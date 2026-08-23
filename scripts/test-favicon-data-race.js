@@ -83,6 +83,9 @@ const sandbox = {
 };
 sandbox.globalThis = sandbox;
 
+vm.runInNewContext(fs.readFileSync('src/shared/favicon-utils.js', 'utf8'), sandbox, {
+  filename: 'src/shared/favicon-utils.js'
+});
 vm.runInNewContext(fs.readFileSync('src/shared/favicon-view-core.js', 'utf8'), sandbox, {
   filename: 'src/shared/favicon-view-core.js'
 });

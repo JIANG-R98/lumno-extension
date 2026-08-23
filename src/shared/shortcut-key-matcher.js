@@ -1,5 +1,5 @@
 (function(root, factory) {
-  const api = factory();
+  const api = root.LumnoShortcutKeyMatcher || factory();
   if (typeof module === 'object' && module.exports) {
     module.exports = api;
   }
@@ -17,6 +17,10 @@
     down: 'ArrowDown',
     left: 'ArrowLeft',
     right: 'ArrowRight',
+    arrowup: 'ArrowUp',
+    arrowdown: 'ArrowDown',
+    arrowleft: 'ArrowLeft',
+    arrowright: 'ArrowRight',
     comma: ',',
     period: '.',
     slash: '/',
@@ -24,6 +28,7 @@
     quote: '\'',
     minus: '-',
     plus: '+',
+    equal: '+',
     backslash: '\\',
     backquote: '`',
     bracketleft: '[',
@@ -53,9 +58,13 @@
   });
 
   function parseShortcut(shortcut) {
-    const value = String(shortcut || '').trim();
+    let value = String(shortcut || '').trim().replace(/\s*\+\s*/g, '+');
     if (!value || value.includes('%')) {
       return null;
+    }
+    const compactMacMatch = value.match(/^([⌘⇧⌃⌥]+)(.+)$/);
+    if (compactMacMatch) {
+      value = `${Array.from(compactMacMatch[1]).join('+')}+${compactMacMatch[2]}`;
     }
     const parts = value
       .split('+')
@@ -74,14 +83,14 @@
     };
     for (const token of parts) {
       const normalized = token.toLowerCase();
-      if (normalized === 'ctrl' || normalized === 'control' || normalized === 'macctrl') {
+      if (normalized === 'ctrl' || normalized === 'control' || normalized === 'macctrl' || token === '⌃') {
         spec.ctrl = true;
-      } else if (normalized === 'alt' || normalized === 'option') {
+      } else if (normalized === 'alt' || normalized === 'option' || token === '⌥') {
         spec.alt = true;
-      } else if (normalized === 'shift') {
+      } else if (normalized === 'shift' || token === '⇧') {
         spec.shift = true;
       } else if (normalized === 'command' || normalized === 'cmd' ||
-          normalized === 'meta' || normalized === 'super') {
+          normalized === 'meta' || normalized === 'super' || token === '⌘') {
         spec.meta = true;
       } else {
         return null;
@@ -150,6 +159,10 @@
     return eventKey === spec.key;
   }
 
+  function eventMatchesShortcut(event, shortcutOrSpec) {
+    return descriptorMatchesShortcut(describeKeyboardEvent(event), shortcutOrSpec);
+  }
+
   function canBeChromeCommandShortcut(descriptor) {
     if (!descriptor || !String(descriptor.key || '')) {
       return false;
@@ -163,6 +176,7 @@
     getKeyFromCode,
     describeKeyboardEvent,
     descriptorMatchesShortcut,
+    eventMatchesShortcut,
     canBeChromeCommandShortcut
   });
 });

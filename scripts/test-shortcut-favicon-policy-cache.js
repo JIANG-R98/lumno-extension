@@ -43,6 +43,18 @@ const createPolicyCache = new Function('deps', `
   const BACKGROUND_SHORTCUT_FAVICON_CACHE_MAX_ENTRIES = 64;
   const SHORTCUT_FAVICON_FETCH_TIMEOUT_MS = 1000;
   let enhancedFetchEnabled = deps.enhancedFetchEnabled;
+  const FAVICON_UTILS = {
+    setBoundedCacheEntry(cache, key, value, maxEntries) {
+      if (cache.has(key)) {
+        cache.delete(key);
+      }
+      cache.set(key, value);
+      while (cache.size > maxEntries) {
+        cache.delete(cache.keys().next().value);
+      }
+      return value;
+    }
+  };
 
   function getShortcutFaviconPreferredTheme(value) {
     return String(value || 'light');
@@ -62,10 +74,6 @@ const createPolicyCache = new Function('deps', `
   function resolveShortcutFaviconData(...args) {
     return deps.resolve(...args);
   }
-  function setBoundedBackgroundCacheEntry(cache, key, value) {
-    cache.set(key, value);
-  }
-
   ${extractedFunctions}
 
   return {

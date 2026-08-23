@@ -16,6 +16,7 @@ const injectedScriptFiles = [
   'src/shared/codex-debug-surface.js',
   'src/shared/navigation-disposition.js',
   'src/shared/community-links.js',
+  'src/shared/browser-profile.js',
   'src/shared/settings.js',
   'src/shared/search-utils.js',
   'src/shared/site-search-store.js',

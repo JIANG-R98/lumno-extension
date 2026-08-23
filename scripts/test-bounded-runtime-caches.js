@@ -92,6 +92,21 @@ function testRuntimeCachesUseBoundedWrites() {
     0,
     'shared favicon view cache writes should use the bounded helper'
   );
+  assert.doesNotMatch(
+    background,
+    /function setBoundedBackgroundCacheEntry\(/,
+    'background should call the shared bounded cache helper directly'
+  );
+  assert.doesNotMatch(
+    overlay,
+    /function setBoundedOverlayCacheEntry\(/,
+    'overlay should call the shared bounded cache helper directly'
+  );
+  assert.doesNotMatch(
+    faviconCore,
+    /function setBoundedCacheEntry\(/,
+    'favicon view core should call the shared bounded cache helper directly'
+  );
   assert.ok(
     overlayFavicon.includes('faviconViewCore.cacheFaviconData(sourceUrl, value)') &&
       overlayFavicon.includes('faviconUtils.setBoundedCacheEntry(faviconDataCache, sourceUrl, value, 256)'),

@@ -30,7 +30,6 @@ function extractFunctionSource(source, name) {
 }
 
 const extractedFunctions = [
-  'setBoundedBackgroundCacheEntry',
   'normalizeFaviconRequestBlacklistItems',
   'normalizeFaviconEnhancedFetchEnabled',
   'loadFaviconRequestBlacklistItems',
@@ -167,6 +166,7 @@ async function run() {
         const host = String(hostname || '').trim().toLowerCase();
         return host === '192.168.1.8' || host === 'service.internal';
       },
+      setBoundedCacheEntry: faviconUtils.setBoundedCacheEntry,
       isFaviconProxyUrl: faviconUtils.isFaviconProxyUrl,
       isFaviconSourceAllowedByEnhancedFetchPolicy: faviconUtils.isFaviconSourceAllowedByEnhancedFetchPolicy
     },

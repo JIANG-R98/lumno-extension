@@ -132,6 +132,12 @@ try {
 }
 
 try {
+  importScripts(chrome.runtime.getURL('src/shared/browser-profile.js'));
+} catch (error) {
+  console.warn('Lumno: failed to load browser profile helpers.', error);
+}
+
+try {
   importScripts(chrome.runtime.getURL('src/background/shortcut-rules.js'));
 } catch (error) {
   console.warn('Lumno: failed to load shortcut rules helpers.', error);
@@ -3418,7 +3424,7 @@ function warmSwitcherTabThemeColor(host, url) {
       const sharedHost = getSwitcherRegistrableThemeHost(normalizedHost);
       if (accentRgb && sharedHost && sharedHost !== normalizedHost) {
         const sharedKey = `${sharedHost}::${parsed.origin}::auto`;
-        setBoundedBackgroundCacheEntry(
+        FAVICON_UTILS.setBoundedCacheEntry(
           siteThemeColorCache,
           sharedKey,
           result,
@@ -4907,6 +4913,7 @@ function openOverlayOnTab(activeTab, tabs, source, options) {
     'src/shared/shortcut-display.js',
     'src/shared/shortcut-favicon.js',
     'src/shared/community-links.js',
+    'src/shared/browser-profile.js',
     'src/shared/feature-hints.js',
     'src/shared/update-notice.js',
     'src/shared/engagement-notice.js',
@@ -7528,28 +7535,6 @@ const logBackgroundFaviconDecision = typeof FAVICON_UTILS.createFaviconDecisionL
   ? FAVICON_UTILS.createFaviconDecisionLogger({ surface: 'background' })
   : (() => false);
 
-function setBoundedBackgroundCacheEntry(cache, key, value, maxEntries) {
-  if (typeof FAVICON_UTILS.setBoundedCacheEntry === 'function') {
-    return FAVICON_UTILS.setBoundedCacheEntry(cache, key, value, maxEntries);
-  }
-  if (!cache || typeof cache.set !== 'function') {
-    return value;
-  }
-  if (typeof cache.delete === 'function' && typeof cache.has === 'function' && cache.has(key)) {
-    cache.delete(key);
-  }
-  cache.set(key, value);
-  while (cache.size > maxEntries && typeof cache.keys === 'function' &&
-      typeof cache.delete === 'function') {
-    const oldest = cache.keys().next();
-    if (!oldest || oldest.done) {
-      break;
-    }
-    cache.delete(oldest.value);
-  }
-  return value;
-}
-
 function logBlockedLocalFavicon(url, candidateKind, reason, pageUrl) {
   return logBackgroundFaviconDecision(url, reason || 'local-rule', {
     pageUrl: pageUrl || url,
@@ -8551,7 +8536,7 @@ function fetchShortcutFaviconData(pageUrl, preferredTheme, explicitIconUrl) {
     ).finally(() => clearTimeout(timeoutId));
   }).then((result) => {
     if (policyRevision === shortcutFaviconPolicyRevision) {
-      setBoundedBackgroundCacheEntry(
+      FAVICON_UTILS.setBoundedCacheEntry(
         shortcutFaviconDataCache,
         cacheKey,
         result || null,
@@ -8911,7 +8896,7 @@ function fetchFaviconData(url, pageUrl) {
       })
       .then((dataUrl) => {
         if (dataUrl) {
-          setBoundedBackgroundCacheEntry(
+          FAVICON_UTILS.setBoundedCacheEntry(
             faviconDataCache,
             url,
             dataUrl,
@@ -10093,7 +10078,7 @@ function buildTitlePinyinIndex(title) {
     initials: initials,
     chineseLength: chineseChars.length
   };
-  setBoundedBackgroundCacheEntry(
+  FAVICON_UTILS.setBoundedCacheEntry(
     titlePinyinCache,
     rawTitle,
     result,

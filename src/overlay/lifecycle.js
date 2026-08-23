@@ -2,6 +2,45 @@
   const api = factory();
   root.LumnoOverlayLifecycle = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function() {
+  function createChromeEventListenerRegistry(eventTarget) {
+    const listeners = new Set();
+
+    function add(listener) {
+      if (!eventTarget || typeof eventTarget.addListener !== 'function' ||
+          typeof listener !== 'function') {
+        return null;
+      }
+      if (listeners.has(listener)) {
+        return listener;
+      }
+      eventTarget.addListener(listener);
+      listeners.add(listener);
+      return listener;
+    }
+
+    function remove(listener) {
+      if (!listeners.has(listener)) {
+        return false;
+      }
+      listeners.delete(listener);
+      if (eventTarget && typeof eventTarget.removeListener === 'function') {
+        eventTarget.removeListener(listener);
+      }
+      return true;
+    }
+
+    function clear() {
+      Array.from(listeners).forEach(remove);
+    }
+
+    return Object.freeze({
+      add,
+      remove,
+      clear,
+      get size() { return listeners.size; }
+    });
+  }
+
   function createFrameTracker(win) {
     const targetWindow = win || window;
     let enterRafA = null;
@@ -645,6 +684,7 @@
 
   return Object.freeze({
     createAntiTranslateGuard,
+    createChromeEventListenerRegistry,
     createFrameTracker,
     createMountConnectionGuard,
     createViewportSizeSync

@@ -1,10 +1,18 @@
 (function(root, factory) {
-  const api = factory();
+  const shortcutKeyMatcher = root.LumnoShortcutKeyMatcher ||
+    (typeof module === 'object' && module.exports
+      ? require('../shared/shortcut-key-matcher.js')
+      : {});
+  const settings = root.LumnoSettings ||
+    (typeof module === 'object' && module.exports
+      ? require('../shared/settings.js')
+      : {});
+  const api = factory(shortcutKeyMatcher, settings);
   if (typeof module === 'object' && module.exports) {
     module.exports = api;
   }
   root.LumnoOnboardingContent = api;
-})(typeof globalThis !== 'undefined' ? globalThis : this, function() {
+})(typeof globalThis !== 'undefined' ? globalThis : this, function(SHORTCUT_KEY_MATCHER, SETTINGS) {
   const SUPPORTED_LOCALES = Object.freeze(['zh_CN', 'zh_TW', 'ja', 'en']);
   const LUMNO_GITHUB_HOMEPAGE_URL = 'https://github.com/kubai087/lumno-extension';
   const EMPTY_COPY = Object.freeze({ eyebrow: '', title: '', body: '' });
@@ -636,21 +644,7 @@
   });
 
   function normalizeLocale(locale) {
-    const raw = String(locale || '').trim();
-    if (!raw) {
-      return 'en';
-    }
-    const lower = raw.toLowerCase().replace('_', '-');
-    if (lower.startsWith('zh')) {
-      if (lower.includes('tw') || lower.includes('hk') || lower.includes('mo') || lower.includes('hant')) {
-        return 'zh_TW';
-      }
-      return 'zh_CN';
-    }
-    if (lower === 'ja' || lower.startsWith('ja-')) {
-      return 'ja';
-    }
-    return 'en';
+    return SETTINGS.normalizeLocale(locale);
   }
 
   function normalizeShortcutValue(value) {
@@ -790,153 +784,11 @@
   }
 
   function parseShortcutHotkey(shortcut) {
-    const value = normalizeShortcutValue(shortcut);
-    if (!value) {
-      return null;
-    }
-    const parts = value.split('+').map((item) => String(item || '').trim()).filter(Boolean);
-    if (parts.length === 0) {
-      return null;
-    }
-    const keyToken = parts[parts.length - 1];
-    const modifierTokens = parts.slice(0, -1);
-    const spec = {
-      ctrl: false,
-      alt: false,
-      shift: false,
-      meta: false,
-      key: ''
-    };
-
-    modifierTokens.forEach((token) => {
-      const lower = token.toLowerCase();
-      if (lower === 'ctrl' || lower === 'control' || lower === 'macctrl' || token === '⌃') {
-        spec.ctrl = true;
-      } else if (lower === 'alt' || lower === 'option' || token === '⌥') {
-        spec.alt = true;
-      } else if (lower === 'shift' || token === '⇧') {
-        spec.shift = true;
-      } else if (lower === 'command' || lower === 'cmd' || lower === 'meta' || lower === 'super' || token === '⌘') {
-        spec.meta = true;
-      }
-    });
-
-    const keyLower = keyToken.toLowerCase();
-    const specialMap = {
-      tab: 'Tab',
-      enter: 'Enter',
-      return: 'Enter',
-      esc: 'Escape',
-      escape: 'Escape',
-      space: ' ',
-      spacebar: ' ',
-      up: 'ArrowUp',
-      down: 'ArrowDown',
-      left: 'ArrowLeft',
-      right: 'ArrowRight',
-      arrowup: 'ArrowUp',
-      arrowdown: 'ArrowDown',
-      arrowleft: 'ArrowLeft',
-      arrowright: 'ArrowRight',
-      comma: ',',
-      period: '.',
-      slash: '/',
-      semicolon: ';',
-      quote: '\'',
-      minus: '-',
-      plus: '+',
-      equal: '+',
-      backslash: '\\',
-      backquote: '`',
-      bracketleft: '[',
-      bracketright: ']'
-    };
-    if (specialMap[keyLower]) {
-      spec.key = specialMap[keyLower];
-      return spec;
-    }
-    if (/^f\d{1,2}$/.test(keyLower)) {
-      spec.key = keyLower.toUpperCase();
-      return spec;
-    }
-    if (keyLower.length === 1) {
-      spec.key = keyLower;
-      return spec;
-    }
-    spec.key = keyToken;
-    return spec;
-  }
-
-  function getShortcutKeyTokenFromCode(rawCode) {
-    const code = String(rawCode || '').trim();
-    if (!code) {
-      return '';
-    }
-    if (/^Key[A-Z]$/.test(code)) {
-      return code.slice(3).toLowerCase();
-    }
-    if (/^Digit[0-9]$/.test(code)) {
-      return code.slice(5);
-    }
-    const codeMap = {
-      Backquote: '`',
-      Minus: '-',
-      Equal: '+',
-      BracketLeft: '[',
-      BracketRight: ']',
-      Backslash: '\\',
-      Semicolon: ';',
-      Quote: '\'',
-      Comma: ',',
-      Period: '.',
-      Slash: '/',
-      Space: ' ',
-      Tab: 'Tab',
-      Enter: 'Enter',
-      Escape: 'Escape',
-      ArrowUp: 'ArrowUp',
-      ArrowDown: 'ArrowDown',
-      ArrowLeft: 'ArrowLeft',
-      ArrowRight: 'ArrowRight'
-    };
-    if (codeMap[code]) {
-      return codeMap[code];
-    }
-    if (/^F\d{1,2}$/.test(code)) {
-      return code.toUpperCase();
-    }
-    return '';
-  }
-
-  function getShortcutKeyTokenFromEvent(event) {
-    if (!event) {
-      return '';
-    }
-    return getShortcutKeyTokenFromCode(event.code) || String(event.key || '');
-  }
-
-  function shortcutHotkeySpecMatchesEvent(spec, event) {
-    if (!spec || !event) {
-      return false;
-    }
-    if (Boolean(event.ctrlKey) !== spec.ctrl ||
-        Boolean(event.altKey) !== spec.alt ||
-        Boolean(event.shiftKey) !== spec.shift ||
-        Boolean(event.metaKey) !== spec.meta) {
-      return false;
-    }
-    const eventKey = getShortcutKeyTokenFromEvent(event);
-    if (spec.key.length === 1) {
-      return eventKey.toLowerCase() === spec.key;
-    }
-    if (spec.key.startsWith('F')) {
-      return eventKey.toUpperCase() === spec.key;
-    }
-    return eventKey === spec.key;
+    return SHORTCUT_KEY_MATCHER.parseShortcut(normalizeShortcutValue(shortcut));
   }
 
   function shortcutHotkeyMatchesEvent(shortcut, event) {
-    return shortcutHotkeySpecMatchesEvent(parseShortcutHotkey(shortcut), event);
+    return SHORTCUT_KEY_MATCHER.eventMatchesShortcut(event, parseShortcutHotkey(shortcut));
   }
 
   function cloneCopy(copy) {

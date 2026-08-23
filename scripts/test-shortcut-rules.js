@@ -1,6 +1,9 @@
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 
 const shortcutRules = require('../src/background/shortcut-rules.js');
+const browserProfile = require('../src/shared/browser-profile.js');
 const bundledShortcutRules = require('../assets/data/shortcut-rules.json');
 
 function createResponse(data) {
@@ -43,16 +46,16 @@ async function testLoadShortcutRulesFallback() {
 }
 
 function testBrowserScheme() {
-  assert.strictEqual(shortcutRules.getBrowserInternalScheme('Chrome Edg/123'), 'edge://');
-  assert.strictEqual(shortcutRules.getBrowserInternalScheme('Chrome Brave'), 'brave://');
-  assert.strictEqual(shortcutRules.getBrowserInternalScheme('Vivaldi'), 'vivaldi://');
-  assert.strictEqual(shortcutRules.getBrowserInternalScheme('OPR/99'), 'opera://');
-  assert.strictEqual(shortcutRules.getBrowserInternalScheme('Chrome'), 'chrome://');
+  assert.strictEqual(browserProfile.getBrowserInternalScheme('Chrome Edg/123'), 'edge://');
+  assert.strictEqual(browserProfile.getBrowserInternalScheme('Chrome Brave'), 'brave://');
+  assert.strictEqual(browserProfile.getBrowserInternalScheme('Vivaldi'), 'vivaldi://');
+  assert.strictEqual(browserProfile.getBrowserInternalScheme('OPR/99'), 'opera://');
+  assert.strictEqual(browserProfile.getBrowserInternalScheme('Chrome'), 'chrome://');
 }
 
 function testBrowserProfileUsesClientHintBrand() {
   assert.deepStrictEqual(
-    shortcutRules.getBrowserInternalProfile({
+    browserProfile.getBrowserInternalProfile({
       userAgent: 'Mozilla/5.0 Chrome/149 Safari/537.36',
       userAgentData: {
         brands: [
@@ -66,7 +69,7 @@ function testBrowserProfileUsesClientHintBrand() {
   );
 
   assert.deepStrictEqual(
-    shortcutRules.getBrowserInternalProfile({
+    browserProfile.getBrowserInternalProfile({
       userAgent: 'Mozilla/5.0 Chrome/149 Safari/537.36',
       userAgentData: {
         brands: [
@@ -79,11 +82,45 @@ function testBrowserProfileUsesClientHintBrand() {
   );
 
   assert.deepStrictEqual(
-    shortcutRules.getBrowserInternalProfile({
+    browserProfile.getBrowserInternalProfile({
       userAgent: 'Mozilla/5.0 Chrome Edg/149 Safari/537.36'
     }),
     { scheme: 'edge://', name: 'Microsoft Edge' }
   );
+}
+
+function testBrowserProfileRuntimeWiring() {
+  const repoRoot = path.join(__dirname, '..');
+  const backgroundSource = fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8');
+  const newtabHtml = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.html'), 'utf8');
+  const newtabSource = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8');
+  const onboardingHtml = fs.readFileSync(path.join(repoRoot, 'src/onboarding/onboarding.html'), 'utf8');
+  const overlaySource = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
+
+  assert(
+    backgroundSource.indexOf("importScripts(chrome.runtime.getURL('src/shared/browser-profile.js'))") <
+      backgroundSource.indexOf("importScripts(chrome.runtime.getURL('src/background/shortcut-rules.js'))"),
+    'background should load browser-profile before shortcut-rules'
+  );
+  assert(
+    backgroundSource.indexOf("'src/shared/browser-profile.js'") <
+      backgroundSource.indexOf("'src/overlay/search-panel.js'"),
+    'overlay injection should load browser-profile before search-panel'
+  );
+  assert(
+    newtabHtml.indexOf('../shared/browser-profile.js') < newtabHtml.indexOf('../newtab/newtab.js'),
+    'newtab should load browser-profile before its page entry'
+  );
+  assert(
+    onboardingHtml.indexOf('../shared/browser-profile.js') < onboardingHtml.indexOf('../overlay/search-panel.js'),
+    'onboarding preview should load browser-profile before overlay search'
+  );
+  assert.match(newtabSource, /BROWSER_PROFILE\.getBrowserInternalProfile\(navigator\)/);
+  assert.match(overlaySource, /BROWSER_PROFILE\.getBrowserInternalProfile\(navigator\)/);
+  [newtabSource, overlaySource].forEach((source) => {
+    assert.doesNotMatch(source, /function getBrowserInternalScheme\(/);
+    assert.doesNotMatch(source, /function getClientHintBrowserName\(/);
+  });
 }
 
 function testShortcutUrlMatching() {
@@ -161,6 +198,7 @@ function testBundledChromePageRules() {
   await testLoadShortcutRulesFallback();
   testBrowserScheme();
   testBrowserProfileUsesClientHintBrand();
+  testBrowserProfileRuntimeWiring();
   testShortcutUrlMatching();
   await testInstanceShortcutUrl();
   testBundledChromePageRules();

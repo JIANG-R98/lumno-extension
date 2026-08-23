@@ -1,6 +1,24 @@
 const assert = require('assert');
 const settings = require('../src/shared/settings.js');
 
+let registeredStorageListener = null;
+const storageListener = () => {};
+assert.strictEqual(settings.addStorageChangeListener({
+  storage: {
+    onChanged: {
+      addListener(listener) {
+        registeredStorageListener = listener;
+      }
+    }
+  }
+}, storageListener), true);
+assert.strictEqual(registeredStorageListener, storageListener);
+assert.strictEqual(settings.addStorageChangeListener(null, storageListener), false);
+assert.strictEqual(settings.addStorageChangeListener({ storage: {} }, storageListener), false);
+assert.strictEqual(settings.addStorageChangeListener({
+  storage: { onChanged: { addListener() {} } }
+}, null), false);
+
 assert.strictEqual(settings.CHROME_SYNC_STORAGE_KEYS.length, 57);
 assert.strictEqual(
   new Set(settings.CHROME_SYNC_STORAGE_KEYS).size,

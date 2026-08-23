@@ -10,9 +10,10 @@
   const PAGE_TOAST_ID = '_x_extension_page_toast_2026_unique_';
   const PAGE_TOAST_SHOW_DURATION_MS = 2000;
   const LANGUAGE_STORAGE_KEY = '_x_extension_language_2024_unique_';
-  const providerStorageRuntime = globalThis.LumnoSettings &&
-    typeof globalThis.LumnoSettings.createProviderStorageRuntime === 'function'
-    ? globalThis.LumnoSettings.createProviderStorageRuntime(chrome)
+  const SETTINGS = globalThis.LumnoSettings || {};
+  const SHORTCUT_KEY_MATCHER = globalThis.LumnoShortcutKeyMatcher || {};
+  const providerStorageRuntime = typeof SETTINGS.createProviderStorageRuntime === 'function'
+    ? SETTINGS.createProviderStorageRuntime(chrome)
     : null;
   const storageArea = providerStorageRuntime
     ? providerStorageRuntime.area
@@ -77,23 +78,7 @@
   }
 
   function normalizeLocale(value) {
-    const normalized = String(value || '').replace('-', '_').toLowerCase();
-    if (normalized === 'zh' || normalized === 'zh_cn' || normalized.startsWith('zh_cn') || normalized.startsWith('zh_hans')) {
-      return 'zh_CN';
-    }
-    if (normalized === 'zh_tw' || normalized.startsWith('zh_tw') || normalized.startsWith('zh_hant_tw')) {
-      return 'zh_TW';
-    }
-    if (normalized === 'zh_hk' || normalized.startsWith('zh_hk') || normalized.startsWith('zh_hant_hk')) {
-      return 'zh_TW';
-    }
-    if (normalized.startsWith('zh_hant')) {
-      return 'zh_TW';
-    }
-    if (normalized === 'ja' || normalized.startsWith('ja_')) {
-      return 'ja';
-    }
-    return 'en';
+    return SETTINGS.normalizeLocale(value);
   }
 
   function getTargetLocale() {
@@ -415,153 +400,12 @@
     }
   }
 
-  function parseShortcut(shortcut) {
-    const value = String(shortcut || '').trim();
-    if (!value) {
-      return null;
-    }
-    const parts = value.split('+').map((item) => String(item || '').trim()).filter(Boolean);
-    if (parts.length === 0) {
-      return null;
-    }
-    const keyToken = parts[parts.length - 1];
-    const modifierTokens = parts.slice(0, -1);
-    const spec = {
-      ctrl: false,
-      alt: false,
-      shift: false,
-      meta: false,
-      key: ''
-    };
-
-    modifierTokens.forEach((token) => {
-      const lower = token.toLowerCase();
-      if (lower === 'ctrl' || lower === 'control' || lower === 'macctrl') {
-        spec.ctrl = true;
-      } else if (lower === 'alt' || lower === 'option') {
-        spec.alt = true;
-      } else if (lower === 'shift') {
-        spec.shift = true;
-      } else if (lower === 'command' || lower === 'cmd' || lower === 'meta' || lower === 'super') {
-        spec.meta = true;
-      }
-    });
-
-    const keyLower = keyToken.toLowerCase();
-    const specialMap = {
-      tab: 'Tab',
-      enter: 'Enter',
-      return: 'Enter',
-      esc: 'Escape',
-      escape: 'Escape',
-      space: ' ',
-      spacebar: ' ',
-      up: 'ArrowUp',
-      down: 'ArrowDown',
-      left: 'ArrowLeft',
-      right: 'ArrowRight',
-      comma: ',',
-      period: '.',
-      slash: '/',
-      semicolon: ';',
-      quote: '\'',
-      minus: '-',
-      plus: '+',
-      backslash: '\\',
-      backquote: '`',
-      bracketleft: '[',
-      bracketright: ']'
-    };
-    if (specialMap[keyLower]) {
-      spec.key = specialMap[keyLower];
-      return spec;
-    }
-    if (/^f\d{1,2}$/.test(keyLower)) {
-      spec.key = keyLower.toUpperCase();
-      return spec;
-    }
-    if (keyLower.length === 1) {
-      spec.key = keyLower;
-      return spec;
-    }
-    spec.key = keyToken;
-    return spec;
-  }
-
-  function getShortcutKeyTokenFromCode(rawCode) {
-    const code = String(rawCode || '').trim();
-    if (!code) {
-      return '';
-    }
-    if (/^Key[A-Z]$/.test(code)) {
-      return code.slice(3).toLowerCase();
-    }
-    if (/^Digit[0-9]$/.test(code)) {
-      return code.slice(5);
-    }
-    const codeMap = {
-      Backquote: '`',
-      Minus: '-',
-      Equal: '+',
-      BracketLeft: '[',
-      BracketRight: ']',
-      Backslash: '\\',
-      Semicolon: ';',
-      Quote: '\'',
-      Comma: ',',
-      Period: '.',
-      Slash: '/',
-      Space: ' ',
-      Tab: 'Tab',
-      Enter: 'Enter',
-      Escape: 'Escape',
-      ArrowUp: 'ArrowUp',
-      ArrowDown: 'ArrowDown',
-      ArrowLeft: 'ArrowLeft',
-      ArrowRight: 'ArrowRight'
-    };
-    if (codeMap[code]) {
-      return codeMap[code];
-    }
-    if (/^F\d{1,2}$/.test(code)) {
-      return code.toUpperCase();
-    }
-    return '';
-  }
-
-  function getShortcutKeyTokenFromEvent(event) {
-    if (!event) {
-      return '';
-    }
-    return getShortcutKeyTokenFromCode(event.code) || String(event.key || '');
-  }
-
   function isEditableTarget(target) {
     const element = target && target.nodeType === 1 ? target : (target && target.parentElement ? target.parentElement : null);
     if (!element || !element.closest) {
       return false;
     }
     return Boolean(element.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]'));
-  }
-
-  function shortcutMatchesEvent(event, spec) {
-    if (!spec) {
-      return false;
-    }
-    if (Boolean(event.ctrlKey) !== spec.ctrl ||
-      Boolean(event.altKey) !== spec.alt ||
-      Boolean(event.shiftKey) !== spec.shift ||
-      Boolean(event.metaKey) !== spec.meta) {
-      return false;
-    }
-    const eventKey = getShortcutKeyTokenFromEvent(event);
-    if (spec.key.length === 1) {
-      return eventKey.toLowerCase() === spec.key;
-    }
-    if (spec.key.startsWith('F')) {
-      return eventKey.toUpperCase() === spec.key;
-    }
-    return eventKey === spec.key;
   }
 
   function refreshShortcut(force) {
@@ -585,7 +429,7 @@
           return;
         }
         shortcutRaw = nextShortcut;
-        shortcutSpec = parseShortcut(nextShortcut);
+        shortcutSpec = SHORTCUT_KEY_MATCHER.parseShortcut(nextShortcut);
         logHotkeyListenerDebug('shortcut-refresh', {
           shortcut: shortcutRaw,
           hasSpec: Boolean(shortcutSpec)
@@ -660,7 +504,9 @@
     }
     refreshShortcut(false);
     const editableTarget = isEditableTarget(event.target);
-    const matchedConfiguredShortcut = Boolean(shortcutSpec && shortcutMatchesEvent(event, shortcutSpec));
+    const matchedConfiguredShortcut = Boolean(
+      shortcutSpec && SHORTCUT_KEY_MATCHER.eventMatchesShortcut(event, shortcutSpec)
+    );
     if (matchedConfiguredShortcut) {
       logHotkeyListenerDebug('shortcut-matched', {
         key: String(event.key || ''),

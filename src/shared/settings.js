@@ -592,6 +592,16 @@
     });
   }
 
+  function addStorageChangeListener(chromeApi, listener) {
+    const onChanged = chromeApi && chromeApi.storage && chromeApi.storage.onChanged;
+    if (!onChanged || typeof onChanged.addListener !== 'function' ||
+        typeof listener !== 'function') {
+      return false;
+    }
+    onChanged.addListener(listener);
+    return true;
+  }
+
   return Object.freeze({
     THEME_STORAGE_KEY,
     NEWTAB_THEME_MODE_STORAGE_KEY,
@@ -667,6 +677,7 @@
     normalizeThemeMode,
     createGlobalThemeModeStorageUpdate,
     createStorageReadBatch,
-    createProviderStorageRuntime
+    createProviderStorageRuntime,
+    addStorageChangeListener
   });
 });

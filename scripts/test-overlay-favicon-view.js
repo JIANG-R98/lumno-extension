@@ -348,7 +348,7 @@ function testOverlayRendererLoadsFaviconPolicyBeforeInitialTabs() {
   );
   assert.match(
     overlayJs,
-    /overlayFaviconEnhancedFetchStorageListener[\s\S]*?faviconEnhancedFetchEnabled = normalizeFaviconEnhancedFetchEnabled[\s\S]*?refreshOverlayFaviconsForPolicyChange\(\)/,
+    /storageChangeListeners\.add\(\(changes,\s*areaName\) => \{[\s\S]*?!changes\[FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY\][\s\S]*?faviconEnhancedFetchEnabled = normalizeFaviconEnhancedFetchEnabled[\s\S]*?refreshOverlayFaviconsForPolicyChange\(\)[\s\S]*?\}\);/,
     'favicon setting changes should recover replaced rows after updating the policy state'
   );
   const faviconViewJs = fs.readFileSync(path.join(repoRoot, 'src/overlay/favicon-view.js'), 'utf8');

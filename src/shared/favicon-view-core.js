@@ -1,10 +1,14 @@
 (function(root, factory) {
-  const api = factory(root);
+  const faviconUtils = root.LumnoFaviconUtils ||
+    (typeof module === 'object' && module.exports
+      ? require('./favicon-utils.js')
+      : {});
+  const api = factory(root, faviconUtils);
   if (typeof module === 'object' && module.exports) {
     module.exports = api;
   }
   root.LumnoFaviconViewCore = api;
-})(typeof globalThis !== 'undefined' ? globalThis : this, function(root) {
+})(typeof globalThis !== 'undefined' ? globalThis : this, function(root, faviconUtils) {
   function noop() {}
   const FAVICON_INTRINSIC_SIZE = 128;
 
@@ -55,32 +59,8 @@
     const placeholderProbeCacheMaxEntries = Number.isFinite(config.placeholderProbeCacheMaxEntries)
       ? Math.max(1, Math.floor(config.placeholderProbeCacheMaxEntries))
       : 32;
-    const faviconUtils = (root && root.LumnoFaviconUtils) || {};
-
-    function setBoundedCacheEntry(cache, key, value, maxEntries) {
-      if (typeof faviconUtils.setBoundedCacheEntry === 'function') {
-        return faviconUtils.setBoundedCacheEntry(cache, key, value, maxEntries);
-      }
-      if (!cache || typeof cache.set !== 'function') {
-        return value;
-      }
-      if (typeof cache.delete === 'function' && typeof cache.has === 'function' && cache.has(key)) {
-        cache.delete(key);
-      }
-      cache.set(key, value);
-      while (cache.size > maxEntries && typeof cache.keys === 'function' &&
-          typeof cache.delete === 'function') {
-        const oldest = cache.keys().next();
-        if (!oldest || oldest.done) {
-          break;
-        }
-        cache.delete(oldest.value);
-      }
-      return value;
-    }
-
     function cacheFaviconData(url, dataUrl) {
-      return setBoundedCacheEntry(
+      return faviconUtils.setBoundedCacheEntry(
         faviconDataCache,
         url,
         dataUrl,
@@ -160,7 +140,7 @@
         return Promise.resolve('');
       }
       if (!extensionFaviconPlaceholderProbeCache.has(probeUrl)) {
-        setBoundedCacheEntry(
+        faviconUtils.setBoundedCacheEntry(
           extensionFaviconPlaceholderProbeCache,
           probeUrl,
           loadImageSignature(probeUrl),
@@ -512,7 +492,7 @@
       img.decoding = 'async';
       img.referrerPolicy = 'no-referrer';
       img.src = url;
-      setBoundedCacheEntry(iconPreloadCache, url, img, iconPreloadCacheMaxEntries);
+      faviconUtils.setBoundedCacheEntry(iconPreloadCache, url, img, iconPreloadCacheMaxEntries);
     }
 
     function warmIconCache(list) {

@@ -5,6 +5,10 @@ const path = require('path');
 const repoRoot = path.resolve(__dirname, '..');
 const newtabJs = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8');
 const newtabHtml = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.html'), 'utf8');
+const folderIconJs = fs.readFileSync(
+  path.join(repoRoot, 'src/newtab/bookmark-folder-icon.js'),
+  'utf8'
+);
 const cascadeMenuJs = fs.readFileSync(path.join(repoRoot, 'src/newtab/bookmark-cascade-menu.js'), 'utf8');
 const cascadeViewReact = fs.readFileSync(
   path.join(repoRoot, 'react-src/newtab/bookmark-cascade-view.tsx'),
@@ -42,6 +46,11 @@ assertContains(
   cascadeViewReact,
   'getFigmaFolderSvg(',
   'the React bookmark cascade should reuse the newtab bookmark folder SVG'
+);
+assertContains(
+  folderIconJs,
+  'function getFigmaFolderSvg(',
+  'the shared bookmark folder component should own the folder SVG implementation'
 );
 assertContains(
   cascadeMenuJs,

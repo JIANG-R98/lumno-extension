@@ -607,12 +607,7 @@
       : Boolean(storageAreaName) && areaName === storageAreaName;
   }
   function addStorageChangeListener(listener) {
-    if (!chrome || !chrome.storage || !chrome.storage.onChanged ||
-        typeof chrome.storage.onChanged.addListener !== 'function') {
-      return false;
-    }
-    chrome.storage.onChanged.addListener(listener);
-    return true;
+    return SETTINGS.addStorageChangeListener(chrome, listener);
   }
 
   function getFocusedSettingsPanelAnchor() {

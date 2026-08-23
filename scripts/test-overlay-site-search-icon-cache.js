@@ -215,7 +215,7 @@ assert.match(
 
 assert.match(
   overlaySource,
-  /siteSearchIconStorageListener[\s\S]*?setSiteSearchPrefix\(activeProvider,[\s\S]*?inputModeController\.refreshModeMenu\(\)/,
+  /storageChangeListeners\.add\(\(changes,\s*areaName\) => \{[\s\S]*?changes && changes\[SITE_SEARCH_ICON_CACHE_STORAGE_KEY\][\s\S]*?setSiteSearchPrefix\(activeProvider,[\s\S]*?inputModeController\.refreshModeMenu\(\)[\s\S]*?\}\);/,
   'an open overlay tag and menu should adopt background-warmed icons immediately'
 );
 

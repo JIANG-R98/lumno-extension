@@ -78,7 +78,7 @@ assert.match(
 );
 assert.match(
   overlayJs,
-  /overlayDocumentPipStorageListener = \(changes,\s*areaName\) =>[\s\S]*?documentPipEnabled = changes\[DOCUMENT_PIP_ENABLED_STORAGE_KEY\]\.newValue === true/,
+  /storageChangeListeners\.add\(\(changes,\s*areaName\) => \{[\s\S]*?!changes\[DOCUMENT_PIP_ENABLED_STORAGE_KEY\][\s\S]*?documentPipEnabled = changes\[DOCUMENT_PIP_ENABLED_STORAGE_KEY\]\.newValue === true[\s\S]*?\}\);/,
   'overlay should keep clip command visibility synced if the setting changes'
 );
 

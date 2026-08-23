@@ -53,9 +53,9 @@ assertMatches(
   'options should finish indicator measurements before applying style writes'
 );
 assert.strictEqual(
-  (optionsJs.match(/^\s*chrome\.storage\.onChanged\.addListener/gm) || []).length,
+  (optionsJs.match(/SETTINGS\.addStorageChangeListener\(chrome, listener\)/g) || []).length,
   1,
-  'options storage listeners should register through the guarded helper'
+  'options storage listeners should register through the shared guarded helper'
 );
 assertMatches(
   optionsJs,
@@ -161,9 +161,9 @@ assertMatches(
   'new tab theme bootstrap should tolerate favicon runtime initialization still being pending'
 );
 assert.strictEqual(
-  (newtabJs.match(/^\s*chrome\.storage\.onChanged\.addListener/gm) || []).length,
+  (newtabJs.match(/SETTINGS\.addStorageChangeListener\(chrome, listener\)/g) || []).length,
   1,
-  'new tab storage listeners should register through the guarded helper'
+  'new tab storage listeners should register through the shared guarded helper'
 );
 assert.strictEqual(
   (newtabJs.match(/chrome\.runtime\.getURL\(/g) || []).length,

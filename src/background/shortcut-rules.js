@@ -1,89 +1,14 @@
 (function(root, factory) {
-  const api = factory();
+  const browserProfile = root.LumnoBrowserProfile ||
+    (typeof module === 'object' && module.exports
+      ? require('../shared/browser-profile.js')
+      : {});
+  const api = factory(browserProfile);
   if (typeof module === 'object' && module.exports) {
     module.exports = api;
   }
   root.LumnoShortcutRules = api;
-})(typeof globalThis !== 'undefined' ? globalThis : this, function() {
-  function getBrowserInternalScheme(userAgent) {
-    const ua = String(userAgent || '');
-    if (ua.includes('Edg/')) {
-      return 'edge://';
-    }
-    if (ua.includes('Brave')) {
-      return 'brave://';
-    }
-    if (ua.includes('Vivaldi')) {
-      return 'vivaldi://';
-    }
-    if (ua.includes('OPR/') || ua.includes('Opera')) {
-      return 'opera://';
-    }
-    return 'chrome://';
-  }
-
-  function normalizeBrandName(brand) {
-    return String(brand || '').replace(/\s+/g, ' ').trim();
-  }
-
-  function isGreaseBrandName(brand) {
-    const compact = normalizeBrandName(brand).toLowerCase().replace(/[^a-z]/g, '');
-    return compact.includes('not') && compact.includes('brand');
-  }
-
-  function isChromiumEngineBrandName(brand) {
-    return normalizeBrandName(brand).toLowerCase() === 'chromium';
-  }
-
-  function getClientHintBrowserName(userAgentData) {
-    const brands = userAgentData && Array.isArray(userAgentData.brands)
-      ? userAgentData.brands
-      : [];
-    const names = brands
-      .map((item) => normalizeBrandName(item && item.brand))
-      .filter((name) => name && !isGreaseBrandName(name));
-    const productName = names.find((name) => {
-      const lower = name.toLowerCase();
-      return !isChromiumEngineBrandName(name) &&
-        lower !== 'google chrome' &&
-        lower !== 'chrome';
-    });
-    if (productName) {
-      return productName;
-    }
-    return names.find((name) => !isChromiumEngineBrandName(name)) ||
-      names.find((name) => isChromiumEngineBrandName(name)) ||
-      '';
-  }
-
-  function getFallbackBrowserName(userAgent, scheme) {
-    if (scheme === 'edge://') {
-      return 'Microsoft Edge';
-    }
-    if (scheme === 'brave://') {
-      return 'Brave';
-    }
-    if (scheme === 'vivaldi://') {
-      return 'Vivaldi';
-    }
-    if (scheme === 'opera://') {
-      return 'Opera';
-    }
-    return 'Chrome';
-  }
-
-  function getBrowserInternalProfile(navigatorLike) {
-    const source = navigatorLike && typeof navigatorLike === 'object'
-      ? navigatorLike
-      : { userAgent: navigatorLike };
-    const userAgent = String(source.userAgent || '');
-    const scheme = getBrowserInternalScheme(userAgent);
-    return {
-      scheme,
-      name: getClientHintBrowserName(source.userAgentData) ||
-        getFallbackBrowserName(userAgent, scheme)
-    };
-  }
+})(typeof globalThis !== 'undefined' ? globalThis : this, function(browserProfile) {
 
   function getShortcutUrlForScheme(query, rules, scheme) {
     if (!query || !Array.isArray(rules)) {
@@ -147,7 +72,7 @@
     }
 
     function getShortcutUrl(query, rules) {
-      const scheme = getBrowserInternalProfile(navigatorLike).scheme;
+      const scheme = browserProfile.getBrowserInternalProfile(navigatorLike).scheme;
       return getShortcutUrlForScheme(query, rules, scheme);
     }
 
@@ -159,8 +84,6 @@
 
   return Object.freeze({
     create,
-    getBrowserInternalScheme,
-    getBrowserInternalProfile,
     getShortcutUrlForScheme
   });
 });

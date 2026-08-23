@@ -299,19 +299,96 @@
     }, options);
   }
 
-  function appendSourceItems(target, seenHosts, items, source, limit, options) {
+  function createRecentSiteCollector(pinned, hidden, limit, options) {
+    const opts = options && typeof options === 'object' ? options : {};
+    const maxItems = Math.max(0, Number(limit) || 0);
+    const items = [];
+    const seenUrls = new Set();
+    const seenHosts = new Set();
+    const hiddenByUrl = new Map();
+
+    normalizeHiddenRecentSites(hidden, opts).forEach((entry) => {
+      hiddenByUrl.set(entry.url, entry);
+    });
+
+    function isFull() {
+      return items.length >= maxItems;
+    }
+
+    function appendNormalized(normalized, isPinned) {
+      if (!normalized || isFull()) {
+        return false;
+      }
+      const urlKey = getRecentSiteUrlKey(normalized);
+      const hiddenEntry = hiddenByUrl.get(urlKey);
+      if (hiddenEntry) {
+        const lastVisitTime = Math.max(0, Number(normalized.lastVisitTime) || 0);
+        if (lastVisitTime <= hiddenEntry.lastVisitTime) {
+          return false;
+        }
+      }
+      const hostKey = getRecentSiteHostKey(normalized, opts);
+      if ((urlKey && seenUrls.has(urlKey)) || (hostKey && seenHosts.has(hostKey))) {
+        return false;
+      }
+      if (urlKey) {
+        seenUrls.add(urlKey);
+      }
+      if (hostKey) {
+        seenHosts.add(hostKey);
+      }
+      normalized._xPinned = Boolean(isPinned);
+      items.push(normalized);
+      return true;
+    }
+
+    const normalizedPinned = normalizePinnedRecentSites(pinned, opts);
+    for (let index = 0; index < normalizedPinned.length && !isFull(); index += 1) {
+      appendNormalized(normalizedPinned[index], true);
+    }
+
+    return {
+      items,
+      isFull,
+      append(item, isPinned) {
+        const normalized = normalizeRecentSiteItem(item, {
+          ...opts,
+          ignoreBlacklist: Boolean(isPinned)
+        });
+        return appendNormalized(normalized, isPinned);
+      },
+      appendNormalized
+    };
+  }
+
+  function appendSourceItemsToCollector(
+    collector,
+    candidateState,
+    seenHosts,
+    items,
+    source,
+    limit,
+    options
+  ) {
     const list = Array.isArray(items) ? items : [];
-    for (let i = 0; i < list.length; i += 1) {
-      if (target.length >= limit) {
+    for (let index = 0; index < list.length; index += 1) {
+      if (candidateState.count >= limit || collector.isFull()) {
         break;
       }
-      const normalized = normalizeSourceItem(list[i], source, options);
+      const normalized = normalizeSourceItem(list[index], source, options);
       if (!normalized || !normalized.host || seenHosts.has(normalized.host)) {
         continue;
       }
       seenHosts.add(normalized.host);
-      target.push(normalized);
+      candidateState.count += 1;
+      collector.appendNormalized(normalized, false);
     }
+  }
+
+  function sortTabCandidates(items) {
+    return (Array.isArray(items) ? items : [])
+      .slice()
+      .sort((a, b) => (Number(b && b.lastAccessed) || 0) - (Number(a && a.lastAccessed) || 0));
   }
 
   function shouldPrioritizeTabUrl(url, options) {
@@ -328,34 +405,12 @@
     if (maxItems <= 0) {
       return [];
     }
-    const merged = [];
-    const hiddenSites = normalizeHiddenRecentSites(hidden, opts);
-    const appendUnique = (item, isPinned) => {
-      const normalized = normalizeRecentSiteItem(item, {
-        ...opts,
-        ignoreBlacklist: Boolean(isPinned)
-      });
-      if (!normalized || isRecentSiteHidden(normalized, hiddenSites)) {
-        return;
-      }
-      const duplicated = merged.some((existingItem) =>
-        isSameRecentSite(existingItem, normalized, opts)
-      );
-      if (duplicated) {
-        return;
-      }
-      normalized._xPinned = Boolean(isPinned);
-      merged.push(normalized);
-    };
-    const normalizedPinned = normalizePinnedRecentSites(pinned, opts);
-    for (let index = 0; index < normalizedPinned.length && merged.length < maxItems; index += 1) {
-      appendUnique(normalizedPinned[index], true);
-    }
+    const collector = createRecentSiteCollector(pinned, hidden, maxItems, opts);
     const candidates = Array.isArray(items) ? items : [];
-    for (let index = 0; index < candidates.length && merged.length < maxItems; index += 1) {
-      appendUnique(candidates[index], false);
+    for (let index = 0; index < candidates.length && !collector.isFull(); index += 1) {
+      collector.append(candidates[index], false);
     }
-    return merged;
+    return collector.items;
   }
 
   function mergeRecentSiteSources(input) {
@@ -366,33 +421,47 @@
     }
     const candidateLimit = Math.max(limit, Number(options.candidateLimit) || limit);
     const mode = options.mode === 'most' ? 'most' : 'latest';
-    const results = [];
-    const seenHosts = new Set();
-    const tabCandidates = (Array.isArray(options.tabs) ? options.tabs : [])
-      .slice()
-      .sort((a, b) => (Number(b && b.lastAccessed) || 0) - (Number(a && a.lastAccessed) || 0));
-    const priorityTabCandidates = tabCandidates.filter((item) =>
-      shouldPrioritizeTabUrl(item && item.url, options)
-    );
-    appendSourceItems(results, seenHosts, priorityTabCandidates, 'tabs', candidateLimit, options);
-    if (mode === 'most') {
-      appendSourceItems(results, seenHosts, options.topSites, 'topSites', candidateLimit, options);
-      if (results.length === 0) {
-        appendSourceItems(results, seenHosts, options.historyItems, 'history', candidateLimit, options);
-        appendSourceItems(results, seenHosts, options.topSites, 'topSites', candidateLimit, options);
-      }
-    } else {
-      appendSourceItems(results, seenHosts, options.historyItems, 'history', candidateLimit, options);
-      appendSourceItems(results, seenHosts, options.topSites, 'topSites', candidateLimit, options);
-    }
-    appendSourceItems(results, seenHosts, tabCandidates, 'tabs', candidateLimit, options);
-    return mergeRecentSitesWithPinned(
-      results,
+    const collector = createRecentSiteCollector(
       options.pinned,
       options.hidden,
       limit,
       options
     );
+    if (collector.isFull()) {
+      return collector.items;
+    }
+    const candidateState = { count: 0 };
+    const sourceSeenHosts = new Set();
+    const appendSource = (items, source) => {
+      appendSourceItemsToCollector(
+        collector,
+        candidateState,
+        sourceSeenHosts,
+        items,
+        source,
+        candidateLimit,
+        options
+      );
+    };
+    const rawTabCandidates = Array.isArray(options.tabs) ? options.tabs : [];
+    const priorityTabCandidates = sortTabCandidates(
+      rawTabCandidates.filter((item) => shouldPrioritizeTabUrl(item && item.url, options))
+    );
+    appendSource(priorityTabCandidates, 'tabs');
+    if (mode === 'most') {
+      appendSource(options.topSites, 'topSites');
+      if (candidateState.count === 0) {
+        appendSource(options.historyItems, 'history');
+        appendSource(options.topSites, 'topSites');
+      }
+    } else {
+      appendSource(options.historyItems, 'history');
+      appendSource(options.topSites, 'topSites');
+    }
+    if (candidateState.count < candidateLimit && !collector.isFull()) {
+      appendSource(sortTabCandidates(rawTabCandidates), 'tabs');
+    }
+    return collector.items;
   }
 
   return Object.freeze({

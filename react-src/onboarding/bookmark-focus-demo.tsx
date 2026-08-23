@@ -3,6 +3,7 @@ import {
   useState,
   type CSSProperties
 } from 'react';
+import { RemixIcon as Icon } from '../shared/remix-icon';
 import { HighlightedText } from './site-search-demo';
 
 export interface BookmarkFocusResult {
@@ -31,15 +32,6 @@ export interface BookmarkFocusModel {
   results: BookmarkFocusResult[];
   searchAriaLabel: string;
   settingsLabel: string;
-}
-
-function Icon({ className }: { className: string }) {
-  return (
-    <i
-      aria-hidden="true"
-      className={`ri-icon ${className || 'ri-link'}`}
-    />
-  );
 }
 
 function SkeletonLine({ className }: { className: string }) {

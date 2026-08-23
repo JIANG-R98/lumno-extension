@@ -3,6 +3,7 @@ import {
   type CSSProperties,
   type ReactNode
 } from 'react';
+import { RemixIcon as Icon } from '../shared/remix-icon';
 
 type Rgb = number[];
 
@@ -42,15 +43,6 @@ export interface SiteSearchDemoModel {
   openLabel: string;
   settingsLabel: string;
   tabHintTemplate: string;
-}
-
-function Icon({ className }: { className: string }) {
-  return (
-    <i
-      aria-hidden="true"
-      className={`ri-icon ${className || 'ri-search-line'}`}
-    />
-  );
 }
 
 function rgbToCss(rgb: Rgb | undefined): string {

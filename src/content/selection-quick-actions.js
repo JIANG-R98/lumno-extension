@@ -9,6 +9,7 @@
   const INTENT = globalThis.LumnoSelectionIntent || {};
   const ACTION_ICON_LIBRARY = globalThis.LumnoSelectionActionIcons || {};
   const TOAST = globalThis.LumnoToast || {};
+  const SETTINGS = globalThis.LumnoSettings || {};
   if (typeof INTENT.classifySelection !== 'function') {
     return;
   }
@@ -38,9 +39,8 @@
   const ACTION_FAILURE_DISMISS_MS = 2200;
   const VIEWPORT_SAFE_MARGIN_PX = 12;
   const TEXT_INPUT_TYPES = new Set(['text', 'search', 'url', 'tel', 'email']);
-  const providerStorageRuntime = globalThis.LumnoSettings &&
-    typeof globalThis.LumnoSettings.createProviderStorageRuntime === 'function'
-    ? globalThis.LumnoSettings.createProviderStorageRuntime(chrome)
+  const providerStorageRuntime = typeof SETTINGS.createProviderStorageRuntime === 'function'
+    ? SETTINGS.createProviderStorageRuntime(chrome)
     : null;
   const storageArea = providerStorageRuntime
     ? providerStorageRuntime.area
@@ -208,17 +208,7 @@
   }
 
   function normalizeLocale(value) {
-    const raw = String(value || '').replace(/_/g, '-').toLowerCase();
-    if (raw.startsWith('zh-tw') || raw.startsWith('zh-hk') || raw.includes('hant')) {
-      return 'zh-TW';
-    }
-    if (raw.startsWith('zh')) {
-      return 'zh-CN';
-    }
-    if (raw.startsWith('ja')) {
-      return 'ja';
-    }
-    return 'en';
+    return SETTINGS.localeToHtmlLang(value);
   }
 
   function getCurrentLocale() {

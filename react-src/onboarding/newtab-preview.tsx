@@ -3,6 +3,7 @@ import {
   useState,
   type CSSProperties
 } from 'react';
+import { RemixIcon as Icon } from '../shared/remix-icon';
 
 type PreviewHoverTarget = 'idle' | 'recent' | 'bookmark';
 type Rgb = [number, number, number];
@@ -43,15 +44,6 @@ export interface NewtabPreviewModel {
   settingsLabel: string;
   visitLabel: string;
   wordmarkSrc: string;
-}
-
-function Icon({ className }: { className: string }) {
-  return (
-    <i
-      aria-hidden="true"
-      className={`ri-icon ${className || 'ri-link'}`}
-    />
-  );
 }
 
 function formatTemplate(
