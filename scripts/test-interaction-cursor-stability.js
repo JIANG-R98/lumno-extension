@@ -6,7 +6,7 @@ const repoRoot = path.resolve(__dirname, '..');
 const read = (relativePath) =>
   fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
 
-const newtabHtml = read('src/newtab/newtab.html');
+const newtabHtml = read('newtab.html');
 const optionsHtml = read('src/options/options.html');
 const onboardingHtml = read('src/onboarding/onboarding.html');
 const overlayShell = read('react-src/overlay/shell.tsx');

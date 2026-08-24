@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 
-const newtabHtml = fs.readFileSync('src/newtab/newtab.html', 'utf8');
+const newtabHtml = fs.readFileSync('newtab.html', 'utf8');
 const newtabJs = fs.readFileSync('src/newtab/newtab.js', 'utf8');
 const wallpaperViewReact = fs.readFileSync(
   'react-src/newtab/wallpaper-view.tsx',

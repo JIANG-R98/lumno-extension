@@ -6,7 +6,7 @@ const repoRoot = path.resolve(__dirname, '..');
 const tooltipJsPath = path.join(repoRoot, 'src/shared/tooltip.js');
 const cursorTooltipJsPath = path.join(repoRoot, 'src/shared/cursor-tooltip.js');
 const cursorTooltipCssPath = path.join(repoRoot, 'src/shared/cursor-tooltip.css');
-const newtabHtmlPath = path.join(repoRoot, 'src/newtab/newtab.html');
+const newtabHtmlPath = path.join(repoRoot, 'newtab.html');
 
 global.LumnoTooltipView = {
   implementation: 'react-test-double',

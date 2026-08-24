@@ -385,6 +385,93 @@ function createFakeWallpaperViewController(config) {
     'inputAutoFocusInfoButton'
   );
   addSwitch(inputAutoFocusRow, 'inputAutoFocusToggle');
+  const shortcutsAccordion = add(
+    widthControl,
+    'div',
+    'x-nt-shortcuts-accordion',
+    { 'data-expanded': 'false', 'data-enabled': 'true' },
+    'shortcutsAccordion'
+  );
+  const shortcutsRow = add(
+    shortcutsAccordion,
+    'div',
+    'x-nt-appearance-setting-row x-nt-shortcuts-accordion-row'
+  );
+  const shortcutsTrigger = add(
+    shortcutsRow,
+    'button',
+    'x-nt-shortcuts-accordion-trigger',
+    {
+      'aria-controls': '_x_extension_newtab_shortcuts_settings_2026_unique_',
+      'aria-expanded': 'false',
+      id: '_x_extension_newtab_shortcuts_accordion_trigger_2026_unique_',
+      type: 'button'
+    },
+    'shortcutsAccordionTrigger'
+  );
+  add(shortcutsTrigger, 'span', 'x-nt-appearance-setting-title', {}, 'shortcutsTitle');
+  add(shortcutsTrigger, 'span', 'x-nt-shortcuts-accordion-icon');
+  addSwitch(shortcutsRow, 'shortcutsToggle');
+  const shortcutsDetails = add(
+    shortcutsAccordion,
+    'div',
+    'x-nt-shortcuts-accordion-details',
+    {
+      'aria-hidden': 'true',
+      'aria-labelledby': '_x_extension_newtab_shortcuts_accordion_trigger_2026_unique_',
+      'data-visible': 'false',
+      id: '_x_extension_newtab_shortcuts_settings_2026_unique_',
+      role: 'region'
+    },
+    'shortcutsDetails'
+  );
+  shortcutsDetails.hidden = true;
+  const shortcutsDetailsInner = add(
+    shortcutsDetails,
+    'div',
+    'x-nt-shortcuts-accordion-details-inner'
+  );
+  const shortcutAddRow = add(shortcutsDetailsInner, 'div', 'x-nt-appearance-setting-row');
+  add(shortcutAddRow, 'span', 'x-nt-appearance-setting-title', {}, 'shortcutAddTitle');
+  addSwitch(shortcutAddRow, 'shortcutAddToggle');
+  const shortcutDockRow = add(shortcutsDetailsInner, 'div', 'x-nt-appearance-setting-row');
+  add(
+    shortcutDockRow,
+    'span',
+    'x-nt-appearance-setting-title',
+    {},
+    'shortcutDockMagnificationTitle'
+  );
+  addSwitch(shortcutDockRow, 'shortcutDockMagnificationToggle');
+  const shortcutWidthControl = add(
+    shortcutsDetailsInner,
+    'div',
+    'x-nt-overlay-control x-nt-shortcut-width-control',
+    { 'data-visible': 'false', 'aria-hidden': 'true' },
+    'shortcutWidthControl'
+  );
+  const shortcutWidthHeader = add(shortcutWidthControl, 'div', 'x-nt-overlay-control-header');
+  add(shortcutWidthHeader, 'span', 'x-nt-overlay-label', {}, 'shortcutWidthLabel');
+  add(shortcutWidthHeader, 'span', 'x-nt-overlay-value', {}, 'shortcutWidthValue');
+  const shortcutWidthWrap = add(
+    shortcutWidthControl,
+    'div',
+    'x-nt-overlay-slider-wrap x-nt-shortcut-width-slider-wrap'
+  );
+  const shortcutWidthSlider = add(
+    shortcutWidthWrap,
+    'input',
+    'x-nt-overlay-slider x-nt-shortcut-width-slider',
+    {
+      'data-value-suffix': ' px',
+      type: 'range',
+      min: String(model.shortcutWidth && model.shortcutWidth.min || 360),
+      max: String(model.shortcutWidth && model.shortcutWidth.max || 1440),
+      step: '1'
+    },
+    'shortcutWidthSlider'
+  );
+  shortcutWidthSlider.type = 'range';
   const moreSettings = add(
     widthControl,
     'a',
@@ -1218,7 +1305,7 @@ function assertThemeAwareAlternateFaviconAsset() {
   assert.doesNotMatch(svg, /fill="black"/i, 'alternate favicon should not keep fixed black fills');
   assert.doesNotMatch(svg, /url\(#paint/i, 'alternate favicon should not depend on fixed gradient paints');
 
-  ['src/newtab/newtab.html'].forEach((filePath) => {
+  ['newtab.html'].forEach((filePath) => {
     const html = fs.readFileSync(filePath, 'utf8');
     assert.match(
       html,
@@ -1258,7 +1345,7 @@ function testNewtabFaviconPreloadAppliesCachedAlternateBeforeMainRuntime() {
     'cached alternate favicon should use the theme-aware monochrome SVG asset before the colorful default can flash'
   );
 
-  ['src/newtab/newtab.html'].forEach((filePath) => {
+  ['newtab.html'].forEach((filePath) => {
     const html = fs.readFileSync(filePath, 'utf8');
     const staticFaviconIndex = html.indexOf('data-lumno-newtab-favicon="true"');
     const firstStylesheetIndex = html.indexOf('<link rel="stylesheet"');
@@ -1298,7 +1385,7 @@ function testNewtabFaviconPreloadAppliesCachedAlternateBeforeMainRuntime() {
   );
   assert.match(
     fallbackRedirectJs,
-    /new URL\('newtab\.html', window\.location\.href\)/,
+    /new URL\('\.\.\/\.\.\/newtab\.html', window\.location\.href\)/,
     'lumno-newtab fallback should redirect into the maintained primary newtab document'
   );
   assert.doesNotMatch(
@@ -1584,6 +1671,11 @@ vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper.js', 'utf8'), sandbox, 
 let inputAutoFocusEnabled = false;
 const inputAutoFocusWrites = [];
 const inputAutoFocusTooltips = [];
+let shortcutsVisible = true;
+let shortcutAddVisible = true;
+let shortcutDockMagnificationEnabled = true;
+let shortcutWidth = 920;
+const shortcutPreferenceWrites = [];
 const runtime = sandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
   documentObj,
   windowObj,
@@ -1592,6 +1684,26 @@ const runtime = sandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
   setInputAutoFocusEnabled(value) {
     inputAutoFocusEnabled = Boolean(value);
     inputAutoFocusWrites.push(inputAutoFocusEnabled);
+  },
+  getShortcutsVisible: () => shortcutsVisible,
+  setShortcutsVisible(value) {
+    shortcutsVisible = Boolean(value);
+    shortcutPreferenceWrites.push(['visible', shortcutsVisible]);
+  },
+  getShortcutAddVisible: () => shortcutAddVisible,
+  setShortcutAddVisible(value) {
+    shortcutAddVisible = Boolean(value);
+    shortcutPreferenceWrites.push(['add', shortcutAddVisible]);
+  },
+  getShortcutDockMagnificationEnabled: () => shortcutDockMagnificationEnabled,
+  setShortcutDockMagnificationEnabled(value) {
+    shortcutDockMagnificationEnabled = Boolean(value);
+    shortcutPreferenceWrites.push(['dock', shortcutDockMagnificationEnabled]);
+  },
+  getShortcutWidth: () => shortcutWidth,
+  setShortcutWidth(value) {
+    shortcutWidth = Number(value);
+    shortcutPreferenceWrites.push(['width', shortcutWidth]);
   },
   showTopActionTooltip(anchor, text) {
     inputAutoFocusTooltips.push({ anchor, text });
@@ -1658,6 +1770,17 @@ const inputAutoFocusInfoButton = getChildByClassName(
 );
 const inputAutoFocusToggle = inputAutoFocusRow.children[1].children[0];
 const moreSettingsLink = getChildByClassName(searchWidthControl, 'x-nt-appearance-more-settings');
+const shortcutsAccordion = getChildByClassName(searchWidthControl, 'x-nt-shortcuts-accordion');
+const shortcutsRow = shortcutsAccordion.children[0];
+const shortcutsTrigger = shortcutsRow.children[0];
+const shortcutsToggle = shortcutsRow.children[1].children[0];
+const shortcutsDetails = shortcutsAccordion.children[1];
+const shortcutsDetailsInner = shortcutsDetails.children[0];
+const shortcutAddToggle = shortcutsDetailsInner.children[0].children[1].children[0];
+const shortcutDockToggle = shortcutsDetailsInner.children[1].children[1].children[0];
+const shortcutWidthControl = shortcutsDetailsInner.children[2];
+const shortcutWidthSlider = shortcutWidthControl.children[1].children[0];
+const shortcutWidthValue = shortcutWidthControl.children[0].children[1];
 
 assert.ok(appearanceHeader, 'appearance header should be a direct panel child above the scrollable content');
 assert.ok(appearanceScrollBody, 'appearance panel content should use one dedicated internal scroll container');
@@ -1667,6 +1790,30 @@ assert.strictEqual(searchWidthSlider.tabIndex, 0, 'global scope search width sli
 assert.strictEqual(inputAutoFocusToggle.checked, false, 'input auto-focus should default to disabled');
 assert.strictEqual(inputAutoFocusToggle.getAttribute('role'), 'switch');
 assert.strictEqual(inputAutoFocusToggle.getAttribute('aria-checked'), 'false');
+assert.strictEqual(shortcutsToggle.checked, true, 'shortcuts should default to enabled');
+assert.strictEqual(shortcutsTrigger.getAttribute('aria-expanded'), 'false');
+assert.strictEqual(shortcutsTrigger.disabled, false);
+assert.strictEqual(shortcutsDetails.hidden, true, 'shortcut details should default to collapsed');
+assert.strictEqual(shortcutAddToggle.disabled, true, 'collapsed shortcut details should not be tabbable');
+assert.strictEqual(shortcutDockToggle.disabled, true, 'collapsed shortcut details should disable nested toggles');
+assert.strictEqual(shortcutWidthSlider.disabled, true, 'collapsed shortcut details should disable the width slider');
+shortcutsTrigger.click();
+assert.strictEqual(shortcutsTrigger.getAttribute('aria-expanded'), 'true');
+assert.strictEqual(shortcutsDetails.hidden, false, 'clicking the shortcut row should expand its details');
+assert.strictEqual(shortcutAddToggle.disabled, false);
+assert.strictEqual(shortcutDockToggle.disabled, false);
+assert.strictEqual(shortcutWidthSlider.disabled, false);
+assert.strictEqual(shortcutWidthValue.textContent, '920 px');
+shortcutsToggle.checked = false;
+shortcutsToggle._listeners.change.forEach((listener) => listener({ target: shortcutsToggle }));
+assert.strictEqual(shortcutsTrigger.disabled, true, 'turning shortcuts off should disable the accordion trigger');
+assert.strictEqual(shortcutsDetails.hidden, true, 'turning shortcuts off should collapse shortcut details');
+shortcutsTrigger.click();
+assert.strictEqual(shortcutsDetails.hidden, true, 'disabled shortcut accordion should not reopen');
+shortcutsToggle.checked = true;
+shortcutsToggle._listeners.change.forEach((listener) => listener({ target: shortcutsToggle }));
+assert.strictEqual(shortcutsTrigger.disabled, false, 're-enabling shortcuts should restore the accordion trigger');
+assert.strictEqual(shortcutsDetails.hidden, true, 're-enabling shortcuts should keep the accordion collapsed');
 assert.strictEqual(
   inputAutoFocusInfoButton.getAttribute('aria-label'),
   'Input auto-focus info'
@@ -1684,7 +1831,7 @@ assert.deepStrictEqual(inputAutoFocusWrites, [true]);
 assert.strictEqual(inputAutoFocusToggle.getAttribute('aria-checked'), 'true');
 assert.strictEqual(moreSettingsLink.tabIndex, 0, 'global scope search width settings link should be tabbable');
 
-const newtabHtml = fs.readFileSync('src/newtab/newtab.html', 'utf8');
+const newtabHtml = fs.readFileSync('newtab.html', 'utf8');
 assert.match(
   newtabHtml,
   /\.x-nt-appearance-setting-row\s*\{[\s\S]*?margin-top:\s*8px;/,
@@ -2736,8 +2883,8 @@ Promise.resolve()
   .then(() => {
     assertBrandMarkCopy();
     assertThemeAwareAlternateFaviconAsset();
-    assertSquareFaviconOptionCss('src/newtab/newtab.html');
-    assertSegmentedTabRadiusCss('src/newtab/newtab.html');
+    assertSquareFaviconOptionCss('newtab.html');
+    assertSegmentedTabRadiusCss('newtab.html');
     assertWallpaperBootstrapWaitsForTheme();
     assertInitialWallpaperToneStartsBeforeDeferredRefresh();
   })

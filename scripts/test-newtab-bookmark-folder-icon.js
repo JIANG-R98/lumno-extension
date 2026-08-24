@@ -5,7 +5,7 @@ const { JSDOM } = require('jsdom');
 const folderIcon = require('../src/newtab/bookmark-folder-icon.js');
 
 const repoRoot = path.resolve(__dirname, '..');
-const newtabHtml = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.html'), 'utf8');
+const newtabHtml = fs.readFileSync(path.join(repoRoot, 'newtab.html'), 'utf8');
 const newtabJs = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8');
 
 const firstSvg = folderIcon.getFigmaFolderSvg('folder one');

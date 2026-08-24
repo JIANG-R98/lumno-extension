@@ -334,7 +334,7 @@ assert.strictEqual(
   'own extension options page should force the Lumno icon'
 );
 assert.strictEqual(
-  resolver.getPageFaviconCandidateUrl('chrome-extension://abc/src/newtab/newtab.html'),
+  resolver.getPageFaviconCandidateUrl('chrome-extension://abc/newtab.html'),
   'chrome-extension://abc/assets/images/lumno.png',
   'own extension newtab page should force the Lumno icon'
 );

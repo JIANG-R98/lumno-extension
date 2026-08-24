@@ -84,7 +84,7 @@ async function runBackgroundBridgeTests() {
   assert.strictEqual(bridge.attach(), false, 'bridge attachment should be idempotent');
 
   const port = createPort({
-    tab: { id: 27, url: 'chrome-extension://lumno/src/newtab/newtab.html' },
+    tab: { id: 27, url: 'chrome-extension://lumno/newtab.html' },
     frameId: 0,
     documentId: 'doc-newtab'
   });
@@ -95,7 +95,7 @@ async function runBackgroundBridgeTests() {
     type: 'surface.register',
     surfaceId: 'surface-newtab',
     pageType: 'newtab',
-    url: 'chrome-extension://lumno/src/newtab/newtab.html',
+    url: 'chrome-extension://lumno/newtab.html',
     title: 'New Tab',
     readyState: 'complete'
   });
@@ -207,7 +207,7 @@ async function runSurfaceBridgeTests() {
       <img id="wallpaper" class="x-nt-bookmark-card" src="data:image/png;base64,large" />
       <script>window.fixtureScript = true;</script>
     </body></html>`, {
-    url: 'chrome-extension://kkcjcneagmlhpeaafngjdlpcfjakejgb/src/newtab/newtab.html',
+    url: 'chrome-extension://kkcjcneagmlhpeaafngjdlpcfjakejgb/newtab.html',
     pretendToBeVisual: true
   });
   const port = createPort();
@@ -916,7 +916,7 @@ function runCrossTabStartupSamplerTests() {
 
 function runWiringTests() {
   const pagePaths = [
-    'src/newtab/newtab.html',
+    'newtab.html',
     'src/options/options.html',
     'src/onboarding/onboarding.html'
   ];

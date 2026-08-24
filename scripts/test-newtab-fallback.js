@@ -98,7 +98,7 @@ assert.ok(
 );
 assert.match(
   lumnoNewtabRedirectJs,
-  /new URL\('newtab\.html', window\.location\.href\)/,
+  /new URL\('\.\.\/\.\.\/newtab\.html', window\.location\.href\)/,
   'standalone Lumno newtab redirect script should target the primary maintained newtab page'
 );
 assert.match(
@@ -138,7 +138,7 @@ assert.match(
   });
   assert.deepStrictEqual(
     replacedUrls,
-    ['chrome-extension://abc/src/newtab/newtab.html?focus=1&notice=file-access#search'],
+    ['chrome-extension://abc/newtab.html?focus=1&notice=file-access#search'],
     'standalone Lumno newtab redirect should preserve query and hash while requesting focus'
   );
 }
@@ -159,7 +159,7 @@ assert.match(
   });
   assert.deepStrictEqual(
     replacedUrls,
-    ['chrome-extension://abc/src/newtab/newtab.html?focus=1'],
+    ['chrome-extension://abc/newtab.html?focus=1'],
     'standalone Lumno fallbacks should request focus while retaining the maintained page entrance animation'
   );
 }

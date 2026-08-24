@@ -92,7 +92,7 @@ assert(
   'store package should exclude development-only Codex debug scripts'
 );
 [
-  'src/newtab/newtab.html',
+  'newtab.html',
   'src/options/options.html',
   'src/onboarding/onboarding.html'
 ].forEach((file) => {

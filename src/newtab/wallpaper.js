@@ -138,6 +138,37 @@
     const setSearchWidth = typeof options.setSearchWidth === 'function'
       ? options.setSearchWidth
       : function() {};
+    const shortcutWidthConfig = Object.assign({
+      min: 360,
+      max: 1440,
+      fallback: 920
+    }, options.shortcutWidthConfig || {});
+    const getShortcutsVisible = typeof options.getShortcutsVisible === 'function'
+      ? options.getShortcutsVisible
+      : function() { return true; };
+    const setShortcutsVisible = typeof options.setShortcutsVisible === 'function'
+      ? options.setShortcutsVisible
+      : function() {};
+    const getShortcutAddVisible = typeof options.getShortcutAddVisible === 'function'
+      ? options.getShortcutAddVisible
+      : function() { return true; };
+    const setShortcutAddVisible = typeof options.setShortcutAddVisible === 'function'
+      ? options.setShortcutAddVisible
+      : function() {};
+    const getShortcutDockMagnificationEnabled =
+      typeof options.getShortcutDockMagnificationEnabled === 'function'
+        ? options.getShortcutDockMagnificationEnabled
+        : function() { return true; };
+    const setShortcutDockMagnificationEnabled =
+      typeof options.setShortcutDockMagnificationEnabled === 'function'
+        ? options.setShortcutDockMagnificationEnabled
+        : function() {};
+    const getShortcutWidth = typeof options.getShortcutWidth === 'function'
+      ? options.getShortcutWidth
+      : function() { return shortcutWidthConfig.fallback; };
+    const setShortcutWidth = typeof options.setShortcutWidth === 'function'
+      ? options.setShortcutWidth
+      : function() {};
     const featureHints = options.featureHints || globalThis.LumnoFeatureHints || {};
     const getInputAutoFocusEnabled = typeof options.getInputAutoFocusEnabled === 'function'
       ? options.getInputAutoFocusEnabled
@@ -441,9 +472,24 @@
     let wallpaperInputAutoFocusToggle = null;
     let wallpaperInputAutoFocusHintController = null;
     let inputAutoFocusReadyResolved = false;
+    let wallpaperShortcutsAccordion = null;
+    let wallpaperShortcutsAccordionTrigger = null;
+    let wallpaperShortcutsTitle = null;
+    let wallpaperShortcutsDetails = null;
+    let wallpaperShortcutsToggle = null;
+    let wallpaperShortcutAddTitle = null;
+    let wallpaperShortcutAddToggle = null;
+    let wallpaperShortcutDockMagnificationTitle = null;
+    let wallpaperShortcutDockMagnificationToggle = null;
+    let wallpaperShortcutWidthControl = null;
+    let wallpaperShortcutWidthLabel = null;
+    let wallpaperShortcutWidthValue = null;
+    let wallpaperShortcutWidthSlider = null;
+    let wallpaperShortcutsAccordionExpanded = false;
     let wallpaperAppearanceMoreSettingsLink = null;
     let wallpaperAppearanceMoreSettingsText = null;
     let wallpaperSearchWidthSaveTimer = null;
+    let wallpaperShortcutWidthSaveTimer = null;
     let wallpaperOverlayLabel = null;
     let wallpaperOverlaySlider = null;
     let wallpaperEffectLabel = null;
@@ -3252,6 +3298,195 @@
       wallpaperSearchWidthSaveTimer = window.setTimeout(persist, 140);
     }
 
+    function getShortcutWidthMin() {
+      return Number.isFinite(Number(shortcutWidthConfig.min))
+        ? Number(shortcutWidthConfig.min)
+        : 360;
+    }
+
+    function getShortcutWidthMax() {
+      const min = getShortcutWidthMin();
+      const max = Number.isFinite(Number(shortcutWidthConfig.max))
+        ? Number(shortcutWidthConfig.max)
+        : 1440;
+      return Math.max(min + 1, max);
+    }
+
+    function normalizeShortcutWidthValue(value) {
+      const min = getShortcutWidthMin();
+      const max = getShortcutWidthMax();
+      const fallback = Number.isFinite(Number(shortcutWidthConfig.fallback))
+        ? Number(shortcutWidthConfig.fallback)
+        : 920;
+      const number = Number(value);
+      if (!Number.isFinite(number)) {
+        return Math.min(max, Math.max(min, Math.round(fallback)));
+      }
+      return Math.min(max, Math.max(min, Math.round(number)));
+    }
+
+    function getShortcutWidthPercent(value) {
+      const min = getShortcutWidthMin();
+      const max = getShortcutWidthMax();
+      return ((normalizeShortcutWidthValue(value) - min) / (max - min)) * 100;
+    }
+
+    function formatShortcutWidthValue(value) {
+      return `${normalizeShortcutWidthValue(value)} px`;
+    }
+
+    function updateShortcutWidthSliderElement(width) {
+      if (!wallpaperShortcutWidthSlider) {
+        return;
+      }
+      const value = normalizeShortcutWidthValue(width);
+      wallpaperShortcutWidthSlider.min = String(getShortcutWidthMin());
+      wallpaperShortcutWidthSlider.max = String(getShortcutWidthMax());
+      wallpaperShortcutWidthSlider.value = String(value);
+      wallpaperShortcutWidthSlider.style.setProperty(
+        '--x-nt-overlay-slider-percent',
+        `${getShortcutWidthPercent(value)}%`
+      );
+      wallpaperShortcutWidthSlider.setAttribute('aria-valuenow', String(value));
+      wallpaperShortcutWidthSlider.setAttribute('aria-valuetext', formatShortcutWidthValue(value));
+      if (wallpaperShortcutWidthValue) {
+        wallpaperShortcutWidthValue.textContent = formatShortcutWidthValue(value);
+      }
+    }
+
+    function applyWallpaperShortcutsAccordionUi() {
+      const enabled = Boolean(getShortcutsVisible());
+      const expanded = Boolean(wallpaperShortcutsAccordionExpanded && enabled);
+      wallpaperShortcutsAccordionExpanded = expanded;
+      if (wallpaperShortcutsAccordion) {
+        wallpaperShortcutsAccordion.setAttribute('data-expanded', expanded ? 'true' : 'false');
+        wallpaperShortcutsAccordion.setAttribute('data-enabled', enabled ? 'true' : 'false');
+      }
+      if (wallpaperShortcutsAccordionTrigger) {
+        wallpaperShortcutsAccordionTrigger.disabled = !enabled;
+        wallpaperShortcutsAccordionTrigger.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        wallpaperShortcutsAccordionTrigger.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+      }
+      if (wallpaperShortcutsDetails) {
+        wallpaperShortcutsDetails.hidden = !expanded;
+        wallpaperShortcutsDetails.setAttribute('data-visible', expanded ? 'true' : 'false');
+        wallpaperShortcutsDetails.setAttribute('aria-hidden', expanded ? 'false' : 'true');
+      }
+      if (wallpaperShortcutWidthControl) {
+        wallpaperShortcutWidthControl.setAttribute('data-visible', expanded ? 'true' : 'false');
+        wallpaperShortcutWidthControl.setAttribute('aria-hidden', expanded ? 'false' : 'true');
+      }
+      [wallpaperShortcutAddToggle, wallpaperShortcutDockMagnificationToggle].forEach((toggle) => {
+        if (!toggle) {
+          return;
+        }
+        toggle.disabled = !enabled || !expanded;
+        toggle.setAttribute('aria-checked', toggle.checked ? 'true' : 'false');
+      });
+      if (wallpaperShortcutWidthSlider) {
+        wallpaperShortcutWidthSlider.disabled = !enabled || !expanded;
+      }
+    }
+
+    function setWallpaperShortcutsAccordionExpanded(expanded, options) {
+      const nextExpanded = Boolean(expanded && getShortcutsVisible());
+      const changed = wallpaperShortcutsAccordionExpanded !== nextExpanded;
+      wallpaperShortcutsAccordionExpanded = nextExpanded;
+      if (!changed || !options || options.animate === false) {
+        applyWallpaperShortcutsAccordionUi();
+        return;
+      }
+      animateWallpaperPanelResize(() => {
+        applyWallpaperShortcutsAccordionUi();
+      });
+    }
+
+    function updateWallpaperShortcutsUi() {
+      const enabled = Boolean(getShortcutsVisible());
+      if (!enabled) {
+        wallpaperShortcutsAccordionExpanded = false;
+      }
+      if (wallpaperShortcutsTitle) {
+        wallpaperShortcutsTitle.textContent = t('settings_newtab_shortcuts_title', 'Shortcuts');
+      }
+      if (wallpaperShortcutsToggle) {
+        wallpaperShortcutsToggle.checked = enabled;
+        wallpaperShortcutsToggle.setAttribute('aria-label', t(
+          'settings_newtab_shortcuts_title',
+          'Shortcuts'
+        ));
+        wallpaperShortcutsToggle.setAttribute('aria-checked', enabled ? 'true' : 'false');
+      }
+      if (wallpaperShortcutsAccordionTrigger) {
+        wallpaperShortcutsAccordionTrigger.setAttribute('aria-label', t(
+          'settings_newtab_shortcuts_title',
+          'Shortcuts'
+        ));
+      }
+      if (wallpaperShortcutAddTitle) {
+        wallpaperShortcutAddTitle.textContent = t(
+          'settings_newtab_shortcut_add_title',
+          'Show “+”'
+        );
+      }
+      if (wallpaperShortcutAddToggle) {
+        wallpaperShortcutAddToggle.checked = Boolean(getShortcutAddVisible());
+        wallpaperShortcutAddToggle.setAttribute('aria-label', t(
+          'settings_newtab_shortcut_add_title',
+          'Show “+”'
+        ));
+      }
+      if (wallpaperShortcutDockMagnificationTitle) {
+        wallpaperShortcutDockMagnificationTitle.textContent = t(
+          'settings_newtab_shortcut_dock_magnification_title',
+          'macOS Dock-style magnification'
+        );
+      }
+      if (wallpaperShortcutDockMagnificationToggle) {
+        wallpaperShortcutDockMagnificationToggle.checked = Boolean(
+          getShortcutDockMagnificationEnabled()
+        );
+        wallpaperShortcutDockMagnificationToggle.setAttribute('aria-label', t(
+          'settings_newtab_shortcut_dock_magnification_title',
+          'macOS Dock-style magnification'
+        ));
+      }
+      if (wallpaperShortcutWidthLabel || wallpaperShortcutWidthSlider) {
+        const label = t('settings_newtab_shortcut_width_title', 'Shortcut width');
+        if (wallpaperShortcutWidthLabel) {
+          wallpaperShortcutWidthLabel.textContent = label;
+        }
+        if (wallpaperShortcutWidthSlider) {
+          wallpaperShortcutWidthSlider.setAttribute('aria-label', label);
+        }
+      }
+      updateShortcutWidthSliderElement(getShortcutWidth());
+      applyWallpaperShortcutsAccordionUi();
+    }
+
+    function persistShortcutWidthFromSlider(value, options) {
+      const final = Boolean(options && options.final);
+      const width = normalizeShortcutWidthValue(value);
+      if (wallpaperShortcutWidthSlider && wallpaperShortcutWidthSlider.value !== String(width)) {
+        wallpaperShortcutWidthSlider.value = String(width);
+      }
+      setShortcutWidth(width, { persist: false });
+      updateShortcutWidthSliderElement(width);
+      if (wallpaperShortcutWidthSaveTimer !== null) {
+        window.clearTimeout(wallpaperShortcutWidthSaveTimer);
+        wallpaperShortcutWidthSaveTimer = null;
+      }
+      const persist = () => {
+        wallpaperShortcutWidthSaveTimer = null;
+        setShortcutWidth(width, { persist: true });
+      };
+      if (final) {
+        persist();
+        return;
+      }
+      wallpaperShortcutWidthSaveTimer = window.setTimeout(persist, 140);
+    }
+
     function updateWallpaperAppearanceSelectionUi() {
       updateWallpaperAppearanceScopeTabsUi(getThemeScope());
       if (wallpaperAppearanceOptions) {
@@ -3262,6 +3497,7 @@
         });
       }
       updateWallpaperSearchWidthControlUi();
+      updateWallpaperShortcutsUi();
     }
 
     function updateCustomWallpaperUploadTile() {
@@ -4096,6 +4332,7 @@
           typeof wallpaperInputAutoFocusHintController.updateLanguage === 'function') {
         wallpaperInputAutoFocusHintController.updateLanguage();
       }
+      updateWallpaperShortcutsUi();
       if (wallpaperAppearanceScopeTabs) {
         wallpaperAppearanceScopeTabs.setAttribute('aria-label', t('newtab_theme_scope_label', 'Theme scope'));
         wallpaperAppearanceScopeTabs.querySelectorAll('.x-nt-appearance-scope-tab').forEach((button) => {
@@ -4241,7 +4478,7 @@
         return `${chrome.runtime.getURL('src/options/options.html')}#appearance`;
       }
       try {
-        return new URL('../options/options.html#appearance', window.location.href).toString();
+        return new URL('../options/options.html#appearance', document.baseURI || window.location.href).toString();
       } catch (e) {
         return '../options/options.html#appearance';
       }
@@ -4315,6 +4552,18 @@
           max: getSearchWidthMax(),
           ticks: searchWidthTicks
         },
+        shortcutWidth: {
+          defaultValue: normalizeShortcutWidthValue(getShortcutWidth()),
+          min: getShortcutWidthMin(),
+          max: getShortcutWidthMax(),
+          ticks: [
+            { align: 'start', label: String(getShortcutWidthMin()) },
+            {
+              label: String(Math.round((getShortcutWidthMin() + getShortcutWidthMax()) / 2))
+            },
+            { align: 'end', label: String(getShortcutWidthMax()) }
+          ]
+        },
         wallpapers: NEWTAB_WALLPAPER_OPTIONS.map((item) => ({
           id: item.id,
           path: getWallpaperLocalPath(item),
@@ -4355,6 +4604,19 @@
       wallpaperInputAutoFocusTitle = refs.inputAutoFocusTitle;
       wallpaperInputAutoFocusInfoButton = refs.inputAutoFocusInfoButton;
       wallpaperInputAutoFocusToggle = refs.inputAutoFocusToggle;
+      wallpaperShortcutsAccordion = refs.shortcutsAccordion;
+      wallpaperShortcutsAccordionTrigger = refs.shortcutsAccordionTrigger;
+      wallpaperShortcutsTitle = refs.shortcutsTitle;
+      wallpaperShortcutsDetails = refs.shortcutsDetails;
+      wallpaperShortcutsToggle = refs.shortcutsToggle;
+      wallpaperShortcutAddTitle = refs.shortcutAddTitle;
+      wallpaperShortcutAddToggle = refs.shortcutAddToggle;
+      wallpaperShortcutDockMagnificationTitle = refs.shortcutDockMagnificationTitle;
+      wallpaperShortcutDockMagnificationToggle = refs.shortcutDockMagnificationToggle;
+      wallpaperShortcutWidthControl = refs.shortcutWidthControl;
+      wallpaperShortcutWidthLabel = refs.shortcutWidthLabel;
+      wallpaperShortcutWidthValue = refs.shortcutWidthValue;
+      wallpaperShortcutWidthSlider = refs.shortcutWidthSlider;
       wallpaperAppearanceMoreSettingsLink = refs.moreSettingsLink;
       wallpaperAppearanceMoreSettingsText = refs.moreSettingsText;
       wallpaperOverlayLabel = refs.overlayLabel;
@@ -4491,6 +4753,47 @@
           updateInputAutoFocusUi();
         });
       }
+      if (wallpaperShortcutsAccordionTrigger) {
+        wallpaperShortcutsAccordionTrigger.addEventListener('click', () => {
+          if (!getShortcutsVisible()) {
+            return;
+          }
+          setWallpaperShortcutsAccordionExpanded(
+            !wallpaperShortcutsAccordionExpanded,
+            { animate: true }
+          );
+        });
+      }
+      if (wallpaperShortcutsToggle) {
+        wallpaperShortcutsToggle.addEventListener('change', () => {
+          setShortcutsVisible(wallpaperShortcutsToggle.checked, { persist: true });
+          updateWallpaperShortcutsUi();
+        });
+      }
+      if (wallpaperShortcutAddToggle) {
+        wallpaperShortcutAddToggle.addEventListener('change', () => {
+          setShortcutAddVisible(wallpaperShortcutAddToggle.checked, { persist: true });
+          updateWallpaperShortcutsUi();
+        });
+      }
+      if (wallpaperShortcutDockMagnificationToggle) {
+        wallpaperShortcutDockMagnificationToggle.addEventListener('change', () => {
+          setShortcutDockMagnificationEnabled(
+            wallpaperShortcutDockMagnificationToggle.checked,
+            { persist: true }
+          );
+          updateWallpaperShortcutsUi();
+        });
+      }
+      if (wallpaperShortcutWidthSlider) {
+        wallpaperShortcutWidthSlider.addEventListener('input', () => {
+          persistShortcutWidthFromSlider(wallpaperShortcutWidthSlider.value, { final: false });
+        });
+        wallpaperShortcutWidthSlider.addEventListener('change', () => {
+          persistShortcutWidthFromSlider(wallpaperShortcutWidthSlider.value, { final: true });
+        });
+        bindWallpaperSliderValueBubble(wallpaperShortcutWidthSlider);
+      }
       wallpaperEnabledToggle.addEventListener('change', () => {
         persistWallpaperEnabled(wallpaperEnabledToggle.checked);
       });
@@ -4599,6 +4902,7 @@
       updateWallpaperModeControlsUi({ animate: false });
       updateWallpaperAppearanceSelectionUi();
       updateInputAutoFocusUi();
+      updateWallpaperShortcutsUi();
       updateNewtabFaviconSelectionUi();
     }
 
@@ -4798,6 +5102,7 @@
       updateLanguageStrings: updateWallpaperLanguageStrings,
       updateAppearanceSelectionUi: updateWallpaperAppearanceSelectionUi,
       updateSearchWidthUi: updateWallpaperSearchWidthControlUi,
+      updateShortcutsUi: updateWallpaperShortcutsUi,
       updateInputAutoFocusUi,
       updateTopContentModeUi,
       updateTimeFontWeightUi,

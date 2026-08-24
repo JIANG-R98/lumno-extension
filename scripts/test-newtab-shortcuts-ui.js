@@ -5,7 +5,7 @@ const vm = require('vm');
 
 const repoRoot = path.resolve(__dirname, '..');
 const newtabJs = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8');
-const newtabHtml = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.html'), 'utf8');
+const newtabHtml = fs.readFileSync(path.join(repoRoot, 'newtab.html'), 'utf8');
 const pageStructureReact = fs.readFileSync(
   path.join(repoRoot, 'react-src/newtab/page-structure.tsx'),
   'utf8'
@@ -22,6 +22,11 @@ const shortcutDialogCss = fs.readFileSync(path.join(repoRoot, 'src/newtab/shortc
 const wallpaperAdaptiveToneJs = fs.readFileSync(path.join(repoRoot, 'src/newtab/wallpaper-adaptive-tone.js'), 'utf8');
 const tooltipJs = fs.readFileSync(path.join(repoRoot, 'src/shared/tooltip.js'), 'utf8');
 const optionsHtml = fs.readFileSync(path.join(repoRoot, 'src/options/options.html'), 'utf8');
+const wallpaperSource = fs.readFileSync(path.join(repoRoot, 'src/newtab/wallpaper.js'), 'utf8');
+const wallpaperViewSource = fs.readFileSync(
+  path.join(repoRoot, 'react-src/newtab/wallpaper-view.tsx'),
+  'utf8'
+);
 const locales = ['zh_CN', 'zh_TW', 'en', 'ja'].map((locale) => ({
   locale,
   messages: JSON.parse(fs.readFileSync(path.join(repoRoot, `_locales/${locale}/messages.json`), 'utf8'))
@@ -723,39 +728,81 @@ assertContains(
 );
 
 assertContains(
+  wallpaperViewSource,
+  'name="shortcutsToggle"',
+  'New Tab appearance should include a shortcuts visibility toggle'
+);
+
+assertContains(
+  wallpaperViewSource,
+  "ref('shortcutsAccordionTrigger')",
+  'New Tab shortcuts should expose an accordion trigger'
+);
+
+assertContains(
+  wallpaperViewSource,
+  'aria-expanded="false"',
+  'New Tab shortcuts accordion should start collapsed'
+);
+
+assertContains(
+  wallpaperViewSource,
+  "ref('shortcutsDetails')",
+  'New Tab shortcuts should expose an accordion details region'
+);
+
+assertContains(
+  wallpaperViewSource,
+  'role="region"',
+  'New Tab shortcuts accordion details should be announced as a region'
+);
+
+assertContains(
+  wallpaperViewSource,
+  'name="shortcutAddToggle"',
+  'New Tab shortcuts should include the nested add shortcut visibility toggle'
+);
+
+assertContains(
+  wallpaperViewSource,
+  'name="shortcutDockMagnificationToggle"',
+  'New Tab shortcuts should include the nested Dock magnification toggle'
+);
+
+assertContains(
+  wallpaperViewSource,
+  'data-value-suffix=" px"',
+  'shortcut width slider should reserve px for the current value output'
+);
+
+assertContains(
+  wallpaperViewSource,
+  'inputClass="x-nt-overlay-slider x-nt-shortcut-width-slider"',
+  'New Tab shortcuts should render their own width slider'
+);
+
+assertContains(
+  wallpaperSource,
+  'function updateWallpaperShortcutsUi()',
+  'wallpaper runtime should centralize shortcut appearance control updates'
+);
+
+assertContains(
+  wallpaperSource,
+  'function setWallpaperShortcutsAccordionExpanded',
+  'wallpaper runtime should own shortcut accordion expansion state'
+);
+
+assertContains(
+  wallpaperSource,
+  'wallpaperShortcutsAccordionTrigger.disabled = !enabled',
+  'shortcut accordion should be disabled when shortcuts are turned off'
+);
+
+assertNotContains(
   optionsHtml,
   '_x_extension_newtab_shortcuts_toggle_2026_unique_',
-  'appearance settings should include a New Tab shortcuts visibility toggle'
-);
-
-assertContains(
-  optionsHtml,
-  'data-i18n="settings_newtab_shortcuts_title"',
-  'appearance settings should label the New Tab shortcuts visibility toggle'
-);
-
-assertContains(
-  optionsHtml,
-  '_x_extension_newtab_shortcut_add_toggle_2026_unique_',
-  'appearance settings should include a nested add shortcut visibility toggle'
-);
-
-assertContains(
-  optionsHtml,
-  'data-i18n="settings_newtab_shortcut_add_title"',
-  'appearance settings should label the nested add shortcut visibility toggle'
-);
-
-assertContains(
-  optionsHtml,
-  '_x_extension_newtab_shortcut_dock_magnification_toggle_2026_unique_',
-  'appearance settings should include a nested shortcut Dock magnification toggle'
-);
-
-assertContains(
-  optionsHtml,
-  'data-i18n="settings_newtab_shortcut_dock_magnification_title"',
-  'appearance settings should label the nested shortcut Dock magnification toggle'
+  'legacy Options page should no longer render the New Tab shortcuts controls'
 );
 
 assertContains(
@@ -2190,6 +2237,18 @@ assertContains(
 );
 
 assertContains(
+  getFunctionSource(newtabJs, 'getShortcutContextMenuOptions'),
+  "label: t('newtab_open_in_new_tab', 'Open in new tab')",
+  'shortcut context menu should put Open in new tab first'
+);
+
+assertContains(
+  getFunctionSource(newtabJs, 'getShortcutContextMenuOptions'),
+  'dividerBefore: true',
+  'shortcut context menu should separate opening from Edit and Remove'
+);
+
+assertContains(
   newtabJs,
   "label: t('shortcuts_remove', 'Remove')",
   'shortcut context menu should include a Remove action'
@@ -2546,6 +2605,7 @@ assertContains(
   'newtab_shortcuts_removed',
   'newtab_shortcuts_edit_dialog_title',
   'newtab_shortcuts_context_menu_label',
+  'newtab_open_in_new_tab',
   'settings_newtab_shortcuts_title',
   'settings_newtab_shortcut_add_title',
   'settings_newtab_shortcut_dock_magnification_title',

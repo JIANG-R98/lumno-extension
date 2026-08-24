@@ -5,7 +5,7 @@ delete globalThis.LumnoSuggestionsHeightLayout;
 require('../src/shared/suggestions-height-layout.js');
 
 const runtime = globalThis.LumnoSuggestionsHeightLayout;
-const newtabHtml = fs.readFileSync('src/newtab/newtab.html', 'utf8');
+const newtabHtml = fs.readFileSync('newtab.html', 'utf8');
 const newtabLayoutSource = fs.readFileSync('src/newtab/layout.js', 'utf8');
 const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
 const backgroundSource = fs.readFileSync('src/background/background.js', 'utf8');

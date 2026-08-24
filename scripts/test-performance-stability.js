@@ -9,7 +9,7 @@ const newtabWallpaperJs = fs.readFileSync(
   path.join(repoRoot, 'src/newtab/wallpaper.js'),
   'utf8'
 );
-const newtabHtml = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.html'), 'utf8');
+const newtabHtml = fs.readFileSync(path.join(repoRoot, 'newtab.html'), 'utf8');
 const overlaySearchPanelJs = fs.readFileSync(
   path.join(repoRoot, 'src/overlay/search-panel.js'),
   'utf8'
@@ -19,7 +19,7 @@ const overlaySuggestionsCss = fs.readFileSync(
   'utf8'
 );
 const htmlFiles = [
-  'src/newtab/newtab.html',
+  'newtab.html',
   'src/options/options.html',
   'src/onboarding/onboarding.html'
 ];

@@ -14,7 +14,8 @@ const zipPath = path.join(distDir, `lumno-store-v${version}.zip`);
 const packageRoots = [
   'src',
   '_locales',
-  'assets'
+  'assets',
+  'newtab.html'
 ];
 const developmentOnlyFiles = new Set([
   'src/background/codex-debug-bridge.js',
@@ -129,6 +130,7 @@ function collectHtmlFiles(dir) {
   });
 }
 collectHtmlFiles(stagedPath('src'));
+stagedHtmlFiles.push(stagedPath('newtab.html'));
 
 let debugSurfaceScriptCount = 0;
 stagedHtmlFiles.forEach((file) => {
@@ -390,20 +392,29 @@ function checkRuntimeGetUrlReferences() {
 }
 
 function checkHtmlReferences() {
-  const files = listHtmlFiles(stagedPath('src'));
+  const files = stagedHtmlFiles;
   const referencePattern = /\b(?:src|href)=["']([^"']+)["']/g;
   files.forEach((file) => {
     const source = fs.readFileSync(file, 'utf8');
     const packageFile = packagePathForFile(file);
-    checkCssUrlReferences(packageFile, source);
+    const baseMatch = source.match(/<base\s+[^>]*href=["']([^"']+)["']/i);
+    const baseHref = baseMatch ? baseMatch[1] : '';
+    const referenceBase = baseHref
+      ? path.normalize(path.join(path.dirname(packageFile), baseHref))
+      : path.dirname(packageFile);
+    const referenceFile = path.join(referenceBase, path.basename(packageFile));
+    checkCssUrlReferences(referenceFile, source);
     let match = null;
     while ((match = referencePattern.exec(source))) {
       const value = match[1];
       if (!value || /^(https?:|data:|mailto:|tel:|#|__MSG_)/.test(value)) {
         continue;
       }
+      if (baseHref && value === baseHref) {
+        continue;
+      }
       const cleanValue = value.split(/[?#]/)[0];
-      const resolved = path.normalize(path.join(path.dirname(packageFile), cleanValue));
+      const resolved = path.normalize(path.join(referenceBase, cleanValue));
       checkManifestPath(resolved);
     }
   });

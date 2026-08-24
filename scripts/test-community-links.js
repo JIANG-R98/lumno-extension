@@ -148,7 +148,7 @@ const communityLinks = require('../src/shared/community-links.js');
   );
 
   const newtabSource = fs.readFileSync('src/newtab/newtab.js', 'utf8');
-  const newtabHtml = fs.readFileSync('src/newtab/newtab.html', 'utf8');
+  const newtabHtml = fs.readFileSync('newtab.html', 'utf8');
   const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
   const optionsHtml = fs.readFileSync('src/options/options.html', 'utf8');
   const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');

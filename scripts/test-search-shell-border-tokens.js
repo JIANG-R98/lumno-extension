@@ -8,7 +8,7 @@ const sharedSearchInputCss = fs.readFileSync(
   'utf8'
 );
 const newtabHtml = fs.readFileSync(
-  path.join(repoRoot, 'src/newtab/newtab.html'),
+  path.join(repoRoot, 'newtab.html'),
   'utf8'
 );
 const customSelectCss = fs.readFileSync(

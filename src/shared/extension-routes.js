@@ -6,7 +6,8 @@
   root.LumnoExtensionRoutes = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function() {
   const ROUTE_PATHS = Object.freeze({
-    newtab: 'src/newtab/newtab.html',
+    newtab: 'newtab.html',
+    legacyNewtab: 'src/newtab/newtab.html',
     lumnoNewtab: 'src/newtab/lumno-newtab.html',
     onboarding: 'src/onboarding/onboarding.html',
     options: 'src/options/options.html',
@@ -97,6 +98,7 @@
   function isNewtabUrl(url) {
     const pathname = getPathname(url);
     return pathMatchesRoute(pathname, ROUTE_PATHS.newtab) ||
+      pathMatchesRoute(pathname, ROUTE_PATHS.legacyNewtab) ||
       pathMatchesRoute(pathname, ROUTE_PATHS.lumnoNewtab);
   }
 

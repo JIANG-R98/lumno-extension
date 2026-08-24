@@ -9,7 +9,7 @@ const overlaySource = readSource('src/overlay/search-panel.js');
 const backgroundSource = readSource('src/background/background.js');
 const inputModeSource = readSource('src/shared/search-input-mode.js');
 const inputModeCss = readSource('src/shared/search-input.css');
-const newtabHtml = readSource('src/newtab/newtab.html');
+const newtabHtml = readSource('newtab.html');
 const manifestSource = readSource('manifest.json');
 const overlaySuggestionsCss = readSource('src/overlay/suggestions-view.css');
 

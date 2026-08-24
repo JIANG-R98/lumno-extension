@@ -7,7 +7,7 @@ require('../src/newtab/layout.js');
 
 const layoutRuntime = globalThis.LumnoNewtabLayout;
 const repoRoot = path.resolve(__dirname, '..');
-const newtabHtml = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.html'), 'utf8');
+const newtabHtml = fs.readFileSync(path.join(repoRoot, 'newtab.html'), 'utf8');
 const newtabSource = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8');
 const wallpaperSource = fs.readFileSync(path.join(repoRoot, 'src/newtab/wallpaper.js'), 'utf8');
 const newtabRedirectSource = fs.readFileSync(
@@ -32,8 +32,13 @@ function testNewtabRedirectFocusHintIsConsumedOnce() {
   );
   assert.match(
     recoverySource,
-    /let forceInitialFocusPending = hasExplicitFocusHint;[\s\S]*?const focused = tryFocusSearchInput\(forceInitialFocusPending\);[\s\S]*?if \(focused\) \{\s*forceInitialFocusPending = false;/,
+    /let forceInitialFocusPending = hasExplicitFocusHint;[\s\S]*?const focused = tryFocusSearchInput\(forceInitialFocusPending\);[\s\S]*?if \(focused\) \{[\s\S]*?forceInitialFocusPending = false;/,
     'the explicit New Tab focus hint should be consumed after the first successful input focus'
+  );
+  assert.match(
+    recoverySource,
+    /url\.searchParams\.delete\('focus'\);[\s\S]*?window\.history\.replaceState\([\s\S]*?if \(consumedExplicitFocusHint\) \{\s*clearExplicitFocusQuery\(\);/,
+    'the consumed focus hint should be removed without a second navigation'
   );
   assert.doesNotMatch(
     recoverySource,

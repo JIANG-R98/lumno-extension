@@ -4,14 +4,23 @@ const path = require('path');
 const vm = require('vm');
 
 const repoRoot = path.resolve(__dirname, '..');
-const html = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.html'), 'utf8');
+const html = fs.readFileSync(path.join(repoRoot, 'newtab.html'), 'utf8');
 const sourcePath = path.join(repoRoot, 'src/newtab/newtab-focus-entry.js');
 const source = fs.existsSync(sourcePath) ? fs.readFileSync(sourcePath, 'utf8') : '';
 const backgroundSource = fs.readFileSync(
   path.join(repoRoot, 'src/background/background.js'),
   'utf8'
 );
+const legacyHtml = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.html'), 'utf8');
+const legacyRedirectSourcePath = path.join(repoRoot, 'src/newtab/newtab-route-redirect.js');
+const legacyRedirectSource = fs.readFileSync(legacyRedirectSourcePath, 'utf8');
 const storageKey = '_x_extension_newtab_input_auto_focus_enabled_2026_unique_';
+
+assert.match(
+  html,
+  /<base href="src\/newtab\/" \/>/,
+  'the short root entry should retain the existing New Tab resource base'
+);
 
 assert.match(
   html,
@@ -48,7 +57,7 @@ function runEntry({ storedValue, search = '', storageAvailable = true }) {
   const replacedUrls = [];
   const attributes = new Set();
   let storageReads = 0;
-  const href = `chrome-extension://abc/src/newtab/newtab.html${search}`;
+  const href = `chrome-extension://abc/newtab.html${search}`;
   const location = {
     href,
     search,
@@ -115,7 +124,7 @@ function runEntry({ storedValue, search = '', storageAvailable = true }) {
   const result = runEntry({ storedValue: true });
   assert.deepStrictEqual(
     result.replacedUrls,
-    ['chrome-extension://abc/src/newtab/newtab.html?focus=1'],
+    ['chrome-extension://abc/newtab.html?focus=1'],
     'an existing enabled preference should retain the renderer-navigation focus handoff'
   );
   assert.strictEqual(result.storageReads, 1);
@@ -136,6 +145,33 @@ function runEntry({ storedValue, search = '', storageAvailable = true }) {
   const result = runEntry({ storageAvailable: false });
   assert.deepStrictEqual(result.replacedUrls, [], 'storage failures should preserve the disabled default');
   assert.strictEqual(result.attributes.has('data-nt-focus-route-pending'), false);
+}
+
+assert.match(
+  legacyHtml,
+  /<script src="newtab-route-redirect\.js"><\/script>/,
+  'the previous New Tab path should remain as a compatibility redirect'
+);
+{
+  const replacedUrls = [];
+  vm.runInNewContext(legacyRedirectSource, {
+    URL,
+    window: {
+      location: {
+        href: 'chrome-extension://abc/src/newtab/newtab.html?focus=1&notice=file-access#search',
+        search: '?focus=1&notice=file-access',
+        hash: '#search',
+        replace(url) {
+          replacedUrls.push(url);
+        }
+      }
+    }
+  }, { filename: legacyRedirectSourcePath });
+  assert.deepStrictEqual(
+    replacedUrls,
+    ['chrome-extension://abc/newtab.html?focus=1&notice=file-access#search'],
+    'the compatibility redirect should preserve query and hash on the short route'
+  );
 }
 
 const openNewTabBlock = backgroundSource.match(/case 'openNewTab': \{([\s\S]*?)\n    \}/);

@@ -19,7 +19,7 @@ assert.strictEqual(settings.addStorageChangeListener({
   storage: { onChanged: { addListener() {} } }
 }, null), false);
 
-assert.strictEqual(settings.CHROME_SYNC_STORAGE_KEYS.length, 57);
+assert.strictEqual(settings.CHROME_SYNC_STORAGE_KEYS.length, 58);
 assert.strictEqual(
   new Set(settings.CHROME_SYNC_STORAGE_KEYS).size,
   settings.CHROME_SYNC_STORAGE_KEYS.length
@@ -140,6 +140,18 @@ assert.strictEqual(
   settings.NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY,
   '_x_extension_newtab_shortcut_dock_magnification_enabled_2026_unique_'
 );
+assert.strictEqual(
+  settings.NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY,
+  '_x_extension_newtab_shortcut_width_2026_unique_'
+);
+assert.strictEqual(settings.NEWTAB_SHORTCUT_WIDTH_MIN, 360);
+assert.strictEqual(settings.NEWTAB_SHORTCUT_WIDTH_MAX, 1440);
+assert.strictEqual(settings.NEWTAB_SHORTCUT_WIDTH_DEFAULT, 920);
+assert.strictEqual(settings.normalizeNewtabShortcutWidth(undefined), 920);
+assert.strictEqual(settings.normalizeNewtabShortcutWidth(359), 360);
+assert.strictEqual(settings.normalizeNewtabShortcutWidth(920), 920);
+assert.strictEqual(settings.normalizeNewtabShortcutWidth(1441), 1440);
+assert.strictEqual(settings.normalizeNewtabShortcutWidth(720.5), 721);
 
 assert.strictEqual(settings.normalizeBookmarkFolderIconsVisible(false), false);
 assert.strictEqual(settings.normalizeBookmarkFolderIconsVisible(true), true);

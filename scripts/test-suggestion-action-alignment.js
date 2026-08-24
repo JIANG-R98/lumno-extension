@@ -4,7 +4,7 @@ const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..');
 const newtabHtml = fs.readFileSync(
-  path.join(repoRoot, 'src/newtab/newtab.html'),
+  path.join(repoRoot, 'newtab.html'),
   'utf8'
 );
 const overlayCss = fs.readFileSync(

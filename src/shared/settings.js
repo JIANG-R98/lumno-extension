@@ -13,6 +13,10 @@
   const NEWTAB_SHORTCUTS_CHUNK_3_STORAGE_KEY = '_x_extension_newtab_shortcuts_chunk_3_2026_unique_';
   const NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY = '_x_extension_newtab_shortcut_add_visible_2026_unique_';
   const NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY = '_x_extension_newtab_shortcut_dock_magnification_enabled_2026_unique_';
+  const NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY = '_x_extension_newtab_shortcut_width_2026_unique_';
+  const NEWTAB_SHORTCUT_WIDTH_MIN = 360;
+  const NEWTAB_SHORTCUT_WIDTH_MAX = 1440;
+  const NEWTAB_SHORTCUT_WIDTH_DEFAULT = 920;
   const NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY = '_x_extension_newtab_input_auto_focus_enabled_2026_unique_';
   const BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY = '_x_extension_bookmark_folder_icons_visible_2026_unique_';
   const UPDATE_NOTICE_ENABLED_STORAGE_KEY = '_x_extension_update_notice_enabled_2026_unique_';
@@ -68,6 +72,7 @@
     '_x_extension_newtab_shortcuts_visible_2026_unique_',
     '_x_extension_newtab_shortcut_add_visible_2026_unique_',
     '_x_extension_newtab_shortcut_dock_magnification_enabled_2026_unique_',
+    NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY,
     '_x_extension_update_notice_enabled_2026_unique_',
     '_x_extension_motion_effects_enabled_2026_unique_',
     '_x_extension_simple_mode_enabled_2026_unique_',
@@ -208,6 +213,20 @@
 
   function normalizeNewtabShortcutDockMagnificationEnabled(value) {
     return value !== false;
+  }
+
+  function normalizeNewtabShortcutWidth(value, options) {
+    const config = options || {};
+    const min = Number.isFinite(Number(config.min)) ? Number(config.min) : NEWTAB_SHORTCUT_WIDTH_MIN;
+    const max = Number.isFinite(Number(config.max)) ? Number(config.max) : NEWTAB_SHORTCUT_WIDTH_MAX;
+    const fallback = Number.isFinite(Number(config.fallback))
+      ? Number(config.fallback)
+      : NEWTAB_SHORTCUT_WIDTH_DEFAULT;
+    const number = Number(value);
+    if (!Number.isFinite(number)) {
+      return Math.min(max, Math.max(min, Math.round(fallback)));
+    }
+    return Math.min(max, Math.max(min, Math.round(number)));
   }
 
   function normalizeNewtabInputAutoFocusEnabled(value) {
@@ -611,6 +630,10 @@
     NEWTAB_SHORTCUTS_CHUNK_3_STORAGE_KEY,
     NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY,
     NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY,
+    NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY,
+    NEWTAB_SHORTCUT_WIDTH_MIN,
+    NEWTAB_SHORTCUT_WIDTH_MAX,
+    NEWTAB_SHORTCUT_WIDTH_DEFAULT,
     NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY,
     BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY,
     UPDATE_NOTICE_ENABLED_STORAGE_KEY,
@@ -649,6 +672,7 @@
     normalizeNewtabShortcutsVisible,
     normalizeNewtabShortcutAddVisible,
     normalizeNewtabShortcutDockMagnificationEnabled,
+    normalizeNewtabShortcutWidth,
     normalizeNewtabInputAutoFocusEnabled,
     normalizeBookmarkCount,
     normalizeBookmarkColumns,

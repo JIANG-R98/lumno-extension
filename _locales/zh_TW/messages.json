@@ -565,6 +565,9 @@
   "settings_newtab_shortcut_dock_magnification_title": {
     "message": "仿 macOS Dock 程式塢縮放效果"
   },
+  "settings_newtab_shortcut_width_title": {
+    "message": "捷徑寬度"
+  },
   "settings_wallpaper_title": {
     "message": "新分頁壁紙"
   },
@@ -1314,6 +1317,9 @@
   },
   "bookmarks_open_in_new_tab_group": {
     "message": "在新分頁群組中開啟"
+  },
+  "newtab_open_in_new_tab": {
+    "message": "在新分頁開啟"
   },
   "bookmarks_open_group_confirm_title": {
     "message": "開啟 {count} 個分頁？"

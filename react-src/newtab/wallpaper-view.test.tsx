@@ -44,6 +44,16 @@ describe('New Tab React wallpaper view', () => {
             max: 1040,
             ticks: []
           },
+          shortcutWidth: {
+            defaultValue: 920,
+            min: 360,
+            max: 1440,
+            ticks: [
+              { align: 'start', label: '360' },
+              { label: '900' },
+              { align: 'end', label: '1440' }
+            ]
+          },
           topContentOptions: [
             { value: 'brand', label: 'Brand' },
             { value: 'time', label: 'Time' },
@@ -96,6 +106,49 @@ describe('New Tab React wallpaper view', () => {
     const inputAutoFocusInfoButton = controller.getRefs().inputAutoFocusInfoButton;
     expect(inputAutoFocusInfoButton?.classList.contains('x-nt-appearance-info-button')).toBe(true);
     expect(inputAutoFocusInfoButton?.querySelector('.ri-information-line')).not.toBeNull();
+  });
+
+  it('renders the shortcuts accordion collapsed with a unitless scale', () => {
+    act(() => {
+      controller = createWallpaperViewController({
+        documentObj: document,
+        model: {
+          appearanceOptions: [],
+          effectTypes: [],
+          favicons: [],
+          icons: { arrow: '<i class="ri-arrow-right-s-line"></i>' },
+          searchWidth: { min: 720, max: 1040, ticks: [] },
+          shortcutWidth: {
+            defaultValue: 920,
+            min: 360,
+            max: 1440,
+            ticks: [
+              { align: 'start', label: '360' },
+              { label: '900' },
+              { align: 'end', label: '1440' }
+            ]
+          },
+          wallpapers: []
+        }
+      });
+    });
+    if (!controller) {
+      throw new Error('Expected wallpaper view controller');
+    }
+    const refs = controller.getRefs();
+    const trigger = refs.shortcutsAccordionTrigger as HTMLButtonElement;
+    const details = refs.shortcutsDetails as HTMLDivElement;
+    const slider = refs.shortcutWidthSlider as HTMLInputElement;
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    expect(trigger.getAttribute('aria-controls')).toBe(
+      '_x_extension_newtab_shortcuts_settings_2026_unique_'
+    );
+    expect(details.getAttribute('role')).toBe('region');
+    expect(details.hidden).toBe(true);
+    expect(slider.getAttribute('data-value-suffix')).toBe(' px');
+    expect(Array.from(details.querySelectorAll('.x-nt-shortcut-width-scale .x-nt-overlay-tick')).map(
+      (tick) => tick.textContent
+    )).toEqual(['360', '900', '1440']);
   });
 
   it('updates custom wallpaper tiles without replacing the panel', () => {

@@ -11,7 +11,7 @@ assert.strictEqual(
 );
 
 const onboardingUrl = 'chrome-extension://abc/src/onboarding/onboarding.html?entry=ext';
-const newtabUrl = 'chrome-extension://abc/src/newtab/newtab.html?focus=1';
+const newtabUrl = 'chrome-extension://abc/newtab.html?focus=1';
 const pageUrl = 'https://example.com/';
 
 function optionsFor(url) {

@@ -11,13 +11,13 @@ const chromeApi = {
 
 assert.strictEqual(
   routes.buildNewtabUrl(chromeApi, { focus: true }),
-  'chrome-extension://abc/src/newtab/newtab.html?focus=1',
+  'chrome-extension://abc/newtab.html?focus=1',
   'focused newtab URL should use the extension route'
 );
 
 assert.strictEqual(
   routes.buildNewtabUrl(chromeApi, { focus: true, notice: 'file-access' }),
-  'chrome-extension://abc/src/newtab/newtab.html?focus=1&notice=file-access',
+  'chrome-extension://abc/newtab.html?focus=1&notice=file-access',
   'newtab URL should preserve focus and notice params'
 );
 
@@ -40,9 +40,15 @@ assert.strictEqual(
 );
 
 assert.strictEqual(
-  routes.classifyExtensionUrl('chrome-extension://abc/src/newtab/newtab.html?focus=1'),
+  routes.classifyExtensionUrl('chrome-extension://abc/newtab.html?focus=1'),
   'newtab',
   'newtab URLs should be classified'
+);
+
+assert.strictEqual(
+  routes.classifyExtensionUrl('chrome-extension://abc/src/newtab/newtab.html?focus=1'),
+  'newtab',
+  'the previous newtab URL should remain classified during compatibility redirects'
 );
 
 assert.strictEqual(
@@ -71,6 +77,10 @@ assert.strictEqual(
 
 const repoRoot = path.resolve(__dirname, '..');
 const manifest = require('../manifest.json');
+assert.ok(
+  fs.existsSync(path.join(repoRoot, routes.ROUTE_PATHS.newtab)),
+  'the short maintained New Tab HTML should exist'
+);
 assert.strictEqual(
   manifest.chrome_url_overrides.newtab,
   routes.ROUTE_PATHS.newtab,

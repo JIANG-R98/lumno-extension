@@ -85,7 +85,8 @@
     if (chrome && chrome.runtime && typeof chrome.runtime.getURL === 'function') {
       return chrome.runtime.getURL(normalizedPath);
     }
-    return new URL(`../../${normalizedPath}`, window.location.href).href;
+    const baseUrl = document.baseURI || window.location.href;
+    return new URL(`../../${normalizedPath}`, baseUrl).href;
   }
   function sendRuntimeMessage(message, callback) {
     if (typeof chrome === 'undefined' ||
@@ -383,6 +384,17 @@
   const NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY = '_x_extension_newtab_shortcuts_visible_2026_unique_';
   const NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY = '_x_extension_newtab_shortcut_add_visible_2026_unique_';
   const NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY = '_x_extension_newtab_shortcut_dock_magnification_enabled_2026_unique_';
+  const NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY = SETTINGS.NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY ||
+    '_x_extension_newtab_shortcut_width_2026_unique_';
+  const NEWTAB_SHORTCUT_WIDTH_MIN = Number.isFinite(Number(SETTINGS.NEWTAB_SHORTCUT_WIDTH_MIN))
+    ? Number(SETTINGS.NEWTAB_SHORTCUT_WIDTH_MIN)
+    : 360;
+  const NEWTAB_SHORTCUT_WIDTH_MAX = Number.isFinite(Number(SETTINGS.NEWTAB_SHORTCUT_WIDTH_MAX))
+    ? Number(SETTINGS.NEWTAB_SHORTCUT_WIDTH_MAX)
+    : 1440;
+  const NEWTAB_SHORTCUT_WIDTH_DEFAULT = Number.isFinite(Number(SETTINGS.NEWTAB_SHORTCUT_WIDTH_DEFAULT))
+    ? Number(SETTINGS.NEWTAB_SHORTCUT_WIDTH_DEFAULT)
+    : 920;
   const NEWTAB_SHORTCUT_ICONS_STORAGE_KEY =
     NEWTAB_SHORTCUT_ICON_STORE.DEFAULT_STORAGE_KEY ||
     '_x_extension_newtab_shortcut_icons_2026_unique_';
@@ -587,6 +599,7 @@
   let newtabShortcutsVisible = true;
   let newtabShortcutAddVisible = true;
   let newtabShortcutDockMagnificationEnabled = true;
+  let newtabShortcutWidth = NEWTAB_SHORTCUT_WIDTH_DEFAULT;
   let shortcutStorageReloadTimer = null;
   let shortcutPersistenceInFlightCount = 0;
   let shortcutDockPointerFrame = 0;
@@ -597,6 +610,7 @@
   const SHORTCUT_DIALOG_MODE_EDIT = NEWTAB_SHORTCUT_DIALOG.MODE_EDIT || 'edit';
   const SHORTCUT_DIALOG_ITEM_BOOKMARK = 'bookmark';
   const SHORTCUT_DIALOG_ITEM_FOLDER = 'folder';
+  const NEWTAB_CONTEXT_MENU_OPEN_VALUE = 'open-in-new-tab';
   const SHORTCUT_CONTEXT_MENU_EDIT_VALUE = 'edit';
   const SHORTCUT_CONTEXT_MENU_REMOVE_VALUE = 'remove';
   const SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE = 'hide-add';
@@ -1356,6 +1370,24 @@
       : value !== false;
   }
 
+  function normalizeNewtabShortcutWidth(value) {
+    if (typeof SETTINGS.normalizeNewtabShortcutWidth === 'function') {
+      return SETTINGS.normalizeNewtabShortcutWidth(value, {
+        min: NEWTAB_SHORTCUT_WIDTH_MIN,
+        max: NEWTAB_SHORTCUT_WIDTH_MAX,
+        fallback: NEWTAB_SHORTCUT_WIDTH_DEFAULT
+      });
+    }
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return Math.min(
+        NEWTAB_SHORTCUT_WIDTH_MAX,
+        Math.max(NEWTAB_SHORTCUT_WIDTH_MIN, Math.round(parsed))
+      );
+    }
+    return NEWTAB_SHORTCUT_WIDTH_DEFAULT;
+  }
+
   function normalizeNewtabInputAutoFocusEnabled(value) {
     return typeof SETTINGS.normalizeNewtabInputAutoFocusEnabled === 'function'
       ? SETTINGS.normalizeNewtabInputAutoFocusEnabled(value)
@@ -1374,6 +1406,66 @@
     updateNewtabInputAutoFocusUi();
     if (storageArea) {
       storageArea.set({ [NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY]: nextValue });
+    }
+    return nextValue;
+  }
+
+  function updateNewtabShortcutPreferencesUi() {
+    if (wallpaperRuntime && typeof wallpaperRuntime.updateShortcutsUi === 'function') {
+      wallpaperRuntime.updateShortcutsUi();
+    }
+  }
+
+  function setNewtabShortcutsVisible(enabled, options) {
+    const config = options || {};
+    const nextValue = normalizeNewtabShortcutsVisible(enabled);
+    newtabShortcutsVisible = nextValue;
+    applyNewtabShortcutsVisibility();
+    updateNewtabShortcutPreferencesUi();
+    updateBookmarkSectionPosition({ preserveSearchEntryLayout: true });
+    if (config.persist && storageArea) {
+      storageArea.set({ [NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY]: nextValue });
+    }
+    return nextValue;
+  }
+
+  function setNewtabShortcutAddVisible(enabled, options) {
+    const config = options || {};
+    const nextValue = normalizeNewtabShortcutAddVisible(enabled);
+    newtabShortcutAddVisible = nextValue;
+    renderShortcuts();
+    updateNewtabShortcutPreferencesUi();
+    if (config.persist && storageArea) {
+      storageArea.set({ [NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY]: nextValue });
+    }
+    return nextValue;
+  }
+
+  function setNewtabShortcutDockMagnificationEnabled(enabled, options) {
+    const config = options || {};
+    const nextValue = normalizeNewtabShortcutDockMagnificationEnabled(enabled);
+    newtabShortcutDockMagnificationEnabled = nextValue;
+    applyNewtabShortcutDockMagnification();
+    updateNewtabShortcutPreferencesUi();
+    scheduleWallpaperAdaptiveToneUpdate();
+    if (config.persist && storageArea) {
+      storageArea.set({ [NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY]: nextValue });
+    }
+    return nextValue;
+  }
+
+  function setNewtabShortcutWidth(value, options) {
+    const config = options || {};
+    const nextValue = normalizeNewtabShortcutWidth(value);
+    newtabShortcutWidth = nextValue;
+    applyNewtabShortcutWidth();
+    updateNewtabShortcutPreferencesUi();
+    updateBookmarkSectionPosition({
+      preserveSearchEntryLayout: true,
+      stabilizeDockDensity: true
+    });
+    if (config.persist && storageArea) {
+      storageArea.set({ [NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY]: nextValue });
     }
     return nextValue;
   }
@@ -2820,6 +2912,19 @@
     setSearchWidth: (value, options) => {
       setNewtabSearchWidth(value, options);
     },
+    shortcutWidthConfig: {
+      min: NEWTAB_SHORTCUT_WIDTH_MIN,
+      max: NEWTAB_SHORTCUT_WIDTH_MAX,
+      fallback: NEWTAB_SHORTCUT_WIDTH_DEFAULT
+    },
+    getShortcutsVisible: () => newtabShortcutsVisible,
+    setShortcutsVisible: setNewtabShortcutsVisible,
+    getShortcutAddVisible: () => newtabShortcutAddVisible,
+    setShortcutAddVisible: setNewtabShortcutAddVisible,
+    getShortcutDockMagnificationEnabled: () => newtabShortcutDockMagnificationEnabled,
+    setShortcutDockMagnificationEnabled: setNewtabShortcutDockMagnificationEnabled,
+    getShortcutWidth: () => newtabShortcutWidth,
+    setShortcutWidth: setNewtabShortcutWidth,
     featureHints: FEATURE_HINTS,
     inputAutoFocusReady: initialNewtabInputAutoFocusReadyTask,
     inputAutoFocusVisibilityGate: newtabEntryAnimationReadyPromise,
@@ -3748,6 +3853,7 @@
         storageArea.set({ [NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY]: nextValue });
       }
       applyNewtabShortcutsVisibility();
+      updateNewtabShortcutPreferencesUi();
     }
     if (changes[NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY]) {
       const raw = changes[NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY].newValue;
@@ -3757,6 +3863,7 @@
         storageArea.set({ [NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY]: nextValue });
       }
       renderShortcuts();
+      updateNewtabShortcutPreferencesUi();
     }
     if (changes[NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY]) {
       const raw = changes[NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY].newValue;
@@ -3766,6 +3873,21 @@
         storageArea.set({ [NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY]: nextValue });
       }
       applyNewtabShortcutDockMagnification();
+      updateNewtabShortcutPreferencesUi();
+    }
+    if (changes[NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY]) {
+      const raw = changes[NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY].newValue;
+      const nextValue = normalizeNewtabShortcutWidth(raw);
+      newtabShortcutWidth = nextValue;
+      if (storageArea && raw !== nextValue) {
+        storageArea.set({ [NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY]: nextValue });
+      }
+      applyNewtabShortcutWidth();
+      updateBookmarkSectionPosition({
+        preserveSearchEntryLayout: true,
+        stabilizeDockDensity: true
+      });
+      updateNewtabShortcutPreferencesUi();
     }
     if (changes[RECENT_MODE_STORAGE_KEY]) {
       const nextMode = normalizeRecentMode(changes[RECENT_MODE_STORAGE_KEY].newValue, 'latest');
@@ -4556,7 +4678,8 @@
     ...NEWTAB_SHORTCUTS_STORAGE_KEYS,
     NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY,
     NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY,
-    NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY
+    NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY,
+    NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY
   ]);
   let handleTabKey = null;
   const defaultSiteSearchProviders = typeof SEARCH_UTILS.getDefaultSiteSearchProviders === 'function'
@@ -6318,6 +6441,16 @@
     return Boolean(section && section.getAttribute('data-visible') === 'true');
   }
 
+  function applyNewtabShortcutWidth() {
+    if (!document.documentElement || !document.documentElement.style) {
+      return;
+    }
+    document.documentElement.style.setProperty(
+      '--x-nt-shortcut-width',
+      `${newtabShortcutWidth}px`
+    );
+  }
+
   function applyNewtabShortcutsVisibility() {
     if (!shortcutSection) {
       return;
@@ -6673,10 +6806,18 @@
     }
     return [
       {
-        value: SHORTCUT_CONTEXT_MENU_EDIT_VALUE,
-        label: t('shortcuts_edit', 'Edit')
+        action: NEWTAB_CONTEXT_MENU_OPEN_VALUE,
+        value: NEWTAB_CONTEXT_MENU_OPEN_VALUE,
+        label: t('newtab_open_in_new_tab', 'Open in new tab')
       },
       {
+        action: SHORTCUT_CONTEXT_MENU_EDIT_VALUE,
+        value: SHORTCUT_CONTEXT_MENU_EDIT_VALUE,
+        label: t('shortcuts_edit', 'Edit'),
+        dividerBefore: true
+      },
+      {
+        action: SHORTCUT_CONTEXT_MENU_REMOVE_VALUE,
         value: SHORTCUT_CONTEXT_MENU_REMOVE_VALUE,
         label: t('shortcuts_remove', 'Remove')
       }
@@ -6697,7 +6838,7 @@
         getShortcutContextMenuOptions(shortcutContextMenuTarget),
         shortcutContextMenuTarget && shortcutContextMenuTarget.kind === 'add'
           ? SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE
-          : SHORTCUT_CONTEXT_MENU_EDIT_VALUE
+          : NEWTAB_CONTEXT_MENU_OPEN_VALUE
       );
     }
   }
@@ -6716,7 +6857,11 @@
       bookmarkContextMenuSelectController.setOptions(
         bookmarkContextMenu.control,
         getBookmarkContextMenuOptions(bookmarkContextMenuTarget),
-        BOOKMARK_CONTEXT_MENU_EDIT_VALUE
+        bookmarkContextMenuTarget && bookmarkContextMenuTarget.isFolder
+          ? BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE
+          : bookmarkContextMenuTarget
+            ? NEWTAB_CONTEXT_MENU_OPEN_VALUE
+            : BOOKMARK_CONTEXT_MENU_EDIT_VALUE
       );
     }
   }
@@ -6735,7 +6880,7 @@
       recentContextMenuSelectController.setOptions(
         recentContextMenu.control,
         getRecentContextMenuOptions(recentContextMenuTarget),
-        RECENT_CONTEXT_MENU_REMOVE_VALUE
+        NEWTAB_CONTEXT_MENU_OPEN_VALUE
       );
     }
   }
@@ -7163,6 +7308,10 @@
       openShortcutEditor(shortcut, sourceElement);
       return;
     }
+    if (action === NEWTAB_CONTEXT_MENU_OPEN_VALUE) {
+      openExternalNewTabUrl(shortcut.url, 'newTab');
+      return;
+    }
     if (action === SHORTCUT_CONTEXT_MENU_REMOVE_VALUE) {
       removeShortcutById(targetId);
     }
@@ -7211,9 +7360,12 @@
       menuPortal: true,
       menuPortalZIndex: SHORTCUT_CONTEXT_MENU_PORTAL_Z_INDEX,
       menuPortalOffset: SHORTCUT_CONTEXT_MENU_PORTAL_OFFSET_PX,
-      value: SHORTCUT_CONTEXT_MENU_EDIT_VALUE,
+      value: NEWTAB_CONTEXT_MENU_OPEN_VALUE,
       ariaLabel: t('newtab_shortcuts_context_menu_label', 'Shortcut actions'),
-      options: getShortcutContextMenuOptions()
+      options: getShortcutContextMenuOptions(),
+      onAction(payload) {
+        handleShortcutContextMenuAction(payload && payload.action);
+      }
     });
     const control = created.wrapper;
     const select = created.select;
@@ -7268,7 +7420,7 @@
     setShortcutContextMenuPosition(tile);
     const defaultValue = target.kind === 'add'
       ? SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE
-      : SHORTCUT_CONTEXT_MENU_EDIT_VALUE;
+      : NEWTAB_CONTEXT_MENU_OPEN_VALUE;
     if (typeof shortcutContextMenuSelectController.setOptions === 'function') {
       shortcutContextMenuSelectController.setOptions(
         shortcutContextMenu.control,
@@ -7323,13 +7475,19 @@
         label: t('bookmarks_open_in_new_tab_group', 'Open in new tab group'),
         disabled: getBookmarkFolderOpenCount(target) <= 0
       });
+    } else if (target && !target.isFolder) {
+      options.push({
+        action: NEWTAB_CONTEXT_MENU_OPEN_VALUE,
+        value: NEWTAB_CONTEXT_MENU_OPEN_VALUE,
+        label: t('newtab_open_in_new_tab', 'Open in new tab')
+      });
     }
     options.push(
       {
         action: BOOKMARK_CONTEXT_MENU_EDIT_VALUE,
         value: BOOKMARK_CONTEXT_MENU_EDIT_VALUE,
         label: t('bookmarks_edit', 'Edit'),
-        dividerBefore: Boolean(target && target.isFolder)
+        dividerBefore: options.length > 0
       },
       {
         action: BOOKMARK_CONTEXT_MENU_REMOVE_VALUE,
@@ -7405,6 +7563,10 @@
     const target = bookmarkContextMenuTarget;
     closeBookmarkContextMenu();
     if (!target || !action) {
+      return;
+    }
+    if (action === NEWTAB_CONTEXT_MENU_OPEN_VALUE) {
+      openExternalNewTabUrl(target.url, 'newTab');
       return;
     }
     if (action === BOOKMARK_CONTEXT_MENU_EDIT_VALUE) {
@@ -7516,7 +7678,7 @@
         getBookmarkContextMenuOptions(target),
         target.isFolder
           ? BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE
-          : BOOKMARK_CONTEXT_MENU_EDIT_VALUE
+          : NEWTAB_CONTEXT_MENU_OPEN_VALUE
       );
     }
     bookmarkContextMenuSelectController.setOpen(bookmarkContextMenu.control, true);
@@ -7547,11 +7709,17 @@
   function getRecentContextMenuOptions(target) {
     return [
       {
+        action: NEWTAB_CONTEXT_MENU_OPEN_VALUE,
+        value: NEWTAB_CONTEXT_MENU_OPEN_VALUE,
+        label: t('newtab_open_in_new_tab', 'Open in new tab')
+      },
+      {
         action: RECENT_CONTEXT_MENU_REMOVE_VALUE,
         value: RECENT_CONTEXT_MENU_REMOVE_VALUE,
         label: target && target.item
           ? getRecentDismissTooltip(target.item)
-          : t('recent_dismiss_tooltip', 'Remove')
+          : t('recent_dismiss_tooltip', 'Remove'),
+        dividerBefore: true
       }
     ];
   }
@@ -7642,7 +7810,14 @@
     const action = String(actionValue || '');
     const target = recentContextMenuTarget;
     closeRecentContextMenu();
-    if (!target || !target.item || action !== RECENT_CONTEXT_MENU_REMOVE_VALUE) {
+    if (!target || !target.item || !action) {
+      return;
+    }
+    if (action === NEWTAB_CONTEXT_MENU_OPEN_VALUE) {
+      openExternalNewTabUrl(target.item.url, 'newTab');
+      return;
+    }
+    if (action !== RECENT_CONTEXT_MENU_REMOVE_VALUE) {
       return;
     }
     removeRecentSiteFromContextMenu(target.item);
@@ -7694,7 +7869,7 @@
       menuPortal: true,
       menuPortalZIndex: RECENT_CONTEXT_MENU_PORTAL_Z_INDEX,
       menuPortalOffset: RECENT_CONTEXT_MENU_PORTAL_OFFSET_PX,
-      value: RECENT_CONTEXT_MENU_REMOVE_VALUE,
+      value: NEWTAB_CONTEXT_MENU_OPEN_VALUE,
       ariaLabel: t('recent_context_menu_label', 'Recent site actions'),
       options: getRecentContextMenuOptions(),
       onAction(payload) {
@@ -7747,7 +7922,7 @@
       recentContextMenuSelectController.setOptions(
         recentContextMenu.control,
         getRecentContextMenuOptions(target),
-        RECENT_CONTEXT_MENU_REMOVE_VALUE
+        NEWTAB_CONTEXT_MENU_OPEN_VALUE
       );
     }
     recentContextMenuSelectController.setOpen(recentContextMenu.control, true);
@@ -8405,25 +8580,31 @@
       newtabShortcutsVisible = true;
       newtabShortcutAddVisible = true;
       newtabShortcutDockMagnificationEnabled = true;
+      newtabShortcutWidth = NEWTAB_SHORTCUT_WIDTH_DEFAULT;
+      applyNewtabShortcutWidth();
       applyNewtabShortcutsVisibility();
       applyNewtabShortcutDockMagnification();
+      updateNewtabShortcutPreferencesUi();
       return Promise.resolve();
     }
     return new Promise((resolve) => {
       storageArea.get([
         NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY,
         NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY,
-        NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY
+        NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY,
+        NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY
       ], (result) => {
         const stored = result || {};
         const rawVisible = stored[NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY];
         const rawAddVisible = stored[NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY];
         const rawMagnification =
           stored[NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY];
+        const rawWidth = stored[NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY];
         newtabShortcutsVisible = normalizeNewtabShortcutsVisible(rawVisible);
         newtabShortcutAddVisible = normalizeNewtabShortcutAddVisible(rawAddVisible);
         newtabShortcutDockMagnificationEnabled =
           normalizeNewtabShortcutDockMagnificationEnabled(rawMagnification);
+        newtabShortcutWidth = normalizeNewtabShortcutWidth(rawWidth);
         const repairs = {};
         if (rawVisible !== newtabShortcutsVisible) {
           repairs[NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY] = newtabShortcutsVisible;
@@ -8435,11 +8616,16 @@
           repairs[NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY] =
             newtabShortcutDockMagnificationEnabled;
         }
+        if (rawWidth !== newtabShortcutWidth) {
+          repairs[NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY] = newtabShortcutWidth;
+        }
         if (Object.keys(repairs).length > 0) {
           storageArea.set(repairs);
         }
+        applyNewtabShortcutWidth();
         applyNewtabShortcutsVisibility();
         applyNewtabShortcutDockMagnification();
+        updateNewtabShortcutPreferencesUi();
         resolve();
       });
     });
@@ -14889,6 +15075,19 @@
       window.location.hash.includes('focus');
     let forceInitialFocusPending = hasExplicitFocusHint;
 
+    const clearExplicitFocusQuery = () => {
+      try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('focus') !== '1') {
+          return;
+        }
+        url.searchParams.delete('focus');
+        window.history.replaceState(window.history.state, '', url.toString());
+      } catch (_error) {
+        // Keep focus recovery independent from address cleanup failures.
+      }
+    };
+
     const retryDelays = [0, 60, 140, 280, 520, 900, 1400];
     const attemptFocusIfVisible = () => {
       if (!newtabInputAutoFocusEnabled) {
@@ -14902,7 +15101,11 @@
       }
       const focused = tryFocusSearchInput(forceInitialFocusPending);
       if (focused) {
+        const consumedExplicitFocusHint = forceInitialFocusPending;
         forceInitialFocusPending = false;
+        if (consumedExplicitFocusHint) {
+          clearExplicitFocusQuery();
+        }
       }
     };
 

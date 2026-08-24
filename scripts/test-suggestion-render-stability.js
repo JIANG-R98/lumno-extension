@@ -122,7 +122,7 @@ function verifyClassification() {
 
 verifyClassification();
 const newtabSource = readSource('src/newtab/newtab.js');
-const newtabHtml = readSource('src/newtab/newtab.html');
+const newtabHtml = readSource('newtab.html');
 const newtabLayoutSource = readSource('src/newtab/layout.js');
 const overlaySource = readSource('src/overlay/search-panel.js');
 

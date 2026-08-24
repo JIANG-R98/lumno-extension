@@ -1716,7 +1716,7 @@
     if (pathname.includes('/newtab/lumno-newtab.html')) {
       return 'newtab-fallback';
     }
-    if (pathname.includes('/newtab/')) {
+    if (pathname === '/newtab.html' || pathname.includes('/newtab/')) {
       return 'newtab';
     }
     if (pathname.includes('/options/')) {

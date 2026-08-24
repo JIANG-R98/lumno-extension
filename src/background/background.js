@@ -1197,7 +1197,7 @@ function isLumnoNewtabUrl(url) {
   const prefixes = routeBuilders.length > 0
     ? routeBuilders.map((builder) => builder(chrome))
     : [
-        chrome.runtime.getURL('src/newtab/newtab.html'),
+        chrome.runtime.getURL('newtab.html'),
         chrome.runtime.getURL('src/newtab/lumno-newtab.html')
       ];
   return prefixes.some((prefix) => value === prefix || value.startsWith(`${prefix}?`));
@@ -1233,7 +1233,7 @@ function isLumnoBrowserOverrideNewtabUrl(url) {
   }
   const newtabPrefix = typeof EXTENSION_ROUTES.buildNewtabUrl === 'function'
     ? EXTENSION_ROUTES.buildNewtabUrl(chrome)
-    : chrome.runtime.getURL('src/newtab/newtab.html');
+    : chrome.runtime.getURL('newtab.html');
   return value === newtabPrefix || value.startsWith(`${newtabPrefix}?`);
 }
 

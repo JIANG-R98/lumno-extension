@@ -5,15 +5,16 @@ const settings = require('../src/shared/settings.js');
 const optionsHtml = fs.readFileSync('src/options/options.html', 'utf8');
 const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
 const newtabSource = fs.readFileSync('src/newtab/newtab.js', 'utf8');
+const wallpaperViewSource = fs.readFileSync('react-src/newtab/wallpaper-view.tsx', 'utf8');
+const wallpaperSource = fs.readFileSync('src/newtab/wallpaper.js', 'utf8');
 
 const topContentIndex = optionsHtml.indexOf('data-i18n="settings_newtab_wordmark_title"');
 const inputAutoFocusIndex = optionsHtml.indexOf('data-i18n="newtab_input_auto_focus_title"', topContentIndex);
-const shortcutsIndex = optionsHtml.indexOf('data-i18n="settings_newtab_shortcuts_title"', inputAutoFocusIndex);
 
 assert(topContentIndex >= 0, 'options should keep the New Tab top-content setting');
 assert(
-  inputAutoFocusIndex > topContentIndex && inputAutoFocusIndex < shortcutsIndex,
-  'input auto-focus should appear directly below the search-box top-content setting'
+  inputAutoFocusIndex > topContentIndex,
+  'options should keep input auto-focus below the New Tab top-content setting'
 );
 assert.match(
   optionsHtml,
@@ -55,6 +56,26 @@ assert.match(
   newtabSource,
   /NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY = SETTINGS\.NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY/,
   'New Tab should continue to read the same shared preference key'
+);
+assert(
+  wallpaperViewSource.indexOf("name=\"inputAutoFocusToggle\"") <
+    wallpaperViewSource.indexOf("ref('shortcutsAccordion')"),
+  'New Tab appearance should place shortcuts below input auto-focus'
+);
+assert.match(
+  wallpaperViewSource,
+  /ref\('shortcutsAccordionTrigger'\)[\s\S]*?aria-expanded="false"[\s\S]*?disabled state is applied by the runtime|ref\('shortcutsAccordionTrigger'\)[\s\S]*?aria-expanded="false"/,
+  'New Tab appearance should render the shortcuts accordion collapsed by default'
+);
+assert.match(
+  wallpaperSource,
+  /wallpaperShortcutsAccordionTrigger\.disabled = !enabled/,
+  'shortcut accordion should become unavailable when the main switch is off'
+);
+assert.doesNotMatch(
+  optionsHtml,
+  /_x_extension_newtab_shortcuts_toggle_2026_unique_/,
+  'Options should no longer duplicate the New Tab shortcuts switch'
 );
 
 console.log('newtab input auto-focus setting tests passed');

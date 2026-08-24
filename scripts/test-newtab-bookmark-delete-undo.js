@@ -4,7 +4,7 @@ const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..');
 const newtabJs = fs.readFileSync(path.join(repoRoot, 'src', 'newtab', 'newtab.js'), 'utf8');
-const newtabHtml = fs.readFileSync(path.join(repoRoot, 'src', 'newtab', 'newtab.html'), 'utf8');
+const newtabHtml = fs.readFileSync(path.join(repoRoot, 'newtab.html'), 'utf8');
 const bookmarksRuntimeJs = fs.readFileSync(
   path.join(repoRoot, 'src', 'newtab', 'bookmarks-runtime.js'),
   'utf8'
@@ -108,6 +108,9 @@ assert.ok(
 );
 assert.ok(
   newtabJs.includes("BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE = 'open-in-new-tab-group'") &&
+    newtabJs.includes("label: t('newtab_open_in_new_tab', 'Open in new tab')") &&
+    newtabJs.includes("openExternalNewTabUrl(target.url, 'newTab')") &&
+    newtabJs.includes('dividerBefore: options.length > 0') &&
     newtabJs.includes("label: t('bookmarks_open_in_new_tab_group'") &&
     newtabJs.includes('disabled: getBookmarkFolderOpenCount(target) <= 0') &&
     newtabJs.includes("option.getAttribute('aria-disabled') === 'true'") &&
@@ -163,6 +166,7 @@ assert.ok(
   ));
   [
     'bookmarks_delete',
+    'newtab_open_in_new_tab',
     'bookmarks_open_in_new_tab_group',
     'bookmarks_open_group_confirm_title',
     'bookmarks_open_group_confirm_description',

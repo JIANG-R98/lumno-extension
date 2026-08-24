@@ -565,6 +565,9 @@
   "settings_newtab_shortcut_dock_magnification_title": {
     "message": "仿 macOS Dock 程序坞缩放效果"
   },
+  "settings_newtab_shortcut_width_title": {
+    "message": "快捷方式宽度"
+  },
   "settings_wallpaper_title": {
     "message": "新标签页壁纸"
   },
@@ -1314,6 +1317,9 @@
   },
   "bookmarks_open_in_new_tab_group": {
     "message": "在新标签页组中打开"
+  },
+  "newtab_open_in_new_tab": {
+    "message": "在新标签页打开"
   },
   "bookmarks_open_group_confirm_title": {
     "message": "打开 {count} 个标签页？"

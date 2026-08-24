@@ -219,19 +219,28 @@ function checkRuntimeGetUrlReferences() {
 }
 
 function checkHtmlReferences() {
-  const files = listHtmlFiles('src');
+  const files = [...listHtmlFiles('src'), 'newtab.html'];
   const referencePattern = /\b(?:src|href)=["']([^"']+)["']/g;
   files.forEach((file) => {
     const source = fs.readFileSync(file, 'utf8');
-    checkCssUrlReferences(file, source);
+    const baseMatch = source.match(/<base\s+[^>]*href=["']([^"']+)["']/i);
+    const baseHref = baseMatch ? baseMatch[1] : '';
+    const referenceBase = baseHref
+      ? path.normalize(path.join(path.dirname(file), baseHref))
+      : path.dirname(file);
+    const referenceFile = path.join(referenceBase, path.basename(file));
+    checkCssUrlReferences(referenceFile, source);
     let match = null;
     while ((match = referencePattern.exec(source))) {
       const value = match[1];
       if (!value || /^(https?:|data:|mailto:|tel:|#|__MSG_)/.test(value)) {
         continue;
       }
+      if (baseHref && value === baseHref) {
+        continue;
+      }
       const cleanValue = value.split(/[?#]/)[0];
-      const resolved = path.normalize(path.join(path.dirname(file), cleanValue));
+      const resolved = path.normalize(path.join(referenceBase, cleanValue));
       checkPath(resolved);
     }
   });

@@ -18,6 +18,7 @@ const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
 const optionsHtml = fs.readFileSync('src/options/options.html', 'utf8');
 const backgroundSource = fs.readFileSync('src/background/background.js', 'utf8');
 const newtabSource = fs.readFileSync('src/newtab/newtab.js', 'utf8');
+const wallpaperSource = fs.readFileSync('src/newtab/wallpaper.js', 'utf8');
 const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
 const sharedSettingsSource = fs.readFileSync('src/shared/settings.js', 'utf8');
 const shortcutFaviconSource = fs.readFileSync('src/shared/shortcut-favicon.js', 'utf8');
@@ -604,8 +605,8 @@ assert(
   'the New Tab add shortcut preference should be included in local-to-sync migration'
 );
 assert(
-  /data-i18n="settings_newtab_shortcut_add_title"/.test(optionsHtml),
-  'the New Tab add shortcut preference label should be wired through i18n'
+  /t\(\s*['"]settings_newtab_shortcut_add_title['"]/.test(wallpaperSource),
+  'the New Tab add shortcut preference label should be wired through the wallpaper runtime i18n path'
 );
 localeNames.forEach((locale) => {
   [
@@ -633,8 +634,8 @@ assert(
   'the New Tab shortcut Dock magnification preference should be included in local-to-sync migration'
 );
 assert(
-  /data-i18n="settings_newtab_shortcut_dock_magnification_title"/.test(optionsHtml),
-  'the New Tab shortcut Dock magnification label should be wired through i18n'
+  /t\(\s*['"]settings_newtab_shortcut_dock_magnification_title['"]/.test(wallpaperSource),
+  'the New Tab shortcut Dock magnification label should be wired through the wallpaper runtime i18n path'
 );
 localeNames.forEach((locale) => {
   const key = 'settings_newtab_shortcut_dock_magnification_title';

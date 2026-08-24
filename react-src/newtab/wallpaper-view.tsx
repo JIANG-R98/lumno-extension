@@ -285,6 +285,24 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
   const effectInkTones: EffectInkToneItem[] = Array.isArray(model.effectInkTones)
     ? model.effectInkTones
     : DEFAULT_EFFECT_INK_TONES;
+  const shortcutWidthMin = Number(model.shortcutWidth?.min) || 360;
+  const shortcutWidthMax = Math.max(
+    shortcutWidthMin + 1,
+    Number(model.shortcutWidth?.max) || 1440
+  );
+  const shortcutWidthDefault = Math.min(
+    shortcutWidthMax,
+    Math.max(shortcutWidthMin, Number(model.shortcutWidth?.defaultValue) || 920)
+  );
+  const shortcutWidthTicks: RangeSliderTick[] = Array.isArray(
+    model.shortcutWidth?.ticks
+  )
+    ? model.shortcutWidth.ticks
+    : [
+        { align: 'start', label: String(shortcutWidthMin) },
+        { label: String(Math.round((shortcutWidthMin + shortcutWidthMax) / 2)) },
+        { align: 'end', label: String(shortcutWidthMax) }
+      ];
   return (
     <>
       <div
@@ -407,6 +425,106 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                   ariaLabel="Automatically focus the search input"
                   name="inputAutoFocusToggle"
                 />
+              </div>
+              <div
+                {...ref('shortcutsAccordion')}
+                className="x-nt-shortcuts-accordion"
+                data-expanded="false"
+                data-enabled="true"
+              >
+                <div className="x-nt-appearance-setting-row x-nt-shortcuts-accordion-row">
+                  <button
+                    {...ref('shortcutsAccordionTrigger')}
+                    aria-controls="_x_extension_newtab_shortcuts_settings_2026_unique_"
+                    aria-expanded="false"
+                    className="x-nt-shortcuts-accordion-trigger"
+                    id="_x_extension_newtab_shortcuts_accordion_trigger_2026_unique_"
+                    type="button"
+                  >
+                    <span className="x-nt-appearance-setting-title-group">
+                      <span
+                        {...ref('shortcutsTitle')}
+                        className="x-nt-appearance-setting-title"
+                      />
+                      <span
+                        aria-hidden="true"
+                        className="x-nt-shortcuts-accordion-icon"
+                        dangerouslySetInnerHTML={{
+                          __html: String(model.icons?.arrow || '')
+                        }}
+                      />
+                    </span>
+                  </button>
+                  <Switch
+                    ariaLabel="Shortcuts"
+                    name="shortcutsToggle"
+                  />
+                </div>
+                <div
+                  {...ref('shortcutsDetails')}
+                  aria-hidden="true"
+                  aria-labelledby="_x_extension_newtab_shortcuts_accordion_trigger_2026_unique_"
+                  className="x-nt-shortcuts-accordion-details"
+                  data-visible="false"
+                  hidden
+                  id="_x_extension_newtab_shortcuts_settings_2026_unique_"
+                  role="region"
+                >
+                  <div className="x-nt-shortcuts-accordion-details-inner">
+                    <div className="x-nt-appearance-setting-row">
+                      <span
+                        {...ref('shortcutAddTitle')}
+                        className="x-nt-appearance-setting-title"
+                      />
+                      <Switch
+                        ariaLabel="Show “+”"
+                        name="shortcutAddToggle"
+                      />
+                    </div>
+                    <div className="x-nt-appearance-setting-row">
+                      <span
+                        {...ref('shortcutDockMagnificationTitle')}
+                        className="x-nt-appearance-setting-title"
+                      />
+                      <Switch
+                        ariaLabel="macOS Dock-style magnification"
+                        name="shortcutDockMagnificationToggle"
+                      />
+                    </div>
+                    <div
+                      {...ref('shortcutWidthControl')}
+                      aria-hidden="true"
+                      className="x-nt-overlay-control x-nt-shortcut-width-control"
+                      data-visible="false"
+                    >
+                      <div className="x-nt-overlay-control-header">
+                        <span
+                          {...ref('shortcutWidthLabel')}
+                          className="x-nt-overlay-label"
+                        />
+                        <span
+                          {...ref('shortcutWidthValue')}
+                          className="x-nt-overlay-value"
+                        />
+                      </div>
+                      <RangeSlider
+                        {...ref('shortcutWidthSlider')}
+                        className="x-nt-overlay-slider-wrap x-nt-shortcut-width-slider-wrap"
+                        data-value-suffix=" px"
+                        defaultValue={String(shortcutWidthDefault)}
+                        inputClass="x-nt-overlay-slider x-nt-shortcut-width-slider"
+                        max={String(shortcutWidthMax)}
+                        min={String(shortcutWidthMin)}
+                        step="1"
+                      >
+                        <Scale
+                          className="x-nt-shortcut-width-scale"
+                          ticks={shortcutWidthTicks}
+                        />
+                      </RangeSlider>
+                    </div>
+                  </div>
+                </div>
               </div>
               <a
                 {...ref('moreSettingsLink')}

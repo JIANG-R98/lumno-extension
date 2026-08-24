@@ -4,7 +4,7 @@ const settings = require('../src/shared/settings.js');
 
 const optionsHtml = fs.readFileSync('src/options/options.html', 'utf8');
 const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
-const newtabHtml = fs.readFileSync('src/newtab/newtab.html', 'utf8');
+const newtabHtml = fs.readFileSync('newtab.html', 'utf8');
 const newtabSource = fs.readFileSync('src/newtab/newtab.js', 'utf8');
 const wallpaperSource = fs.readFileSync('src/newtab/wallpaper.js', 'utf8');
 const wallpaperViewSource = fs.readFileSync(

@@ -565,6 +565,9 @@
   "settings_newtab_shortcut_dock_magnification_title": {
     "message": "macOS Dock-style magnification"
   },
+  "settings_newtab_shortcut_width_title": {
+    "message": "Shortcut width"
+  },
   "settings_wallpaper_title": {
     "message": "New Tab wallpaper"
   },
@@ -1314,6 +1317,9 @@
   },
   "bookmarks_open_in_new_tab_group": {
     "message": "Open in new tab group"
+  },
+  "newtab_open_in_new_tab": {
+    "message": "Open in new tab"
   },
   "bookmarks_open_group_confirm_title": {
     "message": "Open {count} tabs?"

@@ -38,6 +38,7 @@ const expectedSyncKeys = [
   '_x_extension_newtab_shortcuts_visible_2026_unique_',
   '_x_extension_newtab_shortcut_add_visible_2026_unique_',
   '_x_extension_newtab_shortcut_dock_magnification_enabled_2026_unique_',
+  '_x_extension_newtab_shortcut_width_2026_unique_',
   '_x_extension_update_notice_enabled_2026_unique_',
   '_x_extension_motion_effects_enabled_2026_unique_',
   '_x_extension_simple_mode_enabled_2026_unique_',

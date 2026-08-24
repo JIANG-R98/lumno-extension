@@ -37,7 +37,7 @@ assert.ok(
 );
 
 assert.strictEqual(guards.isRestrictedUrl('chrome://extensions/'), true);
-assert.strictEqual(guards.isRestrictedUrl('chrome-extension://abc/src/newtab/newtab.html'), true);
+assert.strictEqual(guards.isRestrictedUrl('chrome-extension://abc/newtab.html'), true);
 assert.strictEqual(guards.isRestrictedUrl('https://chromewebstore.google.com/detail/example/abc'), true);
 assert.strictEqual(guards.isRestrictedUrl('https://chrome.google.com/webstore/detail/example/abc'), true);
 assert.strictEqual(guards.isRestrictedUrl('https://microsoftedge.microsoft.com/addons/detail/example/abc'), true);

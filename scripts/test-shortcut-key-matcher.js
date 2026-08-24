@@ -92,7 +92,7 @@ const contentHotkeySource = fs.readFileSync('src/content/hotkey-listener.js', 'u
 const onboardingSource = fs.readFileSync('src/onboarding/onboarding-content.js', 'utf8');
 const onboardingHtml = fs.readFileSync('src/onboarding/onboarding.html', 'utf8');
 const newtabSource = fs.readFileSync('src/newtab/newtab.js', 'utf8');
-const newtabHtml = fs.readFileSync('src/newtab/newtab.html', 'utf8');
+const newtabHtml = fs.readFileSync('newtab.html', 'utf8');
 assert.match(contentHotkeySource, /SHORTCUT_KEY_MATCHER\.parseShortcut\(nextShortcut\)/);
 assert.match(contentHotkeySource, /SHORTCUT_KEY_MATCHER\.eventMatchesShortcut\(event, shortcutSpec\)/);
 assert.doesNotMatch(contentHotkeySource, /function parseShortcut\(/);

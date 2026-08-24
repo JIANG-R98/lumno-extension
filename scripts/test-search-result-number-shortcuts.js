@@ -3,7 +3,7 @@ const fs = require('fs');
 
 const read = (filePath) => fs.readFileSync(filePath, 'utf8');
 const newtabSource = read('src/newtab/newtab.js');
-const newtabHtml = read('src/newtab/newtab.html');
+const newtabHtml = read('newtab.html');
 const onboardingHtml = read('src/onboarding/onboarding.html');
 const overlaySource = read('src/overlay/search-panel.js');
 const overlayCss = read('src/overlay/suggestions-view.css');

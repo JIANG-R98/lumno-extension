@@ -3,7 +3,7 @@ const fs = require('fs');
 const shortcutFavicon = require('../src/shared/shortcut-favicon.js');
 
 const newtabSource = fs.readFileSync('src/newtab/newtab.js', 'utf8');
-const newtabHtml = fs.readFileSync('src/newtab/newtab.html', 'utf8');
+const newtabHtml = fs.readFileSync('newtab.html', 'utf8');
 const searchInputCss = fs.readFileSync('src/shared/search-input.css', 'utf8');
 const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
 

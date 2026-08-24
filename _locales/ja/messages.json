@@ -565,6 +565,9 @@
   "settings_newtab_shortcut_dock_magnification_title": {
     "message": "macOS Dock風の拡大効果"
   },
+  "settings_newtab_shortcut_width_title": {
+    "message": "タイル幅"
+  },
   "settings_wallpaper_title": {
     "message": "新しいタブの壁紙"
   },
@@ -1314,6 +1317,9 @@
   },
   "bookmarks_open_in_new_tab_group": {
     "message": "新しいタブグループで開く"
+  },
+  "newtab_open_in_new_tab": {
+    "message": "新しいタブで開く"
   },
   "bookmarks_open_group_confirm_title": {
     "message": "{count} 個のタブを開きますか？"

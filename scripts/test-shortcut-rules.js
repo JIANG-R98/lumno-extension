@@ -92,7 +92,7 @@ function testBrowserProfileUsesClientHintBrand() {
 function testBrowserProfileRuntimeWiring() {
   const repoRoot = path.join(__dirname, '..');
   const backgroundSource = fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8');
-  const newtabHtml = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.html'), 'utf8');
+  const newtabHtml = fs.readFileSync(path.join(repoRoot, 'newtab.html'), 'utf8');
   const newtabSource = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8');
   const onboardingHtml = fs.readFileSync(path.join(repoRoot, 'src/onboarding/onboarding.html'), 'utf8');
   const overlaySource = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');

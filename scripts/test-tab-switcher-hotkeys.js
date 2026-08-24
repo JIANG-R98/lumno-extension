@@ -17,7 +17,7 @@ const switcherBridgeSource = fs.existsSync(switcherBridgePath)
   ? fs.readFileSync(switcherBridgePath, 'utf8')
   : '';
 const manifestSource = fs.readFileSync('manifest.json', 'utf8');
-const newtabHtmlSource = fs.readFileSync('src/newtab/newtab.html', 'utf8');
+const newtabHtmlSource = fs.readFileSync('newtab.html', 'utf8');
 const optionsHtmlSource = fs.readFileSync('src/options/options.html', 'utf8');
 const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
 const onboardingHtmlSource = fs.readFileSync('src/onboarding/onboarding.html', 'utf8');

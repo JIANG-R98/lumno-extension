@@ -40,6 +40,7 @@ export interface RangeSliderControlRenderModel {
     label: string;
   }>;
   value: number;
+  valueSuffix?: string;
 }
 
 export interface RangeSliderControlControllerOptions {
@@ -184,11 +185,12 @@ function RangeSliderControl({
     setValue(next);
     onInput(next);
   };
+  const valueText = `${value}${model.valueSuffix || ''}`;
   return (
     <div className="_x_extension_range_slider_control_2026_unique_">
       <RangeSlider
         aria-label={model.ariaLabel}
-        aria-valuetext={String(value)}
+        aria-valuetext={valueText}
         className="x-lumno-range-slider"
         disabled={model.disabled}
         id={model.id}
@@ -232,7 +234,7 @@ function RangeSliderControl({
         className="_x_extension_range_slider_value_2026_unique_"
         htmlFor={model.id}
       >
-        {value}
+        {valueText}
       </output>
     </div>
   );

@@ -147,7 +147,7 @@ const injectablePendingNavigationCases = [
     tab: {
       id: 46,
       status: 'loading',
-      url: 'chrome-extension://example/src/newtab/newtab.html',
+      url: 'chrome-extension://example/newtab.html',
       pendingUrl: 'https://destination.example.test/path'
     }
   },

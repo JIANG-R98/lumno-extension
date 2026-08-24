@@ -8,7 +8,7 @@ const newtabJs = fs.readFileSync(
   'utf8'
 );
 const newtabHtml = fs.readFileSync(
-  path.join(repoRoot, 'src', 'newtab', 'newtab.html'),
+  path.join(repoRoot, 'newtab.html'),
   'utf8'
 );
 const recentSitesReact = fs.readFileSync(
@@ -44,6 +44,9 @@ assert.ok(
 );
 assert.ok(
   newtabJs.includes("RECENT_CONTEXT_MENU_REMOVE_VALUE = 'remove'") &&
+    newtabJs.includes("action: NEWTAB_CONTEXT_MENU_OPEN_VALUE") &&
+    newtabJs.includes("openExternalNewTabUrl(target.item.url, 'newTab')") &&
+    newtabJs.includes('dividerBefore: true') &&
     newtabJs.includes('function handleRecentContextMenuAction(actionValue)') &&
     newtabJs.includes('removeRecentSiteFromContextMenu(target.item)') &&
     newtabJs.includes('hideRecentSiteTemporarily(item)'),
@@ -66,7 +69,9 @@ assert.ok(
     'utf8'
   ));
   assert.ok(
-    messages.recent_context_menu_label &&
+    messages.newtab_open_in_new_tab &&
+      messages.recent_context_menu_label &&
+      String(messages.newtab_open_in_new_tab.message || '').trim() &&
       String(messages.recent_context_menu_label.message || '').trim(),
     `${locale} should localize the recent-site context-menu label`
   );
