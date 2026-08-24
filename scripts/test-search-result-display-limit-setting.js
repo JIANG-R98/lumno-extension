@@ -51,8 +51,14 @@ assert.match(overlaySource,
   /composeSearchFirstSuggestionSlate\(allSuggestions, \{\s*limit: overlaySearchResultDisplayLimit\s*\}\)/,
   'overlay should compose search-first results against the configured visible-row limit');
 assert.match(newtabSource,
-  /action: 'getSearchEngineSuggestions',[\s\S]*?searchFirst: searchResultPriorityMode === 'search'/,
+  /const requestSearchFirst = searchResultPriorityMode === 'search';[\s\S]*?action: 'getSearchEngineSuggestions',[\s\S]*?searchFirst: requestSearchFirst/,
   'New Tab should request the expanded remote quota only in search-first mode');
+assert.match(newtabSource,
+  /const showExactSearchPendingState = requestSearchFirst &&[\s\S]*?!requestLocalSearchScope &&[\s\S]*?!siteSearchState &&[\s\S]*?!getDirectUrlSuggestion\(requestQuery\);[\s\S]*?if \(showExactSearchPendingState\) \{\s*renderSuggestions\(\[\], requestQuery\);\s*\}/,
+  'New Tab search-first mode should immediately render the exact-search row while remote suggestions are pending');
+assert.match(newtabSource,
+  /if \(requestLocalSearchScope\) \{\s*renderSuggestions\(localSuggestions, requestQuery\);\s*return;\s*\}[\s\S]*?if \(!showExactSearchPendingState\) \{\s*renderSuggestions\(localSuggestions, requestQuery\);\s*\}[\s\S]*?const remoteDelay = \(requestSearchFirst \|\| immediate\)[\s\S]*?\? 0/,
+  'New Tab search-first mode should keep the exact-search placeholder instead of flashing local results and should request the final mix immediately');
 assert.match(overlaySource,
   /const requestSearchFirst = overlaySearchResultPriorityMode === 'search';[\s\S]*?action: 'getSearchEngineSuggestions',[\s\S]*?searchFirst: requestSearchFirst/,
   'overlay should request the expanded remote quota only in search-first mode');

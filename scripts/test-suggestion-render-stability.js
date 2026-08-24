@@ -166,8 +166,8 @@ assert.match(
 );
 assert.match(
   newtabSource,
-  /function requestSuggestions\(query, options\)[\s\S]*?directNavigationSettleController\.schedule\(\{[\s\S]*?query: requestQuery,[\s\S]*?requestSeq[\s\S]*?directNavigationSettleController\.cancel\(\);[\s\S]*?renderSuggestions\(localSuggestions, requestQuery\);/,
-  'New Tab should cancel the provisional direct URL render when the local result arrives in time'
+  /function requestSuggestions\(query, options\)[\s\S]*?directNavigationSettleController\.schedule\(\{[\s\S]*?query: requestQuery,[\s\S]*?requestSeq[\s\S]*?directNavigationSettleController\.cancel\(\);[\s\S]*?if \(requestLocalSearchScope\) \{\s*renderSuggestions\(localSuggestions, requestQuery\);/,
+  'New Tab should cancel the provisional direct URL render when the local result arrives in time and preserve scoped local rendering'
 );
 assert.match(
   newtabSource,
@@ -191,8 +191,8 @@ assert.match(
 );
 assert.match(
   newtabSource,
-  /function requestSuggestions\(query, options\)[\s\S]*?renderSuggestions\(localSuggestions, requestQuery\);[\s\S]*?renderSuggestions\(remoteResponse\.suggestions, requestQuery\);/,
-  'local and remote New Tab stages should each use the same ordinary render commit'
+  /function requestSuggestions\(query, options\)[\s\S]*?if \(!showExactSearchPendingState\) \{\s*renderSuggestions\(localSuggestions, requestQuery\);\s*\}[\s\S]*?renderSuggestions\(remoteResponse\.suggestions, requestQuery\);/,
+  'New Tab should suppress the local-result flash only for the search-first pending state before committing the remote mix'
 );
 
 console.log('suggestion render stability tests passed');

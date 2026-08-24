@@ -14528,6 +14528,11 @@
     const requestStartedAt = Date.now();
     const requestQuery = latestQuery;
     const requestSeq = ++suggestionRequestSeq;
+    const requestSearchFirst = searchResultPriorityMode === 'search';
+    const showExactSearchPendingState = requestSearchFirst &&
+      !requestLocalSearchScope &&
+      !siteSearchState &&
+      !getDirectUrlSuggestion(requestQuery);
     directNavigationSettleController.cancel();
     if (deferInitialDirectNavigationRender) {
       directNavigationSettleController.schedule({
@@ -14542,6 +14547,9 @@
     if (suggestionRequestWatchdogTimer) {
       clearTimeout(suggestionRequestWatchdogTimer);
       suggestionRequestWatchdogTimer = null;
+    }
+    if (showExactSearchPendingState) {
+      renderSuggestions([], requestQuery);
     }
     suggestionRequestWatchdogTimer = setTimeout(function() {
       if (requestSeq !== suggestionRequestSeq || requestQuery !== latestQuery) {
@@ -14573,12 +14581,17 @@
         return;
       }
       const localSuggestions = response && Array.isArray(response.suggestions) ? response.suggestions : [];
-      renderSuggestions(localSuggestions, requestQuery);
       if (requestLocalSearchScope) {
+        renderSuggestions(localSuggestions, requestQuery);
         return;
       }
+      if (!showExactSearchPendingState) {
+        renderSuggestions(localSuggestions, requestQuery);
+      }
       refreshTabsForSearchContext(() => {});
-      const remoteDelay = immediate ? 0 : Math.max(0, 120 - (Date.now() - requestStartedAt));
+      const remoteDelay = (requestSearchFirst || immediate)
+        ? 0
+        : Math.max(0, 120 - (Date.now() - requestStartedAt));
       remoteSuggestionDebounceTimer = setTimeout(function() {
         remoteSuggestionDebounceTimer = null;
         if (requestSeq !== suggestionRequestSeq || requestQuery !== latestQuery) {
@@ -14589,7 +14602,7 @@
           query: requestQuery,
           context: 'newtab',
           localSuggestions: localSuggestions,
-          searchFirst: searchResultPriorityMode === 'search'
+          searchFirst: requestSearchFirst
         }, function(remoteResponse) {
           if (requestSeq !== suggestionRequestSeq || requestQuery !== latestQuery) {
             return;
