@@ -799,10 +799,34 @@ assertContains(
   'shortcut accordion should be disabled when shortcuts are turned off'
 );
 
-assertNotContains(
+assertContains(
   optionsHtml,
   '_x_extension_newtab_shortcuts_toggle_2026_unique_',
-  'legacy Options page should no longer render the New Tab shortcuts controls'
+  'Options should keep the New Tab shortcuts visibility control'
+);
+
+assertContains(
+  optionsHtml,
+  '_x_extension_newtab_shortcut_add_toggle_2026_unique_',
+  'Options should keep the add shortcut visibility control'
+);
+
+assertContains(
+  optionsHtml,
+  '_x_extension_newtab_shortcut_dock_magnification_toggle_2026_unique_',
+  'Options should keep the shortcut Dock magnification control'
+);
+
+assertContains(
+  newtabHtml,
+  '.x-nt-shortcuts-accordion-details[hidden]',
+  'collapsed shortcut details should override the authored display declaration'
+);
+
+assertContains(
+  newtabHtml,
+  'gap: var(--x-nt-panel-item-gap);',
+  'shortcut details should inherit the appearance panel global item gap'
 );
 
 assertContains(

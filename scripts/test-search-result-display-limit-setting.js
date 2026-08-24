@@ -45,6 +45,18 @@ assert.match(overlayRuntimeSource,
     'slash-command discovery should stay uncapped');
 });
 assert.match(newtabSource,
+  /composeSearchFirstSuggestionSlate\(allSuggestions, \{\s*limit: searchResultDisplayLimit\s*\}\)/,
+  'New Tab should compose search-first results against the configured visible-row limit');
+assert.match(overlaySource,
+  /composeSearchFirstSuggestionSlate\(allSuggestions, \{\s*limit: overlaySearchResultDisplayLimit\s*\}\)/,
+  'overlay should compose search-first results against the configured visible-row limit');
+assert.match(newtabSource,
+  /action: 'getSearchEngineSuggestions',[\s\S]*?searchFirst: searchResultPriorityMode === 'search'/,
+  'New Tab should request the expanded remote quota only in search-first mode');
+assert.match(overlaySource,
+  /const requestSearchFirst = overlaySearchResultPriorityMode === 'search';[\s\S]*?action: 'getSearchEngineSuggestions',[\s\S]*?searchFirst: requestSearchFirst/,
+  'overlay should request the expanded remote quota only in search-first mode');
+assert.match(newtabSource,
   /changes\[SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY\][\s\S]*?renderSuggestions\(lastSuggestionResponse, latestQuery\)/,
   'New Tab should re-render current results when the limit changes');
 assert.match(overlaySource,

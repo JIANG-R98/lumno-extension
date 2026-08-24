@@ -310,6 +310,15 @@ function testCanonicalProviderResolution() {
     'the shared runtime should own the canonical built-in icon asset path'
   );
   assert.strictEqual(
+    shortcutFavicon.getSiteSearchPinnedIconAssetPath({
+      ...youtubeProvider,
+      key: 'video',
+      builtinKey: 'YT'
+    }),
+    'assets/images/site-search/tile-yt.png',
+    'a renamed built-in provider should keep resolving its canonical bundled icon'
+  );
+  assert.strictEqual(
     shortcutFavicon.isSiteSearchPinnedIconAssetUrl(
       'chrome-extension://lumno/assets/images/site-search/tile-yt.png'
     ),
@@ -408,6 +417,23 @@ function testCanonicalProviderResolution() {
     ),
     youtubeDataUrl,
     'YouTube should resolve to the same persisted data URL in overlay and newtab'
+  );
+  assert.strictEqual(
+    shortcutFavicon.getSiteSearchProviderIcon(
+      {},
+      {
+        ...youtubeProvider,
+        key: 'video',
+        builtinKey: 'yt'
+      },
+      now,
+      {
+        ...shortcutFavicon.SITE_SEARCH_CACHE_OPTIONS,
+        resolveAssetUrl: (path) => `chrome-extension://test/${path}`
+      }
+    ),
+    'chrome-extension://test/assets/images/site-search/tile-yt.png',
+    'a renamed built-in provider should render its bundled icon on every search-scope surface'
   );
 
   [

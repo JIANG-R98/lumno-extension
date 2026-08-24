@@ -104,8 +104,13 @@ assert.doesNotMatch(
 
 assert.match(
   overlaySource,
-  /const waitForFirstResultMix =\s*suggestionsContainer\.getAttribute\('data-collapsed'\) === 'true';[\s\S]*?OVERLAY_FIRST_RESULT_REVEAL_DELAY_MS[\s\S]*?const remoteDelay = waitForFirstResultMix\s*\? 0[\s\S]*?if \(remoteMixState\.visualSettled\) \{\s*return;/,
-  'the first local and remote result stages should still produce only one visible commit'
+  /const showExactSearchPendingState = requestSearchFirst &&[\s\S]*?!requestLocalSearchScope &&[\s\S]*?!getDirectUrlSuggestion\(requestQuery\);[\s\S]*?if \(showExactSearchPendingState\) \{\s*updateSearchSuggestions\(\[\], requestQuery, \{ remoteMixState \}\);\s*\}[\s\S]*?const waitForFirstResultMix = !requestSearchFirst &&[\s\S]*?else if \(!showExactSearchPendingState\) \{\s*updateSearchSuggestions\(localSuggestions, requestQuery,[\s\S]*?const remoteDelay = \(requestSearchFirst \|\| waitForFirstResultMix\)\s*\? 0/,
+  'search-first mode should show only the exact search action before requesting its final remote mix'
+);
+assert.match(
+  overlaySource,
+  /if \(waitForFirstResultMix\) \{[\s\S]*?if \(remoteMixState\.visualSettled\) \{\s*return;[\s\S]*?updateSearchSuggestions\(remoteResponse\.suggestions, requestQuery,[\s\S]*?finalRemoteMix: true/,
+  'autocomplete-first should keep one collapsed-surface commit while search-first publishes the final remote slate'
 );
 assert.match(
   overlaySource,
@@ -114,8 +119,8 @@ assert.match(
 );
 assert.match(
   overlaySource,
-  /!finalRemoteMix && remoteMixState &&[\s\S]*?remoteMixState\.settled && remoteMixState\.hasFinalSuggestions[\s\S]*?return;/,
-  'a late local render should not overwrite an already completed remote mix'
+  /!finalRemoteMix && remoteMixState && remoteMixState\.settled[\s\S]*?return;/,
+  'a late pending or local render should not overwrite any completed final mix'
 );
 
 [

@@ -123,7 +123,9 @@
   }
 
   function getSiteSearchPinnedIconAssetPath(provider) {
-    const providerKey = String(provider && provider.key || '').trim().toLowerCase();
+    const providerKey = String(
+      provider && (provider.builtinKey || provider.key) || ''
+    ).trim().toLowerCase();
     return SITE_SEARCH_PINNED_ICON_ASSETS[providerKey] || '';
   }
 

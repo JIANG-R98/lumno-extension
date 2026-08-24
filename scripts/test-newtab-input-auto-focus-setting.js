@@ -72,10 +72,10 @@ assert.match(
   /wallpaperShortcutsAccordionTrigger\.disabled = !enabled/,
   'shortcut accordion should become unavailable when the main switch is off'
 );
-assert.doesNotMatch(
+assert.match(
   optionsHtml,
   /_x_extension_newtab_shortcuts_toggle_2026_unique_/,
-  'Options should no longer duplicate the New Tab shortcuts switch'
+  'Options should keep a second entry for the shared New Tab shortcuts switch'
 );
 
 console.log('newtab input auto-focus setting tests passed');

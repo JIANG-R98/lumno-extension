@@ -157,6 +157,10 @@
   const NEWTAB_SEARCH_WIDTH_STORAGE_KEY = '_x_extension_newtab_search_width_2026_unique_';
   const NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY = SETTINGS.NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY ||
     '_x_extension_newtab_input_auto_focus_enabled_2026_unique_';
+  const NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY = SETTINGS.NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY ||
+    '_x_extension_newtab_feedback_button_visible_2026_unique_';
+  const NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY = SETTINGS.NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY ||
+    '_x_extension_newtab_appearance_button_visible_2026_unique_';
   const NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY = SETTINGS.NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY ||
     '_x_extension_number_shortcut_instant_enabled_2026_unique_';
   const MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY =
@@ -546,6 +550,8 @@
   let newtabTimeFontWeight = NEWTAB_TIME_FONT_WEIGHT_DEFAULT;
   let newtabTimeSecondsVisible = false;
   let newtabInputAutoFocusEnabled = false;
+  let newtabFeedbackButtonVisible = true;
+  let newtabAppearanceButtonVisible = true;
   let numberShortcutInstantEnabled = false;
   let macosCtrlSuggestionNavigationEnabled = false;
   let simpleModeEnabled = false;
@@ -1392,6 +1398,18 @@
     return typeof SETTINGS.normalizeNewtabInputAutoFocusEnabled === 'function'
       ? SETTINGS.normalizeNewtabInputAutoFocusEnabled(value)
       : value === true;
+  }
+
+  function normalizeNewtabFeedbackButtonVisible(value) {
+    return typeof SETTINGS.normalizeNewtabFeedbackButtonVisible === 'function'
+      ? SETTINGS.normalizeNewtabFeedbackButtonVisible(value)
+      : value !== false;
+  }
+
+  function normalizeNewtabAppearanceButtonVisible(value) {
+    return typeof SETTINGS.normalizeNewtabAppearanceButtonVisible === 'function'
+      ? SETTINGS.normalizeNewtabAppearanceButtonVisible(value)
+      : value !== false;
   }
 
   function updateNewtabInputAutoFocusUi() {
@@ -3840,6 +3858,26 @@
       }
       setNewtabTimeSecondsVisible(nextValue);
     }
+    if (changes[NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY]) {
+      const raw = changes[NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY].newValue;
+      newtabFeedbackButtonVisible = normalizeNewtabFeedbackButtonVisible(raw);
+      if (storageArea && raw !== newtabFeedbackButtonVisible) {
+        storageArea.set({
+          [NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY]: newtabFeedbackButtonVisible
+        });
+      }
+      applyNewtabActionButtonVisibility();
+    }
+    if (changes[NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY]) {
+      const raw = changes[NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY].newValue;
+      newtabAppearanceButtonVisible = normalizeNewtabAppearanceButtonVisible(raw);
+      if (storageArea && raw !== newtabAppearanceButtonVisible) {
+        storageArea.set({
+          [NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY]: newtabAppearanceButtonVisible
+        });
+      }
+      applyNewtabActionButtonVisibility();
+    }
     if (changes[NEWTAB_ZEN_MODE_STORAGE_KEY]) {
       zenModeEnabled = normalizeZenModeEnabled(changes[NEWTAB_ZEN_MODE_STORAGE_KEY].newValue);
       applyZenMode();
@@ -4648,6 +4686,8 @@
     NEWTAB_WIDTH_MODE_STORAGE_KEY,
     NEWTAB_SEARCH_WIDTH_STORAGE_KEY,
     NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY,
+    NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,
+    NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY,
     NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY,
     NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY,
     NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY,
@@ -14191,11 +14231,13 @@
         newTabSuggestion,
         ...suggestions
       ].filter(Boolean);
-      const groupedDefaultSuggestions = typeof SEARCH_UTILS.groupSearchSuggestionsByKind === 'function'
-        ? SEARCH_UTILS.groupSearchSuggestionsByKind(defaultSuggestions, {
-          searchFirst: searchResultPriorityMode === 'search'
-        })
-        : defaultSuggestions;
+      let groupedDefaultSuggestions = defaultSuggestions;
+      if (searchResultPriorityMode !== 'search' &&
+          typeof SEARCH_UTILS.groupSearchSuggestionsByKind === 'function') {
+        groupedDefaultSuggestions = SEARCH_UTILS.groupSearchSuggestionsByKind(defaultSuggestions, {
+          searchFirst: false
+        });
+      }
 
       let allSuggestions = localSearchQueryModeActive
         ? suggestions.filter((item) => (
@@ -14220,6 +14262,20 @@
         }
       });
       allSuggestions = filterBlacklistedSuggestions(allSuggestions, query);
+      const hasDirectUrlSuggestion = preSuggestions.some((suggestion) => (
+        suggestion && suggestion.type === 'directUrl'
+      ));
+      if (searchResultPriorityMode === 'search' &&
+          !localSearchQueryModeActive &&
+          !slashCommandModeActive &&
+          !toggleCommandActive &&
+          !siteSearchQueryModeActive &&
+          !hasDirectUrlSuggestion &&
+          typeof SEARCH_UTILS.composeSearchFirstSuggestionSlate === 'function') {
+        allSuggestions = SEARCH_UTILS.composeSearchFirstSuggestionSlate(allSuggestions, {
+          limit: searchResultDisplayLimit
+        });
+      }
 
       const keywordSuggestionState = getKeywordSearchSuggestionState(allSuggestions);
       const onlyKeywordSuggestions = keywordSuggestionState.onlyKeywordSuggestions;
@@ -14282,7 +14338,8 @@
           primaryHighlightIndex = 0;
           primaryHighlightReason = 'topSite';
         }
-        if (!siteSearchState && query && !onlyKeywordSuggestions && openTabQuickSwitchEnabled) {
+        if (preferAutocompleteFirst &&
+            !siteSearchState && query && !onlyKeywordSuggestions && openTabQuickSwitchEnabled) {
           const openTabMatch = typeof SEARCH_UTILS.findSearchOpenTabMatchIndex === 'function'
             ? SEARCH_UTILS.findSearchOpenTabMatchIndex(allSuggestions, {
               rawQuery: latestRawQuery.trim(),
@@ -14531,7 +14588,8 @@
           action: 'getSearchEngineSuggestions',
           query: requestQuery,
           context: 'newtab',
-          localSuggestions: localSuggestions
+          localSuggestions: localSuggestions,
+          searchFirst: searchResultPriorityMode === 'search'
         }, function(remoteResponse) {
           if (requestSeq !== suggestionRequestSeq || requestQuery !== latestQuery) {
             return;
@@ -15424,6 +15482,66 @@
     }
   }
 
+  function setNewtabActionControlVisibility(element, visible) {
+    if (!element) {
+      return;
+    }
+    const nextVisible = visible !== false;
+    element.hidden = !nextVisible;
+    element.style.setProperty('display', nextVisible ? '' : 'none');
+    element.setAttribute('aria-hidden', nextVisible ? 'false' : 'true');
+    element.inert = !nextVisible;
+    if (nextVisible) {
+      element.removeAttribute('inert');
+    } else {
+      element.setAttribute('inert', '');
+    }
+  }
+
+  function applyNewtabActionButtonVisibility() {
+    if (!newtabFeedbackButtonVisible && feedbackReactController) {
+      closeFeedbackPopover();
+    }
+    if (!newtabAppearanceButtonVisible && wallpaperRuntime) {
+      closeWallpaperPanel();
+    }
+    setNewtabActionControlVisibility(feedbackControl, newtabFeedbackButtonVisible);
+    setNewtabActionControlVisibility(wallpaperControl, newtabAppearanceButtonVisible);
+  }
+
+  function loadNewtabActionButtonVisibility() {
+    if (!storageArea) {
+      newtabFeedbackButtonVisible = true;
+      newtabAppearanceButtonVisible = true;
+      applyNewtabActionButtonVisibility();
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      storageArea.get([
+        NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,
+        NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY
+      ], (result) => {
+        const stored = result || {};
+        const rawFeedback = stored[NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY];
+        const rawAppearance = stored[NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY];
+        newtabFeedbackButtonVisible = normalizeNewtabFeedbackButtonVisible(rawFeedback);
+        newtabAppearanceButtonVisible = normalizeNewtabAppearanceButtonVisible(rawAppearance);
+        const repairs = {};
+        if (rawFeedback !== newtabFeedbackButtonVisible) {
+          repairs[NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY] = newtabFeedbackButtonVisible;
+        }
+        if (rawAppearance !== newtabAppearanceButtonVisible) {
+          repairs[NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY] = newtabAppearanceButtonVisible;
+        }
+        applyNewtabActionButtonVisibility();
+        if (Object.keys(repairs).length > 0) {
+          storageArea.set(repairs);
+        }
+        resolve();
+      });
+    });
+  }
+
   function setSiteSearchTabHint(provider) {
     if (inputModeController) {
       inputModeController.setTabHintVisible(true, provider);
@@ -16002,6 +16120,8 @@
     positionBookmarkCascadeLevels();
   }, { passive: true });
   bottomDockRuntime.onScroll(scheduleWallpaperAdaptiveToneUpdate, { passive: true });
+  const actionButtonVisibilityReadyPromise = loadNewtabActionButtonVisibility();
+  observeNewtabStartupTask('action-button-visibility', actionButtonVisibilityReadyPromise);
   const shortcutPreferencesReadyPromise = loadNewtabShortcutPreferences();
   observeNewtabStartupTask('shortcut-preferences', shortcutPreferencesReadyPromise);
   const shortcutsReadyPromise = shortcutPreferencesReadyPromise.then(loadVisibleShortcuts);
@@ -16027,6 +16147,7 @@
     initialAppearanceReadyTask,
     initialBookmarkViewModeReadyPromise,
     loadZenMode(),
+    actionButtonVisibilityReadyPromise,
     shortcutPreferencesReadyPromise,
     initialMotionPreferenceReadyTask
   ]).then(() => {

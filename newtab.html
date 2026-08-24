@@ -4728,17 +4728,24 @@
         min-width: 0;
         display: block;
       }
+      .x-nt-shortcuts-accordion-details[hidden],
+      .x-nt-shortcuts-accordion-details[data-visible="false"] {
+        display: none;
+      }
       .x-nt-shortcuts-accordion-details-inner {
         min-width: 0;
-        padding-left: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: var(--x-nt-panel-item-gap);
+        padding: var(--x-nt-panel-item-gap) 0 0 16px;
         box-sizing: border-box;
       }
       .x-nt-shortcuts-accordion-details .x-nt-appearance-setting-row {
-        margin-top: 8px;
+        margin-top: 0;
         padding-left: 0;
       }
       .x-nt-shortcut-width-control {
-        padding: 12px 2px 0 0;
+        padding: 0 2px 0 0;
       }
       @media (prefers-reduced-motion: reduce) {
         .x-nt-shortcuts-accordion-icon {

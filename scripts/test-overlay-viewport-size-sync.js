@@ -335,8 +335,8 @@ assert.match(
 );
 assert.match(
   searchPanelSource,
-  /!finalRemoteMix && remoteMixState &&[\s\S]*?remoteMixState\.settled && remoteMixState\.hasFinalSuggestions[\s\S]*?return;/,
-  'a late local render should not overwrite an already completed remote mix'
+  /!finalRemoteMix && remoteMixState && remoteMixState\.settled[\s\S]*?return;/,
+  'a late pending or local render should not overwrite any completed final mix'
 );
 assert.doesNotMatch(
   searchPanelSource,

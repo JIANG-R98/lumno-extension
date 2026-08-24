@@ -66,10 +66,12 @@
         return;
       }
       seen.add(key);
+      const builtinKey = String(item && item.builtinKey ? item.builtinKey : '').toLowerCase();
+      const baseProvider = baseMap.get(builtinKey || key);
       merged.push({
         ...item,
-        action: String(item.action || (baseMap.get(key) && baseMap.get(key).action) || '').trim(),
-        submitStrategy: String(item.submitStrategy || (baseMap.get(key) && baseMap.get(key).submitStrategy) || '').trim(),
+        action: String(item.action || (baseProvider && baseProvider.action) || '').trim(),
+        submitStrategy: String(item.submitStrategy || (baseProvider && baseProvider.submitStrategy) || '').trim(),
         _xIsCustom: true
       });
     });
@@ -86,11 +88,27 @@
 
   function mergeStoredProviders(baseItems, customItems, disabledKeys, mergeCustomProviders) {
     const disabled = normalizeDisabledKeys(disabledKeys);
+    const baseMap = new Map((baseItems || []).map((item) => [
+      String(item && item.key ? item.key : '').toLowerCase(),
+      item
+    ]));
+    const hydratedCustom = (customItems || []).map((item) => {
+      const key = String(item && item.key ? item.key : '').toLowerCase();
+      const builtinKey = String(item && item.builtinKey ? item.builtinKey : '').toLowerCase();
+      const baseProvider = baseMap.get(builtinKey || key);
+      return {
+        ...item,
+        action: String(item && item.action || (baseProvider && baseProvider.action) || '').trim(),
+        submitStrategy: String(
+          item && item.submitStrategy || (baseProvider && baseProvider.submitStrategy) || ''
+        ).trim()
+      };
+    });
     const filteredBase = (baseItems || []).filter((item) => {
       const key = String(item && item.key ? item.key : '').toLowerCase();
       return key && !disabled.includes(key);
     });
-    return mergeProviders(filteredBase, customItems, mergeCustomProviders);
+    return mergeProviders(filteredBase, hydratedCustom, mergeCustomProviders);
   }
 
   function loadSiteSearchProviders(options) {

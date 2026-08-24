@@ -169,8 +169,8 @@ assert.match(
 );
 assert.match(
   newtabSource,
-  /groupSearchSuggestionsByKind\(defaultSuggestions,\s*\{\s*searchFirst: searchResultPriorityMode === 'search'\s*\}\)/,
-  'the rendered list should group webpages and keyword-search suggestions instead of interleaving them'
+  /searchResultPriorityMode === 'search'[\s\S]*?composeSearchFirstSuggestionSlate\(allSuggestions, \{\s*limit: searchResultDisplayLimit\s*\}\)/,
+  'search-first rendering should use the shared quota slate instead of interleaving local and keyword-search rows'
 );
 
 console.log('suggestion action alignment tests passed');

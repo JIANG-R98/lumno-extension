@@ -19,6 +19,28 @@ async function run() {
   assert.strictEqual(merged[0].submitStrategy, 'geminiPrompt');
   assert.strictEqual(merged[0]._xIsCustom, true);
 
+  const renamedBuiltIn = store.mergeStoredProviders(
+    baseProviders,
+    [{
+      key: 'gmx',
+      builtinKey: 'gm',
+      name: 'Gemini Renamed',
+      template: 'https://gemini.google.com/app'
+    }],
+    ['gm'],
+    null
+  );
+  assert.strictEqual(renamedBuiltIn.length, 2);
+  assert.strictEqual(renamedBuiltIn[0].key, 'gmx');
+  assert.strictEqual(renamedBuiltIn[0].builtinKey, 'gm');
+  assert.strictEqual(renamedBuiltIn[0].action, 'openAndSubmit');
+  assert.strictEqual(renamedBuiltIn[0].submitStrategy, 'geminiPrompt');
+  assert.strictEqual(
+    renamedBuiltIn.some((item) => item.key === 'gm'),
+    false,
+    'disabling the origin should prevent a renamed override from duplicating its built-in'
+  );
+
   const runtimeItems = [{ key: 'rd', name: 'Reddit', template: 'https://reddit.com/search?q={query}' }];
   const runtimeLoaded = await store.loadSiteSearchProviders({
     chromeApi: {

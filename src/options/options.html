@@ -1129,6 +1129,7 @@
       #_x_extension_bookmark_rows_control_2026_unique_,
       #_x_extension_bookmark_columns_control_2026_unique_,
       #_x_extension_newtab_time_font_weight_control_2026_unique_,
+      #_x_extension_newtab_shortcut_width_control_2026_unique_,
       #_x_extension_recent_count_control_2026_unique_,
       #_x_extension_search_result_display_limit_control_2026_unique_ {
         width: 210px;
@@ -2504,6 +2505,7 @@
         #_x_extension_bookmark_rows_setting_row_2026_unique_,
         #_x_extension_bookmark_columns_setting_row_2026_unique_,
         #_x_extension_newtab_time_font_weight_row_2026_unique_,
+        #_x_extension_newtab_shortcut_width_setting_row_2026_unique_,
         #_x_extension_search_result_display_limit_setting_row_2026_unique_ {
           align-items: flex-start;
           flex-direction: column;
@@ -2511,6 +2513,7 @@
         #_x_extension_bookmark_rows_control_2026_unique_,
         #_x_extension_bookmark_columns_control_2026_unique_,
         #_x_extension_newtab_time_font_weight_control_2026_unique_,
+        #_x_extension_newtab_shortcut_width_control_2026_unique_,
         #_x_extension_recent_count_control_2026_unique_,
         #_x_extension_search_result_display_limit_control_2026_unique_ {
           min-width: 0;
@@ -3072,6 +3075,57 @@
             </div>
             <label class="_x_extension_switch_2024_unique_" for="_x_extension_newtab_input_auto_focus_toggle_2026_unique_">
               <input id="_x_extension_newtab_input_auto_focus_toggle_2026_unique_" type="checkbox" aria-label="输入框自动聚焦" data-i18n-aria-label="newtab_input_auto_focus_title">
+              <span class="_x_extension_switch_slider_2024_unique_" aria-hidden="true"></span>
+            </label>
+          </div>
+          <div class="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_">
+            <div>
+              <p class="_x_extension_setting_title_2024_unique_" data-i18n="settings_newtab_shortcuts_title">快捷方式</p>
+            </div>
+            <label class="_x_extension_switch_2024_unique_" for="_x_extension_newtab_shortcuts_toggle_2026_unique_">
+              <input id="_x_extension_newtab_shortcuts_toggle_2026_unique_" type="checkbox" checked aria-label="快捷方式" data-i18n-aria-label="settings_newtab_shortcuts_title">
+              <span class="_x_extension_switch_slider_2024_unique_" aria-hidden="true"></span>
+            </label>
+          </div>
+          <div id="_x_extension_newtab_shortcut_add_row_2026_unique_" class="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_ _x_extension_setting_subrow_2026_unique_">
+            <div>
+              <p class="_x_extension_setting_title_2024_unique_" data-i18n="settings_newtab_shortcut_add_title">展示「+」</p>
+            </div>
+            <label class="_x_extension_switch_2024_unique_" for="_x_extension_newtab_shortcut_add_toggle_2026_unique_">
+              <input id="_x_extension_newtab_shortcut_add_toggle_2026_unique_" type="checkbox" checked aria-label="展示「+」" data-i18n-aria-label="settings_newtab_shortcut_add_title">
+              <span class="_x_extension_switch_slider_2024_unique_" aria-hidden="true"></span>
+            </label>
+          </div>
+          <div id="_x_extension_newtab_shortcut_dock_magnification_row_2026_unique_" class="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_ _x_extension_setting_subrow_2026_unique_">
+            <div>
+              <p class="_x_extension_setting_title_2024_unique_" data-i18n="settings_newtab_shortcut_dock_magnification_title">仿 macOS Dock 程序坞缩放效果</p>
+            </div>
+            <label class="_x_extension_switch_2024_unique_" for="_x_extension_newtab_shortcut_dock_magnification_toggle_2026_unique_">
+              <input id="_x_extension_newtab_shortcut_dock_magnification_toggle_2026_unique_" type="checkbox" checked aria-label="仿 macOS Dock 程序坞缩放效果" data-i18n-aria-label="settings_newtab_shortcut_dock_magnification_title">
+              <span class="_x_extension_switch_slider_2024_unique_" aria-hidden="true"></span>
+            </label>
+          </div>
+          <div id="_x_extension_newtab_shortcut_width_setting_row_2026_unique_" class="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_ _x_extension_setting_subrow_2026_unique_">
+            <div>
+              <p class="_x_extension_setting_title_2024_unique_" data-i18n="settings_newtab_shortcut_width_title">快捷方式宽度</p>
+            </div>
+            <div id="_x_extension_newtab_shortcut_width_control_2026_unique_"></div>
+          </div>
+          <div class="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_">
+            <div>
+              <p class="_x_extension_setting_title_2024_unique_" data-i18n="settings_newtab_feedback_button_visible_title">展示反馈按钮</p>
+            </div>
+            <label class="_x_extension_switch_2024_unique_" for="_x_extension_newtab_feedback_button_visible_toggle_2026_unique_">
+              <input id="_x_extension_newtab_feedback_button_visible_toggle_2026_unique_" type="checkbox" checked aria-label="展示反馈按钮" data-i18n-aria-label="settings_newtab_feedback_button_visible_title">
+              <span class="_x_extension_switch_slider_2024_unique_" aria-hidden="true"></span>
+            </label>
+          </div>
+          <div class="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_">
+            <div>
+              <p class="_x_extension_setting_title_2024_unique_" data-i18n="settings_newtab_appearance_button_visible_title">展示外观按钮</p>
+            </div>
+            <label class="_x_extension_switch_2024_unique_" for="_x_extension_newtab_appearance_button_visible_toggle_2026_unique_">
+              <input id="_x_extension_newtab_appearance_button_visible_toggle_2026_unique_" type="checkbox" checked aria-label="展示外观按钮" data-i18n-aria-label="settings_newtab_appearance_button_visible_title">
               <span class="_x_extension_switch_slider_2024_unique_" aria-hidden="true"></span>
             </label>
           </div>

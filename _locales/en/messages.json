@@ -556,6 +556,12 @@
   "newtab_time_show_seconds_title": {
     "message": "Show seconds"
   },
+  "settings_newtab_feedback_button_visible_title": {
+    "message": "Show feedback button"
+  },
+  "settings_newtab_appearance_button_visible_title": {
+    "message": "Show Appearance button"
+  },
   "settings_newtab_shortcuts_title": {
     "message": "Shortcuts"
   },

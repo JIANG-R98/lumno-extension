@@ -47,15 +47,15 @@ assert.match(
   newtabSource,
   /setShortcutWidth:\s*setNewtabShortcutWidth/
 );
-assert.doesNotMatch(
+assert.match(
   optionsHtml,
-  /_x_extension_newtab_shortcut_width_(?:setting_row|control)_2026_unique_/,
-  'the legacy Options page should no longer render shortcut width'
+  /id="_x_extension_newtab_shortcut_width_setting_row_2026_unique_"[\s\S]*?data-i18n="settings_newtab_shortcut_width_title"[\s\S]*?id="_x_extension_newtab_shortcut_width_control_2026_unique_"/,
+  'Options should keep a shortcut width control alongside the New Tab appearance panel'
 );
-assert.doesNotMatch(
+assert.match(
   optionsSource,
-  /newtab-shortcut-width|newtab_shortcut_width_slider/,
-  'the legacy Options runtime should no longer own the shortcut width control'
+  /kind:\s*'newtab-shortcut-width'[\s\S]*?id:\s*'_x_extension_newtab_shortcut_width_slider_2026_unique_'[\s\S]*?min:\s*NEWTAB_SHORTCUT_WIDTH_MIN[\s\S]*?max:\s*NEWTAB_SHORTCUT_WIDTH_MAX[\s\S]*?valueSuffix:\s*' px'/,
+  'Options should bind the shared shortcut width setting to its own slider'
 );
 
 const shortcutSectionStart = newtabHtml.indexOf('.x-nt-shortcuts-section {');

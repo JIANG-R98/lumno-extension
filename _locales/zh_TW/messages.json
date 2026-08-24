@@ -556,6 +556,12 @@
   "newtab_time_show_seconds_title": {
     "message": "顯示秒數"
   },
+  "settings_newtab_feedback_button_visible_title": {
+    "message": "顯示意見回饋按鈕"
+  },
+  "settings_newtab_appearance_button_visible_title": {
+    "message": "顯示外觀按鈕"
+  },
   "settings_newtab_shortcuts_title": {
     "message": "快捷方式"
   },

@@ -19,7 +19,7 @@ assert.strictEqual(settings.addStorageChangeListener({
   storage: { onChanged: { addListener() {} } }
 }, null), false);
 
-assert.strictEqual(settings.CHROME_SYNC_STORAGE_KEYS.length, 58);
+assert.strictEqual(settings.CHROME_SYNC_STORAGE_KEYS.length, 60);
 assert.strictEqual(
   new Set(settings.CHROME_SYNC_STORAGE_KEYS).size,
   settings.CHROME_SYNC_STORAGE_KEYS.length
@@ -31,6 +31,8 @@ assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_number_shortcut_
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_macos_ctrl_suggestion_navigation_enabled_2026_unique_'));
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_overlay_page_theme_adaptation_enabled_2026_unique_'));
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_newtab_input_auto_focus_enabled_2026_unique_'));
+assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY));
+assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY));
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_newtab_time_font_weight_2026_unique_'));
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_newtab_time_seconds_visible_2026_unique_'));
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_search_result_display_limit_2026_unique_'));
@@ -140,6 +142,24 @@ assert.strictEqual(
   settings.NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY,
   '_x_extension_newtab_shortcut_dock_magnification_enabled_2026_unique_'
 );
+[
+  [
+    settings.NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,
+    '_x_extension_newtab_feedback_button_visible_2026_unique_',
+    settings.normalizeNewtabFeedbackButtonVisible
+  ],
+  [
+    settings.NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY,
+    '_x_extension_newtab_appearance_button_visible_2026_unique_',
+    settings.normalizeNewtabAppearanceButtonVisible
+  ]
+].forEach(([storageKey, expectedStorageKey, normalize]) => {
+  assert.strictEqual(storageKey, expectedStorageKey);
+  assert.strictEqual(normalize(false), false);
+  assert.strictEqual(normalize(true), true);
+  assert.strictEqual(normalize(undefined), true);
+  assert.strictEqual(normalize('false'), true);
+});
 assert.strictEqual(
   settings.NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY,
   '_x_extension_newtab_shortcut_width_2026_unique_'

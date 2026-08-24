@@ -91,6 +91,15 @@
   const newtabTimeSecondsRow = document.getElementById('_x_extension_newtab_time_seconds_row_2026_unique_');
   const newtabTimeSecondsToggle = document.getElementById('_x_extension_newtab_time_seconds_toggle_2026_unique_');
   const newtabInputAutoFocusToggle = document.getElementById('_x_extension_newtab_input_auto_focus_toggle_2026_unique_');
+  const newtabShortcutsToggle = document.getElementById('_x_extension_newtab_shortcuts_toggle_2026_unique_');
+  const newtabShortcutAddRow = document.getElementById('_x_extension_newtab_shortcut_add_row_2026_unique_');
+  const newtabShortcutAddToggle = document.getElementById('_x_extension_newtab_shortcut_add_toggle_2026_unique_');
+  const newtabShortcutDockMagnificationRow = document.getElementById('_x_extension_newtab_shortcut_dock_magnification_row_2026_unique_');
+  const newtabShortcutDockMagnificationToggle = document.getElementById('_x_extension_newtab_shortcut_dock_magnification_toggle_2026_unique_');
+  const newtabShortcutWidthRow = document.getElementById('_x_extension_newtab_shortcut_width_setting_row_2026_unique_');
+  const newtabShortcutWidthControlHost = document.getElementById('_x_extension_newtab_shortcut_width_control_2026_unique_');
+  const newtabFeedbackButtonVisibleToggle = document.getElementById('_x_extension_newtab_feedback_button_visible_toggle_2026_unique_');
+  const newtabAppearanceButtonVisibleToggle = document.getElementById('_x_extension_newtab_appearance_button_visible_toggle_2026_unique_');
   const restrictedActionSelect = document.getElementById('_x_extension_restricted_action_select_2024_unique_');
   const searchResultPrioritySelect = document.getElementById('_x_extension_search_result_priority_select_2026_unique_');
   const searchResultSourceTypeGroupHost = document.getElementById('_x_extension_search_result_source_types_2026_unique_');
@@ -347,6 +356,11 @@
     [overlayTabQuickSwitchToggle, 'overlay-tab-quick-switch'],
     [newtabTimeSecondsToggle, 'newtab-time-seconds'],
     [newtabInputAutoFocusToggle, 'newtab-input-auto-focus'],
+    [newtabShortcutsToggle, 'newtab-shortcuts'],
+    [newtabShortcutAddToggle, 'newtab-shortcut-add'],
+    [newtabShortcutDockMagnificationToggle, 'newtab-shortcut-dock-magnification'],
+    [newtabFeedbackButtonVisibleToggle, 'newtab-feedback-button-visible'],
+    [newtabAppearanceButtonVisibleToggle, 'newtab-appearance-button-visible'],
     [faviconEnhancedFetchToggle, 'favicon-enhanced-fetch'],
     [tabSwitcherToggle, 'tab-switcher'],
     [documentPipToggle, 'document-pip'],
@@ -790,6 +804,10 @@
   const NEWTAB_SEARCH_WIDTH_STORAGE_KEY = '_x_extension_newtab_search_width_2026_unique_';
   const NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY = SETTINGS.NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY ||
     '_x_extension_newtab_input_auto_focus_enabled_2026_unique_';
+  const NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY = SETTINGS.NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY ||
+    '_x_extension_newtab_feedback_button_visible_2026_unique_';
+  const NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY = SETTINGS.NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY ||
+    '_x_extension_newtab_appearance_button_visible_2026_unique_';
   const NEWTAB_THEME_MODE_STORAGE_KEY = '_x_extension_newtab_theme_mode_2026_unique_';
   const NEWTAB_THEME_SCOPE_STORAGE_KEY = '_x_extension_newtab_theme_scope_2026_unique_';
   const NEWTAB_ZEN_MODE_STORAGE_KEY = '_x_extension_newtab_zen_mode_2026_unique_';
@@ -818,6 +836,9 @@
   const NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY = '_x_extension_newtab_shortcut_dock_magnification_enabled_2026_unique_';
   const NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY = SETTINGS.NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY ||
     '_x_extension_newtab_shortcut_width_2026_unique_';
+  const NEWTAB_SHORTCUT_WIDTH_MIN = Number(SETTINGS.NEWTAB_SHORTCUT_WIDTH_MIN) || 360;
+  const NEWTAB_SHORTCUT_WIDTH_MAX = Number(SETTINGS.NEWTAB_SHORTCUT_WIDTH_MAX) || 1440;
+  const NEWTAB_SHORTCUT_WIDTH_DEFAULT = Number(SETTINGS.NEWTAB_SHORTCUT_WIDTH_DEFAULT) || 920;
   const UPDATE_NOTICE_ENABLED_STORAGE_KEY = '_x_extension_update_notice_enabled_2026_unique_';
   const MOTION_EFFECTS_ENABLED_STORAGE_KEY = SETTINGS.MOTION_EFFECTS_ENABLED_STORAGE_KEY ||
     '_x_extension_motion_effects_enabled_2026_unique_';
@@ -909,6 +930,8 @@
     NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY,
     NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY,
     NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY,
+    NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,
+    NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY,
     NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY,
     UPDATE_NOTICE_ENABLED_STORAGE_KEY,
     MOTION_EFFECTS_ENABLED_STORAGE_KEY,
@@ -1035,6 +1058,7 @@
   let currentBookmarkColumns = 6;
   let currentNewtabTopContentMode = 'brand';
   let currentNewtabTimeFontWeight = NEWTAB_TIME_FONT_WEIGHT_DEFAULT;
+  let currentNewtabShortcutWidth = NEWTAB_SHORTCUT_WIDTH_DEFAULT;
   let currentActiveSettingsTab = 'general';
   const optionsSelectControlRecords = new Map();
   function registerOptionsSelectControl(select, kind) {
@@ -1135,6 +1159,60 @@
       ],
       value: currentNewtabTimeFontWeight
     });
+  }
+  const newtabShortcutWidthController =
+    typeof optionsSettingsControlsApi.createRangeSliderControlController === 'function'
+      ? optionsSettingsControlsApi.createRangeSliderControlController(
+          newtabShortcutWidthControlHost,
+          {
+            kind: 'newtab-shortcut-width',
+            onInput(value) {
+              const nextWidth = normalizeNewtabShortcutWidth(value);
+              currentNewtabShortcutWidth = nextWidth;
+              if (storageArea) {
+                storageArea.set({ [NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY]: nextWidth });
+              }
+            }
+          }
+        )
+      : null;
+  function renderNewtabShortcutWidthControl(value, disabled) {
+    if (!newtabShortcutWidthController) {
+      return;
+    }
+    currentNewtabShortcutWidth = normalizeNewtabShortcutWidth(value);
+    newtabShortcutWidthController.render({
+      ariaLabel: getMessage('settings_newtab_shortcut_width_title', 'Shortcut width'),
+      disabled: Boolean(disabled),
+      id: '_x_extension_newtab_shortcut_width_slider_2026_unique_',
+      min: NEWTAB_SHORTCUT_WIDTH_MIN,
+      max: NEWTAB_SHORTCUT_WIDTH_MAX,
+      step: 1,
+      ticks: [
+        { align: 'start', label: String(NEWTAB_SHORTCUT_WIDTH_MIN) },
+        { label: String(Math.round((NEWTAB_SHORTCUT_WIDTH_MIN + NEWTAB_SHORTCUT_WIDTH_MAX) / 2)) },
+        { align: 'end', label: String(NEWTAB_SHORTCUT_WIDTH_MAX) }
+      ],
+      value: currentNewtabShortcutWidth,
+      valueSuffix: ' px'
+    });
+  }
+  function syncNewtabShortcutSubcontrolAvailability() {
+    const disabled = Boolean(newtabShortcutsToggle && !newtabShortcutsToggle.checked);
+    [newtabShortcutAddToggle, newtabShortcutDockMagnificationToggle].forEach((toggle) => {
+      if (toggle) {
+        setOptionsToggleState(toggle, toggle.checked, disabled);
+      }
+    });
+    [newtabShortcutAddRow, newtabShortcutDockMagnificationRow, newtabShortcutWidthRow]
+      .forEach((row) => {
+        if (!row) {
+          return;
+        }
+        row.setAttribute('data-disabled', disabled ? 'true' : 'false');
+        row.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+      });
+    renderNewtabShortcutWidthControl(currentNewtabShortcutWidth, disabled);
   }
   const bookmarkRowsController =
     typeof optionsSettingsControlsApi.createRangeSliderControlController === 'function'
@@ -1283,6 +1361,8 @@
     });
   }
   renderNewtabTimeFontWeightControl(NEWTAB_TIME_FONT_WEIGHT_DEFAULT);
+  renderNewtabShortcutWidthControl(NEWTAB_SHORTCUT_WIDTH_DEFAULT, false);
+  syncNewtabShortcutSubcontrolAvailability();
   renderRecentCountControl(4);
   renderBookmarkRowsControl(8);
   renderBookmarkColumnsControl(6);
@@ -1973,6 +2053,54 @@
     return typeof SETTINGS.normalizeNewtabInputAutoFocusEnabled === 'function'
       ? SETTINGS.normalizeNewtabInputAutoFocusEnabled(value)
       : value === true;
+  }
+
+  function normalizeNewtabShortcutsVisible(value) {
+    return typeof SETTINGS.normalizeNewtabShortcutsVisible === 'function'
+      ? SETTINGS.normalizeNewtabShortcutsVisible(value)
+      : value !== false;
+  }
+
+  function normalizeNewtabShortcutAddVisible(value) {
+    return typeof SETTINGS.normalizeNewtabShortcutAddVisible === 'function'
+      ? SETTINGS.normalizeNewtabShortcutAddVisible(value)
+      : value !== false;
+  }
+
+  function normalizeNewtabShortcutDockMagnificationEnabled(value) {
+    return typeof SETTINGS.normalizeNewtabShortcutDockMagnificationEnabled === 'function'
+      ? SETTINGS.normalizeNewtabShortcutDockMagnificationEnabled(value)
+      : value !== false;
+  }
+
+  function normalizeNewtabShortcutWidth(value) {
+    return typeof SETTINGS.normalizeNewtabShortcutWidth === 'function'
+      ? SETTINGS.normalizeNewtabShortcutWidth(value, {
+          min: NEWTAB_SHORTCUT_WIDTH_MIN,
+          max: NEWTAB_SHORTCUT_WIDTH_MAX,
+          fallback: NEWTAB_SHORTCUT_WIDTH_DEFAULT
+        })
+      : Math.min(
+          NEWTAB_SHORTCUT_WIDTH_MAX,
+          Math.max(
+            NEWTAB_SHORTCUT_WIDTH_MIN,
+            Number.isFinite(Number(value))
+              ? Math.round(Number(value))
+              : NEWTAB_SHORTCUT_WIDTH_DEFAULT
+          )
+        );
+  }
+
+  function normalizeNewtabFeedbackButtonVisible(value) {
+    return typeof SETTINGS.normalizeNewtabFeedbackButtonVisible === 'function'
+      ? SETTINGS.normalizeNewtabFeedbackButtonVisible(value)
+      : value !== false;
+  }
+
+  function normalizeNewtabAppearanceButtonVisible(value) {
+    return typeof SETTINGS.normalizeNewtabAppearanceButtonVisible === 'function'
+      ? SETTINGS.normalizeNewtabAppearanceButtonVisible(value)
+      : value !== false;
   }
 
   function normalizeBookmarkFolderIconsVisible(value) {
@@ -3222,8 +3350,23 @@
         showToast(getMessage('toast_error', '操作失败，请重试'), true);
       });
     }
-    customSiteSearchProviders = customSiteSearchProviders.filter((item) => String(item.key || '') !== key);
-    return saveCustomSiteSearchProviders(customSiteSearchProviders).then(() => {
+    const removedItem = customSiteSearchProviders.find(
+      (item) => String(item.key || '') === key
+    );
+    const nextCustom = customSiteSearchProviders.filter(
+      (item) => String(item.key || '') !== key
+    );
+    const nextDisabledKeys = new Set(disabledSiteSearchKeys);
+    const builtinKey = getSiteSearchBuiltinKey(removedItem);
+    if (builtinKey) {
+      nextDisabledKeys.delete(builtinKey);
+    }
+    return Promise.all([
+      saveCustomSiteSearchProviders(nextCustom),
+      saveDisabledSiteSearchKeys(nextDisabledKeys)
+    ]).then(() => {
+      customSiteSearchProviders = nextCustom;
+      disabledSiteSearchKeys = nextDisabledKeys;
       refreshSiteSearchProviders();
       if (editingSiteSearchKey === key) {
         resetSiteSearchForm();
@@ -3366,6 +3509,8 @@
       setRestrictedActionTabState(currentRestrictedAction);
       setNewtabTopContentTabState(currentNewtabTopContentMode);
       renderNewtabTimeFontWeightControl(currentNewtabTimeFontWeight);
+      renderNewtabShortcutWidthControl(currentNewtabShortcutWidth);
+      syncNewtabShortcutSubcontrolAvailability();
       renderRecentCountControl(currentRecentCount);
       renderBookmarkRowsControl(currentBookmarkCount);
       renderBookmarkColumnsControl(currentBookmarkColumns);
@@ -4451,7 +4596,7 @@
     const aliasSource = Array.isArray(item && item.aliases)
       ? item.aliases
       : (Array.isArray(baseItem && baseItem.aliases) ? baseItem.aliases : []);
-    return {
+    const provider = {
       key,
       aliases: aliasSource.filter(Boolean),
       name: String((item && item.name) || (baseItem && baseItem.name) || key).trim() || key,
@@ -4468,6 +4613,13 @@
       icon: String((item && item.icon) || (baseItem && baseItem.icon) || '').trim(),
       iconUrl: String((item && item.iconUrl) || (baseItem && baseItem.iconUrl) || '').trim()
     };
+    const builtinKey = String(
+      (item && item.builtinKey) || (baseItem && baseItem.builtinKey) || ''
+    ).trim().toLowerCase();
+    if (builtinKey) {
+      provider.builtinKey = builtinKey;
+    }
+    return provider;
   }
 
   function findSiteSearchKeyConflict(key, allowedKey) {
@@ -4498,6 +4650,23 @@
       return false;
     }
     return (defaults || []).some((item) => normalizeSiteSearchTemplate(String(item.template || '').trim()) === normalized);
+  }
+
+  function getSiteSearchBuiltinKey(item) {
+    return String(item && item.builtinKey ? item.builtinKey : '').trim().toLowerCase();
+  }
+
+  function getActiveBuiltinSiteSearchProviders(defaults, custom, disabledKeys) {
+    const customKeys = new Set((custom || []).map((item) => (
+      String(item && item.key ? item.key : '').trim().toLowerCase()
+    )).filter(Boolean));
+    const disabled = disabledKeys instanceof Set
+      ? disabledKeys
+      : new Set(Array.from(disabledKeys || []).map((key) => String(key || '').toLowerCase()));
+    return (defaults || []).filter((item) => {
+      const key = String(item && item.key ? item.key : '').trim().toLowerCase();
+      return key && !customKeys.has(key) && !disabled.has(key);
+    });
   }
 
   function normalizeAliases(input) {
@@ -4762,6 +4931,61 @@
       storageArea.set({ [NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY]: next });
     });
   }
+  if (newtabShortcutsToggle) {
+    newtabShortcutsToggle.addEventListener('change', () => {
+      const next = normalizeNewtabShortcutsVisible(newtabShortcutsToggle.checked);
+      setOptionsToggleState(newtabShortcutsToggle, next);
+      syncNewtabShortcutSubcontrolAvailability();
+      if (storageArea) {
+        storageArea.set({ [NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY]: next });
+      }
+    });
+  }
+  if (newtabShortcutAddToggle) {
+    newtabShortcutAddToggle.addEventListener('change', () => {
+      const next = normalizeNewtabShortcutAddVisible(newtabShortcutAddToggle.checked);
+      setOptionsToggleState(newtabShortcutAddToggle, next);
+      if (storageArea) {
+        storageArea.set({ [NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY]: next });
+      }
+    });
+  }
+  if (newtabShortcutDockMagnificationToggle) {
+    newtabShortcutDockMagnificationToggle.addEventListener('change', () => {
+      const next = normalizeNewtabShortcutDockMagnificationEnabled(
+        newtabShortcutDockMagnificationToggle.checked
+      );
+      setOptionsToggleState(newtabShortcutDockMagnificationToggle, next);
+      if (storageArea) {
+        storageArea.set({
+          [NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY]: next
+        });
+      }
+    });
+  }
+  [
+    [
+      newtabFeedbackButtonVisibleToggle,
+      NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,
+      normalizeNewtabFeedbackButtonVisible
+    ],
+    [
+      newtabAppearanceButtonVisibleToggle,
+      NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY,
+      normalizeNewtabAppearanceButtonVisible
+    ]
+  ].forEach(([toggle, storageKey, normalize]) => {
+    if (!toggle) {
+      return;
+    }
+    toggle.addEventListener('change', () => {
+      const next = normalize(toggle.checked);
+      setOptionsToggleState(toggle, next);
+      if (storageArea) {
+        storageArea.set({ [storageKey]: next });
+      }
+    });
+  });
   if (updateNoticeToggle) {
     updateNoticeToggle.addEventListener('change', () => {
       const next = normalizeUpdateNoticeEnabled(updateNoticeToggle.checked);
@@ -5421,6 +5645,71 @@
         storageArea.set({ [NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY]: stored });
       }
     });
+    storageArea.get([
+      NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY,
+      NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY,
+      NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY,
+      NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY
+    ], (result) => {
+      const rawVisible = result[NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY];
+      const rawAddVisible = result[NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY];
+      const rawDockMagnification =
+        result[NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY];
+      const rawWidth = result[NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY];
+      const visible = normalizeNewtabShortcutsVisible(rawVisible);
+      const addVisible = normalizeNewtabShortcutAddVisible(rawAddVisible);
+      const dockMagnification = normalizeNewtabShortcutDockMagnificationEnabled(
+        rawDockMagnification
+      );
+      const width = normalizeNewtabShortcutWidth(rawWidth);
+      setOptionsToggleState(newtabShortcutsToggle, visible);
+      setOptionsToggleState(newtabShortcutAddToggle, addVisible);
+      setOptionsToggleState(newtabShortcutDockMagnificationToggle, dockMagnification);
+      renderNewtabShortcutWidthControl(width);
+      syncNewtabShortcutSubcontrolAvailability();
+      const repairs = {};
+      if (rawVisible !== visible) {
+        repairs[NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY] = visible;
+      }
+      if (rawAddVisible !== addVisible) {
+        repairs[NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY] = addVisible;
+      }
+      if (rawDockMagnification !== dockMagnification) {
+        repairs[NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY] = dockMagnification;
+      }
+      if (rawWidth !== width) {
+        repairs[NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY] = width;
+      }
+      if (Object.keys(repairs).length > 0) {
+        storageArea.set(repairs);
+      }
+    });
+    storageArea.get([
+      NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,
+      NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY
+    ], (result) => {
+      [
+        [
+          newtabFeedbackButtonVisibleToggle,
+          NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,
+          normalizeNewtabFeedbackButtonVisible
+        ],
+        [
+          newtabAppearanceButtonVisibleToggle,
+          NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY,
+          normalizeNewtabAppearanceButtonVisible
+        ]
+      ].forEach(([toggle, storageKey, normalize]) => {
+        const rawValue = result[storageKey];
+        const stored = normalize(rawValue);
+        if (toggle) {
+          setOptionsToggleState(toggle, stored);
+        }
+        if (rawValue !== stored) {
+          storageArea.set({ [storageKey]: stored });
+        }
+      });
+    });
     storageArea.get([UPDATE_NOTICE_ENABLED_STORAGE_KEY], (result) => {
       const rawValue = result[UPDATE_NOTICE_ENABLED_STORAGE_KEY];
       const stored = normalizeUpdateNoticeEnabled(rawValue);
@@ -5803,9 +6092,14 @@
         (entry) => String(entry.key || '').toLowerCase() !== previousKey
       );
     }
-    const shouldDisable = !isBuiltin &&
-      isDuplicateTemplate(template, defaultSiteSearchProviders);
-    const nextItem = normalizeSiteSearchProvider({
+    const builtinKey = isBuiltin ? previousKey : getSiteSearchBuiltinKey(item);
+    const nextDisabledKeys = new Set(disabledSiteSearchKeys);
+    if (builtinKey) {
+      nextDisabledKeys.add(builtinKey);
+    } else {
+      nextDisabledKeys.delete(normalizedKey);
+    }
+    const nextItemDraft = {
       ...item,
       key: nextKeyRaw,
       name: String(draft && draft.name ? draft.name : '').trim() || nextKeyRaw,
@@ -5813,7 +6107,19 @@
       aliases,
       category: isBuiltinAiProvider
         ? 'aiSearch'
-        : (draft && draft.category === 'searchEngine' ? 'searchEngine' : 'site'),
+        : (draft && draft.category === 'searchEngine' ? 'searchEngine' : 'site')
+    };
+    if (builtinKey) {
+      nextItemDraft.builtinKey = builtinKey;
+    }
+    const activeBuiltins = getActiveBuiltinSiteSearchProviders(
+      defaultSiteSearchProviders,
+      [nextItemDraft].concat(next),
+      nextDisabledKeys
+    );
+    const shouldDisable = !builtinKey && isDuplicateTemplate(template, activeBuiltins);
+    const nextItem = normalizeSiteSearchProvider({
+      ...nextItemDraft,
       disabled: shouldDisable,
       disabledReason: shouldDisable ? 'duplicate' : ''
     });
@@ -5824,12 +6130,12 @@
       });
     }
     next.unshift(nextItem);
-    disabledSiteSearchKeys.delete(normalizedKey);
     return Promise.all([
       saveCustomSiteSearchProviders(next),
-      saveDisabledSiteSearchKeys(disabledSiteSearchKeys)
+      saveDisabledSiteSearchKeys(nextDisabledKeys)
     ]).then(() => {
       customSiteSearchProviders = next;
+      disabledSiteSearchKeys = nextDisabledKeys;
       renderSiteSearchList();
       setTimeout(() => {
         showToast(getMessage('toast_saved', '已保存'), false);
@@ -5863,7 +6169,11 @@
       )
     );
     const builtinTemplateSet = new Set(
-      defaultSiteSearchProviders
+      getActiveBuiltinSiteSearchProviders(
+        defaultSiteSearchProviders,
+        customSiteSearchProviders,
+        disabledSiteSearchKeys
+      )
         .map((item) =>
           normalizeSiteSearchTemplate(String(item.template || '').trim())
         )
@@ -5972,6 +6282,9 @@
   function filterRedundantCustomProviders(defaults, custom) {
     const map = new Map((defaults || []).map((item) => [String(item.key || '').toLowerCase(), item]));
     return (custom || []).filter((item) => {
+      if (getSiteSearchBuiltinKey(item)) {
+        return true;
+      }
       const key = String(item.key || '').toLowerCase();
       const base = map.get(key);
       if (!base) {
@@ -5995,7 +6308,8 @@
         ]));
         resolve(items.map((item) => {
           const key = String(item && item.key ? item.key : '').toLowerCase();
-          return normalizeSiteSearchProvider(item, baseMap.get(key));
+          const builtinKey = getSiteSearchBuiltinKey(item);
+          return normalizeSiteSearchProvider(item, baseMap.get(builtinKey || key));
         }).filter(Boolean));
       });
     });
@@ -6244,12 +6558,19 @@
       loadDisabledSiteSearchKeys()
     ])).then(([defaults, custom, disabled]) => {
       defaultSiteSearchProviders = defaults;
+      disabledSiteSearchKeys = new Set(disabled || []);
       const filteredCustom = filterRedundantCustomProviders(defaults, custom);
       const withoutDebug = filteredCustom.filter((item) => String(item.key || '').toLowerCase() !== DEBUG_DUPLICATE_CUSTOM_KEY);
       const didFilter = filteredCustom.length !== (custom || []).length;
       const didRemoveDebug = withoutDebug.length !== filteredCustom.length;
+      const activeBuiltins = getActiveBuiltinSiteSearchProviders(
+        defaults,
+        withoutDebug,
+        disabledSiteSearchKeys
+      );
       let nextCustom = withoutDebug.map((item) => {
-        const shouldDisable = isDuplicateTemplate(item.template, defaults);
+        const shouldDisable = !getSiteSearchBuiltinKey(item) &&
+          isDuplicateTemplate(item.template, activeBuiltins);
         return {
           ...item,
           disabled: shouldDisable,
@@ -6257,12 +6578,11 @@
         };
       });
       const didUpdateDisabled = nextCustom.some((item, index) => {
-        const before = filteredCustom[index] || {};
+        const before = withoutDebug[index] || {};
         return Boolean(before.disabled) !== Boolean(item.disabled) ||
           String(before.disabledReason || '') !== String(item.disabledReason || '');
       });
       customSiteSearchProviders = nextCustom;
-      disabledSiteSearchKeys = new Set(disabled || []);
       if (didFilter || didUpdateDisabled || didRemoveDebug) {
         saveCustomSiteSearchProviders(nextCustom);
       }
@@ -6393,16 +6713,22 @@
         return;
       }
       const normalizedKey = key.toLowerCase();
+      const editingItem = customSiteSearchProviders.find(
+        (item) => String(item.key || '').toLowerCase() === String(editingSiteSearchKey || '').toLowerCase()
+      );
+      const builtinKey = getSiteSearchBuiltinKey(editingItem);
       let next = customSiteSearchProviders.filter((item) => String(item.key || '').toLowerCase() !== normalizedKey);
       if (editingSiteSearchKey && editingSiteSearchKey.toLowerCase() !== normalizedKey) {
         next = next.filter((item) => String(item.key || '').toLowerCase() !== editingSiteSearchKey.toLowerCase());
       }
       const nextItem = normalizeSiteSearchProvider({
+        ...(editingItem || {}),
         key: key,
         name: name || key,
         template: template,
         aliases: aliases,
-        category: siteSearchDraftCategory === 'searchEngine' ? 'searchEngine' : 'site'
+        category: siteSearchDraftCategory === 'searchEngine' ? 'searchEngine' : 'site',
+        ...(builtinKey ? { builtinKey } : {})
       });
       if (!nextItem) {
         setSiteSearchError(getMessage('toast_error', '操作失败，请重试'));
@@ -6410,12 +6736,18 @@
       }
       next.unshift(nextItem);
       const lowerKey = normalizedKey;
-      disabledSiteSearchKeys.delete(lowerKey);
+      const nextDisabledKeys = new Set(disabledSiteSearchKeys);
+      if (builtinKey) {
+        nextDisabledKeys.add(builtinKey);
+      } else {
+        nextDisabledKeys.delete(lowerKey);
+      }
       Promise.all([
         saveCustomSiteSearchProviders(next),
-        saveDisabledSiteSearchKeys(disabledSiteSearchKeys)
+        saveDisabledSiteSearchKeys(nextDisabledKeys)
       ]).then(() => {
         customSiteSearchProviders = next;
+        disabledSiteSearchKeys = nextDisabledKeys;
         renderSiteSearchList();
         refreshSiteSearchProviders();
         resetSiteSearchForm();
@@ -6439,7 +6771,8 @@
           const defaultKeys = new Set((defaults || []).map((item) => String(item.key || '').toLowerCase()));
           const filteredCustom = (custom || []).filter((item) => {
             const key = String(item && item.key ? item.key : '').toLowerCase();
-            return key && !defaultKeys.has(key);
+            const builtinKey = getSiteSearchBuiltinKey(item);
+            return key && !defaultKeys.has(key) && !defaultKeys.has(builtinKey);
           });
           Promise.all([
             saveCustomSiteSearchProviders(filteredCustom),
@@ -6464,8 +6797,19 @@
       'confirm_clear_custom',
       '确认清空自定义搜索？',
       () => {
-        saveCustomSiteSearchProviders([]).then(() => {
+        const nextDisabledKeys = new Set(disabledSiteSearchKeys);
+        customSiteSearchProviders.forEach((item) => {
+          const builtinKey = getSiteSearchBuiltinKey(item);
+          if (builtinKey) {
+            nextDisabledKeys.delete(builtinKey);
+          }
+        });
+        Promise.all([
+          saveCustomSiteSearchProviders([]),
+          saveDisabledSiteSearchKeys(nextDisabledKeys)
+        ]).then(() => {
           customSiteSearchProviders = [];
+          disabledSiteSearchKeys = nextDisabledKeys;
           renderSiteSearchList();
           showToast(getMessage('toast_cleared', '已清空'), false);
         }).catch(() => {
@@ -6672,6 +7016,67 @@
         storageArea.set({ [NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY]: next });
       }
     }
+    if (changes[NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY] && newtabShortcutsToggle) {
+      const raw = changes[NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY].newValue;
+      const next = normalizeNewtabShortcutsVisible(raw);
+      setOptionsToggleState(newtabShortcutsToggle, next);
+      syncNewtabShortcutSubcontrolAvailability();
+      if (raw !== next && storageArea) {
+        storageArea.set({ [NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY]: next });
+      }
+    }
+    if (changes[NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY] && newtabShortcutAddToggle) {
+      const raw = changes[NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY].newValue;
+      const next = normalizeNewtabShortcutAddVisible(raw);
+      setOptionsToggleState(newtabShortcutAddToggle, next);
+      if (raw !== next && storageArea) {
+        storageArea.set({ [NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY]: next });
+      }
+    }
+    if (changes[NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY] &&
+        newtabShortcutDockMagnificationToggle) {
+      const raw = changes[NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY].newValue;
+      const next = normalizeNewtabShortcutDockMagnificationEnabled(raw);
+      setOptionsToggleState(newtabShortcutDockMagnificationToggle, next);
+      if (raw !== next && storageArea) {
+        storageArea.set({
+          [NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY]: next
+        });
+      }
+    }
+    if (changes[NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY]) {
+      const raw = changes[NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY].newValue;
+      const next = normalizeNewtabShortcutWidth(raw);
+      renderNewtabShortcutWidthControl(
+        next,
+        Boolean(newtabShortcutsToggle && !newtabShortcutsToggle.checked)
+      );
+      if (raw !== next && storageArea) {
+        storageArea.set({ [NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY]: next });
+      }
+    }
+    [
+      [
+        newtabFeedbackButtonVisibleToggle,
+        NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,
+        normalizeNewtabFeedbackButtonVisible
+      ],
+      [
+        newtabAppearanceButtonVisibleToggle,
+        NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY,
+        normalizeNewtabAppearanceButtonVisible
+      ]
+    ].forEach(([toggle, storageKey, normalize]) => {
+      if (!changes[storageKey] || !toggle) {
+        return;
+      }
+      const raw = changes[storageKey].newValue;
+      const next = normalize(raw);
+      setOptionsToggleState(toggle, next);
+      if (raw !== next && storageArea) {
+        storageArea.set({ [storageKey]: next });
+      }
+    });
     if (changes[UPDATE_NOTICE_ENABLED_STORAGE_KEY] && updateNoticeToggle) {
       const raw = changes[UPDATE_NOTICE_ENABLED_STORAGE_KEY].newValue;
       const next = normalizeUpdateNoticeEnabled(raw);

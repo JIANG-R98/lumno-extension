@@ -550,7 +550,8 @@ async function run() {
               'github login',
               'github desktop',
               'github copilot',
-              'github actions'
+              'github actions',
+              'github pages'
             ]
           ]
         };
@@ -728,6 +729,20 @@ async function run() {
   assert.ok(
     firstMixedEngineSuggestionIndex > lastMixedLocalSuggestionIndex,
     'the remote merge should keep webpage results contiguous before search-engine suggestions'
+  );
+  const searchFirstMixedSuggestions = await context.__testGetSearchEngineSuggestions(
+    'github',
+    mixedLocalSuggestions,
+    { context: 'newtab', searchFirst: true }
+  );
+  assert.strictEqual(
+    searchFirstMixedSuggestions.filter((item) => item && item.type === 'googleSuggest').length,
+    5,
+    'search-first remote merge should reserve the full five-item engine suggestion cap'
+  );
+  assert.ok(
+    searchFirstMixedSuggestions.slice(0, 5).every((item) => item && item.type === 'googleSuggest'),
+    'search-first remote merge should keep all reserved engine suggestions inside the returned slate limit'
   );
   const mergedXiaohongshuSuggestions = await context.__testGetSearchEngineSuggestions(
     '小红书',

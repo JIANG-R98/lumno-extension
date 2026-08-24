@@ -7064,7 +7064,8 @@ function handleSearchMessage(request, sender, sendResponse) {
       const controller = requestRecord.controller;
       getSearchEngineSuggestions(query, request.localSuggestions, {
         signal: controller.signal,
-        rawEngineSuggestionsPromise: startSearchEngineSuggestionRequest(requestRecord)
+        rawEngineSuggestionsPromise: startSearchEngineSuggestionRequest(requestRecord),
+        searchFirst: request.searchFirst === true
       }).then((suggestions) => {
         const isCurrent = searchEngineSuggestionRequests.get(requestKey) === requestRecord;
         const hasRemoteSuggestions = isCurrent && !controller.signal.aborted && suggestions.some((suggestion) => (
@@ -8961,7 +8962,7 @@ function sanitizeSiteSearchProviders(items) {
     .filter((item) => item && item.key && item.template)
     .map((item) => {
       const template = normalizeSiteSearchTemplate(item.template);
-      return {
+      const provider = {
         key: String(item.key).trim(),
         aliases: Array.isArray(item.aliases) ? item.aliases.filter(Boolean) : [],
         name: item.name || item.key,
@@ -8970,6 +8971,11 @@ function sanitizeSiteSearchProviders(items) {
         submitStrategy: String(item.submitStrategy || '').trim(),
         category: String(item.category || '').trim()
       };
+      const builtinKey = String(item.builtinKey || '').trim().toLowerCase();
+      if (builtinKey) {
+        provider.builtinKey = builtinKey;
+      }
+      return provider;
     })
     .filter((item) => item.key && item.template && (item.template.includes('{query}') || isAiSiteSearchProvider(item)));
 }
@@ -9335,10 +9341,12 @@ function mergeCustomProviders(baseItems, customItems) {
       return;
     }
     seen.add(key);
+    const builtinKey = String(item && item.builtinKey ? item.builtinKey : '').toLowerCase();
+    const baseProvider = baseMap.get(builtinKey || key);
     merged.push({
       ...item,
-      action: String(item.action || (baseMap.get(key) && baseMap.get(key).action) || '').trim(),
-      submitStrategy: String(item.submitStrategy || (baseMap.get(key) && baseMap.get(key).submitStrategy) || '').trim(),
+      action: String(item.action || (baseProvider && baseProvider.action) || '').trim(),
+      submitStrategy: String(item.submitStrategy || (baseProvider && baseProvider.submitStrategy) || '').trim(),
       _xIsCustom: true
     });
   });
@@ -9444,11 +9452,27 @@ function loadSiteSearchProviders() {
     return localItems;
   }).then((items) => Promise.all([loadCustomSiteSearchProviders(), loadDisabledSiteSearchKeys()])
     .then(([customItems, disabledKeys]) => {
+      const baseMap = new Map(items.map((item) => [
+        String(item && item.key ? item.key : '').toLowerCase(),
+        item
+      ]));
+      const hydratedCustom = customItems.map((item) => {
+        const key = String(item && item.key ? item.key : '').toLowerCase();
+        const builtinKey = String(item && item.builtinKey ? item.builtinKey : '').toLowerCase();
+        const baseProvider = baseMap.get(builtinKey || key);
+        return {
+          ...item,
+          action: String(item.action || (baseProvider && baseProvider.action) || '').trim(),
+          submitStrategy: String(
+            item.submitStrategy || (baseProvider && baseProvider.submitStrategy) || ''
+          ).trim()
+        };
+      });
       const filteredBase = items.filter((item) => {
         const key = String(item && item.key ? item.key : '').toLowerCase();
         return key && !disabledKeys.includes(key);
       });
-      const merged = mergeCustomProviders(filteredBase, customItems);
+      const merged = mergeCustomProviders(filteredBase, hydratedCustom);
       siteSearchCache = merged;
       return merged;
     })).catch(() => {
@@ -10611,7 +10635,10 @@ async function getSearchEngineSuggestions(query, localSuggestions, options) {
       .filter((item) => item && item.toLowerCase() !== context.queryLower)
       .slice(0, searchPolicy.maxEngineSuggestions || 5);
   const engineSuggestionPolicy = typeof searchUtils.getSearchEngineSuggestionPolicy === 'function'
-    ? searchUtils.getSearchEngineSuggestionPolicy(context, normalizedLocalSuggestions, searchPolicy)
+    ? searchUtils.getSearchEngineSuggestionPolicy(context, normalizedLocalSuggestions, {
+      ...searchPolicy,
+      searchFirst: settings.searchFirst === true
+    })
     : {
       limit: normalizedLocalSuggestions.length > 0
         ? Math.min(
@@ -10663,11 +10690,27 @@ async function getSearchEngineSuggestions(query, localSuggestions, options) {
     finalSuggestions = searchUtils.filterSearchSuggestionsBySourceTypes(finalSuggestions, sourceTypes);
   }
   if (typeof searchUtils.applySearchSuggestionHostDiversity === 'function') {
-    finalSuggestions = searchUtils.applySearchSuggestionHostDiversity(finalSuggestions, { context });
+    if (settings.searchFirst === true) {
+      const engineCandidates = finalSuggestions.filter((suggestion) => (
+        suggestion && suggestion.type === 'googleSuggest'
+      ));
+      const localCandidates = searchUtils.applySearchSuggestionHostDiversity(
+        finalSuggestions.filter((suggestion) => !suggestion || suggestion.type !== 'googleSuggest'),
+        { context }
+      );
+      finalSuggestions = [...localCandidates, ...engineCandidates];
+    } else {
+      finalSuggestions = searchUtils.applySearchSuggestionHostDiversity(finalSuggestions, { context });
+    }
   } else {
     finalSuggestions = finalSuggestions.slice(0, searchPolicy.finalSuggestionLimit || 12);
   }
-  if (typeof searchUtils.composeSearchSuggestionSlate === 'function') {
+  if (settings.searchFirst === true &&
+      typeof searchUtils.composeSearchFirstSuggestionSlate === 'function') {
+    finalSuggestions = searchUtils.composeSearchFirstSuggestionSlate(finalSuggestions, {
+      limit: searchPolicy.finalSuggestionLimit || 12
+    }).slice(0, searchPolicy.finalSuggestionLimit || 12);
+  } else if (typeof searchUtils.composeSearchSuggestionSlate === 'function') {
     finalSuggestions = searchUtils.composeSearchSuggestionSlate(finalSuggestions, context);
   }
   return finalSuggestions;

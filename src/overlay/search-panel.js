@@ -3821,10 +3821,11 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       }
       const requestSeq = ++overlaySuggestionRequestSeq;
       const requestStartedAt = Date.now();
-      const remoteMixState = {
-        settled: false,
-        hasFinalSuggestions: false
-      };
+      const requestSearchFirst = overlaySearchResultPriorityMode === 'search';
+      const showExactSearchPendingState = requestSearchFirst &&
+        !requestLocalSearchScope &&
+        !getDirectUrlSuggestion(requestQuery);
+      const remoteMixState = { settled: false };
       if (overlayRemoteSuggestionDebounceTimer) {
         clearTimeout(overlayRemoteSuggestionDebounceTimer);
         overlayRemoteSuggestionDebounceTimer = null;
@@ -3832,6 +3833,9 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       if (overlayFirstResultRevealTimer) {
         clearTimeout(overlayFirstResultRevealTimer);
         overlayFirstResultRevealTimer = null;
+      }
+      if (showExactSearchPendingState) {
+        updateSearchSuggestions([], requestQuery, { remoteMixState });
       }
       chrome.runtime.sendMessage({
         action: 'getSearchSuggestions',
@@ -3853,12 +3857,10 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
           updateSearchSuggestions(localSuggestions, requestQuery);
           return;
         }
-        // A collapsed surface has no useful intermediate height to preserve.
-        // Give the remote mix one short response budget so the first visible
-        // result set is committed once at its final height. If that budget is
-        // missed, reveal local results and ignore the late mix instead of
-        // moving the whole result surface a second time.
-        const waitForFirstResultMix =
+        // Search-first already shows the exact search action while remote
+        // suggestions are pending. Autocomplete-first keeps its short mix
+        // budget so a collapsed result surface still opens only once.
+        const waitForFirstResultMix = !requestSearchFirst &&
           suggestionsContainer.getAttribute('data-collapsed') === 'true';
         if (waitForFirstResultMix) {
           overlayFirstResultRevealTimer = setTimeout(() => {
@@ -3874,12 +3876,12 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
               finalRemoteMix: true
             });
           }, OVERLAY_FIRST_RESULT_REVEAL_DELAY_MS);
-        } else {
+        } else if (!showExactSearchPendingState) {
           updateSearchSuggestions(localSuggestions, requestQuery, {
             remoteMixState
           });
         }
-        const remoteDelay = waitForFirstResultMix
+        const remoteDelay = (requestSearchFirst || waitForFirstResultMix)
           ? 0
           : Math.max(0, 120 - (Date.now() - requestStartedAt));
         overlayRemoteSuggestionDebounceTimer = setTimeout(function() {
@@ -3891,7 +3893,8 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
             action: 'getSearchEngineSuggestions',
             query: requestQuery,
             context: 'overlay',
-            localSuggestions: localSuggestions
+            localSuggestions: localSuggestions,
+            searchFirst: requestSearchFirst
           }, function(remoteResponse) {
             if (requestSeq !== overlaySuggestionRequestSeq || requestQuery !== latestOverlayQuery) {
               return;
@@ -3936,7 +3939,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
               return;
             }
             remoteMixState.settled = true;
-            remoteMixState.hasFinalSuggestions = true;
             if (waitForFirstResultMix) {
               if (remoteMixState.visualSettled) {
                 return;
@@ -7875,8 +7877,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
         if (query !== latestOverlayQuery) {
           return;
         }
-        if (!finalRemoteMix && remoteMixState &&
-            remoteMixState.settled && remoteMixState.hasFinalSuggestions) {
+        if (!finalRemoteMix && remoteMixState && remoteMixState.settled) {
           return;
         }
         const commandMatches = (slashCommandModeActive && !modeCommandActive && !siteSearchQueryModeActive)
@@ -7974,6 +7975,20 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
           }
         });
         allSuggestions = filterOverlayBlacklistedSuggestions(allSuggestions, query);
+        const hasDirectUrlSuggestion = preSuggestions.some((suggestion) => (
+          suggestion && suggestion.type === 'directUrl'
+        ));
+        if (overlaySearchResultPriorityMode === 'search' &&
+            !localSearchQueryModeActive &&
+            !slashCommandModeActive &&
+            !modeCommandActive &&
+            !siteSearchQueryModeActive &&
+            !hasDirectUrlSuggestion &&
+            typeof SEARCH_UTILS.composeSearchFirstSuggestionSlate === 'function') {
+          allSuggestions = SEARCH_UTILS.composeSearchFirstSuggestionSlate(allSuggestions, {
+            limit: overlaySearchResultDisplayLimit
+          });
+        }
         const keywordSuggestionState = getKeywordSearchSuggestionState(allSuggestions);
         const onlyKeywordSuggestions = keywordSuggestionState.onlyKeywordSuggestions;
 
@@ -8035,7 +8050,9 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
             primaryHighlightIndex = 0;
             primaryHighlightReason = 'topSite';
           }
-          if (!siteSearchState && query && !onlyKeywordSuggestions && (overlayTabQuickSwitchEnabled || prioritizeCurrentPageMatch)) {
+          if (preferAutocompleteFirst &&
+              !siteSearchState && query && !onlyKeywordSuggestions &&
+              (overlayTabQuickSwitchEnabled || prioritizeCurrentPageMatch)) {
             const openTabMatch = typeof SEARCH_UTILS.findSearchOpenTabMatchIndex === 'function'
               ? SEARCH_UTILS.findSearchOpenTabMatchIndex(allSuggestions, {
                 rawQuery: latestRawInputValue.trim(),
