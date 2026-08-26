@@ -218,6 +218,10 @@ function flushMicrotasks() {
   assert.strictEqual(updateNotice.normalizeVersionTag('0.9.10'), 'v0.9.10');
   assert.strictEqual(updateNotice.normalizeVersionTag('v0.9.10'), 'v0.9.10');
   assert.strictEqual(updateNotice.formatVersionLabel('v0.9.10'), '0.9.10');
+  assert.strictEqual(updateNotice.UPDATE_NOTICE_MAX_DISPLAY_COUNT, 3);
+  assert.strictEqual(updateNotice.normalizeUpdateNoticeDisplayCount(undefined), 0);
+  assert.strictEqual(updateNotice.normalizeUpdateNoticeDisplayCount(2.9), 2);
+  assert.strictEqual(updateNotice.normalizeUpdateNoticeDisplayCount(10), 3);
 
   const normalized = updateNotice.normalizeUpdateNoticePayload({
     version: '0.9.10',
@@ -409,6 +413,11 @@ function flushMicrotasks() {
       overlayMountingSetIndex < overlayNoticeAppendIndex,
     'overlay update notice should enter with a temporary mount animation state before insertion'
   );
+  assert(
+    newtabSource.includes('updateNoticeController.recordExposure()') &&
+      overlaySource.includes('overlayUpdateNoticeController.recordExposure()'),
+    'newtab and overlay should count an exposure only when the notice is mounted'
+  );
   const updateNoticeCss = fs.readFileSync('src/shared/feature-hints.css', 'utf8');
   assert(
     updateNoticeCss.includes('.x-lumno-feature-hint--update-notice-overlay') &&
@@ -516,6 +525,11 @@ function flushMicrotasks() {
   );
   assert(firstDismissKey.includes('update_notice'), 'dismiss key should be scoped to the update notice');
   assert.notStrictEqual(firstDismissKey, nextDismissKey, 'dismiss key should change per version');
+  assert.notStrictEqual(
+    updateNotice.getUpdateNoticeDisplayCountKey('0.9.10'),
+    updateNotice.getUpdateNoticeDisplayCountKey('0.9.11'),
+    'display count should reset for each update version'
+  );
 
   const syncStore = {
     [updateNotice.UPDATE_NOTICE_STORAGE_KEY]: normalized
@@ -744,6 +758,74 @@ function flushMicrotasks() {
     'Minor Bug Fixes',
     'hydrated release title should be persisted for all surfaces'
   );
+
+  const cappedStore = {
+    [updateNotice.UPDATE_NOTICE_STORAGE_KEY]: normalized
+  };
+  const cappedChromeApi = createStorageBackedChrome({}, cappedStore, '0.9.10');
+  const displayCountKey = updateNotice.getUpdateNoticeDisplayCountKey('0.9.10');
+  const cappedDismissKey = updateNotice.getUpdateNoticeDismissKey(featureHints, '0.9.10');
+  async function createMountedCappedController(surface) {
+    const controller = updateNotice.createUpdateNotice({
+      documentObj: createFakeDocument(),
+      featureHints,
+      chromeApi: cappedChromeApi,
+      surface,
+      t(key, fallback) {
+        return fallback;
+      },
+      getRiSvg() {
+        return '';
+      }
+    });
+    assert(controller, `${surface} capped update notice should be created`);
+    const exposureRecorded = controller.recordExposure();
+    await controller.ready;
+    const recorded = await exposureRecorded;
+    await flushMicrotasks();
+    return { controller, recorded };
+  }
+
+  const cappedFirst = await createMountedCappedController('newtab');
+  assert.strictEqual(cappedFirst.recorded, true, 'the first newtab display should count');
+  assert.strictEqual(cappedStore[displayCountKey], 1);
+  assert.strictEqual(
+    await cappedFirst.controller.recordExposure(),
+    false,
+    'one mounted instance should not count more than once'
+  );
+  assert.strictEqual(cappedStore[displayCountKey], 1);
+  cappedFirst.controller.destroy();
+
+  const cappedSecond = await createMountedCappedController('overlay');
+  assert.strictEqual(cappedSecond.recorded, true, 'the overlay display should share the same count');
+  assert.strictEqual(cappedStore[displayCountKey], 2);
+  cappedSecond.controller.destroy();
+
+  const cappedThird = await createMountedCappedController('newtab');
+  assert.strictEqual(cappedThird.recorded, true, 'the third cross-surface display should count');
+  assert.strictEqual(cappedStore[displayCountKey], 3);
+  assert.strictEqual(
+    cappedStore[cappedDismissKey],
+    true,
+    'the third display should persist the normal per-version dismissal'
+  );
+  assert.strictEqual(
+    cappedThird.controller.element.getAttribute('data-visible'),
+    'true',
+    'the third exposure should remain visible instead of disappearing immediately'
+  );
+  cappedThird.controller.destroy();
+
+  const cappedFourth = await createMountedCappedController('overlay');
+  assert.strictEqual(cappedFourth.recorded, false, 'a fourth display should be suppressed');
+  assert.strictEqual(cappedFourth.controller.getDisplayCount(), 3);
+  assert.strictEqual(
+    cappedFourth.controller.element.getAttribute('data-visible'),
+    'false',
+    'later newtab and overlay instances should stay closed after three displays'
+  );
+  cappedFourth.controller.destroy();
 
   firstController.destroy();
   secondController.destroy();

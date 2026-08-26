@@ -16261,6 +16261,9 @@
   }
   if (updateNoticeController && updateNoticeController.element) {
     document.body.insertBefore(updateNoticeController.element, newtabUpdateNoticeAnchor);
+    if (typeof updateNoticeController.recordExposure === 'function') {
+      updateNoticeController.recordExposure();
+    }
   }
   document.body.insertBefore(suggestionsSurface, newtabUpdateNoticeAnchor);
   document.body.insertBefore(suggestionsOutline, newtabUpdateNoticeAnchor);

@@ -9,6 +9,9 @@
   const SETTINGS = root && root.LumnoSettings ? root.LumnoSettings : {};
   const UPDATE_NOTICE_ENABLED_STORAGE_KEY = SETTINGS.UPDATE_NOTICE_ENABLED_STORAGE_KEY ||
     '_x_extension_update_notice_enabled_2026_unique_';
+  const UPDATE_NOTICE_DISPLAY_COUNT_STORAGE_PREFIX =
+    '_x_lumno_update_notice_display_count_2026_';
+  const UPDATE_NOTICE_MAX_DISPLAY_COUNT = 3;
   const UPDATE_NOTICE_ID = 'update-notice';
   const RELEASE_DETAILS_URL = 'https://lumno.kubai.design/release/';
   const GITHUB_RELEASE_API_URL = 'https://api.github.com/repos/kubai087/lumno-extension/releases/tags/';
@@ -200,6 +203,19 @@
     return `_x_lumno_feature_hint_sync_dismissed_2026_${idPart}_${versionPart}`;
   }
 
+  function getUpdateNoticeDisplayCountKey(versionTag) {
+    const versionPart = getDomIdPart(normalizeVersionTag(versionTag) || 'unversioned');
+    return `${UPDATE_NOTICE_DISPLAY_COUNT_STORAGE_PREFIX}${versionPart}`;
+  }
+
+  function normalizeUpdateNoticeDisplayCount(value) {
+    const count = Number(value);
+    if (!Number.isFinite(count)) {
+      return 0;
+    }
+    return Math.min(UPDATE_NOTICE_MAX_DISPLAY_COUNT, Math.max(0, Math.floor(count)));
+  }
+
   function getStoredUpdateNotice(chromeApi) {
     const storageRuntime = getStorageRuntime(chromeApi);
     return new Promise((resolve) => {
@@ -236,6 +252,28 @@
         });
       } catch (e) {
         resolve(normalizeUpdateNoticeEnabled(undefined));
+      }
+    });
+  }
+
+  function getStoredUpdateNoticeDisplayCount(chromeApi, versionTag) {
+    const storageRuntime = getStorageRuntime(chromeApi);
+    const displayCountKey = getUpdateNoticeDisplayCountKey(versionTag);
+    return new Promise((resolve) => {
+      if (!storageRuntime.area || typeof storageRuntime.area.get !== 'function') {
+        resolve(0);
+        return;
+      }
+      try {
+        storageRuntime.area.get([displayCountKey], (result) => {
+          const api = chromeApi || (root && root.chrome) || null;
+          const runtimeError = api && api.runtime ? api.runtime.lastError : null;
+          resolve(runtimeError
+            ? 0
+            : normalizeUpdateNoticeDisplayCount(result && result[displayCountKey]));
+        });
+      } catch (e) {
+        resolve(0);
       }
     });
   }
@@ -362,6 +400,7 @@
       : (config.surface === 'newtab' ? 'newtab' : 'shared');
     const definition = createUpdateNoticeDefinition(currentVersion, { surface });
     const dismissKey = getUpdateNoticeDismissKey(featureHints, currentVersion);
+    const displayCountKey = getUpdateNoticeDisplayCountKey(currentVersion);
     const baseT = typeof config.t === 'function'
       ? config.t
       : function(_key, fallback) { return fallback || ''; };
@@ -374,6 +413,11 @@
     let titleRefreshPromise = null;
     let sessionSlotClaimed = false;
     let readyPromise = null;
+    let displayCount = 0;
+    let displayCountLoaded = false;
+    let exposureRequested = false;
+    let exposureRecorded = false;
+    let ignoreOwnAutoDismissChange = false;
 
     function translate(key, fallback) {
       if (key === 'update_notice_badge') {
@@ -454,10 +498,61 @@
       }
     }
 
+    function syncDisplayCountAttribute() {
+      hintController.element.setAttribute(
+        'data-update-notice-display-count',
+        String(displayCount)
+      );
+      hintController.element.setAttribute(
+        'data-update-notice-display-limit',
+        String(UPDATE_NOTICE_MAX_DISPLAY_COUNT)
+      );
+    }
+
+    function recordExposureIfVisible() {
+      if (destroyed || exposureRecorded || !exposureRequested || !displayCountLoaded || !isVisible()) {
+        return false;
+      }
+      exposureRecorded = true;
+      displayCount = normalizeUpdateNoticeDisplayCount(displayCount + 1);
+      syncDisplayCountAttribute();
+      if (!storageRuntime.area || typeof storageRuntime.area.set !== 'function') {
+        return true;
+      }
+      const values = { [displayCountKey]: displayCount };
+      if (displayCount >= UPDATE_NOTICE_MAX_DISPLAY_COUNT) {
+        // Persist the normal per-version dismissal while leaving this third
+        // exposure visible. Any later newtab or overlay instance will start
+        // dismissed, and already-open sibling instances close via onChanged.
+        values[dismissKey] = true;
+        ignoreOwnAutoDismissChange = true;
+      }
+      try {
+        storageRuntime.area.set(values, () => {
+          const api = chromeApi || (root && root.chrome) || null;
+          if (api && api.runtime && api.runtime.lastError) {
+            ignoreOwnAutoDismissChange = false;
+          }
+        });
+      } catch (e) {
+        ignoreOwnAutoDismissChange = false;
+      }
+      return true;
+    }
+
     function syncNoticeVisibility() {
       hintController.updateLanguage();
-      hintController.setVisible(Boolean(updateNoticeEnabled && notice));
+      const displayLimitReached = displayCountLoaded &&
+        displayCount >= UPDATE_NOTICE_MAX_DISPLAY_COUNT &&
+        !exposureRecorded;
+      hintController.setVisible(Boolean(
+        updateNoticeEnabled &&
+        notice &&
+        displayCountLoaded &&
+        !displayLimitReached
+      ));
       claimSessionSlotIfVisible();
+      recordExposureIfVisible();
       if (updateNoticeEnabled) {
         refreshMissingTitle();
       }
@@ -501,9 +596,13 @@
 
     const storedNoticeReadyPromise = Promise.all([
       getStoredUpdateNotice(chromeApi),
-      getStoredUpdateNoticeEnabled(chromeApi)
-    ]).then(([payload, enabled]) => {
+      getStoredUpdateNoticeEnabled(chromeApi),
+      getStoredUpdateNoticeDisplayCount(chromeApi, currentVersion)
+    ]).then(([payload, enabled, storedDisplayCount]) => {
       updateNoticeEnabled = enabled;
+      displayCount = storedDisplayCount;
+      displayCountLoaded = true;
+      syncDisplayCountAttribute();
       applyNoticePayload(payload);
     });
     readyPromise = Promise.all([
@@ -527,8 +626,20 @@
       if (changes && changes[UPDATE_NOTICE_STORAGE_KEY]) {
         applyNoticePayload(changes[UPDATE_NOTICE_STORAGE_KEY].newValue);
       }
+      if (changes && changes[displayCountKey]) {
+        displayCount = normalizeUpdateNoticeDisplayCount(changes[displayCountKey].newValue);
+        displayCountLoaded = true;
+        syncDisplayCountAttribute();
+        if (!exposureRecorded) {
+          syncNoticeVisibility();
+        }
+      }
       if (changes && changes[dismissKey] && changes[dismissKey].newValue && !hintController.isDismissed()) {
-        hintController.dismiss();
+        if (ignoreOwnAutoDismissChange) {
+          ignoreOwnAutoDismissChange = false;
+        } else {
+          hintController.dismiss();
+        }
       }
     }
 
@@ -556,10 +667,23 @@
       getNotice() {
         return notice;
       },
+      getDisplayCount() {
+        return displayCount;
+      },
       hasSessionSlot() {
         return sessionSlotClaimed;
       },
       isVisible,
+      recordExposure() {
+        const wasRecorded = exposureRecorded;
+        exposureRequested = true;
+        if (!readyPromise) {
+          return Promise.resolve(false);
+        }
+        return readyPromise.then(() => (
+          recordExposureIfVisible() || (!wasRecorded && exposureRecorded)
+        ));
+      },
       ready: readyPromise,
       getDetailsUrl() {
         const activeNotice = getActiveNotice();
@@ -571,6 +695,8 @@
   return Object.freeze({
     UPDATE_NOTICE_STORAGE_KEY,
     UPDATE_NOTICE_ENABLED_STORAGE_KEY,
+    UPDATE_NOTICE_DISPLAY_COUNT_STORAGE_PREFIX,
+    UPDATE_NOTICE_MAX_DISPLAY_COUNT,
     RELEASE_DETAILS_URL,
     GITHUB_RELEASE_API_URL,
     GITHUB_RELEASE_PAGE_URL,
@@ -585,8 +711,11 @@
     normalizeUpdateNoticeEnabled,
     createUpdateNoticeDefinition,
     getUpdateNoticeDismissKey,
+    getUpdateNoticeDisplayCountKey,
+    normalizeUpdateNoticeDisplayCount,
     getStoredUpdateNotice,
     getStoredUpdateNoticeEnabled,
+    getStoredUpdateNoticeDisplayCount,
     setStoredUpdateNotice,
     fetchReleaseTitle,
     publishUpdateNotice,

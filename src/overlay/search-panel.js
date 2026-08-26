@@ -2206,6 +2206,10 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       } else if (document.body) {
         document.body.appendChild(noticeElement);
       }
+      if (overlayUpdateNoticeController &&
+          typeof overlayUpdateNoticeController.recordExposure === 'function') {
+        overlayUpdateNoticeController.recordExposure();
+      }
       syncOverlayUpdateNoticeFrame(overlay);
       if (animateMount) {
         requestAnimationFrame(() => {
