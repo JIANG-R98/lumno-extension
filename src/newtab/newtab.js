@@ -4759,6 +4759,7 @@
   let siteSearchProvidersCache = null;
   let pendingProviderReload = false;
   let suggestionRequestSeq = 0;
+  let searchSuggestionsDismissed = false;
   let suggestionRequestWatchdogTimer = null;
   let searchResultPriorityMode = 'autocomplete';
   let enabledSearchResultSourceTypes = ['topSite', 'bookmark', 'history'];
@@ -13062,14 +13063,7 @@
     autocompleteState = null;
   }
 
-  function dismissAutocompletePreviewOnNonTabKey(event) {
-    if (!event || event.key === 'Tab') {
-      return false;
-    }
-    const isModifierOnly = event.key === 'Shift' || event.key === 'Control' || event.key === 'Alt' || event.key === 'Meta';
-    if (isModifierOnly) {
-      return false;
-    }
+  function restoreUserAuthoredSearchInput() {
     if (!autocompleteState || !autocompleteState.completion) {
       return false;
     }
@@ -13084,6 +13078,17 @@
     latestQuery = rawQuery.trim();
     clearAutocomplete();
     return true;
+  }
+
+  function dismissAutocompletePreviewOnNonTabKey(event) {
+    if (!event || event.key === 'Tab') {
+      return false;
+    }
+    const isModifierOnly = event.key === 'Shift' || event.key === 'Control' || event.key === 'Alt' || event.key === 'Meta';
+    if (isModifierOnly) {
+      return false;
+    }
+    return restoreUserAuthoredSearchInput();
   }
 
   function applyAutocomplete(allSuggestions, primarySuggestion, primaryHighlightReason) {
@@ -14348,7 +14353,45 @@
     lastRenderedActionContextKey = '';
   }
 
+  function dismissSearchSuggestionsFromBackground() {
+    restoreUserAuthoredSearchInput();
+    searchSuggestionsDismissed = true;
+    suggestionRequestSeq += 1;
+    if (remoteSuggestionDebounceTimer) {
+      clearTimeout(remoteSuggestionDebounceTimer);
+      remoteSuggestionDebounceTimer = null;
+    }
+    if (suggestionRequestWatchdogTimer) {
+      clearTimeout(suggestionRequestWatchdogTimer);
+      suggestionRequestWatchdogTimer = null;
+    }
+    clearSearchSuggestions();
+  }
+
+  function restoreDismissedSearchSuggestions() {
+    if (!searchSuggestionsDismissed || !inputParts || !inputParts.input) {
+      return false;
+    }
+    const rawValue = String(inputParts.input.value || '');
+    const query = rawValue.trim();
+    searchSuggestionsDismissed = false;
+    if (!query) {
+      return false;
+    }
+    latestRawQuery = rawValue;
+    latestQuery = query;
+    if (!localSearchScopeState && isSlashCommandInput(query)) {
+      renderSuggestions([], query);
+      return true;
+    }
+    requestSuggestions(query, { immediate: true });
+    return true;
+  }
+
   function renderSuggestions(suggestions, query) {
+    if (searchSuggestionsDismissed) {
+      return;
+    }
     if (!query) {
       clearSearchSuggestions();
       return;
@@ -14356,7 +14399,7 @@
     lastSuggestionResponse = Array.isArray(suggestions) ? suggestions : [];
 
     getShortcutRules().then((rules) => {
-      if (query !== latestQuery) {
+      if (searchSuggestionsDismissed || query !== latestQuery) {
         return;
       }
       const rawTagInput = (latestRawQuery || inputParts.input.value || '').trim();
@@ -14941,6 +14984,7 @@
       cursor: 'pointer'
     },
     onInput: function(event) {
+      searchSuggestionsDismissed = false;
       if (searchInputHistoryController && !isApplyingSearchInputHistory) {
         searchInputHistoryController.resetNavigation();
       }
@@ -14999,20 +15043,6 @@
         return;
       }
       requestSuggestions(query);
-    },
-    onBlur: function(event) {
-      const rawValue = event && event.target ? event.target.value : '';
-      if (localSearchScopeState || !isSlashCommandInput(rawValue)) {
-        return;
-      }
-      latestRawQuery = '';
-      latestQuery = '';
-      clearAutocomplete();
-      clearSearchSuggestions();
-      if (event && event.target) {
-        event.target.value = '';
-      }
-      updateModeBadge('');
     },
     onKeyDown: function(event) {
       syncSuggestionActionModifiersFromEvent(event);
@@ -15523,6 +15553,8 @@
 
   const handleBackgroundPointerFocus = NEWTAB_BACKGROUND_SEARCH_FOCUS.createBackgroundFocusHandler({
     getBackgroundTargets: () => [document.body, root, searchLayer],
+    getSearchValue: () => inputParts.input.value,
+    dismissSearchResults: dismissSearchSuggestionsFromBackground,
     focusSearch: focusSearchInputPreservingScroll
   });
 
@@ -15538,6 +15570,7 @@
   window.addEventListener('pointerdown', handleBackgroundPointerFocus, true);
   modeBadge = inputParts.modeBadge;
   const searchInput = inputParts.input;
+  searchInput.addEventListener('focus', restoreDismissedSearchSuggestions);
   searchInputRef = searchInput;
   const searchScopeIcon = inputParts.icon;
   const rightIcon = inputParts.rightIcon;

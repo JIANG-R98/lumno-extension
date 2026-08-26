@@ -21,6 +21,15 @@
       if (!shouldFocusSearchFromPointer(event, config.getBackgroundTargets())) {
         return false;
       }
+      const searchValue = typeof config.getSearchValue === 'function'
+        ? String(config.getSearchValue() || '')
+        : '';
+      if (searchValue) {
+        if (typeof config.dismissSearchResults === 'function') {
+          config.dismissSearchResults();
+        }
+        return true;
+      }
       config.focusSearch();
       return true;
     };
