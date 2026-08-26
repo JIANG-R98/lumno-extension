@@ -19,6 +19,21 @@
   const NEWTAB_SHORTCUT_WIDTH_MIN = 360;
   const NEWTAB_SHORTCUT_WIDTH_MAX = 1440;
   const NEWTAB_SHORTCUT_WIDTH_DEFAULT = 920;
+  const NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY =
+    '_x_extension_newtab_shortcut_columns_2026_unique_';
+  const NEWTAB_SHORTCUT_COLUMNS_MIN = 4;
+  const NEWTAB_SHORTCUT_COLUMNS_MAX = 16;
+  const NEWTAB_SHORTCUT_COLUMNS_DEFAULT = 10;
+  const NEWTAB_SHORTCUT_SIZE_STORAGE_KEY =
+    '_x_extension_newtab_shortcut_size_2026_unique_';
+  const NEWTAB_SHORTCUT_SIZE_MIN = 48;
+  const NEWTAB_SHORTCUT_SIZE_MAX = 80;
+  const NEWTAB_SHORTCUT_SIZE_DEFAULT = 64;
+  const NEWTAB_SHORTCUT_GAP_STORAGE_KEY =
+    '_x_extension_newtab_shortcut_gap_2026_unique_';
+  const NEWTAB_SHORTCUT_GAP_MIN = 0;
+  const NEWTAB_SHORTCUT_GAP_MAX = 24;
+  const NEWTAB_SHORTCUT_GAP_DEFAULT = 4;
   const NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY = '_x_extension_newtab_input_auto_focus_enabled_2026_unique_';
   const BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY = '_x_extension_bookmark_folder_icons_visible_2026_unique_';
   const UPDATE_NOTICE_ENABLED_STORAGE_KEY = '_x_extension_update_notice_enabled_2026_unique_';
@@ -77,6 +92,9 @@
     NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,
     NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY,
     NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY,
+    NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY,
+    NEWTAB_SHORTCUT_SIZE_STORAGE_KEY,
+    NEWTAB_SHORTCUT_GAP_STORAGE_KEY,
     '_x_extension_update_notice_enabled_2026_unique_',
     '_x_extension_motion_effects_enabled_2026_unique_',
     '_x_extension_simple_mode_enabled_2026_unique_',
@@ -239,6 +257,91 @@
       return Math.min(max, Math.max(min, Math.round(fallback)));
     }
     return Math.min(max, Math.max(min, Math.round(number)));
+  }
+
+  function normalizeNewtabShortcutColumns(value, options) {
+    const config = options || {};
+    const min = Number.isFinite(Number(config.min))
+      ? Number(config.min)
+      : NEWTAB_SHORTCUT_COLUMNS_MIN;
+    const max = Number.isFinite(Number(config.max))
+      ? Number(config.max)
+      : NEWTAB_SHORTCUT_COLUMNS_MAX;
+    const fallback = Number.isFinite(Number(config.fallback))
+      ? Number(config.fallback)
+      : NEWTAB_SHORTCUT_COLUMNS_DEFAULT;
+    const number = Number(value);
+    if (!Number.isFinite(number)) {
+      return Math.min(max, Math.max(min, Math.round(fallback)));
+    }
+    return Math.min(max, Math.max(min, Math.round(number)));
+  }
+
+  function normalizeNewtabShortcutSize(value, options) {
+    const config = options || {};
+    const min = Number.isFinite(Number(config.min))
+      ? Number(config.min)
+      : NEWTAB_SHORTCUT_SIZE_MIN;
+    const max = Number.isFinite(Number(config.max))
+      ? Number(config.max)
+      : NEWTAB_SHORTCUT_SIZE_MAX;
+    const fallback = Number.isFinite(Number(config.fallback))
+      ? Number(config.fallback)
+      : NEWTAB_SHORTCUT_SIZE_DEFAULT;
+    const number = Number(value);
+    if (!Number.isFinite(number)) {
+      return Math.min(max, Math.max(min, Math.round(fallback)));
+    }
+    return Math.min(max, Math.max(min, Math.round(number)));
+  }
+
+  function normalizeNewtabShortcutGap(value, options) {
+    const config = options || {};
+    const min = Number.isFinite(Number(config.min))
+      ? Number(config.min)
+      : NEWTAB_SHORTCUT_GAP_MIN;
+    const max = Number.isFinite(Number(config.max))
+      ? Number(config.max)
+      : NEWTAB_SHORTCUT_GAP_MAX;
+    const fallback = Number.isFinite(Number(config.fallback))
+      ? Number(config.fallback)
+      : NEWTAB_SHORTCUT_GAP_DEFAULT;
+    const number = Number(value);
+    if (!Number.isFinite(number)) {
+      return Math.min(max, Math.max(min, Math.round(fallback)));
+    }
+    return Math.min(max, Math.max(min, Math.round(number)));
+  }
+
+  function inferNewtabShortcutColumnsFromWidth(value, options) {
+    const config = options || {};
+    const widthMin = Number.isFinite(Number(config.widthMin))
+      ? Number(config.widthMin)
+      : NEWTAB_SHORTCUT_WIDTH_MIN;
+    const widthMax = Number.isFinite(Number(config.widthMax))
+      ? Number(config.widthMax)
+      : NEWTAB_SHORTCUT_WIDTH_MAX;
+    const columnsMin = Number.isFinite(Number(config.columnsMin))
+      ? Number(config.columnsMin)
+      : NEWTAB_SHORTCUT_COLUMNS_MIN;
+    const columnsMax = Number.isFinite(Number(config.columnsMax))
+      ? Number(config.columnsMax)
+      : NEWTAB_SHORTCUT_COLUMNS_MAX;
+    const width = normalizeNewtabShortcutWidth(value, {
+      min: widthMin,
+      max: widthMax,
+      fallback: NEWTAB_SHORTCUT_WIDTH_DEFAULT
+    });
+    const range = Math.max(1, widthMax - widthMin);
+    const ratio = (width - widthMin) / range;
+    return normalizeNewtabShortcutColumns(
+      columnsMin + ratio * (columnsMax - columnsMin),
+      {
+        min: columnsMin,
+        max: columnsMax,
+        fallback: NEWTAB_SHORTCUT_COLUMNS_DEFAULT
+      }
+    );
   }
 
   function normalizeNewtabInputAutoFocusEnabled(value) {
@@ -648,6 +751,18 @@
     NEWTAB_SHORTCUT_WIDTH_MIN,
     NEWTAB_SHORTCUT_WIDTH_MAX,
     NEWTAB_SHORTCUT_WIDTH_DEFAULT,
+    NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY,
+    NEWTAB_SHORTCUT_COLUMNS_MIN,
+    NEWTAB_SHORTCUT_COLUMNS_MAX,
+    NEWTAB_SHORTCUT_COLUMNS_DEFAULT,
+    NEWTAB_SHORTCUT_SIZE_STORAGE_KEY,
+    NEWTAB_SHORTCUT_SIZE_MIN,
+    NEWTAB_SHORTCUT_SIZE_MAX,
+    NEWTAB_SHORTCUT_SIZE_DEFAULT,
+    NEWTAB_SHORTCUT_GAP_STORAGE_KEY,
+    NEWTAB_SHORTCUT_GAP_MIN,
+    NEWTAB_SHORTCUT_GAP_MAX,
+    NEWTAB_SHORTCUT_GAP_DEFAULT,
     NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY,
     BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY,
     UPDATE_NOTICE_ENABLED_STORAGE_KEY,
@@ -689,6 +804,10 @@
     normalizeNewtabFeedbackButtonVisible,
     normalizeNewtabAppearanceButtonVisible,
     normalizeNewtabShortcutWidth,
+    normalizeNewtabShortcutColumns,
+    normalizeNewtabShortcutSize,
+    normalizeNewtabShortcutGap,
+    inferNewtabShortcutColumnsFromWidth,
     normalizeNewtabInputAutoFocusEnabled,
     normalizeBookmarkCount,
     normalizeBookmarkColumns,

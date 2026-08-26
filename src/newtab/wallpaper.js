@@ -138,11 +138,21 @@
     const setSearchWidth = typeof options.setSearchWidth === 'function'
       ? options.setSearchWidth
       : function() {};
-    const shortcutWidthConfig = Object.assign({
-      min: 360,
-      max: 1440,
-      fallback: 920
-    }, options.shortcutWidthConfig || {});
+    const shortcutColumnsConfig = Object.assign({
+      min: 4,
+      max: 16,
+      fallback: 10
+    }, options.shortcutColumnsConfig || {});
+    const shortcutSizeConfig = Object.assign({
+      min: 48,
+      max: 80,
+      fallback: 64
+    }, options.shortcutSizeConfig || {});
+    const shortcutGapConfig = Object.assign({
+      min: 0,
+      max: 24,
+      fallback: 4
+    }, options.shortcutGapConfig || {});
     const getShortcutsVisible = typeof options.getShortcutsVisible === 'function'
       ? options.getShortcutsVisible
       : function() { return true; };
@@ -163,11 +173,23 @@
       typeof options.setShortcutDockMagnificationEnabled === 'function'
         ? options.setShortcutDockMagnificationEnabled
         : function() {};
-    const getShortcutWidth = typeof options.getShortcutWidth === 'function'
-      ? options.getShortcutWidth
-      : function() { return shortcutWidthConfig.fallback; };
-    const setShortcutWidth = typeof options.setShortcutWidth === 'function'
-      ? options.setShortcutWidth
+    const getShortcutColumns = typeof options.getShortcutColumns === 'function'
+      ? options.getShortcutColumns
+      : function() { return shortcutColumnsConfig.fallback; };
+    const setShortcutColumns = typeof options.setShortcutColumns === 'function'
+      ? options.setShortcutColumns
+      : function() {};
+    const getShortcutSize = typeof options.getShortcutSize === 'function'
+      ? options.getShortcutSize
+      : function() { return shortcutSizeConfig.fallback; };
+    const setShortcutSize = typeof options.setShortcutSize === 'function'
+      ? options.setShortcutSize
+      : function() {};
+    const getShortcutGap = typeof options.getShortcutGap === 'function'
+      ? options.getShortcutGap
+      : function() { return shortcutGapConfig.fallback; };
+    const setShortcutGap = typeof options.setShortcutGap === 'function'
+      ? options.setShortcutGap
       : function() {};
     const featureHints = options.featureHints || globalThis.LumnoFeatureHints || {};
     const getInputAutoFocusEnabled = typeof options.getInputAutoFocusEnabled === 'function'
@@ -454,7 +476,6 @@
     let topContentOffTab = null;
     let topContentWeightControl = null;
     let topContentWeightTitle = null;
-    let topContentWeightValue = null;
     let topContentWeightSlider = null;
     let topContentSecondsRow = null;
     let topContentSecondsTitle = null;
@@ -465,7 +486,6 @@
     let wallpaperAppearanceOptions = null;
     let wallpaperSearchWidthControl = null;
     let wallpaperSearchWidthLabel = null;
-    let wallpaperSearchWidthValue = null;
     let wallpaperSearchWidthSlider = null;
     let wallpaperInputAutoFocusTitle = null;
     let wallpaperInputAutoFocusInfoButton = null;
@@ -481,15 +501,24 @@
     let wallpaperShortcutAddToggle = null;
     let wallpaperShortcutDockMagnificationTitle = null;
     let wallpaperShortcutDockMagnificationToggle = null;
-    let wallpaperShortcutWidthControl = null;
-    let wallpaperShortcutWidthLabel = null;
-    let wallpaperShortcutWidthValue = null;
-    let wallpaperShortcutWidthSlider = null;
+    let wallpaperShortcutColumnsControl = null;
+    let wallpaperShortcutColumnsLabel = null;
+    let wallpaperShortcutColumnsSlider = null;
+    let wallpaperShortcutSizeControl = null;
+    let wallpaperShortcutSizeLabel = null;
+    let wallpaperShortcutSizeSlider = null;
+    let wallpaperShortcutSizeResetButton = null;
+    let wallpaperShortcutGapControl = null;
+    let wallpaperShortcutGapLabel = null;
+    let wallpaperShortcutGapSlider = null;
+    let wallpaperShortcutGapResetButton = null;
     let wallpaperShortcutsAccordionExpanded = false;
     let wallpaperAppearanceMoreSettingsLink = null;
     let wallpaperAppearanceMoreSettingsText = null;
     let wallpaperSearchWidthSaveTimer = null;
-    let wallpaperShortcutWidthSaveTimer = null;
+    let wallpaperShortcutColumnsSaveTimer = null;
+    let wallpaperShortcutSizeSaveTimer = null;
+    let wallpaperShortcutGapSaveTimer = null;
     let wallpaperOverlayLabel = null;
     let wallpaperOverlaySlider = null;
     let wallpaperEffectLabel = null;
@@ -2078,7 +2107,85 @@
       if (config.labelKey) {
         slider.setAttribute('aria-label', t(config.labelKey, config.fallback));
       }
+      syncWallpaperSliderValueInput(slider);
       syncWallpaperSliderValueBubble(slider);
+    }
+
+    function getWallpaperSliderValueInput(slider) {
+      if (!slider || typeof slider.closest !== 'function') {
+        return null;
+      }
+      const row = slider.closest('.x-nt-range-slider-row');
+      return row
+        ? row.querySelector('._x_extension_range_slider_value_input_2026_unique_')
+        : null;
+    }
+
+    function syncWallpaperSliderValueInput(slider) {
+      const valueInput = getWallpaperSliderValueInput(slider);
+      if (!valueInput) {
+        return;
+      }
+      valueInput.min = slider.min;
+      valueInput.max = slider.max;
+      valueInput.step = slider.step;
+      valueInput.value = slider.value;
+      valueInput.disabled = Boolean(slider.disabled);
+      const label = String(slider.getAttribute('aria-label') || '').trim();
+      if (label) {
+        valueInput.setAttribute('aria-label', `${label} value`);
+      }
+    }
+
+    function commitWallpaperSliderValueInput(slider) {
+      const valueInput = getWallpaperSliderValueInput(slider);
+      if (!slider || !valueInput) {
+        return;
+      }
+      const draft = String(valueInput.value || '').trim();
+      const number = Number(draft);
+      if (!draft || !Number.isFinite(number)) {
+        syncWallpaperSliderValueInput(slider);
+        return;
+      }
+      const min = Number(slider.min);
+      const max = Number(slider.max);
+      const step = Number(slider.step);
+      const bounded = Math.min(
+        Number.isFinite(max) ? max : number,
+        Math.max(Number.isFinite(min) ? min : number, number)
+      );
+      const nextValue = Number.isFinite(step) && step > 0 && Number.isFinite(min)
+        ? min + Math.round((bounded - min) / step) * step
+        : bounded;
+      slider.value = String(nextValue);
+      slider.dispatchEvent(new Event('input', { bubbles: true }));
+      slider.dispatchEvent(new Event('change', { bubbles: true }));
+      syncWallpaperSliderValueInput(slider);
+    }
+
+    function bindWallpaperSliderValueInput(slider) {
+      const valueInput = getWallpaperSliderValueInput(slider);
+      if (!slider || !valueInput || valueInput.dataset.sliderValueInputBound === 'true') {
+        return;
+      }
+      valueInput.dataset.sliderValueInputBound = 'true';
+      slider.addEventListener('input', () => {
+        syncWallpaperSliderValueInput(slider);
+      });
+      slider.addEventListener('change', () => {
+        syncWallpaperSliderValueInput(slider);
+      });
+      valueInput.addEventListener('blur', () => {
+        commitWallpaperSliderValueInput(slider);
+      });
+      valueInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          valueInput.blur();
+        }
+      });
+      syncWallpaperSliderValueInput(slider);
     }
 
     function updateWallpaperOverlayControlUi() {
@@ -2962,9 +3069,6 @@
         topContentWeightControl.setAttribute('data-visible', visible ? 'true' : 'false');
         topContentWeightControl.setAttribute('aria-hidden', visible ? 'false' : 'true');
       }
-      if (topContentWeightValue) {
-        topContentWeightValue.textContent = String(currentTimeFontWeight);
-      }
       if (topContentWeightSlider) {
         const percent = (currentTimeFontWeight - NEWTAB_TIME_FONT_WEIGHT_MIN) /
           (NEWTAB_TIME_FONT_WEIGHT_MAX - NEWTAB_TIME_FONT_WEIGHT_MIN) * 100;
@@ -2978,6 +3082,7 @@
         );
         topContentWeightSlider.setAttribute('aria-valuenow', String(currentTimeFontWeight));
         topContentWeightSlider.setAttribute('aria-valuetext', String(currentTimeFontWeight));
+        syncWallpaperSliderValueInput(topContentWeightSlider);
       }
     }
 
@@ -3220,9 +3325,7 @@
       wallpaperSearchWidthSlider.style.setProperty('--x-nt-overlay-slider-percent', `${getSearchWidthPercent(value)}%`);
       wallpaperSearchWidthSlider.setAttribute('aria-valuenow', String(value));
       wallpaperSearchWidthSlider.setAttribute('aria-valuetext', formatSearchWidthValue(value));
-      if (wallpaperSearchWidthValue) {
-        wallpaperSearchWidthValue.textContent = formatSearchWidthValue(value);
-      }
+      syncWallpaperSliderValueInput(wallpaperSearchWidthSlider);
     }
 
     function setSearchWidthControlVisible(visible) {
@@ -3298,26 +3401,26 @@
       wallpaperSearchWidthSaveTimer = window.setTimeout(persist, 140);
     }
 
-    function getShortcutWidthMin() {
-      return Number.isFinite(Number(shortcutWidthConfig.min))
-        ? Number(shortcutWidthConfig.min)
-        : 360;
+    function getShortcutColumnsMin() {
+      return Number.isFinite(Number(shortcutColumnsConfig.min))
+        ? Number(shortcutColumnsConfig.min)
+        : 4;
     }
 
-    function getShortcutWidthMax() {
-      const min = getShortcutWidthMin();
-      const max = Number.isFinite(Number(shortcutWidthConfig.max))
-        ? Number(shortcutWidthConfig.max)
-        : 1440;
-      return Math.max(min + 1, max);
+    function getShortcutColumnsMax() {
+      const min = getShortcutColumnsMin();
+      const max = Number.isFinite(Number(shortcutColumnsConfig.max))
+        ? Number(shortcutColumnsConfig.max)
+        : 16;
+      return Math.max(min, max);
     }
 
-    function normalizeShortcutWidthValue(value) {
-      const min = getShortcutWidthMin();
-      const max = getShortcutWidthMax();
-      const fallback = Number.isFinite(Number(shortcutWidthConfig.fallback))
-        ? Number(shortcutWidthConfig.fallback)
-        : 920;
+    function normalizeShortcutColumnsValue(value) {
+      const min = getShortcutColumnsMin();
+      const max = getShortcutColumnsMax();
+      const fallback = Number.isFinite(Number(shortcutColumnsConfig.fallback))
+        ? Number(shortcutColumnsConfig.fallback)
+        : 10;
       const number = Number(value);
       if (!Number.isFinite(number)) {
         return Math.min(max, Math.max(min, Math.round(fallback)));
@@ -3325,33 +3428,229 @@
       return Math.min(max, Math.max(min, Math.round(number)));
     }
 
-    function getShortcutWidthPercent(value) {
-      const min = getShortcutWidthMin();
-      const max = getShortcutWidthMax();
-      return ((normalizeShortcutWidthValue(value) - min) / (max - min)) * 100;
+    function getShortcutColumnsTickValues() {
+      return [4, 8, 12, 16].map(normalizeShortcutColumnsValue)
+        .filter((value, index, array) => array.indexOf(value) === index)
+        .sort((a, b) => a - b);
     }
 
-    function formatShortcutWidthValue(value) {
-      return `${normalizeShortcutWidthValue(value)} px`;
+    function getShortcutColumnsPercent(value) {
+      const min = getShortcutColumnsMin();
+      const max = getShortcutColumnsMax();
+      if (max <= min) {
+        return 0;
+      }
+      return ((normalizeShortcutColumnsValue(value) - min) / (max - min)) * 100;
     }
 
-    function updateShortcutWidthSliderElement(width) {
-      if (!wallpaperShortcutWidthSlider) {
+    function updateShortcutColumnsSliderElements(columns) {
+      const value = normalizeShortcutColumnsValue(columns);
+      if (wallpaperShortcutColumnsSlider) {
+        wallpaperShortcutColumnsSlider.min = String(getShortcutColumnsMin());
+        wallpaperShortcutColumnsSlider.max = String(getShortcutColumnsMax());
+        wallpaperShortcutColumnsSlider.step = '1';
+        wallpaperShortcutColumnsSlider.value = String(value);
+        wallpaperShortcutColumnsSlider.style.setProperty(
+          '--x-nt-overlay-slider-percent',
+          `${getShortcutColumnsPercent(value)}%`
+        );
+        wallpaperShortcutColumnsSlider.setAttribute('aria-valuenow', String(value));
+        wallpaperShortcutColumnsSlider.setAttribute('aria-valuetext', String(value));
+        syncWallpaperSliderValueInput(wallpaperShortcutColumnsSlider);
+      }
+    }
+
+    function persistShortcutColumnsFromSlider(value, options) {
+      const config = options || {};
+      const final = Boolean(config.final);
+      const columns = normalizeShortcutColumnsValue(value);
+      setShortcutColumns(columns, { persist: false });
+      updateShortcutColumnsSliderElements(columns);
+      if (wallpaperShortcutColumnsSaveTimer !== null) {
+        window.clearTimeout(wallpaperShortcutColumnsSaveTimer);
+        wallpaperShortcutColumnsSaveTimer = null;
+      }
+      const persist = () => {
+        wallpaperShortcutColumnsSaveTimer = null;
+        setShortcutColumns(columns, { persist: true });
+      };
+      if (final) {
+        persist();
         return;
       }
-      const value = normalizeShortcutWidthValue(width);
-      wallpaperShortcutWidthSlider.min = String(getShortcutWidthMin());
-      wallpaperShortcutWidthSlider.max = String(getShortcutWidthMax());
-      wallpaperShortcutWidthSlider.value = String(value);
-      wallpaperShortcutWidthSlider.style.setProperty(
-        '--x-nt-overlay-slider-percent',
-        `${getShortcutWidthPercent(value)}%`
+      wallpaperShortcutColumnsSaveTimer = window.setTimeout(persist, 140);
+    }
+
+    function getShortcutLayoutMin(config, fallback) {
+      return Number.isFinite(Number(config && config.min))
+        ? Number(config.min)
+        : fallback;
+    }
+
+    function getShortcutLayoutMax(config, fallbackMin, fallbackMax) {
+      const min = getShortcutLayoutMin(config, fallbackMin);
+      const max = Number.isFinite(Number(config && config.max))
+        ? Number(config.max)
+        : fallbackMax;
+      return Math.max(min, max);
+    }
+
+    function getShortcutLayoutDefault(config, fallbackMin, fallbackMax, fallbackValue) {
+      const min = getShortcutLayoutMin(config, fallbackMin);
+      const max = getShortcutLayoutMax(config, fallbackMin, fallbackMax);
+      const value = Number.isFinite(Number(config && config.fallback))
+        ? Number(config.fallback)
+        : fallbackValue;
+      return Math.min(max, Math.max(min, Math.round(value)));
+    }
+
+    function normalizeShortcutLayoutValue(
+      value,
+      config,
+      fallbackMin,
+      fallbackMax,
+      fallbackValue
+    ) {
+      const min = getShortcutLayoutMin(config, fallbackMin);
+      const max = getShortcutLayoutMax(config, fallbackMin, fallbackMax);
+      const fallback = getShortcutLayoutDefault(
+        config,
+        fallbackMin,
+        fallbackMax,
+        fallbackValue
       );
-      wallpaperShortcutWidthSlider.setAttribute('aria-valuenow', String(value));
-      wallpaperShortcutWidthSlider.setAttribute('aria-valuetext', formatShortcutWidthValue(value));
-      if (wallpaperShortcutWidthValue) {
-        wallpaperShortcutWidthValue.textContent = formatShortcutWidthValue(value);
+      const number = Number(value);
+      return Math.min(
+        max,
+        Math.max(min, Number.isFinite(number) ? Math.round(number) : fallback)
+      );
+    }
+
+    function getShortcutLayoutPercent(
+      value,
+      config,
+      fallbackMin,
+      fallbackMax,
+      fallbackValue
+    ) {
+      const min = getShortcutLayoutMin(config, fallbackMin);
+      const max = getShortcutLayoutMax(config, fallbackMin, fallbackMax);
+      if (max <= min) {
+        return 0;
       }
+      const normalized = normalizeShortcutLayoutValue(
+        value,
+        config,
+        fallbackMin,
+        fallbackMax,
+        fallbackValue
+      );
+      return ((normalized - min) / (max - min)) * 100;
+    }
+
+    function updateShortcutLayoutSliderElements(slider, resetButton, value, config) {
+      if (!slider) {
+        return;
+      }
+      const normalized = normalizeShortcutLayoutValue(
+        value,
+        config.source,
+        config.min,
+        config.max,
+        config.fallback
+      );
+      const defaultValue = getShortcutLayoutDefault(
+        config.source,
+        config.min,
+        config.max,
+        config.fallback
+      );
+      slider.min = String(getShortcutLayoutMin(config.source, config.min));
+      slider.max = String(getShortcutLayoutMax(config.source, config.min, config.max));
+      slider.step = '1';
+      slider.value = String(normalized);
+      slider.style.setProperty(
+        '--x-nt-overlay-slider-percent',
+        `${getShortcutLayoutPercent(
+          normalized,
+          config.source,
+          config.min,
+          config.max,
+          config.fallback
+        )}%`
+      );
+      slider.setAttribute('aria-valuenow', String(normalized));
+      slider.setAttribute('aria-valuetext', `${normalized} px`);
+      syncWallpaperSliderValueInput(slider);
+      if (resetButton) {
+        resetButton.disabled = Boolean(slider.disabled || normalized === defaultValue);
+      }
+    }
+
+    function normalizeShortcutSizeValue(value) {
+      return normalizeShortcutLayoutValue(value, shortcutSizeConfig, 48, 80, 64);
+    }
+
+    function normalizeShortcutGapValue(value) {
+      return normalizeShortcutLayoutValue(value, shortcutGapConfig, 0, 24, 4);
+    }
+
+    function updateShortcutSizeSliderElements(value) {
+      updateShortcutLayoutSliderElements(
+        wallpaperShortcutSizeSlider,
+        wallpaperShortcutSizeResetButton,
+        value,
+        { source: shortcutSizeConfig, min: 48, max: 80, fallback: 64 }
+      );
+    }
+
+    function updateShortcutGapSliderElements(value) {
+      updateShortcutLayoutSliderElements(
+        wallpaperShortcutGapSlider,
+        wallpaperShortcutGapResetButton,
+        value,
+        { source: shortcutGapConfig, min: 0, max: 24, fallback: 4 }
+      );
+    }
+
+    function persistShortcutSizeFromSlider(value, options) {
+      const final = Boolean(options && options.final);
+      const size = normalizeShortcutSizeValue(value);
+      setShortcutSize(size, { persist: false });
+      updateShortcutSizeSliderElements(size);
+      if (wallpaperShortcutSizeSaveTimer !== null) {
+        window.clearTimeout(wallpaperShortcutSizeSaveTimer);
+        wallpaperShortcutSizeSaveTimer = null;
+      }
+      const persist = () => {
+        wallpaperShortcutSizeSaveTimer = null;
+        setShortcutSize(size, { persist: true });
+      };
+      if (final) {
+        persist();
+        return;
+      }
+      wallpaperShortcutSizeSaveTimer = window.setTimeout(persist, 140);
+    }
+
+    function persistShortcutGapFromSlider(value, options) {
+      const final = Boolean(options && options.final);
+      const gap = normalizeShortcutGapValue(value);
+      setShortcutGap(gap, { persist: false });
+      updateShortcutGapSliderElements(gap);
+      if (wallpaperShortcutGapSaveTimer !== null) {
+        window.clearTimeout(wallpaperShortcutGapSaveTimer);
+        wallpaperShortcutGapSaveTimer = null;
+      }
+      const persist = () => {
+        wallpaperShortcutGapSaveTimer = null;
+        setShortcutGap(gap, { persist: true });
+      };
+      if (final) {
+        persist();
+        return;
+      }
+      wallpaperShortcutGapSaveTimer = window.setTimeout(persist, 140);
     }
 
     function applyWallpaperShortcutsAccordionUi() {
@@ -3372,10 +3671,16 @@
         wallpaperShortcutsDetails.setAttribute('data-visible', expanded ? 'true' : 'false');
         wallpaperShortcutsDetails.setAttribute('aria-hidden', expanded ? 'false' : 'true');
       }
-      if (wallpaperShortcutWidthControl) {
-        wallpaperShortcutWidthControl.setAttribute('data-visible', expanded ? 'true' : 'false');
-        wallpaperShortcutWidthControl.setAttribute('aria-hidden', expanded ? 'false' : 'true');
-      }
+      [
+        wallpaperShortcutColumnsControl,
+        wallpaperShortcutSizeControl,
+        wallpaperShortcutGapControl
+      ].forEach((control) => {
+        if (control) {
+          control.setAttribute('data-visible', expanded ? 'true' : 'false');
+          control.setAttribute('aria-hidden', expanded ? 'false' : 'true');
+        }
+      });
       [wallpaperShortcutAddToggle, wallpaperShortcutDockMagnificationToggle].forEach((toggle) => {
         if (!toggle) {
           return;
@@ -3383,9 +3688,20 @@
         toggle.disabled = !enabled || !expanded;
         toggle.setAttribute('aria-checked', toggle.checked ? 'true' : 'false');
       });
-      if (wallpaperShortcutWidthSlider) {
-        wallpaperShortcutWidthSlider.disabled = !enabled || !expanded;
-      }
+      [
+        wallpaperShortcutColumnsSlider,
+        getWallpaperSliderValueInput(wallpaperShortcutColumnsSlider),
+        wallpaperShortcutSizeSlider,
+        getWallpaperSliderValueInput(wallpaperShortcutSizeSlider),
+        wallpaperShortcutGapSlider,
+        getWallpaperSliderValueInput(wallpaperShortcutGapSlider)
+      ].forEach((input) => {
+        if (input) {
+          input.disabled = !enabled || !expanded;
+        }
+      });
+      updateShortcutSizeSliderElements(getShortcutSize());
+      updateShortcutGapSliderElements(getShortcutGap());
     }
 
     function setWallpaperShortcutsAccordionExpanded(expanded, options) {
@@ -3451,40 +3767,53 @@
           'macOS Dock-style magnification'
         ));
       }
-      if (wallpaperShortcutWidthLabel || wallpaperShortcutWidthSlider) {
-        const label = t('settings_newtab_shortcut_width_title', 'Shortcut width');
-        if (wallpaperShortcutWidthLabel) {
-          wallpaperShortcutWidthLabel.textContent = label;
+      if (wallpaperShortcutColumnsLabel || wallpaperShortcutColumnsSlider) {
+        const label = t('settings_newtab_shortcut_columns_title', 'Shortcuts per row');
+        if (wallpaperShortcutColumnsLabel) {
+          wallpaperShortcutColumnsLabel.textContent = label;
         }
-        if (wallpaperShortcutWidthSlider) {
-          wallpaperShortcutWidthSlider.setAttribute('aria-label', label);
+        if (wallpaperShortcutColumnsSlider) {
+          wallpaperShortcutColumnsSlider.setAttribute('aria-label', label);
         }
       }
-      updateShortcutWidthSliderElement(getShortcutWidth());
+      if (wallpaperShortcutSizeLabel || wallpaperShortcutSizeSlider) {
+        const label = t('settings_newtab_shortcut_size_title', 'Shortcut size');
+        const resetLabel = t(
+          'settings_newtab_shortcut_size_reset',
+          'Reset shortcut size'
+        );
+        if (wallpaperShortcutSizeLabel) {
+          wallpaperShortcutSizeLabel.textContent = label;
+        }
+        if (wallpaperShortcutSizeSlider) {
+          wallpaperShortcutSizeSlider.setAttribute('aria-label', label);
+        }
+        if (wallpaperShortcutSizeResetButton) {
+          wallpaperShortcutSizeResetButton.setAttribute('aria-label', resetLabel);
+          wallpaperShortcutSizeResetButton.setAttribute('title', resetLabel);
+        }
+      }
+      if (wallpaperShortcutGapLabel || wallpaperShortcutGapSlider) {
+        const label = t('settings_newtab_shortcut_gap_title', 'Shortcut spacing');
+        const resetLabel = t(
+          'settings_newtab_shortcut_gap_reset',
+          'Reset shortcut spacing'
+        );
+        if (wallpaperShortcutGapLabel) {
+          wallpaperShortcutGapLabel.textContent = label;
+        }
+        if (wallpaperShortcutGapSlider) {
+          wallpaperShortcutGapSlider.setAttribute('aria-label', label);
+        }
+        if (wallpaperShortcutGapResetButton) {
+          wallpaperShortcutGapResetButton.setAttribute('aria-label', resetLabel);
+          wallpaperShortcutGapResetButton.setAttribute('title', resetLabel);
+        }
+      }
+      updateShortcutColumnsSliderElements(getShortcutColumns());
+      updateShortcutSizeSliderElements(getShortcutSize());
+      updateShortcutGapSliderElements(getShortcutGap());
       applyWallpaperShortcutsAccordionUi();
-    }
-
-    function persistShortcutWidthFromSlider(value, options) {
-      const final = Boolean(options && options.final);
-      const width = normalizeShortcutWidthValue(value);
-      if (wallpaperShortcutWidthSlider && wallpaperShortcutWidthSlider.value !== String(width)) {
-        wallpaperShortcutWidthSlider.value = String(width);
-      }
-      setShortcutWidth(width, { persist: false });
-      updateShortcutWidthSliderElement(width);
-      if (wallpaperShortcutWidthSaveTimer !== null) {
-        window.clearTimeout(wallpaperShortcutWidthSaveTimer);
-        wallpaperShortcutWidthSaveTimer = null;
-      }
-      const persist = () => {
-        wallpaperShortcutWidthSaveTimer = null;
-        setShortcutWidth(width, { persist: true });
-      };
-      if (final) {
-        persist();
-        return;
-      }
-      wallpaperShortcutWidthSaveTimer = window.setTimeout(persist, 140);
     }
 
     function updateWallpaperAppearanceSelectionUi() {
@@ -4552,17 +4881,49 @@
           max: getSearchWidthMax(),
           ticks: searchWidthTicks
         },
-        shortcutWidth: {
-          defaultValue: normalizeShortcutWidthValue(getShortcutWidth()),
-          min: getShortcutWidthMin(),
-          max: getShortcutWidthMax(),
-          ticks: [
-            { align: 'start', label: String(getShortcutWidthMin()) },
-            {
-              label: String(Math.round((getShortcutWidthMin() + getShortcutWidthMax()) / 2))
-            },
-            { align: 'end', label: String(getShortcutWidthMax()) }
-          ]
+        shortcutColumns: {
+          defaultValue: normalizeShortcutColumnsValue(getShortcutColumns()),
+          min: getShortcutColumnsMin(),
+          max: getShortcutColumnsMax(),
+          ticks: getShortcutColumnsTickValues().map((value, index, values) => ({
+            align: index === 0 ? 'start' : (index === values.length - 1 ? 'end' : 'center'),
+            label: String(value),
+            percent: getShortcutColumnsPercent(value)
+          }))
+        },
+        shortcutSize: {
+          defaultValue: normalizeShortcutSizeValue(getShortcutSize()),
+          min: getShortcutLayoutMin(shortcutSizeConfig, 48),
+          max: getShortcutLayoutMax(shortcutSizeConfig, 48, 80),
+          ticks: [48, 64, 80]
+            .map(normalizeShortcutSizeValue)
+            .filter((value, index, values) => values.indexOf(value) === index)
+            .sort((a, b) => a - b)
+            .map((value, index, values) => ({
+              align: index === 0 ? 'start' : (index === values.length - 1 ? 'end' : 'center'),
+              label: String(value),
+              percent: getShortcutLayoutPercent(
+                value,
+                shortcutSizeConfig,
+                48,
+                80,
+                64
+              )
+            }))
+        },
+        shortcutGap: {
+          defaultValue: normalizeShortcutGapValue(getShortcutGap()),
+          min: getShortcutLayoutMin(shortcutGapConfig, 0),
+          max: getShortcutLayoutMax(shortcutGapConfig, 0, 24),
+          ticks: [0, 8, 16, 24]
+            .map(normalizeShortcutGapValue)
+            .filter((value, index, values) => values.indexOf(value) === index)
+            .sort((a, b) => a - b)
+            .map((value, index, values) => ({
+              align: index === 0 ? 'start' : (index === values.length - 1 ? 'end' : 'center'),
+              label: String(value),
+              percent: getShortcutLayoutPercent(value, shortcutGapConfig, 0, 24, 4)
+            }))
         },
         wallpapers: NEWTAB_WALLPAPER_OPTIONS.map((item) => ({
           id: item.id,
@@ -4588,7 +4949,6 @@
       topContentOffTab = refs.topContentOffTab;
       topContentWeightControl = refs.topContentWeightControl;
       topContentWeightTitle = refs.topContentWeightTitle;
-      topContentWeightValue = refs.topContentWeightValue;
       topContentWeightSlider = refs.topContentWeightSlider;
       topContentSecondsRow = refs.topContentSecondsRow;
       topContentSecondsTitle = refs.topContentSecondsTitle;
@@ -4599,7 +4959,6 @@
       wallpaperAppearanceOptions = refs.appearanceOptions;
       wallpaperSearchWidthControl = refs.searchWidthControl;
       wallpaperSearchWidthLabel = refs.searchWidthLabel;
-      wallpaperSearchWidthValue = refs.searchWidthValue;
       wallpaperSearchWidthSlider = refs.searchWidthSlider;
       wallpaperInputAutoFocusTitle = refs.inputAutoFocusTitle;
       wallpaperInputAutoFocusInfoButton = refs.inputAutoFocusInfoButton;
@@ -4613,10 +4972,17 @@
       wallpaperShortcutAddToggle = refs.shortcutAddToggle;
       wallpaperShortcutDockMagnificationTitle = refs.shortcutDockMagnificationTitle;
       wallpaperShortcutDockMagnificationToggle = refs.shortcutDockMagnificationToggle;
-      wallpaperShortcutWidthControl = refs.shortcutWidthControl;
-      wallpaperShortcutWidthLabel = refs.shortcutWidthLabel;
-      wallpaperShortcutWidthValue = refs.shortcutWidthValue;
-      wallpaperShortcutWidthSlider = refs.shortcutWidthSlider;
+      wallpaperShortcutColumnsControl = refs.shortcutColumnsControl;
+      wallpaperShortcutColumnsLabel = refs.shortcutColumnsLabel;
+      wallpaperShortcutColumnsSlider = refs.shortcutColumnsSlider;
+      wallpaperShortcutSizeControl = refs.shortcutSizeControl;
+      wallpaperShortcutSizeLabel = refs.shortcutSizeLabel;
+      wallpaperShortcutSizeSlider = refs.shortcutSizeSlider;
+      wallpaperShortcutSizeResetButton = refs.shortcutSizeResetButton;
+      wallpaperShortcutGapControl = refs.shortcutGapControl;
+      wallpaperShortcutGapLabel = refs.shortcutGapLabel;
+      wallpaperShortcutGapSlider = refs.shortcutGapSlider;
+      wallpaperShortcutGapResetButton = refs.shortcutGapResetButton;
       wallpaperAppearanceMoreSettingsLink = refs.moreSettingsLink;
       wallpaperAppearanceMoreSettingsText = refs.moreSettingsText;
       wallpaperOverlayLabel = refs.overlayLabel;
@@ -4686,6 +5052,7 @@
         persist(value);
       });
       bindWallpaperSliderValueBubble(slider);
+      bindWallpaperSliderValueInput(slider);
     }
 
     function bindReactWallpaperPanel() {
@@ -4747,6 +5114,7 @@
         persistSearchWidthFromSlider(wallpaperSearchWidthSlider.value, { final: true });
       });
       bindWallpaperSliderValueBubble(wallpaperSearchWidthSlider);
+      bindWallpaperSliderValueInput(wallpaperSearchWidthSlider);
       if (wallpaperInputAutoFocusToggle) {
         wallpaperInputAutoFocusToggle.addEventListener('change', () => {
           setInputAutoFocusEnabled(wallpaperInputAutoFocusToggle.checked);
@@ -4785,14 +5153,64 @@
           updateWallpaperShortcutsUi();
         });
       }
-      if (wallpaperShortcutWidthSlider) {
-        wallpaperShortcutWidthSlider.addEventListener('input', () => {
-          persistShortcutWidthFromSlider(wallpaperShortcutWidthSlider.value, { final: false });
+      if (wallpaperShortcutColumnsSlider) {
+        wallpaperShortcutColumnsSlider.addEventListener('input', () => {
+          persistShortcutColumnsFromSlider(wallpaperShortcutColumnsSlider.value, {
+            final: false
+          });
         });
-        wallpaperShortcutWidthSlider.addEventListener('change', () => {
-          persistShortcutWidthFromSlider(wallpaperShortcutWidthSlider.value, { final: true });
+        wallpaperShortcutColumnsSlider.addEventListener('change', () => {
+          persistShortcutColumnsFromSlider(wallpaperShortcutColumnsSlider.value, {
+            final: true
+          });
         });
-        bindWallpaperSliderValueBubble(wallpaperShortcutWidthSlider);
+      }
+      if (wallpaperShortcutColumnsSlider) {
+        bindWallpaperSliderValueInput(wallpaperShortcutColumnsSlider);
+      }
+      if (wallpaperShortcutSizeSlider) {
+        wallpaperShortcutSizeSlider.addEventListener('input', () => {
+          persistShortcutSizeFromSlider(wallpaperShortcutSizeSlider.value, {
+            final: false
+          });
+        });
+        wallpaperShortcutSizeSlider.addEventListener('change', () => {
+          persistShortcutSizeFromSlider(wallpaperShortcutSizeSlider.value, {
+            final: true
+          });
+        });
+        bindWallpaperSliderValueInput(wallpaperShortcutSizeSlider);
+      }
+      if (wallpaperShortcutSizeResetButton) {
+        wallpaperShortcutSizeResetButton.addEventListener('click', () => {
+          persistShortcutSizeFromSlider(
+            getShortcutLayoutDefault(shortcutSizeConfig, 48, 80, 64),
+            { final: true }
+          );
+          wallpaperShortcutSizeResetButton.blur();
+        });
+      }
+      if (wallpaperShortcutGapSlider) {
+        wallpaperShortcutGapSlider.addEventListener('input', () => {
+          persistShortcutGapFromSlider(wallpaperShortcutGapSlider.value, {
+            final: false
+          });
+        });
+        wallpaperShortcutGapSlider.addEventListener('change', () => {
+          persistShortcutGapFromSlider(wallpaperShortcutGapSlider.value, {
+            final: true
+          });
+        });
+        bindWallpaperSliderValueInput(wallpaperShortcutGapSlider);
+      }
+      if (wallpaperShortcutGapResetButton) {
+        wallpaperShortcutGapResetButton.addEventListener('click', () => {
+          persistShortcutGapFromSlider(
+            getShortcutLayoutDefault(shortcutGapConfig, 0, 24, 4),
+            { final: true }
+          );
+          wallpaperShortcutGapResetButton.blur();
+        });
       }
       wallpaperEnabledToggle.addEventListener('change', () => {
         persistWallpaperEnabled(wallpaperEnabledToggle.checked);
@@ -4874,6 +5292,7 @@
           persistTimeFontWeight(topContentWeightSlider.value);
         });
         bindWallpaperSliderValueBubble(topContentWeightSlider);
+        bindWallpaperSliderValueInput(topContentWeightSlider);
       }
       if (topContentSecondsToggle) {
         topContentSecondsToggle.addEventListener('change', () => {

@@ -1,0 +1,35 @@
+._x_extension_range_slider_reset_button_2026_unique_ {
+  all: unset;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  padding: 4px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  color: var(--panel-subtext, var(--x-nt-subtext, #64748b));
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    opacity 140ms ease;
+}
+
+._x_extension_range_slider_reset_button_2026_unique_:hover:not(:disabled) {
+  background: rgba(148, 163, 184, 0.2);
+}
+
+._x_extension_range_slider_reset_button_2026_unique_:focus-visible {
+  outline: 2px solid var(--input-focus-color, rgba(59, 130, 246, 0.65));
+  outline-offset: 2px;
+}
+
+._x_extension_range_slider_reset_button_2026_unique_:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+._x_extension_range_slider_reset_button_2026_unique_ .ri-icon {
+  pointer-events: none;
+}

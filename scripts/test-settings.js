@@ -19,7 +19,7 @@ assert.strictEqual(settings.addStorageChangeListener({
   storage: { onChanged: { addListener() {} } }
 }, null), false);
 
-assert.strictEqual(settings.CHROME_SYNC_STORAGE_KEYS.length, 60);
+assert.strictEqual(settings.CHROME_SYNC_STORAGE_KEYS.length, 63);
 assert.strictEqual(
   new Set(settings.CHROME_SYNC_STORAGE_KEYS).size,
   settings.CHROME_SYNC_STORAGE_KEYS.length
@@ -172,6 +172,32 @@ assert.strictEqual(settings.normalizeNewtabShortcutWidth(359), 360);
 assert.strictEqual(settings.normalizeNewtabShortcutWidth(920), 920);
 assert.strictEqual(settings.normalizeNewtabShortcutWidth(1441), 1440);
 assert.strictEqual(settings.normalizeNewtabShortcutWidth(720.5), 721);
+assert.strictEqual(
+  settings.NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY,
+  '_x_extension_newtab_shortcut_columns_2026_unique_'
+);
+assert.strictEqual(settings.NEWTAB_SHORTCUT_COLUMNS_MIN, 4);
+assert.strictEqual(settings.NEWTAB_SHORTCUT_COLUMNS_MAX, 16);
+assert.strictEqual(settings.NEWTAB_SHORTCUT_COLUMNS_DEFAULT, 10);
+assert.strictEqual(settings.normalizeNewtabShortcutColumns(undefined), 10);
+assert.strictEqual(settings.normalizeNewtabShortcutColumns(3), 4);
+assert.strictEqual(settings.normalizeNewtabShortcutColumns(10.5), 11);
+assert.strictEqual(settings.normalizeNewtabShortcutColumns(17), 16);
+assert.strictEqual(settings.inferNewtabShortcutColumnsFromWidth(360), 4);
+assert.strictEqual(settings.inferNewtabShortcutColumnsFromWidth(920), 10);
+assert.strictEqual(settings.inferNewtabShortcutColumnsFromWidth(1440), 16);
+assert.strictEqual(settings.NEWTAB_SHORTCUT_SIZE_MIN, 48);
+assert.strictEqual(settings.NEWTAB_SHORTCUT_SIZE_MAX, 80);
+assert.strictEqual(settings.NEWTAB_SHORTCUT_SIZE_DEFAULT, 64);
+assert.strictEqual(settings.normalizeNewtabShortcutSize(undefined), 64);
+assert.strictEqual(settings.normalizeNewtabShortcutSize(47), 48);
+assert.strictEqual(settings.normalizeNewtabShortcutSize(81), 80);
+assert.strictEqual(settings.NEWTAB_SHORTCUT_GAP_MIN, 0);
+assert.strictEqual(settings.NEWTAB_SHORTCUT_GAP_MAX, 24);
+assert.strictEqual(settings.NEWTAB_SHORTCUT_GAP_DEFAULT, 4);
+assert.strictEqual(settings.normalizeNewtabShortcutGap(undefined), 4);
+assert.strictEqual(settings.normalizeNewtabShortcutGap(-1), 0);
+assert.strictEqual(settings.normalizeNewtabShortcutGap(25), 24);
 
 assert.strictEqual(settings.normalizeBookmarkFolderIconsVisible(false), false);
 assert.strictEqual(settings.normalizeBookmarkFolderIconsVisible(true), true);

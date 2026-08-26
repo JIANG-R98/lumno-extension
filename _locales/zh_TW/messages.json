@@ -574,6 +574,21 @@
   "settings_newtab_shortcut_width_title": {
     "message": "捷徑寬度"
   },
+  "settings_newtab_shortcut_columns_title": {
+    "message": "每行捷徑數量"
+  },
+  "settings_newtab_shortcut_size_title": {
+    "message": "捷徑大小"
+  },
+  "settings_newtab_shortcut_gap_title": {
+    "message": "捷徑間距"
+  },
+  "settings_newtab_shortcut_size_reset": {
+    "message": "恢復預設大小"
+  },
+  "settings_newtab_shortcut_gap_reset": {
+    "message": "恢復預設間距"
+  },
   "settings_wallpaper_title": {
     "message": "新分頁壁紙"
   },

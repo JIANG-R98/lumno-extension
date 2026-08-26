@@ -124,12 +124,22 @@ describe('Options settings controls React islands', () => {
     }));
 
     const input = host.querySelector<HTMLInputElement>('input[type="range"]');
+    const valueInput = host.querySelector<HTMLInputElement>('input[type="number"]');
     expect(host.dataset.reactIsland).toBe('options-range-slider-control');
     expect(input?.classList.contains('x-lumno-range-slider-input')).toBe(true);
     expect(input?.value).toBe('6');
     expect(host.querySelector<HTMLElement>('.x-lumno-range-slider-scale')
       ?.style.getPropertyValue('--x-lumno-range-slider-tick-count')).toBe('3');
-    expect(host.querySelector('output')?.textContent).toBe('6');
+    expect(valueInput?.value).toBe('6');
+    expect(valueInput?.max).toBe(input?.max);
+    expect(valueInput?.max).toBe('8');
+    expect(valueInput?.classList.contains('_x_extension_shortcut_input_2024_unique_'))
+      .toBe(true);
+    expect(valueInput?.classList.contains(
+      '_x_extension_range_slider_value_input_2026_unique_'
+    )).toBe(true);
+    expect(valueInput?.style.width).toBe('56px');
+    expect(valueInput?.style.height).toBe('36px');
 
     act(() => {
       if (!input) return;
@@ -137,7 +147,93 @@ describe('Options settings controls React islands', () => {
       input.dispatchEvent(new Event('input', { bubbles: true }));
     });
     expect(onInput).toHaveBeenCalledWith(7);
-    expect(host.querySelector('output')?.textContent).toBe('7');
+    expect(valueInput?.value).toBe('7');
+  });
+
+  it('keeps every slider step and commits a fixed-width editable value', () => {
+    const host = document.createElement('div');
+    const onInput = vi.fn();
+    document.body.appendChild(host);
+    const controller = createRangeSliderControlController(host, {
+      kind: 'newtab-shortcut-columns',
+      onInput
+    });
+    controllers.push(controller);
+
+    act(() => controller.render({
+      ariaLabel: '快捷方式每行数量',
+      id: 'newtab-shortcut-columns',
+      max: 16,
+      min: 4,
+      step: 1,
+      ticks: [
+        { align: 'start', label: '4', percent: 0 },
+        { label: '8', percent: 100 / 3 },
+        { label: '12', percent: 200 / 3 },
+        { align: 'end', label: '16', percent: 100 }
+      ],
+      value: 10
+    }));
+
+    const slider = host.querySelector<HTMLInputElement>('input[type="range"]');
+    const valueInput = host.querySelector<HTMLInputElement>('input[type="number"]');
+    const setNativeInputValue = (input: HTMLInputElement, next: string) => {
+      Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        'value'
+      )?.set?.call(input, next);
+    };
+    expect(valueInput?.disabled).toBe(false);
+    expect(valueInput?.max).toBe(slider?.max);
+    expect(valueInput?.max).toBe('16');
+    expect(valueInput?.classList.contains('_x_extension_shortcut_input_2024_unique_'))
+      .toBe(true);
+    expect(valueInput?.style.width).toBe('56px');
+    expect(valueInput?.style.height).toBe('36px');
+    expect(host.querySelectorAll<HTMLElement>('.x-lumno-range-slider-tick')[1]
+      ?.style.getPropertyValue('--x-lumno-range-slider-tick-percent')).toBe(
+        `${100 / 3}%`
+      );
+
+    act(() => {
+      if (!slider) return;
+      slider.value = '7';
+      slider.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(onInput).toHaveBeenLastCalledWith(7);
+    expect(slider?.value).toBe('7');
+    expect(valueInput?.value).toBe('7');
+
+    act(() => {
+      valueInput?.focus();
+      if (!valueInput) return;
+      setNativeInputValue(valueInput, '11');
+      valueInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    act(() => {
+      if (!valueInput) return;
+      valueInput.dispatchEvent(new KeyboardEvent('keydown', {
+        bubbles: true,
+        key: 'Enter'
+      }));
+    });
+    expect(onInput).toHaveBeenLastCalledWith(11);
+    expect(slider?.value).toBe('11');
+    expect(valueInput?.value).toBe('11');
+
+    act(() => {
+      valueInput?.focus();
+      if (!valueInput) return;
+      setNativeInputValue(valueInput, '99');
+      valueInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    act(() => {
+      if (!valueInput) return;
+      valueInput.blur();
+    });
+    expect(onInput).toHaveBeenLastCalledWith(16);
+    expect(valueInput?.value).toBe('16');
+    expect(valueInput?.style.width).toBe('56px');
   });
 
   it('aligns a two-tick range to both slider endpoints', () => {
@@ -167,6 +263,52 @@ describe('Options settings controls React islands', () => {
     expect(scale?.style.getPropertyValue('--x-lumno-range-slider-tick-count')).toBe('2');
     expect(Array.from(ticks).map((tick) => [tick.dataset.align, tick.textContent]))
       .toEqual([['start', '5'], ['end', '10']]);
+  });
+
+  it('resets a slider to its component-provided default value', () => {
+    const host = document.createElement('div');
+    const onInput = vi.fn();
+    document.body.appendChild(host);
+    const controller = createRangeSliderControlController(host, {
+      kind: 'newtab-shortcut-size',
+      onInput
+    });
+    controllers.push(controller);
+
+    act(() => controller.render({
+      ariaLabel: '快捷方式大小',
+      defaultValue: 64,
+      id: 'newtab-shortcut-size',
+      max: 80,
+      min: 48,
+      resetAriaLabel: '恢复默认大小',
+      resetButtonId: 'newtab-shortcut-size-reset',
+      step: 1,
+      ticks: [
+        { align: 'start', label: '48' },
+        { label: '64' },
+        { align: 'end', label: '80' }
+      ],
+      value: 72,
+      valueSuffix: ' px'
+    }));
+
+    const slider = host.querySelector<HTMLInputElement>('input[type="range"]');
+    const reset = host.querySelector<HTMLButtonElement>('#newtab-shortcut-size-reset');
+    const valueInput = host.querySelector<HTMLInputElement>('input[type="number"]');
+    expect(reset?.getAttribute('aria-label')).toBe('恢复默认大小');
+    expect(reset?.querySelector('.ri-reset-left-line')).not.toBeNull();
+    expect(reset?.querySelector('.ri-size-14')).not.toBeNull();
+    expect(reset?.classList.contains(
+      '_x_extension_shortcut_group_action_2024_unique_'
+    )).toBe(true);
+    expect(reset?.nextElementSibling).toBe(valueInput);
+    expect(reset?.disabled).toBe(false);
+
+    act(() => reset?.click());
+    expect(onInput).toHaveBeenLastCalledWith(64);
+    expect(slider?.value).toBe('64');
+    expect(reset?.disabled).toBe(true);
   });
 
   it('keeps adapter-provided localized labels after an interaction rerender', () => {

@@ -574,6 +574,21 @@
   "settings_newtab_shortcut_width_title": {
     "message": "タイル幅"
   },
+  "settings_newtab_shortcut_columns_title": {
+    "message": "1行あたりのタイル数"
+  },
+  "settings_newtab_shortcut_size_title": {
+    "message": "ショートカットのサイズ"
+  },
+  "settings_newtab_shortcut_gap_title": {
+    "message": "ショートカットの間隔"
+  },
+  "settings_newtab_shortcut_size_reset": {
+    "message": "ショートカットのサイズを初期値に戻す"
+  },
+  "settings_newtab_shortcut_gap_reset": {
+    "message": "ショートカットの間隔を初期値に戻す"
+  },
   "settings_wallpaper_title": {
     "message": "新しいタブの壁紙"
   },

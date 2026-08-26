@@ -399,6 +399,45 @@
   const NEWTAB_SHORTCUT_WIDTH_DEFAULT = Number.isFinite(Number(SETTINGS.NEWTAB_SHORTCUT_WIDTH_DEFAULT))
     ? Number(SETTINGS.NEWTAB_SHORTCUT_WIDTH_DEFAULT)
     : 920;
+  const NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY = SETTINGS.NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY ||
+    '_x_extension_newtab_shortcut_columns_2026_unique_';
+  const NEWTAB_SHORTCUT_COLUMNS_MIN = Number.isFinite(Number(SETTINGS.NEWTAB_SHORTCUT_COLUMNS_MIN))
+    ? Number(SETTINGS.NEWTAB_SHORTCUT_COLUMNS_MIN)
+    : 4;
+  const NEWTAB_SHORTCUT_COLUMNS_MAX = Number.isFinite(Number(SETTINGS.NEWTAB_SHORTCUT_COLUMNS_MAX))
+    ? Number(SETTINGS.NEWTAB_SHORTCUT_COLUMNS_MAX)
+    : 16;
+  const NEWTAB_SHORTCUT_COLUMNS_DEFAULT = Number.isFinite(
+    Number(SETTINGS.NEWTAB_SHORTCUT_COLUMNS_DEFAULT)
+  )
+    ? Number(SETTINGS.NEWTAB_SHORTCUT_COLUMNS_DEFAULT)
+    : 10;
+  const NEWTAB_SHORTCUT_SIZE_STORAGE_KEY = SETTINGS.NEWTAB_SHORTCUT_SIZE_STORAGE_KEY ||
+    '_x_extension_newtab_shortcut_size_2026_unique_';
+  const NEWTAB_SHORTCUT_SIZE_MIN = Number.isFinite(Number(SETTINGS.NEWTAB_SHORTCUT_SIZE_MIN))
+    ? Number(SETTINGS.NEWTAB_SHORTCUT_SIZE_MIN)
+    : 48;
+  const NEWTAB_SHORTCUT_SIZE_MAX = Number.isFinite(Number(SETTINGS.NEWTAB_SHORTCUT_SIZE_MAX))
+    ? Number(SETTINGS.NEWTAB_SHORTCUT_SIZE_MAX)
+    : 80;
+  const NEWTAB_SHORTCUT_SIZE_DEFAULT = Number.isFinite(
+    Number(SETTINGS.NEWTAB_SHORTCUT_SIZE_DEFAULT)
+  )
+    ? Number(SETTINGS.NEWTAB_SHORTCUT_SIZE_DEFAULT)
+    : 64;
+  const NEWTAB_SHORTCUT_GAP_STORAGE_KEY = SETTINGS.NEWTAB_SHORTCUT_GAP_STORAGE_KEY ||
+    '_x_extension_newtab_shortcut_gap_2026_unique_';
+  const NEWTAB_SHORTCUT_GAP_MIN = Number.isFinite(Number(SETTINGS.NEWTAB_SHORTCUT_GAP_MIN))
+    ? Number(SETTINGS.NEWTAB_SHORTCUT_GAP_MIN)
+    : 0;
+  const NEWTAB_SHORTCUT_GAP_MAX = Number.isFinite(Number(SETTINGS.NEWTAB_SHORTCUT_GAP_MAX))
+    ? Number(SETTINGS.NEWTAB_SHORTCUT_GAP_MAX)
+    : 24;
+  const NEWTAB_SHORTCUT_GAP_DEFAULT = Number.isFinite(
+    Number(SETTINGS.NEWTAB_SHORTCUT_GAP_DEFAULT)
+  )
+    ? Number(SETTINGS.NEWTAB_SHORTCUT_GAP_DEFAULT)
+    : 4;
   const NEWTAB_SHORTCUT_ICONS_STORAGE_KEY =
     NEWTAB_SHORTCUT_ICON_STORE.DEFAULT_STORAGE_KEY ||
     '_x_extension_newtab_shortcut_icons_2026_unique_';
@@ -605,7 +644,9 @@
   let newtabShortcutsVisible = true;
   let newtabShortcutAddVisible = true;
   let newtabShortcutDockMagnificationEnabled = true;
-  let newtabShortcutWidth = NEWTAB_SHORTCUT_WIDTH_DEFAULT;
+  let newtabShortcutColumns = NEWTAB_SHORTCUT_COLUMNS_DEFAULT;
+  let newtabShortcutSize = NEWTAB_SHORTCUT_SIZE_DEFAULT;
+  let newtabShortcutGap = NEWTAB_SHORTCUT_GAP_DEFAULT;
   let shortcutStorageReloadTimer = null;
   let shortcutPersistenceInFlightCount = 0;
   let shortcutDockPointerFrame = 0;
@@ -1394,6 +1435,78 @@
     return NEWTAB_SHORTCUT_WIDTH_DEFAULT;
   }
 
+  function normalizeNewtabShortcutColumns(value) {
+    if (typeof SETTINGS.normalizeNewtabShortcutColumns === 'function') {
+      return SETTINGS.normalizeNewtabShortcutColumns(value, {
+        min: NEWTAB_SHORTCUT_COLUMNS_MIN,
+        max: NEWTAB_SHORTCUT_COLUMNS_MAX,
+        fallback: NEWTAB_SHORTCUT_COLUMNS_DEFAULT
+      });
+    }
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return Math.min(
+        NEWTAB_SHORTCUT_COLUMNS_MAX,
+        Math.max(NEWTAB_SHORTCUT_COLUMNS_MIN, Math.round(parsed))
+      );
+    }
+    return NEWTAB_SHORTCUT_COLUMNS_DEFAULT;
+  }
+
+  function normalizeNewtabShortcutSize(value) {
+    if (typeof SETTINGS.normalizeNewtabShortcutSize === 'function') {
+      return SETTINGS.normalizeNewtabShortcutSize(value, {
+        min: NEWTAB_SHORTCUT_SIZE_MIN,
+        max: NEWTAB_SHORTCUT_SIZE_MAX,
+        fallback: NEWTAB_SHORTCUT_SIZE_DEFAULT
+      });
+    }
+    const parsed = Number(value);
+    return Math.min(
+      NEWTAB_SHORTCUT_SIZE_MAX,
+      Math.max(
+        NEWTAB_SHORTCUT_SIZE_MIN,
+        Number.isFinite(parsed) ? Math.round(parsed) : NEWTAB_SHORTCUT_SIZE_DEFAULT
+      )
+    );
+  }
+
+  function normalizeNewtabShortcutGap(value) {
+    if (typeof SETTINGS.normalizeNewtabShortcutGap === 'function') {
+      return SETTINGS.normalizeNewtabShortcutGap(value, {
+        min: NEWTAB_SHORTCUT_GAP_MIN,
+        max: NEWTAB_SHORTCUT_GAP_MAX,
+        fallback: NEWTAB_SHORTCUT_GAP_DEFAULT
+      });
+    }
+    const parsed = Number(value);
+    return Math.min(
+      NEWTAB_SHORTCUT_GAP_MAX,
+      Math.max(
+        NEWTAB_SHORTCUT_GAP_MIN,
+        Number.isFinite(parsed) ? Math.round(parsed) : NEWTAB_SHORTCUT_GAP_DEFAULT
+      )
+    );
+  }
+
+  function inferNewtabShortcutColumnsFromWidth(value) {
+    if (typeof SETTINGS.inferNewtabShortcutColumnsFromWidth === 'function') {
+      return SETTINGS.inferNewtabShortcutColumnsFromWidth(value, {
+        widthMin: NEWTAB_SHORTCUT_WIDTH_MIN,
+        widthMax: NEWTAB_SHORTCUT_WIDTH_MAX,
+        columnsMin: NEWTAB_SHORTCUT_COLUMNS_MIN,
+        columnsMax: NEWTAB_SHORTCUT_COLUMNS_MAX
+      });
+    }
+    const width = normalizeNewtabShortcutWidth(value);
+    const ratio = (width - NEWTAB_SHORTCUT_WIDTH_MIN) /
+      Math.max(1, NEWTAB_SHORTCUT_WIDTH_MAX - NEWTAB_SHORTCUT_WIDTH_MIN);
+    return normalizeNewtabShortcutColumns(
+      NEWTAB_SHORTCUT_COLUMNS_MIN +
+        ratio * (NEWTAB_SHORTCUT_COLUMNS_MAX - NEWTAB_SHORTCUT_COLUMNS_MIN)
+    );
+  }
+
   function normalizeNewtabInputAutoFocusEnabled(value) {
     return typeof SETTINGS.normalizeNewtabInputAutoFocusEnabled === 'function'
       ? SETTINGS.normalizeNewtabInputAutoFocusEnabled(value)
@@ -1472,18 +1585,50 @@
     return nextValue;
   }
 
-  function setNewtabShortcutWidth(value, options) {
+  function setNewtabShortcutColumns(value, options) {
     const config = options || {};
-    const nextValue = normalizeNewtabShortcutWidth(value);
-    newtabShortcutWidth = nextValue;
-    applyNewtabShortcutWidth();
+    const nextValue = normalizeNewtabShortcutColumns(value);
+    newtabShortcutColumns = nextValue;
+    applyNewtabShortcutColumns();
     updateNewtabShortcutPreferencesUi();
     updateBookmarkSectionPosition({
       preserveSearchEntryLayout: true,
       stabilizeDockDensity: true
     });
     if (config.persist && storageArea) {
-      storageArea.set({ [NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY]: nextValue });
+      storageArea.set({ [NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY]: nextValue });
+    }
+    return nextValue;
+  }
+
+  function setNewtabShortcutSize(value, options) {
+    const config = options || {};
+    const nextValue = normalizeNewtabShortcutSize(value);
+    newtabShortcutSize = nextValue;
+    applyNewtabShortcutLayoutPreferences();
+    updateNewtabShortcutPreferencesUi();
+    updateBookmarkSectionPosition({
+      preserveSearchEntryLayout: true,
+      stabilizeDockDensity: true
+    });
+    if (config.persist && storageArea) {
+      storageArea.set({ [NEWTAB_SHORTCUT_SIZE_STORAGE_KEY]: nextValue });
+    }
+    return nextValue;
+  }
+
+  function setNewtabShortcutGap(value, options) {
+    const config = options || {};
+    const nextValue = normalizeNewtabShortcutGap(value);
+    newtabShortcutGap = nextValue;
+    applyNewtabShortcutLayoutPreferences();
+    updateNewtabShortcutPreferencesUi();
+    updateBookmarkSectionPosition({
+      preserveSearchEntryLayout: true,
+      stabilizeDockDensity: true
+    });
+    if (config.persist && storageArea) {
+      storageArea.set({ [NEWTAB_SHORTCUT_GAP_STORAGE_KEY]: nextValue });
     }
     return nextValue;
   }
@@ -2930,10 +3075,20 @@
     setSearchWidth: (value, options) => {
       setNewtabSearchWidth(value, options);
     },
-    shortcutWidthConfig: {
-      min: NEWTAB_SHORTCUT_WIDTH_MIN,
-      max: NEWTAB_SHORTCUT_WIDTH_MAX,
-      fallback: NEWTAB_SHORTCUT_WIDTH_DEFAULT
+    shortcutColumnsConfig: {
+      min: NEWTAB_SHORTCUT_COLUMNS_MIN,
+      max: NEWTAB_SHORTCUT_COLUMNS_MAX,
+      fallback: NEWTAB_SHORTCUT_COLUMNS_DEFAULT
+    },
+    shortcutSizeConfig: {
+      min: NEWTAB_SHORTCUT_SIZE_MIN,
+      max: NEWTAB_SHORTCUT_SIZE_MAX,
+      fallback: NEWTAB_SHORTCUT_SIZE_DEFAULT
+    },
+    shortcutGapConfig: {
+      min: NEWTAB_SHORTCUT_GAP_MIN,
+      max: NEWTAB_SHORTCUT_GAP_MAX,
+      fallback: NEWTAB_SHORTCUT_GAP_DEFAULT
     },
     getShortcutsVisible: () => newtabShortcutsVisible,
     setShortcutsVisible: setNewtabShortcutsVisible,
@@ -2941,8 +3096,12 @@
     setShortcutAddVisible: setNewtabShortcutAddVisible,
     getShortcutDockMagnificationEnabled: () => newtabShortcutDockMagnificationEnabled,
     setShortcutDockMagnificationEnabled: setNewtabShortcutDockMagnificationEnabled,
-    getShortcutWidth: () => newtabShortcutWidth,
-    setShortcutWidth: setNewtabShortcutWidth,
+    getShortcutColumns: () => newtabShortcutColumns,
+    setShortcutColumns: setNewtabShortcutColumns,
+    getShortcutSize: () => newtabShortcutSize,
+    setShortcutSize: setNewtabShortcutSize,
+    getShortcutGap: () => newtabShortcutGap,
+    setShortcutGap: setNewtabShortcutGap,
     featureHints: FEATURE_HINTS,
     inputAutoFocusReady: initialNewtabInputAutoFocusReadyTask,
     inputAutoFocusVisibilityGate: newtabEntryAnimationReadyPromise,
@@ -3913,14 +4072,42 @@
       applyNewtabShortcutDockMagnification();
       updateNewtabShortcutPreferencesUi();
     }
-    if (changes[NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY]) {
-      const raw = changes[NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY].newValue;
-      const nextValue = normalizeNewtabShortcutWidth(raw);
-      newtabShortcutWidth = nextValue;
+    if (changes[NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY]) {
+      const raw = changes[NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY].newValue;
+      const nextValue = normalizeNewtabShortcutColumns(raw);
+      newtabShortcutColumns = nextValue;
       if (storageArea && raw !== nextValue) {
-        storageArea.set({ [NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY]: nextValue });
+        storageArea.set({ [NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY]: nextValue });
       }
-      applyNewtabShortcutWidth();
+      applyNewtabShortcutColumns();
+      updateBookmarkSectionPosition({
+        preserveSearchEntryLayout: true,
+        stabilizeDockDensity: true
+      });
+      updateNewtabShortcutPreferencesUi();
+    }
+    if (changes[NEWTAB_SHORTCUT_SIZE_STORAGE_KEY]) {
+      const raw = changes[NEWTAB_SHORTCUT_SIZE_STORAGE_KEY].newValue;
+      const nextValue = normalizeNewtabShortcutSize(raw);
+      newtabShortcutSize = nextValue;
+      if (storageArea && raw !== nextValue) {
+        storageArea.set({ [NEWTAB_SHORTCUT_SIZE_STORAGE_KEY]: nextValue });
+      }
+      applyNewtabShortcutLayoutPreferences();
+      updateBookmarkSectionPosition({
+        preserveSearchEntryLayout: true,
+        stabilizeDockDensity: true
+      });
+      updateNewtabShortcutPreferencesUi();
+    }
+    if (changes[NEWTAB_SHORTCUT_GAP_STORAGE_KEY]) {
+      const raw = changes[NEWTAB_SHORTCUT_GAP_STORAGE_KEY].newValue;
+      const nextValue = normalizeNewtabShortcutGap(raw);
+      newtabShortcutGap = nextValue;
+      if (storageArea && raw !== nextValue) {
+        storageArea.set({ [NEWTAB_SHORTCUT_GAP_STORAGE_KEY]: nextValue });
+      }
+      applyNewtabShortcutLayoutPreferences();
       updateBookmarkSectionPosition({
         preserveSearchEntryLayout: true,
         stabilizeDockDensity: true
@@ -4719,7 +4906,10 @@
     NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY,
     NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY,
     NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY,
-    NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY
+    NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY,
+    NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY,
+    NEWTAB_SHORTCUT_SIZE_STORAGE_KEY,
+    NEWTAB_SHORTCUT_GAP_STORAGE_KEY
   ]);
   let handleTabKey = null;
   const defaultSiteSearchProviders = typeof SEARCH_UTILS.getDefaultSiteSearchProviders === 'function'
@@ -6481,13 +6671,52 @@
     return Boolean(section && section.getAttribute('data-visible') === 'true');
   }
 
-  function applyNewtabShortcutWidth() {
+  function applyNewtabShortcutLayoutPreferences() {
+    if (!document.documentElement || !document.documentElement.style) {
+      return;
+    }
+    const rootStyle = document.documentElement.style;
+    const size = normalizeNewtabShortcutSize(newtabShortcutSize);
+    const gap = normalizeNewtabShortcutGap(newtabShortcutGap);
+    rootStyle.setProperty('--x-nt-shortcut-user-tile-size', `${size}px`);
+    rootStyle.setProperty('--x-nt-shortcut-user-icon-size', `${size * 0.75}px`);
+    rootStyle.setProperty('--x-nt-shortcut-user-icon-radius', `${size * 0.25}px`);
+    rootStyle.setProperty('--x-nt-shortcut-user-favicon-size', `${size * 0.4375}px`);
+    rootStyle.setProperty('--x-nt-shortcut-user-tile-padding', `${size * 0.125}px`);
+    rootStyle.setProperty('--x-nt-shortcut-user-column-gap', `${gap}px`);
+    rootStyle.setProperty('--x-nt-shortcut-user-row-gap', `${gap + 6}px`);
+    applyNewtabShortcutColumns();
+  }
+
+  function applyNewtabShortcutColumns() {
     if (!document.documentElement || !document.documentElement.style) {
       return;
     }
     document.documentElement.style.setProperty(
-      '--x-nt-shortcut-width',
-      `${newtabShortcutWidth}px`
+      '--x-nt-shortcut-columns',
+      String(newtabShortcutColumns)
+    );
+    if (!shortcutGrid || typeof window.getComputedStyle !== 'function') {
+      return;
+    }
+    const gridStyle = window.getComputedStyle(shortcutGrid);
+    const tileSize = Number.parseFloat(
+      gridStyle.getPropertyValue('--x-nt-shortcut-tile-size')
+    );
+    const columnGap = Number.parseFloat(gridStyle.columnGap);
+    const paddingLeft = Number.parseFloat(gridStyle.paddingLeft);
+    const paddingRight = Number.parseFloat(gridStyle.paddingRight);
+    if (![tileSize, columnGap, paddingLeft, paddingRight].every(Number.isFinite)) {
+      return;
+    }
+    const targetWidth =
+      (tileSize * newtabShortcutColumns) +
+      (columnGap * Math.max(0, newtabShortcutColumns - 1)) +
+      paddingLeft +
+      paddingRight;
+    document.documentElement.style.setProperty(
+      '--x-nt-shortcuts-target-width',
+      `${Math.round(targetWidth)}px`
     );
   }
 
@@ -8620,8 +8849,10 @@
       newtabShortcutsVisible = true;
       newtabShortcutAddVisible = true;
       newtabShortcutDockMagnificationEnabled = true;
-      newtabShortcutWidth = NEWTAB_SHORTCUT_WIDTH_DEFAULT;
-      applyNewtabShortcutWidth();
+      newtabShortcutColumns = NEWTAB_SHORTCUT_COLUMNS_DEFAULT;
+      newtabShortcutSize = NEWTAB_SHORTCUT_SIZE_DEFAULT;
+      newtabShortcutGap = NEWTAB_SHORTCUT_GAP_DEFAULT;
+      applyNewtabShortcutLayoutPreferences();
       applyNewtabShortcutsVisibility();
       applyNewtabShortcutDockMagnification();
       updateNewtabShortcutPreferencesUi();
@@ -8632,7 +8863,10 @@
         NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY,
         NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY,
         NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY,
-        NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY
+        NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY,
+        NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY,
+        NEWTAB_SHORTCUT_SIZE_STORAGE_KEY,
+        NEWTAB_SHORTCUT_GAP_STORAGE_KEY
       ], (result) => {
         const stored = result || {};
         const rawVisible = stored[NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY];
@@ -8640,11 +8874,18 @@
         const rawMagnification =
           stored[NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY];
         const rawWidth = stored[NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY];
+        const rawColumns = stored[NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY];
+        const rawSize = stored[NEWTAB_SHORTCUT_SIZE_STORAGE_KEY];
+        const rawGap = stored[NEWTAB_SHORTCUT_GAP_STORAGE_KEY];
         newtabShortcutsVisible = normalizeNewtabShortcutsVisible(rawVisible);
         newtabShortcutAddVisible = normalizeNewtabShortcutAddVisible(rawAddVisible);
         newtabShortcutDockMagnificationEnabled =
           normalizeNewtabShortcutDockMagnificationEnabled(rawMagnification);
-        newtabShortcutWidth = normalizeNewtabShortcutWidth(rawWidth);
+        newtabShortcutColumns = rawColumns === undefined
+          ? inferNewtabShortcutColumnsFromWidth(rawWidth)
+          : normalizeNewtabShortcutColumns(rawColumns);
+        newtabShortcutSize = normalizeNewtabShortcutSize(rawSize);
+        newtabShortcutGap = normalizeNewtabShortcutGap(rawGap);
         const repairs = {};
         if (rawVisible !== newtabShortcutsVisible) {
           repairs[NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY] = newtabShortcutsVisible;
@@ -8656,13 +8897,19 @@
           repairs[NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY] =
             newtabShortcutDockMagnificationEnabled;
         }
-        if (rawWidth !== newtabShortcutWidth) {
-          repairs[NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY] = newtabShortcutWidth;
+        if (rawColumns !== newtabShortcutColumns) {
+          repairs[NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY] = newtabShortcutColumns;
+        }
+        if (rawSize !== newtabShortcutSize) {
+          repairs[NEWTAB_SHORTCUT_SIZE_STORAGE_KEY] = newtabShortcutSize;
+        }
+        if (rawGap !== newtabShortcutGap) {
+          repairs[NEWTAB_SHORTCUT_GAP_STORAGE_KEY] = newtabShortcutGap;
         }
         if (Object.keys(repairs).length > 0) {
           storageArea.set(repairs);
         }
-        applyNewtabShortcutWidth();
+        applyNewtabShortcutLayoutPreferences();
         applyNewtabShortcutsVisibility();
         applyNewtabShortcutDockMagnification();
         updateNewtabShortcutPreferencesUi();
@@ -15684,6 +15931,7 @@
     newtabResizeFrame = 0;
     const previousBookmarkLimit = getBookmarkLimit();
     applyNewtabWidthMode();
+    applyNewtabShortcutColumns();
     const recentLayoutBefore = recentLoadedOnce && shouldAnimateNewtabLayoutShift()
       ? captureRecentCardLayout()
       : null;

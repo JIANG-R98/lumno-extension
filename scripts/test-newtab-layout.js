@@ -1068,12 +1068,12 @@ function testBottomDockCssDefinesAdaptiveDensityVariables() {
   );
   assert.match(
     newtabHtml,
-    /body\[data-nt-bottom-dock-density="compact"\]\s*\{[\s\S]*?--x-nt-shortcuts-reserved-height:\s*54px;[\s\S]*?--x-nt-shortcut-icon-size:\s*36px;/,
+    /body\[data-nt-bottom-dock-density="compact"\]\s*\{[\s\S]*?--x-nt-shortcuts-reserved-height:\s*54px;[\s\S]*?--x-nt-shortcut-icon-size:\s*min\(var\(--x-nt-shortcut-user-icon-size\),\s*36px\);/,
     'compact dock density should also reduce the shortcut dock footprint'
   );
   assert.match(
     newtabHtml,
-    /body\[data-nt-bottom-dock-density="tiny"\]\s*\{[\s\S]*?--x-nt-shortcuts-reserved-height:\s*42px;[\s\S]*?--x-nt-shortcut-icon-size:\s*28px;/,
+    /body\[data-nt-bottom-dock-density="tiny"\]\s*\{[\s\S]*?--x-nt-shortcuts-reserved-height:\s*42px;[\s\S]*?--x-nt-shortcut-icon-size:\s*min\(var\(--x-nt-shortcut-user-icon-size\),\s*28px\);/,
     'tiny dock density should aggressively reduce shortcut dock footprint'
   );
   assert.match(
@@ -1133,7 +1133,7 @@ function testBottomDockCssDefinesAdaptiveDensityVariables() {
   );
   assert.match(
     newtabHtml,
-    /@media \(min-width:\s*641px\) and \(max-width:\s*900px\) and \(max-height:\s*560px\)[\s\S]*?body\[data-nt-bottom-dock-density="tiny"\]\s*\{[\s\S]*?--x-nt-shortcuts-reserved-height:\s*50px;[\s\S]*?--x-nt-shortcut-tile-size:\s*44px;[\s\S]*?#_x_extension_newtab_bottom_dock_2024_unique_\[data-density="tiny"\]\s*\{[\s\S]*?--x-nt-dock-bookmark-card-height:\s*44px;[\s\S]*?\.x-nt-wallpaper-button,\s*\.x-nt-feedback-button\s*\{[\s\S]*?width:\s*44px;[\s\S]*?height:\s*44px;/,
+    /@media \(min-width:\s*641px\) and \(max-width:\s*900px\) and \(max-height:\s*560px\)[\s\S]*?body\[data-nt-bottom-dock-density="tiny"\]\s*\{[\s\S]*?--x-nt-shortcuts-reserved-height:\s*50px;[\s\S]*?--x-nt-shortcut-tile-size:\s*min\(var\(--x-nt-shortcut-user-tile-size\),\s*44px\);[\s\S]*?#_x_extension_newtab_bottom_dock_2024_unique_\[data-density="tiny"\]\s*\{[\s\S]*?--x-nt-dock-bookmark-card-height:\s*44px;[\s\S]*?\.x-nt-wallpaper-button,\s*\.x-nt-feedback-button\s*\{[\s\S]*?width:\s*44px;[\s\S]*?height:\s*44px;/,
     'narrow landscape should not let tiny density shrink interactive rows below 44px'
   );
   assert.match(
@@ -1148,7 +1148,7 @@ function testBottomDockCssDefinesAdaptiveDensityVariables() {
   );
   assert.match(
     newtabHtml,
-    /@media \(max-width:\s*640px\)[\s\S]*?:root\s*\{[\s\S]*?--x-nt-shortcuts-reserved-height:\s*64px;[\s\S]*?--x-nt-shortcuts-section-margin-top:\s*10px;[\s\S]*?--x-nt-shortcut-tile-size:\s*52px;[\s\S]*?--x-nt-shortcut-icon-size:\s*40px;/,
+    /@media \(max-width:\s*640px\)[\s\S]*?:root\s*\{[\s\S]*?--x-nt-shortcuts-reserved-height:\s*64px;[\s\S]*?--x-nt-shortcuts-section-margin-top:\s*10px;[\s\S]*?--x-nt-shortcut-tile-size:\s*min\(var\(--x-nt-shortcut-user-tile-size\),\s*52px\);[\s\S]*?--x-nt-shortcut-icon-size:\s*min\(var\(--x-nt-shortcut-user-icon-size\),\s*40px\);/,
     'mobile shortcuts should use the compact touch-safe footprint'
   );
   assert.match(

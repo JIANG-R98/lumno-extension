@@ -594,6 +594,7 @@ assert.match(
 );
 
 const wallpaperPanelRule = getCssRuleBlock(newtabHtml, '.x-nt-wallpaper-panel');
+const newtabRootRule = getCssRuleBlock(newtabHtml, ':root');
 const shortcutDialogRule = getCssRuleBlock(shortcutDialogCss, '.x-nt-shortcut-dialog');
 const settingsPanelRule = getCssRuleBlock(optionsHtml, '#_x_extension_settings_panel_2024_unique_');
 [
@@ -604,6 +605,19 @@ const settingsPanelRule = getCssRuleBlock(optionsHtml, '#_x_extension_settings_p
     getCssDeclaration(shortcutDialogRule, property),
     getCssDeclaration(wallpaperPanelRule, property),
     `shortcut dialog ${property} should match the bottom-right floating panel`
+  );
+});
+
+[
+  '--input-focus-color',
+  '--input-focus-shadow',
+  '--input-placeholder',
+  '--input-focus-bg'
+].forEach((property) => {
+  assert.strictEqual(
+    getCssDeclaration(newtabRootRule, property),
+    getCssDeclaration(settingsPanelRule, property),
+    `New Tab ${property} should keep shared inputs aligned with Options`
   );
 });
 
@@ -771,14 +785,20 @@ assertContains(
 
 assertContains(
   wallpaperViewSource,
-  'data-value-suffix=" px"',
-  'shortcut width slider should reserve px for the current value output'
+  "ref('shortcutColumnsSlider')",
+  'New Tab shortcuts should expose a per-row shortcut slider'
 );
 
 assertContains(
   wallpaperViewSource,
-  'inputClass="x-nt-overlay-slider x-nt-shortcut-width-slider"',
-  'New Tab shortcuts should render their own width slider'
+  "ref('shortcutColumnsSliderValueInput')",
+  'New Tab shortcuts should expose an editable numeric slider value'
+);
+
+assertContains(
+  wallpaperViewSource,
+  "label: '8', percent: 100 / 3",
+  'New Tab shortcuts should render the 4-step slider ticks'
 );
 
 assertContains(
@@ -861,19 +881,19 @@ assertContains(
 
 assertContains(
   newtabHtml,
-  '--x-nt-shortcut-tile-size: 64px;',
+  '--x-nt-shortcut-user-tile-size: 64px;',
   'shortcut tiles should define a compact dock-sized hit target'
 );
 
 assertContains(
   newtabHtml,
-  '--x-nt-shortcut-icon-size: 48px;',
+  '--x-nt-shortcut-user-icon-size: 48px;',
   'shortcut icons should start smaller before dock magnification'
 );
 
 assertContains(
   newtabHtml,
-  '--x-nt-shortcut-favicon-size: 28px;',
+  '--x-nt-shortcut-user-favicon-size: 28px;',
   'shortcut favicons should scale down with the compact icon size'
 );
 
@@ -891,7 +911,7 @@ assertContains(
 
 assertContains(
   newtabHtml,
-  '--x-nt-shortcut-icon-radius: 16px;',
+  '--x-nt-shortcut-user-icon-radius: 16px;',
   'shortcut icons should define a smooth rounded-rectangle radius'
 );
 
@@ -1004,7 +1024,19 @@ const shortcutGridRule = getCssRuleBlock(newtabHtml, '.x-nt-shortcuts-grid');
 assertContains(
   shortcutGridRule,
   'display: flex;',
-  'shortcut rail should use a dock-like flex row'
+  'shortcut rail should use a wrapping row constrained by the selected count'
+);
+
+assertContains(
+  shortcutGridRule,
+  'flex-wrap: wrap;',
+  'shortcut rail should wrap by the selected per-row count while adapting on narrow screens'
+);
+
+assertContains(
+  shortcutGridRule,
+  'justify-content: center;',
+  'shortcut rail should center incomplete rows'
 );
 
 assertContains(
@@ -1021,13 +1053,13 @@ assertContains(
 
 assertContains(
   newtabHtml,
-  '--x-nt-shortcuts-grid-row-gap: 10px;',
+  '--x-nt-shortcut-user-row-gap: 10px;',
   'shortcut rail should define its default row gap token'
 );
 
 assertContains(
   newtabHtml,
-  '--x-nt-shortcuts-grid-column-gap: 4px;',
+  '--x-nt-shortcut-user-column-gap: 4px;',
   'shortcut rail should define its default column gap token'
 );
 

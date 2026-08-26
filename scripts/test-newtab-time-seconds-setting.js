@@ -134,8 +134,8 @@ assert.match(
 );
 
 assert.match(wallpaperViewSource, /ref\('topContentWeightControl'\)/);
-assert.match(wallpaperViewSource, /ref\('topContentWeightValue'\)/);
 assert.match(wallpaperViewSource, /ref\('topContentWeightSlider'\)/);
+assert.match(wallpaperViewSource, /ref\('topContentWeightSliderValueInput'\)/);
 assert.match(
   wallpaperViewSource,
   /max=\{String\(timeFontWeightMax\)\}[\s\S]*?min=\{String\(timeFontWeightMin\)\}[\s\S]*?step="1"[\s\S]*?defaultValue=\{String\(timeFontWeightDefault\)\}/
@@ -149,8 +149,8 @@ const updateWallpaperFontWeightUi = getFunctionSource(
 );
 assert.match(updateWallpaperFontWeightUi, /currentTopContentMode === 'time'/);
 assert.match(updateWallpaperFontWeightUi, /topContentWeightControl\.hidden = !visible/);
-assert.match(updateWallpaperFontWeightUi, /topContentWeightValue\.textContent = String\(currentTimeFontWeight\)/);
 assert.match(updateWallpaperFontWeightUi, /topContentWeightSlider\.step = '1'/);
+assert.match(updateWallpaperFontWeightUi, /syncWallpaperSliderValueInput\(topContentWeightSlider\)/);
 assert.match(
   wallpaperSource,
   /topContentWeightSlider\.addEventListener\('input',[\s\S]*?persistTimeFontWeight/

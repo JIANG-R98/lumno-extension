@@ -9,7 +9,7 @@ import {
   type ReactRootController
 } from './root-controller';
 import {
-  RangeSlider
+  RangeSliderField
 } from '../shared/range-slider';
 
 export interface ToggleControlRenderModel {
@@ -30,6 +30,7 @@ export type ToggleControlController =
 
 export interface RangeSliderControlRenderModel {
   ariaLabel: string;
+  defaultValue?: number;
   disabled?: boolean;
   id: string;
   max: number;
@@ -38,9 +39,12 @@ export interface RangeSliderControlRenderModel {
   ticks: Array<{
     align?: 'start' | 'center' | 'end';
     label: string;
+    percent?: number;
   }>;
   value: number;
   valueSuffix?: string;
+  resetAriaLabel?: string;
+  resetButtonId?: string;
 }
 
 export interface RangeSliderControlControllerOptions {
@@ -170,25 +174,47 @@ function RangeSliderControl({
   onInput(value: number): void;
 }) {
   const [value, setValue] = useState(model.value);
+  const [draftValue, setDraftValue] = useState(String(model.value));
   const valueRef = useRef(model.value);
 
   useEffect(() => {
     valueRef.current = model.value;
     setValue(model.value);
+    setDraftValue(String(model.value));
   }, [model.value]);
 
+  const normalizeValue = (next: number) => {
+    const min = Number(model.min);
+    const max = Number(model.max);
+    const step = Number(model.step) > 0 ? Number(model.step) : 1;
+    if (!Number.isFinite(next)) {
+      return valueRef.current;
+    }
+    const stepped = min + Math.round((next - min) / step) * step;
+    return Math.min(max, Math.max(min, stepped));
+  };
   const handleValueChange = (next: number) => {
-    if (next === valueRef.current) {
+    const normalized = normalizeValue(next);
+    setDraftValue(String(normalized));
+    if (normalized === valueRef.current) {
       return;
     }
-    valueRef.current = next;
-    setValue(next);
-    onInput(next);
+    valueRef.current = normalized;
+    setValue(normalized);
+    onInput(normalized);
+  };
+  const commitDraftValue = () => {
+    const next = Number(draftValue);
+    if (!draftValue.trim() || !Number.isFinite(next)) {
+      setDraftValue(String(valueRef.current));
+      return;
+    }
+    handleValueChange(next);
   };
   const valueText = `${value}${model.valueSuffix || ''}`;
   return (
     <div className="_x_extension_range_slider_control_2026_unique_">
-      <RangeSlider
+      <RangeSliderField
         aria-label={model.ariaLabel}
         aria-valuetext={valueText}
         className="x-lumno-range-slider"
@@ -197,6 +223,18 @@ function RangeSliderControl({
         inputClass="x-lumno-range-slider-input"
         max={model.max}
         min={model.min}
+        resetButtonProps={Number.isFinite(model.defaultValue) && model.resetAriaLabel
+          ? {
+              'aria-label': model.resetAriaLabel,
+              disabled: Boolean(model.disabled || value === model.defaultValue),
+              id: model.resetButtonId,
+              onClick: (event) => {
+                handleValueChange(Number(model.defaultValue));
+                event.currentTarget.blur();
+              },
+              title: model.resetAriaLabel
+            }
+          : undefined}
         onChange={(event) => {
           handleValueChange(Number(event.currentTarget.value));
         }}
@@ -210,6 +248,23 @@ function RangeSliderControl({
           }%`
         } as CSSProperties}
         value={value}
+        valueInputProps={{
+          'aria-label': `${model.ariaLabel} value`,
+          disabled: model.disabled,
+          inputMode: 'numeric',
+          onBlur: commitDraftValue,
+          onChange: (event) => {
+            setDraftValue(event.currentTarget.value);
+          },
+          onKeyDown: (event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              commitDraftValue();
+              event.currentTarget.blur();
+            }
+          },
+          value: draftValue
+        }}
       >
         <div
           aria-hidden="true"
@@ -222,20 +277,19 @@ function RangeSliderControl({
             <span
               className="x-lumno-range-slider-tick"
               data-align={tick.align || 'center'}
+              data-positioned={Number.isFinite(tick.percent) ? 'true' : undefined}
               key={`${tick.align || 'center'}-${tick.label}`}
+              style={Number.isFinite(tick.percent)
+                ? ({
+                    '--x-lumno-range-slider-tick-percent': `${tick.percent}%`
+                  } as CSSProperties)
+                : undefined}
             >
               {tick.label}
             </span>
           ))}
         </div>
-      </RangeSlider>
-      <output
-        aria-hidden="true"
-        className="_x_extension_range_slider_value_2026_unique_"
-        htmlFor={model.id}
-      >
-        {valueText}
-      </output>
+      </RangeSliderField>
     </div>
   );
 }

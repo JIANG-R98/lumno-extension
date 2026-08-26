@@ -96,8 +96,12 @@
   const newtabShortcutAddToggle = document.getElementById('_x_extension_newtab_shortcut_add_toggle_2026_unique_');
   const newtabShortcutDockMagnificationRow = document.getElementById('_x_extension_newtab_shortcut_dock_magnification_row_2026_unique_');
   const newtabShortcutDockMagnificationToggle = document.getElementById('_x_extension_newtab_shortcut_dock_magnification_toggle_2026_unique_');
-  const newtabShortcutWidthRow = document.getElementById('_x_extension_newtab_shortcut_width_setting_row_2026_unique_');
-  const newtabShortcutWidthControlHost = document.getElementById('_x_extension_newtab_shortcut_width_control_2026_unique_');
+  const newtabShortcutColumnsRow = document.getElementById('_x_extension_newtab_shortcut_columns_setting_row_2026_unique_');
+  const newtabShortcutColumnsControlHost = document.getElementById('_x_extension_newtab_shortcut_columns_control_2026_unique_');
+  const newtabShortcutSizeRow = document.getElementById('_x_extension_newtab_shortcut_size_setting_row_2026_unique_');
+  const newtabShortcutSizeControlHost = document.getElementById('_x_extension_newtab_shortcut_size_control_2026_unique_');
+  const newtabShortcutGapRow = document.getElementById('_x_extension_newtab_shortcut_gap_setting_row_2026_unique_');
+  const newtabShortcutGapControlHost = document.getElementById('_x_extension_newtab_shortcut_gap_control_2026_unique_');
   const newtabFeedbackButtonVisibleToggle = document.getElementById('_x_extension_newtab_feedback_button_visible_toggle_2026_unique_');
   const newtabAppearanceButtonVisibleToggle = document.getElementById('_x_extension_newtab_appearance_button_visible_toggle_2026_unique_');
   const restrictedActionSelect = document.getElementById('_x_extension_restricted_action_select_2024_unique_');
@@ -839,6 +843,27 @@
   const NEWTAB_SHORTCUT_WIDTH_MIN = Number(SETTINGS.NEWTAB_SHORTCUT_WIDTH_MIN) || 360;
   const NEWTAB_SHORTCUT_WIDTH_MAX = Number(SETTINGS.NEWTAB_SHORTCUT_WIDTH_MAX) || 1440;
   const NEWTAB_SHORTCUT_WIDTH_DEFAULT = Number(SETTINGS.NEWTAB_SHORTCUT_WIDTH_DEFAULT) || 920;
+  const NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY = SETTINGS.NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY ||
+    '_x_extension_newtab_shortcut_columns_2026_unique_';
+  const NEWTAB_SHORTCUT_COLUMNS_MIN = Number(SETTINGS.NEWTAB_SHORTCUT_COLUMNS_MIN) || 4;
+  const NEWTAB_SHORTCUT_COLUMNS_MAX = Number(SETTINGS.NEWTAB_SHORTCUT_COLUMNS_MAX) || 16;
+  const NEWTAB_SHORTCUT_COLUMNS_DEFAULT = Number(SETTINGS.NEWTAB_SHORTCUT_COLUMNS_DEFAULT) || 10;
+  const NEWTAB_SHORTCUT_SIZE_STORAGE_KEY = SETTINGS.NEWTAB_SHORTCUT_SIZE_STORAGE_KEY ||
+    '_x_extension_newtab_shortcut_size_2026_unique_';
+  const NEWTAB_SHORTCUT_SIZE_MIN = Number(SETTINGS.NEWTAB_SHORTCUT_SIZE_MIN) || 48;
+  const NEWTAB_SHORTCUT_SIZE_MAX = Number(SETTINGS.NEWTAB_SHORTCUT_SIZE_MAX) || 80;
+  const NEWTAB_SHORTCUT_SIZE_DEFAULT = Number(SETTINGS.NEWTAB_SHORTCUT_SIZE_DEFAULT) || 64;
+  const NEWTAB_SHORTCUT_GAP_STORAGE_KEY = SETTINGS.NEWTAB_SHORTCUT_GAP_STORAGE_KEY ||
+    '_x_extension_newtab_shortcut_gap_2026_unique_';
+  const NEWTAB_SHORTCUT_GAP_MIN = Number.isFinite(Number(SETTINGS.NEWTAB_SHORTCUT_GAP_MIN))
+    ? Number(SETTINGS.NEWTAB_SHORTCUT_GAP_MIN)
+    : 0;
+  const NEWTAB_SHORTCUT_GAP_MAX = Number(SETTINGS.NEWTAB_SHORTCUT_GAP_MAX) || 24;
+  const NEWTAB_SHORTCUT_GAP_DEFAULT = Number.isFinite(
+    Number(SETTINGS.NEWTAB_SHORTCUT_GAP_DEFAULT)
+  )
+    ? Number(SETTINGS.NEWTAB_SHORTCUT_GAP_DEFAULT)
+    : 4;
   const UPDATE_NOTICE_ENABLED_STORAGE_KEY = '_x_extension_update_notice_enabled_2026_unique_';
   const MOTION_EFFECTS_ENABLED_STORAGE_KEY = SETTINGS.MOTION_EFFECTS_ENABLED_STORAGE_KEY ||
     '_x_extension_motion_effects_enabled_2026_unique_';
@@ -933,6 +958,9 @@
     NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,
     NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY,
     NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY,
+    NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY,
+    NEWTAB_SHORTCUT_SIZE_STORAGE_KEY,
+    NEWTAB_SHORTCUT_GAP_STORAGE_KEY,
     UPDATE_NOTICE_ENABLED_STORAGE_KEY,
     MOTION_EFFECTS_ENABLED_STORAGE_KEY,
     SIMPLE_MODE_ENABLED_STORAGE_KEY,
@@ -1058,7 +1086,9 @@
   let currentBookmarkColumns = 6;
   let currentNewtabTopContentMode = 'brand';
   let currentNewtabTimeFontWeight = NEWTAB_TIME_FONT_WEIGHT_DEFAULT;
-  let currentNewtabShortcutWidth = NEWTAB_SHORTCUT_WIDTH_DEFAULT;
+  let currentNewtabShortcutColumns = NEWTAB_SHORTCUT_COLUMNS_DEFAULT;
+  let currentNewtabShortcutSize = NEWTAB_SHORTCUT_SIZE_DEFAULT;
+  let currentNewtabShortcutGap = NEWTAB_SHORTCUT_GAP_DEFAULT;
   let currentActiveSettingsTab = 'general';
   const optionsSelectControlRecords = new Map();
   function registerOptionsSelectControl(select, kind) {
@@ -1160,40 +1190,132 @@
       value: currentNewtabTimeFontWeight
     });
   }
-  const newtabShortcutWidthController =
+  const newtabShortcutColumnsController =
     typeof optionsSettingsControlsApi.createRangeSliderControlController === 'function'
       ? optionsSettingsControlsApi.createRangeSliderControlController(
-          newtabShortcutWidthControlHost,
+          newtabShortcutColumnsControlHost,
           {
-            kind: 'newtab-shortcut-width',
+            kind: 'newtab-shortcut-columns',
             onInput(value) {
-              const nextWidth = normalizeNewtabShortcutWidth(value);
-              currentNewtabShortcutWidth = nextWidth;
+              const nextColumns = normalizeNewtabShortcutColumns(value);
+              currentNewtabShortcutColumns = nextColumns;
               if (storageArea) {
-                storageArea.set({ [NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY]: nextWidth });
+                storageArea.set({ [NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY]: nextColumns });
               }
             }
           }
         )
       : null;
-  function renderNewtabShortcutWidthControl(value, disabled) {
-    if (!newtabShortcutWidthController) {
+  function renderNewtabShortcutColumnsControl(value, disabled) {
+    if (!newtabShortcutColumnsController) {
       return;
     }
-    currentNewtabShortcutWidth = normalizeNewtabShortcutWidth(value);
-    newtabShortcutWidthController.render({
-      ariaLabel: getMessage('settings_newtab_shortcut_width_title', 'Shortcut width'),
+    currentNewtabShortcutColumns = normalizeNewtabShortcutColumns(value);
+    newtabShortcutColumnsController.render({
+      ariaLabel: getMessage(
+        'settings_newtab_shortcut_columns_title',
+        'Shortcuts per row'
+      ),
       disabled: Boolean(disabled),
-      id: '_x_extension_newtab_shortcut_width_slider_2026_unique_',
-      min: NEWTAB_SHORTCUT_WIDTH_MIN,
-      max: NEWTAB_SHORTCUT_WIDTH_MAX,
+      id: '_x_extension_newtab_shortcut_columns_slider_2026_unique_',
+      min: NEWTAB_SHORTCUT_COLUMNS_MIN,
+      max: NEWTAB_SHORTCUT_COLUMNS_MAX,
       step: 1,
       ticks: [
-        { align: 'start', label: String(NEWTAB_SHORTCUT_WIDTH_MIN) },
-        { label: String(Math.round((NEWTAB_SHORTCUT_WIDTH_MIN + NEWTAB_SHORTCUT_WIDTH_MAX) / 2)) },
-        { align: 'end', label: String(NEWTAB_SHORTCUT_WIDTH_MAX) }
+        { align: 'start', label: '4', percent: 0 },
+        { label: '8', percent: 100 / 3 },
+        { label: '12', percent: 200 / 3 },
+        { align: 'end', label: '16', percent: 100 }
       ],
-      value: currentNewtabShortcutWidth,
+      value: currentNewtabShortcutColumns
+    });
+  }
+  const newtabShortcutSizeController =
+    typeof optionsSettingsControlsApi.createRangeSliderControlController === 'function'
+      ? optionsSettingsControlsApi.createRangeSliderControlController(
+          newtabShortcutSizeControlHost,
+          {
+            kind: 'newtab-shortcut-size',
+            onInput(value) {
+              const nextSize = normalizeNewtabShortcutSize(value);
+              currentNewtabShortcutSize = nextSize;
+              if (storageArea) {
+                storageArea.set({ [NEWTAB_SHORTCUT_SIZE_STORAGE_KEY]: nextSize });
+              }
+            }
+          }
+        )
+      : null;
+  function renderNewtabShortcutSizeControl(value, disabled) {
+    if (!newtabShortcutSizeController) {
+      return;
+    }
+    currentNewtabShortcutSize = normalizeNewtabShortcutSize(value);
+    const label = getMessage('settings_newtab_shortcut_size_title', 'Shortcut size');
+    newtabShortcutSizeController.render({
+      ariaLabel: label,
+      defaultValue: NEWTAB_SHORTCUT_SIZE_DEFAULT,
+      disabled: Boolean(disabled),
+      id: '_x_extension_newtab_shortcut_size_slider_2026_unique_',
+      min: NEWTAB_SHORTCUT_SIZE_MIN,
+      max: NEWTAB_SHORTCUT_SIZE_MAX,
+      resetAriaLabel: getMessage(
+        'settings_newtab_shortcut_size_reset',
+        'Reset shortcut size'
+      ),
+      resetButtonId: '_x_extension_newtab_shortcut_size_reset_2026_unique_',
+      step: 1,
+      ticks: [
+        { align: 'start', label: String(NEWTAB_SHORTCUT_SIZE_MIN), percent: 0 },
+        { label: String(NEWTAB_SHORTCUT_SIZE_DEFAULT), percent: 50 },
+        { align: 'end', label: String(NEWTAB_SHORTCUT_SIZE_MAX), percent: 100 }
+      ],
+      value: currentNewtabShortcutSize,
+      valueSuffix: ' px'
+    });
+  }
+  const newtabShortcutGapController =
+    typeof optionsSettingsControlsApi.createRangeSliderControlController === 'function'
+      ? optionsSettingsControlsApi.createRangeSliderControlController(
+          newtabShortcutGapControlHost,
+          {
+            kind: 'newtab-shortcut-gap',
+            onInput(value) {
+              const nextGap = normalizeNewtabShortcutGap(value);
+              currentNewtabShortcutGap = nextGap;
+              if (storageArea) {
+                storageArea.set({ [NEWTAB_SHORTCUT_GAP_STORAGE_KEY]: nextGap });
+              }
+            }
+          }
+        )
+      : null;
+  function renderNewtabShortcutGapControl(value, disabled) {
+    if (!newtabShortcutGapController) {
+      return;
+    }
+    currentNewtabShortcutGap = normalizeNewtabShortcutGap(value);
+    const label = getMessage('settings_newtab_shortcut_gap_title', 'Shortcut spacing');
+    newtabShortcutGapController.render({
+      ariaLabel: label,
+      defaultValue: NEWTAB_SHORTCUT_GAP_DEFAULT,
+      disabled: Boolean(disabled),
+      id: '_x_extension_newtab_shortcut_gap_slider_2026_unique_',
+      min: NEWTAB_SHORTCUT_GAP_MIN,
+      max: NEWTAB_SHORTCUT_GAP_MAX,
+      resetAriaLabel: getMessage(
+        'settings_newtab_shortcut_gap_reset',
+        'Reset shortcut spacing'
+      ),
+      resetButtonId: '_x_extension_newtab_shortcut_gap_reset_2026_unique_',
+      step: 1,
+      ticks: [
+        { align: 'start', label: '0', percent: 0 },
+        { label: '8', percent: 100 / 3 },
+        { label: '16', percent: 200 / 3 },
+        { align: 'end', label: '24', percent: 100 }
+      ],
+      value: currentNewtabShortcutGap,
       valueSuffix: ' px'
     });
   }
@@ -1204,7 +1326,13 @@
         setOptionsToggleState(toggle, toggle.checked, disabled);
       }
     });
-    [newtabShortcutAddRow, newtabShortcutDockMagnificationRow, newtabShortcutWidthRow]
+    [
+      newtabShortcutAddRow,
+      newtabShortcutDockMagnificationRow,
+      newtabShortcutColumnsRow,
+      newtabShortcutSizeRow,
+      newtabShortcutGapRow
+    ]
       .forEach((row) => {
         if (!row) {
           return;
@@ -1212,7 +1340,9 @@
         row.setAttribute('data-disabled', disabled ? 'true' : 'false');
         row.setAttribute('aria-disabled', disabled ? 'true' : 'false');
       });
-    renderNewtabShortcutWidthControl(currentNewtabShortcutWidth, disabled);
+    renderNewtabShortcutColumnsControl(currentNewtabShortcutColumns, disabled);
+    renderNewtabShortcutSizeControl(currentNewtabShortcutSize, disabled);
+    renderNewtabShortcutGapControl(currentNewtabShortcutGap, disabled);
   }
   const bookmarkRowsController =
     typeof optionsSettingsControlsApi.createRangeSliderControlController === 'function'
@@ -1361,7 +1491,9 @@
     });
   }
   renderNewtabTimeFontWeightControl(NEWTAB_TIME_FONT_WEIGHT_DEFAULT);
-  renderNewtabShortcutWidthControl(NEWTAB_SHORTCUT_WIDTH_DEFAULT, false);
+  renderNewtabShortcutColumnsControl(NEWTAB_SHORTCUT_COLUMNS_DEFAULT, false);
+  renderNewtabShortcutSizeControl(NEWTAB_SHORTCUT_SIZE_DEFAULT, false);
+  renderNewtabShortcutGapControl(NEWTAB_SHORTCUT_GAP_DEFAULT, false);
   syncNewtabShortcutSubcontrolAvailability();
   renderRecentCountControl(4);
   renderBookmarkRowsControl(8);
@@ -2089,6 +2221,78 @@
               : NEWTAB_SHORTCUT_WIDTH_DEFAULT
           )
         );
+  }
+
+  function normalizeNewtabShortcutColumns(value) {
+    if (typeof SETTINGS.normalizeNewtabShortcutColumns === 'function') {
+      return SETTINGS.normalizeNewtabShortcutColumns(value, {
+        min: NEWTAB_SHORTCUT_COLUMNS_MIN,
+        max: NEWTAB_SHORTCUT_COLUMNS_MAX,
+        fallback: NEWTAB_SHORTCUT_COLUMNS_DEFAULT
+      });
+    }
+    const number = Number(value);
+    return Math.min(
+      NEWTAB_SHORTCUT_COLUMNS_MAX,
+      Math.max(
+        NEWTAB_SHORTCUT_COLUMNS_MIN,
+        Number.isFinite(number) ? Math.round(number) : NEWTAB_SHORTCUT_COLUMNS_DEFAULT
+      )
+    );
+  }
+
+  function normalizeNewtabShortcutSize(value) {
+    if (typeof SETTINGS.normalizeNewtabShortcutSize === 'function') {
+      return SETTINGS.normalizeNewtabShortcutSize(value, {
+        min: NEWTAB_SHORTCUT_SIZE_MIN,
+        max: NEWTAB_SHORTCUT_SIZE_MAX,
+        fallback: NEWTAB_SHORTCUT_SIZE_DEFAULT
+      });
+    }
+    const number = Number(value);
+    return Math.min(
+      NEWTAB_SHORTCUT_SIZE_MAX,
+      Math.max(
+        NEWTAB_SHORTCUT_SIZE_MIN,
+        Number.isFinite(number) ? Math.round(number) : NEWTAB_SHORTCUT_SIZE_DEFAULT
+      )
+    );
+  }
+
+  function normalizeNewtabShortcutGap(value) {
+    if (typeof SETTINGS.normalizeNewtabShortcutGap === 'function') {
+      return SETTINGS.normalizeNewtabShortcutGap(value, {
+        min: NEWTAB_SHORTCUT_GAP_MIN,
+        max: NEWTAB_SHORTCUT_GAP_MAX,
+        fallback: NEWTAB_SHORTCUT_GAP_DEFAULT
+      });
+    }
+    const number = Number(value);
+    return Math.min(
+      NEWTAB_SHORTCUT_GAP_MAX,
+      Math.max(
+        NEWTAB_SHORTCUT_GAP_MIN,
+        Number.isFinite(number) ? Math.round(number) : NEWTAB_SHORTCUT_GAP_DEFAULT
+      )
+    );
+  }
+
+  function inferNewtabShortcutColumnsFromWidth(value) {
+    if (typeof SETTINGS.inferNewtabShortcutColumnsFromWidth === 'function') {
+      return SETTINGS.inferNewtabShortcutColumnsFromWidth(value, {
+        widthMin: NEWTAB_SHORTCUT_WIDTH_MIN,
+        widthMax: NEWTAB_SHORTCUT_WIDTH_MAX,
+        columnsMin: NEWTAB_SHORTCUT_COLUMNS_MIN,
+        columnsMax: NEWTAB_SHORTCUT_COLUMNS_MAX
+      });
+    }
+    const width = normalizeNewtabShortcutWidth(value);
+    const ratio = (width - NEWTAB_SHORTCUT_WIDTH_MIN) /
+      Math.max(1, NEWTAB_SHORTCUT_WIDTH_MAX - NEWTAB_SHORTCUT_WIDTH_MIN);
+    return normalizeNewtabShortcutColumns(
+      NEWTAB_SHORTCUT_COLUMNS_MIN +
+        ratio * (NEWTAB_SHORTCUT_COLUMNS_MAX - NEWTAB_SHORTCUT_COLUMNS_MIN)
+    );
   }
 
   function normalizeNewtabFeedbackButtonVisible(value) {
@@ -3509,7 +3713,9 @@
       setRestrictedActionTabState(currentRestrictedAction);
       setNewtabTopContentTabState(currentNewtabTopContentMode);
       renderNewtabTimeFontWeightControl(currentNewtabTimeFontWeight);
-      renderNewtabShortcutWidthControl(currentNewtabShortcutWidth);
+      renderNewtabShortcutColumnsControl(currentNewtabShortcutColumns);
+      renderNewtabShortcutSizeControl(currentNewtabShortcutSize);
+      renderNewtabShortcutGapControl(currentNewtabShortcutGap);
       syncNewtabShortcutSubcontrolAvailability();
       renderRecentCountControl(currentRecentCount);
       renderBookmarkRowsControl(currentBookmarkCount);
@@ -5649,23 +5855,35 @@
       NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY,
       NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY,
       NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY,
-      NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY
+      NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY,
+      NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY,
+      NEWTAB_SHORTCUT_SIZE_STORAGE_KEY,
+      NEWTAB_SHORTCUT_GAP_STORAGE_KEY
     ], (result) => {
       const rawVisible = result[NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY];
       const rawAddVisible = result[NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY];
       const rawDockMagnification =
         result[NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY];
       const rawWidth = result[NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY];
+      const rawColumns = result[NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY];
+      const rawSize = result[NEWTAB_SHORTCUT_SIZE_STORAGE_KEY];
+      const rawGap = result[NEWTAB_SHORTCUT_GAP_STORAGE_KEY];
       const visible = normalizeNewtabShortcutsVisible(rawVisible);
       const addVisible = normalizeNewtabShortcutAddVisible(rawAddVisible);
       const dockMagnification = normalizeNewtabShortcutDockMagnificationEnabled(
         rawDockMagnification
       );
-      const width = normalizeNewtabShortcutWidth(rawWidth);
+      const columns = rawColumns === undefined
+        ? inferNewtabShortcutColumnsFromWidth(rawWidth)
+        : normalizeNewtabShortcutColumns(rawColumns);
+      const size = normalizeNewtabShortcutSize(rawSize);
+      const gap = normalizeNewtabShortcutGap(rawGap);
       setOptionsToggleState(newtabShortcutsToggle, visible);
       setOptionsToggleState(newtabShortcutAddToggle, addVisible);
       setOptionsToggleState(newtabShortcutDockMagnificationToggle, dockMagnification);
-      renderNewtabShortcutWidthControl(width);
+      renderNewtabShortcutColumnsControl(columns);
+      renderNewtabShortcutSizeControl(size);
+      renderNewtabShortcutGapControl(gap);
       syncNewtabShortcutSubcontrolAvailability();
       const repairs = {};
       if (rawVisible !== visible) {
@@ -5677,8 +5895,14 @@
       if (rawDockMagnification !== dockMagnification) {
         repairs[NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY] = dockMagnification;
       }
-      if (rawWidth !== width) {
-        repairs[NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY] = width;
+      if (rawColumns !== columns) {
+        repairs[NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY] = columns;
+      }
+      if (rawSize !== size) {
+        repairs[NEWTAB_SHORTCUT_SIZE_STORAGE_KEY] = size;
+      }
+      if (rawGap !== gap) {
+        repairs[NEWTAB_SHORTCUT_GAP_STORAGE_KEY] = gap;
       }
       if (Object.keys(repairs).length > 0) {
         storageArea.set(repairs);
@@ -7044,15 +7268,37 @@
         });
       }
     }
-    if (changes[NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY]) {
-      const raw = changes[NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY].newValue;
-      const next = normalizeNewtabShortcutWidth(raw);
-      renderNewtabShortcutWidthControl(
+    if (changes[NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY]) {
+      const raw = changes[NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY].newValue;
+      const next = normalizeNewtabShortcutColumns(raw);
+      renderNewtabShortcutColumnsControl(
         next,
         Boolean(newtabShortcutsToggle && !newtabShortcutsToggle.checked)
       );
       if (raw !== next && storageArea) {
-        storageArea.set({ [NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY]: next });
+        storageArea.set({ [NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY]: next });
+      }
+    }
+    if (changes[NEWTAB_SHORTCUT_SIZE_STORAGE_KEY]) {
+      const raw = changes[NEWTAB_SHORTCUT_SIZE_STORAGE_KEY].newValue;
+      const next = normalizeNewtabShortcutSize(raw);
+      renderNewtabShortcutSizeControl(
+        next,
+        Boolean(newtabShortcutsToggle && !newtabShortcutsToggle.checked)
+      );
+      if (raw !== next && storageArea) {
+        storageArea.set({ [NEWTAB_SHORTCUT_SIZE_STORAGE_KEY]: next });
+      }
+    }
+    if (changes[NEWTAB_SHORTCUT_GAP_STORAGE_KEY]) {
+      const raw = changes[NEWTAB_SHORTCUT_GAP_STORAGE_KEY].newValue;
+      const next = normalizeNewtabShortcutGap(raw);
+      renderNewtabShortcutGapControl(
+        next,
+        Boolean(newtabShortcutsToggle && !newtabShortcutsToggle.checked)
+      );
+      if (raw !== next && storageArea) {
+        storageArea.set({ [NEWTAB_SHORTCUT_GAP_STORAGE_KEY]: next });
       }
     }
     [

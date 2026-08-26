@@ -213,7 +213,7 @@
         border-color: var(--input-focus-color);
         background: var(--input-focus-bg);
       }
-      .x-nt-shortcut-dialog ._x_extension_shortcut_input_2024_unique_ {
+      ._x_extension_shortcut_input_2024_unique_ {
         padding: 8px 10px;
         border-radius: 10px;
         border: 1px solid var(--tab-border);
@@ -241,13 +241,25 @@
         border: none;
         background: transparent;
       }
-      .x-nt-shortcut-dialog ._x_extension_shortcut_input_2024_unique_::placeholder {
+      ._x_extension_shortcut_input_2024_unique_::placeholder {
         color: var(--input-placeholder);
       }
-      .x-nt-shortcut-dialog ._x_extension_shortcut_input_2024_unique_:hover,
-      .x-nt-shortcut-dialog ._x_extension_shortcut_input_2024_unique_:focus {
+      ._x_extension_shortcut_input_2024_unique_:hover,
+      ._x_extension_shortcut_input_2024_unique_:focus {
         border-color: var(--input-focus-color);
         background: var(--input-focus-bg);
+      }
+      ._x_extension_shortcut_input_2024_unique_._x_extension_range_slider_value_input_2026_unique_ {
+        appearance: textfield;
+        -moz-appearance: textfield;
+        font-variant-numeric: tabular-nums;
+        text-align: center;
+      }
+      ._x_extension_range_slider_value_input_2026_unique_::-webkit-inner-spin-button,
+      ._x_extension_range_slider_value_input_2026_unique_::-webkit-outer-spin-button {
+        margin: 0;
+        appearance: none;
+        -webkit-appearance: none;
       }
       .x-nt-shortcut-error {
         min-height: 16px;

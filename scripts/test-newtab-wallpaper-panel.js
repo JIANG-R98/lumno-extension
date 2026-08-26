@@ -31,24 +31,32 @@ function createFakeStyle() {
 }
 
 function createFakeClassList(element) {
-  const classes = new Set();
+  const getClasses = () => new Set(
+    String(element.className || '').split(/\s+/).filter(Boolean)
+  );
+  const writeClasses = (classes) => {
+    element.className = Array.from(classes).join(' ');
+  };
   return {
     add(...items) {
+      const classes = getClasses();
       items.forEach((item) => {
         if (item) {
           classes.add(String(item));
         }
       });
-      element.className = Array.from(classes).join(' ');
+      writeClasses(classes);
     },
     remove(...items) {
+      const classes = getClasses();
       items.forEach((item) => classes.delete(String(item)));
-      element.className = Array.from(classes).join(' ');
+      writeClasses(classes);
     },
     contains(item) {
-      return classes.has(String(item));
+      return getClasses().has(String(item));
     },
     toggle(item, force) {
+      const classes = getClasses();
       const name = String(item);
       const shouldAdd = force === undefined ? !classes.has(name) : Boolean(force);
       if (shouldAdd) {
@@ -56,7 +64,7 @@ function createFakeClassList(element) {
       } else {
         classes.delete(name);
       }
-      element.className = Array.from(classes).join(' ');
+      writeClasses(classes);
       return shouldAdd;
     }
   };
@@ -78,6 +86,7 @@ function createFakeElement(tagName, documentObj) {
     disabled: false,
     checked: false,
     tabIndex: 0,
+    dataset: {},
     _listeners: Object.create(null),
     style: createFakeStyle(),
     classList: null,
@@ -89,17 +98,26 @@ function createFakeElement(tagName, documentObj) {
         this.className = text;
       } else if (key === 'id') {
         this.id = text;
-      } else if (key === 'type') {
-        this.type = text;
+      } else if (['type', 'min', 'max', 'step', 'value'].includes(key)) {
+        this[key] = text;
       } else if (key === 'src' || key === 'href') {
         this[key] = text;
+      }
+      if (key.startsWith('data-')) {
+        const datasetKey = key.slice(5).replace(/-([a-z])/g, (_match, letter) => letter.toUpperCase());
+        this.dataset[datasetKey] = text;
       }
     },
     getAttribute(name) {
       return attributes.has(String(name)) ? attributes.get(String(name)) : null;
     },
     removeAttribute(name) {
-      attributes.delete(String(name));
+      const key = String(name);
+      attributes.delete(key);
+      if (key.startsWith('data-')) {
+        const datasetKey = key.slice(5).replace(/-([a-z])/g, (_match, letter) => letter.toUpperCase());
+        delete this.dataset[datasetKey];
+      }
     },
     appendChild(child) {
       this.children.push(child);
@@ -126,6 +144,21 @@ function createFakeElement(tagName, documentObj) {
       }
       return this.children.some((child) => child && typeof child.contains === 'function' && child.contains(target));
     },
+    closest(selector) {
+      const source = String(selector || '').trim();
+      if (!source.startsWith('.')) {
+        return null;
+      }
+      const className = source.slice(1);
+      let current = this;
+      while (current) {
+        if (current.classList && current.classList.contains(className)) {
+          return current;
+        }
+        current = current.parentElement;
+      }
+      return null;
+    },
     addEventListener(type, listener) {
       const key = String(type);
       if (!this._listeners[key]) {
@@ -139,6 +172,17 @@ function createFakeElement(tagName, documentObj) {
         return;
       }
       this._listeners[key] = this._listeners[key].filter((item) => item !== listener);
+    },
+    dispatchEvent(event) {
+      const nextEvent = event || { type: '' };
+      if (!nextEvent.target) {
+        nextEvent.target = this;
+      }
+      nextEvent.currentTarget = this;
+      (this._listeners[String(nextEvent.type)] || []).slice().forEach((listener) => {
+        listener(nextEvent);
+      });
+      return !nextEvent.defaultPrevented;
     },
     click() {
       (this._listeners.click || []).forEach((listener) => {
@@ -197,6 +241,12 @@ function createFakeElement(tagName, documentObj) {
         documentObj.activeElement = null;
       }
       this._blurred = true;
+      this.dispatchEvent({
+        type: 'blur',
+        target: this,
+        preventDefault() {},
+        stopPropagation() {}
+      });
     }
   };
   element.classList = createFakeClassList(element);
@@ -253,15 +303,24 @@ function createFakeWallpaperViewController(config) {
     );
     const header = add(control, 'div', 'x-nt-overlay-control-header');
     add(header, 'span', 'x-nt-effect-slider-label', {}, names.label);
-    const wrap = add(control, 'div', 'x-nt-overlay-slider-wrap');
+    const row = add(control, 'div', 'x-nt-range-slider-row');
+    const wrap = add(row, 'div', 'x-nt-overlay-slider-wrap');
     const slider = add(
       wrap,
       'input',
       'x-nt-overlay-slider',
-      { type: 'range', min: '0', max: '100', step: '1' },
+      { type: 'range', min: '0', max: '100', step: '1', value: '50' },
       names.slider
     );
     slider.type = 'range';
+    const valueInput = add(
+      row,
+      'input',
+      '_x_extension_shortcut_input_2024_unique_ _x_extension_range_slider_value_input_2026_unique_',
+      { type: 'number', min: '0', max: '100', step: '1', value: '50' },
+      `${names.slider}ValueInput`
+    );
+    valueInput.type = 'number';
     return control;
   };
 
@@ -335,9 +394,9 @@ function createFakeWallpaperViewController(config) {
   );
   const widthHeader = add(widthControl, 'div', 'x-nt-overlay-control-header');
   add(widthHeader, 'span', 'x-nt-overlay-label', {}, 'searchWidthLabel');
-  add(widthHeader, 'span', 'x-nt-overlay-value', {}, 'searchWidthValue');
+  const widthRow = add(widthControl, 'div', 'x-nt-range-slider-row');
   const widthWrap = add(
-    widthControl,
+    widthRow,
     'div',
     'x-nt-overlay-slider-wrap x-nt-search-width-slider-wrap'
   );
@@ -354,12 +413,27 @@ function createFakeWallpaperViewController(config) {
     'searchWidthSlider'
   );
   widthSlider.type = 'range';
+  widthSlider.value = String(model.searchWidth && model.searchWidth.min || 0);
   const widthScale = add(widthWrap, 'div', 'x-nt-search-width-scale');
   (model.searchWidth && model.searchWidth.ticks || []).forEach((tick) => {
     add(widthScale, 'span', 'x-nt-search-width-tick', {
       'data-search-width-tick': tick.searchKey || ''
     });
   });
+  const widthValueInput = add(
+    widthRow,
+    'input',
+    '_x_extension_shortcut_input_2024_unique_ _x_extension_range_slider_value_input_2026_unique_',
+    {
+      type: 'number',
+      min: widthSlider.min,
+      max: widthSlider.max,
+      step: widthSlider.step,
+      value: widthSlider.value
+    },
+    'searchWidthSliderValueInput'
+  );
+  widthValueInput.type = 'number';
   const inputAutoFocusRow = add(
     widthControl,
     'div',
@@ -443,35 +517,75 @@ function createFakeWallpaperViewController(config) {
     'shortcutDockMagnificationTitle'
   );
   addSwitch(shortcutDockRow, 'shortcutDockMagnificationToggle');
-  const shortcutWidthControl = add(
+  const shortcutColumnsControl = add(
     shortcutsDetailsInner,
     'div',
-    'x-nt-overlay-control x-nt-shortcut-width-control',
+    'x-nt-overlay-control x-nt-shortcut-columns-control',
     { 'data-visible': 'false', 'aria-hidden': 'true' },
-    'shortcutWidthControl'
+    'shortcutColumnsControl'
   );
-  const shortcutWidthHeader = add(shortcutWidthControl, 'div', 'x-nt-overlay-control-header');
-  add(shortcutWidthHeader, 'span', 'x-nt-overlay-label', {}, 'shortcutWidthLabel');
-  add(shortcutWidthHeader, 'span', 'x-nt-overlay-value', {}, 'shortcutWidthValue');
-  const shortcutWidthWrap = add(
-    shortcutWidthControl,
+  const shortcutColumnsHeader = add(
+    shortcutColumnsControl,
     'div',
-    'x-nt-overlay-slider-wrap x-nt-shortcut-width-slider-wrap'
+    'x-nt-overlay-control-header'
   );
-  const shortcutWidthSlider = add(
-    shortcutWidthWrap,
+  add(
+    shortcutColumnsHeader,
+    'span',
+    'x-nt-overlay-label',
+    {},
+    'shortcutColumnsLabel'
+  );
+  const shortcutColumnsRow = add(
+    shortcutColumnsControl,
+    'div',
+    'x-nt-range-slider-row'
+  );
+  const shortcutColumnsWrap = add(
+    shortcutColumnsRow,
+    'div',
+    'x-nt-overlay-slider-wrap x-nt-shortcut-columns-slider-wrap'
+  );
+  const shortcutColumnsSlider = add(
+    shortcutColumnsWrap,
     'input',
-    'x-nt-overlay-slider x-nt-shortcut-width-slider',
+    'x-nt-overlay-slider x-nt-shortcut-columns-slider',
     {
-      'data-value-suffix': ' px',
       type: 'range',
-      min: String(model.shortcutWidth && model.shortcutWidth.min || 360),
-      max: String(model.shortcutWidth && model.shortcutWidth.max || 1440),
+      min: String(model.shortcutColumns && model.shortcutColumns.min || 4),
+      max: String(model.shortcutColumns && model.shortcutColumns.max || 16),
       step: '1'
     },
-    'shortcutWidthSlider'
+    'shortcutColumnsSlider'
   );
-  shortcutWidthSlider.type = 'range';
+  shortcutColumnsSlider.type = 'range';
+  shortcutColumnsSlider.value = String(
+    model.shortcutColumns && model.shortcutColumns.defaultValue || 10
+  );
+  const shortcutColumnsScale = add(
+    shortcutColumnsWrap,
+    'div',
+    'x-nt-overlay-scale x-nt-shortcut-columns-scale'
+  );
+  [4, 8, 12, 16].forEach((value, index) => {
+    add(shortcutColumnsScale, 'span', 'x-nt-overlay-tick', {
+      'data-align': index === 0 ? 'start' : (index === 3 ? 'end' : 'center')
+    }).textContent = String(value);
+  });
+  const shortcutColumnsSliderValueInput = add(
+    shortcutColumnsRow,
+    'input',
+    '_x_extension_shortcut_input_2024_unique_ _x_extension_range_slider_value_input_2026_unique_',
+    {
+      type: 'number',
+      min: String(model.shortcutColumns && model.shortcutColumns.min || 4),
+      max: String(model.shortcutColumns && model.shortcutColumns.max || 16),
+      step: '1'
+    },
+    'shortcutColumnsSliderValueInput'
+  );
+  shortcutColumnsSliderValueInput.type = 'number';
+  shortcutColumnsSliderValueInput.value = shortcutColumnsSlider.value;
   const moreSettings = add(
     widthControl,
     'a',
@@ -730,25 +844,32 @@ function createFakeWallpaperViewController(config) {
     {},
     'topContentWeightTitle'
   );
-  add(
-    topContentWeightHeader,
-    'span',
-    'x-nt-overlay-value',
-    {},
-    'topContentWeightValue'
+  const topContentWeightRow = add(
+    topContentWeightControl,
+    'div',
+    'x-nt-range-slider-row'
   );
   const topContentWeightWrap = add(
-    topContentWeightControl,
+    topContentWeightRow,
     'div',
     'x-nt-overlay-slider-wrap x-nt-time-weight-slider-wrap'
   );
-  add(
+  const topContentWeightSlider = add(
     topContentWeightWrap,
     'input',
     'x-nt-overlay-slider x-nt-time-weight-slider',
     { type: 'range', min: '300', max: '800', step: '1', value: '320' },
     'topContentWeightSlider'
   );
+  topContentWeightSlider.type = 'range';
+  const topContentWeightSliderValueInput = add(
+    topContentWeightRow,
+    'input',
+    '_x_extension_shortcut_input_2024_unique_ _x_extension_range_slider_value_input_2026_unique_',
+    { type: 'number', min: '300', max: '800', step: '1', value: '320' },
+    'topContentWeightSliderValueInput'
+  );
+  topContentWeightSliderValueInput.type = 'number';
   const topContentSecondsRow = add(
     brandSection,
     'div',
@@ -848,6 +969,21 @@ function createFakeWindow() {
   const mediaQueries = new Map();
   const listenersByType = Object.create(null);
   const localStorageData = new Map();
+  class FakeEvent {
+    constructor(type, options) {
+      this.type = String(type || '');
+      this.bubbles = Boolean(options && options.bubbles);
+      this.defaultPrevented = false;
+      this.target = null;
+      this.currentTarget = null;
+    }
+
+    preventDefault() {
+      this.defaultPrevented = true;
+    }
+
+    stopPropagation() {}
+  }
   function getMediaQueryList(query) {
     const text = String(query || '');
     if (!mediaQueries.has(text)) {
@@ -908,6 +1044,7 @@ function createFakeWindow() {
     listenersByType[key] = listenersByType[key].filter((item) => item !== listener);
   }
   return {
+    Event: FakeEvent,
     setTimeout,
     clearTimeout,
     requestAnimationFrame(callback) {
@@ -1612,6 +1749,7 @@ function createWallpaperSandbox(options) {
     requestAnimationFrame: testWindow.requestAnimationFrame,
     cancelAnimationFrame: testWindow.cancelAnimationFrame,
     URL,
+    Event: testWindow.Event,
     Image: options && options.Image ? options.Image : createFakeImageClass(),
     globalThis: null,
     document: testDocument,
@@ -1646,6 +1784,7 @@ const sandbox = {
   requestAnimationFrame: windowObj.requestAnimationFrame,
   cancelAnimationFrame: windowObj.cancelAnimationFrame,
   URL,
+  Event: windowObj.Event,
   Image: createFakeImageClass(),
   globalThis: null,
   document: documentObj,
@@ -1674,7 +1813,7 @@ const inputAutoFocusTooltips = [];
 let shortcutsVisible = true;
 let shortcutAddVisible = true;
 let shortcutDockMagnificationEnabled = true;
-let shortcutWidth = 920;
+let shortcutColumns = 10;
 const shortcutPreferenceWrites = [];
 const runtime = sandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
   documentObj,
@@ -1700,10 +1839,10 @@ const runtime = sandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
     shortcutDockMagnificationEnabled = Boolean(value);
     shortcutPreferenceWrites.push(['dock', shortcutDockMagnificationEnabled]);
   },
-  getShortcutWidth: () => shortcutWidth,
-  setShortcutWidth(value) {
-    shortcutWidth = Number(value);
-    shortcutPreferenceWrites.push(['width', shortcutWidth]);
+  getShortcutColumns: () => shortcutColumns,
+  setShortcutColumns(value) {
+    shortcutColumns = Number(value);
+    shortcutPreferenceWrites.push(['columns', shortcutColumns]);
   },
   showTopActionTooltip(anchor, text) {
     inputAutoFocusTooltips.push({ anchor, text });
@@ -1754,6 +1893,19 @@ assert.strictEqual(documentObj.activeElement, null, 'closing the appearance pane
 const appearanceButton = control.children[1];
 appearanceButton.click();
 const renderedPanel = control.children[0];
+const rangeSliderRows = renderedPanel.querySelectorAll('.x-nt-range-slider-row');
+assert.strictEqual(rangeSliderRows.length, 7, 'every New Tab slider should include an editable numeric value');
+rangeSliderRows.forEach((row) => {
+  const rowSlider = row.querySelector('input[type="range"]');
+  const rowValueInput = row.querySelector('input[type="number"]');
+  assert.ok(rowSlider, 'each shared slider row should contain a range input');
+  assert.ok(rowValueInput, 'each shared slider row should contain a number input');
+  assert.strictEqual(
+    rowValueInput.max,
+    rowSlider.max,
+    'each numeric value should inherit the maximum from its slider'
+  );
+});
 const appearanceHeader = getChildByClassName(renderedPanel, 'x-nt-appearance-header');
 const appearanceScrollBody = getChildByClassName(renderedPanel, 'x-nt-wallpaper-panel-scroll');
 const appearanceSection = getChildByClassName(appearanceScrollBody, 'x-nt-appearance-section');
@@ -1778,9 +1930,10 @@ const shortcutsDetails = shortcutsAccordion.children[1];
 const shortcutsDetailsInner = shortcutsDetails.children[0];
 const shortcutAddToggle = shortcutsDetailsInner.children[0].children[1].children[0];
 const shortcutDockToggle = shortcutsDetailsInner.children[1].children[1].children[0];
-const shortcutWidthControl = shortcutsDetailsInner.children[2];
-const shortcutWidthSlider = shortcutWidthControl.children[1].children[0];
-const shortcutWidthValue = shortcutWidthControl.children[0].children[1];
+const shortcutColumnsControl = shortcutsDetailsInner.children[2];
+const shortcutColumnsRow = shortcutColumnsControl.children[1];
+const shortcutColumnsSlider = shortcutColumnsRow.children[0].children[0];
+const shortcutColumnsSliderValueInput = shortcutColumnsRow.children[1];
 
 assert.ok(appearanceHeader, 'appearance header should be a direct panel child above the scrollable content');
 assert.ok(appearanceScrollBody, 'appearance panel content should use one dedicated internal scroll container');
@@ -1796,20 +1949,43 @@ assert.strictEqual(shortcutsTrigger.disabled, false);
 assert.strictEqual(shortcutsDetails.hidden, true, 'shortcut details should default to collapsed');
 assert.strictEqual(shortcutAddToggle.disabled, true, 'collapsed shortcut details should not be tabbable');
 assert.strictEqual(shortcutDockToggle.disabled, true, 'collapsed shortcut details should disable nested toggles');
-assert.strictEqual(shortcutWidthSlider.disabled, true, 'collapsed shortcut details should disable the width slider');
+assert.strictEqual(shortcutColumnsSlider.disabled, true, 'collapsed shortcut details should disable the column slider');
+assert.strictEqual(shortcutColumnsSliderValueInput.disabled, true, 'collapsed shortcut details should disable the numeric value');
 shortcutsTrigger.click();
 assert.strictEqual(shortcutsTrigger.getAttribute('aria-expanded'), 'true');
 assert.strictEqual(shortcutsDetails.hidden, false, 'clicking the shortcut row should expand its details');
 assert.strictEqual(shortcutAddToggle.disabled, false);
 assert.strictEqual(shortcutDockToggle.disabled, false);
-assert.strictEqual(shortcutWidthSlider.disabled, false);
-assert.strictEqual(shortcutWidthValue.textContent, '920 px');
+assert.strictEqual(shortcutColumnsSlider.disabled, false);
+assert.strictEqual(shortcutColumnsSliderValueInput.disabled, false);
+assert.strictEqual(shortcutColumnsSlider.value, '10');
+assert.strictEqual(shortcutColumnsSliderValueInput.value, '10');
+shortcutColumnsSlider.value = '7';
+shortcutColumnsSlider._listeners.input[0]();
+shortcutColumnsSlider._listeners.change[0]();
+assert.strictEqual(shortcutColumns, 7, 'the slider should preserve every integer without snapping');
+shortcutColumnsSliderValueInput.value = '11';
+shortcutColumnsSliderValueInput._listeners.keydown[0]({
+  key: 'Enter',
+  preventDefault() {}
+});
+assert.strictEqual(shortcutColumns, 11, 'Enter should commit a typed exact integer');
+shortcutColumnsSliderValueInput.value = '13';
+shortcutColumnsSliderValueInput._listeners.blur[0]();
+assert.strictEqual(shortcutColumns, 13, 'clicking outside should commit the numeric value through blur');
+shortcutColumnsSliderValueInput.value = '';
+shortcutColumnsSliderValueInput._listeners.blur[0]();
+assert.strictEqual(shortcutColumnsSliderValueInput.value, '13', 'an empty draft should restore the saved value');
+shortcutColumnsSliderValueInput.value = '99';
+shortcutColumnsSliderValueInput._listeners.blur[0]();
+assert.strictEqual(shortcutColumns, 16, 'typed values should clamp to the supported range');
 shortcutsTrigger.click();
 assert.strictEqual(shortcutsTrigger.getAttribute('aria-expanded'), 'false');
 assert.strictEqual(shortcutsDetails.hidden, true, 'clicking the shortcut row again should collapse its details');
 assert.strictEqual(shortcutAddToggle.disabled, true);
 assert.strictEqual(shortcutDockToggle.disabled, true);
-assert.strictEqual(shortcutWidthSlider.disabled, true);
+assert.strictEqual(shortcutColumnsSlider.disabled, true);
+assert.strictEqual(shortcutColumnsSliderValueInput.disabled, true);
 shortcutsTrigger.click();
 assert.strictEqual(shortcutsDetails.hidden, false, 'shortcut details should reopen after being collapsed');
 shortcutsToggle.checked = false;

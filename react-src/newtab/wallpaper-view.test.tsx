@@ -44,15 +44,20 @@ describe('New Tab React wallpaper view', () => {
             max: 1040,
             ticks: []
           },
-          shortcutWidth: {
-            defaultValue: 920,
-            min: 360,
-            max: 1440,
-            ticks: [
-              { align: 'start', label: '360' },
-              { label: '900' },
-              { align: 'end', label: '1440' }
-            ]
+          shortcutColumns: {
+            defaultValue: 10,
+            min: 4,
+            max: 16
+          },
+          shortcutSize: {
+            defaultValue: 64,
+            min: 48,
+            max: 80
+          },
+          shortcutGap: {
+            defaultValue: 4,
+            min: 0,
+            max: 24
           },
           topContentOptions: [
             { value: 'brand', label: 'Brand' },
@@ -81,6 +86,23 @@ describe('New Tab React wallpaper view', () => {
       controller.control.querySelectorAll('[data-wallpaper-effect-ink-tone]')
     ).toHaveLength(2);
     expect(controller.getRefs().effectInkToneControl).toBeTruthy();
+    const sliderRows = controller.control.querySelectorAll<HTMLElement>(
+      '.x-nt-range-slider-row'
+    );
+    expect(sliderRows).toHaveLength(9);
+    sliderRows.forEach((row) => {
+      const slider = row.querySelector<HTMLInputElement>('input[type="range"]');
+      const valueInput = row.querySelector<HTMLInputElement>('input[type="number"]');
+      expect(slider).not.toBeNull();
+      expect(valueInput?.max).toBe(slider?.max);
+      expect(valueInput?.classList.contains('_x_extension_shortcut_input_2024_unique_'))
+        .toBe(true);
+      expect(valueInput?.classList.contains(
+        '_x_extension_range_slider_value_input_2026_unique_'
+      )).toBe(true);
+      expect(valueInput?.style.width).toBe('56px');
+      expect(valueInput?.style.height).toBe('36px');
+    });
     const segmentedGroups = [
       controller.getRefs().effectOptions,
       controller.getRefs().effectInkToneOptions
@@ -108,7 +130,7 @@ describe('New Tab React wallpaper view', () => {
     expect(inputAutoFocusInfoButton?.querySelector('.ri-information-line')).not.toBeNull();
   });
 
-  it('renders the shortcuts accordion collapsed with a unitless scale', () => {
+  it('renders the shortcuts accordion collapsed with editable slider ticks', () => {
     act(() => {
       controller = createWallpaperViewController({
         documentObj: document,
@@ -118,15 +140,20 @@ describe('New Tab React wallpaper view', () => {
           favicons: [],
           icons: { arrow: '<i class="ri-arrow-right-s-line"></i>' },
           searchWidth: { min: 720, max: 1040, ticks: [] },
-          shortcutWidth: {
-            defaultValue: 920,
-            min: 360,
-            max: 1440,
-            ticks: [
-              { align: 'start', label: '360' },
-              { label: '900' },
-              { align: 'end', label: '1440' }
-            ]
+          shortcutColumns: {
+            defaultValue: 10,
+            min: 4,
+            max: 16
+          },
+          shortcutSize: {
+            defaultValue: 64,
+            min: 48,
+            max: 80
+          },
+          shortcutGap: {
+            defaultValue: 4,
+            min: 0,
+            max: 24
           },
           wallpapers: []
         }
@@ -138,17 +165,52 @@ describe('New Tab React wallpaper view', () => {
     const refs = controller.getRefs();
     const trigger = refs.shortcutsAccordionTrigger as HTMLButtonElement;
     const details = refs.shortcutsDetails as HTMLDivElement;
-    const slider = refs.shortcutWidthSlider as HTMLInputElement;
+    const slider = refs.shortcutColumnsSlider as HTMLInputElement;
+    const valueInput = refs.shortcutColumnsSliderValueInput as HTMLInputElement;
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
     expect(trigger.getAttribute('aria-controls')).toBe(
       '_x_extension_newtab_shortcuts_settings_2026_unique_'
     );
     expect(details.getAttribute('role')).toBe('region');
     expect(details.hidden).toBe(true);
-    expect(slider.getAttribute('data-value-suffix')).toBe(' px');
-    expect(Array.from(details.querySelectorAll('.x-nt-shortcut-width-scale .x-nt-overlay-tick')).map(
-      (tick) => tick.textContent
-    )).toEqual(['360', '900', '1440']);
+    expect(slider.type).toBe('range');
+    expect(slider.min).toBe('4');
+    expect(slider.max).toBe('16');
+    expect(slider.step).toBe('1');
+    expect(slider.value).toBe('10');
+    expect(valueInput.type).toBe('number');
+    expect(valueInput.value).toBe('10');
+    expect(valueInput.max).toBe(slider.max);
+    expect(valueInput.max).toBe('16');
+    expect(valueInput.style.width).toBe('56px');
+    expect(valueInput.style.height).toBe('36px');
+    expect(Array.from(
+      details.querySelectorAll('.x-nt-shortcut-columns-scale .x-nt-overlay-tick')
+    ).map((tick) => tick.textContent)).toEqual(['4', '8', '12', '16']);
+    expect(details.querySelectorAll<HTMLElement>(
+      '.x-nt-shortcut-columns-scale .x-nt-overlay-tick'
+    )[1]?.style.getPropertyValue('--x-nt-overlay-tick-percent')).toBe(
+      `${100 / 3}%`
+    );
+    const sizeSlider = refs.shortcutSizeSlider as HTMLInputElement;
+    const sizeReset = refs.shortcutSizeResetButton as HTMLButtonElement;
+    const gapSlider = refs.shortcutGapSlider as HTMLInputElement;
+    const gapReset = refs.shortcutGapResetButton as HTMLButtonElement;
+    expect([sizeSlider.min, sizeSlider.value, sizeSlider.max]).toEqual([
+      '48', '64', '80'
+    ]);
+    expect([gapSlider.min, gapSlider.value, gapSlider.max]).toEqual([
+      '0', '4', '24'
+    ]);
+    [sizeReset, gapReset].forEach((button) => {
+      expect(button.querySelector('.ri-reset-left-line')).not.toBeNull();
+      expect(button.querySelector('.ri-size-14')).not.toBeNull();
+      expect(button.classList.contains(
+        '_x_extension_shortcut_group_action_2024_unique_'
+      )).toBe(true);
+      expect(button.nextElementSibling?.matches('input[type="number"]')).toBe(true);
+      expect(button.disabled).toBe(true);
+    });
   });
 
   it('updates custom wallpaper tiles without replacing the panel', () => {
@@ -178,5 +240,25 @@ describe('New Tab React wallpaper view', () => {
     expect(tiles).toHaveLength(1);
     expect(tiles[0].dataset.wallpaperId).toBe('custom-1');
     expect(controller.panel).toBe(panel);
+  });
+
+  it('preserves zero as an explicit shortcut spacing value', () => {
+    act(() => {
+      controller = createWallpaperViewController({
+        documentObj: document,
+        model: {
+          appearanceOptions: [],
+          effectTypes: [],
+          favicons: [],
+          icons: {},
+          searchWidth: { min: 720, max: 1040, ticks: [] },
+          shortcutGap: { defaultValue: 0, min: 0, max: 24 },
+          wallpapers: []
+        }
+      });
+    });
+    const refs = controller?.getRefs();
+    expect((refs?.shortcutGapSlider as HTMLInputElement)?.value).toBe('0');
+    expect((refs?.shortcutGapSliderValueInput as HTMLInputElement)?.value).toBe('0');
   });
 });
