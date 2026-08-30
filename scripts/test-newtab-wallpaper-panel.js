@@ -135,6 +135,15 @@ function createFakeElement(tagName, documentObj) {
       child.parentElement = this;
       return child;
     },
+    removeChild(child) {
+      const index = this.children.indexOf(child);
+      if (index !== -1) {
+        this.children.splice(index, 1);
+        child.parentNode = null;
+        child.parentElement = null;
+      }
+      return child;
+    },
     contains(target) {
       if (!target) {
         return false;
@@ -286,6 +295,7 @@ function createFakeWallpaperViewController(config) {
     parent.appendChild(element);
     if (refName) {
       refs[refName] = element;
+      element.setAttribute('data-wallpaper-ref', refName);
     }
     return element;
   };
@@ -294,6 +304,7 @@ function createFakeWallpaperViewController(config) {
     return add(label, 'input', '', { role: 'switch', type: 'checkbox' }, refName);
   };
   const addSliderControl = (parent, names, className) => {
+    const dynamicRange = Boolean(names.dynamicRange);
     const control = add(
       parent,
       'div',
@@ -305,19 +316,44 @@ function createFakeWallpaperViewController(config) {
     add(header, 'span', 'x-nt-effect-slider-label', {}, names.label);
     const row = add(control, 'div', 'x-nt-range-slider-row');
     const wrap = add(row, 'div', 'x-nt-overlay-slider-wrap');
+    const sliderAttributes = {
+      type: 'range',
+      min: '0',
+      max: '100',
+      step: dynamicRange ? 'any' : '1',
+      value: '50'
+    };
+    if (dynamicRange) {
+      sliderAttributes['data-wallpaper-dynamic-range'] = 'true';
+    }
     const slider = add(
       wrap,
       'input',
       'x-nt-overlay-slider',
-      { type: 'range', min: '0', max: '100', step: '1', value: '50' },
+      sliderAttributes,
       names.slider
     );
     slider.type = 'range';
+    const scale = add(wrap, 'div', 'x-nt-overlay-scale');
+    [
+      { align: 'start', label: '0' },
+      { align: 'center', key: 'default', label: 'Default' },
+      { align: 'end', label: '100%' }
+    ].forEach((tick) => {
+      const tickElement = add(scale, 'span', 'x-nt-overlay-tick', {
+        'data-align': tick.align,
+        ...(tick.key ? { 'data-overlay-tick': tick.key } : {})
+      });
+      tickElement.textContent = tick.label;
+    });
+    const valueInputAttributes = dynamicRange
+      ? { type: 'number', step: 'any', value: '50' }
+      : { type: 'number', min: '0', max: '100', step: '1', value: '50' };
     const valueInput = add(
       row,
       'input',
       '_x_extension_shortcut_input_2024_unique_ _x_extension_range_slider_value_input_2026_unique_',
-      { type: 'number', min: '0', max: '100', step: '1', value: '50' },
+      valueInputAttributes,
       `${names.slider}ValueInput`
     );
     valueInput.type = 'number';
@@ -791,6 +827,26 @@ function createFakeWallpaperViewController(config) {
     label: 'effectSpacingLabel',
     slider: 'effectSpacingSlider'
   });
+  addSliderControl(effectControl, {
+    control: 'effectTextureControl',
+    label: 'effectTextureLabel',
+    slider: 'effectTextureSlider'
+  });
+  addSliderControl(effectControl, {
+    control: 'effectCrtBloomControl',
+    label: 'effectCrtBloomLabel',
+    slider: 'effectCrtBloomSlider'
+  });
+  addSliderControl(effectControl, {
+    control: 'effectCrtRgbOffsetControl',
+    label: 'effectCrtRgbOffsetLabel',
+    slider: 'effectCrtRgbOffsetSlider'
+  });
+  addSliderControl(effectControl, {
+    control: 'effectCrtCurvatureControl',
+    label: 'effectCrtCurvatureLabel',
+    slider: 'effectCrtCurvatureSlider'
+  });
 
   const brandSection = add(scroll, 'div', 'x-nt-wallpaper-section');
   const topContentHeader = add(brandSection, 'div', 'x-nt-wallpaper-panel-header x-nt-top-content-header');
@@ -1057,11 +1113,21 @@ function createFakeWindow() {
     removeEventListener: removeWindowListener,
     innerWidth: 1280,
     innerHeight: 800,
-    getComputedStyle() {
+    getComputedStyle(element) {
       return {
         borderLeftWidth: '0',
         borderTopWidth: '0',
-        transform: 'none'
+        transform: 'none',
+        backgroundColor: element && element.style.getPropertyValue('background-color'),
+        backgroundImage: element && element.style.getPropertyValue('background-image'),
+        backgroundSize: element && element.style.getPropertyValue('background-size'),
+        backgroundPosition: element && element.style.getPropertyValue('background-position'),
+        backgroundRepeat: element && element.style.getPropertyValue('background-repeat'),
+        getPropertyValue(name) {
+          return element && element.style && typeof element.style.getPropertyValue === 'function'
+            ? element.style.getPropertyValue(name)
+            : '';
+        }
       };
     },
     matchMedia(query) {
@@ -1532,9 +1598,9 @@ function testNewtabFaviconPreloadAppliesCachedAlternateBeforeMainRuntime() {
   );
 }
 
-function testWallpaperPreloadUsesTheCachedResolvedMode() {
+async function testWallpaperPreloadUsesTheCachedResolvedMode() {
   const runWallpaperPreload = (documentObj, windowObj) => {
-    vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper-preload.js', 'utf8'), {
+    const preloadSandbox = {
       document: documentObj,
       window: windowObj,
       chrome: {
@@ -1542,9 +1608,11 @@ function testWallpaperPreloadUsesTheCachedResolvedMode() {
           getURL: (path) => `chrome-extension://abc/${String(path || '').replace(/^\/+/, '')}`
         }
       }
-    }, {
+    };
+    vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper-preload.js', 'utf8'), preloadSandbox, {
       filename: 'src/newtab/wallpaper-preload.js'
     });
+    return preloadSandbox;
   };
   const documentObj = createFakeDocument();
   const windowObj = createFakeWindow();
@@ -1565,9 +1633,17 @@ function testWallpaperPreloadUsesTheCachedResolvedMode() {
         id: 'dark-shanshui-moonlit',
         path: 'assets/wallpapers/lumno-newtab-dark-shanshui-moonlit.webp'
       }
+    },
+    wallpaperEffects: {
+      light: { type: 'grain', spacing: -20, crtSpacing: 73, crtGrain: 9 },
+      dark: { type: 'grain', spacing: 240, crtSpacing: 73, crtGrain: 9 }
     }
   }));
-  runWallpaperPreload(documentObj, windowObj);
+  const preloadSandbox = runWallpaperPreload(documentObj, windowObj);
+  const preloadedEffectPrefs = await preloadSandbox.LumnoNewtabWallpaperPreload.effectPrefsReady;
+  assert.strictEqual(preloadedEffectPrefs.spacing, 100);
+  assert.strictEqual(preloadedEffectPrefs.crtSpacing, undefined);
+  assert.strictEqual(preloadedEffectPrefs.crtGrain, undefined);
 
   const preloadedImage = documentObj.documentElement.style.getPropertyValue('--x-nt-wallpaper-image');
   assert.ok(
@@ -1761,7 +1837,7 @@ function createWallpaperSandbox(options) {
       }
     },
     LumnoNewtabWallpaperAdaptiveTone: {},
-    LumnoNewtabWallpaperEffects: {},
+    LumnoNewtabWallpaperEffects: options && options.effectsApi ? options.effectsApi : {},
     LumnoNewtabWallpaperLocalStore: options && options.localStoreApi ? options.localStoreApi : {},
     LumnoNewtabWallpaperView: {
       createController: createFakeWallpaperViewController
@@ -1894,17 +1970,22 @@ const appearanceButton = control.children[1];
 appearanceButton.click();
 const renderedPanel = control.children[0];
 const rangeSliderRows = renderedPanel.querySelectorAll('.x-nt-range-slider-row');
-assert.strictEqual(rangeSliderRows.length, 7, 'every New Tab slider should include an editable numeric value');
+assert.strictEqual(rangeSliderRows.length, 11, 'every New Tab slider should include an editable numeric value');
 rangeSliderRows.forEach((row) => {
   const rowSlider = row.querySelector('input[type="range"]');
   const rowValueInput = row.querySelector('input[type="number"]');
   assert.ok(rowSlider, 'each shared slider row should contain a range input');
   assert.ok(rowValueInput, 'each shared slider row should contain a number input');
-  assert.strictEqual(
-    rowValueInput.max,
-    rowSlider.max,
-    'each numeric value should inherit the maximum from its slider'
-  );
+  if (rowSlider.getAttribute('data-wallpaper-dynamic-range') === 'true') {
+    assert.strictEqual(rowValueInput.getAttribute('min'), null);
+    assert.strictEqual(rowValueInput.getAttribute('max'), null);
+  } else {
+    assert.strictEqual(
+      rowValueInput.max,
+      rowSlider.max,
+      'bounded numeric values should inherit the maximum from their slider'
+    );
+  }
 });
 const appearanceHeader = getChildByClassName(renderedPanel, 'x-nt-appearance-header');
 const appearanceScrollBody = getChildByClassName(renderedPanel, 'x-nt-wallpaper-panel-scroll');
@@ -3063,6 +3144,455 @@ async function testWallpaperEffectInkToneControlPersistsAndFollowsEffectType() {
   );
 }
 
+async function testBlocksExposeReliefControls() {
+  const storageArea = createMemoryStorage({});
+  const { documentObj: testDocument, windowObj: testWindow, sandbox: testSandbox } =
+    createWallpaperSandbox();
+  const testRuntime = testSandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
+    documentObj: testDocument,
+    windowObj: testWindow,
+    storageArea,
+    storageKeys: { effect: WALLPAPER_EFFECT_STORAGE_KEY },
+    t: (_key, fallback) => fallback || '',
+    getRiSvg: () => ''
+  });
+
+  testRuntime.createControls();
+  testRuntime.getControlElement().children[1].click();
+  await testRuntime.bootstrapInitialWallpaperEffect();
+  const control = testRuntime.getControlElement();
+  const blocksButton = getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'blocks');
+  const inkToneControl = getDescendantByClassName(control, 'x-nt-effect-ink-tone-control');
+
+  assert.ok(blocksButton, 'the appearance panel should include the Blocks filter');
+  blocksButton.click();
+  assert.strictEqual(blocksButton.getAttribute('aria-pressed'), 'true');
+  assert.strictEqual(testDocument.body.getAttribute('data-wallpaper-effect'), 'blocks');
+  [
+    ['effectSizeControl', 'effectSizeLabel', 'Block size']
+  ].forEach(([controlRef, labelRef, label]) => {
+    assert.strictEqual(
+      getDescendantByAttribute(control, 'data-wallpaper-ref', controlRef).getAttribute('data-visible'),
+      'true',
+      `${label} should be visible for Blocks`
+    );
+    assert.strictEqual(
+      getDescendantByAttribute(control, 'data-wallpaper-ref', labelRef).textContent,
+      label
+    );
+  });
+  assert.strictEqual(
+    inkToneControl.getAttribute('data-visible'),
+    'false',
+    'Blocks should preserve wallpaper colors instead of exposing an ink-tone override'
+  );
+  assert.strictEqual(
+    getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectStrengthControl').getAttribute('data-visible'),
+    'false',
+    'fixed full-height relief should not render a redundant adjustment'
+  );
+  assert.strictEqual(
+    getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectTextureControl').getAttribute('data-visible'),
+    'false',
+    'fixed full-detail color should not render a redundant adjustment'
+  );
+  assert.strictEqual(
+    getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectSpacingControl').getAttribute('data-visible'),
+    'false',
+    'fixed zero block spacing should not render a redundant adjustment'
+  );
+  const sizeSlider = getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectSizeSlider');
+  assert.strictEqual(sizeSlider.max, '5');
+  assert.strictEqual(sizeSlider.step, '1');
+  assert.strictEqual(sizeSlider.getAttribute('data-value-suffix'), null);
+  assert.strictEqual(sizeSlider.closest('.x-nt-range-slider-row').getAttribute('data-value-suffix'), null);
+  assert.strictEqual(sizeSlider.value, '1', 'Blocks should start at the first size level');
+  sizeSlider.value = '5';
+  sizeSlider._listeners.input.forEach((listener) => listener({ target: sizeSlider }));
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.type, 'blocks');
+  assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].dark.type, 'blocks');
+  assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.strength, 100);
+  assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.texture, 100);
+  assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.size, 5);
+  assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.spacing, 0);
+}
+
+async function testGlassBlurCanBeEnabledAndDisabled() {
+  const storageArea = createMemoryStorage({
+    [WALLPAPER_EFFECT_STORAGE_KEY]: {
+      version: 4,
+      light: {
+        version: 4,
+        type: 'none',
+        inkTone: 'auto',
+        strength: 50,
+        size: 50,
+        spacing: 50
+      },
+      dark: {
+        version: 4,
+        type: 'none',
+        inkTone: 'auto',
+        strength: 50,
+        size: 50,
+        spacing: 50
+      }
+    }
+  });
+  const { documentObj: testDocument, windowObj: testWindow, sandbox: testSandbox } =
+    createWallpaperSandbox();
+  const testRuntime = testSandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
+    documentObj: testDocument,
+    windowObj: testWindow,
+    storageArea,
+    storageKeys: { effect: WALLPAPER_EFFECT_STORAGE_KEY },
+    t: (_key, fallback) => fallback || '',
+    getRiSvg: () => ''
+  });
+
+  testRuntime.createControls();
+  testRuntime.getControlElement().children[1].click();
+  await testRuntime.bootstrapInitialWallpaperEffect();
+  const control = testRuntime.getControlElement();
+  const blurButton = getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'blur');
+  const sizeControl = getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectSizeControl');
+  const spacingControl = getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectSpacingControl');
+  const strengthValueInput = getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectStrengthSliderValueInput');
+  const textureSlider = getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectTextureSlider');
+  const textureLabel = getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectTextureLabel');
+  const textureValueInput = getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectTextureSliderValueInput');
+  const offButton = getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'none');
+
+  blurButton.click();
+  assert.strictEqual(blurButton.getAttribute('aria-pressed'), 'true');
+  assert.strictEqual(testDocument.body.getAttribute('data-wallpaper-effect'), 'blur');
+  assert.strictEqual(
+    getDescendantByAttribute(control, 'data-wallpaper-blur-style', 'standard'),
+    null,
+    'a single standard texture style should not render a redundant style selector'
+  );
+  assert.strictEqual(sizeControl.getAttribute('data-visible'), 'false');
+  assert.strictEqual(spacingControl.getAttribute('data-visible'), 'false');
+  assert.strictEqual(textureSlider.getAttribute('data-wallpaper-dynamic-range'), null);
+  assert.strictEqual(String(textureValueInput.min), '0');
+  assert.strictEqual(String(textureValueInput.max), '100');
+  assert.strictEqual(textureLabel.textContent, 'Texture');
+  textureValueInput.value = '180.75';
+  textureValueInput.blur();
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  assert.strictEqual(
+    storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.texture,
+    100,
+    'standard glass texture should clamp typed values to 0–100'
+  );
+  strengthValueInput.value = '150';
+  strengthValueInput.blur();
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.type, 'blur');
+  assert.strictEqual(
+    storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.strength,
+    100,
+    'bounded strength should keep its existing 0–100 contract'
+  );
+  offButton.click();
+  assert.strictEqual(offButton.getAttribute('aria-pressed'), 'true');
+  assert.strictEqual(testDocument.body.getAttribute('data-wallpaper-effect'), 'none');
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.type, 'none');
+  assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].dark.type, 'none');
+}
+
+async function testGlassBlurFilterSwitchPreservesTheOutgoingFrame() {
+  const storageArea = createMemoryStorage({
+    [WALLPAPER_EFFECT_STORAGE_KEY]: {
+      version: 7,
+      light: { version: 7, type: 'grain', strength: 50, size: 50, spacing: 50, texture: 20 },
+      dark: { version: 7, type: 'grain', strength: 50, size: 50, spacing: 50, texture: 20 }
+    }
+  });
+  let resolveBlurRender;
+  const blurRenderReady = new Promise((resolve) => {
+    resolveBlurRender = resolve;
+  });
+  const effectsApi = {
+    DEFAULT_PREFS: { version: 7, type: 'none', strength: 50, size: 50, spacing: 50, texture: 20 },
+    normalizePrefs(value) {
+      return Object.assign({}, this.DEFAULT_PREFS, value || {});
+    },
+    createWallpaperEffects() {
+      return {
+        apply(prefs) {
+          return prefs.type === 'blur' ? blurRenderReady : Promise.resolve();
+        },
+        refresh() {
+          return Promise.resolve();
+        }
+      };
+    }
+  };
+  const { documentObj: testDocument, windowObj: testWindow, sandbox: testSandbox } =
+    createWallpaperSandbox({ effectsApi });
+  testWindow.__setMediaMatchSilently('(prefers-reduced-motion: reduce)', false);
+  const testRuntime = testSandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
+    documentObj: testDocument,
+    windowObj: testWindow,
+    storageArea,
+    storageKeys: { effect: WALLPAPER_EFFECT_STORAGE_KEY },
+    t: (_key, fallback) => fallback || '',
+    getRiSvg: () => ''
+  });
+
+  testRuntime.createControls();
+  testRuntime.getControlElement().children[1].click();
+  await testRuntime.bootstrapInitialWallpaperEffect();
+  testDocument.body.setAttribute('data-nt-enter', 'done');
+  const control = testRuntime.getControlElement();
+  const blurButton = getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'blur');
+  const grainButton = getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'grain');
+
+  assert.strictEqual(testDocument.body.getAttribute('data-wallpaper-effect'), 'grain');
+  blurButton.click();
+  const enteringSnapshot = getDescendantByClassName(
+    testDocument.body,
+    'x-nt-wallpaper-transition-layer'
+  );
+  assert.ok(enteringSnapshot, 'entering glass blur should preserve the outgoing wallpaper frame');
+  assert.strictEqual(enteringSnapshot.getAttribute('data-exit'), null);
+  assert.strictEqual(testDocument.body.getAttribute('data-wallpaper-effect'), 'blur');
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.strictEqual(
+    enteringSnapshot.getAttribute('data-exit'),
+    null,
+    'the outgoing frame must remain opaque until the blurred background and texture are rendered'
+  );
+  resolveBlurRender();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.strictEqual(
+    enteringSnapshot.getAttribute('data-exit'),
+    'true',
+    'the outgoing frame should begin fading on the frame after the glass render completes'
+  );
+
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  assert.strictEqual(enteringSnapshot.parentNode, null);
+  const blurSnapshotProperties = {
+    '--x-nt-wallpaper-blur-overscan': '42px',
+    '--x-nt-wallpaper-blur-radius': '18px',
+    '--x-nt-wallpaper-blur-saturate': '110%',
+    '--x-nt-wallpaper-blur-brightness': '106%',
+    '--x-nt-wallpaper-blur-contrast': '84%'
+  };
+  Object.entries(blurSnapshotProperties).forEach(([name, value]) => {
+    testDocument.body.style.setProperty(name, value);
+  });
+  grainButton.click();
+  const leavingSnapshot = getDescendantByClassName(
+    testDocument.body,
+    'x-nt-wallpaper-transition-layer'
+  );
+  assert.ok(leavingSnapshot, 'leaving glass blur should preserve the blurred outgoing frame');
+  assert.strictEqual(leavingSnapshot.getAttribute('data-wallpaper-effect'), 'blur');
+  Object.entries(blurSnapshotProperties).forEach(([name, value]) => {
+    assert.strictEqual(
+      leavingSnapshot.style.getPropertyValue(name),
+      value,
+      `${name} should be frozen on the outgoing blur snapshot`
+    );
+  });
+  assert.strictEqual(testDocument.body.getAttribute('data-wallpaper-effect'), 'grain');
+}
+
+async function testCrtFilterPersistsAndShowsDisplayControls() {
+  assert.strictEqual(
+    sandbox.LumnoNewtabWallpaper.normalizeWallpaperEffectStoragePrefs({ type: 'crt' }).light.type,
+    'crt',
+    'the storage fallback should preserve CRT before the renderer module is available'
+  );
+  const storageArea = createMemoryStorage({
+    [WALLPAPER_EFFECT_STORAGE_KEY]: {
+      version: 7,
+      light: { version: 7, type: 'none', strength: 50, size: 50, spacing: 240, texture: 20 },
+      dark: { version: 7, type: 'none', strength: 50, size: 50, spacing: 240, texture: 20 }
+    }
+  });
+  const { documentObj: testDocument, windowObj: testWindow, sandbox: testSandbox } =
+    createWallpaperSandbox();
+  const testRuntime = testSandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
+    documentObj: testDocument,
+    windowObj: testWindow,
+    storageArea,
+    storageKeys: { effect: WALLPAPER_EFFECT_STORAGE_KEY },
+    t: (_key, fallback) => fallback || '',
+    getRiSvg: () => ''
+  });
+
+  testRuntime.createControls();
+  testRuntime.getControlElement().children[1].click();
+  await testRuntime.bootstrapInitialWallpaperEffect();
+  const control = testRuntime.getControlElement();
+  const crtButton = getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'crt');
+  assert.ok(crtButton, 'the wallpaper filter picker should expose CRT');
+  crtButton.click();
+  assert.strictEqual(testDocument.body.getAttribute('data-wallpaper-effect'), 'crt');
+  assert.strictEqual(
+    getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectSizeControl').getAttribute('data-visible'),
+    'false',
+    'CRT should use a preset-specific fixed phosphor grille instead of exposing its size'
+  );
+  assert.strictEqual(
+    getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectSpacingControl').getAttribute('data-visible'),
+    'false',
+    'CRT should use a fixed two-pixel scanline instead of exposing spacing'
+  );
+  assert.strictEqual(
+    getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectTextureControl').getAttribute('data-visible'),
+    'false'
+  );
+  assert.strictEqual(
+    getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectStrengthLabel').textContent,
+    'Display intensity'
+  );
+  assert.strictEqual(
+    getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectCrtPresetControl'),
+    null,
+    'RGB-only CRT should not render a redundant style selector'
+  );
+  assert.strictEqual(
+    getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectCrtGrainControl'),
+    null,
+    'electron grain should no longer be rendered as a setting'
+  );
+  [
+    ['effectCrtBloomControl', 'effectCrtBloomLabel', 'Bloom'],
+    ['effectCrtRgbOffsetControl', 'effectCrtRgbOffsetLabel', 'RGB offset'],
+    ['effectCrtCurvatureControl', 'effectCrtCurvatureLabel', 'Screen curvature']
+  ].forEach(([controlRef, labelRef, label]) => {
+    assert.strictEqual(
+      getDescendantByAttribute(control, 'data-wallpaper-ref', controlRef).getAttribute('data-visible'),
+      'true'
+    );
+    assert.strictEqual(
+      getDescendantByAttribute(control, 'data-wallpaper-ref', labelRef).textContent,
+      label
+    );
+  });
+  const strengthValueInput = getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectStrengthSliderValueInput');
+  strengthValueInput.value = '50';
+  strengthValueInput.blur();
+  const bloomValueInput = getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectCrtBloomSliderValueInput');
+  bloomValueInput.value = '140';
+  bloomValueInput._listeners.input.forEach((listener) => listener({ target: bloomValueInput }));
+  assert.strictEqual(bloomValueInput.value, '100', 'bounded CRT percentages should clamp while typing');
+  bloomValueInput.blur();
+  const curvatureValueInput = getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectCrtCurvatureSliderValueInput');
+  curvatureValueInput.value = '50';
+  curvatureValueInput.blur();
+  assert.strictEqual(
+    getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectCrtCurvatureSlider').value,
+    '50',
+    'fractional physical values should round-trip back to the same UI percentage'
+  );
+  const rgbOffsetValueInput = getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectCrtRgbOffsetSliderValueInput');
+  rgbOffsetValueInput.value = '50';
+  rgbOffsetValueInput.blur();
+  assert.strictEqual(String(getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectStrengthSlider').max), '100');
+  assert.strictEqual(String(getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectCrtBloomSlider').max), '100');
+  assert.strictEqual(String(getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectCrtCurvatureSlider').max), '100');
+  [
+    'effectStrengthSlider',
+    'effectCrtBloomSlider',
+    'effectCrtCurvatureSlider'
+  ].forEach((sliderRef) => {
+    const rangeSlider = getDescendantByAttribute(control, 'data-wallpaper-ref', sliderRef);
+    const row = rangeSlider.closest('.x-nt-range-slider-row');
+    assert.strictEqual(
+      row.querySelector('.x-nt-overlay-tick[data-overlay-tick="default"]').textContent,
+      '50%',
+      'CRT percentages should label the actual midpoint instead of implying it is the preset default'
+    );
+    assert.strictEqual(
+      row.querySelector('.x-nt-overlay-tick[data-align="end"]').textContent,
+      '100%'
+    );
+  });
+  [
+    'effectStrengthSlider',
+    'effectCrtBloomSlider',
+    'effectCrtRgbOffsetSlider',
+    'effectCrtCurvatureSlider'
+  ].forEach((sliderRef) => {
+    const rangeSlider = getDescendantByAttribute(control, 'data-wallpaper-ref', sliderRef);
+    assert.strictEqual(
+      rangeSlider.closest('.x-nt-range-slider-row').getAttribute('data-value-suffix'),
+      '%',
+      'CRT parameter values should visibly use percentage units'
+    );
+    assert.strictEqual(
+      rangeSlider.getAttribute('data-value-suffix'),
+      '%',
+      'CRT slider bubbles should include the percentage suffix'
+    );
+  });
+  const grainButton = getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'grain');
+  grainButton.click();
+  assert.strictEqual(
+    getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectSpacingSlider').getAttribute('data-wallpaper-dynamic-range'),
+    null,
+    'non-CRT filter spacing should remain bounded to prevent accidental values'
+  );
+  assert.strictEqual(
+    getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectSpacingSlider').max,
+    '100'
+  );
+  assert.strictEqual(
+    getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectSpacingSlider').value,
+    '100',
+    'legacy out-of-range spacing should render at the safe UI boundary'
+  );
+  assert.strictEqual(
+    storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.spacing,
+    100,
+    'normalized spacing should remain within the shared slider range'
+  );
+  const genericSpacingSlider = getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectSpacingSlider');
+  assert.strictEqual(genericSpacingSlider.getAttribute('data-value-suffix'), '%');
+  assert.strictEqual(genericSpacingSlider.closest('.x-nt-range-slider-row').getAttribute('data-value-suffix'), '%');
+  const genericSpacingInput = getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectSpacingSliderValueInput');
+  genericSpacingInput.value = '240';
+  genericSpacingInput._listeners.input.forEach((listener) => listener({ target: genericSpacingInput }));
+  assert.strictEqual(genericSpacingInput.value, '100', 'other filter spacing should clamp accidental values');
+  genericSpacingInput.blur();
+  crtButton.click();
+  assert.strictEqual(
+    getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectSpacingControl').getAttribute('data-visible'),
+    'false',
+    'returning to CRT should keep the removed spacing control hidden'
+  );
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.type, 'crt');
+  assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].dark.type, 'crt');
+  assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.crtPreset, undefined);
+  assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].dark.crtPreset, undefined);
+  assert.strictEqual(
+    storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.strength,
+    10,
+    '50% display intensity should map to half of its physical 20-unit range'
+  );
+  assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.crtBloom, 20);
+  assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.crtRgbOffset, 50);
+  assert.strictEqual(
+    storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.crtCurvature,
+    17.5,
+    '50% curvature should map to half of its physical 35-unit range'
+  );
+  assert.strictEqual(
+    storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.spacing,
+    100,
+    'other filter spacing should persist only within the bounded range'
+  );
+}
+
 Promise.resolve()
   .then(() => {
     assertBrandMarkCopy();
@@ -3089,6 +3619,10 @@ Promise.resolve()
   .then(testNewtabFaviconOptionsRenderBelowLogoAndPersistSelection)
   .then(testNewtabFaviconThemeBroadcastRefreshesBackgroundTabs)
   .then(testWallpaperEffectInkToneControlPersistsAndFollowsEffectType)
+  .then(testBlocksExposeReliefControls)
+  .then(testGlassBlurCanBeEnabledAndDisabled)
+  .then(testGlassBlurFilterSwitchPreservesTheOutgoingFrame)
+  .then(testCrtFilterPersistsAndShowsDisplayControls)
   .then(() => {
     console.log('newtab wallpaper panel tests passed');
   })

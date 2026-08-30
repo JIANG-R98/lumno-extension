@@ -18,25 +18,55 @@
   };
   const PRELOAD_STORAGE_KEY = '_x_extension_newtab_wallpaper_preload_2026_unique_';
   const PRELOAD_STORAGE_VERSION = 4;
-  const WALLPAPER_EFFECT_MODE_STORAGE_VERSION = 4;
+  const WALLPAPER_EFFECT_MODE_STORAGE_VERSION = 10;
   const NEWTAB_TIME_FONT_WEIGHT_MIN = Number(SETTINGS.NEWTAB_TIME_FONT_WEIGHT_MIN) || 300;
   const NEWTAB_TIME_FONT_WEIGHT_MAX = Number(SETTINGS.NEWTAB_TIME_FONT_WEIGHT_MAX) || 800;
   const NEWTAB_TIME_FONT_WEIGHT_DEFAULT = Number(SETTINGS.NEWTAB_TIME_FONT_WEIGHT_DEFAULT) || 320;
   const FALLBACK_WALLPAPER_EFFECT_PREFS = {
-    version: 4,
+    version: 10,
     type: 'none',
     inkTone: 'auto',
     strength: 50,
     size: 50,
-    spacing: 50
+    spacing: 50,
+    texture: 20,
+    crtBloom: 15,
+    crtRgbOffset: 35,
+    crtCurvature: 18
   };
+  const CRT_PARAMETER_PHYSICAL_MAX = Object.freeze({
+    strength: 20,
+    crtBloom: 20,
+    crtRgbOffset: 100,
+    crtCurvature: 35
+  });
+  const BLOCK_PARAMETER_MAX = 5;
+  const BLOCK_DEFAULT_SIZE_UI = 1;
+
+  function getCrtParameterPercent(key, value) {
+    const physicalMax = CRT_PARAMETER_PHYSICAL_MAX[key];
+    const number = Number(value);
+    if (!Number.isFinite(physicalMax) || !Number.isFinite(number) || physicalMax <= 0) {
+      return 0;
+    }
+    return Math.round(Math.max(0, Math.min(100, (number / physicalMax) * 100)));
+  }
+
+  function getCrtParameterPhysicalValue(key, percent) {
+    const physicalMax = CRT_PARAMETER_PHYSICAL_MAX[key];
+    const number = Number(percent);
+    if (!Number.isFinite(physicalMax) || !Number.isFinite(number) || physicalMax <= 0) {
+      return 0;
+    }
+    return Math.round((Math.max(0, Math.min(100, number)) / 100) * physicalMax * 1000) / 1000;
+  }
 
   function normalizeSingleWallpaperEffectPrefs(value) {
     if (typeof WALLPAPER_EFFECTS.normalizePrefs === 'function') {
       return WALLPAPER_EFFECTS.normalizePrefs(value);
     }
     const source = value && typeof value === 'object' ? value : {};
-    const type = ['none', 'grain', 'halftone', 'dither', 'ascii'].includes(source.type)
+    const type = ['none', 'blur', 'grain', 'blocks', 'halftone', 'dither', 'ascii', 'crt'].includes(source.type)
       ? source.type
       : FALLBACK_WALLPAPER_EFFECT_PREFS.type;
     const normalizePercent = (raw, fallback) => {
@@ -45,6 +75,16 @@
         ? Math.max(0, Math.min(100, Math.round(number)))
         : fallback;
     };
+    const normalizeCrtPhysical = (raw, fallback, max) => {
+      const number = Number(raw);
+      const bounded = Number.isFinite(number) ? Math.max(0, Math.min(max, number)) : fallback;
+      return Math.round(bounded * 1000) / 1000;
+    };
+    const normalizeBlockParameter = (raw, fallback) => {
+      const number = Number(raw);
+      if (!Number.isFinite(number)) return fallback;
+      return Math.max(0, Math.min(BLOCK_PARAMETER_MAX, Math.round(number)));
+    };
     const rawSize = Number.isFinite(Number(source.size)) ? source.size : source.density;
     return {
       version: FALLBACK_WALLPAPER_EFFECT_PREFS.version,
@@ -52,13 +92,37 @@
       inkTone: ['auto', 'dark', 'light'].includes(source.inkTone)
         ? source.inkTone
         : FALLBACK_WALLPAPER_EFFECT_PREFS.inkTone,
-      strength: normalizePercent(source.strength, FALLBACK_WALLPAPER_EFFECT_PREFS.strength),
-      size: normalizePercent(rawSize, FALLBACK_WALLPAPER_EFFECT_PREFS.size),
-      spacing: normalizePercent(source.spacing, FALLBACK_WALLPAPER_EFFECT_PREFS.spacing)
+      strength: type === 'blocks'
+        ? 100
+        : (type === 'crt'
+          ? normalizeCrtPhysical(source.strength, 20, 20)
+          : normalizePercent(source.strength, FALLBACK_WALLPAPER_EFFECT_PREFS.strength)),
+      size: type === 'blocks'
+        ? normalizeBlockParameter(source.size, BLOCK_DEFAULT_SIZE_UI)
+        : normalizePercent(rawSize, FALLBACK_WALLPAPER_EFFECT_PREFS.size),
+      spacing: type === 'blocks'
+        ? 0
+        : normalizePercent(source.spacing, FALLBACK_WALLPAPER_EFFECT_PREFS.spacing),
+      texture: type === 'blocks'
+        ? 100
+        : normalizePercent(source.texture, FALLBACK_WALLPAPER_EFFECT_PREFS.texture),
+      crtBloom: normalizeCrtPhysical(source.crtBloom, FALLBACK_WALLPAPER_EFFECT_PREFS.crtBloom, 20),
+      crtRgbOffset: normalizePercent(
+        source.crtRgbOffset,
+        FALLBACK_WALLPAPER_EFFECT_PREFS.crtRgbOffset
+      ),
+      crtCurvature: normalizeCrtPhysical(
+        source.crtCurvature,
+        FALLBACK_WALLPAPER_EFFECT_PREFS.crtCurvature,
+        35
+      )
     };
   }
 
   function normalizeWallpaperEffectStoragePrefs(value) {
+    if (typeof WALLPAPER_EFFECTS.normalizeStoragePrefs === 'function') {
+      return WALLPAPER_EFFECTS.normalizeStoragePrefs(value);
+    }
     const source = value && typeof value === 'object' ? value : null;
     const hasModePrefs = Boolean(source &&
       ((source.light && typeof source.light === 'object') ||
@@ -386,19 +450,26 @@
       dark: { top: 44, mid: 20, bottom: 50 }
     };
     const NEWTAB_WALLPAPER_EFFECT_DEFAULTS = WALLPAPER_EFFECTS.DEFAULT_PREFS || {
-      version: 4,
+      version: 10,
       type: 'none',
       inkTone: 'auto',
       strength: 50,
       size: 50,
-      spacing: 50
+      spacing: 50,
+      texture: 20,
+      crtBloom: 15,
+      crtRgbOffset: 35,
+      crtCurvature: 18
     };
     const NEWTAB_WALLPAPER_EFFECT_TYPES = [
       { type: 'none', labelKey: 'newtab_wallpaper_effect_none', fallback: 'Off' },
+      { type: 'blur', labelKey: 'newtab_wallpaper_effect_blur', fallback: 'Glass blur' },
       { type: 'grain', labelKey: 'newtab_wallpaper_effect_grain', fallback: 'Grain' },
+      { type: 'blocks', labelKey: 'newtab_wallpaper_effect_blocks', fallback: 'Blocks' },
       { type: 'halftone', labelKey: 'newtab_wallpaper_effect_halftone', fallback: 'Halftone' },
       { type: 'dither', labelKey: 'newtab_wallpaper_effect_dither', fallback: 'Dither' },
-      { type: 'ascii', labelKey: 'newtab_wallpaper_effect_ascii', fallback: 'ASCII' }
+      { type: 'ascii', labelKey: 'newtab_wallpaper_effect_ascii', fallback: 'ASCII' },
+      { type: 'crt', labelKey: 'newtab_wallpaper_effect_crt', fallback: 'CRT' }
     ];
     const NEWTAB_WALLPAPER_EFFECT_INK_TONES = [
       { tone: 'dark', labelKey: 'newtab_wallpaper_effect_ink_dark', fallback: 'Shadows' },
@@ -445,6 +516,7 @@
     const WALLPAPER_PANEL_RESIZE_DURATION_MS = 260;
     const WALLPAPER_PANEL_RESIZE_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
     const WALLPAPER_VISUAL_TRANSITION_MS = 220;
+    const WALLPAPER_FILTER_TRANSITION_MS = 180;
     const WALLPAPER_VISUAL_REFRESH_DELAY_MS = 80;
     const WALLPAPER_IMAGE_READY_CACHE_LIMIT = 8;
 
@@ -536,6 +608,18 @@
     let wallpaperEffectSpacingControl = null;
     let wallpaperEffectSpacingLabel = null;
     let wallpaperEffectSpacingSlider = null;
+    let wallpaperEffectTextureControl = null;
+    let wallpaperEffectTextureLabel = null;
+    let wallpaperEffectTextureSlider = null;
+    let wallpaperEffectCrtBloomControl = null;
+    let wallpaperEffectCrtBloomLabel = null;
+    let wallpaperEffectCrtBloomSlider = null;
+    let wallpaperEffectCrtRgbOffsetControl = null;
+    let wallpaperEffectCrtRgbOffsetLabel = null;
+    let wallpaperEffectCrtRgbOffsetSlider = null;
+    let wallpaperEffectCrtCurvatureControl = null;
+    let wallpaperEffectCrtCurvatureLabel = null;
+    let wallpaperEffectCrtCurvatureSlider = null;
     let newtabFaviconTitle = null;
     let newtabFaviconOptions = null;
     let newtabFaviconThemeQueryList = null;
@@ -1436,9 +1520,31 @@
       const layer = document.createElement('div');
       layer.className = 'x-nt-wallpaper-transition-layer';
       layer.style.backgroundColor = computedStyle.backgroundColor;
-      layer.style.backgroundImage = computedStyle.backgroundImage;
-      layer.style.backgroundSize = computedStyle.backgroundSize;
-      layer.style.backgroundPosition = computedStyle.backgroundPosition;
+      if (document.body.getAttribute('data-wallpaper-effect') === 'blur') {
+        layer.setAttribute('data-wallpaper-effect', 'blur');
+        layer.style.backgroundImage =
+          computedStyle.getPropertyValue('--x-nt-wallpaper-image').trim() || 'none';
+        layer.style.backgroundSize =
+          computedStyle.getPropertyValue('--x-nt-wallpaper-size').trim() || 'cover';
+        layer.style.backgroundPosition =
+          computedStyle.getPropertyValue('--x-nt-wallpaper-position').trim() || 'center center';
+        [
+          '--x-nt-wallpaper-blur-overscan',
+          '--x-nt-wallpaper-blur-radius',
+          '--x-nt-wallpaper-blur-saturate',
+          '--x-nt-wallpaper-blur-brightness',
+          '--x-nt-wallpaper-blur-contrast'
+        ].forEach((propertyName) => {
+          const propertyValue = computedStyle.getPropertyValue(propertyName).trim();
+          if (propertyValue) {
+            layer.style.setProperty(propertyName, propertyValue);
+          }
+        });
+      } else {
+        layer.style.backgroundImage = computedStyle.backgroundImage;
+        layer.style.backgroundSize = computedStyle.backgroundSize;
+        layer.style.backgroundPosition = computedStyle.backgroundPosition;
+      }
       layer.style.backgroundRepeat = computedStyle.backgroundRepeat;
       layer.style.backgroundAttachment = 'fixed';
       document.body.insertBefore(layer, document.body.firstChild);
@@ -1455,7 +1561,9 @@
           if (layer.parentNode) {
             layer.parentNode.removeChild(layer);
           }
-        }, WALLPAPER_VISUAL_TRANSITION_MS + 80);
+        }, (layer.getAttribute('data-wallpaper-filter-transition') === 'true'
+          ? WALLPAPER_FILTER_TRANSITION_MS
+          : WALLPAPER_VISUAL_TRANSITION_MS) + 80);
       });
     }
 
@@ -2092,12 +2200,27 @@
       if (!slider) {
         return;
       }
+      if (typeof config.dynamicRange === 'boolean') {
+        if (config.dynamicRange) {
+          slider.setAttribute('data-wallpaper-dynamic-range', 'true');
+          slider.step = 'any';
+        } else {
+          slider.removeAttribute('data-wallpaper-dynamic-range');
+          slider.min = String(Number.isFinite(Number(config.min)) ? Number(config.min) : 0);
+          slider.max = String(Number.isFinite(Number(config.max)) ? Number(config.max) : 100);
+          slider.step = '1';
+        }
+      }
       const value = Number(config.value);
       const normalizedValue = Number.isFinite(value) ? value : 0;
+      ensureDynamicWallpaperSliderRange(slider, normalizedValue, false);
       slider.value = String(normalizedValue);
-      slider.style.setProperty('--x-nt-overlay-slider-percent', `${normalizedValue}%`);
+      updateWallpaperSliderFill(slider, normalizedValue);
       slider.setAttribute('aria-valuenow', String(normalizedValue));
-      slider.setAttribute('aria-valuetext', `${normalizedValue}%`);
+      slider.setAttribute(
+        'aria-valuetext',
+        config.percent === true ? `${normalizedValue}%` : String(normalizedValue)
+      );
       if (typeof config.enabled === 'boolean') {
         slider.disabled = !config.enabled;
         if (slider.parentElement) {
@@ -2109,6 +2232,34 @@
       }
       syncWallpaperSliderValueInput(slider);
       syncWallpaperSliderValueBubble(slider);
+      const sliderRow = typeof slider.closest === 'function'
+        ? slider.closest('.x-nt-range-slider-row')
+        : null;
+      if (sliderRow) {
+        if (config.percent === true) {
+          sliderRow.setAttribute('data-value-suffix', '%');
+          slider.setAttribute('data-value-suffix', '%');
+        } else {
+          sliderRow.removeAttribute('data-value-suffix');
+          slider.removeAttribute('data-value-suffix');
+        }
+      }
+      const endTick = sliderRow
+        ? sliderRow.querySelector('.x-nt-overlay-tick[data-align="end"]')
+        : null;
+      if (endTick && !isDynamicWallpaperSlider(slider)) {
+        endTick.textContent = Number(slider.max) === 100 ? '100%' : slider.max;
+      }
+      const middleTick = sliderRow
+        ? sliderRow.querySelector('.x-nt-overlay-tick[data-overlay-tick="default"]')
+        : null;
+      if (middleTick && !isDynamicWallpaperSlider(slider)) {
+        middleTick.textContent = config.percent === true
+          ? `${Math.round((Number(slider.min) + Number(slider.max)) / 2)}%`
+          : Number(slider.max) === 100
+          ? t('newtab_wallpaper_overlay_default_tick', 'Default')
+          : String(Math.round((Number(slider.min) + Number(slider.max)) / 2));
+      }
     }
 
     function getWallpaperSliderValueInput(slider) {
@@ -2121,14 +2272,64 @@
         : null;
     }
 
+    function isDynamicWallpaperSlider(slider) {
+      return Boolean(slider && slider.getAttribute('data-wallpaper-dynamic-range') === 'true');
+    }
+
+    function ensureDynamicWallpaperSliderRange(slider, value, recenterAtEdge) {
+      if (!isDynamicWallpaperSlider(slider) || !Number.isFinite(Number(value))) {
+        return false;
+      }
+      const number = Number(value);
+      const currentMin = Number(slider.min);
+      const currentMax = Number(slider.max);
+      const hasRange = Number.isFinite(currentMin) && Number.isFinite(currentMax) && currentMax > currentMin;
+      const outside = !hasRange || number < currentMin || number > currentMax;
+      const atEdge = hasRange && (number <= currentMin || number >= currentMax);
+      if (!outside && !(recenterAtEdge && atEdge)) {
+        return false;
+      }
+      const currentRadius = hasRange ? (currentMax - currentMin) / 2 : 50;
+      const radius = Math.max(50, Math.abs(number) * 0.25, currentRadius);
+      const rawMin = number - radius;
+      const rawMax = number + radius;
+      const nextMin = Number.isFinite(rawMin) ? rawMin : -Number.MAX_VALUE;
+      const nextMax = Number.isFinite(rawMax) ? rawMax : Number.MAX_VALUE;
+      if (!(nextMax > nextMin)) {
+        return false;
+      }
+      slider.min = String(nextMin);
+      slider.max = String(nextMax);
+      return true;
+    }
+
+    function updateWallpaperSliderFill(slider, value) {
+      if (!slider || !slider.style) {
+        return;
+      }
+      const min = Number(slider.min);
+      const max = Number(slider.max);
+      const number = Number(value);
+      const percent = Number.isFinite(number) && Number.isFinite(min) && Number.isFinite(max) && max > min
+        ? ((number - min) / (max - min)) * 100
+        : 0;
+      slider.style.setProperty('--x-nt-overlay-slider-percent', `${percent}%`);
+    }
+
     function syncWallpaperSliderValueInput(slider) {
       const valueInput = getWallpaperSliderValueInput(slider);
       if (!valueInput) {
         return;
       }
-      valueInput.min = slider.min;
-      valueInput.max = slider.max;
-      valueInput.step = slider.step;
+      if (isDynamicWallpaperSlider(slider)) {
+        valueInput.removeAttribute('min');
+        valueInput.removeAttribute('max');
+        valueInput.step = 'any';
+      } else {
+        valueInput.min = slider.min;
+        valueInput.max = slider.max;
+        valueInput.step = slider.step;
+      }
       valueInput.value = slider.value;
       valueInput.disabled = Boolean(slider.disabled);
       const label = String(slider.getAttribute('aria-label') || '').trim();
@@ -2151,11 +2352,17 @@
       const min = Number(slider.min);
       const max = Number(slider.max);
       const step = Number(slider.step);
-      const bounded = Math.min(
-        Number.isFinite(max) ? max : number,
-        Math.max(Number.isFinite(min) ? min : number, number)
-      );
-      const nextValue = Number.isFinite(step) && step > 0 && Number.isFinite(min)
+      const dynamicRange = isDynamicWallpaperSlider(slider);
+      if (dynamicRange) {
+        ensureDynamicWallpaperSliderRange(slider, number, false);
+      }
+      const bounded = dynamicRange
+        ? number
+        : Math.min(
+          Number.isFinite(max) ? max : number,
+          Math.max(Number.isFinite(min) ? min : number, number)
+        );
+      const nextValue = !dynamicRange && Number.isFinite(step) && step > 0 && Number.isFinite(min)
         ? min + Math.round((bounded - min) / step) * step
         : bounded;
       slider.value = String(nextValue);
@@ -2175,6 +2382,22 @@
       });
       slider.addEventListener('change', () => {
         syncWallpaperSliderValueInput(slider);
+      });
+      valueInput.addEventListener('input', () => {
+        if (isDynamicWallpaperSlider(slider)) {
+          return;
+        }
+        const number = Number(valueInput.value);
+        const min = Number(slider.min);
+        const max = Number(slider.max);
+        if (!Number.isFinite(number)) {
+          return;
+        }
+        if (Number.isFinite(min) && number < min) {
+          valueInput.value = String(min);
+        } else if (Number.isFinite(max) && number > max) {
+          valueInput.value = String(max);
+        }
       });
       valueInput.addEventListener('blur', () => {
         commitWallpaperSliderValueInput(slider);
@@ -2306,7 +2529,7 @@
     }
 
     function doesWallpaperEffectSupportSize(type) {
-      return type === 'halftone' || type === 'dither' || type === 'ascii';
+      return type === 'blocks' || type === 'halftone' || type === 'dither' || type === 'ascii';
     }
 
     function doesWallpaperEffectSupportSpacing(type) {
@@ -2781,12 +3004,28 @@
     }
 
     function applyWallpaperEffectForResolvedMode() {
-      currentAppliedWallpaperEffectPrefs = getWallpaperEffectPrefsForMode(getResolvedWallpaperMode());
+      const previousType = currentAppliedWallpaperEffectPrefs.type;
+      const nextPrefs = getWallpaperEffectPrefsForMode(getResolvedWallpaperMode());
+      const transitionLayer = previousType !== nextPrefs.type
+        ? createWallpaperTransitionLayer()
+        : null;
+      if (transitionLayer) {
+        transitionLayer.setAttribute('data-wallpaper-filter-transition', 'true');
+      }
+      currentAppliedWallpaperEffectPrefs = nextPrefs;
       if (document.body) {
         document.body.setAttribute('data-wallpaper-effect', currentAppliedWallpaperEffectPrefs.type);
       }
-      if (wallpaperEffects) {
-        wallpaperEffects.apply(currentAppliedWallpaperEffectPrefs);
+      const effectRenderReady = wallpaperEffects
+        ? wallpaperEffects.apply(currentAppliedWallpaperEffectPrefs)
+        : null;
+      if (transitionLayer && effectRenderReady && typeof effectRenderReady.then === 'function') {
+        Promise.resolve(effectRenderReady).then(
+          () => releaseWallpaperTransitionLayer(transitionLayer),
+          () => releaseWallpaperTransitionLayer(transitionLayer)
+        );
+      } else {
+        releaseWallpaperTransitionLayer(transitionLayer);
       }
       updateWallpaperEffectControlUi();
     }
@@ -2800,9 +3039,13 @@
     function getWallpaperEffectControlVisibility(prefs) {
       return {
         inkTone: doesWallpaperEffectSupportInkTone(prefs.type),
-        strength: prefs.type !== 'none',
+        strength: prefs.type !== 'none' && prefs.type !== 'blocks',
         size: doesWallpaperEffectSupportSize(prefs.type),
-        spacing: doesWallpaperEffectSupportSpacing(prefs.type)
+        spacing: doesWallpaperEffectSupportSpacing(prefs.type),
+        texture: prefs.type === 'blur',
+        crtBloom: prefs.type === 'crt',
+        crtRgbOffset: prefs.type === 'crt',
+        crtCurvature: prefs.type === 'crt'
       };
     }
 
@@ -2816,13 +3059,21 @@
         [wallpaperEffectInkToneControl, visibility.inkTone],
         [wallpaperEffectStrengthControl, visibility.strength],
         [wallpaperEffectSizeControl, visibility.size],
-        [wallpaperEffectSpacingControl, visibility.spacing]
+        [wallpaperEffectSpacingControl, visibility.spacing],
+        [wallpaperEffectTextureControl, visibility.texture],
+        [wallpaperEffectCrtBloomControl, visibility.crtBloom],
+        [wallpaperEffectCrtRgbOffsetControl, visibility.crtRgbOffset],
+        [wallpaperEffectCrtCurvatureControl, visibility.crtCurvature]
       ].some((item) => isWallpaperEffectControlVisibilityChanged(item[0], item[1]));
       const applyVisibility = () => {
         setWallpaperEffectSliderControlVisible(wallpaperEffectInkToneControl, visibility.inkTone);
         setWallpaperEffectSliderControlVisible(wallpaperEffectStrengthControl, visibility.strength);
         setWallpaperEffectSliderControlVisible(wallpaperEffectSizeControl, visibility.size);
         setWallpaperEffectSliderControlVisible(wallpaperEffectSpacingControl, visibility.spacing);
+        setWallpaperEffectSliderControlVisible(wallpaperEffectTextureControl, visibility.texture);
+        setWallpaperEffectSliderControlVisible(wallpaperEffectCrtBloomControl, visibility.crtBloom);
+        setWallpaperEffectSliderControlVisible(wallpaperEffectCrtRgbOffsetControl, visibility.crtRgbOffset);
+        setWallpaperEffectSliderControlVisible(wallpaperEffectCrtCurvatureControl, visibility.crtCurvature);
       };
       if (changed) {
         animateWallpaperPanelResize(applyVisibility);
@@ -2877,40 +3128,121 @@
       );
     }
 
+    function getWallpaperEffectStrengthLabel(prefs) {
+      if (prefs.type === 'blur') {
+        return { labelKey: 'newtab_wallpaper_effect_blur_strength', fallback: 'Blur strength' };
+      }
+      if (prefs.type === 'crt') {
+        return { labelKey: 'newtab_wallpaper_effect_crt_strength', fallback: 'Display intensity' };
+      }
+      return { labelKey: 'newtab_wallpaper_effect_strength', fallback: 'Sampling strength' };
+    }
+
+    function getWallpaperEffectSizeLabel(prefs) {
+      if (prefs.type === 'blocks') {
+        return { labelKey: 'newtab_wallpaper_effect_blocks_size', fallback: 'Block size' };
+      }
+      return { labelKey: 'newtab_wallpaper_effect_size', fallback: 'Size' };
+    }
+
+    function getWallpaperEffectSpacingLabel(prefs) {
+      return { labelKey: 'newtab_wallpaper_effect_spacing', fallback: 'Spacing' };
+    }
+
+    function getWallpaperEffectTextureLabel() {
+      return { labelKey: 'newtab_wallpaper_effect_texture', fallback: 'Texture' };
+    }
+
     function updateWallpaperEffectSlidersUi(prefs, visibility) {
+      const strengthLabel = getWallpaperEffectStrengthLabel(prefs);
+      const sizeLabel = getWallpaperEffectSizeLabel(prefs);
+      const spacingLabel = getWallpaperEffectSpacingLabel(prefs);
+      const textureLabel = getWallpaperEffectTextureLabel();
       updateWallpaperSliderElement(wallpaperEffectSlider, {
-        value: prefs.strength,
+        value: prefs.type === 'crt'
+          ? getCrtParameterPercent('strength', prefs.strength)
+          : prefs.strength,
         enabled: visibility.strength,
-        labelKey: 'newtab_wallpaper_effect_strength',
-        fallback: 'Sampling strength'
+        dynamicRange: false,
+        min: 0,
+        max: 100,
+        percent: prefs.type === 'crt',
+        labelKey: strengthLabel.labelKey,
+        fallback: strengthLabel.fallback
       });
       updateWallpaperSliderElement(wallpaperEffectSizeSlider, {
         value: prefs.size,
         enabled: visibility.size,
-        labelKey: 'newtab_wallpaper_effect_size',
-        fallback: 'Size'
+        dynamicRange: false,
+        min: 0,
+        max: prefs.type === 'blocks' ? BLOCK_PARAMETER_MAX : 100,
+        percent: false,
+        labelKey: sizeLabel.labelKey,
+        fallback: sizeLabel.fallback
       });
       updateWallpaperSliderElement(wallpaperEffectSpacingSlider, {
-        value: prefs.spacing,
+        value: Math.round(clampNumber(prefs.spacing, 0, prefs.type === 'blocks' ? 5 : 100)),
         enabled: visibility.spacing,
-        labelKey: 'newtab_wallpaper_effect_spacing',
-        fallback: 'Spacing'
+        dynamicRange: false,
+        min: 0,
+        max: prefs.type === 'blocks' ? BLOCK_PARAMETER_MAX : 100,
+        percent: true,
+        labelKey: spacingLabel.labelKey,
+        fallback: spacingLabel.fallback
       });
+      updateWallpaperSliderElement(wallpaperEffectTextureSlider, {
+        value: prefs.texture,
+        enabled: visibility.texture,
+        dynamicRange: false,
+        labelKey: textureLabel.labelKey,
+        fallback: textureLabel.fallback
+      });
+      [
+        { prefKey: 'crtBloom', slider: wallpaperEffectCrtBloomSlider, value: prefs.crtBloom, enabled: visibility.crtBloom, key: 'newtab_wallpaper_effect_crt_bloom', fallback: 'Bloom' },
+        { prefKey: 'crtRgbOffset', slider: wallpaperEffectCrtRgbOffsetSlider, value: prefs.crtRgbOffset, enabled: visibility.crtRgbOffset, key: 'newtab_wallpaper_effect_crt_rgb_offset', fallback: 'RGB offset' },
+        { prefKey: 'crtCurvature', slider: wallpaperEffectCrtCurvatureSlider, value: prefs.crtCurvature, enabled: visibility.crtCurvature, key: 'newtab_wallpaper_effect_crt_curvature', fallback: 'Screen curvature' }
+      ].forEach((item) => updateWallpaperSliderElement(item.slider, {
+        value: getCrtParameterPercent(item.prefKey, item.value),
+        enabled: item.enabled,
+        dynamicRange: false,
+        min: 0,
+        max: 100,
+        percent: true,
+        labelKey: item.key,
+        fallback: item.fallback
+      }));
     }
 
-    function updateWallpaperEffectTextUi() {
+    function updateWallpaperEffectTextUi(prefs) {
       if (wallpaperEffectLabel) {
         wallpaperEffectLabel.textContent = t('newtab_wallpaper_effect_title', 'Wallpaper filter');
       }
       if (wallpaperEffectStrengthLabel) {
-        wallpaperEffectStrengthLabel.textContent = t('newtab_wallpaper_effect_strength', 'Sampling strength');
+        const strengthLabel = getWallpaperEffectStrengthLabel(prefs);
+        wallpaperEffectStrengthLabel.textContent = t(
+          strengthLabel.labelKey,
+          strengthLabel.fallback
+        );
       }
       if (wallpaperEffectSizeLabel) {
-        wallpaperEffectSizeLabel.textContent = t('newtab_wallpaper_effect_size', 'Size');
+        const sizeLabel = getWallpaperEffectSizeLabel(prefs);
+        wallpaperEffectSizeLabel.textContent = t(sizeLabel.labelKey, sizeLabel.fallback);
       }
       if (wallpaperEffectSpacingLabel) {
-        wallpaperEffectSpacingLabel.textContent = t('newtab_wallpaper_effect_spacing', 'Spacing');
+        const spacingLabel = getWallpaperEffectSpacingLabel(prefs);
+        wallpaperEffectSpacingLabel.textContent = t(spacingLabel.labelKey, spacingLabel.fallback);
       }
+      if (wallpaperEffectTextureLabel) {
+        const textureLabel = getWallpaperEffectTextureLabel();
+        wallpaperEffectTextureLabel.textContent = t(textureLabel.labelKey, textureLabel.fallback);
+      }
+      [
+        [wallpaperEffectCrtBloomLabel, 'newtab_wallpaper_effect_crt_bloom', 'Bloom'],
+        [wallpaperEffectCrtRgbOffsetLabel, 'newtab_wallpaper_effect_crt_rgb_offset', 'RGB offset'],
+        [wallpaperEffectCrtCurvatureLabel, 'newtab_wallpaper_effect_crt_curvature', 'Screen curvature']
+      ].forEach((item) => {
+        if (item[0]) item[0].textContent = t(item[1], item[2]);
+      });
     }
 
     function updateWallpaperEffectControlUi() {
@@ -2920,7 +3252,7 @@
       updateWallpaperEffectOptionsUi(prefs);
       updateWallpaperEffectInkToneUi(prefs);
       updateWallpaperEffectSlidersUi(prefs, visibility);
-      updateWallpaperEffectTextUi();
+      updateWallpaperEffectTextUi(prefs);
     }
 
     function persistWallpaperEffectPrefs(partial) {
@@ -5002,6 +5334,18 @@
       wallpaperEffectSpacingControl = refs.effectSpacingControl;
       wallpaperEffectSpacingLabel = refs.effectSpacingLabel;
       wallpaperEffectSpacingSlider = refs.effectSpacingSlider;
+      wallpaperEffectTextureControl = refs.effectTextureControl;
+      wallpaperEffectTextureLabel = refs.effectTextureLabel;
+      wallpaperEffectTextureSlider = refs.effectTextureSlider;
+      wallpaperEffectCrtBloomControl = refs.effectCrtBloomControl;
+      wallpaperEffectCrtBloomLabel = refs.effectCrtBloomLabel;
+      wallpaperEffectCrtBloomSlider = refs.effectCrtBloomSlider;
+      wallpaperEffectCrtRgbOffsetControl = refs.effectCrtRgbOffsetControl;
+      wallpaperEffectCrtRgbOffsetLabel = refs.effectCrtRgbOffsetLabel;
+      wallpaperEffectCrtRgbOffsetSlider = refs.effectCrtRgbOffsetSlider;
+      wallpaperEffectCrtCurvatureControl = refs.effectCrtCurvatureControl;
+      wallpaperEffectCrtCurvatureLabel = refs.effectCrtCurvatureLabel;
+      wallpaperEffectCrtCurvatureSlider = refs.effectCrtCurvatureSlider;
       newtabFaviconTitle = refs.faviconTitle;
       newtabFaviconOptions = refs.faviconOptions;
       customWallpaperUploadTile = refs.uploadTile;
@@ -5023,10 +5367,12 @@
       return refs;
     }
 
-    function bindReactWallpaperSlider(slider, getFallbackValue, persist) {
+    function bindReactWallpaperSlider(slider, getFallbackValue, persist, options) {
       if (!slider) {
         return;
       }
+      const snapWhileDragging = !options || options.snapWhileDragging !== false;
+      const supportsDynamicRange = Boolean(options && options.dynamicRange);
       slider.addEventListener('pointerdown', () => {
         setWallpaperActiveSlider(slider);
       });
@@ -5043,14 +5389,27 @@
         const fallbackValue = typeof getFallbackValue === 'function'
           ? getFallbackValue()
           : Number(slider.value);
-        const value = wallpaperActiveSlider === slider
-          ? snapWallpaperOverlaySliderValue(slider.value)
-          : normalizeWallpaperOverlayOpacity(slider.value, fallbackValue);
+        const rawValue = Number(slider.value);
+        const dynamicRange = supportsDynamicRange && isDynamicWallpaperSlider(slider);
+        const value = dynamicRange
+          ? (Number.isFinite(rawValue) ? rawValue : Number(fallbackValue))
+          : (wallpaperActiveSlider === slider && snapWhileDragging
+            ? snapWallpaperOverlaySliderValue(slider.value)
+            : normalizeWallpaperOverlayOpacity(slider.value, fallbackValue));
         if (String(value) !== slider.value) {
           slider.value = String(value);
         }
         persist(value);
       });
+      if (supportsDynamicRange) {
+        slider.addEventListener('change', () => {
+          const value = Number(slider.value);
+          if (ensureDynamicWallpaperSliderRange(slider, value, true)) {
+            updateWallpaperSliderFill(slider, value);
+            syncWallpaperSliderValueInput(slider);
+          }
+        });
+      }
       bindWallpaperSliderValueBubble(slider);
       bindWallpaperSliderValueInput(slider);
     }
@@ -5245,9 +5604,15 @@
       });
       wallpaperEffectOptions.querySelectorAll('[data-wallpaper-effect-type]').forEach((button) => {
         button.addEventListener('click', () => {
-          persistWallpaperEffectPrefs({
-            type: button.getAttribute('data-wallpaper-effect-type')
-          });
+          const type = button.getAttribute('data-wallpaper-effect-type');
+          const currentPrefs = getWallpaperEffectPrefsForEditMode();
+          const defaults = type === 'blocks' && currentPrefs.type !== 'blocks'
+            ? {
+                size: BLOCK_DEFAULT_SIZE_UI,
+                spacing: 0
+              }
+            : {};
+          persistWallpaperEffectPrefs(Object.assign({ type }, defaults));
         });
       });
       wallpaperEffectInkToneOptions.querySelectorAll('[data-wallpaper-effect-ink-tone]').forEach((button) => {
@@ -5274,12 +5639,51 @@
         {
           key: 'spacing',
           slider: wallpaperEffectSpacingSlider
-        }
+        },
+        {
+          key: 'texture',
+          slider: wallpaperEffectTextureSlider
+        },
+        {
+          key: 'crtBloom',
+          slider: wallpaperEffectCrtBloomSlider
+        },
+        {
+          key: 'crtRgbOffset',
+          slider: wallpaperEffectCrtRgbOffsetSlider
+        },
+        {
+          key: 'crtCurvature',
+          slider: wallpaperEffectCrtCurvatureSlider
+        },
       ].forEach((entry) => {
         bindReactWallpaperSlider(
           entry.slider,
-          () => getWallpaperEffectPrefsForEditMode()[entry.key],
-          (value) => persistWallpaperEffectPrefs({ [entry.key]: value })
+          () => {
+            const currentPrefs = getWallpaperEffectPrefsForEditMode();
+            const key = typeof entry.resolveKey === 'function'
+              ? entry.resolveKey(currentPrefs)
+              : entry.key;
+            if (currentPrefs.type === 'crt' && CRT_PARAMETER_PHYSICAL_MAX[key]) {
+              return getCrtParameterPercent(key, currentPrefs[key]);
+            }
+            return currentPrefs[key];
+          },
+          (value) => {
+            const currentPrefs = getWallpaperEffectPrefsForEditMode();
+            const key = typeof entry.resolveKey === 'function'
+              ? entry.resolveKey(currentPrefs)
+              : entry.key;
+            let persistedValue = value;
+            if (currentPrefs.type === 'crt' && CRT_PARAMETER_PHYSICAL_MAX[key]) {
+              persistedValue = getCrtParameterPhysicalValue(key, value);
+            }
+            persistWallpaperEffectPrefs({ [key]: persistedValue });
+          },
+          {
+            dynamicRange: false,
+            snapWhileDragging: entry.key === 'strength'
+          }
         );
       });
       newtabFaviconOptions.querySelectorAll('[data-newtab-favicon-id]').forEach((tile) => {

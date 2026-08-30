@@ -916,6 +916,30 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                   sliderRef="effectSpacingSlider"
                   ticks={defaultTicks}
                 />
+                <SliderControl
+                  controlRef="effectTextureControl"
+                  labelRef="effectTextureLabel"
+                  sliderRef="effectTextureSlider"
+                  ticks={defaultTicks}
+                />
+                <SliderControl
+                  controlRef="effectCrtBloomControl"
+                  labelRef="effectCrtBloomLabel"
+                  sliderRef="effectCrtBloomSlider"
+                  ticks={defaultTicks}
+                />
+                <SliderControl
+                  controlRef="effectCrtRgbOffsetControl"
+                  labelRef="effectCrtRgbOffsetLabel"
+                  sliderRef="effectCrtRgbOffsetSlider"
+                  ticks={defaultTicks}
+                />
+                <SliderControl
+                  controlRef="effectCrtCurvatureControl"
+                  labelRef="effectCrtCurvatureLabel"
+                  sliderRef="effectCrtCurvatureSlider"
+                  ticks={defaultTicks}
+                />
               </div>
             </div>
           </div>

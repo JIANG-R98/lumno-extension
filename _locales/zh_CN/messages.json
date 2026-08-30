@@ -904,17 +904,36 @@
   "newtab_wallpaper_effect_strength": {
     "message": "采样强度"
   },
+  "newtab_wallpaper_effect_blur_strength": {
+    "message": "模糊强度"
+  },
   "newtab_wallpaper_effect_size": {
     "message": "大小"
   },
   "newtab_wallpaper_effect_spacing": {
     "message": "间距"
   },
+  "newtab_wallpaper_effect_texture": {
+    "message": "纹理"
+  },
+  "newtab_wallpaper_effect_blocks_size": { "message": "积木尺寸" },
+  "newtab_wallpaper_effect_crt_strength": {
+    "message": "显示强度"
+  },
+  "newtab_wallpaper_effect_crt_bloom": { "message": "光晕" },
+  "newtab_wallpaper_effect_crt_rgb_offset": { "message": "RGB 偏移" },
+  "newtab_wallpaper_effect_crt_curvature": { "message": "屏幕曲率" },
   "newtab_wallpaper_effect_none": {
     "message": "关闭"
   },
+  "newtab_wallpaper_effect_blur": {
+    "message": "毛玻璃"
+  },
   "newtab_wallpaper_effect_grain": {
     "message": "颗粒"
+  },
+  "newtab_wallpaper_effect_blocks": {
+    "message": "积木"
   },
   "newtab_wallpaper_effect_halftone": {
     "message": "网点"
@@ -924,6 +943,9 @@
   },
   "newtab_wallpaper_effect_ascii": {
     "message": "ASCII"
+  },
+  "newtab_wallpaper_effect_crt": {
+    "message": "CRT"
   },
   "newtab_wallpaper_effect_select_label": {
     "message": "使用 {effect} 壁纸滤镜"

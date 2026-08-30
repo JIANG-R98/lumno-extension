@@ -30,7 +30,10 @@ describe('New Tab React wallpaper view', () => {
           ],
           effectTypes: [
             { type: 'none', fallback: 'Off' },
-            { type: 'grain', fallback: 'Grain' }
+            { type: 'grain', fallback: 'Grain' },
+            { type: 'blocks', fallback: 'Blocks' },
+            { type: 'blur', fallback: 'Glass blur' },
+            { type: 'crt', fallback: 'CRT' }
           ],
           effectInkTones: [
             { tone: 'dark', fallback: 'Shadows' },
@@ -81,28 +84,48 @@ describe('New Tab React wallpaper view', () => {
     ).not.toBeNull();
     expect(
       controller.control.querySelectorAll('[data-wallpaper-effect-type]')
-    ).toHaveLength(2);
+    ).toHaveLength(5);
+    expect(
+      controller.control.querySelector('[data-wallpaper-effect-type="blocks"]')
+    ).not.toBeNull();
+    expect(
+      controller.control.querySelector('[data-wallpaper-effect-type="blur"]')
+    ).not.toBeNull();
+    expect(
+      controller.control.querySelector('[data-wallpaper-effect-type="crt"]')
+    ).not.toBeNull();
+    expect(
+      controller.control.querySelectorAll('[data-wallpaper-blur-style]')
+    ).toHaveLength(0);
+    expect(controller.getRefs().effectBlurStyleControl).toBeUndefined();
     expect(
       controller.control.querySelectorAll('[data-wallpaper-effect-ink-tone]')
     ).toHaveLength(2);
     expect(controller.getRefs().effectInkToneControl).toBeTruthy();
+    expect(controller.getRefs().effectCrtGrainControl).toBeUndefined();
+    expect(
+      controller.getRefs().effectSpacingSlider?.dataset.wallpaperDynamicRange
+    ).toBeUndefined();
     const sliderRows = controller.control.querySelectorAll<HTMLElement>(
       '.x-nt-range-slider-row'
     );
-    expect(sliderRows).toHaveLength(9);
+    expect(sliderRows).toHaveLength(13);
     sliderRows.forEach((row) => {
       const slider = row.querySelector<HTMLInputElement>('input[type="range"]');
       const valueInput = row.querySelector<HTMLInputElement>('input[type="number"]');
       expect(slider).not.toBeNull();
       expect(valueInput?.max).toBe(slider?.max);
+      expect(valueInput?.style.width).toBe('56px');
       expect(valueInput?.classList.contains('_x_extension_shortcut_input_2024_unique_'))
         .toBe(true);
       expect(valueInput?.classList.contains(
         '_x_extension_range_slider_value_input_2026_unique_'
       )).toBe(true);
-      expect(valueInput?.style.width).toBe('56px');
       expect(valueInput?.style.height).toBe('36px');
     });
+    expect(controller.getRefs().effectSizeSlider?.dataset.wallpaperDynamicRange).toBeUndefined();
+    expect(controller.getRefs().effectTextureSlider?.dataset.wallpaperDynamicRange).toBeUndefined();
+    expect(controller.getRefs().effectStrengthSlider?.dataset.wallpaperDynamicRange).toBeUndefined();
     const segmentedGroups = [
       controller.getRefs().effectOptions,
       controller.getRefs().effectInkToneOptions
@@ -115,6 +138,10 @@ describe('New Tab React wallpaper view', () => {
       });
     });
     expect(controller.getRefs().effectInkToneIndicator).toBeTruthy();
+    expect(controller.getRefs().effectCrtPresetIndicator).toBeUndefined();
+    expect(
+      controller.control.querySelectorAll('[data-wallpaper-effect-crt-preset]')
+    ).toHaveLength(0);
     const topContentGroup = controller.getRefs().topContentTabs;
     expect(topContentGroup?.getAttribute('role')).toBe('group');
     const topContentButtons = topContentGroup?.querySelectorAll('button');
