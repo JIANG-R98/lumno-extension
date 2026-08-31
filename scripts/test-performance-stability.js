@@ -114,7 +114,8 @@ assertMatches(
   'visible-shortcuts',
   'recent-sites',
   'bookmarks',
-  'deferred-content'
+  'fonts',
+  'visual-ready'
 ].forEach((task) => {
   assert(
     newtabJs.includes(`observeNewtabStartupTask('${task}'`),

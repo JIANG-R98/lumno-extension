@@ -322,47 +322,19 @@ function testBookmarkStore() {
   });
 }
 
-function testBookmarkCacheHydrationGuard() {
-  assert.strictEqual(
-    bookmarkStore.shouldApplyBookmarkCacheHydration(
-      { loadToken: 2 },
-      { loadToken: 2, loadedOnce: false, dataDirty: true }
-    ),
-    true
-  );
-  assert.strictEqual(
-    bookmarkStore.shouldApplyBookmarkCacheHydration(
-      { loadToken: 2 },
-      { loadToken: 3, loadedOnce: false, dataDirty: true }
-    ),
-    false
-  );
-  assert.strictEqual(
-    bookmarkStore.shouldApplyBookmarkCacheHydration(
-      { loadToken: 2 },
-      { loadToken: 2, loadedOnce: true, dataDirty: false }
-    ),
-    false
-  );
-}
-
-function testNewtabUsesBookmarkCacheHydrationGuard() {
+function testNewtabRejectsProvisionalSectionCacheHydration() {
   const newtabJs = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8');
-  assert.ok(
-    newtabJs.includes('shouldApplyBookmarkCacheHydration'),
-    'newtab should guard bookmark cache hydration against live loads'
-  );
-  assert.ok(
-    newtabJs.includes('bookmarkCacheHydrationLoadToken'),
-    'newtab should compare bookmark cache hydration against the load token captured at scheduling time'
+  assert.doesNotMatch(
+    newtabJs,
+    /shouldApplyBookmarkCacheHydration|hydrateSectionsFromCache|_x_extension_newtab_(?:recent|bookmark)_cache_2024_unique_/,
+    'newtab should not render provisional cached section geometry before authoritative startup data'
   );
 }
 
 testRecentStore()
   .then(() => {
     testBookmarkStore();
-    testBookmarkCacheHydrationGuard();
-    testNewtabUsesBookmarkCacheHydrationGuard();
+    testNewtabRejectsProvisionalSectionCacheHydration();
     console.log('newtab store tests passed');
   })
   .catch((error) => {

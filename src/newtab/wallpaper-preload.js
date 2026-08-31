@@ -43,12 +43,38 @@
     return normalizeWallpaperMode(data && data.mode);
   }
 
-  function normalizeEffectPrefs(value) {
+  function normalizeEffectPrefs(value, inheritedVersion) {
     const effects = globalThis.LumnoNewtabWallpaperEffects;
     if (effects && typeof effects.normalizePrefs === 'function') {
-      return effects.normalizePrefs(value);
+      return effects.normalizePrefs(value, inheritedVersion);
     }
-    const source = value && typeof value === 'object' ? value : {};
+    const rawSource = value && typeof value === 'object' ? value : {};
+    const ownVersion = Number(rawSource.version);
+    const fallbackVersion = Number(inheritedVersion);
+    const storedVersion = Number.isFinite(ownVersion) ? ownVersion : fallbackVersion;
+    const source = Object.assign({}, rawSource);
+    if (!Number.isFinite(storedVersion) || storedVersion < 11) {
+      if (source.type === 'blocks') {
+        const explicitBlockSize = Number(source.blockSize);
+        const legacySize = Number(source.size);
+        let blockSize = Number.isFinite(explicitBlockSize) ? explicitBlockSize : legacySize;
+        if ((!Number.isFinite(storedVersion) || storedVersion < 10) &&
+            Number.isFinite(blockSize) && blockSize > 5) {
+          blockSize /= 20;
+        }
+        source.blockSize = Number.isFinite(blockSize) ? blockSize : 1;
+        source.strength = 50;
+        source.size = 50;
+        source.spacing = 50;
+        source.texture = 20;
+      }
+      if (source.type === 'crt') {
+        source.crtStrength = Number.isFinite(Number(source.crtStrength))
+          ? source.crtStrength
+          : (Number.isFinite(Number(source.strength)) ? source.strength : 20);
+        source.strength = 50;
+      }
+    }
     const normalizePercent = (raw, fallback) => {
       const number = Number(raw);
       return Number.isFinite(number)
@@ -70,23 +96,17 @@
       ? source.type
       : 'none';
     return {
-      version: 10,
+      version: 11,
       type,
       inkTone: ['auto', 'dark', 'light'].includes(source.inkTone)
         ? source.inkTone
         : 'auto',
-      strength: type === 'blocks'
-        ? 100
-        : (type === 'crt'
-          ? normalizeCrtPhysical(source.strength, 20, 20)
-          : normalizePercent(source.strength, 50)),
-      size: type === 'blocks'
-        ? normalizeBlockParameter(source.size, 1)
-        : normalizePercent(rawSize, 50),
-      spacing: type === 'blocks'
-        ? 0
-        : normalizePercent(source.spacing, 50),
-      texture: type === 'blocks' ? 100 : normalizePercent(source.texture, 20),
+      strength: normalizePercent(source.strength, 50),
+      size: normalizePercent(rawSize, 50),
+      spacing: normalizePercent(source.spacing, 50),
+      texture: normalizePercent(source.texture, 20),
+      blockSize: normalizeBlockParameter(source.blockSize, 1),
+      crtStrength: normalizeCrtPhysical(source.crtStrength, 20, 20),
       crtBloom: normalizeCrtPhysical(source.crtBloom, 15, 20),
       crtRgbOffset: normalizePercent(source.crtRgbOffset, 35),
       crtCurvature: normalizeCrtPhysical(source.crtCurvature, 18, 35)
@@ -102,7 +122,7 @@
     const candidate = source && (source.light || source.dark)
       ? (source[mode] || source.light || source.dark)
       : source;
-    return candidate ? normalizeEffectPrefs(candidate) : null;
+    return candidate ? normalizeEffectPrefs(candidate, source && source.version) : null;
   }
 
   function readStoredEffectPrefs(mode, cachedPrefs) {

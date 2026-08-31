@@ -637,6 +637,10 @@
     modeMenu.tabIndex = -1;
     modeMenu.hidden = true;
     const modeMenuEdgeOffset = surface === 'newtab' ? '-6px' : '-1px';
+    const modeMenuPositionTransform = 'translateY(calc(var(--x-lumno-search-mode-menu-result-offset, 0px) + var(--x-lumno-search-mode-menu-lift, 0px)))';
+    const modeMenuClosedTransform = surface === 'newtab'
+      ? `${modeMenuPositionTransform} scale(0.96, 0.86)`
+      : 'translateY(calc(var(--x-lumno-search-mode-menu-result-offset, 0px) + var(--x-lumno-search-mode-menu-lift, 0px) - 6px)) scale(0.96, 0.86)';
     const modeMenuStyles = [
       ['position', 'absolute'],
       ['left', modeMenuEdgeOffset],
@@ -658,8 +662,8 @@
       ['z-index', '40'],
       ['--x-lumno-search-mode-menu-lift', '0px'],
       ['--x-lumno-search-mode-menu-result-offset', '0px'],
-      ['--x-extension-menu-surface-closed-transform', 'translateY(calc(var(--x-lumno-search-mode-menu-result-offset, 0px) + var(--x-lumno-search-mode-menu-lift, 0px) - 6px)) scale(0.96, 0.86)'],
-      ['--x-extension-menu-surface-open-transform', 'translateY(calc(var(--x-lumno-search-mode-menu-result-offset, 0px) + var(--x-lumno-search-mode-menu-lift, 0px))) scale(1, 1)'],
+      ['--x-extension-menu-surface-closed-transform', modeMenuClosedTransform],
+      ['--x-extension-menu-surface-open-transform', `${modeMenuPositionTransform} scale(1, 1)`],
       ['overscroll-behavior', 'contain']
     ];
     modeMenu.style.cssText = '';

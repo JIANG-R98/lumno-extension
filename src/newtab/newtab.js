@@ -289,7 +289,6 @@
       typeof NEWTAB_RECENT_STORE.normalizeRecentSiteItem !== 'function' ||
       typeof NEWTAB_BOOKMARKS_STORE.buildBookmarkFolderCache !== 'function' ||
       typeof NEWTAB_BOOKMARKS_STORE.collectFolderBookmarkUrls !== 'function' ||
-      typeof NEWTAB_BOOKMARKS_STORE.shouldApplyBookmarkCacheHydration !== 'function' ||
       typeof NEWTAB_BOOKMARKS_RUNTIME.createBookmarksRuntime !== 'function' ||
       typeof NEWTAB_BOOKMARKS_TOPBAR.createBookmarksTopbar !== 'function' ||
       typeof NEWTAB_BOOKMARK_BREADCRUMB.createBookmarkBreadcrumbController !== 'function' ||
@@ -378,8 +377,6 @@
   const THEME_RESOLUTION_BATCH_SIZE = 2;
   const THEME_RESOLUTION_BATCH_DELAY_MS = 160;
   const RESTORE_SEARCH_LAYOUT_LOCK_MS = 900;
-  const NEWTAB_RECENT_CACHE_STORAGE_KEY = '_x_extension_newtab_recent_cache_2024_unique_';
-  const NEWTAB_BOOKMARK_CACHE_STORAGE_KEY = '_x_extension_newtab_bookmark_cache_2024_unique_';
   const PINNED_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_pinned_recent_sites_2026_unique_';
   const HIDDEN_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_hidden_recent_sites_2026_unique_';
   const NEWTAB_SHORTCUTS_STORAGE_KEY = '_x_extension_newtab_shortcuts_2026_unique_';
@@ -473,7 +470,6 @@
   const BOOKMARK_DRAG_CLICK_SUPPRESS_MS = 420;
   const BOOKMARK_DRAG_PAGE_SWITCH_DELAY_MS = 640;
   const BOOKMARK_DRAG_FOLDER_SWITCH_DELAY_MS = 640;
-  const NEWTAB_SECTION_CACHE_TTL_MS = 1000 * 60 * 5;
   const NEWTAB_EXTERNAL_CHANGE_DEBOUNCE_MS = 120;
   const NEWTAB_RESIZE_DENSITY_SETTLE_MS = 140;
   const NEWTAB_INITIAL_VIEWPORT_SETTLE_MS = 32;
@@ -526,6 +522,8 @@
   let recentSourceItems = [];
   let pinnedRecentSites = [];
   let hiddenRecentSites = [];
+  let initialPinnedRecentSitesReadyTask = Promise.resolve([]);
+  let initialHiddenRecentSitesReadyTask = Promise.resolve([]);
   let searchBlacklistItems = [];
   let currentMessages = null;
   let currentLanguageMode = 'system';
@@ -1945,10 +1943,7 @@
     topContentContainer.style.setProperty('max-height', nextVisible ? '74px' : '0');
     topContentContainer.style.setProperty('margin-bottom', nextVisible ? '28px' : '0');
     topContentContainer.style.setProperty('opacity', nextVisible ? '1' : '0');
-    topContentContainer.style.setProperty(
-      'transform',
-      nextVisible ? 'translate3d(0, 0, 0)' : 'translate3d(0, -8px, 0)'
-    );
+    topContentContainer.style.removeProperty('transform');
     topContentContainer.style.setProperty('pointer-events', nextVisible ? 'auto' : 'none');
     topContentContainer.inert = !nextVisible;
     if (nextVisible) {
@@ -2955,8 +2950,7 @@
       sampleElement: getShortcutDockIcon(tile) || tile,
       minWidth: 42,
       minHeight: 42,
-      iconButton: true,
-      forcedIconBackground: 'default-theme'
+      iconButton: true
     }));
     if (addShortcutButton) {
       shortcutToneTargets.push({
@@ -4223,19 +4217,27 @@
 
   if (storageArea) {
     bootstrapInitialLanguageMode();
-    readPinnedRecentSites().then((items) => {
+    initialPinnedRecentSitesReadyTask = readPinnedRecentSites().then((items) => {
       pinnedRecentSites = items;
       if (recentSourceItems.length > 0) {
         recentRenderSignature = '';
         renderRecentSites(recentSourceItems);
       }
+      return items;
+    }).catch(() => {
+      pinnedRecentSites = [];
+      return pinnedRecentSites;
     });
-    readHiddenRecentSites().then((items) => {
+    initialHiddenRecentSitesReadyTask = readHiddenRecentSites().then((items) => {
       hiddenRecentSites = items;
       if (recentSourceItems.length > 0) {
         recentRenderSignature = '';
         renderRecentSites(recentSourceItems);
       }
+      return items;
+    }).catch(() => {
+      hiddenRecentSites = [];
+      return hiddenRecentSites;
     });
 
     storageArea.get([RECENT_COUNT_STORAGE_KEY], (result) => {
@@ -9486,6 +9488,7 @@
   syncBookmarkTopbarSurfaceAppearance({ updateMenu: false, scheduleTone: false });
   syncBookmarkSurfaceMode();
   let bookmarkRenderSignature = '';
+  let sectionDataRevision = 0;
   let bookmarkLoadToken = 0;
   let bookmarkDataDirty = true;
   let bookmarkLoadedOnce = false;
@@ -11643,107 +11646,28 @@
     recentDataDirty = true;
   }
 
-  function readSectionCache(cacheKey) {
-    return new Promise((resolve) => {
-      if (!localStorageArea || !cacheKey) {
-        resolve(null);
-        return;
-      }
-      localStorageArea.get([cacheKey], (result) => {
-        const payload = result && result[cacheKey];
-        if (!payload || typeof payload !== 'object') {
-          resolve(null);
-          return;
-        }
-        const updatedAt = Number(payload.updatedAt || 0);
-        const items = Array.isArray(payload.items) ? payload.items : null;
-        if (!items || !Number.isFinite(updatedAt)) {
-          resolve(null);
-          return;
-        }
-        if ((Date.now() - updatedAt) > NEWTAB_SECTION_CACHE_TTL_MS) {
-          resolve(null);
-          return;
-        }
-        resolve(items);
-      });
-    });
-  }
-
-  function writeSectionCache(cacheKey, items) {
-    if (!localStorageArea || !cacheKey || !Array.isArray(items)) {
-      return;
-    }
-    localStorageArea.set({
-      [cacheKey]: {
-        updatedAt: Date.now(),
-        items: items
-      }
-    });
-  }
-
-  function hydrateSectionsFromCache() {
-    Promise.all([
-      readSectionCache(NEWTAB_RECENT_CACHE_STORAGE_KEY),
-      waitForFaviconRenderCaches(FAVICON_CACHE_BOOT_WAIT_MS)
-    ]).then(([items]) => {
-      if (!Array.isArray(items) || items.length === 0) {
-        return;
-      }
-      const recentSourceLimit = getRecentSourceLimit();
-      if (!recentSourceLimit || recentSourceLimit <= 0) {
-        return;
-      }
-      const cachedItems = items.slice(
-        0,
-        Math.max(0, recentSourceLimit + MAX_PINNED_RECENT_SITES)
-      );
-      renderRecentSites(cachedItems);
-      recentLoadedOnce = true;
-    });
-    const bookmarkCacheHydrationLoadToken = bookmarkLoadToken;
-    Promise.all([
-      readSectionCache(NEWTAB_BOOKMARK_CACHE_STORAGE_KEY),
-      waitForFaviconRenderCaches(FAVICON_CACHE_BOOT_WAIT_MS)
-    ]).then(([items]) => {
-      if (!NEWTAB_BOOKMARKS_STORE.shouldApplyBookmarkCacheHydration(
-        { loadToken: bookmarkCacheHydrationLoadToken },
-        {
-          loadToken: bookmarkLoadToken,
-          loadedOnce: bookmarkLoadedOnce,
-          dataDirty: bookmarkDataDirty
-        }
-      )) {
-        return;
-      }
-      if (!Array.isArray(items) || items.length === 0) {
-        return;
-      }
-      if (!currentBookmarkCount || currentBookmarkCount <= 0) {
-        return;
-      }
-      bookmarkCurrentPage = 0;
-      bookmarkAllItems = isBookmarkTopbarMode()
-        ? items.slice()
-        : items.slice(0, Math.max(0, getBookmarkLimit()));
-      bookmarkRootTotalCount = bookmarkAllItems.length;
-      bookmarkRootVisibleCount = bookmarkAllItems.length;
-      bookmarkRenderSignature = '';
-      renderCurrentBookmarkPage();
-      bookmarkLoadedOnce = true;
-    });
-  }
-
   function loadBookmarks(options) {
+    const config = options || {};
+    const requestedSectionDataRevision = Number.isFinite(Number(config.sectionDataRevision))
+      ? Number(config.sectionDataRevision)
+      : sectionDataRevision;
     if (!initialThemeApplied) {
-      return bootstrapInitialThemeMode().then(() => loadBookmarks(options));
+      return bootstrapInitialThemeMode().then(() => loadBookmarks({
+        ...config,
+        sectionDataRevision: requestedSectionDataRevision
+      }));
     }
-    const forceReload = Boolean(options && options.force);
-    const skipFaviconWait = Boolean(options && options.skipFaviconWait);
+    const forceReload = Boolean(config.force);
+    const skipFaviconWait = Boolean(config.skipFaviconWait);
     if (!skipFaviconWait && !areFaviconRenderCachesReady()) {
       const waitMs = forceReload ? Math.min(80, FAVICON_CACHE_BOOT_WAIT_MS) : FAVICON_CACHE_BOOT_WAIT_MS;
       return waitForFaviconRenderCaches(waitMs).then(() => (
-        loadBookmarks({ force: forceReload, skipFaviconWait: true })
+        loadBookmarks({
+          ...config,
+          force: forceReload,
+          skipFaviconWait: true,
+          sectionDataRevision: requestedSectionDataRevision
+        })
       ));
     }
     if (!forceReload && !bookmarkDataDirty && bookmarkLoadedOnce) {
@@ -11766,7 +11690,8 @@
       return Promise.resolve();
     }
     return getTopBookmarks(0, bookmarkCurrentFolderId).then((items) => {
-      if (requestToken !== bookmarkLoadToken) {
+      if (requestToken !== bookmarkLoadToken ||
+          requestedSectionDataRevision !== sectionDataRevision) {
         return;
       }
       if (!currentBookmarkCount || currentBookmarkCount <= 0) {
@@ -11799,30 +11724,33 @@
       updateBookmarkBreadcrumb();
       renderCurrentBookmarkPage();
       playPendingBookmarkLayoutAnimation();
-      if (isAtRoot) {
-        const bookmarkCacheLimit = isBookmarkTopbarMode()
-          ? Math.min(200, bookmarkAllItems.length)
-          : getBookmarkLimit();
-        writeSectionCache(
-          NEWTAB_BOOKMARK_CACHE_STORAGE_KEY,
-          bookmarkAllItems.slice(0, bookmarkCacheLimit)
-        );
-      }
       bookmarkDataDirty = false;
       bookmarkLoadedOnce = true;
     });
   }
 
   function loadRecentSites(options) {
+    const config = options || {};
+    const requestedSectionDataRevision = Number.isFinite(Number(config.sectionDataRevision))
+      ? Number(config.sectionDataRevision)
+      : sectionDataRevision;
     if (!initialThemeApplied) {
-      return bootstrapInitialThemeMode().then(() => loadRecentSites(options));
+      return bootstrapInitialThemeMode().then(() => loadRecentSites({
+        ...config,
+        sectionDataRevision: requestedSectionDataRevision
+      }));
     }
-    const forceReload = Boolean(options && options.force);
-    const skipFaviconWait = Boolean(options && options.skipFaviconWait);
+    const forceReload = Boolean(config.force);
+    const skipFaviconWait = Boolean(config.skipFaviconWait);
     if (!skipFaviconWait && !areFaviconRenderCachesReady()) {
       const waitMs = forceReload ? Math.min(80, FAVICON_CACHE_BOOT_WAIT_MS) : FAVICON_CACHE_BOOT_WAIT_MS;
       return waitForFaviconRenderCaches(waitMs).then(() => (
-        loadRecentSites({ force: forceReload, skipFaviconWait: true })
+        loadRecentSites({
+          ...config,
+          force: forceReload,
+          skipFaviconWait: true,
+          sectionDataRevision: requestedSectionDataRevision
+        })
       ));
     }
     if (!forceReload && !recentDataDirty && recentLoadedOnce) {
@@ -11842,18 +11770,12 @@
       return Promise.resolve();
     }
     return getRecentSites(recentSourceLimit + MAX_PINNED_RECENT_SITES, currentRecentMode).then((items) => {
-      if (requestToken !== recentLoadToken) {
+      if (requestToken !== recentLoadToken ||
+          requestedSectionDataRevision !== sectionDataRevision) {
         return;
       }
       const normalizedItems = Array.isArray(items) ? items : [];
       renderRecentSites(normalizedItems);
-      writeSectionCache(
-        NEWTAB_RECENT_CACHE_STORAGE_KEY,
-        normalizedItems.slice(
-          0,
-          Math.max(0, recentSourceLimit + MAX_PINNED_RECENT_SITES)
-        )
-      );
       recentDataDirty = false;
       recentLoadedOnce = true;
     });
@@ -12896,10 +12818,8 @@
     const colors = getShortcutIconColors(theme, host);
     tile.setAttribute('data-shortcut-theme-default', isDefaultTheme ? 'true' : 'false');
     tile.setAttribute('data-shortcut-theme-source', getThemeSource(fallbackTheme));
-    if (!isDefaultTheme) {
-      tile.style.removeProperty('--x-nt-shortcut-wallpaper-icon-bg');
-      tile.style.removeProperty('--x-nt-shortcut-wallpaper-icon-color');
-    }
+    tile.style.removeProperty('--x-nt-shortcut-wallpaper-icon-bg');
+    tile.style.removeProperty('--x-nt-shortcut-wallpaper-icon-color');
     tile.style.setProperty('--x-nt-shortcut-icon-bg', colors.iconBg);
     tile.style.setProperty('--x-nt-shortcut-icon-color', colors.iconColor);
     scheduleWallpaperAdaptiveToneUpdate();
@@ -16439,55 +16359,53 @@
     typeof globalThis.LumnoMotionPreferenceReady.then === 'function'
       ? globalThis.LumnoMotionPreferenceReady
       : Promise.resolve(true);
-  let initialNewtabSkipsEntryMotion = false;
+  const initialLayoutStorageReadyTask = startupStorageReadBatch
+    ? startupStorageReadBatch.ready
+    : Promise.resolve(true);
+  const initialFontsReadyTask = document.fonts && document.fonts.ready &&
+    typeof document.fonts.ready.then === 'function'
+      ? document.fonts.ready.catch(() => true)
+      : Promise.resolve(true);
+  observeNewtabStartupTask('fonts', initialFontsReadyTask);
   const initialVisualReadyPromise = Promise.all([
     initialAppearanceReadyTask,
     initialBookmarkViewModeReadyPromise,
     loadZenMode(),
     actionButtonVisibilityReadyPromise,
-    shortcutPreferencesReadyPromise,
-    initialMotionPreferenceReadyTask
-  ]).then(() => {
-    initialNewtabSkipsEntryMotion = shouldSkipNewtabEntryMotion();
-    if (!initialNewtabSkipsEntryMotion) {
-      hydrateSectionsFromCache();
-      maybeShowFileAccessNotice();
-      markNewtabReady();
-      return;
-    }
-    return Promise.all([
-      initialLanguageReadyTask,
-      sectionPolicyReadyPromise,
-      initialShortcutsReadyTask
-    ]).then(() => {
-      const recentSitesReadyTask = loadRecentSites();
-      const bookmarksReadyTask = loadBookmarks();
-      observeNewtabStartupTask('recent-sites', recentSitesReadyTask);
-      observeNewtabStartupTask('bookmarks', bookmarksReadyTask);
-      return Promise.all([recentSitesReadyTask, bookmarksReadyTask]);
-    }).catch((error) => {
-      console.warn('[Lumno] Motion-free new tab entry setup failed.', error);
-    }).then(() => {
-      maybeShowFileAccessNotice();
-      markNewtabReady();
-    });
-  });
-  observeNewtabStartupTask('visual-ready', initialVisualReadyPromise);
-  const initialDeferredContentReadyTask = Promise.all([
-    initialVisualReadyPromise,
+    initialMotionPreferenceReadyTask,
     initialLanguageReadyTask,
-    sectionPolicyReadyPromise
-  ]).then(() => {
-    if (initialNewtabSkipsEntryMotion) {
-      return;
-    }
-    const recentSitesReadyTask = loadRecentSites();
-    const bookmarksReadyTask = loadBookmarks();
+    sectionPolicyReadyPromise,
+    initialShortcutsReadyTask,
+    initialPinnedRecentSitesReadyTask,
+    initialHiddenRecentSitesReadyTask,
+    initialLayoutStorageReadyTask,
+    initialFontsReadyTask
+  ]).catch((error) => {
+    console.warn('[Lumno] Initial new tab layout setup failed.', error);
+  }).then(() => {
+    // Run one authoritative data pass after every layout-affecting preference
+    // has settled. This keeps cached/default geometry from becoming visible and
+    // then moving the entire entry when bookmarks or history arrive.
+    sectionDataRevision += 1;
+    const initialSectionDataRevision = sectionDataRevision;
+    const recentSitesReadyTask = loadRecentSites({
+      force: true,
+      sectionDataRevision: initialSectionDataRevision
+    });
+    const bookmarksReadyTask = loadBookmarks({
+      force: true,
+      sectionDataRevision: initialSectionDataRevision
+    });
     observeNewtabStartupTask('recent-sites', recentSitesReadyTask);
     observeNewtabStartupTask('bookmarks', bookmarksReadyTask);
     return Promise.all([recentSitesReadyTask, bookmarksReadyTask]);
+  }).catch((error) => {
+    console.warn('[Lumno] Initial new tab content setup failed.', error);
+  }).then(() => {
+    maybeShowFileAccessNotice();
+    markNewtabReady();
   });
-  observeNewtabStartupTask('deferred-content', initialDeferredContentReadyTask);
+  observeNewtabStartupTask('visual-ready', initialVisualReadyPromise);
   updateBookmarkSectionPosition();
   markNewtabStartupMilestone('script-end');
 

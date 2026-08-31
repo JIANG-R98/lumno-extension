@@ -1404,6 +1404,30 @@ function assertSegmentedTabRadiusCss(filePath) {
   );
 }
 
+function assertEffectOptionsGridCss(filePath) {
+  const source = fs.readFileSync(filePath, 'utf8');
+  assert.match(
+    source,
+    /\.x-nt-effect-options:not\(\.x-nt-effect-ink-tone-options\)\s*\{[\s\S]*?display:\s*grid;[\s\S]*?grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\);/,
+    `${filePath} should lay out the eight main filters in four columns and two rows`
+  );
+  assert.match(
+    source,
+    /\.x-nt-effect-options:not\(\.x-nt-effect-ink-tone-options\) \.x-nt-effect-indicator\s*\{\s*display:\s*none;/,
+    `${filePath} should disable the one-row sliding indicator for the filter grid`
+  );
+  assert.match(
+    source,
+    /\.x-nt-effect-options:not\(\.x-nt-effect-ink-tone-options\)[\s\S]*?\.x-nt-effect-option\[data-active="true"\]\s*\{[\s\S]*?background:/,
+    `${filePath} should give the active grid option its own selected surface`
+  );
+  assert.match(
+    source,
+    /body\[data-theme="dark"\][\s\S]*?\.x-nt-effect-options:not\(\.x-nt-effect-ink-tone-options\)[\s\S]*?\.x-nt-effect-option\[data-active="true"\]\s*\{[\s\S]*?background:\s*#3f3f46;/,
+    `${filePath} should retain a visible selected surface in dark mode`
+  );
+}
+
 function readLocaleMessages(locale) {
   return JSON.parse(fs.readFileSync(`_locales/${locale}/messages.json`, 'utf8'));
 }
@@ -3212,10 +3236,94 @@ async function testBlocksExposeReliefControls() {
   await new Promise((resolve) => setTimeout(resolve, 150));
   assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.type, 'blocks');
   assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].dark.type, 'blocks');
-  assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.strength, 100);
-  assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.texture, 100);
-  assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.size, 5);
-  assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.spacing, 0);
+  assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.strength, 50);
+  assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.texture, 20);
+  assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.size, 50);
+  assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.spacing, 50);
+  assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.blockSize, 5);
+}
+
+async function testEffectSpecificParametersRoundTrip() {
+  const modePrefs = {
+    version: 11,
+    type: 'grain',
+    inkTone: 'auto',
+    strength: 80,
+    size: 65,
+    spacing: 35,
+    texture: 25,
+    blockSize: 1,
+    crtStrength: 20,
+    crtBloom: 15,
+    crtRgbOffset: 35,
+    crtCurvature: 18
+  };
+  const storageArea = createMemoryStorage({
+    [WALLPAPER_EFFECT_STORAGE_KEY]: {
+      version: 11,
+      light: Object.assign({}, modePrefs),
+      dark: Object.assign({}, modePrefs)
+    }
+  });
+  const { documentObj: testDocument, windowObj: testWindow, sandbox: testSandbox } =
+    createWallpaperSandbox();
+  const testRuntime = testSandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
+    documentObj: testDocument,
+    windowObj: testWindow,
+    storageArea,
+    storageKeys: { effect: WALLPAPER_EFFECT_STORAGE_KEY },
+    t: (_key, fallback) => fallback || '',
+    getRiSvg: () => ''
+  });
+
+  testRuntime.createControls();
+  testRuntime.getControlElement().children[1].click();
+  await testRuntime.bootstrapInitialWallpaperEffect();
+  const control = testRuntime.getControlElement();
+  const strengthSlider = getDescendantByAttribute(
+    control,
+    'data-wallpaper-ref',
+    'effectStrengthSlider'
+  );
+  const sizeSlider = getDescendantByAttribute(
+    control,
+    'data-wallpaper-ref',
+    'effectSizeSlider'
+  );
+  assert.strictEqual(strengthSlider.value, '80');
+
+  getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'crt').click();
+  assert.strictEqual(strengthSlider.value, '100', 'CRT should expose its dedicated strength');
+  strengthSlider.value = '50';
+  strengthSlider._listeners.input.forEach((listener) => listener({ target: strengthSlider }));
+
+  getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'grain').click();
+  assert.strictEqual(
+    strengthSlider.value,
+    '80',
+    'Grain strength should survive a round trip through CRT'
+  );
+
+  getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'blocks').click();
+  assert.strictEqual(sizeSlider.value, '1', 'Blocks should expose its dedicated size');
+  sizeSlider.value = '4';
+  sizeSlider._listeners.input.forEach((listener) => listener({ target: sizeSlider }));
+
+  getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'halftone').click();
+  assert.strictEqual(sizeSlider.value, '65', 'generic size should survive a round trip through Blocks');
+  getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'blocks').click();
+  assert.strictEqual(sizeSlider.value, '4', 'Blocks size should be retained independently');
+  getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'grain').click();
+
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  const persisted = storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light;
+  assert.strictEqual(persisted.type, 'grain');
+  assert.strictEqual(persisted.strength, 80);
+  assert.strictEqual(persisted.size, 65);
+  assert.strictEqual(persisted.spacing, 35);
+  assert.strictEqual(persisted.texture, 25);
+  assert.strictEqual(persisted.blockSize, 4);
+  assert.strictEqual(persisted.crtStrength, 10);
 }
 
 async function testGlassBlurCanBeEnabledAndDisabled() {
@@ -3575,9 +3683,14 @@ async function testCrtFilterPersistsAndShowsDisplayControls() {
   assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.crtPreset, undefined);
   assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].dark.crtPreset, undefined);
   assert.strictEqual(
-    storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.strength,
+    storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.crtStrength,
     10,
     '50% display intensity should map to half of its physical 20-unit range'
+  );
+  assert.strictEqual(
+    storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.strength,
+    50,
+    'editing CRT intensity should not overwrite generic effect strength'
   );
   assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.crtBloom, 20);
   assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.crtRgbOffset, 50);
@@ -3599,6 +3712,7 @@ Promise.resolve()
     assertThemeAwareAlternateFaviconAsset();
     assertSquareFaviconOptionCss('newtab.html');
     assertSegmentedTabRadiusCss('newtab.html');
+    assertEffectOptionsGridCss('newtab.html');
     assertWallpaperBootstrapWaitsForTheme();
     assertInitialWallpaperToneStartsBeforeDeferredRefresh();
   })
@@ -3620,6 +3734,7 @@ Promise.resolve()
   .then(testNewtabFaviconThemeBroadcastRefreshesBackgroundTabs)
   .then(testWallpaperEffectInkToneControlPersistsAndFollowsEffectType)
   .then(testBlocksExposeReliefControls)
+  .then(testEffectSpecificParametersRoundTrip)
   .then(testGlassBlurCanBeEnabledAndDisabled)
   .then(testGlassBlurFilterSwitchPreservesTheOutgoingFrame)
   .then(testCrtFilterPersistsAndShowsDisplayControls)

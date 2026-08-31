@@ -158,7 +158,7 @@ function getTestContrastRatio(firstColor, secondColor) {
     (Math.min(firstLuminance, secondLuminance) + 0.05);
 }
 
-async function assertDarkWallpaperShortcutAdaptiveTone() {
+async function assertDarkWallpaperKeepsShortcutThemeBackground() {
   const wordmark = createToneElement({
     left: 390,
     top: 54,
@@ -171,6 +171,7 @@ async function assertDarkWallpaperShortcutAdaptiveTone() {
   const addTile = createToneElement();
   const disabledTarget = createToneElement();
   shortcutTile.setAttribute('data-shortcut-theme-default', 'true');
+  shortcutTile.style.setProperty('--x-nt-shortcut-icon-bg', 'rgb(220 233 253)');
   disabledTarget.setAttribute('data-wallpaper-ink', 'light');
   disabledTarget.setAttribute('data-wallpaper-icon-bg', 'true');
   disabledTarget.style.setProperty('--x-nt-wallpaper-icon-solid-bg', 'rgb(20 28 45)');
@@ -265,8 +266,7 @@ async function assertDarkWallpaperShortcutAdaptiveTone() {
           sampleElement: shortcutTile,
           minWidth: 42,
           minHeight: 42,
-          iconButton: true,
-          forcedIconBackground: 'default-theme'
+          iconButton: true
         },
         {
           element: addTile,
@@ -310,12 +310,6 @@ async function assertDarkWallpaperShortcutAdaptiveTone() {
   const wordmarkColor = parseSolidRgb(
     wordmark.style.getPropertyValue('--x-nt-wallpaper-wordmark-ink')
   );
-  const shortcutBackground = parseSolidRgb(
-    shortcutTile.style.getPropertyValue('--x-nt-shortcut-wallpaper-icon-bg')
-  );
-  const shortcutForeground = parseSolidRgb(
-    shortcutTile.style.getPropertyValue('--x-nt-shortcut-wallpaper-icon-color')
-  );
   const addBackground = parseSolidRgb(addTile.style.getPropertyValue('--x-nt-shortcut-add-bg'));
   const addForeground = parseSolidRgb(addTile.style.getPropertyValue('--x-nt-shortcut-add-color'));
   assert.strictEqual(disabledTarget.getAttribute('data-wallpaper-ink'), null);
@@ -329,17 +323,19 @@ async function assertDarkWallpaperShortcutAdaptiveTone() {
     getTestContrastRatio(wordmarkColor, pixel) >= 3.25,
     'wallpaper wordmark should keep accessible contrast on a similarly colored dark background'
   );
-  assert.ok(
-    getTestColorLuminance(shortcutBackground) < 0.36,
-    'dark wallpaper URL fallback shortcut backgrounds should stay in the dark-mode surface range'
+  assert.strictEqual(
+    shortcutTile.style.getPropertyValue('--x-nt-shortcut-wallpaper-icon-bg'),
+    '',
+    'dark wallpapers should not override a favicon theme background'
   );
   assert.ok(
     getTestColorLuminance(addBackground) < 0.42,
     'dark wallpaper add shortcut background should stay dark instead of becoming white'
   );
-  assert.ok(
-    getTestColorLuminance(shortcutForeground) > 0.72,
-    'dark wallpaper URL fallback shortcut icon should remain light on the dark surface'
+  assert.strictEqual(
+    shortcutTile.style.getPropertyValue('--x-nt-shortcut-icon-bg'),
+    'rgb(220 233 253)',
+    'dark wallpapers should preserve the favicon light-theme background'
   );
   assert.ok(
     getTestColorLuminance(addForeground) > 0.72,
@@ -347,7 +343,7 @@ async function assertDarkWallpaperShortcutAdaptiveTone() {
   );
 }
 
-async function assertDarkThemeLightWallpaperShortcutAdaptiveTone() {
+async function assertDarkThemeKeepsShortcutThemeBackground() {
   const wordmark = createToneElement({
     left: 390,
     top: 54,
@@ -359,6 +355,7 @@ async function assertDarkThemeLightWallpaperShortcutAdaptiveTone() {
   const shortcutTile = createToneElement();
   const addTile = createToneElement();
   shortcutTile.setAttribute('data-shortcut-theme-default', 'true');
+  shortcutTile.style.setProperty('--x-nt-shortcut-icon-bg', 'rgb(33 52 85)');
   const pixel = { red: 238, green: 242, blue: 247 };
   const canvas = {
     width: 0,
@@ -451,8 +448,7 @@ async function assertDarkThemeLightWallpaperShortcutAdaptiveTone() {
           sampleElement: shortcutTile,
           minWidth: 42,
           minHeight: 42,
-          iconButton: true,
-          forcedIconBackground: 'default-theme'
+          iconButton: true
         },
         {
           element: addTile,
@@ -488,12 +484,6 @@ async function assertDarkThemeLightWallpaperShortcutAdaptiveTone() {
   const wordmarkColor = parseSolidRgb(
     wordmark.style.getPropertyValue('--x-nt-wallpaper-wordmark-ink')
   );
-  const shortcutBackground = parseSolidRgb(
-    shortcutTile.style.getPropertyValue('--x-nt-shortcut-wallpaper-icon-bg')
-  );
-  const shortcutForeground = parseSolidRgb(
-    shortcutTile.style.getPropertyValue('--x-nt-shortcut-wallpaper-icon-color')
-  );
   const addBackground = parseSolidRgb(addTile.style.getPropertyValue('--x-nt-shortcut-add-bg'));
   const addForeground = parseSolidRgb(addTile.style.getPropertyValue('--x-nt-shortcut-add-color'));
 
@@ -501,17 +491,19 @@ async function assertDarkThemeLightWallpaperShortcutAdaptiveTone() {
     getTestContrastRatio(wordmarkColor, pixel) >= 3.25,
     'wallpaper wordmark should keep accessible contrast on a similarly colored light background'
   );
-  assert.ok(
-    getTestColorLuminance(shortcutBackground) < 0.36,
-    'dark theme URL fallback shortcut backgrounds should stay dark even on a light wallpaper'
+  assert.strictEqual(
+    shortcutTile.style.getPropertyValue('--x-nt-shortcut-wallpaper-icon-bg'),
+    '',
+    'light wallpapers should not override a favicon dark-theme background'
   );
   assert.ok(
     getTestColorLuminance(addBackground) < 0.42,
     'dark theme add shortcut background should stay dark even on a light wallpaper'
   );
-  assert.ok(
-    getTestColorLuminance(shortcutForeground) > 0.72,
-    'dark theme URL fallback shortcut icon should remain light on the dark surface'
+  assert.strictEqual(
+    shortcutTile.style.getPropertyValue('--x-nt-shortcut-icon-bg'),
+    'rgb(33 52 85)',
+    'light wallpapers should preserve the favicon dark-theme background'
   );
   assert.ok(
     getTestColorLuminance(addForeground) > 0.72,
@@ -644,8 +636,8 @@ assert.strictEqual(
 
 assertContains(
   shortcutDialogCss,
-  'transform: translate3d(var(--x-nt-shortcut-dialog-enter-x, 0px), var(--x-nt-shortcut-dialog-enter-y, 12px), 0) scale(0.98);',
-  'shortcut dialog should open from a trigger-aware direction'
+  'transform: translateX(var(--x-nt-shortcut-dialog-enter-x, 0px)) scale(0.98);',
+  'shortcut dialog should keep its trigger-aware horizontal entry direction'
 );
 
 assertContains(
@@ -1737,7 +1729,7 @@ assertContains(
 assertContains(
   newtabJs,
   "tile.setAttribute('data-shortcut-theme-default', isDefaultTheme ? 'true' : 'false');",
-  'shortcut tiles should mark whether their URL background needs a forced wallpaper contrast color'
+  'shortcut tiles should retain default-theme classification for diagnostics'
 );
 
 const applyThemeModeSource = getFunctionSource(newtabJs, 'applyThemeMode');
@@ -1774,13 +1766,19 @@ assertContains(
 assertContains(
   newtabJs,
   "return theme._xThemeNeutral === true ||",
-  'neutral favicon themes should still receive the wallpaper-adaptive URL fallback background'
+  'neutral favicon themes should remain identifiable without changing their stable theme background'
+);
+
+assertNotContains(
+  newtabJs,
+  "forcedIconBackground: 'default-theme'",
+  'favicon tiles should not receive wallpaper-forced backgrounds'
 );
 
 assertContains(
-  newtabJs,
-  "forcedIconBackground: 'default-theme'",
-  'shortcut wallpaper tone targets should only force backgrounds for default-theme URL tiles'
+  getFunctionSource(newtabJs, 'applyShortcutTileTheme'),
+  "tile.style.removeProperty('--x-nt-shortcut-wallpaper-icon-bg');",
+  'favicon theme application should clear stale wallpaper background overrides'
 );
 
 assertContains(
@@ -2478,10 +2476,10 @@ assertContains(
   'shortcut dialog should write a trigger-aware x enter offset'
 );
 
-assertContains(
-  shortcutDialogJs,
-  "'--x-nt-shortcut-dialog-enter-y'",
-  'shortcut dialog should write a trigger-aware y enter offset'
+assert.ok(
+  !shortcutDialogCss.includes('--x-nt-shortcut-dialog-enter-y') &&
+    !shortcutDialogJs.includes("'--x-nt-shortcut-dialog-enter-y'"),
+  'shortcut dialog should not derive or apply a vertical enter offset'
 );
 
 assertContains(
@@ -2558,25 +2556,25 @@ assert.match(
 
 assert.match(
   newtabJs,
-  /const initialVisualReadyPromise = Promise\.all\(\[[\s\S]*?shortcutPreferencesReadyPromise[\s\S]*?\]\)\.then\(\(\) => \{[\s\S]*?markNewtabReady\(\);[\s\S]*?\}\);/,
-  'newtab ready transition should branch after lightweight visual preferences resolve'
+  /const initialVisualReadyPromise = Promise\.all\(\[[\s\S]*?initialShortcutsReadyTask[\s\S]*?\]\)\.catch[\s\S]*?loadRecentSites\(\{[\s\S]*?force: true[\s\S]*?loadBookmarks\(\{[\s\S]*?force: true[\s\S]*?markNewtabReady\(\);/,
+  'newtab ready transition should wait for shortcut and authoritative section geometry'
 );
 
 const initialVisualDependencyBlock = newtabJs.slice(
   newtabJs.indexOf('const initialVisualReadyPromise = Promise.all(['),
-  newtabJs.indexOf(']).then(() => {',
+  newtabJs.indexOf(']).catch((error) => {',
     newtabJs.indexOf('const initialVisualReadyPromise = Promise.all(['))
 );
-assert.doesNotMatch(
+assert.match(
   initialVisualDependencyBlock,
-  /bootstrapInitialWallpaper|shortcutsReadyPromise|loadVisibleShortcuts|loadShortcutIcons/,
-  'newtab ready transition should not wait for wallpaper or shortcut asset payloads'
+  /initialShortcutsReadyTask/,
+  'newtab ready transition should reserve final shortcut geometry before first paint'
 );
 
-assert.match(
+assert.doesNotMatch(
   newtabJs,
-  /initialNewtabSkipsEntryMotion = shouldSkipNewtabEntryMotion\(\);[\s\S]*?if \(!initialNewtabSkipsEntryMotion\) \{[\s\S]*?markNewtabReady\(\);\s*return;\s*\}[\s\S]*?initialShortcutsReadyTask[\s\S]*?markNewtabReady\(\);/,
-  'animated new tabs should reveal immediately while motion-free entry waits for shortcut content'
+  /initialNewtabSkipsEntryMotion|hydrateSectionsFromCache/,
+  'animated and motion-free new tabs should share the same stable first-paint geometry'
 );
 
 assertContains(
@@ -2678,8 +2676,8 @@ assert.strictEqual(
 );
 
 Promise.all([
-  assertDarkWallpaperShortcutAdaptiveTone(),
-  assertDarkThemeLightWallpaperShortcutAdaptiveTone()
+  assertDarkWallpaperKeepsShortcutThemeBackground(),
+  assertDarkThemeKeepsShortcutThemeBackground()
 ]).catch((error) => {
   console.error(error);
   process.exitCode = 1;

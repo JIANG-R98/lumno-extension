@@ -18,7 +18,30 @@ const sharedSearchInputCss = fs.readFileSync(
   path.join(repoRoot, 'src/shared/search-input.css'),
   'utf8'
 );
+const featureHintsCss = fs.readFileSync(
+  path.join(repoRoot, 'src/shared/feature-hints.css'),
+  'utf8'
+);
 const dockReactSource = fs.readFileSync(path.join(repoRoot, 'react-src/newtab/dock.tsx'), 'utf8');
+
+function getCssBlock(source, marker) {
+  const markerIndex = source.indexOf(marker);
+  assert.ok(markerIndex >= 0, `missing CSS block: ${marker}`);
+  const openIndex = source.indexOf('{', markerIndex);
+  assert.ok(openIndex >= 0, `missing CSS block opening brace: ${marker}`);
+  let depth = 0;
+  for (let index = openIndex; index < source.length; index += 1) {
+    if (source[index] === '{') {
+      depth += 1;
+    } else if (source[index] === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return source.slice(markerIndex, index + 1);
+      }
+    }
+  }
+  assert.fail(`missing CSS block closing brace: ${marker}`);
+}
 
 function testNewtabRedirectFocusHintIsConsumedOnce() {
   assert.match(
@@ -880,8 +903,18 @@ function testContinuousResizeKeepsDockDensityStableUntilSettle() {
 function testInitialEntryMotionIsStaggeredAndTransient() {
   assert.match(
     newtabSource,
-    /const initialWallpaperOverlayReadyTask = bootstrapInitialWallpaperOverlay\(\);[\s\S]*?const initialWallpaperVisualReadyTask = Promise\.all\(\[\s*bootstrapInitialThemeMode\(\),\s*initialWallpaperOverlayReadyTask\.then\(\(\) => bootstrapInitialWallpaper\(\)\),\s*initialWallpaperOverlayReadyTask,\s*bootstrapInitialWallpaperEffect\(\)\s*\]\)\.then\(\(\) => waitForInitialWallpaperEffectVisual\(\)\)[\s\S]*?markInitialWallpaperVisualReady\(\);[\s\S]*?const initialAppearanceReadyTask = Promise\.all\(\[\s*initialWallpaperVisualReadyTask,\s*bootstrapInitialNewtabFavicon\(\)[\s\S]*?const initialLanguageReadyTask = bootstrapInitialLanguageMode\(\);[\s\S]*?const initialMotionPreferenceReadyTask[\s\S]*?const initialVisualReadyPromise = Promise\.all\(\[\s*initialAppearanceReadyTask,\s*initialBookmarkViewModeReadyPromise,[\s\S]*?initialMotionPreferenceReadyTask[\s\S]*?initialNewtabSkipsEntryMotion = shouldSkipNewtabEntryMotion\(\);[\s\S]*?if \(!initialNewtabSkipsEntryMotion\) \{[\s\S]*?markNewtabReady\(\);[\s\S]*?Promise\.all\(\[\s*initialVisualReadyPromise,\s*initialLanguageReadyTask,\s*sectionPolicyReadyPromise\s*\]\)/,
-    'critical appearance and motion preference state should settle before the mode-specific entry path'
+    /const initialLayoutStorageReadyTask = startupStorageReadBatch[\s\S]*?startupStorageReadBatch\.ready[\s\S]*?const initialFontsReadyTask = document\.fonts[\s\S]*?document\.fonts\.ready[\s\S]*?const initialVisualReadyPromise = Promise\.all\(\[[\s\S]*?initialLanguageReadyTask,[\s\S]*?sectionPolicyReadyPromise,[\s\S]*?initialShortcutsReadyTask,[\s\S]*?initialPinnedRecentSitesReadyTask,[\s\S]*?initialHiddenRecentSitesReadyTask,[\s\S]*?initialLayoutStorageReadyTask,[\s\S]*?initialFontsReadyTask[\s\S]*?sectionDataRevision \+= 1;[\s\S]*?loadRecentSites\(\{[\s\S]*?force: true,[\s\S]*?sectionDataRevision: initialSectionDataRevision[\s\S]*?loadBookmarks\(\{[\s\S]*?force: true,[\s\S]*?sectionDataRevision: initialSectionDataRevision[\s\S]*?Promise\.all\(\[recentSitesReadyTask, bookmarksReadyTask\]\)[\s\S]*?markNewtabReady\(\)/,
+    'all layout preferences, fonts, shortcuts, and authoritative section data should settle before New Tab becomes visible'
+  );
+  assert.match(
+    newtabSource,
+    /function loadBookmarks\(options\)[\s\S]*?requestedSectionDataRevision[\s\S]*?requestedSectionDataRevision !== sectionDataRevision[\s\S]*?function loadRecentSites\(options\)[\s\S]*?requestedSectionDataRevision[\s\S]*?requestedSectionDataRevision !== sectionDataRevision/,
+    'late section requests from provisional startup preferences should not overwrite the authoritative first layout'
+  );
+  assert.doesNotMatch(
+    newtabSource,
+    /hydrateSectionsFromCache|_x_extension_newtab_(?:recent|bookmark)_cache_2024_unique_/,
+    'stale section caches should not paint a provisional dock geometry before authoritative data'
   );
   assert.match(
     newtabSource,
@@ -972,6 +1005,33 @@ function testInitialEntryMotionIsStaggeredAndTransient() {
     /filter:\s*blur/,
     'the backdrop-filtered search panel should stay on compositor-only opacity and scale motion'
   );
+  [
+    '_x_nt_wordmark_enter_2026_unique_',
+    '_x_nt_shortcut_entry_2026_unique_',
+    '_x_nt_content_section_entry_2026_unique_',
+    '_x_nt_corner_control_entry_2026_unique_'
+  ].forEach((name) => {
+    assert.doesNotMatch(
+      getCssBlock(newtabHtml, `@keyframes ${name}`),
+      /translate(?:3d|Y)?\s*[:(]/,
+      `${name} should preserve its final vertical position throughout entry`
+    );
+  });
+  [
+    ['.x-lumno-feature-hint--newtab-wallpaper', 'translateY(-50%)'],
+    ['.x-lumno-feature-hint--newtab-ai-quick-jump', 'translateX(-50%)'],
+    ['.x-lumno-feature-hint--newtab-tab-switcher', ''],
+    ['.x-lumno-feature-hint--newtab-input-auto-focus', ''],
+    ['.x-lumno-feature-hint--update-notice-newtab', '']
+  ].forEach(([selector, allowedPositionTransform]) => {
+    const block = getCssBlock(featureHintsCss, selector);
+    const transforms = block.match(/translate(?:X|Y)?\([^)]*\)/g) || [];
+    assert.deepStrictEqual(
+      transforms,
+      allowedPositionTransform ? [allowedPositionTransform] : [],
+      `${selector} should keep only its fixed positioning transform during entry`
+    );
+  });
   assert.match(
     newtabHtml,
     /body\[data-nt-enter="run"\] \.x-nt-shortcuts-section\[data-visible="true"\] \.x-nt-shortcut-tile\s*\{[\s\S]*?calc\(80ms \+ \(var\(--x-nt-shortcut-enter-index\) \* 18ms\)\) both;/,

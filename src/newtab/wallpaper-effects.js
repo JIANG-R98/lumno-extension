@@ -16,13 +16,15 @@
   const MIN_BLUR_RADIUS_PX = 2;
   const MAX_BLUR_RADIUS_PX = 32;
   const DEFAULT_PREFS = {
-    version: 10,
+    version: 11,
     type: 'none',
     inkTone: 'auto',
     strength: 50,
     size: 50,
     spacing: 50,
     texture: 20,
+    blockSize: 1,
+    crtStrength: 20,
     crtBloom: 15,
     crtRgbOffset: 35,
     crtCurvature: 18
@@ -66,11 +68,30 @@
     const fallbackVersion = Number(inheritedVersion);
     const storedVersion = Number.isFinite(ownVersion) ? ownVersion : fallbackVersion;
     const migrated = Object.assign({}, source);
-    if ((!Number.isFinite(storedVersion) || storedVersion < 10) &&
-        source.type === 'blocks') {
-      const legacySize = Number(source.size);
-      if (Number.isFinite(legacySize) && legacySize > 5) {
-        migrated.size = legacySize / 20;
+    if (!Number.isFinite(storedVersion) || storedVersion < 11) {
+      if (source.type === 'blocks') {
+        const explicitBlockSize = Number(source.blockSize);
+        const legacySize = Number(source.size);
+        let blockSize = Number.isFinite(explicitBlockSize) ? explicitBlockSize : legacySize;
+        if ((!Number.isFinite(storedVersion) || storedVersion < 10) &&
+            Number.isFinite(blockSize) && blockSize > 5) {
+          blockSize /= 20;
+        }
+        migrated.blockSize = Number.isFinite(blockSize)
+          ? blockSize
+          : DEFAULT_PREFS.blockSize;
+        migrated.strength = DEFAULT_PREFS.strength;
+        migrated.size = DEFAULT_PREFS.size;
+        migrated.spacing = DEFAULT_PREFS.spacing;
+        migrated.texture = DEFAULT_PREFS.texture;
+      }
+      if (source.type === 'crt') {
+        migrated.crtStrength = Number.isFinite(Number(source.crtStrength))
+          ? source.crtStrength
+          : (Number.isFinite(Number(source.strength))
+            ? source.strength
+            : DEFAULT_PREFS.crtStrength);
+        migrated.strength = DEFAULT_PREFS.strength;
       }
     }
     migrated.version = DEFAULT_PREFS.version;
@@ -237,6 +258,12 @@
     const rawTexture = Number.isFinite(Number(source.texture))
       ? source.texture
       : DEFAULT_PREFS.texture;
+    const rawBlockSize = Number.isFinite(Number(source.blockSize))
+      ? source.blockSize
+      : DEFAULT_PREFS.blockSize;
+    const rawCrtStrength = Number.isFinite(Number(source.crtStrength))
+      ? source.crtStrength
+      : DEFAULT_PREFS.crtStrength;
     const rawCrtBloom = Number.isFinite(Number(source.crtBloom))
       ? source.crtBloom
       : DEFAULT_PREFS.crtBloom;
@@ -250,22 +277,12 @@
       version: DEFAULT_PREFS.version,
       type,
       inkTone,
-      strength: type === 'blocks'
-        ? 100
-        : (type === 'crt'
-          ? clampCrtPhysicalValue(rawStrength, 0, 20)
-          : Math.round(clampNumber(rawStrength, 0, 100))),
-      size: type === 'blocks'
-        ? normalizeBlockParameter(source.size, 1)
-        : Math.round(clampNumber(rawSize, 0, 100)),
-      spacing: type === 'blocks'
-        ? 0
-        : Math.round(clampNumber(rawSpacing, 0, 100)),
-      texture: type === 'blocks'
-        ? 100
-        : (type === 'blur'
-          ? Math.round(clampNumber(rawTexture, 0, 100))
-          : Number(rawTexture)),
+      strength: Math.round(clampNumber(rawStrength, 0, 100)),
+      size: Math.round(clampNumber(rawSize, 0, 100)),
+      spacing: Math.round(clampNumber(rawSpacing, 0, 100)),
+      texture: Math.round(clampNumber(rawTexture, 0, 100)),
+      blockSize: normalizeBlockParameter(rawBlockSize, DEFAULT_PREFS.blockSize),
+      crtStrength: clampCrtPhysicalValue(rawCrtStrength, 0, 20),
       crtBloom: clampCrtPhysicalValue(rawCrtBloom, 0, 20),
       crtRgbOffset: Math.round(clampNumber(rawCrtRgbOffset, 0, 100)),
       crtCurvature: clampCrtPhysicalValue(rawCrtCurvature, 0, 35)
@@ -1903,10 +1920,10 @@
           drawBlocks(
             nextViewport,
             sampler,
-            normalized.strength,
-            normalized.size,
-            normalized.spacing,
-            normalized.texture
+            100,
+            normalized.blockSize,
+            0,
+            100
           );
           completeRender(revision);
           return;
@@ -1940,7 +1957,7 @@
             nextViewport,
             sampler,
             normalized.inkTone,
-            normalized.strength,
+            normalized.crtStrength,
             normalized
           );
           completeRender(revision);
@@ -2013,7 +2030,9 @@
       const visualPrefsChanged = previousType !== prefs.type ||
         previousPrefs.inkTone !== prefs.inkTone ||
         previousPrefs.strength !== prefs.strength ||
+        previousPrefs.crtStrength !== prefs.crtStrength ||
         (prefs.type !== 'crt' && previousPrefs.size !== prefs.size) ||
+        previousPrefs.blockSize !== prefs.blockSize ||
         (prefs.type !== 'crt' && previousPrefs.spacing !== prefs.spacing) ||
         previousPrefs.texture !== prefs.texture ||
         previousPrefs.crtBloom !== prefs.crtBloom ||

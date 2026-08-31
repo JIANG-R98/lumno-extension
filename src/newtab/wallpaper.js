@@ -18,24 +18,26 @@
   };
   const PRELOAD_STORAGE_KEY = '_x_extension_newtab_wallpaper_preload_2026_unique_';
   const PRELOAD_STORAGE_VERSION = 4;
-  const WALLPAPER_EFFECT_MODE_STORAGE_VERSION = 10;
+  const WALLPAPER_EFFECT_MODE_STORAGE_VERSION = 11;
   const NEWTAB_TIME_FONT_WEIGHT_MIN = Number(SETTINGS.NEWTAB_TIME_FONT_WEIGHT_MIN) || 300;
   const NEWTAB_TIME_FONT_WEIGHT_MAX = Number(SETTINGS.NEWTAB_TIME_FONT_WEIGHT_MAX) || 800;
   const NEWTAB_TIME_FONT_WEIGHT_DEFAULT = Number(SETTINGS.NEWTAB_TIME_FONT_WEIGHT_DEFAULT) || 320;
   const FALLBACK_WALLPAPER_EFFECT_PREFS = {
-    version: 10,
+    version: 11,
     type: 'none',
     inkTone: 'auto',
     strength: 50,
     size: 50,
     spacing: 50,
     texture: 20,
+    blockSize: 1,
+    crtStrength: 20,
     crtBloom: 15,
     crtRgbOffset: 35,
     crtCurvature: 18
   };
   const CRT_PARAMETER_PHYSICAL_MAX = Object.freeze({
-    strength: 20,
+    crtStrength: 20,
     crtBloom: 20,
     crtRgbOffset: 100,
     crtCurvature: 35
@@ -61,11 +63,39 @@
     return Math.round((Math.max(0, Math.min(100, number)) / 100) * physicalMax * 1000) / 1000;
   }
 
-  function normalizeSingleWallpaperEffectPrefs(value) {
+  function normalizeSingleWallpaperEffectPrefs(value, inheritedVersion) {
     if (typeof WALLPAPER_EFFECTS.normalizePrefs === 'function') {
-      return WALLPAPER_EFFECTS.normalizePrefs(value);
+      return WALLPAPER_EFFECTS.normalizePrefs(value, inheritedVersion);
     }
-    const source = value && typeof value === 'object' ? value : {};
+    const rawSource = value && typeof value === 'object' ? value : {};
+    const ownVersion = Number(rawSource.version);
+    const fallbackVersion = Number(inheritedVersion);
+    const storedVersion = Number.isFinite(ownVersion) ? ownVersion : fallbackVersion;
+    const source = Object.assign({}, rawSource);
+    if (!Number.isFinite(storedVersion) || storedVersion < 11) {
+      if (source.type === 'blocks') {
+        const explicitBlockSize = Number(source.blockSize);
+        const legacySize = Number(source.size);
+        let blockSize = Number.isFinite(explicitBlockSize) ? explicitBlockSize : legacySize;
+        if ((!Number.isFinite(storedVersion) || storedVersion < 10) &&
+            Number.isFinite(blockSize) && blockSize > BLOCK_PARAMETER_MAX) {
+          blockSize /= 20;
+        }
+        source.blockSize = Number.isFinite(blockSize) ? blockSize : BLOCK_DEFAULT_SIZE_UI;
+        source.strength = FALLBACK_WALLPAPER_EFFECT_PREFS.strength;
+        source.size = FALLBACK_WALLPAPER_EFFECT_PREFS.size;
+        source.spacing = FALLBACK_WALLPAPER_EFFECT_PREFS.spacing;
+        source.texture = FALLBACK_WALLPAPER_EFFECT_PREFS.texture;
+      }
+      if (source.type === 'crt') {
+        source.crtStrength = Number.isFinite(Number(source.crtStrength))
+          ? source.crtStrength
+          : (Number.isFinite(Number(source.strength))
+            ? source.strength
+            : FALLBACK_WALLPAPER_EFFECT_PREFS.crtStrength);
+        source.strength = FALLBACK_WALLPAPER_EFFECT_PREFS.strength;
+      }
+    }
     const type = ['none', 'blur', 'grain', 'blocks', 'halftone', 'dither', 'ascii', 'crt'].includes(source.type)
       ? source.type
       : FALLBACK_WALLPAPER_EFFECT_PREFS.type;
@@ -92,20 +122,16 @@
       inkTone: ['auto', 'dark', 'light'].includes(source.inkTone)
         ? source.inkTone
         : FALLBACK_WALLPAPER_EFFECT_PREFS.inkTone,
-      strength: type === 'blocks'
-        ? 100
-        : (type === 'crt'
-          ? normalizeCrtPhysical(source.strength, 20, 20)
-          : normalizePercent(source.strength, FALLBACK_WALLPAPER_EFFECT_PREFS.strength)),
-      size: type === 'blocks'
-        ? normalizeBlockParameter(source.size, BLOCK_DEFAULT_SIZE_UI)
-        : normalizePercent(rawSize, FALLBACK_WALLPAPER_EFFECT_PREFS.size),
-      spacing: type === 'blocks'
-        ? 0
-        : normalizePercent(source.spacing, FALLBACK_WALLPAPER_EFFECT_PREFS.spacing),
-      texture: type === 'blocks'
-        ? 100
-        : normalizePercent(source.texture, FALLBACK_WALLPAPER_EFFECT_PREFS.texture),
+      strength: normalizePercent(source.strength, FALLBACK_WALLPAPER_EFFECT_PREFS.strength),
+      size: normalizePercent(rawSize, FALLBACK_WALLPAPER_EFFECT_PREFS.size),
+      spacing: normalizePercent(source.spacing, FALLBACK_WALLPAPER_EFFECT_PREFS.spacing),
+      texture: normalizePercent(source.texture, FALLBACK_WALLPAPER_EFFECT_PREFS.texture),
+      blockSize: normalizeBlockParameter(source.blockSize, BLOCK_DEFAULT_SIZE_UI),
+      crtStrength: normalizeCrtPhysical(
+        source.crtStrength,
+        FALLBACK_WALLPAPER_EFFECT_PREFS.crtStrength,
+        20
+      ),
       crtBloom: normalizeCrtPhysical(source.crtBloom, FALLBACK_WALLPAPER_EFFECT_PREFS.crtBloom, 20),
       crtRgbOffset: normalizePercent(
         source.crtRgbOffset,
@@ -127,13 +153,14 @@
     const hasModePrefs = Boolean(source &&
       ((source.light && typeof source.light === 'object') ||
         (source.dark && typeof source.dark === 'object')));
-    const shared = normalizeSingleWallpaperEffectPrefs(value);
+    const inheritedVersion = source && source.version;
+    const shared = normalizeSingleWallpaperEffectPrefs(value, inheritedVersion);
     const lightSource = hasModePrefs ? (source.light || source.dark) : shared;
     const darkSource = hasModePrefs ? (source.dark || source.light) : shared;
     return {
       version: WALLPAPER_EFFECT_MODE_STORAGE_VERSION,
-      light: normalizeSingleWallpaperEffectPrefs(lightSource),
-      dark: normalizeSingleWallpaperEffectPrefs(darkSource)
+      light: normalizeSingleWallpaperEffectPrefs(lightSource, inheritedVersion),
+      dark: normalizeSingleWallpaperEffectPrefs(darkSource, inheritedVersion)
     };
   }
 
@@ -450,13 +477,15 @@
       dark: { top: 44, mid: 20, bottom: 50 }
     };
     const NEWTAB_WALLPAPER_EFFECT_DEFAULTS = WALLPAPER_EFFECTS.DEFAULT_PREFS || {
-      version: 10,
+      version: 11,
       type: 'none',
       inkTone: 'auto',
       strength: 50,
       size: 50,
       spacing: 50,
       texture: 20,
+      blockSize: 1,
+      crtStrength: 20,
       crtBloom: 15,
       crtRgbOffset: 35,
       crtCurvature: 18
@@ -3160,7 +3189,7 @@
       const textureLabel = getWallpaperEffectTextureLabel();
       updateWallpaperSliderElement(wallpaperEffectSlider, {
         value: prefs.type === 'crt'
-          ? getCrtParameterPercent('strength', prefs.strength)
+          ? getCrtParameterPercent('crtStrength', prefs.crtStrength)
           : prefs.strength,
         enabled: visibility.strength,
         dynamicRange: false,
@@ -3171,7 +3200,7 @@
         fallback: strengthLabel.fallback
       });
       updateWallpaperSliderElement(wallpaperEffectSizeSlider, {
-        value: prefs.size,
+        value: prefs.type === 'blocks' ? prefs.blockSize : prefs.size,
         enabled: visibility.size,
         dynamicRange: false,
         min: 0,
@@ -5605,14 +5634,7 @@
       wallpaperEffectOptions.querySelectorAll('[data-wallpaper-effect-type]').forEach((button) => {
         button.addEventListener('click', () => {
           const type = button.getAttribute('data-wallpaper-effect-type');
-          const currentPrefs = getWallpaperEffectPrefsForEditMode();
-          const defaults = type === 'blocks' && currentPrefs.type !== 'blocks'
-            ? {
-                size: BLOCK_DEFAULT_SIZE_UI,
-                spacing: 0
-              }
-            : {};
-          persistWallpaperEffectPrefs(Object.assign({ type }, defaults));
+          persistWallpaperEffectPrefs({ type });
         });
       });
       wallpaperEffectInkToneOptions.querySelectorAll('[data-wallpaper-effect-ink-tone]').forEach((button) => {
@@ -5630,10 +5652,12 @@
       [
         {
           key: 'strength',
+          resolveKey: (prefs) => prefs.type === 'crt' ? 'crtStrength' : 'strength',
           slider: wallpaperEffectSlider
         },
         {
           key: 'size',
+          resolveKey: (prefs) => prefs.type === 'blocks' ? 'blockSize' : 'size',
           slider: wallpaperEffectSizeSlider
         },
         {

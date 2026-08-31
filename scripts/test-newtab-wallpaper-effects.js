@@ -136,13 +136,15 @@ const normalized = effects.normalizePrefs({
 assert.deepStrictEqual(
   JSON.parse(JSON.stringify(normalized)),
   {
-    version: 10,
+    version: 11,
     type: 'ascii',
     inkTone: 'light',
     strength: 100,
     size: 0,
     spacing: 100,
-    texture: -240.75,
+    texture: 0,
+    blockSize: 1,
+    crtStrength: 20,
     crtBloom: 15,
     crtRgbOffset: 35,
     crtCurvature: 18
@@ -155,13 +157,15 @@ assert.deepStrictEqual(
     texture: -Infinity
   }))),
   {
-    version: 10,
+    version: 11,
     type: 'none',
     inkTone: 'auto',
     strength: 50,
     size: 50,
     spacing: 50,
     texture: 20,
+    blockSize: 1,
+    crtStrength: 20,
     crtBloom: 15,
     crtRgbOffset: 35,
     crtCurvature: 18
@@ -191,29 +195,29 @@ assert.strictEqual(
   'standard glass texture should not retain negative values'
 );
 assert.strictEqual(
-  effects.normalizePrefs({ type: 'blocks', texture: 180.75 }).texture,
+  effects.normalizePrefs({ version: 11, type: 'blocks', texture: 180.75 }).texture,
   100,
-  'block color levels should use the fixed full-detail value'
+  'shared texture should remain bounded while Blocks uses a fixed render value'
 );
 assert.strictEqual(
-  effects.normalizePrefs({ type: 'blocks', texture: -40 }).texture,
-  100,
-  'legacy block color levels should migrate to the fixed full-detail value'
+  effects.normalizePrefs({ version: 11, type: 'blocks', texture: -40 }).texture,
+  0,
+  'selecting Blocks should not force the shared texture value'
 );
 assert.strictEqual(
-  effects.normalizePrefs({ type: 'blocks', strength: 12 }).strength,
-  100,
-  'legacy block relief values should migrate to the fixed full-height value'
+  effects.normalizePrefs({ version: 11, type: 'blocks', strength: 12 }).strength,
+  12,
+  'selecting Blocks should not force the shared strength value'
 );
 assert.strictEqual(
-  effects.normalizePrefs({ type: 'blocks', size: 80 }).size,
+  effects.normalizePrefs({ type: 'blocks', size: 80 }).blockSize,
   4,
   'legacy percentage-mapped block size should migrate to the native 0–5 scale'
 );
 assert.strictEqual(
-  effects.normalizePrefs({ version: 10, type: 'blocks', size: 8 }).size,
+  effects.normalizePrefs({ version: 10, type: 'blocks', size: 8 }).blockSize,
   5,
-  'current block size values should clamp instead of being mistaken for legacy percentages'
+  'v10 block size values should clamp instead of being mistaken for percentages'
 );
 const migratedBlockPrefs = effects.normalizePrefs({ version: 9, type: 'blocks', size: 80 });
 assert.deepStrictEqual(
@@ -226,18 +230,18 @@ const migratedModePrefs = effects.normalizeStoragePrefs({
   light: { type: 'blocks', size: 80 },
   dark: { type: 'blocks', size: 20 }
 });
-assert.strictEqual(migratedModePrefs.version, 10);
-assert.strictEqual(migratedModePrefs.light.version, 10);
-assert.strictEqual(migratedModePrefs.light.size, 4);
-assert.strictEqual(migratedModePrefs.dark.size, 1);
+assert.strictEqual(migratedModePrefs.version, 11);
+assert.strictEqual(migratedModePrefs.light.version, 11);
+assert.strictEqual(migratedModePrefs.light.blockSize, 4);
+assert.strictEqual(migratedModePrefs.dark.blockSize, 1);
 assert.deepStrictEqual(
   JSON.parse(JSON.stringify(effects.normalizeStoragePrefs(migratedModePrefs))),
   JSON.parse(JSON.stringify(migratedModePrefs)),
   'mode-aware effect storage should migrate directly to one stable latest schema'
 );
-assert.strictEqual(effects.normalizePrefs({ type: 'blocks' }).size, 1);
-assert.strictEqual(effects.normalizePrefs({ type: 'blocks' }).spacing, 0);
-assert.strictEqual(effects.normalizePrefs({ type: 'blocks', spacing: -10 }).spacing, 0);
+assert.strictEqual(effects.normalizePrefs({ type: 'blocks' }).blockSize, 1);
+assert.strictEqual(effects.normalizePrefs({ type: 'blocks' }).spacing, 50);
+assert.strictEqual(effects.normalizePrefs({ version: 11, type: 'blocks', spacing: -10 }).spacing, 0);
 assert.strictEqual(
   effects.normalizePrefs({ type: 'blocks' }).type,
   'blocks',
@@ -285,9 +289,10 @@ const normalizedCrt = effects.normalizePrefs({
   crtRgbOffset: -20,
   crtCurvature: 38.4
 });
-assert.strictEqual(normalizedCrt.version, 10);
+assert.strictEqual(normalizedCrt.version, 11);
 assert.strictEqual(normalizedCrt.spacing, 100);
-assert.strictEqual(normalizedCrt.strength, 20);
+assert.strictEqual(normalizedCrt.strength, 50);
+assert.strictEqual(normalizedCrt.crtStrength, 20);
 assert.strictEqual(normalizedCrt.crtBloom, 20);
 assert.strictEqual(normalizedCrt.crtRgbOffset, 0);
 assert.strictEqual(normalizedCrt.crtCurvature, 35);
@@ -307,25 +312,55 @@ const normalizedFractionalCrt = effects.normalizePrefs({
   crtBloom: 10.5,
   crtCurvature: 17.5
 });
-assert.strictEqual(normalizedFractionalCrt.strength, 10.5);
+assert.strictEqual(normalizedFractionalCrt.strength, 50);
+assert.strictEqual(normalizedFractionalCrt.crtStrength, 10.5);
 assert.strictEqual(normalizedFractionalCrt.crtBloom, 10.5);
 assert.strictEqual(normalizedFractionalCrt.crtCurvature, 17.5);
 assert.deepStrictEqual(
   JSON.parse(JSON.stringify(effects.normalizePrefs({ version: 7, type: 'crt' }))),
   {
-    version: 10,
+    version: 11,
     type: 'crt',
     inkTone: 'auto',
-    strength: 20,
+    strength: 50,
     size: 50,
     spacing: 50,
     texture: 20,
+    blockSize: 1,
+    crtStrength: 20,
     crtBloom: 15,
     crtRgbOffset: 35,
     crtCurvature: 18
   },
   'legacy CRT preferences should gain the RGB-only defaults'
 );
+
+const independentEffectPrefs = effects.normalizePrefs({
+  version: 11,
+  type: 'grain',
+  strength: 80,
+  size: 65,
+  spacing: 35,
+  texture: 25,
+  blockSize: 4,
+  crtStrength: 10
+});
+const switchedToCrt = effects.normalizePrefs(Object.assign({}, independentEffectPrefs, {
+  type: 'crt'
+}));
+const switchedToBlocks = effects.normalizePrefs(Object.assign({}, switchedToCrt, {
+  type: 'blocks'
+}));
+const switchedBackToGrain = effects.normalizePrefs(Object.assign({}, switchedToBlocks, {
+  type: 'grain'
+}));
+assert.strictEqual(switchedToCrt.strength, 80, 'CRT should not overwrite generic strength');
+assert.strictEqual(switchedToCrt.crtStrength, 10, 'CRT should retain its dedicated strength');
+assert.strictEqual(switchedToBlocks.blockSize, 4, 'Blocks should retain its dedicated size');
+assert.strictEqual(switchedBackToGrain.strength, 80, 'generic strength should round-trip across effects');
+assert.strictEqual(switchedBackToGrain.size, 65, 'generic size should round-trip across effects');
+assert.strictEqual(switchedBackToGrain.spacing, 35, 'generic spacing should round-trip across effects');
+assert.strictEqual(switchedBackToGrain.texture, 25, 'generic texture should round-trip across effects');
 
 assert.strictEqual(
   effects.normalizePrefs({ type: 'blur' }).type,
@@ -401,7 +436,7 @@ const wallpaper = sandbox.LumnoNewtabWallpaper;
 assert.ok(wallpaper, 'wallpaper runtime module should initialize');
 assert.strictEqual(
   wallpaper.WALLPAPER_EFFECT_MODE_STORAGE_VERSION,
-  10,
+  11,
   'mode-aware wallpaper effect storage should have an explicit schema version'
 );
 const legacyEffectPrefs = {
@@ -414,9 +449,9 @@ const legacyEffectPrefs = {
 assert.deepStrictEqual(
   JSON.parse(JSON.stringify(wallpaper.normalizeWallpaperEffectStoragePrefs(legacyEffectPrefs))),
   {
-    version: 10,
-    light: { version: 10, type: 'grain', inkTone: 'auto', strength: 64, size: 35, spacing: 72, texture: 20, crtBloom: 15, crtRgbOffset: 35, crtCurvature: 18 },
-    dark: { version: 10, type: 'grain', inkTone: 'auto', strength: 64, size: 35, spacing: 72, texture: 20, crtBloom: 15, crtRgbOffset: 35, crtCurvature: 18 }
+    version: 11,
+    light: { version: 11, type: 'grain', inkTone: 'auto', strength: 64, size: 35, spacing: 72, texture: 20, blockSize: 1, crtStrength: 20, crtBloom: 15, crtRgbOffset: 35, crtCurvature: 18 },
+    dark: { version: 11, type: 'grain', inkTone: 'auto', strength: 64, size: 35, spacing: 72, texture: 20, blockSize: 1, crtStrength: 20, crtBloom: 15, crtRgbOffset: 35, crtCurvature: 18 }
   },
   'legacy shared wallpaper effects should migrate to identical light and dark preferences'
 );
@@ -447,9 +482,9 @@ assert.deepStrictEqual(
     dark: { type: 'ascii', strength: 82, size: 73, spacing: 64, glow: 40 }
   }))),
   {
-    version: 10,
-    light: { version: 10, type: 'blur', inkTone: 'auto', strength: 31, size: 42, spacing: 53, texture: 32, crtBloom: 15, crtRgbOffset: 35, crtCurvature: 18 },
-    dark: { version: 10, type: 'ascii', inkTone: 'auto', strength: 82, size: 73, spacing: 64, texture: 20, crtBloom: 15, crtRgbOffset: 35, crtCurvature: 18 }
+    version: 11,
+    light: { version: 11, type: 'blur', inkTone: 'auto', strength: 31, size: 42, spacing: 53, texture: 32, blockSize: 1, crtStrength: 20, crtBloom: 15, crtRgbOffset: 35, crtCurvature: 18 },
+    dark: { version: 11, type: 'ascii', inkTone: 'auto', strength: 82, size: 73, spacing: 64, texture: 20, blockSize: 1, crtStrength: 20, crtBloom: 15, crtRgbOffset: 35, crtCurvature: 18 }
   },
   'mode-aware wallpaper effects should preserve supported values and discard removed optics'
 );
@@ -502,6 +537,21 @@ assert.match(
   effectsSource,
   /previousPrefs\.inkTone !== prefs\.inkTone/,
   'changing dot or ASCII color should invalidate and rerender the cached effect layer'
+);
+assert.match(
+  effectsSource,
+  /previousPrefs\.crtStrength !== prefs\.crtStrength[\s\S]*?previousPrefs\.blockSize !== prefs\.blockSize/,
+  'dedicated CRT strength and Blocks size should invalidate their active render'
+);
+assert.match(
+  effectsSource,
+  /if \(normalized\.type === 'blocks'\) \{[\s\S]*?drawBlocks\([\s\S]*?100,[\s\S]*?normalized\.blockSize,[\s\S]*?0,[\s\S]*?100/,
+  'Blocks should use fixed render-only relief values without persisting them over shared controls'
+);
+assert.match(
+  effectsSource,
+  /if \(normalized\.type === 'crt'\) \{[\s\S]*?drawCrt\([\s\S]*?normalized\.crtStrength/,
+  'CRT should render from its dedicated physical strength'
 );
 assert.match(
   effectsSource,
@@ -1188,7 +1238,15 @@ async function testBlocksRenderDeterministicReliefFaces() {
     shouldAnimateTransition: () => false
   });
   try {
-    controller.apply({ type: 'blocks', strength: 70, size: 45, spacing: 25, texture: 40 });
+    controller.apply({
+      version: 11,
+      type: 'blocks',
+      strength: 70,
+      size: 45,
+      spacing: 25,
+      texture: 40,
+      blockSize: 3
+    });
     await controller.refresh({ immediate: true });
     const effectCanvas = createdCanvases[0];
     assert.strictEqual(effectCanvas.getAttribute('data-effect'), 'blocks');
@@ -1269,7 +1327,14 @@ async function testCrtRendersPhosphorScanlinesAndColorFringe() {
   });
 
   try {
-    controller.apply({ type: 'crt', strength: 70, size: 45, spacing: 60 });
+    controller.apply({
+      version: 11,
+      type: 'crt',
+      strength: 70,
+      crtStrength: 14,
+      size: 45,
+      spacing: 60
+    });
     await controller.refresh({ immediate: true });
     const effectCanvas = createdCanvases[0];
     assert.strictEqual(effectCanvas.getAttribute('data-effect'), 'crt');

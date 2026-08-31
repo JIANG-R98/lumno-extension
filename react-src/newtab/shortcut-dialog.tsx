@@ -791,9 +791,7 @@ function setEnterDirection(
   options: NormalizedOptions
 ): void {
   let enterX = 0;
-  let enterY = 12;
   let originX = 'center';
-  let originY = 'bottom';
   if (sourceElement && dialog) {
     const sourceRect = sourceElement.getBoundingClientRect();
     const dialogRect = dialog.getBoundingClientRect();
@@ -803,41 +801,22 @@ function setEnterDirection(
         options.documentObj.documentElement?.clientWidth ||
         0
     );
-    const viewportHeight = Math.max(
-      0,
-      options.windowObj.innerHeight ||
-        options.documentObj.documentElement?.clientHeight ||
-        0
-    );
     const targetX = dialogRect.width
       ? dialogRect.left + dialogRect.width / 2
       : viewportWidth / 2;
-    const targetY = dialogRect.height
-      ? dialogRect.top + dialogRect.height / 2
-      : viewportHeight / 2;
     const sourceX = sourceRect.left + sourceRect.width / 2;
-    const sourceY = sourceRect.top + sourceRect.height / 2;
     enterX = getEnterOffset(sourceX, targetX);
-    enterY = getEnterOffset(sourceY, targetY);
     if (Math.abs(enterX) < 2) {
       enterX = 0;
     }
-    if (Math.abs(enterY) < 2) {
-      enterY = 0;
-    }
     originX = enterX < -2 ? 'left' : enterX > 2 ? 'right' : 'center';
-    originY = enterY < -2 ? 'top' : enterY > 2 ? 'bottom' : 'center';
   }
   if (dialog) {
     dialog.style.setProperty(
       '--x-nt-shortcut-dialog-enter-x',
       `${Math.round(enterX)}px`
     );
-    dialog.style.setProperty(
-      '--x-nt-shortcut-dialog-enter-y',
-      `${Math.round(enterY)}px`
-    );
-    dialog.style.transformOrigin = `${originX} ${originY}`;
+    dialog.style.transformOrigin = `${originX} center`;
   }
 }
 
