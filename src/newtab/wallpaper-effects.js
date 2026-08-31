@@ -1,7 +1,7 @@
 (function(root) {
   'use strict';
 
-  const EFFECT_TYPES = ['none', 'grain', 'halftone', 'dither', 'ascii'];
+  const EFFECT_TYPES = ['none', 'blur', 'grain', 'blocks', 'halftone', 'dither', 'ascii', 'crt'];
   const EFFECT_INK_TONES = ['auto', 'dark', 'light'];
   const BAYER_4X4 = [
     [0, 8, 2, 10],
@@ -13,13 +13,19 @@
   const TARGET_EFFECT_CANVAS_PIXELS = 2048 * 2048;
   const MAX_EFFECT_CANVAS_SCALE = 1.6;
   const PARAMETER_RENDER_DEBOUNCE_MS = 72;
+  const MIN_BLUR_RADIUS_PX = 2;
+  const MAX_BLUR_RADIUS_PX = 32;
   const DEFAULT_PREFS = {
-    version: 4,
+    version: 10,
     type: 'none',
     inkTone: 'auto',
     strength: 50,
     size: 50,
-    spacing: 50
+    spacing: 50,
+    texture: 20,
+    crtBloom: 15,
+    crtRgbOffset: 35,
+    crtCurvature: 18
   };
 
   function getOption(options, key, fallback) {
@@ -40,6 +46,35 @@
       return min;
     }
     return Math.min(max, Math.max(min, number));
+  }
+
+  function clampCrtPhysicalValue(value, min, max) {
+    return Math.round(clampNumber(value, min, max) * 1000) / 1000;
+  }
+
+  function normalizeBlockParameter(value, fallback) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) {
+      return fallback;
+    }
+    return Math.round(clampNumber(number, 0, 5));
+  }
+
+  function migratePrefsToLatest(value, inheritedVersion) {
+    const source = value && typeof value === 'object' ? value : {};
+    const ownVersion = Number(source.version);
+    const fallbackVersion = Number(inheritedVersion);
+    const storedVersion = Number.isFinite(ownVersion) ? ownVersion : fallbackVersion;
+    const migrated = Object.assign({}, source);
+    if ((!Number.isFinite(storedVersion) || storedVersion < 10) &&
+        source.type === 'blocks') {
+      const legacySize = Number(source.size);
+      if (Number.isFinite(legacySize) && legacySize > 5) {
+        migrated.size = legacySize / 20;
+      }
+    }
+    migrated.version = DEFAULT_PREFS.version;
+    return migrated;
   }
 
   function quantizeDitherChannel(value, threshold, levels) {
@@ -184,30 +219,93 @@
     };
   }
 
-  function normalizePrefs(value) {
-    if (!value || typeof value !== 'object') {
-      return Object.assign({}, DEFAULT_PREFS);
-    }
-    const type = EFFECT_TYPES.indexOf(value.type) === -1 ? DEFAULT_PREFS.type : value.type;
-    const inkTone = EFFECT_INK_TONES.indexOf(value.inkTone) === -1
+  function normalizePrefs(value, inheritedVersion) {
+    const source = migratePrefsToLatest(value, inheritedVersion);
+    const type = EFFECT_TYPES.indexOf(source.type) === -1 ? DEFAULT_PREFS.type : source.type;
+    const inkTone = EFFECT_INK_TONES.indexOf(source.inkTone) === -1
       ? DEFAULT_PREFS.inkTone
-      : value.inkTone;
-    const rawStrength = Number.isFinite(Number(value.strength))
-      ? value.strength
+      : source.inkTone;
+    const rawStrength = Number.isFinite(Number(source.strength))
+      ? source.strength
       : DEFAULT_PREFS.strength;
-    const rawSize = Number.isFinite(Number(value.size))
-      ? value.size
-      : (Number.isFinite(Number(value.density)) ? value.density : DEFAULT_PREFS.size);
-    const rawSpacing = Number.isFinite(Number(value.spacing))
-      ? value.spacing
+    const rawSize = Number.isFinite(Number(source.size))
+      ? source.size
+      : (Number.isFinite(Number(source.density)) ? source.density : DEFAULT_PREFS.size);
+    const rawSpacing = Number.isFinite(Number(source.spacing))
+      ? source.spacing
       : DEFAULT_PREFS.spacing;
+    const rawTexture = Number.isFinite(Number(source.texture))
+      ? source.texture
+      : DEFAULT_PREFS.texture;
+    const rawCrtBloom = Number.isFinite(Number(source.crtBloom))
+      ? source.crtBloom
+      : DEFAULT_PREFS.crtBloom;
+    const rawCrtRgbOffset = Number.isFinite(Number(source.crtRgbOffset))
+      ? source.crtRgbOffset
+      : DEFAULT_PREFS.crtRgbOffset;
+    const rawCrtCurvature = Number.isFinite(Number(source.crtCurvature))
+      ? source.crtCurvature
+      : DEFAULT_PREFS.crtCurvature;
     return {
       version: DEFAULT_PREFS.version,
       type,
       inkTone,
-      strength: Math.round(clampNumber(rawStrength, 0, 100)),
-      size: Math.round(clampNumber(rawSize, 0, 100)),
-      spacing: Math.round(clampNumber(rawSpacing, 0, 100))
+      strength: type === 'blocks'
+        ? 100
+        : (type === 'crt'
+          ? clampCrtPhysicalValue(rawStrength, 0, 20)
+          : Math.round(clampNumber(rawStrength, 0, 100))),
+      size: type === 'blocks'
+        ? normalizeBlockParameter(source.size, 1)
+        : Math.round(clampNumber(rawSize, 0, 100)),
+      spacing: type === 'blocks'
+        ? 0
+        : Math.round(clampNumber(rawSpacing, 0, 100)),
+      texture: type === 'blocks'
+        ? 100
+        : (type === 'blur'
+          ? Math.round(clampNumber(rawTexture, 0, 100))
+          : Number(rawTexture)),
+      crtBloom: clampCrtPhysicalValue(rawCrtBloom, 0, 20),
+      crtRgbOffset: Math.round(clampNumber(rawCrtRgbOffset, 0, 100)),
+      crtCurvature: clampCrtPhysicalValue(rawCrtCurvature, 0, 35)
+    };
+  }
+
+  function normalizeStoragePrefs(value) {
+    const source = value && typeof value === 'object' ? value : {};
+    const hasModePrefs = Boolean(
+      (source.light && typeof source.light === 'object') ||
+      (source.dark && typeof source.dark === 'object')
+    );
+    const normalizeMode = (modeValue) => normalizePrefs(modeValue, source.version);
+    const shared = normalizeMode(source);
+    const lightSource = hasModePrefs ? (source.light || source.dark) : shared;
+    const darkSource = hasModePrefs ? (source.dark || source.light) : shared;
+    return {
+      version: DEFAULT_PREFS.version,
+      light: normalizeMode(lightSource),
+      dark: normalizeMode(darkSource)
+    };
+  }
+
+  function getBlurRadius(strength) {
+    const ratio = clampNumber(strength, 0, 100) / 100;
+    return Math.round((MIN_BLUR_RADIUS_PX +
+      ((MAX_BLUR_RADIUS_PX - MIN_BLUR_RADIUS_PX) * ratio)) * 10) / 10;
+  }
+
+  function getStandardFrostParams(texture) {
+    const inputRatio = clampNumber(texture, 0, 100) / 100;
+    const ratio = Math.pow(inputRatio, 0.65);
+    return {
+      ratio,
+      materialOpacity: ratio * 0.18,
+      grainSize: Math.round(96 - (32 * ratio)),
+      coarseGrainSize: Math.round(420 - (100 * ratio)),
+      saturation: Math.round(100 + (10 * ratio)),
+      brightness: Math.round(100 + (6 * ratio)),
+      contrast: Math.round(100 - (16 * ratio))
     };
   }
 
@@ -252,12 +350,17 @@
     let observer = null;
     let asciiGlyphMetricsCache = null;
     let effectBaseCacheKey = '';
+    let crtWebglRenderer = null;
+    let hasTriedCrtWebglRenderer = false;
+    const materialNoiseTiles = { coarse: null, fine: null };
+    const standardNoiseDataUrls = { coarse: null, fine: null };
     let resizeTransitionCanvas = null;
     let resizeTransitionFrame = 0;
     let resizeTransitionTimer = 0;
     let shouldCrossfadeResize = false;
     let renderRequestRevision = 0;
     let renderCompletedRevision = 0;
+    let destroyed = false;
     const renderWaiters = [];
 
     function requestFrame(callback) {
@@ -309,6 +412,23 @@
       return Boolean(documentObj.body &&
         documentObj.body.getAttribute('data-wallpaper-active') === 'true' &&
         getCurrentWallpaper());
+    }
+
+    function updateWallpaperEffectProperties(nextPrefs) {
+      const body = documentObj && documentObj.body;
+      if (!body || !body.style || typeof body.style.setProperty !== 'function') {
+        return;
+      }
+      body.style.setProperty(
+        '--x-nt-wallpaper-blur-radius',
+        `${getBlurRadius(nextPrefs.strength)}px`
+      );
+      const frost = nextPrefs.type === 'blur'
+        ? getStandardFrostParams(nextPrefs.texture)
+        : getStandardFrostParams(0);
+      body.style.setProperty('--x-nt-wallpaper-blur-saturate', `${frost.saturation}%`);
+      body.style.setProperty('--x-nt-wallpaper-blur-brightness', `${frost.brightness}%`);
+      body.style.setProperty('--x-nt-wallpaper-blur-contrast', `${frost.contrast}%`);
     }
 
     function ensureCanvas() {
@@ -398,6 +518,10 @@
       snapshot.style.height = '100vh';
       snapshot.style.opacity = String(getCanvasOpacity());
       snapshot.style.mixBlendMode = canvas.style.mixBlendMode || 'normal';
+      snapshot.style.backgroundImage = canvas.style.backgroundImage || 'none';
+      snapshot.style.backgroundRepeat = canvas.style.backgroundRepeat || 'no-repeat';
+      snapshot.style.backgroundSize = canvas.style.backgroundSize || 'auto';
+      snapshot.style.backgroundPosition = canvas.style.backgroundPosition || '0 0';
       try {
         snapshotContext.drawImage(canvas, 0, 0);
       } catch (error) {
@@ -440,6 +564,9 @@
       if (!canvas || !context) {
         return null;
       }
+      canvas.style.backgroundImage = 'none';
+      canvas.style.backgroundRepeat = 'no-repeat';
+      canvas.style.backgroundSize = 'auto';
       const viewport = getViewportSize();
       const scale = getDeviceScale(viewport);
       const width = Math.max(1, Math.round(viewport.width * scale));
@@ -474,6 +601,9 @@
         canvas.removeAttribute('data-effect');
         canvas.style.opacity = '0';
         canvas.style.mixBlendMode = 'normal';
+        canvas.style.backgroundImage = 'none';
+        canvas.style.backgroundRepeat = 'no-repeat';
+        canvas.style.backgroundSize = 'auto';
       }
       onRender();
     }
@@ -727,6 +857,16 @@
       return clampNumber(Number.isFinite(opacity) ? opacity : 1, 0, 1);
     }
 
+    function resolveMaterialBlendMode(luminance) {
+      if (luminance <= 0.42) {
+        return 'screen';
+      }
+      if (luminance >= 0.68) {
+        return 'multiply';
+      }
+      return 'soft-light';
+    }
+
     function getLuminanceAtViewport(viewportX, viewportY, baseLuminance) {
       const normalized = normalizePrefs(prefs);
       if (!canvas ||
@@ -735,6 +875,9 @@
           normalized.type === 'none' ||
           canvas.style.opacity === '0') {
         return null;
+      }
+      if (normalized.type === 'blur') {
+        return Number.isFinite(baseLuminance) ? baseLuminance : null;
       }
       const viewport = getViewportSize();
       const x = Math.round(clampNumber(viewportX, 0, viewport.width) * (canvas.width / viewport.width));
@@ -790,6 +933,321 @@
       context.fillStyle = pattern;
       context.fillRect(0, 0, viewport.width, viewport.height);
       setCanvasVisuals('grain', 0.08 + getEffectAlpha(0.22, strength), 'overlay');
+    }
+
+    function quantizeBlockColor(color, texture) {
+      const levels = 4 + Math.round((clampNumber(texture, 0, 100) / 100) * 20);
+      const quantize = (value) => Math.round(
+        (Math.round((clampNumber(value, 0, 255) / 255) * (levels - 1)) / (levels - 1)) * 255
+      );
+      return {
+        red: quantize(color.red),
+        green: quantize(color.green),
+        blue: quantize(color.blue)
+      };
+    }
+
+    function shadeBlockColor(color, amount) {
+      const ratio = clampNumber(amount, -1, 1);
+      const target = ratio >= 0 ? 255 : 0;
+      const mix = Math.abs(ratio);
+      return {
+        red: Math.round(color.red + ((target - color.red) * mix)),
+        green: Math.round(color.green + ((target - color.green) * mix)),
+        blue: Math.round(color.blue + ((target - color.blue) * mix))
+      };
+    }
+
+    function getBlockColorCss(color, alpha) {
+      if (Number.isFinite(alpha)) {
+        return `rgb(${color.red} ${color.green} ${color.blue} / ${clampNumber(alpha, 0, 1)})`;
+      }
+      return `rgb(${color.red} ${color.green} ${color.blue})`;
+    }
+
+    function fillBlockPolygon(targetContext, points, color) {
+      if (!points.length) {
+        return;
+      }
+      targetContext.beginPath();
+      targetContext.moveTo(points[0].x, points[0].y);
+      for (let index = 1; index < points.length; index += 1) {
+        targetContext.lineTo(points[index].x, points[index].y);
+      }
+      targetContext.closePath();
+      targetContext.fillStyle = color;
+      targetContext.fill();
+    }
+
+    function fillBlockCircle(targetContext, x, y, radius, color) {
+      targetContext.beginPath();
+      targetContext.arc(x, y, radius, 0, Math.PI * 2);
+      targetContext.closePath();
+      targetContext.fillStyle = color;
+      targetContext.fill();
+    }
+
+    function getBlockMaterialHash(column, row) {
+      return Math.abs(Math.imul(column + 17, 374761393) ^ Math.imul(row + 29, 668265263));
+    }
+
+    function getBlockMaterialVariation(column, row) {
+      return ((getBlockMaterialHash(column, row) % 17) - 8) / 400;
+    }
+
+    function mixBlockColors(first, second, ratio) {
+      const mix = clampNumber(ratio, 0, 1);
+      const target = second || first;
+      return {
+        red: Math.round(first.red + ((target.red - first.red) * mix)),
+        green: Math.round(first.green + ((target.green - first.green) * mix)),
+        blue: Math.round(first.blue + ((target.blue - first.blue) * mix))
+      };
+    }
+
+    function drawCompactBlockGrid(viewport, sampler, metrics, cellSize, texture) {
+      const edge = 1;
+      for (let y = -cellSize; y < viewport.height + cellSize; y += cellSize) {
+        for (let x = -cellSize; x < viewport.width + cellSize; x += cellSize) {
+          const column = Math.round(x / cellSize);
+          const row = Math.round(y / cellSize);
+          const sampled = sampleColor(
+            sampler,
+            metrics,
+            x + (cellSize / 2),
+            y + (cellSize / 2)
+          );
+          const faceColor = shadeBlockColor(
+            quantizeBlockColor(sampled, texture),
+            0.065 + getBlockMaterialVariation(column, row)
+          );
+          context.fillStyle = getBlockColorCss(faceColor);
+          context.fillRect(x, y, cellSize, cellSize);
+          context.fillStyle = getBlockColorCss(shadeBlockColor(faceColor, -0.18), 0.42);
+          context.fillRect(x + cellSize - edge, y, edge, cellSize);
+          context.fillRect(x, y + cellSize - edge, cellSize, edge);
+        }
+      }
+    }
+
+    function drawBlocks(viewport, sampler, strength, size, spacing, texture) {
+      const sizeRatio = clampNumber(size, 0, 5) / 5;
+      const cellSize = Math.round((viewport.width < 720 ? 10 : 13) +
+        (Math.pow(sizeRatio, 0.82) * (viewport.width < 720 ? 30 : 43)));
+      const gap = Math.min(cellSize - 2, (clampNumber(spacing, 0, 5) / 5) * cellSize * 0.3);
+      const strengthRatio = clampNumber(strength, 0, 100) / 100;
+      const metrics = getRenderedMetrics(sampler, viewport);
+      const cacheKey = [
+        getEffectBaseKey('blocks', viewport, sampler, 'auto', strength, size, spacing),
+        texture
+      ].join(':');
+      if (effectBaseCacheKey !== cacheKey) {
+        context.clearRect(0, 0, viewport.width, viewport.height);
+        if (cellSize < 16) {
+          drawCompactBlockGrid(viewport, sampler, metrics, cellSize, texture);
+          effectBaseCacheKey = cacheKey;
+          setCanvasVisuals('blocks', 1, 'normal');
+          return;
+        }
+        const startX = -cellSize;
+        const startY = -cellSize;
+        const columnCount = Math.ceil((viewport.width + (cellSize * 2)) / cellSize);
+        const rowCount = Math.ceil((viewport.height + (cellSize * 2)) / cellSize);
+        const cells = Array.from({ length: rowCount }, (_, row) =>
+          Array.from({ length: columnCount }, (_, column) => {
+            const x = startX + (column * cellSize);
+            const y = startY + (row * cellSize);
+            const centerX = x + (cellSize / 2);
+            const centerY = y + (cellSize / 2);
+            return { color: sampleColor(sampler, metrics, centerX, centerY) };
+          })
+        );
+        const occupied = Array.from({ length: rowCount }, () => Array(columnCount).fill(false));
+        const canOccupy = (row, column, rowSpan, columnSpan) => {
+          if (row + rowSpan > rowCount || column + columnSpan > columnCount) {
+            return false;
+          }
+          for (let offsetRow = 0; offsetRow < rowSpan; offsetRow += 1) {
+            for (let offsetColumn = 0; offsetColumn < columnSpan; offsetColumn += 1) {
+              if (occupied[row + offsetRow][column + offsetColumn]) {
+                return false;
+              }
+            }
+          }
+          return true;
+        };
+        const getCombinedSample = (row, column, rowSpan, columnSpan) => {
+          let count = 0;
+          let red = 0;
+          let green = 0;
+          let blue = 0;
+          for (let offsetRow = 0; offsetRow < rowSpan; offsetRow += 1) {
+            for (let offsetColumn = 0; offsetColumn < columnSpan; offsetColumn += 1) {
+              const sampleRow = cells[row + offsetRow];
+              if (sampleRow && sampleRow[column + offsetColumn]) {
+                const sample = sampleRow[column + offsetColumn];
+                red += sample.color.red;
+                green += sample.color.green;
+                blue += sample.color.blue;
+                count += 1;
+              }
+            }
+          }
+          if (!count) {
+            return null;
+          }
+          return {
+            color: {
+              red: red / count,
+              green: green / count,
+              blue: blue / count
+            }
+          };
+        };
+        const tiles = [];
+        for (let row = 0; row < rowCount; row += 1) {
+          for (let column = 0; column < columnCount; column += 1) {
+            if (occupied[row][column]) {
+              continue;
+            }
+            const hash = getBlockMaterialHash(column, row);
+            let rowSpan = 1;
+            let columnSpan = 1;
+            if (hash % 37 === 0 && canOccupy(row, column, 2, 2)) {
+              rowSpan = 2;
+              columnSpan = 2;
+            } else if (hash % 11 === 0) {
+              const horizontal = hash % 2 === 0;
+              const nextRowSpan = horizontal ? 1 : 2;
+              const nextColumnSpan = horizontal ? 2 : 1;
+              if (canOccupy(row, column, nextRowSpan, nextColumnSpan)) {
+                rowSpan = nextRowSpan;
+                columnSpan = nextColumnSpan;
+              }
+            }
+            for (let offsetRow = 0; offsetRow < rowSpan; offsetRow += 1) {
+              for (let offsetColumn = 0; offsetColumn < columnSpan; offsetColumn += 1) {
+                occupied[row + offsetRow][column + offsetColumn] = true;
+              }
+            }
+            tiles.push({
+              row,
+              column,
+              rowSpan,
+              columnSpan,
+              hash,
+              sample: getCombinedSample(row, column, rowSpan, columnSpan)
+            });
+          }
+        }
+        tiles.forEach((tile) => {
+            const sample = tile.sample;
+            if (!sample) {
+              return;
+            }
+            const x = startX + (tile.column * cellSize);
+            const y = startY + (tile.row * cellSize);
+            const rightNeighbor = getCombinedSample(tile.row, tile.column + tile.columnSpan, tile.rowSpan, 1);
+            const bottomNeighbor = getCombinedSample(tile.row + tile.rowSpan, tile.column, 1, tile.columnSpan);
+            const color = quantizeBlockColor(sample.color, texture);
+            const depth = strengthRatio * Math.min(11, cellSize * 0.22);
+            const offsetX = depth * 0.52;
+            const offsetY = depth * 0.78;
+            const topX = x + (gap / 2);
+            const topY = y + (gap / 2) - (depth * 0.34);
+            const blockWidth = Math.max(2, (tile.columnSpan * cellSize) - gap);
+            const blockHeight = Math.max(2, (tile.rowSpan * cellSize) - gap);
+            const rightX = topX + blockWidth;
+            const bottomY = topY + blockHeight;
+            const bevel = Math.max(1, Math.min(3, Math.round(blockWidth * 0.08)));
+            const faceColor = shadeBlockColor(
+              color,
+              0.065 + getBlockMaterialVariation(tile.column, tile.row)
+            );
+            const rightBounceColor = rightNeighbor
+              ? quantizeBlockColor(rightNeighbor.color, texture)
+              : color;
+            const bottomBounceColor = bottomNeighbor
+              ? quantizeBlockColor(bottomNeighbor.color, texture)
+              : color;
+            if (!rightNeighbor) {
+              fillBlockPolygon(context, [
+                { x: rightX, y: topY },
+                { x: rightX + offsetX, y: topY + offsetY },
+                { x: rightX + offsetX, y: bottomY + offsetY },
+                { x: rightX, y: bottomY }
+              ], getBlockColorCss(shadeBlockColor(color, -0.18)));
+            }
+            if (!bottomNeighbor) {
+              fillBlockPolygon(context, [
+                { x: topX, y: bottomY },
+                { x: rightX, y: bottomY },
+                { x: rightX + offsetX, y: bottomY + offsetY },
+                { x: topX + offsetX, y: bottomY + offsetY }
+              ], getBlockColorCss(shadeBlockColor(color, -0.28)));
+            }
+            context.fillStyle = getBlockColorCss(faceColor);
+            context.fillRect(topX, topY, blockWidth, blockHeight);
+            context.fillStyle = getBlockColorCss(shadeBlockColor(faceColor, 0.24), 0.34);
+            context.fillRect(topX, topY, blockWidth, bevel);
+            context.fillRect(topX, topY, bevel, blockHeight);
+            context.fillStyle = getBlockColorCss(
+              shadeBlockColor(mixBlockColors(faceColor, rightBounceColor, 0.07), -0.18),
+              0.42
+            );
+            context.fillRect(rightX - bevel, topY + bevel, bevel, blockHeight - bevel);
+            context.fillStyle = getBlockColorCss(
+              shadeBlockColor(mixBlockColors(faceColor, bottomBounceColor, 0.06), -0.18),
+              0.42
+            );
+            context.fillRect(topX + bevel, bottomY - bevel, blockWidth - bevel, bevel);
+            context.fillStyle = getBlockColorCss(shadeBlockColor(faceColor, 0.48), 0.34);
+            context.fillRect(
+              topX + bevel,
+              topY + bevel,
+              Math.max(2, blockWidth * 0.24),
+              1
+            );
+            if (tile.hash % 7 === 0) {
+              const wearLength = Math.max(2, Math.min(5, Math.round(cellSize * 0.13)));
+              const wearOffsetX = bevel +
+                (tile.hash % Math.max(2, Math.floor(blockWidth - wearLength - bevel)));
+              const wearOffsetY = bevel +
+                (tile.hash % Math.max(2, Math.floor(blockHeight - wearLength - bevel)));
+              context.fillStyle = getBlockColorCss(shadeBlockColor(faceColor, 0.64), 0.38);
+              context.fillRect(topX + wearOffsetX, topY, wearLength, 1);
+              context.fillStyle = getBlockColorCss(shadeBlockColor(faceColor, -0.34), 0.24);
+              context.fillRect(topX, topY + wearOffsetY, 1, Math.max(1, wearLength - 1));
+            }
+            if (cellSize - gap >= 12) {
+              for (let studRow = 0; studRow < tile.rowSpan; studRow += 1) {
+                for (let studColumn = 0; studColumn < tile.columnSpan; studColumn += 1) {
+                  const studRadius = Math.max(2, (cellSize - gap) * 0.16);
+                  const studX = topX + ((studColumn + 0.5) * cellSize);
+                  const studY = topY + ((studRow + 0.5) * cellSize);
+                  fillBlockCircle(
+                    context,
+                    studX + 0.7,
+                    studY + 0.9,
+                    studRadius,
+                    getBlockColorCss(shadeBlockColor(faceColor, -0.22), 0.78)
+                  );
+                  fillBlockCircle(
+                    context,
+                    studX - 0.35,
+                    studY - 0.45,
+                    studRadius * 0.88,
+                    getBlockColorCss(shadeBlockColor(faceColor, 0.12))
+                  );
+                  context.fillStyle = getBlockColorCss(shadeBlockColor(faceColor, 0.58), 0.52);
+                  context.fillRect(studX - (studRadius * 0.45), studY - (studRadius * 0.55), 1, 1);
+                }
+              }
+            }
+        });
+        effectBaseCacheKey = cacheKey;
+      }
+      setCanvasVisuals('blocks', 1, 'normal');
     }
 
     function getGridStart(step, minimum) {
@@ -978,11 +1436,261 @@
       targetContext.imageSmoothingEnabled = previousSmoothing;
     }
 
+    function drawWallpaperCover(targetContext, viewport, sampler, offsetX) {
+      if (!loadedImage || !sampler) {
+        return;
+      }
+      const metrics = getRenderedMetrics(sampler, viewport);
+      targetContext.drawImage(
+        loadedImage,
+        0,
+        0,
+        sampler.naturalWidth,
+        sampler.naturalHeight,
+        metrics.offsetX + (Number(offsetX) || 0),
+        metrics.offsetY,
+        metrics.renderedWidth,
+        metrics.renderedHeight
+      );
+    }
+
+    function drawCrtFallbackLayer(targetContext, viewport, sampler, _inkTone, strength, crtPrefs) {
+      const details = crtPrefs || DEFAULT_PREFS;
+      const strengthRatio = clampNumber(strength, 0, 20) / 20;
+      const fringeOffset = getControlRange(details.crtRgbOffset, 0, 4.2);
+      const bloomRatio = clampNumber(details.crtBloom, 0, 20) / 20;
+      const curvatureRatio = clampNumber(details.crtCurvature, 0, 35) / 100;
+      targetContext.clearRect(0, 0, viewport.width, viewport.height);
+
+      targetContext.save();
+      targetContext.filter = `saturate(${1.04 + (strengthRatio * 0.28)}) ` +
+        `contrast(${1.02 + (strengthRatio * 0.16)}) brightness(${1.01 + (strengthRatio * 0.05)})`;
+      drawWallpaperCover(targetContext, viewport, sampler, 0);
+      targetContext.restore();
+
+      targetContext.save();
+      targetContext.globalCompositeOperation = 'screen';
+      targetContext.globalAlpha = 0.018 + (strengthRatio * 0.045);
+      targetContext.filter = 'sepia(1) saturate(7) hue-rotate(292deg)';
+      drawWallpaperCover(targetContext, viewport, sampler, -fringeOffset);
+      targetContext.filter = 'sepia(1) saturate(7) hue-rotate(142deg)';
+      drawWallpaperCover(targetContext, viewport, sampler, fringeOffset);
+      targetContext.restore();
+
+      if (bloomRatio > 0) {
+        targetContext.save();
+        targetContext.globalCompositeOperation = 'screen';
+        targetContext.globalAlpha = bloomRatio * 0.24;
+        targetContext.filter = `blur(${1 + (details.crtBloom * 0.42)}px) saturate(1.08)`;
+        drawWallpaperCover(targetContext, viewport, sampler, 0);
+        targetContext.restore();
+      }
+
+      const phosphorWidth = 1;
+      const scanlinePeriod = 2;
+      const phosphorTile = documentObj.createElement('canvas');
+      phosphorTile.width = phosphorWidth * 3;
+      phosphorTile.height = scanlinePeriod;
+      const phosphorContext = phosphorTile.getContext('2d');
+      if (phosphorContext) {
+        phosphorContext.fillStyle = 'rgb(255 38 48 / 82%)';
+        phosphorContext.fillRect(0, 0, phosphorWidth, scanlinePeriod);
+        phosphorContext.fillStyle = 'rgb(38 255 132 / 78%)';
+        phosphorContext.fillRect(phosphorWidth, 0, phosphorWidth, scanlinePeriod);
+        phosphorContext.fillStyle = 'rgb(38 94 255 / 86%)';
+        phosphorContext.fillRect(phosphorWidth * 2, 0, phosphorWidth, scanlinePeriod);
+        phosphorContext.fillStyle = 'rgb(255 255 255 / 12%)';
+        phosphorContext.fillRect(0, 0, phosphorTile.width, 1);
+        phosphorContext.fillStyle = 'rgb(0 0 0 / 82%)';
+        phosphorContext.fillRect(
+          0,
+          Math.max(1, scanlinePeriod - 1),
+          phosphorTile.width,
+          1
+        );
+        const phosphorPattern = targetContext.createPattern(phosphorTile, 'repeat');
+        if (phosphorPattern) {
+          targetContext.save();
+          targetContext.globalCompositeOperation = 'soft-light';
+          targetContext.globalAlpha = 0.32 + (strengthRatio * 0.28);
+          targetContext.fillStyle = phosphorPattern;
+          targetContext.fillRect(0, 0, viewport.width, viewport.height);
+          targetContext.restore();
+        }
+      }
+
+      const centerX = viewport.width / 2;
+      const centerY = viewport.height / 2;
+      const vignette = targetContext.createRadialGradient(
+        centerX,
+        centerY,
+        Math.min(viewport.width, viewport.height) * 0.18,
+        centerX,
+        centerY,
+        Math.max(viewport.width, viewport.height) * 0.72
+      );
+      vignette.addColorStop(0, 'rgb(255 255 255 / 2%)');
+      vignette.addColorStop(0.68, 'rgb(0 0 0 / 0%)');
+      vignette.addColorStop(
+        1,
+        `rgb(0 0 0 / ${Math.round(18 + (strengthRatio * 20) + (curvatureRatio * 28))}%)`
+      );
+      targetContext.fillStyle = vignette;
+      targetContext.fillRect(0, 0, viewport.width, viewport.height);
+    }
+
+    function getNoiseByte(x, y, seed) {
+      let value = ((x * 374761393) ^ (y * 668265263) ^ seed) >>> 0;
+      value = Math.imul(value ^ (value >>> 13), 1274126177) >>> 0;
+      return (value ^ (value >>> 16)) & 255;
+    }
+
+    function getCoarseNoiseByte(x, y, tileSize) {
+      const cellSize = 16;
+      const cellCount = Math.max(1, Math.round(tileSize / cellSize));
+      const cellX = Math.floor(x / cellSize);
+      const cellY = Math.floor(y / cellSize);
+      const nextX = (cellX + 1) % cellCount;
+      const nextY = (cellY + 1) % cellCount;
+      const offsetX = (x % cellSize) / cellSize;
+      const offsetY = (y % cellSize) / cellSize;
+      const smoothX = offsetX * offsetX * (3 - (2 * offsetX));
+      const smoothY = offsetY * offsetY * (3 - (2 * offsetY));
+      const topLeft = getNoiseByte(cellX, cellY, 0x51f15e);
+      const topRight = getNoiseByte(nextX, cellY, 0x51f15e);
+      const bottomLeft = getNoiseByte(cellX, nextY, 0x51f15e);
+      const bottomRight = getNoiseByte(nextX, nextY, 0x51f15e);
+      const top = topLeft + ((topRight - topLeft) * smoothX);
+      const bottom = bottomLeft + ((bottomRight - bottomLeft) * smoothX);
+      return Math.round(top + ((bottom - top) * smoothY));
+    }
+
+    function writeTransparentNoisePixel(data, index, value, alphaScale) {
+      const delta = value - 127.5;
+      const channel = delta >= 0 ? 255 : 0;
+      data[index] = channel;
+      data[index + 1] = channel;
+      data[index + 2] = channel;
+      data[index + 3] = Math.round(Math.min(255, Math.abs(delta) * 2 * alphaScale));
+    }
+
+    function ensureMaterialNoiseTile(kind) {
+      if (!materialNoiseTiles[kind]) {
+        const tile = documentObj.createElement('canvas');
+        tile.width = 128;
+        tile.height = 128;
+        const tileContext = tile.getContext('2d');
+        if (!tileContext) {
+          return null;
+        }
+        const imageData = tileContext.createImageData(tile.width, tile.height);
+        const noiseValues = new Uint8Array(tile.width * tile.height);
+        for (let y = 0; y < tile.height; y += 1) {
+          for (let x = 0; x < tile.width; x += 1) {
+            noiseValues[(y * tile.width) + x] = kind === 'coarse'
+              ? getCoarseNoiseByte(x, y, tile.width)
+              : getNoiseByte(x, y, 0x9e3779b9);
+          }
+        }
+        for (let y = 0; y < tile.height; y += 1) {
+          for (let x = 0; x < tile.width; x += 1) {
+            const pixelIndex = (y * tile.width) + x;
+            const index = pixelIndex * 4;
+            let value = noiseValues[pixelIndex];
+            if (kind === 'fine') {
+              const left = noiseValues[(y * tile.width) + ((x + tile.width - 1) % tile.width)];
+              const right = noiseValues[(y * tile.width) + ((x + 1) % tile.width)];
+              const top = noiseValues[(((y + tile.height - 1) % tile.height) * tile.width) + x];
+              const bottom = noiseValues[(((y + 1) % tile.height) * tile.width) + x];
+              value = clampNumber(
+                127.5 + (((right - left) + (bottom - top)) * 0.55),
+                0,
+                255
+              );
+            }
+            writeTransparentNoisePixel(
+              imageData.data,
+              index,
+              value,
+              kind === 'coarse' ? 0.45 : 1.05
+            );
+          }
+        }
+        tileContext.putImageData(imageData, 0, 0);
+        materialNoiseTiles[kind] = tile;
+      }
+      return materialNoiseTiles[kind];
+    }
+
+    function getStandardNoiseDataUrl(kind) {
+      if (standardNoiseDataUrls[kind] !== null) {
+        return standardNoiseDataUrls[kind];
+      }
+      const tile = ensureMaterialNoiseTile(kind);
+      if (!tile || typeof tile.toDataURL !== 'function') {
+        return '';
+      }
+      try {
+        standardNoiseDataUrls[kind] = tile.toDataURL('image/png');
+      } catch (_error) {
+        return '';
+      }
+      return standardNoiseDataUrls[kind];
+    }
+
+    function drawStandardGlassTexture(texture, wallpaperLuminance) {
+      const params = getStandardFrostParams(texture);
+      const viewport = getViewportSize();
+      const materialBlendMode = resolveMaterialBlendMode(
+        Number.isFinite(wallpaperLuminance) ? wallpaperLuminance : 0.5
+      );
+      const enabled = params.ratio > 0.001;
+      const fineNoiseUrl = enabled ? getStandardNoiseDataUrl('fine') : '';
+      const coarseNoiseUrl = enabled ? getStandardNoiseDataUrl('coarse') : '';
+      const backgroundImages = [
+        'linear-gradient(rgba(248, 250, 252, 0.55), rgba(248, 250, 252, 0.55))',
+        'linear-gradient(180deg, rgba(255, 255, 255, 0.62) 0%, rgba(255, 255, 255, 0.12) 14%, transparent 34%)',
+        'radial-gradient(ellipse 65% 52% at 12% 8%, rgba(255, 255, 255, 0.46), transparent 72%)',
+        'radial-gradient(ellipse at center, transparent 58%, rgba(255, 255, 255, 0.16) 88%, rgba(255, 255, 255, 0.04) 100%)'
+      ];
+      const backgroundRepeats = ['no-repeat', 'no-repeat', 'no-repeat', 'no-repeat'];
+      const backgroundSizes = ['100% 100%', '100% 100%', '100% 100%', '100% 100%'];
+      if (fineNoiseUrl) {
+        backgroundImages.push(`url("${fineNoiseUrl}")`);
+        backgroundRepeats.push('repeat');
+        backgroundSizes.push(`${params.grainSize}px ${params.grainSize}px`);
+      }
+      if (coarseNoiseUrl) {
+        backgroundImages.push(`url("${coarseNoiseUrl}")`);
+        backgroundRepeats.push('repeat');
+        backgroundSizes.push(`${params.coarseGrainSize}px ${params.coarseGrainSize}px`);
+      }
+      canvas.width = 1;
+      canvas.height = 1;
+      canvas.style.width = `${viewport.width}px`;
+      canvas.style.height = `${viewport.height}px`;
+      canvas.style.backgroundImage = enabled
+        ? backgroundImages.join(', ')
+        : 'none';
+      canvas.style.backgroundRepeat = enabled
+        ? backgroundRepeats.join(', ')
+        : 'no-repeat';
+      canvas.style.backgroundSize = enabled
+        ? backgroundSizes.join(', ')
+        : 'auto';
+      setCanvasVisuals(
+        'blur-standard',
+        enabled ? params.materialOpacity : 0,
+        materialBlendMode
+      );
+    }
+
     function drawCachedLayeredEffect(type, viewport, sampler, inkTone, strength, size, spacing, drawLayer) {
-      const cacheKey = getEffectBaseKey(type, viewport, sampler, inkTone, strength, size, spacing);
+      const boundedSpacing = clampNumber(spacing, 0, 100);
+      const cacheKey = getEffectBaseKey(type, viewport, sampler, inkTone, strength, size, boundedSpacing);
       if (effectBaseCacheKey !== cacheKey) {
         context.clearRect(0, 0, viewport.width, viewport.height);
-        drawLayer(context, viewport, sampler, inkTone, strength, size, spacing);
+        drawLayer(context, viewport, sampler, inkTone, strength, size, boundedSpacing);
         effectBaseCacheKey = cacheKey;
       }
       setCanvasVisuals(type, 1, 'normal');
@@ -1027,6 +1735,85 @@
       );
     }
 
+    function ensureCrtWebglRenderer() {
+      if (hasTriedCrtWebglRenderer) {
+        return crtWebglRenderer;
+      }
+      hasTriedCrtWebglRenderer = true;
+      const factory = root.LumnoNewtabCrtWebGL;
+      if (!factory || typeof factory.createRenderer !== 'function') {
+        return null;
+      }
+      try {
+        crtWebglRenderer = factory.createRenderer({
+          documentObj,
+          onContextLost: () => {
+            clearEffectBaseCache();
+            scheduleRender();
+          },
+          onContextRestored: () => {
+            clearEffectBaseCache();
+            scheduleRender();
+          }
+        });
+      } catch (_error) {
+        crtWebglRenderer = null;
+      }
+      return crtWebglRenderer;
+    }
+
+    function destroyCrtWebglRenderer() {
+      if (crtWebglRenderer && typeof crtWebglRenderer.destroy === 'function') {
+        crtWebglRenderer.destroy();
+      }
+      crtWebglRenderer = null;
+      hasTriedCrtWebglRenderer = false;
+    }
+
+    function drawCrt(viewport, sampler, inkTone, strength, crtPrefs) {
+      const details = crtPrefs || DEFAULT_PREFS;
+      const cacheKey = [
+        getEffectBaseKey('crt-webgl', viewport, sampler, inkTone, strength, 33, 2),
+        details.crtBloom,
+        details.crtRgbOffset,
+        details.crtCurvature
+      ].join(':');
+      if (effectBaseCacheKey !== cacheKey) {
+        const renderer = ensureCrtWebglRenderer();
+        const rendered = Boolean(renderer &&
+          typeof renderer.render === 'function' &&
+          renderer.render({
+            image: loadedImage,
+            width: canvas.width,
+            height: canvas.height,
+            sourceWidth: sampler.naturalWidth,
+            sourceHeight: sampler.naturalHeight,
+            strength,
+            bloom: details.crtBloom,
+            rgbOffset: details.crtRgbOffset,
+            curvature: details.crtCurvature
+          }));
+        context.clearRect(0, 0, viewport.width, viewport.height);
+        if (rendered && renderer.canvas) {
+          context.drawImage(
+            renderer.canvas,
+            0,
+            0,
+            renderer.canvas.width,
+            renderer.canvas.height,
+            0,
+            0,
+            viewport.width,
+            viewport.height
+          );
+        } else {
+          drawCrtFallbackLayer(context, viewport, sampler, inkTone, strength, details);
+        }
+        effectBaseCacheKey = cacheKey;
+      }
+      setCanvasVisuals('crt', 1, 'normal');
+    }
+
     function renderNow(revision) {
       renderFrame = 0;
       const normalized = normalizePrefs(prefs);
@@ -1039,10 +1826,43 @@
         completeRender(revision);
         return;
       }
+      const token = ++renderToken;
+      if (normalized.type === 'blur') {
+        shouldCrossfadeResize = false;
+        const wallpaper = getCurrentWallpaper();
+        const imageUrl = wallpaper ? getWallpaperImageUrl(wallpaper) : '';
+        if (loadedSampler && loadedSamplerUrl === imageUrl) {
+          drawStandardGlassTexture(normalized.texture, loadedSampler.averageLuminance);
+          completeRender(revision);
+          return;
+        }
+        drawStandardGlassTexture(normalized.texture, null);
+        if (!imageUrl) {
+          completeRender(revision);
+          return;
+        }
+        loadImage(imageUrl, token).then((image) => {
+          if (token !== renderToken) {
+            return;
+          }
+          const sampler = image ? getSampler(image, imageUrl) : null;
+          if (sampler) {
+            drawStandardGlassTexture(normalized.texture, sampler.averageLuminance);
+          }
+          completeRender(revision);
+        }).catch(() => {
+          if (token === renderToken) {
+            completeRender(revision);
+          }
+        });
+        return;
+      }
       const crossfadeResize = shouldCrossfadeResize &&
-        (normalized.type === 'halftone' ||
+        (normalized.type === 'blocks' ||
+          normalized.type === 'halftone' ||
           normalized.type === 'dither' ||
-          normalized.type === 'ascii');
+          normalized.type === 'ascii' ||
+          normalized.type === 'crt');
       shouldCrossfadeResize = false;
       if (crossfadeResize) {
         prepareResizeCrossfade();
@@ -1052,7 +1872,6 @@
         completeRender(revision);
         return;
       }
-      const token = ++renderToken;
       if (normalized.type === 'grain') {
         drawGrain(viewport, normalized.strength);
         completeRender(revision);
@@ -1069,14 +1888,26 @@
           completeRender(revision);
           return;
         }
+        const nextViewport = resizeCanvas();
+        if (!nextViewport) {
+          completeRender(revision);
+          return;
+        }
         const sampler = getSampler(image, imageUrl);
         if (!sampler) {
           clearCanvas();
           completeRender(revision);
           return;
         }
-        const nextViewport = resizeCanvas();
-        if (!nextViewport) {
+        if (normalized.type === 'blocks') {
+          drawBlocks(
+            nextViewport,
+            sampler,
+            normalized.strength,
+            normalized.size,
+            normalized.spacing,
+            normalized.texture
+          );
           completeRender(revision);
           return;
         }
@@ -1104,6 +1935,17 @@
           completeRender(revision);
           return;
         }
+        if (normalized.type === 'crt') {
+          drawCrt(
+            nextViewport,
+            sampler,
+            normalized.inkTone,
+            normalized.strength,
+            normalized
+          );
+          completeRender(revision);
+          return;
+        }
         if (normalized.type === 'ascii') {
           drawAscii(
             nextViewport,
@@ -1116,6 +1958,10 @@
         }
         completeRender(revision);
       }).catch(() => {
+        if (token !== renderToken) {
+          completeRender(revision);
+          return;
+        }
         clearCanvas();
         completeRender(revision);
       });
@@ -1135,6 +1981,10 @@
 
     function scheduleRender(delay) {
       const revision = ++renderRequestRevision;
+      if (destroyed) {
+        completeRender(revision);
+        return revision;
+      }
       if (renderFrame) {
         cancelFrame(renderFrame);
         renderFrame = 0;
@@ -1158,16 +2008,28 @@
     function apply(nextPrefs) {
       const previousPrefs = normalizePrefs(prefs);
       prefs = normalizePrefs(nextPrefs);
+      updateWallpaperEffectProperties(prefs);
       const previousType = previousPrefs.type;
       const visualPrefsChanged = previousType !== prefs.type ||
         previousPrefs.inkTone !== prefs.inkTone ||
         previousPrefs.strength !== prefs.strength ||
-        previousPrefs.size !== prefs.size ||
-        previousPrefs.spacing !== prefs.spacing;
+        (prefs.type !== 'crt' && previousPrefs.size !== prefs.size) ||
+        (prefs.type !== 'crt' && previousPrefs.spacing !== prefs.spacing) ||
+        previousPrefs.texture !== prefs.texture ||
+        previousPrefs.crtBloom !== prefs.crtBloom ||
+        previousPrefs.crtRgbOffset !== prefs.crtRgbOffset ||
+        previousPrefs.crtCurvature !== prefs.crtCurvature;
       if (!visualPrefsChanged) {
-        return;
+        return Promise.resolve();
       }
-      if (prefs.type !== 'ascii' && prefs.type !== 'dither' && prefs.type !== 'halftone') {
+      if (previousType === 'crt' && prefs.type !== 'crt') {
+        destroyCrtWebglRenderer();
+      }
+      if (prefs.type !== 'ascii' &&
+          prefs.type !== 'dither' &&
+          prefs.type !== 'halftone' &&
+          prefs.type !== 'blocks' &&
+          prefs.type !== 'crt') {
         clearEffectBaseCache();
       }
       if (canvas &&
@@ -1177,15 +2039,16 @@
           previousType !== 'none' &&
           prefs.type !== 'none' &&
           getCanvasOpacity() > 0.01) {
+        if (prepareResizeCrossfade()) {
+          return waitForRenderRevision(scheduleRender());
+        }
         canvas.style.opacity = '0';
-        scheduleRender(EFFECT_CROSSFADE_MS);
-        return;
+        return waitForRenderRevision(scheduleRender(EFFECT_CROSSFADE_MS));
       }
       if (visualPrefsChanged && previousType === prefs.type) {
-        scheduleRender(PARAMETER_RENDER_DEBOUNCE_MS);
-        return;
+        return waitForRenderRevision(scheduleRender(PARAMETER_RENDER_DEBOUNCE_MS));
       }
-      scheduleRender();
+      return waitForRenderRevision(scheduleRender());
     }
 
     function refresh(options) {
@@ -1196,30 +2059,79 @@
           canAnimateTransition() &&
           normalized.type !== 'none' &&
           getCanvasOpacity() > 0.01) {
-        canvas.style.opacity = '0';
-        return waitForRenderRevision(scheduleRender(immediate ? 0 : EFFECT_CROSSFADE_MS));
+        const preservedCurrentFrame = (
+          normalized.type === 'blocks' ||
+          normalized.type === 'halftone' ||
+          normalized.type === 'dither' ||
+          normalized.type === 'ascii' ||
+          normalized.type === 'crt'
+        ) && prepareResizeCrossfade();
+        if (!preservedCurrentFrame) {
+          canvas.style.opacity = '0';
+        }
+        return waitForRenderRevision(scheduleRender(
+          immediate || preservedCurrentFrame ? 0 : EFFECT_CROSSFADE_MS
+        ));
       }
       return waitForRenderRevision(scheduleRender(immediate ? 0 : 60));
     }
 
+    function handleWindowResize() {
+      const normalized = normalizePrefs(prefs);
+      shouldCrossfadeResize = Boolean(
+        canvas &&
+        context &&
+        canAnimateTransition() &&
+        (normalized.type === 'blocks' ||
+          normalized.type === 'halftone' ||
+          normalized.type === 'dither' ||
+          normalized.type === 'ascii' ||
+          normalized.type === 'crt') &&
+        getCanvasOpacity() > 0.01
+      );
+      scheduleRender(RESIZE_RENDER_SETTLE_MS);
+    }
+
+    function destroy() {
+      if (destroyed) {
+        return;
+      }
+      destroyed = true;
+      renderToken += 1;
+      if (renderFrame) {
+        cancelFrame(renderFrame);
+        renderFrame = 0;
+      }
+      if (renderTimer) {
+        clearTimeout(renderTimer);
+        renderTimer = 0;
+      }
+      if (observer && typeof observer.disconnect === 'function') {
+        observer.disconnect();
+      }
+      observer = null;
+      cleanupResizeCrossfade();
+      destroyCrtWebglRenderer();
+      if (windowObj && typeof windowObj.removeEventListener === 'function') {
+        windowObj.removeEventListener('resize', handleWindowResize);
+        windowObj.removeEventListener('beforeunload', destroy);
+      }
+      if (canvas && canvas.parentNode) {
+        canvas.parentNode.removeChild(canvas);
+      }
+      canvas = null;
+      context = null;
+      completeRender(++renderRequestRevision);
+    }
+
     if (windowObj && typeof windowObj.addEventListener === 'function') {
-      windowObj.addEventListener('resize', () => {
-        const normalized = normalizePrefs(prefs);
-        shouldCrossfadeResize = Boolean(
-          canvas &&
-          context &&
-          canAnimateTransition() &&
-          (normalized.type === 'halftone' ||
-            normalized.type === 'dither' ||
-            normalized.type === 'ascii') &&
-          getCanvasOpacity() > 0.01
-        );
-        scheduleRender(RESIZE_RENDER_SETTLE_MS);
-      }, { passive: true });
+      windowObj.addEventListener('resize', handleWindowResize, { passive: true });
+      windowObj.addEventListener('beforeunload', destroy, { once: true });
     }
 
     return {
       apply,
+      destroy,
       getLuminanceAtViewport,
       refresh,
       normalizePrefs
@@ -1233,8 +2145,11 @@
     EFFECT_TYPES,
     createWallpaperEffects,
     getEffectCanvasScale,
+    getBlurRadius,
     liftSampleColor,
+    migratePrefsToLatest,
     normalizePrefs,
+    normalizeStoragePrefs,
     quantizeDitherColor,
     resolveUseDarkInk
   };

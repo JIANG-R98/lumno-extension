@@ -904,17 +904,36 @@
   "newtab_wallpaper_effect_strength": {
     "message": "Sampling strength"
   },
+  "newtab_wallpaper_effect_blur_strength": {
+    "message": "Blur strength"
+  },
   "newtab_wallpaper_effect_size": {
     "message": "Size"
   },
   "newtab_wallpaper_effect_spacing": {
     "message": "Spacing"
   },
+  "newtab_wallpaper_effect_texture": {
+    "message": "Texture"
+  },
+  "newtab_wallpaper_effect_blocks_size": { "message": "Block size" },
+  "newtab_wallpaper_effect_crt_strength": {
+    "message": "Display intensity"
+  },
+  "newtab_wallpaper_effect_crt_bloom": { "message": "Bloom" },
+  "newtab_wallpaper_effect_crt_rgb_offset": { "message": "RGB offset" },
+  "newtab_wallpaper_effect_crt_curvature": { "message": "Screen curvature" },
   "newtab_wallpaper_effect_none": {
     "message": "Off"
   },
+  "newtab_wallpaper_effect_blur": {
+    "message": "Glass blur"
+  },
   "newtab_wallpaper_effect_grain": {
     "message": "Grain"
+  },
+  "newtab_wallpaper_effect_blocks": {
+    "message": "Blocks"
   },
   "newtab_wallpaper_effect_halftone": {
     "message": "Halftone"
@@ -924,6 +943,9 @@
   },
   "newtab_wallpaper_effect_ascii": {
     "message": "ASCII"
+  },
+  "newtab_wallpaper_effect_crt": {
+    "message": "CRT"
   },
   "newtab_wallpaper_effect_select_label": {
     "message": "Use {effect} wallpaper filter"

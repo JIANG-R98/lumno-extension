@@ -21,6 +21,7 @@
     <script src="../shared/browser-profile.js"></script>
     <script src="newtab-focus-entry.js"></script>
     <script src="../shared/motion-preload.js"></script>
+    <script src="wallpaper-crt-webgl.js"></script>
     <script src="wallpaper-effects.js"></script>
     <script src="wallpaper-preload.js"></script>
     <link rel="stylesheet" href="../../assets/fonts/open-sans/open-sans.css" />
@@ -215,6 +216,11 @@
         --x-nt-wallpaper-image: none;
         --x-nt-wallpaper-overlay: none;
         --x-nt-wallpaper-effect-overlay: none;
+        --x-nt-wallpaper-blur-radius: 19px;
+        --x-nt-wallpaper-blur-overscan: calc(var(--x-nt-wallpaper-blur-radius) * 2);
+        --x-nt-wallpaper-blur-saturate: 118%;
+        --x-nt-wallpaper-blur-brightness: 100%;
+        --x-nt-wallpaper-blur-contrast: 100%;
         --x-nt-wallpaper-size: cover;
         --x-nt-wallpaper-position: center center;
         --x-nt-wallpaper-overlay-light-top: 54%;
@@ -422,6 +428,9 @@
       .x-nt-wallpaper-transition-layer[data-exit="true"] {
         opacity: 0;
       }
+      .x-nt-wallpaper-transition-layer[data-wallpaper-filter-transition="true"] {
+        transition-duration: 180ms;
+      }
       .x-nt-wallpaper-effect-canvas {
         position: fixed;
         inset: 0;
@@ -451,6 +460,42 @@
       body[data-wallpaper-active="true"][data-wallpaper-effect="grain"] {
         --x-nt-wallpaper-overlay: none;
       }
+      body[data-wallpaper-active="true"][data-wallpaper-effect="blocks"] {
+        --x-nt-wallpaper-overlay: none;
+      }
+      body[data-wallpaper-active="true"][data-wallpaper-effect="blur"] {
+        --x-nt-wallpaper-overlay: none;
+        background-image: none;
+      }
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        background-color: var(--x-nt-bg);
+        background-image: none;
+        background-repeat: no-repeat;
+        background-size: var(--x-nt-wallpaper-size, cover);
+        background-position: var(--x-nt-wallpaper-position, center center);
+        opacity: 0;
+        transform: translateZ(0);
+        transition: opacity 180ms ease;
+        contain: strict;
+      }
+      body[data-wallpaper-active="true"][data-wallpaper-effect="blur"]::before,
+      .x-nt-wallpaper-transition-layer[data-wallpaper-effect="blur"] {
+        inset: calc(0px - var(--x-nt-wallpaper-blur-overscan));
+        filter: blur(var(--x-nt-wallpaper-blur-radius))
+          saturate(var(--x-nt-wallpaper-blur-saturate))
+          brightness(var(--x-nt-wallpaper-blur-brightness))
+          contrast(var(--x-nt-wallpaper-blur-contrast));
+      }
+      body[data-wallpaper-active="true"][data-wallpaper-effect="blur"]::before {
+        background-image: var(--x-nt-wallpaper-image, none);
+        opacity: 1;
+        will-change: opacity, filter;
+      }
       body::after {
         content: "";
         position: fixed;
@@ -472,12 +517,16 @@
       @media (prefers-reduced-motion: reduce) {
         .x-nt-wallpaper-transition-layer,
         .x-nt-wallpaper-effect-canvas,
+        body::before,
         body::after {
           transition: none;
         }
       }
       body:not([data-nt-enter="done"]) .x-nt-wallpaper-effect-canvas,
       body:not([data-nt-enter="done"])::after {
+        transition: none;
+      }
+      body:not([data-nt-enter="done"])::before {
         transition: none;
       }
       #_x_extension_newtab_root_2024_unique_ {
@@ -4771,6 +4820,31 @@
         align-items: center;
         gap: 10px;
         min-width: 0;
+        position: relative;
+      }
+      .x-nt-range-slider-row[data-value-suffix="%"]
+        > ._x_extension_range_slider_value_input_2026_unique_ {
+        appearance: textfield;
+        padding-right: 20px;
+        width: 64px !important;
+      }
+      .x-nt-range-slider-row[data-value-suffix="%"]
+        > ._x_extension_range_slider_value_input_2026_unique_::-webkit-inner-spin-button,
+      .x-nt-range-slider-row[data-value-suffix="%"]
+        > ._x_extension_range_slider_value_input_2026_unique_::-webkit-outer-spin-button {
+        appearance: none;
+        margin: 0;
+      }
+      .x-nt-range-slider-row[data-value-suffix="%"]::after {
+        content: "%";
+        position: absolute;
+        right: 8px;
+        top: 50%;
+        color: var(--x-nt-subtext, #6b7280);
+        font-size: 12px;
+        line-height: 1;
+        pointer-events: none;
+        transform: translateY(-50%);
       }
       .x-nt-range-slider-row > .x-nt-overlay-slider-wrap {
         flex: 1 1 auto;

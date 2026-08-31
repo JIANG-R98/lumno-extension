@@ -55,21 +55,49 @@
         ? Math.max(0, Math.min(100, Math.round(number)))
         : fallback;
     };
+    const normalizeCrtPhysical = (raw, fallback, max) => {
+      const number = Number(raw);
+      const bounded = Number.isFinite(number) ? Math.max(0, Math.min(max, number)) : fallback;
+      return Math.round(bounded * 1000) / 1000;
+    };
+    const normalizeBlockParameter = (raw, fallback) => {
+      const number = Number(raw);
+      if (!Number.isFinite(number)) return fallback;
+      return Math.max(0, Math.min(5, Math.round(number)));
+    };
+    const rawSize = Number.isFinite(Number(source.size)) ? source.size : source.density;
+    const type = ['none', 'blur', 'grain', 'blocks', 'halftone', 'dither', 'ascii', 'crt'].includes(source.type)
+      ? source.type
+      : 'none';
     return {
-      version: 4,
-      type: ['none', 'grain', 'halftone', 'dither', 'ascii'].includes(source.type)
-        ? source.type
-        : 'none',
+      version: 10,
+      type,
       inkTone: ['auto', 'dark', 'light'].includes(source.inkTone)
         ? source.inkTone
         : 'auto',
-      strength: normalizePercent(source.strength, 50),
-      size: normalizePercent(source.size, 50),
-      spacing: normalizePercent(source.spacing, 50)
+      strength: type === 'blocks'
+        ? 100
+        : (type === 'crt'
+          ? normalizeCrtPhysical(source.strength, 20, 20)
+          : normalizePercent(source.strength, 50)),
+      size: type === 'blocks'
+        ? normalizeBlockParameter(source.size, 1)
+        : normalizePercent(rawSize, 50),
+      spacing: type === 'blocks'
+        ? 0
+        : normalizePercent(source.spacing, 50),
+      texture: type === 'blocks' ? 100 : normalizePercent(source.texture, 20),
+      crtBloom: normalizeCrtPhysical(source.crtBloom, 15, 20),
+      crtRgbOffset: normalizePercent(source.crtRgbOffset, 35),
+      crtCurvature: normalizeCrtPhysical(source.crtCurvature, 18, 35)
     };
   }
 
   function getEffectPrefsForMode(value, mode) {
+    const effects = globalThis.LumnoNewtabWallpaperEffects;
+    if (effects && typeof effects.normalizeStoragePrefs === 'function') {
+      return effects.normalizeStoragePrefs(value)[mode];
+    }
     const source = value && typeof value === 'object' ? value : null;
     const candidate = source && (source.light || source.dark)
       ? (source[mode] || source.light || source.dark)

@@ -904,17 +904,36 @@
   "newtab_wallpaper_effect_strength": {
     "message": "効果の強さ"
   },
+  "newtab_wallpaper_effect_blur_strength": {
+    "message": "ぼかしの強さ"
+  },
   "newtab_wallpaper_effect_size": {
     "message": "サイズ"
   },
   "newtab_wallpaper_effect_spacing": {
     "message": "間隔"
   },
+  "newtab_wallpaper_effect_texture": {
+    "message": "テクスチャ"
+  },
+  "newtab_wallpaper_effect_blocks_size": { "message": "ブロックサイズ" },
+  "newtab_wallpaper_effect_crt_strength": {
+    "message": "表示強度"
+  },
+  "newtab_wallpaper_effect_crt_bloom": { "message": "ブルーム" },
+  "newtab_wallpaper_effect_crt_rgb_offset": { "message": "RGB ずれ" },
+  "newtab_wallpaper_effect_crt_curvature": { "message": "画面の湾曲" },
   "newtab_wallpaper_effect_none": {
     "message": "オフ"
   },
+  "newtab_wallpaper_effect_blur": {
+    "message": "すりガラス"
+  },
   "newtab_wallpaper_effect_grain": {
     "message": "粒子"
+  },
+  "newtab_wallpaper_effect_blocks": {
+    "message": "ブロック"
   },
   "newtab_wallpaper_effect_halftone": {
     "message": "網点"
@@ -924,6 +943,9 @@
   },
   "newtab_wallpaper_effect_ascii": {
     "message": "ASCII"
+  },
+  "newtab_wallpaper_effect_crt": {
+    "message": "CRT"
   },
   "newtab_wallpaper_effect_select_label": {
     "message": "{effect} を使用"
