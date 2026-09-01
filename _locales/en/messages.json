@@ -1841,6 +1841,9 @@
   "recent_pin_remove": {
     "message": "Unpin"
   },
+  "recent_replace_pinned_url_with_current": {
+    "message": "Replace Pinned URL with Current"
+  },
   "recent_pin_limit": {
     "message": "You can pin up to 3 cards"
   },

@@ -123,6 +123,6 @@
   "default_locale": "zh_CN",
    "name": "__MSG_ext_name__",
    "author": "Kubai087",
-   "permissions": [ "scripting", "tabs", "tabGroups", "history", "topSites", "bookmarks", "storage", "search", "favicon" ],
+   "permissions": [ "scripting", "tabs", "tabGroups", "history", "topSites", "bookmarks", "storage", "search", "favicon", "contextMenus" ],
    "version": "0.9.53"
 }

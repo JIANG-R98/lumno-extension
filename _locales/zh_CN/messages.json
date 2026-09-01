@@ -1841,6 +1841,9 @@
   "recent_pin_remove": {
     "message": "取消置顶"
   },
+  "recent_replace_pinned_url_with_current": {
+    "message": "用当前页面替换置顶链接"
+  },
   "recent_pin_limit": {
     "message": "最多置顶 3 个"
   },

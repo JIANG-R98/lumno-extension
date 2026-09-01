@@ -1841,6 +1841,9 @@
   "recent_pin_remove": {
     "message": "取消置頂"
   },
+  "recent_replace_pinned_url_with_current": {
+    "message": "用目前頁面取代置頂連結"
+  },
   "recent_pin_limit": {
     "message": "最多置頂 3 個"
   },

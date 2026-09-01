@@ -162,6 +162,18 @@ try {
 }
 
 try {
+  importScripts(chrome.runtime.getURL('src/newtab/recent-sites-store.js'));
+} catch (error) {
+  console.warn('Lumno: failed to load recent sites store.', error);
+}
+
+try {
+  importScripts(chrome.runtime.getURL('src/background/pinned-recent-context-menu.js'));
+} catch (error) {
+  console.warn('Lumno: failed to load pinned recent context menu.', error);
+}
+
+try {
   importScripts(chrome.runtime.getURL('src/background/overlay-loading-lifecycle.js'));
 } catch (error) {
   console.warn('Lumno: failed to load Overlay loading lifecycle helpers.', error);
@@ -213,6 +225,8 @@ const openNewtabFallback = BACKGROUND_NEWTAB_FALLBACK.openNewtabFallback;
 const openNewtabFallbackForUrl = BACKGROUND_NEWTAB_FALLBACK.openNewtabFallbackForUrl;
 const BACKGROUND_SHORTCUT_RULES = globalThis.LumnoShortcutRules || {};
 const RECENT_TAB_SWITCHER = globalThis.LumnoRecentTabSwitcher || {};
+const NEWTAB_RECENT_STORE = globalThis.LumnoNewtabRecentSitesStore || {};
+const PINNED_RECENT_CONTEXT_MENU = globalThis.LumnoPinnedRecentContextMenu || {};
 const OVERLAY_LOADING_LIFECYCLE = globalThis.LumnoOverlayLoadingLifecycle || {};
 const DEV_EXTENSION_STARTUP = globalThis.LumnoDevExtensionStartup || {};
 const CODEX_DEBUG_BRIDGE = globalThis.LumnoCodexDebugBackground || {};
@@ -1627,6 +1641,18 @@ const BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS = globalThis.LumnoSettings &&
   : [];
 const PINNED_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_pinned_recent_sites_2026_unique_';
 const HIDDEN_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_hidden_recent_sites_2026_unique_';
+const pinnedRecentContextMenuController =
+  typeof PINNED_RECENT_CONTEXT_MENU.createPinnedRecentContextMenuController === 'function'
+    ? PINNED_RECENT_CONTEXT_MENU.createPinnedRecentContextMenuController({
+      chromeApi: chrome,
+      recentStore: NEWTAB_RECENT_STORE,
+      storage: storageArea,
+      storageKey: PINNED_RECENT_SITES_STORAGE_KEY
+    })
+    : null;
+if (pinnedRecentContextMenuController) {
+  pinnedRecentContextMenuController.attach();
+}
 const NEWTAB_SHORTCUTS_STORAGE_KEY = '_x_extension_newtab_shortcuts_2026_unique_';
 const RESTRICTED_ACTION_STORAGE_KEY = '_x_extension_restricted_action_2024_unique_';
 const RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY = '_x_extension_restricted_action_auto_browser_setting_done_2026_unique_';

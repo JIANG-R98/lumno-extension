@@ -12,6 +12,8 @@ const injectedScriptFiles = [
   'src/background/pip-ownership.js',
   'src/background/pip-main-world.js',
   'src/background/recent-tab-switcher.js',
+  'src/background/pinned-recent-context-menu.js',
+  'src/newtab/recent-sites-store.js',
   'src/shared/extension-routes.js',
   'src/shared/codex-debug-surface.js',
   'src/shared/navigation-disposition.js',
