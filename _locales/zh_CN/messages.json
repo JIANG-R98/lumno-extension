@@ -1841,6 +1841,12 @@
   "recent_pin_remove": {
     "message": "取消置顶"
   },
+  "recent_track_add": {
+    "message": "跟踪链接"
+  },
+  "recent_track_remove": {
+    "message": "停止跟踪"
+  },
   "recent_replace_pinned_url_with_current": {
     "message": "用当前页面替换置顶链接"
   },

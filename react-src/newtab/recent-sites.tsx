@@ -21,6 +21,7 @@ export interface RecentSiteItem {
   host?: string;
   lastVisitTime?: string | number;
   visitCount?: string | number;
+  trackingEnabled?: boolean;
   [key: string]: unknown;
 }
 
@@ -33,6 +34,7 @@ interface OwnExtensionDisplay {
 interface PinResult {
   pinned?: boolean;
   limitReached?: boolean;
+  tracking?: boolean;
 }
 
 interface ThemeSuggestion {
@@ -47,6 +49,7 @@ export interface RecentCardElement extends HTMLDivElement {
   _xActionText?: HTMLSpanElement | null;
   _xTitleText?: string;
   _xPinButton?: HTMLButtonElement | null;
+  _xTrackingButton?: HTMLButtonElement | null;
   _xDisposeRecentCard?: () => void;
 }
 
@@ -94,10 +97,17 @@ export interface RecentSitesViewOptions {
   ) => void;
   getCurrentRecentCount?: () => number;
   isPinned?: (item: RecentSiteItem) => boolean;
+  isTracked?: (item: RecentSiteItem) => boolean;
   getPinnedCount?: () => number;
   getMaxPinnedCount?: () => number;
   updatePinButton?: (
     button: HTMLButtonElement,
+    pinned: boolean,
+    limitReached: boolean
+  ) => void;
+  updateTrackingButton?: (
+    button: HTMLButtonElement,
+    tracked: boolean,
     pinned: boolean,
     limitReached: boolean
   ) => void;
@@ -122,6 +132,9 @@ export interface RecentSitesViewOptions {
   ) => unknown;
   hideCursorTooltip?: () => void;
   togglePinned?: (
+    item: RecentSiteItem
+  ) => PinResult | null | Promise<PinResult | null>;
+  toggleTracking?: (
     item: RecentSiteItem
   ) => PinResult | null | Promise<PinResult | null>;
   onItemContextMenu?: (payload: {
@@ -186,9 +199,13 @@ interface NormalizedRecentSitesOptions {
     RecentSitesViewOptions['getCurrentRecentCount']
   >;
   isPinned: NonNullable<RecentSitesViewOptions['isPinned']>;
+  isTracked: NonNullable<RecentSitesViewOptions['isTracked']>;
   getPinnedCount: NonNullable<RecentSitesViewOptions['getPinnedCount']>;
   getMaxPinnedCount: NonNullable<RecentSitesViewOptions['getMaxPinnedCount']>;
   updatePinButton: NonNullable<RecentSitesViewOptions['updatePinButton']>;
+  updateTrackingButton: NonNullable<
+    RecentSitesViewOptions['updateTrackingButton']
+  >;
   showToast: NonNullable<RecentSitesViewOptions['showToast']>;
   showTopActionTooltip: NonNullable<
     RecentSitesViewOptions['showTopActionTooltip']
@@ -204,6 +221,7 @@ interface NormalizedRecentSitesOptions {
     RecentSitesViewOptions['hideCursorTooltip']
   >;
   togglePinned: NonNullable<RecentSitesViewOptions['togglePinned']>;
+  toggleTracking: NonNullable<RecentSitesViewOptions['toggleTracking']>;
   onItemContextMenu: NonNullable<
     RecentSitesViewOptions['onItemContextMenu']
   >;
@@ -249,7 +267,8 @@ export function getRecentSitesSignature(items: RecentSiteItem[]): string {
       ? String(item.lastVisitTime)
       : '';
     const visitCount = item?.visitCount ? String(item.visitCount) : '';
-    return `${index}::${url}::${title}::${siteName}::${lastVisitTime}::${visitCount}`;
+    const trackingEnabled = item?.trackingEnabled === true ? 'tracked' : '';
+    return `${index}::${url}::${title}::${siteName}::${lastVisitTime}::${visitCount}::${trackingEnabled}`;
   }).join('\n');
 }
 
@@ -345,6 +364,10 @@ function normalizeOptions(
       typeof rawOptions.isPinned === 'function'
         ? rawOptions.isPinned
         : () => false,
+    isTracked:
+      typeof rawOptions.isTracked === 'function'
+        ? rawOptions.isTracked
+        : () => false,
     getPinnedCount:
       typeof rawOptions.getPinnedCount === 'function'
         ? rawOptions.getPinnedCount
@@ -356,6 +379,10 @@ function normalizeOptions(
     updatePinButton:
       typeof rawOptions.updatePinButton === 'function'
         ? rawOptions.updatePinButton
+        : () => {},
+    updateTrackingButton:
+      typeof rawOptions.updateTrackingButton === 'function'
+        ? rawOptions.updateTrackingButton
         : () => {},
     showToast:
       typeof rawOptions.showToast === 'function'
@@ -384,6 +411,10 @@ function normalizeOptions(
       typeof rawOptions.togglePinned === 'function'
         ? rawOptions.togglePinned
         : () => Promise.resolve(null),
+    toggleTracking:
+      typeof rawOptions.toggleTracking === 'function'
+        ? rawOptions.toggleTracking
+        : () => Promise.resolve(null),
     onItemContextMenu:
       typeof rawOptions.onItemContextMenu === 'function'
         ? rawOptions.onItemContextMenu
@@ -401,6 +432,7 @@ function RecentSiteCard({
   const titleRef = useRef<HTMLDivElement>(null);
   const actionTextRef = useRef<HTMLSpanElement>(null);
   const pinButtonRef = useRef<HTMLButtonElement>(null);
+  const trackingButtonRef = useRef<HTMLButtonElement>(null);
   const isCardPointerActiveRef = useRef(false);
   const hasNavigateAttemptedRef = useRef(false);
   const tooltipSuppressedRef = useRef(false);
@@ -439,13 +471,16 @@ function RecentSiteCard({
   const safeTitleText = options.sanitizeDisplayText(titleText);
   const shouldEager = index < options.getCurrentRecentCount();
   const initiallyPinned = options.isPinned(item);
+  const initiallyTracked = options.isTracked(item);
   const immediateTheme = options.getImmediateThemeForSuggestion({
     type: 'history',
     url: faviconPageUrl,
     title: itemTitle
   });
-  const pinAction = useExclusiveAsyncAction(
-    () => options.togglePinned(item)
+  const cardAction = useExclusiveAsyncAction(
+    (action: 'pin' | 'tracking') => action === 'tracking'
+      ? options.toggleTracking(item)
+      : options.togglePinned(item)
   );
 
   function clearRollbackTimer(): void {
@@ -592,6 +627,17 @@ function RecentSiteCard({
     }
   }
 
+  function showTrackingTooltip(): void {
+    const button = trackingButtonRef.current;
+    const label =
+      button?.getAttribute('data-tooltip') ||
+      button?.getAttribute('aria-label') ||
+      '';
+    if (button && label) {
+      options.showTopActionTooltip(button, label);
+    }
+  }
+
   async function handlePin(): Promise<void> {
     const button = pinButtonRef.current;
     const card = cardRef.current;
@@ -609,7 +655,7 @@ function RecentSiteCard({
       options.updatePinButton(button, false, true);
       return;
     }
-    const outcome = await pinAction.run();
+    const outcome = await cardAction.run('pin');
     if (outcome.status === 'skipped') {
       return;
     }
@@ -637,6 +683,51 @@ function RecentSiteCard({
     );
   }
 
+  async function handleTracking(): Promise<void> {
+    const button = trackingButtonRef.current;
+    const pinButton = pinButtonRef.current;
+    const card = cardRef.current;
+    if (!button || !card) {
+      return;
+    }
+    if (
+      !initiallyPinned &&
+      options.getPinnedCount() >= options.getMaxPinnedCount()
+    ) {
+      options.showToast(
+        options.t('recent_pin_limit_toast', '最多只能置顶 3 个卡片'),
+        false
+      );
+      options.updateTrackingButton(button, false, false, true);
+      return;
+    }
+    const outcome = await cardAction.run('tracking');
+    if (outcome.status === 'skipped') {
+      return;
+    }
+    if (outcome.status === 'rejected') {
+      options.showToast(options.t('toast_error', '操作失败，请重试'), true);
+      return;
+    }
+    const result = outcome.value;
+    if (!result || !card.isConnected) {
+      return;
+    }
+    options.updateTrackingButton(
+      button,
+      Boolean(result.tracking),
+      Boolean(result.pinned),
+      Boolean(result.limitReached)
+    );
+    if (pinButton) {
+      options.updatePinButton(
+        pinButton,
+        Boolean(result.pinned),
+        Boolean(!result.pinned && result.limitReached)
+      );
+    }
+  }
+
   function dispose(): void {
     clearRollbackTimer();
     clearHoverUnlockTimer();
@@ -651,7 +742,8 @@ function RecentSiteCard({
     const card = cardRef.current;
     const favicon = faviconRef.current;
     const pinButton = pinButtonRef.current;
-    if (!card || !favicon || !pinButton) {
+    const trackingButton = trackingButtonRef.current;
+    if (!card || !favicon || !pinButton || !trackingButton) {
       return;
     }
     card._xHost = host;
@@ -659,6 +751,7 @@ function RecentSiteCard({
     card._xActionText = actionTextRef.current;
     card._xTitleText = safeTitleText;
     card._xPinButton = pinButton;
+    card._xTrackingButton = trackingButton;
     card._xDisposeRecentCard = dispose;
 
     options.applyCardTheme(card, immediateTheme, host);
@@ -667,6 +760,13 @@ function RecentSiteCard({
     });
     options.updatePinButton(
       pinButton,
+      initiallyPinned,
+      !initiallyPinned &&
+        options.getPinnedCount() >= options.getMaxPinnedCount()
+    );
+    options.updateTrackingButton(
+      trackingButton,
+      initiallyTracked,
       initiallyPinned,
       !initiallyPinned &&
         options.getPinnedCount() >= options.getMaxPinnedCount()
@@ -705,6 +805,7 @@ function RecentSiteCard({
     immediateTheme,
     index,
     initiallyPinned,
+    initiallyTracked,
     item,
     itemTitle,
     options,
@@ -865,8 +966,8 @@ function RecentSiteCard({
           </span>
           <button
             ref={pinButtonRef}
-            aria-busy={pinAction.pending}
-            disabled={pinAction.pending}
+            aria-busy={cardAction.pending}
+            disabled={cardAction.pending}
             type="button"
             className="x-nt-recent-pin"
             onPointerDown={stopCardActivation}
@@ -893,6 +994,38 @@ function RecentSiteCard({
                 initiallyPinned ? 'ri-pushpin-fill' : 'ri-pushpin-line'
               }`}
               data-recent-pin-icon=""
+            />
+          </button>
+          <button
+            ref={trackingButtonRef}
+            aria-busy={cardAction.pending}
+            disabled={cardAction.pending}
+            type="button"
+            className="x-nt-recent-track"
+            onPointerDown={stopCardActivation}
+            onClick={(event) => {
+              stopCardActivation(event);
+              void handleTracking();
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                stopCardActivation(event);
+                event.currentTarget.click();
+              }
+            }}
+            onMouseEnter={showTrackingTooltip}
+            onPointerLeave={options.hideTopActionTooltip}
+            onPointerCancel={options.hideTopActionTooltip}
+            onMouseLeave={options.hideTopActionTooltip}
+            onFocus={showTrackingTooltip}
+            onBlur={options.hideTopActionTooltip}
+          >
+            <i
+              aria-hidden="true"
+              className={`ri-icon ri-size-16 ${
+                initiallyTracked ? 'ri-radar-fill' : 'ri-radar-line'
+              }`}
+              data-recent-track-icon=""
             />
           </button>
         </div>

@@ -85,6 +85,7 @@ async function run() {
     url: 'https://www.bilibili.com/video/BV-old/?p=1',
     host: 'bilibili.com',
     pinnedAt: 123,
+    trackingEnabled: true,
     lastVisitTime: 100,
     visitCount: 8
   }, {
@@ -102,8 +103,19 @@ async function run() {
   assert.strictEqual(replaced.items[0].title, 'Course');
   assert.strictEqual(replaced.items[0].siteName, 'Bilibili');
   assert.strictEqual(replaced.items[0].pinnedAt, 123);
+  assert.strictEqual(replaced.items[0].trackingEnabled, true);
   assert.strictEqual(replaced.items[0].lastVisitTime, 999);
   assert.strictEqual(replaced.items[1].url, 'https://docs.example/start');
+
+  assert.strictEqual(
+    pinnedMenu.replacePinnedUrlWithCurrent(
+      [{ ...original[0], trackingEnabled: false }],
+      'https://www.bilibili.com/video/BV-untracked/?p=2',
+      { recentStore }
+    ).changed,
+    false,
+    'an untracked pin should not be replaceable'
+  );
 
   assert.strictEqual(
     pinnedMenu.replacePinnedUrlWithCurrent(original, 'https://other.example/', { recentStore }).changed,

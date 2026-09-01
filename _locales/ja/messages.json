@@ -1841,6 +1841,12 @@
   "recent_pin_remove": {
     "message": "固定を解除"
   },
+  "recent_track_add": {
+    "message": "リンクを追跡"
+  },
+  "recent_track_remove": {
+    "message": "追跡を停止"
+  },
   "recent_replace_pinned_url_with_current": {
     "message": "固定したURLを現在のページに置き換える"
   },

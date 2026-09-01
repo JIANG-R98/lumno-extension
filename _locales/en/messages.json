@@ -1841,6 +1841,12 @@
   "recent_pin_remove": {
     "message": "Unpin"
   },
+  "recent_track_add": {
+    "message": "Track link"
+  },
+  "recent_track_remove": {
+    "message": "Stop tracking"
+  },
   "recent_replace_pinned_url_with_current": {
     "message": "Replace Pinned URL with Current"
   },

@@ -105,7 +105,8 @@
       siteName,
       lastVisitTime: Number(item.lastVisitTime) || 0,
       visitCount: Number(item.visitCount) || 0,
-      pinnedAt: Number(item.pinnedAt) || 0
+      pinnedAt: Number(item.pinnedAt) || 0,
+      trackingEnabled: item.trackingEnabled === true
     };
   }
 

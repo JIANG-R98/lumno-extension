@@ -44,12 +44,20 @@ function createOptions(
     },
     getCurrentRecentCount: () => 4,
     isPinned: () => false,
+    isTracked: () => false,
     getPinnedCount: () => 0,
     getMaxPinnedCount: () => 3,
     updatePinButton: (button, pinned, limitReached) => {
       button.dataset.pinned = String(pinned);
       button.dataset.limitReached = String(limitReached);
       button.setAttribute('aria-label', pinned ? 'Unpin' : 'Pin');
+    },
+    updateTrackingButton: (button, tracked, pinned, limitReached) => {
+      button.dataset.tracked = String(tracked);
+      button.dataset.pinned = String(pinned);
+      button.dataset.limitReached = String(limitReached);
+      button.setAttribute('aria-label', tracked ? 'Stop tracking' : 'Track link');
+      button.setAttribute('aria-pressed', String(tracked));
     },
     showToast: () => {},
     showTopActionTooltip: () => {},
@@ -58,6 +66,7 @@ function createOptions(
     bindCursorTooltip: () => null,
     openUrl: () => {},
     togglePinned: () => Promise.resolve(null),
+    toggleTracking: () => Promise.resolve(null),
     onItemContextMenu: () => {},
     ...overrides
   };
@@ -106,8 +115,10 @@ describe('Recent Sites React island', () => {
       visitCount: 2
     }];
     expect(getRecentSitesSignature(items)).toBe(
-      '0::https://example.com/::Example::::::2'
+      '0::https://example.com/::Example::::::2::'
     );
+    expect(getRecentSitesSignature([{ ...items[0], trackingEnabled: true }]))
+      .toBe('0::https://example.com/::Example::::::2::tracked');
 
     const options = createOptions();
     const view = createRecentSitesView(options);
@@ -148,6 +159,7 @@ describe('Recent Sites React island', () => {
     expect(card?._xTitleText).toBe('Example Docs');
     expect(card?._xActionText?.textContent).toBe('前往');
     expect(card?._xPinButton).toBeInstanceOf(HTMLButtonElement);
+    expect(card?._xTrackingButton).toBeInstanceOf(HTMLButtonElement);
     expect(card?.querySelector('.x-nt-recent-dismiss')).toBeNull();
     expect(
       card?.querySelector('.x-nt-recent-card-visual')
@@ -388,6 +400,96 @@ describe('Recent Sites React island', () => {
       element: card
     });
     expect(opened).not.toHaveBeenCalled();
+  });
+
+  it('tracks from a sibling action without opening the card', async () => {
+    const opened = vi.fn();
+    const updatePinButton = vi.fn();
+    const updateTrackingButton = vi.fn(
+      (button: HTMLButtonElement, tracked: boolean) => {
+        button.dataset.tracked = String(tracked);
+        button.setAttribute('aria-label', tracked ? 'Stop tracking' : 'Track link');
+      }
+    );
+    const toggleTracking = vi.fn(() => Promise.resolve({
+      pinned: true,
+      tracking: true,
+      limitReached: false
+    }));
+    const { view } = createView({
+      openUrl: opened,
+      toggleTracking,
+      updateTrackingButton,
+      updatePinButton
+    });
+    renderItems(view, [{
+      title: 'Example',
+      url: 'https://example.com/'
+    }]);
+    const card = view.getCards()[0];
+    const trackingButton = card._xTrackingButton;
+
+    expect(trackingButton).toBeInstanceOf(HTMLButtonElement);
+    expect(trackingButton?.getAttribute('aria-label')).toBe('Track link');
+    expect(trackingButton?.querySelector('[data-recent-track-icon]')?.className)
+      .toContain('ri-radar-line');
+
+    await act(async () => {
+      trackingButton?.click();
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+    });
+
+    expect(opened).not.toHaveBeenCalled();
+    expect(toggleTracking).toHaveBeenCalledOnce();
+    expect(updateTrackingButton).toHaveBeenCalledWith(
+      trackingButton,
+      true,
+      true,
+      false
+    );
+    expect(updatePinButton).toHaveBeenCalledWith(
+      card._xPinButton,
+      true,
+      false
+    );
+  });
+
+  it('serializes pin and tracking actions on the same card', async () => {
+    let resolveTracking: (
+      result: { pinned: boolean; tracking: boolean; limitReached: boolean }
+    ) => void = () => {};
+    const toggleTracking = vi.fn(() => new Promise<{
+      pinned: boolean;
+      tracking: boolean;
+      limitReached: boolean;
+    }>((resolve) => {
+      resolveTracking = resolve;
+    }));
+    const togglePinned = vi.fn(() => Promise.resolve({
+      pinned: true,
+      limitReached: false
+    }));
+    const { view } = createView({ togglePinned, toggleTracking });
+    renderItems(view, [{
+      title: 'Example',
+      url: 'https://example.com/'
+    }]);
+    const card = view.getCards()[0];
+
+    act(() => {
+      card._xTrackingButton?.click();
+      card._xPinButton?.click();
+    });
+
+    expect(toggleTracking).toHaveBeenCalledOnce();
+    expect(togglePinned).not.toHaveBeenCalled();
+    expect(card._xTrackingButton?.disabled).toBe(true);
+    expect(card._xPinButton?.disabled).toBe(true);
+
+    await act(async () => {
+      resolveTracking({ pinned: true, tracking: true, limitReached: false });
+      await Promise.resolve();
+    });
   });
 
   it('coalesces rapid pin actions while persistence is pending', async () => {

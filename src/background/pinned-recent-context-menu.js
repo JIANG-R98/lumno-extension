@@ -52,6 +52,7 @@
     const normalizedItems = recentStore.normalizePinnedRecentSites(items, storeOptions);
     const currentHost = recentStore.getRecentSiteHostKey({ url: normalizedUrl }, storeOptions);
     const targetIndex = normalizedItems.findIndex((item) =>
+      item.trackingEnabled === true &&
       recentStore.getRecentSiteHostKey(item, storeOptions) === currentHost
     );
     if (!currentHost || targetIndex < 0 || normalizedItems[targetIndex].url === normalizedUrl) {

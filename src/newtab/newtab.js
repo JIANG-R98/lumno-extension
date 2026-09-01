@@ -9560,9 +9560,11 @@
     applyCardTheme: applyRecentCardTheme,
     getCurrentRecentCount: () => getRecentLimit(),
     isPinned: isRecentSitePinned,
+    isTracked: isRecentSiteTracked,
     getPinnedCount: () => pinnedRecentSites.length,
     getMaxPinnedCount: () => MAX_PINNED_RECENT_SITES,
     updatePinButton: updateRecentPinButton,
+    updateTrackingButton: updateRecentTrackingButton,
     showToast,
     showTopActionTooltip,
     hideTopActionTooltip,
@@ -9571,6 +9573,7 @@
     hideCursorTooltip,
     openUrl: openUrlFromNewtabCard,
     togglePinned: togglePinnedRecentSite,
+    toggleTracking: toggleTrackedRecentSite,
     onItemContextMenu: handleRecentCardContextMenu
   });
   if (recentModeMenu) {
@@ -11930,6 +11933,11 @@
     return pinnedRecentSites.some((pinnedItem) => isSameRecentSite(pinnedItem, item));
   }
 
+  function isRecentSiteTracked(item) {
+    const pinnedItem = pinnedRecentSites.find((candidate) => isSameRecentSite(candidate, item));
+    return Boolean(pinnedItem && pinnedItem.trackingEnabled === true);
+  }
+
   function mergeRecentSitesWithPinned(items, limit) {
     return NEWTAB_RECENT_STORE.mergeRecentSitesWithPinned(
       items,
@@ -11976,6 +11984,51 @@
     });
   }
 
+  function toggleTrackedRecentSite(item) {
+    const normalizedItem = normalizeRecentSiteRecord(item, { ignoreBlacklist: true });
+    if (!normalizedItem) {
+      return Promise.resolve({ pinned: false, tracking: false, limitReached: false });
+    }
+    const existingIndex = pinnedRecentSites.findIndex((pinnedItem) =>
+      isSameRecentSite(pinnedItem, normalizedItem)
+    );
+    let nextItems;
+    let tracking;
+    if (existingIndex >= 0) {
+      tracking = pinnedRecentSites[existingIndex].trackingEnabled !== true;
+      nextItems = pinnedRecentSites.map((pinnedItem, index) => (
+        index === existingIndex
+          ? { ...pinnedItem, trackingEnabled: tracking }
+          : pinnedItem
+      ));
+    } else {
+      if (pinnedRecentSites.length >= MAX_PINNED_RECENT_SITES) {
+        return Promise.resolve({
+          pinned: false,
+          tracking: false,
+          limitReached: true,
+          items: pinnedRecentSites.slice()
+        });
+      }
+      tracking = true;
+      nextItems = [{
+        ...normalizedItem,
+        pinnedAt: Date.now(),
+        trackingEnabled: true
+      }].concat(pinnedRecentSites);
+    }
+    return writePinnedRecentSites(nextItems).then((savedItems) => {
+      recentRenderSignature = '';
+      renderRecentSites(recentSourceItems);
+      return {
+        pinned: true,
+        tracking,
+        limitReached: false,
+        items: savedItems
+      };
+    });
+  }
+
   function updateRecentPinButton(button, isPinned, limitReached) {
     if (!button) {
       return;
@@ -11996,6 +12049,27 @@
     if (icon) {
       icon.className = `ri-icon ri-size-16 ${
         isPinned ? 'ri-pushpin-fill' : 'ri-pushpin-line'
+      }`;
+    }
+  }
+
+  function updateRecentTrackingButton(button, isTracked, isPinned, limitReached) {
+    if (!button) {
+      return;
+    }
+    button.classList.toggle('x-nt-recent-track--active', Boolean(isTracked));
+    button.classList.toggle('x-nt-recent-track--limit', Boolean(!isPinned && limitReached));
+    button.setAttribute('aria-pressed', isTracked ? 'true' : 'false');
+    const label = isTracked
+      ? t('recent_track_remove', '停止跟踪')
+      : t('recent_track_add', '跟踪链接');
+    button.setAttribute('aria-label', label);
+    button.setAttribute('data-tooltip', label);
+    button.removeAttribute('title');
+    const icon = button.querySelector('[data-recent-track-icon]');
+    if (icon) {
+      icon.className = `ri-icon ri-size-16 ${
+        isTracked ? 'ri-radar-fill' : 'ri-radar-line'
       }`;
     }
   }
