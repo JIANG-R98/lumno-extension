@@ -465,6 +465,37 @@ describe('Recent Sites React island', () => {
     );
   });
 
+  it('passes the tracked card identity when opening in a new tab', async () => {
+    const opened = vi.fn();
+    const { view } = createView({
+      openUrl: opened,
+      isTracked: () => true
+    });
+    renderItems(view, [{
+      cardId: 'pinned-background',
+      title: 'Tracked background card',
+      url: 'https://example.com/episode-1',
+      trackingEnabled: true
+    }]);
+    const card = view.getCards()[0];
+
+    act(() => {
+      card.dispatchEvent(new MouseEvent('click', {
+        bubbles: true,
+        button: 0,
+        ctrlKey: true
+      }));
+    });
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 0));
+    });
+
+    expect(opened).toHaveBeenCalledWith('https://example.com/episode-1', {
+      openInBackgroundTab: true,
+      trackingCardId: 'pinned-background'
+    });
+  });
+
   it('exposes active tracked-tab count on the tracking action', () => {
     const { view } = createView({
       isPinned: () => true,

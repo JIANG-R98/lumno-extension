@@ -8137,7 +8137,7 @@
       return;
     }
     if (action === NEWTAB_CONTEXT_MENU_OPEN_VALUE) {
-      openExternalNewTabUrl(target.item.url, 'newTab');
+      openRecentSiteInNewTab(target.item);
       return;
     }
     if (action === RECENT_CONTEXT_MENU_UNDO_UPDATE_VALUE) {
@@ -12023,6 +12023,22 @@
     return Boolean(pinnedIndex >= 0 && pinnedRecentSites[pinnedIndex].trackingEnabled === true);
   }
 
+  function openRecentSiteInNewTab(item) {
+    if (!item || !item.url) {
+      return false;
+    }
+    if (chrome && chrome.runtime && typeof chrome.runtime.sendMessage === 'function') {
+      chrome.runtime.sendMessage({
+        action: 'createTab',
+        url: String(item.url),
+        disposition: 'newTab',
+        trackingCardId: isRecentSiteTracked(item) ? String(item.cardId || '') : ''
+      });
+      return true;
+    }
+    return openExternalNewTabUrl(item.url, 'newTab');
+  }
+
   function mergeRecentSitesWithPinned(items, limit) {
     return NEWTAB_RECENT_STORE.mergeRecentSitesWithPinned(
       items,
@@ -12208,7 +12224,6 @@
     }
     button.classList.toggle('x-nt-recent-track--active', Boolean(isTracked));
     const liveCount = isTracked ? Math.max(0, Number(activeTabCount) || 0) : 0;
-    button.classList.toggle('x-nt-recent-track--live', liveCount > 0);
     button.classList.toggle('x-nt-recent-track--limit', Boolean(!isPinned && limitReached));
     button.dataset.activeTabCount = String(liveCount);
     button.setAttribute('aria-pressed', isTracked ? 'true' : 'false');

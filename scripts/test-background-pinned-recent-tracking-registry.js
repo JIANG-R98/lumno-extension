@@ -123,6 +123,16 @@ async function run() {
     cards[0].cardId
   );
 
+  await registry.bindTab({ id: 17, url: cards[0].url }, cards[0].cardId, cards);
+  const canonicalRedirect = await registry.syncDocument({
+    id: 17,
+    url: 'https://bilibili.com/video/BV-canonical/?p=2'
+  }, '', cards);
+  assert.strictEqual(canonicalRedirect.status, 'bound-session-only');
+  assert.strictEqual(canonicalRedirect.clear, true);
+  assert.strictEqual(canonicalRedirect.cardId, cards[0].cardId);
+  assert.strictEqual(registry.getCardId(17), cards[0].cardId);
+
   await registry.bindTab({ id: 18, url: cards[0].url }, cards[0].cardId, cards);
   const originBound = await registry.syncDocument({
     id: 18,

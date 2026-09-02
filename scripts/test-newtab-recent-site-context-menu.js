@@ -46,7 +46,8 @@ assert.ok(
     newtabJs.includes("RECENT_CONTEXT_MENU_REMOVE_VALUE = 'remove'") &&
     newtabJs.includes("RECENT_CONTEXT_MENU_UNDO_UPDATE_VALUE = 'undo-tracking-update'") &&
     newtabJs.includes("action: NEWTAB_CONTEXT_MENU_OPEN_VALUE") &&
-    newtabJs.includes("openExternalNewTabUrl(target.item.url, 'newTab')") &&
+    newtabJs.includes('openRecentSiteInNewTab(target.item)') &&
+    newtabJs.includes("trackingCardId: isRecentSiteTracked(item)") &&
     newtabJs.includes('dividerBefore: true') &&
     newtabJs.includes('function handleRecentContextMenuAction(actionValue)') &&
     newtabJs.includes('removeRecentSiteFromContextMenu(target.item)') &&

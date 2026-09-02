@@ -20,6 +20,39 @@
     const chromeApi = config.chromeApi || (windowObj && windowObj.chrome);
     let attached = false;
     let syncTask = null;
+    let syncQueued = false;
+    let locationMonitorId = null;
+    let lastLocationHref = '';
+
+    function getLocationHref() {
+      try {
+        return String(windowObj && windowObj.location && windowObj.location.href || '');
+      } catch (error) {
+        return '';
+      }
+    }
+
+    function stopLocationMonitor() {
+      if (locationMonitorId === null) return;
+      if (windowObj && typeof windowObj.clearInterval === 'function') {
+        windowObj.clearInterval(locationMonitorId);
+      }
+      locationMonitorId = null;
+    }
+
+    function syncAfterLocationChange() {
+      const currentHref = getLocationHref();
+      if (!currentHref || currentHref === lastLocationHref) return;
+      lastLocationHref = currentHref;
+      void requestSync();
+    }
+
+    function startLocationMonitor() {
+      lastLocationHref = getLocationHref();
+      if (locationMonitorId !== null || !windowObj ||
+          typeof windowObj.setInterval !== 'function') return;
+      locationMonitorId = windowObj.setInterval(syncAfterLocationChange, 1000);
+    }
 
     function isTopFrame() {
       try {
@@ -53,23 +86,42 @@
           typeof chromeApi.runtime.sendMessage !== 'function') {
         return Promise.resolve({ status: 'ignored' });
       }
-      if (syncTask) return syncTask;
+      if (syncTask) {
+        syncQueued = true;
+        return syncTask;
+      }
+      const requestLocationHref = getLocationHref();
       syncTask = new Promise((resolve) => {
-        chromeApi.runtime.sendMessage({
-          action: SYNC_ACTION,
-          trackingToken: readToken()
-        }, (response) => {
-          if (chromeApi.runtime.lastError) {
-            resolve({ status: 'ignored' });
-            return;
-          }
-          const result = response && typeof response === 'object' ? response : { status: 'ignored' };
-          if (result.clear === true) writeToken('');
-          else if (result.token) writeToken(result.token);
-          resolve(result);
-        });
+        try {
+          chromeApi.runtime.sendMessage({
+            action: SYNC_ACTION,
+            trackingToken: readToken()
+          }, (response) => {
+            if (chromeApi.runtime.lastError) {
+              resolve({ status: 'ignored' });
+              return;
+            }
+            const result = response && typeof response === 'object'
+              ? response
+              : { status: 'ignored' };
+            if (result.clear === true) writeToken('');
+            else if (result.token) writeToken(result.token);
+            if (result.cardId) startLocationMonitor();
+            else if (result.clear === true) stopLocationMonitor();
+            resolve(result);
+          });
+        } catch (error) {
+          stopLocationMonitor();
+          resolve({ status: 'ignored' });
+        }
       }).finally(() => {
         syncTask = null;
+        const shouldResync = syncQueued || Boolean(
+          locationMonitorId !== null && requestLocationHref &&
+          getLocationHref() !== requestLocationHref
+        );
+        syncQueued = false;
+        if (shouldResync) void requestSync();
       });
       return syncTask;
     }
@@ -88,6 +140,9 @@
         windowObj.addEventListener('pageshow', () => {
           void requestSync();
         });
+        windowObj.addEventListener('popstate', syncAfterLocationChange);
+        windowObj.addEventListener('hashchange', syncAfterLocationChange);
+        windowObj.addEventListener('pagehide', stopLocationMonitor);
       }
       void requestSync();
       return true;

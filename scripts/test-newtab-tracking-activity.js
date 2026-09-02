@@ -14,9 +14,9 @@ assert.ok(
   'New Tab should query, invalidate, and render tracking activity by cardId'
 );
 assert.ok(
-  newtabJs.includes("button.classList.toggle('x-nt-recent-track--live', liveCount > 0)") &&
-    newtabJs.includes('button.dataset.activeTabCount = String(liveCount)'),
-  'tracking action should expose a distinct live-tab state'
+  newtabJs.includes('button.dataset.activeTabCount = String(liveCount)') &&
+    newtabJs.includes("'停止跟踪 · 已关联 {count} 个标签页'"),
+  'tracking action should expose its live-tab count through the existing status label'
 );
 assert.ok(
     newtabJs.includes("trackingCardId: String(config.trackingCardId || '')") &&
@@ -41,8 +41,9 @@ assert.ok(extensionPagesRoute, 'extension page message route should remain disco
   );
 });
 assert.ok(
-  html.includes('.x-nt-recent-track.x-nt-recent-track--live::after'),
-  'live tracking state should have a stable visual marker'
+  !html.includes('.x-nt-recent-track.x-nt-recent-track--live::after') &&
+    !newtabJs.includes("button.classList.toggle('x-nt-recent-track--live'"),
+  'tracking activity should not duplicate the existing status label with a green dot'
 );
 
 console.log('newtab tracking activity tests passed');

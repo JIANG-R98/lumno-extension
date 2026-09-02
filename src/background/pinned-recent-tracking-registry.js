@@ -74,6 +74,19 @@
     }
   }
 
+  function areCanonicalOrigins(valueA, valueB) {
+    try {
+      const originA = new URL(String(valueA || ''));
+      const originB = new URL(String(valueB || ''));
+      return originA.protocol === originB.protocol &&
+        originA.port === originB.port &&
+        originA.hostname.replace(/^www\./i, '').toLowerCase() ===
+          originB.hostname.replace(/^www\./i, '').toLowerCase();
+    } catch (error) {
+      return false;
+    }
+  }
+
   function createPinnedRecentTrackingRegistry(options) {
     const config = options && typeof options === 'object' ? options : {};
     const runtime = config.runtime || null;
@@ -249,7 +262,8 @@
       let durableChanged = false;
       sessionBindings.forEach((binding, tabId) => {
         const card = cards.get(binding.cardId);
-        if (card && card.origin === binding.origin) return;
+        if (card && card.hostKey === getHostKey(binding.origin) &&
+            areCanonicalOrigins(card.origin, binding.origin)) return;
         sessionBindings.delete(tabId);
         sessionChanged = true;
       });
@@ -327,31 +341,49 @@
         if (currentBinding) {
           const card = cards.get(currentBinding.cardId);
           const boundRecord = currentBinding.token && tokenRecords.get(currentBinding.token);
-          if (!card || card.hostKey !== hostKey || card.origin !== origin ||
-              currentBinding.origin !== origin ||
-              (boundRecord && boundRecord.origin !== origin)) {
+          if (!card || card.hostKey !== hostKey ||
+              !areCanonicalOrigins(currentBinding.origin, origin)) {
             sessionBindings.delete(tabId);
             return persistSessionBindings().then(() => ({ status: 'clear', clear: true }));
           }
+          const originChanged = currentBinding.origin !== origin;
+          const durableOriginEligible = card.origin === origin;
+          if (originChanged || (boundRecord && boundRecord.origin !== origin)) {
+            if (currentBinding.token) tokenRecords.delete(currentBinding.token);
+            sessionBindings.set(tabId, {
+              cardId: currentBinding.cardId,
+              token: '',
+              origin
+            });
+            await Promise.all([persistSessionBindings(), persistTokenRecords()]);
+          }
+          const activeBinding = sessionBindings.get(tabId) || currentBinding;
           if (tab && tab.incognito) {
-            if (currentBinding.token) {
+            if (activeBinding.token) {
               sessionBindings.set(tabId, {
-                cardId: currentBinding.cardId,
+                cardId: activeBinding.cardId,
                 token: '',
-                origin: currentBinding.origin
+                origin: activeBinding.origin
               });
               return persistSessionBindings().then(() => ({
                 status: 'bound-session-only',
-                cardId: currentBinding.cardId,
+                cardId: activeBinding.cardId,
                 clear: true
               }));
             }
-            return { status: 'bound-session-only', cardId: currentBinding.cardId, clear: true };
+            return { status: 'bound-session-only', cardId: activeBinding.cardId, clear: true };
           }
           if (!hasDurableState) {
-            return { status: 'bound-session-only', cardId: currentBinding.cardId };
+            return { status: 'bound-session-only', cardId: activeBinding.cardId };
           }
-          let token = normalizeTrackingToken(currentBinding.token);
+          if (!durableOriginEligible) {
+            return {
+              status: 'bound-session-only',
+              cardId: activeBinding.cardId,
+              clear: true
+            };
+          }
+          let token = normalizeTrackingToken(activeBinding.token);
           let record = token && tokenRecords.get(token);
           if (!record || record.cardId !== card.cardId || record.hostKey !== card.hostKey) {
             token = createToken();
