@@ -53,13 +53,18 @@ async function run() {
   assert.strictEqual(surface.dataset.visualVariant, 'homepage-card');
   assert.match(style, /data-visual-variant="homepage-card"[^}]*background:\s*transparent/s);
   assert.match(style, /--home-card-width:\s*248px/);
-  assert.match(style, /grid-template-columns:\s*248px 248px/);
-  assert.match(style, /data-visual-variant="homepage-card"[^}]*\.change[^}]*grid-column:\s*2/s);
+  assert.match(style, /data-visual-variant="homepage-card"[^}]*\.panel[^}]*width:\s*248px/s);
+  assert.match(style, /data-visual-variant="homepage-card"[^}]*\.change[^}]*left:\s*calc\(100% \+ 16px\)/s);
+  assert.match(style, /data-visual-variant="homepage-card"[^}]*\.actions[^}]*justify-content:\s*center/s);
   assert.doesNotMatch(style, /data-visual-variant="homepage-card"[^}]*\.glow\s*\{[^}]*inset:\s*calc/s);
   assert.doesNotMatch(style, /data-phase="ready"[^}]*\.card-inner\s*\{/s);
   assert.match(style, /data-phase="old-out"[^}]*\.card-inner[^}]*translateX\(-72px\)/s);
-  assert.match(style, /data-phase="new-in"[^}]*\.record--new[^}]*translateX\(-264px\)/s);
-  assert.match(style, /\.card-footer\s*\{[^}]*width:\s*100%/s);
+  assert.match(style, /data-phase="new-in"[^}]*\.incoming-card[\s\S]*?translateX\(-264px\)/s);
+  assert.match(style, /data-phase="saving"[^}]*\.incoming-card[\s\S]*?opacity:\s*1[^}]*translateX\(-264px\)/s);
+  assert.match(style, /data-phase="success"[^}]*\.change[^}]*display:\s*block/s);
+  assert.match(style, /data-phase="success"[^}]*\.home-card[\s\S]*?opacity:\s*0/s);
+  assert.match(style, /data-phase="success"[^}]*\.home-card[\s\S]*?animation:\s*none/s);
+  assert.match(style, /\.card-footer,[^}]*\.incoming-footer\s*\{[^}]*width:\s*100%/s);
   assert.match(style, /x-lumno-action-button--warning/);
   assert.strictEqual(
     mountTarget.firstElementChild.style.getPropertyValue('--lumno-flow-breathe'),
@@ -85,7 +90,7 @@ async function run() {
   assert.strictEqual(toast.hidden, false);
   assert.match(toast.textContent, /undone/i);
   assert.strictEqual(
-    surface.querySelector('.card-title').textContent,
+    surface.querySelector('.incoming-title').textContent,
     'Episode 8',
     'the simplified undo animation should fade the updated card without swapping its title'
   );

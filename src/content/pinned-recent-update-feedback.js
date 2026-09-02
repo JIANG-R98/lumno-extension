@@ -72,6 +72,10 @@
     let oldUrl;
     let newTitle;
     let newUrl;
+    let incomingSite;
+    let incomingTitle;
+    let incomingUrl;
+    let incomingIcon;
     let cardSite;
     let cardTitle;
     let cardUrl;
@@ -154,6 +158,7 @@
         .change { display: grid; grid-template-columns: minmax(0,1fr) 34px minmax(0,1fr); align-items: stretch; gap: 8px; }
         .record { min-width: 0; padding: 13px 14px; border-radius: 18px; background: rgba(255,255,255,.42); box-shadow: inset 0 1px 0 rgba(255,255,255,.72),inset 0 0 0 1px rgba(15,23,42,.06); transition: opacity var(--lumno-flow-swap,560ms) ease,transform var(--lumno-flow-swap,560ms) cubic-bezier(.22,1,.36,1),filter var(--lumno-flow-swap,560ms) ease; }
         .record--new { position: relative; z-index: 2; background: linear-gradient(135deg,rgba(37,99,235,.12),rgba(255,255,255,.46)); }
+        .incoming-card { display:none; }
         .record-label { margin-bottom: 5px; color: #547086; font-size: 11px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; }
         .record-title,.record-url { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .record-title { color: #142535; font-size: 14px; line-height: 1.45; font-weight: 600; }
@@ -189,33 +194,37 @@
         .x-lumno-action-button--secondary { border: 1px solid rgba(15,23,42,.06); background: #fff; color: #1f2937; box-shadow: 0 2px 2px rgba(15,23,42,.025),0 1px 1px rgba(15,23,42,.035); }
         .x-lumno-action-button--warning { border-color:#c86b12; background:linear-gradient(180deg,#f2a94b,#dc7b1f); color:#351801; box-shadow:inset 0 1px 1.6px rgba(255,255,255,.4),0 2px 6px rgba(180,83,9,.18); }
         .surface[data-visual-variant="homepage-card"] { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; pointer-events:none; }
-        .surface[data-visual-variant="homepage-card"] .panel { --home-card-width:248px; width:512px; max-height:none; padding:0; overflow:visible; border-radius:28px; display:grid; grid-template-columns:248px 248px; column-gap:16px; background:transparent; box-shadow:none; backdrop-filter:none; -webkit-backdrop-filter:none; pointer-events:auto; }
-        .surface[data-visual-variant="homepage-card"] h2 { grid-column:1 / -1; margin:0 0 10px; color:#25384a; font-size:13px; text-shadow:0 1px 0 rgba(255,255,255,.7); }
-        .surface[data-visual-variant="homepage-card"] .change { position:relative; z-index:3; grid-column:2; grid-row:2; display:block; width:234px; margin:0 7px; align-self:start; }
+        .surface[data-visual-variant="homepage-card"] .panel { --home-card-width:248px; position:relative; width:248px; max-height:none; padding:0; overflow:visible; border-radius:28px; background:transparent; box-shadow:none; backdrop-filter:none; -webkit-backdrop-filter:none; pointer-events:auto; }
+        .surface[data-visual-variant="homepage-card"] h2 { margin:0 0 10px; color:#25384a; font-size:13px; text-shadow:0 1px 0 rgba(255,255,255,.7); }
+        .surface[data-visual-variant="homepage-card"] .change { position:absolute; z-index:3; top:35px; left:calc(100% + 16px); display:block; width:248px; margin:0; }
         .surface[data-visual-variant="homepage-card"] .record--old,
+        .surface[data-visual-variant="homepage-card"] .record--new,
         .surface[data-visual-variant="homepage-card"] .arrow { display:none; }
-        .surface[data-visual-variant="homepage-card"] .record--new { width:100%; min-height:104px; padding:13px 13px 14px 15px; border:1px solid rgba(0,0,0,.1); border-radius:20px; box-sizing:border-box; background:#fff; box-shadow:0 58px 16px rgba(199,199,199,0),0 37px 15px rgba(199,199,199,.01),0 21px 12px rgba(199,199,199,.05),0 9px 9px rgba(199,199,199,.09),0 2px 5px rgba(199,199,199,.1); transform-origin:center bottom; }
-        .surface[data-visual-variant="homepage-card"] .record-label { color:#68788a; }
-        .surface[data-visual-variant="homepage-card"] .card-stage { grid-column:1; grid-row:2; width:var(--home-card-width); margin:0; transition:transform 220ms cubic-bezier(.2,.8,.2,1); }
-        .surface[data-visual-variant="homepage-card"] .home-card { padding:7px 7px 12px; border-radius:28px; background:#dcebfe; border-color:rgba(255,255,255,.1); box-shadow:0 52px 15px rgba(199,199,199,0),0 33px 13px rgba(199,199,199,.01),0 19px 11px rgba(199,199,199,.05),0 8px 8px rgba(199,199,199,.09),0 2px 5px rgba(199,199,199,.1); transform:none; transition:transform 220ms cubic-bezier(.2,.8,.2,1),box-shadow 220ms ease; }
-        .surface[data-visual-variant="homepage-card"] .card-inner { position:relative; width:100%; height:104px; border:1px solid rgba(0,0,0,.1); background:#fff; box-shadow:0 58px 16px rgba(199,199,199,0),0 37px 15px rgba(199,199,199,.01),0 21px 12px rgba(199,199,199,.05),0 9px 9px rgba(199,199,199,.09),0 2px 5px rgba(199,199,199,.1); transition:height 220ms ease,transform 220ms ease,margin-bottom 220ms ease,opacity 180ms ease; }
+        .surface[data-visual-variant="homepage-card"] .card-stage { width:var(--home-card-width); margin:0; }
+        .surface[data-visual-variant="homepage-card"] .home-card,
+        .surface[data-visual-variant="homepage-card"] .incoming-card { padding:7px 7px 12px; border:1px solid rgba(255,255,255,.1); border-radius:28px; box-sizing:border-box; background:#dcebfe; box-shadow:0 52px 15px rgba(199,199,199,0),0 33px 13px rgba(199,199,199,.01),0 19px 11px rgba(199,199,199,.05),0 8px 8px rgba(199,199,199,.09),0 2px 5px rgba(199,199,199,.1); transform:none; transition:opacity var(--lumno-flow-swap,560ms) ease,transform var(--lumno-flow-swap,560ms) cubic-bezier(.22,1,.36,1),box-shadow 220ms ease; }
+        .surface[data-visual-variant="homepage-card"] .incoming-card { display:block; width:248px; }
+        .surface[data-visual-variant="homepage-card"] .card-inner,
+        .surface[data-visual-variant="homepage-card"] .incoming-inner { position:relative; width:100%; height:104px; padding:13px 13px 14px 15px; border:1px solid rgba(0,0,0,.1); border-radius:20px; box-sizing:border-box; overflow:hidden; background:#fff; box-shadow:0 58px 16px rgba(199,199,199,0),0 37px 15px rgba(199,199,199,.01),0 21px 12px rgba(199,199,199,.05),0 9px 9px rgba(199,199,199,.09),0 2px 5px rgba(199,199,199,.1); transition:opacity 180ms ease,transform 220ms ease; }
         .surface[data-visual-variant="homepage-card"] .card-content { opacity:1; transform:none; filter:none; }
-        .surface[data-visual-variant="homepage-card"] .card-footer { width:100%; margin:10px 0 0; }
+        .surface[data-visual-variant="homepage-card"] .card-footer,
+        .surface[data-visual-variant="homepage-card"] .incoming-footer { display:flex; align-items:center; gap:8px; width:100%; min-width:0; margin:10px 0 0; color:#55758c; font-size:13px; }
         .surface[data-visual-variant="homepage-card"][data-phase="old-out"] .card-inner { opacity:0; transform:translateX(-72px); }
-        .surface[data-visual-variant="homepage-card"][data-phase="old-out"] .record--new { opacity:1; transform:none; }
         .surface[data-visual-variant="homepage-card"][data-phase="new-in"] .card-inner { opacity:0; transform:translateX(-72px); }
-        .surface[data-visual-variant="homepage-card"][data-phase="new-in"] .record--new { opacity:1; transform:translateX(-264px); }
-        .surface[data-visual-variant="homepage-card"][data-phase="saving"] .record--new { opacity:0; transform:translateX(-264px); }
-        .surface[data-visual-variant="homepage-card"][data-phase="saving"] .card-inner { opacity:1; transform:none; }
+        .surface[data-visual-variant="homepage-card"][data-phase="new-in"] .incoming-card,
+        .surface[data-visual-variant="homepage-card"][data-phase="saving"] .incoming-card,
+        .surface[data-visual-variant="homepage-card"][data-phase="success"] .incoming-card,
+        .surface[data-visual-variant="homepage-card"][data-phase="undone"] .incoming-card { opacity:1; transform:translateX(-264px); }
+        .surface[data-visual-variant="homepage-card"][data-phase="saving"] .home-card,
+        .surface[data-visual-variant="homepage-card"][data-phase="success"] .home-card,
+        .surface[data-visual-variant="homepage-card"][data-phase="undone"] .home-card { opacity:0; animation:none; }
         .surface[data-visual-variant="homepage-card"][data-phase="success"] .change,
-        .surface[data-visual-variant="homepage-card"][data-phase="undone"] .change { display:none; }
-        .surface[data-visual-variant="homepage-card"][data-phase="success"] .card-stage { transform:translateX(132px); }
-        .surface[data-visual-variant="homepage-card"][data-phase="success"] .home-card { transform:none; box-shadow:0 70px 19px rgba(199,199,199,0),0 44px 18px rgba(199,199,199,.02),0 25px 15px rgba(199,199,199,.08),0 11px 11px rgba(199,199,199,.13),0 3px 6px rgba(199,199,199,.15); }
-        .surface[data-visual-variant="homepage-card"] .actions { grid-column:1 / -1; }
+        .surface[data-visual-variant="homepage-card"][data-phase="undone"] .change { display:block; }
+        .surface[data-visual-variant="homepage-card"][data-phase="success"] .incoming-card { box-shadow:0 70px 19px rgba(199,199,199,0),0 44px 18px rgba(199,199,199,.02),0 25px 15px rgba(199,199,199,.08),0 11px 11px rgba(199,199,199,.13),0 3px 6px rgba(199,199,199,.15); }
+        .surface[data-visual-variant="homepage-card"] .actions { justify-content:center; }
         .surface[data-visual-variant="homepage-card"][data-phase="undone"] h2,
         .surface[data-visual-variant="homepage-card"][data-phase="undone"] .actions { display:none; }
-        .surface[data-visual-variant="homepage-card"][data-phase="undone"] .card-stage { transform:translateX(132px); }
-        .surface[data-visual-variant="homepage-card"][data-phase="undone"] .home-card { animation:card-fade 260ms ease both; }
+        .surface[data-visual-variant="homepage-card"][data-phase="undone"] .incoming-card { animation:card-fade 260ms ease both; }
         .undo-toast { position:absolute; left:50%; top:24px; translate:-50% 0; min-height:36px; padding:0 16px; display:flex; align-items:center; border:1px solid rgba(255,255,255,.22); border-radius:999px; background:#263141; color:#fff; box-shadow:0 10px 30px rgba(15,23,42,.2); font:600 13px/1 "Open Sans","PingFang SC",sans-serif; animation:toast-enter 180ms cubic-bezier(.22,1,.36,1) both; }
         .undo-toast[hidden] { display:none; }
         @keyframes viewport-breathe { 0%{opacity:0;transform:scale(1.008)} 42%{opacity:.95;transform:scale(1)} 100%{opacity:0;transform:scale(.996)} }
@@ -233,11 +242,13 @@
       surface.className = 'surface';
       surface.dataset.visualVariant = visualVariant;
       surface.hidden = true;
-      surface.innerHTML = `<div class="glow" aria-hidden="true"></div><section class="panel" role="dialog" aria-modal="true" aria-labelledby="flow-title" tabindex="-1"><h2 id="flow-title"></h2><div class="change"><div class="record record--old"><div class="record-label old-label"></div><div class="record-title old-title"></div><div class="record-url old-url"></div></div><div class="arrow" aria-hidden="true">→</div><div class="record record--new"><div class="record-label new-label"></div><div class="record-title new-title"></div><div class="record-url new-url"></div></div></div><div class="card-stage" aria-hidden="true"><div class="home-card"><div class="card-inner"><div class="card-content"><div class="card-header"><span class="card-icon"></span><span class="card-site"></span></div><div class="card-title"></div></div></div><div class="card-footer"><span class="card-url"></span><span class="card-status"></span></div></div></div><div class="actions"><button class="x-lumno-action-button x-lumno-action-button--secondary secondary" type="button"></button><button class="x-lumno-action-button x-lumno-action-button--primary primary" type="button"></button></div></section><div class="undo-toast" role="status" aria-live="polite" hidden></div>`;
+      surface.innerHTML = `<div class="glow" aria-hidden="true"></div><section class="panel" role="dialog" aria-modal="true" aria-labelledby="flow-title" tabindex="-1"><h2 id="flow-title"></h2><div class="change"><div class="record record--old"><div class="record-label old-label"></div><div class="record-title old-title"></div><div class="record-url old-url"></div></div><div class="arrow" aria-hidden="true">→</div><div class="record record--new"><div class="record-label new-label"></div><div class="record-title new-title"></div><div class="record-url new-url"></div></div><div class="incoming-card"><div class="incoming-inner"><div class="card-header"><span class="card-icon incoming-icon"></span><span class="card-site incoming-site"></span></div><div class="card-title incoming-title"></div></div><div class="incoming-footer"><span class="card-url incoming-url"></span><span class="card-status incoming-status"></span></div></div></div><div class="card-stage" aria-hidden="true"><div class="home-card"><div class="card-inner"><div class="card-content"><div class="card-header"><span class="card-icon"></span><span class="card-site"></span></div><div class="card-title"></div></div></div><div class="card-footer"><span class="card-url"></span><span class="card-status"></span></div></div></div><div class="actions"><button class="x-lumno-action-button x-lumno-action-button--secondary secondary" type="button"></button><button class="x-lumno-action-button x-lumno-action-button--primary primary" type="button"></button></div></section><div class="undo-toast" role="status" aria-live="polite" hidden></div>`;
       if (visualVariant === 'homepage-card') surface.querySelector('.panel').setAttribute('aria-modal', 'false');
       title = surface.querySelector('h2');
       oldTitle = surface.querySelector('.old-title'); oldUrl = surface.querySelector('.old-url');
       newTitle = surface.querySelector('.new-title'); newUrl = surface.querySelector('.new-url');
+      incomingSite = surface.querySelector('.incoming-site'); incomingTitle = surface.querySelector('.incoming-title');
+      incomingUrl = surface.querySelector('.incoming-url'); incomingIcon = surface.querySelector('.incoming-icon');
       cardSite = surface.querySelector('.card-site'); cardTitle = surface.querySelector('.card-title');
       cardUrl = surface.querySelector('.card-url'); cardIcon = surface.querySelector('.card-icon');
       secondary = surface.querySelector('.secondary'); primary = surface.querySelector('.primary');
@@ -245,6 +256,7 @@
       surface.querySelector('.old-label').textContent = ui('recent_update_preview_original','Current tracked card');
       surface.querySelector('.new-label').textContent = ui('recent_update_preview_new','Replace with');
       surface.querySelector('.card-status').textContent = ui('recent_mode_tracking','Linked');
+      surface.querySelector('.incoming-status').textContent = ui('recent_mode_tracking','Linked');
       secondary.addEventListener('click', handleSecondary);
       primary.addEventListener('click', handlePrimary);
       documentObj.addEventListener('keydown', handleKeydown, true);
@@ -252,13 +264,22 @@
       return true;
     }
 
-    function fillCard(item) {
+    function fillCardFields(siteElement, titleElement, urlElement, iconElement, item) {
       const value = item || {};
       let hostname = '';
       try { hostname = new URL(String(value.url || '')).hostname.replace(/^www\./i, ''); } catch (_error) {}
-      cardSite.textContent = hostname || String(value.title || '');
-      cardTitle.textContent = String(value.title || value.url || ''); cardUrl.textContent = String(value.url || '');
-      cardIcon.textContent = String(hostname || value.title || 'L').charAt(0).toUpperCase();
+      siteElement.textContent = hostname || String(value.title || '');
+      titleElement.textContent = String(value.title || value.url || '');
+      urlElement.textContent = String(value.url || '');
+      iconElement.textContent = String(hostname || value.title || 'L').charAt(0).toUpperCase();
+    }
+
+    function fillCard(item) {
+      fillCardFields(cardSite, cardTitle, cardUrl, cardIcon, item);
+    }
+
+    function fillIncomingCard(item) {
+      fillCardFields(incomingSite, incomingTitle, incomingUrl, incomingIcon, item);
     }
 
     function fill(previous, current) {
@@ -266,6 +287,7 @@
       const after = current || {};
       oldTitle.textContent = String(before.title || before.url || ''); oldUrl.textContent = String(before.url || '');
       newTitle.textContent = String(after.title || after.url || ''); newUrl.textContent = String(after.url || '');
+      fillIncomingCard(after);
       fillCard(visualVariant === 'homepage-card' ? before : after);
     }
 
