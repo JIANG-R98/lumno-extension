@@ -471,8 +471,17 @@ async function run() {
   });
   browserRestartController.attach();
   await new Promise((resolve) => setImmediate(resolve));
+  await browserRestartChrome.events.onShown.emit({
+    pageUrl: 'https://www.bilibili.com/video/BV-new/?p=8'
+  }, {
+    id: 212,
+    active: true,
+    url: 'https://www.bilibili.com/video/BV-new/?p=8'
+  });
+  const refreshBeforeRestore = browserRestartChrome.calls.refresh;
   const browserRestored = await browserRestartController.syncTrackingDocument({
     id: 212,
+    active: true,
     url: 'https://www.bilibili.com/video/BV-new/?p=8'
   }, syncedTracking.token);
   assert.strictEqual(browserRestored.status, 'restored');
@@ -480,9 +489,45 @@ async function run() {
     browserRestored.cardId,
     recentStore.normalizePinnedRecentSites(ambiguous)[0].cardId
   );
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.strictEqual(
+    browserRestartChrome.calls.update.at(-1).changes.title,
+    'Update This Tracked Card to the Current Page'
+  );
+  assert.ok(browserRestartChrome.calls.refresh > refreshBeforeRestore);
   assert.deepStrictEqual(await browserRestartController.getTrackingActivity(), {
     [recentStore.normalizePinnedRecentSites(ambiguous)[0].cardId]: 1
   });
+
+  await browserRestartChrome.events.onUpdated.emit(212, {
+    url: 'https://www.bilibili.com/video/BV-new/?p=9'
+  }, {
+    id: 212,
+    active: true,
+    url: 'https://www.bilibili.com/video/BV-new/?p=9'
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  const spaRestartChrome = createChromeApi({
+    sessionStorage: createMemoryStorage({}),
+    localStorage: browserRestartChrome.localStorage
+  });
+  const spaRestartController = pinnedMenu.createPinnedRecentContextMenuController({
+    chromeApi: spaRestartChrome.api,
+    recentStore,
+    storage,
+    storageKey: PINNED_KEY,
+    now: () => 1001
+  });
+  spaRestartController.attach();
+  await new Promise((resolve) => setImmediate(resolve));
+  const spaRestored = await spaRestartController.syncTrackingDocument({
+    id: 313,
+    active: true,
+    url: 'https://www.bilibili.com/video/BV-new/?p=9'
+  }, browserRestored.token);
+  assert.strictEqual(spaRestored.status, 'restored');
+  assert.strictEqual(spaRestored.cardId, browserRestored.cardId);
+
   await browserRestartChrome.events.onRemoved.emit(212, { isWindowClosing: false });
   assert.deepStrictEqual(await browserRestartController.getTrackingActivity(), {});
   assert.strictEqual(

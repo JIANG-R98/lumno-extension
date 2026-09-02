@@ -478,9 +478,13 @@ describe('Recent Sites React island', () => {
       activeTabCount: 2
     }]);
 
-    const trackingButton = view.getCards()[0]._xTrackingButton;
+    const liveCard = view.getCards()[0];
+    const trackingButton = liveCard._xTrackingButton;
     expect(trackingButton?.dataset.tracked).toBe('true');
     expect(trackingButton?.dataset.activeTabCount).toBe('2');
+    expect(liveCard.dataset.recentTrackingLive).toBe('true');
+    expect(liveCard.querySelector('.x-nt-recent-live-badge')?.textContent).toContain('2');
+    expect(liveCard.querySelector('.x-nt-recent-live-badge .ri-radar-fill')).not.toBeNull();
   });
 
   it('shows an update badge and clears it when the card is opened', async () => {

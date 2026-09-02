@@ -2924,11 +2924,19 @@
         mask-composite: exclude;
         pointer-events: none;
       }
-      .x-nt-recent-update-badge {
+      .x-nt-recent-status-badges {
         position: absolute;
         top: 10px;
         right: 10px;
         z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 4px;
+        pointer-events: none;
+      }
+      .x-nt-recent-update-badge,
+      .x-nt-recent-live-badge {
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -2945,6 +2953,18 @@
         letter-spacing: 0.02em;
         pointer-events: none;
       }
+      .x-nt-recent-live-badge {
+        gap: 3px;
+        min-width: 28px;
+        padding-inline: 6px;
+        background: #168a5b;
+        box-shadow: 0 4px 12px rgba(22, 138, 91, 0.24);
+      }
+      .x-nt-recent-live-badge .ri-icon {
+        width: 11px;
+        height: 11px;
+        font-size: 11px;
+      }
       .x-nt-recent-header {
         display: flex;
         align-items: center;
@@ -2954,6 +2974,12 @@
       }
       .x-nt-recent-card[data-recent-update-pending="true"] .x-nt-recent-header {
         padding-right: 58px;
+      }
+      .x-nt-recent-card[data-recent-tracking-live="true"] .x-nt-recent-header {
+        padding-right: 50px;
+      }
+      .x-nt-recent-card[data-recent-update-pending="true"][data-recent-tracking-live="true"] .x-nt-recent-header {
+        padding-right: 88px;
       }
       .x-nt-recent-favicon {
         width: var(--x-nt-dock-recent-favicon-size, 25px);

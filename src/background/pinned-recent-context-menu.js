@@ -550,14 +550,22 @@
       return itemsTask.then(() => rememberTrackingSource(tab, cardId, url));
     }
 
-    function syncTrackingDocument(tab, token) {
+    function syncTrackingDocument(tab, token, options) {
       if (!trackingRegistry) return Promise.resolve({ status: 'ignored' });
+      const syncOptions = options && typeof options === 'object' ? options : {};
       const itemsTask = itemsLoaded ? Promise.resolve(cachedItems) : loadItems();
       return Promise.all([trackingReady, itemsTask]).then(() =>
         trackingRegistry.syncDocument(tab, token, cachedItems)
       ).then((result) => {
         if (result && result.cardId) notifyTrackingActivityChanged();
-        return result;
+        if (!result || !result.cardId || !tab || tab.active !== true ||
+            syncOptions.refreshMenu === false) {
+          return result;
+        }
+        return refreshMenuForTab(tab).then(() => {
+          if (menus && typeof menus.refresh === 'function') menus.refresh();
+          return result;
+        });
       });
     }
 
@@ -640,8 +648,19 @@
               pendingTrackingOpeners.delete(Number(tabId));
             }
           }
-          if (!tab || !tab.active || (!changeInfo.url && !changeInfo.status && !changeInfo.title)) return;
-          return refreshMenuForActiveTab();
+          const updateTrackingUrl = Boolean(
+            changeInfo && changeInfo.url && trackingRegistry &&
+            trackingRegistry.getCardId(Number(tabId))
+          );
+          const trackingTask = updateTrackingUrl
+            ? syncTrackingDocument({ ...tab, id: Number(tabId), url: changeInfo.url }, '', {
+              refreshMenu: false
+            })
+            : Promise.resolve(null);
+          if (!tab || !tab.active || (!changeInfo.url && !changeInfo.status && !changeInfo.title)) {
+            return trackingTask;
+          }
+          return trackingTask.then(() => refreshMenuForActiveTab());
         });
       }
       if (tabs && tabs.onRemoved && typeof tabs.onRemoved.addListener === 'function') {

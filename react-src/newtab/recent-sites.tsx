@@ -959,6 +959,7 @@ function RecentSiteCard({
       })}
       data-cursor-tooltip={safeTitleText}
       data-recent-update-pending={updateBadgeVisible ? 'true' : undefined}
+      data-recent-tracking-live={activeTabCount > 0 ? 'true' : undefined}
       onPointerDown={handlePointerDown}
       onPointerCancel={() => {
         isCardPointerActiveRef.current = false;
@@ -984,12 +985,20 @@ function RecentSiteCard({
     >
       <div className="x-nt-recent-card-visual">
         <div className="x-nt-recent-inner">
-          {updateBadgeVisible ? (
-            <span
-              className="x-nt-recent-update-badge"
-            >
-              {options.t('recent_update_badge', '更新')}
-            </span>
+          {updateBadgeVisible || activeTabCount > 0 ? (
+            <div className="x-nt-recent-status-badges" aria-hidden="true">
+              {updateBadgeVisible ? (
+                <span className="x-nt-recent-update-badge">
+                  {options.t('recent_update_badge', '更新')}
+                </span>
+              ) : null}
+              {activeTabCount > 0 ? (
+                <span className="x-nt-recent-live-badge">
+                  <i className="ri-icon ri-radar-fill" />
+                  <span>{activeTabCount}</span>
+                </span>
+              ) : null}
+            </div>
           ) : null}
           <div className="x-nt-recent-header">
             <img

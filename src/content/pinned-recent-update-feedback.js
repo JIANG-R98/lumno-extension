@@ -49,6 +49,7 @@
     let surface = null;
     let messageElement = null;
     let preview = null;
+    let previewPanel = null;
     let previewOldTitle = null;
     let previewOldUrl = null;
     let previewNewTitle = null;
@@ -57,8 +58,10 @@
     let previewCardTitle = null;
     let previewCardUrl = null;
     let previewCardIcon = null;
+    let previewCancel = null;
     let previewConfirm = null;
     let previewResolve = null;
+    let previousFocus = null;
     let previewTimers = [];
     let hideTimer = 0;
     const previewTimings = {
@@ -114,22 +117,22 @@
         .feedback[data-show="true"] { opacity: 1; }
         .feedback[data-show="true"] .glow { animation: viewport-breathe 1050ms cubic-bezier(.22,.61,.36,1) both; }
         .message { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
-        .preview { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; box-sizing: border-box; pointer-events: auto; background: rgba(7,18,30,.30); backdrop-filter: blur(7px); color-scheme: light dark; font-family: "Open Sans","PingFang SC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; opacity: 1; transition: opacity 220ms ease, background-color 220ms ease, backdrop-filter 220ms ease; }
+        .preview { position: absolute; inset: 0; display: grid; place-items: center; padding: 12px; box-sizing: border-box; pointer-events: auto; background: rgba(15,23,42,.18); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); color-scheme: light dark; font-family: "Open Sans","PingFang SC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; opacity: 1; transition: opacity 220ms ease, background-color 220ms ease, backdrop-filter 220ms ease; }
         .preview[hidden] { display: none; }
         .preview[data-state="entering"], .preview[data-state="leaving"] { opacity: 0; background: rgba(7,18,30,0); backdrop-filter: blur(0); }
-        .panel { width: min(620px, calc(100vw - 48px)); padding: 24px; box-sizing: border-box; border: 1px solid rgba(133,205,254,.48); border-radius: 24px; background: rgba(248,252,255,.96); box-shadow: 0 28px 90px rgba(5,35,58,.28), inset 0 1px 0 rgba(255,255,255,.78); color: #142535; opacity: 1; transform: translateY(0) scale(1); transition: opacity 220ms ease, transform 220ms cubic-bezier(.2,.8,.2,1); overflow: hidden; }
+        .panel { --home-card-width: min(251px, calc((min(96vw, 1040px) - 36px) / 4)); width: min(720px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); padding: 24px; box-sizing: border-box; border: 0; border-radius: 30px; background: radial-gradient(120% 160% at 12% -24%, rgba(255,255,255,.78) 0%, rgba(255,255,255,.44) 38%, rgba(241,245,249,.26) 100%), linear-gradient(135deg, rgba(255,255,255,.48), rgba(226,232,240,.28)); box-shadow: 0 26px 82px rgba(15,23,42,.22), 0 5px 18px rgba(15,23,42,.08), inset 0 1px 0 rgba(255,255,255,.86), inset 0 -18px 44px rgba(255,255,255,.22), inset 0 0 0 1px rgba(255,255,255,.30); backdrop-filter: blur(56px) saturate(210%); -webkit-backdrop-filter: blur(56px) saturate(210%); color: #172033; opacity: 1; transform: translateY(0) scale(1); transition: opacity 220ms ease, transform 220ms cubic-bezier(.22,1,.36,1); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
         .preview[data-state="entering"] .panel { opacity: 0; transform: translateY(18px) scale(.965); }
         .preview[data-state="leaving"] .panel { opacity: 0; transform: translateY(-10px) scale(.98); }
-        .preview-title { margin: 0 0 18px; font-size: 17px; line-height: 1.4; font-weight: 650; text-align: center; transition: opacity 180ms ease, transform 220ms ease; }
+        .preview-title { margin: 0 0 18px; font-size: 16px; line-height: 1.4; font-weight: 650; text-align: center; transition: opacity 180ms ease, transform 220ms ease; }
         .change { display: grid; grid-template-columns: minmax(0,1fr) 34px minmax(0,1fr); align-items: stretch; gap: 8px; position: relative; }
-        .record { min-width: 0; padding: 13px 14px; border-radius: 14px; background: rgba(20,160,253,.07); box-shadow: inset 0 0 0 1px rgba(20,160,253,.08); transition: opacity 240ms ease, transform 460ms cubic-bezier(.22,1,.36,1), filter 240ms ease; }
-        .record--new { background: linear-gradient(135deg, rgba(20,160,253,.15), rgba(133,205,254,.12)); box-shadow: inset 0 0 0 1px rgba(20,160,253,.20); }
+        .record { min-width: 0; padding: 13px 14px; border-radius: 18px; background: rgba(255,255,255,.42); box-shadow: inset 0 1px 0 rgba(255,255,255,.72), inset 0 0 0 1px rgba(15,23,42,.06); transition: opacity 240ms ease, transform 460ms cubic-bezier(.22,1,.36,1), filter 240ms ease; }
+        .record--new { background: linear-gradient(135deg, rgba(37,99,235,.12), rgba(255,255,255,.46)); box-shadow: inset 0 1px 0 rgba(255,255,255,.78), inset 0 0 0 1px rgba(37,99,235,.16); }
         .record-label { margin-bottom: 5px; color: #547086; font-size: 11px; line-height: 1.3; font-weight: 650; text-transform: uppercase; letter-spacing: .06em; }
         .record-title { overflow: hidden; color: #142535; font-size: 14px; line-height: 1.45; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
         .record-url { margin-top: 3px; overflow: hidden; color: #668095; font-size: 12px; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
         .arrow { align-self: center; justify-self: center; color: #14a0fd; font-size: 18px; line-height: 1; transition: opacity 180ms ease, transform 260ms ease; }
-        .card-stage { margin: 18px auto 0; width: min(340px, 100%); perspective: 900px; }
-        .home-card { padding: 7px 7px 12px; border: 1px solid rgba(20,72,109,.11); border-radius: 28px; background: linear-gradient(145deg, rgba(20,160,253,.14), rgba(133,205,254,.24)); box-shadow: 0 18px 40px rgba(26,91,135,.16), inset 0 1px 0 rgba(255,255,255,.62); transform: scale(.965); transform-origin: center; transition: transform 420ms cubic-bezier(.22,1,.36,1), box-shadow 420ms ease; }
+        .card-stage { margin: 18px auto 0; width: min(var(--home-card-width), 100%); perspective: 900px; }
+        .home-card { padding: 7px 7px 12px; border: 1px solid rgba(0,0,0,.10); border-radius: 28px; background: linear-gradient(145deg, rgba(37,99,235,.12), rgba(148,163,184,.20)); box-shadow: 0 12px 30px rgba(15,23,42,.14), inset 0 1px 0 rgba(255,255,255,.62); transform: scale(.965); transform-origin: center; transition: transform 420ms cubic-bezier(.22,1,.36,1), box-shadow 420ms ease; }
         .card-inner { position: relative; height: 104px; padding: 13px 13px 14px 15px; box-sizing: border-box; border: 1px solid rgba(20,72,109,.11); border-radius: 20px; background: rgba(255,255,255,.78); box-shadow: 0 12px 30px rgba(31,83,118,.10), inset 0 1px 0 rgba(255,255,255,.82); overflow: hidden; }
         .card-content { opacity: 0; transform: translateY(-12px) scale(.98); filter: blur(4px); transition: opacity 280ms ease, transform 420ms cubic-bezier(.22,1,.36,1), filter 300ms ease; }
         .card-header { display: grid; grid-template-columns: 25px minmax(0,1fr); align-items: center; gap: 7px; }
@@ -148,24 +151,45 @@
         .preview[data-phase="complete"] .change { visibility: hidden; height: 0; }
         .preview[data-phase="complete"] .home-card { transform: rotate(-1.2deg) scale(1.025); box-shadow: 0 24px 58px rgba(20,103,158,.24), inset 0 1px 0 rgba(255,255,255,.7); }
         .preview[data-phase="complete"] .card-stage { animation: card-complete 420ms cubic-bezier(.22,1,.36,1) both; }
-        .actions { display: flex; justify-content: center; gap: 10px; margin-top: 20px; transition: opacity 160ms ease, transform 180ms ease; }
+        .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; transition: opacity 160ms ease, transform 180ms ease; }
         .preview[data-phase="committing"] .actions, .preview[data-phase="complete"] .actions { opacity: 0; transform: translateY(8px); pointer-events: none; }
-        .button { min-width: 84px; padding: 9px 16px; border: 0; border-radius: 10px; font: inherit; font-size: 13px; font-weight: 600; line-height: 1.3; cursor: pointer; }
-        .cancel { background: rgba(77,105,126,.10); color: #344d61; }
-        .confirm { background: linear-gradient(135deg, #14a0fd, #85cdfe); color: #05233a; box-shadow: 0 7px 20px rgba(20,160,253,.24); }
-        .button:focus-visible { outline: 2px solid #14a0fd; outline-offset: 2px; }
+        .x-lumno-action-button { all: unset; position: relative; min-width: 84px; min-height: 36px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--action-border, transparent); background: var(--action-bg, transparent); background-clip: padding-box; color: var(--action-color, #1f2937); box-shadow: var(--action-shadow, none); display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; font: 600 13px/1 "Open Sans","PingFang SC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; white-space: nowrap; cursor: pointer; transition: transform 120ms ease, filter 120ms ease, background 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease; }
+        .x-lumno-action-button::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; box-shadow: var(--action-before-shadow, none); }
+        .x-lumno-action-button:hover { background: var(--action-hover-bg, var(--action-bg)); box-shadow: var(--action-hover-shadow, var(--action-shadow)); }
+        .x-lumno-action-button:active { transform: translateY(1px) scale(.98); filter: brightness(.96); }
+        .x-lumno-action-button:focus-visible { outline: 2px solid rgba(75,84,95,.35); outline-offset: 2px; }
+        .x-lumno-action-button:disabled { opacity: .62; cursor: not-allowed; transform: none; filter: none; }
+        .x-lumno-action-button--primary { --action-border: #040404; --action-bg: linear-gradient(180deg,#404859 0%,#273042 100%); --action-color: #fff; --action-shadow: 0 3px 2px rgba(0,0,0,.035),0 2px 2px rgba(0,0,0,.065),0 0 1px rgba(0,0,0,.075); --action-before-shadow: inset 0 1px 1.6px rgba(255,255,255,.34); --action-hover-bg: linear-gradient(180deg,#4a5467 0%,#2f3a4f 100%); }
+        .x-lumno-action-button--secondary { --action-border: rgba(15,23,42,.06); --action-bg: #fff; --action-color: #1f2937; --action-shadow: 0 2px 2px rgba(15,23,42,.025),0 1px 1px rgba(15,23,42,.035),0 0 1px rgba(15,23,42,.06),inset 0 1px 0 rgba(255,255,255,.75); --action-hover-bg: #f8fafc; }
         @media (prefers-color-scheme: dark) {
-          .panel { background: rgba(18,29,40,.97); color: #edf7ff; box-shadow: 0 24px 80px rgba(0,0,0,.42), 0 0 0 1px rgba(255,255,255,.06) inset; }
+          .panel { background: radial-gradient(120% 160% at 12% -24%, rgba(71,85,105,.48) 0%, rgba(30,41,59,.50) 40%, rgba(15,23,42,.64) 100%), linear-gradient(135deg, rgba(30,41,59,.72), rgba(15,23,42,.64)); color: #edf7ff; box-shadow: 0 26px 82px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.12), inset 0 0 0 1px rgba(255,255,255,.08); }
           .record { background: rgba(133,205,254,.07); }
           .record--new { background: linear-gradient(135deg, rgba(20,160,253,.17), rgba(133,205,254,.09)); }
           .record-title { color: #edf7ff; }
           .record-label, .record-url { color: #9bb5c8; }
-          .cancel { background: rgba(203,226,242,.10); color: #d6e8f5; }
+          .x-lumno-action-button--primary { --action-bg: linear-gradient(180deg,#4a566c 0%,#334157 100%); --action-color: #f8fafc; --action-hover-bg: linear-gradient(180deg,#56647c 0%,#3a4b66 100%); }
+          .x-lumno-action-button--secondary { --action-border: rgba(148,163,184,.18); --action-bg: rgba(30,41,59,.90); --action-color: #f8fafc; --action-hover-bg: rgba(51,65,85,.96); }
           .home-card { border-color: rgba(255,255,255,.10); background: linear-gradient(145deg, rgba(20,160,253,.18), rgba(80,120,147,.22)); box-shadow: 0 18px 40px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08); }
           .card-inner { border-color: rgba(255,255,255,.08); background: rgba(20,31,42,.82); box-shadow: 0 12px 30px rgba(0,0,0,.20), inset 0 1px 0 rgba(255,255,255,.06); }
           .card-site { color: #edf7ff; }
           .card-title { color: #c9dce9; }
           .card-footer { color: #9bb5c8; }
+        }
+        @media (max-width: 860px) {
+          .panel { --home-card-width: min(360px, calc((96vw - 12px) / 2)); }
+        }
+        @media (max-width: 640px) {
+          .panel { --home-card-width: 100%; padding: 18px; }
+          .change { grid-template-columns: minmax(0,1fr); }
+          .arrow { transform: rotate(90deg); }
+          .actions { justify-content: stretch; }
+          .x-lumno-action-button { flex: 1 1 0; }
+        }
+        @media (max-height: 620px) {
+          .panel { padding-block: 16px; }
+          .preview-title { margin-bottom: 12px; }
+          .card-stage { margin-top: 12px; }
+          .actions { margin-top: 14px; }
         }
         @keyframes card-complete { 0% { opacity: .7; transform: translateY(8px) scale(.97); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
         @keyframes viewport-breathe {
@@ -192,7 +216,7 @@
       preview.className = 'preview';
       preview.hidden = true;
       preview.innerHTML = `
-        <section class="panel" role="dialog" aria-modal="true" aria-labelledby="preview-title">
+        <section class="panel" role="dialog" aria-modal="true" aria-labelledby="preview-title" tabindex="-1">
           <h2 class="preview-title" id="preview-title"></h2>
           <div class="change">
             <div class="record record--old"><div class="record-label old-label"></div><div class="record-title old-title"></div><div class="record-url old-url"></div></div>
@@ -205,14 +229,15 @@
               <div class="card-footer"><span class="card-url"></span><span class="card-status"></span></div>
             </div>
           </div>
-          <div class="actions"><button class="button cancel" type="button"></button><button class="button confirm" type="button"></button></div>
+          <div class="actions"><button class="x-lumno-action-button x-lumno-action-button--secondary cancel" type="button"></button><button class="x-lumno-action-button x-lumno-action-button--primary confirm" type="button"></button></div>
         </section>`;
       preview.querySelector('.preview-title').textContent = getUiMessage('recent_update_preview_title', 'Confirm tracking update');
+      previewPanel = preview.querySelector('.panel');
       preview.querySelector('.old-label').textContent = getUiMessage('recent_update_preview_original', 'Current tracked card');
       preview.querySelector('.new-label').textContent = getUiMessage('recent_update_preview_new', 'Replace with this page');
-      const cancel = preview.querySelector('.cancel');
+      previewCancel = preview.querySelector('.cancel');
       previewConfirm = preview.querySelector('.confirm');
-      cancel.textContent = getUiMessage('recent_update_preview_cancel', 'Cancel');
+      previewCancel.textContent = getUiMessage('recent_update_preview_cancel', 'Cancel');
       previewConfirm.textContent = getUiMessage('recent_update_preview_confirm', 'Update card');
       previewOldTitle = preview.querySelector('.old-title');
       previewOldUrl = preview.querySelector('.old-url');
@@ -223,7 +248,7 @@
       previewCardUrl = preview.querySelector('.card-url');
       previewCardIcon = preview.querySelector('.card-icon');
       preview.querySelector('.card-status').textContent = getUiMessage('recent_track_add', 'Track link');
-      cancel.addEventListener('click', () => startPreviewExit(false));
+      previewCancel.addEventListener('click', () => startPreviewExit(false));
       previewConfirm.addEventListener('click', commitPreview);
       preview.addEventListener('click', (event) => {
         if (event.target === preview) startPreviewExit(false);
@@ -252,6 +277,10 @@
       previewResolve = null;
       if (preview) preview.hidden = true;
       documentObj.removeEventListener('keydown', handlePreviewKeydown, true);
+      if (previousFocus && previousFocus.isConnected && typeof previousFocus.focus === 'function') {
+        previousFocus.focus();
+      }
+      previousFocus = null;
       resolve(Boolean(confirmed));
     }
 
@@ -265,6 +294,7 @@
       if (!previewResolve || preview.dataset.phase !== 'compare') return;
       preview.dataset.phase = 'committing';
       previewConfirm.disabled = true;
+      if (previewPanel) previewPanel.focus();
       schedulePreview(() => {
         preview.dataset.phase = 'complete';
         schedulePreview(() => startPreviewExit(true), previewTimings.hold);
@@ -272,15 +302,42 @@
     }
 
     function handlePreviewKeydown(event) {
+      const handledKey = event && (event.key === 'Escape' || event.key === 'Tab');
+      if (handledKey && preview && preview.dataset.phase !== 'compare') {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       if (event && event.key === 'Escape') {
         event.preventDefault();
+        event.stopPropagation();
         startPreviewExit(false);
+        return;
+      }
+      if (!event || event.key !== 'Tab' || !previewCancel || !previewConfirm) return;
+      const focusable = [previewCancel, previewConfirm].filter((button) => !button.disabled);
+      if (focusable.length === 0) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      event.stopPropagation();
+      const shadow = preview && preview.getRootNode ? preview.getRootNode() : null;
+      const activeElement = shadow && shadow.activeElement;
+      const activeIndex = focusable.indexOf(activeElement);
+      const movingBeforeStart = event.shiftKey && activeIndex <= 0;
+      const movingAfterEnd = !event.shiftKey && activeIndex === focusable.length - 1;
+      if (activeIndex < 0 || movingBeforeStart || movingAfterEnd) {
+        event.preventDefault();
+        const target = event.shiftKey ? focusable[focusable.length - 1] : focusable[0];
+        target.focus();
       }
     }
 
     function showPreview(payload) {
       if (!ensureSurface()) return Promise.resolve(false);
       if (previewResolve) finishPreview(false);
+      previousFocus = documentObj.activeElement;
       const previous = payload && payload.previous || {};
       const current = payload && payload.current || {};
       let currentHost = '';
