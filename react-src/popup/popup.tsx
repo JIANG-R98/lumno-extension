@@ -14,12 +14,13 @@ export interface PopupLinkedItem { cardId: string; title: string; url: string; s
 
 export interface PopupRenderModel {
   status: PopupStatus;
-  busy?: 'update' | 'undo' | 'settings' | '';
+  busy?: 'update' | 'link' | 'undo' | 'clip' | 'settings' | '';
   page?: PopupPageItem | null;
   linkedCard?: PopupLinkedItem | null;
   canUpdate?: boolean;
+  canLink?: boolean;
   canUndo?: boolean;
-  canOpenSettings?: boolean;
+  canClip?: boolean;
   notice?: { kind: 'success' | 'error'; text: string } | null;
   labels: {
     appName: string;
@@ -27,15 +28,19 @@ export interface PopupRenderModel {
     updateTo: string;
     update: string;
     updating: string;
+    link: string;
+    linking: string;
     undo: string;
     undoing: string;
-    webClipSettings: string;
-    webClipSettingsDescription: string;
+    settings: string;
+    webClip: string;
     statuses: Record<PopupStatus, string>;
     statusDetails: Record<PopupStatus, string>;
   };
   onUpdate(): void;
+  onLink(): void;
   onUndo(): void;
+  onClip(): void;
   onOpenSettings(): void;
 }
 
@@ -71,13 +76,21 @@ function RecentCardPreview({ item, badge }: {
 }
 
 export function PopupView(model: PopupRenderModel) {
-  const { labels, status, busy = '', page, linkedCard, canUpdate, canUndo, notice } = model;
+  const { labels, status, busy = '', page, linkedCard, canUpdate, canLink, canUndo, notice } = model;
   const previewItem = page || linkedCard;
   return (
     <main className="popup-shell" data-status={status}>
       <header className="popup-header">
         <img src="../../assets/images/lumno.png" alt="" />
         <span>{labels.appName}</span>
+        <div className="popup-header-actions">
+          <button className="popup-header-button" type="button" aria-label={labels.webClip} title={labels.webClip} disabled={Boolean(busy) || !model.canClip} onClick={model.onClip}>
+            <i className="ri-icon ri-scissors-cut-line" aria-hidden="true" />
+          </button>
+          <button className="popup-settings-button" type="button" aria-label={labels.settings} title={labels.settings} disabled={Boolean(busy)} onClick={model.onOpenSettings}>
+            <i className="ri-icon ri-settings-3-line" aria-hidden="true" />
+          </button>
+        </div>
       </header>
 
       <section className="popup-content" aria-live="polite">
@@ -89,7 +102,7 @@ export function PopupView(model: PopupRenderModel) {
               <h1>{labels.statuses[status]}</h1>
               <p>{labels.statusDetails[status]}</p>
             </div>
-            {previewItem && (
+            {previewItem && status !== 'unsupported' && status !== 'error' && (
               <RecentCardPreview
                 item={previewItem}
                 badge={status === 'update-available' ? labels.updateTo : undefined}
@@ -114,6 +127,12 @@ export function PopupView(model: PopupRenderModel) {
             {busy === 'update' ? labels.updating : labels.update}
           </button>
         )}
+        {canLink && (
+          <button className="popup-button popup-button--primary" disabled={Boolean(busy)} onClick={model.onLink}>
+            <i className="ri-icon ri-links-line" aria-hidden="true" />
+            {busy === 'link' ? labels.linking : labels.link}
+          </button>
+        )}
         {canUndo && (
           <button className="popup-button popup-button--warning" disabled={Boolean(busy)} onClick={model.onUndo}>
             <i className="ri-icon ri-arrow-go-back-line" aria-hidden="true" />
@@ -122,14 +141,6 @@ export function PopupView(model: PopupRenderModel) {
         )}
       </div>
 
-      <button className="popup-settings-link" disabled={Boolean(busy) || !model.canOpenSettings} onClick={model.onOpenSettings}>
-        <span className="popup-settings-icon"><i className="ri-icon ri-scissors-cut-line" aria-hidden="true" /></span>
-        <span className="popup-settings-copy">
-          <strong>{labels.webClipSettings}</strong>
-          <small>{labels.webClipSettingsDescription}</small>
-        </span>
-        <i className="ri-icon ri-arrow-right-s-line" aria-hidden="true" />
-      </button>
     </main>
   );
 }

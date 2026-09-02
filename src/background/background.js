@@ -6674,7 +6674,9 @@ const BACKGROUND_MESSAGE_ROUTE_GROUPS = Object.freeze({
       'getPinnedRecentTrackingActivity',
       'getPinnedRecentToolbarState',
       'updatePinnedRecentFromToolbar',
+      'linkPinnedRecentFromToolbar',
       'undoPinnedRecentTrackingUpdate',
+      'openDocumentPipFromToolbar',
       'createTab',
       'openNewTab',
       'openExtensionDetailsPage'
@@ -7375,20 +7377,23 @@ function handleExtensionPageMessage(request, sender, sendResponse) {
       return true;
     }
     case 'getPinnedRecentToolbarState':
-    case 'updatePinnedRecentFromToolbar': {
+    case 'updatePinnedRecentFromToolbar':
+    case 'linkPinnedRecentFromToolbar': {
       const method = request.action === 'getPinnedRecentToolbarState'
         ? 'getToolbarStateForTab'
-        : 'updateForTab';
+        : (request.action === 'updatePinnedRecentFromToolbar' ? 'updateForTab' : 'linkForTab');
       if (typeof PINNED_RECENT_TOOLBAR.callControllerForFreshTab !== 'function') {
         sendResponse({ ok: false, status: 'error', reason: 'unavailable' });
         return;
       }
-      const args = request.action === 'getPinnedRecentToolbarState' ? [] : [request.guard];
+      const args = request.action === 'updatePinnedRecentFromToolbar' ? [request.guard] : [];
       PINNED_RECENT_TOOLBAR.callControllerForFreshTab(chrome, pinnedRecentContextMenuController, {
         tabId: request.tabId,
         method,
         args
-      }).then(sendResponse);
+      }).then((result) => {
+        sendResponse(result);
+      });
       return true;
     }
     case 'undoPinnedRecentTrackingUpdate': {
@@ -7401,6 +7406,21 @@ function handleExtensionPageMessage(request, sender, sendResponse) {
         request.cardId,
         request.expectedUrl
       ).then(sendResponse).catch(() => sendResponse({ ok: false, reason: 'save-failed' }));
+      return true;
+    }
+    case 'openDocumentPipFromToolbar': {
+      const tabId = Number(request.tabId);
+      if (!Number.isInteger(tabId) || !chrome.tabs || typeof chrome.tabs.get !== 'function') {
+        sendResponse({ ok: false, reason: 'unavailable' });
+        return;
+      }
+      chrome.tabs.get(tabId, (tab) => {
+        if ((chrome.runtime && chrome.runtime.lastError) || !tab) {
+          sendResponse({ ok: false, reason: 'tab-unavailable' });
+          return;
+        }
+        openDocumentPipPickerOnTab(tab, 'popup', sendResponse);
+      });
       return true;
     }
     case 'createTab': {

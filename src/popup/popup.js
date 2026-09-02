@@ -10,21 +10,24 @@
   let state = null;
   let busy = '';
   let notice = null;
+  let showUndo = false;
 
   function t(key, fallback) {
     return chrome.i18n.getMessage(key) || fallback;
   }
 
   const labels = {
-    appName: t('ext_name', 'Lumno'),
+    appName: 'Lumno',
     originalContent: t('popup_original_content', 'Previous content'),
     updateTo: t('popup_update_to', 'Current page'),
     update: t('popup_update_action', 'Update link'),
     updating: t('popup_updating_action', 'Updating…'),
+    link: t('popup_link_action', 'Link this page'),
+    linking: t('popup_linking_action', 'Linking…'),
     undo: t('recent_undo_tracking_update', 'Undo current update'),
     undoing: t('popup_undoing_action', 'Undoing…'),
-    webClipSettings: t('settings_document_pip_title', 'Web clipping'),
-    webClipSettingsDescription: t('popup_web_clip_settings_desc', 'Enable or adjust it in Settings'),
+    settings: t('settings_title', 'Settings'),
+    webClip: t('document_pip_command_action', 'Start clipping'),
     statuses: {
       loading: t('popup_status_loading', 'Reading current page…'),
       'update-available': t('popup_status_update_available', 'Update available'),
@@ -38,7 +41,7 @@
       loading: t('popup_status_loading_detail', 'Checking the active tab'),
       'update-available': t('popup_status_update_available_detail', 'Replace the previous content with the current page'),
       'up-to-date': t('popup_status_up_to_date_detail', 'The linked card already points to this page'),
-      'not-linked': t('popup_status_not_linked_detail', 'Link a card from the New Tab page first'),
+      'not-linked': t('popup_status_not_linked_detail', 'Add this page to the New Tab page and link it'),
       unsupported: t('popup_status_unsupported_detail', 'Only regular web pages can be linked'),
       blocked: t('popup_status_blocked_detail', 'The current page does not match this linked card'),
       error: t('popup_status_error_detail', 'Close the panel and try again')
@@ -60,12 +63,15 @@
       page,
       linkedCard: state && state.linkedCard,
       canUpdate: Boolean(state && state.canUpdate),
-      canUndo: Boolean(state && state.undo && state.undo.available),
-      canOpenSettings: true,
+      canLink: Boolean(state && state.status === 'not-linked' && state.page && state.page.url),
+      canUndo: Boolean(showUndo && state && state.undo && state.undo.available),
+      canClip: Number.isInteger(activeTabId),
       labels,
       onUpdate: update,
+      onLink: link,
       onUndo: undo,
-      onOpenSettings: openWebClipSettings
+      onClip: openWebClip,
+      onOpenSettings: openSettings
     });
   }
 
@@ -97,6 +103,18 @@
     notice = result && result.ok
       ? { kind: 'success', text: t('popup_update_success', 'Linked card updated') }
       : { kind: 'error', text: t('popup_update_failed', 'Unable to update this link') };
+    showUndo = Boolean(result && result.ok);
+    await refresh();
+  }
+
+  async function link() {
+    if (!state || state.status !== 'not-linked' || busy) return;
+    busy = 'link'; notice = null; render();
+    const result = await send({ action: 'linkPinnedRecentFromToolbar', tabId: activeTabId });
+    busy = '';
+    notice = result && result.ok
+      ? { kind: 'success', text: t('popup_link_success', 'Page linked') }
+      : { kind: 'error', text: t('popup_link_failed', 'Unable to link this page') };
     await refresh();
   }
 
@@ -112,15 +130,24 @@
     notice = result && result.ok
       ? { kind: 'success', text: t('popup_undo_success', 'Current update undone') }
       : { kind: 'error', text: t('recent_undo_tracking_update_failed', 'Unable to undo this update') };
+    if (result && result.ok) showUndo = false;
     await refresh();
   }
 
-  async function openWebClipSettings() {
+  async function openSettings() {
     if (busy) return;
     busy = 'settings'; render();
-    const result = await send({ action: 'openOptionsPage', hash: 'labs' });
+    const result = await send({ action: 'openOptionsPage' });
     if (result && result.ok) window.close();
     else { busy = ''; notice = { kind: 'error', text: t('popup_settings_failed', 'Unable to open Settings') }; render(); }
+  }
+
+  async function openWebClip() {
+    if (!Number.isInteger(activeTabId) || busy) return;
+    busy = 'clip'; render();
+    const result = await send({ action: 'openDocumentPipFromToolbar', tabId: activeTabId });
+    if (result && result.ok) window.close();
+    else { busy = ''; notice = { kind: 'error', text: t('document_pip_picker_open_failed', 'Unable to start web clipping') }; render(); }
   }
 
   render();

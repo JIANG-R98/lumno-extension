@@ -21,6 +21,11 @@ button { font: inherit; }
 .popup-header { display: flex; align-items: center; gap: 8px; padding: 0 2px 14px; }
 .popup-header img { width: 24px; height: 24px; border-radius: 7px; }
 .popup-header > span:nth-child(2) { font-size: 14px; font-weight: 600; }
+.popup-header-actions { display:flex; align-items:center; gap:2px; margin-left:auto; }
+.popup-header-button,.popup-settings-button { display:grid; place-items:center; width:30px; height:30px; padding:0; border:0; border-radius:9px; color:var(--popup-subtext); background:transparent; font-size:18px; cursor:pointer; transition:background-color 180ms ease,transform 140ms ease; }
+.popup-header-button:hover,.popup-settings-button:hover { color:var(--popup-text); background:var(--popup-hover); }
+.popup-header-button:active,.popup-settings-button:active { transform:translateY(1px) scale(.96); }
+.popup-header-button:focus-visible,.popup-settings-button:focus-visible { outline:2px solid rgba(37,99,169,.45); outline-offset:2px; }
 .popup-content { min-height: 142px; }
 .popup-status-copy { padding: 2px 4px 12px; }
 .popup-status-copy h1 { margin: 0; font-size: 16px; font-weight: 550; line-height: 1.35; letter-spacing: -0.015em; }
@@ -38,23 +43,17 @@ button { font: inherit; }
 .popup-recent-title { grid-column: 2 / -1; overflow: hidden; font-size: 12px; font-weight: 400; line-height: 16px; text-overflow: ellipsis; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
 .popup-recent-url { margin: 0 5px 0 10px; overflow: hidden; color: var(--popup-subtext); font-size: 14px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
 .popup-actions { display: flex; flex-direction: column; gap: 5px; margin-top: 12px; }
+.popup-actions:empty { display:none; }
 .popup-button { min-height: 38px; border: 0; border-radius: 999px; display: inline-flex; justify-content: center; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; cursor: pointer; transition: transform 140ms ease, background-color 180ms ease, opacity 180ms ease; }
 .popup-button--primary { border:1px solid #040404; color:#fff; background:linear-gradient(180deg,#404859 0%,#273042 100%); box-shadow:inset 0 1px 1.6px rgba(255,255,255,.34),0 2px 2px rgba(0,0,0,.065); }
 .popup-button--primary:hover { background: linear-gradient(180deg,#4a5365 0%,#30394b 100%); }
 .popup-button--warning { min-height: 32px; color: var(--popup-warning); background: transparent; font-size: 12px; }
 .popup-button--warning:hover { background: rgba(245, 158, 11, 0.1); }
-.popup-button:active, .popup-settings-link:active { transform: translateY(1px) scale(.98); }
-.popup-button:focus-visible, .popup-settings-link:focus-visible { outline: 2px solid rgba(37,99,169,.45); outline-offset: 2px; }
-.popup-button:disabled, .popup-settings-link:disabled { opacity: .5; cursor: default; }
+.popup-button:active { transform: translateY(1px) scale(.98); }
+.popup-button:focus-visible { outline: 2px solid rgba(37,99,169,.45); outline-offset: 2px; }
+.popup-button:disabled,.popup-header-button:disabled,.popup-settings-button:disabled { opacity:.5; cursor:default; }
 .popup-notice { margin-top:9px; padding:0 4px; font-size:12px; line-height:1.5; }
 .popup-notice--success { color:#15803d; }.popup-notice--error { color:#b42318; }
-.popup-settings-link { width: 100%; margin-top: 11px; padding: 12px 14px; border: 0; border-top: 1px solid var(--popup-line); color: var(--popup-text); background: transparent; display: grid; grid-template-columns: 30px minmax(0,1fr) 18px; align-items: center; gap: 9px; text-align: left; cursor: pointer; transition: background-color 180ms ease, transform 140ms ease; }
-.popup-settings-link:hover { background: var(--popup-hover); border-radius: 11px; }
-.popup-settings-icon { display:grid; place-items:center; width:30px; height:30px; color:var(--popup-subtext); font-size:19px; }
-.popup-settings-copy { display: grid; gap: 2px; min-width: 0; }
-.popup-settings-copy strong { font-size:13px; font-weight:400; }
-.popup-settings-copy small { overflow:hidden; color:var(--popup-subtext); font-size:11px; line-height:1.4; text-overflow:ellipsis; white-space:nowrap; }
-.popup-settings-link > i { color: var(--popup-subtext); }
 .popup-loading-card { display: grid; gap: 10px; padding: 7px 7px 12px; border-radius: 28px; background: var(--popup-card); }
 .popup-loading-card div { height: 104px; border-radius: 20px; background: var(--popup-card-inner); }
 .popup-loading-card span { display: block; height: 6px; margin-inline: 10px; border-radius: 4px; background: var(--popup-hover); animation: popup-loading 1.2s ease-in-out infinite; }

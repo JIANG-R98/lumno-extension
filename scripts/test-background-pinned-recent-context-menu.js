@@ -350,6 +350,20 @@ async function run() {
     }
   });
 
+  const linkedExisting = await controller.linkForTab({
+    id: 10,
+    url: original[0].url,
+    title: 'Course · Episode 1'
+  });
+  assert.strictEqual(linkedExisting.ok, true);
+  assert.strictEqual(linkedExisting.reason, 'linked');
+  const linkedExistingState = await controller.getToolbarStateForTab({
+    id: 10,
+    url: original[0].url,
+    title: 'Course · Episode 1'
+  });
+  assert.strictEqual(linkedExistingState.status, 'up-to-date');
+
   await controller.bindTrackingTab(
     { id: 11 },
     recentStore.normalizePinnedRecentSites(ambiguous)[0].cardId,

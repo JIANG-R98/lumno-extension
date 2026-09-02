@@ -660,6 +660,37 @@
       });
     }
 
+    function linkForTab(tab, info) {
+      return loadItems().then((items) => {
+        const addition = getAddition(items, tab, info);
+        if (addition.reason === 'already-tracked') {
+          const existingItem = addition.items[addition.index];
+          if (!existingItem) return { ok: false, changed: false, reason: 'source-not-found' };
+          return rememberTrackingSource(tab, existingItem.cardId, existingItem.url).then((bound) => ({
+            ok: Boolean(bound),
+            changed: false,
+            reason: bound ? 'linked' : 'bind-failed',
+            cardId: String(existingItem.cardId || '')
+          }));
+        }
+        if (!addition.changed) return { ok: false, ...addition, items: undefined };
+        return storageSet(storage, { [storageKey]: addition.items }, runtime).then(async (saved) => {
+          if (!saved) return { ok: false, changed: false, reason: 'save-failed' };
+          cachedItems = addition.items;
+          const linkedItem = addition.items[addition.index];
+          const bound = linkedItem
+            ? await rememberTrackingSource(tab, linkedItem.cardId, linkedItem.url)
+            : false;
+          return {
+            ok: Boolean(bound),
+            changed: true,
+            reason: bound ? addition.reason : 'bind-failed',
+            cardId: String(linkedItem && linkedItem.cardId || '')
+          };
+        });
+      });
+    }
+
     function undoTrackingUpdate(cardId, expectedUrl) {
       const normalizedCardId = normalizeTrackingCardId(cardId);
       const normalizedExpectedUrl = getHttpUrl(expectedUrl);
@@ -853,6 +884,7 @@
       attach,
       replaceForTab,
       addForTab,
+      linkForTab,
       applyForTab,
       getToolbarStateForTab,
       updateForTab,
