@@ -223,7 +223,10 @@
     const opts = options && typeof options === 'object' ? options : {};
     const normalizedItems = normalizePinnedRecentSites(items, opts);
     const url = String(currentUrl || '').trim();
-    const index = normalizedItems.findIndex((item) => getRecentSiteUrlKey(item) === url);
+    const cardId = normalizePinnedRecentCardId(opts.cardId);
+    const index = cardId
+      ? normalizedItems.findIndex((item) => item.cardId === cardId)
+      : normalizedItems.findIndex((item) => getRecentSiteUrlKey(item) === url);
     if (index < 0) return { changed: false, reason: 'not-pinned', items: normalizedItems };
     const currentItem = normalizedItems[index];
     const history = Array.isArray(currentItem.updateHistory) ? currentItem.updateHistory : [];
@@ -231,6 +234,12 @@
     if (!previous) return { changed: false, reason: 'no-history', items: normalizedItems };
     const restored = normalizeRecentSiteItem(previous, { ...opts, ignoreBlacklist: true });
     if (!restored) return { changed: false, reason: 'invalid-history', items: normalizedItems };
+    const conflictingIndex = normalizedItems.findIndex((item, itemIndex) =>
+      itemIndex !== index && getRecentSiteUrlKey(item) === getRecentSiteUrlKey(restored)
+    );
+    if (conflictingIndex >= 0) {
+      return { changed: false, reason: 'url-conflict', items: normalizedItems };
+    }
     const nextItems = normalizedItems.slice();
     nextItems[index] = {
       ...currentItem,

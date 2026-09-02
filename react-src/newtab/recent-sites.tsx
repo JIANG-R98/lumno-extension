@@ -18,6 +18,7 @@ type ThemeValue = unknown;
 
 export interface RecentSiteItem {
   cardId?: string;
+  activeTabCount?: number;
   url?: string;
   title?: string;
   siteName?: string;
@@ -119,7 +120,8 @@ export interface RecentSitesViewOptions {
     button: HTMLButtonElement,
     tracked: boolean,
     pinned: boolean,
-    limitReached: boolean
+    limitReached: boolean,
+    activeTabCount: number
   ) => void;
   showToast?: (message: string, isError: boolean) => void;
   showTopActionTooltip?: (
@@ -130,7 +132,7 @@ export interface RecentSitesViewOptions {
   navigateToUrl?: (url: string) => void;
   openUrl?: (
     url: string,
-    options: { openInBackgroundTab: boolean }
+    options: { openInBackgroundTab: boolean; trackingCardId?: string }
   ) => void;
   acknowledgeUpdate?: (
     item: RecentSiteItem
@@ -292,7 +294,8 @@ export function getRecentSitesSignature(items: RecentSiteItem[]): string {
     const updateHistory = Array.isArray(item?.updateHistory)
       ? item.updateHistory.map((entry) => `${entry?.url || ''}@${entry?.updatedAt || ''}`).join('|')
       : '';
-    return `${index}::${url}::${title}::${siteName}::${lastVisitTime}::${visitCount}::${trackingEnabled}::${updatePending}::${updateHistory}`;
+    const activeTabCount = Math.max(0, Number(item?.activeTabCount) || 0);
+    return `${index}::${url}::${title}::${siteName}::${lastVisitTime}::${visitCount}::${trackingEnabled}::${activeTabCount}::${updatePending}::${updateHistory}`;
   }).join('\n');
 }
 
@@ -505,6 +508,9 @@ function RecentSiteCard({
   const shouldEager = index < options.getCurrentRecentCount();
   const initiallyPinned = options.isPinned(item);
   const initiallyTracked = options.isTracked(item);
+  const activeTabCount = initiallyTracked
+    ? Math.max(0, Number(item.activeTabCount) || 0)
+    : 0;
   const updatePending = item.updatePending === true;
   const [updateBadgeVisible, setUpdateBadgeVisible] = useState(updatePending);
   const immediateTheme = options.getImmediateThemeForSuggestion({
@@ -634,13 +640,7 @@ function RecentSiteCard({
     if (!hoverLockedRef.current) {
       card.classList.remove(ROLLBACK_CLASS_NAME);
     }
-    if (initiallyTracked) {
-      try {
-        options.rememberTrackingTarget(item);
-      } catch {
-        // Navigation should still proceed if recording the source tab fails.
-      }
-    }
+    const openInBackgroundTab = shouldOpenUrlInBackground(event);
     if (updatePending && !updateAcknowledgedRef.current) {
       updateAcknowledgedRef.current = true;
       setUpdateBadgeVisible(false);
@@ -650,16 +650,31 @@ function RecentSiteCard({
         // Navigation should still proceed if persisting the read state fails.
       }
     }
-    const openInBackgroundTab = shouldOpenUrlInBackground(event);
-    if (!openInBackgroundTab) {
-      bindNavigationSignals();
+    const openCard = () => {
+      if (!openInBackgroundTab) {
+        bindNavigationSignals();
+      }
+      options.openUrl(itemUrl, {
+        openInBackgroundTab,
+        trackingCardId: initiallyTracked ? String(item.cardId || '') : ''
+      });
+      if (openInBackgroundTab) {
+        resetBackgroundOpenGuard();
+      } else {
+        scheduleRollbackIfPending();
+      }
+    };
+    if (initiallyTracked && !openInBackgroundTab) {
+      try {
+        void Promise.resolve(options.rememberTrackingTarget(item))
+          .catch(() => false)
+          .then(openCard);
+        return;
+      } catch {
+        // Navigation should still proceed if recording the source tab fails.
+      }
     }
-    options.openUrl(itemUrl, { openInBackgroundTab });
-    if (openInBackgroundTab) {
-      resetBackgroundOpenGuard();
-    } else {
-      scheduleRollbackIfPending();
-    }
+    openCard();
   }
 
   function stopCardActivation(
@@ -754,7 +769,7 @@ function RecentSiteCard({
         options.t('recent_pin_limit_toast', '最多只能置顶 3 个卡片'),
         false
       );
-      options.updateTrackingButton(button, false, false, true);
+      options.updateTrackingButton(button, false, false, true, 0);
       return;
     }
     const outcome = await cardAction.run('tracking');
@@ -773,7 +788,8 @@ function RecentSiteCard({
       button,
       Boolean(result.tracking),
       Boolean(result.pinned),
-      Boolean(result.limitReached)
+      Boolean(result.limitReached),
+      result.tracking ? activeTabCount : 0
     );
     if (pinButton) {
       options.updatePinButton(
@@ -825,7 +841,8 @@ function RecentSiteCard({
       initiallyTracked,
       initiallyPinned,
       !initiallyPinned &&
-        options.getPinnedCount() >= options.getMaxPinnedCount()
+        options.getPinnedCount() >= options.getMaxPinnedCount(),
+      activeTabCount
     );
     options.bindCursorTooltip(
       card,

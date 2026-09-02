@@ -22,6 +22,7 @@
     'same-url': 'This page is already the tracked card link',
     'ambiguous-target': 'Cannot identify the tracked card',
     'source-not-found': 'The original tracked card no longer exists',
+    'url-conflict': 'Another pinned card already uses this link',
     'no-tracked-target': 'No tracked card can be updated from this page',
     'save-failed': 'Could not update the tracked card'
   });
@@ -34,6 +35,7 @@
     'same-url': 'recent_update_feedback_same_url',
     'ambiguous-target': 'recent_update_feedback_ambiguous',
     'source-not-found': 'recent_update_feedback_source_missing',
+    'url-conflict': 'recent_update_feedback_url_conflict',
     'no-tracked-target': 'recent_update_feedback_not_tracked',
     'save-failed': 'recent_update_feedback_failed'
   });

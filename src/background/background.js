@@ -168,6 +168,12 @@ try {
 }
 
 try {
+  importScripts(chrome.runtime.getURL('src/background/pinned-recent-tracking-registry.js'));
+} catch (error) {
+  console.warn('Lumno: failed to load pinned recent tracking registry.', error);
+}
+
+try {
   importScripts(chrome.runtime.getURL('src/background/pinned-recent-context-menu.js'));
 } catch (error) {
   console.warn('Lumno: failed to load pinned recent context menu.', error);
@@ -226,6 +232,7 @@ const openNewtabFallbackForUrl = BACKGROUND_NEWTAB_FALLBACK.openNewtabFallbackFo
 const BACKGROUND_SHORTCUT_RULES = globalThis.LumnoShortcutRules || {};
 const RECENT_TAB_SWITCHER = globalThis.LumnoRecentTabSwitcher || {};
 const NEWTAB_RECENT_STORE = globalThis.LumnoNewtabRecentSitesStore || {};
+const PINNED_RECENT_TRACKING_REGISTRY = globalThis.LumnoPinnedRecentTrackingRegistry || {};
 const PINNED_RECENT_CONTEXT_MENU = globalThis.LumnoPinnedRecentContextMenu || {};
 const OVERLAY_LOADING_LIFECYCLE = globalThis.LumnoOverlayLoadingLifecycle || {};
 const DEV_EXTENSION_STARTUP = globalThis.LumnoDevExtensionStartup || {};
@@ -1646,8 +1653,10 @@ const pinnedRecentContextMenuController =
     ? PINNED_RECENT_CONTEXT_MENU.createPinnedRecentContextMenuController({
       chromeApi: chrome,
       recentStore: NEWTAB_RECENT_STORE,
+      trackingRegistryApi: PINNED_RECENT_TRACKING_REGISTRY,
       storage: storageArea,
       sessionStorage: chrome && chrome.storage ? chrome.storage.session : null,
+      durableStorage: chrome && chrome.storage ? chrome.storage.local : null,
       storageKey: PINNED_RECENT_SITES_STORAGE_KEY
     })
     : null;
@@ -6650,6 +6659,9 @@ const BACKGROUND_MESSAGE_ROUTE_GROUPS = Object.freeze({
       'openReleasePage',
       'openBookmarkManager',
       'openBookmarkFolderInNewTabGroup',
+      'syncPinnedRecentTrackingToken',
+      'rememberPinnedRecentTrackingTarget',
+      'getPinnedRecentTrackingActivity',
       'createTab',
       'openNewTab',
       'openExtensionDetailsPage'
@@ -7303,6 +7315,49 @@ function handleExtensionPageMessage(request, sender, sendResponse) {
       });
       return true;
     }
+    case 'syncPinnedRecentTrackingToken': {
+      if (!pinnedRecentContextMenuController ||
+          typeof pinnedRecentContextMenuController.syncTrackingDocument !== 'function') {
+        sendResponse({ status: 'ignored' });
+        return;
+      }
+      const trackingSenderTab = sender && sender.tab
+        ? { ...sender.tab, url: sender.url || sender.tab.url }
+        : null;
+      pinnedRecentContextMenuController.syncTrackingDocument(
+        trackingSenderTab,
+        request.trackingToken
+      ).then(sendResponse).catch(() => sendResponse({ status: 'ignored' }));
+      return true;
+    }
+    case 'rememberPinnedRecentTrackingTarget': {
+      const trackingSourceUrl = String(sender && sender.url || '');
+      const expectedNewtabUrl = chrome.runtime.getURL('newtab.html');
+      if (!pinnedRecentContextMenuController ||
+          typeof pinnedRecentContextMenuController.bindTrackingTab !== 'function' ||
+          !trackingSourceUrl.startsWith(expectedNewtabUrl)) {
+        sendResponse({ ok: false });
+        return;
+      }
+      pinnedRecentContextMenuController.bindTrackingTab(
+        sender && sender.tab,
+        request.cardId,
+        request.url
+      ).then((bound) => sendResponse({ ok: Boolean(bound) }))
+        .catch(() => sendResponse({ ok: false }));
+      return true;
+    }
+    case 'getPinnedRecentTrackingActivity': {
+      if (!pinnedRecentContextMenuController ||
+          typeof pinnedRecentContextMenuController.getTrackingActivity !== 'function') {
+        sendResponse({ ok: false, activeTabCountByCardId: {} });
+        return;
+      }
+      pinnedRecentContextMenuController.getTrackingActivity().then((counts) => {
+        sendResponse({ ok: true, activeTabCountByCardId: counts || {} });
+      }).catch(() => sendResponse({ ok: false, activeTabCountByCardId: {} }));
+      return true;
+    }
     case 'createTab': {
       const targetUrl = typeof request.url === 'string' ? request.url : '';
       const sourceTab = sender && sender.tab ? sender.tab : null;
@@ -7333,8 +7388,25 @@ function handleExtensionPageMessage(request, sender, sendResponse) {
         });
         return true;
       }
-      createTabWithSourceGroup({ url: targetUrl, active: request.disposition !== 'backgroundTab' }, sourceTab, (_tab, info) => {
-        sendResponse({ ok: Boolean(info && info.ok) });
+      createTabWithSourceGroup({ url: targetUrl, active: request.disposition !== 'backgroundTab' }, sourceTab, (tab, info) => {
+        const created = Boolean(info && info.ok);
+        const trackingCardId = typeof request.trackingCardId === 'string'
+          ? request.trackingCardId
+          : '';
+        if (!created || !trackingCardId || !pinnedRecentContextMenuController ||
+            typeof pinnedRecentContextMenuController.bindTrackingTab !== 'function') {
+          sendResponse({ ok: created });
+          return;
+        }
+        pinnedRecentContextMenuController.bindTrackingTab(tab, trackingCardId, targetUrl).then((bound) => {
+          if (bound && tab && typeof tab.id === 'number' && chrome.tabs &&
+              typeof chrome.tabs.sendMessage === 'function') {
+            chrome.tabs.sendMessage(tab.id, { action: 'refreshPinnedRecentTrackingToken' }, () => {
+              if (chrome.runtime) void chrome.runtime.lastError;
+            });
+          }
+          sendResponse({ ok: created, trackingBound: Boolean(bound) });
+        }).catch(() => sendResponse({ ok: created, trackingBound: false }));
       });
       return true;
     }

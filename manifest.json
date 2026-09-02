@@ -43,6 +43,11 @@
       },
       {
          "matches": [ "\u003Call_urls>" ],
+         "js": [ "src/content/pinned-recent-tracking-token.js" ],
+         "run_at": "document_start"
+      },
+      {
+         "matches": [ "\u003Call_urls>" ],
          "js": [ "src/shared/shortcut-key-matcher.js", "src/content/shortcut-key-observer.js" ],
          "run_at": "document_start",
          "all_frames": true,

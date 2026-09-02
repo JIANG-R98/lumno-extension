@@ -1847,6 +1847,9 @@
   "recent_track_remove": {
     "message": "停止跟踪"
   },
+  "recent_track_remove_with_tabs": {
+    "message": "停止跟踪 · 已关联 {count} 个标签页"
+  },
   "recent_replace_pinned_url_with_current": {
     "message": "更新此追踪卡片为当前页面"
   },
@@ -1862,6 +1865,7 @@
   "recent_update_feedback_same_url": { "message": "当前页面已经是这张追踪卡片的链接" },
   "recent_update_feedback_ambiguous": { "message": "无法确定要更新的卡片，请从目标卡片重新打开" },
   "recent_update_feedback_source_missing": { "message": "原追踪卡片已不存在，请重新设置跟踪" },
+  "recent_update_feedback_url_conflict": { "message": "另一张置顶卡片已使用此链接" },
   "recent_update_feedback_not_tracked": { "message": "当前页面没有可更新的追踪卡片" },
   "recent_update_feedback_failed": { "message": "更新追踪卡片失败，请重试" },
   "recent_update_preview_title": { "message": "确认更新追踪卡片" },

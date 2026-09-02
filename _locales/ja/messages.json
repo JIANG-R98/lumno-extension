@@ -1847,6 +1847,9 @@
   "recent_track_remove": {
     "message": "追跡を停止"
   },
+  "recent_track_remove_with_tabs": {
+    "message": "追跡を停止 · {count} 個のタブに接続中"
+  },
   "recent_replace_pinned_url_with_current": {
     "message": "この追跡カードを現在のページに更新"
   },
@@ -1862,6 +1865,7 @@
   "recent_update_feedback_same_url": { "message": "このページはすでに追跡カードのリンクです" },
   "recent_update_feedback_ambiguous": { "message": "対象カードを特定できません。対象カードから開き直してください" },
   "recent_update_feedback_source_missing": { "message": "元の追跡カードが見つかりません" },
+  "recent_update_feedback_url_conflict": { "message": "別の固定カードがこのリンクを使用しています" },
   "recent_update_feedback_not_tracked": { "message": "このページから更新できる追跡カードはありません" },
   "recent_update_feedback_failed": { "message": "追跡カードを更新できませんでした。再試行してください" },
   "recent_update_preview_title": { "message": "追跡カードの更新を確認" },

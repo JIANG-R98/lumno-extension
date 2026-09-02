@@ -1847,6 +1847,9 @@
   "recent_track_remove": {
     "message": "停止追蹤"
   },
+  "recent_track_remove_with_tabs": {
+    "message": "停止追蹤 · 已連結 {count} 個分頁"
+  },
   "recent_replace_pinned_url_with_current": {
     "message": "將此追蹤卡片更新為目前頁面"
   },
@@ -1862,6 +1865,7 @@
   "recent_update_feedback_same_url": { "message": "目前頁面已經是這張追蹤卡片的連結" },
   "recent_update_feedback_ambiguous": { "message": "無法確定要更新的卡片，請從目標卡片重新開啟" },
   "recent_update_feedback_source_missing": { "message": "原追蹤卡片已不存在，請重新設定追蹤" },
+  "recent_update_feedback_url_conflict": { "message": "另一張置頂卡片已使用此連結" },
   "recent_update_feedback_not_tracked": { "message": "目前頁面沒有可更新的追蹤卡片" },
   "recent_update_feedback_failed": { "message": "更新追蹤卡片失敗，請再試一次" },
   "recent_update_preview_title": { "message": "確認更新追蹤卡片" },

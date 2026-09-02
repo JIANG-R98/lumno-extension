@@ -2084,6 +2084,7 @@
         padding: 4px 8px;
         gap: 7px;
         border: 1px solid transparent;
+        position: relative;
         border-radius: 7px;
         background: transparent;
         box-shadow: none;
@@ -3075,6 +3076,17 @@
       .x-nt-recent-track.x-nt-recent-track--active {
         color: var(--x-nt-recent-accent-color, #4389ff);
         background: var(--x-nt-recent-accent-soft, rgba(0, 0, 0, 0.04));
+      }
+      .x-nt-recent-track.x-nt-recent-track--live::after {
+        content: "";
+        position: absolute;
+        top: 3px;
+        right: 3px;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: #2fb171;
+        box-shadow: 0 0 0 1.5px var(--x-nt-recent-accent-soft, rgba(255, 255, 255, 0.9));
       }
       .x-nt-recent-pin:disabled,
       .x-nt-recent-track:disabled {

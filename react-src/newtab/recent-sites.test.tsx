@@ -52,10 +52,11 @@ function createOptions(
       button.dataset.limitReached = String(limitReached);
       button.setAttribute('aria-label', pinned ? 'Unpin' : 'Pin');
     },
-    updateTrackingButton: (button, tracked, pinned, limitReached) => {
+    updateTrackingButton: (button, tracked, pinned, limitReached, activeTabCount) => {
       button.dataset.tracked = String(tracked);
       button.dataset.pinned = String(pinned);
       button.dataset.limitReached = String(limitReached);
+      button.dataset.activeTabCount = String(activeTabCount);
       button.setAttribute('aria-label', tracked ? 'Stop tracking' : 'Track link');
       button.setAttribute('aria-pressed', String(tracked));
     },
@@ -115,12 +116,17 @@ describe('Recent Sites React island', () => {
       visitCount: 2
     }];
     expect(getRecentSitesSignature(items)).toBe(
-      '0::https://example.com/::Example::::::2::::::'
+      '0::https://example.com/::Example::::::2::::0::::'
     );
     expect(getRecentSitesSignature([{ ...items[0], trackingEnabled: true }]))
-      .toBe('0::https://example.com/::Example::::::2::tracked::::');
+      .toBe('0::https://example.com/::Example::::::2::tracked::0::::');
+    expect(getRecentSitesSignature([{
+      ...items[0],
+      trackingEnabled: true,
+      activeTabCount: 2
+    }])).toBe('0::https://example.com/::Example::::::2::tracked::2::::');
     expect(getRecentSitesSignature([{ ...items[0], updatePending: true }]))
-      .toBe('0::https://example.com/::Example::::::2::::updated::');
+      .toBe('0::https://example.com/::Example::::::2::::0::updated::');
 
     const options = createOptions();
     const view = createRecentSitesView(options);
@@ -292,11 +298,13 @@ describe('Recent Sites React island', () => {
     expect(opened).toEqual([
       {
         url: 'https://example.com/',
-        openInBackgroundTab: true
+        openInBackgroundTab: true,
+        trackingCardId: ''
       },
       {
         url: 'https://example.com/',
-        openInBackgroundTab: true
+        openInBackgroundTab: true,
+        trackingCardId: ''
       }
     ]);
   });
@@ -447,13 +455,32 @@ describe('Recent Sites React island', () => {
       trackingButton,
       true,
       true,
-      false
+      false,
+      0
     );
     expect(updatePinButton).toHaveBeenCalledWith(
       card._xPinButton,
       true,
       false
     );
+  });
+
+  it('exposes active tracked-tab count on the tracking action', () => {
+    const { view } = createView({
+      isPinned: () => true,
+      isTracked: (item) => item.trackingEnabled === true
+    });
+    renderItems(view, [{
+      cardId: 'pinned-live',
+      title: 'Live course',
+      url: 'https://example.com/course',
+      trackingEnabled: true,
+      activeTabCount: 2
+    }]);
+
+    const trackingButton = view.getCards()[0]._xTrackingButton;
+    expect(trackingButton?.dataset.tracked).toBe('true');
+    expect(trackingButton?.dataset.activeTabCount).toBe('2');
   });
 
   it('shows an update badge and clears it when the card is opened', async () => {
@@ -488,8 +515,37 @@ describe('Recent Sites React island', () => {
     expect(card.hasAttribute('data-recent-update-pending')).toBe(false);
     expect(card.querySelector('.x-nt-recent-update-badge')).toBeNull();
     expect(opened).toHaveBeenCalledWith(item.url, {
-      openInBackgroundTab: false
+      openInBackgroundTab: false,
+      trackingCardId: ''
     });
+  });
+
+  it('binds a foreground tracked tab before navigation starts', async () => {
+    let finishBinding: () => void = () => {};
+    const opened = vi.fn();
+    const rememberTrackingTarget = vi.fn(() => new Promise<void>((resolve) => {
+      finishBinding = resolve;
+    }));
+    const { view } = createView({
+      openUrl: opened,
+      rememberTrackingTarget,
+      isTracked: () => true
+    });
+    renderItems(view, [{
+      cardId: 'pinned-sequenced',
+      title: 'Sequenced',
+      url: 'https://example.com/sequenced'
+    }]);
+
+    view.getCards()[0].click();
+    expect(rememberTrackingTarget).toHaveBeenCalledOnce();
+    expect(opened).not.toHaveBeenCalled();
+
+    await act(async () => {
+      finishBinding();
+      await Promise.resolve();
+    });
+    expect(opened).toHaveBeenCalledOnce();
   });
 
   it('serializes pin and tracking actions on the same card', async () => {

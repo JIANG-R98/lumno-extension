@@ -147,6 +147,26 @@ async function testRecentStore() {
   assert.strictEqual(undonePinned.items[0].cardId, loadedPinned[0].cardId);
   assert.strictEqual(undonePinned.items[0].updatePending, true);
   assert.strictEqual(undonePinned.items[0].updateHistory.length, 0);
+  const undoByCardId = recentStore.undoPinnedRecentSiteUpdate(
+    loadedPinned,
+    'https://stale.example/not-the-current-url',
+    { cardId: loadedPinned[0].cardId }
+  );
+  assert.strictEqual(undoByCardId.changed, true);
+  assert.strictEqual(undoByCardId.items[0].cardId, loadedPinned[0].cardId);
+
+  const conflictingUndoItems = recentStore.normalizePinnedRecentSites([
+    loadedPinned[0],
+    { title: 'Conflict', url: loadedPinned[0].updateHistory[0].url, pinnedAt: 999 }
+  ]);
+  const conflictingUndo = recentStore.undoPinnedRecentSiteUpdate(
+    conflictingUndoItems,
+    loadedPinned[0].url,
+    { cardId: conflictingUndoItems[0].cardId }
+  );
+  assert.strictEqual(conflictingUndo.changed, false);
+  assert.strictEqual(conflictingUndo.reason, 'url-conflict');
+  assert.strictEqual(conflictingUndo.items.length, 2);
   assert.deepStrictEqual(
     recentStore.mergeRecentSitesWithPinned([], loadedPinned, [], 4, options)
       .map((item) => item.url),

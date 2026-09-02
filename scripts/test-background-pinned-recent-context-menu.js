@@ -1,5 +1,7 @@
 const assert = require('assert');
 const recentStore = require('../src/newtab/recent-sites-store.js');
+const trackingRegistry = require('../src/background/pinned-recent-tracking-registry.js');
+globalThis.LumnoPinnedRecentTrackingRegistry = trackingRegistry;
 const pinnedMenu = require('../src/background/pinned-recent-context-menu.js');
 
 const PINNED_KEY = recentStore.DEFAULT_PINNED_KEY;
@@ -64,11 +66,13 @@ function createChromeApi(options) {
   const onMessage = createEvent();
   const onCreated = createEvent();
   const onRemoved = createEvent();
+  const onReplaced = createEvent();
   const onActivated = createEvent();
   const onUpdated = createEvent();
   const onStorageChanged = createEvent();
   const calls = { create: [], update: [], sendMessage: [], refresh: 0 };
   const sessionStorage = config.sessionStorage || createMemoryStorage({});
+  const localStorage = config.localStorage || createMemoryStorage({});
   let activeTab = {
     id: 90,
     active: true,
@@ -76,8 +80,9 @@ function createChromeApi(options) {
   };
   return {
     calls,
-    events: { onClicked, onShown, onMessage, onCreated, onRemoved, onActivated, onUpdated, onStorageChanged },
+    events: { onClicked, onShown, onMessage, onCreated, onRemoved, onReplaced, onActivated, onUpdated, onStorageChanged },
     sessionStorage,
+    localStorage,
     setActiveTab(tab) {
       activeTab = tab;
     },
@@ -113,6 +118,7 @@ function createChromeApi(options) {
       tabs: {
         onCreated,
         onRemoved,
+        onReplaced,
         onActivated,
         onUpdated,
         query(_queryInfo, callback) {
@@ -127,7 +133,7 @@ function createChromeApi(options) {
           );
         }
       },
-      storage: { onChanged: onStorageChanged, session: sessionStorage }
+      storage: { onChanged: onStorageChanged, session: sessionStorage, local: localStorage }
     }
   };
 }
@@ -168,6 +174,23 @@ async function run() {
   assert.strictEqual(replaced.items[0].updateHistory.length, 1);
   assert.strictEqual(replaced.items[0].updateHistory[0].url, original[0].url);
   assert.strictEqual(replaced.items[0].updateHistory[0].title, original[0].title);
+  const replacementConflictItems = [original[0], {
+    title: 'Other Bilibili',
+    url: 'https://www.bilibili.com/video/BV-other/',
+    pinnedAt: 124,
+    trackingEnabled: true
+  }];
+  const replacementConflict = pinnedMenu.replacePinnedUrlWithCurrent(
+    replacementConflictItems,
+    replacementConflictItems[1].url,
+    {
+      recentStore,
+      sourceCardId: recentStore.normalizePinnedRecentSites(replacementConflictItems)[0].cardId
+    }
+  );
+  assert.strictEqual(replacementConflict.changed, false);
+  assert.strictEqual(replacementConflict.reason, 'url-conflict');
+  assert.strictEqual(replacementConflict.items.length, replacementConflictItems.length);
   let chainedItems = [original[0]];
   let chainedSource = original[0].url;
   for (let index = 0; index < 12; index += 1) {
@@ -331,13 +354,11 @@ async function run() {
     }
   });
 
-  await chrome.events.onMessage.emit({
-    action: 'rememberPinnedRecentTrackingTarget',
-    cardId: recentStore.normalizePinnedRecentSites(ambiguous)[0].cardId,
-    url: original[0].url
-  }, {
-    tab: { id: 11 }
-  });
+  await controller.bindTrackingTab(
+    { id: 11 },
+    recentStore.normalizePinnedRecentSites(ambiguous)[0].cardId,
+    original[0].url
+  );
   chrome.setActiveTab({
     id: 12,
     active: true,
@@ -348,7 +369,7 @@ async function run() {
   await new Promise((resolve) => setImmediate(resolve));
   assert.strictEqual(
     chrome.sessionStorage.data[pinnedMenu.TRACKING_SESSION_STORAGE_KEY]['12'],
-    recentStore.normalizePinnedRecentSites(ambiguous)[0].cardId
+    undefined
   );
   await chrome.events.onUpdated.emit(12, {
     url: 'https://www.bilibili.com/video/BV-new/?p=7'
@@ -358,10 +379,56 @@ async function run() {
     url: 'https://www.bilibili.com/video/BV-new/?p=7'
   });
   await new Promise((resolve) => setImmediate(resolve));
+  assert.strictEqual(
+    chrome.sessionStorage.data[pinnedMenu.TRACKING_SESSION_STORAGE_KEY]['12'].cardId,
+    recentStore.normalizePinnedRecentSites(ambiguous)[0].cardId
+  );
   assert.strictEqual(chrome.calls.update.at(-1).changes.enabled, true);
   assert.strictEqual(
     chrome.calls.update.at(-1).changes.title,
     'Update This Tracked Card to the Current Page'
+  );
+
+  await chrome.events.onCreated.emit({
+    id: 13,
+    openerTabId: 11,
+    url: 'chrome://extensions/'
+  });
+  await chrome.events.onUpdated.emit(13, { status: 'complete' }, {
+    id: 13,
+    url: 'chrome://extensions/'
+  });
+  await chrome.events.onCreated.emit({ id: 14, openerTabId: 11 });
+  await chrome.events.onUpdated.emit(14, { url: 'https://example.com/' }, {
+    id: 14,
+    url: 'https://example.com/'
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.strictEqual(
+    chrome.sessionStorage.data[pinnedMenu.TRACKING_SESSION_STORAGE_KEY]['13'],
+    undefined
+  );
+  assert.strictEqual(
+    chrome.sessionStorage.data[pinnedMenu.TRACKING_SESSION_STORAGE_KEY]['14'],
+    undefined
+  );
+
+  await chrome.events.onCreated.emit({ id: 15, openerTabId: 11 });
+  await chrome.events.onReplaced.emit(16, 15);
+  await chrome.events.onUpdated.emit(16, {
+    url: 'https://www.bilibili.com/video/BV-replaced-opener/'
+  }, {
+    id: 16,
+    url: 'https://www.bilibili.com/video/BV-replaced-opener/'
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.strictEqual(
+    chrome.sessionStorage.data[pinnedMenu.TRACKING_SESSION_STORAGE_KEY]['15'],
+    undefined
+  );
+  assert.strictEqual(
+    chrome.sessionStorage.data[pinnedMenu.TRACKING_SESSION_STORAGE_KEY]['16'].cardId,
+    recentStore.normalizePinnedRecentSites(ambiguous)[0].cardId
   );
 
   const restartedChrome = createChromeApi({ sessionStorage: chrome.sessionStorage });
@@ -384,6 +451,44 @@ async function run() {
   });
   assert.strictEqual(restartedChrome.calls.update.at(-1).changes.enabled, true);
   assert.strictEqual(restartedChrome.calls.refresh, 1);
+  const syncedTracking = await restartedController.syncTrackingDocument({
+    id: 12,
+    url: 'https://www.bilibili.com/video/BV-new/?p=7'
+  }, '');
+  assert.strictEqual(syncedTracking.status, 'bound');
+  assert.ok(trackingRegistry.normalizeTrackingToken(syncedTracking.token));
+
+  const browserRestartChrome = createChromeApi({
+    sessionStorage: createMemoryStorage({}),
+    localStorage: restartedChrome.localStorage
+  });
+  const browserRestartController = pinnedMenu.createPinnedRecentContextMenuController({
+    chromeApi: browserRestartChrome.api,
+    recentStore,
+    storage,
+    storageKey: PINNED_KEY,
+    now: () => 1000
+  });
+  browserRestartController.attach();
+  await new Promise((resolve) => setImmediate(resolve));
+  const browserRestored = await browserRestartController.syncTrackingDocument({
+    id: 212,
+    url: 'https://www.bilibili.com/video/BV-new/?p=8'
+  }, syncedTracking.token);
+  assert.strictEqual(browserRestored.status, 'restored');
+  assert.strictEqual(
+    browserRestored.cardId,
+    recentStore.normalizePinnedRecentSites(ambiguous)[0].cardId
+  );
+  assert.deepStrictEqual(await browserRestartController.getTrackingActivity(), {
+    [recentStore.normalizePinnedRecentSites(ambiguous)[0].cardId]: 1
+  });
+  await browserRestartChrome.events.onRemoved.emit(212, { isWindowClosing: false });
+  assert.deepStrictEqual(await browserRestartController.getTrackingActivity(), {});
+  assert.strictEqual(
+    browserRestartChrome.localStorage.data[trackingRegistry.TRACKING_TOKEN_STORAGE_KEY][browserRestored.token],
+    undefined
+  );
   storage.data[PINNED_KEY] = ambiguous.map((item, index) =>
     index === 0 ? { ...item, trackingEnabled: false } : item
   );
@@ -401,7 +506,11 @@ async function run() {
   const normalizedAmbiguous = recentStore.normalizePinnedRecentSites(ambiguous);
   const deferredSessionStorage = createDeferredReadStorage({
     [pinnedMenu.TRACKING_SESSION_STORAGE_KEY]: {
-      44: normalizedAmbiguous[1].cardId
+      44: {
+        cardId: normalizedAmbiguous[1].cardId,
+        token: '',
+        origin: new URL(normalizedAmbiguous[1].url).origin
+      }
     }
   });
   const racingChrome = createChromeApi({ sessionStorage: deferredSessionStorage });
@@ -412,20 +521,27 @@ async function run() {
     storageKey: PINNED_KEY
   });
   racingController.attach();
-  const racingRemember = racingChrome.events.onMessage.emit({
-    action: 'rememberPinnedRecentTrackingTarget',
-    cardId: normalizedAmbiguous[0].cardId,
-    url: normalizedAmbiguous[0].url
-  }, {
-    tab: { id: 45 }
-  });
+  const racingRemember = racingController.bindTrackingTab(
+    { id: 45 },
+    normalizedAmbiguous[0].cardId,
+    normalizedAmbiguous[0].url
+  );
+  await new Promise((resolve) => setImmediate(resolve));
   deferredSessionStorage.releaseReads();
   await racingRemember;
   assert.deepStrictEqual(
     deferredSessionStorage.data[pinnedMenu.TRACKING_SESSION_STORAGE_KEY],
     {
-      44: normalizedAmbiguous[1].cardId,
-      45: normalizedAmbiguous[0].cardId
+      44: {
+        cardId: normalizedAmbiguous[1].cardId,
+        token: '',
+        origin: new URL(normalizedAmbiguous[1].url).origin
+      },
+      45: {
+        cardId: normalizedAmbiguous[0].cardId,
+        token: '',
+        origin: new URL(normalizedAmbiguous[0].url).origin
+      }
     }
   );
 
@@ -534,13 +650,11 @@ async function run() {
     storageKey: PINNED_KEY
   });
   failedController.attach();
-  await chrome.events.onMessage.emit({
-    action: 'rememberPinnedRecentTrackingTarget',
-    cardId: recentStore.normalizePinnedRecentSites(original)[0].cardId,
-    url: original[0].url
-  }, {
-    tab: { id: 22 }
-  });
+  await failedController.bindTrackingTab(
+    { id: 22 },
+    recentStore.normalizePinnedRecentSites(original)[0].cardId,
+    original[0].url
+  );
   const failedResult = await failedController.replaceForTab({
     id: 22,
     url: 'https://www.bilibili.com/video/BV-failed/?p=9',
@@ -559,13 +673,11 @@ async function run() {
   });
   cancelledController.attach();
   await new Promise((resolve) => setImmediate(resolve));
-  await cancelledChrome.events.onMessage.emit({
-    action: 'rememberPinnedRecentTrackingTarget',
-    cardId: recentStore.normalizePinnedRecentSites(original)[0].cardId,
-    url: original[0].url
-  }, {
-    tab: { id: 33, url: original[0].url }
-  });
+  await cancelledController.bindTrackingTab(
+    { id: 33, url: original[0].url },
+    recentStore.normalizePinnedRecentSites(original)[0].cardId,
+    original[0].url
+  );
   const cancelledResult = await cancelledController.confirmAndApplyForTab({
     id: 33,
     url: 'https://www.bilibili.com/video/BV-cancelled/',

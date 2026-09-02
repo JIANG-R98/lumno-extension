@@ -1847,6 +1847,9 @@
   "recent_track_remove": {
     "message": "Stop tracking"
   },
+  "recent_track_remove_with_tabs": {
+    "message": "Stop tracking · linked to {count} tab(s)"
+  },
   "recent_replace_pinned_url_with_current": {
     "message": "Update This Tracked Card to the Current Page"
   },
@@ -1862,6 +1865,7 @@
   "recent_update_feedback_same_url": { "message": "This page is already the tracked card’s link" },
   "recent_update_feedback_ambiguous": { "message": "Cannot identify the card. Open this page from the target card and try again" },
   "recent_update_feedback_source_missing": { "message": "The original tracked card no longer exists" },
+  "recent_update_feedback_url_conflict": { "message": "Another pinned card already uses this link" },
   "recent_update_feedback_not_tracked": { "message": "No tracked card can be updated from this page" },
   "recent_update_feedback_failed": { "message": "Could not update the tracked card. Try again" },
   "recent_update_preview_title": { "message": "Confirm Tracking Update" },

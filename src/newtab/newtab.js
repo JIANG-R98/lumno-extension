@@ -522,8 +522,10 @@
   let recentSourceItems = [];
   let pinnedRecentSites = [];
   let hiddenRecentSites = [];
+  let recentTrackingActivityByCardId = {};
   let initialPinnedRecentSitesReadyTask = Promise.resolve([]);
   let initialHiddenRecentSitesReadyTask = Promise.resolve([]);
+  let initialRecentTrackingActivityReadyTask = Promise.resolve({});
   let searchBlacklistItems = [];
   let currentMessages = null;
   let currentLanguageMode = 'system';
@@ -4197,6 +4199,10 @@
       if (!message) {
         return;
       }
+      if (message.action === 'pinnedRecentTrackingActivityChanged') {
+        void loadRecentTrackingActivity();
+        return;
+      }
       if (message.action === 'lumno:wallpapers-updated') {
         if (wallpaperRuntime && typeof wallpaperRuntime.refreshCustomWallpapers === 'function') {
           wallpaperRuntime.refreshCustomWallpapers();
@@ -4240,6 +4246,7 @@
       hiddenRecentSites = [];
       return hiddenRecentSites;
     });
+    initialRecentTrackingActivityReadyTask = loadRecentTrackingActivity();
 
     storageArea.get([RECENT_COUNT_STORAGE_KEY], (result) => {
       const stored = result[RECENT_COUNT_STORAGE_KEY];
@@ -6184,7 +6191,8 @@
       chrome.runtime.sendMessage({
         action: 'createTab',
         url: url,
-        disposition: 'backgroundTab'
+        disposition: 'backgroundTab',
+        trackingCardId: String(config.trackingCardId || '')
       });
       return;
     }
@@ -7988,7 +7996,7 @@
       },
     ];
     const item = target && target.item;
-    if (item && isRecentSiteTracked(item) && Array.isArray(item.updateHistory) && item.updateHistory.length) {
+    if (item && Array.isArray(item.updateHistory) && item.updateHistory.length) {
       options.push({
         action: RECENT_CONTEXT_MENU_UNDO_UPDATE_VALUE,
         value: RECENT_CONTEXT_MENU_UNDO_UPDATE_VALUE,
@@ -8095,7 +8103,7 @@
       ? NEWTAB_RECENT_STORE.undoPinnedRecentSiteUpdate(
         pinnedRecentSites,
         normalizedItem && normalizedItem.url,
-        getRecentStoreOptions()
+        { ...getRecentStoreOptions(), cardId: item && item.cardId }
       )
       : { changed: false, reason: 'unavailable', items: pinnedRecentSites.slice() };
     if (!result.changed) {
@@ -11656,7 +11664,12 @@
         return !shouldExcludeFromRecentSites(url) && !isRecentSiteHidden(item);
       });
     recentSourceItems = normalizedSourceItems.slice();
-    const mergedItems = mergeRecentSitesWithPinned(normalizedSourceItems, getRecentLimit());
+    const mergedItems = mergeRecentSitesWithPinned(normalizedSourceItems, getRecentLimit()).map((item) => ({
+      ...item,
+      activeTabCount: item && item.cardId
+        ? Math.max(0, Number(recentTrackingActivityByCardId[item.cardId]) || 0)
+        : 0
+    }));
     const renderResult = recentSitesView.render(mergedItems, {
       signature: recentRenderSignature
     });
@@ -11837,6 +11850,7 @@
     if (document.visibilityState !== 'visible') {
       return;
     }
+    void loadRecentTrackingActivity();
     const shouldReloadRecent = recentDataDirty || !recentLoadedOnce;
     const shouldReloadBookmarks = bookmarkDataDirty || !bookmarkLoadedOnce;
     if (shouldReloadRecent || shouldReloadBookmarks) {
@@ -12121,12 +12135,46 @@
 
   function rememberRecentTrackingTarget(item) {
     if (!item || !item.url || !isRecentSiteTracked(item)) {
-      return false;
+      return Promise.resolve(false);
     }
-    return sendRuntimeMessage({
-      action: 'rememberPinnedRecentTrackingTarget',
-      cardId: String(item.cardId || ''),
-      url: String(item.url)
+    return new Promise((resolve) => {
+      const sent = sendRuntimeMessage({
+        action: 'rememberPinnedRecentTrackingTarget',
+        cardId: String(item.cardId || ''),
+        url: String(item.url)
+      }, (response) => {
+        if (chrome && chrome.runtime && chrome.runtime.lastError) {
+          resolve(false);
+          return;
+        }
+        resolve(Boolean(response && response.ok !== false));
+      });
+      if (!sent) resolve(false);
+    });
+  }
+
+  function loadRecentTrackingActivity() {
+    return new Promise((resolve) => {
+      const sent = sendRuntimeMessage({
+        action: 'getPinnedRecentTrackingActivity'
+      }, (response) => {
+        if (chrome && chrome.runtime && chrome.runtime.lastError) {
+          resolve(recentTrackingActivityByCardId);
+          return;
+        }
+        const next = response && response.ok === true &&
+          response.activeTabCountByCardId &&
+          typeof response.activeTabCountByCardId === 'object'
+          ? response.activeTabCountByCardId
+          : {};
+        recentTrackingActivityByCardId = { ...next };
+        recentRenderSignature = '';
+        if (recentLoadedOnce || recentSourceItems.length > 0 || pinnedRecentSites.length > 0) {
+          renderRecentSites(recentSourceItems);
+        }
+        resolve(recentTrackingActivityByCardId);
+      });
+      if (!sent) resolve(recentTrackingActivityByCardId);
     });
   }
 
@@ -12154,15 +12202,22 @@
     }
   }
 
-  function updateRecentTrackingButton(button, isTracked, isPinned, limitReached) {
+  function updateRecentTrackingButton(button, isTracked, isPinned, limitReached, activeTabCount) {
     if (!button) {
       return;
     }
     button.classList.toggle('x-nt-recent-track--active', Boolean(isTracked));
+    const liveCount = isTracked ? Math.max(0, Number(activeTabCount) || 0) : 0;
+    button.classList.toggle('x-nt-recent-track--live', liveCount > 0);
     button.classList.toggle('x-nt-recent-track--limit', Boolean(!isPinned && limitReached));
+    button.dataset.activeTabCount = String(liveCount);
     button.setAttribute('aria-pressed', isTracked ? 'true' : 'false');
     const label = isTracked
-      ? t('recent_track_remove', '停止跟踪')
+      ? (liveCount > 0
+        ? formatMessage('recent_track_remove_with_tabs', '停止跟踪 · 已关联 {count} 个标签页', {
+          count: String(liveCount)
+        })
+        : t('recent_track_remove', '停止跟踪'))
       : t('recent_track_add', '跟踪链接');
     button.setAttribute('aria-label', label);
     button.setAttribute('data-tooltip', label);
@@ -16553,6 +16608,7 @@
     initialShortcutsReadyTask,
     initialPinnedRecentSitesReadyTask,
     initialHiddenRecentSitesReadyTask,
+    initialRecentTrackingActivityReadyTask,
     initialLayoutStorageReadyTask,
     initialFontsReadyTask
   ]).catch((error) => {

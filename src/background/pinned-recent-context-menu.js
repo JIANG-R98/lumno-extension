@@ -88,6 +88,12 @@
     if (normalizedItems[targetIndex].url === normalizedUrl) {
       return { changed: false, reason: 'same-url', items: normalizedItems };
     }
+    const conflictingIndex = normalizedItems.findIndex((item, index) =>
+      index !== targetIndex && getHttpUrl(item && item.url) === normalizedUrl
+    );
+    if (conflictingIndex >= 0) {
+      return { changed: false, reason: 'url-conflict', items: normalizedItems };
+    }
     const now = typeof config.now === 'function' ? config.now() : Date.now();
     const currentTitle = String(config.currentTitle || '').replace(/\s+/g, ' ').trim();
     const nextItems = normalizedItems.slice();
@@ -225,15 +231,30 @@
     const sessionStorage = config.sessionStorage || (
       chromeApi && chromeApi.storage ? chromeApi.storage.session : null
     );
+    const durableStorage = config.durableStorage || (
+      chromeApi && chromeApi.storage ? chromeApi.storage.local : null
+    );
     const recentStore = config.recentStore || {};
     const storage = config.storage || null;
     const storageKey = String(config.storageKey || DEFAULT_STORAGE_KEY);
-    const trackingCardByTabId = new Map();
+    const registryApi = config.trackingRegistryApi || globalThis.LumnoPinnedRecentTrackingRegistry || {};
+    const trackingRegistry = config.trackingRegistry || (
+      typeof registryApi.createPinnedRecentTrackingRegistry === 'function'
+        ? registryApi.createPinnedRecentTrackingRegistry({
+          runtime,
+          sessionStorage,
+          durableStorage,
+          recentStore,
+          storeOptions: config.storeOptions,
+          now: config.now
+        })
+        : null
+    );
     let cachedItems = [];
     let itemsLoaded = false;
     let attached = false;
-    let sessionReady = Promise.resolve();
-    let sessionWriteQueue = Promise.resolve();
+    let trackingReady = Promise.resolve();
+    const pendingTrackingOpeners = new Map();
 
     function normalizeTrackingCardId(cardId) {
       return typeof recentStore.normalizePinnedRecentCardId === 'function'
@@ -241,37 +262,15 @@
         : String(cardId || '').trim();
     }
 
-    function persistTrackingSessions() {
-      const snapshot = {};
-      trackingCardByTabId.forEach((cardId, tabId) => {
-        snapshot[String(tabId)] = cardId;
-      });
-      sessionWriteQueue = sessionWriteQueue.then(() =>
-        storageSet(sessionStorage, { [TRACKING_SESSION_STORAGE_KEY]: snapshot }, runtime)
-      );
-      return sessionWriteQueue;
-    }
-
-    function loadTrackingSessions() {
-      return storageGet(sessionStorage, TRACKING_SESSION_STORAGE_KEY, runtime).then((result) => {
-        const activeEntries = new Map(trackingCardByTabId);
-        const stored = result && result[TRACKING_SESSION_STORAGE_KEY];
-        if (stored && typeof stored === 'object') {
-          Object.keys(stored).forEach((tabIdValue) => {
-            const tabId = Number(tabIdValue);
-            const cardId = normalizeTrackingCardId(stored[tabIdValue]);
-            if (Number.isInteger(tabId) && tabId >= 0 && cardId) {
-              trackingCardByTabId.set(tabId, cardId);
-            }
-          });
-        }
-        activeEntries.forEach((cardId, tabId) => trackingCardByTabId.set(tabId, cardId));
-        return trackingCardByTabId;
+    function notifyTrackingActivityChanged() {
+      if (!runtime || typeof runtime.sendMessage !== 'function') return;
+      runtime.sendMessage({ action: 'pinnedRecentTrackingActivityChanged' }, () => {
+        if (runtime) void runtime.lastError;
       });
     }
 
-    function rememberTrackingSource(tabId, cardId, url) {
-      const normalizedTabId = Number(tabId);
+    function rememberTrackingSource(tab, cardId, url) {
+      const targetTab = tab && typeof tab === 'object' ? tab : { id: tab };
       let normalizedCardId = normalizeTrackingCardId(cardId);
       const normalizedUrl = getHttpUrl(url);
       if (!normalizedCardId && normalizedUrl) {
@@ -280,12 +279,31 @@
         );
         normalizedCardId = String(matchedItem && matchedItem.cardId || '');
       }
-      if (!Number.isInteger(normalizedTabId) || normalizedTabId < 0 || !normalizedCardId) {
+      if (!Number.isInteger(Number(targetTab.id)) || Number(targetTab.id) < 0 ||
+          !normalizedCardId || !trackingRegistry) {
         return Promise.resolve(false);
       }
-      return sessionReady.then(() => {
-        trackingCardByTabId.set(normalizedTabId, normalizedCardId);
-        return persistTrackingSessions().then(() => true);
+      return trackingReady.then(() => trackingRegistry.bindTab(
+        targetTab,
+        normalizedCardId,
+        cachedItems,
+        normalizedUrl
+      )).then((result) => {
+        const remembered = Boolean(result && result.cardId);
+        if (remembered) notifyTrackingActivityChanged();
+        return remembered;
+      });
+    }
+
+    function inheritTrackingTab(openerTabId, tab) {
+      return trackingReady.then(() => {
+        return trackingRegistry.inheritTab(openerTabId, tab, cachedItems).then((result) => {
+          if (result && result.cardId) {
+            notifyTrackingActivityChanged();
+            if (tab && tab.active) void refreshMenuForActiveTab();
+          }
+          return result;
+        });
       });
     }
 
@@ -294,17 +312,10 @@
         change && change.newValue,
         config.storeOptions || {}
       );
-      const trackedCardIds = new Set(newItems
-        .filter((item) => item && item.trackingEnabled === true && item.cardId)
-        .map((item) => item.cardId));
-      return sessionReady.then(() => {
-        let changed = false;
-        trackingCardByTabId.forEach((cardId, tabId) => {
-          if (trackedCardIds.has(cardId)) return;
-          trackingCardByTabId.delete(tabId);
-          changed = true;
-        });
-        return changed ? persistTrackingSessions() : false;
+      if (!trackingRegistry) return Promise.resolve(false);
+      return trackingReady.then(() => trackingRegistry.prune(newItems)).then((result) => {
+        notifyTrackingActivityChanged();
+        return result;
       });
     }
 
@@ -358,7 +369,9 @@
         storeOptions: config.storeOptions,
         now: config.now,
         currentTitle: tab && tab.title,
-        sourceCardId: tab && trackingCardByTabId.get(Number(tab.id))
+        sourceCardId: tab && trackingRegistry
+          ? trackingRegistry.getCardId(Number(tab.id))
+          : ''
       });
     }
 
@@ -404,7 +417,7 @@
       const itemsPromise = refreshOptions.reload === true || !itemsLoaded
         ? loadItems()
         : Promise.resolve(cachedItems);
-      return sessionReady.then(() => itemsPromise).then((items) => {
+      return trackingReady.then(() => itemsPromise).then((items) => {
         const action = getAction(items, tab, info || null);
         const reason = action && action.result ? action.result.reason : '';
         let title = getAddTitle();
@@ -499,7 +512,7 @@
             const tabId = Number(tab && tab.id);
             const addedItem = addition.items[addition.index];
             if (Number.isInteger(tabId) && addedItem && addedItem.url) {
-              await rememberTrackingSource(tabId, addedItem.cardId, addedItem.url);
+              await rememberTrackingSource(tab, addedItem.cardId, addedItem.url);
             }
           }
           return {
@@ -532,6 +545,27 @@
       });
     }
 
+    function bindTrackingTab(tab, cardId, url) {
+      const itemsTask = itemsLoaded ? Promise.resolve(cachedItems) : loadItems();
+      return itemsTask.then(() => rememberTrackingSource(tab, cardId, url));
+    }
+
+    function syncTrackingDocument(tab, token) {
+      if (!trackingRegistry) return Promise.resolve({ status: 'ignored' });
+      const itemsTask = itemsLoaded ? Promise.resolve(cachedItems) : loadItems();
+      return Promise.all([trackingReady, itemsTask]).then(() =>
+        trackingRegistry.syncDocument(tab, token, cachedItems)
+      ).then((result) => {
+        if (result && result.cardId) notifyTrackingActivityChanged();
+        return result;
+      });
+    }
+
+    function getTrackingActivity() {
+      if (!trackingRegistry) return Promise.resolve({});
+      return trackingReady.then(() => trackingRegistry.getActiveCounts());
+    }
+
     function createMenu() {
       if (!menus || typeof menus.create !== 'function') return;
       const properties = {
@@ -552,7 +586,9 @@
     function attach() {
       if (attached || !menus) return false;
       attached = true;
-      sessionReady = loadTrackingSessions().catch(() => trackingCardByTabId);
+      trackingReady = loadItems().then((items) => (
+        trackingRegistry ? trackingRegistry.initialize(items) : false
+      )).catch(() => false);
       createMenu();
       if (menus.onShown && typeof menus.onShown.addListener === 'function') {
         menus.onShown.addListener((info, tab) => {
@@ -574,35 +610,16 @@
           });
         });
       }
-      if (runtime && runtime.onMessage && typeof runtime.onMessage.addListener === 'function') {
-        runtime.onMessage.addListener((message, sender) => {
-          if (!message || message.action !== 'rememberPinnedRecentTrackingTarget') return;
-          const remember = () => rememberTrackingSource(
-            sender && sender.tab && sender.tab.id,
-            message.cardId,
-            message.url
-          ).then((remembered) => {
-            if (remembered) {
-              void refreshMenuForTab(sender && sender.tab);
-            }
-          });
-          if (itemsLoaded || message.cardId) return remember();
-          return loadItems().then(remember).catch(() => false);
-        });
-      }
       if (tabs && tabs.onCreated && typeof tabs.onCreated.addListener === 'function') {
         tabs.onCreated.addListener((tab) => {
           const openerTabId = Number(tab && tab.openerTabId);
-          if (!Number.isInteger(openerTabId)) return;
-          return sessionReady.then(() => {
-            const sourceCardId = trackingCardByTabId.get(openerTabId);
-            if (sourceCardId) {
-              return rememberTrackingSource(tab && tab.id, sourceCardId).then(() => {
-                if (tab && tab.active) void refreshMenuForActiveTab();
-              });
-            }
-            return false;
-          });
+          if (!Number.isInteger(openerTabId) || !trackingRegistry) return;
+          const tabId = Number(tab && tab.id);
+          const targetUrl = String(tab && (tab.pendingUrl || tab.url) || '');
+          if (getHttpUrl(targetUrl)) return inheritTrackingTab(openerTabId, tab);
+          if (Number.isInteger(tabId) && tabId >= 0 && (!targetUrl || targetUrl === 'about:blank')) {
+            pendingTrackingOpeners.set(tabId, openerTabId);
+          }
         });
       }
       if (tabs && tabs.onActivated && typeof tabs.onActivated.addListener === 'function') {
@@ -611,18 +628,50 @@
         });
       }
       if (tabs && tabs.onUpdated && typeof tabs.onUpdated.addListener === 'function') {
-        tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
+        tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+          const pendingOpenerTabId = pendingTrackingOpeners.get(Number(tabId));
+          if (Number.isInteger(pendingOpenerTabId)) {
+            const targetUrl = String(changeInfo && changeInfo.url ||
+              tab && (tab.pendingUrl || tab.url) || '');
+            if (getHttpUrl(targetUrl)) {
+              pendingTrackingOpeners.delete(Number(tabId));
+              void inheritTrackingTab(pendingOpenerTabId, { ...tab, id: Number(tabId), url: targetUrl });
+            } else if (targetUrl && targetUrl !== 'about:blank') {
+              pendingTrackingOpeners.delete(Number(tabId));
+            }
+          }
           if (!tab || !tab.active || (!changeInfo.url && !changeInfo.status && !changeInfo.title)) return;
           return refreshMenuForActiveTab();
         });
       }
       if (tabs && tabs.onRemoved && typeof tabs.onRemoved.addListener === 'function') {
-        tabs.onRemoved.addListener((tabId) => {
-          return sessionReady.then(() => {
-            if (trackingCardByTabId.delete(Number(tabId))) {
-              return persistTrackingSessions();
+        tabs.onRemoved.addListener((tabId, removeInfo) => {
+          pendingTrackingOpeners.delete(Number(tabId));
+          if (!trackingRegistry) return;
+          return trackingReady.then(() => trackingRegistry.releaseTab(tabId, {
+            revokeToken: !(removeInfo && removeInfo.isWindowClosing === true)
+          })).then((changed) => {
+            if (changed) notifyTrackingActivityChanged();
+            return changed;
+          });
+        });
+      }
+      if (tabs && tabs.onReplaced && typeof tabs.onReplaced.addListener === 'function') {
+        tabs.onReplaced.addListener((addedTabId, removedTabId) => {
+          const pendingOpenerTabId = pendingTrackingOpeners.get(Number(removedTabId));
+          if (Number.isInteger(pendingOpenerTabId)) {
+            pendingTrackingOpeners.delete(Number(removedTabId));
+            if (Number.isInteger(Number(addedTabId)) && Number(addedTabId) >= 0) {
+              pendingTrackingOpeners.set(Number(addedTabId), pendingOpenerTabId);
             }
-            return false;
+          }
+          if (!trackingRegistry || typeof trackingRegistry.replaceTab !== 'function') return;
+          return trackingReady.then(() => trackingRegistry.replaceTab(
+            removedTabId,
+            addedTabId
+          )).then((changed) => {
+            if (changed) notifyTrackingActivityChanged();
+            return changed;
           });
         });
       }
@@ -635,7 +684,7 @@
             .catch(() => {});
         });
       }
-      void Promise.all([sessionReady, loadItems()]).then(refreshMenuForActiveTab).catch(() => {});
+      void trackingReady.then(refreshMenuForActiveTab).catch(() => {});
       return true;
     }
 
@@ -644,7 +693,10 @@
       replaceForTab,
       addForTab,
       applyForTab,
-      confirmAndApplyForTab
+      confirmAndApplyForTab,
+      bindTrackingTab,
+      syncTrackingDocument,
+      getTrackingActivity
     });
   }
 
