@@ -20,6 +20,11 @@ async function run() {
     embedded: true,
     mountTarget,
     manualPlayback: true,
+    visualVariant: 'homepage-card',
+    confirmBeforeSwap: true,
+    directUndo: true,
+    fadeAfterUndo: true,
+    undoFadeDelay: 20,
     chromeApi: {
       i18n: { getMessage: () => '' },
       runtime: {
@@ -42,21 +47,25 @@ async function run() {
   assert.strictEqual(controller.getPhase(), 'breathing');
   assert.strictEqual(mountTarget.firstElementChild.id, feedback.HOST_ID);
   const style = mountTarget.firstElementChild.shadowRoot.querySelector('style').textContent;
+  const surface = mountTarget.firstElementChild.shadowRoot.querySelector('.surface');
   assert.match(style, /position:\s*absolute/);
+  assert.strictEqual(surface.dataset.visualVariant, 'homepage-card');
+  assert.match(style, /data-visual-variant="homepage-card"[^}]*background:\s*transparent/s);
+  assert.match(style, /--home-card-width:\s*248px/);
+  assert.match(style, /\.card-footer\s*\{[^}]*width:\s*100%/s);
+  assert.match(style, /x-lumno-action-button--warning/);
   assert.strictEqual(
     mountTarget.firstElementChild.style.getPropertyValue('--lumno-flow-breathe'),
     '525ms'
   );
 
-  ['card-enter', 'old-out', 'new-in', 'saving'].forEach((phase) => {
+  ['card-enter', 'ready', 'old-out', 'new-in', 'saving'].forEach((phase) => {
     assert.strictEqual(controller.advancePreview(), phase);
     assert.strictEqual(controller.getPhase(), phase);
   });
   await Promise.resolve();
   assert.strictEqual(readyResult, true);
   assert.strictEqual(controller.advancePreview(), 'success');
-  assert.strictEqual(controller.advancePreview(), 'undo-confirm');
-  assert.strictEqual(undoCount, 0, 'undo should still require the confirmation stage');
   assert.strictEqual(controller.advancePreview(), 'saving');
   assert.strictEqual(undoCount, 1);
   pendingUndo({
@@ -65,6 +74,13 @@ async function run() {
     current: { title: 'Episode 7', url: 'https://example.com/p7' }
   });
   assert.strictEqual(controller.getPhase(), 'undone');
+  assert.strictEqual(
+    surface.querySelector('.card-title').textContent,
+    'Episode 7',
+    'undo should restore the previous title before the card fades'
+  );
+  await new Promise((resolve) => dom.window.setTimeout(resolve, 280));
+  assert.strictEqual(controller.getPhase(), '', 'the restored card should fade out automatically');
 
   controller.showPreview({
     cardId: 'card-1',
@@ -106,6 +122,8 @@ async function run() {
   assert.match(html, /data-action="replay"/);
   assert.match(html, /data-action="advance"/);
   assert.match(html, /data-stage="breathing"/);
+  assert.match(html, /data-stage="ready"/);
+  assert.doesNotMatch(html, /data-stage="undo-confirm"/);
   assert.match(html, /pinned-recent-update-feedback\.js/);
 
   const packageSource = fs.readFileSync(path.join(__dirname, 'package-store.js'), 'utf8');

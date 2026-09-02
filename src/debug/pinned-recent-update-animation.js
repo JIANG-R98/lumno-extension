@@ -3,7 +3,7 @@
 
   root.LumnoDisablePinnedRecentUpdateAutoAttach = true;
 
-  const STAGES = ['breathing','card-enter','old-out','new-in','saving','success','undo-confirm','undone'];
+  const STAGES = ['breathing','card-enter','ready','old-out','new-in','saving','success','undone'];
   const SCENARIOS = Object.freeze({
     episode: {
       cardId: 'debug-course',
@@ -48,7 +48,13 @@
       chromeApi: mockChrome,
       embedded: true,
       mountTarget: canvas,
-      manualPlayback: true
+      manualPlayback: true,
+      visualVariant: 'homepage-card',
+      confirmBeforeSwap: true,
+      directUndo: true,
+      fadeAfterUndo: true,
+      undoFadeDelay: 560,
+      previewTimings: { breathe: 180, enter: 140, commit: 220, exit: 160 }
     });
     const phaseOutput = document.querySelector('[data-output="phase"]');
     const stageButtons = Array.from(document.querySelectorAll('[data-stage]'));
@@ -80,21 +86,26 @@
     function replay() {
       const token = ++replayToken;
       const sample = getScenario();
-      controller.showPreview(sample, { manual: false }).then((ready) => {
-        if (!ready || token !== replayToken) return;
-        const speed = Math.max(.1, Number(document.querySelector('[data-control="speed"]').value) || 1);
+      const speed = Math.max(.1, Number(document.querySelector('[data-control="speed"]').value) || 1);
+      controller.setPlaybackRate(speed);
+      controller.showPreview(sample, { manual: true });
+      syncPhase();
+      const steps = [180, 140, 360, 100, 220];
+      let elapsed = 0;
+      steps.forEach((delay) => {
+        elapsed += delay / speed;
         root.setTimeout(() => {
           if (token !== replayToken) return;
-          controller.show({ action: api.ACTION, ok: true, reason: 'updated', ...sample });
+          controller.advancePreview();
           syncPhase();
-        }, 320 / speed);
+        }, elapsed);
       });
-      const poll = () => {
+      elapsed += 140 / speed;
+      root.setTimeout(() => {
         if (token !== replayToken) return;
+        controller.show({ action: api.ACTION, ok: true, reason: 'updated', ...sample });
         syncPhase();
-        if (controller.getPhase() !== 'success') root.requestAnimationFrame(poll);
-      };
-      root.requestAnimationFrame(poll);
+      }, elapsed);
     }
 
     document.querySelector('[data-control="speed"]').addEventListener('change', (event) => {
