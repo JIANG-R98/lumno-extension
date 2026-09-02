@@ -471,32 +471,6 @@
       });
     }
 
-    function requestUpdatePreview(tab, replacement) {
-      return new Promise((resolve) => {
-        const tabId = Number(tab && tab.id);
-        const nextItem = replacement && replacement.items && replacement.items[replacement.index];
-        if (!Number.isInteger(tabId) || !tabs || typeof tabs.sendMessage !== 'function' ||
-            !replacement || !replacement.previousItem || !nextItem) {
-          resolve(false);
-          return;
-        }
-        tabs.sendMessage(tabId, {
-          action: 'showPinnedRecentUpdatePreview',
-          cardId: String(nextItem.cardId || ''),
-          previous: {
-            title: replacement.previousItem.title,
-            url: replacement.previousItem.url
-          },
-          current: {
-            title: nextItem.title,
-            url: nextItem.url
-          }
-        }, (response) => {
-          resolve(Boolean(!getRuntimeError(runtime) && response && response.ready === true));
-        });
-      });
-    }
-
     function replaceForTab(tab, info) {
       return loadItems().then((items) => {
         const replacement = getReplacement(items, tab, info);
@@ -541,20 +515,6 @@
       return loadItems().then((items) => getAction(items, tab, info)).then((action) => {
         if (action.kind === 'update') return replaceForTab(tab, info);
         return addForTab(tab, info);
-      });
-    }
-
-    function confirmAndApplyForTab(tab, info) {
-      return loadItems().then((items) => getAction(items, tab, info)).then((action) => {
-        if (action.kind !== 'update' || !action.result.changed) {
-          return applyForTab(tab, info);
-        }
-        return requestUpdatePreview(tab, action.result).then((ready) => {
-          if (!ready) {
-            return { ...action.result, changed: false, reason: 'cancelled' };
-          }
-          return replaceForTab(tab, info);
-        });
       });
     }
 
@@ -666,8 +626,8 @@
       if (menus.onClicked && typeof menus.onClicked.addListener === 'function') {
         menus.onClicked.addListener((info, tab) => {
           if (!info || info.menuItemId !== MENU_ID) return;
-          return confirmAndApplyForTab(tab, info).then((result) => {
-            if (!result || result.reason !== 'cancelled') notifyFeedback(tab, result);
+          return applyForTab(tab, info).then((result) => {
+            notifyFeedback(tab, result);
             void refreshMenuForTab(tab);
             return result;
           }).catch(() => {
@@ -776,7 +736,6 @@
       replaceForTab,
       addForTab,
       applyForTab,
-      confirmAndApplyForTab,
       undoTrackingUpdate,
       bindTrackingTab,
       syncTrackingDocument,

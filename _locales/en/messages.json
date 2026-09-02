@@ -1860,6 +1860,7 @@
   "recent_tracked_page_is_current": { "message": "This Page Is Already the Tracked Link" },
   "recent_current_page_already_pinned_tracked": { "message": "This Page Is Already Pinned and Tracked" },
   "recent_update_feedback_success": { "message": "Tracked card link updated" },
+  "recent_update_feedback_badge": { "message": "Updated" },
   "recent_add_tracking_feedback_success": { "message": "Current page pinned and tracking enabled" },
   "recent_enable_tracking_feedback_success": { "message": "Tracking enabled for this pinned page" },
   "recent_add_tracking_feedback_already_tracked": { "message": "Current page is already pinned and tracked" },

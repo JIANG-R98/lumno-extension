@@ -126,11 +126,7 @@ function createChromeApi(options) {
         },
         sendMessage(tabId, message, callback) {
           calls.sendMessage.push({ tabId, message });
-          if (callback) callback(
-            message && message.action === 'showPinnedRecentUpdatePreview'
-              ? { ready: config.previewConfirmed !== false }
-              : undefined
-          );
+          if (callback) callback();
         }
       },
       storage: { onChanged: onStorageChanged, session: sessionStorage, local: localStorage }
@@ -641,18 +637,7 @@ async function run() {
   const previewCall = chrome.calls.sendMessage.find((call) =>
     call.message && call.message.action === 'showPinnedRecentUpdatePreview'
   );
-  assert.deepStrictEqual(previewCall, {
-    tabId: 12,
-    message: {
-      action: 'showPinnedRecentUpdatePreview',
-      cardId: storage.data[PINNED_KEY][0].cardId,
-      previous: { title: 'Course', url: original[0].url },
-      current: {
-        title: 'Conan Collection · Episode 2',
-        url: 'https://www.bilibili.com/video/BV-new/?p=7'
-      }
-    }
-  });
+  assert.strictEqual(previewCall, undefined, 'formal updates should save before showing completion feedback');
   assert.deepStrictEqual(chrome.calls.sendMessage.at(-1), {
     tabId: 12,
     message: {
@@ -762,31 +747,6 @@ async function run() {
   });
   assert.strictEqual(failedResult.changed, false);
   assert.strictEqual(failedStorage.data[PINNED_KEY][0].url, original[0].url);
-
-  const cancelledStorage = createMemoryStorage({ [PINNED_KEY]: original });
-  const cancelledChrome = createChromeApi({ previewConfirmed: false });
-  const cancelledController = pinnedMenu.createPinnedRecentContextMenuController({
-    chromeApi: cancelledChrome.api,
-    recentStore,
-    storage: cancelledStorage,
-    storageKey: PINNED_KEY
-  });
-  cancelledController.attach();
-  await new Promise((resolve) => setImmediate(resolve));
-  await cancelledController.bindTrackingTab(
-    { id: 33, url: original[0].url },
-    recentStore.normalizePinnedRecentSites(original)[0].cardId,
-    original[0].url
-  );
-  const cancelledResult = await cancelledController.confirmAndApplyForTab({
-    id: 33,
-    url: 'https://www.bilibili.com/video/BV-cancelled/',
-    title: 'Cancelled update',
-    incognito: false
-  });
-  assert.strictEqual(cancelledResult.changed, false);
-  assert.strictEqual(cancelledResult.reason, 'cancelled');
-  assert.strictEqual(cancelledStorage.data[PINNED_KEY][0].url, original[0].url);
 
   console.log('background pinned recent context menu tests passed');
 }

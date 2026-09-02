@@ -1860,6 +1860,7 @@
   "recent_tracked_page_is_current": { "message": "目前頁面已是此卡片的追蹤連結" },
   "recent_current_page_already_pinned_tracked": { "message": "目前頁面已置頂並處於追蹤狀態" },
   "recent_update_feedback_success": { "message": "追蹤卡片連結已更新" },
+  "recent_update_feedback_badge": { "message": "已更新" },
   "recent_add_tracking_feedback_success": { "message": "已置頂並開始追蹤目前頁面" },
   "recent_enable_tracking_feedback_success": { "message": "已開始追蹤這個置頂頁面" },
   "recent_add_tracking_feedback_already_tracked": { "message": "目前頁面已置頂並處於追蹤狀態" },

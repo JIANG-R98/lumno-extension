@@ -52,7 +52,7 @@
     const directUndo = config.directUndo === true;
     const fadeAfterUndo = config.fadeAfterUndo === true;
     const celebrateOnSuccess = config.celebrateOnSuccess === true;
-    const updatedStatusText = String(config.updatedStatusText || 'Updated');
+    const updatedStatusText = String(config.updatedStatusText || '');
     const undoFadeDelay = Math.max(0, Number(config.undoFadeDelay) || 560);
     const baseTimings = {
       breathe: Math.max(0, Number(config.previewTimings && config.previewTimings.breathe) || 1050),
@@ -226,7 +226,7 @@
         .surface[data-visual-variant="homepage-card"][data-phase="undone"] .change { display:block; }
         .surface[data-visual-variant="homepage-card"][data-phase="success"] .incoming-card { box-shadow:0 70px 19px rgba(199,199,199,0),0 44px 18px rgba(199,199,199,.02),0 25px 15px rgba(199,199,199,.08),0 11px 11px rgba(199,199,199,.13),0 3px 6px rgba(199,199,199,.15); }
         .surface[data-visual-variant="homepage-card"] .actions { justify-content:center; }
-        .surface[data-visual-variant="homepage-card"][data-celebrate="true"] h2 { display:none; }
+        .surface[data-visual-variant="homepage-card"][data-celebrate="true"][data-phase="success"] h2 { display:none; }
         .surface[data-visual-variant="homepage-card"][data-celebrate="true"] .change { top:0; }
         .surface[data-visual-variant="homepage-card"][data-celebrate="true"] .incoming-status { padding:3px 7px; border-radius:999px; background:rgba(20,160,253,.12); color:#087ecb; font-size:11px; font-weight:700; }
         .surface[data-visual-variant="homepage-card"][data-celebrate="true"][data-phase="success"] .panel { animation:completion-pop var(--lumno-flow-enter,360ms) cubic-bezier(.22,1,.36,1) both; }
@@ -354,6 +354,7 @@
     function requestUndo() {
       if (!activeChange || !chromeApi || !chromeApi.runtime || !chromeApi.runtime.sendMessage) return;
       const requestRevision = flowRevision;
+      surface.dataset.celebrate = 'false';
       surface.dataset.phase = 'saving';
       secondary.disabled = true; primary.disabled = true;
       chromeApi.runtime.sendMessage({
@@ -419,6 +420,7 @@
       if (!surface || surface.hidden) return;
       if (event.key === 'Escape') { event.preventDefault(); handleSecondary(); return; }
       if (event.key !== 'Tab') return;
+      if (visualVariant === 'homepage-card') return;
       const buttons = [secondary, primary].filter((button) => button && !button.hidden && !button.disabled);
       if (!buttons.length) { event.preventDefault(); return; }
       const root = surface.getRootNode();
@@ -556,7 +558,9 @@
       undoToast.hidden = true;
       surface.dataset.celebrate = 'false';
       surface.dataset.phase = 'success';
-      if (celebrateOnSuccess) incomingStatus.textContent = updatedStatusText;
+      if (celebrateOnSuccess) {
+        incomingStatus.textContent = updatedStatusText || ui('recent_update_feedback_badge','Updated');
+      }
       void surface.offsetWidth;
       surface.dataset.celebrate = celebrateOnSuccess ? 'true' : 'false';
       title.textContent = reasonMessage('updated');
@@ -590,5 +594,23 @@
     });
   }
 
-  return Object.freeze({ ACTION, PREVIEW_ACTION, UNDO_ACTION, HOST_ID, createFeedbackController, attach(options) { const controller = createFeedbackController(options); controller.attach(); return controller; } });
+  return Object.freeze({
+    ACTION,
+    PREVIEW_ACTION,
+    UNDO_ACTION,
+    HOST_ID,
+    createFeedbackController,
+    attach(options) {
+      const controller = createFeedbackController({
+        visualVariant: 'homepage-card',
+        directUndo: true,
+        fadeAfterUndo: true,
+        celebrateOnSuccess: true,
+        undoFadeDelay: 1000,
+        ...(options && typeof options === 'object' ? options : {})
+      });
+      controller.attach();
+      return controller;
+    }
+  });
 });

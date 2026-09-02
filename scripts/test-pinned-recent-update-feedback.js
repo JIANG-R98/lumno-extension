@@ -8,6 +8,12 @@ const dom = new JSDOM('<!doctype html><html><body><button id="origin">Open</butt
 });
 const listeners = [];
 const undoRequests = [];
+let undoResponse = {
+  ok: true,
+  reason: 'undone',
+  previous: { title: 'New episode', url: 'https://example.com/new' },
+  current: { title: 'Old episode', url: 'https://example.com/old' }
+};
 const chromeApi = {
   i18n: { getMessage: () => '' },
   runtime: {
@@ -15,40 +21,20 @@ const chromeApi = {
     onMessage: { addListener(listener) { listeners.push(listener); } },
     sendMessage(message, callback) {
       undoRequests.push(message);
-      callback({
-        ok: true,
-        reason: 'undone',
-        previous: { title: 'New episode', url: 'https://example.com/new' },
-        current: { title: 'Old episode', url: 'https://example.com/old' }
-      });
+      callback(undoResponse);
     }
   }
 };
 
-async function tick() {
-  await new Promise((resolve) => dom.window.setTimeout(resolve, 0));
-}
-
 async function run() {
   dom.window.document.getElementById('origin').focus();
-  feedback.attach({ windowObj: dom.window, chromeApi, previewTimings: { instant: true } });
+  feedback.attach({
+    windowObj: dom.window,
+    chromeApi,
+    previewTimings: { instant: true },
+    undoFadeDelay: 10
+  });
   assert.strictEqual(listeners.length, 1);
-
-  let previewResponse = null;
-  assert.strictEqual(listeners[0]({
-    action: feedback.PREVIEW_ACTION,
-    cardId: 'card-1',
-    previous: { title: 'Old episode', url: 'https://example.com/old' },
-    current: { title: 'New episode', url: 'https://example.com/new' }
-  }, null, (response) => { previewResponse = response; }), true);
-  await tick();
-  const host = dom.window.document.getElementById(feedback.HOST_ID);
-  const surface = host.shadowRoot.querySelector('.surface');
-  assert.deepStrictEqual(previewResponse, { ready: true });
-  assert.strictEqual(surface.hidden, false);
-  assert.strictEqual(surface.dataset.phase, 'saving');
-  assert.strictEqual(surface.querySelector('.old-title').textContent, 'Old episode');
-  assert.strictEqual(surface.querySelector('.new-title').textContent, 'New episode');
 
   listeners[0]({
     action: feedback.ACTION,
@@ -58,26 +44,46 @@ async function run() {
     previous: { title: 'Old episode', url: 'https://example.com/old' },
     current: { title: 'New episode', url: 'https://example.com/new' }
   });
+  const host = dom.window.document.getElementById(feedback.HOST_ID);
+  const surface = host.shadowRoot.querySelector('.surface');
   assert.strictEqual(surface.dataset.phase, 'success');
+  assert.strictEqual(surface.dataset.visualVariant, 'homepage-card');
+  assert.strictEqual(surface.dataset.celebrate, 'true');
+  assert.strictEqual(surface.querySelector('.incoming-title').textContent, 'New episode');
+  assert.strictEqual(surface.querySelector('.incoming-status').textContent, 'Updated');
   assert.strictEqual(surface.querySelector('.primary').textContent, 'Undo');
   assert.strictEqual(surface.querySelector('.secondary').textContent, 'Close');
 
+  undoResponse = { ok: false, reason: 'source-changed' };
   surface.querySelector('.primary').click();
-  assert.strictEqual(surface.dataset.phase, 'undo-confirm');
-  assert.strictEqual(undoRequests.length, 0, 'undo must not save before the reverse change is confirmed');
-  assert.strictEqual(surface.querySelector('.old-title').textContent, 'New episode');
-  assert.strictEqual(surface.querySelector('.new-title').textContent, 'Old episode');
+  assert.strictEqual(surface.dataset.phase, 'error');
+  assert.strictEqual(surface.dataset.celebrate, 'false');
+  assert.strictEqual(surface.querySelector('h2').textContent, 'Could not update the tracked card');
+
+  listeners[0]({
+    action: feedback.ACTION,
+    ok: true,
+    reason: 'updated',
+    cardId: 'card-1',
+    previous: { title: 'Old episode', url: 'https://example.com/old' },
+    current: { title: 'New episode', url: 'https://example.com/new' }
+  });
+  undoResponse = {
+    ok: true,
+    reason: 'undone',
+    previous: { title: 'New episode', url: 'https://example.com/new' },
+    current: { title: 'Old episode', url: 'https://example.com/old' }
+  };
   surface.querySelector('.primary').click();
-  assert.strictEqual(undoRequests.length, 1);
-  assert.deepStrictEqual(undoRequests[0], {
+  assert.strictEqual(undoRequests.length, 2);
+  assert.deepStrictEqual(undoRequests[1], {
     action: feedback.UNDO_ACTION,
     cardId: 'card-1',
     expectedUrl: 'https://example.com/new'
   });
   assert.strictEqual(surface.dataset.phase, 'undone');
-
-  surface.querySelector('.secondary').click();
-  await tick();
+  assert.strictEqual(surface.querySelector('.undo-toast').hidden, false);
+  await new Promise((resolve) => dom.window.setTimeout(resolve, 15));
   assert.strictEqual(surface.hidden, true);
   assert.strictEqual(dom.window.document.activeElement.id, 'origin');
 

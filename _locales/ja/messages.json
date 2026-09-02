@@ -1860,6 +1860,7 @@
   "recent_tracked_page_is_current": { "message": "現在のページはすでにこのカードの追跡リンクです" },
   "recent_current_page_already_pinned_tracked": { "message": "現在のページはすでに固定・追跡されています" },
   "recent_update_feedback_success": { "message": "追跡カードのリンクを更新しました" },
+  "recent_update_feedback_badge": { "message": "更新済み" },
   "recent_add_tracking_feedback_success": { "message": "現在のページを固定し、追跡を開始しました" },
   "recent_enable_tracking_feedback_success": { "message": "この固定ページの追跡を開始しました" },
   "recent_add_tracking_feedback_already_tracked": { "message": "現在のページはすでに固定・追跡されています" },
