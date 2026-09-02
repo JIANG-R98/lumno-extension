@@ -51,6 +51,8 @@
     const confirmBeforeSwap = config.confirmBeforeSwap === true;
     const directUndo = config.directUndo === true;
     const fadeAfterUndo = config.fadeAfterUndo === true;
+    const celebrateOnSuccess = config.celebrateOnSuccess === true;
+    const updatedStatusText = String(config.updatedStatusText || 'Updated');
     const undoFadeDelay = Math.max(0, Number(config.undoFadeDelay) || 560);
     const baseTimings = {
       breathe: Math.max(0, Number(config.previewTimings && config.previewTimings.breathe) || 1050),
@@ -76,6 +78,7 @@
     let incomingTitle;
     let incomingUrl;
     let incomingIcon;
+    let incomingStatus;
     let cardSite;
     let cardTitle;
     let cardUrl;
@@ -146,6 +149,7 @@
         .surface[data-state="entering"], .surface[data-state="leaving"] { opacity: 0; background: transparent; transition-duration: var(--lumno-flow-exit,220ms); }
         .glow { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: linear-gradient(to bottom,rgba(20,160,253,.46),transparent 128px),linear-gradient(to top,rgba(20,160,253,.42),transparent 128px),linear-gradient(to right,rgba(20,160,253,.42),transparent 128px),linear-gradient(to left,rgba(20,160,253,.42),transparent 128px); box-shadow: inset 0 0 34px rgba(20,160,253,.42),inset 0 0 112px rgba(133,205,254,.22); }
         .surface[data-phase="breathing"] .glow { animation: viewport-breathe var(--lumno-flow-breathe,1050ms) cubic-bezier(.22,.61,.36,1) both; }
+        .surface[data-celebrate="true"][data-phase="success"] .glow { animation: viewport-breathe var(--lumno-flow-breathe,760ms) cubic-bezier(.22,.61,.36,1) both; }
         .surface[data-phase="breathing"] .panel { opacity: 0; transform: translateY(20px) scale(.96); }
         .surface[data-phase="card-enter"] .panel { animation: panel-enter var(--lumno-flow-enter,240ms) cubic-bezier(.22,1,.36,1) both; }
         .surface[data-phase="transient"] { pointer-events: none; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
@@ -222,33 +226,47 @@
         .surface[data-visual-variant="homepage-card"][data-phase="undone"] .change { display:block; }
         .surface[data-visual-variant="homepage-card"][data-phase="success"] .incoming-card { box-shadow:0 70px 19px rgba(199,199,199,0),0 44px 18px rgba(199,199,199,.02),0 25px 15px rgba(199,199,199,.08),0 11px 11px rgba(199,199,199,.13),0 3px 6px rgba(199,199,199,.15); }
         .surface[data-visual-variant="homepage-card"] .actions { justify-content:center; }
+        .surface[data-visual-variant="homepage-card"][data-celebrate="true"] h2 { display:none; }
+        .surface[data-visual-variant="homepage-card"][data-celebrate="true"] .change { top:0; }
+        .surface[data-visual-variant="homepage-card"][data-celebrate="true"] .incoming-status { padding:3px 7px; border-radius:999px; background:rgba(20,160,253,.12); color:#087ecb; font-size:11px; font-weight:700; }
+        .surface[data-visual-variant="homepage-card"][data-celebrate="true"][data-phase="success"] .panel { animation:completion-pop var(--lumno-flow-enter,360ms) cubic-bezier(.22,1,.36,1) both; }
         .surface[data-visual-variant="homepage-card"][data-phase="undone"] h2,
         .surface[data-visual-variant="homepage-card"][data-phase="undone"] .actions { display:none; }
         .surface[data-visual-variant="homepage-card"][data-phase="undone"] .incoming-card { animation:card-fade 260ms ease both; }
         .undo-toast { position:absolute; left:50%; top:24px; translate:-50% 0; min-height:36px; padding:0 16px; display:flex; align-items:center; border:1px solid rgba(255,255,255,.22); border-radius:999px; background:#263141; color:#fff; box-shadow:0 10px 30px rgba(15,23,42,.2); font:600 13px/1 "Open Sans","PingFang SC",sans-serif; animation:toast-enter 180ms cubic-bezier(.22,1,.36,1) both; }
         .undo-toast[hidden] { display:none; }
+        .confetti { display:none; position:absolute; inset:-72px; z-index:5; overflow:visible; pointer-events:none; }
+        .surface[data-celebrate="true"][data-phase="success"] .confetti { display:block; }
+        .confetti-piece { --x:0px; --y:100px; --r:180deg; position:absolute; left:50%; top:42%; width:6px; height:11px; border-radius:2px; background:#14a0fd; opacity:0; animation:confetti-burst var(--lumno-flow-breathe,760ms) cubic-bezier(.16,.78,.3,1) both; }
+        .confetti-piece:nth-child(2n) { width:8px; height:7px; background:#f2a94b; }
+        .confetti-piece:nth-child(3n) { border-radius:50%; background:#f6d365; }
+        .confetti-piece:nth-child(1){--x:-118px;--y:54px;--r:-210deg}.confetti-piece:nth-child(2){--x:-92px;--y:112px;--r:260deg}.confetti-piece:nth-child(3){--x:-65px;--y:148px;--r:-170deg}.confetti-piece:nth-child(4){--x:-34px;--y:82px;--r:230deg}.confetti-piece:nth-child(5){--x:-12px;--y:136px;--r:-280deg}.confetti-piece:nth-child(6){--x:18px;--y:94px;--r:190deg}.confetti-piece:nth-child(7){--x:42px;--y:150px;--r:-240deg}.confetti-piece:nth-child(8){--x:68px;--y:76px;--r:270deg}.confetti-piece:nth-child(9){--x:92px;--y:132px;--r:-200deg}.confetti-piece:nth-child(10){--x:116px;--y:58px;--r:250deg}.confetti-piece:nth-child(11){--x:-142px;--y:104px;--r:-160deg}.confetti-piece:nth-child(12){--x:142px;--y:116px;--r:220deg}
         @keyframes viewport-breathe { 0%{opacity:0;transform:scale(1.008)} 42%{opacity:.95;transform:scale(1)} 100%{opacity:0;transform:scale(.996)} }
         @keyframes panel-enter { from{opacity:0;transform:translateY(20px) scale(.96)} to{opacity:1;transform:translateY(0) scale(1)} }
+        @keyframes completion-pop { from{opacity:0;transform:translateY(8px) scale(.96)} to{opacity:1;transform:translateY(0) scale(1)} }
         @keyframes card-complete { from{opacity:.7;transform:translateY(8px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
         @keyframes card-fade { from{opacity:1} to{opacity:0} }
         @keyframes toast-enter { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes confetti-burst { 0%{opacity:0;transform:translate(-50%,-50%) scale(.35) rotate(0)} 12%{opacity:1} 100%{opacity:0;transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(1) rotate(var(--r))} }
         @media (max-width:860px) { .panel { --home-card-width:min(360px,calc((96vw - 12px) / 2)); } }
         @media (max-width:640px) { .panel { --home-card-width:100%;padding:18px; } .change { grid-template-columns:minmax(0,1fr); } .arrow { transform:rotate(90deg); } .actions { justify-content:stretch; } .x-lumno-action-button { flex:1; } }
         @media (prefers-color-scheme:dark) { .panel { color:#edf7ff;background:linear-gradient(135deg,rgba(30,41,59,.86),rgba(15,23,42,.82)); } .record{background:rgba(133,205,254,.07)} .record-title,.card-site{color:#edf7ff}.record-label,.record-url,.card-title,.card-footer{color:#9bb5c8}.card-inner{background:rgba(20,31,42,.82)}.x-lumno-action-button--secondary{background:#1e293b;color:#f8fafc;border-color:rgba(148,163,184,.18)} }
-        @media (prefers-reduced-motion:reduce) { .glow,.panel,.record,.card-content,.home-card,.actions { animation-duration:1ms!important;transition-duration:1ms!important; } }
+        @media (prefers-reduced-motion:reduce) { .glow,.panel,.record,.card-content,.home-card,.incoming-card,.confetti-piece,.undo-toast,.actions { animation-duration:1ms!important;transition-duration:1ms!important; } }
         ${embedded ? '.panel { width:min(720px,calc(100% - 24px));max-height:calc(100% - 24px); }' : ''}
       `;
       surface = documentObj.createElement('div');
       surface.className = 'surface';
       surface.dataset.visualVariant = visualVariant;
+      surface.dataset.celebrate = 'false';
       surface.hidden = true;
-      surface.innerHTML = `<div class="glow" aria-hidden="true"></div><section class="panel" role="dialog" aria-modal="true" aria-labelledby="flow-title" tabindex="-1"><h2 id="flow-title"></h2><div class="change"><div class="record record--old"><div class="record-label old-label"></div><div class="record-title old-title"></div><div class="record-url old-url"></div></div><div class="arrow" aria-hidden="true">→</div><div class="record record--new"><div class="record-label new-label"></div><div class="record-title new-title"></div><div class="record-url new-url"></div></div><div class="incoming-card"><div class="incoming-inner"><div class="card-header"><span class="card-icon incoming-icon"></span><span class="card-site incoming-site"></span></div><div class="card-title incoming-title"></div></div><div class="incoming-footer"><span class="card-url incoming-url"></span><span class="card-status incoming-status"></span></div></div></div><div class="card-stage" aria-hidden="true"><div class="home-card"><div class="card-inner"><div class="card-content"><div class="card-header"><span class="card-icon"></span><span class="card-site"></span></div><div class="card-title"></div></div></div><div class="card-footer"><span class="card-url"></span><span class="card-status"></span></div></div></div><div class="actions"><button class="x-lumno-action-button x-lumno-action-button--secondary secondary" type="button"></button><button class="x-lumno-action-button x-lumno-action-button--primary primary" type="button"></button></div></section><div class="undo-toast" role="status" aria-live="polite" hidden></div>`;
+      surface.innerHTML = `<div class="glow" aria-hidden="true"></div><section class="panel" role="dialog" aria-modal="true" aria-labelledby="flow-title" tabindex="-1"><div class="confetti" aria-hidden="true">${'<i class="confetti-piece"></i>'.repeat(12)}</div><h2 id="flow-title"></h2><div class="change"><div class="record record--old"><div class="record-label old-label"></div><div class="record-title old-title"></div><div class="record-url old-url"></div></div><div class="arrow" aria-hidden="true">→</div><div class="record record--new"><div class="record-label new-label"></div><div class="record-title new-title"></div><div class="record-url new-url"></div></div><div class="incoming-card"><div class="incoming-inner"><div class="card-header"><span class="card-icon incoming-icon"></span><span class="card-site incoming-site"></span></div><div class="card-title incoming-title"></div></div><div class="incoming-footer"><span class="card-url incoming-url"></span><span class="card-status incoming-status"></span></div></div></div><div class="card-stage" aria-hidden="true"><div class="home-card"><div class="card-inner"><div class="card-content"><div class="card-header"><span class="card-icon"></span><span class="card-site"></span></div><div class="card-title"></div></div></div><div class="card-footer"><span class="card-url"></span><span class="card-status"></span></div></div></div><div class="actions"><button class="x-lumno-action-button x-lumno-action-button--secondary secondary" type="button"></button><button class="x-lumno-action-button x-lumno-action-button--primary primary" type="button"></button></div></section><div class="undo-toast" role="status" aria-live="polite" hidden></div>`;
       if (visualVariant === 'homepage-card') surface.querySelector('.panel').setAttribute('aria-modal', 'false');
       title = surface.querySelector('h2');
       oldTitle = surface.querySelector('.old-title'); oldUrl = surface.querySelector('.old-url');
       newTitle = surface.querySelector('.new-title'); newUrl = surface.querySelector('.new-url');
       incomingSite = surface.querySelector('.incoming-site'); incomingTitle = surface.querySelector('.incoming-title');
       incomingUrl = surface.querySelector('.incoming-url'); incomingIcon = surface.querySelector('.incoming-icon');
+      incomingStatus = surface.querySelector('.incoming-status');
       cardSite = surface.querySelector('.card-site'); cardTitle = surface.querySelector('.card-title');
       cardUrl = surface.querySelector('.card-url'); cardIcon = surface.querySelector('.card-icon');
       secondary = surface.querySelector('.secondary'); primary = surface.querySelector('.primary');
@@ -256,7 +274,7 @@
       surface.querySelector('.old-label').textContent = ui('recent_update_preview_original','Current tracked card');
       surface.querySelector('.new-label').textContent = ui('recent_update_preview_new','Replace with');
       surface.querySelector('.card-status').textContent = ui('recent_mode_tracking','Linked');
-      surface.querySelector('.incoming-status').textContent = ui('recent_mode_tracking','Linked');
+      incomingStatus.textContent = ui('recent_mode_tracking','Linked');
       secondary.addEventListener('click', handleSecondary);
       primary.addEventListener('click', handlePrimary);
       documentObj.addEventListener('keydown', handleKeydown, true);
@@ -465,6 +483,8 @@
       previousFocus = documentObj.activeElement;
       activeChange = { previous: payload.previous || {}, current: payload.current || {}, cardId: String(payload.cardId || '') };
       fill(activeChange.previous, activeChange.current);
+      surface.dataset.celebrate = 'false';
+      incomingStatus.textContent = ui('recent_mode_tracking','Linked');
       undoToast.hidden = true;
       title.textContent = ui('recent_update_progress_title','Updating tracked card');
       setButtons('', '', false);
@@ -508,6 +528,7 @@
           previousFocus = documentObj.activeElement;
           surface.hidden = false;
           surface.dataset.state = 'active';
+          surface.dataset.celebrate = 'false';
           surface.dataset.phase = 'transient';
           title.textContent = reasonMessage(String(result && result.reason || 'save-failed'));
           clearTimers();
@@ -520,15 +541,24 @@
         secondary.focus();
         return true;
       }
+      flowRevision += 1;
+      clearTimers();
       activeChange = {
         cardId: String(result.cardId || activeChange && activeChange.cardId || ''),
         previous: result.previous,
         current: result.current
       };
+      if (surface.hidden) previousFocus = documentObj.activeElement;
+      surface.hidden = false;
+      surface.dataset.state = 'active';
       fill(activeChange.previous, activeChange.current);
       fillCard(activeChange.current);
       undoToast.hidden = true;
+      surface.dataset.celebrate = 'false';
       surface.dataset.phase = 'success';
+      if (celebrateOnSuccess) incomingStatus.textContent = updatedStatusText;
+      void surface.offsetWidth;
+      surface.dataset.celebrate = celebrateOnSuccess ? 'true' : 'false';
       title.textContent = reasonMessage('updated');
       setButtons(ui('recent_update_close','Close'),ui('recent_undo_tracking_update','Undo'),true);
       primary.focus();
