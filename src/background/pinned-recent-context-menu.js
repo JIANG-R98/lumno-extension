@@ -550,13 +550,26 @@
       return itemsTask.then(() => rememberTrackingSource(tab, cardId, url));
     }
 
+    function addTrackingCardInfo(result) {
+      if (!result || !result.cardId ||
+          typeof recentStore.normalizePinnedRecentSites !== 'function') return result;
+      const normalizedItems = recentStore.normalizePinnedRecentSites(
+        cachedItems,
+        config.storeOptions || {}
+      );
+      const card = normalizedItems.find((item) => item && item.cardId === result.cardId);
+      const cardTitle = String(card && (card.title || card.siteName) || '').trim();
+      return cardTitle ? { ...result, cardTitle } : result;
+    }
+
     function syncTrackingDocument(tab, token, options) {
       if (!trackingRegistry) return Promise.resolve({ status: 'ignored' });
       const syncOptions = options && typeof options === 'object' ? options : {};
       const itemsTask = itemsLoaded ? Promise.resolve(cachedItems) : loadItems();
       return Promise.all([trackingReady, itemsTask]).then(() =>
         trackingRegistry.syncDocument(tab, token, cachedItems)
-      ).then((result) => {
+      ).then((rawResult) => {
+        const result = addTrackingCardInfo(rawResult);
         if (result && result.cardId) notifyTrackingActivityChanged();
         if (!result || !result.cardId || !tab || tab.active !== true ||
             syncOptions.refreshMenu === false) {

@@ -1850,6 +1850,10 @@
   "recent_track_remove_with_tabs": {
     "message": "停止跟踪 · 已关联 {count} 个标签页"
   },
+  "recent_tracking_page_badge_title": { "message": "正在跟踪此标签页" },
+  "recent_tracking_page_badge_detail": { "message": "当前页面可更新置顶卡片" },
+  "recent_tracking_page_badge_collapse": { "message": "收起到侧边" },
+  "recent_tracking_page_badge_expand": { "message": "保持展开" },
   "recent_replace_pinned_url_with_current": {
     "message": "更新此追踪卡片为当前页面"
   },

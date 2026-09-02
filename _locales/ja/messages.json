@@ -1850,6 +1850,10 @@
   "recent_track_remove_with_tabs": {
     "message": "追跡を停止 · {count} 個のタブに接続中"
   },
+  "recent_tracking_page_badge_title": { "message": "このタブを追跡中" },
+  "recent_tracking_page_badge_detail": { "message": "現在のページで固定カードを更新できます" },
+  "recent_tracking_page_badge_collapse": { "message": "端に折りたたむ" },
+  "recent_tracking_page_badge_expand": { "message": "展開したままにする" },
   "recent_replace_pinned_url_with_current": {
     "message": "この追跡カードを現在のページに更新"
   },

@@ -43,7 +43,7 @@
       },
       {
          "matches": [ "\u003Call_urls>" ],
-         "js": [ "src/content/pinned-recent-tracking-token.js" ],
+         "js": [ "src/content/pinned-recent-tracking-status.js", "src/content/pinned-recent-tracking-token.js" ],
          "run_at": "document_start"
       },
       {

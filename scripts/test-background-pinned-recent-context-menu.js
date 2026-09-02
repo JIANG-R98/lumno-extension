@@ -489,6 +489,7 @@ async function run() {
     url: 'https://www.bilibili.com/video/BV-new/?p=7'
   }, '');
   assert.strictEqual(syncedTracking.status, 'bound');
+  assert.strictEqual(syncedTracking.cardTitle, 'Course');
   assert.ok(trackingRegistry.normalizeTrackingToken(syncedTracking.token));
 
   const browserRestartChrome = createChromeApi({

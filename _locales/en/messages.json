@@ -1850,6 +1850,10 @@
   "recent_track_remove_with_tabs": {
     "message": "Stop tracking · linked to {count} tab(s)"
   },
+  "recent_tracking_page_badge_title": { "message": "Tracking this tab" },
+  "recent_tracking_page_badge_detail": { "message": "Current page can update the pinned card" },
+  "recent_tracking_page_badge_collapse": { "message": "Collapse to the side" },
+  "recent_tracking_page_badge_expand": { "message": "Keep expanded" },
   "recent_replace_pinned_url_with_current": {
     "message": "Update This Tracked Card to the Current Page"
   },
