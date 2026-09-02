@@ -18,6 +18,7 @@ const chromeApi = {
   i18n: { getMessage: () => '' },
   runtime: {
     lastError: null,
+    getURL(pathname) { return `chrome-extension://test${pathname}`; },
     onMessage: { addListener(listener) { listeners.push(listener); } },
     sendMessage(message, callback) {
       undoRequests.push(message);
@@ -51,8 +52,18 @@ async function run() {
   assert.strictEqual(surface.dataset.celebrate, 'true');
   assert.strictEqual(surface.querySelector('.incoming-title').textContent, 'New episode');
   assert.strictEqual(surface.querySelector('.incoming-status').textContent, 'Updated');
-  assert.strictEqual(surface.querySelector('.primary').textContent, 'Undo');
+  assert.strictEqual(surface.querySelector('.primary').textContent, 'Undo current update');
   assert.strictEqual(surface.querySelector('.secondary').textContent, 'Close');
+  assert.ok(
+    surface.querySelector('.incoming-inner > .incoming-status-badges > .incoming-status'),
+    'the updated badge should use the same top-right slot as the New Tab card'
+  );
+  assert.match(
+    surface.querySelector('.incoming-favicon').src,
+    /_favicon\/\?pageUrl=https%3A%2F%2Fexample\.com%2Fnew&size=32$/,
+    'the formal card should use Chrome favicon rendering instead of a generated letter tile'
+  );
+  assert.strictEqual(surface.querySelector('.incoming-icon').getAttribute('aria-hidden'), 'true');
 
   undoResponse = { ok: false, reason: 'source-changed' };
   surface.querySelector('.primary').click();

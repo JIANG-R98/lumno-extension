@@ -1878,7 +1878,7 @@
   "recent_update_preview_confirm": { "message": "Update Card" },
   "recent_update_progress_title": { "message": "Updating Tracked Card" },
   "recent_update_close": { "message": "Close" },
-  "recent_undo_tracking_update": { "message": "Undo Last Tracking Update" },
+  "recent_undo_tracking_update": { "message": "Undo Current Update" },
   "recent_undo_tracking_update_confirm_title": { "message": "Undo This Tracking Update?" },
   "recent_undo_tracking_update_confirm_description": { "message": "“{current}” will be replaced with “{previous}”." },
   "recent_undo_tracking_update_confirm": { "message": "Confirm Undo" },

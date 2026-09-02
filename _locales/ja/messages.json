@@ -1878,7 +1878,7 @@
   "recent_update_preview_confirm": { "message": "カードを更新" },
   "recent_update_progress_title": { "message": "追跡カードを更新中" },
   "recent_update_close": { "message": "閉じる" },
-  "recent_undo_tracking_update": { "message": "直前の追跡更新を元に戻す" },
+  "recent_undo_tracking_update": { "message": "今回の更新を元に戻す" },
   "recent_undo_tracking_update_confirm_title": { "message": "この追跡更新を元に戻しますか？" },
   "recent_undo_tracking_update_confirm_description": { "message": "「{current}」を「{previous}」に戻します。" },
   "recent_undo_tracking_update_confirm": { "message": "元に戻す" },

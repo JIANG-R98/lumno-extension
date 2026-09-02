@@ -1878,7 +1878,7 @@
   "recent_update_preview_confirm": { "message": "确认更新" },
   "recent_update_progress_title": { "message": "正在更新追踪卡片" },
   "recent_update_close": { "message": "关闭" },
-  "recent_undo_tracking_update": { "message": "撤销上一次追踪更新" },
+  "recent_undo_tracking_update": { "message": "撤销当前更新" },
   "recent_undo_tracking_update_confirm_title": { "message": "撤销这次追踪更新？" },
   "recent_undo_tracking_update_confirm_description": { "message": "“{current}”将恢复为“{previous}”。" },
   "recent_undo_tracking_update_confirm": { "message": "确认撤销" },

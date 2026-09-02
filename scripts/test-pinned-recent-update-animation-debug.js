@@ -53,7 +53,7 @@ async function run() {
   assert.strictEqual(surface.dataset.celebrate, 'true');
   assert.strictEqual(surface.querySelector('.incoming-title').textContent, 'Episode 8');
   assert.strictEqual(surface.querySelector('.incoming-status').textContent, '已更新');
-  assert.strictEqual(surface.querySelectorAll('.confetti-piece').length, 12);
+  assert.strictEqual(surface.querySelectorAll('.confetti-piece').length, 24);
   assert.strictEqual(surface.querySelector('.secondary').hidden, false);
   assert.strictEqual(surface.querySelector('.primary').hidden, false);
   assert.match(style, /position:\s*absolute/);
@@ -63,11 +63,16 @@ async function run() {
   assert.match(style, /data-visual-variant="homepage-card"[^}]*\.panel[^}]*width:\s*248px/s);
   assert.match(style, /data-visual-variant="homepage-card"[^}]*\.change[^}]*left:\s*calc\(100% \+ 16px\)/s);
   assert.match(style, /data-visual-variant="homepage-card"[^}]*\.actions[^}]*justify-content:\s*center/s);
+  assert.match(style, /data-celebrate="true"\]\[data-phase="success"\] \.card-stage[^}]*display:\s*none/s);
+  assert.match(style, /data-celebrate="true"\]\[data-phase="success"\] \.change[^}]*position:\s*relative/s);
+  assert.match(style, /data-visual-variant="homepage-card"[^}]*\.actions[^}]*margin-top:\s*28px/s);
+  assert.match(style, /\.incoming-card::before[^}]*radial-gradient[^}]*filter:\s*blur\(12px\)/s);
   assert.doesNotMatch(style, /data-visual-variant="homepage-card"[^}]*\.glow\s*\{[^}]*inset:\s*calc/s);
   assert.match(style, /data-celebrate="true"\]\[data-phase="success"\] \.glow/);
   assert.match(style, /\.confetti-piece/);
   assert.match(style, /@keyframes confetti-burst/);
   assert.match(style, /confetti-burst var\(--lumno-flow-breathe/);
+  assert.match(style, /35%\{opacity:1;transform:translate\(calc\(-50% \+ var\(--mx\)/);
   assert.match(style, /completion-pop var\(--lumno-flow-enter/);
   assert.match(style, /prefers-reduced-motion:reduce[^}]*\.undo-toast/s);
   assert.match(style, /data-phase="success"[^}]*\.change[^}]*display:\s*block/s);

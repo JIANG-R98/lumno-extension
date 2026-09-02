@@ -87,4 +87,18 @@ assert.ok(
   );
 });
 
+const zhCnMessages = JSON.parse(fs.readFileSync(
+  path.join(repoRoot, '_locales', 'zh_CN', 'messages.json'),
+  'utf8'
+));
+assert.strictEqual(
+  zhCnMessages.recent_undo_tracking_update.message,
+  '撤销当前更新',
+  'the feedback action and New Tab context menu should use the concise current-update wording'
+);
+assert.ok(
+  newtabJs.includes("t('recent_undo_tracking_update', 'Undo current update')"),
+  'the New Tab fallback should match the localized current-update wording'
+);
+
 console.log('New Tab recent-site context-menu tests passed.');

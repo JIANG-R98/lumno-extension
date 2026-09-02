@@ -1878,7 +1878,7 @@
   "recent_update_preview_confirm": { "message": "確認更新" },
   "recent_update_progress_title": { "message": "正在更新追蹤卡片" },
   "recent_update_close": { "message": "關閉" },
-  "recent_undo_tracking_update": { "message": "復原上一次追蹤更新" },
+  "recent_undo_tracking_update": { "message": "復原目前更新" },
   "recent_undo_tracking_update_confirm_title": { "message": "復原這次追蹤更新？" },
   "recent_undo_tracking_update_confirm_description": { "message": "「{current}」將恢復為「{previous}」。" },
   "recent_undo_tracking_update_confirm": { "message": "確認復原" },

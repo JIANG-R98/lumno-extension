@@ -8024,7 +8024,7 @@
       options.push({
         action: RECENT_CONTEXT_MENU_UNDO_UPDATE_VALUE,
         value: RECENT_CONTEXT_MENU_UNDO_UPDATE_VALUE,
-        label: t('recent_undo_tracking_update', 'Undo last tracking update'),
+        label: t('recent_undo_tracking_update', 'Undo current update'),
         dividerBefore: true
       });
     }

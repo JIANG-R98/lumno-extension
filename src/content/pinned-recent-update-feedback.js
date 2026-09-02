@@ -173,7 +173,12 @@
         .card-inner { height: 104px; padding: 13px 13px 14px 15px; box-sizing: border-box; border-radius: 20px; background: rgba(255,255,255,.78); overflow: hidden; }
         .card-content { opacity: 0; transform: translateY(18px) scale(.98); filter: blur(4px); transition: opacity 300ms ease,transform 480ms cubic-bezier(.22,1,.36,1),filter 300ms ease; }
         .card-header { display: grid; grid-template-columns: 25px minmax(0,1fr); align-items: center; gap: 7px; }
-        .card-icon { display: grid; place-items: center; width: 25px; height: 25px; border-radius: 6px; background: linear-gradient(135deg,#14a0fd,#85cdfe); color: #063755; font-size: 12px; font-weight: 750; }
+        .card-icon { position:relative; display:grid; place-items:center; width:25px; height:25px; border-radius:6px; overflow:hidden; flex-shrink:0; background:rgba(255,255,255,.01); color:#063755; font-size:12px; font-weight:750; }
+        .card-favicon,.card-icon-fallback { position:absolute; inset:0; width:25px; height:25px; border-radius:6px; box-sizing:border-box; }
+        .card-favicon { object-fit:contain; opacity:0; }
+        .card-icon[data-loaded="true"] .card-favicon { opacity:1; }
+        .card-icon-fallback { display:grid; place-items:center; background:linear-gradient(135deg,#14a0fd,#85cdfe); }
+        .card-icon[data-loaded="true"] .card-icon-fallback { opacity:0; }
         .card-site,.card-title,.card-url { overflow: hidden; text-overflow: ellipsis; }
         .card-site { color: #19364b; font-size: 14px; white-space: nowrap; }
         .card-title { margin: 5px 0 0 32px; color: #29485f; font-size: 12px; line-height: 16px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
@@ -206,13 +211,18 @@
         .surface[data-visual-variant="homepage-card"] .arrow { display:none; }
         .surface[data-visual-variant="homepage-card"] .card-stage { width:var(--home-card-width); margin:0; }
         .surface[data-visual-variant="homepage-card"] .home-card,
-        .surface[data-visual-variant="homepage-card"] .incoming-card { padding:7px 7px 12px; border:1px solid rgba(255,255,255,.1); border-radius:28px; box-sizing:border-box; background:#dcebfe; box-shadow:0 52px 15px rgba(199,199,199,0),0 33px 13px rgba(199,199,199,.01),0 19px 11px rgba(199,199,199,.05),0 8px 8px rgba(199,199,199,.09),0 2px 5px rgba(199,199,199,.1); transform:none; transition:opacity var(--lumno-flow-swap,560ms) ease,transform var(--lumno-flow-swap,560ms) cubic-bezier(.22,1,.36,1),box-shadow 220ms ease; }
-        .surface[data-visual-variant="homepage-card"] .incoming-card { display:block; width:248px; }
+        .surface[data-visual-variant="homepage-card"] .incoming-card { padding:7px 7px 12px; border:1px solid rgba(0,0,0,.1); border-radius:28px; box-sizing:border-box; background:#dcebfe; box-shadow:0 52px 15px rgba(199,199,199,0),0 33px 13px rgba(199,199,199,.01),0 19px 11px rgba(199,199,199,.05),0 8px 8px rgba(199,199,199,.09),0 2px 5px rgba(199,199,199,.1); transform:none; transition:opacity var(--lumno-flow-swap,560ms) ease,transform var(--lumno-flow-swap,560ms) cubic-bezier(.22,1,.36,1),box-shadow 220ms ease; }
+        .surface[data-visual-variant="homepage-card"] .incoming-card { position:relative; display:block; width:248px; isolation:isolate; }
+        .surface[data-visual-variant="homepage-card"] .incoming-card::before { content:""; position:absolute; z-index:-1; inset:12px 12px -10px; border-radius:24px; background:radial-gradient(ellipse at center,rgba(80,153,219,.30),rgba(80,153,219,.08) 62%,transparent 76%); filter:blur(12px); transform:translateY(8px) scale(.96); pointer-events:none; }
         .surface[data-visual-variant="homepage-card"] .card-inner,
-        .surface[data-visual-variant="homepage-card"] .incoming-inner { position:relative; width:100%; height:104px; padding:13px 13px 14px 15px; border:1px solid rgba(0,0,0,.1); border-radius:20px; box-sizing:border-box; overflow:hidden; background:#fff; box-shadow:0 58px 16px rgba(199,199,199,0),0 37px 15px rgba(199,199,199,.01),0 21px 12px rgba(199,199,199,.05),0 9px 9px rgba(199,199,199,.09),0 2px 5px rgba(199,199,199,.1); transition:opacity 180ms ease,transform 220ms ease; }
+        .surface[data-visual-variant="homepage-card"] .incoming-inner { position:relative; display:grid; grid-template-columns:25px 1fr; column-gap:7px; row-gap:3px; align-content:start; align-items:start; width:100%; height:104px; padding:13px 13px 14px 15px; border:1px solid rgba(0,0,0,.1); border-radius:20px; box-sizing:border-box; overflow:hidden; background:#fff; box-shadow:0 58px 16px rgba(199,199,199,0),0 37px 15px rgba(199,199,199,.01),0 21px 12px rgba(199,199,199,.05),0 9px 9px rgba(199,199,199,.09),0 2px 5px rgba(199,199,199,.1); transition:opacity 180ms ease,transform 220ms ease; }
+        .surface[data-visual-variant="homepage-card"] .incoming-inner > .card-header { display:flex; grid-column:1 / -1; align-items:center; gap:7px; min-width:0; padding-right:58px; }
+        .surface[data-visual-variant="homepage-card"] .incoming-inner > .card-title { grid-column:2 / -1; margin:0; color:#000; font-size:12px; font-weight:400; line-height:16px; white-space:pre-wrap; }
+        .surface[data-visual-variant="homepage-card"] .incoming-inner .card-site { color:#000; font-size:14px; font-weight:500; line-height:1.25; white-space:nowrap; }
+        .surface[data-visual-variant="homepage-card"] .incoming-status-badges { position:absolute; top:10px; right:10px; z-index:1; display:flex; align-items:center; justify-content:flex-end; pointer-events:none; }
         .surface[data-visual-variant="homepage-card"] .card-content { opacity:1; transform:none; filter:none; }
         .surface[data-visual-variant="homepage-card"] .card-footer,
-        .surface[data-visual-variant="homepage-card"] .incoming-footer { display:flex; align-items:center; gap:8px; width:100%; min-width:0; margin:10px 0 0; color:#55758c; font-size:13px; }
+        .surface[data-visual-variant="homepage-card"] .incoming-footer { display:flex; align-items:center; gap:8px; width:100%; min-width:0; margin:10px 0 0; color:rgba(0,0,0,.51); font-size:14px; font-weight:400; line-height:1.2; }
         .surface[data-visual-variant="homepage-card"][data-phase="old-out"] .card-inner { opacity:0; transform:translateX(-72px); }
         .surface[data-visual-variant="homepage-card"][data-phase="new-in"] .card-inner { opacity:0; transform:translateX(-72px); }
         .surface[data-visual-variant="homepage-card"][data-phase="new-in"] .incoming-card,
@@ -225,29 +235,35 @@
         .surface[data-visual-variant="homepage-card"][data-phase="success"] .change,
         .surface[data-visual-variant="homepage-card"][data-phase="undone"] .change { display:block; }
         .surface[data-visual-variant="homepage-card"][data-phase="success"] .incoming-card { box-shadow:0 70px 19px rgba(199,199,199,0),0 44px 18px rgba(199,199,199,.02),0 25px 15px rgba(199,199,199,.08),0 11px 11px rgba(199,199,199,.13),0 3px 6px rgba(199,199,199,.15); }
-        .surface[data-visual-variant="homepage-card"] .actions { justify-content:center; }
+        .surface[data-visual-variant="homepage-card"] .actions { justify-content:center; gap:12px; margin-top:28px; }
         .surface[data-visual-variant="homepage-card"][data-celebrate="true"][data-phase="success"] h2 { display:none; }
         .surface[data-visual-variant="homepage-card"][data-celebrate="true"] .change { top:0; }
-        .surface[data-visual-variant="homepage-card"][data-celebrate="true"] .incoming-status { padding:3px 7px; border-radius:999px; background:rgba(20,160,253,.12); color:#087ecb; font-size:11px; font-weight:700; }
+        .surface[data-visual-variant="homepage-card"][data-celebrate="true"][data-phase="success"] .change { position:relative; top:auto; left:auto; width:100%; }
+        .surface[data-visual-variant="homepage-card"][data-celebrate="true"][data-phase="success"] .incoming-card { transform:none; }
+        .surface[data-visual-variant="homepage-card"][data-celebrate="true"][data-phase="success"] .card-stage { display:none; }
+        .surface[data-visual-variant="homepage-card"][data-celebrate="true"] .incoming-status { display:inline-flex; align-items:center; justify-content:center; min-height:20px; padding:1px 7px; box-sizing:border-box; border-radius:999px; background:#148fdc; box-shadow:0 4px 12px rgba(20,143,220,.24); color:#fff; font-size:10px; font-weight:700; line-height:1; letter-spacing:.02em; }
         .surface[data-visual-variant="homepage-card"][data-celebrate="true"][data-phase="success"] .panel { animation:completion-pop var(--lumno-flow-enter,360ms) cubic-bezier(.22,1,.36,1) both; }
         .surface[data-visual-variant="homepage-card"][data-phase="undone"] h2,
         .surface[data-visual-variant="homepage-card"][data-phase="undone"] .actions { display:none; }
         .surface[data-visual-variant="homepage-card"][data-phase="undone"] .incoming-card { animation:card-fade 260ms ease both; }
         .undo-toast { position:absolute; left:50%; top:24px; translate:-50% 0; min-height:36px; padding:0 16px; display:flex; align-items:center; border:1px solid rgba(255,255,255,.22); border-radius:999px; background:#263141; color:#fff; box-shadow:0 10px 30px rgba(15,23,42,.2); font:600 13px/1 "Open Sans","PingFang SC",sans-serif; animation:toast-enter 180ms cubic-bezier(.22,1,.36,1) both; }
         .undo-toast[hidden] { display:none; }
-        .confetti { display:none; position:absolute; inset:-72px; z-index:5; overflow:visible; pointer-events:none; }
+        .confetti { display:none; position:absolute; inset:-120px -180px; z-index:5; overflow:visible; pointer-events:none; }
         .surface[data-celebrate="true"][data-phase="success"] .confetti { display:block; }
-        .confetti-piece { --x:0px; --y:100px; --r:180deg; position:absolute; left:50%; top:42%; width:6px; height:11px; border-radius:2px; background:#14a0fd; opacity:0; animation:confetti-burst var(--lumno-flow-breathe,760ms) cubic-bezier(.16,.78,.3,1) both; }
-        .confetti-piece:nth-child(2n) { width:8px; height:7px; background:#f2a94b; }
-        .confetti-piece:nth-child(3n) { border-radius:50%; background:#f6d365; }
-        .confetti-piece:nth-child(1){--x:-118px;--y:54px;--r:-210deg}.confetti-piece:nth-child(2){--x:-92px;--y:112px;--r:260deg}.confetti-piece:nth-child(3){--x:-65px;--y:148px;--r:-170deg}.confetti-piece:nth-child(4){--x:-34px;--y:82px;--r:230deg}.confetti-piece:nth-child(5){--x:-12px;--y:136px;--r:-280deg}.confetti-piece:nth-child(6){--x:18px;--y:94px;--r:190deg}.confetti-piece:nth-child(7){--x:42px;--y:150px;--r:-240deg}.confetti-piece:nth-child(8){--x:68px;--y:76px;--r:270deg}.confetti-piece:nth-child(9){--x:92px;--y:132px;--r:-200deg}.confetti-piece:nth-child(10){--x:116px;--y:58px;--r:250deg}.confetti-piece:nth-child(11){--x:-142px;--y:104px;--r:-160deg}.confetti-piece:nth-child(12){--x:142px;--y:116px;--r:220deg}
+        .confetti-piece { --mx:0px; --x:0px; --lift:82px; --fall:130px; --r:180deg; --delay:0ms; position:absolute; left:50%; top:48%; width:6px; height:12px; border-radius:2px; background:#14a0fd; opacity:0; animation:confetti-burst var(--lumno-flow-breathe,1050ms) cubic-bezier(.16,.78,.3,1) var(--delay) both; }
+        .confetti-piece:nth-child(6n+2) { width:8px; height:8px; border-radius:50%; background:#f2a94b; }
+        .confetti-piece:nth-child(6n+3) { width:5px; height:14px; background:#f6d365; }
+        .confetti-piece:nth-child(6n+4) { width:7px; height:10px; background:#ff7187; }
+        .confetti-piece:nth-child(6n+5) { width:8px; height:8px; border-radius:50%; background:#54d39a; }
+        .confetti-piece:nth-child(6n) { width:5px; height:15px; background:#936fe8; }
+        .confetti-piece:nth-child(1){--mx:-82px;--x:-190px;--lift:76px;--fall:112px;--r:-420deg}.confetti-piece:nth-child(2){--mx:-70px;--x:-164px;--lift:108px;--fall:154px;--r:360deg;--delay:35ms}.confetti-piece:nth-child(3){--mx:-60px;--x:-145px;--lift:88px;--fall:188px;--r:-330deg;--delay:70ms}.confetti-piece:nth-child(4){--mx:-48px;--x:-124px;--lift:126px;--fall:122px;--r:470deg;--delay:15ms}.confetti-piece:nth-child(5){--mx:-40px;--x:-104px;--lift:72px;--fall:174px;--r:-390deg;--delay:90ms}.confetti-piece:nth-child(6){--mx:-31px;--x:-82px;--lift:116px;--fall:142px;--r:410deg;--delay:45ms}.confetti-piece:nth-child(7){--mx:-24px;--x:-61px;--lift:92px;--fall:192px;--r:-350deg;--delay:10ms}.confetti-piece:nth-child(8){--mx:-14px;--x:-38px;--lift:132px;--fall:126px;--r:440deg;--delay:75ms}.confetti-piece:nth-child(9){--mx:-6px;--x:-17px;--lift:84px;--fall:168px;--r:-380deg;--delay:25ms}.confetti-piece:nth-child(10){--mx:4px;--x:11px;--lift:122px;--fall:198px;--r:460deg;--delay:95ms}.confetti-piece:nth-child(11){--mx:12px;--x:33px;--lift:74px;--fall:136px;--r:-400deg;--delay:55ms}.confetti-piece:nth-child(12){--mx:21px;--x:54px;--lift:112px;--fall:180px;--r:370deg;--delay:5ms}.confetti-piece:nth-child(13){--mx:29px;--x:76px;--lift:94px;--fall:118px;--r:-450deg;--delay:80ms}.confetti-piece:nth-child(14){--mx:37px;--x:96px;--lift:128px;--fall:158px;--r:390deg;--delay:30ms}.confetti-piece:nth-child(15){--mx:45px;--x:116px;--lift:78px;--fall:190px;--r:-360deg;--delay:65ms}.confetti-piece:nth-child(16){--mx:53px;--x:134px;--lift:118px;--fall:132px;--r:430deg;--delay:20ms}.confetti-piece:nth-child(17){--mx:62px;--x:151px;--lift:90px;--fall:176px;--r:-410deg;--delay:85ms}.confetti-piece:nth-child(18){--mx:72px;--x:171px;--lift:124px;--fall:146px;--r:350deg;--delay:40ms}.confetti-piece:nth-child(19){--mx:-76px;--x:-176px;--lift:138px;--fall:204px;--r:-470deg;--delay:60ms}.confetti-piece:nth-child(20){--mx:-51px;--x:-130px;--lift:96px;--fall:210px;--r:420deg;--delay:100ms}.confetti-piece:nth-child(21){--mx:-28px;--x:-72px;--lift:142px;--fall:166px;--r:-390deg;--delay:50ms}.confetti-piece:nth-child(22){--mx:26px;--x:69px;--lift:136px;--fall:202px;--r:480deg;--delay:0ms}.confetti-piece:nth-child(23){--mx:49px;--x:126px;--lift:104px;--fall:214px;--r:-430deg;--delay:72ms}.confetti-piece:nth-child(24){--mx:80px;--x:188px;--lift:140px;--fall:184px;--r:400deg;--delay:28ms}
         @keyframes viewport-breathe { 0%{opacity:0;transform:scale(1.008)} 42%{opacity:.95;transform:scale(1)} 100%{opacity:0;transform:scale(.996)} }
         @keyframes panel-enter { from{opacity:0;transform:translateY(20px) scale(.96)} to{opacity:1;transform:translateY(0) scale(1)} }
         @keyframes completion-pop { from{opacity:0;transform:translateY(8px) scale(.96)} to{opacity:1;transform:translateY(0) scale(1)} }
         @keyframes card-complete { from{opacity:.7;transform:translateY(8px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
         @keyframes card-fade { from{opacity:1} to{opacity:0} }
         @keyframes toast-enter { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes confetti-burst { 0%{opacity:0;transform:translate(-50%,-50%) scale(.35) rotate(0)} 12%{opacity:1} 100%{opacity:0;transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(1) rotate(var(--r))} }
+        @keyframes confetti-burst { 0%{opacity:0;transform:translate(-50%,-50%) scale(.3) rotate(0)} 10%{opacity:1} 35%{opacity:1;transform:translate(calc(-50% + var(--mx)),calc(-50% - var(--lift))) scale(1) rotate(calc(var(--r) * .46))} 100%{opacity:0;transform:translate(calc(-50% + var(--x)),calc(-50% + var(--fall))) scale(.9) rotate(var(--r))} }
         @media (max-width:860px) { .panel { --home-card-width:min(360px,calc((96vw - 12px) / 2)); } }
         @media (max-width:640px) { .panel { --home-card-width:100%;padding:18px; } .change { grid-template-columns:minmax(0,1fr); } .arrow { transform:rotate(90deg); } .actions { justify-content:stretch; } .x-lumno-action-button { flex:1; } }
         @media (prefers-color-scheme:dark) { .panel { color:#edf7ff;background:linear-gradient(135deg,rgba(30,41,59,.86),rgba(15,23,42,.82)); } .record{background:rgba(133,205,254,.07)} .record-title,.card-site{color:#edf7ff}.record-label,.record-url,.card-title,.card-footer{color:#9bb5c8}.card-inner{background:rgba(20,31,42,.82)}.x-lumno-action-button--secondary{background:#1e293b;color:#f8fafc;border-color:rgba(148,163,184,.18)} }
@@ -259,7 +275,7 @@
       surface.dataset.visualVariant = visualVariant;
       surface.dataset.celebrate = 'false';
       surface.hidden = true;
-      surface.innerHTML = `<div class="glow" aria-hidden="true"></div><section class="panel" role="dialog" aria-modal="true" aria-labelledby="flow-title" tabindex="-1"><div class="confetti" aria-hidden="true">${'<i class="confetti-piece"></i>'.repeat(12)}</div><h2 id="flow-title"></h2><div class="change"><div class="record record--old"><div class="record-label old-label"></div><div class="record-title old-title"></div><div class="record-url old-url"></div></div><div class="arrow" aria-hidden="true">→</div><div class="record record--new"><div class="record-label new-label"></div><div class="record-title new-title"></div><div class="record-url new-url"></div></div><div class="incoming-card"><div class="incoming-inner"><div class="card-header"><span class="card-icon incoming-icon"></span><span class="card-site incoming-site"></span></div><div class="card-title incoming-title"></div></div><div class="incoming-footer"><span class="card-url incoming-url"></span><span class="card-status incoming-status"></span></div></div></div><div class="card-stage" aria-hidden="true"><div class="home-card"><div class="card-inner"><div class="card-content"><div class="card-header"><span class="card-icon"></span><span class="card-site"></span></div><div class="card-title"></div></div></div><div class="card-footer"><span class="card-url"></span><span class="card-status"></span></div></div></div><div class="actions"><button class="x-lumno-action-button x-lumno-action-button--secondary secondary" type="button"></button><button class="x-lumno-action-button x-lumno-action-button--primary primary" type="button"></button></div></section><div class="undo-toast" role="status" aria-live="polite" hidden></div>`;
+      surface.innerHTML = `<div class="glow" aria-hidden="true"></div><section class="panel" role="dialog" aria-modal="true" aria-labelledby="flow-title" tabindex="-1"><div class="confetti" aria-hidden="true">${'<i class="confetti-piece"></i>'.repeat(24)}</div><h2 id="flow-title"></h2><div class="change"><div class="record record--old"><div class="record-label old-label"></div><div class="record-title old-title"></div><div class="record-url old-url"></div></div><div class="arrow" aria-hidden="true">→</div><div class="record record--new"><div class="record-label new-label"></div><div class="record-title new-title"></div><div class="record-url new-url"></div></div><div class="incoming-card"><div class="incoming-inner"><div class="incoming-status-badges"><span class="card-status incoming-status"></span></div><div class="card-header"><span class="card-icon incoming-icon" aria-hidden="true"><img class="card-favicon incoming-favicon" alt=""><span class="card-icon-fallback"></span></span><span class="card-site incoming-site"></span></div><div class="card-title incoming-title"></div></div><div class="incoming-footer"><span class="card-url incoming-url"></span></div></div></div><div class="card-stage" aria-hidden="true"><div class="home-card"><div class="card-inner"><div class="card-content"><div class="card-header"><span class="card-icon" aria-hidden="true"><img class="card-favicon" alt=""><span class="card-icon-fallback"></span></span><span class="card-site"></span></div><div class="card-title"></div></div></div><div class="card-footer"><span class="card-url"></span><span class="card-status"></span></div></div></div><div class="actions"><button class="x-lumno-action-button x-lumno-action-button--secondary secondary" type="button"></button><button class="x-lumno-action-button x-lumno-action-button--primary primary" type="button"></button></div></section><div class="undo-toast" role="status" aria-live="polite" hidden></div>`;
       if (visualVariant === 'homepage-card') surface.querySelector('.panel').setAttribute('aria-modal', 'false');
       title = surface.querySelector('h2');
       oldTitle = surface.querySelector('.old-title'); oldUrl = surface.querySelector('.old-url');
@@ -271,6 +287,10 @@
       cardUrl = surface.querySelector('.card-url'); cardIcon = surface.querySelector('.card-icon');
       secondary = surface.querySelector('.secondary'); primary = surface.querySelector('.primary');
       undoToast = surface.querySelector('.undo-toast');
+      surface.querySelectorAll('.card-favicon').forEach((image) => {
+        image.addEventListener('load', () => { image.parentElement.dataset.loaded = 'true'; });
+        image.addEventListener('error', () => { image.parentElement.dataset.loaded = 'false'; });
+      });
       surface.querySelector('.old-label').textContent = ui('recent_update_preview_original','Current tracked card');
       surface.querySelector('.new-label').textContent = ui('recent_update_preview_new','Replace with');
       surface.querySelector('.card-status').textContent = ui('recent_mode_tracking','Linked');
@@ -282,14 +302,28 @@
       return true;
     }
 
+    function faviconUrl(pageUrl) {
+      if (!pageUrl || !chromeApi || !chromeApi.runtime || typeof chromeApi.runtime.getURL !== 'function') return '';
+      return `${chromeApi.runtime.getURL('/_favicon/')}?pageUrl=${encodeURIComponent(pageUrl)}&size=32`;
+    }
+
     function fillCardFields(siteElement, titleElement, urlElement, iconElement, item) {
       const value = item || {};
+      const pageUrl = String(value.url || '');
       let hostname = '';
-      try { hostname = new URL(String(value.url || '')).hostname.replace(/^www\./i, ''); } catch (_error) {}
+      try { hostname = new URL(pageUrl).hostname.replace(/^www\./i, ''); } catch (_error) {}
       siteElement.textContent = hostname || String(value.title || '');
-      titleElement.textContent = String(value.title || value.url || '');
-      urlElement.textContent = String(value.url || '');
-      iconElement.textContent = String(hostname || value.title || 'L').charAt(0).toUpperCase();
+      titleElement.textContent = String(value.title || pageUrl || '');
+      urlElement.textContent = pageUrl;
+      const fallback = iconElement.querySelector('.card-icon-fallback');
+      const image = iconElement.querySelector('.card-favicon');
+      if (fallback) fallback.textContent = String(hostname || value.title || 'L').charAt(0).toUpperCase();
+      iconElement.dataset.loaded = 'false';
+      const source = faviconUrl(pageUrl);
+      if (image) {
+        image.removeAttribute('src');
+        if (source) image.src = source;
+      }
     }
 
     function fillCard(item) {
@@ -344,7 +378,7 @@
         surface.dataset.phase = 'success';
         title.textContent = reasonMessage('updated');
         fill(activeChange.previous, activeChange.current);
-        setButtons(ui('recent_update_close','Close'),ui('recent_undo_tracking_update','Undo'),true);
+        setButtons(ui('recent_update_close','Close'),ui('recent_undo_tracking_update','Undo current update'),true);
         primary.focus();
         return;
       }
@@ -564,7 +598,7 @@
       void surface.offsetWidth;
       surface.dataset.celebrate = celebrateOnSuccess ? 'true' : 'false';
       title.textContent = reasonMessage('updated');
-      setButtons(ui('recent_update_close','Close'),ui('recent_undo_tracking_update','Undo'),true);
+      setButtons(ui('recent_update_close','Close'),ui('recent_undo_tracking_update','Undo current update'),true);
       primary.focus();
       return true;
     }
