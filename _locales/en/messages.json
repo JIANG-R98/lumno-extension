@@ -1848,7 +1848,32 @@
     "message": "Stop tracking"
   },
   "recent_replace_pinned_url_with_current": {
-    "message": "Replace Pinned URL with Current"
+    "message": "Update This Tracked Card to the Current Page"
+  },
+  "recent_pin_and_track_current_page": { "message": "Pin and Track the Current Page" },
+  "recent_pin_and_track_current_page_limit": { "message": "Pin and Track the Current Page (3-Pin Limit Reached)" },
+  "recent_tracked_page_is_current": { "message": "This Page Is Already the Tracked Link" },
+  "recent_current_page_already_pinned_tracked": { "message": "This Page Is Already Pinned and Tracked" },
+  "recent_update_feedback_success": { "message": "Tracked card link updated" },
+  "recent_add_tracking_feedback_success": { "message": "Current page pinned and tracking enabled" },
+  "recent_enable_tracking_feedback_success": { "message": "Tracking enabled for this pinned page" },
+  "recent_add_tracking_feedback_already_tracked": { "message": "Current page is already pinned and tracked" },
+  "recent_add_tracking_feedback_limit": { "message": "Remove a pinned card before adding another" },
+  "recent_update_feedback_same_url": { "message": "This page is already the tracked card’s link" },
+  "recent_update_feedback_ambiguous": { "message": "Cannot identify the card. Open this page from the target card and try again" },
+  "recent_update_feedback_source_missing": { "message": "The original tracked card no longer exists" },
+  "recent_update_feedback_not_tracked": { "message": "No tracked card can be updated from this page" },
+  "recent_update_feedback_failed": { "message": "Could not update the tracked card. Try again" },
+  "recent_update_preview_title": { "message": "Confirm Tracking Update" },
+  "recent_update_preview_original": { "message": "Current Tracked Card" },
+  "recent_update_preview_new": { "message": "Replace With This Page" },
+  "recent_update_preview_cancel": { "message": "Cancel" },
+  "recent_update_preview_confirm": { "message": "Update Card" },
+  "recent_undo_tracking_update": { "message": "Undo Last Tracking Update" },
+  "recent_undo_tracking_update_success": { "message": "Last tracking update undone" },
+  "recent_undo_tracking_update_failed": { "message": "Unable to undo this update" },
+  "recent_update_badge": {
+    "message": "Updated"
   },
   "recent_pin_limit": {
     "message": "You can pin up to 3 cards"

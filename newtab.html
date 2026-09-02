@@ -2923,12 +2923,36 @@
         mask-composite: exclude;
         pointer-events: none;
       }
+      .x-nt-recent-update-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 20px;
+        padding: 1px 7px;
+        box-sizing: border-box;
+        border-radius: 999px;
+        background: #ef4444;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.24);
+        color: #ffffff;
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: 0.02em;
+        pointer-events: none;
+      }
       .x-nt-recent-header {
         display: flex;
         align-items: center;
         gap: 7px;
         grid-column: 1 / -1;
         padding-right: 30px;
+      }
+      .x-nt-recent-card[data-recent-update-pending="true"] .x-nt-recent-header {
+        padding-right: 58px;
       }
       .x-nt-recent-favicon {
         width: var(--x-nt-dock-recent-favicon-size, 25px);

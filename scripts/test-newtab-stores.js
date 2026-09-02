@@ -96,8 +96,18 @@ async function testRecentStore() {
 
   const storage = createMemoryStorage({
     [recentStore.DEFAULT_PINNED_KEY]: [
-      { title: 'A', url: 'https://a.example/', trackingEnabled: true },
-      { title: 'A duplicate', url: 'https://a.example/' },
+      {
+        title: 'A',
+        url: 'https://a.example/',
+        trackingEnabled: true,
+        updatePending: true,
+        updateHistory: [{
+          title: 'Previous A',
+          url: 'https://previous-a.example/episode/1',
+          updatedAt: 123
+        }]
+      },
+      { title: 'A second pin', url: 'https://a.example/second' },
       { title: 'B', url: 'https://b.example/' },
       { title: 'C', url: 'https://c.example/' },
       { title: 'D', url: 'https://d.example/' }
@@ -105,9 +115,31 @@ async function testRecentStore() {
   });
   const loadedPinned = await recentStore.loadPinnedRecentSites(storage, options);
   assert.strictEqual(loadedPinned.length, 3);
-  assert.deepStrictEqual(loadedPinned.map((item) => item.host), ['a.example', 'b.example', 'c.example']);
+  assert.deepStrictEqual(loadedPinned.map((item) => item.host), ['a.example', 'a.example', 'b.example']);
   assert.strictEqual(loadedPinned[0].trackingEnabled, true);
+  assert.strictEqual(loadedPinned[0].updatePending, true);
+  assert.strictEqual(loadedPinned[0].updateHistory.length, 1);
+  assert.strictEqual(loadedPinned[0].updateHistory[0].title, 'Previous A');
   assert.strictEqual(loadedPinned[1].trackingEnabled, false);
+  assert.strictEqual(loadedPinned[1].updatePending, false);
+  const undonePinned = recentStore.undoPinnedRecentSiteUpdate(
+    loadedPinned,
+    'https://a.example/',
+    options
+  );
+  assert.strictEqual(undonePinned.changed, true);
+  assert.strictEqual(undonePinned.reason, 'undone');
+  assert.strictEqual(undonePinned.items[0].url, 'https://previous-a.example/episode/1');
+  assert.strictEqual(undonePinned.items[0].title, 'Previous A');
+  assert.strictEqual(undonePinned.items[0].trackingEnabled, true);
+  assert.strictEqual(undonePinned.items[0].updatePending, true);
+  assert.strictEqual(undonePinned.items[0].updateHistory.length, 0);
+  assert.deepStrictEqual(
+    recentStore.mergeRecentSitesWithPinned([], loadedPinned, [], 4, options)
+      .map((item) => item.url),
+    ['https://a.example/', 'https://a.example/second', 'https://b.example/'],
+    'distinct pinned URLs on the same host should remain visible as separate cards'
+  );
 
   const savedHidden = await recentStore.saveHiddenRecentSites(storage, [
     'https://hidden.example/a',

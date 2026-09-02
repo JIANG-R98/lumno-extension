@@ -1848,7 +1848,32 @@
     "message": "停止跟踪"
   },
   "recent_replace_pinned_url_with_current": {
-    "message": "用当前页面替换置顶链接"
+    "message": "更新此追踪卡片为当前页面"
+  },
+  "recent_pin_and_track_current_page": { "message": "置顶并追踪当前页面" },
+  "recent_pin_and_track_current_page_limit": { "message": "置顶并追踪当前页面（已达 3 个上限）" },
+  "recent_tracked_page_is_current": { "message": "当前页面已是此卡片的追踪链接" },
+  "recent_current_page_already_pinned_tracked": { "message": "当前页面已置顶并处于追踪状态" },
+  "recent_update_feedback_success": { "message": "追踪卡片链接已更新" },
+  "recent_add_tracking_feedback_success": { "message": "已置顶并开始追踪当前页面" },
+  "recent_enable_tracking_feedback_success": { "message": "已开始追踪这个置顶页面" },
+  "recent_add_tracking_feedback_already_tracked": { "message": "当前页面已置顶并处于追踪状态" },
+  "recent_add_tracking_feedback_limit": { "message": "请先取消一个置顶卡片后再添加" },
+  "recent_update_feedback_same_url": { "message": "当前页面已经是这张追踪卡片的链接" },
+  "recent_update_feedback_ambiguous": { "message": "无法确定要更新的卡片，请从目标卡片重新打开" },
+  "recent_update_feedback_source_missing": { "message": "原追踪卡片已不存在，请重新设置跟踪" },
+  "recent_update_feedback_not_tracked": { "message": "当前页面没有可更新的追踪卡片" },
+  "recent_update_feedback_failed": { "message": "更新追踪卡片失败，请重试" },
+  "recent_update_preview_title": { "message": "确认更新追踪卡片" },
+  "recent_update_preview_original": { "message": "当前追踪卡片" },
+  "recent_update_preview_new": { "message": "将替换为当前页面" },
+  "recent_update_preview_cancel": { "message": "取消" },
+  "recent_update_preview_confirm": { "message": "确认更新" },
+  "recent_undo_tracking_update": { "message": "撤销上一次追踪更新" },
+  "recent_undo_tracking_update_success": { "message": "已撤销上一次追踪更新" },
+  "recent_undo_tracking_update_failed": { "message": "无法撤销此次更新" },
+  "recent_update_badge": {
+    "message": "更新"
   },
   "recent_pin_limit": {
     "message": "最多置顶 3 个"

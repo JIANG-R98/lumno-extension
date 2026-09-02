@@ -1848,7 +1848,32 @@
     "message": "追跡を停止"
   },
   "recent_replace_pinned_url_with_current": {
-    "message": "固定したURLを現在のページに置き換える"
+    "message": "この追跡カードを現在のページに更新"
+  },
+  "recent_pin_and_track_current_page": { "message": "現在のページを固定して追跡" },
+  "recent_pin_and_track_current_page_limit": { "message": "現在のページを固定して追跡（固定は最大3枚）" },
+  "recent_tracked_page_is_current": { "message": "現在のページはすでにこのカードの追跡リンクです" },
+  "recent_current_page_already_pinned_tracked": { "message": "現在のページはすでに固定・追跡されています" },
+  "recent_update_feedback_success": { "message": "追跡カードのリンクを更新しました" },
+  "recent_add_tracking_feedback_success": { "message": "現在のページを固定し、追跡を開始しました" },
+  "recent_enable_tracking_feedback_success": { "message": "この固定ページの追跡を開始しました" },
+  "recent_add_tracking_feedback_already_tracked": { "message": "現在のページはすでに固定・追跡されています" },
+  "recent_add_tracking_feedback_limit": { "message": "追加する前に固定カードを1枚解除してください" },
+  "recent_update_feedback_same_url": { "message": "このページはすでに追跡カードのリンクです" },
+  "recent_update_feedback_ambiguous": { "message": "対象カードを特定できません。対象カードから開き直してください" },
+  "recent_update_feedback_source_missing": { "message": "元の追跡カードが見つかりません" },
+  "recent_update_feedback_not_tracked": { "message": "このページから更新できる追跡カードはありません" },
+  "recent_update_feedback_failed": { "message": "追跡カードを更新できませんでした。再試行してください" },
+  "recent_update_preview_title": { "message": "追跡カードの更新を確認" },
+  "recent_update_preview_original": { "message": "現在の追跡カード" },
+  "recent_update_preview_new": { "message": "現在のページに置き換え" },
+  "recent_update_preview_cancel": { "message": "キャンセル" },
+  "recent_update_preview_confirm": { "message": "カードを更新" },
+  "recent_undo_tracking_update": { "message": "直前の追跡更新を元に戻す" },
+  "recent_undo_tracking_update_success": { "message": "直前の追跡更新を元に戻しました" },
+  "recent_undo_tracking_update_failed": { "message": "この更新を元に戻せません" },
+  "recent_update_badge": {
+    "message": "更新"
   },
   "recent_pin_limit": {
     "message": "固定は最大3枚"

@@ -115,10 +115,12 @@ describe('Recent Sites React island', () => {
       visitCount: 2
     }];
     expect(getRecentSitesSignature(items)).toBe(
-      '0::https://example.com/::Example::::::2::'
+      '0::https://example.com/::Example::::::2::::::'
     );
     expect(getRecentSitesSignature([{ ...items[0], trackingEnabled: true }]))
-      .toBe('0::https://example.com/::Example::::::2::tracked');
+      .toBe('0::https://example.com/::Example::::::2::tracked::::');
+    expect(getRecentSitesSignature([{ ...items[0], updatePending: true }]))
+      .toBe('0::https://example.com/::Example::::::2::::updated::');
 
     const options = createOptions();
     const view = createRecentSitesView(options);
@@ -452,6 +454,42 @@ describe('Recent Sites React island', () => {
       true,
       false
     );
+  });
+
+  it('shows an update badge and clears it when the card is opened', async () => {
+    const opened = vi.fn();
+    const acknowledgeUpdate = vi.fn(() => Promise.resolve(true));
+    const rememberTrackingTarget = vi.fn();
+    const { view } = createView({
+      openUrl: opened,
+      acknowledgeUpdate,
+      rememberTrackingTarget,
+      isTracked: () => true
+    });
+    const item = {
+      title: 'Updated episode',
+      url: 'https://example.com/episode-2',
+      updatePending: true
+    };
+    renderItems(view, [item]);
+    const card = view.getCards()[0];
+
+    expect(card.dataset.recentUpdatePending).toBe('true');
+    expect(card.querySelector('.x-nt-recent-update-badge')?.textContent)
+      .toBe('更新');
+
+    await act(async () => {
+      card.click();
+      await Promise.resolve();
+    });
+
+    expect(acknowledgeUpdate).toHaveBeenCalledWith(item);
+    expect(rememberTrackingTarget).toHaveBeenCalledWith(item);
+    expect(card.hasAttribute('data-recent-update-pending')).toBe(false);
+    expect(card.querySelector('.x-nt-recent-update-badge')).toBeNull();
+    expect(opened).toHaveBeenCalledWith(item.url, {
+      openInBackgroundTab: false
+    });
   });
 
   it('serializes pin and tracking actions on the same card', async () => {

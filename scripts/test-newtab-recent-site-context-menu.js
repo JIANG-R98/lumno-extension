@@ -43,12 +43,14 @@ assert.ok(
   'recent-site deletion should reuse the shared New Tab context-menu surface'
 );
 assert.ok(
-  newtabJs.includes("RECENT_CONTEXT_MENU_REMOVE_VALUE = 'remove'") &&
+    newtabJs.includes("RECENT_CONTEXT_MENU_REMOVE_VALUE = 'remove'") &&
+    newtabJs.includes("RECENT_CONTEXT_MENU_UNDO_UPDATE_VALUE = 'undo-tracking-update'") &&
     newtabJs.includes("action: NEWTAB_CONTEXT_MENU_OPEN_VALUE") &&
     newtabJs.includes("openExternalNewTabUrl(target.item.url, 'newTab')") &&
     newtabJs.includes('dividerBefore: true') &&
     newtabJs.includes('function handleRecentContextMenuAction(actionValue)') &&
     newtabJs.includes('removeRecentSiteFromContextMenu(target.item)') &&
+    newtabJs.includes('undoRecentSiteUpdateFromContextMenu(target.item)') &&
     newtabJs.includes('hideRecentSiteTemporarily(item)'),
   'the recent-site record should change only after the remove menu action is selected'
 );
@@ -71,6 +73,8 @@ assert.ok(
   assert.ok(
     messages.newtab_open_in_new_tab &&
       messages.recent_context_menu_label &&
+      messages.recent_undo_tracking_update &&
+      messages.recent_undo_tracking_update_success &&
       String(messages.newtab_open_in_new_tab.message || '').trim() &&
       String(messages.recent_context_menu_label.message || '').trim(),
     `${locale} should localize the recent-site context-menu label`

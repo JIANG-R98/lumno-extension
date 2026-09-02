@@ -769,8 +769,9 @@
   const BOOKMARK_CONTEXT_MENU_PORTAL_Z_INDEX = 10060;
   const BOOKMARK_CONTEXT_MENU_PORTAL_OFFSET_PX = -6;
   const RECENT_CONTEXT_MENU_REMOVE_VALUE = 'remove';
+  const RECENT_CONTEXT_MENU_UNDO_UPDATE_VALUE = 'undo-tracking-update';
   const RECENT_CONTEXT_MENU_MIN_WIDTH_PX = 124;
-  const RECENT_CONTEXT_MENU_MAX_WIDTH_PX = 180;
+  const RECENT_CONTEXT_MENU_MAX_WIDTH_PX = 240;
   const RECENT_CONTEXT_MENU_PORTAL_Z_INDEX = 10050;
   const RECENT_CONTEXT_MENU_PORTAL_OFFSET_PX = -6;
   const SEARCH_LAYOUT_MIN_TOP_PX = 28;
@@ -7979,21 +7980,31 @@
   }
 
   function getRecentContextMenuOptions(target) {
-    return [
+    const options = [
       {
         action: NEWTAB_CONTEXT_MENU_OPEN_VALUE,
         value: NEWTAB_CONTEXT_MENU_OPEN_VALUE,
         label: t('newtab_open_in_new_tab', 'Open in new tab')
       },
-      {
+    ];
+    const item = target && target.item;
+    if (item && isRecentSiteTracked(item) && Array.isArray(item.updateHistory) && item.updateHistory.length) {
+      options.push({
+        action: RECENT_CONTEXT_MENU_UNDO_UPDATE_VALUE,
+        value: RECENT_CONTEXT_MENU_UNDO_UPDATE_VALUE,
+        label: t('recent_undo_tracking_update', 'Undo last tracking update'),
+        dividerBefore: true
+      });
+    }
+    options.push({
         action: RECENT_CONTEXT_MENU_REMOVE_VALUE,
         value: RECENT_CONTEXT_MENU_REMOVE_VALUE,
         label: target && target.item
           ? getRecentDismissTooltip(target.item)
           : t('recent_dismiss_tooltip', 'Remove'),
         dividerBefore: true
-      }
-    ];
+      });
+    return options;
   }
 
   function isRecentContextMenuOpen() {
@@ -8078,6 +8089,38 @@
     });
   }
 
+  function undoRecentSiteUpdate(item) {
+    const normalizedItem = normalizeRecentSiteRecord(item, { ignoreBlacklist: true });
+    const result = typeof NEWTAB_RECENT_STORE.undoPinnedRecentSiteUpdate === 'function'
+      ? NEWTAB_RECENT_STORE.undoPinnedRecentSiteUpdate(
+        pinnedRecentSites,
+        normalizedItem && normalizedItem.url,
+        getRecentStoreOptions()
+      )
+      : { changed: false, reason: 'unavailable', items: pinnedRecentSites.slice() };
+    if (!result.changed) {
+      return Promise.resolve({ undone: false, reason: result.reason });
+    }
+    return writePinnedRecentSites(result.items).then((savedItems) => {
+      recentRenderSignature = '';
+      renderRecentSites(recentSourceItems);
+      return { undone: true, reason: 'undone', items: savedItems };
+    });
+  }
+
+  function undoRecentSiteUpdateFromContextMenu(item) {
+    return undoRecentSiteUpdate(item).then((result) => {
+      showToast(
+        result && result.undone
+          ? t('recent_undo_tracking_update_success', 'Tracking update undone')
+          : t('recent_undo_tracking_update_failed', 'Unable to undo this update'),
+        !(result && result.undone)
+      );
+    }).catch(() => {
+      showToast(t('recent_undo_tracking_update_failed', 'Unable to undo this update'), true);
+    });
+  }
+
   function handleRecentContextMenuAction(actionValue) {
     const action = String(actionValue || '');
     const target = recentContextMenuTarget;
@@ -8087,6 +8130,10 @@
     }
     if (action === NEWTAB_CONTEXT_MENU_OPEN_VALUE) {
       openExternalNewTabUrl(target.item.url, 'newTab');
+      return;
+    }
+    if (action === RECENT_CONTEXT_MENU_UNDO_UPDATE_VALUE) {
+      undoRecentSiteUpdateFromContextMenu(target.item);
       return;
     }
     if (action !== RECENT_CONTEXT_MENU_REMOVE_VALUE) {
@@ -9572,6 +9619,8 @@
     bindCursorTooltip,
     hideCursorTooltip,
     openUrl: openUrlFromNewtabCard,
+    acknowledgeUpdate: acknowledgeRecentSiteUpdate,
+    rememberTrackingTarget: rememberRecentTrackingTarget,
     togglePinned: togglePinnedRecentSite,
     toggleTracking: toggleTrackedRecentSite,
     onItemContextMenu: handleRecentCardContextMenu
@@ -11910,6 +11959,21 @@
     return NEWTAB_RECENT_STORE.isSameRecentSite(a, b, getRecentStoreOptions());
   }
 
+  function findPinnedRecentSiteIndex(item) {
+    const urlKey = getRecentSiteUrlKey(item);
+    if (urlKey) {
+      const exactIndex = pinnedRecentSites.findIndex((pinnedItem) =>
+        getRecentSiteUrlKey(pinnedItem) === urlKey
+      );
+      if (exactIndex >= 0) return exactIndex;
+    }
+    const matchingIndexes = pinnedRecentSites.reduce((indexes, pinnedItem, index) => {
+      if (isSameRecentSite(pinnedItem, item)) indexes.push(index);
+      return indexes;
+    }, []);
+    return matchingIndexes.length === 1 ? matchingIndexes[0] : -1;
+  }
+
   function normalizePinnedRecentSites(items) {
     return NEWTAB_RECENT_STORE.normalizePinnedRecentSites(items, getRecentStoreOptions());
   }
@@ -11930,12 +11994,12 @@
   }
 
   function isRecentSitePinned(item) {
-    return pinnedRecentSites.some((pinnedItem) => isSameRecentSite(pinnedItem, item));
+    return findPinnedRecentSiteIndex(item) >= 0;
   }
 
   function isRecentSiteTracked(item) {
-    const pinnedItem = pinnedRecentSites.find((candidate) => isSameRecentSite(candidate, item));
-    return Boolean(pinnedItem && pinnedItem.trackingEnabled === true);
+    const pinnedIndex = findPinnedRecentSiteIndex(item);
+    return Boolean(pinnedIndex >= 0 && pinnedRecentSites[pinnedIndex].trackingEnabled === true);
   }
 
   function mergeRecentSitesWithPinned(items, limit) {
@@ -11953,7 +12017,7 @@
     if (!normalizedItem) {
       return Promise.resolve({ pinned: false, limitReached: false });
     }
-    const existingIndex = pinnedRecentSites.findIndex((pinnedItem) => isSameRecentSite(pinnedItem, normalizedItem));
+    const existingIndex = findPinnedRecentSiteIndex(normalizedItem);
     if (existingIndex >= 0) {
       const nextItems = pinnedRecentSites.filter((_, index) => index !== existingIndex);
       return writePinnedRecentSites(nextItems).then((savedItems) => {
@@ -11989,9 +12053,7 @@
     if (!normalizedItem) {
       return Promise.resolve({ pinned: false, tracking: false, limitReached: false });
     }
-    const existingIndex = pinnedRecentSites.findIndex((pinnedItem) =>
-      isSameRecentSite(pinnedItem, normalizedItem)
-    );
+    const existingIndex = findPinnedRecentSiteIndex(normalizedItem);
     let nextItems;
     let tracking;
     if (existingIndex >= 0) {
@@ -12026,6 +12088,37 @@
         limitReached: false,
         items: savedItems
       };
+    });
+  }
+
+  function acknowledgeRecentSiteUpdate(item) {
+    const normalizedItem = normalizeRecentSiteRecord(item, { ignoreBlacklist: true });
+    if (!normalizedItem) {
+      return Promise.resolve(false);
+    }
+    const existingIndex = findPinnedRecentSiteIndex(normalizedItem);
+    if (existingIndex < 0 || pinnedRecentSites[existingIndex].updatePending !== true) {
+      return Promise.resolve(false);
+    }
+    const nextItems = pinnedRecentSites.map((pinnedItem, index) => (
+      index === existingIndex
+        ? { ...pinnedItem, updatePending: false }
+        : pinnedItem
+    ));
+    return writePinnedRecentSites(nextItems).then(() => {
+      recentRenderSignature = '';
+      renderRecentSites(recentSourceItems);
+      return true;
+    });
+  }
+
+  function rememberRecentTrackingTarget(item) {
+    if (!item || !item.url || !isRecentSiteTracked(item)) {
+      return false;
+    }
+    return sendRuntimeMessage({
+      action: 'rememberPinnedRecentTrackingTarget',
+      url: String(item.url)
     });
   }
 

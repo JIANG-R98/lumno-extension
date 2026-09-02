@@ -1848,7 +1848,32 @@
     "message": "停止追蹤"
   },
   "recent_replace_pinned_url_with_current": {
-    "message": "用目前頁面取代置頂連結"
+    "message": "將此追蹤卡片更新為目前頁面"
+  },
+  "recent_pin_and_track_current_page": { "message": "置頂並追蹤目前頁面" },
+  "recent_pin_and_track_current_page_limit": { "message": "置頂並追蹤目前頁面（已達 3 個上限）" },
+  "recent_tracked_page_is_current": { "message": "目前頁面已是此卡片的追蹤連結" },
+  "recent_current_page_already_pinned_tracked": { "message": "目前頁面已置頂並處於追蹤狀態" },
+  "recent_update_feedback_success": { "message": "追蹤卡片連結已更新" },
+  "recent_add_tracking_feedback_success": { "message": "已置頂並開始追蹤目前頁面" },
+  "recent_enable_tracking_feedback_success": { "message": "已開始追蹤這個置頂頁面" },
+  "recent_add_tracking_feedback_already_tracked": { "message": "目前頁面已置頂並處於追蹤狀態" },
+  "recent_add_tracking_feedback_limit": { "message": "請先取消一個置頂卡片後再新增" },
+  "recent_update_feedback_same_url": { "message": "目前頁面已經是這張追蹤卡片的連結" },
+  "recent_update_feedback_ambiguous": { "message": "無法確定要更新的卡片，請從目標卡片重新開啟" },
+  "recent_update_feedback_source_missing": { "message": "原追蹤卡片已不存在，請重新設定追蹤" },
+  "recent_update_feedback_not_tracked": { "message": "目前頁面沒有可更新的追蹤卡片" },
+  "recent_update_feedback_failed": { "message": "更新追蹤卡片失敗，請再試一次" },
+  "recent_update_preview_title": { "message": "確認更新追蹤卡片" },
+  "recent_update_preview_original": { "message": "目前追蹤卡片" },
+  "recent_update_preview_new": { "message": "將替換為目前頁面" },
+  "recent_update_preview_cancel": { "message": "取消" },
+  "recent_update_preview_confirm": { "message": "確認更新" },
+  "recent_undo_tracking_update": { "message": "復原上一次追蹤更新" },
+  "recent_undo_tracking_update_success": { "message": "已復原上一次追蹤更新" },
+  "recent_undo_tracking_update_failed": { "message": "無法復原此次更新" },
+  "recent_update_badge": {
+    "message": "更新"
   },
   "recent_pin_limit": {
     "message": "最多置頂 3 個"

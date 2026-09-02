@@ -1,6 +1,8 @@
 import {
+  useEffect,
   useLayoutEffect,
   useRef,
+  useState,
   type FocusEvent as ReactFocusEvent,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
@@ -22,6 +24,13 @@ export interface RecentSiteItem {
   lastVisitTime?: string | number;
   visitCount?: string | number;
   trackingEnabled?: boolean;
+  updatePending?: boolean;
+  updateHistory?: Array<{
+    url?: string;
+    title?: string;
+    updatedAt?: string | number;
+    [key: string]: unknown;
+  }>;
   [key: string]: unknown;
 }
 
@@ -122,6 +131,10 @@ export interface RecentSitesViewOptions {
     url: string,
     options: { openInBackgroundTab: boolean }
   ) => void;
+  acknowledgeUpdate?: (
+    item: RecentSiteItem
+  ) => unknown | Promise<unknown>;
+  rememberTrackingTarget?: (item: RecentSiteItem) => unknown;
   bindCursorTooltip?: (
     target: HTMLElement,
     getText: () => string,
@@ -214,6 +227,12 @@ interface NormalizedRecentSitesOptions {
     RecentSitesViewOptions['hideTopActionTooltip']
   >;
   openUrl: NonNullable<RecentSitesViewOptions['openUrl']>;
+  acknowledgeUpdate: NonNullable<
+    RecentSitesViewOptions['acknowledgeUpdate']
+  >;
+  rememberTrackingTarget: NonNullable<
+    RecentSitesViewOptions['rememberTrackingTarget']
+  >;
   bindCursorTooltip: NonNullable<
     RecentSitesViewOptions['bindCursorTooltip']
   >;
@@ -268,7 +287,11 @@ export function getRecentSitesSignature(items: RecentSiteItem[]): string {
       : '';
     const visitCount = item?.visitCount ? String(item.visitCount) : '';
     const trackingEnabled = item?.trackingEnabled === true ? 'tracked' : '';
-    return `${index}::${url}::${title}::${siteName}::${lastVisitTime}::${visitCount}::${trackingEnabled}`;
+    const updatePending = item?.updatePending === true ? 'updated' : '';
+    const updateHistory = Array.isArray(item?.updateHistory)
+      ? item.updateHistory.map((entry) => `${entry?.url || ''}@${entry?.updatedAt || ''}`).join('|')
+      : '';
+    return `${index}::${url}::${title}::${siteName}::${lastVisitTime}::${visitCount}::${trackingEnabled}::${updatePending}::${updateHistory}`;
   }).join('\n');
 }
 
@@ -399,6 +422,14 @@ function normalizeOptions(
     openUrl: typeof rawOptions.openUrl === 'function'
       ? rawOptions.openUrl
       : (url) => navigateToUrl(url),
+    acknowledgeUpdate:
+      typeof rawOptions.acknowledgeUpdate === 'function'
+        ? rawOptions.acknowledgeUpdate
+        : () => Promise.resolve(false),
+    rememberTrackingTarget:
+      typeof rawOptions.rememberTrackingTarget === 'function'
+        ? rawOptions.rememberTrackingTarget
+        : () => false,
     bindCursorTooltip:
       typeof rawOptions.bindCursorTooltip === 'function'
         ? rawOptions.bindCursorTooltip
@@ -433,6 +464,7 @@ function RecentSiteCard({
   const actionTextRef = useRef<HTMLSpanElement>(null);
   const pinButtonRef = useRef<HTMLButtonElement>(null);
   const trackingButtonRef = useRef<HTMLButtonElement>(null);
+  const updateAcknowledgedRef = useRef(false);
   const isCardPointerActiveRef = useRef(false);
   const hasNavigateAttemptedRef = useRef(false);
   const tooltipSuppressedRef = useRef(false);
@@ -472,6 +504,8 @@ function RecentSiteCard({
   const shouldEager = index < options.getCurrentRecentCount();
   const initiallyPinned = options.isPinned(item);
   const initiallyTracked = options.isTracked(item);
+  const updatePending = item.updatePending === true;
+  const [updateBadgeVisible, setUpdateBadgeVisible] = useState(updatePending);
   const immediateTheme = options.getImmediateThemeForSuggestion({
     type: 'history',
     url: faviconPageUrl,
@@ -482,6 +516,11 @@ function RecentSiteCard({
       ? options.toggleTracking(item)
       : options.togglePinned(item)
   );
+
+  useEffect(() => {
+    updateAcknowledgedRef.current = false;
+    setUpdateBadgeVisible(updatePending);
+  }, [itemUrl, updatePending]);
 
   function clearRollbackTimer(): void {
     if (!rollbackTimerRef.current) {
@@ -593,6 +632,22 @@ function RecentSiteCard({
     hasNavigateAttemptedRef.current = true;
     if (!hoverLockedRef.current) {
       card.classList.remove(ROLLBACK_CLASS_NAME);
+    }
+    if (initiallyTracked) {
+      try {
+        options.rememberTrackingTarget(item);
+      } catch {
+        // Navigation should still proceed if recording the source tab fails.
+      }
+    }
+    if (updatePending && !updateAcknowledgedRef.current) {
+      updateAcknowledgedRef.current = true;
+      setUpdateBadgeVisible(false);
+      try {
+        void Promise.resolve(options.acknowledgeUpdate(item)).catch(() => {});
+      } catch {
+        // Navigation should still proceed if persisting the read state fails.
+      }
     }
     const openInBackgroundTab = shouldOpenUrlInBackground(event);
     if (!openInBackgroundTab) {
@@ -885,6 +940,7 @@ function RecentSiteCard({
         title: titleText
       })}
       data-cursor-tooltip={safeTitleText}
+      data-recent-update-pending={updateBadgeVisible ? 'true' : undefined}
       onPointerDown={handlePointerDown}
       onPointerCancel={() => {
         isCardPointerActiveRef.current = false;
@@ -910,6 +966,13 @@ function RecentSiteCard({
     >
       <div className="x-nt-recent-card-visual">
         <div className="x-nt-recent-inner">
+          {updateBadgeVisible ? (
+            <span
+              className="x-nt-recent-update-badge"
+            >
+              {options.t('recent_update_badge', '更新')}
+            </span>
+          ) : null}
           <div className="x-nt-recent-header">
             <img
               ref={faviconRef}

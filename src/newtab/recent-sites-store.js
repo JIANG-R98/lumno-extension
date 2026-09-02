@@ -9,6 +9,7 @@
   const DEFAULT_HIDDEN_KEY = '_x_extension_newtab_hidden_recent_sites_2026_unique_';
   const DEFAULT_MAX_PINNED = 3;
   const DEFAULT_MAX_HIDDEN = 60;
+  const DEFAULT_MAX_UPDATE_HISTORY = 10;
 
   function normalizeRecentCount(value) {
     const parsed = Number.parseInt(value, 10);
@@ -82,6 +83,35 @@
     return normalizeHost(rawHost || '');
   }
 
+  function normalizeRecentUpdateHistory(items, options) {
+    const opts = options && typeof options === 'object' ? options : {};
+    const maxHistory = Number.isFinite(Number(opts.maxUpdateHistory))
+      ? Math.max(0, Number(opts.maxUpdateHistory))
+      : DEFAULT_MAX_UPDATE_HISTORY;
+    if (!Array.isArray(items) || maxHistory <= 0) return [];
+    const normalized = [];
+    for (let index = 0; index < items.length && normalized.length < maxHistory; index += 1) {
+      const item = items[index];
+      if (!item || !item.url) continue;
+      const url = String(item.url).trim();
+      const host = getRecentSiteHostKey(item, opts);
+      if (!url || !host) continue;
+      normalized.push({
+        title: sanitizeDisplayText(item.title || item.siteName || host || url, opts),
+        url,
+        host,
+        siteName: sanitizeDisplayText(
+          item.siteName || getSiteDisplayName(host, item.title || '', opts) || host,
+          opts
+        ),
+        lastVisitTime: Math.max(0, Number(item.lastVisitTime) || 0),
+        visitCount: Math.max(0, Number(item.visitCount) || 0),
+        updatedAt: Math.max(0, Number(item.updatedAt) || 0)
+      });
+    }
+    return normalized;
+  }
+
   function normalizeRecentSiteItem(item, options) {
     const opts = options && typeof options === 'object' ? options : {};
     const ignoreBlacklist = opts.ignoreBlacklist === true;
@@ -106,7 +136,9 @@
       lastVisitTime: Number(item.lastVisitTime) || 0,
       visitCount: Number(item.visitCount) || 0,
       pinnedAt: Number(item.pinnedAt) || 0,
-      trackingEnabled: item.trackingEnabled === true
+      trackingEnabled: item.trackingEnabled === true,
+      updatePending: item.updatePending === true,
+      updateHistory: normalizeRecentUpdateHistory(item.updateHistory, opts)
     };
   }
 
@@ -138,8 +170,9 @@
       if (!nextItem) {
         continue;
       }
+      const nextUrlKey = getRecentSiteUrlKey(nextItem);
       const duplicated = normalized.some((existingItem) =>
-        isSameRecentSite(existingItem, nextItem, opts)
+        getRecentSiteUrlKey(existingItem) === nextUrlKey
       );
       if (duplicated) {
         continue;
@@ -150,6 +183,38 @@
       }
     }
     return normalized;
+  }
+
+  function undoPinnedRecentSiteUpdate(items, currentUrl, options) {
+    const opts = options && typeof options === 'object' ? options : {};
+    const normalizedItems = normalizePinnedRecentSites(items, opts);
+    const url = String(currentUrl || '').trim();
+    const index = normalizedItems.findIndex((item) => getRecentSiteUrlKey(item) === url);
+    if (index < 0) return { changed: false, reason: 'not-pinned', items: normalizedItems };
+    const currentItem = normalizedItems[index];
+    const history = Array.isArray(currentItem.updateHistory) ? currentItem.updateHistory : [];
+    const previous = history[0];
+    if (!previous) return { changed: false, reason: 'no-history', items: normalizedItems };
+    const restored = normalizeRecentSiteItem(previous, { ...opts, ignoreBlacklist: true });
+    if (!restored) return { changed: false, reason: 'invalid-history', items: normalizedItems };
+    const nextItems = normalizedItems.slice();
+    nextItems[index] = {
+      ...currentItem,
+      title: restored.title,
+      url: restored.url,
+      host: restored.host,
+      siteName: restored.siteName,
+      lastVisitTime: restored.lastVisitTime,
+      visitCount: restored.visitCount,
+      updateHistory: history.slice(1),
+      updatePending: true
+    };
+    return {
+      changed: true,
+      reason: 'undone',
+      index,
+      items: normalizePinnedRecentSites(nextItems, opts)
+    };
   }
 
   function normalizeHiddenRecentSiteEntry(item) {
@@ -329,7 +394,10 @@
         }
       }
       const hostKey = getRecentSiteHostKey(normalized, opts);
-      if ((urlKey && seenUrls.has(urlKey)) || (hostKey && seenHosts.has(hostKey))) {
+      if (
+        (urlKey && seenUrls.has(urlKey)) ||
+        (!isPinned && hostKey && seenHosts.has(hostKey))
+      ) {
         return false;
       }
       if (urlKey) {
@@ -470,9 +538,12 @@
     DEFAULT_HIDDEN_KEY,
     DEFAULT_MAX_PINNED,
     DEFAULT_MAX_HIDDEN,
+    DEFAULT_MAX_UPDATE_HISTORY,
     normalizeRecentCount,
     normalizeRecentSiteItem,
+    normalizeRecentUpdateHistory,
     normalizePinnedRecentSites,
+    undoPinnedRecentSiteUpdate,
     normalizeHiddenRecentSiteEntry,
     normalizeHiddenRecentSites,
     loadPinnedRecentSites,

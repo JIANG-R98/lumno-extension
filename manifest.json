@@ -55,6 +55,11 @@
          "run_at": "document_idle"
       },
       {
+         "matches": [ "\u003Call_urls>" ],
+         "js": [ "src/content/pinned-recent-update-feedback.js" ],
+         "run_at": "document_idle"
+      },
+      {
          "matches": [
             "*://*.iqiyi.com/*",
             "*://*.iq.com/*",
