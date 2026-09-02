@@ -520,7 +520,7 @@
   "recent_mode_most": {
     "message": "最常访问"
   },
-  "recent_mode_tracking": { "message": "追踪视图" },
+  "recent_mode_tracking": { "message": "已关联" },
   "settings_toggle_on": {
     "message": "开启"
   },
@@ -1302,7 +1302,7 @@
   "recent_heading_most": {
     "message": "最常访问"
   },
-  "recent_heading_tracking": { "message": "正在追踪" },
+  "recent_heading_tracking": { "message": "已关联" },
   "bookmarks_heading": {
     "message": "书签"
   },

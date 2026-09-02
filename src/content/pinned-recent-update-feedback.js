@@ -2,7 +2,9 @@
   const api = factory();
   if (typeof module === 'object' && module.exports) module.exports = api;
   root.LumnoPinnedRecentUpdateFeedback = api;
-  if (root.document && root.chrome) api.attach({ windowObj: root, chromeApi: root.chrome });
+  if (root.document && root.chrome && !root.LumnoDisablePinnedRecentUpdateAutoAttach) {
+    api.attach({ windowObj: root, chromeApi: root.chrome });
+  }
 })(typeof globalThis !== 'undefined' ? globalThis : this, function() {
   'use strict';
 
@@ -42,18 +44,22 @@
     const windowObj = config.windowObj || globalThis.window;
     const documentObj = config.documentObj || (windowObj && windowObj.document);
     const chromeApi = config.chromeApi || (windowObj && windowObj.chrome);
-    const timings = {
+    const embedded = config.embedded === true;
+    const mountTarget = config.mountTarget || (documentObj && documentObj.documentElement);
+    const manualPlayback = config.manualPlayback === true;
+    const baseTimings = {
       breathe: Math.max(0, Number(config.previewTimings && config.previewTimings.breathe) || 1050),
       enter: Math.max(0, Number(config.previewTimings && config.previewTimings.enter) || 240),
       swap: Math.max(0, Number(config.previewTimings && config.previewTimings.commit) || 560),
       exit: Math.max(0, Number(config.previewTimings && config.previewTimings.exit) || 220)
     };
     if (config.previewTimings && config.previewTimings.instant === true) {
-      timings.breathe = 0;
-      timings.enter = 0;
-      timings.swap = 0;
-      timings.exit = 0;
+      baseTimings.breathe = 0;
+      baseTimings.enter = 0;
+      baseTimings.swap = 0;
+      baseTimings.exit = 0;
     }
+    const timings = { ...baseTimings };
     let host;
     let surface;
     let title;
@@ -69,6 +75,7 @@
     let primary;
     let pendingReady;
     let activeChange = null;
+    let flowRevision = 0;
     let previousFocus = null;
     let timerIds = [];
 
@@ -94,33 +101,51 @@
       else timerIds.push(windowObj.setTimeout(callback, delay));
     }
 
+    function syncTimingStyles() {
+      if (!host || !host.style) return;
+      host.style.setProperty('--lumno-flow-breathe', `${timings.breathe}ms`);
+      host.style.setProperty('--lumno-flow-enter', `${timings.enter}ms`);
+      host.style.setProperty('--lumno-flow-swap', `${timings.swap}ms`);
+      host.style.setProperty('--lumno-flow-exit', `${timings.exit}ms`);
+    }
+
+    function setPlaybackRate(value) {
+      const rate = Math.min(4, Math.max(.1, Number(value) || 1));
+      Object.keys(baseTimings).forEach((key) => {
+        timings[key] = Math.round(baseTimings[key] / rate);
+      });
+      syncTimingStyles();
+      return rate;
+    }
+
     function ensureSurface() {
       if (surface && surface.isConnected) return true;
-      if (!documentObj || !documentObj.documentElement) return false;
+      if (!documentObj || !documentObj.documentElement || !mountTarget) return false;
       host = documentObj.getElementById(HOST_ID) || documentObj.createElement('div');
       host.id = HOST_ID;
-      if (!host.isConnected) documentObj.documentElement.appendChild(host);
+      if (!host.isConnected) mountTarget.appendChild(host);
+      syncTimingStyles();
       const shadow = host.shadowRoot || host.attachShadow({ mode: 'open' });
       shadow.textContent = '';
       const style = documentObj.createElement('style');
       style.textContent = `
-        :host { all: initial; position: fixed; inset: 0; z-index: 2147483647; pointer-events: none; }
+        :host { all: initial; position: ${embedded ? 'absolute' : 'fixed'}; inset: 0; z-index: ${embedded ? '2' : '2147483647'}; pointer-events: none; }
         .surface { position: absolute; inset: 0; display: grid; place-items: center; padding: 12px; box-sizing: border-box; pointer-events: auto; background: rgba(15,23,42,.18); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); font-family: "Open Sans","PingFang SC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; opacity: 1; transition: opacity 220ms ease, background 220ms ease; }
         .surface[hidden] { display: none; }
-        .surface[data-state="entering"], .surface[data-state="leaving"] { opacity: 0; background: transparent; }
+        .surface[data-state="entering"], .surface[data-state="leaving"] { opacity: 0; background: transparent; transition-duration: var(--lumno-flow-exit,220ms); }
         .glow { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: linear-gradient(to bottom,rgba(20,160,253,.46),transparent 128px),linear-gradient(to top,rgba(20,160,253,.42),transparent 128px),linear-gradient(to right,rgba(20,160,253,.42),transparent 128px),linear-gradient(to left,rgba(20,160,253,.42),transparent 128px); box-shadow: inset 0 0 34px rgba(20,160,253,.42),inset 0 0 112px rgba(133,205,254,.22); }
-        .surface[data-phase="breathing"] .glow { animation: viewport-breathe 1050ms cubic-bezier(.22,.61,.36,1) both; }
+        .surface[data-phase="breathing"] .glow { animation: viewport-breathe var(--lumno-flow-breathe,1050ms) cubic-bezier(.22,.61,.36,1) both; }
         .surface[data-phase="breathing"] .panel { opacity: 0; transform: translateY(20px) scale(.96); }
-        .surface[data-phase="card-enter"] .panel { animation: panel-enter 240ms cubic-bezier(.22,1,.36,1) both; }
+        .surface[data-phase="card-enter"] .panel { animation: panel-enter var(--lumno-flow-enter,240ms) cubic-bezier(.22,1,.36,1) both; }
         .surface[data-phase="transient"] { pointer-events: none; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
         .surface[data-phase="transient"] .panel { display: none; }
-        .surface[data-phase="transient"] .glow { animation: viewport-breathe 1050ms cubic-bezier(.22,.61,.36,1) both; }
+        .surface[data-phase="transient"] .glow { animation: viewport-breathe var(--lumno-flow-breathe,1050ms) cubic-bezier(.22,.61,.36,1) both; }
         .panel { --home-card-width: min(251px, calc((min(96vw, 1040px) - 36px) / 4)); position: relative; width: min(720px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); padding: 24px; box-sizing: border-box; border-radius: 30px; overflow-x: hidden; overflow-y: auto; color: #172033; background: radial-gradient(120% 160% at 12% -24%,rgba(255,255,255,.78),rgba(255,255,255,.44) 38%,rgba(241,245,249,.26)),linear-gradient(135deg,rgba(255,255,255,.48),rgba(226,232,240,.28)); box-shadow: 0 26px 82px rgba(15,23,42,.22),0 5px 18px rgba(15,23,42,.08),inset 0 1px 0 rgba(255,255,255,.86),inset 0 0 0 1px rgba(255,255,255,.30); backdrop-filter: blur(56px) saturate(210%); -webkit-backdrop-filter: blur(56px) saturate(210%); transform: translateY(0) scale(1); transition: opacity 220ms ease,transform 420ms cubic-bezier(.22,1,.36,1); }
         .surface[data-state="entering"] .panel { opacity: 0; transform: translateY(20px) scale(.96); }
         .surface[data-state="leaving"] .panel { opacity: 0; transform: translateY(-12px) scale(.98); }
         h2 { margin: 0 0 18px; text-align: center; font-size: 16px; line-height: 1.4; font-weight: 650; }
         .change { display: grid; grid-template-columns: minmax(0,1fr) 34px minmax(0,1fr); align-items: stretch; gap: 8px; }
-        .record { min-width: 0; padding: 13px 14px; border-radius: 18px; background: rgba(255,255,255,.42); box-shadow: inset 0 1px 0 rgba(255,255,255,.72),inset 0 0 0 1px rgba(15,23,42,.06); transition: opacity 260ms ease,transform 520ms cubic-bezier(.22,1,.36,1),filter 260ms ease; }
+        .record { min-width: 0; padding: 13px 14px; border-radius: 18px; background: rgba(255,255,255,.42); box-shadow: inset 0 1px 0 rgba(255,255,255,.72),inset 0 0 0 1px rgba(15,23,42,.06); transition: opacity var(--lumno-flow-swap,560ms) ease,transform var(--lumno-flow-swap,560ms) cubic-bezier(.22,1,.36,1),filter var(--lumno-flow-swap,560ms) ease; }
         .record--new { position: relative; z-index: 2; background: linear-gradient(135deg,rgba(37,99,235,.12),rgba(255,255,255,.46)); }
         .record-label { margin-bottom: 5px; color: #547086; font-size: 11px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; }
         .record-title,.record-url { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -162,6 +187,7 @@
         @media (max-width:640px) { .panel { --home-card-width:100%;padding:18px; } .change { grid-template-columns:minmax(0,1fr); } .arrow { transform:rotate(90deg); } .actions { justify-content:stretch; } .x-lumno-action-button { flex:1; } }
         @media (prefers-color-scheme:dark) { .panel { color:#edf7ff;background:linear-gradient(135deg,rgba(30,41,59,.86),rgba(15,23,42,.82)); } .record{background:rgba(133,205,254,.07)} .record-title,.card-site{color:#edf7ff}.record-label,.record-url,.card-title,.card-footer{color:#9bb5c8}.card-inner{background:rgba(20,31,42,.82)}.x-lumno-action-button--secondary{background:#1e293b;color:#f8fafc;border-color:rgba(148,163,184,.18)} }
         @media (prefers-reduced-motion:reduce) { .glow,.panel,.record,.card-content,.home-card,.actions { animation-duration:1ms!important;transition-duration:1ms!important; } }
+        ${embedded ? '.panel { width:min(720px,calc(100% - 24px));max-height:calc(100% - 24px); }' : ''}
       `;
       surface = documentObj.createElement('div');
       surface.className = 'surface';
@@ -175,7 +201,7 @@
       secondary = surface.querySelector('.secondary'); primary = surface.querySelector('.primary');
       surface.querySelector('.old-label').textContent = ui('recent_update_preview_original','Current tracked card');
       surface.querySelector('.new-label').textContent = ui('recent_update_preview_new','Replace with');
-      surface.querySelector('.card-status').textContent = ui('recent_mode_tracking','Tracking');
+      surface.querySelector('.card-status').textContent = ui('recent_mode_tracking','Linked');
       secondary.addEventListener('click', handleSecondary);
       primary.addEventListener('click', handlePrimary);
       documentObj.addEventListener('keydown', handleKeydown, true);
@@ -203,6 +229,7 @@
 
     function close() {
       if (!surface || surface.hidden) return;
+      flowRevision += 1;
       clearTimers();
       if (pendingReady) {
         const resolveReady = pendingReady;
@@ -232,6 +259,7 @@
 
     function requestUndo() {
       if (!activeChange || !chromeApi || !chromeApi.runtime || !chromeApi.runtime.sendMessage) return;
+      const requestRevision = flowRevision;
       surface.dataset.phase = 'saving';
       secondary.disabled = true; primary.disabled = true;
       chromeApi.runtime.sendMessage({
@@ -239,6 +267,7 @@
         cardId: activeChange.cardId,
         expectedUrl: activeChange.current && activeChange.current.url
       }, (result) => {
+        if (requestRevision !== flowRevision) return;
         secondary.disabled = false; primary.disabled = false;
         if (chromeApi.runtime.lastError || !result || result.ok !== true) {
           surface.dataset.phase = 'error';
@@ -282,8 +311,43 @@
       }
     }
 
-    function showPreview(payload) {
+    function resolvePreviewReady(value) {
+      const done = pendingReady;
+      pendingReady = null;
+      if (done) done(Boolean(value));
+    }
+
+    function getPhase() {
+      return surface && !surface.hidden ? String(surface.dataset.phase || '') : '';
+    }
+
+    function advancePreview() {
+      if (!surface || surface.hidden || !activeChange) return '';
+      clearTimers();
+      const phase = getPhase();
+      if (phase === 'breathing') surface.dataset.phase = 'card-enter';
+      else if (phase === 'card-enter') surface.dataset.phase = 'old-out';
+      else if (phase === 'old-out') surface.dataset.phase = 'new-in';
+      else if (phase === 'new-in') {
+        surface.dataset.phase = 'saving';
+        resolvePreviewReady(true);
+      } else if (phase === 'saving') {
+        show({
+          action: ACTION,
+          ok: true,
+          reason: 'updated',
+          cardId: activeChange.cardId,
+          previous: activeChange.previous,
+          current: activeChange.current
+        });
+      } else if (phase === 'success') handlePrimary();
+      else if (phase === 'undo-confirm') requestUndo();
+      return getPhase();
+    }
+
+    function showPreview(payload, playbackOptions) {
       if (!ensureSurface()) return Promise.resolve(false);
+      flowRevision += 1;
       clearTimers();
       if (pendingReady) pendingReady(false);
       previousFocus = documentObj.activeElement;
@@ -297,6 +361,10 @@
       void surface.offsetWidth;
       return new Promise((resolve) => {
         pendingReady = resolve;
+        const useManualPlayback = playbackOptions && typeof playbackOptions.manual === 'boolean'
+          ? playbackOptions.manual
+          : manualPlayback;
+        if (useManualPlayback) return;
         later(() => {
           surface.dataset.phase = 'card-enter';
           later(() => {
@@ -305,9 +373,7 @@
               surface.dataset.phase = 'new-in';
               later(() => {
                 surface.dataset.phase = 'saving';
-                const done = pendingReady;
-                pendingReady = null;
-                if (done) done(true);
+                resolvePreviewReady(true);
               }, timings.swap);
             }, Math.round(timings.swap * .45));
           }, timings.enter);
@@ -361,7 +427,15 @@
       return true;
     }
 
-    return Object.freeze({ attach, show, showPreview, close });
+    return Object.freeze({
+      attach,
+      show,
+      showPreview,
+      close,
+      advancePreview,
+      getPhase,
+      setPlaybackRate
+    });
   }
 
   return Object.freeze({ ACTION, PREVIEW_ACTION, UNDO_ACTION, HOST_ID, createFeedbackController, attach(options) { const controller = createFeedbackController(options); controller.attach(); return controller; } });

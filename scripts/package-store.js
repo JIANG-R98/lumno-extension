@@ -19,7 +19,9 @@ const packageRoots = [
 ];
 const developmentOnlyFiles = new Set([
   'src/background/codex-debug-bridge.js',
-  'src/shared/codex-debug-surface.js'
+  'src/shared/codex-debug-surface.js',
+  'src/debug/pinned-recent-update-animation.html',
+  'src/debug/pinned-recent-update-animation.js'
 ]);
 const injectedScriptFiles = [
   'src/background/extension-pages.js',

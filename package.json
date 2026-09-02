@@ -36,6 +36,8 @@
     "test:newtab-shortcut-icon-store": "node scripts/test-newtab-shortcut-icon-store.js",
     "test:newtab-layout": "node scripts/test-newtab-layout.js",
     "test:newtab-tracking-view": "node scripts/test-newtab-tracking-view.js",
+    "test:tracking-update-animation-debug": "node scripts/test-pinned-recent-update-animation-debug.js",
+    "debug:tracking-update-animation": "node scripts/open-pinned-recent-update-animation-debug.js",
     "test:message-router": "node scripts/test-message-router.js",
     "test:codex-debug": "node scripts/test-codex-debug-bridge.js",
     "test:tab-groups": "node scripts/test-background-tab-groups.js",

@@ -3248,7 +3248,7 @@
       ? 'recent_heading_tracking'
       : (currentRecentMode === 'most' ? 'recent_heading_most' : 'recent_heading_latest');
     const fallback = currentRecentMode === 'tracking'
-      ? 'Tracking'
+      ? 'Linked'
       : (currentRecentMode === 'most' ? 'Most visited' : 'Recent visits');
     recentHeading.textContent = t(key, fallback);
   }
@@ -9640,7 +9640,7 @@
       ...(hasTrackedRecentSites() ? [{
         value: 'tracking',
         labelKey: 'recent_mode_tracking',
-        fallback: 'Tracking',
+        fallback: 'Linked',
         iconClass: 'ri-radar-line'
       }] : [])
     ]

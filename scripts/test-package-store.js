@@ -85,11 +85,13 @@ assert(
 );
 const developmentOnlyFiles = [
   'src/background/codex-debug-bridge.js',
-  'src/shared/codex-debug-surface.js'
+  'src/shared/codex-debug-surface.js',
+  'src/debug/pinned-recent-update-animation.html',
+  'src/debug/pinned-recent-update-animation.js'
 ];
 assert(
   developmentOnlyFiles.every((file) => !entries.includes(file)),
-  'store package should exclude development-only Codex debug scripts'
+  'store package should exclude development-only debug tools'
 );
 [
   'newtab.html',

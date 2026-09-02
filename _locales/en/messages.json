@@ -520,7 +520,7 @@
   "recent_mode_most": {
     "message": "Show Most Visited"
   },
-  "recent_mode_tracking": { "message": "Tracking View" },
+  "recent_mode_tracking": { "message": "Linked" },
   "settings_toggle_on": {
     "message": "On"
   },
@@ -1302,7 +1302,7 @@
   "recent_heading_most": {
     "message": "Most Visited"
   },
-  "recent_heading_tracking": { "message": "Tracking" },
+  "recent_heading_tracking": { "message": "Linked" },
   "bookmarks_heading": {
     "message": "Bookmarks"
   },

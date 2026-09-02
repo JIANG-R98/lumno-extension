@@ -7,6 +7,10 @@ const path = require('path');
 const repoRoot = path.resolve(__dirname, '..');
 const source = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8');
 const optionsSource = fs.readFileSync(path.join(repoRoot, 'src/options/options.js'), 'utf8');
+const zhCnMessages = JSON.parse(fs.readFileSync(
+  path.join(repoRoot, '_locales/zh_CN/messages.json'),
+  'utf8'
+));
 
 assert.match(source, /value:\s*'tracking'[\s\S]*?labelKey:\s*'recent_mode_tracking'/,
   'the recent display menu should expose a tracking view when tracked cards exist');
@@ -18,5 +22,7 @@ assert.match(source, /leaveEmptyTrackingView\(\);/,
   'an empty tracking view should fall back to the preferred recent mode');
 assert.doesNotMatch(optionsSource, /recent_mode_tracking/,
   'tracking view should not appear in Appearance settings');
+assert.strictEqual(zhCnMessages.recent_mode_tracking.message, '已关联');
+assert.strictEqual(zhCnMessages.recent_heading_tracking.message, '已关联');
 
 console.log('New Tab tracking-view tests passed.');

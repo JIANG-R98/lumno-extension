@@ -520,7 +520,7 @@
   "recent_mode_most": {
     "message": "よくアクセス"
   },
-  "recent_mode_tracking": { "message": "追跡ビュー" },
+  "recent_mode_tracking": { "message": "関連済み" },
   "settings_toggle_on": {
     "message": "オン"
   },
@@ -1302,7 +1302,7 @@
   "recent_heading_most": {
     "message": "よくアクセス"
   },
-  "recent_heading_tracking": { "message": "追跡中" },
+  "recent_heading_tracking": { "message": "関連済み" },
   "bookmarks_heading": {
     "message": "ブックマーク"
   },

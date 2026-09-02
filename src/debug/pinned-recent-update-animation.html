@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lumno · 关联卡片动效调试台</title>
+  <style>
+    :root { color-scheme: dark; font-family: "Open Sans","PingFang SC",system-ui,sans-serif; background:#0b1018; color:#e8f1f8; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-width:320px; min-height:100vh; background:radial-gradient(circle at 20% -10%,rgba(20,160,253,.13),transparent 32%),#0b1018; }
+    button,select { font:inherit; }
+    .shell { width:min(1440px,100%); margin:auto; padding:24px; }
+    .topbar { display:flex; align-items:flex-end; justify-content:space-between; gap:24px; margin-bottom:18px; }
+    .identity { display:flex; align-items:center; gap:13px; }
+    .mark { display:grid; place-items:center; width:38px; height:38px; border:1px solid rgba(133,205,254,.35); border-radius:12px; background:linear-gradient(145deg,#14a0fd,#85cdfe); color:#062a40; font-weight:800; box-shadow:0 8px 30px rgba(20,160,253,.2); }
+    .eyebrow { margin:0 0 3px; color:#79bde9; font:650 11px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace; letter-spacing:.14em; text-transform:uppercase; }
+    h1 { margin:0; font-size:21px; line-height:1.2; font-weight:650; letter-spacing:-.02em; }
+    .status { display:flex; align-items:center; gap:8px; color:#8da3b5; font:12px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace; }
+    .status::before { content:""; width:7px; height:7px; border-radius:50%; background:#54d39a; box-shadow:0 0 0 4px rgba(84,211,154,.1); }
+    .workspace { display:grid; grid-template-columns:240px minmax(0,1fr); min-height:calc(100vh - 104px); border:1px solid rgba(148,163,184,.14); border-radius:24px; overflow:hidden; background:rgba(17,25,37,.82); box-shadow:0 30px 90px rgba(0,0,0,.28); }
+    .rail { padding:20px; border-right:1px solid rgba(148,163,184,.12); background:rgba(9,15,24,.68); }
+    .rail-title { margin:0 0 12px; color:#8da3b5; font-size:11px; font-weight:650; letter-spacing:.1em; text-transform:uppercase; }
+    .stage-list { display:grid; gap:5px; }
+    .stage { width:100%; padding:9px 10px; border:0; border-radius:10px; background:transparent; color:#93a7b8; text-align:left; cursor:pointer; transition:background .15s,color .15s,transform .15s; }
+    .stage:hover { color:#edf7ff; background:rgba(133,205,254,.08); }
+    .stage[data-active="true"] { color:#fff; background:linear-gradient(90deg,rgba(20,160,253,.2),rgba(20,160,253,.05)); box-shadow:inset 2px 0 #14a0fd; }
+    .stage-index { display:inline-block; width:24px; color:#577187; font:11px ui-monospace,SFMono-Regular,Consolas,monospace; }
+    .main { min-width:0; display:grid; grid-template-rows:auto minmax(520px,1fr); }
+    .controls { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:14px 16px; border-bottom:1px solid rgba(148,163,184,.12); }
+    .field { display:flex; align-items:center; gap:7px; color:#8da3b5; font-size:12px; }
+    select,.control { min-height:34px; border:1px solid rgba(148,163,184,.18); border-radius:10px; background:#182231; color:#edf7ff; padding:0 11px; }
+    .control { cursor:pointer; font-weight:600; }
+    .control:hover { border-color:rgba(133,205,254,.45); background:#1d2a3b; }
+    .control.primary { border-color:#0d82d0; background:linear-gradient(180deg,#20a8ff,#087ecb); color:#041e2f; }
+    .control.primary:hover { filter:brightness(1.06); }
+    .spacer { flex:1; }
+    .phase-readout { min-width:112px; color:#85cdfe; font:12px ui-monospace,SFMono-Regular,Consolas,monospace; text-align:right; }
+    .canvas-wrap { padding:18px; min-width:0; background-image:linear-gradient(rgba(148,163,184,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.035) 1px,transparent 1px); background-size:24px 24px; }
+    .canvas { position:relative; height:100%; min-height:500px; overflow:hidden; border:1px solid rgba(148,163,184,.13); border-radius:18px; background:#f2f5f8; isolation:isolate; }
+    .mock-page { position:absolute; inset:0; padding:24px; background:linear-gradient(180deg,#fff,#eef3f7); color:#233141; }
+    .mock-nav { height:34px; width:100%; border-radius:10px; background:linear-gradient(90deg,#f46b8b 0 92px,#e7edf2 92px); opacity:.78; }
+    .mock-layout { display:grid; grid-template-columns:minmax(0,2.2fr) minmax(180px,.8fr); gap:18px; margin-top:22px; }
+    .mock-video { aspect-ratio:16/9; border-radius:16px; background:linear-gradient(135deg,#ccd8e2,#aabac7); box-shadow:inset 0 0 0 1px rgba(36,54,70,.08); }
+    .mock-copy,.mock-side { display:grid; gap:10px; margin-top:14px; }
+    .line { height:10px; border-radius:99px; background:#d5dfe7; }
+    .line.short { width:58%; }
+    .mock-side { margin:0; }
+    .mock-side .line { height:54px; border-radius:12px; }
+    .hint { position:absolute; left:16px; bottom:14px; color:#718392; font:11px ui-monospace,SFMono-Regular,Consolas,monospace; }
+    @media (max-width:800px) { .shell{padding:12px}.topbar{align-items:flex-start;flex-direction:column}.workspace{grid-template-columns:1fr}.rail{border-right:0;border-bottom:1px solid rgba(148,163,184,.12)}.stage-list{display:flex;overflow:auto}.stage{min-width:132px}.main{grid-template-rows:auto minmax(460px,1fr)}.mock-layout{grid-template-columns:1fr}.mock-side{display:none}.phase-readout{min-width:0}.canvas-wrap{padding:10px} }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="identity"><div class="mark">L</div><div><p class="eyebrow">Motion lab · development only</p><h1>关联卡片更新动效</h1></div></div>
+      <div class="status">使用正式动画控制器</div>
+    </header>
+    <section class="workspace">
+      <aside class="rail">
+        <p class="rail-title">更新流程</p>
+        <div class="stage-list">
+          <button class="stage" data-stage="breathing"><span class="stage-index">01</span>呼吸提示</button>
+          <button class="stage" data-stage="card-enter"><span class="stage-index">02</span>卡片入场</button>
+          <button class="stage" data-stage="old-out"><span class="stage-index">03</span>旧内容抽出</button>
+          <button class="stage" data-stage="new-in"><span class="stage-index">04</span>新内容插入</button>
+          <button class="stage" data-stage="saving"><span class="stage-index">05</span>保存中</button>
+          <button class="stage" data-stage="success"><span class="stage-index">06</span>更新成功</button>
+          <button class="stage" data-stage="undo-confirm"><span class="stage-index">07</span>撤回确认</button>
+          <button class="stage" data-stage="undone"><span class="stage-index">08</span>已撤回</button>
+        </div>
+      </aside>
+      <div class="main">
+        <div class="controls">
+          <label class="field">场景<select data-control="scenario"><option value="episode">同一合集 · 下一集</option><option value="cross">跨视频 · 新内容</option><option value="long">超长标题</option></select></label>
+          <label class="field">速度<select data-control="speed"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label>
+          <span class="spacer"></span>
+          <span class="phase-readout" data-output="phase">breathing</span>
+          <button class="control" data-action="reset" type="button">重置</button>
+          <button class="control" data-action="advance" type="button">下一步</button>
+          <button class="control primary" data-action="replay" type="button">完整重播</button>
+        </div>
+        <div class="canvas-wrap">
+          <div class="canvas" data-animation-canvas>
+            <div class="mock-page" aria-hidden="true"><div class="mock-nav"></div><div class="mock-layout"><div><div class="mock-video"></div><div class="mock-copy"><div class="line"></div><div class="line short"></div></div></div><div class="mock-side"><div class="line"></div><div class="line"></div><div class="line"></div></div></div><div class="hint">模拟内容页面 · 不会写入扩展数据</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script src="pinned-recent-update-animation.js"></script>
+  <script src="../content/pinned-recent-update-feedback.js"></script>
+</body>
+</html>
