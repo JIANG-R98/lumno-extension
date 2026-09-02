@@ -48,6 +48,7 @@ async function run() {
   const host = dom.window.document.getElementById(feedback.HOST_ID);
   const surface = host.shadowRoot.querySelector('.surface');
   assert.strictEqual(surface.dataset.phase, 'success');
+  assert.strictEqual(surface.dataset.completionLayout, 'true');
   assert.strictEqual(surface.dataset.visualVariant, 'homepage-card');
   assert.strictEqual(surface.dataset.celebrate, 'true');
   assert.strictEqual(surface.querySelector('.incoming-title').textContent, 'New episode');
@@ -68,6 +69,7 @@ async function run() {
   undoResponse = { ok: false, reason: 'source-changed' };
   surface.querySelector('.primary').click();
   assert.strictEqual(surface.dataset.phase, 'error');
+  assert.strictEqual(surface.dataset.completionLayout, 'true');
   assert.strictEqual(surface.dataset.celebrate, 'false');
   assert.strictEqual(surface.querySelector('h2').textContent, 'Could not update the tracked card');
 
