@@ -79,6 +79,10 @@ async function run() {
   assert.strictEqual(harness.sent[0].action, tokenModule.SYNC_ACTION);
   assert.strictEqual(harness.sent[0].trackingToken, '');
   assert.strictEqual(
+    harness.sent[0].currentUrl,
+    'https://www.bilibili.com/video/BV-old/?p=1'
+  );
+  assert.strictEqual(
     harness.data.get(tokenModule.PAGE_TOKEN_STORAGE_KEY),
     'trk-11111111111111111111111111111111'
   );
@@ -87,6 +91,10 @@ async function run() {
   harness.intervalListeners[0]();
   await Promise.resolve();
   assert.strictEqual(harness.sent.length, 2);
+  assert.strictEqual(
+    harness.sent[1].currentUrl,
+    'https://www.bilibili.com/video/BV-new/?p=2'
+  );
 
   harness.data.set(tokenModule.PAGE_TOKEN_STORAGE_KEY, 'trk-old');
   harness.chromeApi.runtime.sendMessage = (message, callback) => {

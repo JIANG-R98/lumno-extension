@@ -7321,8 +7321,11 @@ function handleExtensionPageMessage(request, sender, sendResponse) {
         sendResponse({ status: 'ignored' });
         return;
       }
+      const trackingCurrentUrl = typeof PINNED_RECENT_CONTEXT_MENU.getHttpUrl === 'function'
+        ? PINNED_RECENT_CONTEXT_MENU.getHttpUrl(request.currentUrl)
+        : '';
       const trackingSenderTab = sender && sender.tab
-        ? { ...sender.tab, url: sender.url || sender.tab.url }
+        ? { ...sender.tab, url: trackingCurrentUrl || sender.url || sender.tab.url }
         : null;
       pinnedRecentContextMenuController.syncTrackingDocument(
         trackingSenderTab,

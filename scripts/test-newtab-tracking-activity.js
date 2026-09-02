@@ -22,6 +22,8 @@ assert.ok(
     newtabJs.includes("trackingCardId: String(config.trackingCardId || '')") &&
     backgroundJs.includes("case 'rememberPinnedRecentTrackingTarget':") &&
     backgroundJs.includes("case 'syncPinnedRecentTrackingToken':") &&
+    backgroundJs.includes('PINNED_RECENT_CONTEXT_MENU.getHttpUrl(request.currentUrl)') &&
+    backgroundJs.includes('url: trackingCurrentUrl || sender.url || sender.tab.url') &&
     backgroundJs.includes("case 'getPinnedRecentTrackingActivity':") &&
     backgroundJs.includes('pinnedRecentContextMenuController.bindTrackingTab(tab, trackingCardId, targetUrl)'),
   'background card opens should bind only the created tab'

@@ -660,7 +660,14 @@
           if (!tab || !tab.active || (!changeInfo.url && !changeInfo.status && !changeInfo.title)) {
             return trackingTask;
           }
-          return trackingTask.then(() => refreshMenuForActiveTab());
+          return trackingTask.then(() => {
+            if (!changeInfo.url) return refreshMenuForActiveTab();
+            const updatedTab = { ...tab, id: Number(tabId), url: changeInfo.url };
+            return refreshMenuForTab(updatedTab).then((enabled) => {
+              if (menus && typeof menus.refresh === 'function') menus.refresh();
+              return enabled;
+            });
+          });
         });
       }
       if (tabs && tabs.onRemoved && typeof tabs.onRemoved.addListener === 'function') {

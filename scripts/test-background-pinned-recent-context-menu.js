@@ -360,6 +360,39 @@ async function run() {
     original[0].url
   );
   chrome.setActiveTab({
+    id: 11,
+    active: true,
+    url: original[0].url,
+    title: 'Course · Episode 1'
+  });
+  await chrome.events.onShown.emit({ pageUrl: original[0].url }, {
+    id: 11,
+    active: true,
+    url: original[0].url,
+    title: 'Course · Episode 1'
+  });
+  assert.strictEqual(
+    chrome.calls.update.at(-1).changes.title,
+    'This Page Is Already the Tracked Link'
+  );
+  const refreshBeforeSpaUpdate = chrome.calls.refresh;
+  await chrome.events.onUpdated.emit(11, {
+    url: 'https://www.bilibili.com/video/BV-spa/?p=2'
+  }, {
+    id: 11,
+    active: true,
+    url: 'https://www.bilibili.com/video/BV-spa/?p=2',
+    title: 'Course · Episode 2'
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.strictEqual(
+    chrome.calls.update.at(-1).changes.title,
+    'Update This Tracked Card to the Current Page',
+    'an active SPA URL update should refresh the menu without switching tabs'
+  );
+  assert.strictEqual(chrome.calls.update.at(-1).changes.enabled, true);
+  assert.ok(chrome.calls.refresh > refreshBeforeSpaUpdate);
+  chrome.setActiveTab({
     id: 12,
     active: true,
     url: 'https://www.bilibili.com/video/BV-new/?p=7',

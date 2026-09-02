@@ -95,7 +95,8 @@
         try {
           chromeApi.runtime.sendMessage({
             action: SYNC_ACTION,
-            trackingToken: readToken()
+            trackingToken: readToken(),
+            currentUrl: requestLocationHref
           }, (response) => {
             if (chromeApi.runtime.lastError) {
               resolve({ status: 'ignored' });
