@@ -1647,6 +1647,7 @@ const pinnedRecentContextMenuController =
       chromeApi: chrome,
       recentStore: NEWTAB_RECENT_STORE,
       storage: storageArea,
+      sessionStorage: chrome && chrome.storage ? chrome.storage.session : null,
       storageKey: PINNED_RECENT_SITES_STORAGE_KEY
     })
     : null;

@@ -116,6 +116,18 @@ async function testRecentStore() {
   const loadedPinned = await recentStore.loadPinnedRecentSites(storage, options);
   assert.strictEqual(loadedPinned.length, 3);
   assert.deepStrictEqual(loadedPinned.map((item) => item.host), ['a.example', 'a.example', 'b.example']);
+  assert.ok(loadedPinned.every((item) => /^pinned-/.test(item.cardId)));
+  assert.strictEqual(new Set(loadedPinned.map((item) => item.cardId)).size, 3);
+  assert.deepStrictEqual(
+    recentStore.normalizePinnedRecentSites(loadedPinned, options).map((item) => item.cardId),
+    loadedPinned.map((item) => item.cardId),
+    'legacy card ids should stay stable after normalization'
+  );
+  assert.deepStrictEqual(
+    storage.data[recentStore.DEFAULT_PINNED_KEY].map((item) => item.cardId),
+    loadedPinned.map((item) => item.cardId),
+    'legacy card ids should be persisted after the first load'
+  );
   assert.strictEqual(loadedPinned[0].trackingEnabled, true);
   assert.strictEqual(loadedPinned[0].updatePending, true);
   assert.strictEqual(loadedPinned[0].updateHistory.length, 1);
@@ -132,6 +144,7 @@ async function testRecentStore() {
   assert.strictEqual(undonePinned.items[0].url, 'https://previous-a.example/episode/1');
   assert.strictEqual(undonePinned.items[0].title, 'Previous A');
   assert.strictEqual(undonePinned.items[0].trackingEnabled, true);
+  assert.strictEqual(undonePinned.items[0].cardId, loadedPinned[0].cardId);
   assert.strictEqual(undonePinned.items[0].updatePending, true);
   assert.strictEqual(undonePinned.items[0].updateHistory.length, 0);
   assert.deepStrictEqual(

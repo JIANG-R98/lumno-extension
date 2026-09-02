@@ -11,6 +11,29 @@
   const DEFAULT_MAX_HIDDEN = 60;
   const DEFAULT_MAX_UPDATE_HISTORY = 10;
 
+  function normalizePinnedRecentCardId(value) {
+    const cardId = String(value || '').trim();
+    return /^[a-z0-9][a-z0-9._-]{0,79}$/i.test(cardId) ? cardId : '';
+  }
+
+  function hashPinnedRecentCardSeed(value) {
+    const text = String(value || '');
+    let hash = 2166136261;
+    for (let index = 0; index < text.length; index += 1) {
+      hash ^= text.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return (hash >>> 0).toString(36);
+  }
+
+  function createLegacyPinnedRecentCardId(item) {
+    const source = item && typeof item === 'object' ? item : {};
+    return `pinned-${hashPinnedRecentCardSeed([
+      Number(source.pinnedAt) || 0,
+      String(source.url || '')
+    ].join('\n'))}`;
+  }
+
   function normalizeRecentCount(value) {
     const parsed = Number.parseInt(value, 10);
     if (parsed === 0 || parsed === 4 || parsed === 8) {
@@ -129,6 +152,7 @@
       opts
     );
     return {
+      cardId: normalizePinnedRecentCardId(item.cardId),
       title,
       url,
       host,
@@ -162,6 +186,7 @@
       return [];
     }
     const normalized = [];
+    const usedCardIds = new Set();
     for (let i = 0; i < items.length; i += 1) {
       const nextItem = normalizeRecentSiteItem(items[i], {
         ...opts,
@@ -177,6 +202,15 @@
       if (duplicated) {
         continue;
       }
+      const cardIdBase = nextItem.cardId || createLegacyPinnedRecentCardId(nextItem);
+      let cardId = cardIdBase;
+      let collisionIndex = 2;
+      while (usedCardIds.has(cardId)) {
+        cardId = `${cardIdBase}-${collisionIndex}`;
+        collisionIndex += 1;
+      }
+      nextItem.cardId = cardId;
+      usedCardIds.add(cardId);
       normalized.push(nextItem);
       if (normalized.length >= maxPinned) {
         break;
@@ -304,9 +338,18 @@
   function loadPinnedRecentSites(storage, options) {
     const opts = options && typeof options === 'object' ? options : {};
     const key = opts.key || DEFAULT_PINNED_KEY;
-    return storageGet(storage, key).then((result) =>
-      normalizePinnedRecentSites(result && result[key], opts)
-    );
+    return storageGet(storage, key).then((result) => {
+      const rawItems = Array.isArray(result && result[key]) ? result[key] : [];
+      const normalized = normalizePinnedRecentSites(rawItems, opts);
+      const needsCardIdMigration = normalized.some((item) => {
+        const rawItem = rawItems.find((candidate) =>
+          getRecentSiteUrlKey(candidate) === getRecentSiteUrlKey(item)
+        );
+        return !rawItem || normalizePinnedRecentCardId(rawItem.cardId) !== item.cardId;
+      });
+      if (!needsCardIdMigration) return normalized;
+      return storageSet(storage, { [key]: normalized }).then(() => normalized);
+    });
   }
 
   function savePinnedRecentSites(storage, items, options) {
@@ -539,6 +582,8 @@
     DEFAULT_MAX_PINNED,
     DEFAULT_MAX_HIDDEN,
     DEFAULT_MAX_UPDATE_HISTORY,
+    normalizePinnedRecentCardId,
+    createLegacyPinnedRecentCardId,
     normalizeRecentCount,
     normalizeRecentSiteItem,
     normalizeRecentUpdateHistory,

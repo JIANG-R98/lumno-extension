@@ -32,6 +32,19 @@ function createFailingStorage(runtime, initialData) {
   return storage;
 }
 
+function createDeferredReadStorage(initialData) {
+  const storage = createMemoryStorage(initialData);
+  const immediateGet = storage.get.bind(storage);
+  const pendingReads = [];
+  storage.get = (keys, callback) => {
+    pendingReads.push(() => immediateGet(keys, callback));
+  };
+  storage.releaseReads = () => {
+    pendingReads.splice(0).forEach((read) => read());
+  };
+  return storage;
+}
+
 function createEvent() {
   const listeners = [];
   return {
@@ -47,13 +60,15 @@ function createEvent() {
 function createChromeApi(options) {
   const config = options || {};
   const onClicked = createEvent();
+  const onShown = createEvent();
   const onMessage = createEvent();
   const onCreated = createEvent();
   const onRemoved = createEvent();
   const onActivated = createEvent();
   const onUpdated = createEvent();
   const onStorageChanged = createEvent();
-  const calls = { create: [], update: [], sendMessage: [] };
+  const calls = { create: [], update: [], sendMessage: [], refresh: 0 };
+  const sessionStorage = config.sessionStorage || createMemoryStorage({});
   let activeTab = {
     id: 90,
     active: true,
@@ -61,13 +76,15 @@ function createChromeApi(options) {
   };
   return {
     calls,
-    events: { onClicked, onMessage, onCreated, onRemoved, onActivated, onUpdated, onStorageChanged },
+    events: { onClicked, onShown, onMessage, onCreated, onRemoved, onActivated, onUpdated, onStorageChanged },
+    sessionStorage,
     setActiveTab(tab) {
       activeTab = tab;
     },
     api: {
       contextMenus: {
         onClicked,
+        onShown,
         create(details, callback) {
           calls.create.push(details);
           if (callback) callback();
@@ -75,6 +92,9 @@ function createChromeApi(options) {
         update(id, changes, callback) {
           calls.update.push({ id, changes });
           if (callback) callback();
+        },
+        refresh() {
+          calls.refresh += 1;
         }
       },
       i18n: {
@@ -107,7 +127,7 @@ function createChromeApi(options) {
           );
         }
       },
-      storage: { onChanged: onStorageChanged }
+      storage: { onChanged: onStorageChanged, session: sessionStorage }
     }
   };
 }
@@ -143,6 +163,7 @@ async function run() {
   assert.strictEqual(replaced.items[0].siteName, 'Bilibili');
   assert.strictEqual(replaced.items[0].pinnedAt, 123);
   assert.strictEqual(replaced.items[0].trackingEnabled, true);
+  assert.ok(replaced.items[0].cardId);
   assert.strictEqual(replaced.items[0].updatePending, true);
   assert.strictEqual(replaced.items[0].updateHistory.length, 1);
   assert.strictEqual(replaced.items[0].updateHistory[0].url, original[0].url);
@@ -213,6 +234,22 @@ async function run() {
   assert.strictEqual(sourceMatched.index, 0);
   assert.strictEqual(sourceMatched.items[0].url, 'https://www.bilibili.com/video/BV-new/');
   assert.strictEqual(sourceMatched.items[1].url, ambiguous[1].url);
+  const cardIdMatched = pinnedMenu.replacePinnedUrlWithCurrent(
+    ambiguous,
+    'https://www.bilibili.com/video/BV-card-id/',
+    { recentStore, sourceCardId: sourceMatched.items[0].cardId }
+  );
+  assert.strictEqual(cardIdMatched.changed, true);
+  assert.strictEqual(cardIdMatched.index, 0);
+  assert.strictEqual(
+    pinnedMenu.replacePinnedUrlWithCurrent(
+      ambiguous,
+      'https://other.example/watch/1',
+      { recentStore, sourceCardId: sourceMatched.items[0].cardId }
+    ).reason,
+    'host-mismatch',
+    'a persisted tab binding must not update its card after cross-site navigation'
+  );
 
   const added = pinnedMenu.addPinnedTrackedCurrent(
     [original[1]],
@@ -296,6 +333,7 @@ async function run() {
 
   await chrome.events.onMessage.emit({
     action: 'rememberPinnedRecentTrackingTarget',
+    cardId: recentStore.normalizePinnedRecentSites(ambiguous)[0].cardId,
     url: original[0].url
   }, {
     tab: { id: 11 }
@@ -307,6 +345,11 @@ async function run() {
     title: 'Conan Collection · Episode 2'
   });
   await chrome.events.onCreated.emit({ id: 12, openerTabId: 11 });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.strictEqual(
+    chrome.sessionStorage.data[pinnedMenu.TRACKING_SESSION_STORAGE_KEY]['12'],
+    recentStore.normalizePinnedRecentSites(ambiguous)[0].cardId
+  );
   await chrome.events.onUpdated.emit(12, {
     url: 'https://www.bilibili.com/video/BV-new/?p=7'
   }, {
@@ -320,6 +363,72 @@ async function run() {
     chrome.calls.update.at(-1).changes.title,
     'Update This Tracked Card to the Current Page'
   );
+
+  const restartedChrome = createChromeApi({ sessionStorage: chrome.sessionStorage });
+  const restartedController = pinnedMenu.createPinnedRecentContextMenuController({
+    chromeApi: restartedChrome.api,
+    recentStore,
+    storage,
+    storageKey: PINNED_KEY,
+    now: () => 999
+  });
+  restartedController.attach();
+  await new Promise((resolve) => setImmediate(resolve));
+  await restartedChrome.events.onShown.emit({
+    pageUrl: 'https://www.bilibili.com/video/BV-new/?p=7'
+  }, {
+    id: 12,
+    active: true,
+    url: 'https://untracked.example/stale-tab-url',
+    title: 'Conan Collection · Episode 2'
+  });
+  assert.strictEqual(restartedChrome.calls.update.at(-1).changes.enabled, true);
+  assert.strictEqual(restartedChrome.calls.refresh, 1);
+  storage.data[PINNED_KEY] = ambiguous.map((item, index) =>
+    index === 0 ? { ...item, trackingEnabled: false } : item
+  );
+  await restartedChrome.events.onShown.emit({
+    pageUrl: 'https://www.bilibili.com/video/BV-new/?p=7'
+  }, {
+    id: 12,
+    active: true,
+    url: 'https://www.bilibili.com/video/BV-new/?p=7'
+  });
+  assert.strictEqual(restartedChrome.calls.update.at(-1).changes.enabled, false);
+  assert.strictEqual(restartedChrome.calls.refresh, 2);
+  storage.data[PINNED_KEY] = ambiguous;
+
+  const normalizedAmbiguous = recentStore.normalizePinnedRecentSites(ambiguous);
+  const deferredSessionStorage = createDeferredReadStorage({
+    [pinnedMenu.TRACKING_SESSION_STORAGE_KEY]: {
+      44: normalizedAmbiguous[1].cardId
+    }
+  });
+  const racingChrome = createChromeApi({ sessionStorage: deferredSessionStorage });
+  const racingController = pinnedMenu.createPinnedRecentContextMenuController({
+    chromeApi: racingChrome.api,
+    recentStore,
+    storage,
+    storageKey: PINNED_KEY
+  });
+  racingController.attach();
+  const racingRemember = racingChrome.events.onMessage.emit({
+    action: 'rememberPinnedRecentTrackingTarget',
+    cardId: normalizedAmbiguous[0].cardId,
+    url: normalizedAmbiguous[0].url
+  }, {
+    tab: { id: 45 }
+  });
+  deferredSessionStorage.releaseReads();
+  await racingRemember;
+  assert.deepStrictEqual(
+    deferredSessionStorage.data[pinnedMenu.TRACKING_SESSION_STORAGE_KEY],
+    {
+      44: normalizedAmbiguous[1].cardId,
+      45: normalizedAmbiguous[0].cardId
+    }
+  );
+
   await chrome.events.onClicked.emit({
     menuItemId: pinnedMenu.MENU_ID,
     pageUrl: 'https://www.bilibili.com/video/BV-new/?p=7'
@@ -427,6 +536,7 @@ async function run() {
   failedController.attach();
   await chrome.events.onMessage.emit({
     action: 'rememberPinnedRecentTrackingTarget',
+    cardId: recentStore.normalizePinnedRecentSites(original)[0].cardId,
     url: original[0].url
   }, {
     tab: { id: 22 }
@@ -451,6 +561,7 @@ async function run() {
   await new Promise((resolve) => setImmediate(resolve));
   await cancelledChrome.events.onMessage.emit({
     action: 'rememberPinnedRecentTrackingTarget',
+    cardId: recentStore.normalizePinnedRecentSites(original)[0].cardId,
     url: original[0].url
   }, {
     tab: { id: 33, url: original[0].url }

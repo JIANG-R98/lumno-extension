@@ -17,6 +17,7 @@ type Translate = (key: string, fallback: string) => string;
 type ThemeValue = unknown;
 
 export interface RecentSiteItem {
+  cardId?: string;
   url?: string;
   title?: string;
   siteName?: string;

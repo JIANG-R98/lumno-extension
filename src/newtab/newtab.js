@@ -11960,6 +11960,13 @@
   }
 
   function findPinnedRecentSiteIndex(item) {
+    const cardId = String(item && item.cardId || '').trim();
+    if (cardId) {
+      const cardIdIndex = pinnedRecentSites.findIndex((pinnedItem) =>
+        pinnedItem && pinnedItem.cardId === cardId
+      );
+      if (cardIdIndex >= 0) return cardIdIndex;
+    }
     const urlKey = getRecentSiteUrlKey(item);
     if (urlKey) {
       const exactIndex = pinnedRecentSites.findIndex((pinnedItem) =>
@@ -12118,6 +12125,7 @@
     }
     return sendRuntimeMessage({
       action: 'rememberPinnedRecentTrackingTarget',
+      cardId: String(item.cardId || ''),
       url: String(item.url)
     });
   }
