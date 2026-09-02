@@ -56,6 +56,12 @@ async function run() {
   assert.strictEqual(surface.querySelectorAll('.confetti-piece').length, 24);
   assert.strictEqual(surface.querySelector('.secondary').hidden, false);
   assert.strictEqual(surface.querySelector('.primary').hidden, false);
+  assert.ok(surface.querySelector('.feedback-backdrop'), 'the card and actions should share a local background layer');
+  assert.strictEqual(
+    mountTarget.firstElementChild.style.getPropertyValue('--lumno-flow-confetti'),
+    '1370ms',
+    'confetti should remain visible slightly longer than the viewport breathing effect'
+  );
   assert.match(style, /position:\s*absolute/);
   assert.strictEqual(surface.dataset.visualVariant, 'homepage-card');
   assert.match(style, /data-visual-variant="homepage-card"[^}]*background:\s*transparent/s);
@@ -66,19 +72,26 @@ async function run() {
   assert.match(style, /data-celebrate="true"\]\[data-phase="success"\] \.card-stage[^}]*display:\s*none/s);
   assert.match(style, /data-celebrate="true"\]\[data-phase="success"\] \.change[^}]*position:\s*relative/s);
   assert.match(style, /data-visual-variant="homepage-card"[^}]*\.actions[^}]*margin-top:\s*28px/s);
+  assert.match(style, /data-visual-variant="homepage-card"[^}]*\.incoming-footer[^}]*margin:\s*10px 5px 0 10px/s);
   assert.match(style, /\.incoming-card::before[^}]*radial-gradient[^}]*filter:\s*blur\(12px\)/s);
+  assert.match(style, /\.feedback-backdrop[^}]*backdrop-filter:\s*blur\(18px\)[^}]*mask-image:\s*linear-gradient\(to right,transparent/s);
   assert.doesNotMatch(style, /data-visual-variant="homepage-card"[^}]*\.glow\s*\{[^}]*inset:\s*calc/s);
   assert.match(style, /data-celebrate="true"\]\[data-phase="success"\] \.glow/);
   assert.match(style, /\.confetti-piece/);
   assert.match(style, /@keyframes confetti-burst/);
-  assert.match(style, /confetti-burst var\(--lumno-flow-breathe/);
+  assert.match(style, /confetti-burst var\(--lumno-flow-confetti/);
+  assert.match(style, /\.confetti-piece[^}]*top:\s*-12px[^}]*var\(--lumno-flow-confetti/);
   assert.match(style, /35%\{opacity:1;transform:translate\(calc\(-50% \+ var\(--mx\)/);
   assert.match(style, /completion-pop var\(--lumno-flow-enter/);
+  assert.match(style, /@keyframes completion-pop \{ from\{opacity:0;transform:scale\(\.84\)\}/);
+  assert.match(style, /@media \(prefers-color-scheme:dark\) \{[\s\S]*?\.incoming-card\{background:#1c2228/);
+  assert.match(style, /@media \(prefers-color-scheme:dark\) \{[\s\S]*?\.incoming-inner\{background:rgba\(22,22,22,\.72\)/);
   assert.match(style, /prefers-reduced-motion:reduce[^}]*\.undo-toast/s);
+  assert.match(style, /prefers-reduced-motion:reduce[\s\S]*?\.confetti\{display:none!important\}/);
   assert.match(style, /data-phase="success"[^}]*\.change[^}]*display:\s*block/s);
   assert.match(style, /data-phase="success"[^}]*\.home-card[\s\S]*?opacity:\s*0/s);
   assert.match(style, /data-phase="success"[^}]*\.home-card[\s\S]*?animation:\s*none/s);
-  assert.match(style, /\.card-footer,[^}]*\.incoming-footer\s*\{[^}]*width:\s*100%/s);
+  assert.match(style, /\.card-footer,[^}]*\.incoming-footer\s*\{[^}]*width:\s*auto/s);
   assert.match(style, /x-lumno-action-button--warning/);
   assert.strictEqual(controller.advancePreview(), 'saving');
   assert.strictEqual(undoCount, 1);
