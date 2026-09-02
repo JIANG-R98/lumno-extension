@@ -14,70 +14,92 @@ export interface PopupLinkedItem { cardId: string; title: string; url: string; s
 
 export interface PopupRenderModel {
   status: PopupStatus;
-  busy?: 'update' | 'undo' | 'pip' | '';
+  busy?: 'update' | 'undo' | 'settings' | '';
   page?: PopupPageItem | null;
   linkedCard?: PopupLinkedItem | null;
   canUpdate?: boolean;
   canUndo?: boolean;
-  canPip?: boolean;
+  canOpenSettings?: boolean;
   notice?: { kind: 'success' | 'error'; text: string } | null;
   labels: {
     appName: string;
-    currentPage: string;
-    linkedCard: string;
+    originalContent: string;
+    updateTo: string;
     update: string;
     updating: string;
     undo: string;
     undoing: string;
-    pip: string;
+    webClipSettings: string;
+    webClipSettingsDescription: string;
     statuses: Record<PopupStatus, string>;
+    statusDetails: Record<PopupStatus, string>;
   };
   onUpdate(): void;
   onUndo(): void;
-  onPip(): void;
+  onOpenSettings(): void;
 }
 
 export type PopupController = ReactRootController<PopupRenderModel>;
 
-function SiteRow({ item, eyebrow, current }: {
+function RecentCardPreview({ item, badge }: {
   item: PopupPageItem | PopupLinkedItem;
-  eyebrow: string;
-  current?: boolean;
+  badge?: string;
 }) {
+  const siteName = 'siteName' in item && item.siteName
+    ? item.siteName
+    : (() => {
+        try { return new URL(item.url).hostname.replace(/^www\./, ''); }
+        catch { return item.url; }
+      })();
   return (
-    <div className={`popup-site-row${current ? ' popup-site-row--current' : ''}`}>
-      <div className="popup-site-icon" aria-hidden="true">
-        {'faviconUrl' in item && item.faviconUrl
-          ? <img src={item.faviconUrl} alt="" />
-          : <span>{String(item.title || item.url || '?').trim().charAt(0).toUpperCase()}</span>}
+    <article className={`popup-recent-card${badge ? ' popup-recent-card--badged' : ''}`}>
+      <div className="popup-recent-inner">
+        {badge && <span className="popup-card-badge">{badge}</span>}
+        <div className="popup-recent-header">
+          <div className="popup-favicon" aria-hidden="true">
+            {'faviconUrl' in item && item.faviconUrl
+              ? <img src={item.faviconUrl} alt="" />
+              : <i className="ri-icon ri-link" />}
+          </div>
+          <span>{siteName}</span>
+        </div>
+        <strong className="popup-recent-title">{item.title || item.url}</strong>
       </div>
-      <div className="popup-site-copy">
-        <span className="popup-eyebrow">{eyebrow}</span>
-        <strong>{item.title || item.url}</strong>
-        <span className="popup-url">{item.url}</span>
-      </div>
-    </div>
+      <span className="popup-recent-url">{item.url}</span>
+    </article>
   );
 }
 
 export function PopupView(model: PopupRenderModel) {
   const { labels, status, busy = '', page, linkedCard, canUpdate, canUndo, notice } = model;
+  const previewItem = page || linkedCard;
   return (
     <main className="popup-shell" data-status={status}>
       <header className="popup-header">
         <img src="../../assets/images/lumno.png" alt="" />
         <span>{labels.appName}</span>
-        <strong>{labels.statuses[status]}</strong>
       </header>
 
-      <section className="popup-card" aria-live="polite">
+      <section className="popup-content" aria-live="polite">
         {status === 'loading' ? (
-          <div className="popup-loading"><span /><span /><span /></div>
+          <div className="popup-loading-card"><div /><span /><span /></div>
         ) : (
           <>
-            {linkedCard && <SiteRow item={linkedCard} eyebrow={labels.linkedCard} />}
-            {page && (status !== 'up-to-date' || !linkedCard) && (
-              <SiteRow item={page} eyebrow={labels.currentPage} current />
+            <div className="popup-status-copy">
+              <h1>{labels.statuses[status]}</h1>
+              <p>{labels.statusDetails[status]}</p>
+            </div>
+            {previewItem && (
+              <RecentCardPreview
+                item={previewItem}
+                badge={status === 'update-available' ? labels.updateTo : undefined}
+              />
+            )}
+            {status === 'update-available' && linkedCard && (
+              <div className="popup-update-source">
+                <span>{labels.originalContent}</span>
+                <strong>{linkedCard.title || linkedCard.url}</strong>
+              </div>
             )}
           </>
         )}
@@ -100,9 +122,12 @@ export function PopupView(model: PopupRenderModel) {
         )}
       </div>
 
-      <button className="popup-pip" disabled={Boolean(busy) || !model.canPip} onClick={model.onPip}>
-        <i className="ri-icon ri-picture-in-picture-2-line" aria-hidden="true" />
-        <span>{labels.pip}</span>
+      <button className="popup-settings-link" disabled={Boolean(busy) || !model.canOpenSettings} onClick={model.onOpenSettings}>
+        <span className="popup-settings-icon"><i className="ri-icon ri-scissors-cut-line" aria-hidden="true" /></span>
+        <span className="popup-settings-copy">
+          <strong>{labels.webClipSettings}</strong>
+          <small>{labels.webClipSettingsDescription}</small>
+        </span>
         <i className="ri-icon ri-arrow-right-s-line" aria-hidden="true" />
       </button>
     </main>

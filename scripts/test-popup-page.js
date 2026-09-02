@@ -12,7 +12,7 @@ assert(html.includes('data-react-entry="../react/popup-islands.js"'));
 assert(html.includes('data-page-entry="../popup/popup.js"'));
 assert(backgroundSource.includes("'getPinnedRecentToolbarState'"));
 assert(backgroundSource.includes("'updatePinnedRecentFromToolbar'"));
-assert(backgroundSource.includes("openDocumentPipPickerOnTab(tab, 'popup', sendResponse)"));
+assert(!backgroundSource.includes("'openDocumentPipFromToolbar'"));
 assert(!backgroundSource.includes("chrome.action.onClicked.addListener"));
 
 const calls = [];
@@ -74,8 +74,8 @@ setImmediate(async () => {
   await lastModel.onUndo();
   assert(calls.some((call) => call.action === 'undoPinnedRecentTrackingUpdate' &&
     call.expectedUrl === 'https://example.com/?p=2'));
-  await lastModel.onPip();
-  assert(calls.some((call) => call.action === 'openDocumentPipFromToolbar' && call.tabId === 7));
+  await lastModel.onOpenSettings();
+  assert(calls.some((call) => call.action === 'openOptionsPage' && call.hash === 'labs'));
   assert.strictEqual(closeCalls, 1);
   console.log('popup page tests passed');
 });

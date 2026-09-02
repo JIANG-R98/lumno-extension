@@ -6675,7 +6675,6 @@ const BACKGROUND_MESSAGE_ROUTE_GROUPS = Object.freeze({
       'getPinnedRecentToolbarState',
       'updatePinnedRecentFromToolbar',
       'undoPinnedRecentTrackingUpdate',
-      'openDocumentPipFromToolbar',
       'createTab',
       'openNewTab',
       'openExtensionDetailsPage'
@@ -7402,21 +7401,6 @@ function handleExtensionPageMessage(request, sender, sendResponse) {
         request.cardId,
         request.expectedUrl
       ).then(sendResponse).catch(() => sendResponse({ ok: false, reason: 'save-failed' }));
-      return true;
-    }
-    case 'openDocumentPipFromToolbar': {
-      const tabId = Number(request.tabId);
-      if (!Number.isInteger(tabId) || !chrome.tabs || typeof chrome.tabs.get !== 'function') {
-        sendResponse({ ok: false, reason: 'unavailable' });
-        return;
-      }
-      chrome.tabs.get(tabId, (tab) => {
-        if ((chrome.runtime && chrome.runtime.lastError) || !tab) {
-          sendResponse({ ok: false, reason: 'tab-unavailable' });
-          return;
-        }
-        openDocumentPipPickerOnTab(tab, 'popup', sendResponse);
-      });
       return true;
     }
     case 'createTab': {

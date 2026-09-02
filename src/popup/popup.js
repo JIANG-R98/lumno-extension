@@ -17,13 +17,14 @@
 
   const labels = {
     appName: t('ext_name', 'Lumno'),
-    currentPage: t('popup_current_page', 'Current page'),
-    linkedCard: t('popup_linked_card', 'Linked card'),
+    originalContent: t('popup_original_content', 'Previous content'),
+    updateTo: t('popup_update_to', 'Current page'),
     update: t('popup_update_action', 'Update link'),
     updating: t('popup_updating_action', 'Updating…'),
     undo: t('recent_undo_tracking_update', 'Undo current update'),
     undoing: t('popup_undoing_action', 'Undoing…'),
-    pip: t('popup_pip_action', 'Choose Picture-in-Picture content'),
+    webClipSettings: t('settings_document_pip_title', 'Web clipping'),
+    webClipSettingsDescription: t('popup_web_clip_settings_desc', 'Enable or adjust it in Settings'),
     statuses: {
       loading: t('popup_status_loading', 'Reading current page…'),
       'update-available': t('popup_status_update_available', 'Update available'),
@@ -32,6 +33,15 @@
       unsupported: t('popup_status_unsupported', 'This page is not supported'),
       blocked: t('popup_status_blocked', 'This link cannot be updated'),
       error: t('popup_status_error', 'Unable to read page status')
+    },
+    statusDetails: {
+      loading: t('popup_status_loading_detail', 'Checking the active tab'),
+      'update-available': t('popup_status_update_available_detail', 'Replace the previous content with the current page'),
+      'up-to-date': t('popup_status_up_to_date_detail', 'The linked card already points to this page'),
+      'not-linked': t('popup_status_not_linked_detail', 'Link a card from the New Tab page first'),
+      unsupported: t('popup_status_unsupported_detail', 'Only regular web pages can be linked'),
+      blocked: t('popup_status_blocked_detail', 'The current page does not match this linked card'),
+      error: t('popup_status_error_detail', 'Close the panel and try again')
     }
   };
 
@@ -51,11 +61,11 @@
       linkedCard: state && state.linkedCard,
       canUpdate: Boolean(state && state.canUpdate),
       canUndo: Boolean(state && state.undo && state.undo.available),
-      canPip: Number.isInteger(activeTabId),
+      canOpenSettings: true,
       labels,
       onUpdate: update,
       onUndo: undo,
-      onPip: openPip
+      onOpenSettings: openWebClipSettings
     });
   }
 
@@ -105,12 +115,12 @@
     await refresh();
   }
 
-  async function openPip() {
-    if (!Number.isInteger(activeTabId) || busy) return;
-    busy = 'pip'; render();
-    const result = await send({ action: 'openDocumentPipFromToolbar', tabId: activeTabId });
+  async function openWebClipSettings() {
+    if (busy) return;
+    busy = 'settings'; render();
+    const result = await send({ action: 'openOptionsPage', hash: 'labs' });
     if (result && result.ok) window.close();
-    else { busy = ''; notice = { kind: 'error', text: t('popup_pip_failed', 'Unable to open Picture-in-Picture') }; render(); }
+    else { busy = ''; notice = { kind: 'error', text: t('popup_settings_failed', 'Unable to open Settings') }; render(); }
   }
 
   render();
