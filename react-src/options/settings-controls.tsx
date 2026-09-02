@@ -7,7 +7,7 @@ import {
 import {
   createReactRootController,
   type ReactRootController
-} from './root-controller';
+} from '../shared/root-controller';
 import {
   RangeSliderField
 } from '../shared/range-slider';

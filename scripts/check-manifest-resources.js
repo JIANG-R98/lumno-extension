@@ -13,6 +13,7 @@ const injectedScriptFiles = [
   'src/background/pip-main-world.js',
   'src/background/recent-tab-switcher.js',
   'src/background/pinned-recent-context-menu.js',
+  'src/background/pinned-recent-toolbar.js',
   'src/newtab/recent-sites-store.js',
   'src/shared/extension-routes.js',
   'src/shared/codex-debug-surface.js',
@@ -285,6 +286,7 @@ function checkNewtabWallpaperFiles() {
 
 function run() {
   checkPath(manifest.background && manifest.background.service_worker);
+  checkPath(manifest.action && manifest.action.default_popup);
   checkPath(manifest.chrome_url_overrides && manifest.chrome_url_overrides.newtab);
   checkPath(manifest.options_ui && manifest.options_ui.page);
 

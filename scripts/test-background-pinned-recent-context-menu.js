@@ -355,6 +355,74 @@ async function run() {
     recentStore.normalizePinnedRecentSites(ambiguous)[0].cardId,
     original[0].url
   );
+  const toolbarCurrentState = await controller.getToolbarStateForTab({
+    id: 11,
+    active: true,
+    url: original[0].url,
+    title: 'Course · Episode 1'
+  });
+  assert.strictEqual(toolbarCurrentState.status, 'up-to-date');
+  assert.strictEqual(toolbarCurrentState.canUpdate, false);
+  assert.strictEqual(toolbarCurrentState.linkedCard.url, original[0].url);
+
+  const toolbarUpdateState = await controller.getToolbarStateForTab({
+    id: 11,
+    active: true,
+    url: 'https://www.bilibili.com/video/BV-spa/?p=2',
+    title: 'Course · Episode 2'
+  });
+  assert.strictEqual(toolbarUpdateState.status, 'update-available');
+  assert.strictEqual(toolbarUpdateState.canUpdate, true);
+  assert.strictEqual(toolbarUpdateState.updateGuard.cardId, toolbarUpdateState.linkedCard.cardId);
+  assert.strictEqual(toolbarUpdateState.updateGuard.sourceUrl, original[0].url);
+
+  const stalePageUpdate = await controller.updateForTab({
+    id: 11,
+    url: 'https://www.bilibili.com/video/BV-spa/?p=3'
+  }, toolbarUpdateState.updateGuard);
+  assert.strictEqual(stalePageUpdate.reason, 'stale-page');
+  const staleBindingUpdate = await controller.updateForTab({
+    id: 11,
+    url: toolbarUpdateState.updateGuard.pageUrl
+  }, { ...toolbarUpdateState.updateGuard, cardId: 'missing-card' });
+  assert.strictEqual(staleBindingUpdate.reason, 'stale-binding');
+  const staleSourceUpdate = await controller.updateForTab({
+    id: 11,
+    url: toolbarUpdateState.updateGuard.pageUrl
+  }, { ...toolbarUpdateState.updateGuard, sourceUrl: 'https://www.bilibili.com/video/BV-old/' });
+  assert.strictEqual(staleSourceUpdate.reason, 'source-changed');
+
+  const unboundItemCount = storage.data[PINNED_KEY].length;
+  const unboundUpdate = await controller.updateForTab({
+    id: 99,
+    url: 'https://unbound.example/new',
+    title: 'Unbound'
+  });
+  assert.strictEqual(unboundUpdate.ok, false);
+  assert.strictEqual(unboundUpdate.reason, 'no-tracked-target');
+  assert.strictEqual(storage.data[PINNED_KEY].length, unboundItemCount);
+
+  const toolbarUpdate = await controller.updateForTab({
+    id: 11,
+    url: 'https://www.bilibili.com/video/BV-spa/?p=2',
+    title: 'Course · Episode 2'
+  }, toolbarUpdateState.updateGuard);
+  assert.strictEqual(toolbarUpdate.ok, true);
+  assert.strictEqual(toolbarUpdate.current.url, 'https://www.bilibili.com/video/BV-spa/?p=2');
+  assert.strictEqual(storage.data[PINNED_KEY].length, unboundItemCount);
+  const updatedToolbarState = await controller.getToolbarStateForTab({
+    id: 11,
+    url: toolbarUpdate.current.url,
+    title: toolbarUpdate.current.title
+  });
+  assert.strictEqual(updatedToolbarState.status, 'up-to-date');
+  assert.strictEqual(updatedToolbarState.undo.available, true);
+  const toolbarUndo = await controller.undoTrackingUpdate(
+    toolbarUpdate.cardId,
+    toolbarUpdate.current.url
+  );
+  assert.strictEqual(toolbarUndo.ok, true);
+  assert.strictEqual(storage.data[PINNED_KEY][0].url, original[0].url);
   chrome.setActiveTab({
     id: 11,
     active: true,

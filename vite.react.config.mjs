@@ -28,6 +28,10 @@ export default defineConfig({
         'onboarding-islands': resolve(
           import.meta.dirname,
           'react-src/onboarding/onboarding-islands-entry.ts'
+        ),
+        'popup-islands': resolve(
+          import.meta.dirname,
+          'react-src/popup/popup-islands-entry.ts'
         )
       },
       output: {

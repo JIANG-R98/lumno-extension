@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   createReactRootController,
   type ReactRootController
-} from './root-controller';
+} from '../shared/root-controller';
 import type { BlacklistMatchMode } from './blacklist-list';
 import {
   SiteSearchProviderCategoryControl,

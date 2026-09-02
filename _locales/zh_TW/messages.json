@@ -2144,5 +2144,22 @@
   "command_tabs_action": { "message": "搜尋分頁" },
   "command_copy_title": { "message": "複製目前頁面連結" },
   "command_copy_action": { "message": "複製連結" },
-  "settings_tab_account": { "message": "帳號與同步" }
+  "settings_tab_account": { "message": "帳號與同步" },
+  "popup_current_page": { "message": "目前頁面" },
+  "popup_linked_card": { "message": "關聯卡片" },
+  "popup_update_action": { "message": "更新關聯" },
+  "popup_updating_action": { "message": "正在更新…" },
+  "popup_undoing_action": { "message": "正在復原…" },
+  "popup_pip_action": { "message": "選擇子母畫面內容" },
+  "popup_status_loading": { "message": "正在讀取目前頁面…" },
+  "popup_status_update_available": { "message": "發現可更新內容" },
+  "popup_status_up_to_date": { "message": "已關聯，內容為最新" },
+  "popup_status_not_linked": { "message": "目前頁面尚未關聯" },
+  "popup_status_unsupported": { "message": "目前頁面暫不支援關聯" },
+  "popup_status_blocked": { "message": "目前連結無法更新" },
+  "popup_status_error": { "message": "暫時無法讀取頁面狀態" },
+  "popup_update_success": { "message": "關聯卡片已更新" },
+  "popup_update_failed": { "message": "無法更新目前關聯" },
+  "popup_undo_success": { "message": "已復原目前更新" },
+  "popup_pip_failed": { "message": "無法開啟子母畫面" }
 }

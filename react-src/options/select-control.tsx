@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   createReactRootController,
   type ReactRootController
-} from './root-controller';
+} from '../shared/root-controller';
 
 export interface SelectControlItemModel {
   iconUrl?: string;

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   createReactRootController,
   type ReactRootController
-} from './root-controller';
+} from '../shared/root-controller';
 import {
   getAsyncErrorMessage,
   useExclusiveAsyncAction

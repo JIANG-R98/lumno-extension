@@ -1,7 +1,7 @@
 # React UI architecture
 
-React is the required renderer for Lumno's New Tab, Options, Onboarding, and
-in-page Overlay surfaces. The classic scripts under `src/` remain responsible
+React is the required renderer for Lumno's New Tab, Options, Onboarding, Popup,
+and in-page Overlay surfaces. The classic scripts under `src/` remain responsible
 for browser APIs, persistence, navigation, ranking, drag orchestration, viewport
 placement, and other platform behavior. They do not provide a second page
 renderer.
@@ -17,6 +17,7 @@ renderer.
   interaction surfaces.
 - `react-src/overlay/` owns the injected shell, search input, result rows, empty
   states, and recent-tab switcher.
+- `react-src/popup/` owns the toolbar status, update, undo, and Picture-in-Picture controls.
 - `react-src/shared/` contains typed renderers reused by more than one route.
 - Background and content scripts stay framework-free unless they host one of the
   React surfaces above.
@@ -41,7 +42,7 @@ error; there is no timed legacy-renderer fallback.
   owned by a React controller.
 - Add visible structure and state to React components, not to classic adapter
   scripts.
-- Keep the New Tab, Options, Onboarding, and Overlay bundle budgets enforced by
+- Keep the New Tab, Options, Onboarding, Popup, and Overlay bundle budgets enforced by
   `scripts/test-react-migration-contract.js`.
 - Run both Vitest component coverage and classic browser-adapter contract tests.
 
@@ -57,6 +58,6 @@ npm run test:package-store
 git diff --check
 ```
 
-Unpacked-extension smoke tests cover all four routes plus delayed search
+Unpacked-extension smoke tests cover all five routes plus delayed search
 completion, tab switching, bookmark drag/cascade behavior, wallpaper controls,
 and settings persistence.

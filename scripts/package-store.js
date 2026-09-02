@@ -459,6 +459,7 @@ function checkNewtabWallpaperFiles() {
 }
 
 checkManifestPath(storeManifest.background && storeManifest.background.service_worker);
+checkManifestPath(storeManifest.action && storeManifest.action.default_popup);
 checkManifestPath(storeManifest.chrome_url_overrides && storeManifest.chrome_url_overrides.newtab);
 checkManifestPath(storeManifest.options_ui && storeManifest.options_ui.page);
 Object.values(storeManifest.icons || {}).forEach(checkManifestPath);

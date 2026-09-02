@@ -27,6 +27,10 @@ const onboardingSource = fs.readFileSync(
   path.join(repoRoot, 'src/onboarding/onboarding.js'),
   'utf8'
 );
+const popupHtml = fs.readFileSync(
+  path.join(repoRoot, 'src/popup/popup.html'),
+  'utf8'
+);
 const overlaySuggestionsCss = fs.readFileSync(
   path.join(repoRoot, 'src/overlay/suggestions-view.css'),
   'utf8'
@@ -91,6 +95,7 @@ const onboardingBundlePath = path.join(
   'src/react/onboarding-islands.js'
 );
 const overlayBundlePath = path.join(repoRoot, 'src/react/overlay-islands.js');
+const popupBundlePath = path.join(repoRoot, 'src/react/popup-islands.js');
 const sharedBundlePath = path.join(repoRoot, 'src/react/react-shared.js');
 const tabSwitcherSharedBundlePath = path.join(
   repoRoot,
@@ -101,6 +106,7 @@ const newtabBundle = fs.readFileSync(newtabBundlePath, 'utf8');
 const optionsBundle = fs.readFileSync(optionsBundlePath, 'utf8');
 const onboardingBundle = fs.readFileSync(onboardingBundlePath, 'utf8');
 const overlayBundle = fs.readFileSync(overlayBundlePath, 'utf8');
+const popupBundle = fs.readFileSync(popupBundlePath, 'utf8');
 const sharedBundle = fs.readFileSync(sharedBundlePath, 'utf8');
 const tabSwitcherSharedBundle = fs.readFileSync(
   tabSwitcherSharedBundlePath,
@@ -114,7 +120,8 @@ const bundles = [
   newtabBundle,
   optionsBundle,
   onboardingBundle,
-  overlayBundle
+  overlayBundle,
+  popupBundle
 ];
 const bundle = bundles.join('\n');
 const bundlePaths = [
@@ -124,7 +131,8 @@ const bundlePaths = [
   newtabBundlePath,
   optionsBundlePath,
   onboardingBundlePath,
-  overlayBundlePath
+  overlayBundlePath,
+  popupBundlePath
 ];
 
 const kibibytes = (bytes) => `${(bytes / 1024).toFixed(2)} KiB`;
@@ -147,7 +155,8 @@ const bundleBudgets = {
   newtab: { uncompressed: 384, gzip: 115 },
   options: { uncompressed: 264, gzip: 79 },
   overlay: { uncompressed: 271, gzip: 82 },
-  total: { uncompressed: 746, gzip: 219 }
+  popup: { uncompressed: 230, gzip: 72 },
+  total: { uncompressed: 790, gzip: 232 }
 };
 
 const retiredNewtabRendererScripts = [
@@ -219,6 +228,13 @@ assert(
     onboardingHtml.includes('data-page-entry="../onboarding/onboarding.js"') &&
     onboardingHtml.includes('data-react-state="LumnoOnboardingReactBootstrap"'),
   'Onboarding should use the shared React-aware bootstrap and retain classic page semantics'
+);
+assert(
+  popupHtml.includes(bootstrapScript) &&
+    popupHtml.includes('data-react-entry="../react/popup-islands.js"') &&
+    popupHtml.includes('data-page-entry="../popup/popup.js"') &&
+    popupHtml.includes('data-react-state="LumnoPopupReactBootstrap"'),
+  'the Popup page should start through the shared React bootstrap'
 );
 assert(
   /id="_x_extension_blacklist_form_2026_unique_"[^>]*><\/div>/.test(optionsHtml) &&
@@ -305,14 +321,26 @@ assertWithinBudget(
   'the injected Overlay React route (gzip)'
 );
 assertWithinBudget(
+  fs.statSync(popupBundlePath).size +
+    fs.statSync(sharedBundlePath).size +
+    fs.statSync(runtimeBundlePath).size,
+  bundleBudgets.popup.uncompressed,
+  'the Popup React route (uncompressed)'
+);
+assertWithinBudget(
+  gzipSize(popupBundle) + gzipSize(sharedBundle) + gzipSize(runtimeBundle),
+  bundleBudgets.popup.gzip,
+  'the Popup React route (gzip)'
+);
+assertWithinBudget(
   bundlePaths.reduce((total, file) => total + fs.statSync(file).size, 0),
   bundleBudgets.total.uncompressed,
-  'all shared React artifacts and four page entries (uncompressed)'
+  'all shared React artifacts and five page entries (uncompressed)'
 );
 assertWithinBudget(
   bundles.reduce((total, source) => total + gzipSize(source), 0),
   bundleBudgets.total.gzip,
-  'all shared React artifacts and four page entries (gzip)'
+  'all shared React artifacts and five page entries (gzip)'
 );
 assert(
   newtabBundle.includes('from"./react-runtime.js"') &&

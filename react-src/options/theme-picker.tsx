@@ -1,7 +1,7 @@
 import {
   createReactRootController,
   type ReactRootController
-} from './root-controller';
+} from '../shared/root-controller';
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 

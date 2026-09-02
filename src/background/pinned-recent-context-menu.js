@@ -400,6 +400,124 @@
       return { kind: 'add', result: getAddition(items, tab, info) };
     }
 
+    function createToolbarState(items, tab) {
+      const tabId = Number(tab && tab.id);
+      const pageUrl = getTabUrl(tab, null);
+      const replacement = getReplacement(items, tab, null);
+      const normalizedItems = Array.isArray(replacement.items) ? replacement.items : [];
+      const cardId = Number.isInteger(tabId) && trackingRegistry
+        ? normalizeTrackingCardId(trackingRegistry.getCardId(tabId))
+        : '';
+      const linkedCard = cardId
+        ? (replacement.changed && replacement.previousItem &&
+            replacement.previousItem.cardId === cardId
+          ? replacement.previousItem
+          : normalizedItems.find((item) => item && item.cardId === cardId) || null)
+        : null;
+      const reason = String(replacement && replacement.reason || 'unavailable-tab');
+      let status = 'not-linked';
+      if (!tab || tab.incognito === true || !pageUrl || reason === 'invalid-url' ||
+          reason === 'unavailable-tab') {
+        status = 'unsupported';
+      } else if (replacement.changed) {
+        status = 'update-available';
+      } else if (reason === 'same-url') {
+        status = 'up-to-date';
+      } else if (reason === 'host-mismatch' || reason === 'url-conflict') {
+        status = 'blocked';
+      }
+      const history = linkedCard && Array.isArray(linkedCard.updateHistory)
+        ? linkedCard.updateHistory
+        : [];
+      return {
+        ok: true,
+        status,
+        reason,
+        page: {
+          tabId: Number.isInteger(tabId) ? tabId : null,
+          title: String(tab && tab.title || ''),
+          url: pageUrl,
+          faviconUrl: String(tab && tab.favIconUrl || '')
+        },
+        linkedCard: linkedCard ? {
+          cardId: linkedCard.cardId,
+          title: linkedCard.title,
+          url: linkedCard.url,
+          siteName: linkedCard.siteName || linkedCard.host || ''
+        } : null,
+        canUpdate: Boolean(replacement.changed),
+        updateGuard: replacement.changed && linkedCard ? {
+          cardId: linkedCard.cardId,
+          sourceUrl: linkedCard.url,
+          pageUrl
+        } : null,
+        undo: {
+          available: history.length > 0,
+          expectedUrl: linkedCard ? linkedCard.url : '',
+          previous: history[0] ? { title: history[0].title, url: history[0].url } : null
+        }
+      };
+    }
+
+    function getToolbarStateForTab(tab) {
+      return trackingReady.then(loadItems).then((items) => createToolbarState(items, tab))
+        .catch(() => ({
+          ok: false,
+          status: 'error',
+          reason: 'load-failed',
+          page: null,
+          linkedCard: null,
+          canUpdate: false,
+          updateGuard: null,
+          undo: { available: false, expectedUrl: '', previous: null }
+        }));
+    }
+
+    function updateForTab(tab, guard) {
+      return trackingReady.then(loadItems).then((items) => {
+        const expected = guard && typeof guard === 'object' ? guard : null;
+        const currentPageUrl = getTabUrl(tab, null);
+        const currentCardId = trackingRegistry
+          ? normalizeTrackingCardId(trackingRegistry.getCardId(Number(tab && tab.id)))
+          : '';
+        if (expected && getHttpUrl(expected.pageUrl) !== currentPageUrl) {
+          return { ok: false, changed: false, reason: 'stale-page' };
+        }
+        if (expected && normalizeTrackingCardId(expected.cardId) !== currentCardId) {
+          return { ok: false, changed: false, reason: 'stale-binding' };
+        }
+        const normalizedItems = recentStore.normalizePinnedRecentSites(items, config.storeOptions || {});
+        const linkedCard = normalizedItems.find((item) => item && item.cardId === currentCardId);
+        if (expected && (!linkedCard || getHttpUrl(linkedCard.url) !== getHttpUrl(expected.sourceUrl))) {
+          return { ok: false, changed: false, reason: 'source-changed' };
+        }
+        const replacement = getReplacement(normalizedItems, tab, null);
+        if (!replacement.changed) {
+          return { ok: false, ...replacement, items: undefined };
+        }
+        return storageSet(storage, { [storageKey]: replacement.items }, runtime).then((saved) => {
+          if (!saved) return { ok: false, changed: false, reason: 'save-failed' };
+          cachedItems = replacement.items;
+          const currentItem = replacement.items[replacement.index] || null;
+          return {
+            ok: true,
+            changed: true,
+            reason: 'updated',
+            cardId: String(currentItem && currentItem.cardId || ''),
+            previous: replacement.previousItem ? {
+              title: replacement.previousItem.title,
+              url: replacement.previousItem.url
+            } : null,
+            current: currentItem ? { title: currentItem.title, url: currentItem.url } : null,
+            undo: {
+              available: true,
+              expectedUrl: String(currentItem && currentItem.url || '')
+            }
+          };
+        });
+      }).catch(() => ({ ok: false, changed: false, reason: 'save-failed' }));
+    }
+
     function updateMenuState(state) {
       return new Promise((resolve) => {
         if (!menus || typeof menus.update !== 'function') {
@@ -736,6 +854,8 @@
       replaceForTab,
       addForTab,
       applyForTab,
+      getToolbarStateForTab,
+      updateForTab,
       undoTrackingUpdate,
       bindTrackingTab,
       syncTrackingDocument,

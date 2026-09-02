@@ -180,6 +180,12 @@ try {
 }
 
 try {
+  importScripts(chrome.runtime.getURL('src/background/pinned-recent-toolbar.js'));
+} catch (error) {
+  console.warn('Lumno: failed to load pinned recent toolbar helpers.', error);
+}
+
+try {
   importScripts(chrome.runtime.getURL('src/background/overlay-loading-lifecycle.js'));
 } catch (error) {
   console.warn('Lumno: failed to load Overlay loading lifecycle helpers.', error);
@@ -234,6 +240,7 @@ const RECENT_TAB_SWITCHER = globalThis.LumnoRecentTabSwitcher || {};
 const NEWTAB_RECENT_STORE = globalThis.LumnoNewtabRecentSitesStore || {};
 const PINNED_RECENT_TRACKING_REGISTRY = globalThis.LumnoPinnedRecentTrackingRegistry || {};
 const PINNED_RECENT_CONTEXT_MENU = globalThis.LumnoPinnedRecentContextMenu || {};
+const PINNED_RECENT_TOOLBAR = globalThis.LumnoPinnedRecentToolbar || {};
 const OVERLAY_LOADING_LIFECYCLE = globalThis.LumnoOverlayLoadingLifecycle || {};
 const DEV_EXTENSION_STARTUP = globalThis.LumnoDevExtensionStartup || {};
 const CODEX_DEBUG_BRIDGE = globalThis.LumnoCodexDebugBackground || {};
@@ -5662,15 +5669,18 @@ function detectAnyActiveVideoPiP(callback) {
   });
 }
 
-function openDocumentPipPickerOnTab(activeTab, source) {
+function openDocumentPipPickerOnTab(activeTab, source, onComplete) {
+  const complete = typeof onComplete === 'function' ? onComplete : () => {};
   if (!documentPipEnabledCache) {
     logHotkeyDebug('document-pip-disabled', { source: source || '' });
     openExtensionOptionsPage();
+    complete({ ok: false, reason: 'disabled' });
     return;
   }
   if (!activeTab || typeof activeTab.id !== 'number') {
     logHotkeyDebug('document-pip-no-active-tab', { source: source || '' });
     openExtensionOptionsPage();
+    complete({ ok: false, reason: 'tab-unavailable' });
     return;
   }
   const activeUrl = getResolvedTabUrl(activeTab);
@@ -5688,6 +5698,7 @@ function openDocumentPipPickerOnTab(activeTab, source) {
       source: source || ''
     });
     openExtensionOptionsPage();
+    complete({ ok: false, reason: 'restricted-url' });
     return;
   }
   const injectAndInvoke = (invokeMode) => {
@@ -5706,6 +5717,7 @@ function openDocumentPipPickerOnTab(activeTab, source) {
           source: source || ''
         });
         openExtensionOptionsPage();
+        complete({ ok: false, reason: 'inject-failed' });
         return;
       }
       chrome.scripting.executeScript({
@@ -5733,6 +5745,7 @@ function openDocumentPipPickerOnTab(activeTab, source) {
             source: source || '',
             mode: invokeMode || 'toggle'
           });
+          complete({ ok: false, reason: 'toggle-failed' });
           return;
         }
         const result = Array.isArray(results) && results[0] ? results[0].result : null;
@@ -5742,6 +5755,9 @@ function openDocumentPipPickerOnTab(activeTab, source) {
           mode: invokeMode || 'toggle',
           result: result && typeof result === 'object' ? result : {}
         });
+        complete(result && typeof result === 'object'
+          ? result
+          : { ok: false, reason: 'empty-result' });
       });
     });
   };
@@ -6024,12 +6040,6 @@ ensureTabSwitchStatsLoaded().catch(() => {});
 ensureTabSwitcherStateLoaded().catch(() => {});
 cleanupRemovedAiStorageKeys();
 cleanupLocalOnlyBookmarkTopbarSyncStorage();
-
-if (chrome.action && chrome.action.onClicked) {
-  chrome.action.onClicked.addListener((tab) => {
-    openDocumentPipPickerOnTab(tab, 'action');
-  });
-}
 
 if (chrome && chrome.tabs && chrome.tabs.onActivated) {
   chrome.tabs.onActivated.addListener((activeInfo) => {
@@ -6662,7 +6672,10 @@ const BACKGROUND_MESSAGE_ROUTE_GROUPS = Object.freeze({
       'syncPinnedRecentTrackingToken',
       'rememberPinnedRecentTrackingTarget',
       'getPinnedRecentTrackingActivity',
+      'getPinnedRecentToolbarState',
+      'updatePinnedRecentFromToolbar',
       'undoPinnedRecentTrackingUpdate',
+      'openDocumentPipFromToolbar',
       'createTab',
       'openNewTab',
       'openExtensionDetailsPage'
@@ -7362,6 +7375,23 @@ function handleExtensionPageMessage(request, sender, sendResponse) {
       }).catch(() => sendResponse({ ok: false, activeTabCountByCardId: {} }));
       return true;
     }
+    case 'getPinnedRecentToolbarState':
+    case 'updatePinnedRecentFromToolbar': {
+      const method = request.action === 'getPinnedRecentToolbarState'
+        ? 'getToolbarStateForTab'
+        : 'updateForTab';
+      if (typeof PINNED_RECENT_TOOLBAR.callControllerForFreshTab !== 'function') {
+        sendResponse({ ok: false, status: 'error', reason: 'unavailable' });
+        return;
+      }
+      const args = request.action === 'getPinnedRecentToolbarState' ? [] : [request.guard];
+      PINNED_RECENT_TOOLBAR.callControllerForFreshTab(chrome, pinnedRecentContextMenuController, {
+        tabId: request.tabId,
+        method,
+        args
+      }).then(sendResponse);
+      return true;
+    }
     case 'undoPinnedRecentTrackingUpdate': {
       if (!pinnedRecentContextMenuController ||
           typeof pinnedRecentContextMenuController.undoTrackingUpdate !== 'function') {
@@ -7372,6 +7402,21 @@ function handleExtensionPageMessage(request, sender, sendResponse) {
         request.cardId,
         request.expectedUrl
       ).then(sendResponse).catch(() => sendResponse({ ok: false, reason: 'save-failed' }));
+      return true;
+    }
+    case 'openDocumentPipFromToolbar': {
+      const tabId = Number(request.tabId);
+      if (!Number.isInteger(tabId) || !chrome.tabs || typeof chrome.tabs.get !== 'function') {
+        sendResponse({ ok: false, reason: 'unavailable' });
+        return;
+      }
+      chrome.tabs.get(tabId, (tab) => {
+        if ((chrome.runtime && chrome.runtime.lastError) || !tab) {
+          sendResponse({ ok: false, reason: 'tab-unavailable' });
+          return;
+        }
+        openDocumentPipPickerOnTab(tab, 'popup', sendResponse);
+      });
       return true;
     }
     case 'createTab': {

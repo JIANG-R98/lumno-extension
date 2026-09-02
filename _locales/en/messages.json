@@ -2144,5 +2144,22 @@
   "command_tabs_action": { "message": "Search tabs" },
   "command_copy_title": { "message": "Copy current page link" },
   "command_copy_action": { "message": "Copy link" },
-  "settings_tab_account": { "message": "Account & sync" }
+  "settings_tab_account": { "message": "Account & sync" },
+  "popup_current_page": { "message": "Current page" },
+  "popup_linked_card": { "message": "Linked card" },
+  "popup_update_action": { "message": "Update link" },
+  "popup_updating_action": { "message": "Updating…" },
+  "popup_undoing_action": { "message": "Undoing…" },
+  "popup_pip_action": { "message": "Choose Picture-in-Picture content" },
+  "popup_status_loading": { "message": "Reading current page…" },
+  "popup_status_update_available": { "message": "Update available" },
+  "popup_status_up_to_date": { "message": "Linked and up to date" },
+  "popup_status_not_linked": { "message": "This page is not linked" },
+  "popup_status_unsupported": { "message": "This page is not supported" },
+  "popup_status_blocked": { "message": "This link cannot be updated" },
+  "popup_status_error": { "message": "Unable to read page status" },
+  "popup_update_success": { "message": "Linked card updated" },
+  "popup_update_failed": { "message": "Unable to update this link" },
+  "popup_undo_success": { "message": "Current update undone" },
+  "popup_pip_failed": { "message": "Unable to open Picture-in-Picture" }
 }

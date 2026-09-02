@@ -1,4 +1,4 @@
-import { createReactRootController, type ReactRootController } from './root-controller';
+import { createReactRootController, type ReactRootController } from '../shared/root-controller';
 
 export interface FeedbackSupportItem {
   href: string;

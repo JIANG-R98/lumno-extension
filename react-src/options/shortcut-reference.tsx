@@ -2,7 +2,7 @@ import { Fragment } from 'react';
 import {
   createReactRootController,
   type ReactRootController
-} from './root-controller';
+} from '../shared/root-controller';
 
 export interface ShortcutReferenceItemModel {
   commandName: string;
