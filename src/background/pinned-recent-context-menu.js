@@ -456,7 +456,16 @@
       tabs.sendMessage(tabId, {
         action: 'showPinnedRecentUpdateFeedback',
         ok: Boolean(result && result.changed),
-        reason: String(result && result.reason || 'save-failed')
+        reason: String(result && result.reason || 'save-failed'),
+        cardId: String(result && result.cardId || ''),
+        previous: result && result.previousItem ? {
+          title: result.previousItem.title,
+          url: result.previousItem.url
+        } : null,
+        current: result && result.currentItem ? {
+          title: result.currentItem.title,
+          url: result.currentItem.url
+        } : null
       }, () => {
         if (runtime) void runtime.lastError;
       });
@@ -473,6 +482,7 @@
         }
         tabs.sendMessage(tabId, {
           action: 'showPinnedRecentUpdatePreview',
+          cardId: String(nextItem.cardId || ''),
           previous: {
             title: replacement.previousItem.title,
             url: replacement.previousItem.url
@@ -482,7 +492,7 @@
             url: nextItem.url
           }
         }, (response) => {
-          resolve(Boolean(!getRuntimeError(runtime) && response && response.confirmed === true));
+          resolve(Boolean(!getRuntimeError(runtime) && response && response.ready === true));
         });
       });
     }
@@ -496,7 +506,10 @@
           return {
             ...replacement,
             changed: Boolean(saved),
-            reason: saved ? 'updated' : 'save-failed'
+            reason: saved ? 'updated' : 'save-failed',
+            cardId: String(replacement.items[replacement.index] &&
+              replacement.items[replacement.index].cardId || ''),
+            currentItem: replacement.items[replacement.index] || null
           };
         });
       });
@@ -536,11 +549,11 @@
         if (action.kind !== 'update' || !action.result.changed) {
           return applyForTab(tab, info);
         }
-        return requestUpdatePreview(tab, action.result).then((confirmed) => {
-          if (!confirmed) {
+        return requestUpdatePreview(tab, action.result).then((ready) => {
+          if (!ready) {
             return { ...action.result, changed: false, reason: 'cancelled' };
           }
-          return applyForTab(tab, info);
+          return replaceForTab(tab, info);
         });
       });
     }
@@ -550,26 +563,13 @@
       return itemsTask.then(() => rememberTrackingSource(tab, cardId, url));
     }
 
-    function addTrackingCardInfo(result) {
-      if (!result || !result.cardId ||
-          typeof recentStore.normalizePinnedRecentSites !== 'function') return result;
-      const normalizedItems = recentStore.normalizePinnedRecentSites(
-        cachedItems,
-        config.storeOptions || {}
-      );
-      const card = normalizedItems.find((item) => item && item.cardId === result.cardId);
-      const cardTitle = String(card && (card.title || card.siteName) || '').trim();
-      return cardTitle ? { ...result, cardTitle } : result;
-    }
-
     function syncTrackingDocument(tab, token, options) {
       if (!trackingRegistry) return Promise.resolve({ status: 'ignored' });
       const syncOptions = options && typeof options === 'object' ? options : {};
       const itemsTask = itemsLoaded ? Promise.resolve(cachedItems) : loadItems();
       return Promise.all([trackingReady, itemsTask]).then(() =>
         trackingRegistry.syncDocument(tab, token, cachedItems)
-      ).then((rawResult) => {
-        const result = addTrackingCardInfo(rawResult);
+      ).then((result) => {
         if (result && result.cardId) notifyTrackingActivityChanged();
         if (!result || !result.cardId || !tab || tab.active !== true ||
             syncOptions.refreshMenu === false) {
@@ -578,6 +578,50 @@
         return refreshMenuForTab(tab).then(() => {
           if (menus && typeof menus.refresh === 'function') menus.refresh();
           return result;
+        });
+      });
+    }
+
+    function undoTrackingUpdate(cardId, expectedUrl) {
+      const normalizedCardId = normalizeTrackingCardId(cardId);
+      const normalizedExpectedUrl = getHttpUrl(expectedUrl);
+      return loadItems().then((items) => {
+        const normalizedItems = recentStore.normalizePinnedRecentSites(
+          items,
+          config.storeOptions || {}
+        );
+        const currentItem = normalizedItems.find((item) =>
+          item && item.cardId === normalizedCardId
+        );
+        if (!currentItem || !normalizedCardId) {
+          return { ok: false, reason: 'source-not-found' };
+        }
+        if (!normalizedExpectedUrl || getHttpUrl(currentItem.url) !== normalizedExpectedUrl) {
+          return { ok: false, reason: 'source-changed' };
+        }
+        if (!Array.isArray(currentItem.updateHistory) || !currentItem.updateHistory.length ||
+            typeof recentStore.undoPinnedRecentSiteUpdate !== 'function') {
+          return { ok: false, reason: 'source-not-found' };
+        }
+        const undoResult = recentStore.undoPinnedRecentSiteUpdate(
+          normalizedItems,
+          currentItem.url,
+          { ...(config.storeOptions || {}), cardId: normalizedCardId }
+        );
+        if (!undoResult || !undoResult.changed) {
+          return { ok: false, reason: String(undoResult && undoResult.reason || 'save-failed') };
+        }
+        const restoredItem = undoResult.items.find((item) => item && item.cardId === normalizedCardId);
+        return storageSet(storage, { [storageKey]: undoResult.items }, runtime).then((saved) => {
+          if (!saved) return { ok: false, reason: 'save-failed' };
+          cachedItems = undoResult.items;
+          return {
+            ok: true,
+            reason: 'undone',
+            cardId: normalizedCardId,
+            previous: { title: currentItem.title, url: currentItem.url },
+            current: { title: restoredItem && restoredItem.title, url: restoredItem && restoredItem.url }
+          };
         });
       });
     }
@@ -733,6 +777,7 @@
       addForTab,
       applyForTab,
       confirmAndApplyForTab,
+      undoTrackingUpdate,
       bindTrackingTab,
       syncTrackingDocument,
       getTrackingActivity

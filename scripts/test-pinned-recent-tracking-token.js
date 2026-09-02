@@ -61,23 +61,16 @@ function createHarness(options) {
     pageListeners,
     intervalListeners,
     responseCallbacks,
-    trackingStatus: config.trackingStatus,
     sent
   };
 }
 
 async function run() {
-  const statusCalls = [];
   const harness = createHarness({
     response: {
       status: 'bound',
       cardId: 'pinned-course',
-      cardTitle: 'Course · Episode 1',
       token: 'trk-11111111111111111111111111111111'
-    },
-    trackingStatus: {
-      show(state) { statusCalls.push({ action: 'show', state }); },
-      hide() { statusCalls.push({ action: 'hide' }); }
     }
   });
   const controller = tokenModule.createTrackingTokenController(harness);
@@ -93,14 +86,6 @@ async function run() {
     harness.data.get(tokenModule.PAGE_TOKEN_STORAGE_KEY),
     'trk-11111111111111111111111111111111'
   );
-  assert.deepStrictEqual(statusCalls[0], {
-    action: 'show',
-    state: {
-      status: 'bound',
-      cardId: 'pinned-course',
-      cardTitle: 'Course · Episode 1'
-    }
-  });
   assert.strictEqual(harness.intervalListeners.length, 1);
   harness.windowObj.location.href = 'https://www.bilibili.com/video/BV-new/?p=2';
   harness.intervalListeners[0]();
@@ -119,7 +104,6 @@ async function run() {
   harness.listeners[0]({ action: tokenModule.REFRESH_ACTION });
   await Promise.resolve();
   assert.strictEqual(harness.data.has(tokenModule.PAGE_TOKEN_STORAGE_KEY), false);
-  assert.strictEqual(statusCalls.at(-1).action, 'hide');
 
   const blocked = createHarness({ storageThrows: true, response: { status: 'ignored' } });
   const blockedController = tokenModule.createTrackingTokenController(blocked);

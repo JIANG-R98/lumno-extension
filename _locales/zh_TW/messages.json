@@ -520,6 +520,7 @@
   "recent_mode_most": {
     "message": "最常瀏覽"
   },
+  "recent_mode_tracking": { "message": "追蹤檢視" },
   "settings_toggle_on": {
     "message": "開啟"
   },
@@ -1301,6 +1302,7 @@
   "recent_heading_most": {
     "message": "最常瀏覽"
   },
+  "recent_heading_tracking": { "message": "正在追蹤" },
   "bookmarks_heading": {
     "message": "書籤"
   },
@@ -1850,10 +1852,6 @@
   "recent_track_remove_with_tabs": {
     "message": "停止追蹤 · 已連結 {count} 個分頁"
   },
-  "recent_tracking_page_badge_title": { "message": "正在追蹤此分頁" },
-  "recent_tracking_page_badge_detail": { "message": "目前頁面可更新置頂卡片" },
-  "recent_tracking_page_badge_collapse": { "message": "收合到側邊" },
-  "recent_tracking_page_badge_expand": { "message": "保持展開" },
   "recent_replace_pinned_url_with_current": {
     "message": "將此追蹤卡片更新為目前頁面"
   },
@@ -1877,7 +1875,12 @@
   "recent_update_preview_new": { "message": "將替換為目前頁面" },
   "recent_update_preview_cancel": { "message": "取消" },
   "recent_update_preview_confirm": { "message": "確認更新" },
+  "recent_update_progress_title": { "message": "正在更新追蹤卡片" },
+  "recent_update_close": { "message": "關閉" },
   "recent_undo_tracking_update": { "message": "復原上一次追蹤更新" },
+  "recent_undo_tracking_update_confirm_title": { "message": "復原這次追蹤更新？" },
+  "recent_undo_tracking_update_confirm_description": { "message": "「{current}」將恢復為「{previous}」。" },
+  "recent_undo_tracking_update_confirm": { "message": "確認復原" },
   "recent_undo_tracking_update_success": { "message": "已復原上一次追蹤更新" },
   "recent_undo_tracking_update_failed": { "message": "無法復原此次更新" },
   "recent_update_badge": {

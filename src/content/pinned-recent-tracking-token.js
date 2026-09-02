@@ -18,12 +18,6 @@
     const config = options && typeof options === 'object' ? options : {};
     const windowObj = config.windowObj || globalThis.window;
     const chromeApi = config.chromeApi || (windowObj && windowObj.chrome);
-    const trackingStatusApi = globalThis.LumnoPinnedRecentTrackingStatus;
-    const trackingStatus = config.trackingStatus || (
-      trackingStatusApi && typeof trackingStatusApi.createTrackingStatusController === 'function'
-        ? trackingStatusApi.createTrackingStatusController({ windowObj, chromeApi })
-        : null
-    );
     let attached = false;
     let syncTask = null;
     let syncQueued = false;
@@ -113,21 +107,8 @@
               : { status: 'ignored' };
             if (result.clear === true) writeToken('');
             else if (result.token) writeToken(result.token);
-            if (result.cardId) {
-              startLocationMonitor();
-              if (trackingStatus && typeof trackingStatus.show === 'function') {
-                trackingStatus.show({
-                  status: String(result.status || 'bound'),
-                  cardId: String(result.cardId),
-                  cardTitle: String(result.cardTitle || '')
-                });
-              }
-            } else {
-              if (result.clear === true) stopLocationMonitor();
-              if (trackingStatus && typeof trackingStatus.hide === 'function') {
-                trackingStatus.hide();
-              }
-            }
+            if (result.cardId) startLocationMonitor();
+            else if (result.clear === true) stopLocationMonitor();
             resolve(result);
           });
         } catch (error) {

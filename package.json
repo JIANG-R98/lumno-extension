@@ -35,6 +35,7 @@
     "test:newtab-shortcuts-store": "node scripts/test-newtab-shortcuts-store.js",
     "test:newtab-shortcut-icon-store": "node scripts/test-newtab-shortcut-icon-store.js",
     "test:newtab-layout": "node scripts/test-newtab-layout.js",
+    "test:newtab-tracking-view": "node scripts/test-newtab-tracking-view.js",
     "test:message-router": "node scripts/test-message-router.js",
     "test:codex-debug": "node scripts/test-codex-debug-bridge.js",
     "test:tab-groups": "node scripts/test-background-tab-groups.js",

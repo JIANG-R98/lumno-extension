@@ -52,6 +52,8 @@ assert.ok(
     newtabJs.includes('function handleRecentContextMenuAction(actionValue)') &&
     newtabJs.includes('removeRecentSiteFromContextMenu(target.item)') &&
     newtabJs.includes('undoRecentSiteUpdateFromContextMenu(target.item)') &&
+    newtabJs.includes("confirmationTitle: t('recent_undo_tracking_update_confirm_title'") &&
+    newtabJs.includes('async onConfirm()') &&
     newtabJs.includes('hideRecentSiteTemporarily(item)'),
   'the recent-site record should change only after the remove menu action is selected'
 );
@@ -75,6 +77,9 @@ assert.ok(
     messages.newtab_open_in_new_tab &&
       messages.recent_context_menu_label &&
       messages.recent_undo_tracking_update &&
+      messages.recent_undo_tracking_update_confirm_title &&
+      messages.recent_undo_tracking_update_confirm_description &&
+      messages.recent_undo_tracking_update_confirm &&
       messages.recent_undo_tracking_update_success &&
       String(messages.newtab_open_in_new_tab.message || '').trim() &&
       String(messages.recent_context_menu_label.message || '').trim(),

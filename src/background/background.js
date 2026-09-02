@@ -6662,6 +6662,7 @@ const BACKGROUND_MESSAGE_ROUTE_GROUPS = Object.freeze({
       'syncPinnedRecentTrackingToken',
       'rememberPinnedRecentTrackingTarget',
       'getPinnedRecentTrackingActivity',
+      'undoPinnedRecentTrackingUpdate',
       'createTab',
       'openNewTab',
       'openExtensionDetailsPage'
@@ -7359,6 +7360,18 @@ function handleExtensionPageMessage(request, sender, sendResponse) {
       pinnedRecentContextMenuController.getTrackingActivity().then((counts) => {
         sendResponse({ ok: true, activeTabCountByCardId: counts || {} });
       }).catch(() => sendResponse({ ok: false, activeTabCountByCardId: {} }));
+      return true;
+    }
+    case 'undoPinnedRecentTrackingUpdate': {
+      if (!pinnedRecentContextMenuController ||
+          typeof pinnedRecentContextMenuController.undoTrackingUpdate !== 'function') {
+        sendResponse({ ok: false, reason: 'unavailable' });
+        return;
+      }
+      pinnedRecentContextMenuController.undoTrackingUpdate(
+        request.cardId,
+        request.expectedUrl
+      ).then(sendResponse).catch(() => sendResponse({ ok: false, reason: 'save-failed' }));
       return true;
     }
     case 'createTab': {

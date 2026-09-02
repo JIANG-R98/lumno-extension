@@ -548,6 +548,7 @@
   let searchEntryLastVisibleViewportWidth = Math.max(0, window.innerWidth || 0);
   let searchEntryLastVisibleViewportHeight = Math.max(0, window.innerHeight || 0);
   let currentRecentMode = 'most';
+  let preferredRecentMode = 'most';
   let currentRecentCount = 4;
   let currentBookmarkCount = 8;
   let currentBookmarkColumns = 6;
@@ -3243,8 +3244,12 @@
     if (!recentHeading) {
       return;
     }
-    const key = currentRecentMode === 'most' ? 'recent_heading_most' : 'recent_heading_latest';
-    const fallback = currentRecentMode === 'most' ? 'Most visited' : 'Recent visits';
+    const key = currentRecentMode === 'tracking'
+      ? 'recent_heading_tracking'
+      : (currentRecentMode === 'most' ? 'recent_heading_most' : 'recent_heading_latest');
+    const fallback = currentRecentMode === 'tracking'
+      ? 'Tracking'
+      : (currentRecentMode === 'most' ? 'Most visited' : 'Recent visits');
     recentHeading.textContent = t(key, fallback);
   }
 
@@ -3255,19 +3260,34 @@
   }
 
   function setRecentMode(nextMode) {
-    const mode = normalizeRecentMode(nextMode, 'latest');
+    const mode = nextMode === 'tracking'
+      ? 'tracking'
+      : normalizeRecentMode(nextMode, 'latest');
     if (currentRecentMode === mode) {
       updateRecentModeMenu();
       return;
     }
     currentRecentMode = mode;
+    if (mode !== 'tracking') preferredRecentMode = mode;
     updateRecentHeading();
     updateRecentModeMenu();
-    if (storageArea) {
+    if (storageArea && mode !== 'tracking') {
       storageArea.set({ [RECENT_MODE_STORAGE_KEY]: mode });
     }
     markRecentDataDirty();
     loadRecentSites({ force: true });
+  }
+
+  function hasTrackedRecentSites() {
+    return pinnedRecentSites.some((item) => item && item.trackingEnabled === true);
+  }
+
+  function leaveEmptyTrackingView() {
+    if (currentRecentMode !== 'tracking' || hasTrackedRecentSites()) return false;
+    currentRecentMode = preferredRecentMode;
+    updateRecentHeading();
+    updateRecentModeMenu();
+    return true;
   }
 
   function canDismissRecentCard() {
@@ -4113,7 +4133,8 @@
     }
     if (changes[RECENT_MODE_STORAGE_KEY]) {
       const nextMode = normalizeRecentMode(changes[RECENT_MODE_STORAGE_KEY].newValue, 'latest');
-      if (currentRecentMode === nextMode) {
+      preferredRecentMode = nextMode;
+      if (currentRecentMode === 'tracking' || currentRecentMode === nextMode) {
         updateRecentModeMenu();
       } else {
         currentRecentMode = nextMode;
@@ -4180,6 +4201,7 @@
     }
     if (changes[PINNED_RECENT_SITES_STORAGE_KEY]) {
       pinnedRecentSites = normalizePinnedRecentSites(changes[PINNED_RECENT_SITES_STORAGE_KEY].newValue);
+      updateRecentModeMenu();
       recentRenderSignature = '';
       renderRecentSites(recentSourceItems);
     }
@@ -4226,6 +4248,7 @@
     bootstrapInitialLanguageMode();
     initialPinnedRecentSitesReadyTask = readPinnedRecentSites().then((items) => {
       pinnedRecentSites = items;
+      updateRecentModeMenu();
       if (recentSourceItems.length > 0) {
         recentRenderSignature = '';
         renderRecentSites(recentSourceItems);
@@ -4323,6 +4346,7 @@
       const mode = normalizeRecentMode(stored, 'most');
       const changed = currentRecentMode !== mode;
       currentRecentMode = mode;
+      preferredRecentMode = mode;
       updateRecentHeading();
       updateRecentModeMenu();
       if (!hasStored) {
@@ -8099,6 +8123,11 @@
 
   function undoRecentSiteUpdate(item) {
     const normalizedItem = normalizeRecentSiteRecord(item, { ignoreBlacklist: true });
+    const currentIndex = findPinnedRecentSiteIndex(item);
+    if (!normalizedItem || currentIndex < 0 ||
+        pinnedRecentSites[currentIndex].url !== normalizedItem.url) {
+      return Promise.resolve({ undone: false, reason: 'source-changed' });
+    }
     const result = typeof NEWTAB_RECENT_STORE.undoPinnedRecentSiteUpdate === 'function'
       ? NEWTAB_RECENT_STORE.undoPinnedRecentSiteUpdate(
         pinnedRecentSites,
@@ -8117,15 +8146,33 @@
   }
 
   function undoRecentSiteUpdateFromContextMenu(item) {
-    return undoRecentSiteUpdate(item).then((result) => {
-      showToast(
-        result && result.undone
-          ? t('recent_undo_tracking_update_success', 'Tracking update undone')
-          : t('recent_undo_tracking_update_failed', 'Unable to undo this update'),
-        !(result && result.undone)
-      );
-    }).catch(() => {
-      showToast(t('recent_undo_tracking_update_failed', 'Unable to undo this update'), true);
+    const historyItem = item && Array.isArray(item.updateHistory) ? item.updateHistory[0] : null;
+    if (!historyItem) return;
+    openShortcutDialog({
+      confirmationTitle: t('recent_undo_tracking_update_confirm_title', 'Undo this tracking update?'),
+      confirmationDescription: formatMessage(
+        'recent_undo_tracking_update_confirm_description',
+        '“{current}” will be replaced with “{previous}”.',
+        {
+          current: String(item.title || item.url || ''),
+          previous: String(historyItem.title || historyItem.url || '')
+        }
+      ),
+      confirmLabel: t('recent_undo_tracking_update_confirm', 'Confirm undo'),
+      async onConfirm() {
+        try {
+          const result = await undoRecentSiteUpdate(item);
+          showToast(
+            result && result.undone
+              ? t('recent_undo_tracking_update_success', 'Tracking update undone')
+              : t('recent_undo_tracking_update_failed', 'Unable to undo this update'),
+            !(result && result.undone)
+          );
+        } catch (_error) {
+          showToast(t('recent_undo_tracking_update_failed', 'Unable to undo this update'), true);
+        }
+        return true;
+      }
     });
   }
 
@@ -9579,7 +9626,7 @@
     onChange: (nextMode) => {
       setRecentMode(nextMode);
     },
-    options: [
+    getOptions: () => [
       {
         value: 'latest',
         labelKey: 'recent_mode_latest',
@@ -9589,7 +9636,13 @@
         value: 'most',
         labelKey: 'recent_mode_most',
         fallback: 'Most visited'
-      }
+      },
+      ...(hasTrackedRecentSites() ? [{
+        value: 'tracking',
+        labelKey: 'recent_mode_tracking',
+        fallback: 'Tracking',
+        iconClass: 'ri-radar-line'
+      }] : [])
     ]
   });
   recentGrid = pageStructureRuntime.recent.grid;
@@ -11664,7 +11717,11 @@
         return !shouldExcludeFromRecentSites(url) && !isRecentSiteHidden(item);
       });
     recentSourceItems = normalizedSourceItems.slice();
-    const mergedItems = mergeRecentSitesWithPinned(normalizedSourceItems, getRecentLimit()).map((item) => ({
+    leaveEmptyTrackingView();
+    const visibleItems = currentRecentMode === 'tracking'
+      ? pinnedRecentSites.filter((item) => item && item.trackingEnabled === true)
+      : mergeRecentSitesWithPinned(normalizedSourceItems, getRecentLimit());
+    const mergedItems = visibleItems.map((item) => ({
       ...item,
       activeTabCount: item && item.cardId
         ? Math.max(0, Number(recentTrackingActivityByCardId[item.cardId]) || 0)
@@ -11824,7 +11881,7 @@
     }
     const requestToken = ++recentLoadToken;
     const recentSourceLimit = getRecentSourceLimit();
-    if (!recentSourceLimit || recentSourceLimit <= 0) {
+    if (currentRecentMode !== 'tracking' && (!recentSourceLimit || recentSourceLimit <= 0)) {
       recentRenderSignature = '';
       recentSourceItems = [];
       recentSitesView.clear();
@@ -11834,7 +11891,10 @@
       updateBookmarkSectionPosition();
       return Promise.resolve();
     }
-    return getRecentSites(recentSourceLimit + MAX_PINNED_RECENT_SITES, currentRecentMode).then((items) => {
+    const recentTask = currentRecentMode === 'tracking'
+      ? Promise.resolve([])
+      : getRecentSites(recentSourceLimit + MAX_PINNED_RECENT_SITES, currentRecentMode);
+    return recentTask.then((items) => {
       if (requestToken !== recentLoadToken ||
           requestedSectionDataRevision !== sectionDataRevision) {
         return;
@@ -12010,6 +12070,7 @@
       key: PINNED_RECENT_SITES_STORAGE_KEY
     })).then((normalized) => {
       pinnedRecentSites = normalized;
+      updateRecentModeMenu();
       return normalized;
     });
   }

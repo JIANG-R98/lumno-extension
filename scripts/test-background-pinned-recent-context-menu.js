@@ -128,7 +128,7 @@ function createChromeApi(options) {
           calls.sendMessage.push({ tabId, message });
           if (callback) callback(
             message && message.action === 'showPinnedRecentUpdatePreview'
-              ? { confirmed: config.previewConfirmed !== false }
+              ? { ready: config.previewConfirmed !== false }
               : undefined
           );
         }
@@ -489,7 +489,6 @@ async function run() {
     url: 'https://www.bilibili.com/video/BV-new/?p=7'
   }, '');
   assert.strictEqual(syncedTracking.status, 'bound');
-  assert.strictEqual(syncedTracking.cardTitle, 'Course');
   assert.ok(trackingRegistry.normalizeTrackingToken(syncedTracking.token));
 
   const browserRestartChrome = createChromeApi({
@@ -646,6 +645,7 @@ async function run() {
     tabId: 12,
     message: {
       action: 'showPinnedRecentUpdatePreview',
+      cardId: storage.data[PINNED_KEY][0].cardId,
       previous: { title: 'Course', url: original[0].url },
       current: {
         title: 'Conan Collection · Episode 2',
@@ -658,9 +658,27 @@ async function run() {
     message: {
       action: 'showPinnedRecentUpdateFeedback',
       ok: true,
-      reason: 'updated'
+      reason: 'updated',
+      cardId: storage.data[PINNED_KEY][0].cardId,
+      previous: { title: 'Course', url: original[0].url },
+      current: {
+        title: 'Conan Collection · Episode 2',
+        url: 'https://www.bilibili.com/video/BV-new/?p=7'
+      }
     }
   });
+  const undoResult = await controller.undoTrackingUpdate(
+    storage.data[PINNED_KEY][0].cardId,
+    'https://www.bilibili.com/video/BV-new/?p=7'
+  );
+  assert.strictEqual(undoResult.ok, true);
+  assert.strictEqual(storage.data[PINNED_KEY][0].url, original[0].url);
+  const staleUndo = await controller.undoTrackingUpdate(
+    storage.data[PINNED_KEY][0].cardId,
+    'https://www.bilibili.com/video/BV-new/?p=7'
+  );
+  assert.strictEqual(staleUndo.ok, false);
+  assert.strictEqual(staleUndo.reason, 'source-changed');
 
   chrome.setActiveTab({ id: 91, active: true, url: 'https://untracked.example/' });
   await chrome.events.onActivated.emit({ tabId: 91 });
@@ -706,7 +724,10 @@ async function run() {
     message: {
       action: 'showPinnedRecentUpdateFeedback',
       ok: true,
-      reason: 'added'
+      reason: 'added',
+      cardId: '',
+      previous: null,
+      current: null
     }
   });
   await Promise.resolve();

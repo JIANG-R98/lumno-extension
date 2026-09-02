@@ -520,6 +520,7 @@
   "recent_mode_most": {
     "message": "Show Most Visited"
   },
+  "recent_mode_tracking": { "message": "Tracking View" },
   "settings_toggle_on": {
     "message": "On"
   },
@@ -1301,6 +1302,7 @@
   "recent_heading_most": {
     "message": "Most Visited"
   },
+  "recent_heading_tracking": { "message": "Tracking" },
   "bookmarks_heading": {
     "message": "Bookmarks"
   },
@@ -1850,10 +1852,6 @@
   "recent_track_remove_with_tabs": {
     "message": "Stop tracking · linked to {count} tab(s)"
   },
-  "recent_tracking_page_badge_title": { "message": "Tracking this tab" },
-  "recent_tracking_page_badge_detail": { "message": "Current page can update the pinned card" },
-  "recent_tracking_page_badge_collapse": { "message": "Collapse to the side" },
-  "recent_tracking_page_badge_expand": { "message": "Keep expanded" },
   "recent_replace_pinned_url_with_current": {
     "message": "Update This Tracked Card to the Current Page"
   },
@@ -1877,7 +1875,12 @@
   "recent_update_preview_new": { "message": "Replace With This Page" },
   "recent_update_preview_cancel": { "message": "Cancel" },
   "recent_update_preview_confirm": { "message": "Update Card" },
+  "recent_update_progress_title": { "message": "Updating Tracked Card" },
+  "recent_update_close": { "message": "Close" },
   "recent_undo_tracking_update": { "message": "Undo Last Tracking Update" },
+  "recent_undo_tracking_update_confirm_title": { "message": "Undo This Tracking Update?" },
+  "recent_undo_tracking_update_confirm_description": { "message": "“{current}” will be replaced with “{previous}”." },
+  "recent_undo_tracking_update_confirm": { "message": "Confirm Undo" },
   "recent_undo_tracking_update_success": { "message": "Last tracking update undone" },
   "recent_undo_tracking_update_failed": { "message": "Unable to undo this update" },
   "recent_update_badge": {
