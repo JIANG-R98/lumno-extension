@@ -53,7 +53,7 @@
       confirmBeforeSwap: true,
       directUndo: true,
       fadeAfterUndo: true,
-      undoFadeDelay: 560,
+      undoFadeDelay: 1000,
       previewTimings: { breathe: 180, enter: 140, commit: 220, exit: 160 }
     });
     const phaseOutput = document.querySelector('[data-output="phase"]');

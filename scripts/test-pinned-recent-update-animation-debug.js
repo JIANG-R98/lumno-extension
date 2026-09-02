@@ -48,10 +48,17 @@ async function run() {
   assert.strictEqual(mountTarget.firstElementChild.id, feedback.HOST_ID);
   const style = mountTarget.firstElementChild.shadowRoot.querySelector('style').textContent;
   const surface = mountTarget.firstElementChild.shadowRoot.querySelector('.surface');
+  assert.strictEqual(surface.querySelector('.panel').getAttribute('aria-modal'), 'false');
   assert.match(style, /position:\s*absolute/);
   assert.strictEqual(surface.dataset.visualVariant, 'homepage-card');
   assert.match(style, /data-visual-variant="homepage-card"[^}]*background:\s*transparent/s);
   assert.match(style, /--home-card-width:\s*248px/);
+  assert.match(style, /grid-template-columns:\s*248px 248px/);
+  assert.match(style, /data-visual-variant="homepage-card"[^}]*\.change[^}]*grid-column:\s*2/s);
+  assert.doesNotMatch(style, /data-visual-variant="homepage-card"[^}]*\.glow\s*\{[^}]*inset:\s*calc/s);
+  assert.doesNotMatch(style, /data-phase="ready"[^}]*\.card-inner\s*\{/s);
+  assert.match(style, /data-phase="old-out"[^}]*\.card-inner[^}]*translateX\(-72px\)/s);
+  assert.match(style, /data-phase="new-in"[^}]*\.record--new[^}]*translateX\(-264px\)/s);
   assert.match(style, /\.card-footer\s*\{[^}]*width:\s*100%/s);
   assert.match(style, /x-lumno-action-button--warning/);
   assert.strictEqual(
@@ -74,10 +81,13 @@ async function run() {
     current: { title: 'Episode 7', url: 'https://example.com/p7' }
   });
   assert.strictEqual(controller.getPhase(), 'undone');
+  const toast = surface.querySelector('.undo-toast');
+  assert.strictEqual(toast.hidden, false);
+  assert.match(toast.textContent, /undone/i);
   assert.strictEqual(
     surface.querySelector('.card-title').textContent,
-    'Episode 7',
-    'undo should restore the previous title before the card fades'
+    'Episode 8',
+    'the simplified undo animation should fade the updated card without swapping its title'
   );
   await new Promise((resolve) => dom.window.setTimeout(resolve, 280));
   assert.strictEqual(controller.getPhase(), '', 'the restored card should fade out automatically');

@@ -78,6 +78,7 @@
     let cardIcon;
     let secondary;
     let primary;
+    let undoToast;
     let pendingReady;
     let activeChange = null;
     let flowRevision = 0;
@@ -188,34 +189,40 @@
         .x-lumno-action-button--secondary { border: 1px solid rgba(15,23,42,.06); background: #fff; color: #1f2937; box-shadow: 0 2px 2px rgba(15,23,42,.025),0 1px 1px rgba(15,23,42,.035); }
         .x-lumno-action-button--warning { border-color:#c86b12; background:linear-gradient(180deg,#f2a94b,#dc7b1f); color:#351801; box-shadow:inset 0 1px 1.6px rgba(255,255,255,.4),0 2px 6px rgba(180,83,9,.18); }
         .surface[data-visual-variant="homepage-card"] { background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; pointer-events:none; }
-        .surface[data-visual-variant="homepage-card"] .panel { pointer-events:auto; }
-        .surface[data-visual-variant="homepage-card"] .glow { inset:calc(50% - 154px) calc(50% - 154px); border-radius:42px; background:radial-gradient(circle,rgba(20,160,253,.3),transparent 68%); box-shadow:none; }
-        .surface[data-visual-variant="homepage-card"] .panel { --home-card-width: 248px; width:248px; max-height:none; padding:0; overflow:visible; border-radius:28px; background:transparent; box-shadow:none; backdrop-filter:none; -webkit-backdrop-filter:none; }
-        .surface[data-visual-variant="homepage-card"] h2 { margin:0 0 10px; color:#25384a; font-size:13px; text-shadow:0 1px 0 rgba(255,255,255,.7); }
-        .surface[data-visual-variant="homepage-card"] .change { position:relative; z-index:3; display:block; width:234px; margin:0 auto -4px; }
+        .surface[data-visual-variant="homepage-card"] .panel { --home-card-width:248px; width:512px; max-height:none; padding:0; overflow:visible; border-radius:28px; display:grid; grid-template-columns:248px 248px; column-gap:16px; background:transparent; box-shadow:none; backdrop-filter:none; -webkit-backdrop-filter:none; pointer-events:auto; }
+        .surface[data-visual-variant="homepage-card"] h2 { grid-column:1 / -1; margin:0 0 10px; color:#25384a; font-size:13px; text-shadow:0 1px 0 rgba(255,255,255,.7); }
+        .surface[data-visual-variant="homepage-card"] .change { position:relative; z-index:3; grid-column:2; grid-row:2; display:block; width:234px; margin:0 7px; align-self:start; }
         .surface[data-visual-variant="homepage-card"] .record--old,
         .surface[data-visual-variant="homepage-card"] .arrow { display:none; }
         .surface[data-visual-variant="homepage-card"] .record--new { width:100%; min-height:104px; padding:13px 13px 14px 15px; border:1px solid rgba(0,0,0,.1); border-radius:20px; box-sizing:border-box; background:#fff; box-shadow:0 58px 16px rgba(199,199,199,0),0 37px 15px rgba(199,199,199,.01),0 21px 12px rgba(199,199,199,.05),0 9px 9px rgba(199,199,199,.09),0 2px 5px rgba(199,199,199,.1); transform-origin:center bottom; }
         .surface[data-visual-variant="homepage-card"] .record-label { color:#68788a; }
-        .surface[data-visual-variant="homepage-card"] .card-stage { width:var(--home-card-width); margin:0; }
+        .surface[data-visual-variant="homepage-card"] .card-stage { grid-column:1; grid-row:2; width:var(--home-card-width); margin:0; transition:transform 220ms cubic-bezier(.2,.8,.2,1); }
         .surface[data-visual-variant="homepage-card"] .home-card { padding:7px 7px 12px; border-radius:28px; background:#dcebfe; border-color:rgba(255,255,255,.1); box-shadow:0 52px 15px rgba(199,199,199,0),0 33px 13px rgba(199,199,199,.01),0 19px 11px rgba(199,199,199,.05),0 8px 8px rgba(199,199,199,.09),0 2px 5px rgba(199,199,199,.1); transform:none; transition:transform 220ms cubic-bezier(.2,.8,.2,1),box-shadow 220ms ease; }
         .surface[data-visual-variant="homepage-card"] .card-inner { position:relative; width:100%; height:104px; border:1px solid rgba(0,0,0,.1); background:#fff; box-shadow:0 58px 16px rgba(199,199,199,0),0 37px 15px rgba(199,199,199,.01),0 21px 12px rgba(199,199,199,.05),0 9px 9px rgba(199,199,199,.09),0 2px 5px rgba(199,199,199,.1); transition:height 220ms ease,transform 220ms ease,margin-bottom 220ms ease,opacity 180ms ease; }
         .surface[data-visual-variant="homepage-card"] .card-content { opacity:1; transform:none; filter:none; }
         .surface[data-visual-variant="homepage-card"] .card-footer { width:100%; margin:10px 0 0; }
-        .surface[data-visual-variant="homepage-card"][data-phase="ready"] .card-inner { height:124px; transform:translateY(-20px); margin-bottom:-20px; }
-        .surface[data-visual-variant="homepage-card"][data-phase="old-out"] .card-inner { height:124px; margin-bottom:-20px; opacity:0; transform:translate(-72px,-20px) rotate(-4deg); }
-        .surface[data-visual-variant="homepage-card"][data-phase="old-out"] .record--new { opacity:1; transform:translateY(-8px); }
-        .surface[data-visual-variant="homepage-card"][data-phase="new-in"] .record--new { opacity:0; transform:translateY(116px) scale(.98); }
-        .surface[data-visual-variant="homepage-card"][data-phase="new-in"] .card-inner,
-        .surface[data-visual-variant="homepage-card"][data-phase="saving"] .card-inner { opacity:1; height:124px; transform:translateY(-20px); margin-bottom:-20px; }
+        .surface[data-visual-variant="homepage-card"][data-phase="old-out"] .card-inner { opacity:0; transform:translateX(-72px); }
+        .surface[data-visual-variant="homepage-card"][data-phase="old-out"] .record--new { opacity:1; transform:none; }
+        .surface[data-visual-variant="homepage-card"][data-phase="new-in"] .card-inner { opacity:0; transform:translateX(-72px); }
+        .surface[data-visual-variant="homepage-card"][data-phase="new-in"] .record--new { opacity:1; transform:translateX(-264px); }
+        .surface[data-visual-variant="homepage-card"][data-phase="saving"] .record--new { opacity:0; transform:translateX(-264px); }
+        .surface[data-visual-variant="homepage-card"][data-phase="saving"] .card-inner { opacity:1; transform:none; }
         .surface[data-visual-variant="homepage-card"][data-phase="success"] .change,
         .surface[data-visual-variant="homepage-card"][data-phase="undone"] .change { display:none; }
+        .surface[data-visual-variant="homepage-card"][data-phase="success"] .card-stage { transform:translateX(132px); }
         .surface[data-visual-variant="homepage-card"][data-phase="success"] .home-card { transform:none; box-shadow:0 70px 19px rgba(199,199,199,0),0 44px 18px rgba(199,199,199,.02),0 25px 15px rgba(199,199,199,.08),0 11px 11px rgba(199,199,199,.13),0 3px 6px rgba(199,199,199,.15); }
-        .surface[data-visual-variant="homepage-card"][data-phase="undone"] .panel { animation:restored-fade var(--lumno-flow-undo-fade,560ms) ease both; }
+        .surface[data-visual-variant="homepage-card"] .actions { grid-column:1 / -1; }
+        .surface[data-visual-variant="homepage-card"][data-phase="undone"] h2,
+        .surface[data-visual-variant="homepage-card"][data-phase="undone"] .actions { display:none; }
+        .surface[data-visual-variant="homepage-card"][data-phase="undone"] .card-stage { transform:translateX(132px); }
+        .surface[data-visual-variant="homepage-card"][data-phase="undone"] .home-card { animation:card-fade 260ms ease both; }
+        .undo-toast { position:absolute; left:50%; top:24px; translate:-50% 0; min-height:36px; padding:0 16px; display:flex; align-items:center; border:1px solid rgba(255,255,255,.22); border-radius:999px; background:#263141; color:#fff; box-shadow:0 10px 30px rgba(15,23,42,.2); font:600 13px/1 "Open Sans","PingFang SC",sans-serif; animation:toast-enter 180ms cubic-bezier(.22,1,.36,1) both; }
+        .undo-toast[hidden] { display:none; }
         @keyframes viewport-breathe { 0%{opacity:0;transform:scale(1.008)} 42%{opacity:.95;transform:scale(1)} 100%{opacity:0;transform:scale(.996)} }
         @keyframes panel-enter { from{opacity:0;transform:translateY(20px) scale(.96)} to{opacity:1;transform:translateY(0) scale(1)} }
         @keyframes card-complete { from{opacity:.7;transform:translateY(8px) scale(.97)} to{opacity:1;transform:translateY(0) scale(1)} }
-        @keyframes restored-fade { 0%,55%{opacity:1;transform:translateY(0)} 100%{opacity:0;transform:translateY(-8px)} }
+        @keyframes card-fade { from{opacity:1} to{opacity:0} }
+        @keyframes toast-enter { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
         @media (max-width:860px) { .panel { --home-card-width:min(360px,calc((96vw - 12px) / 2)); } }
         @media (max-width:640px) { .panel { --home-card-width:100%;padding:18px; } .change { grid-template-columns:minmax(0,1fr); } .arrow { transform:rotate(90deg); } .actions { justify-content:stretch; } .x-lumno-action-button { flex:1; } }
         @media (prefers-color-scheme:dark) { .panel { color:#edf7ff;background:linear-gradient(135deg,rgba(30,41,59,.86),rgba(15,23,42,.82)); } .record{background:rgba(133,205,254,.07)} .record-title,.card-site{color:#edf7ff}.record-label,.record-url,.card-title,.card-footer{color:#9bb5c8}.card-inner{background:rgba(20,31,42,.82)}.x-lumno-action-button--secondary{background:#1e293b;color:#f8fafc;border-color:rgba(148,163,184,.18)} }
@@ -226,13 +233,15 @@
       surface.className = 'surface';
       surface.dataset.visualVariant = visualVariant;
       surface.hidden = true;
-      surface.innerHTML = `<div class="glow" aria-hidden="true"></div><section class="panel" role="dialog" aria-modal="true" aria-labelledby="flow-title" tabindex="-1"><h2 id="flow-title"></h2><div class="change"><div class="record record--old"><div class="record-label old-label"></div><div class="record-title old-title"></div><div class="record-url old-url"></div></div><div class="arrow" aria-hidden="true">→</div><div class="record record--new"><div class="record-label new-label"></div><div class="record-title new-title"></div><div class="record-url new-url"></div></div></div><div class="card-stage" aria-hidden="true"><div class="home-card"><div class="card-inner"><div class="card-content"><div class="card-header"><span class="card-icon"></span><span class="card-site"></span></div><div class="card-title"></div></div></div><div class="card-footer"><span class="card-url"></span><span class="card-status"></span></div></div></div><div class="actions"><button class="x-lumno-action-button x-lumno-action-button--secondary secondary" type="button"></button><button class="x-lumno-action-button x-lumno-action-button--primary primary" type="button"></button></div></section>`;
+      surface.innerHTML = `<div class="glow" aria-hidden="true"></div><section class="panel" role="dialog" aria-modal="true" aria-labelledby="flow-title" tabindex="-1"><h2 id="flow-title"></h2><div class="change"><div class="record record--old"><div class="record-label old-label"></div><div class="record-title old-title"></div><div class="record-url old-url"></div></div><div class="arrow" aria-hidden="true">→</div><div class="record record--new"><div class="record-label new-label"></div><div class="record-title new-title"></div><div class="record-url new-url"></div></div></div><div class="card-stage" aria-hidden="true"><div class="home-card"><div class="card-inner"><div class="card-content"><div class="card-header"><span class="card-icon"></span><span class="card-site"></span></div><div class="card-title"></div></div></div><div class="card-footer"><span class="card-url"></span><span class="card-status"></span></div></div></div><div class="actions"><button class="x-lumno-action-button x-lumno-action-button--secondary secondary" type="button"></button><button class="x-lumno-action-button x-lumno-action-button--primary primary" type="button"></button></div></section><div class="undo-toast" role="status" aria-live="polite" hidden></div>`;
+      if (visualVariant === 'homepage-card') surface.querySelector('.panel').setAttribute('aria-modal', 'false');
       title = surface.querySelector('h2');
       oldTitle = surface.querySelector('.old-title'); oldUrl = surface.querySelector('.old-url');
       newTitle = surface.querySelector('.new-title'); newUrl = surface.querySelector('.new-url');
       cardSite = surface.querySelector('.card-site'); cardTitle = surface.querySelector('.card-title');
       cardUrl = surface.querySelector('.card-url'); cardIcon = surface.querySelector('.card-icon');
       secondary = surface.querySelector('.secondary'); primary = surface.querySelector('.primary');
+      undoToast = surface.querySelector('.undo-toast');
       surface.querySelector('.old-label').textContent = ui('recent_update_preview_original','Current tracked card');
       surface.querySelector('.new-label').textContent = ui('recent_update_preview_new','Replace with');
       surface.querySelector('.card-status').textContent = ui('recent_mode_tracking','Linked');
@@ -279,6 +288,7 @@
       surface.dataset.state = 'leaving';
       later(() => {
         surface.hidden = true;
+        if (undoToast) undoToast.hidden = true;
         activeChange = null;
         if (previousFocus && previousFocus.isConnected && previousFocus.focus) previousFocus.focus();
         previousFocus = null;
@@ -321,13 +331,18 @@
           return;
         }
         activeChange = { ...activeChange, previous: result.previous, current: result.current };
-        fill(result.previous, result.current);
-        fillCard(result.current);
         surface.dataset.phase = 'undone';
         title.textContent = reasonMessage('undone');
         setButtons(ui('recent_update_close','Close'),'',false);
-        if (fadeAfterUndo) later(close, undoFadeDelay);
-        else secondary.focus();
+        if (fadeAfterUndo) {
+          undoToast.textContent = reasonMessage('undone');
+          undoToast.hidden = false;
+          later(close, undoFadeDelay);
+        } else {
+          fill(result.previous, result.current);
+          fillCard(result.current);
+          secondary.focus();
+        }
       });
     }
 
@@ -428,6 +443,7 @@
       previousFocus = documentObj.activeElement;
       activeChange = { previous: payload.previous || {}, current: payload.current || {}, cardId: String(payload.cardId || '') };
       fill(activeChange.previous, activeChange.current);
+      undoToast.hidden = true;
       title.textContent = ui('recent_update_progress_title','Updating tracked card');
       setButtons('', '', false);
       surface.hidden = false;
@@ -489,6 +505,7 @@
       };
       fill(activeChange.previous, activeChange.current);
       fillCard(activeChange.current);
+      undoToast.hidden = true;
       surface.dataset.phase = 'success';
       title.textContent = reasonMessage('updated');
       setButtons(ui('recent_update_close','Close'),ui('recent_undo_tracking_update','Undo'),true);
