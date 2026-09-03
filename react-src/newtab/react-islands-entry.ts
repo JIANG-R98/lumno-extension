@@ -4,6 +4,7 @@ import { createFeedbackControlApi } from './feedback';
 import { createRecentSitesViewApi } from './recent-sites';
 import { createSelectMenuApi } from './select-menu';
 import { createShortcutDialogApi } from './shortcut-dialog';
+import { createRecentHistoryDialogApi } from './recent-history-dialog';
 import { createShortcutsViewApi } from './shortcuts';
 import { createSuggestionsViewApi } from './suggestions';
 import { createToastApi } from './toast';
@@ -28,6 +29,7 @@ const runtime = globalThis as typeof globalThis & {
     dock: ReturnType<typeof createDockApi>;
     feedback: ReturnType<typeof createFeedbackControlApi>;
     shortcutDialog: ReturnType<typeof createShortcutDialogApi>;
+    recentHistoryDialog: ReturnType<typeof createRecentHistoryDialogApi>;
     recentSites: ReturnType<typeof createRecentSitesViewApi>;
     searchInput: ReturnType<typeof createSearchInputApi>;
     selectMenu: ReturnType<typeof createSelectMenuApi>;
@@ -52,6 +54,8 @@ const runtime = globalThis as typeof globalThis & {
   LumnoNewtabDockReact?: ReturnType<typeof createDockApi>;
   LumnoNewtabShortcutDialog?: ReturnType<typeof createShortcutDialogApi>;
   LumnoNewtabShortcutDialogReact?: ReturnType<typeof createShortcutDialogApi>;
+  LumnoNewtabRecentHistoryDialog?: ReturnType<typeof createRecentHistoryDialogApi>;
+  LumnoNewtabRecentHistoryDialogReact?: ReturnType<typeof createRecentHistoryDialogApi>;
   LumnoNewtabShortcutsView?: ReturnType<typeof createShortcutsViewApi>;
   LumnoNewtabShortcutsViewReact?: ReturnType<typeof createShortcutsViewApi>;
   LumnoNewtabRecentSitesView?: ReturnType<typeof createRecentSitesViewApi>;
@@ -102,6 +106,7 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   const dockApi = createDockApi();
   const feedbackApi = createFeedbackControlApi();
   const shortcutDialogApi = createShortcutDialogApi();
+  const recentHistoryDialogApi = createRecentHistoryDialogApi();
   const recentSitesApi = createRecentSitesViewApi();
   const selectMenuApi = createSelectMenuApi();
   const shortcutsApi = createShortcutsViewApi();
@@ -128,6 +133,8 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   runtime.LumnoNewtabFeedbackControl = feedbackApi;
   runtime.LumnoNewtabShortcutDialogReact = shortcutDialogApi;
   runtime.LumnoNewtabShortcutDialog = shortcutDialogApi;
+  runtime.LumnoNewtabRecentHistoryDialogReact = recentHistoryDialogApi;
+  runtime.LumnoNewtabRecentHistoryDialog = recentHistoryDialogApi;
   runtime.LumnoNewtabRecentSitesViewReact = recentSitesApi;
   runtime.LumnoNewtabRecentSitesView = recentSitesApi;
   runtime.LumnoNewtabSelectMenuReact = selectMenuApi;
@@ -169,6 +176,7 @@ if (!bootstrapState || !bootstrapState.reactReady) {
     dock: dockApi,
     feedback: feedbackApi,
     shortcutDialog: shortcutDialogApi,
+    recentHistoryDialog: recentHistoryDialogApi,
     recentSites: recentSitesApi,
     searchInput: searchInputApi,
     selectMenu: selectMenuApi,

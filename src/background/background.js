@@ -7408,6 +7408,18 @@ function handleExtensionPageMessage(request, sender, sendResponse) {
       ).then(sendResponse).catch(() => sendResponse({ ok: false, reason: 'save-failed' }));
       return true;
     }
+    case 'undoPinnedRecentTrackingLink': {
+      if (!pinnedRecentContextMenuController ||
+          typeof pinnedRecentContextMenuController.undoTrackingLink !== 'function') {
+        sendResponse({ ok: false, reason: 'unavailable' });
+        return;
+      }
+      pinnedRecentContextMenuController.undoTrackingLink(
+        { id: Number(request.tabId) },
+        request.guard
+      ).then(sendResponse).catch(() => sendResponse({ ok: false, reason: 'save-failed' }));
+      return true;
+    }
     case 'openDocumentPipFromToolbar': {
       const tabId = Number(request.tabId);
       if (!Number.isInteger(tabId) || !chrome.tabs || typeof chrome.tabs.get !== 'function') {

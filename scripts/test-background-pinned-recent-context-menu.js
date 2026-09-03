@@ -376,6 +376,85 @@ async function run() {
   });
   assert.strictEqual(linkedExistingState.status, 'up-to-date');
 
+  const undoAddedStorage = createMemoryStorage({ [PINNED_KEY]: [original[1]] });
+  const undoAddedChrome = createChromeApi();
+  const undoAddedController = pinnedMenu.createPinnedRecentContextMenuController({
+    chromeApi: undoAddedChrome.api,
+    recentStore,
+    storage: undoAddedStorage,
+    storageKey: PINNED_KEY,
+    now: () => 1002
+  });
+  undoAddedController.attach();
+  const newlyLinked = await undoAddedController.linkForTab({
+    id: 101,
+    url: 'https://newly-linked.example/watch/1',
+    title: 'Newly linked'
+  });
+  assert.strictEqual(newlyLinked.ok, true);
+  assert.strictEqual(newlyLinked.undoGuard.mode, 'remove-added');
+  const undoneNewLink = await undoAddedController.undoTrackingLink(
+    { id: 101 },
+    newlyLinked.undoGuard
+  );
+  assert.strictEqual(undoneNewLink.ok, true);
+  assert.strictEqual(undoneNewLink.reason, 'link-undone');
+  assert.deepStrictEqual(
+    undoAddedStorage.data[PINNED_KEY].map((item) => item.url),
+    [original[1].url],
+    'undoing a newly added link should remove only the new card'
+  );
+
+  const disabledPinned = { ...original[1], trackingEnabled: false, title: 'Docs before linking' };
+  const undoEnabledStorage = createMemoryStorage({ [PINNED_KEY]: [disabledPinned] });
+  const undoEnabledChrome = createChromeApi();
+  const undoEnabledController = pinnedMenu.createPinnedRecentContextMenuController({
+    chromeApi: undoEnabledChrome.api,
+    recentStore,
+    storage: undoEnabledStorage,
+    storageKey: PINNED_KEY,
+    now: () => 1003
+  });
+  undoEnabledController.attach();
+  const enabledLink = await undoEnabledController.linkForTab({
+    id: 102,
+    url: disabledPinned.url,
+    title: 'Docs after linking'
+  });
+  assert.strictEqual(enabledLink.undoGuard.mode, 'restore-existing');
+  const undoneEnabledLink = await undoEnabledController.undoTrackingLink(
+    { id: 102 },
+    enabledLink.undoGuard
+  );
+  assert.strictEqual(undoneEnabledLink.ok, true);
+  assert.strictEqual(undoEnabledStorage.data[PINNED_KEY][0].trackingEnabled, false);
+  assert.strictEqual(undoEnabledStorage.data[PINNED_KEY][0].title, 'Docs before linking');
+
+  const bindFailureStorage = createMemoryStorage({ [PINNED_KEY]: [original[1]] });
+  const bindFailureController = pinnedMenu.createPinnedRecentContextMenuController({
+    chromeApi: createChromeApi().api,
+    recentStore,
+    storage: bindFailureStorage,
+    storageKey: PINNED_KEY,
+    trackingRegistry: {
+      bindTab: async () => null,
+      prune: async () => true
+    },
+    now: () => 1004
+  });
+  const failedLink = await bindFailureController.linkForTab({
+    id: 103,
+    url: 'https://bind-failure.example/watch/1',
+    title: 'Should roll back'
+  });
+  assert.strictEqual(failedLink.ok, false);
+  assert.strictEqual(failedLink.reason, 'bind-failed');
+  assert.deepStrictEqual(
+    bindFailureStorage.data[PINNED_KEY].map((item) => item.url),
+    [original[1].url],
+    'a failed tab binding should roll back the saved linked card'
+  );
+
   await controller.bindTrackingTab(
     { id: 11 },
     recentStore.normalizePinnedRecentSites(ambiguous)[0].cardId,

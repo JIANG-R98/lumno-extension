@@ -167,6 +167,57 @@ async function testRecentStore() {
   assert.strictEqual(conflictingUndo.changed, false);
   assert.strictEqual(conflictingUndo.reason, 'url-conflict');
   assert.strictEqual(conflictingUndo.items.length, 2);
+
+  const versionedPinned = recentStore.normalizePinnedRecentSites([{
+    cardId: 'pinned-versioned',
+    title: 'Episode C',
+    url: 'https://series.example/episode/c',
+    trackingEnabled: true,
+    updateHistory: [
+      { title: 'Episode B', url: 'https://series.example/episode/b', updatedAt: 200 },
+      { title: 'Episode A', url: 'https://series.example/episode/a', updatedAt: 100 }
+    ]
+  }], { maxPinned: 3 });
+  const restoredVersion = recentStore.restorePinnedRecentSiteVersion(
+    versionedPinned,
+    'https://series.example/episode/c',
+    versionedPinned[0].updateHistory[0],
+    { cardId: 'pinned-versioned', now: 300 }
+  );
+  assert.strictEqual(restoredVersion.changed, true);
+  assert.strictEqual(restoredVersion.reason, 'restored');
+  assert.strictEqual(restoredVersion.items[0].url, 'https://series.example/episode/b');
+  assert.deepStrictEqual(
+    restoredVersion.items[0].updateHistory.map((entry) => entry.url),
+    [
+      'https://series.example/episode/c',
+      'https://series.example/episode/b',
+      'https://series.example/episode/a'
+    ],
+    'restoring a version should append one change record without consuming history'
+  );
+  const restoredOlderVersion = recentStore.restorePinnedRecentSiteVersion(
+    restoredVersion.items,
+    restoredVersion.items[0].url,
+    restoredVersion.items[0].updateHistory[2],
+    { cardId: 'pinned-versioned', now: 400 }
+  );
+  assert.strictEqual(restoredOlderVersion.changed, true);
+  assert.strictEqual(restoredOlderVersion.items[0].url, 'https://series.example/episode/a');
+  assert.strictEqual(restoredOlderVersion.items[0].updateHistory.length, 4);
+
+  const conflictingRestoreItems = recentStore.normalizePinnedRecentSites([
+    versionedPinned[0],
+    { title: 'Pinned B elsewhere', url: 'https://series.example/episode/b', pinnedAt: 999 }
+  ]);
+  const conflictingRestore = recentStore.restorePinnedRecentSiteVersion(
+    conflictingRestoreItems,
+    versionedPinned[0].url,
+    conflictingRestoreItems[0].updateHistory[0],
+    { cardId: versionedPinned[0].cardId, now: 500 }
+  );
+  assert.strictEqual(conflictingRestore.changed, false);
+  assert.strictEqual(conflictingRestore.reason, 'url-conflict');
   assert.deepStrictEqual(
     recentStore.mergeRecentSitesWithPinned([], loadedPinned, [], 4, options)
       .map((item) => item.url),

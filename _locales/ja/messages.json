@@ -1883,6 +1883,15 @@
   "recent_undo_tracking_update_confirm_description": { "message": "「{current}」を「{previous}」に戻します。" },
   "recent_undo_tracking_update_confirm": { "message": "元に戻す" },
   "recent_undo_tracking_update_success": { "message": "直前の追跡更新を元に戻しました" },
+  "recent_history_menu": { "message": "最近の変更履歴を表示" },
+  "recent_history_title": { "message": "変更履歴" },
+  "recent_history_description": { "message": "履歴を残したまま、任意のバージョンを現在の内容に設定できます。" },
+  "recent_history_current": { "message": "現在のバージョン" },
+  "recent_history_earlier": { "message": "以前のバージョン" },
+  "recent_history_restore": { "message": "現在のバージョンに設定" },
+  "recent_history_restoring": { "message": "復元中…" },
+  "recent_history_restore_success": { "message": "選択したバージョンを復元しました" },
+  "recent_history_restore_failed": { "message": "このバージョンを復元できません" },
   "recent_undo_tracking_update_failed": { "message": "この更新を元に戻せません" },
   "recent_update_badge": {
     "message": "更新"
@@ -2171,5 +2180,7 @@
   "popup_link_success": { "message": "現在のページを関連付けました" },
   "popup_link_failed": { "message": "現在のページを関連付けられませんでした" },
   "popup_undo_success": { "message": "今回の更新を元に戻しました" },
+  "popup_undo_link_action": { "message": "関連付けを元に戻す" },
+  "popup_undo_link_success": { "message": "新しい関連付けを元に戻しました" },
   "popup_settings_failed": { "message": "設定を開けませんでした" }
 }

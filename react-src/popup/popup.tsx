@@ -20,6 +20,7 @@ export interface PopupRenderModel {
   canUpdate?: boolean;
   canLink?: boolean;
   canUndo?: boolean;
+  undoKind?: 'update' | 'link';
   canClip?: boolean;
   notice?: { kind: 'success' | 'error'; text: string; celebrate?: boolean } | null;
   labels: {
@@ -30,6 +31,7 @@ export interface PopupRenderModel {
     link: string;
     linking: string;
     undo: string;
+    undoLink: string;
     undoing: string;
     settings: string;
     webClip: string;
@@ -127,8 +129,29 @@ export function PopupView(model: PopupRenderModel) {
         {status === 'loading' ? (
           <div className="popup-loading-card"><div /><span /><span /></div>
         ) : status === 'unsupported' ? null : (
-          <>
-            {previewItem && status !== 'error' ? (
+          status === 'update-available' && page && linkedCard ? (
+            <div className="popup-update-comparison">
+              <div className="popup-update-source">
+                <span className="popup-update-source-icon" aria-hidden="true">
+                  <i className="ri-icon ri-history-line" />
+                </span>
+                <span className="popup-update-source-copy">
+                  <small>{labels.originalContent}</small>
+                  <strong>{linkedCard.title || linkedCard.url}</strong>
+                  <span title={linkedCard.url}>{linkedCard.url}</span>
+                </span>
+              </div>
+              <span className="popup-update-connector" aria-hidden="true">
+                <i className="ri-icon ri-arrow-down-line" />
+              </span>
+              <RecentCardPreview
+                item={page}
+                badge={labels.statuses[status]}
+                badgeIcon={cardBadgeIcon}
+              />
+            </div>
+          ) : (
+            previewItem && status !== 'error' ? (
               <RecentCardPreview
                 item={previewItem}
                 badge={cardBadgeIcon ? labels.statuses[status] : undefined}
@@ -139,19 +162,8 @@ export function PopupView(model: PopupRenderModel) {
                 <h1>{labels.statuses[status]}</h1>
                 <p>{labels.statusDetails[status]}</p>
               </div>
-            )}
-            {status === 'update-available' && linkedCard && (
-              <div className="popup-update-source">
-                <span className="popup-update-source-icon" aria-hidden="true">
-                  <i className="ri-icon ri-arrow-left-line" />
-                </span>
-                <span className="popup-update-source-copy">
-                  <small>{labels.originalContent}</small>
-                  <strong title={linkedCard.url}>{linkedCard.url}</strong>
-                </span>
-              </div>
-            )}
-          </>
+            )
+          )
         )}
       </section>
 
@@ -173,7 +185,7 @@ export function PopupView(model: PopupRenderModel) {
         {canUndo && (
           <button className="popup-button popup-button--warning" disabled={Boolean(busy)} onClick={model.onUndo}>
             <i className="ri-icon ri-arrow-go-back-line" aria-hidden="true" />
-            {busy === 'undo' ? labels.undoing : labels.undo}
+            {busy === 'undo' ? labels.undoing : (model.undoKind === 'link' ? labels.undoLink : labels.undo)}
           </button>
         )}
       </div>

@@ -1883,6 +1883,15 @@
   "recent_undo_tracking_update_confirm_description": { "message": "“{current}”将恢复为“{previous}”。" },
   "recent_undo_tracking_update_confirm": { "message": "确认撤销" },
   "recent_undo_tracking_update_success": { "message": "已撤销上一次追踪更新" },
+  "recent_history_menu": { "message": "查看最近变更历史" },
+  "recent_history_title": { "message": "变更记录" },
+  "recent_history_description": { "message": "选择任意一个版本设为当前内容，历史记录会继续保留。" },
+  "recent_history_current": { "message": "当前版本" },
+  "recent_history_earlier": { "message": "较早版本" },
+  "recent_history_restore": { "message": "设为当前版本" },
+  "recent_history_restoring": { "message": "正在恢复…" },
+  "recent_history_restore_success": { "message": "已恢复为所选版本" },
+  "recent_history_restore_failed": { "message": "无法恢复此版本" },
   "recent_undo_tracking_update_failed": { "message": "无法撤销此次更新" },
   "recent_update_badge": {
     "message": "更新"
@@ -2171,5 +2180,7 @@
   "popup_link_success": { "message": "当前页面已关联" },
   "popup_link_failed": { "message": "无法关联当前页面" },
   "popup_undo_success": { "message": "已撤销当前更新" },
+  "popup_undo_link_action": { "message": "撤销关联" },
+  "popup_undo_link_success": { "message": "已撤销新增关联" },
   "popup_settings_failed": { "message": "无法打开设置" }
 }

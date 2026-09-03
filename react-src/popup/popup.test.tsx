@@ -6,7 +6,7 @@ let controller: PopupController | null = null;
 
 const labels: PopupRenderModel['labels'] = {
   appName: 'Lumno', originalContent: '原内容',
-  update: '更新关联', updating: '正在更新…', undo: '撤销当前更新',
+  update: '更新关联', updating: '正在更新…', undo: '撤销当前更新', undoLink: '撤销关联',
   link: '关联当前页面', linking: '正在关联…', undoing: '正在撤销…',
   settings: '设置', webClip: '开始剪裁',
   statuses: {
@@ -39,7 +39,7 @@ describe('toolbar popup', () => {
       onUpdate, onLink: vi.fn(), onUndo: vi.fn(), onClip: vi.fn(), onOpenSettings: vi.fn()
     }));
 
-    expect(host.textContent).not.toContain('第一集');
+    expect(host.textContent).toContain('第一集');
     expect(host.textContent).toContain('第二集');
     expect(host.querySelector('.popup-card-badge')?.textContent).toContain('可更新关联');
     expect(host.querySelector('.popup-card-badge .ri-refresh-line')).not.toBeNull();

@@ -175,6 +175,7 @@
         changed: true,
         reason: 'tracking-enabled',
         index: exactIndex,
+        previousItem: normalizedItems[exactIndex],
         items: recentStore.normalizePinnedRecentSites(nextItems, storeOptions)
       };
     }
@@ -734,15 +735,84 @@
           if (!saved) return { ok: false, changed: false, reason: 'save-failed' };
           cachedItems = addition.items;
           const linkedItem = addition.items[addition.index];
+          const undoGuard = linkedItem ? {
+            mode: addition.reason === 'tracking-enabled' ? 'restore-existing' : 'remove-added',
+            cardId: String(linkedItem.cardId || ''),
+            expectedUrl: String(linkedItem.url || ''),
+            previousItem: addition.reason === 'tracking-enabled'
+              ? addition.previousItem
+              : null
+          } : null;
           const bound = linkedItem
             ? await rememberTrackingSource(tab, linkedItem.cardId, linkedItem.url)
             : false;
+          if (!bound) {
+            const rollbackItems = recentStore.normalizePinnedRecentSites(
+              items,
+              config.storeOptions || {}
+            );
+            const rolledBack = await storageSet(storage, { [storageKey]: rollbackItems }, runtime);
+            if (rolledBack) {
+              cachedItems = rollbackItems;
+              await pruneTrackingSessionsFromPinnedChange({ newValue: rollbackItems });
+            }
+            return {
+              ok: false,
+              changed: !rolledBack,
+              reason: rolledBack ? 'bind-failed' : 'rollback-failed',
+              cardId: String(linkedItem && linkedItem.cardId || ''),
+              undoGuard: rolledBack ? null : undoGuard
+            };
+          }
           return {
-            ok: Boolean(bound),
+            ok: true,
             changed: true,
-            reason: bound ? addition.reason : 'bind-failed',
-            cardId: String(linkedItem && linkedItem.cardId || '')
+            reason: addition.reason,
+            cardId: String(linkedItem && linkedItem.cardId || ''),
+            undoGuard
           };
+        });
+      });
+    }
+
+    function undoTrackingLink(tab, guard) {
+      const undoGuard = guard && typeof guard === 'object' ? guard : {};
+      const mode = String(undoGuard.mode || '');
+      const cardId = normalizeTrackingCardId(undoGuard.cardId);
+      const expectedUrl = getHttpUrl(undoGuard.expectedUrl);
+      if (!cardId || !expectedUrl || (mode !== 'remove-added' && mode !== 'restore-existing')) {
+        return Promise.resolve({ ok: false, reason: 'invalid-guard' });
+      }
+      return loadItems().then((items) => {
+        const storeOptions = config.storeOptions || {};
+        const normalizedItems = recentStore.normalizePinnedRecentSites(items, storeOptions);
+        const currentIndex = normalizedItems.findIndex((item) => item && item.cardId === cardId);
+        const currentItem = currentIndex >= 0 ? normalizedItems[currentIndex] : null;
+        if (!currentItem || getHttpUrl(currentItem.url) !== expectedUrl ||
+            currentItem.trackingEnabled !== true) {
+          return { ok: false, reason: 'source-changed' };
+        }
+
+        let nextItems;
+        if (mode === 'remove-added') {
+          nextItems = normalizedItems.filter((item) => item.cardId !== cardId);
+        } else {
+          const previous = recentStore.normalizePinnedRecentSites(
+            [undoGuard.previousItem],
+            { ...storeOptions, maxPinned: 1 }
+          )[0];
+          if (!previous || previous.cardId !== cardId || previous.trackingEnabled === true) {
+            return { ok: false, reason: 'invalid-guard' };
+          }
+          nextItems = normalizedItems.slice();
+          nextItems[currentIndex] = previous;
+        }
+
+        return storageSet(storage, { [storageKey]: nextItems }, runtime).then(async (saved) => {
+          if (!saved) return { ok: false, reason: 'save-failed' };
+          cachedItems = nextItems;
+          await pruneTrackingSessionsFromPinnedChange({ newValue: nextItems });
+          return { ok: true, reason: 'link-undone', cardId };
         });
       });
     }
@@ -948,6 +1018,7 @@
       getToolbarStateForTab,
       updateForTab,
       undoTrackingUpdate,
+      undoTrackingLink,
       bindTrackingTab,
       syncTrackingDocument,
       getTrackingActivity

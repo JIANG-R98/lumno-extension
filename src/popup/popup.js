@@ -10,7 +10,7 @@
   let state = null;
   let busy = '';
   let notice = null;
-  let showUndo = false;
+  let undoAction = null;
 
   function t(key, fallback) {
     return chrome.i18n.getMessage(key) || fallback;
@@ -24,6 +24,7 @@
     link: t('popup_link_action', 'Link this page'),
     linking: t('popup_linking_action', 'Linking…'),
     undo: t('recent_undo_tracking_update', 'Undo current update'),
+    undoLink: t('popup_undo_link_action', 'Undo link'),
     undoing: t('popup_undoing_action', 'Undoing…'),
     settings: t('settings_title', 'Settings'),
     webClip: t('document_pip_command_action', 'Start clipping'),
@@ -63,7 +64,8 @@
       linkedCard: state && state.linkedCard,
       canUpdate: Boolean(state && state.canUpdate),
       canLink: Boolean(state && state.status === 'not-linked' && state.page && state.page.url),
-      canUndo: Boolean(showUndo && state && state.undo && state.undo.available),
+      canUndo: Boolean(undoAction),
+      undoKind: undoAction && undoAction.kind,
       canClip: Number.isInteger(activeTabId),
       labels,
       onUpdate: update,
@@ -102,7 +104,15 @@
     notice = result && result.ok
       ? { kind: 'success', text: t('popup_update_success', 'Linked card updated'), celebrate: true }
       : { kind: 'error', text: t('popup_update_failed', 'Unable to update this link') };
-    showUndo = Boolean(result && result.ok);
+    undoAction = result && result.ok && state && state.linkedCard
+      ? {
+          kind: 'update',
+          cardId: state.linkedCard.cardId,
+          expectedUrl: result.current && result.current.url
+            ? result.current.url
+            : state.page && state.page.url
+        }
+      : null;
     await refresh();
   }
 
@@ -114,22 +124,36 @@
     notice = result && result.ok
       ? { kind: 'success', text: t('popup_link_success', 'Page linked'), celebrate: true }
       : { kind: 'error', text: t('popup_link_failed', 'Unable to link this page') };
+    undoAction = result && result.undoGuard
+      ? { kind: 'link', guard: result.undoGuard }
+      : null;
     await refresh();
   }
 
   async function undo() {
-    if (!state || !state.linkedCard || !state.undo || !state.undo.available || busy) return;
+    if (!undoAction || busy) return;
     busy = 'undo'; notice = null; render();
-    const result = await send({
-      action: 'undoPinnedRecentTrackingUpdate',
-      cardId: state.linkedCard.cardId,
-      expectedUrl: state.undo.expectedUrl
-    });
+    const result = undoAction.kind === 'link'
+      ? await send({
+          action: 'undoPinnedRecentTrackingLink',
+          tabId: activeTabId,
+          guard: undoAction.guard
+        })
+      : await send({
+          action: 'undoPinnedRecentTrackingUpdate',
+          cardId: undoAction.cardId,
+          expectedUrl: undoAction.expectedUrl
+        });
     busy = '';
     notice = result && result.ok
-      ? { kind: 'success', text: t('popup_undo_success', 'Current update undone') }
+      ? {
+          kind: 'success',
+          text: undoAction.kind === 'link'
+            ? t('popup_undo_link_success', 'Link undone')
+            : t('popup_undo_success', 'Current update undone')
+        }
       : { kind: 'error', text: t('recent_undo_tracking_update_failed', 'Unable to undo this update') };
-    if (result && result.ok) showUndo = false;
+    if (result && result.ok) undoAction = null;
     await refresh();
   }
 

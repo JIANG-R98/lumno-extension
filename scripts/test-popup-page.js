@@ -14,6 +14,8 @@ assert(html.includes('data-page-entry="../popup/popup.js"'));
 assert(backgroundSource.includes("'getPinnedRecentToolbarState'"));
 assert(backgroundSource.includes("'updatePinnedRecentFromToolbar'"));
 assert(backgroundSource.includes("'linkPinnedRecentFromToolbar'"));
+assert(backgroundSource.includes("'undoPinnedRecentTrackingLink'"));
+assert(source.includes("kind: 'link', guard: result.undoGuard"));
 assert(backgroundSource.includes("'openDocumentPipFromToolbar'"));
 assert(!backgroundSource.includes("chrome.action.onClicked.addListener"));
 assert(/\.popup-header-button[^}]*background:linear-gradient/.test(style));
@@ -33,7 +35,7 @@ let toolbarState = {
   linkedCard: { cardId: 'card-7', title: 'Episode 1', url: 'https://example.com/?p=1' },
   canUpdate: true,
   updateGuard: { cardId: 'card-7', sourceUrl: 'https://example.com/?p=1', pageUrl: 'https://example.com/?p=2' },
-  undo: { available: true, expectedUrl: 'https://example.com/?p=1' }
+  undo: { available: false, expectedUrl: '' }
 };
 
 const context = {
