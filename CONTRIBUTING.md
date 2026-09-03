@@ -16,6 +16,11 @@ Examples: `collab/alice/popup-empty-state` and `collab/bob/tracking-recovery`.
 Do not commit directly to `main` or `feat/dynamic-collections`. Do not rebase or
 force-push either shared branch after publication.
 
+The repository owner has a PR-only break-glass bypass for service recovery. It is
+not part of the normal workflow: the PR must explain why bypass was necessary,
+retain any available CI evidence, and receive a follow-up review. The bypass never
+permits a direct push to a shared branch.
+
 ## Workflow
 
 1. Fetch the latest repository state.
@@ -76,6 +81,6 @@ to the appropriate stable or upstream branch.
 - 每位开发者从目标分支创建 `collab/<GitHub 用户名>/<简短主题>` 分支。
 - 禁止直接推送、强推或变基共享分支；所有修改通过 PR 合入。
 - PR 需要 1 位非作者维护者批准、解决全部讨论并通过 `test` 检查。
+- 仓库所有者仅在故障恢复时可通过 PR 紧急绕过，并须在 PR 中说明原因、保留可用的 CI 证据和补充评审；该权限不允许直接推送。
 - 使用 Squash merge，合并后删除个人任务分支。
 - 修改 `react-src/` 后必须重新构建并提交 `src/react/` 生成产物。
-
