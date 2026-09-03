@@ -8,6 +8,19 @@ const dom = new JSDOM('<!doctype html><html><body><button id="origin">Open</butt
 });
 const listeners = [];
 const undoRequests = [];
+let undoDismissTimer = null;
+const nativeSetTimeout = dom.window.setTimeout.bind(dom.window);
+const nativeClearTimeout = dom.window.clearTimeout.bind(dom.window);
+dom.window.setTimeout = (callback, delay, ...args) => {
+  if (delay === 3000) {
+    undoDismissTimer = { callback, delay };
+    return 9001;
+  }
+  return nativeSetTimeout(callback, delay, ...args);
+};
+dom.window.clearTimeout = (timerId) => {
+  if (timerId !== 9001) nativeClearTimeout(timerId);
+};
 let undoResponse = {
   ok: true,
   reason: 'undone',
@@ -32,8 +45,7 @@ async function run() {
   feedback.attach({
     windowObj: dom.window,
     chromeApi,
-    previewTimings: { instant: true },
-    undoFadeDelay: 10
+    previewTimings: { instant: true }
   });
   assert.strictEqual(listeners.length, 1);
 
@@ -96,7 +108,9 @@ async function run() {
   });
   assert.strictEqual(surface.dataset.phase, 'undone');
   assert.strictEqual(surface.querySelector('.undo-toast').hidden, false);
-  await new Promise((resolve) => dom.window.setTimeout(resolve, 15));
+  assert.strictEqual(surface.querySelector('.undo-toast').textContent, 'This update was undone');
+  assert.strictEqual(undoDismissTimer.delay, 3000);
+  undoDismissTimer.callback();
   assert.strictEqual(surface.hidden, true);
   assert.strictEqual(dom.window.document.activeElement.id, 'origin');
 

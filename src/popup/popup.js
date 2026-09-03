@@ -10,6 +10,7 @@
   let state = null;
   let busy = '';
   let notice = null;
+  let noticeTimer = 0;
   let undoAction = null;
   let comparison = null;
 
@@ -84,6 +85,23 @@
     });
   }
 
+  function clearNotice() {
+    if (noticeTimer) window.clearTimeout(noticeTimer);
+    noticeTimer = 0;
+    notice = null;
+  }
+
+  function showNotice(nextNotice) {
+    clearNotice();
+    notice = nextNotice;
+    render();
+    noticeTimer = window.setTimeout(() => {
+      noticeTimer = 0;
+      notice = null;
+      render();
+    }, 3000);
+  }
+
   function send(message) {
     return new Promise((resolve) => {
       chrome.runtime.sendMessage(message, (response) => {
@@ -105,16 +123,16 @@
     const pendingComparison = state.linkedCard && state.page
       ? { phase: 'saving', previous: { ...state.linkedCard }, next: { ...state.page } }
       : null;
-    busy = 'update'; comparison = pendingComparison; notice = null; render();
+    busy = 'update'; comparison = pendingComparison; clearNotice(); render();
     const result = await send({
       action: 'updatePinnedRecentFromToolbar',
       tabId: activeTabId,
       guard: state.updateGuard
     });
     busy = '';
-    notice = result && result.ok
+    showNotice(result && result.ok
       ? { kind: 'success', text: t('popup_update_success', 'Linked card updated'), celebrate: true }
-      : { kind: 'error', text: t('popup_update_failed', 'Unable to update this link') };
+      : { kind: 'error', text: t('popup_update_failed', 'Unable to update this link') });
     undoAction = result && result.ok && state && state.linkedCard
       ? {
           kind: 'update',
@@ -149,12 +167,12 @@
 
   async function link() {
     if (!state || state.status !== 'not-linked' || busy) return;
-    busy = 'link'; comparison = null; notice = null; render();
+    busy = 'link'; comparison = null; clearNotice(); render();
     const result = await send({ action: 'linkPinnedRecentFromToolbar', tabId: activeTabId });
     busy = '';
-    notice = result && result.ok
+    showNotice(result && result.ok
       ? { kind: 'success', text: t('popup_link_success', 'Page linked'), celebrate: true }
-      : { kind: 'error', text: t('popup_link_failed', 'Unable to link this page') };
+      : { kind: 'error', text: t('popup_link_failed', 'Unable to link this page') });
     undoAction = result && result.undoGuard
       ? { kind: 'link', guard: result.undoGuard }
       : null;
@@ -163,7 +181,7 @@
 
   async function undo() {
     if (!undoAction || busy) return;
-    busy = 'undo'; comparison = null; notice = null; render();
+    busy = 'undo'; comparison = null; clearNotice(); render();
     const result = undoAction.kind === 'link'
       ? await send({
           action: 'undoPinnedRecentTrackingLink',
@@ -176,14 +194,14 @@
           expectedUrl: undoAction.expectedUrl
         });
     busy = '';
-    notice = result && result.ok
+    showNotice(result && result.ok
       ? {
           kind: 'success',
           text: undoAction.kind === 'link'
             ? t('popup_undo_link_success', 'Link undone')
             : t('popup_undo_success', 'Current update undone')
         }
-      : { kind: 'error', text: t('recent_undo_tracking_update_failed', 'Unable to undo this update') };
+      : { kind: 'error', text: t('recent_undo_tracking_update_failed', 'Unable to undo this update') });
     if (result && result.ok) undoAction = null;
     await refresh();
   }
@@ -193,7 +211,7 @@
     busy = 'settings'; render();
     const result = await send({ action: 'openOptionsPage' });
     if (result && result.ok) window.close();
-    else { busy = ''; notice = { kind: 'error', text: t('popup_settings_failed', 'Unable to open Settings') }; render(); }
+    else { busy = ''; showNotice({ kind: 'error', text: t('popup_settings_failed', 'Unable to open Settings') }); }
   }
 
   async function openWebClip() {
@@ -201,7 +219,7 @@
     busy = 'clip'; render();
     const result = await send({ action: 'openDocumentPipFromToolbar', tabId: activeTabId });
     if (result && result.ok) window.close();
-    else { busy = ''; notice = { kind: 'error', text: t('document_pip_picker_open_failed', 'Unable to start web clipping') }; render(); }
+    else { busy = ''; showNotice({ kind: 'error', text: t('document_pip_picker_open_failed', 'Unable to start web clipping') }); }
   }
 
   render();

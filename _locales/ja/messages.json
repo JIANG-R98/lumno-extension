@@ -1882,7 +1882,7 @@
   "recent_undo_tracking_update_confirm_title": { "message": "この追跡更新を元に戻しますか？" },
   "recent_undo_tracking_update_confirm_description": { "message": "「{current}」を「{previous}」に戻します。" },
   "recent_undo_tracking_update_confirm": { "message": "元に戻す" },
-  "recent_undo_tracking_update_success": { "message": "直前の追跡更新を元に戻しました" },
+  "recent_undo_tracking_update_success": { "message": "今回の更新を元に戻しました" },
   "recent_history_menu": { "message": "最近の変更履歴を表示" },
   "recent_history_title": { "message": "変更履歴" },
   "recent_history_description": { "message": "履歴を残したまま、任意のバージョンを現在の内容に設定できます。" },

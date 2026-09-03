@@ -109,6 +109,11 @@ assert.ok(
     recentHistoryReact.includes("t('recent_history_restore', '设为当前版本')"),
   'the New Tab context menu should open a retained version timeline with direct restore actions'
 );
+assert.strictEqual(
+  zhCnMessages.recent_undo_tracking_update_success.message,
+  '已撤销本次更新',
+  'the in-page undo feedback should describe this update, not the previous update'
+);
 assert.ok(
   /\.x-nt-recent-history-list\s*\{[^}]*overflow-x:\s*hidden;[^}]*overflow-y:\s*auto;/.test(recentHistoryStyle) &&
     /\.x-nt-recent-history-list::\-webkit-scrollbar\s*\{[^}]*width:\s*10px;/.test(recentHistoryStyle) &&

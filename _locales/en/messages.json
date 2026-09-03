@@ -1882,7 +1882,7 @@
   "recent_undo_tracking_update_confirm_title": { "message": "Undo This Tracking Update?" },
   "recent_undo_tracking_update_confirm_description": { "message": "“{current}” will be replaced with “{previous}”." },
   "recent_undo_tracking_update_confirm": { "message": "Confirm Undo" },
-  "recent_undo_tracking_update_success": { "message": "Last tracking update undone" },
+  "recent_undo_tracking_update_success": { "message": "This update was undone" },
   "recent_history_menu": { "message": "View Recent Change History" },
   "recent_history_title": { "message": "Change History" },
   "recent_history_description": { "message": "Set any retained version as current without removing history." },

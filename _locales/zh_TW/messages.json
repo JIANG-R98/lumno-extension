@@ -1882,7 +1882,7 @@
   "recent_undo_tracking_update_confirm_title": { "message": "復原這次追蹤更新？" },
   "recent_undo_tracking_update_confirm_description": { "message": "「{current}」將恢復為「{previous}」。" },
   "recent_undo_tracking_update_confirm": { "message": "確認復原" },
-  "recent_undo_tracking_update_success": { "message": "已復原上一次追蹤更新" },
+  "recent_undo_tracking_update_success": { "message": "已復原本次更新" },
   "recent_history_menu": { "message": "查看最近變更歷史" },
   "recent_history_title": { "message": "變更記錄" },
   "recent_history_description": { "message": "選擇任意版本設為目前內容，歷史記錄會繼續保留。" },

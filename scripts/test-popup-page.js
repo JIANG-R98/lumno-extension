@@ -36,12 +36,15 @@ assert(/\.popup-update-diff-card[^}]*height:184px/.test(style));
 assert(/\.popup-update-diff-card\[data-phase="confirmed"\] \.popup-diff-row--old[^}]*opacity:0/.test(style));
 assert(/\.popup-diff-stack[^}]*gap:6px/.test(style));
 assert(/\.popup-notice[^}]*position:absolute[^}]*animation:popup-notice-drop/.test(style));
+assert(/\.popup-notice[^}]*animation:popup-notice-drop 3s/.test(style));
+assert(/@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.popup-notice\[data-visible="true"\][^}]*animation:none/.test(style));
 assert(/\.popup-button--warning[^}]*background:linear-gradient/.test(style));
 
 const calls = [];
 let lastModel = null;
 const renderedModels = [];
 let closeCalls = 0;
+const pendingTimers = [];
 let toolbarState = {
   ok: true,
   status: 'update-available',
@@ -55,7 +58,20 @@ let toolbarState = {
 const context = {
   console,
   document: { getElementById: () => ({}) },
-  window: { close: () => { closeCalls += 1; } },
+  window: {
+    close: () => { closeCalls += 1; },
+    setTimeout(callback, delay) {
+      if (delay < 3000) {
+        callback();
+        return 0;
+      }
+      pendingTimers.push({ callback, delay, noticeAtSchedule: lastModel && lastModel.notice });
+      return pendingTimers.length;
+    },
+    clearTimeout(timerId) {
+      if (timerId > 0 && pendingTimers[timerId - 1]) pendingTimers[timerId - 1] = null;
+    }
+  },
   LumnoPopupReact: {
     createPopupController: () => ({ render: (model) => { lastModel = model; renderedModels.push(model); } })
   },
@@ -99,6 +115,12 @@ setImmediate(async () => {
   assert.strictEqual(lastModel.status, 'up-to-date');
   assert.strictEqual(lastModel.canUndo, true);
   assert.strictEqual(lastModel.notice.celebrate, true);
+  const dismissTimer = pendingTimers.find((timer) => timer && timer.delay === 3000);
+  assert(dismissTimer, 'operation feedback should schedule dismissal after three seconds');
+  assert(dismissTimer.noticeAtSchedule && dismissTimer.noticeAtSchedule.celebrate,
+    'the three-second countdown should begin only after operation feedback is rendered');
+  dismissTimer.callback();
+  assert.strictEqual(lastModel.notice, null, 'operation feedback should disappear after three seconds');
   assert(renderedModels.some((model) => model.comparison && model.comparison.phase === 'confirmed'));
   const exitingModel = renderedModels.find((model) => model.comparison && model.comparison.phase === 'exiting');
   assert(exitingModel, 'the completed comparison should crossfade into the final linked card');

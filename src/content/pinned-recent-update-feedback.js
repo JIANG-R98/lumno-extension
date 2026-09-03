@@ -14,7 +14,7 @@
   const HOST_ID = '_x_extension_pinned_recent_update_feedback_2026_unique_';
   const FALLBACK_MESSAGES = Object.freeze({
     updated: 'Tracked card link updated',
-    undone: 'Last tracking update undone',
+    undone: 'This update was undone',
     added: 'Page pinned and tracking enabled',
     'tracking-enabled': 'Tracking enabled for this pinned page',
     'already-tracked': 'This page is already pinned and tracked',
@@ -656,7 +656,7 @@
         directUndo: true,
         fadeAfterUndo: true,
         celebrateOnSuccess: true,
-        undoFadeDelay: 1000,
+        undoFadeDelay: 3000,
         ...(options && typeof options === 'object' ? options : {})
       });
       controller.attach();
