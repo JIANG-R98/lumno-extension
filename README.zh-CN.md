@@ -115,6 +115,8 @@ npm run test:newtab-layout
 npm run test:onboarding-content
 ```
 
+分支命名、PR、评审以及共享功能分支的协作约定见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
 `npm run package:store` 会读取 `manifest.json` 的版本号，并生成 `dist/lumno-store-v<version>.zip`。本命令依赖系统可用的 `zip` 和 `zipinfo`。
 
 ## 目录结构
