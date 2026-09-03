@@ -21,7 +21,11 @@ export interface PopupRenderModel {
   canLink?: boolean;
   canUndo?: boolean;
   undoKind?: 'update' | 'link';
-  comparisonPhase?: 'saving' | 'confirmed' | '';
+  comparison?: {
+    phase: 'saving' | 'confirmed' | 'exiting';
+    previous: PopupLinkedItem;
+    next: PopupPageItem;
+  } | null;
   canClip?: boolean;
   notice?: { kind: 'success' | 'error'; text: string; celebrate?: boolean } | null;
   labels: {
@@ -112,11 +116,11 @@ function UpdateDiffCard({ previous, next, badge, phase, labels }: {
   previous: PopupLinkedItem;
   next: PopupPageItem;
   badge: string;
-  phase?: PopupRenderModel['comparisonPhase'];
+  phase: 'saving' | 'confirmed' | 'exiting';
   labels: PopupRenderModel['labels'];
 }) {
   return (
-    <article className="popup-recent-card popup-update-diff-card" data-phase={phase || 'idle'}>
+    <article className="popup-recent-card popup-update-diff-card" data-phase={phase}>
       <div className="popup-recent-inner popup-update-diff-inner">
         <span className="popup-card-badge">
           <i className="ri-icon ri-refresh-line" aria-hidden="true" />
@@ -157,9 +161,25 @@ export function PopupView(model: PopupRenderModel) {
   const { labels, status, busy = '', page, linkedCard, canUpdate, canLink, canUndo, notice } = model;
   const previewItem = page || linkedCard;
   const cardBadgeIcon = CARD_BADGE_ICONS[status];
+  const comparison = model.comparison || (
+    status === 'update-available' && page && linkedCard
+      ? { phase: 'saving' as const, previous: linkedCard, next: page }
+      : null
+  );
   return (
     <main className="popup-shell" data-status={status}>
       {notice?.celebrate && <PopupConfetti />}
+      {notice && (
+        <div
+          key={`${notice.kind}:${notice.text}`}
+          className={`popup-notice popup-notice--${notice.kind}`}
+          data-visible="true"
+          role="status"
+          aria-live="polite"
+        >
+          {notice.text}
+        </div>
+      )}
       <header className="popup-header">
         <img src="../../assets/images/lumno.png" alt="" />
         <span>{labels.appName}</span>
@@ -177,14 +197,25 @@ export function PopupView(model: PopupRenderModel) {
         {status === 'loading' ? (
           <div className="popup-loading-card"><div /><span /><span /></div>
         ) : status === 'unsupported' ? null : (
-          status === 'update-available' && page && linkedCard ? (
-            <UpdateDiffCard
-              previous={linkedCard}
-              next={page}
-              badge={labels.statuses[status]}
-              phase={model.comparisonPhase}
-              labels={labels}
-            />
+          comparison ? (
+            <div className="popup-comparison-stage" data-phase={comparison.phase}>
+              <UpdateDiffCard
+                previous={comparison.previous}
+                next={comparison.next}
+                badge={labels.statuses[comparison.phase === 'saving' ? status : 'up-to-date']}
+                phase={comparison.phase}
+                labels={labels}
+              />
+              {comparison.phase === 'exiting' && (
+                <div className="popup-comparison-final">
+                  <RecentCardPreview
+                    item={comparison.next}
+                    badge={labels.statuses['up-to-date']}
+                    badgeIcon={CARD_BADGE_ICONS['up-to-date']}
+                  />
+                </div>
+              )}
+            </div>
           ) : (
             previewItem && status !== 'error' ? (
               <RecentCardPreview
@@ -201,8 +232,6 @@ export function PopupView(model: PopupRenderModel) {
           )
         )}
       </section>
-
-      {notice && <div className={`popup-notice popup-notice--${notice.kind}`}>{notice.text}</div>}
 
       <div className="popup-actions">
         {canUpdate && (

@@ -19,6 +19,10 @@ const recentHistoryReact = fs.readFileSync(
   path.join(repoRoot, 'react-src', 'newtab', 'recent-history-dialog.tsx'),
   'utf8'
 );
+const recentHistoryStyle = fs.readFileSync(
+  path.join(repoRoot, 'src', 'newtab', 'recent-history-dialog.css'),
+  'utf8'
+);
 const onboardingPreviewReact = fs.readFileSync(
   path.join(repoRoot, 'react-src', 'onboarding', 'newtab-preview.tsx'),
   'utf8'
@@ -104,6 +108,12 @@ assert.ok(
     recentHistoryReact.includes('data-history-index={index}') &&
     recentHistoryReact.includes("t('recent_history_restore', '设为当前版本')"),
   'the New Tab context menu should open a retained version timeline with direct restore actions'
+);
+assert.ok(
+  /\.x-nt-recent-history-list\s*\{[^}]*overflow-x:\s*hidden;[^}]*overflow-y:\s*auto;/.test(recentHistoryStyle) &&
+    /\.x-nt-recent-history-list::\-webkit-scrollbar\s*\{[^}]*width:\s*10px;/.test(recentHistoryStyle) &&
+    /\.x-nt-recent-history-list::\-webkit-scrollbar-thumb\s*\{[^}]*border-radius:\s*999px;/.test(recentHistoryStyle),
+  'change history should prevent horizontal scrolling and use the app-style thin vertical scrollbar'
 );
 
 console.log('New Tab recent-site context-menu tests passed.');

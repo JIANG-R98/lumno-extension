@@ -11,7 +11,7 @@
   let busy = '';
   let notice = null;
   let undoAction = null;
-  let comparisonPhase = '';
+  let comparison = null;
 
   function t(key, fallback) {
     return chrome.i18n.getMessage(key) || fallback;
@@ -68,7 +68,12 @@
       canLink: Boolean(state && state.status === 'not-linked' && state.page && state.page.url),
       canUndo: Boolean(undoAction),
       undoKind: undoAction && undoAction.kind,
-      comparisonPhase,
+      comparison: comparison
+        ? {
+            ...comparison,
+            next: { ...comparison.next, faviconUrl: faviconUrl(comparison.next) }
+          }
+        : null,
       canClip: Number.isInteger(activeTabId),
       labels,
       onUpdate: update,
@@ -97,7 +102,10 @@
 
   async function update() {
     if (!state || !state.canUpdate || busy) return;
-    busy = 'update'; comparisonPhase = 'saving'; notice = null; render();
+    const pendingComparison = state.linkedCard && state.page
+      ? { phase: 'saving', previous: { ...state.linkedCard }, next: { ...state.page } }
+      : null;
+    busy = 'update'; comparison = pendingComparison; notice = null; render();
     const result = await send({
       action: 'updatePinnedRecentFromToolbar',
       tabId: activeTabId,
@@ -117,21 +125,31 @@
         }
       : null;
     if (result && result.ok) {
-      comparisonPhase = 'confirmed';
+      comparison = pendingComparison ? { ...pendingComparison, phase: 'confirmed' } : null;
       busy = 'update';
       render();
-      if (window && typeof window.setTimeout === 'function') {
-        await new Promise((resolve) => window.setTimeout(resolve, 240));
+      if (typeof window.setTimeout === 'function') {
+        await new Promise((resolve) => window.setTimeout(resolve, 280));
       }
-      busy = '';
+    } else {
+      comparison = null;
     }
-    comparisonPhase = '';
     await refresh();
+    if (comparison) {
+      comparison = { ...comparison, phase: 'exiting' };
+      render();
+      if (typeof window.setTimeout === 'function') {
+        await new Promise((resolve) => window.setTimeout(resolve, 220));
+      }
+      comparison = null;
+    }
+    busy = '';
+    render();
   }
 
   async function link() {
     if (!state || state.status !== 'not-linked' || busy) return;
-    busy = 'link'; comparisonPhase = ''; notice = null; render();
+    busy = 'link'; comparison = null; notice = null; render();
     const result = await send({ action: 'linkPinnedRecentFromToolbar', tabId: activeTabId });
     busy = '';
     notice = result && result.ok
@@ -145,7 +163,7 @@
 
   async function undo() {
     if (!undoAction || busy) return;
-    busy = 'undo'; notice = null; render();
+    busy = 'undo'; comparison = null; notice = null; render();
     const result = undoAction.kind === 'link'
       ? await send({
           action: 'undoPinnedRecentTrackingLink',

@@ -34,6 +34,8 @@ assert(/\.popup-confetti i[^}]*animation:popup-confetti-fall/.test(style));
 assert(/@keyframes popup-confetti-fall/.test(style));
 assert(/\.popup-update-diff-card[^}]*height:184px/.test(style));
 assert(/\.popup-update-diff-card\[data-phase="confirmed"\] \.popup-diff-row--old[^}]*opacity:0/.test(style));
+assert(/\.popup-diff-stack[^}]*gap:6px/.test(style));
+assert(/\.popup-notice[^}]*position:absolute[^}]*animation:popup-notice-drop/.test(style));
 assert(/\.popup-button--warning[^}]*background:linear-gradient/.test(style));
 
 const calls = [];
@@ -97,7 +99,13 @@ setImmediate(async () => {
   assert.strictEqual(lastModel.status, 'up-to-date');
   assert.strictEqual(lastModel.canUndo, true);
   assert.strictEqual(lastModel.notice.celebrate, true);
-  assert(renderedModels.some((model) => model.comparisonPhase === 'confirmed'));
+  assert(renderedModels.some((model) => model.comparison && model.comparison.phase === 'confirmed'));
+  const exitingModel = renderedModels.find((model) => model.comparison && model.comparison.phase === 'exiting');
+  assert(exitingModel, 'the completed comparison should crossfade into the final linked card');
+  assert.strictEqual(exitingModel.busy, 'update',
+    'popup actions should stay locked until the final-card crossfade completes');
+  assert.strictEqual(lastModel.comparison, null,
+    'the final linked card should replace the comparison only after its exit phase');
   await lastModel.onUndo();
   assert(calls.some((call) => call.action === 'undoPinnedRecentTrackingUpdate' &&
     call.expectedUrl === 'https://example.com/?p=2'));

@@ -34,7 +34,11 @@ describe('toolbar popup', () => {
     const onUpdate = vi.fn();
     act(() => controller?.render({
       status: 'update-available', labels, canUpdate: true, canUndo: false, canClip: true,
-      comparisonPhase: 'confirmed',
+      comparison: {
+        phase: 'saving',
+        previous: { cardId: 'card-1', title: '第一集', url: 'https://example.com/p=1' },
+        next: { title: '第二集', url: 'https://example.com/p=2' }
+      },
       linkedCard: { cardId: 'card-1', title: '第一集', url: 'https://example.com/p=1' },
       page: { title: '第二集', url: 'https://example.com/p=2' },
       onUpdate, onLink: vi.fn(), onUndo: vi.fn(), onClip: vi.fn(), onOpenSettings: vi.fn()
@@ -44,7 +48,7 @@ describe('toolbar popup', () => {
     expect(host.textContent).toContain('第二集');
     expect(host.querySelector('.popup-card-badge')?.textContent).toContain('可更新关联');
     expect(host.querySelector('.popup-card-badge .ri-refresh-line')).not.toBeNull();
-    expect(host.querySelector('.popup-update-diff-card')?.getAttribute('data-phase')).toBe('confirmed');
+    expect(host.querySelector('.popup-update-diff-card')?.getAttribute('data-phase')).toBe('saving');
     expect(host.querySelector('.popup-diff-row--old')?.textContent).toContain('https://example.com/p=1');
     expect(host.querySelector('.popup-diff-row--new')?.textContent).toContain('https://example.com/p=2');
     const button = Array.from(host.querySelectorAll('button')).find((item) =>
@@ -123,6 +127,31 @@ describe('toolbar popup', () => {
     expect(host.querySelector('.popup-recent-card')).toBeNull();
     expect(host.querySelector('.popup-status-copy')).toBeNull();
     expect(host.querySelector('.popup-content')?.children).toHaveLength(0);
+  });
+
+  it('crossfades the completed comparison into the final card under a top banner', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    controller = createPopupController(host);
+    act(() => controller?.render({
+      status: 'up-to-date', labels, canUpdate: false, canUndo: true, canClip: true,
+      comparison: {
+        phase: 'exiting',
+        previous: { cardId: 'card-1', title: '第一集', url: 'https://example.com/p=1' },
+        next: { title: '第二集', url: 'https://example.com/p=2' }
+      },
+      linkedCard: { cardId: 'card-1', title: '第二集', url: 'https://example.com/p=2' },
+      page: { title: '第二集', url: 'https://example.com/p=2' },
+      notice: { kind: 'success', text: '关联卡片已更新', celebrate: true },
+      onUpdate: vi.fn(), onLink: vi.fn(), onUndo: vi.fn(), onClip: vi.fn(), onOpenSettings: vi.fn()
+    }));
+
+    const banner = host.querySelector('.popup-notice');
+    expect(host.querySelector('.popup-comparison-stage')?.getAttribute('data-phase')).toBe('exiting');
+    expect(host.querySelector('.popup-update-diff-card')).not.toBeNull();
+    expect(host.querySelector('.popup-comparison-final .popup-recent-card')).not.toBeNull();
+    expect(banner?.getAttribute('data-visible')).toBe('true');
+    expect(banner?.nextElementSibling).toBe(host.querySelector('.popup-header'));
   });
 
   it('celebrates only successful add or update feedback', () => {
