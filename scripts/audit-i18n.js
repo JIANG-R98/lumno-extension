@@ -4,7 +4,7 @@ const path = require('path');
 const LOCALE_ROOT = '_locales';
 const SOURCE_ROOTS = ['src'];
 const INCLUDED_EXTENSIONS = new Set(['.js', '.html']);
-const IGNORED_DIRS = new Set(['node_modules', 'dist', '.git', 'debug']);
+const IGNORED_DIRS = new Set(['node_modules', 'dist', '.git']);
 const MAX_HITS_PER_FILE = 30;
 const HAN_RE = /\p{Script=Han}/u;
 const STRING_RE = /(['"`])((?:\\.|(?!\1)[\s\S])*?)\1/g;
@@ -238,6 +238,7 @@ function auditSources() {
   const files = SOURCE_ROOTS
     .flatMap(walk)
     .map((file) => path.normalize(file).replace(/\\/g, '/'))
+    .filter((file) => !file.startsWith('src/debug/'))
     .sort();
   const hits = [];
   files.forEach((file) => {
