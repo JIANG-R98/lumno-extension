@@ -5,6 +5,7 @@ const vm = require('vm');
 const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
 const html = fs.readFileSync('src/popup/popup.html', 'utf8');
 const source = fs.readFileSync('src/popup/popup.js', 'utf8');
+const style = fs.readFileSync('src/popup/popup.css', 'utf8');
 const backgroundSource = fs.readFileSync('src/background/background.js', 'utf8');
 
 assert.strictEqual(manifest.action.default_popup, 'src/popup/popup.html');
@@ -15,6 +16,9 @@ assert(backgroundSource.includes("'updatePinnedRecentFromToolbar'"));
 assert(backgroundSource.includes("'linkPinnedRecentFromToolbar'"));
 assert(backgroundSource.includes("'openDocumentPipFromToolbar'"));
 assert(!backgroundSource.includes("chrome.action.onClicked.addListener"));
+assert(/\.popup-header-button[^}]*background:linear-gradient/.test(style));
+assert(/\.popup-confetti i[^}]*animation:popup-confetti-fall/.test(style));
+assert(/@keyframes popup-confetti-fall/.test(style));
 
 const calls = [];
 let lastModel = null;
@@ -75,6 +79,7 @@ setImmediate(async () => {
     call.guard.cardId === 'card-7'));
   assert.strictEqual(lastModel.status, 'up-to-date');
   assert.strictEqual(lastModel.canUndo, true);
+  assert.strictEqual(lastModel.notice.celebrate, true);
   await lastModel.onUndo();
   assert(calls.some((call) => call.action === 'undoPinnedRecentTrackingUpdate' &&
     call.expectedUrl === 'https://example.com/?p=2'));

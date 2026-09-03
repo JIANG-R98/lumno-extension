@@ -31,7 +31,7 @@
     statuses: {
       loading: t('popup_status_loading', 'Reading current page…'),
       'update-available': t('popup_status_update_available', 'Update available'),
-      'up-to-date': t('popup_status_up_to_date', 'Linked and up to date'),
+      'up-to-date': t('popup_status_up_to_date', 'Linked'),
       'not-linked': t('popup_status_not_linked', 'This page is not linked'),
       unsupported: t('popup_status_unsupported', 'This page is not supported'),
       blocked: t('popup_status_blocked', 'This link cannot be updated'),
@@ -101,7 +101,7 @@
     });
     busy = '';
     notice = result && result.ok
-      ? { kind: 'success', text: t('popup_update_success', 'Linked card updated') }
+      ? { kind: 'success', text: t('popup_update_success', 'Linked card updated'), celebrate: true }
       : { kind: 'error', text: t('popup_update_failed', 'Unable to update this link') };
     showUndo = Boolean(result && result.ok);
     await refresh();
@@ -113,7 +113,7 @@
     const result = await send({ action: 'linkPinnedRecentFromToolbar', tabId: activeTabId });
     busy = '';
     notice = result && result.ok
-      ? { kind: 'success', text: t('popup_link_success', 'Page linked') }
+      ? { kind: 'success', text: t('popup_link_success', 'Page linked'), celebrate: true }
       : { kind: 'error', text: t('popup_link_failed', 'Unable to link this page') };
     await refresh();
   }

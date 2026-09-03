@@ -2154,7 +2154,7 @@
   "popup_undoing_action": { "message": "Undoing…" },
   "popup_status_loading": { "message": "Reading current page…" },
   "popup_status_update_available": { "message": "Linked content can be updated" },
-  "popup_status_up_to_date": { "message": "Linked and up to date" },
+  "popup_status_up_to_date": { "message": "Linked" },
   "popup_status_not_linked": { "message": "This page is not linked" },
   "popup_status_unsupported": { "message": "This page is not supported" },
   "popup_status_blocked": { "message": "This link cannot be updated" },

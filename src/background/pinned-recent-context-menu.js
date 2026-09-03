@@ -225,6 +225,7 @@
     const config = options && typeof options === 'object' ? options : {};
     const chromeApi = config.chromeApi || null;
     const menus = chromeApi && chromeApi.contextMenus ? chromeApi.contextMenus : null;
+    const extensionAction = chromeApi && chromeApi.action ? chromeApi.action : null;
     const runtime = chromeApi && chromeApi.runtime ? chromeApi.runtime : null;
     const tabs = chromeApi && chromeApi.tabs ? chromeApi.tabs : null;
     const storageChanges = chromeApi && chromeApi.storage ? chromeApi.storage.onChanged : null;
@@ -290,7 +291,10 @@
         normalizedUrl
       )).then((result) => {
         const remembered = Boolean(result && result.cardId);
-        if (remembered) notifyTrackingActivityChanged();
+        if (remembered) {
+          notifyTrackingActivityChanged();
+          void refreshActionForTab(targetTab);
+        }
         return remembered;
       });
     }
@@ -530,6 +534,55 @@
       });
     }
 
+    function callActionMethod(method, details) {
+      return new Promise((resolve) => {
+        if (!extensionAction || typeof extensionAction[method] !== 'function') {
+          resolve(false);
+          return;
+        }
+        try {
+          extensionAction[method](details, () => resolve(!getRuntimeError(runtime)));
+        } catch (error) {
+          resolve(false);
+        }
+      });
+    }
+
+    function refreshActionForTab(tab) {
+      const tabId = Number(tab && tab.id);
+      if (!Number.isInteger(tabId) || tabId < 0) return Promise.resolve(false);
+      const linked = Boolean(
+        trackingRegistry && normalizeTrackingCardId(trackingRegistry.getCardId(tabId))
+      );
+      return callActionMethod('setIcon', {
+        tabId,
+        path: linked ? {
+          16: 'assets/images/lumno-tracked-16.png',
+          32: 'assets/images/lumno-tracked-32.png'
+        } : {
+          16: 'assets/images/lumno.png',
+          32: 'assets/images/lumno.png'
+        }
+      }).then(() => linked);
+    }
+
+    function refreshActionsForOpenTabs() {
+      return new Promise((resolve) => {
+        if (!tabs || typeof tabs.query !== 'function') {
+          resolve(false);
+          return;
+        }
+        tabs.query({}, (openTabs) => {
+          if (getRuntimeError(runtime)) {
+            resolve(false);
+            return;
+          }
+          Promise.all((Array.isArray(openTabs) ? openTabs : []).map(refreshActionForTab))
+            .then(() => resolve(true));
+        });
+      });
+    }
+
     function refreshMenuForTab(tab, info, options) {
       const refreshOptions = options && typeof options === 'object' ? options : {};
       const itemsPromise = refreshOptions.reload === true || !itemsLoaded
@@ -547,7 +600,10 @@
           title = getAlreadyTrackedTitle();
         }
         const enabled = Boolean(action && action.result && action.result.changed);
-        return updateMenuState({ title, enabled }).then(() => enabled);
+        return Promise.all([
+          updateMenuState({ title, enabled }),
+          refreshActionForTab(tab)
+        ]).then(() => enabled);
       });
     }
 
@@ -863,7 +919,7 @@
             addedTabId
           )).then((changed) => {
             if (changed) notifyTrackingActivityChanged();
-            return changed;
+            return refreshActionForTab({ id: addedTabId }).then(() => changed);
           });
         });
       }
@@ -876,7 +932,10 @@
             .catch(() => {});
         });
       }
-      void trackingReady.then(refreshMenuForActiveTab).catch(() => {});
+      void trackingReady.then(() => Promise.all([
+        refreshMenuForActiveTab(),
+        refreshActionsForOpenTabs()
+      ])).catch(() => {});
       return true;
     }
 

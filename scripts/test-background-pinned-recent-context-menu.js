@@ -70,7 +70,13 @@ function createChromeApi(options) {
   const onActivated = createEvent();
   const onUpdated = createEvent();
   const onStorageChanged = createEvent();
-  const calls = { create: [], update: [], sendMessage: [], refresh: 0 };
+  const calls = {
+    create: [],
+    update: [],
+    sendMessage: [],
+    actionIcons: [],
+    refresh: 0
+  };
   const sessionStorage = config.sessionStorage || createMemoryStorage({});
   const localStorage = config.localStorage || createMemoryStorage({});
   let activeTab = {
@@ -87,6 +93,12 @@ function createChromeApi(options) {
       activeTab = tab;
     },
     api: {
+      action: {
+        setIcon(details, callback) {
+          calls.actionIcons.push(details);
+          if (callback) callback();
+        }
+      },
       contextMenus: {
         onClicked,
         onShown,
@@ -378,6 +390,29 @@ async function run() {
   assert.strictEqual(toolbarCurrentState.status, 'up-to-date');
   assert.strictEqual(toolbarCurrentState.canUpdate, false);
   assert.strictEqual(toolbarCurrentState.linkedCard.url, original[0].url);
+  assert.deepStrictEqual(chrome.calls.actionIcons.at(-1), {
+    tabId: 11,
+    path: {
+      16: 'assets/images/lumno-tracked-16.png',
+      32: 'assets/images/lumno-tracked-32.png'
+    }
+  });
+
+  chrome.setActiveTab({ id: 90, active: true, url: 'https://untracked.example/' });
+  await chrome.events.onActivated.emit({ tabId: 90 });
+  assert.deepStrictEqual(chrome.calls.actionIcons.at(-1), {
+    tabId: 90,
+    path: {
+      16: 'assets/images/lumno.png',
+      32: 'assets/images/lumno.png'
+    }
+  });
+  chrome.setActiveTab({
+    id: 11,
+    active: true,
+    url: original[0].url,
+    title: 'Course · Episode 1'
+  });
 
   const toolbarUpdateState = await controller.getToolbarStateForTab({
     id: 11,

@@ -21,7 +21,7 @@ export interface PopupRenderModel {
   canLink?: boolean;
   canUndo?: boolean;
   canClip?: boolean;
-  notice?: { kind: 'success' | 'error'; text: string } | null;
+  notice?: { kind: 'success' | 'error'; text: string; celebrate?: boolean } | null;
   labels: {
     appName: string;
     originalContent: string;
@@ -45,6 +45,22 @@ export interface PopupRenderModel {
 }
 
 export type PopupController = ReactRootController<PopupRenderModel>;
+
+function PopupConfetti() {
+  return (
+    <div className="popup-confetti" aria-hidden="true">
+      {Array.from({ length: 24 }, (_, index) => (
+        <i
+          key={index}
+          style={{
+            left: `${6 + ((index * 37) % 89)}%`,
+            animationDelay: `${(index * 47) % 260}ms`
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 function RecentCardPreview({ item, badge }: {
   item: PopupPageItem | PopupLinkedItem;
@@ -78,8 +94,10 @@ function RecentCardPreview({ item, badge }: {
 export function PopupView(model: PopupRenderModel) {
   const { labels, status, busy = '', page, linkedCard, canUpdate, canLink, canUndo, notice } = model;
   const previewItem = page || linkedCard;
+  const linkedUrl = linkedCard?.url || page?.url || '';
   return (
     <main className="popup-shell" data-status={status}>
+      {notice?.celebrate && <PopupConfetti />}
       <header className="popup-header">
         <img src="../../assets/images/lumno.png" alt="" />
         <span>{labels.appName}</span>
@@ -98,10 +116,20 @@ export function PopupView(model: PopupRenderModel) {
           <div className="popup-loading-card"><div /><span /><span /></div>
         ) : (
           <>
-            <div className="popup-status-copy">
-              <h1>{labels.statuses[status]}</h1>
-              <p>{labels.statusDetails[status]}</p>
-            </div>
+            {status === 'up-to-date' && linkedUrl ? (
+              <div className="popup-linked-state">
+                <span className="popup-linked-badge">
+                  <i className="ri-icon ri-radar-fill" aria-hidden="true" />
+                  {labels.statuses[status]}
+                </span>
+                <strong title={linkedUrl}>{linkedUrl}</strong>
+              </div>
+            ) : (
+              <div className="popup-status-copy">
+                <h1>{labels.statuses[status]}</h1>
+                <p>{labels.statusDetails[status]}</p>
+              </div>
+            )}
             {previewItem && status !== 'unsupported' && status !== 'error' && (
               <RecentCardPreview
                 item={previewItem}
@@ -110,8 +138,13 @@ export function PopupView(model: PopupRenderModel) {
             )}
             {status === 'update-available' && linkedCard && (
               <div className="popup-update-source">
-                <span>{labels.originalContent}</span>
-                <strong>{linkedCard.title || linkedCard.url}</strong>
+                <span className="popup-update-source-icon" aria-hidden="true">
+                  <i className="ri-icon ri-arrow-left-line" />
+                </span>
+                <span className="popup-update-source-copy">
+                  <small>{labels.originalContent}</small>
+                  <strong title={linkedCard.url}>{linkedCard.url}</strong>
+                </span>
               </div>
             )}
           </>

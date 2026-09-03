@@ -10,7 +10,7 @@ const labels: PopupRenderModel['labels'] = {
   link: '关联当前页面', linking: '正在关联…', undoing: '正在撤销…',
   settings: '设置', webClip: '开始剪裁',
   statuses: {
-    loading: '读取中', 'update-available': '可更新关联', 'up-to-date': '已关联，内容为最新',
+    loading: '读取中', 'update-available': '可更新关联', 'up-to-date': '已关联',
     'not-linked': '尚未关联', unsupported: '不支持', blocked: '无法更新', error: '读取失败'
   },
   statusDetails: {
@@ -39,8 +39,9 @@ describe('toolbar popup', () => {
       onUpdate, onLink: vi.fn(), onUndo: vi.fn(), onClip: vi.fn(), onOpenSettings: vi.fn()
     }));
 
-    expect(host.textContent).toContain('第一集');
+    expect(host.textContent).not.toContain('第一集');
     expect(host.textContent).toContain('第二集');
+    expect(host.querySelector('.popup-update-source')?.textContent).toContain('https://example.com/p=1');
     const button = Array.from(host.querySelectorAll('button')).find((item) =>
       item.textContent?.includes('更新关联')) as HTMLButtonElement;
     act(() => button.click());
@@ -66,6 +67,9 @@ describe('toolbar popup', () => {
     act(() => host.querySelector<HTMLButtonElement>('.popup-header-button')?.click());
     expect(onUndo).toHaveBeenCalledOnce();
     expect(onClip).toHaveBeenCalledOnce();
+    expect(host.querySelector('.popup-linked-state')?.textContent).toContain('https://example.com/p=2');
+    expect(host.querySelector('.popup-linked-state .ri-radar-fill')).not.toBeNull();
+    expect(host.querySelector('.popup-status-copy p')).toBeNull();
   });
 
   it('renders clipping before the settings action in the header', () => {
@@ -109,5 +113,29 @@ describe('toolbar popup', () => {
       onUpdate: vi.fn(), onLink: vi.fn(), onUndo: vi.fn(), onClip: vi.fn(), onOpenSettings: vi.fn()
     }));
     expect(host.querySelector('.popup-recent-card')).toBeNull();
+  });
+
+  it('celebrates only successful add or update feedback', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    controller = createPopupController(host);
+    const baseModel = {
+      status: 'up-to-date' as const,
+      labels,
+      page: { title: '当前网页', url: 'https://example.com/current' },
+      linkedCard: { cardId: 'card-1', title: '当前网页', url: 'https://example.com/current' },
+      onUpdate: vi.fn(), onLink: vi.fn(), onUndo: vi.fn(), onClip: vi.fn(), onOpenSettings: vi.fn()
+    };
+    act(() => controller?.render({
+      ...baseModel,
+      notice: { kind: 'success', text: '关联卡片已更新', celebrate: true }
+    }));
+    expect(host.querySelectorAll('.popup-confetti i')).toHaveLength(24);
+
+    act(() => controller?.render({
+      ...baseModel,
+      notice: { kind: 'success', text: '已撤销当前更新' }
+    }));
+    expect(host.querySelector('.popup-confetti')).toBeNull();
   });
 });
