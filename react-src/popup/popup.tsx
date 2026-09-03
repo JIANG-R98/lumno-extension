@@ -21,11 +21,13 @@ export interface PopupRenderModel {
   canLink?: boolean;
   canUndo?: boolean;
   undoKind?: 'update' | 'link';
+  comparisonPhase?: 'saving' | 'confirmed' | '';
   canClip?: boolean;
   notice?: { kind: 'success' | 'error'; text: string; celebrate?: boolean } | null;
   labels: {
     appName: string;
     originalContent: string;
+    currentContent: string;
     update: string;
     updating: string;
     link: string;
@@ -75,12 +77,7 @@ function RecentCardPreview({ item, badge, badgeIcon }: {
   badge?: string;
   badgeIcon?: string;
 }) {
-  const siteName = 'siteName' in item && item.siteName
-    ? item.siteName
-    : (() => {
-        try { return new URL(item.url).hostname.replace(/^www\./, ''); }
-        catch { return item.url; }
-      })();
+  const siteName = getPopupSiteName(item);
   return (
     <article className={`popup-recent-card${badge ? ' popup-recent-card--badged' : ''}`}>
       <div className="popup-recent-inner">
@@ -101,6 +98,57 @@ function RecentCardPreview({ item, badge, badgeIcon }: {
         <strong className="popup-recent-title">{item.title || item.url}</strong>
       </div>
       <span className="popup-recent-url">{item.url}</span>
+    </article>
+  );
+}
+
+function getPopupSiteName(item: PopupPageItem | PopupLinkedItem): string {
+  if ('siteName' in item && item.siteName) return item.siteName;
+  try { return new URL(item.url).hostname.replace(/^www\./, ''); }
+  catch { return item.url; }
+}
+
+function UpdateDiffCard({ previous, next, badge, phase, labels }: {
+  previous: PopupLinkedItem;
+  next: PopupPageItem;
+  badge: string;
+  phase?: PopupRenderModel['comparisonPhase'];
+  labels: PopupRenderModel['labels'];
+}) {
+  return (
+    <article className="popup-recent-card popup-update-diff-card" data-phase={phase || 'idle'}>
+      <div className="popup-recent-inner popup-update-diff-inner">
+        <span className="popup-card-badge">
+          <i className="ri-icon ri-refresh-line" aria-hidden="true" />
+          {badge}
+        </span>
+        <div className="popup-recent-header">
+          <div className="popup-favicon" aria-hidden="true">
+            {next.faviconUrl
+              ? <img src={next.faviconUrl} alt="" />
+              : <i className="ri-icon ri-link" />}
+          </div>
+          <span>{getPopupSiteName(next)}</span>
+        </div>
+        <div className="popup-diff-stack">
+          <div className="popup-diff-row popup-diff-row--old">
+            <span className="popup-diff-mark" aria-hidden="true">−</span>
+            <span className="popup-diff-copy">
+              <small>{labels.originalContent}</small>
+              <strong>{previous.title || previous.url}</strong>
+              <span title={previous.url}>{previous.url}</span>
+            </span>
+          </div>
+          <div className="popup-diff-row popup-diff-row--new">
+            <span className="popup-diff-mark" aria-hidden="true">+</span>
+            <span className="popup-diff-copy">
+              <small>{labels.currentContent}</small>
+              <strong>{next.title || next.url}</strong>
+              <span title={next.url}>{next.url}</span>
+            </span>
+          </div>
+        </div>
+      </div>
     </article>
   );
 }
@@ -130,26 +178,13 @@ export function PopupView(model: PopupRenderModel) {
           <div className="popup-loading-card"><div /><span /><span /></div>
         ) : status === 'unsupported' ? null : (
           status === 'update-available' && page && linkedCard ? (
-            <div className="popup-update-comparison">
-              <div className="popup-update-source">
-                <span className="popup-update-source-icon" aria-hidden="true">
-                  <i className="ri-icon ri-history-line" />
-                </span>
-                <span className="popup-update-source-copy">
-                  <small>{labels.originalContent}</small>
-                  <strong>{linkedCard.title || linkedCard.url}</strong>
-                  <span title={linkedCard.url}>{linkedCard.url}</span>
-                </span>
-              </div>
-              <span className="popup-update-connector" aria-hidden="true">
-                <i className="ri-icon ri-arrow-down-line" />
-              </span>
-              <RecentCardPreview
-                item={page}
-                badge={labels.statuses[status]}
-                badgeIcon={cardBadgeIcon}
-              />
-            </div>
+            <UpdateDiffCard
+              previous={linkedCard}
+              next={page}
+              badge={labels.statuses[status]}
+              phase={model.comparisonPhase}
+              labels={labels}
+            />
           ) : (
             previewItem && status !== 'error' ? (
               <RecentCardPreview

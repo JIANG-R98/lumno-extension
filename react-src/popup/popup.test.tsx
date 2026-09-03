@@ -5,7 +5,7 @@ import { createPopupController, type PopupController, type PopupRenderModel } fr
 let controller: PopupController | null = null;
 
 const labels: PopupRenderModel['labels'] = {
-  appName: 'Lumno', originalContent: '原内容',
+  appName: 'Lumno', originalContent: '原内容', currentContent: '当前页面',
   update: '更新关联', updating: '正在更新…', undo: '撤销当前更新', undoLink: '撤销关联',
   link: '关联当前页面', linking: '正在关联…', undoing: '正在撤销…',
   settings: '设置', webClip: '开始剪裁',
@@ -34,6 +34,7 @@ describe('toolbar popup', () => {
     const onUpdate = vi.fn();
     act(() => controller?.render({
       status: 'update-available', labels, canUpdate: true, canUndo: false, canClip: true,
+      comparisonPhase: 'confirmed',
       linkedCard: { cardId: 'card-1', title: '第一集', url: 'https://example.com/p=1' },
       page: { title: '第二集', url: 'https://example.com/p=2' },
       onUpdate, onLink: vi.fn(), onUndo: vi.fn(), onClip: vi.fn(), onOpenSettings: vi.fn()
@@ -43,7 +44,9 @@ describe('toolbar popup', () => {
     expect(host.textContent).toContain('第二集');
     expect(host.querySelector('.popup-card-badge')?.textContent).toContain('可更新关联');
     expect(host.querySelector('.popup-card-badge .ri-refresh-line')).not.toBeNull();
-    expect(host.querySelector('.popup-update-source')?.textContent).toContain('https://example.com/p=1');
+    expect(host.querySelector('.popup-update-diff-card')?.getAttribute('data-phase')).toBe('confirmed');
+    expect(host.querySelector('.popup-diff-row--old')?.textContent).toContain('https://example.com/p=1');
+    expect(host.querySelector('.popup-diff-row--new')?.textContent).toContain('https://example.com/p=2');
     const button = Array.from(host.querySelectorAll('button')).find((item) =>
       item.textContent?.includes('更新关联')) as HTMLButtonElement;
     act(() => button.click());

@@ -8144,7 +8144,6 @@
     return writePinnedRecentSites(result.items).then(() => {
       recentRenderSignature = '';
       renderRecentSites(recentSourceItems);
-      showToast(t('recent_history_restore_success', 'Version restored'), false);
       return true;
     }).catch(() => {
       showToast(t('recent_history_restore_failed', 'Unable to restore this version'), true);
@@ -9424,7 +9423,10 @@
       documentObj: document,
       windowObj: window,
       t,
-      onRestore: restoreRecentSiteVersion
+      onRestore: restoreRecentSiteVersion,
+      onRestoreSuccess() {
+        showToast(t('recent_history_restore_success', 'Version restored'), false);
+      }
     });
   }
 

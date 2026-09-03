@@ -20,6 +20,9 @@ export interface RecentHistoryDialogOptions {
     version: RecentHistoryVersion,
     historyIndex: number
   ) => boolean | Promise<boolean>;
+  onRestoreSuccess?: () => void;
+  closeDelayMs?: number;
+  restoredToastDelayMs?: number;
 }
 
 export interface RecentHistoryDialogController {
@@ -38,6 +41,9 @@ interface ViewModel {
   onClose(): void;
   onRestore(index: number): void;
 }
+
+const DEFAULT_CLOSE_DELAY_MS = 220;
+const DEFAULT_TOAST_DELAY_MS = 130;
 
 function formatVersionTime(value: number | undefined, current: boolean, t: ViewModel['t']): string {
   if (current) return t('recent_history_current', '当前版本');
@@ -81,19 +87,23 @@ function RecentHistoryDialogView(model: ViewModel) {
           <article className="x-nt-recent-history-version" key={`${version.url}-${version.updatedAt || 0}-${index}`}>
             <span className="x-nt-recent-history-rail" aria-hidden="true"><i /></span>
             <VersionContent version={version} />
-            <time>{formatVersionTime(version.updatedAt, false, t)}</time>
-            <button
-              className="x-lumno-action-button x-lumno-action-button--secondary x-nt-recent-history-restore"
-              type="button"
-              data-history-index={index}
-              disabled={busyIndex >= 0}
-              onClick={() => model.onRestore(index)}
-            >
-              <i className="ri-icon ri-pushpin-2-line" aria-hidden="true" />
-              {busyIndex === index
-                ? t('recent_history_restoring', '正在恢复…')
-                : t('recent_history_restore', '设为当前版本')}
-            </button>
+            <span className="x-nt-recent-history-version-actions">
+              <time>{formatVersionTime(version.updatedAt, false, t)}</time>
+              <span className="x-nt-recent-history-action-slot">
+                <button
+                  className="x-lumno-action-button x-lumno-action-button--secondary x-nt-recent-history-restore"
+                  type="button"
+                  data-history-index={index}
+                  disabled={busyIndex >= 0}
+                  onClick={() => model.onRestore(index)}
+                >
+                  <i className="ri-icon ri-pushpin-2-line" aria-hidden="true" />
+                  {busyIndex === index
+                    ? t('recent_history_restoring', '正在恢复…')
+                    : t('recent_history_restore', '设为当前版本')}
+                </button>
+              </span>
+            </span>
           </article>
         ))}
       </div>
@@ -109,6 +119,16 @@ export function createRecentHistoryDialog(
   if (!documentObj || !windowObj) return null;
   const t = rawOptions.t || ((_key: string, fallback: string) => fallback);
   const onRestore = rawOptions.onRestore || (() => false);
+  const onRestoreSuccess = rawOptions.onRestoreSuccess || (() => {});
+  const rawCloseDelayMs = Number(rawOptions.closeDelayMs);
+  const closeDelayMs = Number.isFinite(rawCloseDelayMs)
+    ? Math.max(0, rawCloseDelayMs)
+    : DEFAULT_CLOSE_DELAY_MS;
+  const rawToastDelayMs = Number(rawOptions.restoredToastDelayMs);
+  const restoredToastDelayMs = Math.min(
+    closeDelayMs,
+    Number.isFinite(rawToastDelayMs) ? Math.max(0, rawToastDelayMs) : DEFAULT_TOAST_DELAY_MS
+  );
   const host = documentObj.createElement('div');
   host.className = 'x-nt-recent-history-backdrop';
   host.hidden = true;
@@ -119,17 +139,36 @@ export function createRecentHistoryDialog(
   let busyIndex = -1;
   let previousFocus: HTMLElement | null = null;
   let destroyed = false;
+  let closeTimer = 0;
+  let toastTimer = 0;
 
   function render(): void {
     root.render({ item, busyIndex, t, onClose: () => close({ restoreFocus: true }), onRestore: restore });
   }
 
-  function close(options: { restoreFocus?: boolean } = {}): boolean {
-    if (destroyed || busyIndex >= 0) return false;
-    host.dataset.open = 'false';
+  function clearTransitionTimers(): void {
+    if (closeTimer) windowObj.clearTimeout(closeTimer);
+    if (toastTimer) windowObj.clearTimeout(toastTimer);
+    closeTimer = 0;
+    toastTimer = 0;
+  }
+
+  function finishClose(restoreFocus: boolean): void {
+    closeTimer = 0;
     host.hidden = true;
-    if (options.restoreFocus) previousFocus?.focus();
+    host.dataset.state = 'closed';
+    if (restoreFocus) previousFocus?.focus();
     previousFocus = null;
+  }
+
+  function close(options: { restoreFocus?: boolean } = {}): boolean {
+    if (destroyed || busyIndex >= 0 || host.dataset.state === 'restored') return false;
+    clearTransitionTimers();
+    const restoreFocus = options.restoreFocus === true;
+    host.dataset.state = 'closing';
+    host.dataset.open = 'false';
+    if (host.hidden || closeDelayMs === 0) finishClose(restoreFocus);
+    else closeTimer = windowObj.setTimeout(() => finishClose(restoreFocus), closeDelayMs);
     return true;
   }
 
@@ -139,26 +178,51 @@ export function createRecentHistoryDialog(
     busyIndex = index;
     render();
     const version = selectedItem.updateHistory[index];
-    if (!version) return;
+    if (!version) {
+      busyIndex = -1;
+      render();
+      return;
+    }
     const succeeded = await Promise.resolve()
       .then(() => onRestore(selectedItem, version, index))
       .catch(() => false);
     busyIndex = -1;
-    if (succeeded) close({ restoreFocus: true });
-    else render();
+    if (!succeeded) {
+      render();
+      return;
+    }
+    clearTransitionTimers();
+    host.dataset.state = 'restored';
+    host.dataset.open = 'false';
+    toastTimer = windowObj.setTimeout(() => {
+      toastTimer = 0;
+      try { onRestoreSuccess(); } catch (_error) {}
+    }, restoredToastDelayMs);
+    closeTimer = windowObj.setTimeout(() => finishClose(true), closeDelayMs);
   }
 
   function open(options: { item: RecentHistoryItem; sourceElement?: HTMLElement | null }): boolean {
     if (destroyed || busyIndex >= 0 || !options.item) return false;
     item = options.item;
+    clearTransitionTimers();
     previousFocus = options.sourceElement || (
       documentObj.activeElement instanceof HTMLElement ? documentObj.activeElement : null
     );
     render();
     host.hidden = false;
+    host.dataset.state = 'opening';
     host.dataset.open = 'false';
-    windowObj.requestAnimationFrame(() => { if (!host.hidden) host.dataset.open = 'true'; });
-    windowObj.requestAnimationFrame(() => host.querySelector<HTMLButtonElement>('.x-nt-recent-history-close')?.focus());
+    windowObj.requestAnimationFrame(() => {
+      if (!host.hidden && host.dataset.state === 'opening') {
+        host.dataset.state = 'open';
+        host.dataset.open = 'true';
+      }
+    });
+    windowObj.requestAnimationFrame(() => {
+      if (!host.hidden && (host.dataset.state === 'opening' || host.dataset.state === 'open')) {
+        host.querySelector<HTMLButtonElement>('.x-nt-recent-history-close')?.focus();
+      }
+    });
     return true;
   }
 
@@ -200,6 +264,7 @@ export function createRecentHistoryDialog(
 
   function destroy(): void {
     if (destroyed) return;
+    clearTransitionTimers();
     destroyed = true;
     host.removeEventListener('pointerdown', handlePointerDown);
     host.removeEventListener('keydown', handleKeydown);

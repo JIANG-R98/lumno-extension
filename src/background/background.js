@@ -6676,6 +6676,7 @@ const BACKGROUND_MESSAGE_ROUTE_GROUPS = Object.freeze({
       'updatePinnedRecentFromToolbar',
       'linkPinnedRecentFromToolbar',
       'undoPinnedRecentTrackingUpdate',
+      'undoPinnedRecentTrackingLink',
       'openDocumentPipFromToolbar',
       'createTab',
       'openNewTab',

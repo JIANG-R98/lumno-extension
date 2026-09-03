@@ -11,6 +11,7 @@
   let busy = '';
   let notice = null;
   let undoAction = null;
+  let comparisonPhase = '';
 
   function t(key, fallback) {
     return chrome.i18n.getMessage(key) || fallback;
@@ -19,6 +20,7 @@
   const labels = {
     appName: 'Lumno',
     originalContent: t('popup_original_content', 'Previous content'),
+    currentContent: t('popup_update_to', 'Current page'),
     update: t('popup_update_action', 'Update link'),
     updating: t('popup_updating_action', 'Updating…'),
     link: t('popup_link_action', 'Link this page'),
@@ -66,6 +68,7 @@
       canLink: Boolean(state && state.status === 'not-linked' && state.page && state.page.url),
       canUndo: Boolean(undoAction),
       undoKind: undoAction && undoAction.kind,
+      comparisonPhase,
       canClip: Number.isInteger(activeTabId),
       labels,
       onUpdate: update,
@@ -94,7 +97,7 @@
 
   async function update() {
     if (!state || !state.canUpdate || busy) return;
-    busy = 'update'; notice = null; render();
+    busy = 'update'; comparisonPhase = 'saving'; notice = null; render();
     const result = await send({
       action: 'updatePinnedRecentFromToolbar',
       tabId: activeTabId,
@@ -113,12 +116,22 @@
             : state.page && state.page.url
         }
       : null;
+    if (result && result.ok) {
+      comparisonPhase = 'confirmed';
+      busy = 'update';
+      render();
+      if (window && typeof window.setTimeout === 'function') {
+        await new Promise((resolve) => window.setTimeout(resolve, 240));
+      }
+      busy = '';
+    }
+    comparisonPhase = '';
     await refresh();
   }
 
   async function link() {
     if (!state || state.status !== 'not-linked' || busy) return;
-    busy = 'link'; notice = null; render();
+    busy = 'link'; comparisonPhase = ''; notice = null; render();
     const result = await send({ action: 'linkPinnedRecentFromToolbar', tabId: activeTabId });
     busy = '';
     notice = result && result.ok

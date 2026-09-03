@@ -7,6 +7,10 @@ const html = fs.readFileSync('src/popup/popup.html', 'utf8');
 const source = fs.readFileSync('src/popup/popup.js', 'utf8');
 const style = fs.readFileSync('src/popup/popup.css', 'utf8');
 const backgroundSource = fs.readFileSync('src/background/background.js', 'utf8');
+const extensionPageRoutes = backgroundSource.slice(
+  backgroundSource.indexOf('extensionPages: {'),
+  backgroundSource.indexOf('handler: handleExtensionPageMessage')
+);
 
 assert.strictEqual(manifest.action.default_popup, 'src/popup/popup.html');
 assert(html.includes('data-react-entry="../react/popup-islands.js"'));
@@ -15,6 +19,10 @@ assert(backgroundSource.includes("'getPinnedRecentToolbarState'"));
 assert(backgroundSource.includes("'updatePinnedRecentFromToolbar'"));
 assert(backgroundSource.includes("'linkPinnedRecentFromToolbar'"));
 assert(backgroundSource.includes("'undoPinnedRecentTrackingLink'"));
+assert(
+  extensionPageRoutes.includes("'undoPinnedRecentTrackingLink'"),
+  'the popup link-undo message must be registered before it can reach its background handler'
+);
 assert(source.includes("kind: 'link', guard: result.undoGuard"));
 assert(backgroundSource.includes("'openDocumentPipFromToolbar'"));
 assert(!backgroundSource.includes("chrome.action.onClicked.addListener"));
@@ -24,9 +32,13 @@ assert(/\.popup-shell\[data-status="unsupported"\][^}]*min-height:0/.test(style)
 assert(/\.popup-shell\[data-status="unsupported"\] \.popup-content[^}]*display:none/.test(style));
 assert(/\.popup-confetti i[^}]*animation:popup-confetti-fall/.test(style));
 assert(/@keyframes popup-confetti-fall/.test(style));
+assert(/\.popup-update-diff-card[^}]*height:184px/.test(style));
+assert(/\.popup-update-diff-card\[data-phase="confirmed"\] \.popup-diff-row--old[^}]*opacity:0/.test(style));
+assert(/\.popup-button--warning[^}]*background:linear-gradient/.test(style));
 
 const calls = [];
 let lastModel = null;
+const renderedModels = [];
 let closeCalls = 0;
 let toolbarState = {
   ok: true,
@@ -43,7 +55,7 @@ const context = {
   document: { getElementById: () => ({}) },
   window: { close: () => { closeCalls += 1; } },
   LumnoPopupReact: {
-    createPopupController: () => ({ render: (model) => { lastModel = model; } })
+    createPopupController: () => ({ render: (model) => { lastModel = model; renderedModels.push(model); } })
   },
   chrome: {
     i18n: { getMessage: () => '' },
@@ -85,6 +97,7 @@ setImmediate(async () => {
   assert.strictEqual(lastModel.status, 'up-to-date');
   assert.strictEqual(lastModel.canUndo, true);
   assert.strictEqual(lastModel.notice.celebrate, true);
+  assert(renderedModels.some((model) => model.comparisonPhase === 'confirmed'));
   await lastModel.onUndo();
   assert(calls.some((call) => call.action === 'undoPinnedRecentTrackingUpdate' &&
     call.expectedUrl === 'https://example.com/?p=2'));
