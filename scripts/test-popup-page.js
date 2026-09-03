@@ -17,6 +17,9 @@ assert(backgroundSource.includes("'linkPinnedRecentFromToolbar'"));
 assert(backgroundSource.includes("'openDocumentPipFromToolbar'"));
 assert(!backgroundSource.includes("chrome.action.onClicked.addListener"));
 assert(/\.popup-header-button[^}]*background:linear-gradient/.test(style));
+assert(/\.popup-header-actions[^}]*gap:8px/.test(style));
+assert(/\.popup-shell\[data-status="unsupported"\][^}]*min-height:0/.test(style));
+assert(/\.popup-shell\[data-status="unsupported"\] \.popup-content[^}]*display:none/.test(style));
 assert(/\.popup-confetti i[^}]*animation:popup-confetti-fall/.test(style));
 assert(/@keyframes popup-confetti-fall/.test(style));
 

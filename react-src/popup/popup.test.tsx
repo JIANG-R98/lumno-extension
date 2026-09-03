@@ -5,13 +5,13 @@ import { createPopupController, type PopupController, type PopupRenderModel } fr
 let controller: PopupController | null = null;
 
 const labels: PopupRenderModel['labels'] = {
-  appName: 'Lumno', originalContent: '原内容', updateTo: '当前页面',
+  appName: 'Lumno', originalContent: '原内容',
   update: '更新关联', updating: '正在更新…', undo: '撤销当前更新',
   link: '关联当前页面', linking: '正在关联…', undoing: '正在撤销…',
   settings: '设置', webClip: '开始剪裁',
   statuses: {
     loading: '读取中', 'update-available': '可更新关联', 'up-to-date': '已关联',
-    'not-linked': '尚未关联', unsupported: '不支持', blocked: '无法更新', error: '读取失败'
+    'not-linked': '可关联', unsupported: '不支持', blocked: '无法更新', error: '读取失败'
   },
   statusDetails: {
     loading: '正在检查当前标签页', 'update-available': '将原内容更新为当前页面',
@@ -41,6 +41,8 @@ describe('toolbar popup', () => {
 
     expect(host.textContent).not.toContain('第一集');
     expect(host.textContent).toContain('第二集');
+    expect(host.querySelector('.popup-card-badge')?.textContent).toContain('可更新关联');
+    expect(host.querySelector('.popup-card-badge .ri-refresh-line')).not.toBeNull();
     expect(host.querySelector('.popup-update-source')?.textContent).toContain('https://example.com/p=1');
     const button = Array.from(host.querySelectorAll('button')).find((item) =>
       item.textContent?.includes('更新关联')) as HTMLButtonElement;
@@ -67,8 +69,9 @@ describe('toolbar popup', () => {
     act(() => host.querySelector<HTMLButtonElement>('.popup-header-button')?.click());
     expect(onUndo).toHaveBeenCalledOnce();
     expect(onClip).toHaveBeenCalledOnce();
-    expect(host.querySelector('.popup-linked-state')?.textContent).toContain('https://example.com/p=2');
-    expect(host.querySelector('.popup-linked-state .ri-radar-fill')).not.toBeNull();
+    expect(host.querySelector('.popup-card-badge')?.textContent).toContain('已关联');
+    expect(host.querySelector('.popup-card-badge .ri-radar-fill')).not.toBeNull();
+    expect(host.querySelector('.popup-recent-card')?.previousElementSibling).toBeNull();
     expect(host.querySelector('.popup-status-copy p')).toBeNull();
   });
 
@@ -100,6 +103,8 @@ describe('toolbar popup', () => {
       item.textContent?.includes('关联当前页面'));
     act(() => linkButton?.click());
     expect(host.querySelector('.popup-recent-card')).not.toBeNull();
+    expect(host.querySelector('.popup-card-badge')?.textContent).toContain('可关联');
+    expect(host.querySelector('.popup-card-badge .ri-links-line')).not.toBeNull();
     expect(onLink).toHaveBeenCalledOnce();
   });
 
@@ -113,6 +118,8 @@ describe('toolbar popup', () => {
       onUpdate: vi.fn(), onLink: vi.fn(), onUndo: vi.fn(), onClip: vi.fn(), onOpenSettings: vi.fn()
     }));
     expect(host.querySelector('.popup-recent-card')).toBeNull();
+    expect(host.querySelector('.popup-status-copy')).toBeNull();
+    expect(host.querySelector('.popup-content')?.children).toHaveLength(0);
   });
 
   it('celebrates only successful add or update feedback', () => {

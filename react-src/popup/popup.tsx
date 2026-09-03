@@ -25,7 +25,6 @@ export interface PopupRenderModel {
   labels: {
     appName: string;
     originalContent: string;
-    updateTo: string;
     update: string;
     updating: string;
     link: string;
@@ -46,6 +45,13 @@ export interface PopupRenderModel {
 
 export type PopupController = ReactRootController<PopupRenderModel>;
 
+const CARD_BADGE_ICONS: Partial<Record<PopupStatus, string>> = {
+  'update-available': 'ri-refresh-line',
+  'up-to-date': 'ri-radar-fill',
+  'not-linked': 'ri-links-line',
+  blocked: 'ri-alert-line'
+};
+
 function PopupConfetti() {
   return (
     <div className="popup-confetti" aria-hidden="true">
@@ -62,9 +68,10 @@ function PopupConfetti() {
   );
 }
 
-function RecentCardPreview({ item, badge }: {
+function RecentCardPreview({ item, badge, badgeIcon }: {
   item: PopupPageItem | PopupLinkedItem;
   badge?: string;
+  badgeIcon?: string;
 }) {
   const siteName = 'siteName' in item && item.siteName
     ? item.siteName
@@ -75,7 +82,12 @@ function RecentCardPreview({ item, badge }: {
   return (
     <article className={`popup-recent-card${badge ? ' popup-recent-card--badged' : ''}`}>
       <div className="popup-recent-inner">
-        {badge && <span className="popup-card-badge">{badge}</span>}
+        {badge && (
+          <span className="popup-card-badge">
+            {badgeIcon && <i className={`ri-icon ${badgeIcon}`} aria-hidden="true" />}
+            {badge}
+          </span>
+        )}
         <div className="popup-recent-header">
           <div className="popup-favicon" aria-hidden="true">
             {'faviconUrl' in item && item.faviconUrl
@@ -94,7 +106,7 @@ function RecentCardPreview({ item, badge }: {
 export function PopupView(model: PopupRenderModel) {
   const { labels, status, busy = '', page, linkedCard, canUpdate, canLink, canUndo, notice } = model;
   const previewItem = page || linkedCard;
-  const linkedUrl = linkedCard?.url || page?.url || '';
+  const cardBadgeIcon = CARD_BADGE_ICONS[status];
   return (
     <main className="popup-shell" data-status={status}>
       {notice?.celebrate && <PopupConfetti />}
@@ -114,27 +126,19 @@ export function PopupView(model: PopupRenderModel) {
       <section className="popup-content" aria-live="polite">
         {status === 'loading' ? (
           <div className="popup-loading-card"><div /><span /><span /></div>
-        ) : (
+        ) : status === 'unsupported' ? null : (
           <>
-            {status === 'up-to-date' && linkedUrl ? (
-              <div className="popup-linked-state">
-                <span className="popup-linked-badge">
-                  <i className="ri-icon ri-radar-fill" aria-hidden="true" />
-                  {labels.statuses[status]}
-                </span>
-                <strong title={linkedUrl}>{linkedUrl}</strong>
-              </div>
+            {previewItem && status !== 'error' ? (
+              <RecentCardPreview
+                item={previewItem}
+                badge={cardBadgeIcon ? labels.statuses[status] : undefined}
+                badgeIcon={cardBadgeIcon}
+              />
             ) : (
               <div className="popup-status-copy">
                 <h1>{labels.statuses[status]}</h1>
                 <p>{labels.statusDetails[status]}</p>
               </div>
-            )}
-            {previewItem && status !== 'unsupported' && status !== 'error' && (
-              <RecentCardPreview
-                item={previewItem}
-                badge={status === 'update-available' ? labels.updateTo : undefined}
-              />
             )}
             {status === 'update-available' && linkedCard && (
               <div className="popup-update-source">

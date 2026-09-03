@@ -19,7 +19,6 @@
   const labels = {
     appName: 'Lumno',
     originalContent: t('popup_original_content', 'Previous content'),
-    updateTo: t('popup_update_to', 'Current page'),
     update: t('popup_update_action', 'Update link'),
     updating: t('popup_updating_action', 'Updating…'),
     link: t('popup_link_action', 'Link this page'),
@@ -32,9 +31,9 @@
       loading: t('popup_status_loading', 'Reading current page…'),
       'update-available': t('popup_status_update_available', 'Update available'),
       'up-to-date': t('popup_status_up_to_date', 'Linked'),
-      'not-linked': t('popup_status_not_linked', 'This page is not linked'),
+      'not-linked': t('popup_status_not_linked', 'Ready to link'),
       unsupported: t('popup_status_unsupported', 'This page is not supported'),
-      blocked: t('popup_status_blocked', 'This link cannot be updated'),
+      blocked: t('popup_status_blocked', "Can't update"),
       error: t('popup_status_error', 'Unable to read page status')
     },
     statusDetails: {
