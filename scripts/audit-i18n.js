@@ -16,6 +16,7 @@ const ALLOWLIST = [
   'localized update notice fallback model in src/shared/update-notice.js',
   'localized selection prompt model in src/shared/selection-intent.js',
   'browser built-in bookmark folder aliases used only for folder detection',
+  'development-only pages under src/debug',
   'debug-only score reason strings when the debug flag is disabled by default',
   'Chinese search-intent tokens in src/shared/search-utils.js scoring dictionaries'
 ];
@@ -236,7 +237,8 @@ function scanHtmlLine(file, line, lineNumber, state) {
 function auditSources() {
   const files = SOURCE_ROOTS
     .flatMap(walk)
-    .map((file) => path.normalize(file))
+    .map((file) => path.normalize(file).replace(/\\/g, '/'))
+    .filter((file) => !file.startsWith('src/debug/'))
     .sort();
   const hits = [];
   files.forEach((file) => {

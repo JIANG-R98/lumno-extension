@@ -114,6 +114,9 @@ npm run test:newtab-layout
 npm run test:onboarding-content
 ```
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for branch naming, pull requests, reviews,
+and shared-workstream conventions.
+
 `npm run package:store` reads the version from `manifest.json` and creates `dist/lumno-store-v<version>.zip`. It requires `zip` and `zipinfo` to be available on the system.
 
 ## Project Structure
