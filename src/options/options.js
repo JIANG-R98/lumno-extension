@@ -76,6 +76,7 @@
   const tabSwitcherToggle = document.getElementById('_x_extension_tab_switcher_toggle_2026_unique_');
   const documentPipToggle = document.getElementById('_x_extension_document_pip_toggle_2026_unique_');
   const pinnedTabRecoveryToggle = document.getElementById('_x_extension_pinned_tab_recovery_toggle_2026_unique_');
+  const linkedCardsToggle = document.getElementById('_x_extension_linked_cards_toggle_2026_unique_');
   const selectionQuickActionsToggle = document.getElementById('_x_extension_selection_quick_actions_toggle_2026_unique_');
   const selectionQuickActionsProviderRow = document.getElementById('_x_extension_selection_quick_actions_provider_row_2026_unique_');
   const selectionQuickActionsProviderSelect = document.getElementById('_x_extension_selection_quick_actions_provider_select_2026_unique_');
@@ -369,6 +370,7 @@
     [tabSwitcherToggle, 'tab-switcher'],
     [documentPipToggle, 'document-pip'],
     [pinnedTabRecoveryToggle, 'pinned-tab-recovery'],
+    [linkedCardsToggle, 'linked-cards'],
     [selectionQuickActionsToggle, 'selection-quick-actions'],
     [selectionQuickActionsGroupToggle, 'selection-quick-actions-group']
   ].forEach(([input, kind]) => registerOptionsToggleControl(input, kind));
@@ -878,6 +880,8 @@
   const TAB_SWITCHER_ENABLED_STORAGE_KEY = '_x_extension_tab_switcher_enabled_2026_unique_';
   const DOCUMENT_PIP_ENABLED_STORAGE_KEY = '_x_extension_document_pip_enabled_2026_unique_';
   const PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY = '_x_extension_pinned_tab_recovery_enabled_2026_unique_';
+  const LINKED_CARDS_ENABLED_STORAGE_KEY = SETTINGS.LINKED_CARDS_ENABLED_STORAGE_KEY ||
+    '_x_extension_linked_cards_enabled_2026_unique_';
   const SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY = SETTINGS.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY ||
     '_x_extension_selection_quick_actions_enabled_2026_unique_';
   const SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY = SETTINGS.SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY ||
@@ -973,6 +977,7 @@
     SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY,
     SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY,
     SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY,
+    LINKED_CARDS_ENABLED_STORAGE_KEY,
     OVERLAY_TAB_PRIORITY_STORAGE_KEY,
     NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY,
     NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY,
@@ -2370,6 +2375,12 @@
   function normalizeSelectionQuickActionsEnabled(value) {
     return typeof SETTINGS.normalizeSelectionQuickActionsEnabled === 'function'
       ? SETTINGS.normalizeSelectionQuickActionsEnabled(value)
+      : value === true;
+  }
+
+  function normalizeLinkedCardsEnabled(value) {
+    return typeof SETTINGS.normalizeLinkedCardsEnabled === 'function'
+      ? SETTINGS.normalizeLinkedCardsEnabled(value)
       : value === true;
   }
 
@@ -5279,6 +5290,15 @@
       storageArea.set({ [PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY]: next });
     });
   }
+  if (linkedCardsToggle) {
+    linkedCardsToggle.addEventListener('change', () => {
+      const next = normalizeLinkedCardsEnabled(linkedCardsToggle.checked);
+      setOptionsToggleState(linkedCardsToggle, next);
+      if (storageArea) {
+        storageArea.set({ [LINKED_CARDS_ENABLED_STORAGE_KEY]: next });
+      }
+    });
+  }
   if (selectionQuickActionsToggle) {
     selectionQuickActionsToggle.addEventListener('change', () => {
       const next = normalizeSelectionQuickActionsEnabled(selectionQuickActionsToggle.checked);
@@ -6030,6 +6050,17 @@
       }
       if (rawValue !== stored) {
         storageArea.set({ [PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY]: stored });
+      }
+      refreshCustomSelects();
+    });
+    storageArea.get([LINKED_CARDS_ENABLED_STORAGE_KEY], (result) => {
+      const rawValue = result[LINKED_CARDS_ENABLED_STORAGE_KEY];
+      const stored = normalizeLinkedCardsEnabled(rawValue);
+      if (linkedCardsToggle) {
+        setOptionsToggleState(linkedCardsToggle, stored);
+      }
+      if (rawValue !== stored) {
+        storageArea.set({ [LINKED_CARDS_ENABLED_STORAGE_KEY]: stored });
       }
       refreshCustomSelects();
     });
@@ -7402,6 +7433,15 @@
       setOptionsToggleState(pinnedTabRecoveryToggle, next);
       if (raw !== next && storageArea) {
         storageArea.set({ [PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY]: next });
+      }
+      refreshCustomSelects();
+    }
+    if (changes[LINKED_CARDS_ENABLED_STORAGE_KEY] && linkedCardsToggle) {
+      const raw = changes[LINKED_CARDS_ENABLED_STORAGE_KEY].newValue;
+      const next = normalizeLinkedCardsEnabled(raw);
+      setOptionsToggleState(linkedCardsToggle, next);
+      if (raw !== next && storageArea) {
+        storageArea.set({ [LINKED_CARDS_ENABLED_STORAGE_KEY]: next });
       }
       refreshCustomSelects();
     }

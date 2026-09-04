@@ -20,17 +20,24 @@ export interface PopupRenderModel {
   canUpdate?: boolean;
   canLink?: boolean;
   canUndo?: boolean;
+  undoKind?: 'update' | 'link';
+  comparison?: {
+    phase: 'saving' | 'confirmed' | 'exiting';
+    previous: PopupLinkedItem;
+    next: PopupPageItem;
+  } | null;
   canClip?: boolean;
-  notice?: { kind: 'success' | 'error'; text: string } | null;
+  notice?: { kind: 'success' | 'error'; text: string; celebrate?: boolean } | null;
   labels: {
     appName: string;
     originalContent: string;
-    updateTo: string;
+    currentContent: string;
     update: string;
     updating: string;
     link: string;
     linking: string;
     undo: string;
+    undoLink: string;
     undoing: string;
     settings: string;
     webClip: string;
@@ -46,20 +53,44 @@ export interface PopupRenderModel {
 
 export type PopupController = ReactRootController<PopupRenderModel>;
 
-function RecentCardPreview({ item, badge }: {
+const CARD_BADGE_ICONS: Partial<Record<PopupStatus, string>> = {
+  'update-available': 'ri-refresh-line',
+  'up-to-date': 'ri-radar-fill',
+  'not-linked': 'ri-links-line',
+  blocked: 'ri-alert-line'
+};
+
+function PopupConfetti() {
+  return (
+    <div className="popup-confetti" aria-hidden="true">
+      {Array.from({ length: 24 }, (_, index) => (
+        <i
+          key={index}
+          style={{
+            left: `${6 + ((index * 37) % 89)}%`,
+            animationDelay: `${(index * 47) % 260}ms`
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function RecentCardPreview({ item, badge, badgeIcon }: {
   item: PopupPageItem | PopupLinkedItem;
   badge?: string;
+  badgeIcon?: string;
 }) {
-  const siteName = 'siteName' in item && item.siteName
-    ? item.siteName
-    : (() => {
-        try { return new URL(item.url).hostname.replace(/^www\./, ''); }
-        catch { return item.url; }
-      })();
+  const siteName = getPopupSiteName(item);
   return (
     <article className={`popup-recent-card${badge ? ' popup-recent-card--badged' : ''}`}>
       <div className="popup-recent-inner">
-        {badge && <span className="popup-card-badge">{badge}</span>}
+        {badge && (
+          <span className="popup-card-badge">
+            {badgeIcon && <i className={`ri-icon ${badgeIcon}`} aria-hidden="true" />}
+            {badge}
+          </span>
+        )}
         <div className="popup-recent-header">
           <div className="popup-favicon" aria-hidden="true">
             {'faviconUrl' in item && item.faviconUrl
@@ -75,11 +106,80 @@ function RecentCardPreview({ item, badge }: {
   );
 }
 
+function getPopupSiteName(item: PopupPageItem | PopupLinkedItem): string {
+  if ('siteName' in item && item.siteName) return item.siteName;
+  try { return new URL(item.url).hostname.replace(/^www\./, ''); }
+  catch { return item.url; }
+}
+
+function UpdateDiffCard({ previous, next, badge, phase, labels }: {
+  previous: PopupLinkedItem;
+  next: PopupPageItem;
+  badge: string;
+  phase: 'saving' | 'confirmed' | 'exiting';
+  labels: PopupRenderModel['labels'];
+}) {
+  return (
+    <article className="popup-recent-card popup-update-diff-card" data-phase={phase}>
+      <div className="popup-recent-inner popup-update-diff-inner">
+        <span className="popup-card-badge">
+          <i className="ri-icon ri-refresh-line" aria-hidden="true" />
+          {badge}
+        </span>
+        <div className="popup-recent-header">
+          <div className="popup-favicon" aria-hidden="true">
+            {next.faviconUrl
+              ? <img src={next.faviconUrl} alt="" />
+              : <i className="ri-icon ri-link" />}
+          </div>
+          <span>{getPopupSiteName(next)}</span>
+        </div>
+        <div className="popup-diff-stack">
+          <div className="popup-diff-row popup-diff-row--old">
+            <span className="popup-diff-mark" aria-hidden="true">−</span>
+            <span className="popup-diff-copy">
+              <small>{labels.originalContent}</small>
+              <strong>{previous.title || previous.url}</strong>
+              <span title={previous.url}>{previous.url}</span>
+            </span>
+          </div>
+          <div className="popup-diff-row popup-diff-row--new">
+            <span className="popup-diff-mark" aria-hidden="true">+</span>
+            <span className="popup-diff-copy">
+              <small>{labels.currentContent}</small>
+              <strong>{next.title || next.url}</strong>
+              <span title={next.url}>{next.url}</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
 export function PopupView(model: PopupRenderModel) {
   const { labels, status, busy = '', page, linkedCard, canUpdate, canLink, canUndo, notice } = model;
   const previewItem = page || linkedCard;
+  const cardBadgeIcon = CARD_BADGE_ICONS[status];
+  const comparison = model.comparison || (
+    status === 'update-available' && page && linkedCard
+      ? { phase: 'saving' as const, previous: linkedCard, next: page }
+      : null
+  );
   return (
     <main className="popup-shell" data-status={status}>
+      {notice?.celebrate && <PopupConfetti />}
+      {notice && (
+        <div
+          key={`${notice.kind}:${notice.text}`}
+          className={`popup-notice popup-notice--${notice.kind}`}
+          data-visible="true"
+          role="status"
+          aria-live="polite"
+        >
+          {notice.text}
+        </div>
+      )}
       <header className="popup-header">
         <img src="../../assets/images/lumno.png" alt="" />
         <span>{labels.appName}</span>
@@ -96,29 +196,42 @@ export function PopupView(model: PopupRenderModel) {
       <section className="popup-content" aria-live="polite">
         {status === 'loading' ? (
           <div className="popup-loading-card"><div /><span /><span /></div>
-        ) : (
-          <>
-            <div className="popup-status-copy">
-              <h1>{labels.statuses[status]}</h1>
-              <p>{labels.statusDetails[status]}</p>
+        ) : status === 'unsupported' ? null : (
+          comparison ? (
+            <div className="popup-comparison-stage" data-phase={comparison.phase}>
+              <UpdateDiffCard
+                previous={comparison.previous}
+                next={comparison.next}
+                badge={labels.statuses[comparison.phase === 'saving' ? status : 'up-to-date']}
+                phase={comparison.phase}
+                labels={labels}
+              />
+              {comparison.phase === 'exiting' && (
+                <div className="popup-comparison-final">
+                  <RecentCardPreview
+                    item={comparison.next}
+                    badge={labels.statuses['up-to-date']}
+                    badgeIcon={CARD_BADGE_ICONS['up-to-date']}
+                  />
+                </div>
+              )}
             </div>
-            {previewItem && status !== 'unsupported' && status !== 'error' && (
+          ) : (
+            previewItem && status !== 'error' ? (
               <RecentCardPreview
                 item={previewItem}
-                badge={status === 'update-available' ? labels.updateTo : undefined}
+                badge={cardBadgeIcon ? labels.statuses[status] : undefined}
+                badgeIcon={cardBadgeIcon}
               />
-            )}
-            {status === 'update-available' && linkedCard && (
-              <div className="popup-update-source">
-                <span>{labels.originalContent}</span>
-                <strong>{linkedCard.title || linkedCard.url}</strong>
+            ) : (
+              <div className="popup-status-copy">
+                <h1>{labels.statuses[status]}</h1>
+                <p>{labels.statusDetails[status]}</p>
               </div>
-            )}
-          </>
+            )
+          )
         )}
       </section>
-
-      {notice && <div className={`popup-notice popup-notice--${notice.kind}`}>{notice.text}</div>}
 
       <div className="popup-actions">
         {canUpdate && (
@@ -136,7 +249,7 @@ export function PopupView(model: PopupRenderModel) {
         {canUndo && (
           <button className="popup-button popup-button--warning" disabled={Boolean(busy)} onClick={model.onUndo}>
             <i className="ri-icon ri-arrow-go-back-line" aria-hidden="true" />
-            {busy === 'undo' ? labels.undoing : labels.undo}
+            {busy === 'undo' ? labels.undoing : (model.undoKind === 'link' ? labels.undoLink : labels.undo)}
           </button>
         )}
       </div>

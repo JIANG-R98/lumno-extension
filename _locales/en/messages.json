@@ -65,6 +65,8 @@
   "settings_tab_labs": {
     "message": "Labs"
   },
+  "settings_linked_cards_title": { "message": "Linked pages" },
+  "settings_linked_cards_desc": { "message": "Link pinned New Tab cards to tabs and update the card when the page changes" },
   "settings_selection_quick_actions_title": {
     "message": "Selection quick actions"
   },
@@ -1882,7 +1884,16 @@
   "recent_undo_tracking_update_confirm_title": { "message": "Undo This Tracking Update?" },
   "recent_undo_tracking_update_confirm_description": { "message": "“{current}” will be replaced with “{previous}”." },
   "recent_undo_tracking_update_confirm": { "message": "Confirm Undo" },
-  "recent_undo_tracking_update_success": { "message": "Last tracking update undone" },
+  "recent_undo_tracking_update_success": { "message": "This update was undone" },
+  "recent_history_menu": { "message": "View Recent Change History" },
+  "recent_history_title": { "message": "Change History" },
+  "recent_history_description": { "message": "Set any retained version as current without removing history." },
+  "recent_history_current": { "message": "Current version" },
+  "recent_history_earlier": { "message": "Earlier version" },
+  "recent_history_restore": { "message": "Set as current" },
+  "recent_history_restoring": { "message": "Restoring…" },
+  "recent_history_restore_success": { "message": "Selected version restored" },
+  "recent_history_restore_failed": { "message": "Unable to restore this version" },
   "recent_undo_tracking_update_failed": { "message": "Unable to undo this update" },
   "recent_update_badge": {
     "message": "Updated"
@@ -2154,10 +2165,10 @@
   "popup_undoing_action": { "message": "Undoing…" },
   "popup_status_loading": { "message": "Reading current page…" },
   "popup_status_update_available": { "message": "Linked content can be updated" },
-  "popup_status_up_to_date": { "message": "Linked and up to date" },
-  "popup_status_not_linked": { "message": "This page is not linked" },
+  "popup_status_up_to_date": { "message": "Linked" },
+  "popup_status_not_linked": { "message": "Ready to link" },
   "popup_status_unsupported": { "message": "This page is not supported" },
-  "popup_status_blocked": { "message": "This link cannot be updated" },
+  "popup_status_blocked": { "message": "Can't update" },
   "popup_status_error": { "message": "Unable to read page status" },
   "popup_status_loading_detail": { "message": "Checking the active tab" },
   "popup_status_update_available_detail": { "message": "Replace the previous content with the current page" },
@@ -2171,5 +2182,7 @@
   "popup_link_success": { "message": "Current page linked" },
   "popup_link_failed": { "message": "Unable to link this page" },
   "popup_undo_success": { "message": "Current update undone" },
+  "popup_undo_link_action": { "message": "Undo Link" },
+  "popup_undo_link_success": { "message": "New link undone" },
   "popup_settings_failed": { "message": "Unable to open Settings" }
 }

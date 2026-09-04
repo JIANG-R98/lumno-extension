@@ -65,6 +65,8 @@
   "settings_tab_labs": {
     "message": "實驗室功能"
   },
+  "settings_linked_cards_title": { "message": "關聯頁面" },
+  "settings_linked_cards_desc": { "message": "將首頁置頂卡片與分頁關聯，並在頁面變化後更新卡片內容" },
   "settings_selection_quick_actions_title": {
     "message": "選字快捷操作"
   },
@@ -1882,7 +1884,16 @@
   "recent_undo_tracking_update_confirm_title": { "message": "復原這次追蹤更新？" },
   "recent_undo_tracking_update_confirm_description": { "message": "「{current}」將恢復為「{previous}」。" },
   "recent_undo_tracking_update_confirm": { "message": "確認復原" },
-  "recent_undo_tracking_update_success": { "message": "已復原上一次追蹤更新" },
+  "recent_undo_tracking_update_success": { "message": "已復原本次更新" },
+  "recent_history_menu": { "message": "查看最近變更歷史" },
+  "recent_history_title": { "message": "變更記錄" },
+  "recent_history_description": { "message": "選擇任意版本設為目前內容，歷史記錄會繼續保留。" },
+  "recent_history_current": { "message": "目前版本" },
+  "recent_history_earlier": { "message": "較早版本" },
+  "recent_history_restore": { "message": "設為目前版本" },
+  "recent_history_restoring": { "message": "正在復原…" },
+  "recent_history_restore_success": { "message": "已復原為所選版本" },
+  "recent_history_restore_failed": { "message": "無法復原此版本" },
   "recent_undo_tracking_update_failed": { "message": "無法復原此次更新" },
   "recent_update_badge": {
     "message": "更新"
@@ -2154,10 +2165,10 @@
   "popup_undoing_action": { "message": "正在復原…" },
   "popup_status_loading": { "message": "正在讀取目前頁面…" },
   "popup_status_update_available": { "message": "可更新關聯" },
-  "popup_status_up_to_date": { "message": "已關聯，內容為最新" },
-  "popup_status_not_linked": { "message": "目前頁面尚未關聯" },
+  "popup_status_up_to_date": { "message": "已關聯" },
+  "popup_status_not_linked": { "message": "可關聯" },
   "popup_status_unsupported": { "message": "目前頁面暫不支援關聯" },
-  "popup_status_blocked": { "message": "目前連結無法更新" },
+  "popup_status_blocked": { "message": "無法更新" },
   "popup_status_error": { "message": "暫時無法讀取頁面狀態" },
   "popup_status_loading_detail": { "message": "正在檢查目前分頁" },
   "popup_status_update_available_detail": { "message": "將原內容更新為目前頁面" },
@@ -2171,5 +2182,7 @@
   "popup_link_success": { "message": "目前頁面已關聯" },
   "popup_link_failed": { "message": "無法關聯目前頁面" },
   "popup_undo_success": { "message": "已復原目前更新" },
+  "popup_undo_link_action": { "message": "復原關聯" },
+  "popup_undo_link_success": { "message": "已復原新增關聯" },
   "popup_settings_failed": { "message": "無法開啟設定" }
 }

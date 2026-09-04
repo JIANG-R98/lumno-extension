@@ -19,7 +19,7 @@ assert.strictEqual(settings.addStorageChangeListener({
   storage: { onChanged: { addListener() {} } }
 }, null), false);
 
-assert.strictEqual(settings.CHROME_SYNC_STORAGE_KEYS.length, 63);
+assert.strictEqual(settings.CHROME_SYNC_STORAGE_KEYS.length, 64);
 assert.strictEqual(
   new Set(settings.CHROME_SYNC_STORAGE_KEYS).size,
   settings.CHROME_SYNC_STORAGE_KEYS.length
@@ -347,6 +347,15 @@ assert.strictEqual(settings.SELECTION_QUICK_ACTIONS_ICON_SET_STORAGE_KEY, undefi
 assert.strictEqual(settings.normalizeSelectionQuickActionsTriggerStyle, undefined);
 assert.strictEqual(settings.resolveSelectionQuickActionsTriggerStyle, undefined);
 assert.strictEqual(settings.SELECTION_QUICK_ACTIONS_TRIGGER_STYLE_STORAGE_KEY, undefined);
+
+assert.strictEqual(
+  settings.LINKED_CARDS_ENABLED_STORAGE_KEY,
+  '_x_extension_linked_cards_enabled_2026_unique_'
+);
+assert.strictEqual(settings.normalizeLinkedCardsEnabled(undefined), false);
+assert.strictEqual(settings.normalizeLinkedCardsEnabled(false), false);
+assert.strictEqual(settings.normalizeLinkedCardsEnabled(true), true);
+assert.ok(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.LINKED_CARDS_ENABLED_STORAGE_KEY));
 
 assert.strictEqual(settings.normalizeThemePreference('dark'), 'dark');
 assert.strictEqual(settings.normalizeThemePreference('light'), 'light');

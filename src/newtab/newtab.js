@@ -264,6 +264,7 @@
   const NEWTAB_SHORTCUTS_STORE = globalThis.LumnoNewtabShortcutsStore || {};
   const NEWTAB_SHORTCUT_ICON_STORE = globalThis.LumnoNewtabShortcutIconStore || {};
   const NEWTAB_SHORTCUT_DIALOG = globalThis.LumnoNewtabShortcutDialog || {};
+  const NEWTAB_RECENT_HISTORY_DIALOG = globalThis.LumnoNewtabRecentHistoryDialog || {};
   const NEWTAB_SHORTCUTS_VIEW = globalThis.LumnoNewtabShortcutsView || {};
   const NEWTAB_WALLPAPER_LOCAL_STORE = globalThis.LumnoNewtabWallpaperLocalStore || {};
   const NEWTAB_WALLPAPER_ADAPTIVE_TONE = globalThis.LumnoNewtabWallpaperAdaptiveTone || {};
@@ -336,6 +337,7 @@
       typeof SUGGESTION_ACTION_MODEL.getSuggestionUpdateKind !== 'function' ||
       typeof SUGGESTIONS_HEIGHT_LAYOUT.applyNaturalSuggestionsHeightLayout !== 'function' ||
       typeof NEWTAB_SHORTCUT_DIALOG.createShortcutDialog !== 'function' ||
+      typeof NEWTAB_RECENT_HISTORY_DIALOG.createRecentHistoryDialog !== 'function' ||
       typeof NEWTAB_SHORTCUTS_VIEW.createShortcutsView !== 'function' ||
       typeof NEWTAB_WALLPAPER_LOCAL_STORE.createWallpaperLocalStore !== 'function' ||
       typeof NEWTAB_WALLPAPER_ADAPTIVE_TONE.createWallpaperAdaptiveTone !== 'function' ||
@@ -379,6 +381,8 @@
   const RESTORE_SEARCH_LAYOUT_LOCK_MS = 900;
   const PINNED_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_pinned_recent_sites_2026_unique_';
   const HIDDEN_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_hidden_recent_sites_2026_unique_';
+  const LINKED_CARDS_ENABLED_STORAGE_KEY = SETTINGS.LINKED_CARDS_ENABLED_STORAGE_KEY ||
+    '_x_extension_linked_cards_enabled_2026_unique_';
   const NEWTAB_SHORTCUTS_STORAGE_KEY = '_x_extension_newtab_shortcuts_2026_unique_';
   const NEWTAB_SHORTCUTS_LOCAL_OVERFLOW_STORAGE_KEY =
     '_x_extension_newtab_shortcuts_local_overflow_2026_unique_';
@@ -526,6 +530,7 @@
   let initialPinnedRecentSitesReadyTask = Promise.resolve([]);
   let initialHiddenRecentSitesReadyTask = Promise.resolve([]);
   let initialRecentTrackingActivityReadyTask = Promise.resolve({});
+  let initialLinkedCardsFeatureReadyTask = Promise.resolve(false);
   let searchBlacklistItems = [];
   let currentMessages = null;
   let currentLanguageMode = 'system';
@@ -549,6 +554,7 @@
   let searchEntryLastVisibleViewportHeight = Math.max(0, window.innerHeight || 0);
   let currentRecentMode = 'most';
   let preferredRecentMode = 'most';
+  let linkedCardsEnabled = false;
   let currentRecentCount = 4;
   let currentBookmarkCount = 8;
   let currentBookmarkColumns = 6;
@@ -637,6 +643,7 @@
   let shortcutGrid = null;
   let addShortcutButton = null;
   let shortcutDialogController = null;
+  let recentHistoryDialogController = null;
   let shortcutContextMenu = null;
   let shortcutContextMenuTarget = null;
   let newtabShortcuts = [];
@@ -772,7 +779,7 @@
   const BOOKMARK_CONTEXT_MENU_PORTAL_Z_INDEX = 10060;
   const BOOKMARK_CONTEXT_MENU_PORTAL_OFFSET_PX = -6;
   const RECENT_CONTEXT_MENU_REMOVE_VALUE = 'remove';
-  const RECENT_CONTEXT_MENU_UNDO_UPDATE_VALUE = 'undo-tracking-update';
+  const RECENT_CONTEXT_MENU_HISTORY_VALUE = 'view-change-history';
   const RECENT_CONTEXT_MENU_MIN_WIDTH_PX = 124;
   const RECENT_CONTEXT_MENU_MAX_WIDTH_PX = 240;
   const RECENT_CONTEXT_MENU_PORTAL_Z_INDEX = 10050;
@@ -3260,7 +3267,7 @@
   }
 
   function setRecentMode(nextMode) {
-    const mode = nextMode === 'tracking'
+    const mode = linkedCardsEnabled && nextMode === 'tracking'
       ? 'tracking'
       : normalizeRecentMode(nextMode, 'latest');
     if (currentRecentMode === mode) {
@@ -3279,7 +3286,8 @@
   }
 
   function hasTrackedRecentSites() {
-    return pinnedRecentSites.some((item) => item && item.trackingEnabled === true);
+    return linkedCardsEnabled &&
+      pinnedRecentSites.some((item) => item && item.trackingEnabled === true);
   }
 
   function leaveEmptyTrackingView() {
@@ -4205,6 +4213,27 @@
       recentRenderSignature = '';
       renderRecentSites(recentSourceItems);
     }
+    if (changes[LINKED_CARDS_ENABLED_STORAGE_KEY]) {
+      const raw = changes[LINKED_CARDS_ENABLED_STORAGE_KEY].newValue;
+      linkedCardsEnabled = typeof SETTINGS.normalizeLinkedCardsEnabled === 'function'
+        ? SETTINGS.normalizeLinkedCardsEnabled(raw)
+        : raw === true;
+      if (!linkedCardsEnabled && currentRecentMode === 'tracking') {
+        currentRecentMode = preferredRecentMode;
+        updateRecentHeading();
+      }
+      if (!linkedCardsEnabled) {
+        recentTrackingActivityByCardId = {};
+        if (recentHistoryDialogController &&
+            typeof recentHistoryDialogController.close === 'function') {
+          recentHistoryDialogController.close({ restoreFocus: true });
+        }
+      }
+      updateRecentModeMenu();
+      recentRenderSignature = '';
+      renderRecentSites(recentSourceItems);
+      if (linkedCardsEnabled) void loadRecentTrackingActivity();
+    }
     if (changes[HIDDEN_RECENT_SITES_STORAGE_KEY]) {
       hiddenRecentSites = normalizeHiddenRecentSites(changes[HIDDEN_RECENT_SITES_STORAGE_KEY].newValue);
       recentRenderSignature = '';
@@ -4246,6 +4275,20 @@
 
   if (storageArea) {
     bootstrapInitialLanguageMode();
+    initialLinkedCardsFeatureReadyTask = new Promise((resolve) => {
+      storageArea.get([LINKED_CARDS_ENABLED_STORAGE_KEY], (result) => {
+        const raw = result && result[LINKED_CARDS_ENABLED_STORAGE_KEY];
+        linkedCardsEnabled = typeof SETTINGS.normalizeLinkedCardsEnabled === 'function'
+          ? SETTINGS.normalizeLinkedCardsEnabled(raw)
+          : raw === true;
+        updateRecentModeMenu();
+        recentRenderSignature = '';
+        if (recentSourceItems.length > 0 || pinnedRecentSites.length > 0) {
+          renderRecentSites(recentSourceItems);
+        }
+        resolve(linkedCardsEnabled);
+      });
+    });
     initialPinnedRecentSitesReadyTask = readPinnedRecentSites().then((items) => {
       pinnedRecentSites = items;
       updateRecentModeMenu();
@@ -4269,7 +4312,9 @@
       hiddenRecentSites = [];
       return hiddenRecentSites;
     });
-    initialRecentTrackingActivityReadyTask = loadRecentTrackingActivity();
+    initialRecentTrackingActivityReadyTask = initialLinkedCardsFeatureReadyTask.then((enabled) => (
+      enabled ? loadRecentTrackingActivity() : {}
+    ));
 
     storageArea.get([RECENT_COUNT_STORAGE_KEY], (result) => {
       const stored = result[RECENT_COUNT_STORAGE_KEY];
@@ -8020,11 +8065,12 @@
       },
     ];
     const item = target && target.item;
-    if (item && Array.isArray(item.updateHistory) && item.updateHistory.length) {
+    if (linkedCardsEnabled && item &&
+        Array.isArray(item.updateHistory) && item.updateHistory.length) {
       options.push({
-        action: RECENT_CONTEXT_MENU_UNDO_UPDATE_VALUE,
-        value: RECENT_CONTEXT_MENU_UNDO_UPDATE_VALUE,
-        label: t('recent_undo_tracking_update', 'Undo current update'),
+        action: RECENT_CONTEXT_MENU_HISTORY_VALUE,
+        value: RECENT_CONTEXT_MENU_HISTORY_VALUE,
+        label: t('recent_history_menu', 'View recent change history'),
         dividerBefore: true
       });
     }
@@ -8121,59 +8167,40 @@
     });
   }
 
-  function undoRecentSiteUpdate(item) {
-    const normalizedItem = normalizeRecentSiteRecord(item, { ignoreBlacklist: true });
-    const currentIndex = findPinnedRecentSiteIndex(item);
-    if (!normalizedItem || currentIndex < 0 ||
-        pinnedRecentSites[currentIndex].url !== normalizedItem.url) {
-      return Promise.resolve({ undone: false, reason: 'source-changed' });
+  function restoreRecentSiteVersion(item, selectedHistory) {
+    if (!linkedCardsEnabled) return Promise.resolve(false);
+    const pinnedIndex = findPinnedRecentSiteIndex(item);
+    if (pinnedIndex < 0 || !selectedHistory ||
+        typeof NEWTAB_RECENT_STORE.restorePinnedRecentSiteVersion !== 'function') {
+      return Promise.resolve(false);
     }
-    const result = typeof NEWTAB_RECENT_STORE.undoPinnedRecentSiteUpdate === 'function'
-      ? NEWTAB_RECENT_STORE.undoPinnedRecentSiteUpdate(
-        pinnedRecentSites,
-        normalizedItem && normalizedItem.url,
-        { ...getRecentStoreOptions(), cardId: item && item.cardId }
-      )
-      : { changed: false, reason: 'unavailable', items: pinnedRecentSites.slice() };
-    if (!result.changed) {
-      return Promise.resolve({ undone: false, reason: result.reason });
+    const currentItem = pinnedRecentSites[pinnedIndex];
+    const result = NEWTAB_RECENT_STORE.restorePinnedRecentSiteVersion(
+      pinnedRecentSites,
+      currentItem.url,
+      selectedHistory,
+      { ...getRecentStoreOptions(), cardId: currentItem.cardId }
+    );
+    if (!result || !result.changed) {
+      showToast(t('recent_history_restore_failed', 'Unable to restore this version'), true);
+      return Promise.resolve(false);
     }
-    return writePinnedRecentSites(result.items).then((savedItems) => {
+    return writePinnedRecentSites(result.items).then(() => {
       recentRenderSignature = '';
       renderRecentSites(recentSourceItems);
-      return { undone: true, reason: 'undone', items: savedItems };
+      return true;
+    }).catch(() => {
+      showToast(t('recent_history_restore_failed', 'Unable to restore this version'), true);
+      return false;
     });
   }
 
-  function undoRecentSiteUpdateFromContextMenu(item) {
-    const historyItem = item && Array.isArray(item.updateHistory) ? item.updateHistory[0] : null;
-    if (!historyItem) return;
-    openShortcutDialog({
-      confirmationTitle: t('recent_undo_tracking_update_confirm_title', 'Undo this tracking update?'),
-      confirmationDescription: formatMessage(
-        'recent_undo_tracking_update_confirm_description',
-        '“{current}” will be replaced with “{previous}”.',
-        {
-          current: String(item.title || item.url || ''),
-          previous: String(historyItem.title || historyItem.url || '')
-        }
-      ),
-      confirmLabel: t('recent_undo_tracking_update_confirm', 'Confirm undo'),
-      async onConfirm() {
-        try {
-          const result = await undoRecentSiteUpdate(item);
-          showToast(
-            result && result.undone
-              ? t('recent_undo_tracking_update_success', 'Tracking update undone')
-              : t('recent_undo_tracking_update_failed', 'Unable to undo this update'),
-            !(result && result.undone)
-          );
-        } catch (_error) {
-          showToast(t('recent_undo_tracking_update_failed', 'Unable to undo this update'), true);
-        }
-        return true;
-      }
-    });
+  function openRecentSiteHistoryFromContextMenu(item) {
+    if (!linkedCardsEnabled || !recentHistoryDialogController) return;
+    const currentIndex = findPinnedRecentSiteIndex(item);
+    const currentItem = currentIndex >= 0 ? pinnedRecentSites[currentIndex] : null;
+    if (!currentItem || !Array.isArray(currentItem.updateHistory) || !currentItem.updateHistory.length) return;
+    recentHistoryDialogController.open({ item: currentItem });
   }
 
   function handleRecentContextMenuAction(actionValue) {
@@ -8187,8 +8214,8 @@
       openRecentSiteInNewTab(target.item);
       return;
     }
-    if (action === RECENT_CONTEXT_MENU_UNDO_UPDATE_VALUE) {
-      undoRecentSiteUpdateFromContextMenu(target.item);
+    if (action === RECENT_CONTEXT_MENU_HISTORY_VALUE) {
+      openRecentSiteHistoryFromContextMenu(target.item);
       return;
     }
     if (action !== RECENT_CONTEXT_MENU_REMOVE_VALUE) {
@@ -9435,8 +9462,21 @@
     });
   }
 
+  function createRecentHistoryDialogComponent() {
+    return NEWTAB_RECENT_HISTORY_DIALOG.createRecentHistoryDialog({
+      documentObj: document,
+      windowObj: window,
+      t,
+      onRestore: restoreRecentSiteVersion,
+      onRestoreSuccess() {
+        showToast(t('recent_history_restore_success', 'Version restored'), false);
+      }
+    });
+  }
+
   createShortcutsSection();
   shortcutDialogController = createShortcutDialogComponent();
+  recentHistoryDialogController = createRecentHistoryDialogComponent();
   markNewtabStartupMilestone('shortcut-surface-created');
 
   setContentSectionVisible(bookmarkSection, false);
@@ -11723,6 +11763,11 @@
       : mergeRecentSitesWithPinned(normalizedSourceItems, getRecentLimit());
     const mergedItems = visibleItems.map((item) => ({
       ...item,
+      ...(!linkedCardsEnabled ? {
+        trackingEnabled: false,
+        updatePending: false,
+        updateHistory: []
+      } : {}),
       activeTabCount: item && item.cardId
         ? Math.max(0, Number(recentTrackingActivityByCardId[item.cardId]) || 0)
         : 0
@@ -12080,6 +12125,7 @@
   }
 
   function isRecentSiteTracked(item) {
+    if (!linkedCardsEnabled) return false;
     const pinnedIndex = findPinnedRecentSiteIndex(item);
     return Boolean(pinnedIndex >= 0 && pinnedRecentSites[pinnedIndex].trackingEnabled === true);
   }
@@ -12147,6 +12193,14 @@
   }
 
   function toggleTrackedRecentSite(item) {
+    if (!linkedCardsEnabled) {
+      return Promise.resolve({
+        pinned: isRecentSitePinned(item),
+        tracking: false,
+        limitReached: false,
+        reason: 'feature-disabled'
+      });
+    }
     const normalizedItem = normalizeRecentSiteRecord(item, { ignoreBlacklist: true });
     if (!normalizedItem) {
       return Promise.resolve({ pinned: false, tracking: false, limitReached: false });
@@ -12211,6 +12265,7 @@
   }
 
   function rememberRecentTrackingTarget(item) {
+    if (!linkedCardsEnabled) return Promise.resolve(false);
     if (!item || !item.url || !isRecentSiteTracked(item)) {
       return Promise.resolve(false);
     }
@@ -12231,6 +12286,10 @@
   }
 
   function loadRecentTrackingActivity() {
+    if (!linkedCardsEnabled) {
+      recentTrackingActivityByCardId = {};
+      return Promise.resolve(recentTrackingActivityByCardId);
+    }
     return new Promise((resolve) => {
       const sent = sendRuntimeMessage({
         action: 'getPinnedRecentTrackingActivity'
@@ -12283,6 +12342,9 @@
     if (!button) {
       return;
     }
+    button.hidden = !linkedCardsEnabled;
+    button.disabled = !linkedCardsEnabled;
+    if (!linkedCardsEnabled) return;
     button.classList.toggle('x-nt-recent-track--active', Boolean(isTracked));
     const liveCount = isTracked ? Math.max(0, Number(activeTabCount) || 0) : 0;
     button.classList.toggle('x-nt-recent-track--limit', Boolean(!isPinned && limitReached));
@@ -16563,6 +16625,9 @@
   if (shortcutDialogController) {
     shortcutDialogController.mount(document.body);
   }
+  if (recentHistoryDialogController) {
+    recentHistoryDialogController.mount(document.body);
+  }
   if (BOOKMARK_CASCADE_DEBUG_UI_ENABLED && bookmarkCascadeRuntime && bookmarkCascadeRuntime.getDebugControl()) {
     document.body.appendChild(bookmarkCascadeRuntime.getDebugControl());
   }
@@ -16684,6 +16749,7 @@
     initialShortcutsReadyTask,
     initialPinnedRecentSitesReadyTask,
     initialHiddenRecentSitesReadyTask,
+    initialLinkedCardsFeatureReadyTask,
     initialRecentTrackingActivityReadyTask,
     initialLayoutStorageReadyTask,
     initialFontsReadyTask

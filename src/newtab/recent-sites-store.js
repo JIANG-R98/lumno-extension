@@ -260,6 +260,77 @@
     };
   }
 
+  function restorePinnedRecentSiteVersion(items, currentUrl, targetVersion, options) {
+    const opts = options && typeof options === 'object' ? options : {};
+    const normalizedItems = normalizePinnedRecentSites(items, opts);
+    const url = String(currentUrl || '').trim();
+    const cardId = normalizePinnedRecentCardId(opts.cardId);
+    const index = cardId
+      ? normalizedItems.findIndex((item) => item.cardId === cardId)
+      : normalizedItems.findIndex((item) => getRecentSiteUrlKey(item) === url);
+    if (index < 0) return { changed: false, reason: 'not-pinned', items: normalizedItems };
+
+    const currentItem = normalizedItems[index];
+    const history = Array.isArray(currentItem.updateHistory) ? currentItem.updateHistory : [];
+    const requestedVersion = normalizeRecentUpdateHistory(
+      [targetVersion],
+      { ...opts, maxUpdateHistory: 1 }
+    )[0];
+    const targetIndex = requestedVersion ? history.findIndex((version) =>
+      version.url === requestedVersion.url &&
+      version.title === requestedVersion.title &&
+      version.host === requestedVersion.host &&
+      version.siteName === requestedVersion.siteName &&
+      version.lastVisitTime === requestedVersion.lastVisitTime &&
+      version.visitCount === requestedVersion.visitCount &&
+      version.updatedAt === requestedVersion.updatedAt
+    ) : -1;
+    if (targetIndex < 0) {
+      return { changed: false, reason: 'version-not-found', items: normalizedItems };
+    }
+    const target = normalizeRecentSiteItem(history[targetIndex], { ...opts, ignoreBlacklist: true });
+    if (!target) return { changed: false, reason: 'invalid-history', items: normalizedItems };
+    if (getRecentSiteUrlKey(target) === getRecentSiteUrlKey(currentItem)) {
+      return { changed: false, reason: 'same-version', items: normalizedItems };
+    }
+    const conflictingIndex = normalizedItems.findIndex((item, itemIndex) =>
+      itemIndex !== index && getRecentSiteUrlKey(item) === getRecentSiteUrlKey(target)
+    );
+    if (conflictingIndex >= 0) {
+      return { changed: false, reason: 'url-conflict', items: normalizedItems };
+    }
+
+    const changedAt = Math.max(0, Number(opts.now) || Date.now());
+    const nextHistory = normalizeRecentUpdateHistory([{
+      title: currentItem.title,
+      url: currentItem.url,
+      host: currentItem.host,
+      siteName: currentItem.siteName,
+      lastVisitTime: currentItem.lastVisitTime,
+      visitCount: currentItem.visitCount,
+      updatedAt: changedAt
+    }].concat(history), opts);
+    const nextItems = normalizedItems.slice();
+    nextItems[index] = {
+      ...currentItem,
+      title: target.title,
+      url: target.url,
+      host: target.host,
+      siteName: target.siteName,
+      lastVisitTime: target.lastVisitTime,
+      visitCount: target.visitCount,
+      updateHistory: nextHistory,
+      updatePending: true
+    };
+    return {
+      changed: true,
+      reason: 'restored',
+      index,
+      historyIndex: targetIndex,
+      items: normalizePinnedRecentSites(nextItems, opts)
+    };
+  }
+
   function normalizeHiddenRecentSiteEntry(item) {
     if (!item) {
       return null;
@@ -598,6 +669,7 @@
     normalizeRecentUpdateHistory,
     normalizePinnedRecentSites,
     undoPinnedRecentSiteUpdate,
+    restorePinnedRecentSiteVersion,
     normalizeHiddenRecentSiteEntry,
     normalizeHiddenRecentSites,
     loadPinnedRecentSites,

@@ -70,7 +70,13 @@ function createChromeApi(options) {
   const onActivated = createEvent();
   const onUpdated = createEvent();
   const onStorageChanged = createEvent();
-  const calls = { create: [], update: [], sendMessage: [], refresh: 0 };
+  const calls = {
+    create: [],
+    update: [],
+    sendMessage: [],
+    actionIcons: [],
+    refresh: 0
+  };
   const sessionStorage = config.sessionStorage || createMemoryStorage({});
   const localStorage = config.localStorage || createMemoryStorage({});
   let activeTab = {
@@ -87,6 +93,12 @@ function createChromeApi(options) {
       activeTab = tab;
     },
     api: {
+      action: {
+        setIcon(details, callback) {
+          calls.actionIcons.push(details);
+          if (callback) callback();
+        }
+      },
       contextMenus: {
         onClicked,
         onShown,
@@ -364,6 +376,85 @@ async function run() {
   });
   assert.strictEqual(linkedExistingState.status, 'up-to-date');
 
+  const undoAddedStorage = createMemoryStorage({ [PINNED_KEY]: [original[1]] });
+  const undoAddedChrome = createChromeApi();
+  const undoAddedController = pinnedMenu.createPinnedRecentContextMenuController({
+    chromeApi: undoAddedChrome.api,
+    recentStore,
+    storage: undoAddedStorage,
+    storageKey: PINNED_KEY,
+    now: () => 1002
+  });
+  undoAddedController.attach();
+  const newlyLinked = await undoAddedController.linkForTab({
+    id: 101,
+    url: 'https://newly-linked.example/watch/1',
+    title: 'Newly linked'
+  });
+  assert.strictEqual(newlyLinked.ok, true);
+  assert.strictEqual(newlyLinked.undoGuard.mode, 'remove-added');
+  const undoneNewLink = await undoAddedController.undoTrackingLink(
+    { id: 101 },
+    newlyLinked.undoGuard
+  );
+  assert.strictEqual(undoneNewLink.ok, true);
+  assert.strictEqual(undoneNewLink.reason, 'link-undone');
+  assert.deepStrictEqual(
+    undoAddedStorage.data[PINNED_KEY].map((item) => item.url),
+    [original[1].url],
+    'undoing a newly added link should remove only the new card'
+  );
+
+  const disabledPinned = { ...original[1], trackingEnabled: false, title: 'Docs before linking' };
+  const undoEnabledStorage = createMemoryStorage({ [PINNED_KEY]: [disabledPinned] });
+  const undoEnabledChrome = createChromeApi();
+  const undoEnabledController = pinnedMenu.createPinnedRecentContextMenuController({
+    chromeApi: undoEnabledChrome.api,
+    recentStore,
+    storage: undoEnabledStorage,
+    storageKey: PINNED_KEY,
+    now: () => 1003
+  });
+  undoEnabledController.attach();
+  const enabledLink = await undoEnabledController.linkForTab({
+    id: 102,
+    url: disabledPinned.url,
+    title: 'Docs after linking'
+  });
+  assert.strictEqual(enabledLink.undoGuard.mode, 'restore-existing');
+  const undoneEnabledLink = await undoEnabledController.undoTrackingLink(
+    { id: 102 },
+    enabledLink.undoGuard
+  );
+  assert.strictEqual(undoneEnabledLink.ok, true);
+  assert.strictEqual(undoEnabledStorage.data[PINNED_KEY][0].trackingEnabled, false);
+  assert.strictEqual(undoEnabledStorage.data[PINNED_KEY][0].title, 'Docs before linking');
+
+  const bindFailureStorage = createMemoryStorage({ [PINNED_KEY]: [original[1]] });
+  const bindFailureController = pinnedMenu.createPinnedRecentContextMenuController({
+    chromeApi: createChromeApi().api,
+    recentStore,
+    storage: bindFailureStorage,
+    storageKey: PINNED_KEY,
+    trackingRegistry: {
+      bindTab: async () => null,
+      prune: async () => true
+    },
+    now: () => 1004
+  });
+  const failedLink = await bindFailureController.linkForTab({
+    id: 103,
+    url: 'https://bind-failure.example/watch/1',
+    title: 'Should roll back'
+  });
+  assert.strictEqual(failedLink.ok, false);
+  assert.strictEqual(failedLink.reason, 'bind-failed');
+  assert.deepStrictEqual(
+    bindFailureStorage.data[PINNED_KEY].map((item) => item.url),
+    [original[1].url],
+    'a failed tab binding should roll back the saved linked card'
+  );
+
   await controller.bindTrackingTab(
     { id: 11 },
     recentStore.normalizePinnedRecentSites(ambiguous)[0].cardId,
@@ -378,6 +469,29 @@ async function run() {
   assert.strictEqual(toolbarCurrentState.status, 'up-to-date');
   assert.strictEqual(toolbarCurrentState.canUpdate, false);
   assert.strictEqual(toolbarCurrentState.linkedCard.url, original[0].url);
+  assert.deepStrictEqual(chrome.calls.actionIcons.at(-1), {
+    tabId: 11,
+    path: {
+      16: 'assets/images/lumno-tracked-16.png',
+      32: 'assets/images/lumno-tracked-32.png'
+    }
+  });
+
+  chrome.setActiveTab({ id: 90, active: true, url: 'https://untracked.example/' });
+  await chrome.events.onActivated.emit({ tabId: 90 });
+  assert.deepStrictEqual(chrome.calls.actionIcons.at(-1), {
+    tabId: 90,
+    path: {
+      16: 'assets/images/lumno.png',
+      32: 'assets/images/lumno.png'
+    }
+  });
+  chrome.setActiveTab({
+    id: 11,
+    active: true,
+    url: original[0].url,
+    title: 'Course · Episode 1'
+  });
 
   const toolbarUpdateState = await controller.getToolbarStateForTab({
     id: 11,
@@ -829,6 +943,59 @@ async function run() {
   });
   assert.strictEqual(failedResult.changed, false);
   assert.strictEqual(failedStorage.data[PINNED_KEY][0].url, original[0].url);
+
+  let linkedCardsEnabled = false;
+  const gatedChrome = createChromeApi();
+  const gatedStorage = createMemoryStorage({ [PINNED_KEY]: original });
+  const gatedController = pinnedMenu.createPinnedRecentContextMenuController({
+    chromeApi: gatedChrome.api,
+    recentStore,
+    storage: gatedStorage,
+    storageKey: PINNED_KEY,
+    isEnabled: () => linkedCardsEnabled
+  });
+  gatedController.attach();
+  await new Promise((resolve) => setImmediate(resolve));
+  const disabledState = await gatedController.getToolbarStateForTab({
+    id: 93,
+    url: original[0].url
+  });
+  assert.strictEqual(disabledState.reason, 'feature-disabled');
+  assert.strictEqual(gatedChrome.calls.update.at(-1).changes.visible, false);
+  assert.deepStrictEqual(gatedChrome.calls.actionIcons.at(-1).path, {
+    16: 'assets/images/lumno.png',
+    32: 'assets/images/lumno.png'
+  });
+  linkedCardsEnabled = true;
+  await gatedController.refreshAvailability();
+  assert(gatedChrome.calls.update.some((call) => call.changes.visible === true));
+
+  let resolveFeatureReady;
+  let coldStartEnabled = false;
+  const coldStartReady = new Promise((resolve) => { resolveFeatureReady = resolve; });
+  const coldStartController = pinnedMenu.createPinnedRecentContextMenuController({
+    chromeApi: createChromeApi().api,
+    recentStore,
+    storage: createMemoryStorage({ [PINNED_KEY]: [] }),
+    storageKey: PINNED_KEY,
+    isEnabled: () => coldStartEnabled,
+    featureReady: coldStartReady
+  });
+  coldStartController.attach();
+  let coldStartSettled = false;
+  const coldStartStatePromise = coldStartController.getToolbarStateForTab({
+    id: 94,
+    url: 'https://cold-start.example/'
+  }).then((state) => {
+    coldStartSettled = true;
+    return state;
+  });
+  await Promise.resolve();
+  assert.strictEqual(coldStartSettled, false, 'toolbar state should wait for the Labs flag read');
+  coldStartEnabled = true;
+  resolveFeatureReady(true);
+  const coldStartState = await coldStartStatePromise;
+  assert.notStrictEqual(coldStartState.reason, 'feature-disabled');
 
   console.log('background pinned recent context menu tests passed');
 }

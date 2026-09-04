@@ -8,6 +8,7 @@ const repoRoot = path.resolve(__dirname, '..');
 
 function createMemoryStorage(initialData) {
   const data = { ...(initialData || {}) };
+  let setCount = 0;
   return {
     get(keys, callback) {
       const result = {};
@@ -17,12 +18,16 @@ function createMemoryStorage(initialData) {
       callback(result);
     },
     set(value, callback) {
+      setCount += 1;
       Object.assign(data, value || {});
       if (callback) {
         callback();
       }
     },
-    data
+    data,
+    get setCount() {
+      return setCount;
+    }
   };
 }
 
@@ -37,6 +42,44 @@ async function testRecentStore() {
     getSiteDisplayName: (host) => host.split('.')[0],
     shouldExcludeUrl: (url) => String(url || '').startsWith('chrome-extension://')
   };
+
+  const mainBranchPinned = [
+    {
+      title: 'Main A',
+      url: 'https://main-a.example/watch/1',
+      host: 'main-a.example',
+      siteName: 'Main A Site',
+      lastVisitTime: 101,
+      visitCount: 7,
+      pinnedAt: 1001
+    },
+    {
+      title: 'Main B',
+      url: 'https://main-b.example/article/2',
+      host: 'main-b.example',
+      siteName: 'Main B Site',
+      lastVisitTime: 202,
+      visitCount: 9,
+      pinnedAt: 1002
+    }
+  ];
+  const mainUpgradeStorage = createMemoryStorage({
+    [recentStore.DEFAULT_PINNED_KEY]: mainBranchPinned
+  });
+  const upgradedMainPinned = await recentStore.loadPinnedRecentSites(mainUpgradeStorage, options);
+  assert.deepStrictEqual(
+    upgradedMainPinned.map(({ title, url, host, siteName, lastVisitTime, visitCount, pinnedAt }) => ({
+      title, url, host, siteName, lastVisitTime, visitCount, pinnedAt
+    })),
+    mainBranchPinned,
+    'upgrading main pinned cards must retain every existing field and card order'
+  );
+  assert.ok(upgradedMainPinned.every((item) => item.cardId && item.trackingEnabled === false));
+  assert.strictEqual(new Set(upgradedMainPinned.map((item) => item.cardId)).size, 2);
+  assert.strictEqual(mainUpgradeStorage.setCount, 1, 'legacy cards should be normalized once');
+  const reloadedMainPinned = await recentStore.loadPinnedRecentSites(mainUpgradeStorage, options);
+  assert.deepStrictEqual(reloadedMainPinned, upgradedMainPinned);
+  assert.strictEqual(mainUpgradeStorage.setCount, 1, 'normalized cards should not be rewritten again');
 
   const merged = recentStore.mergeRecentSiteSources({
     ...options,
@@ -167,6 +210,57 @@ async function testRecentStore() {
   assert.strictEqual(conflictingUndo.changed, false);
   assert.strictEqual(conflictingUndo.reason, 'url-conflict');
   assert.strictEqual(conflictingUndo.items.length, 2);
+
+  const versionedPinned = recentStore.normalizePinnedRecentSites([{
+    cardId: 'pinned-versioned',
+    title: 'Episode C',
+    url: 'https://series.example/episode/c',
+    trackingEnabled: true,
+    updateHistory: [
+      { title: 'Episode B', url: 'https://series.example/episode/b', updatedAt: 200 },
+      { title: 'Episode A', url: 'https://series.example/episode/a', updatedAt: 100 }
+    ]
+  }], { maxPinned: 3 });
+  const restoredVersion = recentStore.restorePinnedRecentSiteVersion(
+    versionedPinned,
+    'https://series.example/episode/c',
+    versionedPinned[0].updateHistory[0],
+    { cardId: 'pinned-versioned', now: 300 }
+  );
+  assert.strictEqual(restoredVersion.changed, true);
+  assert.strictEqual(restoredVersion.reason, 'restored');
+  assert.strictEqual(restoredVersion.items[0].url, 'https://series.example/episode/b');
+  assert.deepStrictEqual(
+    restoredVersion.items[0].updateHistory.map((entry) => entry.url),
+    [
+      'https://series.example/episode/c',
+      'https://series.example/episode/b',
+      'https://series.example/episode/a'
+    ],
+    'restoring a version should append one change record without consuming history'
+  );
+  const restoredOlderVersion = recentStore.restorePinnedRecentSiteVersion(
+    restoredVersion.items,
+    restoredVersion.items[0].url,
+    restoredVersion.items[0].updateHistory[2],
+    { cardId: 'pinned-versioned', now: 400 }
+  );
+  assert.strictEqual(restoredOlderVersion.changed, true);
+  assert.strictEqual(restoredOlderVersion.items[0].url, 'https://series.example/episode/a');
+  assert.strictEqual(restoredOlderVersion.items[0].updateHistory.length, 4);
+
+  const conflictingRestoreItems = recentStore.normalizePinnedRecentSites([
+    versionedPinned[0],
+    { title: 'Pinned B elsewhere', url: 'https://series.example/episode/b', pinnedAt: 999 }
+  ]);
+  const conflictingRestore = recentStore.restorePinnedRecentSiteVersion(
+    conflictingRestoreItems,
+    versionedPinned[0].url,
+    conflictingRestoreItems[0].updateHistory[0],
+    { cardId: versionedPinned[0].cardId, now: 500 }
+  );
+  assert.strictEqual(conflictingRestore.changed, false);
+  assert.strictEqual(conflictingRestore.reason, 'url-conflict');
   assert.deepStrictEqual(
     recentStore.mergeRecentSitesWithPinned([], loadedPinned, [], 4, options)
       .map((item) => item.url),

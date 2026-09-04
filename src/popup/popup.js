@@ -10,7 +10,9 @@
   let state = null;
   let busy = '';
   let notice = null;
-  let showUndo = false;
+  let noticeTimer = 0;
+  let undoAction = null;
+  let comparison = null;
 
   function t(key, fallback) {
     return chrome.i18n.getMessage(key) || fallback;
@@ -19,22 +21,23 @@
   const labels = {
     appName: 'Lumno',
     originalContent: t('popup_original_content', 'Previous content'),
-    updateTo: t('popup_update_to', 'Current page'),
+    currentContent: t('popup_update_to', 'Current page'),
     update: t('popup_update_action', 'Update link'),
     updating: t('popup_updating_action', 'Updating…'),
     link: t('popup_link_action', 'Link this page'),
     linking: t('popup_linking_action', 'Linking…'),
     undo: t('recent_undo_tracking_update', 'Undo current update'),
+    undoLink: t('popup_undo_link_action', 'Undo link'),
     undoing: t('popup_undoing_action', 'Undoing…'),
     settings: t('settings_title', 'Settings'),
     webClip: t('document_pip_command_action', 'Start clipping'),
     statuses: {
       loading: t('popup_status_loading', 'Reading current page…'),
       'update-available': t('popup_status_update_available', 'Update available'),
-      'up-to-date': t('popup_status_up_to_date', 'Linked and up to date'),
-      'not-linked': t('popup_status_not_linked', 'This page is not linked'),
+      'up-to-date': t('popup_status_up_to_date', 'Linked'),
+      'not-linked': t('popup_status_not_linked', 'Ready to link'),
       unsupported: t('popup_status_unsupported', 'This page is not supported'),
-      blocked: t('popup_status_blocked', 'This link cannot be updated'),
+      blocked: t('popup_status_blocked', "Can't update"),
       error: t('popup_status_error', 'Unable to read page status')
     },
     statusDetails: {
@@ -64,7 +67,14 @@
       linkedCard: state && state.linkedCard,
       canUpdate: Boolean(state && state.canUpdate),
       canLink: Boolean(state && state.status === 'not-linked' && state.page && state.page.url),
-      canUndo: Boolean(showUndo && state && state.undo && state.undo.available),
+      canUndo: Boolean(undoAction),
+      undoKind: undoAction && undoAction.kind,
+      comparison: comparison
+        ? {
+            ...comparison,
+            next: { ...comparison.next, faviconUrl: faviconUrl(comparison.next) }
+          }
+        : null,
       canClip: Number.isInteger(activeTabId),
       labels,
       onUpdate: update,
@@ -73,6 +83,23 @@
       onClip: openWebClip,
       onOpenSettings: openSettings
     });
+  }
+
+  function clearNotice() {
+    if (noticeTimer) window.clearTimeout(noticeTimer);
+    noticeTimer = 0;
+    notice = null;
+  }
+
+  function showNotice(nextNotice) {
+    clearNotice();
+    notice = nextNotice;
+    render();
+    noticeTimer = window.setTimeout(() => {
+      noticeTimer = 0;
+      notice = null;
+      render();
+    }, 3000);
   }
 
   function send(message) {
@@ -93,44 +120,89 @@
 
   async function update() {
     if (!state || !state.canUpdate || busy) return;
-    busy = 'update'; notice = null; render();
+    const pendingComparison = state.linkedCard && state.page
+      ? { phase: 'saving', previous: { ...state.linkedCard }, next: { ...state.page } }
+      : null;
+    busy = 'update'; comparison = pendingComparison; clearNotice(); render();
     const result = await send({
       action: 'updatePinnedRecentFromToolbar',
       tabId: activeTabId,
       guard: state.updateGuard
     });
     busy = '';
-    notice = result && result.ok
-      ? { kind: 'success', text: t('popup_update_success', 'Linked card updated') }
-      : { kind: 'error', text: t('popup_update_failed', 'Unable to update this link') };
-    showUndo = Boolean(result && result.ok);
+    showNotice(result && result.ok
+      ? { kind: 'success', text: t('popup_update_success', 'Linked card updated'), celebrate: true }
+      : { kind: 'error', text: t('popup_update_failed', 'Unable to update this link') });
+    undoAction = result && result.ok && state && state.linkedCard
+      ? {
+          kind: 'update',
+          cardId: state.linkedCard.cardId,
+          expectedUrl: result.current && result.current.url
+            ? result.current.url
+            : state.page && state.page.url
+        }
+      : null;
+    if (result && result.ok) {
+      comparison = pendingComparison ? { ...pendingComparison, phase: 'confirmed' } : null;
+      busy = 'update';
+      render();
+      if (typeof window.setTimeout === 'function') {
+        await new Promise((resolve) => window.setTimeout(resolve, 280));
+      }
+    } else {
+      comparison = null;
+    }
     await refresh();
+    if (comparison) {
+      comparison = { ...comparison, phase: 'exiting' };
+      render();
+      if (typeof window.setTimeout === 'function') {
+        await new Promise((resolve) => window.setTimeout(resolve, 220));
+      }
+      comparison = null;
+    }
+    busy = '';
+    render();
   }
 
   async function link() {
     if (!state || state.status !== 'not-linked' || busy) return;
-    busy = 'link'; notice = null; render();
+    busy = 'link'; comparison = null; clearNotice(); render();
     const result = await send({ action: 'linkPinnedRecentFromToolbar', tabId: activeTabId });
     busy = '';
-    notice = result && result.ok
-      ? { kind: 'success', text: t('popup_link_success', 'Page linked') }
-      : { kind: 'error', text: t('popup_link_failed', 'Unable to link this page') };
+    showNotice(result && result.ok
+      ? { kind: 'success', text: t('popup_link_success', 'Page linked'), celebrate: true }
+      : { kind: 'error', text: t('popup_link_failed', 'Unable to link this page') });
+    undoAction = result && result.undoGuard
+      ? { kind: 'link', guard: result.undoGuard }
+      : null;
     await refresh();
   }
 
   async function undo() {
-    if (!state || !state.linkedCard || !state.undo || !state.undo.available || busy) return;
-    busy = 'undo'; notice = null; render();
-    const result = await send({
-      action: 'undoPinnedRecentTrackingUpdate',
-      cardId: state.linkedCard.cardId,
-      expectedUrl: state.undo.expectedUrl
-    });
+    if (!undoAction || busy) return;
+    busy = 'undo'; comparison = null; clearNotice(); render();
+    const result = undoAction.kind === 'link'
+      ? await send({
+          action: 'undoPinnedRecentTrackingLink',
+          tabId: activeTabId,
+          guard: undoAction.guard
+        })
+      : await send({
+          action: 'undoPinnedRecentTrackingUpdate',
+          cardId: undoAction.cardId,
+          expectedUrl: undoAction.expectedUrl
+        });
     busy = '';
-    notice = result && result.ok
-      ? { kind: 'success', text: t('popup_undo_success', 'Current update undone') }
-      : { kind: 'error', text: t('recent_undo_tracking_update_failed', 'Unable to undo this update') };
-    if (result && result.ok) showUndo = false;
+    showNotice(result && result.ok
+      ? {
+          kind: 'success',
+          text: undoAction.kind === 'link'
+            ? t('popup_undo_link_success', 'Link undone')
+            : t('popup_undo_success', 'Current update undone')
+        }
+      : { kind: 'error', text: t('recent_undo_tracking_update_failed', 'Unable to undo this update') });
+    if (result && result.ok) undoAction = null;
     await refresh();
   }
 
@@ -139,7 +211,7 @@
     busy = 'settings'; render();
     const result = await send({ action: 'openOptionsPage' });
     if (result && result.ok) window.close();
-    else { busy = ''; notice = { kind: 'error', text: t('popup_settings_failed', 'Unable to open Settings') }; render(); }
+    else { busy = ''; showNotice({ kind: 'error', text: t('popup_settings_failed', 'Unable to open Settings') }); }
   }
 
   async function openWebClip() {
@@ -147,7 +219,7 @@
     busy = 'clip'; render();
     const result = await send({ action: 'openDocumentPipFromToolbar', tabId: activeTabId });
     if (result && result.ok) window.close();
-    else { busy = ''; notice = { kind: 'error', text: t('document_pip_picker_open_failed', 'Unable to start web clipping') }; render(); }
+    else { busy = ''; showNotice({ kind: 'error', text: t('document_pip_picker_open_failed', 'Unable to start web clipping') }); }
   }
 
   render();

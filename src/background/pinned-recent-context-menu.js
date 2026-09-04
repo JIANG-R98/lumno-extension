@@ -175,6 +175,7 @@
         changed: true,
         reason: 'tracking-enabled',
         index: exactIndex,
+        previousItem: normalizedItems[exactIndex],
         items: recentStore.normalizePinnedRecentSites(nextItems, storeOptions)
       };
     }
@@ -225,6 +226,7 @@
     const config = options && typeof options === 'object' ? options : {};
     const chromeApi = config.chromeApi || null;
     const menus = chromeApi && chromeApi.contextMenus ? chromeApi.contextMenus : null;
+    const extensionAction = chromeApi && chromeApi.action ? chromeApi.action : null;
     const runtime = chromeApi && chromeApi.runtime ? chromeApi.runtime : null;
     const tabs = chromeApi && chromeApi.tabs ? chromeApi.tabs : null;
     const storageChanges = chromeApi && chromeApi.storage ? chromeApi.storage.onChanged : null;
@@ -255,6 +257,22 @@
     let attached = false;
     let trackingReady = Promise.resolve();
     const pendingTrackingOpeners = new Map();
+    const hasFeatureGate = typeof config.isEnabled === 'function';
+    const featureReady = Promise.resolve(config.featureReady).catch(() => false);
+
+    function isFeatureEnabled() {
+      return typeof config.isEnabled !== 'function' || config.isEnabled() === true;
+    }
+
+    function disabledResult(extra) {
+      return {
+        ok: false,
+        changed: false,
+        status: 'unsupported',
+        reason: 'feature-disabled',
+        ...(extra && typeof extra === 'object' ? extra : {})
+      };
+    }
 
     function normalizeTrackingCardId(cardId) {
       return typeof recentStore.normalizePinnedRecentCardId === 'function'
@@ -290,7 +308,10 @@
         normalizedUrl
       )).then((result) => {
         const remembered = Boolean(result && result.cardId);
-        if (remembered) notifyTrackingActivityChanged();
+        if (remembered) {
+          notifyTrackingActivityChanged();
+          void refreshActionForTab(targetTab);
+        }
         return remembered;
       });
     }
@@ -530,7 +551,62 @@
       });
     }
 
+    function callActionMethod(method, details) {
+      return new Promise((resolve) => {
+        if (!extensionAction || typeof extensionAction[method] !== 'function') {
+          resolve(false);
+          return;
+        }
+        try {
+          extensionAction[method](details, () => resolve(!getRuntimeError(runtime)));
+        } catch (error) {
+          resolve(false);
+        }
+      });
+    }
+
+    function refreshActionForTab(tab) {
+      const tabId = Number(tab && tab.id);
+      if (!Number.isInteger(tabId) || tabId < 0) return Promise.resolve(false);
+      const linked = isFeatureEnabled() && Boolean(
+        trackingRegistry && normalizeTrackingCardId(trackingRegistry.getCardId(tabId))
+      );
+      return callActionMethod('setIcon', {
+        tabId,
+        path: linked ? {
+          16: 'assets/images/lumno-tracked-16.png',
+          32: 'assets/images/lumno-tracked-32.png'
+        } : {
+          16: 'assets/images/lumno.png',
+          32: 'assets/images/lumno.png'
+        }
+      }).then(() => linked);
+    }
+
+    function refreshActionsForOpenTabs() {
+      return new Promise((resolve) => {
+        if (!tabs || typeof tabs.query !== 'function') {
+          resolve(false);
+          return;
+        }
+        tabs.query({}, (openTabs) => {
+          if (getRuntimeError(runtime)) {
+            resolve(false);
+            return;
+          }
+          Promise.all((Array.isArray(openTabs) ? openTabs : []).map(refreshActionForTab))
+            .then(() => resolve(true));
+        });
+      });
+    }
+
     function refreshMenuForTab(tab, info, options) {
+      if (!isFeatureEnabled()) {
+        return Promise.all([
+          updateMenuState({ visible: false, enabled: false }),
+          refreshActionForTab(tab)
+        ]).then(() => false);
+      }
       const refreshOptions = options && typeof options === 'object' ? options : {};
       const itemsPromise = refreshOptions.reload === true || !itemsLoaded
         ? loadItems()
@@ -547,7 +623,10 @@
           title = getAlreadyTrackedTitle();
         }
         const enabled = Boolean(action && action.result && action.result.changed);
-        return updateMenuState({ title, enabled }).then(() => enabled);
+        return Promise.all([
+          updateMenuState({ title, enabled }),
+          refreshActionForTab(tab)
+        ]).then(() => enabled);
       });
     }
 
@@ -678,15 +757,84 @@
           if (!saved) return { ok: false, changed: false, reason: 'save-failed' };
           cachedItems = addition.items;
           const linkedItem = addition.items[addition.index];
+          const undoGuard = linkedItem ? {
+            mode: addition.reason === 'tracking-enabled' ? 'restore-existing' : 'remove-added',
+            cardId: String(linkedItem.cardId || ''),
+            expectedUrl: String(linkedItem.url || ''),
+            previousItem: addition.reason === 'tracking-enabled'
+              ? addition.previousItem
+              : null
+          } : null;
           const bound = linkedItem
             ? await rememberTrackingSource(tab, linkedItem.cardId, linkedItem.url)
             : false;
+          if (!bound) {
+            const rollbackItems = recentStore.normalizePinnedRecentSites(
+              items,
+              config.storeOptions || {}
+            );
+            const rolledBack = await storageSet(storage, { [storageKey]: rollbackItems }, runtime);
+            if (rolledBack) {
+              cachedItems = rollbackItems;
+              await pruneTrackingSessionsFromPinnedChange({ newValue: rollbackItems });
+            }
+            return {
+              ok: false,
+              changed: !rolledBack,
+              reason: rolledBack ? 'bind-failed' : 'rollback-failed',
+              cardId: String(linkedItem && linkedItem.cardId || ''),
+              undoGuard: rolledBack ? null : undoGuard
+            };
+          }
           return {
-            ok: Boolean(bound),
+            ok: true,
             changed: true,
-            reason: bound ? addition.reason : 'bind-failed',
-            cardId: String(linkedItem && linkedItem.cardId || '')
+            reason: addition.reason,
+            cardId: String(linkedItem && linkedItem.cardId || ''),
+            undoGuard
           };
+        });
+      });
+    }
+
+    function undoTrackingLink(tab, guard) {
+      const undoGuard = guard && typeof guard === 'object' ? guard : {};
+      const mode = String(undoGuard.mode || '');
+      const cardId = normalizeTrackingCardId(undoGuard.cardId);
+      const expectedUrl = getHttpUrl(undoGuard.expectedUrl);
+      if (!cardId || !expectedUrl || (mode !== 'remove-added' && mode !== 'restore-existing')) {
+        return Promise.resolve({ ok: false, reason: 'invalid-guard' });
+      }
+      return loadItems().then((items) => {
+        const storeOptions = config.storeOptions || {};
+        const normalizedItems = recentStore.normalizePinnedRecentSites(items, storeOptions);
+        const currentIndex = normalizedItems.findIndex((item) => item && item.cardId === cardId);
+        const currentItem = currentIndex >= 0 ? normalizedItems[currentIndex] : null;
+        if (!currentItem || getHttpUrl(currentItem.url) !== expectedUrl ||
+            currentItem.trackingEnabled !== true) {
+          return { ok: false, reason: 'source-changed' };
+        }
+
+        let nextItems;
+        if (mode === 'remove-added') {
+          nextItems = normalizedItems.filter((item) => item.cardId !== cardId);
+        } else {
+          const previous = recentStore.normalizePinnedRecentSites(
+            [undoGuard.previousItem],
+            { ...storeOptions, maxPinned: 1 }
+          )[0];
+          if (!previous || previous.cardId !== cardId || previous.trackingEnabled === true) {
+            return { ok: false, reason: 'invalid-guard' };
+          }
+          nextItems = normalizedItems.slice();
+          nextItems[currentIndex] = previous;
+        }
+
+        return storageSet(storage, { [storageKey]: nextItems }, runtime).then(async (saved) => {
+          if (!saved) return { ok: false, reason: 'save-failed' };
+          cachedItems = nextItems;
+          await pruneTrackingSessionsFromPinnedChange({ newValue: nextItems });
+          return { ok: true, reason: 'link-undone', cardId };
         });
       });
     }
@@ -748,6 +896,7 @@
         documentUrlPatterns: ['http://*/*', 'https://*/*'],
         enabled: false
       };
+      if (hasFeatureGate) properties.visible = isFeatureEnabled();
       menus.create({ id: MENU_ID, ...properties }, () => {
         if (chromeApi && chromeApi.runtime) void chromeApi.runtime.lastError;
         if (typeof menus.update !== 'function') return;
@@ -774,7 +923,7 @@
       }
       if (menus.onClicked && typeof menus.onClicked.addListener === 'function') {
         menus.onClicked.addListener((info, tab) => {
-          if (!info || info.menuItemId !== MENU_ID) return;
+          if (!isFeatureEnabled() || !info || info.menuItemId !== MENU_ID) return;
           return applyForTab(tab, info).then((result) => {
             notifyFeedback(tab, result);
             void refreshMenuForTab(tab);
@@ -786,6 +935,7 @@
       }
       if (tabs && tabs.onCreated && typeof tabs.onCreated.addListener === 'function') {
         tabs.onCreated.addListener((tab) => {
+          if (!isFeatureEnabled()) return;
           const openerTabId = Number(tab && tab.openerTabId);
           if (!Number.isInteger(openerTabId) || !trackingRegistry) return;
           const tabId = Number(tab && tab.id);
@@ -803,6 +953,7 @@
       }
       if (tabs && tabs.onUpdated && typeof tabs.onUpdated.addListener === 'function') {
         tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+          if (!isFeatureEnabled()) return;
           const pendingOpenerTabId = pendingTrackingOpeners.get(Number(tabId));
           if (Number.isInteger(pendingOpenerTabId)) {
             const targetUrl = String(changeInfo && changeInfo.url ||
@@ -863,7 +1014,7 @@
             addedTabId
           )).then((changed) => {
             if (changed) notifyTrackingActivityChanged();
-            return changed;
+            return refreshActionForTab({ id: addedTabId }).then(() => changed);
           });
         });
       }
@@ -876,22 +1027,56 @@
             .catch(() => {});
         });
       }
-      void trackingReady.then(refreshMenuForActiveTab).catch(() => {});
+      void trackingReady.then(() => Promise.all([
+        refreshMenuForActiveTab(),
+        refreshActionsForOpenTabs()
+      ])).catch(() => {});
       return true;
+    }
+
+    function refreshAvailability() {
+      if (!isFeatureEnabled()) pendingTrackingOpeners.clear();
+      return Promise.all([
+        hasFeatureGate
+          ? updateMenuState({ visible: isFeatureEnabled(), enabled: false })
+          : Promise.resolve(true),
+        refreshMenuForActiveTab(),
+        refreshActionsForOpenTabs()
+      ]).then(() => isFeatureEnabled());
+    }
+
+    function whenEnabled(method, fallback) {
+      return (...args) => featureReady.then(() => (
+        isFeatureEnabled()
+          ? method(...args)
+          : disabledResult(fallback)
+      ));
     }
 
     return Object.freeze({
       attach,
-      replaceForTab,
-      addForTab,
-      linkForTab,
-      applyForTab,
-      getToolbarStateForTab,
-      updateForTab,
-      undoTrackingUpdate,
-      bindTrackingTab,
-      syncTrackingDocument,
-      getTrackingActivity
+      refreshAvailability,
+      replaceForTab: whenEnabled(replaceForTab),
+      addForTab: whenEnabled(addForTab),
+      linkForTab: whenEnabled(linkForTab),
+      applyForTab: whenEnabled(applyForTab),
+      getToolbarStateForTab: whenEnabled(getToolbarStateForTab, {
+        page: null,
+        linkedCard: null,
+        canUpdate: false,
+        updateGuard: null,
+        undo: { available: false, expectedUrl: '', previous: null }
+      }),
+      updateForTab: whenEnabled(updateForTab),
+      undoTrackingUpdate: whenEnabled(undoTrackingUpdate),
+      undoTrackingLink: whenEnabled(undoTrackingLink),
+      bindTrackingTab: (...args) => featureReady.then(() => (
+        isFeatureEnabled() ? bindTrackingTab(...args) : false
+      )),
+      syncTrackingDocument: whenEnabled(syncTrackingDocument, { status: 'ignored' }),
+      getTrackingActivity: () => featureReady.then(() => (
+        isFeatureEnabled() ? getTrackingActivity() : {}
+      ))
     });
   }
 

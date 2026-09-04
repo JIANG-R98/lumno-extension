@@ -35,6 +35,7 @@
     <link rel="stylesheet" href="../shared/custom-select.css" />
     <link rel="stylesheet" href="../shared/range-slider.css" />
     <link rel="stylesheet" href="shortcut-dialog.css" />
+    <link rel="stylesheet" href="recent-history-dialog.css" />
     <!-- Thanks to the Remix Icon project; this extension uses its icon set: https://remixicon.com/ -->
     <style>
       html,
@@ -3075,6 +3076,9 @@
         opacity: 0;
         transition: opacity 220ms ease, color 180ms ease, background-color 180ms ease, border-color 180ms ease;
         pointer-events: none;
+      }
+      .x-nt-recent-track[hidden] {
+        display: none;
       }
       .x-nt-recent-card:hover .x-nt-recent-pin,
       .x-nt-recent-card:hover .x-nt-recent-track,
