@@ -944,6 +944,59 @@ async function run() {
   assert.strictEqual(failedResult.changed, false);
   assert.strictEqual(failedStorage.data[PINNED_KEY][0].url, original[0].url);
 
+  let linkedCardsEnabled = false;
+  const gatedChrome = createChromeApi();
+  const gatedStorage = createMemoryStorage({ [PINNED_KEY]: original });
+  const gatedController = pinnedMenu.createPinnedRecentContextMenuController({
+    chromeApi: gatedChrome.api,
+    recentStore,
+    storage: gatedStorage,
+    storageKey: PINNED_KEY,
+    isEnabled: () => linkedCardsEnabled
+  });
+  gatedController.attach();
+  await new Promise((resolve) => setImmediate(resolve));
+  const disabledState = await gatedController.getToolbarStateForTab({
+    id: 93,
+    url: original[0].url
+  });
+  assert.strictEqual(disabledState.reason, 'feature-disabled');
+  assert.strictEqual(gatedChrome.calls.update.at(-1).changes.visible, false);
+  assert.deepStrictEqual(gatedChrome.calls.actionIcons.at(-1).path, {
+    16: 'assets/images/lumno.png',
+    32: 'assets/images/lumno.png'
+  });
+  linkedCardsEnabled = true;
+  await gatedController.refreshAvailability();
+  assert(gatedChrome.calls.update.some((call) => call.changes.visible === true));
+
+  let resolveFeatureReady;
+  let coldStartEnabled = false;
+  const coldStartReady = new Promise((resolve) => { resolveFeatureReady = resolve; });
+  const coldStartController = pinnedMenu.createPinnedRecentContextMenuController({
+    chromeApi: createChromeApi().api,
+    recentStore,
+    storage: createMemoryStorage({ [PINNED_KEY]: [] }),
+    storageKey: PINNED_KEY,
+    isEnabled: () => coldStartEnabled,
+    featureReady: coldStartReady
+  });
+  coldStartController.attach();
+  let coldStartSettled = false;
+  const coldStartStatePromise = coldStartController.getToolbarStateForTab({
+    id: 94,
+    url: 'https://cold-start.example/'
+  }).then((state) => {
+    coldStartSettled = true;
+    return state;
+  });
+  await Promise.resolve();
+  assert.strictEqual(coldStartSettled, false, 'toolbar state should wait for the Labs flag read');
+  coldStartEnabled = true;
+  resolveFeatureReady(true);
+  const coldStartState = await coldStartStatePromise;
+  assert.notStrictEqual(coldStartState.reason, 'feature-disabled');
+
   console.log('background pinned recent context menu tests passed');
 }
 

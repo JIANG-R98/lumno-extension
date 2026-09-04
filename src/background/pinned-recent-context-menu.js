@@ -257,6 +257,22 @@
     let attached = false;
     let trackingReady = Promise.resolve();
     const pendingTrackingOpeners = new Map();
+    const hasFeatureGate = typeof config.isEnabled === 'function';
+    const featureReady = Promise.resolve(config.featureReady).catch(() => false);
+
+    function isFeatureEnabled() {
+      return typeof config.isEnabled !== 'function' || config.isEnabled() === true;
+    }
+
+    function disabledResult(extra) {
+      return {
+        ok: false,
+        changed: false,
+        status: 'unsupported',
+        reason: 'feature-disabled',
+        ...(extra && typeof extra === 'object' ? extra : {})
+      };
+    }
 
     function normalizeTrackingCardId(cardId) {
       return typeof recentStore.normalizePinnedRecentCardId === 'function'
@@ -552,7 +568,7 @@
     function refreshActionForTab(tab) {
       const tabId = Number(tab && tab.id);
       if (!Number.isInteger(tabId) || tabId < 0) return Promise.resolve(false);
-      const linked = Boolean(
+      const linked = isFeatureEnabled() && Boolean(
         trackingRegistry && normalizeTrackingCardId(trackingRegistry.getCardId(tabId))
       );
       return callActionMethod('setIcon', {
@@ -585,6 +601,12 @@
     }
 
     function refreshMenuForTab(tab, info, options) {
+      if (!isFeatureEnabled()) {
+        return Promise.all([
+          updateMenuState({ visible: false, enabled: false }),
+          refreshActionForTab(tab)
+        ]).then(() => false);
+      }
       const refreshOptions = options && typeof options === 'object' ? options : {};
       const itemsPromise = refreshOptions.reload === true || !itemsLoaded
         ? loadItems()
@@ -874,6 +896,7 @@
         documentUrlPatterns: ['http://*/*', 'https://*/*'],
         enabled: false
       };
+      if (hasFeatureGate) properties.visible = isFeatureEnabled();
       menus.create({ id: MENU_ID, ...properties }, () => {
         if (chromeApi && chromeApi.runtime) void chromeApi.runtime.lastError;
         if (typeof menus.update !== 'function') return;
@@ -900,7 +923,7 @@
       }
       if (menus.onClicked && typeof menus.onClicked.addListener === 'function') {
         menus.onClicked.addListener((info, tab) => {
-          if (!info || info.menuItemId !== MENU_ID) return;
+          if (!isFeatureEnabled() || !info || info.menuItemId !== MENU_ID) return;
           return applyForTab(tab, info).then((result) => {
             notifyFeedback(tab, result);
             void refreshMenuForTab(tab);
@@ -912,6 +935,7 @@
       }
       if (tabs && tabs.onCreated && typeof tabs.onCreated.addListener === 'function') {
         tabs.onCreated.addListener((tab) => {
+          if (!isFeatureEnabled()) return;
           const openerTabId = Number(tab && tab.openerTabId);
           if (!Number.isInteger(openerTabId) || !trackingRegistry) return;
           const tabId = Number(tab && tab.id);
@@ -929,6 +953,7 @@
       }
       if (tabs && tabs.onUpdated && typeof tabs.onUpdated.addListener === 'function') {
         tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+          if (!isFeatureEnabled()) return;
           const pendingOpenerTabId = pendingTrackingOpeners.get(Number(tabId));
           if (Number.isInteger(pendingOpenerTabId)) {
             const targetUrl = String(changeInfo && changeInfo.url ||
@@ -1009,19 +1034,49 @@
       return true;
     }
 
+    function refreshAvailability() {
+      if (!isFeatureEnabled()) pendingTrackingOpeners.clear();
+      return Promise.all([
+        hasFeatureGate
+          ? updateMenuState({ visible: isFeatureEnabled(), enabled: false })
+          : Promise.resolve(true),
+        refreshMenuForActiveTab(),
+        refreshActionsForOpenTabs()
+      ]).then(() => isFeatureEnabled());
+    }
+
+    function whenEnabled(method, fallback) {
+      return (...args) => featureReady.then(() => (
+        isFeatureEnabled()
+          ? method(...args)
+          : disabledResult(fallback)
+      ));
+    }
+
     return Object.freeze({
       attach,
-      replaceForTab,
-      addForTab,
-      linkForTab,
-      applyForTab,
-      getToolbarStateForTab,
-      updateForTab,
-      undoTrackingUpdate,
-      undoTrackingLink,
-      bindTrackingTab,
-      syncTrackingDocument,
-      getTrackingActivity
+      refreshAvailability,
+      replaceForTab: whenEnabled(replaceForTab),
+      addForTab: whenEnabled(addForTab),
+      linkForTab: whenEnabled(linkForTab),
+      applyForTab: whenEnabled(applyForTab),
+      getToolbarStateForTab: whenEnabled(getToolbarStateForTab, {
+        page: null,
+        linkedCard: null,
+        canUpdate: false,
+        updateGuard: null,
+        undo: { available: false, expectedUrl: '', previous: null }
+      }),
+      updateForTab: whenEnabled(updateForTab),
+      undoTrackingUpdate: whenEnabled(undoTrackingUpdate),
+      undoTrackingLink: whenEnabled(undoTrackingLink),
+      bindTrackingTab: (...args) => featureReady.then(() => (
+        isFeatureEnabled() ? bindTrackingTab(...args) : false
+      )),
+      syncTrackingDocument: whenEnabled(syncTrackingDocument, { status: 'ignored' }),
+      getTrackingActivity: () => featureReady.then(() => (
+        isFeatureEnabled() ? getTrackingActivity() : {}
+      ))
     });
   }
 

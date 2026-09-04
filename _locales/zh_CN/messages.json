@@ -65,6 +65,8 @@
   "settings_tab_labs": {
     "message": "实验室功能"
   },
+  "settings_linked_cards_title": { "message": "关联页面" },
+  "settings_linked_cards_desc": { "message": "将主页置顶卡片与标签页关联，并在页面变化后更新卡片内容" },
   "settings_selection_quick_actions_title": {
     "message": "划词快捷操作"
   },

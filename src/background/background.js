@@ -1655,6 +1655,26 @@ const BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS = globalThis.LumnoSettings &&
   : [];
 const PINNED_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_pinned_recent_sites_2026_unique_';
 const HIDDEN_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_hidden_recent_sites_2026_unique_';
+const LINKED_CARDS_ENABLED_STORAGE_KEY = globalThis.LumnoSettings &&
+  globalThis.LumnoSettings.LINKED_CARDS_ENABLED_STORAGE_KEY ||
+  '_x_extension_linked_cards_enabled_2026_unique_';
+const normalizeLinkedCardsEnabled = globalThis.LumnoSettings &&
+  typeof globalThis.LumnoSettings.normalizeLinkedCardsEnabled === 'function'
+  ? globalThis.LumnoSettings.normalizeLinkedCardsEnabled
+  : (value) => value === true;
+let linkedCardsEnabled = false;
+const linkedCardsFeatureReady = new Promise((resolve) => {
+  if (!storageArea || typeof storageArea.get !== 'function') {
+    resolve(false);
+    return;
+  }
+  storageArea.get([LINKED_CARDS_ENABLED_STORAGE_KEY], (result) => {
+    linkedCardsEnabled = normalizeLinkedCardsEnabled(
+      result && result[LINKED_CARDS_ENABLED_STORAGE_KEY]
+    );
+    resolve(linkedCardsEnabled);
+  });
+});
 const pinnedRecentContextMenuController =
   typeof PINNED_RECENT_CONTEXT_MENU.createPinnedRecentContextMenuController === 'function'
     ? PINNED_RECENT_CONTEXT_MENU.createPinnedRecentContextMenuController({
@@ -1664,11 +1684,33 @@ const pinnedRecentContextMenuController =
       storage: storageArea,
       sessionStorage: chrome && chrome.storage ? chrome.storage.session : null,
       durableStorage: chrome && chrome.storage ? chrome.storage.local : null,
-      storageKey: PINNED_RECENT_SITES_STORAGE_KEY
+      storageKey: PINNED_RECENT_SITES_STORAGE_KEY,
+      isEnabled: () => linkedCardsEnabled,
+      featureReady: linkedCardsFeatureReady
     })
     : null;
 if (pinnedRecentContextMenuController) {
   pinnedRecentContextMenuController.attach();
+  void linkedCardsFeatureReady.then(() => {
+    if (typeof pinnedRecentContextMenuController.refreshAvailability === 'function') {
+      return pinnedRecentContextMenuController.refreshAvailability();
+    }
+    return false;
+  });
+}
+if (chrome && chrome.storage && chrome.storage.onChanged &&
+    typeof chrome.storage.onChanged.addListener === 'function') {
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (!isPrimaryStorageAreaName(areaName) ||
+        !changes || !changes[LINKED_CARDS_ENABLED_STORAGE_KEY]) return;
+    linkedCardsEnabled = normalizeLinkedCardsEnabled(
+      changes[LINKED_CARDS_ENABLED_STORAGE_KEY].newValue
+    );
+    if (pinnedRecentContextMenuController &&
+        typeof pinnedRecentContextMenuController.refreshAvailability === 'function') {
+      void pinnedRecentContextMenuController.refreshAvailability();
+    }
+  });
 }
 const NEWTAB_SHORTCUTS_STORAGE_KEY = '_x_extension_newtab_shortcuts_2026_unique_';
 const RESTRICTED_ACTION_STORAGE_KEY = '_x_extension_restricted_action_2024_unique_';

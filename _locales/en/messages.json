@@ -65,6 +65,8 @@
   "settings_tab_labs": {
     "message": "Labs"
   },
+  "settings_linked_cards_title": { "message": "Linked pages" },
+  "settings_linked_cards_desc": { "message": "Link pinned New Tab cards to tabs and update the card when the page changes" },
   "settings_selection_quick_actions_title": {
     "message": "Selection quick actions"
   },

@@ -8,6 +8,7 @@ const repoRoot = path.resolve(__dirname, '..');
 
 function createMemoryStorage(initialData) {
   const data = { ...(initialData || {}) };
+  let setCount = 0;
   return {
     get(keys, callback) {
       const result = {};
@@ -17,12 +18,16 @@ function createMemoryStorage(initialData) {
       callback(result);
     },
     set(value, callback) {
+      setCount += 1;
       Object.assign(data, value || {});
       if (callback) {
         callback();
       }
     },
-    data
+    data,
+    get setCount() {
+      return setCount;
+    }
   };
 }
 
@@ -37,6 +42,44 @@ async function testRecentStore() {
     getSiteDisplayName: (host) => host.split('.')[0],
     shouldExcludeUrl: (url) => String(url || '').startsWith('chrome-extension://')
   };
+
+  const mainBranchPinned = [
+    {
+      title: 'Main A',
+      url: 'https://main-a.example/watch/1',
+      host: 'main-a.example',
+      siteName: 'Main A Site',
+      lastVisitTime: 101,
+      visitCount: 7,
+      pinnedAt: 1001
+    },
+    {
+      title: 'Main B',
+      url: 'https://main-b.example/article/2',
+      host: 'main-b.example',
+      siteName: 'Main B Site',
+      lastVisitTime: 202,
+      visitCount: 9,
+      pinnedAt: 1002
+    }
+  ];
+  const mainUpgradeStorage = createMemoryStorage({
+    [recentStore.DEFAULT_PINNED_KEY]: mainBranchPinned
+  });
+  const upgradedMainPinned = await recentStore.loadPinnedRecentSites(mainUpgradeStorage, options);
+  assert.deepStrictEqual(
+    upgradedMainPinned.map(({ title, url, host, siteName, lastVisitTime, visitCount, pinnedAt }) => ({
+      title, url, host, siteName, lastVisitTime, visitCount, pinnedAt
+    })),
+    mainBranchPinned,
+    'upgrading main pinned cards must retain every existing field and card order'
+  );
+  assert.ok(upgradedMainPinned.every((item) => item.cardId && item.trackingEnabled === false));
+  assert.strictEqual(new Set(upgradedMainPinned.map((item) => item.cardId)).size, 2);
+  assert.strictEqual(mainUpgradeStorage.setCount, 1, 'legacy cards should be normalized once');
+  const reloadedMainPinned = await recentStore.loadPinnedRecentSites(mainUpgradeStorage, options);
+  assert.deepStrictEqual(reloadedMainPinned, upgradedMainPinned);
+  assert.strictEqual(mainUpgradeStorage.setCount, 1, 'normalized cards should not be rewritten again');
 
   const merged = recentStore.mergeRecentSiteSources({
     ...options,

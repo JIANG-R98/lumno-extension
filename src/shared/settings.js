@@ -50,6 +50,7 @@
   const SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY = '_x_extension_selection_quick_actions_enabled_2026_unique_';
   const SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY = '_x_extension_selection_quick_actions_provider_2026_unique_';
   const SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY = '_x_extension_selection_quick_actions_group_enabled_2026_unique_';
+  const LINKED_CARDS_ENABLED_STORAGE_KEY = '_x_extension_linked_cards_enabled_2026_unique_';
   // Device-specific appearance. Never import these values from Chrome Sync.
   const BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS = Object.freeze([
     '_x_extension_bookmark_topbar_surface_mode_2026_unique_',
@@ -107,6 +108,7 @@
     '_x_extension_selection_quick_actions_enabled_2026_unique_',
     '_x_extension_selection_quick_actions_provider_2026_unique_',
     '_x_extension_selection_quick_actions_group_enabled_2026_unique_',
+    LINKED_CARDS_ENABLED_STORAGE_KEY,
     '_x_extension_overlay_tab_priority_2024_unique_',
     '_x_extension_newtab_wordmark_visible_2026_unique_',
     '_x_extension_newtab_time_font_weight_2026_unique_',
@@ -487,6 +489,10 @@
     return value === true;
   }
 
+  function normalizeLinkedCardsEnabled(value) {
+    return value === true;
+  }
+
   function normalizeSelectionQuickActionsProvider(value) {
     const key = String(value || '').trim().toLowerCase();
     return SELECTION_QUICK_ACTIONS_PROVIDER_KEYS.includes(key) ? key : 'gpt';
@@ -778,6 +784,7 @@
     SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY,
     SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY,
     SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY,
+    LINKED_CARDS_ENABLED_STORAGE_KEY,
     BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS,
     CHROME_SYNC_STORAGE_KEYS,
     SELECTION_QUICK_ACTIONS_PROVIDER_KEYS,
@@ -830,6 +837,7 @@
     normalizeTabRankScoreDebugMode,
     normalizeTabSwitcherEnabled,
     normalizeSelectionQuickActionsEnabled,
+    normalizeLinkedCardsEnabled,
     normalizeSelectionQuickActionsProvider,
     normalizeSelectionQuickActionsGroupEnabled,
     normalizeThemePreference,

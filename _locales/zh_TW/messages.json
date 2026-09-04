@@ -65,6 +65,8 @@
   "settings_tab_labs": {
     "message": "實驗室功能"
   },
+  "settings_linked_cards_title": { "message": "關聯頁面" },
+  "settings_linked_cards_desc": { "message": "將首頁置頂卡片與分頁關聯，並在頁面變化後更新卡片內容" },
   "settings_selection_quick_actions_title": {
     "message": "選字快捷操作"
   },

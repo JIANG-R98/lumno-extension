@@ -65,6 +65,8 @@
   "settings_tab_labs": {
     "message": "ラボ機能"
   },
+  "settings_linked_cards_title": { "message": "関連ページ" },
+  "settings_linked_cards_desc": { "message": "新しいタブの固定カードをタブに関連付け、ページの変化に合わせて更新します" },
   "settings_selection_quick_actions_title": {
     "message": "選択テキストのクイック操作"
   },

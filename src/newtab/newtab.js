@@ -381,6 +381,8 @@
   const RESTORE_SEARCH_LAYOUT_LOCK_MS = 900;
   const PINNED_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_pinned_recent_sites_2026_unique_';
   const HIDDEN_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_hidden_recent_sites_2026_unique_';
+  const LINKED_CARDS_ENABLED_STORAGE_KEY = SETTINGS.LINKED_CARDS_ENABLED_STORAGE_KEY ||
+    '_x_extension_linked_cards_enabled_2026_unique_';
   const NEWTAB_SHORTCUTS_STORAGE_KEY = '_x_extension_newtab_shortcuts_2026_unique_';
   const NEWTAB_SHORTCUTS_LOCAL_OVERFLOW_STORAGE_KEY =
     '_x_extension_newtab_shortcuts_local_overflow_2026_unique_';
@@ -528,6 +530,7 @@
   let initialPinnedRecentSitesReadyTask = Promise.resolve([]);
   let initialHiddenRecentSitesReadyTask = Promise.resolve([]);
   let initialRecentTrackingActivityReadyTask = Promise.resolve({});
+  let initialLinkedCardsFeatureReadyTask = Promise.resolve(false);
   let searchBlacklistItems = [];
   let currentMessages = null;
   let currentLanguageMode = 'system';
@@ -551,6 +554,7 @@
   let searchEntryLastVisibleViewportHeight = Math.max(0, window.innerHeight || 0);
   let currentRecentMode = 'most';
   let preferredRecentMode = 'most';
+  let linkedCardsEnabled = false;
   let currentRecentCount = 4;
   let currentBookmarkCount = 8;
   let currentBookmarkColumns = 6;
@@ -3263,7 +3267,7 @@
   }
 
   function setRecentMode(nextMode) {
-    const mode = nextMode === 'tracking'
+    const mode = linkedCardsEnabled && nextMode === 'tracking'
       ? 'tracking'
       : normalizeRecentMode(nextMode, 'latest');
     if (currentRecentMode === mode) {
@@ -3282,7 +3286,8 @@
   }
 
   function hasTrackedRecentSites() {
-    return pinnedRecentSites.some((item) => item && item.trackingEnabled === true);
+    return linkedCardsEnabled &&
+      pinnedRecentSites.some((item) => item && item.trackingEnabled === true);
   }
 
   function leaveEmptyTrackingView() {
@@ -4208,6 +4213,27 @@
       recentRenderSignature = '';
       renderRecentSites(recentSourceItems);
     }
+    if (changes[LINKED_CARDS_ENABLED_STORAGE_KEY]) {
+      const raw = changes[LINKED_CARDS_ENABLED_STORAGE_KEY].newValue;
+      linkedCardsEnabled = typeof SETTINGS.normalizeLinkedCardsEnabled === 'function'
+        ? SETTINGS.normalizeLinkedCardsEnabled(raw)
+        : raw === true;
+      if (!linkedCardsEnabled && currentRecentMode === 'tracking') {
+        currentRecentMode = preferredRecentMode;
+        updateRecentHeading();
+      }
+      if (!linkedCardsEnabled) {
+        recentTrackingActivityByCardId = {};
+        if (recentHistoryDialogController &&
+            typeof recentHistoryDialogController.close === 'function') {
+          recentHistoryDialogController.close({ restoreFocus: true });
+        }
+      }
+      updateRecentModeMenu();
+      recentRenderSignature = '';
+      renderRecentSites(recentSourceItems);
+      if (linkedCardsEnabled) void loadRecentTrackingActivity();
+    }
     if (changes[HIDDEN_RECENT_SITES_STORAGE_KEY]) {
       hiddenRecentSites = normalizeHiddenRecentSites(changes[HIDDEN_RECENT_SITES_STORAGE_KEY].newValue);
       recentRenderSignature = '';
@@ -4249,6 +4275,20 @@
 
   if (storageArea) {
     bootstrapInitialLanguageMode();
+    initialLinkedCardsFeatureReadyTask = new Promise((resolve) => {
+      storageArea.get([LINKED_CARDS_ENABLED_STORAGE_KEY], (result) => {
+        const raw = result && result[LINKED_CARDS_ENABLED_STORAGE_KEY];
+        linkedCardsEnabled = typeof SETTINGS.normalizeLinkedCardsEnabled === 'function'
+          ? SETTINGS.normalizeLinkedCardsEnabled(raw)
+          : raw === true;
+        updateRecentModeMenu();
+        recentRenderSignature = '';
+        if (recentSourceItems.length > 0 || pinnedRecentSites.length > 0) {
+          renderRecentSites(recentSourceItems);
+        }
+        resolve(linkedCardsEnabled);
+      });
+    });
     initialPinnedRecentSitesReadyTask = readPinnedRecentSites().then((items) => {
       pinnedRecentSites = items;
       updateRecentModeMenu();
@@ -4272,7 +4312,9 @@
       hiddenRecentSites = [];
       return hiddenRecentSites;
     });
-    initialRecentTrackingActivityReadyTask = loadRecentTrackingActivity();
+    initialRecentTrackingActivityReadyTask = initialLinkedCardsFeatureReadyTask.then((enabled) => (
+      enabled ? loadRecentTrackingActivity() : {}
+    ));
 
     storageArea.get([RECENT_COUNT_STORAGE_KEY], (result) => {
       const stored = result[RECENT_COUNT_STORAGE_KEY];
@@ -8023,7 +8065,8 @@
       },
     ];
     const item = target && target.item;
-    if (item && Array.isArray(item.updateHistory) && item.updateHistory.length) {
+    if (linkedCardsEnabled && item &&
+        Array.isArray(item.updateHistory) && item.updateHistory.length) {
       options.push({
         action: RECENT_CONTEXT_MENU_HISTORY_VALUE,
         value: RECENT_CONTEXT_MENU_HISTORY_VALUE,
@@ -8125,6 +8168,7 @@
   }
 
   function restoreRecentSiteVersion(item, selectedHistory) {
+    if (!linkedCardsEnabled) return Promise.resolve(false);
     const pinnedIndex = findPinnedRecentSiteIndex(item);
     if (pinnedIndex < 0 || !selectedHistory ||
         typeof NEWTAB_RECENT_STORE.restorePinnedRecentSiteVersion !== 'function') {
@@ -8152,7 +8196,7 @@
   }
 
   function openRecentSiteHistoryFromContextMenu(item) {
-    if (!recentHistoryDialogController) return;
+    if (!linkedCardsEnabled || !recentHistoryDialogController) return;
     const currentIndex = findPinnedRecentSiteIndex(item);
     const currentItem = currentIndex >= 0 ? pinnedRecentSites[currentIndex] : null;
     if (!currentItem || !Array.isArray(currentItem.updateHistory) || !currentItem.updateHistory.length) return;
@@ -11719,6 +11763,11 @@
       : mergeRecentSitesWithPinned(normalizedSourceItems, getRecentLimit());
     const mergedItems = visibleItems.map((item) => ({
       ...item,
+      ...(!linkedCardsEnabled ? {
+        trackingEnabled: false,
+        updatePending: false,
+        updateHistory: []
+      } : {}),
       activeTabCount: item && item.cardId
         ? Math.max(0, Number(recentTrackingActivityByCardId[item.cardId]) || 0)
         : 0
@@ -12076,6 +12125,7 @@
   }
 
   function isRecentSiteTracked(item) {
+    if (!linkedCardsEnabled) return false;
     const pinnedIndex = findPinnedRecentSiteIndex(item);
     return Boolean(pinnedIndex >= 0 && pinnedRecentSites[pinnedIndex].trackingEnabled === true);
   }
@@ -12143,6 +12193,14 @@
   }
 
   function toggleTrackedRecentSite(item) {
+    if (!linkedCardsEnabled) {
+      return Promise.resolve({
+        pinned: isRecentSitePinned(item),
+        tracking: false,
+        limitReached: false,
+        reason: 'feature-disabled'
+      });
+    }
     const normalizedItem = normalizeRecentSiteRecord(item, { ignoreBlacklist: true });
     if (!normalizedItem) {
       return Promise.resolve({ pinned: false, tracking: false, limitReached: false });
@@ -12207,6 +12265,7 @@
   }
 
   function rememberRecentTrackingTarget(item) {
+    if (!linkedCardsEnabled) return Promise.resolve(false);
     if (!item || !item.url || !isRecentSiteTracked(item)) {
       return Promise.resolve(false);
     }
@@ -12227,6 +12286,10 @@
   }
 
   function loadRecentTrackingActivity() {
+    if (!linkedCardsEnabled) {
+      recentTrackingActivityByCardId = {};
+      return Promise.resolve(recentTrackingActivityByCardId);
+    }
     return new Promise((resolve) => {
       const sent = sendRuntimeMessage({
         action: 'getPinnedRecentTrackingActivity'
@@ -12279,6 +12342,9 @@
     if (!button) {
       return;
     }
+    button.hidden = !linkedCardsEnabled;
+    button.disabled = !linkedCardsEnabled;
+    if (!linkedCardsEnabled) return;
     button.classList.toggle('x-nt-recent-track--active', Boolean(isTracked));
     const liveCount = isTracked ? Math.max(0, Number(activeTabCount) || 0) : 0;
     button.classList.toggle('x-nt-recent-track--limit', Boolean(!isPinned && limitReached));
@@ -16683,6 +16749,7 @@
     initialShortcutsReadyTask,
     initialPinnedRecentSitesReadyTask,
     initialHiddenRecentSitesReadyTask,
+    initialLinkedCardsFeatureReadyTask,
     initialRecentTrackingActivityReadyTask,
     initialLayoutStorageReadyTask,
     initialFontsReadyTask
