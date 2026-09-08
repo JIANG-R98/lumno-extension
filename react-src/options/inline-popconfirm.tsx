@@ -23,8 +23,22 @@ export function InlinePopconfirm({
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const restoreTriggerFocusRef = useRef(false);
   const popconfirmId = useId();
   const confirmAction = useExclusiveAsyncAction(onConfirm);
+
+  const closeAndRestoreTriggerFocus = () => {
+    restoreTriggerFocusRef.current = true;
+    setOpen(false);
+  };
+
+  useEffect(() => {
+    if (open || !restoreTriggerFocusRef.current) {
+      return;
+    }
+    restoreTriggerFocusRef.current = false;
+    triggerRef.current?.focus({ preventScroll: true });
+  }, [open]);
 
   useEffect(() => {
     if (!open) {
@@ -38,8 +52,7 @@ export function InlinePopconfirm({
     const onDocumentKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        setOpen(false);
-        triggerRef.current?.focus();
+        closeAndRestoreTriggerFocus();
       }
     };
     document.addEventListener('pointerdown', onDocumentPointerDown);
@@ -59,6 +72,7 @@ export function InlinePopconfirm({
       <button
         aria-controls={popconfirmId}
         aria-expanded={open}
+        aria-haspopup="dialog"
         aria-label={triggerAriaLabel}
         className={triggerClassName}
         disabled={confirmAction.pending}
@@ -72,25 +86,27 @@ export function InlinePopconfirm({
         <i aria-hidden="true" className={triggerIconClass} />
       </button>
       <div
+        aria-hidden={!open}
+        aria-label={copy.message}
         className="_x_extension_popconfirm_2024_unique_"
         data-open={open ? 'true' : 'false'}
         id={popconfirmId}
+        role="dialog"
       >
-        <PopconfirmContent
-          busy={confirmAction.pending}
-          copy={copy}
-          onCancel={() => {
-            setOpen(false);
-            triggerRef.current?.focus();
-          }}
-          onConfirm={() => {
-            void confirmAction.run().then((outcome) => {
-              if (outcome.status !== 'skipped') {
-                setOpen(false);
-              }
-            });
-          }}
-        />
+        {open ? (
+          <PopconfirmContent
+            busy={confirmAction.pending}
+            copy={copy}
+            onCancel={closeAndRestoreTriggerFocus}
+            onConfirm={() => {
+              void confirmAction.run().then((outcome) => {
+                if (outcome.status !== 'skipped') {
+                  closeAndRestoreTriggerFocus();
+                }
+              });
+            }}
+          />
+        ) : null}
       </div>
     </div>
   );

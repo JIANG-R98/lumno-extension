@@ -710,6 +710,85 @@
         text-align: center;
         white-space: nowrap;
       }
+      #_x_extension_aggregate_search_list_2026_unique_ {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      ._x_extension_shortcut_item_2024_unique_[data-type="aggregate"][data-expanded="true"] ._x_extension_shortcut_editor_2024_unique_ {
+        max-height: 1100px;
+      }
+      ._x_extension_shortcut_form_2024_unique_[data-type="aggregate"][data-expanded="true"],
+      ._x_extension_shortcut_form_2024_unique_[data-type="aggregate"][data-expanded="true"] ._x_extension_shortcut_form_fields_2024_unique_ {
+        max-height: 1100px;
+      }
+      ._x_extension_aggregate_search_editor_2026_unique_ {
+        gap: 14px;
+      }
+      ._x_extension_aggregate_search_source_header_2026_unique_ {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      ._x_extension_aggregate_search_count_2026_unique_ {
+        flex: 0 0 auto;
+        color: var(--panel-subtext);
+        font-size: 11px;
+      }
+      ._x_extension_aggregate_search_sources_2026_unique_ {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        max-height: 360px;
+        padding: 10px;
+        overflow: auto;
+        overscroll-behavior: contain;
+        border: 1px solid var(--tab-border);
+        border-radius: 12px;
+        background: color-mix(in srgb, var(--control-bg) 78%, transparent);
+      }
+      ._x_extension_aggregate_search_source_group_2026_unique_ {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      ._x_extension_aggregate_search_source_group_label_2026_unique_ {
+        color: var(--panel-subtext);
+        font-size: 11px;
+        font-weight: 500;
+      }
+      ._x_extension_aggregate_search_source_grid_2026_unique_ {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px 12px;
+      }
+      ._x_extension_aggregate_search_source_option_2026_unique_ {
+        min-width: 0;
+      }
+      ._x_extension_aggregate_search_source_option_2026_unique_ > span:last-child {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      ._x_extension_aggregate_search_source_option_2026_unique_[data-available="false"] {
+        color: var(--panel-subtext);
+        opacity: 0.68;
+      }
+      ._x_extension_aggregate_search_source_option_2026_unique_[data-available="false"] > span:last-child {
+        text-decoration: line-through;
+      }
+      ._x_extension_aggregate_search_group_toggle_row_2026_unique_ {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 10px 0 2px;
+      }
+      ._x_extension_aggregate_search_group_toggle_row_2026_unique_ > div {
+        min-width: 0;
+      }
       ._x_extension_shortcuts_actions_2024_unique_ {
         gap: 10px;
         flex-wrap: wrap;
@@ -1473,6 +1552,10 @@
       ._x_extension_switch_2024_unique_ input:disabled + ._x_extension_switch_slider_2024_unique_ {
         cursor: not-allowed;
       }
+      ._x_extension_switch_2024_unique_ input:focus-visible + ._x_extension_switch_slider_2024_unique_ {
+        outline: 2px solid var(--input-focus-color);
+        outline-offset: 2px;
+      }
       ._x_extension_switch_2024_unique_ input:checked + ._x_extension_switch_slider_2024_unique_:before {
         transform: translate(20px, -50%);
       }
@@ -1593,6 +1676,12 @@
       }
       ._x_extension_shortcut_group_action_2024_unique_:hover {
         background: rgba(148, 163, 184, 0.2);
+      }
+      ._x_extension_shortcut_group_action_2024_unique_:focus-visible,
+      ._x_extension_shortcut_edit_2024_unique_:focus-visible,
+      ._x_extension_shortcut_remove_2024_unique_:focus-visible {
+        outline: 2px solid var(--input-focus-color);
+        outline-offset: 2px;
       }
       ._x_extension_shortcut_group_action_2024_unique_[data-tooltip]::after {
         content: attr(data-tooltip);
@@ -1837,8 +1926,12 @@
         gap: 8px;
         opacity: 0;
         pointer-events: none;
-        transition: opacity 160ms ease, transform 180ms ease;
+        transition:
+          opacity 160ms ease,
+          transform 180ms ease,
+          visibility 0s linear 180ms;
         z-index: 2;
+        visibility: hidden;
       }
       #_x_extension_settings_panel_2024_unique_[data-theme="dark"] ._x_extension_popconfirm_2024_unique_ {
         background: #1e1e1e;
@@ -1850,6 +1943,8 @@
         opacity: 1;
         transform: translate(-50%, 0) scale(1);
         pointer-events: auto;
+        transition-delay: 0s;
+        visibility: visible;
       }
       ._x_extension_popconfirm_text_2024_unique_ {
         font-size: 12px;
@@ -2497,6 +2592,9 @@
         background: transparent;
       }
       @media (max-width: 720px) {
+        ._x_extension_aggregate_search_source_grid_2026_unique_ {
+          grid-template-columns: minmax(0, 1fr);
+        }
         ._x_extension_feedback_support_header_2026_unique_ {
           min-height: 32px;
         }
@@ -2789,6 +2887,18 @@
             </div>
             <label class="_x_extension_switch_2024_unique_" for="_x_extension_tab_switcher_toggle_2026_unique_">
               <input id="_x_extension_tab_switcher_toggle_2026_unique_" type="checkbox" checked>
+              <span class="_x_extension_switch_slider_2024_unique_" aria-hidden="true"></span>
+            </label>
+          </div>
+          <div class="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_">
+            <div>
+              <p class="_x_extension_setting_title_2024_unique_">
+                <span data-i18n="settings_aggregate_search_auto_group_title">聚合搜索自动创建标签页组</span>
+              </p>
+              <p class="_x_extension_setting_desc_2024_unique_" data-i18n="settings_aggregate_search_auto_group_desc">开启后，聚合搜索打开的所有标签页会归入同一组，并以搜索关键词命名</p>
+            </div>
+            <label class="_x_extension_switch_2024_unique_" for="_x_extension_aggregate_search_auto_group_toggle_2026_unique_">
+              <input id="_x_extension_aggregate_search_auto_group_toggle_2026_unique_" type="checkbox" aria-label="聚合搜索自动创建标签页组" data-i18n-aria-label="settings_aggregate_search_auto_group_title" checked>
               <span class="_x_extension_switch_slider_2024_unique_" aria-hidden="true"></span>
             </label>
           </div>
@@ -3340,6 +3450,18 @@
             <div class="_x_extension_setting_divider_wrap_2024_unique_" role="presentation">
               <div class="_x_extension_setting_divider_2024_unique_"></div>
             </div>
+            <div id="_x_extension_aggregate_search_group_2026_unique_" class="_x_extension_shortcut_group_2024_unique_">
+              <div class="_x_extension_shortcut_group_header_2024_unique_">
+                <div class="_x_extension_shortcut_group_title_2024_unique_ _x_extension_section_title_2024_unique_" data-i18n="aggregate_search_group_title">聚合搜索</div>
+                <button id="_x_extension_aggregate_search_clear_2026_unique_" class="_x_extension_shortcut_group_action_2024_unique_" aria-label="清空聚合搜索" data-tooltip="清空聚合搜索" data-i18n-tooltip="aggregate_search_clear">
+                  <i class="ri-icon ri-size-14 ri-delete-bin-4-line" aria-hidden="true"></i>
+                </button>
+              </div>
+              <div id="_x_extension_aggregate_search_list_2026_unique_"></div>
+            </div>
+            <div class="_x_extension_setting_divider_wrap_2024_unique_" role="presentation">
+              <div class="_x_extension_setting_divider_2024_unique_"></div>
+            </div>
             <div class="_x_extension_shortcut_group_2024_unique_">
               <div class="_x_extension_shortcut_group_header_2024_unique_">
                 <div class="_x_extension_shortcut_group_title_2024_unique_ _x_extension_section_title_2024_unique_" data-i18n="search_scope_group_sites">站内搜索</div>
@@ -3529,7 +3651,7 @@
         </div>
       </div>
     </div>
-    <div id="_x_extension_toast_2024_unique_" class="_x_extension_toast_2024_unique_"></div>
+    <div id="_x_extension_toast_2024_unique_" class="_x_extension_toast_2024_unique_" role="status" aria-live="polite" aria-atomic="true"></div>
     <!--
     <div id="_x_extension_confirm_mask_2024_unique_" class="_x_extension_confirm_mask_2024_unique_">
       <div class="_x_extension_confirm_dialog_2024_unique_">
@@ -3547,6 +3669,7 @@
     <script src="../shared/community-links.js"></script>
     <script src="../shared/settings.js"></script>
     <script src="../shared/search-utils.js"></script>
+    <script src="../shared/aggregate-search-store.js"></script>
     <script src="../shared/shortcut-favicon.js"></script>
     <script src="../shared/tooltip.js"></script>
     <script src="../shared/menu-surface.js"></script>

@@ -64,10 +64,34 @@ const runtimeVersionMatch = overlaySource.match(
   /_x_extension_search_overlay_runtime_version_2026_unique_\s*=\s*\n?\s*'([^']+)'/
 );
 assert.ok(runtimeVersionMatch, 'overlay should publish a runtime version for safe same-page reuse');
+const expectedOverlayRuntimeVersion = '2026-08-31-provider-load-race-v15';
+assert.strictEqual(
+  runtimeVersionMatch[1],
+  expectedOverlayRuntimeVersion,
+  'the Overlay marker must be bumped when its aggregate-search runtime dependencies change'
+);
 assert.ok(
   backgroundSource.includes(`const OVERLAY_RUNTIME_VERSION = '${runtimeVersionMatch[1]}'`),
   'background and injected overlay should agree on the reusable runtime version'
 );
+const overlayInjectionStart = backgroundSource.indexOf('const overlayInjectionFiles = [');
+const overlayInjectionEnd = backgroundSource.indexOf('\n  ];', overlayInjectionStart);
+const overlayInjectionSource = backgroundSource.slice(overlayInjectionStart, overlayInjectionEnd);
+assert.ok(
+  overlayInjectionStart >= 0 && overlayInjectionEnd > overlayInjectionStart,
+  'the versioned Overlay injection dependency list must remain discoverable'
+);
+[
+  'src/shared/site-search-store.js',
+  'src/shared/aggregate-search-store.js',
+  'src/shared/aggregate-search-surface.js',
+  'src/overlay/search-panel.js'
+].forEach((runtimeDependency) => {
+  assert.ok(
+    overlayInjectionSource.includes(`'${runtimeDependency}'`),
+    `${runtimeDependency} must stay coupled to ${expectedOverlayRuntimeVersion}`
+  );
+});
 const immediateOpenStart = backgroundSource.indexOf('function openOverlayOnTab(');
 const immediateOpenSource = backgroundSource.slice(immediateOpenStart, triggerStart);
 assert.strictEqual(

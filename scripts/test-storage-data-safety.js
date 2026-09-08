@@ -68,6 +68,8 @@ const expectedSyncKeys = [
   '_x_extension_fallback_hotkey_2024_unique_',
   '_x_extension_site_search_custom_2024_unique_',
   '_x_extension_site_search_disabled_2024_unique_',
+  '_x_extension_aggregate_searches_2026_unique_',
+  '_x_extension_aggregate_search_auto_group_enabled_2026_unique_',
   '_x_extension_search_blacklist_2026_unique_',
   '_x_extension_favicon_request_blacklist_2026_unique_',
   '_x_extension_favicon_enhanced_fetch_enabled_2026_unique_',

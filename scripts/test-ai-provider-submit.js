@@ -218,7 +218,11 @@ function submitWithFakeChrome(strategyName, prompt, options) {
 
 async function run() {
   await withFakePromptDom(async (env) => {
-    const result = await submitWithFakeChrome('geminiPrompt', 'Explain Lumno');
+    const observations = {};
+    const result = await submitWithFakeChrome('geminiPrompt', 'Explain Lumno', {
+      expectedUrl: 'https://gemini.google.com/app',
+      observations
+    });
     assert.strictEqual(result.ok, true);
     assert.strictEqual(
       result.method,
@@ -226,7 +230,40 @@ async function run() {
       'Gemini should keep watching for a nearby send button after Enter'
     );
     assert.strictEqual(env.sendButton.clickCount, 1, 'Gemini send button should be clicked once it appears');
+    assert.strictEqual(observations.executeCount, 1);
+  }, { documentOrigin: 'https://gemini.google.com' });
+
+  const expectedStrategyOrigins = {
+    geminiPrompt: 'https://gemini.google.com',
+    chatgptPrompt: 'https://chatgpt.com',
+    doubaoPrompt: 'https://www.doubao.com',
+    qianwenQuery: 'https://www.qianwen.com',
+    yuanbaoPrompt: 'https://yuanbao.tencent.com',
+    minimaxPrompt: 'https://chat.minimax.io',
+    deepseekPrompt: 'https://chat.deepseek.com',
+    kimiPrompt: 'https://www.kimi.com'
+  };
+  Object.entries(expectedStrategyOrigins).forEach(([strategy, origin]) => {
+    assert.deepStrictEqual(submitRuntime.getAllowedStrategyOrigins(strategy), [origin]);
+    assert.strictEqual(submitRuntime.isAllowedStrategyOrigin(strategy, origin), true);
+    assert.strictEqual(origin.startsWith('https://'), true);
   });
+
+  const maliciousOriginObservations = {};
+  const maliciousOrigin = await submitWithFakeChrome('chatgptPrompt', 'Private prompt', {
+    expectedUrl: 'https://attacker.example/chat',
+    observations: maliciousOriginObservations
+  });
+  assert.deepStrictEqual(maliciousOrigin, { ok: false, reason: 'unapproved-submit-origin' });
+  assert.strictEqual(maliciousOriginObservations.tabGetCount, 0);
+  assert.strictEqual(maliciousOriginObservations.executeCount, 0,
+    'an attacker-controlled expected origin must be rejected before tab access or DOM injection');
+
+  const insecureOfficialOrigin = await submitWithFakeChrome('chatgptPrompt', 'Private prompt', {
+    expectedUrl: 'http://chatgpt.com/'
+  });
+  assert.deepStrictEqual(insecureOfficialOrigin, { ok: false, reason: 'unapproved-submit-origin' },
+    'interactive strategies must allow only their official HTTPS origins');
 
   const redirectedObservations = {};
   const redirected = await submitWithFakeChrome('chatgptPrompt', 'Private prompt', {
@@ -263,6 +300,25 @@ async function run() {
   });
   assert.deepStrictEqual(alternatePort, { ok: false, reason: 'unexpected-tab-origin' },
     'origin validation must include the effective port');
+
+  const urlOnlyObservations = {};
+  const officialUrlOnly = await submitWithFakeChrome('qianwenQuery', 'Private prompt', {
+    expectedUrl: 'https://www.qianwen.com/?q=Private%20prompt',
+    observations: urlOnlyObservations
+  });
+  assert.deepStrictEqual(officialUrlOnly, { ok: true, method: 'url' });
+  assert.strictEqual(urlOnlyObservations.tabGetCount, 0);
+  assert.strictEqual(urlOnlyObservations.executeCount, 0,
+    'an approved URL-only strategy must not inject a script');
+
+  const maliciousUrlOnlyObservations = {};
+  const maliciousUrlOnly = await submitWithFakeChrome('qianwenQuery', 'Private prompt', {
+    expectedUrl: 'https://attacker.example/?q=Private%20prompt',
+    observations: maliciousUrlOnlyObservations
+  });
+  assert.deepStrictEqual(maliciousUrlOnly, { ok: false, reason: 'unapproved-submit-origin' });
+  assert.strictEqual(maliciousUrlOnlyObservations.tabGetCount, 0);
+  assert.strictEqual(maliciousUrlOnlyObservations.executeCount, 0);
 
   console.log('ai provider submit tests passed');
 }

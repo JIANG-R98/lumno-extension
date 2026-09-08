@@ -53,7 +53,7 @@ describe('Options Popconfirm React island', () => {
     expect(host.querySelectorAll('button')[1]?.textContent).toBe('确认');
   });
 
-  it('updates localized copy without remounting the host', () => {
+  it('removes hidden actions while closed and reuses the host when reopened', () => {
     const { controller, host } = createFixture();
     act(() => {
       controller.render({
@@ -66,10 +66,25 @@ describe('Options Popconfirm React island', () => {
     });
 
     expect(host.dataset.open).toBe('false');
+    expect(host.getAttribute('aria-hidden')).toBe('true');
+    expect(host.querySelectorAll('button')).toHaveLength(0);
+    expect(host.textContent).toBe('');
+    expect(host.isConnected).toBe(true);
+
+    act(() => {
+      controller.render({
+        cancelLabel: 'Cancel',
+        confirmLabel: 'Confirm',
+        message: 'Clear excluded favicon rules?',
+        messageKey: 'confirm_clear_favicon_blacklist',
+        open: true
+      });
+    });
+    expect(host.getAttribute('aria-hidden')).toBe('false');
     expect(host.querySelector('div')?.textContent).toBe(
       'Clear excluded favicon rules?'
     );
-    expect(host.isConnected).toBe(true);
+    expect(host.querySelectorAll('button')).toHaveLength(2);
   });
 
   it('routes cancel and confirm exactly once without document delegation', () => {

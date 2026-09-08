@@ -1,6 +1,6 @@
 {
   "name": "lumno-extension",
-  "version": "0.9.53",
+  "version": "0.9.54",
   "private": true,
   "engines": {
     "node": "20.x"

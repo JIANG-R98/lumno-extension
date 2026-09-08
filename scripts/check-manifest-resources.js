@@ -4,6 +4,7 @@ const path = require('path');
 const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
 const missing = [];
 const injectedScriptFiles = [
+  'src/background/aggregate-search.js',
   'src/background/codex-debug-bridge.js',
   'src/background/extension-pages.js',
   'src/background/message-router.js',
@@ -19,6 +20,8 @@ const injectedScriptFiles = [
   'src/shared/browser-profile.js',
   'src/shared/settings.js',
   'src/shared/search-utils.js',
+  'src/shared/aggregate-search-store.js',
+  'src/shared/aggregate-search-surface.js',
   'src/shared/site-search-store.js',
   'src/shared/suggestion-action-model.js',
   'src/shared/suggestion-navigation.js',

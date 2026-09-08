@@ -84,9 +84,21 @@ try {
 }
 
 try {
+  importScripts(chrome.runtime.getURL('src/shared/aggregate-search-store.js'));
+} catch (error) {
+  console.warn('Lumno: failed to load aggregate search store.', error);
+}
+
+try {
   importScripts(chrome.runtime.getURL('src/background/ai-provider-submit.js'));
 } catch (error) {
   console.warn('Lumno: failed to load AI provider submit runtime.', error);
+}
+
+try {
+  importScripts(chrome.runtime.getURL('src/background/aggregate-search.js'));
+} catch (error) {
+  console.warn('Lumno: failed to load aggregate search runtime.', error);
 }
 
 try {
@@ -198,6 +210,7 @@ const BACKGROUND_MESSAGE_ROUTER = globalThis.LumnoBackgroundMessageRouter || {};
 const BOOKMARK_TAB_GROUPS = globalThis.LumnoBookmarkTabGroups || {};
 const EXTENSION_ROUTES = globalThis.LumnoExtensionRoutes || {};
 const UPDATE_NOTICE = globalThis.LumnoUpdateNotice || {};
+const SETTINGS = globalThis.LumnoSettings || {};
 const COMMAND_TARGET_POLICY = globalThis.LumnoCommandTargetPolicy || {};
 const FAVICON_UTILS = globalThis.LumnoFaviconUtils || {};
 const FAVICON_CACHE = globalThis.LumnoFaviconCache || {};
@@ -1670,7 +1683,7 @@ const TAB_SWITCHER_HOST_STATE_TIMEOUT_MS = 400;
 const tabSwitcherHostTabIdByWindowId = new Map();
 const HOTKEY_DUP_GUARD_MS = 180;
 const OVERLAY_OPENING_GUARD_MS = 5000;
-const OVERLAY_RUNTIME_VERSION = '2026-08-20-current-page-provider-v13';
+const OVERLAY_RUNTIME_VERSION = '2026-08-31-provider-load-race-v15';
 const OVERLAY_HOST_ID = '_x_extension_overlay_host_2026_unique_';
 const OVERLAY_NAVIGATION_STATE_STORAGE_PREFIX =
   '_x_extension_overlay_navigation_state_2026_unique_:';
@@ -4902,6 +4915,8 @@ function openOverlayOnTab(activeTab, tabs, source, options) {
     'src/shared/navigation-disposition.js',
     'src/shared/search-utils.js',
     'src/shared/site-search-store.js',
+    'src/shared/aggregate-search-store.js',
+    'src/shared/aggregate-search-surface.js',
     'src/shared/suggestion-action-model.js',
     'src/shared/suggestion-navigation.js',
     'src/shared/suggestions-height-layout.js',
@@ -6545,6 +6560,38 @@ function runInteractiveSiteSearchProvider(provider, query, sender, disposition) 
   });
 }
 
+let aggregateSearchQueryRunner = null;
+function runAggregateSearchQuery(aggregateId, query, sender, disposition) {
+  if (!aggregateSearchQueryRunner) {
+    if (typeof AGGREGATE_SEARCH.createAggregateSearchQueryRunner !== 'function') {
+      return Promise.resolve({ ok: false, reason: 'aggregate-search-runtime-unavailable' });
+    }
+    aggregateSearchQueryRunner = AGGREGATE_SEARCH.createAggregateSearchQueryRunner({
+      aggregateSearchStore: AGGREGATE_SEARCH_STORE,
+      chromeApi: chrome,
+      storageArea,
+      storageKey: AGGREGATE_SEARCH_STORAGE_KEY,
+      loadSiteSearchProviders,
+      loadAggregateSearchAutoGroupEnabled() {
+        if (typeof SETTINGS.readStorageValue !== 'function') {
+          return Promise.resolve(undefined);
+        }
+        return SETTINGS.readStorageValue(
+          storageArea,
+          chrome,
+          AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY
+        );
+      },
+      openAggregateSearch: AGGREGATE_SEARCH.openAggregateSearch,
+      getEntryUrl: getSiteSearchProviderEntryUrl,
+      isInteractiveProvider: isInteractiveSiteSearchProvider,
+      waitForTabComplete,
+      submitPromptInTab: AI_PROVIDER_SUBMIT.submitPromptInTab
+    });
+  }
+  return aggregateSearchQueryRunner(aggregateId, query, sender, disposition);
+}
+
 // Route message actions by feature area before invoking the original handlers.
 const BACKGROUND_MESSAGE_ROUTE_GROUPS = Object.freeze({
   tabs: {
@@ -6597,7 +6644,8 @@ const BACKGROUND_MESSAGE_ROUTE_GROUPS = Object.freeze({
   siteSearch: {
     actions: [
       'getSiteSearchProviders',
-      'runSiteSearchProviderQuery'
+      'runSiteSearchProviderQuery',
+      'runAggregateSearchQuery'
     ],
     handler: handleSiteSearchMessage
   },
@@ -7132,6 +7180,11 @@ function handleSiteSearchMessage(request, sender, sendResponse) {
     case 'getSiteSearchProviders': {
       loadSiteSearchProviders().then((items) => {
         sendResponse({ items: items });
+      }).catch(() => {
+        sendResponse({
+          items: [],
+          reason: 'site-search-provider-load-failed'
+        });
       });
       return true;
     }
@@ -7151,6 +7204,20 @@ function handleSiteSearchMessage(request, sender, sendResponse) {
         sendResponse({
           ok: false,
           reason: error && error.message ? error.message : 'interactive-site-search-failed'
+        });
+      });
+      return true;
+    }
+    case 'runAggregateSearchQuery': {
+      runAggregateSearchQuery(
+        request.aggregateId,
+        request.query,
+        sender,
+        request.disposition
+      ).then(sendResponse).catch((error) => {
+        sendResponse({
+          ok: false,
+          reason: error && error.message ? error.message : 'aggregate-search-failed'
         });
       });
       return true;
@@ -7424,6 +7491,7 @@ function handleFaviconMessage(request, sender, sendResponse) {
 
 let siteSearchCache = null;
 let siteSearchPromise = null;
+let siteSearchLoadGeneration = 0;
 let searchBlacklistCache = null;
 let searchBlacklistPromise = null;
 let faviconRequestBlacklistCache = null;
@@ -7465,6 +7533,13 @@ let bookmarkTreeCacheListenersBound = false;
 const searchEngineSuggestionRequests = new Map();
 const SITE_SEARCH_STORAGE_KEY = '_x_extension_site_search_custom_2024_unique_';
 const SITE_SEARCH_DISABLED_STORAGE_KEY = '_x_extension_site_search_disabled_2024_unique_';
+const AGGREGATE_SEARCH_STORE = globalThis.LumnoAggregateSearchStore || {};
+const AGGREGATE_SEARCH = globalThis.LumnoBackgroundAggregateSearch || {};
+const AGGREGATE_SEARCH_STORAGE_KEY = AGGREGATE_SEARCH_STORE.STORAGE_KEY ||
+  '_x_extension_aggregate_searches_2026_unique_';
+const AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY =
+  SETTINGS.AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY ||
+  '_x_extension_aggregate_search_auto_group_enabled_2026_unique_';
 const SEARCH_BLACKLIST_STORAGE_KEY = '_x_extension_search_blacklist_2026_unique_';
 const FAVICON_REQUEST_BLACKLIST_STORAGE_KEY = '_x_extension_favicon_request_blacklist_2026_unique_';
 const FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY = '_x_extension_favicon_enhanced_fetch_enabled_2026_unique_';
@@ -8963,6 +9038,7 @@ function sanitizeSiteSearchProviders(items) {
     .map((item) => {
       const template = normalizeSiteSearchTemplate(item.template);
       const provider = {
+        id: String(item.id || '').trim(),
         key: String(item.key).trim(),
         aliases: Array.isArray(item.aliases) ? item.aliases.filter(Boolean) : [],
         name: item.name || item.key,
@@ -8981,30 +9057,27 @@ function sanitizeSiteSearchProviders(items) {
 }
 
 function loadCustomSiteSearchProviders() {
-  return new Promise((resolve) => {
-    if (!storageArea) {
-      resolve([]);
-      return;
-    }
-    storageArea.get([SITE_SEARCH_STORAGE_KEY], (result) => {
-      const items = sanitizeSiteSearchProviders(result[SITE_SEARCH_STORAGE_KEY]);
-      resolve(items);
-    });
-  });
+  if (typeof SETTINGS.readStorageValue === 'function') {
+    return SETTINGS.readStorageValue(
+      storageArea,
+      chrome,
+      SITE_SEARCH_STORAGE_KEY
+    ).then(sanitizeSiteSearchProviders);
+  }
+  return Promise.resolve([]);
 }
 
 function loadDisabledSiteSearchKeys() {
-  return new Promise((resolve) => {
-    if (!storageArea) {
-      resolve([]);
-      return;
-    }
-    storageArea.get([SITE_SEARCH_DISABLED_STORAGE_KEY], (result) => {
-      const items = Array.isArray(result[SITE_SEARCH_DISABLED_STORAGE_KEY])
-        ? result[SITE_SEARCH_DISABLED_STORAGE_KEY]
-        : [];
-      resolve(items.map((item) => String(item).toLowerCase()).filter(Boolean));
-    });
+  if (typeof SETTINGS.readStorageValue !== 'function') {
+    return Promise.resolve([]);
+  }
+  return SETTINGS.readStorageValue(
+    storageArea,
+    chrome,
+    SITE_SEARCH_DISABLED_STORAGE_KEY
+  ).then((value) => {
+    const items = Array.isArray(value) ? value : [];
+    return items.map((item) => String(item).toLowerCase()).filter(Boolean);
   });
 }
 
@@ -9429,6 +9502,12 @@ function parseBangList(text) {
   }
 }
 
+function invalidateSiteSearchProviderCache() {
+  siteSearchLoadGeneration += 1;
+  siteSearchCache = null;
+  siteSearchPromise = null;
+}
+
 function loadSiteSearchProviders() {
   if (siteSearchCache) {
     return Promise.resolve(siteSearchCache);
@@ -9440,17 +9519,16 @@ function loadSiteSearchProviders() {
   const fallbackDefaults = typeof SEARCH_UTILS.getDefaultSiteSearchProviders === 'function'
     ? SEARCH_UTILS.getDefaultSiteSearchProviders()
     : [];
-  siteSearchPromise = fetch(localUrl)
+  const loadGeneration = siteSearchLoadGeneration;
+  const loadTask = fetch(localUrl)
     .then((response) => response.json())
     .then((data) => {
       const items = data && Array.isArray(data.items) ? data.items : [];
       const source = items.length > 0 ? items : fallbackDefaults;
       return sanitizeSiteSearchProviders(source);
     })
-    .catch(() => sanitizeSiteSearchProviders(fallbackDefaults));
-  siteSearchPromise = siteSearchPromise.then((localItems) => {
-    return localItems;
-  }).then((items) => Promise.all([loadCustomSiteSearchProviders(), loadDisabledSiteSearchKeys()])
+    .catch(() => sanitizeSiteSearchProviders(fallbackDefaults))
+    .then((items) => Promise.all([loadCustomSiteSearchProviders(), loadDisabledSiteSearchKeys()])
     .then(([customItems, disabledKeys]) => {
       const baseMap = new Map(items.map((item) => [
         String(item && item.key ? item.key : '').toLowerCase(),
@@ -9473,15 +9551,21 @@ function loadSiteSearchProviders() {
         return key && !disabledKeys.includes(key);
       });
       const merged = mergeCustomProviders(filteredBase, hydratedCustom);
-      siteSearchCache = merged;
-      return merged;
-    })).catch(() => {
-    return loadCustomSiteSearchProviders().then((customItems) => {
-      siteSearchCache = customItems;
-      return customItems;
+      if (loadGeneration === siteSearchLoadGeneration &&
+          siteSearchPromise === loadTask) {
+        siteSearchCache = merged;
+        return merged;
+      }
+      return siteSearchCache || [];
+    })).catch((error) => {
+      if (loadGeneration === siteSearchLoadGeneration &&
+          siteSearchPromise === loadTask) {
+        siteSearchPromise = null;
+      }
+      throw error;
     });
-  });
-  return siteSearchPromise;
+  siteSearchPromise = loadTask;
+  return loadTask;
 }
 
 function warmSiteSearchProviderIcons() {
@@ -9533,8 +9617,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     }
   }
   if (changes[SITE_SEARCH_STORAGE_KEY] || changes[SITE_SEARCH_DISABLED_STORAGE_KEY]) {
-    siteSearchCache = null;
-    siteSearchPromise = null;
+    invalidateSiteSearchProviderCache();
     warmSiteSearchProviderIcons();
   }
   if (changes[SEARCH_BLACKLIST_STORAGE_KEY]) {

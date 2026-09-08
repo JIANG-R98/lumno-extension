@@ -29,8 +29,8 @@ assert.match(
 
 assert.match(
   optionsSource,
-  /customSiteSearchProviders\.forEach\([\s\S]*?nextDisabledKeys\.delete\(builtinKey\);[\s\S]*?saveCustomSiteSearchProviders\(\[\]\),\s*saveDisabledSiteSearchKeys\(nextDisabledKeys\)/,
-  'clearing custom providers should restore built-ins hidden by overrides'
+  /customSiteSearchProviders\.forEach\([\s\S]*?nextDisabledKeys\.delete\(builtinKey\);[\s\S]*?saveSiteSearchProviderState\(\[\], nextDisabledKeys\)/,
+  'clearing custom providers should restore built-ins hidden by overrides in the same storage write'
 );
 
 console.log('options built-in site-search override tests passed');

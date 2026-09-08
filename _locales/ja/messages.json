@@ -1724,6 +1724,96 @@
   "search_scope_group_sites": {
     "message": "サイト内検索"
   },
+  "search_scope_group_aggregates": {
+    "message": "一括検索"
+  },
+  "aggregate_search_action": {
+    "message": "{name}で検索"
+  },
+  "aggregate_search_action_query": {
+    "message": "{name}で「{query}」を検索"
+  },
+  "aggregate_search_group_title": {
+    "message": "一括検索"
+  },
+  "aggregate_search_add": {
+    "message": "一括検索を追加"
+  },
+  "aggregate_search_clear": {
+    "message": "一括検索をすべて削除"
+  },
+  "confirm_clear_aggregate_search": {
+    "message": "一括検索をすべて削除しますか？"
+  },
+  "aggregate_search_name_label": {
+    "message": "名前"
+  },
+  "aggregate_search_name_required_error": {
+    "message": "この一括検索の名前を入力してください。"
+  },
+  "aggregate_search_key_placeholder": {
+    "message": "例: tech"
+  },
+  "aggregate_search_default_name": {
+    "message": "一括検索"
+  },
+  "aggregate_search_sources_label": {
+    "message": "検索元"
+  },
+  "aggregate_search_selected_count": {
+    "message": "選択済み {count}/{max}"
+  },
+  "aggregate_search_min_sources_error": {
+    "message": "検索元を2つ以上選択してください。"
+  },
+  "aggregate_search_max_sources_error": {
+    "message": "検索元は最大10個まで選択できます。"
+  },
+  "settings_aggregate_search_auto_group_title": {
+    "message": "一括検索のタブグループを自動作成"
+  },
+  "settings_aggregate_search_auto_group_desc": {
+    "message": "有効にすると、一括検索で開いたすべてのタブを1つのグループにまとめ、検索キーワードをグループ名にします"
+  },
+  "aggregate_search_badge": {
+    "message": "一括"
+  },
+  "aggregate_search_source_summary": {
+    "message": "検索元 {count} 件"
+  },
+  "aggregate_search_source_summary_unavailable": {
+    "message": "検索元 {count} 件 · 利用不可 {unavailable} 件 · 更新が必要"
+  },
+  "aggregate_search_sources_unavailable_error": {
+    "message": "この一括検索には削除または無効化された検索元があります。設定で更新してください。"
+  },
+  "aggregate_search_in_progress": {
+    "message": "この一括検索はすでに実行中です。"
+  },
+  "aggregate_search_partial_failure": {
+    "message": "一部の一括検索結果を開けませんでした。"
+  },
+  "aggregate_search_degraded_success": {
+    "message": "検索結果は開きましたが、タブのグループ化、名前付け、または切り替えを完了できませんでした。"
+  },
+  "aggregate_search_storage_unavailable_error": {
+    "message": "一括検索を読み込めませんでした。設定ページを再読み込みして、もう一度お試しください。"
+  },
+  "aggregate_search_source_selection_unavailable_error": {
+    "message": "利用できない検索元を外し、利用可能な検索元を2つ以上選択してください。"
+  },
+  "aggregate_search_unavailable_group": {
+    "message": "利用できない検索元"
+  },
+  "aggregate_search_unavailable_name": {
+    "message": "利用できない検索元（{source}）"
+  },
+  "aggregate_search_name_duplicate_error": {
+    "message": "同じ名前の一括検索がすでにあります。"
+  },
+  "aggregate_search_max_items_error": {
+    "message": "一括検索は最大8件まで作成できます。"
+  },
   "overlay_empty_open_tabs": {
     "message": "タブはありません"
   },

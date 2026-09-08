@@ -1724,6 +1724,96 @@
   "search_scope_group_sites": {
     "message": "Site search"
   },
+  "search_scope_group_aggregates": {
+    "message": "Aggregate searches"
+  },
+  "aggregate_search_action": {
+    "message": "Search with {name}"
+  },
+  "aggregate_search_action_query": {
+    "message": "Search with {name} for \"{query}\""
+  },
+  "aggregate_search_group_title": {
+    "message": "Aggregate search"
+  },
+  "aggregate_search_add": {
+    "message": "Add aggregate search"
+  },
+  "aggregate_search_clear": {
+    "message": "Clear aggregate searches"
+  },
+  "confirm_clear_aggregate_search": {
+    "message": "Clear all aggregate searches?"
+  },
+  "aggregate_search_name_label": {
+    "message": "Name"
+  },
+  "aggregate_search_name_required_error": {
+    "message": "Enter a name for this aggregate search."
+  },
+  "aggregate_search_key_placeholder": {
+    "message": "For example, tech"
+  },
+  "aggregate_search_default_name": {
+    "message": "Aggregate search"
+  },
+  "aggregate_search_sources_label": {
+    "message": "Search sources"
+  },
+  "aggregate_search_selected_count": {
+    "message": "Selected {count}/{max}"
+  },
+  "aggregate_search_min_sources_error": {
+    "message": "Select at least 2 search sources."
+  },
+  "aggregate_search_max_sources_error": {
+    "message": "You can select up to 10 search sources."
+  },
+  "settings_aggregate_search_auto_group_title": {
+    "message": "Automatically group aggregate search tabs"
+  },
+  "settings_aggregate_search_auto_group_desc": {
+    "message": "When enabled, all tabs opened by an aggregate search are placed in one group named after the search query"
+  },
+  "aggregate_search_badge": {
+    "message": "Aggregate"
+  },
+  "aggregate_search_source_summary": {
+    "message": "{count} sources"
+  },
+  "aggregate_search_source_summary_unavailable": {
+    "message": "{count} sources · {unavailable} unavailable · Update required"
+  },
+  "aggregate_search_sources_unavailable_error": {
+    "message": "This aggregate search contains removed or disabled sources. Update it in Settings."
+  },
+  "aggregate_search_in_progress": {
+    "message": "This aggregate search is already running."
+  },
+  "aggregate_search_partial_failure": {
+    "message": "Some aggregate search results could not be opened."
+  },
+  "aggregate_search_degraded_success": {
+    "message": "Search results opened, but tab grouping, naming, or focus could not be completed."
+  },
+  "aggregate_search_storage_unavailable_error": {
+    "message": "Aggregate searches could not be loaded. Reload Settings and try again."
+  },
+  "aggregate_search_source_selection_unavailable_error": {
+    "message": "Remove unavailable sources and select at least two available sources."
+  },
+  "aggregate_search_unavailable_group": {
+    "message": "Unavailable sources"
+  },
+  "aggregate_search_unavailable_name": {
+    "message": "Unavailable source ({source})"
+  },
+  "aggregate_search_name_duplicate_error": {
+    "message": "An aggregate search with this name already exists."
+  },
+  "aggregate_search_max_items_error": {
+    "message": "You can create up to 8 aggregate searches."
+  },
   "overlay_empty_open_tabs": {
     "message": "No tabs"
   },

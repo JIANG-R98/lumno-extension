@@ -36,7 +36,7 @@ Lumno 是一个面向 Chromium 浏览器的 Manifest V3 扩展，把「聚焦搜
   </a>
 </p>
 
-<p align="center">当前版本：<code>0.9.53</code></p>
+<p align="center">当前版本：<code>0.9.54</code></p>
 
 <img width="1200" height="480" alt="Lumno command bar preview" src="./assets/images/readme/banner.webp" decoding="async" />
 
@@ -45,6 +45,7 @@ Lumno 是一个面向 Chromium 浏览器的 Manifest V3 扩展，把「聚焦搜
 - 聚焦搜索命令栏：在任意可注入网页唤起悬浮搜索，支持打开网址、搜索关键词、切换已打开标签页、打开浏览器内部页面和进入 Lumno 设置。
 - 智能搜索结果：整合书签、历史记录、常用网站、浏览器建议和当前已打开标签页，支持结果来源筛选、首位结果优先级、访问选择权重、拼音匹配和黑名单过滤。
 - 站内搜索 / AI 搜索：内置 YouTube、Bilibili、GitHub、Google、Bing、Baidu、Zhihu、Douban、Juejin、Taobao、X、Reddit、Wikipedia 等快捷前缀；同时支持 ChatGPT、Gemini、豆包、千问、元宝、MiniMax、DeepSeek、Kimi 等 AI 入口。你也可以添加自定义模板和别名。
+- 聚合搜索：可将 2–10 个内置或自定义搜索源合并为一个搜索范围，一次查询同时打开多个结果标签页；是否自动归入以关键词命名的标签页组，可在“常规”设置中统一控制。
 - 新标签页：提供搜索框、最近/最常访问站点卡片、书签网格/文件夹级联菜单、书签分页、最近站点固定与隐藏、反馈入口和可调内容宽度。
 - 外观与壁纸：支持系统/浅色/深色主题，全局或仅新标签页生效；新标签页内置多套壁纸，支持本地壁纸、遮罩透明度、颗粒/半调/抖色/ASCII 滤镜、搜索框宽度和 Lumno 字标开关。
 - 网页剪裁 PiP：在支持 Document Picture-in-Picture 的 HTTPS 顶层页面中选择页面局部内容，放入悬浮窗口用于参考和对照。
@@ -114,8 +115,6 @@ npm run test:message-router
 npm run test:newtab-layout
 npm run test:onboarding-content
 ```
-
-分支命名、PR、评审以及共享功能分支的协作约定见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 `npm run package:store` 会读取 `manifest.json` 的版本号，并生成 `dist/lumno-store-v<version>.zip`。本命令依赖系统可用的 `zip` 和 `zipinfo`。
 

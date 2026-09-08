@@ -19,7 +19,7 @@ assert.strictEqual(settings.addStorageChangeListener({
   storage: { onChanged: { addListener() {} } }
 }, null), false);
 
-assert.strictEqual(settings.CHROME_SYNC_STORAGE_KEYS.length, 63);
+assert.strictEqual(settings.CHROME_SYNC_STORAGE_KEYS.length, 65);
 assert.strictEqual(
   new Set(settings.CHROME_SYNC_STORAGE_KEYS).size,
   settings.CHROME_SYNC_STORAGE_KEYS.length
@@ -36,6 +36,13 @@ assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_APPEARANCE_BUT
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_newtab_time_font_weight_2026_unique_'));
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_newtab_time_seconds_visible_2026_unique_'));
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_search_result_display_limit_2026_unique_'));
+assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.AGGREGATE_SEARCH_STORAGE_KEY));
+assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(
+  settings.AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY
+));
+assert.strictEqual(settings.normalizeAggregateSearchAutoGroupEnabled(undefined), true);
+assert.strictEqual(settings.normalizeAggregateSearchAutoGroupEnabled(false), false);
+assert.strictEqual(settings.normalizeAggregateSearchAutoGroupEnabled(true), true);
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_bookmark_view_mode_2026_unique_'));
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_SHORTCUTS_CHUNK_2_STORAGE_KEY));
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_SHORTCUTS_CHUNK_3_STORAGE_KEY));
@@ -416,6 +423,36 @@ async function testProviderStorageRuntime() {
     await runtime.area.get([languageKey]),
     { [languageKey]: 'zh_CN' },
     'the runtime should keep reading the Chrome Sync value'
+  );
+
+  let multiWriteCount = 0;
+  let multiWritePayload = null;
+  const writtenValues = await settings.writeStorageValues({
+    set(payload, callback) {
+      multiWriteCount += 1;
+      multiWritePayload = payload;
+      callback();
+    }
+  }, { runtime: { lastError: null } }, {
+    customProviders: [{ id: 'source-1' }],
+    disabledProviders: ['builtin-1']
+  });
+  assert.strictEqual(multiWriteCount, 1, 'related storage keys must be written in one operation');
+  assert.deepStrictEqual(multiWritePayload, writtenValues);
+  assert.deepStrictEqual(writtenValues, {
+    customProviders: [{ id: 'source-1' }],
+    disabledProviders: ['builtin-1']
+  });
+
+  const chromeWithMultiWriteError = { runtime: { lastError: null } };
+  await assert.rejects(
+    settings.writeStorageValues({
+      set(_payload, callback) {
+        chromeWithMultiWriteError.runtime.lastError = { message: 'multi write failed' };
+        callback();
+      }
+    }, chromeWithMultiWriteError, { customProviders: [] }),
+    /multi write failed/
   );
 }
 

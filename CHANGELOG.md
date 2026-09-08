@@ -2,40 +2,28 @@ Tags: Release
 
 ## Features
 
-- 搜索浮层、新标签页、设置页和引导页完成 React 迁移，并移除旧 UI 渲染回退路径。
-- 搜索范围菜单支持范围过滤、双 Tab 确认、退格返回和站内搜索图标展示；同时改善键盘、输入法和 Slash Command 交互。
-- 新标签页新增四套壁纸：印象派果园、点彩湖畔、3D 天文台和山水竹桥。
-- 为快捷方式加入高分辨率 favicon 解析、页面级 favicon 候选和本地缓存能力。
-- 补充站内搜索源的本地图标资源，包括 PNG 图标，并记录图标来源说明。
-- 新增 Codex 调试桥接能力，支持对扩展页面和交互表面进行受控检查与操作。
-- 改进新标签页响应式布局，在窗口调整时复用已加载数据，并平滑移动搜索框、快捷方式、书签和最近访问区域。
+- 新增聚合搜索：可组合 2–10 个内置或自定义搜索源，一次打开全部结果；为聚合搜索设置独立触发词后，可直接从搜索框进入，触发词会与现有搜索源共用重复校验。感谢 @Lysand-Shen 通过 PR #59 贡献核心功能。
+- 聚合搜索结果默认自动归入同一标签页组，并以本次查询命名；可在常规设置中关闭。聚合搜索配置与分组偏好也已纳入配置同步。
+- 新增毛玻璃、积木和 CRT 壁纸滤镜，支持模糊强度、纹理、积木尺寸、RGB 偏移、光晕和屏幕曲率等独立调节。感谢 @JIANG-R98 通过 PR #58 贡献核心功能。
 
 ## Bug Fixes
 
-- 修复页面级 favicon 被旧主机缓存覆盖的问题，并改进缓存并发写入、策略变更失效和快捷方式图标清理。
-- 修复站内搜索 PNG 图标未被打包或未被声明为 web-accessible resource 的问题。
-- 改进搜索范围前缀的切换动画、尺寸过渡和文字对比度，提升浅色与深色主题下的可读性。
-- 修复新标签页调整窗口大小时最近访问区域闪烁或重复加载的问题。
-- 统一提示、光标 tooltip、站内搜索图标和页面过渡的视觉表现，并补充相应的多语言文案。
-- 加强 Manifest 资源、搜索范围、快捷方式 favicon、布局动画、调试桥接和商店打包内容的回归测试。
+- 完善聚合搜索的异常反馈：搜索源不可用、重复执行或部分页面打开失败时会给出明确提示，不再静默失败。
+- 当搜索框已有搜索标签时，放大镜按钮会自动禁用，避免重复打开搜索范围面板；移除标签后恢复交互。
+- 优化新手引导：保留第一页的兼容性提示，并在 New Tab 指引页直接展示相同说明，减少额外点击。
+- 改进 New Tab 的图标背景、内容加载和过渡稳定性，减少壁纸切换或窗口尺寸变化时的跳色、闪动和不必要位移。
 
 ---
 
 ## Features
 
-- Completed the React migration for the Command Bar, New Tab, Settings, and Onboarding pages, and removed the legacy UI renderer fallbacks.
-- Search scope menus now support scope filtering, double-Tab confirmation, Backspace navigation, and site-search icons, with improved keyboard, IME, and Slash Command interactions.
-- Added four New Tab wallpapers: Impressionist Orchard, Pointillist Lakeside, 3D Observatory, and Shanshui Bamboo Bridge.
-- Added high-resolution favicon resolution, page-specific favicon candidates, and local caching for shortcuts.
-- Added bundled local artwork for site-search providers, including PNG icons, with documented icon sources.
-- Added a controlled Codex debugging bridge for inspecting and operating extension pages and interaction surfaces.
-- Improved responsive New Tab layouts by reusing loaded data during window resizing and smoothly moving the search box, shortcuts, bookmarks, and recent-site sections.
+- Added aggregate search for combining 2–10 built-in or custom search sources and opening all results at once. Each aggregate search can have its own trigger word for direct access from the search box, with the same duplicate validation used by existing search sources. Thanks to @Lysand-Shen for the core contribution in PR #59.
+- Aggregate search results are grouped by default and the tab group is named after the current query; this can be disabled in General settings. Aggregate definitions and the grouping preference are also included in settings sync.
+- Added Glass Blur, Blocks, and CRT wallpaper effects with independent controls for blur strength, texture, block size, RGB offset, bloom, and screen curvature. Thanks to @JIANG-R98 for the core contribution in PR #58.
 
 ## Bug Fixes
 
-- Fixed page-specific favicons being overridden by stale host-level caches, and improved concurrent cache writes, policy invalidation, and shortcut-icon cleanup.
-- Fixed bundled site-search PNG icons not being packaged or declared as web-accessible resources.
-- Improved scope-prefix transitions, size changes, and text contrast for better readability in light and dark themes.
-- Fixed flashes and duplicate reloads in the Recent Sites section while resizing the New Tab window.
-- Unified the visual treatment of toasts, cursor tooltips, site-search icons, and page transitions, and added the corresponding localized copy.
-- Expanded regression coverage for manifest resources, search scopes, shortcut favicons, layout animations, the debugging bridge, and store packaging.
+- Added clearer aggregate-search feedback when sources are unavailable, a request is already running, or only some result pages can be opened.
+- The magnifier button is now disabled while a search tag is active, preventing the scope panel from reopening unnecessarily; interaction returns after the tag is removed.
+- Refined onboarding by keeping the compatibility tooltip on the first page while showing the same guidance directly on the New Tab slide.
+- Improved New Tab icon backgrounds, content loading, and transition stability to reduce color shifts, flashes, and unnecessary movement during wallpaper or window-size changes.

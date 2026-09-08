@@ -1079,6 +1079,28 @@ assert.strictEqual(
   namedProvider,
   'an exact multi-word provider title should expose the site-search trigger'
 );
+const aggregateProvider = {
+  key: 'tech',
+  aliases: [],
+  name: 'Technology search',
+  template: '',
+  _xIsAggregateSearch: true
+};
+assert.strictEqual(
+  search.findSiteSearchProvider('tech', [aggregateProvider]),
+  aggregateProvider,
+  'an aggregate search should match its configured trigger'
+);
+assert.strictEqual(
+  search.findSiteSearchProvider('Technology search', [aggregateProvider]),
+  null,
+  'an aggregate search name must not become an implicit alias'
+);
+assert.strictEqual(
+  search.getSiteSearchTriggerCandidate('tec', [aggregateProvider], null),
+  null,
+  'an aggregate trigger must require an exact match without implicit name aliases'
+);
 assert.strictEqual(
   search.findSiteSearchProviderByInput('docs.github.com lumno', [githubProvider]),
   githubProvider,

@@ -295,8 +295,18 @@ assert.strictEqual(thirdSlide.visual.visible, true);
 assert.strictEqual(thirdSlide.cursor.enabled, true);
 assert.deepStrictEqual(
   thirdSlide.left.interactionSlots,
-  [],
-  'third page should not render nonexistent placeholder interaction rows'
+  [
+    {
+      id: 'search-interaction-1',
+      kind: 'compatibility-row',
+      actionId: '',
+      accordionId: '',
+      icon: 'ri-puzzle-line',
+      label: '兼容其他新标签页插件',
+      description: COMPATIBILITY_TOOLTIP
+    }
+  ],
+  'slide=2 should display the first-page new-tab compatibility explanation inline'
 );
 assert.deepStrictEqual(
   thirdSlide.actions,

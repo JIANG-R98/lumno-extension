@@ -875,6 +875,14 @@
         line-height: 1.58;
       }
 
+      .interaction-description {
+        max-width: 360px;
+        color: color-mix(in srgb, var(--page-muted) 86%, var(--page-ink));
+        font-size: 13px;
+        line-height: 1.58;
+        white-space: pre-line;
+      }
+
       .interaction-accordion-trigger {
         all: unset;
         box-sizing: border-box;
@@ -1525,6 +1533,15 @@
 
         .interaction-label {
           font-size: 13px;
+          line-height: 1.42;
+        }
+
+        .interaction-description {
+          max-width: calc(
+            100vw - var(--onboarding-copy-padding-x) -
+            var(--onboarding-copy-padding-x) - 23px
+          );
+          font-size: 12px;
           line-height: 1.42;
         }
 
