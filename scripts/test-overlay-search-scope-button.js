@@ -15,8 +15,23 @@ assert.match(
 );
 assert.match(
   overlaySource,
-  /searchScopeIcon\.dataset\.searchScopeAction = 'true'[\s\S]*?setAttribute\('role', 'button'\)[\s\S]*?setAttribute\('tabindex', '0'\)[\s\S]*?setAttribute\('aria-label', searchScopeTooltipText\(\)\)/,
+  /searchScopeIcon\.dataset\.searchScopeAction = 'true'[\s\S]*?setAttribute\('role', 'button'\)[\s\S]*?setSearchScopeIconEnabled\(true\)/,
   'the overlay search icon should expose the same accessible action contract'
+);
+assert.match(
+  overlaySource,
+  /const setSearchScopeIconEnabled = \(enabled\) => \{[\s\S]*?setAttribute\('aria-disabled', nextEnabled \? 'false' : 'true'\)[\s\S]*?setAttribute\('tabindex', nextEnabled \? '0' : '-1'\)[\s\S]*?removeAttribute\('data-tooltip'\)/,
+  'an active search tag should remove the Overlay icon from pointer, keyboard, and Tooltip interaction'
+);
+assert.match(
+  overlaySource,
+  /const activateSearchScopeIcon = \(event\) => \{[\s\S]*?getAttribute\('aria-disabled'\) === 'true'[\s\S]*?return;/,
+  'programmatic activation must also respect the disabled Overlay state'
+);
+assert.match(
+  overlaySource,
+  /onModeTagActiveChange: \(active\) => \{[\s\S]*?setSearchScopeIconEnabled\(!active\)/,
+  'the shared mode-tag lifecycle should control Overlay search-icon availability'
 );
 assert.match(
   overlaySource,

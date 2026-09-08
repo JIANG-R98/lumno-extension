@@ -42,14 +42,17 @@ export function createPopconfirmController(
       return;
     }
     hostElement.dataset.open = model.open ? 'true' : 'false';
+    hostElement.setAttribute('aria-hidden', model.open ? 'false' : 'true');
+    hostElement.setAttribute('aria-label', model.message);
+    hostElement.setAttribute('role', 'dialog');
     flushSync(() => {
-      reactRoot.render(
+      reactRoot.render(model.open ? (
         <PopconfirmContent
           copy={model}
           onCancel={options.onCancel}
           onConfirm={options.onConfirm}
         />
-      );
+      ) : null);
     });
   }
 

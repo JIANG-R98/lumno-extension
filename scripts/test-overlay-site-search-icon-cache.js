@@ -203,14 +203,14 @@ assert.match(
 
 assert.match(
   newtabSource,
-  /function getSearchModeMenuItems\(\) \{\s*return loadSiteSearchIconCache\(\)\.then\(buildSearchModeMenuItems\);/,
-  'newtab should finish the local cache read before rendering its provider menu'
+  /function getSearchModeMenuItems\(\) \{[\s\S]*?Promise\.all\(\[[\s\S]*?loadSiteSearchIconCache\(\)[\s\S]*?getAggregateSearches\(\)[\s\S]*?\]\)\.then\(buildSearchModeMenuItems\);/,
+  'newtab should finish the icon cache and aggregate configuration reads before rendering its provider menu'
 );
 
 assert.match(
   overlaySource,
-  /function getSearchModeMenuItems\(\) \{[\s\S]*?return loadSiteSearchIconCache\(\)\.then\(buildSearchModeMenuItems\);/,
-  'only opening the shortcut panel should wait for an unfinished local cache read'
+  /function getSearchModeMenuItems\(\) \{[\s\S]*?Promise\.all\(\[[\s\S]*?loadSiteSearchIconCache\(\)[\s\S]*?getAggregateSearches\(\)[\s\S]*?\]\)\.then\(buildSearchModeMenuItems\);/,
+  'opening the shortcut panel should wait for unfinished icon and aggregate configuration reads'
 );
 
 assert.match(

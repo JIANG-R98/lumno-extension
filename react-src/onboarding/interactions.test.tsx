@@ -240,4 +240,21 @@ describe('Onboarding interactions React island', () => {
     expect(options.onHideInfoTooltip).toHaveBeenCalled();
     expect(document.activeElement).not.toBe(button);
   });
+
+  it('renders inline descriptions without a Tooltip affordance', () => {
+    const { controller, host } = createFixture();
+    renderSlots(controller, [
+      {
+        id: 'search-compatibility',
+        kind: 'compatibility-row',
+        label: 'Compatibility',
+        description: 'Works with other new tab extensions.'
+      }
+    ]);
+
+    expect(host.querySelector('.interaction-description')?.textContent).toBe(
+      'Works with other new tab extensions.'
+    );
+    expect(host.querySelector('.interaction-info-button')).toBeNull();
+  });
 });

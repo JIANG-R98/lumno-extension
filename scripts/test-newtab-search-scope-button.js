@@ -14,8 +14,23 @@ assert.match(
 );
 assert.match(
   newtabSource,
-  /searchScopeIcon\.dataset\.searchScopeAction = 'true'[\s\S]*?setAttribute\('role', 'button'\)[\s\S]*?setAttribute\('tabindex', '0'\)[\s\S]*?setAttribute\('aria-label', searchScopeTooltipText\(\)\)/,
+  /searchScopeIcon\.dataset\.searchScopeAction = 'true'[\s\S]*?setAttribute\('role', 'button'\)[\s\S]*?setSearchScopeIconEnabled\(true\)/,
   'the search icon should expose an accessible action contract'
+);
+assert.match(
+  newtabSource,
+  /function setSearchScopeIconEnabled\(enabled\)[\s\S]*?setAttribute\('aria-disabled', nextEnabled \? 'false' : 'true'\)[\s\S]*?setAttribute\('tabindex', nextEnabled \? '0' : '-1'\)[\s\S]*?removeAttribute\('data-tooltip'\)/,
+  'an active search tag should remove the New Tab icon from pointer, keyboard, and Tooltip interaction'
+);
+assert.match(
+  newtabSource,
+  /function activateSearchScopeIcon\(event\) \{[\s\S]*?getAttribute\('aria-disabled'\) === 'true'[\s\S]*?return;/,
+  'programmatic activation must also respect the disabled New Tab state'
+);
+assert.match(
+  newtabSource,
+  /onModeTagActiveChange: \(active\) => \{[\s\S]*?setSearchScopeIconEnabled\(!active\)/,
+  'the shared mode-tag lifecycle should control New Tab search-icon availability'
 );
 assert.match(
   newtabSource,
@@ -110,6 +125,11 @@ assert.match(
   searchInputCss,
   /\.x-lumno-search-input__icon\[data-search-scope-action="true"\]\s*\{[\s\S]*?width:\s*30px;[\s\S]*?height:\s*30px;[\s\S]*?cursor:\s*pointer;/,
   'the search action should match the settings action hit target'
+);
+assert.match(
+  searchInputCss,
+  /\.x-lumno-search-input__icon\[data-search-scope-action="true"\]\[aria-disabled="true"\]\s*\{[\s\S]*?pointer-events:\s*none;[\s\S]*?cursor:\s*default;/,
+  'the disabled search icon should return to a non-interactive visual slot'
 );
 assert.match(
   searchInputCss,

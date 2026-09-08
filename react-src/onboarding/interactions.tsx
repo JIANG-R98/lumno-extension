@@ -40,6 +40,7 @@ export interface InteractionSlot {
   accordionId?: string;
   actionId?: string;
   browserAvatars?: unknown;
+  description?: string;
   icon?: string;
   id: string;
   infoTooltip?: InteractionInfoTooltip;
@@ -314,6 +315,11 @@ function InteractionSlotCopy({
             />
           </>
         )}
+        {slot.description ? (
+          <span className="interaction-description">
+            {slot.description}
+          </span>
+        ) : null}
         {hasInfoTooltip && slot.infoTooltip ? (
           <InteractionInfoButton
             browserAvatars={slot.browserAvatars}

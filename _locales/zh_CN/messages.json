@@ -1724,6 +1724,96 @@
   "search_scope_group_sites": {
     "message": "站内搜索"
   },
+  "search_scope_group_aggregates": {
+    "message": "聚合搜索"
+  },
+  "aggregate_search_action": {
+    "message": "使用{name}搜索"
+  },
+  "aggregate_search_action_query": {
+    "message": "使用{name}搜索“{query}”"
+  },
+  "aggregate_search_group_title": {
+    "message": "聚合搜索"
+  },
+  "aggregate_search_add": {
+    "message": "添加聚合搜索"
+  },
+  "aggregate_search_clear": {
+    "message": "清空聚合搜索"
+  },
+  "confirm_clear_aggregate_search": {
+    "message": "确认清空聚合搜索？"
+  },
+  "aggregate_search_name_label": {
+    "message": "名称"
+  },
+  "aggregate_search_name_required_error": {
+    "message": "请填写聚合搜索名称。"
+  },
+  "aggregate_search_key_placeholder": {
+    "message": "例如 tech"
+  },
+  "aggregate_search_default_name": {
+    "message": "聚合搜索"
+  },
+  "aggregate_search_sources_label": {
+    "message": "搜索源"
+  },
+  "aggregate_search_selected_count": {
+    "message": "已选 {count}/{max}"
+  },
+  "aggregate_search_min_sources_error": {
+    "message": "请至少选择 2 个搜索源。"
+  },
+  "aggregate_search_max_sources_error": {
+    "message": "最多可选择 10 个搜索源。"
+  },
+  "settings_aggregate_search_auto_group_title": {
+    "message": "聚合搜索自动创建标签页组"
+  },
+  "settings_aggregate_search_auto_group_desc": {
+    "message": "开启后，聚合搜索打开的所有标签页会归入同一组，并以搜索关键词命名"
+  },
+  "aggregate_search_badge": {
+    "message": "聚合"
+  },
+  "aggregate_search_source_summary": {
+    "message": "{count} 个搜索源"
+  },
+  "aggregate_search_source_summary_unavailable": {
+    "message": "{count} 个搜索源 · {unavailable} 个不可用 · 需要更新"
+  },
+  "aggregate_search_sources_unavailable_error": {
+    "message": "该聚合搜索包含已移除或已停用的搜索源，请先到设置中更新。"
+  },
+  "aggregate_search_in_progress": {
+    "message": "该聚合搜索正在执行，请勿重复触发。"
+  },
+  "aggregate_search_partial_failure": {
+    "message": "部分聚合搜索结果未能打开。"
+  },
+  "aggregate_search_degraded_success": {
+    "message": "搜索结果已打开，但标签页分组、命名或切换未完全完成。"
+  },
+  "aggregate_search_storage_unavailable_error": {
+    "message": "聚合搜索读取失败，请重新载入设置页后重试。"
+  },
+  "aggregate_search_source_selection_unavailable_error": {
+    "message": "请移除不可用的搜索源，并至少选择 2 个可用搜索源。"
+  },
+  "aggregate_search_unavailable_group": {
+    "message": "不可用的搜索源"
+  },
+  "aggregate_search_unavailable_name": {
+    "message": "不可用的搜索源（{source}）"
+  },
+  "aggregate_search_name_duplicate_error": {
+    "message": "已存在同名的聚合搜索。"
+  },
+  "aggregate_search_max_items_error": {
+    "message": "最多可创建 8 个聚合搜索。"
+  },
   "overlay_empty_open_tabs": {
     "message": "暂无标签"
   },

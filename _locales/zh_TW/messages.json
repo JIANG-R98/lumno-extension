@@ -1724,6 +1724,96 @@
   "search_scope_group_sites": {
     "message": "站內搜尋"
   },
+  "search_scope_group_aggregates": {
+    "message": "彙整搜尋"
+  },
+  "aggregate_search_action": {
+    "message": "使用{name}搜尋"
+  },
+  "aggregate_search_action_query": {
+    "message": "使用{name}搜尋「{query}」"
+  },
+  "aggregate_search_group_title": {
+    "message": "彙整搜尋"
+  },
+  "aggregate_search_add": {
+    "message": "新增彙整搜尋"
+  },
+  "aggregate_search_clear": {
+    "message": "清空彙整搜尋"
+  },
+  "confirm_clear_aggregate_search": {
+    "message": "確認清空彙整搜尋？"
+  },
+  "aggregate_search_name_label": {
+    "message": "名稱"
+  },
+  "aggregate_search_name_required_error": {
+    "message": "請填寫彙整搜尋名稱。"
+  },
+  "aggregate_search_key_placeholder": {
+    "message": "例如 tech"
+  },
+  "aggregate_search_default_name": {
+    "message": "彙整搜尋"
+  },
+  "aggregate_search_sources_label": {
+    "message": "搜尋來源"
+  },
+  "aggregate_search_selected_count": {
+    "message": "已選 {count}/{max}"
+  },
+  "aggregate_search_min_sources_error": {
+    "message": "請至少選擇 2 個搜尋來源。"
+  },
+  "aggregate_search_max_sources_error": {
+    "message": "最多可選擇 10 個搜尋來源。"
+  },
+  "settings_aggregate_search_auto_group_title": {
+    "message": "彙整搜尋自動建立分頁群組"
+  },
+  "settings_aggregate_search_auto_group_desc": {
+    "message": "開啟後，彙整搜尋所開啟的所有分頁會歸入同一群組，並以搜尋關鍵字命名"
+  },
+  "aggregate_search_badge": {
+    "message": "彙整"
+  },
+  "aggregate_search_source_summary": {
+    "message": "{count} 個搜尋來源"
+  },
+  "aggregate_search_source_summary_unavailable": {
+    "message": "{count} 個搜尋來源 · {unavailable} 個無法使用 · 需要更新"
+  },
+  "aggregate_search_sources_unavailable_error": {
+    "message": "此彙整搜尋包含已移除或已停用的搜尋來源，請先到設定中更新。"
+  },
+  "aggregate_search_in_progress": {
+    "message": "此彙整搜尋正在執行，請勿重複觸發。"
+  },
+  "aggregate_search_partial_failure": {
+    "message": "部分彙整搜尋結果無法開啟。"
+  },
+  "aggregate_search_degraded_success": {
+    "message": "搜尋結果已開啟，但分頁群組、命名或切換未完全完成。"
+  },
+  "aggregate_search_storage_unavailable_error": {
+    "message": "彙整搜尋讀取失敗，請重新載入設定頁後再試。"
+  },
+  "aggregate_search_source_selection_unavailable_error": {
+    "message": "請移除無法使用的搜尋來源，並至少選擇 2 個可用的搜尋來源。"
+  },
+  "aggregate_search_unavailable_group": {
+    "message": "無法使用的搜尋來源"
+  },
+  "aggregate_search_unavailable_name": {
+    "message": "無法使用的搜尋來源（{source}）"
+  },
+  "aggregate_search_name_duplicate_error": {
+    "message": "已有同名的彙整搜尋。"
+  },
+  "aggregate_search_max_items_error": {
+    "message": "最多可建立 8 個彙整搜尋。"
+  },
   "overlay_empty_open_tabs": {
     "message": "暫無分頁"
   },

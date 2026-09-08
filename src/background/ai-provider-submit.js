@@ -221,6 +221,17 @@
     }
   });
 
+  const STRATEGY_ALLOWED_ORIGINS = Object.freeze({
+    geminiPrompt: Object.freeze(['https://gemini.google.com']),
+    chatgptPrompt: Object.freeze(['https://chatgpt.com']),
+    doubaoPrompt: Object.freeze(['https://www.doubao.com']),
+    qianwenQuery: Object.freeze(['https://www.qianwen.com']),
+    yuanbaoPrompt: Object.freeze(['https://yuanbao.tencent.com']),
+    minimaxPrompt: Object.freeze(['https://chat.minimax.io']),
+    deepseekPrompt: Object.freeze(['https://chat.deepseek.com']),
+    kimiPrompt: Object.freeze(['https://www.kimi.com'])
+  });
+
   function getStrategyConfig(strategyName) {
     const key = String(strategyName || '').trim();
     const config = STRATEGIES[key];
@@ -244,6 +255,20 @@
     } catch (_error) {
       return '';
     }
+  }
+
+  function getAllowedStrategyOrigins(strategyName) {
+    const key = String(strategyName || '').trim();
+    const origins = STRATEGY_ALLOWED_ORIGINS[key];
+    return Array.isArray(origins) ? origins.slice() : [];
+  }
+
+  function isAllowedStrategyOrigin(strategyName, origin) {
+    const normalizedOrigin = String(origin || '').trim();
+    return Boolean(
+      normalizedOrigin &&
+      getAllowedStrategyOrigins(strategyName).includes(normalizedOrigin)
+    );
   }
 
   function getCurrentTab(chromeApi, tabId) {
@@ -274,12 +299,15 @@
     if (!config) {
       return Promise.resolve({ ok: false, reason: 'unknown-submit-strategy' });
     }
-    if (config.urlOnly) {
-      return Promise.resolve({ ok: true, method: 'url' });
-    }
     const expectedOrigin = getHttpOrigin(expectedUrl);
     if (!expectedOrigin) {
       return { ok: false, reason: 'invalid-expected-origin' };
+    }
+    if (!isAllowedStrategyOrigin(strategyName, expectedOrigin)) {
+      return { ok: false, reason: 'unapproved-submit-origin' };
+    }
+    if (config.urlOnly) {
+      return Promise.resolve({ ok: true, method: 'url' });
     }
     const currentTab = await getCurrentTab(chromeApi, tabId);
     if (!currentTab.ok) {
@@ -581,8 +609,10 @@
   }
 
   return Object.freeze({
+    getAllowedStrategyOrigins,
     getHttpOrigin,
     getStrategyConfig,
+    isAllowedStrategyOrigin,
     submitPromptInTab
   });
 });

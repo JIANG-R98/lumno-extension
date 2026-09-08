@@ -42,6 +42,7 @@ interface ModeController {
     viewportBottom?: number;
   }): number | null;
   getModeMenuFilterQuery(): string;
+  hasActiveModeTag(): boolean;
   handleModeMenuKeyEvent(event: KeyboardEvent): boolean;
   menuElement: HTMLDivElement;
   isModeMenuVisible(): boolean;
@@ -147,6 +148,31 @@ afterEach(() => {
 });
 
 describe('Shared search scope menu', () => {
+  it('reports mode-tag activation only when the visible tag state changes', () => {
+    const parts = createModeParts();
+    const onModeTagActiveChange = vi.fn();
+    const controller = window.LumnoSearchInputMode.createInputModeController(
+      parts,
+      { onModeTagActiveChange }
+    );
+
+    expect(controller.hasActiveModeTag()).toBe(false);
+    controller.setPrefixText('Google', {}, { modeId: 'provider:google' });
+    expect(controller.hasActiveModeTag()).toBe(true);
+    expect(onModeTagActiveChange).toHaveBeenCalledTimes(1);
+    expect(onModeTagActiveChange).toHaveBeenLastCalledWith(true);
+
+    controller.setPrefixText('Google', {}, { modeId: 'provider:google' });
+    expect(onModeTagActiveChange).toHaveBeenCalledTimes(1);
+
+    controller.clearProviderPrefix();
+    expect(controller.hasActiveModeTag()).toBe(false);
+    expect(onModeTagActiveChange).toHaveBeenCalledTimes(2);
+    expect(onModeTagActiveChange).toHaveBeenLastCalledWith(false);
+
+    controller.destroy();
+  });
+
   it('opens only after two distinct empty-input Tab presses within the shared window', () => {
     vi.useFakeTimers();
     const parts = createModeParts();

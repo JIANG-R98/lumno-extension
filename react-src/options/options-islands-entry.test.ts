@@ -5,6 +5,12 @@ type OptionsRuntime = typeof globalThis & {
     reactReady: boolean;
   };
   LumnoOptionsReactIslands?: unknown;
+  LumnoOptionsAggregateSearchList?: {
+    implementation?: string;
+  };
+  LumnoOptionsAggregateSearchListReact?: {
+    implementation?: string;
+  };
   LumnoOptionsBlacklistList?: {
     implementation?: string;
   };
@@ -102,6 +108,8 @@ const runtime = globalThis as OptionsRuntime;
 function clearRuntime(): void {
   delete runtime.LumnoOptionsReactBootstrap;
   delete runtime.LumnoOptionsReactIslands;
+  delete runtime.LumnoOptionsAggregateSearchList;
+  delete runtime.LumnoOptionsAggregateSearchListReact;
   delete runtime.LumnoOptionsBlacklistList;
   delete runtime.LumnoOptionsBlacklistListReact;
   delete runtime.LumnoOptionsFeedbackSupport;
@@ -148,6 +156,10 @@ describe('Options React islands entry', () => {
     await import('./options-islands-entry');
 
     expect(runtime.LumnoOptionsReactBootstrap.reactReady).toBe(true);
+    expect(runtime.LumnoOptionsAggregateSearchList?.implementation).toBe('react');
+    expect(runtime.LumnoOptionsAggregateSearchListReact).toBe(
+      runtime.LumnoOptionsAggregateSearchList
+    );
     expect(runtime.LumnoOptionsBlacklistList?.implementation).toBe('react');
     expect(runtime.LumnoOptionsBlacklistListReact).toBe(
       runtime.LumnoOptionsBlacklistList
@@ -207,6 +219,7 @@ describe('Options React islands entry', () => {
       runtime.LumnoOverlayTabSwitcherView
     );
     expect(runtime.LumnoOptionsReactIslands).toEqual({
+      aggregateSearchList: runtime.LumnoOptionsAggregateSearchList,
       blacklistList: runtime.LumnoOptionsBlacklistList,
       feedbackSupport: runtime.LumnoOptionsFeedbackSupport,
       infoButton: runtime.LumnoOptionsInfoButton,

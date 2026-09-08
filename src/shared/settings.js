@@ -50,6 +50,9 @@
   const SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY = '_x_extension_selection_quick_actions_enabled_2026_unique_';
   const SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY = '_x_extension_selection_quick_actions_provider_2026_unique_';
   const SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY = '_x_extension_selection_quick_actions_group_enabled_2026_unique_';
+  const AGGREGATE_SEARCH_STORAGE_KEY = '_x_extension_aggregate_searches_2026_unique_';
+  const AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY =
+    '_x_extension_aggregate_search_auto_group_enabled_2026_unique_';
   // Device-specific appearance. Never import these values from Chrome Sync.
   const BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS = Object.freeze([
     '_x_extension_bookmark_topbar_surface_mode_2026_unique_',
@@ -119,6 +122,8 @@
     '_x_extension_fallback_hotkey_2024_unique_',
     '_x_extension_site_search_custom_2024_unique_',
     '_x_extension_site_search_disabled_2024_unique_',
+    AGGREGATE_SEARCH_STORAGE_KEY,
+    AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY,
     '_x_extension_search_blacklist_2026_unique_',
     '_x_extension_favicon_request_blacklist_2026_unique_',
     '_x_extension_favicon_enhanced_fetch_enabled_2026_unique_',
@@ -496,6 +501,10 @@
     return value === true;
   }
 
+  function normalizeAggregateSearchAutoGroupEnabled(value) {
+    return value !== false;
+  }
+
   function normalizeThemePreference(value) {
     if (value === 'dark') {
       return 'dark';
@@ -517,6 +526,97 @@
     return {
       [THEME_STORAGE_KEY]: normalizeThemeMode(mode)
     };
+  }
+
+  function readStorageValue(storageArea, chromeApi, key) {
+    return new Promise((resolve, reject) => {
+      if (!storageArea || typeof storageArea.get !== 'function') {
+        resolve(undefined);
+        return;
+      }
+      let settled = false;
+      const finish = (error, result) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        if (error) {
+          reject(error instanceof Error ? error : new Error(String(error)));
+          return;
+        }
+        if (!result || typeof result !== 'object') {
+          reject(new Error('storage-read-failed'));
+          return;
+        }
+        resolve(result[key]);
+      };
+      const callback = (result) => {
+        const runtimeError = chromeApi && chromeApi.runtime
+          ? chromeApi.runtime.lastError
+          : null;
+        finish(
+          runtimeError
+            ? new Error(String(runtimeError.message || 'storage-read-failed'))
+            : null,
+          result
+        );
+      };
+      try {
+        const maybePromise = storageArea.get([key], callback);
+        if (maybePromise && typeof maybePromise.then === 'function') {
+          maybePromise.then((result) => finish(null, result)).catch((error) => finish(error));
+        }
+      } catch (error) {
+        finish(error);
+      }
+    });
+  }
+
+  function writeStorageValues(storageArea, chromeApi, values) {
+    const payload = values && typeof values === 'object' && !Array.isArray(values)
+      ? { ...values }
+      : {};
+    return new Promise((resolve, reject) => {
+      if (!storageArea || typeof storageArea.set !== 'function') {
+        resolve(payload);
+        return;
+      }
+      let settled = false;
+      const finish = (error) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        if (error) {
+          reject(error instanceof Error ? error : new Error(String(error)));
+          return;
+        }
+        resolve(payload);
+      };
+      const callback = () => {
+        const runtimeError = chromeApi && chromeApi.runtime
+          ? chromeApi.runtime.lastError
+          : null;
+        finish(runtimeError
+          ? new Error(String(runtimeError.message || 'storage-write-failed'))
+          : null);
+      };
+      try {
+        const maybePromise = storageArea.set(payload, callback);
+        if (maybePromise && typeof maybePromise.then === 'function') {
+          maybePromise.then(() => {
+            Promise.resolve().then(() => finish(null));
+          }).catch(finish);
+        }
+      } catch (error) {
+        finish(error);
+      }
+    });
+  }
+
+  function writeStorageValue(storageArea, chromeApi, key, value) {
+    return writeStorageValues(storageArea, chromeApi, { [key]: value })
+      .then(() => value);
   }
 
   function createStorageReadBatch(area) {
@@ -778,6 +878,8 @@
     SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY,
     SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY,
     SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY,
+    AGGREGATE_SEARCH_STORAGE_KEY,
+    AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY,
     BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS,
     CHROME_SYNC_STORAGE_KEYS,
     SELECTION_QUICK_ACTIONS_PROVIDER_KEYS,
@@ -832,9 +934,13 @@
     normalizeSelectionQuickActionsEnabled,
     normalizeSelectionQuickActionsProvider,
     normalizeSelectionQuickActionsGroupEnabled,
+    normalizeAggregateSearchAutoGroupEnabled,
     normalizeThemePreference,
     normalizeThemeMode,
     createGlobalThemeModeStorageUpdate,
+    readStorageValue,
+    writeStorageValue,
+    writeStorageValues,
     createStorageReadBatch,
     createProviderStorageRuntime,
     addStorageChangeListener

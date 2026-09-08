@@ -1,4 +1,5 @@
 import { createToastApi } from '../shared/toast';
+import { createAggregateSearchListApi } from './aggregate-search-list';
 import { createBlacklistListApi } from './blacklist-list';
 import { createFeedbackSupportApi } from './feedback-support';
 import { createInfoButtonApi } from './info-button';
@@ -20,6 +21,7 @@ const runtime = globalThis as typeof globalThis & {
     reactReady: boolean;
   };
   LumnoOptionsReactIslands?: {
+    aggregateSearchList: ReturnType<typeof createAggregateSearchListApi>;
     blacklistList: ReturnType<typeof createBlacklistListApi>;
     feedbackSupport: ReturnType<typeof createFeedbackSupportApi>;
     infoButton: ReturnType<typeof createInfoButtonApi>;
@@ -36,6 +38,8 @@ const runtime = globalThis as typeof globalThis & {
     toast: ReturnType<typeof createToastApi>;
     tabSwitcher: ReturnType<typeof createTabSwitcherViewApi>;
   };
+  LumnoOptionsAggregateSearchList?: ReturnType<typeof createAggregateSearchListApi>;
+  LumnoOptionsAggregateSearchListReact?: ReturnType<typeof createAggregateSearchListApi>;
   LumnoOptionsBlacklistList?: ReturnType<typeof createBlacklistListApi>;
   LumnoOptionsBlacklistListReact?: ReturnType<typeof createBlacklistListApi>;
   LumnoOptionsFeedbackSupport?: ReturnType<typeof createFeedbackSupportApi>;
@@ -73,6 +77,7 @@ const runtime = globalThis as typeof globalThis & {
 const bootstrapState = runtime.LumnoOptionsReactBootstrap;
 
 if (!bootstrapState || !bootstrapState.reactReady) {
+  const aggregateSearchListApi = createAggregateSearchListApi();
   const blacklistListApi = createBlacklistListApi();
   const feedbackSupportApi = createFeedbackSupportApi();
   const infoButtonApi = createInfoButtonApi();
@@ -91,6 +96,8 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   const tabSwitcherApi =
     runtime.LumnoOverlayTabSwitcherView || createTabSwitcherViewApi();
 
+  runtime.LumnoOptionsAggregateSearchListReact = aggregateSearchListApi;
+  runtime.LumnoOptionsAggregateSearchList = aggregateSearchListApi;
   runtime.LumnoOptionsBlacklistListReact = blacklistListApi;
   runtime.LumnoOptionsBlacklistList = blacklistListApi;
   runtime.LumnoOptionsFeedbackSupportReact = feedbackSupportApi;
@@ -124,6 +131,7 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   runtime.LumnoOverlayTabSwitcherViewReact = tabSwitcherApi;
   runtime.LumnoOverlayTabSwitcherView = tabSwitcherApi;
   runtime.LumnoOptionsReactIslands = Object.freeze({
+    aggregateSearchList: aggregateSearchListApi,
     blacklistList: blacklistListApi,
     feedbackSupport: feedbackSupportApi,
     infoButton: infoButtonApi,

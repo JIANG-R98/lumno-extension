@@ -968,6 +968,25 @@
     return value;
   }
 
+  function createCompatibilityRow(text, options = {}) {
+    const rows = text.intro.rows || {};
+    const row = {
+      kind: 'compatibility-row',
+      icon: 'ri-puzzle-line',
+      label: rows.compatibility
+    };
+    if (options.showDescription === true) {
+      row.description = rows.compatibilityTooltip;
+    } else {
+      row.infoTooltip = Object.freeze({
+        icon: 'ri-information-line',
+        label: rows.compatibilityTooltipLabel,
+        text: rows.compatibilityTooltip
+      });
+    }
+    return Object.freeze(row);
+  }
+
   function createIntroRows(text) {
     const rows = text.intro.rows || {};
     return Object.freeze([
@@ -997,16 +1016,7 @@
           type: 'browser-avatars'
         })
       }),
-      Object.freeze({
-        kind: 'compatibility-row',
-        icon: 'ri-puzzle-line',
-        label: rows.compatibility,
-        infoTooltip: Object.freeze({
-          icon: 'ri-information-line',
-          label: rows.compatibilityTooltipLabel,
-          text: rows.compatibilityTooltip
-        })
-      })
+      createCompatibilityRow(text)
     ]);
   }
 
@@ -1119,6 +1129,9 @@
         }),
         visualKind: 'newtab-preview-surface',
         visualVisible: true,
+        interactionRows: Object.freeze([
+          createCompatibilityRow(text, { showDescription: true })
+        ]),
         cursorEnabled: true,
         actions: Object.freeze({
           primary: Object.freeze({
@@ -1194,7 +1207,7 @@
           accordionId: String(row.accordionId || '').trim(),
           icon: row.icon || '',
           label: row.label || '',
-          description: ''
+          description: String(row.description || '')
         };
         const browserAvatars = cloneBrowserAvatars(row.browserAvatars);
         if (browserAvatars && browserAvatars.browsers.length > 0) {
