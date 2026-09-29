@@ -198,7 +198,7 @@
         --x-nt-bookmark-folder-hover-bg: rgba(83, 147, 255, 0.05);
         --x-nt-bookmark-shadow-rgb: 199, 199, 199;
         --x-nt-bookmark-pager-hover-bg: rgba(17, 24, 39, 0.08);
-        --x-nt-bookmark-insert-indicator: #7a8491;
+        --x-nt-insert-indicator: #7a8491;
         --input-focus-color: rgba(59, 130, 246, 0.65);
         --input-focus-shadow: rgba(59, 130, 246, 0.2);
         --input-placeholder: rgba(100, 116, 139, 0.7);
@@ -376,7 +376,7 @@
         --x-nt-bookmark-folder-hover-bg: rgba(83, 147, 255, 0.08);
         --x-nt-bookmark-shadow-rgb: 60, 74, 97;
         --x-nt-bookmark-pager-hover-bg: rgba(226, 232, 240, 0.18);
-        --x-nt-bookmark-insert-indicator: #a8b0bc;
+        --x-nt-insert-indicator: #a8b0bc;
         --input-focus-color: rgba(191, 219, 254, 0.7);
         --input-focus-shadow: rgba(59, 130, 246, 0.3);
         --input-placeholder: rgba(148, 163, 184, 0.7);
@@ -644,6 +644,7 @@
         gap: var(--x-nt-shortcuts-grid-row-gap, 10px) var(--x-nt-shortcuts-grid-column-gap, 4px);
         padding: var(--x-nt-shortcuts-grid-padding, 10px 8px 12px);
         box-sizing: border-box;
+        position: relative;
       }
       .x-nt-shortcut-tile {
         all: unset;
@@ -671,6 +672,13 @@
       .x-nt-shortcut-tile[data-shortcut-dragging="true"],
       .x-nt-shortcut-tile[data-shortcut-dropping="true"] {
         z-index: 8;
+      }
+      /* The dragged tile moves by transform inside this section, so lift the
+         section above the bottom dock and bookmarks bar while it can leave the
+         grid; pointer capture keeps delivering events to the tile. */
+      body[data-drag-source="shortcut"] .x-nt-shortcuts-section {
+        z-index: 10001;
+        pointer-events: none;
       }
       .x-nt-shortcut-tile:focus-visible {
         outline: 2px solid var(--x-nt-bookmark-focus, rgba(0, 0, 0, 0.22));
@@ -1594,8 +1602,8 @@
         cursor: grabbing;
         transition: transform 170ms cubic-bezier(0.22, 1, 0.36, 1);
       }
-      body[data-bookmark-drag-active="true"],
-      body[data-bookmark-drag-active="true"] * {
+      body[data-drag-source],
+      body[data-drag-source] * {
         cursor: grabbing !important;
       }
       .x-nt-bookmark-card[data-bookmark-dragging="true"],
@@ -1614,15 +1622,15 @@
         border-color: rgba(96, 165, 250, 0.86);
         box-shadow: none;
       }
-      #_x_extension_newtab_bookmarks_grid_2024_unique_[data-bookmark-insert-position]::after {
+      [data-insert-line-position]::after {
         content: "";
         position: absolute;
-        top: var(--x-nt-bookmark-insert-line-top, 8px);
-        left: calc(var(--x-nt-bookmark-insert-line-left, 4px) - 1px);
+        top: var(--x-nt-insert-line-top, 8px);
+        left: calc(var(--x-nt-insert-line-left, 4px) - 1px);
         width: 2px;
-        height: var(--x-nt-bookmark-insert-line-height, 33px);
+        height: var(--x-nt-insert-line-height, 33px);
         border-radius: 999px;
-        background: var(--x-nt-bookmark-insert-indicator, #7a8491);
+        background: var(--x-nt-insert-indicator, #7a8491);
         pointer-events: none;
         z-index: 12;
         transform: scaleY(0);
@@ -1631,13 +1639,13 @@
         animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
         animation-fill-mode: forwards;
       }
-      #_x_extension_newtab_bookmarks_grid_2024_unique_[data-bookmark-insert-motion="a"]::after {
-        animation-name: _x_nt_bookmark_insert_line_extend_a_2026_unique_;
+      [data-insert-line-motion="a"]::after {
+        animation-name: _x_nt_insert_line_extend_a_2026_unique_;
       }
-      #_x_extension_newtab_bookmarks_grid_2024_unique_[data-bookmark-insert-motion="b"]::after {
-        animation-name: _x_nt_bookmark_insert_line_extend_b_2026_unique_;
+      [data-insert-line-motion="b"]::after {
+        animation-name: _x_nt_insert_line_extend_b_2026_unique_;
       }
-      @keyframes _x_nt_bookmark_insert_line_extend_a_2026_unique_ {
+      @keyframes _x_nt_insert_line_extend_a_2026_unique_ {
         from {
           opacity: 0;
           transform: scaleY(0);
@@ -1647,7 +1655,7 @@
           transform: scaleY(1);
         }
       }
-      @keyframes _x_nt_bookmark_insert_line_extend_b_2026_unique_ {
+      @keyframes _x_nt_insert_line_extend_b_2026_unique_ {
         from {
           opacity: 0;
           transform: scaleY(0);
@@ -1658,7 +1666,7 @@
         }
       }
       @media (prefers-reduced-motion: reduce) {
-        #_x_extension_newtab_bookmarks_grid_2024_unique_[data-bookmark-insert-position]::after {
+        [data-insert-line-position]::after {
           opacity: 1;
           transform: scaleY(1);
           animation: none;
@@ -2196,9 +2204,9 @@
         text-shadow: none;
       }
       .x-nt-bookmarks-topbar
-        #_x_extension_newtab_bookmarks_grid_2024_unique_[data-bookmark-insert-position]::after {
-        top: var(--x-nt-bookmark-insert-line-top, 2px);
-        height: var(--x-nt-bookmark-insert-line-height, 24px);
+        #_x_extension_newtab_bookmarks_grid_2024_unique_[data-insert-line-position]::after {
+        top: var(--x-nt-insert-line-top, 2px);
+        height: var(--x-nt-insert-line-height, 24px);
       }
       body[data-theme="dark"] .x-nt-bookmarks-topbar {
         --x-nt-bookmarks-topbar-surface:
@@ -2557,7 +2565,7 @@
         right: 6px;
         height: 2px;
         border-radius: 999px;
-        background: var(--x-nt-bookmark-insert-indicator, #7a8491);
+        background: var(--x-nt-insert-indicator, #7a8491);
         pointer-events: none;
         z-index: 5;
       }
@@ -6956,6 +6964,7 @@
     <script src="bookmarks-runtime.js"></script>
     <script src="bookmark-move-history.js"></script>
     <script src="bookmark-drag.js"></script>
+    <script src="cross-surface-drag.js"></script>
     <script src="bookmark-folder-icon.js"></script>
     <script src="layout.js"></script>
     <script src="direct-navigation-settle.js"></script>

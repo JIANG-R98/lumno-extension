@@ -1442,6 +1442,9 @@
   "bookmarks_move_failed": {
     "message": "Could not move bookmark"
   },
+  "bookmarks_moved_to_shortcuts": {
+    "message": "Moved to shortcuts"
+  },
   "search_tag_history": {
     "message": "History"
   },
@@ -2170,6 +2173,12 @@
   },
   "newtab_shortcuts_removed": {
     "message": "Shortcut removed"
+  },
+  "newtab_shortcuts_moved_to_bookmarks": {
+    "message": "Moved to bookmarks"
+  },
+  "newtab_shortcuts_move_to_bookmarks_failed": {
+    "message": "Could not move to bookmarks"
   },
   "newtab_shortcuts_edit_dialog_title": {
     "message": "Edit shortcut"

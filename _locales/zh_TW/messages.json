@@ -1442,6 +1442,9 @@
   "bookmarks_move_failed": {
     "message": "無法移動書籤"
   },
+  "bookmarks_moved_to_shortcuts": {
+    "message": "已移至快捷方式"
+  },
   "search_tag_history": {
     "message": "歷史"
   },
@@ -2170,6 +2173,12 @@
   },
   "newtab_shortcuts_removed": {
     "message": "已移除快捷方式"
+  },
+  "newtab_shortcuts_moved_to_bookmarks": {
+    "message": "已移至書籤"
+  },
+  "newtab_shortcuts_move_to_bookmarks_failed": {
+    "message": "無法移至書籤"
   },
   "newtab_shortcuts_edit_dialog_title": {
     "message": "編輯快捷方式"
