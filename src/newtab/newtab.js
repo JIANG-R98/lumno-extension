@@ -251,6 +251,7 @@
   );
   const NEWTAB_BOOKMARK_MOVE_HISTORY = globalThis.LumnoNewtabBookmarkMoveHistory || {};
   const NEWTAB_BOOKMARK_DRAG = globalThis.LumnoNewtabBookmarkDrag || {};
+  const NEWTAB_CROSS_SURFACE_DRAG = globalThis.LumnoNewtabCrossSurfaceDrag || {};
   const NEWTAB_BOOKMARK_FOLDER_ICON = globalThis.LumnoNewtabBookmarkFolderIcon || {};
   const NEWTAB_PAGE_NOTICE = globalThis.LumnoNewtabPageNotice || {};
   const NEWTAB_TOAST = globalThis.LumnoNewtabToast || {};
@@ -306,6 +307,9 @@
       typeof NEWTAB_BOOKMARK_DRAG.isPointInsideElement !== 'function' ||
       typeof NEWTAB_BOOKMARK_DRAG.removePreview !== 'function' ||
       typeof NEWTAB_BOOKMARK_DRAG.updateVisualPosition !== 'function' ||
+      typeof NEWTAB_CROSS_SURFACE_DRAG.getRowInsertionSlot !== 'function' ||
+      typeof NEWTAB_CROSS_SURFACE_DRAG.isBookmarkFolderDropTarget !== 'function' ||
+      typeof NEWTAB_CROSS_SURFACE_DRAG.planBookmarkToShortcut !== 'function' ||
       typeof NEWTAB_BOOKMARK_FOLDER_ICON.getFigmaFolderSvg !== 'function' ||
       typeof NEWTAB_BOOKMARK_FOLDER_ICON.initFolderPathMorph !== 'function' ||
       typeof NEWTAB_BOOKMARK_FOLDER_ICON.playFolderPathMorph !== 'function' ||
@@ -6448,7 +6452,8 @@
 
   function isShortcutTooltipSuppressed() {
     return Boolean(
-      (shortcutDragState && shortcutDragState.isDragging) ||
+      isShortcutDragActive() ||
+      isBookmarkDragActive() ||
       (shortcutGrid && shortcutGrid.getAttribute('data-shortcut-dragging') === 'true') ||
       isShortcutContextMenuOpen()
     );
@@ -7335,7 +7340,7 @@
       shortcutDockPendingTile = null;
       shortcutDockPendingPointerX = Number.NaN;
       if (!pendingTile || !pendingTile.isConnected ||
-          (shortcutDragState && shortcutDragState.isDragging)) {
+          isShortcutDragActive() || isBookmarkDragActive()) {
         return;
       }
       setShortcutDockHover(pendingTile, pendingPointerX);
@@ -7402,7 +7407,7 @@
   }
 
   function handleShortcutDockPointerOver(event) {
-    if (shortcutDragState && shortcutDragState.isDragging) {
+    if (isShortcutDragActive() || isBookmarkDragActive()) {
       return;
     }
     const tile = getShortcutTileFromNode(event.target);
@@ -7412,7 +7417,7 @@
   }
 
   function handleShortcutDockPointerMove(event) {
-    if (shortcutDragState && shortcutDragState.isDragging) {
+    if (isShortcutDragActive() || isBookmarkDragActive()) {
       return;
     }
     const tile = getShortcutTileFromNode(event.target);
@@ -8472,47 +8477,28 @@
     return getShortcutReorderTiles().indexOf(tile);
   }
 
-  function getShortcutDragInsertionIndex(pointerX, pointerY) {
-    if (!shortcutGrid || !shortcutDragState || !Number.isFinite(pointerX) ||
-        !Number.isFinite(pointerY)) {
-      return -1;
-    }
-    const draggedTile = shortcutDragState.tile;
+  function getShortcutInsertionSlotAt(pointerX, pointerY, excludedTile) {
     const layoutItems = getShortcutReorderTiles()
-      .filter((tile) => tile && tile !== draggedTile)
+      .filter((tile) => tile && tile !== excludedTile)
       .map((tile) => ({
         tile,
         rect: getShortcutTileLayoutRect(tile)
       }))
       .filter((item) => item.rect && item.rect.width > 0 && item.rect.height > 0);
-    if (!layoutItems.length) {
-      return 0;
+    const slot = NEWTAB_CROSS_SURFACE_DRAG.getRowInsertionSlot(layoutItems, pointerX, pointerY);
+    return {
+      index: slot.index,
+      markerPosition: slot.markerPosition,
+      anchorRect: slot.anchorIndex >= 0 ? layoutItems[slot.anchorIndex].rect : null
+    };
+  }
+
+  function getShortcutDragInsertionIndex(pointerX, pointerY) {
+    if (!shortcutGrid || !shortcutDragState || !Number.isFinite(pointerX) ||
+        !Number.isFinite(pointerY)) {
+      return -1;
     }
-    let nearestItem = layoutItems[0];
-    let nearestDistance = Infinity;
-    layoutItems.forEach((item) => {
-      const rect = item.rect;
-      const verticalDistance = pointerY < rect.top
-        ? rect.top - pointerY
-        : pointerY > rect.bottom
-          ? pointerY - rect.bottom
-          : 0;
-      if (verticalDistance < nearestDistance) {
-        nearestDistance = verticalDistance;
-        nearestItem = item;
-      }
-    });
-    const rowCenterY = nearestItem.rect.centerY;
-    const rowTiles = layoutItems
-      .filter((item) => Math.abs(item.rect.centerY - rowCenterY) <=
-        Math.max(8, Math.min(item.rect.height, nearestItem.rect.height) / 2))
-      .sort((first, second) => first.rect.left - second.rect.left);
-    const insertionAnchor = rowTiles.find((item) => pointerX < item.rect.centerX);
-    if (insertionAnchor) {
-      return layoutItems.findIndex((item) => item.tile === insertionAnchor.tile);
-    }
-    const lastRowTile = rowTiles[rowTiles.length - 1];
-    return layoutItems.findIndex((item) => item.tile === lastRowTile.tile) + 1;
+    return getShortcutInsertionSlotAt(pointerX, pointerY, shortcutDragState.tile).index;
   }
 
   function moveShortcutTileElement(tile, targetIndex) {
@@ -8570,8 +8556,14 @@
       return;
     }
     shortcutDragState.isDragging = true;
+    if (document.body) {
+      document.body.setAttribute('data-drag-source', 'shortcut');
+    }
     hideShortcutTooltip();
     resetShortcutDockHover();
+    if (isEmptyBookmarkRootHidden()) {
+      renderCurrentBookmarkPage();
+    }
     shortcutGrid.setAttribute('data-shortcut-dragging', 'true');
     tile.setAttribute('data-shortcut-dragging', 'true');
     tile.setAttribute('aria-grabbed', 'true');
@@ -8601,6 +8593,9 @@
       return;
     }
     setShortcutDragTileTransform(state, pointerX, pointerY);
+    if (updateShortcutDragBookmarkTarget(state, pointerX, pointerY)) {
+      return;
+    }
     const targetIndex = getShortcutDragInsertionIndex(pointerX, pointerY);
     if (targetIndex < 0 || targetIndex === getShortcutTileInsertionIndex(state.tile)) {
       return;
@@ -8653,10 +8648,18 @@
       return;
     }
     const state = shortcutDragState;
+    detachShortcutDragDocumentListeners();
     if (state.isDragging) {
       flushShortcutDragMove(state);
     }
+    const bookmarkDropTarget = state.isDragging && !(options && options.cancel)
+      ? state.dropTarget
+      : null;
+    clearDragDropTarget(state);
     shortcutDragState = null;
+    if (document.body) {
+      document.body.removeAttribute('data-drag-source');
+    }
     const tile = state.tile;
     if (shortcutGrid) {
       shortcutGrid.removeAttribute('data-shortcut-dragging');
@@ -8670,9 +8673,9 @@
           // Ignore stale pointer capture releases.
         }
       }
-      if (state.isDragging) {
+      if (state.isDragging && !bookmarkDropTarget) {
         settleShortcutDragTile(tile);
-      } else {
+      } else if (!state.isDragging) {
         tile.removeAttribute('data-shortcut-dragging');
         tile.removeAttribute('data-shortcut-dropping');
         tile.style.pointerEvents = '';
@@ -8683,6 +8686,18 @@
           tile._xShortcutSuppressClick = false;
         }, 0);
       }
+    }
+    if (bookmarkDropTarget) {
+      if (event && typeof event.preventDefault === 'function') {
+        event.preventDefault();
+      }
+      moveShortcutToBookmarks(state, bookmarkDropTarget);
+      return;
+    }
+    if (state.isDragging &&
+        bookmarkGrid &&
+        bookmarkGrid.getAttribute('data-bookmark-empty-drop-surface') === 'true') {
+      renderCurrentBookmarkPage();
     }
     if (state.isDragging && state.hasReordered) {
       if (event && typeof event.preventDefault === 'function') {
@@ -8697,6 +8712,85 @@
     if (options && options.cancel) {
       resetShortcutDockHover();
     }
+  }
+
+  // Reordering re-inserts the captured tile, which drops pointer capture, and
+  // the shortcut section ignores pointer events while a drag is lifted above
+  // the bookmarks, so the session listens on the document like bookmark drags.
+  function attachShortcutDragDocumentListeners() {
+    document.addEventListener('pointermove', handleShortcutDragPointerMove, true);
+    document.addEventListener('pointerup', handleShortcutDragPointerUp, true);
+    document.addEventListener('pointercancel', handleShortcutDragPointerCancel, true);
+  }
+
+  function detachShortcutDragDocumentListeners() {
+    document.removeEventListener('pointermove', handleShortcutDragPointerMove, true);
+    document.removeEventListener('pointerup', handleShortcutDragPointerUp, true);
+    document.removeEventListener('pointercancel', handleShortcutDragPointerCancel, true);
+  }
+
+  function isShortcutDragActive() {
+    return Boolean(shortcutDragState && shortcutDragState.isDragging);
+  }
+
+  function updateShortcutDragBookmarkTarget(state, pointerX, pointerY) {
+    const surface = getBookmarkDropSurfaceElement();
+    if (!surface || !NEWTAB_BOOKMARK_DRAG.isPointInsideElement(surface, pointerX, pointerY)) {
+      if (state.dropTarget) {
+        clearDragDropTarget(state);
+      }
+      return false;
+    }
+    const target = getExternalBookmarkDropTarget(pointerX, pointerY);
+    if (target) {
+      setDragDropTarget(state, target);
+    } else {
+      clearDragDropTarget(state);
+    }
+    return true;
+  }
+
+  function moveShortcutToBookmarks(state, target) {
+    const shortcut = getShortcutById(state.shortcutId);
+    const restoreShortcut = () => {
+      settleShortcutDragTile(state.tile);
+      if (state.hasReordered) {
+        persistShortcutOrder().then(() => {
+          renderShortcuts();
+          scheduleWallpaperAdaptiveToneUpdate();
+        });
+      }
+      return false;
+    };
+    if (!shortcut) {
+      return Promise.resolve(restoreShortcut());
+    }
+    const details = {
+      parentId: String(target.folderId),
+      title: String(shortcut.title || ''),
+      url: String(shortcut.url)
+    };
+    if (target.kind === 'insertion') {
+      details.index = Number(target.index);
+    }
+    queueBookmarkLayoutAnimation('');
+    return bookmarksRuntime.runControlledMutation(() => {
+      return bookmarksRuntime.create(details);
+    }).then(() => {
+      markBookmarkTreeDirty();
+      loadBookmarks({ force: true });
+      return persistShortcuts(
+        newtabShortcuts.filter((item) => item && item.id !== shortcut.id),
+        t('newtab_shortcuts_moved_to_bookmarks', 'Moved to bookmarks')
+      );
+    }, (error) => {
+      bookmarkPendingLayoutAnimation = null;
+      console.warn('[Lumno] Failed to move shortcut to bookmarks', error);
+      markBookmarkTreeDirty();
+      loadBookmarks({ force: true });
+      showToast(t('newtab_shortcuts_move_to_bookmarks_failed', 'Could not move to bookmarks'), true);
+      return false;
+    }).then((moved) => (moved ? true : restoreShortcut()));
   }
 
   function handleShortcutDragPointerDown(event) {
@@ -8722,6 +8816,7 @@
       pendingPointerX: Number(event.clientX),
       pendingPointerY: Number(event.clientY),
       moveFrameId: 0,
+      dropTarget: null,
       isDragging: false,
       hasReordered: false
     };
@@ -8730,6 +8825,7 @@
       shortcutDragState.grabOffsetX = Number(event.clientX) - rect.left;
       shortcutDragState.grabOffsetY = Number(event.clientY) - rect.top;
     }
+    attachShortcutDragDocumentListeners();
     if (typeof tile.setPointerCapture === 'function') {
       try {
         tile.setPointerCapture(event.pointerId);
@@ -9316,9 +9412,6 @@
     shortcutGrid.addEventListener('pointerdown', handleShortcutDragPointerDown);
     shortcutGrid.addEventListener('pointerover', handleShortcutDockPointerOver);
     shortcutGrid.addEventListener('pointermove', handleShortcutDockPointerMove);
-    shortcutGrid.addEventListener('pointermove', handleShortcutDragPointerMove);
-    shortcutGrid.addEventListener('pointerup', handleShortcutDragPointerUp);
-    shortcutGrid.addEventListener('pointercancel', handleShortcutDragPointerCancel);
     shortcutGrid.addEventListener('pointerleave', resetShortcutDockHover);
     updateShortcutLanguageStrings();
   }
@@ -10374,7 +10467,171 @@
     });
   }
 
-  function clearBookmarkDragDropTarget(state) {
+  function getBookmarkDropSurfaceElement() {
+    if (!bookmarkGrid || currentBookmarkCount <= 0) {
+      return null;
+    }
+    if (isBookmarkTopbarMode()) {
+      return bookmarkTopbarRuntime && bookmarkTopbarRuntime.isVisible()
+        ? bookmarkTopbarRuntime.element
+        : null;
+    }
+    return isContentSectionVisible(bookmarkSection) ? bookmarkSection : null;
+  }
+
+  function isEmptyBookmarkRootHidden() {
+    return Boolean(
+      currentBookmarkCount > 0 &&
+      bookmarkLoadedOnce &&
+      !getBookmarkDropSurfaceElement() &&
+      String(bookmarkCurrentFolderId || '') === String(bookmarkRootFolderId || '1') &&
+      bookmarkAllItems.length === 0
+    );
+  }
+
+  // Drop target for items that are not bookmarks yet (e.g. a dragged shortcut):
+  // folders take precedence, otherwise the nearest gap in the pointer's row.
+  function getExternalBookmarkDropTarget(pointerX, pointerY) {
+    const nodeMap = bookmarksRuntime.getNodeMap();
+    const folderTarget = getBookmarkElementDropTarget(pointerX, pointerY);
+    if (folderTarget) {
+      return NEWTAB_CROSS_SURFACE_DRAG.isBookmarkFolderDropTarget(folderTarget.folderId, nodeMap)
+        ? folderTarget
+        : null;
+    }
+    const computedStyle = typeof window.getComputedStyle === 'function'
+      ? window.getComputedStyle(bookmarkGrid)
+      : null;
+    const insertionTarget = NEWTAB_BOOKMARK_DRAG.getGridInsertionTarget({
+      columnGap: computedStyle ? computedStyle.columnGap : '',
+      folderId: bookmarkCurrentFolderId,
+      gridElement: bookmarkGrid,
+      // A foreign item has no slot of its own, so any point in a row snaps
+      // to that row's nearest boundary.
+      hitZonePx: bookmarkGrid.getBoundingClientRect().width,
+      layoutItems: getBookmarkReorderCards()
+        .map((card) => ({
+          card,
+          rect: getBookmarkCardLayoutRect(card)
+        }))
+        .filter((item) => item.rect && item.rect.width > 0 && item.rect.height > 0),
+      markerVerticalInsetPx: isBookmarkTopbarMode() ? 3 : 8,
+      pageStartIndex: getBookmarkPageStartIndex(),
+      pointerX,
+      pointerY
+    });
+    return insertionTarget &&
+      NEWTAB_CROSS_SURFACE_DRAG.isBookmarkFolderDropTarget(insertionTarget.folderId, nodeMap)
+      ? insertionTarget
+      : null;
+  }
+
+  function isPointOverShortcutDropSurface(pointerX, pointerY) {
+    return Boolean(
+      shortcutGrid &&
+      isContentSectionVisible(shortcutSection) &&
+      !isBookmarkCascadeSurfaceAtPoint(pointerX, pointerY) &&
+      NEWTAB_BOOKMARK_DRAG.isPointInsideElement(shortcutGrid, pointerX, pointerY)
+    );
+  }
+
+  function getBookmarkDragShortcutDropTarget(state, pointerX, pointerY) {
+    if (!state || state.isFolder) {
+      return null;
+    }
+    const node = bookmarksRuntime.getNodeMap().get(String(state.bookmarkId || ''));
+    const record = node && node.url
+      ? NEWTAB_SHORTCUTS_STORE.createShortcutRecord(
+        { title: node.title, url: node.url },
+        getShortcutStoreOptions()
+      )
+      : null;
+    const slot = getShortcutInsertionSlotAt(pointerX, pointerY, null);
+    const canMove = Boolean(NEWTAB_CROSS_SURFACE_DRAG.planBookmarkToShortcut({
+      shortcuts: newtabShortcuts,
+      record,
+      index: slot.index,
+      maxShortcuts: MAX_NEWTAB_SHORTCUTS
+    }));
+    const anchorRect = slot.anchorRect || getShortcutTileLayoutRect(addShortcutButton);
+    if (!canMove || !anchorRect || anchorRect.width <= 0) {
+      return null;
+    }
+    const gridRect = shortcutGrid.getBoundingClientRect();
+    const columnGap = Number.parseFloat(window.getComputedStyle(shortcutGrid).columnGap) || 0;
+    const markerX = slot.markerPosition === 'after'
+      ? anchorRect.right + (columnGap / 2)
+      : anchorRect.left - (columnGap / 2);
+    const markerVerticalInsetPx = 8;
+    return {
+      kind: 'insertion',
+      surface: 'shortcuts',
+      index: slot.index,
+      record,
+      element: null,
+      markerElement: shortcutGrid,
+      markerPosition: slot.markerPosition,
+      markerOffsetPx: markerX - gridRect.left,
+      markerTopPx: anchorRect.top - gridRect.top + markerVerticalInsetPx,
+      markerHeightPx: anchorRect.height - (markerVerticalInsetPx * 2)
+    };
+  }
+
+  function moveBookmarkToShortcuts(state, target) {
+    const plan = NEWTAB_CROSS_SURFACE_DRAG.planBookmarkToShortcut({
+      shortcuts: newtabShortcuts,
+      record: target.record,
+      index: target.index,
+      maxShortcuts: MAX_NEWTAB_SHORTCUTS
+    });
+    if (!plan) {
+      return Promise.resolve(false);
+    }
+    return persistShortcuts(
+      plan.shortcuts,
+      t('bookmarks_moved_to_shortcuts', 'Moved to shortcuts'),
+      undefined,
+      { syncOverflowShortcutId: plan.shortcutId }
+    ).then((saved) => {
+      if (!saved) {
+        return false;
+      }
+      queueBookmarkLayoutAnimation(state.bookmarkId);
+      return bookmarksRuntime.runControlledMutation(() => {
+        return bookmarksRuntime.remove(state.bookmarkId);
+      }).then(() => {
+        markBookmarkTreeDirty();
+        loadBookmarks({ force: true });
+        return true;
+      });
+    }).catch((error) => {
+      bookmarkPendingLayoutAnimation = null;
+      console.warn('[Lumno] Failed to remove bookmark moved to shortcuts', error);
+      markBookmarkTreeDirty();
+      loadBookmarks({ force: true });
+      showToast(t('bookmarks_delete_failed', 'Could not delete bookmark'), true);
+      return false;
+    });
+  }
+
+  function isInsertLineDropTarget(target) {
+    return Boolean(
+      target &&
+      target.kind === 'insertion' &&
+      (target.surface === 'grid' || target.surface === 'shortcuts')
+    );
+  }
+
+  function clearDropTargetMarker(marker) {
+    marker.removeAttribute('data-bookmark-insert-position');
+    marker.removeAttribute('data-insert-line-position');
+    marker.style.removeProperty('--x-nt-insert-line-left');
+    marker.style.removeProperty('--x-nt-insert-line-top');
+    marker.style.removeProperty('--x-nt-insert-line-height');
+    marker.removeAttribute('data-insert-line-motion');
+  }
+
+  function clearDragDropTarget(state) {
     if (!state) {
       return;
     }
@@ -10382,11 +10639,7 @@
       state.dropTarget.element.removeAttribute('data-bookmark-drop-target');
     }
     if (state.dropTarget && state.dropTarget.markerElement) {
-      state.dropTarget.markerElement.removeAttribute('data-bookmark-insert-position');
-      state.dropTarget.markerElement.style.removeProperty('--x-nt-bookmark-insert-line-left');
-      state.dropTarget.markerElement.style.removeProperty('--x-nt-bookmark-insert-line-top');
-      state.dropTarget.markerElement.style.removeProperty('--x-nt-bookmark-insert-line-height');
-      state.dropTarget.markerElement.removeAttribute('data-bookmark-insert-motion');
+      clearDropTargetMarker(state.dropTarget.markerElement);
     }
     if (bookmarkCascadeRuntime && typeof bookmarkCascadeRuntime.clearDragTarget === 'function') {
       bookmarkCascadeRuntime.clearDragTarget();
@@ -10529,23 +10782,24 @@
     return target;
   }
 
-  function setBookmarkDragDropTarget(state, target) {
+  function setDragDropTarget(state, target) {
     const previousTarget = state && state.dropTarget ? state.dropTarget : null;
-    const previousElement = state && state.dropTarget ? state.dropTarget.element : null;
-    const previousMarker = state && state.dropTarget ? state.dropTarget.markerElement : null;
+    const previousElement = previousTarget ? previousTarget.element : null;
+    const previousMarker = previousTarget ? previousTarget.markerElement : null;
     const nextElement = target ? target.element : null;
     const nextMarker = target ? target.markerElement : null;
+    const isNextInsertLine = isInsertLineDropTarget(target);
+    const nextMarkerAttribute = isNextInsertLine
+      ? 'data-insert-line-position'
+      : 'data-bookmark-insert-position';
     const previousInsertMotion = previousMarker
-      ? previousMarker.getAttribute('data-bookmark-insert-motion')
+      ? previousMarker.getAttribute('data-insert-line-motion')
       : null;
-    const isNewGridInsertionTarget = Boolean(
-      target &&
-      target.kind === 'insertion' &&
-      target.surface === 'grid' &&
+    const isNewInsertLineTarget = Boolean(
+      isNextInsertLine &&
       (
-        !previousTarget ||
-        previousTarget.kind !== 'insertion' ||
-        previousTarget.surface !== 'grid' ||
+        !isInsertLineDropTarget(previousTarget) ||
+        previousTarget.surface !== target.surface ||
         previousTarget.markerElement !== nextMarker ||
         previousTarget.markerPosition !== target.markerPosition ||
         Number(previousTarget.markerOffsetPx) !== Number(target.markerOffsetPx)
@@ -10556,13 +10810,9 @@
     }
     if (previousMarker &&
         (previousMarker !== nextMarker ||
-          previousMarker.getAttribute('data-bookmark-insert-position') !==
+          previousMarker.getAttribute(nextMarkerAttribute) !==
             String((target && target.markerPosition) || ''))) {
-      previousMarker.removeAttribute('data-bookmark-insert-position');
-      previousMarker.style.removeProperty('--x-nt-bookmark-insert-line-left');
-      previousMarker.style.removeProperty('--x-nt-bookmark-insert-line-top');
-      previousMarker.style.removeProperty('--x-nt-bookmark-insert-line-height');
-      previousMarker.removeAttribute('data-bookmark-insert-motion');
+      clearDropTargetMarker(previousMarker);
     }
     if (!state) {
       return;
@@ -10571,32 +10821,30 @@
     if (nextElement && target.kind !== 'insertion') {
       nextElement.setAttribute('data-bookmark-drop-target', 'true');
     }
-    if (nextMarker && target.kind === 'insertion') {
-      nextMarker.setAttribute('data-bookmark-insert-position', target.markerPosition);
-      if (target.surface === 'grid' && Number.isFinite(Number(target.markerOffsetPx))) {
-        nextMarker.style.setProperty(
-          '--x-nt-bookmark-insert-line-left',
-          `${Number(target.markerOffsetPx)}px`
-        );
-        nextMarker.style.setProperty(
-          '--x-nt-bookmark-insert-line-top',
-          `${Number(target.markerTopPx) || 0}px`
-        );
-        nextMarker.style.setProperty(
-          '--x-nt-bookmark-insert-line-height',
-          `${Math.max(2, Number(target.markerHeightPx) || 0)}px`
-        );
-      } else {
-        nextMarker.style.removeProperty('--x-nt-bookmark-insert-line-left');
-        nextMarker.style.removeProperty('--x-nt-bookmark-insert-line-top');
-        nextMarker.style.removeProperty('--x-nt-bookmark-insert-line-height');
-      }
-      if (isNewGridInsertionTarget) {
-        nextMarker.setAttribute(
-          'data-bookmark-insert-motion',
-          previousInsertMotion === 'a' ? 'b' : 'a'
-        );
-      }
+    if (!nextMarker || target.kind !== 'insertion') {
+      return;
+    }
+    nextMarker.setAttribute(nextMarkerAttribute, target.markerPosition);
+    if (!isNextInsertLine) {
+      return;
+    }
+    nextMarker.style.setProperty(
+      '--x-nt-insert-line-left',
+      `${Number(target.markerOffsetPx) || 0}px`
+    );
+    nextMarker.style.setProperty(
+      '--x-nt-insert-line-top',
+      `${Number(target.markerTopPx) || 0}px`
+    );
+    nextMarker.style.setProperty(
+      '--x-nt-insert-line-height',
+      `${Math.max(2, Number(target.markerHeightPx) || 0)}px`
+    );
+    if (isNewInsertLineTarget) {
+      nextMarker.setAttribute(
+        'data-insert-line-motion',
+        previousInsertMotion === 'a' ? 'b' : 'a'
+      );
     }
   }
 
@@ -10691,7 +10939,7 @@
       }
       const targetFolderId = activeTarget.folderId;
       clearBookmarkDragFolderSwitch(state);
-      clearBookmarkDragDropTarget(state);
+      clearDragDropTarget(state);
       restoreBookmarkDragPreview(state);
       setBookmarkDragCardTransform(
         state,
@@ -10739,7 +10987,7 @@
         clearBookmarkDragPageSwitch(state);
         return;
       }
-      clearBookmarkDragDropTarget(state);
+      clearDragDropTarget(state);
       clearBookmarkDragFolderSwitch(state);
       restoreBookmarkDragPreview(state);
       if (!switchBookmarkPageDuringDrag(bookmarkCurrentPage + normalizedDirection)) {
@@ -10769,7 +11017,7 @@
     }
     if (state.folderSwitchPendingId) {
       clearBookmarkDragPageSwitch(state);
-      clearBookmarkDragDropTarget(state);
+      clearDragDropTarget(state);
       setBookmarkDragCardTransform(state, pointerX, pointerY);
       return;
     }
@@ -10786,23 +11034,35 @@
     const pageSwitchDirection = getBookmarkDragPageSwitchDirection(pointerX, pointerY);
     if (pageSwitchDirection) {
       clearBookmarkDragFolderSwitch(state);
-      clearBookmarkDragDropTarget(state);
+      clearDragDropTarget(state);
       restoreBookmarkDragPreview(state);
       setBookmarkDragCardTransform(state, pointerX, pointerY);
       scheduleBookmarkDragPageSwitch(state, pageSwitchDirection);
       return;
     }
     clearBookmarkDragPageSwitch(state);
+    if (isPointOverShortcutDropSurface(pointerX, pointerY)) {
+      clearBookmarkDragFolderSwitch(state);
+      restoreBookmarkDragPreview(state);
+      setBookmarkDragCardTransform(state, pointerX, pointerY);
+      const shortcutTarget = getBookmarkDragShortcutDropTarget(state, pointerX, pointerY);
+      if (shortcutTarget) {
+        setDragDropTarget(state, shortcutTarget);
+      } else {
+        clearDragDropTarget(state);
+      }
+      return;
+    }
     const crossLevelTarget = getBookmarkCrossLevelDropTarget(state, pointerX, pointerY);
     if (crossLevelTarget) {
       scheduleBookmarkDragFolderSwitch(state, crossLevelTarget);
       restoreBookmarkDragPreview(state);
       setBookmarkDragCardTransform(state, pointerX, pointerY);
-      setBookmarkDragDropTarget(state, crossLevelTarget);
+      setDragDropTarget(state, crossLevelTarget);
       return;
     }
     clearBookmarkDragFolderSwitch(state);
-    clearBookmarkDragDropTarget(state);
+    clearDragDropTarget(state);
     restoreBookmarkDragPreview(state);
     setBookmarkDragCardTransform(state, pointerX, pointerY);
   }
@@ -11206,7 +11466,7 @@
   function shouldSuppressBookmarkHover(target) {
     return Boolean(
       target &&
-      isBookmarkReorderInteractionActive() &&
+      (isBookmarkReorderInteractionActive() || isShortcutDragActive()) &&
       (
         (target.classList &&
           typeof target.classList.contains === 'function' &&
@@ -11223,7 +11483,7 @@
     }
     bookmarkDragState.isDragging = true;
     if (document.body) {
-      document.body.setAttribute('data-bookmark-drag-active', 'true');
+      document.body.setAttribute('data-drag-source', 'bookmark');
     }
     hideCursorTooltip();
     const activeElement = document.activeElement;
@@ -11314,7 +11574,7 @@
       return;
     }
     if (document.body) {
-      document.body.removeAttribute('data-bookmark-drag-active');
+      document.body.removeAttribute('data-drag-source');
     }
     const state = bookmarkDragState;
     detachBookmarkDragDocumentListeners();
@@ -11329,7 +11589,7 @@
     state.draggedVisualRect = state.isDragging && dropTarget
       ? getBookmarkDragVisualRect(state)
       : null;
-    clearBookmarkDragDropTarget(state);
+    clearDragDropTarget(state);
     const shouldKeepCascadeOpen =
       NEWTAB_BOOKMARK_DRAG.shouldKeepCascadeOpenAfterDrop(
         state.sourceKind,
@@ -11387,7 +11647,12 @@
         }, BOOKMARK_DRAG_CLICK_SUPPRESS_MS);
       }
     }
-    if (state.isDragging && dropTarget) {
+    if (state.isDragging && dropTarget && dropTarget.surface === 'shortcuts') {
+      if (event && typeof event.preventDefault === 'function') {
+        event.preventDefault();
+      }
+      moveBookmarkToShortcuts(state, dropTarget);
+    } else if (state.isDragging && dropTarget) {
       if (event && typeof event.preventDefault === 'function') {
         event.preventDefault();
       }
@@ -11528,8 +11793,7 @@
     const keepEmptyRootVisibleForDrag = Boolean(
       isAtRoot &&
       normalizedItems.length === 0 &&
-      bookmarkDragState &&
-      bookmarkDragState.isDragging
+      ((bookmarkDragState && bookmarkDragState.isDragging) || isShortcutDragActive())
     );
     if (bookmarkGrid) {
       if (keepEmptyRootVisibleForDrag) {

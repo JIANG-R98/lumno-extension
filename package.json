@@ -74,6 +74,7 @@
     "test:newtab-bookmark-cascade-keyboard": "node scripts/test-newtab-bookmark-cascade-keyboard.js",
     "test:newtab-feedback-popover": "node scripts/test-newtab-feedback-popover.js",
     "test:newtab-shortcuts-ui": "node scripts/test-newtab-shortcuts-ui.js",
+    "test:newtab-cross-surface-drag": "node scripts/test-newtab-cross-surface-drag.js",
     "test:newtab-mode-command": "node scripts/test-newtab-mode-command.js",
     "test:newtab-zen-command": "node scripts/test-newtab-zen-command.js",
     "test:search-result-highlight": "node scripts/test-search-result-highlight-surface.js",

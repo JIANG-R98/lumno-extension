@@ -1442,6 +1442,9 @@
   "bookmarks_move_failed": {
     "message": "ブックマークを移動できませんでした"
   },
+  "bookmarks_moved_to_shortcuts": {
+    "message": "ショートカットに移動しました"
+  },
   "search_tag_history": {
     "message": "履歴"
   },
@@ -2170,6 +2173,12 @@
   },
   "newtab_shortcuts_removed": {
     "message": "ショートカットを削除しました"
+  },
+  "newtab_shortcuts_moved_to_bookmarks": {
+    "message": "ブックマークに移動しました"
+  },
+  "newtab_shortcuts_move_to_bookmarks_failed": {
+    "message": "ブックマークに移動できませんでした"
   },
   "newtab_shortcuts_edit_dialog_title": {
     "message": "ショートカットを編集"

@@ -247,7 +247,7 @@ assert.ok(
   'bookmark cards and cascade rows should show explicit insertion lines'
 );
 assert.ok(
-  /#_x_extension_newtab_bookmarks_grid_2024_unique_\[data-bookmark-insert-position\]::after\s*\{[^}]*width:\s*2px;[^}]*height:\s*var\(--x-nt-bookmark-insert-line-height/s
+  /\n\s*\[data-insert-line-position\]::after\s*\{[^}]*width:\s*2px;[^}]*height:\s*var\(--x-nt-insert-line-height/s
     .test(newtabHtml) &&
     !/\.x-nt-bookmark-card\[data-bookmark-insert-position\]::after/s.test(newtabHtml),
   'the bookmark grid should draw one independent vertical insertion line at the measured boundary'
@@ -255,9 +255,9 @@ assert.ok(
 assert.ok(
   /\.x-nt-bookmark-card--folder\[data-bookmark-drop-target="true"\]\s*\{[^}]*border-color:[^}]*box-shadow:\s*none;/s
     .test(newtabHtml) &&
-    newtabHtml.includes('_x_nt_bookmark_insert_line_extend_a_2026_unique_') &&
-    newtabHtml.includes('_x_nt_bookmark_insert_line_extend_b_2026_unique_') &&
-    /@keyframes _x_nt_bookmark_insert_line_extend_a_2026_unique_\s*\{[^}]*transform:\s*scaleY\(0\);[\s\S]*?transform:\s*scaleY\(1\);/s
+    newtabHtml.includes('_x_nt_insert_line_extend_a_2026_unique_') &&
+    newtabHtml.includes('_x_nt_insert_line_extend_b_2026_unique_') &&
+    /@keyframes _x_nt_insert_line_extend_a_2026_unique_\s*\{[^}]*transform:\s*scaleY\(0\);[\s\S]*?transform:\s*scaleY\(1\);/s
       .test(newtabHtml),
   'folder targets should keep a crisp edge while grid insertion lines extend into place'
 );
@@ -293,10 +293,10 @@ assert.ok(
 );
 assert.ok(
   startBookmarkDragSource.includes(
-    "document.body.setAttribute('data-bookmark-drag-active', 'true');"
+    "document.body.setAttribute('data-drag-source', 'bookmark');"
   ) &&
     finishBookmarkDragSource.includes(
-      "document.body.removeAttribute('data-bookmark-drag-active');"
+      "document.body.removeAttribute('data-drag-source');"
     ),
   'bookmark drag sessions should hold a page-wide grabbing cursor until pointer release'
 );
@@ -307,12 +307,12 @@ assert.ok(
 assert.ok(
     newtabJs.includes("previousTarget.markerPosition !== target.markerPosition") &&
     newtabJs.includes("previousTarget.markerOffsetPx) !== Number(target.markerOffsetPx") &&
-    newtabJs.includes("'data-bookmark-insert-motion'") &&
+    newtabJs.includes("'data-insert-line-motion'") &&
     newtabJs.includes("previousInsertMotion === 'a' ? 'b' : 'a'"),
   'each newly targeted grid boundary should restart the insertion-line extension'
 );
 assert.ok(
-  /@media \(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?#_x_extension_newtab_bookmarks_grid_2024_unique_\[data-bookmark-insert-position\]::after\s*\{[^}]*animation:\s*none;/s
+  /@media \(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\[data-insert-line-position\]::after\s*\{[^}]*animation:\s*none;/s
     .test(newtabHtml),
   'the grid insertion-line motion should respect reduced-motion preferences'
 );
@@ -395,12 +395,12 @@ assert.ok(
     bookmarkDragJs.includes('itemIndex === Number(config.pageStartIndex)') &&
     bookmarkDragJs.includes('isCrossPageDrag && isPageEndBoundary') &&
     bookmarkDragJs.includes('preservePageSlot: isCrossPageDrag') &&
-    newtabHtml.includes('--x-nt-bookmark-insert-line-left'),
+    newtabHtml.includes('--x-nt-insert-line-left'),
   'the main bookmark grid should map cross-page gap lines to final page slots and suppress the page-end line'
 );
 assert.ok(
-  newtabHtml.includes('--x-nt-bookmark-insert-indicator: #7a8491') &&
-    newtabHtml.includes('--x-nt-bookmark-insert-indicator: #a8b0bc') &&
+  newtabHtml.includes('--x-nt-insert-indicator: #7a8491') &&
+    newtabHtml.includes('--x-nt-insert-indicator: #a8b0bc') &&
     !/data-bookmark-insert-position[^}]*background:\s*#2563eb/s.test(newtabHtml),
   'grid and cascade insertion lines should use neutral solid gray instead of blue'
 );

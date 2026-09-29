@@ -1573,6 +1573,7 @@ assertContains(
   const schedulerFactory = new Function(
     'window',
     'setShortcutDragTileTransform',
+    'updateShortcutDragBookmarkTarget',
     'getShortcutDragInsertionIndex',
     'getShortcutTileInsertionIndex',
     'getShortcutTileRectMap',
@@ -1602,6 +1603,7 @@ assertContains(
       }
     },
     (_state, pointerX, pointerY) => transformCalls.push([pointerX, pointerY]),
+    () => false,
     () => 0,
     () => 0,
     () => new Map(),
@@ -2034,21 +2036,26 @@ assertContains(
 );
 
 assertContains(
-  newtabJs,
-  "shortcutGrid.addEventListener('pointermove', handleShortcutDragPointerMove);",
-  'shortcut grid should update drag reordering on pointer move'
+  getFunctionSource(newtabJs, 'handleShortcutDragPointerDown'),
+  'attachShortcutDragDocumentListeners();',
+  'shortcut drags should track the pointer on the document, since reordering drops pointer capture'
 );
 
 assertContains(
-  newtabJs,
-  "shortcutGrid.addEventListener('pointerup', handleShortcutDragPointerUp);",
-  'shortcut grid should finish drag reordering on pointer up'
+  getFunctionSource(newtabJs, 'attachShortcutDragDocumentListeners'),
+  "document.addEventListener('pointerup', handleShortcutDragPointerUp, true);",
+  'shortcut drags should finish on a document-level pointer up'
 );
 
 assertContains(
-  newtabJs,
-  "shortcutGrid.addEventListener('pointercancel', handleShortcutDragPointerCancel);",
-  'shortcut grid should clean up drag reordering when the pointer is canceled'
+  getFunctionSource(newtabJs, 'finishShortcutDrag'),
+  'detachShortcutDragDocumentListeners();',
+  'shortcut drags should release their document listeners when they finish'
+);
+
+assert.ok(
+  !newtabJs.includes("shortcutGrid.addEventListener('pointerup', handleShortcutDragPointerUp);"),
+  'shortcut drag release must not depend on events bubbling to the grid'
 );
 
 assertContains(
