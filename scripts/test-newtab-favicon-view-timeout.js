@@ -56,6 +56,7 @@ const sandbox = {
 };
 sandbox.globalThis = sandbox;
 sandbox.LumnoFaviconViewCore = {
+  createFallbackIconPresenter: require('../src/shared/favicon-view-core.js').createFallbackIconPresenter,
   createFaviconViewCore() {
     return {
       createImage() {

@@ -144,6 +144,7 @@ function createRuntime(options) {
   };
   sandbox.globalThis = sandbox;
   sandbox.LumnoFaviconViewCore = {
+    createFallbackIconPresenter: require('../src/shared/favicon-view-core.js').createFallbackIconPresenter,
     createFaviconViewCore(config) {
       return {
         setFallbackNodeVisible() {},

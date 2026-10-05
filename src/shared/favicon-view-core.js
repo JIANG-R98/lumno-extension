@@ -165,13 +165,6 @@
         .catch(() => false);
     }
 
-    function setFallbackNodeVisible(node, visible) {
-      if (!node) {
-        return;
-      }
-      node.setAttribute('data-visible', visible ? 'true' : 'false');
-    }
-
     function setFaviconLoadState(img, state) {
       if (!img) {
         return;
@@ -564,7 +557,131 @@
     });
   }
 
+  function setFallbackNodeVisible(node, visible) {
+    if (!node) {
+      return;
+    }
+    node.setAttribute('data-visible', visible ? 'true' : 'false');
+  }
+
+  // Keeps the fallback icon node next to a favicon <img> in step with the
+  // image's resolved, pending and failed states. Surfaces differ only in how
+  // they build the node and how they show or hide the image itself.
+  function createFallbackIconPresenter(options) {
+    const {
+      fallbackClassName,
+      createFallbackNode,
+      setImageVisible,
+      clearCandidateTimer,
+      setTimer
+    } = options;
+    const nodeMap = options.nodeMap || new WeakMap();
+
+    function findFallbackIconNode(img) {
+      if (!img || !img.parentElement) {
+        return null;
+      }
+      const mappedNode = nodeMap.get(img);
+      if (mappedNode && mappedNode.isConnected && mappedNode.parentElement === img.parentElement) {
+        return mappedNode;
+      }
+      const fallbackNodes = Array.from(img.parentElement.querySelectorAll(`.${fallbackClassName}`));
+      const linkedNode = fallbackNodes.find((candidate) => candidate && candidate._xFallbackForImage === img) || null;
+      if (linkedNode) {
+        nodeMap.set(img, linkedNode);
+        return linkedNode;
+      }
+      if (fallbackNodes.length === 1 && img.parentElement.querySelectorAll('img').length === 1) {
+        const onlyNode = fallbackNodes[0];
+        onlyNode._xFallbackForImage = img;
+        nodeMap.set(img, onlyNode);
+        return onlyNode;
+      }
+      return null;
+    }
+
+    function ensureFallbackIconNode(img) {
+      if (!img || !img.parentElement) {
+        return null;
+      }
+      const existingNode = findFallbackIconNode(img);
+      if (existingNode) {
+        return existingNode;
+      }
+      const node = createFallbackNode(img);
+      node._xFallbackForImage = img;
+      nodeMap.set(img, node);
+      return node;
+    }
+
+    function removeFallbackIconNode(img) {
+      const node = findFallbackIconNode(img);
+      if (node && node.parentNode) {
+        node.parentNode.removeChild(node);
+      }
+      if (img) {
+        nodeMap.delete(img);
+      }
+    }
+
+    function showResolvedFavicon(img) {
+      if (!img) {
+        return;
+      }
+      clearCandidateTimer(img);
+      setFallbackNodeVisible(findFallbackIconNode(img), false);
+      img.removeAttribute('data-fallback-icon');
+      img.removeAttribute('data-favicon-placeholder');
+      setImageVisible(img, true);
+    }
+
+    // The node may not be insertable until the image is attached, so retry once
+    // on the next task while the image still waits on the same state.
+    function revealFallbackNode(img, stateAttribute, clearedAttribute) {
+      const node = ensureFallbackIconNode(img);
+      img.removeAttribute(clearedAttribute);
+      img.setAttribute(stateAttribute, 'true');
+      setImageVisible(img, false);
+      if (node) {
+        setFallbackNodeVisible(node, true);
+        return;
+      }
+      setTimer(() => {
+        if (!img.isConnected || img.getAttribute(stateAttribute) !== 'true') {
+          return;
+        }
+        setFallbackNodeVisible(ensureFallbackIconNode(img), true);
+      }, 0);
+    }
+
+    function showPendingFallbackIcon(img) {
+      if (!img) {
+        return;
+      }
+      revealFallbackNode(img, 'data-favicon-placeholder', 'data-fallback-icon');
+    }
+
+    function applyFallbackIcon(img) {
+      if (!img) {
+        return;
+      }
+      clearCandidateTimer(img);
+      revealFallbackNode(img, 'data-fallback-icon', 'data-favicon-placeholder');
+    }
+
+    return Object.freeze({
+      findFallbackIconNode,
+      ensureFallbackIconNode,
+      removeFallbackIconNode,
+      showResolvedFavicon,
+      showPendingFallbackIcon,
+      applyFallbackIcon
+    });
+  }
+
   return Object.freeze({
-    createFaviconViewCore
+    createFaviconViewCore,
+    createFallbackIconPresenter,
+    setFallbackNodeVisible
   });
 });
