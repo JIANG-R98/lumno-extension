@@ -1288,7 +1288,7 @@
     NEWTAB_SELECT_MENU.createController({
       documentObj: document,
       windowObj: window,
-      hideTopActionTooltip: (...args) => hideTopActionTooltip(...args),
+      onBeforeOpen: (...args) => hideTopActionTooltip(...args),
       getViewportTopInset: getNewtabViewportTopPaddingPx
     });
   const shortcutContextMenuSelectController =
