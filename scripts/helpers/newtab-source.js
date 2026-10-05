@@ -15,7 +15,8 @@ const NEWTAB_RUNTIME_MODULES = [
   'src/newtab/bookmark-context-menu.js',
   'src/newtab/bookmark-pager.js',
   'src/newtab/search-autocomplete.js',
-  'src/newtab/tooltip-bindings.js'
+  'src/newtab/tooltip-bindings.js',
+  'src/newtab/page-navigation.js'
 ];
 
 // Returns newtab.js followed by the modules split out of it, so source checks

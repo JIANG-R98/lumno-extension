@@ -273,7 +273,7 @@
     getSystemLocale,
     normalizeLocale,
     t,
-    openExternalNewTabUrl,
+    openExternalNewTabUrl: (...args) => openExternalNewTabUrl(...args),
     hideTopActionTooltip: (...args) => hideTopActionTooltip(...args),
     NEWTAB_FEEDBACK_CONTROL,
     showTopActionTooltip: (...args) => showTopActionTooltip(...args),
@@ -366,7 +366,7 @@
     FOLDER_COLOR_CONTEXT_MENU_VALUE,
     BOOKMARK_CONTEXT_MENU_EDIT_VALUE,
     openFolderColorPicker,
-    openExternalNewTabUrl,
+    openExternalNewTabUrl: (...args) => openExternalNewTabUrl(...args),
     openBookmarkEditor,
     openBookmarkFolderTabGroupConfirmation,
     deleteBookmarkFromContextTarget,
@@ -729,8 +729,8 @@
     SHORTCUT_CONTEXT_MENU_EDIT_VALUE,
     openShortcutEditor,
     NEWTAB_CONTEXT_MENU_OPEN_VALUE,
-    openShortcutUrl,
-    openExternalNewTabUrl,
+    openShortcutUrl: (...args) => openShortcutUrl(...args),
+    openExternalNewTabUrl: (...args) => openExternalNewTabUrl(...args),
     SHORTCUT_CONTEXT_MENU_REMOVE_VALUE,
     removeShortcutById,
     t,
@@ -853,7 +853,7 @@
     AGGREGATE_SEARCH_SURFACE,
     showToast,
     t,
-    navigateToUrl,
+    navigateToUrl: (...args) => navigateToUrl(...args),
     SHORTCUT_FAVICON,
     getPageFaviconUrlResolver,
     siteSearchIconCacheOptions,
@@ -1092,7 +1092,7 @@
     NEWTAB_CONTEXT_MENU_OPEN_VALUE,
     t,
     showToast,
-    openExternalNewTabUrl,
+    openExternalNewTabUrl: (...args) => openExternalNewTabUrl(...args),
     closeShortcutContextMenu,
     closeBookmarkContextMenu,
     canDismissRecentCard,
@@ -4833,185 +4833,41 @@
       : '';
   }
 
-  function navigateToUrl(url) {
-    if (!url) {
-      return;
-    }
-    if (chrome.tabs && chrome.tabs.getCurrent) {
-      chrome.tabs.getCurrent(function(tab) {
-        if (chrome.runtime.lastError) {
-          window.location.href = url;
-          return;
-        }
-        if (tab && tab.id) {
-          chrome.tabs.update(tab.id, { url: url });
-        } else {
-          window.location.href = url;
-        }
-      });
-    } else {
-      window.location.href = url;
-    }
-  }
-
-  function isMiddleClick(event) {
-    return NAVIGATION_DISPOSITION.isMiddleClick(event);
-  }
-
-  function isBackgroundOpenEvent(event) {
-    if (numberShortcutInstantEnabled) {
-      return isMiddleClick(event);
-    }
-    return NAVIGATION_DISPOSITION.isBackgroundOpenEvent(event);
-  }
-
-  function getOpenDisposition(event, fallback) {
-    if (typeof event === 'string') {
-      return event === 'backgroundTab' ? 'backgroundTab' : (fallback || event || 'newTab');
-    }
-    return NAVIGATION_DISPOSITION.getDisposition(event, fallback);
-  }
-
-  function openExternalNewTabUrl(url, eventOrDisposition) {
-    if (!url) {
-      return false;
-    }
-    const disposition = typeof eventOrDisposition === 'string'
-      ? eventOrDisposition
-      : getOpenDisposition(eventOrDisposition, 'newTab');
-    if (chrome && chrome.runtime && typeof chrome.runtime.sendMessage === 'function') {
-      chrome.runtime.sendMessage({
-        action: 'createTab',
-        url,
-        disposition
-      });
-      return true;
-    }
-    if (chrome && chrome.tabs && typeof chrome.tabs.create === 'function') {
-      chrome.tabs.create({ url, active: disposition !== 'backgroundTab' });
-      return true;
-    }
-    window.open(url, '_blank', 'noopener');
-    return true;
-  }
-
-  function openUrlFromNewtabCard(url, options) {
-    if (!url) {
-      return;
-    }
-    const config = options && typeof options === 'object' ? options : {};
-    if (config.openInBackgroundTab &&
-        chrome && chrome.runtime && typeof chrome.runtime.sendMessage === 'function') {
-      chrome.runtime.sendMessage({
-        action: 'createTab',
-        url: url,
-        disposition: 'backgroundTab'
-      });
-      return;
-    }
-    navigateToUrl(url);
-  }
-
-  function openShortcutUrl(shortcut, event) {
-    if (shortcut && shortcut.type === 'folder') {
-      const tile = getShortcutTileById(shortcut.id);
-      bookmarksRuntime.ensureReady(false).then((ready) => {
-        const node = ready && bookmarksRuntime.getNode(getShortcutFolderId(shortcut));
-        if (!node || node.url) {
-          showToast(t('newtab_shortcuts_folder_missing', 'This bookmark folder is no longer available.'), true);
-          return;
-        }
-        openBookmarkCascadeMenu({ ...node, type: 'folder' }, tile);
-      });
-      return;
-    }
-    if (!shortcut || !shortcut.url) {
-      return;
-    }
-    openUrlFromNewtabCard(shortcut.url, {
-      openInBackgroundTab: isBackgroundOpenEvent(event)
-    });
-  }
-
-  function recordSearchSuggestionSelection(suggestion, rawQuery) {
-    if (!suggestion || suggestion.forceSearch || suggestion.provider || !suggestion.url ||
-        !chrome || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
-      return;
-    }
-    const query = String(rawQuery || latestRawQuery || (inputParts && inputParts.input ? inputParts.input.value : '') || '').trim();
-    if (!query) {
-      return;
-    }
-    chrome.runtime.sendMessage({
-      action: 'recordSearchSuggestionSelection',
-      query,
-      url: suggestion.url,
-      title: suggestion.title || '',
-      type: suggestion.type || 'history',
-      source: 'newtab'
-    }, () => {
-      if (chrome.runtime && chrome.runtime.lastError) {
-        // Best-effort ranking signal.
-      }
-    });
-  }
-
-  function openBookmarkFolder(nodeId) {
-    const id = String(nodeId || '').trim();
-    if (!id) {
-      return;
-    }
-    navigateBookmarkFolder(id);
-  }
-
-  function markCurrentTabForSearchTracking() {
-    if (!chrome || !chrome.tabs || !chrome.tabs.getCurrent || !chrome.runtime || !chrome.runtime.sendMessage) {
-      return;
-    }
-    chrome.tabs.getCurrent((tab) => {
-      if (tab && typeof tab.id === 'number') {
-        chrome.runtime.sendMessage({ action: 'trackSearchTab', tabId: tab.id });
-      }
-    });
-  }
-
-  function runBrowserSearch(query, disposition, onFail) {
-    if (chrome && chrome.search && typeof chrome.search.query === 'function') {
-      try {
-        chrome.search.query({ text: query, disposition: disposition || 'CURRENT_TAB' }, () => {
-          if (chrome.runtime && chrome.runtime.lastError && typeof onFail === 'function') {
-            onFail();
-          }
-        });
-        return true;
-      } catch (e) {
-        if (typeof onFail === 'function') {
-          onFail();
-        }
-        return false;
+  const NEWTAB_PAGE_NAVIGATION = globalThis.LumnoNewtabPageNavigation;
+  const {
+    navigateToUrl,
+    isMiddleClick,
+    isBackgroundOpenEvent,
+    getOpenDisposition,
+    openExternalNewTabUrl,
+    openUrlFromNewtabCard,
+    openShortcutUrl,
+    recordSearchSuggestionSelection,
+    openBookmarkFolder,
+    navigateToQuery
+  } = NEWTAB_PAGE_NAVIGATION.createPageNavigation({
+    NAVIGATION_DISPOSITION,
+    getShortcutTileById,
+    bookmarksRuntime,
+    getShortcutFolderId,
+    showToast,
+    t,
+    openBookmarkCascadeMenu,
+    navigateBookmarkFolder,
+    getDirectNavigationUrl,
+    buildDefaultSearchUrl,
+    pageState: {
+      get numberShortcutInstantEnabled() {
+        return numberShortcutInstantEnabled;
+      },
+      get latestRawQuery() {
+        return latestRawQuery;
+      },
+      get inputParts() {
+        return inputParts;
       }
     }
-    return false;
-  }
-
-  function navigateToQuery(query, forceSearch) {
-    const directUrl = !forceSearch ? getDirectNavigationUrl(query) : '';
-    let targetUrl = query;
-    if (directUrl) {
-      navigateToUrl(directUrl);
-      return;
-    }
-    markCurrentTabForSearchTracking();
-    const attempted = runBrowserSearch(query, 'CURRENT_TAB', () => {
-      const fallbackUrl = buildDefaultSearchUrl(query);
-      navigateToUrl(fallbackUrl);
-    });
-    if (attempted) {
-      return;
-    }
-    targetUrl = buildDefaultSearchUrl(query);
-    navigateToUrl(targetUrl);
-  }
+  });
 
   const pageStructureRuntime = NEWTAB_PAGE_STRUCTURE.createPageStructure({
     documentObj: document,
