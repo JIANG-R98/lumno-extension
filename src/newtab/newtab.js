@@ -1,71 +1,4 @@
 (function() {
-
-  const NEWTAB_CONTEXT_MENU_OPEN_VALUE = 'open-in-new-tab';
-  const SHORTCUT_CONTEXT_MENU_EDIT_VALUE = 'edit';
-  const SHORTCUT_CONTEXT_MENU_REMOVE_VALUE = 'remove';
-  const SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE = 'hide-add';
-  const FOLDER_COLOR_CONTEXT_MENU_VALUE = 'folder-color';
-
-  const NEWTAB_SHORTCUT_CONTEXT_MENU = globalThis.LumnoNewtabShortcutContextMenu;
-  const {
-    isShortcutContextMenuOpen,
-    isShortcutContextMenuNode,
-    clearShortcutContextMenuTileActive,
-    applyShortcutContextMenuDockHover,
-    closeShortcutContextMenu,
-    handleShortcutContextMenu,
-    openShortcutAddContextMenu
-  } = NEWTAB_SHORTCUT_CONTEXT_MENU.createShortcutContextMenu({
-    getShortcutDockIcon: (...args) => getShortcutDockIcon(...args),
-    setShortcutDockHover: (...args) => setShortcutDockHover(...args),
-    resetShortcutDockHover: (...args) => resetShortcutDockHover(...args),
-    getShortcutTileFromNode,
-    getShortcutById,
-    SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE,
-    hideShortcutAddFromContextMenu,
-    FOLDER_COLOR_CONTEXT_MENU_VALUE,
-    openFolderColorPicker,
-    getShortcutFolderId,
-    SHORTCUT_CONTEXT_MENU_EDIT_VALUE,
-    openShortcutEditor,
-    NEWTAB_CONTEXT_MENU_OPEN_VALUE,
-    openShortcutUrl,
-    openExternalNewTabUrl,
-    SHORTCUT_CONTEXT_MENU_REMOVE_VALUE,
-    removeShortcutById,
-    t,
-    getShortcutContextMenuOptions,
-    closeRecentContextMenu: (...args) => closeRecentContextMenu(...args),
-    hideShortcutTooltip,
-    getShortcutTileId,
-    pageState: {
-      get shortcutContextMenu() {
-        return shortcutContextMenu;
-      },
-      set shortcutContextMenu(value) {
-        shortcutContextMenu = value;
-      },
-      get shortcutContextMenuSelectController() {
-        return shortcutContextMenuSelectController;
-      },
-      get shortcutGrid() {
-        return shortcutGrid;
-      },
-      get shortcutContextMenuTarget() {
-        return shortcutContextMenuTarget;
-      },
-      set shortcutContextMenuTarget(value) {
-        shortcutContextMenuTarget = value;
-      },
-      get shortcutSection() {
-        return shortcutSection;
-      },
-      get addShortcutButton() {
-        return addShortcutButton;
-      }
-    }
-  });
-
   const root = document.getElementById('_x_extension_newtab_root_2024_unique_');
   const createSearchInput = window._x_extension_createSearchInput_2024_unique_;
   if (!root || typeof createSearchInput !== 'function') {
@@ -410,6 +343,11 @@
     normalizeHost
   });
 
+  const NEWTAB_CONTEXT_MENU_OPEN_VALUE = 'open-in-new-tab';
+  const SHORTCUT_CONTEXT_MENU_EDIT_VALUE = 'edit';
+  const SHORTCUT_CONTEXT_MENU_REMOVE_VALUE = 'remove';
+  const SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE = 'hide-add';
+  const FOLDER_COLOR_CONTEXT_MENU_VALUE = 'folder-color';
   const BOOKMARK_CONTEXT_MENU_EDIT_VALUE = 'edit';
   const BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE = 'open-in-new-tab-group';
 
@@ -432,7 +370,7 @@
     openBookmarkEditor,
     openBookmarkFolderTabGroupConfirmation,
     deleteBookmarkFromContextTarget,
-    closeShortcutContextMenu,
+    closeShortcutContextMenu: (...args) => closeShortcutContextMenu(...args),
     closeRecentContextMenu: (...args) => closeRecentContextMenu(...args),
     hideCursorTooltip,
     pageState: {
@@ -767,6 +705,66 @@
   let newtabShortcutGap = NEWTAB_SHORTCUT_GAP_DEFAULT;
   let shortcutStorageReloadTimer = null;
   let shortcutPersistenceInFlightCount = 0;
+
+  const NEWTAB_SHORTCUT_CONTEXT_MENU = globalThis.LumnoNewtabShortcutContextMenu;
+  const {
+    isShortcutContextMenuOpen,
+    isShortcutContextMenuNode,
+    clearShortcutContextMenuTileActive,
+    applyShortcutContextMenuDockHover,
+    closeShortcutContextMenu,
+    handleShortcutContextMenu,
+    openShortcutAddContextMenu
+  } = NEWTAB_SHORTCUT_CONTEXT_MENU.createShortcutContextMenu({
+    getShortcutDockIcon: (...args) => getShortcutDockIcon(...args),
+    setShortcutDockHover: (...args) => setShortcutDockHover(...args),
+    resetShortcutDockHover: (...args) => resetShortcutDockHover(...args),
+    getShortcutTileFromNode,
+    getShortcutById,
+    SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE,
+    hideShortcutAddFromContextMenu,
+    FOLDER_COLOR_CONTEXT_MENU_VALUE,
+    openFolderColorPicker,
+    getShortcutFolderId,
+    SHORTCUT_CONTEXT_MENU_EDIT_VALUE,
+    openShortcutEditor,
+    NEWTAB_CONTEXT_MENU_OPEN_VALUE,
+    openShortcutUrl,
+    openExternalNewTabUrl,
+    SHORTCUT_CONTEXT_MENU_REMOVE_VALUE,
+    removeShortcutById,
+    t,
+    getShortcutContextMenuOptions,
+    closeRecentContextMenu: (...args) => closeRecentContextMenu(...args),
+    hideShortcutTooltip,
+    getShortcutTileId,
+    pageState: {
+      get shortcutContextMenu() {
+        return shortcutContextMenu;
+      },
+      set shortcutContextMenu(value) {
+        shortcutContextMenu = value;
+      },
+      get shortcutContextMenuSelectController() {
+        return shortcutContextMenuSelectController;
+      },
+      get shortcutGrid() {
+        return shortcutGrid;
+      },
+      get shortcutContextMenuTarget() {
+        return shortcutContextMenuTarget;
+      },
+      set shortcutContextMenuTarget(value) {
+        shortcutContextMenuTarget = value;
+      },
+      get shortcutSection() {
+        return shortcutSection;
+      },
+      get addShortcutButton() {
+        return addShortcutButton;
+      }
+    }
+  });
 
   const NEWTAB_SHORTCUT_DOCK = globalThis.LumnoNewtabShortcutDock;
   const {
