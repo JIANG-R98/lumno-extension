@@ -151,9 +151,9 @@ assert.deepStrictEqual(
     'src/background/background.js:localArea:REMOVED_AI_LOCAL_STORAGE_KEYS',
     'src/background/background.js:localArea:legacyKeys',
     'src/background/background.js:syncArea:REMOVED_AI_SYNC_STORAGE_KEYS',
-    'src/newtab/newtab.js:bookmarkTopbarSurfaceStorageArea:BOOKMARK_TOPBAR_SURFACE_COLOR_STORAGE_KEY',
-    'src/newtab/newtab.js:localArea:BOOKMARK_TOPBAR_SURFACE_COLOR_STORAGE_KEY',
-    'src/newtab/newtab.js:syncArea:cleanupKeys'
+    'src/newtab/bookmark-display-settings.js:bookmarkTopbarSurfaceStorageArea:BOOKMARK_TOPBAR_SURFACE_COLOR_STORAGE_KEY',
+    'src/newtab/bookmark-display-settings.js:localArea:BOOKMARK_TOPBAR_SURFACE_COLOR_STORAGE_KEY',
+    'src/newtab/bookmark-display-settings.js:syncArea:cleanupKeys'
   ],
   'persisted storage removals must remain limited to the reviewed legacy cleanup paths'
 );

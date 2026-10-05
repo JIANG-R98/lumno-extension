@@ -7,7 +7,8 @@ const NEWTAB_RUNTIME_MODULES = [
   'src/newtab/site-theme-resolver.js',
   'src/newtab/url-policy.js',
   'src/newtab/recent-sites-controller.js',
-  'src/newtab/site-search-providers.js'
+  'src/newtab/site-search-providers.js',
+  'src/newtab/bookmark-display-settings.js'
 ];
 
 // Returns newtab.js followed by the modules split out of it, so source checks
