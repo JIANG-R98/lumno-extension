@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 
 const matcher = require('../src/shared/shortcut-key-matcher.js');
+const { readPageSource } = require('./helpers/page-source');
 
 const macEvent = matcher.describeKeyboardEvent({
   code: 'KeyK',
@@ -90,9 +91,9 @@ assert(
 );
 const contentHotkeySource = fs.readFileSync('src/content/hotkey-listener.js', 'utf8');
 const onboardingSource = fs.readFileSync('src/onboarding/onboarding-content.js', 'utf8');
-const onboardingHtml = fs.readFileSync('src/onboarding/onboarding.html', 'utf8');
+const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
 const newtabSource = fs.readFileSync('src/newtab/newtab.js', 'utf8');
-const newtabHtml = fs.readFileSync('newtab.html', 'utf8');
+const newtabHtml = readPageSource('newtab.html');
 assert.match(contentHotkeySource, /SHORTCUT_KEY_MATCHER\.parseShortcut\(nextShortcut\)/);
 assert.match(contentHotkeySource, /SHORTCUT_KEY_MATCHER\.eventMatchesShortcut\(event, shortcutSpec\)/);
 assert.doesNotMatch(contentHotkeySource, /function parseShortcut\(/);

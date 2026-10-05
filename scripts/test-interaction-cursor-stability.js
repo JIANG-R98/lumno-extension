@@ -1,14 +1,15 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readPageSource } = require('./helpers/page-source');
 
 const repoRoot = path.resolve(__dirname, '..');
 const read = (relativePath) =>
   fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
 
-const newtabHtml = read('newtab.html');
-const optionsHtml = read('src/options/options.html');
-const onboardingHtml = read('src/onboarding/onboarding.html');
+const newtabHtml = readPageSource('newtab.html');
+const optionsHtml = readPageSource('src/options/options.html');
+const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
 const overlayShell = read('react-src/overlay/shell.tsx');
 const documentPipPicker = read('src/content/document-pip-picker.js');
 const tooltipCss = read('src/shared/tooltip.css');

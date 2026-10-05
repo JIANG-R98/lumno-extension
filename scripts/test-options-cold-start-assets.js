@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readPageSource } = require('./helpers/page-source');
 const vm = require('vm');
 
 const repoRoot = path.resolve(__dirname, '..');
@@ -10,7 +11,7 @@ const optionsSourcePath = path.join(repoRoot, 'src/options/options.js');
 const lightBackgroundPath = path.join(repoRoot, 'assets/images/settings-bg-light.webp');
 const darkBackgroundPath = path.join(repoRoot, 'assets/images/settings-bg-dark.webp');
 
-const html = fs.readFileSync(htmlPath, 'utf8');
+const html = readPageSource('src/options/options.html');
 const optionsSource = fs.readFileSync(optionsSourcePath, 'utf8');
 
 assert(

@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const vm = require('vm');
+const { readPageSource } = require('./helpers/page-source');
 
 const sandbox = {
   clearTimeout,
@@ -376,7 +377,7 @@ assert.strictEqual(
   'wallpaper filters should remain off by default'
 );
 
-const newtabHtml = fs.readFileSync('newtab.html', 'utf8');
+const newtabHtml = readPageSource('newtab.html');
 assert.match(
   newtabHtml,
   /body\[data-wallpaper-active="true"\]\[data-wallpaper-effect="blur"\]::before,[\s\S]*?\.x-nt-wallpaper-transition-layer\[data-wallpaper-effect="blur"\]\s*\{[\s\S]*?inset:\s*calc\(0px - var\(--x-nt-wallpaper-blur-overscan[\s\S]*?filter:\s*blur\(var\(--x-nt-wallpaper-blur-radius\)\)[\s\S]*?saturate\(var\(--x-nt-wallpaper-blur-saturate\)\)[\s\S]*?brightness\(var\(--x-nt-wallpaper-blur-brightness\)\)[\s\S]*?contrast\(var\(--x-nt-wallpaper-blur-contrast\)\);[\s\S]*?body\[data-wallpaper-active="true"\]\[data-wallpaper-effect="blur"\]::before\s*\{[\s\S]*?background-image:\s*var\(--x-nt-wallpaper-image,[^)]+\);/,

@@ -3,7 +3,8 @@ const fs = require('fs');
 
 const settings = require('../src/shared/settings.js');
 const aggregateStore = require('../src/shared/aggregate-search-store.js');
-const optionsHtml = fs.readFileSync('src/options/options.html', 'utf8');
+const { readPageSource } = require('./helpers/page-source');
+const optionsHtml = readPageSource('src/options/options.html');
 const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
 const backgroundSource = fs.readFileSync('src/background/background.js', 'utf8');
 const aggregateRuntimeSource = fs.readFileSync('src/background/aggregate-search.js', 'utf8');

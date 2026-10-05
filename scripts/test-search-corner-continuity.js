@@ -1,12 +1,13 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readPageSource } = require('./helpers/page-source');
 
 const repoRoot = path.join(__dirname, '..');
 const read = (relativePath) => fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
 
-const newtabSource = read('newtab.html');
-const onboardingSource = read('src/onboarding/onboarding.html');
+const newtabSource = readPageSource('newtab.html');
+const onboardingSource = readPageSource('src/onboarding/onboarding.html');
 const overlayShellSource = read('react-src/overlay/shell.tsx');
 const overlaySearchPanelSource = read('src/overlay/search-panel.js');
 const overlaySuggestionsSource = read('src/overlay/suggestions-view.css');

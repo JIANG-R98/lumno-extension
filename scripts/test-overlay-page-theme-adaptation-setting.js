@@ -3,7 +3,8 @@ const fs = require('fs');
 
 const settings = require('../src/shared/settings.js');
 const pageTheme = require('../src/overlay/page-theme.js');
-const optionsHtml = fs.readFileSync('src/options/options.html', 'utf8');
+const { readPageSource } = require('./helpers/page-source');
+const optionsHtml = readPageSource('src/options/options.html');
 const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
 const overlayRuntimeSource = fs.readFileSync('src/overlay/runtime.js', 'utf8');
 const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');

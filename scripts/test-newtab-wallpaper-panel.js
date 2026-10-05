@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const vm = require('vm');
+const { readPageSource } = require('./helpers/page-source');
 
 // Real page dependencies, loaded the way newtab.html loads them before wallpaper.js.
 require('../src/shared/settings.js');
@@ -1375,7 +1376,7 @@ function clonePlain(value) {
 }
 
 function assertSquareFaviconOptionCss(filePath) {
-  const source = fs.readFileSync(filePath, 'utf8');
+  const source = readPageSource(filePath);
   const optionsRule = source.match(/\.x-nt-favicon-options\s*\{[\s\S]*?\}/);
   assert.ok(optionsRule, `${filePath} should define favicon options layout`);
   assert.match(optionsRule[0], /display:\s*flex;/, `${filePath} favicon options should not stretch as a grid`);
@@ -1416,7 +1417,7 @@ function assertSquareFaviconOptionCss(filePath) {
 }
 
 function assertSegmentedTabRadiusCss(filePath) {
-  const source = fs.readFileSync(filePath, 'utf8');
+  const source = readPageSource(filePath);
   const tokensRule = source.match(/\.x-nt-segmented-tabs\s*\{[\s\S]*?\n\s*\}/);
   assert.ok(tokensRule, `${filePath} should define shared segmented-tab radius tokens`);
   assert.match(tokensRule[0], /--x-nt-segmented-tabs-radius:\s*10px;/);
@@ -1435,7 +1436,7 @@ function assertSegmentedTabRadiusCss(filePath) {
 }
 
 function assertEffectOptionsGridCss(filePath) {
-  const source = fs.readFileSync(filePath, 'utf8');
+  const source = readPageSource(filePath);
   assert.match(
     source,
     /\.x-nt-effect-options:not\(\.x-nt-effect-ink-tone-options\)\s*\{[\s\S]*?display:\s*grid;[\s\S]*?grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\);/,
@@ -1515,7 +1516,7 @@ function assertBrandMarkCopy() {
   assert.match(wallpaperSource, /data-newtab-top-content/);
   assert.match(wallpaperSource, /newtab_time_font_weight_title/);
   assert.match(wallpaperSource, /newtab_time_show_seconds_title/);
-  const optionsHtml = fs.readFileSync('src/options/options.html', 'utf8');
+  const optionsHtml = readPageSource('src/options/options.html');
   assert.match(optionsHtml, /data-newtab-top-content="brand"/);
   assert.match(optionsHtml, /data-newtab-top-content="time"/);
   assert.match(optionsHtml, /data-newtab-top-content="off"/);
@@ -1563,7 +1564,7 @@ function assertThemeAwareAlternateFaviconAsset() {
   assert.doesNotMatch(svg, /url\(#paint/i, 'alternate favicon should not depend on fixed gradient paints');
 
   ['newtab.html'].forEach((filePath) => {
-    const html = fs.readFileSync(filePath, 'utf8');
+    const html = readPageSource(filePath);
     assert.match(
       html,
       /body\[data-theme="dark"\]\s+\.x-nt-favicon-svg-preview\s*\{[\s\S]*?color:\s*#f1f3f4;[\s\S]*?--x-nt-favicon-main-opacity:\s*0\.72;/,
@@ -1604,7 +1605,7 @@ function testNewtabFaviconPreloadAppliesCachedAlternateBeforeMainRuntime() {
   );
 
   ['newtab.html'].forEach((filePath) => {
-    const html = fs.readFileSync(filePath, 'utf8');
+    const html = readPageSource(filePath);
     const staticFaviconIndex = html.indexOf('data-lumno-newtab-favicon="true"');
     const firstStylesheetIndex = html.indexOf('<link rel="stylesheet"');
     assert.ok(staticFaviconIndex !== -1, `${filePath} should include a static monochrome favicon link`);
@@ -2164,7 +2165,7 @@ assert.deepStrictEqual(inputAutoFocusWrites, [true]);
 assert.strictEqual(inputAutoFocusToggle.getAttribute('aria-checked'), 'true');
 assert.strictEqual(moreSettingsLink.tabIndex, 0, 'global scope search width settings link should be tabbable');
 
-const newtabHtml = fs.readFileSync('newtab.html', 'utf8');
+const newtabHtml = readPageSource('newtab.html');
 assert.match(
   newtabHtml,
   /\.x-nt-appearance-setting-row\s*\{[\s\S]*?margin-top:\s*8px;/,

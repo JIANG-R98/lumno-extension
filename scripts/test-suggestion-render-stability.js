@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const suggestionModel = require('../src/shared/suggestion-action-model.js');
+const { readPageSource } = require('./helpers/page-source');
 
 const repoRoot = path.join(__dirname, '..');
 
@@ -122,7 +123,7 @@ function verifyClassification() {
 
 verifyClassification();
 const newtabSource = readSource('src/newtab/newtab.js');
-const newtabHtml = readSource('newtab.html');
+const newtabHtml = readPageSource('newtab.html');
 const newtabLayoutSource = readSource('src/newtab/layout.js');
 const overlaySource = readSource('src/overlay/search-panel.js');
 

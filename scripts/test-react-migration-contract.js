@@ -2,27 +2,19 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
+const { readPageSource } = require('./helpers/page-source');
 
 const repoRoot = path.resolve(__dirname, '..');
 const packageJson = JSON.parse(
   fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8')
 );
-const newtabHtml = fs.readFileSync(
-  path.join(repoRoot, 'newtab.html'),
-  'utf8'
-);
-const optionsHtml = fs.readFileSync(
-  path.join(repoRoot, 'src/options/options.html'),
-  'utf8'
-);
+const newtabHtml = readPageSource('newtab.html');
+const optionsHtml = readPageSource('src/options/options.html');
 const optionsSource = fs.readFileSync(
   path.join(repoRoot, 'src/options/options.js'),
   'utf8'
 );
-const onboardingHtml = fs.readFileSync(
-  path.join(repoRoot, 'src/onboarding/onboarding.html'),
-  'utf8'
-);
+const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
 const onboardingSource = fs.readFileSync(
   path.join(repoRoot, 'src/onboarding/onboarding.js'),
   'utf8'

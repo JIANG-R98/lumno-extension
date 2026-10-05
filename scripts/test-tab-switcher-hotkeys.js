@@ -1,5 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readPageSource } = require('./helpers/page-source');
 
 const contentHotkeySource = fs.readFileSync('src/content/hotkey-listener.js', 'utf8');
 const shortcutReleaseRelaySource = fs.readFileSync(
@@ -17,10 +18,10 @@ const switcherBridgeSource = fs.existsSync(switcherBridgePath)
   ? fs.readFileSync(switcherBridgePath, 'utf8')
   : '';
 const manifestSource = fs.readFileSync('manifest.json', 'utf8');
-const newtabHtmlSource = fs.readFileSync('newtab.html', 'utf8');
-const optionsHtmlSource = fs.readFileSync('src/options/options.html', 'utf8');
+const newtabHtmlSource = readPageSource('newtab.html');
+const optionsHtmlSource = readPageSource('src/options/options.html');
 const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
-const onboardingHtmlSource = fs.readFileSync('src/onboarding/onboarding.html', 'utf8');
+const onboardingHtmlSource = readPageSource('src/onboarding/onboarding.html');
 const manifest = JSON.parse(manifestSource);
 const localeNames = ['en', 'ja', 'zh_CN', 'zh_TW'];
 const localeMessages = Object.fromEntries(localeNames.map((locale) => [

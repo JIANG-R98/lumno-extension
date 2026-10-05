@@ -1,20 +1,15 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readPageSource } = require('./helpers/page-source');
 
 const repoRoot = path.resolve(__dirname, '..');
-const newtabHtml = fs.readFileSync(
-  path.join(repoRoot, 'newtab.html'),
-  'utf8'
-);
+const newtabHtml = readPageSource('newtab.html');
 const overlayCss = fs.readFileSync(
   path.join(repoRoot, 'src/overlay/suggestions-view.css'),
   'utf8'
 );
-const onboardingHtml = fs.readFileSync(
-  path.join(repoRoot, 'src/onboarding/onboarding.html'),
-  'utf8'
-);
+const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
 const suggestionsReact = fs.readFileSync(
   path.join(repoRoot, 'react-src/newtab/suggestions.tsx'),
   'utf8'

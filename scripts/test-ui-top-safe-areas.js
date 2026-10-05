@@ -1,15 +1,16 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readPageSource } = require('./helpers/page-source');
 
-const newtabHtml = fs.readFileSync('newtab.html', 'utf8');
+const newtabHtml = readPageSource('newtab.html');
 const newtabJs = fs.readFileSync('src/newtab/newtab.js', 'utf8');
 const wallpaperViewReact = fs.readFileSync(
   'react-src/newtab/wallpaper-view.tsx',
   'utf8'
 );
 const shortcutDialogCss = fs.readFileSync('src/newtab/shortcut-dialog.css', 'utf8');
-const optionsHtml = fs.readFileSync('src/options/options.html', 'utf8');
-const onboardingHtml = fs.readFileSync('src/onboarding/onboarding.html', 'utf8');
+const optionsHtml = readPageSource('src/options/options.html');
+const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
 const contentHotkeySource = fs.readFileSync('src/content/hotkey-listener.js', 'utf8');
 const overlayLifecycleSource = fs.readFileSync('src/overlay/lifecycle.js', 'utf8');
 const tabSwitcherSource = fs.readFileSync('src/overlay/tab-switcher.js', 'utf8');

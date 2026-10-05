@@ -1,8 +1,9 @@
 const assert = require('assert');
 const fs = require('fs');
 const settings = require('../src/shared/settings.js');
+const { readPageSource } = require('./helpers/page-source');
 
-const optionsHtml = fs.readFileSync('src/options/options.html', 'utf8');
+const optionsHtml = readPageSource('src/options/options.html');
 const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
 const newtabSource = fs.readFileSync('src/newtab/newtab.js', 'utf8');
 const wallpaperViewSource = fs.readFileSync('react-src/newtab/wallpaper-view.tsx', 'utf8');

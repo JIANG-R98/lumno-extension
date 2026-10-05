@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readPageSource } = require('./helpers/page-source');
 
 const repoRoot = path.join(__dirname, '..');
 
@@ -27,7 +28,7 @@ function assertPathMissing(relativePath) {
   'scripts/test-options-telemetry-copy.js'
 ].forEach(assertPathMissing);
 
-const accountUi = read('src/options/options.html');
+const accountUi = readPageSource('src/options/options.html');
 const background = read('src/background/background.js');
 
 [

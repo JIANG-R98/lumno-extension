@@ -1,16 +1,14 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readPageSource } = require('./helpers/page-source');
 
 const repoRoot = path.resolve(__dirname, '..');
 const sharedSearchInputCss = fs.readFileSync(
   path.join(repoRoot, 'src/shared/search-input.css'),
   'utf8'
 );
-const newtabHtml = fs.readFileSync(
-  path.join(repoRoot, 'newtab.html'),
-  'utf8'
-);
+const newtabHtml = readPageSource('newtab.html');
 const customSelectCss = fs.readFileSync(
   path.join(repoRoot, 'src/shared/custom-select.css'),
   'utf8'
@@ -27,10 +25,7 @@ const overlayShellSource = fs.readFileSync(
   path.join(repoRoot, 'react-src/overlay/shell.tsx'),
   'utf8'
 );
-const onboardingHtml = fs.readFileSync(
-  path.join(repoRoot, 'src/onboarding/onboarding.html'),
-  'utf8'
-);
+const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
 
 assert.ok(
   sharedSearchInputCss.includes('--x-lumno-search-shell-border-light: rgba(0, 0, 0, 0.14);') &&

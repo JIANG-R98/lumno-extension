@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readPageSource } = require('./helpers/page-source');
 
 const repoRoot = path.resolve(__dirname, '..');
 const readSource = (relativePath) => fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
@@ -9,7 +10,7 @@ const overlaySource = readSource('src/overlay/search-panel.js');
 const backgroundSource = readSource('src/background/background.js');
 const inputModeSource = readSource('src/shared/search-input-mode.js');
 const inputModeCss = readSource('src/shared/search-input.css');
-const newtabHtml = readSource('newtab.html');
+const newtabHtml = readPageSource('newtab.html');
 const manifestSource = readSource('manifest.json');
 const overlaySuggestionsCss = readSource('src/overlay/suggestions-view.css');
 

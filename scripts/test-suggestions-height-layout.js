@@ -1,11 +1,12 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readPageSource } = require('./helpers/page-source');
 
 delete globalThis.LumnoSuggestionsHeightLayout;
 require('../src/shared/suggestions-height-layout.js');
 
 const runtime = globalThis.LumnoSuggestionsHeightLayout;
-const newtabHtml = fs.readFileSync('newtab.html', 'utf8');
+const newtabHtml = readPageSource('newtab.html');
 const newtabLayoutSource = fs.readFileSync('src/newtab/layout.js', 'utf8');
 const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
 const backgroundSource = fs.readFileSync('src/background/background.js', 'utf8');

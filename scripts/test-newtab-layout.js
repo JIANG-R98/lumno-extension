@@ -1,13 +1,14 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readPageSource } = require('./helpers/page-source');
 
 require('../src/shared/suggestions-height-layout.js');
 require('../src/newtab/layout.js');
 
 const layoutRuntime = globalThis.LumnoNewtabLayout;
 const repoRoot = path.resolve(__dirname, '..');
-const newtabHtml = fs.readFileSync(path.join(repoRoot, 'newtab.html'), 'utf8');
+const newtabHtml = readPageSource('newtab.html');
 const newtabSource = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8');
 const wallpaperSource = fs.readFileSync(path.join(repoRoot, 'src/newtab/wallpaper.js'), 'utf8');
 const newtabRedirectSource = fs.readFileSync(
@@ -1349,9 +1350,9 @@ testBookmarkColumnPreferenceRemainsAnAdaptiveMaximum();
 
 function testBookmarkGridDefaultsToSixColumns() {
   const optionsJs = fs.readFileSync(path.join(repoRoot, 'src/options/options.js'), 'utf8');
-  const optionsHtml = fs.readFileSync(path.join(repoRoot, 'src/options/options.html'), 'utf8');
+  const optionsHtml = readPageSource('src/options/options.html');
   const settingsSource = fs.readFileSync(path.join(repoRoot, 'src/shared/settings.js'), 'utf8');
-  const onboardingHtml = fs.readFileSync(path.join(repoRoot, 'src/onboarding/onboarding.html'), 'utf8');
+  const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
 
   assert.match(newtabSource, /let currentBookmarkColumns = 6;/);
   assert.match(

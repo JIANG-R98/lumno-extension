@@ -1,9 +1,10 @@
 const assert = require('assert');
 const fs = require('fs');
 const { JSDOM } = require('jsdom');
+const { readPageSource } = require('./helpers/page-source');
 
 async function run() {
-  const dom = new JSDOM(fs.readFileSync('src/options/options.html', 'utf8'), {
+  const dom = new JSDOM(readPageSource('src/options/options.html'), {
     url: 'https://extension.test/options.html', runScripts: 'outside-only', pretendToBeVisual: true
   });
   const window = dom.window;

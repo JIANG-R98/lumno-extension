@@ -2,9 +2,10 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { readPageSource } = require('./helpers/page-source');
 
 const repoRoot = path.resolve(__dirname, '..');
-const html = fs.readFileSync(path.join(repoRoot, 'newtab.html'), 'utf8');
+const html = readPageSource('newtab.html');
 const sourcePath = path.join(repoRoot, 'src/newtab/newtab-focus-entry.js');
 const source = fs.existsSync(sourcePath) ? fs.readFileSync(sourcePath, 'utf8') : '';
 const backgroundSource = fs.readFileSync(

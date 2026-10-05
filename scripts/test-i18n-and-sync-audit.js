@@ -2,6 +2,7 @@ const assert = require('assert');
 const { execFileSync } = require('child_process');
 const fs = require('fs');
 const settings = require('../src/shared/settings.js');
+const { readPageSource } = require('./helpers/page-source');
 
 const auditOutput = execFileSync(process.execPath, ['scripts/audit-i18n.js'], {
   encoding: 'utf8'
@@ -15,7 +16,7 @@ assert.strictEqual(
 );
 
 const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
-const optionsHtml = fs.readFileSync('src/options/options.html', 'utf8');
+const optionsHtml = readPageSource('src/options/options.html');
 const backgroundSource = fs.readFileSync('src/background/background.js', 'utf8');
 const newtabSource = fs.readFileSync('src/newtab/newtab.js', 'utf8');
 const wallpaperSource = fs.readFileSync('src/newtab/wallpaper.js', 'utf8');

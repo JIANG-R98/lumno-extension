@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readPageSource } = require('./helpers/page-source');
 
 const repoRoot = path.resolve(__dirname, '..');
 const readSource = (relativePath) => fs.readFileSync(
@@ -8,7 +9,7 @@ const readSource = (relativePath) => fs.readFileSync(
   'utf8'
 );
 
-const optionsHtml = readSource('src/options/options.html');
+const optionsHtml = readPageSource('src/options/options.html');
 const optionsJs = readSource('src/options/options.js');
 const newtabJs = readSource('src/newtab/newtab.js');
 const overlaySearchPanelJs = readSource('src/overlay/search-panel.js');

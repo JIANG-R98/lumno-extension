@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 
 const communityLinks = require('../src/shared/community-links.js');
+const { readPageSource } = require('./helpers/page-source');
 
 (async () => {
   assert.strictEqual(
@@ -148,9 +149,9 @@ const communityLinks = require('../src/shared/community-links.js');
   );
 
   const newtabSource = fs.readFileSync('src/newtab/newtab.js', 'utf8');
-  const newtabHtml = fs.readFileSync('newtab.html', 'utf8');
+  const newtabHtml = readPageSource('newtab.html');
   const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
-  const optionsHtml = fs.readFileSync('src/options/options.html', 'utf8');
+  const optionsHtml = readPageSource('src/options/options.html');
   const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
   const backgroundSource = fs.readFileSync('src/background/background.js', 'utf8');
   assert(

@@ -1,9 +1,10 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readPageSource } = require('./helpers/page-source');
 
 const repoRoot = path.resolve(__dirname, '..');
-const newtabHtml = fs.readFileSync(path.join(repoRoot, 'newtab.html'), 'utf8');
+const newtabHtml = readPageSource('newtab.html');
 const featureHintsCss = fs.readFileSync(
   path.join(repoRoot, 'src/shared/feature-hints.css'),
   'utf8'

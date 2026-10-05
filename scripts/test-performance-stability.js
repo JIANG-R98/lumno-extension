@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readPageSource } = require('./helpers/page-source');
 
 const repoRoot = path.resolve(__dirname, '..');
 const optionsJs = fs.readFileSync(path.join(repoRoot, 'src/options/options.js'), 'utf8');
@@ -9,7 +10,7 @@ const newtabWallpaperJs = fs.readFileSync(
   path.join(repoRoot, 'src/newtab/wallpaper.js'),
   'utf8'
 );
-const newtabHtml = fs.readFileSync(path.join(repoRoot, 'newtab.html'), 'utf8');
+const newtabHtml = readPageSource('newtab.html');
 const overlaySearchPanelJs = fs.readFileSync(
   path.join(repoRoot, 'src/overlay/search-panel.js'),
   'utf8'
@@ -221,7 +222,7 @@ htmlFiles.forEach((relativePath) => {
   });
 });
 
-const optionsHtml = fs.readFileSync(path.join(repoRoot, 'src/options/options.html'), 'utf8');
+const optionsHtml = readPageSource('src/options/options.html');
 assertMatches(
   optionsHtml,
   /\._x_extension_toggle_2024_unique_ input:focus-visible\s*\{[\s\S]*?outline:/,

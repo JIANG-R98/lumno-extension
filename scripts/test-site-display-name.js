@@ -2,9 +2,10 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const siteDisplayName = require('../src/shared/site-display-name.js');
+const { readPageSource } = require('./helpers/page-source');
 
 const repoRoot = path.resolve(__dirname, '..');
-const newtabHtml = fs.readFileSync(path.join(repoRoot, 'newtab.html'), 'utf8');
+const newtabHtml = readPageSource('newtab.html');
 const newtabJs = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8');
 const sharedSource = fs.readFileSync(
   path.join(repoRoot, 'src/shared/site-display-name.js'),

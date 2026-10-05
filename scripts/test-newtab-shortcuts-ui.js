@@ -2,10 +2,11 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { readPageSource } = require('./helpers/page-source');
 
 const repoRoot = path.resolve(__dirname, '..');
 const newtabJs = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8');
-const newtabHtml = fs.readFileSync(path.join(repoRoot, 'newtab.html'), 'utf8');
+const newtabHtml = readPageSource('newtab.html');
 const pageStructureReact = fs.readFileSync(
   path.join(repoRoot, 'react-src/newtab/page-structure.tsx'),
   'utf8'
@@ -21,7 +22,7 @@ const shortcutDialogJs = fs.readFileSync(
 const shortcutDialogCss = fs.readFileSync(path.join(repoRoot, 'src/newtab/shortcut-dialog.css'), 'utf8');
 const wallpaperAdaptiveToneJs = fs.readFileSync(path.join(repoRoot, 'src/newtab/wallpaper-adaptive-tone.js'), 'utf8');
 const tooltipJs = fs.readFileSync(path.join(repoRoot, 'src/shared/tooltip.js'), 'utf8');
-const optionsHtml = fs.readFileSync(path.join(repoRoot, 'src/options/options.html'), 'utf8');
+const optionsHtml = readPageSource('src/options/options.html');
 const wallpaperSource = fs.readFileSync(path.join(repoRoot, 'src/newtab/wallpaper.js'), 'utf8');
 const wallpaperViewSource = fs.readFileSync(
   path.join(repoRoot, 'react-src/newtab/wallpaper-view.tsx'),
