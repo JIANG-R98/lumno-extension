@@ -35,7 +35,7 @@ export interface SegmentedControlControllerOptions {
 export type SegmentedControlController =
   ReactRootController<SegmentedControlRenderModel>;
 
-export function SegmentedControl({
+function SegmentedControl({
   model,
   onSelect
 }: {

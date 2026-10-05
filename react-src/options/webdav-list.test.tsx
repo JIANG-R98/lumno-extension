@@ -21,6 +21,12 @@ function fixture(value = model) {
 const click = async (element: Element | null) => {
   await act(async () => { (element as HTMLElement)?.click(); await Promise.resolve(); });
 };
+const type = async (input: HTMLInputElement, value: string) => {
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+};
 afterEach(() => {
   act(() => controllers.splice(0).forEach((controller) => controller.destroy()));
   document.body.textContent = '';
@@ -138,18 +144,25 @@ describe('WebDAV connection cards', () => {
     await click([...card('a').querySelectorAll('button')].find((button) => button.textContent?.includes(copy.webdav_retry))!);
     expect(onAction).toHaveBeenCalledWith('sync', 'a', {});
   });
-  it('adds and enables in one step with a provider preset', async () => {
+  it('adds and enables in one step, recognising Nutstore from its address', async () => {
     const { host, onAction } = fixture({ ...model, lang: 'zh-CN', connections: [] });
     await click([...host.querySelectorAll('button')].find((button) => button.textContent?.includes('Add WebDAV'))!);
+    expect(host.querySelector('[role="tablist"]')).toBeNull();
     const endpoint = host.querySelector<HTMLInputElement>('[name="endpoint"]')!;
-    expect(endpoint.value).toBe('https://dav.jianguoyun.com/dav/');
-    expect(host.querySelector('a[href^="https://help.jianguoyun.com/"]')).not.toBeNull();
-    await click(host.querySelector('[data-webdav-provider="custom"]'));
     expect(endpoint.value).toBe('');
-    expect(host.querySelector('a[href^="https://help.jianguoyun.com/"]')).toBeNull();
-    await click(host.querySelector('[data-webdav-provider="jianguoyun"]'));
+    expect(endpoint.placeholder).toBe('https://dav.jianguoyun.com/dav/');
+    const help = () => host.querySelector('a[href^="https://help.jianguoyun.com/"]');
+    expect(help()).toBeNull();
+    await type(endpoint, 'https://dav.jianguoyun.com/dav/');
+    expect(help()?.matches('._x_extension_shortcut_ghost_2026_unique_')).toBe(true);
+    const password = host.querySelector<HTMLInputElement>('[name="password"]')!;
+    expect(document.getElementById(password.getAttribute('aria-describedby')!)?.textContent).toBe(copy.webdav_credentials_hint);
+    expect([...host.querySelectorAll('button')].find((button) => button.textContent?.includes(copy.webdav_test))
+      ?.matches('._x_extension_shortcut_ghost_2026_unique_')).toBe(true);
     expect(host.querySelector('button[type="submit"]')?.textContent).toBe(copy.webdav_enable);
     await act(async () => { host.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
     expect(onAction).toHaveBeenCalledWith('add', undefined, { config: { endpoint: 'https://dav.jianguoyun.com/dav/', directory: 'lumno', username: '', password: '' }, enable: true });
+    await type(endpoint, 'https://dav.example.com/');
+    expect(help()).toBeNull();
   });
 });

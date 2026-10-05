@@ -2490,7 +2490,7 @@
     "message": "アプリパスワード"
   },
   "webdav_credentials_hint": {
-    "message": "接続情報はこの端末にのみ保存されます。他の端末ではそれぞれ追加してください。"
+    "message": "この端末にのみ保存されます。他の端末ではこの接続をもう一度追加してください。"
   },
   "webdav_password_saved": {
     "message": "保存済み。空欄なら変更しません"
@@ -2672,14 +2672,8 @@
   "webdav_diagnostic_copied": {
     "message": "コピーしました"
   },
-  "webdav_provider": {
-    "message": "サービス"
-  },
   "webdav_provider_jianguoyun": {
     "message": "Nutstore（坚果云）"
-  },
-  "webdav_provider_custom": {
-    "message": "カスタム"
   },
   "webdav_password_help": {
     "message": "アプリパスワードの取得方法"

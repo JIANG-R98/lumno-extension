@@ -2490,7 +2490,7 @@
     "message": "App password"
   },
   "webdav_credentials_hint": {
-    "message": "Connection details stay on this device. Add the connection on each device separately."
+    "message": "Saved only on this device. Add this connection again on your other devices."
   },
   "webdav_password_saved": {
     "message": "Saved; leave blank to keep it"
@@ -2672,14 +2672,8 @@
   "webdav_diagnostic_copied": {
     "message": "Copied"
   },
-  "webdav_provider": {
-    "message": "Provider"
-  },
   "webdav_provider_jianguoyun": {
     "message": "Nutstore"
-  },
-  "webdav_provider_custom": {
-    "message": "Custom"
   },
   "webdav_password_help": {
     "message": "Get an app password"

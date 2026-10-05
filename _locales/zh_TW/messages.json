@@ -2490,7 +2490,7 @@
     "message": "應用程式密碼"
   },
   "webdav_credentials_hint": {
-    "message": "連線資訊僅儲存在本機，其他裝置需要分別新增。"
+    "message": "只儲存在這台裝置上，其他裝置需要重新新增這條連線。"
   },
   "webdav_password_saved": {
     "message": "已儲存；留空以保持不變"
@@ -2672,14 +2672,8 @@
   "webdav_diagnostic_copied": {
     "message": "已複製"
   },
-  "webdav_provider": {
-    "message": "服務商"
-  },
   "webdav_provider_jianguoyun": {
     "message": "堅果雲"
-  },
-  "webdav_provider_custom": {
-    "message": "自訂"
   },
   "webdav_password_help": {
     "message": "如何取得應用程式密碼"

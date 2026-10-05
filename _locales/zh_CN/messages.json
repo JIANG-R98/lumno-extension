@@ -2490,7 +2490,7 @@
     "message": "应用密码"
   },
   "webdav_credentials_hint": {
-    "message": "连接信息仅保存在本机，其他设备需要分别添加。"
+    "message": "只保存在这台设备上，其他设备需要重新添加这条连接。"
   },
   "webdav_password_saved": {
     "message": "已保存；留空保持不变"
@@ -2672,14 +2672,8 @@
   "webdav_diagnostic_copied": {
     "message": "已复制"
   },
-  "webdav_provider": {
-    "message": "服务商"
-  },
   "webdav_provider_jianguoyun": {
     "message": "坚果云"
-  },
-  "webdav_provider_custom": {
-    "message": "自定义"
   },
   "webdav_password_help": {
     "message": "如何获取应用密码"

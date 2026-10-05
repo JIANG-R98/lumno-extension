@@ -77,29 +77,49 @@
 .lumno-webdav-diff-label { color: var(--panel-subtext); }
 .lumno-webdav-diff-row [role="cell"] { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
 
-.lumno-webdav-settings .lumno-webdav-provider { flex-direction: row; align-items: center; justify-content: flex-start; align-self: stretch; gap: 12px; text-align: left; }
-.lumno-webdav-settings .lumno-webdav-provider ._x_extension_shortcut_label_2024_unique_ { margin: 0; }
 .lumno-webdav-settings form { text-align: left; }
+/* The four connection fields read as one group, 16px clear of the feedback
+   or actions below (10px form gap + 6px). */
 .lumno-webdav-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px 16px;
+  margin: 6px 0;
 }
 .lumno-webdav-form-grid ._x_extension_shortcut_field_2024_unique_ { min-width: 0; }
 .lumno-webdav-form-grid ._x_extension_shortcut_label_row_2024_unique_ { display: flex; justify-content: space-between; gap: 8px; }
 .lumno-webdav-form-grid input { width: 100%; box-sizing: border-box; }
-.lumno-webdav-help { font-size: 12px; color: var(--panel-subtext); text-decoration: underline; text-underline-offset: 2px; }
-.lumno-webdav-help:hover { color: var(--panel-text); }
-.lumno-webdav-form-feedback { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; overflow-wrap: anywhere; }
-.lumno-webdav-success { font-size: 12px; color: #15803d; }
-#_x_extension_settings_panel_2024_unique_[data-theme="dark"] .lumno-webdav-success { color: #86efac; }
-.lumno-webdav-editor-actions > button:first-child { margin-right: auto; }
+/* Ghost actions keep their text aligned with the field edges, and the help
+   link does not make its label row taller than the neighbouring one. */
+.lumno-webdav-settings .lumno-webdav-help { margin: -6px -9px -6px 0; text-decoration: none; }
+.lumno-webdav-editor-actions > .lumno-webdav-test { margin: 0 auto 0 -9px; }
+.lumno-webdav-field-hint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--panel-subtext);
+}
+.lumno-webdav-form-feedback {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--duplicate-badge-text);
+}
+.lumno-webdav-form-feedback[data-tone="success"] { color: #15803d; }
+#_x_extension_settings_panel_2024_unique_[data-theme="dark"] .lumno-webdav-form-feedback[data-tone="success"] { color: #86efac; }
+.lumno-webdav-form-feedback > .ri-icon { flex: 0 0 auto; }
+.lumno-webdav-form-feedback-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.lumno-webdav-form-feedback > button { margin: -6px -9px -6px 0; }
 .lumno-webdav-feedback { margin-top: 12px; overflow-wrap: anywhere; }
 .lumno-webdav-feedback[data-error="true"] { color: var(--duplicate-badge-text); }
 .lumno-webdav-settings [hidden] { display: none !important; }
 @media (max-width: 520px) {
   .lumno-webdav-form-grid { grid-template-columns: minmax(0, 1fr); }
-  .lumno-webdav-settings .lumno-webdav-provider { flex-direction: column; align-items: flex-start; }
   .lumno-webdav-diff-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .lumno-webdav-diff-label { grid-column: 1 / -1; }
   .lumno-webdav-diff-head > :first-child { display: none; }

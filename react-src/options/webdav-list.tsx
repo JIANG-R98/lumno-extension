@@ -1,7 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { createReactRootController } from './root-controller';
 import { InlinePopconfirm } from './inline-popconfirm';
-import { SegmentedControl } from './segmented-control';
 import { getAsyncErrorMessage, useExclusiveAsyncAction } from '../shared/use-exclusive-async-action';
 
 export interface WebDavConfig {
@@ -33,29 +32,24 @@ export interface WebDavListModel {
 export interface WebDavListOptions {
   onAction(operation: string, id?: string, extra?: Record<string, unknown>): Promise<{ needsChoice?: boolean }>;
 }
-type Provider = 'jianguoyun' | 'custom';
 type Tone = 'success' | 'warning' | 'danger' | undefined;
 
 const classes = (name: string) => `_x_extension_${name}_2024_unique_`;
 const buttonClass = `${classes('shortcut_submit')} ${classes('shortcut_secondary')}`;
 const primaryClass = `${classes('shortcut_submit')} ${classes('shortcut_submit_primary')} ${classes('shortcut_save')}`;
+const ghostClass = `${classes('shortcut_submit')} _x_extension_shortcut_ghost_2026_unique_`;
 const JIANGUOYUN_ENDPOINT = 'https://dav.jianguoyun.com/dav/';
 const JIANGUOYUN_HELP = 'https://help.jianguoyun.com/?p=2064';
-const ENDPOINT_PLACEHOLDERS: Record<Provider, string> = {
-  jianguoyun: JIANGUOYUN_ENDPOINT,
-  custom: 'https://dav.example.com/'
-};
 
-function providerOf(endpoint: string): Provider {
-  try {
-    const url = new URL(endpoint);
-    if (url.hostname === 'dav.jianguoyun.com') return 'jianguoyun';
-  } catch { /* Unsaved or invalid input has no provider. */ }
-  return 'custom';
+// Nutstore needs no different input, only its app-password guide, so it is
+// recognised from the address instead of being chosen up front.
+function isJianguoyun(endpoint: string) {
+  try { return new URL(endpoint.trim()).hostname === 'dav.jianguoyun.com'; }
+  catch { return false; }
 }
 
 function connectionTitle(item: WebDavConnection, copy: Record<string, string>) {
-  if (providerOf(item.config.endpoint) === 'jianguoyun') return copy.webdav_provider_jianguoyun;
+  if (isJianguoyun(item.config.endpoint)) return copy.webdav_provider_jianguoyun;
   try { return new URL(item.config.endpoint).host; } catch { return item.config.endpoint; }
 }
 
@@ -100,7 +94,7 @@ function useNow(intervalMs: number) {
   return now;
 }
 
-function DiagnosticButton({ copy, text }: { copy: Record<string, string>; text: string }) {
+function DiagnosticButton({ copy, text, ghost = false }: { copy: Record<string, string>; text: string; ghost?: boolean }) {
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     if (!copied) return undefined;
@@ -108,7 +102,7 @@ function DiagnosticButton({ copy, text }: { copy: Record<string, string>; text: 
     return () => window.clearTimeout(timer);
   }, [copied]);
   return (
-    <button className={buttonClass} onClick={() => {
+    <button className={ghost ? ghostClass : buttonClass} onClick={() => {
       void navigator.clipboard?.writeText(text).then(() => setCopied(true)).catch(() => {});
     }} title={text} type="button">
       <i aria-hidden="true" className={`ri-icon ri-size-14 ${copied ? 'ri-check-line' : 'ri-file-copy-line'}`} />
@@ -198,9 +192,7 @@ function ConnectionEditor({ item, model, options, onClose }: {
 }) {
   const { copy } = model;
   const formId = useId();
-  const initialProvider: Provider = item ? providerOf(item.config.endpoint) : /^zh/i.test(model.lang || '') ? 'jianguoyun' : 'custom';
-  const [provider, setProvider] = useState<Provider>(initialProvider);
-  const [draft, setDraft] = useState({ endpoint: item?.config.endpoint || (initialProvider === 'jianguoyun' ? JIANGUOYUN_ENDPOINT : ''),
+  const [draft, setDraft] = useState({ endpoint: item?.config.endpoint || '',
     directory: item?.config.directory || 'lumno', username: item?.config.username || '', password: '' });
   const [feedback, setFeedback] = useState<{ text: string; failed: boolean; diagnostic?: string } | null>(null);
   const [pendingOperation, setPendingOperation] = useState('');
@@ -217,13 +209,7 @@ function ConnectionEditor({ item, model, options, onClose }: {
   const reusePassword = item?.config.hasPassword && endpoint === item.config.endpoint && draft.username.trim() === item.config.username;
   const disabled = action.pending || !model.ready || model.outdated;
   const update = (field: keyof typeof draft, value: string) => { setFeedback(null); setDraft((current) => ({ ...current, [field]: value })); };
-  const selectProvider = (value: string) => {
-    const next = value as Provider;
-    setProvider(next);
-    setFeedback(null);
-    setDraft((current) => ({ ...current, endpoint: next === 'jianguoyun' ? JIANGUOYUN_ENDPOINT
-      : providerOf(current.endpoint) === 'jianguoyun' ? '' : current.endpoint }));
-  };
+  const jianguoyun = isJianguoyun(draft.endpoint);
   const run = async (operation: string) => {
     const outcome = await action.run(operation);
     setPendingOperation('');
@@ -237,23 +223,14 @@ function ConnectionEditor({ item, model, options, onClose }: {
     }
   };
   const fields = [
-    { name: 'endpoint', type: 'url', placeholder: ENDPOINT_PLACEHOLDERS[provider] },
+    { name: 'endpoint', type: 'url', placeholder: /^zh/i.test(model.lang || '') ? JIANGUOYUN_ENDPOINT : 'https://dav.example.com/' },
     { name: 'directory', type: 'text', placeholder: 'lumno' },
-    { name: 'username', type: 'text', placeholder: provider === 'jianguoyun' ? 'name@example.com' : '' },
+    { name: 'username', type: 'text', placeholder: jianguoyun ? 'name@example.com' : '' },
     { name: 'password', type: 'password', placeholder: reusePassword ? copy.webdav_password_saved : '' }
   ] as const;
   return (
     <form className={item ? classes('shortcut_editor') : classes('shortcut_form_fields')}
       onSubmit={(event) => { event.preventDefault(); void run('submit'); }}>
-      <div className={`${classes('shortcut_field')} lumno-webdav-provider`}>
-        <span className={classes('shortcut_label')} id={`${formId}-provider`}>{copy.webdav_provider}</span>
-        <div aria-labelledby={`${formId}-provider`} className={`${classes('theme_picker')} ${classes('inline_tabs')}`} role="tablist">
-          <SegmentedControl model={{ activeValue: provider, dataAttribute: 'data-webdav-provider', disabled,
-            items: (['jianguoyun', 'custom'] as const).map((value) => ({
-              value, label: copy[`webdav_provider_${value}`], labelKey: `webdav_provider_${value}` })) }}
-          onSelect={selectProvider} />
-        </div>
-      </div>
       <div className="lumno-webdav-form-grid">
         {fields.map((field) => (
           <div className={classes('shortcut_field')} key={field.name}>
@@ -261,31 +238,44 @@ function ConnectionEditor({ item, model, options, onClose }: {
               <label className={classes('shortcut_label')} htmlFor={`${formId}-${field.name}`}>
                 <span>{copy[`webdav_${field.name}`]}</span><span className={classes('shortcut_required')}>*</span>
               </label>
-              {field.name === 'password' && provider === 'jianguoyun' ? (
-                <a className="lumno-webdav-help" href={JIANGUOYUN_HELP} rel="noreferrer" target="_blank">{copy.webdav_password_help}</a>
+              {field.name === 'password' && jianguoyun ? (
+                <a className={`${ghostClass} lumno-webdav-help`} href={JIANGUOYUN_HELP} rel="noreferrer" target="_blank">
+                  {copy.webdav_password_help}<i aria-hidden="true" className="ri-icon ri-size-12 ri-external-link-line" />
+                </a>
               ) : null}
             </div>
-            <input autoFocus={item ? field.name === 'endpoint' : field.name === 'username'}
+            <input autoFocus={field.name === 'endpoint'}
               autoComplete={field.name === 'password' ? 'new-password' : 'off'}
               className={classes('shortcut_input')} disabled={disabled} id={`${formId}-${field.name}`}
+              aria-describedby={field.name === 'password' ? `${formId}-password-hint` : undefined}
               name={field.name} placeholder={field.placeholder}
               required={field.name !== 'password' || !reusePassword} spellCheck={false}
               type={field.type} value={draft[field.name]}
               onChange={(event) => update(field.name, event.currentTarget.value)} />
+            {/* Where credentials live is a property of the password, so it is
+                said under that field instead of as loose text below the form. */}
+            {field.name === 'password' ? (
+              <p className="lumno-webdav-field-hint" id={`${formId}-password-hint`}>
+                <i aria-hidden="true" className="ri-icon ri-size-12 ri-lock-line" />{copy.webdav_credentials_hint}
+              </p>
+            ) : null}
           </div>
         ))}
       </div>
-      <p className={classes('setting_desc')}>{copy.webdav_credentials_hint}</p>
       {feedback ? (
-        <div className="lumno-webdav-form-feedback" role="status">
-          <span className={feedback.failed ? classes('shortcut_error') : 'lumno-webdav-success'}>{feedback.text}</span>
-          {feedback.diagnostic ? <DiagnosticButton copy={copy} text={feedback.diagnostic} /> : null}
+        <div className="lumno-webdav-form-feedback" data-tone={feedback.failed ? 'danger' : 'success'} role="status">
+          <i aria-hidden="true" className={`ri-icon ri-size-14 ${feedback.failed ? 'ri-error-warning-line' : 'ri-checkbox-circle-line'}`} />
+          <span className="lumno-webdav-form-feedback-text">{feedback.text}</span>
+          {feedback.diagnostic ? <DiagnosticButton copy={copy} ghost text={feedback.diagnostic} /> : null}
         </div>
       ) : null}
       <div className={`${classes('shortcut_editor_actions')} lumno-webdav-editor-actions`}>
-        <button aria-busy={pendingOperation === 'test'} className={buttonClass} disabled={disabled} type="button" onClick={(event) => {
+        <button aria-busy={pendingOperation === 'test'} className={`${ghostClass} lumno-webdav-test`} disabled={disabled} type="button" onClick={(event) => {
           if (event.currentTarget.form?.reportValidity()) void run('test');
-        }}>{pendingOperation === 'test' ? copy.webdav_state_testing : copy.webdav_test}</button>
+        }}>
+          <i aria-hidden="true" className="ri-icon ri-size-14 ri-pulse-line" />
+          {pendingOperation === 'test' ? copy.webdav_state_testing : copy.webdav_test}
+        </button>
         <button className={buttonClass} disabled={action.pending} onClick={onClose} type="button">{copy.confirm_cancel}</button>
         <button aria-busy={pendingOperation === 'submit'} className={primaryClass} disabled={disabled} type="submit">
           {pendingOperation === 'submit' ? copy.webdav_connecting : item ? copy.webdav_save : copy.webdav_enable}
