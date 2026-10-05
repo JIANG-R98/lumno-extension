@@ -1,11 +1,15 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 const search = require('../src/shared/search-utils.js');
 
 const repoRoot = path.resolve(__dirname, '..');
 
 function readSource(relativePath) {
+  if (relativePath === 'src/newtab/newtab.js') {
+    return readNewtabRuntimeSource();
+  }
   return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
 }
 

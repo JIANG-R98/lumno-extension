@@ -6,7 +6,8 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const NEWTAB_RUNTIME_MODULES = [
   'src/newtab/site-theme-resolver.js',
   'src/newtab/url-policy.js',
-  'src/newtab/recent-sites-controller.js'
+  'src/newtab/recent-sites-controller.js',
+  'src/newtab/site-search-providers.js'
 ];
 
 // Returns newtab.js followed by the modules split out of it, so source checks
