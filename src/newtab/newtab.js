@@ -482,8 +482,6 @@
   });
   const NEWTAB_EXTERNAL_CHANGE_DEBOUNCE_MS = 120;
   const NEWTAB_RESIZE_DENSITY_SETTLE_MS = 140;
-  const NEWTAB_INITIAL_VIEWPORT_SETTLE_MS = 32;
-  const NEWTAB_ENTRY_ANIMATION_TOTAL_MS = 460;
   const pageSearchParams = new URLSearchParams(window.location.search || '');
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
   let globalThemeMode = 'system';
@@ -584,9 +582,7 @@
   let searchEntryRestoreLayoutLockUntil = 0;
   let newtabResizeLayoutLocked = false;
   let newtabReadyRequested = false;
-  let newtabReadySettleTimer = 0;
   let newtabReadyViewportRevision = 0;
-  let newtabEntryAnimationTimer = 0;
   let resolveNewtabEntryAnimationReady = null;
   const newtabEntryAnimationReadyPromise = new Promise((resolve) => {
     resolveNewtabEntryAnimationReady = resolve;
@@ -2145,115 +2141,6 @@
     return fallback || '';
   }
 
-  function finishNewtabEntryAnimation() {
-    if (newtabEntryAnimationTimer) {
-      window.clearTimeout(newtabEntryAnimationTimer);
-      newtabEntryAnimationTimer = 0;
-    }
-    if (document.body && document.body.getAttribute('data-nt-enter') === 'run') {
-      document.body.setAttribute('data-nt-enter', 'done');
-      root.setAttribute('data-lumno-search-entry', 'done');
-      if (resolveNewtabEntryAnimationReady) {
-        resolveNewtabEntryAnimationReady();
-        resolveNewtabEntryAnimationReady = null;
-      }
-    }
-  }
-
-  function startNewtabEntryAnimation() {
-    if (!document.body) {
-      return;
-    }
-    if (newtabEntryAnimationTimer) {
-      window.clearTimeout(newtabEntryAnimationTimer);
-      newtabEntryAnimationTimer = 0;
-    }
-    const reduceMotion = shouldSkipNewtabEntryMotion();
-    const entryState = reduceMotion ? 'done' : 'run';
-    document.body.setAttribute('data-nt-enter', entryState);
-    root.setAttribute('data-lumno-search-entry', entryState);
-    if (reduceMotion) {
-      if (resolveNewtabEntryAnimationReady) {
-        resolveNewtabEntryAnimationReady();
-        resolveNewtabEntryAnimationReady = null;
-      }
-      return;
-    }
-    newtabEntryAnimationTimer = window.setTimeout(
-      finishNewtabEntryAnimation,
-      NEWTAB_ENTRY_ANIMATION_TOTAL_MS
-    );
-  }
-
-  function revealNewtabWithoutEntryMotion() {
-    if (!document.body) {
-      return;
-    }
-    if (newtabReadySettleTimer) {
-      window.clearTimeout(newtabReadySettleTimer);
-      newtabReadySettleTimer = 0;
-    }
-    updateBookmarkSectionPosition({ releaseDockDensityLock: true });
-    document.body.setAttribute('data-nt-enter', 'done');
-    root.setAttribute('data-lumno-search-entry', 'done');
-    finishWordmarkEntryAnimation();
-    markNewtabStartupMilestone('ready-visible');
-    document.body.setAttribute('data-nt-ready', '1');
-    if (resolveNewtabEntryAnimationReady) {
-      resolveNewtabEntryAnimationReady();
-      resolveNewtabEntryAnimationReady = null;
-    }
-    rememberSearchEntryViewport();
-  }
-
-  function scheduleNewtabReadyAfterViewportSettle() {
-    if (!newtabReadyRequested ||
-        !document.body ||
-        document.body.getAttribute('data-nt-ready') === '1') {
-      return;
-    }
-    if (shouldSkipNewtabEntryMotion()) {
-      revealNewtabWithoutEntryMotion();
-      return;
-    }
-    if (newtabReadySettleTimer) {
-      window.clearTimeout(newtabReadySettleTimer);
-    }
-    const viewport = getSearchEntryViewportSnapshot();
-    const viewportRevision = newtabReadyViewportRevision;
-    newtabReadySettleTimer = window.setTimeout(() => {
-      newtabReadySettleTimer = 0;
-      if (newtabResizeLayoutLocked ||
-          viewportRevision !== newtabReadyViewportRevision ||
-          hasSearchEntryViewportChanged(viewport)) {
-        scheduleNewtabReadyAfterViewportSettle();
-        return;
-      }
-      updateBookmarkSectionPosition({ releaseDockDensityLock: true });
-      requestAnimationFrame(() => {
-        if (newtabResizeLayoutLocked ||
-            viewportRevision !== newtabReadyViewportRevision ||
-            hasSearchEntryViewportChanged(viewport)) {
-          scheduleNewtabReadyAfterViewportSettle();
-          return;
-        }
-        markNewtabStartupMilestone('ready-visible');
-        document.body.setAttribute('data-nt-ready', '1');
-        startNewtabEntryAnimation();
-        rememberSearchEntryViewport();
-      });
-    }, NEWTAB_INITIAL_VIEWPORT_SETTLE_MS);
-  }
-
-  function markNewtabReady() {
-    if (!document.body) {
-      return;
-    }
-    markNewtabStartupMilestone('ready-requested');
-    newtabReadyRequested = true;
-    scheduleNewtabReadyAfterViewportSettle();
-  }
-
   function formatMessage(key, fallback, params) {
     let text = t(key, fallback);
     if (!params) {
@@ -3672,6 +3559,42 @@
       },
       get wallpaperRuntime() {
         return wallpaperRuntime;
+      }
+    }
+  });
+
+  const NEWTAB_ENTRY_MOTION = globalThis.LumnoNewtabEntryMotion;
+  const {
+    finishNewtabEntryAnimation,
+    scheduleNewtabReadyAfterViewportSettle,
+    markNewtabReady
+  } = NEWTAB_ENTRY_MOTION.createEntryMotion({
+    root,
+    shouldSkipNewtabEntryMotion,
+    updateBookmarkSectionPosition,
+    finishWordmarkEntryAnimation,
+    markNewtabStartupMilestone,
+    rememberSearchEntryViewport,
+    getSearchEntryViewportSnapshot,
+    hasSearchEntryViewportChanged,
+    pageState: {
+      get resolveNewtabEntryAnimationReady() {
+        return resolveNewtabEntryAnimationReady;
+      },
+      set resolveNewtabEntryAnimationReady(value) {
+        resolveNewtabEntryAnimationReady = value;
+      },
+      get newtabReadyRequested() {
+        return newtabReadyRequested;
+      },
+      set newtabReadyRequested(value) {
+        newtabReadyRequested = value;
+      },
+      get newtabReadyViewportRevision() {
+        return newtabReadyViewportRevision;
+      },
+      get newtabResizeLayoutLocked() {
+        return newtabResizeLayoutLocked;
       }
     }
   });

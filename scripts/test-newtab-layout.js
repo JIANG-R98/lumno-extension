@@ -958,11 +958,16 @@ function testInitialEntryMotionIsStaggeredAndTransient() {
     /function finishNewtabEntryAnimation\(\)[\s\S]*?setAttribute\('data-nt-enter', 'done'\)[\s\S]*?root\.setAttribute\('data-lumno-search-entry', 'done'\)[\s\S]*?function startNewtabEntryAnimation\(\)[\s\S]*?const reduceMotion = shouldSkipNewtabEntryMotion\(\);[\s\S]*?const entryState = reduceMotion \? 'done' : 'run';[\s\S]*?setAttribute\('data-nt-enter', entryState\)[\s\S]*?root\.setAttribute\('data-lumno-search-entry', entryState\)[\s\S]*?window\.setTimeout\(\s*finishNewtabEntryAnimation,[\s\S]*?NEWTAB_ENTRY_ANIMATION_TOTAL_MS/,
     'new-tab entrance motion should drive the shared search-entry state and release it after the sequence'
   );
+  // The gate promise lives in newtab.js; the entry motion that resolves it is split out.
+  const autoFocusGateMessage =
+    'the input auto-focus hint component gate should release after normal, interrupted, or reduced-motion entry completion';
+  assert.match(newtabSource, /const newtabEntryAnimationReadyPromise = new Promise/, autoFocusGateMessage);
   assert.match(
     newtabSource,
-    /const newtabEntryAnimationReadyPromise = new Promise[\s\S]*?function finishNewtabEntryAnimation\(\)[\s\S]*?resolveNewtabEntryAnimationReady\(\)[\s\S]*?function startNewtabEntryAnimation\(\)[\s\S]*?if \(reduceMotion\)[\s\S]*?resolveNewtabEntryAnimationReady\(\)[\s\S]*?inputAutoFocusVisibilityGate:\s*newtabEntryAnimationReadyPromise/,
-    'the input auto-focus hint component gate should release after normal, interrupted, or reduced-motion entry completion'
+    /function finishNewtabEntryAnimation\(\)[\s\S]*?resolveNewtabEntryAnimationReady\(\)[\s\S]*?function startNewtabEntryAnimation\(\)[\s\S]*?if \(reduceMotion\)[\s\S]*?resolveNewtabEntryAnimationReady\(\)/,
+    autoFocusGateMessage
   );
+  assert.match(newtabSource, /inputAutoFocusVisibilityGate:\s*newtabEntryAnimationReadyPromise/, autoFocusGateMessage);
   assert.match(
     newtabSource,
     /setAttribute\('data-nt-ready', '1'\);\s*startNewtabEntryAnimation\(\);/,
@@ -1044,11 +1049,12 @@ function testInitialEntryMotionIsStaggeredAndTransient() {
     /#_x_extension_newtab_bookmarks_2024_unique_\[data-visible="true"\],\s*body\[data-nt-enter="run"\] #_x_extension_newtab_recent_sites_2024_unique_\[data-visible="true"\]\s*\{[\s\S]*?80ms both;/,
     'bottom content sections should enter together with the shortcut sequence'
   );
-  assert.match(
-    newtabSource,
-    /const NEWTAB_ENTRY_ANIMATION_TOTAL_MS = 460;[\s\S]*?const WORDMARK_ENTRY_ANIMATION_TOTAL_MS = 380;/,
-    'the initial entrance choreography should complete within a compact motion budget'
-  );
+  ['const NEWTAB_ENTRY_ANIMATION_TOTAL_MS = 460;', 'const WORDMARK_ENTRY_ANIMATION_TOTAL_MS = 380;'].forEach((budget) => {
+    assert.ok(
+      newtabSource.includes(budget),
+      'the initial entrance choreography should complete within a compact motion budget'
+    );
+  });
   assert.match(
     sharedSearchInputCss,
     /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.x-lumno-search-entry\[data-lumno-search-entry\]\s*\{[\s\S]*?animation:\s*none;[\s\S]*?filter:\s*none;[\s\S]*?opacity:\s*1;[\s\S]*?scale:\s*1;/,
