@@ -24,11 +24,11 @@
     document.documentElement.setAttribute('data-lumno-options-runtime-started', 'true');
   }
 
-  const NAVIGATION_DISPOSITION = globalThis.LumnoNavigationDisposition || {};
-  const COMMUNITY_LINKS = globalThis.LumnoCommunityLinks || {};
-  const SETTINGS = globalThis.LumnoSettings || {};
-  const AGGREGATE_SEARCH_STORE = globalThis.LumnoAggregateSearchStore || {};
-  const SHORTCUT_FAVICON = globalThis.LumnoShortcutFavicon || {};
+  const NAVIGATION_DISPOSITION = globalThis.LumnoNavigationDisposition;
+  const COMMUNITY_LINKS = globalThis.LumnoCommunityLinks;
+  const SETTINGS = globalThis.LumnoSettings;
+  const AGGREGATE_SEARCH_STORE = globalThis.LumnoAggregateSearchStore;
+  const SHORTCUT_FAVICON = globalThis.LumnoShortcutFavicon;
   const LUMNO_FEEDBACK_SUPPORT_LINKS_FALLBACK = COMMUNITY_LINKS.FALLBACK_LINKS;
   const panel = document.getElementById('_x_extension_settings_panel_2024_unique_');
   const optionsRoot = document.getElementById('_x_extension_options_root_2024_unique_');
@@ -187,37 +187,31 @@
   const confirmOk = document.getElementById('_x_extension_confirm_ok_2024_unique_');
   const confirmCancel = document.getElementById('_x_extension_confirm_cancel_2024_unique_');
   const confirmDialog = document.querySelector('._x_extension_confirm_dialog_2024_unique_');
-  const optionsBlacklistListApi = globalThis.LumnoOptionsBlacklistList || {};
-  const optionsAggregateSearchListApi = globalThis.LumnoOptionsAggregateSearchList || {};
-  const optionsFeedbackSupportApi = globalThis.LumnoOptionsFeedbackSupport || {};
-  const optionsInfoButtonApi = globalThis.LumnoOptionsInfoButton || {};
-  const optionsToastApi = globalThis.LumnoOptionsToast || {};
-  const optionsPopconfirmApi = globalThis.LumnoOptionsPopconfirm || {};
-  const optionsSegmentedControlApi = globalThis.LumnoOptionsSegmentedControl || {};
-  const optionsSelectControlApi = globalThis.LumnoOptionsSelectControl || {};
-  const optionsSettingsControlsApi = globalThis.LumnoOptionsSettingsControls || {};
-  const optionsSettingsFormsApi = globalThis.LumnoOptionsSettingsForms || {};
-  const optionsSettingsNavigationApi = globalThis.LumnoOptionsSettingsNavigation || {};
-  const optionsShortcutReferenceApi = globalThis.LumnoOptionsShortcutReference || {};
-  const optionsShortcutHotkeyApi = globalThis.LumnoOptionsShortcutHotkey || {};
-  const optionsSiteSearchListApi = globalThis.LumnoOptionsSiteSearchList || {};
-  const optionsThemePickerApi = globalThis.LumnoOptionsThemePicker || {};
-  const shortcutDisplay = globalThis.LumnoShortcutDisplay || {};
-  const toastController = typeof optionsToastApi.createToastController === 'function'
-    ? optionsToastApi.createToastController(toastElement, {
-        windowObj: window,
-        duration: 2200,
-        errorBackground: 'rgba(153, 27, 27, 0.92)'
-      })
-    : null;
+  const optionsBlacklistListApi = globalThis.LumnoOptionsBlacklistList;
+  const optionsAggregateSearchListApi = globalThis.LumnoOptionsAggregateSearchList;
+  const optionsFeedbackSupportApi = globalThis.LumnoOptionsFeedbackSupport;
+  const optionsInfoButtonApi = globalThis.LumnoOptionsInfoButton;
+  const optionsToastApi = globalThis.LumnoOptionsToast;
+  const optionsPopconfirmApi = globalThis.LumnoOptionsPopconfirm;
+  const optionsSegmentedControlApi = globalThis.LumnoOptionsSegmentedControl;
+  const optionsSelectControlApi = globalThis.LumnoOptionsSelectControl;
+  const optionsSettingsControlsApi = globalThis.LumnoOptionsSettingsControls;
+  const optionsSettingsFormsApi = globalThis.LumnoOptionsSettingsForms;
+  const optionsSettingsNavigationApi = globalThis.LumnoOptionsSettingsNavigation;
+  const optionsShortcutReferenceApi = globalThis.LumnoOptionsShortcutReference;
+  const optionsShortcutHotkeyApi = globalThis.LumnoOptionsShortcutHotkey;
+  const optionsSiteSearchListApi = globalThis.LumnoOptionsSiteSearchList;
+  const optionsThemePickerApi = globalThis.LumnoOptionsThemePicker;
+  const shortcutDisplay = globalThis.LumnoShortcutDisplay;
+  const toastController = optionsToastApi.createToastController(toastElement, {
+    windowObj: window,
+    duration: 2200,
+    errorBackground: 'rgba(153, 27, 27, 0.92)'
+  });
   const feedbackSupportController =
-    typeof optionsFeedbackSupportApi.createFeedbackSupportController === 'function'
-      ? optionsFeedbackSupportApi.createFeedbackSupportController(feedbackSupportHost)
-      : null;
+    optionsFeedbackSupportApi.createFeedbackSupportController(feedbackSupportHost);
   function createOptionsInfoButtonController(host) {
-    return typeof optionsInfoButtonApi.createInfoButtonController === 'function'
-      ? optionsInfoButtonApi.createInfoButtonController(host)
-      : null;
+    return optionsInfoButtonApi.createInfoButtonController(host);
   }
   const restrictedActionInfoController = createOptionsInfoButtonController(restrictedActionInfoHost);
   const bookmarkRowsInfoController = createOptionsInfoButtonController(bookmarkRowsInfoHost);
@@ -226,32 +220,24 @@
     overlayPageThemeAdaptationInfoHost
   );
   const shortcutReferenceController =
-    typeof optionsShortcutReferenceApi.createShortcutReferenceController === 'function'
-      ? optionsShortcutReferenceApi.createShortcutReferenceController(shortcutReferenceList)
-      : null;
+    optionsShortcutReferenceApi.createShortcutReferenceController(shortcutReferenceList);
   const shortcutHotkeyController =
-    typeof optionsShortcutHotkeyApi.createShortcutHotkeyController === 'function'
-      ? optionsShortcutHotkeyApi.createShortcutHotkeyController(
-          fallbackShortcutTokens,
-          { onContentReady: updateFallbackShortcutWrapWidthForContent }
-        )
-      : null;
+    optionsShortcutHotkeyApi.createShortcutHotkeyController(
+      fallbackShortcutTokens,
+      { onContentReady: updateFallbackShortcutWrapWidthForContent }
+    );
   const themePickerController =
-    typeof optionsThemePickerApi.createThemePickerController === 'function'
-      ? optionsThemePickerApi.createThemePickerController(themePicker, {
-          onSelect(mode, button) {
-            playThemeOptionClickEffect(button);
-            setThemeMode(mode);
-          }
-        })
-      : null;
+    optionsThemePickerApi.createThemePickerController(themePicker, {
+      onSelect(mode, button) {
+        playThemeOptionClickEffect(button);
+        setThemeMode(mode);
+      }
+    });
   function createOptionsSegmentedControlController(host, kind, onSelect) {
-    return typeof optionsSegmentedControlApi.createSegmentedControlController === 'function'
-      ? optionsSegmentedControlApi.createSegmentedControlController(host, {
-          kind,
-          onSelect
-        })
-      : null;
+    return optionsSegmentedControlApi.createSegmentedControlController(host, {
+      kind,
+      onSelect
+    });
   }
   const recentModeTabsController = createOptionsSegmentedControlController(
     recentModeTabsWrap,
@@ -290,8 +276,7 @@
   );
   const optionsToggleControlRecords = new Map();
   function registerOptionsToggleControl(input, kind) {
-    if (!input ||
-        typeof optionsSettingsControlsApi.createToggleControlController !== 'function') {
+    if (!input) {
       return null;
     }
     const host = input.closest('._x_extension_switch_2024_unique_');
@@ -394,28 +379,26 @@
     };
   }).filter((item) => item.value);
   const searchResultSourceTypeController =
-    typeof optionsSettingsControlsApi.createRequiredCheckboxGroupController === 'function'
-      ? optionsSettingsControlsApi.createRequiredCheckboxGroupController(
-          searchResultSourceTypeGroupHost,
-          {
-            kind: 'search-result-sources',
-            onChange(values) {
-              const selected = new Set(values);
-              let changedInput = null;
-              searchResultSourceTypeInputs.forEach((input) => {
-                const next = selected.has(input.getAttribute('data-search-result-source-type'));
-                if (input.checked !== next && !changedInput) {
-                  changedInput = input;
-                }
-                input.checked = next;
-              });
-              if (changedInput) {
-                changedInput.dispatchEvent(new Event('change'));
-              }
+    optionsSettingsControlsApi.createRequiredCheckboxGroupController(
+      searchResultSourceTypeGroupHost,
+      {
+        kind: 'search-result-sources',
+        onChange(values) {
+          const selected = new Set(values);
+          let changedInput = null;
+          searchResultSourceTypeInputs.forEach((input) => {
+            const next = selected.has(input.getAttribute('data-search-result-source-type'));
+            if (input.checked !== next && !changedInput) {
+              changedInput = input;
             }
+            input.checked = next;
+          });
+          if (changedInput) {
+            changedInput.dispatchEvent(new Event('change'));
           }
-        )
-      : null;
+        }
+      }
+    );
   function renderSearchResultSourceTypeControl(value) {
     if (!searchResultSourceTypeController) {
       return;
@@ -429,35 +412,27 @@
     });
   }
   const settingsNavigationController =
-    typeof optionsSettingsNavigationApi.createSettingsNavigationController === 'function'
-      ? optionsSettingsNavigationApi.createSettingsNavigationController(tabsContainer, {
-          onSelect: handleSettingsTabSelection
-        })
-      : null;
+    optionsSettingsNavigationApi.createSettingsNavigationController(tabsContainer, {
+      onSelect: handleSettingsTabSelection
+    });
   const searchBlacklistListController =
-    typeof optionsBlacklistListApi.createBlacklistListController === 'function'
-      ? optionsBlacklistListApi.createBlacklistListController(blacklistList, {
-          kind: 'search',
-          onRemove: handleSearchBlacklistRemove,
-          onSave: handleSearchBlacklistSave
-        })
-      : null;
+    optionsBlacklistListApi.createBlacklistListController(blacklistList, {
+      kind: 'search',
+      onRemove: handleSearchBlacklistRemove,
+      onSave: handleSearchBlacklistSave
+    });
   const faviconBlacklistListController =
-    typeof optionsBlacklistListApi.createBlacklistListController === 'function'
-      ? optionsBlacklistListApi.createBlacklistListController(faviconBlacklistList, {
-          kind: 'favicon',
-          onRemove: handleFaviconBlacklistRemove
-        })
-      : null;
+    optionsBlacklistListApi.createBlacklistListController(faviconBlacklistList, {
+      kind: 'favicon',
+      onRemove: handleFaviconBlacklistRemove
+    });
   function createSiteSearchListController(host, kind) {
-    return typeof optionsSiteSearchListApi.createSiteSearchListController === 'function'
-      ? optionsSiteSearchListApi.createSiteSearchListController(host, {
-          kind,
-          onLocateDuplicate: locateBuiltinSiteSearchProvider,
-          onRemove: removeSiteSearchItem,
-          onSave: handleSiteSearchProviderSave
-        })
-      : null;
+    return optionsSiteSearchListApi.createSiteSearchListController(host, {
+      kind,
+      onLocateDuplicate: locateBuiltinSiteSearchProvider,
+      onRemove: removeSiteSearchItem,
+      onSave: handleSiteSearchProviderSave
+    });
   }
   const siteSearchCustomListController = createSiteSearchListController(
     siteSearchCustomList,
@@ -476,42 +451,32 @@
     'builtin-ai'
   );
   const aggregateSearchListController =
-    typeof optionsAggregateSearchListApi.createAggregateSearchListController === 'function'
-      ? optionsAggregateSearchListApi.createAggregateSearchListController(aggregateSearchList, {
-          onRemove: handleAggregateSearchRemove,
-          onSave: handleAggregateSearchSave
-        })
-      : null;
+    optionsAggregateSearchListApi.createAggregateSearchListController(aggregateSearchList, {
+      onRemove: handleAggregateSearchRemove,
+      onSave: handleAggregateSearchSave
+    });
   const siteSearchFormController =
-    typeof optionsSettingsFormsApi.createSiteSearchFormController === 'function'
-      ? optionsSettingsFormsApi.createSiteSearchFormController(siteSearchForm, {
-          onSave: handleReactSiteSearchFormSave
-        })
-      : null;
+    optionsSettingsFormsApi.createSiteSearchFormController(siteSearchForm, {
+      onSave: handleReactSiteSearchFormSave
+    });
   const searchBlacklistFormController =
-    typeof optionsSettingsFormsApi.createBlacklistFormController === 'function'
-      ? optionsSettingsFormsApi.createBlacklistFormController(blacklistForm, {
-          kind: 'search',
-          onSave: handleReactSearchBlacklistFormSave
-        })
-      : null;
+    optionsSettingsFormsApi.createBlacklistFormController(blacklistForm, {
+      kind: 'search',
+      onSave: handleReactSearchBlacklistFormSave
+    });
   const faviconBlacklistFormController =
-    typeof optionsSettingsFormsApi.createBlacklistFormController === 'function'
-      ? optionsSettingsFormsApi.createBlacklistFormController(faviconBlacklistForm, {
-          kind: 'favicon',
-          onSave: handleReactFaviconBlacklistFormSave
-        })
-      : null;
+    optionsSettingsFormsApi.createBlacklistFormController(faviconBlacklistForm, {
+      kind: 'favicon',
+      onSave: handleReactFaviconBlacklistFormSave
+    });
 
   // 使用系统字体，避免外链字体依赖。
   if (!panel || themeButtons.length === 0 || tabButtons.length === 0) {
     return;
   }
 
-  const SEARCH_UTILS = globalThis.LumnoSearchUtils || {};
-  const providerStorageRuntime = typeof SETTINGS.createProviderStorageRuntime === 'function'
-    ? SETTINGS.createProviderStorageRuntime(chrome)
-    : null;
+  const SEARCH_UTILS = globalThis.LumnoSearchUtils;
+  const providerStorageRuntime = SETTINGS.createProviderStorageRuntime(chrome);
   const rawStorageArea = providerStorageRuntime
     ? providerStorageRuntime.area
     : ((chrome && chrome.storage && chrome.storage.sync)
@@ -520,7 +485,7 @@
   const storageAreaName = providerStorageRuntime ? providerStorageRuntime.name : (rawStorageArea
     ? (rawStorageArea === (chrome && chrome.storage ? chrome.storage.sync : null) ? 'sync' : 'local')
     : null);
-  const startupStorageReadBatch = rawStorageArea && typeof SETTINGS.createStorageReadBatch === 'function'
+  const startupStorageReadBatch = rawStorageArea
     ? SETTINGS.createStorageReadBatch(rawStorageArea)
     : null;
   const storageArea = startupStorageReadBatch ? startupStorageReadBatch.area : rawStorageArea;
@@ -858,7 +823,6 @@
     '_x_extension_newtab_shortcut_width_2026_unique_';
   const NEWTAB_SHORTCUT_WIDTH_MIN = Number(SETTINGS.NEWTAB_SHORTCUT_WIDTH_MIN) || 360;
   const NEWTAB_SHORTCUT_WIDTH_MAX = Number(SETTINGS.NEWTAB_SHORTCUT_WIDTH_MAX) || 1440;
-  const NEWTAB_SHORTCUT_WIDTH_DEFAULT = Number(SETTINGS.NEWTAB_SHORTCUT_WIDTH_DEFAULT) || 920;
   const NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY = SETTINGS.NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY ||
     '_x_extension_newtab_shortcut_columns_2026_unique_';
   const NEWTAB_SHORTCUT_COLUMNS_MIN = Number(SETTINGS.NEWTAB_SHORTCUT_COLUMNS_MIN) || 4;
@@ -933,7 +897,7 @@
   const SEARCH_BLACKLIST_STORAGE_KEY = '_x_extension_search_blacklist_2026_unique_';
   const FAVICON_REQUEST_BLACKLIST_STORAGE_KEY = '_x_extension_favicon_request_blacklist_2026_unique_';
   const FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY = '_x_extension_favicon_enhanced_fetch_enabled_2026_unique_';
-  const BLACKLIST_UTILS = globalThis.LumnoBlacklistUtils || {};
+  const BLACKLIST_UTILS = globalThis.LumnoBlacklistUtils;
   const OPTIONS_PANEL_HEIGHT_ANIMATION_DURATION_MS = 280;
   const OPTIONS_PANEL_HEIGHT_ANIMATION_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
   let optionsPanelHeightAnimation = null;
@@ -941,9 +905,8 @@
   let optionsPanelFocusAnchorReserve = 0;
   let currentMessages = null;
   let currentLanguageMode = 'system';
-  const webDavSettingsController = globalThis.LumnoWebDavOptions
-    ? globalThis.LumnoWebDavOptions.createController({ chromeApi: chrome, getMessage,
-        animateLayout: animateOptionsPanelHeight }) : null;
+  const webDavSettingsController = globalThis.LumnoWebDavOptions.createController({ chromeApi: chrome, getMessage,
+      animateLayout: animateOptionsPanelHeight });
   if (searchResultSourceTypeController) {
     renderSearchResultSourceTypeControl(
       searchResultSourceTypeItems.filter((item) => item.checked).map((item) => item.value)
@@ -1024,11 +987,7 @@
     DEFAULT_SEARCH_ENGINE_STORAGE_KEY
   ];
   const DEBUG_DUPLICATE_CUSTOM_KEY = 'dup';
-  const shortcutPlatform = typeof shortcutDisplay.getNavigatorPlatform === 'function'
-    ? shortcutDisplay.getNavigatorPlatform(typeof navigator !== 'undefined' ? navigator : null)
-    : String((typeof navigator !== 'undefined' && navigator.platform) || '').toLowerCase().includes('mac')
-      ? 'mac'
-      : 'other';
+  const shortcutPlatform = shortcutDisplay.getNavigatorPlatform(typeof navigator !== 'undefined' ? navigator : null);
   const isMacPlatform = shortcutPlatform === 'mac';
   const FORCE_TEXT_KEYCAPS_ON_MAC = false;
   const FORCE_OVERLAY_TAB_QUICK_SWITCH_ENABLED = true;
@@ -1064,16 +1023,13 @@
   let isFallbackWidthReady = false;
   let searchBlacklistItems = [];
   let faviconRequestBlacklistItems = [];
-  const tooltipController = globalThis.LumnoTooltip &&
-      typeof globalThis.LumnoTooltip.createController === 'function'
-    ? globalThis.LumnoTooltip.createController({
-      documentObj: document,
-      windowObj: window,
-      id: '_x_extension_options_tooltip_2026_unique_',
-      appendTo: document.body,
-      maxWidth: 'min(360px, calc(100vw - 24px))'
-    })
-    : null;
+  const tooltipController = globalThis.LumnoTooltip.createController({
+    documentObj: document,
+    windowObj: window,
+    id: '_x_extension_options_tooltip_2026_unique_',
+    appendTo: document.body,
+    maxWidth: 'min(360px, calc(100vw - 24px))'
+  });
   function renderOptionsInfoButtons() {
     const bookmarkTooltip = getMessage(
       'settings_bookmark_adaptive_count_tooltip',
@@ -1107,9 +1063,7 @@
     }
   }
   renderOptionsInfoButtons();
-  const fallbackSiteSearchProviders = typeof SEARCH_UTILS.getDefaultSiteSearchProviders === 'function'
-    ? SEARCH_UTILS.getDefaultSiteSearchProviders()
-    : [];
+  const fallbackSiteSearchProviders = SEARCH_UTILS.getDefaultSiteSearchProviders();
 
   function createPersistentId(prefix) {
     const safePrefix = String(prefix || 'item').replace(/[^a-z0-9_-]/gi, '').toLowerCase() || 'item';
@@ -1120,38 +1074,14 @@
   }
 
   function createDeterministicLegacyProviderId(item, index, attempt) {
-    if (typeof AGGREGATE_SEARCH_STORE.createDeterministicCustomProviderId === 'function') {
-      return AGGREGATE_SEARCH_STORE.createDeterministicCustomProviderId(item, index, attempt);
-    }
-    return `source-legacy-${Math.max(0, Number(index) || 0) + 1}` +
-      `-${Math.max(0, Number(attempt) || 0) + 1}`;
+    return AGGREGATE_SEARCH_STORE.createDeterministicCustomProviderId(item, index, attempt);
   }
 
   function ensureCustomSiteSearchProviderIds(items) {
-    if (typeof AGGREGATE_SEARCH_STORE.ensureCustomProviderIds === 'function') {
-      return AGGREGATE_SEARCH_STORE.ensureCustomProviderIds(
-        items,
-        createDeterministicLegacyProviderId
-      );
-    }
-    let changed = false;
-    const used = new Set();
-    const next = (Array.isArray(items) ? items : []).map((item, index) => {
-      let id = String(item && item.id ? item.id : '').trim();
-      if (!id || used.has(id.toLowerCase())) {
-        let attempts = 0;
-        do {
-          id = createDeterministicLegacyProviderId(item, index, attempts);
-          attempts += 1;
-        } while (used.has(id.toLowerCase()));
-        changed = true;
-      }
-      used.add(id.toLowerCase());
-      return id === String(item && item.id ? item.id : '').trim()
-        ? item
-        : { ...item, id };
-    });
-    return { changed, items: next };
+    return AGGREGATE_SEARCH_STORE.ensureCustomProviderIds(
+      items,
+      createDeterministicLegacyProviderId
+    );
   }
 
   let feedbackSupportLinks = LUMNO_FEEDBACK_SUPPORT_LINKS_FALLBACK;
@@ -1174,8 +1104,7 @@
   let currentActiveSettingsTab = 'general';
   const optionsSelectControlRecords = new Map();
   function registerOptionsSelectControl(select, kind) {
-    if (!select ||
-        typeof optionsSelectControlApi.createSelectControlController !== 'function') {
+    if (!select) {
       return null;
     }
     const host = select.closest('._x_extension_custom_select_2024_unique_');
@@ -1239,21 +1168,19 @@
     }
   });
   const newtabTimeFontWeightController =
-    typeof optionsSettingsControlsApi.createRangeSliderControlController === 'function'
-      ? optionsSettingsControlsApi.createRangeSliderControlController(
-          newtabTimeFontWeightControlHost,
-          {
-            kind: 'newtab-time-font-weight',
-            onInput(value) {
-              const nextWeight = normalizeNewtabTimeFontWeight(value);
-              currentNewtabTimeFontWeight = nextWeight;
-              if (storageArea) {
-                storageArea.set({ [NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY]: nextWeight });
-              }
-            }
+    optionsSettingsControlsApi.createRangeSliderControlController(
+      newtabTimeFontWeightControlHost,
+      {
+        kind: 'newtab-time-font-weight',
+        onInput(value) {
+          const nextWeight = normalizeNewtabTimeFontWeight(value);
+          currentNewtabTimeFontWeight = nextWeight;
+          if (storageArea) {
+            storageArea.set({ [NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY]: nextWeight });
           }
-        )
-      : null;
+        }
+      }
+    );
   function renderNewtabTimeFontWeightControl(value) {
     if (!newtabTimeFontWeightController) {
       return;
@@ -1274,21 +1201,19 @@
     });
   }
   const newtabShortcutColumnsController =
-    typeof optionsSettingsControlsApi.createRangeSliderControlController === 'function'
-      ? optionsSettingsControlsApi.createRangeSliderControlController(
-          newtabShortcutColumnsControlHost,
-          {
-            kind: 'newtab-shortcut-columns',
-            onInput(value) {
-              const nextColumns = normalizeNewtabShortcutColumns(value);
-              currentNewtabShortcutColumns = nextColumns;
-              if (storageArea) {
-                storageArea.set({ [NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY]: nextColumns });
-              }
-            }
+    optionsSettingsControlsApi.createRangeSliderControlController(
+      newtabShortcutColumnsControlHost,
+      {
+        kind: 'newtab-shortcut-columns',
+        onInput(value) {
+          const nextColumns = normalizeNewtabShortcutColumns(value);
+          currentNewtabShortcutColumns = nextColumns;
+          if (storageArea) {
+            storageArea.set({ [NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY]: nextColumns });
           }
-        )
-      : null;
+        }
+      }
+    );
   function renderNewtabShortcutColumnsControl(value, disabled) {
     if (!newtabShortcutColumnsController) {
       return;
@@ -1314,21 +1239,19 @@
     });
   }
   const newtabShortcutSizeController =
-    typeof optionsSettingsControlsApi.createRangeSliderControlController === 'function'
-      ? optionsSettingsControlsApi.createRangeSliderControlController(
-          newtabShortcutSizeControlHost,
-          {
-            kind: 'newtab-shortcut-size',
-            onInput(value) {
-              const nextSize = normalizeNewtabShortcutSize(value);
-              currentNewtabShortcutSize = nextSize;
-              if (storageArea) {
-                storageArea.set({ [NEWTAB_SHORTCUT_SIZE_STORAGE_KEY]: nextSize });
-              }
-            }
+    optionsSettingsControlsApi.createRangeSliderControlController(
+      newtabShortcutSizeControlHost,
+      {
+        kind: 'newtab-shortcut-size',
+        onInput(value) {
+          const nextSize = normalizeNewtabShortcutSize(value);
+          currentNewtabShortcutSize = nextSize;
+          if (storageArea) {
+            storageArea.set({ [NEWTAB_SHORTCUT_SIZE_STORAGE_KEY]: nextSize });
           }
-        )
-      : null;
+        }
+      }
+    );
   function renderNewtabShortcutSizeControl(value, disabled) {
     if (!newtabShortcutSizeController) {
       return;
@@ -1358,21 +1281,19 @@
     });
   }
   const newtabShortcutGapController =
-    typeof optionsSettingsControlsApi.createRangeSliderControlController === 'function'
-      ? optionsSettingsControlsApi.createRangeSliderControlController(
-          newtabShortcutGapControlHost,
-          {
-            kind: 'newtab-shortcut-gap',
-            onInput(value) {
-              const nextGap = normalizeNewtabShortcutGap(value);
-              currentNewtabShortcutGap = nextGap;
-              if (storageArea) {
-                storageArea.set({ [NEWTAB_SHORTCUT_GAP_STORAGE_KEY]: nextGap });
-              }
-            }
+    optionsSettingsControlsApi.createRangeSliderControlController(
+      newtabShortcutGapControlHost,
+      {
+        kind: 'newtab-shortcut-gap',
+        onInput(value) {
+          const nextGap = normalizeNewtabShortcutGap(value);
+          currentNewtabShortcutGap = nextGap;
+          if (storageArea) {
+            storageArea.set({ [NEWTAB_SHORTCUT_GAP_STORAGE_KEY]: nextGap });
           }
-        )
-      : null;
+        }
+      }
+    );
   function renderNewtabShortcutGapControl(value, disabled) {
     if (!newtabShortcutGapController) {
       return;
@@ -1428,24 +1349,22 @@
     renderNewtabShortcutGapControl(currentNewtabShortcutGap, disabled);
   }
   const bookmarkRowsController =
-    typeof optionsSettingsControlsApi.createRangeSliderControlController === 'function'
-      ? optionsSettingsControlsApi.createRangeSliderControlController(
-          bookmarkRowsControlHost,
-          {
-            kind: 'bookmark-rows',
-            onInput(value) {
-              const nextCount = normalizeBookmarkCount(Number(value) * 4);
-              currentBookmarkCount = nextCount;
-              updateBookmarkColumnsSettingVisibility(nextCount);
-              if (!storageArea) {
-                return;
-              }
-              storageArea.set({ [BOOKMARK_COUNT_STORAGE_KEY]: nextCount });
-              notifyNewtabSectionsRefresh('bookmarks');
-            }
+    optionsSettingsControlsApi.createRangeSliderControlController(
+      bookmarkRowsControlHost,
+      {
+        kind: 'bookmark-rows',
+        onInput(value) {
+          const nextCount = normalizeBookmarkCount(Number(value) * 4);
+          currentBookmarkCount = nextCount;
+          updateBookmarkColumnsSettingVisibility(nextCount);
+          if (!storageArea) {
+            return;
           }
-        )
-      : null;
+          storageArea.set({ [BOOKMARK_COUNT_STORAGE_KEY]: nextCount });
+          notifyNewtabSectionsRefresh('bookmarks');
+        }
+      }
+    );
   function renderBookmarkRowsControl(value) {
     if (!bookmarkRowsController) {
       return;
@@ -1466,24 +1385,22 @@
     });
   }
   const recentCountController =
-    typeof optionsSettingsControlsApi.createRangeSliderControlController === 'function'
-      ? optionsSettingsControlsApi.createRangeSliderControlController(
-          recentCountControlHost,
-          {
-            kind: 'recent-count',
-            onInput(value) {
-              const nextCount = normalizeRecentCount(Math.round(Number(value)) * 4);
-              currentRecentCount = nextCount;
-              updateRecentModeTabsVisibility(nextCount);
-              if (!storageArea) {
-                return;
-              }
-              storageArea.set({ [RECENT_COUNT_STORAGE_KEY]: nextCount });
-              notifyNewtabSectionsRefresh('recent');
-            }
+    optionsSettingsControlsApi.createRangeSliderControlController(
+      recentCountControlHost,
+      {
+        kind: 'recent-count',
+        onInput(value) {
+          const nextCount = normalizeRecentCount(Math.round(Number(value)) * 4);
+          currentRecentCount = nextCount;
+          updateRecentModeTabsVisibility(nextCount);
+          if (!storageArea) {
+            return;
           }
-        )
-      : null;
+          storageArea.set({ [RECENT_COUNT_STORAGE_KEY]: nextCount });
+          notifyNewtabSectionsRefresh('recent');
+        }
+      }
+    );
   function renderRecentCountControl(value) {
     if (!recentCountController) {
       return;
@@ -1504,22 +1421,20 @@
     });
   }
   const bookmarkColumnsController =
-    typeof optionsSettingsControlsApi.createRangeSliderControlController === 'function'
-      ? optionsSettingsControlsApi.createRangeSliderControlController(
-          bookmarkColumnsControlHost,
-          {
-            kind: 'bookmark-columns',
-            onInput(value) {
-              const nextColumns = normalizeBookmarkColumns(value);
-              if (!storageArea) {
-                return;
-              }
-              storageArea.set({ [BOOKMARK_COLUMNS_STORAGE_KEY]: nextColumns });
-              notifyNewtabSectionsRefresh('bookmarks');
-            }
+    optionsSettingsControlsApi.createRangeSliderControlController(
+      bookmarkColumnsControlHost,
+      {
+        kind: 'bookmark-columns',
+        onInput(value) {
+          const nextColumns = normalizeBookmarkColumns(value);
+          if (!storageArea) {
+            return;
           }
-        )
-      : null;
+          storageArea.set({ [BOOKMARK_COLUMNS_STORAGE_KEY]: nextColumns });
+          notifyNewtabSectionsRefresh('bookmarks');
+        }
+      }
+    );
   function renderBookmarkColumnsControl(value) {
     if (!bookmarkColumnsController) {
       return;
@@ -1540,21 +1455,19 @@
     });
   }
   const searchResultDisplayLimitController =
-    typeof optionsSettingsControlsApi.createRangeSliderControlController === 'function'
-      ? optionsSettingsControlsApi.createRangeSliderControlController(
-          searchResultDisplayLimitControlHost,
-          {
-            kind: 'search-result-display-limit',
-            onInput(value) {
-              const nextLimit = normalizeSearchResultDisplayLimit(value);
-              currentSearchResultDisplayLimit = nextLimit;
-              if (storageArea) {
-                storageArea.set({ [SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY]: nextLimit });
-              }
-            }
+    optionsSettingsControlsApi.createRangeSliderControlController(
+      searchResultDisplayLimitControlHost,
+      {
+        kind: 'search-result-display-limit',
+        onInput(value) {
+          const nextLimit = normalizeSearchResultDisplayLimit(value);
+          currentSearchResultDisplayLimit = nextLimit;
+          if (storageArea) {
+            storageArea.set({ [SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY]: nextLimit });
           }
-        )
-      : null;
+        }
+      }
+    );
   function renderSearchResultDisplayLimitControl(value) {
     if (!searchResultDisplayLimitController) {
       return;
@@ -1708,12 +1621,10 @@
   }
 
   function getFeedbackSupportCommunityChannel() {
-    return typeof COMMUNITY_LINKS.getCommunityChannel === 'function'
-      ? COMMUNITY_LINKS.getCommunityChannel(
-          feedbackSupportLinks,
-          getFeedbackSupportWebLocale()
-        )
-      : 'discord';
+    return COMMUNITY_LINKS.getCommunityChannel(
+      feedbackSupportLinks,
+      getFeedbackSupportWebLocale()
+    );
   }
 
   function renderFeedbackSupport() {
@@ -1773,9 +1684,6 @@
   }
 
   function loadFeedbackSupportLinks() {
-    if (typeof COMMUNITY_LINKS.load !== 'function') {
-      return Promise.resolve(feedbackSupportLinks);
-    }
     return COMMUNITY_LINKS.load()
       .then((links) => {
         feedbackSupportLinks = links || LUMNO_FEEDBACK_SUPPORT_LINKS_FALLBACK;
@@ -2012,14 +1920,7 @@
   }
 
   function normalizeBookmarkCount(value) {
-    if (typeof SETTINGS.normalizeBookmarkCount === 'function') {
-      return SETTINGS.normalizeBookmarkCount(value);
-    }
-    const parsed = Number(value);
-    if (Number.isInteger(parsed) && parsed >= 0 && parsed <= 32 && parsed % 4 === 0) {
-      return parsed;
-    }
-    return 8;
+    return SETTINGS.normalizeBookmarkCount(value);
   }
 
   function normalizeRecentCount(value) {
@@ -2181,38 +2082,23 @@
   }
 
   function normalizeBookmarkColumns(value) {
-    if (typeof SETTINGS.normalizeBookmarkColumns === 'function') {
-      return SETTINGS.normalizeBookmarkColumns(value);
-    }
-    const parsed = Number(value);
-    if (Number.isInteger(parsed) && parsed >= 4 && parsed <= 8) {
-      return parsed;
-    }
-    return 6;
+    return SETTINGS.normalizeBookmarkColumns(value);
   }
 
   function normalizeNewtabWidthMode(value) {
-    return typeof SETTINGS.normalizeNewtabWidthMode === 'function'
-      ? SETTINGS.normalizeNewtabWidthMode(value)
-      : (value === 'standard' ? 'standard' : 'wide');
+    return SETTINGS.normalizeNewtabWidthMode(value);
   }
 
   function normalizeOverlaySizeMode(value) {
-    return typeof SETTINGS.normalizeOverlaySizeMode === 'function'
-      ? SETTINGS.normalizeOverlaySizeMode(value)
-      : ((value === 'compact' || value === 'large') ? value : 'standard');
+    return SETTINGS.normalizeOverlaySizeMode(value);
   }
 
   function normalizeOverlayEnterAnimation(value) {
-    return typeof SETTINGS.normalizeOverlayEnterAnimation === 'function'
-      ? SETTINGS.normalizeOverlayEnterAnimation(value)
-      : (value === 'fade' ? 'fade' : 'elastic');
+    return SETTINGS.normalizeOverlayEnterAnimation(value);
   }
 
   function normalizeOverlayPageThemeAdaptationEnabled(value) {
-    return typeof SETTINGS.normalizeOverlayPageThemeAdaptationEnabled === 'function'
-      ? SETTINGS.normalizeOverlayPageThemeAdaptationEnabled(value)
-      : value !== false;
+    return SETTINGS.normalizeOverlayPageThemeAdaptationEnabled(value);
   }
 
   function updateBookmarkColumnsSettingVisibility(countValue) {
@@ -2230,207 +2116,104 @@
     if (FORCE_OVERLAY_TAB_QUICK_SWITCH_ENABLED) {
       return true;
     }
-    return typeof SETTINGS.normalizeOverlayTabPriorityMode === 'function'
-      ? SETTINGS.normalizeOverlayTabPriorityMode(value)
-      : value !== 'newtabFirst' && value !== false;
+    return SETTINGS.normalizeOverlayTabPriorityMode(value);
   }
 
   function normalizeNewtabTopContentMode(value) {
-    if (typeof SETTINGS.normalizeNewtabTopContentMode === 'function') {
-      return SETTINGS.normalizeNewtabTopContentMode(value);
-    }
-    if (value === 'time') {
-      return 'time';
-    }
-    return value === 'off' || value === false ? 'off' : 'brand';
+    return SETTINGS.normalizeNewtabTopContentMode(value);
   }
 
   function normalizeNewtabTimeSecondsVisible(value) {
-    return typeof SETTINGS.normalizeNewtabTimeSecondsVisible === 'function'
-      ? SETTINGS.normalizeNewtabTimeSecondsVisible(value)
-      : value === true;
+    return SETTINGS.normalizeNewtabTimeSecondsVisible(value);
   }
 
   function normalizeNewtabTimeFontWeight(value) {
-    if (typeof SETTINGS.normalizeNewtabTimeFontWeight === 'function') {
-      return SETTINGS.normalizeNewtabTimeFontWeight(value);
-    }
-    const number = Number(value);
-    if (!Number.isFinite(number)) {
-      return NEWTAB_TIME_FONT_WEIGHT_DEFAULT;
-    }
-    return Math.min(
-      NEWTAB_TIME_FONT_WEIGHT_MAX,
-      Math.max(NEWTAB_TIME_FONT_WEIGHT_MIN, Math.round(number))
-    );
+    return SETTINGS.normalizeNewtabTimeFontWeight(value);
   }
 
   function normalizeNewtabInputAutoFocusEnabled(value) {
-    return typeof SETTINGS.normalizeNewtabInputAutoFocusEnabled === 'function'
-      ? SETTINGS.normalizeNewtabInputAutoFocusEnabled(value)
-      : value === true;
+    return SETTINGS.normalizeNewtabInputAutoFocusEnabled(value);
   }
 
   function normalizeNewtabShortcutsVisible(value) {
-    return typeof SETTINGS.normalizeNewtabShortcutsVisible === 'function'
-      ? SETTINGS.normalizeNewtabShortcutsVisible(value)
-      : value !== false;
+    return SETTINGS.normalizeNewtabShortcutsVisible(value);
   }
 
   function normalizeNewtabShortcutAddVisible(value) {
-    return typeof SETTINGS.normalizeNewtabShortcutAddVisible === 'function'
-      ? SETTINGS.normalizeNewtabShortcutAddVisible(value)
-      : value !== false;
+    return SETTINGS.normalizeNewtabShortcutAddVisible(value);
   }
 
   function normalizeNewtabShortcutDockMagnificationEnabled(value) {
-    return typeof SETTINGS.normalizeNewtabShortcutDockMagnificationEnabled === 'function'
-      ? SETTINGS.normalizeNewtabShortcutDockMagnificationEnabled(value)
-      : value !== false;
-  }
-
-  function normalizeNewtabShortcutWidth(value) {
-    return typeof SETTINGS.normalizeNewtabShortcutWidth === 'function'
-      ? SETTINGS.normalizeNewtabShortcutWidth(value, {
-          min: NEWTAB_SHORTCUT_WIDTH_MIN,
-          max: NEWTAB_SHORTCUT_WIDTH_MAX,
-          fallback: NEWTAB_SHORTCUT_WIDTH_DEFAULT
-        })
-      : Math.min(
-          NEWTAB_SHORTCUT_WIDTH_MAX,
-          Math.max(
-            NEWTAB_SHORTCUT_WIDTH_MIN,
-            Number.isFinite(Number(value))
-              ? Math.round(Number(value))
-              : NEWTAB_SHORTCUT_WIDTH_DEFAULT
-          )
-        );
+    return SETTINGS.normalizeNewtabShortcutDockMagnificationEnabled(value);
   }
 
   function normalizeNewtabShortcutColumns(value) {
-    if (typeof SETTINGS.normalizeNewtabShortcutColumns === 'function') {
-      return SETTINGS.normalizeNewtabShortcutColumns(value, {
-        min: NEWTAB_SHORTCUT_COLUMNS_MIN,
-        max: NEWTAB_SHORTCUT_COLUMNS_MAX,
-        fallback: NEWTAB_SHORTCUT_COLUMNS_DEFAULT
-      });
-    }
-    const number = Number(value);
-    return Math.min(
-      NEWTAB_SHORTCUT_COLUMNS_MAX,
-      Math.max(
-        NEWTAB_SHORTCUT_COLUMNS_MIN,
-        Number.isFinite(number) ? Math.round(number) : NEWTAB_SHORTCUT_COLUMNS_DEFAULT
-      )
-    );
+    return SETTINGS.normalizeNewtabShortcutColumns(value, {
+      min: NEWTAB_SHORTCUT_COLUMNS_MIN,
+      max: NEWTAB_SHORTCUT_COLUMNS_MAX,
+      fallback: NEWTAB_SHORTCUT_COLUMNS_DEFAULT
+    });
   }
 
   function normalizeNewtabShortcutSize(value) {
-    if (typeof SETTINGS.normalizeNewtabShortcutSize === 'function') {
-      return SETTINGS.normalizeNewtabShortcutSize(value, {
-        min: NEWTAB_SHORTCUT_SIZE_MIN,
-        max: NEWTAB_SHORTCUT_SIZE_MAX,
-        fallback: NEWTAB_SHORTCUT_SIZE_DEFAULT
-      });
-    }
-    const number = Number(value);
-    return Math.min(
-      NEWTAB_SHORTCUT_SIZE_MAX,
-      Math.max(
-        NEWTAB_SHORTCUT_SIZE_MIN,
-        Number.isFinite(number) ? Math.round(number) : NEWTAB_SHORTCUT_SIZE_DEFAULT
-      )
-    );
+    return SETTINGS.normalizeNewtabShortcutSize(value, {
+      min: NEWTAB_SHORTCUT_SIZE_MIN,
+      max: NEWTAB_SHORTCUT_SIZE_MAX,
+      fallback: NEWTAB_SHORTCUT_SIZE_DEFAULT
+    });
   }
 
   function normalizeNewtabShortcutGap(value) {
-    if (typeof SETTINGS.normalizeNewtabShortcutGap === 'function') {
-      return SETTINGS.normalizeNewtabShortcutGap(value, {
-        min: NEWTAB_SHORTCUT_GAP_MIN,
-        max: NEWTAB_SHORTCUT_GAP_MAX,
-        fallback: NEWTAB_SHORTCUT_GAP_DEFAULT
-      });
-    }
-    const number = Number(value);
-    return Math.min(
-      NEWTAB_SHORTCUT_GAP_MAX,
-      Math.max(
-        NEWTAB_SHORTCUT_GAP_MIN,
-        Number.isFinite(number) ? Math.round(number) : NEWTAB_SHORTCUT_GAP_DEFAULT
-      )
-    );
+    return SETTINGS.normalizeNewtabShortcutGap(value, {
+      min: NEWTAB_SHORTCUT_GAP_MIN,
+      max: NEWTAB_SHORTCUT_GAP_MAX,
+      fallback: NEWTAB_SHORTCUT_GAP_DEFAULT
+    });
   }
 
   function inferNewtabShortcutColumnsFromWidth(value) {
-    if (typeof SETTINGS.inferNewtabShortcutColumnsFromWidth === 'function') {
-      return SETTINGS.inferNewtabShortcutColumnsFromWidth(value, {
-        widthMin: NEWTAB_SHORTCUT_WIDTH_MIN,
-        widthMax: NEWTAB_SHORTCUT_WIDTH_MAX,
-        columnsMin: NEWTAB_SHORTCUT_COLUMNS_MIN,
-        columnsMax: NEWTAB_SHORTCUT_COLUMNS_MAX
-      });
-    }
-    const width = normalizeNewtabShortcutWidth(value);
-    const ratio = (width - NEWTAB_SHORTCUT_WIDTH_MIN) /
-      Math.max(1, NEWTAB_SHORTCUT_WIDTH_MAX - NEWTAB_SHORTCUT_WIDTH_MIN);
-    return normalizeNewtabShortcutColumns(
-      NEWTAB_SHORTCUT_COLUMNS_MIN +
-        ratio * (NEWTAB_SHORTCUT_COLUMNS_MAX - NEWTAB_SHORTCUT_COLUMNS_MIN)
-    );
+    return SETTINGS.inferNewtabShortcutColumnsFromWidth(value, {
+      widthMin: NEWTAB_SHORTCUT_WIDTH_MIN,
+      widthMax: NEWTAB_SHORTCUT_WIDTH_MAX,
+      columnsMin: NEWTAB_SHORTCUT_COLUMNS_MIN,
+      columnsMax: NEWTAB_SHORTCUT_COLUMNS_MAX
+    });
   }
 
   function normalizeNewtabFeedbackButtonVisible(value) {
-    return typeof SETTINGS.normalizeNewtabFeedbackButtonVisible === 'function'
-      ? SETTINGS.normalizeNewtabFeedbackButtonVisible(value)
-      : value !== false;
+    return SETTINGS.normalizeNewtabFeedbackButtonVisible(value);
   }
 
   function normalizeNewtabAppearanceButtonVisible(value) {
-    return typeof SETTINGS.normalizeNewtabAppearanceButtonVisible === 'function'
-      ? SETTINGS.normalizeNewtabAppearanceButtonVisible(value)
-      : value !== false;
+    return SETTINGS.normalizeNewtabAppearanceButtonVisible(value);
   }
 
   function normalizeBookmarkFolderIconsVisible(value) {
-    return typeof SETTINGS.normalizeBookmarkFolderIconsVisible === 'function'
-      ? SETTINGS.normalizeBookmarkFolderIconsVisible(value)
-      : value !== false;
+    return SETTINGS.normalizeBookmarkFolderIconsVisible(value);
   }
 
   function normalizeUpdateNoticeEnabled(value) {
-    return typeof SETTINGS.normalizeUpdateNoticeEnabled === 'function'
-      ? SETTINGS.normalizeUpdateNoticeEnabled(value)
-      : value !== false;
+    return SETTINGS.normalizeUpdateNoticeEnabled(value);
   }
 
   function normalizeMotionEffectsEnabled(value) {
-    return typeof SETTINGS.normalizeMotionEffectsEnabled === 'function'
-      ? SETTINGS.normalizeMotionEffectsEnabled(value)
-      : value !== false;
+    return SETTINGS.normalizeMotionEffectsEnabled(value);
   }
 
   function normalizeSimpleModeEnabled(value) {
-    return typeof SETTINGS.normalizeSimpleModeEnabled === 'function'
-      ? SETTINGS.normalizeSimpleModeEnabled(value)
-      : value === true;
+    return SETTINGS.normalizeSimpleModeEnabled(value);
   }
 
   function normalizeNumberShortcutInstantEnabled(value) {
-    return typeof SETTINGS.normalizeNumberShortcutInstantEnabled === 'function'
-      ? SETTINGS.normalizeNumberShortcutInstantEnabled(value)
-      : value === true;
+    return SETTINGS.normalizeNumberShortcutInstantEnabled(value);
   }
 
   function normalizeMacosCtrlSuggestionNavigationEnabled(value) {
-    return typeof SETTINGS.normalizeMacosCtrlSuggestionNavigationEnabled === 'function'
-      ? SETTINGS.normalizeMacosCtrlSuggestionNavigationEnabled(value)
-      : value === true;
+    return SETTINGS.normalizeMacosCtrlSuggestionNavigationEnabled(value);
   }
 
   function normalizeFaviconEnhancedFetchEnabled(value) {
-    return typeof SETTINGS.normalizeFaviconEnhancedFetchEnabled === 'function'
-      ? SETTINGS.normalizeFaviconEnhancedFetchEnabled(value)
-      : value !== false;
+    return SETTINGS.normalizeFaviconEnhancedFetchEnabled(value);
   }
 
   function normalizeAutoPipEnabled(value) {
@@ -2438,9 +2221,7 @@
   }
 
   function normalizeTabSwitcherEnabled(value) {
-    return typeof SETTINGS.normalizeTabSwitcherEnabled === 'function'
-      ? SETTINGS.normalizeTabSwitcherEnabled(value)
-      : value !== false;
+    return SETTINGS.normalizeTabSwitcherEnabled(value);
   }
 
   function normalizeDocumentPipEnabled(value) {
@@ -2452,65 +2233,35 @@
   }
 
   function normalizeSelectionQuickActionsEnabled(value) {
-    return typeof SETTINGS.normalizeSelectionQuickActionsEnabled === 'function'
-      ? SETTINGS.normalizeSelectionQuickActionsEnabled(value)
-      : value === true;
+    return SETTINGS.normalizeSelectionQuickActionsEnabled(value);
   }
 
   function normalizeSelectionQuickActionsProvider(value) {
-    if (typeof SETTINGS.normalizeSelectionQuickActionsProvider === 'function') {
-      return SETTINGS.normalizeSelectionQuickActionsProvider(value);
-    }
-    const key = String(value || '').trim().toLowerCase();
-    return ['gpt', 'gm', 'dbai', 'qw', 'yb', 'mx', 'ds', 'kimi'].includes(key) ? key : 'gpt';
+    return SETTINGS.normalizeSelectionQuickActionsProvider(value);
   }
 
   function normalizeSelectionQuickActionsGroupEnabled(value) {
-    return typeof SETTINGS.normalizeSelectionQuickActionsGroupEnabled === 'function'
-      ? SETTINGS.normalizeSelectionQuickActionsGroupEnabled(value)
-      : value === true;
+    return SETTINGS.normalizeSelectionQuickActionsGroupEnabled(value);
   }
 
   function normalizeAggregateSearchAutoGroupEnabled(value) {
-    return typeof SETTINGS.normalizeAggregateSearchAutoGroupEnabled === 'function'
-      ? SETTINGS.normalizeAggregateSearchAutoGroupEnabled(value)
-      : value !== false;
+    return SETTINGS.normalizeAggregateSearchAutoGroupEnabled(value);
   }
 
   function normalizeSearchResultPriority(value) {
-    return typeof SETTINGS.normalizeSearchResultPriority === 'function'
-      ? SETTINGS.normalizeSearchResultPriority(value)
-      : (value === 'search' ? 'search' : 'autocomplete');
+    return SETTINGS.normalizeSearchResultPriority(value);
   }
 
   function normalizeSearchResultDisplayLimit(value) {
-    if (typeof SETTINGS.normalizeSearchResultDisplayLimit === 'function') {
-      return SETTINGS.normalizeSearchResultDisplayLimit(value);
-    }
-    const parsed = Number(value);
-    return Number.isInteger(parsed) && parsed >= 5 && parsed <= 10 ? parsed : 10;
+    return SETTINGS.normalizeSearchResultDisplayLimit(value);
   }
 
   function normalizeSearchResultSourceTypes(value) {
-    if (typeof SETTINGS.normalizeSearchResultSourceTypes === 'function') {
-      return SETTINGS.normalizeSearchResultSourceTypes(value);
-    }
-    const rawItems = Array.isArray(value) ? value : [];
-    const selected = [];
-    rawItems.forEach((item) => {
-      const raw = String(item || '').trim();
-      const type = raw === 'topSite' || raw === 'bookmark' || raw === 'history' ? raw : '';
-      if (type && !selected.includes(type)) {
-        selected.push(type);
-      }
-    });
-    return selected.length > 0 ? selected : ['topSite', 'bookmark', 'history'];
+    return SETTINGS.normalizeSearchResultSourceTypes(value);
   }
 
   function normalizeOverlayOpenTabsDefaultVisible(value) {
-    return typeof SETTINGS.normalizeOverlayOpenTabsDefaultVisible === 'function'
-      ? SETTINGS.normalizeOverlayOpenTabsDefaultVisible(value)
-      : value !== false;
+    return SETTINGS.normalizeOverlayOpenTabsDefaultVisible(value);
   }
 
   function collectCheckedSearchResultSourceTypes() {
@@ -3695,15 +3446,11 @@
   }
 
   function normalizeLocale(locale) {
-    return typeof SETTINGS.normalizeLocale === 'function'
-      ? SETTINGS.normalizeLocale(locale)
-      : 'en';
+    return SETTINGS.normalizeLocale(locale);
   }
 
   function localeToHtmlLang(locale) {
-    return typeof SETTINGS.localeToHtmlLang === 'function'
-      ? SETTINGS.localeToHtmlLang(locale)
-      : normalizeLocale(locale).replace('_', '-');
+    return SETTINGS.localeToHtmlLang(locale);
   }
 
   function applyDocumentLanguage(locale) {
@@ -4051,59 +3798,9 @@
   }
 
   function formatShortcutForDisplay(shortcut) {
-    if (typeof shortcutDisplay.formatShortcutChord === 'function') {
-      return shortcutDisplay.formatShortcutChord(shortcut, {
-        platform: isMacPlatform ? 'mac' : 'windows'
-      });
-    }
-    const normalized = normalizeFallbackShortcut(shortcut);
-    if (!normalized) {
-      return '';
-    }
-    const parts = normalized.split('+').filter(Boolean);
-    if (parts.length === 0) {
-      return normalized;
-    }
-    const keyToken = parts.pop();
-    const modifierLabels = [];
-    parts.forEach((token) => {
-      if (!isMacPlatform) {
-        modifierLabels.push(token);
-      } else if (token === 'Ctrl') modifierLabels.push('⌃');
-      else if (token === 'Alt') modifierLabels.push('⌥');
-      else if (token === 'Shift') modifierLabels.push('⇧');
-      else if (token === 'Command') modifierLabels.push('⌘');
+    return shortcutDisplay.formatShortcutChord(shortcut, {
+      platform: isMacPlatform ? 'mac' : 'windows'
     });
-    const keyMap = isMacPlatform ? {
-      ArrowUp: '↑',
-      ArrowDown: '↓',
-      ArrowLeft: '←',
-      ArrowRight: '→',
-      Enter: '↩',
-      Escape: '⎋',
-      Tab: '⇥',
-      Space: 'Space',
-      Comma: ',',
-      Period: '.',
-      Slash: '/',
-      Semicolon: ';',
-      Quote: '\'',
-      Minus: '-',
-      Plus: '+',
-      Backslash: '\\',
-      Backquote: '`',
-      BracketLeft: '[',
-      BracketRight: ']'
-    } : {
-      ArrowUp: '↑',
-      ArrowDown: '↓',
-      ArrowLeft: '←',
-      ArrowRight: '→'
-    };
-    const keyLabel = keyMap[keyToken] || keyToken;
-    return isMacPlatform
-      ? `${modifierLabels.join('')}${keyLabel}`
-      : `${modifierLabels.join('+')}+${keyLabel}`;
   }
 
   function getShortcutDisplayTokens(shortcut) {
@@ -4288,25 +3985,9 @@
     if (!text) {
       return '';
     }
-    if (typeof shortcutDisplay.formatShortcutReferencePart === 'function') {
-      return shortcutDisplay.formatShortcutReferencePart(text, {
-        platform: isMacPlatform ? 'mac' : 'windows'
-      });
-    }
-    const display = formatShortcutForDisplay(text);
-    if (display) {
-      return display;
-    }
-    const keyMap = {
-      ArrowUp: '↑',
-      ArrowDown: '↓',
-      ArrowLeft: '←',
-      ArrowRight: '→',
-      Escape: 'Esc',
-      'Arrow keys': '↑↓←→',
-      'release Alt': isMacPlatform ? '⌥↑' : 'Alt↑'
-    };
-    return keyMap[text] || text;
+    return shortcutDisplay.formatShortcutReferencePart(text, {
+      platform: isMacPlatform ? 'mac' : 'windows'
+    });
   }
 
   function getShortcutReferenceParts(shortcut) {
@@ -4360,7 +4041,7 @@
   }
 
   function renderShortcutReferenceList() {
-    if (!shortcutReferenceList || !globalThis.LumnoShortcutReference) {
+    if (!shortcutReferenceList) {
       return;
     }
     const shortcutReference = globalThis.LumnoShortcutReference;
@@ -4582,12 +4263,7 @@
       settingsVersion.textContent = `v${manifest.version}`;
     }
     function getOpenDisposition(event, fallback) {
-      if (typeof NAVIGATION_DISPOSITION.getDisposition === 'function') {
-        return NAVIGATION_DISPOSITION.getDisposition(event, fallback);
-      }
-      return event && (event.metaKey || event.ctrlKey || Number(event.button) === 1)
-        ? 'backgroundTab'
-        : (fallback || 'newTab');
+      return NAVIGATION_DISPOSITION.getDisposition(event, fallback);
     }
     function openSettingsVersionRelease(event) {
       event.preventDefault();
@@ -4635,13 +4311,7 @@
   }
 
   function getThemeStorageUpdate(mode) {
-    if (SETTINGS && typeof SETTINGS.createGlobalThemeModeStorageUpdate === 'function') {
-      return SETTINGS.createGlobalThemeModeStorageUpdate(mode);
-    }
-    const nextMode = mode === 'dark' || mode === 'light' ? mode : 'system';
-    return {
-      [THEME_STORAGE_KEY]: nextMode
-    };
+    return SETTINGS.createGlobalThemeModeStorageUpdate(mode);
   }
 
   function updateThemeButtons(mode) {
@@ -4855,100 +4525,19 @@
   }
 
   function normalizeSiteSearchTemplate(template) {
-    if (typeof SEARCH_UTILS.normalizeSiteSearchTemplate === 'function') {
-      return SEARCH_UTILS.normalizeSiteSearchTemplate(template);
-    }
-    return String(template || '')
-      .trim()
-      .replace(/\{\{\{s\}\}\}/g, '{query}')
-      .replace(/\{s\}/g, '{query}')
-      .replace(/\{searchTerms\}/g, '{query}');
-  }
-
-  function hasOpenAndSubmitSiteSearchAction(item) {
-    if (typeof SEARCH_UTILS.hasOpenAndSubmitSiteSearchAction === 'function') {
-      return SEARCH_UTILS.hasOpenAndSubmitSiteSearchAction(item);
-    }
-    return Boolean(
-      item &&
-      String(item.action || '').trim() === 'openAndSubmit'
-    );
+    return SEARCH_UTILS.normalizeSiteSearchTemplate(template);
   }
 
   function isAiSiteSearchProvider(item) {
-    if (typeof SEARCH_UTILS.isAiSiteSearchProvider === 'function') {
-      return SEARCH_UTILS.isAiSiteSearchProvider(item);
-    }
-    if (!item) {
-      return false;
-    }
-    if (String(item.category || '').trim() === 'aiSearch') {
-      return true;
-    }
-    if (hasOpenAndSubmitSiteSearchAction(item)) {
-      return true;
-    }
-    const template = normalizeSiteSearchTemplate(String(item.template || '').trim());
-    return Boolean(template) && !template.includes('{query}');
+    return SEARCH_UTILS.isAiSiteSearchProvider(item);
   }
 
   function isSearchEngineSiteSearchProvider(item) {
-    if (typeof SEARCH_UTILS.isSearchEngineSiteSearchProvider === 'function') {
-      return SEARCH_UTILS.isSearchEngineSiteSearchProvider(item);
-    }
-    return Boolean(item && String(item.category || '').trim() === 'searchEngine');
+    return SEARCH_UTILS.isSearchEngineSiteSearchProvider(item);
   }
 
   function normalizeSiteSearchProvider(item, baseItem) {
-    if (typeof SEARCH_UTILS.normalizeSiteSearchProvider === 'function') {
-      return SEARCH_UTILS.normalizeSiteSearchProvider(item, baseItem);
-    }
-    if (!item && !baseItem) {
-      return null;
-    }
-    const key = String((item && item.key) || (baseItem && baseItem.key) || '').trim();
-    const template = normalizeSiteSearchTemplate(
-      String((item && item.template) || (baseItem && baseItem.template) || '').trim()
-    );
-    if (!key || !template) {
-      return null;
-    }
-    if (!template.includes('{query}') && !isAiSiteSearchProvider({
-      ...(baseItem || {}),
-      ...(item || {}),
-      key,
-      template
-    })) {
-      return null;
-    }
-    const aliasSource = Array.isArray(item && item.aliases)
-      ? item.aliases
-      : (Array.isArray(baseItem && baseItem.aliases) ? baseItem.aliases : []);
-    const provider = {
-      id: String((item && item.id) || (baseItem && baseItem.id) || '').trim(),
-      key,
-      aliases: aliasSource.filter(Boolean),
-      name: String((item && item.name) || (baseItem && baseItem.name) || key).trim() || key,
-      template,
-      action: String((item && item.action) || (baseItem && baseItem.action) || '').trim(),
-      submitStrategy: String(
-        (item && item.submitStrategy) || (baseItem && baseItem.submitStrategy) || ''
-      ).trim(),
-      category: String(
-        (item && item.category) || (baseItem && baseItem.category) || ''
-      ).trim(),
-      disabled: Boolean(item && item.disabled),
-      disabledReason: String((item && item.disabledReason) || '').trim(),
-      icon: String((item && item.icon) || (baseItem && baseItem.icon) || '').trim(),
-      iconUrl: String((item && item.iconUrl) || (baseItem && baseItem.iconUrl) || '').trim()
-    };
-    const builtinKey = String(
-      (item && item.builtinKey) || (baseItem && baseItem.builtinKey) || ''
-    ).trim().toLowerCase();
-    if (builtinKey) {
-      provider.builtinKey = builtinKey;
-    }
-    return provider;
+    return SEARCH_UTILS.normalizeSiteSearchProvider(item, baseItem);
   }
 
   function findSiteSearchKeyConflict(key, allowedKey, allowedAggregateId) {
@@ -4960,20 +4549,11 @@
     }
     const providers = defaultSiteSearchProviders.concat(customSiteSearchProviders);
     let providerConflict = null;
-    if (typeof SEARCH_UTILS.findSiteSearchProviderKeyConflict === 'function') {
-      providerConflict = SEARCH_UTILS.findSiteSearchProviderKeyConflict(
-        normalizedKey,
-        providers,
-        normalizedAllowedKey
-      );
-    } else if (normalizedKey !== normalizedAllowedKey &&
-        typeof SEARCH_UTILS.findSiteSearchProviderByKey === 'function') {
-      providerConflict = SEARCH_UTILS.findSiteSearchProviderByKey(normalizedKey, providers);
-    } else if (normalizedKey !== normalizedAllowedKey) {
-      providerConflict = providers.find(
-        (provider) => String(provider && provider.key ? provider.key : '').trim().toLowerCase() === normalizedKey
-      ) || null;
-    }
+    providerConflict = SEARCH_UTILS.findSiteSearchProviderKeyConflict(
+      normalizedKey,
+      providers,
+      normalizedAllowedKey
+    );
     if (providerConflict) {
       return providerConflict;
     }
@@ -6316,9 +5896,7 @@
     if (!item || item._xIsCustom) {
       return item && (item.name || item.key) ? (item.name || item.key) : '';
     }
-    const mapping = typeof SEARCH_UTILS.getSiteSearchProviderDisplayNameMessage === 'function'
-      ? SEARCH_UTILS.getSiteSearchProviderDisplayNameMessage(item)
-      : null;
+    const mapping = SEARCH_UTILS.getSiteSearchProviderDisplayNameMessage(item);
     if (!mapping) {
       return item.name || item.key;
     }
@@ -6329,8 +5907,7 @@
     if (!item) {
       return '';
     }
-    const localIconAsset = !item._xIsCustom &&
-      typeof SHORTCUT_FAVICON.getSiteSearchPinnedIconAssetPath === 'function'
+    const localIconAsset = !item._xIsCustom
       ? SHORTCUT_FAVICON.getSiteSearchPinnedIconAssetPath(item)
       : '';
     if (localIconAsset) {
@@ -6723,31 +6300,25 @@
   }
 
   function loadCustomSiteSearchProviders(baseItems) {
-    if (typeof SETTINGS.readStorageValue === 'function') {
-      return SETTINGS.readStorageValue(
-        storageArea,
-        chrome,
-        SITE_SEARCH_STORAGE_KEY
-      ).then((value) => {
-        const items = Array.isArray(value) ? value : [];
-        const baseMap = new Map((baseItems || []).map((item) => [
-          String(item && item.key ? item.key : '').toLowerCase(),
-          item
-        ]));
-        return items.map((item) => {
-          const key = String(item && item.key ? item.key : '').toLowerCase();
-          const builtinKey = getSiteSearchBuiltinKey(item);
-          return normalizeSiteSearchProvider(item, baseMap.get(builtinKey || key));
-        }).filter(Boolean);
-      });
-    }
-    return Promise.resolve([]);
+    return SETTINGS.readStorageValue(
+      storageArea,
+      chrome,
+      SITE_SEARCH_STORAGE_KEY
+    ).then((value) => {
+      const items = Array.isArray(value) ? value : [];
+      const baseMap = new Map((baseItems || []).map((item) => [
+        String(item && item.key ? item.key : '').toLowerCase(),
+        item
+      ]));
+      return items.map((item) => {
+        const key = String(item && item.key ? item.key : '').toLowerCase();
+        const builtinKey = getSiteSearchBuiltinKey(item);
+        return normalizeSiteSearchProvider(item, baseMap.get(builtinKey || key));
+      }).filter(Boolean);
+    });
   }
 
   function loadDisabledSiteSearchKeys() {
-    if (typeof SETTINGS.readStorageValue !== 'function') {
-      return Promise.resolve([]);
-    }
     return SETTINGS.readStorageValue(
       storageArea,
       chrome,
@@ -6762,68 +6333,22 @@
     const payload = Array.from(keys || [])
       .map((item) => String(item).toLowerCase())
       .filter(Boolean);
-    if (typeof SETTINGS.writeStorageValue === 'function') {
-      return SETTINGS.writeStorageValue(
-        rawStorageArea,
-        chrome,
-        SITE_SEARCH_DISABLED_STORAGE_KEY,
-        payload
-      );
-    }
-    return new Promise((resolve, reject) => {
-      if (!storageArea) {
-        resolve(payload);
-        return;
-      }
-      try {
-        const maybePromise = storageArea.set({ [SITE_SEARCH_DISABLED_STORAGE_KEY]: payload }, () => {
-          const runtimeError = chrome && chrome.runtime ? chrome.runtime.lastError : null;
-          if (runtimeError) {
-            reject(new Error(runtimeError.message || 'Failed to save disabled search providers'));
-            return;
-          }
-          resolve(payload);
-        });
-        if (maybePromise && typeof maybePromise.catch === 'function') {
-          maybePromise.catch(reject);
-        }
-      } catch (error) {
-        reject(error);
-      }
-    });
+    return SETTINGS.writeStorageValue(
+      rawStorageArea,
+      chrome,
+      SITE_SEARCH_DISABLED_STORAGE_KEY,
+      payload
+    );
   }
 
   function writeCustomSiteSearchProviders(items) {
     const payload = (items || []).map((item) => normalizeSiteSearchProvider(item)).filter(Boolean);
-    if (typeof SETTINGS.writeStorageValue === 'function') {
-      return SETTINGS.writeStorageValue(
-        storageArea,
-        chrome,
-        SITE_SEARCH_STORAGE_KEY,
-        payload
-      );
-    }
-    return new Promise((resolve, reject) => {
-      if (!storageArea) {
-        resolve(payload);
-        return;
-      }
-      try {
-        const maybePromise = storageArea.set({ [SITE_SEARCH_STORAGE_KEY]: payload }, () => {
-          const runtimeError = chrome && chrome.runtime ? chrome.runtime.lastError : null;
-          if (runtimeError) {
-            reject(new Error(runtimeError.message || 'Failed to save custom search providers'));
-            return;
-          }
-          resolve(payload);
-        });
-        if (maybePromise && typeof maybePromise.catch === 'function') {
-          maybePromise.catch(reject);
-        }
-      } catch (error) {
-        reject(error);
-      }
-    });
+    return SETTINGS.writeStorageValue(
+      storageArea,
+      chrome,
+      SITE_SEARCH_STORAGE_KEY,
+      payload
+    );
   }
 
   function writeSiteSearchProviderState(items, keys) {
@@ -6837,42 +6362,7 @@
       [SITE_SEARCH_STORAGE_KEY]: providersPayload,
       [SITE_SEARCH_DISABLED_STORAGE_KEY]: disabledPayload
     };
-    if (typeof SETTINGS.writeStorageValues === 'function') {
-      return SETTINGS.writeStorageValues(rawStorageArea, chrome, payload);
-    }
-    return new Promise((resolve, reject) => {
-      const targetArea = rawStorageArea || storageArea;
-      if (!targetArea || typeof targetArea.set !== 'function') {
-        resolve(payload);
-        return;
-      }
-      let settled = false;
-      const finish = (error) => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        if (error) {
-          reject(error instanceof Error ? error : new Error(String(error)));
-          return;
-        }
-        resolve(payload);
-      };
-      const callback = () => {
-        const runtimeError = chrome && chrome.runtime ? chrome.runtime.lastError : null;
-        finish(runtimeError
-          ? new Error(runtimeError.message || 'Failed to save search providers')
-          : null);
-      };
-      try {
-        const maybePromise = targetArea.set(payload, callback);
-        if (maybePromise && typeof maybePromise.then === 'function') {
-          maybePromise.then(() => Promise.resolve().then(() => finish(null))).catch(finish);
-        }
-      } catch (error) {
-        finish(error);
-      }
-    });
+    return SETTINGS.writeStorageValues(rawStorageArea, chrome, payload);
   }
 
   function enqueueSiteSearchProviderStorageOperation(operation) {
@@ -7092,9 +6582,7 @@
   }
 
   function normalizeAggregateSearches(value) {
-    return typeof AGGREGATE_SEARCH_STORE.normalizeAggregateSearches === 'function'
-      ? AGGREGATE_SEARCH_STORE.normalizeAggregateSearches(value)
-      : [];
+    return AGGREGATE_SEARCH_STORE.normalizeAggregateSearches(value);
   }
 
   function deriveLegacyAggregateSearchAutoGroupEnabled(value) {
@@ -7105,9 +6593,7 @@
   }
 
   function getAggregateSearchProviderSourceRef(provider) {
-    return typeof AGGREGATE_SEARCH_STORE.getProviderSourceRef === 'function'
-      ? AGGREGATE_SEARCH_STORE.getProviderSourceRef(provider)
-      : '';
+    return AGGREGATE_SEARCH_STORE.getProviderSourceRef(provider);
   }
 
   function getAggregateSearchAvailableProviders() {
@@ -7118,13 +6604,7 @@
     const aggregateCustomProviders = customSiteSearchProviderIdsReady
       ? customSiteSearchProviders
       : customSiteSearchProviders.filter((item) => String(item && item.id ? item.id : '').trim());
-    if (typeof SEARCH_UTILS.mergeCustomProviders === 'function') {
-      return SEARCH_UTILS.mergeCustomProviders(activeDefaults, aggregateCustomProviders);
-    }
-    return aggregateCustomProviders
-      .filter((item) => item && !item.disabled)
-      .map((item) => ({ ...item, _xIsCustom: true }))
-      .concat(activeDefaults);
+    return SEARCH_UTILS.mergeCustomProviders(activeDefaults, aggregateCustomProviders);
   }
 
   function getAggregateSearchProviderGroup(provider) {
@@ -7228,9 +6708,7 @@
   function getAggregateSearchItemModel(item) {
     const count = Array.isArray(item && item.sourceRefs) ? item.sourceRefs.length : 0;
     const providers = getAggregateSearchAvailableProviders();
-    const availability = typeof AGGREGATE_SEARCH_STORE.getAggregateSearchAvailability === 'function'
-      ? AGGREGATE_SEARCH_STORE.getAggregateSearchAvailability(item, providers)
-      : null;
+    const availability = AGGREGATE_SEARCH_STORE.getAggregateSearchAvailability(item, providers);
     if (availability && !availability.available) {
       return {
         id: String(item && item.id ? item.id : ''),
@@ -7277,48 +6755,21 @@
   }
 
   function saveAggregateSearches(items) {
-    const serialized = typeof AGGREGATE_SEARCH_STORE.serializeAggregateSearches === 'function'
-      ? AGGREGATE_SEARCH_STORE.serializeAggregateSearches(items)
-      : { version: 2, items: [] };
-    const serializedBytes = typeof AGGREGATE_SEARCH_STORE.getSerializedStorageByteLength === 'function'
-      ? AGGREGATE_SEARCH_STORE.getSerializedStorageByteLength(
-          serialized,
-          AGGREGATE_SEARCH_STORAGE_KEY
-        )
-      : 0;
+    const serialized = AGGREGATE_SEARCH_STORE.serializeAggregateSearches(items);
+    const serializedBytes = AGGREGATE_SEARCH_STORE.getSerializedStorageByteLength(
+      serialized,
+      AGGREGATE_SEARCH_STORAGE_KEY
+    );
     const byteBudget = Number(AGGREGATE_SEARCH_STORE.SYNC_ITEM_BYTE_BUDGET) || 7800;
     if (getActivePrimaryAreaName() === 'sync' && serializedBytes > byteBudget) {
       return Promise.reject(new Error('aggregate-search-sync-item-quota-exceeded'));
     }
-    if (typeof SETTINGS.writeStorageValue === 'function') {
-      return SETTINGS.writeStorageValue(
-        rawStorageArea,
-        chrome,
-        AGGREGATE_SEARCH_STORAGE_KEY,
-        serialized
-      ).then(() => serialized.items);
-    }
-    return new Promise((resolve, reject) => {
-      if (!rawStorageArea) {
-        resolve(serialized.items);
-        return;
-      }
-      try {
-        const maybePromise = rawStorageArea.set({ [AGGREGATE_SEARCH_STORAGE_KEY]: serialized }, () => {
-          const lastError = chrome && chrome.runtime ? chrome.runtime.lastError : null;
-          if (lastError) {
-            reject(new Error(lastError.message || 'Failed to save aggregate searches'));
-            return;
-          }
-          resolve(serialized.items);
-        });
-        if (maybePromise && typeof maybePromise.catch === 'function') {
-          maybePromise.catch(reject);
-        }
-      } catch (error) {
-        reject(error);
-      }
-    });
+    return SETTINGS.writeStorageValue(
+      rawStorageArea,
+      chrome,
+      AGGREGATE_SEARCH_STORAGE_KEY,
+      serialized
+    ).then(() => serialized.items);
   }
 
   function getAggregateSearchStateCoordinator() {
@@ -7383,9 +6834,7 @@
         error: getMessage('shortcuts_error_key_space', '触发词不能包含空格')
       });
     }
-    const key = typeof AGGREGATE_SEARCH_STORE.normalizeAggregateSearchKey === 'function'
-      ? AGGREGATE_SEARCH_STORE.normalizeAggregateSearchKey(keyRaw)
-      : keyRaw.toLowerCase();
+    const key = AGGREGATE_SEARCH_STORE.normalizeAggregateSearchKey(keyRaw);
     if (!key) {
       return Promise.resolve({
         ok: false,
@@ -7402,9 +6851,7 @@
       .replace(/\s+/g, ' ')
       .trim()
       .slice(0, maxNameLength);
-    const sourceRefs = typeof AGGREGATE_SEARCH_STORE.normalizeSourceRefs === 'function'
-      ? AGGREGATE_SEARCH_STORE.normalizeSourceRefs(draft && draft.sourceRefs)
-      : [];
+    const sourceRefs = AGGREGATE_SEARCH_STORE.normalizeSourceRefs(draft && draft.sourceRefs);
     if (!name) {
       return Promise.resolve({
         ok: false,
@@ -7435,20 +6882,18 @@
         ? { autoCreateTabGroup: previousItem.autoCreateTabGroup === true }
         : {})
     };
-    if (typeof AGGREGATE_SEARCH_STORE.getAggregateSearchAvailability === 'function') {
-      const availability = AGGREGATE_SEARCH_STORE.getAggregateSearchAvailability(
-        nextItem,
-        getAggregateSearchAvailableProviders()
-      );
-      if (!availability.available) {
-        return Promise.resolve({
-          ok: false,
-          error: getMessage(
-            'aggregate_search_source_selection_unavailable_error',
-            'Remove unavailable sources and select at least two available sources.'
-          )
-        });
-      }
+    const availability = AGGREGATE_SEARCH_STORE.getAggregateSearchAvailability(
+      nextItem,
+      getAggregateSearchAvailableProviders()
+    );
+    if (!availability.available) {
+      return Promise.resolve({
+        ok: false,
+        error: getMessage(
+          'aggregate_search_source_selection_unavailable_error',
+          'Remove unavailable sources and select at least two available sources.'
+        )
+      });
     }
     return getAggregateSearchStateCoordinator().enqueueMutation((items) => {
       if (!currentId && items.length >= maxItems) {

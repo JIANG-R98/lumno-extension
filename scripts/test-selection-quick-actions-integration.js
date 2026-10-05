@@ -144,7 +144,7 @@ assert(
   'selection diagnostics should remain source-switchable and cover trigger plus ordering reasons'
 );
 assert(
-  contentSource.includes('const TOAST = globalThis.LumnoToast || {};') &&
+  contentSource.includes('const TOAST = globalThis.LumnoToast;') &&
     contentSource.includes('TOAST.createToastController') &&
     contentSource.includes("toastElement.className = 'x-lumno-toast'") &&
     toastSource.includes('function createToastController') &&
@@ -395,7 +395,7 @@ assert(
   'background actions should require an explicit enabled setting'
 );
 assert(
-  /selectSelectionQuickActionProvider\(providers, preferredProviderKey\)/.test(backgroundSource),
+  /resolveSelectionQuickActionProvider\(\s*providers,\s*bundledProviders,\s*preferredProviderKey/.test(backgroundSource),
   'background actions should honor the stored preferred provider'
 );
 assert(

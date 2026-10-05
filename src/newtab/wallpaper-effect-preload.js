@@ -9,9 +9,7 @@
       !preloadState ||
       !preloadState.wallpaper ||
       !preloadState.imageUrl ||
-      !preloadState.effectPrefsReady ||
-      !effects ||
-      typeof effects.createWallpaperEffects !== 'function') {
+      !preloadState.effectPrefsReady) {
     return;
   }
 
@@ -42,9 +40,7 @@
     if (preloadRuntime.claimed) {
       return;
     }
-    const normalized = typeof effects.normalizePrefs === 'function'
-      ? effects.normalizePrefs(prefs)
-      : prefs;
+    const normalized = effects.normalizePrefs(prefs);
     if (!normalized || normalized.type === 'none') {
       body.setAttribute('data-wallpaper-effect', 'none');
       body.setAttribute('data-nt-wallpaper-ready', '1');

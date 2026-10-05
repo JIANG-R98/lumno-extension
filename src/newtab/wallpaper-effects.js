@@ -1758,9 +1758,6 @@
       }
       hasTriedCrtWebglRenderer = true;
       const factory = root.LumnoNewtabCrtWebGL;
-      if (!factory || typeof factory.createRenderer !== 'function') {
-        return null;
-      }
       try {
         crtWebglRenderer = factory.createRenderer({
           documentObj,

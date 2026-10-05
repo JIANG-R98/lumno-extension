@@ -80,6 +80,8 @@ window.chrome = {
   }
 };
 
+// Extension pages load settings.js before the tab switcher runtime.
+window.eval(fs.readFileSync(path.join(__dirname, '..', 'src/shared/settings.js'), 'utf8'));
 window.eval(source);
 
 const unavailableResult =

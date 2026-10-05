@@ -1359,12 +1359,12 @@ assert.match(
 );
 assert.match(
   backgroundSource,
-  /importScripts\(chrome\.runtime\.getURL\('src\/newtab\/favicon-theme\.js'\)\)/,
+  /chrome\.runtime\.getURL\('src\/newtab\/favicon-theme\.js'\)/,
   'Alt+Q should import the same favicon theme helpers used by newtab recent sites'
 );
 assert.match(
   backgroundSource,
-  /const NEWTAB_FAVICON_THEME = globalThis\.LumnoNewtabFaviconTheme \|\| \{\};/,
+  /const NEWTAB_FAVICON_THEME = globalThis\.LumnoNewtabFaviconTheme;/,
   'Alt+Q should read the newtab favicon theme helper from the shared global'
 );
 assert.match(

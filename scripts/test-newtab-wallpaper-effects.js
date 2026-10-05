@@ -9,6 +9,9 @@ const sandbox = {
 };
 sandbox.globalThis = sandbox;
 
+vm.runInNewContext(fs.readFileSync('src/shared/settings.js', 'utf8'), sandbox, {
+  filename: 'src/shared/settings.js'
+});
 vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper-effects.js', 'utf8'), sandbox, {
   filename: 'src/newtab/wallpaper-effects.js'
 });
@@ -669,11 +672,6 @@ assert.match(
   effectsSource,
   /const scanlinePeriod = 2;[\s\S]*?fillStyle = 'rgb\(0 0 0 \/ 82%\)'/,
   'Canvas CRT fallback should dedicate the second pixel row to a dark scanline'
-);
-assert.match(
-  wallpaperPreloadSource,
-  /\['none', 'blur', 'grain', 'blocks', 'halftone', 'dither', 'ascii', 'crt'\]/,
-  'the head preload fallback should preserve CRT before the renderer module loads'
 );
 assert.match(
   effectsSource,

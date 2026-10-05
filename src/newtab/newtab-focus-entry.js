@@ -13,12 +13,10 @@
     documentElement.setAttribute('data-nt-focus-route-pending', 'true');
   }
 
-  const settings = globalThis.LumnoSettings || {};
+  const settings = globalThis.LumnoSettings;
   const storageKey = settings.NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY ||
     '_x_extension_newtab_input_auto_focus_enabled_2026_unique_';
-  const normalizeEnabled = typeof settings.normalizeNewtabInputAutoFocusEnabled === 'function'
-    ? settings.normalizeNewtabInputAutoFocusEnabled
-    : function(value) { return value === true; };
+  const normalizeEnabled = settings.normalizeNewtabInputAutoFocusEnabled;
 
   function settle(enabled) {
     if (!normalizeEnabled(enabled)) {
@@ -32,8 +30,7 @@
   }
 
   const chromeApi = window.chrome || (typeof chrome !== 'undefined' ? chrome : null);
-  const providerRuntime = typeof settings.createProviderStorageRuntime === 'function'
-    ? settings.createProviderStorageRuntime(chromeApi) : null;
+  const providerRuntime = settings.createProviderStorageRuntime(chromeApi);
   const storage = providerRuntime ? providerRuntime.area : chromeApi && chromeApi.storage
     ? (chromeApi.storage.sync || chromeApi.storage.local)
     : null;

@@ -37,32 +37,6 @@
     return tab && typeof tab.url === 'string' ? tab.url.trim() : '';
   }
 
-  function tryOpenWithSplitViewAdapter(adapter, options, callback) {
-    const done = typeof callback === 'function' ? callback : () => {};
-    if (!adapter || typeof adapter.openTarget !== 'function') {
-      done(null);
-      return;
-    }
-    let settled = false;
-    const finish = (result) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      done(result && result.ok ? { ...result, mode: 'splitView' } : null);
-    };
-    try {
-      const returned = adapter.openTarget(options || {}, finish);
-      if (returned && typeof returned.then === 'function') {
-        returned.then(finish).catch(() => finish(null));
-      } else if (returned && typeof returned === 'object') {
-        finish(returned);
-      }
-    } catch (e) {
-      finish(null);
-    }
-  }
-
   function findExistingSelectionGroup(chromeApi, windowId, title, callback) {
     const api = getChromeApi(chromeApi);
     const done = typeof callback === 'function' ? callback : () => {};
@@ -362,34 +336,28 @@
   function openSelectionTarget(chromeApi, options, callback) {
     const settings = options && typeof options === 'object' ? options : {};
     const done = typeof callback === 'function' ? callback : () => {};
-    tryOpenWithSplitViewAdapter(settings.splitViewAdapter, settings, (splitResult) => {
-      if (splitResult) {
-        done(splitResult);
-        return;
-      }
-      if (settings.groupEnabled === true) {
-        if (settings.reuseExisting !== false) {
-          findReusableSelectionTab(chromeApi, settings, (tab) => {
-            if (!tab) {
-              openInSelectionGroup(chromeApi, settings, done);
-              return;
-            }
-            placeTabInSelectionGroup(chromeApi, tab, settings, (placement) => {
-              done({
-                ...(placement && typeof placement === 'object' ? placement : {}),
-                ok: true,
-                mode: 'reused',
-                tab
-              });
+    if (settings.groupEnabled === true) {
+      if (settings.reuseExisting !== false) {
+        findReusableSelectionTab(chromeApi, settings, (tab) => {
+          if (!tab) {
+            openInSelectionGroup(chromeApi, settings, done);
+            return;
+          }
+          placeTabInSelectionGroup(chromeApi, tab, settings, (placement) => {
+            done({
+              ...(placement && typeof placement === 'object' ? placement : {}),
+              ok: true,
+              mode: 'reused',
+              tab
             });
           });
-          return;
-        }
-        openInSelectionGroup(chromeApi, settings, done);
+        });
         return;
       }
-      openInNewTab(chromeApi, settings, done);
-    });
+      openInSelectionGroup(chromeApi, settings, done);
+      return;
+    }
+    openInNewTab(chromeApi, settings, done);
   }
 
   return Object.freeze({
@@ -402,7 +370,6 @@
     openInSelectionGroup,
     openSelectionTarget,
     placeTabInSelectionGroup,
-    tryOpenWithSplitViewAdapter,
     updateSelectionGroup
   });
 });

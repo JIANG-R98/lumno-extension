@@ -2,7 +2,7 @@
   const STORAGE_KEY = '_x_extension_motion_effects_enabled_2026_unique_';
   const root = document.documentElement;
   const storage = chrome && chrome.storage ? chrome.storage : null;
-  const providerRuntime = globalThis.LumnoSettings && globalThis.LumnoSettings.createProviderStorageRuntime(chrome);
+  const providerRuntime = globalThis.LumnoSettings.createProviderStorageRuntime(chrome);
   const storageArea = providerRuntime ? providerRuntime.area : storage && storage.sync
     ? storage.sync
     : (storage && storage.local ? storage.local : null);

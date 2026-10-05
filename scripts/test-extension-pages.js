@@ -1,6 +1,8 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+// The service worker loads settings before extension pages.
+require('../src/shared/settings.js');
 const pages = require('../src/background/extension-pages.js');
 
 const optionsSource = fs.readFileSync(path.join(__dirname, '..', 'src/options/options.js'), 'utf8');

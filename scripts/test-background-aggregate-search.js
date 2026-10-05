@@ -60,7 +60,7 @@ assert.ok(
   'the background must use the behavior-tested stored-definition request runner'
 );
 assert.ok(
-  backgroundSource.includes('const SETTINGS = globalThis.LumnoSettings || {};') &&
+  backgroundSource.includes('const SETTINGS = globalThis.LumnoSettings;') &&
   backgroundSource.includes('SETTINGS.readStorageValue('),
   'provider storage reads must use the loaded settings runtime and reject on failure'
 );

@@ -64,20 +64,13 @@
     const faviconCandidateLoadTimeoutMs = Number.isFinite(config.faviconCandidateLoadTimeoutMs)
       ? Math.max(0, config.faviconCandidateLoadTimeoutMs)
       : 2600;
-    const faviconUtils = root.LumnoFaviconUtils || {};
+    const faviconUtils = root.LumnoFaviconUtils;
     function isSourceAllowedByEnhancedFetchPolicy(url, pageUrl) {
-      if (typeof faviconUtils.isFaviconSourceAllowedByEnhancedFetchPolicy === 'function') {
-        return faviconUtils.isFaviconSourceAllowedByEnhancedFetchPolicy(
-          url,
-          isEnhancedFaviconFetchEnabled(pageUrl || url),
-          { chromeApi, allowThirdPartyFetch: getStrictFaviconReason(pageUrl || url) !== 'exclusion' }
-        );
-      }
-      return (getStrictFaviconReason(pageUrl || url) !== 'exclusion' && isRemoteFaviconProxy(url)) ||
-        isEnhancedFaviconFetchEnabled(pageUrl || url) === true ||
-        String(url || '').startsWith('data:') ||
-        /^chrome-extension:\/\/[^/]+\/_favicon\//i.test(String(url || '').trim()) ||
-        isChromeMonogramFaviconUrl(url);
+      return faviconUtils.isFaviconSourceAllowedByEnhancedFetchPolicy(
+        url,
+        isEnhancedFaviconFetchEnabled(pageUrl || url),
+        { chromeApi, allowThirdPartyFetch: getStrictFaviconReason(pageUrl || url) !== 'exclusion' }
+      );
     }
     const faviconResolverOptions = {
       chromeApi,
@@ -92,40 +85,34 @@
       getStrictFaviconReason,
       logFaviconDecision
     };
-    const faviconUrlResolver = typeof faviconUtils.createFaviconUrlResolver === 'function'
-      ? faviconUtils.createFaviconUrlResolver({
-        ...faviconResolverOptions,
-        shouldBlockFaviconForHost: shouldBlockOverlayFaviconForHost
-      })
-      : null;
-    const faviconDataSourceResolver = typeof faviconUtils.createFaviconUrlResolver === 'function'
-      ? faviconUtils.createFaviconUrlResolver(faviconResolverOptions)
-      : null;
-    const faviconViewCoreApi = root.LumnoFaviconViewCore || {};
-    const faviconViewCore = typeof faviconViewCoreApi.createFaviconViewCore === 'function'
-      ? faviconViewCoreApi.createFaviconViewCore({
-        document: doc,
-        windowObj: win,
-        chromeApi,
-        getHostFromUrl,
-        shouldBlockFaviconForHost: shouldBlockOverlayFaviconForHost,
-        isBlockedLocalFaviconUrl: isBlockedOverlayFaviconUrl,
-        showResolvedFavicon,
-        showPendingFallbackIcon,
-        getPersistCacheKey: (img) => img.getAttribute('data-x-ov-favicon-cache-key') || '',
-        setPersistedFaviconUrl,
-        setPersistedFaviconData,
-        shouldPersistFaviconUrl: (url) => !isChromeMonogramFaviconUrl(url) && !isFaviconProxyUrl(url),
-        requestFaviconData: config.requestFaviconData,
-        preloadThemeFromFavicon,
-        getThemeFaviconUrl: getGstaticFaviconUrl,
-        hasThemeForHost,
-        faviconDataCache,
-        faviconDataPending,
-        iconPreloadCache,
-        detectDefaultExtensionFavicon: config.detectDefaultExtensionFavicon
-      })
-      : null;
+    const faviconUrlResolver = faviconUtils.createFaviconUrlResolver({
+      ...faviconResolverOptions,
+      shouldBlockFaviconForHost: shouldBlockOverlayFaviconForHost
+    });
+    const faviconDataSourceResolver = faviconUtils.createFaviconUrlResolver(faviconResolverOptions);
+    const faviconViewCoreApi = root.LumnoFaviconViewCore;
+    const faviconViewCore = faviconViewCoreApi.createFaviconViewCore({
+      document: doc,
+      windowObj: win,
+      chromeApi,
+      getHostFromUrl,
+      shouldBlockFaviconForHost: shouldBlockOverlayFaviconForHost,
+      isBlockedLocalFaviconUrl: isBlockedOverlayFaviconUrl,
+      showResolvedFavicon,
+      showPendingFallbackIcon,
+      getPersistCacheKey: (img) => img.getAttribute('data-x-ov-favicon-cache-key') || '',
+      setPersistedFaviconUrl,
+      setPersistedFaviconData,
+      shouldPersistFaviconUrl: (url) => !isChromeMonogramFaviconUrl(url) && !isFaviconProxyUrl(url),
+      requestFaviconData: config.requestFaviconData,
+      preloadThemeFromFavicon,
+      getThemeFaviconUrl: getGstaticFaviconUrl,
+      hasThemeForHost,
+      faviconDataCache,
+      faviconDataPending,
+      iconPreloadCache,
+      detectDefaultExtensionFavicon: config.detectDefaultExtensionFavicon
+    });
 
     function setFaviconLoadState(img, state) {
       faviconViewCore.setFaviconLoadState(img, state);
@@ -351,10 +338,8 @@
           if (value && value.startsWith('data:')) {
             if (faviconViewCore && typeof faviconViewCore.cacheFaviconData === 'function') {
               faviconViewCore.cacheFaviconData(sourceUrl, value);
-            } else if (typeof faviconUtils.setBoundedCacheEntry === 'function') {
-              faviconUtils.setBoundedCacheEntry(faviconDataCache, sourceUrl, value, 256);
             } else {
-              faviconDataCache.set(sourceUrl, value);
+              faviconUtils.setBoundedCacheEntry(faviconDataCache, sourceUrl, value, 256);
             }
             resolve(value);
             return;
@@ -681,8 +666,7 @@
     }
 
     function isRemoteFaviconProxy(url) {
-      return /^https:\/\//i.test(String(url || '')) &&
-        typeof faviconUtils.isFaviconProxyUrl === 'function' && faviconUtils.isFaviconProxyUrl(url);
+      return /^https:\/\//i.test(String(url || '')) && faviconUtils.isFaviconProxyUrl(url);
     }
 
     function attachRemoteFaviconCandidate(img, state, sourceUrl) {

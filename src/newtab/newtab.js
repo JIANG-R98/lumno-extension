@@ -23,17 +23,14 @@
   }
   markNewtabStartupMilestone('script-start');
 
-  const settingsRuntimeApi = globalThis.LumnoSettings || {};
-  const providerStorageRuntime = typeof settingsRuntimeApi.createProviderStorageRuntime === 'function'
-    ? settingsRuntimeApi.createProviderStorageRuntime(chrome)
-    : null;
+  const settingsRuntimeApi = globalThis.LumnoSettings;
+  const providerStorageRuntime = settingsRuntimeApi.createProviderStorageRuntime(chrome);
   const rawStorageArea = providerStorageRuntime
     ? providerStorageRuntime.area
     : ((chrome && chrome.storage && chrome.storage.sync)
         ? chrome.storage.sync
         : (chrome && chrome.storage ? chrome.storage.local : null));
-  const startupStorageReadBatch = rawStorageArea &&
-      typeof settingsRuntimeApi.createStorageReadBatch === 'function'
+  const startupStorageReadBatch = rawStorageArea
     ? settingsRuntimeApi.createStorageReadBatch(rawStorageArea)
     : null;
   const storageArea = startupStorageReadBatch
@@ -147,8 +144,8 @@
   }
 
   const SETTINGS = settingsRuntimeApi;
-  const BROWSER_PROFILE = globalThis.LumnoBrowserProfile || {};
-  const SHORTCUT_KEY_MATCHER = globalThis.LumnoShortcutKeyMatcher || {};
+  const BROWSER_PROFILE = globalThis.LumnoBrowserProfile;
+  const SHORTCUT_KEY_MATCHER = globalThis.LumnoShortcutKeyMatcher;
   const THEME_STORAGE_KEY = '_x_extension_theme_mode_2024_unique_';
   const LANGUAGE_STORAGE_KEY = '_x_extension_language_2024_unique_';
   const RECENT_MODE_STORAGE_KEY = '_x_extension_recent_mode_2024_unique_';
@@ -175,8 +172,6 @@
   const NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY =
     SETTINGS.NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY ||
     '_x_extension_newtab_time_font_weight_2026_unique_';
-  const NEWTAB_TIME_FONT_WEIGHT_MIN = Number(SETTINGS.NEWTAB_TIME_FONT_WEIGHT_MIN) || 300;
-  const NEWTAB_TIME_FONT_WEIGHT_MAX = Number(SETTINGS.NEWTAB_TIME_FONT_WEIGHT_MAX) || 800;
   const NEWTAB_TIME_FONT_WEIGHT_DEFAULT = Number(SETTINGS.NEWTAB_TIME_FONT_WEIGHT_DEFAULT) || 320;
   const NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY =
     SETTINGS.NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY ||
@@ -220,142 +215,77 @@
   const SEARCH_BLACKLIST_STORAGE_KEY = '_x_extension_search_blacklist_2026_unique_';
   const FAVICON_REQUEST_BLACKLIST_STORAGE_KEY = '_x_extension_favicon_request_blacklist_2026_unique_';
   const FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY = '_x_extension_favicon_enhanced_fetch_enabled_2026_unique_';
-  const BLACKLIST_UTILS = globalThis.LumnoBlacklistUtils || {};
-  const EXTENSION_ROUTES = globalThis.LumnoExtensionRoutes || {};
-  const NAVIGATION_DISPOSITION = globalThis.LumnoNavigationDisposition || {};
-  const SEARCH_UTILS = globalThis.LumnoSearchUtils || {};
-  const AGGREGATE_SEARCH_STORE = globalThis.LumnoAggregateSearchStore || {};
-  const AGGREGATE_SEARCH_SURFACE = globalThis.LumnoAggregateSearchSurface || {};
-  const SITE_DISPLAY_NAME = globalThis.LumnoSiteDisplayName || {};
-  const SITE_SEARCH_STORE = globalThis.LumnoSiteSearchStore || {};
-  const SUGGESTION_ACTION_MODEL = globalThis.LumnoSuggestionActionModel || {};
-  const SUGGESTION_NAVIGATION = globalThis.LumnoSuggestionNavigation || {};
-  const SUGGESTIONS_HEIGHT_LAYOUT = globalThis.LumnoSuggestionsHeightLayout || {};
-  const SEARCH_INPUT_HISTORY = globalThis.LumnoSearchInputHistory || {};
-  const SEARCH_INPUT_MODE = globalThis.LumnoSearchInputMode || {};
-  const FEATURE_HINTS = globalThis.LumnoFeatureHints || {};
-  const UPDATE_NOTICE = globalThis.LumnoUpdateNotice || {};
-  const ENGAGEMENT_NOTICE = globalThis.LumnoEngagementNotice || {};
-  const COMMUNITY_LINKS = globalThis.LumnoCommunityLinks || {};
+  const BLACKLIST_UTILS = globalThis.LumnoBlacklistUtils;
+  const EXTENSION_ROUTES = globalThis.LumnoExtensionRoutes;
+  const NAVIGATION_DISPOSITION = globalThis.LumnoNavigationDisposition;
+  const SEARCH_UTILS = globalThis.LumnoSearchUtils;
+  const AGGREGATE_SEARCH_STORE = globalThis.LumnoAggregateSearchStore;
+  const AGGREGATE_SEARCH_SURFACE = globalThis.LumnoAggregateSearchSurface;
+  const SITE_DISPLAY_NAME = globalThis.LumnoSiteDisplayName;
+  const SITE_SEARCH_STORE = globalThis.LumnoSiteSearchStore;
+  const SUGGESTION_ACTION_MODEL = globalThis.LumnoSuggestionActionModel;
+  const SUGGESTION_NAVIGATION = globalThis.LumnoSuggestionNavigation;
+  const SEARCH_INPUT_HISTORY = globalThis.LumnoSearchInputHistory;
+  const SEARCH_INPUT_MODE = globalThis.LumnoSearchInputMode;
+  const FEATURE_HINTS = globalThis.LumnoFeatureHints;
+  const UPDATE_NOTICE = globalThis.LumnoUpdateNotice;
+  const ENGAGEMENT_NOTICE = globalThis.LumnoEngagementNotice;
+  const COMMUNITY_LINKS = globalThis.LumnoCommunityLinks;
   const LUMNO_FEEDBACK_LINKS_FALLBACK = COMMUNITY_LINKS.FALLBACK_LINKS;
-  const FAVICON_UTILS = globalThis.LumnoFaviconUtils || {};
-  const NEWTAB_FAVICON_CACHE = globalThis.LumnoFaviconCache || globalThis.LumnoNewtabFaviconCache || {};
-  const SHORTCUT_FAVICON = globalThis.LumnoShortcutFavicon || {};
-  const NEWTAB_FAVICON_THEME = globalThis.LumnoNewtabFaviconTheme || {};
-  const NEWTAB_FAVICON_VIEW = globalThis.LumnoNewtabFaviconView || {};
-  const NEWTAB_RECENT_STORE = globalThis.LumnoNewtabRecentSitesStore || {};
-  const NEWTAB_BOOKMARKS_STORE = globalThis.LumnoNewtabBookmarksStore || {};
-  const NEWTAB_BOOKMARKS_RUNTIME = globalThis.LumnoNewtabBookmarksRuntime || {};
-  const NEWTAB_BOOKMARKS_TOPBAR = globalThis.LumnoNewtabBookmarksTopbar || {};
+  const FAVICON_UTILS = globalThis.LumnoFaviconUtils;
+  const NEWTAB_FAVICON_CACHE = globalThis.LumnoFaviconCache || {};
+  const SHORTCUT_FAVICON = globalThis.LumnoShortcutFavicon;
+  const NEWTAB_FAVICON_THEME = globalThis.LumnoNewtabFaviconTheme;
+  const NEWTAB_FAVICON_VIEW = globalThis.LumnoNewtabFaviconView;
+  const NEWTAB_RECENT_STORE = globalThis.LumnoNewtabRecentSitesStore;
+  const NEWTAB_BOOKMARKS_STORE = globalThis.LumnoNewtabBookmarksStore;
+  const NEWTAB_BOOKMARKS_RUNTIME = globalThis.LumnoNewtabBookmarksRuntime;
+  const NEWTAB_BOOKMARKS_TOPBAR = globalThis.LumnoNewtabBookmarksTopbar;
   const BOOKMARK_TOPBAR_HEIGHT_PX = Math.max(
     0,
     Number(NEWTAB_BOOKMARKS_TOPBAR.HEIGHT_PX) || 36
   );
-  const NEWTAB_BOOKMARK_MOVE_HISTORY = globalThis.LumnoNewtabBookmarkMoveHistory || {};
-  const NEWTAB_BOOKMARK_DRAG = globalThis.LumnoNewtabBookmarkDrag || {};
-  const NEWTAB_CROSS_SURFACE_DRAG = globalThis.LumnoNewtabCrossSurfaceDrag || {};
-  const NEWTAB_BOOKMARK_FOLDER_ICON = globalThis.LumnoNewtabBookmarkFolderIcon || {};
-  const NEWTAB_PAGE_NOTICE = globalThis.LumnoNewtabPageNotice || {};
-  const NEWTAB_TOAST = globalThis.LumnoNewtabToast || {};
-  const NEWTAB_LAYOUT = globalThis.LumnoNewtabLayout || {};
-  const NEWTAB_DOCK = globalThis.LumnoNewtabDock || {};
-  const NEWTAB_DIRECT_NAVIGATION_SETTLE = globalThis.LumnoNewtabDirectNavigationSettle || {};
-  const NEWTAB_BACKGROUND_SEARCH_FOCUS = globalThis.LumnoNewtabBackgroundSearchFocus || {};
-  const NEWTAB_RECENT_VIEW = globalThis.LumnoNewtabRecentSitesView || {};
-  const NEWTAB_BOOKMARKS_VIEW = globalThis.LumnoNewtabBookmarksView || {};
-  const NEWTAB_BOOKMARK_CASCADE_POSITION = globalThis.LumnoNewtabBookmarkCascadePosition || {};
-  const NEWTAB_BOOKMARK_CASCADE_MENU = globalThis.LumnoNewtabBookmarkCascadeMenu || {};
-  const NEWTAB_SUGGESTIONS_VIEW = globalThis.LumnoNewtabSuggestionsView || {};
-  const NEWTAB_SHORTCUTS_STORE = globalThis.LumnoNewtabShortcutsStore || {};
-  const FOLDER_REFERENCES = globalThis.LumnoBookmarkFolderReference || {};
-  const NEWTAB_SHORTCUT_ICON_STORE = globalThis.LumnoNewtabShortcutIconStore || {};
-  const NEWTAB_SHORTCUT_DIALOG = globalThis.LumnoNewtabShortcutDialog || {};
-  const NEWTAB_SHORTCUTS_VIEW = globalThis.LumnoNewtabShortcutsView || {};
-  const NEWTAB_WALLPAPER_LOCAL_STORE = globalThis.LumnoNewtabWallpaperLocalStore || {};
-  const NEWTAB_WALLPAPER_ADAPTIVE_TONE = globalThis.LumnoNewtabWallpaperAdaptiveTone || {};
-  const NEWTAB_WALLPAPER_EFFECTS = globalThis.LumnoNewtabWallpaperEffects || {};
-  const NEWTAB_WALLPAPER = globalThis.LumnoNewtabWallpaper || {};
-  const NEWTAB_WALLPAPER_VIEW = globalThis.LumnoNewtabWallpaperView || {};
-  const NEWTAB_FEEDBACK_CONTROL = globalThis.LumnoNewtabFeedbackControl || {};
-  const NEWTAB_SELECT_MENU = globalThis.LumnoNewtabSelectMenu || {};
-  const NEWTAB_TOP_CONTENT = globalThis.LumnoNewtabTopContent ||
-    globalThis.LumnoNewtabWordmark || {};
-  const NEWTAB_PAGE_STRUCTURE = globalThis.LumnoNewtabPageStructure || {};
+  const NEWTAB_BOOKMARK_MOVE_HISTORY = globalThis.LumnoNewtabBookmarkMoveHistory;
+  const NEWTAB_BOOKMARK_DRAG = globalThis.LumnoNewtabBookmarkDrag;
+  const NEWTAB_CROSS_SURFACE_DRAG = globalThis.LumnoNewtabCrossSurfaceDrag;
+  const NEWTAB_BOOKMARK_FOLDER_ICON = globalThis.LumnoNewtabBookmarkFolderIcon;
+  const NEWTAB_PAGE_NOTICE = globalThis.LumnoNewtabPageNotice;
+  const NEWTAB_TOAST = globalThis.LumnoNewtabToast;
+  const NEWTAB_LAYOUT = globalThis.LumnoNewtabLayout;
+  const NEWTAB_DOCK = globalThis.LumnoNewtabDock;
+  const NEWTAB_DIRECT_NAVIGATION_SETTLE = globalThis.LumnoNewtabDirectNavigationSettle;
+  const NEWTAB_BACKGROUND_SEARCH_FOCUS = globalThis.LumnoNewtabBackgroundSearchFocus;
+  const NEWTAB_RECENT_VIEW = globalThis.LumnoNewtabRecentSitesView;
+  const NEWTAB_BOOKMARKS_VIEW = globalThis.LumnoNewtabBookmarksView;
+  const NEWTAB_BOOKMARK_CASCADE_POSITION = globalThis.LumnoNewtabBookmarkCascadePosition;
+  const NEWTAB_BOOKMARK_CASCADE_MENU = globalThis.LumnoNewtabBookmarkCascadeMenu;
+  const NEWTAB_SUGGESTIONS_VIEW = globalThis.LumnoNewtabSuggestionsView;
+  const NEWTAB_SHORTCUTS_STORE = globalThis.LumnoNewtabShortcutsStore;
+  const FOLDER_REFERENCES = globalThis.LumnoBookmarkFolderReference;
+  const NEWTAB_SHORTCUT_ICON_STORE = globalThis.LumnoNewtabShortcutIconStore;
+  const NEWTAB_SHORTCUT_DIALOG = globalThis.LumnoNewtabShortcutDialog;
+  const NEWTAB_SHORTCUTS_VIEW = globalThis.LumnoNewtabShortcutsView;
+  const NEWTAB_WALLPAPER = globalThis.LumnoNewtabWallpaper;
+  const NEWTAB_WALLPAPER_VIEW = globalThis.LumnoNewtabWallpaperView;
+  const NEWTAB_FEEDBACK_CONTROL = globalThis.LumnoNewtabFeedbackControl;
+  const NEWTAB_SELECT_MENU = globalThis.LumnoNewtabSelectMenu;
+  const NEWTAB_TOP_CONTENT = globalThis.LumnoNewtabTopContent || {};
+  const NEWTAB_PAGE_STRUCTURE = globalThis.LumnoNewtabPageStructure;
   const NEWTAB_BOOKMARK_CASCADE_VIEW =
-    globalThis.LumnoNewtabBookmarkCascadeView || {};
+    globalThis.LumnoNewtabBookmarkCascadeView;
   const NEWTAB_BOOKMARK_BREADCRUMB =
-    globalThis.LumnoNewtabBookmarkBreadcrumb || {};
+    globalThis.LumnoNewtabBookmarkBreadcrumb;
   if (typeof NEWTAB_FAVICON_CACHE.createFaviconCache !== 'function' ||
-      typeof NEWTAB_FAVICON_THEME.buildTheme !== 'function' ||
-      typeof NEWTAB_FAVICON_VIEW.createFaviconViewRuntime !== 'function' ||
-      typeof SEARCH_INPUT_MODE.createInputModeController !== 'function' ||
-      typeof SHORTCUT_KEY_MATCHER.parseShortcut !== 'function' ||
-      typeof SHORTCUT_KEY_MATCHER.eventMatchesShortcut !== 'function' ||
-      typeof SITE_DISPLAY_NAME.getSiteDisplayName !== 'function' ||
-      typeof NEWTAB_RECENT_STORE.normalizeRecentSiteItem !== 'function' ||
-      typeof NEWTAB_BOOKMARKS_STORE.buildBookmarkFolderCache !== 'function' ||
-      typeof NEWTAB_BOOKMARKS_STORE.collectFolderBookmarkUrls !== 'function' ||
-      typeof NEWTAB_BOOKMARKS_RUNTIME.createBookmarksRuntime !== 'function' ||
-      typeof NEWTAB_BOOKMARKS_TOPBAR.createBookmarksTopbar !== 'function' ||
-      typeof NEWTAB_BOOKMARK_BREADCRUMB.createBookmarkBreadcrumbController !== 'function' ||
-      typeof NEWTAB_BOOKMARK_MOVE_HISTORY.canMoveBookmarkToLocation !== 'function' ||
-      typeof NEWTAB_BOOKMARK_MOVE_HISTORY.canMoveBookmarkToFolder !== 'function' ||
-      typeof NEWTAB_BOOKMARK_MOVE_HISTORY.createBookmarkMoveHistory !== 'function' ||
-      typeof NEWTAB_BOOKMARK_MOVE_HISTORY.getMoveApiDestinationIndex !== 'function' ||
-      typeof NEWTAB_BOOKMARK_MOVE_HISTORY.normalizeMoveDestinationIndex !== 'function' ||
-      typeof NEWTAB_BOOKMARK_DRAG.createPreview !== 'function' ||
-      typeof NEWTAB_BOOKMARK_DRAG.createSession !== 'function' ||
-      typeof NEWTAB_BOOKMARK_DRAG.getGridInsertionTarget !== 'function' ||
-      typeof NEWTAB_BOOKMARK_DRAG.getVisualElement !== 'function' ||
-      typeof NEWTAB_BOOKMARK_DRAG.isPointInsideElement !== 'function' ||
-      typeof NEWTAB_BOOKMARK_DRAG.removePreview !== 'function' ||
-      typeof NEWTAB_BOOKMARK_DRAG.updateVisualPosition !== 'function' ||
-      typeof NEWTAB_CROSS_SURFACE_DRAG.getRowInsertionSlot !== 'function' ||
-      typeof NEWTAB_CROSS_SURFACE_DRAG.isBookmarkFolderDropTarget !== 'function' ||
-      typeof NEWTAB_CROSS_SURFACE_DRAG.planBookmarkToShortcut !== 'function' ||
-      typeof NEWTAB_BOOKMARK_FOLDER_ICON.getFigmaFolderSvg !== 'function' ||
-      typeof NEWTAB_BOOKMARK_FOLDER_ICON.initFolderPathMorph !== 'function' ||
-      typeof NEWTAB_BOOKMARK_FOLDER_ICON.playFolderPathMorph !== 'function' ||
-      typeof NEWTAB_BOOKMARK_FOLDER_ICON.setFolderPathMorphState !== 'function' ||
-      typeof NEWTAB_PAGE_NOTICE.renderPageNotice !== 'function' ||
-      typeof NEWTAB_TOAST.createToastController !== 'function' ||
-      typeof NEWTAB_LAYOUT.createLayoutController !== 'function' ||
-      typeof NEWTAB_LAYOUT.getAdaptiveGridColumnCount !== 'function' ||
-      typeof NEWTAB_LAYOUT.getGridContentWidthForColumns !== 'function' ||
-      typeof NEWTAB_DOCK.createBottomDockRuntime !== 'function' ||
-      typeof NEWTAB_DIRECT_NAVIGATION_SETTLE.createDirectNavigationSettleController !== 'function' ||
-      typeof NEWTAB_BACKGROUND_SEARCH_FOCUS.createBackgroundFocusHandler !== 'function' ||
-      typeof NEWTAB_RECENT_VIEW.createRecentSitesView !== 'function' ||
-      typeof NEWTAB_BOOKMARKS_VIEW.createBookmarksView !== 'function' ||
-      typeof NEWTAB_BOOKMARK_CASCADE_POSITION.placeRootCascadeMenu !== 'function' ||
-      typeof NEWTAB_BOOKMARK_CASCADE_POSITION.placeCascadeSubmenu !== 'function' ||
-      typeof NEWTAB_BOOKMARK_CASCADE_MENU.createBookmarkCascadeMenuRuntime !== 'function' ||
-      typeof NEWTAB_SUGGESTIONS_VIEW.createSuggestionsView !== 'function' ||
-      typeof FOLDER_REFERENCES.createRuntime !== 'function' ||
-      typeof NEWTAB_SHORTCUTS_STORE.normalizeShortcuts !== 'function' ||
-      typeof NEWTAB_SHORTCUTS_STORE.loadShortcuts !== 'function' ||
-      typeof NEWTAB_SHORTCUTS_STORE.saveShortcuts !== 'function' ||
-      typeof NEWTAB_SHORTCUTS_STORE.saveShortcut !== 'function' ||
-      typeof NEWTAB_SHORTCUTS_STORE.createShortcutRecord !== 'function' ||
-      typeof NEWTAB_SHORTCUT_ICON_STORE.createShortcutIconStore !== 'function' ||
-      typeof NEWTAB_SHORTCUT_ICON_STORE.normalizeIconMap !== 'function' ||
-      typeof SHORTCUT_FAVICON.createShortcutFaviconStore !== 'function' ||
-      typeof SHORTCUT_FAVICON.normalizeCacheMap !== 'function' ||
-      typeof SUGGESTION_ACTION_MODEL.getSuggestionStructureIdentity !== 'function' ||
-      typeof SUGGESTION_ACTION_MODEL.getSuggestionPresentationFingerprint !== 'function' ||
-      typeof SUGGESTION_ACTION_MODEL.getSuggestionUpdateKind !== 'function' ||
-      typeof SUGGESTIONS_HEIGHT_LAYOUT.applyNaturalSuggestionsHeightLayout !== 'function' ||
-      typeof NEWTAB_SHORTCUT_DIALOG.createShortcutDialog !== 'function' ||
-      typeof NEWTAB_SHORTCUTS_VIEW.createShortcutsView !== 'function' ||
-      typeof NEWTAB_WALLPAPER_LOCAL_STORE.createWallpaperLocalStore !== 'function' ||
-      typeof NEWTAB_WALLPAPER_ADAPTIVE_TONE.createWallpaperAdaptiveTone !== 'function' ||
-      typeof NEWTAB_WALLPAPER_EFFECTS.createWallpaperEffects !== 'function' ||
-      typeof NEWTAB_WALLPAPER.createWallpaperRuntime !== 'function' ||
-      typeof NEWTAB_TOP_CONTENT.createTopContentController !== 'function' ||
-      typeof NEWTAB_PAGE_STRUCTURE.createPageStructure !== 'function' ||
-      typeof NEWTAB_BOOKMARK_CASCADE_VIEW.createMenu !== 'function' ||
-      typeof NEWTAB_BOOKMARK_CASCADE_VIEW.createLevel !== 'function' ||
-      typeof NEWTAB_WALLPAPER_VIEW.createController !== 'function') {
+      false ||
+      false ||
+      false ||
+      false ||
+      false ||
+      false ||
+      false ||
+      false ||
+      false ||
+      typeof NEWTAB_TOP_CONTENT.createTopContentController !== 'function') {
     console.warn('Lumno: newtab helpers not available.');
     return;
   }
@@ -470,12 +400,10 @@
   const MAX_HIDDEN_RECENT_SITES = 60;
   const MAX_NEWTAB_SHORTCUTS = 60;
   const NEWTAB_SHORTCUTS_CRITICAL_SYNC_RESERVE_BYTES = 64 * 1024;
-  const NEWTAB_SHORTCUTS_STORAGE_KEYS = typeof NEWTAB_SHORTCUTS_STORE.getShortcutStorageKeys === 'function'
-    ? NEWTAB_SHORTCUTS_STORE.getShortcutStorageKeys({
-        key: NEWTAB_SHORTCUTS_STORAGE_KEY,
-        maxShortcuts: MAX_NEWTAB_SHORTCUTS
-      })
-    : [NEWTAB_SHORTCUTS_STORAGE_KEY];
+  const NEWTAB_SHORTCUTS_STORAGE_KEYS = NEWTAB_SHORTCUTS_STORE.getShortcutStorageKeys({
+    key: NEWTAB_SHORTCUTS_STORAGE_KEY,
+    maxShortcuts: MAX_NEWTAB_SHORTCUTS
+  });
   const SHORTCUT_DRAG_START_THRESHOLD_PX = 10;
   const SHORTCUT_REORDER_ANIMATION_MS = 180;
   const SHORTCUT_DROP_ANIMATION_MS = 210;
@@ -1052,12 +980,7 @@
   }
 
   function normalizeBookmarkTopbarSurfaceColor(value) {
-    if (NEWTAB_BOOKMARKS_TOPBAR &&
-        typeof NEWTAB_BOOKMARKS_TOPBAR.normalizeSurfaceColor === 'function') {
-      return NEWTAB_BOOKMARKS_TOPBAR.normalizeSurfaceColor(value);
-    }
-    const raw = String(value || '').trim().toLowerCase();
-    return /^#[0-9a-f]{6}$/.test(raw) ? raw : '';
+    return NEWTAB_BOOKMARKS_TOPBAR.normalizeSurfaceColor(value);
   }
 
   function isBookmarkTopbarSurfaceMode(value) {
@@ -1068,11 +991,7 @@
   }
 
   function normalizeBookmarkTopbarSurfaceMode(value) {
-    if (NEWTAB_BOOKMARKS_TOPBAR &&
-        typeof NEWTAB_BOOKMARKS_TOPBAR.normalizeSurfaceMode === 'function') {
-      return NEWTAB_BOOKMARKS_TOPBAR.normalizeSurfaceMode(value, 'adaptive');
-    }
-    return isBookmarkTopbarSurfaceMode(value) ? value : 'adaptive';
+    return NEWTAB_BOOKMARKS_TOPBAR.normalizeSurfaceMode(value, 'adaptive');
   }
 
   function getEffectiveBookmarkTopbarSurfaceMode() {
@@ -1475,177 +1394,80 @@
   }
 
   function normalizeNewtabWidthMode(value) {
-    return typeof SETTINGS.normalizeNewtabWidthMode === 'function'
-      ? SETTINGS.normalizeNewtabWidthMode(value)
-      : (value === 'standard' ? 'standard' : 'wide');
+    return SETTINGS.normalizeNewtabWidthMode(value);
   }
 
   function normalizeNewtabSearchWidth(value, options) {
-    if (typeof SETTINGS.normalizeNewtabSearchWidth === 'function') {
-      return SETTINGS.normalizeNewtabSearchWidth(value, Object.assign({}, NEWTAB_SEARCH_WIDTH_CONFIG, options || {}));
-    }
-    const config = Object.assign({}, NEWTAB_SEARCH_WIDTH_CONFIG, options || {});
-    const number = Number(value);
-    if (!Number.isFinite(number)) {
-      return config.allowNull ? null : config.fallback;
-    }
-    return Math.min(config.max, Math.max(config.min, Math.round(number)));
+    return SETTINGS.normalizeNewtabSearchWidth(value, Object.assign({}, NEWTAB_SEARCH_WIDTH_CONFIG, options || {}));
   }
 
   function normalizeNewtabTopContentMode(value) {
-    if (typeof SETTINGS.normalizeNewtabTopContentMode === 'function') {
-      return SETTINGS.normalizeNewtabTopContentMode(value);
-    }
-    if (value === 'time') {
-      return 'time';
-    }
-    return value === 'off' || value === false ? 'off' : 'brand';
+    return SETTINGS.normalizeNewtabTopContentMode(value);
   }
 
   function normalizeNewtabTimeSecondsVisible(value) {
-    return typeof SETTINGS.normalizeNewtabTimeSecondsVisible === 'function'
-      ? SETTINGS.normalizeNewtabTimeSecondsVisible(value)
-      : value === true;
+    return SETTINGS.normalizeNewtabTimeSecondsVisible(value);
   }
 
   function normalizeNewtabTimeFontWeight(value) {
-    if (typeof SETTINGS.normalizeNewtabTimeFontWeight === 'function') {
-      return SETTINGS.normalizeNewtabTimeFontWeight(value);
-    }
-    const number = Number(value);
-    if (!Number.isFinite(number)) {
-      return NEWTAB_TIME_FONT_WEIGHT_DEFAULT;
-    }
-    return Math.min(
-      NEWTAB_TIME_FONT_WEIGHT_MAX,
-      Math.max(NEWTAB_TIME_FONT_WEIGHT_MIN, Math.round(number))
-    );
+    return SETTINGS.normalizeNewtabTimeFontWeight(value);
   }
 
   function normalizeNewtabShortcutsVisible(value) {
-    return typeof SETTINGS.normalizeNewtabShortcutsVisible === 'function'
-      ? SETTINGS.normalizeNewtabShortcutsVisible(value)
-      : value !== false;
+    return SETTINGS.normalizeNewtabShortcutsVisible(value);
   }
 
   function normalizeNewtabShortcutAddVisible(value) {
-    return typeof SETTINGS.normalizeNewtabShortcutAddVisible === 'function'
-      ? SETTINGS.normalizeNewtabShortcutAddVisible(value)
-      : value !== false;
+    return SETTINGS.normalizeNewtabShortcutAddVisible(value);
   }
 
   function normalizeNewtabShortcutDockMagnificationEnabled(value) {
-    return typeof SETTINGS.normalizeNewtabShortcutDockMagnificationEnabled === 'function'
-      ? SETTINGS.normalizeNewtabShortcutDockMagnificationEnabled(value)
-      : value !== false;
-  }
-
-  function normalizeNewtabShortcutWidth(value) {
-    if (typeof SETTINGS.normalizeNewtabShortcutWidth === 'function') {
-      return SETTINGS.normalizeNewtabShortcutWidth(value, {
-        min: NEWTAB_SHORTCUT_WIDTH_MIN,
-        max: NEWTAB_SHORTCUT_WIDTH_MAX,
-        fallback: NEWTAB_SHORTCUT_WIDTH_DEFAULT
-      });
-    }
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) {
-      return Math.min(
-        NEWTAB_SHORTCUT_WIDTH_MAX,
-        Math.max(NEWTAB_SHORTCUT_WIDTH_MIN, Math.round(parsed))
-      );
-    }
-    return NEWTAB_SHORTCUT_WIDTH_DEFAULT;
+    return SETTINGS.normalizeNewtabShortcutDockMagnificationEnabled(value);
   }
 
   function normalizeNewtabShortcutColumns(value) {
-    if (typeof SETTINGS.normalizeNewtabShortcutColumns === 'function') {
-      return SETTINGS.normalizeNewtabShortcutColumns(value, {
-        min: NEWTAB_SHORTCUT_COLUMNS_MIN,
-        max: NEWTAB_SHORTCUT_COLUMNS_MAX,
-        fallback: NEWTAB_SHORTCUT_COLUMNS_DEFAULT
-      });
-    }
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) {
-      return Math.min(
-        NEWTAB_SHORTCUT_COLUMNS_MAX,
-        Math.max(NEWTAB_SHORTCUT_COLUMNS_MIN, Math.round(parsed))
-      );
-    }
-    return NEWTAB_SHORTCUT_COLUMNS_DEFAULT;
+    return SETTINGS.normalizeNewtabShortcutColumns(value, {
+      min: NEWTAB_SHORTCUT_COLUMNS_MIN,
+      max: NEWTAB_SHORTCUT_COLUMNS_MAX,
+      fallback: NEWTAB_SHORTCUT_COLUMNS_DEFAULT
+    });
   }
 
   function normalizeNewtabShortcutSize(value) {
-    if (typeof SETTINGS.normalizeNewtabShortcutSize === 'function') {
-      return SETTINGS.normalizeNewtabShortcutSize(value, {
-        min: NEWTAB_SHORTCUT_SIZE_MIN,
-        max: NEWTAB_SHORTCUT_SIZE_MAX,
-        fallback: NEWTAB_SHORTCUT_SIZE_DEFAULT
-      });
-    }
-    const parsed = Number(value);
-    return Math.min(
-      NEWTAB_SHORTCUT_SIZE_MAX,
-      Math.max(
-        NEWTAB_SHORTCUT_SIZE_MIN,
-        Number.isFinite(parsed) ? Math.round(parsed) : NEWTAB_SHORTCUT_SIZE_DEFAULT
-      )
-    );
+    return SETTINGS.normalizeNewtabShortcutSize(value, {
+      min: NEWTAB_SHORTCUT_SIZE_MIN,
+      max: NEWTAB_SHORTCUT_SIZE_MAX,
+      fallback: NEWTAB_SHORTCUT_SIZE_DEFAULT
+    });
   }
 
   function normalizeNewtabShortcutGap(value) {
-    if (typeof SETTINGS.normalizeNewtabShortcutGap === 'function') {
-      return SETTINGS.normalizeNewtabShortcutGap(value, {
-        min: NEWTAB_SHORTCUT_GAP_MIN,
-        max: NEWTAB_SHORTCUT_GAP_MAX,
-        fallback: NEWTAB_SHORTCUT_GAP_DEFAULT
-      });
-    }
-    const parsed = Number(value);
-    return Math.min(
-      NEWTAB_SHORTCUT_GAP_MAX,
-      Math.max(
-        NEWTAB_SHORTCUT_GAP_MIN,
-        Number.isFinite(parsed) ? Math.round(parsed) : NEWTAB_SHORTCUT_GAP_DEFAULT
-      )
-    );
+    return SETTINGS.normalizeNewtabShortcutGap(value, {
+      min: NEWTAB_SHORTCUT_GAP_MIN,
+      max: NEWTAB_SHORTCUT_GAP_MAX,
+      fallback: NEWTAB_SHORTCUT_GAP_DEFAULT
+    });
   }
 
   function inferNewtabShortcutColumnsFromWidth(value) {
-    if (typeof SETTINGS.inferNewtabShortcutColumnsFromWidth === 'function') {
-      return SETTINGS.inferNewtabShortcutColumnsFromWidth(value, {
-        widthMin: NEWTAB_SHORTCUT_WIDTH_MIN,
-        widthMax: NEWTAB_SHORTCUT_WIDTH_MAX,
-        columnsMin: NEWTAB_SHORTCUT_COLUMNS_MIN,
-        columnsMax: NEWTAB_SHORTCUT_COLUMNS_MAX
-      });
-    }
-    const width = normalizeNewtabShortcutWidth(value);
-    const ratio = (width - NEWTAB_SHORTCUT_WIDTH_MIN) /
-      Math.max(1, NEWTAB_SHORTCUT_WIDTH_MAX - NEWTAB_SHORTCUT_WIDTH_MIN);
-    return normalizeNewtabShortcutColumns(
-      NEWTAB_SHORTCUT_COLUMNS_MIN +
-        ratio * (NEWTAB_SHORTCUT_COLUMNS_MAX - NEWTAB_SHORTCUT_COLUMNS_MIN)
-    );
+    return SETTINGS.inferNewtabShortcutColumnsFromWidth(value, {
+      widthMin: NEWTAB_SHORTCUT_WIDTH_MIN,
+      widthMax: NEWTAB_SHORTCUT_WIDTH_MAX,
+      columnsMin: NEWTAB_SHORTCUT_COLUMNS_MIN,
+      columnsMax: NEWTAB_SHORTCUT_COLUMNS_MAX
+    });
   }
 
   function normalizeNewtabInputAutoFocusEnabled(value) {
-    return typeof SETTINGS.normalizeNewtabInputAutoFocusEnabled === 'function'
-      ? SETTINGS.normalizeNewtabInputAutoFocusEnabled(value)
-      : value === true;
+    return SETTINGS.normalizeNewtabInputAutoFocusEnabled(value);
   }
 
   function normalizeNewtabFeedbackButtonVisible(value) {
-    return typeof SETTINGS.normalizeNewtabFeedbackButtonVisible === 'function'
-      ? SETTINGS.normalizeNewtabFeedbackButtonVisible(value)
-      : value !== false;
+    return SETTINGS.normalizeNewtabFeedbackButtonVisible(value);
   }
 
   function normalizeNewtabAppearanceButtonVisible(value) {
-    return typeof SETTINGS.normalizeNewtabAppearanceButtonVisible === 'function'
-      ? SETTINGS.normalizeNewtabAppearanceButtonVisible(value)
-      : value !== false;
+    return SETTINGS.normalizeNewtabAppearanceButtonVisible(value);
   }
 
   function updateNewtabInputAutoFocusUi() {
@@ -1790,9 +1612,7 @@
   const initialNumberShortcutInstantReadyTask = loadNumberShortcutInstantEnabled();
 
   function normalizeSimpleModeEnabled(value) {
-    return typeof SETTINGS.normalizeSimpleModeEnabled === 'function'
-      ? SETTINGS.normalizeSimpleModeEnabled(value)
-      : value === true;
+    return SETTINGS.normalizeSimpleModeEnabled(value);
   }
 
   function loadSimpleModeEnabled() {
@@ -1812,9 +1632,7 @@
   loadSimpleModeEnabled();
 
   function normalizeMacosCtrlSuggestionNavigationEnabled(value) {
-    return typeof SETTINGS.normalizeMacosCtrlSuggestionNavigationEnabled === 'function'
-      ? SETTINGS.normalizeMacosCtrlSuggestionNavigationEnabled(value)
-      : value === true;
+    return SETTINGS.normalizeMacosCtrlSuggestionNavigationEnabled(value);
   }
 
   function loadMacosCtrlSuggestionNavigationEnabled() {
@@ -1835,15 +1653,11 @@
   loadMacosCtrlSuggestionNavigationEnabled();
 
   function normalizeNumberShortcutInstantEnabled(value) {
-    return typeof SETTINGS.normalizeNumberShortcutInstantEnabled === 'function'
-      ? SETTINGS.normalizeNumberShortcutInstantEnabled(value)
-      : value === true;
+    return SETTINGS.normalizeNumberShortcutInstantEnabled(value);
   }
 
   function normalizeBookmarkFolderIconsVisible(value) {
-    return typeof SETTINGS.normalizeBookmarkFolderIconsVisible === 'function'
-      ? SETTINGS.normalizeBookmarkFolderIconsVisible(value)
-      : value !== false;
+    return SETTINGS.normalizeBookmarkFolderIconsVisible(value);
   }
 
   function normalizeZenModeEnabled(value) {
@@ -1851,26 +1665,15 @@
   }
 
   function normalizeSearchResultPriority(value) {
-    return typeof SETTINGS.normalizeSearchResultPriority === 'function'
-      ? SETTINGS.normalizeSearchResultPriority(value)
-      : (value === 'search' ? 'search' : 'autocomplete');
+    return SETTINGS.normalizeSearchResultPriority(value);
   }
 
   function normalizeOverlayTabPriorityMode(value) {
-    return typeof SETTINGS.normalizeOverlayTabPriorityMode === 'function'
-      ? SETTINGS.normalizeOverlayTabPriorityMode(value)
-      : (value !== 'newtabFirst' && value !== false);
+    return SETTINGS.normalizeOverlayTabPriorityMode(value);
   }
 
   function normalizeBookmarkCount(value) {
-    if (typeof SETTINGS.normalizeBookmarkCount === 'function') {
-      return SETTINGS.normalizeBookmarkCount(value);
-    }
-    const parsed = Number(value);
-    if (Number.isInteger(parsed) && parsed >= 0 && parsed <= 32 && parsed % 4 === 0) {
-      return parsed;
-    }
-    return 8;
+    return SETTINGS.normalizeBookmarkCount(value);
   }
 
   function getBookmarkLimit() {
@@ -1885,20 +1688,11 @@
   }
 
   function normalizeBookmarkColumns(value) {
-    if (typeof SETTINGS.normalizeBookmarkColumns === 'function') {
-      return SETTINGS.normalizeBookmarkColumns(value);
-    }
-    const parsed = Number(value);
-    if (Number.isInteger(parsed) && parsed >= 4 && parsed <= 8) {
-      return parsed;
-    }
-    return 6;
+    return SETTINGS.normalizeBookmarkColumns(value);
   }
 
   function normalizeTabRankScoreDebugMode(value) {
-    return typeof SETTINGS.normalizeTabRankScoreDebugMode === 'function'
-      ? SETTINGS.normalizeTabRankScoreDebugMode(value)
-      : value === true;
+    return SETTINGS.normalizeTabRankScoreDebugMode(value);
   }
 
   function normalizeBookmarkCascadeDebugMode(value) {
@@ -1971,10 +1765,7 @@
   function shouldSkipNewtabEntryMotion() {
     const motionEffectsEnabled = !document.documentElement ||
       document.documentElement.getAttribute('data-lumno-motion-effects') !== 'off';
-    if (typeof SETTINGS.shouldSkipEntryMotion === 'function') {
-      return SETTINGS.shouldSkipEntryMotion(window, motionEffectsEnabled);
-    }
-    return !motionEffectsEnabled || prefersSystemReducedMotion();
+    return SETTINGS.shouldSkipEntryMotion(window, motionEffectsEnabled);
   }
 
   function shouldAnimateNewtabLayoutShift() {
@@ -2607,15 +2398,11 @@
   }
 
   function normalizeLocale(locale) {
-    return typeof SETTINGS.normalizeLocale === 'function'
-      ? SETTINGS.normalizeLocale(locale)
-      : 'en';
+    return SETTINGS.normalizeLocale(locale);
   }
 
   function localeToHtmlLang(locale) {
-    return typeof SETTINGS.localeToHtmlLang === 'function'
-      ? SETTINGS.localeToHtmlLang(locale)
-      : normalizeLocale(locale).replace('_', '-');
+    return SETTINGS.localeToHtmlLang(locale);
   }
 
   function applyDocumentLanguage(locale) {
@@ -2830,17 +2617,12 @@
   }
 
   function normalizeFeedbackHttpsUrl(value) {
-    return typeof COMMUNITY_LINKS.normalizeHttpsUrl === 'function'
-      ? COMMUNITY_LINKS.normalizeHttpsUrl(value)
-      : '';
+    return COMMUNITY_LINKS.normalizeHttpsUrl(value);
   }
 
   function loadFeedbackLinks(options) {
     const force = Boolean(options && options.force);
     if (!force && feedbackLinksLoaded) {
-      return Promise.resolve(feedbackLinks);
-    }
-    if (typeof COMMUNITY_LINKS.load !== 'function') {
       return Promise.resolve(feedbackLinks);
     }
     return COMMUNITY_LINKS.load({ force })
@@ -2867,9 +2649,7 @@
   }
 
   function getFeedbackCommunityChannel(links) {
-    return typeof COMMUNITY_LINKS.getCommunityChannel === 'function'
-      ? COMMUNITY_LINKS.getCommunityChannel(links, getFeedbackWebLocale())
-      : 'discord';
+    return COMMUNITY_LINKS.getCommunityChannel(links, getFeedbackWebLocale());
   }
 
   function clearFeedbackRefreshResultTooltipTimer() {
@@ -2881,9 +2661,7 @@
   }
 
   function buildFreshFeedbackQrUrl(value) {
-    return typeof COMMUNITY_LINKS.buildFreshQrUrl === 'function'
-      ? COMMUNITY_LINKS.buildFreshQrUrl(value)
-      : '';
+    return COMMUNITY_LINKS.buildFreshQrUrl(value);
   }
 
   function preloadFeedbackQrImage(url) {
@@ -3169,20 +2947,18 @@
     ].concat(shortcutToneTargets);
   }
 
-  if (globalThis.LumnoNewtabQuotes) {
-    quoteRuntime = globalThis.LumnoNewtabQuotes.createRuntime({
-      documentObj: document, windowObj: window, chromeObj: chrome,
-      storageArea, localStorageArea, t, showToast,
-      getSearchRoot: () => root,
-      getShortcutSection: () => shortcutSection,
-      isPreferenceArea: (areaName) => providerStorageRuntime
-        ? providerStorageRuntime.isActiveAreaName(areaName) : areaName === 'sync',
-      onLayout: () => window.requestAnimationFrame(() => {
-        updateBookmarkSectionPosition();
-        scheduleWallpaperAdaptiveToneUpdate();
-      })
-    });
-  }
+  quoteRuntime = globalThis.LumnoNewtabQuotes.createRuntime({
+    documentObj: document, windowObj: window, chromeObj: chrome,
+    storageArea, localStorageArea, t, showToast,
+    getSearchRoot: () => root,
+    getShortcutSection: () => shortcutSection,
+    isPreferenceArea: (areaName) => providerStorageRuntime
+      ? providerStorageRuntime.isActiveAreaName(areaName) : areaName === 'sync',
+    onLayout: () => window.requestAnimationFrame(() => {
+      updateBookmarkSectionPosition();
+      scheduleWallpaperAdaptiveToneUpdate();
+    })
+  });
   wallpaperRuntime = NEWTAB_WALLPAPER.createWallpaperRuntime({
     documentObj: document,
     windowObj: window,
@@ -3371,8 +3147,7 @@
     storageArea.get([DEFAULT_SEARCH_ENGINE_STORAGE_KEY], (result) => {
       const stored = result ? result[DEFAULT_SEARCH_ENGINE_STORAGE_KEY] : null;
       if (stored && stored.id &&
-          (typeof SEARCH_UTILS.isRetiredSearchEngineState !== 'function' ||
-            !SEARCH_UTILS.isRetiredSearchEngineState(stored))) {
+          (!SEARCH_UTILS.isRetiredSearchEngineState(stored))) {
         defaultSearchEngineState = stored;
       }
     });
@@ -4065,7 +3840,7 @@
       }
       if (areaName === 'local' &&
           (changes[NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY] || changes[settingsRuntimeApi.ASSET_REVISION_STORAGE_KEY] ||
-            (globalThis.LumnoNewtabRemoteContent && changes[globalThis.LumnoNewtabRemoteContent.BING_DAILY_CACHE_KEY])) &&
+            (changes[globalThis.LumnoNewtabRemoteContent.BING_DAILY_CACHE_KEY])) &&
           wallpaperRuntime) {
         wallpaperRuntime.handleStorageChange(changes);
       }
@@ -4798,13 +4573,7 @@
   }
 
   function getGlobalThemeStorageUpdate(mode) {
-    if (SETTINGS && typeof SETTINGS.createGlobalThemeModeStorageUpdate === 'function') {
-      return SETTINGS.createGlobalThemeModeStorageUpdate(mode);
-    }
-    const nextMode = normalizeThemeMode(mode);
-    return {
-      [THEME_STORAGE_KEY]: nextMode
-    };
+    return SETTINGS.createGlobalThemeModeStorageUpdate(mode);
   }
 
   function setGlobalThemeMode(mode) {
@@ -4894,13 +4663,11 @@
   let inlineSearchState = null;
   const imeKeyGuard = LumnoImeKeyGuard.createImeKeyGuard();
   const searchInputHistoryController =
-    typeof SEARCH_INPUT_HISTORY.createSearchInputHistoryController === 'function'
-      ? SEARCH_INPUT_HISTORY.createSearchInputHistoryController({
-          storageArea: localStorageArea,
-          storageChanges: chrome && chrome.storage ? chrome.storage.onChanged : null,
-          storageAreaName: 'local'
-        })
-      : null;
+    SEARCH_INPUT_HISTORY.createSearchInputHistoryController({
+      storageArea: localStorageArea,
+      storageChanges: chrome && chrome.storage ? chrome.storage.onChanged : null,
+      storageAreaName: 'local'
+    });
   let isApplyingSearchInputHistory = false;
   function isImeCompositionEvent(event) {
     return imeKeyGuard.shouldIgnoreKeydown(event);
@@ -4937,8 +4704,7 @@
       if (changes[DEFAULT_SEARCH_ENGINE_STORAGE_KEY]) {
         const nextValue = changes[DEFAULT_SEARCH_ENGINE_STORAGE_KEY].newValue;
         if (nextValue && nextValue.id &&
-            (typeof SEARCH_UTILS.isRetiredSearchEngineState !== 'function' ||
-              !SEARCH_UTILS.isRetiredSearchEngineState(nextValue))) {
+            (!SEARCH_UTILS.isRetiredSearchEngineState(nextValue))) {
           defaultSearchEngineState = nextValue;
         }
       }
@@ -5088,9 +4854,7 @@
     NEWTAB_SHORTCUT_GAP_STORAGE_KEY
   ]);
   let handleTabKey = null;
-  const defaultSiteSearchProviders = typeof SEARCH_UTILS.getDefaultSiteSearchProviders === 'function'
-    ? SEARCH_UTILS.getDefaultSiteSearchProviders()
-    : [];
+  const defaultSiteSearchProviders = SEARCH_UTILS.getDefaultSiteSearchProviders();
   const defaultAccentColor = NEWTAB_FAVICON_THEME.defaultAccentColor;
   const mixColor = NEWTAB_FAVICON_THEME.mixColor;
   const stableHashCode = NEWTAB_FAVICON_THEME.stableHashCode;
@@ -5098,31 +4862,19 @@
   const rgbToCssAlpha = NEWTAB_FAVICON_THEME.rgbToCssAlpha;
   const rgbToCssParts = NEWTAB_FAVICON_THEME.rgbToCssParts;
   const parseCssColor = NEWTAB_FAVICON_THEME.parseCssColor;
-  const getReadableTextColor = typeof NEWTAB_FAVICON_THEME.getReadableTextColor === 'function'
-    ? NEWTAB_FAVICON_THEME.getReadableTextColor
-    : (() => '#111827');
+  const getReadableTextColor = NEWTAB_FAVICON_THEME.getReadableTextColor;
   const buildTheme = NEWTAB_FAVICON_THEME.buildTheme;
   const getBrandAccentForHost = NEWTAB_FAVICON_THEME.getBrandAccentForHost;
   const getBrandAccentForUrl = NEWTAB_FAVICON_THEME.getBrandAccentForUrl;
   const buildFallbackThemeForHost = NEWTAB_FAVICON_THEME.buildFallbackThemeForHost;
-  const getThemeFingerprint = typeof NEWTAB_FAVICON_THEME.getThemeFingerprint === 'function'
-    ? NEWTAB_FAVICON_THEME.getThemeFingerprint
-    : ((theme) => {
-      const rgb = theme && (theme.accentRgb || parseCssColor(theme.accent));
-      const accent = rgb && rgb.length === 3 ? rgb : defaultAccentColor;
-      return `${theme && theme._xThemeSource ? theme._xThemeSource : 'unknown'}:${accent.join(',')}`;
-    });
+  const getThemeFingerprint = NEWTAB_FAVICON_THEME.getThemeFingerprint;
   const normalizeFaviconHost = FAVICON_UTILS.normalizeFaviconHost || NEWTAB_FAVICON_THEME.normalizeFaviconHost;
   const hasThemeTokenInUrl = FAVICON_UTILS.hasThemeTokenInUrl || NEWTAB_FAVICON_THEME.hasThemeTokenInUrl;
   const shouldSkipThemeUpgradeCandidate = FAVICON_UTILS.shouldSkipThemeUpgradeCandidate || NEWTAB_FAVICON_THEME.shouldSkipThemeUpgradeCandidate;
-  const getKnownThemedFaviconCandidates = typeof FAVICON_UTILS.getKnownThemedFaviconCandidateUrls === 'function'
-    ? ((hostname, preferredTheme) => FAVICON_UTILS.getKnownThemedFaviconCandidateUrls(hostname, preferredTheme, {
-      getRuntimeUrl: getExtensionResourceUrl
-    }))
-    : NEWTAB_FAVICON_THEME.getKnownThemedFaviconCandidates;
-  const getRootFaviconCandidates = typeof FAVICON_UTILS.getRootFaviconCandidateUrls === 'function'
-    ? FAVICON_UTILS.getRootFaviconCandidateUrls
-    : (() => []);
+  const getKnownThemedFaviconCandidates = (hostname, preferredTheme) => FAVICON_UTILS.getKnownThemedFaviconCandidateUrls(hostname, preferredTheme, {
+    getRuntimeUrl: getExtensionResourceUrl
+  });
+  const getRootFaviconCandidates = FAVICON_UTILS.getRootFaviconCandidateUrls;
   const hostHasExplicitDarkFavicon = FAVICON_UTILS.hostHasExplicitDarkFavicon || NEWTAB_FAVICON_THEME.hostHasExplicitDarkFavicon;
   const isFaviconProxyUrl = FAVICON_UTILS.isFaviconProxyUrl || NEWTAB_FAVICON_THEME.isFaviconProxyUrl;
   const extractAverageColor = NEWTAB_FAVICON_THEME.extractAverageColor;
@@ -5161,9 +4913,7 @@
   }
 
   function getCanonicalPageUrlForFavicon(url) {
-    return typeof FAVICON_UTILS.getCanonicalPageUrlForFavicon === 'function'
-      ? FAVICON_UTILS.getCanonicalPageUrlForFavicon(url)
-      : String(url || '');
+    return FAVICON_UTILS.getCanonicalPageUrlForFavicon(url);
   }
 
   function normalizeAccentRgb(value) {
@@ -5181,17 +4931,7 @@
     if (!rgb) {
       return false;
     }
-    if (typeof FAVICON_UTILS.isNeutralThemeColor === 'function') {
-      return FAVICON_UTILS.isNeutralThemeColor(rgb);
-    }
-    const max = Math.max(...rgb);
-    const min = Math.min(...rgb);
-    const range = max - min;
-    const saturation = max === 0 ? 0 : range / max;
-    return range <= 24 ||
-      saturation <= 0.12 ||
-      (min >= 235 && max >= 245) ||
-      (max <= 36 && min <= 24);
+    return FAVICON_UTILS.isNeutralThemeColor(rgb);
   }
 
   function normalizeThemeConfidence(value, accentRgb) {
@@ -5467,25 +5207,7 @@
   }
 
   function getThemeFaviconCandidateUrls(urls) {
-    if (typeof FAVICON_UTILS.getThemeFaviconCandidateUrls === 'function') {
-      return FAVICON_UTILS.getThemeFaviconCandidateUrls(urls, { includeProxy: true });
-    }
-    const seen = new Set();
-    const concrete = [];
-    const proxy = [];
-    (Array.isArray(urls) ? urls : []).forEach((item) => {
-      const value = String(item || '').trim();
-      if (!value || seen.has(value) || isBlockedLocalFaviconUrl(value) || isChromeMonogramFaviconUrl(value)) {
-        return;
-      }
-      seen.add(value);
-      if (isFaviconProxyUrl(value)) {
-        proxy.push(value);
-      } else {
-        concrete.push(value);
-      }
-    });
-    return concrete.concat(proxy);
+    return FAVICON_UTILS.getThemeFaviconCandidateUrls(urls, { includeProxy: true });
   }
 
   function requestThemeFaviconCandidates(pageUrl, hostKey) {
@@ -6129,9 +5851,7 @@
     });
   }
 
-  const logNewtabFaviconDecision = typeof FAVICON_UTILS.createFaviconDecisionLogger === 'function'
-    ? FAVICON_UTILS.createFaviconDecisionLogger({ surface: 'newtab' })
-    : (() => false);
+  const logNewtabFaviconDecision = FAVICON_UTILS.createFaviconDecisionLogger({ surface: 'newtab' });
   faviconViewRuntime = NEWTAB_FAVICON_VIEW.createFaviconViewRuntime({
     document,
     windowObj: window,
@@ -6172,24 +5892,17 @@
   const rescueThemeAwareFallbackFavicons = faviconViewRuntime.rescueThemeAwareFallbackFavicons;
 
   function isAllowedFaviconProxyRequestUrl(url) {
-    return typeof FAVICON_UTILS.isAllowedFaviconProxyRequestUrl === 'function'
-      ? FAVICON_UTILS.isAllowedFaviconProxyRequestUrl(url)
-      : /^chrome-extension:\/\/[^/]+\/_favicon\//i.test(String(url || '').trim()) ||
-        /^chrome:\/\/favicon2\//i.test(String(url || '').trim());
+    return FAVICON_UTILS.isAllowedFaviconProxyRequestUrl(url);
   }
 
   function isBlockedLocalFaviconUrl(url) {
-    const blockedByLocalRules = typeof FAVICON_UTILS.isBlockedLocalFaviconUrl === 'function'
-      ? FAVICON_UTILS.isBlockedLocalFaviconUrl(url)
-      : false;
+    const blockedByLocalRules = FAVICON_UTILS.isBlockedLocalFaviconUrl(url);
     return blockedByLocalRules ||
       (!isAllowedFaviconProxyRequestUrl(url) && isUrlBlockedByFaviconRequestBlacklist(url));
   }
 
   function isChromeMonogramFaviconUrl(url) {
-    return typeof FAVICON_UTILS.isChromeMonogramFaviconUrl === 'function'
-      ? FAVICON_UTILS.isChromeMonogramFaviconUrl(url)
-      : /^chrome:\/\/favicon2\//i.test(String(url || '').trim());
+    return FAVICON_UTILS.isChromeMonogramFaviconUrl(url);
   }
 
   function preloadThemeFromFavicon(url, dataUrl, hostOverride) {
@@ -6229,7 +5942,7 @@
   let pageFaviconUrlResolver = null;
 
   function getPageFaviconUrlResolver() {
-    if (!pageFaviconUrlResolver && typeof FAVICON_UTILS.createFaviconUrlResolver === 'function') {
+    if (!pageFaviconUrlResolver) {
       pageFaviconUrlResolver = FAVICON_UTILS.createFaviconUrlResolver({
         chromeApi: chrome,
         size: FAVICON_PROXY_SIZE,
@@ -6282,30 +5995,21 @@
   }
 
   function isMiddleClick(event) {
-    if (typeof NAVIGATION_DISPOSITION.isMiddleClick === 'function') {
-      return NAVIGATION_DISPOSITION.isMiddleClick(event);
-    }
-    return Boolean(event && Number(event.button) === 1);
+    return NAVIGATION_DISPOSITION.isMiddleClick(event);
   }
 
   function isBackgroundOpenEvent(event) {
     if (numberShortcutInstantEnabled) {
       return isMiddleClick(event);
     }
-    if (typeof NAVIGATION_DISPOSITION.isBackgroundOpenEvent === 'function') {
-      return NAVIGATION_DISPOSITION.isBackgroundOpenEvent(event);
-    }
-    return Boolean(event && (event.metaKey || event.ctrlKey || isMiddleClick(event)));
+    return NAVIGATION_DISPOSITION.isBackgroundOpenEvent(event);
   }
 
   function getOpenDisposition(event, fallback) {
     if (typeof event === 'string') {
       return event === 'backgroundTab' ? 'backgroundTab' : (fallback || event || 'newTab');
     }
-    if (typeof NAVIGATION_DISPOSITION.getDisposition === 'function') {
-      return NAVIGATION_DISPOSITION.getDisposition(event, fallback);
-    }
-    return isBackgroundOpenEvent(event) ? 'backgroundTab' : (fallback || 'newTab');
+    return NAVIGATION_DISPOSITION.getDisposition(event, fallback);
   }
 
   function openExternalNewTabUrl(url, eventOrDisposition) {
@@ -6465,74 +6169,56 @@
   const bookmarkSection = pageStructureRuntime.bookmark.section;
   const recentSection = pageStructureRuntime.recent.section;
   searchLayer = pageStructureRuntime.searchLayer;
-  const topActionTooltipController = globalThis.LumnoTooltip &&
-      typeof globalThis.LumnoTooltip.createController === 'function'
-    ? globalThis.LumnoTooltip.createController({
-      documentObj: document,
-      windowObj: window,
-      id: '_x_extension_newtab_top_action_tooltip_2026_unique_',
-      appendTo: document.body,
-      maxWidth: 420
-    })
-    : null;
-  const shortcutTooltipController = globalThis.LumnoTooltip &&
-      typeof globalThis.LumnoTooltip.createController === 'function'
-    ? globalThis.LumnoTooltip.createController({
-      documentObj: document,
-      windowObj: window,
-      id: '_x_extension_newtab_shortcut_tooltip_2026_unique_',
-      className: 'x-nt-shortcut-tooltip',
-      appendTo: document.body,
-      maxWidth: 360
-    })
-    : null;
-  const shortcutDialogTooltipController = globalThis.LumnoTooltip &&
-      typeof globalThis.LumnoTooltip.createController === 'function'
-    ? globalThis.LumnoTooltip.createController({
-      documentObj: document,
-      windowObj: window,
-      id: '_x_extension_newtab_shortcut_dialog_tooltip_2026_unique_',
-      className: 'x-nt-shortcut-dialog-tooltip',
-      appendTo: document.body,
-      maxWidth: 320
-    })
-    : null;
-  const bookmarkCascadeCopyTooltipController = globalThis.LumnoTooltip &&
-      typeof globalThis.LumnoTooltip.createController === 'function'
-    ? globalThis.LumnoTooltip.createController({
-      documentObj: document,
-      windowObj: window,
-      id: '_x_extension_newtab_bookmark_cascade_copy_tooltip_2026_unique_',
-      className: 'x-nt-bookmark-cascade-copy-tooltip',
-      appendTo: document.body,
-      maxWidth: 200
-    })
-    : null;
-  const bookmarkCursorTooltipController = globalThis.LumnoCursorTooltip &&
-      typeof globalThis.LumnoCursorTooltip.createController === 'function'
-    ? globalThis.LumnoCursorTooltip.createController({
-      documentObj: document,
-      windowObj: window,
-      id: '_x_extension_newtab_bookmark_cursor_tooltip_2026_unique_',
-      className: 'x-nt-bookmark-cursor-tooltip',
-      appendTo: document.body,
-      maxWidth: 460,
-      offsetX: 14,
-      offsetY: 16
-    })
-    : null;
-  const searchInputCursorTooltipController = globalThis.LumnoCursorTooltip &&
-      typeof globalThis.LumnoCursorTooltip.createController === 'function'
-    ? globalThis.LumnoCursorTooltip.createController({
-      documentObj: document,
-      windowObj: window,
-      id: '_x_extension_newtab_search_input_cursor_tooltip_2026_unique_',
-      appendTo: document.body,
-      maxWidth: 520,
-      offsetX: 14,
-      offsetY: 16
-    })
-    : null;
+  const topActionTooltipController = globalThis.LumnoTooltip.createController({
+    documentObj: document,
+    windowObj: window,
+    id: '_x_extension_newtab_top_action_tooltip_2026_unique_',
+    appendTo: document.body,
+    maxWidth: 420
+  });
+  const shortcutTooltipController = globalThis.LumnoTooltip.createController({
+    documentObj: document,
+    windowObj: window,
+    id: '_x_extension_newtab_shortcut_tooltip_2026_unique_',
+    className: 'x-nt-shortcut-tooltip',
+    appendTo: document.body,
+    maxWidth: 360
+  });
+  const shortcutDialogTooltipController = globalThis.LumnoTooltip.createController({
+    documentObj: document,
+    windowObj: window,
+    id: '_x_extension_newtab_shortcut_dialog_tooltip_2026_unique_',
+    className: 'x-nt-shortcut-dialog-tooltip',
+    appendTo: document.body,
+    maxWidth: 320
+  });
+  const bookmarkCascadeCopyTooltipController = globalThis.LumnoTooltip.createController({
+    documentObj: document,
+    windowObj: window,
+    id: '_x_extension_newtab_bookmark_cascade_copy_tooltip_2026_unique_',
+    className: 'x-nt-bookmark-cascade-copy-tooltip',
+    appendTo: document.body,
+    maxWidth: 200
+  });
+  const bookmarkCursorTooltipController = globalThis.LumnoCursorTooltip.createController({
+    documentObj: document,
+    windowObj: window,
+    id: '_x_extension_newtab_bookmark_cursor_tooltip_2026_unique_',
+    className: 'x-nt-bookmark-cursor-tooltip',
+    appendTo: document.body,
+    maxWidth: 460,
+    offsetX: 14,
+    offsetY: 16
+  });
+  const searchInputCursorTooltipController = globalThis.LumnoCursorTooltip.createController({
+    documentObj: document,
+    windowObj: window,
+    id: '_x_extension_newtab_search_input_cursor_tooltip_2026_unique_',
+    appendTo: document.body,
+    maxWidth: 520,
+    offsetX: 14,
+    offsetY: 16
+  });
   markNewtabStartupMilestone('page-structure-created');
 
   function showTopActionTooltip(button, text, options) {
@@ -9437,9 +9123,7 @@
 
   function loadShortcuts() {
     if (!storageArea) {
-      newtabShortcuts = typeof NEWTAB_SHORTCUTS_STORE.getDefaultShortcuts === 'function'
-        ? NEWTAB_SHORTCUTS_STORE.getDefaultShortcuts(getShortcutStoreOptions())
-        : [];
+      newtabShortcuts = NEWTAB_SHORTCUTS_STORE.getDefaultShortcuts(getShortcutStoreOptions());
       return Promise.resolve(newtabShortcuts);
     }
     return Promise.all([
@@ -9448,14 +9132,12 @@
     ]).then(([syncedItems, localState]) => {
       if (localState && localState.authoritative === true) {
         newtabShortcuts = localState.items;
-      } else if (typeof NEWTAB_SHORTCUTS_STORE.mergeShortcutLists === 'function') {
+      } else {
         newtabShortcuts = NEWTAB_SHORTCUTS_STORE.mergeShortcutLists(
           syncedItems,
           localState && localState.items,
           getShortcutStoreOptions()
         );
-      } else {
-        newtabShortcuts = Array.isArray(syncedItems) ? syncedItems : [];
       }
       if (newtabShortcuts.some((shortcut) => shortcut.type === 'folder')) {
         return refreshShortcutFolderReferences().then(() => newtabShortcuts);
@@ -13380,42 +13062,18 @@
   }
 
   function isBrowserExtensionProtocol(protocol) {
-    const guards = window.LumnoUrlGuards || {};
-    if (typeof guards.isBrowserExtensionProtocol === 'function') {
-      return guards.isBrowserExtensionProtocol(protocol);
-    }
-    const normalized = String(protocol || '').toLowerCase();
-    return normalized === 'chrome-extension:' ||
-      normalized === 'moz-extension:' ||
-      normalized === 'ms-browser-extension:';
+    const guards = window.LumnoUrlGuards;
+    return guards.isBrowserExtensionProtocol(protocol);
   }
 
   function isBrowserNewtabUrl(url) {
-    const guards = window.LumnoUrlGuards || {};
-    if (typeof guards.isBrowserNewtabUrl === 'function') {
-      return guards.isBrowserNewtabUrl(url);
-    }
-    const lower = String(url || '').trim().toLowerCase().replace(/[?#].*$/, '').replace(/\/+$/, '');
-    return lower === 'chrome://newtab' ||
-      lower === 'chrome://new-tab-page' ||
-      lower === 'edge://newtab' ||
-      lower === 'brave://newtab' ||
-      lower === 'vivaldi://newtab' ||
-      lower === 'opera://startpage';
+    const guards = window.LumnoUrlGuards;
+    return guards.isBrowserNewtabUrl(url);
   }
 
   function isBrowserInternalUrl(url) {
-    const guards = window.LumnoUrlGuards || {};
-    if (typeof guards.isBrowserInternalUrl === 'function') {
-      return guards.isBrowserInternalUrl(url);
-    }
-    const lower = String(url || '').trim().toLowerCase();
-    return lower.startsWith('chrome://') ||
-      lower.startsWith('edge://') ||
-      lower.startsWith('brave://') ||
-      lower.startsWith('vivaldi://') ||
-      lower.startsWith('opera://') ||
-      lower.startsWith('about:');
+    const guards = window.LumnoUrlGuards;
+    return guards.isBrowserInternalUrl(url);
   }
 
   function isBrowserPageRecentUrl(url) {
@@ -13440,9 +13098,7 @@
       return '';
     }
     try {
-      const routeType = typeof EXTENSION_ROUTES.classifyExtensionUrl === 'function'
-        ? EXTENSION_ROUTES.classifyExtensionUrl(url)
-        : '';
+      const routeType = EXTENSION_ROUTES.classifyExtensionUrl(url);
       if (routeType === 'newtab') {
         return t('newtab_page_label', '新标签页');
       }
@@ -13482,39 +13138,8 @@
   }
 
   function isRestrictedUrl(url) {
-    const guards = window.LumnoUrlGuards || {};
-    if (typeof guards.isRestrictedUrl === 'function') {
-      return guards.isRestrictedUrl(url);
-    }
-    if (!url) {
-      return true;
-    }
-    const lower = String(url).toLowerCase();
-    if (lower.startsWith('chrome://') ||
-      lower.startsWith('edge://') ||
-      lower.startsWith('brave://') ||
-      lower.startsWith('vivaldi://') ||
-      lower.startsWith('opera://') ||
-      lower.startsWith('about:')) {
-      return true;
-    }
-    try {
-      const parsed = new URL(url);
-      if (isBrowserExtensionProtocol(parsed.protocol)) {
-        return true;
-      }
-      const host = parsed.hostname.toLowerCase();
-      const path = parsed.pathname.toLowerCase();
-      if ((host === 'chrome.google.com' && path.startsWith('/webstore')) ||
-          host === 'chromewebstore.google.com' ||
-          (host === 'microsoftedge.microsoft.com' && path.startsWith('/addons')) ||
-          host === 'addons.opera.com') {
-        return true;
-      }
-    } catch (e) {
-      return true;
-    }
-    return false;
+    const guards = window.LumnoUrlGuards;
+    return guards.isRestrictedUrl(url);
   }
 
   function getExtensionFaviconUrl(pageUrl) {
@@ -13563,27 +13188,15 @@
   }
 
   function isLocalNetworkHost(hostname) {
-    return typeof FAVICON_UTILS.isLocalNetworkHost === 'function'
-      ? FAVICON_UTILS.isLocalNetworkHost(hostname)
-      : false;
-  }
-
-  function isSuspiciousLocalFaviconHost(hostname) {
-    return typeof FAVICON_UTILS.isSuspiciousLocalFaviconHost === 'function'
-      ? FAVICON_UTILS.isSuspiciousLocalFaviconHost(hostname)
-      : false;
+    return FAVICON_UTILS.isLocalNetworkHost(hostname);
   }
 
   function shouldBlockFaviconForHost(hostname) {
-    return typeof FAVICON_UTILS.shouldBlockFaviconForHost === 'function'
-      ? FAVICON_UTILS.shouldBlockFaviconForHost(hostname)
-      : false;
+    return FAVICON_UTILS.shouldBlockFaviconForHost(hostname);
   }
 
   function shouldAvoidDirectFaviconForHost(hostname) {
-    return typeof FAVICON_UTILS.shouldAvoidDirectFaviconForHost === 'function'
-      ? FAVICON_UTILS.shouldAvoidDirectFaviconForHost(hostname)
-      : (isLocalNetworkHost(hostname) || isSuspiciousLocalFaviconHost(hostname));
+    return FAVICON_UTILS.shouldAvoidDirectFaviconForHost(hostname);
   }
 
   function normalizeSearchBlacklistMatchModes(value) {
@@ -13608,9 +13221,7 @@
   }
 
   function normalizeFaviconEnhancedFetchEnabled(value) {
-    return typeof SETTINGS.normalizeFaviconEnhancedFetchEnabled === 'function'
-      ? SETTINGS.normalizeFaviconEnhancedFetchEnabled(value)
-      : value !== false;
+    return SETTINGS.normalizeFaviconEnhancedFetchEnabled(value);
   }
 
   function loadSearchBlacklistItems() {
@@ -13632,9 +13243,7 @@
     if (!raw) {
       return '';
     }
-    return typeof FAVICON_UTILS.getCanonicalPageUrlForFavicon === 'function'
-      ? String(FAVICON_UTILS.getCanonicalPageUrlForFavicon(raw) || raw).trim()
-      : raw;
+    return String(FAVICON_UTILS.getCanonicalPageUrlForFavicon(raw) || raw).trim();
   }
 
   function isUrlBlockedByFaviconRequestBlacklist(url) {
@@ -13729,13 +13338,9 @@
     if (config.uncapped === true) {
       return Array.isArray(list) ? list : [];
     }
-    if (typeof SEARCH_UTILS.limitSearchSuggestionsForDisplay === 'function') {
-      return SEARCH_UTILS.limitSearchSuggestionsForDisplay(list, {
-        limit: searchResultDisplayLimit
-      });
-    }
-    const suggestions = Array.isArray(list) ? list : [];
-    return suggestions.slice(0, normalizeSearchResultDisplayLimit(searchResultDisplayLimit));
+    return SEARCH_UTILS.limitSearchSuggestionsForDisplay(list, {
+      limit: searchResultDisplayLimit
+    });
   }
 
   function shouldExcludeFromRecentSites(url) {
@@ -14307,61 +13912,25 @@
     return template.replace(/\{query\}/g, encodeURIComponent(query));
   }
 
-  function hasOpenAndSubmitSiteSearchAction(provider) {
-    if (typeof SEARCH_UTILS.hasOpenAndSubmitSiteSearchAction === 'function') {
-      return SEARCH_UTILS.hasOpenAndSubmitSiteSearchAction(provider);
-    }
-    return Boolean(
-      provider &&
-      String(provider.action || '').trim() === 'openAndSubmit'
-    );
-  }
-
   function isAiSiteSearchProvider(provider) {
-    if (typeof SEARCH_UTILS.isAiSiteSearchProvider === 'function') {
-      return SEARCH_UTILS.isAiSiteSearchProvider(provider);
-    }
-    const template = normalizeSiteSearchTemplate(String((provider && provider.template) || '').trim());
-    return Boolean(
-      provider &&
-      (
-        String(provider.category || '').trim() === 'aiSearch' ||
-        hasOpenAndSubmitSiteSearchAction(provider) ||
-        (template && !template.includes('{query}'))
-      )
-    );
+    return SEARCH_UTILS.isAiSiteSearchProvider(provider);
   }
 
   function isSearchEngineSiteSearchProvider(provider) {
-    if (typeof SEARCH_UTILS.isSearchEngineSiteSearchProvider === 'function') {
-      return SEARCH_UTILS.isSearchEngineSiteSearchProvider(provider);
-    }
-    return Boolean(provider && String(provider.category || '').trim() === 'searchEngine');
+    return SEARCH_UTILS.isSearchEngineSiteSearchProvider(provider);
   }
 
   function isAggregateSearchProvider(provider) {
-    if (typeof AGGREGATE_SEARCH_STORE.isAggregateSearchProvider === 'function') {
-      return AGGREGATE_SEARCH_STORE.isAggregateSearchProvider(provider);
-    }
-    return Boolean(provider && provider._xIsAggregateSearch === true);
+    return AGGREGATE_SEARCH_STORE.isAggregateSearchProvider(provider);
   }
 
   function isInteractiveSiteSearchProvider(provider) {
-    if (typeof SEARCH_UTILS.isInteractiveSiteSearchProvider === 'function') {
-      return SEARCH_UTILS.isInteractiveSiteSearchProvider(provider);
-    }
-    return Boolean(
-      hasOpenAndSubmitSiteSearchAction(provider) &&
-      ['geminiPrompt', 'chatgptPrompt', 'doubaoPrompt', 'qianwenQuery', 'yuanbaoPrompt', 'minimaxPrompt', 'deepseekPrompt', 'kimiPrompt'].includes(String(provider.submitStrategy || '').trim())
-    );
+    return SEARCH_UTILS.isInteractiveSiteSearchProvider(provider);
   }
 
   function getAggregateSearchRequestController() {
     if (aggregateSearchRequestController) {
       return aggregateSearchRequestController;
-    }
-    if (typeof AGGREGATE_SEARCH_SURFACE.createAggregateSearchRequestController !== 'function') {
-      return null;
     }
     aggregateSearchRequestController = AGGREGATE_SEARCH_SURFACE.createAggregateSearchRequestController({
       chromeApi: chrome,
@@ -14417,23 +13986,7 @@
   }
 
   function getProviderFaviconPageUrl(provider) {
-    if (typeof SHORTCUT_FAVICON.getSiteSearchProviderPageUrl === 'function') {
-      return SHORTCUT_FAVICON.getSiteSearchProviderPageUrl(provider);
-    }
-    const template = provider && provider.template ? provider.template : '';
-    if (!template) {
-      return '';
-    }
-    try {
-      const url = template.replace(/\{query\}/g, 'test');
-      const parsed = new URL(url);
-      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-        return '';
-      }
-      return `${parsed.origin}/`;
-    } catch (e) {
-      return '';
-    }
+    return SHORTCUT_FAVICON.getSiteSearchProviderPageUrl(provider);
   }
 
   function getProviderIcon(provider) {
@@ -14441,14 +13994,12 @@
     if (!resolver) {
       return '';
     }
-    const iconUrl = typeof SHORTCUT_FAVICON.getSiteSearchProviderIcon === 'function'
-      ? SHORTCUT_FAVICON.getSiteSearchProviderIcon(
-        siteSearchIconCacheLoaded ? siteSearchIconCache : {}, provider, Date.now(), {
-          ...siteSearchIconCacheOptions,
-          resolveAssetUrl: getExtensionResourceUrl
-        }
-      )
-      : (provider && (provider.icon || provider.iconUrl)) || '';
+    const iconUrl = SHORTCUT_FAVICON.getSiteSearchProviderIcon(
+      siteSearchIconCacheLoaded ? siteSearchIconCache : {}, provider, Date.now(), {
+        ...siteSearchIconCacheOptions,
+        resolveAssetUrl: getExtensionResourceUrl
+      }
+    );
     return resolver.getProviderFaviconUrl(getProviderFaviconPageUrl(provider), iconUrl);
   }
 
@@ -14494,9 +14045,7 @@
   }
 
   const attachInputModeFaviconData =
-    typeof SHORTCUT_FAVICON.createSiteSearchProviderIconHydrator === 'function'
-      ? SHORTCUT_FAVICON.createSiteSearchProviderIconHydrator(attachFaviconData)
-      : attachFaviconData;
+    SHORTCUT_FAVICON.createSiteSearchProviderIconHydrator(attachFaviconData);
 
   function beginSiteSearchProviderLoad(loader, options) {
     const settings = options && typeof options === 'object' ? options : {};
@@ -14539,10 +14088,6 @@
     if (siteSearchProvidersCache) {
       return Promise.resolve(siteSearchProvidersCache);
     }
-    if (typeof SITE_SEARCH_STORE.loadSiteSearchProviders !== 'function') {
-      siteSearchProvidersCache = defaultSiteSearchProviders.slice();
-      return Promise.resolve(siteSearchProvidersCache);
-    }
     return beginSiteSearchProviderLoad(() => SITE_SEARCH_STORE.loadSiteSearchProviders({
       chromeApi: chrome,
       storageArea,
@@ -14559,9 +14104,7 @@
   function reloadSiteSearchProvidersFromStorage() {
     return beginSiteSearchProviderLoad(() => {
       const keys = [SITE_SEARCH_STORAGE_KEY, SITE_SEARCH_DISABLED_STORAGE_KEY];
-      const readTask = typeof SITE_SEARCH_STORE.getStorageValues === 'function'
-        ? SITE_SEARCH_STORE.getStorageValues(storageArea, keys)
-        : Promise.resolve({});
+      const readTask = SITE_SEARCH_STORE.getStorageValues(storageArea, keys);
       return readTask.then((result) => {
         const customItems = Array.isArray(result[SITE_SEARCH_STORAGE_KEY])
           ? result[SITE_SEARCH_STORAGE_KEY]
@@ -14569,14 +14112,12 @@
         const disabledKeys = Array.isArray(result[SITE_SEARCH_DISABLED_STORAGE_KEY])
           ? result[SITE_SEARCH_DISABLED_STORAGE_KEY]
           : [];
-        return typeof SITE_SEARCH_STORE.mergeStoredProviders === 'function'
-          ? SITE_SEARCH_STORE.mergeStoredProviders(
-            defaultSiteSearchProviders,
-            customItems,
-            disabledKeys,
-            SEARCH_UTILS.mergeCustomProviders
-          )
-          : defaultSiteSearchProviders.slice();
+        return SITE_SEARCH_STORE.mergeStoredProviders(
+          defaultSiteSearchProviders,
+          customItems,
+          disabledKeys,
+          SEARCH_UTILS.mergeCustomProviders
+        );
       });
     }, { invalidate: true });
   }
@@ -14587,10 +14128,6 @@
     }
     if (aggregateSearchesLoadPromise) {
       return aggregateSearchesLoadPromise;
-    }
-    if (typeof AGGREGATE_SEARCH_STORE.loadAggregateSearches !== 'function') {
-      aggregateSearchesCache = [];
-      return Promise.resolve(aggregateSearchesCache);
     }
     const loadVersion = aggregateSearchesLoadVersion;
     const loadTask = AGGREGATE_SEARCH_STORE.loadAggregateSearches(
@@ -14619,18 +14156,14 @@
   }
 
   function createAggregateSearchScopeProvider(definition) {
-    return typeof AGGREGATE_SEARCH_STORE.createScopeProvider === 'function'
-      ? AGGREGATE_SEARCH_STORE.createScopeProvider(definition)
-      : null;
+    return AGGREGATE_SEARCH_STORE.createScopeProvider(definition);
   }
 
   function getSiteSearchDisplayName(provider) {
     if (!provider) {
       return t('site_search_default', '站内');
     }
-    const mapping = typeof SEARCH_UTILS.getSiteSearchProviderDisplayNameMessage === 'function'
-      ? SEARCH_UTILS.getSiteSearchProviderDisplayNameMessage(provider)
-      : null;
+    const mapping = SEARCH_UTILS.getSiteSearchProviderDisplayNameMessage(provider);
     if (mapping) {
       return t(mapping.messageKey, mapping.fallback);
     }
@@ -14676,9 +14209,6 @@
   }
 
   function promoteStrongNavigationMatch(list, rawQuery) {
-    if (typeof SEARCH_UTILS.promoteStrongNavigationMatch !== 'function') {
-      return null;
-    }
     return SEARCH_UTILS.promoteStrongNavigationMatch(list, rawQuery, {
       getDirectNavigationUrl,
       getUrlDisplay
@@ -14769,24 +14299,14 @@
   }
 
   function normalizeEnabledSearchResultSourceTypes(value) {
-    if (SETTINGS && typeof SETTINGS.normalizeSearchResultSourceTypes === 'function') {
-      return SETTINGS.normalizeSearchResultSourceTypes(value);
-    }
-    return ['topSite', 'bookmark', 'history'];
+    return SETTINGS.normalizeSearchResultSourceTypes(value);
   }
 
   function normalizeSearchResultDisplayLimit(value) {
-    if (SETTINGS && typeof SETTINGS.normalizeSearchResultDisplayLimit === 'function') {
-      return SETTINGS.normalizeSearchResultDisplayLimit(value);
-    }
-    const parsed = Number(value);
-    return Number.isInteger(parsed) && parsed >= 5 && parsed <= 10 ? parsed : 10;
+    return SETTINGS.normalizeSearchResultDisplayLimit(value);
   }
 
   function getLocalSearchScopeCandidate(input, rules) {
-    if (!SEARCH_UTILS || typeof SEARCH_UTILS.findLocalSearchScope !== 'function') {
-      return null;
-    }
     const scope = SEARCH_UTILS.findLocalSearchScope(input, rules);
     if (!scope || !enabledSearchResultSourceTypes.includes(scope.sourceType)) {
       return null;
@@ -14823,14 +14343,8 @@
   }
 
   function getDefaultSearchModeProvider(providers) {
-    if (typeof SEARCH_UTILS.getSearchEngineSiteSearchProvider === 'function') {
-      return SEARCH_UTILS.getSearchEngineSiteSearchProvider(
-        defaultSearchEngineState,
-        providers
-      );
-    }
-    return SEARCH_UTILS.findSiteSearchProvider(
-      defaultSearchEngineState.id || 'google',
+    return SEARCH_UTILS.getSearchEngineSiteSearchProvider(
+      defaultSearchEngineState,
       providers
     );
   }
@@ -14849,9 +14363,6 @@
   }
 
   function isAggregateSearchDefinitionAvailable(definition, providers) {
-    if (typeof AGGREGATE_SEARCH_STORE.isAggregateSearchAvailable !== 'function') {
-      return Boolean(createAggregateSearchScopeProvider(definition));
-    }
     return AGGREGATE_SEARCH_STORE.isAggregateSearchAvailable(
       definition,
       Array.isArray(providers) ? providers : getSearchModeProviders()
@@ -14865,12 +14376,10 @@
         definition,
         sourceProviders
       ));
-    return typeof AGGREGATE_SEARCH_STORE.mergeTriggerProviders === 'function'
-      ? AGGREGATE_SEARCH_STORE.mergeTriggerProviders(
-        sourceProviders,
-        availableDefinitions
-      )
-      : sourceProviders;
+    return AGGREGATE_SEARCH_STORE.mergeTriggerProviders(
+      sourceProviders,
+      availableDefinitions
+    );
   }
 
   function buildSearchModeMenuItems() {
@@ -15228,36 +14737,11 @@
   }
 
   function getDirectNavigationUrl(input) {
-    if (SEARCH_UTILS && typeof SEARCH_UTILS.getDirectNavigationUrl === 'function') {
-      return SEARCH_UTILS.getDirectNavigationUrl(input);
-    }
-    return '';
+    return SEARCH_UTILS.getDirectNavigationUrl(input);
   }
 
   function normalizeTabMatchUrl(url) {
-    if (SEARCH_UTILS && typeof SEARCH_UTILS.buildTabMatchUrl === 'function') {
-      return SEARCH_UTILS.buildTabMatchUrl(url);
-    }
-    if (!url) {
-      return '';
-    }
-    try {
-      const parsed = new URL(url);
-      const protocol = String(parsed.protocol || '').toLowerCase();
-      if (protocol !== 'http:' && protocol !== 'https:') {
-        return String(url).trim().toLowerCase();
-      }
-      const hostname = normalizeHost(parsed.hostname);
-      const host = parsed.port ? `${hostname}:${parsed.port}` : hostname;
-      let path = parsed.pathname || '/';
-      path = path.replace(/\/+$/, '');
-      if (!path) {
-        path = '/';
-      }
-      return `${host}${path}${parsed.search || ''}`;
-    } catch (e) {
-      return String(url).trim().toLowerCase();
-    }
+    return SEARCH_UTILS.buildTabMatchUrl(url);
   }
 
   function getMatchedOpenTabForSuggestion(suggestion) {
@@ -15301,14 +14785,10 @@
       return false;
     }
     const action = item && item._xVisitButtonAction ? item._xVisitButtonAction : 'switch';
-    if (SUGGESTION_ACTION_MODEL &&
-        typeof SUGGESTION_ACTION_MODEL.shouldOpenSwitchActionInNewTab === 'function') {
-      return SUGGESTION_ACTION_MODEL.shouldOpenSwitchActionInNewTab(suggestion, {
-        action,
-        openSwitchInNewTab: true
-      });
-    }
-    return Boolean(suggestion && suggestion.url && action === 'switch');
+    return SUGGESTION_ACTION_MODEL.shouldOpenSwitchActionInNewTab(suggestion, {
+      action,
+      openSwitchInNewTab: true
+    });
   }
 
   function shouldOpenSearchResultInBackgroundTab(event) {
@@ -15316,11 +14796,7 @@
       openInBackgroundTab: isBackgroundOpenEvent(event),
       openInCurrentTab: Boolean(event && event.altKey)
     };
-    if (SUGGESTION_ACTION_MODEL &&
-        typeof SUGGESTION_ACTION_MODEL.getSearchResultOpenDisposition === 'function') {
-      return SUGGESTION_ACTION_MODEL.getSearchResultOpenDisposition(config) === 'backgroundTab';
-    }
-    return Boolean(config.openInBackgroundTab && !config.openInCurrentTab);
+    return SUGGESTION_ACTION_MODEL.getSearchResultOpenDisposition(config) === 'backgroundTab';
   }
 
   function getSearchResultNewTabDisposition(event) {
@@ -15529,9 +15005,6 @@
   }
 
   function getSuggestionUpdateKind(options) {
-    if (typeof SUGGESTION_ACTION_MODEL.getSuggestionUpdateKind !== 'function') {
-      return 'structure';
-    }
     return SUGGESTION_ACTION_MODEL.getSuggestionUpdateKind({
       ...(options || {}),
       includeDebugReasons: Boolean(tabRankScoreDebugEnabled)
@@ -15539,16 +15012,7 @@
   }
 
   function getSuggestionActionContextKey(options) {
-    if (SUGGESTION_ACTION_MODEL &&
-        typeof SUGGESTION_ACTION_MODEL.getActionContextKey === 'function') {
-      return SUGGESTION_ACTION_MODEL.getActionContextKey(options);
-    }
-    const config = options || {};
-    return [
-      Number.isInteger(config.primaryHighlightIndex) ? String(config.primaryHighlightIndex) : '-1',
-      String(config.primaryHighlightReason || ''),
-      config.onlyKeywordSuggestions ? 'keyword' : 'mixed'
-    ].join('|');
+    return SUGGESTION_ACTION_MODEL.getActionContextKey(options);
   }
 
   function updateSelection() {
@@ -15630,9 +15094,6 @@
       return;
     }
     const item = suggestionItems[selectedIndex];
-    if (typeof SUGGESTION_NAVIGATION.scrollItemIntoView !== 'function') {
-      return;
-    }
     SUGGESTION_NAVIGATION.scrollItemIntoView(suggestionsContainer, item, {
       direction,
       didWrap,
@@ -15848,8 +15309,7 @@
         ...suggestions
       ].filter(Boolean);
       let groupedDefaultSuggestions = defaultSuggestions;
-      if (searchResultPriorityMode !== 'search' &&
-          typeof SEARCH_UTILS.groupSearchSuggestionsByKind === 'function') {
+      if (searchResultPriorityMode !== 'search') {
         groupedDefaultSuggestions = SEARCH_UTILS.groupSearchSuggestionsByKind(defaultSuggestions, {
           searchFirst: false
         });
@@ -15886,8 +15346,7 @@
           !slashCommandModeActive &&
           !toggleCommandActive &&
           !siteSearchQueryModeActive &&
-          !hasDirectUrlSuggestion &&
-          typeof SEARCH_UTILS.composeSearchFirstSuggestionSlate === 'function') {
+          !hasDirectUrlSuggestion) {
         allSuggestions = SEARCH_UTILS.composeSearchFirstSuggestionSlate(allSuggestions, {
           limit: searchResultDisplayLimit
         });
@@ -15956,15 +15415,13 @@
         }
         if (preferAutocompleteFirst &&
             !siteSearchState && query && !onlyKeywordSuggestions && openTabQuickSwitchEnabled) {
-          const openTabMatch = typeof SEARCH_UTILS.findSearchOpenTabMatchIndex === 'function'
-            ? SEARCH_UTILS.findSearchOpenTabMatchIndex(allSuggestions, {
-              rawQuery: latestRawQuery.trim(),
-              primaryHighlightIndex,
-              currentTabId: currentNewtabTabId,
-              openTabQuickSwitchEnabled,
-              getDirectNavigationUrl
-            })
-            : { index: -1, reason: '' };
+          const openTabMatch = SEARCH_UTILS.findSearchOpenTabMatchIndex(allSuggestions, {
+            rawQuery: latestRawQuery.trim(),
+            primaryHighlightIndex,
+            currentTabId: currentNewtabTabId,
+            openTabQuickSwitchEnabled,
+            getDirectNavigationUrl
+          });
           if (openTabMatch.index >= 0) {
             if (openTabMatch.index > 0) {
               const [openTabMatchSuggestion] = allSuggestions.splice(openTabMatch.index, 1);
@@ -15974,8 +15431,7 @@
             primaryHighlightReason = openTabMatch.reason || 'openTab';
           }
         }
-        if (preferAutocompleteFirst &&
-            typeof SEARCH_UTILS.pinExactSearchActionSecond === 'function') {
+        if (preferAutocompleteFirst) {
           allSuggestions = SEARCH_UTILS.pinExactSearchActionSecond(allSuggestions);
         }
         if (query && primaryHighlightIndex < 0 && allSuggestions.length > 0) {
@@ -16374,12 +15830,10 @@
       syncSuggestionActionModifiersFromEvent(event);
       dismissAutocompletePreviewOnNonTabKey(event);
       const suggestionNavigationKey =
-        typeof SUGGESTION_NAVIGATION.getSuggestionNavigationKey === 'function'
-          ? SUGGESTION_NAVIGATION.getSuggestionNavigationKey(event, {
-            macosCtrlEnabled: macosCtrlSuggestionNavigationEnabled,
-            navigatorLike: typeof navigator === 'object' && navigator ? navigator : null
-          })
-          : (event.key === 'ArrowDown' || event.key === 'ArrowUp' ? event.key : '');
+        SUGGESTION_NAVIGATION.getSuggestionNavigationKey(event, {
+          macosCtrlEnabled: macosCtrlSuggestionNavigationEnabled,
+          navigatorLike: typeof navigator === 'object' && navigator ? navigator : null
+        });
       if (event.key !== 'Backspace' && !event.metaKey && !event.ctrlKey && !event.altKey) {
         latestRawQuery = inputParts.input.value;
         latestQuery = inputParts.input.value.trim();
@@ -16419,9 +15873,7 @@
         return;
       }
       const inputHistoryDirection =
-        typeof SEARCH_INPUT_HISTORY.getShortcutDirection === 'function'
-          ? SEARCH_INPUT_HISTORY.getShortcutDirection(event)
-          : '';
+        SEARCH_INPUT_HISTORY.getShortcutDirection(event);
       if (inputHistoryDirection) {
         event.preventDefault();
         event.stopPropagation();
@@ -17010,74 +16462,68 @@
       updateNoticeController.hasSessionSlot()
     );
   }
-  updateNoticeController = typeof UPDATE_NOTICE.createUpdateNotice === 'function'
-    ? UPDATE_NOTICE.createUpdateNotice({
+  updateNoticeController = UPDATE_NOTICE.createUpdateNotice({
+    documentObj: document,
+    featureHints: FEATURE_HINTS,
+    chromeApi: chrome,
+    surface: 'newtab',
+    t,
+    getRiSvg,
+    onSessionSlotClaimed() {
+      if (engagementNoticeController &&
+          typeof engagementNoticeController.suppressForSession === 'function') {
+        engagementNoticeController.suppressForSession();
+      }
+    },
+    onDetailsClick(_notice, event) {
+      chrome.runtime.sendMessage({
+        action: 'openReleasePage',
+        reason: 'notice',
+        disposition: getOpenDisposition(event, 'newTab')
+      });
+    }
+  });
+  function createNewtabEngagementNoticeController() {
+    return ENGAGEMENT_NOTICE.createEngagementNotice({
       documentObj: document,
       featureHints: FEATURE_HINTS,
       chromeApi: chrome,
       surface: 'newtab',
+      locale: getFeedbackWebLocale(),
       t,
       getRiSvg,
-      onSessionSlotClaimed() {
-        if (engagementNoticeController &&
-            typeof engagementNoticeController.suppressForSession === 'function') {
-          engagementNoticeController.suppressForSession();
-        }
+      exposureGate: updateNoticeController && updateNoticeController.ready,
+      canShow() {
+        const updateNoticeVisible = Boolean(
+          updateNoticeController &&
+          updateNoticeController.element &&
+          updateNoticeController.element.getAttribute('data-visible') === 'true'
+        );
+        return !updateNoticeVisible &&
+          !updateNoticeClaimsSessionSlot() &&
+          document.visibilityState === 'visible' &&
+          !String(inputParts.input.value || '').trim() &&
+          document.body.getAttribute('data-nt-suggestions-open') !== 'true' &&
+          !isFeedbackPopoverOpen();
       },
-      onDetailsClick(_notice, event) {
-        chrome.runtime.sendMessage({
-          action: 'openReleasePage',
-          reason: 'notice',
-          disposition: getOpenDisposition(event, 'newTab')
+      onReview(event) {
+        const links = feedbackLinks || LUMNO_FEEDBACK_LINKS_FALLBACK;
+        openFeedbackExternalUrl(
+          links.chromeReview || LUMNO_FEEDBACK_LINKS_FALLBACK.chromeReview,
+          getOpenDisposition(event, 'newTab')
+        );
+      },
+      onCommunity(event) {
+        const disposition = getOpenDisposition(event, 'newTab');
+        const communityUrlPromise = ENGAGEMENT_NOTICE.loadCommunityUrl({
+          force: true,
+          locale: getFeedbackWebLocale()
+        });
+        communityUrlPromise.then((url) => {
+          openFeedbackExternalUrl(url, disposition);
         });
       }
-    })
-    : null;
-  function createNewtabEngagementNoticeController() {
-    return typeof ENGAGEMENT_NOTICE.createEngagementNotice === 'function'
-      ? ENGAGEMENT_NOTICE.createEngagementNotice({
-        documentObj: document,
-        featureHints: FEATURE_HINTS,
-        chromeApi: chrome,
-        surface: 'newtab',
-        locale: getFeedbackWebLocale(),
-        t,
-        getRiSvg,
-        exposureGate: updateNoticeController && updateNoticeController.ready,
-        canShow() {
-          const updateNoticeVisible = Boolean(
-            updateNoticeController &&
-            updateNoticeController.element &&
-            updateNoticeController.element.getAttribute('data-visible') === 'true'
-          );
-          return !updateNoticeVisible &&
-            !updateNoticeClaimsSessionSlot() &&
-            document.visibilityState === 'visible' &&
-            !String(inputParts.input.value || '').trim() &&
-            document.body.getAttribute('data-nt-suggestions-open') !== 'true' &&
-            !isFeedbackPopoverOpen();
-        },
-        onReview(event) {
-          const links = feedbackLinks || LUMNO_FEEDBACK_LINKS_FALLBACK;
-          openFeedbackExternalUrl(
-            links.chromeReview || LUMNO_FEEDBACK_LINKS_FALLBACK.chromeReview,
-            getOpenDisposition(event, 'newTab')
-          );
-        },
-        onCommunity(event) {
-          const disposition = getOpenDisposition(event, 'newTab');
-          const communityUrlPromise = typeof ENGAGEMENT_NOTICE.loadCommunityUrl === 'function'
-            ? ENGAGEMENT_NOTICE.loadCommunityUrl({
-              force: true,
-              locale: getFeedbackWebLocale()
-            })
-            : Promise.resolve(ENGAGEMENT_NOTICE.WECHAT_QR_URL);
-          communityUrlPromise.then((url) => {
-            openFeedbackExternalUrl(url, disposition);
-          });
-        }
-      })
-      : null;
+    });
   }
   inputParts.input.addEventListener('input', function() {
     if (!String(inputParts.input.value || '').trim() ||
@@ -17109,8 +16555,7 @@
         return;
       }
       const optionsUrl = runtime &&
-          typeof runtime.getURL === 'function' &&
-          typeof EXTENSION_ROUTES.buildOptionsUrl === 'function'
+          typeof runtime.getURL === 'function'
         ? EXTENSION_ROUTES.buildOptionsUrl(chrome)
         : getExtensionResourceUrl('src/options/options.html');
       window.open(optionsUrl, '_blank');
@@ -17565,11 +17010,9 @@
     if (changes[AGGREGATE_SEARCH_STORAGE_KEY]) {
       aggregateSearchesLoadVersion += 1;
       aggregateSearchesLoadPromise = null;
-      aggregateSearchesCache = typeof AGGREGATE_SEARCH_STORE.normalizeAggregateSearches === 'function'
-        ? AGGREGATE_SEARCH_STORE.normalizeAggregateSearches(
-          changes[AGGREGATE_SEARCH_STORAGE_KEY].newValue
-        )
-        : [];
+      aggregateSearchesCache = AGGREGATE_SEARCH_STORE.normalizeAggregateSearches(
+        changes[AGGREGATE_SEARCH_STORAGE_KEY].newValue
+      );
       if (isAggregateSearchProvider(siteSearchState)) {
         const currentId = String(siteSearchState.aggregateId || '');
         const updatedDefinition = aggregateSearchesCache.find(
@@ -17869,10 +17312,7 @@
   observeNewtabStartupTask('section-policy', sectionPolicyReadyPromise);
   const initialLanguageReadyTask = bootstrapInitialLanguageMode();
   observeNewtabStartupTask('language', initialLanguageReadyTask);
-  const initialMotionPreferenceReadyTask = globalThis.LumnoMotionPreferenceReady &&
-    typeof globalThis.LumnoMotionPreferenceReady.then === 'function'
-      ? globalThis.LumnoMotionPreferenceReady
-      : Promise.resolve(true);
+  const initialMotionPreferenceReadyTask = globalThis.LumnoMotionPreferenceReady;
   const initialLayoutStorageReadyTask = startupStorageReadBatch
     ? startupStorageReadBatch.ready
     : Promise.resolve(true);

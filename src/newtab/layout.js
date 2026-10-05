@@ -1,5 +1,5 @@
 (function() {
-  const SUGGESTIONS_HEIGHT_LAYOUT = globalThis.LumnoSuggestionsHeightLayout || {};
+  const SUGGESTIONS_HEIGHT_LAYOUT = globalThis.LumnoSuggestionsHeightLayout;
 
   function resolveElement(value) {
     if (typeof value === 'function') {
@@ -213,8 +213,7 @@
 
     function commitSuggestionsNaturalHeightAfterRender() {
       const suggestionsContainer = getSuggestionsContainer();
-      if (!suggestionsContainer ||
-          typeof SUGGESTIONS_HEIGHT_LAYOUT.applyNaturalSuggestionsHeightLayout !== 'function') {
+      if (!suggestionsContainer) {
         return false;
       }
       SUGGESTIONS_HEIGHT_LAYOUT.applyNaturalSuggestionsHeightLayout(

@@ -1,9 +1,6 @@
 (function() {
-  const MODEL = globalThis.LumnoOnboardingContent || {};
-  const NAVIGATION_DISPOSITION = globalThis.LumnoNavigationDisposition || {};
-  if (typeof MODEL.getOnboardingBlueprint !== 'function') {
-    return;
-  }
+  const MODEL = globalThis.LumnoOnboardingContent;
+  const NAVIGATION_DISPOSITION = globalThis.LumnoNavigationDisposition;
 
   const LANGUAGE_STORAGE_KEY = '_x_extension_language_2024_unique_';
   const SHOW_SEARCH_COMMAND_NAME = 'show-search';
@@ -22,9 +19,7 @@
     openOptions: 'openOptionsPage',
     openSiteSearchOptions: 'openSiteSearchOptionsPage'
   });
-  let runtimeCopy = typeof MODEL.getOnboardingRuntimeCopy === 'function'
-    ? MODEL.getOnboardingRuntimeCopy('en')
-    : Object.freeze({});
+  let runtimeCopy = MODEL.getOnboardingRuntimeCopy('en');
   const LUMNO_WEB_WORDMARK_SRC = '../../assets/images/lumno-web-textlogo.svg';
   const LUMNO_WEB_BUTTERFLY_REST_PATH = 'M4.3248 17.7823C1.22382 14.6398 -0.116749 10.2475 0.824858 6.7097C1.02033 5.97529 1.95363 5.98287 2.27212 6.67289L4.16024 10.7637C4.38415 11.2488 4.50011 11.7767 4.50011 12.311L4.50011 16L6.24277 16C7.66705 16 9.01155 16.6576 9.88596 17.7819L11.0831 19.3211C11.5044 19.8627 11.2076 20.6668 10.5235 20.7201C8.63849 20.8671 6.85452 20.3459 4.3248 17.7823Z';
   const LUMNO_WEB_BUTTERFLY_FLUTTER_PATH = 'M4.32468 17.7823C-1.04106 11.6456 2.30784 4.56298 5.14393 1.13518C5.48929 0.717757 6.11849 0.734355 6.47527 1.14207L10.4328 5.66451C11.4105 6.78177 11.6239 8.37593 10.9745 9.71102L8.61264 14.567L11.5238 13.9636C13.2202 13.612 14.9706 14.24 16.0565 15.5899L18.7241 18.9056C19.0394 19.2975 18.9857 19.8717 18.5688 20.1531C15.6258 22.1399 9.6385 23.8596 4.32468 17.7823Z';
@@ -235,23 +230,21 @@
   const visualStage = document.getElementById('onboarding-visual-stage');
   const cursorLayer = document.getElementById('onboarding-cursor-layer');
   const copyActions = document.querySelector('.onboarding-copy-actions');
-  const onboardingPageStripApi = globalThis.LumnoOnboardingPageStrip || {};
-  const onboardingActionsApi = globalThis.LumnoOnboardingActions || {};
-  const onboardingBodyCopyApi = globalThis.LumnoOnboardingBodyCopy || {};
-  const onboardingCopyHeadingApi = globalThis.LumnoOnboardingCopyHeading || {};
-  const onboardingCursorLayerApi = globalThis.LumnoOnboardingCursorLayer || {};
-  const onboardingInteractionsApi = globalThis.LumnoOnboardingInteractions || {};
-  const onboardingVisualSurfaceApi = globalThis.LumnoOnboardingVisualSurface || {};
-  const pageStripController = pageStrip &&
-      typeof onboardingPageStripApi.createPageStripController === 'function'
+  const onboardingPageStripApi = globalThis.LumnoOnboardingPageStrip;
+  const onboardingActionsApi = globalThis.LumnoOnboardingActions;
+  const onboardingBodyCopyApi = globalThis.LumnoOnboardingBodyCopy;
+  const onboardingCopyHeadingApi = globalThis.LumnoOnboardingCopyHeading;
+  const onboardingCursorLayerApi = globalThis.LumnoOnboardingCursorLayer;
+  const onboardingInteractionsApi = globalThis.LumnoOnboardingInteractions;
+  const onboardingVisualSurfaceApi = globalThis.LumnoOnboardingVisualSurface;
+  const pageStripController = pageStrip
     ? onboardingPageStripApi.createPageStripController(pageStrip, {
       onNavigate(slideIndex) {
         dispatch({ type: 'GOTO', index: slideIndex });
       }
     })
     : null;
-  const copyActionsController = copyActions &&
-      typeof onboardingActionsApi.createActionButtonsController === 'function'
+  const copyActionsController = copyActions
     ? onboardingActionsApi.createActionButtonsController(copyActions, {
       onAction(actionId, event) {
         runExtensionAction(actionId, event);
@@ -264,8 +257,7 @@
       }
     })
     : null;
-  const interactionSlotsController = interactionSlots &&
-      typeof onboardingInteractionsApi.createInteractionsController === 'function'
+  const interactionSlotsController = interactionSlots
     ? onboardingInteractionsApi.createInteractionsController(interactionSlots, {
       onAction(actionId, event) {
         runExtensionAction(actionId, event);
@@ -281,12 +273,10 @@
       }
     })
     : null;
-  const bodyCopyController = body &&
-      typeof onboardingBodyCopyApi.createBodyCopyController === 'function'
+  const bodyCopyController = body
     ? onboardingBodyCopyApi.createBodyCopyController(body)
     : null;
-  const copyHeadingController = (eyebrow || title) &&
-      typeof onboardingCopyHeadingApi.createCopyHeadingController === 'function'
+  const copyHeadingController = (eyebrow || title)
     ? onboardingCopyHeadingApi.createCopyHeadingController(
       { eyebrow, title },
       {
@@ -296,12 +286,10 @@
       }
     )
     : null;
-  const cursorLayerController = cursorLayer &&
-      typeof onboardingCursorLayerApi.createCursorLayerController === 'function'
+  const cursorLayerController = cursorLayer
     ? onboardingCursorLayerApi.createCursorLayerController(cursorLayer)
     : null;
-  const visualSurfaceController = visualStage &&
-      typeof onboardingVisualSurfaceApi.createVisualSurfaceController === 'function'
+  const visualSurfaceController = visualStage
     ? onboardingVisualSurfaceApi.createVisualSurfaceController(visualStage)
     : null;
   let blueprint = null;
@@ -313,22 +301,16 @@
   let visualScaleFrame = 0;
   let expandedInteractionAccordionId = '';
   let visualResizeObserver = null;
-  const onboardingInfoTooltipController = globalThis.LumnoTooltip &&
-      typeof globalThis.LumnoTooltip.createController === 'function'
-    ? globalThis.LumnoTooltip.createController({
-      id: '_x_extension_onboarding_info_tooltip_2026_unique_',
-      className: 'onboarding-info-tooltip',
-      maxWidth: 360
-    })
-    : null;
-  const actionTooltipController = globalThis.LumnoTooltip &&
-      typeof globalThis.LumnoTooltip.createController === 'function'
-    ? globalThis.LumnoTooltip.createController({
-      id: '_x_extension_onboarding_action_tooltip_2026_unique_',
-      className: 'onboarding-info-tooltip',
-      maxWidth: 360
-    })
-    : null;
+  const onboardingInfoTooltipController = globalThis.LumnoTooltip.createController({
+    id: '_x_extension_onboarding_info_tooltip_2026_unique_',
+    className: 'onboarding-info-tooltip',
+    maxWidth: 360
+  });
+  const actionTooltipController = globalThis.LumnoTooltip.createController({
+    id: '_x_extension_onboarding_action_tooltip_2026_unique_',
+    className: 'onboarding-info-tooltip',
+    maxWidth: 360
+  });
 
   function getChromeApi() {
     return typeof chrome !== 'undefined' ? chrome : null;
@@ -374,9 +356,7 @@
     const chromeApi = getChromeApi();
     const routes = globalThis.LumnoExtensionRoutes;
     let url = '';
-    if (routes && typeof routes.buildLumnoNewtabUrl === 'function') {
-      url = routes.buildLumnoNewtabUrl(chromeApi, { focus: true });
-    }
+    url = routes.buildLumnoNewtabUrl(chromeApi, { focus: true });
     if (!url && chromeApi && chromeApi.runtime && typeof chromeApi.runtime.getURL === 'function') {
       url = chromeApi.runtime.getURL('src/newtab/lumno-newtab.html?focus=1');
     }
@@ -434,12 +414,7 @@
     if (typeof event === 'string') {
       return event === 'backgroundTab' ? 'backgroundTab' : (fallback || event || 'newTab');
     }
-    if (typeof NAVIGATION_DISPOSITION.getDisposition === 'function') {
-      return NAVIGATION_DISPOSITION.getDisposition(event, fallback);
-    }
-    return event && (event.metaKey || event.ctrlKey || Number(event.button) === 1)
-      ? 'backgroundTab'
-      : (fallback || 'newTab');
+    return NAVIGATION_DISPOSITION.getDisposition(event, fallback);
   }
 
   function openExternalTab(url, eventOrDisposition) {
@@ -518,99 +493,11 @@
   }
 
   function getShortcutDisplayTokens(shortcut) {
-    if (typeof MODEL.getShortcutDisplayTokens === 'function') {
-      return MODEL.getShortcutDisplayTokens(shortcut, { preferSymbols: isMacPlatform() });
-    }
-    const value = normalizeShortcutValue(shortcut);
-    if (!value) {
-      return [];
-    }
-    const parts = value.split('+').filter(Boolean);
-    if (parts.length === 0) {
-      return [];
-    }
-    const shouldUseSymbols = isMacPlatform() || parts.some((part) => /^(?:Command|Cmd|Meta)$/i.test(part));
-    const keyToken = parts.pop();
-    const tokens = [];
-    parts.forEach((token) => {
-      const lower = token.toLowerCase();
-      if (!shouldUseSymbols) {
-        tokens.push(lower === 'command' || lower === 'cmd' || lower === 'meta' ? 'Cmd' : token);
-        return;
-      }
-      if (lower === 'command' || lower === 'cmd' || lower === 'meta') {
-        tokens.push('⌘');
-      } else if (lower === 'shift') {
-        tokens.push('⇧');
-      } else if (lower === 'ctrl' || lower === 'control' || lower === 'macctrl') {
-        tokens.push('⌃');
-      } else if (lower === 'alt' || lower === 'option') {
-        tokens.push('⌥');
-      }
-    });
-    const keyMapMac = {
-      ArrowUp: '↑',
-      ArrowDown: '↓',
-      ArrowLeft: '←',
-      ArrowRight: '→',
-      Enter: '↩',
-      Return: '↩',
-      Escape: '⎋',
-      Esc: '⎋',
-      Tab: '⇥',
-      Space: 'Space',
-      Spacebar: 'Space',
-      Comma: ',',
-      Period: '.',
-      Slash: '/',
-      Semicolon: ';',
-      Quote: '\'',
-      Minus: '-',
-      Plus: '+',
-      Backslash: '\\',
-      Backquote: '`',
-      BracketLeft: '[',
-      BracketRight: ']'
-    };
-    const keyMapDefault = {
-      ArrowUp: 'Up',
-      ArrowDown: 'Down',
-      ArrowLeft: 'Left',
-      ArrowRight: 'Right',
-      Escape: 'Esc',
-      Comma: ',',
-      Period: '.',
-      Slash: '/',
-      Semicolon: ';',
-      Quote: '\'',
-      Minus: '-',
-      Plus: '+',
-      Backslash: '\\',
-      Backquote: '`',
-      BracketLeft: '[',
-      BracketRight: ']'
-    };
-    const keyLabel = shouldUseSymbols
-      ? (keyMapMac[keyToken] || keyToken)
-      : (keyMapDefault[keyToken] || keyToken);
-    tokens.push(keyLabel);
-    return tokens.map((token) => {
-      const text = String(token || '');
-      return text.length > 1 ? text.toUpperCase() : text;
-    });
+    return MODEL.getShortcutDisplayTokens(shortcut, { preferSymbols: isMacPlatform() });
   }
 
   function formatShortcutForDisplay(shortcut) {
-    if (typeof MODEL.formatShortcutForDisplay === 'function') {
-      return MODEL.formatShortcutForDisplay(shortcut, { preferSymbols: isMacPlatform() });
-    }
-    const tokens = getShortcutDisplayTokens(shortcut);
-    if (tokens.length === 0) {
-      return '';
-    }
-    const value = normalizeShortcutValue(shortcut);
-    const shouldUseSymbols = isMacPlatform() || value.split('+').some((part) => /^(?:Command|Cmd|Meta)$/i.test(part));
-    return tokens.join(shouldUseSymbols ? '' : '+');
+    return MODEL.formatShortcutForDisplay(shortcut, { preferSymbols: isMacPlatform() });
   }
 
   function loadCurrentShortcut(callback) {
@@ -639,10 +526,7 @@
   }
 
   function shortcutHotkeyMatchesEvent(shortcut, event) {
-    if (typeof MODEL.shortcutHotkeyMatchesEvent === 'function') {
-      return MODEL.shortcutHotkeyMatchesEvent(shortcut, event);
-    }
-    return false;
+    return MODEL.shortcutHotkeyMatchesEvent(shortcut, event);
   }
 
   function isEditableTarget(target) {
@@ -793,9 +677,7 @@
       return;
     }
     const settings = globalThis.LumnoSettings;
-    const storageArea = settings && typeof settings.createProviderStorageRuntime === 'function'
-      ? settings.createProviderStorageRuntime(chromeApi).area
-      : chromeApi.storage.sync || chromeApi.storage.local;
+    const storageArea = settings.createProviderStorageRuntime(chromeApi).area;
     if (!storageArea || typeof storageArea.get !== 'function') {
       callback(MODEL.normalizeLocale(getBrowserLocale()));
       return;
@@ -877,7 +759,7 @@
     if (!element) {
       return;
     }
-    const tooltipView = globalThis.LumnoTooltipView || {};
+    const tooltipView = globalThis.LumnoTooltipView;
     const isBrowserAvatarTooltip =
       infoTooltip && infoTooltip.type === 'browser-avatars';
     element.classList.toggle(
@@ -918,7 +800,7 @@
     renderInfoTooltipContent(element, infoTooltip, browserAvatars);
     if (infoTooltip && infoTooltip.type === 'browser-avatars') {
       positionBrowserAvatarTooltip(element, button);
-    } else if (globalThis.LumnoTooltip && typeof globalThis.LumnoTooltip.position === 'function') {
+    } else {
       globalThis.LumnoTooltip.position(element, button, options);
     }
   }

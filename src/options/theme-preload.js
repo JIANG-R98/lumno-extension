@@ -168,7 +168,7 @@
   }
 
   try {
-    const providerRuntime = globalThis.LumnoSettings && globalThis.LumnoSettings.createProviderStorageRuntime(chrome);
+    const providerRuntime = globalThis.LumnoSettings.createProviderStorageRuntime(chrome);
     const storage = providerRuntime ? providerRuntime.area : globalThis.chrome && chrome.storage
       ? (chrome.storage.sync || chrome.storage.local)
       : null;

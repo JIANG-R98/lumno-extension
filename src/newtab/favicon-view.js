@@ -45,47 +45,43 @@
     const missingIconCache = config.missingIconCache || new Set();
     const missingIconDebugEnabled = config.missingIconDebugEnabled === true;
     const faviconUtils = global.LumnoFaviconUtils || {};
-    const faviconUrlResolver = typeof faviconUtils.createFaviconUrlResolver === 'function'
-      ? faviconUtils.createFaviconUrlResolver({
-        chromeApi,
-        size: 128,
-        getExtensionFaviconUrl,
-        getGstaticFaviconUrl,
-        getChromeFaviconUrl,
-        shouldBlockFaviconForHost,
-        shouldAvoidDirectFaviconForHost,
-        isBlockedLocalFaviconUrl,
-        isEnhancedFaviconFetchEnabled,
-        getStrictFaviconReason,
-        logFaviconDecision
-      })
-      : null;
+    const faviconUrlResolver = faviconUtils.createFaviconUrlResolver({
+      chromeApi,
+      size: 128,
+      getExtensionFaviconUrl,
+      getGstaticFaviconUrl,
+      getChromeFaviconUrl,
+      shouldBlockFaviconForHost,
+      shouldAvoidDirectFaviconForHost,
+      isBlockedLocalFaviconUrl,
+      isEnhancedFaviconFetchEnabled,
+      getStrictFaviconReason,
+      logFaviconDecision
+    });
     const faviconViewCoreApi = global.LumnoFaviconViewCore || {};
-    const faviconViewCore = typeof faviconViewCoreApi.createFaviconViewCore === 'function'
-      ? faviconViewCoreApi.createFaviconViewCore({
-        document: doc,
-        windowObj: win,
-        chromeApi,
-        getHostFromUrl,
-        shouldBlockFaviconForHost,
-        isBlockedLocalFaviconUrl,
-        showResolvedFavicon,
-        showPendingFallbackIcon,
-        getPersistCacheKey: (img) => img.getAttribute('data-x-nt-favicon-cache-key') || '',
-        setPersistedFaviconUrl,
-        setPersistedFaviconData,
-        shouldPersistFaviconUrl: () => true,
-        requestFaviconData: config.requestFaviconData,
-        preloadThemeFromFavicon,
-        getThemeFaviconUrl: getGstaticFaviconUrl,
-        hasThemeForHost: (hostKey) => Boolean(config.hasThemeForHost && config.hasThemeForHost(hostKey)),
-        faviconDataCache,
-        faviconDataPending,
-        iconPreloadCache,
-        detectDefaultExtensionFavicon: config.detectDefaultExtensionFavicon,
-        ignoreLastWorkingWhenFallback: true
-      })
-      : null;
+    const faviconViewCore = faviconViewCoreApi.createFaviconViewCore({
+      document: doc,
+      windowObj: win,
+      chromeApi,
+      getHostFromUrl,
+      shouldBlockFaviconForHost,
+      isBlockedLocalFaviconUrl,
+      showResolvedFavicon,
+      showPendingFallbackIcon,
+      getPersistCacheKey: (img) => img.getAttribute('data-x-nt-favicon-cache-key') || '',
+      setPersistedFaviconUrl,
+      setPersistedFaviconData,
+      shouldPersistFaviconUrl: () => true,
+      requestFaviconData: config.requestFaviconData,
+      preloadThemeFromFavicon,
+      getThemeFaviconUrl: getGstaticFaviconUrl,
+      hasThemeForHost: (hostKey) => Boolean(config.hasThemeForHost && config.hasThemeForHost(hostKey)),
+      faviconDataCache,
+      faviconDataPending,
+      iconPreloadCache,
+      detectDefaultExtensionFavicon: config.detectDefaultExtensionFavicon,
+      ignoreLastWorkingWhenFallback: true
+    });
     const faviconCandidateLoadTimeoutMs = Number.isFinite(config.faviconCandidateLoadTimeoutMs)
       ? Math.max(0, config.faviconCandidateLoadTimeoutMs)
       : 2600;
@@ -399,9 +395,7 @@
       img._xThemeFaviconSession = (img._xThemeFaviconSession || 0) + 1;
       const session = img._xThemeFaviconSession;
       const hostKey = host || getHostFromUrl(url);
-      const cacheKey = typeof faviconUtils.getFaviconPersistCacheKey === 'function'
-        ? faviconUtils.getFaviconPersistCacheKey(url, hostKey)
-        : String(hostKey || url || '').trim();
+      const cacheKey = faviconUtils.getFaviconPersistCacheKey(url, hostKey);
       const skipPersisted = Boolean(optionsArg && optionsArg.skipPersisted === true);
       const persistedDataEntry = !skipPersisted && cacheKey
         ? getPersistedFaviconDataEntry(cacheKey)

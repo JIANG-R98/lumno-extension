@@ -98,8 +98,8 @@ function testBrowserProfileRuntimeWiring() {
   const overlaySource = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
 
   assert(
-    backgroundSource.indexOf("importScripts(chrome.runtime.getURL('src/shared/browser-profile.js'))") <
-      backgroundSource.indexOf("importScripts(chrome.runtime.getURL('src/background/shortcut-rules.js'))"),
+    backgroundSource.indexOf("chrome.runtime.getURL('src/shared/browser-profile.js')") <
+      backgroundSource.indexOf("chrome.runtime.getURL('src/background/shortcut-rules.js')"),
     'background should load browser-profile before shortcut-rules'
   );
   assert(

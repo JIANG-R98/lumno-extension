@@ -4,10 +4,7 @@
   const WALLPAPER_EFFECT_STORAGE_KEY = '_x_extension_newtab_wallpaper_effect_2026_unique_';
   const FAVICON_STORAGE_KEY = '_x_extension_newtab_favicon_2026_unique_';
   const FAVICON_PRELOAD_STORAGE_KEY = '_x_extension_newtab_favicon_preload_2026_unique_';
-  const providerStorageRuntime = globalThis.LumnoSettings &&
-    typeof globalThis.LumnoSettings.createProviderStorageRuntime === 'function'
-    ? globalThis.LumnoSettings.createProviderStorageRuntime(window.chrome)
-    : null;
+  const providerStorageRuntime = globalThis.LumnoSettings.createProviderStorageRuntime(window.chrome);
   const WALLPAPER_PATH_PATTERN = /^(?:assets\/wallpapers|output\/imagegen)\/[-.\w]+\.webp$/;
   const FAVICON_OPTIONS = {
     default: {
@@ -45,84 +42,12 @@
 
   function normalizeEffectPrefs(value, inheritedVersion) {
     const effects = globalThis.LumnoNewtabWallpaperEffects;
-    if (effects && typeof effects.normalizePrefs === 'function') {
-      return effects.normalizePrefs(value, inheritedVersion);
-    }
-    const rawSource = value && typeof value === 'object' ? value : {};
-    const ownVersion = Number(rawSource.version);
-    const fallbackVersion = Number(inheritedVersion);
-    const storedVersion = Number.isFinite(ownVersion) ? ownVersion : fallbackVersion;
-    const source = Object.assign({}, rawSource);
-    if (!Number.isFinite(storedVersion) || storedVersion < 11) {
-      if (source.type === 'blocks') {
-        const explicitBlockSize = Number(source.blockSize);
-        const legacySize = Number(source.size);
-        let blockSize = Number.isFinite(explicitBlockSize) ? explicitBlockSize : legacySize;
-        if ((!Number.isFinite(storedVersion) || storedVersion < 10) &&
-            Number.isFinite(blockSize) && blockSize > 5) {
-          blockSize /= 20;
-        }
-        source.blockSize = Number.isFinite(blockSize) ? blockSize : 1;
-        source.strength = 50;
-        source.size = 50;
-        source.spacing = 50;
-        source.texture = 20;
-      }
-      if (source.type === 'crt') {
-        source.crtStrength = Number.isFinite(Number(source.crtStrength))
-          ? source.crtStrength
-          : (Number.isFinite(Number(source.strength)) ? source.strength : 20);
-        source.strength = 50;
-      }
-    }
-    const normalizePercent = (raw, fallback) => {
-      const number = Number(raw);
-      return Number.isFinite(number)
-        ? Math.max(0, Math.min(100, Math.round(number)))
-        : fallback;
-    };
-    const normalizeCrtPhysical = (raw, fallback, max) => {
-      const number = Number(raw);
-      const bounded = Number.isFinite(number) ? Math.max(0, Math.min(max, number)) : fallback;
-      return Math.round(bounded * 1000) / 1000;
-    };
-    const normalizeBlockParameter = (raw, fallback) => {
-      const number = Number(raw);
-      if (!Number.isFinite(number)) return fallback;
-      return Math.max(0, Math.min(5, Math.round(number)));
-    };
-    const rawSize = Number.isFinite(Number(source.size)) ? source.size : source.density;
-    const type = ['none', 'blur', 'grain', 'blocks', 'halftone', 'dither', 'ascii', 'crt'].includes(source.type)
-      ? source.type
-      : 'none';
-    return {
-      version: 11,
-      type,
-      inkTone: ['auto', 'dark', 'light'].includes(source.inkTone)
-        ? source.inkTone
-        : 'auto',
-      strength: normalizePercent(source.strength, 50),
-      size: normalizePercent(rawSize, 50),
-      spacing: normalizePercent(source.spacing, 50),
-      texture: normalizePercent(source.texture, 20),
-      blockSize: normalizeBlockParameter(source.blockSize, 1),
-      crtStrength: normalizeCrtPhysical(source.crtStrength, 20, 20),
-      crtBloom: normalizeCrtPhysical(source.crtBloom, 15, 20),
-      crtRgbOffset: normalizePercent(source.crtRgbOffset, 35),
-      crtCurvature: normalizeCrtPhysical(source.crtCurvature, 18, 35)
-    };
+    return effects.normalizePrefs(value, inheritedVersion);
   }
 
   function getEffectPrefsForMode(value, mode) {
     const effects = globalThis.LumnoNewtabWallpaperEffects;
-    if (effects && typeof effects.normalizeStoragePrefs === 'function') {
-      return effects.normalizeStoragePrefs(value)[mode];
-    }
-    const source = value && typeof value === 'object' ? value : null;
-    const candidate = source && (source.light || source.dark)
-      ? (source[mode] || source.light || source.dark)
-      : source;
-    return candidate ? normalizeEffectPrefs(candidate, source && source.version) : null;
+    return effects.normalizeStoragePrefs(value)[mode];
   }
 
   function readStoredEffectPrefs(mode, cachedPrefs) {

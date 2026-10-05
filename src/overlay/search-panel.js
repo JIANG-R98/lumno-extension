@@ -5,7 +5,7 @@ window._x_extension_search_overlay_runtime_version_2026_unique_ =
 window._x_extension_search_overlay_open_2026_unique_ = false;
 
 window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayContext) {
-  const BROWSER_PROFILE = globalThis.LumnoBrowserProfile || {};
+  const BROWSER_PROFILE = globalThis.LumnoBrowserProfile;
   let captureTabHandler = null;
   let overlayThemeMediaListener = null;
   let overlayPageThemeObserver = null;
@@ -55,93 +55,39 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
   const OVERLAY_CONTEXT_TOKEN_KEY = '__lumnoOverlayContextToken2026';
   const OVERLAY_CONTEXT_TOKEN_ATTRIBUTE = 'data-lumno-overlay-context-token';
   const overlayContextToken = getOrCreateOverlayContextToken();
-  const SETTINGS = window.LumnoSettings || {};
-  const NAVIGATION_DISPOSITION = window.LumnoNavigationDisposition || {};
-  const SEARCH_UTILS = window.LumnoSearchUtils || {};
-  const SITE_SEARCH_STORE = window.LumnoSiteSearchStore || {};
-  const AGGREGATE_SEARCH_STORE = window.LumnoAggregateSearchStore || {};
-  const AGGREGATE_SEARCH_SURFACE = window.LumnoAggregateSearchSurface || {};
-  const SHORTCUT_FAVICON = window.LumnoShortcutFavicon || {};
-  const SUGGESTION_ACTION_MODEL = window.LumnoSuggestionActionModel || {};
-  const SUGGESTION_NAVIGATION = window.LumnoSuggestionNavigation || {};
-  const SUGGESTIONS_HEIGHT_LAYOUT = window.LumnoSuggestionsHeightLayout || {};
-  const SEARCH_INPUT_HISTORY = window.LumnoSearchInputHistory || {};
-  const OVERLAY_SUGGESTIONS_VIEW = window.LumnoOverlaySuggestionsView || {};
-  const OVERLAY_TOAST = window.LumnoToast || {};
-  const SEARCH_INPUT_MODE = window.LumnoSearchInputMode || {};
-  const FEATURE_HINTS = window.LumnoFeatureHints || {};
-  const UPDATE_NOTICE = window.LumnoUpdateNotice || {};
-  const ENGAGEMENT_NOTICE = window.LumnoEngagementNotice || {};
-  const FAVICON_UTILS = window.LumnoFaviconUtils || {};
-  const FAVICON_THEME = window.LumnoNewtabFaviconTheme || {};
+  const SETTINGS = window.LumnoSettings;
+  const NAVIGATION_DISPOSITION = window.LumnoNavigationDisposition;
+  const SEARCH_UTILS = window.LumnoSearchUtils;
+  const SITE_SEARCH_STORE = window.LumnoSiteSearchStore;
+  const AGGREGATE_SEARCH_STORE = window.LumnoAggregateSearchStore;
+  const AGGREGATE_SEARCH_SURFACE = window.LumnoAggregateSearchSurface;
+  const SHORTCUT_FAVICON = window.LumnoShortcutFavicon;
+  const SUGGESTION_ACTION_MODEL = window.LumnoSuggestionActionModel;
+  const SUGGESTION_NAVIGATION = window.LumnoSuggestionNavigation;
+  const SUGGESTIONS_HEIGHT_LAYOUT = window.LumnoSuggestionsHeightLayout;
+  const SEARCH_INPUT_HISTORY = window.LumnoSearchInputHistory;
+  const OVERLAY_SUGGESTIONS_VIEW = window.LumnoOverlaySuggestionsView;
+  const OVERLAY_TOAST = window.LumnoToast;
+  const SEARCH_INPUT_MODE = window.LumnoSearchInputMode;
+  const FEATURE_HINTS = window.LumnoFeatureHints;
+  const UPDATE_NOTICE = window.LumnoUpdateNotice;
+  const ENGAGEMENT_NOTICE = window.LumnoEngagementNotice;
+  const FAVICON_UTILS = window.LumnoFaviconUtils;
+  const FAVICON_THEME = window.LumnoNewtabFaviconTheme;
   const overlayRuntime = window.LumnoOverlayRuntime;
   const overlayLifecycle = window.LumnoOverlayLifecycle;
   const overlayFaviconView = window.LumnoOverlayFaviconView;
   const overlaySiteFixes = window.LumnoOverlaySiteFixes;
-  const overlayPageTheme = window.LumnoOverlayPageTheme || {};
-  if (!overlayRuntime ||
-      !overlayRuntime.STORAGE_KEYS ||
-      typeof overlayRuntime.getRuntimeUrl !== 'function' ||
-      typeof overlayRuntime.getStorageArea !== 'function' ||
-      typeof overlayRuntime.getStorageValues !== 'function' ||
-      typeof overlayRuntime.loadLocaleMessages !== 'function') {
+  const overlayPageTheme = window.LumnoOverlayPageTheme;
+  if (!overlayRuntime.STORAGE_KEYS) {
     console.warn('Lumno: overlay runtime helper not available.');
-    return;
-  }
-  if (typeof SITE_SEARCH_STORE.loadSiteSearchProviders !== 'function' ||
-      typeof SITE_SEARCH_STORE.mergeStoredProviders !== 'function') {
-    console.warn('Lumno: site search store helper not available.');
-    return;
-  }
-  if (typeof SUGGESTION_NAVIGATION.scrollItemIntoView !== 'function' ||
-      typeof SUGGESTION_NAVIGATION.getVisibleRowsViewportHeight !== 'function') {
-    console.warn('Lumno: suggestion navigation helper not available.');
-    return;
-  }
-  if (typeof SUGGESTIONS_HEIGHT_LAYOUT.applyNaturalSuggestionsHeightLayout !== 'function') {
-    console.warn('Lumno: suggestions height layout helper not available.');
-    return;
-  }
-  if (typeof SUGGESTION_ACTION_MODEL.getSuggestionStructureIdentity !== 'function' ||
-      typeof SUGGESTION_ACTION_MODEL.getSuggestionPresentationFingerprint !== 'function' ||
-      typeof SUGGESTION_ACTION_MODEL.getSuggestionUpdateKind !== 'function') {
-    console.warn('Lumno: suggestion action model helper not available.');
-    return;
-  }
-  if (typeof SEARCH_INPUT_MODE.createInputModeController !== 'function') {
-    console.warn('Lumno: search input mode helper not available.');
-    return;
-  }
-  if (typeof OVERLAY_TOAST.createToastController !== 'function' ||
-      typeof OVERLAY_TOAST.createToastStyleGate !== 'function') {
-    console.warn('Lumno: overlay toast helper not available.');
-    return;
-  }
-  if (!overlayLifecycle ||
-      typeof overlayLifecycle.createFrameTracker !== 'function' ||
-      typeof overlayLifecycle.createViewportSizeSync !== 'function' ||
-      typeof overlayLifecycle.createMountConnectionGuard !== 'function' ||
-      typeof overlayLifecycle.createAntiTranslateGuard !== 'function' ||
-      typeof overlayLifecycle.createChromeEventListenerRegistry !== 'function') {
-    console.warn('Lumno: overlay lifecycle helper not available.');
     return;
   }
   const storageChangeListeners = overlayLifecycle.createChromeEventListenerRegistry(
     chrome && chrome.storage ? chrome.storage.onChanged : null
   );
-  if (!overlayFaviconView ||
-      typeof overlayFaviconView.createOverlayFaviconViewRuntime !== 'function') {
-    console.warn('Lumno: overlay favicon view helper not available.');
-    return;
-  }
-  if (typeof FAVICON_THEME.buildTheme !== 'function' ||
-      typeof FAVICON_THEME.getThemeForMode !== 'function' ||
-      typeof FAVICON_THEME.getHoverColors !== 'function') {
-    console.warn('Lumno: shared favicon theme helper not available.');
-    return;
-  }
   function getSearchUtilsRuntime() {
-    return window.LumnoSearchUtils || SEARCH_UTILS || {};
+    return window.LumnoSearchUtils || {};
   }
   function applyOverlayInputExtensionIsolation(input) {
     if (!input || typeof input.setAttribute !== 'function') {
@@ -391,16 +337,12 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     return overlayEnterAnimation;
   });
   const initialMotionEffectsReady = initialOverlaySettingsReady.then((result) => {
-    motionEffectsEnabled = typeof SETTINGS.normalizeMotionEffectsEnabled === 'function'
-      ? SETTINGS.normalizeMotionEffectsEnabled(result[MOTION_EFFECTS_ENABLED_STORAGE_KEY])
-      : result[MOTION_EFFECTS_ENABLED_STORAGE_KEY] !== false;
+    motionEffectsEnabled = SETTINGS.normalizeMotionEffectsEnabled(result[MOTION_EFFECTS_ENABLED_STORAGE_KEY]);
     return motionEffectsEnabled;
   });
   const initialSimpleModeReady = initialOverlaySettingsReady.then((result) => {
     const rawValue = result[SIMPLE_MODE_ENABLED_STORAGE_KEY];
-    simpleModeEnabled = typeof SETTINGS.normalizeSimpleModeEnabled === 'function'
-      ? SETTINGS.normalizeSimpleModeEnabled(rawValue)
-      : rawValue === true;
+    simpleModeEnabled = SETTINGS.normalizeSimpleModeEnabled(rawValue);
     return simpleModeEnabled;
   });
   const initialSearchResultDisplayLimitReady = initialOverlaySettingsReady.then((result) => {
@@ -414,39 +356,27 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     return overlaySearchResultDisplayLimit;
   });
   const initialNumberShortcutInstantReady = initialOverlaySettingsReady.then((result) => {
-    numberShortcutInstantEnabled = typeof SETTINGS.normalizeNumberShortcutInstantEnabled === 'function'
-      ? SETTINGS.normalizeNumberShortcutInstantEnabled(result[NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY])
-      : result[NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY] === true;
+    numberShortcutInstantEnabled = SETTINGS.normalizeNumberShortcutInstantEnabled(result[NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY]);
     return numberShortcutInstantEnabled;
   });
   const initialMacosCtrlSuggestionNavigationReady = initialOverlaySettingsReady.then((result) => {
     const rawValue = result[MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY];
     macosCtrlSuggestionNavigationEnabled =
-      typeof SETTINGS.normalizeMacosCtrlSuggestionNavigationEnabled === 'function'
-        ? SETTINGS.normalizeMacosCtrlSuggestionNavigationEnabled(rawValue)
-        : rawValue === true;
+      SETTINGS.normalizeMacosCtrlSuggestionNavigationEnabled(rawValue);
     return macosCtrlSuggestionNavigationEnabled;
   });
 
   function normalizeOverlaySearchBlacklistItems(items) {
-    if (globalThis.LumnoBlacklistUtils && typeof globalThis.LumnoBlacklistUtils.normalizeItems === 'function') {
-      return globalThis.LumnoBlacklistUtils.normalizeItems(items, 'prefix');
-    }
-    return [];
+    return globalThis.LumnoBlacklistUtils.normalizeItems(items, 'prefix');
   }
 
   function normalizeOverlayFaviconRequestBlacklistItems(items) {
-    if (globalThis.LumnoBlacklistUtils && typeof globalThis.LumnoBlacklistUtils.normalizeItems === 'function') {
-      return globalThis.LumnoBlacklistUtils.normalizeItems(items, 'prefix');
-    }
-    return [];
+    return globalThis.LumnoBlacklistUtils.normalizeItems(items, 'prefix');
   }
 
   function getOverlayFaviconMatchUrl(url) {
     const raw = String(url || '').trim();
-    return typeof FAVICON_UTILS.getCanonicalPageUrlForFavicon === 'function'
-      ? String(FAVICON_UTILS.getCanonicalPageUrlForFavicon(raw) || raw)
-      : raw;
+    return String(FAVICON_UTILS.getCanonicalPageUrlForFavicon(raw) || raw);
   }
 
   function isUrlExcludedFromOverlayFaviconRequests(url) {
@@ -454,7 +384,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     return Boolean(
       target &&
       globalThis.LumnoBlacklistUtils &&
-      typeof globalThis.LumnoBlacklistUtils.isUrlBlocked === 'function' &&
       globalThis.LumnoBlacklistUtils.isUrlBlocked(target, overlayFaviconRequestBlacklistItems)
     );
   }
@@ -473,15 +402,10 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     return getOverlayStrictFaviconReason(pageUrl) === '';
   }
 
-  const logOverlayFaviconDecision = typeof FAVICON_UTILS.createFaviconDecisionLogger === 'function'
-    ? FAVICON_UTILS.createFaviconDecisionLogger({ surface: 'overlay' })
-    : (() => false);
+  const logOverlayFaviconDecision = FAVICON_UTILS.createFaviconDecisionLogger({ surface: 'overlay' });
 
   function isUrlBlockedByOverlaySearchBlacklist(url) {
-    if (globalThis.LumnoBlacklistUtils && typeof globalThis.LumnoBlacklistUtils.isUrlBlocked === 'function') {
-      return globalThis.LumnoBlacklistUtils.isUrlBlocked(url, overlaySearchBlacklistItems);
-    }
-    return false;
+    return globalThis.LumnoBlacklistUtils.isUrlBlocked(url, overlaySearchBlacklistItems);
   }
 
   function isOverlaySuggestionBlockedBySearchBlacklist(suggestion, queryForProvider) {
@@ -510,11 +434,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
   }
 
   function normalizeSearchResultDisplayLimit(value) {
-    if (typeof SETTINGS.normalizeSearchResultDisplayLimit === 'function') {
-      return SETTINGS.normalizeSearchResultDisplayLimit(value);
-    }
-    const parsed = Number(value);
-    return Number.isInteger(parsed) && parsed >= 5 && parsed <= 10 ? parsed : 10;
+    return SETTINGS.normalizeSearchResultDisplayLimit(value);
   }
 
   function limitOverlaySuggestionsForDisplay(list, options) {
@@ -522,13 +442,9 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     if (config.uncapped === true) {
       return Array.isArray(list) ? list : [];
     }
-    if (typeof SEARCH_UTILS.limitSearchSuggestionsForDisplay === 'function') {
-      return SEARCH_UTILS.limitSearchSuggestionsForDisplay(list, {
-        limit: overlaySearchResultDisplayLimit
-      });
-    }
-    const suggestions = Array.isArray(list) ? list : [];
-    return suggestions.slice(0, normalizeSearchResultDisplayLimit(overlaySearchResultDisplayLimit));
+    return SEARCH_UTILS.limitSearchSuggestionsForDisplay(list, {
+      limit: overlaySearchResultDisplayLimit
+    });
   }
 
   function loadOverlaySearchBlacklistItems(onReload) {
@@ -547,27 +463,19 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
   }
 
   function normalizeSearchResultPriority(value) {
-    return typeof SETTINGS.normalizeSearchResultPriority === 'function'
-      ? SETTINGS.normalizeSearchResultPriority(value)
-      : (value === 'search' ? 'search' : 'autocomplete');
+    return SETTINGS.normalizeSearchResultPriority(value);
   }
 
   function normalizeFaviconEnhancedFetchEnabled(value) {
-    return typeof SETTINGS.normalizeFaviconEnhancedFetchEnabled === 'function'
-      ? SETTINGS.normalizeFaviconEnhancedFetchEnabled(value)
-      : value !== false;
+    return SETTINGS.normalizeFaviconEnhancedFetchEnabled(value);
   }
 
   function normalizeOverlayOpenTabsDefaultVisible(value) {
-    return typeof SETTINGS.normalizeOverlayOpenTabsDefaultVisible === 'function'
-      ? SETTINGS.normalizeOverlayOpenTabsDefaultVisible(value)
-      : value !== false;
+    return SETTINGS.normalizeOverlayOpenTabsDefaultVisible(value);
   }
 
   function normalizeOverlayPageThemeAdaptationEnabled(value) {
-    return typeof SETTINGS.normalizeOverlayPageThemeAdaptationEnabled === 'function'
-      ? SETTINGS.normalizeOverlayPageThemeAdaptationEnabled(value)
-      : value !== false;
+    return SETTINGS.normalizeOverlayPageThemeAdaptationEnabled(value);
   }
 
   function stopOverlayPageThemeObserver() {
@@ -689,9 +597,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
   ensureRemixIconStyles();
 
   function normalizeLocale(locale) {
-    return typeof SETTINGS.normalizeLocale === 'function'
-      ? SETTINGS.normalizeLocale(locale)
-      : 'en';
+    return SETTINGS.normalizeLocale(locale);
   }
 
   function getSystemLocale() {
@@ -758,35 +664,23 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
   }
 
   function normalizeOverlayTabPriorityMode(mode) {
-    return typeof SETTINGS.normalizeOverlayTabPriorityMode === 'function'
-      ? SETTINGS.normalizeOverlayTabPriorityMode(mode)
-      : mode !== 'newtabFirst' && mode !== false;
+    return SETTINGS.normalizeOverlayTabPriorityMode(mode);
   }
 
   function normalizeTabRankScoreDebugMode(mode) {
-    return typeof SETTINGS.normalizeTabRankScoreDebugMode === 'function'
-      ? SETTINGS.normalizeTabRankScoreDebugMode(mode)
-      : mode === true;
+    return SETTINGS.normalizeTabRankScoreDebugMode(mode);
   }
 
   function normalizeOverlaySizeMode(mode) {
-    return typeof SETTINGS.normalizeOverlaySizeMode === 'function'
-      ? SETTINGS.normalizeOverlaySizeMode(mode)
-      : ((mode === 'compact' || mode === 'large') ? mode : 'standard');
+    return SETTINGS.normalizeOverlaySizeMode(mode);
   }
 
   function normalizeOverlayEnterAnimation(mode) {
-    return typeof SETTINGS.normalizeOverlayEnterAnimation === 'function'
-      ? SETTINGS.normalizeOverlayEnterAnimation(mode)
-      : (mode === 'fade' ? 'fade' : 'elastic');
+    return SETTINGS.normalizeOverlayEnterAnimation(mode);
   }
 
   function shouldSkipOverlayEntryMotion() {
-    if (typeof SETTINGS.shouldSkipEntryMotion === 'function') {
-      return SETTINGS.shouldSkipEntryMotion(window, motionEffectsEnabled);
-    }
-    return motionEffectsEnabled === false ||
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    return SETTINGS.shouldSkipEntryMotion(window, motionEffectsEnabled);
   }
 
   function shouldSkipOverlayEntryMotionForSlowStartup() {
@@ -1084,8 +978,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
         settled = true;
         const stored = result ? result[DEFAULT_SEARCH_ENGINE_STORAGE_KEY] : null;
         if (stored && stored.id &&
-            (typeof SEARCH_UTILS.isRetiredSearchEngineState !== 'function' ||
-              !SEARCH_UTILS.isRetiredSearchEngineState(stored))) {
+            (!SEARCH_UTILS.isRetiredSearchEngineState(stored))) {
           overlaySearchEngineState = stored;
           if (typeof onReload === 'function') {
             onReload();
@@ -1106,27 +999,15 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
 
 
   function isLocalNetworkHost(hostname) {
-    return typeof FAVICON_UTILS.isLocalNetworkHost === 'function'
-      ? FAVICON_UTILS.isLocalNetworkHost(hostname)
-      : false;
-  }
-
-  function isSuspiciousLocalFaviconHost(hostname) {
-    return typeof FAVICON_UTILS.isSuspiciousLocalFaviconHost === 'function'
-      ? FAVICON_UTILS.isSuspiciousLocalFaviconHost(hostname)
-      : false;
+    return FAVICON_UTILS.isLocalNetworkHost(hostname);
   }
 
   function shouldBlockFaviconForHost(hostname) {
-    return typeof FAVICON_UTILS.shouldBlockFaviconForHost === 'function'
-      ? FAVICON_UTILS.shouldBlockFaviconForHost(hostname)
-      : false;
+    return FAVICON_UTILS.shouldBlockFaviconForHost(hostname);
   }
 
   function shouldAvoidDirectFaviconForHost(hostname) {
-    return typeof FAVICON_UTILS.shouldAvoidDirectFaviconForHost === 'function'
-      ? FAVICON_UTILS.shouldAvoidDirectFaviconForHost(hostname)
-      : (isLocalNetworkHost(hostname) || isSuspiciousLocalFaviconHost(hostname));
+    return FAVICON_UTILS.shouldAvoidDirectFaviconForHost(hostname);
   }
 
   function shouldBlockOverlayFaviconForHost(hostname) {
@@ -1136,7 +1017,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
   let overlayFaviconUrlResolver = null;
 
   function getOverlayFaviconUrlResolver() {
-    if (!overlayFaviconUrlResolver && typeof FAVICON_UTILS.createFaviconUrlResolver === 'function') {
+    if (!overlayFaviconUrlResolver) {
       overlayFaviconUrlResolver = FAVICON_UTILS.createFaviconUrlResolver({
         chromeApi: chrome,
         size: 128,
@@ -1145,9 +1026,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
         isEnhancedFaviconFetchEnabled: isOverlayEnhancedFaviconFetchEnabled,
         getStrictFaviconReason: getOverlayStrictFaviconReason,
         logFaviconDecision: logOverlayFaviconDecision,
-        isBlockedLocalFaviconUrl: typeof FAVICON_UTILS.isBlockedLocalFaviconUrl === 'function'
-          ? FAVICON_UTILS.isBlockedLocalFaviconUrl
-          : null
+        isBlockedLocalFaviconUrl: FAVICON_UTILS.isBlockedLocalFaviconUrl
       });
     }
     return overlayFaviconUrlResolver;
@@ -1580,10 +1459,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
         mountedToastStyleGate.destroy();
       }
       overlayElement._lumnoToastStyleGate = null;
-      const shellRuntime = window.LumnoOverlayShell || {};
-      if (typeof shellRuntime.destroyOverlayMount === 'function') {
-        shellRuntime.destroyOverlayMount(mountHost);
-      }
+      overlayShell.destroyOverlayMount(mountHost);
       mountHost.remove();
     } else if (overlayWheelIsolationHandler) {
       overlayWheelIsolationHandler = null;
@@ -1723,12 +1599,10 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
   const overlayShell = window.LumnoOverlayShell;
 
   // Check if the overlay already exists
-  let overlay = overlayShell && typeof overlayShell.findOverlayPanel === 'function'
-    ? overlayShell.findOverlayPanel(document, {
-      hostId: OVERLAY_HOST_ID,
-      id: OVERLAY_PANEL_ID
-    })
-    : document.getElementById(OVERLAY_PANEL_ID);
+  let overlay = overlayShell.findOverlayPanel(document, {
+    hostId: OVERLAY_HOST_ID,
+    id: OVERLAY_PANEL_ID
+  });
 
   let shouldReplaceExistingOverlay = false;
   if (overlay) {
@@ -1748,12 +1622,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
 
   if (!overlay || shouldReplaceExistingOverlay) {
     // If it doesn't exist, create it (toggle on)
-    if (!overlayShell ||
-        typeof overlayShell.createOverlayMount !== 'function' ||
-        typeof overlayShell.appendOverlayStyleNodes !== 'function') {
-      console.warn('Lumno: overlay shell helper not available.');
-      return;
-    }
     const initialOverlaySizePreset = getOverlaySizePreset(overlaySizeMode);
     const overlayMount = overlayShell.createOverlayMount(document, {
       hostId: OVERLAY_HOST_ID,
@@ -1988,12 +1856,10 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       });
     }
 
-    overlayRevealGate = overlaySiteFixes && typeof overlaySiteFixes.createOverlayRevealGate === 'function'
-      ? overlaySiteFixes.createOverlayRevealGate(window, {
-        overlay,
-        styleRoot: overlayStyleRoot || document.head || document.documentElement
-      })
-      : null;
+    overlayRevealGate = overlaySiteFixes.createOverlayRevealGate(window, {
+      overlay,
+      styleRoot: overlayStyleRoot || document.head || document.documentElement
+    });
     if (typeof window._x_extension_createSearchInput_2024_unique_ !== 'function') {
       console.warn('Lumno: input UI helper not available.');
       removeOverlay(overlay);
@@ -2058,17 +1924,15 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     const searchScopeIcon = inputParts.icon;
     const rightIcon = inputParts.rightIcon;
     inputHistoryController =
-      typeof SEARCH_INPUT_HISTORY.createSearchInputHistoryController === 'function'
-        ? SEARCH_INPUT_HISTORY.createSearchInputHistoryController({
-            storageArea: chrome && chrome.storage
-              ? (chrome.storage.local || storageArea)
-              : storageArea,
-            storageChanges: chrome && chrome.storage ? chrome.storage.onChanged : null,
-            storageAreaName: chrome && chrome.storage && chrome.storage.local
-              ? 'local'
-              : storageAreaName
-          })
-        : null;
+      SEARCH_INPUT_HISTORY.createSearchInputHistoryController({
+        storageArea: chrome && chrome.storage
+          ? (chrome.storage.local || storageArea)
+          : storageArea,
+        storageChanges: chrome && chrome.storage ? chrome.storage.onChanged : null,
+        storageAreaName: chrome && chrome.storage && chrome.storage.local
+          ? 'local'
+          : storageAreaName
+      });
     overlay._lumnoInputHistoryController = inputHistoryController;
     const handledSearchInputEvents = new WeakSet();
     function overlayUpdateNoticeClaimsSessionSlot() {
@@ -2078,86 +1942,80 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
         overlayUpdateNoticeController.hasSessionSlot()
       );
     }
-    overlayUpdateNoticeController = typeof UPDATE_NOTICE.createUpdateNotice === 'function'
-      ? UPDATE_NOTICE.createUpdateNotice({
-        documentObj: document,
-        featureHints: FEATURE_HINTS,
-        chromeApi: chrome,
-        surface: 'overlay',
-        t,
-        getRiSvg,
-        onSessionSlotClaimed() {
-          if (overlayEngagementNoticeController &&
-              typeof overlayEngagementNoticeController.suppressForSession === 'function') {
-            overlayEngagementNoticeController.suppressForSession();
-          }
-        },
-        onDetailsClick(_notice, event) {
-          chrome.runtime.sendMessage({
-            action: 'openReleasePage',
-            reason: 'notice',
-            disposition: getOpenDisposition(event, 'newTab')
-          });
+    overlayUpdateNoticeController = UPDATE_NOTICE.createUpdateNotice({
+      documentObj: document,
+      featureHints: FEATURE_HINTS,
+      chromeApi: chrome,
+      surface: 'overlay',
+      t,
+      getRiSvg,
+      onSessionSlotClaimed() {
+        if (overlayEngagementNoticeController &&
+            typeof overlayEngagementNoticeController.suppressForSession === 'function') {
+          overlayEngagementNoticeController.suppressForSession();
         }
-      })
-      : null;
+      },
+      onDetailsClick(_notice, event) {
+        chrome.runtime.sendMessage({
+          action: 'openReleasePage',
+          reason: 'notice',
+          disposition: getOpenDisposition(event, 'newTab')
+        });
+      }
+    });
     if (overlayUpdateNoticeController) {
       overlay._lumnoUpdateNoticeController = overlayUpdateNoticeController;
     }
     overlayEngagementNoticeController =
-      typeof ENGAGEMENT_NOTICE.createEngagementNotice === 'function'
-        ? ENGAGEMENT_NOTICE.createEngagementNotice({
-          documentObj: document,
-          featureHints: FEATURE_HINTS,
-          chromeApi: chrome,
-          surface: 'overlay',
-          locale: overlayLanguageMode === 'system'
-            ? getSystemLocale()
-            : normalizeLocale(overlayLanguageMode),
-          t,
-          getRiSvg,
-          exposureGate: overlayUpdateNoticeController && overlayUpdateNoticeController.ready,
-          canShow() {
-            const updateNoticeVisible = Boolean(
-              overlayUpdateNoticeController &&
-              overlayUpdateNoticeController.element &&
-              overlayUpdateNoticeController.element.getAttribute('data-visible') === 'true'
-            );
-            return !updateNoticeVisible &&
-              !overlayUpdateNoticeClaimsSessionSlot() &&
-              document.visibilityState === 'visible' &&
-              overlay &&
-              overlay.isConnected &&
-              !String(searchInput.value || '').trim();
-          },
-          onReview(event) {
+      ENGAGEMENT_NOTICE.createEngagementNotice({
+        documentObj: document,
+        featureHints: FEATURE_HINTS,
+        chromeApi: chrome,
+        surface: 'overlay',
+        locale: overlayLanguageMode === 'system'
+          ? getSystemLocale()
+          : normalizeLocale(overlayLanguageMode),
+        t,
+        getRiSvg,
+        exposureGate: overlayUpdateNoticeController && overlayUpdateNoticeController.ready,
+        canShow() {
+          const updateNoticeVisible = Boolean(
+            overlayUpdateNoticeController &&
+            overlayUpdateNoticeController.element &&
+            overlayUpdateNoticeController.element.getAttribute('data-visible') === 'true'
+          );
+          return !updateNoticeVisible &&
+            !overlayUpdateNoticeClaimsSessionSlot() &&
+            document.visibilityState === 'visible' &&
+            overlay &&
+            overlay.isConnected &&
+            !String(searchInput.value || '').trim();
+        },
+        onReview(event) {
+          chrome.runtime.sendMessage({
+            action: 'createTab',
+            url: ENGAGEMENT_NOTICE.REVIEW_URL,
+            disposition: getOpenDisposition(event, 'newTab')
+          });
+        },
+        onCommunity(event) {
+          const disposition = getOpenDisposition(event, 'newTab');
+          const communityUrlPromise =
+            ENGAGEMENT_NOTICE.loadCommunityUrl({
+              force: true,
+              locale: overlayLanguageMode === 'system'
+                ? getSystemLocale()
+                : normalizeLocale(overlayLanguageMode)
+            });
+          communityUrlPromise.then((url) => {
             chrome.runtime.sendMessage({
               action: 'createTab',
-              url: ENGAGEMENT_NOTICE.REVIEW_URL,
-              disposition: getOpenDisposition(event, 'newTab')
+              url,
+              disposition
             });
-          },
-          onCommunity(event) {
-            const disposition = getOpenDisposition(event, 'newTab');
-            const communityUrlPromise =
-              typeof ENGAGEMENT_NOTICE.loadCommunityUrl === 'function'
-                ? ENGAGEMENT_NOTICE.loadCommunityUrl({
-                  force: true,
-                  locale: overlayLanguageMode === 'system'
-                    ? getSystemLocale()
-                    : normalizeLocale(overlayLanguageMode)
-                })
-                : Promise.resolve(ENGAGEMENT_NOTICE.WECHAT_QR_URL);
-            communityUrlPromise.then((url) => {
-              chrome.runtime.sendMessage({
-                action: 'createTab',
-                url,
-                disposition
-              });
-            });
-          }
-        })
-        : null;
+          });
+        }
+      });
     if (overlayEngagementNoticeController) {
       overlay._lumnoEngagementNoticeController = overlayEngagementNoticeController;
     }
@@ -2234,51 +2092,42 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     applyNoTranslate(searchInput);
     applyNoTranslate(inputContainer);
     applyNoTranslate(rightIcon);
-    const topActionTooltipController = window.LumnoTooltip &&
-        typeof window.LumnoTooltip.createController === 'function'
-      ? window.LumnoTooltip.createController({
-        documentObj: document,
-        windowObj: window,
-        id: '_x_extension_top_action_tooltip_2026_unique_',
-        appendTo: overlay,
-        boundaryElement: overlay,
-        positionMode: 'absolute',
-        maxWidth: 420,
-        decorateElement: applyNoTranslate
-      })
-      : null;
-    const overlayCursorTooltipController = window.LumnoCursorTooltip &&
-        typeof window.LumnoCursorTooltip.createController === 'function'
-      ? window.LumnoCursorTooltip.createController({
-        documentObj: document,
-        windowObj: window,
-        id: '_x_extension_overlay_cursor_tooltip_2026_unique_',
-        appendTo: overlay,
-        boundaryElement: overlay,
-        positionMode: 'absolute',
-        maxWidth: 520,
-        offsetX: 14,
-        offsetY: 16,
-        decorateElement: applyNoTranslate
-      })
-      : null;
-    const overlayModeMenuCursorTooltipController = window.LumnoCursorTooltip &&
-        typeof window.LumnoCursorTooltip.createController === 'function'
-      ? window.LumnoCursorTooltip.createController({
-        documentObj: document,
-        windowObj: window,
-        id: '_x_extension_overlay_mode_menu_cursor_tooltip_2026_unique_',
-        appendTo: overlayStyleRoot || document.body,
-        positionMode: 'fixed',
-        maxWidth: 320,
-        offsetX: 14,
-        offsetY: 16,
-        decorateElement: (element) => {
-          applyNoTranslate(element);
-          element.style.setProperty('--x-extension-tooltip-z-index', '2147483647');
-        }
-      })
-      : null;
+    const topActionTooltipController = window.LumnoTooltip.createController({
+      documentObj: document,
+      windowObj: window,
+      id: '_x_extension_top_action_tooltip_2026_unique_',
+      appendTo: overlay,
+      boundaryElement: overlay,
+      positionMode: 'absolute',
+      maxWidth: 420,
+      decorateElement: applyNoTranslate
+    });
+    const overlayCursorTooltipController = window.LumnoCursorTooltip.createController({
+      documentObj: document,
+      windowObj: window,
+      id: '_x_extension_overlay_cursor_tooltip_2026_unique_',
+      appendTo: overlay,
+      boundaryElement: overlay,
+      positionMode: 'absolute',
+      maxWidth: 520,
+      offsetX: 14,
+      offsetY: 16,
+      decorateElement: applyNoTranslate
+    });
+    const overlayModeMenuCursorTooltipController = window.LumnoCursorTooltip.createController({
+      documentObj: document,
+      windowObj: window,
+      id: '_x_extension_overlay_mode_menu_cursor_tooltip_2026_unique_',
+      appendTo: overlayStyleRoot || document.body,
+      positionMode: 'fixed',
+      maxWidth: 320,
+      offsetX: 14,
+      offsetY: 16,
+      decorateElement: (element) => {
+        applyNoTranslate(element);
+        element.style.setProperty('--x-extension-tooltip-z-index', '2147483647');
+      }
+    });
     overlay._lumnoModeMenuCursorTooltipController =
       overlayModeMenuCursorTooltipController;
     const showTopActionTooltip = (button, text) => {
@@ -2317,13 +2166,8 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       overlayCursorTooltipController.hide();
     };
     function isSuggestionTitleOverflowing(title) {
-      const overflowApi = window.LumnoCursorTooltip || {};
-      if (typeof overflowApi.isElementTextTruncated === 'function') {
-        return overflowApi.isElementTextTruncated(title);
-      }
-      return Boolean(title) &&
-        Number(title.clientWidth) > 0 &&
-        Number(title.scrollWidth) > Number(title.clientWidth);
+      const overflowApi = window.LumnoCursorTooltip;
+      return overflowApi.isElementTextTruncated(title);
     }
     function getSuggestionTextCursorTooltipOptions(extraOptions) {
       return Object.assign({
@@ -2889,13 +2733,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     }
 
     function getThemeStorageUpdate(mode) {
-      if (SETTINGS && typeof SETTINGS.createGlobalThemeModeStorageUpdate === 'function') {
-        return SETTINGS.createGlobalThemeModeStorageUpdate(mode);
-      }
-      const nextMode = mode === 'dark' || mode === 'light' ? mode : 'system';
-      return {
-        [THEME_STORAGE_KEY]: nextMode
-      };
+      return SETTINGS.createGlobalThemeModeStorageUpdate(mode);
     }
 
     function applyThemeModeChange(mode) {
@@ -3065,14 +2903,12 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       cacheMaxEntries: 40,
       maxDataUrlLength: 192 * 1024
     };
-    const siteSearchIconStore = typeof SHORTCUT_FAVICON.createShortcutFaviconStore === 'function'
-      ? SHORTCUT_FAVICON.createShortcutFaviconStore({
-        chromeApi: chrome,
-        storageArea: localStorageArea,
-        storageKey: SITE_SEARCH_ICON_CACHE_STORAGE_KEY,
-        ...siteSearchIconCacheOptions
-      })
-      : null;
+    const siteSearchIconStore = SHORTCUT_FAVICON.createShortcutFaviconStore({
+      chromeApi: chrome,
+      storageArea: localStorageArea,
+      storageKey: SITE_SEARCH_ICON_CACHE_STORAGE_KEY,
+      ...siteSearchIconCacheOptions
+    });
     let siteSearchIconCache = {};
     let siteSearchIconCacheLoaded = false;
     let siteSearchIconCacheLoadPromise = null;
@@ -3110,9 +2946,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
 
     // Warm local icon lookup immediately, but never put it on the overlay reveal path.
     loadSiteSearchIconCache();
-    const defaultSiteSearchProviders = typeof SEARCH_UTILS.getDefaultSiteSearchProviders === 'function'
-      ? SEARCH_UTILS.getDefaultSiteSearchProviders()
-      : initialSiteSearchProviders;
+    const defaultSiteSearchProviders = SEARCH_UTILS.getDefaultSiteSearchProviders();
     const defaultAccentColor = FAVICON_THEME.defaultAccentColor;
     const themeColorCache = window._x_extension_theme_color_cache_2024_unique_ || new Map();
     window._x_extension_theme_color_cache_2024_unique_ = themeColorCache;
@@ -3177,9 +3011,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     const setFaviconSrcWithAnimation = overlayFaviconRuntime.setFaviconSrcWithAnimation;
     const attachFaviconData = overlayFaviconRuntime.attachFaviconData;
     const attachInputModeFaviconData =
-      typeof SHORTCUT_FAVICON.createSiteSearchProviderIconHydrator === 'function'
-        ? SHORTCUT_FAVICON.createSiteSearchProviderIconHydrator(attachFaviconData)
-        : attachFaviconData;
+      SHORTCUT_FAVICON.createSiteSearchProviderIconHydrator(attachFaviconData);
     const attachResolvedFaviconWithFallbacks = overlayFaviconRuntime.attachResolvedFaviconWithFallbacks;
     const refreshOverlayThemeAwareFavicons = overlayFaviconRuntime.refreshOverlayThemeAwareFavicons;
     const refreshOverlayFaviconsForPolicyChange = overlayFaviconRuntime.refreshOverlayFaviconsForPolicyChange;
@@ -3259,18 +3091,12 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     };
     function resolveOverlayTheme(mode, pageTheme) {
       const systemTheme = overlayMediaQuery.matches ? 'dark' : 'light';
-      if (overlayPageTheme && typeof overlayPageTheme.resolveOverlayTheme === 'function') {
-        return overlayPageTheme.resolveOverlayTheme({
-          mode,
-          pageTheme,
-          pageThemeAdaptationEnabled: overlayPageThemeAdaptationEnabled,
-          systemTheme
-        });
-      }
-      if (mode === 'dark' || mode === 'light') {
-        return mode;
-      }
-      return overlayPageThemeAdaptationEnabled && pageTheme ? pageTheme : systemTheme;
+      return overlayPageTheme.resolveOverlayTheme({
+        mode,
+        pageTheme,
+        pageThemeAdaptationEnabled: overlayPageThemeAdaptationEnabled,
+        systemTheme
+      });
     }
 
     function pushThemeCandidate(candidates, element) {
@@ -3420,25 +3246,11 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       return meta ? String(meta.getAttribute('content') || '') : '';
     }
 
-    function detectPageVisualTheme() {
-      if (!overlayPageTheme || typeof overlayPageTheme.detectPageVisualTheme !== 'function') {
-        return null;
-      }
-      return overlayPageTheme.detectPageVisualTheme({
+    function detectPageVisualThemeSignal() {
+      return overlayPageTheme.detectPageVisualThemeSignal({
         document,
         window
       });
-    }
-
-    function detectPageVisualThemeSignal() {
-      if (overlayPageTheme && typeof overlayPageTheme.detectPageVisualThemeSignal === 'function') {
-        return overlayPageTheme.detectPageVisualThemeSignal({
-          document,
-          window
-        });
-      }
-      const theme = detectPageVisualTheme();
-      return theme ? { theme, confidence: 0.58, score: theme === 'dark' ? -0.58 : 0.58 } : null;
     }
 
     function clampThemeConfidence(value) {
@@ -3472,27 +3284,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     }
 
     function getThemeSignalFromCssColor(color, weight) {
-      if (overlayPageTheme && typeof overlayPageTheme.getCssColorThemeSignal === 'function') {
-        return overlayPageTheme.getCssColorThemeSignal(color, weight);
-      }
-      let rgb = null;
-      if (overlayPageTheme && typeof overlayPageTheme.parseCssColor === 'function') {
-        const parsed = overlayPageTheme.parseCssColor(color);
-        if (parsed && parsed.rgb && parsed.rgb.length === 3) {
-          if (parsed.alpha <= 0.08) {
-            return null;
-          }
-          rgb = parsed.alpha < 1
-            ? parsed.rgb.map((channel) => Math.round(
-              (channel * parsed.alpha) + (255 * (1 - parsed.alpha))
-            ))
-            : parsed.rgb;
-        }
-      }
-      if (!rgb || rgb.length !== 3) {
-        rgb = parseCssColor(color);
-      }
-      return getThemeSignalFromRgb(rgb, weight);
+      return overlayPageTheme.getCssColorThemeSignal(color, weight);
     }
 
     function getThemeSignalFromTheme(theme, weight, confidence) {
@@ -3538,32 +3330,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     }
 
     function resolvePageThemeSignals(signals) {
-      if (overlayPageTheme && typeof overlayPageTheme.resolvePageThemeSignals === 'function') {
-        return overlayPageTheme.resolvePageThemeSignals(signals);
-      }
-      let totalScore = 0;
-      let totalWeight = 0;
-      signals.forEach((signal) => {
-        const normalized = normalizeThemeSignal(signal);
-        if (!normalized || normalized.confidence <= 0 || normalized.weight <= 0) {
-          return;
-        }
-        const direction = normalized.theme === 'dark' ? -1 : 1;
-        const contributionWeight = normalized.confidence * normalized.weight;
-        totalScore += direction * contributionWeight;
-        totalWeight += contributionWeight;
-      });
-      if (totalWeight <= 0.2) {
-        return null;
-      }
-      const confidence = totalScore / totalWeight;
-      if (confidence <= -0.22) {
-        return 'dark';
-      }
-      if (confidence >= 0.22) {
-        return 'light';
-      }
-      return null;
+      return overlayPageTheme.resolvePageThemeSignals(signals);
     }
 
     function detectPageTheme() {
@@ -3617,38 +3384,21 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     }
 
     function shouldObserveOverlayPageTheme() {
-      if (overlayPageTheme && typeof overlayPageTheme.shouldObservePageTheme === 'function') {
-        return overlayPageTheme.shouldObservePageTheme({
-          mode: overlayThemeMode,
-          pageThemeAdaptationEnabled: overlayPageThemeAdaptationEnabled,
-          systemTheme: overlayMediaQuery.matches ? 'dark' : 'light'
-        });
-      }
-      if (overlayThemeMode === 'dark') {
-        return true;
-      }
-      if (overlayThemeMode !== 'system') {
-        return false;
-      }
-      return overlayPageThemeAdaptationEnabled || overlayMediaQuery.matches;
+      return overlayPageTheme.shouldObservePageTheme({
+        mode: overlayThemeMode,
+        pageThemeAdaptationEnabled: overlayPageThemeAdaptationEnabled,
+        systemTheme: overlayMediaQuery.matches ? 'dark' : 'light'
+      });
     }
 
     function syncOverlayPageThemeObservation() {
-      if (overlayPageTheme && typeof overlayPageTheme.syncPageThemeObservation === 'function') {
-        return overlayPageTheme.syncPageThemeObservation({
-          mode: overlayThemeMode,
-          pageThemeAdaptationEnabled: overlayPageThemeAdaptationEnabled,
-          systemTheme: overlayMediaQuery.matches ? 'dark' : 'light',
-          start: startOverlayPageThemeObserver,
-          stop: stopOverlayPageThemeObserver
-        });
-      }
-      if (shouldObserveOverlayPageTheme()) {
-        startOverlayPageThemeObserver();
-        return true;
-      }
-      stopOverlayPageThemeObserver();
-      return false;
+      return overlayPageTheme.syncPageThemeObservation({
+        mode: overlayThemeMode,
+        pageThemeAdaptationEnabled: overlayPageThemeAdaptationEnabled,
+        systemTheme: overlayMediaQuery.matches ? 'dark' : 'light',
+        start: startOverlayPageThemeObserver,
+        stop: stopOverlayPageThemeObserver
+      });
     }
 
     function startOverlayPageThemeObserver() {
@@ -3705,13 +3455,10 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       const pageTheme = detectPageTheme();
       const resolved = resolveOverlayTheme(mode, pageTheme);
       const tokens = overlayThemeTokens[resolved] || overlayThemeTokens.light;
-      const shouldStrengthenDarkBackground = overlayPageTheme &&
-        typeof overlayPageTheme.shouldStrengthenDarkOverlayBackground === 'function'
-        ? overlayPageTheme.shouldStrengthenDarkOverlayBackground({
-          resolvedTheme: resolved,
-          pageTheme
-        })
-        : resolved === 'dark' && pageTheme === 'light';
+      const shouldStrengthenDarkBackground = overlayPageTheme.shouldStrengthenDarkOverlayBackground({
+        resolvedTheme: resolved,
+        pageTheme
+      });
       target.setAttribute('data-theme', resolved);
       target.style.setProperty(
         '--x-ov-bg',
@@ -3803,8 +3550,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       }
       const nextValue = changes[DEFAULT_SEARCH_ENGINE_STORAGE_KEY].newValue;
       if (nextValue && nextValue.id &&
-          (typeof SEARCH_UTILS.isRetiredSearchEngineState !== 'function' ||
-            !SEARCH_UTILS.isRetiredSearchEngineState(nextValue))) {
+          (!SEARCH_UTILS.isRetiredSearchEngineState(nextValue))) {
         overlaySearchEngineState = nextValue;
         if (latestOverlayQuery) {
           updateSearchSuggestions(lastSuggestionResponse, latestOverlayQuery);
@@ -4031,9 +3777,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
         return;
       }
       const rawValue = changes[NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY].newValue;
-      numberShortcutInstantEnabled = typeof SETTINGS.normalizeNumberShortcutInstantEnabled === 'function'
-        ? SETTINGS.normalizeNumberShortcutInstantEnabled(rawValue)
-        : rawValue === true;
+      numberShortcutInstantEnabled = SETTINGS.normalizeNumberShortcutInstantEnabled(rawValue);
       SUGGESTION_NAVIGATION.cancelNumberShortcuts(suggestionsContainer);
     });
     storageChangeListeners.add((changes, areaName) => {
@@ -4043,18 +3787,14 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       }
       const rawValue = changes[MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY].newValue;
       macosCtrlSuggestionNavigationEnabled =
-        typeof SETTINGS.normalizeMacosCtrlSuggestionNavigationEnabled === 'function'
-          ? SETTINGS.normalizeMacosCtrlSuggestionNavigationEnabled(rawValue)
-          : rawValue === true;
+        SETTINGS.normalizeMacosCtrlSuggestionNavigationEnabled(rawValue);
     });
     storageChangeListeners.add((changes, areaName) => {
       if (!isPrimaryStorageAreaName(areaName) || !changes[SIMPLE_MODE_ENABLED_STORAGE_KEY]) {
         return;
       }
       const rawValue = changes[SIMPLE_MODE_ENABLED_STORAGE_KEY].newValue;
-      simpleModeEnabled = typeof SETTINGS.normalizeSimpleModeEnabled === 'function'
-        ? SETTINGS.normalizeSimpleModeEnabled(rawValue)
-        : rawValue === true;
+      simpleModeEnabled = SETTINGS.normalizeSimpleModeEnabled(rawValue);
       if (openTabsSearchModeActive || (!latestOverlayQuery && shouldShowOpenTabsForEmptyQuery())) {
         renderTabSuggestions(filterTabsForOverlay(tabs, latestOverlayQuery));
         return;
@@ -4274,15 +4014,11 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     }
 
     function normalizeFaviconHost(hostname) {
-      return typeof FAVICON_UTILS.normalizeFaviconHost === 'function'
-        ? FAVICON_UTILS.normalizeFaviconHost(hostname)
-        : String(hostname || '').toLowerCase().replace(/^www\./i, '');
+      return FAVICON_UTILS.normalizeFaviconHost(hostname);
     }
 
     function getCanonicalPageUrlForFavicon(url) {
-      return typeof FAVICON_UTILS.getCanonicalPageUrlForFavicon === 'function'
-        ? FAVICON_UTILS.getCanonicalPageUrlForFavicon(url)
-        : String(url || '');
+      return FAVICON_UTILS.getCanonicalPageUrlForFavicon(url);
     }
 
     function getExtensionFaviconUrl(pageUrl) {
@@ -4426,15 +4162,11 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     }
 
     function isFaviconProxyUrl(url) {
-      return typeof FAVICON_UTILS.isFaviconProxyUrl === 'function'
-        ? FAVICON_UTILS.isFaviconProxyUrl(url)
-        : false;
+      return FAVICON_UTILS.isFaviconProxyUrl(url);
     }
 
     function isChromeMonogramFaviconUrl(url) {
-      return typeof FAVICON_UTILS.isChromeMonogramFaviconUrl === 'function'
-        ? FAVICON_UTILS.isChromeMonogramFaviconUrl(url)
-        : /^chrome:\/\/favicon2\//i.test(String(url || '').trim());
+      return FAVICON_UTILS.isChromeMonogramFaviconUrl(url);
     }
 
     function getThemeFromUrl(url, hostOverride) {
@@ -4779,14 +4511,10 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
         return false;
       }
       const action = item && item._xVisitButtonAction ? item._xVisitButtonAction : '';
-      if (SUGGESTION_ACTION_MODEL &&
-          typeof SUGGESTION_ACTION_MODEL.shouldOpenNewTabActionInCurrentTab === 'function') {
-        return SUGGESTION_ACTION_MODEL.shouldOpenNewTabActionInCurrentTab(suggestion, {
-          action,
-          openInCurrentTab: true
-        });
-      }
-      return action === 'openNewTab';
+      return SUGGESTION_ACTION_MODEL.shouldOpenNewTabActionInCurrentTab(suggestion, {
+        action,
+        openInCurrentTab: true
+      });
     }
 
     function shouldUseNewTabForSwitchAction(suggestion, event, item) {
@@ -4794,14 +4522,10 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
         return false;
       }
       const action = item && item._xVisitButtonAction ? item._xVisitButtonAction : 'switch';
-      if (SUGGESTION_ACTION_MODEL &&
-          typeof SUGGESTION_ACTION_MODEL.shouldOpenSwitchActionInNewTab === 'function') {
-        return SUGGESTION_ACTION_MODEL.shouldOpenSwitchActionInNewTab(suggestion, {
-          action,
-          openSwitchInNewTab: true
-        });
-      }
-      return Boolean(suggestion && suggestion.url && action === 'switch');
+      return SUGGESTION_ACTION_MODEL.shouldOpenSwitchActionInNewTab(suggestion, {
+        action,
+        openSwitchInNewTab: true
+      });
     }
 
     function shouldOpenSearchResultInBackgroundTab(event) {
@@ -4812,11 +4536,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
         )),
         openInCurrentTab: Boolean(event && event.altKey)
       };
-      if (SUGGESTION_ACTION_MODEL &&
-          typeof SUGGESTION_ACTION_MODEL.getSearchResultOpenDisposition === 'function') {
-        return SUGGESTION_ACTION_MODEL.getSearchResultOpenDisposition(config) === 'backgroundTab';
-      }
-      return Boolean(config.openInBackgroundTab && !config.openInCurrentTab);
+      return SUGGESTION_ACTION_MODEL.getSearchResultOpenDisposition(config) === 'backgroundTab';
     }
 
     function finishOverlayResultActivation(event, canOpenInBackground) {
@@ -4830,14 +4550,11 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     }
 
     function isMiddleClick(event) {
-      if (typeof NAVIGATION_DISPOSITION.isMiddleClick === 'function') {
-        return NAVIGATION_DISPOSITION.isMiddleClick(event);
-      }
-      return Boolean(event && Number(event.button) === 1);
+      return NAVIGATION_DISPOSITION.isMiddleClick(event);
     }
 
     function getOpenDisposition(event, fallback) {
-      if (numberShortcutInstantEnabled || typeof NAVIGATION_DISPOSITION.getDisposition !== 'function') {
+      if (numberShortcutInstantEnabled) {
         return (isMiddleClick(event) || Boolean(event && (event.metaKey || event.ctrlKey) && !numberShortcutInstantEnabled))
           ? 'backgroundTab'
           : (fallback || 'newTab');
@@ -4875,18 +4592,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     }
 
     function createSuggestionActionModel(optionsArg) {
-      if (SUGGESTION_ACTION_MODEL &&
-          typeof SUGGESTION_ACTION_MODEL.createSearchActionModel === 'function') {
-        return SUGGESTION_ACTION_MODEL.createSearchActionModel(optionsArg);
-      }
-      return {
-        actionTags: [],
-        visitButtonAction: 'openNewTab',
-        alwaysHideVisitButton: false,
-        hasActionTags: false,
-        hasSwitchAction: false,
-        hideSourceTags: false
-      };
+      return SUGGESTION_ACTION_MODEL.createSearchActionModel(optionsArg);
     }
 
     function getThemeSourceForSuggestion(suggestion) {
@@ -5122,55 +4828,11 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     }
 
     function normalizeTabMatchUrl(url) {
-      if (SEARCH_UTILS && typeof SEARCH_UTILS.buildTabMatchUrl === 'function') {
-        return SEARCH_UTILS.buildTabMatchUrl(url);
-      }
-      if (!url) {
-        return '';
-      }
-      try {
-        const parsed = new URL(url);
-        const protocol = String(parsed.protocol || '').toLowerCase();
-        if (protocol !== 'http:' && protocol !== 'https:') {
-          return String(url).trim().toLowerCase();
-        }
-        const hostname = normalizeHost(parsed.hostname);
-        const host = parsed.port ? `${hostname}:${parsed.port}` : hostname;
-        let path = parsed.pathname || '/';
-        path = path.replace(/\/+$/, '');
-        if (!path) {
-          path = '/';
-        }
-        return `${host}${path}${parsed.search || ''}`;
-      } catch (e) {
-        return String(url).trim().toLowerCase();
-      }
+      return SEARCH_UTILS.buildTabMatchUrl(url);
     }
 
     function normalizeTabMatchUrlWithoutSearch(url) {
-      if (SEARCH_UTILS && typeof SEARCH_UTILS.buildTabMatchUrl === 'function') {
-        return SEARCH_UTILS.buildTabMatchUrl(url, { includeSearch: false });
-      }
-      if (!url) {
-        return '';
-      }
-      try {
-        const parsed = new URL(url);
-        const protocol = String(parsed.protocol || '').toLowerCase();
-        if (protocol !== 'http:' && protocol !== 'https:') {
-          return String(url).trim().toLowerCase();
-        }
-        const hostname = normalizeHost(parsed.hostname);
-        const host = parsed.port ? `${hostname}:${parsed.port}` : hostname;
-        let path = parsed.pathname || '/';
-        path = path.replace(/\/+$/, '');
-        if (!path) {
-          path = '/';
-        }
-        return `${host}${path}`;
-      } catch (e) {
-        return String(url).trim().toLowerCase();
-      }
+      return SEARCH_UTILS.buildTabMatchUrl(url, { includeSearch: false });
     }
 
     function getMatchedOpenTabIdForSuggestion(suggestion) {
@@ -5479,69 +5141,25 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       return template.replace(/\{query\}/g, encodeURIComponent(query));
     }
 
-    function hasOpenAndSubmitSiteSearchAction(provider) {
-      return Boolean(
-        provider &&
-        String(provider.action || '').trim() === 'openAndSubmit'
-      );
-    }
-
-    function normalizeOverlaySiteSearchTemplate(template) {
-      if (typeof SEARCH_UTILS.normalizeSiteSearchTemplate === 'function') {
-        return SEARCH_UTILS.normalizeSiteSearchTemplate(template);
-      }
-      return String(template || '')
-        .trim()
-        .replace(/\{\{\{s\}\}\}/g, '{query}')
-        .replace(/\{s\}/g, '{query}')
-        .replace(/\{searchTerms\}/g, '{query}');
-    }
-
     function isAiSiteSearchProvider(provider) {
-      if (typeof SEARCH_UTILS.isAiSiteSearchProvider === 'function') {
-        return SEARCH_UTILS.isAiSiteSearchProvider(provider);
-      }
-      const template = normalizeOverlaySiteSearchTemplate(provider && provider.template);
-      return Boolean(
-      provider &&
-      (
-        String(provider.category || '').trim() === 'aiSearch' ||
-        hasOpenAndSubmitSiteSearchAction(provider) ||
-          (template && !template.includes('{query}'))
-        )
-      );
+      return SEARCH_UTILS.isAiSiteSearchProvider(provider);
     }
 
     function isSearchEngineSiteSearchProvider(provider) {
-      if (typeof SEARCH_UTILS.isSearchEngineSiteSearchProvider === 'function') {
-        return SEARCH_UTILS.isSearchEngineSiteSearchProvider(provider);
-      }
-      return Boolean(provider && String(provider.category || '').trim() === 'searchEngine');
+      return SEARCH_UTILS.isSearchEngineSiteSearchProvider(provider);
     }
 
     function isAggregateSearchProvider(provider) {
-      if (typeof AGGREGATE_SEARCH_STORE.isAggregateSearchProvider === 'function') {
-        return AGGREGATE_SEARCH_STORE.isAggregateSearchProvider(provider);
-      }
-      return Boolean(provider && provider._xIsAggregateSearch === true);
+      return AGGREGATE_SEARCH_STORE.isAggregateSearchProvider(provider);
     }
 
     function isInteractiveSiteSearchProvider(provider) {
-      if (typeof SEARCH_UTILS.isInteractiveSiteSearchProvider === 'function') {
-        return SEARCH_UTILS.isInteractiveSiteSearchProvider(provider);
-      }
-      return Boolean(
-        hasOpenAndSubmitSiteSearchAction(provider) &&
-        ['geminiPrompt', 'chatgptPrompt', 'doubaoPrompt', 'qianwenQuery', 'yuanbaoPrompt', 'minimaxPrompt', 'deepseekPrompt', 'kimiPrompt'].includes(String(provider.submitStrategy || '').trim())
-      );
+      return SEARCH_UTILS.isInteractiveSiteSearchProvider(provider);
     }
 
     function getAggregateSearchRequestController() {
       if (aggregateSearchRequestController) {
         return aggregateSearchRequestController;
-      }
-      if (typeof AGGREGATE_SEARCH_SURFACE.createAggregateSearchRequestController !== 'function') {
-        return null;
       }
       aggregateSearchRequestController = AGGREGATE_SEARCH_SURFACE.createAggregateSearchRequestController({
         chromeApi: chrome,
@@ -5570,11 +5188,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
           query: trimmedQuery
         }, {
           onSuccess(response) {
-            const feedbackDelayMs = typeof AGGREGATE_SEARCH_SURFACE.getSuccessFeedbackDelayMs === 'function'
-              ? AGGREGATE_SEARCH_SURFACE.getSuccessFeedbackDelayMs(response)
-              : (response.activationDeferred === true
-                ? Math.max(0, Number(response.activationDelayMs) || 0)
-                : 0);
+            const feedbackDelayMs = AGGREGATE_SEARCH_SURFACE.getSuccessFeedbackDelayMs(response);
             if (feedbackDelayMs > 0) {
               setTimeout(() => {
                 finishOverlayResultActivation(event, true);
@@ -5608,23 +5222,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     }
 
     function getProviderFaviconPageUrl(provider) {
-      if (typeof SHORTCUT_FAVICON.getSiteSearchProviderPageUrl === 'function') {
-        return SHORTCUT_FAVICON.getSiteSearchProviderPageUrl(provider);
-      }
-      const template = provider && provider.template ? provider.template : '';
-      if (!template) {
-        return '';
-      }
-      try {
-        const url = template.replace(/\{query\}/g, 'test');
-        const parsed = new URL(url);
-        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-          return '';
-        }
-        return `${parsed.origin}/`;
-      } catch (e) {
-        return '';
-      }
+      return SHORTCUT_FAVICON.getSiteSearchProviderPageUrl(provider);
     }
 
     function recordSearchSuggestionSelectionFromSuggestion(suggestion, query, source) {
@@ -5650,14 +5248,12 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       if (!resolver) {
         return '';
       }
-      const iconUrl = typeof SHORTCUT_FAVICON.getSiteSearchProviderIcon === 'function'
-        ? SHORTCUT_FAVICON.getSiteSearchProviderIcon(
-          siteSearchIconCacheLoaded ? siteSearchIconCache : {}, provider, Date.now(), {
-            ...siteSearchIconCacheOptions,
-            resolveAssetUrl: (path) => chrome.runtime.getURL(path)
-          }
-        )
-        : (provider && (provider.icon || provider.iconUrl)) || '';
+      const iconUrl = SHORTCUT_FAVICON.getSiteSearchProviderIcon(
+        siteSearchIconCacheLoaded ? siteSearchIconCache : {}, provider, Date.now(), {
+          ...siteSearchIconCacheOptions,
+          resolveAssetUrl: (path) => chrome.runtime.getURL(path)
+        }
+      );
       return resolver.getProviderFaviconUrl(getProviderFaviconPageUrl(provider), iconUrl);
     }
 
@@ -5782,10 +5378,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       if (aggregateSearchesLoadPromise) {
         return aggregateSearchesLoadPromise;
       }
-      if (typeof AGGREGATE_SEARCH_STORE.loadAggregateSearches !== 'function') {
-        aggregateSearchesCache = [];
-        return Promise.resolve(aggregateSearchesCache);
-      }
       const loadVersion = aggregateSearchesLoadVersion;
       const loadTask = AGGREGATE_SEARCH_STORE.loadAggregateSearches(
         storageArea,
@@ -5813,9 +5405,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     }
 
     function createAggregateSearchScopeProvider(definition) {
-      return typeof AGGREGATE_SEARCH_STORE.createScopeProvider === 'function'
-        ? AGGREGATE_SEARCH_STORE.createScopeProvider(definition)
-        : null;
+      return AGGREGATE_SEARCH_STORE.createScopeProvider(definition);
     }
 
     getSiteSearchProviders();
@@ -5842,11 +5432,9 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       if (changes[AGGREGATE_SEARCH_STORAGE_KEY]) {
         aggregateSearchesLoadVersion += 1;
         aggregateSearchesLoadPromise = null;
-        aggregateSearchesCache = typeof AGGREGATE_SEARCH_STORE.normalizeAggregateSearches === 'function'
-          ? AGGREGATE_SEARCH_STORE.normalizeAggregateSearches(
-            changes[AGGREGATE_SEARCH_STORAGE_KEY].newValue
-          )
-          : [];
+        aggregateSearchesCache = AGGREGATE_SEARCH_STORE.normalizeAggregateSearches(
+          changes[AGGREGATE_SEARCH_STORAGE_KEY].newValue
+        );
         if (isAggregateSearchProvider(siteSearchState)) {
           const currentId = String(siteSearchState.aggregateId || '');
           const updatedDefinition = aggregateSearchesCache.find(
@@ -5905,15 +5493,11 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       if (areaName !== 'local' || !iconChange) {
         return;
       }
-      siteSearchIconCache = typeof SHORTCUT_FAVICON.normalizeCacheMap === 'function'
-        ? SHORTCUT_FAVICON.normalizeCacheMap(
-          iconChange.newValue,
-          Date.now(),
-          siteSearchIconCacheOptions
-        )
-        : (iconChange.newValue && typeof iconChange.newValue === 'object'
-          ? iconChange.newValue
-          : {});
+      siteSearchIconCache = SHORTCUT_FAVICON.normalizeCacheMap(
+        iconChange.newValue,
+        Date.now(),
+        siteSearchIconCacheOptions
+      );
       siteSearchIconCacheLoaded = true;
       siteSearchIconCacheRevision += 1;
       siteSearchIconCacheLoadPromise = Promise.resolve(siteSearchIconCache);
@@ -5938,9 +5522,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       if (!provider) {
         return t('site_search_default', '站内');
       }
-      const mapping = typeof SEARCH_UTILS.getSiteSearchProviderDisplayNameMessage === 'function'
-        ? SEARCH_UTILS.getSiteSearchProviderDisplayNameMessage(provider)
-        : null;
+      const mapping = SEARCH_UTILS.getSiteSearchProviderDisplayNameMessage(provider);
       if (mapping) {
         return t(mapping.messageKey, mapping.fallback);
       }
@@ -5990,9 +5572,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     }
 
     function promoteStrongNavigationMatch(list, rawQuery) {
-      if (typeof SEARCH_UTILS.promoteStrongNavigationMatch !== 'function') {
-        return null;
-      }
       return SEARCH_UTILS.promoteStrongNavigationMatch(list, rawQuery, {
         getDirectNavigationUrl,
         getUrlDisplay
@@ -6079,16 +5658,10 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     }
 
     function normalizeEnabledSearchResultSourceTypes(value) {
-      if (SETTINGS && typeof SETTINGS.normalizeSearchResultSourceTypes === 'function') {
-        return SETTINGS.normalizeSearchResultSourceTypes(value);
-      }
-      return ['topSite', 'bookmark', 'history'];
+      return SETTINGS.normalizeSearchResultSourceTypes(value);
     }
 
     function getLocalSearchScopeCandidate(input, rules) {
-      if (!SEARCH_UTILS || typeof SEARCH_UTILS.findLocalSearchScope !== 'function') {
-        return null;
-      }
       const scope = SEARCH_UTILS.findLocalSearchScope(input, rules);
       if (!scope || !enabledSearchResultSourceTypes.includes(scope.sourceType)) {
         return null;
@@ -6125,22 +5698,13 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     }
 
     function getOverlayDefaultSearchModeProvider(providers) {
-      if (typeof SEARCH_UTILS.getSearchEngineSiteSearchProvider === 'function') {
-        return SEARCH_UTILS.getSearchEngineSiteSearchProvider(
-          overlaySearchEngineState,
-          providers
-        );
-      }
-      return SEARCH_UTILS.findSiteSearchProvider(
-        overlaySearchEngineState.id || 'google',
+      return SEARCH_UTILS.getSearchEngineSiteSearchProvider(
+        overlaySearchEngineState,
         providers
       );
     }
 
     function getCurrentPageSiteSearchModeProvider(providers) {
-      if (typeof SEARCH_UTILS.findSiteSearchProviderForPageUrl !== 'function') {
-        return null;
-      }
       return SEARCH_UTILS.findSiteSearchProviderForPageUrl(
         initialContextTabUrl,
         providers
@@ -6161,9 +5725,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     }
 
     function isAggregateSearchDefinitionAvailable(definition, providers) {
-      if (typeof AGGREGATE_SEARCH_STORE.isAggregateSearchAvailable !== 'function') {
-        return Boolean(createAggregateSearchScopeProvider(definition));
-      }
       return AGGREGATE_SEARCH_STORE.isAggregateSearchAvailable(
         definition,
         Array.isArray(providers) ? providers : getSearchModeProviders()
@@ -6177,12 +5738,10 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
           definition,
           sourceProviders
         ));
-      return typeof AGGREGATE_SEARCH_STORE.mergeTriggerProviders === 'function'
-        ? AGGREGATE_SEARCH_STORE.mergeTriggerProviders(
-          sourceProviders,
-          availableDefinitions
-        )
-        : sourceProviders;
+      return AGGREGATE_SEARCH_STORE.mergeTriggerProviders(
+        sourceProviders,
+        availableDefinitions
+      );
     }
 
     function buildSearchModeMenuItems() {
@@ -6983,9 +6542,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
         return;
       }
       const inputHistoryDirection =
-        typeof SEARCH_INPUT_HISTORY.getShortcutDirection === 'function'
-          ? SEARCH_INPUT_HISTORY.getShortcutDirection(e)
-          : '';
+        SEARCH_INPUT_HISTORY.getShortcutDirection(e);
       if (inputHistoryDirection) {
         e.preventDefault();
         e.stopPropagation();
@@ -7060,15 +6617,10 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     }
 
     function getSuggestionNavigationKey(event) {
-      if (typeof SUGGESTION_NAVIGATION.getSuggestionNavigationKey === 'function') {
-        return SUGGESTION_NAVIGATION.getSuggestionNavigationKey(event, {
-          macosCtrlEnabled: macosCtrlSuggestionNavigationEnabled,
-          navigatorLike: window && window.navigator ? window.navigator : null
-        });
-      }
-      return event && (event.key === 'ArrowDown' || event.key === 'ArrowUp')
-        ? event.key
-        : '';
+      return SUGGESTION_NAVIGATION.getSuggestionNavigationKey(event, {
+        macosCtrlEnabled: macosCtrlSuggestionNavigationEnabled,
+        navigatorLike: window && window.navigator ? window.navigator : null
+      });
     }
 
     keydownHandler = function(e) {
@@ -7996,9 +7548,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     }
 
     function getSuggestionVisualIdentity(suggestion) {
-      if (typeof SUGGESTION_ACTION_MODEL.getSuggestionStructureIdentity !== 'function') {
-        return '';
-      }
       return SUGGESTION_ACTION_MODEL.getSuggestionStructureIdentity(suggestion);
     }
 
@@ -8050,9 +7599,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     }
 
     function getSuggestionUpdateKind(options) {
-      if (typeof SUGGESTION_ACTION_MODEL.getSuggestionUpdateKind !== 'function') {
-        return 'structure';
-      }
       return SUGGESTION_ACTION_MODEL.getSuggestionUpdateKind({
         ...(options || {}),
         includeDebugReasons: Boolean(overlayTabScoreDebugEnabled)
@@ -8060,16 +7606,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     }
 
     function getSuggestionActionContextKey(options) {
-      if (SUGGESTION_ACTION_MODEL &&
-          typeof SUGGESTION_ACTION_MODEL.getActionContextKey === 'function') {
-        return SUGGESTION_ACTION_MODEL.getActionContextKey(options);
-      }
-      const config = options || {};
-      return [
-        Number.isInteger(config.primaryHighlightIndex) ? String(config.primaryHighlightIndex) : '-1',
-        String(config.primaryHighlightReason || ''),
-        config.onlyKeywordSuggestions ? 'keyword' : 'mixed'
-      ].join('|');
+      return SUGGESTION_ACTION_MODEL.getActionContextKey(options);
     }
 
     function updateSearchSuggestions(suggestions, query, options) {
@@ -8251,8 +7788,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
             !slashCommandModeActive &&
             !modeCommandActive &&
             !siteSearchQueryModeActive &&
-            !hasDirectUrlSuggestion &&
-            typeof SEARCH_UTILS.composeSearchFirstSuggestionSlate === 'function') {
+            !hasDirectUrlSuggestion) {
           allSuggestions = SEARCH_UTILS.composeSearchFirstSuggestionSlate(allSuggestions, {
             limit: overlaySearchResultDisplayLimit
           });
@@ -8321,16 +7857,14 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
           if (preferAutocompleteFirst &&
               !siteSearchState && query && !onlyKeywordSuggestions &&
               (overlayTabQuickSwitchEnabled || prioritizeCurrentPageMatch)) {
-            const openTabMatch = typeof SEARCH_UTILS.findSearchOpenTabMatchIndex === 'function'
-              ? SEARCH_UTILS.findSearchOpenTabMatchIndex(allSuggestions, {
-                rawQuery: latestRawInputValue.trim(),
-                primaryHighlightIndex,
-                prioritizeCurrentPageMatch,
-                currentTabId: currentOverlayTabId,
-                openTabQuickSwitchEnabled: overlayTabQuickSwitchEnabled,
-                getDirectNavigationUrl
-              })
-              : { index: -1, reason: '' };
+            const openTabMatch = SEARCH_UTILS.findSearchOpenTabMatchIndex(allSuggestions, {
+              rawQuery: latestRawInputValue.trim(),
+              primaryHighlightIndex,
+              prioritizeCurrentPageMatch,
+              currentTabId: currentOverlayTabId,
+              openTabQuickSwitchEnabled: overlayTabQuickSwitchEnabled,
+              getDirectNavigationUrl
+            });
             if (openTabMatch.index >= 0) {
               if (openTabMatch.index > 0) {
                 const [openTabMatchSuggestion] = allSuggestions.splice(openTabMatch.index, 1);
@@ -8340,8 +7874,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
               primaryHighlightReason = openTabMatch.reason || 'openTab';
             }
           }
-          if (preferAutocompleteFirst &&
-              typeof SEARCH_UTILS.pinExactSearchActionSecond === 'function') {
+          if (preferAutocompleteFirst) {
             allSuggestions = SEARCH_UTILS.pinExactSearchActionSecond(allSuggestions);
           }
           if (query && primaryHighlightIndex < 0 && allSuggestions.length > 0) {

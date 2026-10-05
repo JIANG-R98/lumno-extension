@@ -1283,7 +1283,7 @@ assertContains(
 
 assertContains(
   newtabJs,
-  'const NEWTAB_SHORTCUTS_STORE = globalThis.LumnoNewtabShortcutsStore || {};',
+  'const NEWTAB_SHORTCUTS_STORE = globalThis.LumnoNewtabShortcutsStore;',
   'newtab runtime should read the shortcuts store'
 );
 
@@ -1297,18 +1297,6 @@ assertContains(
   newtabJs,
   'const primaryUrl = isFaviconProxyUrl(iconUrl)',
   'explicit provider favicons should be tried before generic browser proxy placeholders'
-);
-
-assertContains(
-  newtabJs,
-  "typeof NEWTAB_SHORTCUTS_STORE.loadShortcuts !== 'function'",
-  'newtab runtime should guard for the shortcuts store API'
-);
-
-assertContains(
-  newtabJs,
-  "typeof NEWTAB_SHORTCUTS_STORE.saveShortcuts !== 'function'",
-  'newtab runtime should guard for bulk shortcut saving before drag reorder is enabled'
 );
 
 assertContains(
@@ -2322,7 +2310,7 @@ assertContains(
 
 assertContains(
   newtabJs,
-  'const NEWTAB_SELECT_MENU = globalThis.LumnoNewtabSelectMenu || {};',
+  'const NEWTAB_SELECT_MENU = globalThis.LumnoNewtabSelectMenu;',
   'shortcut context menu should prefer the React select-menu controller'
 );
 

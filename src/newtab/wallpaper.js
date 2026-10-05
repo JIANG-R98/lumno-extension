@@ -1,9 +1,9 @@
 (function() {
-  const WALLPAPER_ADAPTIVE_TONE = globalThis.LumnoNewtabWallpaperAdaptiveTone || {};
-  const WALLPAPER_EFFECTS = globalThis.LumnoNewtabWallpaperEffects || {};
-  const WALLPAPER_LOCAL_STORE = globalThis.LumnoNewtabWallpaperLocalStore || {};
-  const SETTINGS = globalThis.LumnoSettings || {};
-  const REMOTE_CONTENT = globalThis.LumnoNewtabRemoteContent || {};
+  const WALLPAPER_ADAPTIVE_TONE = globalThis.LumnoNewtabWallpaperAdaptiveTone;
+  const WALLPAPER_EFFECTS = globalThis.LumnoNewtabWallpaperEffects;
+  const WALLPAPER_LOCAL_STORE = globalThis.LumnoNewtabWallpaperLocalStore;
+  const SETTINGS = globalThis.LumnoSettings;
+  const REMOTE_CONTENT = globalThis.LumnoNewtabRemoteContent;
   const DEFAULT_STORAGE_KEYS = {
     wallpaper: '_x_extension_newtab_wallpaper_2026_unique_',
     localWallpaper: '_x_extension_newtab_local_wallpaper_2026_unique_',
@@ -23,20 +23,6 @@
   const NEWTAB_TIME_FONT_WEIGHT_MIN = Number(SETTINGS.NEWTAB_TIME_FONT_WEIGHT_MIN) || 300;
   const NEWTAB_TIME_FONT_WEIGHT_MAX = Number(SETTINGS.NEWTAB_TIME_FONT_WEIGHT_MAX) || 800;
   const NEWTAB_TIME_FONT_WEIGHT_DEFAULT = Number(SETTINGS.NEWTAB_TIME_FONT_WEIGHT_DEFAULT) || 320;
-  const FALLBACK_WALLPAPER_EFFECT_PREFS = {
-    version: 11,
-    type: 'none',
-    inkTone: 'auto',
-    strength: 50,
-    size: 50,
-    spacing: 50,
-    texture: 20,
-    blockSize: 1,
-    crtStrength: 20,
-    crtBloom: 15,
-    crtRgbOffset: 35,
-    crtCurvature: 18
-  };
   const CRT_PARAMETER_PHYSICAL_MAX = Object.freeze({
     crtStrength: 20,
     crtBloom: 20,
@@ -44,8 +30,6 @@
     crtCurvature: 35
   });
   const BLOCK_PARAMETER_MAX = 5;
-  const BLOCK_DEFAULT_SIZE_UI = 1;
-
   function getCrtParameterPercent(key, value) {
     const physicalMax = CRT_PARAMETER_PHYSICAL_MAX[key];
     const number = Number(value);
@@ -65,104 +49,11 @@
   }
 
   function normalizeSingleWallpaperEffectPrefs(value, inheritedVersion) {
-    if (typeof WALLPAPER_EFFECTS.normalizePrefs === 'function') {
-      return WALLPAPER_EFFECTS.normalizePrefs(value, inheritedVersion);
-    }
-    const rawSource = value && typeof value === 'object' ? value : {};
-    const ownVersion = Number(rawSource.version);
-    const fallbackVersion = Number(inheritedVersion);
-    const storedVersion = Number.isFinite(ownVersion) ? ownVersion : fallbackVersion;
-    const source = Object.assign({}, rawSource);
-    if (!Number.isFinite(storedVersion) || storedVersion < 11) {
-      if (source.type === 'blocks') {
-        const explicitBlockSize = Number(source.blockSize);
-        const legacySize = Number(source.size);
-        let blockSize = Number.isFinite(explicitBlockSize) ? explicitBlockSize : legacySize;
-        if ((!Number.isFinite(storedVersion) || storedVersion < 10) &&
-            Number.isFinite(blockSize) && blockSize > BLOCK_PARAMETER_MAX) {
-          blockSize /= 20;
-        }
-        source.blockSize = Number.isFinite(blockSize) ? blockSize : BLOCK_DEFAULT_SIZE_UI;
-        source.strength = FALLBACK_WALLPAPER_EFFECT_PREFS.strength;
-        source.size = FALLBACK_WALLPAPER_EFFECT_PREFS.size;
-        source.spacing = FALLBACK_WALLPAPER_EFFECT_PREFS.spacing;
-        source.texture = FALLBACK_WALLPAPER_EFFECT_PREFS.texture;
-      }
-      if (source.type === 'crt') {
-        source.crtStrength = Number.isFinite(Number(source.crtStrength))
-          ? source.crtStrength
-          : (Number.isFinite(Number(source.strength))
-            ? source.strength
-            : FALLBACK_WALLPAPER_EFFECT_PREFS.crtStrength);
-        source.strength = FALLBACK_WALLPAPER_EFFECT_PREFS.strength;
-      }
-    }
-    const type = ['none', 'blur', 'grain', 'blocks', 'halftone', 'dither', 'ascii', 'crt'].includes(source.type)
-      ? source.type
-      : FALLBACK_WALLPAPER_EFFECT_PREFS.type;
-    const normalizePercent = (raw, fallback) => {
-      const number = Number(raw);
-      return Number.isFinite(number)
-        ? Math.max(0, Math.min(100, Math.round(number)))
-        : fallback;
-    };
-    const normalizeCrtPhysical = (raw, fallback, max) => {
-      const number = Number(raw);
-      const bounded = Number.isFinite(number) ? Math.max(0, Math.min(max, number)) : fallback;
-      return Math.round(bounded * 1000) / 1000;
-    };
-    const normalizeBlockParameter = (raw, fallback) => {
-      const number = Number(raw);
-      if (!Number.isFinite(number)) return fallback;
-      return Math.max(0, Math.min(BLOCK_PARAMETER_MAX, Math.round(number)));
-    };
-    const rawSize = Number.isFinite(Number(source.size)) ? source.size : source.density;
-    return {
-      version: FALLBACK_WALLPAPER_EFFECT_PREFS.version,
-      type,
-      inkTone: ['auto', 'dark', 'light'].includes(source.inkTone)
-        ? source.inkTone
-        : FALLBACK_WALLPAPER_EFFECT_PREFS.inkTone,
-      strength: normalizePercent(source.strength, FALLBACK_WALLPAPER_EFFECT_PREFS.strength),
-      size: normalizePercent(rawSize, FALLBACK_WALLPAPER_EFFECT_PREFS.size),
-      spacing: normalizePercent(source.spacing, FALLBACK_WALLPAPER_EFFECT_PREFS.spacing),
-      texture: normalizePercent(source.texture, FALLBACK_WALLPAPER_EFFECT_PREFS.texture),
-      blockSize: normalizeBlockParameter(source.blockSize, BLOCK_DEFAULT_SIZE_UI),
-      crtStrength: normalizeCrtPhysical(
-        source.crtStrength,
-        FALLBACK_WALLPAPER_EFFECT_PREFS.crtStrength,
-        20
-      ),
-      crtBloom: normalizeCrtPhysical(source.crtBloom, FALLBACK_WALLPAPER_EFFECT_PREFS.crtBloom, 20),
-      crtRgbOffset: normalizePercent(
-        source.crtRgbOffset,
-        FALLBACK_WALLPAPER_EFFECT_PREFS.crtRgbOffset
-      ),
-      crtCurvature: normalizeCrtPhysical(
-        source.crtCurvature,
-        FALLBACK_WALLPAPER_EFFECT_PREFS.crtCurvature,
-        35
-      )
-    };
+    return WALLPAPER_EFFECTS.normalizePrefs(value, inheritedVersion);
   }
 
   function normalizeWallpaperEffectStoragePrefs(value) {
-    if (typeof WALLPAPER_EFFECTS.normalizeStoragePrefs === 'function') {
-      return WALLPAPER_EFFECTS.normalizeStoragePrefs(value);
-    }
-    const source = value && typeof value === 'object' ? value : null;
-    const hasModePrefs = Boolean(source &&
-      ((source.light && typeof source.light === 'object') ||
-        (source.dark && typeof source.dark === 'object')));
-    const inheritedVersion = source && source.version;
-    const shared = normalizeSingleWallpaperEffectPrefs(value, inheritedVersion);
-    const lightSource = hasModePrefs ? (source.light || source.dark) : shared;
-    const darkSource = hasModePrefs ? (source.dark || source.light) : shared;
-    return {
-      version: WALLPAPER_EFFECT_MODE_STORAGE_VERSION,
-      light: normalizeSingleWallpaperEffectPrefs(lightSource, inheritedVersion),
-      dark: normalizeSingleWallpaperEffectPrefs(darkSource, inheritedVersion)
-    };
+    return WALLPAPER_EFFECTS.normalizeStoragePrefs(value);
   }
 
   function createWallpaperRuntime(options) {
@@ -341,20 +232,17 @@
     const getAdaptiveToneTargets = typeof options.getAdaptiveToneTargets === 'function'
       ? options.getAdaptiveToneTargets
       : function() { return []; };
-    const localWallpaperStore = typeof WALLPAPER_LOCAL_STORE.createWallpaperLocalStore === 'function'
-      ? WALLPAPER_LOCAL_STORE.createWallpaperLocalStore({
-        documentObj,
-        windowObj
-      })
-      : null;
-    const remoteClient = typeof REMOTE_CONTENT.createClient === 'function'
-      ? REMOTE_CONTENT.createClient({
-        storageArea: localWallpaperStorageArea,
-        fetch: options.fetchRemoteContent,
-        getLanguage: () => document.documentElement && document.documentElement.lang ||
-          (chrome.i18n && chrome.i18n.getUILanguage ? chrome.i18n.getUILanguage() : 'en'),
-        processFile: (file) => localWallpaperStore.buildRecordFromFile(file)
-      }) : null;
+    const localWallpaperStore = WALLPAPER_LOCAL_STORE.createWallpaperLocalStore({
+      documentObj,
+      windowObj
+    });
+    const remoteClient = REMOTE_CONTENT.createClient({
+      storageArea: localWallpaperStorageArea,
+      fetch: options.fetchRemoteContent,
+      getLanguage: () => document.documentElement && document.documentElement.lang ||
+        (chrome.i18n && chrome.i18n.getUILanguage ? chrome.i18n.getUILanguage() : 'en'),
+      processFile: (file) => localWallpaperStore.buildRecordFromFile(file)
+    });
 
     const NEWTAB_WALLPAPER_DEFAULT_DIRECTORY = 'assets/wallpapers';
     const NEWTAB_WALLPAPER_EXTENSION_DIRECTORY = 'assets/wallpapers';
@@ -1059,33 +947,15 @@
     }
 
     function normalizeNewtabTopContentMode(value) {
-      if (typeof SETTINGS.normalizeNewtabTopContentMode === 'function') {
-        return SETTINGS.normalizeNewtabTopContentMode(value);
-      }
-      if (value === 'time') {
-        return 'time';
-      }
-      return value === 'off' || value === false ? 'off' : 'brand';
+      return SETTINGS.normalizeNewtabTopContentMode(value);
     }
 
     function normalizeNewtabTimeSecondsVisible(value) {
-      return typeof SETTINGS.normalizeNewtabTimeSecondsVisible === 'function'
-        ? SETTINGS.normalizeNewtabTimeSecondsVisible(value)
-        : value === true;
+      return SETTINGS.normalizeNewtabTimeSecondsVisible(value);
     }
 
     function normalizeNewtabTimeFontWeight(value) {
-      if (typeof SETTINGS.normalizeNewtabTimeFontWeight === 'function') {
-        return SETTINGS.normalizeNewtabTimeFontWeight(value);
-      }
-      const number = Number(value);
-      if (!Number.isFinite(number)) {
-        return NEWTAB_TIME_FONT_WEIGHT_DEFAULT;
-      }
-      return Math.min(
-        NEWTAB_TIME_FONT_WEIGHT_MAX,
-        Math.max(NEWTAB_TIME_FONT_WEIGHT_MIN, Math.round(number))
-      );
+      return SETTINGS.normalizeNewtabTimeFontWeight(value);
     }
 
     function getNewtabFaviconById(id) {
@@ -1449,23 +1319,21 @@
     }
 
     let wallpaperEffects = null;
-    const wallpaperAdaptiveTone = typeof WALLPAPER_ADAPTIVE_TONE.createWallpaperAdaptiveTone === 'function'
-      ? WALLPAPER_ADAPTIVE_TONE.createWallpaperAdaptiveTone({
-        documentObj,
-        windowObj,
-        getTargets: getWallpaperAdaptiveToneTargets,
-        getCurrentWallpaper: () => getWallpaperById(currentWallpaperId),
-        getWallpaperImageUrl,
-        getOverlayAlphaAtViewportY: getWallpaperOverlayAlphaAtViewportY,
-        getOverlayLuminance: () => getResolvedWallpaperOverlayMode() === 'dark' ? 0 : 1,
-        getEffectLuminanceAtViewport: (viewportX, viewportY, baseLuminance) => {
-          return wallpaperEffects && typeof wallpaperEffects.getLuminanceAtViewport === 'function'
-            ? wallpaperEffects.getLuminanceAtViewport(viewportX, viewportY, baseLuminance)
-            : null;
-        },
-        applyWordmarkThemeAppearance
-      })
-      : null;
+    const wallpaperAdaptiveTone = WALLPAPER_ADAPTIVE_TONE.createWallpaperAdaptiveTone({
+      documentObj,
+      windowObj,
+      getTargets: getWallpaperAdaptiveToneTargets,
+      getCurrentWallpaper: () => getWallpaperById(currentWallpaperId),
+      getWallpaperImageUrl,
+      getOverlayAlphaAtViewportY: getWallpaperOverlayAlphaAtViewportY,
+      getOverlayLuminance: () => getResolvedWallpaperOverlayMode() === 'dark' ? 0 : 1,
+      getEffectLuminanceAtViewport: (viewportX, viewportY, baseLuminance) => {
+        return wallpaperEffects && typeof wallpaperEffects.getLuminanceAtViewport === 'function'
+          ? wallpaperEffects.getLuminanceAtViewport(viewportX, viewportY, baseLuminance)
+          : null;
+      },
+      applyWordmarkThemeAppearance
+    });
     const wallpaperEffectPreload = globalThis.LumnoNewtabWallpaperEffectPreload || null;
     const wallpaperEffectRuntimeOptions = {
         documentObj,
@@ -1484,7 +1352,7 @@
         shouldAnimateTransition: wallpaperEffectRuntimeOptions.shouldAnimateTransition
       });
       wallpaperEffects = wallpaperEffectPreload.controller;
-    } else if (typeof WALLPAPER_EFFECTS.createWallpaperEffects === 'function') {
+    } else {
       if (wallpaperEffectPreload) {
         wallpaperEffectPreload.claimed = true;
       }

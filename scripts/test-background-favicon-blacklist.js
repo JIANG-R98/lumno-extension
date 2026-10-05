@@ -4,6 +4,7 @@ const path = require('path');
 
 const blacklistUtils = require('../src/shared/blacklist-utils.js');
 const faviconUtils = require('../src/shared/favicon-utils.js');
+const settings = require('../src/shared/settings.js');
 
 const repoRoot = path.resolve(__dirname, '..');
 const backgroundSource = fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8');
@@ -52,6 +53,7 @@ const extractedFunctions = [
 
 const factory = new Function('deps', 'Buffer', `
   const BLACKLIST_UTILS = deps.BLACKLIST_UTILS;
+  const SETTINGS = deps.SETTINGS;
   const FAVICON_UTILS = deps.FAVICON_UTILS;
   let faviconRequestBlacklistCache = deps.faviconRequestBlacklistCache;
   let faviconRequestBlacklistPromise = null;
@@ -153,7 +155,8 @@ const factory = new Function('deps', 'Buffer', `
 async function run() {
   const deps = {
     BLACKLIST_UTILS: blacklistUtils,
-    FAVICON_UTILS: {
+    SETTINGS: settings,
+    FAVICON_UTILS: Object.assign({}, faviconUtils, {
       getCanonicalPageUrlForFavicon(url) {
         return faviconUtils.getCanonicalPageUrlForFavicon(url);
       },
@@ -177,7 +180,7 @@ async function run() {
       createFaviconUrlResolver: faviconUtils.createFaviconUrlResolver,
       isFaviconProxyUrl: faviconUtils.isFaviconProxyUrl,
       isFaviconSourceAllowedByEnhancedFetchPolicy: faviconUtils.isFaviconSourceAllowedByEnhancedFetchPolicy
-    },
+    }),
     faviconRequestBlacklistCache: blacklistUtils.normalizeItems([
       { pattern: 'blocked.example.com', matchModes: ['suffix'] },
       { pattern: 'vpn.example.com/private', matchModes: ['prefix'] },

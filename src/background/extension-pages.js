@@ -180,9 +180,7 @@
       return null;
     }
     const settings = globalThis.LumnoSettings;
-    return settings && typeof settings.createProviderStorageRuntime === 'function'
-      ? settings.createProviderStorageRuntime(chromeApi).area
-      : chromeApi.storage.sync || chromeApi.storage.local || null;
+    return settings.createProviderStorageRuntime(chromeApi).area;
   }
 
   function getStoredReleasePageOpen(payload) {

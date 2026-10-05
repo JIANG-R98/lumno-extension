@@ -30,9 +30,9 @@ assert.match(
   /createOptionsSegmentedControlController\(\s*overlayEnterAnimationTabsWrap,\s*'overlay-enter-animation',\s*handleOverlayEnterAnimationSelection\s*\)/,
   'the animation choice should reuse the options segmented control'
 );
-assert.match(
-  optionsSource,
-  /function normalizeOverlayEnterAnimation\(value\)[\s\S]*?value === 'fade' \? 'fade' : 'elastic'/,
+assert.deepStrictEqual(
+  [undefined, 'bogus', 'fade', 'elastic'].map(settings.normalizeOverlayEnterAnimation),
+  ['elastic', 'elastic', 'fade', 'elastic'],
   'invalid and missing animation values should default to elastic'
 );
 assert.match(

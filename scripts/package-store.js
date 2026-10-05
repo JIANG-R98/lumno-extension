@@ -152,28 +152,28 @@ const stagedBackgroundPath = stagedPath('src/background/background.js');
 let stagedBackground = fs.readFileSync(stagedBackgroundPath, 'utf8');
 stagedBackground = replaceRequired(
   stagedBackground,
-  /try \{\r?\n  importScripts\(chrome\.runtime\.getURL\('src\/background\/codex-debug-bridge\.js'\)\);\r?\n\} catch \(error\) \{\r?\n  console\.warn\('Lumno: failed to load Codex debug bridge helpers\.', error\);\r?\n\}\r?\n\r?\n/,
+  /\/\/ Development-only; the store package strips this import\.\r?\nimportScripts\(chrome\.runtime\.getURL\('src\/background\/codex-debug-bridge\.js'\)\);\r?\n/,
   '',
   1,
   'background debug bridge import'
 );
 stagedBackground = replaceRequired(
   stagedBackground,
-  /const CODEX_DEBUG_BRIDGE = globalThis\.LumnoCodexDebugBackground \|\| \{\};\r?\nconst codexDebugBridge = CODEX_DEBUG_BRIDGE && typeof CODEX_DEBUG_BRIDGE\.create === 'function'\r?\n  \? CODEX_DEBUG_BRIDGE\.create\(\{ chromeApi: chrome \}\)\r?\n  : null;\r?\n/,
+  /const CODEX_DEBUG_BRIDGE = globalThis\.LumnoCodexDebugBackground;\r?\nconst codexDebugBridge = CODEX_DEBUG_BRIDGE\.create\(\{ chromeApi: chrome \}\);\r?\n/,
   '',
   1,
   'background debug bridge initialization'
 );
 stagedBackground = replaceRequired(
   stagedBackground,
-  /if \(codexDebugBridge && typeof codexDebugBridge\.attach === 'function'\) \{\r?\n  codexDebugBridge\.attach\(\);\r?\n\}\r?\n\r?\n/,
+  /codexDebugBridge\.attach\(\);\r?\n\r?\n/,
   '',
   1,
   'background debug bridge attachment'
 );
 stagedBackground = replaceRequired(
   stagedBackground,
-  /  const shouldInjectOverlayCodexDebugSurface = Boolean\(\r?\n    codexDebugBridge && typeof codexDebugBridge\.isEnabled === 'function' &&\r?\n    codexDebugBridge\.isEnabled\(\)\r?\n  \);\r?\n/,
+  /  const shouldInjectOverlayCodexDebugSurface = codexDebugBridge\.isEnabled\(\);\r?\n/,
   '',
   1,
   'conditional Overlay debug surface flag'

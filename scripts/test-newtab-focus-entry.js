@@ -15,6 +15,7 @@ const legacyHtml = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.html')
 const legacyRedirectSourcePath = path.join(repoRoot, 'src/newtab/newtab-route-redirect.js');
 const legacyRedirectSource = fs.readFileSync(legacyRedirectSourcePath, 'utf8');
 const storageKey = '_x_extension_newtab_input_auto_focus_enabled_2026_unique_';
+const settingsSource = fs.readFileSync(path.join(__dirname, '../src/shared/settings.js'), 'utf8');
 
 assert.match(
   html,
@@ -53,7 +54,7 @@ assert.match(
   'the focused destination paint gate should be available before focus routing starts'
 );
 
-function runEntry({ storedValue, search = '', storageAvailable = true }) {
+async function runEntry({ storedValue, search = '', storageAvailable = true }) {
   const replacedUrls = [];
   const attributes = new Set();
   let storageReads = 0;
@@ -68,6 +69,11 @@ function runEntry({ storedValue, search = '', storageAvailable = true }) {
   const chromeApi = storageAvailable
     ? {
         storage: {
+          local: {
+            get(_keys, callback) {
+              callback({});
+            }
+          },
           sync: {
             get(keys, callback) {
               storageReads += 1;
@@ -91,100 +97,103 @@ function runEntry({ storedValue, search = '', storageAvailable = true }) {
         }
       }
     },
-    LumnoSettings: {
-      NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY: storageKey,
-      normalizeNewtabInputAutoFocusEnabled(value) {
-        return value === true;
-      }
-    },
     window: {
       chrome: chromeApi,
       location
     }
   };
-  vm.runInNewContext(source, sandbox, { filename: sourcePath });
+  vm.createContext(sandbox);
+  vm.runInContext(settingsSource, sandbox, { filename: 'settings.js' });
+  vm.runInContext(source, sandbox, { filename: sourcePath });
+  // Provider storage reads settle after the active storage area resolves.
+  await new Promise((resolve) => setImmediate(resolve));
   return { attributes, replacedUrls, storageReads };
 }
 
-{
-  const result = runEntry({ storedValue: false });
-  assert.deepStrictEqual(result.replacedUrls, []);
-  assert.strictEqual(result.storageReads, 1);
-  assert.strictEqual(result.attributes.has('data-nt-focus-route-pending'), false);
-}
+(async () => {
+  {
+    const result = await runEntry({ storedValue: false });
+    assert.deepStrictEqual(result.replacedUrls, []);
+    assert.strictEqual(result.storageReads, 1);
+    assert.strictEqual(result.attributes.has('data-nt-focus-route-pending'), false);
+  }
 
-{
-  const result = runEntry({ storedValue: undefined });
-  assert.deepStrictEqual(result.replacedUrls, [], 'the missing preference should default to disabled');
-  assert.strictEqual(result.storageReads, 1);
-  assert.strictEqual(result.attributes.has('data-nt-focus-route-pending'), false);
-}
+  {
+    const result = await runEntry({ storedValue: undefined });
+    assert.deepStrictEqual(result.replacedUrls, [], 'the missing preference should default to disabled');
+    assert.strictEqual(result.storageReads, 1);
+    assert.strictEqual(result.attributes.has('data-nt-focus-route-pending'), false);
+  }
 
-{
-  const result = runEntry({ storedValue: true });
-  assert.deepStrictEqual(
-    result.replacedUrls,
-    ['chrome-extension://abc/newtab.html?focus=1'],
-    'an existing enabled preference should retain the renderer-navigation focus handoff'
+  {
+    const result = await runEntry({ storedValue: true });
+    assert.deepStrictEqual(
+      result.replacedUrls,
+      ['chrome-extension://abc/newtab.html?focus=1'],
+      'an existing enabled preference should retain the renderer-navigation focus handoff'
+    );
+    assert.strictEqual(result.storageReads, 1);
+  }
+
+  {
+    const result = await runEntry({ search: '?focus=1', storedValue: true });
+    assert.deepStrictEqual(result.replacedUrls, []);
+    assert.strictEqual(result.storageReads, 0, 'the focused destination must not redirect again');
+    assert.strictEqual(
+      result.attributes.has('data-nt-focus-route'),
+      true,
+      'the focused destination should retain a first-paint readiness gate'
+    );
+  }
+
+  {
+    const result = await runEntry({ storageAvailable: false });
+    assert.deepStrictEqual(result.replacedUrls, [], 'storage failures should preserve the disabled default');
+    assert.strictEqual(result.attributes.has('data-nt-focus-route-pending'), false);
+  }
+})().then(() => {
+  assert.match(
+    legacyHtml,
+    /<script src="newtab-route-redirect\.js"><\/script>/,
+    'the previous New Tab path should remain as a compatibility redirect'
   );
-  assert.strictEqual(result.storageReads, 1);
-}
-
-{
-  const result = runEntry({ search: '?focus=1', storedValue: true });
-  assert.deepStrictEqual(result.replacedUrls, []);
-  assert.strictEqual(result.storageReads, 0, 'the focused destination must not redirect again');
-  assert.strictEqual(
-    result.attributes.has('data-nt-focus-route'),
-    true,
-    'the focused destination should retain a first-paint readiness gate'
-  );
-}
-
-{
-  const result = runEntry({ storageAvailable: false });
-  assert.deepStrictEqual(result.replacedUrls, [], 'storage failures should preserve the disabled default');
-  assert.strictEqual(result.attributes.has('data-nt-focus-route-pending'), false);
-}
-
-assert.match(
-  legacyHtml,
-  /<script src="newtab-route-redirect\.js"><\/script>/,
-  'the previous New Tab path should remain as a compatibility redirect'
-);
-{
-  const replacedUrls = [];
-  vm.runInNewContext(legacyRedirectSource, {
-    URL,
-    window: {
-      location: {
-        href: 'chrome-extension://abc/src/newtab/newtab.html?focus=1&notice=file-access#search',
-        search: '?focus=1&notice=file-access',
-        hash: '#search',
-        replace(url) {
-          replacedUrls.push(url);
+  {
+    const replacedUrls = [];
+    vm.runInNewContext(legacyRedirectSource, {
+      URL,
+      window: {
+        location: {
+          href: 'chrome-extension://abc/src/newtab/newtab.html?focus=1&notice=file-access#search',
+          search: '?focus=1&notice=file-access',
+          hash: '#search',
+          replace(url) {
+            replacedUrls.push(url);
+          }
         }
       }
-    }
-  }, { filename: legacyRedirectSourcePath });
-  assert.deepStrictEqual(
-    replacedUrls,
-    ['chrome-extension://abc/newtab.html?focus=1&notice=file-access#search'],
-    'the compatibility redirect should preserve query and hash on the short route'
+    }, { filename: legacyRedirectSourcePath });
+    assert.deepStrictEqual(
+      replacedUrls,
+      ['chrome-extension://abc/newtab.html?focus=1&notice=file-access#search'],
+      'the compatibility redirect should preserve query and hash on the short route'
+    );
+  }
+
+  const openNewTabBlock = backgroundSource.match(/case 'openNewTab': \{([\s\S]*?)\n    \}/);
+  assert(openNewTabBlock, 'background should expose the openNewTab action');
+  assert.doesNotMatch(
+    openNewTabBlock[1],
+    /\burl\s*:/,
+    'openNewTab should omit an extension URL so Chromium opens chrome://newtab'
   );
-}
+  assert.match(
+    openNewTabBlock[1],
+    /createTabWithSourceGroup\(\{[\s\S]*active:/,
+    'openNewTab should retain foreground/background disposition while using the browser New Tab route'
+  );
 
-const openNewTabBlock = backgroundSource.match(/case 'openNewTab': \{([\s\S]*?)\n    \}/);
-assert(openNewTabBlock, 'background should expose the openNewTab action');
-assert.doesNotMatch(
-  openNewTabBlock[1],
-  /\burl\s*:/,
-  'openNewTab should omit an extension URL so Chromium opens chrome://newtab'
-);
-assert.match(
-  openNewTabBlock[1],
-  /createTabWithSourceGroup\(\{[\s\S]*active:/,
-  'openNewTab should retain foreground/background disposition while using the browser New Tab route'
-);
-
-console.log('newtab focus entry tests passed');
+  console.log('newtab focus entry tests passed');
+}).catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

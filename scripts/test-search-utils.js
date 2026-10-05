@@ -12,7 +12,7 @@ function readSource(relativePath) {
 function assertDirectNavigationDelegatesToShared(relativePath) {
   const source = readSource(relativePath);
   assert.ok(
-    /function getDirectNavigationUrl\(input\)\s*\{[\s\S]*?typeof (?:SEARCH_UTILS|searchUtils)\.getDirectNavigationUrl === 'function'[\s\S]*?(?:SEARCH_UTILS|searchUtils)\.getDirectNavigationUrl\(input\)/.test(source),
+    /function getDirectNavigationUrl\(input\)\s*\{[\s\S]*?(?:SEARCH_UTILS|searchUtils)\.getDirectNavigationUrl\(input\)/.test(source),
     `${relativePath} should delegate direct URL parsing to shared search utils`
   );
   assert.doesNotMatch(

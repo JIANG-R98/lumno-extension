@@ -45,10 +45,7 @@
 
   const host = String(location.hostname || "").toLowerCase();
   const AUTO_PIP_ENABLED_STORAGE_KEY = "_x_extension_auto_pip_enabled_2026_unique_";
-  const providerStorageRuntime = globalThis.LumnoSettings &&
-    typeof globalThis.LumnoSettings.createProviderStorageRuntime === "function"
-    ? globalThis.LumnoSettings.createProviderStorageRuntime(chrome)
-    : null;
+  const providerStorageRuntime = globalThis.LumnoSettings.createProviderStorageRuntime(chrome);
   let autoPipEnabled = false;
   function normalizeAutoPipEnabled(value) {
     return value !== false;

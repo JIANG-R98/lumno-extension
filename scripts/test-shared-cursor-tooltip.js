@@ -707,7 +707,7 @@ assert.match(
   'overlay search-scope labels should use a viewport-positioned cursor bubble inside the isolated style root'
 );
 const overlayModeMenuControllerSource = overlayPanel.match(
-  /const overlayModeMenuCursorTooltipController = window\.LumnoCursorTooltip[\s\S]*?\n\s*: null;/
+  /const overlayModeMenuCursorTooltipController = window\.LumnoCursorTooltip[\s\S]*?\n\s*\}\);/
 );
 assert.ok(
   overlayModeMenuControllerSource,

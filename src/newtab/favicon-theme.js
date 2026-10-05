@@ -5,7 +5,7 @@
   }
   root.LumnoNewtabFaviconTheme = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function(root) {
-  const faviconUtils = root.LumnoFaviconUtils || {};
+  const faviconUtils = root.LumnoFaviconUtils;
   const defaultAccentColor = [59, 130, 246];
   const MIN_THEME_FOREGROUND_CONTRAST = 4.5;
   const MIN_THEME_STRONG_BOUNDARY_CONTRAST = 3;
@@ -375,17 +375,7 @@
   }
 
   function normalizeFaviconHost(hostname) {
-    if (typeof faviconUtils.normalizeFaviconHost === 'function') {
-      return faviconUtils.normalizeFaviconHost(hostname);
-    }
-    if (!hostname) {
-      return '';
-    }
-    const host = String(hostname).toLowerCase().replace(/^www\./i, '');
-    if (host === 'feishu.cn' || host.endsWith('.feishu.cn')) {
-      return 'feishu.cn';
-    }
-    return host;
+    return faviconUtils.normalizeFaviconHost(hostname);
   }
 
   function getBrandAccentForHost(hostname) {
@@ -430,95 +420,30 @@
   }
 
   function hasThemeTokenInUrl(url, token) {
-    if (typeof faviconUtils.hasThemeTokenInUrl === 'function') {
-      return faviconUtils.hasThemeTokenInUrl(url, token);
-    }
-    const lower = String(url || '').toLowerCase();
-    return new RegExp(`(^|[._/-])${token}([._/-]|$)`).test(lower);
+    return faviconUtils.hasThemeTokenInUrl(url, token);
   }
 
   function shouldSkipThemeUpgradeCandidate(candidateUrl, preferredTheme, currentUrl) {
-    if (typeof faviconUtils.shouldSkipThemeUpgradeCandidate === 'function') {
-      return faviconUtils.shouldSkipThemeUpgradeCandidate(candidateUrl, preferredTheme, currentUrl);
-    }
-    const mode = preferredTheme === 'dark' ? 'dark' : (preferredTheme === 'light' ? 'light' : '');
-    if (!mode) {
-      return false;
-    }
-    const opposite = mode === 'dark' ? 'light' : 'dark';
-    if (hasThemeTokenInUrl(candidateUrl, opposite)) {
-      return true;
-    }
-    const currentHasPreferredToken = hasThemeTokenInUrl(currentUrl, mode);
-    const candidateHasPreferredToken = hasThemeTokenInUrl(candidateUrl, mode);
-    if (currentHasPreferredToken && !candidateHasPreferredToken) {
-      return true;
-    }
-    return false;
+    return faviconUtils.shouldSkipThemeUpgradeCandidate(candidateUrl, preferredTheme, currentUrl);
   }
 
   function getKnownThemedFaviconCandidates(hostname, preferredTheme) {
-    if (typeof faviconUtils.getKnownThemedFaviconCandidateUrls === 'function') {
-      return faviconUtils.getKnownThemedFaviconCandidateUrls(hostname, preferredTheme, {
-        getRuntimeUrl: (path) => {
-          const chromeApi = root.chrome;
-          return chromeApi && chromeApi.runtime && typeof chromeApi.runtime.getURL === 'function'
-            ? chromeApi.runtime.getURL(path)
-            : '';
-        }
-      });
-    }
-    const host = normalizeFaviconHost(hostname);
-    if (!host) {
-      return [];
-    }
-    if (host === 'lumno.kubai.design') {
-      const chromeApi = root.chrome;
-      const lumnoIconUrl = (chromeApi && chromeApi.runtime && typeof chromeApi.runtime.getURL === 'function')
-        ? chromeApi.runtime.getURL('assets/images/lumno.png')
-        : 'https://lumno.kubai.design/favicon.png';
-      return [
-        lumnoIconUrl
-      ];
-    }
-    if (host === 'github.com' || host.endsWith('.github.com')) {
-      if (preferredTheme === 'dark') {
-        return [
-          'https://github.githubassets.com/favicons/favicon-dark.svg',
-          'https://github.githubassets.com/favicons/favicon.svg',
-          'https://github.githubassets.com/favicons/favicon.png'
-        ];
+    return faviconUtils.getKnownThemedFaviconCandidateUrls(hostname, preferredTheme, {
+      getRuntimeUrl: (path) => {
+        const chromeApi = root.chrome;
+        return chromeApi && chromeApi.runtime && typeof chromeApi.runtime.getURL === 'function'
+          ? chromeApi.runtime.getURL(path)
+          : '';
       }
-      return [
-        'https://github.githubassets.com/favicons/favicon.svg',
-        'https://github.githubassets.com/favicons/favicon-dark.svg',
-        'https://github.githubassets.com/favicons/favicon.png'
-      ];
-    }
-    return [];
+    });
   }
 
   function hostHasExplicitDarkFavicon(hostname) {
-    if (typeof faviconUtils.hostHasExplicitDarkFavicon === 'function') {
-      return faviconUtils.hostHasExplicitDarkFavicon(hostname);
-    }
-    const host = normalizeFaviconHost(hostname);
-    if (!host) {
-      return false;
-    }
-    return host === 'github.com' || host.endsWith('.github.com');
+    return faviconUtils.hostHasExplicitDarkFavicon(hostname);
   }
 
   function isFaviconProxyUrl(url) {
-    if (typeof faviconUtils.isFaviconProxyUrl === 'function') {
-      return faviconUtils.isFaviconProxyUrl(url);
-    }
-    if (!url) {
-      return false;
-    }
-    return /google\.com\/s2\/favicons/i.test(url) ||
-      /gstatic\.com\/favicon/i.test(url) ||
-      /favicon\.is\//i.test(url);
+    return faviconUtils.isFaviconProxyUrl(url);
   }
 
   function extractAverageColor(image) {

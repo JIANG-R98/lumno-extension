@@ -41,7 +41,7 @@ for (const [surface, source, expectedRemovalBranches] of [
 
 assert.ok(
   toastSource.includes('function createToastController(toastElement, options)') &&
-    overlaySource.includes('const OVERLAY_TOAST = window.LumnoToast || {};'),
+    overlaySource.includes('const OVERLAY_TOAST = window.LumnoToast;'),
   'overlay should use the shared lightweight Toast runtime'
 );
 assert.ok(

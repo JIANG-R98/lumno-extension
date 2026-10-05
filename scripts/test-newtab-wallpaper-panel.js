@@ -2,6 +2,20 @@ const assert = require('assert');
 const fs = require('fs');
 const vm = require('vm');
 
+// Real page dependencies, loaded the way newtab.html loads them before wallpaper.js.
+require('../src/shared/settings.js');
+require('../src/newtab/wallpaper-adaptive-tone.js');
+require('../src/newtab/wallpaper-effects.js');
+require('../src/newtab/wallpaper-local-store.js');
+require('../src/newtab/remote-content.js');
+const REAL_WALLPAPER_DEPENDENCIES = {
+  LumnoSettings: globalThis.LumnoSettings,
+  LumnoNewtabRemoteContent: globalThis.LumnoNewtabRemoteContent,
+  LumnoNewtabWallpaperAdaptiveTone: globalThis.LumnoNewtabWallpaperAdaptiveTone,
+  LumnoNewtabWallpaperEffects: globalThis.LumnoNewtabWallpaperEffects,
+  LumnoNewtabWallpaperLocalStore: globalThis.LumnoNewtabWallpaperLocalStore
+};
+
 const WALLPAPER_STORAGE_KEY = '_x_extension_newtab_wallpaper_2026_unique_';
 const LOCAL_WALLPAPER_STORAGE_KEY = '_x_extension_newtab_local_wallpaper_2026_unique_';
 const WALLPAPER_OVERLAY_STORAGE_KEY = '_x_extension_newtab_wallpaper_overlay_2026_unique_';
@@ -1563,6 +1577,7 @@ function testNewtabFaviconPreloadAppliesCachedAlternateBeforeMainRuntime() {
   const windowObj = createFakeWindow();
   windowObj.localStorage.setItem(NEWTAB_FAVICON_PRELOAD_STORAGE_KEY, 'alternate');
   const sandbox = {
+    ...REAL_WALLPAPER_DEPENDENCIES,
     document: documentObj,
     window: windowObj,
     chrome: {
@@ -1641,6 +1656,7 @@ function testNewtabFaviconPreloadAppliesCachedAlternateBeforeMainRuntime() {
 async function testWallpaperPreloadUsesTheCachedResolvedMode() {
   const runWallpaperPreload = (documentObj, windowObj) => {
     const preloadSandbox = {
+      ...REAL_WALLPAPER_DEPENDENCIES,
       document: documentObj,
       window: windowObj,
       chrome: {
@@ -1876,10 +1892,23 @@ function createWallpaperSandbox(options) {
         getURL: (path) => `chrome-extension://abc/${String(path || '').replace(/^\/+/, '')}`
       }
     },
-    LumnoNewtabRemoteContent: options && options.remoteApi ? options.remoteApi : {},
-    LumnoNewtabWallpaperAdaptiveTone: {},
-    LumnoNewtabWallpaperEffects: options && options.effectsApi ? options.effectsApi : {},
-    LumnoNewtabWallpaperLocalStore: options && options.localStoreApi ? options.localStoreApi : {},
+    ...REAL_WALLPAPER_DEPENDENCIES,
+    // Test doubles replace individual functions of the real modules.
+    LumnoNewtabRemoteContent: Object.assign(
+      {},
+      REAL_WALLPAPER_DEPENDENCIES.LumnoNewtabRemoteContent,
+      options && options.remoteApi
+    ),
+    LumnoNewtabWallpaperEffects: Object.assign(
+      {},
+      REAL_WALLPAPER_DEPENDENCIES.LumnoNewtabWallpaperEffects,
+      options && options.effectsApi
+    ),
+    LumnoNewtabWallpaperLocalStore: Object.assign(
+      {},
+      REAL_WALLPAPER_DEPENDENCIES.LumnoNewtabWallpaperLocalStore,
+      options && options.localStoreApi
+    ),
     LumnoNewtabWallpaperView: {
       createController: createFakeWallpaperViewController
     }
@@ -1911,9 +1940,7 @@ const sandbox = {
       getURL: (path) => `chrome-extension://abc/${String(path || '').replace(/^\/+/, '')}`
     }
   },
-  LumnoNewtabWallpaperAdaptiveTone: {},
-  LumnoNewtabWallpaperEffects: {},
-  LumnoNewtabWallpaperLocalStore: {},
+  ...REAL_WALLPAPER_DEPENDENCIES,
   LumnoNewtabWallpaperView: {
     createController: createFakeWallpaperViewController
   }

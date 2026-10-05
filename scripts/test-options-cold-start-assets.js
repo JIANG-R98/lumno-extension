@@ -154,53 +154,64 @@ const sandbox = {
 sandbox.globalThis = sandbox;
 sandbox.window = sandbox;
 
-vm.runInNewContext(fs.readFileSync(preloadPath, 'utf8'), sandbox, {
+vm.createContext(sandbox);
+vm.runInContext(fs.readFileSync(path.join(repoRoot, 'src/shared/settings.js'), 'utf8'), sandbox, {
+  filename: 'settings.js'
+});
+vm.runInContext(fs.readFileSync(preloadPath, 'utf8'), sandbox, {
   filename: 'theme-preload.js'
 });
 
-assert.strictEqual(root.getAttribute('data-theme-ready'), 'true');
-assert.strictEqual(root.getAttribute('data-options-preload-theme'), 'dark');
-assert.strictEqual(root.getAttribute('data-options-theme-mode'), 'dark');
-assert.strictEqual(body.getAttribute('data-theme'), 'dark');
-assert.strictEqual(panel.getAttribute('data-theme'), 'dark');
-assert.strictEqual(root.getAttribute('data-options-initial-tab'), 'shortcuts');
-tabButtons.forEach((button) => {
+(async () => {
+  // The provider storage runtime resolves its active area before reading.
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.strictEqual(root.getAttribute('data-theme-ready'), 'true');
+  assert.strictEqual(root.getAttribute('data-options-preload-theme'), 'dark');
+  assert.strictEqual(root.getAttribute('data-options-theme-mode'), 'dark');
+  assert.strictEqual(body.getAttribute('data-theme'), 'dark');
+  assert.strictEqual(panel.getAttribute('data-theme'), 'dark');
+  assert.strictEqual(root.getAttribute('data-options-initial-tab'), 'shortcuts');
+  tabButtons.forEach((button) => {
+    assert.strictEqual(
+      button.getAttribute('data-active'),
+      button.getAttribute('data-tab') === 'shortcuts' ? 'true' : 'false'
+    );
+  });
+  tabContents.forEach((content) => {
+    assert.strictEqual(
+      content.getAttribute('data-active'),
+      content.getAttribute('data-content') === 'shortcuts' ? 'true' : 'false'
+    );
+  });
+  assert.strictEqual(themeColorMeta.getAttribute('content'), '#111111');
   assert.strictEqual(
-    button.getAttribute('data-active'),
-    button.getAttribute('data-tab') === 'shortcuts' ? 'true' : 'false'
+    localStorageValues.get('_x_extension_options_theme_preload_2026_unique_'),
+    'dark',
+    'the definitive stored preference should refresh the synchronous cache'
   );
-});
-tabContents.forEach((content) => {
+  const imagePreload = headChildren.find((node) => node.id === '_x_extension_options_background_preload_2026_unique_');
+  assert(imagePreload, 'Options should preload its resolved background before first paint');
+  assert.strictEqual(imagePreload.rel, 'preload');
+  assert.strictEqual(imagePreload.as, 'image');
+  assert.strictEqual(imagePreload.fetchPriority, 'high');
   assert.strictEqual(
-    content.getAttribute('data-active'),
-    content.getAttribute('data-content') === 'shortcuts' ? 'true' : 'false'
+    imagePreload.href,
+    'chrome-extension://lumno/assets/images/settings-bg-dark.webp'
   );
-});
-assert.strictEqual(themeColorMeta.getAttribute('content'), '#111111');
-assert.strictEqual(
-  localStorageValues.get('_x_extension_options_theme_preload_2026_unique_'),
-  'dark',
-  'the definitive stored preference should refresh the synchronous cache'
-);
-const imagePreload = headChildren.find((node) => node.id === '_x_extension_options_background_preload_2026_unique_');
-assert(imagePreload, 'Options should preload its resolved background before first paint');
-assert.strictEqual(imagePreload.rel, 'preload');
-assert.strictEqual(imagePreload.as, 'image');
-assert.strictEqual(imagePreload.fetchPriority, 'high');
-assert.strictEqual(
-  imagePreload.href,
-  'chrome-extension://lumno/assets/images/settings-bg-dark.webp'
-);
-assert(
-  optionsSource.includes("const OPTIONS_THEME_PRELOAD_STORAGE_KEY = '_x_extension_options_theme_preload_2026_unique_';") &&
-    optionsSource.includes('cacheOptionsThemeMode(storedMode);') &&
-    optionsSource.includes('cacheOptionsThemeMode(nextMode);'),
-  'Options should keep the synchronous theme cache current after reads and changes'
-);
-assert(
-  html.includes('data-tab="general" data-active="true"') &&
-    html.includes('data-content="general" data-active="true"'),
-  'Options should statically paint the default General route'
-);
+  assert(
+    optionsSource.includes("const OPTIONS_THEME_PRELOAD_STORAGE_KEY = '_x_extension_options_theme_preload_2026_unique_';") &&
+      optionsSource.includes('cacheOptionsThemeMode(storedMode);') &&
+      optionsSource.includes('cacheOptionsThemeMode(nextMode);'),
+    'Options should keep the synchronous theme cache current after reads and changes'
+  );
+  assert(
+    html.includes('data-tab="general" data-active="true"') &&
+      html.includes('data-content="general" data-active="true"'),
+    'Options should statically paint the default General route'
+  );
 
-console.log('Options cold-start asset tests passed');
+  console.log('Options cold-start asset tests passed');
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

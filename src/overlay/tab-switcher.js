@@ -9,7 +9,7 @@
   const switcherThemeMediaQuery = typeof window.matchMedia === 'function'
     ? window.matchMedia('(prefers-color-scheme: dark)')
     : null;
-  const providerRuntime = globalThis.LumnoSettings && globalThis.LumnoSettings.createProviderStorageRuntime(chromeApi);
+  const providerRuntime = globalThis.LumnoSettings.createProviderStorageRuntime(chromeApi);
   const switcherThemeStorageArea = providerRuntime ? providerRuntime.area : (chromeApi && chromeApi.storage && chromeApi.storage.sync)
     ? chromeApi.storage.sync
     : (chromeApi && chromeApi.storage ? chromeApi.storage.local : null);

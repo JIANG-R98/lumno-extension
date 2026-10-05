@@ -105,7 +105,7 @@ assert.match(
 );
 assert.match(
   overlaySource,
-  /typeof overlayPageTheme\.getCssColorThemeSignal === 'function'[\s\S]*?return overlayPageTheme\.getCssColorThemeSignal\(color, weight\);/,
+  /return overlayPageTheme\.getCssColorThemeSignal\(color, weight\);/,
   'page background signals should preserve CSS alpha instead of treating transparent black as opaque black'
 );
 assert.match(

@@ -477,8 +477,8 @@ assertOrder(
   'the cross-surface helpers should load before the page runtime'
 );
 assert.ok(
-  newtabJs.includes("typeof NEWTAB_CROSS_SURFACE_DRAG.planBookmarkToShortcut !== 'function'"),
-  'the page runtime should require the cross-surface helpers'
+  newtabJs.includes('NEWTAB_CROSS_SURFACE_DRAG.planBookmarkToShortcut('),
+  'the page runtime should use the cross-surface helpers'
 );
 
 const applyShortcutDragMoveSource = getFunctionSource(newtabJs, 'applyShortcutDragMove');

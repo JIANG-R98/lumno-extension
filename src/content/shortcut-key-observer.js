@@ -10,7 +10,7 @@
   }
   const SHOW_SEARCH_SHORTCUT_REFRESH_MS = 15000;
   const RELEASE_REPLAY_WINDOW_MS = 5000;
-  const SHORTCUT_KEY_MATCHER = globalThis.LumnoShortcutKeyMatcher || {};
+  const SHORTCUT_KEY_MATCHER = globalThis.LumnoShortcutKeyMatcher;
   let showSearchShortcutRaw = '';
   let showSearchShortcutSpec = null;
   let showSearchShortcutRefreshedAt = 0;
@@ -39,9 +39,7 @@
   function applyShowSearchShortcut(shortcut) {
     const nextShortcut = String(shortcut || '').trim();
     showSearchShortcutRaw = nextShortcut;
-    showSearchShortcutSpec = typeof SHORTCUT_KEY_MATCHER.parseShortcut === 'function'
-      ? SHORTCUT_KEY_MATCHER.parseShortcut(nextShortcut)
-      : null;
+    showSearchShortcutSpec = SHORTCUT_KEY_MATCHER.parseShortcut(nextShortcut);
   }
 
   function refreshShowSearchShortcut(force) {
@@ -69,8 +67,7 @@
   }
 
   function relayUnresolvedShowSearchShortcut(event, descriptor) {
-    if (typeof SHORTCUT_KEY_MATCHER.canBeChromeCommandShortcut !== 'function' ||
-        !SHORTCUT_KEY_MATCHER.canBeChromeCommandShortcut(descriptor)) {
+    if (!SHORTCUT_KEY_MATCHER.canBeChromeCommandShortcut(descriptor)) {
       return;
     }
     try {
@@ -101,15 +98,12 @@
     }
     rememberTrustedShortcutKeydown(event);
     refreshShowSearchShortcut(false);
-    const descriptor = typeof SHORTCUT_KEY_MATCHER.describeKeyboardEvent === 'function'
-      ? SHORTCUT_KEY_MATCHER.describeKeyboardEvent(event)
-      : null;
+    const descriptor = SHORTCUT_KEY_MATCHER.describeKeyboardEvent(event);
     if (!showSearchShortcutSpec) {
       relayUnresolvedShowSearchShortcut(event, descriptor);
       return;
     }
-    if (typeof SHORTCUT_KEY_MATCHER.descriptorMatchesShortcut !== 'function' ||
-        !SHORTCUT_KEY_MATCHER.descriptorMatchesShortcut(descriptor, showSearchShortcutSpec)) {
+    if (!SHORTCUT_KEY_MATCHER.descriptorMatchesShortcut(descriptor, showSearchShortcutSpec)) {
       return;
     }
     event.preventDefault();

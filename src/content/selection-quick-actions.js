@@ -6,13 +6,10 @@
   }
   window._x_extension_selection_quick_actions_2026_unique_ = true;
 
-  const INTENT = globalThis.LumnoSelectionIntent || {};
-  const ACTION_ICON_LIBRARY = globalThis.LumnoSelectionActionIcons || {};
-  const TOAST = globalThis.LumnoToast || {};
-  const SETTINGS = globalThis.LumnoSettings || {};
-  if (typeof INTENT.classifySelection !== 'function') {
-    return;
-  }
+  const INTENT = globalThis.LumnoSelectionIntent;
+  const ACTION_ICON_LIBRARY = globalThis.LumnoSelectionActionIcons;
+  const TOAST = globalThis.LumnoToast;
+  const SETTINGS = globalThis.LumnoSettings;
 
   const ENABLED_STORAGE_KEY = '_x_extension_selection_quick_actions_enabled_2026_unique_';
   const LANGUAGE_STORAGE_KEY = '_x_extension_language_2024_unique_';
@@ -39,9 +36,7 @@
   const ACTION_FAILURE_DISMISS_MS = 2200;
   const VIEWPORT_SAFE_MARGIN_PX = 12;
   const TEXT_INPUT_TYPES = new Set(['text', 'search', 'url', 'tel', 'email']);
-  const providerStorageRuntime = typeof SETTINGS.createProviderStorageRuntime === 'function'
-    ? SETTINGS.createProviderStorageRuntime(chrome)
-    : null;
+  const providerStorageRuntime = SETTINGS.createProviderStorageRuntime(chrome);
   const storageArea = providerStorageRuntime
     ? providerStorageRuntime.area
     : (chrome && chrome.storage && chrome.storage.sync
@@ -338,10 +333,6 @@
   function ensureSelectionToast() {
     if (toastHost && toastHost.isConnected && toastController) {
       return true;
-    }
-    if (typeof TOAST.createToastController !== 'function' ||
-        typeof TOAST.createToastStyleGate !== 'function') {
-      return false;
     }
     clearSelectionToast();
     const staleHost = document.getElementById(TOAST_HOST_ID);

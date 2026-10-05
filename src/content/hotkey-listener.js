@@ -10,11 +10,9 @@
   const PAGE_TOAST_ID = '_x_extension_page_toast_2026_unique_';
   const PAGE_TOAST_SHOW_DURATION_MS = 2000;
   const LANGUAGE_STORAGE_KEY = '_x_extension_language_2024_unique_';
-  const SETTINGS = globalThis.LumnoSettings || {};
-  const SHORTCUT_KEY_MATCHER = globalThis.LumnoShortcutKeyMatcher || {};
-  const providerStorageRuntime = typeof SETTINGS.createProviderStorageRuntime === 'function'
-    ? SETTINGS.createProviderStorageRuntime(chrome)
-    : null;
+  const SETTINGS = globalThis.LumnoSettings;
+  const SHORTCUT_KEY_MATCHER = globalThis.LumnoShortcutKeyMatcher;
+  const providerStorageRuntime = SETTINGS.createProviderStorageRuntime(chrome);
   const storageArea = providerStorageRuntime
     ? providerStorageRuntime.area
     : ((chrome && chrome.storage && chrome.storage.sync)

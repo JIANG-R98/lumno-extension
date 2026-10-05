@@ -1,222 +1,50 @@
+// Classic service-worker imports run in dependency order. A missing file is a
+// packaging error, so let it fail loudly instead of starting half-initialized.
+importScripts(
+  chrome.runtime.getURL('src/shared/blacklist-utils.js'),
+  chrome.runtime.getURL('src/shared/url-guards.js'),
+  chrome.runtime.getURL('src/shared/favicon-utils.js'),
+  chrome.runtime.getURL('src/shared/shortcut-favicon.js'),
+  chrome.runtime.getURL('src/shared/shortcut-key-matcher.js'),
+  chrome.runtime.getURL('src/shared/favicon-cache.js'),
+  chrome.runtime.getURL('src/newtab/favicon-theme.js'),
+  chrome.runtime.getURL('src/shared/extension-routes.js'),
+  chrome.runtime.getURL('src/background/command-target-policy.js'),
+  chrome.runtime.getURL('src/shared/settings.js'),
+  chrome.runtime.getURL('src/shared/bookmark-folder-reference.js'),
+  chrome.runtime.getURL('src/newtab/shortcuts-store.js'),
+  chrome.runtime.getURL('src/newtab/wallpaper-local-store.js'),
+  chrome.runtime.getURL('src/shared/webdav-contract.js'),
+  chrome.runtime.getURL('src/background/webdav-client.js'),
+  chrome.runtime.getURL('src/background/webdav-sync.js'),
+  chrome.runtime.getURL('src/shared/update-notice.js'),
+  chrome.runtime.getURL('src/shared/search-utils.js'),
+  chrome.runtime.getURL('src/shared/selection-intent.js'),
+  chrome.runtime.getURL('src/shared/site-search-store.js'),
+  chrome.runtime.getURL('src/shared/aggregate-search-store.js'),
+  chrome.runtime.getURL('src/background/ai-provider-submit.js'),
+  chrome.runtime.getURL('src/background/aggregate-search.js'),
+  chrome.runtime.getURL('src/background/extension-pages.js'),
+  chrome.runtime.getURL('src/background/tab-groups.js'),
+  chrome.runtime.getURL('src/background/search-result-tabs.js'),
+  chrome.runtime.getURL('src/background/bookmark-tab-groups.js'),
+  chrome.runtime.getURL('src/background/selection-target.js'),
+  chrome.runtime.getURL('src/background/selection-quick-action-provider.js'),
+  chrome.runtime.getURL('src/background/message-router.js'),
+  chrome.runtime.getURL('src/background/newtab-fallback.js'),
+  chrome.runtime.getURL('src/shared/browser-profile.js'),
+  chrome.runtime.getURL('src/background/shortcut-rules.js'),
+  chrome.runtime.getURL('src/background/pip-ownership.js'),
+  chrome.runtime.getURL('src/background/pip-main-world.js'),
+  chrome.runtime.getURL('src/background/recent-tab-switcher.js'),
+  chrome.runtime.getURL('src/background/overlay-loading-lifecycle.js'),
+  chrome.runtime.getURL('src/background/dev-extension-startup.js'),
+  chrome.runtime.getURL('assets/vendor/pinyin-pro.js')
+);
+// Development-only; the store package strips this import.
+importScripts(chrome.runtime.getURL('src/background/codex-debug-bridge.js'));
 
-try {
-  importScripts(chrome.runtime.getURL('src/shared/blacklist-utils.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load blacklist utils.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/shared/url-guards.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load URL guards.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/shared/favicon-utils.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load favicon utils.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/shared/shortcut-favicon.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load shortcut favicon helpers.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/shared/shortcut-key-matcher.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load shortcut key matcher.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/shared/favicon-cache.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load favicon cache runtime.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/newtab/favicon-theme.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load newtab favicon theme helpers.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/shared/extension-routes.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load extension routes.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/background/command-target-policy.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load command target policy.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/shared/settings.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load settings utils.', error);
-}
-
-try {
-  importScripts(
-    chrome.runtime.getURL('src/shared/bookmark-folder-reference.js'),
-    chrome.runtime.getURL('src/newtab/shortcuts-store.js'),
-    chrome.runtime.getURL('src/newtab/wallpaper-local-store.js'),
-    chrome.runtime.getURL('src/shared/webdav-contract.js'),
-    chrome.runtime.getURL('src/background/webdav-client.js'),
-    chrome.runtime.getURL('src/background/webdav-sync.js')
-  );
-} catch (error) {
-  console.warn('Lumno: failed to load WebDAV sync.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/shared/update-notice.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load update notice utils.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/shared/search-utils.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load search utils.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/shared/selection-intent.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load selection intent helpers.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/shared/site-search-store.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load site search store.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/shared/aggregate-search-store.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load aggregate search store.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/background/ai-provider-submit.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load AI provider submit runtime.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/background/aggregate-search.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load aggregate search runtime.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/background/extension-pages.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load extension page helpers.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/background/tab-groups.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load tab group helpers.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/background/search-result-tabs.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load search result tab helpers.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/background/bookmark-tab-groups.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load bookmark tab group helpers.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/background/selection-target.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load selection target helpers.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/background/selection-quick-action-provider.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load selection quick action provider helpers.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/background/message-router.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load background message router.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/background/newtab-fallback.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load newtab fallback helpers.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/shared/browser-profile.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load browser profile helpers.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/background/shortcut-rules.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load shortcut rules helpers.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/background/pip-ownership.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load PiP ownership utils.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/background/pip-main-world.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load PiP main-world utils.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/background/recent-tab-switcher.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load recent tab switcher helpers.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/background/overlay-loading-lifecycle.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load Overlay loading lifecycle helpers.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/background/dev-extension-startup.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load development startup helpers.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('src/background/codex-debug-bridge.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load Codex debug bridge helpers.', error);
-}
-
-try {
-  importScripts(chrome.runtime.getURL('assets/vendor/pinyin-pro.js'));
-} catch (error) {
-  console.warn('Lumno: failed to load pinyin support.', error);
-}
-
-const BACKGROUND_PAGES = globalThis.LumnoBackgroundPages || {};
+const BACKGROUND_PAGES = globalThis.LumnoBackgroundPages;
 const getExtensionDetailsUrl = BACKGROUND_PAGES.getExtensionDetailsUrl;
 const openExtensionOptionsPage = BACKGROUND_PAGES.openExtensionOptionsPage;
 const openOnboardingPage = BACKGROUND_PAGES.openOnboardingPage;
@@ -225,40 +53,36 @@ const openReleasePage = BACKGROUND_PAGES.openReleasePage;
 const openBookmarkManagerPage = BACKGROUND_PAGES.openBookmarkManagerPage;
 const openExtensionShortcutsPage = BACKGROUND_PAGES.openExtensionShortcutsPage;
 const openSiteSearchOptionsPage = BACKGROUND_PAGES.openSiteSearchOptionsPage;
-const BACKGROUND_MESSAGE_ROUTER = globalThis.LumnoBackgroundMessageRouter || {};
-const BOOKMARK_TAB_GROUPS = globalThis.LumnoBookmarkTabGroups || {};
-const EXTENSION_ROUTES = globalThis.LumnoExtensionRoutes || {};
-const UPDATE_NOTICE = globalThis.LumnoUpdateNotice || {};
-const SETTINGS = globalThis.LumnoSettings || {};
-const COMMAND_TARGET_POLICY = globalThis.LumnoCommandTargetPolicy || {};
-const FAVICON_UTILS = globalThis.LumnoFaviconUtils || {};
-const FAVICON_CACHE = globalThis.LumnoFaviconCache || {};
-const SHORTCUT_FAVICON = globalThis.LumnoShortcutFavicon || {};
-const SHORTCUT_KEY_MATCHER = globalThis.LumnoShortcutKeyMatcher || {};
-const NEWTAB_FAVICON_THEME = globalThis.LumnoNewtabFaviconTheme || {};
-const BACKGROUND_NEWTAB_FALLBACK = globalThis.LumnoBackgroundNewtabFallback || {};
-const BACKGROUND_TAB_GROUPS = globalThis.LumnoBackgroundTabGroups || {};
-const SEARCH_RESULT_TABS = globalThis.LumnoSearchResultTabs || {};
+const BACKGROUND_MESSAGE_ROUTER = globalThis.LumnoBackgroundMessageRouter;
+const BOOKMARK_TAB_GROUPS = globalThis.LumnoBookmarkTabGroups;
+const EXTENSION_ROUTES = globalThis.LumnoExtensionRoutes;
+const UPDATE_NOTICE = globalThis.LumnoUpdateNotice;
+const SETTINGS = globalThis.LumnoSettings;
+const COMMAND_TARGET_POLICY = globalThis.LumnoCommandTargetPolicy;
+const FAVICON_UTILS = globalThis.LumnoFaviconUtils;
+const FAVICON_CACHE = globalThis.LumnoFaviconCache;
+const SHORTCUT_FAVICON = globalThis.LumnoShortcutFavicon;
+const SHORTCUT_KEY_MATCHER = globalThis.LumnoShortcutKeyMatcher;
+const NEWTAB_FAVICON_THEME = globalThis.LumnoNewtabFaviconTheme;
+const BACKGROUND_NEWTAB_FALLBACK = globalThis.LumnoBackgroundNewtabFallback;
+const BACKGROUND_TAB_GROUPS = globalThis.LumnoBackgroundTabGroups;
+const SEARCH_RESULT_TABS = globalThis.LumnoSearchResultTabs;
 const isLocalFileLikeTargetUrl = BACKGROUND_NEWTAB_FALLBACK.isLocalFileLikeTargetUrl;
 const checkFileSchemeAccess = BACKGROUND_NEWTAB_FALLBACK.checkFileSchemeAccess;
 const openBrowserNewtabFallback = BACKGROUND_NEWTAB_FALLBACK.openBrowserNewtabFallback;
 const openNewtabFallback = BACKGROUND_NEWTAB_FALLBACK.openNewtabFallback;
 const openNewtabFallbackForUrl = BACKGROUND_NEWTAB_FALLBACK.openNewtabFallbackForUrl;
-const BACKGROUND_SHORTCUT_RULES = globalThis.LumnoShortcutRules || {};
-const RECENT_TAB_SWITCHER = globalThis.LumnoRecentTabSwitcher || {};
-const OVERLAY_LOADING_LIFECYCLE = globalThis.LumnoOverlayLoadingLifecycle || {};
-const DEV_EXTENSION_STARTUP = globalThis.LumnoDevExtensionStartup || {};
-const CODEX_DEBUG_BRIDGE = globalThis.LumnoCodexDebugBackground || {};
-const codexDebugBridge = CODEX_DEBUG_BRIDGE && typeof CODEX_DEBUG_BRIDGE.create === 'function'
-  ? CODEX_DEBUG_BRIDGE.create({ chromeApi: chrome })
-  : null;
-const shortcutRules = BACKGROUND_SHORTCUT_RULES && typeof BACKGROUND_SHORTCUT_RULES.create === 'function'
-  ? BACKGROUND_SHORTCUT_RULES.create({
-    chromeApi: chrome,
-    fetchImpl: fetch,
-    navigatorLike: navigator
-  })
-  : null;
+const BACKGROUND_SHORTCUT_RULES = globalThis.LumnoShortcutRules;
+const RECENT_TAB_SWITCHER = globalThis.LumnoRecentTabSwitcher;
+const OVERLAY_LOADING_LIFECYCLE = globalThis.LumnoOverlayLoadingLifecycle;
+const DEV_EXTENSION_STARTUP = globalThis.LumnoDevExtensionStartup;
+const CODEX_DEBUG_BRIDGE = globalThis.LumnoCodexDebugBackground;
+const codexDebugBridge = CODEX_DEBUG_BRIDGE.create({ chromeApi: chrome });
+const shortcutRules = BACKGROUND_SHORTCUT_RULES.create({
+  chromeApi: chrome,
+  fetchImpl: fetch,
+  navigatorLike: navigator
+});
 const loadShortcutRules = shortcutRules && typeof shortcutRules.loadShortcutRules === 'function'
   ? shortcutRules.loadShortcutRules
   : () => Promise.resolve([]);
@@ -267,119 +91,28 @@ const getShortcutUrl = shortcutRules && typeof shortcutRules.getShortcutUrl === 
   : () => null;
 
 function isBrowserExtensionProtocol(protocol) {
-  const guards = globalThis.LumnoUrlGuards || {};
-  if (typeof guards.isBrowserExtensionProtocol === 'function') {
-    return guards.isBrowserExtensionProtocol(protocol);
-  }
-  const normalized = String(protocol || '').toLowerCase();
-  return normalized === 'chrome-extension:' ||
-    normalized === 'moz-extension:' ||
-    normalized === 'ms-browser-extension:';
+  const guards = globalThis.LumnoUrlGuards;
+  return guards.isBrowserExtensionProtocol(protocol);
 }
 
 function isBrowserInternalUrl(url) {
-  const guards = globalThis.LumnoUrlGuards || {};
-  if (typeof guards.isBrowserInternalUrl === 'function') {
-    return guards.isBrowserInternalUrl(url);
-  }
-  const lower = String(url || '').toLowerCase();
-  return lower.startsWith('chrome://') ||
-    lower.startsWith('edge://') ||
-    lower.startsWith('brave://') ||
-    lower.startsWith('vivaldi://') ||
-    lower.startsWith('opera://') ||
-    lower.startsWith('about:');
+  const guards = globalThis.LumnoUrlGuards;
+  return guards.isBrowserInternalUrl(url);
 }
 
 function isRestrictedUrl(url) {
-  const guards = globalThis.LumnoUrlGuards || {};
-  if (typeof guards.isRestrictedUrl === 'function') {
-    return guards.isRestrictedUrl(url);
-  }
-  if (!url) {
-    return true;
-  }
-  const lower = String(url).toLowerCase();
-  if (lower.startsWith('chrome://') ||
-    lower.startsWith('edge://') ||
-    lower.startsWith('brave://') ||
-    lower.startsWith('vivaldi://') ||
-    lower.startsWith('opera://') ||
-    lower.startsWith('about:')) {
-    return true;
-  }
-  try {
-    const parsed = new URL(url);
-    const protocol = String(parsed.protocol || '').toLowerCase();
-    if (isBrowserExtensionProtocol(protocol)) {
-      return true;
-    }
-    if (protocol !== 'http:' && protocol !== 'https:') {
-      return true;
-    }
-    const host = parsed.hostname.toLowerCase();
-    const path = parsed.pathname.toLowerCase();
-    if ((host === 'chrome.google.com' && path.startsWith('/webstore')) ||
-        host === 'chromewebstore.google.com' ||
-        (host === 'microsoftedge.microsoft.com' && path.startsWith('/addons')) ||
-        host === 'addons.opera.com') {
-      return true;
-    }
-  } catch (e) {
-    return true;
-  }
-  return false;
+  const guards = globalThis.LumnoUrlGuards;
+  return guards.isRestrictedUrl(url);
 }
 
 function canOpenOverlayOnUrl(url) {
-  const guards = globalThis.LumnoUrlGuards || {};
-  if (typeof guards.canOpenOverlayOnUrl === 'function') {
-    return guards.canOpenOverlayOnUrl(url);
-  }
-  if (!url) {
-    return false;
-  }
-  const lower = String(url).toLowerCase();
-  if (lower.startsWith('chrome://') ||
-    lower.startsWith('edge://') ||
-    lower.startsWith('brave://') ||
-    lower.startsWith('vivaldi://') ||
-    lower.startsWith('opera://') ||
-    lower.startsWith('about:')) {
-    return false;
-  }
-  try {
-    const parsed = new URL(url);
-    const protocol = String(parsed.protocol || '').toLowerCase();
-    if (isBrowserExtensionProtocol(protocol)) {
-      return false;
-    }
-    if (protocol === 'file:') {
-      return true;
-    }
-    if (protocol !== 'http:' && protocol !== 'https:') {
-      return false;
-    }
-    const host = parsed.hostname.toLowerCase();
-    const path = parsed.pathname.toLowerCase();
-    if ((host === 'chrome.google.com' && path.startsWith('/webstore')) ||
-        host === 'chromewebstore.google.com' ||
-        (host === 'microsoftedge.microsoft.com' && path.startsWith('/addons')) ||
-        host === 'addons.opera.com') {
-      return false;
-    }
-  } catch (e) {
-    return false;
-  }
-  return true;
+  const guards = globalThis.LumnoUrlGuards;
+  return guards.canOpenOverlayOnUrl(url);
 }
 
 function canFetchPageForFavicon(url) {
-  const guards = globalThis.LumnoUrlGuards || {};
-  if (typeof guards.canFetchPageForFavicon === 'function') {
-    return guards.canFetchPageForFavicon(url);
-  }
-  return !isRestrictedUrl(url);
+  const guards = globalThis.LumnoUrlGuards;
+  return guards.canFetchPageForFavicon(url);
 }
 
 function isOwnExtensionPageUrl(url) {
@@ -407,32 +140,12 @@ function getResolvedTabUrl(tab) {
 }
 
 function getSourceTabGroupContext(tab) {
-  if (BACKGROUND_TAB_GROUPS && typeof BACKGROUND_TAB_GROUPS.getSourceTabGroupContext === 'function') {
-    return BACKGROUND_TAB_GROUPS.getSourceTabGroupContext(tab, chrome);
-  }
-  return null;
+  return BACKGROUND_TAB_GROUPS.getSourceTabGroupContext(tab, chrome);
 }
 
 function createTabWithSourceGroup(createProperties, sourceTab, callback) {
   const done = typeof callback === 'function' ? callback : () => {};
-  if (BACKGROUND_TAB_GROUPS && typeof BACKGROUND_TAB_GROUPS.createTabInSourceGroup === 'function') {
-    BACKGROUND_TAB_GROUPS.createTabInSourceGroup(chrome, createProperties, sourceTab, done);
-    return;
-  }
-  if (!chrome || !chrome.tabs || typeof chrome.tabs.create !== 'function') {
-    done(null, { ok: false, reason: 'tabs-api-unavailable', grouped: false });
-    return;
-  }
-  chrome.tabs.create(createProperties || {}, (tab) => {
-    const error = chrome.runtime && chrome.runtime.lastError
-      ? chrome.runtime.lastError.message || 'tab-create-failed'
-      : '';
-    done(tab || null, {
-      ok: !error,
-      reason: error,
-      grouped: false
-    });
-  });
+  BACKGROUND_TAB_GROUPS.createTabInSourceGroup(chrome, createProperties, sourceTab, done);
 }
 
 function resolveSearchResultTabPlacement(sourceTab) {
@@ -460,13 +173,7 @@ function createSearchResultTab(createProperties, sourceTab, callback, resolvedPl
 }
 
 function moveTabToSourceGroupContext(tab, sourceContext, callback, createProperties) {
-  if (BACKGROUND_TAB_GROUPS && typeof BACKGROUND_TAB_GROUPS.moveTabToSourceGroupContext === 'function') {
-    BACKGROUND_TAB_GROUPS.moveTabToSourceGroupContext(chrome, tab, sourceContext, callback, createProperties);
-    return;
-  }
-  if (typeof callback === 'function') {
-    callback(false, '');
-  }
+  BACKGROUND_TAB_GROUPS.moveTabToSourceGroupContext(chrome, tab, sourceContext, callback, createProperties);
 }
 
 function hasTabSwitcherExtensionPagePort(tab) {
@@ -1126,9 +833,7 @@ function handleTabSwitcherShortcutModifierReleased(senderTab, releasedKey, callb
   }
   const key = String(releasedKey || '');
   getConfiguredTabSwitcherShortcut((shortcut) => {
-    const expectedKeys = typeof RECENT_TAB_SWITCHER.getShortcutReleaseEventKeys === 'function'
-      ? RECENT_TAB_SWITCHER.getShortcutReleaseEventKeys(shortcut)
-      : [];
+    const expectedKeys = RECENT_TAB_SWITCHER.getShortcutReleaseEventKeys(shortcut);
     if (!expectedKeys.includes(key)) {
       recordTabSwitcherShortcutDebug('release-rejected', {
         windowId: senderTab.windowId,
@@ -1155,9 +860,7 @@ function armTabSwitcherShortcutReleaseObservers(tabs, windowId, shortcut, comman
   if (typeof windowId !== 'number') {
     return;
   }
-  const keys = typeof RECENT_TAB_SWITCHER.getShortcutReleaseEventKeys === 'function'
-    ? RECENT_TAB_SWITCHER.getShortcutReleaseEventKeys(shortcut)
-    : [];
+  const keys = RECENT_TAB_SWITCHER.getShortcutReleaseEventKeys(shortcut);
   if (!keys.length) {
     return;
   }
@@ -1202,18 +905,14 @@ function withTabSwitcherHiddenForCapture(tab, capture) {
     .finally(() => setTabSwitcherCaptureVisibility(tab, false));
 }
 
-const pipOwnership = globalThis.LumnoPipOwnership && typeof globalThis.LumnoPipOwnership.create === 'function'
-  ? globalThis.LumnoPipOwnership.create({
-    chromeApi: chrome,
-    getResolvedTabUrl: getResolvedTabUrl
-  })
-  : null;
+const pipOwnership = globalThis.LumnoPipOwnership.create({
+  chromeApi: chrome,
+  getResolvedTabUrl: getResolvedTabUrl
+});
 
-const pipMainWorld = globalThis.LumnoPipMainWorld && typeof globalThis.LumnoPipMainWorld.create === 'function'
-  ? globalThis.LumnoPipMainWorld.create({
-    chromeApi: chrome
-  })
-  : null;
+const pipMainWorld = globalThis.LumnoPipMainWorld.create({
+  chromeApi: chrome
+});
 
 async function requestGlobalPipOwnership(sender, kind) {
   if (!pipOwnership || typeof pipOwnership.requestGlobalPipOwnership !== 'function') {
@@ -1241,9 +940,7 @@ function isLumnoNewtabUrl(url) {
   if (!value || !chrome || !chrome.runtime || typeof chrome.runtime.getURL !== 'function') {
     return false;
   }
-  const routeType = typeof EXTENSION_ROUTES.classifyExtensionUrl === 'function'
-    ? EXTENSION_ROUTES.classifyExtensionUrl(value)
-    : '';
+  const routeType = EXTENSION_ROUTES.classifyExtensionUrl(value);
   if (routeType === 'newtab' && isOwnExtensionUrl(value)) {
     return true;
   }
@@ -1288,9 +985,7 @@ function isLumnoBrowserOverrideNewtabUrl(url) {
   if (!value || !isOwnExtensionUrl(value) || !chrome || !chrome.runtime || typeof chrome.runtime.getURL !== 'function') {
     return false;
   }
-  const newtabPrefix = typeof EXTENSION_ROUTES.buildNewtabUrl === 'function'
-    ? EXTENSION_ROUTES.buildNewtabUrl(chrome)
-    : chrome.runtime.getURL('newtab.html');
+  const newtabPrefix = EXTENSION_ROUTES.buildNewtabUrl(chrome);
   return value === newtabPrefix || value.startsWith(`${newtabPrefix}?`);
 }
 
@@ -1414,29 +1109,15 @@ function maybeAutoSelectRestrictedBrowserSetting(tab, stage) {
 }
 
 function isLumnoOnboardingUrl(url) {
-  return typeof EXTENSION_ROUTES.isOnboardingUrl === 'function' &&
-    EXTENSION_ROUTES.isOnboardingUrl(url) &&
+  return EXTENSION_ROUTES.isOnboardingUrl(url) &&
     isOwnExtensionUrl(url);
 }
 
-function shouldSuppressRestrictedCommandFallback(source, url) {
-  if (COMMAND_TARGET_POLICY && typeof COMMAND_TARGET_POLICY.shouldSuppressRestrictedCommandFallback === 'function') {
-    return COMMAND_TARGET_POLICY.shouldSuppressRestrictedCommandFallback(source, url, {
-      isOwnExtensionUrl,
-      isOnboardingUrl: isLumnoOnboardingUrl
-    });
-  }
-  return false;
-}
-
 function shouldTriggerOnboardingOverlayFromCommand(source, url) {
-  if (COMMAND_TARGET_POLICY && typeof COMMAND_TARGET_POLICY.shouldTriggerOnboardingOverlayFromCommand === 'function') {
-    return COMMAND_TARGET_POLICY.shouldTriggerOnboardingOverlayFromCommand(source, url, {
-      isOwnExtensionUrl,
-      isOnboardingUrl: isLumnoOnboardingUrl
-    });
-  }
-  return shouldSuppressRestrictedCommandFallback(source, url);
+  return COMMAND_TARGET_POLICY.shouldTriggerOnboardingOverlayFromCommand(source, url, {
+    isOwnExtensionUrl,
+    isOnboardingUrl: isLumnoOnboardingUrl
+  });
 }
 
 function triggerOnboardingOverlayFromCommand(activeTab, source) {
@@ -1635,10 +1316,7 @@ function logHotkeyDebug(stage, payload) {
   }
 }
 
-const providerStorageRuntime = globalThis.LumnoSettings &&
-  typeof globalThis.LumnoSettings.createProviderStorageRuntime === 'function'
-  ? globalThis.LumnoSettings.createProviderStorageRuntime(chrome)
-  : null;
+const providerStorageRuntime = globalThis.LumnoSettings.createProviderStorageRuntime(chrome);
 const storageArea = providerStorageRuntime
   ? providerStorageRuntime.area
   : ((chrome && chrome.storage && chrome.storage.sync)
@@ -1663,7 +1341,7 @@ const RECENT_COUNT_STORAGE_KEY = '_x_extension_recent_count_2024_unique_';
 const NEWTAB_WIDTH_MODE_STORAGE_KEY = '_x_extension_newtab_width_mode_2026_unique_';
 const NEWTAB_SEARCH_WIDTH_STORAGE_KEY = '_x_extension_newtab_search_width_2026_unique_';
 const NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY = (
-  globalThis.LumnoSettings && globalThis.LumnoSettings.NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY
+  globalThis.LumnoSettings.NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY
 ) || '_x_extension_newtab_wordmark_visible_2026_unique_';
 const NEWTAB_THEME_MODE_STORAGE_KEY = '_x_extension_newtab_theme_mode_2026_unique_';
 const NEWTAB_THEME_SCOPE_STORAGE_KEY = '_x_extension_newtab_theme_scope_2026_unique_';
@@ -1678,8 +1356,7 @@ const BOOKMARK_COUNT_STORAGE_KEY = '_x_extension_bookmark_count_2024_unique_';
 const BOOKMARK_COLUMNS_STORAGE_KEY = '_x_extension_bookmark_columns_2024_unique_';
 const BOOKMARK_VIEW_MODE_STORAGE_KEY = '_x_extension_bookmark_view_mode_2026_unique_';
 const BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY = '_x_extension_bookmark_folder_icons_visible_2026_unique_';
-const BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS = globalThis.LumnoSettings &&
-  Array.isArray(globalThis.LumnoSettings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS)
+const BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS = Array.isArray(globalThis.LumnoSettings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS)
   ? globalThis.LumnoSettings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS
   : [];
 const PINNED_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_pinned_recent_sites_2026_unique_';
@@ -1800,14 +1477,12 @@ let tabSwitcherStateLoadPromise = null;
 let tabSwitcherStatePersistTimer = null;
 let tabSwitcherStateDirtyBeforeLoad = false;
 let tabSwitcherExtensionPageRequestSeq = 0;
-const recentTabTracker = RECENT_TAB_SWITCHER && typeof RECENT_TAB_SWITCHER.createRecentTabTracker === 'function'
-  ? RECENT_TAB_SWITCHER.createRecentTabTracker({
-    limit: TAB_SWITCHER_LIMIT,
-    thumbnailLimit: TAB_SWITCHER_THUMBNAIL_LIMIT,
-    thumbnailTtlMs: TAB_SWITCHER_THUMBNAIL_TTL_MS,
-    shouldIncludeTab: shouldTrackSwitcherTab
-  })
-  : null;
+const recentTabTracker = RECENT_TAB_SWITCHER.createRecentTabTracker({
+  limit: TAB_SWITCHER_LIMIT,
+  thumbnailLimit: TAB_SWITCHER_THUMBNAIL_LIMIT,
+  thumbnailTtlMs: TAB_SWITCHER_THUMBNAIL_TTL_MS,
+  shouldIncludeTab: shouldTrackSwitcherTab
+});
 const faviconVisitDirtyWriteDebounceMs = 400;
 const faviconVisitDirtyMarkThrottleMs = 2 * 60 * 1000;
 const faviconVisitDirtyMarkCache = new Map();
@@ -2164,10 +1839,7 @@ function normalizePinnedTabRecoveryEnabled(value) {
 }
 
 function normalizeTabSwitcherEnabled(value) {
-  const settings = globalThis.LumnoSettings || {};
-  return typeof settings.normalizeTabSwitcherEnabled === 'function'
-    ? settings.normalizeTabSwitcherEnabled(value)
-    : value !== false;
+  return SETTINGS.normalizeTabSwitcherEnabled(value);
 }
 
 function applyPinnedTabRecoverySetting(rawValue) {
@@ -3403,10 +3075,10 @@ function persistSiteThemeColorForSwitcher(host, result) {
 function getNewtabBrandAccentForSwitcher(host, url) {
   const normalizedHost = normalizeFaviconHost(host);
   let accentRgb = null;
-  if (normalizedHost && typeof NEWTAB_FAVICON_THEME.getBrandAccentForHost === 'function') {
+  if (normalizedHost) {
     accentRgb = NEWTAB_FAVICON_THEME.getBrandAccentForHost(normalizedHost);
   }
-  if (!accentRgb && typeof NEWTAB_FAVICON_THEME.getBrandAccentForUrl === 'function') {
+  if (!accentRgb) {
     accentRgb = NEWTAB_FAVICON_THEME.getBrandAccentForUrl(url);
   }
   return normalizeThemeAccentRgb(accentRgb);
@@ -3909,47 +3581,28 @@ function getDefaultSwitcherSelectedIndex(items, currentTabId) {
 
 function focusWindowAndActivateTab(tabId, windowId, callback) {
   const run = (resolvedWindowId) => {
-    if (RECENT_TAB_SWITCHER && typeof RECENT_TAB_SWITCHER.focusWindowAndActivateTab === 'function') {
-      RECENT_TAB_SWITCHER.focusWindowAndActivateTab(chrome, {
-        tabId,
-        windowId: typeof resolvedWindowId === 'number' ? resolvedWindowId : null
+    RECENT_TAB_SWITCHER.focusWindowAndActivateTab(chrome, {
+      tabId,
+      windowId: typeof resolvedWindowId === 'number' ? resolvedWindowId : null
+    })
+      .then((result) => {
+        if (result && result.ok && typeof tabId === 'number') {
+          recordTabSwitchEvent(tabId);
+        }
+        if (typeof callback === 'function') {
+          callback(result || { ok: false });
+        }
       })
-        .then((result) => {
-          if (result && result.ok && typeof tabId === 'number') {
-            recordTabSwitchEvent(tabId);
-          }
-          if (typeof callback === 'function') {
-            callback(result || { ok: false });
-          }
-        })
-        .catch((error) => {
-          if (typeof callback === 'function') {
-            callback({
-              ok: false,
-              tabId,
-              windowId: typeof resolvedWindowId === 'number' ? resolvedWindowId : null,
-              reason: error && error.message ? error.message : 'switch-failed'
-            });
-          }
-        });
-      return;
-    }
-    chrome.tabs.update(tabId, { active: true }, (tab) => {
-      const ok = !(chrome.runtime && chrome.runtime.lastError);
-      if (ok) {
-        recordTabSwitchEvent(tabId);
-      }
-      if (typeof callback === 'function') {
-        callback({
-          ok,
-          tabId,
-          windowId: typeof resolvedWindowId === 'number'
-            ? resolvedWindowId
-            : (tab && typeof tab.windowId === 'number' ? tab.windowId : null),
-          reason: ok ? '' : (chrome.runtime.lastError.message || 'tab-update-failed')
-        });
-      }
-    });
+      .catch((error) => {
+        if (typeof callback === 'function') {
+          callback({
+            ok: false,
+            tabId,
+            windowId: typeof resolvedWindowId === 'number' ? resolvedWindowId : null,
+            reason: error && error.message ? error.message : 'switch-failed'
+          });
+        }
+      });
   };
   if (typeof windowId === 'number' ||
       !chrome ||
@@ -4093,8 +3746,7 @@ function getOverlayNavigationState(tabId, callback) {
     done(null);
     return;
   }
-  const isExpired = (state) => typeof OVERLAY_LOADING_LIFECYCLE.isNavigationStateExpired === 'function' &&
-    OVERLAY_LOADING_LIFECYCLE.isNavigationStateExpired(
+  const isExpired = (state) => OVERLAY_LOADING_LIFECYCLE.isNavigationStateExpired(
       state,
       Date.now(),
       OVERLAY_NAVIGATION_STATE_TTL_MS
@@ -4140,9 +3792,7 @@ function getOverlayNavigationState(tabId, callback) {
 }
 
 function rememberOverlayTopFrameNavigation(details) {
-  const state = typeof OVERLAY_LOADING_LIFECYCLE.createTopFrameNavigationState === 'function'
-    ? OVERLAY_LOADING_LIFECYCLE.createTopFrameNavigationState(details, Date.now())
-    : null;
+  const state = OVERLAY_LOADING_LIFECYCLE.createTopFrameNavigationState(details, Date.now());
   if (state) {
     setOverlayNavigationState(state);
   }
@@ -4153,7 +3803,7 @@ function updateOverlayTopFrameNavigation(details) {
     return;
   }
   getOverlayNavigationState(details.tabId, (state) => {
-    if (!state || typeof OVERLAY_LOADING_LIFECYCLE.updateTopFrameNavigationState !== 'function') {
+    if (!state) {
       return;
     }
     const nextState = OVERLAY_LOADING_LIFECYCLE.updateTopFrameNavigationState(
@@ -4258,8 +3908,7 @@ function getOverlayLoadingRecord(tabId, callback) {
   }
   const cached = overlayLoadingRecordsByTabId.get(tabId) || null;
   if (cached) {
-    if (typeof OVERLAY_LOADING_LIFECYCLE.isExpired === 'function' &&
-        OVERLAY_LOADING_LIFECYCLE.isExpired(
+    if (OVERLAY_LOADING_LIFECYCLE.isExpired(
           cached,
           Date.now(),
           OVERLAY_LOADING_RECORD_TTL_MS
@@ -4287,8 +3936,7 @@ function getOverlayLoadingRecord(tabId, callback) {
         ? result[storageKey]
         : null;
       if (!stored || stored.tabId !== tabId ||
-          (typeof OVERLAY_LOADING_LIFECYCLE.isExpired === 'function' &&
-            OVERLAY_LOADING_LIFECYCLE.isExpired(
+          (OVERLAY_LOADING_LIFECYCLE.isExpired(
               stored,
               Date.now(),
               OVERLAY_LOADING_RECORD_TTL_MS
@@ -4312,9 +3960,7 @@ function rememberOverlayLoadingRecord(activeTab, source, options) {
   if (settings.loadingRecovery === true) {
     return settings.loadingRecord || overlayLoadingRecordsByTabId.get(activeTab.id) || null;
   }
-  const record = typeof OVERLAY_LOADING_LIFECYCLE.createRecord === 'function'
-    ? OVERLAY_LOADING_LIFECYCLE.createRecord(activeTab, source, Date.now())
-    : null;
+  const record = OVERLAY_LOADING_LIFECYCLE.createRecord(activeTab, source, Date.now());
   if (!record) {
     clearOverlayLoadingRecord(activeTab.id);
     return null;
@@ -4325,42 +3971,24 @@ function rememberOverlayLoadingRecord(activeTab, source, options) {
 }
 
 function getPendingOverlayNavigationUrl(tab) {
-  if (typeof OVERLAY_LOADING_LIFECYCLE.getPendingInjectableUrl === 'function') {
-    return OVERLAY_LOADING_LIFECYCLE.getPendingInjectableUrl(
-      tab,
-      canOpenOverlayOnUrl
-    );
-  }
-  if (!tab || typeof tab.id !== 'number') {
-    return '';
-  }
-  const currentUrl = typeof tab.url === 'string' ? tab.url.trim() : '';
-  const pendingUrl = typeof tab.pendingUrl === 'string' ? tab.pendingUrl.trim() : '';
-  const isLoading = tab.status === 'loading' || Boolean(pendingUrl);
-  if (!isLoading || !pendingUrl || canOpenOverlayOnUrl(currentUrl) ||
-      !canOpenOverlayOnUrl(pendingUrl)) {
-    return '';
-  }
-  return pendingUrl;
+  return OVERLAY_LOADING_LIFECYCLE.getPendingInjectableUrl(
+    tab,
+    canOpenOverlayOnUrl
+  );
 }
 
 function shouldDeferRestrictedOverlayNavigation(tab) {
-  if (typeof OVERLAY_LOADING_LIFECYCLE.shouldDeferRestrictedLoadingTab === 'function') {
-    return OVERLAY_LOADING_LIFECYCLE.shouldDeferRestrictedLoadingTab(
-      tab,
-      canOpenOverlayOnUrl
-    );
-  }
-  return Boolean(getPendingOverlayNavigationUrl(tab));
+  return OVERLAY_LOADING_LIFECYCLE.shouldDeferRestrictedLoadingTab(
+    tab,
+    canOpenOverlayOnUrl
+  );
 }
 
 function rememberOverlayPendingNavigationIntent(activeTab, source, pendingUrl) {
   if (!activeTab || typeof activeTab.id !== 'number') {
     return null;
   }
-  const record = typeof OVERLAY_LOADING_LIFECYCLE.createRecord === 'function'
-    ? OVERLAY_LOADING_LIFECYCLE.createRecord(activeTab, source, Date.now())
-    : null;
+  const record = OVERLAY_LOADING_LIFECYCLE.createRecord(activeTab, source, Date.now());
   if (!record) {
     return null;
   }
@@ -4499,7 +4127,7 @@ function updateOverlayLoadingRecordFromInvocation(activeTab, results) {
     return;
   }
   const record = overlayLoadingRecordsByTabId.get(activeTab.id) || null;
-  if (!record || typeof OVERLAY_LOADING_LIFECYCLE.applyInvocationResult !== 'function') {
+  if (!record) {
     return;
   }
   const outcome = OVERLAY_LOADING_LIFECYCLE.applyInvocationResult(
@@ -4524,7 +4152,7 @@ function updateOverlayLoadingSessionFromMessage(request, sender, sendResponse) {
     return;
   }
   getOverlayLoadingRecord(senderTab.id, (record) => {
-    if (!record || typeof OVERLAY_LOADING_LIFECYCLE.applySessionUpdate !== 'function') {
+    if (!record) {
       sendResponse({ ok: true, tracked: false });
       return;
     }
@@ -4758,14 +4386,12 @@ function recoverOverlayAfterLoadingUpdate(tabId, changeInfo, tab) {
         }
         return;
       }
-      const outcome = typeof OVERLAY_LOADING_LIFECYCLE.decideRecovery === 'function'
-        ? OVERLAY_LOADING_LIFECYCLE.decideRecovery(record, results, {
-          complete: isComplete,
-          stable: isStableComplete,
-          now: Date.now(),
-          ttlMs: OVERLAY_LOADING_RECORD_TTL_MS
-        })
-        : { action: 'clear', record: null };
+      const outcome = OVERLAY_LOADING_LIFECYCLE.decideRecovery(record, results, {
+        complete: isComplete,
+        stable: isStableComplete,
+        now: Date.now(),
+        ttlMs: OVERLAY_LOADING_RECORD_TTL_MS
+      });
       if (!outcome || outcome.action === 'clear' || outcome.action === 'none') {
         clearOverlayLoadingRecord(tabId);
         return;
@@ -4921,14 +4547,12 @@ function openOverlayOnTab(activeTab, tabs, source, options) {
   }
   const overlayLoadingRecord = rememberOverlayLoadingRecord(activeTab, source, openOptions);
   shouldRetryPreCompleteFailure = Boolean(overlayLoadingRecord);
-  const shouldInjectOverlayCodexDebugSurface = Boolean(
-    codexDebugBridge && typeof codexDebugBridge.isEnabled === 'function' &&
-    codexDebugBridge.isEnabled()
-  );
+  const shouldInjectOverlayCodexDebugSurface = codexDebugBridge.isEnabled();
   const overlayInjectionFiles = [
     'src/shared/icon-font-preload.js',
     ...(shouldInjectOverlayCodexDebugSurface ? ['src/shared/codex-debug-surface.js'] : []),
     'src/shared/settings.js',
+    'src/shared/blacklist-utils.js',
     'src/shared/navigation-disposition.js',
     'src/shared/search-utils.js',
     'src/shared/site-search-store.js',
@@ -4943,6 +4567,7 @@ function openOverlayOnTab(activeTab, tabs, source, options) {
     'src/shared/menu-surface.js',
     'src/shared/search-input-mode.js',
     'src/shared/shortcut-display.js',
+    'src/shared/favicon-utils.js',
     'src/shared/shortcut-favicon.js',
     'src/shared/community-links.js',
     'src/shared/browser-profile.js',
@@ -4952,7 +4577,6 @@ function openOverlayOnTab(activeTab, tabs, source, options) {
     'src/shared/tooltip.js',
     'src/shared/cursor-tooltip.js',
     'src/overlay/runtime.js',
-    'src/shared/favicon-utils.js',
     'src/newtab/favicon-theme.js',
     'src/shared/favicon-cache.js',
     'src/shared/favicon-view-core.js',
@@ -5020,9 +4644,7 @@ function openOverlayOnTab(activeTab, tabs, source, options) {
               finishOpenAttempt(false);
               return;
             }
-            const mainResult = typeof OVERLAY_LOADING_LIFECYCLE.getMainFrameResult === 'function'
-              ? OVERLAY_LOADING_LIFECYCLE.getMainFrameResult(results)
-              : (Array.isArray(results) && results[0] ? results[0] : null);
+            const mainResult = OVERLAY_LOADING_LIFECYCLE.getMainFrameResult(results);
             const result = mainResult ? mainResult.result : null;
             if (result && result.ok === false) {
               logHotkeyDebug('inject-failed', {
@@ -5143,8 +4765,7 @@ function triggerShowSearchForTab(tab, source) {
     return;
   }
   const cachedNavigationState = overlayNavigationStateByTabId.get(tab.id) || null;
-  if (cachedNavigationState &&
-      typeof OVERLAY_LOADING_LIFECYCLE.applyTopFrameNavigationState === 'function') {
+  if (cachedNavigationState) {
     const navigationTab = OVERLAY_LOADING_LIFECYCLE.applyTopFrameNavigationState(
       tab,
       cachedNavigationState,
@@ -5166,8 +4787,7 @@ function triggerShowSearchForTab(tab, source) {
     return;
   }
   getOverlayNavigationState(tab.id, (storedNavigationState) => {
-    if (storedNavigationState &&
-        typeof OVERLAY_LOADING_LIFECYCLE.applyTopFrameNavigationState === 'function') {
+    if (storedNavigationState) {
       const navigationTab = OVERLAY_LOADING_LIFECYCLE.applyTopFrameNavigationState(
         tab,
         storedNavigationState,
@@ -5250,6 +4870,7 @@ function injectTabSwitcherOnTab(hostTab, items, context) {
       files: [
         'src/shared/icon-font-preload.js',
         'src/shared/codex-debug-surface.js',
+        'src/shared/settings.js',
         'src/react/overlay-islands.js',
         'src/overlay/tab-switcher.js'
       ]
@@ -5504,9 +5125,7 @@ function triggerTabSwitcherForTab(tab, source, commandObservedAt) {
       const shortcut = typeof results[2] === 'string' && results[2]
         ? results[2]
         : 'Alt+Q';
-      const releaseKeys = typeof RECENT_TAB_SWITCHER.getShortcutReleaseEventKeys === 'function'
-        ? RECENT_TAB_SWITCHER.getShortcutReleaseEventKeys(shortcut)
-        : [];
+      const releaseKeys = RECENT_TAB_SWITCHER.getShortcutReleaseEventKeys(shortcut);
       recordTabSwitcherShortcutDebug('shortcut-configured', {
         windowId,
         shortcut,
@@ -5901,12 +5520,7 @@ function triggerCopyCurrentUrlForTab(activeTab, source, callback) {
 }
 
 function publishExtensionUpdateNotice(details) {
-  if (!UPDATE_NOTICE || typeof UPDATE_NOTICE.publishUpdateNotice !== 'function') {
-    return;
-  }
-  const version = typeof UPDATE_NOTICE.getCurrentVersionTag === 'function'
-    ? UPDATE_NOTICE.getCurrentVersionTag(chrome)
-    : '';
+  const version = UPDATE_NOTICE.getCurrentVersionTag(chrome);
   UPDATE_NOTICE.publishUpdateNotice({
     chromeApi: chrome,
     fetchImpl: typeof fetch === 'function' ? fetch : null,
@@ -5951,9 +5565,7 @@ if (chrome && chrome.runtime && chrome.runtime.onConnect) {
   chrome.runtime.onConnect.addListener(registerTabSwitcherExtensionPagePortConnection);
 }
 
-if (codexDebugBridge && typeof codexDebugBridge.attach === 'function') {
-  codexDebugBridge.attach();
-}
+codexDebugBridge.attach();
 
 chrome.tabs.onCreated.addListener((tab) => {
   rememberBrowserNewtabProviderCandidate(tab);
@@ -5985,9 +5597,7 @@ chrome.runtime.onInstalled.addListener((details) => {
     return;
   }
   if (reason === 'update') {
-    const isSameVersionReload = DEV_EXTENSION_STARTUP &&
-      typeof DEV_EXTENSION_STARTUP.isSameVersionReload === 'function' &&
-      DEV_EXTENSION_STARTUP.isSameVersionReload(details, chrome.runtime.getManifest().version);
+    const isSameVersionReload = DEV_EXTENSION_STARTUP.isSameVersionReload(details, chrome.runtime.getManifest().version);
     if (!isSameVersionReload) {
       if (typeof shouldOpenOnboardingForUpdate === 'function' && shouldOpenOnboardingForUpdate(details)) {
         openOnboardingPage({ reason: 'update' });
@@ -6267,10 +5877,7 @@ function loadSelectionQuickActionsProvider() {
         return;
       }
       const rawValue = result && result[SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY];
-      const settings = globalThis.LumnoSettings || {};
-      const providerKey = typeof settings.normalizeSelectionQuickActionsProvider === 'function'
-        ? settings.normalizeSelectionQuickActionsProvider(rawValue)
-        : String(rawValue || '').trim().toLowerCase();
+      const providerKey = SETTINGS.normalizeSelectionQuickActionsProvider(rawValue);
       resolve(providerKey || 'gpt');
     });
   });
@@ -6326,31 +5933,12 @@ function queueSelectionTargetOpen(options) {
   return task;
 }
 
-function selectSelectionQuickActionProvider(providers, requestedKey) {
-  const interactive = (Array.isArray(providers) ? providers : [])
-    .filter((provider) => isInteractiveSiteSearchProvider(provider));
-  const normalizedKey = String(requestedKey || '').trim().toLowerCase();
-  if (normalizedKey) {
-    const requested = interactive.find((provider) => (
-      String(provider && provider.key || '').trim().toLowerCase() === normalizedKey
-    ));
-    if (requested) {
-      return requested;
-    }
-  }
-  return interactive.find((provider) => String(provider && provider.key || '').toLowerCase() === 'gpt') ||
-    interactive[0] ||
-    null;
-}
-
 function loadSelectionQuickActionFallbackProviders() {
   if (selectionQuickActionFallbackProvidersPromise) {
     return selectionQuickActionFallbackProvidersPromise;
   }
   const localUrl = chrome.runtime.getURL('assets/data/site-search.json');
-  const fallbackDefaults = typeof SEARCH_UTILS.getDefaultSiteSearchProviders === 'function'
-    ? SEARCH_UTILS.getDefaultSiteSearchProviders()
-    : [];
+  const fallbackDefaults = SEARCH_UTILS.getDefaultSiteSearchProviders();
   selectionQuickActionFallbackProvidersPromise = fetch(localUrl)
     .then((response) => response.json())
     .then((data) => {
@@ -6401,8 +5989,7 @@ async function openAndSubmitSelectionPrompt(
     sourceTab,
     groupEnabled,
     groupTitle: groupTitle || SELECTION_TARGET.DEFAULT_GROUP_TITLE,
-    groupColor: 'blue',
-    splitViewAdapter: globalThis.LumnoChromeSplitViewAdapter || null
+    groupColor: 'blue'
   };
   let targetInfo = await queueSelectionTargetOpen(targetOptions);
   if (!targetInfo || targetInfo.ok === false || !targetInfo.tab) {
@@ -6441,15 +6028,8 @@ async function runSelectionQuickAction(request, sender) {
   if (!enabled) {
     return { ok: false, reason: 'selection-quick-actions-disabled' };
   }
-  if (typeof SELECTION_INTENT.buildPrompt !== 'function' ||
-      typeof SELECTION_TARGET.openSelectionTarget !== 'function' ||
-      typeof AI_PROVIDER_SUBMIT.submitPromptInTab !== 'function') {
-    return { ok: false, reason: 'selection-runtime-unavailable' };
-  }
   const rawText = typeof request.text === 'string' ? request.text : '';
-  const normalizedText = typeof SELECTION_INTENT.normalizeText === 'function'
-    ? SELECTION_INTENT.normalizeText(rawText)
-    : rawText.trim();
+  const normalizedText = SELECTION_INTENT.normalizeText(rawText);
   const maxLength = Number(SELECTION_INTENT.MAX_SELECTION_LENGTH) || 2400;
   const actions = Array.isArray(SELECTION_INTENT.ACTIONS) ? SELECTION_INTENT.ACTIONS : [];
   const intent = actions.includes(request.intent) ? request.intent : 'ask';
@@ -6457,16 +6037,12 @@ async function runSelectionQuickAction(request, sender) {
     return { ok: false, reason: 'invalid-selection-text' };
   }
   const providers = await loadSiteSearchProviders();
-  const provider = SELECTION_QUICK_ACTION_PROVIDER &&
-    typeof SELECTION_QUICK_ACTION_PROVIDER.resolveSelectionQuickActionProvider === 'function'
-    ? SELECTION_QUICK_ACTION_PROVIDER.resolveSelectionQuickActionProvider(
-        providers,
-        bundledProviders,
-        preferredProviderKey,
-        isInteractiveSiteSearchProvider
-      )
-    : selectSelectionQuickActionProvider(providers, preferredProviderKey) ||
-      selectSelectionQuickActionProvider(bundledProviders, preferredProviderKey);
+  const provider = SELECTION_QUICK_ACTION_PROVIDER.resolveSelectionQuickActionProvider(
+    providers,
+    bundledProviders,
+    preferredProviderKey,
+    isInteractiveSiteSearchProvider
+  );
   if (!provider) {
     return { ok: false, reason: 'selection-provider-unavailable' };
   }
@@ -6496,10 +6072,6 @@ function runInteractiveSiteSearchProvider(provider, query, sender, disposition) 
   return new Promise((resolve) => {
     if (!entryUrl || !prompt || !isInteractiveSiteSearchProvider(provider)) {
       resolve({ ok: false, reason: 'invalid-provider-request' });
-      return;
-    }
-    if (typeof AI_PROVIDER_SUBMIT.submitPromptInTab !== 'function') {
-      resolve({ ok: false, reason: 'submit-runtime-unavailable' });
       return;
     }
     const finish = (result) => {
@@ -6580,9 +6152,6 @@ function runInteractiveSiteSearchProvider(provider, query, sender, disposition) 
 let aggregateSearchQueryRunner = null;
 function runAggregateSearchQuery(aggregateId, query, sender, disposition) {
   if (!aggregateSearchQueryRunner) {
-    if (typeof AGGREGATE_SEARCH.createAggregateSearchQueryRunner !== 'function') {
-      return Promise.resolve({ ok: false, reason: 'aggregate-search-runtime-unavailable' });
-    }
     aggregateSearchQueryRunner = AGGREGATE_SEARCH.createAggregateSearchQueryRunner({
       aggregateSearchStore: AGGREGATE_SEARCH_STORE,
       chromeApi: chrome,
@@ -6591,9 +6160,6 @@ function runAggregateSearchQuery(aggregateId, query, sender, disposition) {
       loadSiteSearchProviders,
       resolveTabPlacement: resolveSearchResultTabPlacement,
       loadAggregateSearchAutoGroupEnabled() {
-        if (typeof SETTINGS.readStorageValue !== 'function') {
-          return Promise.resolve(undefined);
-        }
         return SETTINGS.readStorageValue(
           storageArea,
           chrome,
@@ -6710,9 +6276,7 @@ const BACKGROUND_MESSAGE_ROUTE_GROUPS = Object.freeze({
   }
 });
 
-const backgroundMessageRouter = typeof BACKGROUND_MESSAGE_ROUTER.createRouter === 'function'
-  ? BACKGROUND_MESSAGE_ROUTER.createRouter(BACKGROUND_MESSAGE_ROUTE_GROUPS)
-  : null;
+const backgroundMessageRouter = BACKGROUND_MESSAGE_ROUTER.createRouter(BACKGROUND_MESSAGE_ROUTE_GROUPS);
 
 function sendUnknownBackgroundMessageResponse(sendResponse) {
   sendResponse({ ok: false });
@@ -6720,7 +6284,7 @@ function sendUnknownBackgroundMessageResponse(sendResponse) {
 }
 
 function dispatchBackgroundMessage(request, sender, sendResponse) {
-  if (backgroundMessageRouter && typeof BACKGROUND_MESSAGE_ROUTER.dispatch === 'function') {
+  if (backgroundMessageRouter) {
     return BACKGROUND_MESSAGE_ROUTER.dispatch(backgroundMessageRouter, request, sender, sendResponse);
   }
   return sendUnknownBackgroundMessageResponse(sendResponse);
@@ -6729,19 +6293,19 @@ function dispatchBackgroundMessage(request, sender, sendResponse) {
 // Listen for extension runtime messages.
 chrome.runtime.onMessage.addListener(dispatchBackgroundMessage);
 
-const shortcutFolderSyncController = globalThis.LumnoBookmarkFolderReference && providerStorageRuntime &&
+const shortcutFolderSyncController = providerStorageRuntime &&
   chrome.bookmarks && typeof chrome.bookmarks.getTree === 'function'
   ? globalThis.LumnoBookmarkFolderReference.createSyncController({ chrome, provider: providerStorageRuntime,
     onError: (error) => console.warn('[Lumno] Could not refresh folder shortcuts.', error) }) : null;
 if (shortcutFolderSyncController) shortcutFolderSyncController.start();
-const webDavSyncController = globalThis.LumnoWebDavSync && typeof indexedDB !== 'undefined'
+const webDavSyncController = typeof indexedDB !== 'undefined'
   ? globalThis.LumnoWebDavSync.createController({ chrome }) : null;
 if (webDavSyncController) webDavSyncController.start();
 
 function handleWebDavMessage(request, sender, sendResponse) {
   // Content scripts and externally connected extensions cannot use stored
   // credentials, configure endpoints, or request arbitrary remote resources.
-  if (!globalThis.LumnoWebDavSync || !globalThis.LumnoWebDavSync.isTrustedSender(chrome, sender)) {
+  if (!globalThis.LumnoWebDavSync.isTrustedSender(chrome, sender)) {
     sendResponse({ ok: false, error: 'forbidden' });
     return;
   }
@@ -6939,11 +6503,8 @@ function handleShortcutMessage(request, sender, sendResponse) {
       };
       if (request && request.requiresShortcutVerification === true) {
         getConfiguredFallbackShortcut((shortcut) => {
-          const spec = typeof SHORTCUT_KEY_MATCHER.parseShortcut === 'function'
-            ? SHORTCUT_KEY_MATCHER.parseShortcut(shortcut)
-            : null;
-          const matched = typeof SHORTCUT_KEY_MATCHER.descriptorMatchesShortcut === 'function' &&
-            SHORTCUT_KEY_MATCHER.descriptorMatchesShortcut(request.observedShortcut, spec);
+          const spec = SHORTCUT_KEY_MATCHER.parseShortcut(shortcut);
+          const matched = SHORTCUT_KEY_MATCHER.descriptorMatchesShortcut(request.observedShortcut, spec);
           if (!matched) {
             sendResponse({ ok: false, reason: 'shortcut-mismatch', shortcut: shortcut || '' });
             return;
@@ -7398,10 +6959,6 @@ function handleExtensionPageMessage(request, sender, sendResponse) {
       return true;
     }
     case 'openBookmarkFolderInNewTabGroup': {
-      if (typeof BOOKMARK_TAB_GROUPS.openBookmarkFolderInNewTabGroup !== 'function') {
-        sendResponse({ ok: false, reason: 'tab-group-api-unavailable' });
-        return;
-      }
       const sourceTab = sender && sender.tab ? sender.tab : null;
       BOOKMARK_TAB_GROUPS.openBookmarkFolderInNewTabGroup(chrome, {
         folderId: request.folderId,
@@ -7612,8 +7169,8 @@ let bookmarkTreeCacheListenersBound = false;
 const searchEngineSuggestionRequests = new Map();
 const SITE_SEARCH_STORAGE_KEY = '_x_extension_site_search_custom_2024_unique_';
 const SITE_SEARCH_DISABLED_STORAGE_KEY = '_x_extension_site_search_disabled_2024_unique_';
-const AGGREGATE_SEARCH_STORE = globalThis.LumnoAggregateSearchStore || {};
-const AGGREGATE_SEARCH = globalThis.LumnoBackgroundAggregateSearch || {};
+const AGGREGATE_SEARCH_STORE = globalThis.LumnoAggregateSearchStore;
+const AGGREGATE_SEARCH = globalThis.LumnoBackgroundAggregateSearch;
 const AGGREGATE_SEARCH_STORAGE_KEY = AGGREGATE_SEARCH_STORE.STORAGE_KEY ||
   '_x_extension_aggregate_searches_2026_unique_';
 const AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY =
@@ -7623,15 +7180,14 @@ const SEARCH_BLACKLIST_STORAGE_KEY = '_x_extension_search_blacklist_2026_unique_
 const FAVICON_REQUEST_BLACKLIST_STORAGE_KEY = '_x_extension_favicon_request_blacklist_2026_unique_';
 const FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY = '_x_extension_favicon_enhanced_fetch_enabled_2026_unique_';
 const OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY = '_x_extension_overlay_open_tabs_default_visible_2026_unique_';
-const BLACKLIST_UTILS = globalThis.LumnoBlacklistUtils || {};
-const SEARCH_UTILS = globalThis.LumnoSearchUtils || {};
-const AI_PROVIDER_SUBMIT = globalThis.LumnoAiProviderSubmit || {};
-const SELECTION_INTENT = globalThis.LumnoSelectionIntent || {};
-const SELECTION_TARGET = globalThis.LumnoSelectionTarget || {};
-const SELECTION_QUICK_ACTION_PROVIDER = globalThis.LumnoSelectionQuickActionProvider || {};
+const BLACKLIST_UTILS = globalThis.LumnoBlacklistUtils;
+const SEARCH_UTILS = globalThis.LumnoSearchUtils;
+const AI_PROVIDER_SUBMIT = globalThis.LumnoAiProviderSubmit;
+const SELECTION_INTENT = globalThis.LumnoSelectionIntent;
+const SELECTION_TARGET = globalThis.LumnoSelectionTarget;
+const SELECTION_QUICK_ACTION_PROVIDER = globalThis.LumnoSelectionQuickActionProvider;
 const DEFAULT_SEARCH_ENGINE_STORAGE_KEY = '_x_extension_default_search_engine_2024_unique_';
-const CHROME_SYNC_STORAGE_KEYS = globalThis.LumnoSettings &&
-  Array.isArray(globalThis.LumnoSettings.CHROME_SYNC_STORAGE_KEYS)
+const CHROME_SYNC_STORAGE_KEYS = Array.isArray(globalThis.LumnoSettings.CHROME_SYNC_STORAGE_KEYS)
   ? globalThis.LumnoSettings.CHROME_SYNC_STORAGE_KEYS
   : [];
 if (providerStorageRuntime) {
@@ -7692,9 +7248,7 @@ let siteSearchIconCacheRevision = 0;
 let siteSearchIconWarmActiveCount = 0;
 const siteSearchIconWarmQueue = [];
 const siteSearchIconWarmPending = new Set();
-const logBackgroundFaviconDecision = typeof FAVICON_UTILS.createFaviconDecisionLogger === 'function'
-  ? FAVICON_UTILS.createFaviconDecisionLogger({ surface: 'background' })
-  : (() => false);
+const logBackgroundFaviconDecision = FAVICON_UTILS.createFaviconDecisionLogger({ surface: 'background' });
 
 function logBlockedLocalFavicon(url, candidateKind, reason, pageUrl) {
   return logBackgroundFaviconDecision(url, reason || 'local-rule', {
@@ -7704,7 +7258,7 @@ function logBlockedLocalFavicon(url, candidateKind, reason, pageUrl) {
 }
 
 function getBackgroundFaviconCacheRuntime() {
-  if (!backgroundFaviconCacheRuntime && typeof FAVICON_CACHE.createFaviconCache === 'function') {
+  if (!backgroundFaviconCacheRuntime) {
     backgroundFaviconCacheRuntime = FAVICON_CACHE.createFaviconCache({
       storageArea: (chrome && chrome.storage && chrome.storage.local) ? chrome.storage.local : null,
       windowObj: globalThis,
@@ -7723,7 +7277,7 @@ function getBackgroundFaviconCacheRuntime() {
 getBackgroundFaviconCacheRuntime();
 
 function getBackgroundFaviconUrlResolver() {
-  if (!backgroundFaviconUrlResolver && typeof FAVICON_UTILS.createFaviconUrlResolver === 'function') {
+  if (!backgroundFaviconUrlResolver) {
     backgroundFaviconUrlResolver = FAVICON_UTILS.createFaviconUrlResolver({
       chromeApi: chrome,
       size: FAVICON_PROXY_SIZE,
@@ -7871,15 +7425,11 @@ function getHostFaviconUrl(hostname) {
 }
 
 function isFaviconProxyUrl(url) {
-  return typeof FAVICON_UTILS.isFaviconProxyUrl === 'function'
-    ? FAVICON_UTILS.isFaviconProxyUrl(url)
-    : false;
+  return FAVICON_UTILS.isFaviconProxyUrl(url);
 }
 
 function isChromeMonogramFaviconUrl(url) {
-  return typeof FAVICON_UTILS.isChromeMonogramFaviconUrl === 'function'
-    ? FAVICON_UTILS.isChromeMonogramFaviconUrl(url)
-    : /^chrome:\/\/favicon2\//i.test(String(url || '').trim());
+  return FAVICON_UTILS.isChromeMonogramFaviconUrl(url);
 }
 
 function normalizeHost(hostname) {
@@ -7895,9 +7445,7 @@ function normalizeHost(hostname) {
 }
 
 function isLocalNetworkHost(hostname) {
-  return typeof FAVICON_UTILS.isLocalNetworkHost === 'function'
-    ? FAVICON_UTILS.isLocalNetworkHost(hostname)
-    : false;
+  return FAVICON_UTILS.isLocalNetworkHost(hostname);
 }
 
 function getSearchEngineByHostname(hostname) {
@@ -7943,8 +7491,7 @@ function loadDefaultSearchEngineState() {
     storageArea.get([DEFAULT_SEARCH_ENGINE_STORAGE_KEY], (result) => {
       const stored = result ? result[DEFAULT_SEARCH_ENGINE_STORAGE_KEY] : null;
       if (stored && stored.id) {
-        if (typeof SEARCH_UTILS.isRetiredSearchEngineState === 'function' &&
-            SEARCH_UTILS.isRetiredSearchEngineState(stored)) {
+        if (SEARCH_UTILS.isRetiredSearchEngineState(stored)) {
           setDefaultSearchEngineState({
             id: 'google',
             name: 'Google',
@@ -8045,10 +7592,7 @@ function getFaviconFallbackHost(rawInput) {
 }
 
 function getDirectNavigationUrl(input) {
-  if (SEARCH_UTILS && typeof SEARCH_UTILS.getDirectNavigationUrl === 'function') {
-    return SEARCH_UTILS.getDirectNavigationUrl(input);
-  }
-  return '';
+  return SEARCH_UTILS.getDirectNavigationUrl(input);
 }
 
 function getDefaultSearchEngineThemeUrl() {
@@ -8283,29 +7827,19 @@ if (chrome && chrome.tabs) {
 }
 
 function normalizeLocaleForMessages(locale) {
-  const settings = globalThis.LumnoSettings || {};
-  return typeof settings.normalizeLocale === 'function'
-    ? settings.normalizeLocale(locale)
-    : 'en';
+  return SETTINGS.normalizeLocale(locale);
 }
 
 function shouldBlockFaviconForHost(hostname) {
-  return typeof FAVICON_UTILS.shouldBlockFaviconForHost === 'function'
-    ? FAVICON_UTILS.shouldBlockFaviconForHost(hostname)
-    : false;
+  return FAVICON_UTILS.shouldBlockFaviconForHost(hostname);
 }
 
 function shouldAvoidDirectFaviconForHost(hostname) {
-  return typeof FAVICON_UTILS.shouldAvoidDirectFaviconForHost === 'function'
-    ? FAVICON_UTILS.shouldAvoidDirectFaviconForHost(hostname)
-    : false;
+  return FAVICON_UTILS.shouldAvoidDirectFaviconForHost(hostname);
 }
 
 function isAllowedFaviconProxyRequestUrl(url) {
-  return typeof FAVICON_UTILS.isAllowedFaviconProxyRequestUrl === 'function'
-    ? FAVICON_UTILS.isAllowedFaviconProxyRequestUrl(url)
-    : /^chrome-extension:\/\/[^/]+\/_favicon\//i.test(String(url || '').trim()) ||
-      /^chrome:\/\/favicon2\//i.test(String(url || '').trim());
+  return FAVICON_UTILS.isAllowedFaviconProxyRequestUrl(url);
 }
 
 function isFaviconRequestBlockedByBlacklist(url) {
@@ -8313,23 +7847,15 @@ function isFaviconRequestBlockedByBlacklist(url) {
 }
 
 function isBlockedLocalFaviconUrl(url) {
-  const blockedByLocalRules = typeof FAVICON_UTILS.isBlockedLocalFaviconUrl === 'function'
-    ? FAVICON_UTILS.isBlockedLocalFaviconUrl(url)
-    : false;
+  const blockedByLocalRules = FAVICON_UTILS.isBlockedLocalFaviconUrl(url);
   return blockedByLocalRules || isFaviconRequestBlockedByBlacklist(url);
 }
 
 function getFaviconHostPolicy(hostname) {
-  if (typeof FAVICON_UTILS.getFaviconHostPolicy === 'function') {
-    return FAVICON_UTILS.getFaviconHostPolicy(hostname, {
-      shouldBlockFaviconForHost,
-      shouldAvoidDirectFaviconForHost
-    });
-  }
-  return {
-    hardBlocked: Boolean(shouldBlockFaviconForHost(hostname)),
-    avoidDirect: Boolean(shouldAvoidDirectFaviconForHost(hostname))
-  };
+  return FAVICON_UTILS.getFaviconHostPolicy(hostname, {
+    shouldBlockFaviconForHost,
+    shouldAvoidDirectFaviconForHost
+  });
 }
 
 function getFaviconTargetPolicy(targetUrl, hostOverride) {
@@ -8364,34 +7890,23 @@ function getFaviconTargetPolicy(targetUrl, hostOverride) {
 }
 
 function normalizeFaviconHost(hostname) {
-  return typeof FAVICON_UTILS.normalizeFaviconHost === 'function'
-    ? FAVICON_UTILS.normalizeFaviconHost(hostname)
-    : String(hostname || '').toLowerCase().replace(/^www\./i, '');
+  return FAVICON_UTILS.normalizeFaviconHost(hostname);
 }
 
 function normalizeThemePreference(theme) {
-  const settings = globalThis.LumnoSettings || {};
-  return typeof settings.normalizeThemePreference === 'function'
-    ? settings.normalizeThemePreference(theme)
-    : '';
+  return SETTINGS.normalizeThemePreference(theme);
 }
 
 function parseCssThemeColor(color) {
-  return typeof FAVICON_UTILS.parseCssThemeColor === 'function'
-    ? FAVICON_UTILS.parseCssThemeColor(color)
-    : null;
+  return FAVICON_UTILS.parseCssThemeColor(color);
 }
 
 function parseHtmlThemeColorCandidates(html, pageUrl, preferredTheme) {
-  return typeof FAVICON_UTILS.parseHtmlThemeColorCandidates === 'function'
-    ? FAVICON_UTILS.parseHtmlThemeColorCandidates(html, pageUrl, normalizeThemePreference(preferredTheme))
-    : [];
+  return FAVICON_UTILS.parseHtmlThemeColorCandidates(html, pageUrl, normalizeThemePreference(preferredTheme));
 }
 
 function pickBestThemeColorCandidate(candidates) {
-  return typeof FAVICON_UTILS.pickBestThemeColorCandidate === 'function'
-    ? FAVICON_UTILS.pickBestThemeColorCandidate(candidates)
-    : null;
+  return FAVICON_UTILS.pickBestThemeColorCandidate(candidates);
 }
 
 function normalizeThemeAccentRgb(value) {
@@ -8405,9 +7920,7 @@ function normalizeThemeAccentRgb(value) {
 }
 
 function getThemeColorConfidence(accentRgb) {
-  return typeof FAVICON_UTILS.getThemeColorConfidence === 'function'
-    ? FAVICON_UTILS.getThemeColorConfidence(accentRgb)
-    : 'color';
+  return FAVICON_UTILS.getThemeColorConfidence(accentRgb);
 }
 
 function buildSiteThemeColorResult(accentRgb, source, options) {
@@ -8656,9 +8169,7 @@ function fetchShortcutFaviconResource(candidate, pageUrl, signal) {
       return null;
     }
     return blob.arrayBuffer().then((buffer) => {
-      const inspection = typeof SHORTCUT_FAVICON.inspectIconResource === 'function'
-        ? SHORTCUT_FAVICON.inspectIconResource(buffer, blob.type, result.sourceUrl, candidate, { minDimension: 16 })
-        : null;
+      const inspection = SHORTCUT_FAVICON.inspectIconResource(buffer, blob.type, result.sourceUrl, candidate, { minDimension: 16 });
       if (!inspection || inspection.usable !== true) {
         return null;
       }
@@ -8724,9 +8235,7 @@ async function resolveShortcutFaviconData(pageUrl, preferredTheme, signal, expli
 }
 
 function fetchShortcutFaviconData(pageUrl, preferredTheme, explicitIconUrl, refresh, iconSource) {
-  const normalizedPageUrl = typeof SHORTCUT_FAVICON.normalizePageUrl === 'function'
-    ? SHORTCUT_FAVICON.normalizePageUrl(pageUrl)
-    : String(pageUrl || '').trim();
+  const normalizedPageUrl = SHORTCUT_FAVICON.normalizePageUrl(pageUrl);
   const theme = getShortcutFaviconPreferredTheme(preferredTheme);
   if (!normalizedPageUrl) {
     return Promise.resolve(null);
@@ -8791,7 +8300,7 @@ function fetchShortcutFaviconData(pageUrl, preferredTheme, explicitIconUrl, refr
 }
 
 function getSiteSearchIconStore() {
-  if (siteSearchIconStore || typeof SHORTCUT_FAVICON.createShortcutFaviconStore !== 'function') {
+  if (siteSearchIconStore) {
     return siteSearchIconStore;
   }
   siteSearchIconStore = SHORTCUT_FAVICON.createShortcutFaviconStore({
@@ -8841,37 +8350,10 @@ function loadSiteSearchIconCache() {
 }
 
 function getSiteSearchProviderIconPageUrl(provider) {
-  if (typeof SHORTCUT_FAVICON.getSiteSearchProviderPageUrl === 'function') {
-    return SHORTCUT_FAVICON.getSiteSearchProviderPageUrl(provider);
-  }
-  const template = provider && provider.template ? String(provider.template).trim() : '';
-  if (!template) {
-    return '';
-  }
-  try {
-    const parsed = new URL(template.replace(/\{query\}/g, 'test'));
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      return '';
-    }
-    return `${parsed.origin}/`;
-  } catch (error) {
-    return '';
-  }
-}
-
-function getCachedSiteSearchIconDataUrl(pageUrl) {
-  if (!siteSearchIconCache || typeof SHORTCUT_FAVICON.getCacheKey !== 'function') {
-    return '';
-  }
-  const key = SHORTCUT_FAVICON.getCacheKey(pageUrl);
-  const entry = key ? siteSearchIconCache[key] : null;
-  return entry && entry.dataUrl ? String(entry.dataUrl) : '';
+  return SHORTCUT_FAVICON.getSiteSearchProviderPageUrl(provider);
 }
 
 function hasUsableCachedSiteSearchProviderIcon(provider) {
-  if (typeof SHORTCUT_FAVICON.getSiteSearchProviderIcon !== 'function') {
-    return Boolean(getCachedSiteSearchIconDataUrl(getSiteSearchProviderIconPageUrl(provider)));
-  }
   const icon = SHORTCUT_FAVICON.getSiteSearchProviderIcon(
     siteSearchIconCache || {},
     provider,
@@ -8904,7 +8386,7 @@ function scheduleSiteSearchIconCacheWrite() {
 }
 
 function pruneSiteSearchProviderIconCache(providers) {
-  if (!siteSearchIconCache || typeof SHORTCUT_FAVICON.retainCachedIcons !== 'function') {
+  if (!siteSearchIconCache) {
     return false;
   }
   const pageUrls = (Array.isArray(providers) ? providers : []).flatMap((provider) => {
@@ -8931,7 +8413,7 @@ function pruneSiteSearchProviderIconCache(providers) {
 }
 
 function cacheSiteSearchProviderIcon(pageUrl, result) {
-  if (!result || !result.data || typeof SHORTCUT_FAVICON.setCachedIcon !== 'function') {
+  if (!result || !result.data) {
     return false;
   }
   const nextCache = SHORTCUT_FAVICON.setCachedIcon(
@@ -8942,9 +8424,7 @@ function cacheSiteSearchProviderIcon(pageUrl, result) {
     Date.now(),
     SITE_SEARCH_ICON_CACHE_OPTIONS
   );
-  const cacheKey = typeof SHORTCUT_FAVICON.getCacheKey === 'function'
-    ? SHORTCUT_FAVICON.getCacheKey(pageUrl)
-    : pageUrl;
+  const cacheKey = SHORTCUT_FAVICON.getCacheKey(pageUrl);
   const nextEntry = cacheKey && nextCache ? nextCache[cacheKey] : null;
   if (!nextEntry || nextEntry.dataUrl !== result.data) {
     return false;
@@ -8988,9 +8468,7 @@ function scheduleSiteSearchProviderIconWarmup(providers, preferredTheme) {
   loadSiteSearchIconCache().then(() => {
     pruneSiteSearchProviderIconCache(items);
     items.forEach((provider) => {
-      const explicitIcon = typeof SHORTCUT_FAVICON.getSiteSearchProviderExplicitIcon === 'function'
-        ? SHORTCUT_FAVICON.getSiteSearchProviderExplicitIcon(provider)
-        : String(provider && (provider.icon || provider.iconUrl) || '').trim();
+      const explicitIcon = SHORTCUT_FAVICON.getSiteSearchProviderExplicitIcon(provider);
       const pageUrl = getSiteSearchProviderIconPageUrl(provider);
       const providerKey = String(provider && provider.key || '').trim().toLowerCase();
       if (SITE_SEARCH_PINNED_ICON_KEYS.has(providerKey)) {
@@ -9068,15 +8546,10 @@ function fetchFaviconData(url, pageUrl) {
     const canonicalPageUrl = getFaviconRequestMatchUrl(pageUrl || url);
     const requestExcluded = isUrlBlockedByFaviconRequestBlacklist(canonicalPageUrl);
     const effectiveEnhancedFetchEnabled = enhancedFetchEnabled && !requestExcluded;
-    const sourceAllowedByMode = typeof FAVICON_UTILS.isFaviconSourceAllowedByEnhancedFetchPolicy === 'function'
-      ? FAVICON_UTILS.isFaviconSourceAllowedByEnhancedFetchPolicy(url, effectiveEnhancedFetchEnabled, {
-        chromeApi: chrome,
-        allowThirdPartyFetch: !requestExcluded
-      })
-      : (!requestExcluded && isFaviconProxyUrl(url)) || effectiveEnhancedFetchEnabled === true || (
-        typeof FAVICON_UTILS.isSafeVirtualFaviconRequestUrl === 'function' &&
-        FAVICON_UTILS.isSafeVirtualFaviconRequestUrl(url)
-      );
+    const sourceAllowedByMode = FAVICON_UTILS.isFaviconSourceAllowedByEnhancedFetchPolicy(url, effectiveEnhancedFetchEnabled, {
+      chromeApi: chrome,
+      allowThirdPartyFetch: !requestExcluded
+    });
     const sourceAllowed = sourceAllowedByMode && isAllowedFaviconProxyRequestUrl(url);
     if (!sourceAllowed) {
       logBlockedLocalFavicon(
@@ -9158,85 +8631,26 @@ function fetchFaviconData(url, pageUrl) {
 }
 
 function normalizeSiteSearchTemplate(template) {
-  if (typeof SEARCH_UTILS.normalizeSiteSearchTemplate === 'function') {
-    return SEARCH_UTILS.normalizeSiteSearchTemplate(template);
-  }
-  return String(template || '')
-    .trim()
-    .replace(/\{\{\{s\}\}\}/g, '{query}')
-    .replace(/\{s\}/g, '{query}')
-    .replace(/\{searchTerms\}/g, '{query}');
-}
-
-function isAiSiteSearchProvider(provider) {
-  if (typeof SEARCH_UTILS.isAiSiteSearchProvider === 'function') {
-    return SEARCH_UTILS.isAiSiteSearchProvider(provider);
-  }
-  const template = normalizeSiteSearchTemplate(provider && provider.template);
-  return Boolean(provider && (
-    String(provider.category || '').trim() === 'aiSearch' ||
-    String(provider.action || '').trim() === 'openAndSubmit' ||
-    (template && !template.includes('{query}'))
-  ));
+  return SEARCH_UTILS.normalizeSiteSearchTemplate(template);
 }
 
 function isInteractiveSiteSearchProvider(provider) {
-  if (typeof SEARCH_UTILS.isInteractiveSiteSearchProvider === 'function') {
-    return SEARCH_UTILS.isInteractiveSiteSearchProvider(provider);
-  }
-  return Boolean(
-    isAiSiteSearchProvider(provider) &&
-    String((provider && provider.action) || '').trim() === 'openAndSubmit' &&
-    (
-      typeof SEARCH_UTILS.isInteractiveSiteSearchSubmitStrategy === 'function'
-        ? SEARCH_UTILS.isInteractiveSiteSearchSubmitStrategy(provider && provider.submitStrategy)
-        : ['geminiPrompt', 'chatgptPrompt', 'doubaoPrompt', 'qianwenQuery', 'yuanbaoPrompt', 'minimaxPrompt', 'deepseekPrompt', 'kimiPrompt'].includes(String((provider && provider.submitStrategy) || '').trim())
-    )
-  );
+  return SEARCH_UTILS.isInteractiveSiteSearchProvider(provider);
 }
 
 function sanitizeSiteSearchProviders(items) {
-  if (typeof SEARCH_UTILS.sanitizeSiteSearchProviders === 'function') {
-    return SEARCH_UTILS.sanitizeSiteSearchProviders(items);
-  }
-  return (Array.isArray(items) ? items : [])
-    .filter((item) => item && item.key && item.template)
-    .map((item) => {
-      const template = normalizeSiteSearchTemplate(item.template);
-      const provider = {
-        id: String(item.id || '').trim(),
-        key: String(item.key).trim(),
-        aliases: Array.isArray(item.aliases) ? item.aliases.filter(Boolean) : [],
-        name: item.name || item.key,
-        template,
-        action: String(item.action || '').trim(),
-        submitStrategy: String(item.submitStrategy || '').trim(),
-        category: String(item.category || '').trim()
-      };
-      const builtinKey = String(item.builtinKey || '').trim().toLowerCase();
-      if (builtinKey) {
-        provider.builtinKey = builtinKey;
-      }
-      return provider;
-    })
-    .filter((item) => item.key && item.template && (item.template.includes('{query}') || isAiSiteSearchProvider(item)));
+  return SEARCH_UTILS.sanitizeSiteSearchProviders(items);
 }
 
 function loadCustomSiteSearchProviders() {
-  if (typeof SETTINGS.readStorageValue === 'function') {
-    return SETTINGS.readStorageValue(
-      storageArea,
-      chrome,
-      SITE_SEARCH_STORAGE_KEY
-    ).then(sanitizeSiteSearchProviders);
-  }
-  return Promise.resolve([]);
+  return SETTINGS.readStorageValue(
+    storageArea,
+    chrome,
+    SITE_SEARCH_STORAGE_KEY
+  ).then(sanitizeSiteSearchProviders);
 }
 
 function loadDisabledSiteSearchKeys() {
-  if (typeof SETTINGS.readStorageValue !== 'function') {
-    return Promise.resolve([]);
-  }
   return SETTINGS.readStorageValue(
     storageArea,
     chrome,
@@ -9269,28 +8683,11 @@ function normalizeFaviconRequestBlacklistItems(items) {
 }
 
 function normalizeFaviconEnhancedFetchEnabled(value) {
-  const settings = globalThis.LumnoSettings || {};
-  if (typeof settings.normalizeFaviconEnhancedFetchEnabled === 'function') {
-    return settings.normalizeFaviconEnhancedFetchEnabled(value);
-  }
-  return value !== false;
+  return SETTINGS.normalizeFaviconEnhancedFetchEnabled(value);
 }
 
 function normalizeSearchResultSourceTypes(value) {
-  const settings = globalThis.LumnoSettings || {};
-  if (typeof settings.normalizeSearchResultSourceTypes === 'function') {
-    return settings.normalizeSearchResultSourceTypes(value);
-  }
-  const rawItems = Array.isArray(value) ? value : [];
-  const selected = [];
-  rawItems.forEach((item) => {
-    const raw = String(item || '').trim();
-    const type = raw === 'topSite' || raw === 'bookmark' || raw === 'history' ? raw : '';
-    if (type && !selected.includes(type)) {
-      selected.push(type);
-    }
-  });
-  return selected.length > 0 ? selected : ['topSite', 'bookmark', 'history'];
+  return SETTINGS.normalizeSearchResultSourceTypes(value);
 }
 
 function areStringArraysEqual(a, b) {
@@ -9415,9 +8812,7 @@ function getFaviconRequestMatchUrl(url) {
   if (!raw) {
     return '';
   }
-  return typeof FAVICON_UTILS.getCanonicalPageUrlForFavicon === 'function'
-    ? String(FAVICON_UTILS.getCanonicalPageUrlForFavicon(raw) || raw).trim()
-    : raw;
+  return String(FAVICON_UTILS.getCanonicalPageUrlForFavicon(raw) || raw).trim();
 }
 
 function isUrlBlockedByFaviconRequestBlacklist(url) {
@@ -9431,10 +8826,7 @@ function isUrlBlockedByFaviconRequestBlacklist(url) {
 }
 
 function normalizeSearchSelectionStats(rawStats) {
-  if (typeof SEARCH_UTILS.normalizeSearchSelectionStats === 'function') {
-    return SEARCH_UTILS.normalizeSearchSelectionStats(rawStats);
-  }
-  return { version: 1, updatedAt: 0, queries: {} };
+  return SEARCH_UTILS.normalizeSearchSelectionStats(rawStats);
 }
 
 function loadSearchSelectionStats() {
@@ -9500,8 +8892,7 @@ function shouldRecordSearchSuggestionSelectionPayload(selection) {
 }
 
 function recordSearchSuggestionSelection(selection) {
-  if (!shouldRecordSearchSuggestionSelectionPayload(selection) ||
-      typeof SEARCH_UTILS.recordSearchSelectionInStats !== 'function') {
+  if (!shouldRecordSearchSuggestionSelectionPayload(selection)) {
     return Promise.resolve({ ok: false, reason: 'invalid-selection' });
   }
   return loadSearchSelectionStats()
@@ -9526,9 +8917,6 @@ function recordSearchSuggestionSelectionFromSuggestion(suggestion, query, source
 }
 
 function getSearchSelectionBoost(item, context, stats, options) {
-  if (typeof SEARCH_UTILS.getSearchSelectionBoost !== 'function') {
-    return 0;
-  }
   return SEARCH_UTILS.getSearchSelectionBoost(item, context, stats, options);
 }
 
@@ -9565,49 +8953,14 @@ function filterBlacklistedSuggestions(list, items, queryForProvider) {
 }
 
 function mergeCustomProviders(baseItems, customItems) {
-  if (typeof SEARCH_UTILS.mergeCustomProviders === 'function') {
-    return SEARCH_UTILS.mergeCustomProviders(baseItems, customItems);
-  }
-  const merged = [];
-  const seen = new Set();
-  const baseMap = new Map((baseItems || []).map((item) => [String(item && item.key ? item.key : '').toLowerCase(), item]));
-  customItems.forEach((item) => {
-    if (item && item.disabled) {
-      return;
-    }
-    const key = String(item.key || '').toLowerCase();
-    if (!key || seen.has(key)) {
-      return;
-    }
-    seen.add(key);
-    const builtinKey = String(item && item.builtinKey ? item.builtinKey : '').toLowerCase();
-    const baseProvider = baseMap.get(builtinKey || key);
-    merged.push({
-      ...item,
-      action: String(item.action || (baseProvider && baseProvider.action) || '').trim(),
-      submitStrategy: String(item.submitStrategy || (baseProvider && baseProvider.submitStrategy) || '').trim(),
-      _xIsCustom: true
-    });
-  });
-  baseItems.forEach((item) => {
-    const key = String(item.key || '').toLowerCase();
-    if (!key || seen.has(key)) {
-      return;
-    }
-    seen.add(key);
-    merged.push(item);
-  });
-  return merged;
+  return SEARCH_UTILS.mergeCustomProviders(baseItems, customItems);
 }
 
 function getSiteSearchProviderEntryUrl(provider, query) {
   if (!provider || !provider.template) {
     return '';
   }
-  if (typeof SEARCH_UTILS.buildSearchUrlFromTemplate === 'function') {
-    return SEARCH_UTILS.buildSearchUrlFromTemplate(provider.template, query || '');
-  }
-  return normalizeSiteSearchTemplate(provider.template).replace(/\{query\}/g, encodeURIComponent(String(query || '')));
+  return SEARCH_UTILS.buildSearchUrlFromTemplate(provider.template, query || '');
 }
 
 function getTemplateDomain(template) {
@@ -9682,9 +9035,7 @@ function loadSiteSearchProviders() {
     return siteSearchPromise;
   }
   const localUrl = chrome.runtime.getURL('assets/data/site-search.json');
-  const fallbackDefaults = typeof SEARCH_UTILS.getDefaultSiteSearchProviders === 'function'
-    ? SEARCH_UTILS.getDefaultSiteSearchProviders()
-    : [];
+  const fallbackDefaults = SEARCH_UTILS.getDefaultSiteSearchProviders();
   const loadGeneration = siteSearchLoadGeneration;
   const loadTask = fetch(localUrl)
     .then((response) => response.json())
@@ -10411,27 +9762,6 @@ function getTitlePinyinMatchScore(title, normalizedQuery) {
   };
 }
 
-function mergeItemsByUrl(itemGroups) {
-  const merged = [];
-  const seenKeys = new Set();
-  (Array.isArray(itemGroups) ? itemGroups : []).forEach((items) => {
-    (Array.isArray(items) ? items : []).forEach((item) => {
-      if (!item) {
-        return;
-      }
-      const urlKey = typeof item.url === 'string' && item.url
-        ? `url:${item.url}`
-        : `id:${item.id || ''}:${item.title || ''}`;
-      if (seenKeys.has(urlKey)) {
-        return;
-      }
-      seenKeys.add(urlKey);
-      merged.push(item);
-    });
-  });
-  return merged;
-}
-
 function getBackgroundSearchPolicy(searchUtils) {
   return (searchUtils && searchUtils.SEARCH_POLICY) || {
     lookupWindowDays: 180,
@@ -10540,27 +9870,12 @@ async function getSearchSuggestions(query, options) {
       loadSearchSelectionStats()
     ]);
     const collectSearchMatches = (items) => {
-      if (typeof searchUtils.collectSearchMatches === 'function') {
-        return searchUtils.collectSearchMatches(items, context, searchBlacklistItems, {
-          getTitlePinyinMatchScore,
-          isUrlBlockedBySearchBlacklist
-        });
-      }
-      return (Array.isArray(items) ? items : []).filter((item) => {
-        if (!item || !item.url || isUrlBlockedBySearchBlacklist(item.url, searchBlacklistItems)) {
-          return false;
-        }
-        const titleLower = item.title ? item.title.toLowerCase() : '';
-        const urlLower = item.url.toLowerCase();
-        const pinyinMatch = context.useTitlePinyinMatch && item.title
-          ? getTitlePinyinMatchScore(item.title, context.normalizedPinyinQuery).score > 0
-          : false;
-        return pinyinMatch || titleLower.includes(context.queryLower) || urlLower.includes(context.queryLower);
+      return searchUtils.collectSearchMatches(items, context, searchBlacklistItems, {
+        getTitlePinyinMatchScore,
+        isUrlBlockedBySearchBlacklist
       });
     };
-    const mergeSearchItems = typeof searchUtils.mergeItemsByUrl === 'function'
-      ? searchUtils.mergeItemsByUrl
-      : mergeItemsByUrl;
+    const mergeSearchItems = searchUtils.mergeItemsByUrl;
     const fallbackHistoryMatches = collectSearchMatches(fallbackHistoryItems);
     const historyItems = collectSearchMatches(mergeSearchItems([
       Array.isArray(historyItemsRaw) ? historyItemsRaw : [],
@@ -10637,28 +9952,11 @@ async function getSearchSuggestions(query, options) {
     }
 
     function createSearchSuggestion(item, sourceType, score, extras) {
-      if (typeof searchUtils.createSearchSuggestion === 'function') {
-        return searchUtils.createSearchSuggestion(item, sourceType, score, extras);
-      }
-      return {
-        type: sourceType,
-        title: item.title || item.url,
-        url: item.url,
-        favicon: extras && extras.favicon ? extras.favicon : '',
-        score,
-        lastVisitTime: Number(item.lastVisitTime) || 0,
-        visitCount: Number(item.visitCount) || 0,
-        typedCount: Number(item.typedCount) || 0,
-        reasons: extras && Array.isArray(extras.reasons) ? extras.reasons : [],
-        ...(extras || {})
-      };
+      return searchUtils.createSearchSuggestion(item, sourceType, score, extras);
     }
 
     function calculateSearchRelevanceScore(item, sourceType) {
-      if (typeof searchUtils.calculateSearchRelevanceScore === 'function') {
-        return searchUtils.calculateSearchRelevanceScore(item, sourceType, context, searchScoreOptions);
-      }
-      return 0;
+      return searchUtils.calculateSearchRelevanceScore(item, sourceType, context, searchScoreOptions);
     }
 
     function buildBookmarkPath(bookmark) {
@@ -10681,9 +9979,7 @@ async function getSearchSuggestions(query, options) {
     const suggestionIndexByKey = new Map();
 
     function getSuggestionKey(item) {
-      return typeof searchUtils.buildSearchDedupEntryKey === 'function'
-        ? searchUtils.buildSearchDedupEntryKey(item)
-        : (item && item.url ? item.url : '');
+      return searchUtils.buildSearchDedupEntryKey(item);
     }
 
     function upsertSuggestion(item, sourceType, extras) {
@@ -10795,29 +10091,24 @@ async function getSearchSuggestions(query, options) {
       upsertOpenTabSuggestion(item);
     });
 
-    if (typeof searchUtils.buildSearchBrandDirectSuggestion === 'function') {
-      const brandDirectSuggestion = searchUtils.buildSearchBrandDirectSuggestion(suggestions, context, {
-        ...searchScoreOptions,
-        buildFavicon: buildSearchSuggestionFavicon,
-        buildReasons: buildSuggestionReasons
-      });
-      if (brandDirectSuggestion) {
-        const directKey = getSuggestionKey(brandDirectSuggestion);
-        const existingIndex = suggestionIndexByKey.get(directKey);
-        if (typeof existingIndex === 'number') {
-          suggestions[existingIndex] = brandDirectSuggestion;
-        } else {
-          suggestionIndexByKey.set(directKey, suggestions.length);
-          suggestions.push(brandDirectSuggestion);
-        }
+    const brandDirectSuggestion = searchUtils.buildSearchBrandDirectSuggestion(suggestions, context, {
+      ...searchScoreOptions,
+      buildFavicon: buildSearchSuggestionFavicon,
+      buildReasons: buildSuggestionReasons
+    });
+    if (brandDirectSuggestion) {
+      const directKey = getSuggestionKey(brandDirectSuggestion);
+      const existingIndex = suggestionIndexByKey.get(directKey);
+      if (typeof existingIndex === 'number') {
+        suggestions[existingIndex] = brandDirectSuggestion;
+      } else {
+        suggestionIndexByKey.set(directKey, suggestions.length);
+        suggestions.push(brandDirectSuggestion);
       }
     }
 
     suggestions.sort((a, b) => {
-      if (typeof searchUtils.compareSearchSuggestions === 'function') {
-        return searchUtils.compareSearchSuggestions(a, b);
-      }
-      return (b.score || 0) - (a.score || 0);
+      return searchUtils.compareSearchSuggestions(a, b);
     });
 
     const uniqueSuggestions = [];
@@ -10833,14 +10124,8 @@ async function getSearchSuggestions(query, options) {
     }
 
     let finalSuggestions = filterBlacklistedSuggestions(uniqueSuggestions, searchBlacklistItems, context.lookupQuery);
-    if (typeof searchUtils.filterSearchSuggestionsBySourceTypes === 'function') {
-      finalSuggestions = searchUtils.filterSearchSuggestionsBySourceTypes(finalSuggestions, sourceTypes);
-    }
-    if (typeof searchUtils.applySearchSuggestionHostDiversity === 'function') {
-      finalSuggestions = searchUtils.applySearchSuggestionHostDiversity(finalSuggestions, { context });
-    } else {
-      finalSuggestions = finalSuggestions.slice(0, searchPolicy.finalSuggestionLimit || 12);
-    }
+    finalSuggestions = searchUtils.filterSearchSuggestionsBySourceTypes(finalSuggestions, sourceTypes);
+    finalSuggestions = searchUtils.applySearchSuggestionHostDiversity(finalSuggestions, { context });
 
     return finalSuggestions;
 
@@ -10877,30 +10162,15 @@ async function getSearchEngineSuggestions(query, localSuggestions, options) {
     return normalizedLocalSuggestions;
   }
 
-  const engineSuggestions = typeof searchUtils.normalizeSearchEngineSuggestions === 'function'
-    ? searchUtils.normalizeSearchEngineSuggestions(
-      rawEngineSuggestions,
-      context.lookupQuery,
-      { limit: searchPolicy.maxEngineSuggestions }
-    )
-    : (Array.isArray(rawEngineSuggestions) ? rawEngineSuggestions : [])
-      .map((item) => String(item || '').trim())
-      .filter((item) => item && item.toLowerCase() !== context.queryLower)
-      .slice(0, searchPolicy.maxEngineSuggestions || 5);
-  const engineSuggestionPolicy = typeof searchUtils.getSearchEngineSuggestionPolicy === 'function'
-    ? searchUtils.getSearchEngineSuggestionPolicy(context, normalizedLocalSuggestions, {
-      ...searchPolicy,
-      searchFirst: settings.searchFirst === true
-    })
-    : {
-      limit: normalizedLocalSuggestions.length > 0
-        ? Math.min(
-          searchPolicy.maxEngineSuggestionsWithLocalResults || 3,
-          searchPolicy.maxEngineSuggestions || 5
-        )
-        : (searchPolicy.maxEngineSuggestions || 5),
-      score: normalizedLocalSuggestions.length > 0 ? 1 : 160
-    };
+  const engineSuggestions = searchUtils.normalizeSearchEngineSuggestions(
+    rawEngineSuggestions,
+    context.lookupQuery,
+    { limit: searchPolicy.maxEngineSuggestions }
+  );
+  const engineSuggestionPolicy = searchUtils.getSearchEngineSuggestionPolicy(context, normalizedLocalSuggestions, {
+    ...searchPolicy,
+    searchFirst: settings.searchFirst === true
+  });
   const mergedSuggestions = normalizedLocalSuggestions.slice();
   engineSuggestions.slice(0, engineSuggestionPolicy.limit).forEach((suggestion) => {
     const suggestionItem = {
@@ -10919,18 +10189,13 @@ async function getSearchEngineSuggestions(query, localSuggestions, options) {
   });
 
   mergedSuggestions.sort((a, b) => {
-    if (typeof searchUtils.compareSearchSuggestions === 'function') {
-      return searchUtils.compareSearchSuggestions(a, b);
-    }
-    return (b.score || 0) - (a.score || 0);
+    return searchUtils.compareSearchSuggestions(a, b);
   });
   const uniqueSuggestions = [];
   const seenSuggestionKeys = new Set();
   for (let i = 0; i < mergedSuggestions.length && uniqueSuggestions.length < (searchPolicy.candidatePoolLimit || 20); i += 1) {
     const suggestion = mergedSuggestions[i];
-    const suggestionKey = typeof searchUtils.buildSearchDedupEntryKey === 'function'
-      ? searchUtils.buildSearchDedupEntryKey(suggestion)
-      : String((suggestion && (suggestion.url || suggestion.title)) || '').trim().toLowerCase();
+    const suggestionKey = searchUtils.buildSearchDedupEntryKey(suggestion);
     if (!suggestionKey || seenSuggestionKeys.has(suggestionKey)) {
       continue;
     }
@@ -10939,31 +10204,24 @@ async function getSearchEngineSuggestions(query, localSuggestions, options) {
   }
 
   let finalSuggestions = filterBlacklistedSuggestions(uniqueSuggestions, searchBlacklistItems, context.lookupQuery);
-  if (typeof searchUtils.filterSearchSuggestionsBySourceTypes === 'function') {
-    finalSuggestions = searchUtils.filterSearchSuggestionsBySourceTypes(finalSuggestions, sourceTypes);
-  }
-  if (typeof searchUtils.applySearchSuggestionHostDiversity === 'function') {
-    if (settings.searchFirst === true) {
-      const engineCandidates = finalSuggestions.filter((suggestion) => (
-        suggestion && suggestion.type === 'googleSuggest'
-      ));
-      const localCandidates = searchUtils.applySearchSuggestionHostDiversity(
-        finalSuggestions.filter((suggestion) => !suggestion || suggestion.type !== 'googleSuggest'),
-        { context }
-      );
-      finalSuggestions = [...localCandidates, ...engineCandidates];
-    } else {
-      finalSuggestions = searchUtils.applySearchSuggestionHostDiversity(finalSuggestions, { context });
-    }
+  finalSuggestions = searchUtils.filterSearchSuggestionsBySourceTypes(finalSuggestions, sourceTypes);
+  if (settings.searchFirst === true) {
+    const engineCandidates = finalSuggestions.filter((suggestion) => (
+      suggestion && suggestion.type === 'googleSuggest'
+    ));
+    const localCandidates = searchUtils.applySearchSuggestionHostDiversity(
+      finalSuggestions.filter((suggestion) => !suggestion || suggestion.type !== 'googleSuggest'),
+      { context }
+    );
+    finalSuggestions = [...localCandidates, ...engineCandidates];
   } else {
-    finalSuggestions = finalSuggestions.slice(0, searchPolicy.finalSuggestionLimit || 12);
+    finalSuggestions = searchUtils.applySearchSuggestionHostDiversity(finalSuggestions, { context });
   }
-  if (settings.searchFirst === true &&
-      typeof searchUtils.composeSearchFirstSuggestionSlate === 'function') {
+  if (settings.searchFirst === true) {
     finalSuggestions = searchUtils.composeSearchFirstSuggestionSlate(finalSuggestions, {
       limit: searchPolicy.finalSuggestionLimit || 12
     }).slice(0, searchPolicy.finalSuggestionLimit || 12);
-  } else if (typeof searchUtils.composeSearchSuggestionSlate === 'function') {
+  } else {
     finalSuggestions = searchUtils.composeSearchSuggestionSlate(finalSuggestions, context);
   }
   return finalSuggestions;

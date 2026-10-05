@@ -204,42 +204,4 @@ function createChromeStub(options) {
   assert.strictEqual(response.groupId, 44);
 }
 
-{
-  const { chromeApi, createdTabs } = createChromeStub();
-  let response = null;
-  selectionTarget.openSelectionTarget(chromeApi, {
-    url: 'https://chatgpt.com/',
-    sourceTab: { id: 1, windowId: 1 },
-    splitViewAdapter: {
-      openTarget(_options, callback) {
-        callback({ ok: true, tab: { id: 88, windowId: 1 } });
-      }
-    }
-  }, (result) => {
-    response = result;
-  });
-  assert.strictEqual(createdTabs.length, 0, 'successful split view adapters should bypass group fallback');
-  assert.strictEqual(response.mode, 'splitView');
-  assert.strictEqual(response.tab.id, 88);
-}
-
-{
-  const { chromeApi, createdTabs } = createChromeStub();
-  let response = null;
-  selectionTarget.openSelectionTarget(chromeApi, {
-    url: 'https://chatgpt.com/',
-    sourceTab: { id: 1, windowId: 1 },
-    splitViewAdapter: {
-      openTarget() {
-        return { ok: true, tab: { id: 89, windowId: 1 } };
-      }
-    }
-  }, (result) => {
-    response = result;
-  });
-  assert.strictEqual(createdTabs.length, 0, 'synchronous split view adapters should bypass group fallback');
-  assert.strictEqual(response.mode, 'splitView');
-  assert.strictEqual(response.tab.id, 89);
-}
-
 console.log('background selection target tests passed');
