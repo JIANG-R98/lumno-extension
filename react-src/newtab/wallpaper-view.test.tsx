@@ -92,7 +92,8 @@ describe('New Tab React wallpaper view', () => {
     expect(controller.getRefs().quoteProviderHint.tagName).toBe('P');
     expect(controller.getRefs().bingTab.textContent).toBe('Bing');
     expect(controller.getRefs().bingDailyToggle.getAttribute('role')).toBe('switch');
-    expect(controller.getRefs().bingDailyPreview.hidden).toBe(true);
+    expect(controller.getRefs().bingSelectedSource.hidden).toBe(true);
+    expect(controller.getRefs().bingRefresh.closest('.x-nt-overlay-control-header')).not.toBeNull();
     expect(controller.control.querySelector('[data-wallpaper-tab="wallhaven"]')).toBeNull();
     expect(
       controller.control.querySelector('[data-wallpaper-id="coast"]')

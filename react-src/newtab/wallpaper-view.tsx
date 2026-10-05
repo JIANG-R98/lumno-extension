@@ -845,27 +845,42 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                 />
               </div>
               <div {...ref('bingPanel')} className="x-nt-bing-panel" data-wallpaper-panel="bing" role="tabpanel" aria-hidden="true">
-                <div className="x-nt-bing-daily-card">
-                  <div className="x-nt-appearance-setting-row">
-                    <span {...ref('bingDailyLabel')} className="x-nt-appearance-setting-title" />
+                <div className="x-nt-bing-daily">
+                  <div className="x-nt-wallpaper-mode-sync">
+                    <span {...ref('bingDailyLabel')} className="x-nt-wallpaper-mode-sync-title" />
                     <Switch name="bingDailyToggle" />
                   </div>
                   <p {...ref('bingDailyHint')} className="x-nt-bing-hint" />
-                  <div {...ref('bingDailyPreview')} className="x-nt-bing-preview" hidden>
-                    <img {...ref('bingDailyImage')} alt="" decoding="async" referrerPolicy="no-referrer" />
-                    <div>
-                      <span {...ref('bingDailyTitle')} className="x-nt-bing-title" />
-                      <span {...ref('bingDailyDate')} className="x-nt-bing-date" />
-                    </div>
+                </div>
+                <div className="x-nt-bing-recent">
+                  <div className="x-nt-overlay-control-header">
+                    <span {...ref('bingRecentLabel')} />
+                    <button
+                      {...ref('bingRefresh')}
+                      className="x-nt-appearance-info-button x-nt-bing-refresh"
+                      data-loading="false"
+                      dangerouslySetInnerHTML={{
+                        __html: String(model.icons?.refresh || '')
+                      }}
+                      type="button"
+                    />
                   </div>
+                  <div {...ref('bingItemsHost')} className="x-nt-wallpaper-grid x-nt-wallpaper-grid--bing" />
+                  <div {...ref('bingStatus')} className="x-nt-bing-status" role="status" aria-live="polite" />
+                  <a {...ref('bingSelectedSource')} className="x-nt-bing-source" target="_blank" rel="noopener noreferrer" hidden>
+                    <span className="x-nt-bing-source-heading">
+                      <span {...ref('bingSelectedTitle')} className="x-nt-bing-source-title" />
+                      <span
+                        aria-hidden="true"
+                        className="x-nt-bing-source-icon"
+                        dangerouslySetInnerHTML={{
+                          __html: String(model.icons?.external || '')
+                        }}
+                      />
+                    </span>
+                    <span {...ref('bingSelectedMeta')} className="x-nt-bing-source-meta" />
+                  </a>
                 </div>
-                <div className="x-nt-bing-toolbar">
-                  <span {...ref('bingRecentLabel')} />
-                  <button {...ref('bingRefresh')} className="x-nt-bing-refresh" type="button" />
-                </div>
-                <div {...ref('bingStatus')} className="x-nt-bing-status" role="status" aria-live="polite" />
-                <div {...ref('bingItemsHost')} className="x-nt-wallpaper-grid x-nt-wallpaper-grid--bing" />
-                <a {...ref('bingSelectedSource')} className="x-nt-bing-source" target="_blank" rel="noopener noreferrer" hidden />
               </div>
               <div className="x-nt-effect-control">
                 <SliderControl

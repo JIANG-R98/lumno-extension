@@ -775,11 +775,10 @@ function createFakeWallpaperViewController(config) {
     'customItemsHost'
   );
   const bingPanel = add(body, 'div', 'x-nt-bing-panel', { 'data-wallpaper-panel': 'bing' }, 'bingPanel');
-  for (const name of ['bingDailyLabel', 'bingDailyHint', 'bingDailyPreview', 'bingDailyTitle', 'bingDailyDate', 'bingRecentLabel', 'bingStatus']) {
+  for (const name of ['bingDailyLabel', 'bingDailyHint', 'bingRecentLabel', 'bingStatus', 'bingSelectedTitle', 'bingSelectedMeta']) {
     add(bingPanel, 'span', '', {}, name);
   }
   addSwitch(bingPanel, 'bingDailyToggle');
-  add(bingPanel, 'img', '', {}, 'bingDailyImage');
   add(bingPanel, 'button', '', {}, 'bingRefresh');
   add(bingPanel, 'a', '', {}, 'bingSelectedSource');
   const bingItemsHost = add(bingPanel, 'div', 'x-nt-wallpaper-grid x-nt-wallpaper-grid--bing', {}, 'bingItemsHost');
@@ -3755,7 +3754,7 @@ async function testCrtFilterPersistsAndShowsDisplayControls() {
 async function testBingDailySelectionAndManualOverride() {
   const remote = require('../src/newtab/remote-content.js');
   const id = 'bing-20261002-OHR.River_ZH-CN123';
-  const photo = { ...remote.wallpaperFromId(id), name: 'River', copyright: '© Photographer',
+  const photo = { ...remote.wallpaperFromId(id), name: 'River', copyright: 'River bank (© Photographer)',
     imageDataUrl: 'data:image/webp;base64,aGVsbG8=', thumbnailDataUrl: 'data:image/webp;base64,dGh1bWI=' };
   let waitForDownload = null;
   const client = {
@@ -3788,7 +3787,11 @@ async function testBingDailySelectionAndManualOverride() {
   assert.strictEqual(prefs.data[WALLPAPER_STORAGE_KEY].light, 'bing-daily', 'Persist daily intent instead of a fixed image ID');
   assert.strictEqual(prefs.data[WALLPAPER_STORAGE_KEY].dark, 'dark-linocut-topographic', 'Respect split light/dark settings');
   assert.strictEqual(daily.checked, true);
-  assert.match(getDescendantByAttribute(control, 'data-wallpaper-ref', 'bingSelectedSource').textContent, /Photographer/);
+  assert.strictEqual(getDescendantByAttribute(control, 'data-wallpaper-ref', 'bingSelectedMeta').textContent,
+    'River bank · © Photographer', 'Split Bing credits into place and photographer');
+  assert.strictEqual(getDescendantByAttribute(control, 'data-wallpaper-ref', 'bingSelectedTitle').textContent, 'River');
+  assert.strictEqual(getDescendantByAttribute(control, 'data-wallpaper-id', id).getAttribute('data-selected'), 'true',
+    'Daily mode should highlight the dated tile it resolves to');
   daily.checked = false;
   daily.dispatchEvent(new context.windowObj.Event('change'));
   await waitForAsyncWallpaperApply();

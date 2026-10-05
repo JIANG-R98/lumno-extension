@@ -4480,7 +4480,7 @@ body[data-theme="dark"] .x-nt-appearance-header {
   align-items: center;
   justify-content: space-between;
   gap: var(--x-nt-panel-header-gap);
-  padding: 0 2px;
+  padding: 0 0 0 2px;
   box-sizing: border-box;
 }
 .x-nt-wallpaper-mode-sync-title {
@@ -4611,7 +4611,7 @@ body[data-theme="dark"] .x-nt-appearance-header {
   align-items: center;
   justify-content: space-between;
   gap: var(--x-nt-panel-header-gap);
-  padding: 0 2px;
+  padding: 0 0 0 2px;
   box-sizing: border-box;
 }
 .x-nt-top-content-seconds-row[hidden],
@@ -4698,7 +4698,8 @@ body[data-theme="dark"] .x-nt-appearance-header {
   pointer-events: none;
 }
 .x-nt-overlay-control.x-nt-search-width-control {
-  padding-top: 0;
+  /* Keep switches in this group flush with the section header switches. */
+  padding: 0 0 0 2px;
   opacity: 1;
   visibility: visible;
   transition: opacity 160ms ease;
@@ -4723,7 +4724,7 @@ body[data-theme="dark"] .x-nt-appearance-header {
   justify-content: space-between;
   gap: var(--x-nt-panel-header-gap);
   margin-top: 8px;
-  padding: 0 2px;
+  padding: 0 0 0 2px;
   box-sizing: border-box;
 }
 .x-nt-appearance-setting-title-group {

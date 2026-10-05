@@ -843,6 +843,9 @@
     let bingStatus = '';
     let bingLoading = false;
     let bingSelecting = false;
+    const BING_RECENT_TILE_LIMIT = 6;
+    let bingDailyCheckedDay = '';
+    let hasBingDailyRolloverListeners = false;
     let activeWallpaperTab = 'built-in';
     let activeWallpaperMode = NEWTAB_WALLPAPER_MODE_LIGHT;
     let wallpaperPanelRendered = false;
@@ -1840,6 +1843,13 @@
         return getResolvedWallpaperMode();
       }
       return normalizeWallpaperMode(activeWallpaperMode);
+    }
+
+    // Daily mode highlights the dated Bing tile it currently resolves to.
+    function getWallpaperTileSelectionId(id) {
+      if (id !== REMOTE_CONTENT.BING_DAILY_ID) return id;
+      const daily = remoteClient.getWallpaper(id);
+      return daily && daily.dailyId || (bingItems[0] && bingItems[0].id) || id;
     }
 
     function getWallpaperSelectionIdForUi() {
@@ -3281,9 +3291,10 @@
       if (tileContainers.length === 0) {
         return;
       }
+      const selectedTileId = getWallpaperTileSelectionId(selectedWallpaperId);
       tileContainers.forEach((container) => {
         container.querySelectorAll('.x-nt-wallpaper-tile').forEach((tile) => {
-          const selected = tile.getAttribute('data-wallpaper-id') === selectedWallpaperId;
+          const selected = tile.getAttribute('data-wallpaper-id') === selectedTileId;
           tile.setAttribute('data-selected', selected ? 'true' : 'false');
           tile.setAttribute('aria-pressed', selected ? 'true' : 'false');
         });
@@ -5055,31 +5066,41 @@
       });
     }
 
+    function formatBingDate(date) {
+      return /^\d{8}$/.test(String(date || ''))
+        ? `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}` : '';
+    }
+
+    // Bing credits read "Place (© Photographer)"; show them as "Place · © Photographer".
+    function formatBingCopyright(copyright) {
+      const text = String(copyright || '').trim();
+      const match = /^(.*?)\s*[(（]\s*(©[^()（）]*)[)）]\s*$/.exec(text);
+      return match ? [match[1], match[2].trim()].filter(Boolean).join(' · ') : text;
+    }
+
+    function getBingWallpaperLabel(item) {
+      return item ? [item.name, formatBingDate(item.date)].filter(Boolean).join(' · ') : '';
+    }
+
     function updateBingUi() {
       if (!wallpaperBingPanel || !wallpaperViewController) return;
       const refs = wallpaperViewController.getRefs();
       const selectedId = getWallpaperSelectionIdForUi();
       const daily = selectedId === REMOTE_CONTENT.BING_DAILY_ID;
       const selected = REMOTE_CONTENT.wallpaperFromId(selectedId) && remoteClient.getWallpaper(selectedId);
-      const today = remoteClient.getWallpaper(REMOTE_CONTENT.BING_DAILY_ID);
-      const preview = daily ? today : bingItems[0];
+      const busy = bingLoading || bingSelecting;
       refs.bingDailyLabel.textContent = t('newtab_bing_daily', 'Daily wallpaper');
       refs.bingDailyHint.textContent = t('newtab_bing_daily_hint', 'A new Bing photo every day. Turn off to keep the current wallpaper.');
       refs.bingDailyToggle.checked = daily;
       refs.bingDailyToggle.disabled = bingSelecting;
       refs.bingDailyToggle.setAttribute('aria-label', t('newtab_bing_daily', 'Daily wallpaper'));
       refs.bingRecentLabel.textContent = t('newtab_bing_recent', 'Recent wallpapers');
-      refs.bingDailyPreview.hidden = !preview || !preview.date;
-      if (preview && preview.date) {
-        const image = getWallpaperThumbnailUrl(preview);
-        if (refs.bingDailyImage.getAttribute('src') !== image) refs.bingDailyImage.setAttribute('src', image);
-        refs.bingDailyTitle.textContent = preview.name;
-        refs.bingDailyDate.textContent = `${preview.date.slice(0, 4)}-${preview.date.slice(4, 6)}-${preview.date.slice(6, 8)}`;
-      }
-      wallpaperBingRefresh.textContent = t('newtab_bing_refresh', 'Refresh');
-      wallpaperBingRefresh.disabled = bingLoading || bingSelecting;
-      wallpaperBingGrid.setAttribute('aria-busy', String(bingLoading || bingSelecting));
-      wallpaperBingStatus.textContent = bingStatus === 'loading'
+      wallpaperBingRefresh.disabled = busy;
+      wallpaperBingRefresh.setAttribute('data-loading', bingLoading ? 'true' : 'false');
+      wallpaperBingRefresh.setAttribute('aria-label', t('newtab_bing_refresh', 'Refresh'));
+      wallpaperBingGrid.setAttribute('aria-busy', String(busy));
+      wallpaperBingGrid.setAttribute('data-loading', bingLoading && !bingItems.length ? 'true' : 'false');
+      wallpaperBingStatus.textContent = bingStatus === 'loading' && !bingItems.length
         ? t('newtab_bing_loading', 'Loading wallpapers…')
         : bingStatus === 'saving'
           ? t('newtab_bing_saving', 'Saving wallpaper…')
@@ -5087,28 +5108,41 @@
             ? t('newtab_bing_error', 'Could not load wallpapers. Please try again.') : '';
       wallpaperBingPanel.setAttribute('aria-label', 'Bing');
       wallpaperBingTab.setAttribute('aria-label', 'Bing');
-      refs.bingSelectedSource.hidden = !selected;
-      refs.bingSelectedSource.textContent = selected
-        ? [selected.name, selected.copyright, t('newtab_bing_source', 'View wallpaper source')].filter(Boolean).join(' · ')
-        : '';
-      if (selected) refs.bingSelectedSource.href = selected.sourceUrl;
+      const hasSource = Boolean(selected && selected.date);
+      refs.bingSelectedSource.hidden = !hasSource;
+      refs.bingSelectedTitle.textContent = hasSource ? selected.name : '';
+      refs.bingSelectedMeta.textContent = hasSource ? formatBingCopyright(selected.copyright) : '';
+      refs.bingSelectedSource.setAttribute('aria-label', hasSource
+        ? `${getBingWallpaperLabel(selected)} · ${t('newtab_bing_source', 'View wallpaper source')}` : '');
+      if (hasSource) refs.bingSelectedSource.href = selected.sourceUrl;
     }
 
     function renderBingTiles() {
       if (!wallpaperBingGrid || !wallpaperViewController.renderOnlineWallpapers) return;
       const selectedId = getWallpaperSelectionIdForUi();
       const selected = REMOTE_CONTENT.wallpaperFromId(selectedId) && remoteClient.getWallpaper(selectedId);
-      const items = selected && selectedId !== REMOTE_CONTENT.BING_DAILY_ID && !bingItems.some((item) => item.id === selectedId)
-        ? [selected, ...bingItems] : bingItems;
+      // Bing skips some days, so cap the list to two full rows instead of leaving a ragged last row.
+      const items = (selected && selectedId !== REMOTE_CONTENT.BING_DAILY_ID && !bingItems.some((item) => item.id === selectedId)
+        ? [selected, ...bingItems] : bingItems).slice(0, BING_RECENT_TILE_LIMIT);
       const tiles = wallpaperViewController.renderOnlineWallpapers(items.map((item) => ({
         id: item.id, thumbnailUrl: getWallpaperThumbnailUrl(remoteClient.getWallpaper(item.id))
       })));
       tiles.forEach((tile) => {
-        tile.onclick = () => selectBingWallpaper(tile.getAttribute('data-wallpaper-id'));
+        const id = tile.getAttribute('data-wallpaper-id');
+        const label = getBingWallpaperLabel(remoteClient.getWallpaper(id));
+        tile.onclick = () => {
+          // The highlighted tile is already applied; re-clicking it should not leave daily mode.
+          if (tile.getAttribute('data-selected') === 'true') return;
+          selectBingWallpaper(id);
+        };
+        tile.onmouseenter = () => showTopActionTooltip(tile, label);
+        tile.onfocus = tile.onmouseenter;
+        tile.onmouseleave = hideTopActionTooltip;
+        tile.onblur = hideTopActionTooltip;
         tile.disabled = bingSelecting;
+        tile.setAttribute('aria-label', formatMessage('newtab_wallpaper_select_label', 'Select {name}', { name: label }));
       });
       updateWallpaperSelectionUi();
-      updateWallpaperTileLanguageStrings();
       updateBingUi();
     }
 
@@ -5139,6 +5173,33 @@
           renderBingTiles();
           scheduleWallpaperPanelTabIndicatorsRefresh();
         }
+      }
+    }
+
+    // A New Tab can stay open past midnight; pick up the new daily photo when it is shown again.
+    function refreshBingDailyWallpaperIfStale() {
+      if (!hasStoredWallpaperStateLoaded || document.visibilityState === 'hidden') return;
+      const day = REMOTE_CONTENT.localDay(Date.now());
+      if (day === bingDailyCheckedDay) return;
+      if (!NEWTAB_WALLPAPER_MODES.some((mode) => getEffectiveWallpaperIdForMode(mode) === REMOTE_CONTENT.BING_DAILY_ID)) return;
+      bingDailyCheckedDay = day;
+      remoteClient.ensureWallpaper(REMOTE_CONTENT.BING_DAILY_ID).then(() => {
+        if (getEffectiveWallpaperIdForMode(getResolvedWallpaperMode()) === REMOTE_CONTENT.BING_DAILY_ID) {
+          applyResolvedNewtabWallpaper();
+        }
+        renderBingTiles();
+      }).catch(() => {});
+    }
+
+    function bindBingDailyRolloverListeners() {
+      if (hasBingDailyRolloverListeners) return;
+      hasBingDailyRolloverListeners = true;
+      bingDailyCheckedDay = REMOTE_CONTENT.localDay(Date.now());
+      if (window && typeof window.addEventListener === 'function') {
+        window.addEventListener('focus', refreshBingDailyWallpaperIfStale, { passive: true });
+      }
+      if (document && typeof document.addEventListener === 'function') {
+        document.addEventListener('visibilitychange', refreshBingDailyWallpaperIfStale, { passive: true });
       }
     }
 
@@ -5247,6 +5308,8 @@
           arrow: getRiSvg('ri-arrow-right-s-line', 'ri-size-14'),
           check: getRiSvg('ri-check-line', 'ri-size-16'),
         delete: getRiSvg('ri-close-line', 'ri-size-14'),
+          external: getRiSvg('ri-arrow-right-up-line', 'ri-size-14'),
+          refresh: getRiSvg('ri-refresh-line', 'ri-size-14'),
           help: getRiSvg('ri-question-line', 'ri-size-14'),
           info: getRiSvg('ri-information-line', 'ri-size-14'),
           wallpaper: getRiSvg('ri-t-shirt-2-line', 'ri-size-20')
@@ -5663,10 +5726,31 @@
         setWallpaperActiveTab('local');
       });
       if (wallpaperBingTab) wallpaperBingTab.addEventListener('click', () => setWallpaperActiveTab('bing'));
-      if (wallpaperBingRefresh) wallpaperBingRefresh.addEventListener('click', () => loadBingCatalog(true));
+      if (wallpaperBingRefresh) {
+        const showBingRefreshTooltip = () => showTopActionTooltip(wallpaperBingRefresh, t('newtab_bing_refresh', 'Refresh'));
+        wallpaperBingRefresh.addEventListener('click', () => loadBingCatalog(true));
+        wallpaperBingRefresh.addEventListener('mouseenter', showBingRefreshTooltip);
+        wallpaperBingRefresh.addEventListener('mouseleave', hideTopActionTooltip);
+        wallpaperBingRefresh.addEventListener('focus', showBingRefreshTooltip);
+        wallpaperBingRefresh.addEventListener('blur', hideTopActionTooltip);
+      }
+      if (refs.bingSelectedSource && refs.bingSelectedMeta) {
+        const meta = refs.bingSelectedMeta;
+        // The credit line is truncated to one line; reveal the full text only when it is cut off.
+        const showBingCreditTooltip = () => {
+          if (meta.scrollWidth > meta.clientWidth) showTopActionTooltip(refs.bingSelectedSource, meta.textContent);
+        };
+        refs.bingSelectedSource.addEventListener('mouseenter', showBingCreditTooltip);
+        refs.bingSelectedSource.addEventListener('mouseleave', hideTopActionTooltip);
+        refs.bingSelectedSource.addEventListener('focus', showBingCreditTooltip);
+        refs.bingSelectedSource.addEventListener('blur', hideTopActionTooltip);
+      }
+      bindBingDailyRolloverListeners();
       if (refs.bingDailyToggle) refs.bingDailyToggle.addEventListener('change', () => {
         const daily = remoteClient.getWallpaper(REMOTE_CONTENT.BING_DAILY_ID);
-        const id = refs.bingDailyToggle.checked ? REMOTE_CONTENT.BING_DAILY_ID : daily && daily.dailyId;
+        const id = refs.bingDailyToggle.checked
+          ? REMOTE_CONTENT.BING_DAILY_ID
+          : daily && daily.dailyId || bingItems[0] && bingItems[0].id;
         if (id) selectBingWallpaper(id);
         else updateBingUi();
       });
