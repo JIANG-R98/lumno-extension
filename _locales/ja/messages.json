@@ -2622,7 +2622,7 @@
     "message": "設定・カスタムアイコン・壁紙を自分のクラウドストレージや NAS に同期します。ブラウザの同期と並行して動き、互いに影響しません。\n\nベータ版のため、同期に失敗することがあります。問題があればお知らせください。"
   },
   "webdav_setup_hint": {
-    "message": "Nutstore（坚果云）、Nextcloud、NAS などの WebDAV サービスで設定・カスタムアイコン・壁紙を同期します。ブラウザの同期と並行して動作します。"
+    "message": "Nutstore（坚果云）などの WebDAV サービスで設定・カスタムアイコン・壁紙を同期します。ブラウザの同期と並行して動作します。"
   },
   "webdav_edit_config": {
     "message": "接続設定を編集"
@@ -2678,11 +2678,8 @@
   "webdav_provider_jianguoyun": {
     "message": "Nutstore（坚果云）"
   },
-  "webdav_provider_nextcloud": {
-    "message": "Nextcloud"
-  },
-  "webdav_provider_other": {
-    "message": "その他"
+  "webdav_provider_custom": {
+    "message": "カスタム"
   },
   "webdav_password_help": {
     "message": "アプリパスワードの取得方法"

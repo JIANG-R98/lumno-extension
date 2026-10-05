@@ -144,7 +144,7 @@ describe('WebDAV connection cards', () => {
     const endpoint = host.querySelector<HTMLInputElement>('[name="endpoint"]')!;
     expect(endpoint.value).toBe('https://dav.jianguoyun.com/dav/');
     expect(host.querySelector('a[href^="https://help.jianguoyun.com/"]')).not.toBeNull();
-    await click(host.querySelector('[data-webdav-provider="other"]'));
+    await click(host.querySelector('[data-webdav-provider="custom"]'));
     expect(endpoint.value).toBe('');
     expect(host.querySelector('a[href^="https://help.jianguoyun.com/"]')).toBeNull();
     await click(host.querySelector('[data-webdav-provider="jianguoyun"]'));

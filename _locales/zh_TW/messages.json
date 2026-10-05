@@ -2622,7 +2622,7 @@
     "message": "把設定、自訂圖示和壁紙同步到你自己的雲端硬碟或 NAS，和瀏覽器內建的同步同時執行，互不影響。\n\n這是測試版，偶爾可能同步失敗。遇到問題歡迎回報。"
   },
   "webdav_setup_hint": {
-    "message": "透過堅果雲、Nextcloud、NAS 等 WebDAV 服務同步設定、自訂圖示和桌布，與瀏覽器內建同步同時執行。"
+    "message": "透過堅果雲或其他 WebDAV 服務同步設定、自訂圖示和壁紙，與瀏覽器內建的同步同時執行。"
   },
   "webdav_edit_config": {
     "message": "編輯連線設定"
@@ -2678,11 +2678,8 @@
   "webdav_provider_jianguoyun": {
     "message": "堅果雲"
   },
-  "webdav_provider_nextcloud": {
-    "message": "Nextcloud"
-  },
-  "webdav_provider_other": {
-    "message": "其他"
+  "webdav_provider_custom": {
+    "message": "自訂"
   },
   "webdav_password_help": {
     "message": "如何取得應用程式密碼"

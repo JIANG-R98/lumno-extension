@@ -33,7 +33,7 @@ export interface WebDavListModel {
 export interface WebDavListOptions {
   onAction(operation: string, id?: string, extra?: Record<string, unknown>): Promise<{ needsChoice?: boolean }>;
 }
-type Provider = 'jianguoyun' | 'nextcloud' | 'other';
+type Provider = 'jianguoyun' | 'custom';
 type Tone = 'success' | 'warning' | 'danger' | undefined;
 
 const classes = (name: string) => `_x_extension_${name}_2024_unique_`;
@@ -43,17 +43,15 @@ const JIANGUOYUN_ENDPOINT = 'https://dav.jianguoyun.com/dav/';
 const JIANGUOYUN_HELP = 'https://help.jianguoyun.com/?p=2064';
 const ENDPOINT_PLACEHOLDERS: Record<Provider, string> = {
   jianguoyun: JIANGUOYUN_ENDPOINT,
-  nextcloud: 'https://cloud.example.com/remote.php/dav/files/USERNAME/',
-  other: 'https://dav.example.com/'
+  custom: 'https://dav.example.com/'
 };
 
 function providerOf(endpoint: string): Provider {
   try {
     const url = new URL(endpoint);
     if (url.hostname === 'dav.jianguoyun.com') return 'jianguoyun';
-    if (/\/remote\.php\/(?:web)?dav(?:\/|$)/.test(url.pathname)) return 'nextcloud';
   } catch { /* Unsaved or invalid input has no provider. */ }
-  return 'other';
+  return 'custom';
 }
 
 function connectionTitle(item: WebDavConnection, copy: Record<string, string>) {
@@ -200,7 +198,7 @@ function ConnectionEditor({ item, model, options, onClose }: {
 }) {
   const { copy } = model;
   const formId = useId();
-  const initialProvider: Provider = item ? providerOf(item.config.endpoint) : /^zh/i.test(model.lang || '') ? 'jianguoyun' : 'other';
+  const initialProvider: Provider = item ? providerOf(item.config.endpoint) : /^zh/i.test(model.lang || '') ? 'jianguoyun' : 'custom';
   const [provider, setProvider] = useState<Provider>(initialProvider);
   const [draft, setDraft] = useState({ endpoint: item?.config.endpoint || (initialProvider === 'jianguoyun' ? JIANGUOYUN_ENDPOINT : ''),
     directory: item?.config.directory || 'lumno', username: item?.config.username || '', password: '' });
@@ -251,7 +249,7 @@ function ConnectionEditor({ item, model, options, onClose }: {
         <span className={classes('shortcut_label')} id={`${formId}-provider`}>{copy.webdav_provider}</span>
         <div aria-labelledby={`${formId}-provider`} className={`${classes('theme_picker')} ${classes('inline_tabs')}`} role="tablist">
           <SegmentedControl model={{ activeValue: provider, dataAttribute: 'data-webdav-provider', disabled,
-            items: (['jianguoyun', 'nextcloud', 'other'] as const).map((value) => ({
+            items: (['jianguoyun', 'custom'] as const).map((value) => ({
               value, label: copy[`webdav_provider_${value}`], labelKey: `webdav_provider_${value}` })) }}
           onSelect={selectProvider} />
         </div>

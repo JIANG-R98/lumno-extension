@@ -2622,7 +2622,7 @@
     "message": "Syncs settings, custom icons and wallpapers to your own cloud drive or NAS. It runs alongside browser sync without affecting it.\n\nThis is a beta, so sync may occasionally fail. Let us know if you run into a problem."
   },
   "webdav_setup_hint": {
-    "message": "Sync settings, custom icons and wallpapers through a WebDAV service such as Nutstore, Nextcloud or a NAS, alongside browser sync."
+    "message": "Sync settings, custom icons and wallpapers through Nutstore or another WebDAV service, alongside browser sync."
   },
   "webdav_edit_config": {
     "message": "Edit connection"
@@ -2678,11 +2678,8 @@
   "webdav_provider_jianguoyun": {
     "message": "Nutstore"
   },
-  "webdav_provider_nextcloud": {
-    "message": "Nextcloud"
-  },
-  "webdav_provider_other": {
-    "message": "Other"
+  "webdav_provider_custom": {
+    "message": "Custom"
   },
   "webdav_password_help": {
     "message": "Get an app password"

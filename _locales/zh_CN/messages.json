@@ -2622,7 +2622,7 @@
     "message": "把设置、自定义图标和壁纸同步到你自己的网盘或 NAS，和浏览器自带的同步同时运行，互不影响。\n\n这是测试版，偶尔可能同步失败。遇到问题欢迎反馈。"
   },
   "webdav_setup_hint": {
-    "message": "通过坚果云、Nextcloud、NAS 等 WebDAV 服务同步配置、自定义图标和壁纸，与浏览器内置同步同时运行。"
+    "message": "通过坚果云或其他 WebDAV 服务同步配置、自定义图标和壁纸，与浏览器自带的同步同时运行。"
   },
   "webdav_edit_config": {
     "message": "编辑连接配置"
@@ -2678,11 +2678,8 @@
   "webdav_provider_jianguoyun": {
     "message": "坚果云"
   },
-  "webdav_provider_nextcloud": {
-    "message": "Nextcloud"
-  },
-  "webdav_provider_other": {
-    "message": "其他"
+  "webdav_provider_custom": {
+    "message": "自定义"
   },
   "webdav_password_help": {
     "message": "如何获取应用密码"
