@@ -185,7 +185,7 @@ assert.match(
 );
 assert.match(
   newtabSource,
-  /getTimeFontWeight: \(\) => newtabTimeFontWeight[\s\S]*?setTimeFontWeight: setNewtabTimeFontWeight/
+  /getTimeFontWeight: \(\) => newtabTimeFontWeight[\s\S]*?setTimeFontWeight: (?:\(\.\.\.args\) => )?setNewtabTimeFontWeight/
 );
 assert.match(
   getFunctionSource(newtabSource, 'setNewtabTimeSecondsVisible'),
@@ -193,7 +193,7 @@ assert.match(
 );
 assert.match(
   newtabSource,
-  /getTimeSecondsVisible: \(\) => newtabTimeSecondsVisible[\s\S]*?setTimeSecondsVisible: setNewtabTimeSecondsVisible/
+  /getTimeSecondsVisible: \(\) => newtabTimeSecondsVisible[\s\S]*?setTimeSecondsVisible: (?:\(\.\.\.args\) => )?setNewtabTimeSecondsVisible/
 );
 
 assert.match(wordmarkSource, /fontWeight\?: number/);

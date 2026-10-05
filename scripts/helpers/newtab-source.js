@@ -24,7 +24,8 @@ const NEWTAB_RUNTIME_MODULES = [
   'src/newtab/card-themes.js',
   'src/newtab/search-modes.js',
   'src/newtab/search-navigation.js',
-  'src/newtab/suggestions-controller.js'
+  'src/newtab/suggestions-controller.js',
+  'src/newtab/top-content.js'
 ];
 
 // Returns newtab.js followed by the modules split out of it, so source checks
