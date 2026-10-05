@@ -573,8 +573,6 @@
   let latestRawQuery = '';
   let siteSearchTriggerState = null;
   let localSearchScopeTriggerState = null;
-  let lastRenderedQuery = '';
-  let lastRenderedActionContextKey = '';
   let suggestionsView = null;
   let recentSourceItems = [];
   let pinnedRecentSites = [];
@@ -962,7 +960,7 @@
     applyShortcutTileTheme: (...args) => applyShortcutTileTheme(...args),
     suggestionItems,
     setSiteSearchPrefix,
-    updateSelection,
+    updateSelection: (...args) => updateSelection(...args),
     setPersistedSiteThemeEntry,
     getPersistedSiteThemeEntry,
     getPageFaviconUrlResolver,
@@ -4478,7 +4476,6 @@
   let aggregateSearchesCache = null;
   let aggregateSearchesLoadPromise = null;
   let aggregateSearchesLoadVersion = 0;
-  let pendingProviderReload = false;
   let suggestionRequestSeq = 0;
   let searchSuggestionsDismissed = false;
   let suggestionRequestWatchdogTimer = null;
@@ -7028,7 +7025,7 @@
     formatMessage,
     defaultTheme,
     clearAutocomplete,
-    clearSearchSuggestions,
+    clearSearchSuggestions: (...args) => clearSearchSuggestions(...args),
     clearSiteSearchPrefix,
     setSiteSearchPrefix,
     getThemeForProvider,
@@ -7144,6 +7141,236 @@
     }
   });
 
+  const NEWTAB_SUGGESTIONS_CONTROLLER = globalThis.LumnoNewtabSuggestionsController;
+  const {
+    setSuggestionActionModifiersActive,
+    syncSuggestionActionModifiersFromEvent,
+    getAutoHighlightIndex,
+    updateSelection,
+    activateRenderedSuggestion,
+    deleteRenderedHistorySuggestion,
+    scrollSelectedSuggestionIntoView,
+    requestTabsAndRender,
+    refreshTabsIfIdle,
+    clearSearchSuggestions,
+    dismissSearchSuggestionsFromBackground,
+    restoreDismissedSearchSuggestions,
+    renderSuggestions,
+    renderPendingSuggestions,
+    directNavigationSettleController,
+    requestSuggestions
+  } = NEWTAB_SUGGESTIONS_CONTROLLER.createSuggestionsController({
+    SUGGESTION_ACTION_MODEL,
+    activateSiteSearch,
+    focusSearchInputPreservingScroll,
+    setVisibleThemeMode,
+    setZenModeEnabled,
+    shouldSwitchMatchedTabSuggestion,
+    openMatchedTabSuggestion,
+    runSiteSearchProviderQuery,
+    shouldOpenSearchResultInBackgroundTab,
+    openSearchResultUrl,
+    navigateToQuery,
+    suggestionsContainer,
+    suggestionItems,
+    SUGGESTION_NAVIGATION,
+    refreshTabsForSearchContext,
+    clearSiteSearchTabHint,
+    restoreUserAuthoredSearchInput,
+    isSlashCommandInput,
+    getShortcutRules,
+    isModeCommand,
+    isZenCommand,
+    storageArea,
+    THEME_STORAGE_KEY,
+    NEWTAB_THEME_MODE_STORAGE_KEY,
+    NEWTAB_THEME_SCOPE_STORAGE_KEY,
+    normalizeThemeMode,
+    normalizeNewtabThemeMode,
+    normalizeNewtabThemeScope,
+    getScopedThemeMode,
+    applyThemeMode,
+    getCommandMatches,
+    buildModeSuggestion,
+    buildZenSuggestion,
+    buildCommandSuggestion,
+    getDirectUrlSuggestion,
+    buildKeywordSuggestions,
+    defaultSiteSearchProviders,
+    getSearchTriggerProviders,
+    getSiteSearchProviders,
+    getInlineSiteSearchCandidate,
+    buildSearchUrl,
+    getSiteSearchActionTitle,
+    getProviderIcon,
+    formatMessage,
+    buildDefaultSearchUrl,
+    getDefaultSearchEngineFaviconUrl,
+    isAggregateSearchProvider,
+    SEARCH_UTILS,
+    getMatchedOpenTabIdForSuggestion,
+    filterBlacklistedSuggestions,
+    getKeywordSearchSuggestionState,
+    promoteStrongNavigationMatch,
+    promoteTopSiteMatch,
+    getSiteSearchTriggerCandidate,
+    getAutocompleteCandidate,
+    getUrlDisplay,
+    getDirectNavigationUrl,
+    findProviderForSuggestionMatch,
+    clearAutocomplete,
+    applyAutocomplete,
+    getLocalSearchScopeCandidate,
+    setSiteSearchTabHint,
+    getLocalSearchScopeTabHintProvider,
+    limitSuggestionsForDisplay,
+    t,
+    warmIconCache,
+    setSuggestionsVisible,
+    NEWTAB_DIRECT_NAVIGATION_SETTLE,
+    sendRuntimeMessage,
+    pageState: {
+      get suggestionsView() {
+        return suggestionsView;
+      },
+      get numberShortcutInstantEnabled() {
+        return numberShortcutInstantEnabled;
+      },
+      get tabRankScoreDebugEnabled() {
+        return tabRankScoreDebugEnabled;
+      },
+      get selectedIndex() {
+        return selectedIndex;
+      },
+      set selectedIndex(value) {
+        selectedIndex = value;
+      },
+      get latestQuery() {
+        return latestQuery;
+      },
+      set latestQuery(value) {
+        latestQuery = value;
+      },
+      get inputParts() {
+        return inputParts;
+      },
+      get currentSuggestions() {
+        return currentSuggestions;
+      },
+      set currentSuggestions(value) {
+        currentSuggestions = value;
+      },
+      get tabs() {
+        return tabs;
+      },
+      set tabs(value) {
+        tabs = value;
+      },
+      get inlineSearchState() {
+        return inlineSearchState;
+      },
+      set inlineSearchState(value) {
+        inlineSearchState = value;
+      },
+      get siteSearchTriggerState() {
+        return siteSearchTriggerState;
+      },
+      set siteSearchTriggerState(value) {
+        siteSearchTriggerState = value;
+      },
+      get localSearchScopeTriggerState() {
+        return localSearchScopeTriggerState;
+      },
+      set localSearchScopeTriggerState(value) {
+        localSearchScopeTriggerState = value;
+      },
+      get lastSuggestionResponse() {
+        return lastSuggestionResponse;
+      },
+      set lastSuggestionResponse(value) {
+        lastSuggestionResponse = value;
+      },
+      get searchSuggestionsDismissed() {
+        return searchSuggestionsDismissed;
+      },
+      set searchSuggestionsDismissed(value) {
+        searchSuggestionsDismissed = value;
+      },
+      get suggestionRequestSeq() {
+        return suggestionRequestSeq;
+      },
+      set suggestionRequestSeq(value) {
+        suggestionRequestSeq = value;
+      },
+      get remoteSuggestionDebounceTimer() {
+        return remoteSuggestionDebounceTimer;
+      },
+      set remoteSuggestionDebounceTimer(value) {
+        remoteSuggestionDebounceTimer = value;
+      },
+      get suggestionRequestWatchdogTimer() {
+        return suggestionRequestWatchdogTimer;
+      },
+      set suggestionRequestWatchdogTimer(value) {
+        suggestionRequestWatchdogTimer = value;
+      },
+      get latestRawQuery() {
+        return latestRawQuery;
+      },
+      set latestRawQuery(value) {
+        latestRawQuery = value;
+      },
+      get localSearchScopeState() {
+        return localSearchScopeState;
+      },
+      get siteSearchState() {
+        return siteSearchState;
+      },
+      get globalThemeMode() {
+        return globalThemeMode;
+      },
+      set globalThemeMode(value) {
+        globalThemeMode = value;
+      },
+      get newtabThemeMode() {
+        return newtabThemeMode;
+      },
+      set newtabThemeMode(value) {
+        newtabThemeMode = value;
+      },
+      get newtabThemeScope() {
+        return newtabThemeScope;
+      },
+      set newtabThemeScope(value) {
+        newtabThemeScope = value;
+      },
+      get currentThemeMode() {
+        return currentThemeMode;
+      },
+      get siteSearchProvidersCache() {
+        return siteSearchProvidersCache;
+      },
+      get aggregateSearchesCache() {
+        return aggregateSearchesCache;
+      },
+      get simpleModeEnabled() {
+        return simpleModeEnabled;
+      },
+      get searchResultPriorityMode() {
+        return searchResultPriorityMode;
+      },
+      get searchResultDisplayLimit() {
+        return searchResultDisplayLimit;
+      },
+      get openTabQuickSwitchEnabled() {
+        return openTabQuickSwitchEnabled;
+      },
+      get currentNewtabTabId() {
+        return currentNewtabTabId;
+      }
+    }
+  });
+
   suggestionsView = NEWTAB_SUGGESTIONS_VIEW.createSuggestionsView({
     document,
     container: suggestionsContainer,
@@ -7215,749 +7442,6 @@
     urlHighlightTheme,
     openTabSuggestionLimit: NEWTAB_OPEN_TAB_SUGGESTION_LIMIT
   });
-  let openInCurrentTabModifierActive = false;
-  let openSwitchInNewTabModifierActive = false;
-  let openInBackgroundTabModifierActive = false;
-
-  function setSuggestionActionModifiersActive(openInCurrentTabActive, openSwitchInNewTabActive, openInBackgroundTabActive) {
-    const nextOpenInCurrentTabActive = Boolean(openInCurrentTabActive);
-    const nextOpenSwitchInNewTabActive = Boolean(openSwitchInNewTabActive);
-    const nextOpenInBackgroundTabActive = Boolean(openInBackgroundTabActive);
-    if (openInCurrentTabModifierActive === nextOpenInCurrentTabActive &&
-        openSwitchInNewTabModifierActive === nextOpenSwitchInNewTabActive &&
-        openInBackgroundTabModifierActive === nextOpenInBackgroundTabActive) {
-      return;
-    }
-    openInCurrentTabModifierActive = nextOpenInCurrentTabActive;
-    openSwitchInNewTabModifierActive = nextOpenSwitchInNewTabActive;
-    openInBackgroundTabModifierActive = nextOpenInBackgroundTabActive;
-    if (suggestionsView && typeof suggestionsView.setOpenInCurrentTabModifierActive === 'function') {
-      suggestionsView.setOpenInCurrentTabModifierActive(nextOpenInCurrentTabActive);
-    }
-    if (suggestionsView && typeof suggestionsView.setOpenSwitchInNewTabModifierActive === 'function') {
-      suggestionsView.setOpenSwitchInNewTabModifierActive(nextOpenSwitchInNewTabActive);
-    }
-    if (suggestionsView && typeof suggestionsView.setOpenInBackgroundTabModifierActive === 'function') {
-      suggestionsView.setOpenInBackgroundTabModifierActive(nextOpenInBackgroundTabActive);
-    }
-  }
-
-  function syncSuggestionActionModifiersFromEvent(event) {
-    setSuggestionActionModifiersActive(
-      Boolean(event && event.altKey),
-      Boolean(event && event.shiftKey),
-      Boolean(event && (event.metaKey || event.ctrlKey) && !numberShortcutInstantEnabled)
-    );
-  }
-
-  function getAutoHighlightIndex() {
-    return suggestionsView.getAutoHighlightIndex();
-  }
-
-  function getSuggestionUpdateKind(options) {
-    return SUGGESTION_ACTION_MODEL.getSuggestionUpdateKind({
-      ...(options || {}),
-      includeDebugReasons: Boolean(tabRankScoreDebugEnabled)
-    });
-  }
-
-  function getSuggestionActionContextKey(options) {
-    return SUGGESTION_ACTION_MODEL.getActionContextKey(options);
-  }
-
-  function updateSelection() {
-    if (!suggestionsView) {
-      return;
-    }
-    suggestionsView.updateSelection(selectedIndex);
-  }
-
-  function activateRenderedSuggestion(suggestion, query, event, index, item) {
-    if (suggestion.type === 'commandNewTab') {
-      chrome.runtime.sendMessage({ action: 'openNewTab' });
-      return;
-    }
-    if (suggestion.type === 'commandSettings') {
-      chrome.runtime.sendMessage({ action: 'openOptionsPage' });
-      return;
-    }
-    if (suggestion.type === 'siteSearchPrompt' && suggestion.provider) {
-      activateSiteSearch(suggestion.provider);
-      focusSearchInputPreservingScroll();
-      return;
-    }
-    if (suggestion.type === 'modeSwitch') {
-      setVisibleThemeMode(suggestion.nextMode);
-      focusSearchInputPreservingScroll();
-      return;
-    }
-    if (suggestion.type === 'zenSwitch') {
-      setZenModeEnabled(suggestion.nextEnabled);
-      focusSearchInputPreservingScroll();
-      return;
-    }
-    if (Number.isInteger(index) && shouldSwitchMatchedTabSuggestion(suggestion, index)) {
-      openMatchedTabSuggestion(suggestion, event, item, query);
-      return;
-    }
-    if (suggestion.provider && suggestion.searchQuery) {
-      runSiteSearchProviderQuery(
-        suggestion.provider,
-        suggestion.searchQuery,
-        shouldOpenSearchResultInBackgroundTab(event) ? 'backgroundTab' : 'currentTab'
-      );
-      return;
-    }
-    if (shouldOpenSearchResultInBackgroundTab(event) && suggestion.url) {
-      openSearchResultUrl(suggestion, query, event);
-      return;
-    }
-    if (suggestion.forceSearch && suggestion.searchQuery) {
-      navigateToQuery(suggestion.searchQuery, true);
-      return;
-    }
-    openSearchResultUrl(suggestion, query, event);
-  }
-
-  function deleteRenderedHistorySuggestion(suggestion) {
-    chrome.runtime.sendMessage({
-      action: 'deleteHistoryUrl',
-      url: suggestion.url
-    }, function(response) {
-      if (chrome.runtime && chrome.runtime.lastError) {
-        return;
-      }
-      if (!response || response.ok !== true) {
-        return;
-      }
-      const refreshQuery = latestQuery || (inputParts && inputParts.input ? String(inputParts.input.value || '').trim() : '');
-      if (!refreshQuery) {
-        clearSearchSuggestions();
-        return;
-      }
-      requestSuggestions(refreshQuery, { immediate: true });
-    });
-  }
-
-  function scrollSelectedSuggestionIntoView(direction, didWrap) {
-    if (!suggestionsContainer || selectedIndex < 0) {
-      return;
-    }
-    const item = suggestionItems[selectedIndex];
-    SUGGESTION_NAVIGATION.scrollItemIntoView(suggestionsContainer, item, {
-      direction,
-      didWrap,
-      inset: 8
-    });
-  }
-
-  function renderTabSuggestions(tabList) {
-    currentSuggestions = [];
-    lastRenderedQuery = '';
-    lastRenderedActionContextKey = '';
-    suggestionsView.renderTabs(tabList);
-  }
-
-  function requestTabsAndRender() {
-    tabs = [];
-    clearSearchSuggestions();
-  }
-
-  function refreshTabsIfIdle() {
-    if (!latestQuery || !latestQuery.trim()) {
-      refreshTabsForSearchContext(() => {});
-      clearSearchSuggestions();
-    }
-  }
-
-  function clearSearchSuggestions() {
-    directNavigationSettleController.cancel();
-    inlineSearchState = null;
-    siteSearchTriggerState = null;
-    localSearchScopeTriggerState = null;
-    clearSiteSearchTabHint();
-    suggestionsView.clear();
-    currentSuggestions = [];
-    lastSuggestionResponse = [];
-    selectedIndex = -1;
-    lastRenderedQuery = '';
-    lastRenderedActionContextKey = '';
-  }
-
-  function dismissSearchSuggestionsFromBackground() {
-    restoreUserAuthoredSearchInput();
-    searchSuggestionsDismissed = true;
-    suggestionRequestSeq += 1;
-    if (remoteSuggestionDebounceTimer) {
-      clearTimeout(remoteSuggestionDebounceTimer);
-      remoteSuggestionDebounceTimer = null;
-    }
-    if (suggestionRequestWatchdogTimer) {
-      clearTimeout(suggestionRequestWatchdogTimer);
-      suggestionRequestWatchdogTimer = null;
-    }
-    clearSearchSuggestions();
-  }
-
-  function restoreDismissedSearchSuggestions() {
-    if (!searchSuggestionsDismissed || !inputParts || !inputParts.input) {
-      return false;
-    }
-    const rawValue = String(inputParts.input.value || '');
-    const query = rawValue.trim();
-    searchSuggestionsDismissed = false;
-    if (!query) {
-      return false;
-    }
-    latestRawQuery = rawValue;
-    latestQuery = query;
-    if (!localSearchScopeState && isSlashCommandInput(query)) {
-      renderSuggestions([], query);
-      return true;
-    }
-    requestSuggestions(query, { immediate: true });
-    return true;
-  }
-
-  function renderSuggestions(suggestions, query) {
-    if (searchSuggestionsDismissed) {
-      return;
-    }
-    if (!query) {
-      clearSearchSuggestions();
-      return;
-    }
-    lastSuggestionResponse = Array.isArray(suggestions) ? suggestions : [];
-
-    getShortcutRules().then((rules) => {
-      if (searchSuggestionsDismissed || query !== latestQuery) {
-        return;
-      }
-      const rawTagInput = (latestRawQuery || inputParts.input.value || '').trim();
-      const localSearchQueryModeActive = Boolean(localSearchScopeState && String(query || '').trim());
-      const slashCommandModeActive = !localSearchQueryModeActive && isSlashCommandInput(rawTagInput);
-      const siteSearchQueryModeActive = !localSearchQueryModeActive &&
-        !slashCommandModeActive &&
-        Boolean(siteSearchState && String(query || '').trim());
-      const modeCommandActive = slashCommandModeActive && !siteSearchQueryModeActive && isModeCommand(rawTagInput);
-      const zenCommandActive = slashCommandModeActive && !siteSearchQueryModeActive && isZenCommand(rawTagInput);
-      const toggleCommandActive = modeCommandActive || zenCommandActive;
-      if (modeCommandActive) {
-        if (storageArea) {
-          storageArea.get([
-            THEME_STORAGE_KEY,
-            NEWTAB_THEME_MODE_STORAGE_KEY,
-            NEWTAB_THEME_SCOPE_STORAGE_KEY
-          ], (result) => {
-            globalThemeMode = normalizeThemeMode(result ? result[THEME_STORAGE_KEY] : 'system');
-            newtabThemeMode = normalizeNewtabThemeMode(result ? result[NEWTAB_THEME_MODE_STORAGE_KEY] : 'global');
-            newtabThemeScope = normalizeNewtabThemeScope(result ? result[NEWTAB_THEME_SCOPE_STORAGE_KEY] : 'global');
-            const storedMode = getScopedThemeMode();
-            if (storedMode !== currentThemeMode && query === latestQuery) {
-              applyThemeMode(storedMode);
-              renderSuggestions([], query);
-            }
-          });
-        }
-      }
-      const commandMatches = (slashCommandModeActive && !toggleCommandActive && !siteSearchQueryModeActive)
-        ? getCommandMatches(rawTagInput)
-        : [];
-      const hasCommand = commandMatches.length > 0;
-      const preSuggestions = [];
-      if (modeCommandActive) {
-        preSuggestions.push(buildModeSuggestion());
-      } else if (zenCommandActive) {
-        preSuggestions.push(buildZenSuggestion());
-      } else if (slashCommandModeActive && !siteSearchQueryModeActive) {
-        commandMatches.forEach((command) => {
-          preSuggestions.push(buildCommandSuggestion(command));
-        });
-      } else if (!siteSearchQueryModeActive && !localSearchQueryModeActive) {
-        const directUrlSuggestion = getDirectUrlSuggestion(query);
-        if (directUrlSuggestion) {
-          preSuggestions.push(directUrlSuggestion);
-        }
-        const keywordSuggestions = buildKeywordSuggestions(query, rules);
-        preSuggestions.push(...keywordSuggestions);
-      }
-
-      const siteProvidersForTags = (siteSearchProvidersCache && siteSearchProvidersCache.length > 0)
-        ? siteSearchProvidersCache
-        : defaultSiteSearchProviders;
-      const providersForTags = getSearchTriggerProviders(
-        siteProvidersForTags,
-        aggregateSearchesCache
-      );
-      if (!siteSearchProvidersCache && !pendingProviderReload) {
-        pendingProviderReload = true;
-        getSiteSearchProviders().then((items) => {
-          pendingProviderReload = false;
-          if (query !== latestQuery) {
-            return;
-          }
-          renderSuggestions(lastSuggestionResponse, query);
-        });
-      }
-      const inlineCandidate = (!localSearchQueryModeActive && !slashCommandModeActive &&
-          !siteSearchQueryModeActive && !toggleCommandActive && !hasCommand)
-        ? getInlineSiteSearchCandidate(rawTagInput, providersForTags)
-        : null;
-      let inlineSuggestion = null;
-      if (inlineCandidate) {
-        const inlineUrl = buildSearchUrl(inlineCandidate.provider.template, inlineCandidate.query);
-        if (inlineUrl) {
-          inlineSuggestion = {
-            type: 'inlineSiteSearch',
-            title: getSiteSearchActionTitle(inlineCandidate.provider),
-            url: inlineUrl,
-            favicon: getProviderIcon(inlineCandidate.provider),
-            provider: inlineCandidate.provider,
-            searchQuery: inlineCandidate.query
-          };
-        }
-      }
-
-      const newTabSuggestion = (localSearchQueryModeActive || slashCommandModeActive ||
-          toggleCommandActive || siteSearchQueryModeActive)
-        ? null
-        : {
-          type: 'newtab',
-          title: simpleModeEnabled
-            ? query
-            : formatMessage('search_query', '搜索 "{query}"', {
-                query: query
-              }),
-          url: buildDefaultSearchUrl(query),
-          favicon: getDefaultSearchEngineFaviconUrl(),
-          searchQuery: query,
-          forceSearch: true
-        };
-      const siteSearchSuggestion = siteSearchQueryModeActive
-        ? (() => {
-            const aggregateSearch = isAggregateSearchProvider(siteSearchState);
-            const siteUrl = aggregateSearch
-              ? ''
-              : buildSearchUrl(siteSearchState.template, query);
-            if (!aggregateSearch && !siteUrl) {
-              return null;
-            }
-            return {
-              type: 'siteSearch',
-              title: getSiteSearchActionTitle(siteSearchState, query),
-              url: siteUrl,
-              favicon: aggregateSearch ? '' : getProviderIcon(siteSearchState),
-              provider: siteSearchState,
-              searchQuery: query
-            };
-          })()
-        : null;
-
-      const defaultSuggestions = [
-        ...preSuggestions,
-        newTabSuggestion,
-        ...suggestions
-      ].filter(Boolean);
-      let groupedDefaultSuggestions = defaultSuggestions;
-      if (searchResultPriorityMode !== 'search') {
-        groupedDefaultSuggestions = SEARCH_UTILS.groupSearchSuggestionsByKind(defaultSuggestions, {
-          searchFirst: false
-        });
-      }
-
-      let allSuggestions = localSearchQueryModeActive
-        ? suggestions.filter((item) => (
-          item &&
-          localSearchScopeState &&
-          item.type === localSearchScopeState.sourceType
-        ))
-        : (slashCommandModeActive ? [...preSuggestions] : (siteSearchQueryModeActive
-          ? (siteSearchSuggestion ? [siteSearchSuggestion] : [])
-          : (toggleCommandActive ? [...preSuggestions] : groupedDefaultSuggestions)));
-      allSuggestions.forEach((item) => {
-        if (!item || !item.url) {
-          return;
-        }
-        const matchedTabId = getMatchedOpenTabIdForSuggestion(item);
-        if (typeof matchedTabId === 'number') {
-          item._xMatchedTabId = matchedTabId;
-          return;
-        }
-        if (Object.prototype.hasOwnProperty.call(item, '_xMatchedTabId')) {
-          delete item._xMatchedTabId;
-        }
-      });
-      allSuggestions = filterBlacklistedSuggestions(allSuggestions, query);
-      const hasDirectUrlSuggestion = preSuggestions.some((suggestion) => (
-        suggestion && suggestion.type === 'directUrl'
-      ));
-      if (searchResultPriorityMode === 'search' &&
-          !localSearchQueryModeActive &&
-          !slashCommandModeActive &&
-          !toggleCommandActive &&
-          !siteSearchQueryModeActive &&
-          !hasDirectUrlSuggestion) {
-        allSuggestions = SEARCH_UTILS.composeSearchFirstSuggestionSlate(allSuggestions, {
-          limit: searchResultDisplayLimit
-        });
-      }
-
-      const keywordSuggestionState = getKeywordSearchSuggestionState(allSuggestions);
-      const onlyKeywordSuggestions = keywordSuggestionState.onlyKeywordSuggestions;
-
-      let autocompleteCandidate = null;
-      let primaryHighlightIndex = -1;
-      let primaryHighlightReason = 'none';
-      let strongNavigationMatch = null;
-      let topSiteMatch = null;
-      let mergedProvider = null;
-      let primarySuggestion = null;
-      const inlineEnabled = Boolean(inlineSuggestion);
-      let siteSearchTrigger = null;
-      const preferAutocompleteFirst = searchResultPriorityMode !== 'search';
-      if (!localSearchQueryModeActive && !slashCommandModeActive && !toggleCommandActive && !hasCommand) {
-        if (!siteSearchState && !inlineEnabled && preferAutocompleteFirst) {
-          strongNavigationMatch = promoteStrongNavigationMatch(allSuggestions, latestRawQuery.trim());
-          if (strongNavigationMatch) {
-            primaryHighlightIndex = 0;
-            primaryHighlightReason = 'navigation';
-          }
-          topSiteMatch = promoteTopSiteMatch(allSuggestions, latestRawQuery.trim());
-        }
-        siteSearchTrigger = (!siteSearchState && !inlineEnabled)
-          ? getSiteSearchTriggerCandidate(rawTagInput, providersForTags, topSiteMatch)
-          : null;
-        if (!siteSearchState && !inlineEnabled && !strongNavigationMatch && preferAutocompleteFirst && !onlyKeywordSuggestions) {
-          autocompleteCandidate = getAutocompleteCandidate(keywordSuggestionState.autocompleteSuggestions, latestRawQuery);
-          if (autocompleteCandidate) {
-            const candidateIndex = allSuggestions.findIndex((suggestion) => {
-              if (!suggestion || suggestion.type === 'newtab') {
-                return false;
-              }
-              if (autocompleteCandidate.url && suggestion.url === autocompleteCandidate.url) {
-                return true;
-              }
-              const suggestionUrlText = getUrlDisplay(suggestion.url);
-              if (suggestionUrlText && suggestionUrlText.toLowerCase() === autocompleteCandidate.completion.toLowerCase()) {
-                return true;
-              }
-              if (suggestion.title && suggestion.title.toLowerCase().startsWith(autocompleteCandidate.completion.toLowerCase())) {
-                return true;
-              }
-              return false;
-            });
-            if (candidateIndex >= 0 && candidateIndex !== 0) {
-              const [candidateSuggestion] = allSuggestions.splice(candidateIndex, 1);
-              allSuggestions.unshift(candidateSuggestion);
-            }
-            primaryHighlightIndex = 0;
-            primaryHighlightReason = 'autocomplete';
-          }
-        }
-        if (inlineSuggestion) {
-          allSuggestions.unshift(inlineSuggestion);
-          allSuggestions = filterBlacklistedSuggestions(allSuggestions, query);
-          primaryHighlightIndex = 0;
-          primaryHighlightReason = 'inline';
-        } else if (!strongNavigationMatch && topSiteMatch && preferAutocompleteFirst) {
-          primaryHighlightIndex = 0;
-          primaryHighlightReason = 'topSite';
-        }
-        if (preferAutocompleteFirst &&
-            !siteSearchState && query && !onlyKeywordSuggestions && openTabQuickSwitchEnabled) {
-          const openTabMatch = SEARCH_UTILS.findSearchOpenTabMatchIndex(allSuggestions, {
-            rawQuery: latestRawQuery.trim(),
-            primaryHighlightIndex,
-            currentTabId: currentNewtabTabId,
-            openTabQuickSwitchEnabled,
-            getDirectNavigationUrl
-          });
-          if (openTabMatch.index >= 0) {
-            if (openTabMatch.index > 0) {
-              const [openTabMatchSuggestion] = allSuggestions.splice(openTabMatch.index, 1);
-              allSuggestions.unshift(openTabMatchSuggestion);
-            }
-            primaryHighlightIndex = 0;
-            primaryHighlightReason = openTabMatch.reason || 'openTab';
-          }
-        }
-        if (preferAutocompleteFirst) {
-          allSuggestions = SEARCH_UTILS.pinExactSearchActionSecond(allSuggestions);
-        }
-        if (query && primaryHighlightIndex < 0 && allSuggestions.length > 0) {
-          primaryHighlightIndex = 0;
-          primaryHighlightReason = 'default';
-        }
-        if (primaryHighlightIndex >= 0) {
-          primarySuggestion = allSuggestions[primaryHighlightIndex] || null;
-          mergedProvider = findProviderForSuggestionMatch(primarySuggestion, providersForTags);
-        }
-        if (onlyKeywordSuggestions) {
-          clearAutocomplete();
-        } else {
-          applyAutocomplete(allSuggestions, primarySuggestion, primaryHighlightReason);
-        }
-        const inlineAutoHighlight = Boolean(inlineSuggestion && primaryHighlightIndex === 0);
-        inlineSearchState = inlineSuggestion
-          ? {
-              url: inlineSuggestion.url,
-              provider: inlineSuggestion.provider,
-              query: inlineSuggestion.searchQuery || '',
-              rawInput: rawTagInput,
-              isAuto: inlineAutoHighlight
-            }
-          : null;
-        const resolvedProvider = siteSearchTrigger;
-        const resolvedLocalScope = !resolvedProvider
-          ? getLocalSearchScopeCandidate(rawTagInput, rules)
-          : null;
-        siteSearchTriggerState = resolvedProvider
-          ? { provider: resolvedProvider, rawInput: rawTagInput }
-          : null;
-        localSearchScopeTriggerState = resolvedLocalScope
-          ? { scope: resolvedLocalScope, rawInput: rawTagInput }
-          : null;
-        if (siteSearchTriggerState) {
-          setSiteSearchTabHint(resolvedProvider);
-        } else if (localSearchScopeTriggerState) {
-          setSiteSearchTabHint(getLocalSearchScopeTabHintProvider(resolvedLocalScope));
-        } else {
-          clearSiteSearchTabHint();
-        }
-      } else if (localSearchQueryModeActive) {
-        clearAutocomplete();
-        inlineSearchState = null;
-        siteSearchTriggerState = null;
-        localSearchScopeTriggerState = null;
-        clearSiteSearchTabHint();
-        if (allSuggestions.length > 0) {
-          primaryHighlightIndex = 0;
-          primaryHighlightReason = 'localScope';
-          primarySuggestion = allSuggestions[0];
-        }
-      } else if (modeCommandActive) {
-        clearAutocomplete();
-        inlineSearchState = null;
-        siteSearchTriggerState = null;
-        localSearchScopeTriggerState = null;
-        clearSiteSearchTabHint();
-        primaryHighlightIndex = 0;
-        primaryHighlightReason = 'modeSwitch';
-      } else if (zenCommandActive) {
-        clearAutocomplete();
-        inlineSearchState = null;
-        siteSearchTriggerState = null;
-        localSearchScopeTriggerState = null;
-        clearSiteSearchTabHint();
-        primaryHighlightIndex = 0;
-        primaryHighlightReason = 'zenSwitch';
-      } else if (slashCommandModeActive) {
-        clearAutocomplete();
-        inlineSearchState = null;
-        siteSearchTriggerState = null;
-        localSearchScopeTriggerState = null;
-        clearSiteSearchTabHint();
-        primaryHighlightIndex = 0;
-        primaryHighlightReason = 'command';
-      }
-      if (hasCommand) {
-        applyAutocomplete(allSuggestions, primarySuggestion, primaryHighlightReason);
-      }
-      allSuggestions = limitSuggestionsForDisplay(allSuggestions, {
-        uncapped: slashCommandModeActive
-      });
-      const emptyMessage = slashCommandModeActive && allSuggestions.length === 0
-        ? t('slash_command_empty', '无匹配命令')
-        : (localSearchQueryModeActive && allSuggestions.length === 0
-          ? t('overlay_empty_result', '无匹配结果')
-          : '');
-
-      const actionContextKey = getSuggestionActionContextKey({
-        primaryHighlightIndex,
-        primaryHighlightReason,
-        onlyKeywordSuggestions,
-        primarySuggestion,
-        mergedProvider,
-        emptyMessage
-      });
-      const updateKind = getSuggestionUpdateKind({
-        query,
-        lastRenderedQuery,
-        actionContextKey,
-        lastRenderedActionContextKey,
-        currentSuggestions,
-        allSuggestions
-      });
-      const canAppend = updateKind === 'append';
-      const startIndex = canAppend ? currentSuggestions.length : 0;
-
-      currentSuggestions = allSuggestions;
-      lastRenderedQuery = query;
-      lastRenderedActionContextKey = actionContextKey;
-      if (updateKind !== 'highlight') {
-        warmIconCache(allSuggestions.filter((item) => (
-          item && item.type !== 'directUrl'
-        )));
-      }
-      suggestionsView.render({
-        suggestions: allSuggestions,
-        query,
-        updateKind,
-        canAppend,
-        startIndex,
-        primaryHighlightIndex,
-        primarySuggestion,
-        primaryHighlightReason,
-        onlyKeywordSuggestions,
-        mergedProvider,
-        emptyMessage
-      });
-      if (updateKind !== 'highlight') {
-        updateSelection();
-        setSuggestionsVisible(true);
-      }
-    });
-  }
-
-  function renderPendingSuggestions(query, options) {
-    renderSuggestions(lastSuggestionResponse, query, options);
-  }
-
-  const DIRECT_NAVIGATION_SETTLE_DELAY_MS = 120;
-  const directNavigationSettleController =
-    NEWTAB_DIRECT_NAVIGATION_SETTLE.createDirectNavigationSettleController({
-      delayMs: DIRECT_NAVIGATION_SETTLE_DELAY_MS,
-      onSettle: ({ query, requestSeq }) => {
-        if (requestSeq !== suggestionRequestSeq || query !== latestQuery) {
-          return;
-        }
-        renderPendingSuggestions(query);
-      }
-    });
-
-  function requestSuggestions(query, options) {
-    latestQuery = query;
-    const requestLocalSearchScope = localSearchScopeState;
-    if (!requestLocalSearchScope && isSlashCommandInput(query)) {
-      renderSuggestions([], query);
-      return;
-    }
-    const immediate = options && options.immediate;
-    const deferInitialDirectNavigationRender = Boolean(
-      options && options.deferInitialDirectNavigationRender
-    );
-    const retryCount = options && Number(options.retryCount) > 0 ? Number(options.retryCount) : 0;
-    const requestStartedAt = Date.now();
-    const requestQuery = latestQuery;
-    const requestSeq = ++suggestionRequestSeq;
-    const requestSearchFirst = searchResultPriorityMode === 'search';
-    const showExactSearchPendingState = requestSearchFirst &&
-      !requestLocalSearchScope &&
-      !siteSearchState &&
-      !getDirectUrlSuggestion(requestQuery);
-    directNavigationSettleController.cancel();
-    if (deferInitialDirectNavigationRender) {
-      directNavigationSettleController.schedule({
-        query: requestQuery,
-        requestSeq
-      });
-    }
-    if (remoteSuggestionDebounceTimer) {
-      clearTimeout(remoteSuggestionDebounceTimer);
-      remoteSuggestionDebounceTimer = null;
-    }
-    if (suggestionRequestWatchdogTimer) {
-      clearTimeout(suggestionRequestWatchdogTimer);
-      suggestionRequestWatchdogTimer = null;
-    }
-    if (showExactSearchPendingState) {
-      renderSuggestions([], requestQuery);
-    }
-    suggestionRequestWatchdogTimer = setTimeout(function() {
-      if (requestSeq !== suggestionRequestSeq || requestQuery !== latestQuery) {
-        return;
-      }
-      if (retryCount < 1) {
-        requestSuggestions(requestQuery, { immediate: true, retryCount: retryCount + 1 });
-        return;
-      }
-      renderPendingSuggestions(requestQuery);
-    }, immediate ? 1200 : 1300);
-    const localRequestSent = sendRuntimeMessage({
-      action: 'getSearchSuggestions',
-      query: requestQuery,
-      context: 'newtab',
-      sourceTypes: requestLocalSearchScope ? [requestLocalSearchScope.sourceType] : undefined,
-      includeOpenTabs: requestLocalSearchScope ? false : undefined
-    }, function(response) {
-      if (suggestionRequestWatchdogTimer) {
-        clearTimeout(suggestionRequestWatchdogTimer);
-        suggestionRequestWatchdogTimer = null;
-      }
-      if (requestSeq !== suggestionRequestSeq || requestQuery !== latestQuery) {
-        return;
-      }
-      directNavigationSettleController.cancel();
-      if (chrome.runtime && chrome.runtime.lastError) {
-        renderPendingSuggestions(requestQuery);
-        return;
-      }
-      const localSuggestions = response && Array.isArray(response.suggestions) ? response.suggestions : [];
-      if (requestLocalSearchScope) {
-        renderSuggestions(localSuggestions, requestQuery);
-        return;
-      }
-      if (!showExactSearchPendingState) {
-        renderSuggestions(localSuggestions, requestQuery);
-      }
-      refreshTabsForSearchContext(() => {});
-      const remoteDelay = (requestSearchFirst || immediate)
-        ? 0
-        : Math.max(0, 120 - (Date.now() - requestStartedAt));
-      remoteSuggestionDebounceTimer = setTimeout(function() {
-        remoteSuggestionDebounceTimer = null;
-        if (requestSeq !== suggestionRequestSeq || requestQuery !== latestQuery) {
-          return;
-        }
-        const remoteRequestSent = sendRuntimeMessage({
-          action: 'getSearchEngineSuggestions',
-          query: requestQuery,
-          context: 'newtab',
-          localSuggestions: localSuggestions,
-          searchFirst: requestSearchFirst
-        }, function(remoteResponse) {
-          if (requestSeq !== suggestionRequestSeq || requestQuery !== latestQuery) {
-            return;
-          }
-          if (chrome.runtime && chrome.runtime.lastError) {
-            renderSuggestions(localSuggestions, requestQuery);
-            return;
-          }
-          if (!remoteResponse ||
-              remoteResponse.aborted === true ||
-              remoteResponse.hasRemoteSuggestions !== true ||
-              !Array.isArray(remoteResponse.suggestions)) {
-            renderSuggestions(localSuggestions, requestQuery);
-            return;
-          }
-          renderSuggestions(remoteResponse.suggestions, requestQuery);
-        });
-        if (!remoteRequestSent) {
-          renderSuggestions(localSuggestions, requestQuery);
-        }
-      }, remoteDelay);
-    });
-    if (!localRequestSent) {
-      if (suggestionRequestWatchdogTimer) {
-        clearTimeout(suggestionRequestWatchdogTimer);
-        suggestionRequestWatchdogTimer = null;
-      }
-      if (requestSeq === suggestionRequestSeq && requestQuery === latestQuery) {
-        directNavigationSettleController.cancel();
-        renderPendingSuggestions(requestQuery);
-      }
-    }
-  }
 
   function shouldRemoveSearchModeTagOnBackspace(event) {
     if (!inputModeController ||
