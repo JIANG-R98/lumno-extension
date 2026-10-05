@@ -96,6 +96,7 @@
       hideShortcutDialogTooltip,
       SHORTCUT_DIALOG_ITEM_BOOKMARK
     } = deps;
+
     // Page state still owned by newtab.js; read and written through accessors.
     const pageState = deps.pageState;
 
@@ -106,15 +107,18 @@
     const SHORTCUT_FAVICON_MAX_CONCURRENT_REQUESTS = 3;
     let shortcutFaviconActiveRequestCount = 0;
     let shortcutFaviconCacheWriteTimer = null;
+
     function getShortcutFolderId(shortcut) {
       if (!shortcut || shortcut.type !== 'folder') return '';
       if (!shortcut.folderRef) return String(shortcut.folderId || '');
       const node = shortcutFolderRuntime.getNode(shortcut, bookmarksRuntime.getNodeMap());
       return node ? String(node.id) : '';
     }
+
     function getVisibleShortcuts() {
       return shortcutFolderRuntime.visibleItems(pageState.newtabShortcuts, bookmarksRuntime.getNodeMap());
     }
+
     function refreshShortcutFolderReferences() {
       if (pageState.bookmarkMoveHistoryBusy) return Promise.resolve(false);
       const original = pageState.newtabShortcuts;
@@ -132,6 +136,7 @@
         return false;
       });
     }
+
     function getShortcutStoreOptions(extraOptions) {
       return {
         key: NEWTAB_SHORTCUTS_STORAGE_KEY,
@@ -141,22 +146,26 @@
         ...(extraOptions || {})
       };
     }
+
     function isShortcutSyncStorageActive() {
       return Boolean(
         (providerStorageRuntime ? providerStorageRuntime.getActiveAreaName() : storageAreaName) === 'sync' &&
         chrome && chrome.storage && chrome.storage.sync
       );
     }
+
     function getShortcutOverflowStorageArea() {
       return isShortcutSyncStorageActive() && chrome.storage.local
         ? chrome.storage.local
         : null;
     }
+
     function getShortcutStorageLastError() {
       return chrome && chrome.runtime && chrome.runtime.lastError
         ? chrome.runtime.lastError
         : null;
     }
+
     function getStorageBytesInUse(area, keys) {
       return new Promise((resolve, reject) => {
         if (!area || typeof area.getBytesInUse !== 'function') {
@@ -182,6 +191,7 @@
         }
       });
     }
+
     function getShortcutSyncByteBudget() {
       const defaultBudget = Number(
         NEWTAB_SHORTCUTS_STORE.DEFAULT_SHORTCUTS_SYNC_TOTAL_BUDGET_BYTES
@@ -206,6 +216,7 @@
         return Math.min(defaultBudget, protectedBudget);
       }).catch(() => 0);
     }
+
     function normalizeShortcutLocalState(value) {
       if (Array.isArray(value)) {
         return {
@@ -225,6 +236,7 @@
         )
       };
     }
+
     function readShortcutLocalState() {
       const overflowArea = getShortcutOverflowStorageArea();
       if (!overflowArea || typeof overflowArea.get !== 'function') {
@@ -246,6 +258,7 @@
         }
       });
     }
+
     function writeShortcutLocalState(items, authoritative) {
       const overflowArea = getShortcutOverflowStorageArea();
       if (!overflowArea || typeof overflowArea.set !== 'function') {
@@ -280,6 +293,7 @@
         }
       });
     }
+
     function scheduleShortcutStorageReload() {
       if (shortcutStorageReloadTimer !== null) {
         window.clearTimeout(shortcutStorageReloadTimer);
@@ -297,10 +311,12 @@
         });
       }, 32);
     }
+
     function getShortcutIconDataUrl(shortcutId) {
       const id = String(shortcutId || '').trim();
       return id && pageState.newtabShortcutIcons[id] ? pageState.newtabShortcutIcons[id] : '';
     }
+
     function getShortcutFaviconDataUrl(pageUrl) {
       const normalizedPageUrl = SHORTCUT_FAVICON.normalizePageUrl(pageUrl);
       const shortcut = pageState.newtabShortcuts.find((item) => SHORTCUT_FAVICON.normalizePageUrl(item && item.url) === normalizedPageUrl);
@@ -313,6 +329,7 @@
       }
       return SHORTCUT_FAVICON.getCachedIconDataUrl(pageState.newtabShortcutFavicons, pageUrl);
     }
+
     function getShortcutFaviconCandidateUrl(pageUrl) {
       // A saved snapshot, including an explicit refresh, takes precedence over bundled defaults.
       if (getShortcutFaviconDataUrl(pageUrl)) {
@@ -326,6 +343,7 @@
         pageUrl, getShortcutDialogBuiltinIconUrl(pageUrl)
       ) : '';
     }
+
     function saveShortcutFaviconSnapshot(pageUrl, dataUrl, sourceUrl, replaceExisting) {
       const normalizedDataUrl = SHORTCUT_FAVICON.normalizeDataUrl(dataUrl);
       if (!normalizedDataUrl || !pageState.newtabShortcuts.some((item) =>
@@ -342,16 +360,19 @@
       scheduleShortcutFaviconCacheWrite(pageUrl);
       return normalizedDataUrl;
     }
+
     function areShortcutFaviconEntriesEqual(left, right) {
       return Boolean(left && right &&
         left.dataUrl === right.dataUrl &&
         left.sourceUrl === right.sourceUrl &&
         left.updatedAt === right.updatedAt);
     }
+
     function getShortcutDialogOnlineIconUrl(url) {
       const pageUrl = NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(url);
       return pageUrl ? getShortcutFaviconDataUrl(pageUrl) || getShortcutFaviconCandidateUrl(pageUrl) : '';
     }
+
     function getShortcutDialogBuiltinIconUrl(url) {
       const pageUrl = NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(url);
       const assetPath = SHORTCUT_FAVICON.getBundledShortcutIconAssetPath(
@@ -359,6 +380,7 @@
       );
       return assetPath ? getExtensionResourceUrl(assetPath) : '';
     }
+
     function getShortcutDialogOnlineIconSource(url) {
       const pageUrl = SHORTCUT_FAVICON.normalizePageUrl(
         NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(url)
@@ -373,6 +395,7 @@
       }
       return 'cache';
     }
+
     function isShortcutDialogIconSourceAvailable(source, url) {
       const pageUrl = NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(url);
       if (!pageUrl) return source === 'cache';
@@ -382,6 +405,7 @@
         ? Boolean(resolver && resolver.getShortcutFaviconFetchCandidates(normalizedPageUrl, source).length)
         : source === 'cache';
     }
+
     function refreshShortcutDialogOnlineIcon(url, iconSource) {
       const pageUrl = NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(url);
       const normalizedPageUrl = SHORTCUT_FAVICON.normalizePageUrl(pageUrl);
@@ -422,6 +446,7 @@
         }
       });
     }
+
     function scheduleShortcutFaviconCacheWrite(pageUrl) {
       const cacheKey = SHORTCUT_FAVICON.normalizePageUrl(pageUrl);
       const cacheEntry = cacheKey ? pageState.newtabShortcutFavicons[cacheKey] : null;
@@ -450,6 +475,7 @@
         }).catch(() => {});
       }, 120);
     }
+
     function drainShortcutFaviconRequestQueue() {
       while (shortcutFaviconActiveRequestCount < SHORTCUT_FAVICON_MAX_CONCURRENT_REQUESTS &&
           shortcutFaviconRequestQueue.length > 0) {
@@ -461,12 +487,14 @@
         });
       }
     }
+
     function enqueueShortcutFaviconRequest(run) {
       return new Promise((resolve) => {
         shortcutFaviconRequestQueue.push({ run, resolve });
         drainShortcutFaviconRequestQueue();
       });
     }
+
     function resolveShortcutFaviconDataUrl(pageUrl) {
       const normalizedPageUrl = SHORTCUT_FAVICON.normalizePageUrl(pageUrl);
       if (!normalizedPageUrl) {
@@ -545,6 +573,7 @@
       shortcutFaviconPending.set(requestKey, promise);
       return promise;
     }
+
     function getShortcutTitle(shortcut) {
       if (shortcut && shortcut.type === 'folder') {
         const node = bookmarksRuntime.getNode(getShortcutFolderId(shortcut));
@@ -556,16 +585,19 @@
         sanitizeDisplayText(shortcut && shortcut.url ? shortcut.url : '') ||
         t('newtab_shortcuts_add', 'Add shortcut');
     }
+
     function setShortcutError(message) {
       if (pageState.shortcutDialogController) {
         pageState.shortcutDialogController.setError(message);
       }
     }
+
     function setShortcutIconError(message) {
       if (pageState.shortcutDialogController && typeof pageState.shortcutDialogController.setIconError === 'function') {
         pageState.shortcutDialogController.setIconError(message);
       }
     }
+
     function renderShortcuts() {
       if (!pageState.shortcutGrid || !shortcutsView) {
         return;
@@ -589,6 +621,7 @@
         )
       });
     }
+
     function loadShortcuts() {
       if (!storageArea) {
         pageState.newtabShortcuts = NEWTAB_SHORTCUTS_STORE.getDefaultShortcuts(getShortcutStoreOptions());
@@ -613,6 +646,7 @@
         return pageState.newtabShortcuts;
       });
     }
+
     function loadShortcutIcons() {
       return shortcutIconStore.readAll()
         .then((icons) => {
@@ -624,6 +658,7 @@
           return pageState.newtabShortcutIcons;
         });
     }
+
     function loadShortcutFavicons() {
       return shortcutFaviconStore.readAll()
         .then((cacheMap) => {
@@ -635,6 +670,7 @@
           return pageState.newtabShortcutFavicons;
         });
     }
+
     function pruneShortcutFavicons(shortcuts, persist) {
       const shortcutUrls = (Array.isArray(shortcuts) ? shortcuts : []).map((item) => item && item.url);
       const nextFavicons = SHORTCUT_FAVICON.retainCachedIcons(
@@ -652,6 +688,7 @@
       }
       return changed;
     }
+
     function loadNewtabShortcutPreferences() {
       if (!storageArea) {
         pageState.newtabShortcutsVisible = true;
@@ -725,6 +762,7 @@
         });
       });
     }
+
     function loadVisibleShortcuts() {
       return Promise.all([loadShortcuts(), loadShortcutIcons(), loadShortcutFavicons(), loadFolderColors()]).then(() => {
         const prunedIcons = getNextShortcutIconMap(pageState.newtabShortcuts);
@@ -742,6 +780,7 @@
         return pageState.newtabShortcuts;
       });
     }
+
     function getNextShortcutIconMap(shortcuts, iconChange) {
       const validIds = new Set(
         (Array.isArray(shortcuts) ? shortcuts : [])
@@ -768,6 +807,7 @@
       }
       return NEWTAB_SHORTCUT_ICON_STORE.normalizeIconMap(nextIcons);
     }
+
     function areShortcutIconMapsEqual(leftValue, rightValue) {
       const left = NEWTAB_SHORTCUT_ICON_STORE.normalizeIconMap(leftValue);
       const right = NEWTAB_SHORTCUT_ICON_STORE.normalizeIconMap(rightValue);
@@ -776,6 +816,7 @@
       return leftKeys.length === rightKeys.length &&
         leftKeys.every((key, index) => key === rightKeys[index] && left[key] === right[key]);
     }
+
     function persistShortcuts(nextShortcuts, toastMessage, iconChange, persistOptions) {
       const options = getShortcutStoreOptions();
       const settings = persistOptions && typeof persistOptions === 'object'
@@ -898,6 +939,7 @@
           return false;
         });
     }
+
     function saveNewShortcutFromDialog(title, url, iconState) {
       const options = getShortcutStoreOptions();
       const nextShortcut = NEWTAB_SHORTCUTS_STORE.createShortcutRecord({ title, url,
@@ -929,6 +971,7 @@
         }
       );
     }
+
     function saveEditedShortcutFromDialog(title, url, shortcutId, iconState) {
       const currentShortcut = getShortcutById(shortcutId);
       if (!currentShortcut) {
@@ -969,6 +1012,7 @@
         }
       );
     }
+
     function saveShortcutFromDialog(title, url, dialogState) {
       const iconState = {
         action: dialogState && dialogState.iconAction,
@@ -980,6 +1024,7 @@
       }
       return saveNewShortcutFromDialog(title, url, iconState);
     }
+
     function saveBookmarkFromDialog(title, url, dialogState) {
       const itemId = String(
         (dialogState && (dialogState.itemId || dialogState.shortcutId)) || ''
@@ -1021,6 +1066,7 @@
         return false;
       });
     }
+
     function removeShortcutById(shortcutId) {
       const id = String(shortcutId || '');
       if (!id || pageState.bookmarkMoveHistoryBusy) {
@@ -1047,6 +1093,7 @@
         return saved;
       }).finally(() => { pageState.bookmarkMoveHistoryBusy = false; });
     }
+
     function hideShortcutAddFromContextMenu(sourceElement) {
       if (!pageState.newtabShortcutAddVisible) {
         return;
@@ -1069,6 +1116,7 @@
         '“+” hidden. Re-enable it in Settings → Appearance → Shortcuts → Show “+”.'
       ));
     }
+
     function createShortcutsSection() {
       pageState.shortcutSection = pageStructureRuntime.shortcut.section;
       pageState.shortcutSection.setAttribute('aria-label', t('newtab_shortcuts_section_label', 'Shortcuts'));
@@ -1118,6 +1166,7 @@
       pageState.shortcutGrid.addEventListener('pointerleave', resetShortcutDockHover);
       updateShortcutLanguageStrings();
     }
+
     function createShortcutDialogComponent() {
       return NEWTAB_SHORTCUT_DIALOG.createShortcutDialog({
         documentObj: document,

@@ -17,6 +17,7 @@
       FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY,
       SEARCH_UTILS
     } = deps;
+
     // Page state still owned by newtab.js; read and written through accessors.
     const pageState = deps.pageState;
 
@@ -26,6 +27,7 @@
       }
       return /^[A-Za-z0-9\s._/-]+$/.test(query);
     }
+
     function getUrlDisplay(url) {
       if (!url) {
         return '';
@@ -43,21 +45,26 @@
         return url;
       }
     }
+
     function isBrowserExtensionProtocol(protocol) {
       const guards = window.LumnoUrlGuards;
       return guards.isBrowserExtensionProtocol(protocol);
     }
+
     function isBrowserNewtabUrl(url) {
       const guards = window.LumnoUrlGuards;
       return guards.isBrowserNewtabUrl(url);
     }
+
     function isBrowserInternalUrl(url) {
       const guards = window.LumnoUrlGuards;
       return guards.isBrowserInternalUrl(url);
     }
+
     function isBrowserPageRecentUrl(url) {
       return Boolean(url && isBrowserInternalUrl(url) && !isBrowserNewtabUrl(url));
     }
+
     function isOwnExtensionUrl(url) {
       if (!url || !chrome || !chrome.runtime || !chrome.runtime.id) {
         return false;
@@ -70,6 +77,7 @@
         return false;
       }
     }
+
     function getOwnExtensionPageLabel(url) {
       if (!isOwnExtensionUrl(url)) {
         return '';
@@ -95,6 +103,7 @@
         return t('extension_page_label', '扩展页面');
       }
     }
+
     function getOwnExtensionPageDisplay(url, title) {
       if (!isOwnExtensionUrl(url)) {
         return null;
@@ -112,36 +121,44 @@
         urlText: `Lumno · ${pageLabel}`.trim()
       };
     }
+
     function isRestrictedUrl(url) {
       const guards = window.LumnoUrlGuards;
       return guards.isRestrictedUrl(url);
     }
+
     function getExtensionFaviconUrl(pageUrl) {
       const resolver = getPageFaviconUrlResolver();
       return resolver ? resolver.getExtensionFaviconUrl(pageUrl) : '';
     }
+
     function getGstaticFaviconUrl(pageUrl) {
       const resolver = getPageFaviconUrlResolver();
       return resolver ? resolver.getGstaticFaviconUrl(pageUrl) : '';
     }
+
     function getChromeFaviconUrl(pageUrl) {
       const resolver = getPageFaviconUrlResolver();
       return resolver ? resolver.getChromeFaviconUrl(pageUrl) : '';
     }
+
     function getBrowserPageFaviconUrl(pageUrl) {
       const resolver = getPageFaviconUrlResolver();
       return resolver ? resolver.getBrowserPageFaviconUrl(pageUrl) : '';
     }
+
     function getPageFaviconCandidateUrl(pageUrl) {
       const resolver = getPageFaviconUrlResolver();
       return resolver ? resolver.getPageFaviconCandidateUrl(pageUrl) : '';
     }
+
     function getPageFaviconRenderCandidates(pageUrl, explicitUrl, options) {
       const resolver = getPageFaviconUrlResolver();
       return resolver && typeof resolver.getPageFaviconRenderCandidates === 'function'
         ? resolver.getPageFaviconRenderCandidates(pageUrl, explicitUrl, options)
         : { primaryUrl: '', browserUrl: '' };
     }
+
     function getHostFaviconUrl(hostname) {
       const normalized = normalizeFaviconHost(hostname);
       if (!normalized) {
@@ -154,36 +171,44 @@
       }
       return getGstaticFaviconUrl(`https://${normalized}/`);
     }
+
     function isLocalNetworkHost(hostname) {
       return FAVICON_UTILS.isLocalNetworkHost(hostname);
     }
+
     function shouldBlockFaviconForHost(hostname) {
       return FAVICON_UTILS.shouldBlockFaviconForHost(hostname);
     }
+
     function shouldAvoidDirectFaviconForHost(hostname) {
       return FAVICON_UTILS.shouldAvoidDirectFaviconForHost(hostname);
     }
+
     function normalizeSearchBlacklistMatchModes(value) {
       if (BLACKLIST_UTILS.normalizeMatchModes) {
         return BLACKLIST_UTILS.normalizeMatchModes(value, 'prefix');
       }
       return ['prefix'];
     }
+
     function normalizeSearchBlacklistItems(items) {
       if (BLACKLIST_UTILS.normalizeItems) {
         return BLACKLIST_UTILS.normalizeItems(items, 'prefix');
       }
       return [];
     }
+
     function normalizeFaviconRequestBlacklistItems(items) {
       if (BLACKLIST_UTILS.normalizeItems) {
         return BLACKLIST_UTILS.normalizeItems(items, 'prefix');
       }
       return [];
     }
+
     function normalizeFaviconEnhancedFetchEnabled(value) {
       return SETTINGS.normalizeFaviconEnhancedFetchEnabled(value);
     }
+
     function loadSearchBlacklistItems() {
       return new Promise((resolve) => {
         if (!storageArea) {
@@ -197,6 +222,7 @@
         });
       });
     }
+
     function getFaviconRequestMatchUrl(url) {
       const raw = String(url || '').trim();
       if (!raw) {
@@ -204,6 +230,7 @@
       }
       return String(FAVICON_UTILS.getCanonicalPageUrlForFavicon(raw) || raw).trim();
     }
+
     function isUrlBlockedByFaviconRequestBlacklist(url) {
       const target = getFaviconRequestMatchUrl(url);
       return Boolean(
@@ -212,6 +239,7 @@
         BLACKLIST_UTILS.isUrlBlocked(target, pageState.faviconRequestBlacklistItems)
       );
     }
+
     function getNewtabStrictFaviconReason(pageUrl) {
       if (isUrlBlockedByFaviconRequestBlacklist(pageUrl)) {
         return 'exclusion';
@@ -221,9 +249,11 @@
       }
       return '';
     }
+
     function isNewtabEnhancedFaviconFetchEnabled(pageUrl) {
       return getNewtabStrictFaviconReason(pageUrl) === '';
     }
+
     function loadFaviconRequestBlacklistItems() {
       return new Promise((resolve) => {
         if (!storageArea) {
@@ -237,6 +267,7 @@
         });
       });
     }
+
     function loadFaviconEnhancedFetchEnabled() {
       return new Promise((resolve) => {
         if (!storageArea) {
@@ -255,11 +286,13 @@
         });
       });
     }
+
     function isUrlBlockedBySearchBlacklist(url) {
       return BLACKLIST_UTILS.isUrlBlocked
         ? BLACKLIST_UTILS.isUrlBlocked(url, pageState.searchBlacklistItems)
         : false;
     }
+
     function isSuggestionBlockedBySearchBlacklist(suggestion) {
       if (!suggestion) {
         return false;
@@ -277,12 +310,14 @@
       }
       return false;
     }
+
     function filterBlacklistedSuggestions(list, queryForProvider) {
       if (!Array.isArray(list) || list.length === 0) {
         return [];
       }
       return list.filter((suggestion) => !isSuggestionBlockedBySearchBlacklist(suggestion));
     }
+
     function limitSuggestionsForDisplay(list, options) {
       const config = options && typeof options === 'object' ? options : {};
       if (config.uncapped === true) {
@@ -292,6 +327,7 @@
         limit: pageState.searchResultDisplayLimit
       });
     }
+
     function shouldExcludeFromRecentSites(url) {
       if (!url) {
         return true;

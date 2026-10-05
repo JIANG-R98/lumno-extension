@@ -9,20 +9,24 @@
       clearShortcutContextMenuTileActive,
       getShortcutTileFromNode
     } = deps;
+
     // Page state still owned by newtab.js; read and written through accessors.
     const pageState = deps.pageState;
 
     let shortcutDockPointerFrame = 0;
     let shortcutDockPendingTile = null;
+
     function getShortcutDockPointerX(event) {
       const value = Number(event && event.clientX);
       return Number.isFinite(value) ? value : null;
     }
+
     function getShortcutDockIcon(tile) {
       return tile && typeof tile.querySelector === 'function'
         ? tile.querySelector('.x-nt-shortcut-icon')
         : null;
     }
+
     function resetShortcutDockTile(tile) {
       if (!tile) {
         return;
@@ -37,6 +41,7 @@
       icon.style.removeProperty('--x-nt-shortcut-dock-shift-x');
       icon.style.removeProperty('--x-nt-shortcut-dock-rise');
     }
+
     function clearShortcutDockMagnificationState() {
       if (!pageState.shortcutGrid) {
         return;
@@ -46,6 +51,7 @@
         resetShortcutDockTile(tile);
       });
     }
+
     function applyNewtabShortcutDockMagnification() {
       if (!pageState.shortcutGrid) {
         return;
@@ -58,6 +64,7 @@
         clearShortcutDockMagnificationState();
       }
     }
+
     function getShortcutDockInfluence(pointerX, icon) {
       if (!icon || typeof icon.getBoundingClientRect !== 'function' || !Number.isFinite(pointerX)) {
         return null;
@@ -74,6 +81,7 @@
         side: centerX < pointerX ? 'before' : centerX > pointerX ? 'after' : 'active'
       };
     }
+
     function applyShortcutDockPointerStyles(tile, pointerX, offset, measurement) {
       const prepared = measurement && typeof measurement === 'object' ? measurement : null;
       const icon = prepared ? prepared.icon : getShortcutDockIcon(tile);
@@ -99,6 +107,7 @@
       icon.style.setProperty('--x-nt-shortcut-dock-shift-x', `${Math.round(shiftPx)}px`);
       icon.style.setProperty('--x-nt-shortcut-dock-rise', `${Math.round(-6 * eased)}px`);
     }
+
     function cancelShortcutDockPointerFrame() {
       if (shortcutDockPointerFrame) {
         window.cancelAnimationFrame(shortcutDockPointerFrame);
@@ -107,6 +116,7 @@
       shortcutDockPendingTile = null;
       pageState.shortcutDockPendingPointerX = Number.NaN;
     }
+
     function scheduleShortcutDockPointerStyles(tile, pointerX) {
       shortcutDockPendingTile = tile || null;
       pageState.shortcutDockPendingPointerX = Number(pointerX);
@@ -126,6 +136,7 @@
         setShortcutDockHover(pendingTile, pendingPointerX);
       });
     }
+
     function resetShortcutDockHover() {
       cancelShortcutDockPointerFrame();
       if (!pageState.shortcutGrid) {
@@ -141,6 +152,7 @@
       clearShortcutDockMagnificationState();
       clearShortcutContextMenuTileActive();
     }
+
     function setShortcutDockHover(activeTile, pointerX) {
       if (!pageState.shortcutGrid || !activeTile) {
         return;
@@ -183,6 +195,7 @@
         }
       });
     }
+
     function handleShortcutDockPointerOver(event) {
       if (isShortcutDragActive() || isBookmarkDragActive()) {
         return;
@@ -192,6 +205,7 @@
         scheduleShortcutDockPointerStyles(tile, getShortcutDockPointerX(event));
       }
     }
+
     function handleShortcutDockPointerMove(event) {
       if (isShortcutDragActive() || isBookmarkDragActive()) {
         return;

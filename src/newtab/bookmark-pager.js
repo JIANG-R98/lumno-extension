@@ -12,6 +12,7 @@
       updateBookmarkSectionPosition,
       stableHashCode
     } = deps;
+
     // Page state still owned by newtab.js; read and written through accessors.
     const pageState = deps.pageState;
 
@@ -22,6 +23,7 @@
       const total = Array.isArray(pageState.bookmarkAllItems) ? pageState.bookmarkAllItems.length : 0;
       return Math.max(1, Math.ceil(total / getBookmarkLimit()));
     }
+
     function getBookmarkPageItems() {
       if (!Array.isArray(pageState.bookmarkAllItems) || pageState.bookmarkAllItems.length === 0) {
         return [];
@@ -38,6 +40,7 @@
         getBookmarkLimit()
       );
     }
+
     function setBookmarkPagerButtonAvailability(button, available) {
       if (!button) {
         return;
@@ -51,6 +54,7 @@
         hideTopActionTooltip();
       }
     }
+
     function updateBookmarkPagerState() {
       if (!pageState.bookmarkPagerPrevButton || !pageState.bookmarkPagerNextButton) {
         return;
@@ -61,6 +65,7 @@
       setBookmarkPagerButtonAvailability(pageState.bookmarkPagerPrevButton, !atStart);
       setBookmarkPagerButtonAvailability(pageState.bookmarkPagerNextButton, !atEnd);
     }
+
     function updateBookmarkGridHeightLock() {
       if (!pageState.bookmarkGrid) {
         return;
@@ -111,10 +116,12 @@
       const minHeight = (rowsPerPage * cardHeight) + ((rowsPerPage - 1) * rowGap);
       pageState.bookmarkGrid.style.setProperty('min-height', `${Math.ceil(minHeight)}px`);
     }
+
     function renderCurrentBookmarkPage() {
       renderBookmarks(getBookmarkPageItems());
       updateBookmarkPagerState();
     }
+
     function switchBookmarkPageDuringDrag(nextPage) {
       const pageCount = getBookmarkPageCount();
       const targetPage = Math.min(Math.max(0, Number(nextPage) || 0), pageCount - 1);
@@ -126,6 +133,7 @@
       updateBookmarkSectionPosition();
       return true;
     }
+
     function switchBookmarkPage(nextPage) {
       const pageCount = getBookmarkPageCount();
       const targetPage = Math.min(Math.max(0, Number(nextPage) || 0), pageCount - 1);

@@ -26,6 +26,7 @@
       setSiteSearchPrefix,
       getThemeForProvider
     } = deps;
+
     // Page state still owned by newtab.js; read and written through accessors.
     const pageState = deps.pageState;
 
@@ -35,6 +36,7 @@
         providers
       );
     }
+
     function getSearchModeProviders() {
       const providers = (pageState.siteSearchProvidersCache && pageState.siteSearchProvidersCache.length > 0)
         ? pageState.siteSearchProvidersCache
@@ -47,12 +49,14 @@
       }
       return [defaultProvider].concat(providers);
     }
+
     function isAggregateSearchDefinitionAvailable(definition, providers) {
       return AGGREGATE_SEARCH_STORE.isAggregateSearchAvailable(
         definition,
         Array.isArray(providers) ? providers : getSearchModeProviders()
       );
     }
+
     function getSearchTriggerProviders(providers, definitions) {
       const sourceProviders = Array.isArray(providers) ? providers : [];
       const availableDefinitions = (Array.isArray(definitions) ? definitions : [])
@@ -65,6 +69,7 @@
         availableDefinitions
       );
     }
+
     function buildSearchModeMenuItems() {
       const engineGroup = t('search_scope_group_engines', '搜索引擎');
       const localGroup = t('search_scope_group_local', '浏览器内容');
@@ -139,6 +144,7 @@
       });
       return items;
     }
+
     function getSearchModeMenuItems() {
       return Promise.all([
         loadSiteSearchIconCache(),
@@ -146,6 +152,7 @@
         getAggregateSearches()
       ]).then(buildSearchModeMenuItems);
     }
+
     function openSearchModeMenuFromDoubleTab() {
       const expectedInputValue = String(pageState.inputParts.input.value || '');
       const activateDefaultProvider = (providers) => {
@@ -176,6 +183,7 @@
         () => activateDefaultProvider(defaultSiteSearchProviders)
       );
     }
+
     function restoreSearchModeQuery(rawQuery) {
       const value = String(rawQuery || '');
       pageState.inputParts.input.value = value;
@@ -183,9 +191,11 @@
       pageState.latestQuery = value.trim();
       pageState.inputParts.input.dispatchEvent(new Event('input', { bubbles: true }));
     }
+
     function shouldPreserveSearchModeResults(rawQuery) {
       return Boolean(String(rawQuery || '').trim());
     }
+
     function selectSearchModeMenuItem(item) {
       if (!item || !item.kind) {
         return;
@@ -210,6 +220,7 @@
         restoreSearchModeQuery(rawQuery);
       }
     }
+
     function getLocalSearchScopeTabHintProvider(scope) {
       const source = getLocalSearchScopeLabel(scope);
       return {
@@ -221,6 +232,7 @@
         )
       };
     }
+
     function setLocalSearchScopePrefix(scope) {
       if (!pageState.inputModeController || !scope) {
         return;
@@ -236,6 +248,7 @@
         }
       );
     }
+
     function activateLocalSearchScope(scope, activationOptions) {
       if (!scope || !pageState.enabledSearchResultSourceTypes.includes(scope.sourceType)) {
         return false;
@@ -259,6 +272,7 @@
       }
       return true;
     }
+
     function clearLocalSearchScope() {
       if (!pageState.localSearchScopeState) {
         return false;
@@ -271,6 +285,7 @@
       clearAutocomplete();
       return true;
     }
+
     function activateSiteSearch(provider, activationOptions) {
       if (!provider) {
         return;
@@ -298,6 +313,7 @@
         clearSearchSuggestions();
       }
     }
+
     function clearSiteSearch() {
       if (!pageState.siteSearchState) {
         return;

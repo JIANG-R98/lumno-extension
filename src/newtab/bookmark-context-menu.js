@@ -18,6 +18,7 @@
       closeRecentContextMenu,
       hideCursorTooltip
     } = deps;
+
     // Page state still owned by newtab.js; read and written through accessors.
     const pageState = deps.pageState;
 
@@ -26,6 +27,7 @@
     const BOOKMARK_CONTEXT_MENU_MAX_WIDTH_PX = 240;
     const BOOKMARK_CONTEXT_MENU_PORTAL_Z_INDEX = 10060;
     const BOOKMARK_CONTEXT_MENU_PORTAL_OFFSET_PX = -6;
+
     function getBookmarkFolderOpenCount(target) {
       if (!target || !target.isFolder) {
         return 0;
@@ -33,6 +35,7 @@
       const node = bookmarksRuntime.getNode(target.bookmarkId);
       return NEWTAB_BOOKMARKS_STORE.collectFolderBookmarkUrls(node).length;
     }
+
     function getBookmarkContextMenuOptions(target) {
       const options = [];
       if (target && target.isFolder) {
@@ -74,6 +77,7 @@
       );
       return options;
     }
+
     function isBookmarkContextMenuOpen() {
       return Boolean(
         pageState.bookmarkContextMenu &&
@@ -81,6 +85,7 @@
         pageState.bookmarkContextMenuSelectController.isOpen(pageState.bookmarkContextMenu.control)
       );
     }
+
     function isBookmarkContextMenuNode(node) {
       if (!node || !pageState.bookmarkContextMenu) {
         return false;
@@ -91,12 +96,14 @@
         (menu && (node === menu || (typeof menu.contains === 'function' && menu.contains(node))))
       );
     }
+
     function clearBookmarkContextMenuTargetVisual() {
       const element = pageState.bookmarkContextMenuTarget && pageState.bookmarkContextMenuTarget.element;
       if (element && typeof element.removeAttribute === 'function') {
         element.removeAttribute('data-bookmark-context-menu-open');
       }
     }
+
     function closeBookmarkContextMenu() {
       clearBookmarkContextMenuTargetVisual();
       if (pageState.bookmarkContextMenu && pageState.bookmarkContextMenuSelectController) {
@@ -104,6 +111,7 @@
       }
       pageState.bookmarkContextMenuTarget = null;
     }
+
     function getBookmarkContextMenuPoint(target, event) {
       const clientX = Number(event && event.clientX);
       const clientY = Number(event && event.clientY);
@@ -120,6 +128,7 @@
       }
       return { x: 0, y: 0 };
     }
+
     function setBookmarkContextMenuPosition(target, event) {
       if (!pageState.bookmarkContextMenu || !pageState.bookmarkContextMenu.control) {
         return;
@@ -128,6 +137,7 @@
       pageState.bookmarkContextMenu.control.style.left = `${Math.round(point.x)}px`;
       pageState.bookmarkContextMenu.control.style.top = `${Math.round(point.y)}px`;
     }
+
     function handleBookmarkContextMenuAction(actionValue) {
       const action = String(actionValue || '');
       const target = pageState.bookmarkContextMenuTarget;
@@ -155,6 +165,7 @@
         deleteBookmarkFromContextTarget(target);
       }
     }
+
     function handleBookmarkContextMenuActionClick(event) {
       const target = event && event.target;
       const option = target && typeof target.closest === 'function'
@@ -168,12 +179,14 @@
       event.stopPropagation();
       handleBookmarkContextMenuAction(option.getAttribute('data-value'));
     }
+
     function handleBookmarkContextMenuDocumentPointerDown(event) {
       if (!isBookmarkContextMenuOpen() || isBookmarkContextMenuNode(event.target)) {
         return;
       }
       closeBookmarkContextMenu();
     }
+
     function createBookmarkContextMenu() {
       if (!pageState.bookmarkContextMenuSelectController ||
           typeof pageState.bookmarkContextMenuSelectController.createSelect !== 'function') {
@@ -224,6 +237,7 @@
       (document.body || document.documentElement).appendChild(control);
       return { control, select, trigger, menu };
     }
+
     function openBookmarkContextMenu(target, event) {
       if (!target || !target.bookmarkId) {
         return;
@@ -253,6 +267,7 @@
       }
       pageState.bookmarkContextMenuSelectController.setOpen(pageState.bookmarkContextMenu.control, true);
     }
+
     function handleBookmarkItemContextMenu(payload) {
       const event = payload && payload.event;
       const item = payload && payload.item;

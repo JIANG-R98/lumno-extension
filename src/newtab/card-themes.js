@@ -18,10 +18,12 @@
       isLowConfidenceTheme,
       scheduleWallpaperAdaptiveToneUpdate
     } = deps;
+
     // Page state still owned by newtab.js; read and written through accessors.
     const pageState = deps.pageState;
 
     const BOOKMARK_HOVER_RECENT_TRANSFER_WINDOW_MS = 220;
+
     function getRecentCardColors(theme, host) {
       const fallbackTheme = theme || buildFallbackThemeForHost(host) || defaultTheme;
       const resolvedTheme = getThemeForMode(fallbackTheme);
@@ -41,6 +43,7 @@
         accentBorder: rgbToCssAlpha(accentRgb, isDark ? 0.24 : 0.18)
       };
     }
+
     function applyRecentCardTheme(card, theme, host) {
       if (!card) {
         return;
@@ -53,6 +56,7 @@
       card.style.setProperty('--x-nt-recent-accent-soft', colors.accentSoft);
       card.style.setProperty('--x-nt-recent-accent-border', colors.accentBorder);
     }
+
     function getBookmarkCardColors(theme, host) {
       const fallbackTheme = theme || buildFallbackThemeForHost(host) || defaultTheme;
       const resolvedTheme = getThemeForMode(fallbackTheme);
@@ -74,6 +78,7 @@
         shadowRgb: rgbToCssParts(shadow)
       };
     }
+
     function applyBookmarkCardTheme(card, theme, host) {
       if (!card) {
         return;
@@ -94,6 +99,7 @@
       card.style.setProperty('--x-nt-bookmark-icon-color', colors.iconBg);
       card.style.setProperty('--x-nt-bookmark-shadow-rgb', colors.shadowRgb);
     }
+
     function getShortcutIconColors(theme, host) {
       const fallbackTheme = theme || buildFallbackThemeForHost(host) || defaultTheme;
       const resolvedTheme = getThemeForMode(fallbackTheme);
@@ -106,6 +112,7 @@
         iconColor: getReadableTextColor(iconBgRgb)
       };
     }
+
     function isShortcutThemeDefaultForWallpaper(theme) {
       if (theme && theme._xIsCustomShortcutIcon) {
         return false;
@@ -121,6 +128,7 @@
       }
       return isLowConfidenceTheme(theme);
     }
+
     function applyShortcutTileTheme(tile, theme, host) {
       if (!tile) {
         return;
@@ -136,6 +144,7 @@
       tile.style.setProperty('--x-nt-shortcut-icon-color', colors.iconColor);
       scheduleWallpaperAdaptiveToneUpdate();
     }
+
     function shouldDelayBookmarkHoverFromRecent(pointerType) {
       if (pointerType && pointerType !== 'mouse') {
         return false;

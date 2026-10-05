@@ -40,6 +40,7 @@
       MAX_PINNED_RECENT_SITES,
       beginSearchEntryRestoreLayoutLock
     } = deps;
+
     // Page state still owned by newtab.js; read and written through accessors.
     const pageState = deps.pageState;
 
@@ -47,6 +48,7 @@
     let bookmarkDataDirty = true;
     let recentLoadToken = 0;
     let recentDataDirty = true;
+
     function renderBookmarks(items) {
       const normalizedItems = Array.isArray(items) ? items : [];
       const isAtRoot = String(pageState.bookmarkCurrentFolderId || '') === String(pageState.bookmarkRootFolderId || '1');
@@ -119,6 +121,7 @@
       updateBookmarkGridHeightLock();
       updateBookmarkSectionPosition();
     }
+
     function renderRecentSites(items) {
       const sourceItems = Array.isArray(items) ? items : [];
       const resolvedHiddenUrls = new Set();
@@ -172,9 +175,11 @@
       setContentSectionVisible(recentSection, true);
       updateBookmarkSectionPosition();
     }
+
     function markBookmarkDataDirty() {
       bookmarkDataDirty = true;
     }
+
     function markBookmarkTreeDirty(options) {
       const preserveCascadeOpen = Boolean(options && options.preserveCascadeOpen);
       bookmarkDataDirty = true;
@@ -185,9 +190,11 @@
         closeBookmarkCascadeMenu();
       }
     }
+
     function markRecentDataDirty() {
       recentDataDirty = true;
     }
+
     function loadBookmarks(options) {
       const config = options || {};
       const requestedSectionDataRevision = Number.isFinite(Number(config.sectionDataRevision))
@@ -273,6 +280,7 @@
         pageState.bookmarkLoadedOnce = true;
       });
     }
+
     function loadRecentSites(options) {
       const config = options || {};
       const requestedSectionDataRevision = Number.isFinite(Number(config.sectionDataRevision))
@@ -324,6 +332,7 @@
         pageState.recentLoadedOnce = true;
       });
     }
+
     function handleRecentVisibilityChange() {
       if (document.visibilityState !== 'visible') {
         return;
@@ -340,6 +349,7 @@
         loadBookmarks();
       }
     }
+
     function forceReloadRecentSitesForI18n() {
       pageState.recentRenderSignature = '';
       pageState.bookmarkRenderSignature = '';

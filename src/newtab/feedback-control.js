@@ -13,15 +13,18 @@
       NEWTAB_FEEDBACK_CONTROL,
       showTopActionTooltip
     } = deps;
+
     // Page state still owned by newtab.js; read and written through accessors.
     const pageState = deps.pageState;
 
     const LUMNO_FEEDBACK_QR_REFRESH_TIMEOUT_MS = 5000;
     let feedbackRefreshResultTooltipTimer = 0;
     let feedbackLinksLoaded = false;
+
     function normalizeFeedbackHttpsUrl(value) {
       return COMMUNITY_LINKS.normalizeHttpsUrl(value);
     }
+
     function loadFeedbackLinks(options) {
       const force = Boolean(options && options.force);
       if (!force && feedbackLinksLoaded) {
@@ -34,6 +37,7 @@
           return pageState.feedbackLinks;
         });
     }
+
     function getFeedbackWebLocale() {
       const locale = pageState.currentResolvedLocale ||
         (pageState.currentLanguageMode === 'system' ? getSystemLocale() : normalizeLocale(pageState.currentLanguageMode));
@@ -48,9 +52,11 @@
       }
       return 'en';
     }
+
     function getFeedbackCommunityChannel(links) {
       return COMMUNITY_LINKS.getCommunityChannel(links, getFeedbackWebLocale());
     }
+
     function clearFeedbackRefreshResultTooltipTimer() {
       if (!feedbackRefreshResultTooltipTimer) {
         return;
@@ -58,9 +64,11 @@
       window.clearTimeout(feedbackRefreshResultTooltipTimer);
       feedbackRefreshResultTooltipTimer = 0;
     }
+
     function buildFreshFeedbackQrUrl(value) {
       return COMMUNITY_LINKS.buildFreshQrUrl(value);
     }
+
     function preloadFeedbackQrImage(url) {
       return new Promise((resolve) => {
         if (!url) {
@@ -91,6 +99,7 @@
         preloader.src = url;
       });
     }
+
     function buildFeedbackReactModel() {
       const links = pageState.feedbackLinks || LUMNO_FEEDBACK_LINKS_FALLBACK;
       const channel = getFeedbackCommunityChannel(links);
@@ -129,12 +138,14 @@
         xUrl: links.x || LUMNO_FEEDBACK_LINKS_FALLBACK.x
       };
     }
+
     function syncFeedbackReactElementReferences() {
       if (!pageState.feedbackControl) {
         return;
       }
       pageState.feedbackButton = pageState.feedbackControl.querySelector('.x-nt-feedback-button');
     }
+
     function renderFeedbackControlWithReact() {
       if (!pageState.feedbackReactController ||
           typeof pageState.feedbackReactController.render !== 'function') {
@@ -144,9 +155,11 @@
       syncFeedbackReactElementReferences();
       return true;
     }
+
     function updateFeedbackContactUi() {
       renderFeedbackControlWithReact();
     }
+
     function openFeedbackExternalUrl(url, disposition) {
       const safeUrl = normalizeFeedbackHttpsUrl(url);
       if (!safeUrl) {
@@ -154,15 +167,19 @@
       }
       return openExternalNewTabUrl(safeUrl, disposition || 'newTab');
     }
+
     function updateFeedbackLanguageStrings() {
       renderFeedbackControlWithReact();
     }
+
     function isFeedbackPopoverOpen() {
       return pageState.feedbackReactController.isOpen();
     }
+
     function closeFeedbackPopover(options) {
       setFeedbackPopoverOpen(false, options);
     }
+
     function setFeedbackPopoverOpen(open, options) {
       if (!open) {
         clearFeedbackRefreshResultTooltipTimer();
@@ -174,6 +191,7 @@
         pageState.feedbackReactController.close(options);
       }
     }
+
     function createFeedbackControls() {
       pageState.feedbackControl = document.createElement('div');
       pageState.feedbackReactController =

@@ -48,6 +48,7 @@
       renderCurrentBookmarkPage,
       closeBookmarkContextMenu
     } = deps;
+
     // Page state still owned by newtab.js; read and written through accessors.
     const pageState = deps.pageState;
 
@@ -59,44 +60,52 @@
     const BOOKMARK_DRAG_PAGE_SWITCH_DELAY_MS = 640;
     const BOOKMARK_DRAG_FOLDER_SWITCH_DELAY_MS = 640;
     let bookmarkPendingLayoutAnimation = null;
+
     function getBookmarkCardFromNode(node) {
       return node && typeof node.closest === 'function'
         ? node.closest('.x-nt-bookmark-card')
         : null;
     }
+
     function getBookmarkCardId(card) {
       return card && typeof card.getAttribute === 'function'
         ? card.getAttribute('data-bookmark-id') || ''
         : '';
     }
+
     function getBookmarkCardParentId(card) {
       return card && typeof card.getAttribute === 'function'
         ? card.getAttribute('data-bookmark-parent-id') || ''
         : '';
     }
+
     function getBookmarkReorderCards() {
       return pageState.bookmarkGrid
         ? Array.from(pageState.bookmarkGrid.querySelectorAll('.x-nt-bookmark-card[data-bookmark-draggable="true"]'))
         : [];
     }
+
     function getBookmarkCardInsertionIndex(card) {
       if (!card) {
         return -1;
       }
       return getBookmarkReorderCards().indexOf(card);
     }
+
     function getBookmarkCardAllIndex(bookmarkId) {
       const id = String(bookmarkId || '');
       return id
         ? pageState.bookmarkAllItems.findIndex((item) => item && String(item.id || '') === id)
         : -1;
     }
+
     function getBookmarkPageStartIndex() {
       if (isBookmarkTopbarMode()) {
         return 0;
       }
       return Math.max(0, pageState.bookmarkCurrentPage * getBookmarkLimit());
     }
+
     function getBookmarkCardLayoutRect(card) {
       if (!card || !pageState.bookmarkGrid || typeof card.getBoundingClientRect !== 'function') {
         return null;
@@ -121,6 +130,7 @@
         centerY: top + (height / 2)
       };
     }
+
     function clearBookmarkCardLayoutAnimation(card) {
       if (!card || !card.style) {
         return;
@@ -136,6 +146,7 @@
         card.style.removeProperty('transform');
       }
     }
+
     function getBookmarkCachedRectMap(state) {
       const rects = new Map();
       const layoutItems = Array.isArray(state && state.layoutItems) ? state.layoutItems : [];
@@ -146,6 +157,7 @@
       });
       return rects;
     }
+
     function animateBookmarkLayoutShift(beforeRects, draggedCard) {
       if (!beforeRects || !pageState.bookmarkGrid) {
         return;
@@ -191,6 +203,7 @@
         });
       });
     }
+
     function getBookmarkLayoutRectMapById() {
       const rects = new Map();
       getBookmarkReorderCards().forEach((card) => {
@@ -202,6 +215,7 @@
       });
       return rects;
     }
+
     function normalizeBookmarkAnimationRect(rect) {
       if (!rect) {
         return null;
@@ -223,12 +237,14 @@
         height
       };
     }
+
     function getBookmarkDragVisualRect(state) {
       const visualElement = getBookmarkDragVisualElement(state);
       return visualElement && typeof visualElement.getBoundingClientRect === 'function'
         ? normalizeBookmarkAnimationRect(visualElement.getBoundingClientRect())
         : null;
     }
+
     function queueBookmarkLayoutAnimation(excludedBookmarkId, animationOptions) {
       const options = animationOptions && typeof animationOptions === 'object'
         ? animationOptions
@@ -246,6 +262,7 @@
         }
         : null;
     }
+
     function playPendingBookmarkLayoutAnimation() {
       const pending = bookmarkPendingLayoutAnimation;
       bookmarkPendingLayoutAnimation = null;
@@ -311,6 +328,7 @@
       });
       return true;
     }
+
     function updateBookmarkDragLayoutCache(state) {
       if (!state || !state.card) {
         return;
@@ -329,6 +347,7 @@
         state.baseTop = draggedLayoutRect.top;
       }
     }
+
     function cancelBookmarkDragMoveFrame(state) {
       if (!state || !state.moveFrameId) {
         return;
@@ -336,9 +355,11 @@
       window.cancelAnimationFrame(state.moveFrameId);
       state.moveFrameId = 0;
     }
+
     function getBookmarkDragVisualElement(state) {
       return NEWTAB_BOOKMARK_DRAG.getVisualElement(state);
     }
+
     function createBookmarkCascadeDragPreview(state) {
       return NEWTAB_BOOKMARK_DRAG.createPreview(state, {
         documentObj: document,
@@ -349,14 +370,17 @@
         }
       });
     }
+
     function removeBookmarkCascadeDragPreview(state) {
       NEWTAB_BOOKMARK_DRAG.removePreview(state);
     }
+
     function setBookmarkDragCardTransform(state, pointerX, pointerY) {
       NEWTAB_BOOKMARK_DRAG.updateVisualPosition(state, pointerX, pointerY, {
         windowObj: window
       });
     }
+
     function settleBookmarkDragCard(card) {
       if (!card || !card.style) {
         return;
@@ -378,9 +402,11 @@
         card.style.pointerEvents = '';
       }, BOOKMARK_DROP_ANIMATION_MS + 90);
     }
+
     function isPointInsideBookmarkElement(element, pointerX, pointerY) {
       return NEWTAB_BOOKMARK_DRAG.isPointInsideElement(element, pointerX, pointerY);
     }
+
     function getBookmarkGridInsertionDropTarget(state, pointerX, pointerY) {
       if (!pageState.bookmarkGrid || !state || !Number.isFinite(pointerX) ||
           !Number.isFinite(pointerY)) {
@@ -409,6 +435,7 @@
         pointerY
       });
     }
+
     function getBookmarkDropSurfaceElement() {
       if (!pageState.bookmarkGrid || pageState.currentBookmarkCount <= 0) {
         return null;
@@ -420,6 +447,7 @@
       }
       return isContentSectionVisible(bookmarkSection) ? bookmarkSection : null;
     }
+
     function isEmptyBookmarkRootHidden() {
       return Boolean(
         pageState.currentBookmarkCount > 0 &&
@@ -429,6 +457,7 @@
         pageState.bookmarkAllItems.length === 0
       );
     }
+
     function getExternalBookmarkSurfacePoint(pointerX, pointerY) {
       const surface = getBookmarkDropSurfaceElement();
       if (!surface) {
@@ -445,6 +474,7 @@
       return NEWTAB_BOOKMARK_DRAG.isPointInsideElement(surface, pointerX, pointerY)
         ? { x: pointerX, y: pointerY } : null;
     }
+
     // Foreign items share the bookmark edge insertion zones. A folder's center
     // accepts its contents; ordinary cards snap to the nearest row boundary.
     function isValidExternalBookmarkDropTarget(state, target) {
@@ -468,6 +498,7 @@
         nodeMap, state.bookmarkId, target.folderId
       );
     }
+
     function resolveExternalBookmarkDropTarget(state, target) {
       const shortcut = state && state.shortcutId ? getShortcutById(state.shortcutId) : null;
       if (shortcut && shortcut.type === 'folder' && target &&
@@ -483,6 +514,7 @@
       return isValidExternalBookmarkDropTarget(state, target)
         ? target : { kind: 'blocked', surface: target && target.surface || 'folder' };
     }
+
     function getShortcutFolderDropTargetAt(state, pointerX, pointerY) {
       if (!isPointOverShortcutDropSurface(pointerX, pointerY)) {
         return null;
@@ -506,6 +538,7 @@
         : isValidBookmarkFolderDropTarget(state, target);
       return valid ? target : { kind: 'blocked', surface: 'folder' };
     }
+
     function getExternalBookmarkDropTarget(pointerX, pointerY, state) {
       if (pageState.bookmarkCascadeRuntime && pageState.bookmarkCascadeRuntime.isOpen()) {
         const cascadeTarget = pageState.bookmarkCascadeRuntime.updateDragPointer({ clientX: pointerX, clientY: pointerY });
@@ -553,6 +586,7 @@
       }
       return folderTarget ? resolveExternalBookmarkDropTarget(state, folderTarget) : null;
     }
+
     function isPointOverShortcutDropSurface(pointerX, pointerY) {
       return Boolean(
         pageState.shortcutGrid &&
@@ -561,6 +595,7 @@
         NEWTAB_BOOKMARK_DRAG.isPointInsideElement(pageState.shortcutGrid, pointerX, pointerY)
       );
     }
+
     function getBookmarkDragShortcutDropTarget(state, pointerX, pointerY) {
       if (!state) {
         return null;
@@ -608,6 +643,7 @@
         markerHeightPx: anchorRect.height - (markerVerticalInsetPx * 2)
       };
     }
+
     function moveBookmarkToShortcuts(state, target) {
       if (pageState.bookmarkMoveHistoryBusy) return Promise.resolve(false);
       const node = bookmarksRuntime.getNode(state.bookmarkId);
@@ -669,6 +705,7 @@
         if (pageState.newtabShortcuts.some((item) => item.type === 'folder')) return refreshShortcutFolderReferences();
       });
     }
+
     async function applyBookmarkShortcutTransfer(record, isUndo) {
       const from = isUndo ? record.to : record.from;
       const to = isUndo ? record.from : record.to;
@@ -773,6 +810,7 @@
         if (keepCascadeOpen) refreshOpenBookmarkCascadeMenu();
       }
     }
+
     function isInsertLineDropTarget(target) {
       return Boolean(
         target &&
@@ -780,6 +818,7 @@
         (target.surface === 'grid' || target.surface === 'shortcuts')
       );
     }
+
     function clearDropTargetMarker(marker) {
       marker.removeAttribute('data-bookmark-insert-position');
       marker.removeAttribute('data-insert-line-position');
@@ -788,6 +827,7 @@
       marker.style.removeProperty('--x-nt-insert-line-height');
       marker.removeAttribute('data-insert-line-motion');
     }
+
     function clearDragDropTarget(state) {
       if (!state) {
         return;
@@ -803,6 +843,7 @@
       }
       state.dropTarget = null;
     }
+
     function restoreBookmarkDragPreview(state) {
       if (!state || !state.hasReordered || !Array.isArray(state.originalAllItems)) {
         return;
@@ -819,6 +860,7 @@
       state.hasReordered = false;
       updateBookmarkDragLayoutCache(state);
     }
+
     function isValidBookmarkFolderDropTarget(state, target) {
       return Boolean(
         state &&
@@ -831,6 +873,7 @@
         })
       );
     }
+
     function isValidBookmarkInsertionDropTarget(state, target) {
       return Boolean(
         state &&
@@ -846,6 +889,7 @@
         })
       );
     }
+
     function getBookmarkElementDropTarget(pointerX, pointerY) {
       if (!document || typeof document.elementFromPoint !== 'function') {
         return null;
@@ -875,6 +919,7 @@
         kind: 'card'
       };
     }
+
     function isBookmarkCascadeSurfaceAtPoint(pointerX, pointerY) {
       if (!document || typeof document.elementFromPoint !== 'function') {
         return false;
@@ -886,6 +931,7 @@
         element.closest('.x-nt-bookmark-cascade-menu')
       );
     }
+
     function getBookmarkCrossLevelDropTarget(state, pointerX, pointerY) {
       let target = null;
       let cascadeBlocked = false;
@@ -932,6 +978,7 @@
       }
       return target;
     }
+
     function setDragDropTarget(state, target) {
       const previousTarget = state && state.dropTarget ? state.dropTarget : null;
       const previousElement = previousTarget ? previousTarget.element : null;
@@ -998,6 +1045,7 @@
         );
       }
     }
+
     function getBookmarkDragPageSwitchDirection(pointerX, pointerY) {
       if (pageState.bookmarkCurrentPage > 0 &&
           pageState.bookmarkPagerPrevButton &&
@@ -1014,6 +1062,7 @@
       }
       return 0;
     }
+
     function clearBookmarkDragPageSwitch(state) {
       if (!state) {
         return;
@@ -1028,6 +1077,7 @@
       state.pageSwitchButton = null;
       state.pageSwitchDirection = 0;
     }
+
     function clearBookmarkDragFolderSwitch(state) {
       if (!state) {
         return;
@@ -1044,6 +1094,7 @@
       state.folderSwitchElement = null;
       state.folderSwitchTargetId = '';
     }
+
     function scheduleBookmarkDragFolderSwitch(state, dropTarget) {
       const getSwitchTarget = (target) => target && (target.kind === 'card' || target.kind === 'shortcut-folder')
         ? { folderId: String(target.folderId), element: target.element }
@@ -1099,6 +1150,7 @@
       }, BOOKMARK_DRAG_FOLDER_SWITCH_DELAY_MS);
       return true;
     }
+
     function scheduleBookmarkDragPageSwitch(state, direction) {
       const normalizedDirection = direction < 0 ? -1 : direction > 0 ? 1 : 0;
       if (!state || !normalizedDirection || !isBookmarkSurfaceDragStateActive(state) || !state.isDragging) {
@@ -1157,6 +1209,7 @@
         }
       }, BOOKMARK_DRAG_PAGE_SWITCH_DELAY_MS);
     }
+
     function processBookmarkDragMove(state) {
       if (!state || pageState.bookmarkDragState !== state || !state.isDragging) {
         return;
@@ -1228,6 +1281,7 @@
       restoreBookmarkDragPreview(state);
       setBookmarkDragCardTransform(state, pointerX, pointerY);
     }
+
     function scheduleBookmarkDragMove(state, pointerX, pointerY) {
       if (!state || !state.isDragging) {
         return;
@@ -1241,6 +1295,7 @@
         processBookmarkDragMove(state);
       });
     }
+
     function moveBookmarkCardElement(card, targetIndex) {
       if (!pageState.bookmarkGrid || !card || card.parentNode !== pageState.bookmarkGrid ||
           !Number.isFinite(targetIndex)) {
@@ -1255,6 +1310,7 @@
       pageState.bookmarkGrid.insertBefore(card, remainingCards[boundedIndex] || null);
       return true;
     }
+
     function moveBookmarkItemInMemory(bookmarkId, targetAllIndex) {
       const currentIndex = getBookmarkCardAllIndex(bookmarkId);
       if (currentIndex < 0 || !Number.isFinite(targetAllIndex)) {
@@ -1270,6 +1326,7 @@
       pageState.bookmarkAllItems = nextItems;
       return true;
     }
+
     function getBookmarkMoveDestination(bookmarkId) {
       const movedIndex = getBookmarkCardAllIndex(bookmarkId);
       if (movedIndex < 0) {
@@ -1298,6 +1355,7 @@
         index: Math.max(0, Math.round(destinationIndex))
       };
     }
+
     function getBookmarkDeleteRecord(target) {
       if (!target || !target.bookmarkId) {
         return null;
@@ -1314,6 +1372,7 @@
         snapshot: node
       });
     }
+
     function deleteBookmarkFromContextTarget(target) {
       if (!target || !target.bookmarkId || pageState.bookmarkMoveHistoryBusy) {
         return false;
@@ -1353,6 +1412,7 @@
       });
       return true;
     }
+
     function getBookmarkMoveRecord(state, destination, movedNode) {
       if (!state || !destination) {
         return null;
@@ -1372,14 +1432,17 @@
         }
       });
     }
+
     function getBookmarkUndoShortcutLabel() {
       const isMac = /Mac|iPhone|iPad|iPod/i.test(String(navigator.platform || navigator.userAgent || ''));
       return isMac ? '⌘Z' : 'Ctrl+Z';
     }
+
     function getBookmarkRedoShortcutLabel() {
       const isMac = /Mac|iPhone|iPad|iPod/i.test(String(navigator.platform || navigator.userAgent || ''));
       return isMac ? '⇧⌘Z' : 'Ctrl+Shift+Z';
     }
+
     function refreshOpenBookmarkCascadeMenu(refreshOptions) {
       if (!pageState.bookmarkCascadeRuntime ||
           typeof pageState.bookmarkCascadeRuntime.isOpen !== 'function' ||
@@ -1392,6 +1455,7 @@
         return false;
       });
     }
+
     function syncOpenBookmarkCascadeAnchorVisual() {
       if (!pageState.bookmarkCascadeRuntime ||
           typeof pageState.bookmarkCascadeRuntime.isOpen !== 'function' ||
@@ -1415,6 +1479,7 @@
         ? pageState.bookmarkCascadeRuntime.rebindAnchor(nextAnchor, { instant: true })
         : false;
     }
+
     function finishPersistedBookmarkMove(state, destination, movedNode) {
       const record = getBookmarkMoveRecord(state, destination, movedNode);
       if (record) {
@@ -1431,6 +1496,7 @@
       }
       return true;
     }
+
     function persistBookmarkDragOrder(state) {
       if (!state || !state.bookmarkId) {
         return Promise.resolve(false);
@@ -1451,6 +1517,7 @@
         return false;
       });
     }
+
     function persistBookmarkCrossLevelMove(state, target) {
       if (!state || !target || !target.folderId) {
         return Promise.resolve(false);
@@ -1489,6 +1556,7 @@
         return false;
       });
     }
+
     function performBookmarkMoveHistoryAction(direction) {
       if (pageState.bookmarkMoveHistoryBusy) {
         return false;
@@ -1674,15 +1742,18 @@
       });
       return true;
     }
+
     function isBookmarkDragActive() {
       return Boolean(
         (pageState.bookmarkDragState && pageState.bookmarkDragState.isDragging) ||
         (pageState.bookmarkGrid && pageState.bookmarkGrid.getAttribute('data-bookmark-dragging') === 'true')
       );
     }
+
     function isBookmarkReorderInteractionActive() {
       return Boolean(pageState.bookmarkDragState || isBookmarkDragActive());
     }
+
     function shouldSuppressBookmarkHover(target) {
       return Boolean(
         target &&
@@ -1696,6 +1767,7 @@
         )
       );
     }
+
     function startBookmarkDrag(event, card) {
       if (!pageState.bookmarkGrid || !card || !pageState.bookmarkDragState || pageState.bookmarkDragState.card !== card) {
         return;
@@ -1738,6 +1810,7 @@
         }
       }
     }
+
     function clearBookmarkDragCardVisual(card) {
       if (!card || !card.style) {
         return;
@@ -1754,6 +1827,7 @@
       card.style.removeProperty('will-change');
       card.style.pointerEvents = '';
     }
+
     function clearBookmarkDragSourceVisual(state) {
       if (!state) {
         return;
@@ -1761,24 +1835,28 @@
       removeBookmarkCascadeDragPreview(state);
       clearBookmarkDragCardVisual(state.card);
     }
+
     function attachBookmarkDragDocumentListeners() {
       document.addEventListener('pointermove', handleBookmarkDragPointerMove, true);
       document.addEventListener('pointerup', handleBookmarkDragPointerUp, true);
       document.addEventListener('pointercancel', handleBookmarkDragPointerCancel, true);
       document.addEventListener('selectstart', handleBookmarkDragSelectStart, true);
     }
+
     function detachBookmarkDragDocumentListeners() {
       document.removeEventListener('pointermove', handleBookmarkDragPointerMove, true);
       document.removeEventListener('pointerup', handleBookmarkDragPointerUp, true);
       document.removeEventListener('pointercancel', handleBookmarkDragPointerCancel, true);
       document.removeEventListener('selectstart', handleBookmarkDragSelectStart, true);
     }
+
     function handleBookmarkDragSelectStart(event) {
       if (!pageState.bookmarkDragState || !event || typeof event.preventDefault !== 'function') {
         return;
       }
       event.preventDefault();
     }
+
     function finishBookmarkDrag(event, finishOptions) {
       if (!pageState.bookmarkDragState) {
         return;
@@ -1899,6 +1977,7 @@
         renderCurrentBookmarkPage();
       }
     }
+
     function beginBookmarkDragPointerTracking(event, card, bookmarkItem, sourceKind) {
       if (!event || !card || pageState.bookmarkDragState || pageState.bookmarkMoveHistoryBusy) {
         return false;
@@ -1950,6 +2029,7 @@
       }
       return true;
     }
+
     function handleBookmarkDragPointerDown(event) {
       if (pageState.bookmarkPageAnimating || pageState.bookmarkDragState) {
         return;
@@ -1961,6 +2041,7 @@
       const card = getBookmarkCardFromNode(event.target);
       beginBookmarkDragPointerTracking(event, card, card && card._xBookmarkItem, 'card');
     }
+
     function handleBookmarkCascadeItemPointerDown(payload) {
       const event = payload && payload.event;
       const element = payload && payload.element;
@@ -1970,6 +2051,7 @@
       }
       beginBookmarkDragPointerTracking(event, element, item, 'cascade');
     }
+
     function handleBookmarkDragPointerMove(event) {
       if (!pageState.bookmarkDragState || pageState.bookmarkDragState.pointerId !== event.pointerId) {
         return;
@@ -1994,9 +2076,11 @@
       event.preventDefault();
       scheduleBookmarkDragMove(pageState.bookmarkDragState, pointerX, pointerY);
     }
+
     function handleBookmarkDragPointerUp(event) {
       finishBookmarkDrag(event);
     }
+
     function handleBookmarkDragPointerCancel(event) {
       finishBookmarkDrag(event, { canceled: true });
     }

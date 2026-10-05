@@ -31,6 +31,7 @@
       getThemeSourceForSuggestion,
       areFaviconRenderCachesReady
     } = deps;
+
     // Page state still owned by newtab.js; read and written through accessors.
     const pageState = deps.pageState;
 
@@ -46,15 +47,21 @@
     const getKnownThemedFaviconCandidates = (hostname, preferredTheme) => FAVICON_UTILS.getKnownThemedFaviconCandidateUrls(hostname, preferredTheme, {
       getRuntimeUrl: getExtensionResourceUrl
     });
+
     const getRootFaviconCandidates = FAVICON_UTILS.getRootFaviconCandidateUrls;
     const hostHasExplicitDarkFavicon = FAVICON_UTILS.hostHasExplicitDarkFavicon || NEWTAB_FAVICON_THEME.hostHasExplicitDarkFavicon;
     const isFaviconProxyUrl = FAVICON_UTILS.isFaviconProxyUrl || NEWTAB_FAVICON_THEME.isFaviconProxyUrl;
     const themeColorCache = window._x_extension_theme_color_cache_2024_unique_ || new Map();
+
     window._x_extension_theme_color_cache_2024_unique_ = themeColorCache;
+
     const themeHostCache = window._x_extension_theme_host_cache_2024_unique_ || new Map();
+
     window._x_extension_theme_host_cache_2024_unique_ = themeHostCache;
+
     const siteThemeRequestPending = new Map();
     const themeFaviconCandidateRequestPending = new Map();
+
     function getHighlightColors(theme) {
       const resolvedTheme = getThemeForMode(theme);
       if (!resolvedTheme || !resolvedTheme._xIsBrand) {
@@ -68,6 +75,7 @@
         border: resolvedTheme.highlightBorder
       };
     }
+
     function getHostFromUrl(url) {
       if (!url) {
         return '';
@@ -78,9 +86,11 @@
         return '';
       }
     }
+
     function getCanonicalPageUrlForFavicon(url) {
       return FAVICON_UTILS.getCanonicalPageUrlForFavicon(url);
     }
+
     function normalizeAccentRgb(value) {
       if (!Array.isArray(value) || value.length !== 3) {
         return null;
@@ -90,6 +100,7 @@
         ? rgb
         : null;
     }
+
     function isNeutralThemeAccent(value) {
       const rgb = normalizeAccentRgb(value);
       if (!rgb) {
@@ -97,6 +108,7 @@
       }
       return FAVICON_UTILS.isNeutralThemeColor(rgb);
     }
+
     function normalizeThemeConfidence(value, accentRgb) {
       const confidence = String(value || '').trim().toLowerCase();
       if (confidence === 'color' || confidence === 'neutral') {
@@ -104,6 +116,7 @@
       }
       return isNeutralThemeAccent(accentRgb) ? 'neutral' : 'color';
     }
+
     function normalizeThemeSource(source) {
       const value = String(source || '').trim().toLowerCase();
       if (
@@ -118,6 +131,7 @@
       }
       return 'fallback';
     }
+
     function getThemeSourcePriority(source, theme) {
       const value = normalizeThemeSource(source);
       if (value === 'brand') {
@@ -140,16 +154,19 @@
       }
       return 10;
     }
+
     function getThemeSource(theme) {
       if (!theme) {
         return 'fallback';
       }
       return normalizeThemeSource(theme._xThemeSource || (theme._xIsDefault ? 'fallback' : (theme._xIsBrand ? 'brand' : 'fallback')));
     }
+
     function getThemeColorFingerprint(theme) {
       const rgb = theme && normalizeAccentRgb(theme.accentRgb || parseCssColor(theme.accent));
       return (rgb || defaultAccentColor).join(',');
     }
+
     function buildThemeFromAccent(accentRgb, source) {
       const rgb = normalizeAccentRgb(accentRgb);
       if (!rgb) {
@@ -165,6 +182,7 @@
       theme._xThemeConfidence = confidence;
       return theme;
     }
+
     function buildThemeFromThemeResult(result, fallbackSource) {
       const accentRgb = result && normalizeAccentRgb(result.accentRgb);
       if (!accentRgb) {
@@ -179,6 +197,7 @@
       theme._xThemeConfidence = confidence;
       return theme;
     }
+
     function isLowConfidenceTheme(theme) {
       if (!theme) {
         return false;
@@ -191,6 +210,7 @@
       const confidence = normalizeThemeConfidence(theme._xThemeConfidence, accentRgb);
       return theme._xThemeNeutral === true || confidence === 'neutral';
     }
+
     function isPersistableTheme(theme) {
       const source = getThemeSource(theme);
       return source === 'brand' ||
@@ -199,9 +219,11 @@
         source === 'manifest' ||
         source === 'favicon';
     }
+
     function getProviderThemeHost(provider) {
       return normalizeHost(getProviderHost(provider));
     }
+
     function getThemeHostForSuggestion(suggestion) {
       if (!suggestion) {
         return '';
@@ -217,6 +239,7 @@
       }
       return '';
     }
+
     function getThemePageUrlForSuggestion(suggestion, hostKey) {
       if (suggestion && suggestion.url) {
         try {
@@ -231,6 +254,7 @@
       const host = normalizeHost(hostKey || '');
       return host ? `https://${host}/` : '';
     }
+
     function refreshThemeConsumersForHost(hostKey, theme) {
       const normalizedHost = normalizeHost(hostKey);
       if (!normalizedHost || !theme) {
@@ -265,6 +289,7 @@
       }
       updateSelection();
     }
+
     function setResolvedThemeForHost(hostKey, theme, options) {
       const normalizedHost = normalizeHost(hostKey);
       const nextTheme = theme || defaultTheme;
@@ -302,6 +327,7 @@
       }
       return nextTheme;
     }
+
     function getPersistedThemeForHost(hostKey) {
       const normalizedHost = normalizeHost(hostKey);
       if (!normalizedHost) {
@@ -321,6 +347,7 @@
       }
       return setResolvedThemeForHost(normalizedHost, theme, { persist: false, refresh: false });
     }
+
     function requestSiteThemeColor(pageUrl, hostKey) {
       const url = String(pageUrl || '').trim();
       const host = normalizeHost(hostKey);
@@ -353,9 +380,11 @@
       siteThemeRequestPending.set(requestKey, promise);
       return promise;
     }
+
     function getThemeFaviconCandidateUrls(urls) {
       return FAVICON_UTILS.getThemeFaviconCandidateUrls(urls, { includeProxy: true });
     }
+
     function requestThemeFaviconCandidates(pageUrl, hostKey) {
       const url = String(pageUrl || '').trim();
       const host = normalizeHost(hostKey);
@@ -385,6 +414,7 @@
       themeFaviconCandidateRequestPending.set(requestKey, promise);
       return promise;
     }
+
     function getThemeFromUrl(url, hostOverride) {
       const resolver = getPageFaviconUrlResolver();
       url = resolver ? resolver.getSafeFaviconCandidateUrl(url, '', 'theme') : '';
@@ -434,6 +464,7 @@
         return loadThemeFromImageSource(url, url, hostKey, useHostCache, { crossOrigin: true });
       });
     }
+
     function withThemeTimeout(promise, timeoutMs, fallbackValue) {
       return new Promise((resolve) => {
         let settled = false;
@@ -453,6 +484,7 @@
         Promise.resolve(promise).then(finish).catch(() => finish(fallbackValue));
       });
     }
+
     function loadThemeFromImageSource(url, imageSource, hostKey, useHostCache, options) {
       return new Promise((resolve) => {
         let settled = false;
@@ -495,6 +527,7 @@
         image.src = imageSource;
       });
     }
+
     function buildAndCacheBrandThemeForHost(hostKey, iconUrl) {
       const normalizedHost = normalizeHost(hostKey);
       if (!normalizedHost) {
@@ -514,6 +547,7 @@
       }
       return brandTheme;
     }
+
     function getThemeFromResolvedFaviconCandidates(pageUrl, hostKey, iconUrl) {
       return requestThemeFaviconCandidates(pageUrl, hostKey).then((candidateUrls) => {
         const candidates = getThemeFaviconCandidateUrls([
@@ -537,6 +571,7 @@
         return next();
       });
     }
+
     function resolveThemeWithFaviconFallback(hostKey, iconUrl, persistedTheme, siteTheme, pageUrl) {
       const siteThemeValue = siteTheme ? buildThemeFromThemeResult(siteTheme, siteTheme.source || 'meta') : null;
       if (siteThemeValue && !isLowConfidenceTheme(siteThemeValue)) {
@@ -563,6 +598,7 @@
         });
       });
     }
+
     function getThemeForProvider(provider) {
       const hostKey = getProviderThemeHost(provider);
       const providerPageUrl = getThemePageUrlForSuggestion({ provider }, hostKey);
@@ -593,6 +629,7 @@
         return resolveThemeWithFaviconFallback(hostKey, iconUrl, persistedTheme, siteTheme, pageUrl);
       });
     }
+
     function shouldUseBrandTheme(suggestion) {
       if (!suggestion) {
         return false;
@@ -603,6 +640,7 @@
       }
       return true;
     }
+
     function getCustomShortcutThemeImageDataUrl(suggestion) {
       const dataUrl = String(
         suggestion && suggestion.customIconDataUrl
@@ -613,18 +651,21 @@
         ? dataUrl
         : '';
     }
+
     function getCustomShortcutThemeCacheKey(dataUrl) {
       const source = String(dataUrl || '');
       return source
         ? `shortcut-custom-icon:${source.length}:${stableHashCode(source)}`
         : '';
     }
+
     function markCustomShortcutTheme(theme) {
       if (theme && theme !== defaultTheme && !theme._xIsDefault) {
         theme._xIsCustomShortcutIcon = true;
       }
       return theme || defaultTheme;
     }
+
     function getThemeForSuggestion(suggestion) {
       if (!shouldUseBrandTheme(suggestion)) {
         return Promise.resolve(defaultTheme);
@@ -665,6 +706,7 @@
         return resolveThemeWithFaviconFallback(hostKey, iconUrl, persistedTheme, siteTheme, pageUrl);
       });
     }
+
     function getImmediateThemeForSuggestion(suggestion) {
       if (!shouldUseBrandTheme(suggestion)) {
         return defaultTheme;
@@ -727,6 +769,7 @@
       }
       return defaultTheme;
     }
+
     function shouldUseUrlFallbackThemeForSuggestion(suggestion, theme) {
       if (!suggestion || !shouldUseBrandTheme(suggestion)) {
         return false;
@@ -738,11 +781,13 @@
       const iconUrl = getThemeSourceForSuggestion(suggestion);
       return Boolean(iconUrl && isFaviconProxyUrl(iconUrl));
     }
+
     const themeResolutionQueue = [];
     const queuedThemeResolutionByTarget = new WeakMap();
     let themeResolutionSequence = 0;
     let themeResolutionFlushTimer = null;
     let themeResolutionCacheWaitStarted = false;
+
     function scheduleThemeResolutionFlush(delayMs) {
       if (themeResolutionFlushTimer !== null) {
         return;
@@ -752,6 +797,7 @@
         flushThemeResolutionQueue();
       }, Math.max(0, Number(delayMs) || 0));
     }
+
     function flushThemeResolutionQueue() {
       if (themeResolutionQueue.length === 0) {
         return;
@@ -792,6 +838,7 @@
         scheduleThemeResolutionFlush(THEME_RESOLUTION_BATCH_DELAY_MS);
       }
     }
+
     function queueThemeForTarget(target, suggestion, applyTheme, options) {
       if (!target || typeof applyTheme !== 'function') {
         return;
@@ -820,24 +867,29 @@
         ? options.delayMs
         : THEME_RESOLUTION_BATCH_DELAY_MS);
     }
+
     function isNewtabDarkMode() {
       return document.body.getAttribute('data-theme') === 'dark';
     }
+
     function getFaviconPreferredTheme() {
       return isNewtabDarkMode() ? 'dark' : 'light';
     }
+
     function getThemeForMode(theme) {
       return NEWTAB_FAVICON_THEME.getThemeForMode(theme, {
         defaultTheme,
         isDarkMode: isNewtabDarkMode
       });
     }
+
     function getHoverColors(theme) {
       return NEWTAB_FAVICON_THEME.getHoverColors(theme, {
         defaultTheme,
         isDarkMode: isNewtabDarkMode
       });
     }
+
     function getNeutralHoverActionColors() {
       return isNewtabDarkMode()
         ? {
@@ -851,6 +903,7 @@
           text: '#4B5563'
         };
     }
+
     function applyThemeVariables(target, theme) {
       if (!target || !theme) {
         return;
@@ -875,6 +928,7 @@
       target.style.setProperty('--x-nt-suggestion-active-bg', highlight.bg);
       target.style.setProperty('--x-nt-suggestion-hover-bg', hover.bg);
     }
+
     function applyMarkVariables(target, theme, active) {
       if (!target || !theme) {
         return;

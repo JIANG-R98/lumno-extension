@@ -44,6 +44,7 @@
       getShortcutTileFromNode,
       closeShortcutContextMenu
     } = deps;
+
     // Page state still owned by newtab.js; read and written through accessors.
     const pageState = deps.pageState;
 
@@ -51,6 +52,7 @@
     const SHORTCUT_REORDER_ANIMATION_MS = 180;
     const SHORTCUT_DROP_ANIMATION_MS = 210;
     const SHORTCUT_REORDER_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
+
     function getShortcutTileRectMap() {
       const rects = new Map();
       getShortcutReorderTiles().forEach((tile) => {
@@ -60,6 +62,7 @@
       });
       return rects;
     }
+
     function getShortcutTileLayoutRect(tile) {
       if (!tile || !pageState.shortcutGrid || typeof tile.offsetLeft !== 'number' ||
           typeof tile.offsetTop !== 'number') {
@@ -86,6 +89,7 @@
         centerY: top + (height / 2)
       };
     }
+
     function clearShortcutTileLayoutAnimation(tile) {
       if (!tile || !tile.style) {
         return;
@@ -100,6 +104,7 @@
         tile.style.removeProperty('transform');
       }
     }
+
     function animateShortcutLayoutShift(beforeRects, draggedTile) {
       if (!beforeRects || !pageState.shortcutGrid) {
         return;
@@ -135,6 +140,7 @@
         });
       });
     }
+
     function setShortcutDragTileTransform(state, pointerX, pointerY) {
       if (!state || !state.tile || !state.tile.style ||
           typeof state.tile.getBoundingClientRect !== 'function') {
@@ -152,6 +158,7 @@
       state.tile.style.transition = 'none';
       state.tile.style.transform = `translate3d(${nextX}px, ${nextY}px, 0)`;
     }
+
     function settleShortcutDragTile(tile) {
       if (!tile || !tile.style) {
         return;
@@ -173,12 +180,14 @@
         tile.style.pointerEvents = '';
       }, SHORTCUT_DROP_ANIMATION_MS + 90);
     }
+
     function getShortcutTileInsertionIndex(tile) {
       if (!tile) {
         return -1;
       }
       return getShortcutReorderTiles().indexOf(tile);
     }
+
     function getShortcutInsertionSlotAt(pointerX, pointerY, excludedTile) {
       const layoutItems = getShortcutReorderTiles()
         .filter((tile) => tile && tile !== excludedTile)
@@ -194,6 +203,7 @@
         anchorRect: slot.anchorIndex >= 0 ? layoutItems[slot.anchorIndex].rect : null
       };
     }
+
     function getShortcutDragInsertionIndex(pointerX, pointerY) {
       if (!pageState.shortcutGrid || !pageState.shortcutDragState || !Number.isFinite(pointerX) ||
           !Number.isFinite(pointerY)) {
@@ -201,6 +211,7 @@
       }
       return getShortcutInsertionSlotAt(pointerX, pointerY, pageState.shortcutDragState.tile).index;
     }
+
     function moveShortcutTileElement(tile, targetIndex) {
       if (!pageState.shortcutGrid || !tile || tile.parentNode !== pageState.shortcutGrid ||
           !Number.isFinite(targetIndex)) {
@@ -219,6 +230,7 @@
       refreshShortcutTileCacheFromDom();
       return true;
     }
+
     function moveShortcutItem(shortcutId, targetIndex) {
       if (!shortcutId || !Number.isFinite(targetIndex)) {
         return false;
@@ -245,6 +257,7 @@
       pageState.newtabShortcuts = nextShortcuts;
       return true;
     }
+
     function restoreShortcutDragOrder(state) {
       const originalOrder = state.originalShortcuts.map((item) => item.id);
       const restored = NEWTAB_CROSS_SURFACE_DRAG.planShortcutReorder({
@@ -260,6 +273,7 @@
       renderShortcuts();
       resetShortcutDockHover();
     }
+
     function persistShortcutOrder(state) {
       const record = state && NEWTAB_BOOKMARK_MOVE_HISTORY.createShortcutReorderRecord({
         fromOrder: state.originalShortcuts.map((item) => item.id),
@@ -276,6 +290,7 @@
           if (state) pageState.bookmarkMoveHistoryBusy = false;
         });
     }
+
     function startShortcutDrag(event, tile) {
       if (!pageState.shortcutGrid || !tile || !pageState.shortcutDragState || pageState.shortcutDragState.tile !== tile) {
         return;
@@ -305,6 +320,7 @@
         }
       }
     }
+
     function cancelShortcutDragMoveFrame(state) {
       if (!state || !state.moveFrameId) {
         return;
@@ -312,6 +328,7 @@
       window.cancelAnimationFrame(state.moveFrameId);
       state.moveFrameId = 0;
     }
+
     function applyShortcutDragMove(state, pointerX, pointerY) {
       if (!state || state !== pageState.shortcutDragState || !state.isDragging ||
           !Number.isFinite(pointerX) || !Number.isFinite(pointerY)) {
@@ -343,6 +360,7 @@
         state.hasReordered = true;
       }
     }
+
     function flushShortcutDragMove(state) {
       if (!state) {
         return;
@@ -355,6 +373,7 @@
       );
       cancelShortcutDragMoveFrame(state);
     }
+
     function scheduleShortcutDragMove(state, pointerX, pointerY) {
       if (!state) {
         return;
@@ -373,6 +392,7 @@
         );
       });
     }
+
     function suppressCanceledDragClick(element, flagName, pointerId) {
       if (element._xDragCancelClickCleanup) {
         element._xDragCancelClickCleanup();
@@ -402,6 +422,7 @@
       document.addEventListener('pointercancel', onRelease, true);
       document.addEventListener('pointerdown', onNextPress, true);
     }
+
     function finishShortcutDrag(event, options) {
       if (!pageState.shortcutDragState) {
         return;
@@ -491,6 +512,7 @@
         resetShortcutDockHover();
       }
     }
+
     // Reordering re-inserts the captured tile, which drops pointer capture, and
     // the shortcut section ignores pointer events while a drag is lifted above
     // the bookmarks, so the session listens on the document like bookmark drags.
@@ -499,17 +521,21 @@
       document.addEventListener('pointerup', handleShortcutDragPointerUp, true);
       document.addEventListener('pointercancel', handleShortcutDragPointerCancel, true);
     }
+
     function detachShortcutDragDocumentListeners() {
       document.removeEventListener('pointermove', handleShortcutDragPointerMove, true);
       document.removeEventListener('pointerup', handleShortcutDragPointerUp, true);
       document.removeEventListener('pointercancel', handleShortcutDragPointerCancel, true);
     }
+
     function isShortcutDragActive() {
       return Boolean(pageState.shortcutDragState && pageState.shortcutDragState.isDragging);
     }
+
     function isBookmarkSurfaceDragStateActive(state) {
       return Boolean(state && state.isDragging && (state === pageState.bookmarkDragState || state === pageState.shortcutDragState));
     }
+
     function updateShortcutDragBookmarkTarget(state, pointerX, pointerY) {
       if (state.folderSwitchPendingId) {
         return true;
@@ -543,6 +569,7 @@
       }
       return overBookmarks || overCascade || Boolean(dockFolder);
     }
+
     function moveShortcutToBookmarks(state, target) {
       const shortcut = getShortcutById(state.shortcutId);
       const restoreShortcut = () => {
@@ -610,6 +637,7 @@
         if (pageState.newtabShortcuts.some((item) => item.type === 'folder')) return refreshShortcutFolderReferences();
       });
     }
+
     function handleShortcutDragPointerDown(event) {
       if (pageState.bookmarkMoveHistoryBusy || isShortcutContextMenuNode(event.target)) {
         return;
@@ -656,6 +684,7 @@
         }
       }
     }
+
     function handleShortcutDragPointerMove(event) {
       if (!pageState.shortcutDragState || pageState.shortcutDragState.pointerId !== event.pointerId) {
         return;
@@ -680,9 +709,11 @@
       event.preventDefault();
       scheduleShortcutDragMove(pageState.shortcutDragState, pointerX, pointerY);
     }
+
     function handleShortcutDragPointerUp(event) {
       finishShortcutDrag(event);
     }
+
     function handleShortcutDragPointerCancel(event) {
       finishShortcutDrag(event, { cancel: true });
     }

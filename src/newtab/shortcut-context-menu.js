@@ -25,6 +25,7 @@
       hideShortcutTooltip,
       getShortcutTileId
     } = deps;
+
     // Page state still owned by newtab.js; read and written through accessors.
     const pageState = deps.pageState;
 
@@ -32,6 +33,7 @@
     const SHORTCUT_CONTEXT_MENU_MAX_WIDTH_PX = 180;
     const SHORTCUT_CONTEXT_MENU_PORTAL_Z_INDEX = 10040;
     const SHORTCUT_CONTEXT_MENU_PORTAL_OFFSET_PX = -6;
+
     function isShortcutContextMenuOpen() {
       return Boolean(
         pageState.shortcutContextMenu &&
@@ -39,6 +41,7 @@
         pageState.shortcutContextMenuSelectController.isOpen(pageState.shortcutContextMenu.control)
       );
     }
+
     function isShortcutContextMenuNode(node) {
       if (!node || !pageState.shortcutContextMenu) {
         return false;
@@ -49,6 +52,7 @@
         (menu && (node === menu || (typeof menu.contains === 'function' && menu.contains(node))))
       );
     }
+
     function clearShortcutContextMenuTileActive() {
       const tiles = pageState.shortcutGrid
         ? Array.from(pageState.shortcutGrid.querySelectorAll('.x-nt-shortcut-tile'))
@@ -63,6 +67,7 @@
         }
       });
     }
+
     function setShortcutContextMenuTileActive(target) {
       clearShortcutContextMenuTileActive();
       const tile = target && target.tile;
@@ -73,9 +78,11 @@
         }
       }
     }
+
     function getShortcutContextMenuAnchorElement(tile) {
       return getShortcutDockIcon(tile) || tile;
     }
+
     function getShortcutContextMenuAnchorX(tile) {
       const anchor = getShortcutContextMenuAnchorElement(tile);
       if (!anchor || typeof anchor.getBoundingClientRect !== 'function') {
@@ -85,6 +92,7 @@
       const centerX = rect.left + (rect.width / 2);
       return Number.isFinite(centerX) ? centerX : null;
     }
+
     function applyShortcutContextMenuDockHover(tile) {
       if (!tile) {
         return;
@@ -92,6 +100,7 @@
       setShortcutDockHover(tile, getShortcutContextMenuAnchorX(tile));
       tile.setAttribute('data-shortcut-context-menu-open', 'true');
     }
+
     function syncShortcutDockHoverFromPoint(clientX, clientY) {
       const pointerX = Number(clientX);
       const pointerY = Number(clientY);
@@ -107,6 +116,7 @@
       }
       resetShortcutDockHover();
     }
+
     function closeShortcutContextMenu(options) {
       const closeOptions = options && typeof options === 'object' ? options : {};
       if (!pageState.shortcutContextMenu || !pageState.shortcutContextMenuSelectController) {
@@ -127,6 +137,7 @@
       }
       resetShortcutDockHover();
     }
+
     function getShortcutContextMenuPoint(tile) {
       const anchor = getShortcutContextMenuAnchorElement(tile);
       if (anchor && typeof anchor.getBoundingClientRect === 'function') {
@@ -138,6 +149,7 @@
       }
       return { x: 0, y: 0 };
     }
+
     function setShortcutContextMenuPosition(tile) {
       if (!pageState.shortcutContextMenu || !pageState.shortcutContextMenu.control) {
         return;
@@ -146,6 +158,7 @@
       pageState.shortcutContextMenu.control.style.left = `${Math.round(point.x)}px`;
       pageState.shortcutContextMenu.control.style.top = `${Math.round(point.y)}px`;
     }
+
     function handleShortcutContextMenuAction(actionValue) {
       const action = String(actionValue || '');
       const target = pageState.shortcutContextMenuTarget;
@@ -185,6 +198,7 @@
         removeShortcutById(targetId);
       }
     }
+
     function handleShortcutContextMenuActionClick(event) {
       const target = event && event.target;
       const option = target && typeof target.closest === 'function'
@@ -197,6 +211,7 @@
       event.stopPropagation();
       handleShortcutContextMenuAction(option.getAttribute('data-value'));
     }
+
     function handleShortcutContextMenuDocumentPointerDown(event) {
       if (!isShortcutContextMenuOpen() || isShortcutContextMenuNode(event.target)) {
         return;
@@ -207,17 +222,20 @@
         clientY: event.clientY
       });
     }
+
     function handleShortcutContextMenuDocumentKeyDown(event) {
       if (event && event.key === 'Escape' &&
           (pageState.shortcutContextMenuTarget || isShortcutContextMenuOpen())) {
         closeShortcutContextMenu();
       }
     }
+
     function handleShortcutContextMenuDocumentFocusIn(event) {
       if (pageState.shortcutContextMenuTarget && !isShortcutContextMenuNode(event.target)) {
         closeShortcutContextMenu();
       }
     }
+
     function createShortcutContextMenu() {
       if (!pageState.shortcutContextMenuSelectController ||
           typeof pageState.shortcutContextMenuSelectController.createSelect !== 'function') {
@@ -275,6 +293,7 @@
         menu
       };
     }
+
     function openShortcutContextMenu(target) {
       const tile = target && target.tile;
       const shortcutId = target && target.kind === 'shortcut'
@@ -310,6 +329,7 @@
       pageState.shortcutContextMenuSelectController.sync(pageState.shortcutContextMenu.control);
       pageState.shortcutContextMenuSelectController.setOpen(pageState.shortcutContextMenu.control, true);
     }
+
     function handleShortcutContextMenu(event) {
       const tile = getShortcutTileFromNode(event.currentTarget || event.target);
       if (!tile || !getShortcutTileId(tile)) {
@@ -323,6 +343,7 @@
         tile
       });
     }
+
     function openShortcutAddContextMenu(sourceElement) {
       const tile = sourceElement || pageState.addShortcutButton;
       if (!tile || tile.hidden) {

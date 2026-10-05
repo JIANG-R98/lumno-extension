@@ -12,6 +12,7 @@
       recordSearchSuggestionSelection,
       navigateToUrl
     } = deps;
+
     // Page state still owned by newtab.js; read and written through accessors.
     const pageState = deps.pageState;
 
@@ -25,6 +26,7 @@
       }
       return formatMessage('open_url', '打开 {url}', { url: targetUrl });
     }
+
     function getShortcutRules() {
       if (window._x_extension_shortcut_rules_2024_unique_) {
         return Promise.resolve(window._x_extension_shortcut_rules_2024_unique_);
@@ -55,6 +57,7 @@
       window._x_extension_shortcut_rules_promise_2024_unique_ = rulesPromise;
       return rulesPromise;
     }
+
     function buildKeywordSuggestions(input, rules) {
       const queryLower = input.toLowerCase();
       const browserProfile = BROWSER_PROFILE.getBrowserInternalProfile(navigator);
@@ -89,6 +92,7 @@
       });
       return matches;
     }
+
     function getDirectUrlSuggestion(input) {
       const targetUrl = getDirectNavigationUrl(input);
       if (!targetUrl) {
@@ -111,12 +115,15 @@
         _xMatchedTabId: matchedTab.id
       };
     }
+
     function getDirectNavigationUrl(input) {
       return SEARCH_UTILS.getDirectNavigationUrl(input);
     }
+
     function normalizeTabMatchUrl(url) {
       return SEARCH_UTILS.buildTabMatchUrl(url);
     }
+
     function getMatchedOpenTabForSuggestion(suggestion) {
       if (!suggestion || !suggestion.url || !Array.isArray(pageState.tabs) || pageState.tabs.length === 0) {
         return null;
@@ -137,10 +144,12 @@
       }
       return null;
     }
+
     function getMatchedOpenTabIdForSuggestion(suggestion) {
       const matchedTab = getMatchedOpenTabForSuggestion(suggestion);
       return matchedTab ? matchedTab.id : null;
     }
+
     function shouldSwitchMatchedTabSuggestion(suggestion) {
       if (!suggestion || typeof suggestion._xMatchedTabId !== 'number') {
         return false;
@@ -150,6 +159,7 @@
       }
       return true;
     }
+
     function shouldUseNewTabForSwitchAction(suggestion, event, item) {
       if (!event || !event.shiftKey) {
         return false;
@@ -160,6 +170,7 @@
         openSwitchInNewTab: true
       });
     }
+
     function shouldOpenSearchResultInBackgroundTab(event) {
       const config = {
         openInBackgroundTab: isBackgroundOpenEvent(event),
@@ -167,9 +178,11 @@
       };
       return SUGGESTION_ACTION_MODEL.getSearchResultOpenDisposition(config) === 'backgroundTab';
     }
+
     function getSearchResultNewTabDisposition(event) {
       return shouldOpenSearchResultInBackgroundTab(event) ? 'backgroundTab' : 'newTab';
     }
+
     function openSearchResultUrl(suggestion, query, event) {
       if (!suggestion || !suggestion.url) {
         return false;
@@ -186,6 +199,7 @@
       navigateToUrl(suggestion.url);
       return true;
     }
+
     function openMatchedTabSuggestion(suggestion, event, item, query) {
       if (shouldUseNewTabForSwitchAction(suggestion, event, item) ||
           shouldOpenSearchResultInBackgroundTab(event)) {
@@ -202,6 +216,7 @@
         tabId: suggestion._xMatchedTabId
       });
     }
+
     function refreshTabsForSearchContext(callback) {
       if (!chrome || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
         if (typeof callback === 'function') {
@@ -240,9 +255,11 @@
         finish(true);
       });
     }
+
     // Warm the tab snapshot before the first URL input so a matched page can render
     // with its final title and switch action on the first visible frame.
     refreshTabsForSearchContext(() => {});
+
     function resolveQuickNavigation(query) {
       const directUrlSuggestion = getDirectUrlSuggestion(query);
       if (directUrlSuggestion) {

@@ -6,6 +6,7 @@
       isEnglishQuery,
       getKeywordSearchSuggestionState
     } = deps;
+
     // Page state still owned by newtab.js; read and written through accessors.
     const pageState = deps.pageState;
 
@@ -70,6 +71,7 @@
       }
       return null;
     }
+
     function getDomainPrefixCandidate(allSuggestions, rawQuery) {
       if (!Array.isArray(allSuggestions) || !rawQuery) {
         return null;
@@ -96,6 +98,7 @@
       }
       return null;
     }
+
     function getAutocompleteCandidateFromSuggestion(suggestion, rawQuery) {
       if (!suggestion || !rawQuery || suggestion.type === 'newtab') {
         return null;
@@ -147,9 +150,11 @@
       }
       return null;
     }
+
     function clearAutocomplete() {
       pageState.autocompleteState = null;
     }
+
     function restoreUserAuthoredSearchInput() {
       if (!pageState.autocompleteState || !pageState.autocompleteState.completion) {
         return false;
@@ -166,6 +171,7 @@
       clearAutocomplete();
       return true;
     }
+
     function dismissAutocompletePreviewOnNonTabKey(event) {
       if (!event || event.key === 'Tab') {
         return false;
@@ -176,6 +182,7 @@
       }
       return restoreUserAuthoredSearchInput();
     }
+
     function applyAutocomplete(allSuggestions, primarySuggestion, primaryHighlightReason) {
       const rawQuery = pageState.latestRawQuery;
       const trimmedQuery = rawQuery.trim();

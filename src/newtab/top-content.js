@@ -15,6 +15,7 @@
       normalizeNewtabTimeFontWeight,
       normalizeNewtabTimeSecondsVisible
     } = deps;
+
     // Page state still owned by newtab.js; read and written through accessors.
     const pageState = deps.pageState;
 
@@ -28,6 +29,7 @@
     const WORDMARK_WALLPAPER_SOLID_OPACITY = '0.6';
     const TOP_CONTENT_LAYOUT_TRANSITION_MS = 260;
     const TOP_CONTENT_LAYOUT_TRANSITION_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
+
     function getTopContentMotionElements() {
       return [
         pageState.topContentContainer,
@@ -44,6 +46,7 @@
         elements.indexOf(element) === index
       ));
     }
+
     function captureTopContentLayout() {
       const positions = new Map();
       getTopContentMotionElements().forEach((element) => {
@@ -56,6 +59,7 @@
       });
       return positions;
     }
+
     function captureRecentCardLayout() {
       const positions = new Map();
       recentCards.forEach((card) => {
@@ -71,25 +75,30 @@
       });
       return positions;
     }
+
     function cancelTopContentLayoutAnimations() {
       topContentLayoutAnimations.forEach((animation) => animation.cancel());
       topContentLayoutAnimations.clear();
     }
+
     function cancelRecentResizeLayoutAnimations() {
       recentResizeLayoutAnimations.forEach((animation) => animation.cancel());
       recentResizeLayoutAnimations.clear();
     }
+
     function prefersSystemReducedMotion() {
       return Boolean(
         window.matchMedia &&
         window.matchMedia('(prefers-reduced-motion: reduce)').matches
       );
     }
+
     function shouldSkipNewtabEntryMotion() {
       const motionEffectsEnabled = !document.documentElement ||
         document.documentElement.getAttribute('data-lumno-motion-effects') !== 'off';
       return SETTINGS.shouldSkipEntryMotion(window, motionEffectsEnabled);
     }
+
     function shouldAnimateNewtabLayoutShift() {
       const body = document.body;
       return Boolean(
@@ -100,6 +109,7 @@
         !prefersSystemReducedMotion()
       );
     }
+
     function animateLayoutShift(fromPositions, animations) {
       if (!fromPositions || fromPositions.size === 0) {
         return;
@@ -136,12 +146,15 @@
         };
       });
     }
+
     function animateTopContentLayout(fromPositions) {
       animateLayoutShift(fromPositions, topContentLayoutAnimations);
     }
+
     function animateRecentResizeLayout(fromPositions) {
       animateLayoutShift(fromPositions, recentResizeLayoutAnimations);
     }
+
     function applyNewtabTopContentVisibility(options) {
       if (!pageState.topContentContainer) {
         return;
@@ -197,6 +210,7 @@
       }
       scheduleWallpaperAdaptiveToneUpdate();
     }
+
     function finishWordmarkEntryAnimation() {
       if (wordmarkEntryTransitionTimer) {
         window.clearTimeout(wordmarkEntryTransitionTimer);
@@ -206,6 +220,7 @@
         pageState.topContentContainer.setAttribute('data-enter', 'done');
       }
     }
+
     function restartWordmarkEntryAnimation() {
       if (!pageState.topContentContainer) {
         return;
@@ -229,6 +244,7 @@
         WORDMARK_ENTRY_ANIMATION_TOTAL_MS
       );
     }
+
     function getWordmarkSolidFill(wallpaperActive, wallpaperInk, theme) {
       if (wallpaperActive) {
         return wallpaperInk === 'dark'
@@ -237,12 +253,14 @@
       }
       return theme === 'dark' ? 'rgb(248 250 252)' : 'rgb(31 41 55)';
     }
+
     function applyWordmarkSolidFill(fill) {
       if (!pageState.topContentContainer) {
         return;
       }
       pageState.topContentContainer.style.setProperty('--x-nt-wordmark-solid-fill', fill);
     }
+
     function applyWordmarkSolidLayerVisible(visible) {
       if (!wordmarkSolidEl) {
         return;
@@ -252,6 +270,7 @@
         visible ? WORDMARK_WALLPAPER_SOLID_OPACITY : '0'
       );
     }
+
     function applyWordmarkThemeAppearance(resolvedTheme) {
       const theme = resolvedTheme || (document.body ? document.body.getAttribute('data-theme') : 'light');
       const wallpaperActive = document.body &&
@@ -307,6 +326,7 @@
       applyWordmarkSolidFill(getWordmarkSolidFill(false, '', theme));
       pageState.wordmarkImageEl.style.setProperty('opacity', '0.82');
     }
+
     function renderNewtabTopContent(animateEntry) {
       if (!pageState.topContentController) {
         return;
@@ -325,6 +345,7 @@
       applyWordmarkThemeAppearance();
       scheduleWallpaperAdaptiveToneUpdate();
     }
+
     function setNewtabTopContentMode(value) {
       const nextMode = normalizeNewtabTopContentMode(value);
       const contentChanged = nextMode !== pageState.newtabTopContentMode;
@@ -338,16 +359,19 @@
       }
       applyNewtabTopContentVisibility({ contentChanged, fromLayout });
     }
+
     function updateNewtabTimeSecondsVisibleUi() {
       if (pageState.wallpaperRuntime && typeof pageState.wallpaperRuntime.updateTimeSecondsVisibleUi === 'function') {
         pageState.wallpaperRuntime.updateTimeSecondsVisibleUi();
       }
     }
+
     function updateNewtabTimeFontWeightUi() {
       if (pageState.wallpaperRuntime && typeof pageState.wallpaperRuntime.updateTimeFontWeightUi === 'function') {
         pageState.wallpaperRuntime.updateTimeFontWeightUi();
       }
     }
+
     function setNewtabTimeFontWeight(value) {
       const nextValue = normalizeNewtabTimeFontWeight(value);
       const changed = nextValue !== pageState.newtabTimeFontWeight;
@@ -358,6 +382,7 @@
       updateNewtabTimeFontWeightUi();
       return nextValue;
     }
+
     function setNewtabTimeSecondsVisible(value) {
       const nextValue = normalizeNewtabTimeSecondsVisible(value);
       const changed = nextValue !== pageState.newtabTimeSecondsVisible;

@@ -72,6 +72,7 @@
       NEWTAB_DIRECT_NAVIGATION_SETTLE,
       sendRuntimeMessage
     } = deps;
+
     // Page state still owned by newtab.js; read and written through accessors.
     const pageState = deps.pageState;
 
@@ -81,6 +82,7 @@
     let openInCurrentTabModifierActive = false;
     let openSwitchInNewTabModifierActive = false;
     let openInBackgroundTabModifierActive = false;
+
     function setSuggestionActionModifiersActive(openInCurrentTabActive, openSwitchInNewTabActive, openInBackgroundTabActive) {
       const nextOpenInCurrentTabActive = Boolean(openInCurrentTabActive);
       const nextOpenSwitchInNewTabActive = Boolean(openSwitchInNewTabActive);
@@ -103,6 +105,7 @@
         pageState.suggestionsView.setOpenInBackgroundTabModifierActive(nextOpenInBackgroundTabActive);
       }
     }
+
     function syncSuggestionActionModifiersFromEvent(event) {
       setSuggestionActionModifiersActive(
         Boolean(event && event.altKey),
@@ -110,24 +113,29 @@
         Boolean(event && (event.metaKey || event.ctrlKey) && !pageState.numberShortcutInstantEnabled)
       );
     }
+
     function getAutoHighlightIndex() {
       return pageState.suggestionsView.getAutoHighlightIndex();
     }
+
     function getSuggestionUpdateKind(options) {
       return SUGGESTION_ACTION_MODEL.getSuggestionUpdateKind({
         ...(options || {}),
         includeDebugReasons: Boolean(pageState.tabRankScoreDebugEnabled)
       });
     }
+
     function getSuggestionActionContextKey(options) {
       return SUGGESTION_ACTION_MODEL.getActionContextKey(options);
     }
+
     function updateSelection() {
       if (!pageState.suggestionsView) {
         return;
       }
       pageState.suggestionsView.updateSelection(pageState.selectedIndex);
     }
+
     function activateRenderedSuggestion(suggestion, query, event, index, item) {
       if (suggestion.type === 'commandNewTab') {
         chrome.runtime.sendMessage({ action: 'openNewTab' });
@@ -174,6 +182,7 @@
       }
       openSearchResultUrl(suggestion, query, event);
     }
+
     function deleteRenderedHistorySuggestion(suggestion) {
       chrome.runtime.sendMessage({
         action: 'deleteHistoryUrl',
@@ -193,6 +202,7 @@
         requestSuggestions(refreshQuery, { immediate: true });
       });
     }
+
     function scrollSelectedSuggestionIntoView(direction, didWrap) {
       if (!suggestionsContainer || pageState.selectedIndex < 0) {
         return;
@@ -204,22 +214,26 @@
         inset: 8
       });
     }
+
     function renderTabSuggestions(tabList) {
       pageState.currentSuggestions = [];
       lastRenderedQuery = '';
       lastRenderedActionContextKey = '';
       pageState.suggestionsView.renderTabs(tabList);
     }
+
     function requestTabsAndRender() {
       pageState.tabs = [];
       clearSearchSuggestions();
     }
+
     function refreshTabsIfIdle() {
       if (!pageState.latestQuery || !pageState.latestQuery.trim()) {
         refreshTabsForSearchContext(() => {});
         clearSearchSuggestions();
       }
     }
+
     function clearSearchSuggestions() {
       directNavigationSettleController.cancel();
       pageState.inlineSearchState = null;
@@ -233,6 +247,7 @@
       lastRenderedQuery = '';
       lastRenderedActionContextKey = '';
     }
+
     function dismissSearchSuggestionsFromBackground() {
       restoreUserAuthoredSearchInput();
       pageState.searchSuggestionsDismissed = true;
@@ -247,6 +262,7 @@
       }
       clearSearchSuggestions();
     }
+
     function restoreDismissedSearchSuggestions() {
       if (!pageState.searchSuggestionsDismissed || !pageState.inputParts || !pageState.inputParts.input) {
         return false;
@@ -266,6 +282,7 @@
       requestSuggestions(query, { immediate: true });
       return true;
     }
+
     function renderSuggestions(suggestions, query) {
       if (pageState.searchSuggestionsDismissed) {
         return;
@@ -665,9 +682,11 @@
         }
       });
     }
+
     function renderPendingSuggestions(query, options) {
       renderSuggestions(pageState.lastSuggestionResponse, query, options);
     }
+
     const DIRECT_NAVIGATION_SETTLE_DELAY_MS = 120;
     const directNavigationSettleController =
       NEWTAB_DIRECT_NAVIGATION_SETTLE.createDirectNavigationSettleController({
@@ -679,6 +698,7 @@
           renderPendingSuggestions(query);
         }
       });
+
     function requestSuggestions(query, options) {
       pageState.latestQuery = query;
       const requestLocalSearchScope = pageState.localSearchScopeState;

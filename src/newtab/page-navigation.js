@@ -14,6 +14,7 @@
       getDirectNavigationUrl,
       buildDefaultSearchUrl
     } = deps;
+
     // Page state still owned by newtab.js; read and written through accessors.
     const pageState = deps.pageState;
 
@@ -37,21 +38,25 @@
         window.location.href = url;
       }
     }
+
     function isMiddleClick(event) {
       return NAVIGATION_DISPOSITION.isMiddleClick(event);
     }
+
     function isBackgroundOpenEvent(event) {
       if (pageState.numberShortcutInstantEnabled) {
         return isMiddleClick(event);
       }
       return NAVIGATION_DISPOSITION.isBackgroundOpenEvent(event);
     }
+
     function getOpenDisposition(event, fallback) {
       if (typeof event === 'string') {
         return event === 'backgroundTab' ? 'backgroundTab' : (fallback || event || 'newTab');
       }
       return NAVIGATION_DISPOSITION.getDisposition(event, fallback);
     }
+
     function openExternalNewTabUrl(url, eventOrDisposition) {
       if (!url) {
         return false;
@@ -74,6 +79,7 @@
       window.open(url, '_blank', 'noopener');
       return true;
     }
+
     function openUrlFromNewtabCard(url, options) {
       if (!url) {
         return;
@@ -90,6 +96,7 @@
       }
       navigateToUrl(url);
     }
+
     function openShortcutUrl(shortcut, event) {
       if (shortcut && shortcut.type === 'folder') {
         const tile = getShortcutTileById(shortcut.id);
@@ -110,6 +117,7 @@
         openInBackgroundTab: isBackgroundOpenEvent(event)
       });
     }
+
     function recordSearchSuggestionSelection(suggestion, rawQuery) {
       if (!suggestion || suggestion.forceSearch || suggestion.provider || !suggestion.url ||
           !chrome || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
@@ -132,6 +140,7 @@
         }
       });
     }
+
     function openBookmarkFolder(nodeId) {
       const id = String(nodeId || '').trim();
       if (!id) {
@@ -139,6 +148,7 @@
       }
       navigateBookmarkFolder(id);
     }
+
     function markCurrentTabForSearchTracking() {
       if (!chrome || !chrome.tabs || !chrome.tabs.getCurrent || !chrome.runtime || !chrome.runtime.sendMessage) {
         return;
@@ -149,6 +159,7 @@
         }
       });
     }
+
     function runBrowserSearch(query, disposition, onFail) {
       if (chrome && chrome.search && typeof chrome.search.query === 'function') {
         try {
@@ -167,6 +178,7 @@
       }
       return false;
     }
+
     function navigateToQuery(query, forceSearch) {
       const directUrl = !forceSearch ? getDirectNavigationUrl(query) : '';
       let targetUrl = query;

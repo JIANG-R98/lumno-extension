@@ -14,6 +14,7 @@
       bookmarkCursorTooltipController,
       shouldSuppressBookmarkHover
     } = deps;
+
     // Page state still owned by newtab.js; read and written through accessors.
     const pageState = deps.pageState;
 
@@ -30,9 +31,11 @@
         maxWidth: 420
       }));
     }
+
     function hideTopActionTooltip() {
       topActionTooltipController.hide();
     }
+
     function bindSearchInputCursorTooltip(button, getText) {
       if (!button) {
         return null;
@@ -46,9 +49,11 @@
           : null
       });
     }
+
     function hideSearchInputCursorTooltip() {
       searchInputCursorTooltipController.hide();
     }
+
     function bindShortcutTooltip(target, getText, options) {
       if (!target) {
         return null;
@@ -76,6 +81,7 @@
         showOnFocus: false
       }, tooltipOptions));
     }
+
     function isShortcutTooltipSuppressed() {
       return Boolean(
         isShortcutDragActive() ||
@@ -84,9 +90,11 @@
         isShortcutContextMenuOpen()
       );
     }
+
     function hideShortcutTooltip() {
       shortcutTooltipController.hide();
     }
+
     function bindShortcutDialogTooltip(target, getText, options) {
       if (!target) {
         return null;
@@ -96,9 +104,11 @@
         maxWidth: 320
       }, options || {}));
     }
+
     function hideShortcutDialogTooltip() {
       shortcutDialogTooltipController.hide();
     }
+
     function bindCursorTooltip(target, getText, options) {
       if (!target) {
         return null;
@@ -118,9 +128,11 @@
         }
       }));
     }
+
     function isBookmarkCursorTooltipSuppressed(target) {
       return shouldSuppressBookmarkHover(target);
     }
+
     function hideCursorTooltip() {
       bookmarkCursorTooltipController.hide();
     }

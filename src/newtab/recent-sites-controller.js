@@ -25,6 +25,7 @@
       renderRecentSites,
       PINNED_RECENT_SITES_STORAGE_KEY
     } = deps;
+
     // Page state still owned by newtab.js; read and written through accessors.
     const pageState = deps.pageState;
 
@@ -34,6 +35,7 @@
     const RECENT_CONTEXT_MENU_MAX_WIDTH_PX = 180;
     const RECENT_CONTEXT_MENU_PORTAL_Z_INDEX = 10050;
     const RECENT_CONTEXT_MENU_PORTAL_OFFSET_PX = -6;
+
     function getRecentContextMenuOptions(target) {
       return [
         {
@@ -51,6 +53,7 @@
         }
       ];
     }
+
     function isRecentContextMenuOpen() {
       return Boolean(
         pageState.recentContextMenu &&
@@ -58,6 +61,7 @@
         pageState.recentContextMenuSelectController.isOpen(pageState.recentContextMenu.control)
       );
     }
+
     function isRecentContextMenuNode(node) {
       if (!node || !pageState.recentContextMenu) {
         return false;
@@ -68,12 +72,14 @@
         (menu && (node === menu || (typeof menu.contains === 'function' && menu.contains(node))))
       );
     }
+
     function clearRecentContextMenuTargetVisual() {
       const element = pageState.recentContextMenuTarget && pageState.recentContextMenuTarget.element;
       if (element && typeof element.removeAttribute === 'function') {
         element.removeAttribute('data-recent-context-menu-open');
       }
     }
+
     function closeRecentContextMenu() {
       clearRecentContextMenuTargetVisual();
       if (pageState.recentContextMenu && pageState.recentContextMenuSelectController) {
@@ -81,6 +87,7 @@
       }
       pageState.recentContextMenuTarget = null;
     }
+
     function getRecentContextMenuPoint(target, event) {
       const clientX = Number(event && event.clientX);
       const clientY = Number(event && event.clientY);
@@ -97,6 +104,7 @@
       }
       return { x: 0, y: 0 };
     }
+
     function setRecentContextMenuPosition(target, event) {
       if (!pageState.recentContextMenu || !pageState.recentContextMenu.control) {
         return;
@@ -105,6 +113,7 @@
       pageState.recentContextMenu.control.style.left = `${Math.round(point.x)}px`;
       pageState.recentContextMenu.control.style.top = `${Math.round(point.y)}px`;
     }
+
     function removeRecentSiteFromContextMenu(item) {
       return Promise.resolve(hideRecentSiteTemporarily(item)).then((result) => {
         if (!result || !result.hidden) {
@@ -126,6 +135,7 @@
         showToast(t('toast_error', '操作失败，请重试'), true);
       });
     }
+
     function handleRecentContextMenuAction(actionValue) {
       const action = String(actionValue || '');
       const target = pageState.recentContextMenuTarget;
@@ -142,6 +152,7 @@
       }
       removeRecentSiteFromContextMenu(target.item);
     }
+
     function handleRecentContextMenuActionClick(event) {
       const target = event && event.target;
       const option = target && typeof target.closest === 'function'
@@ -154,18 +165,21 @@
       event.stopPropagation();
       handleRecentContextMenuAction(option.getAttribute('data-value'));
     }
+
     function handleRecentContextMenuDocumentPointerDown(event) {
       if (!pageState.recentContextMenuTarget || isRecentContextMenuNode(event.target)) {
         return;
       }
       closeRecentContextMenu();
     }
+
     function handleRecentContextMenuDocumentKeyDown(event) {
       if (event && event.key === 'Escape' &&
           (pageState.recentContextMenuTarget || isRecentContextMenuOpen())) {
         closeRecentContextMenu();
       }
     }
+
     function createRecentContextMenu() {
       if (!pageState.recentContextMenuSelectController ||
           typeof pageState.recentContextMenuSelectController.createSelect !== 'function') {
@@ -217,6 +231,7 @@
       (document.body || document.documentElement).appendChild(control);
       return { control, select, trigger, menu };
     }
+
     function openRecentContextMenu(target, event) {
       if (!target || !target.item || !target.element) {
         return;
@@ -242,6 +257,7 @@
       }
       pageState.recentContextMenuSelectController.setOpen(pageState.recentContextMenu.control, true);
     }
+
     function handleRecentCardContextMenu(payload) {
       const event = payload && payload.event;
       const item = payload && payload.item;
@@ -255,6 +271,7 @@
       hideTopActionTooltip();
       openRecentContextMenu({ item, element }, event);
     }
+
     function getRecentStoreOptions(extraOptions) {
       return {
         normalizeHost,
@@ -269,20 +286,25 @@
         ...(extraOptions || {})
       };
     }
+
     function getRecentSiteUrlKey(item) {
       return NEWTAB_RECENT_STORE.getRecentSiteUrlKey(item);
     }
+
     function normalizeHiddenRecentSiteEntry(item) {
       return NEWTAB_RECENT_STORE.normalizeHiddenRecentSiteEntry(item);
     }
+
     function normalizeHiddenRecentSites(items) {
       return NEWTAB_RECENT_STORE.normalizeHiddenRecentSites(items, getRecentStoreOptions());
     }
+
     function readHiddenRecentSites() {
       return NEWTAB_RECENT_STORE.loadHiddenRecentSites(recentSitesStorageArea, getRecentStoreOptions({
         key: HIDDEN_RECENT_SITES_STORAGE_KEY
       }));
     }
+
     function writeHiddenRecentSites(items) {
       return NEWTAB_RECENT_STORE.saveHiddenRecentSites(recentSitesStorageArea, items, getRecentStoreOptions({
         key: HIDDEN_RECENT_SITES_STORAGE_KEY
@@ -291,9 +313,11 @@
         return normalized;
       });
     }
+
     function isRecentSiteHidden(item) {
       return NEWTAB_RECENT_STORE.isRecentSiteHidden(item, pageState.hiddenRecentSites);
     }
+
     function hideRecentSiteTemporarily(item) {
       const normalizedItem = normalizeRecentSiteRecord(item);
       const key = getRecentSiteUrlKey(normalizedItem);
@@ -321,6 +345,7 @@
         return { hidden: true, wasPinned };
       });
     }
+
     function getRecentDismissTooltip(item) {
       const normalizedItem = normalizeRecentSiteRecord(item);
       if (normalizedItem && isRecentSitePinned(normalizedItem)) {
@@ -334,23 +359,29 @@
         '从最近访问移除，再次访问后会重新出现'
       );
     }
+
     function getRecentSiteHostKey(item) {
       return NEWTAB_RECENT_STORE.getRecentSiteHostKey(item, getRecentStoreOptions());
     }
+
     function normalizeRecentSiteRecord(item, options) {
       return NEWTAB_RECENT_STORE.normalizeRecentSiteItem(item, getRecentStoreOptions(options));
     }
+
     function isSameRecentSite(a, b) {
       return NEWTAB_RECENT_STORE.isSameRecentSite(a, b, getRecentStoreOptions());
     }
+
     function normalizePinnedRecentSites(items) {
       return NEWTAB_RECENT_STORE.normalizePinnedRecentSites(items, getRecentStoreOptions());
     }
+
     function readPinnedRecentSites() {
       return NEWTAB_RECENT_STORE.loadPinnedRecentSites(recentSitesStorageArea, getRecentStoreOptions({
         key: PINNED_RECENT_SITES_STORAGE_KEY
       }));
     }
+
     function writePinnedRecentSites(items) {
       return NEWTAB_RECENT_STORE.savePinnedRecentSites(recentSitesStorageArea, items, getRecentStoreOptions({
         key: PINNED_RECENT_SITES_STORAGE_KEY
@@ -359,9 +390,11 @@
         return normalized;
       });
     }
+
     function isRecentSitePinned(item) {
       return pageState.pinnedRecentSites.some((pinnedItem) => isSameRecentSite(pinnedItem, item));
     }
+
     function mergeRecentSitesWithPinned(items, limit) {
       return NEWTAB_RECENT_STORE.mergeRecentSitesWithPinned(
         items,
@@ -371,6 +404,7 @@
         getRecentStoreOptions()
       );
     }
+
     function togglePinnedRecentSite(item) {
       const normalizedItem = normalizeRecentSiteRecord(item, { ignoreBlacklist: true });
       if (!normalizedItem) {
@@ -406,6 +440,7 @@
         };
       });
     }
+
     function updateRecentPinButton(button, isPinned, limitReached) {
       if (!button) {
         return;
