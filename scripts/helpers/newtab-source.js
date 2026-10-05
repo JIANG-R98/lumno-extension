@@ -17,7 +17,8 @@ const NEWTAB_RUNTIME_MODULES = [
   'src/newtab/search-autocomplete.js',
   'src/newtab/tooltip-bindings.js',
   'src/newtab/page-navigation.js',
-  'src/newtab/shortcuts-controller.js'
+  'src/newtab/shortcuts-controller.js',
+  'src/newtab/shortcut-drag.js'
 ];
 
 // Returns newtab.js followed by the modules split out of it, so source checks
