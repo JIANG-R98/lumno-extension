@@ -5,7 +5,8 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 // Page runtime modules split out of newtab.js, in the order newtab.html loads them.
 const NEWTAB_RUNTIME_MODULES = [
   'src/newtab/site-theme-resolver.js',
-  'src/newtab/url-policy.js'
+  'src/newtab/url-policy.js',
+  'src/newtab/recent-sites-controller.js'
 ];
 
 // Returns newtab.js followed by the modules split out of it, so source checks
