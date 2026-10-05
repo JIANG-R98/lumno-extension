@@ -1,6 +1,7 @@
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { createReactRootController } from './root-controller';
 import { InlinePopconfirm } from './inline-popconfirm';
+import { SegmentedControl } from './segmented-control';
 import { getAsyncErrorMessage, useExclusiveAsyncAction } from '../shared/use-exclusive-async-action';
 
 export interface WebDavConfig {
@@ -15,7 +16,8 @@ export interface WebDavConnection {
   enabled: boolean;
   state: string;
   errorText?: string;
-  lastSyncAt?: number;
+  diagnosticText?: string;
+  lastSyncAt?: number | null;
   hasMigrationBackup?: boolean;
   needsRecovery?: boolean;
   conflictsText?: string;
@@ -24,14 +26,98 @@ export interface WebDavConnection {
 export interface WebDavListModel {
   connections: WebDavConnection[];
   copy: Record<string, string>;
+  lang?: string;
   ready: boolean;
   outdated: boolean;
 }
 export interface WebDavListOptions {
   onAction(operation: string, id?: string, extra?: Record<string, unknown>): Promise<{ needsChoice?: boolean }>;
 }
+type Provider = 'jianguoyun' | 'nextcloud' | 'other';
+type Tone = 'success' | 'warning' | 'danger' | undefined;
+
 const classes = (name: string) => `_x_extension_${name}_2024_unique_`;
 const buttonClass = `${classes('shortcut_submit')} ${classes('shortcut_secondary')}`;
+const primaryClass = `${classes('shortcut_submit')} ${classes('shortcut_submit_primary')} ${classes('shortcut_save')}`;
+const JIANGUOYUN_ENDPOINT = 'https://dav.jianguoyun.com/dav/';
+const JIANGUOYUN_HELP = 'https://help.jianguoyun.com/?p=2064';
+const ENDPOINT_PLACEHOLDERS: Record<Provider, string> = {
+  jianguoyun: JIANGUOYUN_ENDPOINT,
+  nextcloud: 'https://cloud.example.com/remote.php/dav/files/USERNAME/',
+  other: 'https://dav.example.com/'
+};
+
+function providerOf(endpoint: string): Provider {
+  try {
+    const url = new URL(endpoint);
+    if (url.hostname === 'dav.jianguoyun.com') return 'jianguoyun';
+    if (/\/remote\.php\/(?:web)?dav(?:\/|$)/.test(url.pathname)) return 'nextcloud';
+  } catch { /* Unsaved or invalid input has no provider. */ }
+  return 'other';
+}
+
+function connectionTitle(item: WebDavConnection, copy: Record<string, string>) {
+  if (providerOf(item.config.endpoint) === 'jianguoyun') return copy.webdav_provider_jianguoyun;
+  try { return new URL(item.config.endpoint).host; } catch { return item.config.endpoint; }
+}
+
+function formatTime(timestamp: number, lang: string) {
+  return new Date(timestamp).toLocaleString(lang || undefined, { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function formatRelative(timestamp: number, now: number, lang: string) {
+  const seconds = Math.round((timestamp - now) / 1000);
+  const format = new Intl.RelativeTimeFormat(lang || undefined, { numeric: 'auto' });
+  if (Math.abs(seconds) < 60) return format.format(0, 'second');
+  if (Math.abs(seconds) < 3600) return format.format(Math.round(seconds / 60), 'minute');
+  if (Math.abs(seconds) < 86400) return format.format(Math.round(seconds / 3600), 'hour');
+  return formatTime(timestamp, lang);
+}
+
+function validTime(value?: number | null) {
+  return typeof value === 'number' && Number.isFinite(new Date(value).getTime()) ? value : null;
+}
+
+// One status per card, in the same pill the Chrome sync row uses. Anything
+// that needs the user is resolved below the header, never by the color alone.
+function describeStatus(item: WebDavConnection, copy: Record<string, string>, syncing: boolean, now: number, lang: string): { tone: Tone; label: string } {
+  const lastSyncAt = validTime(item.lastSyncAt);
+  if (item.needsRecovery) return { tone: 'danger', label: copy.webdav_state_recovery };
+  if (syncing || item.state === 'syncing') return { tone: undefined, label: copy.webdav_state_syncing };
+  if (item.state === 'choice' || item.state === 'conflict') return { tone: 'warning', label: copy[`webdav_state_${item.state}`] };
+  if (item.errorText) return { tone: 'danger', label: copy.webdav_state_error };
+  if (!item.enabled) return { tone: undefined, label: lastSyncAt ? copy.webdav_state_paused : copy.webdav_state_browser };
+  if (item.state === 'ready') {
+    return { tone: 'success', label: lastSyncAt ? `${copy.webdav_state_ready} · ${formatRelative(lastSyncAt, now, lang)}` : copy.webdav_state_ready };
+  }
+  return { tone: undefined, label: copy.webdav_state_pending };
+}
+
+function useNow(intervalMs: number) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), intervalMs);
+    return () => window.clearInterval(timer);
+  }, [intervalMs]);
+  return now;
+}
+
+function DiagnosticButton({ copy, text }: { copy: Record<string, string>; text: string }) {
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return undefined;
+    const timer = window.setTimeout(() => setCopied(false), 1600);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+  return (
+    <button className={buttonClass} onClick={() => {
+      void navigator.clipboard?.writeText(text).then(() => setCopied(true)).catch(() => {});
+    }} title={text} type="button">
+      <i aria-hidden="true" className={`ri-icon ri-size-14 ${copied ? 'ri-check-line' : 'ri-file-copy-line'}`} />
+      {copied ? copy.webdav_diagnostic_copied : copy.webdav_copy_diagnostic}
+    </button>
+  );
+}
 
 function ConnectionEditor({ item, model, options, onClose }: {
   item?: WebDavConnection;
@@ -41,110 +127,211 @@ function ConnectionEditor({ item, model, options, onClose }: {
 }) {
   const { copy } = model;
   const formId = useId();
-  const [draft, setDraft] = useState({ endpoint: item?.config.endpoint || '', directory: item?.config.directory || 'lumno',
-    username: item?.config.username || '', password: '' });
-  const [feedback, setFeedback] = useState('');
-  const [failed, setFailed] = useState(false);
+  const initialProvider: Provider = item ? providerOf(item.config.endpoint) : /^zh/i.test(model.lang || '') ? 'jianguoyun' : 'other';
+  const [provider, setProvider] = useState<Provider>(initialProvider);
+  const [draft, setDraft] = useState({ endpoint: item?.config.endpoint || (initialProvider === 'jianguoyun' ? JIANGUOYUN_ENDPOINT : ''),
+    directory: item?.config.directory || 'lumno', username: item?.config.username || '', password: '' });
+  const [feedback, setFeedback] = useState<{ text: string; failed: boolean; diagnostic?: string } | null>(null);
+  const [pendingOperation, setPendingOperation] = useState('');
   const action = useExclusiveAsyncAction(async (operation: string) => {
-    setFeedback('');
-    setFailed(false);
-    return options.onAction(operation, item?.id, { config: draft });
+    setFeedback(null);
+    setPendingOperation(operation);
+    if (operation === 'test') return options.onAction('test', item?.id, { config: draft });
+    return item
+      ? options.onAction('save', item.id, { config: draft, resume: true })
+      : options.onAction('add', undefined, { config: draft, enable: true });
   });
   let endpoint = '';
   try { endpoint = new URL(draft.endpoint.trim()).href.replace(/\/*$/, '/'); } catch { /* Native form validation handles it. */ }
   const reusePassword = item?.config.hasPassword && endpoint === item.config.endpoint && draft.username.trim() === item.config.username;
   const disabled = action.pending || !model.ready || model.outdated;
+  const update = (field: keyof typeof draft, value: string) => { setFeedback(null); setDraft((current) => ({ ...current, [field]: value })); };
+  const selectProvider = (value: string) => {
+    const next = value as Provider;
+    setProvider(next);
+    setFeedback(null);
+    setDraft((current) => ({ ...current, endpoint: next === 'jianguoyun' ? JIANGUOYUN_ENDPOINT
+      : providerOf(current.endpoint) === 'jianguoyun' ? '' : current.endpoint }));
+  };
   const run = async (operation: string) => {
     const outcome = await action.run(operation);
-    if (outcome.status === 'rejected') { setFailed(true); setFeedback(getAsyncErrorMessage(outcome.error)); }
+    setPendingOperation('');
+    if (outcome.status === 'rejected') {
+      const error = outcome.error as { diagnostic?: string };
+      setFeedback({ text: getAsyncErrorMessage(outcome.error), failed: true, diagnostic: error?.diagnostic || '' });
+    }
     if (outcome.status === 'fulfilled') {
-      if (operation === 'test') setFeedback(copy.webdav_test_success);
+      if (operation === 'test') setFeedback({ text: copy.webdav_test_success, failed: false });
       else onClose();
     }
   };
+  const fields = [
+    { name: 'endpoint', type: 'url', placeholder: ENDPOINT_PLACEHOLDERS[provider] },
+    { name: 'directory', type: 'text', placeholder: 'lumno' },
+    { name: 'username', type: 'text', placeholder: provider === 'jianguoyun' ? 'name@example.com' : '' },
+    { name: 'password', type: 'password', placeholder: reusePassword ? copy.webdav_password_saved : '' }
+  ] as const;
   return (
     <form className={item ? classes('shortcut_editor') : classes('shortcut_form_fields')}
-      onSubmit={(event) => { event.preventDefault(); void run(item ? 'save' : 'add'); }}>
+      onSubmit={(event) => { event.preventDefault(); void run('submit'); }}>
+      <div className={`${classes('shortcut_field')} lumno-webdav-provider`}>
+        <span className={classes('shortcut_label')} id={`${formId}-provider`}>{copy.webdav_provider}</span>
+        <div aria-labelledby={`${formId}-provider`} className={`${classes('theme_picker')} ${classes('inline_tabs')}`} role="tablist">
+          <SegmentedControl model={{ activeValue: provider, dataAttribute: 'data-webdav-provider', disabled,
+            items: (['jianguoyun', 'nextcloud', 'other'] as const).map((value) => ({
+              value, label: copy[`webdav_provider_${value}`], labelKey: `webdav_provider_${value}` })) }}
+          onSelect={selectProvider} />
+        </div>
+      </div>
       <div className="lumno-webdav-form-grid">
-        {(['endpoint', 'directory', 'username', 'password'] as const).map((field) => (
-          <div className={classes('shortcut_field')} key={field}>
-            <label className={classes('shortcut_label')} htmlFor={`${formId}-${field}`}>
-              <span>{copy[`webdav_${field}`]}</span><span className={classes('shortcut_required')}>*</span>
-            </label>
-            <input autoFocus={field === 'endpoint'} autoComplete={field === 'password' ? 'new-password' : 'off'}
-              className={classes('shortcut_input')} disabled={disabled} id={`${formId}-${field}`}
-              name={field} placeholder={field === 'password' && reusePassword ? copy.webdav_password_saved : field === 'endpoint' ? 'https://dav.example.com/' : ''}
-              required={field !== 'password' || !reusePassword} spellCheck={false}
-              type={field === 'password' ? 'password' : field === 'endpoint' ? 'url' : 'text'} value={draft[field]}
-              onChange={(event) => { setFeedback(''); setDraft({ ...draft, [field]: event.currentTarget.value }); }} />
+        {fields.map((field) => (
+          <div className={classes('shortcut_field')} key={field.name}>
+            <div className={classes('shortcut_label_row')}>
+              <label className={classes('shortcut_label')} htmlFor={`${formId}-${field.name}`}>
+                <span>{copy[`webdav_${field.name}`]}</span><span className={classes('shortcut_required')}>*</span>
+              </label>
+              {field.name === 'password' && provider === 'jianguoyun' ? (
+                <a className="lumno-webdav-help" href={JIANGUOYUN_HELP} rel="noreferrer" target="_blank">{copy.webdav_password_help}</a>
+              ) : null}
+            </div>
+            <input autoFocus={item ? field.name === 'endpoint' : field.name === 'username'}
+              autoComplete={field.name === 'password' ? 'new-password' : 'off'}
+              className={classes('shortcut_input')} disabled={disabled} id={`${formId}-${field.name}`}
+              name={field.name} placeholder={field.placeholder}
+              required={field.name !== 'password' || !reusePassword} spellCheck={false}
+              type={field.type} value={draft[field.name]}
+              onChange={(event) => update(field.name, event.currentTarget.value)} />
           </div>
         ))}
       </div>
       <p className={classes('setting_desc')}>{copy.webdav_credentials_hint}</p>
-      {item?.enabled ? <p className={classes('setting_desc')}>{copy.webdav_edit_active_hint}</p> : null}
-      <div className={classes('shortcut_editor_actions')}>
-        <button className={buttonClass} disabled={disabled} type="button" onClick={(event) => {
+      {feedback ? (
+        <div className="lumno-webdav-form-feedback" role="status">
+          <span className={feedback.failed ? classes('shortcut_error') : 'lumno-webdav-success'}>{feedback.text}</span>
+          {feedback.diagnostic ? <DiagnosticButton copy={copy} text={feedback.diagnostic} /> : null}
+        </div>
+      ) : null}
+      <div className={`${classes('shortcut_editor_actions')} lumno-webdav-editor-actions`}>
+        <button aria-busy={pendingOperation === 'test'} className={buttonClass} disabled={disabled} type="button" onClick={(event) => {
           if (event.currentTarget.form?.reportValidity()) void run('test');
-        }}>{copy.webdav_test}</button>
+        }}>{pendingOperation === 'test' ? copy.webdav_state_testing : copy.webdav_test}</button>
         <button className={buttonClass} disabled={action.pending} onClick={onClose} type="button">{copy.confirm_cancel}</button>
-        <button className={`${classes('shortcut_submit')} ${classes('shortcut_save')}`} disabled={disabled} type="submit">{copy.webdav_save}</button>
+        <button aria-busy={pendingOperation === 'submit'} className={primaryClass} disabled={disabled} type="submit">
+          {pendingOperation === 'submit' ? copy.webdav_connecting : item ? copy.webdav_save : copy.webdav_enable}
+        </button>
       </div>
-      {feedback ? <p className={`${classes('setting_desc')} lumno-webdav-feedback`} data-error={failed} role="status">{feedback}</p> : null}
     </form>
   );
 }
 
-function ConnectionCard({ item, expanded, model, options, onEdit, onClose }: {
+function ConnectionCard({ item, expanded, model, now, options, onEdit, onClose }: {
   item: WebDavConnection;
   expanded: boolean;
   model: WebDavListModel;
+  now: number;
   options: WebDavListOptions;
   onEdit(): void;
   onClose(): void;
 }) {
   const { copy } = model;
+  const lang = model.lang || '';
   const editorId = useId();
   const editRef = useRef<HTMLButtonElement>(null);
-  const [feedback, setFeedback] = useState('');
-  const [needsChoice, setNeedsChoice] = useState(false);
+  const [feedback, setFeedback] = useState<{ text: string; diagnostic: string } | null>(null);
+  const [pendingOperation, setPendingOperation] = useState('');
   const action = useExclusiveAsyncAction(async (operation: string, decision?: string) => {
-    setFeedback('');
-    const result = await options.onAction(operation, item.id, decision ? { decision } : {});
-    setNeedsChoice(Boolean(result.needsChoice));
-    return result;
+    setFeedback(null);
+    setPendingOperation(operation);
+    return options.onAction(operation, item.id, decision ? { decision } : {});
   });
   const run = async (operation: string, decision?: string) => {
     const outcome = await action.run(operation, decision);
-    if (outcome.status === 'rejected') setFeedback(getAsyncErrorMessage(outcome.error));
+    setPendingOperation('');
+    if (outcome.status === 'rejected') {
+      const error = outcome.error as { diagnostic?: string };
+      setFeedback({ text: getAsyncErrorMessage(outcome.error), diagnostic: error?.diagnostic || '' });
+    }
   };
-  const busy = action.pending || ['syncing', 'saving', 'testing'].includes(item.state);
-  const choice = needsChoice || ['choice', 'conflict'].includes(item.state);
-  const date = item.lastSyncAt ? new Date(item.lastSyncAt) : null;
-  const validDate = date && Number.isFinite(date.getTime());
-  let title = item.config.endpoint;
-  try { title = new URL(item.config.endpoint).host; } catch { /* Keep the saved display text. */ }
+  const syncing = action.pending && ['sync', 'enable'].includes(pendingOperation);
+  const busy = action.pending || item.state === 'syncing';
+  const choice = item.state === 'choice' || item.state === 'conflict';
+  const status = describeStatus(item, copy, syncing, now, lang);
+  const title = connectionTitle(item, copy);
+  const lastSyncAt = validTime(item.lastSyncAt);
+  const errorText = feedback?.text || item.errorText || '';
+  const diagnostic = feedback ? feedback.diagnostic : item.diagnosticText || '';
+  const location = `${item.config.endpoint}${item.config.directory}`;
   const close = () => { onClose(); requestAnimationFrame(() => editRef.current?.focus()); };
+  let notice = null;
+  if (!expanded && item.needsRecovery) {
+    notice = (
+      <div className="lumno-webdav-notice" data-tone="danger">
+        <p className={classes('setting_desc')}>{item.errorText || copy.webdav_error_interrupted}</p>
+        {item.hasMigrationBackup ? <div className="lumno-webdav-actions">
+          <button className={primaryClass} disabled={busy || model.outdated} onClick={() => { void run('restoreBackup'); }} type="button">
+            <i className="ri-icon ri-size-14 ri-history-line" aria-hidden="true" />{copy.webdav_restore_backup}
+          </button>
+        </div> : null}
+      </div>
+    );
+  } else if (!expanded && choice) {
+    const decide = (decision: string) => { void run(item.enabled ? 'sync' : 'enable', decision); };
+    notice = (
+      <div className="lumno-webdav-notice" data-tone="warning" role="group"
+        aria-label={copy[item.state === 'conflict' ? 'webdav_conflict_title' : 'webdav_choice_title']}>
+        <p className={classes('setting_desc')}>
+          {copy[item.remoteMissing ? 'webdav_missing_hint' : item.state === 'conflict' ? 'webdav_conflict_hint' : 'webdav_choice_hint']}
+        </p>
+        {item.conflictsText ? <p className={classes('setting_desc')}>{copy.webdav_conflict_items}：{item.conflictsText}</p> : null}
+        {feedback ? <p className={`${classes('shortcut_error')} lumno-webdav-notice-error`}>{feedback.text}</p> : null}
+        <div className="lumno-webdav-actions">
+          <button className={buttonClass} disabled={busy} onClick={() => { void run('pause'); }} type="button">{copy.webdav_resolve_later}</button>
+          {item.remoteMissing ? (
+            <button className={primaryClass} disabled={busy || model.outdated} onClick={() => decide('local')} type="button">{copy.webdav_upload_local}</button>
+          ) : (['local', 'remote'] as const).map((decision) => (
+            <button className={buttonClass} disabled={busy || model.outdated} key={decision} onClick={() => decide(decision)} type="button">
+              {copy[`webdav_use_${decision}`]}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  } else if (!expanded && errorText) {
+    notice = (
+      <div className="lumno-webdav-notice" data-tone="danger">
+        <p className={`${classes('setting_desc')} lumno-webdav-error`} role="status">{errorText}</p>
+        <div className="lumno-webdav-actions">
+          {diagnostic ? <DiagnosticButton copy={copy} text={diagnostic} /> : null}
+          <button className={buttonClass} disabled={busy || model.outdated} onClick={() => { void run(item.enabled ? 'sync' : 'enable'); }} type="button">
+            <i className="ri-icon ri-size-14 ri-refresh-line" aria-hidden="true" />{copy.webdav_retry}
+          </button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className={`${classes('shortcut_item')} lumno-webdav-card`} data-expanded={expanded} data-type="custom" data-webdav-id={item.id}>
       <div className={classes('shortcut_item_header')}>
         <div className={classes('shortcut_item_info')}>
           <div className={classes('shortcut_item_title')}>
-            <span className={classes('shortcut_badge')} data-tone={item.enabled && item.state === 'ready' ? 'suffix' : undefined} role="status">
-              {copy[`webdav_state_${action.pending ? 'syncing' : item.state}`] || copy.webdav_state_error}
+            <span className="lumno-webdav-name" title={location}>{title}</span>
+            <span className={classes('sync_status')} data-status={status.tone} role="status"
+              title={lastSyncAt ? `${copy.webdav_last_sync}：${formatTime(lastSyncAt, lang)}` : copy.webdav_never_synced}>
+              {status.label}
             </span>
-            <span title={`${item.config.endpoint}${item.config.directory}`}>{title} / {item.config.directory}</span>
           </div>
-          <div className={classes('shortcut_item_meta')} title={`${item.config.endpoint}${item.config.directory} · ${item.config.username}`}>
-            {item.config.endpoint}{item.config.directory} · {item.config.username}
+          <div className={classes('shortcut_item_meta')} title={`${location} · ${item.config.username}`}>
+            {item.config.username} · /{item.config.directory}
+            {lastSyncAt && status.tone !== 'success' ? ` · ${copy.webdav_last_sync} ${formatTime(lastSyncAt, lang)}` : ''}
           </div>
         </div>
         <div className={classes('shortcut_item_actions')}>
-          <label className={classes('switch')}>
-            <input aria-label={`${copy.webdav_title} · ${title} / ${item.config.directory}`} checked={item.enabled}
-              disabled={busy || !model.ready || (!item.enabled && (model.outdated || choice))} type="checkbox"
-              onChange={(event) => { void run(event.currentTarget.checked ? 'enable' : 'pause'); }} />
-            <span className={classes('switch_slider')} aria-hidden="true" />
-          </label>
+          {item.enabled && !choice && !item.needsRecovery && !errorText ? (
+            <button aria-label={copy.webdav_sync} className={`${classes('shortcut_edit')} lumno-webdav-sync-now`} data-spinning={syncing || item.state === 'syncing'}
+              data-tooltip={copy.webdav_sync} disabled={busy || model.outdated} onClick={() => { void run('sync'); }} type="button">
+              <i aria-hidden="true" className="ri-icon ri-size-14 ri-refresh-line" />
+            </button>
+          ) : null}
           <button aria-controls={editorId} aria-expanded={expanded} aria-label={copy.webdav_edit_config}
             className={classes('shortcut_edit')} disabled={busy} onClick={onEdit} ref={editRef} type="button">
             <i aria-hidden="true" className="ri-icon ri-size-14 ri-edit-line" />
@@ -155,34 +342,16 @@ function ConnectionCard({ item, expanded, model, options, onEdit, onClose }: {
             triggerAriaLabel={copy.webdav_remove} triggerClassName={classes('shortcut_remove')}
             triggerDisabled={busy || !model.ready || model.outdated}
             triggerIconClass="ri-icon ri-size-14 ri-delete-bin-4-line" />
+          <label className={classes('switch')}>
+            <input aria-label={`${copy.webdav_title} · ${title} / ${item.config.directory}`} checked={item.enabled}
+              disabled={busy || !model.ready || (!item.enabled && (model.outdated || choice))} type="checkbox"
+              onChange={(event) => { void run(event.currentTarget.checked ? 'enable' : 'pause'); }} />
+            <span className={classes('switch_slider')} aria-hidden="true" />
+          </label>
         </div>
       </div>
-      <div className="lumno-webdav-meta">
-        <span className={classes('setting_desc')}>{copy.webdav_last_sync}：<time dateTime={validDate ? date.toISOString() : undefined}>
-          {validDate ? date.toLocaleString(document.documentElement.lang || undefined) : copy.webdav_never_synced}
-        </time></span>
-        <button className={buttonClass} disabled={busy || !item.enabled || model.outdated} onClick={() => { void run('sync'); }} type="button">
-          <i className="ri-icon ri-size-14 ri-refresh-line" aria-hidden="true" />{copy.webdav_sync}
-        </button>
-      </div>
+      {notice}
       {expanded ? <div id={editorId}><ConnectionEditor item={item} model={model} options={options} onClose={close} /></div> : null}
-      {choice ? <div className="lumno-webdav-choice" role="group" aria-label={copy.webdav_choice_title}>
-        <p className={classes('setting_title')}>{copy[item.state === 'conflict' ? 'webdav_conflict_title' : 'webdav_choice_title']}</p>
-        <p className={classes('setting_desc')}>{copy[item.remoteMissing ? 'webdav_missing_hint' : item.state === 'conflict' ? 'webdav_conflict_hint' : 'webdav_choice_hint']}</p>
-        {item.conflictsText ? <p className={classes('setting_desc')}>{copy.webdav_conflict_items}：{item.conflictsText}</p> : null}
-        <div className="lumno-webdav-actions">
-          {(['local', 'remote'] as const).map((decision) => <button className={buttonClass} key={decision}
-            disabled={busy || model.outdated || (decision === 'remote' && item.remoteMissing)}
-            onClick={() => { void run(item.enabled ? 'sync' : 'enable', decision); }} type="button">{copy[`webdav_use_${decision}`]}</button>)}
-          <button className={buttonClass} disabled={busy} onClick={() => { void run('pause'); }} type="button">{copy.webdav_resolve_later}</button>
-        </div>
-      </div> : null}
-      {feedback || item.errorText ? <p className={`${classes('setting_desc')} lumno-webdav-feedback`} data-error="true" role="status">{feedback || item.errorText}</p> : null}
-      {item.hasMigrationBackup && item.needsRecovery ? <div className="lumno-webdav-actions">
-        <button className={buttonClass} disabled={busy || model.outdated} onClick={() => { void run('restoreBackup'); }} type="button">
-          <i className="ri-icon ri-size-14 ri-history-line" aria-hidden="true" />{copy.webdav_restore_backup}
-        </button>
-      </div> : null}
     </div>
   );
 }
@@ -192,10 +361,11 @@ export function WebDavList({ model, options }: { model: WebDavListModel; options
   const [adding, setAdding] = useState(false);
   const addRef = useRef<HTMLButtonElement>(null);
   const addId = useId();
+  const now = useNow(30000);
   const closeAdd = () => { setAdding(false); requestAnimationFrame(() => addRef.current?.focus()); };
   return <>
     <div className={classes('shortcut_list')}>
-      {model.connections.map((item) => <ConnectionCard key={item.id} item={item} model={model} options={options}
+      {model.connections.map((item) => <ConnectionCard key={item.id} item={item} model={model} now={now} options={options}
         expanded={expandedId === item.id} onClose={() => setExpandedId(null)}
         onEdit={() => { setAdding(false); setExpandedId((value) => value === item.id ? null : item.id); }} />)}
     </div>

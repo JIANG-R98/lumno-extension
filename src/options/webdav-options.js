@@ -10,7 +10,7 @@
       webdav_directory: t("webdav_directory", "同步目录"),
       webdav_username: t("webdav_username", "用户名"),
       webdav_password: t("webdav_password", "应用密码"),
-      webdav_credentials_hint: t("webdav_credentials_hint", "连接信息仅保存在本机，其他设备需分别配置。保存配置后再开启同步。"),
+      webdav_credentials_hint: t("webdav_credentials_hint", "连接信息仅保存在本机，其他设备需要分别添加。"),
       webdav_password_saved: t("webdav_password_saved", "已保存；留空保持不变"),
       webdav_last_sync: t("webdav_last_sync", "最近同步"),
       webdav_choice_hint: t("webdav_choice_hint", "远端已有配置，请选择保留本机版本或使用远端版本。替换前会保留本机备份，Chrome 同步继续运行。"),
@@ -26,7 +26,7 @@
       webdav_state_syncing: t("webdav_state_syncing", "正在同步…"),
       webdav_state_paused: t("webdav_state_paused", "已暂停"),
       webdav_state_pending: t("webdav_state_pending", "等待同步"),
-      webdav_state_choice: t("webdav_state_choice", "等待选择"),
+      webdav_state_choice: t("webdav_state_choice", "需要选择"),
       webdav_state_conflict: t("webdav_state_conflict", "配置冲突"),
       webdav_state_error: t("webdav_state_error", "同步失败"),
       webdav_missing_hint: t("webdav_missing_hint", "远端配置已不存在。上传本机配置可重新建立同步；也可以先检查服务器地址。"),
@@ -34,11 +34,21 @@
       webdav_title: t("webdav_title", "WebDAV 同步"),
       webdav_beta_hint: t("webdav_beta_hint", "通过 WebDAV 服务器同步配置、自定义图标和壁纸，与浏览器内置同步同时运行。可添加多个连接，分别开启同步。\n\n目前为 Beta 版本，可能出现同步失败或配置异常。欢迎反馈问题，帮助我们改进。"),
       webdav_edit_config: t("webdav_edit_config", "编辑连接配置"),
-      webdav_save: t("webdav_save", "保存配置"),
-      webdav_edit_active_hint: t("webdav_edit_active_hint", "保存会暂停这条 WebDAV 连接。其他连接与 Chrome 同步继续运行。保存后可重新开启。"),
+      webdav_save: t("webdav_save", "保存"),
+      webdav_enable: t("webdav_enable", "保存并开启同步"),
       webdav_never_synced: t("webdav_never_synced", "尚未同步"),
-      webdav_state_saving: t("webdav_state_saving", "正在保存配置"),
       webdav_state_testing: t("webdav_state_testing", "正在测试连接"),
+      webdav_state_recovery: t("webdav_state_recovery", "需要恢复"),
+      webdav_connecting: t("webdav_connecting", "正在连接…"),
+      webdav_retry: t("webdav_retry", "重试"),
+      webdav_copy_diagnostic: t("webdav_copy_diagnostic", "复制诊断信息"),
+      webdav_diagnostic_copied: t("webdav_diagnostic_copied", "已复制"),
+      webdav_upload_local: t("webdav_upload_local", "上传本机配置"),
+      webdav_provider: t("webdav_provider", "服务商"),
+      webdav_provider_jianguoyun: t("webdav_provider_jianguoyun", "坚果云"),
+      webdav_provider_nextcloud: t("webdav_provider_nextcloud", "Nextcloud"),
+      webdav_provider_other: t("webdav_provider_other", "其他"),
+      webdav_password_help: t("webdav_password_help", "如何获取应用密码"),
       webdav_choice_title: t("webdav_choice_title", "选择初始同步版本"),
       webdav_conflict_title: t("webdav_conflict_title", "同步内容存在冲突"),
       webdav_conflict_items: t("webdav_conflict_items", "有冲突的内容"),
@@ -81,20 +91,24 @@
         'invalid-state': 'invalid', 'state-too-large': 'invalid', 'invalid-shortcuts': 'invalid', 'invalid-wallpaper': 'invalid',
         'invalid-asset': 'asset', 'asset-missing': 'asset', 'asset-integrity': 'asset', 'asset-too-large': 'asset',
         'response-too-large': 'invalid', 'private-storage-unavailable': 'storage', 'local-storage-failed': 'storage',
-        'shortcut-capacity': 'shortcuts', 'interrupted-apply': 'interrupted'
+        'shortcut-capacity': 'shortcuts', 'interrupted-apply': 'interrupted', 'duplicate-connection': 'duplicate'
       };
       return t(`webdav_error_${categories[code] || 'generic'}`, t('webdav_error_generic', '同步失败，请稍后重试。'));
     }
-    function failureText(error) {
-      let value = errorText(error.message);
-      const diagnostic = error.diagnostic;
-      if (diagnostic && diagnostic.revision === EXPECTED_CLIENT_REVISION &&
-          ['state-etag', 'state-lock-create', 'directory-race', 'directory-delete', 'directory-recreate',
-            'move-race', 'move-owner', 'move-delete', 'move-recreate', 'move-claim'].includes(diagnostic.phase)) {
-        const statuses = (Array.isArray(diagnostic.statuses) ? diagnostic.statuses : []).filter((status) => Number.isInteger(status) && status >= 0 && status <= 599).slice(0, 2);
-        value += ` (${diagnostic.revision} / ${diagnostic.phase} / ${statuses.join(',')})`;
-      }
-      return value;
+    // Diagnostics stay out of the sentence users read; the card offers them
+    // through a copy action for bug reports.
+    function diagnosticText(diagnostic) {
+      if (!diagnostic || diagnostic.revision !== EXPECTED_CLIENT_REVISION ||
+          !['state-etag', 'state-lock-create', 'directory-race', 'directory-delete', 'directory-recreate',
+            'move-race', 'move-owner', 'move-delete', 'move-recreate', 'move-claim'].includes(diagnostic.phase)) return '';
+      const statuses = (Array.isArray(diagnostic.statuses) ? diagnostic.statuses : []).filter((status) => Number.isInteger(status) && status >= 0 && status <= 599).slice(0, 2);
+      return `${diagnostic.revision} / ${diagnostic.phase} / ${statuses.join(',')}`;
+    }
+    function failure(error) {
+      return Object.assign(new Error(errorText(error.message)), { diagnostic: diagnosticText(error.diagnostic) });
+    }
+    function connectionName(item) {
+      try { return new URL(item.config.endpoint).host; } catch (_error) { return item.config.endpoint; }
     }
     const listController = api.createWebDavListController(document.getElementById('lumno-webdav-list'), {
       async onAction(operation, id, extra) {
@@ -105,18 +119,28 @@
           return result;
         } catch (error) {
           await refresh().catch(() => {});
-          throw new Error(failureText(error));
+          throw failure(error);
         }
       }
     });
     function render() {
       infoController?.render({ tooltip: createCopy(t).webdav_beta_hint, tooltipKey: 'webdav_beta_hint' });
       const copy = createCopy(t);
-      const connections = current.connections || (current.config ? [{ id: 'default', ...current }] : []);
+      const connections = (current.connections || (current.config ? [{ id: 'default', ...current }] : []))
+        .map((item) => ({ ...item, needsRecovery: Boolean(item.needsRecovery || (item.error === 'interrupted-apply' && !item.enabled)) }));
+      const blocking = connections.find((item) => item.needsRecovery);
+      const describeError = (item) => {
+        // The choice panel already explains a missing remote copy.
+        if (!item.error || item.error === 'remote-missing') return '';
+        if (item.error === 'interrupted-apply' && !item.needsRecovery && blocking) {
+          return t('webdav_error_interrupted_other', '另一条 WebDAV 连接（{name}）需要先恢复本机配置，恢复后这里会继续同步。').replace('{name}', connectionName(blocking));
+        }
+        return errorText(item.error);
+      };
       listController.render({
-        ready: initialized, outdated: requiresReload(), copy,
-        connections: connections.map((item) => ({ ...item, errorText: item.error ? errorText(item.error) : '', remoteMissing: item.error === 'remote-missing',
-          needsRecovery: Boolean(item.needsRecovery || (item.error === 'interrupted-apply' && !item.enabled)),
+        ready: initialized, outdated: requiresReload(), copy, lang: document.documentElement.lang || '',
+        connections: connections.map((item) => ({ ...item, errorText: describeError(item), remoteMissing: item.error === 'remote-missing',
+          diagnosticText: item.error ? diagnosticText(item.diagnostic) : '',
           conflictsText: [...new Set((item.conflicts || []).map((key) => copy[
             key === 'shortcuts' ? 'webdav_conflict_shortcuts' : key === 'wallpapers' ? 'webdav_conflict_wallpapers' : 'webdav_conflict_preferences'
           ]))].join(/^(zh|ja)/.test(document.documentElement.lang) ? '、' : ', ') }))
@@ -144,7 +168,7 @@
       const version = document.getElementById('lumno-webdav-version');
       version.hidden = false;
       version.dataset.error = 'true';
-      version.textContent = failureText(error);
+      version.textContent = failure(error).message;
     });
     return { render, refresh };
   }

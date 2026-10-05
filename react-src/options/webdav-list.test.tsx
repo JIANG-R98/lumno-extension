@@ -30,7 +30,8 @@ describe('WebDAV connection cards', () => {
   it('keeps saved details on collapsed cards and opens one editor at a time', async () => {
     const { card, host } = fixture();
     expect(card('a').dataset.expanded).toBe('false');
-    expect(card('a').textContent).toContain('https://dav.test/lumno · user');
+    expect(card('a').textContent).toContain('user · /lumno');
+    expect(card('a').textContent).not.toContain('https://dav.test/');
     await click(card('a').querySelector('button[aria-label="Edit connection"]'));
     expect(card('a').dataset.expanded).toBe('true');
     expect(card('a').querySelector<HTMLInputElement>('[name="password"]')?.required).toBe(false);
@@ -43,7 +44,7 @@ describe('WebDAV connection cards', () => {
     const { card, onAction } = fixture();
     await click(card('a').querySelector('button[aria-label="Edit connection"]'));
     await act(async () => { card('a').querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
-    expect(onAction).toHaveBeenCalledWith('save', 'a', { config: { endpoint: 'https://dav.test/', directory: 'lumno', username: 'user', password: '' } });
+    expect(onAction).toHaveBeenCalledWith('save', 'a', { config: { endpoint: 'https://dav.test/', directory: 'lumno', username: 'user', password: '' }, resume: true });
     expect(card('a').querySelector('form')).toBeNull();
     expect(card('b').dataset.expanded).toBe('false');
   });
@@ -84,8 +85,50 @@ describe('WebDAV connection cards', () => {
   it('routes choices per connection and keeps remote-missing data protected', async () => {
     const { card, onAction } = fixture({ ...model, connections: [{ ...item, state: 'choice', remoteMissing: true }, { ...item, id: 'b', state: 'conflict', enabled: true }] });
     const buttons = [...card('a').querySelectorAll('button')];
-    expect(buttons.find((button) => button.textContent === copy.webdav_use_remote)?.disabled).toBe(true);
+    expect(buttons.find((button) => button.textContent === copy.webdav_use_remote)).toBeUndefined();
+    await click(buttons.find((button) => button.textContent === copy.webdav_upload_local)!);
+    expect(onAction).toHaveBeenCalledWith('enable', 'a', { decision: 'local' });
     await click([...card('b').querySelectorAll('button')].find((button) => button.textContent === copy.webdav_use_remote)!);
     expect(onAction).toHaveBeenCalledWith('sync', 'b', { decision: 'remote' });
+    expect(card('b').querySelector('[role="status"]')?.getAttribute('data-status')).toBe('warning');
+  });
+  it('shows one status pill per card and offers sync only while running', () => {
+    const now = Date.now();
+    const { card } = fixture({ ...model, connections: [
+      { ...item, id: 'new', lastSyncAt: null },
+      { ...item, id: 'paused' },
+      { ...item, id: 'ready', enabled: true, state: 'ready', lastSyncAt: now - 3 * 60 * 1000 },
+      { ...item, id: 'failed', enabled: true, state: 'error', errorText: 'Sign-in failed', diagnosticText: 'dav-lock-4 / move-race / 201,201' }
+    ] });
+    const pill = (id: string) => card(id).querySelector<HTMLElement>('._x_extension_sync_status_2024_unique_')!;
+    expect(pill('new').textContent).toBe(copy.webdav_state_browser);
+    expect(pill('paused').textContent).toBe(copy.webdav_state_paused);
+    expect(pill('ready').dataset.status).toBe('success');
+    expect(pill('ready').textContent).toContain('3 minutes ago');
+    expect(pill('failed').dataset.status).toBe('danger');
+    expect(card('paused').querySelector(`button[aria-label="${copy.webdav_sync}"]`)).toBeNull();
+    expect(card('ready').querySelector(`button[aria-label="${copy.webdav_sync}"]`)).not.toBeNull();
+    expect(card('failed').textContent).toContain('Sign-in failed');
+    expect(card('failed').textContent).not.toContain('move-race');
+    expect([...card('failed').querySelectorAll('button')].some((button) => button.textContent?.includes(copy.webdav_copy_diagnostic))).toBe(true);
+  });
+  it('retries a failed connection from its notice', async () => {
+    const { card, onAction } = fixture({ ...model, connections: [{ ...item, enabled: true, state: 'error', errorText: 'Offline' }] });
+    await click([...card('a').querySelectorAll('button')].find((button) => button.textContent?.includes(copy.webdav_retry))!);
+    expect(onAction).toHaveBeenCalledWith('sync', 'a', {});
+  });
+  it('adds and enables in one step with a provider preset', async () => {
+    const { host, onAction } = fixture({ ...model, lang: 'zh-CN', connections: [] });
+    await click([...host.querySelectorAll('button')].find((button) => button.textContent?.includes('Add WebDAV'))!);
+    const endpoint = host.querySelector<HTMLInputElement>('[name="endpoint"]')!;
+    expect(endpoint.value).toBe('https://dav.jianguoyun.com/dav/');
+    expect(host.querySelector('a[href^="https://help.jianguoyun.com/"]')).not.toBeNull();
+    await click(host.querySelector('[data-webdav-provider="other"]'));
+    expect(endpoint.value).toBe('');
+    expect(host.querySelector('a[href^="https://help.jianguoyun.com/"]')).toBeNull();
+    await click(host.querySelector('[data-webdav-provider="jianguoyun"]'));
+    expect(host.querySelector('button[type="submit"]')?.textContent).toBe(copy.webdav_enable);
+    await act(async () => { host.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    expect(onAction).toHaveBeenCalledWith('add', undefined, { config: { endpoint: 'https://dav.jianguoyun.com/dav/', directory: 'lumno', username: '', password: '' }, enable: true });
   });
 });

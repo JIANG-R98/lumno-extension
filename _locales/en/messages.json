@@ -2490,22 +2490,13 @@
     "message": "App password"
   },
   "webdav_credentials_hint": {
-    "message": "Connection details stay on this device. Configure each device separately, then turn on sync after saving."
+    "message": "Connection details stay on this device. Add the connection on each device separately."
   },
   "webdav_password_saved": {
     "message": "Saved; leave blank to keep it"
   },
   "webdav_last_sync": {
     "message": "Last synced"
-  },
-  "webdav_backup_complete": {
-    "message": "Chrome settings backup updated (images excluded)"
-  },
-  "webdav_backup_partial": {
-    "message": "Chrome settings backup is incomplete; full data remains on this device"
-  },
-  "webdav_backup_failed": {
-    "message": "Chrome settings backup failed; full data remains on this device"
   },
   "webdav_choice_hint": {
     "message": "The server already has settings. Choose this device or the server as the initial version. A local backup is saved before replacement. Chrome sync continues."
@@ -2568,16 +2559,10 @@
     "message": "Test connection"
   },
   "webdav_enable": {
-    "message": "Save and enable"
+    "message": "Save and turn on sync"
   },
   "webdav_sync": {
     "message": "Sync now"
-  },
-  "webdav_pause": {
-    "message": "Pause WebDAV"
-  },
-  "webdav_browser": {
-    "message": "Switch to browser sync"
   },
   "webdav_restore_backup": {
     "message": "Restore settings from before replacement"
@@ -2621,12 +2606,6 @@
   "webdav_missing_hint": {
     "message": "The remote settings no longer exist. Upload local settings to restart sync, or check the server address first."
   },
-  "webdav_restore_success": {
-    "message": "Local backup restored and this WebDAV connection paused."
-  },
-  "webdav_chrome_backup_title": {
-    "message": "Chrome settings backup"
-  },
   "webdav_error_locked": {
     "message": "Another device is writing to the server. Try again later. If it stays blocked, follow the WebDAV guide to recover a leftover lock."
   },
@@ -2636,9 +2615,6 @@
   "webdav_error_outdated": {
     "message": "Reload the Lumno extension, then refresh settings to use multiple WebDAV connections."
   },
-  "webdav_client_revision": {
-    "message": "Connection test version"
-  },
   "webdav_title": {
     "message": "WebDAV sync"
   },
@@ -2646,31 +2622,16 @@
     "message": "Sync settings, custom icons and wallpapers through a WebDAV server alongside your browser’s built-in sync. Add multiple connections and enable each independently.\n\nThis feature is in Beta. Sync may fail or settings may change unexpectedly. Please report any issues to help us improve it."
   },
   "webdav_setup_hint": {
-    "message": "Add and save a server, then enable sync for that connection."
-  },
-  "webdav_unsaved_hint": {
-    "message": "Save your connection changes before turning on sync."
-  },
-  "webdav_configure": {
-    "message": "Configure server"
+    "message": "Sync settings, custom icons and wallpapers through a WebDAV service such as Nutstore, Nextcloud or a NAS, alongside browser sync."
   },
   "webdav_edit_config": {
     "message": "Edit connection"
   },
   "webdav_save": {
-    "message": "Save settings"
-  },
-  "webdav_save_success": {
-    "message": "Connection saved on this device. You can now turn on WebDAV sync."
-  },
-  "webdav_edit_active_hint": {
-    "message": "Saving pauses this WebDAV connection. Other connections and Chrome sync keep running. Enable it again after saving."
+    "message": "Save"
   },
   "webdav_never_synced": {
     "message": "Not synced yet"
-  },
-  "webdav_state_saving": {
-    "message": "Saving settings"
   },
   "webdav_state_testing": {
     "message": "Testing connection"
@@ -2698,6 +2659,45 @@
   },
   "webdav_add": {
     "message": "Add WebDAV"
+  },
+  "webdav_state_recovery": {
+    "message": "Needs restore"
+  },
+  "webdav_retry": {
+    "message": "Retry"
+  },
+  "webdav_copy_diagnostic": {
+    "message": "Copy diagnostics"
+  },
+  "webdav_diagnostic_copied": {
+    "message": "Copied"
+  },
+  "webdav_provider": {
+    "message": "Provider"
+  },
+  "webdav_provider_jianguoyun": {
+    "message": "Nutstore"
+  },
+  "webdav_provider_nextcloud": {
+    "message": "Nextcloud"
+  },
+  "webdav_provider_other": {
+    "message": "Other"
+  },
+  "webdav_password_help": {
+    "message": "Get an app password"
+  },
+  "webdav_connecting": {
+    "message": "Connecting…"
+  },
+  "webdav_upload_local": {
+    "message": "Upload this device's settings"
+  },
+  "webdav_error_duplicate": {
+    "message": "A connection with the same server, folder and username already exists."
+  },
+  "webdav_error_interrupted_other": {
+    "message": "Another WebDAV connection ({name}) needs to restore local settings first. This one resumes afterwards."
   },
   "webdav_remove": {
     "message": "Delete WebDAV connection"

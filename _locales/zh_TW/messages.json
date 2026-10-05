@@ -2490,22 +2490,13 @@
     "message": "應用程式密碼"
   },
   "webdav_credentials_hint": {
-    "message": "連線資訊僅儲存在本機，其他裝置需分別設定。儲存設定後再開啟同步。"
+    "message": "連線資訊僅儲存在本機，其他裝置需要分別新增。"
   },
   "webdav_password_saved": {
     "message": "已儲存；留空以保持不變"
   },
   "webdav_last_sync": {
     "message": "上次同步"
-  },
-  "webdav_backup_complete": {
-    "message": "Chrome 設定副本已更新（不含圖片）"
-  },
-  "webdav_backup_partial": {
-    "message": "Chrome 設定副本不完整；完整資料保存在本機"
-  },
-  "webdav_backup_failed": {
-    "message": "Chrome 設定副本更新失敗；完整資料保存在本機"
   },
   "webdav_choice_hint": {
     "message": "遠端已有設定，請選擇保留本機版本或使用遠端版本。替換前會保留本機備份，Chrome 同步會繼續執行。"
@@ -2568,16 +2559,10 @@
     "message": "測試連線"
   },
   "webdav_enable": {
-    "message": "儲存並啟用"
+    "message": "儲存並開啟同步"
   },
   "webdav_sync": {
     "message": "立即同步"
-  },
-  "webdav_pause": {
-    "message": "暫停 WebDAV"
-  },
-  "webdav_browser": {
-    "message": "切回瀏覽器同步"
   },
   "webdav_restore_backup": {
     "message": "還原替換前的本機設定"
@@ -2607,7 +2592,7 @@
     "message": "等待同步"
   },
   "webdav_state_choice": {
-    "message": "等待選擇"
+    "message": "需要選擇"
   },
   "webdav_state_conflict": {
     "message": "設定衝突"
@@ -2621,12 +2606,6 @@
   "webdav_missing_hint": {
     "message": "遠端設定已不存在。上傳本機設定可重新建立同步；也可以先檢查伺服器位址。"
   },
-  "webdav_restore_success": {
-    "message": "已還原本機備份並暫停這筆 WebDAV 連線。"
-  },
-  "webdav_chrome_backup_title": {
-    "message": "Chrome 設定副本"
-  },
   "webdav_error_locked": {
     "message": "另一台裝置正在寫入，請稍後重試。若長期無法恢復，請依 WebDAV 接入說明處理殘留鎖。"
   },
@@ -2636,9 +2615,6 @@
   "webdav_error_outdated": {
     "message": "請重新載入 Lumno 擴充功能，再重新整理設定頁以使用多連線同步。"
   },
-  "webdav_client_revision": {
-    "message": "連線檢測版本"
-  },
   "webdav_title": {
     "message": "WebDAV 同步"
   },
@@ -2646,31 +2622,16 @@
     "message": "透過 WebDAV 伺服器同步設定、自訂圖示與桌布，與瀏覽器內建同步同時執行。可新增多個連線，分別開啟同步。\n\n目前為 Beta 版本，可能出現同步失敗或設定異常。歡迎回報問題，協助我們改善。"
   },
   "webdav_setup_hint": {
-    "message": "新增並儲存伺服器設定後，開啟對應連線的同步。"
-  },
-  "webdav_unsaved_hint": {
-    "message": "連線設定尚未儲存，請儲存後再開啟同步。"
-  },
-  "webdav_configure": {
-    "message": "設定伺服器"
+    "message": "透過堅果雲、Nextcloud、NAS 等 WebDAV 服務同步設定、自訂圖示和桌布，與瀏覽器內建同步同時執行。"
   },
   "webdav_edit_config": {
     "message": "編輯連線設定"
   },
   "webdav_save": {
-    "message": "儲存設定"
-  },
-  "webdav_save_success": {
-    "message": "連線設定已儲存在本機，可開啟 WebDAV 同步。"
-  },
-  "webdav_edit_active_hint": {
-    "message": "儲存會暫停這筆 WebDAV 連線。其他連線與 Chrome 同步繼續執行。儲存後可重新開啟。"
+    "message": "儲存"
   },
   "webdav_never_synced": {
     "message": "尚未同步"
-  },
-  "webdav_state_saving": {
-    "message": "正在儲存設定"
   },
   "webdav_state_testing": {
     "message": "正在測試連線"
@@ -2698,6 +2659,45 @@
   },
   "webdav_add": {
     "message": "新增 WebDAV"
+  },
+  "webdav_state_recovery": {
+    "message": "需要還原"
+  },
+  "webdav_retry": {
+    "message": "重試"
+  },
+  "webdav_copy_diagnostic": {
+    "message": "複製診斷資訊"
+  },
+  "webdav_diagnostic_copied": {
+    "message": "已複製"
+  },
+  "webdav_provider": {
+    "message": "服務商"
+  },
+  "webdav_provider_jianguoyun": {
+    "message": "堅果雲"
+  },
+  "webdav_provider_nextcloud": {
+    "message": "Nextcloud"
+  },
+  "webdav_provider_other": {
+    "message": "其他"
+  },
+  "webdav_password_help": {
+    "message": "如何取得應用程式密碼"
+  },
+  "webdav_connecting": {
+    "message": "正在連線…"
+  },
+  "webdav_upload_local": {
+    "message": "上傳本機設定"
+  },
+  "webdav_error_duplicate": {
+    "message": "已新增過相同伺服器、目錄與使用者名稱的連線。"
+  },
+  "webdav_error_interrupted_other": {
+    "message": "另一條 WebDAV 連線（{name}）需要先還原本機設定，還原後這裡會繼續同步。"
   },
   "webdav_remove": {
     "message": "刪除 WebDAV 設定"

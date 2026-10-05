@@ -2490,22 +2490,13 @@
     "message": "应用密码"
   },
   "webdav_credentials_hint": {
-    "message": "连接信息仅保存在本机，其他设备需分别配置。保存配置后再开启同步。"
+    "message": "连接信息仅保存在本机，其他设备需要分别添加。"
   },
   "webdav_password_saved": {
     "message": "已保存；留空保持不变"
   },
   "webdav_last_sync": {
     "message": "最近同步"
-  },
-  "webdav_backup_complete": {
-    "message": "Chrome 配置副本已更新（不含图片）"
-  },
-  "webdav_backup_partial": {
-    "message": "Chrome 配置副本不完整；完整数据保存在本机"
-  },
-  "webdav_backup_failed": {
-    "message": "Chrome 配置副本更新失败；完整数据保存在本机"
   },
   "webdav_choice_hint": {
     "message": "远端已有配置，请选择保留本机版本或使用远端版本。替换前会保留本机备份，Chrome 同步继续运行。"
@@ -2568,16 +2559,10 @@
     "message": "测试连接"
   },
   "webdav_enable": {
-    "message": "保存并启用"
+    "message": "保存并开启同步"
   },
   "webdav_sync": {
     "message": "立即同步"
-  },
-  "webdav_pause": {
-    "message": "暂停 WebDAV"
-  },
-  "webdav_browser": {
-    "message": "切回浏览器同步"
   },
   "webdav_restore_backup": {
     "message": "恢复替换前的本机配置"
@@ -2607,7 +2592,7 @@
     "message": "等待同步"
   },
   "webdav_state_choice": {
-    "message": "等待选择"
+    "message": "需要选择"
   },
   "webdav_state_conflict": {
     "message": "配置冲突"
@@ -2621,12 +2606,6 @@
   "webdav_missing_hint": {
     "message": "远端配置已不存在。上传本机配置可重新建立同步；也可以先检查服务器地址。"
   },
-  "webdav_restore_success": {
-    "message": "已恢复本机备份并暂停这条 WebDAV 连接。"
-  },
-  "webdav_chrome_backup_title": {
-    "message": "Chrome 配置副本"
-  },
   "webdav_error_locked": {
     "message": "另一台设备正在写入，请稍后重试。若长期无法恢复，请按 WebDAV 接入说明处理残留锁。"
   },
@@ -2636,9 +2615,6 @@
   "webdav_error_outdated": {
     "message": "请重新加载 Lumno 扩展，再刷新设置页以使用多连接同步。"
   },
-  "webdav_client_revision": {
-    "message": "连接检测版本"
-  },
   "webdav_title": {
     "message": "WebDAV 同步"
   },
@@ -2646,31 +2622,16 @@
     "message": "通过 WebDAV 服务器同步配置、自定义图标和壁纸，与浏览器内置同步同时运行。可添加多个连接，分别开启同步。\n\n目前为 Beta 版本，可能出现同步失败或配置异常。欢迎反馈问题，帮助我们改进。"
   },
   "webdav_setup_hint": {
-    "message": "添加并保存服务器配置后，开启对应连接的同步。"
-  },
-  "webdav_unsaved_hint": {
-    "message": "连接配置尚未保存，请保存后再开启同步。"
-  },
-  "webdav_configure": {
-    "message": "配置服务器"
+    "message": "通过坚果云、Nextcloud、NAS 等 WebDAV 服务同步配置、自定义图标和壁纸，与浏览器内置同步同时运行。"
   },
   "webdav_edit_config": {
     "message": "编辑连接配置"
   },
   "webdav_save": {
-    "message": "保存配置"
-  },
-  "webdav_save_success": {
-    "message": "连接配置已保存在本机，可开启 WebDAV 同步。"
-  },
-  "webdav_edit_active_hint": {
-    "message": "保存会暂停这条 WebDAV 连接。其他连接与 Chrome 同步继续运行。保存后可重新开启。"
+    "message": "保存"
   },
   "webdav_never_synced": {
     "message": "尚未同步"
-  },
-  "webdav_state_saving": {
-    "message": "正在保存配置"
   },
   "webdav_state_testing": {
     "message": "正在测试连接"
@@ -2698,6 +2659,45 @@
   },
   "webdav_add": {
     "message": "添加 WebDAV"
+  },
+  "webdav_state_recovery": {
+    "message": "需要恢复"
+  },
+  "webdav_retry": {
+    "message": "重试"
+  },
+  "webdav_copy_diagnostic": {
+    "message": "复制诊断信息"
+  },
+  "webdav_diagnostic_copied": {
+    "message": "已复制"
+  },
+  "webdav_provider": {
+    "message": "服务商"
+  },
+  "webdav_provider_jianguoyun": {
+    "message": "坚果云"
+  },
+  "webdav_provider_nextcloud": {
+    "message": "Nextcloud"
+  },
+  "webdav_provider_other": {
+    "message": "其他"
+  },
+  "webdav_password_help": {
+    "message": "如何获取应用密码"
+  },
+  "webdav_connecting": {
+    "message": "正在连接…"
+  },
+  "webdav_upload_local": {
+    "message": "上传本机配置"
+  },
+  "webdav_error_duplicate": {
+    "message": "已添加过同一服务器、目录和用户名的连接。"
+  },
+  "webdav_error_interrupted_other": {
+    "message": "另一条 WebDAV 连接（{name}）需要先恢复本机配置，恢复后这里会继续同步。"
   },
   "webdav_remove": {
     "message": "删除 WebDAV 配置"

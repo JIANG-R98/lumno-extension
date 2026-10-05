@@ -55,6 +55,16 @@ async function run() {
   assert.strictEqual(renderModel.connections.length, 2);
   assert.strictEqual(renderModel.connections[1].remoteMissing, true);
   assert(renderModel.connections[1].conflictsText.includes('Shortcuts and icons'));
+  assert.strictEqual(renderModel.connections[1].errorText, '', 'the choice panel alone explains a missing remote copy');
+  model.connections = [{ ...a, id: 'blocked', error: 'interrupted-apply', enabled: false, hasMigrationBackup: true,
+    config: { ...a.config, endpoint: 'https://broken.test/' } }, { ...a, id: 'waiting', enabled: true, state: 'error', error: 'interrupted-apply',
+    diagnostic: { revision: 'dav-lock-4', phase: 'move-race', statuses: [201, 201] } }];
+  await controller.refresh();
+  assert.strictEqual(renderModel.connections[0].needsRecovery, true);
+  assert(renderModel.connections[1].errorText.includes('broken.test'), 'other blocked connections point to the one that needs restoring');
+  assert.strictEqual(renderModel.connections[1].diagnosticText, 'dav-lock-4 / move-race / 201,201');
+  model.connections = [a, { ...a, id: 'b', state: 'conflict', conflicts: ['shortcuts', 'wallpapers'], error: 'remote-missing' }];
+  await controller.refresh();
   assert.strictEqual(window.document.querySelector('#lumno-webdav-setup-hint').hidden, true);
   await actions.onAction('pause', 'a');
   assert(requests.some((request) => request.operation === 'pause' && request.id === 'a'));
@@ -63,7 +73,10 @@ async function run() {
   await actions.onAction('add', undefined, { config: { endpoint: 'https://new.test/' } });
   assert(requests.some((request) => request.operation === 'add' && !request.id));
   nextError = { error: 'conditional-write-unsupported', diagnostic: { revision: 'dav-lock-4', phase: 'move-race', statuses: [201, 201], password: 'never-display' } };
-  await assert.rejects(actions.onAction('test', 'a'), (error) => error.message.includes('dav-lock-4 / move-race / 201,201') && !error.message.includes('never-display'));
+  await assert.rejects(actions.onAction('test', 'a'), (error) => error.diagnostic === 'dav-lock-4 / move-race / 201,201' &&
+    !error.message.includes('move-race') && !error.message.includes('never-display'));
+  nextError = { error: 'duplicate-connection' };
+  await assert.rejects(actions.onAction('add'), /same server, folder and username/);
   nextError = { error: 'network-error' };
   await assert.rejects(actions.onAction('sync', 'a'), /Local data is retained/);
   model.syncRevision = 'dav-parallel-1';

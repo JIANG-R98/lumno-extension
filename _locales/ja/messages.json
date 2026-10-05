@@ -2490,22 +2490,13 @@
     "message": "アプリパスワード"
   },
   "webdav_credentials_hint": {
-    "message": "接続情報はこの端末にのみ保存されます。他の端末でも個別に設定し、保存後に同期をオンにしてください。"
+    "message": "接続情報はこの端末にのみ保存されます。他の端末ではそれぞれ追加してください。"
   },
   "webdav_password_saved": {
     "message": "保存済み。空欄なら変更しません"
   },
   "webdav_last_sync": {
     "message": "最終同期"
-  },
-  "webdav_backup_complete": {
-    "message": "Chrome の設定のコピーを更新しました（画像を除く）"
-  },
-  "webdav_backup_partial": {
-    "message": "Chrome の設定のコピーは一部のみです。すべてのデータはこの端末に保存されています"
-  },
-  "webdav_backup_failed": {
-    "message": "Chrome の設定のコピーを更新できませんでした。すべてのデータはこの端末に保存されています"
   },
   "webdav_choice_hint": {
     "message": "サーバーに設定があります。この端末とサーバーのどちらを使うか選んでください。置き換え前に端末のバックアップを保存します。Chrome 同期は続行されます。"
@@ -2568,16 +2559,10 @@
     "message": "接続テスト"
   },
   "webdav_enable": {
-    "message": "保存して有効にする"
+    "message": "保存して同期をオン"
   },
   "webdav_sync": {
     "message": "今すぐ同期"
-  },
-  "webdav_pause": {
-    "message": "WebDAV を一時停止"
-  },
-  "webdav_browser": {
-    "message": "ブラウザー同期に戻す"
   },
   "webdav_restore_backup": {
     "message": "置き換え前のローカル設定を復元"
@@ -2607,7 +2592,7 @@
     "message": "同期待ち"
   },
   "webdav_state_choice": {
-    "message": "設定を選択してください"
+    "message": "選択が必要"
   },
   "webdav_state_conflict": {
     "message": "設定の競合"
@@ -2621,12 +2606,6 @@
   "webdav_missing_hint": {
     "message": "リモート設定が存在しません。ローカル設定をアップロードして同期を再開するか、サーバーのアドレスを確認してください。"
   },
-  "webdav_restore_success": {
-    "message": "端末のバックアップを復元し、この WebDAV 接続を一時停止しました。"
-  },
-  "webdav_chrome_backup_title": {
-    "message": "Chrome の設定のコピー"
-  },
   "webdav_error_locked": {
     "message": "別のデバイスがサーバーに書き込んでいます。後で再試行してください。解除されない場合は、WebDAV ガイドに従って残ったロックを処理してください。"
   },
@@ -2636,9 +2615,6 @@
   "webdav_error_outdated": {
     "message": "Lumno 拡張機能を再読み込みしてから設定ページを更新し、複数の WebDAV 接続を利用してください。"
   },
-  "webdav_client_revision": {
-    "message": "接続テストのバージョン"
-  },
   "webdav_title": {
     "message": "WebDAV 同期"
   },
@@ -2646,31 +2622,16 @@
     "message": "WebDAV サーバーを通じて設定・カスタムアイコン・壁紙を同期します。ブラウザ内蔵同期と同時に動作し、複数の接続を追加して個別に同期を有効にできます。\n\n現在は Beta 版のため、同期の失敗や設定の不具合が発生する可能性があります。改善のため、問題の報告をお待ちしています。"
   },
   "webdav_setup_hint": {
-    "message": "サーバーを追加して保存した後、その接続の同期を有効にしてください。"
-  },
-  "webdav_unsaved_hint": {
-    "message": "接続設定を保存してから同期をオンにしてください。"
-  },
-  "webdav_configure": {
-    "message": "サーバーを設定"
+    "message": "Nutstore（坚果云）、Nextcloud、NAS などの WebDAV サービスで設定・カスタムアイコン・壁紙を同期します。ブラウザの同期と並行して動作します。"
   },
   "webdav_edit_config": {
     "message": "接続設定を編集"
   },
   "webdav_save": {
-    "message": "設定を保存"
-  },
-  "webdav_save_success": {
-    "message": "接続設定をこの端末に保存しました。WebDAV 同期をオンにできます。"
-  },
-  "webdav_edit_active_hint": {
-    "message": "保存すると、この WebDAV 接続は一時停止します。他の接続と Chrome 同期は継続します。保存後に再度有効にできます。"
+    "message": "保存"
   },
   "webdav_never_synced": {
     "message": "未同期"
-  },
-  "webdav_state_saving": {
-    "message": "設定を保存中"
   },
   "webdav_state_testing": {
     "message": "接続をテスト中"
@@ -2698,6 +2659,45 @@
   },
   "webdav_add": {
     "message": "WebDAV を追加"
+  },
+  "webdav_state_recovery": {
+    "message": "復元が必要"
+  },
+  "webdav_retry": {
+    "message": "再試行"
+  },
+  "webdav_copy_diagnostic": {
+    "message": "診断情報をコピー"
+  },
+  "webdav_diagnostic_copied": {
+    "message": "コピーしました"
+  },
+  "webdav_provider": {
+    "message": "サービス"
+  },
+  "webdav_provider_jianguoyun": {
+    "message": "Nutstore（坚果云）"
+  },
+  "webdav_provider_nextcloud": {
+    "message": "Nextcloud"
+  },
+  "webdav_provider_other": {
+    "message": "その他"
+  },
+  "webdav_password_help": {
+    "message": "アプリパスワードの取得方法"
+  },
+  "webdav_connecting": {
+    "message": "接続中…"
+  },
+  "webdav_upload_local": {
+    "message": "この端末の設定をアップロード"
+  },
+  "webdav_error_duplicate": {
+    "message": "同じサーバー・フォルダ・ユーザー名の接続がすでにあります。"
+  },
+  "webdav_error_interrupted_other": {
+    "message": "別の WebDAV 接続（{name}）でローカル設定の復元が必要です。復元後にこちらも同期を再開します。"
   },
   "webdav_remove": {
     "message": "WebDAV 接続を削除"
