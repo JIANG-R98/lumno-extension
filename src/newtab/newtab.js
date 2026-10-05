@@ -233,7 +233,7 @@
   const COMMUNITY_LINKS = globalThis.LumnoCommunityLinks;
   const LUMNO_FEEDBACK_LINKS_FALLBACK = COMMUNITY_LINKS.FALLBACK_LINKS;
   const FAVICON_UTILS = globalThis.LumnoFaviconUtils;
-  const NEWTAB_FAVICON_CACHE = globalThis.LumnoFaviconCache || {};
+  const NEWTAB_FAVICON_CACHE = globalThis.LumnoFaviconCache;
   const SHORTCUT_FAVICON = globalThis.LumnoShortcutFavicon;
   const NEWTAB_FAVICON_THEME = globalThis.LumnoNewtabFaviconTheme;
   const NEWTAB_FAVICON_VIEW = globalThis.LumnoNewtabFaviconView;
@@ -269,26 +269,12 @@
   const NEWTAB_WALLPAPER_VIEW = globalThis.LumnoNewtabWallpaperView;
   const NEWTAB_FEEDBACK_CONTROL = globalThis.LumnoNewtabFeedbackControl;
   const NEWTAB_SELECT_MENU = globalThis.LumnoNewtabSelectMenu;
-  const NEWTAB_TOP_CONTENT = globalThis.LumnoNewtabTopContent || {};
+  const NEWTAB_TOP_CONTENT = globalThis.LumnoNewtabTopContent;
   const NEWTAB_PAGE_STRUCTURE = globalThis.LumnoNewtabPageStructure;
   const NEWTAB_BOOKMARK_CASCADE_VIEW =
     globalThis.LumnoNewtabBookmarkCascadeView;
   const NEWTAB_BOOKMARK_BREADCRUMB =
     globalThis.LumnoNewtabBookmarkBreadcrumb;
-  if (typeof NEWTAB_FAVICON_CACHE.createFaviconCache !== 'function' ||
-      false ||
-      false ||
-      false ||
-      false ||
-      false ||
-      false ||
-      false ||
-      false ||
-      false ||
-      typeof NEWTAB_TOP_CONTENT.createTopContentController !== 'function') {
-    console.warn('Lumno: newtab helpers not available.');
-    return;
-  }
   const SITE_DISPLAY_NAME_OPTIONS = Object.freeze({
     getBrandName(brandHost, fallback) {
       if (brandHost === 'mp.weixin.qq.com') {
@@ -5789,9 +5775,7 @@
   }
 
   function isSiteThemePersistLoaded() {
-    return typeof faviconCacheRuntime.isSiteThemePersistLoaded === 'function'
-      ? faviconCacheRuntime.isSiteThemePersistLoaded()
-      : true;
+    return faviconCacheRuntime.isSiteThemePersistLoaded();
   }
 
   function waitForFaviconCachesOrTimeout(maxWaitMs) {
@@ -5830,9 +5814,7 @@
   }
 
   function getPersistedSiteThemeEntry(hostKey) {
-    return typeof faviconCacheRuntime.getPersistedThemeEntry === 'function'
-      ? faviconCacheRuntime.getPersistedThemeEntry(hostKey)
-      : null;
+    return faviconCacheRuntime.getPersistedThemeEntry(hostKey);
   }
 
   function setPersistedSiteThemeEntry(hostKey, theme) {
@@ -5840,7 +5822,7 @@
       return false;
     }
     const accentRgb = normalizeAccentRgb(theme.accentRgb || parseCssColor(theme.accent));
-    if (!accentRgb || typeof faviconCacheRuntime.setPersistedThemeEntry !== 'function') {
+    if (!accentRgb) {
       return false;
     }
     return faviconCacheRuntime.setPersistedThemeEntry(hostKey, {
@@ -6222,7 +6204,7 @@
   markNewtabStartupMilestone('page-structure-created');
 
   function showTopActionTooltip(button, text, options) {
-    if (!topActionTooltipController || !button || !text) {
+    if (!button || !text) {
       return;
     }
     const tooltipOptions = options && typeof options === 'object' ? options : {};
@@ -6236,14 +6218,11 @@
   }
 
   function hideTopActionTooltip() {
-    if (!topActionTooltipController) {
-      return;
-    }
     topActionTooltipController.hide();
   }
 
   function bindSearchInputCursorTooltip(button, getText) {
-    if (!searchInputCursorTooltipController || !button) {
+    if (!button) {
       return null;
     }
     return searchInputCursorTooltipController.bind(button, getText, {
@@ -6257,14 +6236,11 @@
   }
 
   function hideSearchInputCursorTooltip() {
-    if (!searchInputCursorTooltipController) {
-      return;
-    }
     searchInputCursorTooltipController.hide();
   }
 
   function bindShortcutTooltip(target, getText, options) {
-    if (!shortcutTooltipController || !target) {
+    if (!target) {
       return null;
     }
     const tooltipOptions = options && typeof options === 'object' ? options : {};
@@ -6301,14 +6277,11 @@
   }
 
   function hideShortcutTooltip() {
-    if (!shortcutTooltipController) {
-      return;
-    }
     shortcutTooltipController.hide();
   }
 
   function bindShortcutDialogTooltip(target, getText, options) {
-    if (!shortcutDialogTooltipController || !target) {
+    if (!target) {
       return null;
     }
     return shortcutDialogTooltipController.bind(target, getText, Object.assign({
@@ -6318,13 +6291,11 @@
   }
 
   function hideShortcutDialogTooltip() {
-    if (shortcutDialogTooltipController) {
-      shortcutDialogTooltipController.hide();
-    }
+    shortcutDialogTooltipController.hide();
   }
 
   function bindCursorTooltip(target, getText, options) {
-    if (!bookmarkCursorTooltipController || !target) {
+    if (!target) {
       return null;
     }
     const tooltipOptions = options && typeof options === 'object' ? options : {};
@@ -6348,9 +6319,6 @@
   }
 
   function hideCursorTooltip() {
-    if (!bookmarkCursorTooltipController) {
-      return;
-    }
     bookmarkCursorTooltipController.hide();
   }
 
@@ -15767,7 +15735,7 @@
     },
     onInput: function(event) {
       searchSuggestionsDismissed = false;
-      if (searchInputHistoryController && !isApplyingSearchInputHistory) {
+      if (!isApplyingSearchInputHistory) {
         searchInputHistoryController.resetNavigation();
       }
       const rawValue = event.target.value;
@@ -15877,20 +15845,18 @@
       if (inputHistoryDirection) {
         event.preventDefault();
         event.stopPropagation();
-        if (searchInputHistoryController) {
-          const result = searchInputHistoryController.move(
-            inputHistoryDirection,
-            inputParts.input.value
-          );
-          if (result.handled) {
-            isApplyingSearchInputHistory = true;
-            try {
-              inputParts.input.value = result.value;
-              inputParts.input.setSelectionRange(result.value.length, result.value.length);
-              inputParts.input.dispatchEvent(new Event('input', { bubbles: true }));
-            } finally {
-              isApplyingSearchInputHistory = false;
-            }
+        const result = searchInputHistoryController.move(
+          inputHistoryDirection,
+          inputParts.input.value
+        );
+        if (result.handled) {
+          isApplyingSearchInputHistory = true;
+          try {
+            inputParts.input.value = result.value;
+            inputParts.input.setSelectionRange(result.value.length, result.value.length);
+            inputParts.input.dispatchEvent(new Event('input', { bubbles: true }));
+          } finally {
+            isApplyingSearchInputHistory = false;
           }
         }
         return;
@@ -15950,9 +15916,7 @@
       if (!query) {
         return;
       }
-      if (searchInputHistoryController) {
-        searchInputHistoryController.record(query);
-      }
+      searchInputHistoryController.record(query);
       const commandMatch = localSearchScopeState ? null : getCommandMatch(query);
       if (commandMatch && selectedIndex === -1) {
         if (commandMatch.command.type === 'commandNewTab') {

@@ -87,7 +87,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     chrome && chrome.storage ? chrome.storage.onChanged : null
   );
   function getSearchUtilsRuntime() {
-    return window.LumnoSearchUtils || {};
+    return window.LumnoSearchUtils;
   }
   function applyOverlayInputExtensionIsolation(input) {
     if (!input || typeof input.setAttribute !== 'function') {
@@ -1766,17 +1766,13 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     overlay._lumnoToastStyleGate = overlayToastStyleGate;
 
     function hideOverlayToast() {
-      if (overlayToastController && typeof overlayToastController.hide === 'function') {
-        overlayToastController.hide();
-      }
+      overlayToastController.hide();
     }
 
     function showOverlayToast(message, isError, options) {
-      if (overlayToastController && typeof overlayToastController.show === 'function') {
-        overlayToastController.show(message, Object.assign({}, options, {
-          error: Boolean(isError)
-        }));
-      }
+      overlayToastController.show(message, Object.assign({}, options, {
+        error: Boolean(isError)
+      }));
     }
 
     const numberShortcutOptions = {
@@ -2131,7 +2127,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     overlay._lumnoModeMenuCursorTooltipController =
       overlayModeMenuCursorTooltipController;
     const showTopActionTooltip = (button, text) => {
-      if (!topActionTooltipController || !button || !text) {
+      if (!button || !text) {
         return;
       }
       topActionTooltipController.show(button, text, {
@@ -2141,13 +2137,10 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       });
     };
     const hideTopActionTooltip = () => {
-      if (!topActionTooltipController) {
-        return;
-      }
       topActionTooltipController.hide();
     };
     const bindInputActionCursorTooltip = (button, getText) => {
-      if (!overlayCursorTooltipController || !button) {
+      if (!button) {
         return;
       }
       overlayCursorTooltipController.bind(button, getText, {
@@ -2160,9 +2153,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       });
     };
     const hideInputActionCursorTooltip = () => {
-      if (!overlayCursorTooltipController) {
-        return;
-      }
       overlayCursorTooltipController.hide();
     };
     function isSuggestionTitleOverflowing(title) {
@@ -2180,7 +2170,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       }, extraOptions || {});
     }
     function bindSuggestionTitleCursorTooltip(title, suggestion, query) {
-      if (!overlayCursorTooltipController || !title || !suggestion) {
+      if (!title || !suggestion) {
         return;
       }
       const titleText = sanitizeDisplayText(suggestion.title || '');
@@ -2194,7 +2184,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       );
     }
     function bindSuggestionUrlCursorTooltip(urlLine, url) {
-      if (!overlayCursorTooltipController || !urlLine || !url) {
+      if (!urlLine || !url) {
         return;
       }
       const urlText = sanitizeDisplayText(url);
@@ -2920,10 +2910,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       }
       if (siteSearchIconCacheLoadPromise) {
         return siteSearchIconCacheLoadPromise;
-      }
-      if (!siteSearchIconStore || typeof siteSearchIconStore.readAll !== 'function') {
-        siteSearchIconCacheLoaded = true;
-        return Promise.resolve(siteSearchIconCache);
       }
       const loadRevision = siteSearchIconCacheRevision;
       siteSearchIconCacheLoadPromise = siteSearchIconStore.readAll()
@@ -7279,7 +7265,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
         showTopActionTooltip,
         hideTopActionTooltip,
         bindCursorTooltip: (target, getText, options) => (
-          overlayCursorTooltipController &&
           overlayCursorTooltipController.bind(
             target,
             getText,

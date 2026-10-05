@@ -343,18 +343,14 @@
     }
 
     function attachFaviconData(img, url, hostOverride, pageUrl) {
-      const safeUrl = faviconUrlResolver
-        ? faviconUrlResolver.getSafeFaviconCandidateUrl(url, pageUrl || url, 'data')
-        : '';
+      const safeUrl = faviconUrlResolver.getSafeFaviconCandidateUrl(url, pageUrl || url, 'data');
       if (safeUrl) {
         faviconViewCore.attachFaviconData(img, safeUrl, hostOverride, pageUrl || url);
       }
     }
 
     function preloadIcon(url, pageUrl) {
-      const safeUrl = faviconUrlResolver
-        ? faviconUrlResolver.resolveFaviconSource(url, pageUrl || '')
-        : '';
+      const safeUrl = faviconUrlResolver.resolveFaviconSource(url, pageUrl || '');
       if (safeUrl) {
         faviconViewCore.preloadIcon(safeUrl);
       }
@@ -365,30 +361,26 @@
         if (!item || !item.favicon) {
           return item;
         }
-        const safeUrl = faviconUrlResolver
-          ? faviconUrlResolver.resolveFaviconSource(item.favicon, item.url || '')
-          : '';
+        const safeUrl = faviconUrlResolver.resolveFaviconSource(item.favicon, item.url || '');
         return { ...item, favicon: safeUrl };
       });
       faviconViewCore.warmIconCache(safeItems);
     }
 
     function getSafeFaviconCandidateUrl(value, pageUrl, candidateKind, sourceOptions) {
-      return faviconUrlResolver
-        ? faviconUrlResolver.getSafeFaviconCandidateUrl(value, pageUrl, candidateKind, sourceOptions)
-        : '';
+      return faviconUrlResolver.getSafeFaviconCandidateUrl(value, pageUrl, candidateKind, sourceOptions);
     }
 
     function getRuntimeExtensionFaviconUrl(pageUrl) {
-      return faviconUrlResolver ? faviconUrlResolver.getExtensionFaviconUrl(pageUrl) : '';
+      return faviconUrlResolver.getExtensionFaviconUrl(pageUrl);
     }
 
     function getRuntimeGstaticFaviconUrl(pageUrl) {
-      return faviconUrlResolver ? faviconUrlResolver.getGstaticFaviconUrl(pageUrl) : '';
+      return faviconUrlResolver.getGstaticFaviconUrl(pageUrl);
     }
 
     function getRuntimeChromeFaviconUrl(pageUrl) {
-      return faviconUrlResolver ? faviconUrlResolver.getChromeFaviconUrl(pageUrl) : '';
+      return faviconUrlResolver.getChromeFaviconUrl(pageUrl);
     }
 
     function createThemeAwareFaviconState(img, url, host, optionsArg) {
@@ -410,7 +402,7 @@
         : !String(previousSrc || '').startsWith('data:');
       const reusablePreviousSrc = canReusePrevious ? previousSrc : '';
       const previousWorkingSrc = optionsArg && optionsArg.sourceProfile === 'shortcut'
-        ? (faviconUrlResolver ? faviconUrlResolver.getShortcutFaviconCandidateUrl(url, reusablePreviousSrc) : '')
+        ? faviconUrlResolver.getShortcutFaviconCandidateUrl(url, reusablePreviousSrc)
         : getSafeFaviconCandidateUrl(reusablePreviousSrc, url, 'previous');
 
       return {
@@ -516,19 +508,7 @@
     }
 
     function buildThemeAwareFaviconCandidatePlan(state) {
-      const runtimeCandidates = faviconUrlResolver
-        ? faviconUrlResolver.buildFaviconCandidatePlan(state)
-        : [
-          { kind: 'page-specific', url: state.pageSpecificUrl },
-          ...(state.skipPersisted ? [] : [
-            { kind: 'persisted-data', url: state.persistedDataUrl },
-            { kind: 'primary', url: state.persistedUrl }
-          ]),
-          { kind: 'primary', url: state.primaryUrl },
-          { kind: 'browser', url: state.browserUrl },
-          { kind: 'extension', url: state.extensionFavicon },
-          { kind: 'gstatic', url: state.gstaticFavicon }
-        ];
+      const runtimeCandidates = faviconUrlResolver.buildFaviconCandidatePlan(state);
       const seen = new Set();
       return runtimeCandidates.filter((candidate) => {
         const safeUrl = getSafeFaviconCandidateUrl(candidate && candidate.url, state.url, candidate && candidate.kind,
@@ -579,9 +559,7 @@
       tried.add(nextSrc);
       clearThemeAwareCandidateLoadTimer(img);
 
-      const faviconProxyCheckKind = faviconUrlResolver
-        ? faviconUrlResolver.getFaviconProxyCheckKind(candidate)
-        : '';
+      const faviconProxyCheckKind = faviconUrlResolver.getFaviconProxyCheckKind(candidate);
       const shouldCheckDefaultProxy = Boolean(faviconProxyCheckKind);
       let defaultProxyCheckStarted = false;
       const scheduleDefaultProxyFaviconCheck = () => {

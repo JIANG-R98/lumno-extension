@@ -153,6 +153,7 @@ function createRuntime(options) {
           img.setAttribute('width', '128');
           img.setAttribute('height', '128');
         },
+        cacheFaviconData() {},
         requestFaviconData() {
           return typeof config.requestFaviconData === 'function'
             ? config.requestFaviconData.apply(null, arguments)

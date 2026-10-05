@@ -108,9 +108,8 @@ function testRuntimeCachesUseBoundedWrites() {
     'favicon view core should call the shared bounded cache helper directly'
   );
   assert.ok(
-    overlayFavicon.includes('faviconViewCore.cacheFaviconData(sourceUrl, value)') &&
-      overlayFavicon.includes('faviconUtils.setBoundedCacheEntry(faviconDataCache, sourceUrl, value, 256)'),
-    'overlay favicon bypass path should retain the shared cache bound'
+    overlayFavicon.includes('faviconViewCore.cacheFaviconData(sourceUrl, value)'),
+    'overlay favicon bypass path should cache through the bounded favicon view core'
   );
 }
 

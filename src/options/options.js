@@ -2957,7 +2957,7 @@
   }
 
   function showTooltipFor(target) {
-    if (!tooltipController || !target) {
+    if (!target) {
       return;
     }
     const text = target.getAttribute('data-tooltip');
@@ -2971,16 +2971,10 @@
   }
 
   function hideTooltip() {
-    if (!tooltipController) {
-      return;
-    }
     tooltipController.hide();
   }
 
   function initTooltips() {
-    if (!tooltipController) {
-      return;
-    }
     const nodes = Array.from(document.querySelectorAll('[data-tooltip]'));
     nodes.forEach((node) => {
       tooltipController.bind(node, () => node.getAttribute('data-tooltip'), {
@@ -6709,7 +6703,7 @@
     const count = Array.isArray(item && item.sourceRefs) ? item.sourceRefs.length : 0;
     const providers = getAggregateSearchAvailableProviders();
     const availability = AGGREGATE_SEARCH_STORE.getAggregateSearchAvailability(item, providers);
-    if (availability && !availability.available) {
+    if (!availability.available) {
       return {
         id: String(item && item.id ? item.id : ''),
         key: String(item && item.key ? item.key : ''),

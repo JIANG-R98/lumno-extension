@@ -41,7 +41,7 @@
       return;
     }
     const normalized = effects.normalizePrefs(prefs);
-    if (!normalized || normalized.type === 'none') {
+    if (normalized.type === 'none') {
       body.setAttribute('data-wallpaper-effect', 'none');
       body.setAttribute('data-nt-wallpaper-ready', '1');
       return;

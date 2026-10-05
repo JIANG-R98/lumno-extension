@@ -788,7 +788,7 @@
 
   function showOnboardingInfoTooltip(button, infoTooltip, browserAvatars) {
     const text = String(infoTooltip && infoTooltip.text || getBrowserTooltipText(browserAvatars) || '').trim();
-    if (!onboardingInfoTooltipController || !button || !text) {
+    if (!button || !text) {
       return;
     }
     const options = {
@@ -806,9 +806,6 @@
   }
 
   function hideOnboardingInfoTooltip() {
-    if (!onboardingInfoTooltipController) {
-      return;
-    }
     onboardingInfoTooltipController.hide();
   }
 
@@ -819,7 +816,7 @@
 
   function showActionButtonTooltip(button) {
     const text = String(button && button.dataset && button.dataset.tooltip || '').trim();
-    if (!actionTooltipController || !button || !text) {
+    if (!button || !text) {
       return;
     }
     const maxWidth = getActionButtonTooltipMaxWidth(button);
@@ -831,9 +828,6 @@
   }
 
   function hideActionButtonTooltip() {
-    if (!actionTooltipController) {
-      return;
-    }
     actionTooltipController.hide();
   }
 

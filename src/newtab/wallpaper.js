@@ -249,7 +249,6 @@
     const NEWTAB_WALLPAPER_THUMBNAIL_SUFFIX = '-thumb.webp';
     const NEWTAB_WALLPAPER_DEFAULT_ID = 'monet-coastal-white';
     const NEWTAB_CUSTOM_WALLPAPER_ID = WALLPAPER_LOCAL_STORE.CUSTOM_WALLPAPER_ID || 'custom-upload';
-    const NEWTAB_CUSTOM_WALLPAPER_ID_PREFIX = WALLPAPER_LOCAL_STORE.CUSTOM_WALLPAPER_ID_PREFIX || 'custom-wallpaper-';
     const NEWTAB_LOCAL_WALLPAPER_DISABLED_VALUE = '__lumno_local_wallpaper_disabled__';
     const NEWTAB_WALLPAPER_PREFS_STORAGE_VERSION = 2;
     const NEWTAB_WALLPAPER_MODE_LIGHT = 'light';
@@ -907,10 +906,7 @@
     }
 
     function isCustomWallpaperId(id) {
-      if (localWallpaperStore) {
-        return localWallpaperStore.isCustomWallpaperId(id);
-      }
-      return String(id || '').startsWith(NEWTAB_CUSTOM_WALLPAPER_ID_PREFIX);
+      return localWallpaperStore.isCustomWallpaperId(id);
     }
 
     function getCustomWallpaperById(id) {
@@ -929,7 +925,7 @@
       if (isCustomWallpaperId(normalizedId)) {
         return getCustomWallpaperById(normalizedId);
       }
-      if (remoteClient && REMOTE_CONTENT.wallpaperFromId(normalizedId)) {
+      if (REMOTE_CONTENT.wallpaperFromId(normalizedId)) {
         return remoteClient.getWallpaper(normalizedId);
       }
       return NEWTAB_WALLPAPER_OPTIONS.find((item) => item && item.id === normalizedId) || null;
@@ -1360,15 +1356,11 @@
     }
 
     function scheduleWallpaperAdaptiveToneUpdate() {
-      if (wallpaperAdaptiveTone) {
-        wallpaperAdaptiveTone.schedule();
-      }
+      wallpaperAdaptiveTone.schedule();
     }
 
     function refreshWallpaperAdaptiveSampler() {
-      if (wallpaperAdaptiveTone) {
-        wallpaperAdaptiveTone.refresh();
-      }
+      wallpaperAdaptiveTone.refresh();
     }
 
     function refreshWallpaperEffects() {
@@ -1859,7 +1851,7 @@
     }
 
     function getWallpaperSourceTabForId(id) {
-      if (remoteClient && REMOTE_CONTENT.wallpaperFromId(id)) return 'bing';
+      if (REMOTE_CONTENT.wallpaperFromId(id)) return 'bing';
       return isCustomWallpaperId(id) ? 'local' : 'built-in';
     }
 
@@ -1998,35 +1990,27 @@
     }
 
     function normalizeCustomWallpaperRecord(record) {
-      return localWallpaperStore ? localWallpaperStore.normalizeRecord(record) : null;
+      return localWallpaperStore.normalizeRecord(record);
     }
 
     function readCustomWallpaperRecords() {
-      return localWallpaperStore ? localWallpaperStore.readAll() : Promise.resolve([]);
+      return localWallpaperStore.readAll();
     }
 
     function readCustomWallpaperRecordsByIds(ids) {
-      return localWallpaperStore && typeof localWallpaperStore.readByIds === 'function'
-        ? localWallpaperStore.readByIds(ids)
-        : Promise.resolve([]);
+      return localWallpaperStore.readByIds(ids);
     }
 
     function writeCustomWallpaperRecord(record) {
-      return localWallpaperStore
-        ? localWallpaperStore.write(record)
-        : Promise.reject(new Error('Local wallpaper store is not available.'));
+      return localWallpaperStore.write(record);
     }
 
     function deleteCustomWallpaperRecord(record) {
-      return localWallpaperStore
-        ? localWallpaperStore.remove(record)
-        : Promise.reject(new Error('Local wallpaper store is not available.'));
+      return localWallpaperStore.remove(record);
     }
 
     function buildCustomWallpaperRecordFromFile(file) {
-      return localWallpaperStore
-        ? localWallpaperStore.buildRecordFromFile(file)
-        : Promise.reject(new Error('Local wallpaper store is not available.'));
+      return localWallpaperStore.buildRecordFromFile(file);
     }
 
     function normalizeWallpaperOverlayOpacity(value, fallback) {
@@ -4341,25 +4325,22 @@
           : Promise.resolve();
         const remoteIds = getWallpaperStorageRawIds(results[0].value)
           .map((id) => normalizeNewtabWallpaperId(id))
-          .filter((id) => remoteClient && REMOTE_CONTENT.wallpaperFromId(id));
-        const remoteTask = remoteClient
-          ? Promise.all(remoteIds.map((id) => remoteClient.restoreWallpaper(id))) : Promise.resolve();
+          .filter((id) => REMOTE_CONTENT.wallpaperFromId(id));
+        const remoteTask = Promise.all(remoteIds.map((id) => remoteClient.restoreWallpaper(id)));
         return Promise.all([customWallpaperPromise, remoteTask]).then(() => {
           if (changeSeq !== wallpaperStorageChangeSeq ||
               typeof config.shouldApply === 'function' && !config.shouldApply()) {
             return false;
           }
           applyStoredWallpaperState(results[0], results[1]);
-          if (remoteClient) {
-            remoteClient.setPinnedIds(remoteIds);
-            remoteIds.forEach((id) => {
-              if (id !== REMOTE_CONTENT.BING_DAILY_ID && remoteClient.getWallpaper(id).imageDataUrl) return;
-              remoteClient.ensureWallpaper(id).then(() => {
-                if (getEffectiveWallpaperIdForMode(getResolvedWallpaperMode()) === id) applyResolvedNewtabWallpaper();
-                renderBingTiles();
-              }).catch(() => {});
-            });
-          }
+          remoteClient.setPinnedIds(remoteIds);
+          remoteIds.forEach((id) => {
+            if (id !== REMOTE_CONTENT.BING_DAILY_ID && remoteClient.getWallpaper(id).imageDataUrl) return;
+            remoteClient.ensureWallpaper(id).then(() => {
+              if (getEffectiveWallpaperIdForMode(getResolvedWallpaperMode()) === id) applyResolvedNewtabWallpaper();
+              renderBingTiles();
+            }).catch(() => {});
+          });
           return true;
         });
       });
@@ -4516,7 +4497,7 @@
         overrides.dark = overrides.light;
       }
       setWallpaperPrefs(prefs, overrides);
-      if (remoteClient) remoteClient.setPinnedIds([prefs.light, prefs.dark]);
+      remoteClient.setPinnedIds([prefs.light, prefs.dark]);
       applyResolvedNewtabWallpaper();
       updateBingUi();
       updateWallpaperSelectionUi();
@@ -5079,8 +5060,8 @@
       const refs = wallpaperViewController.getRefs();
       const selectedId = getWallpaperSelectionIdForUi();
       const daily = selectedId === REMOTE_CONTENT.BING_DAILY_ID;
-      const selected = remoteClient && REMOTE_CONTENT.wallpaperFromId(selectedId) && remoteClient.getWallpaper(selectedId);
-      const today = remoteClient && remoteClient.getWallpaper(REMOTE_CONTENT.BING_DAILY_ID);
+      const selected = REMOTE_CONTENT.wallpaperFromId(selectedId) && remoteClient.getWallpaper(selectedId);
+      const today = remoteClient.getWallpaper(REMOTE_CONTENT.BING_DAILY_ID);
       const preview = daily ? today : bingItems[0];
       refs.bingDailyLabel.textContent = t('newtab_bing_daily', 'Daily wallpaper');
       refs.bingDailyHint.textContent = t('newtab_bing_daily_hint', 'A new Bing photo every day. Turn off to keep the current wallpaper.');
@@ -5114,7 +5095,7 @@
     }
 
     function renderBingTiles() {
-      if (!remoteClient || !wallpaperBingGrid || !wallpaperViewController.renderOnlineWallpapers) return;
+      if (!wallpaperBingGrid || !wallpaperViewController.renderOnlineWallpapers) return;
       const selectedId = getWallpaperSelectionIdForUi();
       const selected = REMOTE_CONTENT.wallpaperFromId(selectedId) && remoteClient.getWallpaper(selectedId);
       const items = selected && selectedId !== REMOTE_CONTENT.BING_DAILY_ID && !bingItems.some((item) => item.id === selectedId)
@@ -5132,7 +5113,7 @@
     }
 
     async function loadBingCatalog(refresh) {
-      if (!remoteClient || !wallpaperBingGrid) return;
+      if (!wallpaperBingGrid) return;
       const seq = ++bingCatalogSeq;
       bingLoading = true;
       bingStatus = 'loading';
@@ -5162,7 +5143,7 @@
     }
 
     async function selectBingWallpaper(id) {
-      if (bingSelecting || !remoteClient) return;
+      if (bingSelecting) return;
       const seq = ++bingSelectionSeq;
       const mode = getWallpaperEditMode();
       const sameForModes = currentWallpaperPrefs.sameForModes;
@@ -5684,7 +5665,7 @@
       if (wallpaperBingTab) wallpaperBingTab.addEventListener('click', () => setWallpaperActiveTab('bing'));
       if (wallpaperBingRefresh) wallpaperBingRefresh.addEventListener('click', () => loadBingCatalog(true));
       if (refs.bingDailyToggle) refs.bingDailyToggle.addEventListener('change', () => {
-        const daily = remoteClient && remoteClient.getWallpaper(REMOTE_CONTENT.BING_DAILY_ID);
+        const daily = remoteClient.getWallpaper(REMOTE_CONTENT.BING_DAILY_ID);
         const id = refs.bingDailyToggle.checked ? REMOTE_CONTENT.BING_DAILY_ID : daily && daily.dailyId;
         if (id) selectBingWallpaper(id);
         else updateBingUi();
@@ -5928,7 +5909,7 @@
         return false;
       }
       let handled = false;
-      if (remoteClient && changes[REMOTE_CONTENT.BING_DAILY_CACHE_KEY] && hasStoredWallpaperStateLoaded) {
+      if (changes[REMOTE_CONTENT.BING_DAILY_CACHE_KEY] && hasStoredWallpaperStateLoaded) {
         remoteClient.restoreWallpaper(REMOTE_CONTENT.BING_DAILY_ID).then(() => {
           if (getEffectiveWallpaperIdForMode(getResolvedWallpaperMode()) === REMOTE_CONTENT.BING_DAILY_ID) {
             applyResolvedNewtabWallpaper();

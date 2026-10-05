@@ -83,12 +83,8 @@ const shortcutRules = BACKGROUND_SHORTCUT_RULES.create({
   fetchImpl: fetch,
   navigatorLike: navigator
 });
-const loadShortcutRules = shortcutRules && typeof shortcutRules.loadShortcutRules === 'function'
-  ? shortcutRules.loadShortcutRules
-  : () => Promise.resolve([]);
-const getShortcutUrl = shortcutRules && typeof shortcutRules.getShortcutUrl === 'function'
-  ? shortcutRules.getShortcutUrl
-  : () => null;
+const loadShortcutRules = shortcutRules.loadShortcutRules;
+const getShortcutUrl = shortcutRules.getShortcutUrl;
 
 function isBrowserExtensionProtocol(protocol) {
   const guards = globalThis.LumnoUrlGuards;
@@ -915,23 +911,14 @@ const pipMainWorld = globalThis.LumnoPipMainWorld.create({
 });
 
 async function requestGlobalPipOwnership(sender, kind) {
-  if (!pipOwnership || typeof pipOwnership.requestGlobalPipOwnership !== 'function') {
-    return { ok: false, granted: false, reason: 'pip-ownership-unavailable' };
-  }
   return pipOwnership.requestGlobalPipOwnership(sender, kind);
 }
 
 async function releaseGlobalPipOwnership(sender, token) {
-  if (!pipOwnership || typeof pipOwnership.releaseGlobalPipOwnership !== 'function') {
-    return { ok: false, released: false, reason: 'pip-ownership-unavailable' };
-  }
   return pipOwnership.releaseGlobalPipOwnership(sender, token);
 }
 
 function clearGlobalPipOwnerForTabId(tabId) {
-  if (!pipOwnership || typeof pipOwnership.clearGlobalPipOwnerForTabId !== 'function') {
-    return;
-  }
   pipOwnership.clearGlobalPipOwnerForTabId(tabId);
 }
 
@@ -1663,10 +1650,6 @@ function setTabSwitcherStateToStorage(state) {
 }
 
 function ensureTabSwitcherStateLoaded() {
-  if (!recentTabTracker || typeof recentTabTracker.hydrateState !== 'function') {
-    tabSwitcherStateLoaded = true;
-    return Promise.resolve(false);
-  }
   if (tabSwitcherStateLoaded) {
     return Promise.resolve(true);
   }
@@ -1699,16 +1682,10 @@ function ensureTabSwitcherStateLoaded() {
 
 function persistTabSwitcherState() {
   tabSwitcherStatePersistTimer = null;
-  if (!recentTabTracker || typeof recentTabTracker.exportState !== 'function') {
-    return Promise.resolve(false);
-  }
   return setTabSwitcherStateToStorage(recentTabTracker.exportState());
 }
 
 function schedulePersistTabSwitcherState() {
-  if (!recentTabTracker || typeof recentTabTracker.exportState !== 'function') {
-    return;
-  }
   if (!tabSwitcherStateLoaded) {
     tabSwitcherStateDirtyBeforeLoad = true;
   }
@@ -2764,9 +2741,6 @@ function recoverFromPageHotkeyNewtab(newTabId, windowId) {
 }
 
 function recordRecentSwitcherTab(tab, at) {
-  if (!recentTabTracker || typeof recentTabTracker.recordTab !== 'function') {
-    return null;
-  }
   const snapshot = recentTabTracker.recordTab(tab, at);
   if (snapshot) {
     schedulePersistTabSwitcherState();
@@ -2775,9 +2749,6 @@ function recordRecentSwitcherTab(tab, at) {
 }
 
 function updateRecentSwitcherTab(tab, at) {
-  if (!recentTabTracker || typeof recentTabTracker.updateTab !== 'function') {
-    return null;
-  }
   const snapshot = recentTabTracker.updateTab(tab, at);
   if (snapshot) {
     schedulePersistTabSwitcherState();
@@ -2786,35 +2757,14 @@ function updateRecentSwitcherTab(tab, at) {
 }
 
 function removeRecentSwitcherTab(tabId) {
-  if (!recentTabTracker || typeof recentTabTracker.removeTab !== 'function') {
-    clearSwitcherThumbnailPriority(tabId);
-    return;
-  }
   clearSwitcherThumbnailPriority(tabId);
   if (recentTabTracker.removeTab(tabId)) {
     schedulePersistTabSwitcherState();
   }
 }
 
-function getSwitcherThumbnailForTab(tabId, url) {
-  if (!recentTabTracker || typeof recentTabTracker.getThumbnail !== 'function') {
-    return '';
-  }
-  return recentTabTracker.getThumbnail(tabId, url);
-}
-
 function getSwitcherThumbnailStateForTab(tabId, url) {
-  if (recentTabTracker && typeof recentTabTracker.getThumbnailState === 'function') {
-    return recentTabTracker.getThumbnailState(tabId, url);
-  }
-  const dataUrl = getSwitcherThumbnailForTab(tabId, url);
-  return {
-    status: dataUrl ? 'ok' : 'missing',
-    reason: '',
-    dataUrl,
-    capturedAt: 0,
-    updatedAt: 0
-  };
+  return recentTabTracker.getThumbnailState(tabId, url);
 }
 
 function getSwitcherThumbnailStateForPayload(tab, url) {
@@ -2928,9 +2878,6 @@ function consumeSwitcherThumbnailPriority(tab, reason) {
 }
 
 function markSwitcherThumbnailStatus(tab, status, requestReason, failureReason) {
-  if (!recentTabTracker || typeof recentTabTracker.setThumbnailStatus !== 'function') {
-    return false;
-  }
   if (!tab || typeof tab.id !== 'number') {
     return false;
   }
@@ -3415,7 +3362,7 @@ function captureSwitcherThumbnailForTab(tab, reason) {
           return;
         }
         prepareSwitcherThumbnailDataUrl(captureResult.dataUrl).then((thumbnailDataUrl) => {
-          if (!thumbnailDataUrl || !recentTabTracker || typeof recentTabTracker.setThumbnail !== 'function') {
+          if (!thumbnailDataUrl) {
             logSwitcherThumbnailCaptureFailure(resolvedTab, 'empty-thumbnail-data', reason);
             resolve(false);
             return;
@@ -3544,16 +3491,8 @@ function getRecentTabsForSwitcher(tabList, currentTabId) {
       url: getResolvedTabUrl(tab)
     }))
     .filter(shouldTrackSwitcherTab);
-  if (recentTabTracker && typeof recentTabTracker.getRecentTabs === 'function') {
-    return recentTabTracker
-      .getRecentTabs(normalizedTabs, { limit: TAB_SWITCHER_LIMIT })
-      .map((tab) => normalizeSwitcherTabForPayload(tab, currentTabId))
-      .filter(Boolean);
-  }
-  return normalizedTabs
-    .slice()
-    .sort((a, b) => (Number(b.lastAccessed) || 0) - (Number(a.lastAccessed) || 0))
-    .slice(0, TAB_SWITCHER_LIMIT)
+  return recentTabTracker
+    .getRecentTabs(normalizedTabs, { limit: TAB_SWITCHER_LIMIT })
     .map((tab) => normalizeSwitcherTabForPayload(tab, currentTabId))
     .filter(Boolean);
 }
@@ -4135,7 +4074,7 @@ function updateOverlayLoadingRecordFromInvocation(activeTab, results) {
     results,
     Date.now()
   );
-  if (!outcome || outcome.action === 'clear') {
+  if (outcome.action === 'clear') {
     clearOverlayLoadingRecord(activeTab.id);
     return;
   }
@@ -4166,7 +4105,7 @@ function updateOverlayLoadingSessionFromMessage(request, sender, sendResponse) {
         now: Date.now()
       }
     );
-    if (!outcome || !outcome.record) {
+    if (!outcome.record) {
       sendResponse({ ok: true, tracked: false });
       return;
     }
@@ -4392,7 +4331,7 @@ function recoverOverlayAfterLoadingUpdate(tabId, changeInfo, tab) {
         now: Date.now(),
         ttlMs: OVERLAY_LOADING_RECORD_TTL_MS
       });
-      if (!outcome || outcome.action === 'clear' || outcome.action === 'none') {
+      if (outcome.action === 'clear' || outcome.action === 'none') {
         clearOverlayLoadingRecord(tabId);
         return;
       }
@@ -6284,10 +6223,7 @@ function sendUnknownBackgroundMessageResponse(sendResponse) {
 }
 
 function dispatchBackgroundMessage(request, sender, sendResponse) {
-  if (backgroundMessageRouter) {
-    return BACKGROUND_MESSAGE_ROUTER.dispatch(backgroundMessageRouter, request, sender, sendResponse);
-  }
-  return sendUnknownBackgroundMessageResponse(sendResponse);
+  return BACKGROUND_MESSAGE_ROUTER.dispatch(backgroundMessageRouter, request, sender, sendResponse);
 }
 
 // Listen for extension runtime messages.
@@ -6535,7 +6471,7 @@ function handleShortcutMessage(request, sender, sendResponse) {
 }
 
 function sendPipMainWorldResponse(methodName, sender, sendResponse) {
-  if (!pipMainWorld || typeof pipMainWorld[methodName] !== 'function') {
+  if (typeof pipMainWorld[methodName] !== 'function') {
     sendResponse({ ok: false, reason: 'pip-main-world-unavailable' });
     return;
   }
@@ -8170,7 +8106,7 @@ function fetchShortcutFaviconResource(candidate, pageUrl, signal) {
     }
     return blob.arrayBuffer().then((buffer) => {
       const inspection = SHORTCUT_FAVICON.inspectIconResource(buffer, blob.type, result.sourceUrl, candidate, { minDimension: 16 });
-      if (!inspection || inspection.usable !== true) {
+      if (inspection.usable !== true) {
         return null;
       }
       return {
