@@ -30,7 +30,7 @@ async function main() {
     return group;
   };
   const refs = { quoteTitle: document.createElement('span'), quoteBody: document.createElement('div'),
-    quoteEnabledToggle: document.createElement('input'), quoteProviderHint: document.createElement('p'),
+    quoteEnabledToggle: document.createElement('input'), quoteInfoButton: document.createElement('button'),
     quotePosition: createGroup('quotePosition', ['search', 'bottom']),
     quoteCategory: createGroup('quoteCategory', ['literature', 'poetry']),
     quoteFontSizeRow: document.createElement('div'), quoteFontSizeTitle: document.createElement('span'),
@@ -40,7 +40,7 @@ async function main() {
   refs.quoteEnabledToggle.type = 'checkbox';
   refs.quoteFontSizeRow.append(refs.quoteFontSizeTitle, refs.quoteFontSizeSlider, refs.quoteFontSizeSliderValueInput);
   refs.quoteBody.append(refs.quoteCategory, refs.quotePosition, refs.quoteFontSizeRow);
-  document.body.append(refs.quoteEnabledToggle, refs.quoteBody, refs.quoteProviderHint);
+  document.body.append(refs.quoteEnabledToggle, refs.quoteBody, refs.quoteInfoButton);
   runtime.bindSettings(refs);
   await runtime.mount();
   assert.equal(requests, 0, 'Disabled quotes must not contact an external API');
@@ -99,7 +99,7 @@ async function main() {
     runtime.updateLanguage();
     assert.equal(refs.quoteTitle.textContent, messages.newtab_quote_title.message);
     assert.equal(refs.quoteEnabledToggle.getAttribute('aria-label'), messages.newtab_quote_title.message);
-    assert.equal(refs.quoteProviderHint.textContent, messages.newtab_quote_provider.message);
+    assert.equal(refs.quoteInfoButton.getAttribute('aria-label'), messages.newtab_quote_provider.message);
     assert.equal(refs.quotePosition.getAttribute('aria-label'), messages.newtab_quote_position.message);
     assert.equal(refs.quoteCategory.getAttribute('aria-label'), messages.newtab_quote_category.message);
     assert.equal(refs.quoteFontSizeTitle.textContent, messages.newtab_quote_font_size.message);

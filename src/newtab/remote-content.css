@@ -83,24 +83,17 @@ body[data-quote-position="bottom"] #_x_extension_newtab_bottom_dock_scroller_202
 body[data-quote-position="bottom"].x-nt-mobile-flow {
   padding-bottom: max(108px, calc(var(--x-nt-quote-bottom-height, 26px) + 24px + var(--x-nt-bottom-safe-inset, 0px)));
 }
-.x-nt-quote-settings,
-.x-nt-quote-body { display: grid; gap: 12px; }
+.x-nt-quote-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--x-nt-panel-content-gap);
+}
 .x-nt-quote-tabs .x-nt-wallpaper-tabs-indicator {
   width: calc((100% - var(--x-nt-segmented-tabs-inset) - var(--x-nt-segmented-tabs-inset) - var(--x-nt-panel-tab-gap)) / 2);
   transform: translateX(calc(var(--x-nt-quote-tab-index, 0) * (100% + var(--x-nt-panel-tab-gap))));
 }
-.x-nt-quote-provider {
-  margin: 0;
-  color: var(--x-nt-subtext);
-  font-size: 11px;
-  line-height: 1.6;
-}
-.x-nt-quote-font-size { display: grid; gap: 8px; }
-.x-nt-quote-font-size .x-nt-range-slider-row::after {
-  content: "px";
-  font-size: 11px;
-  color: var(--x-nt-subtext);
-}
+
 .x-nt-wallpaper-body:not([data-active-tab="bing"]) .x-nt-bing-panel,
 .x-nt-wallpaper-body[data-active-tab="bing"] .x-nt-wallpaper-grid--built-in,
 .x-nt-wallpaper-body[data-active-tab="bing"] .x-nt-wallpaper-grid--local { display: none; }
@@ -110,13 +103,6 @@ body[data-quote-position="bottom"].x-nt-mobile-flow {
   flex-direction: column;
   gap: var(--x-nt-panel-content-gap);
 }
-.x-nt-bing-daily {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.x-nt-bing-hint,
 .x-nt-bing-status {
   margin: 0;
   padding: 0 2px;
@@ -154,52 +140,19 @@ body[data-quote-position="bottom"].x-nt-mobile-flow {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding: 0 2px;
-  color: var(--x-nt-subtext);
-  text-decoration: none;
-}
-.x-nt-bing-source:focus-visible {
-  outline: 2px solid var(--x-nt-bookmark-focus, rgba(0, 0, 0, 0.22));
-  outline-offset: 3px;
-  border-radius: 6px;
-}
-.x-nt-bing-source-heading {
-  min-width: 0;
-  display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 4px;
+  padding: 0 2px;
 }
-.x-nt-bing-source-title {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--x-nt-text);
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.4;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-decoration: underline transparent;
-  text-underline-offset: 3px;
-  transition: text-decoration-color 140ms ease;
+.x-nt-appearance-more-settings.x-nt-bing-source-link {
+  max-width: 100%;
+  margin: 0;
 }
-.x-nt-bing-source:hover .x-nt-bing-source-title {
-  text-decoration-color: currentColor;
-}
-.x-nt-bing-source-icon {
-  flex: 0 0 auto;
-  display: inline-flex;
-  color: var(--x-nt-subtext);
-  transition: color 140ms ease;
-}
-.x-nt-bing-source-icon .ri-icon { --ri-size: 12px; }
-.x-nt-bing-source:hover .x-nt-bing-source-icon { color: var(--x-nt-text); }
 .x-nt-bing-source-meta {
-  overflow: hidden;
+  margin: 0;
+  color: var(--x-nt-subtext);
   font-size: 11px;
   line-height: 1.5;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 @media (prefers-reduced-motion: reduce) {
   .x-nt-bing-refresh[data-loading="true"] .ri-icon { animation: none; }

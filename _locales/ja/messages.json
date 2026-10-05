@@ -38,6 +38,9 @@
   "newtab_theme_follow_global": {
     "message": "全体に合わせる"
   },
+  "newtab_search_section_title": {
+    "message": "検索ボックス"
+  },
   "newtab_search_width_title": {
     "message": "検索ボックスの幅"
   },

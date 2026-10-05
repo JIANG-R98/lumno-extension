@@ -38,6 +38,9 @@
   "newtab_theme_follow_global": {
     "message": "Follow \"Global\""
   },
+  "newtab_search_section_title": {
+    "message": "Search box"
+  },
   "newtab_search_width_title": {
     "message": "Search box width"
   },

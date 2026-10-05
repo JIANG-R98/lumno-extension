@@ -464,8 +464,11 @@
     let wallpaperPanel = null;
     let wallpaperPanelHeader = null;
     let wallpaperPanelTitle = null;
+    let wallpaperAccordionTrigger = null;
+    let wallpaperSectionExpanded = true;
     let wallpaperEnabledToggle = null;
     let topContentTitle = null;
+    let searchSectionTitle = null;
     let topContentTabs = null;
     let topContentTabsIndicator = null;
     let topContentBrandTab = null;
@@ -2890,6 +2893,14 @@
       scheduleWallpaperPanelTabIndicatorsRefresh();
     }
 
+    function updateWallpaperAccordionUi(enabled) {
+      if (!wallpaperAccordionTrigger) return;
+      const expanded = Boolean(enabled && wallpaperSectionExpanded);
+      wallpaperAccordionTrigger.disabled = !enabled;
+      wallpaperAccordionTrigger.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      wallpaperAccordionTrigger.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+    }
+
     function setWallpaperBodyVisible(visible) {
       if (!wallpaperBody) {
         return;
@@ -2902,13 +2913,9 @@
         }
         return;
       }
-      animateWallpaperPanelResize(() => {
-        wallpaperBody.setAttribute('data-visible', nextVisible);
-        wallpaperBody.setAttribute('aria-hidden', visible ? 'false' : 'true');
-        if (visible) {
-          playWallpaperEnterMotion(wallpaperBody, 'enter');
-        }
-      });
+      // Height and fade are animated by the .x-nt-panel-collapsible styles.
+      wallpaperBody.setAttribute('data-visible', nextVisible);
+      wallpaperBody.setAttribute('aria-hidden', visible ? 'false' : 'true');
       if (visible) {
         scheduleWallpaperTabsIndicatorRefresh();
         scheduleWallpaperEffectTabsIndicatorRefresh();
@@ -3286,7 +3293,8 @@
         wallpaperEnabledToggle.setAttribute('aria-checked', wallpaperEnabled ? 'true' : 'false');
         wallpaperEnabledToggle.setAttribute('aria-label', t('newtab_wallpaper_toggle_label', 'Toggle wallpaper'));
       }
-      setWallpaperBodyVisible(wallpaperEnabled);
+      setWallpaperBodyVisible(wallpaperEnabled && wallpaperSectionExpanded);
+      updateWallpaperAccordionUi(wallpaperEnabled);
       const tileContainers = getWallpaperTileContainers();
       if (tileContainers.length === 0) {
         return;
@@ -3964,17 +3972,11 @@
       updateShortcutGapSliderElements(getShortcutGap());
     }
 
-    function setWallpaperShortcutsAccordionExpanded(expanded, options) {
+    function setWallpaperShortcutsAccordionExpanded(expanded) {
       const nextExpanded = Boolean(expanded && getShortcutsVisible());
-      const changed = wallpaperShortcutsAccordionExpanded !== nextExpanded;
       wallpaperShortcutsAccordionExpanded = nextExpanded;
-      if (!changed || !options || options.animate === false) {
-        applyWallpaperShortcutsAccordionUi();
-        return;
-      }
-      animateWallpaperPanelResize(() => {
-        applyWallpaperShortcutsAccordionUi();
-      });
+      // The details region animates itself through .x-nt-panel-collapsible.
+      applyWallpaperShortcutsAccordionUi();
     }
 
     function updateWallpaperShortcutsUi() {
@@ -4964,6 +4966,7 @@
       if (wallpaperPanelTitle) {
         const title = t('newtab_wallpaper_title', 'Wallpaper');
         wallpaperPanelTitle.textContent = title;
+        if (wallpaperAccordionTrigger) wallpaperAccordionTrigger.setAttribute('aria-label', title);
         if (wallpaperPanel) {
           wallpaperPanel.setAttribute('aria-label', t('settings_tab_appearance', 'Appearance'));
         }
@@ -4986,6 +4989,9 @@
       }
       if (wallpaperLocalGrid) {
         wallpaperLocalGrid.setAttribute('aria-label', t('newtab_wallpaper_local_section', 'Local'));
+      }
+      if (searchSectionTitle) {
+        searchSectionTitle.textContent = t('newtab_search_section_title', 'Search box');
       }
       if (topContentTitle) {
         topContentTitle.textContent = t('settings_newtab_wordmark_title', 'Content above the search bar');
@@ -5090,7 +5096,7 @@
       const selected = REMOTE_CONTENT.wallpaperFromId(selectedId) && remoteClient.getWallpaper(selectedId);
       const busy = bingLoading || bingSelecting;
       refs.bingDailyLabel.textContent = t('newtab_bing_daily', 'Daily wallpaper');
-      refs.bingDailyHint.textContent = t('newtab_bing_daily_hint', 'A new Bing photo every day. Turn off to keep the current wallpaper.');
+      refs.bingDailyInfoButton.setAttribute('aria-label', t('newtab_bing_daily_hint', 'A new Bing photo every day. Turn off to keep the current wallpaper.'));
       refs.bingDailyToggle.checked = daily;
       refs.bingDailyToggle.disabled = bingSelecting;
       refs.bingDailyToggle.setAttribute('aria-label', t('newtab_bing_daily', 'Daily wallpaper'));
@@ -5112,9 +5118,9 @@
       refs.bingSelectedSource.hidden = !hasSource;
       refs.bingSelectedTitle.textContent = hasSource ? selected.name : '';
       refs.bingSelectedMeta.textContent = hasSource ? formatBingCopyright(selected.copyright) : '';
-      refs.bingSelectedSource.setAttribute('aria-label', hasSource
+      refs.bingSelectedLink.setAttribute('aria-label', hasSource
         ? `${getBingWallpaperLabel(selected)} · ${t('newtab_bing_source', 'View wallpaper source')}` : '');
-      if (hasSource) refs.bingSelectedSource.href = selected.sourceUrl;
+      if (hasSource) refs.bingSelectedLink.href = selected.sourceUrl;
     }
 
     function renderBingTiles() {
@@ -5174,6 +5180,15 @@
           scheduleWallpaperPanelTabIndicatorsRefresh();
         }
       }
+    }
+
+    function bindInfoButtonTooltip(button, getText) {
+      if (!button) return;
+      const show = () => showTopActionTooltip(button, getText());
+      button.addEventListener('mouseenter', show);
+      button.addEventListener('mouseleave', hideTopActionTooltip);
+      button.addEventListener('focus', show);
+      button.addEventListener('blur', hideTopActionTooltip);
     }
 
     // A New Tab can stay open past midnight; pick up the new daily photo when it is shown again.
@@ -5306,9 +5321,9 @@
         icons: {
           add: getRiSvg('ri-add-large-line', 'ri-size-18'),
           arrow: getRiSvg('ri-arrow-right-s-line', 'ri-size-14'),
+          link: getRiSvg('ri-arrow-right-line', 'ri-size-14'),
           check: getRiSvg('ri-check-line', 'ri-size-16'),
         delete: getRiSvg('ri-close-line', 'ri-size-14'),
-          external: getRiSvg('ri-arrow-right-up-line', 'ri-size-14'),
           refresh: getRiSvg('ri-refresh-line', 'ri-size-14'),
           help: getRiSvg('ri-question-line', 'ri-size-14'),
           info: getRiSvg('ri-information-line', 'ri-size-14'),
@@ -5394,8 +5409,10 @@
       const refs = wallpaperViewController.getRefs();
       wallpaperPanelHeader = refs.panelHeader;
       wallpaperPanelTitle = refs.panelTitle;
+      wallpaperAccordionTrigger = refs.wallpaperAccordionTrigger;
       wallpaperEnabledToggle = refs.enabledToggle;
       topContentTitle = refs.topContentTitle;
+      searchSectionTitle = refs.searchSectionTitle || null;
       topContentTabs = refs.topContentTabs;
       topContentTabsIndicator = refs.topContentTabsIndicator;
       topContentBrandTab = refs.topContentBrandTab;
@@ -5615,10 +5632,7 @@
           if (!getShortcutsVisible()) {
             return;
           }
-          setWallpaperShortcutsAccordionExpanded(
-            !wallpaperShortcutsAccordionExpanded,
-            { animate: true }
-          );
+          setWallpaperShortcutsAccordionExpanded(!wallpaperShortcutsAccordionExpanded);
         });
       }
       if (wallpaperShortcutsToggle) {
@@ -5704,6 +5718,13 @@
       wallpaperEnabledToggle.addEventListener('change', () => {
         persistWallpaperEnabled(wallpaperEnabledToggle.checked);
       });
+      if (wallpaperAccordionTrigger) {
+        wallpaperAccordionTrigger.addEventListener('click', () => {
+          if (!hasAnyWallpaperEnabled()) return;
+          wallpaperSectionExpanded = !wallpaperSectionExpanded;
+          updateWallpaperSelectionUi();
+        });
+      }
       customWallpaperInput.addEventListener('change', (event) => {
         const file = event && event.target && event.target.files
           ? event.target.files[0]
@@ -5734,17 +5755,11 @@
         wallpaperBingRefresh.addEventListener('focus', showBingRefreshTooltip);
         wallpaperBingRefresh.addEventListener('blur', hideTopActionTooltip);
       }
-      if (refs.bingSelectedSource && refs.bingSelectedMeta) {
-        const meta = refs.bingSelectedMeta;
-        // The credit line is truncated to one line; reveal the full text only when it is cut off.
-        const showBingCreditTooltip = () => {
-          if (meta.scrollWidth > meta.clientWidth) showTopActionTooltip(refs.bingSelectedSource, meta.textContent);
-        };
-        refs.bingSelectedSource.addEventListener('mouseenter', showBingCreditTooltip);
-        refs.bingSelectedSource.addEventListener('mouseleave', hideTopActionTooltip);
-        refs.bingSelectedSource.addEventListener('focus', showBingCreditTooltip);
-        refs.bingSelectedSource.addEventListener('blur', hideTopActionTooltip);
-      }
+      bindInfoButtonTooltip(refs.bingDailyInfoButton, () => t(
+        'newtab_bing_daily_hint',
+        'A new Bing photo every day. Turn off to keep the current wallpaper.'
+      ));
+      bindInfoButtonTooltip(refs.quoteInfoButton, () => t('newtab_quote_provider', 'Powered by Hitokoto'));
       bindBingDailyRolloverListeners();
       if (refs.bingDailyToggle) refs.bingDailyToggle.addEventListener('change', () => {
         const daily = remoteClient.getWallpaper(REMOTE_CONTENT.BING_DAILY_ID);

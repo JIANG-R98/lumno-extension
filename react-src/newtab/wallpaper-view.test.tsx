@@ -89,7 +89,11 @@ describe('New Tab React wallpaper view', () => {
       expect(group.querySelectorAll('.x-nt-segmented-tab')).toHaveLength(2);
     });
     expect(controller.control.querySelector('[data-quote-position="off"]')).toBeNull();
-    expect(controller.getRefs().quoteProviderHint.tagName).toBe('P');
+    expect(controller.getRefs().quoteProviderHint).toBeUndefined();
+    expect(controller.getRefs().quoteInfoButton.closest('.x-nt-appearance-setting-title-group')).not.toBeNull();
+    expect(controller.getRefs().bingDailyHint).toBeUndefined();
+    expect(controller.getRefs().bingDailyInfoButton.closest('.x-nt-appearance-setting-title-group')).not.toBeNull();
+    expect(controller.getRefs().bingSelectedLink.classList.contains('x-nt-appearance-more-settings')).toBe(true);
     expect(controller.getRefs().bingTab.textContent).toBe('Bing');
     expect(controller.getRefs().bingDailyToggle.getAttribute('role')).toBe('switch');
     expect(controller.getRefs().bingSelectedSource.hidden).toBe(true);

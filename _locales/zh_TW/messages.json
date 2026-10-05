@@ -38,6 +38,9 @@
   "newtab_theme_follow_global": {
     "message": "跟隨「全域」"
   },
+  "newtab_search_section_title": {
+    "message": "搜尋框"
+  },
   "newtab_search_width_title": {
     "message": "搜尋框寬度"
   },

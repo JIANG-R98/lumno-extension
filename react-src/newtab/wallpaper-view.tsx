@@ -394,6 +394,15 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                 )
               )}
             </div>
+          </div>
+          <div className="x-nt-panel-divider" />
+          <div className="x-nt-wallpaper-section x-nt-search-section">
+            <div className="x-nt-wallpaper-panel-header">
+              <div
+                {...ref('searchSectionTitle')}
+                className="x-nt-wallpaper-panel-title"
+              />
+            </div>
             <div
               {...ref('searchWidthControl')}
               aria-hidden="true"
@@ -427,272 +436,357 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                   ticks={model.searchWidth.ticks}
                 />
               </RangeSliderField>
-              <div className="x-nt-appearance-setting-row">
-                <span className="x-nt-appearance-setting-title-group">
-                  <span
-                    {...ref('inputAutoFocusTitle')}
-                    className="x-nt-appearance-setting-title"
-                  />
-                  <button
-                    {...ref('inputAutoFocusInfoButton')}
-                    className="x-nt-appearance-info-button"
-                    dangerouslySetInnerHTML={{
-                      __html: String(model.icons?.info || '')
-                    }}
-                    type="button"
-                  />
-                </span>
-                <Switch
-                  ariaLabel="Automatically focus the search input"
-                  name="inputAutoFocusToggle"
+            </div>
+            <div className="x-nt-appearance-setting-row">
+              <span className="x-nt-appearance-setting-title-group">
+                <span
+                  {...ref('inputAutoFocusTitle')}
+                  className="x-nt-appearance-setting-title"
                 />
-              </div>
+                <button
+                  {...ref('inputAutoFocusInfoButton')}
+                  className="x-nt-appearance-info-button"
+                  dangerouslySetInnerHTML={{
+                    __html: String(model.icons?.info || '')
+                  }}
+                  type="button"
+                />
+              </span>
+              <Switch
+                ariaLabel="Automatically focus the search input"
+                name="inputAutoFocusToggle"
+              />
+            </div>
+            <div className="x-nt-appearance-setting-row x-nt-top-content-header">
               <div
-                {...ref('shortcutsAccordion')}
-                className="x-nt-shortcuts-accordion"
-                data-expanded="false"
-                data-enabled="true"
+                {...ref('topContentTitle')}
+                className="x-nt-appearance-setting-title"
+              />
+              <SegmentedTabs
+                ariaLabel="Content above the search bar"
+                className="x-nt-wallpaper-tabs x-nt-top-content-tabs"
+                indicatorClassName="x-nt-wallpaper-tabs-indicator"
+                indicatorRef="topContentTabsIndicator"
+                name="topContentTabs"
+                role="group"
               >
-                <div className="x-nt-appearance-setting-row x-nt-shortcuts-accordion-row">
+                {topContentOptions.map((item) => (
                   <button
-                    {...ref('shortcutsAccordionTrigger')}
-                    aria-controls="_x_extension_newtab_shortcuts_settings_2026_unique_"
-                    aria-expanded="false"
-                    className="x-nt-shortcuts-accordion-trigger"
-                    id="_x_extension_newtab_shortcuts_accordion_trigger_2026_unique_"
+                    {...ref(
+                      item.value === 'brand'
+                        ? 'topContentBrandTab'
+                        : item.value === 'time'
+                          ? 'topContentTimeTab'
+                          : 'topContentOffTab'
+                    )}
+                    aria-pressed={item.value === 'brand'}
+                    className="x-nt-segmented-tab x-nt-wallpaper-tab x-nt-top-content-tab"
+                    data-active={item.value === 'brand' ? 'true' : 'false'}
+                    data-newtab-top-content={item.value}
+                    key={item.value}
                     type="button"
                   >
-                    <span className="x-nt-appearance-setting-title-group">
-                      <span
-                        {...ref('shortcutsTitle')}
-                        className="x-nt-appearance-setting-title"
-                      />
-                      <span
-                        aria-hidden="true"
-                        className="x-nt-shortcuts-accordion-icon"
-                        dangerouslySetInnerHTML={{
-                          __html: String(model.icons?.arrow || '')
-                        }}
-                      />
-                    </span>
+                    {item.label}
                   </button>
-                  <Switch
-                    ariaLabel="Shortcuts"
-                    name="shortcutsToggle"
-                  />
-                </div>
-                <div
-                  {...ref('shortcutsDetails')}
-                  aria-hidden="true"
-                  aria-labelledby="_x_extension_newtab_shortcuts_accordion_trigger_2026_unique_"
-                  className="x-nt-shortcuts-accordion-details"
-                  data-visible="false"
-                  hidden
-                  id="_x_extension_newtab_shortcuts_settings_2026_unique_"
-                  role="region"
-                >
-                  <div className="x-nt-shortcuts-accordion-details-inner">
-                    <div className="x-nt-appearance-setting-row">
-                      <span
-                        {...ref('shortcutAddTitle')}
-                        className="x-nt-appearance-setting-title"
-                      />
-                      <Switch
-                        ariaLabel="Show “+”"
-                        name="shortcutAddToggle"
-                      />
-                    </div>
-                    <div className="x-nt-appearance-setting-row">
-                      <span
-                        {...ref('shortcutDockMagnificationTitle')}
-                        className="x-nt-appearance-setting-title"
-                      />
-                      <Switch
-                        ariaLabel="macOS Dock-style magnification"
-                        name="shortcutDockMagnificationToggle"
-                      />
-                    </div>
-                    <div
-                      {...ref('shortcutColumnsControl')}
-                      aria-hidden="true"
-                      className="x-nt-overlay-control x-nt-shortcut-columns-control"
-                      data-visible="false"
-                    >
-                      <div className="x-nt-overlay-control-header">
-                        <span
-                          {...ref('shortcutColumnsLabel')}
-                          className="x-nt-overlay-label"
-                        />
-                      </div>
-                      <RangeSliderField
-                        {...ref('shortcutColumnsSlider')}
-                        className="x-nt-overlay-slider-wrap x-nt-shortcut-columns-slider-wrap"
-                        defaultValue={String(shortcutColumnsDefault)}
-                        inputClass="x-nt-overlay-slider x-nt-shortcut-columns-slider"
-                        max={String(shortcutColumnsMax)}
-                        min={String(shortcutColumnsMin)}
-                        rowClassName="x-nt-range-slider-row"
-                        step="1"
-                        valueInputProps={{
-                          ...ref('shortcutColumnsSliderValueInput'),
-                          'aria-label': 'Shortcuts per row value',
-                          defaultValue: String(shortcutColumnsDefault),
-                          inputMode: 'numeric'
-                        }}
-                      >
-                        <Scale
-                          className="x-nt-shortcut-columns-scale x-nt-shortcut-layout-scale"
-                          ticks={shortcutColumnTicks}
-                        />
-                      </RangeSliderField>
-                    </div>
-                    <div
-                      {...ref('shortcutSizeControl')}
-                      aria-hidden="true"
-                      className="x-nt-overlay-control x-nt-shortcut-size-control"
-                      data-visible="false"
-                    >
-                      <div className="x-nt-overlay-control-header">
-                        <span
-                          {...ref('shortcutSizeLabel')}
-                          className="x-nt-overlay-label"
-                        />
-                      </div>
-                      <RangeSliderField
-                        {...ref('shortcutSizeSlider')}
-                        className="x-nt-overlay-slider-wrap x-nt-shortcut-size-slider-wrap"
-                        data-value-suffix=" px"
-                        defaultValue={String(shortcutSizeDefault)}
-                        inputClass="x-nt-overlay-slider x-nt-shortcut-size-slider"
-                        max={String(shortcutSizeMax)}
-                        min={String(shortcutSizeMin)}
-                        resetButtonProps={{
-                          ...ref('shortcutSizeResetButton'),
-                          'aria-label': 'Reset shortcut size',
-                          disabled: true,
-                          title: 'Reset shortcut size'
-                        }}
-                        rowClassName="x-nt-range-slider-row"
-                        step="1"
-                        valueInputProps={{
-                          ...ref('shortcutSizeSliderValueInput'),
-                          'aria-label': 'Shortcut size value',
-                          defaultValue: String(shortcutSizeDefault),
-                          inputMode: 'numeric'
-                        }}
-                      >
-                        <Scale
-                          className="x-nt-shortcut-layout-scale"
-                          ticks={shortcutSizeTicks}
-                        />
-                      </RangeSliderField>
-                    </div>
-                    <div
-                      {...ref('shortcutGapControl')}
-                      aria-hidden="true"
-                      className="x-nt-overlay-control x-nt-shortcut-gap-control"
-                      data-visible="false"
-                    >
-                      <div className="x-nt-overlay-control-header">
-                        <span
-                          {...ref('shortcutGapLabel')}
-                          className="x-nt-overlay-label"
-                        />
-                      </div>
-                      <RangeSliderField
-                        {...ref('shortcutGapSlider')}
-                        className="x-nt-overlay-slider-wrap x-nt-shortcut-gap-slider-wrap"
-                        data-value-suffix=" px"
-                        defaultValue={String(shortcutGapDefault)}
-                        inputClass="x-nt-overlay-slider x-nt-shortcut-gap-slider"
-                        max={String(shortcutGapMax)}
-                        min={String(shortcutGapMin)}
-                        resetButtonProps={{
-                          ...ref('shortcutGapResetButton'),
-                          'aria-label': 'Reset shortcut spacing',
-                          disabled: true,
-                          title: 'Reset shortcut spacing'
-                        }}
-                        rowClassName="x-nt-range-slider-row"
-                        step="1"
-                        valueInputProps={{
-                          ...ref('shortcutGapSliderValueInput'),
-                          'aria-label': 'Shortcut spacing value',
-                          defaultValue: String(shortcutGapDefault),
-                          inputMode: 'numeric'
-                        }}
-                      >
-                        <Scale
-                          className="x-nt-shortcut-layout-scale"
-                          ticks={shortcutGapTicks}
-                        />
-                      </RangeSliderField>
-                    </div>
-                  </div>
-                </div>
+                ))}
+              </SegmentedTabs>
+            </div>
+            <div
+              {...ref('topContentWeightControl')}
+              aria-hidden="true"
+              className="x-nt-time-weight-control x-nt-panel-collapsible"
+              data-visible="false"
+              hidden
+            >
+              <div className="x-nt-overlay-control-header">
+                <span {...ref('topContentWeightTitle')}>Time font weight</span>
               </div>
-              <a
-                {...ref('moreSettingsLink')}
-                className="x-nt-appearance-more-settings"
-                href={model.moreSettingsUrl}
+              <RangeSliderField
+                {...ref('topContentWeightSlider')}
+                className="x-nt-overlay-slider-wrap x-nt-time-weight-slider-wrap"
+                inputClass="x-nt-overlay-slider x-nt-time-weight-slider"
+                max={String(timeFontWeightMax)}
+                min={String(timeFontWeightMin)}
+                rowClassName="x-nt-range-slider-row"
+                step="1"
+                defaultValue={String(timeFontWeightDefault)}
+                valueInputProps={{
+                  ...ref('topContentWeightSliderValueInput'),
+                  'aria-label': 'Time font weight value',
+                  defaultValue: String(timeFontWeightDefault),
+                  inputMode: 'numeric'
+                }}
               >
-                <span
-                  {...ref('moreSettingsText')}
-                  className="x-nt-appearance-more-settings-text"
-                />
-                <span
-                  aria-hidden="true"
-                  className="x-nt-appearance-more-settings-icon"
-                  dangerouslySetInnerHTML={{
-                    __html: String(model.icons?.arrow || '')
-                  }}
-                />
-              </a>
+                <Scale ticks={timeFontWeightTicks} />
+              </RangeSliderField>
+            </div>
+            <div
+              {...ref('topContentSecondsRow')}
+              aria-hidden="true"
+              className="x-nt-top-content-seconds-row x-nt-panel-collapsible"
+              data-visible="false"
+              hidden
+            >
+              <span
+                {...ref('topContentSecondsTitle')}
+                className="x-nt-top-content-seconds-title"
+              >
+                Show seconds
+              </span>
+              <Switch
+                ariaLabel="Show seconds"
+                name="topContentSecondsToggle"
+              />
             </div>
           </div>
           <div className="x-nt-panel-divider" />
-          <div className="x-nt-quote-settings">
+          <div className="x-nt-wallpaper-section">
+            <div
+              {...ref('shortcutsAccordion')}
+              className="x-nt-shortcuts-accordion"
+              data-expanded="false"
+              data-enabled="true"
+            >
+              <div className="x-nt-wallpaper-panel-header x-nt-shortcuts-accordion-row">
+                <button
+                  {...ref('shortcutsAccordionTrigger')}
+                  aria-controls="_x_extension_newtab_shortcuts_settings_2026_unique_"
+                  aria-expanded="false"
+                  className="x-nt-shortcuts-accordion-trigger"
+                  id="_x_extension_newtab_shortcuts_accordion_trigger_2026_unique_"
+                  type="button"
+                >
+                  <span className="x-nt-appearance-setting-title-group">
+                    <span
+                      {...ref('shortcutsTitle')}
+                      className="x-nt-wallpaper-panel-title"
+                    />
+                    <span
+                      aria-hidden="true"
+                      className="x-nt-shortcuts-accordion-icon"
+                      dangerouslySetInnerHTML={{
+                        __html: String(model.icons?.arrow || '')
+                      }}
+                    />
+                  </span>
+                </button>
+                <Switch
+                  ariaLabel="Shortcuts"
+                  name="shortcutsToggle"
+                />
+              </div>
+              <div
+                {...ref('shortcutsDetails')}
+                aria-hidden="true"
+                aria-labelledby="_x_extension_newtab_shortcuts_accordion_trigger_2026_unique_"
+                className="x-nt-shortcuts-accordion-details x-nt-panel-collapsible"
+                data-visible="false"
+                hidden
+                id="_x_extension_newtab_shortcuts_settings_2026_unique_"
+                role="region"
+              >
+                <div className="x-nt-shortcuts-accordion-details-inner">
+                  <div className="x-nt-appearance-setting-row">
+                    <span
+                      {...ref('shortcutAddTitle')}
+                      className="x-nt-appearance-setting-title"
+                    />
+                    <Switch
+                      ariaLabel="Show “+”"
+                      name="shortcutAddToggle"
+                    />
+                  </div>
+                  <div className="x-nt-appearance-setting-row">
+                    <span
+                      {...ref('shortcutDockMagnificationTitle')}
+                      className="x-nt-appearance-setting-title"
+                    />
+                    <Switch
+                      ariaLabel="macOS Dock-style magnification"
+                      name="shortcutDockMagnificationToggle"
+                    />
+                  </div>
+                  <div
+                    {...ref('shortcutColumnsControl')}
+                    aria-hidden="true"
+                    className="x-nt-overlay-control x-nt-shortcut-columns-control"
+                    data-visible="false"
+                  >
+                    <div className="x-nt-overlay-control-header">
+                      <span
+                        {...ref('shortcutColumnsLabel')}
+                        className="x-nt-overlay-label"
+                      />
+                    </div>
+                    <RangeSliderField
+                      {...ref('shortcutColumnsSlider')}
+                      className="x-nt-overlay-slider-wrap x-nt-shortcut-columns-slider-wrap"
+                      defaultValue={String(shortcutColumnsDefault)}
+                      inputClass="x-nt-overlay-slider x-nt-shortcut-columns-slider"
+                      max={String(shortcutColumnsMax)}
+                      min={String(shortcutColumnsMin)}
+                      rowClassName="x-nt-range-slider-row"
+                      step="1"
+                      valueInputProps={{
+                        ...ref('shortcutColumnsSliderValueInput'),
+                        'aria-label': 'Shortcuts per row value',
+                        defaultValue: String(shortcutColumnsDefault),
+                        inputMode: 'numeric'
+                      }}
+                    >
+                      <Scale
+                        className="x-nt-shortcut-columns-scale x-nt-shortcut-layout-scale"
+                        ticks={shortcutColumnTicks}
+                      />
+                    </RangeSliderField>
+                  </div>
+                  <div
+                    {...ref('shortcutSizeControl')}
+                    aria-hidden="true"
+                    className="x-nt-overlay-control x-nt-shortcut-size-control"
+                    data-visible="false"
+                  >
+                    <div className="x-nt-overlay-control-header">
+                      <span
+                        {...ref('shortcutSizeLabel')}
+                        className="x-nt-overlay-label"
+                      />
+                    </div>
+                    <RangeSliderField
+                      {...ref('shortcutSizeSlider')}
+                      className="x-nt-overlay-slider-wrap x-nt-shortcut-size-slider-wrap"
+                      data-value-suffix=" px"
+                      defaultValue={String(shortcutSizeDefault)}
+                      inputClass="x-nt-overlay-slider x-nt-shortcut-size-slider"
+                      max={String(shortcutSizeMax)}
+                      min={String(shortcutSizeMin)}
+                      resetButtonProps={{
+                        ...ref('shortcutSizeResetButton'),
+                        'aria-label': 'Reset shortcut size',
+                        disabled: true,
+                        title: 'Reset shortcut size'
+                      }}
+                      rowClassName="x-nt-range-slider-row"
+                      step="1"
+                      valueInputProps={{
+                        ...ref('shortcutSizeSliderValueInput'),
+                        'aria-label': 'Shortcut size value',
+                        defaultValue: String(shortcutSizeDefault),
+                        inputMode: 'numeric'
+                      }}
+                    >
+                      <Scale
+                        className="x-nt-shortcut-layout-scale"
+                        ticks={shortcutSizeTicks}
+                      />
+                    </RangeSliderField>
+                  </div>
+                  <div
+                    {...ref('shortcutGapControl')}
+                    aria-hidden="true"
+                    className="x-nt-overlay-control x-nt-shortcut-gap-control"
+                    data-visible="false"
+                  >
+                    <div className="x-nt-overlay-control-header">
+                      <span
+                        {...ref('shortcutGapLabel')}
+                        className="x-nt-overlay-label"
+                      />
+                    </div>
+                    <RangeSliderField
+                      {...ref('shortcutGapSlider')}
+                      className="x-nt-overlay-slider-wrap x-nt-shortcut-gap-slider-wrap"
+                      data-value-suffix=" px"
+                      defaultValue={String(shortcutGapDefault)}
+                      inputClass="x-nt-overlay-slider x-nt-shortcut-gap-slider"
+                      max={String(shortcutGapMax)}
+                      min={String(shortcutGapMin)}
+                      resetButtonProps={{
+                        ...ref('shortcutGapResetButton'),
+                        'aria-label': 'Reset shortcut spacing',
+                        disabled: true,
+                        title: 'Reset shortcut spacing'
+                      }}
+                      rowClassName="x-nt-range-slider-row"
+                      step="1"
+                      valueInputProps={{
+                        ...ref('shortcutGapSliderValueInput'),
+                        'aria-label': 'Shortcut spacing value',
+                        defaultValue: String(shortcutGapDefault),
+                        inputMode: 'numeric'
+                      }}
+                    >
+                      <Scale
+                        className="x-nt-shortcut-layout-scale"
+                        ticks={shortcutGapTicks}
+                      />
+                    </RangeSliderField>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="x-nt-panel-divider" />
+          <div className="x-nt-wallpaper-section x-nt-quote-settings">
             <div className="x-nt-wallpaper-panel-header">
-              <span {...ref('quoteTitle')} className="x-nt-appearance-setting-title" />
+              <span className="x-nt-appearance-setting-title-group">
+                <span {...ref('quoteTitle')} className="x-nt-wallpaper-panel-title" />
+                <button
+                  {...ref('quoteInfoButton')}
+                  className="x-nt-appearance-info-button"
+                  dangerouslySetInnerHTML={{
+                    __html: String(model.icons?.info || '')
+                  }}
+                  type="button"
+                />
+              </span>
               <Switch name="quoteEnabledToggle" />
             </div>
-            <div {...ref('quoteBody')} className="x-nt-quote-body" hidden>
-              <SegmentedTabs
-                className="x-nt-wallpaper-tabs x-nt-quote-tabs"
-                indicatorClassName="x-nt-wallpaper-tabs-indicator"
-                indicatorRef="quoteCategoryIndicator"
-                name="quoteCategory"
-                role="group"
-              >
-                {['literature', 'poetry'].map((category) => (
-                  <button
-                    aria-pressed="false"
-                    className="x-nt-segmented-tab x-nt-wallpaper-tab"
-                    data-quote-category={category}
-                    key={category}
-                    type="button"
-                  />
-                ))}
-              </SegmentedTabs>
-              <SegmentedTabs
-                className="x-nt-wallpaper-tabs x-nt-quote-tabs"
-                indicatorClassName="x-nt-wallpaper-tabs-indicator"
-                indicatorRef="quotePositionIndicator"
-                name="quotePosition"
-                role="group"
-              >
-                {['search', 'bottom'].map((position) => (
-                  <button
-                    aria-pressed="false"
-                    className="x-nt-segmented-tab x-nt-wallpaper-tab"
-                    data-quote-position={position}
-                    key={position}
-                    type="button"
-                  />
-                ))}
-              </SegmentedTabs>
-              <div {...ref('quoteFontSizeRow')} className="x-nt-quote-font-size">
-                <span {...ref('quoteFontSizeTitle')} className="x-nt-appearance-setting-title" />
+            <div {...ref('quoteBody')} className="x-nt-quote-body x-nt-panel-collapsible" hidden>
+              <div className="x-nt-appearance-setting-row">
+                <span {...ref('quoteCategoryLabel')} className="x-nt-appearance-setting-title" />
+                <SegmentedTabs
+                  className="x-nt-wallpaper-tabs x-nt-quote-tabs x-nt-row-tabs"
+                  indicatorClassName="x-nt-wallpaper-tabs-indicator"
+                  indicatorRef="quoteCategoryIndicator"
+                  name="quoteCategory"
+                  role="group"
+                >
+                  {['literature', 'poetry'].map((category) => (
+                    <button
+                      aria-pressed="false"
+                      className="x-nt-segmented-tab x-nt-wallpaper-tab"
+                      data-quote-category={category}
+                      key={category}
+                      type="button"
+                    />
+                  ))}
+                </SegmentedTabs>
+              </div>
+              <div className="x-nt-appearance-setting-row">
+                <span {...ref('quotePositionLabel')} className="x-nt-appearance-setting-title" />
+                <SegmentedTabs
+                  className="x-nt-wallpaper-tabs x-nt-quote-tabs x-nt-row-tabs"
+                  indicatorClassName="x-nt-wallpaper-tabs-indicator"
+                  indicatorRef="quotePositionIndicator"
+                  name="quotePosition"
+                  role="group"
+                >
+                  {['search', 'bottom'].map((position) => (
+                    <button
+                      aria-pressed="false"
+                      className="x-nt-segmented-tab x-nt-wallpaper-tab"
+                      data-quote-position={position}
+                      key={position}
+                      type="button"
+                    />
+                  ))}
+                </SegmentedTabs>
+              </div>
+              <div {...ref('quoteFontSizeRow')} className="x-nt-overlay-control x-nt-quote-font-size">
+                <div className="x-nt-overlay-control-header">
+                  <span {...ref('quoteFontSizeTitle')} />
+                </div>
                 <RangeSliderField
                   {...ref('quoteFontSizeSlider')}
                   className="x-nt-overlay-slider-wrap"
@@ -710,7 +804,6 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                 />
               </div>
             </div>
-            <p {...ref('quoteProviderHint')} className="x-nt-quote-provider" />
           </div>
           <div className="x-nt-panel-divider" />
           <div className="x-nt-wallpaper-section">
@@ -718,10 +811,27 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
               {...ref('panelHeader')}
               className="x-nt-wallpaper-panel-header"
             >
-              <div
-                {...ref('panelTitle')}
-                className="x-nt-wallpaper-panel-title"
-              />
+              <button
+                {...ref('wallpaperAccordionTrigger')}
+                aria-controls="_x_extension_newtab_wallpaper_body_2026_unique_"
+                aria-expanded="true"
+                className="x-nt-shortcuts-accordion-trigger x-nt-wallpaper-accordion-trigger"
+                type="button"
+              >
+                <span className="x-nt-appearance-setting-title-group">
+                  <span
+                    {...ref('panelTitle')}
+                    className="x-nt-wallpaper-panel-title"
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="x-nt-shortcuts-accordion-icon"
+                    dangerouslySetInnerHTML={{
+                      __html: String(model.icons?.arrow || '')
+                    }}
+                  />
+                </span>
+              </button>
               <Switch name="enabledToggle" />
             </div>
             <input
@@ -734,8 +844,9 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
             <div
               {...ref('body')}
               aria-hidden="false"
-              className="x-nt-wallpaper-body"
+              className="x-nt-wallpaper-body x-nt-panel-collapsible"
               data-active-tab={model.activeTab || 'built-in'}
+              id="_x_extension_newtab_wallpaper_body_2026_unique_"
               data-visible="true"
             >
               <div className="x-nt-wallpaper-mode-sync">
@@ -845,12 +956,19 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                 />
               </div>
               <div {...ref('bingPanel')} className="x-nt-bing-panel" data-wallpaper-panel="bing" role="tabpanel" aria-hidden="true">
-                <div className="x-nt-bing-daily">
-                  <div className="x-nt-wallpaper-mode-sync">
+                <div className="x-nt-wallpaper-mode-sync">
+                  <span className="x-nt-appearance-setting-title-group">
                     <span {...ref('bingDailyLabel')} className="x-nt-wallpaper-mode-sync-title" />
-                    <Switch name="bingDailyToggle" />
-                  </div>
-                  <p {...ref('bingDailyHint')} className="x-nt-bing-hint" />
+                    <button
+                      {...ref('bingDailyInfoButton')}
+                      className="x-nt-appearance-info-button"
+                      dangerouslySetInnerHTML={{
+                        __html: String(model.icons?.info || '')
+                      }}
+                      type="button"
+                    />
+                  </span>
+                  <Switch name="bingDailyToggle" />
                 </div>
                 <div className="x-nt-bing-recent">
                   <div className="x-nt-overlay-control-header">
@@ -867,21 +985,27 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                   </div>
                   <div {...ref('bingItemsHost')} className="x-nt-wallpaper-grid x-nt-wallpaper-grid--bing" />
                   <div {...ref('bingStatus')} className="x-nt-bing-status" role="status" aria-live="polite" />
-                  <a {...ref('bingSelectedSource')} className="x-nt-bing-source" target="_blank" rel="noopener noreferrer" hidden>
-                    <span className="x-nt-bing-source-heading">
-                      <span {...ref('bingSelectedTitle')} className="x-nt-bing-source-title" />
+                  <div {...ref('bingSelectedSource')} className="x-nt-bing-source" hidden>
+                    <a
+                      {...ref('bingSelectedLink')}
+                      className="x-nt-appearance-more-settings x-nt-bing-source-link"
+                      rel="noopener noreferrer"
+                      target="_blank"
+                    >
+                      <span {...ref('bingSelectedTitle')} />
                       <span
                         aria-hidden="true"
-                        className="x-nt-bing-source-icon"
+                        className="x-nt-appearance-more-settings-icon"
                         dangerouslySetInnerHTML={{
-                          __html: String(model.icons?.external || '')
+                          __html: String(model.icons?.link || '')
                         }}
                       />
-                    </span>
-                    <span {...ref('bingSelectedMeta')} className="x-nt-bing-source-meta" />
-                  </a>
+                    </a>
+                    <p {...ref('bingSelectedMeta')} className="x-nt-bing-source-meta" />
+                  </div>
                 </div>
               </div>
+              <div className="x-nt-panel-divider x-nt-panel-divider--inset" />
               <div className="x-nt-effect-control">
                 <SliderControl
                   controlClass="x-nt-overlay-control x-nt-overlay-control--effect"
@@ -1006,87 +1130,6 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
           </div>
           <div className="x-nt-panel-divider" />
           <div className="x-nt-wallpaper-section">
-            <div className="x-nt-wallpaper-panel-header x-nt-top-content-header">
-              <div
-                {...ref('topContentTitle')}
-                className="x-nt-wallpaper-panel-title"
-              />
-              <SegmentedTabs
-                ariaLabel="Content above the search bar"
-                className="x-nt-wallpaper-tabs x-nt-top-content-tabs"
-                indicatorClassName="x-nt-wallpaper-tabs-indicator"
-                indicatorRef="topContentTabsIndicator"
-                name="topContentTabs"
-                role="group"
-              >
-                {topContentOptions.map((item) => (
-                  <button
-                    {...ref(
-                      item.value === 'brand'
-                        ? 'topContentBrandTab'
-                        : item.value === 'time'
-                          ? 'topContentTimeTab'
-                          : 'topContentOffTab'
-                    )}
-                    aria-pressed={item.value === 'brand'}
-                    className="x-nt-segmented-tab x-nt-wallpaper-tab x-nt-top-content-tab"
-                    data-active={item.value === 'brand' ? 'true' : 'false'}
-                    data-newtab-top-content={item.value}
-                    key={item.value}
-                    type="button"
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </SegmentedTabs>
-            </div>
-            <div
-              {...ref('topContentWeightControl')}
-              aria-hidden="true"
-              className="x-nt-time-weight-control"
-              data-visible="false"
-              hidden
-            >
-              <div className="x-nt-overlay-control-header">
-                <span {...ref('topContentWeightTitle')}>Time font weight</span>
-              </div>
-              <RangeSliderField
-                {...ref('topContentWeightSlider')}
-                className="x-nt-overlay-slider-wrap x-nt-time-weight-slider-wrap"
-                inputClass="x-nt-overlay-slider x-nt-time-weight-slider"
-                max={String(timeFontWeightMax)}
-                min={String(timeFontWeightMin)}
-                rowClassName="x-nt-range-slider-row"
-                step="1"
-                defaultValue={String(timeFontWeightDefault)}
-                valueInputProps={{
-                  ...ref('topContentWeightSliderValueInput'),
-                  'aria-label': 'Time font weight value',
-                  defaultValue: String(timeFontWeightDefault),
-                  inputMode: 'numeric'
-                }}
-              >
-                <Scale ticks={timeFontWeightTicks} />
-              </RangeSliderField>
-            </div>
-            <div
-              {...ref('topContentSecondsRow')}
-              aria-hidden="true"
-              className="x-nt-top-content-seconds-row"
-              data-visible="false"
-              hidden
-            >
-              <span
-                {...ref('topContentSecondsTitle')}
-                className="x-nt-top-content-seconds-title"
-              >
-                Show seconds
-              </span>
-              <Switch
-                ariaLabel="Show seconds"
-                name="topContentSecondsToggle"
-              />
-            </div>
             <div className="x-nt-favicon-group">
               <div
                 {...ref('faviconTitle')}
@@ -1107,6 +1150,24 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
               </div>
             </div>
           </div>
+          <div className="x-nt-panel-divider" />
+          <a
+            {...ref('moreSettingsLink')}
+            className="x-nt-appearance-more-settings"
+            href={model.moreSettingsUrl}
+          >
+            <span
+              {...ref('moreSettingsText')}
+              className="x-nt-appearance-more-settings-text"
+            />
+            <span
+              aria-hidden="true"
+              className="x-nt-appearance-more-settings-icon"
+              dangerouslySetInnerHTML={{
+                __html: String(model.icons?.link || '')
+              }}
+            />
+          </a>
         </div>
       </div>
       <button

@@ -119,9 +119,11 @@
       refs.quoteEnabledToggle.checked = prefs.enabled;
       refs.quoteEnabledToggle.setAttribute('aria-label', title);
       refs.quoteBody.hidden = !prefs.enabled;
-      refs.quoteProviderHint.textContent = t('newtab_quote_provider', 'Powered by Hitokoto');
+      if (refs.quoteInfoButton) refs.quoteInfoButton.setAttribute('aria-label', t('newtab_quote_provider', 'Powered by Hitokoto'));
       refs.quotePosition.setAttribute('aria-label', t('newtab_quote_position', 'Quote position'));
       refs.quoteCategory.setAttribute('aria-label', t('newtab_quote_category', 'Quote category'));
+      if (refs.quotePositionLabel) refs.quotePositionLabel.textContent = t('newtab_quote_position', 'Quote position');
+      if (refs.quoteCategoryLabel) refs.quoteCategoryLabel.textContent = t('newtab_quote_category', 'Quote category');
       syncFontSizeControls(false);
       [refs.quotePosition, refs.quoteCategory].forEach((group) => {
         group.querySelectorAll('button').forEach((item, index) => {

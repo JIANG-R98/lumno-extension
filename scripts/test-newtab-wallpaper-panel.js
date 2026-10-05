@@ -661,7 +661,8 @@ function createFakeWallpaperViewController(config) {
     {},
     'panelHeader'
   );
-  add(panelHeader, 'div', 'x-nt-wallpaper-panel-title', {}, 'panelTitle');
+  const wallpaperAccordionTrigger = add(panelHeader, 'button', 'x-nt-wallpaper-accordion-trigger', {}, 'wallpaperAccordionTrigger');
+  add(wallpaperAccordionTrigger, 'span', 'x-nt-wallpaper-panel-title', {}, 'panelTitle');
   addSwitch(panelHeader, 'enabledToggle');
   add(
     wallpaperSection,
@@ -775,12 +776,14 @@ function createFakeWallpaperViewController(config) {
     'customItemsHost'
   );
   const bingPanel = add(body, 'div', 'x-nt-bing-panel', { 'data-wallpaper-panel': 'bing' }, 'bingPanel');
-  for (const name of ['bingDailyLabel', 'bingDailyHint', 'bingRecentLabel', 'bingStatus', 'bingSelectedTitle', 'bingSelectedMeta']) {
+  for (const name of ['bingDailyLabel', 'bingRecentLabel', 'bingStatus', 'bingSelectedTitle', 'bingSelectedMeta']) {
     add(bingPanel, 'span', '', {}, name);
   }
   addSwitch(bingPanel, 'bingDailyToggle');
   add(bingPanel, 'button', '', {}, 'bingRefresh');
-  add(bingPanel, 'a', '', {}, 'bingSelectedSource');
+  add(bingPanel, 'div', '', {}, 'bingSelectedSource');
+  add(bingPanel, 'a', '', {}, 'bingSelectedLink');
+  add(bingPanel, 'button', '', {}, 'bingDailyInfoButton');
   const bingItemsHost = add(bingPanel, 'div', 'x-nt-wallpaper-grid x-nt-wallpaper-grid--bing', {}, 'bingItemsHost');
   const effectControl = add(body, 'div', 'x-nt-effect-control');
   addSliderControl(
@@ -3813,6 +3816,15 @@ async function testBingDailySelectionAndManualOverride() {
   assert.strictEqual(prefs.data[WALLPAPER_STORAGE_KEY].light, 'dark-monet-lily-nocturne',
     'A completed Bing download must not override a newer manual choice');
   assert.strictEqual(daily.checked, false);
+
+  const accordion = getDescendantByAttribute(control, 'data-wallpaper-ref', 'wallpaperAccordionTrigger');
+  const body = getDescendantByAttribute(control, 'data-wallpaper-ref', 'body');
+  accordion.click();
+  assert.strictEqual(body.getAttribute('data-visible'), 'false', 'Collapsing hides the wallpaper options');
+  assert.strictEqual(accordion.getAttribute('aria-expanded'), 'false');
+  accordion.click();
+  assert.strictEqual(body.getAttribute('data-visible'), 'true', 'Expanding shows the wallpaper options again');
+  assert.strictEqual(accordion.getAttribute('aria-expanded'), 'true');
 }
 
 async function testLegacyOnlineWallpaperMigratesToBing() {
