@@ -77,7 +77,7 @@ assert.match(
 );
 assert.match(
   newtabJs,
-  /getViewportTopInset:\s*getNewtabViewportTopPaddingPx/,
+  /getViewportTopInset:\s*(?:\(\.\.\.args\) => )?getNewtabViewportTopPaddingPx/,
   'newtab custom-select portals should receive the occupied top inset'
 );
 assert.match(
