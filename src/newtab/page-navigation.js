@@ -1,5 +1,6 @@
 (function(root) {
-  // Opening URLs, bookmarks, shortcuts and searches from the New Tab with the\nright tab disposition.
+  // Opening URLs, bookmarks, shortcuts and searches from the New Tab with the
+  // right tab disposition.
   function createPageNavigation(deps) {
     const {
       NAVIGATION_DISPOSITION,

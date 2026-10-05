@@ -1,5 +1,6 @@
 (function(root) {
-  // The feedback button and popover: community links, QR code refresh and\nthe React-rendered control.
+  // The feedback button and popover: community links, QR code refresh and
+  // the React-rendered control.
   function createFeedbackControlRuntime(deps) {
     const {
       COMMUNITY_LINKS,

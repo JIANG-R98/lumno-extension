@@ -1,5 +1,6 @@
 (function(root) {
-  // Shortcut storage, favicons, loading, persistence, rendering and the add/edit\ndialog.
+  // Shortcut storage, favicons, loading, persistence, rendering and the add/edit
+  // dialog.
   function createShortcutsController(deps) {
     const {
       shortcutFolderRuntime,

@@ -1,5 +1,6 @@
 (function(root) {
-  // Binds and hides the New Tab tooltips: top actions, search input, shortcut\ntiles, the shortcut dialog and bookmark cursor tooltips.
+  // Binds and hides the New Tab tooltips: top actions, search input, shortcut
+  // tiles, the shortcut dialog and bookmark cursor tooltips.
   function createTooltipBindings(deps) {
     const {
       topActionTooltipController,

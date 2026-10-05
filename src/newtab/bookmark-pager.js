@@ -1,5 +1,6 @@
 (function(root) {
-  // Bookmark grid paging: page slicing, pager buttons, grid height lock and\nanimated page switches.
+  // Bookmark grid paging: page slicing, pager buttons, grid height lock and
+  // animated page switches.
   function createBookmarkPager(deps) {
     const {
       isBookmarkTopbarMode,
