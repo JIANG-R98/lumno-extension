@@ -42,6 +42,7 @@ const extractedFunctions = [
   'isBlockedLocalFaviconUrl',
   'getFaviconHostPolicy',
   'getFaviconTargetPolicy',
+  'getBackgroundFaviconUrlResolver',
   'resolveSiteThemeColor',
   'buildFaviconFallbackCandidates',
   'dedupeAndSortFaviconCandidates',
@@ -59,7 +60,13 @@ const factory = new Function('deps', 'Buffer', `
   const FAVICON_REQUEST_BLACKLIST_STORAGE_KEY = '_x_extension_favicon_request_blacklist_2026_unique_';
   const FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY = '_x_extension_favicon_enhanced_fetch_enabled_2026_unique_';
   const storageArea = deps.storageArea;
-  const chrome = { runtime: { id: 'test' } };
+  const chrome = { runtime: {
+    id: 'test',
+    getURL(path) { return 'chrome-extension://test' + (path.startsWith('/') ? path : '/' + path); }
+  } };
+  let backgroundFaviconUrlResolver = null;
+  const FAVICON_PROXY_SIZE = 128;
+  function logBackgroundFaviconDecision() {}
   const faviconDataCache = new Map();
   const faviconPending = new Map();
   const siteThemeColorCache = new Map();
@@ -167,6 +174,7 @@ async function run() {
         return host === '192.168.1.8' || host === 'service.internal';
       },
       setBoundedCacheEntry: faviconUtils.setBoundedCacheEntry,
+      createFaviconUrlResolver: faviconUtils.createFaviconUrlResolver,
       isFaviconProxyUrl: faviconUtils.isFaviconProxyUrl,
       isFaviconSourceAllowedByEnhancedFetchPolicy: faviconUtils.isFaviconSourceAllowedByEnhancedFetchPolicy
     },
@@ -240,7 +248,7 @@ async function run() {
   );
   assert.strictEqual(
     deps.fetchCalls[0].url,
-    'chrome-extension://test/_favicon/?pageUrl=https%3A%2F%2Ffoo.blocked.example.com%2Fpage',
+    'chrome-extension://test/_favicon/?pageUrl=https%3A%2F%2Ffoo.blocked.example.com%2Fpage&fallbackToHost=0',
     'virtual favicon data should fetch only the extension favicon endpoint'
   );
 
@@ -298,18 +306,27 @@ async function run() {
   assert.deepStrictEqual(
     result,
     [
-      'chrome-extension://test/_favicon/?pageUrl=https%3A%2F%2Fpublic.example.com%2Fpage'
+      'chrome-extension://test/_favicon/?pageUrl=https%3A%2F%2Fpublic.example.com%2Fpage',
+      'https://t2.gstatic.cn/faviconV2?url=https%3A%2F%2Fpublic.example.com%2Fpage'
     ],
-    'disabled enhanced favicon fetching should keep only the extension virtual favicon candidate'
+    'disabled enhanced favicon fetching should keep browser cache followed by the approved service'
   );
 
   result = await disabledApi.fetchFaviconData('https://foo.example.com/favicon.ico');
   assert.strictEqual(result, null, 'strict mode should reject direct target-site favicon data requests');
+  assert.strictEqual(deps.fetchCalls.length, 0, 'direct target-site requests must not reach fetch');
   result = await disabledApi.fetchFaviconData(
     'https://t2.gstatic.cn/faviconV2?url=https%3A%2F%2Ffoo.example.com%2F'
   );
-  assert.strictEqual(result, null, 'strict mode should reject third-party proxy favicon data requests');
-  assert.strictEqual(deps.fetchCalls.length, 0, 'strict mode should not network-fetch rejected favicon candidates');
+  assert.ok(result.startsWith('data:image/png;base64,'), 'disabled enhanced fetching should allow approved service bytes');
+  assert.strictEqual(deps.fetchCalls.length, 1, 'only the approved service request should reach fetch');
+  assert.strictEqual(deps.fetchCalls[0].options.redirect, 'error');
+
+  result = await disabledApi.fetchFaviconData(
+    'https://t2.gstatic.cn/faviconV2?url=https%3A%2F%2Ffoo.blocked.example.com%2Fpage'
+  );
+  assert.strictEqual(result, null, 'site exclusions must take precedence even with enhanced fetching disabled');
+  assert.strictEqual(deps.fetchCalls.length, 1);
 
   result = await disabledApi.fetchFaviconData(
     'chrome-extension://test/_favicon/?pageUrl=https%3A%2F%2Ffoo.example.com%2F'
@@ -318,7 +335,7 @@ async function run() {
     typeof result === 'string' && result.startsWith('data:image/png;base64,'),
     'strict mode should still allow the extension virtual favicon endpoint'
   );
-  assert.strictEqual(deps.fetchCalls.length, 1, 'strict mode should fetch only the extension virtual favicon endpoint');
+  assert.strictEqual(deps.fetchCalls.length, 2, 'disabled enhanced fetching should allow browser cache and approved services');
 
   const privatePageUrl = 'https://foo.example.com/private';
   const publicPageUrl = 'https://foo.example.com/public';
@@ -379,6 +396,25 @@ async function run() {
   result = await matrixApi.fetchFaviconData(rootIconUrl, publicPageUrl);
   assert.strictEqual(result, null,
     'same-host nonexcluded background paths must not fetch direct favicon bytes');
+
+  const matchingDeps = { ...deps, fetchCalls: [], faviconEnhancedFetchEnabledCache: true };
+  const matchingApi = factory(matchingDeps, Buffer);
+  const dashboardPage = 'https://chrome.google.com/webstore/devconsole?hl=zh-CN';
+  const rootBrowserSource = `chrome-extension://test/_favicon/?pageUrl=${encodeURIComponent('https://chrome.google.com/')}`;
+  assert.ok(await matchingApi.fetchFaviconData(rootBrowserSource), 'root-page icon bytes can be cached for the root page');
+  const callsBeforeMismatch = matchingDeps.fetchCalls.length;
+  assert.strictEqual(await matchingApi.fetchFaviconData(rootBrowserSource, dashboardPage), null,
+    'the shared byte API must reject a wrong-page source before returning cached bytes');
+  assert.strictEqual(matchingDeps.fetchCalls.length, callsBeforeMismatch);
+  const oldDashboardSource = `chrome-extension://test/_favicon/?pageUrl=${encodeURIComponent(dashboardPage)}&fallbackToHost=1`;
+  assert.ok(await matchingApi.fetchFaviconData(oldDashboardSource, dashboardPage));
+  assert.strictEqual(new URL(matchingDeps.fetchCalls.at(-1).url).searchParams.get('fallbackToHost'), '0',
+    'the shared byte API must normalize old host-fallback requests before fetching');
+  const oldChromeFavicon2Source = `chrome://favicon2/?pageUrl=${encodeURIComponent(dashboardPage)}&fallbackToHost=0`;
+  assert.ok(await matchingApi.fetchFaviconData(oldChromeFavicon2Source, dashboardPage));
+  assert.strictEqual(new URL(matchingDeps.fetchCalls.at(-1).url).protocol, 'chrome-extension:',
+    'the shared byte API must never fetch a web-page chrome://favicon2 source with forced host fallback');
+  assert.strictEqual(new URL(matchingDeps.fetchCalls.at(-1).url).searchParams.get('pageUrl'), dashboardPage);
 
   console.log('background favicon blacklist tests passed');
 }

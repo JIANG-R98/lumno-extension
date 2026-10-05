@@ -95,17 +95,28 @@ async function run() {
     enhancedFetchEnabled: false,
     resolve() {
       resolveCalls += 1;
-      return Promise.resolve(fetchedResult);
+      return Promise.resolve(null);
     }
   };
   const cache = createPolicyCache(deps);
   const pageUrl = 'https://example.com/';
 
   assert.strictEqual(await cache.fetchShortcutFaviconData(pageUrl), null);
+  assert.strictEqual(resolveCalls, 1, 'strict mode should still attempt safe cache snapshot resolution');
+  deps.resolve = () => {
+    resolveCalls += 1;
+    return Promise.resolve(fetchedResult);
+  };
   cache.setEnhancedFetchEnabled(true);
   cache.invalidateShortcutFaviconPolicyCache();
   assert.deepStrictEqual(await cache.fetchShortcutFaviconData(pageUrl), fetchedResult);
-  assert.strictEqual(resolveCalls, 1, 'enabling enhanced fetching should retry a previously cached miss');
+  assert.strictEqual(resolveCalls, 2, 'enabling enhanced fetching should retry a previously cached miss');
+
+  deps.resolve = () => Promise.resolve(null);
+  assert.strictEqual(await cache.fetchShortcutFaviconData('https://temporary-miss.example/'), null);
+  deps.resolve = () => Promise.resolve(fetchedResult);
+  assert.deepStrictEqual(await cache.fetchShortcutFaviconData('https://temporary-miss.example/'), fetchedResult,
+    'a temporary cache/network miss must be retried without waiting for policy invalidation');
 
   let resolveOldRequest = null;
   deps.resolve = () => new Promise((resolve) => {
@@ -136,6 +147,22 @@ async function run() {
     freshResult,
     'an old in-flight request should not repopulate the cache after policy invalidation'
   );
+
+  let resolveBeforeRefresh;
+  deps.resolve = () => new Promise((resolve) => { resolveBeforeRefresh = resolve; });
+  const refreshPage = 'https://refresh.example/';
+  const beforeRefresh = cache.fetchShortcutFaviconData(refreshPage);
+  await new Promise((resolve) => setImmediate(resolve));
+  deps.resolve = (...args) => {
+    assert.strictEqual(args[4], true, 'refresh must reach the actual acquisition resolver');
+    return Promise.resolve(freshResult);
+  };
+  assert.deepStrictEqual(await cache.fetchShortcutFaviconData(refreshPage, '', '', true), freshResult,
+    'an explicit refresh must not join an older automatic request');
+  resolveBeforeRefresh(fetchedResult);
+  await beforeRefresh;
+  assert.deepStrictEqual(await cache.fetchShortcutFaviconData(refreshPage), freshResult,
+    'a late automatic response must not overwrite the refreshed result');
 
   assert(
     /if \(changes\[FAVICON_REQUEST_BLACKLIST_STORAGE_KEY\]\)[\s\S]{0,300}invalidateShortcutFaviconPolicyCache\(\)/

@@ -80,50 +80,138 @@
   "settings_selection_quick_actions_group_desc": {
     "message": "所有 AI 网页皆归入「AI 查询」标签组"
   },
-  "selection_quick_actions_group_name": { "message": "AI 查询" },
-  "selection_quick_action_ask": { "message": "解答" },
-  "selection_quick_action_translate": { "message": "翻译" },
-  "selection_quick_action_explain": { "message": "解释" },
-  "selection_quick_action_summarize": { "message": "总结" },
-  "selection_quick_action_search": { "message": "调研" },
-  "selection_quick_action_calculate": { "message": "计算" },
-  "selection_quick_action_open_menu": { "message": "使用 Lumno 处理所选文字" },
-  "selection_quick_action_more": { "message": "更多操作" },
-  "selection_quick_action_sending": { "message": "正在后台打开…" },
-  "selection_quick_action_failed": { "message": "发送失败，请重试" },
-  "selection_debug_decision_title": { "message": "划词判定" },
-  "selection_debug_status_show": { "message": "显示" },
-  "selection_debug_status_hide": { "message": "不显示" },
-  "selection_debug_sort_title": { "message": "菜单排序" },
-  "selection_debug_item_count": { "message": "{count} 项" },
-  "selection_debug_reason_calculate": { "message": "检测到算式、货币或单位换算" },
-  "selection_debug_reason_question": { "message": "检测到明确问句" },
-  "selection_debug_reason_prose": { "message": "检测到词汇足够丰富的完整正文" },
-  "selection_debug_reason_search": { "message": "检测到新闻、价格、官网、版本等检索意图" },
-  "selection_debug_reason_translate": { "message": "所选文字与 Lumno 界面语言不匹配" },
-  "selection_debug_reason_error": { "message": "检测到报错或异常信息" },
-  "selection_debug_reason_code": { "message": "检测到代码结构或代码区域" },
-  "selection_debug_reason_term": { "message": "检测到有意义的短词或术语" },
-  "selection_debug_reason_explain_score": { "message": "解释得分最高" },
-  "selection_debug_reason_top_score": { "message": "该操作的匹配得分最高" },
-  "selection_debug_rejection_disabled": { "message": "划词快捷操作的功能开关未开启" },
-  "selection_debug_rejection_sensitive": { "message": "所选区域属于密码、支付或其他敏感字段，未读取内容" },
-  "selection_debug_rejection_no_selection": { "message": "未获取到有效的文字选区" },
-  "selection_debug_rejection_too_short": { "message": "少于 2 个字符" },
-  "selection_debug_rejection_too_long": { "message": "超过 2400 个字符" },
-  "selection_debug_rejection_url": { "message": "内容是完整网址" },
-  "selection_debug_rejection_email": { "message": "内容是邮箱地址" },
-  "selection_debug_rejection_generic_ui": { "message": "命中“了解更多 / 保存 / 下一步”等通用界面文案" },
-  "selection_debug_rejection_plain_number": { "message": "只是普通数字，未构成计算或换算" },
-  "selection_debug_rejection_symbols": { "message": "符号占比过高" },
-  "selection_debug_rejection_no_intent": { "message": "未命中明确任务、有意义术语或足够完整的正文" },
-  "selection_debug_primary_meta": { "message": "首选：{action} · 得分 {score} · {confidence}置信度" },
-  "selection_debug_confidence_high": { "message": "高" },
-  "selection_debug_confidence_medium": { "message": "中" },
-  "selection_debug_confidence_low": { "message": "低" },
-  "selection_debug_sort_primary_cause": { "message": "{reason}，得分 {score}" },
-  "selection_debug_sort_fallback_cause": { "message": "通用备选，按固定顺序补齐并去重" },
-  "selection_debug_sort_footer": { "message": "首项取意图得分最高者；其余按“解释 → 调研 → 翻译”补齐。" },
+  "selection_quick_actions_group_name": {
+    "message": "AI 查询"
+  },
+  "selection_quick_action_ask": {
+    "message": "解答"
+  },
+  "selection_quick_action_translate": {
+    "message": "翻译"
+  },
+  "selection_quick_action_explain": {
+    "message": "解释"
+  },
+  "selection_quick_action_summarize": {
+    "message": "总结"
+  },
+  "selection_quick_action_search": {
+    "message": "调研"
+  },
+  "selection_quick_action_calculate": {
+    "message": "计算"
+  },
+  "selection_quick_action_open_menu": {
+    "message": "使用 Lumno 处理所选文字"
+  },
+  "selection_quick_action_more": {
+    "message": "更多操作"
+  },
+  "selection_quick_action_sending": {
+    "message": "正在后台打开…"
+  },
+  "selection_quick_action_failed": {
+    "message": "发送失败，请重试"
+  },
+  "selection_debug_decision_title": {
+    "message": "划词判定"
+  },
+  "selection_debug_status_show": {
+    "message": "显示"
+  },
+  "selection_debug_status_hide": {
+    "message": "不显示"
+  },
+  "selection_debug_sort_title": {
+    "message": "菜单排序"
+  },
+  "selection_debug_item_count": {
+    "message": "{count} 项"
+  },
+  "selection_debug_reason_calculate": {
+    "message": "检测到算式、货币或单位换算"
+  },
+  "selection_debug_reason_question": {
+    "message": "检测到明确问句"
+  },
+  "selection_debug_reason_prose": {
+    "message": "检测到词汇足够丰富的完整正文"
+  },
+  "selection_debug_reason_search": {
+    "message": "检测到新闻、价格、官网、版本等检索意图"
+  },
+  "selection_debug_reason_translate": {
+    "message": "所选文字与 Lumno 界面语言不匹配"
+  },
+  "selection_debug_reason_error": {
+    "message": "检测到报错或异常信息"
+  },
+  "selection_debug_reason_code": {
+    "message": "检测到代码结构或代码区域"
+  },
+  "selection_debug_reason_term": {
+    "message": "检测到有意义的短词或术语"
+  },
+  "selection_debug_reason_explain_score": {
+    "message": "解释得分最高"
+  },
+  "selection_debug_reason_top_score": {
+    "message": "该操作的匹配得分最高"
+  },
+  "selection_debug_rejection_disabled": {
+    "message": "划词快捷操作的功能开关未开启"
+  },
+  "selection_debug_rejection_sensitive": {
+    "message": "所选区域属于密码、支付或其他敏感字段，未读取内容"
+  },
+  "selection_debug_rejection_no_selection": {
+    "message": "未获取到有效的文字选区"
+  },
+  "selection_debug_rejection_too_short": {
+    "message": "少于 2 个字符"
+  },
+  "selection_debug_rejection_too_long": {
+    "message": "超过 2400 个字符"
+  },
+  "selection_debug_rejection_url": {
+    "message": "内容是完整网址"
+  },
+  "selection_debug_rejection_email": {
+    "message": "内容是邮箱地址"
+  },
+  "selection_debug_rejection_generic_ui": {
+    "message": "命中“了解更多 / 保存 / 下一步”等通用界面文案"
+  },
+  "selection_debug_rejection_plain_number": {
+    "message": "只是普通数字，未构成计算或换算"
+  },
+  "selection_debug_rejection_symbols": {
+    "message": "符号占比过高"
+  },
+  "selection_debug_rejection_no_intent": {
+    "message": "未命中明确任务、有意义术语或足够完整的正文"
+  },
+  "selection_debug_primary_meta": {
+    "message": "首选：{action} · 得分 {score} · {confidence}置信度"
+  },
+  "selection_debug_confidence_high": {
+    "message": "高"
+  },
+  "selection_debug_confidence_medium": {
+    "message": "中"
+  },
+  "selection_debug_confidence_low": {
+    "message": "低"
+  },
+  "selection_debug_sort_primary_cause": {
+    "message": "{reason}，得分 {score}"
+  },
+  "selection_debug_sort_fallback_cause": {
+    "message": "通用备选，按固定顺序补齐并去重"
+  },
+  "selection_debug_sort_footer": {
+    "message": "首项取意图得分最高者；其余按“解释 → 调研 → 翻译”补齐。"
+  },
   "settings_global_section_title": {
     "message": "全局设置"
   },
@@ -187,6 +275,18 @@
   "settings_search_result_priority_title": {
     "message": "搜索结果首位优先级"
   },
+  "settings_search_result_tab_position_title": {
+    "message": "搜索结果标签页打开位置"
+  },
+  "search_result_tab_position_end": {
+    "message": "标签栏最右侧（最下方）"
+  },
+  "search_result_tab_position_after_current": {
+    "message": "当前标签页右侧（下方）"
+  },
+  "search_result_tab_position_before_current": {
+    "message": "当前标签页左侧（上方）"
+  },
   "settings_search_result_sources_title": {
     "message": "显示结果类型"
   },
@@ -200,7 +300,7 @@
     "message": "增强图标与主题色获取"
   },
   "settings_favicon_enhanced_fetch_desc": {
-    "message": "若遇到本地网络访问权限提示，可关闭此功能。关闭后仅使用浏览器缓存、Lumno 内置或通用图标。"
+    "message": "若遇到本地网络访问权限提示，可关闭此功能。关闭后不直接加载网站图片，仍可使用浏览器缓存、内置图标和第三方图标服务。"
   },
   "favicon_blacklist_section_desc": {
     "message": "按网站排除"
@@ -916,13 +1016,21 @@
   "newtab_wallpaper_effect_texture": {
     "message": "纹理"
   },
-  "newtab_wallpaper_effect_blocks_size": { "message": "积木尺寸" },
+  "newtab_wallpaper_effect_blocks_size": {
+    "message": "积木尺寸"
+  },
   "newtab_wallpaper_effect_crt_strength": {
     "message": "显示强度"
   },
-  "newtab_wallpaper_effect_crt_bloom": { "message": "光晕" },
-  "newtab_wallpaper_effect_crt_rgb_offset": { "message": "RGB 偏移" },
-  "newtab_wallpaper_effect_crt_curvature": { "message": "屏幕曲率" },
+  "newtab_wallpaper_effect_crt_bloom": {
+    "message": "光晕"
+  },
+  "newtab_wallpaper_effect_crt_rgb_offset": {
+    "message": "RGB 偏移"
+  },
+  "newtab_wallpaper_effect_crt_curvature": {
+    "message": "屏幕曲率"
+  },
   "newtab_wallpaper_effect_none": {
     "message": "关闭"
   },
@@ -1398,7 +1506,7 @@
     "message": "编辑书签"
   },
   "bookmarks_edit_folder_dialog_title": {
-    "message": "编辑文件夹"
+    "message": "重命名文件夹"
   },
   "bookmarks_name_placeholder": {
     "message": "名称"
@@ -1776,7 +1884,7 @@
     "message": "聚合搜索自动创建标签页组"
   },
   "settings_aggregate_search_auto_group_desc": {
-    "message": "开启后，聚合搜索打开的所有标签页会归入同一组，并以搜索关键词命名"
+    "message": "开启后，聚合搜索打开的所有标签页会归入同一组，并以“聚合名称：搜索关键词”命名"
   },
   "aggregate_search_badge": {
     "message": "聚合"
@@ -1827,10 +1935,10 @@
     "message": "微信公众号"
   },
   "settings_sync_title": {
-    "message": "浏览器内置同步"
+    "message": "{browser} 内置同步"
   },
   "settings_sync_section_title": {
-    "message": "同步方式"
+    "message": "浏览器内置同步"
   },
   "settings_sync_desc": {
     "message": "配置通过当前浏览器的内置同步服务自动同步"
@@ -2114,17 +2222,107 @@
   "newtab_shortcuts_url_label": {
     "message": "网址"
   },
+  "newtab_shortcuts_url_info_label": {
+    "message": "支持的网址说明"
+  },
+  "newtab_shortcuts_url_info": {
+    "message": "也支持浏览器内置页面，例如：\nchrome://inspect/#devices"
+  },
   "newtab_shortcuts_url_placeholder": {
     "message": "https://example.com"
   },
   "newtab_shortcuts_icon_label": {
     "message": "图标（可选）"
   },
+  "newtab_shortcuts_icon_mode_label": {
+    "message": "图标来源"
+  },
+  "newtab_shortcuts_icon_builtin": {
+    "message": "内置图标"
+  },
+  "newtab_shortcuts_icon_builtin_hint": {
+    "message": "直接使用 Lumno 内置的高清图标。"
+  },
+  "newtab_shortcuts_icon_builtin_network_hint": {
+    "message": "无需联网获取。"
+  },
+  "newtab_shortcuts_icon_builtin_info_label": {
+    "message": "内置图标说明"
+  },
+  "newtab_shortcuts_icon_service": {
+    "message": "Gstatic（第三方图标服务）"
+  },
+  "newtab_shortcuts_icon_favicon_is": {
+    "message": "Favicon.is（第三方图标服务）"
+  },
+  "newtab_shortcuts_icon_favicon_is_hint": {
+    "message": "向 Favicon.is 发送域名，优先获取大尺寸图标。"
+  },
+  "newtab_shortcuts_icon_favicon_is_caution": {
+    "message": "按域名匹配，可能与当前页面图标不同。"
+  },
+  "newtab_shortcuts_icon_cache": {
+    "message": "浏览器缓存"
+  },
+  "newtab_shortcuts_icon_service_hint": {
+    "message": "向 Gstatic 发送域名获取图标，稳定、高清。"
+  },
+  "newtab_shortcuts_icon_cache_hint": {
+    "message": "读取浏览器缓存，快速、匹配准确。"
+  },
+  "newtab_shortcuts_icon_custom_hint": {
+    "message": "默认保存在本机，不参与浏览器同步。"
+  },
+  "newtab_shortcuts_icon_service_caution": {
+    "message": "部分网站可能无法识别。"
+  },
+  "newtab_shortcuts_icon_cache_caution": {
+    "message": "受网站设置影响，可能带通知红点或较模糊。"
+  },
+  "newtab_shortcuts_icon_custom_sync_hint": {
+    "message": "可通过 WebDAV 跨设备同步。"
+  },
+  "newtab_shortcuts_icon_refresh_success": {
+    "message": "获取成功"
+  },
+  "newtab_shortcuts_icon_cache_failed": {
+    "message": "未找到缓存图标。先访问这个网站，再点刷新。"
+  },
+  "newtab_shortcuts_icon_source_unavailable": {
+    "message": "此来源暂不可用，请选择浏览器缓存或自定义图标。"
+  },
+  "newtab_shortcuts_icon_online": {
+    "message": "在线图标"
+  },
+  "newtab_shortcuts_icon_custom": {
+    "message": "自定义图标"
+  },
+  "newtab_shortcuts_icon_current": {
+    "message": "当前图标"
+  },
+  "newtab_shortcuts_icon_refresh": {
+    "message": "刷新"
+  },
+  "newtab_shortcuts_icon_refreshing": {
+    "message": "刷新中…"
+  },
+  "newtab_shortcuts_icon_refresh_failed": {
+    "message": "图标刷新失败，请稍后重试"
+  },
+  "newtab_shortcuts_icon_custom_required": {
+    "message": "请选择一张图片作为自定义图标"
+  },
+  "newtab_shortcuts_icon_online_info_label": {
+    "message": "在线图标说明"
+  },
+  "newtab_shortcuts_icon_online_info": {
+    "message": "在线图标保持固定，刷新并保存后才会更新。刷新使用图标服务或浏览器缓存。"
+  },
   "newtab_shortcuts_icon_info_label": {
     "message": "本地图标说明"
   },
   "newtab_shortcuts_icon_info": {
-    "message": "支持 PNG、JPG、WebP；推荐使用 128×128 px 以上、透明背景的正方形图标。仅保存在本设备。"
+    "message": "支持 PNG、JPG、WebP；推荐使用 128×128 px 以上、透明背景的正方形图标。默认保存在本机，可通过 WebDAV 同步。"
   },
   "newtab_shortcuts_icon_choose": {
     "message": "选择图片"
@@ -2147,6 +2345,54 @@
   "newtab_shortcuts_icon_storage_error": {
     "message": "本地图标保存失败，请尝试其他图片"
   },
+  "folder_rename": {
+    "message": "重命名"
+  },
+  "folder_color_change": {
+    "message": "修改颜色"
+  },
+  "folder_color_format": {
+    "message": "色值格式"
+  },
+  "folder_color_title": {
+    "message": "文件夹颜色"
+  },
+  "folder_color_description": {
+    "message": "快捷栏与菜单中的同一文件夹也会使用此颜色，保存在当前设备。"
+  },
+  "folder_color_presets": {
+    "message": "预设颜色"
+  },
+  "folder_color_reset": {
+    "message": "恢复默认"
+  },
+  "folder_color_reset_tooltip": {
+    "message": "恢复默认颜色"
+  },
+  "folder_color_saved": {
+    "message": "已保存的颜色"
+  },
+  "folder_color_save_current": {
+    "message": "保存当前颜色"
+  },
+  "folder_color_remove_saved": {
+    "message": "删除已保存的颜色"
+  },
+  "folder_color_saved_delete_failed": {
+    "message": "无法删除此颜色，请重试。"
+  },
+  "folder_color_saved_load_failed": {
+    "message": "无法加载已保存的颜色，请重新打开取色器重试。"
+  },
+  "folder_color_saved_save_failed": {
+    "message": "无法保存此颜色，请重试。"
+  },
+  "folder_color_invalid": {
+    "message": "请输入有效的 HEX 色值，或 0–255 范围内的 RGB 色值。"
+  },
+  "folder_color_save_failed": {
+    "message": "无法保存文件夹颜色，请重试。"
+  },
   "newtab_shortcuts_cancel": {
     "message": "取消"
   },
@@ -2157,7 +2403,7 @@
     "message": "保存"
   },
   "newtab_shortcuts_invalid_url": {
-    "message": "请输入有效的 http 或 https 网址"
+    "message": "请输入有效的 http、https 或浏览器内置页面网址"
   },
   "newtab_shortcuts_limit_reached": {
     "message": "最多可添加 {count} 个快捷方式。"
@@ -2173,6 +2419,27 @@
   },
   "newtab_shortcuts_removed": {
     "message": "已移除快捷方式"
+  },
+  "newtab_shortcuts_removed_undo": {
+    "message": "已移除快捷方式 · 按 {shortcut} 撤回"
+  },
+  "newtab_shortcuts_remove_undone": {
+    "message": "已恢复快捷方式 · 按 {shortcut} 重做"
+  },
+  "newtab_shortcuts_remove_redone": {
+    "message": "已重新移除快捷方式 · 按 {shortcut} 撤回"
+  },
+  "newtab_shortcuts_open_folder": {
+    "message": "打开文件夹"
+  },
+  "newtab_shortcuts_from_bookmarks": {
+    "message": "（来自书签栏）"
+  },
+  "newtab_shortcuts_folder_added": {
+    "message": "已添加文件夹快捷入口"
+  },
+  "newtab_shortcuts_folder_missing": {
+    "message": "此收藏夹文件夹已不存在。"
   },
   "newtab_shortcuts_moved_to_bookmarks": {
     "message": "已移到书签"
@@ -2192,10 +2459,325 @@
   "settings_tab_switcher_desc": {
     "message": "快速切换最近标签页，默认 {shortcut}，可自定义"
   },
-  "slash_command_empty": { "message": "无匹配命令" },
-  "command_tabs_title": { "message": "仅搜索已打开的标签页" },
-  "command_tabs_action": { "message": "搜索标签页" },
-  "command_copy_title": { "message": "复制当前页面链接" },
-  "command_copy_action": { "message": "复制链接" },
-  "settings_tab_account": { "message": "账号与同步" }
+  "slash_command_empty": {
+    "message": "无匹配命令"
+  },
+  "command_tabs_title": {
+    "message": "仅搜索已打开的标签页"
+  },
+  "command_tabs_action": {
+    "message": "搜索标签页"
+  },
+  "command_copy_title": {
+    "message": "复制当前页面链接"
+  },
+  "command_copy_action": {
+    "message": "复制链接"
+  },
+  "settings_tab_account": {
+    "message": "账号与同步"
+  },
+  "webdav_endpoint": {
+    "message": "服务器地址（HTTPS）"
+  },
+  "webdav_directory": {
+    "message": "同步目录"
+  },
+  "webdav_username": {
+    "message": "用户名"
+  },
+  "webdav_password": {
+    "message": "应用密码"
+  },
+  "webdav_credentials_hint": {
+    "message": "连接信息仅保存在本机，其他设备需分别配置。保存配置后再开启同步。"
+  },
+  "webdav_password_saved": {
+    "message": "已保存；留空保持不变"
+  },
+  "webdav_last_sync": {
+    "message": "最近同步"
+  },
+  "webdav_backup_complete": {
+    "message": "Chrome 配置副本已更新（不含图片）"
+  },
+  "webdav_backup_partial": {
+    "message": "Chrome 配置副本不完整；完整数据保存在本机"
+  },
+  "webdav_backup_failed": {
+    "message": "Chrome 配置副本更新失败；完整数据保存在本机"
+  },
+  "webdav_choice_hint": {
+    "message": "远端已有配置，请选择保留本机版本或使用远端版本。替换前会保留本机备份，Chrome 同步继续运行。"
+  },
+  "webdav_conflict_hint": {
+    "message": "两端修改了相同内容，WebDAV 正等待处理。请选择冲突内容采用的版本，其他改动仍会合并；替换前会保留备份。Chrome 同步继续运行。"
+  },
+  "webdav_error_endpoint": {
+    "message": "请输入有效的 HTTPS WebDAV 地址。"
+  },
+  "webdav_error_directory": {
+    "message": "同步目录无效，请使用普通目录名称。"
+  },
+  "webdav_error_credentials": {
+    "message": "请输入用户名和应用密码。"
+  },
+  "webdav_error_auth": {
+    "message": "认证失败，请检查用户名和应用密码。"
+  },
+  "webdav_error_permission": {
+    "message": "服务器拒绝访问，请检查目录的读写权限。"
+  },
+  "webdav_error_rate": {
+    "message": "服务器请求次数受限，请稍后重试。"
+  },
+  "webdav_error_capacity": {
+    "message": "WebDAV 空间不足，请释放空间后重试。"
+  },
+  "webdav_error_conditional": {
+    "message": "该服务器不能可靠防止同时覆盖，暂不支持自动同步。"
+  },
+  "webdav_error_changed": {
+    "message": "同步期间配置发生变化，本机数据已保留，将再次同步。"
+  },
+  "webdav_error_missing": {
+    "message": "远端配置已被删除。选择上传本机配置以重新建立同步，或检查服务器地址。"
+  },
+  "webdav_error_chrome_capacity": {
+    "message": "配置超过 Chrome 同步容量，WebDAV 未应用该版本。原有 Chrome 同步和本机数据保留，请减少配置内容后重试。"
+  },
+  "webdav_error_network": {
+    "message": "连接失败或超时，请检查网络、服务器地址和证书。本机数据已保留。"
+  },
+  "webdav_error_invalid": {
+    "message": "远端配置格式无效或过大，本机数据未被替换。"
+  },
+  "webdav_error_asset": {
+    "message": "图片缺失、损坏或格式不支持，本机配置已保留。"
+  },
+  "webdav_error_storage": {
+    "message": "无法保存同步数据，请检查浏览器的本地存储。"
+  },
+  "webdav_error_shortcuts": {
+    "message": "恢复后快捷方式数量会超出上限，请先减少本机文件夹快捷方式。"
+  },
+  "webdav_error_generic": {
+    "message": "同步失败，请稍后重试。本机数据已保留。"
+  },
+  "webdav_test": {
+    "message": "测试连接"
+  },
+  "webdav_enable": {
+    "message": "保存并启用"
+  },
+  "webdav_sync": {
+    "message": "立即同步"
+  },
+  "webdav_pause": {
+    "message": "暂停 WebDAV"
+  },
+  "webdav_browser": {
+    "message": "切回浏览器同步"
+  },
+  "webdav_restore_backup": {
+    "message": "恢复替换前的本机配置"
+  },
+  "webdav_use_remote": {
+    "message": "使用远端版本"
+  },
+  "webdav_use_local": {
+    "message": "保留本机版本"
+  },
+  "webdav_test_success": {
+    "message": "连接、读写和并发保护验证通过"
+  },
+  "webdav_state_browser": {
+    "message": "未开启"
+  },
+  "webdav_state_ready": {
+    "message": "已同步"
+  },
+  "webdav_state_syncing": {
+    "message": "正在同步…"
+  },
+  "webdav_state_paused": {
+    "message": "已暂停"
+  },
+  "webdav_state_pending": {
+    "message": "等待同步"
+  },
+  "webdav_state_choice": {
+    "message": "等待选择"
+  },
+  "webdav_state_conflict": {
+    "message": "配置冲突"
+  },
+  "webdav_state_error": {
+    "message": "同步失败"
+  },
+  "webdav_error_interrupted": {
+    "message": "上次配置替换未完成，已暂停上传。可恢复替换前的本机配置，或重新连接并使用远端配置。"
+  },
+  "webdav_missing_hint": {
+    "message": "远端配置已不存在。上传本机配置可重新建立同步；也可以先检查服务器地址。"
+  },
+  "webdav_restore_success": {
+    "message": "已恢复本机备份并暂停这条 WebDAV 连接。"
+  },
+  "webdav_chrome_backup_title": {
+    "message": "Chrome 配置副本"
+  },
+  "webdav_error_locked": {
+    "message": "另一台设备正在写入，请稍后重试。若长期无法恢复，请按 WebDAV 接入说明处理残留锁。"
+  },
+  "webdav_error_lock_recovery": {
+    "message": "远端写入未能安全结束，已保留写入保护。请先暂停所有设备的同步并确认中断请求已结束，再清理远端同步目录下的 v1/write-lock 文件夹。"
+  },
+  "webdav_error_outdated": {
+    "message": "请重新加载 Lumno 扩展，再刷新设置页以使用多连接同步。"
+  },
+  "webdav_client_revision": {
+    "message": "连接检测版本"
+  },
+  "webdav_title": {
+    "message": "WebDAV 同步"
+  },
+  "webdav_beta_hint": {
+    "message": "通过 WebDAV 服务器同步配置、自定义图标和壁纸，与浏览器内置同步同时运行。可添加多个连接，分别开启同步。\n\n目前为 Beta 版本，可能出现同步失败或配置异常。欢迎反馈问题，帮助我们改进。"
+  },
+  "webdav_setup_hint": {
+    "message": "添加并保存服务器配置后，开启对应连接的同步。"
+  },
+  "webdav_unsaved_hint": {
+    "message": "连接配置尚未保存，请保存后再开启同步。"
+  },
+  "webdav_configure": {
+    "message": "配置服务器"
+  },
+  "webdav_edit_config": {
+    "message": "编辑连接配置"
+  },
+  "webdav_save": {
+    "message": "保存配置"
+  },
+  "webdav_save_success": {
+    "message": "连接配置已保存在本机，可开启 WebDAV 同步。"
+  },
+  "webdav_edit_active_hint": {
+    "message": "保存会暂停这条 WebDAV 连接。其他连接与 Chrome 同步继续运行。保存后可重新开启。"
+  },
+  "webdav_never_synced": {
+    "message": "尚未同步"
+  },
+  "webdav_state_saving": {
+    "message": "正在保存配置"
+  },
+  "webdav_state_testing": {
+    "message": "正在测试连接"
+  },
+  "webdav_choice_title": {
+    "message": "选择初始同步版本"
+  },
+  "webdav_conflict_title": {
+    "message": "同步内容存在冲突"
+  },
+  "webdav_conflict_items": {
+    "message": "有冲突的内容"
+  },
+  "webdav_conflict_shortcuts": {
+    "message": "快捷方式及图标"
+  },
+  "webdav_conflict_wallpapers": {
+    "message": "壁纸及选图"
+  },
+  "webdav_conflict_preferences": {
+    "message": "设置项"
+  },
+  "webdav_resolve_later": {
+    "message": "稍后处理并暂停"
+  },
+  "webdav_add": {
+    "message": "添加 WebDAV"
+  },
+  "webdav_remove": {
+    "message": "删除 WebDAV 配置"
+  },
+  "webdav_remove_confirm": {
+    "message": "删除这条本机连接配置？服务器上的文件会保留。"
+  },
+  "newtab_quote_title": {
+    "message": "每日名句"
+  },
+  "newtab_quote_position": {
+    "message": "名句位置"
+  },
+  "newtab_quote_category": {
+    "message": "名句类型"
+  },
+  "newtab_quote_off": {
+    "message": "关闭"
+  },
+  "newtab_quote_search": {
+    "message": "快捷方式下方"
+  },
+  "newtab_quote_bottom": {
+    "message": "页面底部"
+  },
+  "newtab_quote_literature": {
+    "message": "文学"
+  },
+  "newtab_quote_poetry": {
+    "message": "诗词"
+  },
+  "newtab_quote_source": {
+    "message": "查看一言出处"
+  },
+  "newtab_quote_save_error": {
+    "message": "名句设置保存失败"
+  },
+  "newtab_quote_fallback_text": {
+    "message": "千里之行，始于足下。"
+  },
+  "newtab_quote_fallback_author": {
+    "message": "老子"
+  },
+  "newtab_quote_fallback_source": {
+    "message": "道德经"
+  },
+  "newtab_bing_daily": {
+    "message": "每日壁纸"
+  },
+  "newtab_bing_daily_hint": {
+    "message": "每天跟随 Bing 更新，关闭后固定当前壁纸。"
+  },
+  "newtab_bing_recent": {
+    "message": "最近一周"
+  },
+  "newtab_bing_refresh": {
+    "message": "刷新"
+  },
+  "newtab_bing_loading": {
+    "message": "正在加载壁纸…"
+  },
+  "newtab_bing_saving": {
+    "message": "正在保存壁纸…"
+  },
+  "newtab_bing_error": {
+    "message": "壁纸加载失败，请稍后重试。"
+  },
+  "newtab_bing_save_error": {
+    "message": "壁纸保存失败，请稍后重试。"
+  },
+  "newtab_bing_source": {
+    "message": "查看壁纸来源"
+  },
+  "newtab_quote_font_size": {
+    "message": "字号"
+  },
+  "newtab_quote_font_size_label": {
+    "message": "名句字号（px）"
+  },
+  "newtab_quote_provider": {
+    "message": "由一言提供服务"
+  }
 }

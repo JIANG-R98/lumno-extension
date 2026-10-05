@@ -32,7 +32,9 @@
   }
 
   const chromeApi = window.chrome || (typeof chrome !== 'undefined' ? chrome : null);
-  const storage = chromeApi && chromeApi.storage
+  const providerRuntime = typeof settings.createProviderStorageRuntime === 'function'
+    ? settings.createProviderStorageRuntime(chromeApi) : null;
+  const storage = providerRuntime ? providerRuntime.area : chromeApi && chromeApi.storage
     ? (chromeApi.storage.sync || chromeApi.storage.local)
     : null;
   if (!storage || typeof storage.get !== 'function') {

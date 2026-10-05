@@ -16,6 +16,7 @@ docs/*
 !docs/account-sync-architecture.md
 !docs/supabase-deployment.md
 !docs/cloud-sync-compatibility-playbook.md
+!docs/webdav-sync.md
 !docs/privacy-policy-draft.md
 !docs/chrome-web-store-data-disclosure.md
 supabase/.temp/

@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const shortcutFavicon = require('../src/shared/shortcut-favicon.js');
+const searchUtils = require('../src/shared/search-utils.js');
 
 function createPngHeader(width, height) {
   const bytes = new Uint8Array(24);
@@ -129,6 +130,12 @@ function testResourceInspection() {
     '64px raster artwork is too small for a 36px icon on a 2x display'
   );
   assert.strictEqual(shortcutFavicon.MIN_ICON_DIMENSION, 128);
+  assert.strictEqual(shortcutFavicon.inspectIconResource(createPngHeader(32, 32),
+    'image/png', 'https://t2.gstatic.cn/faviconV2', {}, { minDimension: 16 }).usable, true,
+  'shortcut acquisition should accept an existing small favicon instead of hiding it');
+  assert.strictEqual(shortcutFavicon.inspectIconResource(mislabeledHtml.buffer,
+    'image/png', 'https://t2.gstatic.cn/faviconV2', {}, { minDimension: 16 }).usable, false,
+  'small-icon fallback must still reject HTML responses');
   assert.strictEqual(vector.usable, true);
   assert.strictEqual(vector.vector, true);
   assert.strictEqual(invalid.usable, false);
@@ -168,6 +175,42 @@ async function testLocalCache() {
   );
   await store.writeAll(loaded);
   assert.deepStrictEqual(storage.data[shortcutFavicon.DEFAULT_STORAGE_KEY], loaded);
+}
+
+function testStableShortcutArtwork() {
+  const providers = searchUtils.getDefaultSiteSearchProviders();
+  assert.strictEqual(shortcutFavicon.getBundledShortcutIconAssetPath(
+    'https://github.com/kubai087/lumno-extension', providers
+  ), 'assets/images/site-search/glyph-gh.svg', 'GitHub shortcuts should load the transparent original glyph');
+  assert.strictEqual(shortcutFavicon.getSiteSearchPinnedIconAssetPath({ key: 'gh' }),
+    'assets/images/site-search/tile-gh.png', 'search-provider tiles should retain their own artwork');
+  assert.deepStrictEqual(Object.keys(shortcutFavicon.SHORTCUT_PINNED_ICON_ASSETS),
+    Object.keys(shortcutFavicon.SITE_SEARCH_PINNED_ICON_ASSETS), 'both surfaces should cover the complete built-in catalog');
+  Object.values(shortcutFavicon.SHORTCUT_PINNED_ICON_ASSETS).forEach((assetPath) => {
+    assert.ok(fs.existsSync(assetPath), `${assetPath} should be bundled locally`);
+  });
+  assert.strictEqual(shortcutFavicon.getBundledShortcutIconAssetPath(
+    'https://www.xiaohongshu.com/explore?unread=3', providers
+  ), 'assets/images/site-search/glyph-xhs.png', 'Xiaohongshu shortcuts should use original bundled artwork without an extra tile');
+  assert.strictEqual(shortcutFavicon.getBundledShortcutIconAssetPath(
+    'https://xiaohongshu.com/explore?unread=8', providers
+  ), 'assets/images/site-search/glyph-xhs.png', 'www aliases and notification queries must not change the icon');
+  assert.strictEqual(shortcutFavicon.getBundledShortcutIconAssetPath(
+    'https://xiaohongshu.com.example.com/', providers
+  ), '', 'unrelated hosts must not receive a bundled brand icon');
+  const now = Date.now();
+  const fiveYearsAgo = now - (1000 * 60 * 60 * 24 * 365 * 5);
+  const dataUrl = 'data:image/png;base64,c25hcHNob3Q=';
+  let cache = {};
+  for (let index = 0; index < 60; index += 1) {
+    cache = shortcutFavicon.setCachedIcon(cache, `https://shortcut-${index}.example/`,
+      dataUrl, '', fiveYearsAgo + index);
+  }
+  assert.strictEqual(Object.keys(shortcutFavicon.normalizeCacheMap(cache, now)).length, 60,
+    'all 60 shortcut snapshots should survive across long periods without refetching');
+  assert.strictEqual(shortcutFavicon.getCachedIconDataUrl(cache, 'https://shortcut-0.example/', now), dataUrl);
+  assert.strictEqual(Object.keys(shortcutFavicon.normalizeCacheMap(cache, now, { cacheTtlMs: 1000 })).length, 0,
+    'explicit finite cache policies must continue to expire old entries');
 }
 
 async function testConcurrentCacheUpdates() {
@@ -254,7 +297,7 @@ async function testDedicatedSiteSearchCachePolicy() {
   assert.strictEqual(
     Object.keys(cache).length,
     30,
-    'the dedicated provider cache should not inherit the 24-shortcut entry cap'
+    'the dedicated provider cache should retain its independent entry cap'
   );
 
   const fiveMonthsAgo = now - (1000 * 60 * 60 * 24 * 150);
@@ -474,6 +517,7 @@ async function run() {
   testManifestCandidates();
   testResourceInspection();
   await testLocalCache();
+  testStableShortcutArtwork();
   await testConcurrentCacheUpdates();
   testNewtabCacheWriteIntegration();
   await testDedicatedSiteSearchCachePolicy();

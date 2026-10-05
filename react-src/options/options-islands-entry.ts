@@ -12,6 +12,7 @@ import { createSettingsFormsApi } from './settings-forms';
 import { createShortcutReferenceApi } from './shortcut-reference';
 import { createShortcutHotkeyApi } from './shortcut-hotkey';
 import { createSiteSearchListApi } from './site-search-list';
+import { createWebDavListApi } from './webdav-list';
 import { createThemePickerApi } from './theme-picker';
 import { createTooltipViewApi } from '../shared/tooltip-view';
 import { createTabSwitcherViewApi } from '../overlay/tab-switcher';
@@ -34,6 +35,7 @@ const runtime = globalThis as typeof globalThis & {
     shortcutReference: ReturnType<typeof createShortcutReferenceApi>;
     shortcutHotkey: ReturnType<typeof createShortcutHotkeyApi>;
     siteSearchList: ReturnType<typeof createSiteSearchListApi>;
+    webDavList: ReturnType<typeof createWebDavListApi>;
     themePicker: ReturnType<typeof createThemePickerApi>;
     toast: ReturnType<typeof createToastApi>;
     tabSwitcher: ReturnType<typeof createTabSwitcherViewApi>;
@@ -64,6 +66,7 @@ const runtime = globalThis as typeof globalThis & {
   LumnoOptionsShortcutHotkeyReact?: ReturnType<typeof createShortcutHotkeyApi>;
   LumnoOptionsSiteSearchList?: ReturnType<typeof createSiteSearchListApi>;
   LumnoOptionsSiteSearchListReact?: ReturnType<typeof createSiteSearchListApi>;
+  LumnoOptionsWebDavList?: ReturnType<typeof createWebDavListApi>;
   LumnoOptionsThemePicker?: ReturnType<typeof createThemePickerApi>;
   LumnoOptionsThemePickerReact?: ReturnType<typeof createThemePickerApi>;
   LumnoOptionsToast?: ReturnType<typeof createToastApi>;
@@ -90,6 +93,7 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   const shortcutReferenceApi = createShortcutReferenceApi();
   const shortcutHotkeyApi = createShortcutHotkeyApi();
   const siteSearchListApi = createSiteSearchListApi();
+  const webDavListApi = createWebDavListApi();
   const themePickerApi = createThemePickerApi();
   const toastApi = createToastApi();
   const tooltipViewApi = createTooltipViewApi();
@@ -122,6 +126,7 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   runtime.LumnoOptionsShortcutHotkey = shortcutHotkeyApi;
   runtime.LumnoOptionsSiteSearchListReact = siteSearchListApi;
   runtime.LumnoOptionsSiteSearchList = siteSearchListApi;
+  runtime.LumnoOptionsWebDavList = webDavListApi;
   runtime.LumnoOptionsThemePickerReact = themePickerApi;
   runtime.LumnoOptionsThemePicker = themePickerApi;
   runtime.LumnoOptionsToastReact = toastApi;
@@ -144,6 +149,7 @@ if (!bootstrapState || !bootstrapState.reactReady) {
     shortcutReference: shortcutReferenceApi,
     shortcutHotkey: shortcutHotkeyApi,
     siteSearchList: siteSearchListApi,
+    webDavList: webDavListApi,
     themePicker: themePickerApi,
     toast: toastApi,
     tabSwitcher: tabSwitcherApi

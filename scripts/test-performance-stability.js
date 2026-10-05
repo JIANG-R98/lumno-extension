@@ -124,7 +124,7 @@ assertMatches(
 });
 assertMatches(
   newtabJs,
-  /function migrateStorageIfNeeded\(keys\) \{[\s\S]*?isPrimaryStorageAreaName\('local'\)/,
+  /function migrateStorageIfNeeded\(keys(?:, providerReady)?\) \{[\s\S]*?isPrimaryStorageAreaName\('local'\)/,
   'new tab storage migration should identify the wrapped primary area by name'
 );
 assertMatches(

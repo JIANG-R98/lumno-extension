@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import '../../src/shared/menu-surface.js';
 import '../../src/shared/shortcut-display.js';
+import '../../src/shared/favicon-utils.js';
 import '../../src/shared/search-input-mode.js';
 
 Object.assign(globalThis, {
@@ -48,6 +49,7 @@ interface ModeController {
   isModeMenuVisible(): boolean;
   openModeMenu(focusTarget?: string): boolean;
   refreshModeMenuLanguage(): void;
+  refreshModeMenu(): unknown;
   resetModeMenuDoubleTab(): boolean;
   resetModeTagRemovalConfirmation(): boolean;
   setModeMenuResultOffset(offset: number): void;
@@ -148,6 +150,50 @@ afterEach(() => {
 });
 
 describe('Shared search scope menu', () => {
+  it('checks current favicon policy before assigning prefix and menu images', () => {
+    const faviconUtils = (globalThis as unknown as {
+      LumnoFaviconUtils: {
+        createFaviconUrlResolver(options: object): {
+          getProviderFaviconUrl(pageUrl: string, iconUrl: string): string;
+          getExtensionFaviconUrl(pageUrl: string): string;
+        };
+      };
+    }).LumnoFaviconUtils;
+    let enhanced = true;
+    const resolver = faviconUtils.createFaviconUrlResolver({
+      getRuntimeUrl: (path: string) => `chrome-extension://abc${path}`,
+      isEnhancedFaviconFetchEnabled: () => enhanced
+    });
+    const pageUrl = 'https://custom.example.com/';
+    const iconUrl = 'https://custom.example.com/favicon.ico';
+    const provider = { key: 'custom', name: 'Custom', iconUrl };
+    const parts = createModeParts();
+    const controller = window.LumnoSearchInputMode.createInputModeController(parts, {
+      // These callers deliberately retain a URL chosen before settings changed.
+      getProviderIcon: () => iconUrl,
+      preferDirectProviderIcons: true,
+      resolveProviderIconUrl: (_provider: object, source: string) => (
+        resolver.getProviderFaviconUrl(pageUrl, source)
+      ),
+      getModeMenuItems: () => [{
+        id: 'provider:custom', kind: 'provider', label: 'Custom', provider, iconUrl
+      }]
+    });
+    controller.setProviderPrefix(provider);
+    expect(parts.modePrefixIcon.getAttribute('src')).toBe(iconUrl);
+    controller.openModeMenu();
+    expect(controller.menuElement.querySelector('img')?.getAttribute('src')).toBe(iconUrl);
+    enhanced = false;
+    controller.setProviderPrefix(provider);
+    expect(parts.modePrefixIcon.getAttribute('src')).toBe(resolver.getExtensionFaviconUrl(pageUrl));
+    controller.refreshModeMenu();
+    const menuImages = Array.from(controller.menuElement.querySelectorAll('img'));
+    expect(menuImages).toHaveLength(1);
+    expect(menuImages[0].getAttribute('src')).toBe(resolver.getExtensionFaviconUrl(pageUrl));
+    expect(controller.menuElement.innerHTML).not.toContain(iconUrl);
+    controller.destroy();
+  });
+
   it('reports mode-tag activation only when the visible tag state changes', () => {
     const parts = createModeParts();
     const onModeTagActiveChange = vi.fn();

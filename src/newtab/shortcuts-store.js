@@ -1,10 +1,12 @@
 (function(root, factory) {
-  const api = factory();
+  const references = root.LumnoBookmarkFolderReference || (typeof require === 'function'
+    ? require('../shared/bookmark-folder-reference.js') : {});
+  const api = factory(references);
   if (typeof module === 'object' && module.exports) {
     module.exports = api;
   }
   root.LumnoNewtabShortcutsStore = api;
-})(typeof globalThis !== 'undefined' ? globalThis : this, function() {
+})(typeof globalThis !== 'undefined' ? globalThis : this, function(references) {
   const DEFAULT_SHORTCUTS_KEY = '_x_extension_newtab_shortcuts_2026_unique_';
   const DEFAULT_MAX_SHORTCUTS = 60;
   const DEFAULT_SHORTCUTS_CHUNK_SIZE = 20;
@@ -22,6 +24,9 @@
       title: 'Lumno',
       url: 'https://lumno.kubai.design/'
     })
+  ]);
+  const BROWSER_INTERNAL_PROTOCOLS = new Set([
+    'chrome:', 'edge:', 'brave:', 'vivaldi:', 'opera:'
   ]);
 
   function defaultNormalizeHost(hostname) {
@@ -134,11 +139,19 @@
     const candidate = /^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `https://${raw}`;
     try {
       const parsed = new URL(candidate);
-      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      const isBrowserInternal = BROWSER_INTERNAL_PROTOCOLS.has(parsed.protocol);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:' && !isBrowserInternal) {
         return '';
       }
       if (!parsed.hostname) {
         return '';
+      }
+      if (isBrowserInternal) {
+        if (parsed.username || parsed.password || parsed.port) {
+          return '';
+        }
+        parsed.hostname = parsed.hostname.toLowerCase();
+        parsed.pathname = parsed.pathname || '/';
       }
       return parsed.toString();
     } catch (error) {
@@ -156,6 +169,27 @@
   function normalizeShortcutItem(item, options) {
     const opts = options && typeof options === 'object' ? options : {};
     const source = item && typeof item === 'object' ? item : {};
+    if (source.type === 'folder') {
+      const folderRef = references.normalizeReference(source.folderRef);
+      const folderId = String(source.folderId || '').trim();
+      if (!folderRef && (!folderId || folderId === '0')) {
+        return null;
+      }
+      const id = sanitizeDisplayText(source.id || '', opts);
+      if (folderRef && !id) {
+        return null;
+      }
+      const now = Number.isFinite(Number(opts.now)) ? Number(opts.now) : Date.now();
+      const createdAt = Math.max(0, Number(source.createdAt) || now);
+      return {
+        id: id || `shortcut-folder-${folderId}`,
+        type: 'folder',
+        ...(folderRef ? { folderRef } : { folderId }),
+        title: sanitizeDisplayText(source.title || source.name || '', opts),
+        createdAt,
+        updatedAt: Math.max(createdAt, Number(source.updatedAt) || now)
+      };
+    }
     const url = normalizeShortcutUrl(source.url);
     if (!url) {
       return null;
@@ -181,7 +215,9 @@
       url,
       host,
       createdAt,
-      updatedAt
+      updatedAt,
+      ...(['service', 'favicon-is', 'cache', 'custom', 'builtin'].includes(source.iconSource)
+        ? { iconSource: source.iconSource } : {})
     };
   }
 
@@ -192,6 +228,8 @@
       : Date.now();
     return normalizeShortcutItem({
       ...(input || {}),
+      ...(input && input.type === 'folder' && references.normalizeReference(input.folderRef) && !input.id
+        ? { id: references.createEntryId() } : {}),
       createdAt: now,
       updatedAt: now
     }, {
@@ -210,10 +248,12 @@
     const seenUrls = new Set();
     for (let i = 0; i < items.length; i += 1) {
       const item = normalizeShortcutItem(items[i], opts);
-      if (!item || seenUrls.has(item.url)) {
+      const identity = item && (item.type === 'folder'
+        ? (item.folderRef ? `folder-entry:${item.id}` : `folder:${item.folderId}`) : item.url);
+      if (!item || seenUrls.has(identity)) {
         continue;
       }
-      seenUrls.add(item.url);
+      seenUrls.add(identity);
       normalized.push(item);
       if (normalized.length >= maxShortcuts) {
         break;
@@ -413,7 +453,13 @@
       if (!nextShortcut) {
         return items;
       }
-      const withoutDuplicate = items.filter((item) => item && item.url !== nextShortcut.url);
+      const withoutDuplicate = items.filter((item) => item && (
+        nextShortcut.type === 'folder'
+          ? item.type !== 'folder' || (nextShortcut.folderRef
+            ? item.id !== nextShortcut.id
+            : item.folderRef || item.folderId !== nextShortcut.folderId)
+          : item.url !== nextShortcut.url
+      ));
       const maxShortcuts = getMaxShortcuts(opts);
       const nextItems = withoutDuplicate.concat(nextShortcut);
       const savedItems = maxShortcuts > 0 && nextItems.length <= maxShortcuts

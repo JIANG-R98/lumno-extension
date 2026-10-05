@@ -1,0 +1,51 @@
+.lumno-webdav-settings {
+  padding: var(--settings-row-block-space) var(--settings-content-edge-space);
+}
+.lumno-webdav-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--settings-content-gap);
+  min-height: var(--settings-section-header-height);
+}
+.lumno-webdav-title { gap: 6px; min-width: 0; }
+.lumno-webdav-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin: 14px 0;
+}
+.lumno-webdav-meta ._x_extension_setting_desc_2024_unique_ { margin: 0; }
+.lumno-webdav-meta > button { margin-left: auto; }
+.lumno-webdav-settings ._x_extension_switch_2024_unique_:has(input:disabled) { opacity: .5; cursor: default; }
+.lumno-webdav-editor { margin-top: var(--settings-content-gap); }
+.lumno-webdav-card .lumno-webdav-meta { margin: 0; }
+.lumno-webdav-card[data-expanded="true"] ._x_extension_shortcut_editor_2024_unique_ { max-height: none; }
+.lumno-webdav-card ._x_extension_shortcut_item_title_2024_unique_ > span:last-child { overflow: hidden; text-overflow: ellipsis; }
+.lumno-webdav-card ._x_extension_shortcut_item_info_2024_unique_ { flex: 1; }
+.lumno-webdav-settings .lumno-webdav-editor[data-expanded="true"],
+.lumno-webdav-settings .lumno-webdav-editor[data-expanded="true"] ._x_extension_shortcut_form_fields_2024_unique_ { max-height: none; }
+.lumno-webdav-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+.lumno-webdav-form-grid ._x_extension_shortcut_field_2024_unique_ { min-width: 0; }
+.lumno-webdav-form-grid input { width: 100%; box-sizing: border-box; }
+.lumno-webdav-choice {
+  margin-top: var(--settings-content-gap);
+  padding: var(--settings-row-block-space) var(--settings-content-edge-space);
+  border: 1px solid var(--tab-border);
+  border-radius: 14px;
+  background: var(--control-bg);
+}
+.lumno-webdav-choice p:first-child { margin-top: 0; }
+.lumno-webdav-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.lumno-webdav-feedback { margin-top: 12px; overflow-wrap: anywhere; }
+.lumno-webdav-feedback[data-error="true"] { color: var(--duplicate-badge-text); }
+.lumno-webdav-settings [hidden] { display: none !important; }
+@media (max-width: 520px) {
+  .lumno-webdav-form-grid { grid-template-columns: minmax(0, 1fr); }
+  .lumno-webdav-meta > button { margin-left: 0; }
+}

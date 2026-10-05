@@ -315,10 +315,28 @@ async function testSiteSearchProviderCacheInvalidationRace() {
 
 async function run() {
   await testSiteSearchProviderCacheInvalidationRace();
+  const positioned = createChromeApi({ failUrls: ['https://failed.test/?q=ordered'] });
+  await aggregateSearch.openAggregateSearch(positioned.api, {
+    query: 'ordered',
+    providers: [
+      { key: 'first', template: 'https://first.test/?q={query}' },
+      { key: 'failed', template: 'https://failed.test/?q={query}' },
+      { key: 'last', template: 'https://last.test/?q={query}' }
+    ],
+    autoCreateTabGroup: false,
+    windowId: 7,
+    insertIndex: 4,
+    getEntryUrl,
+    disposition: 'backgroundTab'
+  });
+  assert.deepStrictEqual(positioned.created.map((tab) => tab.index), [4, 5, 5],
+    'aggregate results should remain consecutive and ordered even if a source fails');
+  assert.strictEqual(positioned.activated.length, 0);
   const success = createChromeApi();
   const waited = [];
   const submitted = [];
   const successResult = await aggregateSearch.openAggregateSearch(success.api, {
+    definition: { name: '人工智能' },
     query: 'Lumno 聚合搜索',
     providers,
     autoCreateTabGroup: true,
@@ -353,7 +371,7 @@ async function run() {
     { url: 'https://chatgpt.com/', active: false, windowId: 7 }
   ]);
   assert.deepStrictEqual(success.grouped, [{ tabIds: [101, 102] }]);
-  assert.deepStrictEqual(success.titled, [{ groupId: 44, title: 'Lumno 聚合搜索' }]);
+  assert.deepStrictEqual(success.titled, [{ groupId: 44, title: '人工智能：Lumno 聚合搜索' }]);
   assert.deepStrictEqual(success.activated, [{ tabId: 101, active: true }]);
   assert.deepStrictEqual(waited, [{ tabId: 102, timeoutMs: 15000 }]);
   assert.deepStrictEqual(submitted, [{
@@ -363,8 +381,31 @@ async function run() {
     entryUrl: 'https://chatgpt.com/'
   }]);
 
+  for (const [definition, expectedTitle] of [
+    [undefined, '测试'],
+    [{}, '测试'],
+    [{ name: '' }, '测试'],
+    [{ name: ' \n\t ' }, '测试'],
+    [{ name: '  人工智能  ' }, '人工智能：测试'],
+    [{ name: 'AI 🔎' }, 'AI 🔎：测试']
+  ]) {
+    const titleCase = createChromeApi();
+    const titleCaseResult = await aggregateSearch.openAggregateSearch(titleCase.api, {
+      definition,
+      query: '  测试  ',
+      providers: [providers[0]],
+      autoCreateTabGroup: true,
+      disposition: 'backgroundTab',
+      getEntryUrl
+    });
+    assert.strictEqual(titleCaseResult.groupTitleApplied, true);
+    assert.deepStrictEqual(titleCase.titled, [{ groupId: 44, title: expectedTitle }]);
+    assert.strictEqual(titleCase.created[0].url, 'https://www.google.com/search?q=%E6%B5%8B%E8%AF%95');
+  }
+
   const background = createChromeApi();
   const backgroundResult = await aggregateSearch.openAggregateSearch(background.api, {
+    definition: { name: '人工智能', autoCreateTabGroup: true },
     query: 'quiet',
     providers: [providers[0]],
     autoCreateTabGroup: false,
@@ -376,6 +417,8 @@ async function run() {
   assert.strictEqual(backgroundResult.activatedTabId, null);
   assert.deepStrictEqual(background.activated, []);
   assert.deepStrictEqual(background.grouped, []);
+  assert.deepStrictEqual(background.titled, [],
+    'disabling grouping must skip naming even when the aggregate has a name');
 
   const degraded = createChromeApi({ groupError: 'group denied' });
   const degradedResult = await aggregateSearch.openAggregateSearch(degraded.api, {
@@ -637,6 +680,10 @@ async function run() {
     loadAggregateSearchAutoGroupEnabled() {
       return Promise.resolve(false);
     },
+    resolveTabPlacement(sourceTab) {
+      assert.strictEqual(sourceTab.id, 88);
+      return Promise.resolve({ windowId: 7, index: 4 });
+    },
     openAggregateSearch(_chromeApi, options) {
       runnerOpenCalls.push(options);
       return Promise.resolve({ ok: true, openedCount: options.providers.length });
@@ -667,6 +714,7 @@ async function run() {
     'the global setting must override a legacy per-item true value'
   );
   assert.strictEqual(runnerOpenCalls[0].windowId, 7);
+  assert.strictEqual(runnerOpenCalls[0].insertIndex, 4);
   await runner('research', 'stored trust boundary', sender, 'currentTab');
   assert.strictEqual(runnerOpenCalls.length, 1, 'recent identical requests stay deduplicated');
   now += 1001;

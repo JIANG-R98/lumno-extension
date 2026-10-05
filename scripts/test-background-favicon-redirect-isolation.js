@@ -1,5 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
+const faviconUtils = require('../src/shared/favicon-utils.js');
 
 const source = fs.readFileSync('src/background/background.js', 'utf8');
 
@@ -24,12 +25,14 @@ const factory = new Function('deps', `
   const SHORTCUT_FAVICON = { inspectIconResource() { return null; } };
   const arrayBufferToBase64 = () => '';
   const isAllowedFaviconProxyRequestUrl = deps.isAllowed;
+  const getBackgroundFaviconUrlResolver = () => deps.resolver;
   const fetch = deps.fetch;
   ${fetchShortcutFaviconResourceSource}
   return fetchShortcutFaviconResource;
 `);
 
 const fetchResource = factory({
+  resolver: faviconUtils.createFaviconUrlResolver(),
   isAllowed(url) {
     return /^https:\/\/t2\.gstatic\.cn\/faviconV2/i.test(String(url || ''));
   },

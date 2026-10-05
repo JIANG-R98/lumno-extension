@@ -286,6 +286,9 @@
     const getProviderIcon = typeof config.getProviderIcon === 'function'
       ? config.getProviderIcon
       : () => '';
+    const resolveProviderIconUrl = typeof config.resolveProviderIconUrl === 'function'
+      ? config.resolveProviderIconUrl
+      : (_provider, iconUrl) => iconUrl;
     const getProviderThemeHost = typeof config.getProviderThemeHost === 'function'
       ? config.getProviderThemeHost
       : () => '';
@@ -1358,7 +1361,10 @@
         outgoingIcon = createInputModePrefixIconGhost(animateOutgoingIcon);
       }
       const contentRevision = ++inputModePrefixContentRevision;
-      const iconUrl = contentOptions && contentOptions.iconUrl ? String(contentOptions.iconUrl || '').trim() : '';
+      const iconUrl = String(resolveProviderIconUrl(
+        contentOptions && contentOptions.provider,
+        contentOptions && contentOptions.iconUrl || ''
+      ) || '').trim();
       const iconClass = contentOptions && contentOptions.iconClass
         ? String(contentOptions.iconClass).trim()
         : (contentOptions && contentOptions.isAi ? 'ri-search-ai-line' : 'ri-search-line');
@@ -2420,7 +2426,7 @@
           }
         }).catch(() => {});
       }
-      const iconUrl = item.iconUrl ? String(item.iconUrl).trim() : '';
+      const iconUrl = item.iconUrl ? String(resolveProviderIconUrl(item.provider, item.iconUrl) || '').trim() : '';
       if (iconUrl) {
         const image = doc.createElement('img');
         image.alt = '';

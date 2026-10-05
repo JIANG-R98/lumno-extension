@@ -396,12 +396,12 @@ async function flushPromises() {
   assert.strictEqual(
     levels[0],
     initialRootLevel,
-    'clicking an already-open folder trigger should reuse the current menu without replaying its open animation'
+    'opening an already-open folder without toggle should reuse the current menu without replaying its open animation'
   );
   assert.deepStrictEqual(
     anchorVisualStates,
     [true],
-    'clicking an already-open folder trigger should not reactivate its visual state'
+    'opening an already-open folder without toggle should not reactivate its visual state'
   );
   rootItems = getMenuItems(levels[0]);
 
@@ -534,6 +534,44 @@ async function flushPromises() {
     true,
     'background bookmark activation should keep the folder menu open'
   );
+  runtime.close();
+
+  const toggleOptions = { toggle: true };
+  runtime.open({ id: 'root', title: 'Root' }, anchor, toggleOptions);
+  await flushPromises();
+  assert.strictEqual(runtime.isOpen(), true, 'the first folder activation should expand its menu');
+  assert.strictEqual(anchor.getAttribute('aria-expanded'), 'true');
+  dispatchKey(documentObj, 'ArrowRight');
+  runtime.open({ id: 'root', title: 'Root' }, anchor, toggleOptions);
+  assert.strictEqual(runtime.isOpen(), false, 'the second folder activation should collapse all menu levels');
+  assert.strictEqual(documentObj.body.querySelectorAll('.x-nt-bookmark-cascade-level').length, 0);
+  assert.strictEqual(anchor.getAttribute('aria-expanded'), 'false');
+  assert.strictEqual(anchorVisualStates[anchorVisualStates.length - 1], false);
+  assert.strictEqual(documentObj.activeElement, anchor, 'collapsing the menu should restore focus to its trigger');
+
+  runtime.open({ id: 'root', title: 'Root' }, anchor, toggleOptions);
+  await flushPromises();
+  assert.strictEqual(runtime.isOpen(), true, 'a third folder activation should reopen the menu');
+  runtime.close();
+
+  runtime.open({ id: 'root', title: 'Root' }, anchor, toggleOptions);
+  runtime.open({ id: 'root', title: 'Root' }, anchor, toggleOptions);
+  await flushPromises();
+  assert.strictEqual(runtime.isOpen(), false, 'a second activation during loading should cancel the pending menu');
+  assert.strictEqual(anchor.getAttribute('aria-expanded'), 'false');
+  runtime.open({ id: 'root', title: 'Root' }, anchor, toggleOptions);
+  runtime.open({ id: 'root', title: 'Root' }, anchor, toggleOptions);
+  runtime.open({ id: 'root', title: 'Root' }, anchor, toggleOptions);
+  await flushPromises();
+  assert.strictEqual(runtime.isOpen(), true, 'rapid repeated activations should respect the last toggle');
+  runtime.close();
+
+  runtime.open({ id: 'root', title: 'Root' }, anchor, { dragMode: true, toggle: true });
+  await flushPromises();
+  const dragMenu = documentObj.body.querySelector('.x-nt-bookmark-cascade-menu');
+  runtime.open({ id: 'root', title: 'Root' }, anchor, { dragMode: true, toggle: true });
+  assert.strictEqual(runtime.isOpen(), true, 'repeated drag expansion should keep the folder open');
+  assert.strictEqual(documentObj.body.querySelector('.x-nt-bookmark-cascade-menu'), dragMenu);
   runtime.close();
 
   console.log('newtab bookmark cascade keyboard tests passed');

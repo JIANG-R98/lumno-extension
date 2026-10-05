@@ -32,9 +32,13 @@ export interface ShortcutTileElement extends HTMLButtonElement {
   _xHost?: string;
   _xTheme?: ThemeValue;
   _xShortcutSuppressClick?: boolean;
+  _xSetBookmarkMenuVisualActive?: (active: boolean) => void;
 }
 
 export interface ShortcutsViewOptions {
+  getFolderIconSvg?: (idSuffix: string, folderId?: string) => string;
+  initFolderIcon?: (icon: HTMLElement) => void;
+  animateFolderIcon?: (icon: HTMLElement, active: boolean) => void;
   grid?: HTMLElement | null;
   tiles?: ShortcutTileElement[];
   maxShortcuts?: number;
@@ -43,7 +47,8 @@ export interface ShortcutsViewOptions {
   getShortcutIconDataUrl?: (shortcutId: string) => string;
   getShortcutFaviconDataUrl?: (pageUrl: string) => string;
   resolveShortcutFaviconDataUrl?: (pageUrl: string) => Promise<string>;
-  getPageFaviconCandidateUrl?: (url: string) => string;
+  getShortcutFaviconPolicyRevision?: () => number;
+  getShortcutFaviconCandidateUrl?: (url: string) => string;
   getImmediateThemeForSuggestion?: (
     suggestion: ThemeSuggestion
   ) => ThemeValue;
@@ -67,6 +72,7 @@ export interface ShortcutsViewOptions {
       browserUrl?: string;
       pageSpecificUrl?: string;
       skipPersisted?: boolean;
+      sourceProfile?: 'shortcut';
     }
   ) => void;
   bindTooltip?: (
@@ -99,6 +105,9 @@ export interface ShortcutsViewController {
 }
 
 interface NormalizedOptions {
+  getFolderIconSvg: (idSuffix: string, folderId?: string) => string;
+  initFolderIcon: (icon: HTMLElement) => void;
+  animateFolderIcon: (icon: HTMLElement, active: boolean) => void;
   grid: HTMLElement;
   tiles: ShortcutTileElement[];
   maxShortcuts: number;
@@ -107,7 +116,8 @@ interface NormalizedOptions {
   getShortcutIconDataUrl: (shortcutId: string) => string;
   getShortcutFaviconDataUrl: (pageUrl: string) => string;
   resolveShortcutFaviconDataUrl: (pageUrl: string) => Promise<string>;
-  getPageFaviconCandidateUrl: (url: string) => string;
+  getShortcutFaviconPolicyRevision: () => number;
+  getShortcutFaviconCandidateUrl: (url: string) => string;
   getImmediateThemeForSuggestion: (
     suggestion: ThemeSuggestion
   ) => ThemeValue;
@@ -131,6 +141,7 @@ interface NormalizedOptions {
       browserUrl?: string;
       pageSpecificUrl?: string;
       skipPersisted?: boolean;
+      sourceProfile?: 'shortcut';
     }
   ) => void;
   bindTooltip: (
@@ -161,6 +172,9 @@ function normalizeOptions(
     return null;
   }
   return {
+    getFolderIconSvg: options.getFolderIconSvg || (() => ''),
+    initFolderIcon: options.initFolderIcon || (() => {}),
+    animateFolderIcon: options.animateFolderIcon || (() => {}),
     grid: options.grid,
     tiles: Array.isArray(options.tiles) ? options.tiles : [],
     maxShortcuts: Number.isFinite(Number(options.maxShortcuts))
@@ -173,8 +187,10 @@ function normalizeOptions(
       options.getShortcutFaviconDataUrl || (() => ''),
     resolveShortcutFaviconDataUrl:
       options.resolveShortcutFaviconDataUrl || (() => Promise.resolve('')),
-    getPageFaviconCandidateUrl:
-      options.getPageFaviconCandidateUrl || (() => ''),
+    getShortcutFaviconPolicyRevision:
+      options.getShortcutFaviconPolicyRevision || (() => 0),
+    getShortcutFaviconCandidateUrl:
+      options.getShortcutFaviconCandidateUrl || (() => ''),
     getImmediateThemeForSuggestion:
       options.getImmediateThemeForSuggestion || (() => null),
     applyShortcutTileTheme: options.applyShortcutTileTheme || (() => {}),
@@ -212,32 +228,35 @@ function ShortcutFavicon({
   const imageRef = useRef<HTMLImageElement>(null);
   const shortcutId = String(shortcut.id || '');
   const url = String(shortcut.url || '');
+  const iconSource = String(shortcut.iconSource || '');
   const localIconDataUrl = options.getShortcutIconDataUrl(shortcutId);
+  const primaryFaviconUrl = options.getShortcutFaviconCandidateUrl(url);
+  const isBuiltinIcon = !localIconDataUrl && /\/assets\/images\/site-search\/glyph-[a-z0-9]+\.(?:svg|png)(?:[?#]|$)/.test(primaryFaviconUrl);
+  const isMonochromeBuiltinIcon = isBuiltinIcon && /\/glyph-(?:gh|gpt|mdn|wk|zw)\.svg(?:[?#]|$)/.test(primaryFaviconUrl);
   const cachedFaviconDataUrl = options.getShortcutFaviconDataUrl(url);
-  const [resolvedFaviconDataUrl, setResolvedFaviconDataUrl] = useState(
-    cachedFaviconDataUrl
-  );
+  const faviconPolicyRevision = options.getShortcutFaviconPolicyRevision();
+  const [resolvedFavicon, setResolvedFavicon] = useState({ url, iconSource, dataUrl: cachedFaviconDataUrl });
   const fallbackFaviconDataUrl =
-    resolvedFaviconDataUrl || cachedFaviconDataUrl;
+    cachedFaviconDataUrl || (resolvedFavicon.url === url && resolvedFavicon.iconSource === iconSource ? resolvedFavicon.dataUrl : '');
 
   useEffect(() => {
     let cancelled = false;
-    if (localIconDataUrl || cachedFaviconDataUrl) {
-      setResolvedFaviconDataUrl(cachedFaviconDataUrl);
+    if (localIconDataUrl || cachedFaviconDataUrl || primaryFaviconUrl) {
+      setResolvedFavicon({ url, iconSource, dataUrl: cachedFaviconDataUrl });
       return () => {
         cancelled = true;
       };
     }
-    setResolvedFaviconDataUrl('');
+    setResolvedFavicon({ url, iconSource, dataUrl: '' });
     options.resolveShortcutFaviconDataUrl(url).then((dataUrl) => {
       if (!cancelled && dataUrl) {
-        setResolvedFaviconDataUrl(dataUrl);
+        setResolvedFavicon({ url, iconSource, dataUrl });
       }
     }).catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [cachedFaviconDataUrl, localIconDataUrl, options, url]);
+  }, [cachedFaviconDataUrl, faviconPolicyRevision, iconSource, localIconDataUrl, options, primaryFaviconUrl, url]);
 
   useLayoutEffect(() => {
     const image = imageRef.current;
@@ -251,15 +270,16 @@ function ShortcutFavicon({
       return;
     }
     options.attachFaviconWithFallbacks(image, url, host, {
-      primaryUrl: options.getPageFaviconCandidateUrl(url),
+      primaryUrl: primaryFaviconUrl,
       pageSpecificUrl: fallbackFaviconDataUrl,
-      skipPersisted: true
+      skipPersisted: true,
+      sourceProfile: 'shortcut'
     });
-  }, [fallbackFaviconDataUrl, host, localIconDataUrl, options, url]);
+  }, [fallbackFaviconDataUrl, host, localIconDataUrl, options, primaryFaviconUrl, url]);
 
   return (
     <span className="x-nt-shortcut-icon">
-      <span className="x-nt-shortcut-favicon-mask">
+      <span className="x-nt-shortcut-favicon-mask" data-builtin-icon={isBuiltinIcon ? 'true' : undefined} data-builtin-monochrome={isMonochromeBuiltinIcon ? 'true' : undefined}>
         <img
           key={localIconDataUrl || url}
           ref={imageRef}
@@ -282,10 +302,16 @@ function ShortcutTile({
   options: NormalizedOptions;
 }) {
   const tileRef = useRef<ShortcutTileElement>(null);
+  const folderIconRef = useRef<HTMLSpanElement>(null);
+  const isFolder = shortcut.type === 'folder';
   const title = options.getShortcutTitle(shortcut);
   const url = String(shortcut.url || '');
   const host = String(shortcut.host || options.getHostFromUrl(url));
   const shortcutId = String(shortcut.id || url);
+  // Preserve the SVG paths owned by the animation runtime across list refreshes.
+  const folderIconHtml = useMemo(() => ({
+    __html: isFolder ? options.getFolderIconSvg(`shortcut-${shortcutId}`, String(shortcut.folderId || '')) : ''
+  }), [isFolder, options, shortcutId, shortcut.folderId]);
   const localIconDataUrl = options.getShortcutIconDataUrl(
     String(shortcut.id || '')
   );
@@ -306,6 +332,22 @@ function ShortcutTile({
     tile._xHost = host;
     tile._xTheme = immediateTheme;
     options.applyShortcutTileTheme(tile, immediateTheme, host);
+    options.bindTooltip(
+      tile,
+      () => tile.getAttribute('data-shortcut-title') || title,
+      { maxWidth: 360 }
+    );
+    if (isFolder && folderIconRef.current) {
+      const icon = folderIconRef.current;
+      options.initFolderIcon(icon);
+      tile._xSetBookmarkMenuVisualActive = (active) => {
+        const expanded = active || tile.getAttribute('aria-expanded') === 'true' ||
+          tile.hasAttribute('data-shortcut-context-menu-open');
+        tile.toggleAttribute('data-shortcut-folder-open', expanded);
+        options.animateFolderIcon(icon, expanded);
+      };
+      return () => { delete tile._xSetBookmarkMenuVisualActive; };
+    }
     options.queueThemeForTarget(
       tile,
       themeSuggestion,
@@ -318,12 +360,7 @@ function ShortcutTile({
       },
       { priority: 0 }
     );
-    options.bindTooltip(
-      tile,
-      () => tile.getAttribute('data-shortcut-title') || title,
-      { maxWidth: 360 }
-    );
-  }, [host, options, themeSuggestion, title]);
+  }, [host, isFolder, options, themeSuggestion, title]);
 
   function activate(
     event: ReactMouseEvent<HTMLButtonElement> |
@@ -360,12 +397,17 @@ function ShortcutTile({
     <button
       ref={tileRef}
       type="button"
-      className="x-nt-shortcut-tile"
+      className={`x-nt-shortcut-tile${isFolder ? ' x-nt-shortcut-tile--folder' : ''}`}
       draggable={false}
       data-shortcut-id={shortcutId}
       data-shortcut-url={url}
       data-shortcut-title={title}
       data-shortcut-draggable="true"
+      data-bookmark-id={isFolder ? String(shortcut.folderId || '') : undefined}
+      data-bookmark-drop-folder-id={isFolder ? String(shortcut.folderId || '') : undefined}
+      data-bookmark-drop-folder-title={isFolder ? title : undefined}
+      aria-haspopup={isFolder ? 'menu' : undefined}
+      aria-expanded={isFolder ? false : undefined}
       data-shortcut-custom-icon={localIconDataUrl ? 'true' : undefined}
       data-tooltip={title}
       aria-label={options.formatOpenLabel(title)}
@@ -374,12 +416,26 @@ function ShortcutTile({
       onKeyDown={handleKeyDown}
       onContextMenu={options.onContextMenu}
       onDragStart={options.onNativeDragStart}
+      onPointerEnter={() => {
+        if (folderIconRef.current && !document.body.hasAttribute('data-drag-source')) {
+          options.animateFolderIcon(folderIconRef.current, true);
+        }
+      }}
+      onPointerLeave={() => {
+        if (folderIconRef.current && !tileRef.current?.hasAttribute('data-shortcut-folder-open')) {
+          options.animateFolderIcon(folderIconRef.current, false);
+        }
+      }}
     >
-      <ShortcutFavicon
+      {isFolder ? <span
+        ref={folderIconRef}
+        className="x-nt-shortcut-icon x-nt-shortcut-icon--folder"
+        dangerouslySetInnerHTML={folderIconHtml}
+      /> : <ShortcutFavicon
         shortcut={shortcut}
         host={host}
         options={options}
-      />
+      />}
     </button>
   );
 }

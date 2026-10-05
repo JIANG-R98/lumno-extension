@@ -259,7 +259,7 @@ describe('Bookmarks React island', () => {
       }));
       card.click();
     });
-    expect(openedFolders).toEqual([{ item: folder, card }]);
+    expect(openedFolders).toEqual([{ item: folder, card }, { item: folder, card }]);
     expect(card.classList.contains('x-nt-bookmark-card--hover')).toBe(
       true
     );
@@ -277,6 +277,34 @@ describe('Bookmarks React island', () => {
       false
     );
     expect(morphStates).toEqual([true, false, true, false]);
+  });
+
+  it('keeps an open folder and its animated SVG through rename and reorder refreshes', () => {
+    const morph = vi.fn();
+    const { view } = createView({
+      getFigmaFolderSvg: () => '<svg><path d="M0 0" /></svg>',
+      playFolderPathMorph: morph
+    });
+    const folder: BookmarkItem = { id: 'design', parentId: '1', index: 0, type: 'folder', title: 'Design' };
+    renderItems(view, [folder], { viewMode: 'top', menuMode: true });
+    const card = view.getCards()[0];
+    const path = card.querySelector('path')!;
+    card.setAttribute('aria-expanded', 'true');
+    card._xSetBookmarkMenuVisualActive?.(true);
+    path.setAttribute('d', 'M9 13');
+    morph.mockClear();
+    renderItems(view, [{ id: 'link', parentId: '1', index: 0, title: 'Link', url: 'https://example.com/' }, { ...folder, title: 'Renamed', index: 1 }], { viewMode: 'top', menuMode: true });
+    expect(view.getCards()[1]).toBe(card);
+    expect(card.querySelector('path')).toBe(path);
+    expect(path.getAttribute('d')).toBe('M9 13');
+    expect(card.getAttribute('aria-expanded')).toBe('true');
+    expect(card.classList.contains('x-nt-bookmark-card--folder-expanded')).toBe(true);
+    expect(morph.mock.calls.every(([, active]) => active)).toBe(true);
+    act(() => card.dispatchEvent(new PointerEvent('pointerout', { bubbles: true })));
+    expect(card.classList.contains('x-nt-bookmark-card--folder-expanded')).toBe(true);
+    card.setAttribute('aria-expanded', 'false');
+    card._xSetBookmarkMenuVisualActive?.(false);
+    expect(card.classList.contains('x-nt-bookmark-card--folder-expanded')).toBe(false);
   });
 
   it('marks topbar cards so drag previews keep the compact layout', () => {

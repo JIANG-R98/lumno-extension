@@ -27,6 +27,26 @@ function setInputValue(input: HTMLInputElement, value: string): void {
   input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
+function iconSourceSelect(controller: ShortcutDialogController): HTMLSelectElement {
+  return controller.element.querySelector<HTMLSelectElement>('.x-nt-shortcut-icon-source-select select')!;
+}
+
+function iconSourceTrigger(controller: ShortcutDialogController): HTMLButtonElement {
+  return controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-icon-source-select button')!;
+}
+
+function chooseIconSource(controller: ShortcutDialogController, source: string): void {
+  const trigger = iconSourceTrigger(controller);
+  if (trigger.getAttribute('aria-expanded') !== 'true') trigger.click();
+  const option = controller.element.querySelector<HTMLElement>(`[role="option"][data-value="${source}"]`);
+  if (!option) throw new Error(`Expected icon source option: ${source}`);
+  option.click();
+}
+
+function sourceKey(controller: ShortcutDialogController, key: string): void {
+  iconSourceTrigger(controller).dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+}
+
 function createController(
   onSubmit: (payload: Readonly<ShortcutDialogPayload>) => boolean | Promise<boolean>,
   overrides: Partial<ShortcutDialogOptions> = {}
@@ -80,6 +100,7 @@ afterEach(() => {
   act(() => {
     controllers.forEach((controller) => controller.destroy());
   });
+  vi.useRealTimers();
 });
 
 describe('shortcut dialog React island', () => {
@@ -173,7 +194,8 @@ describe('shortcut dialog React island', () => {
         itemId: 'shortcut-one',
         shortcutId: 'shortcut-one',
         iconAction: 'keep',
-        iconDataUrl: ''
+        iconDataUrl: '',
+        iconSource: 'cache'
       }
     ]);
     expect(controller.element.hidden).toBe(true);
@@ -215,6 +237,106 @@ describe('shortcut dialog React island', () => {
     });
     expect(pageContent.hasAttribute('inert')).toBe(false);
     expect(document.activeElement).toBe(backgroundButton);
+  });
+
+  it.each(['cancel', 'Escape', 'backdrop'])('starts a fresh add form after closing via %s, even during the closing animation', async (closeMethod) => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const controller = createController(() => false, {
+      closeDelayMs: 180,
+      prepareIconFile: async () => ({ dataUrl: 'data:image/png;base64,Y3VzdG9t' }),
+      getOnlineIconUrl: (url) => url ? 'data:image/png;base64,b25saW5l' : ''
+    });
+    act(() => { controller.open(); flushAnimationFrames(); });
+    const previousForm = controller.element.querySelector('form')!;
+    const previousInputs = previousForm.querySelectorAll<HTMLInputElement>('input[type="text"]');
+    act(() => {
+      setInputValue(previousInputs[0], 'Abandoned shortcut');
+      setInputValue(previousInputs[1], 'https://example.com/');
+    });
+    act(() => chooseIconSource(controller, 'custom'));
+    const fileInput = controller.element.querySelector<HTMLInputElement>('.x-nt-shortcut-icon-input')!;
+    Object.defineProperty(fileInput, 'files', {
+      configurable: true,
+      value: [new File(['icon'], 'icon.png', { type: 'image/png' })]
+    });
+    await act(async () => fileInput.dispatchEvent(new Event('change', { bubbles: true })));
+    expect(controller.element.querySelector<HTMLElement>('.x-nt-shortcut-icon-upload-tile')?.dataset.hasIcon).toBe('true');
+    act(() => {
+      controller.setError('Previous validation error');
+      controller.setIconError('Previous icon error');
+      iconSourceTrigger(controller).click();
+    });
+
+    act(() => {
+      if (closeMethod === 'cancel') {
+        controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-dialog-button--secondary')!.click();
+      } else if (closeMethod === 'Escape') {
+        sourceKey(controller, 'Escape');
+      } else {
+        controller.element.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      }
+    });
+    if (closeMethod === 'Escape') act(() => sourceKey(controller, 'Escape'));
+    expect(controller.getState().open).toBe(false);
+    act(() => { controller.open(); flushAnimationFrames(); vi.advanceTimersByTime(180); });
+
+    const inputs = controller.element.querySelectorAll<HTMLInputElement>('input[type="text"]');
+    expect(previousForm.isConnected).toBe(false);
+    expect(Array.from(inputs, (input) => input.value)).toEqual(['', '']);
+    expect(document.activeElement).toBe(inputs[0]);
+    expect(controller.getState()).toEqual({ mode: 'add', itemType: 'shortcut', editingId: '', open: true, busy: false });
+    expect(iconSourceSelect(controller).value).toBe('cache');
+    expect(iconSourceTrigger(controller).getAttribute('aria-expanded')).toBe('false');
+    expect(controller.element.querySelector('.x-nt-shortcut-icon-upload-tile')).toBeNull();
+    expect(controller.element.querySelector('.x-nt-shortcut-online-icon-preview img')).toBeNull();
+    expect(controller.element.querySelector('.x-nt-shortcut-error')?.textContent).toBe('');
+    expect(controller.element.querySelector('.x-nt-shortcut-icon-error')?.textContent).toBe('');
+    const refresh = controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-icon-refresh')!;
+    expect(refresh.textContent).toBe('Refresh');
+    expect(refresh.disabled).toBe(true);
+    act(() => chooseIconSource(controller, 'custom'));
+    expect(controller.element.querySelector<HTMLElement>('.x-nt-shortcut-icon-upload-tile')?.dataset.hasIcon).toBe('false');
+  });
+
+  it('ignores edit data and source preferences when opening a new add form', () => {
+    const shortcut = { id: 'one', title: 'Saved shortcut', url: 'https://example.com/', iconSource: 'service' as const };
+    const controller = createController(() => false, { getOnlineIconSource: () => 'service' });
+    act(() => controller.open({ mode: 'edit', shortcut }));
+    expect(iconSourceSelect(controller).value).toBe('service');
+    act(() => { controller.close(); controller.open({ mode: 'add', shortcut }); flushAnimationFrames(); });
+    expect(Array.from(controller.element.querySelectorAll<HTMLInputElement>('input[type="text"]'), (input) => input.value)).toEqual(['', '']);
+    expect(iconSourceSelect(controller).value).toBe('cache');
+    expect(controller.getState().editingId).toBe('');
+  });
+
+  it('discards an abandoned upload without interrupting the next add session', async () => {
+    const uploads: Array<(icon: { dataUrl: string }) => void> = [];
+    const controller = createController(() => false, {
+      prepareIconFile: () => new Promise<{ dataUrl: string }>((resolve) => uploads.push(resolve))
+    });
+    const upload = () => {
+      const input = controller.element.querySelector<HTMLInputElement>('.x-nt-shortcut-icon-input')!;
+      Object.defineProperty(input, 'files', {
+        configurable: true,
+        value: [new File(['icon'], 'icon.png', { type: 'image/png' })]
+      });
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    act(() => controller.open());
+    act(() => chooseIconSource(controller, 'custom'));
+    act(upload);
+    act(() => controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-dialog-button--secondary')!.click());
+    act(() => controller.open());
+    act(() => chooseIconSource(controller, 'custom'));
+    act(upload);
+    await act(async () => uploads[0]({ dataUrl: 'data:image/png;base64,c3RhbGU=' }));
+    const tile = controller.element.querySelector<HTMLElement>('.x-nt-shortcut-icon-upload-tile')!;
+    expect(tile.dataset.hasIcon).toBe('false');
+    expect(tile.dataset.loading).toBe('true');
+    await act(async () => uploads[1]({ dataUrl: 'data:image/png;base64,bmV3' }));
+    expect(tile.dataset.hasIcon).toBe('true');
+    expect(tile.dataset.loading).toBe('false');
+    expect(tile.querySelector('img')?.getAttribute('src')).toBe('data:image/png;base64,bmV3');
   });
 
   it('uses the shared form for bookmark and folder editing', async () => {
@@ -279,7 +401,7 @@ describe('shortcut dialog React island', () => {
     expect(inputs[0].value).toBe('Research');
     expect(
       controller.element.querySelector('.x-nt-shortcut-dialog-title')?.textContent
-    ).toBe('Edit folder');
+    ).toBe('Rename folder');
     expect(
       controller.element.querySelector('.x-nt-shortcut-icon-field')
     ).toBeNull();
@@ -382,6 +504,9 @@ describe('shortcut dialog React island', () => {
       controller.open();
       flushAnimationFrames();
     });
+    act(() => {
+      chooseIconSource(controller, 'custom');
+    });
     const fileInput = controller.element.querySelector<HTMLInputElement>(
       '.x-nt-shortcut-icon-input'
     );
@@ -420,6 +545,231 @@ describe('shortcut dialog React island', () => {
       iconAction: 'replace',
       iconDataUrl: 'data:image/png;base64,dGVzdA=='
     });
+  });
+
+  it('previews the current online icon and stages refreshed artwork until Save', async () => {
+    const initial = 'data:image/png;base64,b2xk';
+    const fresh = { dataUrl: 'data:image/png;base64,bmV3', pageUrl: 'https://example.com/', sourceUrl: 'https://www.gstatic.com/icon' };
+    const onSubmit = vi.fn(() => true);
+    const refreshOnlineIcon = vi.fn(async () => fresh);
+    const controller = createController(onSubmit, { getOnlineIconUrl: () => initial, refreshOnlineIcon });
+    act(() => controller.open({ mode: 'edit', shortcut: { id: 'one', url: fresh.pageUrl } }));
+    expect(iconSourceSelect(controller).value).toBe('cache');
+    expect(controller.element.querySelector<HTMLImageElement>('.x-nt-shortcut-online-icon-preview img')?.src).toBe(initial);
+    expect(controller.element.querySelector('.x-nt-shortcut-icon-upload-tile')).toBeNull();
+    await act(async () => {
+      controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-icon-refresh')?.click();
+    });
+    expect(refreshOnlineIcon).toHaveBeenCalledWith(fresh.pageUrl, 'cache');
+    expect(controller.element.querySelector<HTMLImageElement>('.x-nt-shortcut-online-icon-preview img')?.src).toBe(fresh.dataUrl);
+    expect(onSubmit).not.toHaveBeenCalled();
+    await act(async () => { await controller.submit(); });
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ onlineIcon: fresh, iconAction: 'keep' }));
+  });
+
+  it('keeps the custom draft across mode switches and removes it only when Online is saved', async () => {
+    const onSubmit = vi.fn(() => true);
+    const controller = createController(onSubmit, {
+      refreshOnlineIcon: async (pageUrl) => ({ dataUrl: 'data:image/png;base64,b25saW5l', pageUrl })
+    });
+    act(() => controller.open({ mode: 'edit', shortcut: { id: 'one', url: 'https://example.com/', iconDataUrl: 'data:image/png;base64,Y3VzdG9t' } }));
+    expect(iconSourceSelect(controller).value).toBe('custom');
+    await act(async () => chooseIconSource(controller, 'cache'));
+    act(() => chooseIconSource(controller, 'custom'));
+    expect(controller.element.querySelector<HTMLImageElement>('.x-nt-shortcut-icon-upload-tile img')?.src).toBe('data:image/png;base64,Y3VzdG9t');
+    await act(async () => chooseIconSource(controller, 'cache'));
+    await act(async () => { await controller.submit(); });
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ iconAction: 'remove', iconDataUrl: '' }));
+  });
+
+  it('discards refresh results after cancellation or a URL change', async () => {
+    const requests: Array<(icon: { dataUrl: string; pageUrl: string }) => void> = [];
+    const refreshOnlineIcon = vi.fn(() => new Promise<{ dataUrl: string; pageUrl: string }>((resolve) => { requests.push(resolve); }));
+    const onSubmit = vi.fn((_payload: Readonly<ShortcutDialogPayload>) => true);
+    const controller = createController(onSubmit, { getOnlineIconUrl: (url) => url ? 'data:image/png;base64,b2xk' : '', refreshOnlineIcon });
+    act(() => controller.open({ mode: 'edit', shortcut: { id: 'one', url: 'https://example.com/' } }));
+    act(() => controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-icon-refresh')?.click());
+    expect(controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-dialog-button--primary')?.disabled).toBe(true);
+    act(() => setInputValue(controller.element.querySelectorAll<HTMLInputElement>('input[type="text"]')[1], 'https://second.example/'));
+    await act(async () => requests[0]({ dataUrl: 'data:image/png;base64,c3RhbGU=', pageUrl: 'https://example.com/' }));
+    expect(controller.element.querySelector<HTMLImageElement>('.x-nt-shortcut-online-icon-preview img')?.src).toBe('data:image/png;base64,b2xk');
+    act(() => controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-icon-refresh')?.click());
+    act(() => {
+      controller.close();
+      controller.open({ mode: 'edit', shortcut: { id: 'two', url: 'https://third.example/' } });
+    });
+    await act(async () => requests[1]({ dataUrl: 'data:image/png;base64,c3RhbGU=', pageUrl: 'https://second.example/' }));
+    expect(onSubmit).not.toHaveBeenCalled();
+    await act(async () => { await controller.submit(); });
+    expect(onSubmit.mock.calls[0]?.[0]).not.toHaveProperty('onlineIcon');
+  });
+
+  it('retains the current icon on refresh failure and validates empty custom mode', async () => {
+    const onSubmit = vi.fn(() => true);
+    const controller = createController(onSubmit, {
+      getOnlineIconUrl: () => 'data:image/png;base64,b2xk',
+      refreshOnlineIcon: async () => null
+    });
+    act(() => controller.open({ mode: 'edit', shortcut: { id: 'one', url: 'https://example.com/' } }));
+    await act(async () => controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-icon-refresh')?.click());
+    expect(controller.element.querySelector('.x-nt-shortcut-icon-error')?.textContent).toContain('No cached icon');
+    expect(controller.element.querySelector<HTMLImageElement>('.x-nt-shortcut-online-icon-preview img')?.src).toBe('data:image/png;base64,b2xk');
+    act(() => chooseIconSource(controller, 'custom'));
+    await act(async () => { expect(await controller.submit()).toBe(false); });
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(controller.element.querySelector('.x-nt-shortcut-icon-upload-tile'));
+  });
+
+  it('supports keyboard selection and closes the dropdown before the dialog on Escape', () => {
+    const controller = createController(() => false);
+    act(() => { controller.open(); flushAnimationFrames(); });
+    const trigger = iconSourceTrigger(controller);
+    act(() => { trigger.focus(); sourceKey(controller, 'ArrowDown'); });
+    expect(trigger.getAttribute('aria-expanded')).toBe('true');
+    act(() => sourceKey(controller, 'ArrowDown'));
+    act(() => sourceKey(controller, 'Enter'));
+    expect(iconSourceSelect(controller).value).toBe('custom');
+    expect(controller.element.querySelector('.x-nt-shortcut-icon-upload-tile')).not.toBeNull();
+    act(() => trigger.click());
+    expect(trigger.getAttribute('aria-expanded')).toBe('true');
+    act(() => sourceKey(controller, 'Escape'));
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    expect(controller.getState().open).toBe(true);
+    expect(document.activeElement).toBe(trigger);
+    act(() => sourceKey(controller, 'Escape'));
+    expect(controller.getState().open).toBe(false);
+  });
+
+  it('shows success in the refresh button for two seconds and clears it on close', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const controller = createController(() => false, {
+      refreshOnlineIcon: async (pageUrl) => ({ dataUrl: 'data:image/png;base64,aWNvbg==', pageUrl })
+    });
+    act(() => controller.open({ mode: 'edit', shortcut: { id: 'one', url: 'https://example.com/' } }));
+    await act(async () => controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-icon-refresh')!.click());
+    const refresh = controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-icon-refresh')!;
+    expect(refresh.textContent).toBe('Icon acquired');
+    expect(refresh.dataset.success).toBe('true');
+    expect(refresh.querySelector('.ri-check-line')).not.toBeNull();
+    expect(controller.element.querySelector('.x-nt-shortcut-icon-error')?.textContent).toBe('');
+    act(() => vi.advanceTimersByTime(1999));
+    expect(refresh.textContent).toBe('Icon acquired');
+    act(() => vi.advanceTimersByTime(1));
+    expect(refresh.textContent).toBe('Refresh');
+    expect(refresh.dataset.success).toBe('false');
+    expect(refresh.querySelector('.ri-refresh-line')).not.toBeNull();
+    await act(async () => refresh.click());
+    act(() => { controller.close(); controller.open(); vi.advanceTimersByTime(2000); });
+    expect(controller.element.querySelector('.x-nt-shortcut-icon-refresh')?.textContent).toBe('Refresh');
+  });
+
+  it('uses the chosen source and blocks saving a failed source switch', async () => {
+    const onSubmit = vi.fn(() => true);
+    const refreshOnlineIcon = vi.fn(async (pageUrl: string, source?: string) => source === 'service'
+      ? null : { dataUrl: 'data:image/png;base64,Y2FjaGU=', pageUrl });
+    const controller = createController(onSubmit, { refreshOnlineIcon, getOnlineIconUrl: () => 'data:image/png;base64,b2xk' });
+    act(() => controller.open({ mode: 'edit', shortcut: { id: 'one', url: 'https://example.com/', iconSource: 'cache' } }));
+    expect(Array.from(iconSourceSelect(controller).options, (option) => option.value)).toEqual(['service', 'favicon-is', 'cache', 'custom']);
+    await act(async () => chooseIconSource(controller, 'service'));
+    expect(refreshOnlineIcon).toHaveBeenCalledWith('https://example.com/', 'service');
+    const hint = controller.element.querySelector('.x-nt-shortcut-icon-source-hint')!;
+    expect(hint.previousElementSibling?.classList.contains('x-nt-shortcut-icon-source-select')).toBe(true);
+    expect(hint.textContent).toContain('site domain');
+    expect(controller.element.querySelector<HTMLImageElement>('.x-nt-shortcut-online-icon-preview img')?.src).toBe('data:image/png;base64,b2xk');
+    expect(controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-dialog-button--primary')?.disabled).toBe(true);
+    await act(async () => expect(await controller.submit()).toBe(false));
+    expect(onSubmit).not.toHaveBeenCalled();
+    act(() => chooseIconSource(controller, 'cache'));
+    expect(controller.element.querySelector('.x-nt-shortcut-icon-source-hint')?.textContent).toContain('browser cache');
+    expect(controller.element.querySelector('.x-nt-shortcut-icon-source-hint')?.textContent).not.toContain('Chrome');
+    await act(async () => controller.submit());
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ iconSource: 'cache' }));
+  });
+
+  it('refreshes and saves Favicon.is as a separate source, then restores the saved choice', async () => {
+    const onSubmit = vi.fn(() => true);
+    const refreshOnlineIcon = vi.fn(async (pageUrl: string) => ({
+      dataUrl: 'data:image/png;base64,ZmF2aWNvbi1pcw==', pageUrl,
+      sourceUrl: 'https://favicon.is/example.com?larger=true'
+    }));
+    const controller = createController(onSubmit, { refreshOnlineIcon });
+    const shortcut = { id: 'one', url: 'https://example.com/private?view=1', iconSource: 'cache' as const };
+    act(() => controller.open({ mode: 'edit', shortcut }));
+    await act(async () => chooseIconSource(controller, 'favicon-is'));
+    expect(refreshOnlineIcon).toHaveBeenCalledWith(shortcut.url, 'favicon-is');
+    expect(iconSourceSelect(controller).value).toBe('favicon-is');
+    expect(controller.element.querySelector<HTMLImageElement>('.x-nt-shortcut-online-icon-preview img')?.src)
+      .toBe('data:image/png;base64,ZmF2aWNvbi1pcw==');
+    await act(async () => controller.submit());
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      iconSource: 'favicon-is', onlineIcon: expect.objectContaining({ sourceUrl: 'https://favicon.is/example.com?larger=true' })
+    }));
+    act(() => controller.open({ mode: 'edit', shortcut: { ...shortcut, iconSource: 'favicon-is' } }));
+    expect(iconSourceSelect(controller).value).toBe('favicon-is');
+  });
+
+  it('restores a saved service source and skips unavailable sources in keyboard navigation', async () => {
+    const controller = createController(() => false, {
+      isIconSourceAvailable: (source) => source === 'cache'
+    });
+    act(() => controller.open({ mode: 'edit', shortcut: { id: 'one', url: 'https://example.com/', iconSource: 'service' } }));
+    expect(iconSourceSelect(controller).value).toBe('service');
+    expect(iconSourceSelect(controller).querySelector<HTMLOptionElement>('option[value="service"]')?.disabled).toBe(true);
+    expect(controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-icon-refresh')?.disabled).toBe(true);
+    act(() => { iconSourceTrigger(controller).focus(); sourceKey(controller, 'ArrowDown'); });
+    act(() => sourceKey(controller, 'ArrowDown'));
+    await act(async () => sourceKey(controller, 'Enter'));
+    expect(document.activeElement).toBe(iconSourceTrigger(controller));
+    expect(iconSourceSelect(controller).value).toBe('cache');
+  });
+
+  it('offers packaged artwork only for supported URLs and saves it without acquiring an online icon', async () => {
+    const onSubmit = vi.fn((_payload: Readonly<ShortcutDialogPayload>) => true);
+    const refreshOnlineIcon = vi.fn(async () => null);
+    const builtinUrl = '/assets/images/site-search/glyph-gh.svg';
+    const getBuiltinIconUrl = (url: string) => {
+      try { return new URL(url).hostname === 'github.com' ? builtinUrl : ''; } catch { return ''; }
+    };
+    const controller = createController(onSubmit, { getBuiltinIconUrl, refreshOnlineIcon });
+    act(() => controller.open({ mode: 'edit', shortcut: { id: 'one', url: 'https://github.com/project' } }));
+    expect(Array.from(iconSourceSelect(controller).options, (option) => option.value)).toEqual(['builtin', 'service', 'favicon-is', 'cache', 'custom']);
+    expect(controller.element.getAttribute('role')).toBe('dialog');
+    expect(controller.element.getAttribute('aria-modal')).toBe('true');
+    expect(controller.element.contains(controller.element.querySelector('[role="listbox"]'))).toBe(true);
+    act(() => chooseIconSource(controller, 'builtin'));
+    expect(controller.element.querySelector<HTMLImageElement>('.x-nt-shortcut-online-icon-preview img')?.getAttribute('src')).toBe(builtinUrl);
+    expect(controller.element.querySelector('.x-nt-shortcut-icon-refresh')).toBeNull();
+    expect(controller.element.querySelector('.x-nt-shortcut-icon-source-hint')?.textContent).toContain('Lumno’s built-in high-quality icons');
+    expect(refreshOnlineIcon).not.toHaveBeenCalled();
+    await act(async () => controller.submit());
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ iconSource: 'builtin' }));
+    expect(onSubmit.mock.calls[0]?.[0]).not.toHaveProperty('onlineIcon');
+
+    act(() => controller.open({ mode: 'edit', shortcut: { id: 'one', url: 'https://github.com/project', iconSource: 'builtin' } }));
+    expect(iconSourceSelect(controller).value).toBe('builtin');
+    const urlInput = controller.element.querySelectorAll<HTMLInputElement>('input[type="text"]')[1];
+    act(() => setInputValue(urlInput, 'https://github.com.evil.test/'));
+    expect(iconSourceSelect(controller).value).toBe('cache');
+    expect(iconSourceSelect(controller).querySelector('option[value="builtin"]')).toBeNull();
+    expect(controller.element.querySelector('.x-nt-shortcut-icon-refresh')).not.toBeNull();
+    expect(refreshOnlineIcon).not.toHaveBeenCalled();
+  });
+
+  it('uses a built-in icon when replacing a custom icon and updates it when the supported URL changes', async () => {
+    const onSubmit = vi.fn(() => true);
+    const getBuiltinIconUrl = (url: string) => url.startsWith('https://github.com/') ? '/github.png'
+      : url.startsWith('https://developer.mozilla.org/') ? '/mdn.png' : '';
+    const controller = createController(onSubmit, { getBuiltinIconUrl });
+    act(() => controller.open({ mode: 'edit', shortcut: {
+      id: 'one', url: 'https://github.com/', iconDataUrl: 'data:image/png;base64,Y3VzdG9t'
+    } }));
+    act(() => chooseIconSource(controller, 'builtin'));
+    const urlInput = controller.element.querySelectorAll<HTMLInputElement>('input[type="text"]')[1];
+    act(() => setInputValue(urlInput, 'https://developer.mozilla.org/'));
+    expect(iconSourceSelect(controller).value).toBe('builtin');
+    expect(controller.element.querySelector<HTMLImageElement>('.x-nt-shortcut-online-icon-preview img')?.getAttribute('src')).toBe('/mdn.png');
+    await act(async () => controller.submit());
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ iconSource: 'builtin', iconAction: 'remove', iconDataUrl: '' }));
   });
 
   it('traps focus, closes on Escape, and detaches cleanly', () => {

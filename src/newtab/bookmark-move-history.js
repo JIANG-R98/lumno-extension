@@ -146,10 +146,76 @@
   }
 
   function normalizeHistoryRecord(record) {
+    if (record && record.kind === 'shortcut-reorder') {
+      return createShortcutReorderRecord(record);
+    }
+    if (record && record.kind === 'transfer') {
+      return createTransferRecord(record);
+    }
+    if (record && record.kind === 'shortcut-delete') {
+      return createShortcutDeleteRecord(record);
+    }
     if (record && record.kind === 'delete') {
       return createDeleteRecord(record);
     }
     return createMoveRecord(record);
+  }
+
+  function createShortcutDeleteRecord(options) {
+    const config = options && typeof options === 'object' ? options : {};
+    const snapshot = config.snapshot;
+    if (!snapshot || !snapshot.id || !(snapshot.url || snapshot.folderId || snapshot.folderRef)) {
+      return null;
+    }
+    return Object.freeze({
+      kind: 'shortcut-delete',
+      snapshot: Object.freeze(JSON.parse(JSON.stringify(snapshot))),
+      index: Math.max(0, Math.round(Number(config.index) || 0)),
+      iconDataUrl: String(config.iconDataUrl || '')
+    });
+  }
+
+  function createTransferRecord(options) {
+    const config = options && typeof options === 'object' ? options : {};
+    const from = normalizeLocation(config.from);
+    const to = normalizeLocation(config.to);
+    const snapshot = cloneBookmarkSnapshot(config.snapshot);
+    const beforeShortcut = config.beforeShortcut && createShortcutDeleteRecord(config.beforeShortcut);
+    const afterShortcut = config.afterShortcut && createShortcutDeleteRecord(config.afterShortcut);
+    if ((!from && !to) || !snapshot || (!beforeShortcut && !afterShortcut) ||
+        (!snapshot.url && (!from || !to || !config.bookmarkId))) {
+      return null;
+    }
+    return Object.freeze({
+      kind: 'transfer',
+      bookmarkId: String(config.bookmarkId || ''),
+      snapshot,
+      from: from && Object.freeze(from),
+      to: to && Object.freeze(to),
+      beforeShortcut: beforeShortcut || null,
+      afterShortcut: afterShortcut || null,
+      runtime: {
+        currentBookmarkId: String(config.runtime && config.runtime.currentBookmarkId || config.bookmarkId || '')
+      }
+    });
+  }
+
+  function createShortcutReorderRecord(options) {
+    const config = options || {};
+    const fromOrder = Array.isArray(config.fromOrder) ? config.fromOrder.map(String) : [];
+    const toOrder = Array.isArray(config.toOrder) ? config.toOrder.map(String) : [];
+    const fromIds = new Set(fromOrder);
+    if (fromOrder.length < 2 || fromOrder.length !== toOrder.length ||
+        fromIds.size !== fromOrder.length || new Set(toOrder).size !== toOrder.length ||
+        fromOrder.some((id) => !id) || toOrder.some((id) => !fromIds.has(id)) ||
+        fromOrder.every((id, index) => id === toOrder[index])) {
+      return null;
+    }
+    return Object.freeze({
+      kind: 'shortcut-reorder',
+      fromOrder: Object.freeze(fromOrder),
+      toOrder: Object.freeze(toOrder)
+    });
   }
 
   function createBookmarkMoveHistory(options) {
@@ -157,6 +223,28 @@
     const maxEntries = Math.max(1, Math.round(Number(config.maxEntries) || 30));
     const undoStack = [];
     const redoStack = [];
+    const bookmarkIds = new Map();
+
+    function resolveBookmarkId(bookmarkId) {
+      let id = String(bookmarkId || '');
+      const seen = new Set();
+      while (bookmarkIds.has(id) && !seen.has(id)) {
+        seen.add(id);
+        id = bookmarkIds.get(id);
+      }
+      return id;
+    }
+
+    function remapBookmarkId(previousId, nextId) {
+      const resolvedId = resolveBookmarkId(previousId);
+      const id = String(nextId || '');
+      if (resolvedId && id && resolvedId !== id) {
+        for (const key of bookmarkIds.keys()) {
+          if (resolveBookmarkId(key) === resolvedId) bookmarkIds.set(key, id);
+        }
+        bookmarkIds.set(String(previousId), id);
+      }
+    }
 
     function push(record) {
       const normalized = normalizeHistoryRecord(record);
@@ -168,6 +256,14 @@
         undoStack.splice(0, undoStack.length - maxEntries);
       }
       redoStack.length = 0;
+      // Retain mappings only for the bounded history, rather than accumulating
+      // an id for every bookmark recreated by repeated undo/redo cycles.
+      const retainedIds = new Set(undoStack.map((item) => item.bookmarkId).filter(Boolean));
+      const retainedMappings = [...bookmarkIds.keys()]
+        .filter((id) => retainedIds.has(id))
+        .map((id) => [id, resolveBookmarkId(id)]);
+      bookmarkIds.clear();
+      retainedMappings.forEach(([id, currentId]) => bookmarkIds.set(id, currentId));
       return true;
     }
 
@@ -198,6 +294,7 @@
     function clear() {
       undoStack.length = 0;
       redoStack.length = 0;
+      bookmarkIds.clear();
     }
 
     return Object.freeze({
@@ -206,6 +303,8 @@
       peekRedo,
       commitUndo,
       commitRedo,
+      resolveBookmarkId,
+      remapBookmarkId,
       clear,
       canUndo: () => undoStack.length > 0,
       canRedo: () => redoStack.length > 0
@@ -217,6 +316,9 @@
     canMoveBookmarkToFolder,
     cloneBookmarkSnapshot,
     createDeleteRecord,
+    createShortcutDeleteRecord,
+    createTransferRecord,
+    createShortcutReorderRecord,
     createBookmarkMoveHistory,
     createMoveRecord,
     getMoveApiDestinationIndex,

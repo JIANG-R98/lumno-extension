@@ -6,6 +6,7 @@
   root.LumnoFaviconCache = api;
   root.LumnoNewtabFaviconCache = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function(root) {
+  const PAGE_FAVICON_CACHE_VERSION = 3;
   const DEFAULTS = Object.freeze({
     faviconPersistStorageKey: '_x_extension_favicon_url_cache_2024_unique_',
     faviconPersistTtlMs: 1000 * 60 * 60 * 24 * 14,
@@ -253,6 +254,7 @@
           const payload = result && result[faviconPersistStorageKey];
           const entries = getValidFaviconPersistEntries(payload && payload.entries ? payload.entries : null);
           entries.forEach((item) => {
+            if (/^page:https?:\/\//i.test(item.key) && payload.version !== PAGE_FAVICON_CACHE_VERSION) return;
             faviconPersistCache.set(item.key, { url: item.url, updatedAt: item.updatedAt });
           });
           faviconPersistLoaded = true;
@@ -280,6 +282,8 @@
           const payload = result && result[faviconDataPersistStorageKey];
           const entries = getValidFaviconDataPersistEntries(payload && payload.entries ? payload.entries : null);
           entries.forEach((item) => {
+            // Previous page caches may contain icons obtained with host fallback.
+            if (/^page:https?:\/\//i.test(item.key) && payload.version !== PAGE_FAVICON_CACHE_VERSION) return;
             faviconDataPersistCache.set(item.key, { dataUrl: item.dataUrl, updatedAt: item.updatedAt });
           });
           faviconDataPersistLoaded = true;
@@ -394,7 +398,7 @@
         });
         storageArea.set({
           [faviconPersistStorageKey]: {
-            version: 1,
+            version: PAGE_FAVICON_CACHE_VERSION,
             entries: serialized,
             updatedAt: Date.now()
           }
@@ -426,7 +430,7 @@
         });
         storageArea.set({
           [faviconDataPersistStorageKey]: {
-            version: 1,
+            version: PAGE_FAVICON_CACHE_VERSION,
             entries: serialized,
             updatedAt: Date.now()
           }

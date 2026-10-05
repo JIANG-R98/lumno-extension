@@ -155,6 +155,20 @@ function createChromeStub(options) {
       visitCount: 2,
       typedCount: 0,
       lastVisitTime: now - 8000
+    },
+    {
+      title: 'Chrome 应用商店开发者信息中心',
+      url: 'https://chrome.google.com/webstore/devconsole/test-dashboard?hl=zh-CN',
+      visitCount: 12,
+      typedCount: 1,
+      lastVisitTime: now - 9000
+    },
+    {
+      title: '开发者信息中心 - Google 搜索',
+      url: 'https://www.google.com/search?q=%E5%BC%80%E5%8F%91%E8%80%85%E4%BF%A1%E6%81%AF%E4%B8%AD%E5%BF%83',
+      visitCount: 20,
+      typedCount: 2,
+      lastVisitTime: now - 9500
     }
   ].concat(
     Array.from({ length: 260 }, (_, index) => ({
@@ -435,6 +449,7 @@ function loadBackgroundForTest(options) {
 
   const backgroundSource = fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8') +
     '\nglobalThis.__testGetSearchSuggestions = getSearchSuggestions;\n' +
+    'globalThis.__testIsSearchEngineResultUrl = isSearchEngineResultUrl;\n' +
     'globalThis.__testSetDefaultSearchEngineState = setDefaultSearchEngineState;\n' +
     'globalThis.__testGetSearchEngineSuggestions = typeof getSearchEngineSuggestions === "function" ? getSearchEngineSuggestions : null;\n';
   vm.runInContext(backgroundSource, context, {
@@ -627,6 +642,126 @@ async function run() {
   assert.ok(
     suggestions.some((item) => item && (item.type === 'bookmark' || item.type === 'history' || item.type === 'topSite')),
     'background search suggestions should include at least one enabled local source type'
+  );
+
+  const developerDashboardSuggestions = await context.__testGetSearchSuggestions('开发者信息中心', {
+    sourceTypes: ['history'],
+    includeOpenTabs: false
+  });
+  assert.ok(
+    developerDashboardSuggestions.some((item) => (
+      item && item.type === 'history' &&
+      item.url === 'https://chrome.google.com/webstore/devconsole/test-dashboard?hl=zh-CN'
+    )),
+    'Chinese title fragments should find the Chrome developer dashboard in history without relying on an open tab or bookmark'
+  );
+  assert.ok(
+    !developerDashboardSuggestions.some((item) => item && item.url.startsWith('https://www.google.com/search?')),
+    'actual search-result pages should still be excluded from history suggestions'
+  );
+
+  const searchResultUrls = [
+    'https://www.google.com/search?q=test',
+    'https://www.google.com/search/?q=test',
+    'https://www.google.co.jp/search?q=test',
+    'https://www.google.com.hk/search?q=test',
+    'https://kagi.com/search?q=test',
+    'https://www.bing.com/search?q=test',
+    'https://cn.bing.com/search?q=test',
+    'https://www.baidu.com/s?wd=test',
+    'https://duckduckgo.com/?q=test',
+    'https://search.yahoo.com/search?p=test',
+    'https://yandex.com/search/?text=test',
+    'https://www.sogou.com/web?query=test',
+    'https://m.sm.cn/s?q=test'
+  ];
+  searchResultUrls.forEach((url) => {
+    assert.strictEqual(context.__testIsSearchEngineResultUrl(url), true, `${url} should be recognized as a search result`);
+  });
+  const ordinaryPageUrls = [
+    'https://chrome.google.com/webstore/devconsole/test-dashboard?hl=zh-CN',
+    'https://chrome.google.com/webstore/devconsole/test-dashboard?q=test',
+    'https://chromewebstore.google.com/detail/example/example-id',
+    'https://www.google.com/webmasters/',
+    'https://www.google.com/support/',
+    'https://www.google.com/sheets/',
+    'https://www.google.com/search-console?q=test',
+    'https://www.google.com/search/docs?q=test',
+    'https://www.google.com/search',
+    'https://www.google.com/search?q=',
+    'https://www.google.com/?q=test',
+    'https://www.sogou.com/webstore?query=test',
+    'https://www.baidu.com/support?wd=test',
+    'https://www.google.com.example.test/search?q=test',
+    'https://notbing.com/search?q=test',
+    'https://bing.com.example.test/search?q=test',
+    'https://example.test/search?q=test',
+    'chrome://history/',
+    'invalid-url'
+  ];
+  ordinaryPageUrls.forEach((url) => {
+    assert.strictEqual(context.__testIsSearchEngineResultUrl(url), false, `${url} should remain an ordinary page`);
+  });
+
+  const developerDashboard = {
+    title: 'Chrome 应用商店开发者信息中心',
+    url: 'https://chrome.google.com/webstore/devconsole/test-dashboard?hl=zh-CN'
+  };
+  for (const surface of ['newtab', 'overlay']) {
+    const response = await sendBackgroundMessage(messageListeners, {
+      action: 'getSearchSuggestions',
+      query: '开发者信息中心',
+      context: surface,
+      includeOpenTabs: false
+    }, 1000);
+    assert.ok(
+      response && response.suggestions.some((item) => item && item.url === developerDashboard.url),
+      `${surface} search messages should retain the developer dashboard history match`
+    );
+  }
+
+  const { context: developerBookmarkContext } = loadBackgroundForTest();
+  developerBookmarkContext.chrome.bookmarks.search = (_options, callback) => {
+    setTimeout(() => callback([{ id: '11', parentId: '1', ...developerDashboard }]), 0);
+  };
+  const developerBookmarks = await developerBookmarkContext.__testGetSearchSuggestions('开发者信息中心', {
+    sourceTypes: ['bookmark'],
+    includeOpenTabs: false
+  });
+  assert.ok(
+    developerBookmarks.some((item) => item && item.type === 'bookmark' && item.url === developerDashboard.url),
+    'the developer dashboard should remain searchable from bookmarks'
+  );
+
+  const { context: developerOpenTabContext } = loadBackgroundForTest();
+  developerOpenTabContext.chrome.tabs.query = (_options, callback) => {
+    setTimeout(() => callback([
+      { id: 27, windowId: 1, ...developerDashboard },
+      {
+        id: 28,
+        windowId: 1,
+        title: '账户安全中心 - Example',
+        url: 'https://example.test/settings/security/account'
+      },
+      { id: 29, windowId: 1, title: 'Unrelated page', url: 'https://example.test/other' }
+    ]), 0);
+  };
+  const developerOpenTabs = await developerOpenTabContext.__testGetSearchSuggestions('开发者信息中心', {
+    sourceTypes: ['bookmark']
+  });
+  assert.ok(
+    developerOpenTabs.some((item) => (
+      item && item.type === 'openTab' && item.url === developerDashboard.url && item._xMatchedTabId === 27
+    )),
+    'the developer dashboard should remain searchable as an open tab without a history or bookmark match'
+  );
+  assert.strictEqual(developerOpenTabs.length, 1, 'unrelated open tabs should remain excluded');
+  const securityOpenTabs = await developerOpenTabContext.__testGetSearchSuggestions('账户安全', {
+    sourceTypes: ['bookmark']
+  });
+  assert.ok(
+    securityOpenTabs.some((item) => item && item._xMatchedTabId === 28 && item.score > 0),
+    'category penalties should rank a matching open utility page without removing it'
   );
 
   const xiaohongshuLocalSuggestions = await context.__testGetSearchSuggestions('小红书');

@@ -1,6 +1,7 @@
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
-import type { CSSProperties, ReactNode } from 'react';
+import type { CSSProperties } from 'react';
+import { SegmentedTabs } from './segmented-tabs';
 import {
   RangeSliderField
 } from '../shared/range-slider';
@@ -33,46 +34,6 @@ const DEFAULT_EFFECT_INK_TONES: EffectInkToneItem[] = [
 ];
 
 const ref = (name: string) => ({ 'data-wallpaper-ref': name });
-
-function SegmentedTabs({
-  ariaHidden,
-  ariaLabel,
-  children,
-  className,
-  dataVisible,
-  indicatorClassName,
-  indicatorRef,
-  name,
-  role
-}: {
-  ariaHidden?: boolean | 'false' | 'true';
-  ariaLabel?: string;
-  children: ReactNode;
-  className: string;
-  dataVisible?: 'false' | 'true';
-  indicatorClassName: string;
-  indicatorRef: string;
-  name: string;
-  role: 'group' | 'tablist';
-}) {
-  return (
-    <div
-      {...ref(name)}
-      aria-hidden={ariaHidden}
-      aria-label={ariaLabel}
-      className={`x-nt-segmented-tabs ${className}`}
-      data-visible={dataVisible}
-      role={role}
-    >
-      <span
-        {...ref(indicatorRef)}
-        aria-hidden="true"
-        className={`x-nt-segmented-tabs-indicator ${indicatorClassName}`}
-      />
-      {children}
-    </div>
-  );
-}
 
 function Switch({
   ariaLabel,
@@ -690,6 +651,68 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
             </div>
           </div>
           <div className="x-nt-panel-divider" />
+          <div className="x-nt-quote-settings">
+            <div className="x-nt-wallpaper-panel-header">
+              <span {...ref('quoteTitle')} className="x-nt-appearance-setting-title" />
+              <Switch name="quoteEnabledToggle" />
+            </div>
+            <div {...ref('quoteBody')} className="x-nt-quote-body" hidden>
+              <SegmentedTabs
+                className="x-nt-wallpaper-tabs x-nt-quote-tabs"
+                indicatorClassName="x-nt-wallpaper-tabs-indicator"
+                indicatorRef="quoteCategoryIndicator"
+                name="quoteCategory"
+                role="group"
+              >
+                {['literature', 'poetry'].map((category) => (
+                  <button
+                    aria-pressed="false"
+                    className="x-nt-segmented-tab x-nt-wallpaper-tab"
+                    data-quote-category={category}
+                    key={category}
+                    type="button"
+                  />
+                ))}
+              </SegmentedTabs>
+              <SegmentedTabs
+                className="x-nt-wallpaper-tabs x-nt-quote-tabs"
+                indicatorClassName="x-nt-wallpaper-tabs-indicator"
+                indicatorRef="quotePositionIndicator"
+                name="quotePosition"
+                role="group"
+              >
+                {['search', 'bottom'].map((position) => (
+                  <button
+                    aria-pressed="false"
+                    className="x-nt-segmented-tab x-nt-wallpaper-tab"
+                    data-quote-position={position}
+                    key={position}
+                    type="button"
+                  />
+                ))}
+              </SegmentedTabs>
+              <div {...ref('quoteFontSizeRow')} className="x-nt-quote-font-size">
+                <span {...ref('quoteFontSizeTitle')} className="x-nt-appearance-setting-title" />
+                <RangeSliderField
+                  {...ref('quoteFontSizeSlider')}
+                  className="x-nt-overlay-slider-wrap"
+                  inputClass="x-nt-overlay-slider"
+                  min={String(model.quoteFontSize?.min ?? 12)}
+                  max={String(model.quoteFontSize?.max ?? 24)}
+                  defaultValue={String(model.quoteFontSize?.defaultValue ?? 15)}
+                  step="1"
+                  rowClassName="x-nt-range-slider-row"
+                  valueInputProps={{
+                    ...ref('quoteFontSizeSliderValueInput'),
+                    defaultValue: String(model.quoteFontSize?.defaultValue ?? 15),
+                    inputMode: 'numeric'
+                  }}
+                />
+              </div>
+            </div>
+            <p {...ref('quoteProviderHint')} className="x-nt-quote-provider" />
+          </div>
+          <div className="x-nt-panel-divider" />
           <div className="x-nt-wallpaper-section">
             <div
               {...ref('panelHeader')}
@@ -760,9 +783,9 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                   name="tabs"
                   role="tablist"
                 >
-                  {['built-in', 'local'].map((tab) => (
+                  {['built-in', 'local', 'bing'].map((tab) => (
                     <button
-                      {...ref(tab === 'built-in' ? 'builtInTab' : 'localTab')}
+                      {...ref(tab === 'built-in' ? 'builtInTab' : tab === 'local' ? 'localTab' : 'bingTab')}
                       aria-selected="false"
                       className="x-nt-segmented-tab x-nt-wallpaper-tab"
                       data-active="false"
@@ -771,7 +794,7 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                       role="tab"
                       type="button"
                     >
-                      {tab === 'built-in' ? 'Built-in' : 'Local'}
+                      {tab === 'built-in' ? 'Built-in' : tab === 'local' ? 'Local' : 'Bing'}
                     </button>
                   ))}
                 </SegmentedTabs>
@@ -820,6 +843,29 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                   data-wallpaper-custom-items=""
                   style={{ display: 'contents' }}
                 />
+              </div>
+              <div {...ref('bingPanel')} className="x-nt-bing-panel" data-wallpaper-panel="bing" role="tabpanel" aria-hidden="true">
+                <div className="x-nt-bing-daily-card">
+                  <div className="x-nt-appearance-setting-row">
+                    <span {...ref('bingDailyLabel')} className="x-nt-appearance-setting-title" />
+                    <Switch name="bingDailyToggle" />
+                  </div>
+                  <p {...ref('bingDailyHint')} className="x-nt-bing-hint" />
+                  <div {...ref('bingDailyPreview')} className="x-nt-bing-preview" hidden>
+                    <img {...ref('bingDailyImage')} alt="" decoding="async" referrerPolicy="no-referrer" />
+                    <div>
+                      <span {...ref('bingDailyTitle')} className="x-nt-bing-title" />
+                      <span {...ref('bingDailyDate')} className="x-nt-bing-date" />
+                    </div>
+                  </div>
+                </div>
+                <div className="x-nt-bing-toolbar">
+                  <span {...ref('bingRecentLabel')} />
+                  <button {...ref('bingRefresh')} className="x-nt-bing-refresh" type="button" />
+                </div>
+                <div {...ref('bingStatus')} className="x-nt-bing-status" role="status" aria-live="polite" />
+                <div {...ref('bingItemsHost')} className="x-nt-wallpaper-grid x-nt-wallpaper-grid--bing" />
+                <a {...ref('bingSelectedSource')} className="x-nt-bing-source" target="_blank" rel="noopener noreferrer" hidden />
               </div>
               <div className="x-nt-effect-control">
                 <SliderControl
@@ -1118,6 +1164,7 @@ export interface WallpaperViewController {
   getRefs(): Record<string, HTMLElement>;
   panel: HTMLDivElement;
   renderCustomWallpapers(items: WallpaperItem[]): HTMLElement[];
+  renderOnlineWallpapers(items: WallpaperItem[]): HTMLElement[];
 }
 
 export function createWallpaperViewController(
@@ -1145,6 +1192,8 @@ export function createWallpaperViewController(
     throw new Error('Lumno React wallpaper view did not mount.');
   }
   const customRoot: Root = createRoot(customItemsHost);
+  const onlineItemsHost = control.querySelector<HTMLElement>('[data-wallpaper-ref="bingItemsHost"]')!;
+  const onlineRoot: Root = createRoot(onlineItemsHost);
   let destroyed = false;
   const getRefs = () => {
     const refs: Record<string, HTMLElement> = {};
@@ -1167,10 +1216,18 @@ export function createWallpaperViewController(
       }
       destroyed = true;
       flushSync(() => customRoot.unmount());
+      flushSync(() => onlineRoot.unmount());
       flushSync(() => root.unmount());
     },
     getRefs,
     panel,
+    renderOnlineWallpapers(items: WallpaperItem[]) {
+      if (destroyed) return [];
+      flushSync(() => onlineRoot.render(<>{items.map((item) => (
+        <WallpaperTile checkIcon={String(model.icons?.check || '')} item={item} key={item.id} />
+      ))}</>));
+      return Array.from(onlineItemsHost.querySelectorAll<HTMLElement>('.x-nt-wallpaper-tile'));
+    },
     renderCustomWallpapers(items: WallpaperItem[]) {
       if (destroyed) {
         return [];

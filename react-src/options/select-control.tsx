@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import {
   createReactRootController,
   type ReactRootController
@@ -127,8 +127,11 @@ function SelectControl({
       </button>
       <div
         className="_x_extension_select_menu_2024_unique_ _x_extension_menu_surface_2024_unique_"
+        data-menu-surface-width="content"
         data-open={open ? 'true' : 'false'}
         role="listbox"
+        // Keep the trigger width as the minimum; longer translations expand the menu.
+        style={{ '--x-extension-menu-surface-min-width': '100%' } as CSSProperties}
       >
         {model.items.map((item) => {
           const selected = item.value === selectValue;

@@ -9,7 +9,8 @@
   const switcherThemeMediaQuery = typeof window.matchMedia === 'function'
     ? window.matchMedia('(prefers-color-scheme: dark)')
     : null;
-  const switcherThemeStorageArea = (chromeApi && chromeApi.storage && chromeApi.storage.sync)
+  const providerRuntime = globalThis.LumnoSettings && globalThis.LumnoSettings.createProviderStorageRuntime(chromeApi);
+  const switcherThemeStorageArea = providerRuntime ? providerRuntime.area : (chromeApi && chromeApi.storage && chromeApi.storage.sync)
     ? chromeApi.storage.sync
     : (chromeApi && chromeApi.storage ? chromeApi.storage.local : null);
   const switcherThemeStorageAreaName = switcherThemeStorageArea
@@ -608,7 +609,7 @@
       }
       if (chromeApi && chromeApi.storage && chromeApi.storage.onChanged) {
         themeStorageListener = (changes, areaName) => {
-          if (switcherThemeStorageAreaName && areaName !== switcherThemeStorageAreaName) {
+          if (providerRuntime ? !providerRuntime.isActiveAreaName(areaName) : switcherThemeStorageAreaName && areaName !== switcherThemeStorageAreaName) {
             return;
           }
           if (!changes || !changes[THEME_STORAGE_KEY]) {

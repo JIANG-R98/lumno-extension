@@ -34,7 +34,7 @@ Lumno is a Manifest V3 extension for Chromium browsers. It combines a focused br
   </a>
 </p>
 
-<p align="center">Current version: <code>0.9.55</code></p>
+<p align="center">Current version: <code>0.9.56</code></p>
 
 <img width="1200" height="480" alt="Lumno command bar preview" src="./assets/images/readme/banner.webp" decoding="async" />
 
@@ -81,6 +81,12 @@ For manual installation:
 5. Optional: open Lumno settings to configure language, theme, new tab content, site search, blacklist rules, PiP, and shortcut behavior.
 
 To use the command bar on local HTML, PDF, or `file://` pages, enable "Allow access to file URLs" on the extension details page.
+
+## WebDAV sync
+
+WebDAV is a Beta feature under **Settings → Account & sync**. Save the HTTPS endpoint, directory, username and app password, then turn on its switch. It runs alongside the existing Chrome sync and adds custom shortcut icons and uploaded wallpapers; images stay out of Chrome Sync. Connection details are saved only on each device.
+
+Existing server data requires an explicit initial-version choice. Later conflicts let you choose a version for conflicting content while merging other changes, with backups before replacement. The UI shows the last successful sync time. Turning WebDAV off keeps Chrome sync running. See [WebDAV sync details](docs/webdav-sync.md) for behavior and server requirements.
 
 ## Development
 

@@ -111,6 +111,7 @@
 
     let bookmarkCascadeMenu = null;
     let bookmarkCascadeAnchor = null;
+    let bookmarkCascadeOpenRequest = null;
     let bookmarkCascadeLevels = [];
     let bookmarkCascadePointer = null;
     let bookmarkCascadePreviousPointer = null;
@@ -710,8 +711,20 @@
       return bookmarkCascadeDebugControl;
     }
 
+    function cancelBookmarkCascadeOpenRequest() {
+      const pendingAnchor = bookmarkCascadeOpenRequest && bookmarkCascadeOpenRequest.anchorElement;
+      bookmarkCascadeOpenRequest = null;
+      if (pendingAnchor && pendingAnchor !== bookmarkCascadeAnchor) {
+        pendingAnchor.setAttribute('aria-expanded', 'false');
+        if (typeof pendingAnchor._xSetBookmarkMenuVisualActive === 'function') {
+          pendingAnchor._xSetBookmarkMenuVisualActive(false);
+        }
+      }
+    }
+
     function close(closeOptions) {
       const optionsForClose = closeOptions || {};
+      cancelBookmarkCascadeOpenRequest();
       cancelBookmarkCascadeHoverIntent();
       cancelBookmarkCascadeDelayedClose();
       hideCursorTooltip();
@@ -924,6 +937,8 @@
         if (shouldRemove && entry.triggerElement &&
             entry.triggerElement.getAttribute('aria-haspopup') === 'menu') {
           entry.triggerElement.setAttribute('aria-expanded', 'false');
+          const icon = entry.triggerElement.querySelector('.x-nt-bookmark-cascade-icon--folder');
+          if (icon) playFolderPathMorph(icon, entry.triggerElement.getAttribute('data-active') === 'true');
         }
         if (shouldRemove && entry.levelElement && entry.levelElement.parentNode) {
           if (entry.viewController && typeof entry.viewController.destroy === 'function') {
@@ -1116,14 +1131,15 @@
       }
       getBookmarkCascadeLevelItems(levelElement).forEach((button) => {
         const active = button === activeButton;
+        const submenuOpen = bookmarkCascadeLevels.some((entry) => entry.triggerElement === button);
         setBookmarkCascadeItemHoverSuppressed(button, false);
         button.setAttribute('data-active', active ? 'true' : 'false');
         button.tabIndex = active ? 0 : -1;
         const icon = button.querySelector('.x-nt-bookmark-cascade-icon--folder');
         if (icon) {
-          playFolderPathMorph(icon, active);
+          playFolderPathMorph(icon, active || submenuOpen);
         }
-        if (!active && button.getAttribute('aria-haspopup') === 'menu') {
+        if (!active && !submenuOpen && button.getAttribute('aria-haspopup') === 'menu') {
           button.setAttribute('aria-expanded', 'false');
         }
       });
@@ -1611,6 +1627,15 @@
       if (!folderId || !anchorElement || !documentObj || !documentObj.body) {
         return;
       }
+      if (optionsForOpen.toggle === true && !dragMode &&
+          (isBookmarkCascadeMenuOpenFor(folderId, anchorElement, dragMode) ||
+           (bookmarkCascadeOpenRequest &&
+            bookmarkCascadeOpenRequest.folderId === folderId &&
+            bookmarkCascadeOpenRequest.anchorElement === anchorElement &&
+            bookmarkCascadeOpenRequest.dragMode === dragMode))) {
+        close({ restoreFocus: true });
+        return;
+      }
       if (isBookmarkCascadeMenuOpenFor(folderId, anchorElement, dragMode)) {
         cancelBookmarkCascadeHoverIntent();
         cancelBookmarkCascadeDelayedClose();
@@ -1623,7 +1648,14 @@
         }
         return;
       }
+      cancelBookmarkCascadeOpenRequest();
+      const openRequest = { folderId, anchorElement, dragMode };
+      bookmarkCascadeOpenRequest = openRequest;
       Promise.resolve(ensureReady(false)).then((ready) => {
+        if (bookmarkCascadeOpenRequest !== openRequest) {
+          return;
+        }
+        bookmarkCascadeOpenRequest = null;
         if (typeof optionsForOpen.shouldOpen === 'function' && !optionsForOpen.shouldOpen()) {
           return;
         }
@@ -1785,6 +1817,10 @@
       for (let levelIndex = bookmarkCascadeLevels.length - 1; levelIndex >= 0; levelIndex -= 1) {
         const entry = bookmarkCascadeLevels[levelIndex];
         const buttons = entry ? getBookmarkCascadeLevelItems(entry.levelElement) : [];
+        if (entry && buttons.length === 0 && isPointInsideRect(point, getBookmarkCascadeElementRect(entry.levelElement))) {
+          return { entry, kind: 'insertion', folderId: entry.folderId, index: 0,
+            element: null, markerElement: null, markerPosition: 'before' };
+        }
         const rows = buttons.map((button) => {
           const row = typeof button.closest === 'function'
             ? button.closest('.x-nt-bookmark-cascade-row')

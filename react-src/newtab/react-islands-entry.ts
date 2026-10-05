@@ -3,7 +3,8 @@ import { createDockApi } from './dock';
 import { createFeedbackControlApi } from './feedback';
 import { createRecentSitesViewApi } from './recent-sites';
 import { createSelectMenuApi } from './select-menu';
-import { createShortcutDialogApi } from './shortcut-dialog';
+import { createShortcutDialogApi } from './shortcut-dialog-lazy';
+import { createFolderColorPickerApi } from './folder-color-picker-lazy';
 import { createShortcutsViewApi } from './shortcuts';
 import { createSuggestionsViewApi } from './suggestions';
 import { createToastApi } from './toast';
@@ -52,6 +53,7 @@ const runtime = globalThis as typeof globalThis & {
   LumnoNewtabDockReact?: ReturnType<typeof createDockApi>;
   LumnoNewtabShortcutDialog?: ReturnType<typeof createShortcutDialogApi>;
   LumnoNewtabShortcutDialogReact?: ReturnType<typeof createShortcutDialogApi>;
+  LumnoNewtabFolderColorPicker?: ReturnType<typeof createFolderColorPickerApi>;
   LumnoNewtabShortcutsView?: ReturnType<typeof createShortcutsViewApi>;
   LumnoNewtabShortcutsViewReact?: ReturnType<typeof createShortcutsViewApi>;
   LumnoNewtabRecentSitesView?: ReturnType<typeof createRecentSitesViewApi>;
@@ -102,6 +104,7 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   const dockApi = createDockApi();
   const feedbackApi = createFeedbackControlApi();
   const shortcutDialogApi = createShortcutDialogApi();
+  const folderColorPickerApi = createFolderColorPickerApi();
   const recentSitesApi = createRecentSitesViewApi();
   const selectMenuApi = createSelectMenuApi();
   const shortcutsApi = createShortcutsViewApi();
@@ -128,6 +131,7 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   runtime.LumnoNewtabFeedbackControl = feedbackApi;
   runtime.LumnoNewtabShortcutDialogReact = shortcutDialogApi;
   runtime.LumnoNewtabShortcutDialog = shortcutDialogApi;
+  runtime.LumnoNewtabFolderColorPicker = folderColorPickerApi;
   runtime.LumnoNewtabRecentSitesViewReact = recentSitesApi;
   runtime.LumnoNewtabRecentSitesView = recentSitesApi;
   runtime.LumnoNewtabSelectMenuReact = selectMenuApi;

@@ -36,7 +36,7 @@ Lumno 是一个面向 Chromium 浏览器的 Manifest V3 扩展，把「聚焦搜
   </a>
 </p>
 
-<p align="center">当前版本：<code>0.9.55</code></p>
+<p align="center">当前版本：<code>0.9.56</code></p>
 
 <img width="1200" height="480" alt="Lumno command bar preview" src="./assets/images/readme/banner.webp" decoding="async" />
 
@@ -83,6 +83,12 @@ Lumno 是一个面向 Chromium 浏览器的 Manifest V3 扩展，把「聚焦搜
 5. 可选：进入扩展的设置页，调整语言、主题、新标签页内容、站内搜索、黑名单、PiP 和快捷键策略。
 
 如果需要在本地 HTML、PDF 或 `file://` 页面使用聚焦搜索，请在扩展详情页开启「允许访问文件网址」。
+
+## WebDAV 同步
+
+WebDAV 为 Beta 功能，入口在「设置 → 账号与同步」。填写 HTTPS 地址、同步目录、用户名与应用密码并保存配置后，再开启开关。它与原有 Chrome 同步同时运行，额外同步自定义快捷方式图标与上传的壁纸；图片不进入 Chrome Sync。连接信息仅保存在各自设备上。
+
+首次连接已有远端数据时选择初始版本，后续冲突仅选择冲突内容采用的版本，其他改动仍合并，替换前保留备份。界面显示最近成功同步时间，关闭 WebDAV 不影响 Chrome 同步。详细行为与兼容要求见 [WebDAV 同步说明](docs/webdav-sync.md)。
 
 ## 开发
 

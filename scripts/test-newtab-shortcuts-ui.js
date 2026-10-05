@@ -48,7 +48,9 @@ function assertMessage(locale, messages, key) {
 }
 
 function getCssRuleBlock(source, selector) {
-  const selectorIndex = source.indexOf(`${selector} {`);
+  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = new RegExp(`^\\s*${escapedSelector} \\{`, 'm').exec(source);
+  const selectorIndex = match ? match.index : -1;
   assert.ok(selectorIndex >= 0, `${selector} rule should exist`);
   const blockStart = source.indexOf('{', selectorIndex);
   const blockEnd = source.indexOf('\n      }', blockStart);
@@ -83,6 +85,52 @@ function getFunctionSource(source, name) {
   assert.fail(`${name} function body should end`);
   return '';
 }
+
+function assertBrowserInternalShortcutNavigation() {
+  const navigations = [];
+  const messages = [];
+  const location = { href: 'chrome-extension://lumno/newtab.html' };
+  const sandbox = {
+    chrome: {
+      runtime: {
+        lastError: null,
+        sendMessage: (message) => messages.push(message)
+      },
+      tabs: {
+        getCurrent: (callback) => callback({ id: 42 }),
+        update: (tabId, options) => navigations.push({ tabId, url: options.url })
+      }
+    },
+    window: { location },
+    NAVIGATION_DISPOSITION: require('../src/shared/navigation-disposition.js'),
+    numberShortcutInstantEnabled: false
+  };
+  vm.runInNewContext([
+    'navigateToUrl',
+    'isMiddleClick',
+    'isBackgroundOpenEvent',
+    'openUrlFromNewtabCard',
+    'openShortcutUrl'
+  ].map((name) => getFunctionSource(newtabJs, name)).join('\n'), sandbox);
+
+  const shortcut = { url: 'chrome://inspect/#devices' };
+  sandbox.openShortcutUrl(shortcut, { button: 0 });
+  assert.deepStrictEqual(navigations, [{ tabId: 42, url: shortcut.url }]);
+  assert.strictEqual(location.href, 'chrome-extension://lumno/newtab.html');
+
+  [{ ctrlKey: true }, { metaKey: true }, { button: 1 }].forEach((event) => {
+    sandbox.openShortcutUrl(shortcut, event);
+  });
+  assert.strictEqual(messages.length, 3);
+  messages.forEach((message) => {
+    assert.strictEqual(message.action, 'createTab');
+    assert.strictEqual(message.url, shortcut.url);
+    assert.strictEqual(message.disposition, 'backgroundTab');
+  });
+  assert.strictEqual(navigations.length, 1);
+}
+
+assertBrowserInternalShortcutNavigation();
 
 function createFakeStyle() {
   const values = new Map();
@@ -266,7 +314,8 @@ async function assertDarkWallpaperKeepsShortcutThemeBackground() {
           sampleElement: shortcutTile,
           minWidth: 42,
           minHeight: 42,
-          iconButton: true
+          iconButton: true,
+          forcedIconBackground: 'shortcut-fallback'
         },
         {
           element: addTile,
@@ -341,6 +390,12 @@ async function assertDarkWallpaperKeepsShortcutThemeBackground() {
     getTestColorLuminance(addForeground) > 0.72,
     'dark wallpaper add shortcut icon should remain light on the dark surface'
   );
+  const fallbackBackground = parseSolidRgb(shortcutTile.style.getPropertyValue('--x-nt-shortcut-fallback-icon-bg'));
+  const fallbackForeground = parseSolidRgb(shortcutTile.style.getPropertyValue('--x-nt-shortcut-fallback-icon-color'));
+  assert.ok(getTestColorLuminance(fallbackBackground) < 0.42, 'unavailable icons and folders should retain a visible dark-wallpaper surface');
+  assert.ok(getTestContrastRatio(fallbackBackground, fallbackForeground) >= 4.5, 'fallback icons should remain readable on that surface');
+  runtime.clear();
+  assert.strictEqual(shortcutTile.style.getPropertyValue('--x-nt-shortcut-fallback-icon-bg'), '', 'removing wallpaper should restore the static fallback surface');
 }
 
 async function assertDarkThemeKeepsShortcutThemeBackground() {
@@ -448,7 +503,8 @@ async function assertDarkThemeKeepsShortcutThemeBackground() {
           sampleElement: shortcutTile,
           minWidth: 42,
           minHeight: 42,
-          iconButton: true
+          iconButton: true,
+          forcedIconBackground: 'shortcut-fallback'
         },
         {
           element: addTile,
@@ -509,6 +565,12 @@ async function assertDarkThemeKeepsShortcutThemeBackground() {
     getTestColorLuminance(addForeground) > 0.72,
     'dark theme add shortcut icon should remain light on the dark surface'
   );
+  const fallbackBackground = parseSolidRgb(shortcutTile.style.getPropertyValue('--x-nt-shortcut-fallback-icon-bg'));
+  const fallbackForeground = parseSolidRgb(shortcutTile.style.getPropertyValue('--x-nt-shortcut-fallback-icon-color'));
+  assert.ok(getTestColorLuminance(fallbackBackground) < 0.42, 'dark-theme fallback surfaces should stay dark on a light wallpaper');
+  assert.ok(getTestContrastRatio(fallbackBackground, fallbackForeground) >= 4.5, 'dark-theme fallback icons should remain readable');
+  runtime.clear();
+  assert.strictEqual(shortcutTile.style.getPropertyValue('--x-nt-shortcut-fallback-icon-color'), '', 'clearing wallpaper should restore theme-aware fallback foregrounds');
 }
 
 assertContains(
@@ -1201,7 +1263,7 @@ assertContains(
 assertContains(
   newtabHtml,
   '.x-nt-shortcut-icon:has(.x-nt-favicon-fallback[data-visible="true"])',
-  'visible shortcut fallback nodes should not stack with the themed icon card'
+  'visible shortcut fallback nodes should select the shared fallback surface'
 );
 
 const shortcutFallbackSurfaceRule = getCssRuleBlock(
@@ -1210,8 +1272,13 @@ const shortcutFallbackSurfaceRule = getCssRuleBlock(
 );
 assertContains(
   shortcutFallbackSurfaceRule,
-  'background: transparent;',
-  'shortcut fallback state should replace rather than stack with the icon card surface'
+  '--x-nt-shortcut-icon-bg: var(--x-nt-shortcut-fallback-icon-bg);',
+  'unavailable shortcut artwork should keep the shared fallback background'
+);
+assertContains(
+  newtabHtml,
+  '.x-nt-shortcut-icon--folder,\n      .x-nt-shortcut-icon:has(.x-nt-shortcut-favicon[data-fallback-icon="true"])',
+  'folder shortcuts should share the unavailable-favicon surface'
 );
 
 assertContains(
@@ -1574,6 +1641,7 @@ assertContains(
     'window',
     'setShortcutDragTileTransform',
     'updateShortcutDragBookmarkTarget',
+    'isPointOverShortcutDropSurface',
     'getShortcutDragInsertionIndex',
     'getShortcutTileInsertionIndex',
     'getShortcutTileRectMap',
@@ -1581,6 +1649,8 @@ assertContains(
     'moveShortcutTileElement',
     'animateShortcutLayoutShift',
     `let shortcutDragState = null;
+    const document = { body: { removeAttribute() {} } };
+    const isBookmarkTopbarMode = () => false;
     ${getFunctionSource(newtabJs, 'cancelShortcutDragMoveFrame')}
     ${getFunctionSource(newtabJs, 'applyShortcutDragMove')}
     ${getFunctionSource(newtabJs, 'flushShortcutDragMove')}
@@ -1604,6 +1674,7 @@ assertContains(
     },
     (_state, pointerX, pointerY) => transformCalls.push([pointerX, pointerY]),
     () => false,
+    () => true,
     () => 0,
     () => 0,
     () => new Map(),
@@ -1683,8 +1754,8 @@ assertContains(
 
 assertContains(
   newtabJs,
-  'NEWTAB_SHORTCUTS_STORE.saveShortcuts(storageArea, newtabShortcuts, options)',
-  'shortcut drag reordering should persist the reordered shortcut array'
+  "persistShortcuts(newtabShortcuts, '', undefined, { render: false })",
+  'shortcut drag reordering should use the shared quota and local overflow persistence'
 );
 
 assertContains(
@@ -2533,7 +2604,7 @@ assertContains(
 
 assertContains(
   newtabJs,
-  'return Promise.all([loadShortcuts(), loadShortcutIcons(), loadShortcutFavicons()]).then(() => {',
+  'return Promise.all([loadShortcuts(), loadShortcutIcons(), loadShortcutFavicons(), loadFolderColors()]).then(() => {',
   'newtab runtime should load shortcut metadata, local icons, and cached high-resolution favicons together'
 );
 

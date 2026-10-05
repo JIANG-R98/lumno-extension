@@ -1,10 +1,12 @@
 (function(root, factory) {
-  const api = factory();
+  const faviconUtils = root.LumnoFaviconUtils || (typeof require === 'function'
+    ? require('./favicon-utils.js') : {});
+  const api = factory(faviconUtils);
   if (typeof module === 'object' && module.exports) {
     module.exports = api;
   }
   root.LumnoShortcutFavicon = api;
-})(typeof globalThis !== 'undefined' ? globalThis : this, function() {
+})(typeof globalThis !== 'undefined' ? globalThis : this, function(faviconUtils) {
   'use strict';
 
   const DEFAULT_STORAGE_KEY = '_x_extension_newtab_shortcut_favicon_cache_2026_unique_';
@@ -63,8 +65,59 @@
     wk: 'assets/images/site-search/tile-wk.png',
     zw: 'assets/images/site-search/tile-zw.png'
   });
-  const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30;
-  const CACHE_MAX_ENTRIES = 24;
+  // Shortcuts supply their own themed tile. Load the original artwork without
+  // the background and rounded mask baked into the search-provider tiles.
+  const SHORTCUT_PINNED_ICON_ASSETS = Object.freeze({
+    yt: 'assets/images/site-search/glyph-yt.svg',
+    bb: 'assets/images/site-search/glyph-bb.svg',
+    gh: 'assets/images/site-search/glyph-gh.svg',
+    sf: 'assets/images/site-search/glyph-sf.svg',
+    mdn: 'assets/images/site-search/glyph-mdn.svg',
+    npm: 'assets/images/site-search/glyph-npm.svg',
+    hf: 'assets/images/site-search/glyph-hf.png',
+    gs: 'assets/images/site-search/glyph-gs.png',
+    ss: 'assets/images/site-search/glyph-ss.svg',
+    maps: 'assets/images/site-search/glyph-maps.png',
+    gpt: 'assets/images/site-search/glyph-gpt.svg',
+    gm: 'assets/images/site-search/glyph-gm.svg',
+    dbai: 'assets/images/site-search/glyph-dbai.png',
+    qw: 'assets/images/site-search/glyph-qw.png',
+    yb: 'assets/images/site-search/glyph-yb.svg',
+    mx: 'assets/images/site-search/glyph-mx.png',
+    ds: 'assets/images/site-search/glyph-ds.svg',
+    kimi: 'assets/images/site-search/glyph-kimi.svg',
+    pplx: 'assets/images/site-search/glyph-pplx.svg',
+    metaso: 'assets/images/site-search/glyph-metaso.png',
+    felo: 'assets/images/site-search/glyph-felo.svg',
+    bd: 'assets/images/site-search/glyph-bd.svg',
+    bi: 'assets/images/site-search/glyph-bi.svg',
+    gg: 'assets/images/site-search/glyph-gg.svg',
+    kg: 'assets/images/site-search/glyph-kg.png',
+    ddg: 'assets/images/site-search/glyph-ddg.svg',
+    br: 'assets/images/site-search/glyph-br.svg',
+    eco: 'assets/images/site-search/glyph-eco.svg',
+    sg: 'assets/images/site-search/glyph-sg.svg',
+    yh: 'assets/images/site-search/glyph-yh.svg',
+    yx: 'assets/images/site-search/glyph-yx.svg',
+    sm: 'assets/images/site-search/glyph-sm.png',
+    zh: 'assets/images/site-search/glyph-zh.png',
+    db: 'assets/images/site-search/glyph-db.svg',
+    jj: 'assets/images/site-search/glyph-jj.svg',
+    wx: 'assets/images/site-search/glyph-wx.svg',
+    tb: 'assets/images/site-search/glyph-tb.png',
+    tm: 'assets/images/site-search/glyph-tm.png',
+    tw: 'assets/images/site-search/glyph-tw.svg',
+    rd: 'assets/images/site-search/glyph-rd.png',
+    wb: 'assets/images/site-search/glyph-wb.png',
+    xhs: 'assets/images/site-search/glyph-xhs.png',
+    dy: 'assets/images/site-search/glyph-dy.png',
+    jd: 'assets/images/site-search/glyph-jd.png',
+    wk: 'assets/images/site-search/glyph-wk.svg',
+    zw: 'assets/images/site-search/glyph-zw.svg'
+  });
+  // Shortcut artwork is a saved snapshot; deletion or a URL edit prunes it.
+  const CACHE_TTL_MS = 0;
+  const CACHE_MAX_ENTRIES = 60;
   const MAX_DATA_URL_LENGTH = 384 * 1024;
   const SITE_SEARCH_CACHE_OPTIONS = Object.freeze({
     cacheTtlMs: 1000 * 60 * 60 * 24 * 180,
@@ -101,6 +154,45 @@
 
   function getCacheKey(pageUrl) {
     return normalizePageUrl(pageUrl);
+  }
+
+  function normalizeIconSourceUrl(value) {
+    const raw = String(value || '').trim();
+    if (faviconUtils.isSafeVirtualFaviconRequestUrl(raw)) {
+      try { return new URL(raw).href; } catch (error) { return ''; }
+    }
+    return normalizePageUrl(raw);
+  }
+
+  function getCachedIconSource(entry) {
+    const sourceUrl = String(entry && entry.sourceUrl || '');
+    if (faviconUtils.isFaviconIsUrl(sourceUrl)) return 'favicon-is';
+    return !faviconUtils.isSafeVirtualFaviconRequestUrl(sourceUrl) && faviconUtils.isFaviconProxyUrl(sourceUrl)
+      ? 'service' : 'cache';
+  }
+
+  function isCachedIconForPage(entry, pageUrl) {
+    const page = normalizePageUrl(pageUrl);
+    if (!entry || !page) return false;
+    const parsedPage = new URL(page);
+    const isOriginPage = parsedPage.pathname === '/' && !parsedPage.search;
+    const sourceUrl = normalizeIconSourceUrl(entry.sourceUrl);
+    // Older Chrome snapshots lost their source URL. Reacquire path-specific
+    // entries once, since their page-to-icon mapping cannot be verified.
+    if (!sourceUrl) return isOriginPage;
+    // The chrome://favicon2 local-storage branch ignores fallbackToHost=0.
+    if (faviconUtils.isChromeMonogramFaviconUrl(sourceUrl)) return false;
+    if (faviconUtils.isFaviconProxyUrl(sourceUrl) || faviconUtils.isSafeVirtualFaviconRequestUrl(sourceUrl)) {
+      const target = normalizePageUrl(faviconUtils.getPageUrlFromFaviconProxyUrl(sourceUrl));
+      if (target && faviconUtils.isFaviconIsUrl(sourceUrl)) {
+        return new URL(target).hostname === parsedPage.hostname;
+      }
+      if (!target || target !== page) return false;
+      if (faviconUtils.isSafeVirtualFaviconRequestUrl(sourceUrl)) {
+        return new URL(sourceUrl).searchParams.get('fallbackToHost') === '0';
+      }
+    }
+    return true;
   }
 
   function getSiteSearchProviderPageUrl(provider) {
@@ -207,10 +299,31 @@
     return pinnedIcon || getSiteSearchProviderExplicitIcon(provider);
   }
 
+  function getBundledShortcutIconAssetPath(pageUrl, providers) {
+    const getHost = (url) => {
+      try {
+        const parsed = new URL(String(url || ''));
+        return /^https?:$/.test(parsed.protocol)
+          ? parsed.hostname.toLowerCase().replace(/^www\./, '') : '';
+      } catch (error) {
+        return '';
+      }
+    };
+    const host = getHost(pageUrl);
+    if (!host) {
+      return '';
+    }
+    const provider = (Array.isArray(providers) ? providers : []).find((item) => (
+      getSiteSearchPinnedIconAssetPath(item) && getHost(getSiteSearchProviderPageUrl(item)) === host
+    ));
+    const providerKey = String(provider && (provider.builtinKey || provider.key) || '').trim().toLowerCase();
+    return SHORTCUT_PINNED_ICON_ASSETS[providerKey] || '';
+  }
+
   function normalizeCacheOptions(options) {
     const settings = options && typeof options === 'object' ? options : {};
     return Object.freeze({
-      cacheTtlMs: Number.isFinite(Number(settings.cacheTtlMs)) && Number(settings.cacheTtlMs) > 0
+      cacheTtlMs: Number.isFinite(Number(settings.cacheTtlMs)) && Number(settings.cacheTtlMs) >= 0
         ? Number(settings.cacheTtlMs)
         : CACHE_TTL_MS,
       cacheMaxEntries: Number.isFinite(Number(settings.cacheMaxEntries)) && Number(settings.cacheMaxEntries) > 0
@@ -587,7 +700,7 @@
     return brands.includes('avif') || brands.includes('avis');
   }
 
-  function inspectIconResource(arrayBuffer, mimeType, url, candidate) {
+  function inspectIconResource(arrayBuffer, mimeType, url, candidate, options) {
     const bytes = new Uint8Array(arrayBuffer || new ArrayBuffer(0));
     const type = String(mimeType || '').split(';')[0].trim().toLowerCase();
     let leadingText = '';
@@ -620,9 +733,12 @@
     const declaredSize = Number(candidate && candidate.declaredSize || 0);
     const effectiveWidth = detected ? detected.dimensions.width : (avif ? declaredSize : 0);
     const effectiveHeight = detected ? detected.dimensions.height : (avif ? declaredSize : 0);
+    const minDimension = Number.isFinite(Number(options && options.minDimension))
+      ? Math.max(16, Math.min(MIN_ICON_DIMENSION, Number(options.minDimension)))
+      : MIN_ICON_DIMENSION;
     const usable = Number.isFinite(effectiveWidth) && Number.isFinite(effectiveHeight) &&
-      Math.max(effectiveWidth, effectiveHeight) >= MIN_ICON_DIMENSION &&
-      Math.min(effectiveWidth, effectiveHeight) >= Math.floor(MIN_ICON_DIMENSION / 2);
+      Math.max(effectiveWidth, effectiveHeight) >= minDimension &&
+      Math.min(effectiveWidth, effectiveHeight) >= Math.max(16, Math.floor(minDimension / 2));
     const resolvedMimeType = detected
       ? detected.mimeType
       : (avif ? 'image/avif' : (type.startsWith('image/') ? type : 'image/png'));
@@ -643,10 +759,10 @@
       const item = source[rawKey];
       const key = getCacheKey(rawKey);
       const dataUrl = normalizeDataUrl(item && item.dataUrl, cacheOptions);
-      const sourceUrl = normalizePageUrl(item && item.sourceUrl);
+      const sourceUrl = normalizeIconSourceUrl(item && item.sourceUrl);
       const updatedAt = Number(item && item.updatedAt || 0);
       if (!key || !dataUrl || !Number.isFinite(updatedAt) || updatedAt <= 0 ||
-          now - updatedAt > cacheOptions.cacheTtlMs) {
+          (cacheOptions.cacheTtlMs > 0 && now - updatedAt > cacheOptions.cacheTtlMs)) {
         return [];
       }
       return [{ key, dataUrl, sourceUrl, updatedAt }];
@@ -671,7 +787,7 @@
       ...(cacheMap || {}),
       [key]: {
         dataUrl: iconDataUrl,
-        sourceUrl: normalizePageUrl(sourceUrl),
+        sourceUrl: normalizeIconSourceUrl(sourceUrl),
         updatedAt: Number.isFinite(Number(nowValue)) ? Number(nowValue) : Date.now()
       }
     }, nowValue, options);
@@ -691,7 +807,7 @@
   function getCachedIconDataUrl(cacheMap, pageUrl, nowValue, options) {
     const normalized = normalizeCacheMap(cacheMap, nowValue, options);
     const entry = normalized[getCacheKey(pageUrl)];
-    return entry ? entry.dataUrl : '';
+    return isCachedIconForPage(entry, pageUrl) ? entry.dataUrl : '';
   }
 
   function createShortcutFaviconStore(options) {
@@ -781,12 +897,15 @@
     SITE_SEARCH_LEGACY_STORAGE_KEYS,
     GOOGLE_BRAND_ICON_URL,
     SITE_SEARCH_PINNED_ICON_ASSETS,
+    SHORTCUT_PINNED_ICON_ASSETS,
     CACHE_TTL_MS,
     CACHE_MAX_ENTRIES,
     MAX_DATA_URL_LENGTH,
     SITE_SEARCH_CACHE_OPTIONS,
     MIN_ICON_DIMENSION,
     getCacheKey,
+    getCachedIconSource,
+    isCachedIconForPage,
     getSiteSearchProviderPageUrl,
     getSiteSearchProviderExplicitIcon,
     getSiteSearchPinnedIconAssetPath,
@@ -795,6 +914,7 @@
     createSiteSearchProviderIconHydrator,
     getPinnedSiteSearchProviderIcon,
     getSiteSearchProviderIcon,
+    getBundledShortcutIconAssetPath,
     normalizePageUrl,
     normalizeCacheOptions,
     normalizeDataUrl,

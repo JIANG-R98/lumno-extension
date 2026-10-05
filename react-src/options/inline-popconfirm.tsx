@@ -12,13 +12,15 @@ export function InlinePopconfirm({
   onConfirm,
   triggerAriaLabel,
   triggerClassName,
-  triggerIconClass
+  triggerIconClass,
+  triggerDisabled = false
 }: {
   copy: InlinePopconfirmCopy;
   onConfirm(): void | Promise<void>;
   triggerAriaLabel: string;
   triggerClassName: string;
   triggerIconClass: string;
+  triggerDisabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -75,7 +77,7 @@ export function InlinePopconfirm({
         aria-haspopup="dialog"
         aria-label={triggerAriaLabel}
         className={triggerClassName}
-        disabled={confirmAction.pending}
+        disabled={confirmAction.pending || triggerDisabled}
         onClick={(event) => {
           event.stopPropagation();
           setOpen((value) => !value);

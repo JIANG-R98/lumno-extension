@@ -41,6 +41,7 @@
     const faviconDataPending = config.faviconDataPending || new Map();
     const iconPreloadCache = config.iconPreloadCache || new Map();
     const faviconFallbackNodeMap = config.faviconFallbackNodeMap || new WeakMap();
+    const shortcutFaviconOptionsByImage = new WeakMap();
     const missingIconCache = config.missingIconCache || new Set();
     const missingIconDebugEnabled = config.missingIconDebugEnabled === true;
     const faviconUtils = global.LumnoFaviconUtils || {};
@@ -348,7 +349,7 @@
     function attachFaviconData(img, url, hostOverride, pageUrl) {
       const safeUrl = faviconUrlResolver
         ? faviconUrlResolver.getSafeFaviconCandidateUrl(url, pageUrl || url, 'data')
-        : String(url || '');
+        : '';
       if (safeUrl) {
         faviconViewCore.attachFaviconData(img, safeUrl, hostOverride, pageUrl || url);
       }
@@ -356,8 +357,8 @@
 
     function preloadIcon(url, pageUrl) {
       const safeUrl = faviconUrlResolver
-        ? faviconUrlResolver.getSafeFaviconCandidateUrl(url, pageUrl || url, 'preload')
-        : String(url || '');
+        ? faviconUrlResolver.resolveFaviconSource(url, pageUrl || '')
+        : '';
       if (safeUrl) {
         faviconViewCore.preloadIcon(safeUrl);
       }
@@ -369,16 +370,16 @@
           return item;
         }
         const safeUrl = faviconUrlResolver
-          ? faviconUrlResolver.getSafeFaviconCandidateUrl(item.favicon, item.url || '', 'preload')
-          : String(item.favicon || '');
+          ? faviconUrlResolver.resolveFaviconSource(item.favicon, item.url || '')
+          : '';
         return { ...item, favicon: safeUrl };
       });
       faviconViewCore.warmIconCache(safeItems);
     }
 
-    function getSafeFaviconCandidateUrl(value, pageUrl, candidateKind) {
+    function getSafeFaviconCandidateUrl(value, pageUrl, candidateKind, sourceOptions) {
       return faviconUrlResolver
-        ? faviconUrlResolver.getSafeFaviconCandidateUrl(value, pageUrl, candidateKind)
+        ? faviconUrlResolver.getSafeFaviconCandidateUrl(value, pageUrl, candidateKind, sourceOptions)
         : '';
     }
 
@@ -408,11 +409,15 @@
       const persistedUrlEntry = !skipPersisted && cacheKey
         ? getPersistedFaviconEntry(cacheKey)
         : null;
-      const previousWorkingSrc = getSafeFaviconCandidateUrl(
-        getLastWorkingFaviconSrc(img),
-        url,
-        'previous'
-      );
+      const previousSrc = getLastWorkingFaviconSrc(img);
+      const previousPage = img.getAttribute('data-x-nt-favicon-page-url') || '';
+      const canReusePrevious = previousPage
+        ? faviconUtils.getFaviconPersistCacheKey(previousPage) === faviconUtils.getFaviconPersistCacheKey(url)
+        : !String(previousSrc || '').startsWith('data:');
+      const reusablePreviousSrc = canReusePrevious ? previousSrc : '';
+      const previousWorkingSrc = optionsArg && optionsArg.sourceProfile === 'shortcut'
+        ? (faviconUrlResolver ? faviconUrlResolver.getShortcutFaviconCandidateUrl(url, reusablePreviousSrc) : '')
+        : getSafeFaviconCandidateUrl(reusablePreviousSrc, url, 'previous');
 
       return {
         url: String(url || ''),
@@ -430,7 +435,8 @@
         primaryUrl: getSafeFaviconCandidateUrl(
           (optionsArg && (optionsArg.primaryUrl || optionsArg.fallbackUrl)) || '',
           url,
-          'primary'
+          'primary',
+          { allowRemoteImage: Boolean(optionsArg && optionsArg.allowRemoteImage === true) }
         ),
         browserUrl: getSafeFaviconCandidateUrl((optionsArg && optionsArg.browserUrl) || '', url, 'browser') ||
           (/^https?:\/\//i.test(String(url || '')) ? '' : getRuntimeChromeFaviconUrl(url)),
@@ -443,6 +449,10 @@
         gstaticFavicon: getRuntimeGstaticFaviconUrl(url),
         previousWorkingSrc,
         skipPersisted,
+        sourceProfile: optionsArg && optionsArg.sourceProfile === 'shortcut' ? 'shortcut' : '',
+        allowRemoteImage: Boolean(optionsArg && optionsArg.allowRemoteImage === true),
+        customImageUrl: optionsArg && optionsArg.allowRemoteImage === true
+          ? String(optionsArg.primaryUrl || optionsArg.fallbackUrl || '') : '',
         isSessionCurrent() {
           return Boolean(img && img._xThemeFaviconSession === session);
         },
@@ -503,6 +513,7 @@
       img.setAttribute('data-x-nt-theme-favicon', '1');
       img.setAttribute('data-x-nt-favicon-page-url', state.url);
       img.setAttribute('data-x-nt-favicon-host', state.hostKey);
+      img.setAttribute('data-x-nt-favicon-custom-image', state.customImageUrl);
       if (state.cacheKey) {
         img.setAttribute('data-x-nt-favicon-cache-key', state.cacheKey);
       } else {
@@ -526,7 +537,8 @@
         ];
       const seen = new Set();
       return runtimeCandidates.filter((candidate) => {
-        const safeUrl = getSafeFaviconCandidateUrl(candidate && candidate.url, state.url, candidate && candidate.kind);
+        const safeUrl = getSafeFaviconCandidateUrl(candidate && candidate.url, state.url, candidate && candidate.kind,
+          { allowRemoteImage: state.allowRemoteImage && candidate && candidate.kind === 'primary' });
         if (!safeUrl || seen.has(safeUrl)) {
           return false;
         }
@@ -690,6 +702,11 @@
       if (!img || !url) {
         return;
       }
+      if (optionsArg && optionsArg.sourceProfile === 'shortcut') {
+        shortcutFaviconOptionsByImage.set(img, { ...optionsArg });
+      } else {
+        shortcutFaviconOptionsByImage.delete(img);
+      }
       if (img._xThemeFaviconErrorHandler) {
         img.removeEventListener('error', img._xThemeFaviconErrorHandler);
         img._xThemeFaviconErrorHandler = null;
@@ -764,7 +781,12 @@
           return;
         }
         const host = img.getAttribute('data-x-nt-favicon-host') || '';
-        attachFaviconWithFallbacks(img, pageUrl, host);
+        const customImageUrl = img.getAttribute('data-x-nt-favicon-custom-image') || '';
+        attachFaviconWithFallbacks(img, pageUrl, host, {
+          primaryUrl: customImageUrl,
+          allowRemoteImage: Boolean(customImageUrl),
+          ...shortcutFaviconOptionsByImage.get(img)
+        });
       });
     }
 
@@ -781,7 +803,12 @@
           return;
         }
         const host = img.getAttribute('data-x-nt-favicon-host') || '';
-        attachFaviconWithFallbacks(img, pageUrl, host);
+        const customImageUrl = img.getAttribute('data-x-nt-favicon-custom-image') || '';
+        attachFaviconWithFallbacks(img, pageUrl, host, {
+          primaryUrl: customImageUrl,
+          allowRemoteImage: Boolean(customImageUrl),
+          ...shortcutFaviconOptionsByImage.get(img)
+        });
       });
     }
 

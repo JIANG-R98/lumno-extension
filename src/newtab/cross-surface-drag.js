@@ -59,11 +59,14 @@
     const config = options && typeof options === 'object' ? options : {};
     const shortcuts = Array.isArray(config.shortcuts) ? config.shortcuts.filter(Boolean) : [];
     const record = config.record;
+    const folderId = (item) => typeof config.getFolderId === 'function' ? config.getFolderId(item) : item.folderId;
     const index = Number(config.index);
-    if (!record || !record.url || !Number.isFinite(index)) {
+    if (!record || !(record.url || (record.type === 'folder' && (record.folderId || record.folderRef))) || !Number.isFinite(index)) {
       return null;
     }
-    const existingIndex = shortcuts.findIndex((item) => item.url === record.url);
+    const existingIndex = shortcuts.findIndex((item) => record.type === 'folder'
+      ? item.type === 'folder' && (item.id === record.id || (folderId(record) && folderId(item) === folderId(record)))
+      : item.type !== 'folder' && item.url === record.url);
     if (existingIndex < 0 && shortcuts.length >= Number(config.maxShortcuts)) {
       return null;
     }
@@ -79,9 +82,58 @@
     };
   }
 
+  function planTransferShortcuts(options) {
+    const config = options || {};
+    const next = Array.isArray(config.shortcuts) ? config.shortcuts.slice() : [];
+    const source = config.source && config.source.snapshot;
+    const destination = config.destination && config.destination.snapshot;
+    if (source) {
+      const index = next.findIndex((item) => item.id === source.id);
+      if (index < 0 || next[index].type !== source.type ||
+          (source.type !== 'folder' &&
+            (next[index].url !== source.url || next[index].title !== source.title))) {
+        return null;
+      }
+      next.splice(index, 1);
+    }
+    if (destination) {
+      const duplicate = next.some((item) => item.id === destination.id ||
+        (destination.type !== 'folder' && item.type !== 'folder' && item.url === destination.url) ||
+        (destination.type === 'folder' && !destination.folderRef &&
+          item.type === 'folder' && !item.folderRef && item.folderId === destination.folderId));
+      if (duplicate || next.length >= Number(config.maxShortcuts)) {
+        return null;
+      }
+      next.splice(Math.min(config.destination.index, next.length), 0, destination);
+    }
+    return next;
+  }
+
+  function planShortcutReorder(options) {
+    const config = options || {};
+    const shortcuts = Array.isArray(config.shortcuts) ? config.shortcuts : [];
+    const order = Array.isArray(config.order) ? config.order : [];
+    const ids = new Set(order);
+    const byId = new Map(shortcuts.map((item) => [item.id, item]));
+    if (!order.length || ids.size !== order.length || order.some((id) => !byId.has(id))) {
+      return null;
+    }
+    const currentOrder = shortcuts.filter((item) => ids.has(item.id)).map((item) => item.id);
+    if (config.sourceOrder && (config.sourceOrder.length !== currentOrder.length ||
+        currentOrder.some((id, index) => id !== config.sourceOrder[index]))) {
+      return null;
+    }
+    let index = 0;
+    // Reorder the recorded entries in their current slots, preserving newer
+    // shortcuts and the latest titles, icons and folder bindings.
+    return shortcuts.map((item) => ids.has(item.id) ? byId.get(order[index++]) : item);
+  }
+
   return Object.freeze({
     getRowInsertionSlot,
     isBookmarkFolderDropTarget,
-    planBookmarkToShortcut
+    planBookmarkToShortcut,
+    planTransferShortcuts,
+    planShortcutReorder
   });
 });

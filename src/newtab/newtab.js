@@ -157,6 +157,8 @@
   const NEWTAB_SEARCH_WIDTH_STORAGE_KEY = '_x_extension_newtab_search_width_2026_unique_';
   const NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY = SETTINGS.NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY ||
     '_x_extension_newtab_input_auto_focus_enabled_2026_unique_';
+  const NEWTAB_QUOTE_PREFS_STORAGE_KEY = SETTINGS.NEWTAB_QUOTE_PREFS_STORAGE_KEY ||
+    '_x_extension_newtab_quote_prefs_2026_unique_';
   const NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY = SETTINGS.NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY ||
     '_x_extension_newtab_feedback_button_visible_2026_unique_';
   const NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY = SETTINGS.NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY ||
@@ -265,6 +267,7 @@
   const NEWTAB_BOOKMARK_CASCADE_MENU = globalThis.LumnoNewtabBookmarkCascadeMenu || {};
   const NEWTAB_SUGGESTIONS_VIEW = globalThis.LumnoNewtabSuggestionsView || {};
   const NEWTAB_SHORTCUTS_STORE = globalThis.LumnoNewtabShortcutsStore || {};
+  const FOLDER_REFERENCES = globalThis.LumnoBookmarkFolderReference || {};
   const NEWTAB_SHORTCUT_ICON_STORE = globalThis.LumnoNewtabShortcutIconStore || {};
   const NEWTAB_SHORTCUT_DIALOG = globalThis.LumnoNewtabShortcutDialog || {};
   const NEWTAB_SHORTCUTS_VIEW = globalThis.LumnoNewtabShortcutsView || {};
@@ -328,6 +331,7 @@
       typeof NEWTAB_BOOKMARK_CASCADE_POSITION.placeCascadeSubmenu !== 'function' ||
       typeof NEWTAB_BOOKMARK_CASCADE_MENU.createBookmarkCascadeMenuRuntime !== 'function' ||
       typeof NEWTAB_SUGGESTIONS_VIEW.createSuggestionsView !== 'function' ||
+      typeof FOLDER_REFERENCES.createRuntime !== 'function' ||
       typeof NEWTAB_SHORTCUTS_STORE.normalizeShortcuts !== 'function' ||
       typeof NEWTAB_SHORTCUTS_STORE.loadShortcuts !== 'function' ||
       typeof NEWTAB_SHORTCUTS_STORE.saveShortcuts !== 'function' ||
@@ -367,7 +371,10 @@
     }
   });
   const getFigmaFolderSvg = NEWTAB_BOOKMARK_FOLDER_ICON.getFigmaFolderSvg;
-  const initFolderPathMorph = NEWTAB_BOOKMARK_FOLDER_ICON.initFolderPathMorph;
+  function initFolderPathMorph(icon) {
+    NEWTAB_BOOKMARK_FOLDER_ICON.initFolderPathMorph(icon);
+    applySavedFolderColor(icon);
+  }
   const playFolderPathMorph = NEWTAB_BOOKMARK_FOLDER_ICON.playFolderPathMorph;
   const setFolderPathMorphState = NEWTAB_BOOKMARK_FOLDER_ICON.setFolderPathMorphState;
   const normalizeHost = NEWTAB_FAVICON_THEME.normalizeHost;
@@ -375,6 +382,10 @@
     chromeApi: typeof chrome !== 'undefined' ? chrome : null,
     store: NEWTAB_BOOKMARKS_STORE,
     normalizeHost
+  });
+  const shortcutFolderRuntime = FOLDER_REFERENCES.createRuntime({ chrome });
+  shortcutFolderRuntime.ready.catch((error) => {
+    console.warn('[Lumno] Could not load shortcut folder bindings.', error);
   });
   const TAB_RANK_SCORE_DEBUG_STORAGE_KEY = '_x_extension_tab_rank_score_debug_2026_unique_';
   const NEWTAB_OPEN_TAB_SUGGESTION_LIMIT = 8;
@@ -580,6 +591,7 @@
   let wordmarkEntryTransitionTimer = 0;
   let wallpaperControl = null;
   let wallpaperRuntime = null;
+  let quoteRuntime = null;
   let feedbackControl = null;
   let feedbackReactController = null;
   let feedbackButton = null;
@@ -640,6 +652,8 @@
   let shortcutGrid = null;
   let addShortcutButton = null;
   let shortcutDialogController = null;
+  let shortcutDialogLoadPromise = null;
+  let shortcutDialogOpenRevision = 0;
   let shortcutContextMenu = null;
   let shortcutContextMenuTarget = null;
   let newtabShortcuts = [];
@@ -665,6 +679,110 @@
   const SHORTCUT_CONTEXT_MENU_EDIT_VALUE = 'edit';
   const SHORTCUT_CONTEXT_MENU_REMOVE_VALUE = 'remove';
   const SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE = 'hide-add';
+  const FOLDER_COLOR_CONTEXT_MENU_VALUE = 'folder-color';
+  const folderColorApi = globalThis.LumnoNewtabFolderColorPicker;
+  const FOLDER_COLORS_STORAGE_KEY = folderColorApi.FOLDER_COLORS_STORAGE_KEY;
+  const FOLDER_COLOR_PRESETS_STORAGE_KEY = '_x_extension_bookmark_folder_color_presets_2026_unique_';
+  let folderColors = {};
+  let folderColorPreview = null;
+  let folderColorPicker = null;
+
+  function getFolderColor(folderId) {
+    return folderColorPreview && folderColorPreview.folderId === String(folderId)
+      ? folderColorPreview.color
+      : folderColors[String(folderId)] || folderColorApi.DEFAULT_FOLDER_COLOR;
+  }
+
+  function applySavedFolderColor(icon) {
+    if (!icon) return;
+    const svg = icon.querySelector('svg[data-folder-color-id]');
+    const folderId = svg && svg.getAttribute('data-folder-color-id');
+    if (folderId) NEWTAB_BOOKMARK_FOLDER_ICON.applyFolderColor(icon, getFolderColor(folderId));
+  }
+
+  function refreshFolderColors() {
+    document.querySelectorAll('svg[data-folder-color-id]').forEach((svg) => {
+      applySavedFolderColor(svg.parentElement);
+    });
+  }
+
+  function readFolderColors() {
+    return new Promise((resolve, reject) => {
+      if (!localStorageArea) { resolve({}); return; }
+      localStorageArea.get(FOLDER_COLORS_STORAGE_KEY, (data) => {
+        const error = chrome.runtime && chrome.runtime.lastError;
+        if (error) { reject(new Error(error.message)); return; }
+        resolve(folderColorApi.normalizeFolderColorMap(data && data[FOLDER_COLORS_STORAGE_KEY]));
+      });
+    });
+  }
+
+  function loadFolderColors() {
+    return readFolderColors().then((colors) => {
+      folderColors = colors;
+      refreshFolderColors();
+    }).catch(() => {});
+  }
+
+  async function saveFolderColor(folderId, color) {
+    const next = await readFolderColors();
+    if (color) next[folderId] = color;
+    else delete next[folderId];
+    await new Promise((resolve, reject) => {
+      if (!localStorageArea) { reject(new Error('Storage unavailable')); return; }
+      localStorageArea.set({ [FOLDER_COLORS_STORAGE_KEY]: next }, () => {
+        const error = chrome.runtime && chrome.runtime.lastError;
+        if (error) reject(new Error(error.message));
+        else resolve();
+      });
+    });
+    folderColors = next;
+  }
+
+  async function openFolderColorPicker(folderId, title, sourceElement) {
+    closeBookmarkCascadeMenu();
+    closeShortcutDialog();
+    hideCursorTooltip();
+    if (!folderColorPicker) {
+      try {
+        folderColorPicker = await folderColorApi.createFolderColorPicker({
+          documentObj: document, t,
+          getFolderSvg: getFigmaFolderSvg,
+          initFolderIcon: NEWTAB_BOOKMARK_FOLDER_ICON.initFolderPathMorph,
+          animateFolderIcon: playFolderPathMorph,
+          applyFolderColor: NEWTAB_BOOKMARK_FOLDER_ICON.applyFolderColor,
+          bindTooltip: bindShortcutDialogTooltip,
+          hideTooltip: hideShortcutDialogTooltip,
+          readSavedColors: () => new Promise((resolve, reject) => {
+            if (!localStorageArea) { reject(new Error('Storage unavailable')); return; }
+            localStorageArea.get(FOLDER_COLOR_PRESETS_STORAGE_KEY, (data) => {
+              const error = chrome.runtime && chrome.runtime.lastError;
+              if (error) { reject(new Error(error.message)); return; }
+              resolve(data && data[FOLDER_COLOR_PRESETS_STORAGE_KEY]);
+            });
+          }),
+          saveSavedColors: (colors) => new Promise((resolve, reject) => {
+            if (!localStorageArea) { reject(new Error('Storage unavailable')); return; }
+            localStorageArea.set({ [FOLDER_COLOR_PRESETS_STORAGE_KEY]: colors }, () => {
+              const error = chrome.runtime && chrome.runtime.lastError;
+              if (error) reject(new Error(error.message));
+              else resolve();
+            });
+          }),
+          onPreview: (id, color) => {
+            folderColorPreview = { folderId: id, color };
+            refreshFolderColors();
+          },
+          onSubmit: saveFolderColor,
+          onClose: () => { folderColorPreview = null; refreshFolderColors(); }
+        });
+      } catch {
+        showToast(t('folder_color_save_failed', 'Could not save the folder color. Try again.'), true);
+        return;
+      }
+    }
+    folderColorPicker.open({ folderId: String(folderId), title, color: getFolderColor(folderId), sourceElement });
+  }
   const shortcutIconStore = NEWTAB_SHORTCUT_ICON_STORE.createShortcutIconStore({
     documentObj: document,
     windowObj: window,
@@ -714,6 +832,7 @@
 
   loadSiteSearchIconCache();
   const shortcutFaviconPending = new Map();
+  let shortcutFaviconPolicyRevision = 0;
   const shortcutFaviconRequestQueue = [];
   const SHORTCUT_FAVICON_MAX_CONCURRENT_REQUESTS = 3;
   let shortcutFaviconActiveRequestCount = 0;
@@ -2506,7 +2625,11 @@
     document.documentElement.lang = localeToHtmlLang(locale);
   }
 
-  function migrateStorageIfNeeded(keys) {
+  function migrateStorageIfNeeded(keys, providerReady) {
+    if (providerStorageRuntime && !providerReady) {
+      providerStorageRuntime.ready.then(() => migrateStorageIfNeeded(keys, true));
+      return;
+    }
     if (!storageArea || !chrome || !chrome.storage || !chrome.storage.local) {
       return;
     }
@@ -2962,7 +3085,8 @@
       sampleElement: getShortcutDockIcon(tile) || tile,
       minWidth: 42,
       minHeight: 42,
-      iconButton: true
+      iconButton: true,
+      forcedIconBackground: 'shortcut-fallback'
     }));
     if (addShortcutButton) {
       shortcutToneTargets.push({
@@ -2992,6 +3116,12 @@
           : (wordmarkImageEl || topContentContainer),
         minWidth: 220,
         minHeight: 72
+      },
+      {
+        element: quoteRuntime && quoteRuntime.element,
+        sampleElement: quoteRuntime && quoteRuntime.element,
+        minWidth: 240,
+        minHeight: 32
       },
       {
         element: bookmarkTitleWrap,
@@ -3039,6 +3169,20 @@
     ].concat(shortcutToneTargets);
   }
 
+  if (globalThis.LumnoNewtabQuotes) {
+    quoteRuntime = globalThis.LumnoNewtabQuotes.createRuntime({
+      documentObj: document, windowObj: window, chromeObj: chrome,
+      storageArea, localStorageArea, t, showToast,
+      getSearchRoot: () => root,
+      getShortcutSection: () => shortcutSection,
+      isPreferenceArea: (areaName) => providerStorageRuntime
+        ? providerStorageRuntime.isActiveAreaName(areaName) : areaName === 'sync',
+      onLayout: () => window.requestAnimationFrame(() => {
+        updateBookmarkSectionPosition();
+        scheduleWallpaperAdaptiveToneUpdate();
+      })
+    });
+  }
   wallpaperRuntime = NEWTAB_WALLPAPER.createWallpaperRuntime({
     documentObj: document,
     windowObj: window,
@@ -3046,6 +3190,7 @@
     extensionRoutes: EXTENSION_ROUTES,
     storageArea,
     localWallpaperStorageArea: localStorageArea,
+    getQuoteRuntime: () => quoteRuntime,
     storageKeys: {
       wallpaper: NEWTAB_WALLPAPER_STORAGE_KEY,
       localWallpaper: NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY,
@@ -3212,22 +3357,7 @@
   }
 
   function getDefaultSearchEngineFaviconUrl() {
-    if (defaultSearchEngineState.id === 'google') {
-      return 'https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png';
-    }
-    if (defaultSearchEngineState.host) {
-      return `https://${defaultSearchEngineState.host}/favicon.ico`;
-    }
-    const engine = getSearchEngineById(defaultSearchEngineState.id);
-    if (engine) {
-      try {
-        const host = new URL(engine.searchUrl('test')).hostname;
-        return `https://${host}/favicon.ico`;
-      } catch (e) {
-        return '';
-      }
-    }
-    return 'https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png';
+    return getPageFaviconCandidateUrl(getDefaultSearchEngineThemeUrl());
   }
 
   function getSearchActionLabel() {
@@ -3551,6 +3681,7 @@
     updateRecentModeMenu();
     updateBookmarkModeMenu();
     updateWallpaperLanguageStrings();
+    if (quoteRuntime) quoteRuntime.updateLanguage();
     updateWallpaperAppearanceSelectionUi();
     updateFeedbackLanguageStrings();
     updateShortcutLanguageStrings();
@@ -3863,6 +3994,14 @@
   markNewtabStartupMilestone('appearance-bootstrap-scheduled');
 
   addStorageChangeListener((changes, areaName) => {
+    if (areaName === 'local' && changes[FOLDER_REFERENCES.BINDINGS_KEY]) {
+      shortcutFolderRuntime.accept(changes[FOLDER_REFERENCES.BINDINGS_KEY].newValue);
+      if (!isShortcutDragActive()) renderShortcuts();
+    }
+    if (areaName === 'local' && changes[FOLDER_COLORS_STORAGE_KEY]) {
+      folderColors = folderColorApi.normalizeFolderColorMap(changes[FOLDER_COLORS_STORAGE_KEY].newValue);
+      refreshFolderColors();
+    }
     if (areaName === 'local' && changes[NEWTAB_SHORTCUT_ICONS_STORAGE_KEY]) {
       newtabShortcutIcons = NEWTAB_SHORTCUT_ICON_STORE.normalizeIconMap(
         changes[NEWTAB_SHORTCUT_ICONS_STORAGE_KEY].newValue
@@ -3925,7 +4064,8 @@
         renderRecentSites(recentSourceItems);
       }
       if (areaName === 'local' &&
-          changes[NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY] &&
+          (changes[NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY] || changes[settingsRuntimeApi.ASSET_REVISION_STORAGE_KEY] ||
+            (globalThis.LumnoNewtabRemoteContent && changes[globalThis.LumnoNewtabRemoteContent.BING_DAILY_CACHE_KEY])) &&
           wallpaperRuntime) {
         wallpaperRuntime.handleStorageChange(changes);
       }
@@ -4872,6 +5012,16 @@
           refreshThemeAwareFavicons();
         }
       }
+      if (changes[FAVICON_REQUEST_BLACKLIST_STORAGE_KEY] || changes[FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY]) {
+        shortcutFaviconPolicyRevision += 1;
+        renderShortcuts();
+        if (inputModeController) {
+          if (siteSearchState) {
+            setSiteSearchPrefix(siteSearchState, getImmediateThemeForSuggestion({ provider: siteSearchState }), { animate: false });
+          }
+          inputModeController.refreshModeMenu();
+        }
+      }
       if (latestQuery && latestQuery.trim() && (
         changes[DEFAULT_SEARCH_ENGINE_STORAGE_KEY] ||
         changes[SEARCH_RESULT_PRIORITY_STORAGE_KEY] ||
@@ -4897,6 +5047,7 @@
     NEWTAB_WIDTH_MODE_STORAGE_KEY,
     NEWTAB_SEARCH_WIDTH_STORAGE_KEY,
     NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY,
+    NEWTAB_QUOTE_PREFS_STORAGE_KEY,
     NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,
     NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY,
     NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY,
@@ -5368,6 +5519,8 @@
   }
 
   function getThemeFromUrl(url, hostOverride) {
+    const resolver = getPageFaviconUrlResolver();
+    url = resolver ? resolver.getSafeFaviconCandidateUrl(url, '', 'theme') : '';
     if (!url) {
       return Promise.resolve(defaultTheme);
     }
@@ -5552,9 +5705,8 @@
   function getThemeForProvider(provider) {
     const hostKey = getProviderThemeHost(provider);
     const providerPageUrl = getThemePageUrlForSuggestion({ provider }, hostKey);
-    const iconUrl = isNewtabEnhancedFaviconFetchEnabled(providerPageUrl)
-      ? getProviderIcon(provider)
-      : getPageFaviconCandidateUrl(providerPageUrl);
+    const resolver = getPageFaviconUrlResolver();
+    const iconUrl = resolver ? resolver.resolveFaviconSource(getProviderIcon(provider), providerPageUrl) : '';
     if (hostKey && themeHostCache.has(hostKey)) {
       const cachedTheme = themeHostCache.get(hostKey);
       if (cachedTheme && !isLowConfidenceTheme(cachedTheme)) {
@@ -5644,6 +5796,9 @@
     const brandTheme = buildAndCacheBrandThemeForHost(hostKey, iconUrl);
     if (brandTheme) {
       return Promise.resolve(brandTheme);
+    }
+    if (suggestion && suggestion.type === 'shortcut') {
+      return iconUrl ? getThemeFromUrl(iconUrl, hostKey) : Promise.resolve(defaultTheme);
     }
     const persistedTheme = getPersistedThemeForHost(hostKey);
     if (persistedTheme && !isHostFaviconVisitDirty(hostKey) && !isLowConfidenceTheme(persistedTheme)) {
@@ -6089,40 +6244,21 @@
   }
 
   function getThemeSourceForSuggestion(suggestion) {
+    if (suggestion && suggestion.type === 'shortcut') {
+      return getShortcutFaviconCandidateUrl(suggestion.url) || getShortcutFaviconDataUrl(suggestion.url);
+    }
     if (suggestion && suggestion.provider) {
-      const hostKey = getProviderThemeHost(suggestion.provider);
-      if (hostKey && shouldBlockFaviconForHost(hostKey)) {
-        return '';
-      }
-      const providerPageUrl = getThemePageUrlForSuggestion(suggestion, hostKey);
-      if (!isNewtabEnhancedFaviconFetchEnabled(providerPageUrl)) {
-        return getPageFaviconCandidateUrl(providerPageUrl);
-      }
-      return getProviderIcon(suggestion.provider) || (hostKey ? getHostFaviconUrl(hostKey) : '');
+      const resolver = getPageFaviconUrlResolver();
+      return resolver ? resolver.resolveFaviconSource(
+        getProviderIcon(suggestion.provider), getProviderFaviconPageUrl(suggestion.provider)
+      ) : '';
     }
-    if (suggestion && suggestion.url && !isNewtabEnhancedFaviconFetchEnabled(suggestion.url)) {
-      return getPageFaviconCandidateUrl(getCanonicalPageUrlForFavicon(suggestion.url) || suggestion.url);
-    }
-    if (suggestion && suggestion.url) {
-      try {
-        const pageUrl = getCanonicalPageUrlForFavicon(suggestion.url) || suggestion.url;
-        const hostname = normalizeHost(new URL(pageUrl).hostname);
-        if (hostname) {
-          return getGstaticFaviconUrl(pageUrl) || getHostFaviconUrl(hostname);
-        }
-      } catch (e) {
-        // Ignore malformed URLs.
-      }
-    }
-    return suggestion && suggestion.favicon ? suggestion.favicon : '';
+    const resolver = getPageFaviconUrlResolver();
+    return resolver
+      ? resolver.resolveFaviconSource(suggestion && suggestion.favicon, suggestion && suggestion.url)
+      : '';
   }
 
-  function getSiteFaviconUrl(hostname) {
-    if (!hostname) {
-      return '';
-    }
-    return `https://${hostname}/favicon.ico`;
-  }
 
   function navigateToUrl(url) {
     if (!url) {
@@ -6213,6 +6349,18 @@
   }
 
   function openShortcutUrl(shortcut, event) {
+    if (shortcut && shortcut.type === 'folder') {
+      const tile = getShortcutTileById(shortcut.id);
+      bookmarksRuntime.ensureReady(false).then((ready) => {
+        const node = ready && bookmarksRuntime.getNode(getShortcutFolderId(shortcut));
+        if (!node || node.url) {
+          showToast(t('newtab_shortcuts_folder_missing', 'This bookmark folder is no longer available.'), true);
+          return;
+        }
+        openBookmarkCascadeMenu({ ...node, type: 'folder' }, tile);
+      });
+      return;
+    }
     if (!shortcut || !shortcut.url) {
       return;
     }
@@ -6440,6 +6588,13 @@
     return shortcutTooltipController.bind(target, (tooltipTarget) => {
       if (isShortcutTooltipSuppressed()) {
         return '';
+      }
+      const tooltip = shortcutTooltipController.element;
+      if (tooltip && tooltipTarget.classList.contains('x-nt-shortcut-tile--folder')) {
+        tooltip.setAttribute('data-shortcut-origin-label',
+          t('newtab_shortcuts_from_bookmarks', '(from bookmarks bar)'));
+      } else if (tooltip) {
+        tooltip.removeAttribute('data-shortcut-origin-label');
       }
       return resolveText(tooltipTarget);
     }, Object.assign({
@@ -6750,7 +6905,8 @@
     if (!shortcutSection) {
       return;
     }
-    const hasVisibleContent = newtabShortcuts.length > 0 || newtabShortcutAddVisible;
+    const hasVisibleContent = getVisibleShortcuts().length > 0 ||
+      (newtabShortcutAddVisible && newtabShortcuts.length < MAX_NEWTAB_SHORTCUTS);
     setContentSectionVisible(
       shortcutSection,
       Boolean(newtabShortcutsVisible && hasVisibleContent)
@@ -6760,6 +6916,35 @@
       closeShortcutContextMenu();
       closeShortcutDialog();
     }
+  }
+
+  function getShortcutFolderId(shortcut) {
+    if (!shortcut || shortcut.type !== 'folder') return '';
+    if (!shortcut.folderRef) return String(shortcut.folderId || '');
+    const node = shortcutFolderRuntime.getNode(shortcut, bookmarksRuntime.getNodeMap());
+    return node ? String(node.id) : '';
+  }
+
+  function getVisibleShortcuts() {
+    return shortcutFolderRuntime.visibleItems(newtabShortcuts, bookmarksRuntime.getNodeMap());
+  }
+
+  function refreshShortcutFolderReferences() {
+    if (bookmarkMoveHistoryBusy) return Promise.resolve(false);
+    const original = newtabShortcuts;
+    return Promise.all([shortcutFolderRuntime.ready, bookmarksRuntime.ensureReady(false)]).then(([, ready]) => {
+      if (!ready || bookmarkMoveHistoryBusy || isShortcutDragActive() || newtabShortcuts !== original) return false;
+      const next = shortcutFolderRuntime.reconcile(original, bookmarksRuntime.getNodeMap());
+      return shortcutFolderRuntime.flush().then(() => {
+        if (newtabShortcuts !== original || bookmarkMoveHistoryBusy || isShortcutDragActive()) return false;
+        if (JSON.stringify(next) !== JSON.stringify(original)) return persistShortcuts(next);
+        renderShortcuts();
+        return true;
+      });
+    }).catch((error) => {
+      console.warn('[Lumno] Could not update shortcut folder references.', error);
+      return false;
+    });
   }
 
   function getShortcutStoreOptions(extraOptions) {
@@ -6774,7 +6959,7 @@
 
   function isShortcutSyncStorageActive() {
     return Boolean(
-      storageAreaName === 'sync' &&
+      (providerStorageRuntime ? providerStorageRuntime.getActiveAreaName() : storageAreaName) === 'sync' &&
       chrome && chrome.storage && chrome.storage.sync
     );
   }
@@ -6943,7 +7128,47 @@
   }
 
   function getShortcutFaviconDataUrl(pageUrl) {
+    const normalizedPageUrl = SHORTCUT_FAVICON.normalizePageUrl(pageUrl);
+    const shortcut = newtabShortcuts.find((item) => SHORTCUT_FAVICON.normalizePageUrl(item && item.url) === normalizedPageUrl);
+    const source = shortcut && shortcut.iconSource;
+    if (source === 'builtin') return '';
+    const entry = normalizedPageUrl && newtabShortcutFavicons[normalizedPageUrl];
+    if (entry && ['service', 'favicon-is', 'cache'].includes(source)) {
+      const savedSource = SHORTCUT_FAVICON.getCachedIconSource(entry);
+      if (source !== savedSource) return '';
+    }
     return SHORTCUT_FAVICON.getCachedIconDataUrl(newtabShortcutFavicons, pageUrl);
+  }
+
+  function getShortcutFaviconCandidateUrl(pageUrl) {
+    // A saved snapshot, including an explicit refresh, takes precedence over bundled defaults.
+    if (getShortcutFaviconDataUrl(pageUrl)) {
+      return '';
+    }
+    const normalizedPageUrl = SHORTCUT_FAVICON.normalizePageUrl(pageUrl);
+    const shortcut = newtabShortcuts.find((item) => SHORTCUT_FAVICON.normalizePageUrl(item && item.url) === normalizedPageUrl);
+    if (normalizedPageUrl && (!shortcut || shortcut.iconSource !== 'builtin')) return '';
+    const resolver = getPageFaviconUrlResolver();
+    return resolver ? resolver.getShortcutFaviconCandidateUrl(
+      pageUrl, getShortcutDialogBuiltinIconUrl(pageUrl)
+    ) : '';
+  }
+
+  function saveShortcutFaviconSnapshot(pageUrl, dataUrl, sourceUrl, replaceExisting) {
+    const normalizedDataUrl = SHORTCUT_FAVICON.normalizeDataUrl(dataUrl);
+    if (!normalizedDataUrl || !newtabShortcuts.some((item) =>
+        SHORTCUT_FAVICON.normalizePageUrl(item && item.url) === pageUrl)) {
+      return '';
+    }
+    const savedDataUrl = getShortcutFaviconDataUrl(pageUrl);
+    if (savedDataUrl && replaceExisting !== true) {
+      return savedDataUrl;
+    }
+    newtabShortcutFavicons = SHORTCUT_FAVICON.setCachedIcon(
+      newtabShortcutFavicons, pageUrl, normalizedDataUrl, sourceUrl
+    );
+    scheduleShortcutFaviconCacheWrite(pageUrl);
+    return normalizedDataUrl;
   }
 
   function areShortcutFaviconEntriesEqual(left, right) {
@@ -6951,6 +7176,85 @@
       left.dataUrl === right.dataUrl &&
       left.sourceUrl === right.sourceUrl &&
       left.updatedAt === right.updatedAt);
+  }
+
+  function getShortcutDialogOnlineIconUrl(url) {
+    const pageUrl = NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(url);
+    return pageUrl ? getShortcutFaviconDataUrl(pageUrl) || getShortcutFaviconCandidateUrl(pageUrl) : '';
+  }
+
+  function getShortcutDialogBuiltinIconUrl(url) {
+    const pageUrl = NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(url);
+    const assetPath = SHORTCUT_FAVICON.getBundledShortcutIconAssetPath(
+      pageUrl, SEARCH_UTILS.getDefaultSiteSearchProviders()
+    );
+    return assetPath ? getExtensionResourceUrl(assetPath) : '';
+  }
+
+  function getShortcutDialogOnlineIconSource(url) {
+    const pageUrl = SHORTCUT_FAVICON.normalizePageUrl(
+      NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(url)
+    );
+    const shortcut = newtabShortcuts.find((item) => SHORTCUT_FAVICON.normalizePageUrl(item && item.url) === pageUrl);
+    if (shortcut && ['service', 'favicon-is', 'cache', 'builtin'].includes(shortcut.iconSource)) {
+      return shortcut.iconSource;
+    }
+    const entry = pageUrl && newtabShortcutFavicons[pageUrl];
+    if (entry && SHORTCUT_FAVICON.isCachedIconForPage(entry, pageUrl)) {
+      return SHORTCUT_FAVICON.getCachedIconSource(entry);
+    }
+    return 'cache';
+  }
+
+  function isShortcutDialogIconSourceAvailable(source, url) {
+    const pageUrl = NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(url);
+    if (!pageUrl) return source === 'cache';
+    const normalizedPageUrl = SHORTCUT_FAVICON.normalizePageUrl(pageUrl);
+    const resolver = getPageFaviconUrlResolver();
+    return normalizedPageUrl
+      ? Boolean(resolver && resolver.getShortcutFaviconFetchCandidates(normalizedPageUrl, source).length)
+      : source === 'cache';
+  }
+
+  function refreshShortcutDialogOnlineIcon(url, iconSource) {
+    const pageUrl = NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(url);
+    const normalizedPageUrl = SHORTCUT_FAVICON.normalizePageUrl(pageUrl);
+    if (!normalizedPageUrl) {
+      if (iconSource === 'service' || iconSource === 'favicon-is') return Promise.resolve(null);
+      // Internal browser pages can only use their browser-provided icon.
+      const browserIcon = pageUrl ? getShortcutFaviconCandidateUrl(pageUrl) : '';
+      return Promise.resolve(browserIcon ? { dataUrl: browserIcon, pageUrl } : null);
+    }
+    const resolver = getPageFaviconUrlResolver();
+    if (!resolver || resolver.getShortcutFaviconFetchCandidates(normalizedPageUrl, iconSource).length === 0) {
+      return Promise.resolve(null);
+    }
+    const policyRevision = shortcutFaviconPolicyRevision;
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (result) => {
+        if (settled) return;
+        settled = true;
+        resolve(result);
+      };
+      const timeoutId = window.setTimeout(() => finish(null), 8000);
+      const sent = sendRuntimeMessage({
+        action: 'getShortcutFaviconData',
+        pageUrl: normalizedPageUrl,
+        refresh: true,
+        ...(['service', 'favicon-is', 'cache'].includes(iconSource) ? { iconSource } : {})
+      }, (response) => {
+        window.clearTimeout(timeoutId);
+        const dataUrl = SHORTCUT_FAVICON.normalizeDataUrl(response && response.data);
+        finish(dataUrl && policyRevision === shortcutFaviconPolicyRevision
+          ? { dataUrl, pageUrl: normalizedPageUrl, sourceUrl: String(response.sourceUrl || '') }
+          : null);
+      });
+      if (!sent) {
+        window.clearTimeout(timeoutId);
+        finish(null);
+      }
+    });
   }
 
   function scheduleShortcutFaviconCacheWrite(pageUrl) {
@@ -7006,66 +7310,86 @@
     if (!normalizedPageUrl) {
       return Promise.resolve('');
     }
+    const shortcut = newtabShortcuts.find((item) => SHORTCUT_FAVICON.normalizePageUrl(item && item.url) === normalizedPageUrl);
+    const iconSource = shortcut && shortcut.iconSource;
+    if (iconSource === 'builtin') return Promise.resolve('');
     const cachedDataUrl = getShortcutFaviconDataUrl(normalizedPageUrl);
     if (cachedDataUrl) {
       return Promise.resolve(cachedDataUrl);
     }
-    if (shortcutFaviconPending.has(normalizedPageUrl)) {
-      return shortcutFaviconPending.get(normalizedPageUrl);
+    const policyRevision = shortcutFaviconPolicyRevision;
+    const requestKey = `${normalizedPageUrl}::${policyRevision}::${iconSource || 'auto'}`;
+    if (shortcutFaviconPending.has(requestKey)) {
+      return shortcutFaviconPending.get(requestKey);
     }
-    const promise = enqueueShortcutFaviconRequest(() => new Promise((resolve) => {
-      let settled = false;
-      const finish = (dataUrl) => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        resolve(dataUrl || '');
-      };
+    const promise = enqueueShortcutFaviconRequest(async () => {
+      await faviconCacheRuntime.ensureCachesReady();
       const shortcutStillExists = newtabShortcuts.some((item) =>
         SHORTCUT_FAVICON.normalizePageUrl(item && item.url) === normalizedPageUrl);
-      if (!shortcutStillExists) {
-        finish('');
-        return;
+      if (!shortcutStillExists || policyRevision !== shortcutFaviconPolicyRevision) {
+        return '';
       }
-      const timeoutId = window.setTimeout(() => finish(''), 8000);
-      const sent = sendRuntimeMessage({
-        action: 'getShortcutFaviconData',
-        pageUrl: normalizedPageUrl
-      }, (response) => {
-        window.clearTimeout(timeoutId);
-        const dataUrl = SHORTCUT_FAVICON.normalizeDataUrl(response && response.data);
-        if (!dataUrl) {
+      const savedDataUrl = getShortcutFaviconDataUrl(normalizedPageUrl);
+      if (savedDataUrl) {
+        return savedDataUrl;
+      }
+      const cacheKey = FAVICON_UTILS.getFaviconPersistCacheKey(normalizedPageUrl);
+      const existingEntry = getPersistedFaviconDataEntry(cacheKey);
+      if (!iconSource && SHORTCUT_FAVICON.isCachedIconForPage(existingEntry, normalizedPageUrl) &&
+          SHORTCUT_FAVICON.normalizeDataUrl(existingEntry.dataUrl)) {
+        return saveShortcutFaviconSnapshot(normalizedPageUrl, existingEntry.dataUrl, existingEntry.sourceUrl || '');
+      }
+      const resolver = getPageFaviconUrlResolver();
+      if (!resolver || resolver.getShortcutFaviconFetchCandidates(normalizedPageUrl, iconSource).length === 0) {
+        return '';
+      }
+      return new Promise((resolve) => {
+        let settled = false;
+        const finish = (dataUrl) => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          resolve(dataUrl || '');
+        };
+        const timeoutId = window.setTimeout(() => finish(''), 8000);
+        const sent = sendRuntimeMessage({
+          action: 'getShortcutFaviconData',
+          pageUrl: normalizedPageUrl,
+          ...(['service', 'favicon-is', 'cache'].includes(iconSource) ? { iconSource } : {})
+        }, (response) => {
+          window.clearTimeout(timeoutId);
+          if (settled) {
+            return;
+          }
+          const currentShortcut = newtabShortcuts.find((item) =>
+            SHORTCUT_FAVICON.normalizePageUrl(item && item.url) === normalizedPageUrl);
+          if (!currentShortcut || currentShortcut.iconSource !== iconSource ||
+              policyRevision !== shortcutFaviconPolicyRevision) {
+            finish('');
+            return;
+          }
+          finish(saveShortcutFaviconSnapshot(normalizedPageUrl,
+            response && response.data, response && response.sourceUrl));
+        });
+        if (!sent) {
+          window.clearTimeout(timeoutId);
           finish('');
-          return;
         }
-        const shortcutStillExistsAfterRequest = newtabShortcuts.some((item) =>
-          SHORTCUT_FAVICON.normalizePageUrl(item && item.url) === normalizedPageUrl);
-        if (!shortcutStillExistsAfterRequest) {
-          finish('');
-          return;
-        }
-        newtabShortcutFavicons = SHORTCUT_FAVICON.setCachedIcon(
-          newtabShortcutFavicons,
-          normalizedPageUrl,
-          dataUrl,
-          response && response.sourceUrl
-        );
-        scheduleShortcutFaviconCacheWrite(normalizedPageUrl);
-        finish(dataUrl);
       });
-      if (!sent) {
-        window.clearTimeout(timeoutId);
-        finish('');
-      }
-    })).finally(() => {
-      shortcutFaviconPending.delete(normalizedPageUrl);
+    }).finally(() => {
+      shortcutFaviconPending.delete(requestKey);
     });
-    shortcutFaviconPending.set(normalizedPageUrl, promise);
+    shortcutFaviconPending.set(requestKey, promise);
     return promise;
   }
 
   function getShortcutTitle(shortcut) {
+    if (shortcut && shortcut.type === 'folder') {
+      const node = bookmarksRuntime.getNode(getShortcutFolderId(shortcut));
+      return sanitizeDisplayText((node && node.title) || shortcut.title || '') ||
+        t('newtab_shortcuts_open_folder', 'Open folder');
+    }
     return sanitizeDisplayText(shortcut && shortcut.title ? shortcut.title : '') ||
       sanitizeDisplayText(shortcut && shortcut.host ? shortcut.host : '') ||
       sanitizeDisplayText(shortcut && shortcut.url ? shortcut.url : '') ||
@@ -7097,6 +7421,19 @@
           value: SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE,
           label: t('newtab_shortcuts_hide_add', 'Hide')
         }
+      ];
+    }
+    const shortcut = target && getShortcutById(target.shortcutId);
+    if (shortcut && shortcut.type === 'folder') {
+      return [
+        { action: NEWTAB_CONTEXT_MENU_OPEN_VALUE, value: NEWTAB_CONTEXT_MENU_OPEN_VALUE,
+          label: t('newtab_shortcuts_open_folder', 'Open folder') },
+        { action: SHORTCUT_CONTEXT_MENU_EDIT_VALUE, value: SHORTCUT_CONTEXT_MENU_EDIT_VALUE,
+          label: t('folder_rename', 'Rename'), dividerBefore: true },
+        { action: FOLDER_COLOR_CONTEXT_MENU_VALUE, value: FOLDER_COLOR_CONTEXT_MENU_VALUE,
+          label: t('folder_color_change', 'Change color') },
+        { action: SHORTCUT_CONTEXT_MENU_REMOVE_VALUE, value: SHORTCUT_CONTEXT_MENU_REMOVE_VALUE,
+          label: t('shortcuts_remove', 'Remove') }
       ];
     }
     return [
@@ -7202,6 +7539,7 @@
   }
 
   function closeShortcutDialog(options) {
+    shortcutDialogOpenRevision += 1;
     if (shortcutDialogController) {
       shortcutDialogController.close({
         ...(options || {}),
@@ -7210,9 +7548,23 @@
     }
   }
 
-  function openShortcutDialog(options) {
-    if (shortcutDialogController) {
-      shortcutDialogController.open(options);
+  async function openShortcutDialog(options) {
+    const revision = ++shortcutDialogOpenRevision;
+    try {
+      if (!shortcutDialogController) {
+        if (!shortcutDialogLoadPromise) {
+          shortcutDialogLoadPromise = Promise.resolve(createShortcutDialogComponent()).then((controller) => {
+            if (!controller) throw new Error('Shortcut dialog unavailable');
+            shortcutDialogController = controller;
+            controller.mount(document.body);
+          }).finally(() => { shortcutDialogLoadPromise = null; });
+        }
+        await shortcutDialogLoadPromise;
+      }
+      if (revision === shortcutDialogOpenRevision) shortcutDialogController.open(options);
+    } catch (error) {
+      console.warn('[Lumno] Failed to load shortcut dialog', error);
+      if (revision === shortcutDialogOpenRevision) showToast(t('toast_error', 'Operation failed. Please try again.'), true);
     }
   }
 
@@ -7488,7 +7840,13 @@
       ? Array.from(shortcutGrid.querySelectorAll('.x-nt-shortcut-tile'))
       : [];
     tiles.forEach((tile) => {
+      if (!tile.hasAttribute('data-shortcut-context-menu-open')) {
+        return;
+      }
       tile.removeAttribute('data-shortcut-context-menu-open');
+      if (typeof tile._xSetBookmarkMenuVisualActive === 'function') {
+        tile._xSetBookmarkMenuVisualActive(false);
+      }
     });
   }
 
@@ -7497,6 +7855,9 @@
     const tile = target && target.tile;
     if (tile) {
       tile.setAttribute('data-shortcut-context-menu-open', 'true');
+      if (typeof tile._xSetBookmarkMenuVisualActive === 'function') {
+        tile._xSetBookmarkMenuVisualActive(true);
+      }
     }
   }
 
@@ -7599,11 +7960,19 @@
     if (!shortcut) {
       return;
     }
+    if (action === FOLDER_COLOR_CONTEXT_MENU_VALUE && shortcut.type === 'folder') {
+      openFolderColorPicker(getShortcutFolderId(shortcut), shortcut.title, sourceElement);
+      return;
+    }
     if (action === SHORTCUT_CONTEXT_MENU_EDIT_VALUE) {
       openShortcutEditor(shortcut, sourceElement);
       return;
     }
     if (action === NEWTAB_CONTEXT_MENU_OPEN_VALUE) {
+      if (shortcut.type === 'folder') {
+        openShortcutUrl(shortcut);
+        return;
+      }
       openExternalNewTabUrl(shortcut.url, 'newTab');
       return;
     }
@@ -7634,6 +8003,19 @@
       clientX: event.clientX,
       clientY: event.clientY
     });
+  }
+
+  function handleShortcutContextMenuDocumentKeyDown(event) {
+    if (event && event.key === 'Escape' &&
+        (shortcutContextMenuTarget || isShortcutContextMenuOpen())) {
+      closeShortcutContextMenu();
+    }
+  }
+
+  function handleShortcutContextMenuDocumentFocusIn(event) {
+    if (shortcutContextMenuTarget && !isShortcutContextMenuNode(event.target)) {
+      closeShortcutContextMenu();
+    }
   }
 
   function createShortcutContextMenu() {
@@ -7683,6 +8065,8 @@
     });
     menu.addEventListener('click', handleShortcutContextMenuActionClick);
     document.addEventListener('pointerdown', handleShortcutContextMenuDocumentPointerDown, true);
+    document.addEventListener('keydown', handleShortcutContextMenuDocumentKeyDown, true);
+    document.addEventListener('focusin', handleShortcutContextMenuDocumentFocusIn, true);
     (document.body || shortcutSection || document.documentElement).appendChild(control);
     return {
       control,
@@ -7777,12 +8161,22 @@
         label: t('newtab_open_in_new_tab', 'Open in new tab')
       });
     }
+    if (target && target.isFolder) {
+      options.push({
+        action: FOLDER_COLOR_CONTEXT_MENU_VALUE,
+        value: FOLDER_COLOR_CONTEXT_MENU_VALUE,
+        label: t('folder_color_change', 'Change color'),
+        dividerBefore: true
+      });
+    }
     options.push(
       {
         action: BOOKMARK_CONTEXT_MENU_EDIT_VALUE,
         value: BOOKMARK_CONTEXT_MENU_EDIT_VALUE,
-        label: t('bookmarks_edit', 'Edit'),
-        dividerBefore: options.length > 0
+        label: target && target.isFolder
+          ? t('folder_rename', 'Rename')
+          : t('bookmarks_edit', 'Edit'),
+        dividerBefore: options.length > 0 && !(target && target.isFolder)
       },
       {
         action: BOOKMARK_CONTEXT_MENU_REMOVE_VALUE,
@@ -7858,6 +8252,10 @@
     const target = bookmarkContextMenuTarget;
     closeBookmarkContextMenu();
     if (!target || !action) {
+      return;
+    }
+    if (action === FOLDER_COLOR_CONTEXT_MENU_VALUE && target.isFolder) {
+      openFolderColorPicker(target.bookmarkId, target.title, target.element);
       return;
     }
     if (action === NEWTAB_CONTEXT_MENU_OPEN_VALUE) {
@@ -8314,6 +8712,11 @@
     if (!shortcut) {
       return;
     }
+    if (shortcut.type === 'folder') {
+      openBookmarkEditor({ bookmarkId: getShortcutFolderId(shortcut), isFolder: true,
+        title: getShortcutTitle(shortcut), element: sourceElement });
+      return;
+    }
     openShortcutDialog({
       mode: SHORTCUT_DIALOG_MODE_EDIT,
       shortcut: {
@@ -8528,9 +8931,17 @@
     if (currentIndex < 0) {
       return false;
     }
+    const tiles = getShortcutReorderTiles();
+    const visibleIds = tiles.filter((tile) => getShortcutTileId(tile) !== shortcutId).map(getShortcutTileId);
+    const visibleTargetIndex = Math.max(0, Math.min(visibleIds.length, Math.floor(targetIndex)));
+    if (tiles.findIndex((tile) => getShortcutTileId(tile) === shortcutId) === visibleTargetIndex) {
+      return false;
+    }
     const nextShortcuts = newtabShortcuts.slice();
     const shortcutItem = nextShortcuts.splice(currentIndex, 1)[0];
-    const boundedIndex = Math.max(0, Math.min(nextShortcuts.length, targetIndex));
+    const anchorId = visibleIds[visibleTargetIndex];
+    const anchorIndex = anchorId ? nextShortcuts.findIndex((item) => item.id === anchorId) : nextShortcuts.length;
+    const boundedIndex = Math.max(0, anchorIndex);
     if (currentIndex === boundedIndex) {
       return false;
     }
@@ -8539,16 +8950,37 @@
     return true;
   }
 
-  function persistShortcutOrder() {
-    const options = getShortcutStoreOptions();
-    newtabShortcuts = NEWTAB_SHORTCUTS_STORE.normalizeShortcuts(newtabShortcuts, options);
-    if (!storageArea) {
-      return Promise.resolve(newtabShortcuts);
-    }
-    return NEWTAB_SHORTCUTS_STORE.saveShortcuts(storageArea, newtabShortcuts, options).then((items) => {
-      newtabShortcuts = Array.isArray(items) ? items : newtabShortcuts;
-      return newtabShortcuts;
+  function restoreShortcutDragOrder(state) {
+    const originalOrder = state.originalShortcuts.map((item) => item.id);
+    const restored = NEWTAB_CROSS_SURFACE_DRAG.planShortcutReorder({
+      shortcuts: newtabShortcuts, order: originalOrder
     });
+    if (restored) newtabShortcuts = restored;
+    // React has not committed the manually moved DOM order during the drag.
+    let visibleIndex = 0;
+    newtabShortcuts.forEach((shortcut) => {
+      const tile = getShortcutTileById(shortcut.id);
+      if (tile) moveShortcutTileElement(tile, visibleIndex++);
+    });
+    renderShortcuts();
+    resetShortcutDockHover();
+  }
+
+  function persistShortcutOrder(state) {
+    const record = state && NEWTAB_BOOKMARK_MOVE_HISTORY.createShortcutReorderRecord({
+      fromOrder: state.originalShortcuts.map((item) => item.id),
+      toOrder: newtabShortcuts.map((item) => item.id)
+    });
+    if (state && !record) return Promise.resolve(newtabShortcuts);
+    if (state) bookmarkMoveHistoryBusy = true;
+    return persistShortcuts(newtabShortcuts, '', undefined, { render: false })
+      .then((saved) => {
+        if (saved && record) bookmarkMoveHistory.push(record);
+        if (!saved && state) restoreShortcutDragOrder(state);
+        return newtabShortcuts;
+      }).finally(() => {
+        if (state) bookmarkMoveHistoryBusy = false;
+      });
   }
 
   function startShortcutDrag(event, tile) {
@@ -8556,6 +8988,8 @@
       return;
     }
     shortcutDragState.isDragging = true;
+    hideCursorTooltip();
+    closeBookmarkCascadeMenu();
     if (document.body) {
       document.body.setAttribute('data-drag-source', 'shortcut');
     }
@@ -8593,7 +9027,17 @@
       return;
     }
     setShortcutDragTileTransform(state, pointerX, pointerY);
+    document.body.removeAttribute('data-drag-blocked');
+    const topbarPoint = isBookmarkTopbarMode() &&
+      !isBookmarkCascadeSurfaceAtPoint(pointerX, pointerY)
+      ? getExternalBookmarkSurfacePoint(pointerX, pointerY) : null;
+    if (topbarPoint && bookmarkTopbarRuntime.autoScroll(topbarPoint.x, topbarPoint.y)) {
+      scheduleShortcutDragMove(state, pointerX, pointerY);
+    }
     if (updateShortcutDragBookmarkTarget(state, pointerX, pointerY)) {
+      return;
+    }
+    if (!isPointOverShortcutDropSurface(pointerX, pointerY)) {
       return;
     }
     const targetIndex = getShortcutDragInsertionIndex(pointerX, pointerY);
@@ -8619,6 +9063,7 @@
       Number(state.pendingPointerX),
       Number(state.pendingPointerY)
     );
+    cancelShortcutDragMoveFrame(state);
   }
 
   function scheduleShortcutDragMove(state, pointerX, pointerY) {
@@ -8640,6 +9085,36 @@
     });
   }
 
+  function suppressCanceledDragClick(element, flagName, pointerId) {
+    if (element._xDragCancelClickCleanup) {
+      element._xDragCancelClickCleanup();
+    }
+    element[flagName] = true;
+    const cleanup = () => {
+      document.removeEventListener('pointerup', onRelease, true);
+      document.removeEventListener('pointercancel', onRelease, true);
+      document.removeEventListener('pointerdown', onNextPress, true);
+      delete element._xDragCancelClickCleanup;
+    };
+    const onRelease = (releaseEvent) => {
+      if (releaseEvent.pointerId !== pointerId) {
+        return;
+      }
+      cleanup();
+      // A canceled drag can still generate a click when the held mouse is
+      // released later. Keep suppression through that click's event turn.
+      window.setTimeout(() => { element[flagName] = false; }, 0);
+    };
+    const onNextPress = () => {
+      cleanup();
+      element[flagName] = false;
+    };
+    element._xDragCancelClickCleanup = cleanup;
+    document.addEventListener('pointerup', onRelease, true);
+    document.addEventListener('pointercancel', onRelease, true);
+    document.addEventListener('pointerdown', onNextPress, true);
+  }
+
   function finishShortcutDrag(event, options) {
     if (!shortcutDragState) {
       return;
@@ -8649,14 +9124,22 @@
     }
     const state = shortcutDragState;
     detachShortcutDragDocumentListeners();
+    if (event && Number.isFinite(event.clientX) && Number.isFinite(event.clientY)) {
+      state.pendingPointerX = event.clientX;
+      state.pendingPointerY = event.clientY;
+    }
     if (state.isDragging) {
       flushShortcutDragMove(state);
     }
     const bookmarkDropTarget = state.isDragging && !(options && options.cancel)
       ? state.dropTarget
       : null;
+    clearBookmarkDragPageSwitch(state);
+    clearBookmarkDragFolderSwitch(state);
     clearDragDropTarget(state);
     shortcutDragState = null;
+    document.body.removeAttribute('data-drag-blocked');
+    closeBookmarkCascadeMenu();
     if (document.body) {
       document.body.removeAttribute('data-drag-source');
     }
@@ -8666,9 +9149,9 @@
     }
     if (tile) {
       tile.removeAttribute('aria-grabbed');
-      if (typeof tile.releasePointerCapture === 'function' && event) {
+      if (typeof tile.releasePointerCapture === 'function') {
         try {
-          tile.releasePointerCapture(event.pointerId);
+          tile.releasePointerCapture(state.pointerId);
         } catch (error) {
           // Ignore stale pointer capture releases.
         }
@@ -8682,9 +9165,13 @@
       }
       if (state.isDragging) {
         tile._xShortcutSuppressClick = true;
-        window.setTimeout(() => {
-          tile._xShortcutSuppressClick = false;
-        }, 0);
+        if (event) {
+          window.setTimeout(() => {
+            tile._xShortcutSuppressClick = false;
+          }, 0);
+        } else {
+          suppressCanceledDragClick(tile, '_xShortcutSuppressClick', state.pointerId);
+        }
       }
     }
     if (bookmarkDropTarget) {
@@ -8692,6 +9179,10 @@
         event.preventDefault();
       }
       moveShortcutToBookmarks(state, bookmarkDropTarget);
+      return;
+    }
+    if (options && options.cancel && state.hasReordered) {
+      restoreShortcutDragOrder(state);
       return;
     }
     if (state.isDragging &&
@@ -8703,7 +9194,7 @@
       if (event && typeof event.preventDefault === 'function') {
         event.preventDefault();
       }
-      persistShortcutOrder().then(() => {
+      persistShortcutOrder(state).then(() => {
         renderShortcuts();
         scheduleWallpaperAdaptiveToneUpdate();
       });
@@ -8733,21 +9224,42 @@
     return Boolean(shortcutDragState && shortcutDragState.isDragging);
   }
 
+  function isBookmarkSurfaceDragStateActive(state) {
+    return Boolean(state && state.isDragging && (state === bookmarkDragState || state === shortcutDragState));
+  }
+
   function updateShortcutDragBookmarkTarget(state, pointerX, pointerY) {
-    const surface = getBookmarkDropSurfaceElement();
-    if (!surface || !NEWTAB_BOOKMARK_DRAG.isPointInsideElement(surface, pointerX, pointerY)) {
-      if (state.dropTarget) {
-        clearDragDropTarget(state);
-      }
-      return false;
+    if (state.folderSwitchPendingId) {
+      return true;
     }
-    const target = getExternalBookmarkDropTarget(pointerX, pointerY);
+    const direction = getBookmarkDragPageSwitchDirection(pointerX, pointerY);
+    if (direction) {
+      clearDragDropTarget(state);
+      clearBookmarkDragFolderSwitch(state);
+      scheduleBookmarkDragPageSwitch(state, direction);
+      return true;
+    }
+    clearBookmarkDragPageSwitch(state);
+    const overBookmarks = Boolean(getExternalBookmarkSurfacePoint(pointerX, pointerY));
+    const overCascade = isBookmarkCascadeSurfaceAtPoint(pointerX, pointerY);
+    const dockFolder = getShortcutFolderDropTargetAt(state, pointerX, pointerY);
+    const target = overCascade || overBookmarks || dockFolder
+      ? getExternalBookmarkDropTarget(pointerX, pointerY, state) || dockFolder
+      : null;
+    if (target && target.kind === 'blocked') {
+      document.body.setAttribute('data-drag-blocked', 'true');
+      clearDragDropTarget(state);
+      clearBookmarkDragFolderSwitch(state);
+      return true;
+    }
     if (target) {
       setDragDropTarget(state, target);
+      scheduleBookmarkDragFolderSwitch(state, target);
     } else {
       clearDragDropTarget(state);
+      clearBookmarkDragFolderSwitch(state);
     }
-    return true;
+    return overBookmarks || overCascade || Boolean(dockFolder);
   }
 
   function moveShortcutToBookmarks(state, target) {
@@ -8762,39 +9274,64 @@
       }
       return false;
     };
-    if (!shortcut) {
+    if (!shortcut || bookmarkMoveHistoryBusy) {
       return Promise.resolve(restoreShortcut());
     }
-    const details = {
-      parentId: String(target.folderId),
-      title: String(shortcut.title || ''),
-      url: String(shortcut.url)
-    };
-    if (target.kind === 'insertion') {
-      details.index = Number(target.index);
+    if (!isValidExternalBookmarkDropTarget(state, target)) {
+      return Promise.resolve(restoreShortcut());
     }
+    const isFolder = shortcut.type === 'folder';
+    const node = isFolder ? bookmarksRuntime.getNode(getShortcutFolderId(shortcut)) : null;
+    if (isFolder && !node) {
+      return Promise.resolve(restoreShortcut());
+    }
+    const from = node ? { parentId: node.parentId, index: node.index } : null;
+    const to = isFolder && String(node.parentId) === String(target.folderId) && target.kind !== 'insertion'
+      ? from
+      : {
+        parentId: String(target.folderId),
+        index: NEWTAB_BOOKMARK_MOVE_HISTORY.normalizeMoveDestinationIndex({
+          sourceParentId: from && from.parentId,
+          sourceIndex: from && from.index,
+          targetParentId: target.folderId,
+          targetIndex: target.kind === 'insertion'
+            ? target.index : bookmarksRuntime.getFolderItems(target.folderId).length
+        })
+      };
+    const originalShortcuts = state.originalShortcuts || newtabShortcuts;
+    const record = NEWTAB_BOOKMARK_MOVE_HISTORY.createTransferRecord({
+      bookmarkId: node && node.id,
+      snapshot: { title: isFolder ? node.title : shortcut.title, url: isFolder ? '' : shortcut.url },
+      from,
+      to,
+      beforeShortcut: {
+        snapshot: shortcut,
+        index: originalShortcuts.findIndex((item) => item.id === shortcut.id),
+        iconDataUrl: newtabShortcutIcons[shortcut.id]
+      }
+    });
+    if (!record) return Promise.resolve(restoreShortcut());
+    bookmarkMoveHistoryBusy = true;
     queueBookmarkLayoutAnimation('');
-    return bookmarksRuntime.runControlledMutation(() => {
-      return bookmarksRuntime.create(details);
-    }).then(() => {
-      markBookmarkTreeDirty();
-      loadBookmarks({ force: true });
-      return persistShortcuts(
-        newtabShortcuts.filter((item) => item && item.id !== shortcut.id),
-        t('newtab_shortcuts_moved_to_bookmarks', 'Moved to bookmarks')
-      );
-    }, (error) => {
-      bookmarkPendingLayoutAnimation = null;
-      console.warn('[Lumno] Failed to move shortcut to bookmarks', error);
-      markBookmarkTreeDirty();
-      loadBookmarks({ force: true });
-      showToast(t('newtab_shortcuts_move_to_bookmarks_failed', 'Could not move to bookmarks'), true);
-      return false;
-    }).then((moved) => (moved ? true : restoreShortcut()));
+    return applyBookmarkShortcutTransfer(record, false).then((moved) => {
+      if (!moved) return restoreShortcut();
+      bookmarkMoveHistory.push({
+        ...record,
+        bookmarkId: record.runtime.currentBookmarkId,
+        to: record.runtime.location || record.to
+      });
+      if (isFolder) {
+        showToast(t('newtab_shortcuts_moved_to_bookmarks', 'Moved to bookmarks'));
+      }
+      return true;
+    }).finally(() => {
+      bookmarkMoveHistoryBusy = false;
+      if (newtabShortcuts.some((item) => item.type === 'folder')) return refreshShortcutFolderReferences();
+    });
   }
 
   function handleShortcutDragPointerDown(event) {
-    if (isShortcutContextMenuNode(event.target)) {
+    if (bookmarkMoveHistoryBusy || isShortcutContextMenuNode(event.target)) {
       return;
     }
     const tile = getShortcutTileFromNode(event.target);
@@ -8807,6 +9344,11 @@
       pointerId: event.pointerId,
       tile,
       shortcutId,
+      originalShortcuts: newtabShortcuts.slice(),
+      bookmarkId: getShortcutFolderId(getShortcutById(shortcutId)),
+      pageSwitchTimerId: 0,
+      folderSwitchTimerId: 0,
+      folderSwitchPendingId: '',
       startX: Number(event.clientX),
       startY: Number(event.clientY),
       grabOffsetX: 0,
@@ -8875,11 +9417,11 @@
     }
     hideShortcutTooltip();
     closeShortcutContextMenu();
-    const items = NEWTAB_SHORTCUTS_STORE.normalizeShortcuts
-      ? NEWTAB_SHORTCUTS_STORE.normalizeShortcuts(newtabShortcuts, getShortcutStoreOptions())
-      : [];
-    newtabShortcuts = items;
+    newtabShortcuts = NEWTAB_SHORTCUTS_STORE.normalizeShortcuts(newtabShortcuts, getShortcutStoreOptions());
+    const items = getVisibleShortcuts();
     shortcutsView.render(items);
+    shortcutFolderRuntime.flush().catch(() => {});
+    syncOpenBookmarkCascadeAnchorVisual();
     addShortcutButton = shortcutsView.getAddButton();
     if (shortcutSection) {
       shortcutSection.setAttribute('data-count', String(items.length));
@@ -8914,6 +9456,9 @@
         );
       } else {
         newtabShortcuts = Array.isArray(syncedItems) ? syncedItems : [];
+      }
+      if (newtabShortcuts.some((shortcut) => shortcut.type === 'folder')) {
+        return refreshShortcutFolderReferences().then(() => newtabShortcuts);
       }
       return newtabShortcuts;
     });
@@ -9036,7 +9581,7 @@
   }
 
   function loadVisibleShortcuts() {
-    return Promise.all([loadShortcuts(), loadShortcutIcons(), loadShortcutFavicons()]).then(() => {
+    return Promise.all([loadShortcuts(), loadShortcutIcons(), loadShortcutFavicons(), loadFolderColors()]).then(() => {
       const prunedIcons = getNextShortcutIconMap(newtabShortcuts);
       const shouldPrune = !areShortcutIconMapsEqual(newtabShortcutIcons, prunedIcons);
       const shouldPruneFavicons = pruneShortcutFavicons(newtabShortcuts, false);
@@ -9170,7 +9715,9 @@
         const items = result && Array.isArray(result.items) ? result.items : normalized;
         newtabShortcuts = items;
         pruneShortcutFavicons(newtabShortcuts);
-        renderShortcuts();
+        if (settings.render !== false) {
+          renderShortcuts();
+        }
         const overflowShortcutId = String(settings.syncOverflowShortcutId || '');
         const shouldWarnAboutSyncLimit = Boolean(
           result && result.syncLimited === true && overflowShortcutId &&
@@ -9212,9 +9759,10 @@
 
   function saveNewShortcutFromDialog(title, url, iconState) {
     const options = getShortcutStoreOptions();
-    const nextShortcut = NEWTAB_SHORTCUTS_STORE.createShortcutRecord({ title, url }, options);
+    const nextShortcut = NEWTAB_SHORTCUTS_STORE.createShortcutRecord({ title, url,
+      iconSource: iconState && iconState.source }, options);
     if (!nextShortcut) {
-      setShortcutError(t('newtab_shortcuts_invalid_url', 'Enter a valid http or https URL.'));
+      setShortcutError(t('newtab_shortcuts_invalid_url', 'Enter a valid http, https, or browser internal URL.'));
       return Promise.resolve(false);
     }
     const withoutDuplicate = newtabShortcuts.filter((item) => item && item.url !== nextShortcut.url);
@@ -9244,13 +9792,14 @@
   function saveEditedShortcutFromDialog(title, url, shortcutId, iconState) {
     const currentShortcut = getShortcutById(shortcutId);
     if (!currentShortcut) {
-      setShortcutError(t('newtab_shortcuts_invalid_url', 'Enter a valid http or https URL.'));
+      setShortcutError(t('newtab_shortcuts_invalid_url', 'Enter a valid http, https, or browser internal URL.'));
       return Promise.resolve(false);
     }
     const options = getShortcutStoreOptions();
-    const nextShortcut = NEWTAB_SHORTCUTS_STORE.createShortcutRecord({ title, url }, options);
+    const nextShortcut = NEWTAB_SHORTCUTS_STORE.createShortcutRecord({ title, url,
+      iconSource: iconState && iconState.source || currentShortcut.iconSource }, options);
     if (!nextShortcut) {
-      setShortcutError(t('newtab_shortcuts_invalid_url', 'Enter a valid http or https URL.'));
+      setShortcutError(t('newtab_shortcuts_invalid_url', 'Enter a valid http, https, or browser internal URL.'));
       return Promise.resolve(false);
     }
     nextShortcut.id = currentShortcut.id;
@@ -9284,7 +9833,8 @@
   function saveShortcutFromDialog(title, url, dialogState) {
     const iconState = {
       action: dialogState && dialogState.iconAction,
-      dataUrl: dialogState && dialogState.iconDataUrl
+      dataUrl: dialogState && dialogState.iconDataUrl,
+      source: dialogState && dialogState.iconSource
     };
     if (dialogState && dialogState.mode === SHORTCUT_DIALOG_MODE_EDIT) {
       return saveEditedShortcutFromDialog(title, url, dialogState.shortcutId, iconState);
@@ -9336,14 +9886,29 @@
 
   function removeShortcutById(shortcutId) {
     const id = String(shortcutId || '');
-    if (!id) {
+    if (!id || bookmarkMoveHistoryBusy) {
       return Promise.resolve(false);
     }
-    const nextShortcuts = newtabShortcuts.filter((item) => item && item.id !== id);
-    if (nextShortcuts.length === newtabShortcuts.length) {
+    const index = newtabShortcuts.findIndex((item) => item && item.id === id);
+    if (index < 0) {
       return Promise.resolve(false);
     }
-    return persistShortcuts(nextShortcuts, t('newtab_shortcuts_removed', 'Shortcut removed'));
+    const record = NEWTAB_BOOKMARK_MOVE_HISTORY.createShortcutDeleteRecord({
+      snapshot: newtabShortcuts[index], index,
+      iconDataUrl: newtabShortcutIcons[id]
+    });
+    bookmarkMoveHistoryBusy = true;
+    return persistShortcuts(newtabShortcuts.filter((item) => item && item.id !== id)).then((saved) => {
+      if (saved) {
+        bookmarkMoveHistory.push(record);
+        showToast(formatMessage(
+          'newtab_shortcuts_removed_undo',
+          'Shortcut removed · {shortcut} to undo',
+          { shortcut: getBookmarkUndoShortcutLabel() }
+        ));
+      }
+      return saved;
+    }).finally(() => { bookmarkMoveHistoryBusy = false; });
   }
 
   function hideShortcutAddFromContextMenu(sourceElement) {
@@ -9381,12 +9946,16 @@
       grid: shortcutGrid,
       tiles: shortcutTiles,
       maxShortcuts: MAX_NEWTAB_SHORTCUTS,
+      getFolderIconSvg: getFigmaFolderSvg,
+      initFolderIcon: initFolderPathMorph,
+      animateFolderIcon: playFolderPathMorph,
       getShortcutTitle,
       getHostFromUrl,
       getShortcutIconDataUrl,
       getShortcutFaviconDataUrl,
       resolveShortcutFaviconDataUrl,
-      getPageFaviconCandidateUrl,
+      getShortcutFaviconPolicyRevision: () => shortcutFaviconPolicyRevision,
+      getShortcutFaviconCandidateUrl,
       getImmediateThemeForSuggestion,
       applyShortcutTileTheme,
       queueThemeForTarget,
@@ -9400,7 +9969,7 @@
       onNativeDragStart: handleShortcutNativeDragStart,
       getAddLabel: () => t('newtab_shortcuts_add', 'Add shortcut'),
       getAddIconSvg: () => getRiSvg('ri-add-line', 'ri-size-28'),
-      getAddVisible: () => newtabShortcutAddVisible,
+      getAddVisible: () => newtabShortcutAddVisible && newtabShortcuts.length < MAX_NEWTAB_SHORTCUTS,
       onAdd: (sourceElement) => {
         hideShortcutTooltip();
         openShortcutDialog({ sourceElement });
@@ -9425,6 +9994,11 @@
       bindTooltip: bindShortcutDialogTooltip,
       hideTooltip: hideShortcutDialogTooltip,
       prepareIconFile: shortcutIconStore.prepareFile,
+      getOnlineIconUrl: getShortcutDialogOnlineIconUrl,
+      getOnlineIconSource: getShortcutDialogOnlineIconSource,
+      getBuiltinIconUrl: getShortcutDialogBuiltinIconUrl,
+      isIconSourceAvailable: isShortcutDialogIconSourceAvailable,
+      refreshOnlineIcon: refreshShortcutDialogOnlineIcon,
       onSubmit(payload) {
         if (payload.itemType === SHORTCUT_DIALOG_ITEM_BOOKMARK ||
             payload.itemType === SHORTCUT_DIALOG_ITEM_FOLDER) {
@@ -9438,14 +10012,24 @@
           mode: payload.mode,
           shortcutId: payload.shortcutId,
           iconAction: payload.iconAction,
-          iconDataUrl: payload.iconDataUrl
+          iconDataUrl: payload.iconDataUrl,
+          iconSource: payload.iconSource
+        }).then((saved) => {
+          const onlineIcon = payload.onlineIcon;
+          const pageUrl = SHORTCUT_FAVICON.normalizePageUrl(
+            NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(payload.url)
+          );
+          if (saved && onlineIcon && pageUrl && pageUrl === onlineIcon.pageUrl) {
+            saveShortcutFaviconSnapshot(pageUrl, onlineIcon.dataUrl, onlineIcon.sourceUrl, true);
+            renderShortcuts();
+          }
+          return saved;
         });
       }
     });
   }
 
   createShortcutsSection();
-  shortcutDialogController = createShortcutDialogComponent();
   markNewtabStartupMilestone('shortcut-surface-created');
 
   setContentSectionVisible(bookmarkSection, false);
@@ -9700,6 +10284,7 @@
     inputParts: () => inputParts,
     topContentContainer: () => topContentContainer,
     shortcutSection: () => shortcutSection,
+    quoteSection: () => quoteRuntime && quoteRuntime.element,
     bookmarkSection,
     recentSection,
     suggestionsContainer,
@@ -10395,7 +10980,7 @@
     return NEWTAB_BOOKMARK_DRAG.createPreview(state, {
       documentObj: document,
       renderClosedFolderIcon: ({ bookmarkId, folderIcon }) => {
-        folderIcon.innerHTML = getFigmaFolderSvg(`${bookmarkId}-drag-preview`);
+        folderIcon.innerHTML = getFigmaFolderSvg(`${bookmarkId}-drag-preview`, bookmarkId);
         initFolderPathMorph(folderIcon);
         setFolderPathMorphState(folderIcon, false);
       }
@@ -10489,15 +11074,107 @@
     );
   }
 
-  // Drop target for items that are not bookmarks yet (e.g. a dragged shortcut):
-  // folders take precedence, otherwise the nearest gap in the pointer's row.
-  function getExternalBookmarkDropTarget(pointerX, pointerY) {
+  function getExternalBookmarkSurfacePoint(pointerX, pointerY) {
+    const surface = getBookmarkDropSurfaceElement();
+    if (!surface) {
+      return null;
+    }
+    if (isBookmarkTopbarMode()) {
+      return NEWTAB_BOOKMARK_DRAG.getTopbarDropPoint({
+        surfaceElement: surface,
+        viewportElement: bookmarkTopbarRuntime.viewport,
+        pointerX,
+        pointerY
+      });
+    }
+    return NEWTAB_BOOKMARK_DRAG.isPointInsideElement(surface, pointerX, pointerY)
+      ? { x: pointerX, y: pointerY } : null;
+  }
+
+  // Foreign items share the bookmark edge insertion zones. A folder's center
+  // accepts its contents; ordinary cards snap to the nearest row boundary.
+  function isValidExternalBookmarkDropTarget(state, target) {
     const nodeMap = bookmarksRuntime.getNodeMap();
-    const folderTarget = getBookmarkElementDropTarget(pointerX, pointerY);
-    if (folderTarget) {
-      return NEWTAB_CROSS_SURFACE_DRAG.isBookmarkFolderDropTarget(folderTarget.folderId, nodeMap)
-        ? folderTarget
-        : null;
+    if (!target || !NEWTAB_CROSS_SURFACE_DRAG.isBookmarkFolderDropTarget(target.folderId, nodeMap)) {
+      return false;
+    }
+    const destination = nodeMap.get(String(target.folderId));
+    if (destination.unmodifiable) {
+      return false;
+    }
+    if (target.kind === 'return') {
+      const source = state && nodeMap.get(String(state.bookmarkId || ''));
+      if (!source || source.url || !state.shortcutId ||
+          String(target.bookmarkId) !== String(source.id) ||
+          String(target.folderId) !== String(source.parentId)) {
+        return false;
+      }
+    }
+    return !state || !state.bookmarkId || !NEWTAB_BOOKMARK_MOVE_HISTORY.isFolderInsideBookmark(
+      nodeMap, state.bookmarkId, target.folderId
+    );
+  }
+
+  function resolveExternalBookmarkDropTarget(state, target) {
+    const shortcut = state && state.shortcutId ? getShortcutById(state.shortcutId) : null;
+    if (shortcut && shortcut.type === 'folder' && target &&
+        (target.kind === 'card' || target.kind === 'cascade') &&
+        String(target.folderId) === String(getShortcutFolderId(shortcut))) {
+      const source = bookmarksRuntime.getNodeMap().get(String(getShortcutFolderId(shortcut)));
+      if (source && !source.url) {
+        // Returning the alias to its original bookmark removes the shortcut
+        // without trying to move the real folder into itself.
+        target = { ...target, kind: 'return', bookmarkId: source.id, folderId: source.parentId };
+      }
+    }
+    return isValidExternalBookmarkDropTarget(state, target)
+      ? target : { kind: 'blocked', surface: target && target.surface || 'folder' };
+  }
+
+  function getShortcutFolderDropTargetAt(state, pointerX, pointerY) {
+    if (!isPointOverShortcutDropSurface(pointerX, pointerY)) {
+      return null;
+    }
+    const tile = getShortcutReorderTiles().find((candidate) => {
+      if (!candidate.hasAttribute('data-bookmark-drop-folder-id') || candidate === state.tile) {
+        return false;
+      }
+      const rect = getShortcutTileLayoutRect(candidate);
+      return rect && pointerX >= rect.left + rect.width * 0.25 &&
+        pointerX <= rect.right - rect.width * 0.25 && pointerY >= rect.top && pointerY <= rect.bottom;
+    });
+    if (!tile) {
+      return null;
+    }
+    const target = { kind: 'shortcut-folder', surface: 'folder', element: tile,
+      folderId: tile.getAttribute('data-bookmark-drop-folder-id'),
+      title: tile.getAttribute('data-shortcut-title') || '' };
+    const valid = state === shortcutDragState
+      ? isValidExternalBookmarkDropTarget(state, target)
+      : isValidBookmarkFolderDropTarget(state, target);
+    return valid ? target : { kind: 'blocked', surface: 'folder' };
+  }
+
+  function getExternalBookmarkDropTarget(pointerX, pointerY, state) {
+    if (bookmarkCascadeRuntime && bookmarkCascadeRuntime.isOpen()) {
+      const cascadeTarget = bookmarkCascadeRuntime.updateDragPointer({ clientX: pointerX, clientY: pointerY });
+      if (cascadeTarget) {
+        return resolveExternalBookmarkDropTarget(state, cascadeTarget);
+      }
+      if (isBookmarkCascadeSurfaceAtPoint(pointerX, pointerY)) {
+        return null;
+      }
+    }
+    const surfacePoint = getExternalBookmarkSurfacePoint(pointerX, pointerY);
+    const folderTarget = getBookmarkElementDropTarget(
+      surfacePoint ? surfacePoint.x : pointerX,
+      surfacePoint ? surfacePoint.y : pointerY
+    );
+    if (folderTarget && folderTarget.kind !== 'card') {
+      return resolveExternalBookmarkDropTarget(state, folderTarget);
+    }
+    if (!surfacePoint) {
+      return folderTarget ? resolveExternalBookmarkDropTarget(state, folderTarget) : null;
     }
     const computedStyle = typeof window.getComputedStyle === 'function'
       ? window.getComputedStyle(bookmarkGrid)
@@ -10506,9 +11183,9 @@
       columnGap: computedStyle ? computedStyle.columnGap : '',
       folderId: bookmarkCurrentFolderId,
       gridElement: bookmarkGrid,
-      // A foreign item has no slot of its own, so any point in a row snaps
-      // to that row's nearest boundary.
-      hitZonePx: bookmarkGrid.getBoundingClientRect().width,
+      // Keep the shared narrow edge zones over folders so their centers can
+      // still accept contents. Other points may snap anywhere in the row.
+      hitZonePx: folderTarget ? undefined : bookmarkGrid.getBoundingClientRect().width,
       layoutItems: getBookmarkReorderCards()
         .map((card) => ({
           card,
@@ -10517,13 +11194,13 @@
         .filter((item) => item.rect && item.rect.width > 0 && item.rect.height > 0),
       markerVerticalInsetPx: isBookmarkTopbarMode() ? 3 : 8,
       pageStartIndex: getBookmarkPageStartIndex(),
-      pointerX,
-      pointerY
+      pointerX: surfacePoint.x,
+      pointerY: surfacePoint.y
     });
-    return insertionTarget &&
-      NEWTAB_CROSS_SURFACE_DRAG.isBookmarkFolderDropTarget(insertionTarget.folderId, nodeMap)
-      ? insertionTarget
-      : null;
+    if (insertionTarget) {
+      return resolveExternalBookmarkDropTarget(state, insertionTarget);
+    }
+    return folderTarget ? resolveExternalBookmarkDropTarget(state, folderTarget) : null;
   }
 
   function isPointOverShortcutDropSurface(pointerX, pointerY) {
@@ -10536,13 +11213,15 @@
   }
 
   function getBookmarkDragShortcutDropTarget(state, pointerX, pointerY) {
-    if (!state || state.isFolder) {
+    if (!state) {
       return null;
     }
     const node = bookmarksRuntime.getNodeMap().get(String(state.bookmarkId || ''));
-    const record = node && node.url
+    const record = node
       ? NEWTAB_SHORTCUTS_STORE.createShortcutRecord(
-        { title: node.title, url: node.url },
+        state.isFolder
+          ? { type: 'folder', folderId: node.id, title: node.title }
+          : { title: node.title, url: node.url },
         getShortcutStoreOptions()
       )
       : null;
@@ -10551,10 +11230,12 @@
       shortcuts: newtabShortcuts,
       record,
       index: slot.index,
+      getFolderId: getShortcutFolderId,
       maxShortcuts: MAX_NEWTAB_SHORTCUTS
     }));
     const anchorRect = slot.anchorRect || getShortcutTileLayoutRect(addShortcutButton);
     if (!canMove || !anchorRect || anchorRect.width <= 0) {
+      document.body.setAttribute('data-drag-blocked', 'true');
       return null;
     }
     const gridRect = shortcutGrid.getBoundingClientRect();
@@ -10566,7 +11247,9 @@
     return {
       kind: 'insertion',
       surface: 'shortcuts',
-      index: slot.index,
+      index: slot.index < getShortcutReorderTiles().length
+        ? newtabShortcuts.findIndex((item) => item.id === getShortcutTileId(getShortcutReorderTiles()[slot.index]))
+        : newtabShortcuts.length,
       record,
       element: null,
       markerElement: shortcutGrid,
@@ -10578,40 +11261,170 @@
   }
 
   function moveBookmarkToShortcuts(state, target) {
+    if (bookmarkMoveHistoryBusy) return Promise.resolve(false);
+    const node = bookmarksRuntime.getNode(state.bookmarkId);
+    if (!node) return Promise.resolve(false);
     const plan = NEWTAB_CROSS_SURFACE_DRAG.planBookmarkToShortcut({
       shortcuts: newtabShortcuts,
       record: target.record,
       index: target.index,
+      getFolderId: getShortcutFolderId,
       maxShortcuts: MAX_NEWTAB_SHORTCUTS
     });
     if (!plan) {
       return Promise.resolve(false);
     }
-    return persistShortcuts(
-      plan.shortcuts,
-      t('bookmarks_moved_to_shortcuts', 'Moved to shortcuts'),
-      undefined,
-      { syncOverflowShortcutId: plan.shortcutId }
-    ).then((saved) => {
-      if (!saved) {
-        return false;
+    const existingIndex = newtabShortcuts.findIndex((item) => item.id === plan.shortcutId);
+    const beforeShortcut = existingIndex >= 0 ? {
+      snapshot: newtabShortcuts[existingIndex],
+      index: existingIndex,
+      iconDataUrl: newtabShortcutIcons[plan.shortcutId]
+    } : null;
+    if (target.record.type === 'folder') {
+      const index = plan.shortcuts.findIndex((item) => item.id === plan.shortcutId);
+      const original = plan.shortcuts[index];
+      const folderId = String(target.record.folderId || getShortcutFolderId(original));
+      const folderRef = FOLDER_REFERENCES.describe(folderId, bookmarksRuntime.getNodeMap());
+      if (!folderRef) return Promise.resolve(false);
+      const id = original.folderRef ? original.id : FOLDER_REFERENCES.createEntryId();
+      const { folderId: _localId, ...entry } = original;
+      plan.shortcuts[index] = { ...entry, id, folderRef };
+      plan.shortcutId = id;
+    }
+    const afterIndex = plan.shortcuts.findIndex((item) => item.id === plan.shortcutId);
+    const isFolder = target.record.type === 'folder';
+    const from = { parentId: node.parentId, index: node.index };
+    const record = NEWTAB_BOOKMARK_MOVE_HISTORY.createTransferRecord({
+      bookmarkId: node.id,
+      snapshot: { title: node.title, url: node.url },
+      from,
+      to: isFolder ? from : null,
+      beforeShortcut,
+      afterShortcut: {
+        snapshot: plan.shortcuts[afterIndex],
+        index: afterIndex,
+        iconDataUrl: beforeShortcut && beforeShortcut.iconDataUrl
       }
-      queueBookmarkLayoutAnimation(state.bookmarkId);
-      return bookmarksRuntime.runControlledMutation(() => {
-        return bookmarksRuntime.remove(state.bookmarkId);
-      }).then(() => {
-        markBookmarkTreeDirty();
-        loadBookmarks({ force: true });
+    });
+    if (!record) return Promise.resolve(false);
+    bookmarkMoveHistoryBusy = true;
+    queueBookmarkLayoutAnimation(state.bookmarkId);
+    return applyBookmarkShortcutTransfer(record, false).then((saved) => {
+      if (!saved) return false;
+      bookmarkMoveHistory.push(record);
+      if (isFolder) {
+        showToast(t('newtab_shortcuts_folder_added', 'Folder added to shortcuts'));
+      }
+      return true;
+    }).finally(() => {
+      bookmarkMoveHistoryBusy = false;
+      if (newtabShortcuts.some((item) => item.type === 'folder')) return refreshShortcutFolderReferences();
+    });
+  }
+
+  async function applyBookmarkShortcutTransfer(record, isUndo) {
+    const from = isUndo ? record.to : record.from;
+    const to = isUndo ? record.from : record.to;
+    const sourceShortcut = isUndo ? record.afterShortcut : record.beforeShortcut;
+    const destinationShortcut = isUndo ? record.beforeShortcut : record.afterShortcut;
+    const planShortcuts = (source, destination) => NEWTAB_CROSS_SURFACE_DRAG.planTransferShortcuts({
+      shortcuts: newtabShortcuts, source, destination, maxShortcuts: MAX_NEWTAB_SHORTCUTS
+    });
+    const persistShortcutState = async (items, destination) => {
+      if (destination && destination.snapshot.type === 'folder') {
+        shortcutFolderRuntime.bind(destination.snapshot.id, record.bookmarkId);
+        await shortcutFolderRuntime.flush();
+      }
+      const iconChange = destination && destination.iconDataUrl
+        ? { shortcutId: destination.snapshot.id, action: 'replace', dataUrl: destination.iconDataUrl }
+        : undefined;
+      return persistShortcuts(items, '', iconChange, {
+        syncOverflowShortcutId: destination && destination.snapshot.id
+      });
+    };
+    let rollbackBookmark = null;
+    let shortcutsSaved = false;
+    const keepCascadeOpen = Boolean(bookmarkCascadeRuntime && bookmarkCascadeRuntime.isOpen());
+    try {
+      if (!planShortcuts(sourceShortcut, destinationShortcut)) {
+        throw new Error('Shortcut transfer conflicts with the current shortcuts.');
+      }
+      return await bookmarksRuntime.runControlledMutation(async () => {
+        await bookmarksRuntime.ensureReady(false);
+        const bookmarkId = bookmarkMoveHistory.resolveBookmarkId(record.bookmarkId || record.runtime.currentBookmarkId);
+        const node = from ? bookmarksRuntime.getNode(bookmarkId) : null;
+        if (from && (!node || Boolean(node.url) !== Boolean(record.snapshot.url))) {
+          throw new Error('The transferred bookmark is unavailable.');
+        }
+        let movedNode = node;
+        if (to && !from) {
+          movedNode = await bookmarksRuntime.create({
+            parentId: to.parentId, index: to.index,
+            title: record.snapshot.title, url: record.snapshot.url
+          });
+          if (!movedNode || !movedNode.id) throw new Error('The restored bookmark id is unavailable.');
+          rollbackBookmark = () => bookmarksRuntime.remove(movedNode.id);
+        } else if (to && (from.parentId !== to.parentId || from.index !== to.index)) {
+          const originalLocation = { parentId: String(node.parentId), index: Number(node.index) || 0 };
+          movedNode = await bookmarksRuntime.move(bookmarkId, {
+            parentId: to.parentId,
+            index: NEWTAB_BOOKMARK_MOVE_HISTORY.getMoveApiDestinationIndex({
+              sourceParentId: node.parentId, sourceIndex: node.index,
+              targetParentId: to.parentId, targetIndex: to.index
+            })
+          });
+          rollbackBookmark = () => bookmarksRuntime.move(bookmarkId, {
+            parentId: originalLocation.parentId,
+            index: NEWTAB_BOOKMARK_MOVE_HISTORY.getMoveApiDestinationIndex({
+              sourceParentId: movedNode.parentId, sourceIndex: movedNode.index,
+              targetParentId: originalLocation.parentId, targetIndex: originalLocation.index
+            })
+          });
+        }
+        const nextShortcuts = planShortcuts(sourceShortcut, destinationShortcut);
+        if (!nextShortcuts) throw new Error('Shortcuts changed during the transfer.');
+        if (!await persistShortcutState(nextShortcuts, destinationShortcut)) {
+          if (rollbackBookmark) {
+            await rollbackBookmark();
+            rollbackBookmark = null;
+          }
+          return false;
+        }
+        shortcutsSaved = true;
+        // Save the destination before removing the source. Folder aliases keep
+        // the original tree, including every nested bookmark id.
+        if (!to) await bookmarksRuntime.remove(bookmarkId);
+        if (movedNode && to) {
+          bookmarkMoveHistory.remapBookmarkId(record.bookmarkId, movedNode.id);
+          record.runtime.currentBookmarkId = String(movedNode.id);
+          record.runtime.location = { parentId: String(movedNode.parentId), index: Number(movedNode.index) || 0 };
+        }
         return true;
       });
-    }).catch((error) => {
+    } catch (error) {
+      // Keep failures out of history and restore any completed destination write.
+      try {
+        await bookmarksRuntime.runControlledMutation(async () => {
+          if (rollbackBookmark) await rollbackBookmark();
+          if (shortcutsSaved) {
+            const originalShortcuts = planShortcuts(destinationShortcut, sourceShortcut);
+            if (!originalShortcuts || !await persistShortcutState(originalShortcuts, sourceShortcut)) {
+              throw new Error('Could not roll back shortcut transfer.');
+            }
+          }
+        });
+      } catch (rollbackError) {
+        console.warn('[Lumno] Failed to roll back bookmark shortcut transfer', rollbackError);
+      }
       bookmarkPendingLayoutAnimation = null;
-      console.warn('[Lumno] Failed to remove bookmark moved to shortcuts', error);
-      markBookmarkTreeDirty();
-      loadBookmarks({ force: true });
-      showToast(t('bookmarks_delete_failed', 'Could not delete bookmark'), true);
+      console.warn('[Lumno] Failed to transfer bookmark and shortcut', error);
+      showToast(t('bookmarks_move_failed', 'Could not move bookmark'), true);
       return false;
-    });
+    } finally {
+      markBookmarkTreeDirty({ preserveCascadeOpen: keepCascadeOpen });
+      loadBookmarks({ force: true });
+      if (keepCascadeOpen) refreshOpenBookmarkCascadeMenu();
+    }
   }
 
   function isInsertLineDropTarget(target) {
@@ -10707,7 +11520,7 @@
         folderId: breadcrumbTarget.getAttribute('data-bookmark-drop-folder-id') || '',
         title: breadcrumbTarget.getAttribute('data-bookmark-drop-folder-title') || '',
         element: breadcrumbTarget,
-        kind: 'breadcrumb'
+        kind: breadcrumbTarget.classList.contains('x-nt-shortcut-tile') ? 'shortcut-folder' : 'breadcrumb'
       };
     }
     const folderCard = element.closest('.x-nt-bookmark-card--folder[data-bookmark-id]');
@@ -10786,7 +11599,8 @@
     const previousTarget = state && state.dropTarget ? state.dropTarget : null;
     const previousElement = previousTarget ? previousTarget.element : null;
     const previousMarker = previousTarget ? previousTarget.markerElement : null;
-    const nextElement = target ? target.element : null;
+    // An insertion anchor locates the line; it is not a highlighted folder target.
+    const nextElement = target && target.kind !== 'insertion' ? target.element : null;
     const nextMarker = target ? target.markerElement : null;
     const isNextInsertLine = isInsertLineDropTarget(target);
     const nextMarkerAttribute = isNextInsertLine
@@ -10818,7 +11632,7 @@
       return;
     }
     state.dropTarget = target || null;
-    if (nextElement && target.kind !== 'insertion') {
+    if (nextElement) {
       nextElement.setAttribute('data-bookmark-drop-target', 'true');
     }
     if (!nextMarker || target.kind !== 'insertion') {
@@ -10898,11 +11712,11 @@
   }
 
   function scheduleBookmarkDragFolderSwitch(state, dropTarget) {
-    const switchTarget = NEWTAB_BOOKMARK_DRAG.getFolderSwitchTarget(
-      bookmarkCurrentFolderId,
-      dropTarget
-    );
-    if (!state || !switchTarget || bookmarkDragState !== state ||
+    const getSwitchTarget = (target) => target && (target.kind === 'card' || target.kind === 'shortcut-folder')
+      ? { folderId: String(target.folderId), element: target.element }
+      : NEWTAB_BOOKMARK_DRAG.getFolderSwitchTarget(bookmarkCurrentFolderId, target);
+    const switchTarget = getSwitchTarget(dropTarget);
+    if (!state || !switchTarget || !isBookmarkSurfaceDragStateActive(state) ||
         !state.isDragging) {
       clearBookmarkDragFolderSwitch(state);
       return false;
@@ -10924,14 +11738,11 @@
     }
     state.folderSwitchTimerId = window.setTimeout(() => {
       state.folderSwitchTimerId = 0;
-      if (bookmarkDragState !== state || !state.isDragging) {
+      if (!isBookmarkSurfaceDragStateActive(state) || !state.isDragging) {
         clearBookmarkDragFolderSwitch(state);
         return;
       }
-      const activeTarget = NEWTAB_BOOKMARK_DRAG.getFolderSwitchTarget(
-        bookmarkCurrentFolderId,
-        state.dropTarget
-      );
+      const activeTarget = getSwitchTarget(state.dropTarget);
       if (!activeTarget ||
           activeTarget.folderId !== state.folderSwitchTargetId) {
         clearBookmarkDragFolderSwitch(state);
@@ -10939,13 +11750,17 @@
       }
       const targetFolderId = activeTarget.folderId;
       clearBookmarkDragFolderSwitch(state);
+      if (state.dropTarget.kind === 'shortcut-folder' ||
+          (state.dropTarget.kind === 'card' && (isBookmarkTopbarMode() || currentBookmarkViewMode === 'list'))) {
+        openBookmarkCascadeMenu({ id: targetFolderId, title: state.dropTarget.title, type: 'folder' },
+          activeTarget.element, { dragMode: true, shouldOpen: () => isBookmarkSurfaceDragStateActive(state) });
+        return;
+      }
       clearDragDropTarget(state);
-      restoreBookmarkDragPreview(state);
-      setBookmarkDragCardTransform(
-        state,
-        Number(state.pendingPointerX),
-        Number(state.pendingPointerY)
-      );
+      if (state === bookmarkDragState) {
+        restoreBookmarkDragPreview(state);
+        setBookmarkDragCardTransform(state, Number(state.pendingPointerX), Number(state.pendingPointerY));
+      }
       state.folderSwitchPendingId = targetFolderId;
       navigateBookmarkFolder(targetFolderId);
     }, BOOKMARK_DRAG_FOLDER_SWITCH_DELAY_MS);
@@ -10954,7 +11769,7 @@
 
   function scheduleBookmarkDragPageSwitch(state, direction) {
     const normalizedDirection = direction < 0 ? -1 : direction > 0 ? 1 : 0;
-    if (!state || !normalizedDirection || bookmarkDragState !== state || !state.isDragging) {
+    if (!state || !normalizedDirection || !isBookmarkSurfaceDragStateActive(state) || !state.isDragging) {
       clearBookmarkDragPageSwitch(state);
       return;
     }
@@ -10977,7 +11792,7 @@
     }
     state.pageSwitchTimerId = window.setTimeout(() => {
       state.pageSwitchTimerId = 0;
-      if (bookmarkDragState !== state || !state.isDragging) {
+      if (!isBookmarkSurfaceDragStateActive(state) || !state.isDragging) {
         clearBookmarkDragPageSwitch(state);
         return;
       }
@@ -10989,13 +11804,19 @@
       }
       clearDragDropTarget(state);
       clearBookmarkDragFolderSwitch(state);
-      restoreBookmarkDragPreview(state);
+      if (state === bookmarkDragState) {
+        restoreBookmarkDragPreview(state);
+      }
       if (!switchBookmarkPageDuringDrag(bookmarkCurrentPage + normalizedDirection)) {
         clearBookmarkDragPageSwitch(state);
         return;
       }
-      updateBookmarkDragLayoutCache(state);
-      setBookmarkDragCardTransform(state, pointerX, pointerY);
+      if (state === bookmarkDragState) {
+        updateBookmarkDragLayoutCache(state);
+        setBookmarkDragCardTransform(state, pointerX, pointerY);
+      } else {
+        setShortcutDragTileTransform(state, pointerX, pointerY);
+      }
       const nextDirection = getBookmarkDragPageSwitchDirection(pointerX, pointerY);
       if (nextDirection === normalizedDirection) {
         scheduleBookmarkDragPageSwitch(state, normalizedDirection);
@@ -11010,6 +11831,7 @@
       return;
     }
     state.moveFrameId = 0;
+    document.body.removeAttribute('data-drag-blocked');
     const pointerX = Number(state.pendingPointerX);
     const pointerY = Number(state.pendingPointerY);
     if (!Number.isFinite(pointerX) || !Number.isFinite(pointerY)) {
@@ -11045,9 +11867,18 @@
       clearBookmarkDragFolderSwitch(state);
       restoreBookmarkDragPreview(state);
       setBookmarkDragCardTransform(state, pointerX, pointerY);
-      const shortcutTarget = getBookmarkDragShortcutDropTarget(state, pointerX, pointerY);
+      const folderTarget = getShortcutFolderDropTargetAt(state, pointerX, pointerY);
+      if (folderTarget && folderTarget.kind === 'blocked') {
+        document.body.setAttribute('data-drag-blocked', 'true');
+        clearDragDropTarget(state);
+        return;
+      }
+      const shortcutTarget = folderTarget || getBookmarkDragShortcutDropTarget(state, pointerX, pointerY);
       if (shortcutTarget) {
         setDragDropTarget(state, shortcutTarget);
+        if (folderTarget) {
+          scheduleBookmarkDragFolderSwitch(state, folderTarget);
+        }
       } else {
         clearDragDropTarget(state);
       }
@@ -11253,9 +12084,13 @@
     if (!rootFolderId) {
       return false;
     }
-    const nextAnchor = getBookmarkReorderCards().find((card) =>
-      getBookmarkCardId(card) === rootFolderId
+    const shortcutAnchor = getShortcutReorderTiles().find((tile) =>
+      tile.getAttribute('data-bookmark-id') === rootFolderId
     );
+    const currentShortcutAnchor = shortcutAnchor && shortcutAnchor.getAttribute('aria-expanded') === 'true';
+    const nextAnchor = (currentShortcutAnchor && shortcutAnchor) || getBookmarkReorderCards().find((card) =>
+      getBookmarkCardId(card) === rootFolderId
+    ) || shortcutAnchor;
     return nextAnchor
       ? bookmarkCascadeRuntime.rebindAnchor(nextAnchor, { instant: true })
       : false;
@@ -11348,6 +12183,77 @@
       return false;
     }
     bookmarkMoveHistoryBusy = true;
+    if (record.kind === 'shortcut-reorder') {
+      const next = NEWTAB_CROSS_SURFACE_DRAG.planShortcutReorder({
+        shortcuts: newtabShortcuts,
+        sourceOrder: isUndo ? record.toOrder : record.fromOrder,
+        order: isUndo ? record.fromOrder : record.toOrder
+      });
+      if (!next) {
+        bookmarkMoveHistoryBusy = false;
+        showToast(t('toast_error', 'Operation failed. Please try again.'), true);
+        return true;
+      }
+      persistShortcuts(next, '').then((saved) => {
+        if (!saved) return;
+        if (isUndo) bookmarkMoveHistory.commitUndo();
+        else bookmarkMoveHistory.commitRedo();
+        scheduleWallpaperAdaptiveToneUpdate();
+      }).finally(() => { bookmarkMoveHistoryBusy = false; });
+      return true;
+    }
+    if (record.kind === 'transfer') {
+      queueBookmarkLayoutAnimation('');
+      applyBookmarkShortcutTransfer(record, isUndo).then((saved) => {
+        if (!saved) return;
+        if (isUndo) bookmarkMoveHistory.commitUndo();
+        else bookmarkMoveHistory.commitRedo();
+        if (!record.snapshot.url) {
+          showToast(formatMessage(
+            isUndo ? 'bookmarks_move_undone' : 'bookmarks_move_redone',
+            isUndo ? 'Move undone · {shortcut} to redo' : 'Move restored · {shortcut} to undo',
+            { shortcut: isUndo ? getBookmarkRedoShortcutLabel() : getBookmarkUndoShortcutLabel() }
+          ));
+        }
+      }).finally(() => {
+        bookmarkMoveHistoryBusy = false;
+        if (newtabShortcuts.some((item) => item.type === 'folder')) return refreshShortcutFolderReferences();
+      });
+      return true;
+    }
+    if (record.kind === 'shortcut-delete') {
+      const snapshot = record.snapshot;
+      const exists = newtabShortcuts.some((item) => item.id === snapshot.id ||
+        (snapshot.type === 'folder'
+          ? !snapshot.folderRef && !item.folderRef && item.type === 'folder' && item.folderId === snapshot.folderId
+          : item.url === snapshot.url));
+      if (isUndo && (exists || newtabShortcuts.length >= MAX_NEWTAB_SHORTCUTS)) {
+        bookmarkMoveHistoryBusy = false;
+        showToast(t('toast_error', 'Operation failed. Please try again.'), true);
+        return true;
+      }
+      const next = newtabShortcuts.slice();
+      if (isUndo) {
+        next.splice(Math.min(record.index, next.length), 0, snapshot);
+      } else {
+        const index = next.findIndex((item) => item.id === snapshot.id);
+        if (index >= 0) next.splice(index, 1);
+      }
+      const iconChange = isUndo && record.iconDataUrl
+        ? { shortcutId: snapshot.id, action: 'replace', dataUrl: record.iconDataUrl }
+        : undefined;
+      persistShortcuts(next, '', iconChange).then((saved) => {
+        if (!saved) return;
+        if (isUndo) bookmarkMoveHistory.commitUndo();
+        else bookmarkMoveHistory.commitRedo();
+        showToast(formatMessage(
+          isUndo ? 'newtab_shortcuts_remove_undone' : 'newtab_shortcuts_remove_redone',
+          isUndo ? 'Shortcut restored · {shortcut} to redo' : 'Shortcut removed · {shortcut} to undo',
+          { shortcut: isUndo ? getBookmarkRedoShortcutLabel() : getBookmarkUndoShortcutLabel() }
+        ));
+      }).finally(() => { bookmarkMoveHistoryBusy = false; });
+      return true;
+    }
     const keepCascadeOpen = Boolean(
       bookmarkCascadeRuntime &&
       typeof bookmarkCascadeRuntime.isOpen === 'function' &&
@@ -11365,12 +12271,13 @@
             parentId: record.parentId,
             index: record.index
           }).then((node) => {
+            bookmarkMoveHistory.remapBookmarkId(record.bookmarkId, node && node.id);
             if (record.runtime) {
               record.runtime.currentBookmarkId = String((node && node.id) || '');
             }
           })
           : bookmarksRuntime.remove(
-            String((record.runtime && record.runtime.currentBookmarkId) || ''),
+            bookmarkMoveHistory.resolveBookmarkId(record.bookmarkId || (record.runtime && record.runtime.currentBookmarkId)),
             { recursive: !record.snapshot.url }
           ).then(() => {
             if (record.runtime) {
@@ -11420,7 +12327,7 @@
       })
     };
     bookmarksRuntime.runControlledMutation(() => {
-      return bookmarksRuntime.move(record.bookmarkId, destination);
+      return bookmarksRuntime.move(bookmarkMoveHistory.resolveBookmarkId(record.bookmarkId), destination);
     }).then(() => {
       if (isUndo) {
         bookmarkMoveHistory.commitUndo();
@@ -11575,6 +12482,7 @@
     }
     if (document.body) {
       document.body.removeAttribute('data-drag-source');
+      document.body.removeAttribute('data-drag-blocked');
     }
     const state = bookmarkDragState;
     detachBookmarkDragDocumentListeners();
@@ -11608,6 +12516,7 @@
       restoreBookmarkDragPreview(state);
     }
     bookmarkDragState = null;
+    document.body.removeAttribute('data-drag-blocked');
     state.folderSwitchPendingId = '';
     const card = state.card;
     if (bookmarkGrid) {
@@ -11615,9 +12524,9 @@
     }
     if (card) {
       card.removeAttribute('aria-grabbed');
-      if (typeof card.releasePointerCapture === 'function' && event) {
+      if (typeof card.releasePointerCapture === 'function') {
         try {
-          card.releasePointerCapture(event.pointerId);
+          card.releasePointerCapture(state.pointerId);
         } catch (error) {
           // Ignore stale pointer capture releases.
         }
@@ -11641,10 +12550,15 @@
         if (card._xBookmarkSuppressClickTimer) {
           window.clearTimeout(card._xBookmarkSuppressClickTimer);
         }
-        card._xBookmarkSuppressClickTimer = window.setTimeout(() => {
+        if (event) {
+          card._xBookmarkSuppressClickTimer = window.setTimeout(() => {
+            card._xBookmarkSuppressClickTimer = 0;
+            card._xBookmarkSuppressClick = false;
+          }, BOOKMARK_DRAG_CLICK_SUPPRESS_MS);
+        } else {
           card._xBookmarkSuppressClickTimer = 0;
-          card._xBookmarkSuppressClick = false;
-        }, BOOKMARK_DRAG_CLICK_SUPPRESS_MS);
+          suppressCanceledDragClick(card, '_xBookmarkSuppressClick', state.pointerId);
+        }
       }
     }
     if (state.isDragging && dropTarget && dropTarget.surface === 'shortcuts') {
@@ -11681,7 +12595,7 @@
   }
 
   function beginBookmarkDragPointerTracking(event, card, bookmarkItem, sourceKind) {
-    if (!event || !card || bookmarkDragState) {
+    if (!event || !card || bookmarkDragState || bookmarkMoveHistoryBusy) {
       return false;
     }
     const bookmarkId = getBookmarkCardId(card);
@@ -11809,6 +12723,11 @@
       viewMode: currentBookmarkViewMode,
       menuMode: currentBookmarkViewMode === 'list' || isBookmarkTopbarMode()
     });
+    if (shortcutDragState && shortcutDragState.isDragging &&
+        shortcutDragState.folderSwitchPendingId === String(bookmarkCurrentFolderId || '')) {
+      shortcutDragState.folderSwitchPendingId = '';
+      scheduleShortcutDragMove(shortcutDragState, shortcutDragState.pendingPointerX, shortcutDragState.pendingPointerY);
+    }
     if (bookmarkDragState &&
         bookmarkDragState.isDragging &&
         bookmarkDragState.folderSwitchPendingId ===
@@ -12006,6 +12925,9 @@
       updateBookmarkBreadcrumb();
       renderCurrentBookmarkPage();
       playPendingBookmarkLayoutAnimation();
+      if (!isShortcutDragActive() && newtabShortcuts.some((shortcut) => shortcut.type === 'folder')) {
+        renderShortcuts();
+      }
       bookmarkDataDirty = false;
       bookmarkLoadedOnce = true;
     });
@@ -12624,7 +13546,7 @@
     const resolver = getPageFaviconUrlResolver();
     return resolver && typeof resolver.getPageFaviconRenderCandidates === 'function'
       ? resolver.getPageFaviconRenderCandidates(pageUrl, explicitUrl, options)
-      : { primaryUrl: String(explicitUrl || '').trim(), browserUrl: '' };
+      : { primaryUrl: '', browserUrl: '' };
   }
 
   function getHostFaviconUrl(hostname) {
@@ -12725,10 +13647,13 @@
   }
 
   function getNewtabStrictFaviconReason(pageUrl) {
+    if (isUrlBlockedByFaviconRequestBlacklist(pageUrl)) {
+      return 'exclusion';
+    }
     if (!faviconEnhancedFetchEnabled) {
       return 'global-off';
     }
-    return isUrlBlockedByFaviconRequestBlacklist(pageUrl) ? 'exclusion' : '';
+    return '';
   }
 
   function isNewtabEnhancedFaviconFetchEnabled(pageUrl) {
@@ -12937,7 +13862,10 @@
 
   function openBookmarkCascadeMenu(item, anchorElement, options) {
     if (bookmarkCascadeRuntime) {
-      bookmarkCascadeRuntime.open(item, anchorElement, options);
+      bookmarkCascadeRuntime.open(item, anchorElement, {
+        ...options,
+        toggle: !options || options.dragMode !== true
+      });
     }
   }
 
@@ -13509,35 +14437,19 @@
   }
 
   function getProviderIcon(provider) {
-    if (typeof SHORTCUT_FAVICON.getSiteSearchProviderIcon === 'function') {
-      const resolvedIcon = SHORTCUT_FAVICON.getSiteSearchProviderIcon(
-        siteSearchIconCacheLoaded ? siteSearchIconCache : {},
-        provider,
-        Date.now(),
-        {
+    const resolver = getPageFaviconUrlResolver();
+    if (!resolver) {
+      return '';
+    }
+    const iconUrl = typeof SHORTCUT_FAVICON.getSiteSearchProviderIcon === 'function'
+      ? SHORTCUT_FAVICON.getSiteSearchProviderIcon(
+        siteSearchIconCacheLoaded ? siteSearchIconCache : {}, provider, Date.now(), {
           ...siteSearchIconCacheOptions,
           resolveAssetUrl: getExtensionResourceUrl
         }
-      );
-      if (resolvedIcon) {
-        return resolvedIcon;
-      }
-    }
-    const explicitIcon = provider && (provider.icon || provider.iconUrl) ? (provider.icon || provider.iconUrl) : '';
-    const providerIconPageUrl = explicitIcon ? getCanonicalPageUrlForFavicon(explicitIcon) : '';
-    if (providerIconPageUrl && providerIconPageUrl !== explicitIcon) {
-      return getPageFaviconCandidateUrl(providerIconPageUrl) || explicitIcon;
-    }
-    if (explicitIcon) {
-      return explicitIcon;
-    }
-    const providerPageUrl = getProviderFaviconPageUrl(provider);
-    try {
-      const hostname = normalizeHost(new URL(providerPageUrl).hostname);
-      return getPageFaviconCandidateUrl(providerPageUrl) || getHostFaviconUrl(hostname);
-    } catch (e) {
-      return '';
-    }
+      )
+      : (provider && (provider.icon || provider.iconUrl)) || '';
+    return resolver.getProviderFaviconUrl(getProviderFaviconPageUrl(provider), iconUrl);
   }
 
   function getProviderIconAttachPageUrl(provider, iconUrl, iconHost) {
@@ -13568,12 +14480,13 @@
       return false;
     }
     const hostKey = iconHost || getHostFromUrl(pageUrl);
-    const candidates = getPageFaviconRenderCandidates(pageUrl, iconUrl) || {};
+    const candidates = getPageFaviconRenderCandidates(pageUrl, iconUrl, { allowRemoteImage: true }) || {};
     const primaryUrl = isFaviconProxyUrl(iconUrl)
       ? (candidates.primaryUrl || iconUrl)
       : iconUrl;
     attachFaviconWithFallbacks(icon, pageUrl, hostKey, {
       primaryUrl,
+      allowRemoteImage: true,
       browserUrl: candidates.browserUrl || '',
       onUnavailable: context && context.onIconUnavailable
     });
@@ -15912,6 +16825,7 @@
   refreshFallbackShortcut(true);
 
   function handleGlobalTypingFocus(event) {
+    if (folderColorPicker && folderColorPicker.isOpen()) return;
     if (!event || event.defaultPrevented) {
       return;
     }
@@ -16330,6 +17244,9 @@
     rgbToCss,
     isDarkMode: isNewtabDarkMode,
     getProviderIcon,
+    resolveProviderIconUrl: (provider, iconUrl) => getPageFaviconUrlResolver().getProviderFaviconUrl(
+      getProviderFaviconPageUrl(provider), iconUrl
+    ),
     getProviderThemeHost,
     getThemeForProvider,
     getSiteSearchPrefixText,
@@ -16565,6 +17482,14 @@
   };
 
   document.addEventListener('keydown', function(event) {
+    if (folderColorPicker && folderColorPicker.isOpen()) return;
+    if (event && event.key === 'Escape' && (shortcutDragState || bookmarkDragState)) {
+      finishShortcutDrag(null, { cancel: true });
+      finishBookmarkDrag(null, { canceled: true });
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
     if (!event || event.defaultPrevented || event.altKey || isEditableElement(event.target)) {
       return;
     }
@@ -16585,6 +17510,7 @@
   }, true);
 
   document.addEventListener('keydown', function(event) {
+    if (folderColorPicker && folderColorPicker.isOpen()) return;
     syncSuggestionActionModifiersFromEvent(event);
     if (SUGGESTION_NAVIGATION.handleNumberShortcutKeyEvent(
       event,
@@ -16827,6 +17753,7 @@
     bookmarkTopbarRuntime.mount(document.body);
   }
   bottomDockRuntime.mount(document.body);
+  if (quoteRuntime) quoteRuntime.mount();
   if (wallpaperControl) {
     document.body.appendChild(wallpaperControl);
   }
@@ -16881,6 +17808,10 @@
       });
     }
     bookmarksRuntime.subscribe((change) => {
+      // Folder entries remain useful even when the bookmarks section is hidden.
+      if (newtabShortcuts.some((shortcut) => shortcut.type === 'folder')) {
+        refreshShortcutFolderReferences();
+      }
       const cascadeOpen = Boolean(
         bookmarkCascadeRuntime &&
         typeof bookmarkCascadeRuntime.isOpen === 'function' &&
@@ -16909,6 +17840,10 @@
   }
 
   bindRecentAndBookmarkChangeListeners();
+  window.addEventListener('blur', () => {
+    finishShortcutDrag(null, { cancel: true });
+    finishBookmarkDrag(null, { canceled: true });
+  });
   window.addEventListener('visibilitychange', handleRecentVisibilityChange);
   window.addEventListener('resize', scheduleWallpaperAdaptiveToneUpdate, { passive: true });
   window.addEventListener('scroll', () => {

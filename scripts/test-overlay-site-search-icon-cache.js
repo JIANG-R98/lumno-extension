@@ -133,8 +133,8 @@ assert.match(
 
 assert.match(
   backgroundSource,
-  /function resolveShortcutFaviconData\(pageUrl, preferredTheme, signal, explicitIconUrl\)[\s\S]*?getGstaticFaviconUrl\(pageUrl\)[\s\S]*?source: 'proxy'/,
-  'background warming should use only the fixed 128px proxy instead of arbitrary provider URLs'
+  /async function resolveShortcutFaviconData\(pageUrl, preferredTheme, signal, explicitIconUrl, refresh, iconSource\)[\s\S]*?resolver\.getShortcutFaviconFetchCandidates\(pageUrl, iconSource\)[\s\S]*?fetchShortcutFaviconResource\(/,
+  'background warming should use centralized proxy and browser snapshot candidates instead of arbitrary provider URLs'
 );
 assert.match(
   backgroundSource,

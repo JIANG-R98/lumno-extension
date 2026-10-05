@@ -64,15 +64,82 @@ function testFallsBackToHostForEmptyTitle() {
   assert.strictEqual(shortcut.host, 'example.com');
 }
 
+function testCreatesBrowserInternalShortcuts() {
+  const shortcut = shortcutsStore.createShortcutRecord({
+    title: 'Inspect devices',
+    url: ' chrome://inspect/#devices '
+  }, { now: 42 });
+
+  assert.strictEqual(shortcut.title, 'Inspect devices');
+  assert.strictEqual(shortcut.url, 'chrome://inspect/#devices');
+  assert.strictEqual(shortcut.host, 'inspect');
+  assert.strictEqual(shortcut.createdAt, 42);
+  assert.strictEqual(shortcut.updatedAt, 42);
+
+  ['chrome', 'edge', 'brave', 'vivaldi', 'opera'].forEach((scheme) => {
+    assert.strictEqual(
+      shortcutsStore.normalizeShortcutUrl(`${scheme.toUpperCase()}://SETTINGS`),
+      `${scheme}://settings/`
+    );
+    assert.strictEqual(
+      shortcutsStore.normalizeShortcutUrl(`${scheme}://settings/content?search=camera#permissions`),
+      `${scheme}://settings/content?search=camera#permissions`
+    );
+  });
+  assert.strictEqual(
+    shortcutsStore.createShortcutRecord({ url: 'chrome://extensions/' }).title,
+    'extensions'
+  );
+}
+
 function testRejectsUnsafeOrMissingUrls() {
-  assert.strictEqual(
-    shortcutsStore.createShortcutRecord({ title: 'Bad', url: 'javascript:alert(1)' }),
-    null
-  );
-  assert.strictEqual(
-    shortcutsStore.createShortcutRecord({ title: 'Missing', url: '' }),
-    null
-  );
+  [
+    '',
+    'javascript:alert(1)',
+    'data:text/html,<script>alert(1)</script>',
+    'file:///tmp/example.html',
+    'chrome-extension://example/options.html',
+    'custom://settings/',
+    'chrome://',
+    'chrome:settings',
+    'chrome:///settings',
+    'chrome://user@settings/',
+    'chrome://user:password@settings/',
+    'chrome://settings:80/'
+  ].forEach((url) => {
+    assert.strictEqual(
+      shortcutsStore.createShortcutRecord({ title: 'Bad', url }),
+      null,
+      `${url} should not be accepted as a shortcut URL`
+    );
+  });
+}
+
+async function testBrowserInternalShortcutsSurviveStorageAndEditing() {
+  const key = '_test_internal_shortcuts';
+  const storage = createMemoryStorage();
+  const saved = await shortcutsStore.saveShortcuts(storage, [
+    { id: 'inspect', title: 'Inspect', url: 'chrome://inspect/#devices' },
+    { id: 'settings', title: 'Settings', url: 'chrome://settings' },
+    { id: 'duplicate', title: 'Duplicate', url: 'CHROME://SETTINGS/' },
+    { id: 'example', title: 'Example', url: 'https://example.com/' }
+  ], { key, now: 10 });
+  const loaded = await shortcutsStore.loadShortcuts(storage, { key, now: 20 });
+
+  assert.deepStrictEqual(loaded, saved);
+  assert.deepStrictEqual(loaded.map((item) => item.id), ['inspect', 'settings', 'example']);
+  assert.strictEqual(loaded[0].url, 'chrome://inspect/#devices');
+  assert.strictEqual(loaded[1].url, 'chrome://settings/');
+
+  const edited = loaded.map((item) => item.id === 'inspect'
+    ? { ...item, title: 'Network', url: 'chrome://net-export/' }
+    : item);
+  await shortcutsStore.saveShortcuts(storage, edited, { key, now: 30 });
+  const reloaded = await shortcutsStore.loadShortcuts(storage, { key, now: 40 });
+  assert.strictEqual(reloaded[0].id, 'inspect');
+  assert.strictEqual(reloaded[0].title, 'Network');
+  assert.strictEqual(reloaded[0].url, 'chrome://net-export/');
+  assert.strictEqual(reloaded[0].createdAt, 10);
 }
 
 function testNormalizesAndDeduplicatesShortcuts() {
@@ -318,10 +385,45 @@ async function testQuotaOverflowAndStorageFailuresAreObservable() {
   );
 }
 
+async function testFolderReferencesSurviveStorageAndDeduplicateIndependentlyFromUrls() {
+  const folder = shortcutsStore.createShortcutRecord({ type: 'folder', folderId: '42', title: 'Design' }, { now: 9 });
+  assert.strictEqual(folder.url, undefined);
+  assert.strictEqual(folder.id, 'shortcut-folder-42');
+  assert.strictEqual(shortcutsStore.normalizeShortcutItem({ type: 'folder', folderId: '0' }), null);
+  const storage = createMemoryStorage();
+  await shortcutsStore.saveShortcuts(storage, [folder,
+    { type: 'folder', folderId: '42', title: 'Duplicate' },
+    { type: 'folder', folderId: '43', title: 'Other folder' },
+    { url: 'https://example.com/', title: 'Site' }
+  ]);
+  const loaded = await shortcutsStore.loadShortcuts(storage);
+  assert.strictEqual(loaded.length, 3);
+  assert.strictEqual(loaded[0].folderId, '42');
+  assert.strictEqual(loaded[1].folderId, '43');
+  assert.strictEqual(loaded[2].url, 'https://example.com/');
+}
+
 async function run() {
+  const sourceStorage = createMemoryStorage();
+  await shortcutsStore.saveShortcuts(sourceStorage, [
+    { url: 'https://service.example/', iconSource: 'service' },
+    { url: 'https://favicon-is.example/', iconSource: 'favicon-is' },
+    { url: 'https://cache.example/', iconSource: 'cache' },
+    { url: 'https://custom.example/', iconSource: 'custom' },
+    { url: 'https://github.com/', iconSource: 'builtin' },
+    { url: 'https://legacy.example/' },
+    { url: 'https://invalid.example/', iconSource: 'unapproved' }
+  ]);
+  const sourceRecords = await shortcutsStore.loadShortcuts(sourceStorage);
+  assert.deepStrictEqual(sourceRecords.map((item) => item.iconSource),
+    ['service', 'favicon-is', 'cache', 'custom', 'builtin', undefined, undefined],
+    'source preferences must survive storage without rewriting legacy or invalid sources');
+  await testFolderReferencesSurviveStorageAndDeduplicateIndependentlyFromUrls();
   testCreatesShortcutFromLooseUrl();
   testFallsBackToHostForEmptyTitle();
+  testCreatesBrowserInternalShortcuts();
   testRejectsUnsafeOrMissingUrls();
+  await testBrowserInternalShortcutsSurviveStorageAndEditing();
   testNormalizesAndDeduplicatesShortcuts();
   testDefaultCapacityAllowsSixtyShortcuts();
   testDefaultShortcutsContainLumno();

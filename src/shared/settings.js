@@ -6,6 +6,11 @@
   root.LumnoSettings = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function() {
   const THEME_STORAGE_KEY = '_x_extension_theme_mode_2024_unique_';
+  // Retained for safely migrating older WebDAV installations. New connections
+  // keep Chrome Sync as the preferences source and add WebDAV alongside it.
+  const LOCAL_PRIMARY_STORAGE_KEY = '_x_extension_local_primary_2026_unique_';
+  const WEBDAV_STATUS_STORAGE_KEY = '_x_extension_webdav_status_2026_unique_';
+  const ASSET_REVISION_STORAGE_KEY = '_x_extension_asset_revision_2026_unique_';
   const NEWTAB_THEME_MODE_STORAGE_KEY = '_x_extension_newtab_theme_mode_2026_unique_';
   const NEWTAB_THEME_SCOPE_STORAGE_KEY = '_x_extension_newtab_theme_scope_2026_unique_';
   const NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY = '_x_extension_newtab_shortcuts_visible_2026_unique_';
@@ -35,6 +40,10 @@
   const NEWTAB_SHORTCUT_GAP_MAX = 24;
   const NEWTAB_SHORTCUT_GAP_DEFAULT = 4;
   const NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY = '_x_extension_newtab_input_auto_focus_enabled_2026_unique_';
+  const NEWTAB_QUOTE_PREFS_STORAGE_KEY = '_x_extension_newtab_quote_prefs_2026_unique_';
+  const NEWTAB_QUOTE_FONT_SIZE_MIN = 12;
+  const NEWTAB_QUOTE_FONT_SIZE_MAX = 24;
+  const NEWTAB_QUOTE_FONT_SIZE_DEFAULT = 15;
   const BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY = '_x_extension_bookmark_folder_icons_visible_2026_unique_';
   const UPDATE_NOTICE_ENABLED_STORAGE_KEY = '_x_extension_update_notice_enabled_2026_unique_';
   const MOTION_EFFECTS_ENABLED_STORAGE_KEY = '_x_extension_motion_effects_enabled_2026_unique_';
@@ -44,6 +53,7 @@
     '_x_extension_macos_ctrl_suggestion_navigation_enabled_2026_unique_';
   const FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY = '_x_extension_favicon_enhanced_fetch_enabled_2026_unique_';
   const SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY = '_x_extension_search_result_display_limit_2026_unique_';
+  const SEARCH_RESULT_TAB_POSITION_STORAGE_KEY = '_x_extension_search_result_tab_position_2026_unique_';
   const OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY = '_x_extension_overlay_open_tabs_default_visible_2026_unique_';
   const OVERLAY_ENTER_ANIMATION_STORAGE_KEY = '_x_extension_overlay_enter_animation_2026_unique_';
   const OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY = '_x_extension_overlay_page_theme_adaptation_enabled_2026_unique_';
@@ -70,6 +80,7 @@
     '_x_extension_newtab_width_mode_2026_unique_',
     '_x_extension_newtab_search_width_2026_unique_',
     '_x_extension_newtab_input_auto_focus_enabled_2026_unique_',
+    NEWTAB_QUOTE_PREFS_STORAGE_KEY,
     '_x_extension_newtab_theme_mode_2026_unique_',
     '_x_extension_newtab_theme_scope_2026_unique_',
     '_x_extension_newtab_zen_mode_2026_unique_',
@@ -118,6 +129,7 @@
     '_x_extension_search_result_priority_2026_unique_',
     '_x_extension_search_result_source_types_2026_unique_',
     '_x_extension_search_result_display_limit_2026_unique_',
+    SEARCH_RESULT_TAB_POSITION_STORAGE_KEY,
     '_x_extension_overlay_open_tabs_default_visible_2026_unique_',
     '_x_extension_fallback_hotkey_2024_unique_',
     '_x_extension_site_search_custom_2024_unique_',
@@ -209,6 +221,21 @@
       return NEWTAB_TOP_CONTENT_OFF;
     }
     return NEWTAB_TOP_CONTENT_BRAND;
+  }
+
+  function normalizeNewtabQuotePrefs(value) {
+    const source = value && typeof value === 'object' ? value : {};
+    const size = typeof source.fontSize === 'number' ||
+      (typeof source.fontSize === 'string' && source.fontSize.trim())
+      ? Number(source.fontSize) : NaN;
+    return {
+      enabled: typeof source.enabled === 'boolean' ? source.enabled : ['search', 'bottom'].includes(source.position),
+      position: source.position === 'bottom' ? 'bottom' : 'search',
+      category: source.category === 'poetry' ? 'poetry' : 'literature',
+      fontSize: Number.isFinite(size)
+        ? Math.min(NEWTAB_QUOTE_FONT_SIZE_MAX, Math.max(NEWTAB_QUOTE_FONT_SIZE_MIN, Math.round(size)))
+        : NEWTAB_QUOTE_FONT_SIZE_DEFAULT
+    };
   }
 
   function normalizeNewtabWordmarkVisible(value) {
@@ -442,6 +469,10 @@
 
   function normalizeSearchResultPriority(value) {
     return value === 'search' ? 'search' : 'autocomplete';
+  }
+
+  function normalizeSearchResultTabPosition(value) {
+    return value === 'afterCurrent' || value === 'beforeCurrent' ? value : 'end';
   }
 
   function normalizeSearchResultDisplayLimit(value) {
@@ -771,15 +802,47 @@
     });
   }
 
+  const providerStorageRuntimes = new WeakMap();
+
   function createProviderStorageRuntime(chromeApi) {
+    if (chromeApi && providerStorageRuntimes.has(chromeApi)) {
+      return providerStorageRuntimes.get(chromeApi);
+    }
     const storage = chromeApi && chromeApi.storage ? chromeApi.storage : null;
     const syncArea = storage && storage.sync ? storage.sync : null;
     const localArea = storage && storage.local ? storage.local : syncArea;
-    const activeAreaName = syncArea ? 'sync' : (localArea ? 'local' : '');
-    const modeReady = Promise.resolve(activeAreaName);
+    let activeAreaName = syncArea ? 'sync' : (localArea ? 'local' : '');
+    let observedModeChange = false;
+    const modeReady = new Promise((resolve) => {
+      if (!localArea || typeof localArea.get !== 'function') {
+        resolve(activeAreaName);
+        return;
+      }
+      let settled = false;
+      const finish = (result) => {
+        if (settled) return;
+        settled = true;
+        if (!observedModeChange && result && result[LOCAL_PRIMARY_STORAGE_KEY] === true) activeAreaName = 'local';
+        resolve(activeAreaName);
+      };
+      try {
+        const pending = localArea.get([LOCAL_PRIMARY_STORAGE_KEY], finish);
+        if (pending && typeof pending.then === 'function') pending.then(finish).catch(() => finish({}));
+      } catch (_error) { finish({}); }
+    });
+    const onChanged = storage && storage.onChanged;
+    if (onChanged && typeof onChanged.addListener === 'function') {
+      onChanged.addListener((changes, areaName) => {
+        if (areaName === 'local' && changes[LOCAL_PRIMARY_STORAGE_KEY]) {
+          observedModeChange = true;
+          activeAreaName = changes[LOCAL_PRIMARY_STORAGE_KEY].newValue === true
+            ? 'local' : (syncArea ? 'sync' : 'local');
+        }
+      });
+    }
 
     function getActiveArea() {
-      return syncArea || localArea;
+      return activeAreaName === 'local' ? localArea : (syncArea || localArea);
     }
 
     function invoke(method, args) {
@@ -796,8 +859,10 @@
         const finish = (result) => {
           if (settled) return;
           settled = true;
+          const lastError = chromeApi && chromeApi.runtime && chromeApi.runtime.lastError;
           if (callback) callback(result);
-          resolve(result);
+          if (lastError && !callback) reject(new Error(lastError.message || 'Storage operation failed'));
+          else resolve(result);
         };
         try {
           const maybePromise = area[method](...values, finish);
@@ -817,13 +882,15 @@
       clear(...args) { return invoke('clear', args); }
     });
 
-    return Object.freeze({
+    const runtime = Object.freeze({
       area,
-      name: activeAreaName,
+      get name() { return activeAreaName; },
       ready: modeReady,
       getActiveAreaName() { return activeAreaName; },
       isActiveAreaName(areaName) { return String(areaName || '') === activeAreaName; }
     });
+    if (chromeApi) providerStorageRuntimes.set(chromeApi, runtime);
+    return runtime;
   }
 
   function addStorageChangeListener(chromeApi, listener) {
@@ -837,6 +904,9 @@
   }
 
   return Object.freeze({
+    LOCAL_PRIMARY_STORAGE_KEY,
+    WEBDAV_STATUS_STORAGE_KEY,
+    ASSET_REVISION_STORAGE_KEY,
     THEME_STORAGE_KEY,
     NEWTAB_THEME_MODE_STORAGE_KEY,
     NEWTAB_THEME_SCOPE_STORAGE_KEY,
@@ -864,6 +934,10 @@
     NEWTAB_SHORTCUT_GAP_MAX,
     NEWTAB_SHORTCUT_GAP_DEFAULT,
     NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY,
+    NEWTAB_QUOTE_PREFS_STORAGE_KEY,
+    NEWTAB_QUOTE_FONT_SIZE_MIN,
+    NEWTAB_QUOTE_FONT_SIZE_MAX,
+    NEWTAB_QUOTE_FONT_SIZE_DEFAULT,
     BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY,
     UPDATE_NOTICE_ENABLED_STORAGE_KEY,
     MOTION_EFFECTS_ENABLED_STORAGE_KEY,
@@ -872,6 +946,7 @@
     MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY,
     FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY,
     SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
+    SEARCH_RESULT_TAB_POSITION_STORAGE_KEY,
     OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY,
     OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
     OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY,
@@ -897,6 +972,7 @@
     normalizeNewtabWidthMode,
     normalizeNewtabSearchWidth,
     normalizeNewtabTopContentMode,
+    normalizeNewtabQuotePrefs,
     normalizeNewtabWordmarkVisible,
     normalizeNewtabTimeFontWeight,
     normalizeNewtabTimeSecondsVisible,
@@ -927,6 +1003,7 @@
     normalizeOverlayEnterAnimation,
     normalizeOverlayTabPriorityMode,
     normalizeSearchResultPriority,
+    normalizeSearchResultTabPosition,
     normalizeSearchResultDisplayLimit,
     normalizeSearchResultSourceTypes,
     normalizeTabRankScoreDebugMode,

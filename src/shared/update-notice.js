@@ -146,6 +146,7 @@
 
   function getStorageRuntime(chromeApi) {
     const api = chromeApi || (root && root.chrome) || null;
+    if (typeof SETTINGS.createProviderStorageRuntime === 'function') return SETTINGS.createProviderStorageRuntime(api);
     const storage = api && api.storage ? api.storage : null;
     const area = storage && storage.sync
       ? storage.sync

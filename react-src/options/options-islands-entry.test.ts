@@ -83,6 +83,9 @@ type OptionsRuntime = typeof globalThis & {
   LumnoOptionsSiteSearchListReact?: {
     implementation?: string;
   };
+  LumnoOptionsWebDavList?: {
+    implementation?: string;
+  };
   LumnoOptionsThemePicker?: {
     implementation?: string;
   };
@@ -134,6 +137,7 @@ function clearRuntime(): void {
   delete runtime.LumnoOptionsShortcutHotkeyReact;
   delete runtime.LumnoOptionsSiteSearchList;
   delete runtime.LumnoOptionsSiteSearchListReact;
+  delete runtime.LumnoOptionsWebDavList;
   delete runtime.LumnoOptionsThemePicker;
   delete runtime.LumnoOptionsThemePickerReact;
   delete runtime.LumnoOptionsToast;
@@ -232,6 +236,7 @@ describe('Options React islands entry', () => {
       shortcutReference: runtime.LumnoOptionsShortcutReference,
       shortcutHotkey: runtime.LumnoOptionsShortcutHotkey,
       siteSearchList: runtime.LumnoOptionsSiteSearchList,
+      webDavList: runtime.LumnoOptionsWebDavList,
       themePicker: runtime.LumnoOptionsThemePicker,
       toast: runtime.LumnoOptionsToast,
       tabSwitcher: runtime.LumnoOverlayTabSwitcherView

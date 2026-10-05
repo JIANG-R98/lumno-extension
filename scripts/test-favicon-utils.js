@@ -19,11 +19,18 @@ assert.strictEqual(utils.normalizeFaviconHost('www.Example.com'), 'example.com')
 assert.strictEqual(utils.normalizeFaviconHost('app.feishu.cn'), 'feishu.cn');
 
 assert.strictEqual(utils.isFaviconProxyUrl('https://www.google.com/s2/favicons?domain=example.com'), true);
-assert.strictEqual(utils.isFaviconProxyUrl('chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Fexample.com%2F'), true);
+assert.strictEqual(utils.isFaviconProxyUrl('chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Fexample.com%2F&fallbackToHost=0'), true);
 assert.strictEqual(utils.isFaviconProxyUrl('https://t2.gstatic.cn/faviconV2?url=https%3A%2F%2Fexample.com%2F'), true);
 assert.strictEqual(utils.isFaviconProxyUrl('https://example.com/favicon.ico'), false);
+assert.strictEqual(utils.isFaviconProxyUrl('https://favicon.is/example.com?larger=true'), true);
+assert.strictEqual(utils.getPageUrlFromFaviconProxyUrl('https://favicon.is/example.com?larger=true&url=https://wrong.example/'),
+  'https://example.com/', 'Favicon.is target matching must use its domain path, not an arbitrary query parameter');
+for (const spoof of ['https://favicon.is.evil.test/example.com', 'http://favicon.is/example.com',
+  'https://favicon.is/https://example.com/', 'https://favicon.is/example.com%2Fprivate', 'https://favicon.is/']) {
+  assert.strictEqual(utils.isFaviconIsUrl(spoof), false, 'only the documented HTTPS domain endpoint is valid');
+}
 assert.strictEqual(
-  utils.isSafeVirtualFaviconRequestUrl('chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Fexample.com%2F'),
+  utils.isSafeVirtualFaviconRequestUrl('chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Fexample.com%2F&fallbackToHost=0'),
   true
 );
 assert.strictEqual(utils.isSafeVirtualFaviconRequestUrl('chrome://favicon2/?pageUrl=https%3A%2F%2Fexample.com%2F'), true);
@@ -42,12 +49,19 @@ assert.strictEqual(
     'https://t2.gstatic.cn/faviconV2?url=https%3A%2F%2Ffoo.example.com%2F',
     false
   ),
-  false,
-  'strict favicon mode should reject third-party favicon proxies'
+  true,
+  'disabled enhanced fetching should keep approved third-party favicon proxies'
 );
+assert.strictEqual(utils.isFaviconSourceAllowedByEnhancedFetchPolicy(
+  'https://t2.gstatic.cn/faviconV2?url=https%3A%2F%2Ffoo.example.com%2F', false,
+  { allowThirdPartyFetch: false }
+), false, 'site exclusions should still reject third-party services');
+assert.strictEqual(utils.isFaviconSourceAllowedByEnhancedFetchPolicy(
+  'https://cdn.example.com/icon.png', false, { allowRemoteImage: true }
+), false, 'disabled enhanced fetching must reject even explicitly configured website images');
 assert.strictEqual(
   utils.isFaviconSourceAllowedByEnhancedFetchPolicy(
-    'chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Ffoo.example.com%2F',
+    'chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Ffoo.example.com%2F&fallbackToHost=0',
     false,
     { ownExtensionId: 'abc' }
   ),
@@ -189,7 +203,7 @@ assert.strictEqual(
   utils.getExtensionFaviconUrl('https://example.com/a b', {
     getRuntimeUrl: (path) => `chrome-extension://abc${path}`
   }),
-  'chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Fexample.com%2Fa+b&size=128'
+  'chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Fexample.com%2Fa+b&size=128&fallbackToHost=0'
 );
 assert.strictEqual(utils.getExtensionFaviconUrl('chrome://extensions/', {
   getRuntimeUrl: (path) => `chrome-extension://abc${path}`
@@ -204,7 +218,14 @@ assert.strictEqual(
 );
 assert.strictEqual(
   utils.getChromeFaviconUrl('http://192.168.1.8/dashboard'),
-  'chrome://favicon2/?pageUrl=http%3A%2F%2F192.168.1.8%2Fdashboard&size=128'
+  '',
+  'web pages must not use chrome://favicon2 when the exact extension endpoint is unavailable'
+);
+assert.strictEqual(
+  utils.getChromeFaviconUrl('http://192.168.1.8/dashboard', {
+    getRuntimeUrl: (path) => `chrome-extension://abc${path}`
+  }),
+  'chrome-extension://abc/_favicon/?pageUrl=http%3A%2F%2F192.168.1.8%2Fdashboard&size=128&fallbackToHost=0'
 );
 const browserPageFaviconUrl = utils.getBrowserPageFaviconUrl('chrome://extensions/', {
   getRuntimeUrl: (path) => `chrome-extension://abc${path}`
@@ -235,16 +256,16 @@ const strictPlanBeforeSettingsLoad = strictResolver.buildFaviconCandidatePlan({
 });
 assert.strictEqual(
   strictPlanBeforeSettingsLoad.map((candidate) => candidate.url).join('\n'),
-  'chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Ffoo.example.com%2F&size=128',
+  'chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Ffoo.example.com%2F&size=128&fallbackToHost=0',
   'favicon candidate resolution should fail closed before settings load without direct or gstatic sources'
 );
 assert.strictEqual(
   strictResolver.getSafeFaviconCandidateUrl(
-    'chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Ffoo.example.com%2F',
+    'chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Ffoo.example.com%2F&fallbackToHost=0',
     'https://foo.example.com/',
     'browser-cache'
   ),
-  'chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Ffoo.example.com%2F',
+  'chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Ffoo.example.com%2F&fallbackToHost=0',
   'strict resolver should retain Lumno-owned _favicon sources'
 );
 assert.strictEqual(
@@ -266,6 +287,138 @@ assert.strictEqual(
   'strict resolver should turn other-extension _favicon sources into generic fallback'
 );
 strictEnhancedFetchState = true;
+const automaticPageUrl = 'https://foo.example.com/account';
+const automaticIconUrl = 'https://foo.example.com/favicon.ico?unread=3';
+const automaticBrowserUrl = strictResolver.getExtensionFaviconUrl(automaticPageUrl);
+const staleRootBrowserUrl = strictResolver.getExtensionFaviconUrl('https://foo.example.com/');
+assert.strictEqual(strictResolver.getSafeFaviconCandidateUrl(staleRootBrowserUrl, automaticPageUrl), '',
+  'the shared resolver must reject root-page browser artwork for a different page');
+assert.strictEqual(strictResolver.resolveFaviconSource(staleRootBrowserUrl, automaticPageUrl), automaticBrowserUrl,
+  'rendering must reacquire the exact page instead of accepting a stale root-page source');
+const nestedFaviconPage = 'https://chrome.google.com/webstore/devconsole?hl=zh-CN';
+const differentFaviconPages = [
+  'https://chrome.google.com/',
+  'https://chrome.google.com/webstore/',
+  'https://chrome.google.com/webstore/devconsole?hl=en',
+  'https://chrome.google.com/webstore/devconsole/?hl=zh-CN',
+  'https://chrome.google.com/webstore%2Fdevconsole?hl=zh-CN',
+  'http://chrome.google.com/webstore/devconsole?hl=zh-CN',
+  'https://chrome.google.com:8443/webstore/devconsole?hl=zh-CN',
+  'https://www.chrome.google.com/webstore/devconsole?hl=zh-CN'
+];
+for (const getSource of [
+  (page) => strictResolver.getExtensionFaviconUrl(page),
+  (page) => strictResolver.getChromeFaviconUrl(page),
+  (page) => strictResolver.getGstaticFaviconUrl(page)
+]) {
+  differentFaviconPages.forEach((page) => {
+    assert.strictEqual(strictResolver.getSafeFaviconCandidateUrl(getSource(page), nestedFaviconPage), '',
+      'different paths, parameters, schemes, ports and subdomains must not share proxy artwork');
+  });
+  assert.ok(strictResolver.getSafeFaviconCandidateUrl(getSource(`${nestedFaviconPage}#intro`), nestedFaviconPage),
+    'fragments on the same document may reuse its icon');
+}
+const oldChromeSource = `chrome://favicon2/?url=${encodeURIComponent(nestedFaviconPage)}&fallbackToHost=1`;
+const normalizedChromeSource = new URL(strictResolver.getSafeFaviconCandidateUrl(oldChromeSource, nestedFaviconPage));
+assert.strictEqual(normalizedChromeSource.protocol, 'chrome-extension:',
+  'legacy web-page chrome://favicon2 sources must be replaced by the exact extension endpoint');
+assert.strictEqual(normalizedChromeSource.searchParams.get('pageUrl'), nestedFaviconPage);
+assert.strictEqual(normalizedChromeSource.searchParams.has('url'), false);
+assert.strictEqual(normalizedChromeSource.searchParams.get('fallbackToHost'), '0',
+  'legacy Chrome virtual URLs must use exact-page matching as well');
+const overriddenResolver = utils.createFaviconUrlResolver({
+  getRuntimeUrl: (path) => `chrome-extension://abc${path}`,
+  getExtensionFaviconUrl: () => staleRootBrowserUrl,
+  getChromeFaviconUrl: () => strictResolver.getChromeFaviconUrl('https://foo.example.com/'),
+  getGstaticFaviconUrl: () => strictResolver.getGstaticFaviconUrl('https://foo.example.com/')
+});
+for (const name of ['getExtensionFaviconUrl', 'getChromeFaviconUrl', 'getGstaticFaviconUrl']) {
+  assert.strictEqual(utils.getPageUrlFromFaviconProxyUrl(overriddenResolver[name](automaticPageUrl)), automaticPageUrl,
+    'custom callbacks must not collapse a requested page to its origin');
+}
+const customProviderIcon = 'https://cdn.example.com/custom-search.png';
+assert.strictEqual(strictResolver.resolveFaviconSource(automaticIconUrl, automaticPageUrl), automaticBrowserUrl,
+  'tab icon URLs should resolve through Chrome even with enhanced fetching enabled');
+assert.strictEqual(strictResolver.getSafeFaviconCandidateUrl(automaticIconUrl, automaticPageUrl), '',
+  'website icon URLs must not be used for automatic loading or theme extraction');
+assert.strictEqual(strictResolver.getProviderFaviconUrl(automaticPageUrl, customProviderIcon), customProviderIcon,
+  'explicit custom provider artwork should remain available with enhanced fetching enabled');
+const automaticPlan = strictResolver.buildFaviconCandidatePlan({
+  pageUrl: automaticPageUrl,
+  primaryUrl: automaticIconUrl,
+  persistedUrl: automaticIconUrl,
+  persistedDataUrl: 'data:image/png;base64,Y2FjaGVk'
+});
+assert.strictEqual(automaticPlan[0].url, 'data:image/png;base64,Y2FjaGVk', 'cached image bytes should come first');
+assert.strictEqual(automaticPlan[1].url, automaticBrowserUrl, 'Chrome should precede third-party sources');
+assert.strictEqual(automaticPlan.some((candidate) => candidate.url === automaticIconUrl), false,
+  'old persisted website icon URLs must not enter the automatic source plan');
+assert.ok(automaticPlan[2].url.includes('gstatic.cn/faviconV2'), 'enhanced mode should retain a proxy fallback');
+const stableShortcutPlan = strictResolver.buildFaviconCandidatePlan({
+  pageUrl: automaticPageUrl,
+  sourceProfile: 'shortcut',
+  skipPersisted: true,
+  primaryUrl: automaticBrowserUrl,
+  pageSpecificUrl: 'data:image/png;base64,c25hcHNob3Q='
+});
+assert.deepStrictEqual(JSON.parse(JSON.stringify(stableShortcutPlan.map((candidate) => candidate.url))),
+  ['data:image/png;base64,c25hcHNob3Q='], 'shortcut rendering must use saved images without live browser or remote fallbacks');
+assert.strictEqual(strictResolver.buildFaviconCandidatePlan({
+  pageUrl: automaticPageUrl, sourceProfile: 'shortcut', skipPersisted: true
+}).length, 0, 'a shortcut without saved artwork should show a placeholder while its image is acquired');
+const bundledShortcutIcon = 'chrome-extension://abc/assets/images/site-search/tile-xhs.png';
+assert.strictEqual(strictResolver.getShortcutFaviconCandidateUrl(automaticPageUrl, bundledShortcutIcon), bundledShortcutIcon);
+assert.strictEqual(strictResolver.getShortcutFaviconCandidateUrl(automaticPageUrl, automaticBrowserUrl), '',
+  'shortcut artwork must not derive from the live Chrome cache');
+const stableFetchUrl = strictResolver.getShortcutFaviconFetchUrl(`${automaticPageUrl}?unread=3#section`);
+assert.strictEqual(new URL(stableFetchUrl).searchParams.get('url'), 'https://foo.example.com/account?unread=3',
+  'shortcut acquisition must preserve the full page path and query, removing only the fragment');
+assert.strictEqual(new URL(automaticBrowserUrl).searchParams.get('fallbackToHost'), '0',
+  'browser-cache requests must disable matching an unrelated icon from the same host');
+assert.deepStrictEqual(Array.from(strictResolver.getShortcutFaviconFetchCandidates(automaticPageUrl), (item) => item.kind),
+  ['browser-cache', 'proxy'], 'exact-page Chrome artwork must precede third-party artwork');
+const faviconIsCandidates = strictResolver.getShortcutFaviconFetchCandidates(`${automaticPageUrl}?private=1#section`, 'favicon-is');
+assert.strictEqual(faviconIsCandidates.length, 1);
+assert.strictEqual(faviconIsCandidates[0].url, 'https://favicon.is/foo.example.com?larger=true');
+assert.strictEqual(strictResolver.getSafeFaviconCandidateUrl(faviconIsCandidates[0].url, automaticPageUrl), '',
+  'an automatic candidate must not relax exact-page matching for a domain icon');
+assert.strictEqual(strictResolver.getSafeFaviconCandidateUrl(faviconIsCandidates[0].url, automaticPageUrl,
+  'shortcut-snapshot', { allowDomainProxy: true }), faviconIsCandidates[0].url);
+assert.strictEqual(strictResolver.getSafeFaviconCandidateUrl('https://favicon.is/other.example.com?larger=true',
+  automaticPageUrl, 'shortcut-snapshot', { allowDomainProxy: true }), '', 'explicit domain matching must still reject other hosts');
+assert.strictEqual(strictResolver.getSafeFaviconCandidateUrl(staleRootBrowserUrl, automaticPageUrl,
+  'shortcut-snapshot', { allowDomainProxy: true }), '', 'domain matching must not weaken Chrome exact-page matching');
+assert.strictEqual(strictResolver.getShortcutFaviconFetchCandidates('chrome://settings/', 'favicon-is').length, 0);
+const blockedDomainResolver = utils.createFaviconUrlResolver({ shouldBlockFaviconForHost: host => host === 'foo.example.com' });
+assert.strictEqual(blockedDomainResolver.getShortcutFaviconFetchCandidates(automaticPageUrl, 'favicon-is').length, 0,
+  'Favicon.is must respect hostname blocks');
+strictEnhancedFetchState = false;
+assert.strictEqual(strictResolver.getShortcutFaviconFetchCandidates(automaticPageUrl, 'favicon-is').length, 1,
+  'Favicon.is remains available with enhanced fetching disabled');
+assert.ok(strictResolver.getShortcutFaviconFetchUrl(automaticPageUrl).startsWith('https://t2.gstatic.cn/'),
+  'approved remote shortcut acquisition remains available with enhanced fetching disabled');
+assert.deepStrictEqual(Array.from(strictResolver.getShortcutFaviconFetchCandidates(automaticPageUrl), (item) => item.url),
+  [automaticBrowserUrl, strictResolver.getShortcutFaviconFetchUrl(automaticPageUrl)],
+  'disabled enhanced fetching should prefer Chrome and retain the approved service fallback');
+assert.strictEqual(strictResolver.getShortcutFaviconCandidateUrl(automaticPageUrl, bundledShortcutIcon), bundledShortcutIcon,
+  'strict mode should retain fixed bundled shortcut artwork');
+assert.strictEqual(strictResolver.getProviderFaviconUrl(automaticPageUrl, customProviderIcon), automaticBrowserUrl,
+  'custom remote artwork must respect the enhanced-fetch switch');
+assert.strictEqual(strictResolver.getProviderFaviconUrl(automaticPageUrl, 'chrome-extension://abc/assets/images/site-search/tile-ddg.png'),
+  'chrome-extension://abc/assets/images/site-search/tile-ddg.png', 'bundled artwork should remain available with enhanced fetching disabled');
+assert.strictEqual(strictResolver.resolveFaviconSource('data:image/png;base64,Y2FjaGVk', automaticPageUrl),
+  'data:image/png;base64,Y2FjaGVk', 'local tab image bytes should remain usable');
+strictEnhancedFetchState = true;
+for (const spoofedProxy of [
+  'https://example.com/gstatic.cn/faviconV2',
+  'https://gstatic.cn.example.com/faviconV2',
+  'https://example.com/?icon=https://www.google.com/s2/favicons',
+  'https://t2.gstatic.cn/other.png'
+]) {
+  assert.strictEqual(utils.isFaviconProxyUrl(spoofedProxy), false, 'proxy identification must use the actual host and path');
+  assert.strictEqual(utils.isFaviconSourceAllowedByEnhancedFetchPolicy(spoofedProxy, true), false,
+    'arbitrary website URLs must not masquerade as an approved third-party source');
+}
 assert.ok(
   strictResolver.buildFaviconCandidatePlan({
     pageUrl: 'https://foo.example.com/',
@@ -278,12 +431,16 @@ const excludedResolver = utils.createFaviconUrlResolver({
   isEnhancedFaviconFetchEnabled: (pageUrl) => pageUrl !== 'https://foo.example.com/private',
   getStrictFaviconReason: (pageUrl) => pageUrl === 'https://foo.example.com/private' ? 'exclusion' : ''
 });
+assert.strictEqual(excludedResolver.getShortcutFaviconFetchUrl('https://foo.example.com/private'), '',
+  'origin-only shortcut acquisition must still enforce full-page exclusions');
+assert.strictEqual(excludedResolver.getShortcutFaviconFetchCandidates('https://foo.example.com/private', 'favicon-is').length, 0,
+  'Favicon.is domain requests must still enforce full-page exclusions');
 assert.deepStrictEqual(
   JSON.parse(JSON.stringify(excludedResolver.buildFaviconCandidatePlan({
     pageUrl: 'https://foo.example.com/private',
     primaryUrl: 'https://foo.example.com/favicon.ico'
   }).map((candidate) => candidate.url))),
-  ['chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Ffoo.example.com%2Fprivate&size=128'],
+  ['chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Ffoo.example.com%2Fprivate&size=128&fallbackToHost=0'],
   'a path-specific exclusion should block direct and gstatic candidates while keeping browser cache'
 );
 assert.ok(
@@ -295,11 +452,11 @@ assert.ok(
 );
 assert.strictEqual(
   resolver.getExtensionFaviconUrl('https://example.com/docs'),
-  'chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Fexample.com%2Fdocs&size=128'
+  'chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Fexample.com%2Fdocs&size=128&fallbackToHost=0'
 );
 assert.strictEqual(
   resolver.getPageFaviconCandidateUrl('https://example.com/docs'),
-  'chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Fexample.com%2Fdocs&size=128',
+  'chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Fexample.com%2Fdocs&size=128&fallbackToHost=0',
   'HTTP pages should prefer the extension _favicon candidate'
 );
 assert.strictEqual(
@@ -362,28 +519,28 @@ assert.strictEqual(
   'browser-internal favicon candidates must not be blocked by the synthetic host name'
 );
 assert.strictEqual(
-  resolver.getSafeFaviconCandidateUrl('chrome-extension://abc/_favicon/?pageUrl=http%3A%2F%2F127.0.0.1%2F&size=128'),
+  resolver.getSafeFaviconCandidateUrl('chrome-extension://abc/_favicon/?pageUrl=http%3A%2F%2F127.0.0.1%2F&size=128&fallbackToHost=0'),
   '',
   'local HTTP favicon candidates should still be blocked when the caller blocks their host'
 );
 const plan = resolver.buildFaviconCandidatePlan({
-  primaryUrl: 'chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Fexample.com%2Fdocs&size=128',
+  primaryUrl: 'chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Fexample.com%2Fdocs&size=128&fallbackToHost=0',
   browserUrl: 'chrome://favicon2/?pageUrl=https%3A%2F%2Fexample.com%2Fdocs&size=128',
   pageUrl: 'https://example.com/docs'
 });
 assert.strictEqual(
   plan.map((candidate) => candidate.kind).join(','),
-  'primary,browser,gstatic',
-  'candidate plans should dedupe extension primary URL before browser/gstatic fallbacks'
+  'primary,gstatic',
+  'candidate plans should dedupe the exact extension source after replacing chrome://favicon2'
 );
 assert.strictEqual(resolver.getFaviconProxyCheckKind(plan[0]), 'extension');
-assert.strictEqual(resolver.getFaviconProxyCheckKind(plan[2]), 'gstatic');
+assert.strictEqual(resolver.getFaviconProxyCheckKind(plan[1]), 'gstatic');
 const pageSpecificPlan = resolver.buildFaviconCandidatePlan({
   pageUrl: 'https://x.com/home',
   pageSpecificUrl: 'data:image/png;base64,eA==',
   persistedDataUrl: 'data:image/jpeg;base64,c3RhbGU=',
   persistedUrl: 'https://x.com/stale.ico',
-  primaryUrl: 'chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Fx.com%2Fhome&size=128',
+  primaryUrl: 'chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Fx.com%2Fhome&size=128&fallbackToHost=0',
   skipPersisted: true
 });
 assert.strictEqual(
@@ -402,7 +559,7 @@ assert.strictEqual(
   'https://www.lovart.ai/home'
 );
 assert.strictEqual(
-  utils.getPageUrlFromFaviconProxyUrl('chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Fwww.lovart.ai%2Fhome&size=128'),
+  utils.getPageUrlFromFaviconProxyUrl('chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Fwww.lovart.ai%2Fhome&size=128&fallbackToHost=0'),
   'https://www.lovart.ai/home'
 );
 assert.strictEqual(
@@ -455,11 +612,11 @@ assert.strictEqual(
   false
 );
 assert.strictEqual(
-  utils.isBlockedLocalFaviconUrl('chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Fexample.com%2F&size=128'),
+  utils.isBlockedLocalFaviconUrl('chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Fexample.com%2F&size=128&fallbackToHost=0'),
   false
 );
 assert.strictEqual(
-  utils.isBlockedLocalFaviconUrl('chrome-extension://abc/_favicon/?pageUrl=http%3A%2F%2F192.168.1.8%2F&size=128'),
+  utils.isBlockedLocalFaviconUrl('chrome-extension://abc/_favicon/?pageUrl=http%3A%2F%2F192.168.1.8%2F&size=128&fallbackToHost=0'),
   false
 );
 assert.strictEqual(
@@ -504,7 +661,7 @@ assert.ok(htmlIconCandidates.some((candidate) => candidate.url === 'https://exam
 
 assert.strictEqual(
   utils.getThemeFaviconCandidateUrls([
-    'chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Fmp.weixin.qq.com%2F&size=128',
+    'chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Fmp.weixin.qq.com%2F&size=128&fallbackToHost=0',
     'https://t2.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE%2CSIZE%2CURL&url=https%3A%2F%2Fmp.weixin.qq.com%2F&size=128',
     'chrome://favicon2/?url=https%3A%2F%2Fmp.weixin.qq.com%2F',
     'https://res.wx.qq.com/a/wx_fed/assets/res/OTE0YTAw.png',
@@ -512,7 +669,7 @@ assert.strictEqual(
   ]).join('\n'),
   [
     'https://res.wx.qq.com/a/wx_fed/assets/res/OTE0YTAw.png',
-    'chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Fmp.weixin.qq.com%2F&size=128',
+    'chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Fmp.weixin.qq.com%2F&size=128&fallbackToHost=0',
     'https://t2.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE%2CSIZE%2CURL&url=https%3A%2F%2Fmp.weixin.qq.com%2F&size=128'
   ].join('\n')
 );

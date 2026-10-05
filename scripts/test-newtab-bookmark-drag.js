@@ -8,6 +8,7 @@ const {
   getFolderSwitchTarget,
   getFloatingPreviewPosition,
   getGridInsertionTarget,
+  getTopbarDropPoint,
   getLayoutShiftDelta,
   isPointInsideElement,
   shouldKeepCascadeOpenAfterDrop,
@@ -428,6 +429,27 @@ const topbarTarget = getGridInsertionTarget({
 });
 assert.strictEqual(topbarTarget.markerTopPx, 7);
 assert.strictEqual(topbarTarget.markerHeightPx, 22);
+
+// A shortcut approaching the compact top bar can land in its padding or just
+// below it; project that point into the row while excluding the action buttons.
+const compactBar = { getBoundingClientRect: () => createRect(0, 0, 1000, 36) };
+const compactViewport = { getBoundingClientRect: () => createRect(4, 4, 928, 28) };
+const topbarPoint = (pointerX, pointerY) => getTopbarDropPoint({
+  surfaceElement: compactBar,
+  viewportElement: compactViewport,
+  pointerX,
+  pointerY
+});
+assert.deepStrictEqual(topbarPoint(500, 18), { x: 500, y: 18 });
+assert.deepStrictEqual(topbarPoint(500, 0), { x: 500, y: 5 });
+assert.deepStrictEqual(topbarPoint(500, 36), { x: 500, y: 31 });
+assert.deepStrictEqual(topbarPoint(500, 52), { x: 500, y: 31 });
+assert.deepStrictEqual(topbarPoint(0, 18), { x: 4, y: 18 });
+assert.strictEqual(topbarPoint(500, 53), null, 'leaving the approach area clears the target');
+assert.strictEqual(topbarPoint(950, 18), null, 'mode and manager buttons are not drop targets');
+assert.strictEqual(topbarPoint(-1, 18), null);
+assert.strictEqual(topbarPoint(500, -1), null);
+assert.strictEqual(topbarPoint(NaN, 18), null);
 
 const emptyTarget = getGridInsertionTarget({
   folderId: 'empty',

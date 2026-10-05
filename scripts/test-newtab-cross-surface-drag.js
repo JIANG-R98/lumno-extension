@@ -55,6 +55,190 @@ function rect(left, top, width = 60, height = 60) {
   };
 }
 
+{
+  const folders = [
+    { id: 'design-entry', type: 'folder', folderId: '42' },
+    { id: 'archive-entry', type: 'folder', folderId: '43' }
+  ];
+  const duplicatePlan = planBookmarkToShortcut({
+    shortcuts: folders, record: { id: 'duplicate', type: 'folder', folderId: '42' },
+    index: 2, maxShortcuts: 2
+  });
+  assert.deepStrictEqual(duplicatePlan.shortcuts.map((item) => item.id), ['archive-entry', 'design-entry']);
+  assert.strictEqual(planBookmarkToShortcut({
+    shortcuts: folders, record: { type: 'folder', folderId: '44' }, index: 0, maxShortcuts: 2
+  }), null, 'new folders must not evict entries when the dock is full');
+}
+
+// A folder shortcut can return to its own bookmark card/row without moving the
+// real folder into itself. Dropping inside that folder or a descendant remains
+// invalid, and an ordinary bookmark drag cannot use the alias return path.
+{
+  const nodeMap = new Map([
+    ['1', { id: '1', parentId: '0' }],
+    ['42', { id: '42', parentId: '1' }],
+    ['43', { id: '43', parentId: '42' }],
+    ['44', { id: '44', parentId: '1' }]
+  ]);
+  const shortcut = { id: 'folder-entry', type: 'folder', folderId: '42' };
+  const factory = new Function('nodeMap', 'shortcut', 'NEWTAB_CROSS_SURFACE_DRAG', 'NEWTAB_BOOKMARK_MOVE_HISTORY', `
+    const bookmarksRuntime = { getNodeMap: () => nodeMap };
+    const getShortcutById = (id) => id === shortcut.id ? shortcut : null;
+    const getShortcutFolderId = (item) => item.folderId;
+    ${getFunctionSource(newtabJs, 'isValidExternalBookmarkDropTarget')}
+    ${getFunctionSource(newtabJs, 'resolveExternalBookmarkDropTarget')}
+    return { resolveExternalBookmarkDropTarget, isValidExternalBookmarkDropTarget };
+  `);
+  const { resolveExternalBookmarkDropTarget: resolve, isValidExternalBookmarkDropTarget: valid } = factory(
+    nodeMap, shortcut,
+    require(path.join(repoRoot, 'src', 'newtab', 'cross-surface-drag.js')),
+    require(path.join(repoRoot, 'src', 'newtab', 'bookmark-move-history.js'))
+  );
+  const state = { shortcutId: shortcut.id, bookmarkId: shortcut.folderId };
+  const element = {};
+  const returned = resolve(state, { kind: 'card', folderId: '42', element });
+  assert.deepStrictEqual(returned, { kind: 'return', folderId: '1', bookmarkId: '42', element });
+  assert.strictEqual(valid(state, returned), true, 'the original bookmark accepts the shortcut alias');
+  assert.strictEqual(resolve(state, { kind: 'cascade', folderId: '42', element }).kind, 'return');
+  ['breadcrumb', 'shortcut-folder', 'insertion'].forEach((kind) => {
+    assert.strictEqual(resolve(state, { kind, folderId: '42' }).kind, 'blocked',
+      'dropping inside the source folder must remain blocked');
+  });
+  assert.strictEqual(resolve(state, { kind: 'card', folderId: '43' }).kind, 'blocked',
+    'dropping into a descendant remains blocked');
+  assert.strictEqual(resolve({ bookmarkId: '42' }, { kind: 'card', folderId: '42' }).kind, 'blocked',
+    'ordinary bookmark drags cannot return a shortcut alias');
+  assert.strictEqual(resolve(state, { kind: 'card', folderId: '44' }).folderId, '44',
+    'other folders remain actual destinations');
+  nodeMap.get('42').parentId = '44';
+  assert.strictEqual(valid(state, returned), false, 'a stale return target cannot move a folder back after an external move');
+  nodeMap.delete('42');
+  assert.strictEqual(resolve(state, { kind: 'card', folderId: '42' }).kind, 'blocked',
+    'a deleted source folder cannot leave a valid return target');
+}
+
+// Escape must restore both persisted order and DOM nodes moved outside React.
+{
+  const originalShortcuts = [{ id: 'one' }, { id: 'two' }];
+  const domOrder = ['two', 'one'];
+  const tiles = new Map(originalShortcuts.map((item) => [item.id, { id: item.id, removeAttribute() {} }]));
+  const state = { isDragging: true, hasReordered: true, originalShortcuts, tile: tiles.get('one'), dropTarget: null };
+  const finish = new Function('initialState', 'tiles', 'domOrder', 'NEWTAB_CROSS_SURFACE_DRAG', `
+    let shortcutDragState = initialState;
+    let newtabShortcuts = initialState.originalShortcuts.slice().reverse();
+    const document = { body: { removeAttribute() {} } };
+    const window = { setTimeout() {} };
+    const shortcutGrid = null, bookmarkGrid = null;
+    const detachShortcutDragDocumentListeners = () => {};
+    const flushShortcutDragMove = () => {};
+    const clearBookmarkDragPageSwitch = () => {};
+    const clearBookmarkDragFolderSwitch = () => {};
+    const clearDragDropTarget = () => {};
+    const closeBookmarkCascadeMenu = () => {};
+    const settleShortcutDragTile = () => {};
+    const resetShortcutDockHover = () => {};
+    const getShortcutTileById = (id) => tiles.get(id);
+    const moveShortcutTileElement = (tile, index) => {
+      domOrder.splice(domOrder.indexOf(tile.id), 1);
+      domOrder.splice(index, 0, tile.id);
+    };
+    const renderShortcuts = () => {};
+    const suppressCanceledDragClick = () => {};
+    ${getFunctionSource(newtabJs, 'restoreShortcutDragOrder')}
+    ${getFunctionSource(newtabJs, 'finishShortcutDrag')}
+    finishShortcutDrag(null, { cancel: true });
+    return { dataOrder: newtabShortcuts.map((item) => item.id), domOrder, activeState: shortcutDragState };
+  `);
+  const result = finish(state, tiles, domOrder, require('../src/newtab/cross-surface-drag'));
+  assert.deepStrictEqual(result.dataOrder, ['one', 'two']);
+  assert.deepStrictEqual(result.domOrder, ['one', 'two']);
+  assert.strictEqual(result.activeState, null);
+}
+
+// Escape cancels before mouseup. Suppression must last until that release's
+// click, even when the user keeps holding the mouse, then allow a fresh press.
+{
+  const listeners = new Map();
+  const timers = [];
+  const document = {
+    addEventListener(type, handler) {
+      if (!listeners.has(type)) { listeners.set(type, new Set()); }
+      listeners.get(type).add(handler);
+    },
+    removeEventListener(type, handler) { listeners.get(type).delete(handler); }
+  };
+  const suppress = new Function('document', 'window', `
+    ${getFunctionSource(newtabJs, 'suppressCanceledDragClick')}
+    return suppressCanceledDragClick;
+  `)(document, { setTimeout(callback) { timers.push(callback); } });
+  const element = {};
+  const dispatch = (type, pointerId) => {
+    [...listeners.get(type)].forEach((handler) => handler({ pointerId }));
+  };
+  suppress(element, '_xShortcutSuppressClick', 7);
+  assert.strictEqual(element._xShortcutSuppressClick, true);
+  assert.strictEqual(timers.length, 0, 'holding the mouse cannot expire suppression');
+  dispatch('pointerup', 8);
+  assert.strictEqual(timers.length, 0, 'another pointer cannot end the gesture');
+  dispatch('pointerup', 7);
+  assert.strictEqual(element._xShortcutSuppressClick, true, 'the ensuing click stays suppressed');
+  timers.shift()();
+  assert.strictEqual(element._xShortcutSuppressClick, false);
+  assert.ok([...listeners.values()].every((handlers) => handlers.size === 0));
+  suppress(element, '_xBookmarkSuppressClick', 7);
+  suppress(element, '_xBookmarkSuppressClick', 7);
+  assert.strictEqual(listeners.get('pointerdown').size, 1, 'repeat cancellation replaces old listeners');
+  dispatch('pointerdown', 9);
+  assert.strictEqual(element._xBookmarkSuppressClick, false, 'a new intentional gesture remains usable');
+  assert.ok([...listeners.values()].every((handlers) => handlers.size === 0));
+}
+
+// Holding a shortcut at the top-bar edge keeps scrolling without pointer
+// movement; releasing cancels even the frame queued by that final scroll.
+{
+  const frames = new Map();
+  let nextFrame = 0;
+  let scrollCount = 0;
+  let overCascade = false;
+  const state = { isDragging: true, moveFrameId: 0, pendingPointerX: 900, pendingPointerY: 35 };
+  const factory = new Function('state', 'window', 'bookmarkTopbarRuntime', 'isBookmarkCascadeSurfaceAtPoint', `
+    const shortcutDragState = state;
+    const document = { body: { removeAttribute() {} } };
+    const isBookmarkTopbarMode = () => true;
+    const getExternalBookmarkSurfacePoint = () => ({ x: 900, y: 30 });
+    const setShortcutDragTileTransform = () => {};
+    const updateShortcutDragBookmarkTarget = () => true;
+    ${getFunctionSource(newtabJs, 'cancelShortcutDragMoveFrame')}
+    ${getFunctionSource(newtabJs, 'applyShortcutDragMove')}
+    ${getFunctionSource(newtabJs, 'scheduleShortcutDragMove')}
+    ${getFunctionSource(newtabJs, 'flushShortcutDragMove')}
+    return { scheduleShortcutDragMove, flushShortcutDragMove };
+  `);
+  const scheduler = factory(state, {
+    requestAnimationFrame(callback) { frames.set(++nextFrame, callback); return nextFrame; },
+    cancelAnimationFrame(id) { frames.delete(id); }
+  }, {
+    autoScroll(x, y) { assert.deepStrictEqual([x, y], [900, 30]); scrollCount += 1; return 18; }
+  }, () => overCascade);
+  const runFrame = () => {
+    const [id, callback] = frames.entries().next().value;
+    frames.delete(id);
+    callback();
+  };
+  scheduler.scheduleShortcutDragMove(state, 900, 35);
+  runFrame();
+  runFrame();
+  assert.strictEqual(scrollCount, 2, 'edge scrolling continues while the pointer is held still');
+  assert.strictEqual(frames.size, 1);
+  scheduler.flushShortcutDragMove(state);
+  assert.strictEqual(frames.size, 0, 'release must stop edge scrolling');
+  overCascade = true;
+  scheduler.scheduleShortcutDragMove(state, 900, 35);
+  runFrame();
+  assert.strictEqual(scrollCount, 3, 'hovering a cascade must not scroll the bar behind it');
+  assert.strictEqual(frames.size, 0);
+}
+
 // Two rows: three tiles on top, two below.
 const tiles = [
   rect(0, 0), rect(70, 0), rect(140, 0),
@@ -224,6 +408,59 @@ assert.strictEqual(
   clearDragDropTarget(state);
   assert.strictEqual(cascadeRow.attributes.size, 0);
   assert.strictEqual(state.dropTarget, null);
+
+  for (const surface of ['grid', 'shortcuts', 'cascade']) {
+    for (const position of ['before', 'after']) {
+      const folder = createFakeElement();
+      const marker = createFakeElement();
+      const folderTarget = {
+        kind: surface === 'cascade' ? 'cascade' : surface === 'shortcuts' ? 'shortcut-folder' : 'card',
+        surface,
+        element: folder,
+        folderId: 'design'
+      };
+      const insertionTarget = {
+        kind: 'insertion',
+        surface,
+        element: folder,
+        folderId: '1',
+        index: 2,
+        markerElement: marker,
+        markerPosition: position,
+        markerOffsetPx: 132,
+        markerTopPx: 18,
+        markerHeightPx: 48
+      };
+      const markerAttribute = surface === 'cascade'
+        ? 'data-bookmark-insert-position' : 'data-insert-line-position';
+      const scenario = `${surface}/${position}`;
+
+      setDragDropTarget(state, folderTarget);
+      assert.strictEqual(folder.getAttribute('data-bookmark-drop-target'), 'true');
+      setDragDropTarget(state, insertionTarget);
+      assert.strictEqual(
+        folder.getAttribute('data-bookmark-drop-target'), null,
+        `${scenario}: inserting beside the same folder must clear its contents-drop highlight`
+      );
+      assert.strictEqual(marker.getAttribute(markerAttribute), position);
+      assert.strictEqual(state.dropTarget, insertionTarget);
+
+      const motion = marker.getAttribute('data-insert-line-motion');
+      setDragDropTarget(state, insertionTarget);
+      assert.strictEqual(folder.getAttribute('data-bookmark-drop-target'), null);
+      assert.strictEqual(marker.getAttribute('data-insert-line-motion'), motion,
+        `${scenario}: staying at the same boundary must preserve its line motion`);
+
+      setDragDropTarget(state, folderTarget);
+      assert.strictEqual(folder.getAttribute('data-bookmark-drop-target'), 'true',
+        `${scenario}: returning to the folder center must restore its contents-drop highlight`);
+      assert.strictEqual(marker.attributes.size, 0);
+      assert.strictEqual(marker.styles.size, 0);
+      clearDragDropTarget(state);
+      assert.strictEqual(folder.attributes.size, 0);
+      assert.strictEqual(state.dropTarget, null);
+    }
+  }
 }
 
 // Wiring contracts.
@@ -263,21 +500,15 @@ const updateShortcutDragBookmarkTargetSource = getFunctionSource(
 );
 assertOrder(
   updateShortcutDragBookmarkTargetSource,
-  'getBookmarkDropSurfaceElement()',
-  'getExternalBookmarkDropTarget(pointerX, pointerY)',
-  'shortcut drags should only target bookmarks inside the visible bookmarks surface'
+  'getExternalBookmarkSurfacePoint(pointerX, pointerY)',
+  'getExternalBookmarkDropTarget(pointerX, pointerY, state)',
+  'shortcut drags should inspect visible bookmarks and cascade surfaces'
 );
 const externalTargetSource = getFunctionSource(newtabJs, 'getExternalBookmarkDropTarget');
-assertOrder(
-  externalTargetSource,
-  'getBookmarkElementDropTarget(pointerX, pointerY)',
-  'NEWTAB_BOOKMARK_DRAG.getGridInsertionTarget(',
-  'folders should win over grid gaps for external drops'
-);
 assert.ok(
-  externalTargetSource.includes('hitZonePx: bookmarkGrid.getBoundingClientRect().width') &&
+  externalTargetSource.includes('hitZonePx: folderTarget ? undefined : bookmarkGrid.getBoundingClientRect().width') &&
     !externalTargetSource.includes('getBookmarkCrossLevelDropTarget'),
-  'external drops should snap anywhere in a row and skip bookmark-only validators'
+  'external drops keep folder edge insertion zones and skip bookmark-only validators'
 );
 assert.ok(
   getFunctionSource(newtabJs, 'getBookmarkDropSurfaceElement').includes('currentBookmarkCount <= 0') &&
@@ -294,21 +525,22 @@ assert.ok(
 assertOrder(
   finishShortcutDragSource,
   'moveShortcutToBookmarks(state, bookmarkDropTarget);',
-  'persistShortcutOrder()',
+  'persistShortcutOrder(state)',
   'dropping a shortcut on bookmarks should branch before persisting the shortcut order'
 );
 const moveShortcutToBookmarksSource = getFunctionSource(newtabJs, 'moveShortcutToBookmarks');
+const applyTransferSource = getFunctionSource(newtabJs, 'applyBookmarkShortcutTransfer');
 assertOrder(
-  moveShortcutToBookmarksSource,
-  'bookmarksRuntime.create(details)',
-  'persistShortcuts(',
+  applyTransferSource,
+  'bookmarksRuntime.create({',
+  'persistShortcutState(nextShortcuts, destinationShortcut)',
   'the bookmark should exist before the shortcut is removed'
 );
 assert.ok(
-  moveShortcutToBookmarksSource.includes("if (target.kind === 'insertion') {") &&
+  moveShortcutToBookmarksSource.includes("target.kind === 'insertion'") &&
     moveShortcutToBookmarksSource.includes('settleShortcutDragTile(state.tile);') &&
-    !moveShortcutToBookmarksSource.includes('bookmarkMoveHistory'),
-  'shortcut-to-bookmark moves should settle the tile back on failure and stay out of undo history'
+    moveShortcutToBookmarksSource.includes('bookmarkMoveHistory.push('),
+  'shortcut-to-bookmark moves should settle the tile back on failure and record successful transfers'
 );
 
 const processBookmarkDragMoveSource = getFunctionSource(newtabJs, 'processBookmarkDragMove');
@@ -325,10 +557,10 @@ assert.ok(
 );
 const shortcutDropTargetSource = getFunctionSource(newtabJs, 'getBookmarkDragShortcutDropTarget');
 assert.ok(
-  shortcutDropTargetSource.includes('state.isFolder') &&
+  shortcutDropTargetSource.includes("type: 'folder', folderId: node.id") &&
     shortcutDropTargetSource.includes('maxShortcuts: MAX_NEWTAB_SHORTCUTS') &&
     shortcutDropTargetSource.includes("surface: 'shortcuts'"),
-  'folders and over-limit URLs should never target the shortcut grid'
+  'folder references should be supported while respecting the shortcut capacity'
 );
 const finishBookmarkDragSource = getFunctionSource(newtabJs, 'finishBookmarkDrag');
 assertOrder(
@@ -339,15 +571,15 @@ assertOrder(
 );
 const moveBookmarkToShortcutsSource = getFunctionSource(newtabJs, 'moveBookmarkToShortcuts');
 assertOrder(
-  moveBookmarkToShortcutsSource,
-  'persistShortcuts(',
-  'bookmarksRuntime.remove(state.bookmarkId)',
+  applyTransferSource,
+  'persistShortcutState(nextShortcuts, destinationShortcut)',
+  'bookmarksRuntime.remove(bookmarkId)',
   'the shortcut should be saved before the bookmark is deleted'
 );
 assert.ok(
-  moveBookmarkToShortcutsSource.includes('if (!saved) {') &&
-    !moveBookmarkToShortcutsSource.includes('bookmarkMoveHistory'),
-  'a failed shortcut save should keep the bookmark and conversions stay out of undo history'
+  moveBookmarkToShortcutsSource.includes('if (!saved) return false;') &&
+    moveBookmarkToShortcutsSource.includes('bookmarkMoveHistory.push(record)'),
+  'failed transfers should keep the bookmark and only successful transfers enter undo history'
 );
 
 assert.ok(

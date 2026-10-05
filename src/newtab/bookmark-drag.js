@@ -508,7 +508,9 @@
       element: anchorCard,
       markerElement: gridElement,
       markerPosition,
-      markerOffsetPx: nearestBoundary.x - gridRect.left,
+      // The compact bar clips its scrolling viewport. Keep the two-pixel
+      // endpoint markers inside the grid instead of drawing in its outer gap.
+      markerOffsetPx: Math.max(1, Math.min(gridRect.width - 1, nearestBoundary.x - gridRect.left)),
       markerTopPx: anchorItem.rect.top - gridRect.top + markerVerticalInsetPx,
       markerHeightPx: Math.max(
         2,
@@ -517,6 +519,29 @@
       isPageStartBoundary,
       preservePageSlot: isCrossPageDrag,
       surface: 'grid'
+    };
+  }
+
+  function getTopbarDropPoint(options) {
+    const config = options || {};
+    const surface = config.surfaceElement;
+    const viewport = config.viewportElement;
+    const x = Number(config.pointerX);
+    const y = Number(config.pointerY);
+    if (!surface || !viewport || !Number.isFinite(x) || !Number.isFinite(y)) {
+      return null;
+    }
+    const barRect = surface.getBoundingClientRect();
+    const rowRect = viewport.getBoundingClientRect();
+    // The compact bar's padding and a small approach area below it should
+    // accept drops too. Keep the action buttons outside the drop surface.
+    if (!rowRect.width || !rowRect.height || x < barRect.left ||
+        x > rowRect.right || y < barRect.top || y > barRect.bottom + 16) {
+      return null;
+    }
+    return {
+      x: Math.max(rowRect.left, Math.min(rowRect.right - 1, x)),
+      y: Math.max(rowRect.top + 1, Math.min(rowRect.bottom - 1, y))
     };
   }
 
@@ -529,6 +554,7 @@
     getFolderSwitchTarget,
     getFloatingPreviewPosition,
     getGridInsertionTarget,
+    getTopbarDropPoint,
     getLayoutShiftDelta,
     getVisualElement,
     isPointInsideElement,

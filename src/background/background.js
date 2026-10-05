@@ -60,6 +60,19 @@ try {
 }
 
 try {
+  importScripts(
+    chrome.runtime.getURL('src/shared/bookmark-folder-reference.js'),
+    chrome.runtime.getURL('src/newtab/shortcuts-store.js'),
+    chrome.runtime.getURL('src/newtab/wallpaper-local-store.js'),
+    chrome.runtime.getURL('src/shared/webdav-contract.js'),
+    chrome.runtime.getURL('src/background/webdav-client.js'),
+    chrome.runtime.getURL('src/background/webdav-sync.js')
+  );
+} catch (error) {
+  console.warn('Lumno: failed to load WebDAV sync.', error);
+}
+
+try {
   importScripts(chrome.runtime.getURL('src/shared/update-notice.js'));
 } catch (error) {
   console.warn('Lumno: failed to load update notice utils.', error);
@@ -111,6 +124,12 @@ try {
   importScripts(chrome.runtime.getURL('src/background/tab-groups.js'));
 } catch (error) {
   console.warn('Lumno: failed to load tab group helpers.', error);
+}
+
+try {
+  importScripts(chrome.runtime.getURL('src/background/search-result-tabs.js'));
+} catch (error) {
+  console.warn('Lumno: failed to load search result tab helpers.', error);
 }
 
 try {
@@ -219,6 +238,7 @@ const SHORTCUT_KEY_MATCHER = globalThis.LumnoShortcutKeyMatcher || {};
 const NEWTAB_FAVICON_THEME = globalThis.LumnoNewtabFaviconTheme || {};
 const BACKGROUND_NEWTAB_FALLBACK = globalThis.LumnoBackgroundNewtabFallback || {};
 const BACKGROUND_TAB_GROUPS = globalThis.LumnoBackgroundTabGroups || {};
+const SEARCH_RESULT_TABS = globalThis.LumnoSearchResultTabs || {};
 const isLocalFileLikeTargetUrl = BACKGROUND_NEWTAB_FALLBACK.isLocalFileLikeTargetUrl;
 const checkFileSchemeAccess = BACKGROUND_NEWTAB_FALLBACK.checkFileSchemeAccess;
 const openBrowserNewtabFallback = BACKGROUND_NEWTAB_FALLBACK.openBrowserNewtabFallback;
@@ -412,6 +432,30 @@ function createTabWithSourceGroup(createProperties, sourceTab, callback) {
       reason: error,
       grouped: false
     });
+  });
+}
+
+function resolveSearchResultTabPlacement(sourceTab) {
+  return SETTINGS.readStorageValue(storageArea, chrome, SETTINGS.SEARCH_RESULT_TAB_POSITION_STORAGE_KEY)
+    .catch(() => undefined)
+    .then((value) => SEARCH_RESULT_TABS.resolvePlacement(
+      chrome,
+      sourceTab,
+      SETTINGS.normalizeSearchResultTabPosition(value)
+    ));
+}
+
+function createSearchResultTab(createProperties, sourceTab, callback, resolvedPlacement) {
+  const placementTask = resolvedPlacement
+    ? Promise.resolve(resolvedPlacement)
+    : resolveSearchResultTabPlacement(sourceTab);
+  placementTask.then((placement) => {
+    const props = { ...createProperties };
+    if (typeof placement.index === 'number') {
+      props.index = placement.index;
+      props.windowId = placement.windowId;
+    }
+    createTabWithSourceGroup(props, placement.sourceTab, callback);
   });
 }
 
@@ -1683,7 +1727,7 @@ const TAB_SWITCHER_HOST_STATE_TIMEOUT_MS = 400;
 const tabSwitcherHostTabIdByWindowId = new Map();
 const HOTKEY_DUP_GUARD_MS = 180;
 const OVERLAY_OPENING_GUARD_MS = 5000;
-const OVERLAY_RUNTIME_VERSION = '2026-08-31-provider-load-race-v15';
+const OVERLAY_RUNTIME_VERSION = '2026-10-01-favicon-source-scope-v16';
 const OVERLAY_HOST_ID = '_x_extension_overlay_host_2026_unique_';
 const OVERLAY_NAVIGATION_STATE_STORAGE_PREFIX =
   '_x_extension_overlay_navigation_state_2026_unique_:';
@@ -2876,7 +2920,7 @@ function migrateStorageIfNeeded(keys) {
   if (!storageArea || !chrome || !chrome.storage || !chrome.storage.local) {
     return;
   }
-  if (storageArea === chrome.storage.local) {
+  if (isPrimaryStorageAreaName('local')) {
     return;
   }
   chrome.storage.local.get(keys, (localResult) => {
@@ -3228,37 +3272,10 @@ function markSwitcherThumbnailStatus(tab, status, requestReason, failureReason) 
   return didSet;
 }
 
-function isPageVisibleSafeFaviconUrl(url) {
-  const raw = String(url || '').trim();
-  if (!raw) {
-    return false;
-  }
-  if (raw.startsWith('data:image/')) {
-    return true;
-  }
-  try {
-    const parsed = new URL(raw);
-    const protocol = String(parsed.protocol || '').toLowerCase();
-    if (protocol === 'http:' || protocol === 'https:') {
-      return true;
-    }
-    return protocol === 'chrome-extension:' &&
-      chrome &&
-      chrome.runtime &&
-      String(parsed.hostname || '') === String(chrome.runtime.id || '');
-  } catch (error) {
-    return false;
-  }
-}
-
 function buildSwitcherTabFavicon(tab, url) {
   const resolved = String(url || getResolvedTabUrl(tab) || '').trim();
-  const candidate = getPageFaviconCandidateUrl(resolved);
-  if (candidate) {
-    return candidate;
-  }
-  const fallback = typeof tab.favIconUrl === 'string' ? tab.favIconUrl.trim() : '';
-  return isPageVisibleSafeFaviconUrl(fallback) ? fallback : '';
+  const resolver = getBackgroundFaviconUrlResolver();
+  return resolver ? resolver.resolveFaviconSource(tab && tab.favIconUrl, resolved) : '';
 }
 
 function getSwitcherRegistrableThemeHost(host) {
@@ -6550,7 +6567,7 @@ function runInteractiveSiteSearchProvider(provider, query, sender, disposition) 
       return;
     }
     const sourceTab = sender && sender.tab ? sender.tab : null;
-    createTabWithSourceGroup({ url: entryUrl, active: targetDisposition !== 'backgroundTab' }, sourceTab, (tab, info) => {
+    createSearchResultTab({ url: entryUrl, active: targetDisposition !== 'backgroundTab' }, sourceTab, (tab, info) => {
       if (!info || info.ok === false) {
         finish({ ok: false, reason: (info && info.reason) || 'tab-create-failed' });
         return;
@@ -6572,6 +6589,7 @@ function runAggregateSearchQuery(aggregateId, query, sender, disposition) {
       storageArea,
       storageKey: AGGREGATE_SEARCH_STORAGE_KEY,
       loadSiteSearchProviders,
+      resolveTabPlacement: resolveSearchResultTabPlacement,
       loadAggregateSearchAutoGroupEnabled() {
         if (typeof SETTINGS.readStorageValue !== 'function') {
           return Promise.resolve(undefined);
@@ -6594,6 +6612,10 @@ function runAggregateSearchQuery(aggregateId, query, sender, disposition) {
 
 // Route message actions by feature area before invoking the original handlers.
 const BACKGROUND_MESSAGE_ROUTE_GROUPS = Object.freeze({
+  webdav: {
+    actions: ['webdav'],
+    handler: handleWebDavMessage
+  },
   tabs: {
     actions: [
       'switchToTab',
@@ -6706,6 +6728,32 @@ function dispatchBackgroundMessage(request, sender, sendResponse) {
 
 // Listen for extension runtime messages.
 chrome.runtime.onMessage.addListener(dispatchBackgroundMessage);
+
+const shortcutFolderSyncController = globalThis.LumnoBookmarkFolderReference && providerStorageRuntime &&
+  chrome.bookmarks && typeof chrome.bookmarks.getTree === 'function'
+  ? globalThis.LumnoBookmarkFolderReference.createSyncController({ chrome, provider: providerStorageRuntime,
+    onError: (error) => console.warn('[Lumno] Could not refresh folder shortcuts.', error) }) : null;
+if (shortcutFolderSyncController) shortcutFolderSyncController.start();
+const webDavSyncController = globalThis.LumnoWebDavSync && typeof indexedDB !== 'undefined'
+  ? globalThis.LumnoWebDavSync.createController({ chrome }) : null;
+if (webDavSyncController) webDavSyncController.start();
+
+function handleWebDavMessage(request, sender, sendResponse) {
+  // Content scripts and externally connected extensions cannot use stored
+  // credentials, configure endpoints, or request arbitrary remote resources.
+  if (!globalThis.LumnoWebDavSync || !globalThis.LumnoWebDavSync.isTrustedSender(chrome, sender)) {
+    sendResponse({ ok: false, error: 'forbidden' });
+    return;
+  }
+  if (!webDavSyncController) {
+    sendResponse({ ok: false, error: 'private-storage-unavailable' });
+    return;
+  }
+  webDavSyncController.handle(request).then((result) => sendResponse({ ok: true, ...result }))
+    .catch((error) => sendResponse({ ok: false, error: error.code || 'sync-failed',
+      diagnostic: globalThis.LumnoWebDavClient.diagnostic(error.diagnostic) }));
+  return true;
+}
 
 function handleTabMessage(request, sender, sendResponse) {
   switch (request.action) {
@@ -7026,13 +7074,13 @@ function handleSearchMessage(request, sender, sendResponse) {
       const forceSearch = Boolean(request.forceSearch);
       const openInBackgroundTab = request.disposition === 'backgroundTab';
       const sourceTab = sender && sender.tab ? sender.tab : null;
-      const createResolvedTab = (url, callback) => {
-        createTabWithSourceGroup({
-          url: url,
-          active: !openInBackgroundTab
-        }, sourceTab, callback);
-      };
-      loadShortcutRules().then((rules) => {
+      Promise.all([loadShortcutRules(), resolveSearchResultTabPlacement(sourceTab)]).then(([rules, placement]) => {
+        const createResolvedTab = (url, callback) => {
+          createSearchResultTab({
+            url,
+            active: !openInBackgroundTab
+          }, sourceTab, callback, placement);
+        };
         const shortcutUrl = getShortcutUrl(query, rules);
         if (shortcutUrl) {
           createResolvedTab(shortcutUrl, () => {
@@ -7048,33 +7096,64 @@ function handleSearchMessage(request, sender, sendResponse) {
         } else {
           // It's a search query - use browser default search engine
           const fallbackUrl = buildDefaultSearchUrl(query);
-          if (openInBackgroundTab) {
+          // Preserve the original browser search path unless an adjacent position is selected.
+          if (typeof placement.index !== 'number') {
+            if (openInBackgroundTab) {
+              createResolvedTab(fallbackUrl, () => {
+                sendResponse({ ok: true, url: fallbackUrl });
+              });
+              return;
+            }
+            if (chrome && chrome.search && typeof chrome.search.query === 'function') {
+              markPendingSearchTab(null, sourceTab);
+              try {
+                chrome.search.query({ text: query, disposition: 'NEW_TAB' }, () => {
+                  if (chrome.runtime && chrome.runtime.lastError) {
+                    pendingSearchAt = 0;
+                    pendingSearchTabId = null;
+                    pendingSearchGroupContext = null;
+                    createResolvedTab(fallbackUrl, () => {
+                      sendResponse({ ok: true, url: fallbackUrl });
+                    });
+                    return;
+                  }
+                  sendResponse({ ok: true, url: fallbackUrl });
+                });
+                return;
+              } catch (error) {
+                pendingSearchAt = 0;
+                pendingSearchTabId = null;
+                pendingSearchGroupContext = null;
+              }
+            }
             createResolvedTab(fallbackUrl, () => {
               sendResponse({ ok: true, url: fallbackUrl });
             });
             return;
           }
           if (chrome && chrome.search && typeof chrome.search.query === 'function') {
-            markPendingSearchTab(null, sourceTab);
-            try {
-              chrome.search.query({ text: query, disposition: 'NEW_TAB' }, () => {
-                if (chrome.runtime && chrome.runtime.lastError) {
-                  pendingSearchAt = 0;
-                  pendingSearchTabId = null;
-                  pendingSearchGroupContext = null;
-                  createResolvedTab(fallbackUrl, () => {
-                    sendResponse({ ok: true, url: fallbackUrl });
-                  });
-                  return;
+            createResolvedTab('about:blank', (tab, info) => {
+              if (!tab || typeof tab.id !== 'number' || !info || !info.ok) {
+                sendResponse({ ok: false, reason: (info && info.reason) || 'tab-create-failed' });
+                return;
+              }
+              markPendingSearchTab(tab.id, sourceTab);
+              SEARCH_RESULT_TABS.searchInTab(chrome, {
+                query,
+                tabId: tab.id,
+                fallbackUrl,
+                onFallback() {
+                  if (pendingSearchTabId === tab.id) {
+                    pendingSearchAt = 0;
+                    pendingSearchTabId = null;
+                    pendingSearchGroupContext = null;
+                  }
                 }
-                sendResponse({ ok: true, url: fallbackUrl });
+              }, (result) => {
+                sendResponse({ ...result, url: fallbackUrl });
               });
-              return;
-            } catch (e) {
-              pendingSearchAt = 0;
-              pendingSearchTabId = null;
-              pendingSearchGroupContext = null;
-            }
+            });
+            return;
           }
           createResolvedTab(fallbackUrl, () => {
             sendResponse({ ok: true, url: fallbackUrl });
@@ -7373,7 +7452,7 @@ function handleExtensionPageMessage(request, sender, sendResponse) {
         });
         return true;
       }
-      createTabWithSourceGroup({ url: targetUrl, active: request.disposition !== 'backgroundTab' }, sourceTab, (_tab, info) => {
+      createSearchResultTab({ url: targetUrl, active: request.disposition !== 'backgroundTab' }, sourceTab, (_tab, info) => {
         sendResponse({ ok: Boolean(info && info.ok) });
       });
       return true;
@@ -7454,7 +7533,7 @@ function handleFaviconMessage(request, sender, sendResponse) {
     case 'getShortcutFaviconData': {
       const pageUrl = request.pageUrl || '';
       const preferredTheme = request.preferredTheme || '';
-      fetchShortcutFaviconData(pageUrl, preferredTheme).then((result) => {
+      fetchShortcutFaviconData(pageUrl, preferredTheme, '', request.refresh === true, request.iconSource).then((result) => {
         sendResponse(result || {
           data: '',
           sourceUrl: '',
@@ -7555,7 +7634,13 @@ const CHROME_SYNC_STORAGE_KEYS = globalThis.LumnoSettings &&
   Array.isArray(globalThis.LumnoSettings.CHROME_SYNC_STORAGE_KEYS)
   ? globalThis.LumnoSettings.CHROME_SYNC_STORAGE_KEYS
   : [];
-migrateStorageIfNeeded(CHROME_SYNC_STORAGE_KEYS);
+if (providerStorageRuntime) {
+  providerStorageRuntime.ready.then(() => {
+    migrateStorageIfNeeded(CHROME_SYNC_STORAGE_KEYS);
+  });
+} else {
+  migrateStorageIfNeeded(CHROME_SYNC_STORAGE_KEYS);
+}
 if (chrome && chrome.storage && chrome.storage.sync &&
     typeof chrome.storage.sync.remove === 'function') {
   chrome.storage.sync.remove(LANGUAGE_MESSAGES_STORAGE_KEY, () => {
@@ -7649,10 +7734,13 @@ function getBackgroundFaviconUrlResolver() {
         !isUrlBlockedByFaviconRequestBlacklist(pageUrl)
       ),
       getStrictFaviconReason: (pageUrl) => {
+        if (isUrlBlockedByFaviconRequestBlacklist(pageUrl)) {
+          return 'exclusion';
+        }
         if (faviconEnhancedFetchEnabledCache !== true) {
           return 'global-off';
         }
-        return isUrlBlockedByFaviconRequestBlacklist(pageUrl) ? 'exclusion' : '';
+        return '';
       },
       logFaviconDecision: logBackgroundFaviconDecision
     });
@@ -7876,34 +7964,31 @@ function loadDefaultSearchEngineState() {
 function isSearchEngineResultUrl(url) {
   try {
     const parsedUrl = new URL(url);
-    const hostname = parsedUrl.hostname.toLowerCase();
-    const path = parsedUrl.pathname.toLowerCase();
-    const isKnownHost = SEARCH_ENGINE_DEFS.some((engine) =>
-      engine.hostMatches.some((match) => hostname.includes(match))
-    );
-    if (!isKnownHost) {
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
       return false;
     }
-    const searchPaths = [
-      '/search',
-      '/s',
-      '/s/2',
-      '/web',
-      '/?'
-    ];
-    if (path === '/' && parsedUrl.searchParams.has('q')) {
-      return true;
+    const hostname = parsedUrl.hostname.toLowerCase();
+    const engine = SEARCH_ENGINE_DEFS.find((candidate) =>
+      candidate.hostMatches.some((match) => {
+        if (match === 'google.') {
+          return /(^|\.)google\.(?:com|[a-z]{2}|(?:co|com)\.[a-z]{2})$/.test(hostname);
+        }
+        return hostname === match || hostname.endsWith(`.${match}`);
+      })
+    );
+    if (!engine) {
+      return false;
     }
-    if (path === '/' && parsedUrl.searchParams.has('wd')) {
-      return true;
+    const queryMarker = '__lumno_search_query__';
+    const searchUrl = new URL(engine.searchTemplate.replace('{query}', queryMarker));
+    const normalizePath = (value) => value.toLowerCase().replace(/\/+$/, '') || '/';
+    // A prefix such as /web also matches ordinary pages like /webstore.
+    if (normalizePath(parsedUrl.pathname) !== normalizePath(searchUrl.pathname)) {
+      return false;
     }
-    if (path === '/' && parsedUrl.searchParams.has('query')) {
-      return true;
-    }
-    if (searchPaths.some((prefix) => path.startsWith(prefix))) {
-      return true;
-    }
-    return false;
+    const queryParam = Array.from(searchUrl.searchParams.entries())
+      .find(([, value]) => value === queryMarker);
+    return Boolean(queryParam && String(parsedUrl.searchParams.get(queryParam[0]) || '').trim());
   } catch (e) {
     return false;
   }
@@ -8162,6 +8247,9 @@ if (chrome && chrome.tabs) {
     if (!pendingSearchAt || !tab || typeof tab.id !== 'number') {
       return;
     }
+    if (pendingSearchTabId !== null && tab.id !== pendingSearchTabId) {
+      return;
+    }
     if (Date.now() - pendingSearchAt > 5000) {
       pendingSearchAt = 0;
       pendingSearchTabId = null;
@@ -8408,7 +8496,7 @@ function buildFaviconFallbackCandidates(pageUrl, hostOverride, fallbackUrl, opti
   }
   if (inputUrl) {
     candidates.push({ url: getExtensionFaviconUrl(inputUrl), score: 30 });
-    if (settings.enhancedFetchEnabled === true) {
+    if (settings.allowThirdPartyFetch === true) {
       candidates.push({ url: getGstaticFaviconUrl(inputUrl), score: 20 });
     }
   }
@@ -8449,18 +8537,19 @@ function resolveFaviconCandidates(targetUrl, hostOverride, fallbackUrl) {
       logBlockedLocalFavicon(targetUrl || hostOverride || '', 'resolveFaviconCandidates');
       return [];
     }
-    const strictReason = !enhancedFetchEnabled
-      ? 'global-off'
-      : (targetPolicy.requestBlacklisted ? 'exclusion' : '');
-    const effectiveEnhancedFetchEnabled = enhancedFetchEnabled && !targetPolicy.requestBlacklisted;
+    const strictReason = targetPolicy.requestBlacklisted
+      ? 'exclusion'
+      : (!enhancedFetchEnabled ? 'global-off' : '');
     if (strictReason) {
       if (fallbackUrl) {
         logBlockedLocalFavicon(fallbackUrl, 'direct', strictReason, inputUrl);
       }
-      logBlockedLocalFavicon(getGstaticFaviconUrl(inputUrl), 'third-party-proxy', strictReason, inputUrl);
+      if (targetPolicy.requestBlacklisted) {
+        logBlockedLocalFavicon(getGstaticFaviconUrl(inputUrl), 'third-party-proxy', strictReason, inputUrl);
+      }
     }
     return dedupeAndSortFaviconCandidates(buildFaviconFallbackCandidates(inputUrl, hostOverride, fallbackUrl, {
-      enhancedFetchEnabled: effectiveEnhancedFetchEnabled,
+      allowThirdPartyFetch: !targetPolicy.requestBlacklisted,
       skipDirectFallback: !enhancedFetchEnabled || targetPolicy.requestBlacklisted || targetPolicy.avoidDirect,
       targetPolicy
     }));
@@ -8514,15 +8603,30 @@ function fetchShortcutFaviconManifest(manifestUrl, signal) {
 
 function fetchShortcutFaviconResource(candidate, pageUrl, signal) {
   const sourceUrl = candidate && candidate.url ? String(candidate.url) : '';
-  if (!sourceUrl || !isAllowedFaviconProxyRequestUrl(sourceUrl)) {
+  const resolver = getBackgroundFaviconUrlResolver();
+  if (!sourceUrl || !isAllowedFaviconProxyRequestUrl(sourceUrl) || !resolver ||
+      !resolver.getSafeFaviconCandidateUrl(sourceUrl, pageUrl, 'shortcut-snapshot', {
+        allowDomainProxy: candidate.kind === 'favicon-is'
+      })) {
     return Promise.resolve(null);
   }
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const abort = () => controller && controller.abort();
+  if (signal && signal.aborted) {
+    return Promise.resolve(null);
+  }
+  if (signal && controller) {
+    signal.addEventListener('abort', abort, { once: true });
+  }
+  // Leave time for the local Chrome snapshot if the proxy is unreachable.
+  const timeoutId = controller ? setTimeout(abort,
+    candidate.kind === 'favicon-is' ? 5000 : candidate.kind === 'proxy' ? 2500 : 1500) : null;
   return fetch(sourceUrl, {
-    cache: 'force-cache',
+    cache: candidate.refresh === true ? 'reload' : 'force-cache',
     credentials: 'omit',
     referrerPolicy: 'no-referrer',
     redirect: 'error',
-    signal
+    signal: controller ? controller.signal : signal
   }).then((response) => {
     if (!response || !response.ok) {
       return null;
@@ -8530,7 +8634,10 @@ function fetchShortcutFaviconResource(candidate, pageUrl, signal) {
     const resolvedSourceUrl = typeof response.url === 'string' && response.url
       ? response.url
       : sourceUrl;
-    if (!isAllowedFaviconProxyRequestUrl(resolvedSourceUrl)) {
+    if (!isAllowedFaviconProxyRequestUrl(resolvedSourceUrl) ||
+        !resolver.getSafeFaviconCandidateUrl(resolvedSourceUrl, pageUrl, 'shortcut-response', {
+          allowDomainProxy: candidate.kind === 'favicon-is'
+        })) {
       return null;
     }
     const contentLength = Number(response.headers && response.headers.get
@@ -8550,7 +8657,7 @@ function fetchShortcutFaviconResource(candidate, pageUrl, signal) {
     }
     return blob.arrayBuffer().then((buffer) => {
       const inspection = typeof SHORTCUT_FAVICON.inspectIconResource === 'function'
-        ? SHORTCUT_FAVICON.inspectIconResource(buffer, blob.type, result.sourceUrl, candidate)
+        ? SHORTCUT_FAVICON.inspectIconResource(buffer, blob.type, result.sourceUrl, candidate, { minDimension: 16 })
         : null;
       if (!inspection || inspection.usable !== true) {
         return null;
@@ -8564,21 +8671,59 @@ function fetchShortcutFaviconResource(candidate, pageUrl, signal) {
         pageUrl
       };
     });
-  }).catch(() => null);
+  }).catch(() => null).finally(() => {
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId);
+    }
+    if (signal && controller) {
+      signal.removeEventListener('abort', abort);
+    }
+  });
 }
 
-function resolveShortcutFaviconData(pageUrl, preferredTheme, signal, explicitIconUrl) {
-  const proxyUrl = getGstaticFaviconUrl(pageUrl);
-  if (!proxyUrl) return Promise.resolve(null);
-  return fetchShortcutFaviconResource({
-    url: proxyUrl,
-    source: 'proxy',
-    declaredSize: 128,
-    vector: false
-  }, pageUrl, signal);
+async function resolveShortcutFaviconData(pageUrl, preferredTheme, signal, explicitIconUrl, refresh, iconSource) {
+  const resolver = getBackgroundFaviconUrlResolver();
+  const candidates = resolver ? resolver.getShortcutFaviconFetchCandidates(pageUrl, iconSource) : [];
+  for (const candidate of candidates) {
+    if (signal && signal.aborted) {
+      break;
+    }
+    const result = await fetchShortcutFaviconResource({
+      ...candidate,
+      refresh: refresh === true,
+      declaredSize: 128,
+      vector: false
+    }, pageUrl, signal);
+    if (!result) {
+      continue;
+    }
+    // Save Chrome's cached artwork once rather than keeping a live cache URL.
+    // Its generic globe must not become a permanent shortcut snapshot.
+    if (candidate.placeholderUrl && (candidate.kind === 'browser-cache' || candidate.kind === 'favicon-is' ||
+        (result.width <= 16 && result.height <= 16))) {
+      let placeholderData = faviconDataCache.get(candidate.placeholderUrl);
+      if (!placeholderData) {
+        const placeholder = await fetchShortcutFaviconResource({
+          url: candidate.placeholderUrl,
+          kind: candidate.kind,
+          declaredSize: 128
+        }, FAVICON_UTILS.getPageUrlFromFaviconProxyUrl(candidate.placeholderUrl), signal);
+        placeholderData = placeholder && placeholder.data;
+        if (placeholderData) {
+          FAVICON_UTILS.setBoundedCacheEntry(faviconDataCache, candidate.placeholderUrl,
+            placeholderData, BACKGROUND_FAVICON_DATA_CACHE_MAX_ENTRIES);
+        }
+      }
+      if (placeholderData && placeholderData === result.data) {
+        continue;
+      }
+    }
+    return result;
+  }
+  return null;
 }
 
-function fetchShortcutFaviconData(pageUrl, preferredTheme, explicitIconUrl) {
+function fetchShortcutFaviconData(pageUrl, preferredTheme, explicitIconUrl, refresh, iconSource) {
   const normalizedPageUrl = typeof SHORTCUT_FAVICON.normalizePageUrl === 'function'
     ? SHORTCUT_FAVICON.normalizePageUrl(pageUrl)
     : String(pageUrl || '').trim();
@@ -8587,22 +8732,24 @@ function fetchShortcutFaviconData(pageUrl, preferredTheme, explicitIconUrl) {
     return Promise.resolve(null);
   }
   const explicitIcon = String(explicitIconUrl || '').trim();
-  const cacheKey = `${normalizedPageUrl}::${theme || 'auto'}::${explicitIcon}`;
-  if (shortcutFaviconDataCache.has(cacheKey)) {
+  const selectedSource = ['service', 'favicon-is', 'cache'].includes(iconSource) ? iconSource : '';
+  const cacheKey = `${normalizedPageUrl}::${theme || 'auto'}::${explicitIcon}${selectedSource ? `::${selectedSource}` : ''}`;
+  const pendingKey = refresh === true ? `${cacheKey}::refresh` : cacheKey;
+  if (refresh !== true && shortcutFaviconDataCache.has(cacheKey)) {
     return Promise.resolve(shortcutFaviconDataCache.get(cacheKey));
   }
-  if (shortcutFaviconPending.has(cacheKey)) {
-    return shortcutFaviconPending.get(cacheKey);
+  if (shortcutFaviconPending.has(pendingKey)) {
+    return shortcutFaviconPending.get(pendingKey);
   }
+  const cachedResultAtStart = shortcutFaviconDataCache.get(cacheKey);
   const policyRevision = shortcutFaviconPolicyRevision;
   let promise = null;
   promise = Promise.all([
     loadFaviconRequestBlacklistItems(),
     loadFaviconEnhancedFetchEnabled()
-  ]).then(([, enhancedFetchEnabled]) => {
+  ]).then(() => {
     const targetPolicy = getFaviconTargetPolicy(normalizedPageUrl, '');
-    if (!enhancedFetchEnabled || !targetPolicy.ok || targetPolicy.directFetchBlocked ||
-        !canFetchPageForFavicon(normalizedPageUrl)) {
+    if (!targetPolicy.ok || targetPolicy.hardBlocked) {
       return null;
     }
     const controller = typeof AbortController === 'function' ? new AbortController() : null;
@@ -8615,28 +8762,31 @@ function fetchShortcutFaviconData(pageUrl, preferredTheme, explicitIconUrl) {
       normalizedPageUrl,
       theme,
       controller ? controller.signal : undefined,
-      explicitIcon
+      explicitIcon,
+      refresh === true,
+      selectedSource
     ).finally(() => clearTimeout(timeoutId));
   }).then((result) => {
-    if (policyRevision === shortcutFaviconPolicyRevision) {
+    if (result && policyRevision === shortcutFaviconPolicyRevision &&
+        (refresh === true || shortcutFaviconDataCache.get(cacheKey) === cachedResultAtStart)) {
       FAVICON_UTILS.setBoundedCacheEntry(
         shortcutFaviconDataCache,
         cacheKey,
-        result || null,
+        result,
         BACKGROUND_SHORTCUT_FAVICON_CACHE_MAX_ENTRIES
       );
     }
-    if (shortcutFaviconPending.get(cacheKey) === promise) {
-      shortcutFaviconPending.delete(cacheKey);
+    if (shortcutFaviconPending.get(pendingKey) === promise) {
+      shortcutFaviconPending.delete(pendingKey);
     }
     return result || null;
   }).catch(() => {
-    if (shortcutFaviconPending.get(cacheKey) === promise) {
-      shortcutFaviconPending.delete(cacheKey);
+    if (shortcutFaviconPending.get(pendingKey) === promise) {
+      shortcutFaviconPending.delete(pendingKey);
     }
     return null;
   });
-  shortcutFaviconPending.set(cacheKey, promise);
+  shortcutFaviconPending.set(pendingKey, promise);
   return promise;
 }
 
@@ -8919,8 +9069,11 @@ function fetchFaviconData(url, pageUrl) {
     const requestExcluded = isUrlBlockedByFaviconRequestBlacklist(canonicalPageUrl);
     const effectiveEnhancedFetchEnabled = enhancedFetchEnabled && !requestExcluded;
     const sourceAllowedByMode = typeof FAVICON_UTILS.isFaviconSourceAllowedByEnhancedFetchPolicy === 'function'
-      ? FAVICON_UTILS.isFaviconSourceAllowedByEnhancedFetchPolicy(url, effectiveEnhancedFetchEnabled, { chromeApi: chrome })
-      : effectiveEnhancedFetchEnabled === true || (
+      ? FAVICON_UTILS.isFaviconSourceAllowedByEnhancedFetchPolicy(url, effectiveEnhancedFetchEnabled, {
+        chromeApi: chrome,
+        allowThirdPartyFetch: !requestExcluded
+      })
+      : (!requestExcluded && isFaviconProxyUrl(url)) || effectiveEnhancedFetchEnabled === true || (
         typeof FAVICON_UTILS.isSafeVirtualFaviconRequestUrl === 'function' &&
         FAVICON_UTILS.isSafeVirtualFaviconRequestUrl(url)
       );
@@ -8934,6 +9087,12 @@ function fetchFaviconData(url, pageUrl) {
       );
       return null;
     }
+    const resolver = getBackgroundFaviconUrlResolver();
+    const matchedSourceUrl = resolver && resolver.getSafeFaviconCandidateUrl(url, canonicalPageUrl, 'background-data');
+    if (!matchedSourceUrl) {
+      return null;
+    }
+    url = matchedSourceUrl;
     if (isBlockedLocalFaviconUrl(url) || isFaviconRequestBlockedByBlacklist(url)) {
       logBlockedLocalFavicon(url, 'fetchFaviconData');
       return null;
@@ -10533,7 +10692,7 @@ async function getSearchSuggestions(query, options) {
       }
       const itemKey = getSuggestionKey(item);
       const baseScore = calculateSearchRelevanceScore(item, sourceType);
-      if (baseScore <= 0) {
+      if (baseScore <= 0 && sourceType !== 'openTab') {
         return null;
       }
       const normalizedExtras = extras && typeof extras === 'object' ? { ...extras } : {};
@@ -10543,7 +10702,11 @@ async function getSearchSuggestions(query, options) {
       if (selectionBoost > 0) {
         normalizedExtras.selectionBoost = selectionBoost;
       }
-      const suggestion = createSearchSuggestion(item, sourceType, baseScore + scoreAdjustment + selectionBoost, {
+      const rankedScore = baseScore + scoreAdjustment + selectionBoost;
+      // Open tabs have already passed query matching. Ranking penalties must
+      // not make a matching live page disappear from search.
+      const score = sourceType === 'openTab' ? Math.max(1, rankedScore) : rankedScore;
+      const suggestion = createSearchSuggestion(item, sourceType, score, {
         favicon: buildSearchSuggestionFavicon(item.url),
         reasons: buildSuggestionReasons(item, sourceType),
         ...normalizedExtras

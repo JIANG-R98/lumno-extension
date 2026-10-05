@@ -161,7 +161,7 @@ const runtime = sandbox.LumnoNewtabFaviconView.createFaviconViewRuntime({
 (async () => {
   const img = createFakeImage();
   runtime.attachFaviconWithFallbacks(img, 'https://example.test/page', 'example.test');
-  assert.strictEqual(img.src, 'chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Fexample.test%2Fpage&size=128');
+  assert.strictEqual(img.src, 'chrome-extension://abc/_favicon/?pageUrl=https%3A%2F%2Fexample.test%2Fpage&size=128&fallbackToHost=0');
   const browserImg = createFakeImage();
   runtime.attachFaviconWithFallbacks(browserImg, 'chrome://newtab/', 'newtab');
   assert.strictEqual(browserImg.src, 'chrome://favicon2/?pageUrl=chrome%3A%2F%2Fnewtab%2F&size=128');

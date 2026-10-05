@@ -80,50 +80,138 @@
   "settings_selection_quick_actions_group_desc": {
     "message": "すべての AI ページを「AI 検索」タブグループにまとめます"
   },
-  "selection_quick_actions_group_name": { "message": "AI 検索" },
-  "selection_quick_action_ask": { "message": "回答" },
-  "selection_quick_action_translate": { "message": "翻訳" },
-  "selection_quick_action_explain": { "message": "説明" },
-  "selection_quick_action_summarize": { "message": "要約" },
-  "selection_quick_action_search": { "message": "調査" },
-  "selection_quick_action_calculate": { "message": "計算" },
-  "selection_quick_action_open_menu": { "message": "選択したテキストを Lumno で処理" },
-  "selection_quick_action_more": { "message": "その他の操作" },
-  "selection_quick_action_sending": { "message": "バックグラウンドで開いています…" },
-  "selection_quick_action_failed": { "message": "送信できませんでした。もう一度お試しください。" },
-  "selection_debug_decision_title": { "message": "選択判定" },
-  "selection_debug_status_show": { "message": "表示する" },
-  "selection_debug_status_hide": { "message": "表示しない" },
-  "selection_debug_sort_title": { "message": "メニュー順序" },
-  "selection_debug_item_count": { "message": "{count} 件" },
-  "selection_debug_reason_calculate": { "message": "数式、通貨、単位換算を検出" },
-  "selection_debug_reason_question": { "message": "明確な質問を検出" },
-  "selection_debug_reason_prose": { "message": "十分に内容のあるまとまった文章を検出" },
-  "selection_debug_reason_search": { "message": "ニュース、価格、公式サイト、バージョンなどの検索意図を検出" },
-  "selection_debug_reason_translate": { "message": "選択したテキストが Lumno の UI 言語と一致しません" },
-  "selection_debug_reason_error": { "message": "エラーまたは例外を検出" },
-  "selection_debug_reason_code": { "message": "コード構造またはコード領域を検出" },
-  "selection_debug_reason_term": { "message": "意味のある単語または短いフレーズを検出" },
-  "selection_debug_reason_explain_score": { "message": "「説明」のスコアが最も高い" },
-  "selection_debug_reason_top_score": { "message": "この操作の一致スコアが最も高い" },
-  "selection_debug_rejection_disabled": { "message": "選択クイックアクションが無効です" },
-  "selection_debug_rejection_sensitive": { "message": "パスワード、支払い情報などの機密フィールドです。内容は読み取っていません" },
-  "selection_debug_rejection_no_selection": { "message": "有効なテキスト選択を取得できませんでした" },
-  "selection_debug_rejection_too_short": { "message": "2 文字未満" },
-  "selection_debug_rejection_too_long": { "message": "2400 文字を超えています" },
-  "selection_debug_rejection_url": { "message": "完全な URL です" },
-  "selection_debug_rejection_email": { "message": "メールアドレスです" },
-  "selection_debug_rejection_generic_ui": { "message": "「続きを読む / 保存 / 次へ」などの一般的な UI テキストです" },
-  "selection_debug_rejection_plain_number": { "message": "単なる数値で、計算や換算ではありません" },
-  "selection_debug_rejection_symbols": { "message": "記号の割合が高すぎます" },
-  "selection_debug_rejection_no_intent": { "message": "明確なタスク、意味のある用語、十分な本文のいずれにも一致しません" },
-  "selection_debug_primary_meta": { "message": "優先：{action} · スコア {score} · 信頼度 {confidence}" },
-  "selection_debug_confidence_high": { "message": "高" },
-  "selection_debug_confidence_medium": { "message": "中" },
-  "selection_debug_confidence_low": { "message": "低" },
-  "selection_debug_sort_primary_cause": { "message": "{reason}、スコア {score}" },
-  "selection_debug_sort_fallback_cause": { "message": "一般的な候補として固定順で補完し、重複を除外" },
-  "selection_debug_sort_footer": { "message": "先頭は意図スコアが最も高い操作です。残りは「説明 → 調査 → 翻訳」の順で補完します。" },
+  "selection_quick_actions_group_name": {
+    "message": "AI 検索"
+  },
+  "selection_quick_action_ask": {
+    "message": "回答"
+  },
+  "selection_quick_action_translate": {
+    "message": "翻訳"
+  },
+  "selection_quick_action_explain": {
+    "message": "説明"
+  },
+  "selection_quick_action_summarize": {
+    "message": "要約"
+  },
+  "selection_quick_action_search": {
+    "message": "調査"
+  },
+  "selection_quick_action_calculate": {
+    "message": "計算"
+  },
+  "selection_quick_action_open_menu": {
+    "message": "選択したテキストを Lumno で処理"
+  },
+  "selection_quick_action_more": {
+    "message": "その他の操作"
+  },
+  "selection_quick_action_sending": {
+    "message": "バックグラウンドで開いています…"
+  },
+  "selection_quick_action_failed": {
+    "message": "送信できませんでした。もう一度お試しください。"
+  },
+  "selection_debug_decision_title": {
+    "message": "選択判定"
+  },
+  "selection_debug_status_show": {
+    "message": "表示する"
+  },
+  "selection_debug_status_hide": {
+    "message": "表示しない"
+  },
+  "selection_debug_sort_title": {
+    "message": "メニュー順序"
+  },
+  "selection_debug_item_count": {
+    "message": "{count} 件"
+  },
+  "selection_debug_reason_calculate": {
+    "message": "数式、通貨、単位換算を検出"
+  },
+  "selection_debug_reason_question": {
+    "message": "明確な質問を検出"
+  },
+  "selection_debug_reason_prose": {
+    "message": "十分に内容のあるまとまった文章を検出"
+  },
+  "selection_debug_reason_search": {
+    "message": "ニュース、価格、公式サイト、バージョンなどの検索意図を検出"
+  },
+  "selection_debug_reason_translate": {
+    "message": "選択したテキストが Lumno の UI 言語と一致しません"
+  },
+  "selection_debug_reason_error": {
+    "message": "エラーまたは例外を検出"
+  },
+  "selection_debug_reason_code": {
+    "message": "コード構造またはコード領域を検出"
+  },
+  "selection_debug_reason_term": {
+    "message": "意味のある単語または短いフレーズを検出"
+  },
+  "selection_debug_reason_explain_score": {
+    "message": "「説明」のスコアが最も高い"
+  },
+  "selection_debug_reason_top_score": {
+    "message": "この操作の一致スコアが最も高い"
+  },
+  "selection_debug_rejection_disabled": {
+    "message": "選択クイックアクションが無効です"
+  },
+  "selection_debug_rejection_sensitive": {
+    "message": "パスワード、支払い情報などの機密フィールドです。内容は読み取っていません"
+  },
+  "selection_debug_rejection_no_selection": {
+    "message": "有効なテキスト選択を取得できませんでした"
+  },
+  "selection_debug_rejection_too_short": {
+    "message": "2 文字未満"
+  },
+  "selection_debug_rejection_too_long": {
+    "message": "2400 文字を超えています"
+  },
+  "selection_debug_rejection_url": {
+    "message": "完全な URL です"
+  },
+  "selection_debug_rejection_email": {
+    "message": "メールアドレスです"
+  },
+  "selection_debug_rejection_generic_ui": {
+    "message": "「続きを読む / 保存 / 次へ」などの一般的な UI テキストです"
+  },
+  "selection_debug_rejection_plain_number": {
+    "message": "単なる数値で、計算や換算ではありません"
+  },
+  "selection_debug_rejection_symbols": {
+    "message": "記号の割合が高すぎます"
+  },
+  "selection_debug_rejection_no_intent": {
+    "message": "明確なタスク、意味のある用語、十分な本文のいずれにも一致しません"
+  },
+  "selection_debug_primary_meta": {
+    "message": "優先：{action} · スコア {score} · 信頼度 {confidence}"
+  },
+  "selection_debug_confidence_high": {
+    "message": "高"
+  },
+  "selection_debug_confidence_medium": {
+    "message": "中"
+  },
+  "selection_debug_confidence_low": {
+    "message": "低"
+  },
+  "selection_debug_sort_primary_cause": {
+    "message": "{reason}、スコア {score}"
+  },
+  "selection_debug_sort_fallback_cause": {
+    "message": "一般的な候補として固定順で補完し、重複を除外"
+  },
+  "selection_debug_sort_footer": {
+    "message": "先頭は意図スコアが最も高い操作です。残りは「説明 → 調査 → 翻訳」の順で補完します。"
+  },
   "settings_global_section_title": {
     "message": "全体設定"
   },
@@ -187,6 +275,18 @@
   "settings_search_result_priority_title": {
     "message": "検索結果の先頭表示優先度"
   },
+  "settings_search_result_tab_position_title": {
+    "message": "検索結果のタブを開く位置"
+  },
+  "search_result_tab_position_end": {
+    "message": "タブバーの右端（最下部）"
+  },
+  "search_result_tab_position_after_current": {
+    "message": "現在のタブの右隣（下）"
+  },
+  "search_result_tab_position_before_current": {
+    "message": "現在のタブの左隣（上）"
+  },
   "settings_search_result_sources_title": {
     "message": "表示する結果タイプ"
   },
@@ -200,7 +300,7 @@
     "message": "アイコンとテーマカラーの拡張取得"
   },
   "settings_favicon_enhanced_fetch_desc": {
-    "message": "ローカルネットワークへのアクセス許可を求められた場合は、この機能をオフにしてください。オフにすると、ブラウザのキャッシュ、Lumno 内蔵、または汎用アイコンのみを使用します。"
+    "message": "ローカルネットワークへのアクセス許可を求められた場合は、この機能をオフにしてください。ウェブサイトの画像を直接読み込まなくなりますが、ブラウザキャッシュ、内蔵アイコン、サードパーティのアイコンサービスは引き続き利用できます。"
   },
   "favicon_blacklist_section_desc": {
     "message": "サイトごとに除外"
@@ -916,13 +1016,21 @@
   "newtab_wallpaper_effect_texture": {
     "message": "テクスチャ"
   },
-  "newtab_wallpaper_effect_blocks_size": { "message": "ブロックサイズ" },
+  "newtab_wallpaper_effect_blocks_size": {
+    "message": "ブロックサイズ"
+  },
   "newtab_wallpaper_effect_crt_strength": {
     "message": "表示強度"
   },
-  "newtab_wallpaper_effect_crt_bloom": { "message": "ブルーム" },
-  "newtab_wallpaper_effect_crt_rgb_offset": { "message": "RGB ずれ" },
-  "newtab_wallpaper_effect_crt_curvature": { "message": "画面の湾曲" },
+  "newtab_wallpaper_effect_crt_bloom": {
+    "message": "ブルーム"
+  },
+  "newtab_wallpaper_effect_crt_rgb_offset": {
+    "message": "RGB ずれ"
+  },
+  "newtab_wallpaper_effect_crt_curvature": {
+    "message": "画面の湾曲"
+  },
   "newtab_wallpaper_effect_none": {
     "message": "オフ"
   },
@@ -1398,7 +1506,7 @@
     "message": "ブックマークを編集"
   },
   "bookmarks_edit_folder_dialog_title": {
-    "message": "フォルダーを編集"
+    "message": "フォルダの名前を変更"
   },
   "bookmarks_name_placeholder": {
     "message": "名前"
@@ -1776,7 +1884,7 @@
     "message": "一括検索のタブグループを自動作成"
   },
   "settings_aggregate_search_auto_group_desc": {
-    "message": "有効にすると、一括検索で開いたすべてのタブを1つのグループにまとめ、検索キーワードをグループ名にします"
+    "message": "有効にすると、一括検索で開いたすべてのタブを1つのグループにまとめ、「一括検索名：検索キーワード」という名前を付けます"
   },
   "aggregate_search_badge": {
     "message": "一括"
@@ -1827,10 +1935,10 @@
     "message": "WeChat公式"
   },
   "settings_sync_title": {
-    "message": "ブラウザ内蔵同期"
+    "message": "{browser} の内蔵同期"
   },
   "settings_sync_section_title": {
-    "message": "同期方法"
+    "message": "ブラウザ内蔵同期"
   },
   "settings_sync_desc": {
     "message": "現在のブラウザの標準同期サービスで設定を自動的に同期します"
@@ -2114,17 +2222,107 @@
   "newtab_shortcuts_url_label": {
     "message": "URL"
   },
+  "newtab_shortcuts_url_info_label": {
+    "message": "対応URLについて"
+  },
+  "newtab_shortcuts_url_info": {
+    "message": "ブラウザーの内部ページにも対応しています。例：\nchrome://inspect/#devices"
+  },
   "newtab_shortcuts_url_placeholder": {
     "message": "https://example.com"
   },
   "newtab_shortcuts_icon_label": {
     "message": "アイコン（任意）"
   },
+  "newtab_shortcuts_icon_mode_label": {
+    "message": "アイコンの取得元"
+  },
+  "newtab_shortcuts_icon_builtin": {
+    "message": "内蔵アイコン"
+  },
+  "newtab_shortcuts_icon_builtin_hint": {
+    "message": "Lumno に同梱された高画質アイコンを使用します。"
+  },
+  "newtab_shortcuts_icon_builtin_network_hint": {
+    "message": "ネット接続は不要です。"
+  },
+  "newtab_shortcuts_icon_builtin_info_label": {
+    "message": "内蔵アイコンについて"
+  },
+  "newtab_shortcuts_icon_service": {
+    "message": "Gstatic（外部アイコンサービス）"
+  },
+  "newtab_shortcuts_icon_favicon_is": {
+    "message": "Favicon.is（外部アイコンサービス）"
+  },
+  "newtab_shortcuts_icon_favicon_is_hint": {
+    "message": "Favicon.is にドメインを送信し、大きなアイコンを取得。"
+  },
+  "newtab_shortcuts_icon_favicon_is_caution": {
+    "message": "ドメイン単位のため、ページのアイコンと異なる場合も。"
+  },
+  "newtab_shortcuts_icon_cache": {
+    "message": "ブラウザキャッシュ"
+  },
+  "newtab_shortcuts_icon_service_hint": {
+    "message": "Gstatic にドメインを送信。安定・高画質。"
+  },
+  "newtab_shortcuts_icon_cache_hint": {
+    "message": "ブラウザのキャッシュを使用。高速・正確。"
+  },
+  "newtab_shortcuts_icon_custom_hint": {
+    "message": "標準ではこの端末に保存され、ブラウザ同期の対象外です。"
+  },
+  "newtab_shortcuts_icon_service_caution": {
+    "message": "一部のサイトを認識できない場合があります。"
+  },
+  "newtab_shortcuts_icon_cache_caution": {
+    "message": "サイト設定により、通知バッジや低画質の場合も。"
+  },
+  "newtab_shortcuts_icon_custom_sync_hint": {
+    "message": "WebDAV で端末間の同期ができます。"
+  },
+  "newtab_shortcuts_icon_refresh_success": {
+    "message": "取得しました"
+  },
+  "newtab_shortcuts_icon_cache_failed": {
+    "message": "キャッシュにアイコンがありません。サイトを開いてから、もう一度更新してください。"
+  },
+  "newtab_shortcuts_icon_source_unavailable": {
+    "message": "この取得元は利用できません。ブラウザキャッシュかカスタムアイコンを選んでください。"
+  },
+  "newtab_shortcuts_icon_online": {
+    "message": "オンラインアイコン"
+  },
+  "newtab_shortcuts_icon_custom": {
+    "message": "カスタムアイコン"
+  },
+  "newtab_shortcuts_icon_current": {
+    "message": "現在のアイコン"
+  },
+  "newtab_shortcuts_icon_refresh": {
+    "message": "更新"
+  },
+  "newtab_shortcuts_icon_refreshing": {
+    "message": "更新中…"
+  },
+  "newtab_shortcuts_icon_refresh_failed": {
+    "message": "アイコンを更新できませんでした。後でもう一度お試しください。"
+  },
+  "newtab_shortcuts_icon_custom_required": {
+    "message": "カスタムアイコンに使用する画像を選択してください。"
+  },
+  "newtab_shortcuts_icon_online_info_label": {
+    "message": "オンラインアイコンについて"
+  },
+  "newtab_shortcuts_icon_online_info": {
+    "message": "オンラインアイコンは更新して保存するまで変わりません。更新にはアイコンサービスまたはブラウザのキャッシュを使用します。"
+  },
   "newtab_shortcuts_icon_info_label": {
     "message": "ローカルアイコンについて"
   },
   "newtab_shortcuts_icon_info": {
-    "message": "PNG、JPG、WebP に対応。128×128 px 以上の透明な正方形アイコンを推奨します。このデバイスにのみ保存されます。"
+    "message": "PNG、JPG、WebP に対応。128×128 px 以上の透明な正方形アイコンを推奨します。標準ではこの端末に保存され、WebDAV で同期できます。"
   },
   "newtab_shortcuts_icon_choose": {
     "message": "画像を選択"
@@ -2147,6 +2345,54 @@
   "newtab_shortcuts_icon_storage_error": {
     "message": "ローカルアイコンを保存できませんでした。別の画像をお試しください"
   },
+  "folder_rename": {
+    "message": "名前を変更"
+  },
+  "folder_color_change": {
+    "message": "色を変更"
+  },
+  "folder_color_format": {
+    "message": "カラー形式"
+  },
+  "folder_color_title": {
+    "message": "フォルダの色"
+  },
+  "folder_color_description": {
+    "message": "ショートカットやメニュー内の同じフォルダにも適用されます。この端末に保存されます。"
+  },
+  "folder_color_presets": {
+    "message": "プリセットカラー"
+  },
+  "folder_color_reset": {
+    "message": "初期色に戻す"
+  },
+  "folder_color_reset_tooltip": {
+    "message": "既定の色に戻す"
+  },
+  "folder_color_saved": {
+    "message": "保存した色"
+  },
+  "folder_color_save_current": {
+    "message": "現在の色を保存"
+  },
+  "folder_color_remove_saved": {
+    "message": "保存した色を削除"
+  },
+  "folder_color_saved_delete_failed": {
+    "message": "この色を削除できませんでした。もう一度お試しください。"
+  },
+  "folder_color_saved_load_failed": {
+    "message": "保存した色を読み込めませんでした。カラーピッカーを開き直して、もう一度お試しください。"
+  },
+  "folder_color_saved_save_failed": {
+    "message": "この色を保存できませんでした。もう一度お試しください。"
+  },
+  "folder_color_invalid": {
+    "message": "有効な HEX 値、または 0〜255 の RGB 値を入力してください。"
+  },
+  "folder_color_save_failed": {
+    "message": "フォルダの色を保存できませんでした。もう一度お試しください。"
+  },
   "newtab_shortcuts_cancel": {
     "message": "キャンセル"
   },
@@ -2157,7 +2403,7 @@
     "message": "保存"
   },
   "newtab_shortcuts_invalid_url": {
-    "message": "有効な http または https のURLを入力してください"
+    "message": "有効な http、https、またはブラウザーの内部ページのURLを入力してください"
   },
   "newtab_shortcuts_limit_reached": {
     "message": "ショートカットは最大 {count} 件まで追加できます。"
@@ -2173,6 +2419,27 @@
   },
   "newtab_shortcuts_removed": {
     "message": "ショートカットを削除しました"
+  },
+  "newtab_shortcuts_removed_undo": {
+    "message": "ショートカットを削除しました · {shortcut} で元に戻す"
+  },
+  "newtab_shortcuts_remove_undone": {
+    "message": "ショートカットを復元しました · {shortcut} でやり直す"
+  },
+  "newtab_shortcuts_remove_redone": {
+    "message": "ショートカットを再び削除しました · {shortcut} で元に戻す"
+  },
+  "newtab_shortcuts_open_folder": {
+    "message": "フォルダを開く"
+  },
+  "newtab_shortcuts_from_bookmarks": {
+    "message": "（ブックマークバーから）"
+  },
+  "newtab_shortcuts_folder_added": {
+    "message": "フォルダをショートカットに追加しました"
+  },
+  "newtab_shortcuts_folder_missing": {
+    "message": "このブックマークフォルダは利用できなくなりました。"
   },
   "newtab_shortcuts_moved_to_bookmarks": {
     "message": "ブックマークに移動しました"
@@ -2192,10 +2459,325 @@
   "settings_tab_switcher_desc": {
     "message": "最近のタブをすばやく切り替えます。デフォルトは {shortcut} で、変更できます。"
   },
-  "slash_command_empty": { "message": "一致するコマンドはありません" },
-  "command_tabs_title": { "message": "開いているタブのみを検索" },
-  "command_tabs_action": { "message": "タブを検索" },
-  "command_copy_title": { "message": "現在のページのリンクをコピー" },
-  "command_copy_action": { "message": "リンクをコピー" },
-  "settings_tab_account": { "message": "アカウントと同期" }
+  "slash_command_empty": {
+    "message": "一致するコマンドはありません"
+  },
+  "command_tabs_title": {
+    "message": "開いているタブのみを検索"
+  },
+  "command_tabs_action": {
+    "message": "タブを検索"
+  },
+  "command_copy_title": {
+    "message": "現在のページのリンクをコピー"
+  },
+  "command_copy_action": {
+    "message": "リンクをコピー"
+  },
+  "settings_tab_account": {
+    "message": "アカウントと同期"
+  },
+  "webdav_endpoint": {
+    "message": "サーバー URL（HTTPS）"
+  },
+  "webdav_directory": {
+    "message": "同期フォルダー"
+  },
+  "webdav_username": {
+    "message": "ユーザー名"
+  },
+  "webdav_password": {
+    "message": "アプリパスワード"
+  },
+  "webdav_credentials_hint": {
+    "message": "接続情報はこの端末にのみ保存されます。他の端末でも個別に設定し、保存後に同期をオンにしてください。"
+  },
+  "webdav_password_saved": {
+    "message": "保存済み。空欄なら変更しません"
+  },
+  "webdav_last_sync": {
+    "message": "最終同期"
+  },
+  "webdav_backup_complete": {
+    "message": "Chrome の設定のコピーを更新しました（画像を除く）"
+  },
+  "webdav_backup_partial": {
+    "message": "Chrome の設定のコピーは一部のみです。すべてのデータはこの端末に保存されています"
+  },
+  "webdav_backup_failed": {
+    "message": "Chrome の設定のコピーを更新できませんでした。すべてのデータはこの端末に保存されています"
+  },
+  "webdav_choice_hint": {
+    "message": "サーバーに設定があります。この端末とサーバーのどちらを使うか選んでください。置き換え前に端末のバックアップを保存します。Chrome 同期は続行されます。"
+  },
+  "webdav_conflict_hint": {
+    "message": "両方で同じ内容が変更されました。競合する内容に使うバージョンを選んでください。他の変更は統合し、置き換え前にバックアップを保存します。Chrome 同期は続行されます。"
+  },
+  "webdav_error_endpoint": {
+    "message": "有効な HTTPS WebDAV URL を入力してください。"
+  },
+  "webdav_error_directory": {
+    "message": "有効な同期フォルダー名を入力してください。"
+  },
+  "webdav_error_credentials": {
+    "message": "ユーザー名とアプリパスワードを入力してください。"
+  },
+  "webdav_error_auth": {
+    "message": "認証に失敗しました。ユーザー名とアプリパスワードを確認してください。"
+  },
+  "webdav_error_permission": {
+    "message": "アクセスが拒否されました。フォルダーの読み書き権限を確認してください。"
+  },
+  "webdav_error_rate": {
+    "message": "サーバーのリクエスト上限に達しました。しばらくしてから再試行してください。"
+  },
+  "webdav_error_capacity": {
+    "message": "WebDAV の空き容量が不足しています。空き容量を確保して再試行してください。"
+  },
+  "webdav_error_conditional": {
+    "message": "このサーバーは同時更新による上書きを防止できないため、自動同期に対応していません。"
+  },
+  "webdav_error_changed": {
+    "message": "同期中に設定が変更されました。端末のデータを保持し、同期を再試行します。"
+  },
+  "webdav_error_missing": {
+    "message": "サーバーの設定が削除されました。端末の設定をアップロードして再作成するか、サーバー URL を確認してください。"
+  },
+  "webdav_error_chrome_capacity": {
+    "message": "設定が Chrome 同期の容量を超えるため適用できません。既存の Chrome 同期と端末のデータは保持されます。設定を減らして再試行してください。"
+  },
+  "webdav_error_network": {
+    "message": "接続に失敗またはタイムアウトしました。ネットワーク、サーバー URL、証明書を確認してください。端末のデータは保持しています。"
+  },
+  "webdav_error_invalid": {
+    "message": "サーバーの設定が無効または大きすぎます。端末のデータは置換していません。"
+  },
+  "webdav_error_asset": {
+    "message": "画像が見つからない、破損している、または未対応です。端末の設定は保持しています。"
+  },
+  "webdav_error_storage": {
+    "message": "同期データを保存できません。ブラウザーのローカルストレージを確認してください。"
+  },
+  "webdav_error_shortcuts": {
+    "message": "復元するとショートカット数の上限を超えます。端末のフォルダーショートカットを減らしてください。"
+  },
+  "webdav_error_generic": {
+    "message": "同期に失敗しました。後で再試行してください。端末のデータは保持しています。"
+  },
+  "webdav_test": {
+    "message": "接続テスト"
+  },
+  "webdav_enable": {
+    "message": "保存して有効にする"
+  },
+  "webdav_sync": {
+    "message": "今すぐ同期"
+  },
+  "webdav_pause": {
+    "message": "WebDAV を一時停止"
+  },
+  "webdav_browser": {
+    "message": "ブラウザー同期に戻す"
+  },
+  "webdav_restore_backup": {
+    "message": "置き換え前のローカル設定を復元"
+  },
+  "webdav_use_remote": {
+    "message": "サーバーのバージョンを使う"
+  },
+  "webdav_use_local": {
+    "message": "この端末のバージョンを使う"
+  },
+  "webdav_test_success": {
+    "message": "接続・読み書き・同時更新の保護を確認しました"
+  },
+  "webdav_state_browser": {
+    "message": "オフ"
+  },
+  "webdav_state_ready": {
+    "message": "同期済み"
+  },
+  "webdav_state_syncing": {
+    "message": "同期中…"
+  },
+  "webdav_state_paused": {
+    "message": "一時停止中"
+  },
+  "webdav_state_pending": {
+    "message": "同期待ち"
+  },
+  "webdav_state_choice": {
+    "message": "設定を選択してください"
+  },
+  "webdav_state_conflict": {
+    "message": "設定の競合"
+  },
+  "webdav_state_error": {
+    "message": "同期に失敗"
+  },
+  "webdav_error_interrupted": {
+    "message": "前回の設定の置き換えが中断され、アップロードを一時停止しました。以前のローカル設定を復元するか、再接続してリモート設定を使用してください。"
+  },
+  "webdav_missing_hint": {
+    "message": "リモート設定が存在しません。ローカル設定をアップロードして同期を再開するか、サーバーのアドレスを確認してください。"
+  },
+  "webdav_restore_success": {
+    "message": "端末のバックアップを復元し、この WebDAV 接続を一時停止しました。"
+  },
+  "webdav_chrome_backup_title": {
+    "message": "Chrome の設定のコピー"
+  },
+  "webdav_error_locked": {
+    "message": "別のデバイスがサーバーに書き込んでいます。後で再試行してください。解除されない場合は、WebDAV ガイドに従って残ったロックを処理してください。"
+  },
+  "webdav_error_lock_recovery": {
+    "message": "リモートへの書き込みが安全に完了しなかったため、書き込み保護を保持しています。すべてのデバイスで同期を一時停止し、中断したリクエストが終了したことを確認してから、リモート同期フォルダー内の v1/write-lock を削除してください。"
+  },
+  "webdav_error_outdated": {
+    "message": "Lumno 拡張機能を再読み込みしてから設定ページを更新し、複数の WebDAV 接続を利用してください。"
+  },
+  "webdav_client_revision": {
+    "message": "接続テストのバージョン"
+  },
+  "webdav_title": {
+    "message": "WebDAV 同期"
+  },
+  "webdav_beta_hint": {
+    "message": "WebDAV サーバーを通じて設定・カスタムアイコン・壁紙を同期します。ブラウザ内蔵同期と同時に動作し、複数の接続を追加して個別に同期を有効にできます。\n\n現在は Beta 版のため、同期の失敗や設定の不具合が発生する可能性があります。改善のため、問題の報告をお待ちしています。"
+  },
+  "webdav_setup_hint": {
+    "message": "サーバーを追加して保存した後、その接続の同期を有効にしてください。"
+  },
+  "webdav_unsaved_hint": {
+    "message": "接続設定を保存してから同期をオンにしてください。"
+  },
+  "webdav_configure": {
+    "message": "サーバーを設定"
+  },
+  "webdav_edit_config": {
+    "message": "接続設定を編集"
+  },
+  "webdav_save": {
+    "message": "設定を保存"
+  },
+  "webdav_save_success": {
+    "message": "接続設定をこの端末に保存しました。WebDAV 同期をオンにできます。"
+  },
+  "webdav_edit_active_hint": {
+    "message": "保存すると、この WebDAV 接続は一時停止します。他の接続と Chrome 同期は継続します。保存後に再度有効にできます。"
+  },
+  "webdav_never_synced": {
+    "message": "未同期"
+  },
+  "webdav_state_saving": {
+    "message": "設定を保存中"
+  },
+  "webdav_state_testing": {
+    "message": "接続をテスト中"
+  },
+  "webdav_choice_title": {
+    "message": "最初に同期するデータを選択"
+  },
+  "webdav_conflict_title": {
+    "message": "同期内容が競合しています"
+  },
+  "webdav_conflict_items": {
+    "message": "競合する内容"
+  },
+  "webdav_conflict_shortcuts": {
+    "message": "ショートカットとアイコン"
+  },
+  "webdav_conflict_wallpapers": {
+    "message": "壁紙と選択"
+  },
+  "webdav_conflict_preferences": {
+    "message": "設定項目"
+  },
+  "webdav_resolve_later": {
+    "message": "後で解決して一時停止"
+  },
+  "webdav_add": {
+    "message": "WebDAV を追加"
+  },
+  "webdav_remove": {
+    "message": "WebDAV 接続を削除"
+  },
+  "webdav_remove_confirm": {
+    "message": "この端末の接続設定を削除しますか？サーバー上のファイルは保持されます。"
+  },
+  "newtab_quote_title": {
+    "message": "今日の一言"
+  },
+  "newtab_quote_position": {
+    "message": "表示位置"
+  },
+  "newtab_quote_category": {
+    "message": "一言の種類"
+  },
+  "newtab_quote_off": {
+    "message": "オフ"
+  },
+  "newtab_quote_search": {
+    "message": "ショートカットの下"
+  },
+  "newtab_quote_bottom": {
+    "message": "ページ下部"
+  },
+  "newtab_quote_literature": {
+    "message": "文学"
+  },
+  "newtab_quote_poetry": {
+    "message": "詩詞"
+  },
+  "newtab_quote_source": {
+    "message": "一言で見る"
+  },
+  "newtab_quote_save_error": {
+    "message": "一言の設定を保存できませんでした"
+  },
+  "newtab_quote_fallback_text": {
+    "message": "千里の道も一歩から。"
+  },
+  "newtab_quote_fallback_author": {
+    "message": "老子"
+  },
+  "newtab_quote_fallback_source": {
+    "message": "道徳経"
+  },
+  "newtab_bing_daily": {
+    "message": "毎日の壁紙"
+  },
+  "newtab_bing_daily_hint": {
+    "message": "毎日 Bing の写真に更新します。オフにすると現在の壁紙を固定します。"
+  },
+  "newtab_bing_recent": {
+    "message": "最近の壁紙"
+  },
+  "newtab_bing_refresh": {
+    "message": "更新"
+  },
+  "newtab_bing_loading": {
+    "message": "壁紙を読み込み中…"
+  },
+  "newtab_bing_saving": {
+    "message": "壁紙を保存中…"
+  },
+  "newtab_bing_error": {
+    "message": "壁紙を読み込めませんでした。もう一度お試しください。"
+  },
+  "newtab_bing_save_error": {
+    "message": "壁紙を保存できませんでした。もう一度お試しください。"
+  },
+  "newtab_bing_source": {
+    "message": "壁紙の出典を見る"
+  },
+  "newtab_quote_font_size": {
+    "message": "文字サイズ"
+  },
+  "newtab_quote_font_size_label": {
+    "message": "一言の文字サイズ（px）"
+  },
+  "newtab_quote_provider": {
+    "message": "一言によるサービス提供"
+  }
 }

@@ -20,7 +20,7 @@
 }
 
 ._x_extension_menu_surface_2024_unique_[data-open="true"],
-[data-open="true"] > ._x_extension_menu_surface_2024_unique_ {
+[data-open="true"] > ._x_extension_menu_surface_2024_unique_:not([data-open]) {
   opacity: 1;
   transform: var(--x-extension-menu-surface-open-transform);
   pointer-events: auto;

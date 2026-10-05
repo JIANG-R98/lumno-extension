@@ -1,5 +1,6 @@
 import {
   useLayoutEffect,
+  useMemo,
   useRef,
   type FocusEvent as ReactFocusEvent,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -88,7 +89,7 @@ export interface BookmarksViewOptions {
   getSiteDisplayName?: (host: string, title?: string) => string;
   getUrlDisplay?: (url: string) => string;
   getRiSvg?: (id: string, sizeClass?: string) => string;
-  getFigmaFolderSvg?: (id: string) => string;
+  getFigmaFolderSvg?: (id: string, folderId?: string) => string;
   initFolderPathMorph?: (element: HTMLElement) => void;
   playFolderPathMorph?: (
     element: HTMLElement,
@@ -530,6 +531,10 @@ function BookmarkCard({
 
   const isTopbarMode = viewMode === 'top';
   const isFolder = item.type === 'folder';
+  const folderIconId = String(item.id || `folder-${index}`);
+  const folderIconHtml = useMemo(() => ({
+    __html: isFolder ? options.getFigmaFolderSvg(`bookmark-${folderIconId}`, item.id) : ''
+  }), [isFolder, folderIconId, item.id, options]);
   const themeUrl = String(item.themeUrl || item.url || '');
   const host = String(item.host || options.getHostFromUrl(themeUrl) || '');
   const siteName = options.getSiteDisplayName(
@@ -689,12 +694,12 @@ function BookmarkCard({
       return;
     }
     clearHoverIntentTimer();
-    hoverVisualActiveRef.current = false;
-    menuVisualLockedRef.current = false;
+    menuVisualLockedRef.current = Boolean(isFolder && menuMode && card.getAttribute('aria-expanded') === 'true');
+    hoverVisualActiveRef.current = menuVisualLockedRef.current;
     copyActionFocusedRef.current = false;
-    card.classList.remove('x-nt-bookmark-card--hover');
+    card.classList.toggle('x-nt-bookmark-card--hover', menuVisualLockedRef.current);
     card.removeAttribute('data-bookmark-copy-action-visible');
-    setFolderExpanded(false);
+    syncFolderExpandedState();
   }
 
   function clearDragClickSuppression(): void {
@@ -787,9 +792,6 @@ function BookmarkCard({
     options.hideCursorTooltip();
     if (isFolder) {
       if (menuMode) {
-        if (shouldKeepMenuVisualActive()) {
-          return;
-        }
         setMenuVisualLocked(true);
         options.openFolderMenu(item, card);
         return;
@@ -825,7 +827,7 @@ function BookmarkCard({
     if (!isTopbarMode) {
       options.applyCardTheme(card, immediateTheme, host);
     }
-    if (isFolder && icon && !isTopbarMode) {
+    if (isFolder && icon) {
       options.initFolderPathMorph(icon);
     }
     if (!isFolder && favicon) {
@@ -1005,11 +1007,7 @@ function BookmarkCard({
           ref={iconRef}
           className="x-nt-bookmark-icon x-nt-bookmark-icon--figma"
           aria-hidden="true"
-          dangerouslySetInnerHTML={{
-            __html: options.getFigmaFolderSvg(
-              `${item.id || 'folder'}-${index}`
-            )
-          }}
+          dangerouslySetInnerHTML={folderIconHtml}
         />
       ) : (
         <img
@@ -1109,7 +1107,7 @@ function BookmarksList({
 }) {
   return items.map((item, index) => (
     <BookmarkCard
-      key={`${viewMode}::${getBookmarkCacheKey(item)}`}
+      key={`${viewMode}::${item.id ? `${item.id}::${item.type || ''}` : getBookmarkCacheKey(item)}`}
       item={item}
       index={index}
       viewMode={viewMode}

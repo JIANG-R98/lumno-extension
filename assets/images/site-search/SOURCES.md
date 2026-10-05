@@ -1,6 +1,6 @@
 # Built-in search icon provenance
 
-The only runtime artwork in this directory is the bundled `tile-<key>.png` set. Options, new tab, and the search-scope panel all resolve icons through the same shared key-to-tile map. Each 144px RGBA tile bakes in its background and clipping mask so the artwork remains legible in both light and dark themes.
+Options and the search-scope panel use the bundled `tile-<key>.png` set. Each 144px RGBA tile bakes in its background and clipping mask so the artwork remains legible in both light and dark themes. New-tab shortcuts use the separate `glyph-<key>.svg/png` set: original artwork recovered from the frozen sources used to make these tiles, without adding a second tile background or clipping mask. Any background belonging to the brand artwork itself is preserved. Kagi's glyph is extracted from its frozen tile with the white tile field removed.
 
 The notes below record the provenance of those frozen tiles. Brand names and marks remain the property of their respective owners.
 

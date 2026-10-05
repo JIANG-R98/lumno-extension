@@ -5,8 +5,21 @@
   }
   root.LumnoNewtabBookmarkFolderIcon = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function() {
-  function getFigmaFolderSvg(idSuffix) {
+  const DEFAULT_FOLDER_COLOR = '#5393FF';
+  const FOLDER_COLORS_STORAGE_KEY = '_x_extension_bookmark_folder_colors_2026_unique_';
+  function normalizeFolderColorMap(value) {
+    const result = {};
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return result;
+    Object.entries(value).forEach(([id, color]) => {
+      if (/^[a-zA-Z0-9_-]+$/.test(id) && !['__proto__', 'constructor', 'prototype'].includes(id) && typeof color === 'string' && hexToRgb(color)) {
+        result[id] = rgbToHex(hexToRgb(color)).toUpperCase();
+      }
+    });
+    return result;
+  }
+  function getFigmaFolderSvg(idSuffix, folderId) {
     const suffix = String(idSuffix || 'default').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const colorId = String(folderId || '').replace(/[^a-zA-Z0-9_-]/g, '_');
     const baseLowerFilterId = `x-nt-folder-filter-lower-base-${suffix}`;
     const baseUpperFilterId = `x-nt-folder-filter-upper-base-${suffix}`;
     const hoverLowerFilterId = `x-nt-folder-filter-lower-hover-${suffix}`;
@@ -18,8 +31,9 @@
     const hoverUpperOverlayGradientId = `x-nt-folder-gradient-upper-overlay-hover-${suffix}`;
     const morphUpperGradientId = `x-nt-folder-gradient-upper-morph-${suffix}`;
     const morphUpperOverlayGradientId = `x-nt-folder-gradient-upper-overlay-morph-${suffix}`;
+    // The closed shape spans y=2..23; center its geometry while leaving shadows visible.
     return `
-      <svg viewBox="0 0 31 29" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+      <svg data-folder-color-id="${colorId}" viewBox="0 -2 31 29" overflow="visible" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
         <g data-folder-layer="lower">
           <g class="x-nt-folder-shape x-nt-folder-shape--base" filter="url(#${baseLowerFilterId})">
             <path data-folder-part="lower-body" data-folder-fill-base="url(#${baseLowerGradientId})" data-folder-fill-hover="url(#${hoverLowerGradientId})" d="M7.24 2C6.08213 2 5.5032 2 5.06414 2.23247C4.70983 2.42007 4.42007 2.70983 4.23247 3.06414C4 3.5032 4 4.08213 4 5.24V19.76C4 20.9179 4 21.4968 4.23247 21.9359C4.42007 22.2902 4.70983 22.5799 5.06414 22.7675C5.5032 23 6.08213 23 7.24 23H23.76C24.9179 23 25.4968 23 25.9359 22.7675C26.2902 22.5799 26.5799 22.2902 26.7675 21.9359C27 21.4968 27 20.9179 27 19.76V8.24C27 7.08213 27 6.5032 26.7675 6.06414C26.5799 5.70983 26.2902 5.42007 25.9359 5.23247C25.4968 5 24.9179 5 23.76 5H16.2872C15.7668 5 15.5067 5 15.2631 4.93779C15.0647 4.88712 14.8753 4.80628 14.7014 4.69811C14.488 4.56531 14.308 4.37746 13.948 4.00178L12.9862 2.99822C12.6262 2.62254 12.4462 2.43469 12.2327 2.30189C12.0589 2.19372 11.8694 2.11288 11.6711 2.06221C11.4275 2 11.1673 2 10.647 2H7.24Z" fill="url(#${baseLowerGradientId})"/>
@@ -358,6 +372,66 @@
     return `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`;
   }
 
+  function tintFolderColor(source, color) {
+    if (color.toUpperCase() === '#5393FF') return source;
+    const sourceRgb = hexToRgb(source);
+    const selected = hexToRgb(color);
+    if (!sourceRgb || !selected) return source;
+    const reference = { r: 83, g: 147, b: 255 };
+    const tinted = {};
+    // Preserve the original highlights and shaded edges relative to the outline.
+    ['r', 'g', 'b'].forEach((channel) => {
+      const amount = channel === 'b'
+        ? (sourceRgb.r - reference.r) / (255 - reference.r)
+        : (sourceRgb[channel] - reference[channel]) / (255 - reference[channel]);
+      tinted[channel] = amount >= 0
+        ? selected[channel] + (255 - selected[channel]) * amount
+        : selected[channel] * (1 + amount);
+    });
+    return rgbToHex(tinted);
+  }
+
+  function applyFolderColor(folderIcon, value) {
+    const svg = folderIcon && folderIcon.querySelector('svg');
+    if (!svg) return;
+    const selected = hexToRgb(value);
+    const color = selected ? rgbToHex(selected).toUpperCase() : DEFAULT_FOLDER_COLOR;
+    if (folderIcon._xFolderColor === color && svg.getAttribute('data-folder-color') === color) return;
+    folderIcon._xFolderColor = color;
+    svg.setAttribute('data-folder-color', color);
+    svg.querySelectorAll('[data-folder-part$="-outline"], [data-folder-part-hover$="-outline"]').forEach((path) => {
+      path.setAttribute('stroke', color);
+    });
+    svg.querySelectorAll('linearGradient:not([data-folder-gradient-morph]) stop').forEach((stop) => {
+      const source = stop.getAttribute('data-folder-base-color') || stop.getAttribute('stop-color');
+      stop.setAttribute('data-folder-base-color', source);
+      stop.setAttribute('stop-color', tintFolderColor(source, color));
+    });
+    svg.querySelectorAll('feColorMatrix').forEach((matrix) => {
+      const original = matrix.getAttribute('data-folder-base-shadow') || matrix.getAttribute('values');
+      if (!original || !original.includes('0.541176')) return;
+      matrix.setAttribute('data-folder-base-shadow', original);
+      if (color === DEFAULT_FOLDER_COLOR) { matrix.setAttribute('values', original); return; }
+      const shadow = hexToRgb(tintFolderColor('#8AB6FF', color));
+      matrix.setAttribute('values', `0 0 0 0 ${shadow.r / 255} 0 0 0 0 ${shadow.g / 255} 0 0 0 0 ${shadow.b / 255} 0 0 0 0.21 0`);
+    });
+    initFolderUpperGradientMorph(folderIcon);
+    const morph = folderIcon._xUpperGradientMorph;
+    if (morph) {
+      if (morph.rafId) { cancelAnimationFrame(morph.rafId); morph.rafId = 0; }
+      ['baseMain', 'hoverMain', 'baseOverlay', 'hoverOverlay'].forEach((key) => {
+        morph[key].stops.forEach((stop) => {
+          stop.baseColor = stop.baseColor || stop.color;
+          stop.color = tintFolderColor(stop.baseColor, color);
+        });
+      });
+      const isOpen = folderIcon._xFolderMorphState === 'hover';
+      morph.state = isOpen ? 'hover' : 'base';
+      applyGradientMorphConfig(morph.mainGradientEl, isOpen ? morph.hoverMain : morph.baseMain);
+      applyGradientMorphConfig(morph.overlayGradientEl, isOpen ? morph.hoverOverlay : morph.baseOverlay);
+    }
+  }
+
   function lerpNumber(fromValue, toValue, t) {
     return fromValue + (toValue - fromValue) * t;
   }
@@ -602,10 +676,16 @@
   }
 
   function initFolderPathMorph(folderIcon) {
-    if (!folderIcon || folderIcon._xFolderMorphParts) {
-      return;
-    }
+    if (!folderIcon) return;
     const svg = folderIcon.querySelector('svg');
+    if (folderIcon._xFolderMorphParts && folderIcon._xFolderMorphSvg === svg) return;
+    if (folderIcon._xFolderMorphParts) {
+      folderIcon._xFolderMorphParts.forEach(cancelFolderPathMorph);
+      const previous = folderIcon._xUpperGradientMorph;
+      if (previous && previous.rafId) cancelAnimationFrame(previous.rafId);
+      delete folderIcon._xUpperGradientMorph;
+    }
+    folderIcon._xFolderMorphSvg = svg;
     if (!svg) {
       folderIcon._xFolderMorphParts = [];
       return;
@@ -795,8 +875,12 @@
   }
 
   return Object.freeze({
+    DEFAULT_FOLDER_COLOR,
+    FOLDER_COLORS_STORAGE_KEY,
+    normalizeFolderColorMap,
     FOLDER_PATH_MORPH_DURATION_MS,
     getFigmaFolderSvg,
+    applyFolderColor,
     initFolderPathMorph,
     playFolderPathMorph,
     setFolderPathMorphState

@@ -2,6 +2,8 @@ const assert = require('assert');
 const fs = require('fs');
 
 const optionsHtml = fs.readFileSync('src/options/options.html', 'utf8');
+const infoButtonCss = fs.readFileSync('src/shared/info-button.css', 'utf8');
+const newtabHtml = fs.readFileSync('newtab.html', 'utf8');
 const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
 const onboardingHtml = fs.readFileSync('src/onboarding/onboarding.html', 'utf8');
 const infoButtonSource = fs.readFileSync('react-src/options/info-button.tsx', 'utf8');
@@ -30,13 +32,16 @@ assertCircularInfoButton(
   'onboarding info button'
 );
 assertCircularInfoButton(
-  cssRule(optionsHtml, '._x_extension_info_button_2026_unique_'),
+  cssRule(infoButtonCss, '._x_extension_info_button_2026_unique_'),
   'options shared info button'
 );
+for (const page of [optionsHtml, newtabHtml]) {
+  assert.match(page, /href="\.\.\/shared\/info-button\.css"/, 'Options and New Tab should load the same info styles');
+}
 
 for (const [source, selector, label] of [
   [onboardingHtml, '.interaction-info-button:hover', 'onboarding info hover'],
-  [optionsHtml, '._x_extension_info_button_2026_unique_:hover', 'options info hover']
+  [infoButtonCss, '._x_extension_info_button_2026_unique_:hover', 'options info hover']
 ]) {
   assert.match(
     cssRule(source, selector),

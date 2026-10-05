@@ -80,50 +80,138 @@
   "settings_selection_quick_actions_group_desc": {
     "message": "Collect all AI pages in the “AI Search” tab group"
   },
-  "selection_quick_actions_group_name": { "message": "AI Search" },
-  "selection_quick_action_ask": { "message": "Answer" },
-  "selection_quick_action_translate": { "message": "Translate" },
-  "selection_quick_action_explain": { "message": "Explain" },
-  "selection_quick_action_summarize": { "message": "Summarize" },
-  "selection_quick_action_search": { "message": "Research" },
-  "selection_quick_action_calculate": { "message": "Calculate" },
-  "selection_quick_action_open_menu": { "message": "Use Lumno with selected text" },
-  "selection_quick_action_more": { "message": "More actions" },
-  "selection_quick_action_sending": { "message": "Opening in the background…" },
-  "selection_quick_action_failed": { "message": "Couldn’t send. Try again." },
-  "selection_debug_decision_title": { "message": "Selection decision" },
-  "selection_debug_status_show": { "message": "Show" },
-  "selection_debug_status_hide": { "message": "Don’t show" },
-  "selection_debug_sort_title": { "message": "Menu order" },
-  "selection_debug_item_count": { "message": "{count} items" },
-  "selection_debug_reason_calculate": { "message": "Detected an expression, currency, or unit conversion" },
-  "selection_debug_reason_question": { "message": "Detected an explicit question" },
-  "selection_debug_reason_prose": { "message": "Detected sufficiently rich continuous prose" },
-  "selection_debug_reason_search": { "message": "Detected a news, pricing, official-site, or version lookup intent" },
-  "selection_debug_reason_translate": { "message": "Selected text differs from Lumno’s UI language" },
-  "selection_debug_reason_error": { "message": "Detected an error or exception" },
-  "selection_debug_reason_code": { "message": "Detected code syntax or a code context" },
-  "selection_debug_reason_term": { "message": "Detected a meaningful term or short phrase" },
-  "selection_debug_reason_explain_score": { "message": "Explain received the highest score" },
-  "selection_debug_reason_top_score": { "message": "This action received the highest matching score" },
-  "selection_debug_rejection_disabled": { "message": "Selection Quick Actions are disabled" },
-  "selection_debug_rejection_sensitive": { "message": "Sensitive password or payment field; content was not read" },
-  "selection_debug_rejection_no_selection": { "message": "No valid text selection detected" },
-  "selection_debug_rejection_too_short": { "message": "Fewer than 2 characters" },
-  "selection_debug_rejection_too_long": { "message": "More than 2400 characters" },
-  "selection_debug_rejection_url": { "message": "Complete URL" },
-  "selection_debug_rejection_email": { "message": "Email address" },
-  "selection_debug_rejection_generic_ui": { "message": "Generic UI copy such as “Learn more / Save / Next”" },
-  "selection_debug_rejection_plain_number": { "message": "Plain number without a calculation or conversion" },
-  "selection_debug_rejection_symbols": { "message": "Symbol ratio is too high" },
-  "selection_debug_rejection_no_intent": { "message": "Did not match an explicit task, meaningful term, or substantial prose" },
-  "selection_debug_primary_meta": { "message": "Primary: {action} · Score {score} · {confidence} confidence" },
-  "selection_debug_confidence_high": { "message": "High" },
-  "selection_debug_confidence_medium": { "message": "Medium" },
-  "selection_debug_confidence_low": { "message": "Low" },
-  "selection_debug_sort_primary_cause": { "message": "{reason}, score {score}" },
-  "selection_debug_sort_fallback_cause": { "message": "General fallback, filled in fixed order and deduplicated" },
-  "selection_debug_sort_footer": { "message": "The first item uses the highest intent score; remaining items follow “Explain → Research → Translate.”" },
+  "selection_quick_actions_group_name": {
+    "message": "AI Search"
+  },
+  "selection_quick_action_ask": {
+    "message": "Answer"
+  },
+  "selection_quick_action_translate": {
+    "message": "Translate"
+  },
+  "selection_quick_action_explain": {
+    "message": "Explain"
+  },
+  "selection_quick_action_summarize": {
+    "message": "Summarize"
+  },
+  "selection_quick_action_search": {
+    "message": "Research"
+  },
+  "selection_quick_action_calculate": {
+    "message": "Calculate"
+  },
+  "selection_quick_action_open_menu": {
+    "message": "Use Lumno with selected text"
+  },
+  "selection_quick_action_more": {
+    "message": "More actions"
+  },
+  "selection_quick_action_sending": {
+    "message": "Opening in the background…"
+  },
+  "selection_quick_action_failed": {
+    "message": "Couldn’t send. Try again."
+  },
+  "selection_debug_decision_title": {
+    "message": "Selection decision"
+  },
+  "selection_debug_status_show": {
+    "message": "Show"
+  },
+  "selection_debug_status_hide": {
+    "message": "Don’t show"
+  },
+  "selection_debug_sort_title": {
+    "message": "Menu order"
+  },
+  "selection_debug_item_count": {
+    "message": "{count} items"
+  },
+  "selection_debug_reason_calculate": {
+    "message": "Detected an expression, currency, or unit conversion"
+  },
+  "selection_debug_reason_question": {
+    "message": "Detected an explicit question"
+  },
+  "selection_debug_reason_prose": {
+    "message": "Detected sufficiently rich continuous prose"
+  },
+  "selection_debug_reason_search": {
+    "message": "Detected a news, pricing, official-site, or version lookup intent"
+  },
+  "selection_debug_reason_translate": {
+    "message": "Selected text differs from Lumno’s UI language"
+  },
+  "selection_debug_reason_error": {
+    "message": "Detected an error or exception"
+  },
+  "selection_debug_reason_code": {
+    "message": "Detected code syntax or a code context"
+  },
+  "selection_debug_reason_term": {
+    "message": "Detected a meaningful term or short phrase"
+  },
+  "selection_debug_reason_explain_score": {
+    "message": "Explain received the highest score"
+  },
+  "selection_debug_reason_top_score": {
+    "message": "This action received the highest matching score"
+  },
+  "selection_debug_rejection_disabled": {
+    "message": "Selection Quick Actions are disabled"
+  },
+  "selection_debug_rejection_sensitive": {
+    "message": "Sensitive password or payment field; content was not read"
+  },
+  "selection_debug_rejection_no_selection": {
+    "message": "No valid text selection detected"
+  },
+  "selection_debug_rejection_too_short": {
+    "message": "Fewer than 2 characters"
+  },
+  "selection_debug_rejection_too_long": {
+    "message": "More than 2400 characters"
+  },
+  "selection_debug_rejection_url": {
+    "message": "Complete URL"
+  },
+  "selection_debug_rejection_email": {
+    "message": "Email address"
+  },
+  "selection_debug_rejection_generic_ui": {
+    "message": "Generic UI copy such as “Learn more / Save / Next”"
+  },
+  "selection_debug_rejection_plain_number": {
+    "message": "Plain number without a calculation or conversion"
+  },
+  "selection_debug_rejection_symbols": {
+    "message": "Symbol ratio is too high"
+  },
+  "selection_debug_rejection_no_intent": {
+    "message": "Did not match an explicit task, meaningful term, or substantial prose"
+  },
+  "selection_debug_primary_meta": {
+    "message": "Primary: {action} · Score {score} · {confidence} confidence"
+  },
+  "selection_debug_confidence_high": {
+    "message": "High"
+  },
+  "selection_debug_confidence_medium": {
+    "message": "Medium"
+  },
+  "selection_debug_confidence_low": {
+    "message": "Low"
+  },
+  "selection_debug_sort_primary_cause": {
+    "message": "{reason}, score {score}"
+  },
+  "selection_debug_sort_fallback_cause": {
+    "message": "General fallback, filled in fixed order and deduplicated"
+  },
+  "selection_debug_sort_footer": {
+    "message": "The first item uses the highest intent score; remaining items follow “Explain → Research → Translate.”"
+  },
   "settings_global_section_title": {
     "message": "Global Settings"
   },
@@ -187,6 +275,18 @@
   "settings_search_result_priority_title": {
     "message": "First Search Result Priority"
   },
+  "settings_search_result_tab_position_title": {
+    "message": "Search result tab position"
+  },
+  "search_result_tab_position_end": {
+    "message": "End of tab strip (bottom)"
+  },
+  "search_result_tab_position_after_current": {
+    "message": "Right of current tab (below)"
+  },
+  "search_result_tab_position_before_current": {
+    "message": "Left of current tab (above)"
+  },
   "settings_search_result_sources_title": {
     "message": "Visible Result Types"
   },
@@ -200,7 +300,7 @@
     "message": "Enhanced Icon and Theme Color Fetching"
   },
   "settings_favicon_enhanced_fetch_desc": {
-    "message": "If you see a local network access prompt, turn this off. Lumno will then use only browser-cached, built-in, or generic icons."
+    "message": "If you see a local network access prompt, turn this off. Lumno will stop loading website images directly while keeping browser-cached icons and third-party icon services available."
   },
   "favicon_blacklist_section_desc": {
     "message": "Exclude by website"
@@ -916,13 +1016,21 @@
   "newtab_wallpaper_effect_texture": {
     "message": "Texture"
   },
-  "newtab_wallpaper_effect_blocks_size": { "message": "Block size" },
+  "newtab_wallpaper_effect_blocks_size": {
+    "message": "Block size"
+  },
   "newtab_wallpaper_effect_crt_strength": {
     "message": "Display intensity"
   },
-  "newtab_wallpaper_effect_crt_bloom": { "message": "Bloom" },
-  "newtab_wallpaper_effect_crt_rgb_offset": { "message": "RGB offset" },
-  "newtab_wallpaper_effect_crt_curvature": { "message": "Screen curvature" },
+  "newtab_wallpaper_effect_crt_bloom": {
+    "message": "Bloom"
+  },
+  "newtab_wallpaper_effect_crt_rgb_offset": {
+    "message": "RGB offset"
+  },
+  "newtab_wallpaper_effect_crt_curvature": {
+    "message": "Screen curvature"
+  },
   "newtab_wallpaper_effect_none": {
     "message": "Off"
   },
@@ -1398,7 +1506,7 @@
     "message": "Edit bookmark"
   },
   "bookmarks_edit_folder_dialog_title": {
-    "message": "Edit folder"
+    "message": "Rename folder"
   },
   "bookmarks_name_placeholder": {
     "message": "Name"
@@ -1776,7 +1884,7 @@
     "message": "Automatically group aggregate search tabs"
   },
   "settings_aggregate_search_auto_group_desc": {
-    "message": "When enabled, all tabs opened by an aggregate search are placed in one group named after the search query"
+    "message": "When enabled, all tabs opened by an aggregate search are placed in one group named “Aggregate name：Search query”"
   },
   "aggregate_search_badge": {
     "message": "Aggregate"
@@ -1827,10 +1935,10 @@
     "message": "WeChat Official Accounts"
   },
   "settings_sync_title": {
-    "message": "Browser sync"
+    "message": "{browser} built-in sync"
   },
   "settings_sync_section_title": {
-    "message": "Sync method"
+    "message": "Browser built-in sync"
   },
   "settings_sync_desc": {
     "message": "Settings sync automatically through your current browser's built-in sync service"
@@ -2114,17 +2222,107 @@
   "newtab_shortcuts_url_label": {
     "message": "URL"
   },
+  "newtab_shortcuts_url_info_label": {
+    "message": "About supported URLs"
+  },
+  "newtab_shortcuts_url_info": {
+    "message": "Browser internal pages are also supported, for example:\nchrome://inspect/#devices"
+  },
   "newtab_shortcuts_url_placeholder": {
     "message": "https://example.com"
   },
   "newtab_shortcuts_icon_label": {
     "message": "Icon (optional)"
   },
+  "newtab_shortcuts_icon_mode_label": {
+    "message": "Icon source"
+  },
+  "newtab_shortcuts_icon_builtin": {
+    "message": "Built-in icon"
+  },
+  "newtab_shortcuts_icon_builtin_hint": {
+    "message": "Use Lumno’s built-in high-quality icons."
+  },
+  "newtab_shortcuts_icon_builtin_network_hint": {
+    "message": "No network request needed."
+  },
+  "newtab_shortcuts_icon_builtin_info_label": {
+    "message": "About built-in icons"
+  },
+  "newtab_shortcuts_icon_service": {
+    "message": "Gstatic (third-party icons)"
+  },
+  "newtab_shortcuts_icon_favicon_is": {
+    "message": "Favicon.is (third-party icons)"
+  },
+  "newtab_shortcuts_icon_favicon_is_hint": {
+    "message": "Send the domain to Favicon.is for a larger icon."
+  },
+  "newtab_shortcuts_icon_favicon_is_caution": {
+    "message": "Domain icons may differ from the current page’s icon."
+  },
+  "newtab_shortcuts_icon_cache": {
+    "message": "Browser cache"
+  },
+  "newtab_shortcuts_icon_service_hint": {
+    "message": "Send the site domain to Gstatic. Stable, high quality."
+  },
+  "newtab_shortcuts_icon_cache_hint": {
+    "message": "Fast, accurate website icons from the browser cache."
+  },
+  "newtab_shortcuts_icon_custom_hint": {
+    "message": "Saved on this device by default, outside browser sync."
+  },
+  "newtab_shortcuts_icon_service_caution": {
+    "message": "Some websites may not be recognized."
+  },
+  "newtab_shortcuts_icon_cache_caution": {
+    "message": "Site settings may add notification dots or reduce clarity."
+  },
+  "newtab_shortcuts_icon_custom_sync_hint": {
+    "message": "Sync across devices with WebDAV."
+  },
+  "newtab_shortcuts_icon_refresh_success": {
+    "message": "Icon acquired"
+  },
+  "newtab_shortcuts_icon_cache_failed": {
+    "message": "No cached icon found. Visit this website, then refresh again."
+  },
+  "newtab_shortcuts_icon_source_unavailable": {
+    "message": "This source is unavailable. Choose browser cache or a custom icon."
+  },
+  "newtab_shortcuts_icon_online": {
+    "message": "Online icon"
+  },
+  "newtab_shortcuts_icon_custom": {
+    "message": "Custom icon"
+  },
+  "newtab_shortcuts_icon_current": {
+    "message": "Current icon"
+  },
+  "newtab_shortcuts_icon_refresh": {
+    "message": "Refresh"
+  },
+  "newtab_shortcuts_icon_refreshing": {
+    "message": "Refreshing…"
+  },
+  "newtab_shortcuts_icon_refresh_failed": {
+    "message": "Could not refresh the icon. Try again later."
+  },
+  "newtab_shortcuts_icon_custom_required": {
+    "message": "Choose an image for the custom icon."
+  },
+  "newtab_shortcuts_icon_online_info_label": {
+    "message": "About online icons"
+  },
+  "newtab_shortcuts_icon_online_info": {
+    "message": "Online icons stay fixed until you refresh and save. Refresh uses the icon service or browser cache."
+  },
   "newtab_shortcuts_icon_info_label": {
     "message": "About local shortcut icons"
   },
   "newtab_shortcuts_icon_info": {
-    "message": "PNG, JPG, and WebP supported. A transparent square icon at 128×128 px or larger is recommended. Saved only on this device."
+    "message": "PNG, JPG, and WebP supported. A transparent square icon at 128×128 px or larger is recommended. Saved on this device by default; WebDAV sync is available."
   },
   "newtab_shortcuts_icon_choose": {
     "message": "Choose image"
@@ -2147,6 +2345,54 @@
   "newtab_shortcuts_icon_storage_error": {
     "message": "The local icon could not be saved. Try another image"
   },
+  "folder_rename": {
+    "message": "Rename"
+  },
+  "folder_color_change": {
+    "message": "Change color"
+  },
+  "folder_color_format": {
+    "message": "Color format"
+  },
+  "folder_color_title": {
+    "message": "Folder color"
+  },
+  "folder_color_description": {
+    "message": "Also applies to this folder in shortcuts and menus. Saved on this device."
+  },
+  "folder_color_presets": {
+    "message": "Preset colors"
+  },
+  "folder_color_reset": {
+    "message": "Reset"
+  },
+  "folder_color_reset_tooltip": {
+    "message": "Restore default color"
+  },
+  "folder_color_saved": {
+    "message": "Saved colors"
+  },
+  "folder_color_save_current": {
+    "message": "Save current color"
+  },
+  "folder_color_remove_saved": {
+    "message": "Delete saved color"
+  },
+  "folder_color_saved_delete_failed": {
+    "message": "Could not delete this color. Try again."
+  },
+  "folder_color_saved_load_failed": {
+    "message": "Could not load saved colors. Reopen the color picker to try again."
+  },
+  "folder_color_saved_save_failed": {
+    "message": "Could not save this color. Try again."
+  },
+  "folder_color_invalid": {
+    "message": "Enter a valid HEX color or RGB values from 0 to 255."
+  },
+  "folder_color_save_failed": {
+    "message": "Could not save the folder color. Try again."
+  },
   "newtab_shortcuts_cancel": {
     "message": "Cancel"
   },
@@ -2157,7 +2403,7 @@
     "message": "Save"
   },
   "newtab_shortcuts_invalid_url": {
-    "message": "Enter a valid http or https URL"
+    "message": "Enter a valid http, https, or browser internal URL"
   },
   "newtab_shortcuts_limit_reached": {
     "message": "You can add up to {count} shortcuts."
@@ -2173,6 +2419,27 @@
   },
   "newtab_shortcuts_removed": {
     "message": "Shortcut removed"
+  },
+  "newtab_shortcuts_removed_undo": {
+    "message": "Shortcut removed · {shortcut} to undo"
+  },
+  "newtab_shortcuts_remove_undone": {
+    "message": "Shortcut restored · {shortcut} to redo"
+  },
+  "newtab_shortcuts_remove_redone": {
+    "message": "Shortcut removed · {shortcut} to undo"
+  },
+  "newtab_shortcuts_open_folder": {
+    "message": "Open folder"
+  },
+  "newtab_shortcuts_from_bookmarks": {
+    "message": "(from bookmarks bar)"
+  },
+  "newtab_shortcuts_folder_added": {
+    "message": "Folder added to shortcuts"
+  },
+  "newtab_shortcuts_folder_missing": {
+    "message": "This bookmark folder is no longer available."
   },
   "newtab_shortcuts_moved_to_bookmarks": {
     "message": "Moved to bookmarks"
@@ -2192,10 +2459,325 @@
   "settings_tab_switcher_desc": {
     "message": "Quickly switch recent tabs. Default: {shortcut}; customizable."
   },
-  "slash_command_empty": { "message": "No matching commands" },
-  "command_tabs_title": { "message": "Search open tabs only" },
-  "command_tabs_action": { "message": "Search tabs" },
-  "command_copy_title": { "message": "Copy current page link" },
-  "command_copy_action": { "message": "Copy link" },
-  "settings_tab_account": { "message": "Account & sync" }
+  "slash_command_empty": {
+    "message": "No matching commands"
+  },
+  "command_tabs_title": {
+    "message": "Search open tabs only"
+  },
+  "command_tabs_action": {
+    "message": "Search tabs"
+  },
+  "command_copy_title": {
+    "message": "Copy current page link"
+  },
+  "command_copy_action": {
+    "message": "Copy link"
+  },
+  "settings_tab_account": {
+    "message": "Account & sync"
+  },
+  "webdav_endpoint": {
+    "message": "Server address (HTTPS)"
+  },
+  "webdav_directory": {
+    "message": "Sync folder"
+  },
+  "webdav_username": {
+    "message": "Username"
+  },
+  "webdav_password": {
+    "message": "App password"
+  },
+  "webdav_credentials_hint": {
+    "message": "Connection details stay on this device. Configure each device separately, then turn on sync after saving."
+  },
+  "webdav_password_saved": {
+    "message": "Saved; leave blank to keep it"
+  },
+  "webdav_last_sync": {
+    "message": "Last synced"
+  },
+  "webdav_backup_complete": {
+    "message": "Chrome settings backup updated (images excluded)"
+  },
+  "webdav_backup_partial": {
+    "message": "Chrome settings backup is incomplete; full data remains on this device"
+  },
+  "webdav_backup_failed": {
+    "message": "Chrome settings backup failed; full data remains on this device"
+  },
+  "webdav_choice_hint": {
+    "message": "The server already has settings. Choose this device or the server as the initial version. A local backup is saved before replacement. Chrome sync continues."
+  },
+  "webdav_conflict_hint": {
+    "message": "Both sides changed the same content. Choose a version for the conflicting content; other changes will still be merged. A backup is saved before replacement. Chrome sync continues."
+  },
+  "webdav_error_endpoint": {
+    "message": "Enter a valid HTTPS WebDAV address."
+  },
+  "webdav_error_directory": {
+    "message": "Enter a valid sync folder name."
+  },
+  "webdav_error_credentials": {
+    "message": "Enter a username and app password."
+  },
+  "webdav_error_auth": {
+    "message": "Authentication failed. Check the username and app password."
+  },
+  "webdav_error_permission": {
+    "message": "Access denied. Check the folder’s read and write permissions."
+  },
+  "webdav_error_rate": {
+    "message": "The server rate limit was reached. Try again later."
+  },
+  "webdav_error_capacity": {
+    "message": "WebDAV storage is full. Free up space and try again."
+  },
+  "webdav_error_conditional": {
+    "message": "This server cannot reliably prevent concurrent overwrites and is not supported for automatic sync."
+  },
+  "webdav_error_changed": {
+    "message": "Settings changed during sync. Local data is retained and sync will retry."
+  },
+  "webdav_error_missing": {
+    "message": "Remote settings were deleted. Choose to upload local settings to recreate them, or check the server address."
+  },
+  "webdav_error_chrome_capacity": {
+    "message": "These settings exceed Chrome sync capacity and were not applied. Existing Chrome sync and local data are preserved. Reduce the settings and try again."
+  },
+  "webdav_error_network": {
+    "message": "Connection failed or timed out. Check the network, server address and certificate. Local data is retained."
+  },
+  "webdav_error_invalid": {
+    "message": "Remote settings are invalid or too large. Local data was not replaced."
+  },
+  "webdav_error_asset": {
+    "message": "An image is missing, damaged or unsupported. Local settings are retained."
+  },
+  "webdav_error_storage": {
+    "message": "Sync data could not be saved. Check the browser’s local storage."
+  },
+  "webdav_error_shortcuts": {
+    "message": "Restoring would exceed the shortcut limit. Remove some local folder shortcuts first."
+  },
+  "webdav_error_generic": {
+    "message": "Sync failed. Try again later. Local data is retained."
+  },
+  "webdav_test": {
+    "message": "Test connection"
+  },
+  "webdav_enable": {
+    "message": "Save and enable"
+  },
+  "webdav_sync": {
+    "message": "Sync now"
+  },
+  "webdav_pause": {
+    "message": "Pause WebDAV"
+  },
+  "webdav_browser": {
+    "message": "Switch to browser sync"
+  },
+  "webdav_restore_backup": {
+    "message": "Restore settings from before replacement"
+  },
+  "webdav_use_remote": {
+    "message": "Use server version"
+  },
+  "webdav_use_local": {
+    "message": "Keep this device’s version"
+  },
+  "webdav_test_success": {
+    "message": "Connection, read/write and concurrent update protection verified"
+  },
+  "webdav_state_browser": {
+    "message": "Off"
+  },
+  "webdav_state_ready": {
+    "message": "Synced"
+  },
+  "webdav_state_syncing": {
+    "message": "Syncing…"
+  },
+  "webdav_state_paused": {
+    "message": "Paused"
+  },
+  "webdav_state_pending": {
+    "message": "Pending sync"
+  },
+  "webdav_state_choice": {
+    "message": "Choose a copy"
+  },
+  "webdav_state_conflict": {
+    "message": "Settings conflict"
+  },
+  "webdav_state_error": {
+    "message": "Sync failed"
+  },
+  "webdav_error_interrupted": {
+    "message": "The previous replacement was interrupted. Uploads are paused. Restore the previous local settings, or reconnect and use the remote settings."
+  },
+  "webdav_missing_hint": {
+    "message": "The remote settings no longer exist. Upload local settings to restart sync, or check the server address first."
+  },
+  "webdav_restore_success": {
+    "message": "Local backup restored and this WebDAV connection paused."
+  },
+  "webdav_chrome_backup_title": {
+    "message": "Chrome settings backup"
+  },
+  "webdav_error_locked": {
+    "message": "Another device is writing to the server. Try again later. If it stays blocked, follow the WebDAV guide to recover a leftover lock."
+  },
+  "webdav_error_lock_recovery": {
+    "message": "The remote write could not finish safely, so its protection was kept. Pause sync on every device and confirm the interrupted request has ended before removing v1/write-lock from the remote sync directory."
+  },
+  "webdav_error_outdated": {
+    "message": "Reload the Lumno extension, then refresh settings to use multiple WebDAV connections."
+  },
+  "webdav_client_revision": {
+    "message": "Connection test version"
+  },
+  "webdav_title": {
+    "message": "WebDAV sync"
+  },
+  "webdav_beta_hint": {
+    "message": "Sync settings, custom icons and wallpapers through a WebDAV server alongside your browser’s built-in sync. Add multiple connections and enable each independently.\n\nThis feature is in Beta. Sync may fail or settings may change unexpectedly. Please report any issues to help us improve it."
+  },
+  "webdav_setup_hint": {
+    "message": "Add and save a server, then enable sync for that connection."
+  },
+  "webdav_unsaved_hint": {
+    "message": "Save your connection changes before turning on sync."
+  },
+  "webdav_configure": {
+    "message": "Configure server"
+  },
+  "webdav_edit_config": {
+    "message": "Edit connection"
+  },
+  "webdav_save": {
+    "message": "Save settings"
+  },
+  "webdav_save_success": {
+    "message": "Connection saved on this device. You can now turn on WebDAV sync."
+  },
+  "webdav_edit_active_hint": {
+    "message": "Saving pauses this WebDAV connection. Other connections and Chrome sync keep running. Enable it again after saving."
+  },
+  "webdav_never_synced": {
+    "message": "Not synced yet"
+  },
+  "webdav_state_saving": {
+    "message": "Saving settings"
+  },
+  "webdav_state_testing": {
+    "message": "Testing connection"
+  },
+  "webdav_choice_title": {
+    "message": "Choose the initial version"
+  },
+  "webdav_conflict_title": {
+    "message": "Sync conflict"
+  },
+  "webdav_conflict_items": {
+    "message": "Conflicting content"
+  },
+  "webdav_conflict_shortcuts": {
+    "message": "Shortcuts and icons"
+  },
+  "webdav_conflict_wallpapers": {
+    "message": "Wallpapers and selection"
+  },
+  "webdav_conflict_preferences": {
+    "message": "Settings"
+  },
+  "webdav_resolve_later": {
+    "message": "Pause and resolve later"
+  },
+  "webdav_add": {
+    "message": "Add WebDAV"
+  },
+  "webdav_remove": {
+    "message": "Delete WebDAV connection"
+  },
+  "webdav_remove_confirm": {
+    "message": "Delete this local connection? Files on the server will be kept."
+  },
+  "newtab_quote_title": {
+    "message": "Daily quote"
+  },
+  "newtab_quote_position": {
+    "message": "Quote position"
+  },
+  "newtab_quote_category": {
+    "message": "Quote category"
+  },
+  "newtab_quote_off": {
+    "message": "Off"
+  },
+  "newtab_quote_search": {
+    "message": "Below shortcuts"
+  },
+  "newtab_quote_bottom": {
+    "message": "Page bottom"
+  },
+  "newtab_quote_literature": {
+    "message": "Literature"
+  },
+  "newtab_quote_poetry": {
+    "message": "Poetry"
+  },
+  "newtab_quote_source": {
+    "message": "View on Hitokoto"
+  },
+  "newtab_quote_save_error": {
+    "message": "Failed to save quote settings"
+  },
+  "newtab_quote_fallback_text": {
+    "message": "A journey of a thousand miles begins with a single step."
+  },
+  "newtab_quote_fallback_author": {
+    "message": "Laozi"
+  },
+  "newtab_quote_fallback_source": {
+    "message": "Tao Te Ching"
+  },
+  "newtab_bing_daily": {
+    "message": "Daily wallpaper"
+  },
+  "newtab_bing_daily_hint": {
+    "message": "A new Bing photo every day. Turn off to keep the current wallpaper."
+  },
+  "newtab_bing_recent": {
+    "message": "Recent wallpapers"
+  },
+  "newtab_bing_refresh": {
+    "message": "Refresh"
+  },
+  "newtab_bing_loading": {
+    "message": "Loading wallpapers…"
+  },
+  "newtab_bing_saving": {
+    "message": "Saving wallpaper…"
+  },
+  "newtab_bing_error": {
+    "message": "Could not load wallpapers. Please try again."
+  },
+  "newtab_bing_save_error": {
+    "message": "Could not save wallpaper. Please try again."
+  },
+  "newtab_bing_source": {
+    "message": "View wallpaper source"
+  },
+  "newtab_quote_font_size": {
+    "message": "Font size"
+  },
+  "newtab_quote_font_size_label": {
+    "message": "Quote font size (px)"
+  },
+  "newtab_quote_provider": {
+    "message": "Powered by Hitokoto"
+  }
 }

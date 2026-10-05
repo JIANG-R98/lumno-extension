@@ -6,14 +6,17 @@
     <meta name="theme-color" content="#111111" />
     <title data-i18n="options_page_title">Lumno 设置</title>
     <script src="../shared/icon-font-preload.js"></script>
+    <script src="../shared/settings.js"></script>
     <script src="theme-preload.js"></script>
     <link rel="stylesheet" href="../../assets/fonts/open-sans/open-sans.css" />
     <link rel="stylesheet" href="../../assets/remixicon/fonts/remixicon.css" />
     <link rel="stylesheet" href="../shared/tooltip.css" />
     <link rel="stylesheet" href="../shared/menu-surface.css" />
     <link rel="stylesheet" href="../shared/custom-select.css" />
+    <link rel="stylesheet" href="../shared/info-button.css" />
     <link rel="stylesheet" href="../shared/checkbox.css" />
     <link rel="stylesheet" href="../shared/range-slider.css" />
+    <link rel="stylesheet" href="webdav-options.css" />
     <!-- Thanks to the Remix Icon project; this extension uses its icon set: https://remixicon.com/ -->
     <style>
       html {
@@ -170,6 +173,9 @@
         --sync-button-hover-bg: rgba(148, 163, 184, 0.28);
         --sync-menu-shadow: 0 14px 28px rgba(15, 23, 42, 0.14);
         --settings-content-edge-space: 14px;
+        --settings-content-gap: 16px;
+        --settings-row-block-space: 12px;
+        --settings-section-header-height: 30px;
         background: var(--panel-bg);
         border: 1px solid var(--panel-border);
         border-radius: var(--settings-panel-radius);
@@ -463,12 +469,9 @@
         transform: scale(1);
       }
       ._x_extension_settings_content_2024_unique_ {
-        gap: 16px;
+        gap: var(--settings-content-gap);
         flex-direction: column;
         display: none;
-        padding-bottom: var(--settings-content-edge-space);
-      }
-      #_x_extension_account_settings_content_2026_unique_ {
         padding-bottom: 0;
       }
       ._x_extension_settings_content_2024_unique_[data-active="true"] {
@@ -479,7 +482,7 @@
         justify-content: space-between;
         align-items: center;
         gap: 16px;
-        padding: 12px 14px;
+        padding: var(--settings-row-block-space) var(--settings-content-edge-space);
         border-radius: 14px;
         border: none;
         background: transparent;
@@ -561,25 +564,25 @@
       ._x_extension_section_title_2024_unique_ {
         font-size: 16px;
         font-weight: 550;
+        line-height: 24px;
         margin: 0;
         color: var(--panel-text);
       }
-      ._x_extension_general_header_row_2026_unique_ {
-        min-height: 40px;
-        padding-top: 6px;
-        padding-bottom: 4px;
+      ._x_extension_section_header_2026_unique_,
+      ._x_extension_feedback_support_header_2026_unique_,
+      ._x_extension_shortcut_group_header_2024_unique_ {
+        min-height: var(--settings-section-header-height);
       }
       ._x_extension_feedback_support_section_2026_unique_ {
         display: flex;
         flex-direction: column;
         align-items: stretch;
         gap: 4px;
-        padding: 6px 14px 4px;
+        padding: var(--settings-row-block-space) var(--settings-content-edge-space);
       }
       ._x_extension_feedback_support_header_2026_unique_ {
         display: flex;
         align-items: center;
-        min-height: 40px;
         flex: 0 0 auto;
       }
       ._x_extension_feedback_support_links_2026_unique_ {
@@ -1163,36 +1166,6 @@
       #_x_extension_overlay_tab_priority_row_2024_unique_ {
         display: none;
       }
-      ._x_extension_info_button_2026_unique_ {
-        box-sizing: border-box;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        flex: 0 0 20px;
-        width: 20px;
-        height: 20px;
-        border-radius: 999px;
-        color: rgba(107, 114, 128, 0.74);
-        background: transparent;
-        cursor: help;
-        font-size: 14px;
-        line-height: 1;
-        transition: background-color 140ms ease, color 140ms ease;
-      }
-      ._x_extension_info_button_2026_unique_:hover {
-        background: rgba(37, 99, 235, 0.1);
-        color: var(--panel-text);
-      }
-      ._x_extension_info_button_2026_unique_:focus-visible {
-        background: rgba(37, 99, 235, 0.1);
-        color: var(--panel-text);
-        outline: 2px solid rgba(37, 99, 235, 0.46);
-        outline-offset: 3px;
-      }
-      ._x_extension_info_button_2026_unique_ .ri-icon {
-        font-size: 14px;
-        line-height: 1;
-      }
       ._x_extension_sync_actions_2024_unique_ {
         display: flex;
         align-items: center;
@@ -1596,8 +1569,8 @@
       ._x_extension_shortcuts_section_2024_unique_ {
         display: flex;
         flex-direction: column;
-        gap: 14px;
-        padding: 12px 14px 0;
+        gap: var(--settings-content-gap);
+        padding: 0 var(--settings-content-edge-space) var(--settings-row-block-space);
         border-radius: 14px;
         background: transparent;
       }
@@ -1632,8 +1605,7 @@
       #_x_extension_favicon_blacklist_editor_2026_unique_ {
         display: flex;
         flex-direction: column;
-        gap: 14px;
-        margin-top: 12px;
+        gap: var(--settings-content-gap);
       }
       #_x_extension_favicon_blacklist_editor_2026_unique_[aria-disabled="true"] {
         opacity: 0.55;
@@ -1644,6 +1616,10 @@
         display: flex;
         flex-direction: column;
         gap: 8px;
+        padding: var(--settings-row-block-space) 0;
+      }
+      ._x_extension_shortcuts_section_2024_unique_ > ._x_extension_shortcut_group_2024_unique_:last-child {
+        padding-bottom: 0;
       }
       ._x_extension_shortcut_group_title_2024_unique_ {
         font-size: inherit;
@@ -2175,13 +2151,6 @@
         align-items: center;
         gap: 4px;
       }
-      #_x_extension_settings_panel_2024_unique_[data-theme="dark"] ._x_extension_info_button_2026_unique_ {
-        color: rgba(156, 163, 175, 0.82);
-      }
-      #_x_extension_settings_panel_2024_unique_[data-theme="dark"] ._x_extension_info_button_2026_unique_:hover,
-      #_x_extension_settings_panel_2024_unique_[data-theme="dark"] ._x_extension_info_button_2026_unique_:focus-visible {
-        background: rgba(147, 197, 253, 0.14);
-      }
       ._x_extension_shortcut_input_2024_unique_ {
         padding: 8px 10px;
         border-radius: 10px;
@@ -2595,9 +2564,6 @@
         ._x_extension_aggregate_search_source_grid_2026_unique_ {
           grid-template-columns: minmax(0, 1fr);
         }
-        ._x_extension_feedback_support_header_2026_unique_ {
-          min-height: 32px;
-        }
         ._x_extension_feedback_support_links_2026_unique_ {
           flex-wrap: wrap;
         }
@@ -2768,10 +2734,14 @@
       }
       ._x_extension_setting_divider_2024_unique_ {
         height: 0.5px;
-        width: calc(100% - 28px);
-        margin: 0 14px;
+        width: calc(100% - 2 * var(--settings-content-edge-space));
+        margin: 0 var(--settings-content-edge-space);
         background: var(--setting-divider);
         border-radius: 999px;
+      }
+      ._x_extension_shortcuts_section_2024_unique_ > ._x_extension_setting_divider_wrap_2024_unique_ > ._x_extension_setting_divider_2024_unique_ {
+        width: 100%;
+        margin: 0;
       }
       ._x_extension_setting_divider_wrap_2024_unique_ {
         height: 8px;
@@ -2829,7 +2799,7 @@
           <div class="_x_extension_setting_divider_wrap_2024_unique_" role="presentation">
             <div class="_x_extension_setting_divider_2024_unique_"></div>
           </div>
-          <div class="_x_extension_setting_row_2024_unique_ _x_extension_general_header_row_2026_unique_">
+          <div class="_x_extension_setting_row_2024_unique_ _x_extension_section_header_2026_unique_">
             <p class="_x_extension_section_title_2024_unique_" data-i18n="settings_global_section_title">全局设置</p>
             <button id="_x_extension_open_onboarding_page_2026_unique_" class="_x_extension_shortcut_submit_2024_unique_ _x_extension_onboarding_guide_button_2026_unique_" type="button">
               <span data-i18n="settings_onboarding_tutorial_action">使用教程</span>
@@ -2895,7 +2865,7 @@
               <p class="_x_extension_setting_title_2024_unique_">
                 <span data-i18n="settings_aggregate_search_auto_group_title">聚合搜索自动创建标签页组</span>
               </p>
-              <p class="_x_extension_setting_desc_2024_unique_" data-i18n="settings_aggregate_search_auto_group_desc">开启后，聚合搜索打开的所有标签页会归入同一组，并以搜索关键词命名</p>
+              <p class="_x_extension_setting_desc_2024_unique_" data-i18n="settings_aggregate_search_auto_group_desc">开启后，聚合搜索打开的所有标签页会归入同一组，并以“聚合名称：搜索关键词”命名</p>
             </div>
             <label class="_x_extension_switch_2024_unique_" for="_x_extension_aggregate_search_auto_group_toggle_2026_unique_">
               <input id="_x_extension_aggregate_search_auto_group_toggle_2026_unique_" type="checkbox" aria-label="聚合搜索自动创建标签页组" data-i18n-aria-label="settings_aggregate_search_auto_group_title" checked>
@@ -2905,9 +2875,25 @@
           <div class="_x_extension_setting_divider_wrap_2024_unique_" role="presentation">
             <div class="_x_extension_setting_divider_2024_unique_"></div>
           </div>
-          <div class="_x_extension_setting_row_2024_unique_">
+          <div class="_x_extension_setting_row_2024_unique_ _x_extension_section_header_2026_unique_">
             <div>
               <p class="_x_extension_section_title_2024_unique_" data-i18n="settings_search_results_section_title">搜索结果设置</p>
+            </div>
+          </div>
+          <div class="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_">
+            <div>
+              <p class="_x_extension_setting_title_2024_unique_" data-i18n="settings_search_result_tab_position_title">搜索结果标签页打开位置</p>
+            </div>
+            <div class="_x_extension_select_wrap_2024_unique_ _x_extension_custom_select_2024_unique_ _x_extension_select_wrap_auto_2024_unique_ _x_extension_select_align_right_2024_unique_" data-select="_x_extension_search_result_tab_position_select_2026_unique_">
+              <select id="_x_extension_search_result_tab_position_select_2026_unique_" class="_x_extension_select_2024_unique_" tabindex="-1" aria-hidden="true">
+                <option value="end" data-i18n="search_result_tab_position_end" selected>标签栏最右侧（最下方）</option>
+                <option value="afterCurrent" data-i18n="search_result_tab_position_after_current">当前标签页右侧（下方）</option>
+                <option value="beforeCurrent" data-i18n="search_result_tab_position_before_current">当前标签页左侧（上方）</option>
+              </select>
+              <button class="_x_extension_select_trigger_2024_unique_" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="搜索结果标签页打开位置" data-i18n-aria-label="settings_search_result_tab_position_title">
+                <i class="_x_extension_select_icon_2024_unique_ ri-icon ri-size-16 ri-arrow-down-s-line" aria-hidden="true"></i>
+              </button>
+              <div class="_x_extension_select_menu_2024_unique_" role="listbox"></div>
             </div>
           </div>
           <div class="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_">
@@ -2973,7 +2959,7 @@
           <div class="_x_extension_setting_divider_wrap_2024_unique_" role="presentation">
             <div class="_x_extension_setting_divider_2024_unique_"></div>
           </div>
-          <div class="_x_extension_setting_row_2024_unique_">
+          <div class="_x_extension_setting_row_2024_unique_ _x_extension_section_header_2026_unique_">
             <div class="_x_extension_shortcuts_section_block_2026_unique_">
               <div class="_x_extension_shortcuts_section_title_row_2026_unique_">
                 <div class="_x_extension_shortcuts_section_copy_2026_unique_">
@@ -3050,13 +3036,13 @@
           </div>
         </div>
         <div id="_x_extension_account_settings_content_2026_unique_" class="_x_extension_settings_content_2024_unique_" data-content="account" data-active="false">
-          <div class="_x_extension_setting_row_2024_unique_">
-            <p class="_x_extension_section_title_2024_unique_" data-i18n="settings_sync_section_title">同步方式</p>
+          <div class="_x_extension_setting_row_2024_unique_ _x_extension_section_header_2026_unique_">
+            <p class="_x_extension_section_title_2024_unique_" data-i18n="settings_sync_section_title">浏览器内置同步</p>
           </div>
           <div class="_x_extension_setting_row_2024_unique_ _x_extension_browser_sync_row_2026_unique_">
             <div>
               <div class="_x_extension_setting_title_2024_unique_ _x_extension_setting_title_with_icon_2024_unique_ _x_extension_sync_title_with_status_2026_unique_">
-                <span data-i18n="settings_sync_title">浏览器内置同步</span>
+                <span id="lumno-browser-sync-title" data-i18n="settings_sync_title">Chrome 内置同步</span>
                 <span id="_x_extension_sync_status_2024_unique_" class="_x_extension_sync_status_2024_unique_ _x_extension_tooltip_host_2024_unique_" data-tooltip="同步信息说明" data-i18n-tooltip="sync_status_hint" aria-label="同步信息说明" role="img">
                   <span id="_x_extension_sync_status_text_2024_unique_" data-i18n="sync_status_ready">自动同步已开启</span>
                   <i class="ri-icon ri-size-12 ri-question-line" aria-hidden="true"></i>
@@ -3081,9 +3067,24 @@
               <input id="_x_extension_sync_import_input_2024_unique_" type="file" accept="application/json" style="display:none;" />
             </div>
           </div>
+          <div class="_x_extension_setting_divider_wrap_2024_unique_" role="presentation">
+            <div class="_x_extension_setting_divider_2024_unique_"></div>
+          </div>
+          <section id="lumno-webdav-settings" class="lumno-webdav-settings" aria-labelledby="lumno-webdav-title">
+            <div class="lumno-webdav-heading">
+              <div class="_x_extension_setting_title_with_icon_2024_unique_ lumno-webdav-title">
+                <p id="lumno-webdav-title" class="_x_extension_section_title_2024_unique_" data-i18n="webdav_title">WebDAV 同步</p>
+                <span class="_x_extension_shortcut_badge_2024_unique_ _x_extension_lab_beta_badge_2026_unique_">Beta</span>
+                <span id="lumno-webdav-beta-info"></span>
+              </div>
+            </div>
+            <p id="lumno-webdav-setup-hint" class="_x_extension_setting_desc_2024_unique_" data-i18n="webdav_setup_hint">添加并保存服务器配置后，开启对应连接的同步。</p>
+            <div id="lumno-webdav-list"></div>
+            <p id="lumno-webdav-version" class="_x_extension_setting_desc_2024_unique_ lumno-webdav-feedback" hidden></p>
+          </section>
         </div>
         <div class="_x_extension_settings_content_2024_unique_" data-content="appearance" data-active="false">
-          <div class="_x_extension_setting_row_2024_unique_">
+          <div class="_x_extension_setting_row_2024_unique_ _x_extension_section_header_2026_unique_">
             <p class="_x_extension_section_title_2024_unique_" data-i18n="settings_appearance_global_section_title">全局</p>
           </div>
           <div id="_x_extension_theme_mode_row_2026_unique_" class="_x_extension_setting_row_2024_unique_">
@@ -3143,7 +3144,7 @@
           <div class="_x_extension_setting_divider_wrap_2024_unique_" role="presentation">
             <div class="_x_extension_setting_divider_2024_unique_"></div>
           </div>
-          <div class="_x_extension_setting_row_2024_unique_">
+          <div class="_x_extension_setting_row_2024_unique_ _x_extension_section_header_2026_unique_">
             <p class="_x_extension_section_title_2024_unique_" data-i18n="settings_webpage_focus_overlay_section_title">网页聚焦搜索浮层</p>
           </div>
           <div class="_x_extension_setting_row_2024_unique_">
@@ -3194,7 +3195,7 @@
           <div class="_x_extension_setting_divider_wrap_2024_unique_" role="presentation">
             <div class="_x_extension_setting_divider_2024_unique_"></div>
           </div>
-          <div class="_x_extension_setting_row_2024_unique_">
+          <div class="_x_extension_setting_row_2024_unique_ _x_extension_section_header_2026_unique_">
             <p class="_x_extension_section_title_2024_unique_" data-i18n="settings_newtab_section_title">新标签页</p>
           </div>
           <div class="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_">
@@ -3667,15 +3668,16 @@
     <script src="../shared/blacklist-utils.js"></script>
     <script src="../shared/navigation-disposition.js"></script>
     <script src="../shared/community-links.js"></script>
-    <script src="../shared/settings.js"></script>
     <script src="../shared/search-utils.js"></script>
     <script src="../shared/aggregate-search-store.js"></script>
     <script src="../shared/shortcut-favicon.js"></script>
     <script src="../shared/tooltip.js"></script>
     <script src="../shared/menu-surface.js"></script>
     <script src="../shared/shortcut-display.js"></script>
+    <script src="../shared/browser-profile.js"></script>
     <script src="../shared/shortcut-reference.js"></script>
     <script src="../overlay/tab-switcher.js"></script>
+    <script src="webdav-options.js"></script>
     <script
       src="../shared/react-page-bootstrap.js"
       data-react-entry="../react/options-islands.js"

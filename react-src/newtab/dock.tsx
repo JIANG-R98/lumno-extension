@@ -91,6 +91,7 @@ export function createBottomDockRuntime(config: Record<string, any>): DockRuntim
     inputParts: config.inputParts,
     topContentContainer: config.topContentContainer,
     shortcutSection: config.shortcutSection,
+    quoteSection: config.quoteSection,
     bottomDock,
     bookmarkSection: config.bookmarkSection,
     recentSection: config.recentSection,

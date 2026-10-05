@@ -64,11 +64,11 @@ const runtimeVersionMatch = overlaySource.match(
   /_x_extension_search_overlay_runtime_version_2026_unique_\s*=\s*\n?\s*'([^']+)'/
 );
 assert.ok(runtimeVersionMatch, 'overlay should publish a runtime version for safe same-page reuse');
-const expectedOverlayRuntimeVersion = '2026-08-31-provider-load-race-v15';
+const expectedOverlayRuntimeVersion = '2026-10-01-favicon-source-scope-v16';
 assert.strictEqual(
   runtimeVersionMatch[1],
   expectedOverlayRuntimeVersion,
-  'the Overlay marker must be bumped when its aggregate-search runtime dependencies change'
+  'the Overlay marker must be bumped so existing pages receive the favicon scope fix'
 );
 assert.ok(
   backgroundSource.includes(`const OVERLAY_RUNTIME_VERSION = '${runtimeVersionMatch[1]}'`),

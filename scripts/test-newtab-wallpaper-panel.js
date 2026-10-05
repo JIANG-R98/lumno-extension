@@ -721,6 +721,8 @@ function createFakeWallpaperViewController(config) {
     { 'data-wallpaper-tab': 'local', 'data-active': 'false' },
     'localTab'
   );
+  add(tabs, 'button', 'x-nt-segmented-tab x-nt-wallpaper-tab',
+    { 'data-wallpaper-tab': 'bing', 'data-active': 'false' }, 'bingTab');
   const builtInGrid = add(
     body,
     'div',
@@ -756,6 +758,15 @@ function createFakeWallpaperViewController(config) {
     { 'data-wallpaper-custom-items': '' },
     'customItemsHost'
   );
+  const bingPanel = add(body, 'div', 'x-nt-bing-panel', { 'data-wallpaper-panel': 'bing' }, 'bingPanel');
+  for (const name of ['bingDailyLabel', 'bingDailyHint', 'bingDailyPreview', 'bingDailyTitle', 'bingDailyDate', 'bingRecentLabel', 'bingStatus']) {
+    add(bingPanel, 'span', '', {}, name);
+  }
+  addSwitch(bingPanel, 'bingDailyToggle');
+  add(bingPanel, 'img', '', {}, 'bingDailyImage');
+  add(bingPanel, 'button', '', {}, 'bingRefresh');
+  add(bingPanel, 'a', '', {}, 'bingSelectedSource');
+  const bingItemsHost = add(bingPanel, 'div', 'x-nt-wallpaper-grid x-nt-wallpaper-grid--bing', {}, 'bingItemsHost');
   const effectControl = add(body, 'div', 'x-nt-effect-control');
   addSliderControl(
     effectControl,
@@ -999,6 +1010,11 @@ function createFakeWallpaperViewController(config) {
     button,
     getRefs() {
       return refs;
+    },
+    renderOnlineWallpapers(items) {
+      bingItemsHost.children.length = 0;
+      return items.map((item) => add(bingItemsHost, 'button', 'x-nt-wallpaper-tile',
+        { 'data-wallpaper-id': item.id, 'data-selected': 'false' }));
     },
     renderCustomWallpapers(items) {
       customItemsHost.children.length = 0;
@@ -1860,6 +1876,7 @@ function createWallpaperSandbox(options) {
         getURL: (path) => `chrome-extension://abc/${String(path || '').replace(/^\/+/, '')}`
       }
     },
+    LumnoNewtabRemoteContent: options && options.remoteApi ? options.remoteApi : {},
     LumnoNewtabWallpaperAdaptiveTone: {},
     LumnoNewtabWallpaperEffects: options && options.effectsApi ? options.effectsApi : {},
     LumnoNewtabWallpaperLocalStore: options && options.localStoreApi ? options.localStoreApi : {},
@@ -3706,6 +3723,85 @@ async function testCrtFilterPersistsAndShowsDisplayControls() {
   );
 }
 
+async function testBingDailySelectionAndManualOverride() {
+  const remote = require('../src/newtab/remote-content.js');
+  const id = 'bing-20261002-OHR.River_ZH-CN123';
+  const photo = { ...remote.wallpaperFromId(id), name: 'River', copyright: '© Photographer',
+    imageDataUrl: 'data:image/webp;base64,aGVsbG8=', thumbnailDataUrl: 'data:image/webp;base64,dGh1bWI=' };
+  let waitForDownload = null;
+  const client = {
+    getCatalog: async () => [photo], setPinnedIds() {},
+    getWallpaper: (selected) => selected === remote.BING_DAILY_ID ? { ...photo, id: selected, dailyId: id } : photo,
+    restoreWallpaper: async () => photo,
+    ensureWallpaper: async (selected) => {
+      if (waitForDownload) await waitForDownload;
+      return client.getWallpaper(selected);
+    }
+  };
+  const context = createWallpaperSandbox({ remoteApi: { ...remote, createClient: () => client } });
+  const prefs = createMemoryStorage({ [WALLPAPER_STORAGE_KEY]: {
+    version: 2, sameForModes: false, light: DEFAULT_WALLPAPER_ID, dark: 'dark-linocut-topographic'
+  } });
+  const runtime = context.sandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
+    documentObj: context.documentObj, windowObj: context.windowObj,
+    storageArea: prefs, localWallpaperStorageArea: createMemoryStorage(), getRiSvg: () => ''
+  });
+  await runtime.bootstrapInitialWallpaper();
+  runtime.createControls();
+  const control = runtime.getControlElement();
+  control.querySelector('.x-nt-wallpaper-button').click();
+  getDescendantByAttribute(control, 'data-wallpaper-tab', 'bing').click();
+  await waitForAsyncWallpaperApply();
+  const daily = getDescendantByAttribute(control, 'data-wallpaper-ref', 'bingDailyToggle');
+  daily.checked = true;
+  daily.dispatchEvent(new context.windowObj.Event('change'));
+  await waitForAsyncWallpaperApply();
+  assert.strictEqual(prefs.data[WALLPAPER_STORAGE_KEY].light, 'bing-daily', 'Persist daily intent instead of a fixed image ID');
+  assert.strictEqual(prefs.data[WALLPAPER_STORAGE_KEY].dark, 'dark-linocut-topographic', 'Respect split light/dark settings');
+  assert.strictEqual(daily.checked, true);
+  assert.match(getDescendantByAttribute(control, 'data-wallpaper-ref', 'bingSelectedSource').textContent, /Photographer/);
+  daily.checked = false;
+  daily.dispatchEvent(new context.windowObj.Event('change'));
+  await waitForAsyncWallpaperApply();
+  assert.strictEqual(prefs.data[WALLPAPER_STORAGE_KEY].light, id, 'Turning off daily should fix the current photo');
+  assert.strictEqual(daily.checked, false);
+  const tile = getDescendantByAttribute(control, 'data-wallpaper-id', id);
+  tile.onclick();
+  await waitForAsyncWallpaperApply();
+  assert.strictEqual(prefs.data[WALLPAPER_STORAGE_KEY].light, id);
+
+  let completeDownload;
+  waitForDownload = new Promise((resolve) => { completeDownload = resolve; });
+  daily.checked = true;
+  daily.dispatchEvent(new context.windowObj.Event('change'));
+  const builtIn = getDescendantByAttribute(control, 'data-wallpaper-id', 'dark-monet-lily-nocturne');
+  builtIn.click();
+  completeDownload();
+  await waitForAsyncWallpaperApply();
+  assert.strictEqual(prefs.data[WALLPAPER_STORAGE_KEY].light, 'dark-monet-lily-nocturne',
+    'A completed Bing download must not override a newer manual choice');
+  assert.strictEqual(daily.checked, false);
+}
+
+async function testLegacyOnlineWallpaperMigratesToBing() {
+  const remote = require('../src/newtab/remote-content.js');
+  const ensured = [];
+  const photo = { ...remote.wallpaperFromId('bing-20261002-OHR.River_ZH-CN123'),
+    id: remote.BING_DAILY_ID, imageDataUrl: 'data:image/webp;base64,aGVsbG8=' };
+  const client = { getWallpaper: () => photo, restoreWallpaper: async () => photo,
+    ensureWallpaper: async (id) => { ensured.push(id); return photo; }, setPinnedIds() {} };
+  const context = createWallpaperSandbox({ remoteApi: { ...remote, createClient: () => client } });
+  const prefs = createMemoryStorage({ [WALLPAPER_STORAGE_KEY]: 'wallhaven-abc123' });
+  const runtime = context.sandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
+    documentObj: context.documentObj, windowObj: context.windowObj,
+    storageArea: prefs, localWallpaperStorageArea: createMemoryStorage(), getRiSvg: () => ''
+  });
+  await runtime.bootstrapInitialWallpaper();
+  await waitForAsyncWallpaperApply();
+  assert.strictEqual(prefs.data[WALLPAPER_STORAGE_KEY], 'bing-daily');
+  assert(ensured.includes('bing-daily'), 'Start daily updates after migrating the old provider');
+}
+
 Promise.resolve()
   .then(() => {
     assertBrandMarkCopy();
@@ -3716,6 +3812,8 @@ Promise.resolve()
     assertWallpaperBootstrapWaitsForTheme();
     assertInitialWallpaperToneStartsBeforeDeferredRefresh();
   })
+  .then(testBingDailySelectionAndManualOverride)
+  .then(testLegacyOnlineWallpaperMigratesToBing)
   .then(testInputAutoFocusHintWaitsForFinalFocusRoute)
   .then(testNewtabFaviconPreloadAppliesCachedAlternateBeforeMainRuntime)
   .then(testWallpaperPreloadUsesTheCachedResolvedMode)

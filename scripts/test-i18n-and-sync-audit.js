@@ -460,6 +460,7 @@ localeNames.forEach((locale) => {
     'storageArea',
     'chrome',
     'isPrimaryStorageAreaName',
+    'providerStorageRuntime',
     `${getFunctionSource(newtabSource, 'migrateStorageIfNeeded')}
     return migrateStorageIfNeeded;`
   );
@@ -468,13 +469,21 @@ localeNames.forEach((locale) => {
       local: localArea,
       sync: syncArea
     }
-  }, (areaName) => areaName === 'sync');
+  }, (areaName) => areaName === 'sync', null);
   migrateStorageIfNeeded([key]);
   assert.deepStrictEqual(
     writes,
     [],
     'migration must not overwrite a mode that appeared in sync after its first read'
   );
+  let finishModeRead;
+  syncReadCount = 0;
+  const waitingMigration = createMigration(syncArea, { storage: { local: localArea, sync: syncArea } },
+    (areaName) => areaName === 'local', { ready: { then(callback) { finishModeRead = callback; } } });
+  waitingMigration([key]);
+  assert.strictEqual(syncReadCount, 0, 'migration waits for this device to choose its storage source');
+  finishModeRead();
+  assert.strictEqual(syncReadCount, 0, 'a WebDAV device must not migrate its complete local source into Chrome');
 }
 {
   const key = '_x_extension_bookmark_view_mode_2026_unique_';

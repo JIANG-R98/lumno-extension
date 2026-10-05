@@ -10,6 +10,7 @@ export interface ShortcutRecord {
   title?: string;
   url?: string;
   iconDataUrl?: string;
+  iconSource?: 'service' | 'favicon-is' | 'cache' | 'custom' | 'builtin';
 }
 
 export function normalizeMode(

@@ -33,8 +33,11 @@
     <link rel="stylesheet" href="../shared/toast.css" />
     <link rel="stylesheet" href="../shared/menu-surface.css" />
     <link rel="stylesheet" href="../shared/custom-select.css" />
+    <link rel="stylesheet" href="../shared/info-button.css" />
     <link rel="stylesheet" href="../shared/range-slider.css" />
     <link rel="stylesheet" href="shortcut-dialog.css" />
+    <link rel="stylesheet" href="folder-color-picker.css" />
+    <link rel="stylesheet" href="remote-content.css" />
     <!-- Thanks to the Remix Icon project; this extension uses its icon set: https://remixicon.com/ -->
     <style>
       html,
@@ -243,6 +246,7 @@
         --x-nt-shortcut-user-icon-size: 48px;
         --x-nt-shortcut-user-icon-radius: 16px;
         --x-nt-shortcut-user-favicon-size: 28px;
+        --x-nt-shortcut-fallback-icon-bg: rgba(241, 245, 249, 0.9);
         --x-nt-shortcut-user-tile-padding: 8px;
         --x-nt-shortcut-user-column-gap: 4px;
         --x-nt-shortcut-user-row-gap: 10px;
@@ -298,6 +302,7 @@
         );
       }
       body[data-theme="dark"] {
+        --x-nt-shortcut-fallback-icon-bg: rgba(255, 255, 255, 0.09);
         --x-nt-bg: #111111;
         --x-nt-text: #e5e7eb;
         --x-nt-subtext: #9ca3af;
@@ -684,6 +689,16 @@
         outline: 2px solid var(--x-nt-bookmark-focus, rgba(0, 0, 0, 0.22));
         outline-offset: 2px;
       }
+      .x-nt-shortcut-icon--folder svg {
+        width: calc(var(--x-nt-shortcut-favicon-size, 28px) * 1.14);
+        height: calc(var(--x-nt-shortcut-favicon-size, 28px) * 1.14);
+        display: block;
+        flex: 0 0 auto;
+      }
+      .x-nt-shortcut-icon--folder .x-nt-folder-shape--hover {
+        opacity: 0;
+        pointer-events: none;
+      }
       .x-nt-shortcut-tile--add {
         color: var(--x-nt-text, #111827);
       }
@@ -736,6 +751,13 @@
         background: var(--x-nt-shortcut-add-bg, rgba(248, 250, 252, 0.92));
         border: none;
         box-shadow: none;
+      }
+      .x-nt-shortcut-tile[data-bookmark-drop-target="true"] .x-nt-shortcut-icon {
+        cursor: inherit;
+        pointer-events: none;
+        outline: 2px solid rgba(96, 165, 250, 0.86);
+        outline-offset: 3px;
+        border-radius: 28.57%;
       }
       body[data-theme="dark"] .x-nt-shortcut-icon--add {
         color: var(--x-nt-shortcut-add-color, #e5e7eb);
@@ -859,6 +881,14 @@
         -webkit-mask-repeat: no-repeat;
         mask-repeat: no-repeat;
       }
+      .x-nt-shortcut-favicon-mask[data-builtin-icon="true"] {
+        border-radius: 0;
+        -webkit-mask-image: none;
+        mask-image: none;
+      }
+      body[data-theme="dark"] .x-nt-shortcut-favicon-mask[data-builtin-monochrome="true"] .x-nt-shortcut-favicon {
+        filter: invert(1);
+      }
       .x-nt-shortcut-favicon {
         width: 100%;
         height: 100%;
@@ -876,10 +906,12 @@
         color: inherit;
         padding: 0;
       }
+      .x-nt-shortcut-icon--folder,
       .x-nt-shortcut-icon:has(.x-nt-shortcut-favicon[data-fallback-icon="true"]),
       .x-nt-shortcut-icon:has(.x-nt-shortcut-favicon[data-favicon-placeholder="true"]),
       .x-nt-shortcut-icon:has(.x-nt-favicon-fallback[data-visible="true"]) {
-        background: transparent;
+        --x-nt-shortcut-icon-bg: var(--x-nt-shortcut-fallback-icon-bg);
+        --x-nt-shortcut-icon-color: var(--x-nt-shortcut-fallback-icon-color, var(--x-nt-text, #111827));
       }
       .x-nt-shortcut-context-menu {
         position: fixed;
@@ -1587,8 +1619,8 @@
       }
       .x-nt-bookmark-card-drag-preview--topbar
         .x-nt-bookmark-icon--figma {
-        width: 19px;
-        height: 19px;
+        width: 21px;
+        height: 21px;
         border-radius: 0;
         transform: translateY(1px);
       }
@@ -1604,7 +1636,10 @@
       }
       body[data-drag-source],
       body[data-drag-source] * {
-        cursor: grabbing !important;
+        cursor: var(--x-nt-drag-cursor, grabbing) !important;
+      }
+      body[data-drag-blocked="true"] {
+        --x-nt-drag-cursor: not-allowed;
       }
       .x-nt-bookmark-card[data-bookmark-dragging="true"],
       .x-nt-bookmark-card[data-bookmark-dropping="true"] {
@@ -1757,8 +1792,8 @@
         user-select: none;
       }
       .x-nt-bookmark-icon--figma {
-        width: 25px;
-        height: 25px;
+        width: 28px;
+        height: 28px;
         background: transparent;
         border-radius: 0;
         overflow: visible;
@@ -2133,8 +2168,8 @@
         border-radius: 4px;
       }
       .x-nt-bookmarks-topbar .x-nt-bookmark-icon--figma {
-        width: 19px;
-        height: 19px;
+        width: 21px;
+        height: 21px;
         border-radius: 0;
         transform: translateY(1px);
       }
@@ -2381,6 +2416,15 @@
       }
       .x-nt-shortcut-tooltip {
         --x-extension-tooltip-z-index: 10004;
+      }
+      .x-nt-shortcut-tooltip[data-shortcut-origin-label] ._x_extension_tooltip_line_2026_unique_:last-child {
+        display: inline;
+      }
+      .x-nt-shortcut-tooltip[data-shortcut-origin-label]::after {
+        content: attr(data-shortcut-origin-label);
+        margin-inline-start: 4px;
+        opacity: 0.62;
+        white-space: nowrap;
       }
       .x-nt-bookmark-cascade-copy-tooltip {
         --x-extension-tooltip-z-index: 10005;
@@ -2677,8 +2721,8 @@
         flex: 0 0 auto;
       }
       .x-nt-bookmark-cascade-icon--folder {
-        width: 20px;
-        height: 20px;
+        width: 22px;
+        height: 22px;
         border-radius: 0;
         display: inline-flex;
         align-items: center;
@@ -6560,7 +6604,8 @@
       body[data-lumno-page="newtab"] .x-nt-bookmarks-crumb[aria-current="page"] {
         cursor: default;
       }
-      body[data-lumno-page="newtab"] .x-nt-appearance-info-button:not(:disabled) {
+      body[data-lumno-page="newtab"] .x-nt-appearance-info-button:not(:disabled),
+      body[data-lumno-page="newtab"] ._x_extension_info_button_2026_unique_:not(:disabled) {
         cursor: help;
       }
       body[data-lumno-page="newtab"] button *,
@@ -6971,9 +7016,12 @@
     <script src="background-search-focus.js"></script>
     <script src="bookmark-cascade-position.js"></script>
     <script src="bookmark-cascade-menu.js"></script>
+    <script src="../shared/bookmark-folder-reference.js"></script>
     <script src="shortcuts-store.js"></script>
     <script src="shortcut-icon-store.js"></script>
     <script src="wallpaper-local-store.js"></script>
+    <script src="remote-content.js"></script>
+    <script src="quotes.js"></script>
     <script src="wallpaper-adaptive-tone.js"></script>
     <script src="wallpaper.js"></script>
     <script src="../overlay/tab-switcher.js"></script>

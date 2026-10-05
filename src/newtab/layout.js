@@ -120,6 +120,11 @@
       return resolveElement(options.shortcutSection);
     }
 
+    function getInlineQuoteSection() {
+      const element = resolveElement(options.quoteSection);
+      return element && !element.hidden && element.getAttribute('data-position') === 'search' ? element : null;
+    }
+
     function getBookmarkSection() {
       return resolveElement(options.bookmarkSection);
     }
@@ -332,6 +337,11 @@
         );
       }
       const shortcutSection = getShortcutSection();
+      const quoteSection = getInlineQuoteSection();
+      if (quoteSection) {
+        compactTopReserve = Math.max(compactTopReserve,
+          Math.ceil(quoteSection.getBoundingClientRect().bottom + compactDockShortcutGapPx));
+      }
       if (isSectionVisible(shortcutSection)) {
         const shortcutRect = shortcutSection.getBoundingClientRect();
         const shortcutBottom = shortcutRect ? Number(shortcutRect.bottom) || 0 : 0;
@@ -483,7 +493,8 @@
         viewportHeight - occupiedBottomHeight
       );
       const topContentOuterHeight = getElementOuterHeight(getTopContentContainer());
-      const searchBlockHeight = topContentOuterHeight + getSearchEntryBlockHeight();
+      const searchBlockHeight = topContentOuterHeight + getSearchEntryBlockHeight() +
+        getElementOuterHeight(getInlineQuoteSection());
       const bookmarkSection = getBookmarkSection();
       const recentSection = getRecentSection();
       const bookmarkVisible = isSectionVisible(bookmarkSection);

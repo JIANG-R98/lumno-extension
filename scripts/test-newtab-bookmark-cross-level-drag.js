@@ -389,7 +389,7 @@ assert.ok(
   bookmarkDragJs.includes("kind: 'insertion'") &&
     newtabJs.includes('getBookmarkGridInsertionDropTarget') &&
     newtabJs.includes('originalIndex < pageStartIndex || originalIndex >= pageEndIndex') &&
-    bookmarkDragJs.includes('markerOffsetPx: nearestBoundary.x - gridRect.left') &&
+    bookmarkDragJs.includes('markerOffsetPx: Math.max(1, Math.min(gridRect.width - 1, nearestBoundary.x - gridRect.left))') &&
     bookmarkDragJs.includes('firstItem.rect.left - (columnGap / 2)') &&
     bookmarkDragJs.includes('lastItem.rect.right + (columnGap / 2)') &&
     bookmarkDragJs.includes('itemIndex === Number(config.pageStartIndex)') &&
@@ -445,7 +445,7 @@ assert.ok(
 );
 assert.ok(
   bookmarkDragJs.includes('function resetPreviewFolderVisual(state, preview, options)') &&
-    newtabJs.includes('getFigmaFolderSvg(`${bookmarkId}-drag-preview`)') &&
+    newtabJs.includes('getFigmaFolderSvg(`${bookmarkId}-drag-preview`, bookmarkId)') &&
     newtabJs.includes('setFolderPathMorphState(folderIcon, false);') &&
     bookmarkDragJs.includes('resetPreviewFolderVisual(state, preview, config);'),
   'folder drag previews should rebuild an independent closed-folder icon'

@@ -47,7 +47,16 @@
 
   function createWallpaperLocalStore(options) {
     const documentObj = getOption(options, 'documentObj', root.document);
-    const windowObj = getOption(options, 'windowObj', root.window);
+    const windowObj = getOption(options, 'windowObj', root.window || root);
+    function notifyChange() {
+      if (options && typeof options.onChange === 'function') {
+        options.onChange();
+      } else if (root.chrome && root.chrome.storage && root.chrome.storage.local) {
+        root.chrome.storage.local.set({
+          _x_extension_asset_revision_2026_unique_: `${Date.now()}-${Math.random()}`
+        });
+      }
+    }
 
     function normalizeRecord(record) {
       if (!record || typeof record !== 'object') {
@@ -211,6 +220,7 @@
           store.put(Object.assign({}, record, { key: record.key || record.id }));
           transaction.oncomplete = () => {
             db.close();
+            notifyChange();
             resolve();
           };
           transaction.onerror = () => {
@@ -229,6 +239,7 @@
           store.delete(record && record.key ? record.key : '');
           transaction.oncomplete = () => {
             db.close();
+            notifyChange();
             resolve();
           };
           transaction.onerror = () => {
@@ -237,6 +248,22 @@
           };
         });
       });
+    }
+
+    // Apply a downloaded library in one IndexedDB transaction. The caller
+    // validates media before replacing the catalog and publishes its revision.
+    function replaceAll(records) {
+      return openDb().then((db) => new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORE_NAME, 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+        store.clear();
+        records.forEach((record) => store.put(Object.assign({}, record, { key: record.id })));
+        transaction.oncomplete = () => { db.close(); resolve(); };
+        transaction.onerror = transaction.onabort = () => {
+          db.close();
+          reject(transaction.error || new Error('Failed to restore wallpapers.'));
+        };
+      }));
     }
 
     function readFileAsDataUrl(file) {
@@ -396,6 +423,7 @@
       readAll,
       readByIds,
       remove,
+      replaceAll,
       write
     };
   }

@@ -63,8 +63,8 @@ assert.ok(
 );
 assertContains(
   cascadeActiveBody,
-  'playFolderPathMorph(icon, active);',
-  'bookmark cascade menu item hover/active state should drive the folder SVG morph'
+  'playFolderPathMorph(icon, active || submenuOpen);',
+  'bookmark cascade menu item hover and open submenu state should drive the folder SVG morph'
 );
 assertContains(
   cascadeViewReact,

@@ -16,6 +16,8 @@ const expectedSyncKeys = [
   '_x_extension_newtab_width_mode_2026_unique_',
   '_x_extension_newtab_search_width_2026_unique_',
   '_x_extension_newtab_input_auto_focus_enabled_2026_unique_',
+  // Additive preference: missing values leave daily quotes disabled.
+  '_x_extension_newtab_quote_prefs_2026_unique_',
   '_x_extension_newtab_theme_mode_2026_unique_',
   '_x_extension_newtab_theme_scope_2026_unique_',
   '_x_extension_newtab_zen_mode_2026_unique_',
@@ -64,6 +66,8 @@ const expectedSyncKeys = [
   '_x_extension_search_result_priority_2026_unique_',
   '_x_extension_search_result_source_types_2026_unique_',
   '_x_extension_search_result_display_limit_2026_unique_',
+  // Additive preference: absent values preserve the original browser tab-opening paths.
+  '_x_extension_search_result_tab_position_2026_unique_',
   '_x_extension_overlay_open_tabs_default_visible_2026_unique_',
   '_x_extension_fallback_hotkey_2024_unique_',
   '_x_extension_site_search_custom_2024_unique_',

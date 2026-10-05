@@ -41,6 +41,8 @@
     '--x-nt-wallpaper-surface-mist-terminal',
     '--x-nt-shortcut-wallpaper-icon-bg',
     '--x-nt-shortcut-wallpaper-icon-color',
+    '--x-nt-shortcut-fallback-icon-bg',
+    '--x-nt-shortcut-fallback-icon-color',
     '--x-nt-shortcut-add-bg',
     '--x-nt-shortcut-add-color'
   ];
@@ -411,6 +413,8 @@
     element.removeAttribute('data-wallpaper-forced-icon-bg');
     element.style.removeProperty('--x-nt-shortcut-wallpaper-icon-bg');
     element.style.removeProperty('--x-nt-shortcut-wallpaper-icon-color');
+    element.style.removeProperty('--x-nt-shortcut-fallback-icon-bg');
+    element.style.removeProperty('--x-nt-shortcut-fallback-icon-color');
     element.style.removeProperty('--x-nt-shortcut-add-bg');
     element.style.removeProperty('--x-nt-shortcut-add-color');
   }
@@ -422,6 +426,14 @@
     }
     const forcedSurfaceInk = getForcedShortcutSurfaceInk(ink, themeMode);
     const urlSurfaceColor = getShortcutUrlSurfaceColor(color, luminance, forcedSurfaceInk);
+    if (mode === 'shortcut-fallback') {
+      // CSS selects this palette only for folders and unavailable favicons,
+      // so loading/recovering an image keeps its normal site theme immediately.
+      setStyleProperty(element, '--x-nt-shortcut-fallback-icon-bg', formatSolidRgb(urlSurfaceColor));
+      setStyleProperty(element, '--x-nt-shortcut-fallback-icon-color',
+        formatSolidRgb(getIconSolidForegroundColor(urlSurfaceColor)));
+      return;
+    }
     if (mode === 'shortcut-add') {
       const addBackgroundColor = getShortcutAddSurfaceColor(urlSurfaceColor, forcedSurfaceInk);
       element.setAttribute('data-wallpaper-forced-icon-bg', 'true');

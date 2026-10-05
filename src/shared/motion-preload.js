@@ -2,7 +2,8 @@
   const STORAGE_KEY = '_x_extension_motion_effects_enabled_2026_unique_';
   const root = document.documentElement;
   const storage = chrome && chrome.storage ? chrome.storage : null;
-  const storageArea = storage && storage.sync
+  const providerRuntime = globalThis.LumnoSettings && globalThis.LumnoSettings.createProviderStorageRuntime(chrome);
+  const storageArea = providerRuntime ? providerRuntime.area : storage && storage.sync
     ? storage.sync
     : (storage && storage.local ? storage.local : null);
   const storageAreaName = storageArea && storageArea === storage.sync ? 'sync' : 'local';
@@ -39,7 +40,7 @@
 
   if (storage.onChanged && typeof storage.onChanged.addListener === 'function') {
     storage.onChanged.addListener((changes, areaName) => {
-      if (areaName !== storageAreaName || !changes || !changes[STORAGE_KEY]) {
+      if ((providerRuntime ? !providerRuntime.isActiveAreaName(areaName) : areaName !== storageAreaName) || !changes || !changes[STORAGE_KEY]) {
         return;
       }
       applyMotionEffectsPreference(changes[STORAGE_KEY].newValue);

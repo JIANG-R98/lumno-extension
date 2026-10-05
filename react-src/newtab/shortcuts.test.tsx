@@ -21,7 +21,7 @@ function createOptions(
     getShortcutTitle: (shortcut) => String(shortcut.title || shortcut.host || ''),
     getHostFromUrl: () => 'example.com',
     getShortcutIconDataUrl: () => '',
-    getPageFaviconCandidateUrl: (url) => `favicon:${url}`,
+    getShortcutFaviconCandidateUrl: () => '',
     getImmediateThemeForSuggestion: () => ({ accent: 'blue' }),
     applyShortcutTileTheme: (tile) => {
       tile.dataset.themed = 'true';
@@ -77,6 +77,91 @@ afterEach(() => {
 });
 
 describe('Shortcuts React island', () => {
+  it('renders a live folder entry with the shared animated icon and menu semantics', () => {
+    const initFolderIcon = vi.fn();
+    const animateFolderIcon = vi.fn();
+    const openShortcut = vi.fn();
+    const queueThemeForTarget = vi.fn();
+    const getFolderIconSvg = vi.fn(() => '<svg data-folder-icon="true"></svg>');
+    const resolveShortcutFaviconDataUrl = vi.fn(() => Promise.resolve(''));
+    const { view, options } = createView({
+      getFolderIconSvg,
+      initFolderIcon, animateFolderIcon, openShortcut, resolveShortcutFaviconDataUrl,
+      queueThemeForTarget
+    });
+    renderItems(view, [{ id: 'folder-entry', type: 'folder', folderId: '42', title: 'Design' }]);
+    const tile = options.grid!.querySelector<HTMLButtonElement>('[data-shortcut-id="folder-entry"]')!;
+    expect(tile.getAttribute('aria-haspopup')).toBe('menu');
+    expect(tile.getAttribute('data-bookmark-drop-folder-id')).toBe('42');
+    expect(tile.querySelector('[data-folder-icon]')).not.toBeNull();
+    expect(tile.dataset.themed).toBe('true');
+    expect(tile.querySelector('.x-nt-shortcut-icon--folder')?.classList.contains('x-nt-shortcut-icon')).toBe(true);
+    expect(getFolderIconSvg).toHaveBeenCalledWith('shortcut-folder-entry', '42');
+    expect(initFolderIcon).toHaveBeenCalledTimes(1);
+    expect(resolveShortcutFaviconDataUrl).not.toHaveBeenCalled();
+    expect(queueThemeForTarget).not.toHaveBeenCalled();
+    act(() => tile.click());
+    expect(openShortcut).toHaveBeenCalledWith(expect.objectContaining({ folderId: '42' }), expect.anything());
+    const folderTile = tile as import('./shortcuts').ShortcutTileElement;
+    folderTile._xSetBookmarkMenuVisualActive!(true);
+    expect(animateFolderIcon).toHaveBeenLastCalledWith(tile.querySelector('.x-nt-shortcut-icon'), true);
+    expect(tile.hasAttribute('data-shortcut-folder-open')).toBe(true);
+    folderTile._xSetBookmarkMenuVisualActive!(false);
+    expect(tile.hasAttribute('data-shortcut-folder-open')).toBe(false);
+  });
+  it('preserves animated SVG nodes when a folder shortcut rerenders or is renamed', () => {
+    const { view, options } = createView({
+      getFolderIconSvg: () => '<svg><path data-folder-part="upper-body" d="M0 0" /></svg>'
+    });
+    const folder = { id: 'folder-entry', type: 'folder', folderId: '42', title: 'Design' };
+    renderItems(view, [folder]);
+    const path = options.grid!.querySelector('path')!;
+    path.setAttribute('d', 'M9 13');
+    renderItems(view, [folder]);
+    renderItems(view, [{ ...folder, title: 'Design renamed' }]);
+    expect(options.grid!.querySelector('path')).toBe(path);
+    expect(path.getAttribute('d')).toBe('M9 13');
+    expect(options.grid!.querySelector('[data-shortcut-title="Design renamed"]')).not.toBeNull();
+  });
+  it('keeps the folder icon open while the pointer moves into its context menu', () => {
+    const animateFolderIcon = vi.fn();
+    const { view } = createView({
+      getFolderIconSvg: () => '<svg data-folder-icon="true"></svg>',
+      animateFolderIcon
+    });
+    renderItems(view, [{ id: 'folder-entry', type: 'folder', folderId: '42', title: 'Design' }]);
+    const tile = view.getTiles()[0];
+    const icon = tile.querySelector('.x-nt-shortcut-icon');
+    tile.setAttribute('data-shortcut-context-menu-open', 'true');
+    tile._xSetBookmarkMenuVisualActive!(true);
+    animateFolderIcon.mockClear();
+    act(() => tile.dispatchEvent(new MouseEvent('pointerout', { bubbles: true, relatedTarget: document.body })));
+    expect(animateFolderIcon).not.toHaveBeenCalled();
+    // A folder contents menu can close while the context menu is still open.
+    tile._xSetBookmarkMenuVisualActive!(false);
+    expect(animateFolderIcon).toHaveBeenLastCalledWith(icon, true);
+    expect(tile.hasAttribute('data-shortcut-folder-open')).toBe(true);
+    tile.removeAttribute('data-shortcut-context-menu-open');
+    tile._xSetBookmarkMenuVisualActive!(false);
+    expect(animateFolderIcon).toHaveBeenLastCalledWith(icon, false);
+    expect(tile.hasAttribute('data-shortcut-folder-open')).toBe(false);
+  });
+  it('keeps an open folder contents menu expanded when its context menu closes', () => {
+    const animateFolderIcon = vi.fn();
+    const { view } = createView({ animateFolderIcon });
+    renderItems(view, [{ id: 'folder-entry', type: 'folder', folderId: '42', title: 'Design' }]);
+    const tile = view.getTiles()[0];
+    tile.setAttribute('aria-expanded', 'true');
+    tile._xSetBookmarkMenuVisualActive!(true);
+    tile.setAttribute('data-shortcut-context-menu-open', 'true');
+    tile.removeAttribute('data-shortcut-context-menu-open');
+    tile._xSetBookmarkMenuVisualActive!(false);
+    expect(animateFolderIcon).toHaveBeenLastCalledWith(tile.querySelector('.x-nt-shortcut-icon'), true);
+    expect(tile.hasAttribute('data-shortcut-folder-open')).toBe(true);
+    tile.setAttribute('aria-expanded', 'false');
+    tile._xSetBookmarkMenuVisualActive!(false);
+    expect(tile.hasAttribute('data-shortcut-folder-open')).toBe(false);
+  });
   it('renders shortcut metadata and keeps the external tile cache synchronous', () => {
     const attachFavicon = vi.fn((image: HTMLImageElement) => {
       image.src = 'data:image/png;base64,dGVzdA==';
@@ -113,9 +198,10 @@ describe('Shortcuts React island', () => {
       'https://example.com/docs',
       'example.com',
       {
-        primaryUrl: 'favicon:https://example.com/docs',
+        primaryUrl: '',
         pageSpecificUrl: '',
-        skipPersisted: true
+        skipPersisted: true,
+        sourceProfile: 'shortcut'
       }
     );
     expect(applyTheme).toHaveBeenCalledOnce();
@@ -256,7 +342,59 @@ describe('Shortcuts React island', () => {
     );
   });
 
-  it('promotes a resolved page-specific icon ahead of browser favicon fallbacks', async () => {
+  it('uses bundled artwork without acquiring an icon from the browser or a remote service', () => {
+    const assetUrl = 'chrome-extension://abc/assets/images/site-search/glyph-xhs.png';
+    const attachFavicon = vi.fn();
+    const resolveShortcutFaviconDataUrl = vi.fn(() => Promise.resolve(''));
+    const { view } = createView({
+      getShortcutFaviconCandidateUrl: () => assetUrl,
+      resolveShortcutFaviconDataUrl,
+      attachFaviconWithFallbacks: attachFavicon
+    });
+    renderItems(view, [{ id: 'xhs', title: '小红书', url: 'https://www.xiaohongshu.com/' }]);
+    expect(resolveShortcutFaviconDataUrl).not.toHaveBeenCalled();
+    expect(document.querySelector('.x-nt-shortcut-favicon-mask')?.getAttribute('data-builtin-icon')).toBe('true');
+    expect(attachFavicon).toHaveBeenLastCalledWith(
+      expect.any(HTMLImageElement), 'https://www.xiaohongshu.com/', 'example.com',
+      { primaryUrl: assetUrl, pageSpecificUrl: '', skipPersisted: true, sourceProfile: 'shortcut' }
+    );
+  });
+
+  it('retries a missing snapshot after policy changes and then retains the saved image', async () => {
+    let revision = 0;
+    let cachedDataUrl = '';
+    const savedImage = 'data:image/png;base64,c25hcHNob3Q=';
+    const acquireIcon = vi.fn()
+      .mockResolvedValueOnce('')
+      .mockImplementationOnce(async () => {
+        cachedDataUrl = savedImage;
+        return savedImage;
+      });
+    const attachFavicon = vi.fn();
+    const { view } = createView({
+      getShortcutFaviconPolicyRevision: () => revision,
+      getShortcutFaviconDataUrl: () => cachedDataUrl,
+      resolveShortcutFaviconDataUrl: acquireIcon,
+      attachFaviconWithFallbacks: attachFavicon
+    });
+    const items = [{ id: 'stable', title: 'Stable', url: 'https://unlisted.example/' }];
+    renderItems(view, items);
+    await act(async () => { await Promise.resolve(); });
+    expect(acquireIcon).toHaveBeenCalledTimes(1);
+    revision += 1;
+    renderItems(view, items);
+    await act(async () => { await Promise.resolve(); });
+    expect(acquireIcon).toHaveBeenCalledTimes(2);
+    expect(attachFavicon).toHaveBeenLastCalledWith(
+      expect.any(HTMLImageElement), 'https://unlisted.example/', 'example.com',
+      { primaryUrl: '', pageSpecificUrl: savedImage, skipPersisted: true, sourceProfile: 'shortcut' }
+    );
+    revision += 1;
+    renderItems(view, items);
+    expect(acquireIcon).toHaveBeenCalledTimes(2);
+  });
+
+  it('waits for a saved icon without displaying a live browser favicon', async () => {
     const attachFavicon = vi.fn();
     let finishResolution: (dataUrl: string) => void = () => {};
     const resolveShortcutFaviconDataUrl = vi.fn(() => new Promise<string>((resolve) => {
@@ -289,14 +427,15 @@ describe('Shortcuts React island', () => {
       'https://example.com/docs',
       'example.com',
       {
-        primaryUrl: 'favicon:https://example.com/docs',
+        primaryUrl: '',
         pageSpecificUrl: 'data:image/png;base64,aGlnaC1yZXM=',
-        skipPersisted: true
+        skipPersisted: true,
+        sourceProfile: 'shortcut'
       }
     );
   });
 
-  it('uses a cached page-specific icon ahead of the browser favicon candidate', () => {
+  it('uses a cached page-specific icon without acquiring a new one', () => {
     const attachFavicon = vi.fn();
     const resolveShortcutFaviconDataUrl = vi.fn(() => Promise.resolve(''));
     const developerConsoleUrl =
@@ -320,9 +459,10 @@ describe('Shortcuts React island', () => {
       developerConsoleUrl,
       'example.com',
       {
-        primaryUrl: `favicon:${developerConsoleUrl}`,
+        primaryUrl: '',
         pageSpecificUrl: 'data:image/png;base64,Y2FjaGVkLWhk',
-        skipPersisted: true
+        skipPersisted: true,
+        sourceProfile: 'shortcut'
       }
     );
     expect(resolveShortcutFaviconDataUrl).not.toHaveBeenCalled();
@@ -338,7 +478,7 @@ describe('Shortcuts React island', () => {
       getHostFromUrl: () => 'x.com',
       getShortcutFaviconDataUrl: (url) =>
         url === profileUrl ? profileIcon : homeIcon,
-      getPageFaviconCandidateUrl: (url) => `favicon:${url}`,
+      getShortcutFaviconCandidateUrl: () => '',
       attachFaviconWithFallbacks: attachFavicon
     });
 
@@ -353,9 +493,10 @@ describe('Shortcuts React island', () => {
       profileUrl,
       'x.com',
       {
-        primaryUrl: `favicon:${profileUrl}`,
+        primaryUrl: '',
         pageSpecificUrl: profileIcon,
-        skipPersisted: true
+        skipPersisted: true,
+        sourceProfile: 'shortcut'
       }
     );
     expect(attachFavicon).toHaveBeenCalledWith(
@@ -363,9 +504,10 @@ describe('Shortcuts React island', () => {
       homeUrl,
       'x.com',
       {
-        primaryUrl: `favicon:${homeUrl}`,
+        primaryUrl: '',
         pageSpecificUrl: homeIcon,
-        skipPersisted: true
+        skipPersisted: true,
+        sourceProfile: 'shortcut'
       }
     );
   });

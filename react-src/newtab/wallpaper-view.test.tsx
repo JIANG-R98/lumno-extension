@@ -79,6 +79,21 @@ describe('New Tab React wallpaper view', () => {
     expect(createWallpaperViewApi().implementation).toBe('react');
     expect(controller.control.dataset.reactIsland).toBe('newtab-wallpaper');
     expect(controller.getRefs().builtInGrid).toBeTruthy();
+    expect(controller.getRefs().quoteEnabledToggle.getAttribute('role')).toBe('switch');
+    expect(controller.getRefs().quoteBody.hidden).toBe(true);
+    const quoteTabGroups = controller.getRefs().quoteBody.querySelectorAll('.x-nt-segmented-tabs');
+    expect(Array.from(quoteTabGroups, (group) => group.getAttribute('data-wallpaper-ref')))
+      .toEqual(['quoteCategory', 'quotePosition']);
+    quoteTabGroups.forEach((group) => {
+      expect(group.querySelector('.x-nt-segmented-tabs-indicator')).not.toBeNull();
+      expect(group.querySelectorAll('.x-nt-segmented-tab')).toHaveLength(2);
+    });
+    expect(controller.control.querySelector('[data-quote-position="off"]')).toBeNull();
+    expect(controller.getRefs().quoteProviderHint.tagName).toBe('P');
+    expect(controller.getRefs().bingTab.textContent).toBe('Bing');
+    expect(controller.getRefs().bingDailyToggle.getAttribute('role')).toBe('switch');
+    expect(controller.getRefs().bingDailyPreview.hidden).toBe(true);
+    expect(controller.control.querySelector('[data-wallpaper-tab="wallhaven"]')).toBeNull();
     expect(
       controller.control.querySelector('[data-wallpaper-id="coast"]')
     ).not.toBeNull();
@@ -109,7 +124,7 @@ describe('New Tab React wallpaper view', () => {
     const sliderRows = controller.control.querySelectorAll<HTMLElement>(
       '.x-nt-range-slider-row'
     );
-    expect(sliderRows).toHaveLength(13);
+    expect(sliderRows).toHaveLength(14);
     sliderRows.forEach((row) => {
       const slider = row.querySelector<HTMLInputElement>('input[type="range"]');
       const valueInput = row.querySelector<HTMLInputElement>('input[type="number"]');

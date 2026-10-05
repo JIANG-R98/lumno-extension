@@ -46,6 +46,7 @@ function findNextEnabledOptionIndex(
 
 export interface SelectMenuConfig {
   ariaLabel?: string;
+  disabled?: boolean;
   className?: string;
   iconOnly?: boolean;
   id?: string;
@@ -54,11 +55,13 @@ export interface SelectMenuConfig {
   menuMaxWidth?: number | string;
   menuMinWidth?: number | string;
   menuPortal?: boolean;
+  menuPortalContainer?: HTMLElement;
   menuPortalOffset?: number;
   menuPortalZIndex?: number;
   menuTitle?: string;
   menuWidth?: 'auto' | 'content' | 'trigger';
   onAction?(payload: { action: string; option: SelectMenuOption }): void;
+  onValueChange?(value: string): boolean | void;
   options?: SelectMenuOption[];
   selectId?: string;
   tooltip?: string;
@@ -94,7 +97,7 @@ function toCssLength(value: number | string | undefined, fallback: string) {
   return text || fallback;
 }
 
-function SelectMenu({
+export function SelectMenu({
   config,
   documentObj,
   getViewportTopInset,
@@ -126,12 +129,13 @@ function SelectMenu({
 
   const setOpen = useCallback(
     (nextOpen: boolean) => {
+      if (nextOpen && config.disabled) return;
       if (nextOpen && !openRef.current) {
         onBeforeOpen?.();
       }
       setOpenState(nextOpen);
     },
-    [onBeforeOpen]
+    [config.disabled, onBeforeOpen]
   );
 
   const positionMenu = useCallback(() => {
@@ -141,7 +145,17 @@ function SelectMenu({
       return;
     }
     const triggerRect = trigger.getBoundingClientRect();
-    const menuRect = menu.getBoundingClientRect();
+    // Modal portals use their positioned container, which may be offset or scaled.
+    menu.style.position = config.menuPortalContainer || config.menuPortal === false ? 'absolute' : 'fixed';
+    const parent = menu.offsetParent instanceof HTMLElement ? menu.offsetParent : null;
+    const parentRect = parent?.getBoundingClientRect();
+    const scaleX = parent && parentRect && parent.offsetWidth ? parentRect.width / parent.offsetWidth : 1;
+    const scaleY = parent && parentRect && parent.offsetHeight ? parentRect.height / parent.offsetHeight : 1;
+    const originX = parent && parentRect ? parentRect.left + (parent.clientLeft - parent.scrollLeft) * scaleX : 0;
+    const originY = parent && parentRect ? parentRect.top + (parent.clientTop - parent.scrollTop) * scaleY : 0;
+    if (config.menuWidth === 'trigger') {
+      menu.style.width = `${triggerRect.width / scaleX}px`;
+    }
     const viewportWidth = Math.max(
       0,
       windowObj.innerWidth || documentObj.documentElement.clientWidth || 0
@@ -159,11 +173,12 @@ function SelectMenu({
       ? Number(config.menuPortalOffset)
       : 6;
     const menuWidth = Math.max(
-      menuRect.width || 0,
+      menu.offsetWidth * scaleX,
       triggerRect.width || 0,
-      Number.parseFloat(windowObj.getComputedStyle(menu).minWidth) || 0
+      (Number.parseFloat(windowObj.getComputedStyle(menu).minWidth) || 0) * scaleX
     );
-    const menuHeight = Math.max(menuRect.height || 0, 0);
+    // Layout dimensions stay stable while the shared opening animation scales the surface.
+    const naturalMenuHeight = Math.max((menu.scrollHeight + menu.offsetHeight - menu.clientHeight) * scaleY, 0);
     const align = config.menuAlign || 'right';
     let left = triggerRect.left;
     if (align === 'right') {
@@ -175,26 +190,32 @@ function SelectMenu({
       padding,
       Math.min(left, Math.max(padding, viewportWidth - menuWidth - padding))
     );
-    let top = triggerRect.bottom + offset;
-    if (
-      top + menuHeight > viewportHeight - padding &&
-      triggerRect.top - offset - menuHeight >= topInset
-    ) {
-      top = triggerRect.top - offset - menuHeight;
-    }
+    const visualOffset = offset * scaleY;
+    const spaceBelow = Math.max(0, viewportHeight - padding - triggerRect.bottom - visualOffset);
+    const spaceAbove = Math.max(0, triggerRect.top - visualOffset - topInset);
+    const opensAbove = naturalMenuHeight > spaceBelow && spaceAbove > spaceBelow;
+    const availableHeight = opensAbove ? spaceAbove : spaceBelow;
+    const menuHeight = Math.min(naturalMenuHeight, availableHeight);
+    menu.style.maxHeight = `${availableHeight / scaleY}px`;
+    menu.style.overflowY = 'auto';
+    menu.style.overflowX = 'hidden';
+    menu.style.transformOrigin = `${opensAbove ? 'bottom' : 'top'} ${align === 'middle' ? 'center' : align}`;
+    let top = opensAbove ? triggerRect.top - visualOffset - menuHeight : triggerRect.bottom + visualOffset;
     top = Math.max(
       topInset,
       Math.min(top, Math.max(topInset, viewportHeight - menuHeight - padding))
     );
-    menu.style.position = 'fixed';
-    menu.style.left = `${Math.round(left)}px`;
+    menu.style.left = `${(left - originX) / scaleX}px`;
     menu.style.right = 'auto';
-    menu.style.top = `${Math.round(top)}px`;
+    menu.style.top = `${(top - originY) / scaleY}px`;
     menu.style.zIndex = String(config.menuPortalZIndex || 10000);
   }, [
     config.menuAlign,
+    config.menuPortal,
+    config.menuPortalContainer,
     config.menuPortalOffset,
     config.menuPortalZIndex,
+    config.menuWidth,
     documentObj,
     getViewportTopInset,
     host,
@@ -217,11 +238,21 @@ function SelectMenu({
     const onViewportChange = () => positionMenu();
     windowObj.addEventListener('resize', onViewportChange);
     windowObj.addEventListener('scroll', onViewportChange, true);
+    const ResizeObserverCtor = (windowObj as Window & { ResizeObserver?: typeof ResizeObserver }).ResizeObserver;
+    const resizeObserver = ResizeObserverCtor ? new ResizeObserverCtor(onViewportChange) : null;
+    if (triggerRef.current) resizeObserver?.observe(triggerRef.current);
+    if (menuRef.current) resizeObserver?.observe(menuRef.current);
+    if (config.menuPortalContainer) resizeObserver?.observe(config.menuPortalContainer);
+    windowObj.visualViewport?.addEventListener('resize', onViewportChange);
+    windowObj.visualViewport?.addEventListener('scroll', onViewportChange);
     return () => {
       windowObj.removeEventListener('resize', onViewportChange);
       windowObj.removeEventListener('scroll', onViewportChange, true);
+      resizeObserver?.disconnect();
+      windowObj.visualViewport?.removeEventListener('resize', onViewportChange);
+      windowObj.visualViewport?.removeEventListener('scroll', onViewportChange);
     };
-  }, [host, open, options, positionMenu, selectedValue, windowObj]);
+  }, [config.menuPortalContainer, host, open, options, positionMenu, selectedValue, windowObj]);
 
   useEffect(() => {
     if (!open) {
@@ -244,11 +275,19 @@ function SelectMenu({
         triggerRef.current?.focus();
       }
     };
+    const onFocusIn = (event: FocusEvent) => {
+      const target = event.target as Node | null;
+      if (target && !host.contains(target) && !menuRef.current?.contains(target)) {
+        setOpen(false);
+      }
+    };
     documentObj.addEventListener('pointerdown', onPointerDown, true);
     documentObj.addEventListener('keydown', onKeyDown, true);
+    documentObj.addEventListener('focusin', onFocusIn, true);
     return () => {
       documentObj.removeEventListener('pointerdown', onPointerDown, true);
       documentObj.removeEventListener('keydown', onKeyDown, true);
+      documentObj.removeEventListener('focusin', onFocusIn, true);
     };
   }, [documentObj, open, setOpen]);
 
@@ -269,6 +308,11 @@ function SelectMenu({
     if (option.action) {
       config.onAction?.({ action: option.action, option });
       setOpen(false);
+      return;
+    }
+    if (config.onValueChange?.(option.value) === false) {
+      setOpen(false);
+      triggerRef.current?.focus();
       return;
     }
     setSelectedValue(option.value);
@@ -292,6 +336,8 @@ function SelectMenu({
   );
   const menu = (
     <div
+      aria-hidden={!open}
+      id={config.id ? `${config.id}_menu` : undefined}
       className={`_x_extension_select_menu_2024_unique_ _x_extension_menu_surface_2024_unique_${
         config.menuClassName ? ` ${config.menuClassName}` : ''
       }`}
@@ -307,6 +353,7 @@ function SelectMenu({
         {
           '--x-extension-menu-surface-max-width': menuMaxWidth,
           '--x-extension-menu-surface-min-width': menuMinWidth,
+          transformOrigin: config.menuAlign === 'right' ? 'top right' : config.menuAlign === 'left' ? 'top left' : 'top center',
           left: 0,
           right: 'auto'
         } as CSSProperties
@@ -395,6 +442,7 @@ function SelectMenu({
         aria-hidden="true"
         className="_x_extension_select_2024_unique_"
         id={config.selectId}
+        disabled={config.disabled}
         ref={selectRef}
         tabIndex={-1}
         value={selectedValue}
@@ -413,10 +461,12 @@ function SelectMenu({
           ))}
       </select>
       <button
+        aria-controls={config.id ? `${config.id}_menu` : undefined}
         aria-expanded={open}
         aria-haspopup={usesMenuSemantics ? 'menu' : 'listbox'}
         aria-label={config.ariaLabel}
         className="_x_extension_select_trigger_2024_unique_"
+        disabled={config.disabled}
         data-tooltip={config.tooltip}
         onClick={(event) => {
           event.preventDefault();
@@ -467,7 +517,7 @@ function SelectMenu({
         />
       </button>
       {config.menuPortal !== false
-        ? createPortal(menu, documentObj.body)
+        ? createPortal(menu, config.menuPortalContainer || documentObj.body)
         : menu}
     </Fragment>
   );

@@ -34,8 +34,8 @@ assert.notStrictEqual(syncTitleIndex, -1, 'account settings should retain browse
 assert.ok(syncSectionTitleIndex < syncTitleIndex, 'the sync method heading should appear above the browser sync row');
 assert.match(
   optionsHtml,
-  /#_x_extension_account_settings_content_2026_unique_\s*\{\s*padding-bottom:\s*0;/,
-  'account settings bottom padding should match the panel side padding'
+  /\._x_extension_settings_content_2024_unique_\s*\{[^}]*padding-bottom:\s*0;/,
+  'all settings pages should share bottom spacing without extra content padding'
 );
 assert.doesNotMatch(accountContent, /cloud_/,
   'account settings should not restore the paused account sync UI');

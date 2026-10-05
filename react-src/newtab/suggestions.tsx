@@ -94,6 +94,7 @@ interface CursorTooltipOptions {
 interface FaviconCandidates {
   primaryUrl?: string;
   browserUrl?: string;
+  allowRemoteImage?: boolean;
 }
 
 interface ModeTheme {
@@ -242,7 +243,7 @@ export interface SuggestionsViewOptions {
   getPageFaviconRenderCandidates?: (
     url: string,
     explicitUrl: string,
-    options?: { includeChromeFallback?: boolean }
+    options?: { includeChromeFallback?: boolean; allowRemoteImage?: boolean }
   ) => FaviconCandidates;
   reportMissingIcon?: (...args: unknown[]) => void;
   preloadIcon?: (favicon: string, url: string) => void;
@@ -1481,17 +1482,18 @@ function getFaviconCandidates(
   options: NormalizedOptions,
   url: string,
   favicon: string,
-  host: string
+  host: string,
+  allowRemoteImage = false
 ): FaviconCandidates {
-  return options.getPageFaviconRenderCandidates(
-    url,
-    favicon,
-    {
+  return {
+    ...options.getPageFaviconRenderCandidates(url, favicon, {
+      allowRemoteImage,
       includeChromeFallback:
         Boolean(url && !/^https?:\/\//i.test(url)) ||
         Boolean(host && options.isLocalNetworkHost(host))
-    }
-  );
+    }),
+    allowRemoteImage
+  };
 }
 
 interface IconSpec {
@@ -1505,6 +1507,7 @@ interface IconSpec {
   favicon?: string;
   objectFitContain?: boolean;
   fallbackIconName?: string;
+  allowRemoteImage?: boolean;
 }
 
 function getSuggestionIconSpec(
@@ -1579,6 +1582,7 @@ function getSuggestionIconSpec(
       url,
       host,
       favicon,
+      allowRemoteImage: true,
       objectFitContain: true
     };
   }
@@ -1692,7 +1696,8 @@ function SuggestionIcon({
           options,
           spec.url || '',
           spec.favicon || '',
-          spec.host || ''
+          spec.host || '',
+          spec.allowRemoteImage === true
         )
       );
     }
@@ -1700,6 +1705,7 @@ function SuggestionIcon({
     isFavicon,
     options,
     spec.attach,
+    spec.allowRemoteImage,
     spec.favicon,
     spec.host,
     spec.objectFitContain,

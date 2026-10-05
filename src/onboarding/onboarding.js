@@ -792,7 +792,10 @@
       callback(MODEL.normalizeLocale(getBrowserLocale()));
       return;
     }
-    const storageArea = chromeApi.storage.sync || chromeApi.storage.local;
+    const settings = globalThis.LumnoSettings;
+    const storageArea = settings && typeof settings.createProviderStorageRuntime === 'function'
+      ? settings.createProviderStorageRuntime(chromeApi).area
+      : chromeApi.storage.sync || chromeApi.storage.local;
     if (!storageArea || typeof storageArea.get !== 'function') {
       callback(MODEL.normalizeLocale(getBrowserLocale()));
       return;

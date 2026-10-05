@@ -80,50 +80,138 @@
   "settings_selection_quick_actions_group_desc": {
     "message": "所有 AI 網頁皆歸入「AI 查詢」分頁群組"
   },
-  "selection_quick_actions_group_name": { "message": "AI 查詢" },
-  "selection_quick_action_ask": { "message": "解答" },
-  "selection_quick_action_translate": { "message": "翻譯" },
-  "selection_quick_action_explain": { "message": "解釋" },
-  "selection_quick_action_summarize": { "message": "總結" },
-  "selection_quick_action_search": { "message": "研究" },
-  "selection_quick_action_calculate": { "message": "計算" },
-  "selection_quick_action_open_menu": { "message": "使用 Lumno 處理所選文字" },
-  "selection_quick_action_more": { "message": "更多操作" },
-  "selection_quick_action_sending": { "message": "正在背景開啟…" },
-  "selection_quick_action_failed": { "message": "傳送失敗，請重試" },
-  "selection_debug_decision_title": { "message": "劃詞判定" },
-  "selection_debug_status_show": { "message": "顯示" },
-  "selection_debug_status_hide": { "message": "不顯示" },
-  "selection_debug_sort_title": { "message": "選單排序" },
-  "selection_debug_item_count": { "message": "{count} 項" },
-  "selection_debug_reason_calculate": { "message": "偵測到算式、貨幣或單位換算" },
-  "selection_debug_reason_question": { "message": "偵測到明確問句" },
-  "selection_debug_reason_prose": { "message": "偵測到詞彙足夠豐富的完整正文" },
-  "selection_debug_reason_search": { "message": "偵測到新聞、價格、官網、版本等檢索意圖" },
-  "selection_debug_reason_translate": { "message": "所選文字與 Lumno 介面語言不相符" },
-  "selection_debug_reason_error": { "message": "偵測到錯誤或例外資訊" },
-  "selection_debug_reason_code": { "message": "偵測到程式碼結構或程式碼區域" },
-  "selection_debug_reason_term": { "message": "偵測到有意義的短詞或術語" },
-  "selection_debug_reason_explain_score": { "message": "解釋得分最高" },
-  "selection_debug_reason_top_score": { "message": "此操作的配對得分最高" },
-  "selection_debug_rejection_disabled": { "message": "劃詞快捷操作的功能開關未開啟" },
-  "selection_debug_rejection_sensitive": { "message": "所選區域屬於密碼、付款或其他敏感欄位，未讀取內容" },
-  "selection_debug_rejection_no_selection": { "message": "未取得有效的文字選取範圍" },
-  "selection_debug_rejection_too_short": { "message": "少於 2 個字元" },
-  "selection_debug_rejection_too_long": { "message": "超過 2400 個字元" },
-  "selection_debug_rejection_url": { "message": "內容是完整網址" },
-  "selection_debug_rejection_email": { "message": "內容是電子郵件地址" },
-  "selection_debug_rejection_generic_ui": { "message": "符合「瞭解更多 / 儲存 / 下一步」等通用介面文案" },
-  "selection_debug_rejection_plain_number": { "message": "只是一般數字，未構成計算或換算" },
-  "selection_debug_rejection_symbols": { "message": "符號比例過高" },
-  "selection_debug_rejection_no_intent": { "message": "未符合明確任務、有意義術語或足夠完整的正文" },
-  "selection_debug_primary_meta": { "message": "首選：{action} · 得分 {score} · {confidence}信心度" },
-  "selection_debug_confidence_high": { "message": "高" },
-  "selection_debug_confidence_medium": { "message": "中" },
-  "selection_debug_confidence_low": { "message": "低" },
-  "selection_debug_sort_primary_cause": { "message": "{reason}，得分 {score}" },
-  "selection_debug_sort_fallback_cause": { "message": "通用備選，依固定順序補齊並去除重複" },
-  "selection_debug_sort_footer": { "message": "首項取意圖得分最高者；其餘依「解釋 → 研究 → 翻譯」補齊。" },
+  "selection_quick_actions_group_name": {
+    "message": "AI 查詢"
+  },
+  "selection_quick_action_ask": {
+    "message": "解答"
+  },
+  "selection_quick_action_translate": {
+    "message": "翻譯"
+  },
+  "selection_quick_action_explain": {
+    "message": "解釋"
+  },
+  "selection_quick_action_summarize": {
+    "message": "總結"
+  },
+  "selection_quick_action_search": {
+    "message": "研究"
+  },
+  "selection_quick_action_calculate": {
+    "message": "計算"
+  },
+  "selection_quick_action_open_menu": {
+    "message": "使用 Lumno 處理所選文字"
+  },
+  "selection_quick_action_more": {
+    "message": "更多操作"
+  },
+  "selection_quick_action_sending": {
+    "message": "正在背景開啟…"
+  },
+  "selection_quick_action_failed": {
+    "message": "傳送失敗，請重試"
+  },
+  "selection_debug_decision_title": {
+    "message": "劃詞判定"
+  },
+  "selection_debug_status_show": {
+    "message": "顯示"
+  },
+  "selection_debug_status_hide": {
+    "message": "不顯示"
+  },
+  "selection_debug_sort_title": {
+    "message": "選單排序"
+  },
+  "selection_debug_item_count": {
+    "message": "{count} 項"
+  },
+  "selection_debug_reason_calculate": {
+    "message": "偵測到算式、貨幣或單位換算"
+  },
+  "selection_debug_reason_question": {
+    "message": "偵測到明確問句"
+  },
+  "selection_debug_reason_prose": {
+    "message": "偵測到詞彙足夠豐富的完整正文"
+  },
+  "selection_debug_reason_search": {
+    "message": "偵測到新聞、價格、官網、版本等檢索意圖"
+  },
+  "selection_debug_reason_translate": {
+    "message": "所選文字與 Lumno 介面語言不相符"
+  },
+  "selection_debug_reason_error": {
+    "message": "偵測到錯誤或例外資訊"
+  },
+  "selection_debug_reason_code": {
+    "message": "偵測到程式碼結構或程式碼區域"
+  },
+  "selection_debug_reason_term": {
+    "message": "偵測到有意義的短詞或術語"
+  },
+  "selection_debug_reason_explain_score": {
+    "message": "解釋得分最高"
+  },
+  "selection_debug_reason_top_score": {
+    "message": "此操作的配對得分最高"
+  },
+  "selection_debug_rejection_disabled": {
+    "message": "劃詞快捷操作的功能開關未開啟"
+  },
+  "selection_debug_rejection_sensitive": {
+    "message": "所選區域屬於密碼、付款或其他敏感欄位，未讀取內容"
+  },
+  "selection_debug_rejection_no_selection": {
+    "message": "未取得有效的文字選取範圍"
+  },
+  "selection_debug_rejection_too_short": {
+    "message": "少於 2 個字元"
+  },
+  "selection_debug_rejection_too_long": {
+    "message": "超過 2400 個字元"
+  },
+  "selection_debug_rejection_url": {
+    "message": "內容是完整網址"
+  },
+  "selection_debug_rejection_email": {
+    "message": "內容是電子郵件地址"
+  },
+  "selection_debug_rejection_generic_ui": {
+    "message": "符合「瞭解更多 / 儲存 / 下一步」等通用介面文案"
+  },
+  "selection_debug_rejection_plain_number": {
+    "message": "只是一般數字，未構成計算或換算"
+  },
+  "selection_debug_rejection_symbols": {
+    "message": "符號比例過高"
+  },
+  "selection_debug_rejection_no_intent": {
+    "message": "未符合明確任務、有意義術語或足夠完整的正文"
+  },
+  "selection_debug_primary_meta": {
+    "message": "首選：{action} · 得分 {score} · {confidence}信心度"
+  },
+  "selection_debug_confidence_high": {
+    "message": "高"
+  },
+  "selection_debug_confidence_medium": {
+    "message": "中"
+  },
+  "selection_debug_confidence_low": {
+    "message": "低"
+  },
+  "selection_debug_sort_primary_cause": {
+    "message": "{reason}，得分 {score}"
+  },
+  "selection_debug_sort_fallback_cause": {
+    "message": "通用備選，依固定順序補齊並去除重複"
+  },
+  "selection_debug_sort_footer": {
+    "message": "首項取意圖得分最高者；其餘依「解釋 → 研究 → 翻譯」補齊。"
+  },
   "settings_global_section_title": {
     "message": "全域設定"
   },
@@ -187,6 +275,18 @@
   "settings_search_result_priority_title": {
     "message": "搜尋結果首位優先級"
   },
+  "settings_search_result_tab_position_title": {
+    "message": "搜尋結果分頁開啟位置"
+  },
+  "search_result_tab_position_end": {
+    "message": "分頁列最右側（最下方）"
+  },
+  "search_result_tab_position_after_current": {
+    "message": "目前分頁右側（下方）"
+  },
+  "search_result_tab_position_before_current": {
+    "message": "目前分頁左側（上方）"
+  },
   "settings_search_result_sources_title": {
     "message": "顯示結果類型"
   },
@@ -200,7 +300,7 @@
     "message": "增強圖示與主題色取得"
   },
   "settings_favicon_enhanced_fetch_desc": {
-    "message": "若遇到本機網路存取權限提示，可關閉此功能。關閉後僅使用瀏覽器快取、Lumno 內建或通用圖示。"
+    "message": "若遇到本機網路存取權限提示，可關閉此功能。關閉後不直接載入網站圖片，仍可使用瀏覽器快取、內建圖示和第三方圖示服務。"
   },
   "favicon_blacklist_section_desc": {
     "message": "按網站排除"
@@ -916,13 +1016,21 @@
   "newtab_wallpaper_effect_texture": {
     "message": "紋理"
   },
-  "newtab_wallpaper_effect_blocks_size": { "message": "積木尺寸" },
+  "newtab_wallpaper_effect_blocks_size": {
+    "message": "積木尺寸"
+  },
   "newtab_wallpaper_effect_crt_strength": {
     "message": "顯示強度"
   },
-  "newtab_wallpaper_effect_crt_bloom": { "message": "光暈" },
-  "newtab_wallpaper_effect_crt_rgb_offset": { "message": "RGB 偏移" },
-  "newtab_wallpaper_effect_crt_curvature": { "message": "螢幕曲率" },
+  "newtab_wallpaper_effect_crt_bloom": {
+    "message": "光暈"
+  },
+  "newtab_wallpaper_effect_crt_rgb_offset": {
+    "message": "RGB 偏移"
+  },
+  "newtab_wallpaper_effect_crt_curvature": {
+    "message": "螢幕曲率"
+  },
   "newtab_wallpaper_effect_none": {
     "message": "關閉"
   },
@@ -1398,7 +1506,7 @@
     "message": "編輯書籤"
   },
   "bookmarks_edit_folder_dialog_title": {
-    "message": "編輯資料夾"
+    "message": "重新命名資料夾"
   },
   "bookmarks_name_placeholder": {
     "message": "名稱"
@@ -1776,7 +1884,7 @@
     "message": "彙整搜尋自動建立分頁群組"
   },
   "settings_aggregate_search_auto_group_desc": {
-    "message": "開啟後，彙整搜尋所開啟的所有分頁會歸入同一群組，並以搜尋關鍵字命名"
+    "message": "開啟後，彙整搜尋所開啟的所有分頁會歸入同一群組，並以「彙整名稱：搜尋關鍵字」命名"
   },
   "aggregate_search_badge": {
     "message": "彙整"
@@ -1827,10 +1935,10 @@
     "message": "微信公眾號"
   },
   "settings_sync_title": {
-    "message": "瀏覽器內建同步"
+    "message": "{browser} 內建同步"
   },
   "settings_sync_section_title": {
-    "message": "同步方式"
+    "message": "瀏覽器內建同步"
   },
   "settings_sync_desc": {
     "message": "設定會透過目前瀏覽器的內建同步服務自動同步"
@@ -2114,17 +2222,107 @@
   "newtab_shortcuts_url_label": {
     "message": "網址"
   },
+  "newtab_shortcuts_url_info_label": {
+    "message": "支援的網址說明"
+  },
+  "newtab_shortcuts_url_info": {
+    "message": "也支援瀏覽器內建頁面，例如：\nchrome://inspect/#devices"
+  },
   "newtab_shortcuts_url_placeholder": {
     "message": "https://example.com"
   },
   "newtab_shortcuts_icon_label": {
     "message": "圖示（選填）"
   },
+  "newtab_shortcuts_icon_mode_label": {
+    "message": "圖示來源"
+  },
+  "newtab_shortcuts_icon_builtin": {
+    "message": "內建圖示"
+  },
+  "newtab_shortcuts_icon_builtin_hint": {
+    "message": "直接使用 Lumno 內建的高清圖示。"
+  },
+  "newtab_shortcuts_icon_builtin_network_hint": {
+    "message": "無需連網取得。"
+  },
+  "newtab_shortcuts_icon_builtin_info_label": {
+    "message": "內建圖示說明"
+  },
+  "newtab_shortcuts_icon_service": {
+    "message": "Gstatic（第三方圖示服務）"
+  },
+  "newtab_shortcuts_icon_favicon_is": {
+    "message": "Favicon.is（第三方圖示服務）"
+  },
+  "newtab_shortcuts_icon_favicon_is_hint": {
+    "message": "向 Favicon.is 傳送網域，優先取得大尺寸圖示。"
+  },
+  "newtab_shortcuts_icon_favicon_is_caution": {
+    "message": "依網域比對，可能與目前頁面圖示不同。"
+  },
+  "newtab_shortcuts_icon_cache": {
+    "message": "瀏覽器快取"
+  },
+  "newtab_shortcuts_icon_service_hint": {
+    "message": "向 Gstatic 傳送網域取得圖示，穩定、高清。"
+  },
+  "newtab_shortcuts_icon_cache_hint": {
+    "message": "讀取瀏覽器快取，快速、比對準確。"
+  },
+  "newtab_shortcuts_icon_custom_hint": {
+    "message": "預設儲存在本機，不透過瀏覽器同步。"
+  },
+  "newtab_shortcuts_icon_service_caution": {
+    "message": "部分網站可能無法辨識。"
+  },
+  "newtab_shortcuts_icon_cache_caution": {
+    "message": "受網站設定影響，可能帶通知紅點或較模糊。"
+  },
+  "newtab_shortcuts_icon_custom_sync_hint": {
+    "message": "可透過 WebDAV 跨裝置同步。"
+  },
+  "newtab_shortcuts_icon_refresh_success": {
+    "message": "取得成功"
+  },
+  "newtab_shortcuts_icon_cache_failed": {
+    "message": "找不到快取圖示。請先造訪這個網站，再按重新整理。"
+  },
+  "newtab_shortcuts_icon_source_unavailable": {
+    "message": "此來源暫時無法使用，請選擇瀏覽器快取或自訂圖示。"
+  },
+  "newtab_shortcuts_icon_online": {
+    "message": "線上圖示"
+  },
+  "newtab_shortcuts_icon_custom": {
+    "message": "自訂圖示"
+  },
+  "newtab_shortcuts_icon_current": {
+    "message": "目前圖示"
+  },
+  "newtab_shortcuts_icon_refresh": {
+    "message": "重新整理"
+  },
+  "newtab_shortcuts_icon_refreshing": {
+    "message": "重新整理中…"
+  },
+  "newtab_shortcuts_icon_refresh_failed": {
+    "message": "圖示更新失敗，請稍後再試"
+  },
+  "newtab_shortcuts_icon_custom_required": {
+    "message": "請選擇一張圖片作為自訂圖示"
+  },
+  "newtab_shortcuts_icon_online_info_label": {
+    "message": "線上圖示說明"
+  },
+  "newtab_shortcuts_icon_online_info": {
+    "message": "線上圖示保持固定，重新整理並儲存後才會更新。更新使用圖示服務或瀏覽器快取。"
+  },
   "newtab_shortcuts_icon_info_label": {
     "message": "本機圖示說明"
   },
   "newtab_shortcuts_icon_info": {
-    "message": "支援 PNG、JPG、WebP；建議使用 128×128 px 以上、透明背景的正方形圖示。僅儲存在此裝置。"
+    "message": "支援 PNG、JPG、WebP；建議使用 128×128 px 以上、透明背景的正方形圖示。預設儲存在本機，可透過 WebDAV 同步。"
   },
   "newtab_shortcuts_icon_choose": {
     "message": "選擇圖片"
@@ -2147,6 +2345,54 @@
   "newtab_shortcuts_icon_storage_error": {
     "message": "本機圖示儲存失敗，請嘗試其他圖片"
   },
+  "folder_rename": {
+    "message": "重新命名"
+  },
+  "folder_color_change": {
+    "message": "修改顏色"
+  },
+  "folder_color_format": {
+    "message": "色值格式"
+  },
+  "folder_color_title": {
+    "message": "資料夾顏色"
+  },
+  "folder_color_description": {
+    "message": "快捷列與選單中的同一資料夾也會使用此顏色，儲存在目前裝置。"
+  },
+  "folder_color_presets": {
+    "message": "預設顏色"
+  },
+  "folder_color_reset": {
+    "message": "恢復預設"
+  },
+  "folder_color_reset_tooltip": {
+    "message": "恢復預設顏色"
+  },
+  "folder_color_saved": {
+    "message": "已儲存的顏色"
+  },
+  "folder_color_save_current": {
+    "message": "儲存目前顏色"
+  },
+  "folder_color_remove_saved": {
+    "message": "刪除已儲存的顏色"
+  },
+  "folder_color_saved_delete_failed": {
+    "message": "無法刪除此顏色，請再試一次。"
+  },
+  "folder_color_saved_load_failed": {
+    "message": "無法載入已儲存的顏色，請重新開啟選色器再試一次。"
+  },
+  "folder_color_saved_save_failed": {
+    "message": "無法儲存此顏色，請再試一次。"
+  },
+  "folder_color_invalid": {
+    "message": "請輸入有效的 HEX 色值，或 0–255 範圍內的 RGB 色值。"
+  },
+  "folder_color_save_failed": {
+    "message": "無法儲存資料夾顏色，請重試。"
+  },
   "newtab_shortcuts_cancel": {
     "message": "取消"
   },
@@ -2157,7 +2403,7 @@
     "message": "儲存"
   },
   "newtab_shortcuts_invalid_url": {
-    "message": "請輸入有效的 http 或 https 網址"
+    "message": "請輸入有效的 http、https 或瀏覽器內建頁面網址"
   },
   "newtab_shortcuts_limit_reached": {
     "message": "最多可新增 {count} 個快捷方式。"
@@ -2173,6 +2419,27 @@
   },
   "newtab_shortcuts_removed": {
     "message": "已移除快捷方式"
+  },
+  "newtab_shortcuts_removed_undo": {
+    "message": "已移除快捷方式 · 按 {shortcut} 復原"
+  },
+  "newtab_shortcuts_remove_undone": {
+    "message": "已恢復快捷方式 · 按 {shortcut} 重做"
+  },
+  "newtab_shortcuts_remove_redone": {
+    "message": "已重新移除快捷方式 · 按 {shortcut} 復原"
+  },
+  "newtab_shortcuts_open_folder": {
+    "message": "開啟資料夾"
+  },
+  "newtab_shortcuts_from_bookmarks": {
+    "message": "（來自書籤列）"
+  },
+  "newtab_shortcuts_folder_added": {
+    "message": "已新增資料夾快捷入口"
+  },
+  "newtab_shortcuts_folder_missing": {
+    "message": "此收藏夾資料夾已不存在。"
   },
   "newtab_shortcuts_moved_to_bookmarks": {
     "message": "已移至書籤"
@@ -2192,10 +2459,325 @@
   "settings_tab_switcher_desc": {
     "message": "快速切換最近分頁，預設 {shortcut}，可自訂"
   },
-  "slash_command_empty": { "message": "沒有相符的指令" },
-  "command_tabs_title": { "message": "僅搜尋已開啟的分頁" },
-  "command_tabs_action": { "message": "搜尋分頁" },
-  "command_copy_title": { "message": "複製目前頁面連結" },
-  "command_copy_action": { "message": "複製連結" },
-  "settings_tab_account": { "message": "帳號與同步" }
+  "slash_command_empty": {
+    "message": "沒有相符的指令"
+  },
+  "command_tabs_title": {
+    "message": "僅搜尋已開啟的分頁"
+  },
+  "command_tabs_action": {
+    "message": "搜尋分頁"
+  },
+  "command_copy_title": {
+    "message": "複製目前頁面連結"
+  },
+  "command_copy_action": {
+    "message": "複製連結"
+  },
+  "settings_tab_account": {
+    "message": "帳號與同步"
+  },
+  "webdav_endpoint": {
+    "message": "伺服器位址（HTTPS）"
+  },
+  "webdav_directory": {
+    "message": "同步資料夾"
+  },
+  "webdav_username": {
+    "message": "使用者名稱"
+  },
+  "webdav_password": {
+    "message": "應用程式密碼"
+  },
+  "webdav_credentials_hint": {
+    "message": "連線資訊僅儲存在本機，其他裝置需分別設定。儲存設定後再開啟同步。"
+  },
+  "webdav_password_saved": {
+    "message": "已儲存；留空以保持不變"
+  },
+  "webdav_last_sync": {
+    "message": "上次同步"
+  },
+  "webdav_backup_complete": {
+    "message": "Chrome 設定副本已更新（不含圖片）"
+  },
+  "webdav_backup_partial": {
+    "message": "Chrome 設定副本不完整；完整資料保存在本機"
+  },
+  "webdav_backup_failed": {
+    "message": "Chrome 設定副本更新失敗；完整資料保存在本機"
+  },
+  "webdav_choice_hint": {
+    "message": "遠端已有設定，請選擇保留本機版本或使用遠端版本。替換前會保留本機備份，Chrome 同步會繼續執行。"
+  },
+  "webdav_conflict_hint": {
+    "message": "兩端修改了相同內容，WebDAV 正等待處理。請選擇衝突內容採用的版本，其他變更仍會合併；替換前會保留備份。Chrome 同步會繼續執行。"
+  },
+  "webdav_error_endpoint": {
+    "message": "請輸入有效的 HTTPS WebDAV 位址。"
+  },
+  "webdav_error_directory": {
+    "message": "同步資料夾無效，請使用一般資料夾名稱。"
+  },
+  "webdav_error_credentials": {
+    "message": "請輸入使用者名稱與應用程式密碼。"
+  },
+  "webdav_error_auth": {
+    "message": "驗證失敗，請檢查使用者名稱與應用程式密碼。"
+  },
+  "webdav_error_permission": {
+    "message": "伺服器拒絕存取，請檢查資料夾的讀寫權限。"
+  },
+  "webdav_error_rate": {
+    "message": "已達伺服器請求次數上限，請稍後重試。"
+  },
+  "webdav_error_capacity": {
+    "message": "WebDAV 空間不足，請釋放空間後重試。"
+  },
+  "webdav_error_conditional": {
+    "message": "此伺服器無法可靠防止同時覆寫，暫不支援自動同步。"
+  },
+  "webdav_error_changed": {
+    "message": "同步期間設定已變更，本機資料已保留，將再次同步。"
+  },
+  "webdav_error_missing": {
+    "message": "遠端設定已刪除。請選擇上傳本機設定以重建同步，或檢查伺服器位址。"
+  },
+  "webdav_error_chrome_capacity": {
+    "message": "設定超過 Chrome 同步容量，WebDAV 未套用該版本。原有 Chrome 同步與本機資料保留，請減少設定內容後重試。"
+  },
+  "webdav_error_network": {
+    "message": "連線失敗或逾時，請檢查網路、伺服器位址與憑證。本機資料已保留。"
+  },
+  "webdav_error_invalid": {
+    "message": "遠端設定格式無效或過大，本機資料未被取代。"
+  },
+  "webdav_error_asset": {
+    "message": "圖片遺失、損毀或格式不支援，本機設定已保留。"
+  },
+  "webdav_error_storage": {
+    "message": "無法儲存同步資料，請檢查瀏覽器的本機儲存空間。"
+  },
+  "webdav_error_shortcuts": {
+    "message": "還原後捷徑數量將超過上限，請先減少本機資料夾捷徑。"
+  },
+  "webdav_error_generic": {
+    "message": "同步失敗，請稍後重試。本機資料已保留。"
+  },
+  "webdav_test": {
+    "message": "測試連線"
+  },
+  "webdav_enable": {
+    "message": "儲存並啟用"
+  },
+  "webdav_sync": {
+    "message": "立即同步"
+  },
+  "webdav_pause": {
+    "message": "暫停 WebDAV"
+  },
+  "webdav_browser": {
+    "message": "切回瀏覽器同步"
+  },
+  "webdav_restore_backup": {
+    "message": "還原替換前的本機設定"
+  },
+  "webdav_use_remote": {
+    "message": "使用遠端版本"
+  },
+  "webdav_use_local": {
+    "message": "保留本機版本"
+  },
+  "webdav_test_success": {
+    "message": "連線、讀寫與並行保護驗證通過"
+  },
+  "webdav_state_browser": {
+    "message": "未開啟"
+  },
+  "webdav_state_ready": {
+    "message": "已同步"
+  },
+  "webdav_state_syncing": {
+    "message": "正在同步…"
+  },
+  "webdav_state_paused": {
+    "message": "已暫停"
+  },
+  "webdav_state_pending": {
+    "message": "等待同步"
+  },
+  "webdav_state_choice": {
+    "message": "等待選擇"
+  },
+  "webdav_state_conflict": {
+    "message": "設定衝突"
+  },
+  "webdav_state_error": {
+    "message": "同步失敗"
+  },
+  "webdav_error_interrupted": {
+    "message": "上次設定替換未完成，已暫停上傳。可還原替換前的本機設定，或重新連線並使用遠端設定。"
+  },
+  "webdav_missing_hint": {
+    "message": "遠端設定已不存在。上傳本機設定可重新建立同步；也可以先檢查伺服器位址。"
+  },
+  "webdav_restore_success": {
+    "message": "已還原本機備份並暫停這筆 WebDAV 連線。"
+  },
+  "webdav_chrome_backup_title": {
+    "message": "Chrome 設定副本"
+  },
+  "webdav_error_locked": {
+    "message": "另一台裝置正在寫入，請稍後重試。若長期無法恢復，請依 WebDAV 接入說明處理殘留鎖。"
+  },
+  "webdav_error_lock_recovery": {
+    "message": "遠端寫入未能安全結束，已保留寫入保護。請先暫停所有裝置的同步並確認中斷請求已結束，再清理遠端同步目錄下的 v1/write-lock 資料夾。"
+  },
+  "webdav_error_outdated": {
+    "message": "請重新載入 Lumno 擴充功能，再重新整理設定頁以使用多連線同步。"
+  },
+  "webdav_client_revision": {
+    "message": "連線檢測版本"
+  },
+  "webdav_title": {
+    "message": "WebDAV 同步"
+  },
+  "webdav_beta_hint": {
+    "message": "透過 WebDAV 伺服器同步設定、自訂圖示與桌布，與瀏覽器內建同步同時執行。可新增多個連線，分別開啟同步。\n\n目前為 Beta 版本，可能出現同步失敗或設定異常。歡迎回報問題，協助我們改善。"
+  },
+  "webdav_setup_hint": {
+    "message": "新增並儲存伺服器設定後，開啟對應連線的同步。"
+  },
+  "webdav_unsaved_hint": {
+    "message": "連線設定尚未儲存，請儲存後再開啟同步。"
+  },
+  "webdav_configure": {
+    "message": "設定伺服器"
+  },
+  "webdav_edit_config": {
+    "message": "編輯連線設定"
+  },
+  "webdav_save": {
+    "message": "儲存設定"
+  },
+  "webdav_save_success": {
+    "message": "連線設定已儲存在本機，可開啟 WebDAV 同步。"
+  },
+  "webdav_edit_active_hint": {
+    "message": "儲存會暫停這筆 WebDAV 連線。其他連線與 Chrome 同步繼續執行。儲存後可重新開啟。"
+  },
+  "webdav_never_synced": {
+    "message": "尚未同步"
+  },
+  "webdav_state_saving": {
+    "message": "正在儲存設定"
+  },
+  "webdav_state_testing": {
+    "message": "正在測試連線"
+  },
+  "webdav_choice_title": {
+    "message": "選擇初始同步版本"
+  },
+  "webdav_conflict_title": {
+    "message": "同步內容存在衝突"
+  },
+  "webdav_conflict_items": {
+    "message": "有衝突的內容"
+  },
+  "webdav_conflict_shortcuts": {
+    "message": "捷徑與圖示"
+  },
+  "webdav_conflict_wallpapers": {
+    "message": "桌布與選圖"
+  },
+  "webdav_conflict_preferences": {
+    "message": "設定項目"
+  },
+  "webdav_resolve_later": {
+    "message": "稍後處理並暫停"
+  },
+  "webdav_add": {
+    "message": "新增 WebDAV"
+  },
+  "webdav_remove": {
+    "message": "刪除 WebDAV 設定"
+  },
+  "webdav_remove_confirm": {
+    "message": "刪除這筆本機連線設定？伺服器上的檔案會保留。"
+  },
+  "newtab_quote_title": {
+    "message": "每日名句"
+  },
+  "newtab_quote_position": {
+    "message": "名句位置"
+  },
+  "newtab_quote_category": {
+    "message": "名句類型"
+  },
+  "newtab_quote_off": {
+    "message": "關閉"
+  },
+  "newtab_quote_search": {
+    "message": "快捷方式下方"
+  },
+  "newtab_quote_bottom": {
+    "message": "頁面底部"
+  },
+  "newtab_quote_literature": {
+    "message": "文學"
+  },
+  "newtab_quote_poetry": {
+    "message": "詩詞"
+  },
+  "newtab_quote_source": {
+    "message": "查看一言出處"
+  },
+  "newtab_quote_save_error": {
+    "message": "名句設定儲存失敗"
+  },
+  "newtab_quote_fallback_text": {
+    "message": "千里之行，始於足下。"
+  },
+  "newtab_quote_fallback_author": {
+    "message": "老子"
+  },
+  "newtab_quote_fallback_source": {
+    "message": "道德經"
+  },
+  "newtab_bing_daily": {
+    "message": "每日桌布"
+  },
+  "newtab_bing_daily_hint": {
+    "message": "每天跟隨 Bing 更新，關閉後固定目前桌布。"
+  },
+  "newtab_bing_recent": {
+    "message": "最近一週"
+  },
+  "newtab_bing_refresh": {
+    "message": "重新整理"
+  },
+  "newtab_bing_loading": {
+    "message": "正在載入桌布…"
+  },
+  "newtab_bing_saving": {
+    "message": "正在儲存桌布…"
+  },
+  "newtab_bing_error": {
+    "message": "桌布載入失敗，請稍後再試。"
+  },
+  "newtab_bing_save_error": {
+    "message": "桌布儲存失敗，請稍後再試。"
+  },
+  "newtab_bing_source": {
+    "message": "查看桌布來源"
+  },
+  "newtab_quote_font_size": {
+    "message": "字號"
+  },
+  "newtab_quote_font_size_label": {
+    "message": "名句字號（px）"
+  },
+  "newtab_quote_provider": {
+    "message": "由一言提供服務"
+  }
 }

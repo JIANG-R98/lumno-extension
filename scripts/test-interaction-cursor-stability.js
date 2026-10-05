@@ -17,6 +17,7 @@ const featureHintsCss = read('src/shared/feature-hints.css');
 const overlaySuggestionsCss = read('src/overlay/suggestions-view.css');
 const searchInputCss = read('src/shared/search-input.css');
 const shortcutDialogCss = read('src/newtab/shortcut-dialog.css');
+const infoButtonCss = read('src/shared/info-button.css');
 
 function getRule(source, selector) {
   const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -106,7 +107,7 @@ assert.match(
     newtabHtml,
     'body[data-drag-source],\n      body[data-drag-source] *'
   ),
-  /cursor:\s*grabbing\s*!important;/,
+  /cursor:\s*var\(--x-nt-drag-cursor, grabbing\)\s*!important;/,
   'bookmark and shortcut drags should keep a grabbing cursor over every underlying page target'
 );
 assertStableHoverTarget(newtabHtml, '.x-nt-recent-card:hover');
@@ -217,7 +218,7 @@ assert.doesNotMatch(
 );
 
 assert.match(
-  getRule(optionsHtml, '._x_extension_info_button_2026_unique_'),
+  getRule(infoButtonCss, '._x_extension_info_button_2026_unique_'),
   /cursor:\s*help;/,
   'hover-only help affordances should use the help cursor'
 );

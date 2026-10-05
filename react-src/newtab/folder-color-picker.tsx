@@ -1,0 +1,333 @@
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react';
+import { flushSync } from 'react-dom';
+import { createRoot } from 'react-dom/client';
+import { HexColorPicker } from 'react-colorful';
+import { RangeSliderResetButton } from '../shared/range-slider';
+import { SelectMenu } from './select-menu';
+import { DEFAULT_FOLDER_COLOR, MAX_SAVED_FOLDER_COLORS, normalizeSavedFolderColors, parseFolderColor, folderColorToChannels } from './folder-color';
+
+interface OpenOptions {
+  folderId: string;
+  title: string;
+  color?: string;
+  sourceElement?: HTMLElement | null;
+}
+interface PickerOptions {
+  documentObj?: Document;
+  t?: (key: string, fallback: string) => string;
+  getFolderSvg?: (id: string) => string;
+  initFolderIcon?: (element: HTMLElement) => void;
+  animateFolderIcon?: (element: HTMLElement, active: boolean) => void;
+  applyFolderColor?: (element: HTMLElement, color: string) => void;
+  bindTooltip?: (target: HTMLElement, getText: () => string, options: { placement: string; maxWidth: number }) => unknown;
+  hideTooltip?: () => void;
+  readSavedColors?: () => Promise<unknown>;
+  saveSavedColors?: (colors: string[]) => Promise<void>;
+  onPreview?: (folderId: string, color: string) => void;
+  onSubmit?: (folderId: string, color: string | null) => Promise<void>;
+  onClose?: () => void;
+}
+
+type ColorFormat = 'hex' | 'rgb';
+type ColorSource = 'preset' | 'saved' | 'custom';
+const CHANNEL_LABELS = ['R', 'G', 'B'];
+const FORMAT_OPTIONS = [{ value: 'hex', label: 'HEX' }, { value: 'rgb', label: 'RGB' }];
+const ignoreSelectControls = () => {};
+
+const PRESETS = [DEFAULT_FOLDER_COLOR, '#8B5CF6', '#EC4899', '#EF4444', '#F59E0B', '#22C55E', '#14B8A6', '#64748B'];
+
+function FolderColorForm({ initial, options, initialSavedColors, updateSavedColors, close }: {
+  initial: OpenOptions; options: PickerOptions; initialSavedColors: string[];
+  updateSavedColors: (colors: string[]) => void; close: () => void;
+}) {
+  const t = options.t || ((_key, fallback) => fallback);
+  const [color, setColor] = useState(parseFolderColor(initial.color) || DEFAULT_FOLDER_COLOR);
+  const [colorSource, setColorSource] = useState<ColorSource | null>(null);
+  const [hexText, setHexText] = useState(color);
+  const [rgbTexts, setRgbTexts] = useState(folderColorToChannels(color));
+  const [format, setFormat] = useState<ColorFormat>('hex');
+  const [formatHost, setFormatHost] = useState<HTMLDivElement | null>(null);
+  const [reset, setReset] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [savedColors, setSavedColors] = useState(initialSavedColors);
+  // Prefer a saved swatch on reopen; explicit edits keep their own source.
+  const selectedSource = colorSource ?? (savedColors.includes(color) ? 'saved' : 'preset');
+  const [savedColorsReady, setSavedColorsReady] = useState(!options.readSavedColors);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const previewRef = useRef<HTMLSpanElement>(null);
+  const stageRef = useRef<HTMLElement>(null);
+  const addColorRef = useRef<HTMLButtonElement>(null);
+  const savedColorsRef = useRef<HTMLDivElement>(null);
+  const focusSavedColorRef = useRef<number | null>(null);
+  const invalidHex = parseFolderColor(hexText) === null;
+  const invalidChannels = rgbTexts.map((channel) => !/^\d{1,3}$/.test(channel) || Number(channel) > 255);
+  const invalid = format === 'hex' ? invalidHex : invalidChannels.some(Boolean);
+  const invalidMessage = t('folder_color_invalid', 'Enter a valid HEX color or RGB values from 0 to 255.');
+  const previewHtml = useRef({ __html: options.getFolderSvg?.('color-picker-preview') || '' });
+
+  useLayoutEffect(() => { inputRef.current?.focus(); inputRef.current?.select(); }, []);
+  useLayoutEffect(() => {
+    for (const target of [stageRef.current?.querySelector<HTMLButtonElement>('.x-nt-folder-color-reset'), addColorRef.current]) {
+      if (target) options.bindTooltip?.(target, () => target.getAttribute('data-tooltip') || '', { placement: 'top', maxWidth: 260 });
+    }
+    if (focusSavedColorRef.current !== null) {
+      const target = savedColorsRef.current?.querySelectorAll<HTMLButtonElement>('.x-nt-folder-color-swatch:not(.x-nt-folder-color-add)')[focusSavedColorRef.current] || addColorRef.current;
+      focusSavedColorRef.current = null;
+      target?.focus();
+    }
+  }, [options, savedColors]);
+  useEffect(() => {
+    let active = true;
+    if (options.readSavedColors) {
+      void Promise.resolve().then(() => options.readSavedColors!()).then((value) => {
+        if (!active) return;
+        const colors = normalizeSavedFolderColors(value);
+        setSavedColors(colors);
+        updateSavedColors(colors);
+        setSavedColorsReady(true);
+      }).catch(() => {
+        if (active) setError(t('folder_color_saved_load_failed', 'Could not load saved colors. Reopen the color picker to try again.'));
+      });
+    }
+    return () => { active = false; options.hideTooltip?.(); };
+  }, [options, updateSavedColors]);
+  useLayoutEffect(() => {
+    if (previewRef.current) {
+      options.initFolderIcon?.(previewRef.current);
+      options.applyFolderColor?.(previewRef.current, color);
+    }
+    options.onPreview?.(initial.folderId, color);
+  }, [color, initial.folderId, options]);
+
+  function selectColor(value: string, source: ColorSource = 'custom', isReset = false) {
+    const nextColor = parseFolderColor(value);
+    if (!nextColor) return;
+    setColor(nextColor);
+    setColorSource(source);
+    setHexText(nextColor);
+    setRgbTexts(folderColorToChannels(nextColor));
+    setReset(isReset);
+    setError('');
+  }
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (busy || invalid) return;
+    setBusy(true);
+    try {
+      await options.onSubmit?.(initial.folderId, reset ? null : color);
+      close();
+    } catch {
+      setError(t('folder_color_save_failed', 'Could not save the folder color. Try again.'));
+      setBusy(false);
+    }
+  }
+
+  function changeFormat(value: string): boolean {
+    if (invalid) { setError(invalidMessage); return false; }
+    setFormat(value === 'rgb' ? 'rgb' : 'hex');
+    setHexText(color);
+    setRgbTexts(folderColorToChannels(color));
+    setError('');
+    return true;
+  }
+
+  async function persistSavedColors(next: string[], focusIndex: number, failureMessage: string) {
+    setBusy(true);
+    setError('');
+    options.hideTooltip?.();
+    try {
+      await options.saveSavedColors?.(next);
+      updateSavedColors(next);
+      focusSavedColorRef.current = focusIndex;
+      setSavedColors(next);
+      return true;
+    } catch {
+      setError(failureMessage);
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveCurrentColor() {
+    if (busy || invalid || !savedColorsReady || savedColors.length >= MAX_SAVED_FOLDER_COLORS || savedColors.includes(color)) return;
+    if (await persistSavedColors([...savedColors, color], savedColors.length,
+      t('folder_color_saved_save_failed', 'Could not save this color. Try again.'))) {
+      setColorSource('saved');
+      setReset(false);
+    }
+  }
+
+  async function removeSavedColor(saved: string) {
+    const index = savedColors.indexOf(saved);
+    if (busy || !savedColorsReady || index < 0) return;
+    const next = savedColors.filter((value) => value !== saved);
+    if (await persistSavedColors(next, Math.min(index, next.length - 1),
+      t('folder_color_saved_delete_failed', 'Could not delete this color. Try again.')) && selectedSource === 'saved' && color === saved) {
+      setColorSource('custom');
+    }
+  }
+
+  return <div className="x-nt-shortcut-dialog-backdrop x-nt-folder-color-backdrop" data-open="true"
+    onPointerDown={(event) => { if (event.target === event.currentTarget && !busy) close(); }}>
+    <div className="x-nt-shortcut-dialog x-nt-folder-color-dialog" role="dialog" aria-modal="true"
+      aria-label={t('folder_color_change', 'Change color')}>
+      <form className="x-nt-shortcut-form x-nt-folder-color-form" onSubmit={submit}>
+        <div className="x-nt-folder-color-layout">
+          <figure className="x-nt-folder-color-stage" ref={stageRef}>
+            <span className="x-nt-folder-color-preview" ref={previewRef} aria-hidden="true" dangerouslySetInnerHTML={previewHtml.current}
+              onPointerEnter={() => { if (previewRef.current) options.animateFolderIcon?.(previewRef.current, true); }}
+              onPointerLeave={() => { if (previewRef.current) options.animateFolderIcon?.(previewRef.current, false); }} />
+            <figcaption className="x-nt-folder-color-name" title={initial.title}>{initial.title}</figcaption>
+            <RangeSliderResetButton className="x-nt-folder-color-reset" iconClassName="ri-size-16"
+              aria-label={t('folder_color_reset_tooltip', 'Restore default color')}
+              title={t('folder_color_reset_tooltip', 'Restore default color')}
+              data-tooltip={t('folder_color_reset_tooltip', 'Restore default color')}
+              disabled={busy} onClick={() => selectColor(DEFAULT_FOLDER_COLOR, 'preset', true)} />
+          </figure>
+          <div className="x-nt-folder-color-editor">
+            <fieldset className="x-nt-folder-color-controls" disabled={busy}>
+              <div inert={busy}>
+                <HexColorPicker color={color} onChange={(value) => selectColor(value)} aria-label={t('folder_color_title', 'Folder color')} />
+              </div>
+              <div className="x-nt-folder-color-palettes">
+                <div className="x-nt-folder-color-presets" role="group" aria-label={t('folder_color_presets', 'Preset colors')}>
+                  {PRESETS.map((preset) => <button key={preset} type="button" className="x-nt-folder-color-swatch"
+                    style={{ backgroundColor: preset }} aria-label={preset} aria-pressed={selectedSource === 'preset' && color === preset}
+                    onClick={() => selectColor(preset, 'preset')} />)}
+                </div>
+                <div className="x-nt-folder-color-saved" role="group" ref={savedColorsRef}
+                  aria-label={t('folder_color_saved', 'Saved colors')}>
+                  {savedColors.map((saved) => <span key={saved} className="x-nt-folder-color-saved-item" data-color={saved}>
+                    <button type="button" className="x-nt-folder-color-swatch"
+                      style={{ backgroundColor: saved }} aria-label={saved} aria-pressed={selectedSource === 'saved' && color === saved}
+                      onClick={() => selectColor(saved, 'saved')} />
+                    <button type="button" className="x-nt-folder-color-remove" disabled={!savedColorsReady}
+                      aria-label={`${t('folder_color_remove_saved', 'Delete saved color')} ${saved}`}
+                      onClick={(event) => { event.stopPropagation(); void removeSavedColor(saved); }}>
+                      <i className="ri-icon ri-size-12 ri-close-line" aria-hidden="true" />
+                    </button>
+                  </span>)}
+                  {savedColors.length < MAX_SAVED_FOLDER_COLORS ? <button type="button" ref={addColorRef}
+                    className="x-nt-folder-color-swatch x-nt-folder-color-add"
+                    aria-label={t('folder_color_save_current', 'Save current color')}
+                    title={t('folder_color_save_current', 'Save current color')}
+                    data-tooltip={t('folder_color_save_current', 'Save current color')}
+                    disabled={!savedColorsReady || invalid || savedColors.includes(color)} onClick={() => { void saveCurrentColor(); }}>
+                    <i className="ri-icon ri-size-16 ri-add-line" aria-hidden="true" />
+                  </button> : null}
+                </div>
+              </div>
+              <div className="x-nt-folder-color-value-row">
+                <div ref={setFormatHost} className="_x_extension_select_wrap_2024_unique_ _x_extension_custom_select_2024_unique_ x-nt-folder-color-format">
+                  {formatHost ? <SelectMenu config={{
+                    id: 'x-nt-folder-color-format',
+                    selectId: 'x-nt-folder-color-format-select',
+                    ariaLabel: t('folder_color_format', 'Color format'),
+                    disabled: busy,
+                    options: FORMAT_OPTIONS,
+                    value: format,
+                    menuPortal: true,
+                    menuPortalZIndex: 10070,
+                    menuWidth: 'content',
+                    menuAlign: 'left',
+                    menuMinWidth: 92,
+                    menuMaxWidth: 120,
+                    menuClassName: 'x-nt-folder-color-format-menu',
+                    onValueChange: changeFormat
+                  }} documentObj={formatHost.ownerDocument} windowObj={formatHost.ownerDocument.defaultView || window}
+                    host={formatHost} registerControls={ignoreSelectControls} /> : null}
+                </div>
+                {format === 'hex' ? <input className="_x_extension_shortcut_input_2024_unique_ x-nt-folder-color-hex"
+                  ref={inputRef} value={hexText} spellCheck={false} aria-label="HEX"
+                  aria-invalid={invalidHex} aria-describedby={invalidHex ? 'x-nt-folder-color-error' : undefined}
+                  placeholder="#5393FF" onChange={(event) => {
+                    const text = event.currentTarget.value;
+                    setHexText(text); setColorSource('custom'); setReset(false); setError('');
+                    const parsed = parseFolderColor(text);
+                    if (parsed) { setColor(parsed); setRgbTexts(folderColorToChannels(parsed)); }
+                  }} onBlur={() => { const parsed = parseFolderColor(hexText); if (parsed) setHexText(parsed); }} />
+                : <div className="x-nt-folder-color-rgb">
+                  {CHANNEL_LABELS.map((label, index) => <label className="x-nt-folder-color-channel" key={label}
+                    data-invalid={invalidChannels[index] ? 'true' : undefined}>
+                    <span aria-hidden="true">{label}</span>
+                    <input aria-label={label} className="x-nt-folder-color-channel-input" inputMode="numeric" spellCheck={false}
+                      value={rgbTexts[index]} aria-invalid={invalidChannels[index]}
+                      aria-describedby={invalidChannels[index] ? 'x-nt-folder-color-error' : undefined}
+                      onChange={(event) => {
+                        const next = [...rgbTexts] as [string, string, string];
+                        next[index] = event.currentTarget.value;
+                        setRgbTexts(next); setColorSource('custom'); setReset(false); setError('');
+                        const parsed = next.every((channel) => /^\d{1,3}$/.test(channel) && Number(channel) <= 255)
+                          ? parseFolderColor(next.join(', ')) : null;
+                        if (parsed) { setColor(parsed); setHexText(parsed); }
+                      }} onBlur={() => {
+                        if (!invalidChannels[index]) setRgbTexts((current) => current.map((value, channel) => channel === index ? String(Number(value)) : value) as [string, string, string]);
+                      }} />
+                  </label>)}
+                </div>}
+              </div>
+            </fieldset>
+          </div>
+        </div>
+        <div className="x-nt-shortcut-error" id="x-nt-folder-color-error" data-visible={invalid || error ? 'true' : 'false'} role="alert">{error || (invalid ? invalidMessage : '')}</div>
+        <div className="x-nt-shortcut-dialog-actions x-nt-folder-color-actions">
+          <button type="button" className="x-lumno-action-button x-lumno-action-button--secondary x-nt-shortcut-dialog-button" disabled={busy} onClick={close}>{t('newtab_shortcuts_cancel', 'Cancel')}</button>
+          <button type="submit" className="x-lumno-action-button x-lumno-action-button--primary x-nt-shortcut-dialog-button" disabled={busy || invalid}>{t('newtab_shortcuts_save', 'Save')}</button>
+        </div>
+      </form>
+    </div>
+  </div>;
+
+}
+
+export function createFolderColorPicker(options: PickerOptions = {}) {
+  const doc = options.documentObj || document;
+  const host = doc.createElement('div');
+  const root = createRoot(host);
+  let initial: OpenOptions | null = null;
+  let savedColors: string[] = [];
+  const updateSavedColors = (colors: string[]) => { savedColors = colors; };
+  let revision = 0;
+  function close() {
+    if (!initial) return;
+    const source = initial.sourceElement;
+    initial = null;
+    flushSync(() => root.render(null));
+    host.remove();
+    doc.body.removeAttribute('data-folder-color-open');
+    options.onClose?.();
+    if (source?.isConnected) source.focus({ preventScroll: true });
+  }
+  function onKeyDown(event: KeyboardEvent) {
+    if (!initial) return;
+    // Keep modal keys from reaching new-tab search and shortcut navigation.
+    event.stopImmediatePropagation();
+    if (event.defaultPrevented) return;
+    const controls = Array.from(host.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), [tabindex="0"]')).filter((element) => !element.closest('[inert]'));
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      if (!host.querySelector('fieldset:disabled')) close();
+    } else if (event.key === 'Tab' && controls.length) {
+      const first = controls[0], last = controls[controls.length - 1];
+      if (event.shiftKey && doc.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && doc.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
+  }
+  // Capture only after the event reaches this host so React's form keys still work.
+  host.addEventListener('keydown', onKeyDown);
+  return {
+    open(next: OpenOptions) {
+      close(); initial = next; revision += 1;
+      doc.body.append(host);
+      doc.body.setAttribute('data-folder-color-open', 'true');
+      flushSync(() => root.render(<FolderColorForm key={revision} initial={next} options={options}
+        initialSavedColors={savedColors} updateSavedColors={updateSavedColors} close={close} />));
+    },
+    close,
+    isOpen: () => Boolean(initial),
+    destroy() { close(); root.unmount(); host.removeEventListener('keydown', onKeyDown); }
+  };
+}

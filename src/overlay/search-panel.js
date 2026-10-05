@@ -1,7 +1,7 @@
 'use strict';
 
 window._x_extension_search_overlay_runtime_version_2026_unique_ =
-  '2026-08-31-provider-load-race-v15';
+  '2026-10-01-favicon-source-scope-v16';
 window._x_extension_search_overlay_open_2026_unique_ = false;
 
 window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayContext) {
@@ -460,10 +460,13 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
   }
 
   function getOverlayStrictFaviconReason(pageUrl) {
+    if (isUrlExcludedFromOverlayFaviconRequests(pageUrl)) {
+      return 'exclusion';
+    }
     if (!faviconEnhancedFetchEnabled) {
       return 'global-off';
     }
-    return isUrlExcludedFromOverlayFaviconRequests(pageUrl) ? 'exclusion' : '';
+    return '';
   }
 
   function isOverlayEnhancedFaviconFetchEnabled(pageUrl) {
@@ -1049,26 +1052,8 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
   }
 
   function getDefaultSearchEngineFaviconUrlForOverlay() {
-    if (!isOverlayEnhancedFaviconFetchEnabled(getDefaultSearchEngineThemeUrlForOverlay())) {
-      return '';
-    }
-    const state = getOverlaySearchEngineState();
-    if (state.id === 'google') {
-      return 'https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png';
-    }
-    if (state.host) {
-      return `https://${state.host}/favicon.ico`;
-    }
-    if (state.searchTemplate) {
-      try {
-        const url = buildSearchUrlFromTemplate(state.searchTemplate, 'test');
-        const host = new URL(url).hostname;
-        return `https://${host}/favicon.ico`;
-      } catch (e) {
-        return '';
-      }
-    }
-    return 'https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png';
+    const resolver = getOverlayFaviconUrlResolver();
+    return resolver ? resolver.getPageFaviconCandidateUrl(getDefaultSearchEngineThemeUrlForOverlay()) : '';
   }
 
   function getDefaultSearchEngineThemeUrlForOverlay() {
@@ -1181,11 +1166,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
   function isBlockedOverlayFaviconUrl(url) {
     const resolver = getOverlayFaviconUrlResolver();
     return resolver ? resolver.isBlockedFaviconUrl(url) : false;
-  }
-
-  function getSafeOverlayFaviconUrl(url) {
-    const value = String(url || '').trim();
-    return value && !isBlockedOverlayFaviconUrl(value) ? value : '';
   }
 
   function isLocalNetworkInput(input) {
@@ -4124,6 +4104,12 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
         );
       }
       refreshOverlayFaviconsForPolicyChange();
+      if (inputModeController) {
+        if (siteSearchState) {
+          setSiteSearchPrefix(siteSearchState, getImmediateThemeForSuggestion({ provider: siteSearchState }), { animate: false });
+        }
+        inputModeController.refreshModeMenu();
+      }
     });
     if (storageArea) {
       initialOverlayOpenTabsDefaultVisibleReady = initialOverlaySettingsReady.then((result) => {
@@ -4452,6 +4438,8 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     }
 
     function getThemeFromUrl(url, hostOverride) {
+      const resolver = getOverlayFaviconUrlResolver();
+      url = resolver ? resolver.getSafeFaviconCandidateUrl(url, '', 'theme') : '';
       if (!url) {
         return Promise.resolve(defaultTheme);
       }
@@ -4586,9 +4574,8 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     function getThemeForProvider(provider) {
       const hostKey = getProviderThemeHost(provider);
       const providerPageUrl = getProviderFaviconPageUrl(provider);
-      const iconUrl = isOverlayEnhancedFaviconFetchEnabled(providerPageUrl)
-        ? getProviderIcon(provider)
-        : getPageFaviconCandidateUrl(providerPageUrl);
+      const resolver = getOverlayFaviconUrlResolver();
+      const iconUrl = resolver ? resolver.resolveFaviconSource(getProviderIcon(provider), providerPageUrl) : '';
       if (hostKey && themeHostCache.has(hostKey)) {
         return Promise.resolve(themeHostCache.get(hostKey));
       }
@@ -4633,17 +4620,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
         const fallbackTheme = buildFallbackThemeForHost(hostKey);
         return Promise.resolve(fallbackTheme || defaultTheme);
       }
-      const siteFavicon = hostKey && !isUrlExcludedFromOverlayFaviconRequests(suggestion && suggestion.url)
-        ? getSiteFaviconUrl(hostKey)
-        : '';
-      if (siteFavicon) {
-        return getThemeFromUrl(siteFavicon, hostKey).then((theme) => {
-          if (theme && !theme._xIsDefault) {
-            return theme;
-          }
-          return getThemeFromUrl(getThemeSourceForSuggestion(suggestion), hostKey);
-        });
-      }
+
       return getThemeFromUrl(getThemeSourceForSuggestion(suggestion), hostKey);
     }
 
@@ -4914,48 +4891,17 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
 
     function getThemeSourceForSuggestion(suggestion) {
       if (suggestion && suggestion.provider) {
-        const hostKey = getProviderThemeHost(suggestion.provider);
-        if (hostKey && shouldBlockOverlayFaviconForHost(hostKey)) {
-          return '';
-        }
-        const providerPageUrl = getProviderFaviconPageUrl(suggestion.provider);
-        if (!isOverlayEnhancedFaviconFetchEnabled(providerPageUrl)) {
-          return getPageFaviconCandidateUrl(providerPageUrl);
-        }
-        return getProviderIcon(suggestion.provider) || (hostKey ? getHostFaviconUrl(hostKey) : '');
+        const resolver = getOverlayFaviconUrlResolver();
+        return resolver ? resolver.resolveFaviconSource(
+          getProviderIcon(suggestion.provider), getProviderFaviconPageUrl(suggestion.provider)
+        ) : '';
       }
-      if (suggestion && suggestion.url && isUrlExcludedFromOverlayFaviconRequests(suggestion.url)) {
-        return getPageFaviconCandidateUrl(suggestion.url);
-      }
-      if (suggestion && suggestion.url) {
-        try {
-          const hostname = normalizeHost(new URL(suggestion.url).hostname);
-          if (hostname) {
-            if (shouldBlockOverlayFaviconForHost(hostname)) {
-              return '';
-            }
-            return getGstaticFaviconUrl(suggestion.url) || getHostFaviconUrl(hostname);
-          }
-        } catch (e) {
-          // Ignore malformed URLs.
-        }
-      }
-      return suggestion && suggestion.favicon ? suggestion.favicon : '';
+      const resolver = getOverlayFaviconUrlResolver();
+      return resolver
+        ? resolver.resolveFaviconSource(suggestion && suggestion.favicon, suggestion && suggestion.url)
+        : '';
     }
 
-    function getSiteFaviconUrl(hostname) {
-      const normalized = normalizeFaviconHost(hostname);
-      if (!normalized) {
-        return '';
-      }
-      if (!faviconEnhancedFetchEnabled) {
-        return '';
-      }
-      if (shouldAvoidDirectFaviconForHost(normalized)) {
-        return getGstaticFaviconUrl(`https://${normalized}/`);
-      }
-      return `https://${normalized}/favicon.ico`;
-    }
 
     inputModeController = SEARCH_INPUT_MODE.createInputModeController(inputParts, {
       surface: 'overlay',
@@ -4977,6 +4923,9 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       rgbToCss,
       isDarkMode: isOverlayDarkMode,
       getProviderIcon,
+      resolveProviderIconUrl: (provider, iconUrl) => getOverlayFaviconUrlResolver().getProviderFaviconUrl(
+        getProviderFaviconPageUrl(provider), iconUrl
+      ),
       getProviderThemeHost,
       getThemeForProvider,
       getSiteSearchPrefixText,
@@ -5697,37 +5646,19 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     }
 
     function getProviderIcon(provider) {
-      if (typeof SHORTCUT_FAVICON.getSiteSearchProviderIcon === 'function') {
-        const resolvedIcon = SHORTCUT_FAVICON.getSiteSearchProviderIcon(
-          siteSearchIconCacheLoaded ? siteSearchIconCache : {},
-          provider,
-          Date.now(),
-          {
+      const resolver = getOverlayFaviconUrlResolver();
+      if (!resolver) {
+        return '';
+      }
+      const iconUrl = typeof SHORTCUT_FAVICON.getSiteSearchProviderIcon === 'function'
+        ? SHORTCUT_FAVICON.getSiteSearchProviderIcon(
+          siteSearchIconCacheLoaded ? siteSearchIconCache : {}, provider, Date.now(), {
             ...siteSearchIconCacheOptions,
             resolveAssetUrl: (path) => chrome.runtime.getURL(path)
           }
-        );
-        const safeResolvedIcon = getSafeOverlayFaviconUrl(resolvedIcon);
-        if (safeResolvedIcon) {
-          return safeResolvedIcon;
-        }
-      }
-      const explicitIcon = provider && (provider.icon || provider.iconUrl) ? (provider.icon || provider.iconUrl) : '';
-      const safeExplicitIcon = getSafeOverlayFaviconUrl(explicitIcon);
-      const providerIconPageUrl = explicitIcon ? getCanonicalPageUrlForFavicon(explicitIcon) : '';
-      if (providerIconPageUrl && providerIconPageUrl !== explicitIcon) {
-        return getSafeOverlayFaviconUrl(getPageFaviconCandidateUrl(providerIconPageUrl)) || safeExplicitIcon;
-      }
-      if (safeExplicitIcon) {
-        return safeExplicitIcon;
-      }
-      const providerPageUrl = getProviderFaviconPageUrl(provider);
-      try {
-        const hostname = normalizeHost(new URL(providerPageUrl).hostname);
-        return getSafeOverlayFaviconUrl(getPageFaviconCandidateUrl(providerPageUrl) || getHostFaviconUrl(hostname));
-      } catch (e) {
-        return '';
-      }
+        )
+        : (provider && (provider.icon || provider.iconUrl)) || '';
+      return resolver.getProviderFaviconUrl(getProviderFaviconPageUrl(provider), iconUrl);
     }
 
     function getProviderIconAttachPageUrl(provider, iconUrl, iconHost) {
@@ -7723,15 +7654,14 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
           image.dispatchEvent(new CustomEvent('lumno-favicon-fallback', {
             bubbles: true
           }));
-        }
+        },
+        { allowRemoteImage: resolvedCandidates.allowRemoteImage === true }
       );
     }
 
-    function getReactOverlayFaviconCandidates(url, explicitUrl) {
-      return {
-        primaryUrl: explicitUrl || getPageFaviconCandidateUrl(url || ''),
-        browserUrl: getChromeFaviconUrl(url || '')
-      };
+    function getReactOverlayFaviconCandidates(url, explicitUrl, options) {
+      const resolver = getOverlayFaviconUrlResolver();
+      return resolver ? resolver.getPageFaviconRenderCandidates(url, explicitUrl, options) : {};
     }
 
     function ensureOverlaySuggestionsView() {

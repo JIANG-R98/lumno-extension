@@ -1,4 +1,5 @@
 import { act } from 'react';
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createSelectMenuApi,
@@ -61,6 +62,135 @@ afterEach(() => {
 });
 
 describe('New Tab select menu React island', () => {
+  it('keeps a disabled source selector closed', () => {
+    const { controller, instance } = createMenu({ ...baseConfig, disabled: true });
+    expect(instance.trigger.disabled).toBe(true);
+    expect(instance.select.disabled).toBe(true);
+    act(() => controller.setOpen(instance.wrapper, true));
+    expect(controller.isOpen(instance.wrapper)).toBe(false);
+  });
+
+  it('places a modal menu inside its supplied portal container', () => {
+    const modal = document.createElement('div');
+    document.body.appendChild(modal);
+    const { controller, instance } = createMenu({ ...baseConfig, menuPortalContainer: modal });
+    expect(instance.menu.parentElement).toBe(modal);
+    act(() => controller.setOpen(instance.wrapper, true));
+    expect(instance.menu.dataset.open).toBe('true');
+    act(() => instance.menu.querySelector<HTMLElement>('[data-value="list"]')?.click());
+    expect(instance.select.value).toBe('list');
+  });
+
+  it('matches the trigger width when a dropdown is portaled', () => {
+    const { controller, instance } = createMenu({ ...baseConfig, menuWidth: 'trigger' });
+    vi.spyOn(instance.trigger, 'getBoundingClientRect').mockReturnValue({
+      left: 40, right: 412, top: 40, bottom: 76, width: 372, height: 36
+    } as DOMRect);
+    act(() => controller.setOpen(instance.wrapper, true));
+    expect(instance.menu.style.width).toBe('372px');
+  });
+
+  it('positions a modal dropdown in the scaled container coordinates and tracks resizing', () => {
+    const modal = document.createElement('div');
+    document.body.appendChild(modal);
+    const { controller, instance } = createMenu({ ...baseConfig, menuPortalContainer: modal, menuWidth: 'trigger', menuPortalOffset: 6 });
+    Object.defineProperties(modal, {
+      offsetWidth: { value: 400 }, offsetHeight: { value: 300 },
+      clientLeft: { value: 2 }, clientTop: { value: 3 },
+      scrollLeft: { value: 5 }, scrollTop: { value: 8 }
+    });
+    Object.defineProperties(instance.menu, {
+      offsetParent: { value: modal }, offsetWidth: { value: 200 }, offsetHeight: { value: 90 }
+    });
+    vi.spyOn(modal, 'getBoundingClientRect').mockReturnValue({
+      left: 120, top: 80, width: 800, height: 600
+    } as DOMRect);
+    const triggerRect = vi.spyOn(instance.trigger, 'getBoundingClientRect').mockReturnValue({
+      left: 200, right: 600, top: 200, bottom: 272, width: 400, height: 72
+    } as DOMRect);
+    act(() => controller.setOpen(instance.wrapper, true));
+    expect(instance.menu.style.position).toBe('absolute');
+    expect(instance.menu.style.width).toBe('200px');
+    expect(instance.menu.style.left).toBe('43px');
+    expect(instance.menu.style.top).toBe('107px');
+    triggerRect.mockReturnValue({
+      left: 240, right: 640, top: 220, bottom: 292, width: 400, height: 72
+    } as DOMRect);
+    act(() => window.dispatchEvent(new Event('resize')));
+    expect(instance.menu.style.left).toBe('63px');
+    expect(instance.menu.style.top).toBe('117px');
+  });
+
+  it('uses layout dimensions rather than animated bounds for alignment', () => {
+    const { controller, instance } = createMenu({ ...baseConfig, menuAlign: 'right' });
+    Object.defineProperties(instance.menu, { offsetWidth: { value: 240 }, offsetHeight: { value: 180 } });
+    vi.spyOn(instance.trigger, 'getBoundingClientRect').mockReturnValue({
+      left: 800, right: 840, top: 100, bottom: 136, width: 40, height: 36
+    } as DOMRect);
+    vi.spyOn(instance.menu, 'getBoundingClientRect').mockReturnValue({
+      width: 230.4, height: 154.8
+    } as DOMRect);
+    act(() => controller.setOpen(instance.wrapper, true));
+    expect(instance.menu.style.left).toBe('600px');
+  });
+
+  it('limits a tall menu to the space below its trigger instead of overlapping the input', () => {
+    const { controller, instance } = createMenu({ ...baseConfig, menuPortalOffset: 6 });
+    Object.defineProperties(instance.menu, {
+      offsetHeight: { value: 480 }, clientHeight: { value: 478 }, scrollHeight: { value: 478 }
+    });
+    vi.spyOn(instance.trigger, 'getBoundingClientRect').mockReturnValue({
+      left: 40, right: 412, top: 320, bottom: 392, width: 372, height: 72
+    } as DOMRect);
+    act(() => controller.setOpen(instance.wrapper, true));
+    expect(instance.menu.style.top).toBe('398px');
+    expect(instance.menu.style.maxHeight).toBe(`${window.innerHeight - 8 - 398}px`);
+    expect(instance.menu.style.overflowY).toBe('auto');
+    expect(instance.menu.style.transformOrigin).toBe('top left');
+  });
+
+  it('anchors an upward opening animation at the bottom edge beside its trigger', () => {
+    const { controller, instance } = createMenu({ ...baseConfig, menuPortalOffset: 6 });
+    Object.defineProperties(instance.menu, { offsetHeight: { value: 180 } });
+    vi.spyOn(instance.trigger, 'getBoundingClientRect').mockReturnValue({
+      left: 40, right: 412, top: 640, bottom: 676, width: 372, height: 36
+    } as DOMRect);
+    act(() => controller.setOpen(instance.wrapper, true));
+    expect(instance.menu.style.top).toBe('454px');
+    expect(instance.menu.style.transformOrigin).toBe('bottom left');
+  });
+
+  it('visually closes after selection even inside an open modal', () => {
+    const style = document.createElement('style');
+    style.textContent = readFileSync('src/shared/menu-surface.css', 'utf8');
+    document.head.appendChild(style);
+    try {
+      const modal = document.createElement('div');
+      modal.dataset.open = 'true';
+      document.body.appendChild(modal);
+      const { controller, instance } = createMenu({ ...baseConfig, menuPortalContainer: modal });
+      expect(getComputedStyle(instance.menu).opacity).toBe('0');
+      act(() => controller.setOpen(instance.wrapper, true));
+      expect(getComputedStyle(instance.menu).opacity).toBe('1');
+      act(() => instance.menu.querySelector<HTMLElement>('[data-value="list"]')?.click());
+      expect(instance.select.value).toBe('list');
+      expect(getComputedStyle(instance.menu).opacity).toBe('0');
+      expect(getComputedStyle(instance.menu).pointerEvents).toBe('none');
+    } finally {
+      style.remove();
+    }
+  });
+
+  it('closes when keyboard focus moves to another form field without stealing focus', () => {
+    const { controller, instance } = createMenu();
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    act(() => { instance.trigger.focus(); controller.setOpen(instance.wrapper, true); });
+    act(() => input.focus());
+    expect(controller.isOpen(instance.wrapper)).toBe(false);
+    expect(document.activeElement).toBe(input);
+  });
+
   it('preserves the custom-select DOM and synchronous controller contract', () => {
     const { controller, instance } = createMenu();
 
@@ -70,6 +200,8 @@ describe('New Tab select menu React island', () => {
       true
     );
     expect(instance.menu.parentElement).toBe(document.body);
+    expect(instance.menu.getAttribute('aria-hidden')).toBe('true');
+    expect(instance.trigger.getAttribute('aria-controls')).toBe(instance.menu.id);
     expect(controller.isOpen(instance.wrapper)).toBe(false);
 
     act(() => controller.setOpen(instance.wrapper, true));
@@ -77,6 +209,7 @@ describe('New Tab select menu React island', () => {
     expect(controller.isOpen(instance.wrapper)).toBe(true);
     expect(instance.wrapper.dataset.open).toBe('true');
     expect(instance.menu.dataset.open).toBe('true');
+    expect(instance.menu.getAttribute('aria-hidden')).toBe('false');
     expect(instance.trigger.getAttribute('aria-expanded')).toBe('true');
 
     act(() => controller.setOpen(instance.wrapper, false));

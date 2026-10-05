@@ -58,7 +58,7 @@ function CascadeLevel({
   emptyLabel: string;
   folderId: string;
   folderTitle: string;
-  getFigmaFolderSvg(suffix: string): string;
+  getFigmaFolderSvg(suffix: string, folderId?: string): string;
   getRiSvg(icon: string, className: string): string;
   getUrlDisplay(url: string): string;
   items: CascadeItem[];
@@ -157,7 +157,7 @@ function CascadeLevel({
                   className="x-nt-bookmark-cascade-icon x-nt-bookmark-cascade-icon--folder"
                   dangerouslySetInnerHTML={{
                     __html: getFigmaFolderSvg(
-                      `${String(item.id || 'folder')}-cascade-${index}`
+                      `${String(item.id || 'folder')}-cascade-${index}`, String(item.id || '')
                     )
                   }}
                 />

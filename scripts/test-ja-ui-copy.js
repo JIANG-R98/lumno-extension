@@ -53,7 +53,7 @@ const expectedMessages = {
   blacklist_empty: '非表示URLはまだありません',
   blacklist_removed_toast: '非表示リストから削除しました',
   settings_favicon_enhanced_fetch_title: 'アイコンとテーマカラーの拡張取得',
-  settings_favicon_enhanced_fetch_desc: 'ローカルネットワークへのアクセス許可を求められた場合は、この機能をオフにしてください。オフにすると、ブラウザのキャッシュ、Lumno 内蔵、または汎用アイコンのみを使用します。',
+  settings_favicon_enhanced_fetch_desc: 'ローカルネットワークへのアクセス許可を求められた場合は、この機能をオフにしてください。ウェブサイトの画像を直接読み込まなくなりますが、ブラウザキャッシュ、内蔵アイコン、サードパーティのアイコンサービスは引き続き利用できます。',
   settings_overlay_open_tabs_default_visible_title: 'Web ページで Lumno を開いたとき、開いているすべてのタブを既定で表示',
   settings_overlay_enter_animation_title: '表示時のアニメーション',
   overlay_enter_animation_elastic: 'スプリング',

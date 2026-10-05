@@ -232,7 +232,10 @@
     }
 
     const windowId = Number(options.windowId);
-    const creationResults = await Promise.all(plans.map((plan) => {
+    const insertIndex = Number.isInteger(options.insertIndex) && options.insertIndex >= 0
+      ? options.insertIndex
+      : null;
+    const createPlanTab = (plan, offset) => {
       const createProperties = {
         url: plan.url,
         active: false
@@ -240,9 +243,27 @@
       if (Number.isFinite(windowId)) {
         createProperties.windowId = windowId;
       }
+      if (insertIndex !== null) {
+        createProperties.index = insertIndex + offset;
+      }
       return createBackgroundTab(chromeApi, createProperties)
         .then((result) => ({ ...result, plan }));
-    }));
+    };
+    let creationResults;
+    if (insertIndex !== null) {
+      // Insert in source order; parallel insertion can reverse or interleave tabs.
+      creationResults = [];
+      let openedOffset = 0;
+      for (const plan of plans) {
+        const result = await createPlanTab(plan, openedOffset);
+        creationResults.push(result);
+        if (result.tab && typeof result.tab.id === 'number') {
+          openedOffset += 1;
+        }
+      }
+    } else {
+      creationResults = await Promise.all(plans.map((plan) => createPlanTab(plan, 0)));
+    }
     const openedItems = creationResults.filter((result) => (
       result && result.tab && typeof result.tab.id === 'number'
     ));
@@ -290,7 +311,9 @@
       } else {
         groupId = groupResult.groupId;
         grouped = true;
-        const titleResult = await titleTabGroup(chromeApi, groupId, query);
+        const aggregateName = String(definition && definition.name || '').trim();
+        const groupTitle = aggregateName ? `${aggregateName}：${query}` : query;
+        const titleResult = await titleTabGroup(chromeApi, groupId, groupTitle);
         groupTitleApplied = titleResult.ok;
         if (titleResult.error) {
           warnings.push(titleResult.error);
@@ -466,7 +489,7 @@
         store.loadAggregateSearches(config.storageArea, config.storageKey, config.chromeApi),
         Promise.resolve().then(() => loadSiteSearchProviders()),
         autoGroupSettingTask
-      ]).then(([definitions, providers, autoGroupSetting]) => {
+      ]).then(async ([definitions, providers, autoGroupSetting]) => {
         const definition = (Array.isArray(definitions) ? definitions : []).find((item) => (
           String(item && item.id || '').trim().toLowerCase() === normalizedId
         ));
@@ -496,6 +519,9 @@
           };
         }
         const sourceTab = sender && sender.tab ? sender.tab : null;
+        const placement = typeof config.resolveTabPlacement === 'function'
+          ? await config.resolveTabPlacement(sourceTab)
+          : {};
         return openSearch(config.chromeApi, {
           definition: availability.definition,
           query: normalizedQuery,
@@ -506,9 +532,10 @@
             definitions,
             availability.definition
           ),
-          windowId: sourceTab && typeof sourceTab.windowId === 'number'
-            ? sourceTab.windowId
-            : undefined,
+          windowId: typeof placement.windowId === 'number'
+            ? placement.windowId
+            : (sourceTab && typeof sourceTab.windowId === 'number' ? sourceTab.windowId : undefined),
+          insertIndex: placement.index,
           disposition,
           getEntryUrl: config.getEntryUrl,
           isInteractiveProvider: config.isInteractiveProvider,
