@@ -252,7 +252,7 @@ assert.doesNotMatch(sharedMessageSource, /urls:/);
   );
   assert.match(
     source,
-    /if \((?:pageState\.)?aggregateSearchesLoadPromise\) \{\s*return (?:pageState\.)?aggregateSearchesLoadPromise;/,
+    /if \(aggregateSearchesLoadPromise\) \{\s*return aggregateSearchesLoadPromise;/,
     `${surface} must reuse an in-flight aggregate storage read`
   );
   assert.match(

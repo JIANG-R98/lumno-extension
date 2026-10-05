@@ -1430,7 +1430,7 @@ assertContains(
 const setShortcutDockHoverSource = getFunctionSource(newtabJs, 'setShortcutDockHover');
 assertContains(
   setShortcutDockHoverSource,
-  'if (!pageState.newtabShortcutDockMagnificationEnabled)',
+  'if (!newtabShortcutDockMagnificationEnabled)',
   'shortcut hover should skip Dock magnification when the preference is disabled'
 );
 assertContains(
@@ -1505,7 +1505,7 @@ assertContains(
 
 assertContains(
   getFunctionSource(newtabJs, 'getThemeForSuggestion'),
-  "customShortcutIcon,\n          '',\n          false",
+  "customShortcutIcon,\n        '',\n        false",
   'custom shortcut image themes should not overwrite the website host theme cache'
 );
 

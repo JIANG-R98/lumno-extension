@@ -10,15 +10,22 @@ const NEWTAB_RUNTIME_MODULES = [
   'src/newtab/site-search-providers.js',
   'src/newtab/bookmark-display-settings.js',
   'src/newtab/feedback-control.js',
-  'src/newtab/shortcut-dock.js'
+  'src/newtab/shortcut-dock.js',
+  'src/newtab/shortcut-context-menu.js'
 ];
 
 // Returns newtab.js followed by the modules split out of it, so source checks
-// can locate a function regardless of which file now holds it.
+// can locate a function regardless of which file now holds it. Split modules
+// reach page-owned variables through `pageState.name` accessors that map 1:1
+// onto the newtab.js bindings. The prefix and the factory's extra indentation
+// are dropped so checks and extracted functions see the same code they would
+// in a single closure.
 function readNewtabRuntimeSource() {
-  return ['src/newtab/newtab.js', ...NEWTAB_RUNTIME_MODULES]
-    .map((file) => fs.readFileSync(path.join(repoRoot, file), 'utf8'))
-    .join('\n');
+  const modules = NEWTAB_RUNTIME_MODULES.map((file) => fs.readFileSync(path.join(repoRoot, file), 'utf8')
+    .replace(/^  /gm, ''));
+  return [fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8'), ...modules]
+    .join('\n')
+    .replace(/\bpageState\./g, '');
 }
 
 module.exports = { NEWTAB_RUNTIME_MODULES, readNewtabRuntimeSource };

@@ -37,13 +37,6 @@ function createLoadHarness(source) {
     let siteSearchProvidersCache = null;
     let siteSearchProvidersLoadPromise = null;
     let siteSearchProvidersLoadVersion = 0;
-    // The New Tab module reaches page-owned state through accessors.
-    const pageState = {
-      get siteSearchProvidersCache() { return siteSearchProvidersCache; },
-      set siteSearchProvidersCache(value) { siteSearchProvidersCache = value; },
-      get siteSearchProvidersLoadVersion() { return siteSearchProvidersLoadVersion; },
-      set siteSearchProvidersLoadVersion(value) { siteSearchProvidersLoadVersion = value; }
-    };
     ${beginLoadSource}
     return {
       begin: beginSiteSearchProviderLoad,
@@ -72,7 +65,7 @@ async function verifyLoadGuard(surface, source) {
   );
   assert.match(
     source,
-    /const providerReload = reloadSiteSearchProvidersFromStorage\(\);[\s\S]*?providerReload\.version !== (?:pageState\.)?siteSearchProvidersLoadVersion[\s\S]*?return;/,
+    /const providerReload = reloadSiteSearchProvidersFromStorage\(\);[\s\S]*?providerReload\.version !== siteSearchProvidersLoadVersion[\s\S]*?return;/,
     `${surface} should ignore UI work from superseded storage reloads`
   );
 

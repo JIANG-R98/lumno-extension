@@ -1,4 +1,71 @@
 (function() {
+
+  const NEWTAB_CONTEXT_MENU_OPEN_VALUE = 'open-in-new-tab';
+  const SHORTCUT_CONTEXT_MENU_EDIT_VALUE = 'edit';
+  const SHORTCUT_CONTEXT_MENU_REMOVE_VALUE = 'remove';
+  const SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE = 'hide-add';
+  const FOLDER_COLOR_CONTEXT_MENU_VALUE = 'folder-color';
+
+  const NEWTAB_SHORTCUT_CONTEXT_MENU = globalThis.LumnoNewtabShortcutContextMenu;
+  const {
+    isShortcutContextMenuOpen,
+    isShortcutContextMenuNode,
+    clearShortcutContextMenuTileActive,
+    applyShortcutContextMenuDockHover,
+    closeShortcutContextMenu,
+    handleShortcutContextMenu,
+    openShortcutAddContextMenu
+  } = NEWTAB_SHORTCUT_CONTEXT_MENU.createShortcutContextMenu({
+    getShortcutDockIcon: (...args) => getShortcutDockIcon(...args),
+    setShortcutDockHover: (...args) => setShortcutDockHover(...args),
+    resetShortcutDockHover: (...args) => resetShortcutDockHover(...args),
+    getShortcutTileFromNode,
+    getShortcutById,
+    SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE,
+    hideShortcutAddFromContextMenu,
+    FOLDER_COLOR_CONTEXT_MENU_VALUE,
+    openFolderColorPicker,
+    getShortcutFolderId,
+    SHORTCUT_CONTEXT_MENU_EDIT_VALUE,
+    openShortcutEditor,
+    NEWTAB_CONTEXT_MENU_OPEN_VALUE,
+    openShortcutUrl,
+    openExternalNewTabUrl,
+    SHORTCUT_CONTEXT_MENU_REMOVE_VALUE,
+    removeShortcutById,
+    t,
+    getShortcutContextMenuOptions,
+    closeRecentContextMenu: (...args) => closeRecentContextMenu(...args),
+    hideShortcutTooltip,
+    getShortcutTileId,
+    pageState: {
+      get shortcutContextMenu() {
+        return shortcutContextMenu;
+      },
+      set shortcutContextMenu(value) {
+        shortcutContextMenu = value;
+      },
+      get shortcutContextMenuSelectController() {
+        return shortcutContextMenuSelectController;
+      },
+      get shortcutGrid() {
+        return shortcutGrid;
+      },
+      get shortcutContextMenuTarget() {
+        return shortcutContextMenuTarget;
+      },
+      set shortcutContextMenuTarget(value) {
+        shortcutContextMenuTarget = value;
+      },
+      get shortcutSection() {
+        return shortcutSection;
+      },
+      get addShortcutButton() {
+        return addShortcutButton;
+      }
+    }
+  });
+
   const root = document.getElementById('_x_extension_newtab_root_2024_unique_');
   const createSearchInput = window._x_extension_createSearchInput_2024_unique_;
   if (!root || typeof createSearchInput !== 'function') {
@@ -693,11 +760,6 @@
   const SHORTCUT_DIALOG_MODE_EDIT = NEWTAB_SHORTCUT_DIALOG.MODE_EDIT || 'edit';
   const SHORTCUT_DIALOG_ITEM_BOOKMARK = 'bookmark';
   const SHORTCUT_DIALOG_ITEM_FOLDER = 'folder';
-  const NEWTAB_CONTEXT_MENU_OPEN_VALUE = 'open-in-new-tab';
-  const SHORTCUT_CONTEXT_MENU_EDIT_VALUE = 'edit';
-  const SHORTCUT_CONTEXT_MENU_REMOVE_VALUE = 'remove';
-  const SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE = 'hide-add';
-  const FOLDER_COLOR_CONTEXT_MENU_VALUE = 'folder-color';
   const folderColorApi = globalThis.LumnoNewtabFolderColorPicker;
   const FOLDER_COLORS_STORAGE_KEY = folderColorApi.FOLDER_COLORS_STORAGE_KEY;
   const FOLDER_COLOR_PRESETS_STORAGE_KEY = '_x_extension_bookmark_folder_color_presets_2026_unique_';
@@ -1241,10 +1303,6 @@
   const SECTION_MODE_MENU_MAX_WIDTH_PX = 240;
   const SECTION_MODE_MENU_PORTAL_Z_INDEX = 10020;
   const SECTION_MODE_MENU_PORTAL_OFFSET_PX = 8;
-  const SHORTCUT_CONTEXT_MENU_MIN_WIDTH_PX = 124;
-  const SHORTCUT_CONTEXT_MENU_MAX_WIDTH_PX = 180;
-  const SHORTCUT_CONTEXT_MENU_PORTAL_Z_INDEX = 10040;
-  const SHORTCUT_CONTEXT_MENU_PORTAL_OFFSET_PX = -6;
   const BOOKMARK_CONTEXT_MENU_EDIT_VALUE = 'edit';
   const BOOKMARK_CONTEXT_MENU_REMOVE_VALUE = 'remove';
   const BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE = 'open-in-new-tab-group';
@@ -6049,327 +6107,6 @@
       return null;
     }
     return getShortcutReorderTiles().find((tile) => getShortcutTileId(tile) === id) || null;
-  }
-
-  function isShortcutContextMenuOpen() {
-    return Boolean(
-      shortcutContextMenu &&
-      shortcutContextMenuSelectController &&
-      shortcutContextMenuSelectController.isOpen(shortcutContextMenu.control)
-    );
-  }
-
-  function isShortcutContextMenuNode(node) {
-    if (!node || !shortcutContextMenu) {
-      return false;
-    }
-    const { control, menu } = shortcutContextMenu;
-    return Boolean(
-      (control && (node === control || (typeof control.contains === 'function' && control.contains(node)))) ||
-      (menu && (node === menu || (typeof menu.contains === 'function' && menu.contains(node))))
-    );
-  }
-
-  function clearShortcutContextMenuTileActive() {
-    const tiles = shortcutGrid
-      ? Array.from(shortcutGrid.querySelectorAll('.x-nt-shortcut-tile'))
-      : [];
-    tiles.forEach((tile) => {
-      if (!tile.hasAttribute('data-shortcut-context-menu-open')) {
-        return;
-      }
-      tile.removeAttribute('data-shortcut-context-menu-open');
-      if (typeof tile._xSetBookmarkMenuVisualActive === 'function') {
-        tile._xSetBookmarkMenuVisualActive(false);
-      }
-    });
-  }
-
-  function setShortcutContextMenuTileActive(target) {
-    clearShortcutContextMenuTileActive();
-    const tile = target && target.tile;
-    if (tile) {
-      tile.setAttribute('data-shortcut-context-menu-open', 'true');
-      if (typeof tile._xSetBookmarkMenuVisualActive === 'function') {
-        tile._xSetBookmarkMenuVisualActive(true);
-      }
-    }
-  }
-
-  function getShortcutContextMenuAnchorElement(tile) {
-    return getShortcutDockIcon(tile) || tile;
-  }
-
-  function getShortcutContextMenuAnchorX(tile) {
-    const anchor = getShortcutContextMenuAnchorElement(tile);
-    if (!anchor || typeof anchor.getBoundingClientRect !== 'function') {
-      return null;
-    }
-    const rect = anchor.getBoundingClientRect();
-    const centerX = rect.left + (rect.width / 2);
-    return Number.isFinite(centerX) ? centerX : null;
-  }
-
-  function applyShortcutContextMenuDockHover(tile) {
-    if (!tile) {
-      return;
-    }
-    setShortcutDockHover(tile, getShortcutContextMenuAnchorX(tile));
-    tile.setAttribute('data-shortcut-context-menu-open', 'true');
-  }
-
-  function syncShortcutDockHoverFromPoint(clientX, clientY) {
-    const pointerX = Number(clientX);
-    const pointerY = Number(clientY);
-    if (!Number.isFinite(pointerX) || !Number.isFinite(pointerY) ||
-        typeof document.elementFromPoint !== 'function') {
-      resetShortcutDockHover();
-      return;
-    }
-    const tile = getShortcutTileFromNode(document.elementFromPoint(pointerX, pointerY));
-    if (tile) {
-      setShortcutDockHover(tile, pointerX);
-      return;
-    }
-    resetShortcutDockHover();
-  }
-
-  function closeShortcutContextMenu(options) {
-    const closeOptions = options && typeof options === 'object' ? options : {};
-    if (!shortcutContextMenu || !shortcutContextMenuSelectController) {
-      shortcutContextMenuTarget = null;
-      clearShortcutContextMenuTileActive();
-      return;
-    }
-    const wasOpen = isShortcutContextMenuOpen() || Boolean(shortcutContextMenuTarget);
-    shortcutContextMenuSelectController.setOpen(shortcutContextMenu.control, false);
-    shortcutContextMenuTarget = null;
-    clearShortcutContextMenuTileActive();
-    if (!wasOpen) {
-      return;
-    }
-    if (closeOptions.syncHoverFromPointer) {
-      syncShortcutDockHoverFromPoint(closeOptions.clientX, closeOptions.clientY);
-      return;
-    }
-    resetShortcutDockHover();
-  }
-
-  function getShortcutContextMenuPoint(tile) {
-    const anchor = getShortcutContextMenuAnchorElement(tile);
-    if (anchor && typeof anchor.getBoundingClientRect === 'function') {
-      const rect = anchor.getBoundingClientRect();
-      return {
-        x: Math.round(rect.left + rect.width / 2),
-        y: Math.round(rect.bottom)
-      };
-    }
-    return { x: 0, y: 0 };
-  }
-
-  function setShortcutContextMenuPosition(tile) {
-    if (!shortcutContextMenu || !shortcutContextMenu.control) {
-      return;
-    }
-    const point = getShortcutContextMenuPoint(tile);
-    shortcutContextMenu.control.style.left = `${Math.round(point.x)}px`;
-    shortcutContextMenu.control.style.top = `${Math.round(point.y)}px`;
-  }
-
-  function handleShortcutContextMenuAction(actionValue) {
-    const action = String(actionValue || '');
-    const target = shortcutContextMenuTarget;
-    const targetId = target && target.kind === 'shortcut'
-      ? String(target.shortcutId || '')
-      : '';
-    const shortcut = getShortcutById(targetId);
-    const sourceElement = target && target.tile;
-    closeShortcutContextMenu();
-    if (!target || !action) {
-      return;
-    }
-    if (target.kind === 'add' && action === SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE) {
-      hideShortcutAddFromContextMenu(sourceElement);
-      return;
-    }
-    if (!shortcut) {
-      return;
-    }
-    if (action === FOLDER_COLOR_CONTEXT_MENU_VALUE && shortcut.type === 'folder') {
-      openFolderColorPicker(getShortcutFolderId(shortcut), shortcut.title, sourceElement);
-      return;
-    }
-    if (action === SHORTCUT_CONTEXT_MENU_EDIT_VALUE) {
-      openShortcutEditor(shortcut, sourceElement);
-      return;
-    }
-    if (action === NEWTAB_CONTEXT_MENU_OPEN_VALUE) {
-      if (shortcut.type === 'folder') {
-        openShortcutUrl(shortcut);
-        return;
-      }
-      openExternalNewTabUrl(shortcut.url, 'newTab');
-      return;
-    }
-    if (action === SHORTCUT_CONTEXT_MENU_REMOVE_VALUE) {
-      removeShortcutById(targetId);
-    }
-  }
-
-  function handleShortcutContextMenuActionClick(event) {
-    const target = event && event.target;
-    const option = target && typeof target.closest === 'function'
-      ? target.closest('._x_extension_select_option_2024_unique_')
-      : null;
-    if (!option || !shortcutContextMenu || !shortcutContextMenu.menu ||
-        !shortcutContextMenu.menu.contains(option)) {
-      return;
-    }
-    event.stopPropagation();
-    handleShortcutContextMenuAction(option.getAttribute('data-value'));
-  }
-
-  function handleShortcutContextMenuDocumentPointerDown(event) {
-    if (!isShortcutContextMenuOpen() || isShortcutContextMenuNode(event.target)) {
-      return;
-    }
-    closeShortcutContextMenu({
-      syncHoverFromPointer: true,
-      clientX: event.clientX,
-      clientY: event.clientY
-    });
-  }
-
-  function handleShortcutContextMenuDocumentKeyDown(event) {
-    if (event && event.key === 'Escape' &&
-        (shortcutContextMenuTarget || isShortcutContextMenuOpen())) {
-      closeShortcutContextMenu();
-    }
-  }
-
-  function handleShortcutContextMenuDocumentFocusIn(event) {
-    if (shortcutContextMenuTarget && !isShortcutContextMenuNode(event.target)) {
-      closeShortcutContextMenu();
-    }
-  }
-
-  function createShortcutContextMenu() {
-    if (!shortcutContextMenuSelectController ||
-        typeof shortcutContextMenuSelectController.createSelect !== 'function') {
-      return null;
-    }
-    const created = shortcutContextMenuSelectController.createSelect({
-      id: '_x_extension_newtab_shortcut_context_menu_2026_unique_',
-      selectId: '_x_extension_newtab_shortcut_context_menu_select_2026_unique_',
-      className: 'x-nt-shortcut-context-menu',
-      iconOnly: true,
-      triggerIconClass: 'ri-more-line',
-      menuClassName: 'x-nt-shortcut-context-menu-portal',
-      menuAlign: 'middle',
-      menuWidth: 'content',
-      menuMinWidth: SHORTCUT_CONTEXT_MENU_MIN_WIDTH_PX,
-      menuMaxWidth: SHORTCUT_CONTEXT_MENU_MAX_WIDTH_PX,
-      menuPortal: true,
-      menuPortalZIndex: SHORTCUT_CONTEXT_MENU_PORTAL_Z_INDEX,
-      menuPortalOffset: SHORTCUT_CONTEXT_MENU_PORTAL_OFFSET_PX,
-      value: NEWTAB_CONTEXT_MENU_OPEN_VALUE,
-      ariaLabel: t('newtab_shortcuts_context_menu_label', 'Shortcut actions'),
-      options: getShortcutContextMenuOptions(),
-      onAction(payload) {
-        handleShortcutContextMenuAction(payload && payload.action);
-      }
-    });
-    const control = created.wrapper;
-    const select = created.select;
-    const trigger = created.trigger;
-    const menu = created.menu;
-    if (!control || !select || !trigger || !menu) {
-      return null;
-    }
-    trigger.tabIndex = -1;
-    const stopContextMenuEvent = (event) => {
-      event.stopPropagation();
-    };
-    [control, trigger, menu].forEach((element) => {
-      element.addEventListener('pointerdown', stopContextMenuEvent);
-      element.addEventListener('click', stopContextMenuEvent);
-      element.addEventListener('contextmenu', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-      });
-    });
-    menu.addEventListener('click', handleShortcutContextMenuActionClick);
-    document.addEventListener('pointerdown', handleShortcutContextMenuDocumentPointerDown, true);
-    document.addEventListener('keydown', handleShortcutContextMenuDocumentKeyDown, true);
-    document.addEventListener('focusin', handleShortcutContextMenuDocumentFocusIn, true);
-    (document.body || shortcutSection || document.documentElement).appendChild(control);
-    return {
-      control,
-      select,
-      trigger,
-      menu
-    };
-  }
-
-  function openShortcutContextMenu(target) {
-    const tile = target && target.tile;
-    const shortcutId = target && target.kind === 'shortcut'
-      ? String(target.shortcutId || '')
-      : '';
-    if (!tile || (target.kind === 'shortcut' && !shortcutId)) {
-      return;
-    }
-    if (!shortcutContextMenu) {
-      shortcutContextMenu = createShortcutContextMenu();
-    }
-    if (!shortcutContextMenu || !shortcutContextMenuSelectController) {
-      return;
-    }
-    closeRecentContextMenu();
-    hideShortcutTooltip();
-    resetShortcutDockHover();
-    shortcutContextMenuTarget = target;
-    setShortcutContextMenuTileActive(target);
-    applyShortcutContextMenuDockHover(tile);
-    setShortcutContextMenuPosition(tile);
-    const defaultValue = target.kind === 'add'
-      ? SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE
-      : NEWTAB_CONTEXT_MENU_OPEN_VALUE;
-    if (typeof shortcutContextMenuSelectController.setOptions === 'function') {
-      shortcutContextMenuSelectController.setOptions(
-        shortcutContextMenu.control,
-        getShortcutContextMenuOptions(target),
-        defaultValue
-      );
-    }
-    shortcutContextMenu.select.value = defaultValue;
-    shortcutContextMenuSelectController.sync(shortcutContextMenu.control);
-    shortcutContextMenuSelectController.setOpen(shortcutContextMenu.control, true);
-  }
-
-  function handleShortcutContextMenu(event) {
-    const tile = getShortcutTileFromNode(event.currentTarget || event.target);
-    if (!tile || !getShortcutTileId(tile)) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    openShortcutContextMenu({
-      kind: 'shortcut',
-      shortcutId: getShortcutTileId(tile),
-      tile
-    });
-  }
-
-  function openShortcutAddContextMenu(sourceElement) {
-    const tile = sourceElement || addShortcutButton;
-    if (!tile || tile.hidden) {
-      return;
-    }
-    openShortcutContextMenu({
-      kind: 'add',
-      tile
-    });
   }
 
   function getBookmarkFolderOpenCount(target) {
