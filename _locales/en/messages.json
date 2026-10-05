@@ -2556,7 +2556,7 @@
     "message": "Sync failed. Try again later. Local data is retained."
   },
   "webdav_test": {
-    "message": "Test connection"
+    "message": "Test connectivity"
   },
   "webdav_enable": {
     "message": "Save and turn on sync"
@@ -2634,7 +2634,7 @@
     "message": "Not synced yet"
   },
   "webdav_state_testing": {
-    "message": "Testing connection"
+    "message": "Testing connectivity…"
   },
   "webdav_choice_title": {
     "message": "Choose the initial version"
@@ -2674,9 +2674,6 @@
   },
   "webdav_provider_jianguoyun": {
     "message": "Nutstore"
-  },
-  "webdav_password_help": {
-    "message": "Get an app password"
   },
   "webdav_connecting": {
     "message": "Connecting…"

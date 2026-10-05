@@ -144,25 +144,27 @@ describe('WebDAV connection cards', () => {
     await click([...card('a').querySelectorAll('button')].find((button) => button.textContent?.includes(copy.webdav_retry))!);
     expect(onAction).toHaveBeenCalledWith('sync', 'a', {});
   });
-  it('adds and enables in one step, recognising Nutstore from its address', async () => {
+  it('adds and enables in one step from a plain form', async () => {
     const { host, onAction } = fixture({ ...model, lang: 'zh-CN', connections: [] });
     await click([...host.querySelectorAll('button')].find((button) => button.textContent?.includes('Add WebDAV'))!);
     expect(host.querySelector('[role="tablist"]')).toBeNull();
     const endpoint = host.querySelector<HTMLInputElement>('[name="endpoint"]')!;
     expect(endpoint.value).toBe('');
     expect(endpoint.placeholder).toBe('https://dav.jianguoyun.com/dav/');
-    const help = () => host.querySelector('a[href^="https://help.jianguoyun.com/"]');
-    expect(help()).toBeNull();
     await type(endpoint, 'https://dav.jianguoyun.com/dav/');
-    expect(help()?.matches('._x_extension_shortcut_ghost_2026_unique_')).toBe(true);
-    const password = host.querySelector<HTMLInputElement>('[name="password"]')!;
-    expect(document.getElementById(password.getAttribute('aria-describedby')!)?.textContent).toBe(copy.webdav_credentials_hint);
+    expect(host.querySelector('form a')).toBeNull();
+    expect(host.querySelector('form')?.textContent).not.toContain(copy.webdav_credentials_hint);
     expect([...host.querySelectorAll('button')].find((button) => button.textContent?.includes(copy.webdav_test))
       ?.matches('._x_extension_shortcut_ghost_2026_unique_')).toBe(true);
     expect(host.querySelector('button[type="submit"]')?.textContent).toBe(copy.webdav_enable);
     await act(async () => { host.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
     expect(onAction).toHaveBeenCalledWith('add', undefined, { config: { endpoint: 'https://dav.jianguoyun.com/dav/', directory: 'lumno', username: '', password: '' }, enable: true });
-    await type(endpoint, 'https://dav.example.com/');
-    expect(help()).toBeNull();
+  });
+  it('explains local-only credentials with a lock tooltip after the connection name', () => {
+    const { card } = fixture();
+    const lock = card('a').querySelector<HTMLElement>('.lumno-webdav-local-only')!;
+    expect(lock.querySelector('.ri-lock-line')).not.toBeNull();
+    expect(lock.dataset.tooltip).toBe(copy.webdav_credentials_hint);
+    expect(lock.previousElementSibling?.classList.contains('lumno-webdav-name')).toBe(true);
   });
 });

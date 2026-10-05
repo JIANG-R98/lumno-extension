@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { createReactRootController } from './root-controller';
 import { InlinePopconfirm } from './inline-popconfirm';
+import { InfoButton } from './info-button';
 import { getAsyncErrorMessage, useExclusiveAsyncAction } from '../shared/use-exclusive-async-action';
 
 export interface WebDavConfig {
@@ -39,7 +40,6 @@ const buttonClass = `${classes('shortcut_submit')} ${classes('shortcut_secondary
 const primaryClass = `${classes('shortcut_submit')} ${classes('shortcut_submit_primary')} ${classes('shortcut_save')}`;
 const ghostClass = `${classes('shortcut_submit')} _x_extension_shortcut_ghost_2026_unique_`;
 const JIANGUOYUN_ENDPOINT = 'https://dav.jianguoyun.com/dav/';
-const JIANGUOYUN_HELP = 'https://help.jianguoyun.com/?p=2064';
 
 // Nutstore needs no different input, only its app-password guide, so it is
 // recognised from the address instead of being chosen up front.
@@ -234,31 +234,16 @@ function ConnectionEditor({ item, model, options, onClose }: {
       <div className="lumno-webdav-form-grid">
         {fields.map((field) => (
           <div className={classes('shortcut_field')} key={field.name}>
-            <div className={classes('shortcut_label_row')}>
-              <label className={classes('shortcut_label')} htmlFor={`${formId}-${field.name}`}>
-                <span>{copy[`webdav_${field.name}`]}</span><span className={classes('shortcut_required')}>*</span>
-              </label>
-              {field.name === 'password' && jianguoyun ? (
-                <a className={`${ghostClass} lumno-webdav-help`} href={JIANGUOYUN_HELP} rel="noreferrer" target="_blank">
-                  {copy.webdav_password_help}<i aria-hidden="true" className="ri-icon ri-size-12 ri-external-link-line" />
-                </a>
-              ) : null}
-            </div>
+            <label className={classes('shortcut_label')} htmlFor={`${formId}-${field.name}`}>
+              <span>{copy[`webdav_${field.name}`]}</span><span className={classes('shortcut_required')}>*</span>
+            </label>
             <input autoFocus={field.name === 'endpoint'}
               autoComplete={field.name === 'password' ? 'new-password' : 'off'}
               className={classes('shortcut_input')} disabled={disabled} id={`${formId}-${field.name}`}
-              aria-describedby={field.name === 'password' ? `${formId}-password-hint` : undefined}
               name={field.name} placeholder={field.placeholder}
               required={field.name !== 'password' || !reusePassword} spellCheck={false}
               type={field.type} value={draft[field.name]}
               onChange={(event) => update(field.name, event.currentTarget.value)} />
-            {/* Where credentials live is a property of the password, so it is
-                said under that field instead of as loose text below the form. */}
-            {field.name === 'password' ? (
-              <p className="lumno-webdav-field-hint" id={`${formId}-password-hint`}>
-                <i aria-hidden="true" className="ri-icon ri-size-12 ri-lock-line" />{copy.webdav_credentials_hint}
-              </p>
-            ) : null}
           </div>
         ))}
       </div>
@@ -273,7 +258,7 @@ function ConnectionEditor({ item, model, options, onClose }: {
         <button aria-busy={pendingOperation === 'test'} className={`${ghostClass} lumno-webdav-test`} disabled={disabled} type="button" onClick={(event) => {
           if (event.currentTarget.form?.reportValidity()) void run('test');
         }}>
-          <i aria-hidden="true" className="ri-icon ri-size-14 ri-pulse-line" />
+          <i aria-hidden="true" className="ri-icon ri-size-14 ri-link-m" />
           {pendingOperation === 'test' ? copy.webdav_state_testing : copy.webdav_test}
         </button>
         <button className={buttonClass} disabled={action.pending} onClick={onClose} type="button">{copy.confirm_cancel}</button>
@@ -397,6 +382,10 @@ function ConnectionCard({ item, expanded, model, now, options, onEdit, onClose }
         <div className={classes('shortcut_item_info')}>
           <div className={classes('shortcut_item_title')}>
             <span className="lumno-webdav-name" title={location}>{title}</span>
+            {/* Credentials stay on this device; the lock says so without a
+                permanent line of text in the form. */}
+            <InfoButton className="lumno-webdav-local-only" iconClass="ri-lock-line"
+              tooltip={copy.webdav_credentials_hint} tooltipKey="webdav_credentials_hint" />
             <span className={classes('sync_status')} data-status={status.tone} role="status"
               title={lastSyncAt ? `${copy.webdav_last_sync}：${formatTime(lastSyncAt, lang)}` : copy.webdav_never_synced}>
               {status.label}

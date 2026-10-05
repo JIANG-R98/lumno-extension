@@ -87,21 +87,9 @@
   margin: 6px 0;
 }
 .lumno-webdav-form-grid ._x_extension_shortcut_field_2024_unique_ { min-width: 0; }
-.lumno-webdav-form-grid ._x_extension_shortcut_label_row_2024_unique_ { display: flex; justify-content: space-between; gap: 8px; }
 .lumno-webdav-form-grid input { width: 100%; box-sizing: border-box; }
-/* Ghost actions keep their text aligned with the field edges, and the help
-   link does not make its label row taller than the neighbouring one. */
-.lumno-webdav-settings .lumno-webdav-help { margin: -6px -9px -6px 0; text-decoration: none; }
-.lumno-webdav-editor-actions > .lumno-webdav-test { margin: 0 auto 0 -9px; }
-.lumno-webdav-field-hint {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--panel-subtext);
-}
+.lumno-webdav-editor-actions > .lumno-webdav-test { margin-right: auto; }
+.lumno-webdav-card ._x_extension_shortcut_item_title_2024_unique_ > .lumno-webdav-local-only { margin-left: -4px; flex: 0 0 auto; }
 .lumno-webdav-form-feedback {
   display: flex;
   align-items: center;
@@ -114,7 +102,7 @@
 #_x_extension_settings_panel_2024_unique_[data-theme="dark"] .lumno-webdav-form-feedback[data-tone="success"] { color: #86efac; }
 .lumno-webdav-form-feedback > .ri-icon { flex: 0 0 auto; }
 .lumno-webdav-form-feedback-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.lumno-webdav-form-feedback > button { margin: -6px -9px -6px 0; }
+.lumno-webdav-form-feedback > button { margin: -6px 0; }
 .lumno-webdav-feedback { margin-top: 12px; overflow-wrap: anywhere; }
 .lumno-webdav-feedback[data-error="true"] { color: var(--duplicate-badge-text); }
 .lumno-webdav-settings [hidden] { display: none !important; }

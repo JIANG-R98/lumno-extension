@@ -2556,7 +2556,7 @@
     "message": "同步失敗，請稍後重試。本機資料已保留。"
   },
   "webdav_test": {
-    "message": "測試連線"
+    "message": "測試連通性"
   },
   "webdav_enable": {
     "message": "儲存並開啟同步"
@@ -2634,7 +2634,7 @@
     "message": "尚未同步"
   },
   "webdav_state_testing": {
-    "message": "正在測試連線"
+    "message": "正在測試連通性"
   },
   "webdav_choice_title": {
     "message": "選擇初始同步版本"
@@ -2674,9 +2674,6 @@
   },
   "webdav_provider_jianguoyun": {
     "message": "堅果雲"
-  },
-  "webdav_password_help": {
-    "message": "如何取得應用程式密碼"
   },
   "webdav_connecting": {
     "message": "正在連線…"

@@ -2556,7 +2556,7 @@
     "message": "同期に失敗しました。後で再試行してください。端末のデータは保持しています。"
   },
   "webdav_test": {
-    "message": "接続テスト"
+    "message": "疎通を確認"
   },
   "webdav_enable": {
     "message": "保存して同期をオン"
@@ -2634,7 +2634,7 @@
     "message": "未同期"
   },
   "webdav_state_testing": {
-    "message": "接続をテスト中"
+    "message": "疎通を確認中…"
   },
   "webdav_choice_title": {
     "message": "最初に同期するデータを選択"
@@ -2674,9 +2674,6 @@
   },
   "webdav_provider_jianguoyun": {
     "message": "Nutstore（坚果云）"
-  },
-  "webdav_password_help": {
-    "message": "アプリパスワードの取得方法"
   },
   "webdav_connecting": {
     "message": "接続中…"

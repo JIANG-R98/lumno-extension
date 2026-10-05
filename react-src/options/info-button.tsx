@@ -5,6 +5,7 @@ import {
 
 export interface InfoButtonRenderModel {
   className?: string;
+  iconClass?: string;
   label?: string;
   tooltip: string;
   tooltipKey?: string;
@@ -14,6 +15,7 @@ export type InfoButtonController = ReactRootController<InfoButtonRenderModel>;
 
 export function InfoButton({
   className = '',
+  iconClass = 'ri-information-line',
   label,
   tooltip,
   tooltipKey
@@ -35,7 +37,7 @@ export function InfoButton({
     >
       <i
         aria-hidden="true"
-        className="ri-icon ri-size-14 ri-information-line"
+        className={`ri-icon ri-size-14 ${iconClass}`}
       />
     </span>
   );
