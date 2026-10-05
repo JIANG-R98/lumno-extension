@@ -7,6 +7,7 @@
   const DB_NAME = 'lumno-webdav-private';
   const ALARM_NAME = 'lumno-webdav-sync';
   const SYNC_REVISION = 'dav-multi-1';
+  const PROBE_CACHE_MS = 10 * 60 * 1000;
   const CHROME_SYNC_META_KEY = '_x_extension_sync_meta_2024_unique_';
   function isTrustedSender(chromeApi, sender) {
     const page = String(sender && sender.url || '').split(/[?#]/)[0];
@@ -36,6 +37,23 @@
     return { get: (key) => operation('get', key), put: (key, value) => operation('put', key, value),
       delete: (key) => operation('delete', key) };
   }
+  // Capabilities from an explicit test are reused briefly by the following
+  // enable, so testing and then saving does not repeat the destructive probe.
+  function createProbeCache(now) {
+    const entries = new Map();
+    const clock = now || Date.now;
+    const keyOf = (revision, config) => [revision, config.endpoint, config.directory, config.username, config.password].join('\n');
+    return {
+      get(revision, config) {
+        const entry = entries.get(keyOf(revision, config));
+        if (!entry || clock() - entry.at > PROBE_CACHE_MS) return null;
+        return entry.capabilities;
+      },
+      set(revision, config, capabilities) {
+        entries.set(keyOf(revision, config), { at: clock(), capabilities });
+      }
+    };
+  }
   function createConnectionController(options) {
     const opts = options || {};
     const chromeApi = opts.chrome || root.chrome;
@@ -54,6 +72,7 @@
     const statusKey = opts.statusKey || settings.WEBDAV_STATUS_STORAGE_KEY;
     const alarmName = opts.alarmName || ALARM_NAME;
     const withLocalWrite = opts.withLocalWrite || ((fn) => fn());
+    const probeCache = opts.probeCache || createProbeCache();
     let chain = Promise.resolve();
     let generation = 0;
     let timer = null;
@@ -183,6 +202,7 @@
     async function getAsset(digest, asset, client) {
       let bytes = await privateStore.get(`asset:${digest}`);
       if (!bytes) {
+        if (!client) fail('asset-missing');
         const response = await client.request(assetPath(digest, asset.mime), 'GET', undefined, {}, asset.size);
         if (response.status !== 200) fail('asset-missing');
         bytes = response.bytes;
@@ -376,15 +396,17 @@
       else await privateStore.put('session', { config, base: target });
       if (decision) await privateStore.put('recoveryBlocked', false);
       await privateStore.put('conflict', null);
-      await setStatus({ state: 'ready', error: null, conflicts: [], lastSyncAt: Date.now() });
+      await setStatus({ state: 'ready', error: null, diagnostic: null, conflicts: [], lastSyncAt: Date.now() });
       await mirrorChrome();
       return { ok: true };
     }
     async function guardedSync(decision) {
       try { await recoverPendingApply(); return await syncInternal(decision); }
       catch (cause) {
-        await setStatus({ state: cause.code === 'local-changed' ? 'pending' : cause.code === 'remote-missing' ? 'choice' : 'error', error: cause.code || 'sync-failed' });
-        throw Object.assign(clientApi.error(cause.code || 'sync-failed'), { diagnostic: clientApi.diagnostic(cause.diagnostic) });
+        const diagnostic = clientApi.diagnostic(cause.diagnostic);
+        await setStatus({ state: cause.code === 'local-changed' ? 'pending' : cause.code === 'remote-missing' ? 'choice' : 'error',
+          error: cause.code || 'sync-failed', diagnostic });
+        throw Object.assign(clientApi.error(cause.code || 'sync-failed'), { diagnostic });
       }
     }
     async function connection(input) {
@@ -402,7 +424,7 @@
     async function verifiedClient(config) {
       const client = clientApi.createClient(config, opts.clientOptions);
       if (config.clientRevision !== clientApi.REVISION) {
-        const capabilities = await client.testConnection();
+        const capabilities = probeCache.get(clientApi.REVISION, config) || await client.testConnection();
         config.concurrency = capabilities.concurrency;
         config.lockStrategy = capabilities.lockStrategy;
         config.clientRevision = clientApi.REVISION;
@@ -442,15 +464,25 @@
         await privateStore.put('recoveryBlocked', false);
       } else await apply(target, captured, client, true, { config: { ...config, enabled: true }, base: target });
       await privateStore.put('conflict', null);
-      await setStatus({ state: 'ready', enabled: true, error: null, conflicts: [], lastSyncAt: Date.now() });
+      await setStatus({ state: 'ready', enabled: true, error: null, diagnostic: null, conflicts: [], lastSyncAt: Date.now() });
       await mirrorChrome();
       schedule();
       return { ok: true };
     }
+    // A failed enable keeps the connection paused but leaves its reason on the
+    // card, instead of a transient message that disappears on refresh.
+    async function connectReporting(input, decision) {
+      try { return await connect(input, decision); }
+      catch (cause) {
+        const diagnostic = clientApi.diagnostic(cause.diagnostic);
+        if (cause.code !== 'local-changed') await setStatus({ error: cause.code || 'sync-failed', diagnostic }).catch(() => {});
+        throw cause.code ? Object.assign(clientApi.error(cause.code), { diagnostic }) : cause;
+      }
+    }
     async function pause() {
       const { config } = await session();
       if (config) await saveConfig({ ...config, enabled: false });
-      await setStatus({ state: 'paused', enabled: false, error: null });
+      await setStatus({ state: 'paused', enabled: false, error: null, diagnostic: null });
       if (timer) { clearTimeout(timer); timer = null; }
       if (chromeApi.alarms && typeof chromeApi.alarms.clear === 'function') await chromeApi.alarms.clear(alarmName);
       return { ok: true };
@@ -536,19 +568,30 @@
         case 'save': {
           const config = await connection(request.config);
           const previous = await session();
+          // Saving an unchanged form must not interrupt a running connection.
+          if (previous.config && ['endpoint', 'directory', 'username', 'password'].every((key) => previous.config[key] === config[key])) {
+            return { ok: true, unchanged: true };
+          }
+          const wasEnabled = Boolean(previous.config && previous.config.enabled);
           const sameServer = previous.config && ['endpoint', 'directory', 'username'].every((key) => previous.config[key] === config[key]);
           await privateStore.put('session', { config: { ...config, enabled: false }, base: sameServer ? previous.base : null });
           await pause();
           await setStatus({ conflicts: [], ...(!sameServer ? { lastSyncAt: null } : {}) });
+          if (wasEnabled && request.resume === true) return { ...await connectReporting((await session()).config), resumed: true };
           return { ok: true };
         }
-        case 'test': return clientApi.createClient(await connection(request.config), opts.clientOptions).testConnection();
+        case 'test': {
+          const config = await connection(request.config);
+          const capabilities = await clientApi.createClient(config, opts.clientOptions).testConnection();
+          probeCache.set(clientApi.REVISION, config, { concurrency: capabilities.concurrency, lockStrategy: capabilities.lockStrategy });
+          return capabilities;
+        }
         case 'enable': {
           const { config } = await session();
           if (!config) fail('missing-credentials');
-          return connect(config, request.decision);
+          return connectReporting(config, request.decision);
         }
-        case 'connect': return connect(request.config, request.decision);
+        case 'connect': return connectReporting(request.config, request.decision);
         case 'sync': return guardedSync(request.decision);
         case 'pause': return pause();
         case 'browser': return useBrowserSync();
@@ -577,12 +620,14 @@
     const store = opts.privateStore || createPrivateStore(root.indexedDB);
     const wallpaperStore = opts.wallpaperStore || root.LumnoNewtabWallpaperLocalStore.createWallpaperLocalStore({ windowObj: root, onChange() {} });
     const workers = new Map();
+    const probeCache = opts.probeCache || createProbeCache();
     const recordKeys = ['session', 'pendingApply', 'recoveryBlocked', 'conflict', 'replacementBackup', 'replacementBackupMeta', 'migrationBackup', 'migrationBackupMeta'];
     let ids = [];
     let registryChain = Promise.resolve();
     let localChain = Promise.resolve();
     let started = false;
-    const fail = (code) => { throw (opts.client || root.LumnoWebDavClient).error(code); };
+    const clientApi = opts.client || root.LumnoWebDavClient;
+    const fail = (code) => { throw clientApi.error(code); };
     const keyFor = (id, key) => id === 'default' || key.startsWith('asset:') ? key : `connection:${id}:${key}`;
     const statusKeyFor = (id) => id === 'default' ? settings.WEBDAV_STATUS_STORAGE_KEY : `${settings.WEBDAV_STATUS_STORAGE_KEY}:${id}`;
     function serialRegistry(fn) {
@@ -607,7 +652,7 @@
       if (!workers.has(id)) {
         const scopedStore = { get: (key) => store.get(keyFor(id, key)), put: (key, value) => store.put(keyFor(id, key), value) };
         const controller = createConnectionController({ ...opts, chrome: chromeApi, settings, privateStore: scopedStore,
-          wallpaperStore, statusKey: statusKeyFor(id), alarmName: id === 'default' ? ALARM_NAME : `${ALARM_NAME}:${id}`,
+          wallpaperStore, probeCache, statusKey: statusKeyFor(id), alarmName: id === 'default' ? ALARM_NAME : `${ALARM_NAME}:${id}`,
           managed: true, withLocalWrite,
           hasPendingApply: async () => {
             for (const connectionId of workers.keys()) if (await store.get(keyFor(connectionId, 'pendingApply')) ||
@@ -635,11 +680,35 @@
         if (!current.enabled && current.error === 'interrupted-apply' && current.hasMigrationBackup) await store.put(keyFor(id, 'recoveryBlocked'), true);
       }
     })();
+    // Two connections to the same account and directory would sync one remote
+    // with two independent baselines and treat each other's writes as changes.
+    async function assertUnique(input, exceptId) {
+      let candidate;
+      try { candidate = clientApi.normalizeConfig({ ...input, password: input && input.password || 'placeholder' }); }
+      catch (_error) { return; }
+      for (const id of ids) {
+        if (id === exceptId) continue;
+        const { config } = await worker(id).status();
+        if (config && ['endpoint', 'directory', 'username'].every((key) => config[key] === candidate[key])) fail('duplicate-connection');
+      }
+    }
+    async function discard(id) {
+      await worker(id).stop();
+      workers.delete(id);
+      for (const key of recordKeys) {
+        if (store.delete) await store.delete(keyFor(id, key)); else await store.put(keyFor(id, key), null);
+      }
+      await localStorage('remove', [statusKeyFor(id)]);
+    }
+    async function hasLocalHistory(id) {
+      for (const key of ['migrationBackup', 'pendingApply', 'recoveryBlocked']) if (await store.get(keyFor(id, key))) return true;
+      return false;
+    }
     async function status() {
       await ready;
       const connections = (await Promise.all(ids.map(async (id) => ({ id, ...await worker(id).status() })))).filter((item) => item.config);
       return { ...(connections[0] || { state: 'browser', enabled: false, config: null }),
-        clientRevision: (opts.client || root.LumnoWebDavClient).REVISION, syncRevision: SYNC_REVISION, connections };
+        clientRevision: clientApi.REVISION, syncRevision: SYNC_REVISION, connections };
     }
     function start() {
       if (started) return;
@@ -657,33 +726,38 @@
       if (request.operation === 'status') return status();
       if (request.operation === 'add' || (request.operation === 'test' && !request.id)) {
         return serialRegistry(async () => {
+          if (request.operation === 'add') await assertUnique(request.config);
           const id = cryptoApi.randomUUID();
           const controller = worker(id);
           let retained = false;
+          const retain = async () => {
+            const nextIds = [...ids, id];
+            await store.put('connections', nextIds);
+            ids = nextIds;
+            retained = true;
+            await notifyRegistry();
+          };
           try {
-            const result = await controller.handle({ ...request, operation: request.operation === 'add' ? 'save' : 'test' });
-            if (request.operation === 'add') {
-              const nextIds = [...ids, id];
-              await store.put('connections', nextIds);
-              ids = nextIds;
-              retained = true;
-              await notifyRegistry();
+            let result = await controller.handle({ ...request, operation: request.operation === 'add' ? 'save' : 'test' });
+            if (request.operation === 'add' && request.enable === true) {
+              // The card appears only once the server is verified, so a typo
+              // stays in the form instead of becoming a broken connection.
+              try { result = await controller.handle({ operation: 'enable' }); }
+              catch (cause) {
+                if (await hasLocalHistory(id)) await retain();
+                throw cause;
+              }
             }
+            if (request.operation === 'add') await retain();
             return { ...result, id };
           } finally {
-            if (!retained) {
-              await controller.stop();
-              workers.delete(id);
-              for (const key of recordKeys) {
-                if (store.delete) await store.delete(keyFor(id, key)); else await store.put(keyFor(id, key), null);
-              }
-              await localStorage('remove', [statusKeyFor(id)]);
-            }
+            if (!retained) await discard(id);
           }
         });
       }
       const id = request.id || (ids.length === 1 ? ids[0] : null);
       if (!id || !ids.includes(id)) fail('connection-missing');
+      if (request.operation === 'save') await assertUnique(request.config, id);
       if (request.operation === 'remove') {
         return serialRegistry(async () => {
           if (!ids.includes(id)) fail('connection-missing');
@@ -694,11 +768,7 @@
           // Remove the index first: a restart cannot revive this connection.
           await store.put('connections', nextIds);
           ids = nextIds;
-          workers.delete(id);
-          for (const key of recordKeys) {
-            if (store.delete) await store.delete(keyFor(id, key)); else await store.put(keyFor(id, key), null);
-          }
-          await localStorage('remove', [statusKeyFor(id)]);
+          await discard(id);
           await notifyRegistry();
           return { ok: true };
         });
@@ -707,5 +777,5 @@
     }
     return Object.freeze({ start, status, handle });
   }
-  return Object.freeze({ createController, createConnectionController, createPrivateStore, isTrustedSender, ALARM_NAME, SYNC_REVISION });
+  return Object.freeze({ createController, createConnectionController, createPrivateStore, createProbeCache, isTrustedSender, ALARM_NAME, SYNC_REVISION });
 });
