@@ -1430,7 +1430,7 @@ assertContains(
 const setShortcutDockHoverSource = getFunctionSource(newtabJs, 'setShortcutDockHover');
 assertContains(
   setShortcutDockHoverSource,
-  'if (!newtabShortcutDockMagnificationEnabled)',
+  'if (!pageState.newtabShortcutDockMagnificationEnabled)',
   'shortcut hover should skip Dock magnification when the preference is disabled'
 );
 assertContains(
