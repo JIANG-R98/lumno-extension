@@ -6994,299 +6994,113 @@
   const attachInputModeFaviconData =
     SHORTCUT_FAVICON.createSiteSearchProviderIconHydrator(attachFaviconData);
 
-  function getDefaultSearchModeProvider(providers) {
-    return SEARCH_UTILS.getSearchEngineSiteSearchProvider(
-      defaultSearchEngineState,
-      providers
-    );
-  }
-
-  function getSearchModeProviders() {
-    const providers = (siteSearchProvidersCache && siteSearchProvidersCache.length > 0)
-      ? siteSearchProvidersCache
-      : defaultSiteSearchProviders;
-    const defaultProvider = getDefaultSearchModeProvider(providers);
-    if (!defaultProvider || providers.some((provider) => (
-      getSearchModeProviderId(provider) === getSearchModeProviderId(defaultProvider)
-    ))) {
-      return providers;
-    }
-    return [defaultProvider].concat(providers);
-  }
-
-  function isAggregateSearchDefinitionAvailable(definition, providers) {
-    return AGGREGATE_SEARCH_STORE.isAggregateSearchAvailable(
-      definition,
-      Array.isArray(providers) ? providers : getSearchModeProviders()
-    );
-  }
-
-  function getSearchTriggerProviders(providers, definitions) {
-    const sourceProviders = Array.isArray(providers) ? providers : [];
-    const availableDefinitions = (Array.isArray(definitions) ? definitions : [])
-      .filter((definition) => isAggregateSearchDefinitionAvailable(
-        definition,
-        sourceProviders
-      ));
-    return AGGREGATE_SEARCH_STORE.mergeTriggerProviders(
-      sourceProviders,
-      availableDefinitions
-    );
-  }
-
-  function buildSearchModeMenuItems() {
-    const engineGroup = t('search_scope_group_engines', '搜索引擎');
-    const localGroup = t('search_scope_group_local', '浏览器内容');
-    const aiGroup = t('search_scope_group_ai', 'AI 搜索');
-    const siteGroup = t('search_scope_group_sites', '站内搜索');
-    const aggregateGroup = t('search_scope_group_aggregates', '聚合搜索');
-    const items = [];
-    const providers = getSearchModeProviders();
-    (aggregateSearchesCache || []).forEach((definition) => {
-      if (!isAggregateSearchDefinitionAvailable(definition, providers)) {
-        return;
+  const NEWTAB_SEARCH_MODES = globalThis.LumnoNewtabSearchModes;
+  const {
+    getSearchModeProviders,
+    isAggregateSearchDefinitionAvailable,
+    getSearchTriggerProviders,
+    getSearchModeMenuItems,
+    openSearchModeMenuFromDoubleTab,
+    selectSearchModeMenuItem,
+    getLocalSearchScopeTabHintProvider,
+    setLocalSearchScopePrefix,
+    activateLocalSearchScope,
+    clearLocalSearchScope,
+    activateSiteSearch,
+    clearSiteSearch
+  } = NEWTAB_SEARCH_MODES.createSearchModes({
+    SEARCH_UTILS,
+    defaultSiteSearchProviders,
+    getSearchModeProviderId,
+    AGGREGATE_SEARCH_STORE,
+    t,
+    createAggregateSearchScopeProvider,
+    isAggregateSearchProvider,
+    isSearchEngineSiteSearchProvider,
+    isAiSiteSearchProvider,
+    getSiteSearchDisplayName,
+    getProviderIcon,
+    getLocalSearchScopeLabel,
+    getLocalSearchScopeIconClass,
+    loadSiteSearchIconCache,
+    getSiteSearchProviders,
+    getAggregateSearches,
+    formatMessage,
+    defaultTheme,
+    clearAutocomplete,
+    clearSearchSuggestions,
+    clearSiteSearchPrefix,
+    setSiteSearchPrefix,
+    getThemeForProvider,
+    pageState: {
+      get defaultSearchEngineState() {
+        return defaultSearchEngineState;
+      },
+      get siteSearchProvidersCache() {
+        return siteSearchProvidersCache;
+      },
+      get aggregateSearchesCache() {
+        return aggregateSearchesCache;
+      },
+      get siteSearchState() {
+        return siteSearchState;
+      },
+      set siteSearchState(value) {
+        siteSearchState = value;
+      },
+      get enabledSearchResultSourceTypes() {
+        return enabledSearchResultSourceTypes;
+      },
+      get localSearchScopeState() {
+        return localSearchScopeState;
+      },
+      set localSearchScopeState(value) {
+        localSearchScopeState = value;
+      },
+      get inputParts() {
+        return inputParts;
+      },
+      get inputModeController() {
+        return inputModeController;
+      },
+      get latestRawQuery() {
+        return latestRawQuery;
+      },
+      set latestRawQuery(value) {
+        latestRawQuery = value;
+      },
+      get latestQuery() {
+        return latestQuery;
+      },
+      set latestQuery(value) {
+        latestQuery = value;
+      },
+      get suggestionRequestSeq() {
+        return suggestionRequestSeq;
+      },
+      set suggestionRequestSeq(value) {
+        suggestionRequestSeq = value;
+      },
+      get localSearchScopeTriggerState() {
+        return localSearchScopeTriggerState;
+      },
+      set localSearchScopeTriggerState(value) {
+        localSearchScopeTriggerState = value;
+      },
+      get siteSearchTriggerState() {
+        return siteSearchTriggerState;
+      },
+      set siteSearchTriggerState(value) {
+        siteSearchTriggerState = value;
+      },
+      get inlineSearchState() {
+        return inlineSearchState;
+      },
+      set inlineSearchState(value) {
+        inlineSearchState = value;
       }
-      const provider = createAggregateSearchScopeProvider(definition);
-      if (!provider) {
-        return;
-      }
-      items.push({
-        id: `aggregate:${definition.id}`,
-        kind: 'aggregate',
-        aggregate: definition,
-        provider,
-        label: definition.name,
-        group: aggregateGroup,
-        iconClass: 'ri-stack-line',
-        searchTerms: [definition.name].concat(definition.sourceRefs || []),
-        active: Boolean(
-          isAggregateSearchProvider(siteSearchState) &&
-          String(siteSearchState.aggregateId || '') === String(definition.id || '')
-        )
-      });
-    });
-    providers
-      .filter((provider) => isSearchEngineSiteSearchProvider(provider))
-      .concat(providers.filter((provider) => (
-        !isSearchEngineSiteSearchProvider(provider) && !isAiSiteSearchProvider(provider)
-      )))
-      .concat(providers.filter((provider) => isAiSiteSearchProvider(provider)))
-      .forEach((provider) => {
-        const isAi = isAiSiteSearchProvider(provider);
-        const isSearchEngine = isSearchEngineSiteSearchProvider(provider);
-        items.push({
-          id: getSearchModeProviderId(provider),
-          kind: 'provider',
-          provider,
-          label: getSiteSearchDisplayName(provider),
-          group: isSearchEngine ? engineGroup : (isAi ? aiGroup : siteGroup),
-          iconUrl: getProviderIcon(provider),
-          iconClass: isAi ? 'ri-search-ai-line' : 'ri-global-line',
-          isAi,
-          active: Boolean(siteSearchState && getSearchModeProviderId(siteSearchState) === getSearchModeProviderId(provider))
-        });
-      });
-    ['topSite', 'bookmark', 'history'].forEach((sourceType) => {
-      if (!enabledSearchResultSourceTypes.includes(sourceType)) {
-        return;
-      }
-      items.push({
-        id: `local:${sourceType}`,
-        kind: 'local',
-        sourceType,
-        label: getLocalSearchScopeLabel({ sourceType }),
-        searchTerms: sourceType === 'topSite'
-          ? ['top sites', 'frequent sites', 'favorites']
-          : (sourceType === 'bookmark'
-            ? ['bookmark', 'bookmarks']
-            : ['history', 'browsing history']),
-        group: localGroup,
-        iconClass: getLocalSearchScopeIconClass(sourceType),
-        menuIconName: sourceType === 'topSite' ? 'star' : sourceType,
-        active: Boolean(localSearchScopeState && localSearchScopeState.sourceType === sourceType)
-      });
-    });
-    return items;
-  }
-
-  function getSearchModeMenuItems() {
-    return Promise.all([
-      loadSiteSearchIconCache(),
-      getSiteSearchProviders(),
-      getAggregateSearches()
-    ]).then(buildSearchModeMenuItems);
-  }
-
-  function openSearchModeMenuFromDoubleTab() {
-    const expectedInputValue = String(inputParts.input.value || '');
-    const activateDefaultProvider = (providers) => {
-      if (!inputModeController || siteSearchState || localSearchScopeState ||
-          String(inputParts.input.value || '') !== expectedInputValue) {
-        return false;
-      }
-      const provider = getDefaultSearchModeProvider(providers);
-      if (!provider) {
-        return false;
-      }
-      if (expectedInputValue.trim()) {
-        activateSiteSearch(provider, {
-          preserveResults: shouldPreserveSearchModeResults(expectedInputValue)
-        });
-        restoreSearchModeQuery(expectedInputValue);
-      } else {
-        activateSiteSearch(provider);
-      }
-      inputModeController.openModeMenu('none');
-      return true;
-    };
-    if (siteSearchProvidersCache) {
-      return activateDefaultProvider(siteSearchProvidersCache);
     }
-    return getSiteSearchProviders().then(
-      activateDefaultProvider,
-      () => activateDefaultProvider(defaultSiteSearchProviders)
-    );
-  }
-
-  function restoreSearchModeQuery(rawQuery) {
-    const value = String(rawQuery || '');
-    inputParts.input.value = value;
-    latestRawQuery = value;
-    latestQuery = value.trim();
-    inputParts.input.dispatchEvent(new Event('input', { bubbles: true }));
-  }
-
-  function shouldPreserveSearchModeResults(rawQuery) {
-    return Boolean(String(rawQuery || '').trim());
-  }
-
-  function selectSearchModeMenuItem(item) {
-    if (!item || !item.kind) {
-      return;
-    }
-    const rawQuery = inputParts.input.value || '';
-    const preserveResults = shouldPreserveSearchModeResults(rawQuery);
-    if (item.kind === 'local') {
-      activateLocalSearchScope(
-        { sourceType: item.sourceType },
-        { preserveResults }
-      );
-      restoreSearchModeQuery(rawQuery);
-      return;
-    }
-    if (item.kind === 'aggregate' && item.provider) {
-      activateSiteSearch(item.provider, { preserveResults });
-      restoreSearchModeQuery(rawQuery);
-      return;
-    }
-    if (item.kind === 'provider' && item.provider) {
-      activateSiteSearch(item.provider, { preserveResults });
-      restoreSearchModeQuery(rawQuery);
-    }
-  }
-
-  function getLocalSearchScopeTabHintProvider(scope) {
-    const source = getLocalSearchScopeLabel(scope);
-    return {
-      name: source,
-      tabHintLabel: formatMessage(
-        'local_search_tab_hint',
-        '仅搜索{source}',
-        { source }
-      )
-    };
-  }
-
-  function setLocalSearchScopePrefix(scope) {
-    if (!inputModeController || !scope) {
-      return;
-    }
-    inputModeController.setPrefixText(
-      getLocalSearchScopeLabel(scope),
-      defaultTheme,
-      {
-        animate: true,
-        iconClass: getLocalSearchScopeIconClass(scope.sourceType),
-        menuIconName: scope.sourceType === 'topSite' ? 'star' : scope.sourceType,
-        modeId: `local:${scope.sourceType}`
-      }
-    );
-  }
-
-  function activateLocalSearchScope(scope, activationOptions) {
-    if (!scope || !enabledSearchResultSourceTypes.includes(scope.sourceType)) {
-      return false;
-    }
-    const options = activationOptions && typeof activationOptions === 'object'
-      ? activationOptions
-      : {};
-    suggestionRequestSeq += 1;
-    localSearchScopeState = scope;
-    localSearchScopeTriggerState = null;
-    siteSearchState = null;
-    siteSearchTriggerState = null;
-    inlineSearchState = null;
-    inputParts.input.value = '';
-    latestRawQuery = '';
-    latestQuery = '';
-    clearAutocomplete();
-    setLocalSearchScopePrefix(scope);
-    if (options.preserveResults !== true) {
-      clearSearchSuggestions();
-    }
-    return true;
-  }
-
-  function clearLocalSearchScope() {
-    if (!localSearchScopeState) {
-      return false;
-    }
-    suggestionRequestSeq += 1;
-    localSearchScopeState = null;
-    localSearchScopeTriggerState = null;
-    inlineSearchState = null;
-    clearSiteSearchPrefix();
-    clearAutocomplete();
-    return true;
-  }
-
-  function activateSiteSearch(provider, activationOptions) {
-    if (!provider) {
-      return;
-    }
-    const options = activationOptions && typeof activationOptions === 'object'
-      ? activationOptions
-      : {};
-    localSearchScopeState = null;
-    localSearchScopeTriggerState = null;
-    siteSearchState = provider;
-    inlineSearchState = null;
-    inputParts.input.value = '';
-    latestRawQuery = '';
-    latestQuery = '';
-    clearAutocomplete();
-    setSiteSearchPrefix(provider, defaultTheme, {
-      animate: options.animatePrefix !== false
-    });
-    getThemeForProvider(provider).then((theme) => {
-      if (siteSearchState === provider) {
-        setSiteSearchPrefix(provider, theme);
-      }
-    });
-    if (options.preserveResults !== true) {
-      clearSearchSuggestions();
-    }
-  }
-
-  function clearSiteSearch() {
-    if (!siteSearchState) {
-      return;
-    }
-    siteSearchState = null;
-    inlineSearchState = null;
-    clearSiteSearchPrefix();
-    clearAutocomplete();
-  }
+  });
 
   function getBrowserPageSuggestionTitle(browserProfile, targetUrl) {
     const browserName = browserProfile && browserProfile.name ? browserProfile.name : '';
