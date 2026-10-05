@@ -2,8 +2,9 @@ const assert = require('assert');
 const fs = require('fs');
 const vm = require('vm');
 const historyApi = require('../src/newtab/bookmark-move-history');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
-const source = fs.readFileSync(require.resolve('../src/newtab/newtab.js'), 'utf8');
+const source = readNewtabRuntimeSource();
 function extractFunction(name) {
   const start = source.indexOf(`function ${name}(`);
   assert.ok(start >= 0, `Missing ${name}`);

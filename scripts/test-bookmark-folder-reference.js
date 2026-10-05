@@ -4,6 +4,7 @@ const refs = require('../src/shared/bookmark-folder-reference.js');
 const shortcuts = require('../src/newtab/shortcuts-store.js');
 const settings = require('../src/shared/settings.js');
 const drag = require('../src/newtab/cross-surface-drag.js');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 function tree(folderId = '42', rootId = '1', rootTitle = '书签栏') {
   return [{ id: '0', children: [{ id: rootId, parentId: '0', title: rootTitle,
@@ -123,7 +124,7 @@ async function run() {
   assert.strictEqual(legacyRuntime.reconcile([{ ...legacy, id: 'untrusted', folderId: '117' }], aMap)[0].folderRef, undefined,
     'a legacy numeric ID from another profile is not trusted');
 
-  const pageSource = fs.readFileSync(require.resolve('../src/newtab/newtab.js'), 'utf8');
+  const pageSource = readNewtabRuntimeSource();
   const render = new Function('runtime', 'map', 'store', 'initial', `
     const shortcutFolderRuntime = runtime;
     const bookmarksRuntime = { getNodeMap: () => map };

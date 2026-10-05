@@ -1,12 +1,13 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 function readSource(path) {
   return fs.readFileSync(path, 'utf8');
 }
 
 const sharedSource = readSource('src/shared/search-input-mode.js');
-const newtabSource = readSource('src/newtab/newtab.js');
+const newtabSource = readNewtabRuntimeSource();
 const overlaySource = readSource('src/overlay/search-panel.js');
 const overlayRuntimeSource = readSource('src/overlay/runtime.js');
 const backgroundSource = readSource('src/background/background.js');

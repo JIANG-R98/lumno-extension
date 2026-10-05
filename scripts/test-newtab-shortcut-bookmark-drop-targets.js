@@ -4,8 +4,9 @@ const { JSDOM } = require('jsdom');
 const bookmarkDrag = require('../src/newtab/bookmark-drag.js');
 const crossSurfaceDrag = require('../src/newtab/cross-surface-drag.js');
 const bookmarkMoveHistory = require('../src/newtab/bookmark-move-history.js');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
-const source = fs.readFileSync('src/newtab/newtab.js', 'utf8');
+const source = readNewtabRuntimeSource();
 function extractFunction(name, text = source) {
   let start = text.indexOf(`function ${name}(`);
   assert.ok(start >= 0, `missing ${name}`);

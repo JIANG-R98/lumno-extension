@@ -2,9 +2,10 @@ const assert = require('assert');
 const fs = require('fs');
 const shortcutFavicon = require('../src/shared/shortcut-favicon.js');
 const searchUtils = require('../src/shared/search-utils.js');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 const backgroundSource = fs.readFileSync('src/background/background.js', 'utf8');
-const newtabSource = fs.readFileSync('src/newtab/newtab.js', 'utf8');
+const newtabSource = readNewtabRuntimeSource();
 const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
 const overlayRuntimeSource = fs.readFileSync('src/overlay/runtime.js', 'utf8');
 const inputModeSource = fs.readFileSync('src/shared/search-input-mode.js', 'utf8');

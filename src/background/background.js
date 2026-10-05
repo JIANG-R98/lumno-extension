@@ -5478,8 +5478,6 @@ chrome.commands.onCommand.addListener(function(command) {
   ) {
     return;
   }
-  if (command !== SHOW_TAB_SWITCHER_COMMAND_NAME) {
-  }
   const commandObservedAt = Date.now();
   const source = command === SHOW_SEARCH_COMMAND_NAME
     ? 'commands'
@@ -6771,10 +6769,6 @@ function handleSiteSearchMessage(request, sender, sendResponse) {
         sender,
         request.disposition
       ).then((result) => {
-        if (result && result.ok) {
-          if (request.provider && request.provider.category === 'aiSearch') {
-          }
-        }
         sendResponse(result);
       }).catch((error) => {
         sendResponse({
@@ -6809,8 +6803,6 @@ function handleSelectionQuickActionMessage(request, sender, sendResponse) {
   }
   runSelectionQuickAction(request, sender)
     .then((result) => {
-      if (result && result.ok) {
-      }
       sendResponse(result);
     })
     .catch((error) => {

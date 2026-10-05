@@ -3,6 +3,7 @@ const fs = require('fs');
 
 const communityLinks = require('../src/shared/community-links.js');
 const { readPageSource } = require('./helpers/page-source');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 (async () => {
   assert.strictEqual(
@@ -148,7 +149,7 @@ const { readPageSource } = require('./helpers/page-source');
     'a forced refresh should still retry after a cached failure'
   );
 
-  const newtabSource = fs.readFileSync('src/newtab/newtab.js', 'utf8');
+  const newtabSource = readNewtabRuntimeSource();
   const newtabHtml = readPageSource('newtab.html');
   const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
   const optionsHtml = readPageSource('src/options/options.html');

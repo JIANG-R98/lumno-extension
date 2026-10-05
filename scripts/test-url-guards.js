@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const vm = require('vm');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 const sandbox = {
   console,
@@ -26,7 +27,7 @@ assert.strictEqual(guards.isBrowserInternalUrl('chrome://extensions/'), true);
 assert.strictEqual(guards.isBrowserInternalUrl('about:blank'), true);
 assert.strictEqual(guards.isBrowserInternalUrl('https://example.com/'), false);
 
-const newtabJs = fs.readFileSync('src/newtab/newtab.js', 'utf8');
+const newtabJs = readNewtabRuntimeSource();
 assert.ok(
   newtabJs.includes('isBrowserNewtabUrl(url)'),
   'newtab recent-site filtering should use the precise browser newtab guard'

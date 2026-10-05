@@ -1,8 +1,9 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
-const source = fs.readFileSync(path.join(__dirname, '../src/newtab/newtab.js'), 'utf8');
+const source = readNewtabRuntimeSource();
 function extractFunction(name) {
   const start = source.search(new RegExp(`(?:async )?function ${name}\\(`));
   assert(start >= 0);

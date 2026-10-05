@@ -4,6 +4,7 @@ const path = require('path');
 
 const shortcutFavicon = require('../src/shared/shortcut-favicon.js');
 const searchUtils = require('../src/shared/search-utils.js');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 function createPngHeader(width, height) {
   const bytes = new Uint8Array(24);
@@ -261,7 +262,7 @@ async function testConcurrentCacheUpdates() {
 }
 
 function testNewtabCacheWriteIntegration() {
-  const source = fs.readFileSync(path.join(__dirname, '..', 'src/newtab/newtab.js'), 'utf8');
+  const source = readNewtabRuntimeSource();
   assert(
     source.includes('lockManager: window.navigator && window.navigator.locks'),
     'newtab favicon stores should share a cross-tab Web Lock'

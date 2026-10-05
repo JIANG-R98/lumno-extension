@@ -2,10 +2,11 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { readPageSource } = require('./helpers/page-source');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 const repoRoot = path.resolve(__dirname, '..');
 const optionsJs = fs.readFileSync(path.join(repoRoot, 'src/options/options.js'), 'utf8');
-const newtabJs = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8');
+const newtabJs = readNewtabRuntimeSource();
 const newtabWallpaperJs = fs.readFileSync(
   path.join(repoRoot, 'src/newtab/wallpaper.js'),
   'utf8'

@@ -6,10 +6,11 @@ const shortcutFavicon = require('../src/shared/shortcut-favicon.js');
 const shortcutsStore = require('../src/newtab/shortcuts-store.js');
 const searchUtils = require('../src/shared/search-utils.js');
 const faviconCache = require('../src/shared/favicon-cache.js');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 const repoRoot = path.resolve(__dirname, '..');
 const backgroundSource = fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8');
-const newtabSource = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8');
+const newtabSource = readNewtabRuntimeSource();
 
 function extractFunction(source, name) {
   const start = source.search(new RegExp(`(?:async )?function ${name}\\(`));

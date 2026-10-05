@@ -2,11 +2,12 @@ const assert = require('assert');
 const fs = require('fs');
 const settings = require('../src/shared/settings.js');
 const { readPageSource } = require('./helpers/page-source');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 const read = (filePath) => fs.readFileSync(filePath, 'utf8');
 const optionsHtml = readPageSource('src/options/options.html');
 const optionsSource = read('src/options/options.js');
-const newtabSource = read('src/newtab/newtab.js');
+const newtabSource = readNewtabRuntimeSource();
 const overlaySource = read('src/overlay/search-panel.js');
 const overlayRuntimeSource = read('src/overlay/runtime.js');
 const overlaySuggestionsStyles = read('src/overlay/suggestions-view.css');

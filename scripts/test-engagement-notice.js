@@ -3,6 +3,7 @@ const fs = require('fs');
 
 const communityLinks = require('../src/shared/community-links.js');
 const engagementNotice = require('../src/shared/engagement-notice.js');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 function flushMicrotasks() {
   return new Promise((resolve) => setImmediate(resolve));
@@ -326,7 +327,7 @@ function createEligibleState(surface, now) {
   );
   resumedController.destroy();
 
-  const newtabSource = fs.readFileSync('src/newtab/newtab.js', 'utf8');
+  const newtabSource = readNewtabRuntimeSource();
   const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
   const newtabReactEntrySource = fs.readFileSync(
     'react-src/newtab/react-islands-entry.ts',

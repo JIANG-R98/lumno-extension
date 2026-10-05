@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { readPageSource } = require('./helpers/page-source');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 require('../src/shared/suggestions-height-layout.js');
 require('../src/newtab/layout.js');
@@ -9,7 +10,7 @@ require('../src/newtab/layout.js');
 const layoutRuntime = globalThis.LumnoNewtabLayout;
 const repoRoot = path.resolve(__dirname, '..');
 const newtabHtml = readPageSource('newtab.html');
-const newtabSource = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8');
+const newtabSource = readNewtabRuntimeSource();
 const wallpaperSource = fs.readFileSync(path.join(repoRoot, 'src/newtab/wallpaper.js'), 'utf8');
 const newtabRedirectSource = fs.readFileSync(
   path.join(repoRoot, 'src/newtab/lumno-newtab.js'),
@@ -560,7 +561,7 @@ assert.doesNotMatch(
 
 
 function testNewtabLoadsAndUsesDockRuntime() {
-  const newtabJs = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8');
+  const newtabJs = readNewtabRuntimeSource();
   assert.ok(
     !newtabHtml.includes('<script src="dock.js"></script>') &&
       newtabHtml.includes('data-react-entry="../react/newtab-islands.js"'),
@@ -1276,7 +1277,7 @@ function testAdaptiveGridUsesMobileTierBeforeCompactTier() {
 testAdaptiveGridUsesMobileTierBeforeCompactTier();
 
 function testNewtabUsesDistinctMobileGridColumns() {
-  const newtabJs = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8');
+  const newtabJs = readNewtabRuntimeSource();
   const bookmarkColumnsSource = newtabJs.slice(
     newtabJs.indexOf('function getBookmarkGridColumnCount()'),
     newtabJs.indexOf('function getNewtabWidthModeBaseConfig()')
@@ -1495,7 +1496,7 @@ function testWideRecentGridCanReachMaximumColumns() {
 }
 
 function testNewtabWideModeUsesRecentGridMaximumWidth() {
-  const newtabJs = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8');
+  const newtabJs = readNewtabRuntimeSource();
   assert.match(
     newtabJs,
     /contentMaxWidth:\s*RECENT_WIDE_CONTENT_MAX_WIDTH_PX[\s\S]*?recentMaxColumns:\s*RECENT_WIDE_MAX_COLUMNS/,

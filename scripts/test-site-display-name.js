@@ -3,10 +3,11 @@ const fs = require('fs');
 const path = require('path');
 const siteDisplayName = require('../src/shared/site-display-name.js');
 const { readPageSource } = require('./helpers/page-source');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 const repoRoot = path.resolve(__dirname, '..');
 const newtabHtml = readPageSource('newtab.html');
-const newtabJs = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8');
+const newtabJs = readNewtabRuntimeSource();
 const sharedSource = fs.readFileSync(
   path.join(repoRoot, 'src/shared/site-display-name.js'),
   'utf8'

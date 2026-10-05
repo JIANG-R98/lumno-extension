@@ -1,13 +1,14 @@
 const assert = require('assert');
 const fs = require('fs');
 const { readPageSource } = require('./helpers/page-source');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 const read = (file) => fs.readFileSync(file, 'utf8');
 const settings = require('../src/shared/settings.js');
 const aggregateStore = require('../src/shared/aggregate-search-store.js');
 const manifest = JSON.parse(read('manifest.json'));
 const newtabHtml = readPageSource('newtab.html');
-const newtabSource = read('src/newtab/newtab.js');
+const newtabSource = readNewtabRuntimeSource();
 const optionsHtml = readPageSource('src/options/options.html');
 const optionsSource = read('src/options/options.js');
 const overlayRuntimeSource = read('src/overlay/runtime.js');

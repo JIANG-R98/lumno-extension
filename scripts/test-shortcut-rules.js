@@ -6,6 +6,7 @@ const shortcutRules = require('../src/background/shortcut-rules.js');
 const browserProfile = require('../src/shared/browser-profile.js');
 const bundledShortcutRules = require('../assets/data/shortcut-rules.json');
 const { readPageSource } = require('./helpers/page-source');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 function createResponse(data) {
   return {
@@ -94,7 +95,7 @@ function testBrowserProfileRuntimeWiring() {
   const repoRoot = path.join(__dirname, '..');
   const backgroundSource = fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8');
   const newtabHtml = readPageSource('newtab.html');
-  const newtabSource = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8');
+  const newtabSource = readNewtabRuntimeSource();
   const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
   const overlaySource = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
 

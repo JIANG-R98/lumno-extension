@@ -1,5 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 function extractFunction(source, name) {
   const start = source.indexOf(`function ${name}(`);
@@ -113,7 +114,7 @@ async function verifyLoadGuard(surface, source) {
 
 async function main() {
   const surfaces = [
-    ['newtab', fs.readFileSync('src/newtab/newtab.js', 'utf8')],
+    ['newtab', readNewtabRuntimeSource()],
     ['overlay', fs.readFileSync('src/overlay/search-panel.js', 'utf8')]
   ];
   for (const [surface, source] of surfaces) {

@@ -1,11 +1,12 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 const repoRoot = path.resolve(__dirname, '..');
 const optionsJs = fs.readFileSync(path.join(repoRoot, 'src/options/options.js'), 'utf8');
 const overlayJs = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
-const newtabJs = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8');
+const newtabJs = readNewtabRuntimeSource();
 
 function assertMatches(source, pattern, message) {
   assert.ok(pattern.test(source), message);

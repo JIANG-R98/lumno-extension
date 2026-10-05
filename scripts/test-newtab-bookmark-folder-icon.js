@@ -4,10 +4,11 @@ const path = require('path');
 const { JSDOM } = require('jsdom');
 const folderIcon = require('../src/newtab/bookmark-folder-icon.js');
 const { readPageSource } = require('./helpers/page-source');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 const repoRoot = path.resolve(__dirname, '..');
 const newtabHtml = readPageSource('newtab.html');
-const newtabJs = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8');
+const newtabJs = readNewtabRuntimeSource();
 assert.deepStrictEqual(folderIcon.normalizeFolderColorMap(JSON.parse('{"1":"#aabbcc", "2":"#FF0000", "3":"bad-value", "__proto__":"#ffffff", "invalid id":"#ffffff"}')), { '1': '#AABBCC', '2': '#FF0000' });
 
 const firstSvg = folderIcon.getFigmaFolderSvg('folder one');

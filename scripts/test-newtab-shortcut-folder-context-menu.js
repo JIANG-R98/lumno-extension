@@ -2,8 +2,9 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
-const newtabJs = fs.readFileSync(path.join(__dirname, '../src/newtab/newtab.js'), 'utf8');
+const newtabJs = readNewtabRuntimeSource();
 
 function getFunctionSource(source, name) {
   const marker = `function ${name}(`;

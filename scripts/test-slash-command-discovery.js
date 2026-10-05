@@ -3,9 +3,10 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const { readPageSource } = require('./helpers/page-source');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 const repoRoot = path.resolve(__dirname, '..');
-const newtabSource = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8');
+const newtabSource = readNewtabRuntimeSource();
 const newtabSuggestionsSource = fs.readFileSync(path.join(repoRoot, 'react-src/newtab/suggestions.tsx'), 'utf8');
 const newtabHtmlSource = readPageSource('newtab.html');
 const overlaySource = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');

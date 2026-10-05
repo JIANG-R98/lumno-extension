@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const vm = require('vm');
 const search = require('../src/shared/search-utils.js');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 function readSource(path) {
   return fs.readFileSync(path, 'utf8');
@@ -9,7 +10,7 @@ function readSource(path) {
 
 const sharedSource = readSource('src/shared/search-input-mode.js');
 const sharedCss = readSource('src/shared/search-input.css');
-const newtabSource = readSource('src/newtab/newtab.js');
+const newtabSource = readNewtabRuntimeSource();
 const overlaySource = readSource('src/overlay/search-panel.js');
 
 assert.match(

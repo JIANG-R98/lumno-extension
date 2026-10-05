@@ -5,8 +5,9 @@ const historyApi = require('../src/newtab/bookmark-move-history');
 const dragApi = require('../src/newtab/cross-surface-drag');
 const store = require('../src/newtab/shortcuts-store');
 const references = require('../src/shared/bookmark-folder-reference');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
-const source = fs.readFileSync(require.resolve('../src/newtab/newtab.js'), 'utf8');
+const source = readNewtabRuntimeSource();
 function extractFunction(name) {
   let start = source.indexOf(`function ${name}(`);
   assert.ok(start >= 0, `Missing ${name}`);

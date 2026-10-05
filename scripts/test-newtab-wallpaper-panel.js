@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const vm = require('vm');
 const { readPageSource } = require('./helpers/page-source');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 // Real page dependencies, loaded the way newtab.html loads them before wallpaper.js.
 require('../src/shared/settings.js');
@@ -1776,7 +1777,7 @@ async function testWallpaperPreloadUsesTheCachedResolvedMode() {
 }
 
 function assertWallpaperBootstrapWaitsForTheme() {
-  const newtabSource = fs.readFileSync('src/newtab/newtab.js', 'utf8');
+  const newtabSource = readNewtabRuntimeSource();
   assert.match(
     newtabSource,
     /function bootstrapInitialWallpaper\(\)\s*\{[\s\S]*?return bootstrapInitialThemeMode\(\)\.then\(\(\) => wallpaperRuntime\.bootstrapInitialWallpaper\(\)\);[\s\S]*?\}/,

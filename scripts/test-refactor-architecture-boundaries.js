@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 const repoRoot = path.join(__dirname, '..');
 
@@ -64,7 +65,7 @@ assert.deepStrictEqual(
   'bookmark folder SVG and morph logic must stay out of the newtab entry'
 );
 
-const newtabSource = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8');
+const newtabSource = readNewtabRuntimeSource();
 assert.match(
   newtabSource,
   /SITE_DISPLAY_NAME\.getSiteDisplayName\([\s\S]*?SITE_DISPLAY_NAME_OPTIONS/

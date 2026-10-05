@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 require(path.join('..', 'src', 'newtab', 'background-search-focus.js'));
 
@@ -100,10 +101,7 @@ assert.strictEqual(handleBackgroundPointerFocus(createPointerEvent({ name: 'book
 assert.strictEqual(focusCount, 1, 'component pointer events should leave search focus unchanged');
 assert.strictEqual(dismissCount, 2, 'component pointer events should not dismiss search results');
 
-const newtabSource = fs.readFileSync(
-  path.join(__dirname, '..', 'src', 'newtab', 'newtab.js'),
-  'utf8'
-);
+const newtabSource = readNewtabRuntimeSource();
 assert.match(
   newtabSource,
   /createBackgroundFocusHandler\(\{[\s\S]*?getSearchValue:\s*\(\)\s*=>\s*inputParts\.input\.value,[\s\S]*?dismissSearchResults:\s*dismissSearchSuggestionsFromBackground,/,

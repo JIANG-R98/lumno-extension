@@ -1,9 +1,10 @@
 const assert = require('assert');
 const fs = require('fs');
 const { readPageSource } = require('./helpers/page-source');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 const newtabHtml = readPageSource('newtab.html');
-const newtabJs = fs.readFileSync('src/newtab/newtab.js', 'utf8');
+const newtabJs = readNewtabRuntimeSource();
 const wallpaperViewReact = fs.readFileSync(
   'react-src/newtab/wallpaper-view.tsx',
   'utf8'

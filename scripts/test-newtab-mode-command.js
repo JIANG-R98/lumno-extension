@@ -1,9 +1,10 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 const repoRoot = path.resolve(__dirname, '..');
-const newtabJs = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8');
+const newtabJs = readNewtabRuntimeSource();
 
 function assertContains(source, needle, message) {
   assert.ok(source.includes(needle), message);

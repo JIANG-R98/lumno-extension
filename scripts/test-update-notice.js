@@ -1,5 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 class FakeElement {
   constructor(tagName) {
@@ -364,7 +365,7 @@ function flushMicrotasks() {
     'published update notice should include the GitHub release title'
   );
 
-  const newtabSource = fs.readFileSync('src/newtab/newtab.js', 'utf8');
+  const newtabSource = readNewtabRuntimeSource();
   assert.strictEqual(
     newtabSource.includes('searchLayer.appendChild(updateNoticeController.element)'),
     false,
