@@ -19,7 +19,8 @@ const NEWTAB_RUNTIME_MODULES = [
   'src/newtab/page-navigation.js',
   'src/newtab/shortcuts-controller.js',
   'src/newtab/shortcut-drag.js',
-  'src/newtab/bookmark-drag-controller.js'
+  'src/newtab/bookmark-drag-controller.js',
+  'src/newtab/section-loaders.js'
 ];
 
 // Returns newtab.js followed by the modules split out of it, so source checks
