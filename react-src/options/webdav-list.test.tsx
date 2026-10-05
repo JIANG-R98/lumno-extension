@@ -92,12 +92,32 @@ describe('WebDAV connection cards', () => {
     expect(onAction).toHaveBeenCalledWith('sync', 'b', { decision: 'remote' });
     expect(card('b').querySelector('[role="status"]')?.getAttribute('data-status')).toBe('warning');
   });
+  it('loads conflict differences on demand and shows both sides', async () => {
+    const { card, onAction } = fixture({ ...model, connections: [{ ...item, enabled: true, state: 'conflict', conflictsText: 'Shortcuts and icons' }] });
+    onAction.mockResolvedValueOnce({ items: [
+      { key: 'shortcuts', label: 'Shortcuts and icons', domain: 'shortcuts',
+        local: { total: 3, added: { names: ['Figma'], count: 1 }, removed: { names: [], count: 0 }, changed: { names: [], count: 0 }, reordered: false },
+        remote: { total: 2, added: { names: [], count: 0 }, removed: { names: [], count: 0 }, changed: { names: [], count: 0 }, reordered: false } },
+      { key: 'simple', label: 'Simple mode', domain: 'preference', local: { kind: 'boolean', value: true }, remote: { kind: 'unset' } }
+    ] });
+    const toggle = [...card('a').querySelectorAll('button')].find((button) => button.textContent?.includes(copy.webdav_view_diff))!;
+    await click(toggle);
+    expect(onAction).toHaveBeenCalledWith('conflictDetails', 'a');
+    const table = card('a').querySelector('[role="table"]')!;
+    expect(table.textContent).toContain('Added: Figma');
+    expect(table.textContent).toContain(copy.webdav_diff_unchanged);
+    expect(table.textContent).toContain(copy.webdav_value_on);
+    expect(table.textContent).toContain(copy.webdav_value_default);
+    await click([...card('a').querySelectorAll('button')].find((button) => button.textContent?.includes(copy.webdav_hide_diff))!);
+    expect(card('a').querySelector('[role="table"]')).toBeNull();
+  });
   it('shows one status pill per card and offers sync only while running', () => {
     const now = Date.now();
     const { card } = fixture({ ...model, connections: [
       { ...item, id: 'new', lastSyncAt: null },
       { ...item, id: 'paused' },
       { ...item, id: 'ready', enabled: true, state: 'ready', lastSyncAt: now - 3 * 60 * 1000 },
+      { ...item, id: 'fresh', enabled: true, state: 'ready', lastSyncAt: now - 5 * 1000 },
       { ...item, id: 'failed', enabled: true, state: 'error', errorText: 'Sign-in failed', diagnosticText: 'dav-lock-4 / move-race / 201,201' }
     ] });
     const pill = (id: string) => card(id).querySelector<HTMLElement>('._x_extension_sync_status_2024_unique_')!;
@@ -105,6 +125,7 @@ describe('WebDAV connection cards', () => {
     expect(pill('paused').textContent).toBe(copy.webdav_state_paused);
     expect(pill('ready').dataset.status).toBe('success');
     expect(pill('ready').textContent).toContain('3 minutes ago');
+    expect(pill('fresh').textContent).toBe(`${copy.webdav_state_ready} · ${copy.webdav_just_now}`);
     expect(pill('failed').dataset.status).toBe('danger');
     expect(card('paused').querySelector(`button[aria-label="${copy.webdav_sync}"]`)).toBeNull();
     expect(card('ready').querySelector(`button[aria-label="${copy.webdav_sync}"]`)).not.toBeNull();

@@ -106,6 +106,50 @@
       assets: { ...base.assets, ...remote.assets, ...local.assets } });
     return { state, conflicts };
   }
+  // A conflict summary is display data only: names are capped and values are
+  // reduced to their kind, so it never ships full shortcut lists or images.
+  const SUMMARY_NAMES = 6;
+  function names(list, name) {
+    return { names: list.slice(0, SUMMARY_NAMES).map(name), count: list.length };
+  }
+  function summarizeValue(value) {
+    if (typeof value === 'undefined' || value === null) return { kind: 'unset' };
+    if (typeof value === 'boolean') return { kind: 'boolean', value };
+    if (typeof value === 'number' && Number.isFinite(value)) return { kind: 'number', value };
+    if (typeof value === 'string' && value.length <= 40) return { kind: 'text', value };
+    if (Array.isArray(value)) return { kind: 'list', count: value.length };
+    return { kind: 'changed' };
+  }
+  function describeList(before, after, name, changedItem) {
+    const previous = new Map(before.map((item) => [item.id, item]));
+    const next = new Set(after.map((item) => item.id));
+    const kept = after.filter((item) => previous.has(item.id));
+    return {
+      total: after.length,
+      added: names(after.filter((item) => !previous.has(item.id)), name),
+      removed: names(before.filter((item) => !next.has(item.id)), name),
+      changed: names(kept.filter((item) => changedItem(item, previous.get(item.id))), name),
+      reordered: !equal(kept.map((item) => item.id), before.filter((item) => next.has(item.id)).map((item) => item.id))
+    };
+  }
+  function describeShortcuts(base, side) {
+    return describeList(base.shortcuts, side.shortcuts, (item) => String(item.title || item.url || '').slice(0, 60),
+      (item, previous) => !equal(item, previous) || side.icons[item.id] !== base.icons[item.id]);
+  }
+  function describeWallpapers(base, side) {
+    const summary = describeList(base.wallpapers, side.wallpapers, (item) => String(item.name || '').slice(0, 60),
+      (item, previous) => item.image !== previous.image || item.name !== previous.name);
+    summary.selectionChanged = !equal(side.data[LOCAL_WALLPAPER_KEY], base.data[LOCAL_WALLPAPER_KEY]) ||
+      !equal(side.data[WALLPAPER_KEY], base.data[WALLPAPER_KEY]);
+    return summary;
+  }
+  function describeConflict(base, local, remote, keys) {
+    return [...new Set(keys)].map((key) => {
+      if (key === 'shortcuts') return { key, domain: 'shortcuts', local: describeShortcuts(base, local), remote: describeShortcuts(base, remote) };
+      if (key === 'wallpapers') return { key, domain: 'wallpapers', local: describeWallpapers(base, local), remote: describeWallpapers(base, remote) };
+      return { key, domain: 'preference', local: summarizeValue(local.data[key]), remote: summarizeValue(remote.data[key]) };
+    });
+  }
   function planChromeBackup(values, existing, options) {
     const opts = options || {};
     const quota = opts.quota || 102400;
@@ -166,5 +210,5 @@
   }
   return Object.freeze({ SHORTCUT_KEYS, OVERFLOW_KEY, ICONS_KEY, WALLPAPER_KEY, LOCAL_WALLPAPER_KEY,
     PREFERENCE_KEYS, MAX_STATE_BYTES, MAX_ASSET_BYTES, canonical, equal, byteLength, readShortcuts,
-    selectPreferences, validateState, mergeStates, planChromeBackup });
+    selectPreferences, validateState, mergeStates, describeConflict, planChromeBackup });
 });

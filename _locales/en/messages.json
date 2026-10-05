@@ -2499,10 +2499,10 @@
     "message": "Last synced"
   },
   "webdav_choice_hint": {
-    "message": "The server already has settings. Choose this device or the server as the initial version. A local backup is saved before replacement. Chrome sync continues."
+    "message": "The server already has Lumno settings. Pick which copy to keep; the other one is backed up first."
   },
   "webdav_conflict_hint": {
-    "message": "Both sides changed the same content. Choose a version for the conflicting content; other changes will still be merged. A backup is saved before replacement. Chrome sync continues."
+    "message": "This device and the server changed the same thing. Pick a version to keep; other changes merge automatically."
   },
   "webdav_error_endpoint": {
     "message": "Enter a valid HTTPS WebDAV address."
@@ -2604,7 +2604,7 @@
     "message": "The previous replacement was interrupted. Uploads are paused. Restore the previous local settings, or reconnect and use the remote settings."
   },
   "webdav_missing_hint": {
-    "message": "The remote settings no longer exist. Upload local settings to restart sync, or check the server address first."
+    "message": "The settings on the server are gone. Upload this device's settings again, or check the server address first."
   },
   "webdav_error_locked": {
     "message": "Another device is writing to the server. Try again later. If it stays blocked, follow the WebDAV guide to recover a leftover lock."
@@ -2619,7 +2619,7 @@
     "message": "WebDAV sync"
   },
   "webdav_beta_hint": {
-    "message": "Sync settings, custom icons and wallpapers through a WebDAV server alongside your browser’s built-in sync. Add multiple connections and enable each independently.\n\nThis feature is in Beta. Sync may fail or settings may change unexpectedly. Please report any issues to help us improve it."
+    "message": "Syncs settings, custom icons and wallpapers to your own cloud drive or NAS. It runs alongside browser sync without affecting it.\n\nThis is a beta, so sync may occasionally fail. Let us know if you run into a problem."
   },
   "webdav_setup_hint": {
     "message": "Sync settings, custom icons and wallpapers through a WebDAV service such as Nutstore, Nextcloud or a NAS, alongside browser sync."
@@ -2698,6 +2698,69 @@
   },
   "webdav_error_interrupted_other": {
     "message": "Another WebDAV connection ({name}) needs to restore local settings first. This one resumes afterwards."
+  },
+  "webdav_just_now": {
+    "message": "just now"
+  },
+  "webdav_view_diff": {
+    "message": "Show differences"
+  },
+  "webdav_hide_diff": {
+    "message": "Hide differences"
+  },
+  "webdav_diff_local": {
+    "message": "This device"
+  },
+  "webdav_diff_remote": {
+    "message": "Server"
+  },
+  "webdav_diff_added": {
+    "message": "Added: {items}"
+  },
+  "webdav_diff_removed": {
+    "message": "Removed: {items}"
+  },
+  "webdav_diff_changed": {
+    "message": "Edited: {items}"
+  },
+  "webdav_diff_more": {
+    "message": "{count} in total"
+  },
+  "webdav_diff_reordered": {
+    "message": "Reordered"
+  },
+  "webdav_diff_selection": {
+    "message": "Changed the current wallpaper"
+  },
+  "webdav_diff_unchanged": {
+    "message": "No changes"
+  },
+  "webdav_diff_shortcut_total": {
+    "message": "{count} shortcuts"
+  },
+  "webdav_diff_wallpaper_total": {
+    "message": "{count} wallpapers"
+  },
+  "webdav_diff_loading": {
+    "message": "Loading…"
+  },
+  "webdav_value_on": {
+    "message": "On"
+  },
+  "webdav_value_off": {
+    "message": "Off"
+  },
+  "webdav_value_default": {
+    "message": "Default"
+  },
+  "webdav_value_changed": {
+    "message": "Changed"
+  },
+  "webdav_value_list": {
+    "message": "{count} items"
+  },
+  "webdav_preference_other": {
+    "message": "Other setting"
   },
   "webdav_remove": {
     "message": "Delete WebDAV connection"

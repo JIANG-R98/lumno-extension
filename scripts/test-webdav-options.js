@@ -19,6 +19,9 @@ async function run() {
     requests.push(request);
     if (request.operation === 'status') return callback({ ok: true, ...model });
     if (nextError) { const error = nextError; nextError = null; return callback({ ok: false, ...error }); }
+    if (request.operation === 'conflictDetails') return callback({ ok: true, items: [
+      { key: 'shortcuts', domain: 'shortcuts' }, { key: '_x_extension_simple_mode_enabled_2026_unique_', domain: 'preference' },
+      { key: '_x_extension_search_blacklist_2026_unique_', domain: 'preference' }, { key: '_x_extension_unknown_2026_unique_', domain: 'preference' }] });
     callback({ ok: true });
   } }, storage: { onChanged: { addListener(fn) { listeners.push(fn); } } } };
   window.LumnoOptionsInfoButton = { createInfoButtonController: () => ({ render(value) { infoModel = value; } }) };
@@ -68,6 +71,11 @@ async function run() {
   assert.strictEqual(window.document.querySelector('#lumno-webdav-setup-hint').hidden, true);
   await actions.onAction('pause', 'a');
   assert(requests.some((request) => request.operation === 'pause' && request.id === 'a'));
+  const statusReads = requests.filter((request) => request.operation === 'status').length;
+  const details = await actions.onAction('conflictDetails', 'b');
+  assert.deepStrictEqual(details.items.map((item) => item.label), ['Shortcuts and icons', messages.settings_simple_mode_title.message,
+    messages.settings_tab_blacklist.message, messages.webdav_preference_other.message], 'conflicting settings use their visible titles');
+  assert.strictEqual(requests.filter((request) => request.operation === 'status').length, statusReads, 'reading details does not refresh the list');
   await actions.onAction('remove', 'b');
   assert(requests.some((request) => request.operation === 'remove' && request.id === 'b'));
   await actions.onAction('add', undefined, { config: { endpoint: 'https://new.test/' } });

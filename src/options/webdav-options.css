@@ -1,6 +1,11 @@
+/* Same rhythm as the search source groups: 30px header, then an 8px gap. */
 .lumno-webdav-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   padding: var(--settings-row-block-space) var(--settings-content-edge-space);
 }
+.lumno-webdav-settings > ._x_extension_setting_desc_2024_unique_ { margin: 0; }
 .lumno-webdav-heading {
   display: flex;
   align-items: center;
@@ -48,6 +53,29 @@
 .lumno-webdav-notice .lumno-webdav-error { color: var(--duplicate-badge-text); }
 .lumno-webdav-notice-error { margin: 0; }
 .lumno-webdav-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.lumno-webdav-actions > .lumno-webdav-diff-toggle { margin-right: auto; }
+.lumno-webdav-diff {
+  display: flex;
+  flex-direction: column;
+  margin-top: 6px;
+  border: 1px solid var(--tab-border);
+  border-radius: 10px;
+  background: var(--control-bg);
+  overflow: hidden;
+}
+.lumno-webdav-diff-row {
+  display: grid;
+  grid-template-columns: minmax(88px, 0.8fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--panel-text);
+}
+.lumno-webdav-diff-row + .lumno-webdav-diff-row { border-top: 1px solid var(--tab-border); }
+.lumno-webdav-diff-head { color: var(--panel-subtext); font-weight: 500; }
+.lumno-webdav-diff-label { color: var(--panel-subtext); }
+.lumno-webdav-diff-row [role="cell"] { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
 
 .lumno-webdav-settings .lumno-webdav-provider { flex-direction: row; align-items: center; justify-content: flex-start; align-self: stretch; gap: 12px; text-align: left; }
 .lumno-webdav-settings .lumno-webdav-provider ._x_extension_shortcut_label_2024_unique_ { margin: 0; }
@@ -72,4 +100,7 @@
 @media (max-width: 520px) {
   .lumno-webdav-form-grid { grid-template-columns: minmax(0, 1fr); }
   .lumno-webdav-settings .lumno-webdav-provider { flex-direction: column; align-items: flex-start; }
+  .lumno-webdav-diff-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .lumno-webdav-diff-label { grid-column: 1 / -1; }
+  .lumno-webdav-diff-head > :first-child { display: none; }
 }

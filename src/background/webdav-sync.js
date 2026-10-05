@@ -592,6 +592,12 @@
           return connectReporting(config, request.decision);
         }
         case 'connect': return connectReporting(request.config, request.decision);
+        case 'conflictDetails': {
+          const conflict = await privateStore.get('conflict');
+          const { base } = await session();
+          if (!conflict || !base) return { items: [] };
+          return { items: contract.describeConflict(base, conflict.local, conflict.remote, conflict.keys) };
+        }
         case 'sync': return guardedSync(request.decision);
         case 'pause': return pause();
         case 'browser': return useBrowserSync();

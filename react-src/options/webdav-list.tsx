@@ -65,10 +65,10 @@ function formatTime(timestamp: number, lang: string) {
   return new Date(timestamp).toLocaleString(lang || undefined, { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-function formatRelative(timestamp: number, now: number, lang: string) {
+function formatRelative(timestamp: number, now: number, lang: string, justNow: string) {
   const seconds = Math.round((timestamp - now) / 1000);
   const format = new Intl.RelativeTimeFormat(lang || undefined, { numeric: 'auto' });
-  if (Math.abs(seconds) < 60) return format.format(0, 'second');
+  if (Math.abs(seconds) < 60) return justNow;
   if (Math.abs(seconds) < 3600) return format.format(Math.round(seconds / 60), 'minute');
   if (Math.abs(seconds) < 86400) return format.format(Math.round(seconds / 3600), 'hour');
   return formatTime(timestamp, lang);
@@ -88,7 +88,7 @@ function describeStatus(item: WebDavConnection, copy: Record<string, string>, sy
   if (item.errorText) return { tone: 'danger', label: copy.webdav_state_error };
   if (!item.enabled) return { tone: undefined, label: lastSyncAt ? copy.webdav_state_paused : copy.webdav_state_browser };
   if (item.state === 'ready') {
-    return { tone: 'success', label: lastSyncAt ? `${copy.webdav_state_ready} · ${formatRelative(lastSyncAt, now, lang)}` : copy.webdav_state_ready };
+    return { tone: 'success', label: lastSyncAt ? `${copy.webdav_state_ready} · ${formatRelative(lastSyncAt, now, lang, copy.webdav_just_now)}` : copy.webdav_state_ready };
   }
   return { tone: undefined, label: copy.webdav_state_pending };
 }
@@ -116,6 +116,79 @@ function DiagnosticButton({ copy, text }: { copy: Record<string, string>; text: 
       <i aria-hidden="true" className={`ri-icon ri-size-14 ${copied ? 'ri-check-line' : 'ri-file-copy-line'}`} />
       {copied ? copy.webdav_diagnostic_copied : copy.webdav_copy_diagnostic}
     </button>
+  );
+}
+
+interface ListSummary { names: string[]; count: number }
+interface DomainSummary {
+  total: number;
+  added: ListSummary;
+  removed: ListSummary;
+  changed: ListSummary;
+  reordered: boolean;
+  selectionChanged?: boolean;
+}
+interface ValueSummary { kind: 'unset' | 'boolean' | 'number' | 'text' | 'list' | 'changed'; value?: boolean | number | string; count?: number }
+export interface WebDavConflictItem {
+  key: string;
+  label: string;
+  domain: 'preference' | 'shortcuts' | 'wallpapers';
+  local: DomainSummary | ValueSummary;
+  remote: DomainSummary | ValueSummary;
+}
+
+function fill(template: string, values: Record<string, string | number>) {
+  return Object.entries(values).reduce((text, [key, value]) => text.replace(`{${key}}`, String(value)), template);
+}
+
+function describeValue(value: ValueSummary, copy: Record<string, string>) {
+  if (value.kind === 'boolean') return value.value ? copy.webdav_value_on : copy.webdav_value_off;
+  if (value.kind === 'number' || value.kind === 'text') return String(value.value);
+  if (value.kind === 'list') return fill(copy.webdav_value_list, { count: value.count ?? 0 });
+  if (value.kind === 'unset') return copy.webdav_value_default;
+  return copy.webdav_value_changed;
+}
+
+function describeDomain(summary: DomainSummary, domain: string, copy: Record<string, string>, separator: string) {
+  const list = (template: string, part: ListSummary) => part.count ? fill(template, {
+    items: part.names.join(separator) + (part.count > part.names.length ? ` ${fill(copy.webdav_diff_more, { count: part.count })}` : '')
+  }) : '';
+  const lines = [
+    list(copy.webdav_diff_added, summary.added),
+    list(copy.webdav_diff_removed, summary.removed),
+    list(copy.webdav_diff_changed, summary.changed),
+    summary.reordered ? copy.webdav_diff_reordered : '',
+    summary.selectionChanged ? copy.webdav_diff_selection : ''
+  ].filter(Boolean);
+  const total = fill(copy[domain === 'shortcuts' ? 'webdav_diff_shortcut_total' : 'webdav_diff_wallpaper_total'], { count: summary.total });
+  return [total, ...(lines.length ? lines : [copy.webdav_diff_unchanged])];
+}
+
+// Side by side, relative to the last successful sync, so the choice between
+// this device and the server is made on what actually changed.
+function ConflictDiff({ items, copy, lang }: { items: WebDavConflictItem[]; copy: Record<string, string>; lang: string }) {
+  const separator = /^(zh|ja)/i.test(lang) ? '、' : ', ';
+  const cell = (item: WebDavConflictItem, side: 'local' | 'remote') => item.domain === 'preference'
+    ? [describeValue(item[side] as ValueSummary, copy)]
+    : describeDomain(item[side] as DomainSummary, item.domain, copy, separator);
+  return (
+    <div className="lumno-webdav-diff" role="table">
+      <div className="lumno-webdav-diff-row lumno-webdav-diff-head" role="row">
+        <span role="columnheader" />
+        <span role="columnheader">{copy.webdav_diff_local}</span>
+        <span role="columnheader">{copy.webdav_diff_remote}</span>
+      </div>
+      {items.map((item) => (
+        <div className="lumno-webdav-diff-row" key={item.key} role="row">
+          <span className="lumno-webdav-diff-label" role="rowheader">{item.label}</span>
+          {(['local', 'remote'] as const).map((side) => (
+            <span data-side={side} key={side} role="cell">
+              {cell(item, side).map((line, index) => <span className="lumno-webdav-diff-line" key={index}>{line}</span>)}
+            </span>
+          ))}
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -239,6 +312,17 @@ function ConnectionCard({ item, expanded, model, now, options, onEdit, onClose }
   const editRef = useRef<HTMLButtonElement>(null);
   const [feedback, setFeedback] = useState<{ text: string; diagnostic: string } | null>(null);
   const [pendingOperation, setPendingOperation] = useState('');
+  const [diff, setDiff] = useState<{ open: boolean; items: WebDavConflictItem[] | null; error: string }>({ open: false, items: null, error: '' });
+  const toggleDiff = async () => {
+    if (diff.open) { setDiff({ ...diff, open: false }); return; }
+    setDiff({ open: true, items: null, error: '' });
+    try {
+      const result = await options.onAction('conflictDetails', item.id) as { items?: WebDavConflictItem[] };
+      setDiff({ open: true, items: result.items || [], error: '' });
+    } catch (error) {
+      setDiff({ open: true, items: [], error: getAsyncErrorMessage(error) });
+    }
+  };
   const action = useExclusiveAsyncAction(async (operation: string, decision?: string) => {
     setFeedback(null);
     setPendingOperation(operation);
@@ -282,9 +366,19 @@ function ConnectionCard({ item, expanded, model, now, options, onEdit, onClose }
         <p className={classes('setting_desc')}>
           {copy[item.remoteMissing ? 'webdav_missing_hint' : item.state === 'conflict' ? 'webdav_conflict_hint' : 'webdav_choice_hint']}
         </p>
-        {item.conflictsText ? <p className={classes('setting_desc')}>{copy.webdav_conflict_items}：{item.conflictsText}</p> : null}
+        {item.conflictsText && !diff.open ? <p className={classes('setting_desc')}>{copy.webdav_conflict_items}：{item.conflictsText}</p> : null}
+        {diff.open ? (diff.items === null
+          ? <p className={classes('setting_desc')} role="status">{copy.webdav_diff_loading}</p>
+          : diff.error ? <p className={classes('shortcut_error')}>{diff.error}</p>
+            : <ConflictDiff copy={copy} items={diff.items} lang={lang} />) : null}
         {feedback ? <p className={`${classes('shortcut_error')} lumno-webdav-notice-error`}>{feedback.text}</p> : null}
         <div className="lumno-webdav-actions">
+          {item.state === 'conflict' ? (
+            <button aria-expanded={diff.open} className={`${buttonClass} lumno-webdav-diff-toggle`} onClick={() => { void toggleDiff(); }} type="button">
+              <i aria-hidden="true" className={`ri-icon ri-size-14 ${diff.open ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'}`} />
+              {diff.open ? copy.webdav_hide_diff : copy.webdav_view_diff}
+            </button>
+          ) : null}
           <button className={buttonClass} disabled={busy} onClick={() => { void run('pause'); }} type="button">{copy.webdav_resolve_later}</button>
           {item.remoteMissing ? (
             <button className={primaryClass} disabled={busy || model.outdated} onClick={() => decide('local')} type="button">{copy.webdav_upload_local}</button>

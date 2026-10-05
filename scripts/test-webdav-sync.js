@@ -642,6 +642,22 @@ async function run() {
   await set(conflictDevice.chrome.storage.sync, conflictLocal.data);
   conflictServer.replaceState(conflictRemote);
   assert.strictEqual((await conflictDevice.controller.handle({ operation: 'sync' })).conflict, true);
+  assert.deepStrictEqual((await conflictDevice.controller.handle({ operation: 'conflictDetails' })).items, [
+    { key: theme, domain: 'preference', local: { kind: 'text', value: 'dark' }, remote: { kind: 'text', value: 'system' } }
+  ], 'conflict details name only the conflicting setting and both values');
+  const link = (id, title) => ({ id, type: 'link', title, url: `https://${id}.example/` });
+  const summaryBase = { ...empty(), shortcuts: [link('a', 'A'), link('b', 'B'), link('c', 'C')] };
+  const summaryLocal = { ...empty(), shortcuts: [link('b', 'B'), link('a', 'A'), link('c', 'C2'), link('d', 'D')] };
+  const summaryRemote = { ...empty(), shortcuts: [link('a', 'A'), link('c', 'C')] };
+  const [shortcutSummary] = contract.describeConflict(summaryBase, summaryLocal, summaryRemote, ['shortcuts']);
+  assert.deepStrictEqual(shortcutSummary.local, { total: 4, added: { names: ['D'], count: 1 }, removed: { names: [], count: 0 },
+    changed: { names: ['C2'], count: 1 }, reordered: true });
+  assert.deepStrictEqual(shortcutSummary.remote, { total: 2, added: { names: [], count: 0 }, removed: { names: ['B'], count: 1 },
+    changed: { names: [], count: 0 }, reordered: false });
+  const many = Array.from({ length: 9 }, (_, index) => link(`n${index}`, `N${index}`));
+  const [capped] = contract.describeConflict(empty(), { ...empty(), shortcuts: many }, empty(), ['shortcuts']);
+  assert.strictEqual(capped.local.added.names.length, 6, 'summaries cap the names they carry');
+  assert.strictEqual(capped.local.added.count, 9);
   const conflictRemoteBefore = conflictServer.state();
   await conflictDevice.controller.handle({ operation: 'sync' });
   assert.deepStrictEqual(conflictServer.state(), conflictRemoteBefore, 'automatic retries cannot overwrite an unresolved conflict');

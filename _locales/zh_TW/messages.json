@@ -2499,10 +2499,10 @@
     "message": "上次同步"
   },
   "webdav_choice_hint": {
-    "message": "遠端已有設定，請選擇保留本機版本或使用遠端版本。替換前會保留本機備份，Chrome 同步會繼續執行。"
+    "message": "伺服器上已經有 Lumno 的設定。選一邊為準，另一邊會先自動備份。"
   },
   "webdav_conflict_hint": {
-    "message": "兩端修改了相同內容，WebDAV 正等待處理。請選擇衝突內容採用的版本，其他變更仍會合併；替換前會保留備份。Chrome 同步會繼續執行。"
+    "message": "本機和伺服器改了同一處內容。選一個版本保留，其他不衝突的變更會自動合併。"
   },
   "webdav_error_endpoint": {
     "message": "請輸入有效的 HTTPS WebDAV 位址。"
@@ -2568,7 +2568,7 @@
     "message": "還原替換前的本機設定"
   },
   "webdav_use_remote": {
-    "message": "使用遠端版本"
+    "message": "使用伺服器版本"
   },
   "webdav_use_local": {
     "message": "保留本機版本"
@@ -2604,7 +2604,7 @@
     "message": "上次設定替換未完成，已暫停上傳。可還原替換前的本機設定，或重新連線並使用遠端設定。"
   },
   "webdav_missing_hint": {
-    "message": "遠端設定已不存在。上傳本機設定可重新建立同步；也可以先檢查伺服器位址。"
+    "message": "伺服器上的設定不見了。可以重新上傳本機設定，或先檢查伺服器位址。"
   },
   "webdav_error_locked": {
     "message": "另一台裝置正在寫入，請稍後重試。若長期無法恢復，請依 WebDAV 接入說明處理殘留鎖。"
@@ -2619,7 +2619,7 @@
     "message": "WebDAV 同步"
   },
   "webdav_beta_hint": {
-    "message": "透過 WebDAV 伺服器同步設定、自訂圖示與桌布，與瀏覽器內建同步同時執行。可新增多個連線，分別開啟同步。\n\n目前為 Beta 版本，可能出現同步失敗或設定異常。歡迎回報問題，協助我們改善。"
+    "message": "把設定、自訂圖示和壁紙同步到你自己的雲端硬碟或 NAS，和瀏覽器內建的同步同時執行，互不影響。\n\n這是測試版，偶爾可能同步失敗。遇到問題歡迎回報。"
   },
   "webdav_setup_hint": {
     "message": "透過堅果雲、Nextcloud、NAS 等 WebDAV 服務同步設定、自訂圖示和桌布，與瀏覽器內建同步同時執行。"
@@ -2698,6 +2698,69 @@
   },
   "webdav_error_interrupted_other": {
     "message": "另一條 WebDAV 連線（{name}）需要先還原本機設定，還原後這裡會繼續同步。"
+  },
+  "webdav_just_now": {
+    "message": "剛剛"
+  },
+  "webdav_view_diff": {
+    "message": "查看差異"
+  },
+  "webdav_hide_diff": {
+    "message": "收合差異"
+  },
+  "webdav_diff_local": {
+    "message": "本機"
+  },
+  "webdav_diff_remote": {
+    "message": "伺服器"
+  },
+  "webdav_diff_added": {
+    "message": "新增：{items}"
+  },
+  "webdav_diff_removed": {
+    "message": "刪除：{items}"
+  },
+  "webdav_diff_changed": {
+    "message": "修改：{items}"
+  },
+  "webdav_diff_more": {
+    "message": "等 {count} 項"
+  },
+  "webdav_diff_reordered": {
+    "message": "調整了順序"
+  },
+  "webdav_diff_selection": {
+    "message": "換了目前壁紙"
+  },
+  "webdav_diff_unchanged": {
+    "message": "沒有變更"
+  },
+  "webdav_diff_shortcut_total": {
+    "message": "共 {count} 個快捷方式"
+  },
+  "webdav_diff_wallpaper_total": {
+    "message": "共 {count} 張壁紙"
+  },
+  "webdav_diff_loading": {
+    "message": "正在讀取…"
+  },
+  "webdav_value_on": {
+    "message": "開啟"
+  },
+  "webdav_value_off": {
+    "message": "關閉"
+  },
+  "webdav_value_default": {
+    "message": "預設"
+  },
+  "webdav_value_changed": {
+    "message": "已修改"
+  },
+  "webdav_value_list": {
+    "message": "{count} 項"
+  },
+  "webdav_preference_other": {
+    "message": "其他設定"
   },
   "webdav_remove": {
     "message": "刪除 WebDAV 設定"

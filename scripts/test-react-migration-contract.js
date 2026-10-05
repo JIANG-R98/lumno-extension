@@ -135,11 +135,14 @@ const assertWithinBudget = (actualBytes, budgetKiB, label) => {
 // Keep these as durable regression ceilings rather than exact snapshots. The
 // rounded limits leave about 5% headroom over the 0.9.44 production bundles,
 // while the explicit gzip level avoids relying on Node's default compression.
+// Options was rebased at 0.9.56 (277 KiB / 81.4 KiB gzip) after the settings
+// growth since 0.9.44 and the WebDAV connection cards; the total rises by the
+// same amount so it stays consistent with the per-page ceilings.
 const bundleBudgets = {
   newtab: { uncompressed: 384, gzip: 115 },
-  options: { uncompressed: 264, gzip: 79 },
+  options: { uncompressed: 290, gzip: 85 },
   overlay: { uncompressed: 271, gzip: 82 },
-  total: { uncompressed: 746, gzip: 219 }
+  total: { uncompressed: 772, gzip: 225 }
 };
 
 const retiredNewtabRendererScripts = [

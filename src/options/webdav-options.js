@@ -13,12 +13,12 @@
       webdav_credentials_hint: t("webdav_credentials_hint", "连接信息仅保存在本机，其他设备需要分别添加。"),
       webdav_password_saved: t("webdav_password_saved", "已保存；留空保持不变"),
       webdav_last_sync: t("webdav_last_sync", "最近同步"),
-      webdav_choice_hint: t("webdav_choice_hint", "远端已有配置，请选择保留本机版本或使用远端版本。替换前会保留本机备份，Chrome 同步继续运行。"),
-      webdav_conflict_hint: t("webdav_conflict_hint", "两端修改了相同内容，WebDAV 正等待处理。请选择冲突内容采用的版本，其他改动仍会合并；替换前会保留备份。Chrome 同步继续运行。"),
+      webdav_choice_hint: t("webdav_choice_hint", "服务器上已经有 Lumno 的配置。选一边为准，另一边会先自动备份。"),
+      webdav_conflict_hint: t("webdav_conflict_hint", "本机和服务器改了同一处内容。选一个版本保留，其他不冲突的改动会自动合并。"),
       webdav_test: t("webdav_test", "测试连接"),
       webdav_sync: t("webdav_sync", "立即同步"),
       webdav_restore_backup: t("webdav_restore_backup", "恢复替换前的本机配置"),
-      webdav_use_remote: t("webdav_use_remote", "使用远端版本"),
+      webdav_use_remote: t("webdav_use_remote", "使用服务器版本"),
       webdav_use_local: t("webdav_use_local", "保留本机版本"),
       webdav_test_success: t("webdav_test_success", "连接、读写和并发保护验证通过"),
       webdav_state_browser: t("webdav_state_browser", "未开启"),
@@ -29,10 +29,10 @@
       webdav_state_choice: t("webdav_state_choice", "需要选择"),
       webdav_state_conflict: t("webdav_state_conflict", "配置冲突"),
       webdav_state_error: t("webdav_state_error", "同步失败"),
-      webdav_missing_hint: t("webdav_missing_hint", "远端配置已不存在。上传本机配置可重新建立同步；也可以先检查服务器地址。"),
+      webdav_missing_hint: t("webdav_missing_hint", "服务器上的配置不见了。可以把本机配置重新上传，或先检查服务器地址。"),
       webdav_error_outdated: t("webdav_error_outdated", "请重新加载 Lumno 扩展，再刷新设置页以使用多连接同步。"),
       webdav_title: t("webdav_title", "WebDAV 同步"),
-      webdav_beta_hint: t("webdav_beta_hint", "通过 WebDAV 服务器同步配置、自定义图标和壁纸，与浏览器内置同步同时运行。可添加多个连接，分别开启同步。\n\n目前为 Beta 版本，可能出现同步失败或配置异常。欢迎反馈问题，帮助我们改进。"),
+      webdav_beta_hint: t("webdav_beta_hint", "把设置、自定义图标和壁纸同步到你自己的网盘或 NAS，和浏览器自带的同步同时运行，互不影响。\n\n这是测试版，偶尔可能同步失败。遇到问题欢迎反馈。"),
       webdav_edit_config: t("webdav_edit_config", "编辑连接配置"),
       webdav_save: t("webdav_save", "保存"),
       webdav_enable: t("webdav_enable", "保存并开启同步"),
@@ -49,6 +49,26 @@
       webdav_provider_nextcloud: t("webdav_provider_nextcloud", "Nextcloud"),
       webdav_provider_other: t("webdav_provider_other", "其他"),
       webdav_password_help: t("webdav_password_help", "如何获取应用密码"),
+      webdav_just_now: t("webdav_just_now", "刚刚"),
+      webdav_view_diff: t("webdav_view_diff", "查看差异"),
+      webdav_hide_diff: t("webdav_hide_diff", "收起差异"),
+      webdav_diff_local: t("webdav_diff_local", "本机"),
+      webdav_diff_remote: t("webdav_diff_remote", "服务器"),
+      webdav_diff_added: t("webdav_diff_added", "新增：{items}"),
+      webdav_diff_removed: t("webdav_diff_removed", "删除：{items}"),
+      webdav_diff_changed: t("webdav_diff_changed", "修改：{items}"),
+      webdav_diff_more: t("webdav_diff_more", "等 {count} 项"),
+      webdav_diff_reordered: t("webdav_diff_reordered", "调整了顺序"),
+      webdav_diff_selection: t("webdav_diff_selection", "换了当前壁纸"),
+      webdav_diff_unchanged: t("webdav_diff_unchanged", "没有改动"),
+      webdav_diff_shortcut_total: t("webdav_diff_shortcut_total", "共 {count} 个快捷方式"),
+      webdav_diff_wallpaper_total: t("webdav_diff_wallpaper_total", "共 {count} 张壁纸"),
+      webdav_diff_loading: t("webdav_diff_loading", "正在读取…"),
+      webdav_value_on: t("webdav_value_on", "开启"),
+      webdav_value_off: t("webdav_value_off", "关闭"),
+      webdav_value_default: t("webdav_value_default", "默认"),
+      webdav_value_changed: t("webdav_value_changed", "已修改"),
+      webdav_value_list: t("webdav_value_list", "{count} 项"),
       webdav_choice_title: t("webdav_choice_title", "选择初始同步版本"),
       webdav_conflict_title: t("webdav_conflict_title", "同步内容存在冲突"),
       webdav_conflict_items: t("webdav_conflict_items", "有冲突的内容"),
@@ -60,6 +80,51 @@
       webdav_remove: t("webdav_remove", "删除 WebDAV 配置"),
       webdav_remove_confirm: t("webdav_remove_confirm", "删除这条本机连接配置？服务器上的文件会保留。")
     };
+  }
+  // Conflict summaries name settings by the title already shown on the
+  // settings page; keys without a single visible title fall back to their tab.
+  const PREFERENCE_LABELS = [
+    ['theme_mode_2024', 'settings_theme_title'], ['newtab_theme', 'newtab_theme_scope_label'],
+    ['language', 'settings_language_title'], ['recent_mode', 'settings_recent_title'],
+    ['recent_count', 'settings_recent_sites_title'], ['recent_sites', 'settings_recent_sites_title'],
+    ['newtab_width_mode', 'settings_newtab_width_title'], ['newtab_search_width', 'newtab_search_width_title'],
+    ['input_auto_focus', 'newtab_input_auto_focus_title'], ['newtab_wallpaper', 'settings_wallpaper_title'],
+    ['overlay_size_mode', 'settings_overlay_size_title'], ['overlay_enter_animation', 'settings_overlay_enter_animation_title'],
+    ['overlay_page_theme_adaptation', 'settings_overlay_page_theme_adaptation_title'],
+    ['bookmark_count', 'settings_bookmarks_title'], ['bookmark_columns', 'settings_bookmark_columns_title'],
+    ['bookmark_folder_icons', 'settings_bookmark_folder_icons_visible_title'],
+    ['newtab_shortcuts_visible', 'settings_newtab_shortcuts_title'], ['shortcut_add_visible', 'settings_newtab_shortcut_add_title'],
+    ['dock_magnification', 'settings_newtab_shortcut_dock_magnification_title'],
+    ['feedback_button', 'settings_newtab_feedback_button_visible_title'],
+    ['appearance_button', 'settings_newtab_appearance_button_visible_title'],
+    ['shortcut_width', 'settings_newtab_shortcut_width_title'], ['shortcut_columns', 'settings_newtab_shortcut_columns_title'],
+    ['shortcut_size', 'settings_newtab_shortcut_size_title'], ['shortcut_gap', 'settings_newtab_shortcut_gap_title'],
+    ['update_notice', 'settings_update_notice_title'], ['motion_effects', 'settings_motion_effects_title'],
+    ['simple_mode', 'settings_simple_mode_title'], ['number_shortcut_instant', 'settings_number_shortcut_instant_title'],
+    ['macos_ctrl', 'settings_macos_ctrl_suggestion_navigation_title'], ['auto_pip', 'settings_auto_pip_title'],
+    ['tab_switcher', 'settings_tab_switcher_title'], ['document_pip', 'settings_document_pip_title'],
+    ['pinned_tab_recovery', 'settings_pinned_tab_recovery_title'],
+    ['selection_quick_actions_provider', 'settings_selection_quick_actions_provider_title'],
+    ['selection_quick_actions_group', 'settings_selection_quick_actions_group_title'],
+    ['selection_quick_actions', 'settings_selection_quick_actions_title'],
+    ['overlay_tab_priority', 'settings_overlay_tab_priority_title'],
+    ['wordmark_visible', 'settings_newtab_wordmark_title'], ['time_font_weight', 'newtab_time_font_weight_title'],
+    ['time_seconds', 'newtab_time_show_seconds_title'], ['restricted_action', 'settings_restricted_title'],
+    ['search_result_priority', 'settings_search_result_priority_title'],
+    ['search_result_source_types', 'settings_search_result_sources_title'],
+    ['search_result_display_limit', 'settings_search_result_display_limit_title'],
+    ['search_result_tab_position', 'settings_search_result_tab_position_title'],
+    ['open_tabs_default_visible', 'settings_overlay_open_tabs_default_visible_title'],
+    ['fallback_hotkey', 'settings_shortcuts_title'],
+    ['aggregate_search_auto_group', 'settings_aggregate_search_auto_group_title'],
+    ['site_search', 'settings_tab_shortcuts'], ['aggregate_searches', 'settings_tab_shortcuts'],
+    ['default_search_engine', 'settings_tab_shortcuts'], ['favicon_enhanced_fetch', 'settings_favicon_enhanced_fetch_title'],
+    ['blacklist', 'settings_tab_blacklist']
+  ];
+  function preferenceLabel(t, key) {
+    const match = PREFERENCE_LABELS.find(([fragment]) => key.includes(fragment));
+    const label = match ? t(match[1], '').trim() : '';
+    return label || t('webdav_preference_other', '其他设置');
   }
   function createController(options) {
     const chromeApi = options.chromeApi;
@@ -115,6 +180,11 @@
         if (requiresReload() && !['pause'].includes(operation)) throw new Error(createCopy(t).webdav_error_outdated);
         try {
           const result = await message(operation, { ...(id ? { id } : {}), ...extra });
+          if (operation === 'conflictDetails') {
+            const copy = createCopy(t);
+            return { items: (result.items || []).map((item) => ({ ...item, label: item.domain === 'shortcuts' ? copy.webdav_conflict_shortcuts
+              : item.domain === 'wallpapers' ? copy.webdav_conflict_wallpapers : preferenceLabel(t, item.key) })) };
+          }
           await refresh();
           return result;
         } catch (error) {
