@@ -185,7 +185,6 @@
   const NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY = '_x_extension_newtab_wallpaper_effect_2026_unique_';
   const NEWTAB_FAVICON_STORAGE_KEY = '_x_extension_newtab_favicon_2026_unique_';
   const LUMNO_CHROME_WEB_STORE_URL = 'https://chromewebstore.google.com/detail/lumno-%E8%81%9A%E7%84%A6%E6%90%9C%E7%B4%A2%E6%96%B0%E6%A0%87%E7%AD%BE%E9%A1%B5/nggfkkbmogmadfoikakkfegkoilfcfao?utm_source=item-share-cb';
-  const LUMNO_FEEDBACK_QR_REFRESH_TIMEOUT_MS = 5000;
   const BOOKMARK_COUNT_STORAGE_KEY = '_x_extension_bookmark_count_2024_unique_';
   const BOOKMARK_COLUMNS_STORAGE_KEY = '_x_extension_bookmark_columns_2024_unique_';
   const BOOKMARK_VIEW_MODE_STORAGE_KEY = '_x_extension_bookmark_view_mode_2026_unique_';
@@ -259,6 +258,59 @@
   const NEWTAB_WALLPAPER = globalThis.LumnoNewtabWallpaper;
   const NEWTAB_WALLPAPER_VIEW = globalThis.LumnoNewtabWallpaperView;
   const NEWTAB_FEEDBACK_CONTROL = globalThis.LumnoNewtabFeedbackControl;
+
+  const NEWTAB_FEEDBACK_CONTROL_RUNTIME = globalThis.LumnoNewtabFeedbackControlRuntime;
+  const {
+    getFeedbackWebLocale,
+    openFeedbackExternalUrl,
+    updateFeedbackLanguageStrings,
+    isFeedbackPopoverOpen,
+    closeFeedbackPopover,
+    createFeedbackControls
+  } = NEWTAB_FEEDBACK_CONTROL_RUNTIME.createFeedbackControlRuntime({
+    COMMUNITY_LINKS,
+    LUMNO_FEEDBACK_LINKS_FALLBACK,
+    getSystemLocale,
+    normalizeLocale,
+    t,
+    openExternalNewTabUrl,
+    hideTopActionTooltip,
+    NEWTAB_FEEDBACK_CONTROL,
+    showTopActionTooltip,
+    pageState: {
+      get feedbackLinks() {
+        return feedbackLinks;
+      },
+      set feedbackLinks(value) {
+        feedbackLinks = value;
+      },
+      get currentResolvedLocale() {
+        return currentResolvedLocale;
+      },
+      get currentLanguageMode() {
+        return currentLanguageMode;
+      },
+      get feedbackControl() {
+        return feedbackControl;
+      },
+      set feedbackControl(value) {
+        feedbackControl = value;
+      },
+      get feedbackButton() {
+        return feedbackButton;
+      },
+      set feedbackButton(value) {
+        feedbackButton = value;
+      },
+      get feedbackReactController() {
+        return feedbackReactController;
+      },
+      set feedbackReactController(value) {
+        feedbackReactController = value;
+      }
+    }
+  });
+
   const NEWTAB_SELECT_MENU = globalThis.LumnoNewtabSelectMenu;
   const NEWTAB_TOP_CONTENT = globalThis.LumnoNewtabTopContent;
   const NEWTAB_PAGE_STRUCTURE = globalThis.LumnoNewtabPageStructure;
@@ -530,9 +582,7 @@
   let feedbackControl = null;
   let feedbackReactController = null;
   let feedbackButton = null;
-  let feedbackRefreshResultTooltipTimer = 0;
   let feedbackLinks = LUMNO_FEEDBACK_LINKS_FALLBACK;
-  let feedbackLinksLoaded = false;
   let updateNoticeController = null;
   let engagementNoticeController = null;
   let pageNoticeController = null;
@@ -2457,243 +2507,6 @@
     const size = sizeClass || 'ri-size-16';
     const extra = extraClass ? ` ${extraClass}` : '';
     return `<i class="ri-icon ${size}${extra} ${id}" aria-hidden="true"></i>`;
-  }
-
-  function normalizeFeedbackHttpsUrl(value) {
-    return COMMUNITY_LINKS.normalizeHttpsUrl(value);
-  }
-
-  function loadFeedbackLinks(options) {
-    const force = Boolean(options && options.force);
-    if (!force && feedbackLinksLoaded) {
-      return Promise.resolve(feedbackLinks);
-    }
-    return COMMUNITY_LINKS.load({ force })
-      .then((links) => {
-        feedbackLinks = links || LUMNO_FEEDBACK_LINKS_FALLBACK;
-        feedbackLinksLoaded = true;
-        return feedbackLinks;
-      });
-  }
-
-  function getFeedbackWebLocale() {
-    const locale = currentResolvedLocale ||
-      (currentLanguageMode === 'system' ? getSystemLocale() : normalizeLocale(currentLanguageMode));
-    if (locale === 'zh_CN') {
-      return 'zh-CN';
-    }
-    if (locale === 'zh_TW') {
-      return 'zh-TW';
-    }
-    if (locale === 'ja') {
-      return 'ja';
-    }
-    return 'en';
-  }
-
-  function getFeedbackCommunityChannel(links) {
-    return COMMUNITY_LINKS.getCommunityChannel(links, getFeedbackWebLocale());
-  }
-
-  function clearFeedbackRefreshResultTooltipTimer() {
-    if (!feedbackRefreshResultTooltipTimer) {
-      return;
-    }
-    window.clearTimeout(feedbackRefreshResultTooltipTimer);
-    feedbackRefreshResultTooltipTimer = 0;
-  }
-
-  function buildFreshFeedbackQrUrl(value) {
-    return COMMUNITY_LINKS.buildFreshQrUrl(value);
-  }
-
-  function preloadFeedbackQrImage(url) {
-    return new Promise((resolve) => {
-      if (!url) {
-        resolve(false);
-        return;
-      }
-      const preloader = new Image();
-      let settled = false;
-      const finish = (loaded) => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        window.clearTimeout(timeoutId);
-        preloader.onload = null;
-        preloader.onerror = null;
-        resolve(loaded);
-      };
-      const timeoutId = window.setTimeout(() => {
-        finish(false);
-      }, LUMNO_FEEDBACK_QR_REFRESH_TIMEOUT_MS);
-      preloader.onload = () => {
-        finish(true);
-      };
-      preloader.onerror = () => {
-        finish(false);
-      };
-      preloader.src = url;
-    });
-  }
-
-  function buildFeedbackReactModel() {
-    const links = feedbackLinks || LUMNO_FEEDBACK_LINKS_FALLBACK;
-    const channel = getFeedbackCommunityChannel(links);
-    return {
-      buttonLabel: t('newtab_feedback_button_aria', 'Send feedback'),
-      channel,
-      chromeReviewLabel: t('newtab_feedback_chrome_review_label', 'Chrome rating'),
-      chromeReviewTooltip: t(
-        'newtab_feedback_chrome_review_tooltip',
-        'Rate on Chrome Web Store'
-      ),
-      chromeReviewUrl: links.chromeReview || LUMNO_FEEDBACK_LINKS_FALLBACK.chromeReview,
-      closeTooltip: t('newtab_feedback_wechat_close_tooltip', 'Close'),
-      communityLabel: channel === 'wechat'
-        ? t('newtab_feedback_wechat_label', 'WeChat')
-        : t('newtab_feedback_discord_label', 'Discord'),
-      communityTooltip: channel === 'wechat'
-        ? t('newtab_feedback_wechat_tooltip', 'Joining WeChat group')
-        : t('newtab_feedback_discord_tooltip', 'Joining Discord'),
-      discordUrl: links.discord || LUMNO_FEEDBACK_LINKS_FALLBACK.discord,
-      githubIssueLabel: t('newtab_feedback_github_issue_label', 'GitHub Issue'),
-      githubIssueTooltip: t(
-        'newtab_feedback_github_issue_tooltip',
-        'Opening a GitHub Issue'
-      ),
-      githubIssueUrl: links.githubIssue || LUMNO_FEEDBACK_LINKS_FALLBACK.githubIssue,
-      menuAriaLabel: t('newtab_feedback_menu_aria', 'Feedback channels'),
-      panelTitle: channel === 'wechat'
-        ? t('newtab_feedback_wechat_panel_title', 'Bug reports & feature requests')
-        : t('newtab_feedback_discord_label', 'Discord'),
-      qrAlt: t('newtab_feedback_wechat_qr_alt', 'Lumno WeChat group QR code'),
-      qrUrl: links.wechatQr || LUMNO_FEEDBACK_LINKS_FALLBACK.wechatQr,
-      refreshTooltip: t('newtab_feedback_wechat_refresh_tooltip', 'Refresh QR code'),
-      xLabel: t('newtab_feedback_x_label', 'X'),
-      xTooltip: t('newtab_feedback_x_tooltip', 'Contacting on X'),
-      xUrl: links.x || LUMNO_FEEDBACK_LINKS_FALLBACK.x
-    };
-  }
-
-  function syncFeedbackReactElementReferences() {
-    if (!feedbackControl) {
-      return;
-    }
-    feedbackButton = feedbackControl.querySelector('.x-nt-feedback-button');
-  }
-
-  function renderFeedbackControlWithReact() {
-    if (!feedbackReactController ||
-        typeof feedbackReactController.render !== 'function') {
-      return false;
-    }
-    feedbackReactController.render(buildFeedbackReactModel());
-    syncFeedbackReactElementReferences();
-    return true;
-  }
-
-  function updateFeedbackContactUi() {
-    renderFeedbackControlWithReact();
-  }
-
-  function openFeedbackExternalUrl(url, disposition) {
-    const safeUrl = normalizeFeedbackHttpsUrl(url);
-    if (!safeUrl) {
-      return false;
-    }
-    return openExternalNewTabUrl(safeUrl, disposition || 'newTab');
-  }
-
-  function updateFeedbackLanguageStrings() {
-    renderFeedbackControlWithReact();
-  }
-
-  function isFeedbackPopoverOpen() {
-    return feedbackReactController.isOpen();
-  }
-
-  function closeFeedbackPopover(options) {
-    setFeedbackPopoverOpen(false, options);
-  }
-
-  function setFeedbackPopoverOpen(open, options) {
-    if (!open) {
-      clearFeedbackRefreshResultTooltipTimer();
-      hideTopActionTooltip();
-    }
-    if (open) {
-      feedbackReactController.setOpen(true);
-    } else {
-      feedbackReactController.close(options);
-    }
-  }
-
-  function createFeedbackControls() {
-    feedbackControl = document.createElement('div');
-    feedbackReactController =
-      NEWTAB_FEEDBACK_CONTROL.createFeedbackControlController(
-        feedbackControl,
-        {
-          onHideTooltip() {
-            clearFeedbackRefreshResultTooltipTimer();
-            hideTopActionTooltip();
-          },
-          onOpen() {
-            return loadFeedbackLinks({ force: true }).then(() => {
-              renderFeedbackControlWithReact();
-            });
-          },
-          onOpenExternal(url, disposition) {
-            openFeedbackExternalUrl(url, disposition);
-          },
-          async onRefreshQr() {
-            try {
-              const links = await loadFeedbackLinks({ force: true });
-              feedbackLinks = links || feedbackLinks;
-              const channel = getFeedbackCommunityChannel(feedbackLinks);
-              if (channel !== 'wechat') {
-                renderFeedbackControlWithReact();
-                return {};
-              }
-              const refreshedUrl = buildFreshFeedbackQrUrl(
-                feedbackLinks.wechatQr ||
-                  LUMNO_FEEDBACK_LINKS_FALLBACK.wechatQr
-              );
-              const loaded = await preloadFeedbackQrImage(refreshedUrl);
-              return loaded
-                ? {
-                    message: t(
-                      'newtab_feedback_wechat_refresh_success',
-                      'Latest QR code loaded'
-                    ),
-                    qrUrl: refreshedUrl
-                  }
-                : {
-                    message: t(
-                      'newtab_feedback_wechat_refresh_error',
-                      'Could not refresh. Try again.'
-                    )
-                  };
-            } catch (error) {
-              return {
-                message: t(
-                  'newtab_feedback_wechat_refresh_error',
-                  'Could not refresh. Try again.'
-                )
-              };
-            }
-          },
-          onShowTooltip(target, label) {
-            showTopActionTooltip(target, label, {
-              checkActive: false,
-              placement: 'top'
-            });
-          }
-        }
-      );
-    renderFeedbackControlWithReact();
   }
 
   function createWallpaperAdaptiveToneTargets() {
