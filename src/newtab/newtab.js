@@ -488,13 +488,11 @@
   const NEWTAB_ENTRY_ANIMATION_TOTAL_MS = 460;
   const pageSearchParams = new URLSearchParams(window.location.search || '');
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-  let mediaListenerAttached = false;
   let globalThemeMode = 'system';
   let newtabThemeMode = 'global';
   let newtabThemeScope = 'global';
   let currentThemeMode = 'system';
   let initialThemeApplied = false;
-  let hasThemeBootstrapStarted = false;
   let resolveInitialThemeReady = null;
   const initialThemeReadyPromise = new Promise((resolve) => {
     resolveInitialThemeReady = resolve;
@@ -544,9 +542,6 @@
     }
   });
 
-  let initialLanguageApplied = false;
-  let hasLanguageBootstrapStarted = false;
-  let languageApplyRequestId = 0;
   let resolveInitialLanguageReady = null;
   const initialLanguageReadyPromise = new Promise((resolve) => {
     resolveInitialLanguageReady = resolve;
@@ -1348,6 +1343,173 @@
       },
       get recentMouseLeftAt() {
         return recentMouseLeftAt;
+      }
+    }
+  });
+
+  const NEWTAB_APPEARANCE_MODES = globalThis.LumnoNewtabAppearanceModes;
+  const {
+    applyLanguageMode,
+    refreshThemeAwareFavicons,
+    scheduleThemeAwareFaviconRescue,
+    applyThemeMode,
+    normalizeThemeMode,
+    normalizeNewtabThemeMode,
+    normalizeNewtabThemeScope,
+    isNewtabThemeFollowingGlobal,
+    getScopedThemeMode,
+    getSelectedThemeMode,
+    applyScopedThemeMode,
+    bootstrapInitialThemeMode,
+    bootstrapInitialLanguageMode,
+    syncSystemThemeMode
+  } = NEWTAB_APPEARANCE_MODES.createAppearanceModes({
+    t,
+    renderNewtabTopContent: (...args) => renderNewtabTopContent(...args),
+    updateRecentHeading,
+    updateBookmarkHeading,
+    updateBookmarkPagerLabels,
+    updateBookmarkBreadcrumb,
+    updateRecentModeMenu,
+    updateBookmarkModeMenu,
+    updateWallpaperLanguageStrings,
+    updateWallpaperAppearanceSelectionUi,
+    updateFeedbackLanguageStrings,
+    updateShortcutLanguageStrings,
+    setLocalSearchScopePrefix: (...args) => setLocalSearchScopePrefix(...args),
+    updateModeBadge: (...args) => updateModeBadge(...args),
+    recentCards,
+    formatMessage,
+    bookmarkCards,
+    renderSuggestions: (...args) => renderSuggestions(...args),
+    getSystemLocale,
+    normalizeLocale,
+    applyDocumentLanguage,
+    forceReloadRecentSitesForI18n: (...args) => forceReloadRecentSitesForI18n(...args),
+    loadLocaleMessages,
+    shortcutTiles,
+    applyShortcutTileTheme,
+    resolveTheme,
+    syncBookmarkTopbarSurfaceColorForTheme,
+    applyWordmarkThemeAppearance: (...args) => applyWordmarkThemeAppearance(...args),
+    suggestionItems,
+    applyThemeVariables,
+    applyRecentCardTheme,
+    applyBookmarkCardTheme,
+    updateSelection: (...args) => updateSelection(...args),
+    addMediaQueryChangeListener,
+    mediaQuery,
+    removeMediaQueryChangeListener,
+    scheduleWallpaperAdaptiveToneUpdate,
+    initialThemeReadyPromise,
+    storageArea,
+    THEME_STORAGE_KEY,
+    NEWTAB_THEME_MODE_STORAGE_KEY,
+    NEWTAB_THEME_SCOPE_STORAGE_KEY,
+    initialLanguageReadyPromise,
+    LANGUAGE_STORAGE_KEY,
+    pageState: {
+      get topContentController() {
+        return topContentController;
+      },
+      get newtabTopContentMode() {
+        return newtabTopContentMode;
+      },
+      get bookmarkTopbarRuntime() {
+        return bookmarkTopbarRuntime;
+      },
+      get quoteRuntime() {
+        return quoteRuntime;
+      },
+      get inputModeController() {
+        return inputModeController;
+      },
+      get updateNoticeController() {
+        return updateNoticeController;
+      },
+      get engagementNoticeController() {
+        return engagementNoticeController;
+      },
+      get inputParts() {
+        return inputParts;
+      },
+      get defaultPlaceholderText() {
+        return defaultPlaceholderText;
+      },
+      set defaultPlaceholderText(value) {
+        defaultPlaceholderText = value;
+      },
+      get siteSearchState() {
+        return siteSearchState;
+      },
+      get localSearchScopeState() {
+        return localSearchScopeState;
+      },
+      get latestQuery() {
+        return latestQuery;
+      },
+      get lastSuggestionResponse() {
+        return lastSuggestionResponse;
+      },
+      get currentLanguageMode() {
+        return currentLanguageMode;
+      },
+      set currentLanguageMode(value) {
+        currentLanguageMode = value;
+      },
+      get currentResolvedLocale() {
+        return currentResolvedLocale;
+      },
+      set currentResolvedLocale(value) {
+        currentResolvedLocale = value;
+      },
+      get resolveInitialLanguageReady() {
+        return resolveInitialLanguageReady;
+      },
+      get currentMessages() {
+        return currentMessages;
+      },
+      set currentMessages(value) {
+        currentMessages = value;
+      },
+      get faviconViewRuntime() {
+        return faviconViewRuntime;
+      },
+      get currentThemeMode() {
+        return currentThemeMode;
+      },
+      set currentThemeMode(value) {
+        currentThemeMode = value;
+      },
+      get wallpaperRuntime() {
+        return wallpaperRuntime;
+      },
+      get initialThemeApplied() {
+        return initialThemeApplied;
+      },
+      set initialThemeApplied(value) {
+        initialThemeApplied = value;
+      },
+      get resolveInitialThemeReady() {
+        return resolveInitialThemeReady;
+      },
+      get newtabThemeMode() {
+        return newtabThemeMode;
+      },
+      set newtabThemeMode(value) {
+        newtabThemeMode = value;
+      },
+      get globalThemeMode() {
+        return globalThemeMode;
+      },
+      set globalThemeMode(value) {
+        globalThemeMode = value;
+      },
+      get newtabThemeScope() {
+        return newtabThemeScope;
+      },
+      set newtabThemeScope(value) {
+        newtabThemeScope = value;
       }
     }
   });
@@ -2696,289 +2858,6 @@
         };
       })
     });
-  }
-
-  function applyLanguageStrings() {
-    document.title = t('newtab_page_title', 'New Tab');
-    if (topContentController && newtabTopContentMode === 'time') {
-      renderNewtabTopContent(false);
-    }
-    updateRecentHeading();
-    updateBookmarkHeading();
-    updateBookmarkPagerLabels();
-    if (bookmarkTopbarRuntime) {
-      bookmarkTopbarRuntime.updateLanguage(t('bookmark_view_mode_top', 'Top bookmarks bar'));
-    }
-    updateBookmarkBreadcrumb();
-    updateRecentModeMenu();
-    updateBookmarkModeMenu();
-    updateWallpaperLanguageStrings();
-    if (quoteRuntime) quoteRuntime.updateLanguage();
-    updateWallpaperAppearanceSelectionUi();
-    updateFeedbackLanguageStrings();
-    updateShortcutLanguageStrings();
-    if (inputModeController &&
-        typeof inputModeController.refreshModeMenuLanguage === 'function') {
-      inputModeController.refreshModeMenuLanguage();
-    }
-    if (updateNoticeController &&
-        typeof updateNoticeController.updateLanguage === 'function') {
-      updateNoticeController.updateLanguage();
-    }
-    if (engagementNoticeController &&
-        typeof engagementNoticeController.updateLanguage === 'function') {
-      engagementNoticeController.updateLanguage();
-    }
-    if (inputParts && inputParts.input) {
-      defaultPlaceholderText = t('search_placeholder', defaultPlaceholderText);
-      if (!siteSearchState && !localSearchScopeState) {
-        inputParts.input.placeholder = defaultPlaceholderText;
-      }
-      if (localSearchScopeState) {
-        setLocalSearchScopePrefix(localSearchScopeState);
-      }
-    }
-    updateModeBadge(inputParts && inputParts.input ? inputParts.input.value : '');
-    recentCards.forEach((card) => {
-      if (!card || !card._xActionText || !card._xTitleText) {
-        return;
-      }
-      card._xActionText.textContent = t('action_go_current_tab', '前往');
-      card.setAttribute('aria-label', formatMessage('open_prefix', '打开 {title}', {
-        title: card._xTitleText
-      }));
-    });
-    bookmarkCards.forEach((card) => {
-      if (!card || !card._xTitleText) {
-        return;
-      }
-      card.setAttribute('aria-label', formatMessage('open_prefix', '打开 {title}', {
-        title: card._xTitleText
-      }));
-    });
-    if (latestQuery && latestQuery.trim()) {
-      renderSuggestions(lastSuggestionResponse, latestQuery);
-    }
-  }
-
-  function applyLanguageMode(mode) {
-    const requestId = ++languageApplyRequestId;
-    currentLanguageMode = mode || 'system';
-    const targetLocale = currentLanguageMode === 'system' ? getSystemLocale() : normalizeLocale(currentLanguageMode);
-    currentResolvedLocale = targetLocale;
-    applyDocumentLanguage(targetLocale);
-    const finalizeLanguageInit = () => {
-      if (initialLanguageApplied) {
-        return;
-      }
-      initialLanguageApplied = true;
-      if (typeof resolveInitialLanguageReady === 'function') {
-        resolveInitialLanguageReady();
-      }
-    };
-    const applyResolvedMessages = (messages) => {
-      if (requestId !== languageApplyRequestId) {
-        return;
-      }
-      currentMessages = messages || {};
-      applyLanguageStrings();
-      forceReloadRecentSitesForI18n();
-      finalizeLanguageInit();
-    };
-    loadLocaleMessages(targetLocale).then(applyResolvedMessages);
-  }
-
-  function refreshShortcutTileThemes() {
-    shortcutTiles.forEach((tile) => {
-      if (!tile) {
-        return;
-      }
-      applyShortcutTileTheme(tile, tile._xTheme, tile._xHost || '');
-    });
-  }
-
-  function refreshFallbackIcons() {
-    if (faviconViewRuntime && typeof faviconViewRuntime.refreshFallbackIcons === 'function') {
-      faviconViewRuntime.refreshFallbackIcons();
-    }
-  }
-
-  function refreshThemeAwareFavicons() {
-    if (faviconViewRuntime && typeof faviconViewRuntime.refreshThemeAwareFavicons === 'function') {
-      faviconViewRuntime.refreshThemeAwareFavicons();
-    }
-  }
-
-  function scheduleThemeAwareFaviconRescue() {
-    if (faviconViewRuntime && typeof faviconViewRuntime.scheduleThemeAwareFaviconRescue === 'function') {
-      faviconViewRuntime.scheduleThemeAwareFaviconRescue();
-    }
-  }
-
-  function applyThemeMode(mode, options) {
-    const previousThemeMode = currentThemeMode;
-    currentThemeMode = normalizeThemeMode(mode);
-    const mediaMatchesOverride = options && typeof options.mediaMatches === 'boolean'
-      ? options.mediaMatches
-      : null;
-    const previousResolved = document.body ? document.body.getAttribute('data-theme') : '';
-    const resolved = resolveTheme(mode, mediaMatchesOverride);
-    document.body.setAttribute('data-theme', resolved);
-    syncBookmarkTopbarSurfaceColorForTheme(resolved);
-    if (document.documentElement) {
-      document.documentElement.removeAttribute('data-wallpaper-preload-theme');
-      document.documentElement.style.colorScheme = resolved;
-    }
-    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
-    if (themeColorMeta) {
-      themeColorMeta.setAttribute('content', resolved === 'dark' ? '#111111' : '#ffffff');
-    }
-    applyWordmarkThemeAppearance(resolved);
-    const didResolvedThemeChange = previousResolved !== resolved;
-    suggestionItems.forEach((item) => {
-      if (item && item._xTheme) {
-        applyThemeVariables(item, item._xTheme);
-      }
-    });
-    recentCards.forEach((card) => {
-      if (!card) {
-        return;
-      }
-      applyRecentCardTheme(card, card._xTheme, card._xHost || '');
-    });
-    bookmarkCards.forEach((card) => {
-      if (!card) {
-        return;
-      }
-      // 文件夹卡片通常没有 host/theme，也需要在主题切换时重算阴影与变量。
-      applyBookmarkCardTheme(card, card._xTheme, card._xHost || '');
-    });
-    refreshShortcutTileThemes();
-    applyLanguageStrings();
-    updateSelection();
-    updateModeBadge(inputParts && inputParts.input ? inputParts.input.value : '');
-    refreshFallbackIcons();
-    if (didResolvedThemeChange) {
-      refreshThemeAwareFavicons();
-      scheduleThemeAwareFaviconRescue();
-    }
-    if ((didResolvedThemeChange || previousThemeMode !== currentThemeMode) &&
-        wallpaperRuntime && typeof wallpaperRuntime.handleThemeModeChange === 'function') {
-      wallpaperRuntime.handleThemeModeChange();
-    }
-    if (!initialThemeApplied) {
-      initialThemeApplied = true;
-      if (typeof resolveInitialThemeReady === 'function') {
-        resolveInitialThemeReady();
-      }
-    }
-    if (mode === 'system' && !mediaListenerAttached) {
-      mediaListenerAttached = addMediaQueryChangeListener(mediaQuery, handleMediaChange);
-    }
-    if (mode !== 'system' && mediaListenerAttached) {
-      removeMediaQueryChangeListener(mediaQuery, handleMediaChange);
-      mediaListenerAttached = false;
-    }
-    scheduleWallpaperAdaptiveToneUpdate();
-  }
-
-  function normalizeThemeMode(value) {
-    if (value === 'light' || value === 'dark') {
-      return value;
-    }
-    return 'system';
-  }
-
-  function normalizeNewtabThemeMode(value) {
-    if (value === 'light' || value === 'dark') {
-      return value;
-    }
-    return 'global';
-  }
-
-  function normalizeNewtabThemeScope(value) {
-    return value === 'home' ? 'home' : 'global';
-  }
-
-  function isNewtabThemeFollowingGlobal() {
-    return newtabThemeMode === 'global';
-  }
-
-  function getScopedThemeMode() {
-    return isNewtabThemeFollowingGlobal() ? globalThemeMode : newtabThemeMode;
-  }
-
-  function getSelectedThemeMode() {
-    if (newtabThemeScope !== 'home') {
-      return globalThemeMode;
-    }
-    return isNewtabThemeFollowingGlobal() ? 'system' : newtabThemeMode;
-  }
-
-  function applyScopedThemeMode(options) {
-    applyThemeMode(getScopedThemeMode(), options);
-  }
-
-  function bootstrapInitialThemeMode() {
-    if (hasThemeBootstrapStarted) {
-      return initialThemeReadyPromise;
-    }
-    hasThemeBootstrapStarted = true;
-    if (!storageArea) {
-      globalThemeMode = 'system';
-      newtabThemeMode = 'global';
-      newtabThemeScope = 'global';
-      applyScopedThemeMode();
-      return initialThemeReadyPromise;
-    }
-    storageArea.get([
-      THEME_STORAGE_KEY,
-      NEWTAB_THEME_MODE_STORAGE_KEY,
-      NEWTAB_THEME_SCOPE_STORAGE_KEY
-    ], (result) => {
-      globalThemeMode = normalizeThemeMode(result ? result[THEME_STORAGE_KEY] : 'system');
-      newtabThemeMode = normalizeNewtabThemeMode(result ? result[NEWTAB_THEME_MODE_STORAGE_KEY] : 'global');
-      newtabThemeScope = normalizeNewtabThemeScope(result ? result[NEWTAB_THEME_SCOPE_STORAGE_KEY] : 'global');
-      applyScopedThemeMode();
-    });
-    return initialThemeReadyPromise;
-  }
-
-  function bootstrapInitialLanguageMode() {
-    if (hasLanguageBootstrapStarted) {
-      return initialLanguageReadyPromise;
-    }
-    hasLanguageBootstrapStarted = true;
-    if (!storageArea) {
-      applyLanguageMode('system');
-      return initialLanguageReadyPromise;
-    }
-    storageArea.get([LANGUAGE_STORAGE_KEY], (result) => {
-      applyLanguageMode(result[LANGUAGE_STORAGE_KEY] || 'system');
-    });
-    return initialLanguageReadyPromise;
-  }
-
-  function handleMediaChange(event) {
-    if (currentThemeMode !== 'system') {
-      return;
-    }
-    // 仅更新 data-theme 会遗漏依赖 JS 混色的卡片；系统主题切换时需完整重算。
-    const mediaMatches = event && typeof event.matches === 'boolean'
-      ? event.matches
-      : mediaQuery.matches;
-    applyThemeMode('system', { mediaMatches });
-  }
-
-  function syncSystemThemeMode() {
-    if (currentThemeMode !== 'system') {
-      return;
-    }
-    const resolved = resolveTheme('system');
-    if (!document.body || document.body.getAttribute('data-theme') === resolved) {
-      return;
-    }
-    applyThemeMode('system', { mediaMatches: mediaQuery.matches });
   }
 
   document.addEventListener('visibilitychange', () => {

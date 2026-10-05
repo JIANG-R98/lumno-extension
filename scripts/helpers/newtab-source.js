@@ -27,7 +27,8 @@ const NEWTAB_RUNTIME_MODULES = [
   'src/newtab/suggestions-controller.js',
   'src/newtab/top-content.js',
   'src/newtab/mode-commands.js',
-  'src/newtab/page-preferences.js'
+  'src/newtab/page-preferences.js',
+  'src/newtab/appearance-modes.js'
 ];
 
 // Returns newtab.js followed by the modules split out of it, so source checks
