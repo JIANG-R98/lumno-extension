@@ -40,7 +40,7 @@ assert.match(overlayRuntimeSource,
 
 [newtabSource, overlaySource].forEach((source) => {
   assert.match(source,
-    /limitSearchSuggestionsForDisplay\(list, \{\s*limit: (?:searchResultDisplayLimit|overlaySearchResultDisplayLimit)\s*\}\)/,
+    /limitSearchSuggestionsForDisplay\(list, \{\s*limit: (?:(?:pageState\.)?searchResultDisplayLimit|overlaySearchResultDisplayLimit)\s*\}\)/,
     'each search surface should pass the configurable limit to shared display limiting');
   assert.match(source,
     /uncapped: slashCommandModeActive/,
