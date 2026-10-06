@@ -847,17 +847,6 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   flex-direction: column;
   gap: 0;
 }
-._x_extension_shortcut_reference_group_title_2026_unique_ {
-  margin: 22px 14px 7px;
-  color: var(--panel-subtext);
-  font-size: var(--lumno-font-size-sm);
-  font-weight: 520;
-  line-height: 1.2;
-  opacity: 0.72;
-}
-._x_extension_shortcut_reference_list_2026_unique_ > ._x_extension_shortcut_reference_group_title_2026_unique_:first-child {
-  margin-top: 6px;
-}
 ._x_extension_shortcut_reference_item_2026_unique_ {
   min-height: 48px;
 }
@@ -2086,9 +2075,9 @@ body[data-theme="dark"] ._x_extension_shortcut_secondary_2024_unique_ {
 }
 ._x_extension_theme_picker_2024_unique_ {
   display: flex;
-  gap: 6px;
+  gap: 0;
   box-sizing: border-box;
-  padding: 2px;
+  padding: 1px;
   border-radius: var(--lumno-radius-md);
   border: 1px solid var(--tab-border);
   background: var(--control-bg);
@@ -2098,9 +2087,9 @@ body[data-theme="dark"] ._x_extension_shortcut_secondary_2024_unique_ {
 }
 ._x_extension_theme_indicator_2024_unique_ {
   position: absolute;
-  top: 2px;
-  left: 2px;
-  height: calc(100% - 4px);
+  top: 1px;
+  left: 1px;
+  height: calc(100% - 2px);
   width: 0;
   background: var(--inline-tab-active-bg);
   border-radius: var(--lumno-radius-sm);
@@ -2115,8 +2104,8 @@ body[data-theme="dark"] ._x_extension_shortcut_secondary_2024_unique_ {
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
-  height: 26px;
-  padding: 0 8px;
+  height: 28px;
+  padding: 0 12px;
   border-radius: var(--lumno-radius-sm);
   font-size: var(--lumno-font-size-md);
   font-weight: 400;
@@ -2143,12 +2132,8 @@ body[data-theme="dark"] ._x_extension_shortcut_secondary_2024_unique_ {
   color: #a3a3a3;
 }
 ._x_extension_inline_tabs_2024_unique_ {
-  gap: 6px;
-  padding: 2px;
-}
-._x_extension_inline_tabs_2024_unique_ ._x_extension_theme_option_2024_unique_ {
-  padding-left: 10px;
-  padding-right: 10px;
+  gap: 0;
+  padding: 1px;
 }
 ._x_extension_top_content_tabs_2026_unique_ {
   flex: 0 0 auto;

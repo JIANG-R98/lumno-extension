@@ -67,6 +67,13 @@ describe('Options shortcut reference React island', () => {
     ).toBe('聚焦搜索');
     expect(host.querySelectorAll('[data-shortcut-id]')).toHaveLength(2);
     expect(
+      host.querySelector('[data-shortcut-group="search"]')?.classList
+        .contains('_x_extension_setting_group_row_2026_unique_')
+    ).toBe(true);
+    expect(
+      host.querySelectorAll('._x_extension_setting_subrow_2026_unique_')
+    ).toHaveLength(2);
+    expect(
       host.querySelector('[data-shortcut-id="show-search-prefill"]')
         ?.getAttribute('data-shortcut-editable')
     ).toBe('true');
@@ -105,6 +112,18 @@ describe('Options shortcut reference React island', () => {
       .toBe('Command Bar');
     expect(host.querySelector('[data-shortcut-id="search-confirm"] p')?.textContent)
       .toBe('Run selected result');
+  });
+
+  it('renders nested groups without their own group row', () => {
+    const { controller, host } = createFixture();
+    act(() => controller.render({
+      groups: [{ ...model.groups[0], nested: true }]
+    }));
+
+    expect(host.querySelector('[data-shortcut-group="search"]')).toBeNull();
+    expect(
+      host.querySelectorAll('._x_extension_setting_subrow_2026_unique_')
+    ).toHaveLength(2);
   });
 
   it('unmounts cleanly', () => {

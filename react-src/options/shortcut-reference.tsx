@@ -17,6 +17,9 @@ export interface ShortcutReferenceItemModel {
 export interface ShortcutReferenceGroupModel {
   id: string;
   items: ShortcutReferenceItemModel[];
+  // Nested groups hang their rows off the setting above the list instead of
+  // rendering their own group row.
+  nested?: boolean;
   title: string;
   titleKey: string;
 }
@@ -33,16 +36,24 @@ function ShortcutReference({ model }: { model: ShortcutReferenceRenderModel }) {
     <>
       {model.groups.map((group) => (
         <Fragment key={group.id}>
-          <div
-            className="_x_extension_shortcut_reference_group_title_2026_unique_"
-            data-i18n={group.titleKey}
-            data-shortcut-group={group.id}
-          >
-            {group.title}
-          </div>
+          {group.nested ? null : (
+            <div
+              className="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_ _x_extension_setting_group_row_2026_unique_"
+              data-shortcut-group={group.id}
+            >
+              <div>
+                <p
+                  className="_x_extension_setting_title_2024_unique_"
+                  data-i18n={group.titleKey}
+                >
+                  {group.title}
+                </p>
+              </div>
+            </div>
+          )}
           {group.items.map((item) => (
             <div
-              className="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_ _x_extension_shortcut_reference_item_2026_unique_"
+              className="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_ _x_extension_setting_subrow_2026_unique_ _x_extension_shortcut_reference_item_2026_unique_"
               data-shortcut-command={item.commandName}
               data-shortcut-editable={item.editable ? 'true' : 'false'}
               data-shortcut-id={item.id}

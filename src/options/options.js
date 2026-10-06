@@ -2484,8 +2484,7 @@
           {
             value: 'default',
             labelKey: 'restricted_action_default',
-            label: getMessage('restricted_action_default', '前往 Lumno 新标签页'),
-            iconClass: 'ri-icon ri-size-14 ri-file-add-line'
+            label: getMessage('restricted_action_default', '前往 Lumno 新标签页')
           },
           {
             value: 'none',
@@ -3845,6 +3844,8 @@
         id: group && group.id ? String(group.id) : '',
         titleKey: group && group.titleKey ? String(group.titleKey) : '',
         title: getMessage(group.titleKey, group.titleFallback || ''),
+        // The search group hangs off the "show-search" row above the list.
+        nested: group.id === 'search',
         items: group.items.map((item) => {
           const parts = getShortcutReferenceParts(item.shortcut || '');
           const customShortcutLabel = item.shortcutLabelKey

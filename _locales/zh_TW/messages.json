@@ -2202,13 +2202,13 @@
     "message": "確認分頁切換器中選中的分頁"
   },
   "shortcut_reference_document_pip_parent_title": {
-    "message": "網頁剪裁：選擇外層元素"
+    "message": "選擇外層元素"
   },
   "shortcut_reference_document_pip_parent_desc": {
     "message": "選擇網頁剪裁目標時切到更大的父層元素"
   },
   "shortcut_reference_document_pip_child_title": {
-    "message": "網頁剪裁：選擇內層元素"
+    "message": "選擇內層元素"
   },
   "shortcut_reference_document_pip_child_desc": {
     "message": "選擇網頁剪裁目標時切到更小的子層元素"
