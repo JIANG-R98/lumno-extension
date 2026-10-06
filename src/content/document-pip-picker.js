@@ -5,7 +5,8 @@
 
   const STATE_FLAG = '__lumno_document_pip_active_2026__';
   const ROOT_ID = '__lumno_document_pip_picker_root_2026__';
-  const TOAST_ID = '__lumno_document_pip_toast_2026__';
+  const TOAST_HOST_ID = '__lumno_document_pip_toast_2026__';
+  const TOAST = globalThis.LumnoToast;
   const HIGHLIGHT_ID = '__lumno_document_pip_highlight_2026__';
   const PLACEHOLDER_ATTR = 'data-lumno-document-pip-placeholder';
   const PICKER_HIGHLIGHT_PADDING = 4;
@@ -22,7 +23,10 @@
     currentTheme: null,
     session: null,
     teardownSelection: null,
-    toastTimer: null,
+    toastHost: null,
+    toastElement: null,
+    toastController: null,
+    toastStyleGate: null,
     opening: false,
     ownerToken: '',
     runtimeMessageHandlerBound: false
@@ -305,7 +309,8 @@
   }
 
   function isOwnNode(node) {
-    return Boolean(node && node.nodeType === 1 && node.closest && node.closest(`#${ROOT_ID}`));
+    return Boolean(node && node.nodeType === 1 && node.closest &&
+      node.closest(`#${ROOT_ID}, #${TOAST_HOST_ID}`));
   }
 
   function getElementFromPoint(event) {
@@ -638,10 +643,7 @@
       highlightShadow: isDark
         ? '0 0 0 1px rgba(255,255,255,0.12), 0 20px 60px rgba(0, 0, 0, 0.28)'
         : '0 0 0 1px rgba(255,255,255,0.55), 0 20px 60px rgba(15, 23, 42, 0.18)',
-      toastBackground: rgbToCss(surfaceColor, isDark ? 0.96 : 0.98),
-      toastText: rgbToCss(textColor),
-      errorToastBackground: isDark ? 'rgba(127, 29, 29, 0.94)' : 'rgba(254, 226, 226, 0.98)',
-      errorToastText: isDark ? '#fef2f2' : '#991b1b',
+      isDark,
       borderRadius: borderRadius
     };
   }
@@ -684,29 +686,7 @@
       'opacity: 0'
     ].join(';');
 
-    const toast = document.createElement('div');
-    toast.id = TOAST_ID;
-    applyNoTranslate(toast);
-    toast.style.cssText = [
-      'position: fixed',
-      'left: 50%',
-      'bottom: 24px',
-      'transform: translateX(-50%)',
-      'max-width: min(560px, calc(100vw - 32px))',
-      'padding: 10px 14px',
-      'border-radius: 999px',
-      'background: rgba(255, 255, 255, 0.98)',
-      'color: #0f172a',
-      'font-size: 13px',
-      'line-height: 1.35',
-      'opacity: 0',
-      'transition: opacity 120ms ease',
-      'border: 1px solid rgba(15, 23, 42, 0.08)',
-      'box-shadow: 0 16px 42px rgba(15, 23, 42, 0.18)'
-    ].join(';');
-
     root.appendChild(highlight);
-    root.appendChild(toast);
     document.documentElement.appendChild(root);
 
     state.root = root;
@@ -722,12 +702,12 @@
       state.highlight.style.background = resolvedTheme.highlightBackground;
       state.highlight.style.boxShadow = resolvedTheme.highlightShadow;
     }
-    const toast = document.getElementById(TOAST_ID);
-    if (toast) {
-      toast.style.background = resolvedTheme.toastBackground;
-      toast.style.color = resolvedTheme.toastText;
-      toast.style.borderColor = resolvedTheme.toolbarBorder;
-      toast.style.boxShadow = resolvedTheme.cardShadow;
+    if (state.toastElement) {
+      if (resolvedTheme.isDark) {
+        state.toastElement.setAttribute('data-theme', 'dark');
+      } else {
+        state.toastElement.removeAttribute('data-theme');
+      }
     }
   }
 
@@ -751,45 +731,90 @@
     state.highlight.style.transform = `translate3d(${left}px, ${top}px, 0)`;
   }
 
+  function clearToast() {
+    if (state.toastController) {
+      state.toastController.destroy();
+    }
+    if (state.toastStyleGate) {
+      state.toastStyleGate.destroy();
+    }
+    if (state.toastHost && state.toastHost.isConnected) {
+      state.toastHost.remove();
+    }
+    state.toastHost = null;
+    state.toastElement = null;
+    state.toastController = null;
+    state.toastStyleGate = null;
+  }
+
+  // The shared Toast, in its own shadow root so page styles cannot reach it and
+  // outside the aria-hidden picker root so screen readers still hear it.
+  function ensureToast() {
+    if (state.toastHost && state.toastHost.isConnected && state.toastController) {
+      return true;
+    }
+    clearToast();
+    if (!TOAST || typeof TOAST.createToastController !== 'function' || !document.documentElement) {
+      return false;
+    }
+    const staleHost = document.getElementById(TOAST_HOST_ID);
+    if (staleHost) {
+      staleHost.remove();
+    }
+    const toastHost = document.createElement('div');
+    toastHost.id = TOAST_HOST_ID;
+    applyNoTranslate(toastHost);
+    toastHost.style.cssText = [
+      'all: initial',
+      'position: fixed',
+      'inset: 0',
+      `z-index: ${PICKER_Z_INDEX}`,
+      'display: block',
+      'pointer-events: none'
+    ].map((rule) => `${rule} !important`).join(';');
+    const toastShadow = toastHost.attachShadow({ mode: 'closed' });
+    const stylesheet = document.createElement('link');
+    stylesheet.rel = 'stylesheet';
+    stylesheet.href = chrome.runtime.getURL('src/shared/toast.css');
+    const toastElement = document.createElement('div');
+    toastElement.className = 'x-lumno-toast';
+    toastElement.setAttribute('data-show', 'false');
+    toastElement.setAttribute('role', 'status');
+    toastElement.setAttribute('aria-live', 'polite');
+    toastElement.style.setProperty('--x-lumno-toast-top', 'max(24px, calc(env(safe-area-inset-top) + 12px))');
+    toastElement.style.setProperty('--x-lumno-toast-z-index', PICKER_Z_INDEX);
+    applyNoTranslate(toastElement);
+    toastShadow.append(stylesheet, toastElement);
+    document.documentElement.appendChild(toastHost);
+
+    state.toastHost = toastHost;
+    state.toastElement = toastElement;
+    state.toastStyleGate = TOAST.createToastStyleGate(toastElement, {
+      stylesheetElement: stylesheet,
+      windowObj: window
+    });
+    state.toastController = TOAST.createToastController(toastElement, { windowObj: window });
+    return true;
+  }
+
   function hideToast() {
-    const toast = document.getElementById(TOAST_ID);
-    if (!toast) {
-      return;
+    if (state.toastController) {
+      state.toastController.hide();
     }
-    if (state.toastTimer) {
-      window.clearTimeout(state.toastTimer);
-      state.toastTimer = null;
-    }
-    toast.style.opacity = '0';
   }
 
   function showToast(message, kind, options) {
-    ensurePickerUi();
-    const toast = document.getElementById(TOAST_ID);
-    if (!toast) {
+    if (!ensureToast()) {
       return;
     }
-    if (state.toastTimer) {
-      window.clearTimeout(state.toastTimer);
-      state.toastTimer = null;
-    }
-    toast.textContent = message;
-    const theme = state.currentTheme || getPickerTheme(state.currentTarget);
-    applyPickerTheme(theme);
-    toast.style.background = kind === 'error'
-      ? theme.errorToastBackground
-      : theme.toastBackground;
-    toast.style.color = kind === 'error'
-      ? theme.errorToastText
-      : theme.toastText;
-    toast.style.opacity = '1';
-    if (options && options.persistent) {
-      return;
-    }
-    state.toastTimer = window.setTimeout(() => {
-      toast.style.opacity = '0';
-      state.toastTimer = null;
-    }, 2200);
+    applyPickerTheme(state.currentTheme || getPickerTheme(state.currentTarget));
+    const errorToast = kind === 'error';
+    state.toastElement.setAttribute('role', errorToast ? 'alert' : 'status');
+    state.toastElement.setAttribute('aria-live', errorToast ? 'assertive' : 'polite');
+    state.toastController.show(message, {
+      error: errorToast,
+      duration: options && options.persistent ? 0 : undefined
+    });
   }
 
   function selectTargetFromStack(index) {

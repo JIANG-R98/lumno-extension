@@ -5278,6 +5278,7 @@ function openDocumentPipPickerOnTab(activeTab, source) {
       target: { tabId: activeTab.id },
       files: [
         'src/shared/codex-debug-surface.js',
+        'src/shared/toast.js',
         'src/content/document-pip-picker.js'
       ]
     }, () => {

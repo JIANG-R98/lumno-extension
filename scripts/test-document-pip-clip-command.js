@@ -94,4 +94,25 @@ assert.match(
   assert.ok(messages.document_pip_command_action && messages.document_pip_command_action.message, `${locale} should localize the web clip command action`);
 });
 
+assert.match(
+  backgroundJs,
+  /'src\/shared\/toast\.js',\s*'src\/content\/document-pip-picker\.js'/,
+  'the web clip picker should be injected after the shared Toast it uses'
+);
+assert.match(
+  contentJs,
+  /const TOAST = globalThis\.LumnoToast;[\s\S]*?TOAST\.createToastController\(/,
+  'the web clip picker should show its messages through the shared Toast'
+);
+assert.match(
+  contentJs,
+  /attachShadow\(\{ mode: 'closed' \}\)[\s\S]*?getURL\('src\/shared\/toast\.css'\)/,
+  'the web clip Toast should load the shared Toast styles inside its own shadow root'
+);
+assert.doesNotMatch(
+  contentJs,
+  /errorToastBackground|toastTimer/,
+  'the web clip picker should not keep its own Toast palette or timer'
+);
+
 console.log('document PiP clip command tests passed');
