@@ -856,6 +856,27 @@
       (max <= 36 && min <= 24);
   }
 
+  // Average colours of the generic globe that Chrome and Google's favicon
+  // service return for sites without artwork (light and dark variants).
+  const PLACEHOLDER_FAVICON_COLORS = [
+    [95, 99, 104],
+    [154, 160, 166]
+  ];
+  const PLACEHOLDER_FAVICON_COLOR_TOLERANCE = 10;
+
+  function isPlaceholderFaviconColor(rgb) {
+    if (!Array.isArray(rgb) || rgb.length !== 3) {
+      return false;
+    }
+    const channels = rgb.map((channel) => Math.round(Number(channel)));
+    if (!channels.every((channel) => Number.isFinite(channel))) {
+      return false;
+    }
+    return PLACEHOLDER_FAVICON_COLORS.some((placeholder) => placeholder.every((value, index) =>
+      Math.abs(channels[index] - value) <= PLACEHOLDER_FAVICON_COLOR_TOLERANCE
+    ));
+  }
+
   function getThemeColorConfidence(rgb) {
     return isNeutralThemeColor(rgb) ? 'neutral' : 'color';
   }
@@ -1682,6 +1703,7 @@
     normalizeFaviconThemePreference,
     normalizeFaviconHost,
     isNeutralThemeColor,
+    isPlaceholderFaviconColor,
     parseCssThemeColor,
     parseHtmlIconCandidateScores,
     parseHtmlThemeColorCandidates,

@@ -1,5 +1,5 @@
 import { act } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createWallpaperViewApi,
   createWallpaperViewController,
@@ -27,13 +27,6 @@ describe('New Tab React wallpaper view', () => {
             { mode: 'system', imageUrl: '/system.svg' },
             { mode: 'light', imageUrl: '/light.svg' },
             { mode: 'dark', imageUrl: '/dark.svg' }
-          ],
-          effectTypes: [
-            { type: 'none', fallback: 'Off' },
-            { type: 'grain', fallback: 'Grain' },
-            { type: 'blocks', fallback: 'Blocks' },
-            { type: 'blur', fallback: 'Glass blur' },
-            { type: 'crt', fallback: 'CRT' }
           ],
           effectInkTones: [
             { tone: 'dark', fallback: 'Shadows' },
@@ -86,14 +79,37 @@ describe('New Tab React wallpaper view', () => {
       .toEqual(['quoteCategory', 'quotePosition']);
     quoteTabGroups.forEach((group) => {
       expect(group.querySelector('.x-nt-segmented-tabs-indicator')).not.toBeNull();
-      expect(group.querySelectorAll('.x-nt-segmented-tab')).toHaveLength(2);
     });
+    expect(Array.from(quoteTabGroups[1].querySelectorAll<HTMLElement>('.x-nt-segmented-tab'),
+      (tab) => tab.dataset.quotePosition)).toEqual(['input', 'search', 'bottom']);
     expect(controller.control.querySelector('[data-quote-position="off"]')).toBeNull();
     expect(controller.getRefs().quoteProviderHint).toBeUndefined();
-    expect(controller.getRefs().quoteInfoButton.closest('.x-nt-appearance-setting-title-group')).not.toBeNull();
+    expect(controller.getRefs().quoteInfoButton.previousElementSibling).toBe(
+      controller.getRefs().quoteAccordionTrigger
+    );
+    const sectionTriggers = Array.from(
+      controller.control.querySelectorAll<HTMLButtonElement>('.x-nt-section-trigger')
+    );
+    expect(sectionTriggers.map((trigger) => trigger.dataset.wallpaperRef)).toEqual([
+      'themeSectionTrigger',
+      'searchSectionTrigger',
+      'shortcutsAccordionTrigger',
+      'quoteAccordionTrigger',
+      'wallpaperAccordionTrigger',
+      'faviconSectionTrigger'
+    ]);
+    sectionTriggers.forEach((trigger) => {
+      expect(trigger.firstElementChild?.classList.contains('x-nt-section-chevron')).toBe(true);
+      expect(trigger.lastElementChild?.classList.contains('x-nt-wallpaper-panel-title')).toBe(true);
+      expect(controller?.control.querySelector(`#${trigger.getAttribute('aria-controls')}`)).not.toBeNull();
+    });
     expect(controller.getRefs().bingDailyHint).toBeUndefined();
     expect(controller.getRefs().bingDailyInfoButton.closest('.x-nt-appearance-setting-title-group')).not.toBeNull();
-    expect(controller.getRefs().bingSelectedLink.classList.contains('x-nt-appearance-more-settings')).toBe(true);
+    expect(controller.getRefs().bingSelectedLink.classList.contains('x-lumno-link-button')).toBe(true);
+    expect(controller.getRefs().bingSelectedLink.getAttribute('target')).toBe('_blank');
+    expect(controller.getRefs().bingSelectedLink.querySelector('.ri-external-link-line')).not.toBeNull();
+    expect(controller.getRefs().moreSettingsLink.classList.contains('x-lumno-link-button')).toBe(true);
+    expect(controller.getRefs().moreSettingsLink.querySelector('.ri-external-link-line')).not.toBeNull();
     expect(controller.getRefs().bingTab.textContent).toBe('Bing');
     expect(controller.getRefs().bingDailyToggle.getAttribute('role')).toBe('switch');
     expect(controller.getRefs().bingSelectedSource.hidden).toBe(true);
@@ -102,18 +118,41 @@ describe('New Tab React wallpaper view', () => {
     expect(
       controller.control.querySelector('[data-wallpaper-id="coast"]')
     ).not.toBeNull();
+    // The filter dropdown is mounted into this host by the wallpaper runtime.
+    expect(
+      controller.getRefs().effectSelectHost.closest('.x-nt-appearance-setting-row')
+    ).toBe(controller.getRefs().effectLabel.parentElement);
+    expect(
+      controller.getRefs().effectLabel.classList.contains('x-nt-appearance-setting-title')
+    ).toBe(true);
     expect(
       controller.control.querySelectorAll('[data-wallpaper-effect-type]')
-    ).toHaveLength(5);
-    expect(
-      controller.control.querySelector('[data-wallpaper-effect-type="blocks"]')
-    ).not.toBeNull();
-    expect(
-      controller.control.querySelector('[data-wallpaper-effect-type="blur"]')
-    ).not.toBeNull();
-    expect(
-      controller.control.querySelector('[data-wallpaper-effect-type="crt"]')
-    ).not.toBeNull();
+    ).toHaveLength(0);
+    const onEffectChange = vi.fn();
+    act(() => {
+      controller?.renderEffectSelect({
+        ariaLabel: 'Wallpaper filter',
+        onChange: onEffectChange,
+        options: [
+          { value: 'none', label: 'Off' },
+          { value: 'grain', label: 'Grain' }
+        ],
+        value: 'none'
+      });
+    });
+    const effectSelectHost = controller.getRefs().effectSelectHost;
+    expect(effectSelectHost.classList.contains('_x_extension_custom_select_2024_unique_')).toBe(true);
+    expect(effectSelectHost.querySelector('select')?.value).toBe('none');
+    expect(effectSelectHost.querySelector('._x_extension_select_label_2024_unique_')?.textContent).toBe('Off');
+    const grainOption = document.querySelector<HTMLElement>(
+      '[data-react-select-owner="x-nt-wallpaper-effect"] [data-value="grain"]'
+    );
+    expect(grainOption?.getAttribute('role')).toBe('option');
+    expect(controller.containsEffectSelectTarget(grainOption)).toBe(true);
+    act(() => {
+      grainOption?.click();
+    });
+    expect(onEffectChange).toHaveBeenCalledWith('grain');
     expect(
       controller.control.querySelectorAll('[data-wallpaper-blur-style]')
     ).toHaveLength(0);
@@ -134,22 +173,21 @@ describe('New Tab React wallpaper view', () => {
       const slider = row.querySelector<HTMLInputElement>('input[type="range"]');
       const valueInput = row.querySelector<HTMLInputElement>('input[type="number"]');
       expect(slider).not.toBeNull();
+      expect(row.classList.contains('x-range-slider-field')).toBe(true);
+      expect(row.firstElementChild?.classList.contains('x-range-slider-field-label')).toBe(true);
       expect(valueInput?.max).toBe(slider?.max);
-      expect(valueInput?.style.width).toBe('56px');
+      expect(valueInput?.style.width).toBe('var(--x-range-slider-value-width, 52px)');
       expect(valueInput?.classList.contains('_x_extension_shortcut_input_2024_unique_'))
         .toBe(true);
       expect(valueInput?.classList.contains(
         '_x_extension_range_slider_value_input_2026_unique_'
       )).toBe(true);
-      expect(valueInput?.style.height).toBe('36px');
+      expect(valueInput?.style.height).toBe('var(--x-range-slider-value-height, 30px)');
     });
     expect(controller.getRefs().effectSizeSlider?.dataset.wallpaperDynamicRange).toBeUndefined();
     expect(controller.getRefs().effectTextureSlider?.dataset.wallpaperDynamicRange).toBeUndefined();
     expect(controller.getRefs().effectStrengthSlider?.dataset.wallpaperDynamicRange).toBeUndefined();
-    const segmentedGroups = [
-      controller.getRefs().effectOptions,
-      controller.getRefs().effectInkToneOptions
-    ];
+    const segmentedGroups = [controller.getRefs().effectInkToneOptions];
     segmentedGroups.forEach((group) => {
       expect(group?.classList.contains('x-nt-segmented-tabs')).toBe(true);
       expect(group?.querySelector('.x-nt-segmented-tabs-indicator')).not.toBeNull();
@@ -183,7 +221,6 @@ describe('New Tab React wallpaper view', () => {
         documentObj: document,
         model: {
           appearanceOptions: [],
-          effectTypes: [],
           favicons: [],
           icons: { arrow: '<i class="ri-arrow-right-s-line"></i>' },
           searchWidth: { min: 720, max: 1040, ticks: [] },
@@ -229,16 +266,12 @@ describe('New Tab React wallpaper view', () => {
     expect(valueInput.value).toBe('10');
     expect(valueInput.max).toBe(slider.max);
     expect(valueInput.max).toBe('16');
-    expect(valueInput.style.width).toBe('56px');
-    expect(valueInput.style.height).toBe('36px');
-    expect(Array.from(
-      details.querySelectorAll('.x-nt-shortcut-columns-scale .x-nt-overlay-tick')
-    ).map((tick) => tick.textContent)).toEqual(['4', '8', '12', '16']);
-    expect(details.querySelectorAll<HTMLElement>(
-      '.x-nt-shortcut-columns-scale .x-nt-overlay-tick'
-    )[1]?.style.getPropertyValue('--x-nt-overlay-tick-percent')).toBe(
-      `${100 / 3}%`
-    );
+    expect(valueInput.style.width).toBe('var(--x-range-slider-value-width, 52px)');
+    expect(valueInput.style.height).toBe('var(--x-range-slider-value-height, 30px)');
+    const marks = slider.style.getPropertyValue('--x-range-slider-marks');
+    expect(marks.match(/linear-gradient/g)).toHaveLength(2);
+    expect(marks).toContain('* 0.3333)');
+    expect(marks).toContain('* 0.6667)');
     const sizeSlider = refs.shortcutSizeSlider as HTMLInputElement;
     const sizeReset = refs.shortcutSizeResetButton as HTMLButtonElement;
     const gapSlider = refs.shortcutGapSlider as HTMLInputElement;
@@ -255,7 +288,9 @@ describe('New Tab React wallpaper view', () => {
       expect(button.classList.contains(
         '_x_extension_shortcut_group_action_2024_unique_'
       )).toBe(true);
-      expect(button.nextElementSibling?.matches('input[type="number"]')).toBe(true);
+      // Reset trails the label so all tracks keep the same length.
+      expect(button.parentElement?.classList.contains('x-range-slider-field-label')).toBe(true);
+      expect(button.classList.contains('x-range-slider-reset')).toBe(true);
       expect(button.disabled).toBe(true);
     });
   });
@@ -266,7 +301,6 @@ describe('New Tab React wallpaper view', () => {
         documentObj: document,
         model: {
           appearanceOptions: [],
-          effectTypes: [],
           favicons: [],
           icons: {},
           searchWidth: { min: 720, max: 1040, ticks: [] },
@@ -295,7 +329,6 @@ describe('New Tab React wallpaper view', () => {
         documentObj: document,
         model: {
           appearanceOptions: [],
-          effectTypes: [],
           favicons: [],
           icons: {},
           searchWidth: { min: 720, max: 1040, ticks: [] },

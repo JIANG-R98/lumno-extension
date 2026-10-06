@@ -10,7 +10,7 @@
   transform-origin: var(--x-extension-menu-surface-transform-origin);
   pointer-events: none;
   will-change: transform, opacity;
-  transition: opacity 170ms ease, transform 360ms cubic-bezier(0.2, 1.45, 0.35, 1);
+  transition: opacity 170ms ease, transform 360ms var(--lumno-ease-menu, cubic-bezier(0.2, 1.45, 0.35, 1));
 }
 
 ._x_extension_menu_surface_2024_unique_[data-menu-surface-width="content"] {

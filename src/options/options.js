@@ -38,36 +38,22 @@
     ? appearanceContent.querySelector('._x_extension_theme_picker_2024_unique_')
     : null;
   const themeButtons = themePicker ? Array.from(themePicker.querySelectorAll('._x_extension_theme_option_2024_unique_')) : [];
-  const themeIndicator = themePicker ? themePicker.querySelector('._x_extension_theme_indicator_2024_unique_') : null;
   const tabButtons = Array.from(document.querySelectorAll('._x_extension_settings_tab_button_2024_unique_'));
   const tabContents = Array.from(document.querySelectorAll('._x_extension_settings_content_2024_unique_'));
   const tabsContainer = document.getElementById('_x_extension_settings_tabs_2024_unique_');
-  const tabsIndicator = tabsContainer ? tabsContainer.querySelector('._x_extension_tabs_indicator_2024_unique_') : null;
   const settingsVersion = document.getElementById('_x_extension_settings_version_2024_unique_');
   const languageSelect = document.getElementById('_x_extension_language_select_2024_unique_');
   const recentModeSelect = document.getElementById('_x_extension_recent_mode_select_2024_unique_');
   const recentModeTabButtons = Array.from(document.querySelectorAll('button[data-recent-mode]'));
   const recentModeTabsWrap = document.getElementById('_x_extension_recent_mode_tabs_wrap_2024_unique_');
-  const recentModeTabsIndicator = recentModeTabsWrap
-    ? recentModeTabsWrap.querySelector('._x_extension_theme_indicator_2024_unique_')
-    : null;
   const recentCountControlHost = document.getElementById('_x_extension_recent_count_control_2026_unique_');
   const newtabWidthSelect = document.getElementById('_x_extension_newtab_width_select_2026_unique_');
   const newtabWidthTabsWrap = document.getElementById('_x_extension_newtab_width_tabs_wrap_2026_unique_');
   const newtabWidthTabButtons = Array.from(document.querySelectorAll('button[data-newtab-width]'));
-  const newtabWidthTabsIndicator = newtabWidthTabsWrap
-    ? newtabWidthTabsWrap.querySelector('._x_extension_theme_indicator_2024_unique_')
-    : null;
   const overlaySizeTabButtons = Array.from(document.querySelectorAll('button[data-overlay-size]'));
   const overlaySizeTabsWrap = document.getElementById('_x_extension_overlay_size_tabs_wrap_2026_unique_');
-  const overlaySizeTabsIndicator = overlaySizeTabsWrap
-    ? overlaySizeTabsWrap.querySelector('._x_extension_theme_indicator_2024_unique_')
-    : null;
   const overlayEnterAnimationTabButtons = Array.from(document.querySelectorAll('button[data-overlay-enter-animation]'));
   const overlayEnterAnimationTabsWrap = document.getElementById('_x_extension_overlay_enter_animation_tabs_wrap_2026_unique_');
-  const overlayEnterAnimationTabsIndicator = overlayEnterAnimationTabsWrap
-    ? overlayEnterAnimationTabsWrap.querySelector('._x_extension_theme_indicator_2024_unique_')
-    : null;
   const bookmarkRowsControlHost = document.getElementById('_x_extension_bookmark_rows_control_2026_unique_');
   const bookmarkColumnsSettingRow = document.getElementById('_x_extension_bookmark_columns_setting_row_2026_unique_');
   const bookmarkColumnsControlHost = document.getElementById('_x_extension_bookmark_columns_control_2026_unique_');
@@ -87,9 +73,6 @@
   const selectionQuickActionsGroupToggle = document.getElementById('_x_extension_selection_quick_actions_group_toggle_2026_unique_');
   const overlayTabQuickSwitchToggle = document.getElementById('_x_extension_overlay_tab_quick_switch_2024_unique_');
   const newtabTopContentTabsWrap = document.getElementById('_x_extension_newtab_top_content_tabs_wrap_2026_unique_');
-  const newtabTopContentTabsIndicator = newtabTopContentTabsWrap
-    ? newtabTopContentTabsWrap.querySelector('._x_extension_theme_indicator_2024_unique_')
-    : null;
   const newtabTimeFontWeightRow = document.getElementById('_x_extension_newtab_time_font_weight_row_2026_unique_');
   const newtabTimeFontWeightControlHost = document.getElementById('_x_extension_newtab_time_font_weight_control_2026_unique_');
   const newtabTimeSecondsRow = document.getElementById('_x_extension_newtab_time_seconds_row_2026_unique_');
@@ -141,14 +124,8 @@
   const fallbackShortcutWrap = document.querySelector('._x_extension_shortcuts_hotkey_wrap_2024_unique_');
   const restrictedActionSelectWrap = document.getElementById('_x_extension_restricted_action_tabs_wrap_2024_unique_');
   const restrictedActionTabButtons = Array.from(document.querySelectorAll('button[data-restricted-action]'));
-  const restrictedActionTabsIndicator = restrictedActionSelectWrap
-    ? restrictedActionSelectWrap.querySelector('._x_extension_theme_indicator_2024_unique_')
-    : null;
   const searchResultPriorityTabsWrap = document.getElementById('_x_extension_search_result_priority_tabs_wrap_2026_unique_');
   const searchResultPriorityTabButtons = Array.from(document.querySelectorAll('button[data-search-result-priority]'));
-  const searchResultPriorityTabsIndicator = searchResultPriorityTabsWrap
-    ? searchResultPriorityTabsWrap.querySelector('._x_extension_theme_indicator_2024_unique_')
-    : null;
   const clearShortcutButton = document.getElementById('_x_extension_clear_shortcut_2024_unique_');
   const resetShortcutButton = document.getElementById('_x_extension_reset_shortcut_2024_unique_');
   const shortcutsStatus = document.getElementById('_x_extension_shortcuts_status_2024_unique_');
@@ -1047,7 +1024,7 @@
       restrictedActionInfoController.render({
         tooltip: getMessage(
           'settings_restricted_tooltip',
-          '受限页（如 chrome://、扩展商店、部分 file:// 页面）无法开启聚焦搜索；按下快捷键将按此处规则处理'
+          '受限页（如 chrome://、扩展商店、部分 file:// 页面）无法开启聚焦搜索；按下快捷键将按此处规则处理。'
         ),
         tooltipKey: 'settings_restricted_tooltip'
       });
@@ -1122,14 +1099,25 @@
         value: option.value
       };
     });
+    // The setting title plus the current value name the trigger for assistive tech.
+    const title = host.closest('._x_extension_setting_row_2024_unique_')
+      ?.querySelector('._x_extension_setting_title_2024_unique_');
+    if (title && !title.id) {
+      title.id = `${select.id}_title`;
+    }
     const controller = optionsSelectControlApi.createSelectControlController(host, {
+      getViewportTopInset() {
+        // The settings tabs stay pinned at the top; a menu that flips upward must clear them.
+        const tabsRect = tabsRow ? tabsRow.getBoundingClientRect() : null;
+        return tabsRect ? Math.max(0, tabsRect.bottom + 8) : 8;
+      },
       kind,
       onSelect(next) {
         select.value = next;
         select.dispatchEvent(new Event('change', { bubbles: true }));
       }
     });
-    const record = { controller, items, select };
+    const record = { controller, items, labelledBy: title ? title.id : '', select };
     optionsSelectControlRecords.set(select, record);
     return record;
   }
@@ -1141,6 +1129,7 @@
     record.controller.render({
       disabled: Boolean(select.disabled),
       id: select.id,
+      labelledBy: record.labelledBy || undefined,
       items: record.items.map((item) => ({
         iconUrl: item.iconUrl,
         label: item.labelKey ? getMessage(item.labelKey, item.fallback) : item.fallback,
@@ -1826,25 +1815,25 @@
       ? 'searchEngine'
       : 'site';
     if (!key) {
-      return { ok: false, error: getMessage('shortcuts_error_key', '请填写触发词') };
+      return { ok: false, error: getMessage('shortcuts_error_key', '请填写触发词。') };
     }
     if (/\s/.test(key)) {
       return {
         ok: false,
-        error: getMessage('shortcuts_error_key_space', '触发词不能包含空格')
+        error: getMessage('shortcuts_error_key_space', '触发词不能包含空格。')
       };
     }
     if (findSiteSearchKeyConflict(key, '')) {
       return {
         ok: false,
-        error: getMessage('shortcuts_error_key_duplicate', '该触发词已存在，请更换')
+        error: getMessage('shortcuts_error_key_duplicate', '该触发词已存在，请更换。')
       };
     }
     const template = normalizeSiteSearchTemplate(templateRaw);
     if (!template || !template.includes('{query}')) {
       return {
         ok: false,
-        error: getMessage('toast_error_template', '搜索模板必须包含 {query}')
+        error: getMessage('toast_error_template', '搜索模板必须包含 {query}。')
       };
     }
     const normalizedKey = key.toLowerCase();
@@ -1857,7 +1846,7 @@
       category
     });
     if (!nextItem) {
-      return { ok: false, error: getMessage('toast_error', '操作失败，请重试') };
+      return { ok: false, error: getMessage('toast_error', '操作失败，请重试。') };
     }
     const next = [nextItem].concat(
       customSiteSearchProviders.filter(
@@ -1878,7 +1867,7 @@
       }, 220);
       return { ok: true };
     } catch (error) {
-      return { ok: false, error: getMessage('toast_error', '操作失败，请重试') };
+      return { ok: false, error: getMessage('toast_error', '操作失败，请重试。') };
     }
   }
 
@@ -1894,7 +1883,7 @@
       );
       return { ok: true };
     } catch (error) {
-      return { ok: false, error: getMessage('toast_error', '操作失败，请重试') };
+      return { ok: false, error: getMessage('toast_error', '操作失败，请重试。') };
     }
   }
 
@@ -1915,7 +1904,7 @@
       showToast(getMessage('toast_saved', '已保存'), false);
       return { ok: true };
     } catch (error) {
-      return { ok: false, error: getMessage('toast_error', '操作失败，请重试') };
+      return { ok: false, error: getMessage('toast_error', '操作失败，请重试。') };
     }
   }
 
@@ -2047,8 +2036,8 @@
     if (!pattern) {
       return {
         error: matchModes.includes('suffix')
-          ? getMessage('blacklist_error_domain', '请输入网站域名')
-          : getMessage('blacklist_error_url', '请输入站点域名或完整 URL')
+          ? getMessage('blacklist_error_domain', '请输入网站域名。')
+          : getMessage('blacklist_error_url', '请输入站点域名或完整 URL。')
       };
     }
     return {
@@ -2294,177 +2283,6 @@
     storageArea.set({ [SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY]: normalized });
   }
 
-  function measureTabsIndicator(container, indicator, activeButton, inset, containerInset) {
-    if (!container || !indicator) {
-      return null;
-    }
-    if (!activeButton) {
-      return {
-        indicator,
-        width: '0px',
-        transform: null
-      };
-    }
-    const containerRect = container.getBoundingClientRect();
-    const buttonRect = activeButton.getBoundingClientRect();
-    const offset = Math.round(
-      buttonRect.left - containerRect.left + (Number(container.scrollLeft) || 0) -
-      (Number(containerInset) || 0) - inset
-    );
-    return {
-      indicator,
-      width: `${Math.round(buttonRect.width)}px`,
-      transform: `translateX(${offset}px)`
-    };
-  }
-
-  function applyTabsIndicatorMeasurement(measurement) {
-    if (!measurement) {
-      return;
-    }
-    measurement.indicator.style.width = measurement.width;
-    if (measurement.transform !== null) {
-      measurement.indicator.style.transform = measurement.transform;
-    }
-  }
-
-  function measureInlineTabsIndicator(wrapper, indicator, activeSelector) {
-    if (!wrapper) {
-      return null;
-    }
-    const liveIndicator = wrapper.querySelector('._x_extension_theme_indicator_2024_unique_') || indicator;
-    if (!liveIndicator) {
-      return null;
-    }
-    const activeButton = wrapper.querySelector(activeSelector);
-    return measureTabsIndicator(wrapper, liveIndicator, activeButton, 3, 0);
-  }
-
-  function updateInlineTabsIndicator(wrapper, indicator, activeSelector) {
-    applyTabsIndicatorMeasurement(
-      measureInlineTabsIndicator(wrapper, indicator, activeSelector)
-    );
-  }
-
-  function updateRecentModeTabsIndicator() {
-    updateInlineTabsIndicator(
-      recentModeTabsWrap,
-      recentModeTabsIndicator,
-      'button[data-recent-mode][data-active="true"]'
-    );
-  }
-
-  function updateRestrictedActionTabsIndicator() {
-    updateInlineTabsIndicator(
-      restrictedActionSelectWrap,
-      restrictedActionTabsIndicator,
-      'button[data-restricted-action][data-active="true"]'
-    );
-  }
-
-  function updateSearchResultPriorityTabsIndicator() {
-    updateInlineTabsIndicator(
-      searchResultPriorityTabsWrap,
-      searchResultPriorityTabsIndicator,
-      'button[data-search-result-priority][data-active="true"]'
-    );
-  }
-
-  function updateOverlaySizeTabsIndicator() {
-    updateInlineTabsIndicator(
-      overlaySizeTabsWrap,
-      overlaySizeTabsIndicator,
-      'button[data-overlay-size][data-active="true"]'
-    );
-  }
-
-  function updateOverlayEnterAnimationTabsIndicator() {
-    updateInlineTabsIndicator(
-      overlayEnterAnimationTabsWrap,
-      overlayEnterAnimationTabsIndicator,
-      'button[data-overlay-enter-animation][data-active="true"]'
-    );
-  }
-
-  function updateNewtabWidthTabsIndicator() {
-    updateInlineTabsIndicator(
-      newtabWidthTabsWrap,
-      newtabWidthTabsIndicator,
-      'button[data-newtab-width][data-active="true"]'
-    );
-  }
-
-  function updateNewtabTopContentTabsIndicator() {
-    updateInlineTabsIndicator(
-      newtabTopContentTabsWrap,
-      newtabTopContentTabsIndicator,
-      'button[data-newtab-top-content][data-active="true"]'
-    );
-  }
-
-  function refreshAllTabsIndicators() {
-    const measurements = [
-      measureTabIndicator(),
-      measureThemeIndicator(),
-      measureInlineTabsIndicator(
-        newtabWidthTabsWrap,
-        newtabWidthTabsIndicator,
-        'button[data-newtab-width][data-active="true"]'
-      ),
-      measureInlineTabsIndicator(
-        recentModeTabsWrap,
-        recentModeTabsIndicator,
-        'button[data-recent-mode][data-active="true"]'
-      ),
-      measureInlineTabsIndicator(
-        overlaySizeTabsWrap,
-        overlaySizeTabsIndicator,
-        'button[data-overlay-size][data-active="true"]'
-      ),
-      measureInlineTabsIndicator(
-        overlayEnterAnimationTabsWrap,
-        overlayEnterAnimationTabsIndicator,
-        'button[data-overlay-enter-animation][data-active="true"]'
-      ),
-      measureInlineTabsIndicator(
-        restrictedActionSelectWrap,
-        restrictedActionTabsIndicator,
-        'button[data-restricted-action][data-active="true"]'
-      ),
-      measureInlineTabsIndicator(
-        searchResultPriorityTabsWrap,
-        searchResultPriorityTabsIndicator,
-        'button[data-search-result-priority][data-active="true"]'
-      ),
-      measureInlineTabsIndicator(
-        newtabTopContentTabsWrap,
-        newtabTopContentTabsIndicator,
-        'button[data-newtab-top-content][data-active="true"]'
-      )
-    ];
-    measurements.forEach(applyTabsIndicatorMeasurement);
-  }
-
-  let tabsIndicatorsRefreshFrame = 0;
-  let tabsIndicatorsRefreshPasses = 0;
-  function scheduleTabsIndicatorsRefresh(framePasses) {
-    const passes = Number.isFinite(framePasses) && framePasses > 0 ? Math.floor(framePasses) : 2;
-    tabsIndicatorsRefreshPasses = Math.max(tabsIndicatorsRefreshPasses, passes);
-    if (tabsIndicatorsRefreshFrame) {
-      return;
-    }
-    const run = () => {
-      if (tabsIndicatorsRefreshPasses <= 0) {
-        tabsIndicatorsRefreshFrame = 0;
-        refreshAllTabsIndicators();
-        return;
-      }
-      tabsIndicatorsRefreshPasses -= 1;
-      tabsIndicatorsRefreshFrame = requestAnimationFrame(run);
-    };
-    tabsIndicatorsRefreshFrame = requestAnimationFrame(run);
-  }
-
   function renderSegmentedControlState(
     controller,
     model
@@ -2500,7 +2318,6 @@
       'data-recent-mode',
       (value) => value === 'most' ? 'most' : 'latest'
     );
-    requestAnimationFrame(updateRecentModeTabsIndicator);
   }
 
   function setOverlaySizeTabState(mode) {
@@ -2533,7 +2350,6 @@
       'data-overlay-size',
       normalizeOverlaySizeMode
     );
-    requestAnimationFrame(updateOverlaySizeTabsIndicator);
   }
 
   function setOverlayEnterAnimationTabState(mode) {
@@ -2558,7 +2374,6 @@
         ]
       }
     );
-    requestAnimationFrame(updateOverlayEnterAnimationTabsIndicator);
   }
 
   function setNewtabWidthTabState(mode) {
@@ -2589,7 +2404,6 @@
       'data-newtab-width',
       normalizeNewtabWidthMode
     );
-    requestAnimationFrame(updateNewtabWidthTabsIndicator);
   }
 
   function setNewtabTopContentTabState(mode) {
@@ -2620,7 +2434,6 @@
       }
     );
     syncNewtabTimeSecondsVisibility();
-    requestAnimationFrame(updateNewtabTopContentTabsIndicator);
   }
 
   function syncNewtabTimeSecondsVisibility() {
@@ -2645,7 +2458,6 @@
     );
     if (!shouldHide) {
       requestAnimationFrame(() => {
-        requestAnimationFrame(updateRecentModeTabsIndicator);
       });
     }
   }
@@ -2679,7 +2491,6 @@
       'data-restricted-action',
       (value) => value === 'none' ? 'none' : 'default'
     );
-    requestAnimationFrame(updateRestrictedActionTabsIndicator);
   }
 
   function createRestrictedActionStorageUpdate(action) {
@@ -2717,7 +2528,6 @@
       'data-search-result-priority',
       normalizeSearchResultPriority
     );
-    requestAnimationFrame(updateSearchResultPriorityTabsIndicator);
   }
 
   function handleNewtabWidthSelection(value) {
@@ -3306,6 +3116,24 @@
     }
   }
 
+  // A clear-all action has nothing to confirm on an empty list.
+  function syncClearButtonAvailability(button, hasItems) {
+    if (!button) {
+      return;
+    }
+    const disabled = !hasItems;
+    if (button.disabled === disabled) {
+      return;
+    }
+    button.disabled = disabled;
+    const popconfirm = button.getAttribute('aria-controls')
+      ? document.getElementById(button.getAttribute('aria-controls'))
+      : null;
+    if (disabled && popconfirm && popconfirm === activePopconfirm) {
+      closeActivePopconfirm();
+    }
+  }
+
   function initializePopconfirmWrap(wrap, trigger, messageKey, fallbackMessage, onConfirm) {
     if (!wrap || !trigger) {
       return null;
@@ -3411,7 +3239,7 @@
         }
         showToast(getMessage('toast_removed', '已移除'), false);
       }).catch(() => {
-        showToast(getMessage('toast_error', '操作失败，请重试'), true);
+        showToast(getMessage('toast_error', '操作失败，请重试。'), true);
       });
     }
     const removedItem = customSiteSearchProviders.find(
@@ -3435,7 +3263,7 @@
       }
       showToast(getMessage('toast_removed', '已移除'), false);
     }).catch(() => {
-      showToast(getMessage('toast_error', '操作失败，请重试'), true);
+      showToast(getMessage('toast_error', '操作失败，请重试。'), true);
     });
   }
 
@@ -3550,7 +3378,6 @@
       renderOptionsInfoButtons();
       renderFeedbackSupport();
       refreshCustomSelects();
-      scheduleTabsIndicatorsRefresh(2);
       setEditingState(editingSiteSearchKey);
       updateBuiltinResetTooltip();
       updateCustomClearTooltip();
@@ -4121,24 +3948,9 @@
       const isActive = content.getAttribute('data-content') === nextTabKey;
       content.setAttribute('data-active', isActive ? 'true' : 'false');
     });
-    requestAnimationFrame(updateTabIndicator);
-    if (nextTabKey === 'appearance') {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          updateThemeIndicator();
-          updateRecentModeTabsIndicator();
-          updateNewtabWidthTabsIndicator();
-          updateOverlaySizeTabsIndicator();
-          updateOverlayEnterAnimationTabsIndicator();
-          updateNewtabTopContentTabsIndicator();
-        });
-      });
-    }
     if (nextTabKey === 'general') {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          updateRestrictedActionTabsIndicator();
-          updateSearchResultPriorityTabsIndicator();
           syncFallbackShortcutWrapWidth();
           updateFallbackShortcutWrapWidthForContent();
         });
@@ -4162,20 +3974,6 @@
     if (tabKey === 'shortcuts') {
       refreshSiteSearchProviders();
     }
-  }
-
-  function measureTabIndicator() {
-    if (!tabsContainer) return null;
-    const liveIndicator = tabsContainer.querySelector('._x_extension_tabs_indicator_2024_unique_') || tabsIndicator;
-    if (!liveIndicator) return null;
-    const activeButton = tabsContainer.querySelector(
-      '._x_extension_settings_tab_button_2024_unique_[data-active="true"]'
-    );
-    return measureTabsIndicator(tabsContainer, liveIndicator, activeButton, 4, tabsContainer.clientLeft);
-  }
-
-  function updateTabIndicator() {
-    applyTabsIndicatorMeasurement(measureTabIndicator());
   }
 
   function updateTabsStickyVisualState() {
@@ -4204,7 +4002,6 @@
     optionsResizeFrame = window.requestAnimationFrame(() => {
       optionsResizeFrame = 0;
       updateTabsStickyVisualState();
-      refreshAllTabsIndicators();
       syncFallbackShortcutWrapWidth();
     });
   }
@@ -4335,7 +4132,6 @@
         }
       ]
     });
-    requestAnimationFrame(updateThemeIndicator);
   }
 
   function updateOverlayPageThemeAdaptationVisibility(mode) {
@@ -4349,16 +4145,6 @@
       document.documentElement.setAttribute('data-options-theme-mode', nextMode);
       return setConditionalSettingsElementVisibility(overlayPageThemeAdaptationRow, visible);
     });
-  }
-
-  function measureThemeIndicator() {
-    if (!themePicker || !themeIndicator) return null;
-    const activeButton = themeButtons.find((button) => button.getAttribute('data-active') === 'true');
-    return measureTabsIndicator(themePicker, themeIndicator, activeButton, 3, 0);
-  }
-
-  function updateThemeIndicator() {
-    applyTabsIndicatorMeasurement(measureThemeIndicator());
   }
 
   function onMediaChange() {
@@ -4499,12 +4285,6 @@
   if (initialTab === 'shortcuts') {
     refreshSiteSearchProviders();
   }
-  scheduleTabsIndicatorsRefresh(2);
-  if (document.fonts && typeof document.fonts.ready === 'object' && typeof document.fonts.ready.then === 'function') {
-    document.fonts.ready.then(() => {
-      scheduleTabsIndicatorsRefresh(2);
-    });
-  }
   window.addEventListener('scroll', scheduleOptionsScrollRefresh, { passive: true });
   updateTabsStickyVisualState();
   window.addEventListener('resize', scheduleOptionsViewportLayoutRefresh, { passive: true });
@@ -4614,14 +4394,6 @@
       button.dataset.active = active ? 'true' : 'false';
       button.setAttribute('aria-pressed', active ? 'true' : 'false');
     });
-    const indicator = siteSearchCategoryButtons[0]
-      ? siteSearchCategoryButtons[0].parentElement?.querySelector(
-          '._x_extension_theme_indicator_2024_unique_'
-        )
-      : null;
-    if (indicator) {
-      indicator.dataset.category = siteSearchDraftCategory;
-    }
   }
 
   function setSiteSearchFormExpanded(expanded) {
@@ -5056,11 +4828,11 @@
   function openExtensionShortcutsPage() {
     chrome.runtime.sendMessage({ action: 'openExtensionShortcutsPage' }, (response) => {
       if (chrome.runtime && chrome.runtime.lastError) {
-        showToast(getMessage('toast_error', '操作失败，请重试'), true);
+        showToast(getMessage('toast_error', '操作失败，请重试。'), true);
         return;
       }
       if (!response || response.ok === false) {
-        showToast(getMessage('toast_error', '操作失败，请重试'), true);
+        showToast(getMessage('toast_error', '操作失败，请重试。'), true);
       }
     });
   }
@@ -5071,11 +4843,11 @@
     openOnboardingPageButton.addEventListener('click', () => {
       chrome.runtime.sendMessage({ action: 'openOnboardingPage' }, (response) => {
         if (chrome.runtime && chrome.runtime.lastError) {
-          showToast(getMessage('toast_error', '操作失败，请重试'), true);
+          showToast(getMessage('toast_error', '操作失败，请重试。'), true);
           return;
         }
         if (!response || response.ok === false) {
-          showToast(getMessage('toast_error', '操作失败，请重试'), true);
+          showToast(getMessage('toast_error', '操作失败，请重试。'), true);
         }
       });
     });
@@ -5105,7 +4877,7 @@
           return;
         }
         if (isReservedBrowserShortcut(normalized)) {
-          showToast(getMessage('settings_shortcuts_invalid', '快捷键无效，请按组合键（如 Ctrl+K）'), true);
+          showToast(getMessage('settings_shortcuts_invalid', '快捷键无效，请按组合键（如 Ctrl+K）。'), true);
           renderFallbackShortcutTokens(currentShortcutLabel || '');
           return;
         }
@@ -5117,7 +4889,7 @@
         setFallbackShortcutLabel(normalized, true);
         persistFallbackShortcut(normalized, (ok) => {
           if (!ok) {
-            showToast(getMessage('toast_error', '操作失败，请重试'), true);
+            showToast(getMessage('toast_error', '操作失败，请重试。'), true);
           }
         });
         stopFallbackShortcutCaptureDeferred(260);
@@ -5171,7 +4943,7 @@
       setFallbackShortcutLabel('');
       persistFallbackShortcut('', (ok) => {
         if (!ok) {
-          showToast(getMessage('toast_error', '操作失败，请重试'), true);
+          showToast(getMessage('toast_error', '操作失败，请重试。'), true);
         }
       });
       cancelCaptureOnMouseLeave = true;
@@ -5187,7 +4959,7 @@
       setFallbackShortcutLabel(defaultShortcut, true);
       persistFallbackShortcut(defaultShortcut, (ok) => {
         if (!ok) {
-          showToast(getMessage('toast_error', '操作失败，请重试'), true);
+          showToast(getMessage('toast_error', '操作失败，请重试。'), true);
         }
       });
       cancelCaptureOnMouseLeave = true;
@@ -6048,27 +5820,27 @@
     if (!item) {
       return Promise.resolve({
         ok: false,
-        error: getMessage('toast_error', '操作失败，请重试')
+        error: getMessage('toast_error', '操作失败，请重试。')
       });
     }
     const nextKeyRaw = String(draft && draft.key ? draft.key : '').trim();
     if (!nextKeyRaw) {
       return Promise.resolve({
         ok: false,
-        error: getMessage('shortcuts_error_key', '请填写触发词')
+        error: getMessage('shortcuts_error_key', '请填写触发词。')
       });
     }
     if (/\s/.test(nextKeyRaw)) {
       return Promise.resolve({
         ok: false,
-        error: getMessage('shortcuts_error_key_space', '触发词不能包含空格')
+        error: getMessage('shortcuts_error_key_space', '触发词不能包含空格。')
       });
     }
     const previousKey = String(item.key || '').toLowerCase();
     if (findSiteSearchKeyConflict(nextKeyRaw, previousKey)) {
       return Promise.resolve({
         ok: false,
-        error: getMessage('shortcuts_error_key_duplicate', '该触发词已存在，请更换')
+        error: getMessage('shortcuts_error_key_duplicate', '该触发词已存在，请更换。')
       });
     }
     const template = normalizeSiteSearchTemplate(
@@ -6078,7 +5850,7 @@
     if (!template || (!isBuiltinAiProvider && !template.includes('{query}'))) {
       return Promise.resolve({
         ok: false,
-        error: getMessage('toast_error_template', '搜索模板必须包含 {query}')
+        error: getMessage('toast_error_template', '搜索模板必须包含 {query}。')
       });
     }
     const aliases = normalizeAliases(draft && draft.aliases ? draft.aliases : '');
@@ -6126,7 +5898,7 @@
     if (!nextItem) {
       return Promise.resolve({
         ok: false,
-        error: getMessage('toast_error', '操作失败，请重试')
+        error: getMessage('toast_error', '操作失败，请重试。')
       });
     }
     next.unshift(nextItem);
@@ -6141,7 +5913,7 @@
       }, 220);
       return { ok: true };
     }).catch(() => {
-      const error = getMessage('toast_error', '操作失败，请重试');
+      const error = getMessage('toast_error', '操作失败，请重试。');
       showToast(error, true);
       return { ok: false, error };
     });
@@ -6201,6 +5973,7 @@
       getMessage('shortcuts_empty_engines', '暂无内置搜索引擎'),
       builtinTemplateSet
     );
+    syncClearButtonAvailability(customClearButton, customItems.length > 0);
     renderSiteSearchListController(
       siteSearchCustomListController,
       customItems,
@@ -6632,8 +6405,8 @@
       groupBadge: getMessage('aggregate_search_badge', '聚合'),
       keyLabel: getMessage('shortcuts_label_key', '触发词'),
       keyPlaceholder: getMessage('aggregate_search_key_placeholder', '例如 tech'),
-      keyRequiredError: getMessage('shortcuts_error_key', '请填写触发词'),
-      keySpaceError: getMessage('shortcuts_error_key_space', '触发词不能包含空格'),
+      keyRequiredError: getMessage('shortcuts_error_key', '请填写触发词。'),
+      keySpaceError: getMessage('shortcuts_error_key_space', '触发词不能包含空格。'),
       maxSourcesError: getMessage(
         'aggregate_search_max_sources_error',
         '最多可选择 10 个搜索源。'
@@ -6737,6 +6510,7 @@
     if (!aggregateSearchListController || typeof aggregateSearchListController.render !== 'function') {
       return;
     }
+    syncClearButtonAvailability(aggregateSearchClearButton, aggregateSearches.length > 0);
     aggregateSearchListController.render({
       copy: getAggregateSearchListCopy(),
       items: aggregateSearches.map(getAggregateSearchItemModel),
@@ -6787,7 +6561,7 @@
         normalize: normalizeAggregateSearches,
         onLoadError() {
           aggregateSearchesReady = false;
-          showToast(getMessage('toast_error', '操作失败，请重试'), true);
+          showToast(getMessage('toast_error', '操作失败，请重试。'), true);
         },
         save: saveAggregateSearches
       });
@@ -6819,26 +6593,26 @@
     if (!keyRaw) {
       return Promise.resolve({
         ok: false,
-        error: getMessage('shortcuts_error_key', '请填写触发词')
+        error: getMessage('shortcuts_error_key', '请填写触发词。')
       });
     }
     if (/\s/.test(keyRaw)) {
       return Promise.resolve({
         ok: false,
-        error: getMessage('shortcuts_error_key_space', '触发词不能包含空格')
+        error: getMessage('shortcuts_error_key_space', '触发词不能包含空格。')
       });
     }
     const key = AGGREGATE_SEARCH_STORE.normalizeAggregateSearchKey(keyRaw);
     if (!key) {
       return Promise.resolve({
         ok: false,
-        error: getMessage('shortcuts_error_key', '请填写触发词')
+        error: getMessage('shortcuts_error_key', '请填写触发词。')
       });
     }
     if (findSiteSearchKeyConflict(key, '', currentId)) {
       return Promise.resolve({
         ok: false,
-        error: getMessage('shortcuts_error_key_duplicate', '该触发词已存在，请更换')
+        error: getMessage('shortcuts_error_key_duplicate', '该触发词已存在，请更换。')
       });
     }
     const name = String(draft && draft.name ? draft.name : '')
@@ -6913,7 +6687,7 @@
       if (duplicateKey) {
         return {
           ok: false,
-          error: getMessage('shortcuts_error_key_duplicate', '该触发词已存在，请更换')
+          error: getMessage('shortcuts_error_key_duplicate', '该触发词已存在，请更换。')
         };
       }
       const next = currentId
@@ -6927,7 +6701,7 @@
       showToast(getMessage('toast_saved', '已保存'), false);
       return { ok: true };
     }).catch(() => {
-      const error = getMessage('toast_error', '操作失败，请重试');
+      const error = getMessage('toast_error', '操作失败，请重试。');
       showToast(error, true);
       return { ok: false, error };
     });
@@ -6948,7 +6722,7 @@
     })).then(() => {
       showToast(getMessage('toast_removed', '已移除'), false);
     }).catch(() => {
-      showToast(getMessage('toast_error', '操作失败，请重试'), true);
+      showToast(getMessage('toast_error', '操作失败，请重试。'), true);
     });
   }
 
@@ -6967,7 +6741,7 @@
     })).then(() => {
       showToast(getMessage('toast_cleared', '已清空'), false);
     }).catch(() => {
-      showToast(getMessage('toast_error', '操作失败，请重试'), true);
+      showToast(getMessage('toast_error', '操作失败，请重试。'), true);
     });
   }
 
@@ -7031,7 +6805,7 @@
           label: getMessage('blacklist_match_suffix', '整个网站'),
           tooltip: getMessage(
             'blacklist_match_suffix_tooltip',
-            '屏蔽这个网站的所有页面，也包括它的子网站\n────────\n例如，填 baidu.com 后，baidu.com/search 和 tieba.baidu.com 都不会出现'
+            '屏蔽这个网站的所有页面，也包括它的子网站\n────────\n例如，填 baidu.com 后，baidu.com/search 和 tieba.baidu.com 都不会出现。'
           )
         },
         {
@@ -7039,7 +6813,7 @@
           label: getMessage('blacklist_match_exact', '当前页面'),
           tooltip: getMessage(
             'blacklist_match_exact_tooltip',
-            '只屏蔽这一页\n────────\n例如，填 x.com/home 后，只有这一页不会出现，其他页面不受影响'
+            '只屏蔽这一页\n────────\n例如，填 x.com/home 后，只有这一页不会出现，其他页面不受影响。'
           )
         },
         {
@@ -7047,7 +6821,7 @@
           label: getMessage('blacklist_match_prefix', '当前站点路径'),
           tooltip: getMessage(
             'blacklist_match_prefix_tooltip',
-            '只屏蔽这个站点下这一路径的页面\n────────\n例如，填 baidu.com/search 后，baidu.com/search 和 baidu.com/search/1 不会出现，但 baidu.com/news 不受影响'
+            '只屏蔽这个站点下这一路径的页面\n────────\n例如，填 baidu.com/search 后，baidu.com/search 和 baidu.com/search/1 不会出现，但 baidu.com/news 不受影响。'
           )
         }
       ],
@@ -7097,7 +6871,7 @@
       renderFaviconRequestBlacklistList();
       showToast(getMessage('favicon_blacklist_removed_toast', '已移除排除规则'), false);
     }).catch(() => {
-      showToast(getMessage('toast_error', '操作失败，请重试'), true);
+      showToast(getMessage('toast_error', '操作失败，请重试。'), true);
     });
   }
 
@@ -7111,7 +6885,7 @@
       notifyNewtabSectionsRefresh('recent');
       showToast(getMessage('blacklist_removed_toast', '已从黑名单移除'), false);
     }).catch(() => {
-      showToast(getMessage('toast_error', '操作失败，请重试'), true);
+      showToast(getMessage('toast_error', '操作失败，请重试。'), true);
     });
   }
 
@@ -7120,7 +6894,7 @@
     if (!draft.item) {
       return Promise.resolve({
         ok: false,
-        error: draft.error || getMessage('toast_error', '操作失败，请重试')
+        error: draft.error || getMessage('toast_error', '操作失败，请重试。')
       });
     }
     const nextItems = upsertBlacklistItems(draft.item, itemKey);
@@ -7130,7 +6904,7 @@
     ).then(() => ({
       ok: true
     })).catch(() => {
-      const error = getMessage('toast_error', '操作失败，请重试');
+      const error = getMessage('toast_error', '操作失败，请重试。');
       showToast(error, true);
       return {
         ok: false,
@@ -7143,6 +6917,7 @@
     if (!faviconBlacklistList) {
       return;
     }
+    syncClearButtonAvailability(faviconBlacklistClearButton, faviconRequestBlacklistItems.length > 0);
     renderBlacklistListWithReact(
       faviconBlacklistListController,
       faviconRequestBlacklistItems,
@@ -7154,6 +6929,7 @@
     if (!blacklistList) {
       return;
     }
+    syncClearButtonAvailability(blacklistClearButton, searchBlacklistItems.length > 0);
     renderBlacklistListWithReact(
       searchBlacklistListController,
       searchBlacklistItems,
@@ -7235,7 +7011,7 @@
         onError() {
           customSiteSearchProviderIdsReady = false;
           renderAggregateSearchList();
-          showToast(getMessage('toast_error', '操作失败，请重试'), true);
+          showToast(getMessage('toast_error', '操作失败，请重试。'), true);
         },
         persist(_prepared, context) {
           const isCurrent = context && typeof context.isCurrent === 'function'
@@ -7393,20 +7169,20 @@
       const templateRaw = String(siteSearchTemplateInput ? siteSearchTemplateInput.value : '').trim();
       const aliases = normalizeAliases(siteSearchAliasInput ? siteSearchAliasInput.value : '');
       if (!key) {
-        setSiteSearchError(getMessage('shortcuts_error_key', '请填写触发词'));
+        setSiteSearchError(getMessage('shortcuts_error_key', '请填写触发词。'));
         return;
       }
       if (/\s/.test(key)) {
-        setSiteSearchError(getMessage('shortcuts_error_key_space', '触发词不能包含空格'));
+        setSiteSearchError(getMessage('shortcuts_error_key_space', '触发词不能包含空格。'));
         return;
       }
       if (findSiteSearchKeyConflict(key, editingSiteSearchKey || '')) {
-        setSiteSearchError(getMessage('shortcuts_error_key_duplicate', '该触发词已存在，请更换'));
+        setSiteSearchError(getMessage('shortcuts_error_key_duplicate', '该触发词已存在，请更换。'));
         return;
       }
       const template = normalizeSiteSearchTemplate(templateRaw);
       if (!template || !template.includes('{query}')) {
-        setSiteSearchError(getMessage('toast_error_template', '搜索模板必须包含 {query}'));
+        setSiteSearchError(getMessage('toast_error_template', '搜索模板必须包含 {query}。'));
         return;
       }
       const normalizedKey = key.toLowerCase();
@@ -7429,7 +7205,7 @@
         ...(builtinKey ? { builtinKey } : {})
       });
       if (!nextItem) {
-        setSiteSearchError(getMessage('toast_error', '操作失败，请重试'));
+        setSiteSearchError(getMessage('toast_error', '操作失败，请重试。'));
         return;
       }
       next.unshift(nextItem);
@@ -7451,8 +7227,8 @@
           showToast(getMessage('toast_saved', '已保存'), false);
         }, 220);
       }).catch(() => {
-        setSiteSearchError(getMessage('toast_error', '操作失败，请重试'));
-        showToast(getMessage('toast_error', '操作失败，请重试'), true);
+        setSiteSearchError(getMessage('toast_error', '操作失败，请重试。'));
+        showToast(getMessage('toast_error', '操作失败，请重试。'), true);
       });
     });
   }
@@ -7480,10 +7256,10 @@
             renderSiteSearchList();
             renderAggregateSearchList();
           }).catch(() => {
-            showToast(getMessage('toast_error', '操作失败，请重试'), true);
+            showToast(getMessage('toast_error', '操作失败，请重试。'), true);
           });
         }).catch(() => {
-          showToast(getMessage('toast_error', '操作失败，请重试'), true);
+          showToast(getMessage('toast_error', '操作失败，请重试。'), true);
         });
       }
     );
@@ -7510,7 +7286,7 @@
           renderAggregateSearchList();
           showToast(getMessage('toast_cleared', '已清空'), false);
         }).catch(() => {
-          showToast(getMessage('toast_error', '操作失败，请重试'), true);
+          showToast(getMessage('toast_error', '操作失败，请重试。'), true);
         });
       }
     );
@@ -7538,7 +7314,7 @@
           notifyNewtabSectionsRefresh('recent');
           showToast(getMessage('toast_cleared', '已清空'), false);
         }).catch(() => {
-          showToast(getMessage('toast_error', '操作失败，请重试'), true);
+          showToast(getMessage('toast_error', '操作失败，请重试。'), true);
         });
       }
     );
@@ -7554,7 +7330,7 @@
           renderFaviconRequestBlacklistList();
           resetFaviconBlacklistForm();
           showToast(getMessage('toast_cleared', '已清空'), false);
-        }).catch(() => showToast(getMessage('toast_error', '操作失败，请重试'), true));
+        }).catch(() => showToast(getMessage('toast_error', '操作失败，请重试。'), true));
       }
     );
   }

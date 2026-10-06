@@ -23,7 +23,7 @@ const model: AggregateSearchListRenderModel = {
     keyLabel: '触发词',
     keyPlaceholder: '例如 tech',
     keyRequiredError: '请输入触发词',
-    keySpaceError: '触发词不能包含空格',
+    keySpaceError: '触发词不能包含空格。',
     maxSourcesError: '最多 10 个',
     minSourcesError: '至少 2 个',
     nameLabel: '名称',

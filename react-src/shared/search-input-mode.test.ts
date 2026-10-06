@@ -1176,7 +1176,7 @@ describe('Shared search scope menu', () => {
 
   it('switches localized scope placeholders with the panel state', () => {
     const parts = createModeParts();
-    parts.input.placeholder = 'Search or type a URL...';
+    parts.input.placeholder = 'Search or type a URL…';
     let language = 'zh-CN';
     const controller = window.LumnoSearchInputMode.createInputModeController(
       parts,
@@ -1184,13 +1184,13 @@ describe('Shared search scope menu', () => {
         formatMessage: (key: string, fallback: string) => {
           if (key === 'search_scope_panel_placeholder') {
             return language === 'zh-CN'
-              ? '搜索特定站点内容...'
-              : 'Search specific site content...';
+              ? '搜索特定站点内容…'
+              : 'Search specific site content…';
           }
           if (key === 'search_scope_active_placeholder') {
             return language === 'zh-CN'
-              ? '搜索特定内容，复按 Tab 打开范围面板...'
-              : 'Search within this scope; press Tab again to open the scope panel...';
+              ? '搜索特定内容，复按 Tab 打开范围面板…'
+              : 'Search within this scope; press Tab again to open the scope panel…';
           }
           return fallback;
         },
@@ -1206,26 +1206,26 @@ describe('Shared search scope menu', () => {
 
     controller.setPrefixText('Google', {}, { modeId: 'provider:google' });
     expect(parts.input.placeholder).toBe(
-      '搜索特定内容，复按 Tab 打开范围面板...'
+      '搜索特定内容，复按 Tab 打开范围面板…'
     );
 
     expect(controller.openModeMenu('none')).toBe(true);
-    expect(parts.input.placeholder).toBe('搜索特定站点内容...');
+    expect(parts.input.placeholder).toBe('搜索特定站点内容…');
 
     controller.setPrefixText('Bing', {}, { modeId: 'provider:bing' });
-    expect(parts.input.placeholder).toBe('搜索特定站点内容...');
+    expect(parts.input.placeholder).toBe('搜索特定站点内容…');
 
     language = 'en';
     controller.refreshModeMenuLanguage();
-    expect(parts.input.placeholder).toBe('Search specific site content...');
+    expect(parts.input.placeholder).toBe('Search specific site content…');
 
     controller.closeModeMenu(false);
     expect(parts.input.placeholder).toBe(
-      'Search within this scope; press Tab again to open the scope panel...'
+      'Search within this scope; press Tab again to open the scope panel…'
     );
 
     controller.clearProviderPrefix();
-    expect(parts.input.placeholder).toBe('Search or type a URL...');
+    expect(parts.input.placeholder).toBe('Search or type a URL…');
     controller.destroy();
   });
 
@@ -2500,7 +2500,7 @@ describe('Shared search scope menu', () => {
       'var(--x-ov-mode-menu-bg, #FFFFFF)'
     );
     expect(overlayController.menuElement.style.borderRadius).toBe(
-      'var(--x-ov-panel-radius, 28px)'
+      'var(--x-ov-panel-radius, 24px)'
     );
     expect(overlayController.menuElement.style.top).toBe('calc(100% + 14px)');
     expect(overlayController.menuElement.style.boxShadow).toBe(

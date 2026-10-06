@@ -53,10 +53,10 @@ assert.ok(
 );
 
 const expectedMessages = {
-  en: 'Press Backspace again to remove the scope',
-  ja: 'もう一度 Backspace で検索範囲を解除',
-  zh_CN: '再按一次退格键，移除搜索范围',
-  zh_TW: '再按一次退格鍵，移除搜尋範圍'
+  en: 'Press Backspace again to remove the scope.',
+  ja: 'もう一度 Backspace を押すと検索範囲を解除します。',
+  zh_CN: '再按一次退格键，移除搜索范围。',
+  zh_TW: '再按一次退格鍵，移除搜尋範圍。'
 };
 
 for (const [locale, expectedMessage] of Object.entries(expectedMessages)) {
@@ -74,7 +74,7 @@ for (const [surface, source] of [
   ['overlay', overlaySource]
 ]) {
   assert.ok(
-    source.includes("'Press Backspace again to remove the scope'") &&
+    source.includes("'Press Backspace again to remove the scope.'") &&
       !source.includes("'Press Backspace again to remove the current search scope'"),
     `${surface} should use the concise English fallback`
   );

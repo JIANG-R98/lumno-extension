@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { readStylesheet } = require('./helpers/css-tokens');
 const fs = require('fs');
 const path = require('path');
 const { readPageSource } = require('./helpers/page-source');
@@ -7,10 +8,10 @@ const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 const repoRoot = path.resolve(__dirname, '..');
 const newtabHtml = readPageSource('newtab.html');
 const newtabJs = readNewtabRuntimeSource();
-const overlayCss = fs.readFileSync(path.join(repoRoot, 'src/overlay/suggestions-view.css'), 'utf8');
+const overlayCss = readStylesheet('src/overlay/suggestions-view.css');
 const overlayJs = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
 const suggestionsReact = fs.readFileSync(
-  path.join(repoRoot, 'react-src/newtab/suggestions.tsx'),
+  path.join(repoRoot, 'react-src/search/suggestions.tsx'),
   'utf8'
 );
 
@@ -54,7 +55,7 @@ assert.doesNotMatch(
 
 assert.match(
   newtabSuggestionBlock,
-  /border:\s*1px solid transparent;[\s\S]*?transition:\s*background-color 0\.2s ease;/,
+  /border:\s*1px solid transparent;[\s\S]*?transition:\s*background-color (?:0\.2s|200ms) ease;/,
   'newtab suggestion rows should reserve transparent border space and animate only the background'
 );
 
@@ -72,7 +73,7 @@ assert.doesNotMatch(
 
 assert.match(
   overlaySuggestionBlock,
-  /transition:\s*background-color 0\.2s ease;/,
+  /transition:\s*background-color (?:0\.2s|200ms) ease;/,
   'overlay suggestion rows should animate only the background highlight'
 );
 

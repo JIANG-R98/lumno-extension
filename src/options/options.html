@@ -10,12 +10,16 @@
     <script src="theme-preload.js"></script>
     <link rel="stylesheet" href="../../assets/fonts/open-sans/open-sans.css" />
     <link rel="stylesheet" href="../../assets/remixicon/fonts/remixicon.css" />
+    <link rel="stylesheet" href="../shared/tokens.css" />
     <link rel="stylesheet" href="../shared/tooltip.css" />
     <link rel="stylesheet" href="../shared/menu-surface.css" />
     <link rel="stylesheet" href="../shared/custom-select.css" />
     <link rel="stylesheet" href="../shared/info-button.css" />
     <link rel="stylesheet" href="../shared/checkbox.css" />
     <link rel="stylesheet" href="../shared/range-slider.css" />
+    <link rel="stylesheet" href="../shared/switch.css" />
+    <link rel="stylesheet" href="../shared/choice-card.css" />
+    <link rel="stylesheet" href="../shared/toast.css" />
     <link rel="stylesheet" href="webdav-options.css" />
     <!-- Thanks to the Remix Icon project; this extension uses its icon set: https://remixicon.com/ -->
     <link rel="stylesheet" href="options.css" />
@@ -163,7 +167,7 @@
                 <span data-i18n="settings_search_result_priority_title">搜索结果首位优先级</span>
               </p>
             </div>
-            <div id="_x_extension_search_result_priority_tabs_wrap_2026_unique_" class="_x_extension_theme_picker_2024_unique_ _x_extension_inline_tabs_2024_unique_" role="tablist" aria-label="search result priority" data-i18n-aria-label="settings_search_result_priority_title">
+            <div id="_x_extension_search_result_priority_tabs_wrap_2026_unique_" class="_x_extension_theme_picker_2024_unique_ _x_extension_inline_tabs_2024_unique_" role="group" aria-label="search result priority" data-i18n-aria-label="settings_search_result_priority_title">
               <span class="_x_extension_theme_indicator_2024_unique_"></span>
               <button class="_x_extension_theme_option_2024_unique_" data-search-result-priority="autocomplete" data-active="true" aria-pressed="true" type="button">
                 <span data-i18n="search_result_priority_autocomplete">补全优先</span>
@@ -247,11 +251,11 @@
                 <span
                   class="_x_extension_shortcut_badge_2024_unique_ _x_extension_shortcuts_dia_badge_2026_unique_ _x_extension_tooltip_host_2024_unique_"
                   data-i18n-tooltip="settings_shortcuts_dia_tooltip"
-                  data-tooltip="在 Dia 环境下，受浏览器限制，Lumno 的新标签页功能暂不可用，但聚焦搜索功能仍可正常运行。&#10;&#10;若快捷键在 Dia 中不可用，请点击上方按钮进入浏览器的快捷键设置页面，将「Open command bar」从 In Dia 改成 Global"
-                  aria-label="在 Dia 环境下，受浏览器限制，Lumno 的新标签页功能暂不可用，但聚焦搜索功能仍可正常运行。若快捷键在 Dia 中不可用，请点击上方按钮进入浏览器的快捷键设置页面，将「Open command bar」从 In Dia 改成 Global"
+                  data-tooltip="在 Dia 环境下，受浏览器限制，Lumno 的新标签页功能暂不可用，但聚焦搜索功能仍可正常运行。&#10;&#10;若快捷键在 Dia 中不可用，请点击下方右侧按钮进入浏览器的快捷键设置页面，将「Open command bar」从 In Dia 改成 Global。"
+                  aria-label="在 Dia 环境下，受浏览器限制，Lumno 的新标签页功能暂不可用，但聚焦搜索功能仍可正常运行。若快捷键在 Dia 中不可用，请点击下方右侧按钮进入浏览器的快捷键设置页面，将「Open command bar」从 In Dia 改成 Global。"
                   role="img">
                   <span data-i18n="settings_shortcuts_dia_tag">在 Dia 中使用</span>
-                  <i class="ri-icon ri-size-12 ri-question-line" aria-hidden="true"></i>
+                  <i class="ri-icon ri-size-12 ri-information-line" aria-hidden="true"></i>
                 </span>
               </p>
             </div>
@@ -266,7 +270,7 @@
                 <span id="_x_extension_restricted_action_info_2026_unique_"></span>
               </p>
             </div>
-            <div id="_x_extension_restricted_action_tabs_wrap_2024_unique_" class="_x_extension_theme_picker_2024_unique_ _x_extension_inline_tabs_2024_unique_" role="tablist" aria-label="restricted action" data-i18n-aria-label="settings_restricted_title">
+            <div id="_x_extension_restricted_action_tabs_wrap_2024_unique_" class="_x_extension_theme_picker_2024_unique_ _x_extension_inline_tabs_2024_unique_" role="group" aria-label="restricted action" data-i18n-aria-label="settings_restricted_title">
               <span class="_x_extension_theme_indicator_2024_unique_"></span>
               <button class="_x_extension_theme_option_2024_unique_" data-restricted-action="default" data-active="true" aria-pressed="true" type="button">
                 <i class="ri-icon ri-size-14 ri-file-add-line" aria-hidden="true"></i>
@@ -306,21 +310,21 @@
                 <span id="lumno-browser-sync-title" data-i18n="settings_sync_title">Chrome 内置同步</span>
                 <span id="_x_extension_sync_status_2024_unique_" class="_x_extension_sync_status_2024_unique_ _x_extension_tooltip_host_2024_unique_" data-tooltip="同步信息说明" data-i18n-tooltip="sync_status_hint" aria-label="同步信息说明" role="img">
                   <span id="_x_extension_sync_status_text_2024_unique_" data-i18n="sync_status_ready">自动同步已开启</span>
-                  <i class="ri-icon ri-size-12 ri-question-line" aria-hidden="true"></i>
+                  <i class="ri-icon ri-size-12 ri-information-line" aria-hidden="true"></i>
                 </span>
               </div>
             </div>
             <div class="_x_extension_sync_actions_2024_unique_">
               <div class="_x_extension_sync_buttons_2024_unique_">
-                <button id="_x_extension_sync_export_2024_unique_" class="_x_extension_sync_button_2024_unique_ _x_extension_shortcut_submit_2024_unique_ _x_extension_shortcut_secondary_2024_unique_ _x_extension_sync_icon_faded_2024_unique_" type="button">
+                <button id="_x_extension_sync_export_2024_unique_" class="_x_extension_sync_button_2024_unique_ _x_extension_shortcut_submit_2024_unique_ _x_extension_shortcut_secondary_2024_unique_ _x_extension_sync_icon_faded_2024_unique_ _x_extension_shortcut_compact_2026_unique_" type="button">
                   <i class="ri-icon ri-size-16 ri-upload-line" aria-hidden="true"></i>
                   <span data-i18n="sync_action_export">导出配置</span>
                 </button>
-                <button id="_x_extension_sync_import_2024_unique_" class="_x_extension_sync_button_2024_unique_ _x_extension_shortcut_submit_2024_unique_ _x_extension_shortcut_secondary_2024_unique_ _x_extension_sync_icon_faded_2024_unique_" type="button">
+                <button id="_x_extension_sync_import_2024_unique_" class="_x_extension_sync_button_2024_unique_ _x_extension_shortcut_submit_2024_unique_ _x_extension_shortcut_secondary_2024_unique_ _x_extension_sync_icon_faded_2024_unique_ _x_extension_shortcut_compact_2026_unique_" type="button">
                   <i class="ri-icon ri-size-16 ri-download-line" aria-hidden="true"></i>
                   <span data-i18n="sync_action_import">导入配置</span>
                 </button>
-                <button id="_x_extension_sync_now_2024_unique_" class="_x_extension_shortcut_submit_2024_unique_ _x_extension_shortcut_secondary_2024_unique_ _x_extension_shortcut_save_2024_unique_ _x_extension_sync_button_2024_unique_" type="button" data-tooltip="">
+                <button id="_x_extension_sync_now_2024_unique_" class="_x_extension_shortcut_submit_2024_unique_ _x_extension_shortcut_secondary_2024_unique_ _x_extension_shortcut_save_2024_unique_ _x_extension_sync_button_2024_unique_ _x_extension_shortcut_compact_2026_unique_" type="button" data-tooltip="">
                   <i class="ri-icon ri-size-16 _x_extension_sync_now_icon_2024_unique_ ri-refresh-line" aria-hidden="true"></i>
                   <span data-i18n="sync_action_now">手动同步</span>
                 </button>
@@ -413,7 +417,7 @@
               <p class="_x_extension_setting_title_2024_unique_" data-i18n="settings_overlay_size_title">尺寸</p>
             </div>
             <div class="_x_extension_recent_select_group_2024_unique_">
-              <div id="_x_extension_overlay_size_tabs_wrap_2026_unique_" class="_x_extension_theme_picker_2024_unique_ _x_extension_inline_tabs_2024_unique_" role="tablist" aria-label="overlay size" data-i18n-aria-label="settings_overlay_size_title">
+              <div id="_x_extension_overlay_size_tabs_wrap_2026_unique_" class="_x_extension_theme_picker_2024_unique_ _x_extension_inline_tabs_2024_unique_" role="group" aria-label="overlay size" data-i18n-aria-label="settings_overlay_size_title">
                 <span class="_x_extension_theme_indicator_2024_unique_"></span>
                 <button class="_x_extension_theme_option_2024_unique_" data-overlay-size="compact" data-active="false" aria-pressed="false" type="button">
                   <span data-i18n="overlay_size_compact">小</span>
@@ -596,7 +600,7 @@
             </div>
             <div class="_x_extension_recent_select_group_2024_unique_">
               <div id="_x_extension_recent_count_control_2026_unique_"></div>
-              <div id="_x_extension_recent_mode_tabs_wrap_2024_unique_" class="_x_extension_theme_picker_2024_unique_ _x_extension_inline_tabs_2024_unique_" role="tablist" aria-label="recent mode" data-i18n-aria-label="settings_recent_sites_title">
+              <div id="_x_extension_recent_mode_tabs_wrap_2024_unique_" class="_x_extension_theme_picker_2024_unique_ _x_extension_inline_tabs_2024_unique_" role="group" aria-label="recent mode" data-i18n-aria-label="settings_recent_sites_title">
                 <span class="_x_extension_theme_indicator_2024_unique_"></span>
                 <button class="_x_extension_theme_option_2024_unique_" data-recent-mode="latest" data-active="false" aria-pressed="false" type="button">
                   <span data-i18n="recent_mode_latest">最近访问</span>
@@ -616,7 +620,7 @@
               <p class="_x_extension_setting_title_2024_unique_" data-i18n="settings_newtab_width_title">新标签页内容宽度</p>
             </div>
             <div class="_x_extension_recent_select_group_2024_unique_">
-              <div id="_x_extension_newtab_width_tabs_wrap_2026_unique_" class="_x_extension_theme_picker_2024_unique_ _x_extension_inline_tabs_2024_unique_" role="tablist" aria-label="newtab width" data-i18n-aria-label="settings_newtab_width_title">
+              <div id="_x_extension_newtab_width_tabs_wrap_2026_unique_" class="_x_extension_theme_picker_2024_unique_ _x_extension_inline_tabs_2024_unique_" role="group" aria-label="newtab width" data-i18n-aria-label="settings_newtab_width_title">
                 <span class="_x_extension_theme_indicator_2024_unique_"></span>
                 <button class="_x_extension_theme_option_2024_unique_" data-newtab-width="standard" data-active="false" aria-pressed="false" type="button">
                   <span data-i18n="newtab_width_standard">标准</span>
@@ -693,7 +697,7 @@
                 <div class="_x_extension_shortcut_field_2024_unique_">
                   <div class="_x_extension_shortcut_label_2024_unique_" data-i18n="shortcuts_label_display_group">显示位置</div>
                   <div class="_x_extension_theme_picker_2024_unique_ _x_extension_inline_tabs_2024_unique_ _x_extension_site_search_category_tabs_2026_unique_" role="group" aria-label="显示位置" data-i18n-aria-label="shortcuts_label_display_group">
-                    <span class="_x_extension_theme_indicator_2024_unique_" data-category="site" aria-hidden="true"></span>
+                    <span class="_x_extension_theme_indicator_2024_unique_" data-ready="false" aria-hidden="true"></span>
                     <button class="_x_extension_theme_option_2024_unique_" data-site-search-category="site" data-active="true" aria-pressed="true" type="button">
                       <span data-i18n="search_scope_group_sites">站内搜索</span>
                     </button>
@@ -913,7 +917,7 @@
         </div>
       </div>
     </div>
-    <div id="_x_extension_toast_2024_unique_" class="_x_extension_toast_2024_unique_" role="status" aria-live="polite" aria-atomic="true"></div>
+    <div id="_x_extension_toast_2024_unique_" class="_x_extension_toast_2024_unique_ x-lumno-toast" role="status" aria-live="polite" aria-atomic="true"></div>
     <!--
     <div id="_x_extension_confirm_mask_2024_unique_" class="_x_extension_confirm_mask_2024_unique_">
       <div class="_x_extension_confirm_dialog_2024_unique_">

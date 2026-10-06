@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   createReactRootController,
   type ReactRootController
@@ -9,6 +9,7 @@ import {
 } from '../shared/use-exclusive-async-action';
 import { InlinePopconfirm } from './inline-popconfirm';
 import { InfoButton } from './info-button';
+import { useSegmentedIndicator } from '../shared/segmented-indicator';
 
 export type SiteSearchProviderCategory = 'site' | 'searchEngine';
 
@@ -79,6 +80,11 @@ export function SiteSearchProviderCategoryControl({
   copy: SiteSearchProviderCategoryCopyModel;
   onChange(category: SiteSearchProviderCategory): void;
 }) {
+  const indicatorRef = useRef<HTMLSpanElement>(null);
+  useSegmentedIndicator(
+    indicatorRef,
+    `${category}\u0002${copy.siteCategoryLabel}\u0002${copy.searchEngineCategoryLabel}`
+  );
   return (
     <div
       aria-label={copy.categoryLabel}
@@ -88,7 +94,8 @@ export function SiteSearchProviderCategoryControl({
       <span
         aria-hidden="true"
         className="_x_extension_theme_indicator_2024_unique_"
-        data-category={category}
+        data-ready="false"
+        ref={indicatorRef}
       />
       <button
         aria-pressed={category === 'site'}
@@ -356,7 +363,7 @@ function SiteSearchList({
                       }}
                       type="button"
                     >
-                      <i aria-hidden="true" className="ri-icon ri-size-12 ri-question-line" />
+                      <i aria-hidden="true" className="ri-icon ri-size-12 ri-information-line" />
                       {item.duplicateLabel}
                     </button>
                   ) : null}

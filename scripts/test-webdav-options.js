@@ -14,7 +14,7 @@ async function run() {
   let renderModel;
   let actions;
   let nextError;
-  let model = { connections: [], clientRevision: 'dav-lock-4', syncRevision: 'dav-multi-1' };
+  let model = { connections: [], clientRevision: 'dav-lock-5', syncRevision: 'dav-multi-1' };
   const chrome = { runtime: { lastError: null, sendMessage(request, callback) {
     requests.push(request);
     if (request.operation === 'status') return callback({ ok: true, ...model });
@@ -61,11 +61,11 @@ async function run() {
   assert.strictEqual(renderModel.connections[1].errorText, '', 'the choice panel alone explains a missing remote copy');
   model.connections = [{ ...a, id: 'blocked', error: 'interrupted-apply', enabled: false, hasMigrationBackup: true,
     config: { ...a.config, endpoint: 'https://broken.test/' } }, { ...a, id: 'waiting', enabled: true, state: 'error', error: 'interrupted-apply',
-    diagnostic: { revision: 'dav-lock-4', phase: 'move-race', statuses: [201, 201] } }];
+    diagnostic: { revision: 'dav-lock-5', phase: 'move-race', statuses: [201, 201] } }];
   await controller.refresh();
   assert.strictEqual(renderModel.connections[0].needsRecovery, true);
   assert(renderModel.connections[1].errorText.includes('broken.test'), 'other blocked connections point to the one that needs restoring');
-  assert.strictEqual(renderModel.connections[1].diagnosticText, 'dav-lock-4 / move-race / 201,201');
+  assert.strictEqual(renderModel.connections[1].diagnosticText, 'dav-lock-5 / move-race / 201,201');
   model.connections = [a, { ...a, id: 'b', state: 'conflict', conflicts: ['shortcuts', 'wallpapers'], error: 'remote-missing' }];
   await controller.refresh();
   assert.strictEqual(window.document.querySelector('#lumno-webdav-setup-hint').hidden, true);
@@ -80,8 +80,8 @@ async function run() {
   assert(requests.some((request) => request.operation === 'remove' && request.id === 'b'));
   await actions.onAction('add', undefined, { config: { endpoint: 'https://new.test/' } });
   assert(requests.some((request) => request.operation === 'add' && !request.id));
-  nextError = { error: 'conditional-write-unsupported', diagnostic: { revision: 'dav-lock-4', phase: 'move-race', statuses: [201, 201], password: 'never-display' } };
-  await assert.rejects(actions.onAction('test', 'a'), (error) => error.diagnostic === 'dav-lock-4 / move-race / 201,201' &&
+  nextError = { error: 'conditional-write-unsupported', diagnostic: { revision: 'dav-lock-5', phase: 'move-race', statuses: [201, 201], password: 'never-display' } };
+  await assert.rejects(actions.onAction('test', 'a'), (error) => error.diagnostic === 'dav-lock-5 / move-race / 201,201' &&
     !error.message.includes('move-race') && !error.message.includes('never-display'));
   nextError = { error: 'duplicate-connection' };
   await assert.rejects(actions.onAction('add'), /same server, folder and username/);

@@ -646,7 +646,7 @@ function wait(ms) {
     'a stale failed action response must not hide a newer selection candidate');
   assert.strictEqual(selectionToast.dataset.show, 'false',
     'a stale failed action response must not replace a newer candidate with an error Toast');
-  assert.notStrictEqual(selectionToast.textContent, '发送失败，请重试',
+  assert.notStrictEqual(selectionToast.textContent, '发送失败，请重试。',
     'a stale failed action response must not overwrite the shared Toast copy');
   selectionShadow.querySelector('.lumno-selection-main').click();
   assert.strictEqual(
@@ -660,7 +660,7 @@ function wait(ms) {
     'an immediate action failure should keep the selection toolbar closed');
   assert.strictEqual(selectionToast.dataset.show, 'true',
     'an immediate action failure should show the shared Toast error state');
-  assert.strictEqual(selectionToast.textContent, '发送失败，请重试',
+  assert.strictEqual(selectionToast.textContent, '发送失败，请重试。',
     'an immediate action failure should localize its shared Toast copy');
   assert.match(selectionToast.style.background, /153, 27, 27/,
     'the shared Toast should use its error treatment for failed actions');
@@ -689,7 +689,7 @@ function wait(ms) {
     'an older action timer must not reopen the toolbar owned by the latest action');
   assert.strictEqual(selectionToast.dataset.show, 'true',
     'the latest overlapping action failure should retain its dedicated Toast interval');
-  assert.strictEqual(selectionToast.textContent, '发送失败，请重试',
+  assert.strictEqual(selectionToast.textContent, '发送失败，请重试。',
     'the latest overlapping action failure should own the shared Toast copy');
   olderActionResponse({ ok: false });
   selectableLink.focus();

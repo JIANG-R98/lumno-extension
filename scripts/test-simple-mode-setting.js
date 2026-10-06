@@ -11,7 +11,7 @@ const newtabSource = readNewtabRuntimeSource();
 const overlayRuntimeSource = fs.readFileSync('src/overlay/runtime.js', 'utf8');
 const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
 const overlayCss = fs.readFileSync('src/overlay/suggestions-view.css', 'utf8');
-const suggestionsSource = fs.readFileSync('react-src/newtab/suggestions.tsx', 'utf8');
+const suggestionsSource = fs.readFileSync('react-src/search/suggestions.tsx', 'utf8');
 
 const appearanceStart = optionsHtml.indexOf('data-content="appearance"');
 const labsStart = optionsHtml.indexOf('data-content="labs"', appearanceStart);

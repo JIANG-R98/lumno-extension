@@ -972,6 +972,44 @@
       );
     }
 
+    function getShortcutRecordForSite(site) {
+      return NEWTAB_SHORTCUTS_STORE.createShortcutRecord({
+        title: site && site.title,
+        url: site && site.url
+      }, getShortcutStoreOptions());
+    }
+
+    function hasShortcutForSite(site) {
+      const record = getShortcutRecordForSite(site);
+      return Boolean(record && pageState.newtabShortcuts.some((item) => item && item.url === record.url));
+    }
+
+    function addSiteToShortcuts(site) {
+      const nextShortcut = getShortcutRecordForSite(site);
+      if (!nextShortcut) {
+        showToast(t('newtab_shortcuts_invalid_url', 'Enter a valid http, https, or browser internal URL.'), true);
+        return Promise.resolve(false);
+      }
+      if (pageState.newtabShortcuts.some((item) => item && item.url === nextShortcut.url)) {
+        showToast(t('newtab_shortcuts_already_added', 'Already in shortcuts'));
+        return Promise.resolve(false);
+      }
+      if (pageState.newtabShortcuts.length >= MAX_NEWTAB_SHORTCUTS) {
+        showToast(formatMessage(
+          'newtab_shortcuts_limit_reached',
+          'You can add up to {count} shortcuts.',
+          { count: MAX_NEWTAB_SHORTCUTS }
+        ), true);
+        return Promise.resolve(false);
+      }
+      return persistShortcuts(
+        pageState.newtabShortcuts.concat(nextShortcut),
+        t('newtab_shortcuts_added', 'Shortcut added'),
+        undefined,
+        { syncOverflowShortcutId: nextShortcut.id }
+      );
+    }
+
     function saveEditedShortcutFromDialog(title, url, shortcutId, iconState) {
       const currentShortcut = getShortcutById(shortcutId);
       if (!currentShortcut) {
@@ -1227,6 +1265,8 @@
       loadVisibleShortcuts,
       persistShortcuts,
       removeShortcutById,
+      hasShortcutForSite,
+      addSiteToShortcuts,
       hideShortcutAddFromContextMenu,
       createShortcutsSection,
       createShortcutDialogComponent

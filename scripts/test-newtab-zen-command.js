@@ -7,7 +7,7 @@ const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 const repoRoot = path.resolve(__dirname, '..');
 const newtabJs = readNewtabRuntimeSource();
 const newtabHtml = readPageSource('newtab.html');
-const suggestionsViewJs = fs.readFileSync(path.join(repoRoot, 'react-src/newtab/suggestions.tsx'), 'utf8');
+const suggestionsViewJs = fs.readFileSync(path.join(repoRoot, 'react-src/search/suggestions.tsx'), 'utf8');
 
 function assertMatches(source, pattern, message) {
   assert.ok(pattern.test(source), message);

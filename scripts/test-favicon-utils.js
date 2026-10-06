@@ -680,6 +680,12 @@ assert.strictEqual(utils.parseCssThemeColor('transparent'), null);
 assert.strictEqual(utils.isNeutralThemeColor([255, 255, 255]), true);
 assert.strictEqual(utils.isNeutralThemeColor([31, 35, 39]), true);
 assert.strictEqual(utils.isNeutralThemeColor([234, 100, 217]), false);
+assert.strictEqual(utils.isPlaceholderFaviconColor([95, 99, 104]), true);
+assert.strictEqual(utils.isPlaceholderFaviconColor([100, 103, 110]), true);
+assert.strictEqual(utils.isPlaceholderFaviconColor([154, 160, 166]), true);
+assert.strictEqual(utils.isPlaceholderFaviconColor([36, 41, 46]), false);
+assert.strictEqual(utils.isPlaceholderFaviconColor([255, 36, 66]), false);
+assert.strictEqual(utils.isPlaceholderFaviconColor(null), false);
 
 const themeColorCandidates = utils.parseHtmlThemeColorCandidates(`
   <meta name="theme-color" content="#112233" media="(prefers-color-scheme: dark)">

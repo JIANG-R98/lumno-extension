@@ -4,7 +4,12 @@
   if (typeof module === 'object' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function(root) {
   'use strict';
-  const REVISION = 'dav-lock-4';
+  const REVISION = 'dav-lock-5';
+  // Providers refuse an occupied MOVE destination differently: RFC 4918 412,
+  // Nutstore 409, Go x/net/webdav 423, nginx 405, and Apache, WsgiDAV and
+  // Nextcloud 500 when the contenders really overlap. None is trusted alone;
+  // every refusal is confirmed by reading the owner files afterwards.
+  const MOVE_REFUSALS = [405, 409, 412, 423, 500];
   const DIAGNOSTIC_PHASES = ['state-etag', 'state-lock-create', 'directory-race', 'directory-delete', 'directory-recreate',
     'move-race', 'move-owner', 'move-delete', 'move-recreate', 'move-claim'];
   function error(code, status) { return Object.assign(new Error(code), { code, status }); }
@@ -68,12 +73,19 @@
           chunks.forEach((chunk) => { bytes.set(chunk, offset); offset += chunk.byteLength; });
         } else bytes = new Uint8Array(await response.arrayBuffer());
         if (bytes.byteLength > limit) throw error('response-too-large');
-        if (![200, 201, 204, 304, 404, 405, 412].includes(response.status) && !(method === 'MOVE' && response.status === 409)) throw error(`http-${response.status}`, response.status);
+        if (![200, 201, 204, 304, 404, 405, 412].includes(response.status) && !(method === 'MOVE' && MOVE_REFUSALS.includes(response.status))) throw error(`http-${response.status}`, response.status);
         return { status: response.status, etag: response.headers.get('ETag'), bytes };
       } catch (cause) {
         if (cause.code) throw cause;
         throw error(abort.signal.aborted ? 'timeout' : 'network-error');
       } finally { clearTimeout(timer); }
+    }
+    async function ownerMatches(url, owner) {
+      const result = await requestUrl(url + 'owner.txt', 'GET', undefined, {}, 65536);
+      return result.status === 200 && new TextDecoder().decode(result.bytes) === owner;
+    }
+    async function absent(url) {
+      return (await requestUrl(url + 'owner.txt', 'GET', undefined, {}, 65536)).status === 404;
     }
     async function ensureDirectories() {
       for (let index = 1; index <= parts.length; index += 1) {
@@ -86,18 +98,16 @@
       }
     }
     async function readState(etag) {
-      const result = await request('state.json', 'GET', undefined, etag && concurrency === 'conditional' ? { 'If-None-Match': etag } : {});
+      const result = await request('state.json', 'GET');
       if (result.status === 404) return null;
-      if (result.status === 304) return { unchanged: true };
       if (result.status !== 200) throw error('invalid-state');
-      let revision = result.etag;
-      if (concurrency === 'collection-lock') {
-        const digest = new Uint8Array(await root.crypto.subtle.digest('SHA-256', result.bytes));
-        // This token is a local revision, never an HTTP validator. Weak or
-        // absent server ETags cannot hide a changed state under the directory lock.
-        revision = Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('');
-        if (etag === revision) return { unchanged: true };
-      } else if (!revision || !/^"[^"\r\n]+"$/.test(revision)) throw unsupported('state-etag', [result.status]);
+      if (concurrency === 'conditional' && !/^"[^"\r\n]+"$/.test(result.etag || '')) throw unsupported('state-etag', [result.status]);
+      // The revision is a local content digest, never an HTTP validator. Weak
+      // or absent ETags, and strong ones derived from size plus a one-second
+      // mtime (sabre/dav's filesystem backend), cannot hide a changed state.
+      const digest = new Uint8Array(await root.crypto.subtle.digest('SHA-256', result.bytes));
+      const revision = Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('');
+      if (etag === revision) return { unchanged: true };
       let state;
       try { state = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(result.bytes)); }
       catch (_cause) { throw error('invalid-state'); }
@@ -138,8 +148,13 @@
           if (!cause.status || cause.status >= 500) { cleanup = false; throw error('lock-write-uncertain'); }
           throw cause;
         }
-        if ([409, 412].includes(claimed.status)) throw error('remote-locked');
         cleanup = false;
+        if (MOVE_REFUSALS.includes(claimed.status)) {
+          // A candidate still holding its owner proves this MOVE took nothing.
+          if (!await ownerMatches(candidate, owner)) throw unsupported('move-claim', [claimed.status]);
+          cleanup = true;
+          throw error('remote-locked');
+        }
         if (claimed.status !== 201) throw unsupported('move-claim', [claimed.status]);
         const target = await requestUrl(lockUrl + 'owner.txt', 'GET', undefined, {}, 65536);
         const source = await requestUrl(candidate + 'owner.txt', 'GET', undefined, {}, 65536);
@@ -217,11 +232,6 @@
       const sources = [`${prefix}probe-${id}-a/`, `${prefix}probe-${id}-b/`];
       const target = `${prefix}probe-${id}-target/`;
       const owners = [root.crypto.randomUUID(), root.crypto.randomUUID()];
-      const ownerMatches = async (url, owner) => {
-        const result = await requestUrl(url + 'owner.txt', 'GET', undefined, {}, 65536);
-        return result.status === 200 && new TextDecoder().decode(result.bytes) === owner;
-      };
-      const absent = async (url) => (await requestUrl(url + 'owner.txt', 'GET', undefined, {}, 65536)).status === 404;
       const move = (source) => requestUrl(source, 'MOVE', undefined, { Destination: target, Overwrite: 'F' }, 65536);
       try {
         for (let index = 0; index < sources.length; index += 1) {
@@ -234,16 +244,23 @@
         const statuses = attempts.map((attempt) => attempt.status === 'fulfilled' ? attempt.value.status : attempt.reason.status || 0);
         // Only an explicitly unsupported method can select the MKCOL fallback.
         if (statuses.every((status) => [405, 501].includes(status))) return false;
-        const winner = statuses.indexOf(201);
+        let winner = statuses.indexOf(201);
+        if (winner < 0) {
+          // Nextcloud's file locking can refuse both overlapping MOVEs. That is
+          // still exclusive when neither moved; claim the target sequentially.
+          if (!statuses.every((status) => MOVE_REFUSALS.includes(status)) || !await absent(target) ||
+              !await ownerMatches(sources[0], owners[0]) || !await ownerMatches(sources[1], owners[1]) ||
+              (await move(sources[0])).status !== 201) throw unsupported('move-race', statuses);
+          winner = 0;
+        } else if (!MOVE_REFUSALS.includes(statuses[1 - winner])) throw unsupported('move-race', statuses);
         const loser = 1 - winner;
-        if (winner < 0 || ![409, 412].includes(statuses[loser])) throw unsupported('move-race', statuses);
-        // Some providers use 409 for an occupied destination. Accept it only
-        // after verifying that neither contender's content was overwritten.
+        // Accept a refusal only after verifying that neither contender's
+        // content was overwritten.
         if (!await ownerMatches(target, owners[winner]) || !await ownerMatches(sources[loser], owners[loser]) || !await absent(sources[winner])) {
           throw unsupported('move-owner', statuses);
         }
         const occupied = await move(sources[loser]);
-        if (![409, 412].includes(occupied.status) || !await ownerMatches(target, owners[winner]) || !await ownerMatches(sources[loser], owners[loser])) {
+        if (!MOVE_REFUSALS.includes(occupied.status) || !await ownerMatches(target, owners[winner]) || !await ownerMatches(sources[loser], owners[loser])) {
           throw unsupported('move-owner', [occupied.status]);
         }
         const deleted = await requestUrl(target, 'DELETE', undefined, {}, 65536);
@@ -295,5 +312,5 @@
     }
     return Object.freeze({ request, ensureDirectories, readState, writeState, testConnection });
   }
-  return Object.freeze({ normalizeConfig, createClient, error, diagnostic, REVISION });
+  return Object.freeze({ normalizeConfig, createClient, error, diagnostic, REVISION, MOVE_REFUSALS });
 });

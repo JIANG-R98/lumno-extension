@@ -145,7 +145,7 @@ npm run test:onboarding-content
 
 - 日文本地化：感谢 [Humi](https://github.com/Hum1Tab) 参与日文翻译与校对。
 - 内置图标集：[Remix Icon](https://remixicon.com/)
-- 内置字体：Open Sans
+- 内置字体：Open Sans；[霞鹜文楷](https://github.com/lxgw/LxgwWenKai)（SIL OFL 1.1，子集化后用于每日一言）
 
 ## 许可证
 

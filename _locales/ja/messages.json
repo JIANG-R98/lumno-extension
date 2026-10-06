@@ -33,7 +33,7 @@
     "message": "テーマ適用先の説明"
   },
   "newtab_theme_scope_help": {
-    "message": "「全体」は既定のテーマです。「新しいタブ」は新しいタブだけに適用され、「全体に合わせる」で全体設定を引き継ぎます。"
+    "message": "「全体」：すべてのページの既定テーマです。\n「新しいタブ」：新しいタブだけに適用。「全体に合わせる」を選ぶと全体設定と同じになります。"
   },
   "newtab_theme_follow_global": {
     "message": "全体に合わせる"
@@ -55,6 +55,9 @@
   },
   "newtab_search_width_max": {
     "message": "最大"
+  },
+  "newtab_appearance_settings_title": {
+    "message": "外観設定"
   },
   "newtab_more_settings": {
     "message": "その他の設定"
@@ -165,7 +168,7 @@
     "message": "選択クイックアクションが無効です"
   },
   "selection_debug_rejection_sensitive": {
-    "message": "パスワード、支払い情報などの機密フィールドです。内容は読み取っていません"
+    "message": "パスワード、支払い情報などの機密フィールドのため、内容は読み取っていません"
   },
   "selection_debug_rejection_no_selection": {
     "message": "有効なテキスト選択を取得できませんでした"
@@ -342,7 +345,7 @@
     "message": "Webクリップ"
   },
   "settings_document_pip_desc": {
-    "message": "ページ内の一部を切り出して、別ウィンドウで浮かせて表示します。参照や比較に使えます。"
+    "message": "ページ内の一部を切り出して浮かせて表示し、参照や比較に使えます"
   },
   "document_pip_command_title": {
     "message": "Webクリップを開始"
@@ -372,19 +375,19 @@
     "message": "動画を自動でピクチャーインピクチャー表示"
   },
   "settings_auto_pip_desc": {
-    "message": "動画の再生中に別タブへ移動すると、再生中の動画をピクチャーインピクチャーで表示します。"
+    "message": "動画の再生中に別タブへ移動すると、再生中の動画をピクチャーインピクチャーで表示します"
   },
   "settings_pinned_tab_recovery_title": {
     "message": "再起動後に固定タブを復元"
   },
   "settings_pinned_tab_recovery_desc": {
-    "message": "復元可能な固定タブを記録し、ブラウザ再起動後に自動で戻します。"
+    "message": "復元可能な固定タブを記録し、ブラウザ再起動後に自動で戻します"
   },
   "settings_number_shortcut_instant_title": {
     "message": "Command 単押しで数字ジャンプ表示"
   },
   "settings_number_shortcut_instant_desc": {
-    "message": "有効にすると、コマンドバーや検索候補で Command/Ctrl を単押しした時点で数字ジャンプバッジが表示されます。「バックグラウンドで開く」は Command に割り当てられなくなります（マウス中クリックは引き続きバックグラウンドで開きます）。"
+    "message": "有効にすると、コマンドバーや検索候補で Command/Ctrl を単押しした時点で数字ジャンプバッジが表示され、「バックグラウンドで開く」は Command に割り当てられなくなります（マウス中クリックは引き続きバックグラウンドで開きます）"
   },
   "settings_macos_ctrl_suggestion_navigation_title": {
     "message": "Mac キーボードナビゲーション"
@@ -402,10 +405,10 @@
     "message": "浮かせたい内容をクリックしてください。ホイールで範囲を切り替え、Escでキャンセルできます。"
   },
   "document_pip_picker_cancelled": {
-    "message": "内容の選択をキャンセルしました。"
+    "message": "内容の選択をキャンセルしました"
   },
   "document_pip_picker_closed": {
-    "message": "Webクリップを閉じました。"
+    "message": "Webクリップを閉じました"
   },
   "document_pip_picker_guidance_default": {
     "message": "この範囲はWebクリップ表示に適しています。"
@@ -432,7 +435,7 @@
     "message": "Webクリップを開けませんでした。別の範囲でお試しください。"
   },
   "document_pip_picker_badge": {
-    "message": "Webクリップで開きました。"
+    "message": "Webクリップで開きました"
   },
   "document_pip_picker_button_reselect": {
     "message": "選び直す"
@@ -513,7 +516,7 @@
     "message": "なし"
   },
   "settings_shortcuts_invalid": {
-    "message": "キーが無効です。Ctrl+Kなどの組み合わせを押してください"
+    "message": "キーが無効です。Ctrl+Kなどの組み合わせを押してください。"
   },
   "settings_restricted_title": {
     "message": "制限ページでの動作"
@@ -696,7 +699,7 @@
     "message": "新しいタブの壁紙"
   },
   "settings_wallpaper_desc": {
-    "message": "この端末の画像を新しいタブの背景に使用します。"
+    "message": "この端末の画像を新しいタブの背景に使用します"
   },
   "settings_wallpaper_upload": {
     "message": "画像を追加"
@@ -720,10 +723,10 @@
     "message": "壁紙を追加済み（この端末のみ）"
   },
   "settings_wallpaper_status_missing": {
-    "message": "壁紙ファイルが見つかりません。もう一度追加してください"
+    "message": "壁紙ファイルが見つかりません。もう一度追加してください。"
   },
   "settings_wallpaper_status_processing": {
-    "message": "処理中..."
+    "message": "処理中…"
   },
   "settings_wallpaper_upload_done": {
     "message": "壁紙を更新しました"
@@ -741,7 +744,7 @@
     "message": "画像が大きすぎます。より小さい画像にしてください。"
   },
   "settings_wallpaper_error_save": {
-    "message": "壁紙を保存できませんでした。再試行してください"
+    "message": "壁紙を保存できませんでした。再試行してください。"
   },
   "newtab_wallpaper_title": {
     "message": "壁紙"
@@ -846,7 +849,7 @@
     "message": "ヒント"
   },
   "newtab_input_auto_focus_feature_hint_text": {
-    "message": "自動フォーカスは「外観 / 新しいタブ」でオフにできます"
+    "message": "自動フォーカスは「外観 / 新しいタブ」でオフにできます。"
   },
   "newtab_input_auto_focus_feature_hint_close": {
     "message": "入力欄の自動フォーカスのヒントを閉じる"
@@ -948,7 +951,7 @@
     "message": "最新のQRコードを取得しました"
   },
   "newtab_feedback_wechat_refresh_error": {
-    "message": "更新できませんでした。もう一度お試しください"
+    "message": "更新できませんでした。もう一度お試しください。"
   },
   "newtab_feedback_wechat_close_tooltip": {
     "message": "閉じる"
@@ -1057,9 +1060,6 @@
   },
   "newtab_wallpaper_effect_crt": {
     "message": "CRT"
-  },
-  "newtab_wallpaper_effect_select_label": {
-    "message": "{effect} を使用"
   },
   "newtab_wallpaper_effect_ink_title": {
     "message": "サンプル領域"
@@ -1197,13 +1197,13 @@
     "message": "サイト全体"
   },
   "blacklist_match_exact_tooltip": {
-    "message": "このページだけを非表示\n────────\n例：x.com/home を入力すると、このページだけが表示されず、他のページには影響しません"
+    "message": "このページだけを非表示\n────────\n例：x.com/home を入力すると、このページだけが表示されず、他のページには影響しません。"
   },
   "blacklist_match_prefix_tooltip": {
-    "message": "このサイト配下の指定パスだけを非表示\n────────\n例：baidu.com/search を入力すると、baidu.com/search と baidu.com/search/1 は表示されませんが、baidu.com/news は対象外です"
+    "message": "このサイト配下の指定パスだけを非表示\n────────\n例：baidu.com/search を入力すると、baidu.com/search と baidu.com/search/1 は表示されませんが、baidu.com/news は対象外です。"
   },
   "blacklist_match_suffix_tooltip": {
-    "message": "このサイトのすべてのページと下位ドメインを非表示\n────────\n例：baidu.com を入力すると、baidu.com/search と tieba.baidu.com は表示されません"
+    "message": "このサイトのすべてのページと下位ドメインを非表示\n────────\n例：baidu.com を入力すると、baidu.com/search と tieba.baidu.com は表示されません。"
   },
   "blacklist_preview_title": {
     "message": "一致例"
@@ -1215,7 +1215,7 @@
     "message": "一致しません"
   },
   "blacklist_preview_www_note": {
-    "message": "www. 付きにも自動対応します。例：baidu.com は www.baidu.com にも一致します"
+    "message": "www. 付きにも自動対応します。例：baidu.com は www.baidu.com にも一致します。"
   },
   "blacklist_placeholder_url": {
     "message": "現在のページを指定する場合は完全なURL、サイト全体を指定する場合はドメインを入力"
@@ -1239,16 +1239,16 @@
     "message": "非表示URLはまだありません"
   },
   "blacklist_error_url": {
-    "message": "サイトのドメインまたは完全なURLを入力してください"
+    "message": "サイトのドメインまたは完全なURLを入力してください。"
   },
   "blacklist_error_match_mode": {
-    "message": "一致条件を1つ以上選択してください"
+    "message": "一致条件を1つ以上選択してください。"
   },
   "blacklist_error_suffix": {
-    "message": "サイトのドメインを入力してください"
+    "message": "サイトのドメインを入力してください。"
   },
   "blacklist_error_domain": {
-    "message": "サイトのドメインを入力してください"
+    "message": "サイトのドメインを入力してください。"
   },
   "blacklist_match_mode_prefix": {
     "message": "このURLで始まるページに一致"
@@ -1266,7 +1266,7 @@
     "message": "AI"
   },
   "shortcuts_group_ai_desc": {
-    "message": "検索語を入力してTabを押し、質問文を入力すると、以下のAIサイトへ移動して自動入力します（事前に各サイトへのログインが必要です）。"
+    "message": "検索語を入力してTabを押し、質問文を入力すると、以下のAIサイトへ移動して自動入力します（事前に各サイトへのログインが必要です）"
   },
   "shortcuts_badge_custom": {
     "message": "追加"
@@ -1293,16 +1293,16 @@
     "message": "表示先"
   },
   "shortcuts_placeholder_required": {
-    "message": "必須。複数は半角カンマで区切ります。例：jd,bili"
+    "message": "必須、複数は半角カンマで区切る（例：jd,bili）"
   },
   "shortcuts_placeholder_optional_default": {
-    "message": "任意。既定では起動ワードと同じです"
+    "message": "任意（既定は起動ワードと同じ）"
   },
   "shortcuts_placeholder_template": {
     "message": "https://example.com/search?q={query}"
   },
   "shortcuts_placeholder_alias": {
-    "message": "任意。例：Bilibili、YouTubeなど"
+    "message": "任意（例：Bilibili、YouTube など）"
   },
   "shortcuts_insert_query": {
     "message": "検索変数を挿入"
@@ -1341,7 +1341,7 @@
     "message": "削除しました"
   },
   "toast_error": {
-    "message": "操作に失敗しました。再試行してください"
+    "message": "操作に失敗しました。再試行してください。"
   },
   "toast_error_template": {
     "message": "検索URLには {query} が必要です。"
@@ -1392,7 +1392,7 @@
     "message": "この起動ワードはすでに使用されています。別のものを入力してください。"
   },
   "search_placeholder": {
-    "message": "検索またはURLを入力..."
+    "message": "検索またはURLを入力…"
   },
   "overlay_search_placeholder": {
     "message": "検索またはURLを入力、Tabで開いているタブを検索"
@@ -1427,6 +1427,9 @@
   "bookmark_view_mode_top": {
     "message": "上部ブックマークバー"
   },
+  "bookmark_topbar_surface_title": {
+    "message": "バーの背景"
+  },
   "bookmark_topbar_surface_adaptive": {
     "message": "自動調整フロスト"
   },
@@ -1452,7 +1455,7 @@
     "message": "自動配色に戻しました"
   },
   "bookmark_topbar_color_unsupported": {
-    "message": "このブラウザは画面からの色取得に対応していません"
+    "message": "このブラウザは画面からの色取得に対応していません。"
   },
   "bookmark_topbar_color_failed": {
     "message": "色を取得できませんでした。もう一度お試しください。"
@@ -1500,7 +1503,7 @@
     "message": "ブックマークのリンクをコピーしました"
   },
   "bookmarks_copy_url_failed": {
-    "message": "リンクをコピーできませんでした"
+    "message": "リンクをコピーできませんでした。もう一度お試しください。"
   },
   "bookmarks_edit": {
     "message": "編集"
@@ -1515,7 +1518,7 @@
     "message": "名前"
   },
   "bookmarks_invalid_url": {
-    "message": "有効なURLを入力してください"
+    "message": "有効なURLを入力してください。"
   },
   "bookmarks_updated": {
     "message": "ブックマークを更新しました"
@@ -1575,7 +1578,7 @@
     "message": "検索結果のリンクをコピーしました"
   },
   "search_copy_url_failed": {
-    "message": "検索結果のリンクをコピーできませんでした"
+    "message": "検索結果のリンクをコピーできませんでした。もう一度お試しください。"
   },
   "search_tag_top_site": {
     "message": "よく使う"
@@ -1755,7 +1758,7 @@
     "message": "「{query}」を検索"
   },
   "search_in_site_ellipsis": {
-    "message": "{site} で検索..."
+    "message": "{site} で検索…"
   },
   "search_in_site_prefix": {
     "message": "{site} で検索｜"
@@ -1791,13 +1794,13 @@
     "message": "{source}のみ検索"
   },
   "search_scope_switcher_label": {
-    "message": "検索範囲：{scope}。選択すると切り替わります"
+    "message": "検索範囲：{scope}。選択すると切り替わります。"
   },
   "search_scope_current": {
     "message": "現在"
   },
   "search_scope_remove_confirmation": {
-    "message": "もう一度 Backspace で検索範囲を解除"
+    "message": "もう一度 Backspace を押すと検索範囲を解除します。"
   },
   "search_number_jump_release_hint": {
     "message": "離すと数字を表示"
@@ -1821,10 +1824,10 @@
     "message": "検索：{query}"
   },
   "search_scope_panel_placeholder": {
-    "message": "特定のサイト内を検索..."
+    "message": "特定のサイト内を検索…"
   },
   "search_scope_active_placeholder": {
-    "message": "対象を絞って検索。もう一度 Tab を押すと検索範囲パネルが開きます..."
+    "message": "対象を絞って検索、もう一度 Tab で検索範囲パネルを開く…"
   },
   "search_scope_group_engines": {
     "message": "検索エンジン"
@@ -2031,13 +2034,13 @@
     "message": "設定"
   },
   "copy_page_url_failed_retry": {
-    "message": "コピーできませんでした。再試行してください"
+    "message": "コピーできませんでした。再試行してください。"
   },
   "copy_page_url_success": {
     "message": "現在のページURLをコピーしました"
   },
   "copy_page_url_failed_permission": {
-    "message": "コピーできませんでした。権限を確認してください"
+    "message": "コピーできませんでした。権限を確認してください。"
   },
   "recent_pin_add": {
     "message": "固定"
@@ -2049,10 +2052,13 @@
     "message": "固定は最大3枚"
   },
   "recent_pin_limit_toast": {
-    "message": "固定できるカードは最大3枚です"
+    "message": "固定できるカードは最大3枚です。"
   },
   "recent_dismiss_tooltip": {
     "message": "非表示"
+  },
+  "recent_add_to_shortcuts": {
+    "message": "ショートカットに追加"
   },
   "recent_dismiss_pinned_tooltip": {
     "message": "固定解除して非表示"
@@ -2337,16 +2343,16 @@
     "message": "削除"
   },
   "newtab_shortcuts_icon_unsupported": {
-    "message": "PNG、JPG、または WebP 画像を選択してください"
+    "message": "PNG、JPG、または WebP 画像を選択してください。"
   },
   "newtab_shortcuts_icon_dimensions_too_large": {
     "message": "画像サイズは 4096×4096 px 以下にしてください"
   },
   "newtab_shortcuts_icon_invalid": {
-    "message": "この画像は使用できません。別の画像を選択してください"
+    "message": "この画像は使用できません。別の画像を選択してください。"
   },
   "newtab_shortcuts_icon_storage_error": {
-    "message": "ローカルアイコンを保存できませんでした。別の画像をお試しください"
+    "message": "ローカルアイコンを保存できませんでした。別の画像をお試しください。"
   },
   "folder_rename": {
     "message": "名前を変更"
@@ -2366,11 +2372,11 @@
   "folder_color_presets": {
     "message": "プリセットカラー"
   },
+  "folder_color_default": {
+    "message": "デフォルトの色"
+  },
   "folder_color_reset": {
     "message": "初期色に戻す"
-  },
-  "folder_color_reset_tooltip": {
-    "message": "既定の色に戻す"
   },
   "folder_color_saved": {
     "message": "保存した色"
@@ -2406,7 +2412,7 @@
     "message": "保存"
   },
   "newtab_shortcuts_invalid_url": {
-    "message": "有効な http、https、またはブラウザーの内部ページのURLを入力してください"
+    "message": "有効な http、https、またはブラウザーの内部ページのURLを入力してください。"
   },
   "newtab_shortcuts_limit_reached": {
     "message": "ショートカットは最大 {count} 件まで追加できます。"
@@ -2414,8 +2420,11 @@
   "newtab_shortcuts_added": {
     "message": "ショートカットを追加しました"
   },
+  "newtab_shortcuts_already_added": {
+    "message": "すでにショートカットにあります"
+  },
   "newtab_shortcuts_sync_limit_reached": {
-    "message": "ショートカットが同期上限に達したため、新しい項目は同期されません"
+    "message": "ショートカットが同期上限に達したため、新しい項目は同期されません。"
   },
   "newtab_shortcuts_edited": {
     "message": "ショートカットを更新しました"
@@ -2460,7 +2469,7 @@
     "message": "タブ切り替え"
   },
   "settings_tab_switcher_desc": {
-    "message": "最近のタブをすばやく切り替えます。デフォルトは {shortcut} で、変更できます。"
+    "message": "既定の {shortcut} で最近のタブをすばやく切り替えます（変更可能）"
   },
   "slash_command_empty": {
     "message": "一致するコマンドはありません"
@@ -2496,7 +2505,19 @@
     "message": "この端末にのみ保存されます。他の端末ではこの接続をもう一度追加してください。"
   },
   "webdav_password_saved": {
-    "message": "保存済み。空欄なら変更しません"
+    "message": "保存済み"
+  },
+  "webdav_password_change": {
+    "message": "変更"
+  },
+  "webdav_password_keep": {
+    "message": "保存済みのパスワードを使う"
+  },
+  "webdav_password_show": {
+    "message": "パスワードを表示"
+  },
+  "webdav_password_hide": {
+    "message": "パスワードを隠す"
   },
   "webdav_last_sync": {
     "message": "最終同期"
@@ -2770,6 +2791,9 @@
   },
   "newtab_quote_off": {
     "message": "オフ"
+  },
+  "newtab_quote_input": {
+    "message": "検索ボックスの下"
   },
   "newtab_quote_search": {
     "message": "ショートカットの下"

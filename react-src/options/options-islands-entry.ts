@@ -1,4 +1,5 @@
 import { createToastApi } from '../shared/toast';
+import { createSegmentedIndicatorApi } from '../shared/segmented-indicator';
 import { createAggregateSearchListApi } from './aggregate-search-list';
 import { createBlacklistListApi } from './blacklist-list';
 import { createFeedbackSupportApi } from './feedback-support';
@@ -72,6 +73,7 @@ const runtime = globalThis as typeof globalThis & {
   LumnoOptionsToast?: ReturnType<typeof createToastApi>;
   LumnoOptionsToastReact?: ReturnType<typeof createToastApi>;
   LumnoTooltipView?: ReturnType<typeof createTooltipViewApi>;
+  LumnoSegmentedIndicator?: ReturnType<typeof createSegmentedIndicatorApi>;
   LumnoTooltipViewReact?: ReturnType<typeof createTooltipViewApi>;
   LumnoOverlayTabSwitcherView?: ReturnType<typeof createTabSwitcherViewApi>;
   LumnoOverlayTabSwitcherViewReact?: ReturnType<typeof createTabSwitcherViewApi>;
@@ -133,6 +135,7 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   runtime.LumnoOptionsToast = toastApi;
   runtime.LumnoTooltipViewReact = tooltipViewApi;
   runtime.LumnoTooltipView = tooltipViewApi;
+  runtime.LumnoSegmentedIndicator = createSegmentedIndicatorApi();
   runtime.LumnoOverlayTabSwitcherViewReact = tabSwitcherApi;
   runtime.LumnoOverlayTabSwitcherView = tabSwitcherApi;
   runtime.LumnoOptionsReactIslands = Object.freeze({

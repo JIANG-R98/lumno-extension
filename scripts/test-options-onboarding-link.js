@@ -34,7 +34,7 @@ assert.match(
   'onboarding should keep the reference ghost action icon used by the options tutorial link'
 );
 
-const rule = getRule(`.${buttonClass}`);
+const rule = getRule(`._x_extension_shortcut_submit_2024_unique_.${buttonClass}`);
 const darkRule = getRule(`body[data-theme="dark"] .${buttonClass}`);
 [
   /margin-left:\s*auto;/,

@@ -58,7 +58,7 @@
           browser: '支持主流浏览器',
           compatibility: '兼容其他新标签页插件',
           githubLabel: 'GitHub 仓库',
-          githubTooltip: '以 GPL-3.0 许可证开源，点击访问 GitHub 仓库',
+          githubTooltip: '以 GPL-3.0 许可证开源，点击访问 GitHub 仓库。',
           browserTooltipLabel: '支持的浏览器',
           compatibilityTooltipLabel: '兼容说明',
           compatibilityTooltip: '受 Chrome 限制，Lumno 无法提供单独关闭新标签页的入口，但它可以与其他新标签页插件同时使用。\n具体而言，安装 Lumno 后，再覆盖安装或重新启用你正在使用的新标签页插件，让它继续接管新标签页即可。',
@@ -76,7 +76,7 @@
         localFileLabel: '在本地 PDF/HTML 标签页中使用聚焦搜索',
         localFileText: '请前往扩展程序详情页，为 Lumno 开启“允许访问文件网址”，开启后刷新对应标签页。',
         detailsLink: '扩展程序详情页',
-        shortcutActionTooltip: '由于浏览器的限制，请在 扩展程序/键盘快捷键 页面修改插件的所有快捷键，点击前往'
+        shortcutActionTooltip: '由于浏览器限制，请在「扩展程序 / 键盘快捷键」页面修改 Lumno 的快捷键，点击前往。'
       }),
       search: Object.freeze({
         title: '精美新标签页',
@@ -86,7 +86,7 @@
         title: 'AI / 站内搜索一键直达',
         body: '输入关键词，按下 Tab，直接搜索站点内结果。',
         supportList: '支持列表',
-        supportTooltip: '支持自定义，点击前往设置'
+        supportTooltip: '支持自定义，点击前往设置。'
       }),
       finish: Object.freeze({
         title: '更多实用功能',
@@ -109,7 +109,7 @@
           searchLabel: '搜索',
           goLabel: '前往',
           removeHistoryLabel: '移除该历史',
-          newtabSearchPlaceholder: '搜索或输入网址...',
+          newtabSearchPlaceholder: '搜索或输入网址…',
           settingsLabel: '设置',
           previousLabelTemplate: '{label} 上一页',
           nextLabelTemplate: '{label} 下一页',
@@ -269,7 +269,7 @@
           browser: '支援主流瀏覽器',
           compatibility: '可與其他新分頁擴充功能並用',
           githubLabel: 'GitHub 倉庫',
-          githubTooltip: '以 GPL-3.0 授權開源，點擊前往 GitHub 倉庫',
+          githubTooltip: '以 GPL-3.0 授權開源，點擊前往 GitHub 倉庫。',
           browserTooltipLabel: '支援的瀏覽器',
           compatibilityTooltipLabel: '相容說明',
           compatibilityTooltip: '受 Chrome 限制，Lumno 無法單獨關閉新分頁接管，但可與其他新分頁擴充功能一起使用。\n安裝 Lumno 後，再覆蓋安裝或重新啟用你慣用的新分頁擴充功能即可。',
@@ -287,7 +287,7 @@
         localFileLabel: '在本機 PDF/HTML 分頁中使用聚焦搜尋',
         localFileText: '請前往擴充功能詳細資料頁，為 Lumno 開啟「允許存取檔案網址」，開啟後重新整理該分頁。',
         detailsLink: '擴充功能詳細資料頁',
-        shortcutActionTooltip: '受瀏覽器限制，請在「擴充功能 / 鍵盤快速鍵」頁面修改 Lumno 快捷鍵，點擊前往'
+        shortcutActionTooltip: '受瀏覽器限制，請在「擴充功能 / 鍵盤快速鍵」頁面修改 Lumno 快捷鍵，點擊前往。'
       }),
       search: Object.freeze({
         title: '精美新分頁',
@@ -297,7 +297,7 @@
         title: 'AI / 站內搜尋一鍵直達',
         body: '輸入關鍵字後按 Tab，直接搜尋站內結果。',
         supportList: '支援列表',
-        supportTooltip: '可自訂，點擊前往設定'
+        supportTooltip: '可自訂，點擊前往設定。'
       }),
       finish: Object.freeze({
         title: '更多實用功能',
@@ -316,7 +316,7 @@
           searchLabel: '搜尋',
           goLabel: '前往',
           removeHistoryLabel: '移除此歷史紀錄',
-          newtabSearchPlaceholder: '搜尋或輸入網址...',
+          newtabSearchPlaceholder: '搜尋或輸入網址…',
           settingsLabel: '設定',
           previousLabelTemplate: '{label} 上一頁',
           nextLabelTemplate: '{label} 下一頁',
@@ -398,7 +398,7 @@
           browser: '主要ブラウザに対応',
           compatibility: '他の新しいタブ拡張と併用可',
           githubLabel: 'GitHub で見る',
-          githubTooltip: 'GPL-3.0 で公開中。GitHub を開く',
+          githubTooltip: 'GPL-3.0 で公開中。GitHub を開きます。',
           browserTooltipLabel: '対応ブラウザ',
           compatibilityTooltipLabel: '互換性について',
           compatibilityTooltip: 'Chrome の制限により、Lumno だけで新しいタブの上書きをオフにはできませんが、他の新しいタブ拡張と併用できます。\nLumno を入れたあと、使いたい新しいタブ拡張をもう一度有効にしてください。',
@@ -416,7 +416,7 @@
         localFileLabel: 'ローカルの PDF/HTML で使う',
         localFileText: '拡張機能の詳細ページで Lumno の「ファイルの URL へのアクセスを許可する」をオンにし、タブを読み込み直してください。',
         detailsLink: '拡張機能の詳細',
-        shortcutActionTooltip: 'ブラウザの制限により、Lumno のキー設定は拡張機能のキー設定ページで変更します。押すと開きます'
+        shortcutActionTooltip: 'ブラウザの制限により、Lumno のキー設定は拡張機能のキー設定ページで変更します。押すと開きます。'
       }),
       search: Object.freeze({
         title: 'すっきり新しいタブ',
@@ -426,7 +426,7 @@
         title: 'AI / サイト内検索へ直行',
         body: '検索語入力後に Tab。サイト内検索をすぐ開けます。',
         supportList: '対応リスト',
-        supportTooltip: '自由に追加できます。押すと設定を開きます'
+        supportTooltip: '自由に追加できます。押すと設定を開きます。'
       }),
       finish: Object.freeze({
         title: '便利な機能をさらに',
@@ -445,7 +445,7 @@
           searchLabel: '検索',
           goLabel: '移動',
           removeHistoryLabel: 'この履歴を削除',
-          newtabSearchPlaceholder: '検索または URL を入力...',
+          newtabSearchPlaceholder: '検索または URL を入力…',
           settingsLabel: '設定',
           previousLabelTemplate: '{label} 前へ',
           nextLabelTemplate: '{label} 次へ',
@@ -578,7 +578,7 @@
           searchLabel: 'Search',
           goLabel: 'Go',
           removeHistoryLabel: 'Remove from history',
-          newtabSearchPlaceholder: 'Search or enter a URL...',
+          newtabSearchPlaceholder: 'Search or enter a URL…',
           settingsLabel: 'Settings',
           previousLabelTemplate: '{label}, previous',
           nextLabelTemplate: '{label}, next',
@@ -1026,7 +1026,7 @@
         kind: 'accordion-row',
         actionId: 'toggleInteractionAccordion',
         accordionId: 'dia-browser',
-        icon: 'ri-question-fill',
+        icon: 'ri-information-line',
         label: text.setup.diaLabel,
         accordion: Object.freeze({
           icon: 'ri-arrow-left-s-line',
@@ -1045,7 +1045,7 @@
         kind: 'accordion-row',
         actionId: 'toggleInteractionAccordion',
         accordionId: 'local-file-search',
-        icon: 'ri-question-fill',
+        icon: 'ri-information-line',
         label: text.setup.localFileLabel,
         accordion: Object.freeze({
           icon: 'ri-arrow-left-s-line',

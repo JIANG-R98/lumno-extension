@@ -223,7 +223,7 @@ function SearchInput({ config }: { config: SearchInputConfig }) {
         autoComplete="off"
         className={CLASSES.input}
         id={config.inputId || '_x_extension_search_input_2024_unique_'}
-        placeholder={config.placeholder || 'Search or enter URL...'}
+        placeholder={config.placeholder || 'Search or enter URL…'}
         type="text"
       />
       <button

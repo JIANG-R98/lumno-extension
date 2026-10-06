@@ -6,13 +6,13 @@
   flex: 0 0 20px;
   width: 20px;
   height: 20px;
-  border-radius: 999px;
+  border-radius: var(--lumno-radius-pill);
   color: rgba(107, 114, 128, 0.74);
   background: transparent;
   cursor: help;
-  font-size: 14px;
+  font-size: var(--lumno-font-size-lg);
   line-height: 1;
-  transition: background-color 140ms ease, color 140ms ease;
+  transition: background-color var(--lumno-duration-xs) ease, color var(--lumno-duration-xs) ease;
 }
 
 button._x_extension_info_button_2026_unique_ {
@@ -37,7 +37,7 @@ button._x_extension_info_button_2026_unique_ {
 
 ._x_extension_info_button_2026_unique_ .ri-icon {
   --ri-size: 14px;
-  font-size: 14px;
+  font-size: var(--lumno-font-size-lg);
   line-height: 1;
 }
 

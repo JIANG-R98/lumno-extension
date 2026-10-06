@@ -1,4 +1,5 @@
 import { createBookmarksViewApi } from './bookmarks';
+import { createSegmentedIndicatorApi } from '../shared/segmented-indicator';
 import { createDockApi } from './dock';
 import { createFeedbackControlApi } from './feedback';
 import { createRecentSitesViewApi } from './recent-sites';
@@ -6,7 +7,7 @@ import { createSelectMenuApi } from './select-menu';
 import { createShortcutDialogApi } from './shortcut-dialog-lazy';
 import { createFolderColorPickerApi } from './folder-color-picker-lazy';
 import { createShortcutsViewApi } from './shortcuts';
-import { createSuggestionsViewApi } from './suggestions';
+import { createSuggestionsViewApi } from '../search/suggestions';
 import { createToastApi } from './toast';
 import { createTopContentApi } from './wordmark';
 import { createPageStructureApi } from './page-structure';
@@ -89,6 +90,7 @@ const runtime = globalThis as typeof globalThis & {
   LumnoFeatureHintView?: ReturnType<typeof createFeatureHintViewApi>;
   LumnoFeatureHintViewReact?: ReturnType<typeof createFeatureHintViewApi>;
   LumnoTooltipView?: ReturnType<typeof createTooltipViewApi>;
+  LumnoSegmentedIndicator?: ReturnType<typeof createSegmentedIndicatorApi>;
   LumnoTooltipViewReact?: ReturnType<typeof createTooltipViewApi>;
   LumnoOverlayTabSwitcherView?: ReturnType<typeof createTabSwitcherViewApi>;
   LumnoOverlayTabSwitcherViewReact?: ReturnType<typeof createTabSwitcherViewApi>;
@@ -164,6 +166,7 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   runtime.LumnoFeatureHintView = featureHintViewApi;
   runtime.LumnoTooltipViewReact = tooltipViewApi;
   runtime.LumnoTooltipView = tooltipViewApi;
+  runtime.LumnoSegmentedIndicator = createSegmentedIndicatorApi();
   runtime.LumnoOverlayTabSwitcherViewReact = tabSwitcherApi;
   runtime.LumnoOverlayTabSwitcherView = tabSwitcherApi;
   runtime._x_extension_createSearchInput_2024_unique_ =

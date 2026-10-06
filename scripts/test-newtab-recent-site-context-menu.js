@@ -46,6 +46,16 @@ assert.ok(
   'the recent-site record should change only after the remove menu action is selected'
 );
 assert.ok(
+  newtabJs.includes("RECENT_CONTEXT_MENU_ADD_SHORTCUT_VALUE = 'add-shortcut'") &&
+    newtabJs.includes("t('recent_add_to_shortcuts', 'Add to shortcuts')") &&
+    newtabJs.includes('hasShortcutForSite(getRecentShortcutSite(target.item))') &&
+    newtabJs.includes('disabled: isShortcut') &&
+    newtabJs.includes('addSiteToShortcuts(getRecentShortcutSite(target.item))') &&
+    newtabJs.includes('function addSiteToShortcuts(site)') &&
+    newtabJs.includes('newtabShortcuts.length >= MAX_NEWTAB_SHORTCUTS'),
+  'recent-site cards should offer adding the site to shortcuts and disable it once added'
+);
+assert.ok(
   newtabHtml.includes('[data-recent-context-menu-open="true"]') &&
     !newtabHtml.includes('.x-nt-recent-dismiss'),
   'the context-menu target should remain visibly active without old dismiss-button styles'
@@ -64,6 +74,9 @@ assert.ok(
   assert.ok(
     messages.newtab_open_in_new_tab &&
       messages.recent_context_menu_label &&
+      messages.recent_add_to_shortcuts &&
+      messages.newtab_shortcuts_already_added &&
+      String(messages.recent_add_to_shortcuts.message || '').trim() &&
       String(messages.newtab_open_in_new_tab.message || '').trim() &&
       String(messages.recent_context_menu_label.message || '').trim(),
     `${locale} should localize the recent-site context-menu label`

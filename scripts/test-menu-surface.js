@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { readStylesheet } = require('./helpers/css-tokens');
 const fs = require('fs');
 const path = require('path');
 
@@ -9,7 +10,7 @@ const menuSurfaceCssPath = path.join(repoRoot, 'src/shared/menu-surface.css');
 assert.ok(fs.existsSync(menuSurfaceJsPath), 'shared menu surface behavior should live in src/shared/menu-surface.js');
 assert.ok(fs.existsSync(menuSurfaceCssPath), 'shared menu surface styling should live in src/shared/menu-surface.css');
 
-const menuSurfaceCss = fs.readFileSync(menuSurfaceCssPath, 'utf8');
+const menuSurfaceCss = readStylesheet('src/shared/menu-surface.css');
 const menuSurface = require(menuSurfaceJsPath);
 
 function createFakeElement() {

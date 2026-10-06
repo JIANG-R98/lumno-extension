@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { readStylesheet } = require('./helpers/css-tokens');
 const fs = require('fs');
 const path = require('path');
 const { readPageSource } = require('./helpers/page-source');
@@ -16,10 +17,7 @@ const newtabRedirectSource = fs.readFileSync(
   path.join(repoRoot, 'src/newtab/lumno-newtab.js'),
   'utf8'
 );
-const sharedSearchInputCss = fs.readFileSync(
-  path.join(repoRoot, 'src/shared/search-input.css'),
-  'utf8'
-);
+const sharedSearchInputCss = readStylesheet('src/shared/search-input.css');
 const featureHintsCss = fs.readFileSync(
   path.join(repoRoot, 'src/shared/feature-hints.css'),
   'utf8'

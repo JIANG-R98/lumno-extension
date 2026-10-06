@@ -66,7 +66,7 @@ assert(
 );
 assert.match(
   wallpaperViewSource,
-  /ref\('shortcutsAccordionTrigger'\)[\s\S]*?aria-expanded="false"[\s\S]*?disabled state is applied by the runtime|ref\('shortcutsAccordionTrigger'\)[\s\S]*?aria-expanded="false"/,
+  /<SectionTrigger(?:(?!\/>)[\s\S])*?expanded=\{false\}(?:(?!\/>)[\s\S])*?triggerRef="shortcutsAccordionTrigger"/,
   'New Tab appearance should render the shortcuts accordion collapsed by default'
 );
 assert.match(

@@ -2,11 +2,8 @@ import {
   createReactRootController,
   type ReactRootController
 } from './root-controller';
-import {
-  useLayoutEffect,
-  useRef,
-  type KeyboardEvent
-} from 'react';
+import { useRef, type KeyboardEvent } from 'react';
+import { useSegmentedIndicator } from '../shared/segmented-indicator';
 
 export interface SegmentedControlItemModel {
   iconClass?: string;
@@ -47,62 +44,10 @@ function SegmentedControl({
     .map((item) => `${item.value}\u0000${item.label}`)
     .join('\u0001');
 
-  useLayoutEffect(() => {
-    const indicator = indicatorRef.current;
-    const container = indicator?.parentElement;
-    if (!indicator || !container) {
-      return undefined;
-    }
-    let animationFrame = 0;
-    let disposed = false;
-    const measure = () => {
-      if (disposed) {
-        return;
-      }
-      const activeButton = container.querySelector<HTMLButtonElement>(
-        'button[data-active="true"]'
-      );
-      if (!activeButton) {
-        indicator.dataset.ready = 'false';
-        indicator.style.width = '0px';
-        return;
-      }
-      const containerRect = container.getBoundingClientRect();
-      const buttonRect = activeButton.getBoundingClientRect();
-      if (containerRect.width <= 0 || buttonRect.width <= 0) {
-        indicator.dataset.ready = 'false';
-        return;
-      }
-      const baseLeft = Number.parseFloat(window.getComputedStyle(indicator).left) || 0;
-      const offset = Math.round(
-        buttonRect.left - containerRect.left + container.scrollLeft - baseLeft
-      );
-      indicator.style.width = `${Math.round(buttonRect.width)}px`;
-      indicator.style.transform = `translateX(${offset}px)`;
-      indicator.dataset.ready = 'true';
-    };
-    const scheduleMeasure = () => {
-      if (disposed) {
-        return;
-      }
-      window.cancelAnimationFrame(animationFrame);
-      animationFrame = window.requestAnimationFrame(measure);
-    };
-
-    measure();
-    scheduleMeasure();
-    const resizeObserver = typeof ResizeObserver === 'function'
-      ? new ResizeObserver(measure)
-      : null;
-    resizeObserver?.observe(container);
-    document.fonts?.ready.then(scheduleMeasure).catch(() => {});
-
-    return () => {
-      disposed = true;
-      window.cancelAnimationFrame(animationFrame);
-      resizeObserver?.disconnect();
-    };
-  }, [model.activeValue, model.dataAttribute, itemSignature]);
+  useSegmentedIndicator(
+    indicatorRef,
+    `${model.activeValue}\u0002${model.dataAttribute}\u0002${itemSignature}`
+  );
 
   const handleKeyDown = (
     event: KeyboardEvent<HTMLButtonElement>,
@@ -148,7 +93,6 @@ function SegmentedControl({
         return (
           <button
             {...dataProps}
-            aria-selected={active}
             aria-pressed={active}
             className="_x_extension_theme_option_2024_unique_"
             data-active={active ? 'true' : 'false'}
@@ -156,7 +100,6 @@ function SegmentedControl({
             key={item.value}
             onClick={() => onSelect(item.value)}
             onKeyDown={(event) => handleKeyDown(event, index)}
-            role="tab"
             type="button"
           >
             {item.iconClass ? (

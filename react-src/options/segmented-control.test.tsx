@@ -98,6 +98,9 @@ describe('Options segmented control React island', () => {
     expect(host.isConnected).toBe(true);
     expect(host.querySelector('[data-recent-mode="most"]')?.getAttribute('aria-pressed'))
       .toBe('true');
+    // Toggle-button group semantics: no tab role, no aria-selected alongside aria-pressed.
+    expect(host.querySelector('[role="tab"]')).toBeNull();
+    expect(host.querySelector('[aria-selected]')).toBeNull();
     expect(host.querySelector('select')?.value).toBe('most');
     expect(host.querySelector('[data-recent-mode="most"]')?.textContent)
       .toContain('Most visited');

@@ -33,7 +33,7 @@
     "message": "深浅色作用范围说明"
   },
   "newtab_theme_scope_help": {
-    "message": "「全局」设置默认深浅模式。「新标签页」仅覆盖新标签页；在其中选择「跟随全局」即可继承全局设置。"
+    "message": "「全局」：所有页面默认使用的深浅色。\n「新标签页」：仅对新标签页生效，选择跟随「全局」可与全局保持一致。"
   },
   "newtab_theme_follow_global": {
     "message": "跟随「全局」"
@@ -55,6 +55,9 @@
   },
   "newtab_search_width_max": {
     "message": "最大"
+  },
+  "newtab_appearance_settings_title": {
+    "message": "外观设置"
   },
   "newtab_more_settings": {
     "message": "更多设置"
@@ -114,7 +117,7 @@
     "message": "正在后台打开…"
   },
   "selection_quick_action_failed": {
-    "message": "发送失败，请重试"
+    "message": "发送失败，请重试。"
   },
   "selection_debug_decision_title": {
     "message": "划词判定"
@@ -399,7 +402,7 @@
     "message": "将鼠标移动到网页可见区域开始选择。"
   },
   "document_pip_picker_started": {
-    "message": "点击要悬浮的内容，滚轮可切换范围，Esc 取消"
+    "message": "点击要悬浮的内容，滚轮可切换范围，Esc 取消。"
   },
   "document_pip_picker_cancelled": {
     "message": "已退出内容选择"
@@ -420,16 +423,16 @@
     "message": "当前像导航或工具栏区域，复杂菜单在 PiP 中可能不完整，必要时请切到更外层容器。"
   },
   "document_pip_picker_unsupported": {
-    "message": "当前页面暂不支持 Document PiP"
+    "message": "当前页面暂不支持 Document PiP。"
   },
   "document_pip_picker_conflict_video_pip": {
-    "message": "当前已有视频画中画，请先关闭后再进行网页剪裁"
+    "message": "当前已有视频画中画，请先关闭后再进行网页剪裁。"
   },
   "document_pip_picker_invalid": {
-    "message": "这个区域暂时不能悬浮，请换一个更大的内容区域"
+    "message": "这个区域暂时不能悬浮，请换一个更大的内容区域。"
   },
   "document_pip_picker_open_failed": {
-    "message": "打开内容悬浮窗失败，请换一个区域再试"
+    "message": "打开内容悬浮窗失败，请换一个区域再试。"
   },
   "document_pip_picker_badge": {
     "message": "已在悬浮窗打开"
@@ -477,7 +480,7 @@
     "message": "在 Dia 中使用"
   },
   "settings_shortcuts_dia_tooltip": {
-    "message": "在 Dia 环境下，受浏览器限制，Lumno 的新标签页功能暂不可用，但聚焦搜索功能仍可正常运行。\n\n若快捷键在 Dia 中不可用，请点击下方右侧按钮进入浏览器的快捷键设置页面，将「Open command bar」从 In Dia 改成 Global"
+    "message": "在 Dia 环境下，受浏览器限制，Lumno 的新标签页功能暂不可用，但聚焦搜索功能仍可正常运行。\n\n若快捷键在 Dia 中不可用，请点击下方右侧按钮进入浏览器的快捷键设置页面，将「Open command bar」从 In Dia 改成 Global。"
   },
   "settings_shortcuts_section_title": {
     "message": "快捷键设置"
@@ -513,13 +516,13 @@
     "message": "无"
   },
   "settings_shortcuts_invalid": {
-    "message": "快捷键无效，请按组合键（如 Ctrl+K）"
+    "message": "快捷键无效，请按组合键（如 Ctrl+K）。"
   },
   "settings_restricted_title": {
     "message": "在受限页行为"
   },
   "settings_restricted_tooltip": {
-    "message": "受限页（如 chrome://、扩展商店、部分 file:// 页面）无法开启聚焦搜索；按下快捷键将按此处规则处理"
+    "message": "受限页（如 chrome://、扩展商店、部分 file:// 页面）无法开启聚焦搜索；按下快捷键将按此处规则处理。"
   },
   "restricted_action_default": {
     "message": "前往 Lumno 新标签页"
@@ -720,10 +723,10 @@
     "message": "已上传壁纸（仅此设备）"
   },
   "settings_wallpaper_status_missing": {
-    "message": "壁纸文件缺失，请重新上传"
+    "message": "壁纸文件缺失，请重新上传。"
   },
   "settings_wallpaper_status_processing": {
-    "message": "处理中..."
+    "message": "处理中…"
   },
   "settings_wallpaper_upload_done": {
     "message": "壁纸已更新"
@@ -741,7 +744,7 @@
     "message": "图片过大，请换一张更小的图片。"
   },
   "settings_wallpaper_error_save": {
-    "message": "壁纸保存失败，请重试"
+    "message": "壁纸保存失败，请重试。"
   },
   "newtab_wallpaper_title": {
     "message": "壁纸"
@@ -840,13 +843,13 @@
     "message": "输入框自动聚焦说明"
   },
   "newtab_input_auto_focus_help": {
-    "message": "如倾向使用浏览器原生地址栏，可关闭该选项。关闭后地址栏中的插件 url 将不再显示"
+    "message": "如倾向使用浏览器原生地址栏，可关闭该选项。关闭后地址栏中的扩展 URL 将不再显示。"
   },
   "newtab_input_auto_focus_feature_hint_badge": {
     "message": "提示"
   },
   "newtab_input_auto_focus_feature_hint_text": {
-    "message": "自动聚焦可在「外观/新标签页」处关闭"
+    "message": "自动聚焦可在「外观/新标签页」处关闭。"
   },
   "newtab_input_auto_focus_feature_hint_close": {
     "message": "关闭输入框自动聚焦提示"
@@ -948,7 +951,7 @@
     "message": "已拉取最新二维码"
   },
   "newtab_feedback_wechat_refresh_error": {
-    "message": "刷新失败，请稍后重试"
+    "message": "刷新失败，请稍后重试。"
   },
   "newtab_feedback_wechat_close_tooltip": {
     "message": "关闭"
@@ -1057,9 +1060,6 @@
   },
   "newtab_wallpaper_effect_crt": {
     "message": "CRT"
-  },
-  "newtab_wallpaper_effect_select_label": {
-    "message": "使用 {effect} 壁纸滤镜"
   },
   "newtab_wallpaper_effect_ink_title": {
     "message": "取样区域"
@@ -1197,13 +1197,13 @@
     "message": "整个网站"
   },
   "blacklist_match_exact_tooltip": {
-    "message": "只屏蔽这一页\n────────\n例如，填 x.com/home 后，只有这一页不会出现，其他页面不受影响"
+    "message": "只屏蔽这一页\n────────\n例如，填 x.com/home 后，只有这一页不会出现，其他页面不受影响。"
   },
   "blacklist_match_prefix_tooltip": {
-    "message": "只屏蔽这个站点下这一路径的页面\n────────\n例如，填 baidu.com/search 后，baidu.com/search 和 baidu.com/search/1 不会出现，但 baidu.com/news 不受影响"
+    "message": "只屏蔽这个站点下这一路径的页面\n────────\n例如，填 baidu.com/search 后，baidu.com/search 和 baidu.com/search/1 不会出现，但 baidu.com/news 不受影响。"
   },
   "blacklist_match_suffix_tooltip": {
-    "message": "屏蔽这个网站的所有页面，也包括它的子网站\n────────\n例如，填 baidu.com 后，baidu.com/search 和 tieba.baidu.com 都不会出现"
+    "message": "屏蔽这个网站的所有页面，也包括它的子网站\n────────\n例如，填 baidu.com 后，baidu.com/search 和 tieba.baidu.com 都不会出现。"
   },
   "blacklist_preview_title": {
     "message": "实际匹配预览"
@@ -1215,7 +1215,7 @@
     "message": "不会匹配"
   },
   "blacklist_preview_www_note": {
-    "message": "已自动兼容 www. 版本，例如 baidu.com 也会匹配 www.baidu.com"
+    "message": "已自动兼容 www. 版本，例如 baidu.com 也会匹配 www.baidu.com。"
   },
   "blacklist_placeholder_url": {
     "message": "当前页面填完整地址；整个网站填网站域名"
@@ -1239,16 +1239,16 @@
     "message": "暂未添加黑名单 URL"
   },
   "blacklist_error_url": {
-    "message": "请输入站点域名或完整 URL"
+    "message": "请输入站点域名或完整 URL。"
   },
   "blacklist_error_match_mode": {
-    "message": "请至少选择一种匹配方式"
+    "message": "请至少选择一种匹配方式。"
   },
   "blacklist_error_suffix": {
-    "message": "请输入网站域名"
+    "message": "请输入网站域名。"
   },
   "blacklist_error_domain": {
-    "message": "请输入网站域名"
+    "message": "请输入网站域名。"
   },
   "blacklist_match_mode_prefix": {
     "message": "匹配以该 URL 开头的页面"
@@ -1341,10 +1341,10 @@
     "message": "已移除"
   },
   "toast_error": {
-    "message": "操作失败，请重试"
+    "message": "操作失败，请重试。"
   },
   "toast_error_template": {
-    "message": "搜索模板必须包含 {query}"
+    "message": "搜索模板必须包含 {query}。"
   },
   "toast_reset": {
     "message": "已重置"
@@ -1383,16 +1383,16 @@
     "message": "确认移除该项？"
   },
   "shortcuts_error_key": {
-    "message": "请填写触发词"
+    "message": "请填写触发词。"
   },
   "shortcuts_error_key_space": {
-    "message": "触发词不能包含空格"
+    "message": "触发词不能包含空格。"
   },
   "shortcuts_error_key_duplicate": {
-    "message": "该触发词已存在，请更换"
+    "message": "该触发词已存在，请更换。"
   },
   "search_placeholder": {
-    "message": "搜索或输入网址..."
+    "message": "搜索或输入网址…"
   },
   "overlay_search_placeholder": {
     "message": "搜索或输入网址，按 Tab 搜索已打开标签页"
@@ -1427,6 +1427,9 @@
   "bookmark_view_mode_top": {
     "message": "顶部书签栏"
   },
+  "bookmark_topbar_surface_title": {
+    "message": "书签栏背景"
+  },
   "bookmark_topbar_surface_adaptive": {
     "message": "自适应雾面"
   },
@@ -1452,10 +1455,10 @@
     "message": "已恢复自动配色"
   },
   "bookmark_topbar_color_unsupported": {
-    "message": "当前浏览器不支持屏幕取色"
+    "message": "当前浏览器不支持屏幕取色。"
   },
   "bookmark_topbar_color_failed": {
-    "message": "取色失败，请重试"
+    "message": "取色失败，请重试。"
   },
   "bookmarks_empty_folder": {
     "message": "暂无内容"
@@ -1488,7 +1491,7 @@
     "message": "未命名文件夹"
   },
   "bookmarks_open_group_partial_failed": {
-    "message": "已打开 {openedCount} 个标签页，{failedCount} 个未能打开"
+    "message": "已打开 {openedCount} 个标签页，{failedCount} 个未能打开。"
   },
   "bookmarks_open_group_failed": {
     "message": "无法打开此书签文件夹"
@@ -1500,7 +1503,7 @@
     "message": "已复制书签链接"
   },
   "bookmarks_copy_url_failed": {
-    "message": "复制链接失败，请重试"
+    "message": "复制链接失败，请重试。"
   },
   "bookmarks_edit": {
     "message": "编辑"
@@ -1515,7 +1518,7 @@
     "message": "名称"
   },
   "bookmarks_invalid_url": {
-    "message": "请输入有效网址"
+    "message": "请输入有效网址。"
   },
   "bookmarks_updated": {
     "message": "已更新书签"
@@ -1575,7 +1578,7 @@
     "message": "已复制结果链接"
   },
   "search_copy_url_failed": {
-    "message": "复制结果链接失败，请重试"
+    "message": "复制结果链接失败，请重试。"
   },
   "search_tag_top_site": {
     "message": "常用"
@@ -1755,7 +1758,7 @@
     "message": "搜索 \"{query}\""
   },
   "search_in_site_ellipsis": {
-    "message": "在 {site} 中搜索..."
+    "message": "在 {site} 中搜索…"
   },
   "search_in_site_prefix": {
     "message": "在 {site} 中搜索｜"
@@ -1791,13 +1794,13 @@
     "message": "仅搜索{source}"
   },
   "search_scope_switcher_label": {
-    "message": "搜索范围：{scope}。选择即可切换"
+    "message": "搜索范围：{scope}。选择即可切换。"
   },
   "search_scope_current": {
     "message": "当前"
   },
   "search_scope_remove_confirmation": {
-    "message": "再按一次退格键，移除搜索范围"
+    "message": "再按一次退格键，移除搜索范围。"
   },
   "search_number_jump_release_hint": {
     "message": "松开显示数字"
@@ -1821,10 +1824,10 @@
     "message": "检索：{query}"
   },
   "search_scope_panel_placeholder": {
-    "message": "搜索特定站点内容..."
+    "message": "搜索特定站点内容…"
   },
   "search_scope_active_placeholder": {
-    "message": "搜索特定内容，复按 Tab 打开范围面板..."
+    "message": "搜索特定内容，复按 Tab 打开范围面板…"
   },
   "search_scope_group_engines": {
     "message": "搜索引擎"
@@ -2031,13 +2034,13 @@
     "message": "设置"
   },
   "copy_page_url_failed_retry": {
-    "message": "复制失败，请重试"
+    "message": "复制失败，请重试。"
   },
   "copy_page_url_success": {
     "message": "已复制当前页面链接"
   },
   "copy_page_url_failed_permission": {
-    "message": "复制失败，请检查剪贴板权限"
+    "message": "复制失败，请检查剪贴板权限。"
   },
   "recent_pin_add": {
     "message": "置顶"
@@ -2049,10 +2052,13 @@
     "message": "最多置顶 3 个"
   },
   "recent_pin_limit_toast": {
-    "message": "最多只能置顶 3 个卡片"
+    "message": "最多只能置顶 3 个卡片。"
   },
   "recent_dismiss_tooltip": {
     "message": "移除"
+  },
+  "recent_add_to_shortcuts": {
+    "message": "添加到快捷方式"
   },
   "recent_dismiss_pinned_tooltip": {
     "message": "取消置顶并移除"
@@ -2211,7 +2217,7 @@
     "message": "隐藏"
   },
   "newtab_shortcuts_add_hidden": {
-    "message": "已隐藏「+」，可在设置 → 外观 → 快捷方式 → 展示「+」中重新开启"
+    "message": "已隐藏「+」，可在设置 → 外观 → 快捷方式 → 展示「+」中重新开启。"
   },
   "newtab_shortcuts_dialog_title": {
     "message": "添加快捷方式"
@@ -2310,10 +2316,10 @@
     "message": "刷新中…"
   },
   "newtab_shortcuts_icon_refresh_failed": {
-    "message": "图标刷新失败，请稍后重试"
+    "message": "图标刷新失败，请稍后重试。"
   },
   "newtab_shortcuts_icon_custom_required": {
-    "message": "请选择一张图片作为自定义图标"
+    "message": "请选择一张图片作为自定义图标。"
   },
   "newtab_shortcuts_icon_online_info_label": {
     "message": "在线图标说明"
@@ -2337,16 +2343,16 @@
     "message": "移除"
   },
   "newtab_shortcuts_icon_unsupported": {
-    "message": "请选择 PNG、JPG 或 WebP 图片"
+    "message": "请选择 PNG、JPG 或 WebP 图片。"
   },
   "newtab_shortcuts_icon_dimensions_too_large": {
     "message": "图片尺寸不能超过 4096×4096 px"
   },
   "newtab_shortcuts_icon_invalid": {
-    "message": "无法使用该图片，请选择其他图片"
+    "message": "无法使用该图片，请选择其他图片。"
   },
   "newtab_shortcuts_icon_storage_error": {
-    "message": "本地图标保存失败，请尝试其他图片"
+    "message": "本地图标保存失败，请尝试其他图片。"
   },
   "folder_rename": {
     "message": "重命名"
@@ -2366,11 +2372,11 @@
   "folder_color_presets": {
     "message": "预设颜色"
   },
+  "folder_color_default": {
+    "message": "默认颜色"
+  },
   "folder_color_reset": {
     "message": "恢复默认"
-  },
-  "folder_color_reset_tooltip": {
-    "message": "恢复默认颜色"
   },
   "folder_color_saved": {
     "message": "已保存的颜色"
@@ -2406,7 +2412,7 @@
     "message": "保存"
   },
   "newtab_shortcuts_invalid_url": {
-    "message": "请输入有效的 http、https 或浏览器内置页面网址"
+    "message": "请输入有效的 http、https 或浏览器内置页面网址。"
   },
   "newtab_shortcuts_limit_reached": {
     "message": "最多可添加 {count} 个快捷方式。"
@@ -2414,8 +2420,11 @@
   "newtab_shortcuts_added": {
     "message": "已添加快捷方式"
   },
+  "newtab_shortcuts_already_added": {
+    "message": "已在快捷方式中"
+  },
   "newtab_shortcuts_sync_limit_reached": {
-    "message": "快捷方式已达同步上限，新增项将无法同步"
+    "message": "快捷方式已达同步上限，新增项将无法同步。"
   },
   "newtab_shortcuts_edited": {
     "message": "已更新快捷方式"
@@ -2496,7 +2505,19 @@
     "message": "只保存在这台设备上，其他设备需要重新添加这条连接。"
   },
   "webdav_password_saved": {
-    "message": "已保存；留空保持不变"
+    "message": "已保存"
+  },
+  "webdav_password_change": {
+    "message": "更换"
+  },
+  "webdav_password_keep": {
+    "message": "保留原密码"
+  },
+  "webdav_password_show": {
+    "message": "显示密码"
+  },
+  "webdav_password_hide": {
+    "message": "隐藏密码"
   },
   "webdav_last_sync": {
     "message": "最近同步"
@@ -2637,7 +2658,7 @@
     "message": "尚未同步"
   },
   "webdav_state_testing": {
-    "message": "正在测试连通性"
+    "message": "正在测试连通性…"
   },
   "webdav_choice_title": {
     "message": "选择初始同步版本"
@@ -2770,6 +2791,9 @@
   },
   "newtab_quote_off": {
     "message": "关闭"
+  },
+  "newtab_quote_input": {
+    "message": "输入框下方"
   },
   "newtab_quote_search": {
     "message": "快捷方式下方"

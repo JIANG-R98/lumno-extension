@@ -1020,7 +1020,7 @@
             ),
             searchPlaceholder: getRuntimeMiscText(
               'newtabSearchPlaceholder',
-              'Search or enter URL...'
+              'Search or enter URL…'
             ),
             sectionModeBookmarksLabel: getRuntimeMiscText(
               'sectionModeBookmarksLabel',

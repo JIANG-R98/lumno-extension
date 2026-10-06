@@ -2,7 +2,7 @@
    When changing shared overlay styling, verify src/onboarding/onboarding.html?slide=1. */
 :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) {
   --x-ov-panel-border-width: 1px;
-  --x-ov-content-radius: calc(var(--x-ov-panel-radius, 28px) - var(--x-ov-panel-border-width));
+  --x-ov-content-radius: calc(var(--x-ov-panel-radius, 24px) - var(--x-ov-panel-border-width));
   --x-ov-results-inset: 12px;
   --x-ov-result-radius: calc(var(--x-ov-content-radius) - var(--x-ov-results-inset));
   --x-ext-search-input-corners:
@@ -27,7 +27,7 @@
   scrollbar-width: none;
   -ms-overflow-style: none;
   background: transparent;
-  border-radius: 0 0 var(--x-ov-content-radius, 27px) var(--x-ov-content-radius, 27px);
+  border-radius: 0 0 var(--x-ov-content-radius, 23px) var(--x-ov-content-radius, 23px);
   padding: var(--x-ov-results-inset, 12px);
   box-sizing: border-box;
   display: block;
@@ -73,7 +73,7 @@
 :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestions-container[data-open-tabs-visible-row-limit]::-webkit-scrollbar-thumb {
   min-height: 40px;
   border: 3px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--lumno-radius-pill, 999px);
   background-color: rgba(148, 163, 184, 0.68);
   background-clip: padding-box;
 }
@@ -118,7 +118,7 @@
   font-size: 0;
   color: var(--x-ext-input-icon, #9CA3AF);
   cursor: pointer;
-  transition: background-color 140ms ease, color 140ms ease;
+  transition: background-color var(--lumno-duration-xs, 140ms) ease, color var(--lumno-duration-xs, 140ms) ease;
 }
 
 #_x_extension_overlay_2024_unique_[data-lumno-site-fix-reveal] .x-ov-close-other-tabs {
@@ -143,7 +143,7 @@
   justify-content: center;
   line-height: 1;
   transform: none;
-  transition: transform 160ms ease;
+  transition: transform var(--lumno-duration-sm, 160ms) ease;
   pointer-events: none;
   cursor: inherit;
 }
@@ -227,7 +227,7 @@
 }
 
 :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-favicon[data-favicon-load-state="loaded"] {
-  transition: opacity 160ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity var(--lumno-duration-sm, 160ms) cubic-bezier(0.22, 1, 0.36, 1);
   opacity: 1;
 }
 
@@ -240,7 +240,7 @@
   padding: 16px 14px;
   margin: 0;
   border: none;
-  border-radius: 14px;
+  border-radius: var(--lumno-radius-2xl, 14px);
   background: color-mix(in srgb, var(--x-ov-bg, #FFFFFF) 90%, var(--x-ov-hover-bg, #F3F4F6) 10%);
   color: var(--x-ov-subtext, #6B7280);
   box-sizing: border-box;
@@ -248,7 +248,7 @@
   text-decoration: none;
   list-style: none;
   outline: none;
-  font-size: 13px;
+  font-size: var(--lumno-font-size-md, 13px);
   font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   vertical-align: baseline;
 }
@@ -285,9 +285,9 @@
   min-height: var(--x-ov-suggestion-row-height, 52px);
   background: var(--x-ov-suggestion-row-bg, transparent);
   border: 1px solid transparent;
-  border-radius: var(--x-ov-result-radius, 15px);
+  border-radius: var(--x-ov-result-radius, 11px);
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: background-color var(--lumno-duration-lg, 0.2s) ease;
   box-sizing: border-box;
   margin: 0 0 var(--x-ov-suggestion-row-gap, 4px) 0;
   line-height: 1.5;
@@ -307,7 +307,7 @@
 }
 
 :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestions-container[data-scope-result-enter="run"] .x-ov-suggestion-item {
-  animation: _x_ov_scope_result_enter_2026_unique_ 180ms ease-in-out both;
+  animation: _x_ov_scope_result_enter_2026_unique_ var(--lumno-duration-md, 180ms) ease-in-out both;
   will-change: transform;
 }
 
@@ -350,7 +350,7 @@
 }
 
 :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-left[data-motion="true"] {
-  transition: gap 160ms ease, transform 160ms ease;
+  transition: gap var(--lumno-duration-sm, 160ms) ease, transform var(--lumno-duration-sm, 160ms) ease;
 }
 
 :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-icon-slot {
@@ -359,7 +359,7 @@
   height: 24px;
   flex: 0 0 24px;
   flex-shrink: 0;
-  border-radius: 8px;
+  border-radius: var(--lumno-radius-md, 8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -371,7 +371,7 @@
   list-style: none;
   outline: none;
   background: transparent;
-  transition: background-color 0.2s ease;
+  transition: background-color var(--lumno-duration-lg, 0.2s) ease;
   color: var(--x-ov-subtext, #9CA3AF);
   font-size: 100%;
   font: inherit;
@@ -437,7 +437,7 @@
 :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-title {
   all: unset;
   color: var(--x-ov-text, #111827);
-  font-size: 14px;
+  font-size: var(--lumno-font-size-lg, 14px);
   font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-weight: var(--x-ov-suggestion-title-weight, 400);
   white-space: nowrap;
@@ -492,7 +492,7 @@
   overflow: hidden;
   color: var(--x-ov-text, #111827);
   font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  font-size: 14px;
+  font-size: var(--lumno-font-size-lg, 14px);
   font-weight: 500;
   line-height: 18px;
   text-overflow: ellipsis;
@@ -506,7 +506,7 @@
 
 :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-command-description {
   color: var(--x-ov-subtext, #6B7280);
-  font-size: 11px;
+  font-size: var(--lumno-font-size-xs, 11px);
   font-weight: 400;
   line-height: 15px;
 }
@@ -514,7 +514,7 @@
 :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-reason {
   all: unset;
   color: var(--x-ov-subtext, #6B7280);
-  font-size: 11px;
+  font-size: var(--lumno-font-size-xs, 11px);
   font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   line-height: 1.2;
   white-space: nowrap;
@@ -528,7 +528,7 @@
 :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-bookmark-path {
   all: unset;
   color: var(--x-ov-link, #2563EB);
-  font-size: 12px;
+  font-size: var(--lumno-font-size-sm, 12px);
   font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   text-decoration: none;
   white-space: nowrap;
@@ -546,7 +546,7 @@
 :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-url-line {
   all: unset;
   color: var(--x-ov-link, #2563EB);
-  font-size: 12px;
+  font-size: var(--lumno-font-size-sm, 12px);
   font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   text-decoration: none;
   display: inline-block;
@@ -572,11 +572,11 @@
   align-items: center;
   margin-left: 8px;
   padding: 1px 6px;
-  border-radius: 999px;
+  border-radius: var(--lumno-radius-pill, 999px);
   color: var(--x-ov-subtext, #6B7280);
   background: color-mix(in srgb, var(--x-ov-bg, #FFFFFF) 70%, #94A3B8 30%);
   border: 1px solid color-mix(in srgb, var(--x-ov-border, rgba(0, 0, 0, 0.08)) 75%, #94A3B8 25%);
-  font-size: 10px;
+  font-size: var(--lumno-font-size-2xs, 10px);
   font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   line-height: 1.2;
   white-space: nowrap;
@@ -588,10 +588,10 @@
   all: unset;
   background: var(--x-ov-suggestion-source-tag-bg, var(--x-ov-tag-bg, #F3F4F6));
   color: var(--x-ov-suggestion-source-tag-text, var(--x-ov-tag-text, #667085));
-  font-size: 10px;
+  font-size: var(--lumno-font-size-2xs, 10px);
   font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   padding: 4px 6px;
-  border-radius: 8px;
+  border-radius: var(--lumno-radius-md, 8px);
   box-sizing: border-box;
   line-height: 1.2;
   text-decoration: none;
@@ -673,8 +673,8 @@
   border: 0;
   height: auto;
   padding: 4px 8px;
-  border-radius: 8px;
-  font-size: 11px;
+  border-radius: var(--lumno-radius-md, 8px);
+  font-size: var(--lumno-font-size-xs, 11px);
   font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   line-height: 1;
   text-decoration: none;
@@ -733,10 +733,10 @@
   all: unset;
   background: var(--x-ov-suggestion-action-button-bg, transparent);
   color: var(--x-ov-suggestion-action-button-text, var(--x-ov-subtext, #9CA3AF));
-  font-size: 12px;
+  font-size: var(--lumno-font-size-sm, 12px);
   font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 160ms ease;
+  transition: background-color var(--lumno-duration-lg, 0.2s) ease, border-color var(--lumno-duration-lg, 0.2s) ease, color var(--lumno-duration-lg, 0.2s) ease, transform var(--lumno-duration-sm, 160ms) ease;
   box-sizing: border-box;
   margin: 0;
   line-height: 1;
@@ -787,7 +787,7 @@
 
 :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-switch-button {
   border: none;
-  border-radius: 6px;
+  border-radius: var(--lumno-radius-sm, 6px);
   height: var(--x-ov-suggestion-action-height, 26px);
   padding: 0 var(--x-ov-suggestion-action-icon-end, 7px) 0 var(--x-ov-suggestion-action-button-start, 10px);
 }
@@ -812,7 +812,7 @@
   vertical-align: baseline;
   opacity: 0;
   pointer-events: none;
-  transition: width 180ms ease, margin-left 180ms ease, opacity 160ms ease;
+  transition: width var(--lumno-duration-md, 180ms) ease, margin-left var(--lumno-duration-md, 180ms) ease, opacity var(--lumno-duration-sm, 160ms) ease;
 }
 
 :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-utility-slot[data-visible="true"] {
@@ -851,7 +851,7 @@
   font-size: 0;
   cursor: pointer;
   transform: translateX(4px);
-  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 160ms ease, opacity 160ms ease, visibility 160ms ease;
+  transition: background-color var(--lumno-duration-xs, 140ms) ease, border-color var(--lumno-duration-xs, 140ms) ease, color var(--lumno-duration-xs, 140ms) ease, transform var(--lumno-duration-sm, 160ms) ease, opacity var(--lumno-duration-sm, 160ms) ease, visibility var(--lumno-duration-sm, 160ms) ease;
 }
 
 :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-utility-button[data-visible="true"] {
@@ -874,7 +874,7 @@
   justify-content: center;
   line-height: 1;
   transform: none;
-  transition: transform 160ms ease;
+  transition: transform var(--lumno-duration-sm, 160ms) ease;
   pointer-events: none;
   cursor: inherit;
 }
@@ -889,17 +889,22 @@
   outline-offset: 2px;
 }
 
-/* Keep this after the component resets above: `all: unset` also resets corner-shape. */
+/* Keep this after the component resets above: `all: unset` also resets corner-shape.
+   The capsule visit button and the circular close-other-tabs button keep round ends. */
 @supports (corner-shape: superellipse(1.25)) {
   :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestions-container,
   :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-empty-state,
   :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-item,
-  :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-action-tag,
+  :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-icon-slot,
+  :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-source-tag,
+  :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-action-tag,
   :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-action-button,
-  :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-visit-button,
-  :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-close-other-tabs,
   :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-number-shortcut,
   :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-utility-button {
     corner-shape: superellipse(1.25);
+  }
+
+  :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-visit-button {
+    corner-shape: round;
   }
 }

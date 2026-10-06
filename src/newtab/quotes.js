@@ -11,6 +11,8 @@
     const settings = root.LumnoSettings;
     const key = settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY;
     const t = config.t;
+    // Hitokoto only serves Chinese text, so the quote exists for Chinese UI languages only.
+    const isLocaleSupported = () => !config.getLocale || /^zh_(CN|TW)$/.test(config.getLocale() || '');
     const client = config.client || root.LumnoNewtabRemoteContent.createClient({
       storageArea: config.localStorageArea,
       fallbackQuote: () => ({
@@ -41,11 +43,14 @@
     let quote = null;
     let revision = 0;
     let refs;
+    let settingsExpanded = true;
     let mounted = false;
     let dayTimer;
     let unsubscribe;
     let disposed = false;
     let draftFontSize = null;
+    let localeSupported = isLocaleSupported();
+    const isActive = () => prefs.enabled && localeSupported;
     const area = config.storageArea;
     function syncBottomHeight() {
       const height = !element.hidden && prefs.position === 'bottom'
@@ -67,7 +72,7 @@
       refs.quoteFontSizeSlider.step = '1';
       refs.quoteFontSizeSlider.value = String(size);
       refs.quoteFontSizeSlider.setAttribute('aria-label', label);
-      refs.quoteFontSizeSlider.style.setProperty('--x-nt-overlay-slider-percent', `${(size - min) / (max - min) * 100}%`);
+      refs.quoteFontSizeSlider.style.setProperty('--x-range-slider-percent', `${(size - min) / (max - min) * 100}%`);
       const input = refs.quoteFontSizeSliderValueInput;
       input.min = String(min);
       input.max = String(max);
@@ -105,6 +110,7 @@
 
     function labels() {
       return {
+        input: t('newtab_quote_input', 'Below search box'),
         search: t('newtab_quote_search', 'Below shortcuts'),
         bottom: t('newtab_quote_bottom', 'Page bottom'),
         literature: t('newtab_quote_literature', 'Literature'),
@@ -113,12 +119,22 @@
     }
     function updateSettings() {
       if (!refs) return;
+      if (refs.quoteSection) refs.quoteSection.hidden = !localeSupported;
+      if (refs.quoteDivider) refs.quoteDivider.hidden = !localeSupported;
       const text = labels();
       const title = t('newtab_quote_title', 'Daily quote');
       refs.quoteTitle.textContent = title;
       refs.quoteEnabledToggle.checked = prefs.enabled;
       refs.quoteEnabledToggle.setAttribute('aria-label', title);
-      refs.quoteBody.hidden = !prefs.enabled;
+      refs.quoteBody.hidden = !(prefs.enabled && settingsExpanded);
+      if (refs.quoteAccordionTrigger) {
+        refs.quoteAccordionTrigger.disabled = !prefs.enabled;
+        refs.quoteAccordionTrigger.setAttribute('aria-disabled', prefs.enabled ? 'false' : 'true');
+        refs.quoteAccordionTrigger.setAttribute(
+          'aria-expanded',
+          prefs.enabled && settingsExpanded ? 'true' : 'false'
+        );
+      }
       if (refs.quoteInfoButton) refs.quoteInfoButton.setAttribute('aria-label', t('newtab_quote_provider', 'Powered by Hitokoto'));
       refs.quotePosition.setAttribute('aria-label', t('newtab_quote_position', 'Quote position'));
       refs.quoteCategory.setAttribute('aria-label', t('newtab_quote_category', 'Quote category'));
@@ -126,17 +142,25 @@
       if (refs.quoteCategoryLabel) refs.quoteCategoryLabel.textContent = t('newtab_quote_category', 'Quote category');
       syncFontSizeControls(false);
       [refs.quotePosition, refs.quoteCategory].forEach((group) => {
-        group.querySelectorAll('button').forEach((item, index) => {
+        group.querySelectorAll('button').forEach((item) => {
           const value = item.getAttribute('data-quote-position') || item.getAttribute('data-quote-category');
           item.textContent = text[value];
           const selected = value === prefs.position || value === prefs.category;
           item.setAttribute('aria-pressed', selected ? 'true' : 'false');
           item.setAttribute('data-active', selected ? 'true' : 'false');
-          if (selected) group.style.setProperty('--x-nt-quote-tab-index', String(index));
         });
+        syncTabIndicator(group);
       });
     }
-    function updateLanguage() {
+    // Tabs hug their labels, so the indicator follows the active button's measured box.
+    function syncTabIndicator(group) {
+      const segmentedIndicator = globalThis.LumnoSegmentedIndicator;
+      if (segmentedIndicator) segmentedIndicator.sync(group.querySelector('.x-nt-segmented-tabs-indicator'));
+    }
+    const tabResizeObserver = typeof window.ResizeObserver === 'function'
+      ? new window.ResizeObserver((entries) => entries.forEach((entry) => syncTabIndicator(entry.target)))
+      : null;
+    function updateText() {
       element.setAttribute('aria-label', t('newtab_quote_title', 'Daily quote'));
       link.textContent = t('newtab_quote_source', 'View on Hitokoto');
       if (quote) {
@@ -152,21 +176,24 @@
     function render() {
       if (!mounted || disposed) return;
       element.dataset.position = prefs.position;
-      document.body.dataset.quotePosition = prefs.enabled ? prefs.position : 'off';
+      document.body.dataset.quotePosition = isActive() ? prefs.position : 'off';
       element.style.setProperty('--x-nt-quote-font-size', `${draftFontSize === null ? prefs.fontSize : draftFontSize}px`);
-      element.hidden = !prefs.enabled || !quote;
-      if (prefs.position === 'search') {
+      element.hidden = !isActive() || !quote;
+      if (prefs.position === 'input') {
+        const anchor = config.getSearchRoot();
+        anchor.parentNode.insertBefore(element, anchor.nextSibling);
+      } else if (prefs.position === 'search') {
         const shortcuts = config.getShortcutSection && config.getShortcutSection();
         const anchor = shortcuts && shortcuts.parentNode ? shortcuts : config.getSearchRoot();
         anchor.parentNode.insertBefore(element, anchor.nextSibling);
       } else document.body.appendChild(element);
-      updateLanguage();
+      updateText();
       syncBottomHeight();
       if (config.onLayout) config.onLayout();
     }
     async function refresh() {
       const current = ++revision;
-      if (!prefs.enabled) return render();
+      if (!isActive()) return render();
       const category = prefs.category;
       // Render the last successful response before making a network request.
       if (config.localStorageArea) {
@@ -182,7 +209,7 @@
         ));
       }
       const next = await client.getQuote(category);
-      if (current !== revision || disposed || !prefs.enabled) return;
+      if (current !== revision || disposed || !isActive()) return;
       quote = next;
       render();
       window.clearTimeout(dayTimer);
@@ -195,17 +222,26 @@
     function apply(value) {
       const next = settings.normalizeNewtabQuotePrefs(value);
       const changedCategory = next.category !== prefs.category;
-      const enabled = !prefs.enabled && next.enabled;
+      const activated = !isActive() && next.enabled && localeSupported;
       prefs = next;
       draftFontSize = null;
       if (changedCategory) quote = null;
-      if (!prefs.enabled) {
+      sync(changedCategory || activated);
+    }
+    function sync(shouldRefresh) {
+      if (!isActive()) {
         revision += 1;
         window.clearTimeout(dayTimer);
       }
       render();
       updateSettings();
-      if (changedCategory || enabled) refresh().catch(() => {});
+      if (shouldRefresh) refresh().catch(() => {});
+    }
+    function updateLanguage() {
+      const supported = isLocaleSupported();
+      if (supported === localeSupported) return updateText();
+      localeSupported = supported;
+      sync(mounted && supported && prefs.enabled);
     }
     function persist(change) {
       const next = settings.normalizeNewtabQuotePrefs({ ...prefs, ...change });
@@ -231,7 +267,7 @@
       }
     }
     const onVisibility = () => {
-      if (document.visibilityState === 'visible' && prefs.enabled) refresh().catch(() => {});
+      if (document.visibilityState === 'visible' && isActive()) refresh().catch(() => {});
     };
     button.addEventListener('click', () => {
       delete element.dataset.dismissed;
@@ -260,12 +296,24 @@
       refs = nextRefs;
       if (!refs.quotePosition || !refs.quoteCategory) return;
       refs.quoteEnabledToggle.addEventListener('change', () => persist({ enabled: refs.quoteEnabledToggle.checked }));
+      if (refs.quoteAccordionTrigger) {
+        refs.quoteAccordionTrigger.addEventListener('click', () => {
+          if (!prefs.enabled) return;
+          settingsExpanded = !settingsExpanded;
+          updateSettings();
+        });
+      }
       refs.quotePosition.querySelectorAll('[data-quote-position]').forEach((item) => {
         item.addEventListener('click', () => persist({ position: item.dataset.quotePosition }));
       });
       refs.quoteCategory.querySelectorAll('[data-quote-category]').forEach((item) => {
         item.addEventListener('click', () => persist({ category: item.dataset.quoteCategory }));
       });
+      if (tabResizeObserver) {
+        // Re-measure once the collapsed panel lays out, and when translated labels change width.
+        tabResizeObserver.observe(refs.quotePosition);
+        tabResizeObserver.observe(refs.quoteCategory);
+      }
       if (refs.quoteFontSizeSlider) {
         const slider = refs.quoteFontSizeSlider;
         const input = refs.quoteFontSizeSliderValueInput;
@@ -308,6 +356,7 @@
         revision += 1;
         window.clearTimeout(dayTimer);
         if (resizeObserver) resizeObserver.disconnect();
+        if (tabResizeObserver) tabResizeObserver.disconnect();
         if (unsubscribe) unsubscribe();
         document.removeEventListener('visibilitychange', onVisibility);
         document.removeEventListener('pointerdown', onPointerDown);

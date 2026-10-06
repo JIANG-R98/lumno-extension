@@ -122,7 +122,8 @@
 
     function getInlineQuoteSection() {
       const element = resolveElement(options.quoteSection);
-      return element && !element.hidden && element.getAttribute('data-position') === 'search' ? element : null;
+      const position = element && element.getAttribute('data-position');
+      return element && !element.hidden && (position === 'search' || position === 'input') ? element : null;
     }
 
     function getBookmarkSection() {
@@ -492,8 +493,8 @@
         viewportHeight - occupiedBottomHeight
       );
       const topContentOuterHeight = getElementOuterHeight(getTopContentContainer());
-      const searchBlockHeight = topContentOuterHeight + getSearchEntryBlockHeight() +
-        getElementOuterHeight(getInlineQuoteSection());
+      // The inline quote flows below the search entry, so it must not shift the entry upward.
+      const searchBlockHeight = topContentOuterHeight + getSearchEntryBlockHeight();
       const bookmarkSection = getBookmarkSection();
       const recentSection = getRecentSection();
       const bookmarkVisible = isSectionVisible(bookmarkSection);

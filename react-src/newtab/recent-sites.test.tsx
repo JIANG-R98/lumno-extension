@@ -345,7 +345,7 @@ describe('Recent Sites React island', () => {
     });
 
     expect(opened).not.toHaveBeenCalled();
-    expect(showToast).toHaveBeenCalledWith('最多只能置顶 3 个卡片', false);
+    expect(showToast).toHaveBeenCalledWith('最多只能置顶 3 个卡片。', false);
     expect(updatePinButton).toHaveBeenCalledWith(
       view.getCards()[0]._xPinButton,
       false,

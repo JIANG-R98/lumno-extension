@@ -9,7 +9,7 @@ const newtabHtml = readPageSource('newtab.html');
 const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
 const overlaySource = read('src/overlay/search-panel.js');
 const overlayCss = read('src/overlay/suggestions-view.css');
-const suggestionsSource = read('react-src/newtab/suggestions.tsx');
+const suggestionsSource = read('react-src/search/suggestions.tsx');
 const suggestionNavigation = require('../src/shared/suggestion-navigation.js');
 
 const macNavigator = { platform: 'MacIntel' };

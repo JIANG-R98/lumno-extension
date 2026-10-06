@@ -101,4 +101,27 @@ describe('Options settings navigation React island', () => {
 
     expect(host.childElementCount).toBe(0);
   });
+  it('marks hidden edges and scrolls the active tab into view when labels overflow', () => {
+    const { controller, host } = createFixture();
+    // jsdom has no layout: give the strip 200px of room for 600px of tabs.
+    Object.defineProperty(host, 'clientWidth', { configurable: true, value: 200 });
+    Object.defineProperty(host, 'scrollWidth', { configurable: true, value: 600 });
+    act(() => controller.render(model));
+    expect(host.dataset.overflowStart).toBe('false');
+    expect(host.dataset.overflowEnd).toBe('true');
+
+    const appearance = () => host.querySelector<HTMLElement>('[data-tab="appearance"]')!;
+    act(() => controller.render({ ...model, activeKey: 'appearance' }));
+    Object.defineProperty(appearance(), 'offsetLeft', { configurable: true, value: 500 });
+    Object.defineProperty(appearance(), 'offsetWidth', { configurable: true, value: 80 });
+    act(() => controller.render({ ...model, activeKey: 'general' }));
+    act(() => controller.render({ ...model, activeKey: 'appearance' }));
+
+    // Right edge 580 plus the 24px fade margin, minus the 200px viewport.
+    expect(host.scrollLeft).toBe(404);
+    act(() => {
+      host.dispatchEvent(new Event('scroll'));
+    });
+    expect(host.dataset.overflowStart).toBe('true');
+  });
 });

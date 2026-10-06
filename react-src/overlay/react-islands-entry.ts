@@ -1,5 +1,5 @@
 import { createSearchInputApi } from '../shared/search-input';
-import { createSuggestionsViewApi } from '../newtab/suggestions';
+import { createSuggestionsViewApi } from '../search/suggestions';
 import { createTabSwitcherViewApi } from './tab-switcher';
 import { createOverlayShellApi } from './shell';
 import { createFeatureHintViewApi } from '../shared/feature-hint-view';

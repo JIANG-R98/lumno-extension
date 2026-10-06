@@ -306,6 +306,90 @@ describe('New Tab select menu React island', () => {
     expect(instance.menu.textContent).toContain('Liste');
   });
 
+  it('renders a group title between the divider and its first option', () => {
+    const { instance } = createMenu({
+      ...baseConfig,
+      options: [
+        ...(baseConfig.options || []),
+        {
+          action: 'surface:adaptive',
+          dividerBefore: true,
+          groupTitle: 'Bar background',
+          label: 'Adaptive mist',
+          radio: true,
+          value: '__surface_adaptive__'
+        }
+      ]
+    });
+
+    const titles = instance.menu.querySelectorAll<HTMLElement>(
+      '._x_extension_select_menu_title_2024_unique_'
+    );
+    const groupTitle = titles[1];
+    const option = instance.menu.querySelector<HTMLElement>(
+      '[data-value="__surface_adaptive__"]'
+    );
+    expect(titles).toHaveLength(2);
+    expect(groupTitle?.textContent).toBe('Bar background');
+    expect(groupTitle?.previousElementSibling?.getAttribute('role')).toBe(
+      'separator'
+    );
+    expect(groupTitle?.nextElementSibling).toBe(option);
+    expect(
+      instance.menu.querySelectorAll('._x_extension_select_divider_2026_unique_')
+    ).toHaveLength(1);
+  });
+
+  it('keeps listbox dividers out of the option list and skips a leading one', () => {
+    const { instance } = createMenu({
+      ...baseConfig,
+      options: [
+        { dividerBefore: true, label: 'Folders', value: 'folder' },
+        { dividerBefore: true, label: 'List', value: 'list' }
+      ]
+    });
+
+    const dividers = instance.menu.querySelectorAll(
+      '._x_extension_select_divider_2026_unique_'
+    );
+    expect(instance.menu.getAttribute('role')).toBe('listbox');
+    expect(dividers).toHaveLength(1);
+    expect(dividers[0]?.getAttribute('role')).toBe('presentation');
+  });
+
+  it('points the trigger at the active option and supports Home and End', () => {
+    const { controller, instance } = createMenu({
+      ...baseConfig,
+      options: [
+        { label: 'Folders', value: 'folder' },
+        { label: 'List', value: 'list' },
+        { label: 'Top', value: 'top' }
+      ]
+    });
+    const press = (key: string) => act(() => {
+      instance.trigger.dispatchEvent(
+        new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })
+      );
+    });
+
+    expect(instance.trigger.hasAttribute('aria-activedescendant')).toBe(false);
+    act(() => controller.setOpen(instance.wrapper, true));
+    expect(instance.trigger.getAttribute('aria-activedescendant')).toBe(
+      'mode-menu_option_0'
+    );
+    press('End');
+    expect(instance.trigger.getAttribute('aria-activedescendant')).toBe(
+      'mode-menu_option_2'
+    );
+    expect(document.getElementById('mode-menu_option_2')?.dataset.value).toBe(
+      'top'
+    );
+    press('Home');
+    expect(instance.trigger.getAttribute('aria-activedescendant')).toBe(
+      'mode-menu_option_0'
+    );
+  });
+
   it('exposes independent action choices as an accessible radio group', () => {
     const { instance } = createMenu({
       ...baseConfig,

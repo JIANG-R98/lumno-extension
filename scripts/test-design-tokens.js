@@ -1,0 +1,70 @@
+const assert = require('assert');
+const fs = require('fs');
+const { readLightTokens } = require('./helpers/css-tokens');
+
+const read = (file) => fs.readFileSync(file, 'utf8');
+const pages = {
+  'newtab.html': read('newtab.html'),
+  'src/options/options.html': read('src/options/options.html'),
+  'src/onboarding/onboarding.html': read('src/onboarding/onboarding.html')
+};
+
+// Tokens load before any stylesheet that reads them (only font and icon CSS may precede).
+Object.entries(pages).forEach(([file, html]) => {
+  const sheets = Array.from(html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g), (m) => m[1]);
+  const tokensIndex = sheets.indexOf('../shared/tokens.css');
+  assert.ok(tokensIndex >= 0, `${file} should load the shared tokens`);
+  sheets.slice(0, tokensIndex).forEach((href) => {
+    assert.match(href, /^\.\.\/\.\.\/assets\//, `${file} should load ${href} after tokens.css`);
+  });
+});
+
+// Every token a stylesheet references must exist.
+const tokens = readLightTokens();
+const stylesheets = [
+  ...fs.readdirSync('src/shared').filter((f) => f.endsWith('.css')).map((f) => `src/shared/${f}`),
+  'src/options/options.css', 'src/options/webdav-options.css', 'src/newtab/newtab.css',
+  'src/newtab/shortcut-dialog.css', 'src/newtab/folder-color-picker.css',
+  'src/newtab/remote-content.css', 'src/onboarding/onboarding.css', 'src/overlay/suggestions-view.css'
+];
+stylesheets.forEach((file) => {
+  for (const match of read(file).matchAll(/var\((--lumno-[\w-]+)/g)) {
+    assert.ok(tokens.has(match[1]), `${file} references unknown token ${match[1]}`);
+  }
+});
+
+// Stylesheets injected into web pages have no tokens there, so each reference needs a fallback.
+[
+  'src/shared/tooltip.css', 'src/shared/menu-surface.css', 'src/shared/toast.css',
+  'src/shared/search-input.css', 'src/shared/feature-hints.css', 'src/shared/cursor-tooltip.css',
+  'src/overlay/suggestions-view.css'
+].forEach((file) => {
+  const bare = read(file).match(/var\(--lumno-[\w-]+\)/g) || [];
+  assert.deepStrictEqual(bare, [], `${file} is injected into web pages; give every token a fallback`);
+});
+
+// Shared components are defined once; pages only resize them.
+const optionsCss = read('src/options/options.css');
+const newtabCss = read('src/newtab/newtab.css');
+[optionsCss, newtabCss].forEach((css) => {
+  assert.doesNotMatch(css, /--switch-track-on-bg|--switch-knob-shadow|switch-slider[^{]*::before\s*\{/,
+    'switch colors and knob rules belong to src/shared/switch.css');
+  assert.doesNotMatch(css, /^(?:\._x_extension_theme_check_2026_unique_|\.x-nt-appearance-check)\s*\{[^}]*linear-gradient/m,
+    'theme card check badges belong to src/shared/choice-card.css');
+});
+assert.doesNotMatch(optionsCss, /^\._x_extension_toast_2024_unique_ \{[^}]*background:/m,
+  'the Options toast uses src/shared/toast.css');
+
+// One indicator implementation: classic scripts call the shared module.
+assert.doesNotMatch(read('src/options/options.js'), /function measure\w*Indicator/,
+  'options.js should not measure segmented indicators itself');
+['src/newtab/wallpaper.js', 'src/newtab/quotes.js'].forEach((file) => {
+  assert.match(read(file), /globalThis\.LumnoSegmentedIndicator/,
+    `${file} should position indicators through the shared segmented indicator`);
+});
+['react-src/newtab/react-islands-entry.ts', 'react-src/options/options-islands-entry.ts'].forEach((file) => {
+  assert.match(read(file), /runtime\.LumnoSegmentedIndicator = createSegmentedIndicatorApi\(\)/,
+    `${file} should expose the shared segmented indicator to classic scripts`);
+});
+
+console.log('design token tests passed');

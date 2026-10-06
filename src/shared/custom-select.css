@@ -120,7 +120,7 @@
   border: 1px solid var(--tab-border, rgba(15, 23, 42, 0.08));
   background: var(--control-bg, rgba(255, 255, 255, 0.86));
   color: var(--panel-text, #111827);
-  font-size: 13px;
+  font-size: var(--lumno-font-size-md);
   font-weight: 500;
   gap: 8px;
   cursor: pointer;
@@ -130,7 +130,7 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 180ms ease;
+  transition: border-color var(--lumno-duration-sm) ease, background-color var(--lumno-duration-sm) ease, box-shadow var(--lumno-duration-md) ease;
 }
 
 ._x_extension_select_wrap_2024_unique_:hover ._x_extension_select_trigger_2024_unique_ {
@@ -196,7 +196,7 @@ body[data-theme="dark"] ._x_extension_select_wrap_2024_unique_[data-open="true"]
 ._x_extension_select_option_2024_unique_ {
   padding: 10px 12px;
   border-radius: var(--x-extension-select-option-radius, 10px);
-  font-size: 13px;
+  font-size: var(--lumno-font-size-md);
   font-weight: 500;
   color: var(--panel-text, #111827);
   cursor: pointer;
@@ -216,17 +216,9 @@ body[data-theme="dark"] ._x_extension_select_wrap_2024_unique_[data-open="true"]
   margin-top: 4px;
 }
 
-._x_extension_select_option_2024_unique_[data-divider-before="true"] {
-  margin-top: 11px;
-}
-
-._x_extension_select_option_2024_unique_[data-divider-before="true"]::before {
-  content: "";
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  top: -6px;
+._x_extension_select_divider_2026_unique_ {
   height: 1px;
+  margin: 6px 8px;
   background: var(--tab-border, rgba(15, 23, 42, 0.08));
   pointer-events: none;
 }
@@ -238,7 +230,7 @@ body[data-theme="dark"] ._x_extension_select_wrap_2024_unique_[data-open="true"]
   display: block;
   color: var(--panel-subtext, #6b7280);
   pointer-events: none;
-  border-radius: 4px;
+  border-radius: var(--lumno-radius-xs);
   object-fit: contain;
 }
 
@@ -262,10 +254,12 @@ body[data-theme="dark"] ._x_extension_select_wrap_2024_unique_[data-open="true"]
   color: inherit;
 }
 
+/* Titles share the option text inset; the menu edge and a divider both sit
+   14px above a title, so every group opens with the same rhythm. */
 ._x_extension_select_menu_title_2024_unique_ {
-  padding: 4px 8px 6px;
+  padding: 8px 12px;
   color: var(--panel-subtext, #6b7280);
-  font-size: 11px;
+  font-size: var(--lumno-font-size-xs);
   font-weight: 600;
   line-height: 1;
   white-space: nowrap;
@@ -302,7 +296,7 @@ body[data-theme="dark"] ._x_extension_select_wrap_2024_unique_[data-open="true"]
   height: 14px;
   display: block;
   pointer-events: none;
-  transition: color 160ms ease, transform 180ms ease;
+  transition: color var(--lumno-duration-sm) ease, transform var(--lumno-duration-md) ease;
 }
 
 ._x_extension_select_wrap_2024_unique_:hover ._x_extension_select_icon_2024_unique_ {

@@ -45,14 +45,16 @@ assert.match(
 assert.match(templateHeaderRule, /width:\s*100%;/, 'site search template header should span the field width');
 
 const ghostRule = getRule(`.${ghostClass}`);
+// Layout properties need the compound selector to survive the base button's `all: unset`.
+const ghostLayoutRule = getRule(`._x_extension_shortcut_submit_2024_unique_.${ghostClass}`);
 const darkGhostRule = getRule(`body[data-theme="dark"] .${ghostClass}`);
 [
   /--settings-button-bg:\s*transparent;/,
-  /--settings-button-shadow:\s*none;/,
-  /white-space:\s*nowrap;/
+  /--settings-button-shadow:\s*none;/
 ].forEach((pattern) => {
   assert.match(ghostRule, pattern, 'shortcut ghost buttons should stay visually quiet and compact');
 });
+assert.match(ghostLayoutRule, /white-space:\s*nowrap;/, 'shortcut ghost buttons should not wrap their label');
 assert.match(
   ghostRule,
   /--settings-button-hover-bg:\s*rgba\(15,\s*23,\s*42,\s*0\.045\);/,
@@ -92,7 +94,7 @@ assert.ok(
   !new RegExp(`(?:^|\\n)\\s*body\\[data-theme="dark"\\]\\s+\\.${ghostClass}:hover\\s*\\{`).test(optionsHtml),
   'dark shortcut ghost buttons should not need a separate hover selector'
 );
-const buttonRule = getRule(`.${buttonClass}`);
+const buttonRule = getRule(`._x_extension_shortcut_submit_2024_unique_.${buttonClass}`);
 assert.match(buttonRule, /margin-left:\s*auto;/, 'query insert button should sit on the right side of the template header');
 assert.doesNotMatch(buttonRule, /text-align:\s*right;/, 'query insert button should move as a control without right-aligning its label');
 

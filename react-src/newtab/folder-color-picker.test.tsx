@@ -30,7 +30,8 @@ function button(text: string) {
   return result;
 }
 function swatch(group: 'presets' | 'saved', color: string) {
-  return document.querySelector<HTMLButtonElement>(`.x-nt-folder-color-${group} .x-nt-folder-color-swatch[aria-label="${color}"]`)!;
+  const selector = group === 'presets' ? `[data-color="${color}"]` : `[aria-label="${color}"]`;
+  return document.querySelector<HTMLButtonElement>(`.x-nt-folder-color-${group} .x-nt-folder-color-swatch${selector}`)!;
 }
 
 describe('folder color values', () => {
@@ -61,7 +62,7 @@ describe('folder color picker', () => {
     expect(button('Save').disabled).toBe(true);
     expect(input(1).getAttribute('aria-invalid')).toBe('true');
     expect(preview).toHaveBeenLastCalledWith('123', '#0C2238');
-    act(() => document.querySelector<HTMLButtonElement>('button[aria-label="#5393FF"]')!.click());
+    act(() => swatch('presets', '#5393FF').click());
     expect(button('Save').disabled).toBe(false);
     expect(Array.from(document.querySelectorAll<HTMLInputElement>('input')).map((element) => element.value)).toEqual(['83', '147', '255']);
     enter(0, '12'); enter(1, '34'); enter(2, '56');
@@ -107,7 +108,8 @@ describe('folder color picker', () => {
     expect(submit).toHaveBeenLastCalledWith('123', '#FF8800');
     expect(picker!.isOpen()).toBe(false);
     act(() => picker!.open({ folderId: '123', title: 'Design', color: '#FF8800' }));
-    act(() => document.querySelector<HTMLButtonElement>('.x-nt-folder-color-stage button[aria-label="Restore default color"]')!.click());
+    act(() => swatch('presets', '#5393FF').click());
+    expect(swatch('presets', '#5393FF').getAttribute('aria-label')).toBe('Default color');
     expect(input(0).value).toBe('#5393FF');
     await act(async () => { document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
     expect(submit).toHaveBeenLastCalledWith('123', null);
@@ -168,32 +170,40 @@ describe('folder color picker', () => {
     await act(async () => { setup(options); });
     expect(Array.from(document.querySelectorAll('.x-nt-folder-color-saved-item .x-nt-folder-color-swatch')).map((element) => element.getAttribute('aria-label'))).toEqual(stored);
   });
-  it('treats a saved copy of a preset as an independent custom swatch', async () => {
-    const preview = vi.fn();
+  it('only saves colors that are not already presets or saved', async () => {
     const saveSavedColors = vi.fn(async () => {});
-    setup({ onPreview: preview, saveSavedColors });
+    setup({ saveSavedColors });
+    const add = () => document.querySelector<HTMLButtonElement>('.x-nt-folder-color-add')!;
     act(() => swatch('presets', '#8B5CF6').click());
-    const previewCalls = preview.mock.calls.length;
-    expect(swatch('presets', '#8B5CF6').getAttribute('aria-pressed')).toBe('true');
-    await act(async () => document.querySelector<HTMLButtonElement>('.x-nt-folder-color-add')!.click());
-    expect(saveSavedColors).toHaveBeenLastCalledWith(['#8B5CF6']);
-    expect(swatch('saved', '#8B5CF6').getAttribute('aria-pressed')).toBe('true');
-    expect(swatch('presets', '#8B5CF6').getAttribute('aria-pressed')).toBe('false');
-    expect(document.querySelectorAll('.x-nt-folder-color-swatch[aria-pressed="true"]')).toHaveLength(1);
-    chooseFormat('rgb');
-    chooseFormat('hex');
-    expect(swatch('saved', '#8B5CF6').getAttribute('aria-pressed')).toBe('true');
-    act(() => swatch('presets', '#8B5CF6').click());
-    expect(swatch('presets', '#8B5CF6').getAttribute('aria-pressed')).toBe('true');
-    expect(swatch('saved', '#8B5CF6').getAttribute('aria-pressed')).toBe('false');
-    act(() => swatch('saved', '#8B5CF6').click());
-    expect(swatch('saved', '#8B5CF6').getAttribute('aria-pressed')).toBe('true');
-    expect(swatch('presets', '#8B5CF6').getAttribute('aria-pressed')).toBe('false');
-    await act(async () => document.querySelector<HTMLButtonElement>('.x-nt-folder-color-remove')!.click());
-    expect(swatch('presets', '#8B5CF6').getAttribute('aria-pressed')).toBe('false');
-    expect(document.querySelectorAll('.x-nt-folder-color-swatch[aria-pressed="true"]')).toHaveLength(0);
-    expect(input(0).value).toBe('#8B5CF6');
-    expect(preview).toHaveBeenCalledTimes(previewCalls);
+    expect(add().disabled).toBe(true);
+    enter(0, '#8b5cf6');
+    expect(add().disabled).toBe(true);
+    act(() => add().click());
+    expect(saveSavedColors).not.toHaveBeenCalled();
+    enter(0, '#8b5cf7');
+    expect(add().disabled).toBe(false);
+    await act(async () => add().click());
+    expect(saveSavedColors).toHaveBeenLastCalledWith(['#8B5CF7']);
+    expect(swatch('saved', '#8B5CF7').getAttribute('aria-pressed')).toBe('true');
+  });
+  it('accepts HEX values with or without the leading hash', () => {
+    const preview = vi.fn();
+    setup({ onPreview: preview });
+    for (const [value, expected] of [['14b8a6', '#14B8A6'], ['#22c55e', '#22C55E'], ['f80', '#FF8800'], ['#abc', '#AABBCC']]) {
+      enter(0, value);
+      expect(input(0).getAttribute('aria-invalid'), value).toBe('false');
+      expect(preview).toHaveBeenLastCalledWith('123', expected);
+    }
+    enter(0, '14b8a6');
+    act(() => { input(0).focus(); input(0).blur(); });
+    expect(input(0).value).toBe('#14B8A6');
+    expect(button('Save').disabled).toBe(false);
+  });
+  it('opens focused on the selected swatch, or the color area for a custom color', () => {
+    setup();
+    expect(document.activeElement).toBe(swatch('presets', '#5393FF'));
+    act(() => picker!.open({ folderId: '123', title: 'Design', color: '#123456' }));
+    expect(document.activeElement).toBe(document.querySelector('.react-colorful__saturation .react-colorful__interactive'));
   });
   it('recognizes stored custom colors on reopen without linking manual edits to presets', async () => {
     await act(async () => { setup({ readSavedColors: async () => ['#5393FF'] }); });
@@ -210,19 +220,17 @@ describe('folder color picker', () => {
     expect(swatch('saved', '#5393FF').getAttribute('aria-pressed')).toBe('true');
     expect(swatch('presets', '#5393FF').getAttribute('aria-pressed')).toBe('false');
   });
-  it('switches from a preset to a custom color only after saving succeeds', async () => {
+  it('switches to the saved swatch only after saving succeeds', async () => {
     const saveSavedColors = vi.fn().mockRejectedValueOnce(new Error('Storage failed')).mockResolvedValue(undefined);
     const onSubmit = vi.fn(async () => {});
     setup({ saveSavedColors, onSubmit });
-    act(() => document.querySelector<HTMLButtonElement>('.x-nt-folder-color-reset')!.click());
+    enter(0, '#123456');
     await act(async () => document.querySelector<HTMLButtonElement>('.x-nt-folder-color-add')!.click());
-    expect(swatch('presets', '#5393FF').getAttribute('aria-pressed')).toBe('true');
     expect(document.querySelectorAll('.x-nt-folder-color-saved-item')).toHaveLength(0);
     await act(async () => document.querySelector<HTMLButtonElement>('.x-nt-folder-color-add')!.click());
-    expect(swatch('saved', '#5393FF').getAttribute('aria-pressed')).toBe('true');
-    expect(swatch('presets', '#5393FF').getAttribute('aria-pressed')).toBe('false');
+    expect(swatch('saved', '#123456').getAttribute('aria-pressed')).toBe('true');
     await act(async () => { document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
-    expect(onSubmit).toHaveBeenLastCalledWith('123', '#5393FF');
+    expect(onSubmit).toHaveBeenLastCalledWith('123', '#123456');
   });
   it('normalizes stored colors, removes duplicates and limits the saved row to eight colors', async () => {
     const saveSavedColors = vi.fn(async () => {});
@@ -293,7 +301,9 @@ describe('folder color picker', () => {
     }
     expect(saveSavedColors).toHaveBeenLastCalledWith([]);
     expect(document.querySelectorAll('.x-nt-folder-color-saved-item')).toHaveLength(0);
-    expect(document.activeElement).toBe(document.querySelector('.x-nt-folder-color-add'));
+    // The default color cannot be saved, so focus falls back to its selected swatch.
+    expect(document.querySelector<HTMLButtonElement>('.x-nt-folder-color-add')!.disabled).toBe(true);
+    expect(document.activeElement).toBe(swatch('presets', '#5393FF'));
     expect(document.querySelectorAll('.x-nt-folder-color-presets .x-nt-folder-color-swatch')).toHaveLength(8);
   });
   it('retains a saved color when deletion fails and allows retry', async () => {

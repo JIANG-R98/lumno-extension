@@ -255,6 +255,28 @@
       return host ? `https://${host}/` : '';
     }
 
+    // Tiles showing a custom upload, saved snapshot or bundled glyph take their
+    // tint from that artwork rather than from whichever icon set the host theme.
+    function refreshShortcutTileTheme(tile, hostTheme, normalizedHost) {
+      if (tile.getAttribute('data-shortcut-custom-icon') === 'true') {
+        return;
+      }
+      const suggestion = { type: 'shortcut', url: tile.getAttribute('data-shortcut-url') || '' };
+      if (!suggestion.url || !getThemeSourceForSuggestion(suggestion)) {
+        tile._xTheme = hostTheme;
+        applyShortcutTileTheme(tile, hostTheme, normalizedHost);
+        return;
+      }
+      // A snapshot saved after the tile mounted is picked up here.
+      getThemeForSuggestion(suggestion).then((iconTheme) => {
+        if (!tile.isConnected || normalizeHost(tile._xHost || '') !== normalizedHost) {
+          return;
+        }
+        tile._xTheme = iconTheme || defaultTheme;
+        applyShortcutTileTheme(tile, tile._xTheme, normalizedHost);
+      });
+    }
+
     function refreshThemeConsumersForHost(hostKey, theme) {
       const normalizedHost = normalizeHost(hostKey);
       if (!normalizedHost || !theme) {
@@ -274,8 +296,7 @@
       });
       shortcutTiles.forEach((tile) => {
         if (tile && normalizeHost(tile._xHost || '') === normalizedHost) {
-          tile._xTheme = theme;
-          applyShortcutTileTheme(tile, theme, normalizedHost);
+          refreshShortcutTileTheme(tile, theme, normalizedHost);
         }
       });
       suggestionItems.forEach((item) => {
@@ -336,6 +357,10 @@
       const entry = getPersistedSiteThemeEntry(normalizedHost);
       const accentRgb = entry ? normalizeAccentRgb(entry.accentRgb) : null;
       if (!accentRgb) {
+        return null;
+      }
+      // Entries saved before placeholder globes were filtered out.
+      if (normalizeThemeSource(entry.source) === 'favicon' && FAVICON_UTILS.isPlaceholderFaviconColor(accentRgb)) {
         return null;
       }
       const theme = buildThemeFromThemeResult(entry, entry.source);
@@ -415,7 +440,7 @@
       return promise;
     }
 
-    function getThemeFromUrl(url, hostOverride) {
+    function getThemeFromUrl(url, hostOverride, options) {
       const resolver = getPageFaviconUrlResolver();
       url = resolver ? resolver.getSafeFaviconCandidateUrl(url, '', 'theme') : '';
       if (!url) {
@@ -424,7 +449,8 @@
       const hostKey = normalizeHost(hostOverride || getHostFromUrl(url));
       const isProxy = isFaviconProxyUrl(url);
       const useHostCache = hostKey && (!isProxy || Boolean(hostOverride));
-      if (useHostCache && themeHostCache.has(hostKey)) {
+      const preferIconTheme = Boolean(options && options.preferIconTheme);
+      if (useHostCache && !preferIconTheme && themeHostCache.has(hostKey)) {
         const cachedTheme = themeHostCache.get(hostKey);
         if (
           cachedTheme &&
@@ -451,17 +477,17 @@
       }
       const cachedFaviconData = pageState.faviconDataCache.get(url);
       if (cachedFaviconData) {
-        return loadThemeFromImageSource(url, cachedFaviconData, hostKey, useHostCache);
+        return loadThemeFromImageSource(url, cachedFaviconData, hostKey, useHostCache, { preferIconTheme });
       }
       return withThemeTimeout(pageState.requestFaviconData(url), THEME_ICON_LOAD_TIMEOUT_MS, null).then((dataUrl) => {
         if (dataUrl) {
-          return loadThemeFromImageSource(url, dataUrl, hostKey, useHostCache);
+          return loadThemeFromImageSource(url, dataUrl, hostKey, useHostCache, { preferIconTheme });
         }
         if (isProxy) {
           themeColorCache.set(url, defaultTheme);
           return defaultTheme;
         }
-        return loadThemeFromImageSource(url, url, hostKey, useHostCache, { crossOrigin: true });
+        return loadThemeFromImageSource(url, url, hostKey, useHostCache, { crossOrigin: true, preferIconTheme });
       });
     }
 
@@ -508,7 +534,9 @@
         }
         image.onload = function() {
           const avg = extractAverageColor(image);
-          if (!avg) {
+          // A generic globe says nothing about the site; treat it as unresolved so
+          // it neither tints this consumer nor leaks into the host cache.
+          if (!avg || FAVICON_UTILS.isPlaceholderFaviconColor(avg)) {
             themeColorCache.set(url, defaultTheme);
             finish(defaultTheme);
             return;
@@ -516,7 +544,11 @@
           const theme = buildThemeFromAccent(avg, 'favicon');
           themeColorCache.set(url, theme);
           if (useHostCache) {
-            setResolvedThemeForHost(hostKey, theme, { iconUrl: url });
+            // A higher-priority host theme would otherwise replace this icon's
+            // own cache entry; icon-first consumers keep what they measured.
+            setResolvedThemeForHost(hostKey, theme, {
+              iconUrl: options && options.preferIconTheme ? '' : url
+            });
           }
           finish(theme);
         };
@@ -695,7 +727,20 @@
         return Promise.resolve(brandTheme);
       }
       if (suggestion && suggestion.type === 'shortcut') {
-        return iconUrl ? getThemeFromUrl(iconUrl, hostKey) : Promise.resolve(defaultTheme);
+        // Tint from the artwork the tile actually shows, not whatever icon another
+        // surface happened to load for the same host.
+        if (!iconUrl) {
+          return Promise.resolve(defaultTheme);
+        }
+        return getThemeFromUrl(iconUrl, hostKey, { preferIconTheme: true }).then((theme) => {
+          if (theme && !theme._xIsDefault) {
+            return theme;
+          }
+          const hostTheme = hostKey ? themeHostCache.get(hostKey) : null;
+          return hostTheme && !hostTheme._xIsDefault && !isLowConfidenceTheme(hostTheme)
+            ? hostTheme
+            : theme;
+        });
       }
       const persistedTheme = getPersistedThemeForHost(hostKey);
       if (persistedTheme && !isHostFaviconVisitDirty(hostKey) && !isLowConfidenceTheme(persistedTheme)) {
@@ -745,6 +790,13 @@
       }
       if (suggestion && suggestion.url) {
         const hostKey = getHostFromUrl(suggestion.url);
+        if (suggestion.type === 'shortcut') {
+          const iconUrl = getThemeSourceForSuggestion(suggestion);
+          const iconTheme = iconUrl ? themeColorCache.get(iconUrl) : null;
+          if (iconTheme && !iconTheme._xIsDefault) {
+            return iconTheme;
+          }
+        }
         if (hostKey && themeHostCache.has(hostKey)) {
           const cachedTheme = themeHostCache.get(hostKey);
           if (cachedTheme && !isLowConfidenceTheme(cachedTheme)) {

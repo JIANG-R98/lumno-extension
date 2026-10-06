@@ -127,7 +127,7 @@ describe('Options select control React island', () => {
     const select = host.querySelector<HTMLSelectElement>('select')!;
     const setStorage = vi.fn();
     const mount = new Function(
-      'optionsSelectControlApi', 'chrome', 'getMessage', 'languageSelect',
+      'optionsSelectControlApi', 'chrome', 'getMessage', 'languageSelect', 'tabsRow',
       'selectionQuickActionsProviderSelect', 'searchResultTabPositionSelect', 'SETTINGS', 'storageArea',
       optionsSource.slice(
         optionsSource.indexOf('  const SEARCH_RESULT_TAB_POSITION_STORAGE_KEY ='),
@@ -150,7 +150,7 @@ describe('Options select control React island', () => {
           return controller;
         }
       }, {}, (key: string, fallback: string) => messages[key]?.message || fallback,
-      null, null, select, settings, { set: setStorage });
+      null, null, null, select, settings, { set: setStorage });
     });
     expect(host.dataset.selectKind).toBe('search-result-tab-position');
     expect(host.querySelector('._x_extension_select_label_2024_unique_')?.textContent)
@@ -162,7 +162,12 @@ describe('Options select control React island', () => {
     // The auto-width wrapper must not pin longer localized options to the trigger width.
     expect(menu.dataset.menuSurfaceWidth).toBe('content');
     expect(menu.style.getPropertyValue('--x-extension-menu-surface-min-width')).toBe('100%');
-    expect(Array.from(menu.querySelectorAll('[data-i18n]'), (option) => option.textContent))
+    // React owns the labels: no data-i18n hooks for the classic i18n pass to overwrite.
+    expect(menu.querySelector('[data-i18n]')).toBeNull();
+    expect(Array.from(
+      menu.querySelectorAll('._x_extension_select_option_label_2026_unique_'),
+      (option) => option.textContent
+    ))
       .toEqual([
         messages.search_result_tab_position_end.message,
         messages.search_result_tab_position_after_current.message,
@@ -180,5 +185,64 @@ describe('Options select control React island', () => {
     });
     expect(host.querySelector('._x_extension_select_label_2024_unique_')?.textContent)
       .toBe(messages.search_result_tab_position_after_current.message);
+  });
+  it('chooses an option with the keyboard and returns focus to the trigger', () => {
+    const host = document.createElement('div');
+    const onSelect = vi.fn();
+    document.body.appendChild(host);
+    const controller = createSelectControlController(host, { kind: 'language', onSelect });
+    controllers.push(controller);
+    act(() => controller.render({ id: 'language', items, value: 'system' }));
+
+    const trigger = host.querySelector<HTMLButtonElement>('button')!;
+    trigger.focus();
+    const press = (key: string) => act(() => {
+      trigger.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key }));
+    });
+    press('ArrowDown');
+    expect(host.dataset.open).toBe('true');
+    expect(trigger.getAttribute('aria-activedescendant')).toBe('language_control_option_0');
+    press('ArrowDown');
+    expect(trigger.getAttribute('aria-activedescendant')).toBe('language_control_option_1');
+    press('Enter');
+
+    expect(onSelect).toHaveBeenCalledWith('zh-CN');
+    expect(host.dataset.open).toBe('false');
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('closes on Escape without reporting a change', () => {
+    const host = document.createElement('div');
+    const onSelect = vi.fn();
+    document.body.appendChild(host);
+    const controller = createSelectControlController(host, { kind: 'language', onSelect });
+    controllers.push(controller);
+    act(() => controller.render({ id: 'language', items, value: 'system' }));
+
+    act(() => host.querySelector<HTMLButtonElement>('button')?.click());
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }));
+    });
+
+    expect(host.dataset.open).toBe('false');
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('names the trigger with the setting title and the current value', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const controller = createSelectControlController(host, { kind: 'language', onSelect: vi.fn() });
+    controllers.push(controller);
+    act(() => controller.render({
+      id: 'language',
+      items,
+      labelledBy: 'language_title',
+      value: 'zh-CN'
+    }));
+
+    const trigger = host.querySelector<HTMLButtonElement>('button')!;
+    expect(trigger.getAttribute('aria-labelledby')).toBe('language_title language_control_value');
+    expect(trigger.hasAttribute('aria-label')).toBe(false);
+    expect(document.getElementById('language_control_value')?.textContent).toBe('简体中文');
   });
 });

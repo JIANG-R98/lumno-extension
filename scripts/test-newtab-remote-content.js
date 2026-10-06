@@ -32,6 +32,8 @@ async function main() {
   assert.deepEqual(settings.normalizeNewtabQuotePrefs({ position: 'bogus', category: 'invalid' }),
     { enabled: false, position: 'search', category: 'literature', fontSize: 15 });
   assert.deepEqual(settings.normalizeNewtabQuotePrefs({ position: 'bottom', category: 'poetry', fontSize: 20 }),
+    { enabled: false, position: 'bottom', category: 'poetry', fontSize: 20 }, 'A saved position alone must not turn quotes on');
+  assert.deepEqual(settings.normalizeNewtabQuotePrefs({ enabled: true, position: 'bottom', category: 'poetry', fontSize: 20 }),
     { enabled: true, position: 'bottom', category: 'poetry', fontSize: 20 }, 'Existing enabled quotes should keep their preferences');
   assert.deepEqual(settings.normalizeNewtabQuotePrefs({ enabled: false, position: 'bottom', category: 'poetry', fontSize: 20 }),
     { enabled: false, position: 'bottom', category: 'poetry', fontSize: 20 }, 'Disabling must retain the selected position');

@@ -19,7 +19,7 @@ function createServer() {
   const server = { files, directories, requests: [], offline: false, ignoreConditions: false,
     unsafeCollections: false, brokenDelete: false, etagMode: 'strong', beforeRequest: null, afterPut: null,
     rejectStatePut: 0, ignoreMoveOverwrite: false, moveConflictStatus: 412, moveUnsupported: false,
-    loseMoveSource: false };
+    loseMoveSource: false, refuseMoves: 0, refusalStillMoves: false };
   server.fetch = async (url, options) => {
     if (server.offline) throw new Error('network is offline');
     const path = new URL(url).pathname;
@@ -56,12 +56,14 @@ function createServer() {
       assert.strictEqual(headers.get('Overwrite'), 'F');
       if (!directories.has(path)) return response(404);
       const exists = directories.has(destination);
-      if (exists && !server.ignoreMoveOverwrite) {
+      const refused = server.refuseMoves > 0;
+      if (refused) server.refuseMoves -= 1;
+      if (refused || (exists && !server.ignoreMoveOverwrite)) {
         if (server.loseMoveSource) {
           for (const name of [...files.keys()]) if (name.startsWith(path)) files.delete(name);
           directories.delete(path);
         }
-        return response(server.moveConflictStatus);
+        return response(refused ? 500 : server.moveConflictStatus);
       }
       for (const [name] of files) if (name.startsWith(destination)) files.delete(name);
       for (const [name, value] of [...files]) {
@@ -69,14 +71,15 @@ function createServer() {
       }
       directories.delete(path);
       directories.add(destination);
-      return response(exists ? 204 : 201);
+      return response(server.refusalStillMoves ? 500 : exists ? 204 : 201);
     }
     assert.strictEqual(options.method, 'PUT');
     if (server.rejectStatePut && path.endsWith('/state.json')) return response(server.rejectStatePut);
     if (!server.ignoreConditions && ((headers.has('If-Match') && (!entry || entry.etag !== headers.get('If-Match'))) ||
         (headers.get('If-None-Match') === '*' && entry))) return response(412);
     const bytes = typeof options.body === 'string' ? new TextEncoder().encode(options.body) : new Uint8Array(options.body);
-    const next = { bytes, etag: `"revision-${++revision}"` };
+    // 'size' mimics ETags built from size and a one-second mtime (sabre/dav FSExt).
+    const next = { bytes, etag: server.etagMode === 'size' ? `"size-${bytes.byteLength}"` : `"revision-${++revision}"` };
     files.set(path, next);
     if (server.afterPut) await server.afterPut(path, options);
     return response(entry ? 204 : 201, null, next.etag);
@@ -192,7 +195,7 @@ async function run() {
   unsafe.loseMoveSource = false;
   unsafe.moveUnsupported = true;
   await assert.rejects(client.createClient(config, { fetch: unsafe.fetch }).testConnection(), (cause) => {
-    assert.deepStrictEqual(cause.diagnostic, { revision: 'dav-lock-4', phase: 'directory-race', statuses: [201, 201] });
+    assert.deepStrictEqual(cause.diagnostic, { revision: 'dav-lock-5', phase: 'directory-race', statuses: [201, 201] });
     return cause.code === 'conditional-write-unsupported';
   });
   unsafe.unsafeCollections = false;
@@ -201,9 +204,9 @@ async function run() {
   unsafe.brokenDelete = true;
   await assert.rejects(client.createClient(config, { fetch: unsafe.fetch }).testConnection(), /conditional-write-unsupported/);
   unsafe.brokenDelete = false;
-  assert.deepStrictEqual(client.diagnostic({ revision: 'dav-lock-4', phase: 'directory-race', statuses: [201, 'app-password', 405], password: 'app-password' }),
-    { revision: 'dav-lock-4', phase: 'directory-race', statuses: [201, 405] });
-  assert.strictEqual(client.diagnostic({ revision: 'dav-lock-4', phase: 'https://private-user:password@host/' }), null);
+  assert.deepStrictEqual(client.diagnostic({ revision: 'dav-lock-5', phase: 'directory-race', statuses: [201, 'app-password', 405], password: 'app-password' }),
+    { revision: 'dav-lock-5', phase: 'directory-race', statuses: [201, 405] });
+  assert.strictEqual(client.diagnostic({ revision: 'dav-lock-5', phase: 'https://private-user:password@host/' }), null);
 
   const lockConfig = { ...config, concurrency: 'collection-lock' };
   const lockPath = '/dav/lumno/v1/write-lock/';
@@ -266,6 +269,71 @@ async function run() {
   assert(!competing.requests.some((request) => request.path === lockPath && request.method === 'MKCOL'),
     'racy shared-directory creation is never used to claim a MOVE lock');
   competing.directories.delete(lockPath);
+
+  // Real servers refuse the losing MOVE with 405 (nginx), 423 (Go x/net/webdav)
+  // or 500 (Apache, WsgiDAV, Nextcloud). Ownership checks decide, not the code.
+  for (const status of [405, 423, 500]) {
+    const refusing = createServer();
+    refusing.moveConflictStatus = status;
+    assert.deepStrictEqual(await client.createClient(config, { fetch: refusing.fetch }).testConnection(),
+      { ok: true, concurrency: 'conditional', lockStrategy: 'collection-move' }, `a verified ${status} refusal passes the race test`);
+    assert.strictEqual((await probeProvider(config, { fetch: refusing.fetch })).directoryMove.exclusive, true);
+    const first = client.createClient(lockConfig, { fetch: refusing.fetch });
+    const second = client.createClient(lockConfig, { fetch: refusing.fetch });
+    await first.ensureDirectories();
+    await first.writeState(empty({ [theme]: 'light' }), null);
+    const shared = (await first.readState()).etag;
+    const results = await Promise.allSettled([
+      first.writeState(empty({ [theme]: 'dark' }), shared), second.writeState(empty({ [theme]: 'system' }), shared)
+    ]);
+    assert.strictEqual(results.filter((result) => result.status === 'fulfilled').length, 1);
+    assert(results.filter((result) => result.status === 'rejected').every((result) => ['remote-locked', 'remote-changed'].includes(result.reason.code)),
+      `a ${status} refusal is an ordinary lost race, not an uncertain write`);
+    assert.strictEqual(refusing.directories.has(lockPath), false);
+    assert(![...refusing.directories].some((path) => path.includes('lock-candidate-')), 'the losing candidate is cleaned up');
+  }
+  const bothRefused = createServer();
+  bothRefused.refuseMoves = 2;
+  assert.strictEqual((await client.createClient(config, { fetch: bothRefused.fetch }).testConnection()).lockStrategy, 'collection-move',
+    'Nextcloud-style locking may refuse both overlapping MOVEs; neither moved, so the target is claimed sequentially');
+  // Arm the refusal for the standalone race that runs after the connection test.
+  const afterConnectionTest = (server, setup) => {
+    server.beforeRequest = (path, options) => {
+      if (options.method === 'DELETE' && /\/probe-[-\w]+\.txt$/.test(path)) { server.beforeRequest = null; setup(); }
+    };
+  };
+  afterConnectionTest(bothRefused, () => { bothRefused.refuseMoves = 2; });
+  const doubleRefusal = (await probeProvider(config, { fetch: bothRefused.fetch })).directoryMove;
+  assert.deepStrictEqual([doubleRefusal.statuses, doubleRefusal.untouched, doubleRefusal.exclusive], [[500, 500], true, true],
+    'the standalone probe also accepts a double refusal that moved nothing');
+  afterConnectionTest(bothRefused, () => { bothRefused.refuseMoves = 2; bothRefused.loseMoveSource = true; });
+  assert.strictEqual((await probeProvider(config, { fetch: bothRefused.fetch })).directoryMove.exclusive, false);
+  bothRefused.refuseMoves = 2;
+  await assert.rejects(client.createClient(config, { fetch: bothRefused.fetch }).testConnection(), (cause) => cause.diagnostic.phase === 'move-race',
+    'a double refusal is accepted only while both contenders keep their content');
+  const lyingRefusal = createServer();
+  lyingRefusal.etagMode = 'none';
+  const lyingClient = client.createClient(lockConfig, { fetch: lyingRefusal.fetch });
+  await lyingClient.ensureDirectories();
+  lyingRefusal.refusalStillMoves = true;
+  await assert.rejects(lyingClient.writeState(empty(), null), /conditional-write-unsupported/, 'a refusal that still moved the candidate is never a lost race');
+  assert(lyingRefusal.directories.has(lockPath), 'the unexpectedly claimed lock is left for explicit recovery');
+  assert.strictEqual(lyingRefusal.files.has('/dav/lumno/v1/state.json'), false);
+
+  // Same-size rewrites within one second share a size/mtime ETag. The content
+  // digest still exposes the change, so a stale writer cannot overwrite it.
+  const colliding = createServer();
+  colliding.etagMode = 'size';
+  const staleWriter = client.createClient(config, { fetch: colliding.fetch });
+  const freshWriter = client.createClient(config, { fetch: colliding.fetch });
+  await staleWriter.ensureDirectories();
+  await staleWriter.writeState(empty({ [theme]: 'light' }), null);
+  const staleBase = (await staleWriter.readState()).etag;
+  await freshWriter.writeState(empty({ [theme]: 'dark1' }), (await freshWriter.readState()).etag);
+  assert.strictEqual(colliding.files.get('/dav/lumno/v1/state.json').etag,
+    `"size-${Buffer.byteLength(JSON.stringify(empty({ [theme]: 'light' })))}"`, 'the server ETag really collides');
+  await assert.rejects(staleWriter.writeState(empty({ [theme]: 'system' }), staleBase), /remote-changed/);
+  assert.strictEqual(colliding.state().data[theme], 'dark1');
 
   const lostClaim = createServer();
   lostClaim.etagMode = 'none';
@@ -609,12 +677,12 @@ async function run() {
   assert.strictEqual(probeCount(), initialProbeCount, 'repeated toggles and restarts reuse the exact saved capability check');
   assert.strictEqual(saved.privateValues.get('session').config.lockStrategy, 'collection-move');
   const legacySession = saved.privateValues.get('session');
-  legacySession.config.clientRevision = 'dav-lock-3';
+  legacySession.config.clientRevision = 'dav-lock-4';
   legacySession.config.lockStrategy = 'collection-create';
   saved.privateValues.set('session', legacySession);
   await saved.createController().handle({ operation: 'sync' });
   assert(probeCount() > initialProbeCount, 'an older client capability check is upgraded before automatic sync');
-  assert.strictEqual(saved.privateValues.get('session').config.clientRevision, 'dav-lock-4');
+  assert.strictEqual(saved.privateValues.get('session').config.clientRevision, 'dav-lock-5');
   assert.strictEqual(saved.privateValues.get('session').config.lockStrategy, 'collection-move');
   const updatedProbeCount = probeCount();
   await savedRestart.handle({ operation: 'test', config: { ...config, password: '' } });

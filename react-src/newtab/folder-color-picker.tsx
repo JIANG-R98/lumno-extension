@@ -2,7 +2,6 @@ import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 're
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { HexColorPicker } from 'react-colorful';
-import { RangeSliderResetButton } from '../shared/range-slider';
 import { SelectMenu } from './select-menu';
 import { DEFAULT_FOLDER_COLOR, MAX_SAVED_FOLDER_COLORS, normalizeSavedFolderColors, parseFolderColor, folderColorToChannels } from './folder-color';
 
@@ -54,27 +53,35 @@ function FolderColorForm({ initial, options, initialSavedColors, updateSavedColo
   // Prefer a saved swatch on reopen; explicit edits keep their own source.
   const selectedSource = colorSource ?? (savedColors.includes(color) ? 'saved' : 'preset');
   const [savedColorsReady, setSavedColorsReady] = useState(!options.readSavedColors);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLSpanElement>(null);
-  const stageRef = useRef<HTMLElement>(null);
+  const defaultSwatchRef = useRef<HTMLButtonElement>(null);
   const addColorRef = useRef<HTMLButtonElement>(null);
   const savedColorsRef = useRef<HTMLDivElement>(null);
   const focusSavedColorRef = useRef<number | null>(null);
   const invalidHex = parseFolderColor(hexText) === null;
   const invalidChannels = rgbTexts.map((channel) => !/^\d{1,3}$/.test(channel) || Number(channel) > 255);
   const invalid = format === 'hex' ? invalidHex : invalidChannels.some(Boolean);
+  // Presets are always one click away, so only new colors can be saved.
+  const isKnownColor = PRESETS.includes(color) || savedColors.includes(color);
   const invalidMessage = t('folder_color_invalid', 'Enter a valid HEX color or RGB values from 0 to 255.');
   const previewHtml = useRef({ __html: options.getFolderSvg?.('color-picker-preview') || '' });
 
-  useLayoutEffect(() => { inputRef.current?.focus(); inputRef.current?.select(); }, []);
+  // Rest on the selected swatch, or the saturation area for a custom color, so the dialog opens in a browsing state.
+  function focusCurrentColor() {
+    (editorRef.current?.querySelector<HTMLElement>('.x-nt-folder-color-swatch[aria-pressed="true"]')
+      || editorRef.current?.querySelector<HTMLElement>('.react-colorful__saturation .react-colorful__interactive'))?.focus();
+  }
+  useLayoutEffect(focusCurrentColor, []);
   useLayoutEffect(() => {
-    for (const target of [stageRef.current?.querySelector<HTMLButtonElement>('.x-nt-folder-color-reset'), addColorRef.current]) {
+    for (const target of [defaultSwatchRef.current, addColorRef.current]) {
       if (target) options.bindTooltip?.(target, () => target.getAttribute('data-tooltip') || '', { placement: 'top', maxWidth: 260 });
     }
     if (focusSavedColorRef.current !== null) {
       const target = savedColorsRef.current?.querySelectorAll<HTMLButtonElement>('.x-nt-folder-color-swatch:not(.x-nt-folder-color-add)')[focusSavedColorRef.current] || addColorRef.current;
       focusSavedColorRef.current = null;
-      target?.focus();
+      if (target && !target.disabled) target.focus();
+      else focusCurrentColor();
     }
   }, [options, savedColors]);
   useEffect(() => {
@@ -152,7 +159,7 @@ function FolderColorForm({ initial, options, initialSavedColors, updateSavedColo
   }
 
   async function saveCurrentColor() {
-    if (busy || invalid || !savedColorsReady || savedColors.length >= MAX_SAVED_FOLDER_COLORS || savedColors.includes(color)) return;
+    if (busy || invalid || !savedColorsReady || savedColors.length >= MAX_SAVED_FOLDER_COLORS || isKnownColor) return;
     if (await persistSavedColors([...savedColors, color], savedColors.length,
       t('folder_color_saved_save_failed', 'Could not save this color. Try again.'))) {
       setColorSource('saved');
@@ -176,27 +183,28 @@ function FolderColorForm({ initial, options, initialSavedColors, updateSavedColo
       aria-label={t('folder_color_change', 'Change color')}>
       <form className="x-nt-shortcut-form x-nt-folder-color-form" onSubmit={submit}>
         <div className="x-nt-folder-color-layout">
-          <figure className="x-nt-folder-color-stage" ref={stageRef}>
+          <figure className="x-nt-folder-color-stage">
             <span className="x-nt-folder-color-preview" ref={previewRef} aria-hidden="true" dangerouslySetInnerHTML={previewHtml.current}
               onPointerEnter={() => { if (previewRef.current) options.animateFolderIcon?.(previewRef.current, true); }}
               onPointerLeave={() => { if (previewRef.current) options.animateFolderIcon?.(previewRef.current, false); }} />
             <figcaption className="x-nt-folder-color-name" title={initial.title}>{initial.title}</figcaption>
-            <RangeSliderResetButton className="x-nt-folder-color-reset" iconClassName="ri-size-16"
-              aria-label={t('folder_color_reset_tooltip', 'Restore default color')}
-              title={t('folder_color_reset_tooltip', 'Restore default color')}
-              data-tooltip={t('folder_color_reset_tooltip', 'Restore default color')}
-              disabled={busy} onClick={() => selectColor(DEFAULT_FOLDER_COLOR, 'preset', true)} />
           </figure>
-          <div className="x-nt-folder-color-editor">
+          <div className="x-nt-folder-color-editor" ref={editorRef}>
             <fieldset className="x-nt-folder-color-controls" disabled={busy}>
               <div inert={busy}>
                 <HexColorPicker color={color} onChange={(value) => selectColor(value)} aria-label={t('folder_color_title', 'Folder color')} />
               </div>
               <div className="x-nt-folder-color-palettes">
                 <div className="x-nt-folder-color-presets" role="group" aria-label={t('folder_color_presets', 'Preset colors')}>
-                  {PRESETS.map((preset) => <button key={preset} type="button" className="x-nt-folder-color-swatch"
-                    style={{ backgroundColor: preset }} aria-label={preset} aria-pressed={selectedSource === 'preset' && color === preset}
-                    onClick={() => selectColor(preset, 'preset')} />)}
+                  {PRESETS.map((preset) => {
+                    // The default swatch removes the customization instead of pinning its value.
+                    const isDefault = preset === DEFAULT_FOLDER_COLOR;
+                    const label = isDefault ? t('folder_color_default', 'Default color') : preset;
+                    return <button key={preset} type="button" className="x-nt-folder-color-swatch" data-color={preset}
+                      ref={isDefault ? defaultSwatchRef : undefined} title={isDefault ? label : undefined} data-tooltip={isDefault ? label : undefined}
+                      style={{ backgroundColor: preset }} aria-label={label} aria-pressed={selectedSource === 'preset' && color === preset}
+                      onClick={() => selectColor(preset, 'preset', isDefault)} />;
+                  })}
                 </div>
                 <div className="x-nt-folder-color-saved" role="group" ref={savedColorsRef}
                   aria-label={t('folder_color_saved', 'Saved colors')}>
@@ -215,7 +223,7 @@ function FolderColorForm({ initial, options, initialSavedColors, updateSavedColo
                     aria-label={t('folder_color_save_current', 'Save current color')}
                     title={t('folder_color_save_current', 'Save current color')}
                     data-tooltip={t('folder_color_save_current', 'Save current color')}
-                    disabled={!savedColorsReady || invalid || savedColors.includes(color)} onClick={() => { void saveCurrentColor(); }}>
+                    disabled={!savedColorsReady || invalid || isKnownColor} onClick={() => { void saveCurrentColor(); }}>
                     <i className="ri-icon ri-size-16 ri-add-line" aria-hidden="true" />
                   </button> : null}
                 </div>
@@ -241,7 +249,7 @@ function FolderColorForm({ initial, options, initialSavedColors, updateSavedColo
                     host={formatHost} registerControls={ignoreSelectControls} /> : null}
                 </div>
                 {format === 'hex' ? <input className="_x_extension_shortcut_input_2024_unique_ x-nt-folder-color-hex"
-                  ref={inputRef} value={hexText} spellCheck={false} aria-label="HEX"
+                  value={hexText} spellCheck={false} aria-label="HEX"
                   aria-invalid={invalidHex} aria-describedby={invalidHex ? 'x-nt-folder-color-error' : undefined}
                   placeholder="#5393FF" onChange={(event) => {
                     const text = event.currentTarget.value;

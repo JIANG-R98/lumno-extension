@@ -481,8 +481,10 @@
     let topContentSecondsTitle = null;
     let topContentSecondsToggle = null;
     let wallpaperAppearanceTitle = null;
+    let wallpaperThemeSectionTitle = null;
     let wallpaperAppearanceInfoButton = null;
     let wallpaperAppearanceScopeTabs = null;
+    let wallpaperAppearanceScopeTabsIndicator = null;
     let wallpaperAppearanceOptions = null;
     let wallpaperSearchWidthControl = null;
     let wallpaperSearchWidthLabel = null;
@@ -522,8 +524,6 @@
     let wallpaperOverlayLabel = null;
     let wallpaperOverlaySlider = null;
     let wallpaperEffectLabel = null;
-    let wallpaperEffectOptions = null;
-    let wallpaperEffectTabsIndicator = null;
     let wallpaperEffectInkToneControl = null;
     let wallpaperEffectInkToneOptions = null;
     let wallpaperEffectInkToneIndicator = null;
@@ -568,6 +568,7 @@
     let wallpaperModeTabsIndicatorRefreshFrame = 0;
     let wallpaperEffectTabsIndicatorRefreshFrame = 0;
     let topContentTabsIndicatorRefreshFrame = 0;
+    let appearanceScopeTabsIndicatorRefreshFrame = 0;
     let wallpaperActiveSlider = null;
     let wallpaperAppearanceAnimationTimers = [];
     let wallpaperAppearanceModeLabelsHeld = false;
@@ -2239,7 +2240,7 @@
       const percent = Number.isFinite(number) && Number.isFinite(min) && Number.isFinite(max) && max > min
         ? ((number - min) / (max - min)) * 100
         : 0;
-      slider.style.setProperty('--x-nt-overlay-slider-percent', `${percent}%`);
+      slider.style.setProperty('--x-range-slider-percent', `${percent}%`);
     }
 
     function syncWallpaperSliderValueInput(slider) {
@@ -2260,7 +2261,8 @@
       valueInput.disabled = Boolean(slider.disabled);
       const label = String(slider.getAttribute('aria-label') || '').trim();
       if (label) {
-        valueInput.setAttribute('aria-label', `${label} value`);
+        // The spin button role already tells it apart from the slider; keep the localized name.
+        valueInput.setAttribute('aria-label', label);
       }
     }
 
@@ -2487,11 +2489,6 @@
 
     function updateWallpaperEffectTabsIndicator() {
       updateWallpaperTabsIndicatorFor(
-        wallpaperEffectOptions,
-        wallpaperEffectTabsIndicator,
-        'button[data-wallpaper-effect-type][data-active="true"]'
-      );
-      updateWallpaperTabsIndicatorFor(
         wallpaperEffectInkToneOptions,
         wallpaperEffectInkToneIndicator,
         'button[data-wallpaper-effect-ink-tone][data-active="true"]'
@@ -2510,32 +2507,16 @@
       });
     }
 
+    // Measurement is shared with every segmented control (react-src/shared/segmented-indicator.ts).
     function updateWallpaperTabsIndicatorFor(tabs, indicator, selector) {
-      if (!tabs || !indicator) {
+      const segmentedIndicator = globalThis.LumnoSegmentedIndicator;
+      if (!tabs || !indicator || !segmentedIndicator) {
         return;
       }
-      const activeButton = tabs.querySelector(selector);
-      if (!activeButton) {
-        indicator.style.width = '0px';
-        return;
-      }
-      const containerRect = tabs.getBoundingClientRect();
-      const buttonRect = activeButton.getBoundingClientRect();
-      if (containerRect.width <= 0 || buttonRect.width <= 0) {
-        return;
-      }
-      const scaleX = tabs.offsetWidth > 0
-        ? containerRect.width / tabs.offsetWidth
-        : 1;
-      const normalizedScaleX = scaleX > 0 ? scaleX : 1;
-      const tabStyles = window.getComputedStyle(tabs);
-      const indicatorInset = Number.parseFloat(window.getComputedStyle(indicator).left) || 0;
-      const borderLeft = Number.parseFloat(tabStyles.borderLeftWidth) || 0;
-      const offset = Math.round(
-        ((buttonRect.left - containerRect.left) / normalizedScaleX) - indicatorInset - borderLeft
+      segmentedIndicator.apply(
+        indicator,
+        segmentedIndicator.measure(tabs, indicator, tabs.querySelector(selector))
       );
-      indicator.style.width = `${Math.round(buttonRect.width / normalizedScaleX)}px`;
-      indicator.style.transform = `translateX(${offset}px)`;
     }
 
     function updateWallpaperTabsIndicator() {
@@ -2559,6 +2540,14 @@
         topContentTabs,
         topContentTabsIndicator,
         'button[data-newtab-top-content][data-active="true"]'
+      );
+    }
+
+    function updateAppearanceScopeTabsIndicator() {
+      updateWallpaperTabsIndicatorFor(
+        wallpaperAppearanceScopeTabs,
+        wallpaperAppearanceScopeTabsIndicator,
+        'button[data-theme-scope][data-active="true"]'
       );
     }
 
@@ -2598,11 +2587,24 @@
       });
     }
 
+    function scheduleAppearanceScopeTabsIndicatorRefresh() {
+      if (appearanceScopeTabsIndicatorRefreshFrame) {
+        return;
+      }
+      appearanceScopeTabsIndicatorRefreshFrame = requestAnimationFrame(() => {
+        appearanceScopeTabsIndicatorRefreshFrame = requestAnimationFrame(() => {
+          appearanceScopeTabsIndicatorRefreshFrame = 0;
+          updateAppearanceScopeTabsIndicator();
+        });
+      });
+    }
+
     function updateWallpaperPanelTabIndicators() {
       updateWallpaperModeTabsIndicator();
       updateWallpaperTabsIndicator();
       updateWallpaperEffectTabsIndicator();
       updateTopContentTabsIndicator();
+      updateAppearanceScopeTabsIndicator();
     }
 
     function scheduleWallpaperPanelTabIndicatorsRefresh() {
@@ -2610,6 +2612,7 @@
       scheduleWallpaperTabsIndicatorRefresh();
       scheduleWallpaperEffectTabsIndicatorRefresh();
       scheduleTopContentTabsIndicatorRefresh();
+      scheduleAppearanceScopeTabsIndicatorRefresh();
     }
 
     function scheduleWallpaperPanelOpenTabIndicatorsRefresh() {
@@ -2901,6 +2904,22 @@
       wallpaperAccordionTrigger.setAttribute('aria-disabled', enabled ? 'false' : 'true');
     }
 
+    // Sections without an on/off switch only need a plain expand/collapse toggle.
+    function bindPanelSectionDisclosure(trigger, body) {
+      if (!trigger || !body) return;
+      const apply = (expanded) => {
+        trigger.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        body.hidden = !expanded;
+        body.setAttribute('data-visible', expanded ? 'true' : 'false');
+        body.setAttribute('aria-hidden', expanded ? 'false' : 'true');
+        if (expanded) scheduleWallpaperPanelTabIndicatorsRefresh();
+      };
+      apply(trigger.getAttribute('aria-expanded') !== 'false');
+      trigger.addEventListener('click', () => {
+        apply(trigger.getAttribute('aria-expanded') !== 'true');
+      });
+    }
+
     function setWallpaperBodyVisible(visible) {
       if (!wallpaperBody) {
         return;
@@ -3016,24 +3035,20 @@
     }
 
     function updateWallpaperEffectOptionsUi(prefs) {
-      if (wallpaperEffectOptions) {
-        wallpaperEffectOptions.querySelectorAll('.x-nt-effect-option').forEach((button) => {
-          const selected = button.getAttribute('data-wallpaper-effect-type') === prefs.type;
-          button.setAttribute('data-selected', selected ? 'true' : 'false');
-          button.setAttribute('data-active', selected ? 'true' : 'false');
-          button.setAttribute('aria-pressed', selected ? 'true' : 'false');
-          const type = button.getAttribute('data-wallpaper-effect-type') || 'none';
-          button.textContent = getWallpaperEffectLabel(type);
-          button.setAttribute(
-            'aria-label',
-            formatMessage('newtab_wallpaper_effect_select_label', 'Use {effect} wallpaper filter', {
-              effect: getWallpaperEffectLabel(type)
-            })
-          );
-        });
-        wallpaperEffectOptions.setAttribute('aria-label', t('newtab_wallpaper_effect_title', 'Wallpaper filter'));
-        scheduleWallpaperEffectTabsIndicatorRefresh();
+      if (!wallpaperViewController) {
+        return;
       }
+      wallpaperViewController.renderEffectSelect({
+        ariaLabel: t('newtab_wallpaper_effect_title', 'Wallpaper filter'),
+        options: NEWTAB_WALLPAPER_EFFECT_TYPES.map((item) => ({
+          value: item.type,
+          label: getWallpaperEffectLabel(item.type)
+        })),
+        value: prefs.type,
+        onChange: (type) => {
+          persistWallpaperEffectPrefs({ type });
+        }
+      });
     }
 
     function updateWallpaperEffectInkToneUi(prefs) {
@@ -3345,7 +3360,7 @@
         topContentWeightSlider.step = '1';
         topContentWeightSlider.value = String(currentTimeFontWeight);
         topContentWeightSlider.style.setProperty(
-          '--x-nt-overlay-slider-percent',
+          '--x-range-slider-percent',
           `${Math.max(0, Math.min(100, percent))}%`
         );
         topContentWeightSlider.setAttribute('aria-valuenow', String(currentTimeFontWeight));
@@ -3523,10 +3538,11 @@
       if (wallpaperAppearanceScopeTabs) {
         const activeScope = scope === 'home' ? 'home' : 'global';
         wallpaperAppearanceScopeTabs.querySelectorAll('.x-nt-appearance-scope-tab').forEach((button) => {
-          const selected = button.getAttribute('data-theme-scope') === activeScope;
-          button.setAttribute('data-selected', selected ? 'true' : 'false');
-          button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+          const active = button.getAttribute('data-theme-scope') === activeScope;
+          button.setAttribute('data-active', active ? 'true' : 'false');
+          button.setAttribute('aria-pressed', active ? 'true' : 'false');
         });
+        scheduleAppearanceScopeTabsIndicatorRefresh();
       }
       updateWallpaperSearchWidthControlUi();
     }
@@ -3590,7 +3606,7 @@
       wallpaperSearchWidthSlider.min = String(getSearchWidthMin());
       wallpaperSearchWidthSlider.max = String(getSearchWidthMax());
       wallpaperSearchWidthSlider.value = String(value);
-      wallpaperSearchWidthSlider.style.setProperty('--x-nt-overlay-slider-percent', `${getSearchWidthPercent(value)}%`);
+      wallpaperSearchWidthSlider.style.setProperty('--x-range-slider-percent', `${getSearchWidthPercent(value)}%`);
       wallpaperSearchWidthSlider.setAttribute('aria-valuenow', String(value));
       wallpaperSearchWidthSlider.setAttribute('aria-valuetext', formatSearchWidthValue(value));
       syncWallpaperSliderValueInput(wallpaperSearchWidthSlider);
@@ -3719,7 +3735,7 @@
         wallpaperShortcutColumnsSlider.step = '1';
         wallpaperShortcutColumnsSlider.value = String(value);
         wallpaperShortcutColumnsSlider.style.setProperty(
-          '--x-nt-overlay-slider-percent',
+          '--x-range-slider-percent',
           `${getShortcutColumnsPercent(value)}%`
         );
         wallpaperShortcutColumnsSlider.setAttribute('aria-valuenow', String(value));
@@ -3838,7 +3854,7 @@
       slider.step = '1';
       slider.value = String(normalized);
       slider.style.setProperty(
-        '--x-nt-overlay-slider-percent',
+        '--x-range-slider-percent',
         `${getShortcutLayoutPercent(
           normalized,
           config.source,
@@ -4906,7 +4922,10 @@
 
     function updateWallpaperAppearanceLanguageStrings() {
       if (wallpaperAppearanceTitle) {
-        wallpaperAppearanceTitle.textContent = t('settings_tab_appearance', 'Appearance');
+        wallpaperAppearanceTitle.textContent = t('newtab_appearance_settings_title', 'Appearance settings');
+      }
+      if (wallpaperThemeSectionTitle) {
+        wallpaperThemeSectionTitle.textContent = t('settings_theme_title', 'Theme mode');
       }
       if (wallpaperAppearanceMoreSettingsLink) {
         const label = t('newtab_more_settings', 'More settings');
@@ -4959,6 +4978,7 @@
             { scope: label }
           ));
         });
+        scheduleAppearanceScopeTabsIndicatorRefresh();
       }
     }
 
@@ -5311,7 +5331,6 @@
           { mode: 'light', imageUrl: getRuntimeAssetUrl('assets/images/light.svg') },
           { mode: 'dark', imageUrl: getRuntimeAssetUrl('assets/images/dark.svg') }
         ],
-        effectTypes: NEWTAB_WALLPAPER_EFFECT_TYPES,
         effectInkTones: NEWTAB_WALLPAPER_EFFECT_INK_TONES,
         favicons: NEWTAB_FAVICON_OPTIONS.map((item) => ({
           id: item.id,
@@ -5321,11 +5340,9 @@
         icons: {
           add: getRiSvg('ri-add-large-line', 'ri-size-18'),
           arrow: getRiSvg('ri-arrow-right-s-line', 'ri-size-14'),
-          link: getRiSvg('ri-arrow-right-line', 'ri-size-14'),
           check: getRiSvg('ri-check-line', 'ri-size-16'),
         delete: getRiSvg('ri-close-line', 'ri-size-14'),
           refresh: getRiSvg('ri-refresh-line', 'ri-size-14'),
-          help: getRiSvg('ri-question-line', 'ri-size-14'),
           info: getRiSvg('ri-information-line', 'ri-size-14'),
           wallpaper: getRiSvg('ri-t-shirt-2-line', 'ri-size-20')
         },
@@ -5425,8 +5442,10 @@
       topContentSecondsTitle = refs.topContentSecondsTitle;
       topContentSecondsToggle = refs.topContentSecondsToggle;
       wallpaperAppearanceTitle = refs.appearanceTitle;
+      wallpaperThemeSectionTitle = refs.themeSectionTitle || null;
       wallpaperAppearanceInfoButton = refs.appearanceInfoButton;
       wallpaperAppearanceScopeTabs = refs.appearanceScopeTabs;
+      wallpaperAppearanceScopeTabsIndicator = refs.appearanceScopeTabsIndicator || null;
       wallpaperAppearanceOptions = refs.appearanceOptions;
       wallpaperSearchWidthControl = refs.searchWidthControl;
       wallpaperSearchWidthLabel = refs.searchWidthLabel;
@@ -5459,8 +5478,6 @@
       wallpaperOverlayLabel = refs.overlayLabel;
       wallpaperOverlaySlider = refs.overlaySlider;
       wallpaperEffectLabel = refs.effectLabel;
-      wallpaperEffectOptions = refs.effectOptions;
-      wallpaperEffectTabsIndicator = refs.effectTabsIndicator;
       wallpaperEffectInkToneControl = refs.effectInkToneControl;
       wallpaperEffectInkToneOptions = refs.effectInkToneOptions;
       wallpaperEffectInkToneIndicator = refs.effectInkToneIndicator;
@@ -5510,6 +5527,9 @@
       wallpaperBingStatus = refs.bingStatus;
       const quoteRuntime = options.getQuoteRuntime && options.getQuoteRuntime();
       if (quoteRuntime) quoteRuntime.bindSettings(refs);
+      bindPanelSectionDisclosure(refs.themeSectionTrigger, refs.themeSectionBody);
+      bindPanelSectionDisclosure(refs.searchSectionTrigger, refs.searchSectionBody);
+      bindPanelSectionDisclosure(refs.faviconSectionTrigger, refs.faviconSectionBody);
       return refs;
     }
 
@@ -5574,7 +5594,7 @@
           wallpaperAppearanceInfoButton,
           t(
             'newtab_theme_scope_help',
-            '"Global" sets the default theme. "New Tab" overrides only the new tab page; choose "Follow Global" there to inherit the global setting.'
+            'Global: the default theme for all pages.\nNew Tab: applies only to the new tab page. Choose Follow "Global" to keep it in sync.'
           )
         );
       };
@@ -5776,12 +5796,7 @@
           persistNewtabWallpaper(tile.getAttribute('data-wallpaper-id'));
         });
       });
-      wallpaperEffectOptions.querySelectorAll('[data-wallpaper-effect-type]').forEach((button) => {
-        button.addEventListener('click', () => {
-          const type = button.getAttribute('data-wallpaper-effect-type');
-          persistWallpaperEffectPrefs({ type });
-        });
-      });
+      updateWallpaperEffectOptionsUi(getWallpaperEffectPrefsForEditMode());
       wallpaperEffectInkToneOptions.querySelectorAll('[data-wallpaper-effect-ink-tone]').forEach((button) => {
         button.addEventListener('click', () => {
           persistWallpaperEffectPrefs({
@@ -5924,6 +5939,7 @@
       }
       cancelWallpaperPanelActiveControls();
       hideWallpaperSliderValueBubble(null, { force: true });
+      wallpaperViewController.closeEffectSelect();
       wallpaperPanel.setAttribute('data-open', 'false');
       wallpaperButton.setAttribute('data-open', 'false');
       wallpaperButton.setAttribute('aria-expanded', 'false');
@@ -6095,8 +6111,13 @@
     }
 
     function containsTarget(target) {
-      return Boolean(wallpaperControl && target &&
-        (target === wallpaperControl || wallpaperControl.contains(target)));
+      if (!target) {
+        return false;
+      }
+      if (wallpaperControl && (target === wallpaperControl || wallpaperControl.contains(target))) {
+        return true;
+      }
+      return Boolean(wallpaperViewController && wallpaperViewController.containsEffectSelectTarget(target));
     }
 
     return {
@@ -6104,6 +6125,8 @@
       createControls: createWallpaperControls,
       getControlElement,
       containsTarget,
+      closeOpenMenu: () => Boolean(wallpaperViewController &&
+        wallpaperViewController.closeEffectSelect({ restoreFocus: true })),
       isPanelOpen: isWallpaperPanelOpen,
       closePanel: closeWallpaperPanel,
       updateLanguageStrings: updateWallpaperLanguageStrings,

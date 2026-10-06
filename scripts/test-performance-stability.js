@@ -49,10 +49,10 @@ assertMatches(
   /function scheduleOptionsViewportLayoutRefresh\(\) \{[\s\S]*?if \(optionsResizeFrame\)[\s\S]*?requestAnimationFrame/,
   'options resize work should be coalesced with requestAnimationFrame'
 );
-assertMatches(
+assert.doesNotMatch(
   optionsJs,
-  /function refreshAllTabsIndicators\(\) \{[\s\S]*?const measurements = \[[\s\S]*?measurements\.forEach\(applyTabsIndicatorMeasurement\)/,
-  'options should finish indicator measurements before applying style writes'
+  /measureTabsIndicator|refreshAllTabsIndicators|scheduleTabsIndicatorsRefresh/,
+  'segmented indicators are positioned by the shared React hook, not re-measured by the options adapter'
 );
 assert.strictEqual(
   (optionsJs.match(/SETTINGS\.addStorageChangeListener\(chrome, listener\)/g) || []).length,
@@ -60,9 +60,9 @@ assert.strictEqual(
   'options storage listeners should register through the shared guarded helper'
 );
 assertMatches(
-  optionsJs,
-  /buttonRect\.left - containerRect\.left \+ \(Number\(container\.scrollLeft\) \|\| 0\)/,
-  'indicator positioning should account for a horizontally scrolled tab strip'
+  fs.readFileSync('react-src/shared/segmented-indicator.ts', 'utf8'),
+  /\(buttonRect\.left - containerRect\.left\) \/ scaleX \+\s*container\.scrollLeft -\s*container\.clientLeft/,
+  'indicator positioning should account for a horizontally scrolled tab strip and its border'
 );
 
 assertMatches(
@@ -231,8 +231,8 @@ assertMatches(
 );
 assertMatches(
   optionsHtml,
-  /@media \(max-width: 720px\) \{[\s\S]*?#_x_extension_settings_tabs_2024_unique_ \{[\s\S]*?overflow-x: auto;[\s\S]*?\._x_extension_settings_tab_button_2024_unique_ \{[\s\S]*?white-space: nowrap;/,
-  'narrow settings tabs should scroll horizontally instead of wrapping labels'
+  /#_x_extension_settings_tabs_2024_unique_ \{[^}]*overflow-x: auto;[\s\S]*?\._x_extension_settings_tab_button_2024_unique_ \{[^}]*white-space: nowrap;/,
+  'settings tabs should scroll horizontally instead of wrapping labels at every width'
 );
 assertMatches(
   optionsJs,

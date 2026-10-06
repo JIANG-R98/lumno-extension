@@ -78,11 +78,11 @@ body {
   --tab-inactive-text: #8b94a4;
   --inline-tab-active-bg: #ffffff;
   --tab-border: rgba(15, 23, 42, 0.05);
-  --panel-subtext: #6b7280;
+  --panel-subtext: var(--lumno-color-text-muted);
 }
 body[data-theme="dark"] {
   --page-bg: #111111;
-  --panel-text: #e5e7eb;
+  --panel-text: var(--lumno-color-text);
   --tab-bg: #2f2f2f;
   --tab-active-bg: #475569;
   --tab-active-text: #f8fafc;
@@ -90,8 +90,8 @@ body[data-theme="dark"] {
   --inline-tab-active-bg: #3f3f46;
   --control-bg: #2f2f2f;
   --control-hover-bg: #363636;
-  --tab-border: rgba(255, 255, 255, 0.12);
-  --panel-subtext: #9ca3af;
+  --tab-border: var(--lumno-color-border);
+  --panel-subtext: var(--lumno-color-text-muted);
 }
 body[data-theme="light"] {
   --page-bg: #f1f5f9;
@@ -116,16 +116,16 @@ body[data-theme="light"] {
   --settings-panel-radius: 22px;
   --panel-bg: #ffffff;
   --panel-border: rgba(0, 0, 0, 0.12);
-  --panel-text: #111827;
-  --panel-subtext: #6b7280;
+  --panel-text: var(--lumno-color-text);
+  --panel-subtext: var(--lumno-color-text-muted);
   --setting-divider: rgba(15, 23, 42, 0.12);
-  --input-focus-color: rgba(59, 130, 246, 0.65);
+  --input-focus-color: var(--lumno-color-focus-ring);
   --input-focus-shadow: rgba(59, 130, 246, 0.2);
   --input-placeholder: rgba(100, 116, 139, 0.7);
   --input-focus-bg: rgba(59, 130, 246, 0.08);
-  --select-hover-bg: rgba(15, 23, 42, 0.08);
-  --select-selected-bg: #111827;
-  --select-selected-text: #f9fafb;
+  --select-hover-bg: var(--lumno-color-hover);
+  --select-selected-bg: var(--lumno-color-selected);
+  --select-selected-text: var(--lumno-color-selected-text);
   --duplicate-badge-bg: rgba(239, 68, 68, 0.12);
   --duplicate-badge-border: rgba(239, 68, 68, 0.35);
   --duplicate-badge-text: #b91c1c;
@@ -142,10 +142,6 @@ body[data-theme="light"] {
   --menu-bg: #ffffff;
   --top-tabs-bg: rgba(15, 23, 42, 0.04);
   --tab-border: rgba(15, 23, 42, 0.05);
-  --switch-bg: rgba(15, 23, 42, 0.12);
-  --switch-on-bg: #111827;
-  --switch-knob: #ffffff;
-  --tooltip-font-size: 13px;
   --settings-option-desc-font-size: 13px;
   --panel-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
   --sync-button-bg: rgba(148, 163, 184, 0.16);
@@ -194,17 +190,17 @@ body[data-theme="light"] {
 #_x_extension_settings_panel_2024_unique_[data-theme="dark"] {
   --panel-bg: rgb(25, 25, 25);
   --panel-border: rgba(255, 255, 255, 0.1);
-  --panel-text: #e5e7eb;
-  --panel-subtext: #9ca3af;
+  --panel-text: var(--lumno-color-text);
+  --panel-subtext: var(--lumno-color-text-muted);
   --setting-divider: rgba(255, 255, 255, 0.14);
   --panel-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
-  --input-focus-color: rgba(191, 219, 254, 0.7);
+  --input-focus-color: var(--lumno-color-focus-ring);
   --input-focus-shadow: rgba(59, 130, 246, 0.3);
   --input-placeholder: rgba(148, 163, 184, 0.7);
   --input-focus-bg: #383838;
   --select-hover-bg: #363636;
-  --select-selected-bg: #3f3f3f;
-  --select-selected-text: #f8fafc;
+  --select-selected-bg: var(--lumno-color-selected);
+  --select-selected-text: var(--lumno-color-selected-text);
   --duplicate-badge-bg: rgba(248, 113, 113, 0.16);
   --duplicate-badge-border: rgba(248, 113, 113, 0.5);
   --duplicate-badge-text: #fecaca;
@@ -220,24 +216,43 @@ body[data-theme="light"] {
   --control-open-bg: #404040;
   --menu-bg: #252525;
   --top-tabs-bg: #1f2732;
-  --tab-border: rgba(255, 255, 255, 0.12);
-  --switch-bg: rgba(255, 255, 255, 0.14);
-  --switch-on-bg: #2f3847;
-  --switch-knob: #111827;
+  --tab-border: var(--lumno-color-border);
   --sync-button-bg: rgba(255, 255, 255, 0.12);
   --sync-button-hover-bg: rgba(255, 255, 255, 0.2);
   --sync-menu-shadow: 0 16px 34px rgba(0, 0, 0, 0.45);
 }
+/* Labels never wrap: when a translation does not fit, the tab strip scrolls sideways. */
 #_x_extension_settings_tabs_2024_unique_ {
   display: flex;
   gap: 8px;
   padding: 4px;
   background: var(--top-tabs-bg);
-  border-radius: 12px;
+  border-radius: var(--lumno-radius-xl);
   border: none;
   box-shadow: none;
   width: fit-content;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
   position: relative;
+}
+#_x_extension_settings_tabs_2024_unique_::-webkit-scrollbar {
+  display: none;
+}
+/* Fade whichever edge hides tabs (set by the React navigation) so the strip reads as scrollable. */
+#_x_extension_settings_tabs_2024_unique_[data-overflow-end="true"] {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+}
+#_x_extension_settings_tabs_2024_unique_[data-overflow-start="true"] {
+  -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 32px), transparent);
+  mask-image: linear-gradient(to left, #000 calc(100% - 32px), transparent);
+}
+#_x_extension_settings_tabs_2024_unique_[data-overflow-start="true"][data-overflow-end="true"] {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent);
 }
 ._x_extension_settings_tabs_row_2024_unique_ {
   --tabs-panel-gap: 14px;
@@ -247,6 +262,7 @@ body[data-theme="light"] {
   gap: 10px;
   margin-bottom: var(--tabs-panel-gap);
   width: 100%;
+  min-width: 0;
   position: sticky;
   top: var(--tabs-sticky-top);
   z-index: 30;
@@ -295,7 +311,7 @@ body[data-theme="light"] {
   z-index: 1;
 }
 ._x_extension_settings_tabs_row_2024_unique_[data-stuck="true"] ._x_extension_settings_sticky_line_2026_unique_ {
-  animation: _xStickyLineGrow_2026_unique_ 500ms cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
+  animation: _xStickyLineGrow_2026_unique_ 500ms var(--lumno-ease-emphasized) forwards;
 }
 @keyframes _xStickyLineGrow_2026_unique_ {
   from {
@@ -311,11 +327,11 @@ body[data-theme="light"] {
   background: rgba(241, 245, 249, 0.92);
 }
 ._x_extension_settings_tabs_row_2024_unique_[data-stuck="true"]::before {
-  animation: _xStickyBgFadeInBase_2026_unique_ 180ms ease forwards;
+  animation: _xStickyBgFadeInBase_2026_unique_ var(--lumno-duration-md) ease forwards;
   opacity: 1;
 }
 ._x_extension_settings_tabs_row_2024_unique_[data-stuck="true"]::after {
-  animation: _xStickyBgFadeInNoiseLight_2026_unique_ 200ms ease forwards;
+  animation: _xStickyBgFadeInNoiseLight_2026_unique_ var(--lumno-duration-lg) ease forwards;
   opacity: 0.24;
 }
 @keyframes _xStickyBgFadeInBase_2026_unique_ {
@@ -356,9 +372,9 @@ body[data-theme="dark"] ._x_extension_settings_tabs_row_2024_unique_[data-stuck=
   min-height: 22px;
   padding: 3px 8px;
   box-sizing: border-box;
-  border-radius: 999px;
+  border-radius: var(--lumno-radius-pill);
   font-family: inherit;
-  font-size: 11px;
+  font-size: var(--lumno-font-size-xs);
   line-height: 1;
   font-weight: 500;
   color: var(--panel-text);
@@ -368,7 +384,7 @@ body[data-theme="dark"] ._x_extension_settings_tabs_row_2024_unique_[data-stuck=
   -webkit-backdrop-filter: blur(4px);
   cursor: pointer;
   white-space: nowrap;
-  transition: background-color 160ms ease;
+  transition: background-color var(--lumno-duration-sm) ease;
 }
 ._x_extension_settings_version_badge_2024_unique_:hover {
   background: rgba(255, 255, 255, 0.56);
@@ -402,9 +418,9 @@ body[data-theme="dark"] #_x_extension_settings_tabs_2024_unique_ {
   width: 0;
   box-sizing: border-box;
   background: var(--tab-active-bg);
-  border-radius: 8px;
+  border-radius: var(--lumno-radius-md);
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
-  transition: transform 240ms cubic-bezier(0.2, 0.9, 0.2, 1), width 240ms cubic-bezier(0.2, 0.9, 0.2, 1);
+  transition: transform var(--lumno-duration-2xl) var(--lumno-ease-emphasized), width var(--lumno-duration-2xl) var(--lumno-ease-emphasized);
   pointer-events: none;
   z-index: 0;
 }
@@ -415,16 +431,18 @@ body[data-theme="dark"] ._x_extension_tabs_indicator_2024_unique_ {
 }
 ._x_extension_settings_tab_button_2024_unique_ {
   all: unset;
+  flex: 0 0 auto;
+  white-space: nowrap;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 8px;
-  border-radius: 10px;
+  border-radius: var(--lumno-radius-lg);
   color: var(--tab-inactive-text);
-  font-size: var(--tooltip-font-size);
+  font-size: var(--lumno-font-size-md);
   font-weight: 400;
-  transition: color 0.2s ease, transform 120ms ease, filter 120ms ease;
+  transition: color var(--lumno-duration-lg) ease, transform var(--lumno-duration-2xs) ease, filter var(--lumno-duration-2xs) ease;
   position: relative;
   z-index: 1;
 }
@@ -433,7 +451,7 @@ body[data-theme="dark"] ._x_extension_tabs_indicator_2024_unique_ {
   height: 14px;
   opacity: 0.68;
   transform: scale(0.92);
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity var(--lumno-duration-lg) ease, transform var(--lumno-duration-lg) ease;
 }
 ._x_extension_settings_tab_button_2024_unique_[data-active="true"] {
   font-weight: 500;
@@ -462,7 +480,7 @@ body[data-theme="dark"] ._x_extension_tabs_indicator_2024_unique_ {
   align-items: center;
   gap: 16px;
   padding: var(--settings-row-block-space) var(--settings-content-edge-space);
-  border-radius: 14px;
+  border-radius: var(--lumno-radius-2xl);
   border: none;
   background: transparent;
 }
@@ -475,7 +493,7 @@ html[data-options-theme-mode="dark"] #_x_extension_overlay_page_theme_adaptation
   background: transparent;
 }
 ._x_extension_setting_title_2024_unique_ {
-  font-size: var(--tooltip-font-size);
+  font-size: var(--lumno-font-size-md);
   font-weight: 400;
   margin: 0;
   color: var(--panel-text);
@@ -505,10 +523,10 @@ html[data-options-theme-mode="dark"] #_x_extension_overlay_page_theme_adaptation
   display: flex;
   align-items: center;
   gap: 0;
-  border-radius: 10px;
+  border-radius: var(--lumno-radius-lg);
   border: 1px solid var(--tab-border);
   background: var(--control-bg);
-  transition: border-color 180ms ease, background-color 200ms ease;
+  transition: border-color var(--lumno-duration-md) ease, background-color var(--lumno-duration-lg) ease;
   overflow: hidden;
 }
 ._x_extension_shortcut_input_affix_2026_unique_:focus-within,
@@ -520,7 +538,7 @@ html[data-options-theme-mode="dark"] #_x_extension_overlay_page_theme_adaptation
   flex-shrink: 0;
   padding: 8px 0 8px 10px;
   color: var(--panel-subtext);
-  font-size: 13px;
+  font-size: var(--lumno-font-size-md);
   white-space: nowrap;
   user-select: none;
 }
@@ -541,7 +559,7 @@ html[data-options-theme-mode="dark"] #_x_extension_overlay_page_theme_adaptation
   background: transparent;
 }
 ._x_extension_section_title_2024_unique_ {
-  font-size: 16px;
+  font-size: var(--lumno-font-size-xl);
   font-weight: 550;
   line-height: 24px;
   margin: 0;
@@ -578,19 +596,19 @@ html[data-options-theme-mode="dark"] #_x_extension_overlay_page_theme_adaptation
   min-height: 30px;
   padding: 6px 10px;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--lumno-radius-pill);
   background: transparent;
   color: rgba(107, 114, 128, 0.86);
   display: inline-flex;
   align-items: center;
   gap: 6px;
   flex: 0 0 auto;
-  font-size: 12px;
+  font-size: var(--lumno-font-size-sm);
   font-weight: 500;
   line-height: 1;
   white-space: nowrap;
   text-decoration: none;
-  transition: background-color 160ms ease, color 160ms ease;
+  transition: background-color var(--lumno-duration-sm) ease, color var(--lumno-duration-sm) ease;
 }
 ._x_extension_feedback_support_link_2026_unique_ > .ri-external-link-line {
   color: inherit;
@@ -610,7 +628,7 @@ body[data-theme="dark"] ._x_extension_feedback_support_link_2026_unique_:hover {
   background: color-mix(in srgb, var(--control-hover-bg) 72%, transparent);
   color: var(--panel-text);
 }
-._x_extension_onboarding_guide_button_2026_unique_ {
+._x_extension_shortcut_submit_2024_unique_._x_extension_onboarding_guide_button_2026_unique_ {
   margin-left: auto;
   --settings-button-min-height: 30px;
   --settings-button-padding: 6px 10px;
@@ -634,6 +652,8 @@ body[data-theme="dark"] ._x_extension_onboarding_guide_button_2026_unique_ {
   --settings-button-hover-bg: color-mix(in srgb, var(--control-hover-bg) 72%, transparent);
   --settings-button-hover-color: var(--panel-text);
 }
+/* Tone-only variables stay single-class so the compact size modifier can
+   override them. */
 ._x_extension_shortcut_ghost_2026_unique_ {
   --settings-button-min-height: 28px;
   --settings-button-padding: 5px 9px;
@@ -645,6 +665,10 @@ body[data-theme="dark"] ._x_extension_onboarding_guide_button_2026_unique_ {
   --settings-button-hover-color: var(--panel-text);
   --settings-button-hover-shadow: none;
   --settings-button-font-size: 12px;
+}
+/* Compound selector: the base button's `all: unset` comes later and would
+   otherwise wipe these layout properties. */
+._x_extension_shortcut_submit_2024_unique_._x_extension_shortcut_ghost_2026_unique_ {
   align-self: center;
   line-height: 1;
   white-space: nowrap;
@@ -670,26 +694,16 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   gap: 4px;
   min-width: 0;
 }
-._x_extension_site_search_insert_query_2026_unique_ {
+._x_extension_shortcut_submit_2024_unique_._x_extension_site_search_insert_query_2026_unique_ {
   margin-left: auto;
   flex-shrink: 0;
 }
+/* Sits under its field label, so it hugs its labels from the start edge like the other inline tabs. */
 ._x_extension_site_search_category_tabs_2026_unique_ {
-  width: min(100%, 280px);
-  gap: 0;
-}
-._x_extension_site_search_category_tabs_2026_unique_ ._x_extension_theme_indicator_2024_unique_ {
-  pointer-events: none;
-  width: calc((100% - 4px) / 2);
-  transform: translateX(0);
-}
-._x_extension_site_search_category_tabs_2026_unique_ ._x_extension_theme_indicator_2024_unique_[data-category="searchEngine"] {
-  transform: translateX(100%);
+  align-self: flex-start;
+  margin-left: 0;
 }
 ._x_extension_site_search_category_tabs_2026_unique_ ._x_extension_theme_option_2024_unique_ {
-  box-sizing: border-box;
-  flex: 1 1 50%;
-  text-align: center;
   white-space: nowrap;
 }
 #_x_extension_aggregate_search_list_2026_unique_ {
@@ -716,7 +730,7 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
 ._x_extension_aggregate_search_count_2026_unique_ {
   flex: 0 0 auto;
   color: var(--panel-subtext);
-  font-size: 11px;
+  font-size: var(--lumno-font-size-xs);
 }
 ._x_extension_aggregate_search_sources_2026_unique_ {
   display: flex;
@@ -727,7 +741,7 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   overflow: auto;
   overscroll-behavior: contain;
   border: 1px solid var(--tab-border);
-  border-radius: 12px;
+  border-radius: var(--lumno-radius-xl);
   background: color-mix(in srgb, var(--control-bg) 78%, transparent);
 }
 ._x_extension_aggregate_search_source_group_2026_unique_ {
@@ -737,7 +751,7 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
 }
 ._x_extension_aggregate_search_source_group_label_2026_unique_ {
   color: var(--panel-subtext);
-  font-size: 11px;
+  font-size: var(--lumno-font-size-xs);
   font-weight: 500;
 }
 ._x_extension_aggregate_search_source_grid_2026_unique_ {
@@ -790,23 +804,18 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   height: 33px;
   padding: 0 12px;
   box-sizing: border-box;
-  border-radius: 10px;
+  border-radius: var(--lumno-radius-lg);
   border: 1px solid color-mix(in srgb, var(--tab-border) 82%, transparent);
   background: color-mix(in srgb, var(--control-bg) 78%, transparent);
   color: var(--panel-subtext);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: var(--lumno-font-size-md);
   font-weight: 520;
   line-height: 1;
   white-space: nowrap;
   opacity: 0.84;
-}
-._x_extension_shortcuts_link_2026_unique_ {
-  min-height: 40px;
-  padding: 0 14px;
-  border-radius: 10px;
 }
 ._x_extension_shortcut_submit_2024_unique_._x_extension_shortcuts_link_2026_unique_ {
   align-self: center;
@@ -843,7 +852,7 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
 ._x_extension_shortcut_reference_group_title_2026_unique_ {
   margin: 22px 14px 7px;
   color: var(--panel-subtext);
-  font-size: 12px;
+  font-size: var(--lumno-font-size-sm);
   font-weight: 520;
   line-height: 1.2;
   opacity: 0.72;
@@ -866,14 +875,14 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   height: 33px;
   padding: 0 11px;
   box-sizing: border-box;
-  border-radius: 10px;
+  border-radius: var(--lumno-radius-lg);
   border: 1px solid color-mix(in srgb, var(--tab-border) 82%, transparent);
   background: color-mix(in srgb, var(--control-bg) 78%, transparent);
   color: var(--panel-subtext);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: var(--lumno-font-size-md);
   font-weight: 520;
   line-height: 1;
   white-space: nowrap;
@@ -935,12 +944,12 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   height: 40px;
   position: relative;
   border: 1px solid var(--tab-border);
-  border-radius: 10px;
+  border-radius: var(--lumno-radius-lg);
   background: var(--control-bg);
-  transition: border-color 180ms ease, background-color 200ms ease;
+  transition: border-color var(--lumno-duration-md) ease, background-color var(--lumno-duration-lg) ease;
 }
 ._x_extension_shortcuts_hotkey_wrap_2024_unique_[data-width-ready="true"] {
-  transition: width 180ms ease, border-color 180ms ease, background-color 200ms ease;
+  transition: width var(--lumno-duration-md) ease, border-color var(--lumno-duration-md) ease, background-color var(--lumno-duration-lg) ease;
 }
 ._x_extension_shortcuts_hotkey_wrap_2024_unique_:hover {
   border-color: var(--input-focus-color);
@@ -983,7 +992,7 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   cursor: pointer;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 140ms ease, border-radius 140ms ease, background-color 140ms ease;
+  transition: opacity var(--lumno-duration-xs) ease, border-radius var(--lumno-duration-xs) ease, background-color var(--lumno-duration-xs) ease;
 }
 ._x_extension_shortcuts_hotkey_action_2024_unique_:hover {
   color: #2563eb;
@@ -1010,7 +1019,7 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
 ._x_extension_shortcuts_hotkey_tokens_2024_unique_[data-empty="true"]::before {
   content: attr(data-placeholder);
   color: var(--input-placeholder);
-  font-size: 13px;
+  font-size: var(--lumno-font-size-md);
   font-weight: 500;
 }
 ._x_extension_shortcuts_hotkey_wrap_2024_unique_:focus-within
@@ -1032,7 +1041,7 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   background: linear-gradient(180deg, #ededed 0%, #fff 100%);
   box-shadow: 0 4px 0 var(--keycap-shadow-color);
   color: #000;
-  font-size: 12px;
+  font-size: var(--lumno-font-size-sm);
   font-weight: 700;
   line-height: 1;
   display: inline-flex;
@@ -1045,7 +1054,7 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   transform-origin: center bottom;
 }
 ._x_extension_shortcuts_hotkey_token_2024_unique_._x_extension_shortcuts_hotkey_token_pop_2024_unique_ {
-  animation: _x_extension_keycap_pop_2024_unique_ 220ms cubic-bezier(0.22, 1.1, 0.36, 1) both;
+  animation: _x_extension_keycap_pop_2024_unique_ var(--lumno-duration-xl) cubic-bezier(0.22, 1.1, 0.36, 1) both;
 }
 ._x_extension_shortcuts_hotkey_token_2024_unique_::after {
   content: "";
@@ -1162,15 +1171,12 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
 #_x_extension_bookmark_columns_control_2026_unique_,
 #_x_extension_newtab_time_font_weight_control_2026_unique_,
 #_x_extension_newtab_shortcut_columns_control_2026_unique_,
+#_x_extension_newtab_shortcut_size_control_2026_unique_,
+#_x_extension_newtab_shortcut_gap_control_2026_unique_,
 #_x_extension_recent_count_control_2026_unique_,
 #_x_extension_search_result_display_limit_control_2026_unique_ {
   width: 210px;
   min-width: 170px;
-}
-#_x_extension_newtab_shortcut_size_control_2026_unique_,
-#_x_extension_newtab_shortcut_gap_control_2026_unique_ {
-  width: 256px;
-  min-width: 216px;
 }
 ._x_extension_range_slider_control_2026_unique_ {
   display: flex;
@@ -1178,145 +1184,24 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   gap: 10px;
   width: 100%;
 }
-.x-lumno-range-slider {
-  --x-lumno-range-slider-thumb-size: 16px;
-  position: relative;
+/* Track, thumb and marks come from ../shared/range-slider.css; only theme it here. */
+._x_extension_range_slider_control_2026_unique_ .x-range-slider {
+  --x-range-slider-fill: var(--panel-text);
+  --x-range-slider-rail: var(--tab-border);
+  --x-range-slider-surface: var(--panel-bg);
   flex: 1 1 auto;
-  height: 38px;
-  min-width: 0;
 }
-.x-lumno-range-slider-input {
-  appearance: none;
-  -webkit-appearance: none;
-  position: absolute;
-  z-index: 2;
-  top: 8px;
-  left: 0;
-  width: 100%;
-  height: 22px;
-  margin: 0;
-  padding: 0;
-  background: transparent;
-  cursor: pointer;
+#_x_extension_settings_panel_2024_unique_[data-theme="dark"]
+  ._x_extension_range_slider_control_2026_unique_ .x-range-slider {
+  --x-range-slider-thumb-bg: #f5f5f5;
+  --x-range-slider-thumb-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.4),
+    0 1px 3px rgba(0, 0, 0, 0.5);
+  --x-range-slider-ring: rgba(255, 255, 255, 0.12);
 }
-.x-lumno-range-slider-input::-webkit-slider-runnable-track {
-  height: 5px;
-  border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    var(--panel-text) 0%,
-    var(--panel-text) var(--x-lumno-range-slider-percent, 50%),
-    var(--tab-border) var(--x-lumno-range-slider-percent, 50%),
-    var(--tab-border) 100%
-  );
-}
-.x-lumno-range-slider-input::-webkit-slider-thumb {
-  appearance: none;
-  -webkit-appearance: none;
-  width: var(--x-lumno-range-slider-thumb-size);
-  height: var(--x-lumno-range-slider-thumb-size);
-  margin-top: -5.5px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #3d4657 0%, #111827 100%);
-  border: 1px solid rgba(10, 15, 26, 0.92);
-  box-shadow: inset 0 1px 1.4px rgba(255, 255, 255, 0.28),
-    inset 0 -1px 1.6px rgba(0, 0, 0, 0.28),
-    0 4px 10px rgba(15, 23, 42, 0.24);
-  filter: brightness(1);
-  transition: filter 150ms ease, box-shadow 150ms ease;
-}
-.x-lumno-range-slider-input:not(:disabled):hover::-webkit-slider-thumb,
-.x-lumno-range-slider-input:not(:disabled):focus-visible::-webkit-slider-thumb {
-  filter: brightness(1.16) saturate(1.04);
-  box-shadow: inset 0 1px 1.4px rgba(255, 255, 255, 0.36),
-    inset 0 -1px 1.6px rgba(0, 0, 0, 0.24),
-    0 5px 12px rgba(15, 23, 42, 0.28);
-}
-.x-lumno-range-slider-input:not(:disabled):active::-webkit-slider-thumb {
-  filter: brightness(0.96) saturate(1.02);
-}
-.x-lumno-range-slider-input:focus-visible {
-  outline: 2px solid var(--input-focus-color);
-  outline-offset: 3px;
-  border-radius: 999px;
-}
-.x-lumno-range-slider-scale {
-  position: absolute;
-  z-index: 1;
-  inset: 0 calc(var(--x-lumno-range-slider-thumb-size) / 2);
-  display: grid;
-  grid-template-columns: repeat(var(--x-lumno-range-slider-tick-count, 3), 1fr);
-  align-items: start;
-  margin: 0;
-  color: var(--panel-subtext);
-  font-size: 11px;
-  line-height: 1;
-  font-weight: 500;
-  pointer-events: none;
-  user-select: none;
-}
-.x-lumno-range-slider-tick {
-  position: relative;
-  height: 38px;
-  padding-top: 28px;
-  white-space: nowrap;
-}
-.x-lumno-range-slider-tick::before {
-  content: "";
-  position: absolute;
-  top: 19px;
-  width: 1px;
-  height: 13px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--panel-text) 34%, transparent);
-  transform: translateY(-50%);
-}
-.x-lumno-range-slider-tick[data-align="start"] {
-  text-align: left;
-}
-.x-lumno-range-slider-tick[data-align="start"]::before {
-  left: 0;
-}
-.x-lumno-range-slider-tick[data-align="center"] {
-  text-align: center;
-}
-.x-lumno-range-slider-tick[data-align="center"]::before {
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-.x-lumno-range-slider-tick[data-align="end"] {
-  text-align: right;
-}
-.x-lumno-range-slider-tick[data-align="end"]::before {
-  right: 0;
-}
-.x-lumno-range-slider-tick[data-positioned="true"] {
-  position: absolute;
-  left: var(--x-lumno-range-slider-tick-percent, 0%);
-  width: max-content;
-  text-align: center;
-  transform: translateX(-50%);
-}
-.x-lumno-range-slider-tick[data-positioned="true"][data-align="start"] {
-  text-align: left;
-  transform: none;
-}
-.x-lumno-range-slider-tick[data-positioned="true"][data-align="end"] {
-  text-align: right;
-  transform: translateX(-100%);
-}
-.x-lumno-range-slider-tick[data-positioned="true"]::before {
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-.x-lumno-range-slider-tick[data-positioned="true"][data-align="start"]::before {
-  left: 0;
-  transform: translateY(-50%);
-}
-.x-lumno-range-slider-tick[data-positioned="true"][data-align="end"]::before {
-  left: auto;
-  right: 0;
-  transform: translateY(-50%);
+._x_extension_range_slider_control_2026_unique_ ._x_extension_range_slider_value_input_2026_unique_ {
+  --x-range-slider-value-width: 56px;
+  --x-range-slider-value-height: 36px;
 }
 ._x_extension_range_slider_value_2026_unique_ {
   display: inline-flex;
@@ -1327,30 +1212,22 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   margin-top: 7px;
   padding: 0 7px;
   border: 1px solid var(--tab-border);
-  border-radius: 8px;
+  border-radius: var(--lumno-radius-md);
   background: var(--control-bg);
   color: var(--panel-text);
   box-sizing: border-box;
-  font-size: 12px;
+  font-size: var(--lumno-font-size-sm);
   font-weight: 600;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-}
-#_x_extension_settings_panel_2024_unique_[data-theme="dark"]
-  .x-lumno-range-slider-input::-webkit-slider-thumb {
-  background: linear-gradient(180deg, #f8fafc 0%, #cbd5e1 100%);
-  border-color: rgba(255, 255, 255, 0.78);
-  box-shadow: inset 0 1px 1.4px rgba(255, 255, 255, 0.85),
-    inset 0 -1px 1.6px rgba(15, 23, 42, 0.18),
-    0 4px 10px rgba(0, 0, 0, 0.36);
 }
 ._x_extension_sync_status_2024_unique_ {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   padding: 2px 6px;
-  border-radius: 6px;
-  font-size: 11px;
+  border-radius: var(--lumno-radius-sm);
+  font-size: var(--lumno-font-size-xs);
   font-weight: 500;
   line-height: 1.2;
   border: 1px solid transparent;
@@ -1358,7 +1235,7 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   background: rgba(148, 163, 184, 0.16);
   max-width: 100%;
   white-space: normal;
-  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+  transition: background-color var(--lumno-duration-sm) ease, border-color var(--lumno-duration-sm) ease, color var(--lumno-duration-sm) ease;
 }
 ._x_extension_sync_status_2024_unique_:hover {
   background: rgba(148, 163, 184, 0.24);
@@ -1421,70 +1298,7 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   --settings-button-font-size: 13px;
   --settings-button-min-height: 36px;
 }
-._x_extension_switch_2024_unique_ {
-  position: relative;
-  width: 44px;
-  height: 24px;
-  flex-shrink: 0;
-}
-._x_extension_switch_2024_unique_ input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-._x_extension_switch_slider_2024_unique_ {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(180deg, #e1e1e1 0%, #f4f4f4 100%);
-  border: 0.5px solid #dadada;
-  box-shadow:
-    inset 0 -1px 1px rgba(255, 255, 255, 0.32),
-    inset 0 1px 1.5px rgba(0, 0, 0, 0.14);
-  border-radius: 999px;
-  overflow: hidden;
-  z-index: 0;
-  transition:
-    border-color 320ms ease,
-    box-shadow 320ms ease;
-}
-._x_extension_switch_slider_2024_unique_::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(180deg, #404859 0%, #273042 100%);
-  opacity: 0;
-  pointer-events: none;
-  z-index: 1;
-  transition: opacity 320ms ease;
-}
-._x_extension_switch_slider_2024_unique_:before {
-  position: absolute;
-  content: "";
-  height: 18px;
-  width: 18px;
-  box-sizing: border-box;
-  left: 3px;
-  top: 50%;
-  background: #fafafa;
-  border: 0.5px solid #cdcdcd;
-  border-radius: 50%;
-  z-index: 2;
-  transition:
-    transform 320ms ease,
-    background-color 320ms ease,
-    border-color 320ms ease,
-    box-shadow 320ms ease;
-  box-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.1),
-    inset 0 2px 1px #ffffff,
-    inset 0 -1px 2px rgba(0, 0, 0, 0.15);
-  transform: translateY(-50%);
-}
+/* Switch geometry and colors live in ../shared/switch.css. */
 ._x_extension_shortcut_input_2024_unique_._x_extension_range_slider_value_input_2026_unique_ {
   appearance: textfield;
   -moz-appearance: textfield;
@@ -1497,52 +1311,12 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   appearance: none;
   -webkit-appearance: none;
 }
-._x_extension_switch_2024_unique_ input:checked + ._x_extension_switch_slider_2024_unique_ {
-  border-color: transparent;
-  box-shadow: none;
-}
-._x_extension_switch_2024_unique_ input:disabled + ._x_extension_switch_slider_2024_unique_ {
-  cursor: not-allowed;
-}
-._x_extension_switch_2024_unique_ input:focus-visible + ._x_extension_switch_slider_2024_unique_ {
-  outline: 2px solid var(--input-focus-color);
-  outline-offset: 2px;
-}
-._x_extension_switch_2024_unique_ input:checked + ._x_extension_switch_slider_2024_unique_:before {
-  transform: translate(20px, -50%);
-}
-._x_extension_switch_2024_unique_ input:checked + ._x_extension_switch_slider_2024_unique_::after {
-  opacity: 1;
-}
-#_x_extension_settings_panel_2024_unique_[data-theme="dark"] ._x_extension_switch_2024_unique_ input:checked + ._x_extension_switch_slider_2024_unique_ {
-  background: linear-gradient(180deg, #5b5b5b 0%, #434343 100%);
-  border-color: transparent;
-  box-shadow: none;
-}
-#_x_extension_settings_panel_2024_unique_[data-theme="dark"] ._x_extension_switch_slider_2024_unique_ {
-  background: linear-gradient(180deg, #5b5b5b 0%, #434343 100%);
-  border: 0.5px solid #3f3f3f;
-  box-shadow:
-    inset 0 -1px 1px rgba(255, 255, 255, 0.08),
-    inset 0 1px 2px rgba(0, 0, 0, 0.34);
-}
-#_x_extension_settings_panel_2024_unique_[data-theme="dark"] ._x_extension_switch_slider_2024_unique_::after {
-  background: linear-gradient(180deg, #6c7f9f 0%, #3b4a63 100%);
-}
-#_x_extension_settings_panel_2024_unique_[data-theme="dark"] ._x_extension_switch_slider_2024_unique_:before {
-  background: #f4f4f4;
-  border-color: #b9b9b9;
-  box-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.3),
-    inset 0 1px 1px rgba(255, 255, 255, 0.78),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.22);
-}
 ._x_extension_settings_placeholder_2024_unique_ {
   padding: 18px;
-  border-radius: 14px;
+  border-radius: var(--lumno-radius-2xl);
   border: 1px dashed var(--tab-border);
   color: var(--panel-subtext);
-  font-size: 13px;
+  font-size: var(--lumno-font-size-md);
   text-align: center;
 }
 ._x_extension_shortcuts_section_2024_unique_ {
@@ -1550,7 +1324,7 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   flex-direction: column;
   gap: var(--settings-content-gap);
   padding: 0 var(--settings-content-edge-space) var(--settings-row-block-space);
-  border-radius: 14px;
+  border-radius: var(--lumno-radius-2xl);
   background: transparent;
 }
 #_x_extension_settings_panel_2024_unique_[data-theme="dark"] ._x_extension_shortcuts_section_2024_unique_ {
@@ -1562,7 +1336,7 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   gap: 6px;
 }
 ._x_extension_shortcuts_title_2024_unique_ {
-  font-size: var(--tooltip-font-size);
+  font-size: var(--lumno-font-size-md);
   font-weight: 500;
   color: var(--panel-text);
   margin: 0;
@@ -1609,7 +1383,7 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   margin: 0;
 }
 ._x_extension_shortcut_group_title_2024_unique_._x_extension_section_title_2024_unique_ {
-  font-size: 16px;
+  font-size: var(--lumno-font-size-xl);
   font-weight: 550;
 }
 ._x_extension_shortcut_group_header_2024_unique_ {
@@ -1622,15 +1396,19 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   all: unset;
   cursor: pointer;
   padding: 4px;
-  border-radius: 8px;
+  border-radius: var(--lumno-radius-md);
   color: var(--panel-subtext);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   position: relative;
 }
-._x_extension_shortcut_group_action_2024_unique_:hover {
+._x_extension_shortcut_group_action_2024_unique_:hover:not(:disabled) {
   background: rgba(148, 163, 184, 0.2);
+}
+._x_extension_shortcut_group_action_2024_unique_:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
 }
 ._x_extension_shortcut_group_action_2024_unique_:focus-visible,
 ._x_extension_shortcut_edit_2024_unique_:focus-visible,
@@ -1638,43 +1416,13 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   outline: 2px solid var(--input-focus-color);
   outline-offset: 2px;
 }
-._x_extension_shortcut_group_action_2024_unique_[data-tooltip]::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  top: -32px;
-  right: 0;
-  background: #ffffff;
-  color: #334155;
-  padding: 9px 12px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  border-radius: 8px;
-  font-size: var(--tooltip-font-size);
-  white-space: pre-line;
-  max-width: min(360px, calc(100vw - 24px));
-  line-height: 1.4;
-  overflow-wrap: anywhere;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(4px);
-  transition: opacity 120ms ease, transform 120ms ease;
-  z-index: 3;
-}
-._x_extension_tooltip_host_2026_unique_[data-tooltip]::after,
-._x_extension_tooltip_host_2024_unique_[data-tooltip]::after {
-  content: none;
-}
-._x_extension_shortcut_group_action_2024_unique_[data-tooltip]:hover::after {
-  opacity: 1;
-  transform: translateY(0);
-}
 ._x_extension_shortcut_item_2024_unique_ {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 12px;
   padding: 14px;
-  border-radius: 14px;
+  border-radius: var(--lumno-radius-2xl);
   border: 1px solid rgba(15, 23, 42, 0.1);
   background: rgba(255, 255, 255, 0.65);
   box-shadow: 0 4px 8px rgba(15, 23, 42, 0.08);
@@ -1700,7 +1448,7 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 14px;
+  font-size: var(--lumno-font-size-lg);
   font-weight: 500;
   color: var(--panel-text);
   white-space: nowrap;
@@ -1710,12 +1458,12 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
 ._x_extension_shortcut_item_icon_2024_unique_ {
   width: 16px;
   height: 16px;
-  border-radius: 4px;
+  border-radius: var(--lumno-radius-xs);
   object-fit: contain;
   flex: 0 0 auto;
 }
 ._x_extension_shortcut_item_meta_2024_unique_ {
-  font-size: 13px;
+  font-size: var(--lumno-font-size-md);
   padding-left: 4px;
   color: var(--panel-subtext);
   white-space: nowrap;
@@ -1743,8 +1491,8 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   display: inline-flex;
   align-items: center;
   padding: 2px 6px;
-  font-size: 10px;
-  border-radius: 6px;
+  font-size: var(--lumno-font-size-2xs);
+  border-radius: var(--lumno-radius-sm);
   border: 1px solid var(--tab-border);
   color: var(--panel-subtext);
   background: var(--tab-bg);
@@ -1781,7 +1529,7 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
 }
 ._x_extension_shortcuts_dia_badge_2026_unique_ {
   gap: 4px;
-  font-size: 11px;
+  font-size: var(--lumno-font-size-xs);
 }
 ._x_extension_lab_beta_badge_2026_unique_ {
   padding: 1px 5px;
@@ -1815,21 +1563,35 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
     box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
   }
 }
+/*
+ * Collapsed, the editor also gives back its padding, divider and the item's 12px row gap,
+ * so a closed card keeps equal top and bottom padding.
+ */
 ._x_extension_shortcut_editor_2024_unique_ {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding-top: 6px;
+  margin-top: -12px;
+  padding-top: 0;
   padding-bottom: 0;
-  border-top: 1px dashed var(--tab-border);
+  border-top: 1px dashed transparent;
   max-height: 0;
   opacity: 0;
   transform: translateY(-6px);
   overflow: hidden;
   pointer-events: none;
-  transition: max-height 220ms ease, opacity 180ms ease, transform 220ms ease;
+  transition:
+    max-height var(--lumno-duration-xl) ease,
+    margin-top var(--lumno-duration-xl) ease,
+    padding-top var(--lumno-duration-xl) ease,
+    border-color var(--lumno-duration-md) ease,
+    opacity var(--lumno-duration-md) ease,
+    transform var(--lumno-duration-xl) ease;
 }
 ._x_extension_shortcut_item_2024_unique_[data-expanded="true"] ._x_extension_shortcut_editor_2024_unique_ {
+  margin-top: 0;
+  padding-top: 6px;
+  border-top-color: var(--tab-border);
   max-height: 360px;
   opacity: 1;
   transform: translateY(0);
@@ -1848,9 +1610,9 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   all: unset;
   cursor: pointer;
   padding: 4px 10px;
-  font-size: 11px;
+  font-size: var(--lumno-font-size-xs);
   font-weight: 500;
-  border-radius: 999px;
+  border-radius: var(--lumno-radius-pill);
   border: none;
   color: var(--panel-text);
   background: transparent;
@@ -1865,14 +1627,16 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   display: inline-flex;
   align-items: center;
 }
+/* Clear actions sit at the right edge of their header, so the bubble grows leftward. */
 ._x_extension_popconfirm_2024_unique_ {
   position: absolute;
   top: 28px;
-  left: 50%;
-  transform: translate(-50%, -6px) scale(0.98);
+  right: 0;
+  transform: translateY(-6px) scale(0.98);
+  transform-origin: top right;
   background: #ffffff;
   border: 1px solid var(--tab-border);
-  border-radius: 12px;
+  border-radius: var(--lumno-radius-xl);
   padding: 10px;
   box-shadow: 0 14px 36px rgba(15, 23, 42, 0.15);
   min-width: 160px;
@@ -1882,9 +1646,9 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   opacity: 0;
   pointer-events: none;
   transition:
-    opacity 160ms ease,
-    transform 180ms ease,
-    visibility 0s linear 180ms;
+    opacity var(--lumno-duration-sm) ease,
+    transform var(--lumno-duration-md) ease,
+    visibility 0s linear var(--lumno-duration-md);
   z-index: 2;
   visibility: hidden;
 }
@@ -1896,13 +1660,13 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
 }
 ._x_extension_popconfirm_2024_unique_[data-open="true"] {
   opacity: 1;
-  transform: translate(-50%, 0) scale(1);
+  transform: translateY(0) scale(1);
   pointer-events: auto;
   transition-delay: 0s;
   visibility: visible;
 }
 ._x_extension_popconfirm_text_2024_unique_ {
-  font-size: 12px;
+  font-size: var(--lumno-font-size-sm);
   color: var(--panel-text);
 }
 #_x_extension_settings_panel_2024_unique_[data-theme="dark"] ._x_extension_popconfirm_text_2024_unique_ {
@@ -1917,9 +1681,9 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   all: unset;
   cursor: pointer;
   padding: 4px 10px;
-  font-size: 11px;
+  font-size: var(--lumno-font-size-xs);
   font-weight: 500;
-  border-radius: 999px;
+  border-radius: var(--lumno-radius-pill);
   border: none;
   color: var(--panel-text);
   background: transparent;
@@ -1942,13 +1706,13 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   flex-direction: column;
   gap: 10px;
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: var(--lumno-radius-2xl);
   border: 1px dashed var(--shortcut-form-border);
   min-height: 56px;
   justify-content: center;
   overflow: hidden;
   max-height: 56px;
-  transition: max-height 220ms ease;
+  transition: max-height var(--lumno-duration-xl) ease;
   position: relative;
 }
 ._x_extension_shortcut_form_2024_unique_[data-expanded="false"] {
@@ -1979,7 +1743,7 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   display: flex;
   justify-content: center;
   align-items: center;
-  transition: opacity 160ms ease;
+  transition: opacity var(--lumno-duration-sm) ease;
   z-index: 0;
 }
 ._x_extension_shortcut_form_fields_2024_unique_ {
@@ -1992,7 +1756,7 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   transform: translateY(-6px);
   overflow: hidden;
   pointer-events: none;
-  transition: max-height 220ms ease, opacity 180ms ease, transform 220ms ease;
+  transition: max-height var(--lumno-duration-xl) ease, opacity var(--lumno-duration-md) ease, transform var(--lumno-duration-xl) ease;
   position: relative;
   z-index: 1;
 }
@@ -2008,31 +1772,9 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   pointer-events: auto;
   overflow: visible;
 }
+/* Toast look comes from ../shared/toast.css; Options only clears the notch. */
 ._x_extension_toast_2024_unique_ {
-  position: fixed;
-  top: max(24px, calc(env(safe-area-inset-top) + 12px));
-  left: 50%;
-  transform: translateX(-50%) translateY(-10px);
-  background: rgba(17, 24, 39, 0.92);
-  color: #f9fafb;
-  padding: 10px 16px;
-  border-radius: 999px;
-  font-size: 12px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 160ms ease, transform 200ms ease;
-  z-index: 9999;
-}
-._x_extension_toast_2024_unique_[data-show="true"] {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-body[data-theme="dark"] ._x_extension_toast_2024_unique_ {
-  background: rgba(2, 6, 23, 0.97);
-  color: #f8fafc;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45);
+  --x-lumno-toast-top: max(24px, calc(env(safe-area-inset-top) + 12px));
 }
 ._x_extension_confirm_mask_2024_unique_ {
   position: fixed;
@@ -2051,7 +1793,7 @@ body[data-theme="dark"] ._x_extension_toast_2024_unique_ {
   box-sizing: border-box;
   overflow: auto;
   overscroll-behavior: contain;
-  transition: opacity 140ms ease;
+  transition: opacity var(--lumno-duration-xs) ease;
 }
 ._x_extension_confirm_mask_2024_unique_[data-show="true"] {
   display: flex;
@@ -2080,19 +1822,13 @@ body[data-theme="dark"] ._x_extension_toast_2024_unique_ {
   overflow: hidden auto;
   transform: translate(0, 0) scale(1);
   opacity: 1;
-  transition: transform 420ms cubic-bezier(0.2, 0.9, 0.2, 1), opacity 360ms ease;
+  transition: transform 420ms var(--lumno-ease-emphasized), opacity 360ms ease;
 }
 #_x_extension_settings_panel_2024_unique_[data-theme="dark"] + ._x_extension_confirm_mask_2024_unique_ ._x_extension_confirm_dialog_2024_unique_,
 body[data-theme="dark"] ._x_extension_confirm_dialog_2024_unique_ {
   background: #0b1120;
   color: #e5e7eb;
   border: 1px solid rgba(148, 163, 184, 0.2);
-}
-@supports (corner-shape: superellipse(1.25)) {
-  ._x_extension_popconfirm_2024_unique_,
-  ._x_extension_confirm_dialog_2024_unique_ {
-    corner-shape: superellipse(1.25);
-  }
 }
 ._x_extension_confirm_message_2024_unique_ {
   font-size: 12.5px;
@@ -2105,7 +1841,7 @@ body[data-theme="dark"] ._x_extension_confirm_dialog_2024_unique_ {
   gap: 10px;
 }
 ._x_extension_confirm_actions_2024_unique_ ._x_extension_shortcut_edit_2024_unique_ {
-  font-size: 12px;
+  font-size: var(--lumno-font-size-sm);
   padding: 6px 12px;
 }
 ._x_extension_confirm_actions_2024_unique_ ._x_extension_shortcut_submit_2024_unique_ {
@@ -2118,7 +1854,7 @@ body[data-theme="dark"] ._x_extension_confirm_dialog_2024_unique_ {
   gap: 6px;
 }
 ._x_extension_shortcut_label_2024_unique_ {
-  font-size: 12px;
+  font-size: var(--lumno-font-size-sm);
   color: var(--panel-subtext);
 }
 ._x_extension_shortcut_required_2024_unique_ {
@@ -2132,13 +1868,13 @@ body[data-theme="dark"] ._x_extension_confirm_dialog_2024_unique_ {
 }
 ._x_extension_shortcut_input_2024_unique_ {
   padding: 8px 10px;
-  border-radius: 10px;
+  border-radius: var(--lumno-radius-lg);
   border: 1px solid var(--tab-border);
   background: var(--control-bg);
   color: var(--panel-text);
-  font-size: 13px;
+  font-size: var(--lumno-font-size-md);
   font-family: inherit;
-  transition: border-color 180ms ease, background-color 200ms ease;
+  transition: border-color var(--lumno-duration-md) ease, background-color var(--lumno-duration-lg) ease;
 }
 ._x_extension_shortcut_input_2024_unique_:disabled {
   cursor: not-allowed;
@@ -2171,7 +1907,7 @@ body[data-theme="dark"] ._x_extension_confirm_dialog_2024_unique_ {
   align-self: flex-start;
   min-height: var(--settings-button-min-height, auto);
   padding: var(--settings-button-padding, 8px 14px);
-  border-radius: 999px;
+  border-radius: var(--lumno-radius-pill);
   border: 1px solid var(--settings-button-border-color, transparent);
   background: var(--settings-button-bg, var(--tab-active-bg));
   background-clip: padding-box;
@@ -2181,14 +1917,14 @@ body[data-theme="dark"] ._x_extension_confirm_dialog_2024_unique_ {
   font-weight: var(--settings-button-font-weight, 500);
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--settings-button-gap, 6px);
   transition:
-    transform 120ms ease,
-    filter 120ms ease,
-    background 160ms ease,
-    border-color 160ms ease,
-    box-shadow 160ms ease,
-    color 160ms ease;
+    transform var(--lumno-duration-2xs) ease,
+    filter var(--lumno-duration-2xs) ease,
+    background var(--lumno-duration-sm) ease,
+    border-color var(--lumno-duration-sm) ease,
+    box-shadow var(--lumno-duration-sm) ease,
+    color var(--lumno-duration-sm) ease;
 }
 ._x_extension_shortcut_submit_2024_unique_::before {
   content: "";
@@ -2301,6 +2037,25 @@ body[data-theme="dark"] ._x_extension_shortcut_submit_primary_2024_unique_ {
   --settings-button-color: #f8fafc;
   --settings-button-hover-bg: linear-gradient(180deg, #56647c 0%, #3a4b66 100%);
 }
+/* Size modifier: matches the 36px inputs, selects and tabs. Combine with any tone (primary / secondary / ghost). */
+._x_extension_shortcut_compact_2026_unique_ {
+  --settings-button-min-height: 36px;
+  --settings-button-padding: 0 14px;
+  --settings-button-font-size: 13px;
+  --settings-button-gap: 5px;
+  line-height: 1;
+}
+._x_extension_shortcut_compact_2026_unique_ .ri-icon {
+  --ri-size: 14px;
+}
+/* Remix glyphs keep 1-3px of side bearing inside their box, so an edge icon
+   reads as extra padding; pull it toward the edge to balance the text side. */
+._x_extension_shortcut_submit_2024_unique_ > .ri-icon:first-child {
+  margin-inline-start: -2px;
+}
+._x_extension_shortcut_submit_2024_unique_ > * + .ri-icon:last-child {
+  margin-inline-end: -2px;
+}
 ._x_extension_shortcut_form_trigger_2024_unique_ ._x_extension_shortcut_submit_2024_unique_ {
   --settings-button-bg: transparent;
   --settings-button-color: var(--panel-text);
@@ -2308,14 +2063,14 @@ body[data-theme="dark"] ._x_extension_shortcut_submit_primary_2024_unique_ {
   --settings-button-hover-bg: var(--tab-bg);
 }
 ._x_extension_shortcut_error_2024_unique_ {
-  font-size: 12px;
+  font-size: var(--lumno-font-size-sm);
   color: #ef4444;
 }
 ._x_extension_theme_picker_2024_unique_ {
   display: flex;
   gap: 6px;
   padding: 2px;
-  border-radius: 10px;
+  border-radius: var(--lumno-radius-lg);
   border: 1px solid var(--tab-border);
   background: var(--control-bg);
   align-items: center;
@@ -2329,9 +2084,9 @@ body[data-theme="dark"] ._x_extension_shortcut_submit_primary_2024_unique_ {
   height: calc(100% - 4px);
   width: 0;
   background: var(--inline-tab-active-bg);
-  border-radius: 8px;
+  border-radius: var(--lumno-radius-md);
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
-  transition: transform 220ms cubic-bezier(0.2, 0.9, 0.2, 1), width 220ms cubic-bezier(0.2, 0.9, 0.2, 1);
+  transition: transform var(--lumno-duration-xl) var(--lumno-ease-emphasized), width var(--lumno-duration-xl) var(--lumno-ease-emphasized);
   pointer-events: none;
   z-index: 0;
 }
@@ -2339,17 +2094,22 @@ body[data-theme="dark"] ._x_extension_shortcut_submit_primary_2024_unique_ {
   all: unset;
   cursor: pointer;
   padding: 6px;
-  border-radius: 10px;
-  font-size: 13px;
+  border-radius: var(--lumno-radius-lg);
+  font-size: var(--lumno-font-size-md);
   font-weight: 400;
   color: var(--inline-tab-inactive-text, var(--tab-inactive-text));
-  transition: background-color 0.15s ease, color 0.15s ease, transform 120ms ease, filter 120ms ease;
+  transition: background-color 0.15s ease, color 0.15s ease, transform var(--lumno-duration-2xs) ease, filter var(--lumno-duration-2xs) ease;
   position: relative;
   z-index: 1;
 }
 ._x_extension_theme_option_2024_unique_[data-active="true"] {
   font-weight: 500;
   color: var(--tab-active-text);
+}
+/* `all: unset` drops the UA focus ring, so keyboard focus is restored explicitly. */
+._x_extension_theme_option_2024_unique_:focus-visible {
+  outline: 2px solid var(--input-focus-color);
+  outline-offset: -2px;
 }
 ._x_extension_theme_indicator_2024_unique_[data-ready="false"] ~
 ._x_extension_theme_option_2024_unique_[data-active="true"] {
@@ -2410,33 +2170,21 @@ body[data-theme="dark"] ._x_extension_shortcut_submit_primary_2024_unique_ {
   transition: none;
   box-sizing: border-box;
 }
-._x_extension_theme_gallery_2026_unique_ ._x_extension_theme_option_2024_unique_:active ._x_extension_theme_preview_2026_unique_ {
-  transform: scale(0.97);
+._x_extension_theme_gallery_2026_unique_ ._x_extension_theme_option_2024_unique_:focus-visible {
+  outline: none;
+}
+._x_extension_theme_gallery_2026_unique_ ._x_extension_theme_option_2024_unique_:focus-visible ._x_extension_theme_preview_2026_unique_ {
+  outline: 2px solid var(--input-focus-color);
+  outline-offset: 2px;
 }
 ._x_extension_theme_gallery_2026_unique_ ._x_extension_theme_option_2024_unique_[data-active="true"] {
   color: var(--tab-active-text);
 }
+/* Card frame, selection ring and check badge: ../shared/choice-card.css. */
 ._x_extension_theme_preview_2026_unique_ {
-  position: relative;
   width: 90px;
   height: 60px;
-  --x-theme-preview-radius-2026: 8px;
-  border-radius: var(--x-theme-preview-radius-2026);
-  overflow: hidden;
   border: none;
-  background: transparent;
-  transition: transform 140ms ease;
-  box-sizing: border-box;
-}
-._x_extension_theme_preview_2026_unique_::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border: 2px solid transparent;
-  border-radius: var(--x-theme-preview-radius-2026);
-  pointer-events: none;
-  box-sizing: border-box;
-  transition: border-color 170ms ease;
 }
 ._x_extension_theme_preview_img_2026_unique_ {
   width: 100%;
@@ -2449,52 +2197,15 @@ body[data-theme="dark"] ._x_extension_shortcut_submit_primary_2024_unique_ {
 ._x_extension_theme_gallery_2026_unique_ ._x_extension_theme_option_2024_unique_[data-active="true"] ._x_extension_theme_preview_2026_unique_ {
   box-shadow: none;
 }
-._x_extension_theme_gallery_2026_unique_ ._x_extension_theme_option_2024_unique_[data-active="true"] ._x_extension_theme_preview_2026_unique_::after {
-  border-color: #6b7280;
-}
-#_x_extension_settings_panel_2024_unique_[data-theme="dark"] ._x_extension_theme_gallery_2026_unique_ ._x_extension_theme_option_2024_unique_[data-active="true"] ._x_extension_theme_preview_2026_unique_::after {
-  border-color: #9ca3af;
-}
 ._x_extension_theme_check_2026_unique_ {
-  position: absolute;
-  right: 4px;
-  bottom: 4px;
-  width: 14px;
-  height: 14px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #404859 0%, #273042 100%);
-  border: 1px solid #040404;
-  box-shadow: 0px 3px 2px 0px rgba(0, 0, 0, 0.05),
-    0px 2px 2px 0px rgba(0, 0, 0, 0.09),
-    0px 0px 1px 0px rgba(0, 0, 0, 0.1);
-  color: #ffffff;
-  font-size: 10px;
+  --choice-card-check-size: 14px;
+  --choice-card-check-offset: 4px;
+  --choice-card-check-icon-size: 10px;
+  font-size: var(--lumno-font-size-2xs);
   line-height: 14px;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transform: scale(0.82);
-  transition: opacity 160ms ease, transform 200ms cubic-bezier(0.2, 0.85, 0.2, 1.2);
-}
-._x_extension_theme_check_2026_unique_::after {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  box-shadow: inset 0px 1px 1.6px 0px rgba(255, 255, 255, 0.34);
-  pointer-events: none;
 }
 ._x_extension_theme_check_2026_unique_ .ri-icon {
-  width: 10px;
-  height: 10px;
-  font-size: 10px;
-  line-height: 10px;
-}
-._x_extension_theme_gallery_2026_unique_ ._x_extension_theme_option_2024_unique_[data-active="true"] ._x_extension_theme_check_2026_unique_ {
-  display: inline-flex;
-  opacity: 1;
-  transform: scale(1);
+  font-size: var(--lumno-font-size-2xs);
 }
 #_x_extension_settings_panel_2024_unique_[data-theme="dark"] ._x_extension_theme_check_2026_unique_ {
   background: linear-gradient(180deg, #f3f4f6 0%, #e5e7eb 100%);
@@ -2505,7 +2216,7 @@ body[data-theme="dark"] ._x_extension_shortcut_submit_primary_2024_unique_ {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55);
 }
 ._x_extension_theme_label_2026_unique_ {
-  font-size: 13px;
+  font-size: var(--lumno-font-size-md);
   line-height: 1.25;
   font-weight: 400;
   width: 100%;
@@ -2526,7 +2237,7 @@ body[data-theme="dark"] ._x_extension_shortcut_submit_primary_2024_unique_ {
   font-weight: 500;
 }
 ._x_extension_theme_gallery_2026_unique_ ._x_extension_theme_option_2024_unique_.x-theme-clicking ._x_extension_theme_preview_2026_unique_ {
-  animation: _x_extension_theme_pick_bounce_2026_unique_ 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: _x_extension_theme_pick_bounce_2026_unique_ var(--lumno-duration-2xl) cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 @keyframes _x_extension_theme_pick_bounce_2026_unique_ {
   0% { transform: scale(0.96); }
@@ -2546,23 +2257,9 @@ body[data-theme="dark"] ._x_extension_shortcut_submit_primary_2024_unique_ {
   ._x_extension_feedback_support_links_2026_unique_ {
     flex-wrap: wrap;
   }
-  ._x_extension_settings_tabs_row_2024_unique_ {
-    min-width: 0;
-  }
   #_x_extension_settings_tabs_2024_unique_ {
     width: 100%;
-    max-width: 100%;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scrollbar-width: none;
     touch-action: pan-x;
-  }
-  #_x_extension_settings_tabs_2024_unique_::-webkit-scrollbar {
-    display: none;
-  }
-  ._x_extension_settings_tab_button_2024_unique_ {
-    flex: 0 0 auto;
-    white-space: nowrap;
   }
   ._x_extension_settings_version_badge_2024_unique_ {
     display: none;
@@ -2668,14 +2365,14 @@ button[aria-busy="true"]:disabled,
   cursor: pointer;
   user-select: none;
   color: var(--panel-text);
-  font-size: 13px;
+  font-size: var(--lumno-font-size-md);
   font-weight: 500;
 }
 ._x_extension_toggle_2024_unique_ input {
   appearance: none;
   width: 42px;
   height: 24px;
-  border-radius: 999px;
+  border-radius: var(--lumno-radius-pill);
   background: var(--tab-bg);
   border: 1px solid var(--tab-border);
   position: relative;
@@ -2691,7 +2388,7 @@ button[aria-busy="true"]:disabled,
   position: absolute;
   width: 18px;
   height: 18px;
-  border-radius: 999px;
+  border-radius: var(--lumno-radius-pill);
   background: #ffffff;
   top: 2px;
   left: 2px;
@@ -2716,7 +2413,7 @@ button[aria-busy="true"]:disabled,
   width: calc(100% - 2 * var(--settings-content-edge-space));
   margin: 0 var(--settings-content-edge-space);
   background: var(--setting-divider);
-  border-radius: 999px;
+  border-radius: var(--lumno-radius-pill);
 }
 ._x_extension_shortcuts_section_2024_unique_ > ._x_extension_setting_divider_wrap_2024_unique_ > ._x_extension_setting_divider_2024_unique_ {
   width: 100%;
@@ -2735,4 +2432,42 @@ button[aria-busy="true"]:disabled,
 #_x_extension_options_root_2024_unique_ ._x_extension_select_menu_title_2024_unique_,
 #_x_extension_options_root_2024_unique_ ._x_extension_checkbox_2026_unique_ {
   font-weight: 400;
+}
+
+/* Keep this last: `all: unset` in component resets also clears corner-shape. */
+@supports (corner-shape: superellipse(1.25)) {
+  ._x_extension_popconfirm_2024_unique_,
+  ._x_extension_confirm_dialog_2024_unique_,
+  .settings-bg-light,
+  #_x_extension_settings_panel_2024_unique_,
+  #_x_extension_settings_panel_2024_unique_::before,
+  #_x_extension_settings_tabs_2024_unique_,
+  ._x_extension_tabs_indicator_2024_unique_,
+  ._x_extension_settings_tab_button_2024_unique_,
+  ._x_extension_setting_row_2024_unique_,
+  ._x_extension_settings_placeholder_2024_unique_,
+  ._x_extension_aggregate_search_sources_2026_unique_,
+  ._x_extension_shortcuts_status_chip_2026_unique_,
+  ._x_extension_shortcut_reference_key_field_2026_unique_,
+  ._x_extension_shortcuts_hotkey_wrap_2024_unique_,
+  ._x_extension_shortcuts_hotkey_action_2024_unique_,
+  ._x_extension_shortcuts_hotkey_token_2024_unique_,
+  ._x_extension_shortcuts_hotkey_token_2024_unique_::after,
+  ._x_extension_range_slider_value_2026_unique_,
+  ._x_extension_sync_status_2024_unique_,
+  ._x_extension_shortcuts_section_2024_unique_,
+  ._x_extension_shortcut_group_action_2024_unique_,
+  ._x_extension_shortcut_item_2024_unique_,
+  ._x_extension_shortcut_badge_2024_unique_,
+  ._x_extension_shortcut_form_2024_unique_,
+  ._x_extension_shortcut_input_affix_2026_unique_,
+  ._x_extension_shortcut_input_2024_unique_,
+  ._x_extension_theme_picker_2024_unique_,
+  ._x_extension_theme_indicator_2024_unique_,
+  ._x_extension_theme_option_2024_unique_,
+  ._x_extension_theme_preview_2026_unique_,
+  ._x_extension_theme_preview_2026_unique_::after,
+  ._x_extension_theme_preview_img_2026_unique_ {
+    corner-shape: superellipse(1.25);
+  }
 }

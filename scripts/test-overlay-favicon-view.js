@@ -370,7 +370,7 @@ function testOverlayRendererLoadsFaviconPolicyBeforeInitialTabs() {
 function testOverlayRendererGuardsThemeSourcesInStrictMode() {
   const overlayJs = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
   const suggestionsReact = fs.readFileSync(
-    path.join(repoRoot, 'react-src/newtab/suggestions.tsx'),
+    path.join(repoRoot, 'react-src/search/suggestions.tsx'),
     'utf8'
   );
   assert.match(
@@ -405,7 +405,7 @@ function testOverlayRendererGuardsThemeSourcesInStrictMode() {
 function testOverlayRendererLetsLocalFaviconsReachRuntime() {
   const overlayJs = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
   const suggestionsReact = fs.readFileSync(
-    path.join(repoRoot, 'react-src/newtab/suggestions.tsx'),
+    path.join(repoRoot, 'react-src/search/suggestions.tsx'),
     'utf8'
   );
   assert.doesNotMatch(
@@ -433,7 +433,7 @@ function testOverlayRendererLetsLocalFaviconsReachRuntime() {
 function testOverlayRendererDelegatesFallbackStateToReact() {
   const overlayJs = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
   const suggestionsReact = fs.readFileSync(
-    path.join(repoRoot, 'react-src/newtab/suggestions.tsx'),
+    path.join(repoRoot, 'react-src/search/suggestions.tsx'),
     'utf8'
   );
   assert.doesNotMatch(
@@ -507,7 +507,7 @@ function testOverlayPolicyRecoverySignalsFailedReactRows() {
 
 function testOverlayRendererBuildsBrowserPageFavicon2WhenMissingExplicitIcon() {
   const suggestionsReact = fs.readFileSync(
-    path.join(repoRoot, 'react-src/newtab/suggestions.tsx'),
+    path.join(repoRoot, 'react-src/search/suggestions.tsx'),
     'utf8'
   );
   assert.match(

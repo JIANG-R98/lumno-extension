@@ -1,6 +1,6 @@
 (function(root) {
   'use strict';
-  const EXPECTED_CLIENT_REVISION = 'dav-lock-4';
+  const EXPECTED_CLIENT_REVISION = 'dav-lock-5';
   const EXPECTED_SYNC_REVISION = 'dav-multi-1';
   function createCopy(t) {
     return {
@@ -11,7 +11,11 @@
       webdav_username: t("webdav_username", "用户名"),
       webdav_password: t("webdav_password", "应用密码"),
       webdav_credentials_hint: t("webdav_credentials_hint", "只保存在这台设备上，其他设备需要重新添加这条连接。"),
-      webdav_password_saved: t("webdav_password_saved", "已保存；留空保持不变"),
+      webdav_password_saved: t("webdav_password_saved", "已保存"),
+      webdav_password_change: t("webdav_password_change", "更换"),
+      webdav_password_keep: t("webdav_password_keep", "保留原密码"),
+      webdav_password_show: t("webdav_password_show", "显示密码"),
+      webdav_password_hide: t("webdav_password_hide", "隐藏密码"),
       webdav_last_sync: t("webdav_last_sync", "最近同步"),
       webdav_choice_hint: t("webdav_choice_hint", "服务器上已经有 Lumno 的配置。选一边为准，另一边会先自动备份。"),
       webdav_conflict_hint: t("webdav_conflict_hint", "本机和服务器改了同一处内容。选一个版本保留，其他不冲突的改动会自动合并。"),
@@ -37,7 +41,7 @@
       webdav_save: t("webdav_save", "保存"),
       webdav_enable: t("webdav_enable", "保存并开启同步"),
       webdav_never_synced: t("webdav_never_synced", "尚未同步"),
-      webdav_state_testing: t("webdav_state_testing", "正在测试连通性"),
+      webdav_state_testing: t("webdav_state_testing", "正在测试连通性…"),
       webdav_state_recovery: t("webdav_state_recovery", "需要恢复"),
       webdav_connecting: t("webdav_connecting", "正在连接…"),
       webdav_retry: t("webdav_retry", "重试"),

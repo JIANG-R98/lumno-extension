@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { readStylesheet } = require('./helpers/css-tokens');
 const fs = require('fs');
 const path = require('path');
 const { readPageSource } = require('./helpers/page-source');
@@ -6,13 +7,10 @@ const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 const repoRoot = path.resolve(__dirname, '..');
 const newtabHtml = readPageSource('newtab.html');
-const overlayCss = fs.readFileSync(
-  path.join(repoRoot, 'src/overlay/suggestions-view.css'),
-  'utf8'
-);
+const overlayCss = readStylesheet('src/overlay/suggestions-view.css');
 const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
 const suggestionsReact = fs.readFileSync(
-  path.join(repoRoot, 'react-src/newtab/suggestions.tsx'),
+  path.join(repoRoot, 'react-src/search/suggestions.tsx'),
   'utf8'
 );
 const newtabSource = readNewtabRuntimeSource();

@@ -352,7 +352,7 @@ assert.strictEqual(
     {
       refresh: '刷新二维码',
       success: '已拉取最新二维码',
-      error: '刷新失败，请稍后重试',
+      error: '刷新失败，请稍后重试。',
       close: '关闭'
     },
     'zh-CN'
@@ -362,7 +362,7 @@ assert.strictEqual(
     {
       refresh: '重新載入 QR Code',
       success: '已載入最新 QR Code',
-      error: '無法更新 QR Code，請稍後再試',
+      error: '無法更新 QR Code，請稍後再試。',
       close: '關閉'
     },
     'zh-TW'
@@ -382,7 +382,7 @@ assert.strictEqual(
     {
       refresh: 'QRコードを更新',
       success: '最新のQRコードを取得しました',
-      error: '更新できませんでした。もう一度お試しください',
+      error: '更新できませんでした。もう一度お試しください。',
       close: '閉じる'
     },
     'ja'

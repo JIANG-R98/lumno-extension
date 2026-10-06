@@ -603,7 +603,7 @@ function RecentSiteCard({
       options.getPinnedCount() >= options.getMaxPinnedCount()
     ) {
       options.showToast(
-        options.t('recent_pin_limit_toast', '最多只能置顶 3 个卡片'),
+        options.t('recent_pin_limit_toast', '最多只能置顶 3 个卡片。'),
         false
       );
       options.updatePinButton(button, false, true);
@@ -615,7 +615,7 @@ function RecentSiteCard({
     }
     if (outcome.status === 'rejected') {
       options.showToast(
-        options.t('toast_error', '操作失败，请重试'),
+        options.t('toast_error', '操作失败，请重试。'),
         true
       );
       return;
@@ -626,7 +626,7 @@ function RecentSiteCard({
     }
     if (result.limitReached) {
       options.showToast(
-        options.t('recent_pin_limit_toast', '最多只能置顶 3 个卡片'),
+        options.t('recent_pin_limit_toast', '最多只能置顶 3 个卡片。'),
         false
       );
     }

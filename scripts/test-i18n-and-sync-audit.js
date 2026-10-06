@@ -411,6 +411,7 @@ assert(
 }
 localeNames.forEach((locale) => {
   [
+    'bookmark_topbar_surface_title',
     'bookmark_topbar_surface_adaptive',
     'bookmark_topbar_surface_clear',
     'bookmark_topbar_surface_transparent',

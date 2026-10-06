@@ -229,8 +229,10 @@
       (typeof source.fontSize === 'string' && source.fontSize.trim())
       ? Number(source.fontSize) : NaN;
     return {
-      enabled: typeof source.enabled === 'boolean' ? source.enabled : ['search', 'bottom'].includes(source.position),
-      position: source.position === 'bottom' ? 'bottom' : 'search',
+      // Off until the user turns it on; a saved position alone never enables it.
+      enabled: source.enabled === true,
+      // 'search' predates the input-box placement and still means "below shortcuts".
+      position: ['input', 'bottom'].includes(source.position) ? source.position : 'search',
       category: source.category === 'poetry' ? 'poetry' : 'literature',
       fontSize: Number.isFinite(size)
         ? Math.min(NEWTAB_QUOTE_FONT_SIZE_MAX, Math.max(NEWTAB_QUOTE_FONT_SIZE_MIN, Math.round(size)))

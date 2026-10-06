@@ -134,7 +134,7 @@ npm run test:onboarding-content
 
 - 日本語ローカライズ：[Humi](https://github.com/Hum1Tab) さんに日本語翻訳と校正へご協力いただきました。
 - 同梱アイコンセット：[Remix Icon](https://remixicon.com/)
-- 同梱書体：Open Sans
+- 同梱書体：Open Sans、[LXGW WenKai](https://github.com/lxgw/LxgwWenKai)（SIL OFL 1.1、一言表示用にサブセット化）
 
 ## ライセンス
 

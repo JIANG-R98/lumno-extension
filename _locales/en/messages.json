@@ -33,7 +33,7 @@
     "message": "Theme scope info"
   },
   "newtab_theme_scope_help": {
-    "message": "\"Global\" sets the default theme. \"New Tab\" overrides only the new tab page; choose \"Follow Global\" there to inherit the global setting."
+    "message": "Global: the default theme for all pages.\nNew Tab: applies only to the new tab page. Choose Follow \"Global\" to keep it in sync."
   },
   "newtab_theme_follow_global": {
     "message": "Follow \"Global\""
@@ -55,6 +55,9 @@
   },
   "newtab_search_width_max": {
     "message": "Max"
+  },
+  "newtab_appearance_settings_title": {
+    "message": "Appearance settings"
   },
   "newtab_more_settings": {
     "message": "More settings"
@@ -372,19 +375,19 @@
     "message": "Auto Picture-in-Picture"
   },
   "settings_auto_pip_desc": {
-    "message": "Control automatic Picture-in-Picture on websites"
+    "message": "When you switch tabs while a video is playing, it keeps playing in a floating window"
   },
   "settings_pinned_tab_recovery_title": {
     "message": "Restore Pinned Tabs After Restart"
   },
   "settings_pinned_tab_recovery_desc": {
-    "message": "Save restorable pinned web tabs and restore missing ones after the browser restarts."
+    "message": "Save restorable pinned web tabs and restore missing ones after the browser restarts"
   },
   "settings_number_shortcut_instant_title": {
     "message": "Single-press Command to show number jump"
   },
   "settings_number_shortcut_instant_desc": {
-    "message": "When enabled, pressing Command/Ctrl once in the command bar or search suggestions immediately shows number jump badges; \"Open in background tab\" no longer uses Command (middle-click still opens in the background)."
+    "message": "When enabled, pressing Command/Ctrl once in the command bar or search suggestions immediately shows number jump badges; \"Open in background tab\" no longer uses Command (middle-click still opens in the background)"
   },
   "settings_macos_ctrl_suggestion_navigation_title": {
     "message": "Mac keyboard navigation"
@@ -399,7 +402,7 @@
     "message": "Hover a visible area to start selecting."
   },
   "document_pip_picker_started": {
-    "message": "Click the content to float, scroll to change scope, or press Esc to cancel"
+    "message": "Click the content to float, scroll to change scope, or press Esc to cancel."
   },
   "document_pip_picker_cancelled": {
     "message": "Content selection closed"
@@ -420,16 +423,16 @@
     "message": "This looks like a navigation or toolbar area. Complex menus may not fully interact in PiP; scroll to choose a larger container if needed."
   },
   "document_pip_picker_unsupported": {
-    "message": "This page does not support Document Picture-in-Picture"
+    "message": "This page does not support Document Picture-in-Picture."
   },
   "document_pip_picker_conflict_video_pip": {
     "message": "A video PiP is already active. Close it before starting content clipping."
   },
   "document_pip_picker_invalid": {
-    "message": "This area cannot be floated yet, try a larger content region"
+    "message": "This area can’t be floated yet. Try a larger content region."
   },
   "document_pip_picker_open_failed": {
-    "message": "Failed to open the floating content window, try a different area"
+    "message": "Couldn’t open the floating content window. Try a different area."
   },
   "document_pip_picker_badge": {
     "message": "Opened in PiP"
@@ -528,7 +531,7 @@
     "message": "Follow browser setting"
   },
   "newtab_file_access_notice_title": {
-    "message": "To use Lumno on local PDF or HTML pages, enable file URL access."
+    "message": "To use Lumno on local PDF or HTML pages, enable file URL access"
   },
   "newtab_file_access_notice_body": {
     "message": "Lumno does not have file URL access yet. Open the extension details page, enable Allow access to file URLs, then return to that page and press the shortcut again."
@@ -720,10 +723,10 @@
     "message": "Wallpaper uploaded (this device only)"
   },
   "settings_wallpaper_status_missing": {
-    "message": "Wallpaper file missing, please upload again"
+    "message": "Wallpaper file is missing. Please upload it again."
   },
   "settings_wallpaper_status_processing": {
-    "message": "Processing..."
+    "message": "Processing…"
   },
   "settings_wallpaper_upload_done": {
     "message": "Wallpaper updated"
@@ -741,7 +744,7 @@
     "message": "Image is still too large after compression. Try a smaller image."
   },
   "settings_wallpaper_error_save": {
-    "message": "Failed to save wallpaper, please try again"
+    "message": "Couldn’t save the wallpaper. Please try again."
   },
   "newtab_wallpaper_title": {
     "message": "Wallpaper"
@@ -912,13 +915,13 @@
     "message": "X"
   },
   "newtab_feedback_x_tooltip": {
-    "message": "Contacting on X"
+    "message": "Contact us on X"
   },
   "newtab_feedback_github_issue_label": {
     "message": "GitHub Issue"
   },
   "newtab_feedback_github_issue_tooltip": {
-    "message": "Opening a GitHub Issue"
+    "message": "Open a GitHub issue"
   },
   "newtab_feedback_chrome_review_label": {
     "message": "Chrome rating"
@@ -936,7 +939,7 @@
     "message": "WeChat"
   },
   "newtab_feedback_wechat_tooltip": {
-    "message": "Joining WeChat group"
+    "message": "Join the WeChat group"
   },
   "newtab_feedback_wechat_panel_title": {
     "message": "Bug reports & feature requests"
@@ -957,7 +960,7 @@
     "message": "Discord"
   },
   "newtab_feedback_discord_tooltip": {
-    "message": "Joining Discord"
+    "message": "Join Discord"
   },
   "newtab_feedback_wechat_qr_title": {
     "message": "WeChat group QR code"
@@ -1057,9 +1060,6 @@
   },
   "newtab_wallpaper_effect_crt": {
     "message": "CRT"
-  },
-  "newtab_wallpaper_effect_select_label": {
-    "message": "Use {effect} wallpaper filter"
   },
   "newtab_wallpaper_effect_ink_title": {
     "message": "Sample tones"
@@ -1197,13 +1197,13 @@
     "message": "Whole site"
   },
   "blacklist_match_exact_tooltip": {
-    "message": "Blocks only this page\n────────\nFor example, if you enter x.com/home, only that page will be hidden while other pages stay visible"
+    "message": "Blocks only this page\n────────\nFor example, if you enter x.com/home, only that page will be hidden while other pages stay visible."
   },
   "blacklist_match_prefix_tooltip": {
-    "message": "Blocks pages under this site and path only\n────────\nFor example, if you enter baidu.com/search, baidu.com/search and baidu.com/search/1 will be hidden, but baidu.com/news will stay visible"
+    "message": "Blocks pages under this site and path only\n────────\nFor example, if you enter baidu.com/search, baidu.com/search and baidu.com/search/1 will be hidden, but baidu.com/news will stay visible."
   },
   "blacklist_match_suffix_tooltip": {
-    "message": "Blocks every page on this site, including its subdomains\n────────\nFor example, if you enter baidu.com, both baidu.com/search and tieba.baidu.com will be hidden"
+    "message": "Blocks every page on this site, including its subdomains\n────────\nFor example, if you enter baidu.com, both baidu.com/search and tieba.baidu.com will be hidden."
   },
   "blacklist_preview_title": {
     "message": "Actual match preview"
@@ -1215,7 +1215,7 @@
     "message": "Won't match"
   },
   "blacklist_preview_www_note": {
-    "message": "The www. version is also covered, so baidu.com will also match www.baidu.com"
+    "message": "The www. version is also covered, so baidu.com will also match www.baidu.com."
   },
   "blacklist_placeholder_url": {
     "message": "Use the full address for This page, or a site domain for Whole site"
@@ -1239,16 +1239,16 @@
     "message": "No blacklisted URLs yet"
   },
   "blacklist_error_url": {
-    "message": "Enter a site domain or full URL"
+    "message": "Enter a site domain or full URL."
   },
   "blacklist_error_match_mode": {
-    "message": "Select at least one match type"
+    "message": "Select at least one match type."
   },
   "blacklist_error_suffix": {
-    "message": "Enter a site domain"
+    "message": "Enter a site domain."
   },
   "blacklist_error_domain": {
-    "message": "Enter a site domain"
+    "message": "Enter a site domain."
   },
   "blacklist_match_mode_prefix": {
     "message": "Matches pages starting with this URL"
@@ -1266,7 +1266,7 @@
     "message": "AI"
   },
   "shortcuts_group_ai_desc": {
-    "message": "Enter a keyword, press Tab, then type your prompt to open one of these AI sites and fill it in automatically. Sign in to the site first."
+    "message": "Enter a keyword, press Tab, then type your prompt to open one of these AI sites and fill it in automatically (sign in to the site first)"
   },
   "shortcuts_badge_custom": {
     "message": "Custom"
@@ -1341,7 +1341,7 @@
     "message": "Removed"
   },
   "toast_error": {
-    "message": "Action failed, try again"
+    "message": "Action failed. Try again."
   },
   "toast_error_template": {
     "message": "Search template must include {query}."
@@ -1392,7 +1392,7 @@
     "message": "This trigger is already in use. Choose another."
   },
   "search_placeholder": {
-    "message": "Search or type a URL..."
+    "message": "Search or type a URL…"
   },
   "overlay_search_placeholder": {
     "message": "Search or type a URL, press Tab to search open tabs"
@@ -1427,6 +1427,9 @@
   "bookmark_view_mode_top": {
     "message": "Top bookmarks bar"
   },
+  "bookmark_topbar_surface_title": {
+    "message": "Bar background"
+  },
   "bookmark_topbar_surface_adaptive": {
     "message": "Adaptive mist"
   },
@@ -1452,7 +1455,7 @@
     "message": "Automatic colors restored"
   },
   "bookmark_topbar_color_unsupported": {
-    "message": "Screen color picking is not supported in this browser"
+    "message": "Screen color picking is not supported in this browser."
   },
   "bookmark_topbar_color_failed": {
     "message": "Could not pick a color. Try again."
@@ -1500,7 +1503,7 @@
     "message": "Bookmark link copied"
   },
   "bookmarks_copy_url_failed": {
-    "message": "Could not copy link"
+    "message": "Couldn’t copy the link. Try again."
   },
   "bookmarks_edit": {
     "message": "Edit"
@@ -1515,7 +1518,7 @@
     "message": "Name"
   },
   "bookmarks_invalid_url": {
-    "message": "Enter a valid URL"
+    "message": "Enter a valid URL."
   },
   "bookmarks_updated": {
     "message": "Bookmark updated"
@@ -1575,7 +1578,7 @@
     "message": "Result link copied"
   },
   "search_copy_url_failed": {
-    "message": "Could not copy result link"
+    "message": "Couldn’t copy the result link. Try again."
   },
   "search_tag_top_site": {
     "message": "Frequent"
@@ -1755,7 +1758,7 @@
     "message": "Search \"{query}\""
   },
   "search_in_site_ellipsis": {
-    "message": "Search in {site}..."
+    "message": "Search in {site}…"
   },
   "search_in_site_prefix": {
     "message": "Search in {site} |"
@@ -1791,13 +1794,13 @@
     "message": "Only search {source}"
   },
   "search_scope_switcher_label": {
-    "message": "Search scope: {scope}. Activate to switch"
+    "message": "Search scope: {scope}. Activate to switch."
   },
   "search_scope_current": {
     "message": "Current"
   },
   "search_scope_remove_confirmation": {
-    "message": "Press Backspace again to remove the scope"
+    "message": "Press Backspace again to remove the scope."
   },
   "search_number_jump_release_hint": {
     "message": "Release to show numbers"
@@ -1821,10 +1824,10 @@
     "message": "Search: {query}"
   },
   "search_scope_panel_placeholder": {
-    "message": "Search specific site content..."
+    "message": "Search specific site content…"
   },
   "search_scope_active_placeholder": {
-    "message": "Search within this scope; press Tab again to open the scope panel..."
+    "message": "Search within this scope; press Tab again to open the scope panel…"
   },
   "search_scope_group_engines": {
     "message": "Search engines"
@@ -1887,7 +1890,7 @@
     "message": "Automatically group aggregate search tabs"
   },
   "settings_aggregate_search_auto_group_desc": {
-    "message": "When enabled, all tabs opened by an aggregate search are placed in one group named “Aggregate name：Search query”"
+    "message": "When enabled, all tabs opened by an aggregate search are placed in one group named “Aggregate name: Search query”"
   },
   "aggregate_search_badge": {
     "message": "Aggregate"
@@ -2034,7 +2037,7 @@
     "message": "Copy failed. Please try again."
   },
   "copy_page_url_success": {
-    "message": "Current page URL copied."
+    "message": "Current page URL copied"
   },
   "copy_page_url_failed_permission": {
     "message": "Copy failed. Check clipboard permission."
@@ -2049,10 +2052,13 @@
     "message": "You can pin up to 3 cards"
   },
   "recent_pin_limit_toast": {
-    "message": "Pin up to 3 cards"
+    "message": "You can pin up to 3 cards."
   },
   "recent_dismiss_tooltip": {
     "message": "Remove"
+  },
+  "recent_add_to_shortcuts": {
+    "message": "Add to shortcuts"
   },
   "recent_dismiss_pinned_tooltip": {
     "message": "Unpin and remove"
@@ -2337,16 +2343,16 @@
     "message": "Remove"
   },
   "newtab_shortcuts_icon_unsupported": {
-    "message": "Choose a PNG, JPG, or WebP image"
+    "message": "Choose a PNG, JPG, or WebP image."
   },
   "newtab_shortcuts_icon_dimensions_too_large": {
     "message": "The image must be no larger than 4096×4096 px"
   },
   "newtab_shortcuts_icon_invalid": {
-    "message": "This image could not be used. Choose another image"
+    "message": "This image could not be used. Choose another image."
   },
   "newtab_shortcuts_icon_storage_error": {
-    "message": "The local icon could not be saved. Try another image"
+    "message": "The local icon could not be saved. Try another image."
   },
   "folder_rename": {
     "message": "Rename"
@@ -2366,11 +2372,11 @@
   "folder_color_presets": {
     "message": "Preset colors"
   },
+  "folder_color_default": {
+    "message": "Default color"
+  },
   "folder_color_reset": {
     "message": "Reset"
-  },
-  "folder_color_reset_tooltip": {
-    "message": "Restore default color"
   },
   "folder_color_saved": {
     "message": "Saved colors"
@@ -2406,13 +2412,16 @@
     "message": "Save"
   },
   "newtab_shortcuts_invalid_url": {
-    "message": "Enter a valid http, https, or browser internal URL"
+    "message": "Enter a valid http, https, or browser internal URL."
   },
   "newtab_shortcuts_limit_reached": {
     "message": "You can add up to {count} shortcuts."
   },
   "newtab_shortcuts_added": {
     "message": "Shortcut added"
+  },
+  "newtab_shortcuts_already_added": {
+    "message": "Already in shortcuts"
   },
   "newtab_shortcuts_sync_limit_reached": {
     "message": "Shortcuts have reached the sync limit. New items will not sync."
@@ -2460,7 +2469,7 @@
     "message": "Tab switcher"
   },
   "settings_tab_switcher_desc": {
-    "message": "Quickly switch recent tabs. Default: {shortcut}; customizable."
+    "message": "Quickly switch between recent tabs; {shortcut} by default, customizable"
   },
   "slash_command_empty": {
     "message": "No matching commands"
@@ -2496,7 +2505,19 @@
     "message": "Saved only on this device. Add this connection again on your other devices."
   },
   "webdav_password_saved": {
-    "message": "Saved; leave blank to keep it"
+    "message": "Saved"
+  },
+  "webdav_password_change": {
+    "message": "Change"
+  },
+  "webdav_password_keep": {
+    "message": "Keep saved password"
+  },
+  "webdav_password_show": {
+    "message": "Show password"
+  },
+  "webdav_password_hide": {
+    "message": "Hide password"
   },
   "webdav_last_sync": {
     "message": "Last synced"
@@ -2770,6 +2791,9 @@
   },
   "newtab_quote_off": {
     "message": "Off"
+  },
+  "newtab_quote_input": {
+    "message": "Below search box"
   },
   "newtab_quote_search": {
     "message": "Below shortcuts"

@@ -1,5 +1,7 @@
 .x-nt-quote[hidden],
+.x-nt-quote-settings[hidden],
 .x-nt-quote-settings [hidden],
+.x-nt-panel-divider[hidden],
 .x-nt-bing-source[hidden] {
   display: none !important;
 }
@@ -12,17 +14,24 @@
   text-align: center;
   color: var(--x-nt-wallpaper-adaptive-ink-muted, var(--x-nt-subtext));
 }
+/* The shortcut grid already pads its bottom edge, so the quote sits right under the tiles. */
+.x-nt-quote[data-position="search"] { margin-top: 0; }
+.x-nt-quote[data-position="input"] {
+  z-index: 3;
+  margin: 8px 0 0;
+}
+.x-nt-quote[data-position="input"] + .x-nt-shortcuts-section { margin-top: 2px; }
 .x-nt-quote-text {
   display: block;
   width: 100%;
   min-height: 26px;
   border: 0;
   padding: 3px 12px;
-  border-radius: 8px;
+  border-radius: var(--lumno-radius-md);
   background: transparent;
   color: inherit;
   font: inherit;
-  font-family: "Songti SC", "Songti TC", "STSong", "SimSun", "NSimSun",
+  font-family: "LXGW WenKai", "Songti SC", "Songti TC", "STSong", "SimSun", "NSimSun",
     "Noto Serif CJK SC", "Source Han Serif SC", Georgia, "Times New Roman", serif;
   font-size: var(--x-nt-quote-font-size, 15px);
   font-weight: 400;
@@ -53,12 +62,12 @@
   box-sizing: border-box;
   padding: 8px 12px;
   border: 1px solid var(--x-nt-panel-border);
-  border-radius: 10px;
+  border-radius: var(--lumno-radius-lg);
   background: var(--x-nt-panel-bg);
   color: var(--x-nt-text);
   backdrop-filter: blur(16px);
   box-shadow: var(--x-nt-panel-shadow);
-  font-size: 11px;
+  font-size: var(--lumno-font-size-xs);
   line-height: 18px;
 }
 .x-nt-quote-attribution a { color: inherit; white-space: nowrap; }
@@ -89,10 +98,6 @@ body[data-quote-position="bottom"].x-nt-mobile-flow {
   flex-direction: column;
   gap: var(--x-nt-panel-content-gap);
 }
-.x-nt-quote-tabs .x-nt-wallpaper-tabs-indicator {
-  width: calc((100% - var(--x-nt-segmented-tabs-inset) - var(--x-nt-segmented-tabs-inset) - var(--x-nt-panel-tab-gap)) / 2);
-  transform: translateX(calc(var(--x-nt-quote-tab-index, 0) * (100% + var(--x-nt-panel-tab-gap))));
-}
 
 .x-nt-wallpaper-body:not([data-active-tab="bing"]) .x-nt-bing-panel,
 .x-nt-wallpaper-body[data-active-tab="bing"] .x-nt-wallpaper-grid--built-in,
@@ -107,7 +112,7 @@ body[data-quote-position="bottom"].x-nt-mobile-flow {
   margin: 0;
   padding: 0 2px;
   color: var(--x-nt-subtext);
-  font-size: 11px;
+  font-size: var(--lumno-font-size-xs);
   line-height: 1.5;
 }
 .x-nt-bing-status:empty { display: none; }
@@ -144,14 +149,13 @@ body[data-quote-position="bottom"].x-nt-mobile-flow {
   gap: 4px;
   padding: 0 2px;
 }
-.x-nt-appearance-more-settings.x-nt-bing-source-link {
+.x-nt-bing-source-link {
   max-width: 100%;
-  margin: 0;
 }
 .x-nt-bing-source-meta {
   margin: 0;
   color: var(--x-nt-subtext);
-  font-size: 11px;
+  font-size: var(--lumno-font-size-xs);
   line-height: 1.5;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -160,4 +164,11 @@ body[data-quote-position="bottom"].x-nt-mobile-flow {
 @media (max-width: 600px) {
   .x-nt-quote[data-position="bottom"] { width: calc(100% - 112px); }
   .x-nt-quote-attribution { flex-wrap: wrap; gap: 4px 10px; }
+}
+
+@supports (corner-shape: superellipse(1.25)) {
+  .x-nt-quote-text,
+  .x-nt-quote-attribution {
+    corner-shape: superellipse(1.25);
+  }
 }

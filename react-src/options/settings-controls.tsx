@@ -243,13 +243,13 @@ function RangeSliderControl({
         }}
         step={model.step}
         style={{
-          '--x-lumno-range-slider-percent': `${
+          '--x-range-slider-percent': `${
             ((value - model.min) / (model.max - model.min)) * 100
           }%`
         } as CSSProperties}
         value={value}
         valueInputProps={{
-          'aria-label': `${model.ariaLabel} value`,
+          'aria-label': model.ariaLabel,
           disabled: model.disabled,
           inputMode: 'numeric',
           onBlur: commitDraftValue,
@@ -265,31 +265,12 @@ function RangeSliderControl({
           },
           value: draftValue
         }}
-      >
-        <div
-          aria-hidden="true"
-          className="x-lumno-range-slider-scale"
-          style={{
-            '--x-lumno-range-slider-tick-count': String(model.ticks.length)
-          } as CSSProperties}
-        >
-          {model.ticks.map((tick) => (
-            <span
-              className="x-lumno-range-slider-tick"
-              data-align={tick.align || 'center'}
-              data-positioned={Number.isFinite(tick.percent) ? 'true' : undefined}
-              key={`${tick.align || 'center'}-${tick.label}`}
-              style={Number.isFinite(tick.percent)
-                ? ({
-                    '--x-lumno-range-slider-tick-percent': `${tick.percent}%`
-                  } as CSSProperties)
-                : undefined}
-            >
-              {tick.label}
-            </span>
-          ))}
-        </div>
-      </RangeSliderField>
+        marks={model.ticks.map((tick, index) =>
+          Number.isFinite(tick.percent)
+            ? Number(tick.percent)
+            : (index / Math.max(1, model.ticks.length - 1)) * 100
+        )}
+      />
     </div>
   );
 }

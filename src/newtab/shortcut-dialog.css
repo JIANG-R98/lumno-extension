@@ -16,7 +16,7 @@
         -webkit-backdrop-filter: blur(2px);
         opacity: 0;
         pointer-events: auto;
-        transition: opacity 160ms ease, backdrop-filter 160ms ease;
+        transition: opacity var(--lumno-duration-sm) ease, backdrop-filter var(--lumno-duration-sm) ease;
       }
       .x-nt-shortcut-dialog-backdrop[hidden] {
         display: none;
@@ -54,9 +54,9 @@
         transform: translateX(var(--x-nt-shortcut-dialog-enter-x, 0px)) scale(0.98);
         transform-origin: center center;
         transition:
-          opacity 160ms ease,
-          transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
-          filter 180ms cubic-bezier(0.22, 1, 0.36, 1);
+          opacity var(--lumno-duration-sm) ease,
+          transform var(--lumno-duration-xl) cubic-bezier(0.22, 1, 0.36, 1),
+          filter var(--lumno-duration-md) cubic-bezier(0.22, 1, 0.36, 1);
         will-change: auto;
       }
       .x-nt-shortcut-dialog-backdrop[data-open="true"] .x-nt-shortcut-dialog {
@@ -97,7 +97,7 @@
       .x-nt-shortcut-dialog-description {
         margin: -4px 0 2px;
         color: var(--panel-subtext, #64748b);
-        font-size: 13px;
+        font-size: var(--lumno-font-size-md);
         font-weight: 400;
         line-height: 1.6;
       }
@@ -109,7 +109,7 @@
         flex-direction: column;
         gap: 8px;
         color: inherit;
-        font-size: 13px;
+        font-size: var(--lumno-font-size-md);
         font-weight: 600;
         line-height: 1;
       }
@@ -154,13 +154,13 @@
       }
       .x-nt-shortcut-dialog .x-nt-shortcut-icon-source-select ._x_extension_select_trigger_2024_unique_ {
         min-width: 0;
-        font-size: 14px;
+        font-size: var(--lumno-font-size-lg);
         font-weight: 400;
       }
       .x-nt-shortcut-icon-source-hint {
         margin: 0 0 6px;
         color: var(--panel-subtext, #64748b);
-        font-size: 12px;
+        font-size: var(--lumno-font-size-sm);
         font-weight: 400;
         line-height: 1.6;
         overflow-wrap: anywhere;
@@ -196,7 +196,7 @@
         align-items: center;
         justify-content: center;
         border: 1px solid var(--tab-border);
-        border-radius: 14px;
+        border-radius: var(--lumno-radius-2xl);
         background: var(--control-bg);
         box-sizing: border-box;
       }
@@ -204,7 +204,7 @@
         width: 40px;
         height: 40px;
         object-fit: contain;
-        border-radius: 8px;
+        border-radius: var(--lumno-radius-md);
       }
       .x-nt-shortcut-online-icon-preview[data-icon-source="builtin"] img {
         border-radius: 0;
@@ -218,17 +218,17 @@
         height: 32px;
         padding: 0 10px;
         gap: 6px;
-        font-size: 12px;
+        font-size: var(--lumno-font-size-sm);
         justify-content: flex-start;
         overflow: hidden;
         transition:
           width 260ms cubic-bezier(0.22, 1, 0.36, 1),
-          transform 120ms ease,
-          filter 120ms ease,
-          background 160ms ease,
-          border-color 160ms ease,
-          color 160ms ease,
-          box-shadow 160ms ease;
+          transform var(--lumno-duration-2xs) ease,
+          filter var(--lumno-duration-2xs) ease,
+          background var(--lumno-duration-sm) ease,
+          border-color var(--lumno-duration-sm) ease,
+          color var(--lumno-duration-sm) ease,
+          box-shadow var(--lumno-duration-sm) ease;
       }
       .x-nt-shortcut-icon-refresh-glyph {
         display: inline-flex;
@@ -259,7 +259,7 @@
           animation: none;
         }
         .x-nt-shortcut-dialog .x-nt-shortcut-icon-refresh {
-          transition: background 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+          transition: background var(--lumno-duration-sm) ease, border-color var(--lumno-duration-sm) ease, color var(--lumno-duration-sm) ease, box-shadow var(--lumno-duration-sm) ease;
         }
       }
       .x-nt-shortcut-icon-upload-tile {
@@ -270,7 +270,7 @@
         width: 64px;
         height: 64px;
         aspect-ratio: 1 / 1;
-        border-radius: 14px;
+        border-radius: var(--lumno-radius-2xl);
       }
       .x-nt-shortcut-icon-upload-tile[data-has-icon="true"] .x-nt-shortcut-icon-preview {
         border-style: solid;
@@ -308,7 +308,7 @@
       .x-nt-shortcut-icon-error {
         display: none;
         color: #dc2626;
-        font-size: 12px;
+        font-size: var(--lumno-font-size-sm);
         font-weight: 600;
         line-height: 16px;
       }
@@ -322,10 +322,10 @@
         display: flex;
         align-items: center;
         gap: 0;
-        border-radius: 10px;
+        border-radius: var(--lumno-radius-lg);
         border: 1px solid var(--tab-border);
         background: var(--control-bg);
-        transition: border-color 180ms ease, background-color 200ms ease;
+        transition: border-color var(--lumno-duration-md) ease, background-color var(--lumno-duration-lg) ease;
         overflow: hidden;
       }
       .x-nt-shortcut-dialog ._x_extension_shortcut_input_affix_2026_unique_:focus-within,
@@ -335,14 +335,14 @@
       }
       ._x_extension_shortcut_input_2024_unique_ {
         padding: 8px 10px;
-        border-radius: 10px;
+        border-radius: var(--lumno-radius-lg);
         border: 1px solid var(--tab-border);
         background: var(--control-bg);
         color: var(--panel-text);
-        font-size: 13px;
+        font-size: var(--lumno-font-size-md);
         font-family: inherit;
         box-sizing: border-box;
-        transition: border-color 180ms ease, background-color 200ms ease;
+        transition: border-color var(--lumno-duration-md) ease, background-color var(--lumno-duration-lg) ease;
         outline: none;
       }
       .x-nt-shortcut-dialog ._x_extension_shortcut_input_affix_2026_unique_ ._x_extension_shortcut_input_2024_unique_ {
@@ -384,7 +384,7 @@
       .x-nt-shortcut-error {
         min-height: 16px;
         color: #dc2626;
-        font-size: 12px;
+        font-size: var(--lumno-font-size-sm);
         font-weight: 600;
         line-height: 16px;
       }
@@ -404,7 +404,7 @@
         position: relative;
         min-height: 36px;
         padding: 0 16px;
-        border-radius: 999px;
+        border-radius: var(--lumno-radius-pill);
         border: 1px solid var(--x-lumno-action-border-color, transparent);
         background: var(--x-lumno-action-bg, transparent);
         background-clip: padding-box;
@@ -415,18 +415,18 @@
         justify-content: center;
         gap: 6px;
         box-sizing: border-box;
-        font-size: 13px;
+        font-size: var(--lumno-font-size-md);
         font-weight: 600;
         line-height: 1;
         white-space: nowrap;
         cursor: pointer;
         transition:
-          transform 120ms ease,
-          filter 120ms ease,
-          background 160ms ease,
-          border-color 160ms ease,
-          color 160ms ease,
-          box-shadow 160ms ease;
+          transform var(--lumno-duration-2xs) ease,
+          filter var(--lumno-duration-2xs) ease,
+          background var(--lumno-duration-sm) ease,
+          border-color var(--lumno-duration-sm) ease,
+          color var(--lumno-duration-sm) ease,
+          box-shadow var(--lumno-duration-sm) ease;
       }
       .x-lumno-action-button::before {
         content: "";
@@ -512,20 +512,20 @@
       }
       @media (prefers-reduced-motion: reduce) {
         .x-nt-shortcut-dialog-backdrop {
-          transition: opacity 120ms ease;
+          transition: opacity var(--lumno-duration-2xs) ease;
         }
         .x-nt-shortcut-dialog {
           filter: none;
           transform: translateX(0) scale(1);
-          transition: opacity 120ms ease;
+          transition: opacity var(--lumno-duration-2xs) ease;
           will-change: auto;
         }
         .x-lumno-action-button {
           transition:
-            background 160ms ease,
-            border-color 160ms ease,
-            color 160ms ease,
-            box-shadow 160ms ease;
+            background var(--lumno-duration-sm) ease,
+            border-color var(--lumno-duration-sm) ease,
+            color var(--lumno-duration-sm) ease,
+            box-shadow var(--lumno-duration-sm) ease;
         }
         .x-lumno-action-button:active {
           transform: none;
@@ -533,7 +533,13 @@
       }
 
       @supports (corner-shape: superellipse(1.25)) {
-        .x-nt-shortcut-dialog {
+        .x-nt-shortcut-dialog,
+        .x-nt-shortcut-online-icon-preview,
+        .x-nt-shortcut-online-icon-preview img,
+        .x-nt-shortcut-icon-upload-tile .x-nt-shortcut-icon-preview,
+        .x-nt-shortcut-icon-upload-tile .x-nt-shortcut-icon-preview img,
+        .x-nt-shortcut-dialog ._x_extension_shortcut_input_affix_2026_unique_,
+        ._x_extension_shortcut_input_2024_unique_ {
           corner-shape: superellipse(1.25);
         }
       }

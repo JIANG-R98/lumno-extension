@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { resolveLumnoTokens } = require('./css-tokens');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const PAGE_STYLESHEETS = {
@@ -18,7 +19,7 @@ function readPageSource(relativePath) {
     return html;
   }
   const href = path.basename(stylesheet);
-  const css = fs.readFileSync(path.join(repoRoot, stylesheet), 'utf8').replace(/\n$/, '');
+  const css = resolveLumnoTokens(fs.readFileSync(path.join(repoRoot, stylesheet), 'utf8')).replace(/\n$/, '');
   return html.replace(
     new RegExp(`^([ \\t]*)<link rel="stylesheet" href="${href.replace('.', '\\.')}" />$`, 'm'),
     (_match, indent) => [

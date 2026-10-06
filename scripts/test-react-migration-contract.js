@@ -40,7 +40,7 @@ const bookmarksReactSource = fs.readFileSync(
   'utf8'
 );
 const suggestionsReactSource = fs.readFileSync(
-  path.join(repoRoot, 'react-src/newtab/suggestions.tsx'),
+  path.join(repoRoot, 'react-src/search/suggestions.tsx'),
   'utf8'
 );
 const shortcutsReactSource = fs.readFileSync(

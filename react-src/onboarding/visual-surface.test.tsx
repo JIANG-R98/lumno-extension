@@ -78,7 +78,7 @@ function createModel(
       ],
       reducedMotion: false,
       searchAriaLabel: 'Lumno new tab search preview',
-      searchPlaceholder: 'Search or enter URL...',
+      searchPlaceholder: 'Search or enter URL…',
       sectionModeBookmarksLabel: 'Bookmarks display mode',
       sectionModeRecentLabel: 'Recent display mode',
       settingsLabel: 'Settings',
@@ -178,7 +178,7 @@ describe('Onboarding visual surface React island', () => {
       '#_x_extension_newtab_search_input_2024_unique_'
     );
     expect(search?.readOnly).toBe(true);
-    expect(search?.placeholder).toBe('Search or enter URL...');
+    expect(search?.placeholder).toBe('Search or enter URL…');
     expect(
       surface?.querySelectorAll('.x-nt-bookmark-card')
     ).toHaveLength(1);

@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { readStylesheet } = require('./helpers/css-tokens');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -7,10 +8,10 @@ const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 const repoRoot = path.resolve(__dirname, '..');
 const newtabSource = readNewtabRuntimeSource();
-const newtabSuggestionsSource = fs.readFileSync(path.join(repoRoot, 'react-src/newtab/suggestions.tsx'), 'utf8');
+const newtabSuggestionsSource = fs.readFileSync(path.join(repoRoot, 'react-src/search/suggestions.tsx'), 'utf8');
 const newtabHtmlSource = readPageSource('newtab.html');
 const overlaySource = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
-const overlayCssSource = fs.readFileSync(path.join(repoRoot, 'src/overlay/suggestions-view.css'), 'utf8');
+const overlayCssSource = readStylesheet('src/overlay/suggestions-view.css');
 const backgroundSource = fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8');
 const localeNames = ['en', 'ja', 'zh_CN', 'zh_TW'];
 

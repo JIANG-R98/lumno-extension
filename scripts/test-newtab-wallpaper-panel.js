@@ -294,6 +294,11 @@ function createFakeDocument() {
   return documentObj;
 }
 
+function getEffectOption(control, type) {
+  const host = getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectSelectHost');
+  return getDescendantByAttribute(host, 'data-value', type);
+}
+
 function createFakeWallpaperViewController(config) {
   const documentObj = config.documentObj;
   const model = config.model || {};
@@ -388,8 +393,36 @@ function createFakeWallpaperViewController(config) {
     'panel'
   );
   const appearanceHeader = add(panel, 'div', 'x-nt-appearance-header');
-  const appearanceTitleGroup = add(
+  add(
     appearanceHeader,
+    'div',
+    'x-nt-wallpaper-panel-title',
+    {},
+    'appearanceTitle'
+  );
+  const moreSettings = add(
+    appearanceHeader,
+    'a',
+    'x-nt-appearance-more-settings',
+    { href: model.moreSettingsUrl || '' },
+    'moreSettingsLink'
+  );
+  add(
+    moreSettings,
+    'span',
+    'x-nt-appearance-more-settings-text',
+    {},
+    'moreSettingsText'
+  );
+  const scroll = add(panel, 'div', 'x-nt-wallpaper-panel-scroll');
+  const appearanceSection = add(scroll, 'div', 'x-nt-appearance-section');
+  const themeSectionHeader = add(
+    appearanceSection,
+    'div',
+    'x-nt-wallpaper-panel-header'
+  );
+  const appearanceTitleGroup = add(
+    themeSectionHeader,
     'div',
     'x-nt-appearance-title-group'
   );
@@ -398,7 +431,7 @@ function createFakeWallpaperViewController(config) {
     'div',
     'x-nt-wallpaper-panel-title',
     {},
-    'appearanceTitle'
+    'themeSectionTitle'
   );
   add(
     appearanceTitleGroup,
@@ -408,21 +441,26 @@ function createFakeWallpaperViewController(config) {
     'appearanceInfoButton'
   );
   const scopeTabs = add(
-    appearanceHeader,
+    themeSectionHeader,
     'div',
-    'x-nt-appearance-scope-tabs',
+    'x-nt-segmented-tabs x-nt-wallpaper-tabs x-nt-appearance-scope-tabs',
     { role: 'group' },
     'appearanceScopeTabs'
   );
+  add(
+    scopeTabs,
+    'span',
+    'x-nt-segmented-tabs-indicator x-nt-wallpaper-tabs-indicator',
+    {},
+    'appearanceScopeTabsIndicator'
+  );
   ['global', 'home'].forEach((scope) => {
-    add(scopeTabs, 'button', 'x-nt-appearance-scope-tab', {
+    add(scopeTabs, 'button', 'x-nt-segmented-tab x-nt-wallpaper-tab x-nt-appearance-scope-tab', {
       type: 'button',
       'data-theme-scope': scope,
-      'data-selected': 'false'
+      'data-active': 'false'
     });
   });
-  const scroll = add(panel, 'div', 'x-nt-wallpaper-panel-scroll');
-  const appearanceSection = add(scroll, 'div', 'x-nt-appearance-section');
   const appearanceOptions = add(
     appearanceSection,
     'div',
@@ -638,20 +676,6 @@ function createFakeWallpaperViewController(config) {
   );
   shortcutColumnsSliderValueInput.type = 'number';
   shortcutColumnsSliderValueInput.value = shortcutColumnsSlider.value;
-  const moreSettings = add(
-    widthControl,
-    'a',
-    'x-nt-appearance-more-settings',
-    { href: model.moreSettingsUrl || '' },
-    'moreSettingsLink'
-  );
-  add(
-    moreSettings,
-    'span',
-    'x-nt-appearance-more-settings-text',
-    {},
-    'moreSettingsText'
-  );
 
   const wallpaperSection = add(scroll, 'div', 'x-nt-wallpaper-section');
   const panelHeader = add(
@@ -791,27 +815,13 @@ function createFakeWallpaperViewController(config) {
     { control: 'overlayControl', label: 'overlayLabel', slider: 'overlaySlider' },
     'x-nt-overlay-control x-nt-overlay-control--effect'
   );
-  const effectOptions = add(
+  const effectHeader = add(
     effectControl,
     'div',
-    'x-nt-segmented-tabs x-nt-effect-options',
-    {},
-    'effectOptions'
+    'x-nt-appearance-setting-row x-nt-effect-control-header'
   );
-  add(
-    effectOptions,
-    'span',
-    'x-nt-segmented-tabs-indicator x-nt-effect-indicator',
-    {},
-    'effectTabsIndicator'
-  );
-  (model.effectTypes || []).forEach((item) => {
-    add(effectOptions, 'button', 'x-nt-segmented-tab x-nt-effect-option', {
-      'data-wallpaper-effect-type': item.type,
-      'data-active': 'false',
-      'data-selected': 'false'
-    });
-  });
+  add(effectHeader, 'span', 'x-nt-appearance-setting-title x-nt-effect-label', {}, 'effectLabel');
+  const effectSelectHost = add(effectHeader, 'div', 'x-nt-effect-select', {}, 'effectSelectHost');
   const effectInkToneControl = add(
     effectControl,
     'div',
@@ -840,7 +850,6 @@ function createFakeWallpaperViewController(config) {
       'aria-pressed': 'false'
     });
   });
-  add(effectControl, 'span', 'x-nt-effect-label', {}, 'effectLabel');
   addSliderControl(effectControl, {
     control: 'effectStrengthControl',
     label: 'effectStrengthLabel',
@@ -1022,12 +1031,45 @@ function createFakeWallpaperViewController(config) {
     'button'
   );
 
+  const effectSelectRows = new Map();
+  let effectSelectOpen = false;
+  const effectSelectTrigger = add(effectSelectHost, 'button', '_x_extension_select_trigger_2024_unique_');
+  effectSelectTrigger.addEventListener('click', () => {
+    effectSelectOpen = !effectSelectOpen;
+  });
+
   return {
     control,
     panel,
     button,
     getRefs() {
       return refs;
+    },
+    closeEffectSelect() {
+      const wasOpen = effectSelectOpen;
+      effectSelectOpen = false;
+      return wasOpen;
+    },
+    containsEffectSelectTarget(target) {
+      return Array.from(effectSelectRows.values()).includes(target);
+    },
+    renderEffectSelect(select) {
+      effectSelectTrigger.setAttribute('aria-label', select.ariaLabel);
+      select.options.forEach((option) => {
+        let row = effectSelectRows.get(option.value);
+        if (!row) {
+          row = add(effectSelectHost, 'div', '_x_extension_select_option_2024_unique_', {
+            'data-value': option.value
+          });
+          effectSelectRows.set(option.value, row);
+        }
+        row.textContent = option.label;
+        row.setAttribute('data-selected', option.value === select.value ? 'true' : 'false');
+        row._listeners.click = [() => {
+          effectSelectOpen = false;
+          select.onChange(option.value);
+        }];
+      });
     },
     renderOnlineWallpapers(items) {
       bingItemsHost.children.length = 0;
@@ -1397,13 +1439,13 @@ function assertSquareFaviconOptionCss(filePath) {
   assert.ok(optionRule, `${filePath} should define wallpaper-sized favicon option size`);
   assert.match(
     optionRule[0],
-    /width:\s*calc\(\(100% - \(var\(--x-nt-panel-grid-gap\) \* 2\)\) \/ 3\);/,
-    `${filePath} favicon option should match one wallpaper grid column`
+    /width:\s*calc\(\(100% - \(var\(--x-nt-panel-grid-gap\) \* 3\)\) \/ 4\);/,
+    `${filePath} favicon option should use a quarter-width column`
   );
   assert.match(
     optionRule[0],
-    /flex:\s*0\s+0\s+calc\(\(100% - \(var\(--x-nt-panel-grid-gap\) \* 2\)\) \/ 3\);/,
-    `${filePath} favicon option flex basis should match wallpaper grid columns`
+    /flex:\s*0\s+0\s+calc\(\(100% - \(var\(--x-nt-panel-grid-gap\) \* 3\)\) \/ 4\);/,
+    `${filePath} favicon option flex basis should use a quarter-width column`
   );
 
   const thumbRule = source.match(/\.x-nt-favicon-thumb\s*\{[\s\S]*?\}/);
@@ -1438,27 +1480,22 @@ function assertSegmentedTabRadiusCss(filePath) {
   );
 }
 
-function assertEffectOptionsGridCss(filePath) {
+function assertEffectSelectCss(filePath) {
   const source = readPageSource(filePath);
   assert.match(
     source,
-    /\.x-nt-effect-options:not\(\.x-nt-effect-ink-tone-options\)\s*\{[\s\S]*?display:\s*grid;[\s\S]*?grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\);/,
-    `${filePath} should lay out the eight main filters in four columns and two rows`
+    /\.x-nt-effect-select\s*\{[\s\S]*?flex:\s*0 0 var\(--x-nt-row-control-width\);/,
+    `${filePath} should size the filter dropdown like the other row controls`
   );
   assert.match(
     source,
-    /\.x-nt-effect-options:not\(\.x-nt-effect-ink-tone-options\) \.x-nt-effect-indicator\s*\{\s*display:\s*none;/,
-    `${filePath} should disable the one-row sliding indicator for the filter grid`
+    /\.x-nt-effect-select \._x_extension_select_trigger_2024_unique_\s*\{[\s\S]*?height:\s*30px;/,
+    `${filePath} should match the filter trigger height to the slider value inputs`
   );
-  assert.match(
+  assert.doesNotMatch(
     source,
-    /\.x-nt-effect-options:not\(\.x-nt-effect-ink-tone-options\)[\s\S]*?\.x-nt-effect-option\[data-active="true"\]\s*\{[\s\S]*?background:/,
-    `${filePath} should give the active grid option its own selected surface`
-  );
-  assert.match(
-    source,
-    /body\[data-theme="dark"\][\s\S]*?\.x-nt-effect-options:not\(\.x-nt-effect-ink-tone-options\)[\s\S]*?\.x-nt-effect-option\[data-active="true"\]\s*\{[\s\S]*?background:\s*#3f3f46;/,
-    `${filePath} should retain a visible selected surface in dark mode`
+    /\.x-nt-effect-options:not\(\.x-nt-effect-ink-tone-options\)|\.x-nt-effect-select-menu/,
+    `${filePath} should use the shared select menu as-is instead of restyling it`
   );
 }
 
@@ -1519,6 +1556,11 @@ function assertBrandMarkCopy() {
   assert.match(wallpaperSource, /data-newtab-top-content/);
   assert.match(wallpaperSource, /newtab_time_font_weight_title/);
   assert.match(wallpaperSource, /newtab_time_show_seconds_title/);
+  assert.doesNotMatch(
+    wallpaperSource,
+    /\$\{label\} value/,
+    'slider value boxes should reuse the localized slider name without an English suffix'
+  );
   const optionsHtml = readPageSource('src/options/options.html');
   assert.match(optionsHtml, /data-newtab-top-content="brand"/);
   assert.match(optionsHtml, /data-newtab-top-content="time"/);
@@ -2074,7 +2116,7 @@ const inputAutoFocusInfoButton = getChildByClassName(
   'x-nt-appearance-info-button'
 );
 const inputAutoFocusToggle = inputAutoFocusRow.children[1].children[0];
-const moreSettingsLink = getChildByClassName(searchWidthControl, 'x-nt-appearance-more-settings');
+const moreSettingsLink = getChildByClassName(appearanceHeader, 'x-nt-appearance-more-settings');
 const shortcutsAccordion = getChildByClassName(searchWidthControl, 'x-nt-shortcuts-accordion');
 const shortcutsRow = shortcutsAccordion.children[0];
 const shortcutsTrigger = shortcutsRow.children[0];
@@ -2166,7 +2208,7 @@ inputAutoFocusToggle.checked = true;
 inputAutoFocusToggle._listeners.change.forEach((listener) => listener({ target: inputAutoFocusToggle }));
 assert.deepStrictEqual(inputAutoFocusWrites, [true]);
 assert.strictEqual(inputAutoFocusToggle.getAttribute('aria-checked'), 'true');
-assert.strictEqual(moreSettingsLink.tabIndex, 0, 'global scope search width settings link should be tabbable');
+assert.strictEqual(moreSettingsLink.tabIndex, 0, 'more settings link in the sticky header should be tabbable');
 
 const newtabHtml = readPageSource('newtab.html');
 assert.match(
@@ -2177,7 +2219,7 @@ assert.match(
 const zhCNMessages = JSON.parse(fs.readFileSync('_locales/zh_CN/messages.json', 'utf8'));
 assert.strictEqual(
   zhCNMessages.newtab_input_auto_focus_help.message,
-  '如倾向使用浏览器原生地址栏，可关闭该选项。关闭后地址栏中的插件 url 将不再显示'
+  '如倾向使用浏览器原生地址栏，可关闭该选项。关闭后地址栏中的扩展 URL 将不再显示。'
 );
 
 async function testInputAutoFocusHintWaitsForFinalFocusRoute() {
@@ -2297,14 +2339,14 @@ const scopedAppearanceSection = getChildByClassName(scopedScrollBody, 'x-nt-appe
 const scopedSearchWidthControl = getChildByClassName(scopedAppearanceSection, 'x-nt-search-width-control');
 const scopedSearchWidthSlider = scopedSearchWidthControl.children[1].children[0];
 const scopedMoreSettingsLink = getChildByClassName(
-  scopedSearchWidthControl,
+  getChildByClassName(scopedControl.children[0], 'x-nt-appearance-header'),
   'x-nt-appearance-more-settings'
 );
 
 assert.strictEqual(scopedSearchWidthControl.getAttribute('data-visible'), 'true');
 assert.strictEqual(scopedSearchWidthSlider.disabled, false, 'visible search width slider should be interactive');
 assert.strictEqual(scopedSearchWidthSlider.tabIndex, 0, 'visible search width slider should be tabbable');
-assert.strictEqual(scopedMoreSettingsLink.tabIndex, 0, 'visible search width settings link should be tabbable');
+assert.strictEqual(scopedMoreSettingsLink.tabIndex, 0, 'more settings link in the sticky header should stay tabbable');
 
 let switchingScope = 'global';
 const switchingRuntime = sandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
@@ -2324,20 +2366,30 @@ switchingControl.children[1].click();
 const switchingPanel = switchingControl.children[0];
 const switchingScrollBody = getChildByClassName(switchingPanel, 'x-nt-wallpaper-panel-scroll');
 const switchingAppearanceSection = getChildByClassName(switchingScrollBody, 'x-nt-appearance-section');
-const switchingHeader = getChildByClassName(switchingPanel, 'x-nt-appearance-header');
-const switchingScopeTabs = getChildByClassName(switchingHeader, 'x-nt-appearance-scope-tabs');
+const switchingThemeHeader = getChildByClassName(switchingAppearanceSection, 'x-nt-wallpaper-panel-header');
+const switchingScopeTabs = getChildByClassName(switchingThemeHeader, 'x-nt-appearance-scope-tabs');
 const switchingSearchWidthControl = getChildByClassName(switchingAppearanceSection, 'x-nt-search-width-control');
+const getSwitchingScopeTab = (scope) => switchingScopeTabs.children.find(
+  (child) => child.getAttribute('data-theme-scope') === scope
+);
 
 assert.strictEqual(switchingSearchWidthControl.getAttribute('data-visible'), 'true');
-switchingScopeTabs.children[1].click();
+assert.ok(
+  getChildByClassName(switchingScopeTabs, 'x-nt-wallpaper-tabs-indicator'),
+  'theme scope tabs should use the shared segmented tab indicator'
+);
+getSwitchingScopeTab('home').click();
 assert.strictEqual(switchingScope, 'home', 'clicking New Tab should switch theme scope');
+assert.strictEqual(getSwitchingScopeTab('home').getAttribute('data-active'), 'true');
+assert.strictEqual(getSwitchingScopeTab('global').getAttribute('data-active'), 'false');
 assert.strictEqual(
   switchingSearchWidthControl.getAttribute('data-visible'),
   'true',
   'search width control should stay visible after switching to New Tab scope'
 );
-switchingScopeTabs.children[0].click();
+getSwitchingScopeTab('global').click();
 assert.strictEqual(switchingScope, 'global', 'clicking Global should switch theme scope back');
+assert.strictEqual(getSwitchingScopeTab('global').getAttribute('data-active'), 'true');
 assert.strictEqual(
   switchingSearchWidthControl.getAttribute('data-visible'),
   'true',
@@ -3172,7 +3224,7 @@ async function testWallpaperEffectInkToneControlPersistsAndFollowsEffectType() {
   const inkToneControl = getDescendantByClassName(control, 'x-nt-effect-ink-tone-control');
   const darkButton = getDescendantByAttribute(control, 'data-wallpaper-effect-ink-tone', 'dark');
   const lightButton = getDescendantByAttribute(control, 'data-wallpaper-effect-ink-tone', 'light');
-  const ditherButton = getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'dither');
+  const ditherButton = getEffectOption(control, 'dither');
 
   assert.strictEqual(
     inkToneControl.getAttribute('data-visible'),
@@ -3196,7 +3248,7 @@ async function testWallpaperEffectInkToneControlPersistsAndFollowsEffectType() {
     'shared wallpaper modes should persist the chosen ink tone consistently'
   );
 
-  getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'ascii').click();
+  getEffectOption(control, 'ascii').click();
   assert.strictEqual(
     inkToneControl.getAttribute('data-visible'),
     'true',
@@ -3208,7 +3260,7 @@ async function testWallpaperEffectInkToneControlPersistsAndFollowsEffectType() {
     'false',
     'Dither should use the wallpaper palette instead of the dot or character ink picker'
   );
-  getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'grain').click();
+  getEffectOption(control, 'grain').click();
   assert.strictEqual(
     inkToneControl.getAttribute('data-visible'),
     'false',
@@ -3233,13 +3285,20 @@ async function testBlocksExposeReliefControls() {
   testRuntime.getControlElement().children[1].click();
   await testRuntime.bootstrapInitialWallpaperEffect();
   const control = testRuntime.getControlElement();
-  const blocksButton = getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'blocks');
+  const blocksButton = getEffectOption(control, 'blocks');
   const inkToneControl = getDescendantByClassName(control, 'x-nt-effect-ink-tone-control');
 
   assert.ok(blocksButton, 'the appearance panel should include the Blocks filter');
   blocksButton.click();
-  assert.strictEqual(blocksButton.getAttribute('aria-pressed'), 'true');
+  assert.strictEqual(blocksButton.getAttribute('data-selected'), 'true');
   assert.strictEqual(testDocument.body.getAttribute('data-wallpaper-effect'), 'blocks');
+  assert.ok(
+    testRuntime.containsTarget(blocksButton),
+    'clicks inside the filter menu should not count as outside the appearance panel'
+  );
+  getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectSelectHost').children[0].click();
+  assert.strictEqual(testRuntime.closeOpenMenu(), true, 'Escape should close the open filter menu first');
+  assert.strictEqual(testRuntime.closeOpenMenu(), false, 'Escape should fall through once the menu is closed');
   [
     ['effectSizeControl', 'effectSizeLabel', 'Block size']
   ].forEach(([controlRef, labelRef, label]) => {
@@ -3340,28 +3399,28 @@ async function testEffectSpecificParametersRoundTrip() {
   );
   assert.strictEqual(strengthSlider.value, '80');
 
-  getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'crt').click();
+  getEffectOption(control, 'crt').click();
   assert.strictEqual(strengthSlider.value, '100', 'CRT should expose its dedicated strength');
   strengthSlider.value = '50';
   strengthSlider._listeners.input.forEach((listener) => listener({ target: strengthSlider }));
 
-  getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'grain').click();
+  getEffectOption(control, 'grain').click();
   assert.strictEqual(
     strengthSlider.value,
     '80',
     'Grain strength should survive a round trip through CRT'
   );
 
-  getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'blocks').click();
+  getEffectOption(control, 'blocks').click();
   assert.strictEqual(sizeSlider.value, '1', 'Blocks should expose its dedicated size');
   sizeSlider.value = '4';
   sizeSlider._listeners.input.forEach((listener) => listener({ target: sizeSlider }));
 
-  getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'halftone').click();
+  getEffectOption(control, 'halftone').click();
   assert.strictEqual(sizeSlider.value, '65', 'generic size should survive a round trip through Blocks');
-  getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'blocks').click();
+  getEffectOption(control, 'blocks').click();
   assert.strictEqual(sizeSlider.value, '4', 'Blocks size should be retained independently');
-  getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'grain').click();
+  getEffectOption(control, 'grain').click();
 
   await new Promise((resolve) => setTimeout(resolve, 150));
   const persisted = storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light;
@@ -3411,17 +3470,17 @@ async function testGlassBlurCanBeEnabledAndDisabled() {
   testRuntime.getControlElement().children[1].click();
   await testRuntime.bootstrapInitialWallpaperEffect();
   const control = testRuntime.getControlElement();
-  const blurButton = getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'blur');
+  const blurButton = getEffectOption(control, 'blur');
   const sizeControl = getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectSizeControl');
   const spacingControl = getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectSpacingControl');
   const strengthValueInput = getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectStrengthSliderValueInput');
   const textureSlider = getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectTextureSlider');
   const textureLabel = getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectTextureLabel');
   const textureValueInput = getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectTextureSliderValueInput');
-  const offButton = getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'none');
+  const offButton = getEffectOption(control, 'none');
 
   blurButton.click();
-  assert.strictEqual(blurButton.getAttribute('aria-pressed'), 'true');
+  assert.strictEqual(blurButton.getAttribute('data-selected'), 'true');
   assert.strictEqual(testDocument.body.getAttribute('data-wallpaper-effect'), 'blur');
   assert.strictEqual(
     getDescendantByAttribute(control, 'data-wallpaper-blur-style', 'standard'),
@@ -3452,7 +3511,7 @@ async function testGlassBlurCanBeEnabledAndDisabled() {
     'bounded strength should keep its existing 0–100 contract'
   );
   offButton.click();
-  assert.strictEqual(offButton.getAttribute('aria-pressed'), 'true');
+  assert.strictEqual(offButton.getAttribute('data-selected'), 'true');
   assert.strictEqual(testDocument.body.getAttribute('data-wallpaper-effect'), 'none');
   await new Promise((resolve) => setTimeout(resolve, 150));
   assert.strictEqual(storageArea.data[WALLPAPER_EFFECT_STORAGE_KEY].light.type, 'none');
@@ -3504,8 +3563,8 @@ async function testGlassBlurFilterSwitchPreservesTheOutgoingFrame() {
   await testRuntime.bootstrapInitialWallpaperEffect();
   testDocument.body.setAttribute('data-nt-enter', 'done');
   const control = testRuntime.getControlElement();
-  const blurButton = getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'blur');
-  const grainButton = getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'grain');
+  const blurButton = getEffectOption(control, 'blur');
+  const grainButton = getEffectOption(control, 'grain');
 
   assert.strictEqual(testDocument.body.getAttribute('data-wallpaper-effect'), 'grain');
   blurButton.click();
@@ -3587,7 +3646,7 @@ async function testCrtFilterPersistsAndShowsDisplayControls() {
   testRuntime.getControlElement().children[1].click();
   await testRuntime.bootstrapInitialWallpaperEffect();
   const control = testRuntime.getControlElement();
-  const crtButton = getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'crt');
+  const crtButton = getEffectOption(control, 'crt');
   assert.ok(crtButton, 'the wallpaper filter picker should expose CRT');
   crtButton.click();
   assert.strictEqual(testDocument.body.getAttribute('data-wallpaper-effect'), 'crt');
@@ -3690,7 +3749,7 @@ async function testCrtFilterPersistsAndShowsDisplayControls() {
       'CRT slider bubbles should include the percentage suffix'
     );
   });
-  const grainButton = getDescendantByAttribute(control, 'data-wallpaper-effect-type', 'grain');
+  const grainButton = getEffectOption(control, 'grain');
   grainButton.click();
   assert.strictEqual(
     getDescendantByAttribute(control, 'data-wallpaper-ref', 'effectSpacingSlider').getAttribute('data-wallpaper-dynamic-range'),
@@ -3852,7 +3911,7 @@ Promise.resolve()
     assertThemeAwareAlternateFaviconAsset();
     assertSquareFaviconOptionCss('newtab.html');
     assertSegmentedTabRadiusCss('newtab.html');
-    assertEffectOptionsGridCss('newtab.html');
+    assertEffectSelectCss('newtab.html');
     assertWallpaperBootstrapWaitsForTheme();
     assertInitialWallpaperToneStartsBeforeDeferredRefresh();
   })

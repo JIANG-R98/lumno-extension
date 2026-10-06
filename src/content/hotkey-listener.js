@@ -357,7 +357,7 @@
   async function copyCurrentPageUrlWithToast() {
     const url = location && location.href ? location.href : '';
     if (!url) {
-      showPageToast(getMessage('copy_page_url_failed_retry', '复制失败，请重试'), true);
+      showPageToast(getMessage('copy_page_url_failed_retry', '复制失败，请重试。'), true);
       return false;
     }
     try {
@@ -373,7 +373,7 @@
         showPageToast(getMessage('copy_page_url_success', '已复制当前页面链接'));
         return true;
       }
-      showPageToast(getMessage('copy_page_url_failed_permission', '复制失败，请检查剪贴板权限'), true);
+      showPageToast(getMessage('copy_page_url_failed_permission', '复制失败，请检查剪贴板权限。'), true);
       return false;
     }
   }

@@ -574,7 +574,7 @@
   let currentMessages = null;
   let currentLanguageMode = 'system';
   let currentResolvedLocale = null;
-  let defaultPlaceholderText = 'Search or enter URL...';
+  let defaultPlaceholderText = 'Search or enter URL…';
   let toastElement = null;
   let toastController = null;
   let layoutController = null;
@@ -1062,6 +1062,8 @@
     t,
     showToast,
     openExternalNewTabUrl: (...args) => openExternalNewTabUrl(...args),
+    hasShortcutForSite: (...args) => hasShortcutForSite(...args),
+    addSiteToShortcuts: (...args) => addSiteToShortcuts(...args),
     closeShortcutContextMenu,
     closeBookmarkContextMenu,
     canDismissRecentCard: (...args) => canDismissRecentCard(...args),
@@ -2255,6 +2257,7 @@
   quoteRuntime = globalThis.LumnoNewtabQuotes.createRuntime({
     documentObj: document, windowObj: window, chromeObj: chrome,
     storageArea, localStorageArea, t, showToast,
+    getLocale: () => currentResolvedLocale,
     getSearchRoot: () => root,
     getShortcutSection: () => shortcutSection,
     isPreferenceArea: (areaName) => providerStorageRuntime
@@ -3386,7 +3389,8 @@
     const image = new Image();
     image.onload = function() {
       const avg = extractAverageColor(image);
-      if (!avg) {
+      // Generic globes would otherwise become the whole host's theme.
+      if (!avg || FAVICON_UTILS.isPlaceholderFaviconColor(avg)) {
         return;
       }
       const theme = buildThemeFromAccent(avg, 'favicon');
@@ -3834,6 +3838,8 @@
     loadVisibleShortcuts,
     persistShortcuts,
     removeShortcutById,
+    hasShortcutForSite,
+    addSiteToShortcuts,
     hideShortcutAddFromContextMenu,
     createShortcutsSection,
     createShortcutDialogComponent
@@ -4206,6 +4212,9 @@
       if (item && item.dividerBefore) {
         option.dividerBefore = true;
       }
+      if (item && item.groupTitleKey) {
+        option.groupTitle = t(item.groupTitleKey, item.groupTitleFallback || '');
+      }
       if (item && item.radio) {
         option.radio = true;
         option.checked = item.checked === true;
@@ -4246,7 +4255,9 @@
       fallback: 'Adaptive mist',
       radio: true,
       checked: effectiveSurfaceMode === 'adaptive',
-      dividerBefore: true
+      dividerBefore: true,
+      groupTitleKey: 'bookmark_topbar_surface_title',
+      groupTitleFallback: 'Bar background'
     });
     options.push({
       value: '__bookmark_topbar_surface_clear__',
@@ -5539,14 +5550,14 @@
   function copyBookmarkUrl(url) {
     const value = String(url || '').trim();
     if (!value) {
-      showToast(t('bookmarks_copy_url_failed', 'Could not copy link'), true);
+      showToast(t('bookmarks_copy_url_failed', 'Couldn’t copy the link. Try again.'), true);
       return Promise.resolve(false);
     }
     return copyTextToClipboard(value).then(() => {
       showToast(t('bookmarks_copy_url_success', 'Bookmark link copied'));
       return true;
     }).catch(() => {
-      showToast(t('bookmarks_copy_url_failed', 'Could not copy link'), true);
+      showToast(t('bookmarks_copy_url_failed', 'Couldn’t copy the link. Try again.'), true);
       return false;
     });
   }
@@ -5554,14 +5565,14 @@
   function copySearchResultUrl(url) {
     const value = String(url || '').trim();
     if (!value) {
-      showToast(t('search_copy_url_failed', 'Could not copy result link'), true);
+      showToast(t('search_copy_url_failed', 'Couldn’t copy the result link. Try again.'), true);
       return Promise.resolve(false);
     }
     return copyTextToClipboard(value).then(() => {
       showToast(t('search_copy_url_success', 'Result link copied'));
       return true;
     }).catch(() => {
-      showToast(t('search_copy_url_failed', 'Could not copy result link'), true);
+      showToast(t('search_copy_url_failed', 'Couldn’t copy the result link. Try again.'), true);
       return false;
     });
   }
@@ -7175,7 +7186,7 @@
     onModeTagRemovalConfirmation: () => {
       showToast(t(
         'search_scope_remove_confirmation',
-        'Press Backspace again to remove the scope'
+        'Press Backspace again to remove the scope.'
       ));
     },
     onModeTagRemovalConfirmationReset: hideToast,
@@ -7618,6 +7629,10 @@
       return;
     }
     event.preventDefault();
+    // Escape dismisses an open filter menu before it closes the whole panel.
+    if (wallpaperRuntime.closeOpenMenu()) {
+      return;
+    }
     closeWallpaperPanel({ restoreFocus: true });
   }, true);
 

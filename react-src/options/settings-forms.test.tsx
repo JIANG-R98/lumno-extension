@@ -158,7 +158,7 @@ describe('Options settings form React islands', () => {
   it('shows site-search validation errors without collapsing', async () => {
     const host = document.createElement('div');
     const controller = createSiteSearchFormController(host, {
-      onSave: vi.fn().mockResolvedValue({ ok: false, error: '请填写触发词' })
+      onSave: vi.fn().mockResolvedValue({ ok: false, error: '请填写触发词。' })
     });
     controllers.push(controller);
     act(() => controller.render(siteModel));
@@ -173,7 +173,7 @@ describe('Options settings form React islands', () => {
 
     expect(host.dataset.expanded).toBe('true');
     expect(host.querySelector('._x_extension_shortcut_error_2024_unique_')?.textContent)
-      .toBe('请填写触发词');
+      .toBe('请填写触发词。');
   });
 
   it('recovers when an unexpected site-search save error rejects', async () => {
@@ -237,7 +237,7 @@ describe('Options settings form React islands', () => {
     const host = document.createElement('div');
     const controller = createBlacklistFormController(host, {
       kind: 'favicon',
-      onSave: vi.fn().mockResolvedValue({ ok: false, error: '请输入网站域名' })
+      onSave: vi.fn().mockResolvedValue({ ok: false, error: '请输入网站域名。' })
     });
     controllers.push(controller);
     act(() => controller.render(blacklistModel));
@@ -250,7 +250,7 @@ describe('Options settings form React islands', () => {
 
     expect(host.dataset.expanded).toBe('true');
     expect(host.querySelector('._x_extension_shortcut_error_2024_unique_')?.textContent)
-      .toBe('请输入网站域名');
+      .toBe('请输入网站域名。');
   });
 
   it('lets the adapter reset React-owned blacklist form state', () => {

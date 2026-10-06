@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { readStylesheet } = require('./helpers/css-tokens');
 const fs = require('fs');
 
 const settings = require('../src/shared/settings.js');
@@ -9,7 +10,7 @@ const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
 const newtabHtml = readPageSource('newtab.html');
 const newtabSource = readNewtabRuntimeSource();
 const wallpaperSource = fs.readFileSync('src/newtab/wallpaper.js', 'utf8');
-const shortcutDialogCss = fs.readFileSync('src/newtab/shortcut-dialog.css', 'utf8');
+const shortcutDialogCss = readStylesheet('src/newtab/shortcut-dialog.css');
 const wallpaperViewSource = fs.readFileSync(
   'react-src/newtab/wallpaper-view.tsx',
   'utf8'
@@ -22,7 +23,7 @@ const settingsControlsSource = fs.readFileSync(
   'react-src/options/settings-controls.tsx',
   'utf8'
 );
-const rangeSliderCss = fs.readFileSync('src/shared/range-slider.css', 'utf8');
+const rangeSliderCss = readStylesheet('src/shared/range-slider.css');
 const locales = ['en', 'ja', 'zh_CN', 'zh_TW'];
 
 // Keep the old width key readable and exportable so existing sync/import data
@@ -114,8 +115,13 @@ assert.match(
 );
 assert.match(
   rangeSliderSource,
-  /\{resetButtonProps \? \([\s\S]*?<RangeSliderResetButton[\s\S]*?\) : null\}[\s\S]*?<RangeSliderValueInput/,
-  'The shared reset IconButton should render directly to the value input left'
+  /\{label === undefined \? resetButton : null\}[\s\S]*?\{label\}\s*\{resetButton\}/,
+  'The shared reset IconButton should trail a field label, or hang beside the track when unlabelled'
+);
+assert.match(
+  rangeSliderCss,
+  /\.x-range-slider-reset:disabled\s*\{[\s\S]*?visibility:\s*hidden;/,
+  'A reset with nothing to reset should disappear instead of showing a disabled control'
 );
 assert.match(
   rangeSliderCss,
@@ -140,8 +146,8 @@ assert.match(
 assert.doesNotMatch(settingsControlsSource, /snapPoints|snapThreshold|pointerActiveRef/);
 assert.match(
   rangeSliderSource,
-  /RANGE_SLIDER_VALUE_INPUT_STYLE[\s\S]*?height:\s*36,[\s\S]*?width:\s*56/,
-  'The shared slider value-input component should own a fixed size'
+  /RANGE_SLIDER_VALUE_INPUT_STYLE[\s\S]*?height:\s*'var\(--x-range-slider-value-height, 30px\)',[\s\S]*?width:\s*'var\(--x-range-slider-value-width, 52px\)'/,
+  'The shared slider value-input component should own a fixed, page-themeable size'
 );
 assert.match(
   rangeSliderSource,
@@ -179,19 +185,19 @@ assert.match(
   'Shortcut rows should center partial rows inside the configured per-row width'
 );
 assert.match(
-  newtabHtml,
-  /\.x-nt-range-slider-row\s*\{[\s\S]*?align-items:\s*center;/,
-  'New Tab slider value inputs should align to the slider control center'
+  rangeSliderCss,
+  /\.x-range-slider-field\s*\{[\s\S]*?align-items:\s*center;/,
+  'Slider labels, tracks and value inputs should share one centered row'
 );
 assert.match(
-  newtabHtml,
-  /\.x-nt-overlay-slider\s*\{[\s\S]*?top:\s*8px;/,
-  'New Tab slider tracks should use the shared control vertical geometry'
+  rangeSliderCss,
+  /\.x-range-slider-input::-webkit-slider-thumb\s*\{[\s\S]*?margin-top:\s*calc\(\(var\(--x-range-slider-track-height\) - var\(--x-range-slider-thumb-size\)\) \/ 2\);/,
+  'The shared slider thumb should stay centered on the track'
 );
-assert.match(
+assert.doesNotMatch(
   newtabHtml,
-  /\.x-nt-overlay-tick::before\s*\{[\s\S]*?top:\s*19px;/,
-  'New Tab slider ticks should stay aligned with the centered track'
+  /\.x-nt-overlay-slider::-webkit-slider-(?:thumb|runnable-track)|\.x-nt-overlay-tick/,
+  'New Tab should theme the shared slider instead of redrawing its track, thumb or ticks'
 );
 assert.match(
   newtabSource,

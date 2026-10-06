@@ -15,7 +15,7 @@
   width: max-content;
   max-width: min(420px, calc(100vw - 16px));
   padding: 8px 12px;
-  border-radius: 10px;
+  border-radius: var(--lumno-radius-lg, 10px);
   background: linear-gradient(
     180deg,
     var(--x-extension-tooltip-bg-top, #ffffff) 0%,
@@ -40,7 +40,7 @@
   );
   opacity: 0;
   transform: translateY(4px);
-  transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease;
+  transition: opacity var(--lumno-duration-2xs, 120ms) ease, transform var(--lumno-duration-2xs, 120ms) ease, visibility var(--lumno-duration-2xs, 120ms) ease;
 }
 
 ._x_extension_tooltip_2026_unique_[data-tooltip-position="absolute"] {
@@ -88,5 +88,11 @@ body[data-theme="dark"] ._x_extension_tooltip_2026_unique_,
 @media (prefers-reduced-motion: reduce) {
   ._x_extension_tooltip_2026_unique_ {
     transition: none;
+  }
+}
+
+@supports (corner-shape: superellipse(1.25)) {
+  ._x_extension_tooltip_2026_unique_ {
+    corner-shape: superellipse(1.25);
   }
 }

@@ -19,7 +19,7 @@ const expectedMessages = {
   settings_search_result_priority_title: '検索結果の先頭表示優先度',
   settings_overlay_tab_priority_desc: '入力内容が開いているタブに一致したとき、先頭候補でEnterを押して実行する操作',
   settings_version_label: 'バージョン',
-  newtab_input_auto_focus_feature_hint_text: '自動フォーカスは「外観 / 新しいタブ」でオフにできます',
+  newtab_input_auto_focus_feature_hint_text: '自動フォーカスは「外観 / 新しいタブ」でオフにできます。',
   document_pip_picker_hint: 'マウスを動かして要素を選択し、クリックするとWebクリップで表示します。ホイールで親要素へ切り替え、Escでキャンセルできます。',
   settings_shortcuts_section_title: 'キー設定',
   settings_shortcuts_action: 'キー設定へ',
@@ -58,15 +58,15 @@ const expectedMessages = {
   settings_overlay_enter_animation_title: '表示時のアニメーション',
   overlay_enter_animation_elastic: 'スプリング',
   blacklist_preview_title: '一致例',
-  blacklist_match_suffix_tooltip: 'このサイトのすべてのページと下位ドメインを非表示\n────────\n例：baidu.com を入力すると、baidu.com/search と tieba.baidu.com は表示されません',
+  blacklist_match_suffix_tooltip: 'このサイトのすべてのページと下位ドメインを非表示\n────────\n例：baidu.com を入力すると、baidu.com/search と tieba.baidu.com は表示されません。',
   shortcuts_desc: '検索語を入力してTabを押すとサイト内検索に入ります',
-  shortcuts_group_ai_desc: '検索語を入力してTabを押し、質問文を入力すると、以下のAIサイトへ移動して自動入力します（事前に各サイトへのログインが必要です）。',
+  shortcuts_group_ai_desc: '検索語を入力してTabを押し、質問文を入力すると、以下のAIサイトへ移動して自動入力します（事前に各サイトへのログインが必要です）',
   blacklist_clear: '隠すルールを空にする',
   confirm_clear_blacklist: '隠すルールを空にしますか？',
   shortcuts_group_custom: '追加済み',
   shortcuts_badge_custom: '追加',
   shortcuts_empty_custom: 'カスタム検索はまだありません',
-  search_scope_switcher_label: '検索範囲：{scope}。選択すると切り替わります',
+  search_scope_switcher_label: '検索範囲：{scope}。選択すると切り替わります。',
   search_scope_group_local: 'ブラウザ内検索',
   search_scope_group_ai: 'AI検索',
   toast_error_template: '検索URLには {query} が必要です。',
@@ -84,7 +84,7 @@ const expectedMessages = {
   sync_export_done: '設定を書き出しました',
   sync_import_done: '読み込み完了',
   sync_status_hint: 'Lumno の設定は、現在のブラウザの標準同期サービスで自動的に同期されます。同じブラウザアカウントでログインしている端末間のみ同期でき、異なるブラウザ間では同期できません。',
-  copy_page_url_failed_permission: 'コピーできませんでした。権限を確認してください'
+  copy_page_url_failed_permission: 'コピーできませんでした。権限を確認してください。'
 };
 
 Object.entries(expectedMessages).forEach(([key, expected]) => {

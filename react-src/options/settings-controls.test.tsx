@@ -128,9 +128,13 @@ describe('Options settings controls React islands', () => {
     expect(host.dataset.reactIsland).toBe('options-range-slider-control');
     expect(input?.classList.contains('x-lumno-range-slider-input')).toBe(true);
     expect(input?.value).toBe('6');
-    expect(host.querySelector<HTMLElement>('.x-lumno-range-slider-scale')
-      ?.style.getPropertyValue('--x-lumno-range-slider-tick-count')).toBe('3');
+    // Only the interior tick becomes a notch; the ends are implied by the track.
+    expect(input?.style.getPropertyValue('--x-range-slider-marks')
+      .match(/linear-gradient/g)).toHaveLength(1);
+    expect(input?.style.getPropertyValue('--x-range-slider-marks')).toContain('* 0.5)');
+    expect(host.querySelector('.x-lumno-range-slider-tick')).toBeNull();
     expect(valueInput?.value).toBe('6');
+    expect(valueInput?.getAttribute('aria-label')).toBe('书签每行最多显示');
     expect(valueInput?.max).toBe(input?.max);
     expect(valueInput?.max).toBe('8');
     expect(valueInput?.classList.contains('_x_extension_shortcut_input_2024_unique_'))
@@ -138,8 +142,8 @@ describe('Options settings controls React islands', () => {
     expect(valueInput?.classList.contains(
       '_x_extension_range_slider_value_input_2026_unique_'
     )).toBe(true);
-    expect(valueInput?.style.width).toBe('56px');
-    expect(valueInput?.style.height).toBe('36px');
+    expect(valueInput?.style.width).toBe('var(--x-range-slider-value-width, 52px)');
+    expect(valueInput?.style.height).toBe('var(--x-range-slider-value-height, 30px)');
 
     act(() => {
       if (!input) return;
@@ -188,12 +192,10 @@ describe('Options settings controls React islands', () => {
     expect(valueInput?.max).toBe('16');
     expect(valueInput?.classList.contains('_x_extension_shortcut_input_2024_unique_'))
       .toBe(true);
-    expect(valueInput?.style.width).toBe('56px');
-    expect(valueInput?.style.height).toBe('36px');
-    expect(host.querySelectorAll<HTMLElement>('.x-lumno-range-slider-tick')[1]
-      ?.style.getPropertyValue('--x-lumno-range-slider-tick-percent')).toBe(
-        `${100 / 3}%`
-      );
+    expect(valueInput?.style.width).toBe('var(--x-range-slider-value-width, 52px)');
+    expect(valueInput?.style.height).toBe('var(--x-range-slider-value-height, 30px)');
+    expect(slider?.style.getPropertyValue('--x-range-slider-marks')).toContain('* 0.3333)');
+    expect(slider?.style.getPropertyValue('--x-range-slider-marks')).toContain('* 0.6667)');
 
     act(() => {
       if (!slider) return;
@@ -233,7 +235,7 @@ describe('Options settings controls React islands', () => {
     });
     expect(onInput).toHaveBeenLastCalledWith(16);
     expect(valueInput?.value).toBe('16');
-    expect(valueInput?.style.width).toBe('56px');
+    expect(valueInput?.style.width).toBe('var(--x-range-slider-value-width, 52px)');
   });
 
   it('aligns a two-tick range to both slider endpoints', () => {
@@ -258,11 +260,9 @@ describe('Options settings controls React islands', () => {
       value: 10
     }));
 
-    const scale = host.querySelector<HTMLElement>('.x-lumno-range-slider-scale');
-    const ticks = host.querySelectorAll<HTMLElement>('.x-lumno-range-slider-tick');
-    expect(scale?.style.getPropertyValue('--x-lumno-range-slider-tick-count')).toBe('2');
-    expect(Array.from(ticks).map((tick) => [tick.dataset.align, tick.textContent]))
-      .toEqual([['start', '5'], ['end', '10']]);
+    const slider = host.querySelector<HTMLInputElement>('input[type="range"]');
+    expect(slider?.classList.contains('x-range-slider-input')).toBe(true);
+    expect(slider?.style.getPropertyValue('--x-range-slider-marks')).toBe('');
   });
 
   it('resets a slider to its component-provided default value', () => {
@@ -302,13 +302,29 @@ describe('Options settings controls React islands', () => {
     expect(reset?.classList.contains(
       '_x_extension_shortcut_group_action_2024_unique_'
     )).toBe(true);
-    expect(reset?.nextElementSibling).toBe(valueInput);
+    // Unlabelled fields hang reset beside the track instead of shortening it.
+    expect(reset?.parentElement).toBe(slider?.parentElement);
+    expect(slider?.parentElement?.nextElementSibling).toBe(valueInput);
     expect(reset?.disabled).toBe(false);
 
     act(() => reset?.click());
     expect(onInput).toHaveBeenLastCalledWith(64);
     expect(slider?.value).toBe('64');
     expect(reset?.disabled).toBe(true);
+
+    act(() => {
+      if (!slider) return;
+      slider.value = '76';
+      slider.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(reset?.disabled).toBe(false);
+    act(() => slider?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })));
+    expect(onInput).toHaveBeenLastCalledWith(64);
+    expect(reset?.disabled).toBe(true);
+
+    onInput.mockClear();
+    act(() => slider?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })));
+    expect(onInput).not.toHaveBeenCalled();
   });
 
   it('keeps adapter-provided localized labels after an interaction rerender', () => {

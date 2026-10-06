@@ -364,7 +364,7 @@
         panelBg: 'var(--x-ov-mode-menu-bg, #FFFFFF)',
         panelText: 'var(--x-ov-text, #111827)',
         panelShadow: 'var(--x-ov-shadow, 0 16px 40px rgba(15, 23, 42, 0.13))',
-        panelRadius: 'var(--x-ov-panel-radius, 28px)',
+        panelRadius: 'var(--x-ov-panel-radius, 24px)',
         panelGap: '14px'
       }
       : {
@@ -421,14 +421,14 @@
     function getModeMenuPlaceholder() {
       return formatMessage(
         'search_scope_panel_placeholder',
-        'Search specific site content...'
+        'Search specific site content…'
       );
     }
 
     function getModeActivePlaceholder() {
       return formatMessage(
         'search_scope_active_placeholder',
-        'Search within this scope; press Tab again to open the scope panel...'
+        'Search within this scope; press Tab again to open the scope panel…'
       );
     }
 
@@ -627,6 +627,7 @@
       ['background', '#3B82F6'],
       ['border', 'none'],
       ['border-radius', '10px'],
+      ['corner-shape', 'superellipse(1.25)'],
       ['box-shadow', 'none'],
       ['opacity', '1'],
       ['transition', prefixTransition],
@@ -1161,7 +1162,7 @@
       );
       siteSearchPrefix.setAttribute('aria-label', formatMessage(
         'search_scope_switcher_label',
-        '搜索范围：{scope}。选择即可切换',
+        '搜索范围：{scope}。选择即可切换。',
         { scope: prefixText }
       ));
     }
@@ -2224,6 +2225,7 @@
         ['height', '22px'],
         ['padding', '0 6px'],
         ['border-radius', '7px'],
+        ['corner-shape', 'superellipse(1.25)'],
         ['border', `1px solid ${vars.panelBorder}`],
         ['background', vars.tagBg],
         ['color', vars.tagText],

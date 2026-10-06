@@ -17,7 +17,7 @@
   width: max-content;
   justify-content: center;
   padding: 6px 12px 6px 7px;
-  border-radius: 999px;
+  border-radius: var(--lumno-radius-pill, 999px);
   border: 1px solid color-mix(in srgb, var(--x-extension-tooltip-border, rgba(214, 219, 227, 0.95)) 82%, transparent);
   background: linear-gradient(
     180deg,
@@ -25,7 +25,7 @@
     color-mix(in srgb, var(--x-extension-tooltip-bg-bottom, #f7f9fc) 94%, var(--x-extension-tooltip-text, #556070) 6%) 100%
   );
   color: var(--x-extension-tooltip-text, #556070);
-  font-size: 11px;
+  font-size: var(--lumno-font-size-xs, 11px);
   line-height: 1.2;
   font-weight: 650;
   white-space: nowrap;
@@ -49,7 +49,7 @@
   background: linear-gradient(180deg, #ededed 0%, #ffffff 100%);
   box-shadow: 0 2px 0 #000000;
   color: #000000;
-  font-size: 12px;
+  font-size: var(--lumno-font-size-sm, 12px);
   font-weight: 800;
   line-height: 1;
   letter-spacing: 0;
@@ -126,4 +126,15 @@ body[data-theme="dark"] ._x_extension_cursor_tooltip_tag_key_2026_unique_,
     linear-gradient(180deg, #f2f2f2 0%, #d9d9d9 100%) border-box;
   box-shadow: 0 2px 0 #ffffff;
   color: #ffffff;
+}
+
+@supports (corner-shape: superellipse(1.25)) {
+  ._x_extension_cursor_tooltip_tag_key_2026_unique_ {
+    corner-shape: superellipse(1.25);
+  }
+
+  /* The cursor tag is a capsule; keep its ends round. */
+  ._x_extension_tooltip_2026_unique_._x_extension_cursor_tooltip_tag_2026_unique_[data-tooltip-kind="cursor-tag"] {
+    corner-shape: round;
+  }
 }

@@ -40,18 +40,58 @@ describe('WebDAV connection cards', () => {
     expect(card('a').textContent).not.toContain('https://dav.test/');
     await click(card('a').querySelector('button[aria-label="Edit connection"]'));
     expect(card('a').dataset.expanded).toBe('true');
-    expect(card('a').querySelector<HTMLInputElement>('[name="password"]')?.required).toBe(false);
+    expect(card('a').querySelector('[name="password"]')).toBeNull();
+    expect(card('a').querySelector('.lumno-webdav-password-saved')?.textContent).toContain(copy.webdav_password_saved);
     await click(card('b').querySelector('button[aria-label="Edit connection"]'));
     expect(card('a').dataset.expanded).toBe('false');
     expect(card('b').dataset.expanded).toBe('true');
-    expect(host.querySelectorAll('form')).toHaveLength(1);
+    expect(host.querySelectorAll('form:not([inert])')).toHaveLength(1);
+    expect(card('a').querySelector('form')?.hasAttribute('inert')).toBe(true);
+  });
+  it('keeps the editor mounted so it can animate, and resets it on reopening', async () => {
+    const { card } = fixture();
+    const form = card('a').querySelector('form')!;
+    expect(form.hasAttribute('inert')).toBe(true);
+    expect(document.activeElement).not.toBe(form.querySelector('[name="endpoint"]'));
+    await click(card('a').querySelector('button[aria-label="Edit connection"]'));
+    expect(card('a').querySelector('form')).toBe(form);
+    expect(form.hasAttribute('inert')).toBe(false);
+    expect(document.activeElement).toBe(form.querySelector('[name="endpoint"]'));
+    await type(form.querySelector<HTMLInputElement>('[name="username"]')!, 'other');
+    await click(card('a').querySelector('button[aria-label="Edit connection"]'));
+    await click(card('a').querySelector('button[aria-label="Edit connection"]'));
+    expect(form.querySelector<HTMLInputElement>('[name="username"]')!.value).toBe('user');
+  });
+  it('replaces a saved password only on request and can go back to keeping it', async () => {
+    const { card, onAction } = fixture();
+    await click(card('a').querySelector('button[aria-label="Edit connection"]'));
+    await click(card('a').querySelector('.lumno-webdav-password-change'));
+    const input = card('a').querySelector<HTMLInputElement>('[name="password"]')!;
+    expect(input.required).toBe(true);
+    expect(input.autocomplete).toBe('current-password');
+    expect(document.activeElement).toBe(input);
+    await type(input, 'secret');
+    await click(card('a').querySelector(`button[aria-label="${copy.webdav_password_show}"]`));
+    expect(input.type).toBe('text');
+    await click(card('a').querySelector(`button[aria-label="${copy.webdav_password_keep}"]`));
+    expect(card('a').querySelector('[name="password"]')).toBeNull();
+    expect(document.activeElement).toBe(card('a').querySelector('.lumno-webdav-password-change'));
+    await act(async () => { card('a').querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    expect(onAction).toHaveBeenCalledWith('save', 'a', { config: { endpoint: 'https://dav.test/', directory: 'lumno', username: 'user', password: '' }, resume: true });
+  });
+  it('asks for the password again once the account changes', async () => {
+    const { card } = fixture();
+    await click(card('a').querySelector('button[aria-label="Edit connection"]'));
+    await type(card('a').querySelector<HTMLInputElement>('[name="username"]')!, 'other');
+    expect(card('a').querySelector<HTMLInputElement>('[name="password"]')?.required).toBe(true);
+    expect(card('a').querySelector(`button[aria-label="${copy.webdav_password_keep}"]`)).toBeNull();
   });
   it('saves only the edited connection, clears password inputs and collapses', async () => {
     const { card, onAction } = fixture();
     await click(card('a').querySelector('button[aria-label="Edit connection"]'));
     await act(async () => { card('a').querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
     expect(onAction).toHaveBeenCalledWith('save', 'a', { config: { endpoint: 'https://dav.test/', directory: 'lumno', username: 'user', password: '' }, resume: true });
-    expect(card('a').querySelector('form')).toBeNull();
+    expect(card('a').dataset.expanded).toBe('false');
     expect(card('b').dataset.expanded).toBe('false');
   });
   it('uses the existing inline confirmation and removes only the selected card', async () => {
@@ -97,6 +137,8 @@ describe('WebDAV connection cards', () => {
     await click([...card('b').querySelectorAll('button')].find((button) => button.textContent === copy.webdav_use_remote)!);
     expect(onAction).toHaveBeenCalledWith('sync', 'b', { decision: 'remote' });
     expect(card('b').querySelector('[role="status"]')?.getAttribute('data-status')).toBe('warning');
+    const compact = '._x_extension_shortcut_compact_2026_unique_';
+    expect([...card('b').querySelectorAll('.lumno-webdav-actions button')].every((button) => button.matches(compact))).toBe(true);
   });
   it('loads conflict differences on demand and shows both sides', async () => {
     const { card, onAction } = fixture({ ...model, connections: [{ ...item, enabled: true, state: 'conflict', conflictsText: 'Shortcuts and icons' }] });
@@ -124,7 +166,7 @@ describe('WebDAV connection cards', () => {
       { ...item, id: 'paused' },
       { ...item, id: 'ready', enabled: true, state: 'ready', lastSyncAt: now - 3 * 60 * 1000 },
       { ...item, id: 'fresh', enabled: true, state: 'ready', lastSyncAt: now - 5 * 1000 },
-      { ...item, id: 'failed', enabled: true, state: 'error', errorText: 'Sign-in failed', diagnosticText: 'dav-lock-4 / move-race / 201,201' }
+      { ...item, id: 'failed', enabled: true, state: 'error', errorText: 'Sign-in failed', diagnosticText: 'dav-lock-5 / move-race / 201,201' }
     ] });
     const pill = (id: string) => card(id).querySelector<HTMLElement>('._x_extension_sync_status_2024_unique_')!;
     expect(pill('new').textContent).toBe(copy.webdav_state_browser);

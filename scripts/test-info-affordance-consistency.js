@@ -1,9 +1,10 @@
 const assert = require('assert');
+const { readStylesheet } = require('./helpers/css-tokens');
 const fs = require('fs');
 const { readPageSource } = require('./helpers/page-source');
 
 const optionsHtml = readPageSource('src/options/options.html');
-const infoButtonCss = fs.readFileSync('src/shared/info-button.css', 'utf8');
+const infoButtonCss = readStylesheet('src/shared/info-button.css');
 const newtabHtml = readPageSource('newtab.html');
 const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
 const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
@@ -85,5 +86,15 @@ assert.doesNotMatch(
   /ri-question-line/,
   'the webpage theme adaptation info should not retain the old question icon'
 );
+
+for (const [label, source] of [
+  ['options.html', optionsHtml],
+  ['site-search-list.tsx', optionReactSources[2]],
+  ['wallpaper.js', fs.readFileSync('src/newtab/wallpaper.js', 'utf8')],
+  ['wallpaper-view.tsx', fs.readFileSync('react-src/newtab/wallpaper-view.tsx', 'utf8')],
+  ['onboarding-content.js', fs.readFileSync('src/onboarding/onboarding-content.js', 'utf8')]
+]) {
+  assert.doesNotMatch(source, /ri-question-(?:line|fill)|icons\?\.help/, `${label} should use the information icon for help affordances`);
+}
 
 console.log('info affordance consistency tests passed');

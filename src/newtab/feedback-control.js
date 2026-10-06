@@ -117,13 +117,13 @@
           ? t('newtab_feedback_wechat_label', 'WeChat')
           : t('newtab_feedback_discord_label', 'Discord'),
         communityTooltip: channel === 'wechat'
-          ? t('newtab_feedback_wechat_tooltip', 'Joining WeChat group')
-          : t('newtab_feedback_discord_tooltip', 'Joining Discord'),
+          ? t('newtab_feedback_wechat_tooltip', 'Join the WeChat group')
+          : t('newtab_feedback_discord_tooltip', 'Join Discord'),
         discordUrl: links.discord || LUMNO_FEEDBACK_LINKS_FALLBACK.discord,
         githubIssueLabel: t('newtab_feedback_github_issue_label', 'GitHub Issue'),
         githubIssueTooltip: t(
           'newtab_feedback_github_issue_tooltip',
-          'Opening a GitHub Issue'
+          'Open a GitHub issue'
         ),
         githubIssueUrl: links.githubIssue || LUMNO_FEEDBACK_LINKS_FALLBACK.githubIssue,
         menuAriaLabel: t('newtab_feedback_menu_aria', 'Feedback channels'),
@@ -134,7 +134,7 @@
         qrUrl: links.wechatQr || LUMNO_FEEDBACK_LINKS_FALLBACK.wechatQr,
         refreshTooltip: t('newtab_feedback_wechat_refresh_tooltip', 'Refresh QR code'),
         xLabel: t('newtab_feedback_x_label', 'X'),
-        xTooltip: t('newtab_feedback_x_tooltip', 'Contacting on X'),
+        xTooltip: t('newtab_feedback_x_tooltip', 'Contact us on X'),
         xUrl: links.x || LUMNO_FEEDBACK_LINKS_FALLBACK.x
       };
     }

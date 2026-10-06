@@ -33,7 +33,7 @@
     "message": "深淺色作用範圍說明"
   },
   "newtab_theme_scope_help": {
-    "message": "「全域」設定預設深淺色模式。「新分頁」只覆蓋新分頁；在其中選擇「跟隨全域」即可繼承全域設定。"
+    "message": "「全域」：所有頁面預設使用的深淺色。\n「新分頁」：僅對新分頁生效，選擇跟隨「全域」可與全域保持一致。"
   },
   "newtab_theme_follow_global": {
     "message": "跟隨「全域」"
@@ -55,6 +55,9 @@
   },
   "newtab_search_width_max": {
     "message": "最大"
+  },
+  "newtab_appearance_settings_title": {
+    "message": "外觀設定"
   },
   "newtab_more_settings": {
     "message": "更多設定"
@@ -114,7 +117,7 @@
     "message": "正在背景開啟…"
   },
   "selection_quick_action_failed": {
-    "message": "傳送失敗，請重試"
+    "message": "傳送失敗，請重試。"
   },
   "selection_debug_decision_title": {
     "message": "劃詞判定"
@@ -372,7 +375,7 @@
     "message": "自動畫中畫"
   },
   "settings_auto_pip_desc": {
-    "message": "控制網頁自動進入畫中畫功能"
+    "message": "在網頁上播放影片時，若切換至其他分頁，正在播放的影片將以浮窗形式播放"
   },
   "settings_pinned_tab_recovery_title": {
     "message": "重啟後恢復置頂分頁"
@@ -399,7 +402,7 @@
     "message": "將滑鼠移到網頁可見區域開始選擇。"
   },
   "document_pip_picker_started": {
-    "message": "點擊要懸浮的內容，滾輪可切換範圍，Esc 取消"
+    "message": "點擊要懸浮的內容，滾輪可切換範圍，Esc 取消。"
   },
   "document_pip_picker_cancelled": {
     "message": "已退出內容選取"
@@ -420,16 +423,16 @@
     "message": "目前像導覽或工具列區域，複雜選單在 PiP 中可能不完整，必要時請切到更外層容器。"
   },
   "document_pip_picker_unsupported": {
-    "message": "目前頁面暫不支援 Document PiP"
+    "message": "目前頁面暫不支援 Document PiP。"
   },
   "document_pip_picker_conflict_video_pip": {
-    "message": "目前已有影片畫中畫，請先關閉後再進行網頁剪裁"
+    "message": "目前已有影片畫中畫，請先關閉後再進行網頁剪裁。"
   },
   "document_pip_picker_invalid": {
-    "message": "這個區域暫時無法懸浮，請改選較大的內容區域"
+    "message": "這個區域暫時無法懸浮，請改選較大的內容區域。"
   },
   "document_pip_picker_open_failed": {
-    "message": "開啟內容懸浮窗失敗，請改選其他區域再試"
+    "message": "開啟內容懸浮窗失敗，請改選其他區域再試。"
   },
   "document_pip_picker_badge": {
     "message": "已在懸浮窗開啟"
@@ -477,7 +480,7 @@
     "message": "在 Dia 中使用"
   },
   "settings_shortcuts_dia_tooltip": {
-    "message": "在 Dia 環境下，受瀏覽器限制，Lumno 的新分頁功能暫不可用，但聚焦搜尋功能仍可正常運行。\n\n若快捷鍵在 Dia 中不可用，請點擊下方右側按鈕進入瀏覽器的快捷鍵設定頁面，將「Open command bar」從 In Dia 改成 Global"
+    "message": "在 Dia 環境下，受瀏覽器限制，Lumno 的新分頁功能暫不可用，但聚焦搜尋功能仍可正常運行。\n\n若快捷鍵在 Dia 中不可用，請點擊下方右側按鈕進入瀏覽器的快捷鍵設定頁面，將「Open command bar」從 In Dia 改成 Global。"
   },
   "settings_shortcuts_section_title": {
     "message": "快捷鍵設定"
@@ -513,13 +516,13 @@
     "message": "無"
   },
   "settings_shortcuts_invalid": {
-    "message": "快捷鍵無效，請按組合鍵（如 Ctrl+K）"
+    "message": "快捷鍵無效，請按組合鍵（如 Ctrl+K）。"
   },
   "settings_restricted_title": {
     "message": "在受限頁行為"
   },
   "settings_restricted_tooltip": {
-    "message": "受限頁（如 chrome://、擴充功能商店、部分 file:// 頁面）無法開啟聚焦搜尋；按下快捷鍵將依此處規則處理"
+    "message": "受限頁（如 chrome://、擴充功能商店、部分 file:// 頁面）無法開啟聚焦搜尋；按下快捷鍵將依此處規則處理。"
   },
   "restricted_action_default": {
     "message": "前往 Lumno 新分頁"
@@ -720,10 +723,10 @@
     "message": "已上傳壁紙（僅此裝置）"
   },
   "settings_wallpaper_status_missing": {
-    "message": "壁紙檔案遺失，請重新上傳"
+    "message": "壁紙檔案遺失，請重新上傳。"
   },
   "settings_wallpaper_status_processing": {
-    "message": "處理中..."
+    "message": "處理中…"
   },
   "settings_wallpaper_upload_done": {
     "message": "壁紙已更新"
@@ -741,7 +744,7 @@
     "message": "壓縮後仍過大，請更換較小圖片。"
   },
   "settings_wallpaper_error_save": {
-    "message": "壁紙儲存失敗，請重試"
+    "message": "壁紙儲存失敗，請重試。"
   },
   "newtab_wallpaper_title": {
     "message": "壁紙"
@@ -840,13 +843,13 @@
     "message": "輸入框自動聚焦說明"
   },
   "newtab_input_auto_focus_help": {
-    "message": "如果偏好使用瀏覽器原生網址列，可關閉此選項。關閉後網址列中的擴充功能 URL 將不再顯示"
+    "message": "如果偏好使用瀏覽器原生網址列，可關閉此選項。關閉後網址列中的擴充功能 URL 將不再顯示。"
   },
   "newtab_input_auto_focus_feature_hint_badge": {
     "message": "提示"
   },
   "newtab_input_auto_focus_feature_hint_text": {
-    "message": "自動聚焦可在「外觀/新分頁」處關閉"
+    "message": "自動聚焦可在「外觀/新分頁」處關閉。"
   },
   "newtab_input_auto_focus_feature_hint_close": {
     "message": "關閉輸入框自動聚焦提示"
@@ -948,7 +951,7 @@
     "message": "已載入最新 QR Code"
   },
   "newtab_feedback_wechat_refresh_error": {
-    "message": "無法更新 QR Code，請稍後再試"
+    "message": "無法更新 QR Code，請稍後再試。"
   },
   "newtab_feedback_wechat_close_tooltip": {
     "message": "關閉"
@@ -1057,9 +1060,6 @@
   },
   "newtab_wallpaper_effect_crt": {
     "message": "CRT"
-  },
-  "newtab_wallpaper_effect_select_label": {
-    "message": "使用 {effect} 壁紙濾鏡"
   },
   "newtab_wallpaper_effect_ink_title": {
     "message": "取樣區域"
@@ -1188,13 +1188,13 @@
     "message": "整個網站"
   },
   "blacklist_match_exact_tooltip": {
-    "message": "只封鎖這一頁\n────────\n例如，填 x.com/home 後，只有這一頁不會出現，其他頁面不受影響"
+    "message": "只封鎖這一頁\n────────\n例如，填 x.com/home 後，只有這一頁不會出現，其他頁面不受影響。"
   },
   "blacklist_match_prefix_tooltip": {
-    "message": "只封鎖這個網站下這一路徑的頁面\n────────\n例如，填 baidu.com/search 後，baidu.com/search 和 baidu.com/search/1 不會出現，但 baidu.com/news 不受影響"
+    "message": "只封鎖這個網站下這一路徑的頁面\n────────\n例如，填 baidu.com/search 後，baidu.com/search 和 baidu.com/search/1 不會出現，但 baidu.com/news 不受影響。"
   },
   "blacklist_match_suffix_tooltip": {
-    "message": "封鎖這個網站的所有頁面，也包括它的子網站\n────────\n例如，填 baidu.com 後，baidu.com/search 和 tieba.baidu.com 都不會出現"
+    "message": "封鎖這個網站的所有頁面，也包括它的子網站\n────────\n例如，填 baidu.com 後，baidu.com/search 和 tieba.baidu.com 都不會出現。"
   },
   "blacklist_preview_title": {
     "message": "實際比對預覽"
@@ -1206,7 +1206,7 @@
     "message": "不會比對"
   },
   "blacklist_preview_www_note": {
-    "message": "會一併套用到 www. 版本，例如 baidu.com 也會比對到 www.baidu.com"
+    "message": "會一併套用到 www. 版本，例如 baidu.com 也會比對到 www.baidu.com。"
   },
   "blacklist_placeholder_url": {
     "message": "目前頁面填完整網址；整個網站填網站網域"
@@ -1230,16 +1230,16 @@
     "message": "尚未加入黑名單 URL"
   },
   "blacklist_error_url": {
-    "message": "請輸入網站網域或完整 URL"
+    "message": "請輸入網站網域或完整 URL。"
   },
   "blacklist_error_match_mode": {
-    "message": "請至少選擇一種比對方式"
+    "message": "請至少選擇一種比對方式。"
   },
   "blacklist_error_suffix": {
-    "message": "請輸入網站網域"
+    "message": "請輸入網站網域。"
   },
   "blacklist_error_domain": {
-    "message": "請輸入網站網域"
+    "message": "請輸入網站網域。"
   },
   "blacklist_match_mode_prefix": {
     "message": "比對以此 URL 開頭的頁面"
@@ -1341,10 +1341,10 @@
     "message": "已移除"
   },
   "toast_error": {
-    "message": "操作失敗，請重試"
+    "message": "操作失敗，請重試。"
   },
   "toast_error_template": {
-    "message": "搜尋範本必須包含 {query}"
+    "message": "搜尋範本必須包含 {query}。"
   },
   "toast_reset": {
     "message": "已重設"
@@ -1383,16 +1383,16 @@
     "message": "確認移除此項？"
   },
   "shortcuts_error_key": {
-    "message": "請填寫觸發詞"
+    "message": "請填寫觸發詞。"
   },
   "shortcuts_error_key_space": {
-    "message": "觸發詞不能包含空白"
+    "message": "觸發詞不能包含空白。"
   },
   "shortcuts_error_key_duplicate": {
-    "message": "此觸發詞已存在，請更換"
+    "message": "此觸發詞已存在，請更換。"
   },
   "search_placeholder": {
-    "message": "搜尋或輸入網址..."
+    "message": "搜尋或輸入網址…"
   },
   "overlay_search_placeholder": {
     "message": "搜尋或輸入網址，按 Tab 搜尋已開啟分頁"
@@ -1427,6 +1427,9 @@
   "bookmark_view_mode_top": {
     "message": "頂部書籤列"
   },
+  "bookmark_topbar_surface_title": {
+    "message": "書籤列背景"
+  },
   "bookmark_topbar_surface_adaptive": {
     "message": "自適應霧面"
   },
@@ -1452,10 +1455,10 @@
     "message": "已恢復自動配色"
   },
   "bookmark_topbar_color_unsupported": {
-    "message": "目前瀏覽器不支援螢幕取色"
+    "message": "目前瀏覽器不支援螢幕取色。"
   },
   "bookmark_topbar_color_failed": {
-    "message": "取色失敗，請再試一次"
+    "message": "取色失敗，請再試一次。"
   },
   "bookmarks_empty_folder": {
     "message": "暫無內容"
@@ -1488,7 +1491,7 @@
     "message": "未命名資料夾"
   },
   "bookmarks_open_group_partial_failed": {
-    "message": "已開啟 {openedCount} 個分頁，{failedCount} 個未能開啟"
+    "message": "已開啟 {openedCount} 個分頁，{failedCount} 個未能開啟。"
   },
   "bookmarks_open_group_failed": {
     "message": "無法開啟此書籤資料夾"
@@ -1500,7 +1503,7 @@
     "message": "已複製書籤連結"
   },
   "bookmarks_copy_url_failed": {
-    "message": "複製連結失敗，請重試"
+    "message": "複製連結失敗，請重試。"
   },
   "bookmarks_edit": {
     "message": "編輯"
@@ -1515,7 +1518,7 @@
     "message": "名稱"
   },
   "bookmarks_invalid_url": {
-    "message": "請輸入有效網址"
+    "message": "請輸入有效網址。"
   },
   "bookmarks_updated": {
     "message": "已更新書籤"
@@ -1575,7 +1578,7 @@
     "message": "已複製結果連結"
   },
   "search_copy_url_failed": {
-    "message": "無法複製結果連結，請再試一次"
+    "message": "無法複製結果連結，請再試一次。"
   },
   "search_tag_top_site": {
     "message": "常用"
@@ -1755,7 +1758,7 @@
     "message": "搜尋「{query}」"
   },
   "search_in_site_ellipsis": {
-    "message": "在 {site} 中搜尋..."
+    "message": "在 {site} 中搜尋…"
   },
   "search_in_site_prefix": {
     "message": "在 {site} 中搜尋｜"
@@ -1791,13 +1794,13 @@
     "message": "僅搜尋{source}"
   },
   "search_scope_switcher_label": {
-    "message": "搜尋範圍：{scope}。選取即可切換"
+    "message": "搜尋範圍：{scope}。選取即可切換。"
   },
   "search_scope_current": {
     "message": "目前"
   },
   "search_scope_remove_confirmation": {
-    "message": "再按一次退格鍵，移除搜尋範圍"
+    "message": "再按一次退格鍵，移除搜尋範圍。"
   },
   "search_number_jump_release_hint": {
     "message": "放開以顯示數字"
@@ -1821,10 +1824,10 @@
     "message": "搜尋：{query}"
   },
   "search_scope_panel_placeholder": {
-    "message": "搜尋特定網站內容..."
+    "message": "搜尋特定網站內容…"
   },
   "search_scope_active_placeholder": {
-    "message": "搜尋特定內容，再按 Tab 開啟範圍面板..."
+    "message": "搜尋特定內容，再按 Tab 開啟範圍面板…"
   },
   "search_scope_group_engines": {
     "message": "搜尋引擎"
@@ -2031,13 +2034,13 @@
     "message": "設定"
   },
   "copy_page_url_failed_retry": {
-    "message": "複製失敗，請再試一次"
+    "message": "複製失敗，請再試一次。"
   },
   "copy_page_url_success": {
     "message": "已複製目前頁面連結"
   },
   "copy_page_url_failed_permission": {
-    "message": "複製失敗，請檢查剪貼簿權限"
+    "message": "複製失敗，請檢查剪貼簿權限。"
   },
   "recent_pin_add": {
     "message": "置頂"
@@ -2049,10 +2052,13 @@
     "message": "最多置頂 3 個"
   },
   "recent_pin_limit_toast": {
-    "message": "最多只能置頂 3 個卡片"
+    "message": "最多只能置頂 3 個卡片。"
   },
   "recent_dismiss_tooltip": {
     "message": "移除"
+  },
+  "recent_add_to_shortcuts": {
+    "message": "新增至快捷方式"
   },
   "recent_dismiss_pinned_tooltip": {
     "message": "取消置頂並移除"
@@ -2211,7 +2217,7 @@
     "message": "隱藏"
   },
   "newtab_shortcuts_add_hidden": {
-    "message": "已隱藏「+」，可在設定 → 外觀 → 快捷方式 → 顯示「+」中重新開啟"
+    "message": "已隱藏「+」，可在設定 → 外觀 → 快捷方式 → 顯示「+」中重新開啟。"
   },
   "newtab_shortcuts_dialog_title": {
     "message": "新增快捷方式"
@@ -2310,10 +2316,10 @@
     "message": "重新整理中…"
   },
   "newtab_shortcuts_icon_refresh_failed": {
-    "message": "圖示更新失敗，請稍後再試"
+    "message": "圖示更新失敗，請稍後再試。"
   },
   "newtab_shortcuts_icon_custom_required": {
-    "message": "請選擇一張圖片作為自訂圖示"
+    "message": "請選擇一張圖片作為自訂圖示。"
   },
   "newtab_shortcuts_icon_online_info_label": {
     "message": "線上圖示說明"
@@ -2337,16 +2343,16 @@
     "message": "移除"
   },
   "newtab_shortcuts_icon_unsupported": {
-    "message": "請選擇 PNG、JPG 或 WebP 圖片"
+    "message": "請選擇 PNG、JPG 或 WebP 圖片。"
   },
   "newtab_shortcuts_icon_dimensions_too_large": {
     "message": "圖片尺寸不得超過 4096×4096 px"
   },
   "newtab_shortcuts_icon_invalid": {
-    "message": "無法使用此圖片，請選擇其他圖片"
+    "message": "無法使用此圖片，請選擇其他圖片。"
   },
   "newtab_shortcuts_icon_storage_error": {
-    "message": "本機圖示儲存失敗，請嘗試其他圖片"
+    "message": "本機圖示儲存失敗，請嘗試其他圖片。"
   },
   "folder_rename": {
     "message": "重新命名"
@@ -2366,11 +2372,11 @@
   "folder_color_presets": {
     "message": "預設顏色"
   },
+  "folder_color_default": {
+    "message": "預設顏色"
+  },
   "folder_color_reset": {
     "message": "恢復預設"
-  },
-  "folder_color_reset_tooltip": {
-    "message": "恢復預設顏色"
   },
   "folder_color_saved": {
     "message": "已儲存的顏色"
@@ -2406,7 +2412,7 @@
     "message": "儲存"
   },
   "newtab_shortcuts_invalid_url": {
-    "message": "請輸入有效的 http、https 或瀏覽器內建頁面網址"
+    "message": "請輸入有效的 http、https 或瀏覽器內建頁面網址。"
   },
   "newtab_shortcuts_limit_reached": {
     "message": "最多可新增 {count} 個快捷方式。"
@@ -2414,8 +2420,11 @@
   "newtab_shortcuts_added": {
     "message": "已新增快捷方式"
   },
+  "newtab_shortcuts_already_added": {
+    "message": "已在快捷方式中"
+  },
   "newtab_shortcuts_sync_limit_reached": {
-    "message": "快捷方式已達同步上限，新增項目將無法同步"
+    "message": "快捷方式已達同步上限，新增項目將無法同步。"
   },
   "newtab_shortcuts_edited": {
     "message": "已更新快捷方式"
@@ -2496,7 +2505,19 @@
     "message": "只儲存在這台裝置上，其他裝置需要重新新增這條連線。"
   },
   "webdav_password_saved": {
-    "message": "已儲存；留空以保持不變"
+    "message": "已儲存"
+  },
+  "webdav_password_change": {
+    "message": "更換"
+  },
+  "webdav_password_keep": {
+    "message": "保留原密碼"
+  },
+  "webdav_password_show": {
+    "message": "顯示密碼"
+  },
+  "webdav_password_hide": {
+    "message": "隱藏密碼"
   },
   "webdav_last_sync": {
     "message": "上次同步"
@@ -2637,7 +2658,7 @@
     "message": "尚未同步"
   },
   "webdav_state_testing": {
-    "message": "正在測試連通性"
+    "message": "正在測試連通性…"
   },
   "webdav_choice_title": {
     "message": "選擇初始同步版本"
@@ -2770,6 +2791,9 @@
   },
   "newtab_quote_off": {
     "message": "關閉"
+  },
+  "newtab_quote_input": {
+    "message": "輸入框下方"
   },
   "newtab_quote_search": {
     "message": "快捷方式下方"

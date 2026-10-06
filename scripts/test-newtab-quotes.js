@@ -31,7 +31,7 @@ async function main() {
   };
   const refs = { quoteTitle: document.createElement('span'), quoteBody: document.createElement('div'),
     quoteEnabledToggle: document.createElement('input'), quoteInfoButton: document.createElement('button'),
-    quotePosition: createGroup('quotePosition', ['search', 'bottom']),
+    quotePosition: createGroup('quotePosition', ['input', 'search', 'bottom']),
     quoteCategory: createGroup('quoteCategory', ['literature', 'poetry']),
     quoteFontSizeRow: document.createElement('div'), quoteFontSizeTitle: document.createElement('span'),
     quoteFontSizeSlider: document.createElement('input'), quoteFontSizeSliderValueInput: document.createElement('input') };
@@ -89,6 +89,15 @@ async function main() {
   assert.equal(prefs.fontSize, 24, 'An empty input must retain the saved font size');
   assert.equal(sizeInput.value, '24');
   assert.equal(requests, 1, 'Adjusting font size should reuse the current daily quote');
+  refs.quotePosition.querySelector('[data-quote-position="input"]').click();
+  assert.equal(runtime.element.previousElementSibling.id, 'search', 'The input placement sits right under the search box');
+  assert.equal(runtime.element.nextElementSibling.id, 'shortcuts');
+  assert.equal(document.body.dataset.quotePosition, 'input');
+  assert.equal(settings.normalizeNewtabQuotePrefs({ position: 'input' }).position, 'input');
+  for (const saved of [null, undefined, {}, { position: 'search' }, { position: 'bottom', category: 'poetry' }, { enabled: 'true' }]) {
+    assert.equal(settings.normalizeNewtabQuotePrefs(saved).enabled, false, 'Quotes stay off unless the user enabled them');
+  }
+  assert.equal(settings.normalizeNewtabQuotePrefs({ position: 'nope' }).position, 'search');
   refs.quotePosition.querySelector('[data-quote-position="bottom"]').click();
   assert.equal(document.body.dataset.quotePosition, 'bottom');
   assert.equal(runtime.element.dataset.position, 'bottom');
@@ -105,7 +114,7 @@ async function main() {
     assert.equal(refs.quoteFontSizeTitle.textContent, messages.newtab_quote_font_size.message);
     assert.equal(refs.quoteFontSizeSlider.getAttribute('aria-label'), messages.newtab_quote_font_size_label.message);
     assert.equal(sizeInput.getAttribute('aria-label'), messages.newtab_quote_font_size_label.message);
-    for (const position of ['search', 'bottom']) {
+    for (const position of ['input', 'search', 'bottom']) {
       assert.equal(refs.quotePosition.querySelector(`[data-quote-position="${position}"]`).textContent,
         messages[`newtab_quote_${position}`].message);
     }
@@ -138,6 +147,48 @@ async function main() {
   assert.equal(runtime.element.style.getPropertyValue('--x-nt-quote-font-size'), '24px');
   assert.equal(refs.quoteCategory.querySelector('[data-quote-category="poetry"]').getAttribute('aria-pressed'), 'true');
   runtime.destroy();
+
+  // The quote exists only for Chinese UI languages; other languages hide it and its settings.
+  let locale = 'en';
+  let localeRequests = 0;
+  const localeRuntime = quotes.createRuntime({ documentObj: document, windowObj: dom.window,
+    t: (_key, fallback) => fallback, getLocale: () => locale,
+    getSearchRoot: () => document.querySelector('#search'),
+    getShortcutSection: () => document.querySelector('#shortcuts'),
+    storageArea: {
+      get(_keys, callback) { callback({ [settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY]: { enabled: true, position: 'bottom' } }); },
+      set(_value, callback) { callback(); }
+    },
+    client: { getQuote: () => { localeRequests += 1; return Promise.resolve({ text: '海上生明月', author: '', source: '', url: '' }); } }
+  });
+  const localeRefs = { ...refs, quoteSection: document.createElement('div'), quoteDivider: document.createElement('div') };
+  localeRuntime.bindSettings(localeRefs);
+  await localeRuntime.mount();
+  await tick();
+  assert.equal(localeRequests, 0, 'Non-Chinese languages must not contact Hitokoto');
+  assert.equal(localeRuntime.element.hidden, true);
+  assert.equal(document.body.dataset.quotePosition, 'off');
+  assert.equal(localeRefs.quoteSection.hidden, true, 'Quote settings must be hidden for non-Chinese languages');
+  assert.equal(localeRefs.quoteDivider.hidden, true);
+  locale = 'zh_TW';
+  localeRuntime.updateLanguage();
+  await tick();
+  await tick();
+  assert.equal(localeRequests, 1, 'Switching to Chinese should load the saved quote preference');
+  assert.equal(localeRuntime.element.hidden, false);
+  assert.equal(document.body.dataset.quotePosition, 'bottom');
+  assert.equal(localeRefs.quoteSection.hidden, false);
+  assert.equal(localeRefs.quoteDivider.hidden, false);
+  locale = 'ja';
+  localeRuntime.updateLanguage();
+  assert.equal(localeRuntime.element.hidden, true);
+  assert.equal(document.body.dataset.quotePosition, 'off');
+  assert.equal(localeRefs.quoteSection.hidden, true);
+  locale = 'zh_CN';
+  localeRuntime.updateLanguage();
+  await tick();
+  assert.equal(localeRuntime.element.hidden, false, 'Simplified Chinese should show the quote');
+  localeRuntime.destroy();
   dom.window.close();
   console.log('newtab quote UI tests passed');
 }

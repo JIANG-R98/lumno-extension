@@ -2,6 +2,8 @@ import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import type { CSSProperties } from 'react';
 import { SegmentedTabs } from './segmented-tabs';
+import { SelectMenu, type SelectMenuOption } from './select-menu';
+import { LinkButton } from '../shared/link-button';
 import {
   RangeSliderField
 } from '../shared/range-slider';
@@ -58,6 +60,46 @@ function Switch({
   );
 }
 
+// Leading chevron + title form one disclosure hot area for every panel section.
+function SectionTrigger({
+  arrowIcon,
+  bodyId,
+  expanded,
+  id,
+  titleClassName = '',
+  titleRef,
+  triggerRef
+}: {
+  arrowIcon: string;
+  bodyId: string;
+  expanded: boolean;
+  id?: string;
+  titleClassName?: string;
+  titleRef: string;
+  triggerRef: string;
+}) {
+  return (
+    <button
+      {...ref(triggerRef)}
+      aria-controls={bodyId}
+      aria-expanded={expanded ? 'true' : 'false'}
+      className="x-nt-section-trigger"
+      id={id}
+      type="button"
+    >
+      <span
+        aria-hidden="true"
+        className="x-nt-section-chevron"
+        dangerouslySetInnerHTML={{ __html: arrowIcon }}
+      />
+      <span
+        {...ref(titleRef)}
+        className={`x-nt-wallpaper-panel-title${titleClassName ? ` ${titleClassName}` : ''}`}
+      />
+    </button>
+  );
+}
+
 type RangeSliderTick = {
   align?: string;
   key?: string;
@@ -66,47 +108,23 @@ type RangeSliderTick = {
   searchKey?: string;
 };
 
-function Scale({
-  className = '',
-  ticks
-}: {
-  className?: string;
-  ticks: RangeSliderTick[];
-}) {
-  return (
-    <div
-      aria-hidden="true"
-      className={`x-nt-overlay-scale${className ? ` ${className}` : ''}`}
-    >
-      {ticks.map((tick, index) => (
-        <span
-          className={`x-nt-overlay-tick${
-            tick.searchKey ? ' x-nt-search-width-tick' : ''
-          }`}
-          data-align={tick.align || 'center'}
-          data-overlay-tick={tick.key}
-          data-search-width-tick={tick.searchKey}
-          key={tick.key || tick.searchKey || index}
-          style={
-            typeof tick.percent === 'number'
-              ? ({
-                  '--x-nt-overlay-tick-percent': `${tick.percent}%`,
-                  '--x-nt-search-width-tick-percent': `${tick.percent}%`
-                } as CSSProperties)
-              : undefined
-          }
-        >
-          {tick.label}
-        </span>
-      ))}
-    </div>
+// Ticks become notches on the track; the component drops the implied start/end marks.
+function tickMarks(ticks: RangeSliderTick[] = []) {
+  return ticks.map((tick) =>
+    typeof tick.percent === 'number'
+      ? tick.percent
+      : tick.align === 'start'
+        ? 0
+        : tick.align === 'end'
+          ? 100
+          : 50
   );
 }
 
 function SliderControl({
   controlClass = 'x-nt-effect-slider-control',
   controlRef,
-  labelClass = 'x-nt-effect-slider-label',
+  labelClass = 'x-nt-appearance-setting-title x-nt-effect-slider-label',
   labelRef,
   sliderClass = 'x-nt-overlay-slider x-nt-effect-slider',
   sliderRef,
@@ -131,11 +149,9 @@ function SliderControl({
       className={controlClass}
       data-visible={visible ? 'true' : 'false'}
     >
-      <div className="x-nt-overlay-control-header">
-        <span {...ref(labelRef)} className={labelClass} />
-      </div>
       <RangeSliderField
         {...ref(sliderRef)}
+        label={<span {...ref(labelRef)} className={labelClass} />}
         className={wrapClass}
         inputClass={sliderClass}
         max="100"
@@ -148,9 +164,8 @@ function SliderControl({
           defaultValue: '50',
           inputMode: 'numeric'
         }}
-      >
-        <Scale ticks={ticks} />
-      </RangeSliderField>
+        marks={tickMarks(ticks)}
+      />
     </div>
   );
 }
@@ -236,6 +251,7 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
     { align: 'end', label: '100%' }
   ];
   const checkIcon = String(model.icons?.check || '');
+  const arrowIcon = String(model.icons?.arrow || '');
   const topContentOptions: TopContentItem[] = Array.isArray(model.topContentOptions)
     ? model.topContentOptions
     : [
@@ -331,212 +347,238 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
         role="dialog"
       >
         <div className="x-nt-appearance-header">
-          <div className="x-nt-appearance-title-group">
-            <div
-              {...ref('appearanceTitle')}
-              className="x-nt-wallpaper-panel-title"
-            />
-            <button
-              {...ref('appearanceInfoButton')}
-              className="x-nt-appearance-info-button"
-              dangerouslySetInnerHTML={{
-                __html: String(model.icons?.help || '')
-              }}
-              type="button"
-            />
-          </div>
           <div
-            {...ref('appearanceScopeTabs')}
-            className="x-nt-appearance-scope-tabs"
-            role="group"
-          >
-            {['global', 'home'].map((scope) => (
-              <button
-                aria-pressed="false"
-                className="x-nt-appearance-scope-tab"
-                data-selected="false"
-                data-theme-scope={scope}
-                key={scope}
-                type="button"
-              >
-                {scope === 'home' ? 'New Tab' : 'Global'}
-              </button>
-            ))}
-          </div>
+            {...ref('appearanceTitle')}
+            className="x-nt-wallpaper-panel-title"
+          />
+          <LinkButton
+            {...ref('moreSettingsLink')}
+            className="x-nt-appearance-more-settings"
+            href={model.moreSettingsUrl}
+            labelProps={{
+              ...ref('moreSettingsText'),
+              className: 'x-nt-appearance-more-settings-text'
+            }}
+          />
         </div>
         <div className="x-nt-wallpaper-panel-scroll">
           <div className="x-nt-appearance-section">
-            <div
-              {...ref('appearanceOptions')}
-              className="x-nt-appearance-options"
-            >
-              {model.appearanceOptions.map(
-                (item: { imageUrl: string; mode: string }) => (
-                  <button
-                    aria-pressed="false"
-                    className="x-nt-appearance-option"
-                    data-selected="false"
-                    data-theme-mode={item.mode}
-                    key={item.mode}
-                    type="button"
-                  >
-                    <span className="x-nt-appearance-option-content">
-                      <span className="x-nt-appearance-preview">
-                        <img alt="" draggable={false} src={item.imageUrl} />
-                        <span
-                          className="x-nt-appearance-check"
-                          dangerouslySetInnerHTML={{ __html: checkIcon }}
-                        />
-                      </span>
-                      <span className="x-nt-appearance-label" />
-                    </span>
-                  </button>
-                )
-              )}
-            </div>
-          </div>
-          <div className="x-nt-panel-divider" />
-          <div className="x-nt-wallpaper-section x-nt-search-section">
             <div className="x-nt-wallpaper-panel-header">
-              <div
-                {...ref('searchSectionTitle')}
-                className="x-nt-wallpaper-panel-title"
-              />
-            </div>
-            <div
-              {...ref('searchWidthControl')}
-              aria-hidden="true"
-              className="x-nt-overlay-control x-nt-search-width-control"
-              data-visible="false"
-            >
-              <div className="x-nt-overlay-control-header">
-                <span
-                  {...ref('searchWidthLabel')}
-                  className="x-nt-overlay-label"
-                />
-              </div>
-              <RangeSliderField
-                {...ref('searchWidthSlider')}
-                className="x-nt-overlay-slider-wrap x-nt-search-width-slider-wrap"
-                data-value-suffix=" px"
-                inputClass="x-nt-overlay-slider x-nt-search-width-slider"
-                max={String(model.searchWidth.max)}
-                min={String(model.searchWidth.min)}
-                rowClassName="x-nt-range-slider-row"
-                step="1"
-                valueInputProps={{
-                  ...ref('searchWidthSliderValueInput'),
-                  'aria-label': 'Search box width value',
-                  defaultValue: String(model.searchWidth.min),
-                  inputMode: 'numeric'
-                }}
-              >
-                <Scale
-                  className="x-nt-search-width-scale"
-                  ticks={model.searchWidth.ticks}
-                />
-              </RangeSliderField>
-            </div>
-            <div className="x-nt-appearance-setting-row">
-              <span className="x-nt-appearance-setting-title-group">
-                <span
-                  {...ref('inputAutoFocusTitle')}
-                  className="x-nt-appearance-setting-title"
+              <div className="x-nt-appearance-title-group">
+                <SectionTrigger
+                  arrowIcon={arrowIcon}
+                  bodyId="_x_extension_newtab_theme_section_body_2026_unique_"
+                  expanded
+                  titleRef="themeSectionTitle"
+                  triggerRef="themeSectionTrigger"
                 />
                 <button
-                  {...ref('inputAutoFocusInfoButton')}
+                  {...ref('appearanceInfoButton')}
                   className="x-nt-appearance-info-button"
                   dangerouslySetInnerHTML={{
                     __html: String(model.icons?.info || '')
                   }}
                   type="button"
                 />
-              </span>
-              <Switch
-                ariaLabel="Automatically focus the search input"
-                name="inputAutoFocusToggle"
-              />
-            </div>
-            <div className="x-nt-appearance-setting-row x-nt-top-content-header">
-              <div
-                {...ref('topContentTitle')}
-                className="x-nt-appearance-setting-title"
-              />
+              </div>
               <SegmentedTabs
-                ariaLabel="Content above the search bar"
-                className="x-nt-wallpaper-tabs x-nt-top-content-tabs"
+                ariaLabel="Theme scope"
+                className="x-nt-wallpaper-tabs x-nt-appearance-scope-tabs"
                 indicatorClassName="x-nt-wallpaper-tabs-indicator"
-                indicatorRef="topContentTabsIndicator"
-                name="topContentTabs"
+                indicatorRef="appearanceScopeTabsIndicator"
+                name="appearanceScopeTabs"
                 role="group"
               >
-                {topContentOptions.map((item) => (
+                {['global', 'home'].map((scope) => (
                   <button
-                    {...ref(
-                      item.value === 'brand'
-                        ? 'topContentBrandTab'
-                        : item.value === 'time'
-                          ? 'topContentTimeTab'
-                          : 'topContentOffTab'
-                    )}
-                    aria-pressed={item.value === 'brand'}
-                    className="x-nt-segmented-tab x-nt-wallpaper-tab x-nt-top-content-tab"
-                    data-active={item.value === 'brand' ? 'true' : 'false'}
-                    data-newtab-top-content={item.value}
-                    key={item.value}
+                    aria-pressed="false"
+                    className="x-nt-segmented-tab x-nt-wallpaper-tab x-nt-appearance-scope-tab"
+                    data-active="false"
+                    data-theme-scope={scope}
+                    key={scope}
                     type="button"
                   >
-                    {item.label}
+                    {scope === 'home' ? 'New Tab' : 'Global'}
                   </button>
                 ))}
               </SegmentedTabs>
             </div>
             <div
-              {...ref('topContentWeightControl')}
-              aria-hidden="true"
-              className="x-nt-time-weight-control x-nt-panel-collapsible"
-              data-visible="false"
-              hidden
+              {...ref('themeSectionBody')}
+              className="x-nt-panel-section-body x-nt-panel-collapsible"
+              data-visible="true"
+              id="_x_extension_newtab_theme_section_body_2026_unique_"
             >
-              <div className="x-nt-overlay-control-header">
-                <span {...ref('topContentWeightTitle')}>Time font weight</span>
-              </div>
-              <RangeSliderField
-                {...ref('topContentWeightSlider')}
-                className="x-nt-overlay-slider-wrap x-nt-time-weight-slider-wrap"
-                inputClass="x-nt-overlay-slider x-nt-time-weight-slider"
-                max={String(timeFontWeightMax)}
-                min={String(timeFontWeightMin)}
-                rowClassName="x-nt-range-slider-row"
-                step="1"
-                defaultValue={String(timeFontWeightDefault)}
-                valueInputProps={{
-                  ...ref('topContentWeightSliderValueInput'),
-                  'aria-label': 'Time font weight value',
-                  defaultValue: String(timeFontWeightDefault),
-                  inputMode: 'numeric'
-                }}
+              <div
+                {...ref('appearanceOptions')}
+                className="x-nt-appearance-options"
               >
-                <Scale ticks={timeFontWeightTicks} />
-              </RangeSliderField>
+                {model.appearanceOptions.map(
+                  (item: { imageUrl: string; mode: string }) => (
+                    <button
+                      aria-pressed="false"
+                      className="x-nt-appearance-option"
+                      data-selected="false"
+                      data-theme-mode={item.mode}
+                      key={item.mode}
+                      type="button"
+                    >
+                      <span className="x-nt-appearance-option-content">
+                        <span className="x-nt-appearance-preview">
+                          <img alt="" draggable={false} src={item.imageUrl} />
+                          <span
+                            className="x-nt-appearance-check"
+                            dangerouslySetInnerHTML={{ __html: checkIcon }}
+                          />
+                        </span>
+                        <span className="x-nt-appearance-label" />
+                      </span>
+                    </button>
+                  )
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="x-nt-panel-divider" />
+          <div className="x-nt-wallpaper-section x-nt-search-section">
+            <div className="x-nt-wallpaper-panel-header">
+              <SectionTrigger
+                arrowIcon={arrowIcon}
+                bodyId="_x_extension_newtab_search_section_body_2026_unique_"
+                expanded
+                titleRef="searchSectionTitle"
+                triggerRef="searchSectionTrigger"
+              />
             </div>
             <div
-              {...ref('topContentSecondsRow')}
-              aria-hidden="true"
-              className="x-nt-top-content-seconds-row x-nt-panel-collapsible"
-              data-visible="false"
-              hidden
+              {...ref('searchSectionBody')}
+              className="x-nt-panel-section-body x-nt-panel-collapsible"
+              data-visible="true"
+              id="_x_extension_newtab_search_section_body_2026_unique_"
             >
-              <span
-                {...ref('topContentSecondsTitle')}
-                className="x-nt-top-content-seconds-title"
+              <div
+                {...ref('searchWidthControl')}
+                aria-hidden="true"
+                className="x-nt-overlay-control x-nt-search-width-control"
+                data-visible="false"
               >
-                Show seconds
-              </span>
-              <Switch
-                ariaLabel="Show seconds"
-                name="topContentSecondsToggle"
-              />
+                <RangeSliderField
+                  label={<span {...ref('searchWidthLabel')} className="x-nt-appearance-setting-title" />}
+                  {...ref('searchWidthSlider')}
+                  className="x-nt-overlay-slider-wrap x-nt-search-width-slider-wrap"
+                  data-value-suffix=" px"
+                  inputClass="x-nt-overlay-slider x-nt-search-width-slider"
+                  max={String(model.searchWidth.max)}
+                  min={String(model.searchWidth.min)}
+                  rowClassName="x-nt-range-slider-row"
+                  step="1"
+                  valueInputProps={{
+                    ...ref('searchWidthSliderValueInput'),
+                    'aria-label': 'Search box width value',
+                    defaultValue: String(model.searchWidth.min),
+                    inputMode: 'numeric'
+                  }}
+                  marks={tickMarks(model.searchWidth.ticks)}
+                />
+              </div>
+              <div className="x-nt-appearance-setting-row">
+                <span className="x-nt-appearance-setting-title-group">
+                  <span
+                    {...ref('inputAutoFocusTitle')}
+                    className="x-nt-appearance-setting-title"
+                  />
+                  <button
+                    {...ref('inputAutoFocusInfoButton')}
+                    className="x-nt-appearance-info-button"
+                    dangerouslySetInnerHTML={{
+                      __html: String(model.icons?.info || '')
+                    }}
+                    type="button"
+                  />
+                </span>
+                <Switch
+                  ariaLabel="Automatically focus the search input"
+                  name="inputAutoFocusToggle"
+                />
+              </div>
+              <div className="x-nt-appearance-setting-row x-nt-top-content-header">
+                <div
+                  {...ref('topContentTitle')}
+                  className="x-nt-appearance-setting-title"
+                />
+                <SegmentedTabs
+                  ariaLabel="Content above the search bar"
+                  className="x-nt-wallpaper-tabs x-nt-top-content-tabs"
+                  indicatorClassName="x-nt-wallpaper-tabs-indicator"
+                  indicatorRef="topContentTabsIndicator"
+                  name="topContentTabs"
+                  role="group"
+                >
+                  {topContentOptions.map((item) => (
+                    <button
+                      {...ref(
+                        item.value === 'brand'
+                          ? 'topContentBrandTab'
+                          : item.value === 'time'
+                            ? 'topContentTimeTab'
+                            : 'topContentOffTab'
+                      )}
+                      aria-pressed={item.value === 'brand'}
+                      className="x-nt-segmented-tab x-nt-wallpaper-tab x-nt-top-content-tab"
+                      data-active={item.value === 'brand' ? 'true' : 'false'}
+                      data-newtab-top-content={item.value}
+                      key={item.value}
+                      type="button"
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </SegmentedTabs>
+              </div>
+              <div
+                {...ref('topContentWeightControl')}
+                aria-hidden="true"
+                className="x-nt-time-weight-control x-nt-panel-collapsible"
+                data-visible="false"
+                hidden
+              >
+                <RangeSliderField
+                  label={<span {...ref('topContentWeightTitle')} className="x-nt-appearance-setting-title">Time font weight</span>}
+                  {...ref('topContentWeightSlider')}
+                  className="x-nt-overlay-slider-wrap x-nt-time-weight-slider-wrap"
+                  inputClass="x-nt-overlay-slider x-nt-time-weight-slider"
+                  max={String(timeFontWeightMax)}
+                  min={String(timeFontWeightMin)}
+                  rowClassName="x-nt-range-slider-row"
+                  step="1"
+                  defaultValue={String(timeFontWeightDefault)}
+                  valueInputProps={{
+                    ...ref('topContentWeightSliderValueInput'),
+                    'aria-label': 'Time font weight value',
+                    defaultValue: String(timeFontWeightDefault),
+                    inputMode: 'numeric'
+                  }}
+                  marks={tickMarks(timeFontWeightTicks)}
+                />
+              </div>
+              <div
+                {...ref('topContentSecondsRow')}
+                aria-hidden="true"
+                className="x-nt-top-content-seconds-row x-nt-panel-collapsible"
+                data-visible="false"
+                hidden
+              >
+                <span
+                  {...ref('topContentSecondsTitle')}
+                  className="x-nt-top-content-seconds-title"
+                >
+                  Show seconds
+                </span>
+                <Switch
+                  ariaLabel="Show seconds"
+                  name="topContentSecondsToggle"
+                />
+              </div>
             </div>
           </div>
           <div className="x-nt-panel-divider" />
@@ -548,28 +590,14 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
               data-enabled="true"
             >
               <div className="x-nt-wallpaper-panel-header x-nt-shortcuts-accordion-row">
-                <button
-                  {...ref('shortcutsAccordionTrigger')}
-                  aria-controls="_x_extension_newtab_shortcuts_settings_2026_unique_"
-                  aria-expanded="false"
-                  className="x-nt-shortcuts-accordion-trigger"
+                <SectionTrigger
+                  arrowIcon={arrowIcon}
+                  bodyId="_x_extension_newtab_shortcuts_settings_2026_unique_"
+                  expanded={false}
                   id="_x_extension_newtab_shortcuts_accordion_trigger_2026_unique_"
-                  type="button"
-                >
-                  <span className="x-nt-appearance-setting-title-group">
-                    <span
-                      {...ref('shortcutsTitle')}
-                      className="x-nt-wallpaper-panel-title"
-                    />
-                    <span
-                      aria-hidden="true"
-                      className="x-nt-shortcuts-accordion-icon"
-                      dangerouslySetInnerHTML={{
-                        __html: String(model.icons?.arrow || '')
-                      }}
-                    />
-                  </span>
-                </button>
+                  titleRef="shortcutsTitle"
+                  triggerRef="shortcutsAccordionTrigger"
+                />
                 <Switch
                   ariaLabel="Shortcuts"
                   name="shortcutsToggle"
@@ -612,13 +640,8 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                     className="x-nt-overlay-control x-nt-shortcut-columns-control"
                     data-visible="false"
                   >
-                    <div className="x-nt-overlay-control-header">
-                      <span
-                        {...ref('shortcutColumnsLabel')}
-                        className="x-nt-overlay-label"
-                      />
-                    </div>
                     <RangeSliderField
+                      label={<span {...ref('shortcutColumnsLabel')} className="x-nt-appearance-setting-title" />}
                       {...ref('shortcutColumnsSlider')}
                       className="x-nt-overlay-slider-wrap x-nt-shortcut-columns-slider-wrap"
                       defaultValue={String(shortcutColumnsDefault)}
@@ -633,12 +656,8 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                         defaultValue: String(shortcutColumnsDefault),
                         inputMode: 'numeric'
                       }}
-                    >
-                      <Scale
-                        className="x-nt-shortcut-columns-scale x-nt-shortcut-layout-scale"
-                        ticks={shortcutColumnTicks}
-                      />
-                    </RangeSliderField>
+                      marks={tickMarks(shortcutColumnTicks)}
+                    />
                   </div>
                   <div
                     {...ref('shortcutSizeControl')}
@@ -646,13 +665,8 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                     className="x-nt-overlay-control x-nt-shortcut-size-control"
                     data-visible="false"
                   >
-                    <div className="x-nt-overlay-control-header">
-                      <span
-                        {...ref('shortcutSizeLabel')}
-                        className="x-nt-overlay-label"
-                      />
-                    </div>
                     <RangeSliderField
+                      label={<span {...ref('shortcutSizeLabel')} className="x-nt-appearance-setting-title" />}
                       {...ref('shortcutSizeSlider')}
                       className="x-nt-overlay-slider-wrap x-nt-shortcut-size-slider-wrap"
                       data-value-suffix=" px"
@@ -674,12 +688,8 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                         defaultValue: String(shortcutSizeDefault),
                         inputMode: 'numeric'
                       }}
-                    >
-                      <Scale
-                        className="x-nt-shortcut-layout-scale"
-                        ticks={shortcutSizeTicks}
-                      />
-                    </RangeSliderField>
+                      marks={tickMarks(shortcutSizeTicks)}
+                    />
                   </div>
                   <div
                     {...ref('shortcutGapControl')}
@@ -687,13 +697,8 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                     className="x-nt-overlay-control x-nt-shortcut-gap-control"
                     data-visible="false"
                   >
-                    <div className="x-nt-overlay-control-header">
-                      <span
-                        {...ref('shortcutGapLabel')}
-                        className="x-nt-overlay-label"
-                      />
-                    </div>
                     <RangeSliderField
+                      label={<span {...ref('shortcutGapLabel')} className="x-nt-appearance-setting-title" />}
                       {...ref('shortcutGapSlider')}
                       className="x-nt-overlay-slider-wrap x-nt-shortcut-gap-slider-wrap"
                       data-value-suffix=" px"
@@ -715,22 +720,24 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                         defaultValue: String(shortcutGapDefault),
                         inputMode: 'numeric'
                       }}
-                    >
-                      <Scale
-                        className="x-nt-shortcut-layout-scale"
-                        ticks={shortcutGapTicks}
-                      />
-                    </RangeSliderField>
+                      marks={tickMarks(shortcutGapTicks)}
+                    />
                   </div>
                 </div>
               </div>
             </div>
           </div>
-          <div className="x-nt-panel-divider" />
-          <div className="x-nt-wallpaper-section x-nt-quote-settings">
+          <div {...ref('quoteDivider')} className="x-nt-panel-divider" />
+          <div {...ref('quoteSection')} className="x-nt-wallpaper-section x-nt-quote-settings">
             <div className="x-nt-wallpaper-panel-header">
-              <span className="x-nt-appearance-setting-title-group">
-                <span {...ref('quoteTitle')} className="x-nt-wallpaper-panel-title" />
+              <span className="x-nt-appearance-title-group">
+                <SectionTrigger
+                  arrowIcon={arrowIcon}
+                  bodyId="_x_extension_newtab_quote_section_body_2026_unique_"
+                  expanded={false}
+                  titleRef="quoteTitle"
+                  triggerRef="quoteAccordionTrigger"
+                />
                 <button
                   {...ref('quoteInfoButton')}
                   className="x-nt-appearance-info-button"
@@ -742,7 +749,12 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
               </span>
               <Switch name="quoteEnabledToggle" />
             </div>
-            <div {...ref('quoteBody')} className="x-nt-quote-body x-nt-panel-collapsible" hidden>
+            <div
+              {...ref('quoteBody')}
+              className="x-nt-quote-body x-nt-panel-collapsible"
+              hidden
+              id="_x_extension_newtab_quote_section_body_2026_unique_"
+            >
               <div className="x-nt-appearance-setting-row">
                 <span {...ref('quoteCategoryLabel')} className="x-nt-appearance-setting-title" />
                 <SegmentedTabs
@@ -772,7 +784,7 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                   name="quotePosition"
                   role="group"
                 >
-                  {['search', 'bottom'].map((position) => (
+                  {['input', 'search', 'bottom'].map((position) => (
                     <button
                       aria-pressed="false"
                       className="x-nt-segmented-tab x-nt-wallpaper-tab"
@@ -784,10 +796,8 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                 </SegmentedTabs>
               </div>
               <div {...ref('quoteFontSizeRow')} className="x-nt-overlay-control x-nt-quote-font-size">
-                <div className="x-nt-overlay-control-header">
-                  <span {...ref('quoteFontSizeTitle')} />
-                </div>
                 <RangeSliderField
+                  label={<span {...ref('quoteFontSizeTitle')} className="x-nt-appearance-setting-title" />}
                   {...ref('quoteFontSizeSlider')}
                   className="x-nt-overlay-slider-wrap"
                   inputClass="x-nt-overlay-slider"
@@ -811,27 +821,13 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
               {...ref('panelHeader')}
               className="x-nt-wallpaper-panel-header"
             >
-              <button
-                {...ref('wallpaperAccordionTrigger')}
-                aria-controls="_x_extension_newtab_wallpaper_body_2026_unique_"
-                aria-expanded="true"
-                className="x-nt-shortcuts-accordion-trigger x-nt-wallpaper-accordion-trigger"
-                type="button"
-              >
-                <span className="x-nt-appearance-setting-title-group">
-                  <span
-                    {...ref('panelTitle')}
-                    className="x-nt-wallpaper-panel-title"
-                  />
-                  <span
-                    aria-hidden="true"
-                    className="x-nt-shortcuts-accordion-icon"
-                    dangerouslySetInnerHTML={{
-                      __html: String(model.icons?.arrow || '')
-                    }}
-                  />
-                </span>
-              </button>
+              <SectionTrigger
+                arrowIcon={arrowIcon}
+                bodyId="_x_extension_newtab_wallpaper_body_2026_unique_"
+                expanded
+                titleRef="panelTitle"
+                triggerRef="wallpaperAccordionTrigger"
+              />
               <Switch name="enabledToggle" />
             </div>
             <input
@@ -986,21 +982,12 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                   <div {...ref('bingItemsHost')} className="x-nt-wallpaper-grid x-nt-wallpaper-grid--bing" />
                   <div {...ref('bingStatus')} className="x-nt-bing-status" role="status" aria-live="polite" />
                   <div {...ref('bingSelectedSource')} className="x-nt-bing-source" hidden>
-                    <a
+                    <LinkButton
                       {...ref('bingSelectedLink')}
-                      className="x-nt-appearance-more-settings x-nt-bing-source-link"
-                      rel="noopener noreferrer"
-                      target="_blank"
-                    >
-                      <span {...ref('bingSelectedTitle')} />
-                      <span
-                        aria-hidden="true"
-                        className="x-nt-appearance-more-settings-icon"
-                        dangerouslySetInnerHTML={{
-                          __html: String(model.icons?.link || '')
-                        }}
-                      />
-                    </a>
+                      className="x-nt-bing-source-link"
+                      external
+                      labelProps={ref('bingSelectedTitle')}
+                    />
                     <p {...ref('bingSelectedMeta')} className="x-nt-bing-source-meta" />
                   </div>
                 </div>
@@ -1010,7 +997,6 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                 <SliderControl
                   controlClass="x-nt-overlay-control x-nt-overlay-control--effect"
                   controlRef="overlayControl"
-                  labelClass="x-nt-overlay-label"
                   labelRef="overlayLabel"
                   sliderClass="x-nt-overlay-slider"
                   sliderRef="overlaySlider"
@@ -1025,35 +1011,16 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                   ]}
                   wrapClass="x-nt-overlay-slider-wrap"
                 />
-                <div className="x-nt-overlay-control-header x-nt-effect-control-header">
+                <div className="x-nt-appearance-setting-row x-nt-effect-control-header">
                   <span
                     {...ref('effectLabel')}
-                    className="x-nt-effect-label"
+                    className="x-nt-appearance-setting-title x-nt-effect-label"
+                  />
+                  <div
+                    {...ref('effectSelectHost')}
+                    className="_x_extension_select_wrap_2024_unique_ _x_extension_custom_select_2024_unique_ x-nt-effect-select"
                   />
                 </div>
-                <SegmentedTabs
-                  className="x-nt-effect-options"
-                  indicatorClassName="x-nt-effect-indicator"
-                  indicatorRef="effectTabsIndicator"
-                  name="effectOptions"
-                  role="tablist"
-                >
-                  {model.effectTypes.map(
-                    (item: { fallback: string; type: string }) => (
-                      <button
-                        aria-pressed="false"
-                        className="x-nt-segmented-tab x-nt-effect-option"
-                        data-active="false"
-                        data-selected="false"
-                        data-wallpaper-effect-type={item.type}
-                        key={item.type}
-                        type="button"
-                      >
-                        {item.fallback}
-                      </button>
-                    )
-                  )}
-                </SegmentedTabs>
                 <div
                   {...ref('effectInkToneControl')}
                   aria-hidden="true"
@@ -1131,43 +1098,38 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
           <div className="x-nt-panel-divider" />
           <div className="x-nt-wallpaper-section">
             <div className="x-nt-favicon-group">
+              <div className="x-nt-wallpaper-panel-header">
+                <SectionTrigger
+                  arrowIcon={arrowIcon}
+                  bodyId="_x_extension_newtab_favicon_section_body_2026_unique_"
+                  expanded
+                  titleClassName="x-nt-favicon-title"
+                  titleRef="faviconTitle"
+                  triggerRef="faviconSectionTrigger"
+                />
+              </div>
               <div
-                {...ref('faviconTitle')}
-                className="x-nt-wallpaper-panel-title x-nt-favicon-title"
-              />
-              <div
-                {...ref('faviconOptions')}
-                className="x-nt-favicon-options"
-                role="group"
+                {...ref('faviconSectionBody')}
+                className="x-nt-panel-section-body x-nt-panel-collapsible"
+                data-visible="true"
+                id="_x_extension_newtab_favicon_section_body_2026_unique_"
               >
-                {model.favicons.map((item: FaviconItem) => (
-                  <FaviconTile
-                    checkIcon={checkIcon}
-                    item={item}
-                    key={item.id}
-                  />
-                ))}
+                <div
+                  {...ref('faviconOptions')}
+                  className="x-nt-favicon-options"
+                  role="group"
+                >
+                  {model.favicons.map((item: FaviconItem) => (
+                    <FaviconTile
+                      checkIcon={checkIcon}
+                      item={item}
+                      key={item.id}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-          <div className="x-nt-panel-divider" />
-          <a
-            {...ref('moreSettingsLink')}
-            className="x-nt-appearance-more-settings"
-            href={model.moreSettingsUrl}
-          >
-            <span
-              {...ref('moreSettingsText')}
-              className="x-nt-appearance-more-settings-text"
-            />
-            <span
-              aria-hidden="true"
-              className="x-nt-appearance-more-settings-icon"
-              dangerouslySetInnerHTML={{
-                __html: String(model.icons?.link || '')
-              }}
-            />
-          </a>
         </div>
       </div>
       <button
@@ -1233,13 +1195,25 @@ function CustomWallpapers({
   );
 }
 
+export interface WallpaperEffectSelectModel {
+  ariaLabel: string;
+  onChange(value: string): void;
+  options: SelectMenuOption[];
+  value: string;
+}
+
+const EFFECT_SELECT_ID = 'x-nt-wallpaper-effect';
+
 export interface WallpaperViewController {
   button: HTMLButtonElement;
+  closeEffectSelect(options?: { restoreFocus?: boolean }): boolean;
+  containsEffectSelectTarget(target: Node | null): boolean;
   control: HTMLDivElement;
   destroy(): void;
   getRefs(): Record<string, HTMLElement>;
   panel: HTMLDivElement;
   renderCustomWallpapers(items: WallpaperItem[]): HTMLElement[];
+  renderEffectSelect(select: WallpaperEffectSelectModel): void;
   renderOnlineWallpapers(items: WallpaperItem[]): HTMLElement[];
 }
 
@@ -1270,6 +1244,9 @@ export function createWallpaperViewController(
   const customRoot: Root = createRoot(customItemsHost);
   const onlineItemsHost = control.querySelector<HTMLElement>('[data-wallpaper-ref="bingItemsHost"]')!;
   const onlineRoot: Root = createRoot(onlineItemsHost);
+  const effectSelectHost = control.querySelector<HTMLElement>('[data-wallpaper-ref="effectSelectHost"]')!;
+  const effectSelectRoot: Root = createRoot(effectSelectHost);
+  let effectSelectControls: { isOpen(): boolean; setOpen(open: boolean): void } | null = null;
   let destroyed = false;
   const getRefs = () => {
     const refs: Record<string, HTMLElement> = {};
@@ -1293,10 +1270,50 @@ export function createWallpaperViewController(
       destroyed = true;
       flushSync(() => customRoot.unmount());
       flushSync(() => onlineRoot.unmount());
+      flushSync(() => effectSelectRoot.unmount());
       flushSync(() => root.unmount());
     },
     getRefs,
     panel,
+    closeEffectSelect(options?: { restoreFocus?: boolean }) {
+      if (!effectSelectControls?.isOpen()) {
+        return false;
+      }
+      flushSync(() => effectSelectControls?.setOpen(false));
+      if (options?.restoreFocus) {
+        effectSelectHost.querySelector<HTMLButtonElement>('button')?.focus();
+      }
+      return true;
+    },
+    // The menu is portaled to the body but still belongs to the panel.
+    containsEffectSelectTarget(target: Node | null) {
+      const menu = documentObj.querySelector(`[data-react-select-owner="${EFFECT_SELECT_ID}"]`);
+      return Boolean(target && menu?.contains(target));
+    },
+    renderEffectSelect(select: WallpaperEffectSelectModel) {
+      if (destroyed) return;
+      flushSync(() => effectSelectRoot.render(
+        <SelectMenu
+          config={{
+            id: EFFECT_SELECT_ID,
+            selectId: `${EFFECT_SELECT_ID}-select`,
+            ariaLabel: select.ariaLabel,
+            options: select.options,
+            value: select.value,
+            menuAlign: 'left',
+            menuClassName: 'x-nt-effect-select-menu',
+            menuPortal: true,
+            menuPortalZIndex: 10020,
+            menuWidth: 'trigger',
+            onValueChange: select.onChange
+          }}
+          documentObj={documentObj}
+          host={effectSelectHost}
+          registerControls={(controls) => { effectSelectControls = controls; }}
+          windowObj={documentObj.defaultView || window}
+        />
+      ));
+    },
     renderOnlineWallpapers(items: WallpaperItem[]) {
       if (destroyed) return [];
       flushSync(() => onlineRoot.render(<>{items.map((item) => (

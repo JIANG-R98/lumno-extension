@@ -553,7 +553,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
   let overlayTabQuickSwitchEnabled = true;
   let overlayTabScoreDebugEnabled = false;
   let currentMessages = null;
-  let defaultPlaceholderText = 'Search or enter URL...';
+  let defaultPlaceholderText = 'Search or enter URL…';
   let lastSuggestionResponse = [];
   let overlaySearchEngineState = {
     id: '',
@@ -1833,7 +1833,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       if (!value) {
         showOverlayToast(t(
           'search_copy_url_failed',
-          'Could not copy result link'
+          'Couldn’t copy the result link. Try again.'
         ), true);
         return Promise.resolve(false);
       }
@@ -1846,7 +1846,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       }).catch(() => {
         showOverlayToast(t(
           'search_copy_url_failed',
-          'Could not copy result link'
+          'Couldn’t copy the result link. Try again.'
         ), true);
         return false;
       });
@@ -1880,7 +1880,8 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
         height: '56px',
         'min-height': '56px',
         'max-height': '56px',
-        'border-radius': 'var(--x-ov-panel-radius, 28px) var(--x-ov-panel-radius, 28px) 0 0',
+        'border-radius': 'var(--x-ov-panel-radius, 24px) var(--x-ov-panel-radius, 24px) 0 0',
+        'corner-shape': 'superellipse(1.25)',
         overflow: 'visible'
       },
       inputStyleOverrides: {
@@ -2380,14 +2381,14 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       setOverlayPanelScopedStyle(
         overlay,
         'border-radius',
-        'var(--x-ov-panel-radius, 28px)'
+        'var(--x-ov-panel-radius, 24px)'
       );
       setInputScopedStyle(
         inputContainer,
         'border-radius',
         shouldCollapse
-          ? 'var(--x-ov-content-radius, 27px)'
-          : 'var(--x-ov-content-radius, 27px) var(--x-ov-content-radius, 27px) 0 0'
+          ? 'var(--x-ov-content-radius, 23px)'
+          : 'var(--x-ov-content-radius, 23px) var(--x-ov-content-radius, 23px) 0 0'
       );
       if (shouldCollapse) {
         SUGGESTIONS_HEIGHT_LAYOUT.applyNaturalSuggestionsHeightLayout(
@@ -4634,7 +4635,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       onModeTagRemovalConfirmation: () => {
         showOverlayToast(t(
           'search_scope_remove_confirmation',
-          'Press Backspace again to remove the scope'
+          'Press Backspace again to remove the scope.'
         ));
       },
       onModeTagRemovalConfirmationReset: hideOverlayToast,

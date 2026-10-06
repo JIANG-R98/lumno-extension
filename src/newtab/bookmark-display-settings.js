@@ -491,7 +491,7 @@
       if (!window || typeof window.EyeDropper !== 'function') {
         showToast(t(
           'bookmark_topbar_color_unsupported',
-          'Screen color picking is not supported in this browser'
+          'Screen color picking is not supported in this browser.'
         ), true);
         return Promise.resolve(false);
       }

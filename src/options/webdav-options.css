@@ -14,17 +14,13 @@
   min-height: var(--settings-section-header-height);
 }
 .lumno-webdav-title { gap: 6px; min-width: 0; }
-.lumno-webdav-settings ._x_extension_switch_2024_unique_:has(input:disabled) { opacity: .5; cursor: default; }
 .lumno-webdav-editor { margin-top: var(--settings-content-gap); }
-.lumno-webdav-settings .lumno-webdav-editor[data-expanded="true"],
-.lumno-webdav-settings .lumno-webdav-editor[data-expanded="true"] ._x_extension_shortcut_form_fields_2024_unique_ { max-height: none; }
 
 /* Card header: name, status pill, then the same icon actions as site search. */
 .lumno-webdav-card ._x_extension_shortcut_item_info_2024_unique_ { flex: 1; }
 .lumno-webdav-card ._x_extension_shortcut_item_title_2024_unique_ { gap: 8px; }
 .lumno-webdav-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .lumno-webdav-card ._x_extension_sync_status_2024_unique_ { flex: 0 0 auto; white-space: nowrap; }
-.lumno-webdav-card[data-expanded="true"] ._x_extension_shortcut_editor_2024_unique_ { max-height: none; }
 ._x_extension_sync_status_2024_unique_[data-status="warning"] {
   color: #b45309;
   border-color: rgba(245, 158, 11, 0.38);
@@ -59,7 +55,7 @@
   flex-direction: column;
   margin-top: 6px;
   border: 1px solid var(--tab-border);
-  border-radius: 10px;
+  border-radius: var(--lumno-radius-lg);
   background: var(--control-bg);
   overflow: hidden;
 }
@@ -68,7 +64,7 @@
   grid-template-columns: minmax(88px, 0.8fr) minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
   padding: 8px 12px;
-  font-size: 12px;
+  font-size: var(--lumno-font-size-sm);
   line-height: 1.6;
   color: var(--panel-text);
 }
@@ -94,7 +90,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--lumno-font-size-sm);
   line-height: 1.5;
   color: var(--duplicate-badge-text);
 }
@@ -111,4 +107,55 @@
   .lumno-webdav-diff-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .lumno-webdav-diff-label { grid-column: 1 / -1; }
   .lumno-webdav-diff-head > :first-child { display: none; }
+}
+
+/* Password: a saved one never returns to the page, so it shows as a locked
+   row with "Change"; a new one gets a show/hide toggle because password
+   managers cannot fill extension pages and pasting is the usual path. */
+.lumno-webdav-password-saved {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 4px 0 10px;
+  box-sizing: border-box;
+  border-radius: var(--lumno-radius-lg);
+  border: 1px solid var(--tab-border);
+  background: var(--control-bg);
+  font-size: var(--lumno-font-size-md);
+}
+.lumno-webdav-password-saved[data-disabled="true"] { opacity: .6; }
+.lumno-webdav-password-mask { color: var(--panel-text); letter-spacing: 1px; }
+.lumno-webdav-password-status { flex: 1; min-width: 0; color: var(--panel-subtext); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lumno-webdav-password-change,
+.lumno-webdav-password-icon {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: var(--lumno-radius-md);
+  color: var(--panel-subtext);
+  cursor: pointer;
+  transition: color var(--lumno-duration-sm) ease, background-color var(--lumno-duration-sm) ease;
+}
+.lumno-webdav-password-change { height: 28px; padding: 0 10px; font-size: 12px; color: var(--panel-text); }
+.lumno-webdav-password-icon { width: 28px; height: 28px; }
+.lumno-webdav-password-icon:last-child { margin-right: 4px; }
+.lumno-webdav-password-change:hover,
+.lumno-webdav-password-icon:hover { color: var(--panel-text); background: var(--tab-bg); }
+.lumno-webdav-password-change:focus-visible,
+.lumno-webdav-password-icon:focus-visible { outline: 2px solid var(--input-focus-color); outline-offset: -2px; }
+.lumno-webdav-password-change:disabled,
+.lumno-webdav-password-icon:disabled { cursor: not-allowed; opacity: .5; background: none; }
+.lumno-webdav-form-grid .lumno-webdav-password input { width: auto; }
+
+@supports (corner-shape: superellipse(1.25)) {
+  .lumno-webdav-diff,
+  .lumno-webdav-password-saved,
+  .lumno-webdav-password-change,
+  .lumno-webdav-password-icon {
+    corner-shape: superellipse(1.25);
+  }
 }

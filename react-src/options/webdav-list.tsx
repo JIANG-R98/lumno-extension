@@ -38,7 +38,11 @@ type Tone = 'success' | 'warning' | 'danger' | undefined;
 const classes = (name: string) => `_x_extension_${name}_2024_unique_`;
 const buttonClass = `${classes('shortcut_submit')} ${classes('shortcut_secondary')}`;
 const primaryClass = `${classes('shortcut_submit')} ${classes('shortcut_submit_primary')} ${classes('shortcut_save')}`;
+// Notices sit inside a connection card, so their actions use the compact size.
+const compactClass = `${buttonClass} _x_extension_shortcut_compact_2026_unique_`;
+const compactPrimaryClass = `${primaryClass} _x_extension_shortcut_compact_2026_unique_`;
 const ghostClass = `${classes('shortcut_submit')} _x_extension_shortcut_ghost_2026_unique_`;
+const compactGhostClass = `${ghostClass} _x_extension_shortcut_compact_2026_unique_`;
 const JIANGUOYUN_ENDPOINT = 'https://dav.jianguoyun.com/dav/';
 
 // Nutstore needs no different input, only its app-password guide, so it is
@@ -94,7 +98,7 @@ function useNow(intervalMs: number) {
   return now;
 }
 
-function DiagnosticButton({ copy, text, ghost = false }: { copy: Record<string, string>; text: string; ghost?: boolean }) {
+function DiagnosticButton({ copy, text, compact = false, ghost = false }: { copy: Record<string, string>; text: string; compact?: boolean; ghost?: boolean }) {
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     if (!copied) return undefined;
@@ -102,7 +106,7 @@ function DiagnosticButton({ copy, text, ghost = false }: { copy: Record<string, 
     return () => window.clearTimeout(timer);
   }, [copied]);
   return (
-    <button className={ghost ? ghostClass : buttonClass} onClick={() => {
+    <button className={ghost ? ghostClass : compact ? compactClass : buttonClass} onClick={() => {
       void navigator.clipboard?.writeText(text).then(() => setCopied(true)).catch(() => {});
     }} title={text} type="button">
       <i aria-hidden="true" className={`ri-icon ri-size-14 ${copied ? 'ri-check-line' : 'ri-file-copy-line'}`} />
@@ -184,18 +188,39 @@ function ConflictDiff({ items, copy, lang }: { items: WebDavConflictItem[]; copy
   );
 }
 
-function ConnectionEditor({ item, model, options, onClose }: {
+const initialDraft = (item?: WebDavConnection) => ({ endpoint: item?.config.endpoint || '',
+  directory: item?.config.directory || 'lumno', username: item?.config.username || '', password: '' });
+
+// The editor stays mounted so it can slide open and closed like the other
+// settings lists; each opening starts again from the saved connection.
+function ConnectionEditor({ id, item, model, open, options, onClose }: {
+  id: string;
   item?: WebDavConnection;
   model: WebDavListModel;
+  open: boolean;
   options: WebDavListOptions;
   onClose(): void;
 }) {
   const { copy } = model;
   const formId = useId();
-  const [draft, setDraft] = useState({ endpoint: item?.config.endpoint || '',
-    directory: item?.config.directory || 'lumno', username: item?.config.username || '', password: '' });
+  const [draft, setDraft] = useState(() => initialDraft(item));
   const [feedback, setFeedback] = useState<{ text: string; failed: boolean; diagnostic?: string } | null>(null);
   const [pendingOperation, setPendingOperation] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setDraft(initialDraft(item));
+      setFeedback(null);
+      setChangingPassword(false);
+      setPasswordVisible(false);
+    }
+  }
+  const endpointRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (open) endpointRef.current?.focus(); }, [open]);
+  const passwordRef = useRef<HTMLInputElement>(null);
   const action = useExclusiveAsyncAction(async (operation: string) => {
     setFeedback(null);
     setPendingOperation(operation);
@@ -207,6 +232,9 @@ function ConnectionEditor({ item, model, options, onClose }: {
   let endpoint = '';
   try { endpoint = new URL(draft.endpoint.trim()).href.replace(/\/*$/, '/'); } catch { /* Native form validation handles it. */ }
   const reusePassword = item?.config.hasPassword && endpoint === item.config.endpoint && draft.username.trim() === item.config.username;
+  // The saved password never comes back to the page, so it is shown as a
+  // locked row until the user chooses to replace it.
+  const keepPassword = reusePassword && !changingPassword;
   const disabled = action.pending || !model.ready || model.outdated;
   const update = (field: keyof typeof draft, value: string) => { setFeedback(null); setDraft((current) => ({ ...current, [field]: value })); };
   const jianguoyun = isJianguoyun(draft.endpoint);
@@ -225,11 +253,23 @@ function ConnectionEditor({ item, model, options, onClose }: {
   const fields = [
     { name: 'endpoint', type: 'url', placeholder: /^zh/i.test(model.lang || '') ? JIANGUOYUN_ENDPOINT : 'https://dav.example.com/' },
     { name: 'directory', type: 'text', placeholder: 'lumno' },
-    { name: 'username', type: 'text', placeholder: jianguoyun ? 'name@example.com' : '' },
-    { name: 'password', type: 'password', placeholder: reusePassword ? copy.webdav_password_saved : '' }
+    { name: 'username', type: 'text', placeholder: jianguoyun ? 'name@example.com' : '' }
   ] as const;
+  const passwordId = `${formId}-password`;
+  const setChanging = (next: boolean) => {
+    passwordToggled.current = true;
+    setChangingPassword(next);
+    setPasswordVisible(false);
+    if (!next) update('password', '');
+  };
+  const passwordToggled = useRef(false);
+  useEffect(() => {
+    if (!passwordToggled.current) return;
+    passwordToggled.current = false;
+    (changingPassword ? passwordRef.current : document.getElementById(passwordId))?.focus();
+  }, [changingPassword, passwordId]);
   return (
-    <form className={item ? classes('shortcut_editor') : classes('shortcut_form_fields')}
+    <form className={item ? classes('shortcut_editor') : classes('shortcut_form_fields')} id={id} inert={!open}
       onSubmit={(event) => { event.preventDefault(); void run('submit'); }}>
       <div className="lumno-webdav-form-grid">
         {fields.map((field) => (
@@ -237,15 +277,48 @@ function ConnectionEditor({ item, model, options, onClose }: {
             <label className={classes('shortcut_label')} htmlFor={`${formId}-${field.name}`}>
               <span>{copy[`webdav_${field.name}`]}</span><span className={classes('shortcut_required')}>*</span>
             </label>
-            <input autoFocus={field.name === 'endpoint'}
-              autoComplete={field.name === 'password' ? 'new-password' : 'off'}
+            <input autoCapitalize="off"
+              autoComplete={field.name === 'username' ? 'username' : 'off'}
               className={classes('shortcut_input')} disabled={disabled} id={`${formId}-${field.name}`}
-              name={field.name} placeholder={field.placeholder}
-              required={field.name !== 'password' || !reusePassword} spellCheck={false}
+              name={field.name} placeholder={field.placeholder} ref={field.name === 'endpoint' ? endpointRef : undefined}
+              required spellCheck={false}
               type={field.type} value={draft[field.name]}
               onChange={(event) => update(field.name, event.currentTarget.value)} />
           </div>
         ))}
+        <div className={classes('shortcut_field')}>
+          <label className={classes('shortcut_label')} htmlFor={passwordId}>
+            <span>{copy.webdav_password}</span>
+            {keepPassword ? null : <span className={classes('shortcut_required')}>*</span>}
+          </label>
+          {keepPassword ? (
+            <div className="lumno-webdav-password lumno-webdav-password-saved" data-disabled={disabled}>
+              <span aria-hidden="true" className="lumno-webdav-password-mask">••••••••</span>
+              <span className="lumno-webdav-password-status">{copy.webdav_password_saved}</span>
+              <button className="lumno-webdav-password-change" disabled={disabled} id={passwordId}
+                onClick={() => setChanging(true)} type="button">{copy.webdav_password_change}</button>
+            </div>
+          ) : (
+            <div className="_x_extension_shortcut_input_affix_2026_unique_ lumno-webdav-password" data-has-prefix="false">
+              <input autoCapitalize="off" autoComplete="current-password" className={classes('shortcut_input')}
+                disabled={disabled} id={passwordId} name="password" ref={passwordRef} required spellCheck={false}
+                type={passwordVisible ? 'text' : 'password'} value={draft.password}
+                onChange={(event) => update('password', event.currentTarget.value)} />
+              <button aria-label={copy[passwordVisible ? 'webdav_password_hide' : 'webdav_password_show']}
+                aria-pressed={passwordVisible} className="lumno-webdav-password-icon" disabled={disabled}
+                data-tooltip={copy[passwordVisible ? 'webdav_password_hide' : 'webdav_password_show']}
+                onClick={() => setPasswordVisible((visible) => !visible)} type="button">
+                <i aria-hidden="true" className={`ri-icon ri-size-16 ${passwordVisible ? 'ri-eye-off-line' : 'ri-eye-line'}`} />
+              </button>
+              {reusePassword ? (
+                <button aria-label={copy.webdav_password_keep} className="lumno-webdav-password-icon" disabled={disabled}
+                  data-tooltip={copy.webdav_password_keep} onClick={() => setChanging(false)} type="button">
+                  <i aria-hidden="true" className="ri-icon ri-size-16 ri-arrow-go-back-line" />
+                </button>
+              ) : null}
+            </div>
+          )}
+        </div>
       </div>
       {feedback ? (
         <div className="lumno-webdav-form-feedback" data-tone={feedback.failed ? 'danger' : 'success'} role="status">
@@ -255,14 +328,14 @@ function ConnectionEditor({ item, model, options, onClose }: {
         </div>
       ) : null}
       <div className={`${classes('shortcut_editor_actions')} lumno-webdav-editor-actions`}>
-        <button aria-busy={pendingOperation === 'test'} className={`${ghostClass} lumno-webdav-test`} disabled={disabled} type="button" onClick={(event) => {
+        <button aria-busy={pendingOperation === 'test'} className={`${compactGhostClass} lumno-webdav-test`} disabled={disabled} type="button" onClick={(event) => {
           if (event.currentTarget.form?.reportValidity()) void run('test');
         }}>
           <i aria-hidden="true" className="ri-icon ri-size-14 ri-link-m" />
           {pendingOperation === 'test' ? copy.webdav_state_testing : copy.webdav_test}
         </button>
-        <button className={buttonClass} disabled={action.pending} onClick={onClose} type="button">{copy.confirm_cancel}</button>
-        <button aria-busy={pendingOperation === 'submit'} className={primaryClass} disabled={disabled} type="submit">
+        <button className={compactClass} disabled={action.pending} onClick={onClose} type="button">{copy.confirm_cancel}</button>
+        <button aria-busy={pendingOperation === 'submit'} className={compactPrimaryClass} disabled={disabled} type="submit">
           {pendingOperation === 'submit' ? copy.webdav_connecting : item ? copy.webdav_save : copy.webdav_enable}
         </button>
       </div>
@@ -325,7 +398,7 @@ function ConnectionCard({ item, expanded, model, now, options, onEdit, onClose }
       <div className="lumno-webdav-notice" data-tone="danger">
         <p className={classes('setting_desc')}>{item.errorText || copy.webdav_error_interrupted}</p>
         {item.hasMigrationBackup ? <div className="lumno-webdav-actions">
-          <button className={primaryClass} disabled={busy || model.outdated} onClick={() => { void run('restoreBackup'); }} type="button">
+          <button className={compactPrimaryClass} disabled={busy || model.outdated} onClick={() => { void run('restoreBackup'); }} type="button">
             <i className="ri-icon ri-size-14 ri-history-line" aria-hidden="true" />{copy.webdav_restore_backup}
           </button>
         </div> : null}
@@ -347,16 +420,16 @@ function ConnectionCard({ item, expanded, model, now, options, onEdit, onClose }
         {feedback ? <p className={`${classes('shortcut_error')} lumno-webdav-notice-error`}>{feedback.text}</p> : null}
         <div className="lumno-webdav-actions">
           {item.state === 'conflict' ? (
-            <button aria-expanded={diff.open} className={`${buttonClass} lumno-webdav-diff-toggle`} onClick={() => { void toggleDiff(); }} type="button">
+            <button aria-expanded={diff.open} className={`${compactGhostClass} lumno-webdav-diff-toggle`} onClick={() => { void toggleDiff(); }} type="button">
               <i aria-hidden="true" className={`ri-icon ri-size-14 ${diff.open ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'}`} />
               {diff.open ? copy.webdav_hide_diff : copy.webdav_view_diff}
             </button>
           ) : null}
-          <button className={buttonClass} disabled={busy} onClick={() => { void run('pause'); }} type="button">{copy.webdav_resolve_later}</button>
+          <button className={compactClass} disabled={busy} onClick={() => { void run('pause'); }} type="button">{copy.webdav_resolve_later}</button>
           {item.remoteMissing ? (
-            <button className={primaryClass} disabled={busy || model.outdated} onClick={() => decide('local')} type="button">{copy.webdav_upload_local}</button>
+            <button className={compactPrimaryClass} disabled={busy || model.outdated} onClick={() => decide('local')} type="button">{copy.webdav_upload_local}</button>
           ) : (['local', 'remote'] as const).map((decision) => (
-            <button className={buttonClass} disabled={busy || model.outdated} key={decision} onClick={() => decide(decision)} type="button">
+            <button className={compactClass} disabled={busy || model.outdated} key={decision} onClick={() => decide(decision)} type="button">
               {copy[`webdav_use_${decision}`]}
             </button>
           ))}
@@ -368,8 +441,8 @@ function ConnectionCard({ item, expanded, model, now, options, onEdit, onClose }
       <div className="lumno-webdav-notice" data-tone="danger">
         <p className={`${classes('setting_desc')} lumno-webdav-error`} role="status">{errorText}</p>
         <div className="lumno-webdav-actions">
-          {diagnostic ? <DiagnosticButton copy={copy} text={diagnostic} /> : null}
-          <button className={buttonClass} disabled={busy || model.outdated} onClick={() => { void run(item.enabled ? 'sync' : 'enable'); }} type="button">
+          {diagnostic ? <DiagnosticButton compact copy={copy} text={diagnostic} /> : null}
+          <button className={compactClass} disabled={busy || model.outdated} onClick={() => { void run(item.enabled ? 'sync' : 'enable'); }} type="button">
             <i className="ri-icon ri-size-14 ri-refresh-line" aria-hidden="true" />{copy.webdav_retry}
           </button>
         </div>
@@ -422,7 +495,7 @@ function ConnectionCard({ item, expanded, model, now, options, onEdit, onClose }
         </div>
       </div>
       {notice}
-      {expanded ? <div id={editorId}><ConnectionEditor item={item} model={model} options={options} onClose={close} /></div> : null}
+      <ConnectionEditor id={editorId} item={item} model={model} open={expanded} options={options} onClose={close} />
     </div>
   );
 }
@@ -447,7 +520,7 @@ export function WebDavList({ model, options }: { model: WebDavListModel; options
           <i className="ri-icon ri-size-14 ri-add-line" aria-hidden="true" />{model.copy.webdav_add}
         </button>
       </div>
-      {adding ? <div id={addId}><ConnectionEditor model={model} options={options} onClose={closeAdd} /></div> : null}
+      <ConnectionEditor id={addId} model={model} open={adding} options={options} onClose={closeAdd} />
     </div>
   </>;
 }

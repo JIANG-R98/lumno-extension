@@ -2079,7 +2079,7 @@
       setHostHidden(true);
     }
     showSelectionToast(
-      getMessage('selection_quick_action_failed', '发送失败，请重试'),
+      getMessage('selection_quick_action_failed', '发送失败，请重试。'),
       { error: true, duration: ACTION_FAILURE_DISMISS_MS }
     );
     scheduleDismiss(ACTION_FAILURE_DISMISS_MS);

@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { readStylesheet } = require('./helpers/css-tokens');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
@@ -20,7 +21,7 @@ const shortcutDialogJs = fs.readFileSync(
   path.join(repoRoot, 'react-src/newtab/shortcut-dialog.tsx'),
   'utf8'
 );
-const shortcutDialogCss = fs.readFileSync(path.join(repoRoot, 'src/newtab/shortcut-dialog.css'), 'utf8');
+const shortcutDialogCss = readStylesheet('src/newtab/shortcut-dialog.css');
 const wallpaperAdaptiveToneJs = fs.readFileSync(path.join(repoRoot, 'src/newtab/wallpaper-adaptive-tone.js'), 'utf8');
 const tooltipJs = fs.readFileSync(path.join(repoRoot, 'src/shared/tooltip.js'), 'utf8');
 const optionsHtml = readPageSource('src/options/options.html');
@@ -633,8 +634,8 @@ assertContains(
 
 assert.match(
   shortcutDialogCss,
-  /@supports \(corner-shape: superellipse\(1\.25\)\)[\s\S]*?\.x-nt-shortcut-dialog\s*\{[\s\S]*?corner-shape:\s*superellipse\(1\.25\);/,
-  'shortcut dialogs should use continuous superellipse corners when supported'
+  /@supports \(corner-shape: superellipse\(1\.25\)\)\s*\{\s*\.x-nt-shortcut-dialog,[\s\S]*?\._x_extension_shortcut_input_2024_unique_\s*\{\s*corner-shape:\s*superellipse\(1\.25\);/,
+  'shortcut dialogs and their fields should use continuous superellipse corners when supported'
 );
 
 assert.match(
@@ -805,7 +806,7 @@ assertContains(
 
 assertContains(
   wallpaperViewSource,
-  "ref('shortcutsAccordionTrigger')",
+  'triggerRef="shortcutsAccordionTrigger"',
   'New Tab shortcuts should expose an accordion trigger'
 );
 
@@ -2739,7 +2740,7 @@ assertContains(
 assert.strictEqual(
   locales.find(({ locale }) => locale === 'zh_CN')
     .messages.newtab_shortcuts_sync_limit_reached.message,
-  '快捷方式已达同步上限，新增项将无法同步',
+  '快捷方式已达同步上限，新增项将无法同步。',
   'the sync-limit toast should preserve the approved Simplified Chinese copy'
 );
 

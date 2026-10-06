@@ -6,6 +6,8 @@
       t,
       showToast,
       openExternalNewTabUrl,
+      hasShortcutForSite,
+      addSiteToShortcuts,
       closeShortcutContextMenu,
       closeBookmarkContextMenu,
       canDismissRecentCard,
@@ -30,18 +32,37 @@
     const pageState = deps.pageState;
 
     const MAX_HIDDEN_RECENT_SITES = 60;
+    const RECENT_CONTEXT_MENU_ADD_SHORTCUT_VALUE = 'add-shortcut';
     const RECENT_CONTEXT_MENU_REMOVE_VALUE = 'remove';
     const RECENT_CONTEXT_MENU_MIN_WIDTH_PX = 124;
     const RECENT_CONTEXT_MENU_MAX_WIDTH_PX = 180;
     const RECENT_CONTEXT_MENU_PORTAL_Z_INDEX = 10050;
     const RECENT_CONTEXT_MENU_PORTAL_OFFSET_PX = -6;
 
+    function getRecentShortcutSite(item) {
+      const normalizedItem = normalizeRecentSiteRecord(item) || item;
+      return {
+        title: normalizedItem.siteName || normalizedItem.title || '',
+        url: normalizedItem.url
+      };
+    }
+
     function getRecentContextMenuOptions(target) {
+      const isShortcut = Boolean(target && target.item &&
+        hasShortcutForSite(getRecentShortcutSite(target.item)));
       return [
         {
           action: NEWTAB_CONTEXT_MENU_OPEN_VALUE,
           value: NEWTAB_CONTEXT_MENU_OPEN_VALUE,
           label: t('newtab_open_in_new_tab', 'Open in new tab')
+        },
+        {
+          action: RECENT_CONTEXT_MENU_ADD_SHORTCUT_VALUE,
+          value: RECENT_CONTEXT_MENU_ADD_SHORTCUT_VALUE,
+          label: isShortcut
+            ? t('newtab_shortcuts_already_added', 'Already in shortcuts')
+            : t('recent_add_to_shortcuts', 'Add to shortcuts'),
+          disabled: isShortcut
         },
         {
           action: RECENT_CONTEXT_MENU_REMOVE_VALUE,
@@ -132,7 +153,7 @@
           false
         );
       }).catch(() => {
-        showToast(t('toast_error', '操作失败，请重试'), true);
+        showToast(t('toast_error', '操作失败，请重试。'), true);
       });
     }
 
@@ -145,6 +166,10 @@
       }
       if (action === NEWTAB_CONTEXT_MENU_OPEN_VALUE) {
         openExternalNewTabUrl(target.item.url, 'newTab');
+        return;
+      }
+      if (action === RECENT_CONTEXT_MENU_ADD_SHORTCUT_VALUE) {
+        addSiteToShortcuts(getRecentShortcutSite(target.item));
         return;
       }
       if (action !== RECENT_CONTEXT_MENU_REMOVE_VALUE) {
@@ -163,6 +188,9 @@
         return;
       }
       event.stopPropagation();
+      if (option.getAttribute('aria-disabled') === 'true') {
+        return;
+      }
       handleRecentContextMenuAction(option.getAttribute('data-value'));
     }
 

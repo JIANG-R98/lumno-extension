@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { readStylesheet } = require('./helpers/css-tokens');
 const fs = require('fs');
 const settings = require('../src/shared/settings.js');
 const { readPageSource } = require('./helpers/page-source');
@@ -10,7 +11,7 @@ const optionsSource = read('src/options/options.js');
 const newtabSource = readNewtabRuntimeSource();
 const overlaySource = read('src/overlay/search-panel.js');
 const overlayRuntimeSource = read('src/overlay/runtime.js');
-const overlaySuggestionsStyles = read('src/overlay/suggestions-view.css');
+const overlaySuggestionsStyles = readStylesheet('src/overlay/suggestions-view.css');
 const suggestionNavigation = require('../src/shared/suggestion-navigation.js');
 
 const sourcesIndex = optionsHtml.indexOf('data-i18n="settings_search_result_sources_title"');

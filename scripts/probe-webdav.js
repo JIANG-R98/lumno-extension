@@ -60,9 +60,20 @@ async function probeProvider(input, options = {}) {
         const remaining = await client.request(sources[loser] + 'owner.txt', 'GET', undefined, {}, 65536);
         preservesLoser = remaining.status === 200 && new TextDecoder().decode(remaining.bytes) === contents[loser];
       }
-      report.directoryMove = { statuses, preservesWinner, preservesLoser,
-        exclusive: statuses.filter((status) => status === 201).length === 1 &&
-          [409, 412].includes(statuses[1 - winner]) && preservesWinner && preservesLoser };
+      // Nextcloud's file locking can refuse both contenders; that is exclusive
+      // only while the target stays absent and both sources keep their owner.
+      let untouched = false;
+      if (winner < 0 && statuses.every((status) => clientApi.MOVE_REFUSALS.includes(status))) {
+        const target = await client.request(destination + 'owner.txt', 'GET', undefined, {}, 65536);
+        const kept = await Promise.all(sources.map(async (source, index) => {
+          const remaining = await client.request(source + 'owner.txt', 'GET', undefined, {}, 65536);
+          return remaining.status === 200 && new TextDecoder().decode(remaining.bytes) === contents[index];
+        }));
+        untouched = target.status === 404 && kept.every(Boolean);
+      }
+      report.directoryMove = { statuses, preservesWinner, preservesLoser, ...(winner < 0 ? { untouched } : {}),
+        exclusive: untouched || (statuses.filter((status) => status === 201).length === 1 &&
+          clientApi.MOVE_REFUSALS.includes(statuses[1 - winner]) && preservesWinner && preservesLoser) };
     } catch (cause) {
       report.directoryMove = { exclusive: false, error: cause.code || 'probe-failed', status: cause.status || 0 };
     } finally {

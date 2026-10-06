@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { readStylesheet } = require('./helpers/css-tokens');
 const fs = require('fs');
 const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
@@ -419,7 +420,7 @@ function flushMicrotasks() {
       overlaySource.includes('overlayUpdateNoticeController.recordExposure()'),
     'newtab and overlay should count an exposure only when the notice is mounted'
   );
-  const updateNoticeCss = fs.readFileSync('src/shared/feature-hints.css', 'utf8');
+  const updateNoticeCss = readStylesheet('src/shared/feature-hints.css');
   assert(
     updateNoticeCss.includes('.x-lumno-feature-hint--update-notice-overlay') &&
       updateNoticeCss.includes('position: fixed;') &&

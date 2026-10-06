@@ -8,7 +8,7 @@ const contentJs = fs.readFileSync(path.join(repoRoot, 'src/content/document-pip-
 const overlayRuntimeJs = fs.readFileSync(path.join(repoRoot, 'src/overlay/runtime.js'), 'utf8');
 const overlayJs = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
 const suggestionsReact = fs.readFileSync(
-  path.join(repoRoot, 'react-src/newtab/suggestions.tsx'),
+  path.join(repoRoot, 'react-src/search/suggestions.tsx'),
   'utf8'
 );
 const actionModelJs = fs.readFileSync(path.join(repoRoot, 'src/shared/suggestion-action-model.js'), 'utf8');

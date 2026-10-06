@@ -107,7 +107,7 @@ describe('Options blacklist list React island', () => {
 
   it('keeps the editor open and shows adapter validation errors', async () => {
     const { controller, host, onSave } = createFixture();
-    onSave.mockResolvedValue({ ok: false, error: '请输入网站域名' });
+    onSave.mockResolvedValue({ ok: false, error: '请输入网站域名。' });
     act(() => controller.render(model));
     act(() => {
       host.querySelector<HTMLButtonElement>('._x_extension_shortcut_edit_2024_unique_')
@@ -121,7 +121,7 @@ describe('Options blacklist list React island', () => {
     });
 
     expect(host.querySelector('._x_extension_shortcut_error_2024_unique_')?.textContent)
-      .toBe('请输入网站域名');
+      .toBe('请输入网站域名。');
     expect(host.querySelector('[data-expanded="true"]')).not.toBeNull();
   });
 
