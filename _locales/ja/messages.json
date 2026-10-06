@@ -2917,11 +2917,5 @@
   },
   "recent_progress_tracking": {
     "message": "進捗を追跡中"
-  },
-  "recent_progress_updated": {
-    "message": "新しい話・章に更新されました"
-  },
-  "recent_progress_updated_badge": {
-    "message": "更新"
   }
 }

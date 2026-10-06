@@ -2917,11 +2917,5 @@
   },
   "recent_progress_tracking": {
     "message": "Tracking progress"
-  },
-  "recent_progress_updated": {
-    "message": "Moved to a new episode or chapter"
-  },
-  "recent_progress_updated_badge": {
-    "message": "Updated"
   }
 }

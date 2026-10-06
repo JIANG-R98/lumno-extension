@@ -2917,11 +2917,5 @@
   },
   "recent_progress_tracking": {
     "message": "正在跟踪观看进度"
-  },
-  "recent_progress_updated": {
-    "message": "已跟到新的一集或一章"
-  },
-  "recent_progress_updated_badge": {
-    "message": "已更新"
   }
 }
