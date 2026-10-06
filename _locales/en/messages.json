@@ -662,6 +662,9 @@
   "newtab_time_show_seconds_title": {
     "message": "Show seconds"
   },
+  "settings_newtab_page_buttons_title": {
+    "message": "Page buttons"
+  },
   "settings_newtab_feedback_button_visible_title": {
     "message": "Show feedback button"
   },
@@ -766,6 +769,9 @@
   },
   "newtab_favicon_save_error": {
     "message": "Failed to save favicon"
+  },
+  "newtab_wallpaper_source_title": {
+    "message": "Source"
   },
   "newtab_wallpaper_builtin_section": {
     "message": "Built-in"
@@ -2643,7 +2649,7 @@
     "message": "WebDAV sync"
   },
   "webdav_beta_hint": {
-    "message": "Syncs settings, custom icons and wallpapers to your own cloud drive or NAS. It runs alongside browser sync without affecting it.\n\nThis is a beta, so sync may occasionally fail. Let us know if you run into a problem."
+    "message": "In beta: sync settings, custom icons and wallpapers through a WebDAV drive or NAS. Unlike browser built-in sync, it works across browsers and covers icons and wallpapers."
   },
   "webdav_setup_hint": {
     "message": "Sync settings, custom icons and wallpapers through Nutstore or another WebDAV service, alongside browser sync."
@@ -2774,6 +2780,9 @@
   "webdav_preference_other": {
     "message": "Other setting"
   },
+  "webdav_preference_zen_mode": {
+    "message": "Zen mode"
+  },
   "webdav_remove": {
     "message": "Delete WebDAV connection"
   },
@@ -2792,6 +2801,9 @@
   "newtab_quote_off": {
     "message": "Off"
   },
+  "newtab_quote_top": {
+    "message": "Above search box"
+  },
   "newtab_quote_input": {
     "message": "Below search box"
   },
@@ -2806,9 +2818,6 @@
   },
   "newtab_quote_poetry": {
     "message": "Poetry"
-  },
-  "newtab_quote_source": {
-    "message": "View on Hitokoto"
   },
   "newtab_quote_save_error": {
     "message": "Failed to save quote settings"

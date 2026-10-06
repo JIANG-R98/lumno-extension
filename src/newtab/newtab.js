@@ -2204,8 +2204,8 @@
       },
       {
         element: quoteRuntime && quoteRuntime.element,
-        sampleElement: quoteRuntime && quoteRuntime.element,
-        minWidth: 240,
+        sampleElement: quoteRuntime && (quoteRuntime.textElement || quoteRuntime.element),
+        minWidth: 160,
         minHeight: 32
       },
       {
@@ -2260,6 +2260,7 @@
     getLocale: () => currentResolvedLocale,
     getSearchRoot: () => root,
     getShortcutSection: () => shortcutSection,
+    getTooltipController: () => topActionTooltipController,
     isPreferenceArea: (areaName) => providerStorageRuntime
       ? providerStorageRuntime.isActiveAreaName(areaName) : areaName === 'sync',
     onLayout: () => window.requestAnimationFrame(() => {
@@ -4219,8 +4220,8 @@
         option.radio = true;
         option.checked = item.checked === true;
       }
-      if (item && item.uncheckedIconClass) {
-        option.uncheckedIconClass = String(item.uncheckedIconClass);
+      if (item && item.trailingIconClass) {
+        option.trailingIconClass = String(item.trailingIconClass);
       }
       return option;
     });
@@ -4281,7 +4282,7 @@
       labelKey: 'bookmark_topbar_surface_custom',
       fallback: 'Custom color',
       radio: true,
-      uncheckedIconClass: 'ri-dropper-line',
+      trailingIconClass: 'ri-dropper-line',
       checked: effectiveSurfaceMode === 'custom'
     });
     return options;
@@ -7679,7 +7680,9 @@
     bookmarkTopbarRuntime.mount(document.body);
   }
   bottomDockRuntime.mount(document.body);
-  if (quoteRuntime) quoteRuntime.mount();
+  const initialQuoteReadyTask = quoteRuntime
+    ? quoteRuntime.mount().catch(() => true)
+    : Promise.resolve(true);
   if (wallpaperControl) {
     document.body.appendChild(wallpaperControl);
   }
@@ -7804,6 +7807,7 @@
       ? document.fonts.ready.catch(() => true)
       : Promise.resolve(true);
   observeNewtabStartupTask('fonts', initialFontsReadyTask);
+  observeNewtabStartupTask('quote', initialQuoteReadyTask);
   const initialVisualReadyPromise = Promise.all([
     initialAppearanceReadyTask,
     initialBookmarkViewModeReadyPromise,
@@ -7816,7 +7820,8 @@
     initialPinnedRecentSitesReadyTask,
     initialHiddenRecentSitesReadyTask,
     initialLayoutStorageReadyTask,
-    initialFontsReadyTask
+    initialFontsReadyTask,
+    initialQuoteReadyTask
   ]).catch((error) => {
     console.warn('[Lumno] Initial new tab layout setup failed.', error);
   }).then(() => {

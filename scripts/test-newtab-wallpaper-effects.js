@@ -183,6 +183,15 @@ assert.strictEqual(
   true,
   'legacy automatic tone should continue following wallpaper luminance'
 );
+assert.strictEqual(effects.resolveAutoInkTone('auto', 'light'), 'dark');
+assert.strictEqual(effects.resolveAutoInkTone('auto', 'dark'), 'light');
+assert.strictEqual(effects.resolveAutoInkTone('dark', 'dark'), 'dark');
+assert.strictEqual(effects.resolveAutoInkTone('light', 'light'), 'light');
+assert.strictEqual(
+  effects.resolvePrefsForMode({ type: 'ascii', inkTone: 'auto' }, 'dark').inkTone,
+  'light',
+  'automatic tone should render the same tone the panel highlights for the active mode'
+);
 assert.strictEqual(
   effects.normalizePrefs({ inkTone: 'unknown' }).inkTone,
   'auto',
@@ -1391,6 +1400,9 @@ async function testFocusedRoutePreloadsEffectBeforeContent() {
         return controller;
       },
       normalizePrefs(value) {
+        return value;
+      },
+      resolvePrefsForMode(value) {
         return value;
       }
     },

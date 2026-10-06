@@ -764,13 +764,12 @@
     const urlKey = typeof item.url === 'string' && item.url
       ? buildSearchDedupUrlKey(item.url)
       : '';
-    const titleKey = normalizeSearchDedupTitle(item.title);
-    if (urlKey && titleKey) {
-      return `url:${urlKey}::title:${titleKey}`;
-    }
+    // One page is one result: the same URL seen as history, bookmark, top
+    // site or open tab (often under different titles) must merge, not repeat.
     if (urlKey) {
       return `url:${urlKey}`;
     }
+    const titleKey = normalizeSearchDedupTitle(item.title);
     if (titleKey) {
       return `title:${titleKey}`;
     }
@@ -812,7 +811,8 @@
     if (context.hasInformationalIntent || context.hasSettingsIntent) {
       return false;
     }
-    if (!Array.isArray(context.queryTerms) || context.queryTerms.length !== 2) {
+    // queryTerms also carries the whole phrase, so count the split words.
+    if (!Array.isArray(context.coreQueryTerms) || context.coreQueryTerms.length !== 2) {
       return false;
     }
     return context.queryLower.length <= 28;
@@ -2193,6 +2193,12 @@
         useBrandFamilyLimit ? SEARCH_POLICY.brandPrimaryFamilyLimit : Infinity
       );
     });
+
+    // The reserved passes above only guarantee a slot; they must not jump
+    // ahead of stronger results. Restore the incoming rank order for every
+    // primary pick, then let secondary picks fill the tail.
+    const candidateIndex = new Map(candidates.map((suggestion, index) => [suggestion, index]));
+    selected.sort((a, b) => candidateIndex.get(a) - candidateIndex.get(b));
 
     if (selected.length < SEARCH_POLICY.finalSuggestionLimit) {
       candidates.forEach((suggestion) => {

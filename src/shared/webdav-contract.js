@@ -12,6 +12,9 @@
   const WALLPAPER_KEY = '_x_extension_newtab_wallpaper_2026_unique_';
   const LOCAL_WALLPAPER_KEY = '_x_extension_newtab_local_wallpaper_2026_unique_';
   const PREFERENCE_KEYS = settings.CHROME_SYNC_STORAGE_KEYS.filter((key) => !SHORTCUT_KEYS.includes(key));
+  // Records whose fields are independent settings merge field by field, so
+  // two devices editing different fields of one record do not conflict.
+  const FIELD_MERGE_KEYS = [settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY].filter(Boolean);
   const MAX_STATE_BYTES = 2 * 1024 * 1024;
   const MAX_ASSET_BYTES = 2 * 1024 * 1024;
   const HASH_PATTERN = /^[a-f0-9]{64}$/;
@@ -26,6 +29,14 @@
     return JSON.stringify(value);
   }
   function equal(left, right) { return canonical(left) === canonical(right); }
+  // Both sides must still hold a record; a deleted or replaced value is a
+  // whole-value change. A missing base record counts as an empty one.
+  function fieldMergeable(key, base, local, remote) {
+    return FIELD_MERGE_KEYS.includes(key) && isObject(local) && isObject(remote) && (typeof base === 'undefined' || isObject(base));
+  }
+  function fieldNames(...records) {
+    return [...new Set(records.flatMap((record) => Object.keys(record || {})))].sort();
+  }
   function readShortcuts(values, overflow) {
     const stored = SHORTCUT_KEYS.flatMap((key) => Array.isArray(values[key]) ? values[key] : []);
     const extra = Array.isArray(overflow) ? overflow : (Array.isArray(overflow && overflow.items) ? overflow.items : []);
@@ -90,9 +101,19 @@
       conflicts.push(key);
       return left;
     }
+    function chooseFields(key, previous, left, right) {
+      const record = {};
+      fieldNames(previous, left, right).forEach((field) => {
+        const value = choose(key, (previous || {})[field], left[field], right[field]);
+        if (typeof value !== 'undefined') record[field] = value;
+      });
+      return record;
+    }
     const data = {};
     PREFERENCE_KEYS.filter((key) => key !== WALLPAPER_KEY).forEach((key) => {
-      const value = choose(key, base.data[key], local.data[key], remote.data[key]);
+      const value = fieldMergeable(key, base.data[key], local.data[key], remote.data[key])
+        ? chooseFields(key, base.data[key], local.data[key], remote.data[key])
+        : choose(key, base.data[key], local.data[key], remote.data[key]);
       if (typeof value !== 'undefined') data[key] = value;
     });
     const shortcutDomain = (state) => ({ shortcuts: state.shortcuts, icons: state.icons });
@@ -104,7 +125,7 @@
     if (typeof images.builtin !== 'undefined') data[WALLPAPER_KEY] = images.builtin;
     const state = validateState({ version: Math.max(base.version, local.version, remote.version), data, ...links, wallpapers: images.wallpapers,
       assets: { ...base.assets, ...remote.assets, ...local.assets } });
-    return { state, conflicts };
+    return { state, conflicts: [...new Set(conflicts)] };
   }
   // A conflict summary is display data only: names are capped and values are
   // reduced to their kind, so it never ships full shortcut lists or images.
@@ -143,10 +164,20 @@
       !equal(side.data[WALLPAPER_KEY], base.data[WALLPAPER_KEY]);
     return summary;
   }
+  // A field-merged record lists only the fields both sides changed apart.
+  function describeFields(key, previous, left, right) {
+    return fieldNames(previous, left, right).filter((field) => {
+      const before = (previous || {})[field];
+      return !equal(left[field], right[field]) && !equal(left[field], before) && !equal(right[field], before);
+    }).map((field) => ({ key, field, domain: 'preference', local: summarizeValue(left[field]), remote: summarizeValue(right[field]) }));
+  }
   function describeConflict(base, local, remote, keys) {
-    return [...new Set(keys)].map((key) => {
+    return [...new Set(keys)].flatMap((key) => {
       if (key === 'shortcuts') return { key, domain: 'shortcuts', local: describeShortcuts(base, local), remote: describeShortcuts(base, remote) };
       if (key === 'wallpapers') return { key, domain: 'wallpapers', local: describeWallpapers(base, local), remote: describeWallpapers(base, remote) };
+      if (fieldMergeable(key, base.data[key], local.data[key], remote.data[key])) {
+        return describeFields(key, base.data[key], local.data[key], remote.data[key]);
+      }
       return { key, domain: 'preference', local: summarizeValue(local.data[key]), remote: summarizeValue(remote.data[key]) };
     });
   }
@@ -208,7 +239,7 @@
     }
     return { payload, remove, skipped, complete: skipped.length === 0 };
   }
-  return Object.freeze({ SHORTCUT_KEYS, OVERFLOW_KEY, ICONS_KEY, WALLPAPER_KEY, LOCAL_WALLPAPER_KEY,
+  return Object.freeze({ SHORTCUT_KEYS, FIELD_MERGE_KEYS, OVERFLOW_KEY, ICONS_KEY, WALLPAPER_KEY, LOCAL_WALLPAPER_KEY,
     PREFERENCE_KEYS, MAX_STATE_BYTES, MAX_ASSET_BYTES, canonical, equal, byteLength, readShortcuts,
     selectPreferences, validateState, mergeStates, describeConflict, planChromeBackup });
 });

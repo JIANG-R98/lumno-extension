@@ -7,6 +7,7 @@
   const QUOTE_CACHE_KEY = '_x_extension_newtab_quote_cache_2026_unique_';
   const BING_CACHE_KEY = '_x_extension_bing_catalog_cache_2026_unique_';
   const BING_DAILY_CACHE_KEY = '_x_extension_bing_daily_cache_2026_unique_';
+  const BING_META_CACHE_KEY = '_x_extension_bing_wallpaper_meta_2026_unique_';
   const BING_DAILY_ID = 'bing-daily';
   const BING_ID_PATTERN = /^bing-(\d{8})-(OHR\.[a-zA-Z0-9_-]{1,160})$/;
   const BING_ORIGIN = 'https://www.bing.com';
@@ -88,45 +89,11 @@
       copyrightlink: value.sourceUrl }) : null;
   }
 
-  function createMediaStore(indexedDB) {
-    let databaseTask;
-    function open() {
-      if (!databaseTask) databaseTask = new Promise((resolve, reject) => {
-        if (!indexedDB) return reject(new Error('Wallpaper storage is unavailable.'));
-        const request = indexedDB.open('lumno-bing', 1);
-        request.onupgradeneeded = () => request.result.createObjectStore('images', { keyPath: 'id' });
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      }).catch((error) => { databaseTask = null; throw error; });
-      return databaseTask;
-    }
-    async function get(id) {
-      const db = await open();
-      return new Promise((resolve, reject) => {
-        const request = db.transaction('images', 'readonly').objectStore('images').get(id);
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      });
-    }
-    async function put(record, pinnedIds) {
-      const db = await open();
-      return new Promise((resolve, reject) => {
-        const transaction = db.transaction('images', 'readwrite');
-        const store = transaction.objectStore('images');
-        store.put(record);
-        const request = store.getAll();
-        request.onsuccess = () => {
-          const records = request.result.sort((a, b) => b.updatedAt - a.updatedAt);
-          const keep = new Set([record.id, ...pinnedIds]);
-          records.forEach((item) => { if (keep.size < 12) keep.add(item.id); });
-          records.forEach((item) => { if (!keep.has(item.id)) store.delete(item.id); });
-        };
-        transaction.oncomplete = () => resolve(record);
-        transaction.onerror = () => reject(transaction.error);
-        transaction.onabort = () => reject(transaction.error || new Error('Wallpaper could not be saved.'));
-      });
-    }
-    return { get, put };
+  // Earlier versions downloaded Bing images into IndexedDB; the browser HTTP cache now covers this.
+  function deleteLegacyMediaStore(indexedDB) {
+    try {
+      if (indexedDB && typeof indexedDB.deleteDatabase === 'function') indexedDB.deleteDatabase('lumno-bing');
+    } catch (_error) {}
   }
 
   function createClient(options) {
@@ -135,7 +102,6 @@
     const fetcher = config.fetch || root.fetch.bind(root);
     const now = config.now || Date.now;
     const locks = config.locks || (root.navigator && root.navigator.locks);
-    const mediaStore = config.mediaStore || createMediaStore(root.indexedDB);
     const images = new Map();
     const pendingImages = new Map();
     const quoteTasks = new Map();
@@ -143,12 +109,13 @@
     let pinnedIds = [];
     let dailyWallpaper = null;
     const getMarket = () => normalizeMarket(typeof config.getLanguage === 'function' ? config.getLanguage() : config.language);
+    deleteLegacyMediaStore(root.indexedDB);
     function lock(name, task) {
       return locks && typeof locks.request === 'function' ? locks.request(name, task) : task();
     }
-    async function request(url, kind) {
+    async function request(url) {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), kind === 'image' ? 20000 : 8000);
+      const timer = setTimeout(() => controller.abort(), 8000);
       try {
         const response = await fetcher(url, { signal: controller.signal, credentials: 'omit',
           referrerPolicy: 'no-referrer' });
@@ -157,14 +124,7 @@
           error.status = response.status;
           throw error;
         }
-        if (kind !== 'image') return await response.json();
-        const length = Number(response.headers.get('content-length'));
-        if (length > 25 * 1024 * 1024) throw new Error('Wallpaper is too large.');
-        const blob = await response.blob();
-        if (blob.size > 25 * 1024 * 1024 || !/^image\/(jpeg|png|webp)$/.test(blob.type)) {
-          throw new Error('Unsupported wallpaper image.');
-        }
-        return blob;
+        return await response.json();
       } finally { clearTimeout(timer); }
     }
     function getQuote(category) {
@@ -234,47 +194,54 @@
       catalogTasks.set(market, task);
       return task;
     }
+    // Titles and credits of chosen photos outlive the 8-day catalog, so keep them separately.
+    async function readStoredDetails(id) {
+      const saved = (await read(area, BING_META_CACHE_KEY)) || {};
+      if (saved[id]) return normalizeStoredWallpaper(saved[id]);
+      const catalog = (await read(area, BING_CACHE_KEY)) || {};
+      const entry = Object.values(catalog).flatMap((market) => market && Array.isArray(market.items) ? market.items : [])
+        .find((item) => item && item.id === id);
+      return entry ? normalizeStoredWallpaper(entry) : null;
+    }
+    function rememberDetails(item) {
+      return lock('lumno-bing-meta', async () => {
+        const saved = (await read(area, BING_META_CACHE_KEY)) || {};
+        const dailyCache = (await read(area, BING_DAILY_CACHE_KEY)) || {};
+        const keep = new Set([item.id, ...pinnedIds, ...Object.values(dailyCache).map((entry) => entry && entry.id)]);
+        const next = { [item.id]: { id: item.id, date: item.date, name: item.name, copyright: item.copyright,
+          sourceUrl: item.sourceUrl, savedAt: now() } };
+        Object.values(saved).filter((entry) => entry && entry.id !== item.id)
+          .sort((a, b) => b.savedAt - a.savedAt)
+          .forEach((entry) => {
+            if (keep.has(entry.id) || Object.keys(next).length < 12) next[entry.id] = entry;
+          });
+        await write(area, BING_META_CACHE_KEY, next);
+      });
+    }
     async function restoreWallpaper(id) {
-      if (!wallpaperFromId(id)) return null;
+      const descriptor = wallpaperFromId(id);
+      if (!descriptor) return null;
       if (id === BING_DAILY_ID) {
         const cache = (await read(area, BING_DAILY_CACHE_KEY)) || {};
         const entry = cache[getMarket()];
-        const descriptor = entry && wallpaperFromId(entry.id);
-        dailyWallpaper = descriptor && descriptor.rawId ? await restoreWallpaper(entry.id) : null;
+        const daily = entry && wallpaperFromId(entry.id);
+        dailyWallpaper = daily && daily.rawId ? await restoreWallpaper(entry.id) : null;
         return dailyWallpaper ? { ...dailyWallpaper, id: BING_DAILY_ID, dailyId: dailyWallpaper.id } : null;
       }
-      const cached = await mediaStore.get(id).catch(() => null);
-      const item = normalizeStoredWallpaper(cached);
-      if (item && /^data:image\/(jpeg|png|webp);base64,/.test(cached.imageDataUrl || '')) {
-        const record = { ...item, imageDataUrl: cached.imageDataUrl,
-          thumbnailDataUrl: /^data:image\/(jpeg|png|webp);base64,/.test(cached.thumbnailDataUrl || '')
-            ? cached.thumbnailDataUrl : '', updatedAt: cached.updatedAt };
-        images.set(id, record);
-        return record;
+      if (!images.has(id)) {
+        const stored = await readStoredDetails(id).catch(() => null);
+        images.set(id, stored || descriptor);
       }
-      return null;
+      return images.get(id);
     }
     function ensureWallpaper(id) {
       if (!wallpaperFromId(id)) return Promise.reject(new Error('Invalid wallpaper ID.'));
       if (id === BING_DAILY_ID) return ensureDailyWallpaper();
       if (pendingImages.has(id)) return pendingImages.get(id);
-      const task = lock(`lumno-bing-image-${id}`, async () => {
-        const cached = images.get(id);
-        if (cached && cached.imageDataUrl) return cached;
-        const restored = await restoreWallpaper(id);
-        if (restored) return restored;
-        const item = images.get(id) || wallpaperFromId(id);
-        const blob = await request(item.imageUrl, 'image');
-        const file = new File([blob], `${item.rawId}.jpg`, { type: blob.type });
-        const processed = await config.processFile(file);
-        const record = { ...item, imageDataUrl: processed.imageDataUrl,
-          thumbnailDataUrl: processed.thumbnailDataUrl, updatedAt: now() };
-        const dailyCache = (await read(area, BING_DAILY_CACHE_KEY)) || {};
-        const keepIds = [...pinnedIds.filter((pin) => pin !== BING_DAILY_ID),
-          ...Object.values(dailyCache).map((entry) => entry.id)];
-        await mediaStore.put(record, keepIds);
-        images.set(id, record);
-        return record;
+      const task = restoreWallpaper(id).then(async (item) => {
+        // A bare ID carries no title yet; only details from the catalog are worth keeping.
+        if ('copyright' in item) await rememberDetails(item).catch(() => {});
+        return item;
       }).finally(() => pendingImages.delete(id));
       pendingImages.set(id, task);
       return task;
@@ -293,7 +260,7 @@
         try {
           const items = await getCatalog();
           const latest = items[0];
-          // A delayed or stale archive response must not replace a newer cached daily image.
+          // A delayed or stale archive response must not replace a newer daily photo.
           if (dailyWallpaper && dailyWallpaper.date >= latest.date) return getWallpaper(BING_DAILY_ID);
           const record = await ensureWallpaper(latest.id);
           const cache = (await read(area, BING_DAILY_CACHE_KEY)) || {};
@@ -321,6 +288,6 @@
       setPinnedIds: (ids) => { pinnedIds = ids.filter((id) => wallpaperFromId(id)); } });
   }
 
-  return Object.freeze({ QUOTE_CACHE_KEY, BING_CACHE_KEY, BING_DAILY_CACHE_KEY, BING_DAILY_ID, normalizeMarket,
-    localDay, normalizeQuote, normalizeWallpaper, wallpaperFromId, createMediaStore, createClient });
+  return Object.freeze({ QUOTE_CACHE_KEY, BING_CACHE_KEY, BING_DAILY_CACHE_KEY, BING_META_CACHE_KEY, BING_DAILY_ID,
+    normalizeMarket, localDay, normalizeQuote, normalizeWallpaper, wallpaperFromId, createClient });
 });

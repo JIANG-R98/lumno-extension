@@ -282,4 +282,45 @@ describe('Options settings form React islands', () => {
     expect(host.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')[2]?.checked)
       .toBe(true);
   });
+
+  it('keeps the blacklist draft while closing and starts each open empty', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const controller = createBlacklistFormController(host, {
+      kind: 'search',
+      onSave: vi.fn().mockResolvedValue({ ok: true })
+    });
+    controllers.push(controller);
+    act(() => controller.render(blacklistModel));
+    const openButton = host.querySelector<HTMLButtonElement>('button');
+    const fields = host.querySelector<HTMLElement>('._x_extension_shortcut_form_fields_2024_unique_');
+    const textInput = host.querySelector<HTMLInputElement>('input:not([type="checkbox"])');
+    const cancelButton = host.querySelector<HTMLButtonElement>(
+      '._x_extension_shortcut_secondary_2024_unique_'
+    );
+    expect(fields?.hasAttribute('inert')).toBe(true);
+    expect(cancelButton?.style.display).toBe('');
+
+    act(() => openButton?.click());
+    expect(fields?.hasAttribute('inert')).toBe(false);
+    expect(document.activeElement).toBe(textInput);
+    act(() => {
+      const setter = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        'value'
+      )?.set;
+      setter?.call(textInput, 'example.com');
+      textInput?.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    act(() => cancelButton?.click());
+
+    expect(host.dataset.expanded).toBe('false');
+    expect(fields?.hasAttribute('inert')).toBe(true);
+    expect(textInput?.value).toBe('example.com');
+    expect(cancelButton?.style.display).toBe('');
+    expect(document.activeElement).toBe(openButton);
+
+    act(() => openButton?.click());
+    expect(textInput?.value).toBe('');
+  });
 });

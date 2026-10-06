@@ -662,6 +662,9 @@
   "newtab_time_show_seconds_title": {
     "message": "显示秒数"
   },
+  "settings_newtab_page_buttons_title": {
+    "message": "页面按钮"
+  },
   "settings_newtab_feedback_button_visible_title": {
     "message": "展示反馈按钮"
   },
@@ -766,6 +769,9 @@
   },
   "newtab_favicon_save_error": {
     "message": "favicon 保存失败"
+  },
+  "newtab_wallpaper_source_title": {
+    "message": "壁纸来源"
   },
   "newtab_wallpaper_builtin_section": {
     "message": "内置"
@@ -2643,7 +2649,7 @@
     "message": "WebDAV 同步"
   },
   "webdav_beta_hint": {
-    "message": "把设置、自定义图标和壁纸同步到你自己的网盘或 NAS，和浏览器自带的同步同时运行，互不影响。\n\n这是测试版，偶尔可能同步失败。遇到问题欢迎反馈。"
+    "message": "功能测试中：通过 WebDAV 网盘或 NAS 同步设置、自定义图标和壁纸。相比浏览器内置同步，支持跨浏览器，也能同步图标和壁纸。"
   },
   "webdav_setup_hint": {
     "message": "通过坚果云或其他 WebDAV 服务同步配置、自定义图标和壁纸，与浏览器自带的同步同时运行。"
@@ -2774,6 +2780,9 @@
   "webdav_preference_other": {
     "message": "其他设置"
   },
+  "webdav_preference_zen_mode": {
+    "message": "Zen 模式"
+  },
   "webdav_remove": {
     "message": "删除 WebDAV 配置"
   },
@@ -2792,6 +2801,9 @@
   "newtab_quote_off": {
     "message": "关闭"
   },
+  "newtab_quote_top": {
+    "message": "输入框上方"
+  },
   "newtab_quote_input": {
     "message": "输入框下方"
   },
@@ -2806,9 +2818,6 @@
   },
   "newtab_quote_poetry": {
     "message": "诗词"
-  },
-  "newtab_quote_source": {
-    "message": "查看一言出处"
   },
   "newtab_quote_save_error": {
     "message": "名句设置保存失败"

@@ -267,7 +267,7 @@ function appendOverlayStyleNodes(
       justify-content: center;
       box-sizing: border-box;
       border: 0;
-      border-radius: var(--x-ext-input-right-icon-radius, 16px);
+      border-radius: var(--x-ext-input-right-icon-radius, 10px);
       padding: 0;
       background: transparent;
       color: var(--x-ext-input-icon, #9CA3AF);
@@ -458,7 +458,7 @@ function getPanelStyle(options: OverlayShellOptions): string {
     width: ${width}px !important;
     max-width: calc(100vw - 24px) !important;
     max-height: ${maxHeightVh}vh !important;
-    --x-ov-panel-radius: 24px;
+    --x-ov-panel-radius: 26px;
     background: var(--x-ov-bg, rgba(255, 255, 255, 0.95)) !important;
     backdrop-filter: blur(var(--x-ov-blur, 24px)) saturate(var(--x-ov-saturate, 165%)) !important;
     -webkit-backdrop-filter: blur(var(--x-ov-blur, 24px)) saturate(var(--x-ov-saturate, 165%)) !important;

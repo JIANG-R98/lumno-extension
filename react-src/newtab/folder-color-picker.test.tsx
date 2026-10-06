@@ -114,6 +114,24 @@ describe('folder color picker', () => {
     await act(async () => { document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
     expect(submit).toHaveBeenLastCalledWith('123', null);
   });
+  it('animates in on the next frame and fades out before unmounting', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame'] });
+    try {
+      setup();
+      const backdrop = document.querySelector('.x-nt-folder-color-backdrop')!;
+      expect(backdrop.getAttribute('data-open')).toBe('false');
+      act(() => { vi.advanceTimersToNextFrame(); });
+      expect(backdrop.getAttribute('data-open')).toBe('true');
+      act(() => button('Cancel').click());
+      expect(picker!.isOpen()).toBe(false);
+      expect(backdrop.getAttribute('data-open')).toBe('false');
+      expect(backdrop.isConnected).toBe(true);
+      act(() => { vi.advanceTimersByTime(200); });
+      expect(backdrop.isConnected).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
   it('cancels without saving and restores focus', () => {
     const submit = vi.fn();
     const onClose = vi.fn();

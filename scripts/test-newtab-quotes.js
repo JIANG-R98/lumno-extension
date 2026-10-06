@@ -14,10 +14,16 @@ async function main() {
   let requests = 0;
   let resolveQuote;
   let messages = {};
+  const tooltipCalls = [];
+  const tooltipController = {
+    show(_target, text, options) { tooltipCalls.push(['show', text, options.placement]); },
+    hide() { tooltipCalls.push(['hide']); }
+  };
   const runtime = quotes.createRuntime({ documentObj: document, windowObj: dom.window,
     t: (key, fallback) => messages[key] ? messages[key].message : fallback,
     getSearchRoot: () => document.querySelector('#search'),
     getShortcutSection: () => document.querySelector('#shortcuts'),
+    getTooltipController: () => tooltipController,
     storageArea: {
       get(_keys, callback) { callback({ [settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY]: prefs }); },
       set(value, callback) { prefs = value[settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY]; callback(); }
@@ -29,9 +35,15 @@ async function main() {
     values.forEach((value) => { const button = document.createElement('button'); button.dataset[data] = value; group.appendChild(button); });
     return group;
   };
+  // Stands in for the panel view, which renders the position dropdown.
+  let positionSelect = null;
+  const view = { renderQuotePositionSelect(model) { positionSelect = model; } };
+  const choosePosition = (value) => {
+    assert(positionSelect.options.some((option) => option.value === value));
+    positionSelect.onChange(value);
+  };
   const refs = { quoteTitle: document.createElement('span'), quoteBody: document.createElement('div'),
     quoteEnabledToggle: document.createElement('input'), quoteInfoButton: document.createElement('button'),
-    quotePosition: createGroup('quotePosition', ['input', 'search', 'bottom']),
     quoteCategory: createGroup('quoteCategory', ['literature', 'poetry']),
     quoteFontSizeRow: document.createElement('div'), quoteFontSizeTitle: document.createElement('span'),
     quoteFontSizeSlider: document.createElement('input'), quoteFontSizeSliderValueInput: document.createElement('input') };
@@ -39,9 +51,9 @@ async function main() {
   refs.quoteFontSizeSliderValueInput.type = 'number';
   refs.quoteEnabledToggle.type = 'checkbox';
   refs.quoteFontSizeRow.append(refs.quoteFontSizeTitle, refs.quoteFontSizeSlider, refs.quoteFontSizeSliderValueInput);
-  refs.quoteBody.append(refs.quoteCategory, refs.quotePosition, refs.quoteFontSizeRow);
+  refs.quoteBody.append(refs.quoteCategory, refs.quoteFontSizeRow);
   document.body.append(refs.quoteEnabledToggle, refs.quoteBody, refs.quoteInfoButton);
-  runtime.bindSettings(refs);
+  runtime.bindSettings(refs, view);
   await runtime.mount();
   assert.equal(requests, 0, 'Disabled quotes must not contact an external API');
   assert.equal(refs.quoteBody.hidden, true);
@@ -56,16 +68,17 @@ async function main() {
   assert.equal(runtime.element.nextElementSibling.id, 'recent');
   assert.equal(runtime.element.hidden, false);
   assert.equal(runtime.element.querySelector('img'), null, 'Quotes must be rendered as text');
-  assert.equal(runtime.element.querySelector('a').href, 'https://hitokoto.cn/');
-  assert(runtime.element.querySelector('button').getAttribute('aria-label').includes('author'));
-  const quoteButton = runtime.element.querySelector('button');
-  quoteButton.focus();
-  quoteButton.click();
-  assert.equal(quoteButton.getAttribute('aria-expanded'), 'true');
-  quoteButton.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-  assert.equal(quoteButton.getAttribute('aria-expanded'), 'false');
-  assert.equal(runtime.element.dataset.dismissed, 'true', 'Escape must dismiss attribution while retaining keyboard focus');
-  assert.equal(document.activeElement, quoteButton);
+  const quoteButton = runtime.element.querySelector('a.x-nt-quote-text');
+  assert.equal(quoteButton.href, 'https://hitokoto.cn/', 'Only Hitokoto URLs may be opened from the quote');
+  assert.equal(quoteButton.target, '_blank');
+  assert.equal(runtime.element.querySelectorAll('a').length, 1, 'The quote itself is the only link');
+  assert(quoteButton.getAttribute('aria-label').includes('author'));
+  assert.equal(tooltipCalls.length, 0);
+  quoteButton.dispatchEvent(new dom.window.MouseEvent('mouseenter'));
+  assert.deepEqual(tooltipCalls.pop(), ['show', 'author · 《book》', 'bottom'],
+    'Hovering shows the origin in the shared tooltip, away from the search box');
+  quoteButton.dispatchEvent(new dom.window.MouseEvent('mouseleave'));
+  assert.deepEqual(tooltipCalls.pop(), ['hide']);
   assert.equal(refs.quoteBody.hidden, false);
   refs.quoteFontSizeSlider.value = '20';
   refs.quoteFontSizeSlider.dispatchEvent(new dom.window.Event('input'));
@@ -89,7 +102,15 @@ async function main() {
   assert.equal(prefs.fontSize, 24, 'An empty input must retain the saved font size');
   assert.equal(sizeInput.value, '24');
   assert.equal(requests, 1, 'Adjusting font size should reuse the current daily quote');
-  refs.quotePosition.querySelector('[data-quote-position="input"]').click();
+  assert.deepEqual(positionSelect.options.map((option) => option.value), ['top', 'input', 'search', 'bottom'],
+    'Positions are listed in on-page order');
+  assert.equal(positionSelect.value, 'search');
+  choosePosition('top');
+  assert.equal(runtime.element.nextElementSibling.id, 'search', 'The top placement sits right above the search box');
+  assert.equal(document.body.dataset.quotePosition, 'top');
+  assert.equal(positionSelect.value, 'top');
+  assert.equal(settings.normalizeNewtabQuotePrefs({ position: 'top' }).position, 'top');
+  choosePosition('input');
   assert.equal(runtime.element.previousElementSibling.id, 'search', 'The input placement sits right under the search box');
   assert.equal(runtime.element.nextElementSibling.id, 'shortcuts');
   assert.equal(document.body.dataset.quotePosition, 'input');
@@ -98,7 +119,7 @@ async function main() {
     assert.equal(settings.normalizeNewtabQuotePrefs(saved).enabled, false, 'Quotes stay off unless the user enabled them');
   }
   assert.equal(settings.normalizeNewtabQuotePrefs({ position: 'nope' }).position, 'search');
-  refs.quotePosition.querySelector('[data-quote-position="bottom"]').click();
+  choosePosition('bottom');
   assert.equal(document.body.dataset.quotePosition, 'bottom');
   assert.equal(runtime.element.dataset.position, 'bottom');
   assert.equal(requests, 1, 'Changing position should reuse the same daily quote');
@@ -109,22 +130,20 @@ async function main() {
     assert.equal(refs.quoteTitle.textContent, messages.newtab_quote_title.message);
     assert.equal(refs.quoteEnabledToggle.getAttribute('aria-label'), messages.newtab_quote_title.message);
     assert.equal(refs.quoteInfoButton.getAttribute('aria-label'), messages.newtab_quote_provider.message);
-    assert.equal(refs.quotePosition.getAttribute('aria-label'), messages.newtab_quote_position.message);
+    assert.equal(positionSelect.ariaLabel, messages.newtab_quote_position.message);
     assert.equal(refs.quoteCategory.getAttribute('aria-label'), messages.newtab_quote_category.message);
     assert.equal(refs.quoteFontSizeTitle.textContent, messages.newtab_quote_font_size.message);
     assert.equal(refs.quoteFontSizeSlider.getAttribute('aria-label'), messages.newtab_quote_font_size_label.message);
     assert.equal(sizeInput.getAttribute('aria-label'), messages.newtab_quote_font_size_label.message);
-    for (const position of ['input', 'search', 'bottom']) {
-      assert.equal(refs.quotePosition.querySelector(`[data-quote-position="${position}"]`).textContent,
-        messages[`newtab_quote_${position}`].message);
+    for (const option of positionSelect.options) {
+      assert.equal(option.label, messages[`newtab_quote_${option.value}`].message);
     }
     for (const category of ['literature', 'poetry']) {
       assert.equal(refs.quoteCategory.querySelector(`[data-quote-category="${category}"]`).textContent,
         messages[`newtab_quote_${category}`].message);
     }
-    assert.equal(runtime.element.querySelector('a').textContent, messages.newtab_quote_source.message);
     assert.equal(quoteButton.textContent, originalQuote, 'Changing the UI language must keep the original quote');
-    assert.equal(refs.quotePosition.querySelector('[data-quote-position="bottom"]').getAttribute('aria-pressed'), 'true');
+    assert.equal(positionSelect.value, 'bottom');
     assert.equal(requests, 1, 'Changing the UI language must not fetch another quote');
   }
   refs.quoteCategory.querySelector('[data-quote-category="poetry"]').click();
@@ -189,6 +208,39 @@ async function main() {
   await tick();
   assert.equal(localeRuntime.element.hidden, false, 'Simplified Chinese should show the quote');
   localeRuntime.destroy();
+
+  // Mounting waits for the cached quote so the page reveals with it in place, never for the network.
+  const remote = globalThis.LumnoNewtabRemoteContent;
+  let cacheCallback = null;
+  let storageListener = null;
+  const cachedRuntime = quotes.createRuntime({ documentObj: document, windowObj: dom.window,
+    t: (_key, fallback) => fallback,
+    chromeObj: { storage: { onChanged: { addListener(fn) { storageListener = fn; }, removeListener() {} } } },
+    getSearchRoot: () => document.querySelector('#search'),
+    storageArea: {
+      get(_keys, callback) { callback({ [settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY]: { enabled: true, position: 'top' } }); },
+      set(_value, callback) { callback(); }
+    },
+    localStorageArea: { get(_keys, callback) { cacheCallback = callback; } },
+    client: { getQuote: () => new Promise(() => {}) }
+  });
+  let mounted = false;
+  const mountTask = cachedRuntime.mount().then(() => { mounted = true; });
+  await tick();
+  assert.equal(mounted, false, 'Mount must wait for the cached quote read');
+  cacheCallback({ [remote.QUOTE_CACHE_KEY]: { literature: { quote: { text: '缓存', author: '', source: '', url: '' } } } });
+  await mountTask;
+  assert.equal(cachedRuntime.element.hidden, false, 'The cached quote is painted before mount settles');
+  assert.equal(cachedRuntime.element.nextElementSibling.id, 'search');
+  const parent = cachedRuntime.element.parentNode;
+  const observer = new dom.window.MutationObserver(() => {});
+  observer.observe(parent, { childList: true });
+  storageListener({ [settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY]: {
+    newValue: { enabled: true, position: 'top', fontSize: 18 } } }, 'sync');
+  assert.equal(cachedRuntime.element.style.getPropertyValue('--x-nt-quote-font-size'), '18px');
+  assert.equal(observer.takeRecords().length, 0, 'Re-rendering in place must not re-insert the quote');
+  observer.disconnect();
+  cachedRuntime.destroy();
   dom.window.close();
   console.log('newtab quote UI tests passed');
 }

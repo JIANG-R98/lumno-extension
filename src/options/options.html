@@ -463,6 +463,26 @@
           <div class="_x_extension_setting_row_2024_unique_ _x_extension_section_header_2026_unique_">
             <p class="_x_extension_section_title_2024_unique_" data-i18n="settings_newtab_section_title">新标签页</p>
           </div>
+          <div class="_x_extension_setting_row_2024_unique_">
+            <div>
+              <p class="_x_extension_setting_title_2024_unique_" data-i18n="settings_newtab_width_title">新标签页内容宽度</p>
+            </div>
+            <div class="_x_extension_recent_select_group_2024_unique_">
+              <div id="_x_extension_newtab_width_tabs_wrap_2026_unique_" class="_x_extension_theme_picker_2024_unique_ _x_extension_inline_tabs_2024_unique_" role="group" aria-label="newtab width" data-i18n-aria-label="settings_newtab_width_title">
+                <span class="_x_extension_theme_indicator_2024_unique_"></span>
+                <button class="_x_extension_theme_option_2024_unique_" data-newtab-width="standard" data-active="false" aria-pressed="false" type="button">
+                  <span data-i18n="newtab_width_standard">标准</span>
+                </button>
+                <button class="_x_extension_theme_option_2024_unique_" data-newtab-width="wide" data-active="true" aria-pressed="true" type="button">
+                  <span data-i18n="newtab_width_wide">宽屏（推荐）</span>
+                </button>
+                <select id="_x_extension_newtab_width_select_2026_unique_" class="_x_extension_select_2024_unique_" tabindex="-1" aria-hidden="true" style="display:none;">
+                  <option value="standard" data-i18n="newtab_width_standard">标准</option>
+                  <option value="wide" data-i18n="newtab_width_wide" selected>宽屏（推荐）</option>
+                </select>
+              </div>
+            </div>
+          </div>
           <div class="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_">
             <div>
               <p class="_x_extension_setting_title_2024_unique_" data-i18n="settings_newtab_wordmark_title">搜索框上方内容</p>
@@ -549,24 +569,6 @@
             </div>
             <div id="_x_extension_newtab_shortcut_gap_control_2026_unique_"></div>
           </div>
-          <div class="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_">
-            <div>
-              <p class="_x_extension_setting_title_2024_unique_" data-i18n="settings_newtab_feedback_button_visible_title">展示反馈按钮</p>
-            </div>
-            <label class="_x_extension_switch_2024_unique_" for="_x_extension_newtab_feedback_button_visible_toggle_2026_unique_">
-              <input id="_x_extension_newtab_feedback_button_visible_toggle_2026_unique_" type="checkbox" checked aria-label="展示反馈按钮" data-i18n-aria-label="settings_newtab_feedback_button_visible_title">
-              <span class="_x_extension_switch_slider_2024_unique_" aria-hidden="true"></span>
-            </label>
-          </div>
-          <div class="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_">
-            <div>
-              <p class="_x_extension_setting_title_2024_unique_" data-i18n="settings_newtab_appearance_button_visible_title">展示外观按钮</p>
-            </div>
-            <label class="_x_extension_switch_2024_unique_" for="_x_extension_newtab_appearance_button_visible_toggle_2026_unique_">
-              <input id="_x_extension_newtab_appearance_button_visible_toggle_2026_unique_" type="checkbox" checked aria-label="展示外观按钮" data-i18n-aria-label="settings_newtab_appearance_button_visible_title">
-              <span class="_x_extension_switch_slider_2024_unique_" aria-hidden="true"></span>
-            </label>
-          </div>
           <div id="_x_extension_bookmark_rows_setting_row_2026_unique_" class="_x_extension_setting_row_2024_unique_">
             <div>
               <p class="_x_extension_setting_title_2024_unique_ _x_extension_setting_title_with_icon_2024_unique_">
@@ -576,7 +578,7 @@
             </div>
             <div id="_x_extension_bookmark_rows_control_2026_unique_"></div>
           </div>
-          <div id="_x_extension_bookmark_columns_setting_row_2026_unique_" class="_x_extension_setting_row_2024_unique_">
+          <div id="_x_extension_bookmark_columns_setting_row_2026_unique_" class="_x_extension_setting_row_2024_unique_ _x_extension_setting_subrow_2026_unique_">
             <div>
               <p class="_x_extension_setting_title_2024_unique_ _x_extension_setting_title_with_icon_2024_unique_">
                 <span data-i18n="settings_bookmark_columns_title">书签每行数量</span>
@@ -585,7 +587,7 @@
             </div>
             <div id="_x_extension_bookmark_columns_control_2026_unique_"></div>
           </div>
-          <div class="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_">
+          <div id="_x_extension_bookmark_folder_icons_visible_row_2026_unique_" class="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_ _x_extension_setting_subrow_2026_unique_">
             <div>
               <p class="_x_extension_setting_title_2024_unique_" data-i18n="settings_bookmark_folder_icons_visible_title">展示书签文件夹内图标</p>
             </div>
@@ -615,25 +617,28 @@
               </div>
             </div>
           </div>
-          <div class="_x_extension_setting_row_2024_unique_">
+          <div class="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_ _x_extension_setting_group_row_2026_unique_">
             <div>
-              <p class="_x_extension_setting_title_2024_unique_" data-i18n="settings_newtab_width_title">新标签页内容宽度</p>
+              <p class="_x_extension_setting_title_2024_unique_" data-i18n="settings_newtab_page_buttons_title">页面按钮</p>
             </div>
-            <div class="_x_extension_recent_select_group_2024_unique_">
-              <div id="_x_extension_newtab_width_tabs_wrap_2026_unique_" class="_x_extension_theme_picker_2024_unique_ _x_extension_inline_tabs_2024_unique_" role="group" aria-label="newtab width" data-i18n-aria-label="settings_newtab_width_title">
-                <span class="_x_extension_theme_indicator_2024_unique_"></span>
-                <button class="_x_extension_theme_option_2024_unique_" data-newtab-width="standard" data-active="false" aria-pressed="false" type="button">
-                  <span data-i18n="newtab_width_standard">标准</span>
-                </button>
-                <button class="_x_extension_theme_option_2024_unique_" data-newtab-width="wide" data-active="true" aria-pressed="true" type="button">
-                  <span data-i18n="newtab_width_wide">宽屏（推荐）</span>
-                </button>
-                <select id="_x_extension_newtab_width_select_2026_unique_" class="_x_extension_select_2024_unique_" tabindex="-1" aria-hidden="true" style="display:none;">
-                  <option value="standard" data-i18n="newtab_width_standard">标准</option>
-                  <option value="wide" data-i18n="newtab_width_wide" selected>宽屏（推荐）</option>
-                </select>
-              </div>
+          </div>
+          <div class="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_ _x_extension_setting_subrow_2026_unique_">
+            <div>
+              <p class="_x_extension_setting_title_2024_unique_" data-i18n="settings_newtab_feedback_button_visible_title">展示反馈按钮</p>
             </div>
+            <label class="_x_extension_switch_2024_unique_" for="_x_extension_newtab_feedback_button_visible_toggle_2026_unique_">
+              <input id="_x_extension_newtab_feedback_button_visible_toggle_2026_unique_" type="checkbox" checked aria-label="展示反馈按钮" data-i18n-aria-label="settings_newtab_feedback_button_visible_title">
+              <span class="_x_extension_switch_slider_2024_unique_" aria-hidden="true"></span>
+            </label>
+          </div>
+          <div class="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_ _x_extension_setting_subrow_2026_unique_">
+            <div>
+              <p class="_x_extension_setting_title_2024_unique_" data-i18n="settings_newtab_appearance_button_visible_title">展示外观按钮</p>
+            </div>
+            <label class="_x_extension_switch_2024_unique_" for="_x_extension_newtab_appearance_button_visible_toggle_2026_unique_">
+              <input id="_x_extension_newtab_appearance_button_visible_toggle_2026_unique_" type="checkbox" checked aria-label="展示外观按钮" data-i18n-aria-label="settings_newtab_appearance_button_visible_title">
+              <span class="_x_extension_switch_slider_2024_unique_" aria-hidden="true"></span>
+            </label>
           </div>
         </div>
         <div class="_x_extension_settings_content_2024_unique_" data-content="shortcuts" data-active="false">

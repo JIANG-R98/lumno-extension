@@ -163,7 +163,7 @@ const BASE_STYLES: Record<keyof typeof CLASSES, StyleOverrides> = {
     all: 'unset',
     'align-items': 'center',
     background: 'transparent',
-    'border-radius': 'var(--x-ext-input-right-icon-radius, 16px)',
+    'border-radius': 'var(--x-ext-input-right-icon-radius, 10px)',
     'box-sizing': 'border-box',
     color: 'var(--x-ext-input-icon, #9CA3AF)',
     cursor: 'pointer',

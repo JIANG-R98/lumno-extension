@@ -413,6 +413,22 @@ async function run() {
   const deletion = contract.mergeStates(base, empty({ [language]: 'en' }), base);
   assert.strictEqual(Object.hasOwn(deletion.state.data, theme), false);
   assert.throws(() => contract.validateState({ ...empty(), version: 100 }), /invalid-state/);
+  const quote = settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY;
+  const quoteBase = empty({ [quote]: { enabled: true, position: 'search', category: 'literature', fontSize: 16 } });
+  const quoteLocal = empty({ [quote]: { ...quoteBase.data[quote], fontSize: 20 } });
+  const quoteRemote = empty({ [quote]: { ...quoteBase.data[quote], position: 'bottom' } });
+  const quoteMerged = contract.mergeStates(quoteBase, quoteLocal, quoteRemote);
+  assert.deepStrictEqual(quoteMerged.conflicts, [], 'different fields of a field-merged record do not conflict');
+  assert.deepStrictEqual(quoteMerged.state.data[quote], { enabled: true, position: 'bottom', category: 'literature', fontSize: 20 });
+  const quoteBoth = empty({ [quote]: { ...quoteRemote.data[quote], fontSize: 18, category: 'poetry' } });
+  assert.deepStrictEqual(contract.mergeStates(quoteBase, quoteLocal, quoteBoth).conflicts, [quote], 'a record reports one conflict');
+  assert.deepStrictEqual(contract.mergeStates(quoteBase, quoteLocal, quoteBoth, 'local').state.data[quote],
+    { enabled: true, position: 'bottom', category: 'poetry', fontSize: 20 }, 'a chosen side wins only its conflicting fields');
+  assert.deepStrictEqual(contract.describeConflict(quoteBase, quoteLocal, quoteBoth, [quote]), [
+    { key: quote, field: 'fontSize', domain: 'preference', local: { kind: 'number', value: 20 }, remote: { kind: 'number', value: 18 } }
+  ], 'field conflicts list only the fields both sides changed apart');
+  assert.deepStrictEqual(contract.mergeStates(quoteBase, empty(), quoteRemote).conflicts, [quote], 'deleting a record is a whole-value change');
+  assert.deepStrictEqual(contract.mergeStates(empty(), quoteLocal, quoteBoth).conflicts, [quote], 'a missing base record counts as empty');
   const malicious = JSON.parse(JSON.stringify({ ...empty(), data: { password: 'never-import-this', [theme]: 'dark' } }));
   assert.deepStrictEqual(contract.validateState(malicious).data, { [theme]: 'dark' });
 

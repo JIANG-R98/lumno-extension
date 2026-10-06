@@ -21,6 +21,42 @@
   margin: 8px 0 0;
 }
 .x-nt-quote[data-position="input"] + .x-nt-shortcuts-section { margin-top: 2px; }
+/* Between the wordmark/time and the search box. It reads as the wordmark's
+   caption, so it eats into the wordmark's 28px bottom gap and keeps some air
+   above the input. */
+.x-nt-quote[data-position="top"] {
+  z-index: 3;
+  margin: -14px 0 16px;
+}
+/* The quote joins the page entry in on-page order: it trails the search box
+   above the shortcuts, the shortcut cascade below them, and lands with the
+   corner controls at the bottom. A quote that only arrives after the entry
+   (first fetch, category change) fades in on its own without the stagger. */
+body:not([data-nt-ready="1"]) .x-nt-quote {
+  visibility: hidden;
+}
+body[data-nt-ready="1"][data-nt-enter] .x-nt-quote {
+  animation: _x_nt_quote_entry_2026_unique_ var(--lumno-duration-2xl) cubic-bezier(0.16, 1, 0.3, 1)
+    var(--x-nt-quote-enter-delay, 0ms) both;
+}
+body[data-nt-enter="run"] .x-nt-quote[data-position="top"] { --x-nt-quote-enter-delay: 40ms; }
+body[data-nt-enter="run"] .x-nt-quote[data-position="input"] { --x-nt-quote-enter-delay: 60ms; }
+body[data-nt-enter="run"] .x-nt-quote[data-position="search"] { --x-nt-quote-enter-delay: 180ms; }
+body[data-nt-enter="run"] .x-nt-quote[data-position="bottom"] { --x-nt-quote-enter-delay: 200ms; }
+@keyframes _x_nt_quote_entry_2026_unique_ {
+  0% {
+    opacity: 0;
+    filter: blur(3px);
+  }
+  100% {
+    opacity: 1;
+    filter: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body[data-nt-enter] .x-nt-quote { animation: none; }
+}
+html[data-lumno-motion-effects="off"] body[data-nt-enter] .x-nt-quote { animation: none; }
 .x-nt-quote-text {
   display: block;
   width: 100%;
@@ -30,6 +66,7 @@
   border-radius: var(--lumno-radius-md);
   background: transparent;
   color: inherit;
+  text-decoration: none;
   font: inherit;
   font-family: "LXGW WenKai", "Songti SC", "Songti TC", "STSong", "SimSun", "NSimSun",
     "Noto Serif CJK SC", "Source Han Serif SC", Georgia, "Times New Roman", serif;
@@ -44,36 +81,28 @@
   text-wrap: balance;
 }
 .x-nt-quote-text:hover { opacity: 1; }
+/* On a wallpaper the quote shares the time/wordmark ink: a solid sampled tint
+   with a contrast floor and a halo that follows that ink's polarity. Fading it
+   on top would undo the contrast floor, so hover lifts a plate instead. The
+   shared hover tint is sized for small controls; across a full-width line it
+   reads as a heavy band, so the plate hugs the text at half strength. */
+body[data-wallpaper-active="true"] .x-nt-quote-text {
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+  color: var(--x-nt-wallpaper-wordmark-ink, var(--x-nt-wallpaper-adaptive-ink));
+  opacity: 1;
+  text-shadow: 0 1px 2px var(--x-nt-wallpaper-wordmark-shadow, transparent),
+    0 0 10px var(--x-nt-wallpaper-wordmark-halo, transparent);
+  transition: background-color var(--lumno-duration-xs) ease;
+}
+body[data-wallpaper-active="true"] .x-nt-quote-text:hover {
+  background: color-mix(in srgb, var(--x-nt-wallpaper-adaptive-hover-bg) 50%, transparent);
+}
 .x-nt-quote-text:focus-visible {
   outline: 2px solid var(--x-nt-link);
   outline-offset: 2px;
 }
-.x-nt-quote-attribution {
-  position: absolute;
-  top: calc(100% + 5px);
-  left: 50%;
-  transform: translateX(-50%);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  width: max-content;
-  max-width: calc(100vw - 48px);
-  box-sizing: border-box;
-  padding: 8px 12px;
-  border: 1px solid var(--x-nt-panel-border);
-  border-radius: var(--lumno-radius-lg);
-  background: var(--x-nt-panel-bg);
-  color: var(--x-nt-text);
-  backdrop-filter: blur(16px);
-  box-shadow: var(--x-nt-panel-shadow);
-  font-size: var(--lumno-font-size-xs);
-  line-height: 18px;
-}
-.x-nt-quote-attribution a { color: inherit; white-space: nowrap; }
-.x-nt-quote:not([data-dismissed="true"]):hover .x-nt-quote-attribution,
-.x-nt-quote:not([data-dismissed="true"]):focus-within .x-nt-quote-attribution,
-.x-nt-quote[data-expanded="true"] .x-nt-quote-attribution { display: flex; }
 .x-nt-quote[data-position="bottom"] {
   position: fixed;
   left: 50%;
@@ -81,10 +110,6 @@
   transform: translateX(-50%);
   width: min(920px, calc(100% - 136px));
   margin: 0;
-}
-.x-nt-quote[data-position="bottom"] .x-nt-quote-attribution {
-  top: auto;
-  bottom: calc(100% + 5px);
 }
 body[data-quote-position="bottom"] #_x_extension_newtab_bottom_dock_scroller_2024_unique_ {
   padding-bottom: max(var(--x-nt-bottom-dock-bottom-padding, 60px), calc(var(--x-nt-quote-bottom-height, 26px) + 24px + var(--x-nt-bottom-safe-inset, 0px)));
@@ -163,12 +188,10 @@ body[data-quote-position="bottom"].x-nt-mobile-flow {
 }
 @media (max-width: 600px) {
   .x-nt-quote[data-position="bottom"] { width: calc(100% - 112px); }
-  .x-nt-quote-attribution { flex-wrap: wrap; gap: 4px 10px; }
 }
 
 @supports (corner-shape: superellipse(1.25)) {
-  .x-nt-quote-text,
-  .x-nt-quote-attribution {
+  .x-nt-quote-text {
     corner-shape: superellipse(1.25);
   }
 }

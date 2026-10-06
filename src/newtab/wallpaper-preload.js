@@ -6,6 +6,7 @@
   const FAVICON_PRELOAD_STORAGE_KEY = '_x_extension_newtab_favicon_preload_2026_unique_';
   const providerStorageRuntime = globalThis.LumnoSettings.createProviderStorageRuntime(window.chrome);
   const WALLPAPER_PATH_PATTERN = /^(?:assets\/wallpapers|output\/imagegen)\/[-.\w]+\.webp$/;
+  const BING_WALLPAPER_URL_PATTERN = /^https:\/\/www\.bing\.com\/th\?id=OHR\.[-\w]{1,160}_1920x1080\.jpg&pid=hp$/;
   const FAVICON_OPTIONS = {
     default: {
       file: 'assets/images/lumno.png',
@@ -91,6 +92,7 @@
       const mode = resolveCachedWallpaperMode(data);
       const entry = data.wallpapers[mode];
       const path = entry && typeof entry.path === 'string' ? entry.path.trim() : '';
+      const remoteUrl = entry && typeof entry.url === 'string' ? entry.url.trim() : '';
       const overlayStops = normalizeCachedOverlayStops(data.overlayStops);
       if (!overlayStops) {
         return null;
@@ -98,6 +100,7 @@
       return {
         mode,
         path: WALLPAPER_PATH_PATTERN.test(path) ? path : '',
+        url: BING_WALLPAPER_URL_PATTERN.test(remoteUrl) ? remoteUrl : '',
         overlayStops,
         effectPrefs: getEffectPrefsForMode(data.wallpaperEffects, mode)
       };
@@ -271,16 +274,16 @@
       });
     });
   }
-  if (!cachedWallpaper.path) {
+  if (!cachedWallpaper.path && !cachedWallpaper.url) {
     return;
   }
-  const url = getRuntimeUrl(cachedWallpaper.path);
+  const url = cachedWallpaper.url || getRuntimeUrl(cachedWallpaper.path);
   const preloadState = {
     effectPrefsReady: readStoredEffectPrefs(cachedWallpaper.mode, cachedWallpaper.effectPrefs),
     imageUrl: url,
     mode: cachedWallpaper.mode,
     wallpaper: {
-      id: cachedWallpaper.path,
+      id: cachedWallpaper.path || cachedWallpaper.url,
       path: cachedWallpaper.path
     }
   };

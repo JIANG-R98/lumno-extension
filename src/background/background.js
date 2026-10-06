@@ -9910,11 +9910,25 @@ async function getSearchSuggestions(query, options) {
       return searchUtils.buildSearchDedupEntryKey(item);
     }
 
-    function upsertSuggestion(item, sourceType, extras) {
-      if (!item || !item.url) {
+    function upsertSuggestion(rawItem, sourceType, extras) {
+      if (!rawItem || !rawItem.url) {
         return null;
       }
-      const itemKey = getSuggestionKey(item);
+      const itemKey = getSuggestionKey(rawItem);
+      const existingIndex = suggestionIndexByKey.get(itemKey);
+      const existing = typeof existingIndex === 'number' ? suggestions[existingIndex] : null;
+      // Bookmarks and top sites carry no visit data. When the same page was
+      // already seen in history, keep its behavior signals so adding a
+      // bookmark never makes a frequently used page rank lower.
+      const item = existing
+        ? {
+          ...rawItem,
+          lastVisitTime: Math.max(Number(rawItem.lastVisitTime) || 0, Number(existing.lastVisitTime) || 0),
+          visitCount: Math.max(Number(rawItem.visitCount) || 0, Number(existing.visitCount) || 0),
+          typedCount: Math.max(Number(rawItem.typedCount) || 0, Number(existing.typedCount) || 0),
+          isTopSite: Boolean(rawItem.isTopSite || existing.isTopSite)
+        }
+        : rawItem;
       const baseScore = calculateSearchRelevanceScore(item, sourceType);
       if (baseScore <= 0 && sourceType !== 'openTab') {
         return null;
@@ -9929,13 +9943,16 @@ async function getSearchSuggestions(query, options) {
       const rankedScore = baseScore + scoreAdjustment + selectionBoost;
       // Open tabs have already passed query matching. Ranking penalties must
       // not make a matching live page disappear from search.
-      const score = sourceType === 'openTab' ? Math.max(1, rankedScore) : rankedScore;
+      const sourceScore = sourceType === 'openTab' ? Math.max(1, rankedScore) : rankedScore;
+      // The page keeps its strongest evidence: a bookmark title that matches
+      // the query less well must not demote a page history already ranked.
+      const score = existing ? Math.max(sourceScore, Number(existing.score) || 0) : sourceScore;
       const suggestion = createSearchSuggestion(item, sourceType, score, {
         favicon: buildSearchSuggestionFavicon(item.url),
         reasons: buildSuggestionReasons(item, sourceType),
+        ...(item.isTopSite ? { isTopSite: true } : {}),
         ...normalizedExtras
       });
-      const existingIndex = suggestionIndexByKey.get(itemKey);
       if (typeof existingIndex === 'number') {
         suggestions[existingIndex] = suggestion;
       } else {

@@ -25,30 +25,33 @@
     const element = document.createElement('div');
     element.className = 'x-nt-quote';
     element.hidden = true;
-    const button = document.createElement('button');
-    button.type = 'button';
+    // The whole line opens the quote's Hitokoto page; its origin lives in the shared tooltip.
+    const button = document.createElement('a');
     button.className = 'x-nt-quote-text';
-    button.setAttribute('aria-expanded', 'false');
-    button.setAttribute('aria-controls', 'lumno-quote-attribution');
-    const attribution = document.createElement('div');
-    attribution.className = 'x-nt-quote-attribution';
-    attribution.id = 'lumno-quote-attribution';
-    const credit = document.createElement('span');
-    const link = document.createElement('a');
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    attribution.append(credit, link);
-    element.append(button, attribution);
+    button.target = '_blank';
+    button.rel = 'noopener noreferrer';
+    // The link spans the whole row; the inline line box marks where the glyphs
+    // actually sit, so wallpaper tone sampling stays local to the text.
+    const line = document.createElement('span');
+    line.className = 'x-nt-quote-line';
+    button.appendChild(line);
+    element.append(button);
+    // Resolved on use: the page creates its tooltip controllers after the quote runtime.
+    const getTooltip = () => (config.getTooltipController ? config.getTooltipController() : null);
+    let origin = '';
     let prefs = settings.normalizeNewtabQuotePrefs(null);
     let quote = null;
     let revision = 0;
     let refs;
+    let view = null;
     let settingsExpanded = true;
     let mounted = false;
     let dayTimer;
     let unsubscribe;
     let disposed = false;
     let draftFontSize = null;
+    // Settles once the cached quote (if any) is painted; the network refresh is never awaited.
+    let cachedQuoteRead = Promise.resolve();
     let localeSupported = isLocaleSupported();
     const isActive = () => prefs.enabled && localeSupported;
     const area = config.storageArea;
@@ -108,8 +111,11 @@
       syncFontSizeControls(true);
     }
 
+    // Listed in on-page order, top to bottom.
+    const POSITIONS = ['top', 'input', 'search', 'bottom'];
     function labels() {
       return {
+        top: t('newtab_quote_top', 'Above search box'),
         input: t('newtab_quote_input', 'Below search box'),
         search: t('newtab_quote_search', 'Below shortcuts'),
         bottom: t('newtab_quote_bottom', 'Page bottom'),
@@ -136,21 +142,26 @@
         );
       }
       if (refs.quoteInfoButton) refs.quoteInfoButton.setAttribute('aria-label', t('newtab_quote_provider', 'Powered by Hitokoto'));
-      refs.quotePosition.setAttribute('aria-label', t('newtab_quote_position', 'Quote position'));
       refs.quoteCategory.setAttribute('aria-label', t('newtab_quote_category', 'Quote category'));
       if (refs.quotePositionLabel) refs.quotePositionLabel.textContent = t('newtab_quote_position', 'Quote position');
       if (refs.quoteCategoryLabel) refs.quoteCategoryLabel.textContent = t('newtab_quote_category', 'Quote category');
       syncFontSizeControls(false);
-      [refs.quotePosition, refs.quoteCategory].forEach((group) => {
-        group.querySelectorAll('button').forEach((item) => {
-          const value = item.getAttribute('data-quote-position') || item.getAttribute('data-quote-category');
-          item.textContent = text[value];
-          const selected = value === prefs.position || value === prefs.category;
-          item.setAttribute('aria-pressed', selected ? 'true' : 'false');
-          item.setAttribute('data-active', selected ? 'true' : 'false');
-        });
-        syncTabIndicator(group);
+      refs.quoteCategory.querySelectorAll('[data-quote-category]').forEach((item) => {
+        const value = item.getAttribute('data-quote-category');
+        item.textContent = text[value];
+        const selected = value === prefs.category;
+        item.setAttribute('aria-pressed', selected ? 'true' : 'false');
+        item.setAttribute('data-active', selected ? 'true' : 'false');
       });
+      syncTabIndicator(refs.quoteCategory);
+      if (view && view.renderQuotePositionSelect) {
+        view.renderQuotePositionSelect({
+          ariaLabel: t('newtab_quote_position', 'Quote position'),
+          options: POSITIONS.map((value) => ({ value, label: text[value] })),
+          value: prefs.position,
+          onChange: (position) => persist({ position })
+        });
+      }
     }
     // Tabs hug their labels, so the indicator follows the active button's measured box.
     function syncTabIndicator(group) {
@@ -162,14 +173,12 @@
       : null;
     function updateText() {
       element.setAttribute('aria-label', t('newtab_quote_title', 'Daily quote'));
-      link.textContent = t('newtab_quote_source', 'View on Hitokoto');
       if (quote) {
-        button.textContent = quote.text;
-        const origin = [quote.author, quote.source ? `《${quote.source}》` : ''].filter(Boolean).join(' · ');
-        credit.textContent = origin;
-        button.title = origin;
+        line.textContent = quote.text;
+        origin = [quote.author, quote.source ? `《${quote.source}》` : ''].filter(Boolean).join(' · ');
+        if (!config.getTooltipController) button.title = origin;
         button.setAttribute('aria-label', [quote.text, origin].filter(Boolean).join(' — '));
-        link.href = /^https:\/\/hitokoto\.cn\//.test(quote.url || '') ? quote.url : 'https://hitokoto.cn/';
+        button.href = /^https:\/\/hitokoto\.cn\//.test(quote.url || '') ? quote.url : 'https://hitokoto.cn/';
       }
       updateSettings();
     }
@@ -179,14 +188,21 @@
       document.body.dataset.quotePosition = isActive() ? prefs.position : 'off';
       element.style.setProperty('--x-nt-quote-font-size', `${draftFontSize === null ? prefs.fontSize : draftFontSize}px`);
       element.hidden = !isActive() || !quote;
-      if (prefs.position === 'input') {
+      // Re-inserting a node restarts its entry animation, so only move it when its slot changed.
+      const place = (parent, before) => {
+        if (element.parentNode !== parent || element.nextSibling !== before) parent.insertBefore(element, before);
+      };
+      if (prefs.position === 'top') {
         const anchor = config.getSearchRoot();
-        anchor.parentNode.insertBefore(element, anchor.nextSibling);
+        place(anchor.parentNode, anchor);
+      } else if (prefs.position === 'input') {
+        const anchor = config.getSearchRoot();
+        place(anchor.parentNode, anchor.nextSibling);
       } else if (prefs.position === 'search') {
         const shortcuts = config.getShortcutSection && config.getShortcutSection();
         const anchor = shortcuts && shortcuts.parentNode ? shortcuts : config.getSearchRoot();
-        anchor.parentNode.insertBefore(element, anchor.nextSibling);
-      } else document.body.appendChild(element);
+        place(anchor.parentNode, anchor.nextSibling);
+      } else if (element.parentNode !== document.body) document.body.appendChild(element);
       updateText();
       syncBottomHeight();
       if (config.onLayout) config.onLayout();
@@ -197,7 +213,7 @@
       const category = prefs.category;
       // Render the last successful response before making a network request.
       if (config.localStorageArea) {
-        await new Promise((resolve) => config.localStorageArea.get(
+        await (cachedQuoteRead = new Promise((resolve) => config.localStorageArea.get(
           [root.LumnoNewtabRemoteContent.QUOTE_CACHE_KEY], (values) => {
             const cache = values && values[root.LumnoNewtabRemoteContent.QUOTE_CACHE_KEY];
             if (current === revision && cache && cache[category] && cache[category].quote) {
@@ -206,7 +222,7 @@
             }
             resolve();
           }
-        ));
+        )));
       }
       const next = await client.getQuote(category);
       if (current !== revision || disposed || !isActive()) return;
@@ -269,32 +285,27 @@
     const onVisibility = () => {
       if (document.visibilityState === 'visible' && isActive()) refresh().catch(() => {});
     };
-    button.addEventListener('click', () => {
-      delete element.dataset.dismissed;
-      const expanded = button.getAttribute('aria-expanded') !== 'true';
-      button.setAttribute('aria-expanded', String(expanded));
-      element.dataset.expanded = String(expanded);
-    });
-    element.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') {
-        element.dataset.expanded = 'false';
-        button.setAttribute('aria-expanded', 'false');
-        button.focus();
-        element.dataset.dismissed = 'true';
-      }
-    });
-    element.addEventListener('pointerenter', () => { delete element.dataset.dismissed; });
-    element.addEventListener('focusin', () => { delete element.dataset.dismissed; });
-    const onPointerDown = (event) => {
-      if (!element.contains(event.target)) {
-        element.dataset.expanded = 'false';
-        button.setAttribute('aria-expanded', 'false');
+    // Open toward the free side of the page: away from the search box, and inward at the bottom edge.
+    const showOrigin = () => {
+      const tooltip = getTooltip();
+      if (tooltip && origin) {
+        tooltip.show(button, origin, { placement: prefs.position === 'top' || prefs.position === 'bottom' ? 'top' : 'bottom' });
       }
     };
-    document.addEventListener('pointerdown', onPointerDown);
-    function bindSettings(nextRefs) {
+    const hideOrigin = () => {
+      const tooltip = getTooltip();
+      if (tooltip) tooltip.hide();
+    };
+    button.addEventListener('mouseenter', showOrigin);
+    button.addEventListener('focus', showOrigin);
+    button.addEventListener('mouseleave', hideOrigin);
+    button.addEventListener('blur', hideOrigin);
+    button.addEventListener('click', hideOrigin);
+    // The position select is a React island owned by the panel view, so the view renders it.
+    function bindSettings(nextRefs, nextView) {
       refs = nextRefs;
-      if (!refs.quotePosition || !refs.quoteCategory) return;
+      view = nextView || null;
+      if (!refs.quoteCategory) return;
       refs.quoteEnabledToggle.addEventListener('change', () => persist({ enabled: refs.quoteEnabledToggle.checked }));
       if (refs.quoteAccordionTrigger) {
         refs.quoteAccordionTrigger.addEventListener('click', () => {
@@ -303,15 +314,11 @@
           updateSettings();
         });
       }
-      refs.quotePosition.querySelectorAll('[data-quote-position]').forEach((item) => {
-        item.addEventListener('click', () => persist({ position: item.dataset.quotePosition }));
-      });
       refs.quoteCategory.querySelectorAll('[data-quote-category]').forEach((item) => {
         item.addEventListener('click', () => persist({ category: item.dataset.quoteCategory }));
       });
       if (tabResizeObserver) {
         // Re-measure once the collapsed panel lays out, and when translated labels change width.
-        tabResizeObserver.observe(refs.quotePosition);
         tabResizeObserver.observe(refs.quoteCategory);
       }
       if (refs.quoteFontSizeSlider) {
@@ -342,15 +349,17 @@
         onChanged.addListener(handleStorageChange);
         unsubscribe = () => onChanged.removeListener(handleStorageChange);
       }
+      // Resolves after the saved preference and cached quote are rendered, so the page can
+      // reveal with the quote already in its slot instead of shifting the layout afterwards.
       return new Promise((resolve) => {
         if (!area) return resolve();
         area.get([key], (values) => {
           if (!disposed) apply(values && values[key]);
-          resolve();
+          resolve(cachedQuoteRead);
         });
       });
     }
-    return Object.freeze({ element, mount, bindSettings, updateLanguage,
+    return Object.freeze({ element, textElement: line, mount, bindSettings, updateLanguage,
       destroy() {
         disposed = true;
         revision += 1;
@@ -359,7 +368,7 @@
         if (tabResizeObserver) tabResizeObserver.disconnect();
         if (unsubscribe) unsubscribe();
         document.removeEventListener('visibilitychange', onVisibility);
-        document.removeEventListener('pointerdown', onPointerDown);
+        hideOrigin();
         element.remove();
       } });
   }

@@ -2,7 +2,7 @@
    When changing shared overlay styling, verify src/onboarding/onboarding.html?slide=1. */
 :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) {
   --x-ov-panel-border-width: 1px;
-  --x-ov-content-radius: calc(var(--x-ov-panel-radius, 24px) - var(--x-ov-panel-border-width));
+  --x-ov-content-radius: calc(var(--x-ov-panel-radius, 26px) - var(--x-ov-panel-border-width));
   --x-ov-results-inset: 12px;
   --x-ov-result-radius: calc(var(--x-ov-content-radius) - var(--x-ov-results-inset));
   --x-ext-search-input-corners:
@@ -27,7 +27,7 @@
   scrollbar-width: none;
   -ms-overflow-style: none;
   background: transparent;
-  border-radius: 0 0 var(--x-ov-content-radius, 23px) var(--x-ov-content-radius, 23px);
+  border-radius: 0 0 var(--x-ov-content-radius, 25px) var(--x-ov-content-radius, 25px);
   padding: var(--x-ov-results-inset, 12px);
   box-sizing: border-box;
   display: block;
@@ -102,7 +102,7 @@
   transform: none;
   width: 30px;
   height: 30px;
-  border-radius: var(--x-ext-input-right-icon-radius, 16px);
+  border-radius: var(--x-ext-input-right-icon-radius, 10px);
   z-index: 2;
   box-sizing: border-box;
   margin: 0;
@@ -285,7 +285,7 @@
   min-height: var(--x-ov-suggestion-row-height, 52px);
   background: var(--x-ov-suggestion-row-bg, transparent);
   border: 1px solid transparent;
-  border-radius: var(--x-ov-result-radius, 11px);
+  border-radius: var(--x-ov-result-radius, 13px);
   cursor: pointer;
   transition: background-color var(--lumno-duration-lg, 0.2s) ease;
   box-sizing: border-box;
@@ -890,7 +890,7 @@
 }
 
 /* Keep this after the component resets above: `all: unset` also resets corner-shape.
-   The capsule visit button and the circular close-other-tabs button keep round ends. */
+   The capsule visit button keeps round ends. */
 @supports (corner-shape: superellipse(1.25)) {
   :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestions-container,
   :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-empty-state,
@@ -900,7 +900,8 @@
   :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-action-tag,
   :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-action-button,
   :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-number-shortcut,
-  :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-utility-button {
+  :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-utility-button,
+  :is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-close-other-tabs {
     corner-shape: superellipse(1.25);
   }
 

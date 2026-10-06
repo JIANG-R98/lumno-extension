@@ -1239,7 +1239,7 @@ function testBottomDockCssDefinesAdaptiveDensityVariables() {
   );
   assert.match(
     newtabHtml,
-    /@media \(max-width:\s*640px\)[\s\S]*?\.x-nt-wallpaper-panel\s*\{[\s\S]*?position:\s*fixed;[\s\S]*?left:\s*max\(12px,\s*env\(safe-area-inset-left\)\);[\s\S]*?right:\s*max\(12px,\s*env\(safe-area-inset-right\)\);[\s\S]*?bottom:\s*calc\(max\(12px,\s*env\(safe-area-inset-bottom\)\) \+ 56px\);[\s\S]*?width:\s*auto;[\s\S]*?max-width:\s*none;[\s\S]*?max-height:\s*min\([\s\S]*?calc\(100dvh - 100px - var\(--x-nt-top-safe-inset\) - var\(--x-nt-bottom-safe-inset\)\),[\s\S]*?calc\(100dvh - 80px - var\(--x-nt-top-occupied-inset\) - var\(--x-nt-bottom-safe-inset\)\)[\s\S]*?\);[\s\S]*?padding:\s*16px;[\s\S]*?border-radius:\s*22px;[\s\S]*?\.x-nt-wallpaper-panel-scroll\s*\{[\s\S]*?scrollbar-gutter:\s*auto;/,
+    /@media \(max-width:\s*640px\)[\s\S]*?\.x-nt-wallpaper-panel\s*\{[\s\S]*?position:\s*fixed;[\s\S]*?left:\s*max\(12px,\s*env\(safe-area-inset-left\)\);[\s\S]*?right:\s*max\(12px,\s*env\(safe-area-inset-right\)\);[\s\S]*?bottom:\s*calc\(max\(12px,\s*env\(safe-area-inset-bottom\)\) \+ 56px\);[\s\S]*?width:\s*auto;[\s\S]*?max-width:\s*none;[\s\S]*?max-height:\s*min\([\s\S]*?calc\(100dvh - 100px - var\(--x-nt-top-safe-inset\) - var\(--x-nt-bottom-safe-inset\)\),[\s\S]*?calc\(100dvh - 80px - var\(--x-nt-top-occupied-inset\) - var\(--x-nt-bottom-safe-inset\)\)[\s\S]*?\);[\s\S]*?padding:\s*16px;[\s\S]*?\.x-nt-wallpaper-panel-scroll\s*\{[\s\S]*?scrollbar-gutter:\s*auto;/,
     'mobile wallpaper panel should be safe-area aware and independently scrollable'
   );
 }

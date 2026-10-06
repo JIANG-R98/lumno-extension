@@ -419,6 +419,73 @@ function getCssRgbChannels(value) {
     'a transparent topbar should keep choosing ink from the actually composited background'
   );
 
+  preferOverlayPolarity = false;
+  body.setAttribute('data-theme', 'light');
+  body.setAttribute('data-wallpaper-effect', 'dither');
+  overlayAlpha = 0;
+  overlayLuminance = 1;
+  currentWallpaper = {
+    id: 'mid-tone-textured-wallpaper',
+    url: 'test://mid-tone-textured-wallpaper'
+  };
+  runtime.refresh();
+  getPendingImage('test://mid-tone-textured-wallpaper').resolve({
+    red: 120,
+    green: 120,
+    blue: 120
+  });
+  await flushAsyncWork();
+
+  assert.strictEqual(target.getAttribute('data-wallpaper-ink'), 'light');
+  const midToneWordmarkInk = getCssRgbChannels(
+    target.style.getPropertyValue('--x-nt-wallpaper-wordmark-ink')
+  );
+  assert.ok(
+    Math.min(...midToneWordmarkInk) > 200,
+    'a mid tone where neither extreme reaches the textured contrast floor should keep the light ink family'
+  );
+  assert.ok(
+    target.style.getPropertyValue('--x-nt-wallpaper-wordmark-shadow').startsWith('rgb(15 23 42 /'),
+    'light wordmark ink should be backed by a dark shadow'
+  );
+  assert.strictEqual(
+    target.style.getPropertyValue('--x-nt-wallpaper-wordmark-halo'),
+    'rgb(15 23 42 / 28%)',
+    'a textured mid tone should get the full-strength halo'
+  );
+  assert.strictEqual(
+    target.style.getPropertyValue('--x-nt-wallpaper-adaptive-shadow'),
+    'rgb(15 23 42 / 42%)',
+    'light ink at the threshold should not get the weakest shadow'
+  );
+
+  body.removeAttribute('data-wallpaper-effect');
+  currentWallpaper = {
+    id: 'calm-bright-wallpaper',
+    url: 'test://calm-bright-wallpaper'
+  };
+  runtime.refresh();
+  getPendingImage('test://calm-bright-wallpaper').resolve({
+    red: 236,
+    green: 238,
+    blue: 240
+  });
+  await flushAsyncWork();
+
+  assert.strictEqual(target.getAttribute('data-wallpaper-ink'), 'dark');
+  const calmWordmarkInk = getCssRgbChannels(
+    target.style.getPropertyValue('--x-nt-wallpaper-wordmark-ink')
+  );
+  assert.ok(Math.max(...calmWordmarkInk) < 160, 'a bright wallpaper should produce dark wordmark ink');
+  const calmHaloAlpha = Number(
+    (target.style.getPropertyValue('--x-nt-wallpaper-wordmark-halo').match(/\/ ([\d.]+)%/) || [])[1]
+  );
+  assert.ok(
+    target.style.getPropertyValue('--x-nt-wallpaper-wordmark-halo').startsWith('rgb(248 250 252 /') &&
+      calmHaloAlpha <= 12,
+    'dark wordmark ink on a calm background should only get a faint light halo'
+  );
+
   console.log('new tab wallpaper adaptive tone transition tests passed');
 })().catch((error) => {
   console.error(error);

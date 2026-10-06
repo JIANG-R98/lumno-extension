@@ -1064,25 +1064,22 @@ html[lang="en"] .onboarding-shell[data-active-slide="intro"] .title-logo-mark {
 }
 
 .onboarding-action-button--primary {
-  --onboarding-action-border-color: #040404;
-  --onboarding-action-bg: linear-gradient(180deg, #404859 0%, #273042 100%);
-  --onboarding-action-color: #ffffff;
-  --onboarding-action-shadow:
-    0 10px 3px rgba(0, 0, 0, 0),
-    0 6px 2px rgba(0, 0, 0, 0.008),
-    0 3px 2px rgba(0, 0, 0, 0.035),
-    0 2px 2px rgba(0, 0, 0, 0.065),
-    0 0 1px rgba(0, 0, 0, 0.075);
-  --onboarding-action-before-shadow: inset 0 1px 1.6px rgba(255, 255, 255, 0.34);
+  --onboarding-action-border-color: var(--lumno-color-primary-border);
+  --onboarding-action-bg: var(--lumno-color-primary);
+  --onboarding-action-color: var(--lumno-color-on-primary);
+  --onboarding-action-shadow: var(--lumno-shadow-primary);
+  --onboarding-action-before-shadow: var(--lumno-shadow-primary-sheen);
   --onboarding-action-focus-outline: none;
   --onboarding-action-focus-outline-offset: 0;
-  --onboarding-action-hover-bg: linear-gradient(180deg, #4a5467 0%, #2f3a4f 100%);
-  --onboarding-action-hover-shadow:
-    0 12px 4px rgba(0, 0, 0, 0),
-    0 7px 3px rgba(0, 0, 0, 0.015),
-    0 4px 3px rgba(0, 0, 0, 0.045),
-    0 2px 2px rgba(0, 0, 0, 0.075),
-    0 0 1px rgba(0, 0, 0, 0.09);
+  --onboarding-action-hover-bg: var(--lumno-color-primary-hover);
+  --onboarding-action-hover-shadow: var(--lumno-shadow-primary-hover);
+}
+
+/* Pressed: the face sinks, so the drop flattens and the sheen turns into an inner shadow. */
+.onboarding-action-button--primary:active {
+  --onboarding-action-hover-bg: var(--lumno-color-primary);
+  --onboarding-action-hover-shadow: var(--lumno-shadow-primary-pressed);
+  --onboarding-action-before-shadow: var(--lumno-shadow-primary-sheen-pressed);
 }
 
 .onboarding-action-button--secondary {
@@ -1114,12 +1111,6 @@ html[lang="en"] .onboarding-shell[data-active-slide="intro"] .title-logo-mark {
 }
 
 @media (prefers-color-scheme: dark) {
-  .onboarding-action-button--primary {
-    --onboarding-action-bg: linear-gradient(180deg, #4a566c 0%, #334157 100%);
-    --onboarding-action-color: #f8fafc;
-    --onboarding-action-hover-bg: linear-gradient(180deg, #56647c 0%, #3a4b66 100%);
-  }
-
   .onboarding-action-button--secondary {
     --onboarding-action-border-color: rgba(148, 163, 184, 0.18);
     --onboarding-action-bg: color-mix(in srgb, var(--surface-soft) 86%, #475569 14%);
@@ -1791,7 +1782,7 @@ html[lang="en"] .onboarding-shell[data-active-slide="intro"] .title-logo-mark {
   --x-nt-suggestions-bg: rgba(255, 255, 255, 0.96);
   --x-nt-suggestions-border: rgba(0, 0, 0, 0.08);
   --x-nt-suggestions-shadow: 0 18px 44px rgba(0, 0, 0, 0.1);
-  --x-nt-search-shell-radius: 28px;
+  --x-nt-search-shell-radius: 26px;
   --x-nt-search-shell-border-width: 1px;
   --x-nt-search-shell-padding: 4px;
   --x-nt-search-content-inset: calc(
@@ -1925,7 +1916,7 @@ html[lang="en"] .onboarding-shell[data-active-slide="intro"] .title-logo-mark {
   display: flex;
   flex-direction: column;
   border: var(--x-nt-search-shell-border-width, 1px) solid var(--x-nt-panel-border);
-  border-radius: var(--x-nt-search-shell-radius, 28px);
+  border-radius: var(--x-nt-search-shell-radius, 26px);
   background: var(--x-nt-panel-bg);
   box-shadow: var(--x-nt-panel-shadow);
   backdrop-filter: blur(var(--x-nt-panel-blur, 24px)) saturate(var(--x-nt-panel-saturate, 165%));
@@ -1947,7 +1938,7 @@ html[lang="en"] .onboarding-shell[data-active-slide="intro"] .title-logo-mark {
   display: block;
   box-sizing: border-box;
   overflow: visible;
-  border-radius: var(--x-nt-search-content-radius, 23px);
+  border-radius: var(--x-nt-search-content-radius, 21px);
   background: transparent;
   border: var(--x-nt-search-layer-border-width, 1px) solid transparent;
   box-shadow: none;
@@ -1998,7 +1989,7 @@ html[lang="en"] .onboarding-shell[data-active-slide="intro"] .title-logo-mark {
   height: 354px;
   transform: translateX(-50%);
   display: block;
-  border-radius: var(--x-nt-search-shell-radius, 28px);
+  border-radius: var(--x-nt-search-shell-radius, 26px);
   box-sizing: border-box;
   opacity: 1;
   visibility: visible;
@@ -2037,7 +2028,7 @@ html[lang="en"] .onboarding-shell[data-active-slide="intro"] .title-logo-mark {
     var(--x-nt-search-results-padding-block-start, 8px)
     var(--x-nt-search-results-padding-inline, 8px)
     var(--x-nt-search-results-padding-block-end, 12px);
-  border-radius: 0 0 var(--x-nt-search-content-radius, 23px) var(--x-nt-search-content-radius, 23px);
+  border-radius: 0 0 var(--x-nt-search-content-radius, 21px) var(--x-nt-search-content-radius, 21px);
   box-sizing: border-box;
   overflow: hidden;
   opacity: 1;
@@ -2063,7 +2054,7 @@ html[lang="en"] .onboarding-shell[data-active-slide="intro"] .title-logo-mark {
   padding: 12px 16px;
   margin: 0 0 var(--x-nt-suggestion-row-gap, 6px);
   border: 1px solid transparent;
-  border-radius: var(--x-nt-search-result-radius, 15px);
+  border-radius: var(--x-nt-search-result-radius, 13px);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2121,13 +2112,12 @@ html[lang="en"] .onboarding-shell[data-active-slide="intro"] .title-logo-mark {
   z-index: 2;
 }
 
-/* Mirrors New Tab: the capsule search shell and its layer keep round ends. */
+/* Mirrors New Tab: the search shell, its layer and the open panel are continuous. */
 @supports (corner-shape: superellipse(1.25)) {
+  .newtab-preview-viewport #_x_extension_newtab_root_2024_unique_,
+  .newtab-preview-viewport #_x_extension_newtab_search_layer_2024_unique_,
   .newtab-preview-viewport #_x_extension_newtab_suggestions_surface_2026_unique_,
-  .newtab-preview-viewport #_x_extension_newtab_suggestions_outline_2026_unique_ {
-    corner-shape: round round superellipse(1.25) superellipse(1.25);
-  }
-
+  .newtab-preview-viewport #_x_extension_newtab_suggestions_outline_2026_unique_,
   .newtab-preview-viewport #_x_extension_newtab_suggestions_container_2024_unique_,
   .newtab-preview-viewport .x-nt-suggestion-item,
   .newtab-preview-viewport .x-nt-suggestion-number-shortcut {
@@ -2941,7 +2931,7 @@ html[lang="en"] .onboarding-shell[data-active-slide="intro"] .title-logo-mark {
 }
 
 .site-search-demo-surface {
-  --x-ov-panel-radius: 24px;
+  --x-ov-panel-radius: 26px;
   --x-ov-panel-border-width: 1px;
   --x-ov-content-radius: calc(var(--x-ov-panel-radius) - var(--x-ov-panel-border-width));
   --x-ov-results-inset: 12px;
@@ -3006,7 +2996,7 @@ html[lang="en"] .onboarding-shell[data-active-slide="intro"] .title-logo-mark {
   min-width: 0;
   min-height: 0;
   border: var(--x-ov-panel-border-width, 1px) solid var(--x-ov-border, rgba(0, 0, 0, 0.14));
-  border-radius: var(--x-ov-panel-radius, 24px);
+  border-radius: var(--x-ov-panel-radius, 26px);
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -3026,7 +3016,7 @@ html[lang="en"] .onboarding-shell[data-active-slide="intro"] .title-logo-mark {
 
 .site-search-demo-card .x-lumno-search-input__container {
   --x-ext-input-right-icon-inset: 13px;
-  border-radius: var(--x-ov-content-radius, 23px) var(--x-ov-content-radius, 23px) 0 0;
+  border-radius: var(--x-ov-content-radius, 25px) var(--x-ov-content-radius, 25px) 0 0;
   background: transparent;
   box-shadow: none;
   animation: onboarding-overlay-input-shell-expand 980ms cubic-bezier(0.22, 1, 0.36, 1) calc(var(--case-delay, 0ms) + var(--site-search-demo-results-delay)) both;
@@ -3219,7 +3209,7 @@ html[lang="en"] .onboarding-shell[data-active-slide="intro"] .title-logo-mark {
   padding: 12px 16px;
   margin: 0;
   border: 1px solid transparent;
-  border-radius: var(--x-ov-result-radius, 11px);
+  border-radius: var(--x-ov-result-radius, 13px);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3931,7 +3921,7 @@ html[lang="en"] .onboarding-shell[data-active-slide="intro"] .title-logo-mark {
 .lumno-overlay-panel {
   --onboarding-overlay-scale: 0.9;
   --onboarding-overlay-enter-scale: 0.887;
-  --x-ov-panel-radius: 24px;
+  --x-ov-panel-radius: 26px;
   --x-ov-panel-border-width: 1px;
   --x-ov-content-radius: calc(var(--x-ov-panel-radius) - var(--x-ov-panel-border-width));
   --x-ov-results-inset: 12px;
@@ -3972,7 +3962,7 @@ html[lang="en"] .onboarding-shell[data-active-slide="intro"] .title-logo-mark {
   backdrop-filter: blur(var(--x-ov-blur, 24px)) saturate(var(--x-ov-saturate, 165%));
   -webkit-backdrop-filter: blur(var(--x-ov-blur, 24px)) saturate(var(--x-ov-saturate, 165%));
   border: var(--x-ov-panel-border-width, 1px) solid var(--x-ov-border, rgba(0, 0, 0, 0.08));
-  border-radius: var(--x-ov-panel-radius, 24px);
+  border-radius: var(--x-ov-panel-radius, 26px);
   box-shadow: var(--x-ov-shadow, 0 17px 120px 0 rgba(0, 0, 0, 0.05), 0 32px 44.5px 0 rgba(0, 0, 0, 0.10), 0 80px 120px 0 rgba(0, 0, 0, 0.15));
   z-index: 2;
   display: flex;
@@ -3991,7 +3981,7 @@ html[lang="en"] .onboarding-shell[data-active-slide="intro"] .title-logo-mark {
 
 .lumno-overlay-panel .x-lumno-search-input__container {
   --x-ext-input-right-icon-inset: 13px;
-  border-radius: var(--x-ov-content-radius, 23px);
+  border-radius: var(--x-ov-content-radius, 25px);
   animation: onboarding-overlay-input-shell-expand 980ms cubic-bezier(0.22, 1, 0.36, 1) 1900ms both;
 }
 
@@ -4158,10 +4148,10 @@ html[lang="en"] .onboarding-shell[data-active-slide="intro"] .title-logo-mark {
 @keyframes onboarding-overlay-input-shell-expand {
   0%,
   24% {
-    border-radius: var(--x-ov-content-radius, 23px);
+    border-radius: var(--x-ov-content-radius, 25px);
   }
   100% {
-    border-radius: var(--x-ov-content-radius, 23px) var(--x-ov-content-radius, 23px) 0 0;
+    border-radius: var(--x-ov-content-radius, 25px) var(--x-ov-content-radius, 25px) 0 0;
   }
 }
 

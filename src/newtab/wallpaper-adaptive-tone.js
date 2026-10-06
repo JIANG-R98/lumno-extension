@@ -30,6 +30,8 @@
     '--x-nt-wallpaper-adaptive-shadow',
     '--x-nt-wallpaper-adaptive-halo',
     '--x-nt-wallpaper-wordmark-ink',
+    '--x-nt-wallpaper-wordmark-shadow',
+    '--x-nt-wallpaper-wordmark-halo',
     '--x-nt-wallpaper-icon-solid-bg',
     '--x-nt-wallpaper-icon-solid-bg-hover',
     '--x-nt-wallpaper-icon-solid-ink',
@@ -175,7 +177,12 @@
     const darkTarget = { red: 15, green: 23, blue: 42 };
     const preferredTarget = ink === 'dark' ? darkTarget : lightTarget;
     const alternateTarget = ink === 'dark' ? lightTarget : darkTarget;
-    const target = getContrastRatio(preferredTarget, background) >= minimumContrast
+    // Mid-tone backgrounds can sit in a band where neither extreme reaches the
+    // target ratio. Only flip polarity when that actually buys more contrast;
+    // otherwise keep the sampled ink family and let the halo carry the rest.
+    const preferredContrast = getContrastRatio(preferredTarget, background);
+    const target = preferredContrast >= minimumContrast ||
+      preferredContrast >= getContrastRatio(alternateTarget, background)
       ? preferredTarget
       : alternateTarget;
     return mixColorToMinContrast(color, target, background, minimumContrast);
@@ -239,6 +246,16 @@
   function isHighTextureTone(textureContrast, effectType, threshold) {
     return isTexturedWallpaperEffect(effectType) ||
       (Number.isFinite(textureContrast) && textureContrast >= threshold);
+  }
+
+  // How much help ink needs beyond its color: busy textures and mid tones near
+  // the light/dark threshold are where a flat color alone stops reading.
+  function getToneProtection(luminance, textureContrast, effectType) {
+    const textureRisk = isHighTextureTone(textureContrast, effectType, 0.16)
+      ? 1
+      : clampNumber((Number(textureContrast) || 0) / 0.2, 0, 1);
+    const middleLuminanceRisk = 1 - Math.min(1, Math.abs(luminance - 0.52) / 0.48);
+    return Math.max(textureRisk, middleLuminanceRisk * 0.5);
   }
 
   function isWallpaperOverlayCovered(overlayAlpha) {
@@ -473,10 +490,38 @@
       formatSolidRgb(getIconSolidForegroundColor(hoverBackgroundColor)));
   }
 
+  function applyWordmarkToneStyles(element, luminance, wordmarkInk, protection) {
+    // The wordmark ink may leave the sampled ink family to reach its contrast
+    // floor, so its shadow follows the ink it actually rendered.
+    if (getColorLuminance(wordmarkInk) > luminance) {
+      setStyleProperty(element, '--x-nt-wallpaper-wordmark-shadow',
+        formatRgb(15, 23, 42, mixNumber(18, 40, protection)));
+      setStyleProperty(element, '--x-nt-wallpaper-wordmark-halo',
+        formatRgb(15, 23, 42, mixNumber(10, 28, protection)));
+      return;
+    }
+    setStyleProperty(element, '--x-nt-wallpaper-wordmark-shadow',
+      formatRgb(248, 250, 252, mixNumber(0, 36, protection)));
+    setStyleProperty(element, '--x-nt-wallpaper-wordmark-halo',
+      formatRgb(248, 250, 252, mixNumber(0, 46, protection)));
+  }
+
   function applyAdaptiveToneStyles(element, luminance, ink, color, overlayAlpha, overlayLuminance, textureContrast, effectType) {
     if (!element || !Number.isFinite(luminance)) {
       return;
     }
+    const protection = getToneProtection(luminance, textureContrast, effectType);
+    const wordmarkInk = getWordmarkInkColor(
+      color,
+      luminance,
+      ink,
+      overlayAlpha,
+      overlayLuminance,
+      textureContrast,
+      effectType
+    );
+    setStyleProperty(element, '--x-nt-wallpaper-wordmark-ink', formatSolidRgb(wordmarkInk));
+    applyWordmarkToneStyles(element, luminance, wordmarkInk, protection);
     if (ink === 'dark') {
       const amount = clampNumber((luminance - 0.52) / 0.42, 0, 1);
       const red = mixChannel(78, 15, amount);
@@ -487,16 +532,6 @@
       const mutedBlue = mixChannel(139, 59, amount);
       setStyleProperty(element, '--x-nt-wallpaper-adaptive-ink',
         formatRgb(red, green, blue, mixNumber(72, 88, amount)));
-      setStyleProperty(element, '--x-nt-wallpaper-wordmark-ink',
-        formatSolidRgb(getWordmarkInkColor(
-          color,
-          luminance,
-          ink,
-          overlayAlpha,
-          overlayLuminance,
-          textureContrast,
-          effectType
-        )));
       setStyleProperty(element, '--x-nt-wallpaper-adaptive-ink-muted',
         formatRgb(mutedRed, mutedGreen, mutedBlue, mixNumber(52, 66, amount)));
       setStyleProperty(element, '--x-nt-wallpaper-adaptive-hover-bg',
@@ -515,24 +550,16 @@
     const mutedBlue = mixChannel(225, 252, amount);
     setStyleProperty(element, '--x-nt-wallpaper-adaptive-ink',
       formatRgb(red, green, blue, mixNumber(78, 92, amount)));
-    setStyleProperty(element, '--x-nt-wallpaper-wordmark-ink',
-      formatSolidRgb(getWordmarkInkColor(
-        color,
-        luminance,
-        ink,
-        overlayAlpha,
-        overlayLuminance,
-        textureContrast,
-        effectType
-      )));
     setStyleProperty(element, '--x-nt-wallpaper-adaptive-ink-muted',
       formatRgb(mutedRed, mutedGreen, mutedBlue, mixNumber(58, 76, amount)));
     setStyleProperty(element, '--x-nt-wallpaper-adaptive-hover-bg',
       formatRgb(248, 250, 252, mixNumber(10, 18, amount)));
+    // Light ink is palest right at the threshold, so the shadow must not fade
+    // there; protection keeps mid tones and busy textures at full strength.
     setStyleProperty(element, '--x-nt-wallpaper-adaptive-shadow',
-      formatRgb(15, 23, 42, mixNumber(26, 42, amount)));
+      formatRgb(15, 23, 42, Math.max(mixNumber(26, 42, amount), mixNumber(26, 42, protection))));
     setStyleProperty(element, '--x-nt-wallpaper-adaptive-halo',
-      formatRgb(15, 23, 42, mixNumber(12, 22, amount)));
+      formatRgb(15, 23, 42, Math.max(mixNumber(12, 22, amount), mixNumber(12, 26, protection))));
   }
 
   function applySurfaceToneStyles(element, luminance, ink, color, textureContrast, effectType) {
@@ -546,11 +573,7 @@
       sourceColor,
       mixNumber(0.08, 0.18, hueStrength)
     );
-    const textureRisk = isHighTextureTone(textureContrast, effectType, 0.16)
-      ? 1
-      : clampNumber((Number(textureContrast) || 0) / 0.2, 0, 1);
-    const middleLuminanceRisk = 1 - Math.min(1, Math.abs(luminance - 0.52) / 0.48);
-    const protection = Math.max(textureRisk, middleLuminanceRisk * 0.5);
+    const protection = getToneProtection(luminance, textureContrast, effectType);
     const mistAlpha = mixNumber(ink === 'dark' ? 64 : 62, 74, protection);
     const clearAlpha = mixNumber(ink === 'dark' ? 32 : 36, 50, protection);
     const borderColor = ink === 'dark'
@@ -685,6 +708,8 @@
       return new Promise((resolve, reject) => {
         const image = new Image();
         image.decoding = 'async';
+        // Online wallpapers allow CORS; requesting it keeps the canvas readable for pixel sampling.
+        if (/^https?:/i.test(url)) image.crossOrigin = 'anonymous';
         image.onload = () => {
           if (typeof image.decode === 'function') {
             image.decode().then(() => {

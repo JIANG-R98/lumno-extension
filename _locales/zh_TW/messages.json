@@ -662,6 +662,9 @@
   "newtab_time_show_seconds_title": {
     "message": "顯示秒數"
   },
+  "settings_newtab_page_buttons_title": {
+    "message": "頁面按鈕"
+  },
   "settings_newtab_feedback_button_visible_title": {
     "message": "顯示意見回饋按鈕"
   },
@@ -766,6 +769,9 @@
   },
   "newtab_favicon_save_error": {
     "message": "favicon 儲存失敗"
+  },
+  "newtab_wallpaper_source_title": {
+    "message": "壁紙來源"
   },
   "newtab_wallpaper_builtin_section": {
     "message": "內建"
@@ -2643,7 +2649,7 @@
     "message": "WebDAV 同步"
   },
   "webdav_beta_hint": {
-    "message": "把設定、自訂圖示和壁紙同步到你自己的雲端硬碟或 NAS，和瀏覽器內建的同步同時執行，互不影響。\n\n這是測試版，偶爾可能同步失敗。遇到問題歡迎回報。"
+    "message": "功能測試中：透過 WebDAV 雲端硬碟或 NAS 同步設定、自訂圖示和壁紙。相較於瀏覽器內建同步，支援跨瀏覽器，也能同步圖示和壁紙。"
   },
   "webdav_setup_hint": {
     "message": "透過堅果雲或其他 WebDAV 服務同步設定、自訂圖示和壁紙，與瀏覽器內建的同步同時執行。"
@@ -2774,6 +2780,9 @@
   "webdav_preference_other": {
     "message": "其他設定"
   },
+  "webdav_preference_zen_mode": {
+    "message": "Zen 模式"
+  },
   "webdav_remove": {
     "message": "刪除 WebDAV 設定"
   },
@@ -2792,6 +2801,9 @@
   "newtab_quote_off": {
     "message": "關閉"
   },
+  "newtab_quote_top": {
+    "message": "輸入框上方"
+  },
   "newtab_quote_input": {
     "message": "輸入框下方"
   },
@@ -2806,9 +2818,6 @@
   },
   "newtab_quote_poetry": {
     "message": "詩詞"
-  },
-  "newtab_quote_source": {
-    "message": "查看一言出處"
   },
   "newtab_quote_save_error": {
     "message": "名句設定儲存失敗"

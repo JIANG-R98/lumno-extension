@@ -777,23 +777,10 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
               </div>
               <div className="x-nt-appearance-setting-row">
                 <span {...ref('quotePositionLabel')} className="x-nt-appearance-setting-title" />
-                <SegmentedTabs
-                  className="x-nt-wallpaper-tabs x-nt-quote-tabs x-nt-row-tabs"
-                  indicatorClassName="x-nt-wallpaper-tabs-indicator"
-                  indicatorRef="quotePositionIndicator"
-                  name="quotePosition"
-                  role="group"
-                >
-                  {['input', 'search', 'bottom'].map((position) => (
-                    <button
-                      aria-pressed="false"
-                      className="x-nt-segmented-tab x-nt-wallpaper-tab"
-                      data-quote-position={position}
-                      key={position}
-                      type="button"
-                    />
-                  ))}
-                </SegmentedTabs>
+                <div
+                  {...ref('quotePositionSelectHost')}
+                  className="_x_extension_select_wrap_2024_unique_ _x_extension_custom_select_2024_unique_ x-nt-row-select"
+                />
               </div>
               <div {...ref('quoteFontSizeRow')} className="x-nt-overlay-control x-nt-quote-font-size">
                 <RangeSliderField
@@ -883,28 +870,31 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                   className="x-nt-wallpaper-mode-hint"
                   data-visible="false"
                 />
-                <SegmentedTabs
-                  className="x-nt-wallpaper-tabs"
-                  indicatorClassName="x-nt-wallpaper-tabs-indicator"
-                  indicatorRef="tabsIndicator"
-                  name="tabs"
-                  role="tablist"
-                >
-                  {['built-in', 'local', 'bing'].map((tab) => (
-                    <button
-                      {...ref(tab === 'built-in' ? 'builtInTab' : tab === 'local' ? 'localTab' : 'bingTab')}
-                      aria-selected="false"
-                      className="x-nt-segmented-tab x-nt-wallpaper-tab"
-                      data-active="false"
-                      data-wallpaper-tab={tab}
-                      key={tab}
-                      role="tab"
-                      type="button"
-                    >
-                      {tab === 'built-in' ? 'Built-in' : tab === 'local' ? 'Local' : 'Bing'}
-                    </button>
-                  ))}
-                </SegmentedTabs>
+                <div className="x-nt-appearance-setting-row">
+                  <span {...ref('sourceLabel')} className="x-nt-appearance-setting-title" />
+                  <SegmentedTabs
+                    className="x-nt-wallpaper-tabs x-nt-row-tabs"
+                    indicatorClassName="x-nt-wallpaper-tabs-indicator"
+                    indicatorRef="tabsIndicator"
+                    name="tabs"
+                    role="tablist"
+                  >
+                    {['built-in', 'local', 'bing'].map((tab) => (
+                      <button
+                        {...ref(tab === 'built-in' ? 'builtInTab' : tab === 'local' ? 'localTab' : 'bingTab')}
+                        aria-selected="false"
+                        className="x-nt-segmented-tab x-nt-wallpaper-tab"
+                        data-active="false"
+                        data-wallpaper-tab={tab}
+                        key={tab}
+                        role="tab"
+                        type="button"
+                      >
+                        {tab === 'built-in' ? 'Built-in' : tab === 'local' ? 'Local' : 'Bing'}
+                      </button>
+                    ))}
+                  </SegmentedTabs>
+                </div>
               </div>
               <div
                 {...ref('builtInGrid')}
@@ -1018,7 +1008,7 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                   />
                   <div
                     {...ref('effectSelectHost')}
-                    className="_x_extension_select_wrap_2024_unique_ _x_extension_custom_select_2024_unique_ x-nt-effect-select"
+                    className="_x_extension_select_wrap_2024_unique_ _x_extension_custom_select_2024_unique_ x-nt-row-select"
                   />
                 </div>
                 <div
@@ -1027,28 +1017,31 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                   className="x-nt-effect-slider-control x-nt-effect-ink-tone-control"
                   data-visible="false"
                 >
-                  <SegmentedTabs
-                    className="x-nt-effect-options x-nt-effect-ink-tone-options"
-                    indicatorClassName="x-nt-effect-indicator"
-                    indicatorRef="effectInkToneIndicator"
-                    name="effectInkToneOptions"
-                    role="group"
-                  >
-                    {effectInkTones.map(
-                      (item) => (
-                        <button
-                          aria-pressed="false"
-                          className="x-nt-segmented-tab x-nt-effect-option x-nt-effect-ink-tone-option"
-                          data-active="false"
-                          data-wallpaper-effect-ink-tone={item.tone}
-                          key={item.tone}
-                          type="button"
-                        >
-                          {item.fallback}
-                        </button>
-                      )
-                    )}
-                  </SegmentedTabs>
+                  <div className="x-nt-appearance-setting-row">
+                    <span {...ref('effectInkToneLabel')} className="x-nt-appearance-setting-title" />
+                    <SegmentedTabs
+                      className="x-nt-effect-options x-nt-effect-ink-tone-options x-nt-row-tabs"
+                      indicatorClassName="x-nt-effect-indicator"
+                      indicatorRef="effectInkToneIndicator"
+                      name="effectInkToneOptions"
+                      role="group"
+                    >
+                      {effectInkTones.map(
+                        (item) => (
+                          <button
+                            aria-pressed="false"
+                            className="x-nt-segmented-tab x-nt-effect-option x-nt-effect-ink-tone-option"
+                            data-active="false"
+                            data-wallpaper-effect-ink-tone={item.tone}
+                            key={item.tone}
+                            type="button"
+                          >
+                            {item.fallback}
+                          </button>
+                        )
+                      )}
+                    </SegmentedTabs>
+                  </div>
                 </div>
                 <SliderControl
                   controlRef="effectStrengthControl"
@@ -1195,7 +1188,7 @@ function CustomWallpapers({
   );
 }
 
-export interface WallpaperEffectSelectModel {
+export interface PanelSelectModel {
   ariaLabel: string;
   onChange(value: string): void;
   options: SelectMenuOption[];
@@ -1203,17 +1196,19 @@ export interface WallpaperEffectSelectModel {
 }
 
 const EFFECT_SELECT_ID = 'x-nt-wallpaper-effect';
+const QUOTE_POSITION_SELECT_ID = 'x-nt-quote-position';
 
 export interface WallpaperViewController {
   button: HTMLButtonElement;
-  closeEffectSelect(options?: { restoreFocus?: boolean }): boolean;
-  containsEffectSelectTarget(target: Node | null): boolean;
+  closeOpenSelect(options?: { restoreFocus?: boolean }): boolean;
+  containsSelectMenuTarget(target: Node | null): boolean;
   control: HTMLDivElement;
   destroy(): void;
   getRefs(): Record<string, HTMLElement>;
   panel: HTMLDivElement;
   renderCustomWallpapers(items: WallpaperItem[]): HTMLElement[];
-  renderEffectSelect(select: WallpaperEffectSelectModel): void;
+  renderEffectSelect(select: PanelSelectModel): void;
+  renderQuotePositionSelect(select: PanelSelectModel): void;
   renderOnlineWallpapers(items: WallpaperItem[]): HTMLElement[];
 }
 
@@ -1244,9 +1239,42 @@ export function createWallpaperViewController(
   const customRoot: Root = createRoot(customItemsHost);
   const onlineItemsHost = control.querySelector<HTMLElement>('[data-wallpaper-ref="bingItemsHost"]')!;
   const onlineRoot: Root = createRoot(onlineItemsHost);
-  const effectSelectHost = control.querySelector<HTMLElement>('[data-wallpaper-ref="effectSelectHost"]')!;
-  const effectSelectRoot: Root = createRoot(effectSelectHost);
-  let effectSelectControls: { isOpen(): boolean; setOpen(open: boolean): void } | null = null;
+  // Panel selects render as their own roots; their menus portal to the body.
+  const selects = [
+    { id: EFFECT_SELECT_ID, ref: 'effectSelectHost' },
+    { id: QUOTE_POSITION_SELECT_ID, ref: 'quotePositionSelectHost' }
+  ].map(({ id, ref: hostRef }) => {
+    const host = control.querySelector<HTMLElement>(`[data-wallpaper-ref="${hostRef}"]`)!;
+    return {
+      controls: null as { isOpen(): boolean; setOpen(open: boolean): void } | null,
+      host,
+      id,
+      root: createRoot(host) as Root
+    };
+  });
+  const [effectSelect, quotePositionSelect] = selects;
+  const renderSelect = (select: (typeof selects)[number], model: PanelSelectModel) => {
+    flushSync(() => select.root.render(
+      <SelectMenu
+        config={{
+          id: select.id,
+          selectId: `${select.id}-select`,
+          ariaLabel: model.ariaLabel,
+          options: model.options,
+          value: model.value,
+          menuAlign: 'left',
+          menuPortal: true,
+          menuPortalZIndex: 10020,
+          menuWidth: 'trigger',
+          onValueChange: model.onChange
+        }}
+        documentObj={documentObj}
+        host={select.host}
+        registerControls={(controls) => { select.controls = controls; }}
+        windowObj={documentObj.defaultView || window}
+      />
+    ));
+  };
   let destroyed = false;
   const getRefs = () => {
     const refs: Record<string, HTMLElement> = {};
@@ -1270,49 +1298,32 @@ export function createWallpaperViewController(
       destroyed = true;
       flushSync(() => customRoot.unmount());
       flushSync(() => onlineRoot.unmount());
-      flushSync(() => effectSelectRoot.unmount());
+      selects.forEach((select) => flushSync(() => select.root.unmount()));
       flushSync(() => root.unmount());
     },
     getRefs,
     panel,
-    closeEffectSelect(options?: { restoreFocus?: boolean }) {
-      if (!effectSelectControls?.isOpen()) {
+    closeOpenSelect(options?: { restoreFocus?: boolean }) {
+      const open = selects.find((select) => select.controls?.isOpen());
+      if (!open) {
         return false;
       }
-      flushSync(() => effectSelectControls?.setOpen(false));
+      flushSync(() => open.controls?.setOpen(false));
       if (options?.restoreFocus) {
-        effectSelectHost.querySelector<HTMLButtonElement>('button')?.focus();
+        open.host.querySelector<HTMLButtonElement>('button')?.focus();
       }
       return true;
     },
-    // The menu is portaled to the body but still belongs to the panel.
-    containsEffectSelectTarget(target: Node | null) {
-      const menu = documentObj.querySelector(`[data-react-select-owner="${EFFECT_SELECT_ID}"]`);
-      return Boolean(target && menu?.contains(target));
+    // The menus are portaled to the body but still belong to the panel.
+    containsSelectMenuTarget(target: Node | null) {
+      return Boolean(target && selects.some((select) => documentObj
+        .querySelector(`[data-react-select-owner="${select.id}"]`)?.contains(target)));
     },
-    renderEffectSelect(select: WallpaperEffectSelectModel) {
-      if (destroyed) return;
-      flushSync(() => effectSelectRoot.render(
-        <SelectMenu
-          config={{
-            id: EFFECT_SELECT_ID,
-            selectId: `${EFFECT_SELECT_ID}-select`,
-            ariaLabel: select.ariaLabel,
-            options: select.options,
-            value: select.value,
-            menuAlign: 'left',
-            menuClassName: 'x-nt-effect-select-menu',
-            menuPortal: true,
-            menuPortalZIndex: 10020,
-            menuWidth: 'trigger',
-            onValueChange: select.onChange
-          }}
-          documentObj={documentObj}
-          host={effectSelectHost}
-          registerControls={(controls) => { effectSelectControls = controls; }}
-          windowObj={documentObj.defaultView || window}
-        />
-      ));
+    renderEffectSelect(select: PanelSelectModel) {
+      if (!destroyed) renderSelect(effectSelect, select);
+    },
+    renderQuotePositionSelect(select: PanelSelectModel) {
+      if (!destroyed) renderSelect(quotePositionSelect, select);
     },
     renderOnlineWallpapers(items: WallpaperItem[]) {
       if (destroyed) return [];

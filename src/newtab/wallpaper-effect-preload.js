@@ -40,7 +40,7 @@
     if (preloadRuntime.claimed) {
       return;
     }
-    const normalized = effects.normalizePrefs(prefs);
+    const normalized = effects.resolvePrefsForMode(prefs, preloadState.mode);
     if (normalized.type === 'none') {
       body.setAttribute('data-wallpaper-effect', 'none');
       body.setAttribute('data-nt-wallpaper-ready', '1');

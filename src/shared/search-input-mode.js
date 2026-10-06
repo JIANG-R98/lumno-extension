@@ -364,7 +364,7 @@
         panelBg: 'var(--x-ov-mode-menu-bg, #FFFFFF)',
         panelText: 'var(--x-ov-text, #111827)',
         panelShadow: 'var(--x-ov-shadow, 0 16px 40px rgba(15, 23, 42, 0.13))',
-        panelRadius: 'var(--x-ov-panel-radius, 24px)',
+        panelRadius: 'var(--x-ov-panel-radius, 26px)',
         panelGap: '14px'
       }
       : {
@@ -374,7 +374,7 @@
         panelBg: 'var(--x-nt-mode-menu-bg, #FFFFFF)',
         panelText: 'var(--x-nt-text, #111827)',
         panelShadow: 'var(--x-nt-panel-shadow-focus, 0 16px 40px rgba(15, 23, 42, 0.13))',
-        panelRadius: 'var(--x-nt-search-shell-radius, 32px)',
+        panelRadius: 'var(--x-nt-search-shell-radius, 26px)',
         panelGap: '18px'
       };
 

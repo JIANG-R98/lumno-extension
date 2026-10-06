@@ -42,10 +42,13 @@ const newtabBorderWidth = readPxToken(newtabSource, '--x-nt-search-shell-border-
 const newtabShellPadding = readPxToken(newtabSource, '--x-nt-search-shell-padding');
 const newtabResultInset = readPxToken(newtabSource, '--x-nt-search-results-padding-inline');
 
-assert.equal(newtabRestingRadius, 28);
-assert.equal(newtabOuterRadius - newtabBorderWidth - newtabShellPadding, 27);
-assert.equal(newtabRestingRadius - newtabBorderWidth - newtabShellPadding, 23);
-assert.equal(newtabOuterRadius - newtabBorderWidth - newtabShellPadding - newtabResultInset, 19);
+// New Tab matches the overlay: a rounded rectangle, not a capsule, with the same outer and result radii.
+assert.equal(newtabOuterRadius, 26);
+assert.equal(newtabRestingRadius, newtabOuterRadius);
+assert.ok(newtabOuterRadius < 56 / 2);
+assert.equal(newtabOuterRadius - newtabBorderWidth - newtabShellPadding, 21);
+assert.equal(newtabRestingRadius - newtabBorderWidth - newtabShellPadding, 21);
+assert.equal(newtabOuterRadius - newtabBorderWidth - newtabShellPadding - newtabResultInset, 13);
 assert.match(
   newtabSource,
   /--x-nt-search-content-radius:\s*calc\(\s*var\(--x-nt-search-shell-radius\) - var\(--x-nt-search-content-inset\)\s*\);/
@@ -60,33 +63,26 @@ assert.match(
 );
 assert.match(
   newtabSource,
-  /body\[data-nt-suggestions-open="true"\]\s+#_x_extension_newtab_search_layer_2024_unique_\s*\{[\s\S]*?border-radius:\s*var\(--x-nt-search-resting-content-radius,\s*23px\)\s*var\(--x-nt-search-resting-content-radius,\s*23px\)\s*0\s*0;/
+  /body\[data-nt-suggestions-open="true"\]\s+#_x_extension_newtab_search_layer_2024_unique_\s*\{[\s\S]*?border-radius:\s*var\(--x-nt-search-resting-content-radius,\s*21px\)\s*var\(--x-nt-search-resting-content-radius,\s*21px\)\s*0\s*0;/
 );
 assert.match(
   newtabSource,
-  /#_x_extension_newtab_suggestions_surface_2026_unique_\s*\{[\s\S]*?border-radius:\s*var\(--x-nt-search-resting-radius,\s*28px\)\s*var\(--x-nt-search-resting-radius,\s*28px\)\s*var\(--x-nt-search-shell-radius,\s*32px\)\s*var\(--x-nt-search-shell-radius,\s*32px\);/
+  /#_x_extension_newtab_suggestions_surface_2026_unique_\s*\{[\s\S]*?border-radius:\s*var\(--x-nt-search-resting-radius,\s*26px\)\s*var\(--x-nt-search-resting-radius,\s*26px\)\s*var\(--x-nt-search-shell-radius,\s*26px\)\s*var\(--x-nt-search-shell-radius,\s*26px\);/
 );
 assert.match(
   newtabSource,
-  /#_x_extension_newtab_suggestions_outline_2026_unique_\s*\{[\s\S]*?border-radius:\s*var\(--x-nt-search-resting-radius,\s*28px\)\s*var\(--x-nt-search-resting-radius,\s*28px\)\s*var\(--x-nt-search-shell-radius,\s*32px\)\s*var\(--x-nt-search-shell-radius,\s*32px\);/
+  /#_x_extension_newtab_suggestions_outline_2026_unique_\s*\{[\s\S]*?border-radius:\s*var\(--x-nt-search-resting-radius,\s*26px\)\s*var\(--x-nt-search-resting-radius,\s*26px\)\s*var\(--x-nt-search-shell-radius,\s*26px\)\s*var\(--x-nt-search-shell-radius,\s*26px\);/
 );
 assert.match(
   newtabSource,
-  /\.x-nt-suggestion-item\s*\{[\s\S]*?border-radius:\s*var\(--x-nt-search-result-radius,\s*19px\);/
+  /\.x-nt-suggestion-item\s*\{[\s\S]*?border-radius:\s*var\(--x-nt-search-result-radius,\s*13px\);/
 );
-// Capsules keep round ends: the resting shell and its layer get no continuous shape, and the
-// open panel's top corners stay round where they wrap that capsule.
+// Like the overlay, the shell, its layer and the open panel are continuous all around.
 const newtabShapes = readCornerShapes(newtabSource);
-assert.equal(newtabShapes.get('#_x_extension_newtab_root_2024_unique_'), undefined);
-assert.equal(newtabShapes.get('#_x_extension_newtab_search_layer_2024_unique_'), undefined);
-assert.equal(
-  newtabShapes.get('#_x_extension_newtab_suggestions_surface_2026_unique_'),
-  'round round superellipse(1.25) superellipse(1.25)'
-);
-assert.equal(
-  newtabShapes.get('#_x_extension_newtab_suggestions_outline_2026_unique_'),
-  'round round superellipse(1.25) superellipse(1.25)'
-);
+assert.equal(newtabShapes.get('#_x_extension_newtab_root_2024_unique_'), 'superellipse(1.25)');
+assert.equal(newtabShapes.get('#_x_extension_newtab_search_layer_2024_unique_'), 'superellipse(1.25)');
+assert.equal(newtabShapes.get('#_x_extension_newtab_suggestions_surface_2026_unique_'), 'superellipse(1.25)');
+assert.equal(newtabShapes.get('#_x_extension_newtab_suggestions_outline_2026_unique_'), 'superellipse(1.25)');
 assert.equal(newtabShapes.get('#_x_extension_newtab_suggestions_container_2024_unique_'), 'superellipse(1.25)');
 assert.equal(newtabShapes.get('.x-nt-suggestion-item'), 'superellipse(1.25)');
 assert.equal(newtabShapes.get('.x-nt-suggestion-visit-button'), 'round');
@@ -97,12 +93,13 @@ const overlayResultInset = readPxToken(overlaySuggestionsSource, '--x-ov-results
 
 // The single-row overlay (56px input inside a 1px border) must read as a rounded rectangle,
 // not a capsule, so its continuous corners stay clearly below half its height.
-assert.ok(overlayOuterRadius < (56 + overlayBorderWidth * 2) / 2 - 4);
-assert.equal(overlayOuterRadius - overlayBorderWidth, 23);
-assert.equal(overlayOuterRadius - overlayBorderWidth - overlayResultInset, 11);
+assert.ok(overlayOuterRadius < (56 + overlayBorderWidth * 2) / 2 - 2);
+assert.equal(overlayOuterRadius, newtabOuterRadius);
+assert.equal(overlayOuterRadius - overlayBorderWidth, 25);
+assert.equal(overlayOuterRadius - overlayBorderWidth - overlayResultInset, 13);
 assert.match(
   overlaySuggestionsSource,
-  /--x-ov-content-radius:\s*calc\(var\(--x-ov-panel-radius, 24px\) - var\(--x-ov-panel-border-width\)\);/
+  /--x-ov-content-radius:\s*calc\(var\(--x-ov-panel-radius, 26px\) - var\(--x-ov-panel-border-width\)\);/
 );
 assert.match(
   overlaySuggestionsSource,
@@ -110,17 +107,17 @@ assert.match(
 );
 assert.match(
   overlaySearchPanelSource,
-  /var\(--x-ov-content-radius, 23px\) var\(--x-ov-content-radius, 23px\) 0 0/
+  /var\(--x-ov-content-radius, 25px\) var\(--x-ov-content-radius, 25px\) 0 0/
 );
 assert.match(
   overlaySuggestionsSource,
-  /\.x-ov-suggestion-item\s*\{[\s\S]*?border-radius:\s*var\(--x-ov-result-radius,\s*11px\);/
+  /\.x-ov-suggestion-item\s*\{[\s\S]*?border-radius:\s*var\(--x-ov-result-radius,\s*13px\);/
 );
 // The panel, its input and its results container are continuous; circles and capsule buttons are not.
 const overlayScope = ':is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_)';
 const overlayShapes = readCornerShapes(overlaySuggestionsSource);
 assert.equal(overlayShapes.get(`${overlayScope} .x-ov-suggestions-container`), 'superellipse(1.25)');
-assert.equal(overlayShapes.get(`${overlayScope} .x-ov-close-other-tabs`), undefined);
+assert.equal(overlayShapes.get(`${overlayScope} .x-ov-close-other-tabs`), 'superellipse(1.25)');
 assert.equal(overlayShapes.get(`${overlayScope} .x-ov-suggestion-item`), 'superellipse(1.25)');
 assert.equal(overlayShapes.get(`${overlayScope} .x-ov-action-tag`), 'superellipse(1.25)');
 assert.equal(overlayShapes.get(`${overlayScope} .x-ov-suggestion-visit-button`), 'round');
@@ -142,12 +139,12 @@ assert.match(
   sharedSearchInputReactSource,
   /'border-radius':\s*'var\(--x-ext-search-input-corners,28px 28px 0 0\)'/
 );
-// The input capsule and its circular icon buttons keep round ends; the mode menu panel does not.
+// The input keeps its own shape; the icon buttons beside it and the mode menu panel are continuous.
 const searchInputShapes = readCornerShapes(sharedSearchInputSource);
 assert.equal(searchInputShapes.get('.x-lumno-search-input'), undefined);
 assert.equal(searchInputShapes.get('.x-lumno-search-input__container'), undefined);
-assert.equal(searchInputShapes.get('.x-lumno-search-input__right-icon'), undefined);
-assert.equal(searchInputShapes.get('.x-lumno-search-input__icon[data-search-scope-action="true"]'), undefined);
+assert.equal(searchInputShapes.get('.x-lumno-search-input__right-icon'), 'superellipse(1.25) !important');
+assert.equal(searchInputShapes.get('.x-lumno-search-input__icon[data-search-scope-action="true"]'), 'superellipse(1.25) !important');
 assert.equal(searchInputShapes.get('.x-lumno-search-input-mode__menu'), 'superellipse(1.25)');
 assert.doesNotMatch(sharedSearchInputReactSource, /'corner-shape'/);
 // Mode menu parts reset with `all: unset !important`, so their shape must come last and match that priority.
@@ -158,17 +155,17 @@ assert.match(
 
 assert.match(
   onboardingSource,
-  /\.newtab-preview-viewport\s*\{[\s\S]*?--x-nt-search-shell-radius:\s*28px;[\s\S]*?--x-nt-search-content-radius:\s*calc\([\s\S]*?--x-nt-search-result-radius:\s*calc\(/
+  /\.newtab-preview-viewport\s*\{[\s\S]*?--x-nt-search-shell-radius:\s*26px;[\s\S]*?--x-nt-search-content-radius:\s*calc\([\s\S]*?--x-nt-search-result-radius:\s*calc\(/
 );
-// The demos mirror the real surfaces: overlay panels are continuous, the New Tab capsule is not.
+// The demos mirror the real surfaces: overlay panels and the New Tab search shell are continuous.
 const onboardingShapes = readCornerShapes(onboardingSource);
 assert.equal(onboardingShapes.get('.lumno-overlay-panel'), 'superellipse(1.25)');
 assert.equal(onboardingShapes.get('.site-search-demo-card'), 'superellipse(1.25)');
-assert.equal(onboardingShapes.get('.newtab-preview-viewport #_x_extension_newtab_root_2024_unique_'), undefined);
+assert.equal(onboardingShapes.get('.newtab-preview-viewport #_x_extension_newtab_root_2024_unique_'), 'superellipse(1.25)');
 assert.equal(onboardingShapes.get('.site-search-demo-result'), 'superellipse(1.25)');
 assert.equal(
   onboardingShapes.get('.newtab-preview-viewport #_x_extension_newtab_suggestions_surface_2026_unique_'),
-  'round round superellipse(1.25) superellipse(1.25)'
+  'superellipse(1.25)'
 );
 
 console.log('Search corner continuity checks passed.');

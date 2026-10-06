@@ -8,14 +8,22 @@
   max-width: calc(100vw - 32px);
   box-sizing: border-box;
   padding: 10px 16px;
+  border: 1px solid var(--lumno-color-toast-border, rgba(214, 219, 227, 0.95));
   border-radius: var(--lumno-radius-pill, 999px);
-  background: var(--lumno-color-surface-inverse, rgba(17, 24, 39, 0.92));
-  color: var(--lumno-color-text-inverse, #f9fafb);
-  box-shadow: var(--lumno-shadow-toast, 0 12px 30px rgba(0, 0, 0, 0.2));
+  background: linear-gradient(
+    180deg,
+    var(--lumno-color-toast-bg-top, #ffffff) 0%,
+    var(--lumno-color-toast-bg-bottom, #f7f9fc) 100%
+  );
+  color: var(--lumno-color-toast-text, #1f2937);
+  box-shadow: var(
+    --lumno-shadow-toast,
+    0 16px 36px rgba(17, 24, 39, 0.08), 0 3px 10px rgba(17, 24, 39, 0.05)
+  );
   font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
   font-size: var(--lumno-font-size-sm, 12px);
-  font-weight: 400;
+  font-weight: 500;
   line-height: 18px;
   text-align: center;
   white-space: normal;
@@ -33,12 +41,11 @@
   transform: translateX(-50%) translateY(0);
 }
 
-/* Extension pages already get dark colors from tokens; this rule adds the outline and
-   covers the in-page overlay, which marks its toast dark but has no tokens. */
-body[data-theme="dark"] .x-lumno-toast,
+/* Extension pages get dark colors from tokens; this rule covers the in-page overlay,
+   which marks its toast dark but has no tokens. */
 .x-lumno-toast[data-theme="dark"] {
-  background: rgba(2, 6, 23, 0.97);
+  background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
   color: #f8fafc;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.2);
   box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45);
 }

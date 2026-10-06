@@ -22,7 +22,8 @@ export interface SelectMenuOption {
   iconUrl?: string;
   label: string;
   radio?: boolean;
-  uncheckedIconClass?: string;
+  /** Icon after a radio choice's label (for example an eyedropper); checked or not. */
+  trailingIconClass?: string;
   value: string;
 }
 
@@ -383,9 +384,7 @@ export function SelectMenu({
         const selected = !option.action && option.value === selectedValue;
         const radioItem = usesMenuSemantics && (!option.action || option.radio);
         const checked = option.radio ? option.checked === true : selected;
-        const radioIconClass = checked
-          ? 'ri-check-line'
-          : String(option.uncheckedIconClass || '').trim();
+        const trailingIconClass = String(option.trailingIconClass || '').trim();
         return (
           <Fragment key={`${option.action || option.value}:${index}`}>
             {option.dividerBefore && index > 0 ? (
@@ -444,18 +443,12 @@ export function SelectMenu({
               <span className="_x_extension_select_option_label_2026_unique_">
                 {option.label}
               </span>
-              {option.radio ? (
+              {option.radio && trailingIconClass ? (
                 <span
                   aria-hidden="true"
-                  className={`_x_extension_select_option_check_2026_unique_${
-                    checked ? ' _x_extension_select_option_checked_2026_unique_' : ''
-                  }`}
+                  className="_x_extension_select_option_check_2026_unique_"
                 >
-                  {radioIconClass ? (
-                    <i
-                      className={`ri-icon ri-size-16 ${radioIconClass}`}
-                    />
-                  ) : null}
+                  <i className={`ri-icon ri-size-16 ${trailingIconClass}`} />
                 </span>
               ) : null}
             </div>

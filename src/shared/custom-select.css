@@ -109,14 +109,14 @@
 }
 
 ._x_extension_select_trigger_2024_unique_ {
-  --x-extension-select-trigger-radius: 10px;
+  --x-extension-select-trigger-radius: var(--lumno-radius-md, 8px);
   all: unset;
   box-sizing: border-box;
   width: 100%;
   min-width: 180px;
-  height: 36px;
-  padding: 8px 32px 8px 10px;
-  border-radius: var(--x-extension-select-trigger-radius, 10px);
+  height: 32px;
+  padding: 6px 30px 6px 10px;
+  border-radius: var(--x-extension-select-trigger-radius, 8px);
   border: 1px solid var(--tab-border, rgba(15, 23, 42, 0.08));
   background: var(--control-bg, rgba(255, 255, 255, 0.86));
   color: var(--panel-text, #111827);
@@ -167,9 +167,9 @@ body[data-theme="dark"] ._x_extension_select_wrap_2024_unique_[data-open="true"]
 }
 
 ._x_extension_select_menu_2024_unique_ {
-  --x-extension-select-menu-radius: 17px;
+  --x-extension-select-menu-radius: var(--lumno-radius-menu, 16px);
   --x-extension-select-menu-border-width: 1px;
-  --x-extension-select-menu-padding: 6px;
+  --x-extension-select-menu-padding: 5px;
   --x-extension-select-option-radius: calc(
     var(--x-extension-select-menu-radius) -
     var(--x-extension-select-menu-border-width) -
@@ -185,8 +185,8 @@ body[data-theme="dark"] ._x_extension_select_wrap_2024_unique_[data-open="true"]
       --x-extension-select-menu-border,
       var(--tab-border, rgba(15, 23, 42, 0.08))
     );
-  border-radius: var(--x-extension-select-menu-radius, 17px);
-  padding: var(--x-extension-select-menu-padding, 6px);
+  border-radius: var(--x-extension-select-menu-radius, 16px);
+  padding: var(--x-extension-select-menu-padding, 5px);
   box-sizing: border-box;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
   transform-origin: top center;
@@ -194,10 +194,11 @@ body[data-theme="dark"] ._x_extension_select_wrap_2024_unique_[data-open="true"]
 }
 
 ._x_extension_select_option_2024_unique_ {
-  padding: 10px 12px;
+  padding: 7px 10px;
   border-radius: var(--x-extension-select-option-radius, 10px);
   font-size: var(--lumno-font-size-md);
-  font-weight: 500;
+  font-weight: 400;
+  line-height: 18px;
   color: var(--panel-text, #111827);
   cursor: pointer;
   display: flex;
@@ -213,12 +214,12 @@ body[data-theme="dark"] ._x_extension_select_wrap_2024_unique_[data-open="true"]
 }
 
 ._x_extension_select_option_2024_unique_ + ._x_extension_select_option_2024_unique_ {
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 ._x_extension_select_divider_2026_unique_ {
   height: 1px;
-  margin: 6px 8px;
+  margin: 5px 6px;
   background: var(--tab-border, rgba(15, 23, 42, 0.08));
   pointer-events: none;
 }
@@ -254,24 +255,44 @@ body[data-theme="dark"] ._x_extension_select_wrap_2024_unique_[data-open="true"]
   color: inherit;
 }
 
-/* Titles share the option text inset; the menu edge and a divider both sit
-   14px above a title, so every group opens with the same rhythm. */
+/* Group titles are quiet labels, not options: smaller, lighter and set tight to the
+   group they head. */
 ._x_extension_select_menu_title_2024_unique_ {
-  padding: 8px 12px;
-  color: var(--panel-subtext, #6b7280);
-  font-size: var(--lumno-font-size-xs);
-  font-weight: 600;
-  line-height: 1;
+  padding: 8px 10px 6px;
+  color: var(--select-title-color, color-mix(in srgb, var(--panel-subtext, #6b7280) 82%, transparent));
+  font-size: var(--lumno-font-size-xs, 11px);
+  font-weight: 500;
+  line-height: 14px;
+  letter-spacing: 0.02em;
   white-space: nowrap;
 }
 
-._x_extension_select_option_2024_unique_[data-selected="true"] {
-  background: var(--select-selected-bg, #111827);
-  color: var(--select-selected-text, #f9fafb);
+._x_extension_select_menu_title_2024_unique_:first-child {
+  padding-top: 6px;
 }
 
-._x_extension_select_option_2024_unique_[data-active="true"]:not([data-selected="true"]):not([aria-disabled="true"]),
-._x_extension_select_option_2024_unique_:hover:not([data-selected="true"]):not([aria-disabled="true"]) {
+/* A divider before a title sits optically centred between the row above and the
+   title's glyphs: the title drops its top padding, and the divider's lower margin
+   is 2px shorter to absorb the title's half-leading. */
+._x_extension_select_divider_2026_unique_:has(+ ._x_extension_select_menu_title_2024_unique_) {
+  margin: 10px 6px 8px;
+}
+
+._x_extension_select_divider_2026_unique_ + ._x_extension_select_menu_title_2024_unique_ {
+  padding-top: 0;
+}
+
+/* Command menus stay at regular weight; only the chosen value of a select, or the
+   checked choice of a radio group, steps up. */
+._x_extension_select_option_2024_unique_[data-selected="true"],
+._x_extension_select_option_radio_2026_unique_[data-radio-checked="true"] {
+  background: var(--select-selected-bg, #111827);
+  color: var(--select-selected-text, #f9fafb);
+  font-weight: 500;
+}
+
+._x_extension_select_option_2024_unique_[data-active="true"]:not([data-selected="true"]):not([data-radio-checked="true"]):not([aria-disabled="true"]),
+._x_extension_select_option_2024_unique_:hover:not([data-selected="true"]):not([data-radio-checked="true"]):not([aria-disabled="true"]) {
   background: var(--select-hover-bg, rgba(15, 23, 42, 0.08));
   color: var(--panel-text, #111827);
 }

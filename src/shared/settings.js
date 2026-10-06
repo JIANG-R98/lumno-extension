@@ -41,6 +41,8 @@
   const NEWTAB_SHORTCUT_GAP_DEFAULT = 4;
   const NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY = '_x_extension_newtab_input_auto_focus_enabled_2026_unique_';
   const NEWTAB_QUOTE_PREFS_STORAGE_KEY = '_x_extension_newtab_quote_prefs_2026_unique_';
+  // Online wallpaper picks live apart from the shared wallpaper key, which older versions sanitize.
+  const NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY = '_x_extension_newtab_online_wallpaper_2026_unique_';
   const NEWTAB_QUOTE_FONT_SIZE_MIN = 12;
   const NEWTAB_QUOTE_FONT_SIZE_MAX = 24;
   const NEWTAB_QUOTE_FONT_SIZE_DEFAULT = 15;
@@ -85,6 +87,7 @@
     '_x_extension_newtab_theme_scope_2026_unique_',
     '_x_extension_newtab_zen_mode_2026_unique_',
     '_x_extension_newtab_wallpaper_2026_unique_',
+    NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY,
     '_x_extension_newtab_wallpaper_overlay_2026_unique_',
     '_x_extension_newtab_wallpaper_effect_2026_unique_',
     '_x_extension_newtab_favicon_2026_unique_',
@@ -232,7 +235,7 @@
       // Off until the user turns it on; a saved position alone never enables it.
       enabled: source.enabled === true,
       // 'search' predates the input-box placement and still means "below shortcuts".
-      position: ['input', 'bottom'].includes(source.position) ? source.position : 'search',
+      position: ['top', 'input', 'bottom'].includes(source.position) ? source.position : 'search',
       category: source.category === 'poetry' ? 'poetry' : 'literature',
       fontSize: Number.isFinite(size)
         ? Math.min(NEWTAB_QUOTE_FONT_SIZE_MAX, Math.max(NEWTAB_QUOTE_FONT_SIZE_MIN, Math.round(size)))
@@ -937,6 +940,7 @@
     NEWTAB_SHORTCUT_GAP_DEFAULT,
     NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY,
     NEWTAB_QUOTE_PREFS_STORAGE_KEY,
+    NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY,
     NEWTAB_QUOTE_FONT_SIZE_MIN,
     NEWTAB_QUOTE_FONT_SIZE_MAX,
     NEWTAB_QUOTE_FONT_SIZE_DEFAULT,

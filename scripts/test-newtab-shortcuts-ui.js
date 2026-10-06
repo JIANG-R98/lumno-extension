@@ -1278,10 +1278,15 @@ assertContains(
   '--x-nt-shortcut-icon-bg: var(--x-nt-shortcut-fallback-icon-bg);',
   'unavailable shortcut artwork should keep the shared fallback background'
 );
+assert.ok(
+  !shortcutFallbackSurfaceRule.includes('.x-nt-shortcut-icon--folder') &&
+    !newtabHtml.includes('.x-nt-shortcut-icon--folder,\n      .x-nt-shortcut-icon:has('),
+  'folder shortcuts should not follow the wallpaper-sampled fallback surface'
+);
 assertContains(
-  newtabHtml,
-  '.x-nt-shortcut-icon--folder,\n      .x-nt-shortcut-icon:has(.x-nt-shortcut-favicon[data-fallback-icon="true"])',
-  'folder shortcuts should share the unavailable-favicon surface'
+  getCssRuleBlock(newtabHtml, '.x-nt-shortcut-icon--folder'),
+  '--x-nt-shortcut-icon-bg: var(--x-nt-shortcut-folder-icon-bg);',
+  'folder shortcuts should use the neutral site-tile background'
 );
 
 assertContains(
@@ -2177,7 +2182,7 @@ assert.equal(
 
 assertContains(
   shortcutContextMenuPortalRule,
-  '--x-nt-context-menu-radius: 17px;',
+  '--x-nt-context-menu-radius: 16px;',
   'shortcut context menu should name its outer corner radius'
 );
 
@@ -2189,7 +2194,7 @@ assertContains(
 
 assertContains(
   shortcutContextMenuPortalRule,
-  '--x-nt-context-menu-padding: 6px;',
+  '--x-nt-context-menu-padding: 5px;',
   'shortcut context menu should name its inner padding'
 );
 
@@ -2205,13 +2210,13 @@ assertContains(
 
 assertContains(
   shortcutContextMenuPortalRule,
-  'border-radius: var(--x-nt-context-menu-radius, 17px);',
+  'border-radius: var(--x-nt-context-menu-radius, 16px);',
   'shortcut context menu outer radius should be driven by the named radius token'
 );
 
 assertContains(
   shortcutContextMenuPortalRule,
-  'padding: var(--x-nt-context-menu-padding, 6px);',
+  'padding: var(--x-nt-context-menu-padding, 5px);',
   'shortcut context menu padding should be driven by the named padding token'
 );
 

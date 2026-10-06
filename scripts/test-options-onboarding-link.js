@@ -38,8 +38,8 @@ const rule = getRule(`._x_extension_shortcut_submit_2024_unique_.${buttonClass}`
 const darkRule = getRule(`body[data-theme="dark"] .${buttonClass}`);
 [
   /margin-left:\s*auto;/,
-  /--settings-button-min-height:\s*30px;/,
-  /--settings-button-padding:\s*6px 10px;/,
+  /--settings-button-min-height:\s*28px;/,
+  /--settings-button-padding:\s*0 10px;/,
   /--settings-button-bg:\s*transparent;/,
   /--settings-button-shadow:\s*none;/,
   /white-space:\s*nowrap;/

@@ -92,39 +92,32 @@ assert.match(
 
 assert.match(
   newtabHtml,
-  /\.x-nt-feedback-action-community::before \{[\s\S]*?inset: -1px;/,
+  /\.x-nt-feedback-action-community::before \{\s*background: [^;]+;\s*box-shadow:\s*0 0 0 1px #12161f,/,
   'feedback community action ring should extend past the button box instead of being inset at the edge'
 );
 
 assertContains(
   newtabHtml,
-  '0 0 0 1px #040404,',
-  'feedback community action should draw the black ring outside the circle face'
+  '0 0 0 1px #12161f,',
+  'feedback community action should draw the near-black ring outside the circle face'
 );
 
 assert.ok(
-  !newtabHtml.includes('inset 0 0 0 1px #040404'),
-  'feedback community action should not draw the black ring as an inset edge that looks clipped'
+  !newtabHtml.includes('inset 0 0 0 1px #12161f'),
+  'feedback community action should not draw the ring as an inset edge that looks clipped'
 );
 
 assertContains(
   newtabHtml,
-  'inset 0 1px 0 rgba(255, 255, 255, 0.22)',
-  'feedback community action should keep the top highlight subtle after the circle is expanded'
-);
-
-assertContains(
-  newtabHtml,
-  'inset 0 1px 2.4px rgba(255, 255, 255, 0.12)',
-  'feedback community action should keep the soft highlight subtle after the circle is expanded'
+  'inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 1px 3px rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.22)',
+  'feedback community action should share the subtle primary sheen with the primary buttons'
 );
 
 assert.ok(
-  !newtabHtml.includes('inset 0 1px 0 rgba(255, 255, 255, 0.52)') &&
-    !newtabHtml.includes('inset 0 1px 2.4px rgba(255, 255, 255, 0.36)') &&
-    !newtabHtml.includes('inset 0 1px 0 rgba(255, 255, 255, 0.32)') &&
-    !newtabHtml.includes('inset 0 1px 2.4px rgba(255, 255, 255, 0.2)'),
-  'feedback community action should not keep the old stronger highlight on the expanded circle face'
+  !newtabHtml.includes('0 0 0 1px #040404') &&
+    !newtabHtml.includes('inset 0 1px 0 rgba(255, 255, 255, 0.52)') &&
+    !newtabHtml.includes('inset 0 1px 2.4px rgba(255, 255, 255, 0.36)'),
+  'feedback community action should not keep the old black ring or stronger highlight'
 );
 
 assertContains(

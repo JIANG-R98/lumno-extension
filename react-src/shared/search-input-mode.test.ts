@@ -2482,7 +2482,7 @@ describe('Shared search scope menu', () => {
       'var(--x-nt-mode-menu-bg, #FFFFFF)'
     );
     expect(newtabController.menuElement.style.borderRadius).toBe(
-      'var(--x-nt-search-shell-radius, 32px)'
+      'var(--x-nt-search-shell-radius, 26px)'
     );
     expect(newtabController.menuElement.style.top).toBe('calc(100% + 18px)');
     expect(newtabController.menuElement.style.boxShadow).toBe(
@@ -2500,7 +2500,7 @@ describe('Shared search scope menu', () => {
       'var(--x-ov-mode-menu-bg, #FFFFFF)'
     );
     expect(overlayController.menuElement.style.borderRadius).toBe(
-      'var(--x-ov-panel-radius, 24px)'
+      'var(--x-ov-panel-radius, 26px)'
     );
     expect(overlayController.menuElement.style.top).toBe('calc(100% + 14px)');
     expect(overlayController.menuElement.style.boxShadow).toBe(

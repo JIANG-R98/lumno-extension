@@ -1,4 +1,4 @@
-import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   createReactRootController,
   type ReactRootController
@@ -124,12 +124,15 @@ export function getNextAggregateSearchDefaultName(
   }
 }
 
+// The editor stays mounted so it can animate closed like the other cards; each
+// open starts again from the saved item, the way a fresh mount used to.
 function AggregateSearchEditor({
   appearance = 'item',
   item,
   model,
   onCancel,
-  onSave
+  onSave,
+  open
 }: {
   appearance?: 'form' | 'item';
   item: AggregateSearchItemModel | null;
@@ -139,13 +142,15 @@ function AggregateSearchEditor({
     id: string | null,
     draft: AggregateSearchDraft
   ): AggregateSearchSaveResult | Promise<AggregateSearchSaveResult>;
+  open: boolean;
 }) {
-  const [name, setName] = useState(() => item
+  const getInitialName = () => item
     ? item.name
     : getNextAggregateSearchDefaultName(
       model.items,
       model.copy.defaultNameBase
-    ));
+    );
+  const [name, setName] = useState(getInitialName);
   const [key, setKey] = useState(() => item?.key || '');
   const [selected, setSelected] = useState(
     () => new Set(item?.sourceRefs || [])
@@ -154,6 +159,19 @@ function AggregateSearchEditor({
   const [errorField, setErrorField] = useState<
     AggregateSearchEditorErrorField | null
   >(null);
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setName(getInitialName());
+      setKey(item?.key || '');
+      setSelected(new Set(item?.sourceRefs || []));
+      setError('');
+      setErrorField(null);
+    }
+  }
+  const nameRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (open) nameRef.current?.focus(); }, [open]);
   const errorId = useId();
   const keyId = useId();
   const nameId = useId();
@@ -241,6 +259,7 @@ function AggregateSearchEditor({
       className={`${appearance === 'form'
         ? '_x_extension_shortcut_form_fields_2024_unique_'
         : '_x_extension_shortcut_editor_2024_unique_'} _x_extension_aggregate_search_editor_2026_unique_`}
+      inert={!open}
     >
       <div className="_x_extension_shortcut_field_2024_unique_">
         <label
@@ -253,7 +272,6 @@ function AggregateSearchEditor({
         <input
           aria-describedby={error && errorField === 'name' ? errorId : undefined}
           aria-invalid={errorField === 'name'}
-          autoFocus
           className="_x_extension_shortcut_input_2024_unique_"
           data-aggregate-field="name"
           disabled={saving}
@@ -263,6 +281,7 @@ function AggregateSearchEditor({
             clearError();
             setName(event.currentTarget.value);
           }}
+          ref={nameRef}
           value={name}
         />
       </div>
@@ -542,22 +561,16 @@ function AggregateSearchList({
                   />
                 </div>
               </div>
-              {expanded ? (
-                <AggregateSearchEditor
-                  item={item}
-                  model={model}
-                  onCancel={() => closeEditor({
-                    itemId: item.id,
-                    kind: 'edit'
-                  })}
-                  onSave={options.onSave}
-                />
-              ) : (
-                <div
-                  aria-hidden="true"
-                  className="_x_extension_shortcut_editor_2024_unique_ _x_extension_aggregate_search_editor_2026_unique_"
-                />
-              )}
+              <AggregateSearchEditor
+                item={item}
+                model={model}
+                onCancel={() => closeEditor({
+                  itemId: item.id,
+                  kind: 'edit'
+                })}
+                onSave={options.onSave}
+                open={expanded}
+              />
             </div>
           );
         })}
@@ -579,15 +592,14 @@ function AggregateSearchList({
             <span>{model.copy.addLabel}</span>
           </button>
         </div>
-        {adding ? (
-          <AggregateSearchEditor
-            appearance="form"
-            item={null}
-            model={model}
-            onCancel={() => closeEditor({ kind: 'add' })}
-            onSave={options.onSave}
-          />
-        ) : null}
+        <AggregateSearchEditor
+          appearance="form"
+          item={null}
+          model={model}
+          onCancel={() => closeEditor({ kind: 'add' })}
+          onSave={options.onSave}
+          open={adding}
+        />
       </div>
     </>
   );

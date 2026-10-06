@@ -1186,6 +1186,31 @@ assert.strictEqual(
   'site-search title matching should ignore provider search-result URLs to avoid query-title overlap'
 );
 
+assert.deepStrictEqual(
+  search.applySearchSuggestionHostDiversity([
+    { type: 'bookmark', title: 'Docs', url: 'https://notes.example.com/a/b', score: 400 },
+    { type: 'history', title: 'React docs', url: 'https://react.dev/learn', score: 300 },
+    { type: 'topSite', isTopSite: true, title: 'Google Docs', url: 'https://docs.google.com/', score: 60 }
+  ], { context: search.buildSearchQueryContext('docs') }).map((item) => item.title),
+  ['Docs', 'React docs', 'Google Docs'],
+  'a reserved top-site slot should not jump ahead of stronger results'
+);
+assert.strictEqual(
+  search.buildSearchDedupEntryKey({ title: 'GitHub', url: 'https://github.com/' }),
+  search.buildSearchDedupEntryKey({ title: 'GH home', url: 'https://github.com/#top' }),
+  'the same page under different titles should share one dedup key'
+);
+assert.strictEqual(
+  search.isSearchLikelyBrandProductQuery(search.buildSearchQueryContext('notion calendar')),
+  true,
+  'a two-word query should be recognized as a brand-product query'
+);
+assert.strictEqual(
+  search.isSearchLikelyBrandProductQuery(search.buildSearchQueryContext('notion calendar sync')),
+  false,
+  'a three-word query should not be treated as a brand-product query'
+);
+
 const shortcutRules = require('../assets/data/shortcut-rules.json').items;
 assert.deepStrictEqual(
   search.findLocalSearchScope('  BOOKMARKS  ', shortcutRules),

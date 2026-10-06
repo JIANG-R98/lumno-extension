@@ -1880,7 +1880,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
         height: '56px',
         'min-height': '56px',
         'max-height': '56px',
-        'border-radius': 'var(--x-ov-panel-radius, 24px) var(--x-ov-panel-radius, 24px) 0 0',
+        'border-radius': 'var(--x-ov-panel-radius, 26px) var(--x-ov-panel-radius, 26px) 0 0',
         'corner-shape': 'superellipse(1.25)',
         overflow: 'visible'
       },
@@ -2381,14 +2381,14 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       setOverlayPanelScopedStyle(
         overlay,
         'border-radius',
-        'var(--x-ov-panel-radius, 24px)'
+        'var(--x-ov-panel-radius, 26px)'
       );
       setInputScopedStyle(
         inputContainer,
         'border-radius',
         shouldCollapse
-          ? 'var(--x-ov-content-radius, 23px)'
-          : 'var(--x-ov-content-radius, 23px) var(--x-ov-content-radius, 23px) 0 0'
+          ? 'var(--x-ov-content-radius, 25px)'
+          : 'var(--x-ov-content-radius, 25px) var(--x-ov-content-radius, 25px) 0 0'
       );
       if (shouldCollapse) {
         SUGGESTIONS_HEIGHT_LAYOUT.applyNaturalSuggestionsHeightLayout(

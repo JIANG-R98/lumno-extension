@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import {
   createReactRootController,
   type ReactRootController
@@ -84,6 +84,29 @@ export interface BlacklistFormController
   reset(): void;
 }
 
+// The add forms live in a host the adapter owns, so the open state is mirrored
+// onto it. Opening focuses the first field; closing hands focus back to the
+// Add trigger, which only becomes visible once the host has collapsed.
+function useAccordionForm(
+  host: HTMLElement | null,
+  expanded: boolean,
+  fieldRef: RefObject<HTMLInputElement | null>,
+  triggerRef: RefObject<HTMLButtonElement | null>
+) {
+  const wasExpanded = useRef(expanded);
+  useEffect(() => {
+    if (host) {
+      host.dataset.expanded = expanded ? 'true' : 'false';
+    }
+    if (expanded) {
+      fieldRef.current?.focus();
+    } else if (wasExpanded.current) {
+      triggerRef.current?.focus();
+    }
+    wasExpanded.current = expanded;
+  }, [expanded, host]);
+}
+
 function SiteSearchForm({
   host,
   model,
@@ -102,29 +125,25 @@ function SiteSearchForm({
     name: '',
     template: ''
   });
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const keyInputRef = useRef<HTMLInputElement>(null);
   const templateInputRef = useRef<HTMLInputElement>(null);
   const saveAction = useExclusiveAsyncAction(onSave);
   const saving = saveAction.pending;
 
-  useEffect(() => {
-    if (host) {
-      host.dataset.expanded = expanded ? 'true' : 'false';
-    }
-    if (expanded) {
-      keyInputRef.current?.focus();
-    }
-  }, [expanded, host]);
+  useAccordionForm(host, expanded, keyInputRef, triggerRef);
 
   const updateDraft = (field: keyof SiteSearchProviderDraft, value: string) => {
     setError('');
     setDraft((current) => ({ ...current, [field]: value }));
   };
-  const reset = () => {
+  // The draft stays put while the form animates closed and clears on the next open.
+  const open = () => {
     setDraft({ aliases: '', category: 'site', key: '', name: '', template: '' });
     setError('');
-    setExpanded(false);
+    setExpanded(true);
   };
+  const close = () => setExpanded(false);
 
   return (
     <>
@@ -133,14 +152,15 @@ function SiteSearchForm({
           aria-expanded={expanded}
           className="_x_extension_shortcut_submit_2024_unique_"
           id="_x_extension_site_search_expand_2024_unique_"
-          onClick={() => setExpanded(true)}
+          onClick={open}
+          ref={triggerRef}
           type="button"
         >
           <i aria-hidden="true" className="ri-icon ri-size-14 ri-add-line" />
           <span data-i18n="shortcuts_add">{model.copy.addLabel}</span>
         </button>
       </div>
-      <div className="_x_extension_shortcut_form_fields_2024_unique_">
+      <div className="_x_extension_shortcut_form_fields_2024_unique_" inert={!expanded}>
         <div className="_x_extension_shortcut_field_2024_unique_">
           <div className="_x_extension_shortcut_label_row_2024_unique_ _x_extension_site_search_template_header_2026_unique_">
             <div className="_x_extension_site_search_template_label_2026_unique_">
@@ -248,8 +268,7 @@ function SiteSearchForm({
             className="_x_extension_shortcut_submit_2024_unique_ _x_extension_shortcut_secondary_2024_unique_"
             disabled={saving}
             id="_x_extension_site_search_cancel_2024_unique_"
-            onClick={reset}
-            style={{ display: expanded ? 'inline-flex' : 'none' }}
+            onClick={close}
             type="button"
           >
             {model.copy.cancelLabel}
@@ -274,7 +293,7 @@ function SiteSearchForm({
               }
               const result = outcome.value;
               if (result.ok) {
-                reset();
+                close();
               } else {
                 setError(result.error || '');
               }
@@ -314,6 +333,7 @@ function BlacklistForm({
   const [mode, setMode] = useState<BlacklistMatchMode>('suffix');
   const [value, setValue] = useState('');
   const [error, setError] = useState('');
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const saveAction = useExclusiveAsyncAction(onSave);
   const saving = saveAction.pending;
@@ -322,14 +342,7 @@ function BlacklistForm({
     [mode, model.copy.modes]
   );
 
-  useEffect(() => {
-    if (host) {
-      host.dataset.expanded = expanded ? 'true' : 'false';
-    }
-    if (expanded) {
-      inputRef.current?.focus();
-    }
-  }, [expanded, host]);
+  useAccordionForm(host, expanded, inputRef, triggerRef);
 
   useEffect(() => {
     setExpanded(false);
@@ -338,12 +351,14 @@ function BlacklistForm({
     setError('');
   }, [resetVersion]);
 
-  const reset = () => {
-    setExpanded(false);
+  // The draft stays put while the form animates closed and clears on the next open.
+  const open = () => {
     setMode('suffix');
     setValue('');
     setError('');
+    setExpanded(true);
   };
+  const close = () => setExpanded(false);
 
   return (
     <>
@@ -351,14 +366,15 @@ function BlacklistForm({
         <button
           aria-expanded={expanded}
           className="_x_extension_shortcut_submit_2024_unique_"
-          onClick={() => setExpanded(true)}
+          onClick={open}
+          ref={triggerRef}
           type="button"
         >
           <i aria-hidden="true" className="ri-icon ri-size-14 ri-add-line" />
           <span>{model.copy.addLabel}</span>
         </button>
       </div>
-      <div className="_x_extension_shortcut_form_fields_2024_unique_">
+      <div className="_x_extension_shortcut_form_fields_2024_unique_" inert={!expanded}>
         <div className="_x_extension_shortcut_field_2024_unique_">
           <label className="_x_extension_shortcut_label_2024_unique_">
             <span data-i18n={activeMode?.urlLabelKey}>{activeMode?.urlLabel}</span>
@@ -424,8 +440,7 @@ function BlacklistForm({
           <button
             className="_x_extension_shortcut_submit_2024_unique_ _x_extension_shortcut_secondary_2024_unique_"
             disabled={saving}
-            onClick={reset}
-            style={{ display: expanded ? 'inline-flex' : 'none' }}
+            onClick={close}
             type="button"
           >
             {model.copy.cancelLabel}
@@ -450,7 +465,7 @@ function BlacklistForm({
               }
               const result = outcome.value;
               if (result.ok) {
-                reset();
+                close();
               } else {
                 setError(result.error || '');
               }

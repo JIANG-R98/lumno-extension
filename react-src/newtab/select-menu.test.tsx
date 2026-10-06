@@ -415,7 +415,7 @@ describe('New Tab select menu React island', () => {
           checked: false,
           label: 'Custom color',
           radio: true,
-          uncheckedIconClass: 'ri-dropper-line',
+          trailingIconClass: 'ri-dropper-line',
           value: '__surface_custom__'
         }
       ]
@@ -434,7 +434,8 @@ describe('New Tab select menu React island', () => {
     expect(instance.menu.querySelector('[role="separator"]')).not.toBeNull();
     expect(adaptive?.getAttribute('role')).toBe('menuitemradio');
     expect(adaptive?.getAttribute('aria-checked')).toBe('true');
-    expect(adaptive?.querySelector('.ri-check-line')).not.toBeNull();
+    expect(adaptive?.getAttribute('data-radio-checked')).toBe('true');
+    expect(adaptive?.querySelector('.ri-check-line')).toBeNull();
     expect(clear?.getAttribute('aria-checked')).toBe('false');
     expect(custom?.querySelector('.ri-dropper-line')).not.toBeNull();
     expect(custom?.querySelector('.ri-check-line')).toBeNull();
@@ -448,7 +449,7 @@ describe('New Tab select menu React island', () => {
           checked: true,
           label: 'Custom color',
           radio: true,
-          uncheckedIconClass: 'ri-dropper-line',
+          trailingIconClass: 'ri-dropper-line',
           value: '__selected_surface_custom__'
         }
       ],
@@ -456,8 +457,8 @@ describe('New Tab select menu React island', () => {
     }).instance.menu.querySelector<HTMLElement>(
       '[data-value="__selected_surface_custom__"]'
     );
-    expect(selectedCustom?.querySelector('.ri-check-line')).not.toBeNull();
-    expect(selectedCustom?.querySelector('.ri-dropper-line')).toBeNull();
+    expect(selectedCustom?.querySelector('.ri-check-line')).toBeNull();
+    expect(selectedCustom?.querySelector('.ri-dropper-line')).not.toBeNull();
   });
 
   it('closes when focus moves to an outside pointer target', () => {

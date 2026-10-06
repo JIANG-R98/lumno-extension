@@ -127,6 +127,7 @@ interface DomainSummary {
 interface ValueSummary { kind: 'unset' | 'boolean' | 'number' | 'text' | 'list' | 'changed'; value?: boolean | number | string; count?: number }
 export interface WebDavConflictItem {
   key: string;
+  field?: string;
   label: string;
   domain: 'preference' | 'shortcuts' | 'wallpapers';
   local: DomainSummary | ValueSummary;
@@ -175,7 +176,7 @@ function ConflictDiff({ items, copy, lang }: { items: WebDavConflictItem[]; copy
         <span role="columnheader">{copy.webdav_diff_remote}</span>
       </div>
       {items.map((item) => (
-        <div className="lumno-webdav-diff-row" key={item.key} role="row">
+        <div className="lumno-webdav-diff-row" key={item.field ? `${item.key}:${item.field}` : item.key} role="row">
           <span className="lumno-webdav-diff-label" role="rowheader">{item.label}</span>
           {(['local', 'remote'] as const).map((side) => (
             <span data-side={side} key={side} role="cell">

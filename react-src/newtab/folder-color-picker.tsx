@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { HexColorPicker } from 'react-colorful';
 import { SelectMenu } from './select-menu';
+import { DEFAULT_CLOSE_DELAY_MS, getEnterOffset } from './shortcut-dialog-helpers';
 import { DEFAULT_FOLDER_COLOR, MAX_SAVED_FOLDER_COLORS, normalizeSavedFolderColors, parseFolderColor, folderColorToChannels } from './folder-color';
 
 interface OpenOptions {
@@ -177,7 +178,7 @@ function FolderColorForm({ initial, options, initialSavedColors, updateSavedColo
     }
   }
 
-  return <div className="x-nt-shortcut-dialog-backdrop x-nt-folder-color-backdrop" data-open="true"
+  return <div className="x-nt-shortcut-dialog-backdrop x-nt-folder-color-backdrop"
     onPointerDown={(event) => { if (event.target === event.currentTarget && !busy) close(); }}>
     <div className="x-nt-shortcut-dialog x-nt-folder-color-dialog" role="dialog" aria-modal="true"
       aria-label={t('folder_color_change', 'Change color')}>
@@ -299,12 +300,43 @@ export function createFolderColorPicker(options: PickerOptions = {}) {
   let savedColors: string[] = [];
   const updateSavedColors = (colors: string[]) => { savedColors = colors; };
   let revision = 0;
+  let openFrame = 0;
+  let closeTimer = 0;
+  const view = doc.defaultView || window;
+  const getBackdrop = () => host.querySelector<HTMLElement>('.x-nt-folder-color-backdrop');
+  function cancelMotion() {
+    if (openFrame) { view.cancelAnimationFrame(openFrame); openFrame = 0; }
+    if (closeTimer) { view.clearTimeout(closeTimer); closeTimer = 0; }
+  }
+  function unmount() {
+    cancelMotion();
+    host.inert = false;
+    flushSync(() => root.render(null));
+    host.remove();
+  }
+  // Drift in from the source tile the same way the shortcut dialog does.
+  function setEnterDirection(sourceElement: HTMLElement | null | undefined) {
+    const dialog = host.querySelector<HTMLElement>('.x-nt-folder-color-dialog');
+    if (!dialog) return;
+    let enterX = 0;
+    if (sourceElement?.isConnected) {
+      const sourceRect = sourceElement.getBoundingClientRect();
+      const dialogRect = dialog.getBoundingClientRect();
+      const targetX = dialogRect.width ? dialogRect.left + dialogRect.width / 2 : view.innerWidth / 2;
+      enterX = getEnterOffset(sourceRect.left + sourceRect.width / 2, targetX);
+    }
+    dialog.style.setProperty('--x-nt-shortcut-dialog-enter-x', `${Math.round(enterX)}px`);
+    dialog.style.transformOrigin = `${enterX < -2 ? 'left' : enterX > 2 ? 'right' : 'center'} center`;
+  }
   function close() {
     if (!initial) return;
     const source = initial.sourceElement;
     initial = null;
-    flushSync(() => root.render(null));
-    host.remove();
+    cancelMotion();
+    // Keep the form mounted while it fades out, but out of reach of focus and pointer input.
+    host.inert = true;
+    getBackdrop()?.setAttribute('data-open', 'false');
+    closeTimer = view.setTimeout(unmount, DEFAULT_CLOSE_DELAY_MS);
     doc.body.removeAttribute('data-folder-color-open');
     options.onClose?.();
     if (source?.isConnected) source.focus({ preventScroll: true });
@@ -328,14 +360,25 @@ export function createFolderColorPicker(options: PickerOptions = {}) {
   host.addEventListener('keydown', onKeyDown);
   return {
     open(next: OpenOptions) {
-      close(); initial = next; revision += 1;
+      close(); cancelMotion(); initial = next; revision += 1;
+      host.inert = false;
       doc.body.append(host);
       doc.body.setAttribute('data-folder-color-open', 'true');
       flushSync(() => root.render(<FolderColorForm key={revision} initial={next} options={options}
         initialSavedColors={savedColors} updateSavedColors={updateSavedColors} close={close} />));
+      const backdrop = getBackdrop();
+      if (!backdrop) return;
+      backdrop.setAttribute('data-open', 'false');
+      setEnterDirection(next.sourceElement);
+      // Commit the closed styles first so the next frame transitions into the open state.
+      void backdrop.offsetWidth;
+      openFrame = view.requestAnimationFrame(() => {
+        openFrame = 0;
+        if (initial === next) backdrop.setAttribute('data-open', 'true');
+      });
     },
     close,
     isOpen: () => Boolean(initial),
-    destroy() { close(); root.unmount(); host.removeEventListener('keydown', onKeyDown); }
+    destroy() { close(); unmount(); root.unmount(); host.removeEventListener('keydown', onKeyDown); }
   };
 }

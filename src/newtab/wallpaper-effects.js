@@ -326,6 +326,21 @@
     };
   }
 
+  // 'auto' follows the color mode: light mode samples shadows, dark mode samples highlights.
+  function resolveAutoInkTone(inkTone, mode) {
+    if (inkTone === 'dark' || inkTone === 'light') {
+      return inkTone;
+    }
+    return mode === 'dark' ? 'light' : 'dark';
+  }
+
+  function resolvePrefsForMode(value, mode) {
+    const normalized = normalizePrefs(value);
+    return Object.assign({}, normalized, {
+      inkTone: resolveAutoInkTone(normalized.inkTone, mode)
+    });
+  }
+
   function resolveUseDarkInk(inkTone, sampler) {
     if (inkTone === 'dark') {
       return true;
@@ -656,6 +671,8 @@
       return new Promise((resolve, reject) => {
         const image = new Image();
         image.decoding = 'async';
+        // Online wallpapers allow CORS; requesting it keeps the canvas readable for pixel sampling.
+        if (/^https?:/i.test(url)) image.crossOrigin = 'anonymous';
         image.onload = () => {
           if (token !== renderToken) {
             resolve(null);
@@ -2165,6 +2182,8 @@
     normalizePrefs,
     normalizeStoragePrefs,
     quantizeDitherColor,
+    resolveAutoInkTone,
+    resolvePrefsForMode,
     resolveUseDarkInk
   };
 })(globalThis);

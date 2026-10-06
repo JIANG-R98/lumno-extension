@@ -662,6 +662,9 @@
   "newtab_time_show_seconds_title": {
     "message": "秒を表示"
   },
+  "settings_newtab_page_buttons_title": {
+    "message": "ページ上のボタン"
+  },
   "settings_newtab_feedback_button_visible_title": {
     "message": "フィードバックボタンを表示"
   },
@@ -766,6 +769,9 @@
   },
   "newtab_favicon_save_error": {
     "message": "favicon を保存できませんでした"
+  },
+  "newtab_wallpaper_source_title": {
+    "message": "壁紙ソース"
   },
   "newtab_wallpaper_builtin_section": {
     "message": "内蔵"
@@ -2643,7 +2649,7 @@
     "message": "WebDAV 同期"
   },
   "webdav_beta_hint": {
-    "message": "設定・カスタムアイコン・壁紙を自分のクラウドストレージや NAS に同期します。ブラウザの同期と並行して動き、互いに影響しません。\n\nベータ版のため、同期に失敗することがあります。問題があればお知らせください。"
+    "message": "ベータ版：WebDAV ストレージや NAS で設定・カスタムアイコン・壁紙を同期します。ブラウザ内蔵同期とは違い、別のブラウザ間でも同期でき、アイコンや壁紙も対象になります。"
   },
   "webdav_setup_hint": {
     "message": "Nutstore（坚果云）などの WebDAV サービスで設定・カスタムアイコン・壁紙を同期します。ブラウザの同期と並行して動作します。"
@@ -2774,6 +2780,9 @@
   "webdav_preference_other": {
     "message": "その他の設定"
   },
+  "webdav_preference_zen_mode": {
+    "message": "Zen モード"
+  },
   "webdav_remove": {
     "message": "WebDAV 接続を削除"
   },
@@ -2792,6 +2801,9 @@
   "newtab_quote_off": {
     "message": "オフ"
   },
+  "newtab_quote_top": {
+    "message": "検索ボックスの上"
+  },
   "newtab_quote_input": {
     "message": "検索ボックスの下"
   },
@@ -2806,9 +2818,6 @@
   },
   "newtab_quote_poetry": {
     "message": "詩詞"
-  },
-  "newtab_quote_source": {
-    "message": "一言で見る"
   },
   "newtab_quote_save_error": {
     "message": "一言の設定を保存できませんでした"

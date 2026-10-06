@@ -60,8 +60,8 @@ body.x-nt-bottom-layout:not(.x-nt-mobile-flow) {
   --x-nt-suggestions-bg: rgba(255, 255, 255, 0.96);
   --x-nt-suggestions-border: rgba(15, 23, 42, 0.12);
   --x-nt-suggestions-shadow: 0 18px 44px rgba(0, 0, 0, 0.1);
-  --x-nt-search-shell-radius: 32px;
-  --x-nt-search-resting-radius: 28px;
+  --x-nt-search-shell-radius: 26px;
+  --x-nt-search-resting-radius: 26px;
   --x-nt-search-shell-border-width: 1px;
   --x-nt-search-shell-border: var(
     --x-lumno-search-shell-border-light,
@@ -205,6 +205,7 @@ body.x-nt-bottom-layout:not(.x-nt-mobile-flow) {
   --x-nt-shortcut-user-icon-radius: 16px;
   --x-nt-shortcut-user-favicon-size: 28px;
   --x-nt-shortcut-fallback-icon-bg: rgba(241, 245, 249, 0.9);
+  --x-nt-shortcut-folder-icon-bg: rgb(236 237 239);
   --x-nt-shortcut-user-tile-padding: 8px;
   --x-nt-shortcut-user-column-gap: 4px;
   --x-nt-shortcut-user-row-gap: 10px;
@@ -261,6 +262,7 @@ html[data-wallpaper-active="true"] body {
 }
 body[data-theme="dark"] {
   --x-nt-shortcut-fallback-icon-bg: rgba(255, 255, 255, 0.09);
+  --x-nt-shortcut-folder-icon-bg: rgb(58 59 61);
   --x-nt-bg: #111111;
   --x-nt-text: #e5e7eb;
   --x-nt-subtext: #9ca3af;
@@ -507,7 +509,7 @@ html body ._x_extension_tooltip_2026_unique_._x_extension_cursor_tooltip_tag_202
   flex-direction: column;
   background: var(--x-nt-panel-bg);
   border: var(--x-nt-search-shell-border-width, 1px) solid var(--x-nt-search-shell-border);
-  border-radius: var(--x-nt-search-shell-radius, 32px);
+  border-radius: var(--x-nt-search-shell-radius, 26px);
   box-shadow: var(--x-nt-panel-shadow);
   transition: box-shadow var(--lumno-duration-3xl) cubic-bezier(0.22, 1, 0.36, 1);
   backdrop-filter: blur(var(--x-nt-panel-blur, 24px)) saturate(var(--x-nt-panel-saturate, 165%));
@@ -542,7 +544,7 @@ body[data-theme="dark"][data-wallpaper-panel-open="true"] #_x_extension_newtab_r
   display: block;
   box-sizing: border-box;
   overflow: visible;
-  border-radius: var(--x-nt-search-content-radius, 27px);
+  border-radius: var(--x-nt-search-content-radius, 21px);
   background: var(--x-nt-input-bg, rgba(255, 255, 255, 0.9));
   border: var(--x-nt-search-layer-border-width, 1px) solid var(--x-nt-input-border, rgba(0, 0, 0, 0.06));
   box-shadow: var(--x-nt-input-shadow, 0 20px 60px rgba(0, 0, 0, 0.08));
@@ -561,8 +563,8 @@ body[data-nt-suggestions-open="true"] #_x_extension_newtab_root_2024_unique_ {
 body[data-nt-suggestions-open="true"] #_x_extension_newtab_search_layer_2024_unique_ {
   z-index: 20;
   border-radius:
-    var(--x-nt-search-resting-content-radius, 23px)
-    var(--x-nt-search-resting-content-radius, 23px)
+    var(--x-nt-search-resting-content-radius, 21px)
+    var(--x-nt-search-resting-content-radius, 21px)
     0
     0;
   background: transparent;
@@ -864,7 +866,12 @@ body[data-theme="dark"] .x-nt-shortcut-favicon-mask[data-builtin-monochrome="tru
   color: inherit;
   padding: 0;
 }
-.x-nt-shortcut-icon--folder,
+/* Folders sit on the same opaque neutral that monochrome favicons (X, GitHub)
+   resolve to, so they read as a site tile without competing with the folder
+   artwork's own color or following the wallpaper. */
+.x-nt-shortcut-icon--folder {
+  --x-nt-shortcut-icon-bg: var(--x-nt-shortcut-folder-icon-bg);
+}
 .x-nt-shortcut-icon:has(.x-nt-shortcut-favicon[data-fallback-icon="true"]),
 .x-nt-shortcut-icon:has(.x-nt-shortcut-favicon[data-favicon-placeholder="true"]),
 .x-nt-shortcut-icon:has(.x-nt-favicon-fallback[data-visible="true"]) {
@@ -891,9 +898,9 @@ body[data-theme="dark"] .x-nt-shortcut-favicon-mask[data-builtin-monochrome="tru
   pointer-events: none;
 }
 .x-nt-shortcut-context-menu-portal {
-  --x-nt-context-menu-radius: 17px;
+  --x-nt-context-menu-radius: var(--lumno-radius-menu);
   --x-nt-context-menu-border-width: 1px;
-  --x-nt-context-menu-padding: 6px;
+  --x-nt-context-menu-padding: 5px;
   --x-extension-menu-surface-closed-transform: translateX(-50%) scale(0.96, 0.86);
   --x-extension-menu-surface-open-transform: translateX(-50%) scale(1, 1);
   --x-nt-context-menu-option-radius: calc(
@@ -902,8 +909,8 @@ body[data-theme="dark"] .x-nt-shortcut-favicon-mask[data-builtin-monochrome="tru
     var(--x-nt-context-menu-padding)
   );
   background: rgb(255 255 255);
-  border-radius: var(--x-nt-context-menu-radius, 17px);
-  padding: var(--x-nt-context-menu-padding, 6px);
+  border-radius: var(--x-nt-context-menu-radius, 16px);
+  padding: var(--x-nt-context-menu-padding, 5px);
   pointer-events: auto;
 }
 .x-nt-shortcut-context-menu-portal ._x_extension_select_option_2024_unique_ {
@@ -1388,31 +1395,7 @@ body[data-nt-enter="run"] .x-nt-bookmark-cascade-debug-control {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #111827;
-  transition: color var(--lumno-duration-xs) ease;
-}
-._x_extension_select_option_checked_2026_unique_ {
-  color: #111827;
-}
-.x-nt-section-mode-portal
-  ._x_extension_select_option_radio_2026_unique_[data-radio-checked="true"] {
-  background: rgba(15, 23, 42, 0.055);
-}
-body[data-theme="dark"] ._x_extension_select_option_check_2026_unique_,
-body[data-theme="dark"] ._x_extension_select_option_checked_2026_unique_ {
-  color: #f8fafc;
-}
-body[data-theme="dark"] .x-nt-section-mode-portal
-  ._x_extension_select_option_radio_2026_unique_[data-radio-checked="true"] {
-  background: rgba(248, 250, 252, 0.08);
-}
-.x-nt-section-mode-select ._x_extension_select_menu_title_2024_unique_,
-.x-nt-section-mode-portal ._x_extension_select_menu_title_2024_unique_ {
-  color: #7a8491;
-}
-body[data-theme="dark"] .x-nt-section-mode-select ._x_extension_select_menu_title_2024_unique_,
-body[data-theme="dark"] .x-nt-section-mode-portal ._x_extension_select_menu_title_2024_unique_ {
-  color: #94a3b8;
+  color: inherit;
 }
 .x-nt-section-mode-select ._x_extension_select_trigger_2024_unique_:focus-visible {
   outline: 2px solid var(--x-nt-bookmark-focus, rgba(0, 0, 0, 0.22));
@@ -3158,10 +3141,10 @@ body[data-theme="dark"] .x-nt-recent-pin.x-nt-recent-pin--active {
   background: var(--x-nt-suggestions-bg, rgba(255, 255, 255, 0.96));
   border: 1px solid transparent;
   border-radius:
-    var(--x-nt-search-resting-radius, 28px)
-    var(--x-nt-search-resting-radius, 28px)
-    var(--x-nt-search-shell-radius, 32px)
-    var(--x-nt-search-shell-radius, 32px);
+    var(--x-nt-search-resting-radius, 26px)
+    var(--x-nt-search-resting-radius, 26px)
+    var(--x-nt-search-shell-radius, 26px)
+    var(--x-nt-search-shell-radius, 26px);
   box-shadow: var(--x-nt-panel-shadow-focus, var(--x-nt-panel-shadow, 0 18px 44px rgba(0, 0, 0, 0.1)));
   backdrop-filter: blur(var(--x-nt-panel-blur, 24px)) saturate(var(--x-nt-panel-saturate, 165%));
   -webkit-backdrop-filter: blur(var(--x-nt-panel-blur, 24px)) saturate(var(--x-nt-panel-saturate, 165%));
@@ -3183,10 +3166,10 @@ body[data-theme="dark"] .x-nt-recent-pin.x-nt-recent-pin--active {
   background: transparent;
   border: 1px solid var(--x-nt-search-shell-border);
   border-radius:
-    var(--x-nt-search-resting-radius, 28px)
-    var(--x-nt-search-resting-radius, 28px)
-    var(--x-nt-search-shell-radius, 32px)
-    var(--x-nt-search-shell-radius, 32px);
+    var(--x-nt-search-resting-radius, 26px)
+    var(--x-nt-search-resting-radius, 26px)
+    var(--x-nt-search-shell-radius, 26px)
+    var(--x-nt-search-shell-radius, 26px);
   box-sizing: border-box;
   pointer-events: none;
   opacity: 0;
@@ -3217,7 +3200,7 @@ body[data-theme="dark"] .x-nt-recent-pin.x-nt-recent-pin--active {
   background: transparent;
   border: none;
   border-top: none;
-  border-radius: 0 0 var(--x-nt-search-content-radius, 27px) var(--x-nt-search-content-radius, 27px);
+  border-radius: 0 0 var(--x-nt-search-content-radius, 21px) var(--x-nt-search-content-radius, 21px);
   box-shadow: none;
   padding:
     var(--x-nt-search-results-padding-block-start, 8px)
@@ -3733,36 +3716,34 @@ body[data-theme="dark"] .x-nt-feedback-button[data-open="true"]:active {
     inset 0 -4px 3px rgba(255, 255, 255, 0.58);
 }
 .x-nt-feedback-action-community {
-  color: #ffffff;
+  color: var(--lumno-color-on-primary);
 }
+/* The ring is the first shadow so it sits outside the circle face instead of looking clipped. */
 .x-nt-feedback-action-community::before {
-  background: linear-gradient(180deg, #404859 0%, #273042 100%);
+  background: var(--lumno-color-primary);
   box-shadow:
-    0 0 0 1px #040404,
-    0 10px 3px rgba(0, 0, 0, 0),
-    0 6px 2px rgba(0, 0, 0, 0.008),
-    0 3px 2px rgba(0, 0, 0, 0.035),
-    0 2px 2px rgba(0, 0, 0, 0.065),
-    0 0 1px rgba(0, 0, 0, 0.075),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    inset 0 1px 2.4px rgba(255, 255, 255, 0.12);
+    0 0 0 1px var(--lumno-color-primary-border),
+    var(--lumno-shadow-primary),
+    var(--lumno-shadow-primary-sheen);
 }
 .x-nt-feedback-action-community:hover,
 .x-nt-feedback-action-community[data-active="true"] {
-  color: #ffffff;
+  color: var(--lumno-color-on-primary);
 }
 .x-nt-feedback-action-community:hover::before,
 .x-nt-feedback-action-community[data-active="true"]::before {
-  background: linear-gradient(180deg, #4a5467 0%, #2f3a4f 100%);
+  background: var(--lumno-color-primary-hover);
   box-shadow:
-    0 0 0 1px #040404,
-    0 12px 4px rgba(0, 0, 0, 0),
-    0 7px 3px rgba(0, 0, 0, 0.015),
-    0 4px 3px rgba(0, 0, 0, 0.045),
-    0 2px 2px rgba(0, 0, 0, 0.075),
-    0 0 1px rgba(0, 0, 0, 0.09),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    inset 0 1px 2.4px rgba(255, 255, 255, 0.12);
+    0 0 0 1px var(--lumno-color-primary-border),
+    var(--lumno-shadow-primary-hover),
+    var(--lumno-shadow-primary-sheen);
+}
+.x-nt-feedback-action-community:active::before {
+  background: var(--lumno-color-primary);
+  box-shadow:
+    0 0 0 1px var(--lumno-color-primary-border),
+    var(--lumno-shadow-primary-pressed),
+    var(--lumno-shadow-primary-sheen-pressed);
 }
 .x-nt-feedback-detail {
   width: 100%;
@@ -3970,7 +3951,14 @@ body[data-wallpaper-active="true"]
   ._x_extension_select_icon_2024_unique_ {
   color: inherit;
 }
-body[data-wallpaper-active="true"] #_x_extension_newtab_wordmark_2026_unique_ > .x-nt-wordmark-content,
+/* Must outrank the entry animation's settled `filter: none`, or the halo
+   only exists before the wordmark finishes entering. */
+body[data-nt-ready="1"][data-wallpaper-active="true"]
+  #_x_extension_newtab_wordmark_2026_unique_[data-enter="done"]:not([data-wallpaper-overlay-cover="true"])
+  > .x-nt-wordmark-content {
+  filter: drop-shadow(0 1px 1px var(--x-nt-wallpaper-wordmark-shadow, transparent))
+    drop-shadow(0 0 12px var(--x-nt-wallpaper-wordmark-halo, transparent));
+}
 body[data-wallpaper-active="true"] .x-nt-bookmarks-title-wrap,
 body[data-wallpaper-active="true"] .x-nt-bookmarks-pager,
 body[data-wallpaper-active="true"] .x-nt-recent-header-bar,
@@ -4191,7 +4179,7 @@ body[data-wallpaper-active="true"] .x-nt-wallpaper-button[data-open="true"]:not(
     calc(100dvh - 76px - var(--x-nt-top-occupied-inset, 0px))
   );
   padding: 20px;
-  border-radius: 27px;
+  border-radius: var(--lumno-radius-dialog);
   background: rgb(255 255 255);
   border: 1px solid var(
     --x-nt-surface-border,
@@ -4479,14 +4467,16 @@ body[data-theme="dark"] .x-nt-appearance-header {
 /* Segmented controls on the right of a setting row hug their labels instead of splitting a fixed width. */
 .x-nt-top-content-tabs,
 .x-nt-appearance-scope-tabs,
-.x-nt-wallpaper-tabs.x-nt-row-tabs {
+.x-nt-wallpaper-tabs.x-nt-row-tabs,
+.x-nt-effect-options.x-nt-row-tabs {
   flex: 0 1 auto;
   gap: 0;
   min-height: 30px;
 }
 .x-nt-top-content-tab,
 .x-nt-appearance-scope-tab,
-.x-nt-row-tabs .x-nt-wallpaper-tab {
+.x-nt-row-tabs .x-nt-wallpaper-tab,
+.x-nt-row-tabs .x-nt-effect-option {
   flex: 0 0 auto;
   height: 28px;
   padding: 0 8px;
@@ -4801,12 +4791,23 @@ body[data-theme="dark"] .x-nt-range-slider-row .x-range-slider {
   margin-top: var(--x-nt-effect-block-gap);
   padding-left: 0;
 }
-.x-nt-effect-select {
+/* Dropdowns on the right of a setting row (wallpaper filter, quote position).
+   The page-level control fills are translucent white for wallpapers; inside the
+   panel the trigger takes the filled field look the Options page uses. */
+.x-nt-row-select {
+  --control-bg: rgba(15, 23, 42, 0.04);
+  --control-hover-bg: rgba(0, 0, 0, 0.05);
+  --control-open-bg: rgba(0, 0, 0, 0.08);
   flex: 0 0 var(--x-nt-row-control-width);
   min-width: 0;
 }
-/* Sized like the slider value input so the filter row lines up with its neighbours. */
-.x-nt-effect-select ._x_extension_select_trigger_2024_unique_ {
+body[data-theme="dark"] .x-nt-row-select {
+  --control-bg: #2f2f2f;
+  --control-hover-bg: #363636;
+  --control-open-bg: #404040;
+}
+/* Sized like the slider value input so select rows line up with their neighbours. */
+.x-nt-row-select ._x_extension_select_trigger_2024_unique_ {
   width: 100%;
   min-width: 0;
   height: 30px;
@@ -4916,6 +4917,9 @@ body[data-theme="dark"] .x-nt-range-slider-row .x-range-slider {
 }
 .x-nt-effect-ink-tone-control {
   margin-top: var(--x-nt-effect-control-gap);
+}
+.x-nt-effect-ink-tone-control .x-nt-appearance-setting-row {
+  padding-left: 0;
 }
 .x-nt-effect-ink-tone-options {
   margin-top: 0;
@@ -5466,7 +5470,7 @@ body[data-theme="dark"] .x-nt-appearance-check::after {
   min-height: var(--x-nt-suggestion-row-height, 52px);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: var(--x-nt-search-result-radius, 19px);
+  border-radius: var(--x-nt-search-result-radius, 13px);
   cursor: pointer;
   transition: background-color var(--lumno-duration-lg) ease;
   box-sizing: border-box;
@@ -6458,7 +6462,6 @@ body[data-lumno-page="newtab"] [role="button"] .ri-icon {
       calc(100dvh - 80px - var(--x-nt-top-occupied-inset) - var(--x-nt-bottom-safe-inset))
     );
     padding: 16px;
-    border-radius: 22px;
   }
   .x-nt-wallpaper-panel-scroll {
     scrollbar-gutter: auto;
@@ -6507,14 +6510,12 @@ body[data-lumno-page="newtab"] [role="button"] .ri-icon {
   }
 }
 /* Keep this after component resets: `all: unset` also resets corner-shape. */
-/* Capsules and circles keep round ends: the search shell, its layer and the visit button. */
+/* Circles keep round ends: the visit button. */
 @supports (corner-shape: superellipse(1.25)) {
-  /* The open panel's top corners wrap the capsule shell, so only its bottom corners are continuous. */
+  #_x_extension_newtab_root_2024_unique_,
+  #_x_extension_newtab_search_layer_2024_unique_,
   #_x_extension_newtab_suggestions_surface_2026_unique_,
-  #_x_extension_newtab_suggestions_outline_2026_unique_ {
-    corner-shape: round round superellipse(1.25) superellipse(1.25);
-  }
-
+  #_x_extension_newtab_suggestions_outline_2026_unique_,
   #_x_extension_newtab_suggestions_container_2024_unique_,
   .x-nt-wallpaper-panel,
   .x-nt-feedback-popover,

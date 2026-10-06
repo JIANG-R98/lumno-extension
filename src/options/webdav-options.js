@@ -36,7 +36,7 @@
       webdav_missing_hint: t("webdav_missing_hint", "服务器上的配置不见了。可以把本机配置重新上传，或先检查服务器地址。"),
       webdav_error_outdated: t("webdav_error_outdated", "请重新加载 Lumno 扩展，再刷新设置页以使用多连接同步。"),
       webdav_title: t("webdav_title", "WebDAV 同步"),
-      webdav_beta_hint: t("webdav_beta_hint", "把设置、自定义图标和壁纸同步到你自己的网盘或 NAS，和浏览器自带的同步同时运行，互不影响。\n\n这是测试版，偶尔可能同步失败。遇到问题欢迎反馈。"),
+      webdav_beta_hint: t("webdav_beta_hint", "功能测试中：通过 WebDAV 网盘或 NAS 同步设置、自定义图标和壁纸。相比浏览器内置同步，支持跨浏览器，也能同步图标和壁纸。"),
       webdav_edit_config: t("webdav_edit_config", "编辑连接配置"),
       webdav_save: t("webdav_save", "保存"),
       webdav_enable: t("webdav_enable", "保存并开启同步"),
@@ -119,12 +119,33 @@
     ['aggregate_search_auto_group', 'settings_aggregate_search_auto_group_title'],
     ['site_search', 'settings_tab_shortcuts'], ['aggregate_searches', 'settings_tab_shortcuts'],
     ['default_search_engine', 'settings_tab_shortcuts'], ['favicon_enhanced_fetch', 'settings_favicon_enhanced_fetch_title'],
-    ['blacklist', 'settings_tab_blacklist']
+    ['blacklist', 'settings_tab_blacklist'], ['newtab_quote_prefs', 'newtab_quote_title'],
+    ['newtab_zen_mode', 'webdav_preference_zen_mode'], ['newtab_favicon', 'newtab_favicon_title'],
+    ['bookmark_view_mode', 'settings_bookmarks_title']
   ];
+  // Field-merged records name each conflicting field, and enumerated text
+  // values use the option names the settings controls show.
+  const FIELD_LABELS = {
+    newtab_quote_prefs: {
+      fields: { enabled: 'newtab_quote_title', position: 'newtab_quote_position', category: 'newtab_quote_category',
+        fontSize: 'newtab_quote_font_size_label' },
+      values: { top: 'newtab_quote_top', input: 'newtab_quote_input', search: 'newtab_quote_search', bottom: 'newtab_quote_bottom',
+        literature: 'newtab_quote_literature', poetry: 'newtab_quote_poetry' }
+    }
+  };
   function preferenceLabel(t, key) {
     const match = PREFERENCE_LABELS.find(([fragment]) => key.includes(fragment));
     const label = match ? t(match[1], '').trim() : '';
     return label || t('webdav_preference_other', '其他设置');
+  }
+  function preferenceItem(t, item) {
+    const fields = Object.entries(FIELD_LABELS).find(([fragment]) => item.key.includes(fragment));
+    if (!item.field || !fields) return { ...item, label: preferenceLabel(t, item.key) };
+    const labels = fields[1];
+    const label = Object.hasOwn(labels.fields, item.field) ? t(labels.fields[item.field], '').trim() : '';
+    const value = (summary) => summary && summary.kind === 'text' && Object.hasOwn(labels.values, summary.value)
+      ? { ...summary, value: t(labels.values[summary.value], summary.value) } : summary;
+    return { ...item, label: label || `${preferenceLabel(t, item.key)} · ${item.field}`, local: value(item.local), remote: value(item.remote) };
   }
   function createController(options) {
     const chromeApi = options.chromeApi;
@@ -182,8 +203,8 @@
           const result = await message(operation, { ...(id ? { id } : {}), ...extra });
           if (operation === 'conflictDetails') {
             const copy = createCopy(t);
-            return { items: (result.items || []).map((item) => ({ ...item, label: item.domain === 'shortcuts' ? copy.webdav_conflict_shortcuts
-              : item.domain === 'wallpapers' ? copy.webdav_conflict_wallpapers : preferenceLabel(t, item.key) })) };
+            return { items: (result.items || []).map((item) => item.domain === 'shortcuts' ? { ...item, label: copy.webdav_conflict_shortcuts }
+              : item.domain === 'wallpapers' ? { ...item, label: copy.webdav_conflict_wallpapers } : preferenceItem(t, item)) };
           }
           await refresh();
           return result;

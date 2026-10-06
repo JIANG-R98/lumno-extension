@@ -265,8 +265,8 @@ assert.match(
 );
 assert.match(
   shellSource,
-  /--x-ov-panel-radius:\s*24px;[\s\S]*?border-radius:\s*var\(--x-ov-panel-radius\)\s*!important;/,
-  'overlay shell should use the smaller 24px radius on every outer corner'
+  /--x-ov-panel-radius:\s*26px;[\s\S]*?border-radius:\s*var\(--x-ov-panel-radius\)\s*!important;/,
+  'overlay shell should use the 26px radius on every outer corner'
 );
 assert.doesNotMatch(
   shellSource,
@@ -275,18 +275,18 @@ assert.doesNotMatch(
 );
 assert.match(
   searchPanelSource,
-  /setOverlayPanelScopedStyle\([\s\S]*?'border-radius',[\s\S]*?'var\(--x-ov-panel-radius, 24px\)'[\s\S]*?\);/,
-  'collapsed and expanded overlays should keep the same 24px radius on all four outer corners'
+  /setOverlayPanelScopedStyle\([\s\S]*?'border-radius',[\s\S]*?'var\(--x-ov-panel-radius, 26px\)'[\s\S]*?\);/,
+  'collapsed and expanded overlays should keep the same 26px radius on all four outer corners'
 );
 assert.match(
   searchPanelSource,
-  /shouldCollapse\s*\?\s*'var\(--x-ov-content-radius, 23px\)'\s*:\s*'var\(--x-ov-content-radius, 23px\) var\(--x-ov-content-radius, 23px\) 0 0'/,
-  'the input should follow the 23px radius inside the shell border while its expanded seam stays square'
+  /shouldCollapse\s*\?\s*'var\(--x-ov-content-radius, 25px\)'\s*:\s*'var\(--x-ov-content-radius, 25px\) var\(--x-ov-content-radius, 25px\) 0 0'/,
+  'the input should follow the 25px radius inside the shell border while its expanded seam stays square'
 );
 assert.match(
   suggestionsViewSource,
-  /border-radius:\s*0 0 var\(--x-ov-content-radius,\s*23px\) var\(--x-ov-content-radius,\s*23px\);/,
-  'overlay results should follow the 23px radius inside the shell border at the lower corners'
+  /border-radius:\s*0 0 var\(--x-ov-content-radius,\s*25px\) var\(--x-ov-content-radius,\s*25px\);/,
+  'overlay results should follow the 25px radius inside the shell border at the lower corners'
 );
 assert.match(
   searchPanelSource,

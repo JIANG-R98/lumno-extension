@@ -113,7 +113,7 @@ body[data-theme="light"] {
   }
 }
 #_x_extension_settings_panel_2024_unique_ {
-  --settings-panel-radius: 22px;
+  --settings-panel-radius: var(--lumno-radius-dialog);
   --panel-bg: #ffffff;
   --panel-border: rgba(0, 0, 0, 0.12);
   --panel-text: var(--lumno-color-text);
@@ -149,6 +149,7 @@ body[data-theme="light"] {
   --sync-menu-shadow: 0 14px 28px rgba(15, 23, 42, 0.14);
   --settings-content-edge-space: 14px;
   --settings-content-gap: 16px;
+  --settings-row-gap: 8px;
   --settings-row-block-space: 12px;
   --settings-section-header-height: 30px;
   background: var(--panel-bg);
@@ -437,7 +438,7 @@ body[data-theme="dark"] ._x_extension_tabs_indicator_2024_unique_ {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px;
+  padding: 6px 8px;
   border-radius: var(--lumno-radius-lg);
   color: var(--tab-inactive-text);
   font-size: var(--lumno-font-size-md);
@@ -466,7 +467,7 @@ body[data-theme="dark"] ._x_extension_tabs_indicator_2024_unique_ {
   transform: scale(1);
 }
 ._x_extension_settings_content_2024_unique_ {
-  gap: var(--settings-content-gap);
+  gap: var(--settings-row-gap);
   flex-direction: column;
   display: none;
   padding-bottom: 0;
@@ -512,7 +513,7 @@ html[data-options-theme-mode="dark"] #_x_extension_overlay_page_theme_adaptation
 }
 ._x_extension_setting_desc_2024_unique_ {
   font-size: var(--settings-option-desc-font-size);
-  line-height: 1.65;
+  line-height: 1.5;
   margin: 4px 0 0;
   color: var(--panel-subtext);
 }
@@ -523,7 +524,7 @@ html[data-options-theme-mode="dark"] #_x_extension_overlay_page_theme_adaptation
   display: flex;
   align-items: center;
   gap: 0;
-  border-radius: var(--lumno-radius-lg);
+  border-radius: var(--lumno-radius-md);
   border: 1px solid var(--tab-border);
   background: var(--control-bg);
   transition: border-color var(--lumno-duration-md) ease, background-color var(--lumno-duration-lg) ease;
@@ -536,13 +537,14 @@ html[data-options-theme-mode="dark"] #_x_extension_overlay_page_theme_adaptation
 }
 ._x_extension_shortcut_input_prefix_2026_unique_ {
   flex-shrink: 0;
-  padding: 8px 0 8px 10px;
+  padding: 6px 0 6px 10px;
   color: var(--panel-subtext);
   font-size: var(--lumno-font-size-md);
   white-space: nowrap;
   user-select: none;
 }
 ._x_extension_shortcut_input_affix_2026_unique_ ._x_extension_shortcut_input_2024_unique_ {
+  min-height: 0;
   border: none;
   background: transparent;
   border-radius: 0;
@@ -593,8 +595,8 @@ html[data-options-theme-mode="dark"] #_x_extension_overlay_page_theme_adaptation
 }
 ._x_extension_feedback_support_link_2026_unique_ {
   box-sizing: border-box;
-  min-height: 30px;
-  padding: 6px 10px;
+  min-height: 28px;
+  padding: 0 10px;
   border: 1px solid transparent;
   border-radius: var(--lumno-radius-pill);
   background: transparent;
@@ -630,8 +632,8 @@ body[data-theme="dark"] ._x_extension_feedback_support_link_2026_unique_:hover {
 }
 ._x_extension_shortcut_submit_2024_unique_._x_extension_onboarding_guide_button_2026_unique_ {
   margin-left: auto;
-  --settings-button-min-height: 30px;
-  --settings-button-padding: 6px 10px;
+  --settings-button-min-height: 28px;
+  --settings-button-padding: 0 10px;
   --settings-button-border-color: transparent;
   --settings-button-bg: transparent;
   --settings-button-color: rgba(107, 114, 128, 0.86);
@@ -711,13 +713,6 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   flex-direction: column;
   gap: 14px;
 }
-._x_extension_shortcut_item_2024_unique_[data-type="aggregate"][data-expanded="true"] ._x_extension_shortcut_editor_2024_unique_ {
-  max-height: 1100px;
-}
-._x_extension_shortcut_form_2024_unique_[data-type="aggregate"][data-expanded="true"],
-._x_extension_shortcut_form_2024_unique_[data-type="aggregate"][data-expanded="true"] ._x_extension_shortcut_form_fields_2024_unique_ {
-  max-height: 1100px;
-}
 ._x_extension_aggregate_search_editor_2026_unique_ {
   gap: 14px;
 }
@@ -740,6 +735,9 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   padding: 10px;
   overflow: auto;
   overscroll-behavior: contain;
+  /* Keeps the long source list out of each accordion frame's layout and paint;
+     without it the aggregate card drops frames while opening and closing. */
+  contain: layout paint;
   border: 1px solid var(--tab-border);
   border-radius: var(--lumno-radius-xl);
   background: color-mix(in srgb, var(--control-bg) 78%, transparent);
@@ -801,10 +799,10 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
 }
 ._x_extension_shortcuts_status_chip_2026_unique_ {
   min-width: 148px;
-  height: 33px;
+  height: 32px;
   padding: 0 12px;
   box-sizing: border-box;
-  border-radius: var(--lumno-radius-lg);
+  border-radius: var(--lumno-radius-md);
   border: 1px solid color-mix(in srgb, var(--tab-border) 82%, transparent);
   background: color-mix(in srgb, var(--control-bg) 78%, transparent);
   color: var(--panel-subtext);
@@ -872,10 +870,10 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
 }
 ._x_extension_shortcut_reference_key_field_2026_unique_ {
   min-width: 124px;
-  height: 33px;
+  height: 32px;
   padding: 0 11px;
   box-sizing: border-box;
-  border-radius: var(--lumno-radius-lg);
+  border-radius: var(--lumno-radius-md);
   border: 1px solid color-mix(in srgb, var(--tab-border) 82%, transparent);
   background: color-mix(in srgb, var(--control-bg) 78%, transparent);
   color: var(--panel-subtext);
@@ -909,6 +907,10 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
 }
 ._x_extension_setting_subrow_2026_unique_[data-disabled="true"] {
   opacity: 0.5;
+}
+._x_extension_setting_group_row_2026_unique_ {
+  min-height: calc(var(--switch-height, 24px) + var(--settings-row-block-space) * 2);
+  box-sizing: border-box;
 }
 ._x_extension_selection_provider_row_2026_unique_ ._x_extension_custom_select_2024_unique_ {
   min-width: 172px;
@@ -1201,7 +1203,7 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
 }
 ._x_extension_range_slider_control_2026_unique_ ._x_extension_range_slider_value_input_2026_unique_ {
   --x-range-slider-value-width: 56px;
-  --x-range-slider-value-height: 36px;
+  --x-range-slider-value-height: 32px;
 }
 ._x_extension_range_slider_value_2026_unique_ {
   display: inline-flex;
@@ -1294,9 +1296,9 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   cursor: not-allowed;
 }
 ._x_extension_sync_button_2024_unique_ {
-  --settings-button-padding: 10px 16px;
+  --settings-button-padding: 0 14px;
   --settings-button-font-size: 13px;
-  --settings-button-min-height: 36px;
+  --settings-button-min-height: 32px;
 }
 /* Switch geometry and colors live in ../shared/switch.css. */
 ._x_extension_shortcut_input_2024_unique_._x_extension_range_slider_value_input_2026_unique_ {
@@ -1566,6 +1568,9 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
 /*
  * Collapsed, the editor also gives back its padding, divider and the item's 12px row gap,
  * so a closed card keeps equal top and bottom padding.
+ * Every accordion here animates its real height on the shared accordion timing, so a
+ * card moves the same way however tall its editor is. Once a close has finished, the
+ * contents drop out of style, layout and paint, so closed editors cost nothing.
  */
 ._x_extension_shortcut_editor_2024_unique_ {
   display: flex;
@@ -1575,31 +1580,41 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   padding-top: 0;
   padding-bottom: 0;
   border-top: 1px dashed transparent;
-  max-height: 0;
+  /* Without this an open, overflow-visible flex item would jump to its content height. */
+  min-height: 0;
+  height: 0;
+  interpolate-size: allow-keywords;
+  content-visibility: hidden;
   opacity: 0;
   transform: translateY(-6px);
   overflow: hidden;
   pointer-events: none;
   transition:
-    max-height var(--lumno-duration-xl) ease,
+    height var(--lumno-accordion-close),
     margin-top var(--lumno-duration-xl) ease,
     padding-top var(--lumno-duration-xl) ease,
     border-color var(--lumno-duration-md) ease,
     opacity var(--lumno-duration-md) ease,
-    transform var(--lumno-duration-xl) ease;
+    transform var(--lumno-duration-xl) ease,
+    content-visibility 0s linear var(--lumno-duration-xl) allow-discrete;
 }
 ._x_extension_shortcut_item_2024_unique_[data-expanded="true"] ._x_extension_shortcut_editor_2024_unique_ {
   margin-top: 0;
   padding-top: 6px;
   border-top-color: var(--tab-border);
-  max-height: 360px;
+  height: auto;
+  content-visibility: visible;
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
   overflow: visible;
-}
-._x_extension_shortcut_item_2024_unique_[data-type="custom"][data-expanded="true"] ._x_extension_shortcut_editor_2024_unique_ {
-  max-height: 560px;
+  transition:
+    height var(--lumno-accordion-open),
+    margin-top var(--lumno-duration-xl) ease,
+    padding-top var(--lumno-duration-xl) ease,
+    border-color var(--lumno-duration-md) ease,
+    opacity var(--lumno-duration-md) ease,
+    transform var(--lumno-duration-xl) ease;
 }
 ._x_extension_shortcut_editor_actions_2024_unique_ {
   display: flex;
@@ -1711,8 +1726,6 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   min-height: 56px;
   justify-content: center;
   overflow: hidden;
-  max-height: 56px;
-  transition: max-height var(--lumno-duration-xl) ease;
   position: relative;
 }
 ._x_extension_shortcut_form_2024_unique_[data-expanded="false"] {
@@ -1732,9 +1745,9 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
 #_x_extension_settings_panel_2024_unique_[data-theme="dark"] ._x_extension_shortcut_form_2024_unique_[data-expanded="true"] {
   background: rgba(255, 255, 255, 0.04);
 }
+/* The form follows its fields' height, which runs on the accordion timing. */
 ._x_extension_shortcut_form_2024_unique_[data-expanded="true"] {
   justify-content: flex-start;
-  max-height: 560px;
   overflow: visible;
 }
 ._x_extension_shortcut_form_trigger_2024_unique_ {
@@ -1751,12 +1764,19 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   flex-direction: column;
   gap: 10px;
   width: 100%;
-  max-height: 0;
+  min-height: 0;
+  height: 0;
+  interpolate-size: allow-keywords;
+  content-visibility: hidden;
   opacity: 0;
   transform: translateY(-6px);
   overflow: hidden;
   pointer-events: none;
-  transition: max-height var(--lumno-duration-xl) ease, opacity var(--lumno-duration-md) ease, transform var(--lumno-duration-xl) ease;
+  transition:
+    height var(--lumno-accordion-close),
+    opacity var(--lumno-duration-md) ease,
+    transform var(--lumno-duration-xl) ease,
+    content-visibility 0s linear var(--lumno-duration-xl) allow-discrete;
   position: relative;
   z-index: 1;
 }
@@ -1766,11 +1786,16 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   visibility: hidden;
 }
 ._x_extension_shortcut_form_2024_unique_[data-expanded="true"] ._x_extension_shortcut_form_fields_2024_unique_ {
-  max-height: 560px;
+  height: auto;
+  content-visibility: visible;
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
   overflow: visible;
+  transition:
+    height var(--lumno-accordion-open),
+    opacity var(--lumno-duration-md) ease,
+    transform var(--lumno-duration-xl) ease;
 }
 /* Toast look comes from ../shared/toast.css; Options only clears the notch. */
 ._x_extension_toast_2024_unique_ {
@@ -1812,7 +1837,7 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
   max-width: 360px;
   background: #ffffff;
   color: #0f172a;
-  border-radius: 18px;
+  border-radius: var(--lumno-radius-dialog);
   padding: 16px;
   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
   display: flex;
@@ -1867,8 +1892,10 @@ body[data-theme="dark"] ._x_extension_confirm_dialog_2024_unique_ {
   gap: 4px;
 }
 ._x_extension_shortcut_input_2024_unique_ {
-  padding: 8px 10px;
-  border-radius: var(--lumno-radius-lg);
+  box-sizing: border-box;
+  min-height: 32px;
+  padding: 6px 10px;
+  border-radius: var(--lumno-radius-md);
   border: 1px solid var(--tab-border);
   background: var(--control-bg);
   color: var(--panel-text);
@@ -1905,8 +1932,8 @@ body[data-theme="dark"] ._x_extension_confirm_dialog_2024_unique_ {
   position: relative;
   cursor: pointer;
   align-self: flex-start;
-  min-height: var(--settings-button-min-height, auto);
-  padding: var(--settings-button-padding, 8px 14px);
+  min-height: var(--settings-button-min-height, 32px);
+  padding: var(--settings-button-padding, 0 14px);
   border-radius: var(--lumno-radius-pill);
   border: 1px solid var(--settings-button-border-color, transparent);
   background: var(--settings-button-bg, var(--tab-active-bg));
@@ -2011,35 +2038,26 @@ body[data-theme="dark"] ._x_extension_shortcut_secondary_2024_unique_ {
   width: 100%;
 }
 ._x_extension_shortcut_submit_primary_2024_unique_ {
-  --settings-button-border-color: #040404;
-  --settings-button-bg: linear-gradient(180deg, #404859 0%, #273042 100%);
-  --settings-button-color: #ffffff;
+  --settings-button-border-color: var(--lumno-color-primary-border);
+  --settings-button-bg: var(--lumno-color-primary);
+  --settings-button-color: var(--lumno-color-on-primary);
   --settings-button-font-weight: 600;
-  --settings-button-shadow:
-    0 10px 3px rgba(0, 0, 0, 0),
-    0 6px 2px rgba(0, 0, 0, 0.008),
-    0 3px 2px rgba(0, 0, 0, 0.035),
-    0 2px 2px rgba(0, 0, 0, 0.065),
-    0 0 1px rgba(0, 0, 0, 0.075);
-  --settings-button-before-shadow: inset 0 1px 1.6px rgba(255, 255, 255, 0.34);
+  --settings-button-shadow: var(--lumno-shadow-primary);
+  --settings-button-before-shadow: var(--lumno-shadow-primary-sheen);
   --settings-button-focus-outline: none;
   --settings-button-focus-outline-offset: 0;
-  --settings-button-hover-bg: linear-gradient(180deg, #4a5467 0%, #2f3a4f 100%);
-  --settings-button-hover-shadow:
-    0 12px 4px rgba(0, 0, 0, 0),
-    0 7px 3px rgba(0, 0, 0, 0.015),
-    0 4px 3px rgba(0, 0, 0, 0.045),
-    0 2px 2px rgba(0, 0, 0, 0.075),
-    0 0 1px rgba(0, 0, 0, 0.09);
+  --settings-button-hover-bg: var(--lumno-color-primary-hover);
+  --settings-button-hover-shadow: var(--lumno-shadow-primary-hover);
 }
-body[data-theme="dark"] ._x_extension_shortcut_submit_primary_2024_unique_ {
-  --settings-button-bg: linear-gradient(180deg, #4a566c 0%, #334157 100%);
-  --settings-button-color: #f8fafc;
-  --settings-button-hover-bg: linear-gradient(180deg, #56647c 0%, #3a4b66 100%);
+/* Pressed: the face sinks, so the drop flattens and the sheen turns into an inner shadow. */
+._x_extension_shortcut_submit_primary_2024_unique_:active {
+  --settings-button-hover-bg: var(--lumno-color-primary);
+  --settings-button-hover-shadow: var(--lumno-shadow-primary-pressed);
+  --settings-button-before-shadow: var(--lumno-shadow-primary-sheen-pressed);
 }
-/* Size modifier: matches the 36px inputs, selects and tabs. Combine with any tone (primary / secondary / ghost). */
+/* Size modifier: matches the 32px inputs, selects and tabs. Combine with any tone (primary / secondary / ghost). */
 ._x_extension_shortcut_compact_2026_unique_ {
-  --settings-button-min-height: 36px;
+  --settings-button-min-height: 32px;
   --settings-button-padding: 0 14px;
   --settings-button-font-size: 13px;
   --settings-button-gap: 5px;
@@ -2069,12 +2087,13 @@ body[data-theme="dark"] ._x_extension_shortcut_submit_primary_2024_unique_ {
 ._x_extension_theme_picker_2024_unique_ {
   display: flex;
   gap: 6px;
+  box-sizing: border-box;
   padding: 2px;
-  border-radius: var(--lumno-radius-lg);
+  border-radius: var(--lumno-radius-md);
   border: 1px solid var(--tab-border);
   background: var(--control-bg);
   align-items: center;
-  min-height: 30px;
+  min-height: 32px;
   position: relative;
 }
 ._x_extension_theme_indicator_2024_unique_ {
@@ -2084,7 +2103,7 @@ body[data-theme="dark"] ._x_extension_shortcut_submit_primary_2024_unique_ {
   height: calc(100% - 4px);
   width: 0;
   background: var(--inline-tab-active-bg);
-  border-radius: var(--lumno-radius-md);
+  border-radius: var(--lumno-radius-sm);
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
   transition: transform var(--lumno-duration-xl) var(--lumno-ease-emphasized), width var(--lumno-duration-xl) var(--lumno-ease-emphasized);
   pointer-events: none;
@@ -2093,8 +2112,12 @@ body[data-theme="dark"] ._x_extension_shortcut_submit_primary_2024_unique_ {
 ._x_extension_theme_option_2024_unique_ {
   all: unset;
   cursor: pointer;
-  padding: 6px;
-  border-radius: var(--lumno-radius-lg);
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: var(--lumno-radius-sm);
   font-size: var(--lumno-font-size-md);
   font-weight: 400;
   color: var(--inline-tab-inactive-text, var(--tab-inactive-text));
@@ -2419,17 +2442,17 @@ button[aria-busy="true"]:disabled,
   width: 100%;
   margin: 0;
 }
+/* Rows sit 8px apart, so the divider wrap carries the extra air between sections. */
 ._x_extension_setting_divider_wrap_2024_unique_ {
-  height: 8px;
+  height: 20px;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   width: 100%;
 }
 #_x_extension_options_root_2024_unique_ button,
 #_x_extension_options_root_2024_unique_ ._x_extension_theme_label_2026_unique_,
 #_x_extension_options_root_2024_unique_ ._x_extension_select_trigger_2024_unique_,
 #_x_extension_options_root_2024_unique_ ._x_extension_select_option_2024_unique_,
-#_x_extension_options_root_2024_unique_ ._x_extension_select_menu_title_2024_unique_,
 #_x_extension_options_root_2024_unique_ ._x_extension_checkbox_2026_unique_ {
   font-weight: 400;
 }

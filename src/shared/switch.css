@@ -18,6 +18,7 @@
   --switch-track-hover-bg: var(--lumno-color-fill-subtle-hover);
   --switch-track-shadow: var(--lumno-shadow-track-inset);
   --switch-track-on-bg: var(--lumno-color-accent);
+  --switch-track-on-shadow: var(--lumno-shadow-track-on);
   --switch-knob-bg: var(--lumno-color-knob);
   --switch-knob-shadow: var(--lumno-shadow-knob);
   --switch-focus-ring: var(--lumno-color-focus-ring);
@@ -60,6 +61,7 @@
   z-index: 1;
   border-radius: inherit;
   background: var(--switch-track-on-bg);
+  box-shadow: var(--switch-track-on-shadow);
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--lumno-duration-2xl) ease;

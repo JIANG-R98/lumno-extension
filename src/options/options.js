@@ -59,6 +59,7 @@
   const bookmarkColumnsControlHost = document.getElementById('_x_extension_bookmark_columns_control_2026_unique_');
   const searchResultDisplayLimitControlHost = document.getElementById('_x_extension_search_result_display_limit_control_2026_unique_');
   const bookmarkFolderIconsVisibleToggle = document.getElementById('_x_extension_bookmark_folder_icons_visible_toggle_2026_unique_');
+  const bookmarkFolderIconsVisibleRow = document.getElementById('_x_extension_bookmark_folder_icons_visible_row_2026_unique_');
   const autoPipToggle = document.getElementById('_x_extension_auto_pip_toggle_2024_unique_');
   const tabSwitcherToggle = document.getElementById('_x_extension_tab_switcher_toggle_2026_unique_');
   const aggregateSearchAutoGroupToggle = document.getElementById(
@@ -774,6 +775,8 @@
   const NEWTAB_THEME_SCOPE_STORAGE_KEY = '_x_extension_newtab_theme_scope_2026_unique_';
   const NEWTAB_ZEN_MODE_STORAGE_KEY = '_x_extension_newtab_zen_mode_2026_unique_';
   const NEWTAB_WALLPAPER_STORAGE_KEY = '_x_extension_newtab_wallpaper_2026_unique_';
+  const NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY = SETTINGS.NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY ||
+    '_x_extension_newtab_online_wallpaper_2026_unique_';
   const NEWTAB_WALLPAPER_OVERLAY_STORAGE_KEY = '_x_extension_newtab_wallpaper_overlay_2026_unique_';
   const NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY = '_x_extension_newtab_wallpaper_effect_2026_unique_';
   const NEWTAB_FAVICON_STORAGE_KEY = '_x_extension_newtab_favicon_2026_unique_';
@@ -907,6 +910,7 @@
     NEWTAB_THEME_SCOPE_STORAGE_KEY,
     NEWTAB_ZEN_MODE_STORAGE_KEY,
     NEWTAB_WALLPAPER_STORAGE_KEY,
+    NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY,
     NEWTAB_WALLPAPER_OVERLAY_STORAGE_KEY,
     NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY,
     NEWTAB_FAVICON_STORAGE_KEY,
@@ -2096,9 +2100,11 @@
     }
     const parsed = Number.parseInt(countValue, 10);
     const shouldHide = Number.isFinite(parsed) ? parsed <= 0 : false;
-    animateOptionsPanelHeight(() =>
-      setConditionalSettingsElementVisibility(bookmarkColumnsSettingRow, !shouldHide)
-    );
+    animateOptionsPanelHeight(() => {
+      const columnsChanged = setConditionalSettingsElementVisibility(bookmarkColumnsSettingRow, !shouldHide);
+      const folderIconsChanged = setConditionalSettingsElementVisibility(bookmarkFolderIconsVisibleRow, !shouldHide);
+      return columnsChanged || folderIconsChanged;
+    });
   }
 
   function normalizeOverlayTabQuickSwitch(value) {

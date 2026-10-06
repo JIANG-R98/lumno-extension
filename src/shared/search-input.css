@@ -147,7 +147,7 @@
   width: 30px;
   height: 30px;
   padding: 0;
-  border-radius: var(--x-ext-input-right-icon-radius, 16px);
+  border-radius: var(--x-ext-input-right-icon-radius, 10px);
   pointer-events: auto;
   z-index: 2;
   cursor: pointer;
@@ -186,7 +186,7 @@
   transform: none;
   width: 30px;
   height: 30px;
-  border-radius: var(--x-ext-input-right-icon-radius, 16px);
+  border-radius: var(--x-ext-input-right-icon-radius, 10px);
   z-index: 2;
   box-sizing: border-box;
   margin: 0;
@@ -228,10 +228,16 @@
   cursor: inherit;
 }
 
-/* The input capsule and its circular icon buttons keep round ends; only the menu panel is continuous. */
+/* The menu panel and the icon buttons beside the field are continuous rounded rectangles.
+   The right icon also renders with an inline `all: unset`, so its shape needs !important. */
 @supports (corner-shape: superellipse(1.25)) {
   .x-lumno-search-input-mode__menu {
     corner-shape: superellipse(1.25);
+  }
+
+  .x-lumno-search-input__right-icon,
+  .x-lumno-search-input__icon[data-search-scope-action="true"] {
+    corner-shape: superellipse(1.25) !important;
   }
 }
 

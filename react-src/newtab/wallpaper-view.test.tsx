@@ -76,13 +76,28 @@ describe('New Tab React wallpaper view', () => {
     expect(controller.getRefs().quoteBody.hidden).toBe(true);
     const quoteTabGroups = controller.getRefs().quoteBody.querySelectorAll('.x-nt-segmented-tabs');
     expect(Array.from(quoteTabGroups, (group) => group.getAttribute('data-wallpaper-ref')))
-      .toEqual(['quoteCategory', 'quotePosition']);
-    quoteTabGroups.forEach((group) => {
-      expect(group.querySelector('.x-nt-segmented-tabs-indicator')).not.toBeNull();
+      .toEqual(['quoteCategory']);
+    expect(quoteTabGroups[0].querySelector('.x-nt-segmented-tabs-indicator')).not.toBeNull();
+    const onQuotePositionChange = vi.fn();
+    act(() => {
+      controller.renderQuotePositionSelect({
+        ariaLabel: 'Quote position',
+        onChange: onQuotePositionChange,
+        options: ['top', 'input', 'search', 'bottom'].map((value) => ({ value, label: value })),
+        value: 'search'
+      });
     });
-    expect(Array.from(quoteTabGroups[1].querySelectorAll<HTMLElement>('.x-nt-segmented-tab'),
-      (tab) => tab.dataset.quotePosition)).toEqual(['input', 'search', 'bottom']);
-    expect(controller.control.querySelector('[data-quote-position="off"]')).toBeNull();
+    const quotePositionHost = controller.getRefs().quotePositionSelectHost;
+    expect(quotePositionHost.classList.contains('_x_extension_custom_select_2024_unique_')).toBe(true);
+    expect(quotePositionHost.querySelector('select')?.value).toBe('search');
+    const topOption = document.querySelector<HTMLElement>(
+      '[data-react-select-owner="x-nt-quote-position"] [data-value="top"]'
+    );
+    expect(controller.containsSelectMenuTarget(topOption)).toBe(true);
+    act(() => {
+      topOption?.click();
+    });
+    expect(onQuotePositionChange).toHaveBeenCalledWith('top');
     expect(controller.getRefs().quoteProviderHint).toBeUndefined();
     expect(controller.getRefs().quoteInfoButton.previousElementSibling).toBe(
       controller.getRefs().quoteAccordionTrigger
@@ -148,7 +163,7 @@ describe('New Tab React wallpaper view', () => {
       '[data-react-select-owner="x-nt-wallpaper-effect"] [data-value="grain"]'
     );
     expect(grainOption?.getAttribute('role')).toBe('option');
-    expect(controller.containsEffectSelectTarget(grainOption)).toBe(true);
+    expect(controller.containsSelectMenuTarget(grainOption)).toBe(true);
     act(() => {
       grainOption?.click();
     });

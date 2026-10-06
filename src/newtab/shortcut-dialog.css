@@ -35,7 +35,7 @@
         --tab-border: rgba(15, 23, 42, 0.05);
         --panel-text: #111827;
         width: min(420px, 100%);
-        border-radius: 27px;
+        border-radius: var(--lumno-radius-dialog);
         background: var(--x-nt-shortcut-dialog-bg, rgb(255 255 255 / 0.98));
         border: 0;
         box-shadow: var(--x-nt-panel-shadow-focus, 0 18px 44px rgba(0, 0, 0, 0.1));
@@ -83,14 +83,14 @@
       .x-nt-shortcut-form {
         display: flex;
         flex-direction: column;
-        gap: 18px;
-        padding: 24px;
+        gap: 14px;
+        padding: 20px;
         box-sizing: border-box;
       }
       .x-nt-shortcut-dialog-title {
-        margin: 0;
+        margin: 0 0 4px;
         color: inherit;
-        font-size: 18px;
+        font-size: var(--lumno-font-size-xl);
         font-weight: 600;
         line-height: 1.25;
       }
@@ -322,7 +322,7 @@
         display: flex;
         align-items: center;
         gap: 0;
-        border-radius: var(--lumno-radius-lg);
+        border-radius: var(--lumno-radius-md);
         border: 1px solid var(--tab-border);
         background: var(--control-bg);
         transition: border-color var(--lumno-duration-md) ease, background-color var(--lumno-duration-lg) ease;
@@ -334,8 +334,8 @@
         background: var(--input-focus-bg);
       }
       ._x_extension_shortcut_input_2024_unique_ {
-        padding: 8px 10px;
-        border-radius: var(--lumno-radius-lg);
+        padding: 6px 10px;
+        border-radius: var(--lumno-radius-md);
         border: 1px solid var(--tab-border);
         background: var(--control-bg);
         color: var(--panel-text);
@@ -389,7 +389,7 @@
         line-height: 16px;
       }
       .x-nt-shortcut-error[data-visible="false"] {
-        visibility: hidden;
+        display: none;
       }
       body[data-theme="dark"] .x-nt-shortcut-error {
         color: #fca5a5;
@@ -416,7 +416,7 @@
         gap: 6px;
         box-sizing: border-box;
         font-size: var(--lumno-font-size-md);
-        font-weight: 600;
+        font-weight: 500;
         line-height: 1;
         white-space: nowrap;
         cursor: pointer;
@@ -457,23 +457,20 @@
         filter: none;
       }
       .x-lumno-action-button--primary {
-        --x-lumno-action-border-color: #040404;
-        --x-lumno-action-bg: linear-gradient(180deg, #404859 0%, #273042 100%);
-        --x-lumno-action-color: #ffffff;
-        --x-lumno-action-shadow:
-          0 10px 3px rgba(0, 0, 0, 0),
-          0 6px 2px rgba(0, 0, 0, 0.008),
-          0 3px 2px rgba(0, 0, 0, 0.035),
-          0 2px 2px rgba(0, 0, 0, 0.065),
-          0 0 1px rgba(0, 0, 0, 0.075);
-        --x-lumno-action-before-shadow: inset 0 1px 1.6px rgba(255, 255, 255, 0.34);
-        --x-lumno-action-hover-bg: linear-gradient(180deg, #4a5467 0%, #2f3a4f 100%);
-        --x-lumno-action-hover-shadow:
-          0 12px 4px rgba(0, 0, 0, 0),
-          0 7px 3px rgba(0, 0, 0, 0.015),
-          0 4px 3px rgba(0, 0, 0, 0.045),
-          0 2px 2px rgba(0, 0, 0, 0.075),
-          0 0 1px rgba(0, 0, 0, 0.09);
+        font-weight: 600;
+        --x-lumno-action-border-color: var(--lumno-color-primary-border);
+        --x-lumno-action-bg: var(--lumno-color-primary);
+        --x-lumno-action-color: var(--lumno-color-on-primary);
+        --x-lumno-action-shadow: var(--lumno-shadow-primary);
+        --x-lumno-action-before-shadow: var(--lumno-shadow-primary-sheen);
+        --x-lumno-action-hover-bg: var(--lumno-color-primary-hover);
+        --x-lumno-action-hover-shadow: var(--lumno-shadow-primary-hover);
+      }
+      /* Pressed: the face sinks, so the drop flattens and the sheen turns into an inner shadow. */
+      .x-lumno-action-button--primary:active {
+        --x-lumno-action-hover-bg: var(--lumno-color-primary);
+        --x-lumno-action-hover-shadow: var(--lumno-shadow-primary-pressed);
+        --x-lumno-action-before-shadow: var(--lumno-shadow-primary-sheen-pressed);
       }
       .x-lumno-action-button--secondary {
         --x-lumno-action-border-color: rgba(15, 23, 42, 0.06);
@@ -494,12 +491,8 @@
       }
       .x-nt-shortcut-dialog-button {
         min-width: 72px;
-        height: 36px;
-      }
-      body[data-theme="dark"] .x-lumno-action-button--primary {
-        --x-lumno-action-bg: linear-gradient(180deg, #4a566c 0%, #334157 100%);
-        --x-lumno-action-color: #f8fafc;
-        --x-lumno-action-hover-bg: linear-gradient(180deg, #56647c 0%, #3a4b66 100%);
+        min-height: 32px;
+        height: 32px;
       }
       body[data-theme="dark"] .x-lumno-action-button--secondary {
         --x-lumno-action-border-color: rgba(148, 163, 184, 0.18);

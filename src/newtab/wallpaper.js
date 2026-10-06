@@ -7,6 +7,7 @@
   const DEFAULT_STORAGE_KEYS = {
     wallpaper: '_x_extension_newtab_wallpaper_2026_unique_',
     localWallpaper: '_x_extension_newtab_local_wallpaper_2026_unique_',
+    onlineWallpaper: SETTINGS.NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY,
     overlay: '_x_extension_newtab_wallpaper_overlay_2026_unique_',
     effect: '_x_extension_newtab_wallpaper_effect_2026_unique_',
     topContentMode: SETTINGS.NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY ||
@@ -70,6 +71,7 @@
     const storageKeys = Object.assign({}, DEFAULT_STORAGE_KEYS, options.storageKeys || {});
     const NEWTAB_WALLPAPER_STORAGE_KEY = storageKeys.wallpaper;
     const NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY = storageKeys.localWallpaper;
+    const NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY = storageKeys.onlineWallpaper;
     const NEWTAB_WALLPAPER_OVERLAY_STORAGE_KEY = storageKeys.overlay;
     const NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY = storageKeys.effect;
     const NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY = storageKeys.topContentMode;
@@ -240,8 +242,7 @@
       storageArea: localWallpaperStorageArea,
       fetch: options.fetchRemoteContent,
       getLanguage: () => document.documentElement && document.documentElement.lang ||
-        (chrome.i18n && chrome.i18n.getUILanguage ? chrome.i18n.getUILanguage() : 'en'),
-      processFile: (file) => localWallpaperStore.buildRecordFromFile(file)
+        (chrome.i18n && chrome.i18n.getUILanguage ? chrome.i18n.getUILanguage() : 'en')
     });
 
     const NEWTAB_WALLPAPER_DEFAULT_DIRECTORY = 'assets/wallpapers';
@@ -525,6 +526,7 @@
     let wallpaperOverlaySlider = null;
     let wallpaperEffectLabel = null;
     let wallpaperEffectInkToneControl = null;
+    let wallpaperEffectInkToneLabel = null;
     let wallpaperEffectInkToneOptions = null;
     let wallpaperEffectInkToneIndicator = null;
     let wallpaperEffectStrengthControl = null;
@@ -834,6 +836,7 @@
     let wallpaperModeHint = null;
     let wallpaperTabs = null;
     let wallpaperTabsIndicator = null;
+    let wallpaperSourceLabel = null;
     let wallpaperBuiltInTab = null;
     let wallpaperLocalTab = null;
     let wallpaperBingTab = null;
@@ -1228,7 +1231,7 @@
 
     function getWallpaperImageUrl(item) {
       if (item && remoteClient && REMOTE_CONTENT.wallpaperFromId(item.id)) {
-        return item.imageDataUrl || getWallpaperImageUrl(getWallpaperById(NEWTAB_WALLPAPER_DEFAULT_ID));
+        return item.imageUrl || getWallpaperImageUrl(getWallpaperById(NEWTAB_WALLPAPER_DEFAULT_ID));
       }
       if (item && isCustomWallpaperId(item.id)) {
         return item.imageDataUrl || '';
@@ -1245,7 +1248,7 @@
 
     function getWallpaperThumbnailUrl(item) {
       if (item && remoteClient && REMOTE_CONTENT.wallpaperFromId(item.id)) {
-        return item.thumbnailDataUrl || item.thumbnailUrl || getWallpaperImageUrl(item);
+        return item.thumbnailUrl || getWallpaperImageUrl(item);
       }
       if (item && isCustomWallpaperId(item.id)) {
         return item.thumbnailDataUrl || item.imageDataUrl || '';
@@ -1571,9 +1574,49 @@
       });
     }
 
+    function isOnlineWallpaperId(value) {
+      return Boolean(REMOTE_CONTENT.wallpaperFromId(String(getRawWallpaperId(value) || '').trim()));
+    }
+
+    // Versions without online wallpapers clear IDs they do not recognize, and that clear syncs to every device.
+    // Online picks therefore live in their own key, leaving a built-in stand-in under the shared key.
+    function buildSharedSyncedWallpaperValue(value) {
+      if (!value || typeof value !== 'object') {
+        return isOnlineWallpaperId(value) ? NEWTAB_WALLPAPER_DEFAULT_ID : value;
+      }
+      const shared = Object.assign({}, value);
+      NEWTAB_WALLPAPER_MODES.forEach((mode) => {
+        if (isOnlineWallpaperId(shared[mode])) {
+          shared[mode] = NEWTAB_WALLPAPER_DEFAULT_ID;
+        }
+      });
+      return shared;
+    }
+
+    // The online pick only counts while the shared key still holds its stand-in; any other value
+    // means an older version changed the wallpaper since, and that newer choice wins.
+    function mergeOnlineWallpaperValue(synced, online) {
+      const entry = online && online.hasValue ? online.value : null;
+      if (!entry || typeof entry !== 'object' || !synced.hasValue ||
+          !getWallpaperStorageRawIds(entry.value).some(isOnlineWallpaperId) ||
+          getComparableSyncedWallpaperStorageValue(entry.shared) !==
+            getComparableSyncedWallpaperStorageValue(synced.value)) {
+        return synced;
+      }
+      return { hasValue: true, value: entry.value, fromOnlineKey: true };
+    }
+
     function writeSyncedWallpaperValue(value, options) {
-      writeStorageValue(storageArea, NEWTAB_WALLPAPER_STORAGE_KEY, value, () => {
-        if (options && options.showError) {
+      if (!storageArea || typeof storageArea.set !== 'function') {
+        return;
+      }
+      const hasOnlineWallpaper = getWallpaperStorageRawIds(value).some(isOnlineWallpaperId);
+      const shared = hasOnlineWallpaper ? buildSharedSyncedWallpaperValue(value) : value;
+      storageArea.set({
+        [NEWTAB_WALLPAPER_STORAGE_KEY]: shared,
+        [NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY]: hasOnlineWallpaper ? { value, shared } : ''
+      }, () => {
+        if (chrome.runtime && chrome.runtime.lastError && options && options.showError) {
           showToast(t('newtab_wallpaper_save_error', 'Failed to save wallpaper'), true);
         }
       });
@@ -1711,6 +1754,16 @@
         };
       }
       const nextId = normalizeNewtabWallpaperId(value);
+      // An ID this version does not recognize may come from a newer install sharing sync storage.
+      // Show the default here, but never write it back, or that install's wallpaper turns off.
+      if (!nextId && String(getRawWallpaperId(value) || '').trim()) {
+        return {
+          id: NEWTAB_WALLPAPER_DEFAULT_ID,
+          localMigrationId: '',
+          sanitized: false,
+          unrecognized: true
+        };
+      }
       return {
         id: nextId,
         localMigrationId: '',
@@ -1747,13 +1800,14 @@
         localMigrations.dark = darkResolution.localMigrationId;
       }
       const sanitizedValue = buildSyncedWallpaperStorageValue(prefs);
-      const shouldSanitize = !hasValue ||
+      const hasUnrecognizedId = lightResolution.unrecognized || (!sameForModes && darkResolution.unrecognized);
+      const shouldSanitize = !hasUnrecognizedId && (!hasValue ||
         lightResolution.sanitized ||
         (!sameForModes && darkResolution.sanitized) ||
         (isObjectValue && (
           Number(value.version) !== NEWTAB_WALLPAPER_PREFS_STORAGE_VERSION ||
           getComparableSyncedWallpaperStorageValue(value) !== getComparableSyncedWallpaperStorageValue(sanitizedValue)
-        ));
+        )));
       return {
         prefs,
         sanitizedValue: shouldSanitize ? sanitizedValue : null,
@@ -1960,6 +2014,9 @@
 
     function getWallpaperPreloadEntryForMode(mode) {
       const wallpaper = getWallpaperById(getEffectiveWallpaperIdForMode(mode));
+      if (wallpaper && REMOTE_CONTENT.wallpaperFromId(wallpaper.id)) {
+        return wallpaper.imageUrl ? { id: wallpaper.id, url: wallpaper.imageUrl } : null;
+      }
       const path = wallpaper && !isCustomWallpaperId(wallpaper.id)
         ? getWallpaperRuntimePath(wallpaper)
         : '';
@@ -2469,10 +2526,7 @@
     }
 
     function getWallpaperEffectInkToneForUi(prefs) {
-      if (prefs && (prefs.inkTone === 'dark' || prefs.inkTone === 'light')) {
-        return prefs.inkTone;
-      }
-      return getWallpaperEffectEditMode() === NEWTAB_WALLPAPER_MODE_DARK ? 'light' : 'dark';
+      return WALLPAPER_EFFECTS.resolveAutoInkTone(prefs && prefs.inkTone, getWallpaperEffectEditMode());
     }
 
     function getWallpaperEffectInkToneLabel(tone) {
@@ -2969,7 +3023,10 @@
         document.body.setAttribute('data-wallpaper-effect', currentAppliedWallpaperEffectPrefs.type);
       }
       const effectRenderReady = wallpaperEffects
-        ? wallpaperEffects.apply(currentAppliedWallpaperEffectPrefs)
+        ? wallpaperEffects.apply(WALLPAPER_EFFECTS.resolvePrefsForMode(
+          currentAppliedWallpaperEffectPrefs,
+          getResolvedWallpaperMode()
+        ))
         : null;
       if (transitionLayer && effectRenderReady && typeof effectRenderReady.then === 'function') {
         Promise.resolve(effectRenderReady).then(
@@ -3070,10 +3127,12 @@
           })
         );
       });
-      wallpaperEffectInkToneOptions.setAttribute(
-        'aria-label',
-        t('newtab_wallpaper_effect_ink_title', 'Sample tones')
-      );
+      const title = t('newtab_wallpaper_effect_ink_title', 'Sample tones');
+      if (wallpaperEffectInkToneLabel) {
+        wallpaperEffectInkToneLabel.textContent = title;
+      }
+      wallpaperEffectInkToneOptions.setAttribute('aria-label', title);
+      scheduleWallpaperEffectTabsIndicatorRefresh();
     }
 
     function getWallpaperEffectStrengthLabel(prefs) {
@@ -4324,6 +4383,9 @@
       updateWallpaperSelectionUi();
       if (syncedResolution.sanitizedValue !== null) {
         writeSyncedWallpaperValue(syncedResolution.sanitizedValue);
+      } else if (!syncedValue.fromOnlineKey && getWallpaperStorageRawIds(syncedValue.value).some(isOnlineWallpaperId)) {
+        // Move online picks saved under the shared key before older versions can clear them.
+        writeSyncedWallpaperValue(syncedValue.value);
       }
       if (localResolution.shouldClear || migrated.changed) {
         writeLocalWallpaperValue(buildLocalWallpaperStorageValue(
@@ -4343,8 +4405,10 @@
       const changeSeq = wallpaperStorageChangeSeq;
       return Promise.all([
         readStorageValue(storageArea, NEWTAB_WALLPAPER_STORAGE_KEY),
-        readStorageValue(localWallpaperStorageArea, NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY)
-      ]).then((results) => {
+        readStorageValue(localWallpaperStorageArea, NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY),
+        readStorageValue(storageArea, NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY)
+      ]).then((stored) => {
+        const results = [mergeOnlineWallpaperValue(stored[0], stored[2]), stored[1]];
         const customWallpaperIds = getStoredCustomWallpaperIds(results)
           .filter((id) => !hasLoadedStoredCustomWallpaper(id));
         const customWallpaperPromise = customWallpaperIds.length > 0
@@ -4363,13 +4427,14 @@
           }
           applyStoredWallpaperState(results[0], results[1]);
           remoteClient.setPinnedIds(remoteIds);
-          remoteIds.forEach((id) => {
-            if (id !== REMOTE_CONTENT.BING_DAILY_ID && remoteClient.getWallpaper(id).imageDataUrl) return;
-            remoteClient.ensureWallpaper(id).then(() => {
-              if (getEffectiveWallpaperIdForMode(getResolvedWallpaperMode()) === id) applyResolvedNewtabWallpaper();
+          if (remoteIds.includes(REMOTE_CONTENT.BING_DAILY_ID)) {
+            remoteClient.ensureWallpaper(REMOTE_CONTENT.BING_DAILY_ID).then(() => {
+              if (getEffectiveWallpaperIdForMode(getResolvedWallpaperMode()) === REMOTE_CONTENT.BING_DAILY_ID) {
+                applyResolvedNewtabWallpaper();
+              }
               renderBingTiles();
             }).catch(() => {});
-          });
+          }
           return true;
         });
       });
@@ -4991,8 +5056,11 @@
           wallpaperPanel.setAttribute('aria-label', t('settings_tab_appearance', 'Appearance'));
         }
       }
+      if (wallpaperSourceLabel) {
+        wallpaperSourceLabel.textContent = t('newtab_wallpaper_source_title', 'Source');
+      }
       if (wallpaperTabs) {
-        wallpaperTabs.setAttribute('aria-label', t('newtab_wallpaper_title', 'Wallpaper'));
+        wallpaperTabs.setAttribute('aria-label', t('newtab_wallpaper_source_title', 'Source'));
       }
       if (wallpaperBuiltInTab) {
         const label = t('newtab_wallpaper_builtin_section', 'Built-in');
@@ -5479,6 +5547,7 @@
       wallpaperOverlaySlider = refs.overlaySlider;
       wallpaperEffectLabel = refs.effectLabel;
       wallpaperEffectInkToneControl = refs.effectInkToneControl;
+      wallpaperEffectInkToneLabel = refs.effectInkToneLabel;
       wallpaperEffectInkToneOptions = refs.effectInkToneOptions;
       wallpaperEffectInkToneIndicator = refs.effectInkToneIndicator;
       wallpaperEffectStrengthControl = refs.effectStrengthControl;
@@ -5516,6 +5585,7 @@
       wallpaperLightModeTab = refs.lightModeTab;
       wallpaperDarkModeTab = refs.darkModeTab;
       wallpaperModeHint = refs.modeHint;
+      wallpaperSourceLabel = refs.sourceLabel;
       wallpaperTabs = refs.tabs;
       wallpaperTabsIndicator = refs.tabsIndicator;
       wallpaperBuiltInTab = refs.builtInTab;
@@ -5526,7 +5596,7 @@
       wallpaperBingRefresh = refs.bingRefresh;
       wallpaperBingStatus = refs.bingStatus;
       const quoteRuntime = options.getQuoteRuntime && options.getQuoteRuntime();
-      if (quoteRuntime) quoteRuntime.bindSettings(refs);
+      if (quoteRuntime) quoteRuntime.bindSettings(refs, wallpaperViewController);
       bindPanelSectionDisclosure(refs.themeSectionTrigger, refs.themeSectionBody);
       bindPanelSectionDisclosure(refs.searchSectionTrigger, refs.searchSectionBody);
       bindPanelSectionDisclosure(refs.faviconSectionTrigger, refs.faviconSectionBody);
@@ -5939,7 +6009,7 @@
       }
       cancelWallpaperPanelActiveControls();
       hideWallpaperSliderValueBubble(null, { force: true });
-      wallpaperViewController.closeEffectSelect();
+      wallpaperViewController.closeOpenSelect();
       wallpaperPanel.setAttribute('data-open', 'false');
       wallpaperButton.setAttribute('data-open', 'false');
       wallpaperButton.setAttribute('aria-expanded', 'false');
@@ -6043,7 +6113,8 @@
       }
       const wallpaperStorageChanged = Boolean(
         (NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY && changes[NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY]) ||
-        changes[NEWTAB_WALLPAPER_STORAGE_KEY]
+        changes[NEWTAB_WALLPAPER_STORAGE_KEY] ||
+        (NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY && changes[NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY])
       );
       if (wallpaperStorageChanged) {
         bingSelectionSeq += 1;
@@ -6117,7 +6188,7 @@
       if (wallpaperControl && (target === wallpaperControl || wallpaperControl.contains(target))) {
         return true;
       }
-      return Boolean(wallpaperViewController && wallpaperViewController.containsEffectSelectTarget(target));
+      return Boolean(wallpaperViewController && wallpaperViewController.containsSelectMenuTarget(target));
     }
 
     return {
@@ -6126,7 +6197,7 @@
       getControlElement,
       containsTarget,
       closeOpenMenu: () => Boolean(wallpaperViewController &&
-        wallpaperViewController.closeEffectSelect({ restoreFocus: true })),
+        wallpaperViewController.closeOpenSelect({ restoreFocus: true })),
       isPanelOpen: isWallpaperPanelOpen,
       closePanel: closeWallpaperPanel,
       updateLanguageStrings: updateWallpaperLanguageStrings,

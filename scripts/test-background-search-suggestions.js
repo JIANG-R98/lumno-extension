@@ -733,6 +733,32 @@ async function run() {
     'the developer dashboard should remain searchable from bookmarks'
   );
 
+  const historyOnlyGithubRoot = (await context.__testGetSearchSuggestions('github', { includeOpenTabs: false }))
+    .find((item) => item && item.url === 'https://github.com/');
+  const { context: bookmarkedRootContext } = loadBackgroundForTest();
+  bookmarkedRootContext.chrome.bookmarks.search = (_options, callback) => {
+    setTimeout(() => callback([{ id: '12', parentId: '1', title: 'GitHub Home', url: 'https://github.com/' }]), 0);
+  };
+  const bookmarkedRootSuggestions = await bookmarkedRootContext.__testGetSearchSuggestions('github', {
+    includeOpenTabs: false
+  });
+  const bookmarkedRootRows = bookmarkedRootSuggestions.filter((item) => item && item.url === 'https://github.com/');
+  assert.strictEqual(
+    bookmarkedRootRows.length,
+    1,
+    'a page seen in history and bookmarked under another title should appear once'
+  );
+  assert.strictEqual(bookmarkedRootRows[0].type, 'bookmark', 'the merged page should keep its bookmark identity');
+  assert.strictEqual(
+    bookmarkedRootRows[0].visitCount,
+    18,
+    'merging a bookmark into a history page should keep the visit signals'
+  );
+  assert.ok(
+    historyOnlyGithubRoot && bookmarkedRootRows[0].score >= historyOnlyGithubRoot.score,
+    'bookmarking a frequently visited page should never lower its rank score'
+  );
+
   const { context: developerOpenTabContext } = loadBackgroundForTest();
   developerOpenTabContext.chrome.tabs.query = (_options, callback) => {
     setTimeout(() => callback([

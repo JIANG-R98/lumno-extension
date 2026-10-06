@@ -113,81 +113,65 @@ async function main() {
   await catalogClient.getCatalog(true);
   assert.equal(catalogCalls, 3, 'Refresh must not bypass rate-limit backoff');
 
-  const records = new Map();
-  const mediaStore = { get: async (id) => records.get(id), put: async (record) => records.set(record.id, structuredClone(record)) };
-  let imageCalls = 0;
-  const imageClient = remote.createClient({ mediaStore, storageArea: storage(),
-    processFile: async (file) => {
-      assert.equal(file.type, 'image/jpeg');
-      return { imageDataUrl: 'data:image/webp;base64,aGVsbG8=', thumbnailDataUrl: 'data:image/webp;base64,dGh1bWI=' };
-    },
-    fetch: async (url) => {
-      imageCalls += 1;
-      assert.equal(new URL(url).searchParams.get('id'), 'OHR.River_ZH-CN123_1920x1080.jpg');
-      return { ok: true, headers: new Headers(), blob: async () => new Blob(['image'], { type: 'image/jpeg' }) };
-    } });
+  const imageStorage = storage();
+  const imageClient = remote.createClient({ storageArea: imageStorage, now: () => time,
+    fetch: async () => { throw new Error('Wallpapers must not be downloaded'); } });
   imageClient.setPinnedIds([yesterdayId, 'monet-coastal-white']);
   const saved = await imageClient.ensureWallpaper(todayId);
-  assert(saved.imageDataUrl.startsWith('data:image/webp'));
-  const restoredClient = remote.createClient({ mediaStore, fetch: async () => { throw new Error('Should use cache'); } });
-  assert((await restoredClient.ensureWallpaper(todayId)).imageDataUrl);
-  assert.equal(imageCalls, 1, 'A synced fixed wallpaper must resolve directly and reopen offline');
+  assert.equal(saved.imageUrl, 'https://www.bing.com/th?id=OHR.River_ZH-CN123_1920x1080.jpg&pid=hp',
+    'A chosen wallpaper should be shown straight from Bing');
+  assert(!('imageDataUrl' in saved));
+  assert.equal(imageStorage.values[remote.BING_META_CACHE_KEY], undefined, 'Do not store details Bing never provided');
+  imageStorage.values[remote.BING_CACHE_KEY] = { 'en-US': { items: [remote.normalizeWallpaper(wallpaper())] } };
+  const restoredClient = remote.createClient({ storageArea: imageStorage, fetch: async () => { throw new Error('offline'); } });
+  assert.equal((await restoredClient.restoreWallpaper(todayId)).name, 'River', 'Restore titles from the catalog cache');
+  const metaClient = remote.createClient({ storageArea: storage({ [remote.BING_META_CACHE_KEY]: {
+    [todayId]: { id: todayId, date: '20261002', name: 'Saved river', copyright: '', sourceUrl: 'https://www.bing.com' } } }) });
+  assert.equal((await metaClient.restoreWallpaper(todayId)).name, 'Saved river',
+    'Chosen photos keep their title after leaving the 8-day catalog');
+  await restoredClient.ensureWallpaper(todayId);
+  assert.equal(imageStorage.values[remote.BING_META_CACHE_KEY][todayId].name, 'River', 'Choosing a photo keeps its details');
+  assert.equal((await remote.createClient({ storageArea: storage() }).restoreWallpaper(todayId)).imageUrl, saved.imageUrl,
+    'A synced fixed wallpaper resolves from its ID alone');
   await assert.rejects(imageClient.ensureWallpaper('javascript:evil'), /Invalid wallpaper/);
 
   let sourceDate = '20261002';
   let offline = false;
-  let brokenImage = false;
   let dailyFetches = 0;
-  let downloads = 0;
   const dailyStorage = storage();
   const sharedLocks = locks();
-  const dailyRecords = new Map();
   const options = { storageArea: dailyStorage, now: () => time, locks: sharedLocks, language: 'zh-CN',
-    mediaStore: { get: async (id) => dailyRecords.get(id), put: async (record) => dailyRecords.set(record.id, record) },
-    processFile: async () => ({ imageDataUrl: 'data:image/webp;base64,aGVsbG8=', thumbnailDataUrl: 'data:image/webp;base64,dGh1bWI=' }),
     fetch: async (url) => {
       if (offline) throw new Error('offline');
-      if (url.includes('HPImageArchive')) {
-        dailyFetches += 1;
-        return response({ images: [wallpaper('OHR.Daily_ZH-CN123', sourceDate)] });
-      }
-      downloads += 1;
-      if (brokenImage) throw new Error('image download failed');
-      return { ok: true, headers: new Headers(), blob: async () => new Blob(['image'], { type: 'image/jpeg' }) };
+      assert(url.includes('HPImageArchive'), 'Only the catalog is fetched');
+      dailyFetches += 1;
+      return response({ images: [wallpaper('OHR.Daily_ZH-CN123', sourceDate)] });
     } };
   const tab1 = remote.createClient(options);
   const tab2 = remote.createClient(options);
   const [daily1, daily2] = await Promise.all([tab1.ensureWallpaper(remote.BING_DAILY_ID), tab2.ensureWallpaper(remote.BING_DAILY_ID)]);
   assert.equal(daily1.dailyId, daily2.dailyId);
+  assert(daily1.imageUrl.includes('OHR.Daily_ZH-CN123'));
   assert.equal(dailyFetches, 1, 'Separate tabs should share the daily archive request');
-  assert.equal(downloads, 1, 'Separate tabs should share the downloaded daily image');
   await tab1.ensureWallpaper(remote.BING_DAILY_ID);
   assert.equal(dailyFetches, 1);
-  time += 86400000;
-  await tab2.ensureWallpaper(remote.BING_DAILY_ID);
-  assert.equal(downloads, 1, 'A local date change should not redownload an unchanged Bing image');
   sourceDate = '20261003';
-  time += 3600001;
+  time += 86400000;
   const nextDay = await tab1.ensureWallpaper(remote.BING_DAILY_ID);
-  assert.equal(nextDay.date, '20261003');
-  assert.equal(downloads, 2, 'Switch once Bing actually publishes a newer image');
+  assert.equal(nextDay.date, '20261003', 'Switch once Bing actually publishes a newer image');
   sourceDate = '20261002';
   time += 3600001;
   assert.equal((await tab2.ensureWallpaper(remote.BING_DAILY_ID)).date, '20261003', 'Stale responses must not regress the daily image');
   offline = true;
   time += 86400000;
   const offlineTab = remote.createClient(options);
-  assert.equal((await offlineTab.ensureWallpaper(remote.BING_DAILY_ID)).date, '20261003', 'Reopening offline should preserve the last successful image');
+  assert.equal((await offlineTab.ensureWallpaper(remote.BING_DAILY_ID)).date, '20261003',
+    'Reopening offline should keep the last daily photo');
+  const fetchesAfterFailure = dailyFetches;
   offline = false;
-  brokenImage = true;
-  sourceDate = '20261004';
-  time += 86400000;
-  assert.equal((await tab1.ensureWallpaper(remote.BING_DAILY_ID)).date, '20261003');
-  assert.equal(dailyStorage.values[remote.BING_DAILY_CACHE_KEY]['zh-CN'].id, nextDay.dailyId,
-    'Do not advance the daily pointer until the new image is saved');
-  const downloadsAfterFailure = downloads;
   await remote.createClient(options).ensureWallpaper(remote.BING_DAILY_ID);
-  assert.equal(downloads, downloadsAfterFailure, 'Image download backoff should survive page reopens');
+  assert.equal(dailyFetches, fetchesAfterFailure, 'Catalog backoff should survive page reopens');
+  assert.equal(dailyStorage.values[remote.BING_DAILY_CACHE_KEY]['zh-CN'].id, nextDay.dailyId);
   console.log('newtab remote content tests passed');
 }
 main().catch((error) => { console.error(error); process.exitCode = 1; });
