@@ -2,6 +2,27 @@ import { resolve } from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
+// The page entries a module is reachable from, following static and dynamic
+// importers up the graph.
+function getReachingEntries(id, getModuleInfo, seen = new Set()) {
+  const entries = new Set();
+  if (seen.has(id)) {
+    return entries;
+  }
+  seen.add(id);
+  const info = getModuleInfo(id);
+  if (!info) {
+    return entries;
+  }
+  if (info.isEntry) {
+    entries.add(id);
+  }
+  [...info.importers, ...info.dynamicImporters].forEach((importer) => {
+    getReachingEntries(importer, getModuleInfo, seen).forEach((entry) => entries.add(entry));
+  });
+  return entries;
+}
+
 export default defineConfig({
   plugins: [react()],
   publicDir: false,
@@ -34,7 +55,7 @@ export default defineConfig({
         format: 'es',
         entryFileNames: '[name].js',
         chunkFileNames: '[name].js',
-        manualChunks(id) {
+        manualChunks(id, { getModuleInfo }) {
           if (
             id.includes('/node_modules/react/') ||
             id.includes('/node_modules/react-dom/') ||
@@ -42,7 +63,12 @@ export default defineConfig({
           ) {
             return 'react-runtime';
           }
-          if (id.includes('/react-src/shared/')) {
+          // Only components more than one page uses belong in the shared
+          // chunk; every page that loads it pays for all of it.
+          if (
+            id.includes('/react-src/shared/') &&
+            getReachingEntries(id, getModuleInfo).size > 1
+          ) {
             return 'react-shared';
           }
           if (id.includes('/react-src/overlay/tab-switcher.tsx')) {

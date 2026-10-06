@@ -398,8 +398,11 @@ assert(
     sharedBundle.includes('data-react-island'),
   'the compiled islands should expose diagnostic APIs and host markers'
 );
+// The search input is New Tab's (the overlay builds its own copy), so it ships
+// in the New Tab bundle rather than the chunk every page loads.
 assert(
-  sharedBundle.includes('shared-search-input') &&
+  newtabBundle.includes('shared-search-input') &&
+    !sharedBundle.includes('shared-search-input') &&
     sharedBundle.includes('_x_lumnoTooltipRenderReact_2026_unique_') &&
     overlayBundle.includes('_x_lumnoTooltipRenderReact_2026_unique_') &&
     searchInputReactSource.includes('createSearchInput') &&
