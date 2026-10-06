@@ -2866,5 +2866,62 @@
   },
   "newtab_quote_provider": {
     "message": "一言によるサービス提供"
+  },
+  "recent_history_menu": {
+    "message": "最近の変更履歴を表示"
+  },
+  "recent_history_title": {
+    "message": "変更履歴"
+  },
+  "recent_history_description": {
+    "message": "履歴を残したまま、任意のバージョンを現在の内容に設定できます。"
+  },
+  "recent_history_current": {
+    "message": "現在のバージョン"
+  },
+  "recent_history_earlier": {
+    "message": "以前のバージョン"
+  },
+  "recent_history_restore": {
+    "message": "現在のバージョンに設定"
+  },
+  "recent_history_restoring": {
+    "message": "復元中…"
+  },
+  "recent_history_restore_success": {
+    "message": "選択したバージョンを復元しました"
+  },
+  "recent_history_restore_failed": {
+    "message": "このバージョンを復元できません"
+  },
+  "recent_update_close": {
+    "message": "閉じる"
+  },
+  "settings_progress_tracking_title": {
+    "message": "視聴・読書の進捗を追跡"
+  },
+  "settings_progress_tracking_desc": {
+    "message": "新しいタブのカードのメニューでオンにすると、次の話や章に進んだときにカードが自動で更新されます"
+  },
+  "recent_progress_track": {
+    "message": "進捗を追跡"
+  },
+  "recent_progress_stop": {
+    "message": "進捗の追跡を停止"
+  },
+  "recent_progress_track_toast": {
+    "message": "追跡を開始しました。次の話や章に進むとカードが自動で更新されます。"
+  },
+  "recent_progress_stop_toast": {
+    "message": "進捗の追跡を停止しました"
+  },
+  "recent_progress_tracking": {
+    "message": "進捗を追跡中"
+  },
+  "recent_progress_updated": {
+    "message": "新しい話・章に更新されました"
+  },
+  "recent_progress_updated_badge": {
+    "message": "更新"
   }
 }

@@ -25,7 +25,11 @@
       recentSitesStorageArea,
       HIDDEN_RECENT_SITES_STORAGE_KEY,
       renderRecentSites,
-      PINNED_RECENT_SITES_STORAGE_KEY
+      PINNED_RECENT_SITES_STORAGE_KEY,
+      progressMatch,
+      progressHistory,
+      progressHistoryStorageArea,
+      openProgressHistory
     } = deps;
 
     // Page state still owned by newtab.js; read and written through accessors.
@@ -34,8 +38,11 @@
     const MAX_HIDDEN_RECENT_SITES = 60;
     const RECENT_CONTEXT_MENU_ADD_SHORTCUT_VALUE = 'add-shortcut';
     const RECENT_CONTEXT_MENU_REMOVE_VALUE = 'remove';
+    const RECENT_CONTEXT_MENU_TRACK_PROGRESS_VALUE = 'track-progress';
+    const RECENT_CONTEXT_MENU_STOP_PROGRESS_VALUE = 'stop-progress';
+    const RECENT_CONTEXT_MENU_PROGRESS_HISTORY_VALUE = 'progress-history';
     const RECENT_CONTEXT_MENU_MIN_WIDTH_PX = 124;
-    const RECENT_CONTEXT_MENU_MAX_WIDTH_PX = 180;
+    const RECENT_CONTEXT_MENU_MAX_WIDTH_PX = 200;
     const RECENT_CONTEXT_MENU_PORTAL_Z_INDEX = 10050;
     const RECENT_CONTEXT_MENU_PORTAL_OFFSET_PX = -6;
 
@@ -64,6 +71,7 @@
             : t('recent_add_to_shortcuts', 'Add to shortcuts'),
           disabled: isShortcut
         },
+        ...getProgressContextMenuOptions(target && target.item),
         {
           action: RECENT_CONTEXT_MENU_REMOVE_VALUE,
           value: RECENT_CONTEXT_MENU_REMOVE_VALUE,
@@ -170,6 +178,15 @@
       }
       if (action === RECENT_CONTEXT_MENU_ADD_SHORTCUT_VALUE) {
         addSiteToShortcuts(getRecentShortcutSite(target.item));
+        return;
+      }
+      if (action === RECENT_CONTEXT_MENU_TRACK_PROGRESS_VALUE ||
+          action === RECENT_CONTEXT_MENU_STOP_PROGRESS_VALUE) {
+        void setProgressTracking(target.item, action === RECENT_CONTEXT_MENU_TRACK_PROGRESS_VALUE);
+        return;
+      }
+      if (action === RECENT_CONTEXT_MENU_PROGRESS_HISTORY_VALUE) {
+        openProgressHistoryFor(target.item);
         return;
       }
       if (action !== RECENT_CONTEXT_MENU_REMOVE_VALUE) {
@@ -469,6 +486,172 @@
       });
     }
 
+    // Progress tracking (Labs). A tracked pinned card follows the episode or
+    // chapter the person is on; the background moves it (progress-tracker.js)
+    // and keeps the versions it leaves in local storage.
+    function findPinnedIndex(item) {
+      return pageState.pinnedRecentSites.findIndex((pinnedItem) => isSameRecentSite(pinnedItem, item));
+    }
+
+    function getTrackedPinnedItem(item) {
+      if (!pageState.progressTrackingEnabled || !item) return null;
+      const index = findPinnedIndex(item);
+      const pinnedItem = index >= 0 ? pageState.pinnedRecentSites[index] : null;
+      return pinnedItem && pinnedItem.progressTracking === true ? pinnedItem : null;
+    }
+
+    function getProgressSiteKey(item) {
+      return item ? progressMatch.getProgressSiteKey(item.url) : '';
+    }
+
+    function getProgressVersions(item) {
+      const siteKey = getProgressSiteKey(item);
+      const map = pageState.progressHistoryMap || {};
+      return siteKey && Array.isArray(map[siteKey]) ? map[siteKey] : [];
+    }
+
+    function getRecentProgressState(item) {
+      const pinnedItem = getTrackedPinnedItem(item);
+      if (!pinnedItem) return '';
+      return Number(pinnedItem.progressUpdatedAt) > Number(pinnedItem.progressSeenAt)
+        ? 'updated'
+        : 'tracking';
+    }
+
+    function getProgressContextMenuOptions(item) {
+      if (!pageState.progressTrackingEnabled || !item) return [];
+      const tracked = Boolean(getTrackedPinnedItem(item));
+      const options = [{
+        action: tracked ? RECENT_CONTEXT_MENU_STOP_PROGRESS_VALUE : RECENT_CONTEXT_MENU_TRACK_PROGRESS_VALUE,
+        value: tracked ? RECENT_CONTEXT_MENU_STOP_PROGRESS_VALUE : RECENT_CONTEXT_MENU_TRACK_PROGRESS_VALUE,
+        label: tracked
+          ? t('recent_progress_stop', '停止跟踪进度')
+          : t('recent_progress_track', '跟踪观看进度'),
+        dividerBefore: true
+      }];
+      if (tracked && getProgressVersions(item).length) {
+        options.push({
+          action: RECENT_CONTEXT_MENU_PROGRESS_HISTORY_VALUE,
+          value: RECENT_CONTEXT_MENU_PROGRESS_HISTORY_VALUE,
+          label: t('recent_history_menu', '查看最近变更历史')
+        });
+      }
+      return options;
+    }
+
+    // Turning tracking on for an unpinned card pins it, since only pinned
+    // cards stay put long enough to follow a work.
+    function setProgressTracking(item, enabled) {
+      const normalizedItem = normalizeRecentSiteRecord(item, { ignoreBlacklist: true });
+      if (!normalizedItem) return Promise.resolve(false);
+      const index = findPinnedIndex(normalizedItem);
+      let nextItems;
+      if (index >= 0) {
+        nextItems = pageState.pinnedRecentSites.map((pinnedItem, position) => {
+          if (position !== index) return pinnedItem;
+          if (!enabled) {
+            const { progressTracking, progressUpdatedAt, progressSeenAt, ...rest } = pinnedItem;
+            return rest;
+          }
+          return { ...pinnedItem, progressTracking: true, progressUpdatedAt: 0, progressSeenAt: 0 };
+        });
+      } else if (!enabled) {
+        return Promise.resolve(false);
+      } else if (pageState.pinnedRecentSites.length >= MAX_PINNED_RECENT_SITES) {
+        showToast(t('recent_pin_limit_toast', '最多只能置顶 3 个卡片。'), true);
+        return Promise.resolve(false);
+      } else {
+        nextItems = [{
+          ...normalizedItem,
+          pinnedAt: Date.now(),
+          progressTracking: true
+        }].concat(pageState.pinnedRecentSites);
+      }
+      return writePinnedRecentSites(nextItems).then(() => {
+        pageState.recentRenderSignature = '';
+        renderRecentSites(pageState.recentSourceItems);
+        showToast(enabled
+          ? t('recent_progress_track_toast', '已开始跟踪，看下一集或下一章时卡片会自动更新')
+          : t('recent_progress_stop_toast', '已停止跟踪进度'), false);
+        return true;
+      }).catch(() => {
+        showToast(t('toast_error', '操作失败，请重试。'), true);
+        return false;
+      });
+    }
+
+    // Opening a card that moved on its own acknowledges the move.
+    function markProgressSeen(item) {
+      const pinnedItem = getTrackedPinnedItem(item);
+      if (!pinnedItem || getRecentProgressState(pinnedItem) !== 'updated') return Promise.resolve(false);
+      const index = findPinnedIndex(pinnedItem);
+      const nextItems = pageState.pinnedRecentSites.map((entry, position) => (
+        position === index ? { ...entry, progressSeenAt: Date.now() } : entry
+      ));
+      return writePinnedRecentSites(nextItems).then(() => true).catch(() => false);
+    }
+
+    function openProgressHistoryFor(item) {
+      const pinnedItem = getTrackedPinnedItem(item);
+      const versions = pinnedItem ? getProgressVersions(pinnedItem) : [];
+      if (!pinnedItem || !versions.length || typeof openProgressHistory !== 'function') return;
+      openProgressHistory({
+        cardId: getProgressSiteKey(pinnedItem),
+        title: pinnedItem.title,
+        url: pinnedItem.url,
+        updateHistory: versions
+      });
+    }
+
+    function writeProgressHistory(map) {
+      return new Promise((resolve, reject) => {
+        if (!progressHistoryStorageArea || typeof progressHistoryStorageArea.set !== 'function') {
+          reject(new Error('storage-unavailable'));
+          return;
+        }
+        progressHistoryStorageArea.set({ [progressHistory.STORAGE_KEY]: map }, () => {
+          const error = typeof chrome !== 'undefined' && chrome.runtime ? chrome.runtime.lastError : null;
+          if (error) reject(new Error(error.message || 'storage-error'));
+          else resolve(map);
+        });
+      });
+    }
+
+    // Makes a retained version current; the version the card leaves takes its
+    // place in the history, so a restore can itself be restored.
+    function restoreProgressVersion(historyItem, _version, historyIndex) {
+      const index = pageState.pinnedRecentSites.findIndex((pinnedItem) =>
+        pinnedItem && pinnedItem.progressTracking === true &&
+        getProgressSiteKey(pinnedItem) === historyItem.cardId
+      );
+      if (index < 0) return Promise.resolve(false);
+      const current = pageState.pinnedRecentSites[index];
+      const timestamp = Date.now();
+      const restored = progressHistory.restoreVersion(
+        pageState.progressHistoryMap,
+        historyItem.cardId,
+        historyIndex,
+        { url: current.url, title: current.title, updatedAt: timestamp }
+      );
+      if (!restored.version) return Promise.resolve(false);
+      const nextItems = pageState.pinnedRecentSites.map((entry, position) => (
+        position === index
+          ? { ...entry, url: restored.version.url, title: restored.version.title || entry.title, progressSeenAt: timestamp }
+          : entry
+      ));
+      return writeProgressHistory(restored.map).then(() => {
+        pageState.progressHistoryMap = restored.map;
+        return writePinnedRecentSites(nextItems);
+      }).then(() => {
+        pageState.recentRenderSignature = '';
+        renderRecentSites(pageState.recentSourceItems);
+        return true;
+      }).catch(() => {
+        showToast(t('recent_history_restore_failed', '无法恢复此版本'), true);
+        return false;
+      });
+    }
+
     function updateRecentPinButton(button, isPinned, limitReached) {
       if (!button) {
         return;
@@ -509,7 +692,11 @@
       isRecentSitePinned,
       mergeRecentSitesWithPinned,
       togglePinnedRecentSite,
-      updateRecentPinButton
+      updateRecentPinButton,
+      getRecentProgressState,
+      setProgressTracking,
+      markProgressSeen,
+      restoreProgressVersion
     };
   }
 

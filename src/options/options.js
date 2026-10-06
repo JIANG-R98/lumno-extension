@@ -119,6 +119,7 @@
   const motionEffectsToggle = document.getElementById('_x_extension_motion_effects_toggle_2026_unique_');
   const simpleModeToggle = document.getElementById('_x_extension_simple_mode_toggle_2026_unique_');
   const numberShortcutInstantToggle = document.getElementById('_x_extension_number_shortcut_instant_toggle_2026_unique_');
+  const progressTrackingToggle = document.getElementById('_x_extension_progress_tracking_toggle_2026_unique_');
   const macosCtrlSuggestionNavigationToggle = document.getElementById('_x_extension_macos_ctrl_suggestion_navigation_toggle_2026_unique_');
   const fallbackShortcutInput = document.getElementById('_x_extension_shortcuts_input_2024_unique_');
   const fallbackShortcutTokens = document.getElementById('_x_extension_shortcuts_tokens_2024_unique_');
@@ -897,6 +898,8 @@
   const SYNC_META_KEY = '_x_extension_sync_meta_2024_unique_';
   const NEWTAB_QUOTE_PREFS_STORAGE_KEY = SETTINGS.NEWTAB_QUOTE_PREFS_STORAGE_KEY ||
     '_x_extension_newtab_quote_prefs_2026_unique_';
+  const PROGRESS_TRACKING_ENABLED_STORAGE_KEY = SETTINGS.PROGRESS_TRACKING_ENABLED_STORAGE_KEY ||
+    '_x_extension_progress_tracking_enabled_2026_unique_';
   const SYNC_KEYS = [
     THEME_STORAGE_KEY,
     LANGUAGE_STORAGE_KEY,
@@ -962,6 +965,7 @@
     SITE_SEARCH_DISABLED_STORAGE_KEY,
     AGGREGATE_SEARCH_STORAGE_KEY,
     AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY,
+    PROGRESS_TRACKING_ENABLED_STORAGE_KEY,
     SEARCH_BLACKLIST_STORAGE_KEY,
     FAVICON_REQUEST_BLACKLIST_STORAGE_KEY,
     FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY,
@@ -4716,6 +4720,16 @@
       storageArea.set({ [SIMPLE_MODE_ENABLED_STORAGE_KEY]: next });
     });
   }
+  if (progressTrackingToggle) {
+    progressTrackingToggle.addEventListener('change', () => {
+      const next = SETTINGS.normalizeProgressTrackingEnabled(progressTrackingToggle.checked);
+      setOptionsToggleState(progressTrackingToggle, next);
+      if (!storageArea) {
+        return;
+      }
+      storageArea.set({ [PROGRESS_TRACKING_ENABLED_STORAGE_KEY]: next });
+    });
+  }
   if (numberShortcutInstantToggle) {
     numberShortcutInstantToggle.addEventListener('change', () => {
       const next = normalizeNumberShortcutInstantEnabled(numberShortcutInstantToggle.checked);
@@ -5492,6 +5506,14 @@
         storageArea.set({ [SIMPLE_MODE_ENABLED_STORAGE_KEY]: stored });
       }
       refreshCustomSelects();
+    });
+    storageArea.get([PROGRESS_TRACKING_ENABLED_STORAGE_KEY], (result) => {
+      if (progressTrackingToggle) {
+        setOptionsToggleState(
+          progressTrackingToggle,
+          SETTINGS.normalizeProgressTrackingEnabled(result[PROGRESS_TRACKING_ENABLED_STORAGE_KEY])
+        );
+      }
     });
     storageArea.get([NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY], (result) => {
       const rawValue = result[NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY];
@@ -7620,6 +7642,12 @@
         storageArea.set({ [SIMPLE_MODE_ENABLED_STORAGE_KEY]: next });
       }
       refreshCustomSelects();
+    }
+    if (changes[PROGRESS_TRACKING_ENABLED_STORAGE_KEY] && progressTrackingToggle) {
+      setOptionsToggleState(
+        progressTrackingToggle,
+        SETTINGS.normalizeProgressTrackingEnabled(changes[PROGRESS_TRACKING_ENABLED_STORAGE_KEY].newValue)
+      );
     }
     if (changes[NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY] && numberShortcutInstantToggle) {
       const raw = changes[NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY].newValue;

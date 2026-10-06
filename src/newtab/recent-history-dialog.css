@@ -1,0 +1,354 @@
+/*
+ * Change history dialog for a linked card. Backdrop, panel and motion follow the
+ * shortcut dialog (shortcut-dialog.css); colors, type, radius and timing come
+ * from src/shared/tokens.css.
+ */
+.x-nt-recent-history-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding:
+    max(24px, calc(var(--x-nt-top-occupied-inset, 0px) + 12px))
+    max(24px, env(safe-area-inset-right))
+    max(24px, var(--x-nt-bottom-safe-inset, env(safe-area-inset-bottom)))
+    max(24px, env(safe-area-inset-left));
+  box-sizing: border-box;
+  background: rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  opacity: 0;
+  transition: opacity var(--lumno-duration-sm) ease;
+}
+
+.x-nt-recent-history-backdrop[hidden] {
+  display: none;
+}
+
+.x-nt-recent-history-backdrop[data-open="true"] {
+  opacity: 1;
+}
+
+.x-nt-recent-history-dialog {
+  width: min(560px, 100%);
+  max-height: min(680px, calc(100dvh - 48px));
+  overflow: hidden;
+  border: 0;
+  border-radius: 27px;
+  background: var(--x-nt-recent-history-bg, rgb(255 255 255 / 0.98));
+  box-shadow: var(--x-nt-panel-shadow-focus, 0 18px 44px rgba(0, 0, 0, 0.1));
+  backdrop-filter: blur(var(--x-nt-panel-blur, 24px)) saturate(var(--x-nt-panel-saturate, 165%));
+  -webkit-backdrop-filter: blur(var(--x-nt-panel-blur, 24px)) saturate(var(--x-nt-panel-saturate, 165%));
+  color: var(--lumno-color-text);
+  opacity: 0;
+  filter: blur(6px);
+  transform: scale(0.98);
+  transition:
+    opacity var(--lumno-duration-sm) ease,
+    transform var(--lumno-duration-xl) cubic-bezier(0.22, 1, 0.36, 1),
+    filter var(--lumno-duration-md) cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.x-nt-recent-history-backdrop[data-open="true"] .x-nt-recent-history-dialog {
+  opacity: 1;
+  filter: blur(0);
+  transform: scale(1);
+}
+
+/* A successful restore shrinks the dialog toward the toast that confirms it. */
+.x-nt-recent-history-backdrop[data-state="restored"] .x-nt-recent-history-dialog {
+  opacity: 0;
+  filter: blur(7px);
+  transform: translateY(-14px) scale(0.82);
+  transform-origin: center top;
+  transition-duration: var(--lumno-duration-md), var(--lumno-duration-lg), var(--lumno-duration-xl);
+}
+
+body[data-theme="dark"] .x-nt-recent-history-dialog {
+  --x-nt-recent-history-bg: rgb(20 20 20 / 0.98);
+}
+
+.x-nt-recent-history-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 24px 24px 16px;
+}
+
+.x-nt-recent-history-header > span {
+  flex: 1;
+  min-width: 0;
+}
+
+.x-nt-recent-history-header h2 {
+  margin: 0;
+  color: inherit;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.x-nt-recent-history-header p {
+  margin: 6px 0 0;
+  color: var(--lumno-color-text-muted);
+  font-size: var(--lumno-font-size-md);
+  line-height: 1.6;
+}
+
+.x-nt-recent-history-close {
+  all: unset;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin: -4px -6px 0 0;
+  border-radius: var(--lumno-radius-md);
+  color: var(--lumno-color-text-muted);
+  font-size: 18px;
+  cursor: pointer;
+  transition:
+    background-color var(--lumno-duration-sm) ease,
+    color var(--lumno-duration-sm) ease;
+}
+
+.x-nt-recent-history-close:hover {
+  color: var(--lumno-color-text);
+  background: var(--lumno-color-hover);
+}
+
+.x-nt-recent-history-close:focus-visible {
+  outline: 2px solid var(--lumno-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.x-nt-recent-history-list {
+  max-height: min(540px, calc(100dvh - 170px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0 16px 16px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.62) transparent;
+}
+
+/* Same thin scrollbar as the bookmark cascade menu (newtab.css). */
+.x-nt-recent-history-list::-webkit-scrollbar {
+  width: 10px;
+}
+
+.x-nt-recent-history-list::-webkit-scrollbar-track {
+  margin-block: 8px;
+  background: transparent;
+}
+
+.x-nt-recent-history-list::-webkit-scrollbar-thumb {
+  min-height: 34px;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-color: rgba(148, 163, 184, 0.68);
+  background-clip: padding-box;
+}
+
+.x-nt-recent-history-list::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 116, 139, 0.82);
+}
+
+.x-nt-recent-history-list::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.x-nt-recent-history-current,
+.x-nt-recent-history-version {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 12px;
+  min-height: 68px;
+  padding: 12px 12px 12px 8px;
+  border-radius: var(--lumno-radius-2xl);
+  box-sizing: border-box;
+}
+
+/* The current version stays pinned above the timeline. */
+.x-nt-recent-history-current {
+  position: sticky;
+  top: 0;
+  z-index: var(--lumno-z-overlay);
+  margin-bottom: 6px;
+  background: var(--lumno-color-fill-subtle);
+}
+
+.x-nt-recent-history-version {
+  transition: background-color var(--lumno-duration-sm) ease;
+}
+
+.x-nt-recent-history-version:hover,
+.x-nt-recent-history-version:focus-within {
+  background: var(--lumno-color-hover);
+}
+
+.x-nt-recent-history-rail {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  color: var(--lumno-color-text);
+}
+
+.x-nt-recent-history-version .x-nt-recent-history-rail::before {
+  content: "";
+  position: absolute;
+  top: -18px;
+  bottom: -18px;
+  left: 50%;
+  width: 1px;
+  background: var(--lumno-color-border);
+}
+
+.x-nt-recent-history-version .x-nt-recent-history-rail i {
+  position: relative;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--lumno-color-text-muted);
+}
+
+.x-nt-recent-history-version-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.x-nt-recent-history-version-copy strong,
+.x-nt-recent-history-version-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.x-nt-recent-history-version-copy strong {
+  font-size: var(--lumno-font-size-md);
+  font-weight: 600;
+}
+
+.x-nt-recent-history-version-copy span {
+  color: var(--lumno-color-text-muted);
+  font-size: var(--lumno-font-size-sm);
+}
+
+.x-nt-recent-history-current time,
+.x-nt-recent-history-version time {
+  align-self: start;
+  color: var(--lumno-color-text-muted);
+  font-size: var(--lumno-font-size-xs);
+  white-space: nowrap;
+}
+
+.x-nt-recent-history-version-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.x-nt-recent-history-version-actions time {
+  align-self: center;
+}
+
+/* Restore reveals on hover or focus, like the search result row actions. */
+.x-nt-recent-history-action-slot {
+  display: inline-flex;
+  align-items: center;
+  width: 0;
+  margin-left: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    width var(--lumno-duration-md) ease,
+    margin-left var(--lumno-duration-md) ease,
+    opacity var(--lumno-duration-sm) ease;
+}
+
+.x-nt-recent-history-restore {
+  width: 108px;
+  min-height: 30px;
+  padding-inline: 10px;
+  font-size: var(--lumno-font-size-xs);
+  opacity: 0;
+  transform: translateX(4px);
+  transition:
+    background var(--lumno-duration-sm) ease,
+    border-color var(--lumno-duration-sm) ease,
+    box-shadow var(--lumno-duration-sm) ease,
+    color var(--lumno-duration-sm) ease,
+    opacity var(--lumno-duration-sm) ease,
+    transform var(--lumno-duration-sm) ease;
+}
+
+.x-nt-recent-history-version:hover .x-nt-recent-history-action-slot,
+.x-nt-recent-history-version:focus-within .x-nt-recent-history-action-slot {
+  width: 108px;
+  margin-left: 8px;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.x-nt-recent-history-version:hover .x-nt-recent-history-restore,
+.x-nt-recent-history-version:focus-within .x-nt-recent-history-restore {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+@media (hover: none) {
+  .x-nt-recent-history-action-slot {
+    width: 108px;
+    margin-left: 8px;
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .x-nt-recent-history-restore {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .x-nt-recent-history-backdrop {
+    padding-inline: 12px;
+  }
+  .x-nt-recent-history-dialog {
+    border-radius: 24px;
+  }
+  .x-nt-recent-history-header {
+    padding: 20px 18px 14px;
+  }
+  .x-nt-recent-history-list {
+    padding-inline: 10px;
+  }
+  .x-nt-recent-history-current,
+  .x-nt-recent-history-version {
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+    column-gap: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .x-nt-recent-history-backdrop {
+    transition: opacity var(--lumno-duration-2xs) ease;
+  }
+  .x-nt-recent-history-dialog {
+    filter: none;
+    transform: scale(1);
+    transition: opacity var(--lumno-duration-2xs) ease;
+  }
+}
+
+@supports (corner-shape: superellipse(1.25)) {
+  .x-nt-recent-history-dialog {
+    corner-shape: superellipse(1.25);
+  }
+}

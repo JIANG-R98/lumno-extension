@@ -2866,5 +2866,62 @@
   },
   "newtab_quote_provider": {
     "message": "Powered by Hitokoto"
+  },
+  "recent_history_menu": {
+    "message": "View Recent Change History"
+  },
+  "recent_history_title": {
+    "message": "Change History"
+  },
+  "recent_history_description": {
+    "message": "Set any retained version as current without removing history."
+  },
+  "recent_history_current": {
+    "message": "Current version"
+  },
+  "recent_history_earlier": {
+    "message": "Earlier version"
+  },
+  "recent_history_restore": {
+    "message": "Set as current"
+  },
+  "recent_history_restoring": {
+    "message": "Restoring…"
+  },
+  "recent_history_restore_success": {
+    "message": "Selected version restored"
+  },
+  "recent_history_restore_failed": {
+    "message": "Unable to restore this version"
+  },
+  "recent_update_close": {
+    "message": "Close"
+  },
+  "settings_progress_tracking_title": {
+    "message": "Track watching progress"
+  },
+  "settings_progress_tracking_desc": {
+    "message": "Turn it on from a card’s menu on the New Tab page, and the card follows you to the next episode or chapter"
+  },
+  "recent_progress_track": {
+    "message": "Track progress"
+  },
+  "recent_progress_stop": {
+    "message": "Stop tracking progress"
+  },
+  "recent_progress_track_toast": {
+    "message": "Tracking on. The card updates as you move to the next episode or chapter."
+  },
+  "recent_progress_stop_toast": {
+    "message": "Stopped tracking progress"
+  },
+  "recent_progress_tracking": {
+    "message": "Tracking progress"
+  },
+  "recent_progress_updated": {
+    "message": "Moved to a new episode or chapter"
+  },
+  "recent_progress_updated_badge": {
+    "message": "Updated"
   }
 }

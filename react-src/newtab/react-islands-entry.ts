@@ -5,6 +5,7 @@ import { createFeedbackControlApi } from './feedback';
 import { createRecentSitesViewApi } from './recent-sites';
 import { createSelectMenuApi } from './select-menu';
 import { createShortcutDialogApi } from './shortcut-dialog-lazy';
+import { createRecentHistoryDialogApi } from './recent-history-dialog-lazy';
 import { createFolderColorPickerApi } from './folder-color-picker-lazy';
 import { createShortcutsViewApi } from './shortcuts';
 import { createSuggestionsViewApi } from '../search/suggestions';
@@ -30,6 +31,7 @@ const runtime = globalThis as typeof globalThis & {
     dock: ReturnType<typeof createDockApi>;
     feedback: ReturnType<typeof createFeedbackControlApi>;
     shortcutDialog: ReturnType<typeof createShortcutDialogApi>;
+    recentHistoryDialog: ReturnType<typeof createRecentHistoryDialogApi>;
     recentSites: ReturnType<typeof createRecentSitesViewApi>;
     searchInput: ReturnType<typeof createSearchInputApi>;
     selectMenu: ReturnType<typeof createSelectMenuApi>;
@@ -54,6 +56,7 @@ const runtime = globalThis as typeof globalThis & {
   LumnoNewtabDockReact?: ReturnType<typeof createDockApi>;
   LumnoNewtabShortcutDialog?: ReturnType<typeof createShortcutDialogApi>;
   LumnoNewtabShortcutDialogReact?: ReturnType<typeof createShortcutDialogApi>;
+  LumnoNewtabRecentHistoryDialog?: ReturnType<typeof createRecentHistoryDialogApi>;
   LumnoNewtabFolderColorPicker?: ReturnType<typeof createFolderColorPickerApi>;
   LumnoNewtabShortcutsView?: ReturnType<typeof createShortcutsViewApi>;
   LumnoNewtabShortcutsViewReact?: ReturnType<typeof createShortcutsViewApi>;
@@ -106,6 +109,7 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   const dockApi = createDockApi();
   const feedbackApi = createFeedbackControlApi();
   const shortcutDialogApi = createShortcutDialogApi();
+  const recentHistoryDialogApi = createRecentHistoryDialogApi();
   const folderColorPickerApi = createFolderColorPickerApi();
   const recentSitesApi = createRecentSitesViewApi();
   const selectMenuApi = createSelectMenuApi();
@@ -133,6 +137,7 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   runtime.LumnoNewtabFeedbackControl = feedbackApi;
   runtime.LumnoNewtabShortcutDialogReact = shortcutDialogApi;
   runtime.LumnoNewtabShortcutDialog = shortcutDialogApi;
+  runtime.LumnoNewtabRecentHistoryDialog = recentHistoryDialogApi;
   runtime.LumnoNewtabFolderColorPicker = folderColorPickerApi;
   runtime.LumnoNewtabRecentSitesViewReact = recentSitesApi;
   runtime.LumnoNewtabRecentSitesView = recentSitesApi;
@@ -176,6 +181,7 @@ if (!bootstrapState || !bootstrapState.reactReady) {
     dock: dockApi,
     feedback: feedbackApi,
     shortcutDialog: shortcutDialogApi,
+    recentHistoryDialog: recentHistoryDialogApi,
     recentSites: recentSitesApi,
     searchInput: searchInputApi,
     selectMenu: selectMenuApi,

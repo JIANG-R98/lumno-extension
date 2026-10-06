@@ -2866,5 +2866,62 @@
   },
   "newtab_quote_provider": {
     "message": "由一言提供服務"
+  },
+  "recent_history_menu": {
+    "message": "查看最近變更歷史"
+  },
+  "recent_history_title": {
+    "message": "變更記錄"
+  },
+  "recent_history_description": {
+    "message": "選擇任意版本設為目前內容，歷史記錄會繼續保留。"
+  },
+  "recent_history_current": {
+    "message": "目前版本"
+  },
+  "recent_history_earlier": {
+    "message": "較早版本"
+  },
+  "recent_history_restore": {
+    "message": "設為目前版本"
+  },
+  "recent_history_restoring": {
+    "message": "正在復原…"
+  },
+  "recent_history_restore_success": {
+    "message": "已復原為所選版本"
+  },
+  "recent_history_restore_failed": {
+    "message": "無法復原此版本"
+  },
+  "recent_update_close": {
+    "message": "關閉"
+  },
+  "settings_progress_tracking_title": {
+    "message": "追蹤觀看進度"
+  },
+  "settings_progress_tracking_desc": {
+    "message": "在主頁卡片的右鍵選單中開啟後，看到下一集或下一章時卡片會自動更新"
+  },
+  "recent_progress_track": {
+    "message": "追蹤觀看進度"
+  },
+  "recent_progress_stop": {
+    "message": "停止追蹤進度"
+  },
+  "recent_progress_track_toast": {
+    "message": "已開始追蹤，看下一集或下一章時卡片會自動更新"
+  },
+  "recent_progress_stop_toast": {
+    "message": "已停止追蹤進度"
+  },
+  "recent_progress_tracking": {
+    "message": "正在追蹤觀看進度"
+  },
+  "recent_progress_updated": {
+    "message": "已跟到新的一集或一章"
+  },
+  "recent_progress_updated_badge": {
+    "message": "已更新"
   }
 }
