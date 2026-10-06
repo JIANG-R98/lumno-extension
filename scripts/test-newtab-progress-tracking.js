@@ -234,6 +234,40 @@ const menuValues = (controller, item) => controller.getRecentContextMenuOptions(
       [series.url, home.url], 'pinning a series keeps the pinned site card');
   }
 
+  // When the title and URL cannot tell, an open tab with the page is asked.
+  {
+    const sent = [];
+    let reply = (message, callback) => callback({ ok: true, series: message.url === 'https://example.com/v/abc' });
+    global.chrome = {
+      runtime: {
+        lastError: null,
+        sendMessage(message, callback) {
+          sent.push(message);
+          reply(message, callback);
+        }
+      }
+    };
+    try {
+      const harness = createController([], {});
+      await harness.controller.togglePinnedRecentSite({ url: 'https://example.com/v/abc', title: '某视频' });
+      assert.strictEqual(harness.syncArea.data[PINNED_KEY][0].progressTracking, true, 'episode navigation on the open page');
+      assert.deepStrictEqual(sent, [{ action: 'probeProgressSeries', url: 'https://example.com/v/abc' }]);
+      await harness.controller.togglePinnedRecentSite({ url: 'https://example.com/v/abc', title: '某视频' });
+      assert.strictEqual(sent.length, 1, 'unpinning asks nothing');
+      await harness.controller.togglePinnedRecentSite({ url: 'https://vidhub3.top/vodplay/55357-1-1.html', title: '某剧 第1集' });
+      assert.strictEqual(sent.length, 1, 'the title and URL already tell');
+      reply = () => {};
+      const started = Date.now();
+      const result = await harness.controller.togglePinnedRecentSite({ url: 'https://example.com/docs', title: 'Docs' });
+      assert.strictEqual(result.pinned, true, 'a page that never answers still pins');
+      assert(Date.now() - started < 2000, 'the wait is short');
+      const docs = harness.syncArea.data[PINNED_KEY].find((item) => item.url === 'https://example.com/docs');
+      assert.strictEqual('progressTracking' in docs, false);
+    } finally {
+      delete global.chrome;
+    }
+  }
+
   // Restoring a version swaps it with the current one, in both stores.
   {
     const harness = createController([{ ...tracked, siteName: '某剧 第3集' }], history);

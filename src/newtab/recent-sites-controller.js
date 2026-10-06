@@ -42,6 +42,7 @@
     const RECENT_CONTEXT_MENU_STOP_PROGRESS_VALUE = 'stop-progress';
     const RECENT_CONTEXT_MENU_PROGRESS_HISTORY_VALUE = 'progress-history';
     const RECENT_CONTEXT_MENU_MIN_WIDTH_PX = 124;
+    const PIN_PROBE_TIMEOUT_MS = 900;
     const RECENT_CONTEXT_MENU_MAX_WIDTH_PX = 200;
     const RECENT_CONTEXT_MENU_PORTAL_Z_INDEX = 10050;
     const RECENT_CONTEXT_MENU_PORTAL_OFFSET_PX = -6;
@@ -457,10 +458,44 @@
       if (!normalizedItem) {
         return Promise.resolve({ pinned: false, limitReached: false });
       }
-      // Pinning an episode or chapter tracks it from the start (progress
-      // tracking), which also makes it a card for the work, not the site.
-      const autoTrack = Boolean(pageState.progressTrackingEnabled &&
-        progressMatch.looksLikeSeriesPage(normalizedItem));
+      // Unpinning the card itself needs no decision about tracking.
+      const urlKey = getRecentSiteUrlKey(normalizedItem);
+      const pinnedSelf = pageState.pinnedRecentSites.find((pinnedItem) =>
+        getRecentSiteUrlKey(pinnedItem) === urlKey
+      );
+      if (pinnedSelf) {
+        return pinOrUnpinRecentSite(normalizedItem, pinnedSelf.progressTracking === true);
+      }
+      return shouldAutoTrackOnPin(normalizedItem).then((autoTrack) =>
+        pinOrUnpinRecentSite(normalizedItem, autoTrack)
+      );
+    }
+
+    // Pinning an episode or chapter tracks it from the start (progress
+    // tracking), which also makes it a card for the work, not the site. The
+    // title and URL usually tell; otherwise an open tab with the page is read
+    // for episode navigation or metadata, briefly.
+    function shouldAutoTrackOnPin(item) {
+      if (!pageState.progressTrackingEnabled) return Promise.resolve(false);
+      if (progressMatch.looksLikeSeriesPage(item)) return Promise.resolve(true);
+      if (typeof chrome === 'undefined' || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
+        return Promise.resolve(false);
+      }
+      return new Promise((resolve) => {
+        const timer = setTimeout(() => resolve(false), PIN_PROBE_TIMEOUT_MS);
+        try {
+          chrome.runtime.sendMessage({ action: 'probeProgressSeries', url: item.url }, (response) => {
+            clearTimeout(timer);
+            resolve(!chrome.runtime.lastError && Boolean(response && response.series === true));
+          });
+        } catch (error) {
+          clearTimeout(timer);
+          resolve(false);
+        }
+      });
+    }
+
+    function pinOrUnpinRecentSite(normalizedItem, autoTrack) {
       const candidate = autoTrack ? { ...normalizedItem, progressTracking: true } : normalizedItem;
       const existingIndex = pageState.pinnedRecentSites.findIndex((pinnedItem) => isSamePinnedSite(pinnedItem, candidate));
       if (existingIndex >= 0) {

@@ -6227,7 +6227,8 @@ const BACKGROUND_MESSAGE_ROUTE_GROUPS = Object.freeze({
       'openBookmarkFolderInNewTabGroup',
       'createTab',
       'openNewTab',
-      'openExtensionDetailsPage'
+      'openExtensionDetailsPage',
+      'probeProgressSeries'
     ],
     handler: handleExtensionPageMessage
   },
@@ -6876,6 +6877,17 @@ function handleLocaleAndPermissionMessage(request, sender, sendResponse) {
 
 function handleExtensionPageMessage(request, sender, sendResponse) {
   switch (request.action) {
+    case 'probeProgressSeries': {
+      // Pinning from New Tab: does the open page read as an episode or chapter?
+      if (!progressTrackingEnabled) {
+        sendResponse({ ok: true, series: false });
+        return false;
+      }
+      progressTracker.probeSeries(String(request.url || '')).then((series) => {
+        sendResponse({ ok: true, series: series === true });
+      }, () => sendResponse({ ok: false, series: false }));
+      return true;
+    }
     case 'openOptionsPage': {
       openExtensionOptionsPage({ disposition: request.disposition, hash: request.hash }, (ok) => {
         sendResponse({ ok: ok !== false });

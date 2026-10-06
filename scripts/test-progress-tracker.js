@@ -26,7 +26,10 @@ function createArea(initial) {
 
 function createHarness(pinned, options = {}) {
   const tabs = new Map();
-  const listeners = { updated: [], activated: [], removed: [], replaced: [] };
+  const listeners = { updated: [], activated: [], removed: [], replaced: [], created: [] };
+  const pageHints = options.pageHints || (() => null);
+  const transitions = options.transitions || {};
+  const injected = [];
   const timers = [];
   const syncArea = createArea({ [PINNED_KEY]: pinned });
   const localArea = createArea({});
@@ -35,10 +38,24 @@ function createHarness(pinned, options = {}) {
     runtime: { lastError: null },
     tabs: {
       get(tabId, callback) { callback(tabs.get(tabId) || null); },
+      query(_query, callback) { callback(Array.from(tabs.values())); },
+      onCreated: { addListener: (fn) => listeners.created.push(fn) },
       onUpdated: { addListener: (fn) => listeners.updated.push(fn) },
       onActivated: { addListener: (fn) => listeners.activated.push(fn) },
       onRemoved: { addListener: (fn) => listeners.removed.push(fn) },
       onReplaced: { addListener: (fn) => listeners.replaced.push(fn) }
+    },
+    scripting: {
+      executeScript(details, callback) {
+        injected.push(details);
+        const tab = tabs.get(details.target.tabId);
+        callback([{ result: pageHints(tab, details.world || 'ISOLATED') }]);
+      }
+    },
+    history: {
+      getVisits({ url }, callback) {
+        callback(transitions[url] ? [{ visitTime: 1, transition: transitions[url] }] : []);
+      }
     }
   };
   const tracker = createProgressTracker({
@@ -62,6 +79,10 @@ function createHarness(pinned, options = {}) {
   tracker.attach();
   return {
     tracker,
+    injected,
+    open(tabId, openerTabId) {
+      listeners.created.forEach((fn) => fn({ id: tabId, openerTabId }));
+    },
     syncArea,
     localArea,
     setEnabled(value) { enabled = value; },
@@ -230,6 +251,114 @@ const otherCard = {
     assert.deepStrictEqual(Object.keys(harness.history()), ['pb']);
   }
 
+  // How the person got there: clicking on from the card's page counts even
+  // when neither the URL nor the title can tell.
+  const opaqueCard = {
+    title: '发现TV 在线播放',
+    url: 'https://faxiantv.cc/player.php?share=aae5ca3dda55',
+    progressTracking: true,
+    progressId: 'pf'
+  };
+  const opaqueNext = 'https://faxiantv.cc/player.php?share=f3a3ce602a22';
+  {
+    const harness = createHarness([opaqueCard], { transitions: { [opaqueNext]: 'link' } });
+    harness.visit(1, opaqueCard.url, '发现TV 在线播放');
+    harness.visit(1, opaqueNext, '发现TV 在线播放');
+    await harness.elapse();
+    assert.strictEqual(harness.pinned()[0].url, opaqueNext, 'clicked on from the card in the same tab');
+  }
+  {
+    const harness = createHarness([opaqueCard], { transitions: { [opaqueNext]: 'link' } });
+    harness.visit(1, opaqueCard.url, '发现TV 在线播放');
+    harness.open(2, 1);
+    harness.visit(2, 'about:blank', '');
+    harness.visit(2, opaqueNext, '发现TV 在线播放');
+    await harness.elapse();
+    assert.strictEqual(harness.pinned()[0].url, opaqueNext, 'a tab opened from the card came from it');
+  }
+  {
+    const harness = createHarness([opaqueCard], { transitions: { [opaqueNext]: 'typed' } });
+    harness.visit(1, opaqueCard.url, '发现TV 在线播放');
+    harness.visit(1, opaqueNext, '发现TV 在线播放');
+    await harness.elapse();
+    assert.strictEqual(harness.pinned()[0].url, opaqueCard.url, 'a typed URL is not a click from the card');
+  }
+  {
+    const harness = createHarness([opaqueCard]);
+    harness.visit(1, opaqueNext, '发现TV 在线播放');
+    await harness.elapse();
+    assert.strictEqual(harness.pinned()[0].url, opaqueCard.url, 'arriving from elsewhere proves nothing');
+  }
+
+  // What the pages say: the new page's previous link points at the card.
+  {
+    const harness = createHarness([opaqueCard], {
+      pageHints: (tab) => (tab.url === opaqueNext ? { prevUrls: [opaqueCard.url] } : null)
+    });
+    harness.visit(1, opaqueNext, '发现TV 在线播放');
+    await harness.elapse();
+    assert.strictEqual(harness.pinned()[0].url, opaqueNext);
+    assert(harness.injected.every((details) => details.world !== 'MAIN'),
+      'pages other than the card are read in the isolated world only');
+  }
+  // The card's own page names its next page, remembered for later.
+  {
+    const vol2 = 'https://www.bilinovel.com/novel/2013/vol2/1.html';
+    const chapterCard = {
+      title: '某轻小说 第一卷 终章',
+      url: 'https://www.bilinovel.com/novel/2013/72035_3.html',
+      progressTracking: true,
+      progressId: 'pn'
+    };
+    const harness = createHarness([chapterCard], {
+      pageHints: (tab, world) => (world === 'ISOLATED' && tab.url === chapterCard.url ? { nextUrls: [vol2] } : null)
+    });
+    harness.visit(1, chapterCard.url, chapterCard.title);
+    await harness.elapse();
+    harness.visit(2, vol2, '某轻小说 第二卷 序章');
+    await harness.elapse();
+    assert.strictEqual(harness.pinned()[0].url, vol2, 'the next link settles a URL of another shape');
+  }
+  // Pages of sites the person does not track are never read.
+  {
+    const harness = createHarness([opaqueCard]);
+    harness.visit(1, 'https://github.com/', 'GitHub');
+    await harness.elapse();
+    assert.strictEqual(harness.injected.length, 0);
+  }
+
+  // One address for every episode: the card follows what the player names.
+  {
+    const embyUrl = 'https://media.example.com/web/index.html#!/videoosd/videoosd.html';
+    const embyCard = { title: 'Emby', url: embyUrl, progressTracking: true, progressId: 'pe' };
+    let playing = { title: '第1集 初遇', series: '某剧' };
+    const harness = createHarness([embyCard], {
+      pageHints: (_tab, world) => (world === 'MAIN' ? playing : {})
+    });
+    harness.visit(1, embyUrl, 'Emby');
+    await harness.elapse();
+    assert.strictEqual(harness.pinned()[0].title, '某剧 第1集 初遇');
+    assert.strictEqual(harness.pinned()[0].url, embyUrl);
+    assert.deepStrictEqual(harness.history(), {}, 'naming the current episode is not a change');
+    playing = { title: '第2集 重逢', series: '某剧' };
+    harness.update(1, { audible: true }, { audible: true });
+    await harness.elapse();
+    assert.strictEqual(harness.pinned()[0].title, '某剧 第2集 重逢');
+    assert.deepStrictEqual(harness.history().pe.map((version) => version.title), ['某剧 第1集 初遇']);
+  }
+
+  // Pinning: an open tab's episode navigation makes it a series page.
+  {
+    const harness = createHarness([], {
+      pageHints: (tab) => (tab.url === 'https://example.com/v/abc' ? { episodeNavigation: true } : null)
+    });
+    harness.visit(1, 'https://example.com/v/abc', '某视频');
+    assert.strictEqual(await harness.tracker.probeSeries('https://example.com/v/abc'), true);
+    assert.strictEqual(await harness.tracker.probeSeries('https://example.com/v/other'), false, 'no open tab');
+    harness.visit(2, 'https://example.com/docs', 'Docs');
+    assert.strictEqual(await harness.tracker.probeSeries('https://example.com/docs'), false);
+  }
+
   // History helpers.
   {
     let map = {};
@@ -243,6 +372,48 @@ const otherCard = {
     assert.strictEqual(restored.map.site[0].url, 'https://site/13', 'the version left behind can be restored back');
     assert(!restored.map.site.some((version) => version.url === 'https://site/10'), 'the restored version is current, not history');
     assert.strictEqual(progressHistory.restoreVersion(map, 'site', 99, null).version, null);
+  }
+
+  // Reading a page: next and previous links, episode navigation and metadata.
+  {
+    const { JSDOM } = require('jsdom');
+    const { readProgressPageHints } = require('../src/background/progress-tracker.js');
+    const read = (html, url) => {
+      const dom = new JSDOM(html, { url });
+      const previous = { document: global.document, location: global.location, navigator: global.navigator };
+      global.document = dom.window.document;
+      global.location = dom.window.location;
+      Object.defineProperty(global, 'navigator', { value: dom.window.navigator, configurable: true });
+      try {
+        return readProgressPageHints();
+      } finally {
+        global.document = previous.document;
+        global.location = previous.location;
+        Object.defineProperty(global, 'navigator', { value: previous.navigator, configurable: true });
+      }
+    };
+    const chapter = read(`
+      <link rel="prev" href="/novel/2013/72034.html">
+      <a href="/novel/2013/72036.html">下一章</a>
+      <a href="/novel/2013/">目录</a>
+      <a href="/novel/2013/72034.html">上一章</a>`, 'https://www.bilinovel.com/novel/2013/72035.html');
+    assert.deepStrictEqual(chapter.nextUrls, ['https://www.bilinovel.com/novel/2013/72036.html']);
+    assert.deepStrictEqual(chapter.prevUrls, ['https://www.bilinovel.com/novel/2013/72034.html']);
+    assert.strictEqual(chapter.episodeNavigation, true);
+    const show = read(`
+      <meta property="og:type" content="video.episode">
+      <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"TVEpisode","episodeNumber":3,"partOfSeries":{"@type":"TVSeries","name":"某剧"}}]}</script>
+      <a href="/play/2">Next episode ›</a>`, 'https://video.example.com/play/1');
+    assert.strictEqual(show.seriesName, '某剧');
+    assert.strictEqual(show.episode, 3);
+    assert.deepStrictEqual(show.nextUrls, ['https://video.example.com/play/2']);
+    assert.strictEqual(show.episodeNavigation, true);
+    const list = read('<a href="?page=2">下一页</a><a href="javascript:void 0">下一集</a>', 'https://example.com/list');
+    assert.deepStrictEqual(list.nextUrls, ['https://example.com/list?page=2'], 'non-web links are dropped');
+    const plain = read('<a href="/about">About</a>', 'https://example.com/');
+    assert.deepStrictEqual(plain, {
+      nextUrls: [], prevUrls: [], episodeNavigation: false, seriesName: '', episode: 0, media: null
+    });
   }
 
   console.log('progress tracker tests passed');

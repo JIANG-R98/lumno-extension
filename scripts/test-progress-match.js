@@ -40,7 +40,7 @@ check('bilinovel second page of a chapter',
 check('bilinovel next chapter',
   page('https://www.bilinovel.com/novel/2013/72035_3.html'),
   page('https://www.bilinovel.com/novel/2013/72036.html'),
-  { match: false, reason: 'title-mismatch' });
+  { match: false, reason: 'insufficient' });
 check('bilinovel next chapter with the work in the title',
   page('https://www.bilinovel.com/novel/2013/72035_3.html', '某轻小说 第一章 开端（3/3）_哔哩轻小说'),
   page('https://www.bilinovel.com/novel/2013/72036.html', '某轻小说 第二章 转折_哔哩轻小说'),
@@ -68,7 +68,7 @@ check('Emby hash routes are pages, not anchors',
 check('another work with the same URL template',
   page('https://vidhub3.top/vodplay/55357-1-2.html', '某剧 第2集'),
   page('https://vidhub3.top/vodplay/60001-1-1.html', '另一部剧 第1集'),
-  { match: false, reason: 'title-mismatch' });
+  { match: false, reason: 'insufficient' });
 check('another book on shencou',
   page('https://m.shencou.com/chapter.php?aid=993&cid=53107', '书A 第一章'),
   page('https://m.shencou.com/chapter.php?aid=1000&cid=60000', '书B 第一章'),
@@ -105,6 +105,92 @@ check('www is the same site',
   page('https://bilibili.com/video/BV11LEA6eEuj?p=2'),
   page('https://www.bilibili.com/video/BV11LEA6eEuj?p=3'),
   { match: true, confidence: 'high' });
+
+// Account names are not work ids: a tracked GitHub issue never moves to the next issue.
+check('the next GitHub issue',
+  page('https://github.com/Kubai087/lumno-extension/issues/123', 'Fix the bug · Issue #123'),
+  page('https://github.com/Kubai087/lumno-extension/issues/124', 'Add a feature · Issue #124'),
+  { match: false });
+assert.strictEqual(compareProgressPages(
+  page('https://github.com/Kubai087/lumno-extension/issues/123', 'Fix the bug · Issue #123'),
+  page('https://github.com/Kubai087/lumno-extension/issues/124', 'Add a feature · Issue #124'),
+  { fromCurrent: true, transition: 'link' }
+).match, false);
+assert.strictEqual(compareProgressPages(
+  page('https://www.v2ex.com/t/1012345', '如何选择笔记本 - V2EX'),
+  page('https://www.v2ex.com/t/1012346', '另一个帖子 - V2EX'),
+  { fromCurrent: true, transition: 'link' }
+).match, false, 'forum threads stay put');
+
+// Navigation: clicking on from the card's page counts; typing a URL does not.
+const generic = [
+  page('https://faxiantv.cc/player.php?share=aae5ca3dda55', '发现TV 在线播放'),
+  page('https://faxiantv.cc/player.php?share=f3a3ce602a22', '发现TV 在线播放')
+];
+const clicked = compareProgressPages(...generic, { fromCurrent: true, transition: 'link' });
+assert.strictEqual(clicked.match, true, 'an opaque next page clicked from the card continues it');
+assert(clicked.factors.some((factor) => factor.signal === 'navigated-from-card'));
+assert.strictEqual(compareProgressPages(...generic, { fromCurrent: true, transition: 'typed' }).match, false);
+assert.strictEqual(compareProgressPages(...generic, { fromCurrent: false }).match, false);
+assert.strictEqual(compareProgressPages(
+  page('https://vidhub3.top/vodplay/55357-1-2.html', '某剧 第2集'),
+  page('https://vidhub3.top/vodplay/60001-1-1.html', '另一部剧 第1集'),
+  { fromCurrent: true, transition: 'link' }
+).match, false, 'a recommended show clicked from the card is still another work');
+
+// Big jumps need more than the URL.
+check('jumping from episode 3 to 57',
+  page('https://vidhub3.top/vodplay/55357-1-3.html'),
+  page('https://vidhub3.top/vodplay/55357-1-57.html'),
+  { match: false });
+check('jumping from episode 3 to 57 of the same show',
+  page('https://vidhub3.top/vodplay/55357-1-3.html', '某剧 第3集'),
+  page('https://vidhub3.top/vodplay/55357-1-57.html', '某剧 第57集'),
+  { match: true, direction: 'forward' });
+
+// Page links settle it, even when the URL shape changes.
+{
+  const next = compareProgressPages(
+    page('https://www.bilinovel.com/novel/2013/72035_3.html', '第一章'),
+    page('https://www.bilinovel.com/novel/2013/vol2/1.html', '第二卷 第一章'),
+    { currentHints: { nextUrls: ['https://www.bilinovel.com/novel/2013/vol2/1.html#top'] } }
+  );
+  assert.strictEqual(next.match, true);
+  assert.strictEqual(next.confidence, 'high');
+  assert.strictEqual(next.direction, 'forward');
+  const viaPrev = compareProgressPages(
+    page('https://faxiantv.cc/player.php?share=aae5ca3dda55', '发现TV 在线播放'),
+    page('https://faxiantv.cc/player.php?share=f3a3ce602a22', '发现TV 在线播放'),
+    { candidateHints: { prevUrls: ['https://faxiantv.cc/player.php?share=aae5ca3dda55'] } }
+  );
+  assert.strictEqual(viaPrev.match, true);
+  assert.strictEqual(viaPrev.direction, 'forward');
+  const back = compareProgressPages(
+    page('https://faxiantv.cc/player.php?share=f3a3ce602a22', '发现TV 在线播放'),
+    page('https://faxiantv.cc/player.php?share=aae5ca3dda55', '发现TV 在线播放'),
+    { currentHints: { prevUrls: ['https://faxiantv.cc/player.php?share=aae5ca3dda55'] } }
+  );
+  assert.strictEqual(back.match, true);
+  assert.strictEqual(shouldAdvance(back), false, 'following the previous link never rewinds the card');
+}
+
+// Structured metadata names the work.
+assert.strictEqual(compareProgressPages(
+  page('https://faxiantv.cc/player.php?share=aae5ca3dda55', '发现TV 在线播放'),
+  page('https://faxiantv.cc/player.php?share=f3a3ce602a22', '发现TV 在线播放'),
+  { currentHints: { seriesName: '某剧' }, candidateHints: { seriesName: '某剧', episode: 2 }, currentEpisode: 1 }
+).direction, 'forward');
+assert.strictEqual(compareProgressPages(
+  page('https://faxiantv.cc/player.php?share=aae5ca3dda55', '发现TV 在线播放'),
+  page('https://faxiantv.cc/player.php?share=f3a3ce602a22', '发现TV 在线播放'),
+  { currentHints: { seriesName: '某剧' }, candidateHints: { seriesName: '另一部剧' }, fromCurrent: true }
+).match, false, 'metadata naming another work outweighs the click');
+
+// Titles that lead with the episode.
+check('episode-first titles',
+  page('https://faxiantv.cc/player.php?share=aae5ca3dda55', '第2集 消失的约定 - 某剧 - 发现TV'),
+  page('https://faxiantv.cc/player.php?share=f3a3ce602a22', '第3集 新的开始 - 某剧 - 发现TV'),
+  { match: true, direction: 'forward' });
 
 // Going back is recognised but never advances the card.
 const rewatch = check('rewatching an earlier episode',
