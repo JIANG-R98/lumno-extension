@@ -252,6 +252,9 @@
   const FOLDER_REFERENCES = globalThis.LumnoBookmarkFolderReference;
   const NEWTAB_SHORTCUT_ICON_STORE = globalThis.LumnoNewtabShortcutIconStore;
   const NEWTAB_SHORTCUT_DIALOG = globalThis.LumnoNewtabShortcutDialog;
+  const NEWTAB_RECENT_HISTORY_DIALOG = globalThis.LumnoNewtabRecentHistoryDialog;
+  const PROGRESS_MATCH = globalThis.LumnoProgressMatch;
+  const PROGRESS_HISTORY = globalThis.LumnoProgressHistory;
   const NEWTAB_SHORTCUTS_VIEW = globalThis.LumnoNewtabShortcutsView;
   const NEWTAB_WALLPAPER = globalThis.LumnoNewtabWallpaper;
   const NEWTAB_WALLPAPER_VIEW = globalThis.LumnoNewtabWallpaperView;
@@ -567,6 +570,9 @@
   let suggestionsView = null;
   let recentSourceItems = [];
   let pinnedRecentSites = [];
+  // Progress tracking (Labs): the switch and the versions tracked cards left.
+  let progressTrackingEnabled = false;
+  let progressHistoryMap = {};
   let hiddenRecentSites = [];
   let initialPinnedRecentSitesReadyTask = Promise.resolve([]);
   let initialHiddenRecentSitesReadyTask = Promise.resolve([]);
@@ -660,6 +666,8 @@
   let shortcutGrid = null;
   let addShortcutButton = null;
   let shortcutDialogController = null;
+  let recentHistoryDialogController = null;
+  let recentHistoryDialogLoadPromise = null;
   let shortcutDialogLoadPromise = null;
   let shortcutDialogOpenRevision = 0;
   let shortcutContextMenu = null;
@@ -1056,7 +1064,10 @@
     isRecentSitePinned,
     mergeRecentSitesWithPinned,
     togglePinnedRecentSite,
-    updateRecentPinButton
+    updateRecentPinButton,
+    getRecentProgressState,
+    markProgressSeen,
+    restoreProgressVersion
   } = NEWTAB_RECENT_SITES_CONTROLLER.createRecentSitesController({
     NEWTAB_CONTEXT_MENU_OPEN_VALUE,
     t,
@@ -1082,7 +1093,20 @@
     HIDDEN_RECENT_SITES_STORAGE_KEY,
     renderRecentSites: (...args) => renderRecentSites(...args),
     PINNED_RECENT_SITES_STORAGE_KEY,
+    progressMatch: PROGRESS_MATCH,
+    progressHistory: PROGRESS_HISTORY,
+    progressHistoryStorageArea: localStorageArea,
+    openProgressHistory: (item) => openRecentHistoryDialog(item),
     pageState: {
+      get progressTrackingEnabled() {
+        return progressTrackingEnabled;
+      },
+      get progressHistoryMap() {
+        return progressHistoryMap;
+      },
+      set progressHistoryMap(value) {
+        progressHistoryMap = value;
+      },
       get recentContextMenu() {
         return recentContextMenu;
       },
@@ -2557,6 +2581,9 @@
       scheduleShortcutStorageReload();
     }
     handleBookmarkTopbarSurfaceColorStorageChanges(changes, areaName);
+    if (areaName === 'local' && changes[PROGRESS_HISTORY.STORAGE_KEY]) {
+      progressHistoryMap = PROGRESS_HISTORY.normalizeHistoryMap(changes[PROGRESS_HISTORY.STORAGE_KEY].newValue);
+    }
     const isPrimaryArea = isPrimaryStorageAreaName(areaName);
     if (!isPrimaryArea) {
       if (recentSitesStorageAreaName &&
@@ -2842,6 +2869,16 @@
       recentRenderSignature = '';
       renderRecentSites(recentSourceItems);
     }
+    if (changes[settingsRuntimeApi.PROGRESS_TRACKING_ENABLED_STORAGE_KEY]) {
+      progressTrackingEnabled = settingsRuntimeApi.normalizeProgressTrackingEnabled(
+        changes[settingsRuntimeApi.PROGRESS_TRACKING_ENABLED_STORAGE_KEY].newValue
+      );
+      if (!progressTrackingEnabled && recentHistoryDialogController) {
+        recentHistoryDialogController.close({ restoreFocus: false });
+      }
+      recentRenderSignature = '';
+      renderRecentSites(recentSourceItems);
+    }
     if (changes[HIDDEN_RECENT_SITES_STORAGE_KEY]) {
       hiddenRecentSites = normalizeHiddenRecentSites(changes[HIDDEN_RECENT_SITES_STORAGE_KEY].newValue);
       recentRenderSignature = '';
@@ -2879,6 +2916,20 @@
 
   if (storageArea) {
     bootstrapInitialLanguageMode();
+    storageArea.get([settingsRuntimeApi.PROGRESS_TRACKING_ENABLED_STORAGE_KEY], (result) => {
+      progressTrackingEnabled = settingsRuntimeApi.normalizeProgressTrackingEnabled(
+        result && result[settingsRuntimeApi.PROGRESS_TRACKING_ENABLED_STORAGE_KEY]
+      );
+      if (progressTrackingEnabled && recentSourceItems.length > 0) {
+        recentRenderSignature = '';
+        renderRecentSites(recentSourceItems);
+      }
+    });
+    if (localStorageArea) {
+      localStorageArea.get([PROGRESS_HISTORY.STORAGE_KEY], (result) => {
+        progressHistoryMap = PROGRESS_HISTORY.normalizeHistoryMap(result && result[PROGRESS_HISTORY.STORAGE_KEY]);
+      });
+    }
     initialPinnedRecentSitesReadyTask = readPinnedRecentSites().then((items) => {
       pinnedRecentSites = items;
       if (recentSourceItems.length > 0) {
@@ -5000,7 +5051,11 @@
     hideCursorTooltip,
     openUrl: openUrlFromNewtabCard,
     togglePinned: togglePinnedRecentSite,
-    onItemContextMenu: handleRecentCardContextMenu
+    onItemContextMenu: handleRecentCardContextMenu,
+    getProgressState: getRecentProgressState,
+    onItemOpen: (item) => {
+      void markProgressSeen(item);
+    }
   });
   if (recentModeMenu) {
     recentHeader.appendChild(recentModeMenu.control);
@@ -5478,6 +5533,38 @@
     if (layoutController && typeof layoutController.updateSearchEntryLayout === 'function') {
       layoutController.updateSearchEntryLayout(options);
     }
+  }
+
+  // The change history dialog is loaded the first time someone opens it.
+  function openRecentHistoryDialog(item) {
+    if (!recentHistoryDialogLoadPromise) {
+      recentHistoryDialogLoadPromise = Promise.resolve(
+        NEWTAB_RECENT_HISTORY_DIALOG && typeof NEWTAB_RECENT_HISTORY_DIALOG.createRecentHistoryDialog === 'function'
+          ? NEWTAB_RECENT_HISTORY_DIALOG.createRecentHistoryDialog({
+            documentObj: document,
+            windowObj: window,
+            t,
+            onRestore: restoreProgressVersion,
+            onRestoreSuccess() {
+              showToast(t('recent_history_restore_success', '已恢复为所选版本'), false);
+            }
+          })
+          : null
+      ).then((controller) => {
+        if (!controller) throw new Error('Recent history dialog unavailable');
+        controller.mount(document.body);
+        recentHistoryDialogController = controller;
+        return controller;
+      }).catch((error) => {
+        recentHistoryDialogLoadPromise = null;
+        throw error;
+      });
+    }
+    return recentHistoryDialogLoadPromise.then((controller) => {
+      if (progressTrackingEnabled) controller.open({ item });
+    }).catch(() => {
+      showToast(t('toast_error', '操作失败，请重试。'), true);
+    });
   }
 
   function hideToast() {

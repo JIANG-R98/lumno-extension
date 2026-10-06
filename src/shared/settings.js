@@ -63,6 +63,7 @@
   const AGGREGATE_SEARCH_STORAGE_KEY = '_x_extension_aggregate_searches_2026_unique_';
   const AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY =
     '_x_extension_aggregate_search_auto_group_enabled_2026_unique_';
+  const PROGRESS_TRACKING_ENABLED_STORAGE_KEY = '_x_extension_progress_tracking_enabled_2026_unique_';
   // Device-specific appearance. Never import these values from Chrome Sync.
   const BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS = Object.freeze([
     '_x_extension_bookmark_topbar_surface_mode_2026_unique_',
@@ -136,6 +137,7 @@
     '_x_extension_site_search_disabled_2024_unique_',
     AGGREGATE_SEARCH_STORAGE_KEY,
     AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY,
+    PROGRESS_TRACKING_ENABLED_STORAGE_KEY,
     '_x_extension_search_blacklist_2026_unique_',
     '_x_extension_favicon_request_blacklist_2026_unique_',
     '_x_extension_favicon_enhanced_fetch_enabled_2026_unique_',
@@ -536,6 +538,11 @@
 
   function normalizeAggregateSearchAutoGroupEnabled(value) {
     return value !== false;
+  }
+
+  // Labs: off until the person turns it on.
+  function normalizeProgressTrackingEnabled(value) {
+    return value === true;
   }
 
   function normalizeThemePreference(value) {
@@ -957,6 +964,7 @@
     SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY,
     AGGREGATE_SEARCH_STORAGE_KEY,
     AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY,
+    PROGRESS_TRACKING_ENABLED_STORAGE_KEY,
     BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS,
     CHROME_SYNC_STORAGE_KEYS,
     SELECTION_QUICK_ACTIONS_PROVIDER_KEYS,
@@ -1014,6 +1022,7 @@
     normalizeSelectionQuickActionsProvider,
     normalizeSelectionQuickActionsGroupEnabled,
     normalizeAggregateSearchAutoGroupEnabled,
+    normalizeProgressTrackingEnabled,
     normalizeThemePreference,
     normalizeThemeMode,
     createGlobalThemeModeStorageUpdate,

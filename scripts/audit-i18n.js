@@ -17,7 +17,8 @@ const ALLOWLIST = [
   'localized selection prompt model in src/shared/selection-intent.js',
   'browser built-in bookmark folder aliases used only for folder detection',
   'debug-only score reason strings when the debug flag is disabled by default',
-  'Chinese search-intent tokens in src/shared/search-utils.js scoring dictionaries'
+  'Chinese search-intent tokens in src/shared/search-utils.js scoring dictionaries',
+  'episode and chapter title patterns in src/shared/progress-match.js'
 ];
 const I18N_CALL_RE = /(?:^|[^\w])(?:t|baseT|getMessage|formatMessage|updateSyncStatusText|attachPopconfirm|createPopconfirmWrap|createModeOption)\s*\(/;
 
@@ -106,6 +107,9 @@ function isAllowlistedLine(file, line) {
     return true;
   }
   if (file === 'src/shared/selection-intent.js') {
+    return true;
+  }
+  if (file === 'src/shared/progress-match.js') {
     return true;
   }
   if (file === 'src/onboarding/onboarding-content.js') {

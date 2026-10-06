@@ -37,6 +37,9 @@ importScripts(
   chrome.runtime.getURL('src/background/pip-ownership.js'),
   chrome.runtime.getURL('src/background/pip-main-world.js'),
   chrome.runtime.getURL('src/background/recent-tab-switcher.js'),
+  chrome.runtime.getURL('src/shared/progress-match.js'),
+  chrome.runtime.getURL('src/shared/progress-history.js'),
+  chrome.runtime.getURL('src/background/progress-tracker.js'),
   chrome.runtime.getURL('src/background/overlay-loading-lifecycle.js'),
   chrome.runtime.getURL('src/background/dev-extension-startup.js'),
   chrome.runtime.getURL('assets/vendor/pinyin-pro.js')
@@ -1347,6 +1350,32 @@ const BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS = Array.isArray(globalThis.LumnoSetting
   ? globalThis.LumnoSettings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS
   : [];
 const PINNED_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_pinned_recent_sites_2026_unique_';
+const PROGRESS_TRACKING_ENABLED_STORAGE_KEY = globalThis.LumnoSettings.PROGRESS_TRACKING_ENABLED_STORAGE_KEY;
+// Labs: tracked pinned cards follow the episode or chapter the person is on.
+let progressTrackingEnabled = false;
+const progressTracker = globalThis.LumnoProgressTracker.createProgressTracker({
+  chromeApi: chrome,
+  progressMatch: globalThis.LumnoProgressMatch,
+  progressHistory: globalThis.LumnoProgressHistory,
+  getPinnedArea: () => storageArea,
+  historyArea: localStorageArea,
+  pinnedKey: PINNED_RECENT_SITES_STORAGE_KEY,
+  isEnabled: () => progressTrackingEnabled
+});
+progressTracker.attach();
+if (storageArea) {
+  storageArea.get([PROGRESS_TRACKING_ENABLED_STORAGE_KEY], (result) => {
+    progressTrackingEnabled = globalThis.LumnoSettings.normalizeProgressTrackingEnabled(
+      result && result[PROGRESS_TRACKING_ENABLED_STORAGE_KEY]
+    );
+  });
+}
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (!isPrimaryStorageAreaName(areaName) || !changes[PROGRESS_TRACKING_ENABLED_STORAGE_KEY]) return;
+  progressTrackingEnabled = globalThis.LumnoSettings.normalizeProgressTrackingEnabled(
+    changes[PROGRESS_TRACKING_ENABLED_STORAGE_KEY].newValue
+  );
+});
 const HIDDEN_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_hidden_recent_sites_2026_unique_';
 const NEWTAB_SHORTCUTS_STORAGE_KEY = '_x_extension_newtab_shortcuts_2026_unique_';
 const RESTRICTED_ACTION_STORAGE_KEY = '_x_extension_restricted_action_2024_unique_';

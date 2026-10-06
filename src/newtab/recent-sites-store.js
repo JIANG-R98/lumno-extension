@@ -120,6 +120,20 @@
     return Boolean(aHostKey && bHostKey && aHostKey === bHostKey);
   }
 
+  // Progress tracking (Labs) lives on pinned cards only: whether the card
+  // follows the work, when it last moved and when the person last opened it.
+  function withProgressFields(nextItem, item) {
+    if (!nextItem || !item || item.progressTracking !== true) {
+      return nextItem;
+    }
+    return {
+      ...nextItem,
+      progressTracking: true,
+      progressUpdatedAt: Math.max(0, Number(item.progressUpdatedAt) || 0),
+      progressSeenAt: Math.max(0, Number(item.progressSeenAt) || 0)
+    };
+  }
+
   function normalizePinnedRecentSites(items, options) {
     const opts = options && typeof options === 'object' ? options : {};
     const maxPinned = Number.isFinite(Number(opts.maxPinned))
@@ -130,10 +144,10 @@
     }
     const normalized = [];
     for (let i = 0; i < items.length; i += 1) {
-      const nextItem = normalizeRecentSiteItem(items[i], {
+      const nextItem = withProgressFields(normalizeRecentSiteItem(items[i], {
         ...opts,
         ignoreBlacklist: true
-      });
+      }), items[i]);
       if (!nextItem) {
         continue;
       }
