@@ -131,10 +131,9 @@ export interface RecentSitesViewOptions {
   }) => void;
   // Progress tracking (Labs): '' when the card is not tracked.
   getProgressState?: (item: RecentSiteItem) => RecentProgressState;
-  onItemOpen?: (item: RecentSiteItem) => void;
 }
 
-export type RecentProgressState = 'updated' | 'tracking' | '';
+export type RecentProgressState = 'tracking' | '';
 
 export interface RecentSitesRenderState {
   signature?: string;
@@ -213,7 +212,6 @@ interface NormalizedRecentSitesOptions {
     RecentSitesViewOptions['onItemContextMenu']
   >;
   getProgressState: NonNullable<RecentSitesViewOptions['getProgressState']>;
-  onItemOpen: NonNullable<RecentSitesViewOptions['onItemOpen']>;
 }
 
 interface RecentSiteCardProps {
@@ -256,11 +254,8 @@ export function getRecentSitesSignature(items: RecentSiteItem[]): string {
       ? String(item.lastVisitTime)
       : '';
     const visitCount = item?.visitCount ? String(item.visitCount) : '';
-    const progress = item?.progressTracking === true
-      ? `${String(item.progressUpdatedAt || 0)}/${String(item.progressSeenAt || 0)}`
-      : '';
     const base = `${index}::${url}::${title}::${siteName}::${lastVisitTime}::${visitCount}`;
-    return progress ? `${base}::${progress}` : base;
+    return item?.progressTracking === true ? `${base}::tracking` : base;
   }).join('\n');
 }
 
@@ -402,11 +397,7 @@ function normalizeOptions(
     getProgressState:
       typeof rawOptions.getProgressState === 'function'
         ? rawOptions.getProgressState
-        : () => '',
-    onItemOpen:
-      typeof rawOptions.onItemOpen === 'function'
-        ? rawOptions.onItemOpen
-        : () => {}
+        : () => ''
   };
 }
 
@@ -459,9 +450,7 @@ function RecentSiteCard({
   const shouldEager = index < options.getCurrentRecentCount();
   const initiallyPinned = options.isPinned(item);
   const progressState = options.getProgressState(item);
-  const progressLabel = progressState === 'updated'
-    ? options.t('recent_progress_updated', '已跟到新的一集或一章')
-    : options.t('recent_progress_tracking', '正在跟踪观看进度');
+  const progressLabel = options.t('recent_progress_tracking', '正在跟踪观看进度');
   const immediateTheme = options.getImmediateThemeForSuggestion({
     type: 'history',
     url: faviconPageUrl,
@@ -586,7 +575,6 @@ function RecentSiteCard({
     if (!openInBackgroundTab) {
       bindNavigationSignals();
     }
-    options.onItemOpen(item);
     options.openUrl(itemUrl, { openInBackgroundTab });
     if (openInBackgroundTab) {
       resetBackgroundOpenGuard();
@@ -866,19 +854,14 @@ function RecentSiteCard({
             {progressState ? (
               <span
                 className="x-nt-recent-progress-badge"
-                data-progress-state={progressState}
-                role={progressState === 'tracking' ? 'img' : undefined}
+                role="img"
                 aria-label={progressLabel}
                 onMouseEnter={(event) => {
                   options.showTopActionTooltip(event.currentTarget, progressLabel);
                 }}
                 onMouseLeave={options.hideTopActionTooltip}
               >
-                {progressState === 'updated' ? (
-                  options.t('recent_progress_updated_badge', '已更新')
-                ) : (
-                  <i aria-hidden="true" className="ri-icon ri-size-12 ri-radar-line" />
-                )}
+                <i aria-hidden="true" className="ri-icon ri-size-12 ri-radar-line" />
               </span>
             ) : null}
           </div>

@@ -120,9 +120,10 @@ const otherCard = {
     const [card, untouched] = harness.pinned();
     assert.strictEqual(card.url, 'https://vidhub3.top/vodplay/55357-1-2.html');
     assert.strictEqual(card.title, '某剧 第2集');
-    assert.strictEqual(card.progressUpdatedAt, 5000);
+    assert.strictEqual(card.lastVisitTime, 5000);
     assert.strictEqual(card.progressTracking, true);
-    assert.strictEqual(card.siteName, 'vidhub3', 'other card fields are kept');
+    assert.strictEqual(card.pinnedAt, 1, 'other card fields are kept');
+    assert.strictEqual('siteName' in card, false, 'a site name taken from the old title is derived again');
     assert.deepStrictEqual(untouched, otherCard, 'other cards are untouched');
     assert.deepStrictEqual(harness.history()['vidhub3.top'], [
       { url: trackedCard.url, title: '某剧 第1集', updatedAt: 5000 }
@@ -207,6 +208,26 @@ const otherCard = {
       harness.history()['vidhub3.top'].map((version) => version.url),
       ['https://vidhub3.top/vodplay/55357-1-2.html', trackedCard.url]
     );
+  }
+
+  // Several works on one site: each card follows its own work and keeps its own history.
+  {
+    const seriesA = { ...trackedCard, progressId: 'pa' };
+    const seriesB = {
+      title: '另一部剧 第5集',
+      url: 'https://vidhub3.top/vodplay/60001-1-5.html',
+      host: 'vidhub3.top',
+      pinnedAt: 3,
+      progressTracking: true,
+      progressId: 'pb'
+    };
+    const harness = createHarness([seriesA, seriesB]);
+    harness.visit(1, 'https://vidhub3.top/vodplay/60001-1-6.html', '另一部剧 第6集');
+    await harness.elapse();
+    const [a, b] = harness.pinned();
+    assert.strictEqual(a.url, seriesA.url, 'the other work stays put');
+    assert.strictEqual(b.url, 'https://vidhub3.top/vodplay/60001-1-6.html');
+    assert.deepStrictEqual(Object.keys(harness.history()), ['pb']);
   }
 
   // History helpers.

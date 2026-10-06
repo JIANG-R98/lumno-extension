@@ -67,6 +67,19 @@
     return { map: next, version: restored };
   }
 
+  // Tracked cards store their history under their own id; cards tracked
+  // before ids existed fall back to their site.
+  function getHistoryId(card, progressMatch) {
+    const progressId = String(card && card.progressId || '').trim();
+    if (progressId) return progressId;
+    return progressMatch && card ? progressMatch.getProgressSiteKey(card.url) : '';
+  }
+
+  function createProgressId(now) {
+    const time = Math.max(0, Number(now) || Date.now()).toString(36);
+    return `p${time}${Math.random().toString(36).slice(2, 8)}`;
+  }
+
   function removeSite(map, siteKey) {
     const next = normalizeHistoryMap(map);
     delete next[siteKey];
@@ -80,6 +93,8 @@
     normalizeHistoryMap,
     recordVersion,
     restoreVersion,
-    removeSite
+    removeSite,
+    getHistoryId,
+    createProgressId
   });
 });

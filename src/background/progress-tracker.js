@@ -149,12 +149,15 @@
       const stored = await storageGet(pinnedArea, pinnedKey);
       const items = Array.isArray(stored[pinnedKey]) ? stored[pinnedKey] : [];
       const page = { url: tab.url, title: getPageTitle(tab) };
+      // A site can have several tracked works; the URL pattern outranks a
+      // title match when more than one card could continue here.
       let targetIndex = -1;
       let comparison = null;
       items.forEach((item, index) => {
-        if (targetIndex >= 0 || !item || item.progressTracking !== true) return;
+        if (!item || item.progressTracking !== true) return;
         const result = progressMatch.compareProgressPages({ url: item.url, title: item.title }, page);
-        if (progressMatch.shouldAdvance(result)) {
+        if (!progressMatch.shouldAdvance(result)) return;
+        if (!comparison || (comparison.confidence !== 'high' && result.confidence === 'high')) {
           targetIndex = index;
           comparison = result;
         }
@@ -166,21 +169,22 @@
 
       const previous = items[targetIndex];
       const timestamp = Math.max(0, Number(now()) || 0);
-      const siteKey = progressMatch.getProgressSiteKey(previous.url);
+      const historyId = progressHistory.getHistoryId(previous, progressMatch);
       const historyKey = progressHistory.STORAGE_KEY;
       const storedHistory = await storageGet(historyArea, historyKey);
-      const nextHistory = progressHistory.recordVersion(storedHistory[historyKey], siteKey, {
+      const nextHistory = progressHistory.recordVersion(storedHistory[historyKey], historyId, {
         url: previous.url,
         title: previous.title,
         updatedAt: timestamp
       });
+      // The site name can come from the old title, so New Tab derives it again.
+      const { siteName: _staleSiteName, ...card } = previous;
       const nextItems = items.slice();
       nextItems[targetIndex] = {
-        ...previous,
+        ...card,
         url: page.url,
         title: page.title || previous.title,
-        lastVisitTime: timestamp,
-        progressUpdatedAt: timestamp
+        lastVisitTime: timestamp
       };
       try {
         await storageSet(historyArea, { [historyKey]: nextHistory });

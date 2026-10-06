@@ -11,19 +11,33 @@ const HISTORY_KEY = progressHistory.STORAGE_KEY;
 // Pinned cards keep their tracking fields; other cards never gain them.
 {
   const [tracked, plain] = store.normalizePinnedRecentSites([
-    { url: 'https://vidhub3.top/vodplay/55357-1-2.html', title: '某剧 第2集', progressTracking: true, progressUpdatedAt: 20, progressSeenAt: 10 },
-    { url: 'https://github.com/', title: 'GitHub', progressUpdatedAt: 99 }
+    { url: 'https://vidhub3.top/vodplay/55357-1-2.html', title: '某剧 第2集', progressTracking: true, progressId: 'p1' },
+    { url: 'https://github.com/', title: 'GitHub', progressId: 'p2' }
   ]);
   assert.strictEqual(tracked.progressTracking, true);
-  assert.strictEqual(tracked.progressUpdatedAt, 20);
-  assert.strictEqual(tracked.progressSeenAt, 10);
+  assert.strictEqual(tracked.progressId, 'p1');
   assert.strictEqual('progressTracking' in plain, false);
-  assert.strictEqual('progressUpdatedAt' in plain, false);
+  assert.strictEqual('progressId' in plain, false);
   assert.deepStrictEqual(
     store.normalizePinnedRecentSites([{ url: '', progressTracking: true }]),
     [],
     'an invalid card stays dropped'
   );
+}
+
+// A tracked card is one work, not a whole site.
+{
+  const pinned = store.normalizePinnedRecentSites([
+    { url: 'https://www.bilibili.com/video/BV11LEA6eEuj?p=2', title: '合集 P2', progressTracking: true, progressId: 'pa' },
+    { url: 'https://www.bilibili.com/video/BV1xx411c7mD', title: '另一个合集 第1集', progressTracking: true, progressId: 'pb' },
+    { url: 'https://www.bilibili.com/', title: '哔哩哔哩' },
+    { url: 'https://www.bilibili.com/anime/', title: '番剧' }
+  ], { maxPinned: 5 });
+  assert.deepStrictEqual(pinned.map((item) => item.url), [
+    'https://www.bilibili.com/video/BV11LEA6eEuj?p=2',
+    'https://www.bilibili.com/video/BV1xx411c7mD',
+    'https://www.bilibili.com/'
+  ], 'tracked works coexist with one ordinary card for the site');
 }
 
 function createArea(initial) {
@@ -94,11 +108,10 @@ const tracked = {
   url: 'https://vidhub3.top/vodplay/55357-1-3.html',
   title: '某剧 第3集',
   progressTracking: true,
-  progressUpdatedAt: 300,
-  progressSeenAt: 100
+  progressId: 'p1'
 };
 const history = {
-  'vidhub3.top': [
+  p1: [
     { url: 'https://vidhub3.top/vodplay/55357-1-2.html', title: '某剧 第2集', updatedAt: 300 },
     { url: 'https://vidhub3.top/vodplay/55357-1-1.html', title: '某剧 第1集', updatedAt: 200 }
   ]
@@ -109,9 +122,7 @@ const menuValues = (controller, item) => controller.getRecentContextMenuOptions(
   // Badge state and menu items follow the Labs switch.
   {
     const { controller } = createController([tracked], history);
-    assert.strictEqual(controller.getRecentProgressState(tracked), 'updated');
-    assert.strictEqual(controller.getRecentProgressState({ ...tracked, progressSeenAt: 400 }), 'updated',
-      'the pinned card, not the rendered copy, decides the state');
+    assert.strictEqual(controller.getRecentProgressState(tracked), 'tracking');
     assert.deepStrictEqual(menuValues(controller, tracked), ['open', 'add-shortcut', 'stop-progress', 'progress-history', 'remove']);
     assert.deepStrictEqual(menuValues(controller, { url: 'https://example.com/', title: 'Example' }),
       ['open', 'add-shortcut', 'track-progress', 'remove']);
@@ -122,14 +133,32 @@ const menuValues = (controller, item) => controller.getRecentContextMenuOptions(
     assert.deepStrictEqual(menuValues(controller, tracked), ['open', 'add-shortcut', 'remove']);
   }
 
-  // Opening an updated card acknowledges it.
+  // Leaving a tracked page for another video on the same site still records
+  // that video; pages of the tracked work fold into its card.
   {
-    const harness = createController([tracked], history);
-    assert.strictEqual(await harness.controller.markProgressSeen(tracked), true);
-    const [card] = harness.syncArea.data[PINNED_KEY];
-    assert(card.progressSeenAt >= card.progressUpdatedAt);
-    assert.strictEqual(harness.controller.getRecentProgressState(card), 'tracking');
-    assert.strictEqual(await harness.controller.markProgressSeen(card), false, 'nothing to acknowledge twice');
+    const trackedBili = {
+      url: 'https://www.bilibili.com/video/BV11LEA6eEuj?p=3',
+      title: '合集名 第3集_哔哩哔哩_bilibili',
+      progressTracking: true,
+      progressId: 'pa'
+    };
+    const harness = createController([trackedBili], {});
+    const merged = harness.controller.mergeRecentSitesWithPinned([
+      { url: 'https://www.bilibili.com/video/BV1xx411c7mD', title: '饼干童子军_哔哩哔哩_bilibili', lastVisitTime: 30 },
+      { url: 'https://www.bilibili.com/video/BV11LEA6eEuj?p=2', title: '合集名 第2集_哔哩哔哩_bilibili', lastVisitTime: 20 },
+      { url: 'https://github.com/', title: 'GitHub', lastVisitTime: 10 }
+    ], 4);
+    assert.deepStrictEqual(merged.map((item) => item.url), [
+      trackedBili.url,
+      'https://www.bilibili.com/video/BV1xx411c7mD',
+      'https://github.com/'
+    ]);
+    const otherVideo = { url: 'https://www.bilibili.com/video/BV1xx411c7mD', title: '饼干童子军' };
+    assert.strictEqual(harness.controller.isRecentSitePinned(otherVideo), false);
+    const pinResult = await harness.controller.togglePinnedRecentSite(otherVideo);
+    assert.strictEqual(pinResult.pinned, true);
+    assert.deepStrictEqual(harness.syncArea.data[PINNED_KEY].map((item) => item.url),
+      [otherVideo.url, trackedBili.url], 'pinning another video keeps the tracked card');
   }
 
   // Tracking an unpinned card pins it; stopping keeps it pinned without the fields.
@@ -140,12 +169,14 @@ const menuValues = (controller, item) => controller.getRecentContextMenuOptions(
     let [card] = harness.syncArea.data[PINNED_KEY];
     assert.strictEqual(card.url, item.url);
     assert.strictEqual(card.progressTracking, true);
+    assert.match(card.progressId, /^p[a-z0-9]+$/, 'a tracked card gets its own history id');
     assert.strictEqual(harness.controller.getRecentProgressState(item), 'tracking');
     assert.strictEqual(harness.toasts.pop().isError, false);
     assert.strictEqual(await harness.controller.setProgressTracking(item, false), true);
     [card] = harness.syncArea.data[PINNED_KEY];
     assert.strictEqual(card.url, item.url, 'stopping keeps the card pinned');
     assert.strictEqual('progressTracking' in card, false);
+    assert.strictEqual('progressId' in card, false);
   }
   {
     const full = [1, 2, 3].map((n) => ({ url: `https://site${n}.com/`, title: `${n}` }));
@@ -156,10 +187,10 @@ const menuValues = (controller, item) => controller.getRecentContextMenuOptions(
 
   // Restoring a version swaps it with the current one, in both stores.
   {
-    const harness = createController([tracked], history);
+    const harness = createController([{ ...tracked, siteName: '某剧 第3集' }], history);
     const ok = await harness.controller.restoreProgressVersion(
-      { cardId: 'vidhub3.top', url: tracked.url, title: tracked.title, updateHistory: history['vidhub3.top'] },
-      history['vidhub3.top'][1],
+      { cardId: 'p1', url: tracked.url, title: tracked.title, updateHistory: history.p1 },
+      history.p1[1],
       1
     );
     assert.strictEqual(ok, true);
@@ -167,8 +198,9 @@ const menuValues = (controller, item) => controller.getRecentContextMenuOptions(
     assert.strictEqual(card.url, 'https://vidhub3.top/vodplay/55357-1-1.html');
     assert.strictEqual(card.title, '某剧 第1集');
     assert.strictEqual(card.progressTracking, true);
+    assert.notStrictEqual(card.siteName, '某剧 第3集', 'a site name taken from the old title is derived again');
     assert.deepStrictEqual(
-      harness.localArea.data[HISTORY_KEY]['vidhub3.top'].map((version) => version.url),
+      harness.localArea.data[HISTORY_KEY].p1.map((version) => version.url),
       [tracked.url, 'https://vidhub3.top/vodplay/55357-1-2.html']
     );
     assert.strictEqual(await harness.controller.restoreProgressVersion(

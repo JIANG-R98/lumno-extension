@@ -120,18 +120,33 @@
     return Boolean(aHostKey && bHostKey && aHostKey === bHostKey);
   }
 
-  // Progress tracking (Labs) lives on pinned cards only: whether the card
-  // follows the work, when it last moved and when the person last opened it.
+  // Progress tracking (Labs) lives on pinned cards only. A tracked card
+  // stands for one work rather than its whole site, and keeps a stable id
+  // that its change history is stored under.
   function withProgressFields(nextItem, item) {
     if (!nextItem || !item || item.progressTracking !== true) {
       return nextItem;
     }
+    const progressId = String(item.progressId || '').trim();
     return {
       ...nextItem,
       progressTracking: true,
-      progressUpdatedAt: Math.max(0, Number(item.progressUpdatedAt) || 0),
-      progressSeenAt: Math.max(0, Number(item.progressSeenAt) || 0)
+      ...(progressId ? { progressId } : {})
     };
+  }
+
+  function isProgressTracked(item) {
+    return Boolean(item && item.progressTracking === true);
+  }
+
+  // Pinned cards are one per site, except tracked cards: they are one per
+  // work, so another page on the same site is a different card.
+  function isSamePinnedRecentSite(a, b, options) {
+    if (isProgressTracked(a) || isProgressTracked(b)) {
+      const aUrlKey = getRecentSiteUrlKey(a);
+      return Boolean(aUrlKey && aUrlKey === getRecentSiteUrlKey(b));
+    }
+    return isSameRecentSite(a, b, options);
   }
 
   function normalizePinnedRecentSites(items, options) {
@@ -152,7 +167,7 @@
         continue;
       }
       const duplicated = normalized.some((existingItem) =>
-        isSameRecentSite(existingItem, nextItem, opts)
+        isSamePinnedRecentSite(existingItem, nextItem, opts)
       );
       if (duplicated) {
         continue;
@@ -342,13 +357,18 @@
         }
       }
       const hostKey = getRecentSiteHostKey(normalized, opts);
-      if ((urlKey && seenUrls.has(urlKey)) || (hostKey && seenHosts.has(hostKey))) {
+      const claimsSite = !(isPinned && isProgressTracked(normalized));
+      if ((urlKey && seenUrls.has(urlKey)) || (claimsSite && hostKey && seenHosts.has(hostKey))) {
+        return false;
+      }
+      if (!isPinned && typeof opts.belongsToTrackedWork === 'function' &&
+          opts.belongsToTrackedWork(normalized)) {
         return false;
       }
       if (urlKey) {
         seenUrls.add(urlKey);
       }
-      if (hostKey) {
+      if (hostKey && claimsSite) {
         seenHosts.add(hostKey);
       }
       normalized._xPinned = Boolean(isPinned);
@@ -495,6 +515,7 @@
     getRecentSiteUrlKey,
     getRecentSiteHostKey,
     isSameRecentSite,
+    isSamePinnedRecentSite,
     isRecentSiteHidden,
     mergeRecentSitesWithPinned,
     mergeRecentSiteSources

@@ -2921,34 +2921,21 @@ body[data-theme="dark"] .x-nt-recent-inner::before {
   grid-column: 1 / -1;
   padding-right: 30px;
 }
-/* Progress tracking (Labs): quiet while a card follows a work, inverse once it
-   has moved to a new episode or chapter the person has not opened yet. */
+/* Progress tracking (Labs): marks a card that follows a work. */
 .x-nt-recent-progress-badge {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
+  width: 20px;
   height: 20px;
   margin-left: auto;
   /* Sits in the space the header keeps free on its right edge. */
   margin-right: -24px;
-  padding: 0 7px;
   box-sizing: border-box;
   border-radius: var(--lumno-radius-pill);
   background: var(--lumno-color-fill-subtle);
   color: var(--x-nt-recent-title);
-  font-size: var(--lumno-font-size-2xs);
-  font-weight: 700;
-  line-height: 1;
-  white-space: nowrap;
-}
-.x-nt-recent-progress-badge[data-progress-state="tracking"] {
-  width: 20px;
-  padding: 0;
-}
-.x-nt-recent-progress-badge[data-progress-state="updated"] {
-  background: var(--lumno-color-text);
-  color: var(--x-nt-bg, #ffffff);
 }
 .x-nt-recent-favicon {
   width: var(--x-nt-dock-recent-favicon-size, 25px);

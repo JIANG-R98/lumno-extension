@@ -328,6 +328,7 @@
         shouldPrioritizeTabUrl: isBrowserPageRecentUrl,
         maxPinned: MAX_PINNED_RECENT_SITES,
         maxHidden: MAX_HIDDEN_RECENT_SITES,
+        belongsToTrackedWork,
         ...(extraOptions || {})
       };
     }
@@ -376,7 +377,7 @@
       });
       const wasPinned = isRecentSitePinned(normalizedItem);
       const nextPinnedItems = wasPinned
-        ? pageState.pinnedRecentSites.filter((pinnedItem) => !isSameRecentSite(pinnedItem, normalizedItem))
+        ? pageState.pinnedRecentSites.filter((pinnedItem) => !isSamePinnedSite(pinnedItem, normalizedItem))
         : pageState.pinnedRecentSites.slice();
       const nextHiddenItems = [hiddenEntry].concat(
         pageState.hiddenRecentSites.filter((entry) => entry && entry.url !== key)
@@ -413,8 +414,9 @@
       return NEWTAB_RECENT_STORE.normalizeRecentSiteItem(item, getRecentStoreOptions(options));
     }
 
-    function isSameRecentSite(a, b) {
-      return NEWTAB_RECENT_STORE.isSameRecentSite(a, b, getRecentStoreOptions());
+    // Pinned cards are one per site, tracked cards one per work.
+    function isSamePinnedSite(a, b) {
+      return NEWTAB_RECENT_STORE.isSamePinnedRecentSite(a, b, getRecentStoreOptions());
     }
 
     function normalizePinnedRecentSites(items) {
@@ -437,7 +439,7 @@
     }
 
     function isRecentSitePinned(item) {
-      return pageState.pinnedRecentSites.some((pinnedItem) => isSameRecentSite(pinnedItem, item));
+      return pageState.pinnedRecentSites.some((pinnedItem) => isSamePinnedSite(pinnedItem, item));
     }
 
     function mergeRecentSitesWithPinned(items, limit) {
@@ -455,7 +457,7 @@
       if (!normalizedItem) {
         return Promise.resolve({ pinned: false, limitReached: false });
       }
-      const existingIndex = pageState.pinnedRecentSites.findIndex((pinnedItem) => isSameRecentSite(pinnedItem, normalizedItem));
+      const existingIndex = pageState.pinnedRecentSites.findIndex((pinnedItem) => isSamePinnedSite(pinnedItem, normalizedItem));
       if (existingIndex >= 0) {
         const nextItems = pageState.pinnedRecentSites.filter((_, index) => index !== existingIndex);
         return writePinnedRecentSites(nextItems).then((savedItems) => {
@@ -490,7 +492,7 @@
     // chapter the person is on; the background moves it (progress-tracker.js)
     // and keeps the versions it leaves in local storage.
     function findPinnedIndex(item) {
-      return pageState.pinnedRecentSites.findIndex((pinnedItem) => isSameRecentSite(pinnedItem, item));
+      return pageState.pinnedRecentSites.findIndex((pinnedItem) => isSamePinnedSite(pinnedItem, item));
     }
 
     function getTrackedPinnedItem(item) {
@@ -500,22 +502,31 @@
       return pinnedItem && pinnedItem.progressTracking === true ? pinnedItem : null;
     }
 
-    function getProgressSiteKey(item) {
-      return item ? progressMatch.getProgressSiteKey(item.url) : '';
+    function getProgressHistoryId(item) {
+      return progressHistory.getHistoryId(item, progressMatch);
     }
 
     function getProgressVersions(item) {
-      const siteKey = getProgressSiteKey(item);
+      const historyId = getProgressHistoryId(item);
       const map = pageState.progressHistoryMap || {};
-      return siteKey && Array.isArray(map[siteKey]) ? map[siteKey] : [];
+      return historyId && Array.isArray(map[historyId]) ? map[historyId] : [];
     }
 
     function getRecentProgressState(item) {
-      const pinnedItem = getTrackedPinnedItem(item);
-      if (!pinnedItem) return '';
-      return Number(pinnedItem.progressUpdatedAt) > Number(pinnedItem.progressSeenAt)
-        ? 'updated'
-        : 'tracking';
+      return getTrackedPinnedItem(item) ? 'tracking' : '';
+    }
+
+    // Recent pages of a tracked work fold into its card instead of filling
+    // the list with earlier or later episodes.
+    function belongsToTrackedWork(item) {
+      if (!pageState.progressTrackingEnabled || !item) return false;
+      return pageState.pinnedRecentSites.some((pinnedItem) => (
+        pinnedItem && pinnedItem.progressTracking === true &&
+        progressMatch.compareProgressPages(
+          { url: pinnedItem.url, title: pinnedItem.title },
+          { url: item.url, title: item.title }
+        ).match
+      ));
     }
 
     function getProgressContextMenuOptions(item) {
@@ -550,10 +561,14 @@
         nextItems = pageState.pinnedRecentSites.map((pinnedItem, position) => {
           if (position !== index) return pinnedItem;
           if (!enabled) {
-            const { progressTracking, progressUpdatedAt, progressSeenAt, ...rest } = pinnedItem;
+            const { progressTracking, progressId, ...rest } = pinnedItem;
             return rest;
           }
-          return { ...pinnedItem, progressTracking: true, progressUpdatedAt: 0, progressSeenAt: 0 };
+          return {
+            ...pinnedItem,
+            progressTracking: true,
+            progressId: progressHistory.createProgressId(Date.now())
+          };
         });
       } else if (!enabled) {
         return Promise.resolve(false);
@@ -564,7 +579,8 @@
         nextItems = [{
           ...normalizedItem,
           pinnedAt: Date.now(),
-          progressTracking: true
+          progressTracking: true,
+          progressId: progressHistory.createProgressId(Date.now())
         }].concat(pageState.pinnedRecentSites);
       }
       return writePinnedRecentSites(nextItems).then(() => {
@@ -580,23 +596,12 @@
       });
     }
 
-    // Opening a card that moved on its own acknowledges the move.
-    function markProgressSeen(item) {
-      const pinnedItem = getTrackedPinnedItem(item);
-      if (!pinnedItem || getRecentProgressState(pinnedItem) !== 'updated') return Promise.resolve(false);
-      const index = findPinnedIndex(pinnedItem);
-      const nextItems = pageState.pinnedRecentSites.map((entry, position) => (
-        position === index ? { ...entry, progressSeenAt: Date.now() } : entry
-      ));
-      return writePinnedRecentSites(nextItems).then(() => true).catch(() => false);
-    }
-
     function openProgressHistoryFor(item) {
       const pinnedItem = getTrackedPinnedItem(item);
       const versions = pinnedItem ? getProgressVersions(pinnedItem) : [];
       if (!pinnedItem || !versions.length || typeof openProgressHistory !== 'function') return;
       openProgressHistory({
-        cardId: getProgressSiteKey(pinnedItem),
+        cardId: getProgressHistoryId(pinnedItem),
         title: pinnedItem.title,
         url: pinnedItem.url,
         updateHistory: versions
@@ -622,7 +627,7 @@
     function restoreProgressVersion(historyItem, _version, historyIndex) {
       const index = pageState.pinnedRecentSites.findIndex((pinnedItem) =>
         pinnedItem && pinnedItem.progressTracking === true &&
-        getProgressSiteKey(pinnedItem) === historyItem.cardId
+        getProgressHistoryId(pinnedItem) === historyItem.cardId
       );
       if (index < 0) return Promise.resolve(false);
       const current = pageState.pinnedRecentSites[index];
@@ -634,11 +639,12 @@
         { url: current.url, title: current.title, updatedAt: timestamp }
       );
       if (!restored.version) return Promise.resolve(false);
-      const nextItems = pageState.pinnedRecentSites.map((entry, position) => (
-        position === index
-          ? { ...entry, url: restored.version.url, title: restored.version.title || entry.title, progressSeenAt: timestamp }
-          : entry
-      ));
+      const nextItems = pageState.pinnedRecentSites.map((entry, position) => {
+        if (position !== index) return entry;
+        // The site name can come from the old title, so it is derived again.
+        const { siteName: _staleSiteName, ...card } = entry;
+        return { ...card, url: restored.version.url, title: restored.version.title || entry.title };
+      });
       return writeProgressHistory(restored.map).then(() => {
         pageState.progressHistoryMap = restored.map;
         return writePinnedRecentSites(nextItems);
@@ -695,7 +701,6 @@
       updateRecentPinButton,
       getRecentProgressState,
       setProgressTracking,
-      markProgressSeen,
       restoreProgressVersion
     };
   }

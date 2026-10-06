@@ -287,42 +287,28 @@ describe('Recent Sites React island', () => {
     ]);
   });
 
-  it('shows progress tracking state and reports opened cards', () => {
-    const openedItems: RecentSiteItem[] = [];
-    const states: Record<string, 'updated' | 'tracking' | ''> = {
-      'https://vidhub3.top/vodplay/55357-1-3.html': 'updated',
-      'https://www.bilibili.com/video/BV11LEA6eEuj?p=2': 'tracking'
-    };
+  it('marks cards that track progress', () => {
+    const tracked = new Set(['https://www.bilibili.com/video/BV11LEA6eEuj?p=2']);
     const { view } = createView({
-      getProgressState: (item) => states[String(item.url)] || '',
-      onItemOpen: (item) => openedItems.push(item)
+      getProgressState: (item) => (tracked.has(String(item.url)) ? 'tracking' : '')
     });
     renderItems(view, [
-      { title: '某剧 第3集', url: 'https://vidhub3.top/vodplay/55357-1-3.html' },
       { title: '合集 P2', url: 'https://www.bilibili.com/video/BV11LEA6eEuj?p=2' },
       { title: 'Example', url: 'https://example.com/' }
     ]);
-    const [updated, tracking, plain] = view.getCards();
-    const updatedBadge = updated.querySelector('.x-nt-recent-progress-badge');
-    expect(updatedBadge?.getAttribute('data-progress-state')).toBe('updated');
-    expect(updatedBadge?.textContent).toBe('已更新');
-    const trackingBadge = tracking.querySelector('.x-nt-recent-progress-badge');
-    expect(trackingBadge?.getAttribute('data-progress-state')).toBe('tracking');
-    expect(trackingBadge?.getAttribute('role')).toBe('img');
-    expect(trackingBadge?.getAttribute('aria-label')).toBe('正在跟踪观看进度');
+    const [trackedCard, plain] = view.getCards();
+    const badge = trackedCard.querySelector('.x-nt-recent-progress-badge');
+    expect(badge?.getAttribute('role')).toBe('img');
+    expect(badge?.getAttribute('aria-label')).toBe('正在跟踪观看进度');
+    expect(badge?.querySelector('.ri-radar-line')).not.toBeNull();
     expect(plain.querySelector('.x-nt-recent-progress-badge')).toBeNull();
-
-    act(() => {
-      updated.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0, ctrlKey: true }));
-    });
-    expect(openedItems.map((item) => item.url)).toEqual(['https://vidhub3.top/vodplay/55357-1-3.html']);
   });
 
-  it('includes progress state in the signature only for tracked cards', () => {
-    expect(getRecentSitesSignature([{ url: 'https://a.com/', title: 'A' }])).not.toContain('::0/0');
+  it('includes tracking in the signature only for tracked cards', () => {
+    expect(getRecentSitesSignature([{ url: 'https://a.com/', title: 'A' }])).not.toContain('tracking');
     expect(getRecentSitesSignature([
-      { url: 'https://a.com/', title: 'A', progressTracking: true, progressUpdatedAt: 5, progressSeenAt: 2 }
-    ])).toContain('::5/2');
+      { url: 'https://a.com/', title: 'A', progressTracking: true }
+    ])).toContain('::tracking');
   });
 
   it('cleans foreground navigation listeners when the view clears', () => {
