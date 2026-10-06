@@ -543,9 +543,9 @@
     return value !== false;
   }
 
-  // Labs: off until the person turns it on.
+  // Pinning an episode or chapter tracks it unless the person turns this off.
   function normalizeProgressTrackingEnabled(value) {
-    return value === true;
+    return value !== false;
   }
 
   function normalizeThemePreference(value) {

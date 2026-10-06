@@ -2898,10 +2898,10 @@
     "message": "閉じる"
   },
   "settings_progress_tracking_title": {
-    "message": "視聴・読書の進捗を追跡"
+    "message": "固定したシリーズの進捗を追跡"
   },
   "settings_progress_tracking_desc": {
-    "message": "新しいタブのカードのメニューでオンにすると、次の話や章に進んだときにカードが自動で更新されます"
+    "message": "ドラマや小説など続きもののページを固定すると、次の話や章に進んだときにカードが自動で更新されます"
   },
   "recent_progress_track": {
     "message": "進捗を追跡"
@@ -2917,5 +2917,8 @@
   },
   "recent_progress_tracking": {
     "message": "進捗を追跡中"
+  },
+  "recent_progress_auto_toast": {
+    "message": "固定して進捗の追跡を開始しました。カードのメニューから停止できます。"
   }
 }

@@ -135,4 +135,40 @@ assert.deepStrictEqual(
 assert.strictEqual(readTitle('某剧 第二十三集').episode, 23);
 assert.strictEqual(readTitle('Some Show - Episode 4 | Site').workName, 'some show');
 
+// Pinning starts tracking only for pages that read as part of a series.
+const { looksLikeSeriesPage } = require('../src/shared/progress-match.js');
+[
+  ['https://vidhub3.top/vodplay/55357-1-1.html', ''],
+  ['https://www.bilibili.com/video/BV11LEA6eEuj?p=2', ''],
+  ['https://www.bilibili.com/video/BV11LEA6eEuj/', '饼干童子军 第1集'],
+  ['https://www.bilibili.com/bangumi/play/ep123456', ''],
+  ['https://m.shencou.com/chapter.php?aid=993&cid=53107', ''],
+  ['https://www.bilinovel.com/novel/2013/72035.html', ''],
+  ['https://www.bilinovel.com/novel/2013/72035_2.html', ''],
+  ['https://faxiantv.cc/player.php?share=aae5ca3dda55', '某剧 第2集 - 发现TV'],
+  ['https://example.com/watch?v=abc', 'Show Name S01E02'],
+  ['https://example.com/manga/one-piece/chapter-1100', 'One Piece Chapter 1100'],
+  ['https://example.com/video/123', 'Episode 4: Return'],
+  ['https://example.com/read/42', '某小说 第十二章 归来'],
+  ['https://example.com/v/9', '某动画 12話'],
+  ['https://example.com/v/9', '某剧 大结局'],
+  ['https://example.com/course/7', 'Python 入门 第3课']
+].forEach(([url, title]) => {
+  assert.strictEqual(looksLikeSeriesPage({ url, title }), true, `${url} ${title} should read as a series`);
+});
+[
+  ['https://faxiantv.cc/player.php?share=aae5ca3dda55', '发现TV 在线播放'],
+  ['https://github.com/Kubai087/lumno-extension/issues/123', 'Fix the bug · Issue #123'],
+  ['https://github.com/', 'GitHub'],
+  ['https://www.v2ex.com/t/1012345', '如何选择笔记本 - V2EX'],
+  ['https://item.jd.com/100012345678.html', '某商品'],
+  ['https://news.example.com/2026/10/07/some-article', 'Some article'],
+  ['https://example.com/docs/getting-started', 'Getting started'],
+  ['https://example.com/list?page=2', 'Results page 2'],
+  ['https://example.com/blog/my-top-10-tips', 'My top 10 tips'],
+  ['chrome://settings/', '设置']
+].forEach(([url, title]) => {
+  assert.strictEqual(looksLikeSeriesPage({ url, title }), false, `${url} ${title} should not read as a series`);
+});
+
 console.log('progress match tests passed');

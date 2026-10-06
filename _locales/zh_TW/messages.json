@@ -2898,10 +2898,10 @@
     "message": "關閉"
   },
   "settings_progress_tracking_title": {
-    "message": "追蹤觀看進度"
+    "message": "置頂時追蹤觀看進度"
   },
   "settings_progress_tracking_desc": {
-    "message": "在主頁卡片的右鍵選單中開啟後，看到下一集或下一章時卡片會自動更新"
+    "message": "置頂劇集、小說等連續內容後，看到下一集或下一章時卡片會自動更新"
   },
   "recent_progress_track": {
     "message": "追蹤觀看進度"
@@ -2917,5 +2917,8 @@
   },
   "recent_progress_tracking": {
     "message": "正在追蹤觀看進度"
+  },
+  "recent_progress_auto_toast": {
+    "message": "已置頂並追蹤觀看進度，可在右鍵選單中停止"
   }
 }

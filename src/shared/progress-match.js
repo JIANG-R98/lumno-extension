@@ -322,6 +322,69 @@
     return Boolean(comparison && comparison.match && comparison.direction !== 'backward');
   }
 
+  // Pinning a page that looks like part of a series (an episode, chapter or
+  // page of a longer work) starts tracking it. Generic numbered pages such
+  // as issues, threads or products must not qualify: tracking would then
+  // wander to their neighbours.
+  const SERIES_TITLE_PATTERNS = [
+    // 第12集 / 第十二话 / 第3章 / 第2季 / 第5話 / 第1巻 / 第4课
+    new RegExp(`第\\s*[0-9${CJK_NUMERAL}]+\\s*[集话話章节節回卷巻册冊部季期篇幕页頁课課讲講]`),
+    // 12集 / 12话 / 12話 / 12화
+    /\d+\s*[集话話화]/,
+    // EP12 / Ep.12 / Episode 12 / S01E02 / Season 2
+    /\b(?:ep|episode|season)\.?\s*\d+\b/i,
+    /\bs\d{1,2}\s*e\d{1,3}\b/i,
+    // Chapter 12 / Ch. 12 / Chap 12 / Vol. 3 / Volume 3 / Part 2 / Lesson 4 / P2
+    /\b(?:chapter|chap|ch|vol|volume|part|lesson)\.?\s*\d+\b/i,
+    /(?:^|[\s【\[(（|｜_-])p\s?\d+\b/i,
+    // 最终话 / 最終回 / 大结局 / 完结篇 / 番外 / 上集 / 下篇
+    /最终话|最終話|最終回|大结局|完结篇|番外|[上中下]集|[上中下]篇/
+  ];
+  // Query parameters that name an episode, chapter or part.
+  const SERIES_QUERY_KEYS = new Set([
+    'p', 'ep', 'episode', 'episode_id', 'episodeid', 'eid', 'e',
+    'chapter', 'chapter_id', 'chapterid', 'chap', 'cid',
+    'part', 'vol', 'volume', 'season'
+  ]);
+  const SERIES_PATH_PATTERNS = [
+    // ep123 / episode-4 / chapter_12 / ch5 / vol-2 / part3 / season-2 / s01e02
+    /^(?:ep|episode|chapter|chap|ch|vol|volume|part|season|s\d{1,2}e)[-_]?\d+/i,
+    // 55357-1-2.html (play pages: work-source-episode)
+    /^\d+(?:[-_]\d+){2,}(?:\.[a-z]+)?$/i,
+    // 72035_2.html (the second page of a chapter)
+    /^\d{3,}_\d+\.html?$/i
+  ];
+
+  function hasSeriesTitle(title) {
+    const text = normalizeTitle(title);
+    return Boolean(text) && SERIES_TITLE_PATTERNS.some((pattern) => pattern.test(text));
+  }
+
+  function hasSeriesUrl(value) {
+    const url = parseUrl(value);
+    if (!url) return false;
+    for (const { key, value: paramValue } of getQueryEntries(url)) {
+      if (SERIES_QUERY_KEYS.has(key) && isDigits(paramValue)) return true;
+    }
+    const segments = getPathSegments(url);
+    if (segments.some((segment) => SERIES_PATH_PATTERNS.some((pattern) => pattern.test(segment)))) {
+      return true;
+    }
+    // /novel/2013/72035.html: a chapter file under a numeric work id.
+    const last = segments[segments.length - 1] || '';
+    const parent = segments[segments.length - 2] || '';
+    return /^\d{3,}\.html?$/i.test(last) && /^\d{3,}$/.test(parent);
+  }
+
+  /**
+   * Whether a page reads as one part of a longer work, from its title or URL.
+   * @param {{url: string, title?: string}} page
+   */
+  function looksLikeSeriesPage(page) {
+    return Boolean(page && parseUrl(page.url) &&
+      (hasSeriesTitle(page.title) || hasSeriesUrl(page.url)));
+  }
+
   // The key progress history is stored under; one tracked card per site.
   function getProgressSiteKey(value) {
     const url = parseUrl(value);
@@ -332,6 +395,7 @@
     compareProgressPages,
     shouldAdvance,
     readTitle,
-    getProgressSiteKey
+    getProgressSiteKey,
+    looksLikeSeriesPage
   });
 });

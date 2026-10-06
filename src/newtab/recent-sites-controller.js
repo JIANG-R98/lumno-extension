@@ -457,7 +457,12 @@
       if (!normalizedItem) {
         return Promise.resolve({ pinned: false, limitReached: false });
       }
-      const existingIndex = pageState.pinnedRecentSites.findIndex((pinnedItem) => isSamePinnedSite(pinnedItem, normalizedItem));
+      // Pinning an episode or chapter tracks it from the start (progress
+      // tracking), which also makes it a card for the work, not the site.
+      const autoTrack = Boolean(pageState.progressTrackingEnabled &&
+        progressMatch.looksLikeSeriesPage(normalizedItem));
+      const candidate = autoTrack ? { ...normalizedItem, progressTracking: true } : normalizedItem;
+      const existingIndex = pageState.pinnedRecentSites.findIndex((pinnedItem) => isSamePinnedSite(pinnedItem, candidate));
       if (existingIndex >= 0) {
         const nextItems = pageState.pinnedRecentSites.filter((_, index) => index !== existingIndex);
         return writePinnedRecentSites(nextItems).then((savedItems) => {
@@ -475,11 +480,18 @@
       }
       const nextItems = [{
         ...normalizedItem,
-        pinnedAt: Date.now()
+        pinnedAt: Date.now(),
+        ...(autoTrack ? {
+          progressTracking: true,
+          progressId: progressHistory.createProgressId(Date.now())
+        } : {})
       }].concat(pageState.pinnedRecentSites);
       return writePinnedRecentSites(nextItems).then((savedItems) => {
         pageState.recentRenderSignature = '';
         renderRecentSites(pageState.recentSourceItems);
+        if (autoTrack) {
+          showToast(t('recent_progress_auto_toast', '已置顶并跟踪观看进度，可在右键菜单中停止'), false);
+        }
         return {
           pinned: true,
           limitReached: false,

@@ -185,6 +185,37 @@ const menuValues = (controller, item) => controller.getRecentContextMenuOptions(
     assert.strictEqual(harness.toasts.pop().isError, true, 'the pin limit is explained');
   }
 
+  // Pinning an episode or chapter starts tracking it; other pages just pin.
+  {
+    const harness = createController([], {});
+    const episode = { url: 'https://vidhub3.top/vodplay/55357-1-1.html', title: '某剧 第1集' };
+    const result = await harness.controller.togglePinnedRecentSite(episode);
+    assert.strictEqual(result.pinned, true);
+    const [card] = harness.syncArea.data[PINNED_KEY];
+    assert.strictEqual(card.progressTracking, true);
+    assert.match(card.progressId, /^p[a-z0-9]+$/);
+    assert.strictEqual(harness.toasts.pop().isError, false, 'the person learns tracking started');
+    const docs = { url: 'https://example.com/docs/getting-started', title: 'Getting started' };
+    await harness.controller.togglePinnedRecentSite(docs);
+    const docsCard = harness.syncArea.data[PINNED_KEY].find((item) => item.url === docs.url);
+    assert.strictEqual('progressTracking' in docsCard, false);
+    assert.strictEqual(harness.toasts.length, 0, 'plain pins stay quiet');
+  }
+  {
+    const harness = createController([], {}, { enabled: false });
+    await harness.controller.togglePinnedRecentSite({ url: 'https://vidhub3.top/vodplay/55357-1-1.html', title: '某剧 第1集' });
+    assert.strictEqual('progressTracking' in harness.syncArea.data[PINNED_KEY][0], false, 'the switch turns auto-tracking off');
+  }
+  {
+    const home = { url: 'https://www.bilibili.com/', title: '哔哩哔哩' };
+    const harness = createController([home], {});
+    const series = { url: 'https://www.bilibili.com/video/BV11LEA6eEuj?p=2', title: '合集 P2' };
+    const result = await harness.controller.togglePinnedRecentSite(series);
+    assert.strictEqual(result.pinned, true);
+    assert.deepStrictEqual(harness.syncArea.data[PINNED_KEY].map((item) => item.url),
+      [series.url, home.url], 'pinning a series keeps the pinned site card');
+  }
+
   // Restoring a version swaps it with the current one, in both stores.
   {
     const harness = createController([{ ...tracked, siteName: '某剧 第3集' }], history);
@@ -218,8 +249,16 @@ const menuValues = (controller, item) => controller.getRecentContextMenuOptions(
     assert(newtabHtml.includes('../shared/progress-match.js') && newtabHtml.includes('../shared/progress-history.js'));
     assert(newtabHtml.includes('recent-history-dialog.css'));
     const optionsHtml = fs.readFileSync('src/options/options.html', 'utf8');
-    assert(/id="_x_extension_progress_tracking_toggle_2026_unique_" type="checkbox">/.test(optionsHtml),
-      'the Labs switch is off by default');
+    assert(/id="_x_extension_progress_tracking_toggle_2026_unique_" type="checkbox" checked>/.test(optionsHtml),
+      'the switch is on by default');
+    const siteCardsIndex = optionsHtml.indexOf('data-i18n="settings_recent_sites_title"');
+    const switchIndex = optionsHtml.indexOf('id="_x_extension_progress_tracking_toggle_2026_unique_"');
+    const labsIndex = optionsHtml.indexOf('data-content="labs"');
+    assert(siteCardsIndex >= 0 && switchIndex > siteCardsIndex && switchIndex < labsIndex,
+      'the switch sits under the site cards setting, not in Labs');
+    const settings = require('../src/shared/settings.js');
+    assert.strictEqual(settings.normalizeProgressTrackingEnabled(undefined), true);
+    assert.strictEqual(settings.normalizeProgressTrackingEnabled(false), false);
   }
 
   console.log('newtab progress tracking tests passed');

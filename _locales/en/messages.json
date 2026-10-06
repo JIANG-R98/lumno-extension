@@ -2898,10 +2898,10 @@
     "message": "Close"
   },
   "settings_progress_tracking_title": {
-    "message": "Track watching progress"
+    "message": "Track progress on pinned series"
   },
   "settings_progress_tracking_desc": {
-    "message": "Turn it on from a card’s menu on the New Tab page, and the card follows you to the next episode or chapter"
+    "message": "Pinned episodes and chapters move on with you as you reach the next one"
   },
   "recent_progress_track": {
     "message": "Track progress"
@@ -2917,5 +2917,8 @@
   },
   "recent_progress_tracking": {
     "message": "Tracking progress"
+  },
+  "recent_progress_auto_toast": {
+    "message": "Pinned and tracking progress. Stop it from the card’s menu."
   }
 }
