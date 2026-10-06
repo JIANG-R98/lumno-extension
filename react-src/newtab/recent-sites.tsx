@@ -129,11 +129,13 @@ export interface RecentSitesViewOptions {
     item: RecentSiteItem;
     element: RecentCardElement;
   }) => void;
-  // Progress tracking (Labs): '' when the card is not tracked.
+  // Progress tracking: 'available' on a pinned card that is not tracked,
+  // '' where tracking does not apply.
   getProgressState?: (item: RecentSiteItem) => RecentProgressState;
+  toggleProgressTracking?: (item: RecentSiteItem) => boolean | Promise<boolean>;
 }
 
-export type RecentProgressState = 'tracking' | '';
+export type RecentProgressState = 'tracking' | 'available' | '';
 
 export interface RecentSitesRenderState {
   signature?: string;
@@ -212,6 +214,7 @@ interface NormalizedRecentSitesOptions {
     RecentSitesViewOptions['onItemContextMenu']
   >;
   getProgressState: NonNullable<RecentSitesViewOptions['getProgressState']>;
+  toggleProgressTracking: NonNullable<RecentSitesViewOptions['toggleProgressTracking']>;
 }
 
 interface RecentSiteCardProps {
@@ -397,7 +400,11 @@ function normalizeOptions(
     getProgressState:
       typeof rawOptions.getProgressState === 'function'
         ? rawOptions.getProgressState
-        : () => ''
+        : () => '',
+    toggleProgressTracking:
+      typeof rawOptions.toggleProgressTracking === 'function'
+        ? rawOptions.toggleProgressTracking
+        : () => false
   };
 }
 
@@ -450,7 +457,20 @@ function RecentSiteCard({
   const shouldEager = index < options.getCurrentRecentCount();
   const initiallyPinned = options.isPinned(item);
   const progressState = options.getProgressState(item);
-  const progressLabel = options.t('recent_progress_tracking', '正在跟踪观看进度');
+  const progressTracked = progressState === 'tracking';
+  const progressLabel = progressTracked
+    ? options.t('recent_progress_tracking', '正在跟踪观看进度')
+    : options.t('recent_progress_track', '跟踪观看进度');
+  // What tracking is, when to turn it on and what it does.
+  const progressTooltip = progressTracked
+    ? options.t(
+      'recent_progress_stop_tooltip',
+      '正在跟踪观看进度\n────────\n在同一部作品里看到下一集或下一章时，这张卡片会自动更新。\n点击停止跟踪。'
+    )
+    : options.t(
+      'recent_progress_track_tooltip',
+      '跟踪观看进度\n────────\n适合追剧、看连载小说时打开。\n打开后，在同一部作品里看到下一集或下一章，这张卡片会自动更新到最新进度。'
+    );
   const immediateTheme = options.getImmediateThemeForSuggestion({
     type: 'history',
     url: faviconPageUrl,
@@ -458,6 +478,9 @@ function RecentSiteCard({
   });
   const pinAction = useExclusiveAsyncAction(
     () => options.togglePinned(item)
+  );
+  const trackAction = useExclusiveAsyncAction(
+    () => options.toggleProgressTracking(item)
   );
 
   function clearRollbackTimer(): void {
@@ -601,6 +624,18 @@ function RecentSiteCard({
       '';
     if (button && label) {
       options.showTopActionTooltip(button, label);
+    }
+  }
+
+  function showTrackTooltip(event: { currentTarget: HTMLElement }): void {
+    options.showTopActionTooltip(event.currentTarget, progressTooltip);
+  }
+
+  async function handleTrack(): Promise<void> {
+    options.hideTopActionTooltip();
+    const outcome = await trackAction.run();
+    if (outcome.status === 'rejected') {
+      options.showToast(options.t('toast_error', '操作失败，请重试。'), true);
     }
   }
 
@@ -851,19 +886,6 @@ function RecentSiteCard({
             <div className="x-nt-recent-name" title={siteName}>
               {siteName}
             </div>
-            {progressState ? (
-              <span
-                className="x-nt-recent-progress-badge"
-                role="img"
-                aria-label={progressLabel}
-                onMouseEnter={(event) => {
-                  options.showTopActionTooltip(event.currentTarget, progressLabel);
-                }}
-                onMouseLeave={options.hideTopActionTooltip}
-              >
-                <i aria-hidden="true" className="ri-icon ri-size-12 ri-radar-line" />
-              </span>
-            ) : null}
           </div>
           <div ref={titleRef} className="x-nt-recent-title">
             {safeTitleText}
@@ -888,6 +910,38 @@ function RecentSiteCard({
               ? ownExtensionDisplay.urlText
               : options.getUrlDisplay(itemUrl)}
           </span>
+          {progressState ? (
+            <button
+              aria-busy={trackAction.pending}
+              aria-label={progressLabel}
+              aria-pressed={progressTracked}
+              disabled={trackAction.pending}
+              type="button"
+              className={`x-nt-recent-track${progressTracked ? ' x-nt-recent-track--active' : ''}`}
+              onPointerDown={stopCardActivation}
+              onClick={(event) => {
+                stopCardActivation(event);
+                void handleTrack();
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  stopCardActivation(event);
+                  event.currentTarget.click();
+                }
+              }}
+              onMouseEnter={showTrackTooltip}
+              onPointerLeave={options.hideTopActionTooltip}
+              onPointerCancel={options.hideTopActionTooltip}
+              onMouseLeave={options.hideTopActionTooltip}
+              onFocus={showTrackTooltip}
+              onBlur={options.hideTopActionTooltip}
+            >
+              <i
+                aria-hidden="true"
+                className={`ri-icon ri-size-16 ${progressTracked ? 'ri-radar-fill' : 'ri-radar-line'}`}
+              />
+            </button>
+          ) : null}
           <button
             ref={pinButtonRef}
             aria-busy={pinAction.pending}

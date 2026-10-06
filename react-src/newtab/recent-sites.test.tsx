@@ -287,21 +287,47 @@ describe('Recent Sites React island', () => {
     ]);
   });
 
-  it('marks cards that track progress', () => {
-    const tracked = new Set(['https://www.bilibili.com/video/BV11LEA6eEuj?p=2']);
+  it('offers a progress tracking switch on pinned cards', async () => {
+    const states: Record<string, 'tracking' | 'available' | ''> = {
+      'https://www.bilibili.com/video/BV11LEA6eEuj?p=2': 'tracking',
+      'https://example.com/docs': 'available'
+    };
+    const toggled: string[] = [];
+    const tooltips: string[] = [];
     const { view } = createView({
-      getProgressState: (item) => (tracked.has(String(item.url)) ? 'tracking' : '')
+      getProgressState: (item) => states[String(item.url)] || '',
+      toggleProgressTracking: (item) => {
+        toggled.push(String(item.url));
+        return true;
+      },
+      showTopActionTooltip: (_target, message) => tooltips.push(message)
     });
     renderItems(view, [
       { title: '合集 P2', url: 'https://www.bilibili.com/video/BV11LEA6eEuj?p=2' },
+      { title: 'Docs', url: 'https://example.com/docs' },
       { title: 'Example', url: 'https://example.com/' }
     ]);
-    const [trackedCard, plain] = view.getCards();
-    const badge = trackedCard.querySelector('.x-nt-recent-progress-badge');
-    expect(badge?.getAttribute('role')).toBe('img');
-    expect(badge?.getAttribute('aria-label')).toBe('正在跟踪观看进度');
-    expect(badge?.querySelector('.ri-radar-line')).not.toBeNull();
-    expect(plain.querySelector('.x-nt-recent-progress-badge')).toBeNull();
+    const [tracked, available, plain] = view.getCards();
+    const trackedButton = tracked.querySelector<HTMLButtonElement>('.x-nt-recent-track');
+    expect(trackedButton?.getAttribute('aria-pressed')).toBe('true');
+    expect(trackedButton?.classList.contains('x-nt-recent-track--active')).toBe(true);
+    expect(trackedButton?.querySelector('.ri-radar-fill')).not.toBeNull();
+    const availableButton = available.querySelector<HTMLButtonElement>('.x-nt-recent-track');
+    expect(availableButton?.getAttribute('aria-pressed')).toBe('false');
+    expect(availableButton?.querySelector('.ri-radar-line')).not.toBeNull();
+    expect(plain.querySelector('.x-nt-recent-track')).toBeNull();
+    expect(tracked.querySelector('.x-nt-recent-track')?.nextElementSibling)
+      .toBe(tracked.querySelector('.x-nt-recent-pin'));
+
+    act(() => {
+      availableButton?.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    });
+    expect(tooltips.pop()).toContain('适合追剧');
+    await act(async () => {
+      availableButton?.click();
+      await Promise.resolve();
+    });
+    expect(toggled).toEqual(['https://example.com/docs']);
   });
 
   it('includes tracking in the signature only for tracked cards', () => {

@@ -2921,22 +2921,6 @@ body[data-theme="dark"] .x-nt-recent-inner::before {
   grid-column: 1 / -1;
   padding-right: 30px;
 }
-/* Progress tracking (Labs): marks a card that follows a work. */
-.x-nt-recent-progress-badge {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  margin-left: auto;
-  /* Sits in the space the header keeps free on its right edge. */
-  margin-right: -24px;
-  box-sizing: border-box;
-  border-radius: var(--lumno-radius-pill);
-  background: var(--lumno-color-fill-subtle);
-  color: var(--x-nt-recent-title);
-}
 .x-nt-recent-favicon {
   width: var(--x-nt-dock-recent-favicon-size, 25px);
   height: var(--x-nt-dock-recent-favicon-size, 25px);
@@ -3011,7 +2995,9 @@ body[data-theme="dark"] .x-nt-recent-inner::before {
   transition: max-width var(--lumno-duration-xl) ease, padding-left var(--lumno-duration-xl) ease, opacity var(--lumno-duration-xl) ease;
   pointer-events: none;
 }
-.x-nt-recent-pin {
+/* The progress tracking switch sits beside the pin and shares its look. */
+.x-nt-recent-pin,
+.x-nt-recent-track {
   all: unset;
   flex: 0 0 auto;
   box-sizing: border-box;
@@ -3032,34 +3018,46 @@ body[data-theme="dark"] .x-nt-recent-inner::before {
   pointer-events: none;
 }
 .x-nt-recent-card:hover .x-nt-recent-pin,
+.x-nt-recent-card:hover .x-nt-recent-track,
 .x-nt-recent-card:focus-within .x-nt-recent-pin,
+.x-nt-recent-card:focus-within .x-nt-recent-track,
 .x-nt-recent-card[data-recent-context-menu-open="true"] .x-nt-recent-pin,
-.x-nt-recent-pin.x-nt-recent-pin--active {
+.x-nt-recent-card[data-recent-context-menu-open="true"] .x-nt-recent-track,
+.x-nt-recent-pin.x-nt-recent-pin--active,
+.x-nt-recent-track.x-nt-recent-track--active {
   opacity: 1;
   pointer-events: auto;
 }
 .x-nt-recent-pin:hover,
-.x-nt-recent-pin:focus-visible {
+.x-nt-recent-pin:focus-visible,
+.x-nt-recent-track:hover,
+.x-nt-recent-track:focus-visible {
   background: rgba(0, 0, 0, 0.08);
 }
-.x-nt-recent-pin:focus-visible {
+.x-nt-recent-pin:focus-visible,
+.x-nt-recent-track:focus-visible {
   outline: 2px solid var(--x-nt-recent-focus);
   outline-offset: 2px;
 }
-.x-nt-recent-pin.x-nt-recent-pin--active {
+.x-nt-recent-pin.x-nt-recent-pin--active,
+.x-nt-recent-track.x-nt-recent-track--active {
   color: var(--x-nt-recent-accent-color, #4389ff);
   background: var(--x-nt-recent-accent-soft, rgba(0, 0, 0, 0.04));
 }
-.x-nt-recent-pin:disabled {
+.x-nt-recent-pin:disabled,
+.x-nt-recent-track:disabled {
   opacity: 0.42;
   cursor: not-allowed;
   transform: none;
 }
 body[data-theme="dark"] .x-nt-recent-pin:hover,
-body[data-theme="dark"] .x-nt-recent-pin:focus-visible {
+body[data-theme="dark"] .x-nt-recent-pin:focus-visible,
+body[data-theme="dark"] .x-nt-recent-track:hover,
+body[data-theme="dark"] .x-nt-recent-track:focus-visible {
   background: rgba(255, 255, 255, 0.12);
 }
-body[data-theme="dark"] .x-nt-recent-pin.x-nt-recent-pin--active {
+body[data-theme="dark"] .x-nt-recent-pin.x-nt-recent-pin--active,
+body[data-theme="dark"] .x-nt-recent-track.x-nt-recent-track--active {
   color: var(--x-nt-recent-accent-color, #8ab4ff);
   background: var(--x-nt-recent-accent-soft, rgba(255, 255, 255, 0.07));
 }

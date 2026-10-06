@@ -2898,10 +2898,10 @@
     "message": "閉じる"
   },
   "settings_progress_tracking_title": {
-    "message": "固定したシリーズの進捗を追跡"
+    "message": "固定したドラマや小説の進捗を自動更新"
   },
   "settings_progress_tracking_desc": {
-    "message": "ドラマや小説など続きもののページを固定すると、次の話や章に進んだときにカードが自動で更新されます"
+    "message": "新しいタブの最近使ったサイトでドラマや小説のページを固定すると、同じ作品の次の話や章に進んだときに固定したカードが自動で切り替わり、次回は続きから開けます"
   },
   "recent_progress_track": {
     "message": "進捗を追跡"
@@ -2919,9 +2919,15 @@
     "message": "進捗を追跡中"
   },
   "recent_progress_auto_toast": {
-    "message": "固定して進捗の追跡を開始しました。カードのメニューから停止できます。"
+    "message": "固定して進捗の追跡を開始しました。カードのレーダーアイコンで停止できます。"
   },
   "settings_general_newtab_section_title": {
     "message": "新しいタブ設定"
+  },
+  "recent_progress_track_tooltip": {
+    "message": "進捗を追跡\n────────\nドラマや連載小説を追うときにおすすめです。\nオンにすると、同じ作品の次の話や章に進んだときにカードが自動で更新されます。"
+  },
+  "recent_progress_stop_tooltip": {
+    "message": "進捗を追跡中\n────────\n同じ作品の次の話や章に進むと、カードが自動で更新されます。\nクリックで追跡を停止します。"
   }
 }

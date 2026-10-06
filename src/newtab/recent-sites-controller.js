@@ -490,7 +490,7 @@
         pageState.recentRenderSignature = '';
         renderRecentSites(pageState.recentSourceItems);
         if (autoTrack) {
-          showToast(t('recent_progress_auto_toast', '已置顶并跟踪观看进度，可在右键菜单中停止'), false);
+          showToast(t('recent_progress_auto_toast', '已置顶，并开始跟踪进度。点击卡片上的雷达图标可停止。'), false);
         }
         return {
           pinned: true,
@@ -524,8 +524,19 @@
       return historyId && Array.isArray(map[historyId]) ? map[historyId] : [];
     }
 
+    // 'tracking' or 'available' for pinned cards, so the card can offer the
+    // switch; '' where tracking does not apply.
     function getRecentProgressState(item) {
-      return getTrackedPinnedItem(item) ? 'tracking' : '';
+      if (!pageState.progressTrackingEnabled || !item) return '';
+      const index = findPinnedIndex(item);
+      if (index < 0) return '';
+      return pageState.pinnedRecentSites[index].progressTracking === true ? 'tracking' : 'available';
+    }
+
+    function toggleRecentProgressTracking(item) {
+      const state = getRecentProgressState(item);
+      if (!state) return Promise.resolve(false);
+      return setProgressTracking(item, state !== 'tracking');
     }
 
     // Recent pages of a tracked work fold into its card instead of filling
@@ -712,6 +723,7 @@
       togglePinnedRecentSite,
       updateRecentPinButton,
       getRecentProgressState,
+      toggleRecentProgressTracking,
       setProgressTracking,
       restoreProgressVersion
     };

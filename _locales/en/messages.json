@@ -2898,10 +2898,10 @@
     "message": "Close"
   },
   "settings_progress_tracking_title": {
-    "message": "Track progress on pinned series"
+    "message": "Keep pinned shows and novels up to date"
   },
   "settings_progress_tracking_desc": {
-    "message": "Pinned episodes and chapters move on with you as you reach the next one"
+    "message": "When you pin a show or novel page in Site Cards on the New Tab page, the pinned card moves to the next episode or chapter as you reach it, so it opens where you left off"
   },
   "recent_progress_track": {
     "message": "Track progress"
@@ -2919,9 +2919,15 @@
     "message": "Tracking progress"
   },
   "recent_progress_auto_toast": {
-    "message": "Pinned and tracking progress. Stop it from the card’s menu."
+    "message": "Pinned and tracking progress. Click the radar icon on the card to stop."
   },
   "settings_general_newtab_section_title": {
     "message": "New Tab Settings"
+  },
+  "recent_progress_track_tooltip": {
+    "message": "Track progress\n────────\nUseful for shows and serialized novels.\nWhen on, reaching the next episode or chapter of this work moves the card there."
+  },
+  "recent_progress_stop_tooltip": {
+    "message": "Tracking progress\n────────\nReaching the next episode or chapter of this work moves the card there.\nClick to stop tracking."
   }
 }

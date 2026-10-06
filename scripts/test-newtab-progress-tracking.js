@@ -133,6 +133,24 @@ const menuValues = (controller, item) => controller.getRecentContextMenuOptions(
     assert.deepStrictEqual(menuValues(controller, tracked), ['open', 'add-shortcut', 'remove']);
   }
 
+  // Pinned cards offer the switch on the card; it turns tracking on and off.
+  {
+    const docs = { url: 'https://example.com/docs/getting-started', title: 'Getting started' };
+    const harness = createController([docs], {});
+    assert.strictEqual(harness.controller.getRecentProgressState(docs), 'available');
+    assert.strictEqual(harness.controller.getRecentProgressState({ url: 'https://other.com/', title: 'Other' }), '',
+      'unpinned cards have no switch');
+    assert.strictEqual(await harness.controller.toggleRecentProgressTracking(docs), true);
+    assert.strictEqual(harness.controller.getRecentProgressState(docs), 'tracking');
+    assert.strictEqual(await harness.controller.toggleRecentProgressTracking(docs), true);
+    assert.strictEqual(harness.controller.getRecentProgressState(docs), 'available');
+    assert.strictEqual(await harness.controller.toggleRecentProgressTracking({ url: 'https://other.com/' }), false);
+  }
+  {
+    const harness = createController([tracked], history, { enabled: false });
+    assert.strictEqual(harness.controller.getRecentProgressState(tracked), '', 'no switch while the setting is off');
+  }
+
   // Leaving a tracked page for another video on the same site still records
   // that video; pages of the tracked work fold into its card.
   {

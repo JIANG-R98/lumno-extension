@@ -2898,10 +2898,10 @@
     "message": "关闭"
   },
   "settings_progress_tracking_title": {
-    "message": "置顶时跟踪观看进度"
+    "message": "置顶剧集、小说时自动更新进度"
   },
   "settings_progress_tracking_desc": {
-    "message": "置顶剧集、小说等连续内容后，看到下一集或下一章时卡片会自动更新"
+    "message": "在新标签页的站点卡片中置顶剧集或小说页面后，继续看同一部作品的下一集或下一章时，置顶的卡片会自动换成最新的那一集，下次点开直接接着看"
   },
   "recent_progress_track": {
     "message": "跟踪观看进度"
@@ -2919,9 +2919,15 @@
     "message": "正在跟踪观看进度"
   },
   "recent_progress_auto_toast": {
-    "message": "已置顶并跟踪观看进度，可在右键菜单中停止"
+    "message": "已置顶，并开始跟踪进度。点击卡片上的雷达图标可停止。"
   },
   "settings_general_newtab_section_title": {
     "message": "新标签页设置"
+  },
+  "recent_progress_track_tooltip": {
+    "message": "跟踪观看进度\n────────\n适合追剧、看连载小说时打开。\n打开后，在同一部作品里看到下一集或下一章，这张卡片会自动更新到最新进度。"
+  },
+  "recent_progress_stop_tooltip": {
+    "message": "正在跟踪观看进度\n────────\n在同一部作品里看到下一集或下一章时，这张卡片会自动更新。\n点击停止跟踪。"
   }
 }

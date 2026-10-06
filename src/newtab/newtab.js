@@ -1066,6 +1066,7 @@
     togglePinnedRecentSite,
     updateRecentPinButton,
     getRecentProgressState,
+    toggleRecentProgressTracking,
     restoreProgressVersion
   } = NEWTAB_RECENT_SITES_CONTROLLER.createRecentSitesController({
     NEWTAB_CONTEXT_MENU_OPEN_VALUE,
@@ -5052,7 +5053,8 @@
     openUrl: openUrlFromNewtabCard,
     togglePinned: togglePinnedRecentSite,
     onItemContextMenu: handleRecentCardContextMenu,
-    getProgressState: getRecentProgressState
+    getProgressState: getRecentProgressState,
+    toggleProgressTracking: toggleRecentProgressTracking
   });
   if (recentModeMenu) {
     recentHeader.appendChild(recentModeMenu.control);
