@@ -9,9 +9,13 @@ const optionsJs = fs.readFileSync(
   path.join(repoRoot, 'src', 'options', 'options.js'),
   'utf8'
 );
+// The recent row runs from its title to the next settings row, wherever it sits on the page.
+const recentSettingsRowStart = optionsHtml.indexOf('data-i18n="settings_recent_sites_title"');
+assert(recentSettingsRowStart >= 0, 'the recent site cards row should exist');
+const recentSettingsRowEnd = optionsHtml.indexOf('_x_extension_setting_row_2024_unique_', recentSettingsRowStart);
 const recentSettingsRow = optionsHtml.slice(
-  optionsHtml.indexOf('data-i18n="settings_recent_sites_title"'),
-  optionsHtml.indexOf('data-i18n="settings_newtab_width_title"')
+  recentSettingsRowStart,
+  recentSettingsRowEnd >= 0 ? recentSettingsRowEnd : optionsHtml.length
 );
 const recentModeStateSource = optionsJs.slice(
   optionsJs.indexOf('function setRecentModeTabState'),

@@ -79,8 +79,9 @@ describe('New Tab React wallpaper view', () => {
       .toEqual(['quoteCategory']);
     expect(quoteTabGroups[0].querySelector('.x-nt-segmented-tabs-indicator')).not.toBeNull();
     const onQuotePositionChange = vi.fn();
+    const view = controller;
     act(() => {
-      controller.renderQuotePositionSelect({
+      view.renderQuotePositionSelect({
         ariaLabel: 'Quote position',
         onChange: onQuotePositionChange,
         options: ['top', 'input', 'search', 'bottom'].map((value) => ({ value, label: value })),
