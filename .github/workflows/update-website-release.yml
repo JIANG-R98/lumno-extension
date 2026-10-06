@@ -1,0 +1,28 @@
+name: Update Website Release
+
+on:
+  release:
+    types: [published, edited, deleted]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: update-website-release
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    name: Trigger website build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Deploy website with current releases
+        env:
+          GH_TOKEN: ${{ secrets.LUMNO_WEB_ACTIONS_TOKEN }}
+        run: |
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::error::Add LUMNO_WEB_ACTIONS_TOKEN to this repository's Actions secrets. Use a fine-grained token scoped to kubai087/lumno-web with Actions: write permission."
+            exit 1
+          fi
+          gh workflow run deploy-pages.yml --repo kubai087/lumno-web --ref main
