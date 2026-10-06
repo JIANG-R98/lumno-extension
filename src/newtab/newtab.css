@@ -6437,12 +6437,16 @@ body[data-lumno-page="newtab"] [role="button"] .ri-icon {
     width: 100%;
     max-width: none;
   }
+  /* Flow stretches full-width children; the quote keeps its narrower width, so center it. */
+  body.x-nt-mobile-flow .x-nt-quote:not([data-position="bottom"]) {
+    align-self: center;
+  }
   #_x_extension_newtab_bottom_dock_2024_unique_ {
     position: static;
     left: auto;
     bottom: auto;
     transform: none;
-    margin-top: 4px;
+    margin-top: auto;
     max-height: none;
     overflow: visible;
   }
@@ -6458,7 +6462,7 @@ body[data-lumno-page="newtab"] [role="button"] .ri-icon {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   #_x_extension_newtab_recent_sites_grid_2024_unique_ {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .x-nt-wallpaper-control,
   .x-nt-feedback-control {
@@ -6470,6 +6474,16 @@ body[data-lumno-page="newtab"] [role="button"] .ri-icon {
   }
   .x-nt-feedback-control {
     right: calc(max(10px, env(safe-area-inset-right)) + 52px);
+  }
+  /* Suggestions reach the bottom edge on phones; the page buttons would cover the last rows. */
+  .x-nt-wallpaper-control,
+  .x-nt-feedback-control {
+    transition: opacity var(--lumno-duration-xs) ease, visibility var(--lumno-duration-xs) ease;
+  }
+  body[data-nt-suggestions-open="true"] .x-nt-wallpaper-control,
+  body[data-nt-suggestions-open="true"] .x-nt-feedback-control {
+    opacity: 0;
+    visibility: hidden;
   }
   .x-nt-wallpaper-button,
   .x-nt-feedback-button {

@@ -222,18 +222,27 @@ body[data-theme="light"] {
   --sync-button-hover-bg: rgba(255, 255, 255, 0.2);
   --sync-menu-shadow: 0 16px 34px rgba(0, 0, 0, 0.45);
 }
-/* Labels never wrap: when a translation does not fit, the tab strip scrolls sideways. */
-#_x_extension_settings_tabs_2024_unique_ {
+/* The frame carries the pill so the overflow fade below only touches the tabs, never its edge. */
+._x_extension_settings_tabs_frame_2026_unique_ {
   display: flex;
-  gap: 8px;
-  padding: 4px;
-  background: var(--top-tabs-bg);
-  border-radius: var(--lumno-radius-xl);
-  border: none;
-  box-shadow: none;
   width: fit-content;
   min-width: 0;
   max-width: 100%;
+  box-sizing: border-box;
+  background: var(--top-tabs-bg);
+  border-radius: var(--lumno-radius-xl);
+  overflow: hidden;
+}
+/* Labels never wrap: when a translation does not fit, the tab strip scrolls sideways. */
+#_x_extension_settings_tabs_2024_unique_ {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 8px;
+  padding: 4px;
+  border-radius: inherit;
+  border: none;
+  box-shadow: none;
+  min-width: 0;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
@@ -398,14 +407,14 @@ body[data-theme="dark"] ._x_extension_settings_version_badge_2024_unique_ {
 body[data-theme="dark"] ._x_extension_settings_version_badge_2024_unique_:hover {
   background: rgba(255, 255, 255, 0.12);
 }
-body[data-theme="light"] #_x_extension_settings_tabs_2024_unique_ {
+body[data-theme="light"] ._x_extension_settings_tabs_frame_2026_unique_ {
   background: rgba(255, 255, 255, 0.25);
   border: 1px solid rgba(146, 161, 114, 0.25);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   /* box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05); */
 }
-body[data-theme="dark"] #_x_extension_settings_tabs_2024_unique_ {
+body[data-theme="dark"] ._x_extension_settings_tabs_frame_2026_unique_ {
   background: var(--top-tabs-bg);
   border: 1px solid rgba(148, 163, 184, 0.2);
   backdrop-filter: blur(4px);
@@ -2286,8 +2295,10 @@ body[data-theme="dark"] ._x_extension_shortcut_secondary_2024_unique_ {
   ._x_extension_feedback_support_links_2026_unique_ {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  #_x_extension_settings_tabs_2024_unique_ {
+  ._x_extension_settings_tabs_frame_2026_unique_ {
     width: 100%;
+  }
+  #_x_extension_settings_tabs_2024_unique_ {
     touch-action: pan-x;
   }
   ._x_extension_settings_version_badge_2024_unique_ {
@@ -2337,6 +2348,125 @@ body[data-theme="dark"] ._x_extension_shortcut_secondary_2024_unique_ {
   #_x_extension_search_result_display_limit_control_2026_unique_ {
     min-width: 0;
     width: 100%;
+  }
+}
+/* Phones: tighter gutters, and rows whose control needs width stack the label above it. */
+@media (max-width: 560px) {
+  body {
+    padding-top: max(104px, calc(env(safe-area-inset-top) + 24px));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-left: max(12px, env(safe-area-inset-left));
+  }
+  /* Scaling the banner down to the screen width shrinks its wordmark to a smudge, so
+     it keeps ~80% of the desktop scale, crops the meadow's sides and fades those edges.
+     The 24% top crop matches desktop (-80px of 332px). */
+  .settings-bg-light {
+    --settings-banner-height: 260px;
+    top: calc(var(--settings-banner-height) * -0.24);
+    width: calc(100vw - 24px);
+    height: var(--settings-banner-height);
+    background-size: auto 100%;
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 14%, #000 86%, transparent);
+    mask-image: linear-gradient(to right, transparent, #000 14%, #000 86%, transparent);
+  }
+  #_x_extension_settings_panel_2024_unique_ {
+    --settings-content-edge-space: 8px;
+    padding: 12px;
+  }
+  ._x_extension_feedback_support_link_2026_unique_ > .ri-external-link-line {
+    display: none;
+  }
+  ._x_extension_shortcut_submit_2024_unique_._x_extension_shortcuts_link_2026_unique_ {
+    align-self: flex-start;
+  }
+  ._x_extension_setting_title_with_icon_2024_unique_ {
+    flex-wrap: wrap;
+  }
+  ._x_extension_shortcut_badge_2024_unique_,
+  ._x_extension_sync_status_2024_unique_ {
+    white-space: nowrap;
+  }
+  ._x_extension_setting_row_2024_unique_:has(> :is(
+    ._x_extension_select_wrap_2024_unique_,
+    ._x_extension_inline_tabs_2024_unique_,
+    ._x_extension_checkbox_group_2026_unique_,
+    ._x_extension_recent_select_group_2024_unique_,
+    ._x_extension_theme_gallery_2026_unique_,
+    ._x_extension_sync_actions_2024_unique_:not(._x_extension_shortcuts_actions_2024_unique_)
+  )),
+  #_x_extension_theme_mode_row_2026_unique_ {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  ._x_extension_setting_row_2024_unique_ > :is(
+    ._x_extension_select_wrap_2024_unique_,
+    ._x_extension_inline_tabs_2024_unique_,
+    ._x_extension_checkbox_group_2026_unique_,
+    ._x_extension_recent_select_group_2024_unique_,
+    ._x_extension_theme_gallery_2026_unique_,
+    ._x_extension_sync_actions_2024_unique_:not(._x_extension_shortcuts_actions_2024_unique_)
+  ) {
+    width: auto;
+    min-width: 0;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+  ._x_extension_setting_subrow_2026_unique_ > :is(
+    ._x_extension_select_wrap_2024_unique_,
+    ._x_extension_inline_tabs_2024_unique_
+  ),
+  ._x_extension_shortcut_restricted_subrow_2026_unique_ > ._x_extension_inline_tabs_2024_unique_ {
+    margin-left: 12px;
+  }
+  ._x_extension_selection_provider_row_2026_unique_ :is(
+    ._x_extension_custom_select_2024_unique_,
+    ._x_extension_select_trigger_2024_unique_
+  ) {
+    min-width: 0;
+  }
+  ._x_extension_recent_select_group_2024_unique_ > ._x_extension_inline_tabs_2024_unique_ {
+    flex: 1 1 100%;
+  }
+  ._x_extension_setting_row_2024_unique_ > :is(
+    ._x_extension_inline_tabs_2024_unique_,
+    ._x_extension_recent_select_group_2024_unique_
+  ) ._x_extension_theme_option_2024_unique_ {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-width: 0;
+    text-align: center;
+  }
+  ._x_extension_theme_gallery_2026_unique_ {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  ._x_extension_sync_buttons_2024_unique_ {
+    justify-content: flex-start;
+    gap: 8px;
+  }
+  /* Shortcut rows keep the key on the right, wrapping the label first and dropping
+     the key below it only when even a short label would not fit. */
+  ._x_extension_setting_row_2024_unique_:has(> ._x_extension_shortcuts_actions_2024_unique_),
+  ._x_extension_shortcut_reference_item_2026_unique_ {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  ._x_extension_setting_row_2024_unique_:has(> ._x_extension_shortcuts_actions_2024_unique_) > div:first-child,
+  ._x_extension_shortcut_reference_item_2026_unique_ > div:first-child {
+    flex: 1 1 0;
+    min-width: 8em;
+  }
+  ._x_extension_shortcuts_actions_2024_unique_,
+  ._x_extension_shortcut_reference_actions_2026_unique_ {
+    margin-left: auto;
+    max-width: 100%;
+  }
+  ._x_extension_shortcuts_status_chip_2026_unique_ {
+    min-width: 124px;
+  }
+  ._x_extension_shortcuts_status_chip_2026_unique_,
+  ._x_extension_shortcut_reference_key_field_2026_unique_ {
+    max-width: 100%;
   }
 }
 .ri-icon {
@@ -2470,6 +2600,7 @@ button[aria-busy="true"]:disabled,
   .settings-bg-light,
   #_x_extension_settings_panel_2024_unique_,
   #_x_extension_settings_panel_2024_unique_::before,
+  ._x_extension_settings_tabs_frame_2026_unique_,
   #_x_extension_settings_tabs_2024_unique_,
   ._x_extension_tabs_indicator_2024_unique_,
   ._x_extension_settings_tab_button_2024_unique_,

@@ -2263,8 +2263,17 @@
       }
     }
 
+    // Touch-only devices have no Tab key, so the hint would only crowd the query.
+    function hasNoTabKeyPointer() {
+      return Boolean(
+        win &&
+        typeof win.matchMedia === 'function' &&
+        win.matchMedia('(hover: none) and (pointer: coarse)').matches
+      );
+    }
+
     function setTabHintVisible(visible, provider) {
-      if (!visible) {
+      if (!visible || hasNoTabKeyPointer()) {
         setStyle(siteSearchTabHint, 'display', 'none', useImportantStyles);
         siteSearchTabHint.removeAttribute('title');
         updateInputRightPadding();

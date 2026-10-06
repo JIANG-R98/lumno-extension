@@ -368,7 +368,10 @@ export function SelectMenu({
           '--x-extension-menu-surface-min-width': menuMinWidth,
           transformOrigin: config.menuAlign === 'right' ? 'top right' : config.menuAlign === 'left' ? 'top left' : 'top center',
           left: 0,
-          right: 'auto'
+          right: 'auto',
+          // Body portals are fixed once opened; start fixed so a closed menu never
+          // stretches a scrolling page (mobile new tab flows in the document).
+          ...(config.menuPortal !== false && !config.menuPortalContainer ? { position: 'fixed' } : null)
         } as CSSProperties
       }
     >

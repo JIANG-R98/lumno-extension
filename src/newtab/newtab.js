@@ -1848,7 +1848,7 @@
     return NEWTAB_LAYOUT.getAdaptiveGridColumnCount({
       viewportWidth: window.innerWidth,
       mobileBreakpointPx: NEWTAB_MOBILE_FLOW_BREAKPOINT_PX,
-      mobileColumns: 1,
+      mobileColumns: 2,
       compactBreakpointPx: 860,
       compactColumns: 2,
       contentMaxWidth: Number(config.contentMaxWidth || 1040),

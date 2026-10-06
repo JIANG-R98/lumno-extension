@@ -1276,6 +1276,11 @@
     const availableWidth = isCompactLayout
       ? Math.min(viewportWidth, visualSlot.clientWidth || rect.width || viewportWidth)
       : (visualSlot.clientWidth || rect.width || 0);
+    if (isCompactLayout) {
+      // A previous oversized visual squeezes the copy rows (min-height: 0), so
+      // collapse it first and measure the copy at its natural height.
+      root.style.setProperty('--onboarding-visual-rendered-height', '0px');
+    }
     const compactVisualHeight = Math.max(0, viewportHeight - getCompactCopyContentHeight());
     const availableHeight = isCompactLayout
       ? compactVisualHeight

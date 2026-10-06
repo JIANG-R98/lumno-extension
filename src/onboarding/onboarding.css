@@ -1570,6 +1570,17 @@ html[lang="en"] .onboarding-shell[data-active-slide="intro"] .title-logo-mark {
   }
 }
 
+/* Phones: drop the narrow-desktop 760px floor and let the copy fit the screen. */
+@media (max-width: 759px) {
+  .onboarding-shell {
+    min-width: 0;
+  }
+
+  .copy-panel {
+    --onboarding-copy-padding-x: 24px;
+  }
+}
+
 .visual-stage {
   position: relative;
   width: 100%;

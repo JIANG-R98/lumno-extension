@@ -1079,7 +1079,76 @@ function testMobileViewportReleasesFixedDockLayout() {
   assert.strictEqual(body.getAttribute('data-nt-bottom-dock-density'), 'mobile');
   assert.strictEqual(bottomDock.getAttribute('data-layout'), 'flow');
   assert.strictEqual(bottomDock.style.getPropertyValue('max-height'), '');
-  assert.strictEqual(body.style.getPropertyValue('padding-top'), '');
+  // Logo 74 + search 57, centered in 667 - 220 dock and lifted 4% of that space.
+  assert.strictEqual(
+    body.style.getPropertyValue('padding-top'),
+    `${Math.round(((667 - 220) - (74 + 57)) / 2 - (667 - 220) * 0.04)}px`,
+    'mobile should center the logo and search in the space above the dock'
+  );
+}
+
+function testMobileSearchEntryCountsShortcutsAndFallsBackToMinimumTop() {
+  const { body, controller } = createFixture({
+    innerWidth: 375,
+    innerHeight: 667,
+    shortcutVisible: true,
+    shortcutRect: { height: 220 },
+    constants: {
+      mobileFlowBreakpointPx: 640
+    }
+  });
+
+  controller.updateBottomDockLayout();
+
+  const withShortcuts = Number.parseFloat(body.style.getPropertyValue('padding-top'));
+  assert.strictEqual(
+    withShortcuts,
+    48,
+    'mobile content taller than the space above the dock should fall back to the minimum top'
+  );
+}
+
+function testMobileSearchEntryReservesOccupiedTopSurface() {
+  const { body, controller } = createFixture({
+    innerWidth: 375,
+    innerHeight: 667,
+    topInsetPx: 52,
+    shortcutVisible: true,
+    shortcutRect: { height: 220 },
+    constants: {
+      mobileFlowBreakpointPx: 640
+    }
+  });
+
+  controller.updateBottomDockLayout();
+
+  assert.strictEqual(
+    body.style.getPropertyValue('padding-top'),
+    '64px',
+    'mobile minimum top should clear the bookmark top bar plus a gap'
+  );
+}
+
+function testMobileSearchEntryHoldsStillWhileSuggestionsAreOpen() {
+  const { body, bottomDock, controller } = createFixture({
+    innerWidth: 375,
+    innerHeight: 667,
+    constants: {
+      mobileFlowBreakpointPx: 640
+    }
+  });
+
+  controller.updateBottomDockLayout();
+  const initialTop = body.style.getPropertyValue('padding-top');
+  body.setAttribute('data-nt-suggestions-open', 'true');
+  bottomDock.setRect({ height: 120 });
+  controller.updateSearchEntryLayout();
+
+  assert.strictEqual(
+    body.style.getPropertyValue('padding-top'),
+    initialTop,
+    'the soft keyboard and suggestions should not move the search entry'
+  );
 }
 
 function testResizeOutOfMobileRestoresFixedDockLayout() {
@@ -1169,8 +1238,8 @@ function testBottomDockCssDefinesAdaptiveDensityVariables() {
   );
   assert.match(
     newtabHtml,
-    /@media \(max-width:\s*640px\)[\s\S]*?#_x_extension_newtab_recent_sites_grid_2024_unique_\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\);/,
-    'mobile recent sites should remain one column'
+    /@media \(max-width:\s*640px\)[\s\S]*?#_x_extension_newtab_recent_sites_grid_2024_unique_\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/,
+    'mobile recent sites should render two columns'
   );
   assert.match(
     newtabHtml,
@@ -1219,8 +1288,8 @@ function testBottomDockCssDefinesAdaptiveDensityVariables() {
   );
   assert.match(
     newtabHtml,
-    /@media \(max-width:\s*640px\)[\s\S]*?#_x_extension_newtab_bottom_dock_2024_unique_\s*\{[\s\S]*?margin-top:\s*4px;/,
-    'mobile dock should keep only a compact gap below shortcuts'
+    /@media \(max-width:\s*640px\)[\s\S]*?#_x_extension_newtab_bottom_dock_2024_unique_\s*\{[\s\S]*?margin-top:\s*auto;/,
+    'mobile dock should rest at the bottom of the first screen'
   );
   assert.match(
     newtabHtml,
@@ -1250,6 +1319,9 @@ testShortDockReservesVisibleShortcutRow();
 testWrappedShortcutsDoNotOscillateDockDensity();
 testContinuousResizeKeepsDockDensityStableUntilSettle();
 testMobileViewportReleasesFixedDockLayout();
+testMobileSearchEntryCountsShortcutsAndFallsBackToMinimumTop();
+testMobileSearchEntryReservesOccupiedTopSurface();
+testMobileSearchEntryHoldsStillWhileSuggestionsAreOpen();
 testResizeOutOfMobileRestoresFixedDockLayout();
 testBottomDockCssDefinesAdaptiveDensityVariables();
 
@@ -1292,7 +1364,7 @@ function testNewtabUsesDistinctMobileGridColumns() {
   );
 
   assert.match(bookmarkColumnsSource, /mobileColumns:\s*2,/);
-  assert.match(recentColumnsSource, /mobileColumns:\s*1,/);
+  assert.match(recentColumnsSource, /mobileColumns:\s*2,/);
 }
 
 testNewtabUsesDistinctMobileGridColumns();

@@ -84,6 +84,9 @@
     const compactDockShortcutGapPx = getOptionNumber(constants, 'compactDockShortcutGapPx', 8);
     const compactDockMinTopReservePx = getOptionNumber(constants, 'compactDockMinTopReservePx', 168);
     const mobileFlowBreakpointPx = getOptionNumber(constants, 'mobileFlowBreakpointPx', 0);
+    const mobileMinTopPx = getOptionNumber(constants, 'mobileMinTopPx', 48);
+    const mobileUpshiftRatio = getOptionNumber(constants, 'mobileUpshiftRatio', 0.04);
+    const mobileMinTopGapPx = getOptionNumber(constants, 'mobileMinTopGapPx', 12);
     const suggestionsBottomInsetPx = getOptionNumber(constants, 'suggestionsBottomInsetPx', 14);
     const suggestionsViewportFitMaxHeightProperty =
       '--x-nt-suggestions-viewport-fit-max-height';
@@ -468,6 +471,62 @@
       return Number.isFinite(value) ? Math.round(value) : null;
     }
 
+    function isSearchEntryEngaged(body) {
+      if (body.getAttribute && body.getAttribute(suggestionsOpenAttribute) === 'true') {
+        return true;
+      }
+      const root = getRoot();
+      const activeElement = documentObj && documentObj.activeElement;
+      return Boolean(
+        root && activeElement && activeElement !== body &&
+        typeof root.contains === 'function' && root.contains(activeElement)
+      );
+    }
+
+    // Mobile keeps the desktop composition in document flow: the dock rests at the
+    // bottom (CSS margin-top: auto) and the logo, search and shortcuts are centered
+    // in the space above it. Content taller than the screen falls back to the minimum
+    // top inset and scrolls.
+    function updateMobileSearchEntryLayout(body, layoutOptions) {
+      const viewportHeight = Math.max(0, windowObj.innerHeight || 0);
+      if (viewportHeight <= 0) {
+        return;
+      }
+      const hasCurrentTop = getCurrentBodyPaddingTop(body) !== null;
+      // The soft keyboard resizes the viewport while typing; keep the entry still.
+      if (hasCurrentTop && (
+        (layoutOptions && layoutOptions.preserveCurrentTop) || isSearchEntryEngaged(body)
+      )) {
+        return;
+      }
+      const bottomDock = getBottomDock();
+      const dockHeight = bottomDock && bottomDock.style.getPropertyValue('display') !== 'none'
+        ? Math.max(0, Number(bottomDock.getBoundingClientRect().height) || 0)
+        : 0;
+      const shortcutSection = getShortcutSection();
+      const groupHeight = getElementOuterHeight(getTopContentContainer()) +
+        getElementOuterHeight(getTopQuoteSection()) +
+        getSearchEntryBlockHeight() +
+        (isSectionVisible(shortcutSection) ? getElementOuterHeight(shortcutSection) : 0) +
+        getElementOuterHeight(getInlineQuoteSection());
+      // Center below the bookmark top bar, not under it.
+      const occupiedTopHeight = Math.max(0, Number(getTopInsetPx()) || 0);
+      const availableHeight = Math.max(0, viewportHeight - occupiedTopHeight - dockHeight);
+      const upwardOffset = Math.min(
+        upshiftMaxPx,
+        Math.max(0, availableHeight * mobileUpshiftRatio)
+      );
+      const minTop = Math.max(mobileMinTopPx, occupiedTopHeight + mobileMinTopGapPx);
+      let targetTop = occupiedTopHeight + ((availableHeight - groupHeight) / 2) - upwardOffset;
+      if (!Number.isFinite(targetTop)) {
+        targetTop = minTop;
+      }
+      const nextTop = `${Math.round(Math.max(minTop, targetTop))}px`;
+      if (body.style.getPropertyValue('padding-top') !== nextTop) {
+        body.style.setProperty('padding-top', nextTop, 'important');
+      }
+    }
+
     function updateSearchEntryLayout(layoutOptions) {
       const body = documentObj && documentObj.body;
       const root = getRoot();
@@ -475,7 +534,7 @@
         return;
       }
       if (isMobileFlowViewport()) {
-        body.style.removeProperty('padding-top');
+        updateMobileSearchEntryLayout(body, layoutOptions);
         return;
       }
       const viewportHeight = Math.max(0, windowObj.innerHeight || 0);
