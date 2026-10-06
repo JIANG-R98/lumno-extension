@@ -3,6 +3,7 @@ import { createReactRootController } from './root-controller';
 import { InlinePopconfirm } from './inline-popconfirm';
 import { InfoButton } from './info-button';
 import { getAsyncErrorMessage, useExclusiveAsyncAction } from '../shared/use-exclusive-async-action';
+import { BusyLabel } from '../shared/busy-label';
 
 export interface WebDavConfig {
   endpoint: string;
@@ -332,12 +333,14 @@ function ConnectionEditor({ id, item, model, open, options, onClose }: {
         <button aria-busy={pendingOperation === 'test'} className={`${compactGhostClass} lumno-webdav-test`} disabled={disabled} type="button" onClick={(event) => {
           if (event.currentTarget.form?.reportValidity()) void run('test');
         }}>
-          <i aria-hidden="true" className="ri-icon ri-size-14 ri-link-m" />
-          {pendingOperation === 'test' ? copy.webdav_state_testing : copy.webdav_test}
+          <BusyLabel busy={pendingOperation === 'test'}>
+            <i aria-hidden="true" className="ri-icon ri-size-14 ri-link-m" />
+            {copy.webdav_test}
+          </BusyLabel>
         </button>
         <button className={compactClass} disabled={action.pending} onClick={onClose} type="button">{copy.confirm_cancel}</button>
         <button aria-busy={pendingOperation === 'submit'} className={compactPrimaryClass} disabled={disabled} type="submit">
-          {pendingOperation === 'submit' ? copy.webdav_connecting : item ? copy.webdav_save : copy.webdav_enable}
+          <BusyLabel busy={pendingOperation === 'submit'}>{item ? copy.webdav_save : copy.webdav_enable}</BusyLabel>
         </button>
       </div>
     </form>
@@ -472,9 +475,9 @@ function ConnectionCard({ item, expanded, model, now, options, onEdit, onClose }
         </div>
         <div className={classes('shortcut_item_actions')}>
           {item.enabled && !choice && !item.needsRecovery && !errorText ? (
-            <button aria-label={copy.webdav_sync} className={`${classes('shortcut_edit')} lumno-webdav-sync-now`} data-spinning={syncing || item.state === 'syncing'}
+            <button aria-label={copy.webdav_sync} aria-busy={syncing || item.state === 'syncing'} className={`${classes('shortcut_edit')} lumno-webdav-sync-now`}
               data-tooltip={copy.webdav_sync} disabled={busy || model.outdated} onClick={() => { void run('sync'); }} type="button">
-              <i aria-hidden="true" className="ri-icon ri-size-14 ri-refresh-line" />
+              <i aria-hidden="true" className="ri-icon ri-size-14 ri-refresh-line x-lumno-busy-spin" />
             </button>
           ) : null}
           <button aria-controls={editorId} aria-expanded={expanded} aria-label={copy.webdav_edit_config}

@@ -946,8 +946,7 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
                   >
                     <span
                       ref={iconRefreshGlyphRef}
-                      className="x-nt-shortcut-icon-refresh-glyph"
-                      data-loading={formState.iconBusy ? 'true' : 'false'}
+                      className="x-nt-shortcut-icon-refresh-glyph x-lumno-busy-spin"
                       aria-hidden="true"
                       dangerouslySetInnerHTML={{ __html: options.getRiSvg(formState.iconRefreshSuccess ? 'ri-check-line' : 'ri-refresh-line', 'ri-size-16') }}
                     />

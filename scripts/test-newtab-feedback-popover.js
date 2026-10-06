@@ -281,7 +281,7 @@ assert.match(
 
 assert.match(
   feedbackReact,
-  /aria-label=\{model\.refreshTooltip\}[\s\S]*?data-loading=/,
+  /aria-label=\{model\.refreshTooltip\}[\s\S]*?x-lumno-busy-spin/,
   'the React wechat refresh icon should expose a localized accessible label'
 );
 

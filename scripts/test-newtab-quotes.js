@@ -241,6 +241,53 @@ async function main() {
   assert.equal(observer.takeRecords().length, 0, 'Re-rendering in place must not re-insert the quote');
   observer.disconnect();
   cachedRuntime.destroy();
+
+  // Hovering reveals a shuffle button that swaps in another quote without leaving the page.
+  const rerollCalls = [];
+  let rerollResult = null;
+  const toasts = [];
+  const shuffleRuntime = quotes.createRuntime({ documentObj: document, windowObj: dom.window,
+    t: (_key, fallback) => fallback, showToast: (message, isError) => toasts.push([message, isError]),
+    getSearchRoot: () => document.querySelector('#search'),
+    storageArea: {
+      get(_keys, callback) { callback({ [settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY]: { enabled: true, position: 'input', category: 'poetry' } }); },
+      set(_value, callback) { callback(); }
+    },
+    client: { getQuote: (category, options) => {
+      rerollCalls.push([category, Boolean(options && options.reroll)]);
+      if (!options || !options.reroll) return Promise.resolve({ text: '今日', author: '', source: '', url: '' });
+      return rerollResult;
+    } }
+  });
+  await shuffleRuntime.mount();
+  await tick();
+  const shuffleButton = shuffleRuntime.element.querySelector('button.x-nt-quote-shuffle');
+  assert(shuffleButton, 'The quote row carries a shuffle button');
+  assert.equal(shuffleButton.closest('a'), null, 'The shuffle button must not sit inside the quote link');
+  assert.equal(shuffleButton.getAttribute('aria-label'), 'Show another quote');
+  rerollResult = Promise.resolve({ text: '换一句', author: '', source: '', url: '' });
+  shuffleButton.click();
+  assert.equal(shuffleButton.dataset.loading, 'true');
+  shuffleButton.click();
+  await tick();
+  assert.deepEqual(rerollCalls, [['poetry', false], ['poetry', true]], 'A shuffle rerolls the current category once');
+  assert.equal(shuffleRuntime.textElement.textContent, '换一句');
+  assert.equal(shuffleRuntime.textElement.querySelector('.x-nt-quote-tail'), null);
+  assert.equal(shuffleRuntime.textElement.dataset.swap, 'true', 'A shuffled quote fades in');
+  assert.equal(shuffleButton.dataset.loading, undefined);
+  rerollResult = Promise.resolve({ text: '海棠未雨，梨花先雪，一半春休。」', author: '', source: '', url: '' });
+  shuffleButton.click();
+  await tick();
+  assert.equal(shuffleRuntime.textElement.textContent, '海棠未雨，梨花先雪，一半春休。」');
+  assert.equal(shuffleRuntime.textElement.querySelector('.x-nt-quote-tail').textContent, '。」',
+    'Trailing full-width punctuation is set apart so it can render half-width');
+  rerollResult = Promise.reject(new Error('offline'));
+  shuffleButton.click();
+  await tick();
+  await tick();
+  assert.equal(shuffleRuntime.textElement.textContent, '海棠未雨，梨花先雪，一半春休。」', 'A failed shuffle keeps the current quote');
+  assert.deepEqual(toasts, [['Could not load another quote', true]]);
+  shuffleRuntime.destroy();
   dom.window.close();
   console.log('newtab quote UI tests passed');
 }

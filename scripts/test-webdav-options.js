@@ -24,7 +24,13 @@ async function run() {
       { key: '_x_extension_search_blacklist_2026_unique_', domain: 'preference' }, { key: '_x_extension_unknown_2026_unique_', domain: 'preference' },
       { key: '_x_extension_newtab_zen_mode_2026_unique_', domain: 'preference' },
       { key: '_x_extension_newtab_quote_prefs_2026_unique_', field: 'position', domain: 'preference',
-        local: { kind: 'text', value: 'bottom' }, remote: { kind: 'text', value: 'input' } }] });
+        local: { kind: 'text', value: 'bottom' }, remote: { kind: 'text', value: 'input' } },
+      { key: '_x_extension_bookmark_folder_color_refs_2026_unique_', field: 'aaaaaaaaaaaaaaaa', domain: 'preference',
+        local: { kind: 'text', value: '#22C55E' }, remote: { kind: 'text', value: '#F59E0B' } },
+      { key: '_x_extension_bookmark_topbar_surface_mode_2026_unique_', domain: 'preference',
+        local: { kind: 'text', value: 'clear' }, remote: { kind: 'text', value: 'custom' } },
+      { key: '_x_extension_bookmark_topbar_surface_color_dark_2026_unique_', domain: 'preference',
+        local: { kind: 'text', value: '#000000' }, remote: { kind: 'text', value: '#445566' } }] });
     callback({ ok: true });
   } }, storage: { onChanged: { addListener(fn) { listeners.push(fn); } } } };
   window.LumnoOptionsInfoButton = { createInfoButtonController: () => ({ render(value) { infoModel = value; } }) };
@@ -78,9 +84,16 @@ async function run() {
   const details = await actions.onAction('conflictDetails', 'b');
   assert.deepStrictEqual(details.items.map((item) => item.label), ['Shortcuts and icons', messages.settings_simple_mode_title.message,
     messages.settings_tab_blacklist.message, messages.webdav_preference_other.message, messages.webdav_preference_zen_mode.message,
-    messages.newtab_quote_position.message], 'conflicting settings use their visible titles');
+    messages.newtab_quote_position.message, messages.folder_color_title.message, messages.bookmark_topbar_surface_title.message,
+    `${messages.bookmark_topbar_surface_title.message} · ${messages.theme_label_dark.message}`], 'conflicting settings use their visible titles');
   assert.deepStrictEqual([details.items[5].local.value, details.items[5].remote.value],
     [messages.newtab_quote_bottom.message, messages.newtab_quote_input.message], 'record fields show option names');
+  assert.deepStrictEqual([details.items[6].local.value, details.items[6].remote.value], ['#22C55E', '#F59E0B'],
+    'folder color conflicts hide the folder reference and show the colors');
+  assert.deepStrictEqual(details.items.slice(7).map((item) => [item.label, item.local.value, item.remote.value]), [
+    [messages.bookmark_topbar_surface_title.message, messages.bookmark_topbar_surface_clear.message, messages.bookmark_topbar_surface_custom.message],
+    [`${messages.bookmark_topbar_surface_title.message} · ${messages.theme_label_dark.message}`, '#000000', '#445566']
+  ], 'bookmark bar conflicts name the material and tell the light and dark colors apart');
   assert.strictEqual(requests.filter((request) => request.operation === 'status').length, statusReads, 'reading details does not refresh the list');
   await actions.onAction('remove', 'b');
   assert(requests.some((request) => request.operation === 'remove' && request.id === 'b'));

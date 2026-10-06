@@ -6,7 +6,17 @@
   root.LumnoNewtabBookmarkFolderIcon = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function() {
   const DEFAULT_FOLDER_COLOR = '#5393FF';
+  // Legacy device-only map keyed by bookmark id. Ids differ on every device,
+  // so it is migrated into the synced reference map below.
   const FOLDER_COLORS_STORAGE_KEY = '_x_extension_bookmark_folder_colors_2026_unique_';
+  // Synced map keyed by a hash of the folder's root and title path. The
+  // creation time travels with browser bookmark sync and re-finds a folder
+  // after it is renamed or moved.
+  const FOLDER_COLOR_REFS_STORAGE_KEY = '_x_extension_bookmark_folder_color_refs_2026_unique_';
+  // Keeps the synced value well under the 8 KB browser sync item quota.
+  const MAX_FOLDER_COLOR_REFS = 100;
+  const ROOT_TYPES_BY_ID = { '1': 'bookmarks-bar', '2': 'other', '3': 'mobile' };
+  const own = (value, key) => Object.prototype.hasOwnProperty.call(value || {}, key);
   function normalizeFolderColorMap(value) {
     const result = {};
     if (!value || typeof value !== 'object' || Array.isArray(value)) return result;
@@ -16,6 +26,124 @@
       }
     });
     return result;
+  }
+  function hashFolderPath(path) {
+    const text = JSON.stringify(path);
+    let first = 2166136261;
+    let second = 0x9e3779b9;
+    for (let index = 0; index < text.length; index += 1) {
+      const code = text.charCodeAt(index);
+      first = Math.imul(first ^ code, 16777619);
+      second = Math.imul(second ^ code, 2246822519);
+    }
+    return [first, second].map((value) => (value >>> 0).toString(16).padStart(8, '0')).join('');
+  }
+  // Maps every folder id to its portable reference. Same-name siblings are
+  // told apart by their order among themselves.
+  function collectFolderColorRefs(nodeMap) {
+    const refs = new Map();
+    if (!(nodeMap instanceof Map)) return refs;
+    const top = nodeMap.get('0');
+    const roots = top && Array.isArray(top.children)
+      ? top.children
+      : [...nodeMap.values()].filter((node) => String(node.parentId) === '0');
+    function visit(node, path) {
+      refs.set(String(node.id), hashFolderPath(path));
+      if (path.length > 64) return;
+      const seen = new Map();
+      (node.children || []).forEach((child) => {
+        if (!child || child.url || !child.id) return;
+        const title = String(child.title || '');
+        const ordinal = seen.get(title) || 0;
+        seen.set(title, ordinal + 1);
+        visit(child, [...path, ordinal ? [title, ordinal] : title]);
+      });
+    }
+    roots.forEach((node) => {
+      const rootType = node && !node.url && (node.folderType || ROOT_TYPES_BY_ID[String(node.id)]);
+      if (rootType) visit(node, [rootType]);
+    });
+    return refs;
+  }
+  function normalizeFolderColorRefs(value) {
+    const result = {};
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return result;
+    Object.entries(value).forEach(([ref, entry]) => {
+      const rgb = entry && typeof entry === 'object' ? hexToRgb(entry.color) : null;
+      if (!/^[a-f0-9]{16}$/.test(ref) || !rgb) return;
+      const dateAdded = Number(entry.dateAdded);
+      result[ref] = {
+        color: rgbToHex(rgb).toUpperCase(),
+        ...(Number.isFinite(dateAdded) && dateAdded > 0 ? { dateAdded } : {})
+      };
+    });
+    const refs = Object.keys(result);
+    refs.slice(0, Math.max(0, refs.length - MAX_FOLDER_COLOR_REFS)).forEach((ref) => { delete result[ref]; });
+    return result;
+  }
+  function createFolderColorRef(nodeMap, folderId, color) {
+    const node = nodeMap.get(String(folderId));
+    const dateAdded = Number(node && node.dateAdded);
+    return { color, ...(Number.isFinite(dateAdded) && dateAdded > 0 ? { dateAdded } : {}) };
+  }
+  // Returns the colors for this device's folder ids. A unique creation time
+  // finds a folder through renames, moves and same-name sibling shifts; the
+  // path decides otherwise. Entries for folders missing here are kept for
+  // other devices. The caller writes `refs` back when `changed` is true.
+  function resolveFolderColors(value, nodeMap) {
+    const refs = normalizeFolderColorRefs(value);
+    const folderRefs = collectFolderColorRefs(nodeMap);
+    const idsByRef = new Map();
+    const refsByDate = new Map();
+    folderRefs.forEach((ref, id) => {
+      idsByRef.set(ref, [...(idsByRef.get(ref) || []), id]);
+      const dateAdded = Number(nodeMap.get(id).dateAdded) || 0;
+      if (dateAdded > 0) refsByDate.set(dateAdded, new Set([...(refsByDate.get(dateAdded) || []), ref]));
+    });
+    const targets = new Map();
+    const claimed = new Set();
+    Object.entries(refs).forEach(([ref, entry]) => {
+      const matches = entry.dateAdded ? [...(refsByDate.get(entry.dateAdded) || [])] : [];
+      if (matches.length === 1 && !claimed.has(matches[0])) {
+        targets.set(ref, matches[0]);
+        claimed.add(matches[0]);
+      }
+    });
+    // An entry whose path another folder took over has no folder here.
+    Object.keys(refs).forEach((ref) => {
+      if (targets.has(ref) || claimed.has(ref)) return;
+      targets.set(ref, ref);
+      claimed.add(ref);
+    });
+    const next = {};
+    Object.entries(refs).forEach(([ref, entry]) => {
+      if (targets.has(ref)) next[targets.get(ref)] = entry;
+    });
+    const colors = {};
+    Object.entries(next).forEach(([ref, entry]) => {
+      (idsByRef.get(ref) || []).forEach((id) => { colors[id] = entry.color; });
+    });
+    return { colors, refs: next, changed: Object.keys(refs).some((ref) => targets.get(ref) !== ref) };
+  }
+  // Returns the next synced map, or null when the folder cannot be referenced.
+  function setFolderColorRef(value, folderId, color, nodeMap) {
+    const refs = normalizeFolderColorRefs(value);
+    const ref = collectFolderColorRefs(nodeMap).get(String(folderId));
+    if (!ref) return null;
+    delete refs[ref];
+    const rgb = color ? hexToRgb(color) : null;
+    if (rgb) refs[ref] = createFolderColorRef(nodeMap, folderId, rgbToHex(rgb).toUpperCase());
+    return normalizeFolderColorRefs(refs);
+  }
+  // Adds legacy id-keyed colors without replacing colors already synced.
+  function importFolderColorMap(colorMap, value, nodeMap) {
+    const refs = normalizeFolderColorRefs(value);
+    const folderRefs = collectFolderColorRefs(nodeMap);
+    Object.entries(normalizeFolderColorMap(colorMap)).forEach(([id, color]) => {
+      const ref = folderRefs.get(id);
+      if (ref && !own(refs, ref)) refs[ref] = createFolderColorRef(nodeMap, id, color);
+    });
+    return normalizeFolderColorRefs(refs);
   }
   function getFigmaFolderSvg(idSuffix, folderId) {
     const suffix = String(idSuffix || 'default').replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -877,7 +1005,13 @@
   return Object.freeze({
     DEFAULT_FOLDER_COLOR,
     FOLDER_COLORS_STORAGE_KEY,
+    FOLDER_COLOR_REFS_STORAGE_KEY,
+    MAX_FOLDER_COLOR_REFS,
     normalizeFolderColorMap,
+    normalizeFolderColorRefs,
+    resolveFolderColors,
+    setFolderColorRef,
+    importFolderColorMap,
     FOLDER_PATH_MORPH_DURATION_MS,
     getFigmaFolderSvg,
     applyFolderColor,

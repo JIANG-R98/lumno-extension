@@ -1,3 +1,5 @@
+import { BusyLabel } from '../shared/busy-label';
+
 export interface PopconfirmCopy {
   cancelLabel: string;
   confirmLabel: string;
@@ -48,7 +50,7 @@ export function PopconfirmContent({
           }}
           type="button"
         >
-          {copy.confirmLabel}
+          <BusyLabel busy={busy}>{copy.confirmLabel}</BusyLabel>
         </button>
       </div>
     </>

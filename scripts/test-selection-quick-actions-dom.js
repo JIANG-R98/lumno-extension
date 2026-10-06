@@ -662,7 +662,7 @@ function wait(ms) {
     'an immediate action failure should show the shared Toast error state');
   assert.strictEqual(selectionToast.textContent, '发送失败，请重试。',
     'an immediate action failure should localize its shared Toast copy');
-  assert.match(selectionToast.style.background, /153, 27, 27/,
+  assert.strictEqual(selectionToast.dataset.tone, 'error',
     'the shared Toast should use its error treatment for failed actions');
   await wait(1100);
   assert.strictEqual(host.hidden, true,

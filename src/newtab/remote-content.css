@@ -37,7 +37,7 @@ body:not([data-nt-ready="1"]) .x-nt-quote {
 }
 body[data-nt-ready="1"][data-nt-enter] .x-nt-quote {
   animation: _x_nt_quote_entry_2026_unique_ var(--lumno-duration-2xl) cubic-bezier(0.16, 1, 0.3, 1)
-    var(--x-nt-quote-enter-delay, 0ms) both;
+    var(--x-nt-quote-enter-delay, 0ms) backwards;
 }
 body[data-nt-enter="run"] .x-nt-quote[data-position="top"] { --x-nt-quote-enter-delay: 40ms; }
 body[data-nt-enter="run"] .x-nt-quote[data-position="input"] { --x-nt-quote-enter-delay: 60ms; }
@@ -56,9 +56,23 @@ body[data-nt-enter="run"] .x-nt-quote[data-position="bottom"] { --x-nt-quote-ent
 @media (prefers-reduced-motion: reduce) {
   body[data-nt-enter] .x-nt-quote { animation: none; }
 }
-html[data-lumno-motion-effects="off"] body[data-nt-enter] .x-nt-quote { animation: none; }
+html[data-lumno-motion-effects="off"] body[data-nt-enter] .x-nt-quote,
+html[data-lumno-motion-effects="off"] .x-nt-quote-line[data-swap="true"] { animation: none; }
+/* The row hugs the text and keeps room on both sides for the shuffle button,
+   which hangs past the line's end so the quote itself stays centered. The
+   button is a square as tall as one line of the quote: its 1.6 line height
+   plus 3px padding on each side, floored at the quote's 26px min height. */
+.x-nt-quote-row {
+  --x-nt-quote-shuffle-size: max(26px, calc(var(--x-nt-quote-font-size, 15px) * 1.6 + 6px));
+  --x-nt-quote-shuffle-gap: 4px;
+  position: relative;
+  width: fit-content;
+  max-width: calc(100% - 2 * (var(--x-nt-quote-shuffle-size) + var(--x-nt-quote-shuffle-gap)));
+  margin-inline: auto;
+}
 .x-nt-quote-text {
   display: block;
+  box-sizing: border-box;
   width: 100%;
   min-height: 26px;
   border: 0;
@@ -87,21 +101,99 @@ html[data-lumno-motion-effects="off"] body[data-nt-enter] .x-nt-quote { animatio
    shared hover tint is sized for small controls; across a full-width line it
    reads as a heavy band, so the plate hugs the text at half strength. */
 body[data-wallpaper-active="true"] .x-nt-quote-text {
-  width: fit-content;
-  max-width: 100%;
-  margin-inline: auto;
   color: var(--x-nt-wallpaper-wordmark-ink, var(--x-nt-wallpaper-adaptive-ink));
   opacity: 1;
   text-shadow: 0 1px 2px var(--x-nt-wallpaper-wordmark-shadow, transparent),
     0 0 10px var(--x-nt-wallpaper-wordmark-halo, transparent);
-  transition: background-color var(--lumno-duration-xs) ease;
+  transition: background-color var(--lumno-duration-xs) ease, backdrop-filter var(--lumno-duration-xs) ease,
+    -webkit-backdrop-filter var(--lumno-duration-xs) ease;
 }
+/* The half-strength plate is thin over a busy photo, so it frosts what sits behind it. */
 body[data-wallpaper-active="true"] .x-nt-quote-text:hover {
   background: color-mix(in srgb, var(--x-nt-wallpaper-adaptive-hover-bg) 50%, transparent);
+  backdrop-filter: blur(var(--x-nt-quote-plate-blur, 12px)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--x-nt-quote-plate-blur, 12px)) saturate(140%);
 }
 .x-nt-quote-text:focus-visible {
   outline: 2px solid var(--x-nt-link);
   outline-offset: 2px;
+}
+.x-nt-quote-shuffle {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + var(--x-nt-quote-shuffle-gap));
+  width: var(--x-nt-quote-shuffle-size);
+  height: var(--x-nt-quote-shuffle-size);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--lumno-radius-md);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: opacity var(--lumno-duration-xs) ease, background-color var(--lumno-duration-xs) ease;
+}
+/* Bridges the gap to the line so the pointer never leaves the row on its way over. */
+.x-nt-quote-shuffle .ri-icon {
+  --ri-size: max(16px, var(--x-nt-quote-font-size, 15px));
+}
+.x-nt-quote-shuffle::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 100%;
+  width: var(--x-nt-quote-shuffle-gap);
+}
+.x-nt-quote-row:hover .x-nt-quote-shuffle,
+.x-nt-quote-row:focus-within .x-nt-quote-shuffle,
+.x-nt-quote-shuffle[data-loading="true"] {
+  opacity: 0.72;
+  pointer-events: auto;
+}
+.x-nt-quote-row .x-nt-quote-shuffle:hover,
+.x-nt-quote-row .x-nt-quote-shuffle:focus-visible {
+  opacity: 1;
+  background: var(--x-nt-hover-bg);
+}
+body[data-wallpaper-active="true"] .x-nt-quote-shuffle {
+  color: var(--x-nt-wallpaper-wordmark-ink, var(--x-nt-wallpaper-adaptive-ink));
+  transition: opacity var(--lumno-duration-xs) ease, background-color var(--lumno-duration-xs) ease,
+    backdrop-filter var(--lumno-duration-xs) ease, -webkit-backdrop-filter var(--lumno-duration-xs) ease;
+}
+body[data-wallpaper-active="true"] .x-nt-quote-row .x-nt-quote-shuffle:hover,
+body[data-wallpaper-active="true"] .x-nt-quote-row .x-nt-quote-shuffle:focus-visible {
+  background: color-mix(in srgb, var(--x-nt-wallpaper-adaptive-hover-bg) 50%, transparent);
+  backdrop-filter: blur(var(--x-nt-quote-plate-blur, 12px)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--x-nt-quote-plate-blur, 12px)) saturate(140%);
+}
+.x-nt-quote-shuffle:focus-visible {
+  outline: 2px solid var(--x-nt-link);
+  outline-offset: 2px;
+}
+/* The icon stays still while the next quote loads; the button just dims, and the new line fades in. */
+.x-nt-quote-row .x-nt-quote-shuffle[data-loading="true"] {
+  opacity: 0.4;
+  cursor: progress;
+}
+.x-nt-quote-tail {
+  font-feature-settings: "halt";
+  letter-spacing: 0;
+}
+.x-nt-quote-line[data-swap="true"] {
+  animation: _x_nt_quote_entry_2026_unique_ var(--lumno-duration-xl) cubic-bezier(0.16, 1, 0.3, 1);
+}
+/* Touch screens have no hover to reveal it. */
+@media (hover: none) {
+  .x-nt-quote-shuffle {
+    opacity: 0.6;
+    pointer-events: auto;
+  }
 }
 .x-nt-quote[data-position="bottom"] {
   position: fixed;
@@ -158,12 +250,9 @@ body[data-quote-position="bottom"].x-nt-mobile-flow {
   cursor: default;
   background: transparent;
 }
-.x-nt-bing-refresh:disabled:not([data-loading="true"]) { opacity: 0.5; }
-.x-nt-bing-refresh[data-loading="true"] .ri-icon {
-  animation: x-nt-bing-refresh-spin 900ms linear infinite;
-}
-@keyframes x-nt-bing-refresh-spin {
-  to { transform: rotate(360deg); }
+.x-nt-bing-refresh:disabled:not([aria-busy="true"]) { opacity: 0.5; }
+.x-nt-bing-refresh-glyph {
+  display: inline-flex;
 }
 .x-nt-wallpaper-grid.x-nt-wallpaper-grid--bing:empty { display: none; }
 .x-nt-bing-source {
@@ -184,14 +273,15 @@ body[data-quote-position="bottom"].x-nt-mobile-flow {
   line-height: 1.5;
 }
 @media (prefers-reduced-motion: reduce) {
-  .x-nt-bing-refresh[data-loading="true"] .ri-icon { animation: none; }
+  .x-nt-quote-line[data-swap="true"] { animation: none; }
 }
 @media (max-width: 600px) {
   .x-nt-quote[data-position="bottom"] { width: calc(100% - 112px); }
 }
 
 @supports (corner-shape: superellipse(1.25)) {
-  .x-nt-quote-text {
+  .x-nt-quote-text,
+  .x-nt-quote-shuffle {
     corner-shape: superellipse(1.25);
   }
 }

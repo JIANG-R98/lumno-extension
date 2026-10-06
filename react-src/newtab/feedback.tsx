@@ -327,7 +327,6 @@ function FeedbackControl({
                 aria-busy={loading}
                 aria-label={model.refreshTooltip}
                 className="x-nt-feedback-detail-action x-nt-feedback-detail-refresh"
-                data-loading={loading ? 'true' : undefined}
                 disabled={loading}
                 onBlur={onHideTooltip}
                 onClick={async (event) => {
@@ -356,7 +355,7 @@ function FeedbackControl({
                 role="menuitem"
                 type="button"
               >
-                <i aria-hidden="true" className="ri-icon ri-size-16 ri-refresh-line" />
+                <i aria-hidden="true" className="ri-icon ri-size-16 ri-refresh-line x-lumno-busy-spin" />
               </button>
               <button
                 aria-label={model.closeTooltip}

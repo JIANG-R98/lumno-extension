@@ -1573,6 +1573,38 @@ body[data-nt-enter="run"] .x-nt-bookmark-cascade-debug-control {
   cursor: grabbing;
   transition: transform 170ms cubic-bezier(0.22, 1, 0.36, 1);
 }
+/* The neighbours of an insertion point lean apart to open the gap. They use
+   `translate`, which stacks with the reorder and drop `transform`s. */
+.x-nt-shortcut-tile[data-drag-gap],
+.x-nt-bookmark-cascade-row[data-drag-gap],
+#_x_extension_newtab_bookmarks_grid_2024_unique_ .x-nt-bookmark-card[data-drag-gap] {
+  transition: transform 170ms cubic-bezier(0.22, 1, 0.36, 1),
+    translate 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 110ms ease,
+    box-shadow 170ms ease,
+    border-color 170ms ease;
+}
+.x-nt-shortcut-tile[data-drag-gap="before"],
+.x-nt-bookmark-card[data-drag-gap="before"] {
+  translate: calc(var(--x-nt-drag-gap-shift, 6px) * -1) 0;
+}
+.x-nt-shortcut-tile[data-drag-gap="after"],
+.x-nt-bookmark-card[data-drag-gap="after"] {
+  translate: var(--x-nt-drag-gap-shift, 6px) 0;
+}
+.x-nt-bookmark-cascade-row[data-drag-gap="before"] {
+  translate: 0 calc(var(--x-nt-drag-gap-shift-y, 3px) * -1);
+}
+.x-nt-bookmark-cascade-row[data-drag-gap="after"] {
+  translate: 0 var(--x-nt-drag-gap-shift-y, 3px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .x-nt-shortcut-tile[data-drag-gap],
+  .x-nt-bookmark-cascade-row[data-drag-gap],
+  #_x_extension_newtab_bookmarks_grid_2024_unique_ .x-nt-bookmark-card[data-drag-gap] {
+    transition: none;
+  }
+}
 body[data-drag-source],
 body[data-drag-source] * {
   cursor: var(--x-nt-drag-cursor, grabbing) !important;
@@ -2461,20 +2493,23 @@ body[data-wallpaper-active="true"][data-bookmark-view-mode="top"] .x-nt-bookmark
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-gutter: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(148, 163, 184, 0.62) transparent;
+}
+/* Chrome ignores ::-webkit-scrollbar rules once scrollbar-width/color are set,
+   which drops the track inset and lets the bar collide with the rounded corners. */
+@supports not selector(::-webkit-scrollbar) {
+  .x-nt-bookmark-cascade-content {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.62) transparent;
+  }
+  body[data-theme="dark"] .x-nt-bookmark-cascade-content {
+    scrollbar-color: rgba(148, 163, 184, 0.56) transparent;
+  }
 }
 .x-nt-bookmark-cascade-content::-webkit-scrollbar {
   width: 10px;
 }
 .x-nt-bookmark-cascade-content::-webkit-scrollbar-track {
-  margin-block: 8px;
-  background: transparent;
-}
-.x-nt-bookmark-cascade-content::-webkit-scrollbar-button:vertical:start:decrement,
-.x-nt-bookmark-cascade-content::-webkit-scrollbar-button:vertical:end:increment {
-  display: block;
-  height: 8px;
+  margin-block: 10px;
   background: transparent;
 }
 .x-nt-bookmark-cascade-content::-webkit-scrollbar-thumb {
@@ -2557,6 +2592,13 @@ body[data-wallpaper-active="true"][data-bookmark-view-mode="top"] .x-nt-bookmark
 }
 .x-nt-bookmark-cascade-row[data-bookmark-insert-position="after"]::after {
   bottom: -3px;
+}
+/* The marked row leans away from the gap; keep its line in the gap's middle. */
+.x-nt-bookmark-cascade-row[data-bookmark-insert-position="before"][data-drag-gap="after"]::after {
+  top: calc(-3px - var(--x-nt-drag-gap-shift-y, 3px));
+}
+.x-nt-bookmark-cascade-row[data-bookmark-insert-position="after"][data-drag-gap="before"]::after {
+  bottom: calc(-3px - var(--x-nt-drag-gap-shift-y, 3px));
 }
 .x-nt-bookmark-cascade-item {
   all: unset;
@@ -2719,9 +2761,6 @@ body[data-theme="dark"] .x-nt-bookmark-cascade-level {
     0 18px 34px rgba(0, 0, 0, 0.36),
     0 2px 4px rgba(0, 0, 0, 0.18),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-body[data-theme="dark"] .x-nt-bookmark-cascade-content {
-  scrollbar-color: rgba(148, 163, 184, 0.56) transparent;
 }
 body[data-theme="dark"] .x-nt-bookmark-cascade-content::-webkit-scrollbar-thumb {
   background-color: rgba(148, 163, 184, 0.58);
@@ -3843,14 +3882,6 @@ body[data-theme="dark"] .x-nt-feedback-button[data-open="true"]:active {
   cursor: progress;
   opacity: 0.56;
 }
-.x-nt-feedback-detail-refresh[data-loading="true"] .ri-icon {
-  animation: x-nt-feedback-refresh-spin 0.72s linear infinite;
-}
-@keyframes x-nt-feedback-refresh-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
 .x-nt-feedback-qr-image {
   display: block;
   width: 100%;
@@ -3918,9 +3949,6 @@ body[data-theme="dark"] .x-nt-feedback-qr-image {
   .x-nt-section-mode-select ._x_extension_select_trigger_2024_unique_ {
     transition: none;
     transform: none;
-  }
-  .x-nt-feedback-detail-refresh[data-loading="true"] .ri-icon {
-    animation: none;
   }
 }
 body[data-wallpaper-active="true"] {
@@ -6175,6 +6203,7 @@ body[data-lumno-page="newtab"] [role="option"][aria-disabled="true"] {
 }
 body[data-lumno-page="newtab"] [aria-busy="true"] :disabled,
 body[data-lumno-page="newtab"] button[aria-busy="true"],
+body[data-lumno-page="newtab"] [role="button"][aria-busy="true"],
 body[data-lumno-page="newtab"] [role="button"][data-loading="true"] {
   cursor: progress;
 }

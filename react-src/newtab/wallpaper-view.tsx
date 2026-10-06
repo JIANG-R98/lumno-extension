@@ -961,13 +961,18 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                     <span {...ref('bingRecentLabel')} />
                     <button
                       {...ref('bingRefresh')}
+                      aria-busy="false"
                       className="x-nt-appearance-info-button x-nt-bing-refresh"
-                      data-loading="false"
-                      dangerouslySetInnerHTML={{
-                        __html: String(model.icons?.refresh || '')
-                      }}
                       type="button"
-                    />
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="x-nt-bing-refresh-glyph x-lumno-busy-spin"
+                        dangerouslySetInnerHTML={{
+                          __html: String(model.icons?.refresh || '')
+                        }}
+                      />
+                    </button>
                   </div>
                   <div {...ref('bingItemsHost')} className="x-nt-wallpaper-grid x-nt-wallpaper-grid--bing" />
                   <div {...ref('bingStatus')} className="x-nt-bing-status" role="status" aria-live="polite" />

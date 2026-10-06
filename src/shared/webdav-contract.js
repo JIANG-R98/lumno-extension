@@ -12,9 +12,16 @@
   const WALLPAPER_KEY = '_x_extension_newtab_wallpaper_2026_unique_';
   const LOCAL_WALLPAPER_KEY = '_x_extension_newtab_local_wallpaper_2026_unique_';
   const PREFERENCE_KEYS = settings.CHROME_SYNC_STORAGE_KEYS.filter((key) => !SHORTCUT_KEYS.includes(key));
+  // Preferences kept in chrome.storage.local that WebDAV carries but browser
+  // sync never does: the custom wallpaper selection and the bookmark bar
+  // material chosen against it.
+  const TOPBAR_KEYS = settings.BOOKMARK_TOPBAR_WEBDAV_STORAGE_KEYS || [];
+  const LOCAL_PREFERENCE_KEYS = [LOCAL_WALLPAPER_KEY, ...TOPBAR_KEYS];
   // Records whose fields are independent settings merge field by field, so
   // two devices editing different fields of one record do not conflict.
-  const FIELD_MERGE_KEYS = [settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY].filter(Boolean);
+  // Folder colors merge per folder for the same reason.
+  const FIELD_MERGE_KEYS = [settings.NEWTAB_QUOTE_PREFS_STORAGE_KEY,
+    settings.BOOKMARK_FOLDER_COLOR_REFS_STORAGE_KEY].filter(Boolean);
   const MAX_STATE_BYTES = 2 * 1024 * 1024;
   const MAX_ASSET_BYTES = 2 * 1024 * 1024;
   const HASH_PATTERN = /^[a-f0-9]{64}$/;
@@ -43,7 +50,7 @@
     return shortcutStore.normalizeShortcuts(overflow && overflow.authoritative === true ? extra : [...stored, ...extra]);
   }
   function selectPreferences(values) {
-    return Object.fromEntries([...PREFERENCE_KEYS, LOCAL_WALLPAPER_KEY]
+    return Object.fromEntries([...PREFERENCE_KEYS, ...LOCAL_PREFERENCE_KEYS]
       .filter((key) => own(values, key)).map((key) => [key, values[key]]));
   }
   function collectAssets(state) {
@@ -90,41 +97,45 @@
     return state;
   }
   // Whole lists are deliberate merge domains in v1. Sorting and deletes cannot
-  // safely be resolved by joining arrays or choosing a device timestamp.
+  // safely be resolved by joining arrays or choosing a device timestamp, so a
+  // list both sides changed apart is a conflict. Any other value is a single
+  // setting: this device's edit reached WebDAV within seconds, so it is the
+  // latest one and wins without asking.
+  // Every part merges on its own. Chrome sync delivers shared keys before
+  // WebDAV delivers local-only ones (wallpaper selection, icons), and a
+  // half-arrived edit must not look like a second device's change.
   function mergeStates(base, local, remote, resolution) {
     const conflicts = [];
     function choose(key, previous, left, right) {
       if (equal(left, right) || equal(right, previous)) return left;
       if (equal(left, previous)) return right;
-      if (resolution === 'local') return left;
       if (resolution === 'remote') return right;
+      if (resolution === 'local' || ![previous, left, right].some(Array.isArray)) return left;
       conflicts.push(key);
       return left;
     }
     function chooseFields(key, previous, left, right) {
       const record = {};
       fieldNames(previous, left, right).forEach((field) => {
-        const value = choose(key, (previous || {})[field], left[field], right[field]);
+        const value = choose(key, (previous || {})[field], (left || {})[field], (right || {})[field]);
         if (typeof value !== 'undefined') record[field] = value;
       });
       return record;
     }
     const data = {};
-    PREFERENCE_KEYS.filter((key) => key !== WALLPAPER_KEY).forEach((key) => {
+    [...PREFERENCE_KEYS, ...LOCAL_PREFERENCE_KEYS].forEach((key) => {
       const value = fieldMergeable(key, base.data[key], local.data[key], remote.data[key])
         ? chooseFields(key, base.data[key], local.data[key], remote.data[key])
         : choose(key, base.data[key], local.data[key], remote.data[key]);
       if (typeof value !== 'undefined') data[key] = value;
     });
-    const shortcutDomain = (state) => ({ shortcuts: state.shortcuts, icons: state.icons });
-    const wallpaperDomain = (state) => ({ wallpapers: state.wallpapers,
-      selection: state.data[LOCAL_WALLPAPER_KEY], builtin: state.data[WALLPAPER_KEY] });
-    const links = choose('shortcuts', shortcutDomain(base), shortcutDomain(local), shortcutDomain(remote));
-    const images = choose('wallpapers', wallpaperDomain(base), wallpaperDomain(local), wallpaperDomain(remote));
-    if (typeof images.selection !== 'undefined') data[LOCAL_WALLPAPER_KEY] = images.selection;
-    if (typeof images.builtin !== 'undefined') data[WALLPAPER_KEY] = images.builtin;
-    const state = validateState({ version: Math.max(base.version, local.version, remote.version), data, ...links, wallpapers: images.wallpapers,
-      assets: { ...base.assets, ...remote.assets, ...local.assets } });
+    const shortcutList = choose('shortcuts', base.shortcuts, local.shortcuts, remote.shortcuts);
+    const ids = new Set(shortcutList.map((item) => item.id));
+    const icons = Object.fromEntries(Object.entries(chooseFields('shortcuts', base.icons, local.icons, remote.icons))
+      .filter(([id]) => ids.has(id)));
+    const wallpapers = choose('wallpapers', base.wallpapers, local.wallpapers, remote.wallpapers);
+    const state = validateState({ version: Math.max(base.version, local.version, remote.version), data,
+      shortcuts: shortcutList, icons, wallpapers, assets: { ...base.assets, ...remote.assets, ...local.assets } });
     return { state, conflicts: [...new Set(conflicts)] };
   }
   // A conflict summary is display data only: names are capped and values are
@@ -164,12 +175,18 @@
       !equal(side.data[WALLPAPER_KEY], base.data[WALLPAPER_KEY]);
     return summary;
   }
+  // A folder color entry also carries the folder's creation time; only the
+  // color means anything to the person choosing a side.
+  function fieldValue(key, value) {
+    return key === settings.BOOKMARK_FOLDER_COLOR_REFS_STORAGE_KEY && isObject(value) ? value.color : value;
+  }
   // A field-merged record lists only the fields both sides changed apart.
   function describeFields(key, previous, left, right) {
     return fieldNames(previous, left, right).filter((field) => {
       const before = (previous || {})[field];
       return !equal(left[field], right[field]) && !equal(left[field], before) && !equal(right[field], before);
-    }).map((field) => ({ key, field, domain: 'preference', local: summarizeValue(left[field]), remote: summarizeValue(right[field]) }));
+    }).map((field) => ({ key, field, domain: 'preference', local: summarizeValue(fieldValue(key, left[field])),
+      remote: summarizeValue(fieldValue(key, right[field])) }));
   }
   function describeConflict(base, local, remote, keys) {
     return [...new Set(keys)].flatMap((key) => {
@@ -239,7 +256,7 @@
     }
     return { payload, remove, skipped, complete: skipped.length === 0 };
   }
-  return Object.freeze({ SHORTCUT_KEYS, FIELD_MERGE_KEYS, OVERFLOW_KEY, ICONS_KEY, WALLPAPER_KEY, LOCAL_WALLPAPER_KEY,
+  return Object.freeze({ SHORTCUT_KEYS, FIELD_MERGE_KEYS, OVERFLOW_KEY, ICONS_KEY, WALLPAPER_KEY, LOCAL_WALLPAPER_KEY, LOCAL_PREFERENCE_KEYS,
     PREFERENCE_KEYS, MAX_STATE_BYTES, MAX_ASSET_BYTES, canonical, equal, byteLength, readShortcuts,
     selectPreferences, validateState, mergeStates, describeConflict, planChromeBackup });
 });

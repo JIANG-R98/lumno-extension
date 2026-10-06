@@ -10,6 +10,7 @@ import {
 import { InlinePopconfirm } from './inline-popconfirm';
 import { InfoButton } from './info-button';
 import { useSegmentedIndicator } from '../shared/segmented-indicator';
+import { BusyLabel } from '../shared/busy-label';
 
 export type SiteSearchProviderCategory = 'site' | 'searchEngine';
 
@@ -281,7 +282,7 @@ function ProviderEditor({
           }}
           type="button"
         >
-          {copy.saveLabel}
+          <BusyLabel busy={saving}>{copy.saveLabel}</BusyLabel>
         </button>
       </div>
       <div

@@ -200,7 +200,8 @@
       return {
         index: slot.index,
         markerPosition: slot.markerPosition,
-        anchorRect: slot.anchorIndex >= 0 ? layoutItems[slot.anchorIndex].rect : null
+        anchorRect: slot.anchorIndex >= 0 ? layoutItems[slot.anchorIndex].rect : null,
+        anchorTile: slot.anchorIndex >= 0 ? layoutItems[slot.anchorIndex].tile : null
       };
     }
 

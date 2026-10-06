@@ -184,8 +184,7 @@
   const shortcutDisplay = globalThis.LumnoShortcutDisplay;
   const toastController = optionsToastApi.createToastController(toastElement, {
     windowObj: window,
-    duration: 2200,
-    errorBackground: 'rgba(153, 27, 27, 0.92)'
+    duration: 2200
   });
   const feedbackSupportController =
     optionsFeedbackSupportApi.createFeedbackSupportController(feedbackSupportHost);
@@ -790,6 +789,10 @@
   const BOOKMARK_COLUMNS_STORAGE_KEY = '_x_extension_bookmark_columns_2024_unique_';
   const BOOKMARK_VIEW_MODE_STORAGE_KEY = '_x_extension_bookmark_view_mode_2026_unique_';
   const BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY = '_x_extension_bookmark_folder_icons_visible_2026_unique_';
+  const BOOKMARK_FOLDER_COLOR_REFS_STORAGE_KEY = SETTINGS.BOOKMARK_FOLDER_COLOR_REFS_STORAGE_KEY ||
+    '_x_extension_bookmark_folder_color_refs_2026_unique_';
+  const BOOKMARK_FOLDER_COLOR_PRESETS_STORAGE_KEY = SETTINGS.BOOKMARK_FOLDER_COLOR_PRESETS_STORAGE_KEY ||
+    '_x_extension_bookmark_folder_color_presets_2026_unique_';
   const PINNED_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_pinned_recent_sites_2026_unique_';
   const HIDDEN_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_hidden_recent_sites_2026_unique_';
   const NEWTAB_SHORTCUTS_STORAGE_KEY = '_x_extension_newtab_shortcuts_2026_unique_';
@@ -924,6 +927,8 @@
     BOOKMARK_COLUMNS_STORAGE_KEY,
     BOOKMARK_VIEW_MODE_STORAGE_KEY,
     BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY,
+    BOOKMARK_FOLDER_COLOR_REFS_STORAGE_KEY,
+    BOOKMARK_FOLDER_COLOR_PRESETS_STORAGE_KEY,
     PINNED_RECENT_SITES_STORAGE_KEY,
     HIDDEN_RECENT_SITES_STORAGE_KEY,
     NEWTAB_SHORTCUTS_STORAGE_KEY,
@@ -2905,16 +2910,39 @@
     blacklistClearButton.setAttribute('data-tooltip', text);
   }
 
-  function showToast(message, isError) {
-    const errorToast = Boolean(isError);
+  function setToastAnnouncement(errorToast) {
     if (toastElement) {
       toastElement.setAttribute('role', errorToast ? 'alert' : 'status');
       toastElement.setAttribute('aria-live', errorToast ? 'assertive' : 'polite');
       toastElement.setAttribute('aria-atomic', 'true');
     }
+  }
+
+  function showToast(message, isError) {
+    const errorToast = Boolean(isError);
+    setToastAnnouncement(errorToast);
     toastController.show(message, {
       error: errorToast
     });
+  }
+
+  // A task that may run long: its loading Toast turns into the result in place.
+  function beginToast(message) {
+    setToastAnnouncement(false);
+    const task = toastController.begin(message);
+    return {
+      done(result) {
+        setToastAnnouncement(false);
+        task.done(result);
+      },
+      fail(result) {
+        setToastAnnouncement(true);
+        task.fail(result);
+      },
+      cancel() {
+        task.cancel();
+      }
+    };
   }
 
   function setSyncButtonEnabled(button, enabled) {
@@ -5011,8 +5039,10 @@
         updateSyncStatusText('sync_status_unavailable', '同步不可用');
         return;
       }
-      const isRotated = syncNowButton.getAttribute('data-rotated') === 'true';
-      syncNowButton.setAttribute('data-rotated', isRotated ? 'false' : 'true');
+      if (syncNowButton.getAttribute('aria-busy') === 'true') {
+        return;
+      }
+      syncNowButton.setAttribute('aria-busy', 'true');
       browserSyncArea.get(SYNC_KEYS, (result) => {
         const payload = {};
         SYNC_KEYS.forEach((key) => {
@@ -5025,24 +5055,18 @@
           source: 'manual'
         };
         browserSyncArea.set(payload, () => {
+          syncNowButton.removeAttribute('aria-busy');
           if (chrome.runtime && chrome.runtime.lastError) {
             const reason = chrome.runtime && chrome.runtime.lastError
               ? chrome.runtime.lastError.message
               : '';
-            setTimeout(() => {
-              showToast(formatTemplate(getMessage('sync_status_failed_reason', '同步失败：{reason}'), {
-                reason: reason || getMessage('sync_status_failed', '同步失败')
-              }), true);
-            }, 360);
+            showToast(formatTemplate(getMessage('sync_status_failed_reason', '同步失败：{reason}'), {
+              reason: reason || getMessage('sync_status_failed', '同步失败')
+            }), true);
             return;
           }
-          const toastDelay = 360;
-          setTimeout(() => {
-            showToast(getMessage('sync_status_done', '同步完成'), false);
-          }, toastDelay);
-          setTimeout(() => {
-            updateSyncNowTooltip(formatSyncTime(Date.now()));
-          }, toastDelay + 60);
+          showToast(getMessage('sync_status_done', '同步完成'), false);
+          updateSyncNowTooltip(formatSyncTime(Date.now()));
         });
       });
     });
@@ -5070,7 +5094,12 @@
       if (!file) {
         return;
       }
+      const toastTask = beginToast(getMessage('sync_importing', '正在导入配置…'));
       const reader = new FileReader();
+      reader.onerror = () => {
+        toastTask.fail(getMessage('sync_import_invalid', '配置文件无效'));
+        syncImportInput.value = '';
+      };
       reader.onload = () => {
         let parsed = null;
         try {
@@ -5080,7 +5109,7 @@
         }
         const data = parsed && parsed.data ? parsed.data : parsed;
         if (!data || typeof data !== 'object') {
-          showToast(getMessage('sync_import_invalid', '配置文件无效'), true);
+          toastTask.fail(getMessage('sync_import_invalid', '配置文件无效'));
           syncImportInput.value = '';
           return;
         }
@@ -5111,7 +5140,7 @@
             deriveLegacyAggregateSearchAutoGroupEnabled(data[AGGREGATE_SEARCH_STORAGE_KEY]);
         }
         if (Object.keys(payload).length === 0) {
-          showToast(getMessage('sync_import_invalid', '配置文件无效'), true);
+          toastTask.fail(getMessage('sync_import_invalid', '配置文件无效'));
           syncImportInput.value = '';
           return;
         }
@@ -5125,15 +5154,17 @@
               const reason = chrome.runtime && chrome.runtime.lastError
                 ? chrome.runtime.lastError.message
                 : '';
-              showToast(formatTemplate(getMessage('sync_status_failed_reason', '同步失败：{reason}'), {
+              toastTask.fail(formatTemplate(getMessage('sync_status_failed_reason', '同步失败：{reason}'), {
                 reason: reason || getMessage('sync_status_failed', '同步失败')
-              }), true);
+              }));
               syncImportInput.value = '';
               return;
             }
-            showToast(getMessage('sync_import_done', '导入完成'), false);
+            toastTask.done(getMessage('sync_import_done', '导入完成'));
             refreshSyncStatus();
           });
+        } else {
+          toastTask.cancel();
         }
         syncImportInput.value = '';
       };

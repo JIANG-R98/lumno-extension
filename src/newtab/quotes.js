@@ -35,7 +35,18 @@
     const line = document.createElement('span');
     line.className = 'x-nt-quote-line';
     button.appendChild(line);
-    element.append(button);
+    // Revealed on hover; it hangs past the line's end so the quote stays centered.
+    const shuffleButton = document.createElement('button');
+    shuffleButton.type = 'button';
+    shuffleButton.className = 'x-nt-quote-shuffle';
+    const shuffleIcon = document.createElement('i');
+    shuffleIcon.className = 'ri-icon ri-size-16 ri-shuffle-line';
+    shuffleIcon.setAttribute('aria-hidden', 'true');
+    shuffleButton.appendChild(shuffleIcon);
+    const row = document.createElement('div');
+    row.className = 'x-nt-quote-row';
+    row.append(button, shuffleButton);
+    element.append(row);
     // Resolved on use: the page creates its tooltip controllers after the quote runtime.
     const getTooltip = () => (config.getTooltipController ? config.getTooltipController() : null);
     let origin = '';
@@ -50,6 +61,7 @@
     let unsubscribe;
     let disposed = false;
     let draftFontSize = null;
+    let shuffling = false;
     // Settles once the cached quote (if any) is painted; the network refresh is never awaited.
     let cachedQuoteRead = Promise.resolve();
     let localeSupported = isLocaleSupported();
@@ -171,10 +183,28 @@
     const tabResizeObserver = typeof window.ResizeObserver === 'function'
       ? new window.ResizeObserver((entries) => entries.forEach((entry) => syncTabIndicator(entry.target)))
       : null;
+    const shuffleLabel = () => t('newtab_quote_shuffle', 'Show another quote');
+    // Full-width closing punctuation leaves half an em of blank space after its ink, which reads as
+    // a lopsided gap at the end of the line, so the trailing run is set half-width.
+    const TRAILING_PUNCTUATION = /[\u3001\u3002\uff0c\uff0e\uff1a\uff1b\uff01\uff1f\uff09\u3009\u300b\u300d\u300f\u3011\u3015\u3017\u201d\u2019]+$/;
+    function renderLine(text) {
+      if (line.textContent === text) return;
+      const tail = TRAILING_PUNCTUATION.exec(text);
+      if (!tail) {
+        line.textContent = text;
+        return;
+      }
+      const tailElement = document.createElement('span');
+      tailElement.className = 'x-nt-quote-tail';
+      tailElement.textContent = tail[0];
+      line.replaceChildren(document.createTextNode(text.slice(0, tail.index)), tailElement);
+    }
     function updateText() {
       element.setAttribute('aria-label', t('newtab_quote_title', 'Daily quote'));
+      shuffleButton.setAttribute('aria-label', shuffleLabel());
+      if (!config.getTooltipController) shuffleButton.title = shuffleLabel();
       if (quote) {
-        line.textContent = quote.text;
+        renderLine(quote.text);
         origin = [quote.author, quote.source ? `《${quote.source}》` : ''].filter(Boolean).join(' · ');
         if (!config.getTooltipController) button.title = origin;
         button.setAttribute('aria-label', [quote.text, origin].filter(Boolean).join(' — '));
@@ -286,16 +316,49 @@
       if (document.visibilityState === 'visible' && isActive()) refresh().catch(() => {});
     };
     // Open toward the free side of the page: away from the search box, and inward at the bottom edge.
-    const showOrigin = () => {
+    const showTooltip = (target, text) => {
       const tooltip = getTooltip();
-      if (tooltip && origin) {
-        tooltip.show(button, origin, { placement: prefs.position === 'top' || prefs.position === 'bottom' ? 'top' : 'bottom' });
+      if (tooltip && text) {
+        tooltip.show(target, text, { placement: prefs.position === 'top' || prefs.position === 'bottom' ? 'top' : 'bottom' });
       }
     };
+    const showOrigin = () => showTooltip(button, origin);
     const hideOrigin = () => {
       const tooltip = getTooltip();
       if (tooltip) tooltip.hide();
     };
+    // The pick replaces today's cached quote, so it stays until the next daily update.
+    async function shuffle() {
+      if (shuffling || !isActive()) return;
+      const current = ++revision;
+      const category = prefs.category;
+      shuffling = true;
+      shuffleButton.dataset.loading = 'true';
+      shuffleButton.setAttribute('aria-busy', 'true');
+      try {
+        const next = await client.getQuote(category, { reroll: true });
+        if (current !== revision || disposed || !isActive()) return;
+        quote = next;
+        render();
+        // Restart the swap fade even when two shuffles land back to back.
+        line.removeAttribute('data-swap');
+        void line.offsetWidth;
+        line.setAttribute('data-swap', 'true');
+      } catch (_error) {
+        if (!disposed && config.showToast) config.showToast(t('newtab_quote_shuffle_error', 'Could not load another quote'), true);
+      } finally {
+        shuffling = false;
+        delete shuffleButton.dataset.loading;
+        shuffleButton.removeAttribute('aria-busy');
+      }
+    }
+    const showShuffleLabel = () => showTooltip(shuffleButton, shuffleLabel());
+    shuffleButton.addEventListener('click', () => { shuffle(); });
+    line.addEventListener('animationend', () => line.removeAttribute('data-swap'));
+    shuffleButton.addEventListener('mouseenter', showShuffleLabel);
+    shuffleButton.addEventListener('focus', showShuffleLabel);
+    shuffleButton.addEventListener('mouseleave', hideOrigin);
+    shuffleButton.addEventListener('blur', hideOrigin);
     button.addEventListener('mouseenter', showOrigin);
     button.addEventListener('focus', showOrigin);
     button.addEventListener('mouseleave', hideOrigin);

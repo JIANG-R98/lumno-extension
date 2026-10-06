@@ -60,6 +60,7 @@
     const BOOKMARK_DRAG_PAGE_SWITCH_DELAY_MS = 640;
     const BOOKMARK_DRAG_FOLDER_SWITCH_DELAY_MS = 640;
     let bookmarkPendingLayoutAnimation = null;
+    const insertionGapOwner = {};
 
     function getBookmarkCardFromNode(node) {
       return node && typeof node.closest === 'function'
@@ -636,6 +637,7 @@
           : pageState.newtabShortcuts.length,
         record,
         element: null,
+        anchorElement: slot.anchorTile,
         markerElement: pageState.shortcutGrid,
         markerPosition: slot.markerPosition,
         markerOffsetPx: markerX - gridRect.left,
@@ -819,6 +821,37 @@
       );
     }
 
+    function isSameLayoutRow(element, anchor) {
+      const height = Math.min(element.offsetHeight, anchor.offsetHeight) || 1;
+      return Math.abs(element.offsetTop - anchor.offsetTop) < height / 2;
+    }
+
+    // Opens a small gap at a grid, bar or shortcut-row insertion point by
+    // leaning its two neighbours apart. The line itself lives on the container.
+    function syncInsertionGap(state, target) {
+      const isLine = isInsertLineDropTarget(target);
+      const key = isLine
+        ? [target.surface, target.markerPosition, target.surface === 'grid' ? target.element : target.anchorElement]
+        : null;
+      const previousKey = insertionGapOwner.key;
+      if (key && previousKey && key.every((part, index) => part === previousKey[index])) {
+        return;
+      }
+      insertionGapOwner.key = key;
+      let before = null;
+      let after = null;
+      if (isLine) {
+        const isGrid = target.surface === 'grid';
+        const dragged = state && (state.card || state.tile);
+        const items = (isGrid ? getBookmarkReorderCards() : getShortcutReorderTiles())
+          .filter((item) => item !== dragged);
+        const anchor = isGrid ? target.element : target.anchorElement;
+        ({ before, after } = NEWTAB_CROSS_SURFACE_DRAG.getInsertionGapNeighbors(
+          items, anchor, target.markerPosition, isSameLayoutRow));
+      }
+      NEWTAB_CROSS_SURFACE_DRAG.setInsertionGap(insertionGapOwner, before, after);
+    }
+
     function clearDropTargetMarker(marker) {
       marker.removeAttribute('data-bookmark-insert-position');
       marker.removeAttribute('data-insert-line-position');
@@ -841,6 +874,7 @@
       if (pageState.bookmarkCascadeRuntime && typeof pageState.bookmarkCascadeRuntime.clearDragTarget === 'function') {
         pageState.bookmarkCascadeRuntime.clearDragTarget();
       }
+      syncInsertionGap(state, null);
       state.dropTarget = null;
     }
 
@@ -1016,6 +1050,7 @@
         return;
       }
       state.dropTarget = target || null;
+      syncInsertionGap(state, target);
       if (nextElement) {
         nextElement.setAttribute('data-bookmark-drop-target', 'true');
       }

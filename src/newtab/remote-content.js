@@ -62,6 +62,16 @@
       thumbnailUrl: `${BING_ORIGIN}/th?id=${match[2]}_1920x1080.jpg&pid=hp&w=480&h=270&c=1` } : null;
   }
 
+  // Credit links are optional, so a relative or malformed one falls back to Bing instead of dropping the photo.
+  function normalizeSourceUrl(link) {
+    if (!link) return BING_ORIGIN;
+    try {
+      const source = new URL(String(link), BING_ORIGIN);
+      return source.protocol === 'https:' && ['www.bing.com', 'cn.bing.com'].includes(source.hostname) &&
+        !source.port && !source.username && !source.password ? source.href : BING_ORIGIN;
+    } catch (_error) { return BING_ORIGIN; }
+  }
+
   function normalizeWallpaper(value) {
     if (!value || value.wp !== true || !/^\d{8}$/.test(value.startdate)) return null;
     const date = new Date(`${value.startdate.slice(0, 4)}-${value.startdate.slice(4, 6)}-${value.startdate.slice(6, 8)}T00:00:00Z`);
@@ -71,14 +81,9 @@
       if (url.origin !== BING_ORIGIN || url.pathname !== '/th' || url.username || url.password) return null;
       const item = wallpaperFromId(`bing-${value.startdate}-${url.searchParams.get('id')}`);
       if (!item || !item.rawId) return null;
-      let sourceUrl = BING_ORIGIN;
-      if (value.copyrightlink) {
-        const source = new URL(value.copyrightlink);
-        if (source.protocol === 'https:' && ['www.bing.com', 'cn.bing.com'].includes(source.hostname) &&
-            !source.port && !source.username && !source.password) sourceUrl = source.href;
-      }
       return { ...item, name: String(value.title || 'Bing').slice(0, 200),
-        copyright: String(value.copyright || '').slice(0, 500), date: value.startdate, sourceUrl };
+        copyright: String(value.copyright || '').slice(0, 500), date: value.startdate,
+        sourceUrl: normalizeSourceUrl(value.copyrightlink) };
     } catch (_error) { return null; }
   }
 
@@ -108,6 +113,7 @@
     const catalogTasks = new Map();
     let pinnedIds = [];
     let dailyWallpaper = null;
+    let dailyMarket = '';
     const getMarket = () => normalizeMarket(typeof config.getLanguage === 'function' ? config.getLanguage() : config.language);
     deleteLegacyMediaStore(root.indexedDB);
     function lock(name, task) {
@@ -127,17 +133,31 @@
         return await response.json();
       } finally { clearTimeout(timer); }
     }
-    function getQuote(category) {
+    // A reroll skips the daily cache and saves its pick as today's quote, so it stays until the next day.
+    // It fails loudly instead of falling back, leaving the current quote in place.
+    function getQuote(category, options) {
       const type = category === 'poetry' ? 'poetry' : 'literature';
-      if (quoteTasks.has(type)) return quoteTasks.get(type);
+      const reroll = Boolean(options && options.reroll);
+      const taskKey = reroll ? `${type}:reroll` : type;
+      if (quoteTasks.has(taskKey)) return quoteTasks.get(taskKey);
       const task = lock('lumno-daily-quote', async () => {
         const cache = (await read(area, QUOTE_CACHE_KEY)) || {};
         const entry = cache[type];
-        if (entry && entry.quote && (entry.day === localDay(now()) || entry.retryAt > now())) {
+        if (!reroll && entry && entry.quote && (entry.day === localDay(now()) || entry.retryAt > now())) {
           return entry.quote;
         }
+        const url = `https://v1.hitokoto.cn/?c=${type === 'poetry' ? 'i' : 'd'}&encode=json&max_length=40`;
+        if (reroll) {
+          let quote = normalizeQuote(await request(url));
+          // The pool is large but not endless; one more draw keeps a reroll from showing the same line.
+          if (quote && entry && entry.quote && quote.text === entry.quote.text) quote = normalizeQuote(await request(url));
+          if (!quote) throw new Error('Invalid quote response.');
+          const latest = (await read(area, QUOTE_CACHE_KEY)) || {};
+          await write(area, QUOTE_CACHE_KEY, { ...latest, [type]: { quote, day: localDay(now()) } });
+          return quote;
+        }
         try {
-          const data = await request(`https://v1.hitokoto.cn/?c=${type === 'poetry' ? 'i' : 'd'}&encode=json&max_length=40`);
+          const data = await request(url);
           const quote = normalizeQuote(data);
           if (!quote) throw new Error('Invalid quote response.');
           // Read again so concurrently updated categories are not overwritten.
@@ -155,16 +175,17 @@
             [type]: { quote, day: entry && entry.day || '', retryAt: now() + 15 * 60 * 1000 } }).catch(() => {});
           return quote;
         }
-      }).finally(() => quoteTasks.delete(type));
-      quoteTasks.set(type, task);
+      }).finally(() => quoteTasks.delete(taskKey));
+      quoteTasks.set(taskKey, task);
       return task;
     }
     function getCatalog(refresh) {
       const market = getMarket();
-      if (catalogTasks.has(market)) return catalogTasks.get(market);
+      // A refresh must not resolve with a pending plain load that may serve the cache.
+      const taskKey = `${market}${refresh ? ':refresh' : ''}`;
+      if (catalogTasks.has(taskKey)) return catalogTasks.get(taskKey);
       const task = lock(`lumno-bing-catalog-${market}`, async () => {
-        const cache = (await read(area, BING_CACHE_KEY)) || {};
-        const entry = cache[market] || {};
+        const entry = ((await read(area, BING_CACHE_KEY)) || {})[market] || {};
         const cached = Array.isArray(entry.items) ? entry.items.map(normalizeStoredWallpaper).filter(Boolean) : [];
         const remember = (items) => {
           items.forEach((item) => images.set(item.id, { ...images.get(item.id), ...item }));
@@ -181,18 +202,22 @@
           const items = data.images.slice(0, 8).map(normalizeWallpaper).filter(Boolean)
             .sort((a, b) => b.date.localeCompare(a.date));
           if (!items.length) throw new Error('No downloadable wallpapers.');
-          await write(area, BING_CACHE_KEY, { ...cache,
-            [market]: { items, day: localDay(now()), updatedAt: now(), retryAt: 0 } });
+          await writeCatalogEntry(market, { items, day: localDay(now()), updatedAt: now(), retryAt: 0 });
           return remember(items);
         } catch (error) {
-          await write(area, BING_CACHE_KEY, { ...cache, [market]: { ...entry,
-            retryAt: now() + (error.status === 429 ? 60000 : 15 * 60 * 1000) } }).catch(() => {});
+          await writeCatalogEntry(market, { ...entry,
+            retryAt: now() + (error.status === 429 ? 60000 : 15 * 60 * 1000) }).catch(() => {});
           if (cached.length) return remember(cached);
           throw error;
         }
-      }).finally(() => catalogTasks.delete(market));
-      catalogTasks.set(market, task);
+      }).finally(() => catalogTasks.delete(taskKey));
+      catalogTasks.set(taskKey, task);
       return task;
+    }
+    // Read again so markets updated while the request was in flight are not overwritten.
+    async function writeCatalogEntry(market, entry) {
+      const latest = (await read(area, BING_CACHE_KEY)) || {};
+      await write(area, BING_CACHE_KEY, { ...latest, [market]: entry });
     }
     // Titles and credits of chosen photos outlive the 8-day catalog, so keep them separately.
     async function readStoredDetails(id) {
@@ -222,10 +247,15 @@
       const descriptor = wallpaperFromId(id);
       if (!descriptor) return null;
       if (id === BING_DAILY_ID) {
-        const cache = (await read(area, BING_DAILY_CACHE_KEY)) || {};
-        const entry = cache[getMarket()];
+        const market = getMarket();
+        const entry = ((await read(area, BING_DAILY_CACHE_KEY)) || {})[market];
         const daily = entry && wallpaperFromId(entry.id);
-        dailyWallpaper = daily && daily.rawId ? await restoreWallpaper(entry.id) : null;
+        // Without an entry for this market (e.g. after a language change), keep the previous
+        // photo on screen until ensureDailyWallpaper fetches this market's one.
+        if (daily && daily.rawId) {
+          dailyWallpaper = await restoreWallpaper(entry.id);
+          dailyMarket = market;
+        }
         return dailyWallpaper ? { ...dailyWallpaper, id: BING_DAILY_ID, dailyId: dailyWallpaper.id } : null;
       }
       if (!images.has(id)) {
@@ -252,25 +282,21 @@
       if (pendingImages.has(key)) return pendingImages.get(key);
       const task = lock(`lumno-bing-daily-${market}`, async () => {
         await restoreWallpaper(BING_DAILY_ID);
-        const dailyCache = (await read(area, BING_DAILY_CACHE_KEY)) || {};
-        if (dailyCache[market] && dailyCache[market].retryAt > now()) {
-          if (dailyWallpaper) return getWallpaper(BING_DAILY_ID);
-          throw new Error('Please try again shortly.');
-        }
+        // Backoff lives in getCatalog alone, so a successful refresh resolves the daily photo right away.
         try {
           const items = await getCatalog();
           const latest = items[0];
           // A delayed or stale archive response must not replace a newer daily photo.
-          if (dailyWallpaper && dailyWallpaper.date >= latest.date) return getWallpaper(BING_DAILY_ID);
+          if (dailyWallpaper && dailyMarket === market && dailyWallpaper.date >= latest.date) {
+            return getWallpaper(BING_DAILY_ID);
+          }
           const record = await ensureWallpaper(latest.id);
           const cache = (await read(area, BING_DAILY_CACHE_KEY)) || {};
-          await write(area, BING_DAILY_CACHE_KEY, { ...cache, [market]: { id: record.id, retryAt: 0 } });
+          await write(area, BING_DAILY_CACHE_KEY, { ...cache, [market]: { id: record.id } });
           dailyWallpaper = record;
+          dailyMarket = market;
           return getWallpaper(BING_DAILY_ID);
         } catch (error) {
-          const cache = (await read(area, BING_DAILY_CACHE_KEY)) || {};
-          await write(area, BING_DAILY_CACHE_KEY, { ...cache, [market]: {
-            ...cache[market], retryAt: now() + 15 * 60 * 1000 } }).catch(() => {});
           if (dailyWallpaper) return getWallpaper(BING_DAILY_ID);
           throw error;
         }

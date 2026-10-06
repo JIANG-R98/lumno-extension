@@ -9,6 +9,7 @@ import {
 } from '../shared/use-exclusive-async-action';
 import { InlinePopconfirm } from './inline-popconfirm';
 import { InfoButton } from './info-button';
+import { BusyLabel } from '../shared/busy-label';
 
 export type BlacklistMatchMode = 'exact' | 'prefix' | 'suffix';
 
@@ -209,7 +210,7 @@ function BlacklistEditor({
           }}
           type="button"
         >
-          {copy.saveLabel}
+          <BusyLabel busy={saving}>{copy.saveLabel}</BusyLabel>
         </button>
       </div>
       <div

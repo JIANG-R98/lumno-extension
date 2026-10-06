@@ -784,8 +784,13 @@
   const SHORTCUT_DIALOG_ITEM_BOOKMARK = 'bookmark';
   const SHORTCUT_DIALOG_ITEM_FOLDER = 'folder';
   const folderColorApi = globalThis.LumnoNewtabFolderColorPicker;
-  const FOLDER_COLORS_STORAGE_KEY = folderColorApi.FOLDER_COLORS_STORAGE_KEY;
-  const FOLDER_COLOR_PRESETS_STORAGE_KEY = '_x_extension_bookmark_folder_color_presets_2026_unique_';
+  const LEGACY_FOLDER_COLORS_STORAGE_KEY = NEWTAB_BOOKMARK_FOLDER_ICON.FOLDER_COLORS_STORAGE_KEY;
+  const FOLDER_COLOR_REFS_STORAGE_KEY = NEWTAB_BOOKMARK_FOLDER_ICON.FOLDER_COLOR_REFS_STORAGE_KEY;
+  const FOLDER_COLOR_PRESETS_STORAGE_KEY = SETTINGS.BOOKMARK_FOLDER_COLOR_PRESETS_STORAGE_KEY ||
+    '_x_extension_bookmark_folder_color_presets_2026_unique_';
+  // Synced colors keyed by folder path, and the colors they resolve to for
+  // this device's bookmark ids.
+  let folderColorRefs = {};
   let folderColors = {};
 
   const defaultSiteSearchProviders = SEARCH_UTILS.getDefaultSiteSearchProviders();
@@ -1168,37 +1173,95 @@
     });
   }
 
-  function readFolderColors() {
+  function folderColorStorage(area, method, value) {
     return new Promise((resolve, reject) => {
-      if (!localStorageArea) { resolve({}); return; }
-      localStorageArea.get(FOLDER_COLORS_STORAGE_KEY, (data) => {
+      if (!area) { reject(new Error('Storage unavailable')); return; }
+      area[method](value, (data) => {
         const error = chrome.runtime && chrome.runtime.lastError;
-        if (error) { reject(new Error(error.message)); return; }
-        resolve(folderColorApi.normalizeFolderColorMap(data && data[FOLDER_COLORS_STORAGE_KEY]));
+        if (error) reject(new Error(error.message));
+        else resolve(data || {});
       });
     });
   }
 
-  function loadFolderColors() {
-    return readFolderColors().then((colors) => {
-      folderColors = colors;
+  function readFolderColorRefs() {
+    return folderColorStorage(storageArea, 'get', [FOLDER_COLOR_REFS_STORAGE_KEY]).then((data) =>
+      NEWTAB_BOOKMARK_FOLDER_ICON.normalizeFolderColorRefs(data[FOLDER_COLOR_REFS_STORAGE_KEY]));
+  }
+
+  function writeFolderColorRefs(refs) {
+    return folderColorStorage(storageArea, 'set', { [FOLDER_COLOR_REFS_STORAGE_KEY]: refs });
+  }
+
+  // Bookmark ids and paths can change underneath the synced map; resolving
+  // again also moves a renamed or moved folder's color to its new path.
+  // Only this device's own load or bookmark changes write that move back.
+  // A map arriving from another device whose bookmarks have not caught up
+  // would otherwise move the entry back and forth between the two devices.
+  function applyFolderColorRefs(persist) {
+    const resolved = NEWTAB_BOOKMARK_FOLDER_ICON.resolveFolderColors(folderColorRefs, bookmarksRuntime.getNodeMap());
+    folderColors = resolved.colors;
+    refreshFolderColors();
+    if (!resolved.changed || !persist) return Promise.resolve();
+    folderColorRefs = resolved.refs;
+    return writeFolderColorRefs(resolved.refs).catch((error) => {
+      console.warn('[Lumno] Could not update folder color references.', error);
+    });
+  }
+
+  function syncFolderColorsWithBookmarks(persist) {
+    if (!Object.keys(folderColorRefs).length) {
+      folderColors = {};
       refreshFolderColors();
+      return Promise.resolve();
+    }
+    return bookmarksRuntime.ensureReady(false).then((ready) => {
+      if (ready) return applyFolderColorRefs(persist);
+      return undefined;
+    });
+  }
+
+  // Bookmark sync can deliver many changes at once; resolve after they settle.
+  let folderColorSyncTimer = 0;
+  function scheduleFolderColorSync() {
+    if (!Object.keys(folderColorRefs).length) return;
+    clearTimeout(folderColorSyncTimer);
+    folderColorSyncTimer = setTimeout(() => {
+      folderColorSyncTimer = 0;
+      syncFolderColorsWithBookmarks(true).catch(() => {});
+    }, 200);
+  }
+
+  // Colors saved before they synced were keyed by this device's bookmark ids.
+  async function migrateLegacyFolderColors() {
+    const data = await folderColorStorage(localStorageArea, 'get', [LEGACY_FOLDER_COLORS_STORAGE_KEY]);
+    const legacy = NEWTAB_BOOKMARK_FOLDER_ICON.normalizeFolderColorMap(data[LEGACY_FOLDER_COLORS_STORAGE_KEY]);
+    if (!Object.keys(legacy).length) return;
+    if (!await bookmarksRuntime.ensureReady(false)) return;
+    const refs = await readFolderColorRefs();
+    const next = NEWTAB_BOOKMARK_FOLDER_ICON.importFolderColorMap(legacy, refs, bookmarksRuntime.getNodeMap());
+    if (JSON.stringify(next) !== JSON.stringify(refs)) await writeFolderColorRefs(next);
+    await folderColorStorage(localStorageArea, 'remove', [LEGACY_FOLDER_COLORS_STORAGE_KEY]);
+  }
+
+  function loadFolderColors() {
+    return migrateLegacyFolderColors().catch((error) => {
+      console.warn('[Lumno] Could not migrate folder colors.', error);
+    }).then(readFolderColorRefs).then((refs) => {
+      folderColorRefs = refs;
+      return syncFolderColorsWithBookmarks(true);
     }).catch(() => {});
   }
 
   async function saveFolderColor(folderId, color) {
-    const next = await readFolderColors();
-    if (color) next[folderId] = color;
-    else delete next[folderId];
-    await new Promise((resolve, reject) => {
-      if (!localStorageArea) { reject(new Error('Storage unavailable')); return; }
-      localStorageArea.set({ [FOLDER_COLORS_STORAGE_KEY]: next }, () => {
-        const error = chrome.runtime && chrome.runtime.lastError;
-        if (error) reject(new Error(error.message));
-        else resolve();
-      });
-    });
-    folderColors = next;
+    const [refs, ready] = await Promise.all([readFolderColorRefs(), bookmarksRuntime.ensureReady(false)]);
+    const next = ready
+      ? NEWTAB_BOOKMARK_FOLDER_ICON.setFolderColorRef(refs, folderId, color, bookmarksRuntime.getNodeMap())
+      : null;
+    if (!next) throw new Error('Folder is unavailable');
+    await writeFolderColorRefs(next);
+    folderColorRefs = next;
+    await applyFolderColorRefs(true);
   }
 
   async function openFolderColorPicker(folderId, title, sourceElement) {
@@ -1215,22 +1278,9 @@
           applyFolderColor: NEWTAB_BOOKMARK_FOLDER_ICON.applyFolderColor,
           bindTooltip: bindShortcutDialogTooltip,
           hideTooltip: hideShortcutDialogTooltip,
-          readSavedColors: () => new Promise((resolve, reject) => {
-            if (!localStorageArea) { reject(new Error('Storage unavailable')); return; }
-            localStorageArea.get(FOLDER_COLOR_PRESETS_STORAGE_KEY, (data) => {
-              const error = chrome.runtime && chrome.runtime.lastError;
-              if (error) { reject(new Error(error.message)); return; }
-              resolve(data && data[FOLDER_COLOR_PRESETS_STORAGE_KEY]);
-            });
-          }),
-          saveSavedColors: (colors) => new Promise((resolve, reject) => {
-            if (!localStorageArea) { reject(new Error('Storage unavailable')); return; }
-            localStorageArea.set({ [FOLDER_COLOR_PRESETS_STORAGE_KEY]: colors }, () => {
-              const error = chrome.runtime && chrome.runtime.lastError;
-              if (error) reject(new Error(error.message));
-              else resolve();
-            });
-          }),
+          readSavedColors: () => folderColorStorage(storageArea, 'get', [FOLDER_COLOR_PRESETS_STORAGE_KEY])
+            .then((data) => data[FOLDER_COLOR_PRESETS_STORAGE_KEY]),
+          saveSavedColors: (colors) => folderColorStorage(storageArea, 'set', { [FOLDER_COLOR_PRESETS_STORAGE_KEY]: colors }),
           onPreview: (id, color) => {
             folderColorPreview = { folderId: id, color };
             refreshFolderColors();
@@ -2320,6 +2370,7 @@
     setThemeScope: (...args) => setThemeScope(...args),
     getRiSvg,
     showToast,
+    beginToast,
     showTopActionTooltip: (...args) => showTopActionTooltip(...args),
     hideTopActionTooltip: (...args) => hideTopActionTooltip(...args),
     applyWordmarkThemeAppearance: (...args) => applyWordmarkThemeAppearance(...args),
@@ -2533,9 +2584,9 @@
       shortcutFolderRuntime.accept(changes[FOLDER_REFERENCES.BINDINGS_KEY].newValue);
       if (!isShortcutDragActive()) renderShortcuts();
     }
-    if (areaName === 'local' && changes[FOLDER_COLORS_STORAGE_KEY]) {
-      folderColors = folderColorApi.normalizeFolderColorMap(changes[FOLDER_COLORS_STORAGE_KEY].newValue);
-      refreshFolderColors();
+    if (isPrimaryStorageAreaName(areaName) && changes[FOLDER_COLOR_REFS_STORAGE_KEY]) {
+      folderColorRefs = NEWTAB_BOOKMARK_FOLDER_ICON.normalizeFolderColorRefs(changes[FOLDER_COLOR_REFS_STORAGE_KEY].newValue);
+      syncFolderColorsWithBookmarks(false).catch(() => {});
     }
     if (areaName === 'local' && changes[NEWTAB_SHORTCUT_ICONS_STORAGE_KEY]) {
       newtabShortcutIcons = NEWTAB_SHORTCUT_ICON_STORE.normalizeIconMap(
@@ -4926,6 +4977,7 @@
     storageArea,
     debugStorageKey: BOOKMARK_CASCADE_DEBUG_STORAGE_KEY,
     positionUtils: NEWTAB_BOOKMARK_CASCADE_POSITION,
+    crossSurfaceDrag: NEWTAB_CROSS_SURFACE_DRAG,
     menuSurface: globalThis.LumnoMenuSurface,
     t,
     sanitizeDisplayText,
@@ -5578,6 +5630,19 @@
         error: Boolean(isError)
       }));
     }
+  }
+
+  // A task that may run long: its loading Toast turns into the result in place.
+  function beginToast(message) {
+    if (toastController && typeof toastController.begin === 'function') {
+      return toastController.begin(message);
+    }
+    return {
+      update() {},
+      done(result) { if (result) showToast(result, false); },
+      fail(result) { if (result) showToast(result, true); },
+      cancel() {}
+    };
   }
 
   const numberShortcutOptions = {
@@ -7826,6 +7891,7 @@
       if (newtabShortcuts.some((shortcut) => shortcut.type === 'folder')) {
         refreshShortcutFolderReferences();
       }
+      scheduleFolderColorSync();
       const cascadeOpen = Boolean(
         bookmarkCascadeRuntime &&
         typeof bookmarkCascadeRuntime.isOpen === 'function' &&

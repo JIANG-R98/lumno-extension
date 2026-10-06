@@ -105,12 +105,58 @@ assert.strictEqual(toastElement.attributes.get('data-show'), 'false');
 assert.strictEqual(timers.size, 0);
 
 controller.show('Failed', { error: true, duration: 0 });
-assert.strictEqual(styleValues.get('background'), 'rgba(153, 27, 27, 0.92)');
+assert.strictEqual(toastElement.attributes.get('data-tone'), 'error');
+assert.strictEqual(styleValues.has('background'), false,
+  'the error palette comes from toast.css so its text color can follow');
 assert.strictEqual(timers.size, 0);
+controller.show('Saved', { duration: 0 });
+assert.notStrictEqual(toastElement.attributes.get('data-tone'), 'error');
+
+function runPendingTimers() {
+  const entries = Array.from(timers.entries());
+  timers.clear();
+  entries.forEach(([, timer]) => timer.callback());
+}
+
+// A quick task never flashes its loading copy; only the result shows.
+controller.hide();
+const quickTask = controller.begin('Importing…');
+assert.strictEqual(toastElement.attributes.get('data-show'), 'false');
+quickTask.done('Imported');
+assert.strictEqual(toastElement.textContent, 'Imported');
+assert.notStrictEqual(toastElement.attributes.get('data-tone'), 'loading');
+controller.hide();
+
+// A slow task shows its loading copy, survives a result message from elsewhere,
+// and comes back once that message expires.
+const slowTask = controller.begin('Syncing…');
+runPendingTimers();
+assert.strictEqual(toastElement.attributes.get('data-tone'), 'loading');
+assert.strictEqual(toastElement.attributes.get('data-show'), 'true');
+assert.strictEqual(toastElement.textContent, 'Syncing…');
+controller.show('Saved');
+assert.strictEqual(toastElement.textContent, 'Saved');
+runPendingTimers();
+assert.strictEqual(toastElement.textContent, 'Syncing…');
+assert.strictEqual(toastElement.attributes.get('data-tone'), 'loading');
+slowTask.fail('Sync failed');
+assert.strictEqual(toastElement.attributes.get('data-tone'), 'error');
+assert.strictEqual(toastElement.textContent, 'Sync failed');
+runPendingTimers();
+assert.strictEqual(toastElement.attributes.get('data-show'), 'false');
+
+const cancelledTask = controller.begin('Saving…', { delay: 0 });
+assert.strictEqual(toastElement.textContent, 'Saving…');
+cancelledTask.cancel();
+assert.strictEqual(toastElement.attributes.get('data-show'), 'false');
+cancelledTask.done('Ignored after cancel');
+assert.strictEqual(toastElement.attributes.get('data-show'), 'false');
 
 controller.destroy();
 styleGate.destroy();
 controller.show('Ignored');
-assert.strictEqual(toastElement.textContent, 'Failed');
+assert.strictEqual(toastElement.textContent, 'Saving…');
+controller.begin('Ignored', { delay: 0 }).done('Ignored');
+assert.strictEqual(toastElement.attributes.get('data-show'), 'false');
 
 console.log('shared Toast tests passed');

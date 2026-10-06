@@ -31,11 +31,6 @@
   border-color: rgba(251, 191, 36, 0.36);
   background: rgba(245, 158, 11, 0.16);
 }
-.lumno-webdav-sync-now[data-spinning="true"] .ri-icon { animation: lumno-webdav-spin 900ms linear infinite; }
-@keyframes lumno-webdav-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) {
-  .lumno-webdav-sync-now[data-spinning="true"] .ri-icon { animation: none; }
-}
 
 /* Anything that needs the user sits under a dashed rule, like the editor. */
 .lumno-webdav-notice {
@@ -110,8 +105,9 @@
 }
 
 /* Password: a saved one never returns to the page, so it shows as a locked
-   row with "Change"; a new one gets a show/hide toggle because password
-   managers cannot fill extension pages and pasting is the usual path. */
+   row with its status beside "Change"; a new one gets a show/hide toggle
+   because password managers cannot fill extension pages and pasting is the
+   usual path. */
 .lumno-webdav-password-saved {
   display: flex;
   align-items: center;
@@ -125,8 +121,8 @@
   font-size: var(--lumno-font-size-md);
 }
 .lumno-webdav-password-saved[data-disabled="true"] { opacity: .6; }
-.lumno-webdav-password-mask { color: var(--panel-text); letter-spacing: 1px; }
-.lumno-webdav-password-status { flex: 1; min-width: 0; color: var(--panel-subtext); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lumno-webdav-password-mask { flex: 1; min-width: 0; overflow: hidden; color: var(--panel-text); letter-spacing: 1px; white-space: nowrap; }
+.lumno-webdav-password-status { flex: 0 1 auto; min-width: 0; color: var(--panel-subtext); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lumno-webdav-password-change,
 .lumno-webdav-password-icon {
   all: unset;

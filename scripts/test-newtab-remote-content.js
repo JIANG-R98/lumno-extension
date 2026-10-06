@@ -87,6 +87,29 @@ async function main() {
   await offlineClient.getQuote('poetry');
   assert.equal(calls, 3, 'Failures should keep the last quote and enforce retry backoff');
 
+  const rerollStorage = storage();
+  const rerollTexts = ['same', 'same', 'fresh'];
+  let rerollFetches = 0;
+  const rerollClient = remote.createClient({ storageArea: rerollStorage, now: () => time,
+    fetch: async () => {
+      const text = rerollTexts[rerollFetches++];
+      if (!text) throw new Error('offline');
+      return response({ hitokoto: text });
+    } });
+  assert.equal((await rerollClient.getQuote('literature')).text, 'same');
+  assert.equal((await rerollClient.getQuote('literature', { reroll: true })).text, 'fresh',
+    'A reroll skips the daily cache and draws again when it repeats the current quote');
+  assert.equal(rerollFetches, 3);
+  assert.equal((await rerollClient.getQuote('literature')).text, 'fresh', 'The rerolled quote stays for the rest of the day');
+  assert.equal(rerollFetches, 3);
+  await assert.rejects(rerollClient.getQuote('literature', { reroll: true }), /offline/,
+    'A failed reroll reports the failure instead of falling back');
+  assert.equal(rerollStorage.values[remote.QUOTE_CACHE_KEY].literature.quote.text, 'fresh',
+    'A failed reroll keeps the cached quote');
+  const rerollTomorrow = remote.createClient({ storageArea: rerollStorage, now: () => time + 86400000,
+    fetch: async () => response({ hitokoto: 'tomorrow' }) });
+  assert.equal((await rerollTomorrow.getQuote('literature')).text, 'tomorrow', 'The next day replaces a rerolled quote');
+
   let catalogCalls = 0;
   let rateLimited = false;
   const catalogStorage = storage();
@@ -172,6 +195,65 @@ async function main() {
   await remote.createClient(options).ensureWallpaper(remote.BING_DAILY_ID);
   assert.equal(dailyFetches, fetchesAfterFailure, 'Catalog backoff should survive page reopens');
   assert.equal(dailyStorage.values[remote.BING_DAILY_CACHE_KEY]['zh-CN'].id, nextDay.dailyId);
+
+  assert.equal(remote.normalizeWallpaper({ ...wallpaper(), copyrightlink: '/search?q=river' }).sourceUrl,
+    'https://www.bing.com/search?q=river', 'Relative credit links resolve against Bing');
+  assert.equal(remote.normalizeWallpaper({ ...wallpaper(), copyrightlink: 'http://[' }).sourceUrl, 'https://www.bing.com',
+    'A malformed credit link must not drop the photo');
+
+  let limited = true;
+  const limitedClient = remote.createClient({ storageArea: storage(), now: () => time, language: 'en-US',
+    fetch: async () => limited ? response({}, 429) : response({ images: [wallpaper('OHR.Hill_EN-US1')] }) });
+  await assert.rejects(limitedClient.ensureWallpaper(remote.BING_DAILY_ID));
+  limited = false;
+  time += 60001;
+  assert(limitedClient.getWallpaper(remote.BING_DAILY_ID).imageUrl === undefined);
+  await limitedClient.getCatalog(true);
+  assert((await limitedClient.ensureWallpaper(remote.BING_DAILY_ID)).imageUrl.includes('OHR.Hill_EN-US1'),
+    'Once the catalog loads after a rate limit, the daily photo resolves without a longer separate backoff');
+
+  let refreshFetches = 0;
+  let releaseFetch;
+  const refreshClient = remote.createClient({ storageArea: storage(), now: () => time, language: 'en-US',
+    fetch: async () => {
+      refreshFetches += 1;
+      if (refreshFetches === 1) await new Promise((resolve) => { releaseFetch = resolve; });
+      return response({ images: [wallpaper('OHR.Hill_EN-US1')] });
+    } });
+  const plainLoad = refreshClient.getCatalog();
+  await new Promise((resolve) => setImmediate(resolve));
+  const refreshLoad = refreshClient.getCatalog(true);
+  releaseFetch();
+  await Promise.all([plainLoad, refreshLoad]);
+  assert.equal(refreshFetches, 2, 'A refresh must not resolve with a pending plain load');
+
+  const marketStorage = storage();
+  const marketFetch = (rawId) => async () => response({ images: [wallpaper(rawId)] });
+  await remote.createClient({ storageArea: marketStorage, now: () => time, language: 'en-US',
+    fetch: marketFetch('OHR.Hill_EN-US1') }).getCatalog();
+  let language = 'zh-CN';
+  let releaseZh;
+  const zhClient = remote.createClient({ storageArea: marketStorage, now: () => time, getLanguage: () => language,
+    fetch: async (url) => {
+      if (url.includes('zh-CN')) await new Promise((resolve) => { releaseZh = resolve; });
+      return response({ images: [wallpaper(url.includes('zh-CN') ? 'OHR.River_ZH-CN123' : 'OHR.River_JA-JP123')] });
+    } });
+  const zhLoad = zhClient.getCatalog();
+  await new Promise((resolve) => setImmediate(resolve));
+  await remote.createClient({ storageArea: marketStorage, now: () => time, language: 'ja-JP',
+    fetch: marketFetch('OHR.River_JA-JP123') }).getCatalog();
+  releaseZh();
+  await zhLoad;
+  assert.deepEqual(Object.keys(marketStorage.values[remote.BING_CACHE_KEY]).sort(), ['en-US', 'ja-JP', 'zh-CN'],
+    'Writing one market must not drop markets saved while its request was in flight');
+
+  const zhDaily = await zhClient.ensureWallpaper(remote.BING_DAILY_ID);
+  language = 'ja-JP';
+  assert.equal((await zhClient.restoreWallpaper(remote.BING_DAILY_ID)).dailyId, zhDaily.dailyId,
+    'A language change keeps the current photo until the new market resolves');
+  const jaDaily = await zhClient.ensureWallpaper(remote.BING_DAILY_ID);
+  assert.equal(jaDaily.date, zhDaily.date);
+  assert(jaDaily.dailyId.includes('JA-JP'), 'The same date in another market still switches to that market');
   console.log('newtab remote content tests passed');
 }
 main().catch((error) => { console.error(error); process.exitCode = 1; });

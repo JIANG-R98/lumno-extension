@@ -89,6 +89,10 @@
   --lumno-color-toast-bg-bottom: #f7f9fc;
   --lumno-color-toast-border: rgba(214, 219, 227, 0.95);
   --lumno-color-toast-text: #1f2937;
+  /* Error toast: one red surface in both themes, always with light text. */
+  --lumno-color-toast-error-bg: rgba(153, 27, 27, 0.92);
+  --lumno-color-toast-error-border: rgba(255, 255, 255, 0.16);
+  --lumno-color-toast-error-text: #ffffff;
   --lumno-color-selection-outline: #6b7280;
 
   /* Color: control parts */

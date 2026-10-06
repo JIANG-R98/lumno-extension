@@ -1082,6 +1082,9 @@
   "newtab_wallpaper_save_error": {
     "message": "壁紙儲存失敗"
   },
+  "newtab_wallpaper_importing": {
+    "message": "正在匯入壁紙…"
+  },
   "newtab_wallpaper_import_done": {
     "message": "壁紙匯入成功"
   },
@@ -2000,6 +2003,9 @@
   "sync_export_done": {
     "message": "已匯出設定"
   },
+  "sync_importing": {
+    "message": "正在匯入設定…"
+  },
   "sync_import_done": {
     "message": "匯入完成"
   },
@@ -2663,9 +2669,6 @@
   "webdav_never_synced": {
     "message": "尚未同步"
   },
-  "webdav_state_testing": {
-    "message": "正在測試連通性…"
-  },
   "webdav_choice_title": {
     "message": "選擇初始同步版本"
   },
@@ -2704,9 +2707,6 @@
   },
   "webdav_provider_jianguoyun": {
     "message": "堅果雲"
-  },
-  "webdav_connecting": {
-    "message": "正在連線…"
   },
   "webdav_upload_local": {
     "message": "上傳本機設定"
@@ -2818,6 +2818,12 @@
   },
   "newtab_quote_poetry": {
     "message": "詩詞"
+  },
+  "newtab_quote_shuffle": {
+    "message": "換一句"
+  },
+  "newtab_quote_shuffle_error": {
+    "message": "換一句失敗，請稍後再試"
   },
   "newtab_quote_save_error": {
     "message": "名句設定儲存失敗"

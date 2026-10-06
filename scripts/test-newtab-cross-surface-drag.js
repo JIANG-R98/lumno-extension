@@ -8,9 +8,11 @@ const repoRoot = path.resolve(__dirname, '..');
 const newtabJs = readNewtabRuntimeSource();
 const newtabHtml = readPageSource('newtab.html');
 const {
+  getInsertionGapNeighbors,
   getRowInsertionSlot,
   isBookmarkFolderDropTarget,
-  planBookmarkToShortcut
+  planBookmarkToShortcut,
+  setInsertionGap
 } = require(path.join(repoRoot, 'src', 'newtab', 'cross-surface-drag.js'));
 
 function getFunctionSource(source, name) {
@@ -355,6 +357,8 @@ assert.strictEqual(
   const factory = new Function(
     'bookmarkCascadeRuntime',
     `${getFunctionSource(newtabJs, 'isInsertLineDropTarget')}
+    // Neighbour leaning reads live layout; it is covered by the gap tests below.
+    function syncInsertionGap() {}
     ${getFunctionSource(newtabJs, 'clearDropTargetMarker')}
     ${getFunctionSource(newtabJs, 'clearDragDropTarget')}
     ${getFunctionSource(newtabJs, 'setDragDropTarget')}
@@ -628,5 +632,52 @@ assert.ok(
     );
   });
 });
+
+{
+  const [a, b, c, d] = ['a', 'b', 'c', 'd'];
+  const items = [a, b, c, d];
+  assert.deepStrictEqual(getInsertionGapNeighbors(items, b, 'before'), { before: a, after: b },
+    'a gap before an item leans its previous sibling and the item apart');
+  assert.deepStrictEqual(getInsertionGapNeighbors(items, b, 'after'), { before: b, after: c },
+    'a gap after an item leans the item and its next sibling apart');
+  assert.deepStrictEqual(getInsertionGapNeighbors(items, a, 'before'), { before: null, after: a },
+    'a gap at the start only moves the first item');
+  assert.deepStrictEqual(getInsertionGapNeighbors(items, d, 'after'), { before: d, after: null },
+    'a gap at the end only moves the last item');
+  const rowOf = { a: 0, b: 0, c: 1, d: 1 };
+  assert.deepStrictEqual(
+    getInsertionGapNeighbors(items, b, 'after', (item, anchor) => rowOf[item] === rowOf[anchor]),
+    { before: b, after: null },
+    'a neighbour that wrapped to the next row stays put'
+  );
+  assert.deepStrictEqual(getInsertionGapNeighbors(items, 'x', 'before'), { before: null, after: null },
+    'an anchor outside the list leans nothing');
+}
+
+{
+  const makeElement = () => {
+    const attributes = new Map();
+    return {
+      getAttribute: (name) => attributes.has(name) ? attributes.get(name) : null,
+      setAttribute: (name, value) => attributes.set(name, String(value)),
+      removeAttribute: (name) => attributes.delete(name)
+    };
+  };
+  const [first, second, third] = [makeElement(), makeElement(), makeElement()];
+  const owner = {};
+  setInsertionGap(owner, first, second);
+  assert.strictEqual(first.getAttribute('data-drag-gap'), 'before');
+  assert.strictEqual(second.getAttribute('data-drag-gap'), 'after');
+  setInsertionGap(owner, second, third);
+  assert.strictEqual(first.getAttribute('data-drag-gap'), 'rest',
+    'a released neighbour keeps its transition while it slides back');
+  assert.strictEqual(second.getAttribute('data-drag-gap'), 'before',
+    'a neighbour that stays adjacent switches sides without resting');
+  assert.strictEqual(third.getAttribute('data-drag-gap'), 'after');
+  setInsertionGap(owner, null, null);
+  assert.strictEqual(second.getAttribute('data-drag-gap'), 'rest');
+  assert.strictEqual(third.getAttribute('data-drag-gap'), 'rest');
+  [first, second, third].forEach((element) => clearTimeout(element._xInsertionGapRestTimer));
+}
 
 console.log('New tab cross-surface drag tests passed.');

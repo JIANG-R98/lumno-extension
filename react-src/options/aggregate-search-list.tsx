@@ -8,6 +8,7 @@ import {
   getAsyncErrorMessage,
   useExclusiveAsyncAction
 } from '../shared/use-exclusive-async-action';
+import { BusyLabel } from '../shared/busy-label';
 
 export interface AggregateSearchProviderOptionModel {
   available: boolean;
@@ -437,7 +438,7 @@ function AggregateSearchEditor({
           }}
           type="button"
         >
-          {item ? model.copy.saveLabel : model.copy.addLabel}
+          <BusyLabel busy={saving}>{item ? model.copy.saveLabel : model.copy.addLabel}</BusyLabel>
         </button>
       </div>
       <div

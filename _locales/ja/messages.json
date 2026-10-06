@@ -1082,6 +1082,9 @@
   "newtab_wallpaper_save_error": {
     "message": "壁紙を保存できませんでした"
   },
+  "newtab_wallpaper_importing": {
+    "message": "壁紙を追加しています…"
+  },
   "newtab_wallpaper_import_done": {
     "message": "壁紙を追加しました"
   },
@@ -2000,6 +2003,9 @@
   "sync_export_done": {
     "message": "設定を書き出しました"
   },
+  "sync_importing": {
+    "message": "設定を読み込んでいます…"
+  },
   "sync_import_done": {
     "message": "読み込み完了"
   },
@@ -2663,9 +2669,6 @@
   "webdav_never_synced": {
     "message": "未同期"
   },
-  "webdav_state_testing": {
-    "message": "疎通を確認中…"
-  },
   "webdav_choice_title": {
     "message": "最初に同期するデータを選択"
   },
@@ -2704,9 +2707,6 @@
   },
   "webdav_provider_jianguoyun": {
     "message": "Nutstore（坚果云）"
-  },
-  "webdav_connecting": {
-    "message": "接続中…"
   },
   "webdav_upload_local": {
     "message": "この端末の設定をアップロード"
@@ -2818,6 +2818,12 @@
   },
   "newtab_quote_poetry": {
     "message": "詩詞"
+  },
+  "newtab_quote_shuffle": {
+    "message": "別の一言を表示"
+  },
+  "newtab_quote_shuffle_error": {
+    "message": "別の一言を読み込めませんでした"
   },
   "newtab_quote_save_error": {
     "message": "一言の設定を保存できませんでした"

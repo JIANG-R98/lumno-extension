@@ -44,6 +44,8 @@
     const storageArea = getOption(config, 'storageArea', null);
     const debugStorageKey = String(getOption(config, 'debugStorageKey', '') || '');
     const positionUtils = getOption(config, 'positionUtils', {});
+    const crossSurfaceDrag = getOption(config, 'crossSurfaceDrag', null);
+    const insertionGapOwner = {};
     const menuSurface = getOption(config, 'menuSurface', null);
     const view = getOption(config, 'view', null);
     const t = getFunction(config, 't', function(_key, fallback) {
@@ -1888,6 +1890,18 @@
       return null;
     }
 
+    // Leans the rows above and below an insertion point apart.
+    function syncBookmarkCascadeInsertionGap(row, markerPosition, levelElement) {
+      if (!crossSurfaceDrag || typeof crossSurfaceDrag.setInsertionGap !== 'function') {
+        return;
+      }
+      const rows = row && levelElement
+        ? getBookmarkCascadeLevelItems(levelElement).map((button) => button.closest('.x-nt-bookmark-cascade-row') || button)
+        : [];
+      const { before, after } = crossSurfaceDrag.getInsertionGapNeighbors(rows, row, markerPosition);
+      crossSurfaceDrag.setInsertionGap(insertionGapOwner, before, after);
+    }
+
     function clearBookmarkCascadeDragTarget() {
       if (bookmarkCascadeDragTargetButton) {
         bookmarkCascadeDragTargetButton.removeAttribute('data-bookmark-drop-target');
@@ -1895,6 +1909,7 @@
       if (bookmarkCascadeDragInsertionElement) {
         bookmarkCascadeDragInsertionElement.removeAttribute('data-bookmark-insert-position');
       }
+      syncBookmarkCascadeInsertionGap(null, '');
       bookmarkCascadeDragTargetButton = null;
       bookmarkCascadeDragInsertionElement = null;
     }
@@ -1943,6 +1958,11 @@
             nextInsertionPosition
           );
         }
+        syncBookmarkCascadeInsertionGap(
+          bookmarkCascadeDragInsertionElement,
+          nextInsertionPosition,
+          match.entry && match.entry.levelElement
+        );
         const action = match.kind === 'cascade'
           ? bookmarkCascadeItemActions.get(match.button)
           : null;

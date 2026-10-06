@@ -19,7 +19,7 @@ assert.strictEqual(settings.addStorageChangeListener({
   storage: { onChanged: { addListener() {} } }
 }, null), false);
 
-assert.strictEqual(settings.CHROME_SYNC_STORAGE_KEYS.length, 69);
+assert.strictEqual(settings.CHROME_SYNC_STORAGE_KEYS.length, 71);
 assert.strictEqual(
   new Set(settings.CHROME_SYNC_STORAGE_KEYS).size,
   settings.CHROME_SYNC_STORAGE_KEYS.length
@@ -37,6 +37,10 @@ assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_newtab_time_font
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_newtab_time_seconds_visible_2026_unique_'));
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_search_result_display_limit_2026_unique_'));
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.AGGREGATE_SEARCH_STORAGE_KEY));
+// Folder colors sync by bookmark path; the legacy id-keyed map stays device-only.
+assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.BOOKMARK_FOLDER_COLOR_REFS_STORAGE_KEY));
+assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.BOOKMARK_FOLDER_COLOR_PRESETS_STORAGE_KEY));
+assert(!settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_bookmark_folder_colors_2026_unique_'));
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(
   settings.AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY
 ));
@@ -46,6 +50,8 @@ assert.strictEqual(settings.normalizeAggregateSearchAutoGroupEnabled(true), true
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_bookmark_view_mode_2026_unique_'));
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_SHORTCUTS_CHUNK_2_STORAGE_KEY));
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_SHORTCUTS_CHUNK_3_STORAGE_KEY));
+// The bookmark bar material syncs through WebDAV only, without the migrated legacy color.
+assert.deepStrictEqual(settings.BOOKMARK_TOPBAR_WEBDAV_STORAGE_KEYS, settings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS.slice(0, 3));
 assert(!settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_bookmark_topbar_surface_mode_2026_unique_'));
 assert(!settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_bookmark_topbar_surface_color_light_2026_unique_'));
 assert(!settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_bookmark_topbar_surface_color_dark_2026_unique_'));

@@ -11,7 +11,7 @@
           max(24px, var(--x-nt-bottom-safe-inset, env(safe-area-inset-bottom)))
           max(24px, env(safe-area-inset-left));
         box-sizing: border-box;
-        background: rgba(15, 23, 42, 0.12);
+        background: rgba(15, 23, 42, 0.4);
         backdrop-filter: blur(2px);
         -webkit-backdrop-filter: blur(2px);
         opacity: 0;
@@ -245,16 +245,7 @@
         from { clip-path: inset(0 100% 0 0); }
         to { clip-path: inset(0); }
       }
-      .x-nt-shortcut-icon-refresh-glyph[data-loading="true"] {
-        animation: x-nt-shortcut-icon-refresh-spin 900ms linear infinite;
-      }
-      @keyframes x-nt-shortcut-icon-refresh-spin {
-        to { transform: rotate(360deg); }
-      }
       @media (prefers-reduced-motion: reduce) {
-        .x-nt-shortcut-icon-refresh-glyph[data-loading="true"] {
-          animation: none;
-        }
         .x-nt-shortcut-icon-refresh[data-success="true"] .x-nt-shortcut-icon-refresh-label {
           animation: none;
         }

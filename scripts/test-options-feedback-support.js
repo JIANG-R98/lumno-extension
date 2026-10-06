@@ -37,8 +37,8 @@ assert.ok(
 );
 assert.match(
   optionsHtml,
-  /_x_extension_feedback_support_section_2026_unique_[\s\S]*?flex-direction: column[\s\S]*?_x_extension_feedback_support_links_2026_unique_[\s\S]*?display: flex[\s\S]*?justify-content: flex-start[\s\S]*?flex-wrap: nowrap[\s\S]*?gap: 16px/,
-  'feedback support should place all four compact links on one comfortably spaced row below the heading'
+  /_x_extension_feedback_support_section_2026_unique_[\s\S]*?flex-direction: column[\s\S]*?_x_extension_feedback_support_links_2026_unique_[\s\S]*?display: grid[\s\S]*?grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/,
+  'feedback support should lay the four links out as equal-width tiles below the heading'
 );
 assert.match(
   feedbackReact,

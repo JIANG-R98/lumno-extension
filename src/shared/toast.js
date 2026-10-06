@@ -111,11 +111,14 @@
     });
   }
 
+  const NOOP_TASK = Object.freeze({ update() {}, done() {}, fail() {}, cancel() {} });
+
   function createToastController(toastElement, options) {
     if (!toastElement) {
       return Object.freeze({
         show() {},
         hide() {},
+        begin() { return NOOP_TASK; },
         destroy() {}
       });
     }
@@ -124,15 +127,63 @@
     const defaultDuration = Number.isFinite(Number(config.duration))
       ? Math.max(0, Number(config.duration))
       : 2200;
+    const loadingDelay = Number.isFinite(Number(config.loadingDelay))
+      ? Math.max(0, Number(config.loadingDelay))
+      : 240;
+    // Tasks still running, oldest first. The newest one that has passed its delay
+    // owns the Toast whenever no result message is on screen.
+    const tasks = [];
     let timer = 0;
+    let messageShowing = false;
     let destroyed = false;
 
-    function hide() {
+    function clearTimer() {
       if (timer && win && typeof win.clearTimeout === 'function') {
         win.clearTimeout(timer);
       }
       timer = 0;
-      if (!destroyed) {
+    }
+
+    function render(text, tone) {
+      const doc = toastElement.ownerDocument;
+      if (tone === 'loading' && doc && typeof toastElement.replaceChildren === 'function') {
+        const spinner = doc.createElement('span');
+        spinner.className = 'x-lumno-toast-spinner';
+        spinner.setAttribute('aria-hidden', 'true');
+        toastElement.replaceChildren(spinner, doc.createTextNode(text));
+      } else {
+        toastElement.textContent = text;
+      }
+      if (tone) {
+        toastElement.setAttribute('data-tone', tone);
+      } else if (typeof toastElement.removeAttribute === 'function') {
+        toastElement.removeAttribute('data-tone');
+      } else {
+        toastElement.setAttribute('data-tone', '');
+      }
+      toastElement.setAttribute('data-show', 'true');
+    }
+
+    function visibleTask() {
+      for (let index = tasks.length - 1; index >= 0; index -= 1) {
+        if (tasks[index].visible) {
+          return tasks[index];
+        }
+      }
+      return null;
+    }
+
+    // Falls back to the running task once a result message is gone.
+    function settle() {
+      clearTimer();
+      messageShowing = false;
+      if (destroyed) {
+        return;
+      }
+      const task = visibleTask();
+      if (task) {
+        render(task.text, 'loading');
+      } else {
         toastElement.setAttribute('data-show', 'false');
       }
     }
@@ -143,38 +194,106 @@
         return;
       }
       const nextOptions = showOptions || {};
-      hide();
-      toastElement.textContent = text;
-      if (nextOptions.error && toastElement.style) {
-        toastElement.style.setProperty(
-          'background',
-          config.errorBackground || 'rgba(153, 27, 27, 0.92)'
-        );
-      } else if (toastElement.style) {
-        toastElement.style.removeProperty('background');
-      }
-      toastElement.setAttribute('data-show', 'true');
+      clearTimer();
+      messageShowing = true;
+      render(text, nextOptions.error ? 'error' : '');
       const duration = Number.isFinite(Number(nextOptions.duration))
         ? Math.max(0, Number(nextOptions.duration))
         : defaultDuration;
       if (duration > 0 && win && typeof win.setTimeout === 'function') {
         timer = win.setTimeout(() => {
           timer = 0;
-          if (!destroyed) {
-            toastElement.setAttribute('data-show', 'false');
-          }
+          settle();
         }, duration);
       }
     }
 
+    function begin(message, beginOptions) {
+      if (destroyed) {
+        return NOOP_TASK;
+      }
+      const nextOptions = beginOptions || {};
+      const delay = Number.isFinite(Number(nextOptions.delay))
+        ? Math.max(0, Number(nextOptions.delay))
+        : loadingDelay;
+      const task = { text: String(message || ''), visible: false, delayTimer: 0 };
+      let finished = false;
+
+      function isOnScreen() {
+        return task.visible && !messageShowing && visibleTask() === task;
+      }
+
+      function reveal() {
+        task.delayTimer = 0;
+        if (finished || destroyed) {
+          return;
+        }
+        task.visible = true;
+        if (isOnScreen()) {
+          render(task.text, 'loading');
+        }
+      }
+
+      function finish(resultMessage, resultOptions) {
+        if (finished) {
+          return;
+        }
+        finished = true;
+        if (task.delayTimer && win && typeof win.clearTimeout === 'function') {
+          win.clearTimeout(task.delayTimer);
+        }
+        const wasOnScreen = isOnScreen();
+        tasks.splice(tasks.indexOf(task), 1);
+        if (resultMessage) {
+          show(resultMessage, resultOptions);
+        } else if (wasOnScreen) {
+          settle();
+        }
+      }
+
+      tasks.push(task);
+      if (delay > 0 && win && typeof win.setTimeout === 'function') {
+        task.delayTimer = win.setTimeout(reveal, delay);
+      } else {
+        reveal();
+      }
+
+      return Object.freeze({
+        update(nextMessage) {
+          if (finished) {
+            return;
+          }
+          task.text = String(nextMessage || '');
+          if (isOnScreen()) {
+            render(task.text, 'loading');
+          }
+        },
+        done(resultMessage, resultOptions) {
+          finish(resultMessage, resultOptions);
+        },
+        fail(resultMessage, resultOptions) {
+          finish(resultMessage, Object.assign({}, resultOptions, { error: true }));
+        },
+        cancel() {
+          finish('');
+        }
+      });
+    }
+
     return Object.freeze({
       show,
-      hide,
+      hide: settle,
+      begin,
       destroy() {
         if (destroyed) {
           return;
         }
-        hide();
+        tasks.splice(0).forEach((task) => {
+          if (task.delayTimer && win && typeof win.clearTimeout === 'function') {
+            win.clearTimeout(task.delayTimer);
+          }
+        });
+        settle();
         destroyed = true;
       }
     });

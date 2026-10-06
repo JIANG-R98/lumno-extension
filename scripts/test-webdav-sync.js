@@ -11,6 +11,8 @@ const cryptoApi = { subtle: webcrypto.subtle, randomUUID };
 const config = { endpoint: 'https://dav.example.test/dav/', directory: 'lumno', username: 'user', password: 'app-password' };
 const theme = settings.THEME_STORAGE_KEY;
 const language = '_x_extension_language_2024_unique_';
+const customSearch = '_x_extension_site_search_custom_2024_unique_';
+const engine = (name) => [{ name, url: `https://${name}.example/?q=%s` }];
 
 function createServer() {
   const files = new Map();
@@ -227,8 +229,8 @@ async function run() {
     assert.deepStrictEqual(compatible.state().data, { [theme]: 'dark', [language]: 'ja' });
     assert.strictEqual(compatible.directories.has(lockPath), false);
     assert.strictEqual(a.chrome.storage.sync.values[theme], 'dark', 'Chrome backup remains active in compatibility mode');
-    await set(a.chrome.storage.sync, { [theme]: 'light' });
-    await set(b.chrome.storage.sync, { [theme]: 'system' });
+    await set(a.chrome.storage.sync, { [customSearch]: engine('a') });
+    await set(b.chrome.storage.sync, { [customSearch]: engine('b') });
     await a.controller.handle({ operation: 'sync' });
     assert.strictEqual((await b.controller.handle({ operation: 'sync' })).conflict, true, 'directory locks do not bypass three-way conflict detection');
   }
@@ -409,7 +411,11 @@ async function run() {
   const merged = contract.mergeStates(base, empty({ ...base.data, [theme]: 'dark' }), empty({ ...base.data, [language]: 'ja' }));
   assert.deepStrictEqual(merged.conflicts, []);
   assert.deepStrictEqual(merged.state.data, { [theme]: 'dark', [language]: 'ja' });
-  assert.deepStrictEqual(contract.mergeStates(base, empty({ [theme]: 'dark' }), empty({ [theme]: 'system' })).conflicts, [theme]);
+  const settingBoth = contract.mergeStates(base, empty({ [theme]: 'dark' }), empty({ [theme]: 'system' }));
+  assert.deepStrictEqual(settingBoth.conflicts, [], 'a single setting both sides changed is not a conflict');
+  assert.strictEqual(settingBoth.state.data[theme], 'dark', 'this device holds the latest edit of a single setting');
+  assert.deepStrictEqual(contract.mergeStates(empty({ [customSearch]: engine('base') }), empty({ [customSearch]: engine('a') }),
+    empty({ [customSearch]: engine('b') })).conflicts, [customSearch], 'a list both sides changed apart is a conflict');
   const deletion = contract.mergeStates(base, empty({ [language]: 'en' }), base);
   assert.strictEqual(Object.hasOwn(deletion.state.data, theme), false);
   assert.throws(() => contract.validateState({ ...empty(), version: 100 }), /invalid-state/);
@@ -421,14 +427,56 @@ async function run() {
   assert.deepStrictEqual(quoteMerged.conflicts, [], 'different fields of a field-merged record do not conflict');
   assert.deepStrictEqual(quoteMerged.state.data[quote], { enabled: true, position: 'bottom', category: 'literature', fontSize: 20 });
   const quoteBoth = empty({ [quote]: { ...quoteRemote.data[quote], fontSize: 18, category: 'poetry' } });
-  assert.deepStrictEqual(contract.mergeStates(quoteBase, quoteLocal, quoteBoth).conflicts, [quote], 'a record reports one conflict');
-  assert.deepStrictEqual(contract.mergeStates(quoteBase, quoteLocal, quoteBoth, 'local').state.data[quote],
-    { enabled: true, position: 'bottom', category: 'poetry', fontSize: 20 }, 'a chosen side wins only its conflicting fields');
+  const quoteBothMerged = contract.mergeStates(quoteBase, quoteLocal, quoteBoth);
+  assert.deepStrictEqual(quoteBothMerged.conflicts, [], 'a field both sides changed is a single setting');
+  assert.deepStrictEqual(quoteBothMerged.state.data[quote],
+    { enabled: true, position: 'bottom', category: 'poetry', fontSize: 20 }, 'this device wins only the fields both sides changed');
+  assert.deepStrictEqual(contract.mergeStates(quoteBase, quoteLocal, quoteBoth, 'remote').state.data[quote],
+    { enabled: true, position: 'bottom', category: 'poetry', fontSize: 18 }, 'choosing the server version applies to settings too');
   assert.deepStrictEqual(contract.describeConflict(quoteBase, quoteLocal, quoteBoth, [quote]), [
     { key: quote, field: 'fontSize', domain: 'preference', local: { kind: 'number', value: 20 }, remote: { kind: 'number', value: 18 } }
   ], 'field conflicts list only the fields both sides changed apart');
-  assert.deepStrictEqual(contract.mergeStates(quoteBase, empty(), quoteRemote).conflicts, [quote], 'deleting a record is a whole-value change');
-  assert.deepStrictEqual(contract.mergeStates(empty(), quoteLocal, quoteBoth).conflicts, [quote], 'a missing base record counts as empty');
+  const quoteDeleted = contract.mergeStates(quoteBase, empty(), quoteRemote);
+  assert.strictEqual(Object.hasOwn(quoteDeleted.state.data, quote), false, 'deleting a record is a whole-value change');
+  assert.deepStrictEqual(contract.mergeStates(empty(), quoteLocal, quoteBoth).state.data[quote],
+    quoteLocal.data[quote], 'a missing base record counts as empty, so every differing field is this device\'s');
+  const folderColors = settings.BOOKMARK_FOLDER_COLOR_REFS_STORAGE_KEY;
+  const workRef = 'a'.repeat(16);
+  const homeRef = 'b'.repeat(16);
+  const colorBase = empty({ [folderColors]: { [workRef]: { color: '#5393FF', dateAdded: 1 } } });
+  const colorLocal = empty({ [folderColors]: { [workRef]: { color: '#22C55E', dateAdded: 1 } } });
+  const colorRemote = empty({ [folderColors]: { ...colorBase.data[folderColors], [homeRef]: { color: '#EF4444', dateAdded: 2 } } });
+  const colorMerged = contract.mergeStates(colorBase, colorLocal, colorRemote);
+  assert.deepStrictEqual(colorMerged.conflicts, [], 'devices coloring different folders do not conflict');
+  assert.deepStrictEqual(colorMerged.state.data[folderColors], {
+    [homeRef]: { color: '#EF4444', dateAdded: 2 }, [workRef]: { color: '#22C55E', dateAdded: 1 }
+  });
+  const colorBoth = empty({ [folderColors]: { [workRef]: { color: '#F59E0B', dateAdded: 1 } } });
+  assert.deepStrictEqual(contract.describeConflict(colorBase, colorLocal, colorBoth, [folderColors]), [
+    { key: folderColors, field: workRef, domain: 'preference', local: { kind: 'text', value: '#22C55E' }, remote: { kind: 'text', value: '#F59E0B' } }
+  ], 'a folder color conflict shows the colors, not the stored entry');
+  // Chrome sync delivers the shared wallpaper key before WebDAV delivers the
+  // local-only selection. That half-arrived edit is not a second device's change.
+  const shared = contract.WALLPAPER_KEY;
+  const selection = contract.LOCAL_WALLPAPER_KEY;
+  const halfWallpaper = contract.mergeStates(empty({ [shared]: { light: 'default' }, [selection]: { light: 'custom-wallpaper-1' } }),
+    empty({ [shared]: { light: 'aurora' }, [selection]: { light: 'custom-wallpaper-1' } }),
+    empty({ [shared]: { light: 'aurora' }, [selection]: { light: null } }));
+  assert.deepStrictEqual(halfWallpaper.conflicts, [], 'a wallpaper edit that arrived in halves does not conflict');
+  assert.deepStrictEqual(halfWallpaper.state.data[selection], { light: null }, 'the missing half comes from WebDAV');
+  const hashOf = (character) => character.repeat(64);
+  const libraryItem = (id, name) => ({ id, name, width: 10, height: 10, updatedAt: 1, image: hashOf('a'), thumbnail: hashOf('a') });
+  const media = { [hashOf('a')]: { mime: 'image/webp', size: 10 }, [hashOf('b')]: { mime: 'image/png', size: 10 } };
+  const shortcutA = { id: 'a', type: 'link', title: 'A', url: 'https://a.example/' };
+  const shortcutB = { id: 'b', type: 'link', title: 'B', url: 'https://b.example/' };
+  const halfIcon = contract.mergeStates({ ...empty(), shortcuts: [shortcutA] }, { ...empty(), shortcuts: [shortcutA, shortcutB] },
+    { ...empty(), shortcuts: [shortcutA, shortcutB], icons: { b: hashOf('b') }, assets: media });
+  assert.deepStrictEqual(halfIcon.conflicts, [], 'a shortcut that arrived before its icon does not conflict');
+  assert.deepStrictEqual(halfIcon.state.icons, { b: hashOf('b') });
+  const library = (...items) => ({ ...empty(), wallpapers: items, assets: media });
+  assert.deepStrictEqual(contract.mergeStates(library(libraryItem('custom-wallpaper-1', 'One')),
+    library(libraryItem('custom-wallpaper-1', 'One'), libraryItem('custom-wallpaper-2', 'Two')), library()).conflicts, ['wallpapers'],
+  'a wallpaper library both sides changed apart is still a conflict');
   const malicious = JSON.parse(JSON.stringify({ ...empty(), data: { password: 'never-import-this', [theme]: 'dark' } }));
   assert.deepStrictEqual(contract.validateState(malicious).data, { [theme]: 'dark' });
 
@@ -438,11 +486,13 @@ async function run() {
   assert(wallpaper.length <= 160 * 1024);
   const firstShortcut = shortcuts.createShortcutRecord({ id: 'first', title: 'First', url: 'https://example.com/' }, { now: 100 });
   const overflowShortcut = shortcuts.createShortcutRecord({ id: 'overflow', title: 'Overflow', url: 'https://other.example/' }, { now: 100 });
+  const [topbarMode, topbarLight, topbarDark, topbarLegacy] = settings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS;
   const first = createDevice(server, {
     sync: { [theme]: 'light', [language]: 'en', [contract.SHORTCUT_KEYS[0]]: [firstShortcut] },
     local: { [contract.OVERFLOW_KEY]: { authoritative: false, items: [overflowShortcut] },
       [contract.ICONS_KEY]: { first: `data:image/png;base64,${icon.toString('base64')}` },
-      [contract.LOCAL_WALLPAPER_KEY]: { version: 1, light: 'custom-wallpaper-test', dark: 'custom-wallpaper-test' } }
+      [contract.LOCAL_WALLPAPER_KEY]: { version: 1, light: 'custom-wallpaper-test', dark: 'custom-wallpaper-test' },
+      [topbarMode]: 'custom', [topbarLight]: '#112233', [topbarDark]: '#445566', [topbarLegacy]: '#778899' }
   }, [{ id: 'custom-wallpaper-test', key: 'custom-wallpaper-test', name: 'Test', width: 480, height: 270, updatedAt: 100,
     imageDataUrl: `data:image/webp;base64,${wallpaper.toString('base64')}`, thumbnailDataUrl: `data:image/webp;base64,${wallpaper.toString('base64')}` }]);
   await first.controller.handle({ operation: 'connect', config });
@@ -464,6 +514,20 @@ async function run() {
   assert.strictEqual(second.chrome.storage.local.values[contract.ICONS_KEY].first, first.chrome.storage.local.values[contract.ICONS_KEY].first);
   assert.strictEqual((await second.wallpaperStore.readAll())[0].imageDataUrl, (await first.wallpaperStore.readAll())[0].imageDataUrl);
   assert.deepStrictEqual(second.chrome.storage.local.values[contract.LOCAL_WALLPAPER_KEY], first.chrome.storage.local.values[contract.LOCAL_WALLPAPER_KEY]);
+  // The bookmark bar material travels with the wallpapers through WebDAV only.
+  assert.deepStrictEqual([topbarMode, topbarLight, topbarDark].map((key) => second.chrome.storage.local.values[key]),
+    ['custom', '#112233', '#445566'], 'WebDAV carries the bookmark bar material into local storage');
+  assert.strictEqual(Object.hasOwn(server.state().data, topbarLegacy), false, 'the legacy single color migrates locally and never syncs');
+  [first, second].forEach((device) => settings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS.forEach((key) => {
+    assert.strictEqual(Object.hasOwn(device.chrome.storage.sync.values, key), false, 'bookmark bar material never enters browser sync');
+  }));
+  await set(first.chrome.storage.local, { [topbarMode]: 'clear' });
+  await set(second.chrome.storage.local, { [topbarDark]: '#000000' });
+  await first.controller.handle({ operation: 'sync' });
+  await second.controller.handle({ operation: 'sync' });
+  await first.controller.handle({ operation: 'sync' });
+  [first, second].forEach((device) => assert.deepStrictEqual([topbarMode, topbarLight, topbarDark].map((key) =>
+    device.chrome.storage.local.values[key]), ['clear', '#112233', '#000000'], 'each bookmark bar value merges on its own'));
 
   await set(first.chrome.storage.sync, { [theme]: 'dark' });
   await set(second.chrome.storage.sync, { [language]: 'ja' });
@@ -483,15 +547,23 @@ async function run() {
   await set(first.chrome.storage.sync, { [theme]: 'light' });
   await set(second.chrome.storage.sync, { [theme]: 'system' });
   await first.controller.handle({ operation: 'sync' });
+  assert.deepStrictEqual(await second.controller.handle({ operation: 'sync' }), { ok: true }, 'a setting both devices changed does not ask');
+  assert.strictEqual(server.state().data[theme], 'system', 'the device that synced last publishes its setting');
+  await first.controller.handle({ operation: 'sync' });
+  assert.strictEqual(first.chrome.storage.sync.values[theme], 'system');
+
+  await set(first.chrome.storage.sync, { [customSearch]: engine('first') });
+  await set(second.chrome.storage.sync, { [customSearch]: engine('second') });
+  await first.controller.handle({ operation: 'sync' });
   assert.deepStrictEqual(await second.controller.handle({ operation: 'sync' }), { conflict: true });
-  assert.strictEqual(second.chrome.storage.sync.values[theme], 'system');
-  assert.strictEqual(server.state().data[theme], 'light');
+  assert.deepStrictEqual(second.chrome.storage.sync.values[customSearch], engine('second'));
+  assert.deepStrictEqual(server.state().data[customSearch], engine('first'));
   await second.controller.handle({ operation: 'sync', decision: 'remote' });
-  assert.strictEqual(second.chrome.storage.sync.values[theme], 'light');
-  assert.strictEqual(second.privateValues.get('replacementBackup').captured.state.data[theme], 'system', 'conflict resolution retains the replaced local copy');
+  assert.deepStrictEqual(second.chrome.storage.sync.values[customSearch], engine('first'));
+  assert.deepStrictEqual(second.privateValues.get('replacementBackup').captured.state.data[customSearch], engine('second'),
+    'conflict resolution retains the replaced local copy');
 
   server.offline = true;
-  const customSearch = '_x_extension_site_search_custom_2024_unique_';
   await set(first.chrome.storage.sync, { [customSearch]: [] });
   await assert.rejects(first.controller.handle({ operation: 'sync' }), /network-error/);
   await set(first.chrome.storage.sync, { [language]: 'en' });
@@ -524,7 +596,7 @@ async function run() {
   const goodState = server.state();
   server.replaceState({ bad: true });
   await assert.rejects(second.controller.handle({ operation: 'sync' }), /invalid-state/);
-  assert.strictEqual(second.chrome.storage.sync.values[theme], 'light');
+  assert.strictEqual(second.chrome.storage.sync.values[theme], 'system');
   server.replaceState(goodState);
   await set(first.chrome.storage.sync, { [customSearch]: [] });
   await first.controller.handle({ operation: 'sync' });
@@ -714,11 +786,12 @@ async function run() {
   await savedRestart.handle({ operation: 'enable' });
   assert(probeCount() > beforeNewDirectory, 'a new sync directory is independently verified');
 
-  const conflictBase = empty({ [theme]: 'light', [language]: 'en' });
-  const conflictLocal = empty({ [theme]: 'dark', [language]: 'ja' });
-  const conflictRemote = empty({ [theme]: 'system', [language]: 'en', [settings.SIMPLE_MODE_ENABLED_STORAGE_KEY]: true });
+  const conflictBase = empty({ [theme]: 'light', [language]: 'en', [customSearch]: engine('base') });
+  const conflictLocal = empty({ [theme]: 'dark', [language]: 'ja', [customSearch]: engine('local') });
+  const conflictRemote = empty({ [theme]: 'system', [language]: 'en', [customSearch]: engine('remote'),
+    [settings.SIMPLE_MODE_ENABLED_STORAGE_KEY]: true });
   assert.deepStrictEqual(contract.mergeStates(conflictBase, conflictLocal, conflictRemote, 'remote').state.data,
-    { [theme]: 'system', [language]: 'ja', [settings.SIMPLE_MODE_ENABLED_STORAGE_KEY]: true },
+    { [theme]: 'system', [language]: 'ja', [customSearch]: engine('remote'), [settings.SIMPLE_MODE_ENABLED_STORAGE_KEY]: true },
     'choosing a conflict version preserves unrelated edits from both sides');
   const conflictServer = createServer();
   const conflictDevice = createDevice(conflictServer, { sync: conflictBase.data });
@@ -727,8 +800,8 @@ async function run() {
   conflictServer.replaceState(conflictRemote);
   assert.strictEqual((await conflictDevice.controller.handle({ operation: 'sync' })).conflict, true);
   assert.deepStrictEqual((await conflictDevice.controller.handle({ operation: 'conflictDetails' })).items, [
-    { key: theme, domain: 'preference', local: { kind: 'text', value: 'dark' }, remote: { kind: 'text', value: 'system' } }
-  ], 'conflict details name only the conflicting setting and both values');
+    { key: customSearch, domain: 'preference', local: { kind: 'list', count: 1 }, remote: { kind: 'list', count: 1 } }
+  ], 'conflict details name only the conflicting list, not settings that resolved on their own');
   const link = (id, title) => ({ id, type: 'link', title, url: `https://${id}.example/` });
   const summaryBase = { ...empty(), shortcuts: [link('a', 'A'), link('b', 'B'), link('c', 'C')] };
   const summaryLocal = { ...empty(), shortcuts: [link('b', 'B'), link('a', 'A'), link('c', 'C2'), link('d', 'D')] };

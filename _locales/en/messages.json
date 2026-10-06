@@ -1082,6 +1082,9 @@
   "newtab_wallpaper_save_error": {
     "message": "Failed to save wallpaper"
   },
+  "newtab_wallpaper_importing": {
+    "message": "Importing wallpaper…"
+  },
   "newtab_wallpaper_import_done": {
     "message": "Wallpaper imported"
   },
@@ -2000,6 +2003,9 @@
   "sync_export_done": {
     "message": "Settings exported"
   },
+  "sync_importing": {
+    "message": "Importing settings…"
+  },
   "sync_import_done": {
     "message": "Import complete"
   },
@@ -2663,9 +2669,6 @@
   "webdav_never_synced": {
     "message": "Not synced yet"
   },
-  "webdav_state_testing": {
-    "message": "Testing connectivity…"
-  },
   "webdav_choice_title": {
     "message": "Choose the initial version"
   },
@@ -2704,9 +2707,6 @@
   },
   "webdav_provider_jianguoyun": {
     "message": "Nutstore"
-  },
-  "webdav_connecting": {
-    "message": "Connecting…"
   },
   "webdav_upload_local": {
     "message": "Upload this device's settings"
@@ -2818,6 +2818,12 @@
   },
   "newtab_quote_poetry": {
     "message": "Poetry"
+  },
+  "newtab_quote_shuffle": {
+    "message": "Show another quote"
+  },
+  "newtab_quote_shuffle_error": {
+    "message": "Could not load another quote"
   },
   "newtab_quote_save_error": {
     "message": "Failed to save quote settings"

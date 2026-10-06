@@ -41,9 +41,44 @@
   transform: translateX(-50%) translateY(0);
 }
 
+/* Failures share one red surface in both themes, so the text has to switch to light. */
+.x-lumno-toast[data-tone="error"] {
+  background: var(--lumno-color-toast-error-bg, rgba(153, 27, 27, 0.92));
+  color: var(--lumno-color-toast-error-text, #ffffff);
+  border-color: var(--lumno-color-toast-error-border, rgba(255, 255, 255, 0.16));
+}
+
+/* A task in progress: a small ring before the copy, kept until the task settles. */
+.x-lumno-toast-spinner {
+  all: unset;
+  display: inline-block;
+  box-sizing: border-box;
+  width: 12px;
+  height: 12px;
+  margin-inline-end: 8px;
+  vertical-align: -2px;
+  border: 1.5px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  opacity: 0.72;
+  animation: x-lumno-toast-spin 900ms linear infinite;
+}
+
+@keyframes x-lumno-toast-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .x-lumno-toast-spinner {
+    animation: none;
+    border-right-color: currentColor;
+    opacity: 0.4;
+  }
+}
+
 /* Extension pages get dark colors from tokens; this rule covers the in-page overlay,
    which marks its toast dark but has no tokens. */
-.x-lumno-toast[data-theme="dark"] {
+.x-lumno-toast[data-theme="dark"]:not([data-tone="error"]) {
   background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
   color: #f8fafc;
   border-color: rgba(255, 255, 255, 0.2);

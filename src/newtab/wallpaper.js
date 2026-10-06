@@ -201,6 +201,16 @@
         return '<i class="ri-icon ' + size + ' ' + id + '" aria-hidden="true"></i>';
       };
     const showToast = typeof options.showToast === 'function' ? options.showToast : function() {};
+    const beginToast = typeof options.beginToast === 'function'
+      ? options.beginToast
+      : function() {
+        return {
+          update() {},
+          done(result) { if (result) showToast(result, false); },
+          fail(result) { if (result) showToast(result, true); },
+          cancel() {}
+        };
+      };
     const showTopActionTooltip = typeof options.showTopActionTooltip === 'function'
       ? options.showTopActionTooltip
       : function() {};
@@ -1907,7 +1917,7 @@
     function getWallpaperTileSelectionId(id) {
       if (id !== REMOTE_CONTENT.BING_DAILY_ID) return id;
       const daily = remoteClient.getWallpaper(id);
-      return daily && daily.dailyId || (bingItems[0] && bingItems[0].id) || id;
+      return daily && daily.dailyId || id;
     }
 
     function getWallpaperSelectionIdForUi() {
@@ -4665,6 +4675,7 @@
       }
       customWallpaperImporting = true;
       updateCustomWallpaperUploadTile();
+      const toastTask = beginToast(t('newtab_wallpaper_importing', 'Importing wallpaper…'));
       buildCustomWallpaperRecordFromFile(file).then((record) => {
         return writeCustomWallpaperRecord(record).then(() => record);
       }).then((record) => {
@@ -4675,9 +4686,9 @@
         customWallpapers = customWallpapers.concat(nextWallpaper);
         persistNewtabWallpaper(nextWallpaper.id);
         renderCustomWallpaperTiles();
-        showToast(t('newtab_wallpaper_import_done', 'Wallpaper imported'), false);
+        toastTask.done(t('newtab_wallpaper_import_done', 'Wallpaper imported'));
       }).catch(() => {
-        showToast(t('newtab_wallpaper_import_error', 'Failed to import wallpaper'), true);
+        toastTask.fail(t('newtab_wallpaper_import_error', 'Failed to import wallpaper'));
       }).finally(() => {
         customWallpaperImporting = false;
         if (customWallpaperInput) {
@@ -5190,16 +5201,14 @@
       refs.bingDailyToggle.setAttribute('aria-label', t('newtab_bing_daily', 'Daily wallpaper'));
       refs.bingRecentLabel.textContent = t('newtab_bing_recent', 'Recent wallpapers');
       wallpaperBingRefresh.disabled = busy;
-      wallpaperBingRefresh.setAttribute('data-loading', bingLoading ? 'true' : 'false');
+      wallpaperBingRefresh.setAttribute('aria-busy', bingLoading ? 'true' : 'false');
       wallpaperBingRefresh.setAttribute('aria-label', t('newtab_bing_refresh', 'Refresh'));
       wallpaperBingGrid.setAttribute('aria-busy', String(busy));
       wallpaperBingGrid.setAttribute('data-loading', bingLoading && !bingItems.length ? 'true' : 'false');
       wallpaperBingStatus.textContent = bingStatus === 'loading' && !bingItems.length
         ? t('newtab_bing_loading', 'Loading wallpapers…')
-        : bingStatus === 'saving'
-          ? t('newtab_bing_saving', 'Saving wallpaper…')
-          : bingStatus === 'error'
-            ? t('newtab_bing_error', 'Could not load wallpapers. Please try again.') : '';
+        : bingStatus === 'error'
+          ? t('newtab_bing_error', 'Could not load wallpapers. Please try again.') : '';
       wallpaperBingPanel.setAttribute('aria-label', 'Bing');
       wallpaperBingTab.setAttribute('aria-label', 'Bing');
       const hasSource = Boolean(selected && selected.date);
@@ -5250,14 +5259,15 @@
         const items = await remoteClient.getCatalog(Boolean(refresh));
         if (seq !== bingCatalogSeq) return;
         bingItems = items;
+        bingStatus = '';
         if (NEWTAB_WALLPAPER_MODES.some((mode) => getEffectiveWallpaperIdForMode(mode) === REMOTE_CONTENT.BING_DAILY_ID)) {
-          await remoteClient.ensureWallpaper(REMOTE_CONTENT.BING_DAILY_ID);
+          // The list loaded; if the daily photo still fails, the current wallpaper simply stays.
+          await remoteClient.ensureWallpaper(REMOTE_CONTENT.BING_DAILY_ID).catch(() => {});
           if (seq !== bingCatalogSeq) return;
           if (getEffectiveWallpaperIdForMode(getResolvedWallpaperMode()) === REMOTE_CONTENT.BING_DAILY_ID) {
             applyResolvedNewtabWallpaper();
           }
         }
-        bingStatus = '';
       } catch (_error) {
         if (seq !== bingCatalogSeq) return;
         bingStatus = 'error';
@@ -5312,22 +5322,21 @@
       const mode = getWallpaperEditMode();
       const sameForModes = currentWallpaperPrefs.sameForModes;
       bingSelecting = true;
-      bingStatus = 'saving';
       renderBingTiles();
+      // The new wallpaper is its own success signal, so only a failure leaves a message.
+      const toastTask = beginToast(t('newtab_bing_saving', 'Saving wallpaper…'));
       try {
         await remoteClient.ensureWallpaper(id);
+        toastTask.done();
         if (seq !== bingSelectionSeq || mode !== getWallpaperEditMode() ||
             sameForModes !== currentWallpaperPrefs.sameForModes) return;
         persistNewtabWallpaper(id);
-        bingStatus = '';
       } catch (_error) {
-        if (seq === bingSelectionSeq) {
-          bingStatus = 'error';
-          showToast(t('newtab_bing_save_error', 'Could not save wallpaper. Please try again.'), true);
-        }
+        toastTask.fail(seq === bingSelectionSeq
+          ? t('newtab_bing_save_error', 'Could not save wallpaper. Please try again.')
+          : '');
       } finally {
         bingSelecting = false;
-        if (bingStatus === 'saving') bingStatus = '';
         renderBingTiles();
       }
     }
@@ -5853,11 +5862,10 @@
       bindBingDailyRolloverListeners();
       if (refs.bingDailyToggle) refs.bingDailyToggle.addEventListener('change', () => {
         const daily = remoteClient.getWallpaper(REMOTE_CONTENT.BING_DAILY_ID);
-        const id = refs.bingDailyToggle.checked
-          ? REMOTE_CONTENT.BING_DAILY_ID
-          : daily && daily.dailyId || bingItems[0] && bingItems[0].id;
-        if (id) selectBingWallpaper(id);
-        else updateBingUi();
+        if (refs.bingDailyToggle.checked) selectBingWallpaper(REMOTE_CONTENT.BING_DAILY_ID);
+        else if (daily && daily.dailyId) selectBingWallpaper(daily.dailyId);
+        // An unresolved daily photo shows the built-in default, so keep that one.
+        else persistNewtabWallpaper(NEWTAB_WALLPAPER_DEFAULT_ID);
       });
       bindCustomWallpaperUploadTile(customWallpaperUploadTile);
       wallpaperBuiltInGrid.querySelectorAll('[data-wallpaper-id]').forEach((tile) => {

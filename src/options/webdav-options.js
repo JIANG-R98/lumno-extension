@@ -41,9 +41,7 @@
       webdav_save: t("webdav_save", "保存"),
       webdav_enable: t("webdav_enable", "保存并开启同步"),
       webdav_never_synced: t("webdav_never_synced", "尚未同步"),
-      webdav_state_testing: t("webdav_state_testing", "正在测试连通性…"),
       webdav_state_recovery: t("webdav_state_recovery", "需要恢复"),
-      webdav_connecting: t("webdav_connecting", "正在连接…"),
       webdav_retry: t("webdav_retry", "重试"),
       webdav_copy_diagnostic: t("webdav_copy_diagnostic", "复制诊断信息"),
       webdav_diagnostic_copied: t("webdav_diagnostic_copied", "已复制"),
@@ -93,6 +91,7 @@
     ['overlay_page_theme_adaptation', 'settings_overlay_page_theme_adaptation_title'],
     ['bookmark_count', 'settings_bookmarks_title'], ['bookmark_columns', 'settings_bookmark_columns_title'],
     ['bookmark_folder_icons', 'settings_bookmark_folder_icons_visible_title'],
+    ['bookmark_folder_color', 'folder_color_title'], ['bookmark_topbar_surface', 'bookmark_topbar_surface_title'],
     ['newtab_shortcuts_visible', 'settings_newtab_shortcuts_title'], ['shortcut_add_visible', 'settings_newtab_shortcut_add_title'],
     ['dock_magnification', 'settings_newtab_shortcut_dock_magnification_title'],
     ['feedback_button', 'settings_newtab_feedback_button_visible_title'],
@@ -131,21 +130,41 @@
         fontSize: 'newtab_quote_font_size_label' },
       values: { top: 'newtab_quote_top', input: 'newtab_quote_input', search: 'newtab_quote_search', bottom: 'newtab_quote_bottom',
         literature: 'newtab_quote_literature', poetry: 'newtab_quote_poetry' }
-    }
+    },
+    // Fields are folder references with no readable name; the color shows which is which.
+    bookmark_folder_color_refs: { fields: null, values: {} }
   };
   function preferenceLabel(t, key) {
     const match = PREFERENCE_LABELS.find(([fragment]) => key.includes(fragment));
     const label = match ? t(match[1], '').trim() : '';
     return label || t('webdav_preference_other', '其他设置');
   }
+  // Whole-value settings that need more than their title: a qualifier for
+  // settings sharing one title, and the option names of enumerated values.
+  const VALUE_LABELS = {
+    bookmark_topbar_surface_mode: { values: { adaptive: 'bookmark_topbar_surface_adaptive', clear: 'bookmark_topbar_surface_clear',
+      transparent: 'bookmark_topbar_surface_transparent', custom: 'bookmark_topbar_surface_custom' } },
+    bookmark_topbar_surface_color_light: { qualifier: 'theme_label_light', values: {} },
+    bookmark_topbar_surface_color_dark: { qualifier: 'theme_label_dark', values: {} }
+  };
+  function optionValue(t, values, summary) {
+    return summary && summary.kind === 'text' && Object.hasOwn(values, summary.value)
+      ? { ...summary, value: t(values[summary.value], summary.value) } : summary;
+  }
   function preferenceItem(t, item) {
     const fields = Object.entries(FIELD_LABELS).find(([fragment]) => item.key.includes(fragment));
-    if (!item.field || !fields) return { ...item, label: preferenceLabel(t, item.key) };
+    if (!item.field || !fields) {
+      const extra = Object.entries(VALUE_LABELS).find(([fragment]) => item.key.includes(fragment));
+      if (!extra) return { ...item, label: preferenceLabel(t, item.key) };
+      const qualifier = extra[1].qualifier ? t(extra[1].qualifier, '').trim() : '';
+      return { ...item, label: [preferenceLabel(t, item.key), qualifier].filter(Boolean).join(' · '),
+        local: optionValue(t, extra[1].values, item.local), remote: optionValue(t, extra[1].values, item.remote) };
+    }
     const labels = fields[1];
-    const label = Object.hasOwn(labels.fields, item.field) ? t(labels.fields[item.field], '').trim() : '';
-    const value = (summary) => summary && summary.kind === 'text' && Object.hasOwn(labels.values, summary.value)
-      ? { ...summary, value: t(labels.values[summary.value], summary.value) } : summary;
-    return { ...item, label: label || `${preferenceLabel(t, item.key)} · ${item.field}`, local: value(item.local), remote: value(item.remote) };
+    const label = labels.fields && Object.hasOwn(labels.fields, item.field) ? t(labels.fields[item.field], '').trim() : '';
+    const value = (summary) => optionValue(t, labels.values, summary);
+    const fallback = labels.fields ? `${preferenceLabel(t, item.key)} · ${item.field}` : preferenceLabel(t, item.key);
+    return { ...item, label: label || fallback, local: value(item.local), remote: value(item.remote) };
   }
   function createController(options) {
     const chromeApi = options.chromeApi;

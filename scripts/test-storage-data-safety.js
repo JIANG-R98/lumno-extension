@@ -33,6 +33,11 @@ const expectedSyncKeys = [
   '_x_extension_bookmark_columns_2024_unique_',
   '_x_extension_bookmark_view_mode_2026_unique_',
   '_x_extension_bookmark_folder_icons_visible_2026_unique_',
+  // Added with an explicit migration: new tab moves the device-only id-keyed
+  // folder colors into the path-keyed map, and background startup copies saved
+  // colors from local storage into sync.
+  '_x_extension_bookmark_folder_color_refs_2026_unique_',
+  '_x_extension_bookmark_folder_color_presets_2026_unique_',
   '_x_extension_newtab_pinned_recent_sites_2026_unique_',
   '_x_extension_newtab_hidden_recent_sites_2026_unique_',
   '_x_extension_newtab_shortcuts_2026_unique_',

@@ -47,6 +47,9 @@
   const NEWTAB_QUOTE_FONT_SIZE_MAX = 24;
   const NEWTAB_QUOTE_FONT_SIZE_DEFAULT = 15;
   const BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY = '_x_extension_bookmark_folder_icons_visible_2026_unique_';
+  // Folder colors are keyed by bookmark path, not the device-only bookmark id.
+  const BOOKMARK_FOLDER_COLOR_REFS_STORAGE_KEY = '_x_extension_bookmark_folder_color_refs_2026_unique_';
+  const BOOKMARK_FOLDER_COLOR_PRESETS_STORAGE_KEY = '_x_extension_bookmark_folder_color_presets_2026_unique_';
   const UPDATE_NOTICE_ENABLED_STORAGE_KEY = '_x_extension_update_notice_enabled_2026_unique_';
   const MOTION_EFFECTS_ENABLED_STORAGE_KEY = '_x_extension_motion_effects_enabled_2026_unique_';
   const SIMPLE_MODE_ENABLED_STORAGE_KEY = '_x_extension_simple_mode_enabled_2026_unique_';
@@ -66,13 +69,17 @@
   const AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY =
     '_x_extension_aggregate_search_auto_group_enabled_2026_unique_';
   const PROGRESS_TRACKING_ENABLED_STORAGE_KEY = '_x_extension_progress_tracking_enabled_2026_unique_';
-  // Device-specific appearance. Never import these values from Chrome Sync.
+  // Bookmark bar material is chosen against the wallpaper. Browser sync
+  // carries no custom wallpapers, so these values never enter Chrome Sync.
   const BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS = Object.freeze([
     '_x_extension_bookmark_topbar_surface_mode_2026_unique_',
     '_x_extension_bookmark_topbar_surface_color_light_2026_unique_',
     '_x_extension_bookmark_topbar_surface_color_dark_2026_unique_',
     '_x_extension_bookmark_topbar_surface_color_2026_unique_'
   ]);
+  // WebDAV carries them together with the wallpapers. The legacy single color
+  // is migrated into the light and dark colors on each device.
+  const BOOKMARK_TOPBAR_WEBDAV_STORAGE_KEYS = Object.freeze(BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS.slice(0, 3));
   // User-controlled preferences that are safe to store in chrome.storage.sync.
   // Keep generated caches, device state, and custom wallpaper media out of this list.
   const CHROME_SYNC_STORAGE_KEYS = Object.freeze([
@@ -99,6 +106,8 @@
     '_x_extension_bookmark_columns_2024_unique_',
     '_x_extension_bookmark_view_mode_2026_unique_',
     '_x_extension_bookmark_folder_icons_visible_2026_unique_',
+    BOOKMARK_FOLDER_COLOR_REFS_STORAGE_KEY,
+    BOOKMARK_FOLDER_COLOR_PRESETS_STORAGE_KEY,
     '_x_extension_newtab_pinned_recent_sites_2026_unique_',
     '_x_extension_newtab_hidden_recent_sites_2026_unique_',
     '_x_extension_newtab_shortcuts_2026_unique_',
@@ -952,6 +961,8 @@
     NEWTAB_QUOTE_FONT_SIZE_MAX,
     NEWTAB_QUOTE_FONT_SIZE_DEFAULT,
     BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY,
+    BOOKMARK_FOLDER_COLOR_REFS_STORAGE_KEY,
+    BOOKMARK_FOLDER_COLOR_PRESETS_STORAGE_KEY,
     UPDATE_NOTICE_ENABLED_STORAGE_KEY,
     MOTION_EFFECTS_ENABLED_STORAGE_KEY,
     SIMPLE_MODE_ENABLED_STORAGE_KEY,
@@ -970,6 +981,7 @@
     AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY,
     PROGRESS_TRACKING_ENABLED_STORAGE_KEY,
     BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS,
+    BOOKMARK_TOPBAR_WEBDAV_STORAGE_KEYS,
     CHROME_SYNC_STORAGE_KEYS,
     SELECTION_QUICK_ACTIONS_PROVIDER_KEYS,
     NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY,

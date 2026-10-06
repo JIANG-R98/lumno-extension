@@ -12,8 +12,13 @@ assert.match(
 );
 assert.match(
   optionsSource,
-  /function showToast\(message, isError\)[\s\S]*?setAttribute\('role', errorToast \? 'alert' : 'status'\)[\s\S]*?setAttribute\('aria-live', errorToast \? 'assertive' : 'polite'\)[\s\S]*?setAttribute\('aria-atomic', 'true'\)/,
+  /function setToastAnnouncement\(errorToast\)[\s\S]*?setAttribute\('role', errorToast \? 'alert' : 'status'\)[\s\S]*?setAttribute\('aria-live', errorToast \? 'assertive' : 'polite'\)[\s\S]*?setAttribute\('aria-atomic', 'true'\)/,
   'Options should announce errors assertively and normal status updates politely'
+);
+assert.match(
+  optionsSource,
+  /function showToast\(message, isError\)[\s\S]*?setToastAnnouncement\(errorToast\)[\s\S]*?function beginToast\(message\)[\s\S]*?fail\(result\) \{\s*setToastAnnouncement\(true\)/,
+  'Options result Toasts, including a loading task that fails, should announce through the same live region rules'
 );
 const switchCss = fs.readFileSync('src/shared/switch.css', 'utf8');
 assert.match(

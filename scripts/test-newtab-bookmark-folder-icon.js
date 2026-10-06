@@ -11,6 +11,74 @@ const newtabHtml = readPageSource('newtab.html');
 const newtabJs = readNewtabRuntimeSource();
 assert.deepStrictEqual(folderIcon.normalizeFolderColorMap(JSON.parse('{"1":"#aabbcc", "2":"#FF0000", "3":"bad-value", "__proto__":"#ffffff", "invalid id":"#ffffff"}')), { '1': '#AABBCC', '2': '#FF0000' });
 
+{
+  // Two devices share folders through bookmark sync but not bookmark ids.
+  const tree = (ids, options = {}) => {
+    const work = { id: ids.work, parentId: '1', title: options.workTitle || 'Work', dateAdded: 1000, children: [
+      { id: ids.dev, parentId: ids.work, title: 'Dev', dateAdded: 2000, children: [] }
+    ] };
+    const twins = [
+      { id: ids.twinA, parentId: '1', title: 'Twin', dateAdded: 3000, children: [] },
+      { id: ids.twinB, parentId: '1', title: 'Twin', dateAdded: 4000, children: [] }
+    ];
+    const bar = { id: '1', parentId: '0', title: 'Bookmarks bar', folderType: 'bookmarks-bar',
+      children: options.moved ? twins : [work, ...twins] };
+    const other = { id: '2', parentId: '0', title: 'Other', folderType: 'other',
+      children: options.moved ? [{ ...work, parentId: '2' }] : [] };
+    const top = { id: '0', title: '', children: [bar, other] };
+    const map = new Map();
+    const visit = (node) => { map.set(node.id, node); (node.children || []).forEach(visit); };
+    visit(top);
+    return map;
+  };
+  const deviceA = tree({ work: '10', dev: '11', twinA: '12', twinB: '13' });
+  const deviceB = tree({ work: '90', dev: '91', twinA: '92', twinB: '93' });
+  let refs = folderIcon.setFolderColorRef({}, '11', '#22c55e', deviceA);
+  refs = folderIcon.setFolderColorRef(refs, '13', '#EF4444', deviceA);
+  assert.deepStrictEqual(Object.values(refs), [{ color: '#22C55E', dateAdded: 2000 }, { color: '#EF4444', dateAdded: 4000 }]);
+  assert(Object.keys(refs).every((ref) => /^[a-f0-9]{16}$/.test(ref)), 'synced keys never carry device bookmark ids');
+  assert.deepStrictEqual(folderIcon.resolveFolderColors(refs, deviceB).colors, { '91': '#22C55E', '93': '#EF4444' },
+    'another device resolves colors to its own ids, telling same-name siblings apart');
+  assert.strictEqual(folderIcon.resolveFolderColors(refs, deviceB).changed, false);
+  assert.strictEqual(folderIcon.setFolderColorRef(refs, 'missing', '#000000', deviceA), null);
+  assert.deepStrictEqual(folderIcon.resolveFolderColors(folderIcon.setFolderColorRef(refs, '11', null, deviceA), deviceA).colors,
+    { '13': '#EF4444' }, 'clearing a color removes the synced entry');
+
+  const renamed = tree({ work: '90', dev: '91', twinA: '92', twinB: '93' }, { workTitle: 'Jobs', moved: true });
+  const healed = folderIcon.resolveFolderColors(refs, renamed);
+  assert.strictEqual(healed.changed, true, 'a renamed and moved folder is found again by its creation time');
+  assert.deepStrictEqual(healed.colors, { '91': '#22C55E', '93': '#EF4444' });
+  assert.deepStrictEqual(folderIcon.resolveFolderColors(healed.refs, renamed),
+    { colors: healed.colors, refs: healed.refs, changed: false }, 'resolving again is stable, so it never loops writes');
+
+  // Deleting the first of two same-name folders shifts the second into its path.
+  const bothTwins = folderIcon.setFolderColorRef(refs, '12', '#8B5CF6', deviceA);
+  const shifted = tree({ work: '90', dev: '91', twinA: '92', twinB: '93' });
+  shifted.get('1').children = shifted.get('1').children.filter((node) => node.id !== '92');
+  shifted.delete('92');
+  const afterDelete = folderIcon.resolveFolderColors(bothTwins, shifted);
+  assert.deepStrictEqual(afterDelete.colors, { '91': '#22C55E', '93': '#EF4444' },
+    'the remaining twin keeps its own color instead of the deleted twin\'s');
+  assert.strictEqual(Object.keys(afterDelete.refs).length, 2, 'the deleted twin\'s entry is dropped');
+
+  // Without matching creation times the path still finds the folder.
+  const undated = tree({ work: '90', dev: '91', twinA: '92', twinB: '93' });
+  undated.forEach((node) => { node.dateAdded = 7; });
+  const byPath = folderIcon.resolveFolderColors(refs, undated);
+  assert.deepStrictEqual(byPath, { colors: { '91': '#22C55E', '93': '#EF4444' }, refs, changed: false });
+
+  const legacy = folderIcon.importFolderColorMap({ '10': '#aabbcc', '11': '#000000', gone: '#FFFFFF' }, refs, deviceA);
+  assert.deepStrictEqual(folderIcon.resolveFolderColors(legacy, deviceB).colors, { '90': '#AABBCC', '91': '#22C55E', '93': '#EF4444' },
+    'legacy id-keyed colors migrate without replacing colors that already synced');
+
+  const many = Object.fromEntries(Array.from({ length: folderIcon.MAX_FOLDER_COLOR_REFS + 5 }, (_, index) =>
+    [index.toString(16).padStart(16, '0'), { color: '#123456', dateAdded: index + 1 }]));
+  const capped = folderIcon.normalizeFolderColorRefs(many);
+  assert.strictEqual(Object.keys(capped).length, folderIcon.MAX_FOLDER_COLOR_REFS, 'the newest entries are kept under the cap');
+  assert(Buffer.byteLength(JSON.stringify(capped)) < 7680, 'a full map stays within the browser sync item quota');
+  assert.deepStrictEqual(folderIcon.normalizeFolderColorRefs({ bad: { color: '#FFFFFF' }, ['a'.repeat(16)]: { color: 'nope' } }), {});
+}
+
 const firstSvg = folderIcon.getFigmaFolderSvg('folder one');
 const secondSvg = folderIcon.getFigmaFolderSvg('folder/two');
 assert.ok(firstSvg.includes('x-nt-folder-filter-lower-base-folder_one'));

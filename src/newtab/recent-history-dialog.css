@@ -16,7 +16,7 @@
     max(24px, var(--x-nt-bottom-safe-inset, env(safe-area-inset-bottom)))
     max(24px, env(safe-area-inset-left));
   box-sizing: border-box;
-  background: rgba(15, 23, 42, 0.12);
+  background: rgba(15, 23, 42, 0.4);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
   opacity: 0;

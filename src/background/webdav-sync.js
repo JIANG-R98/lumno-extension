@@ -79,7 +79,7 @@
     let started = false;
     let stopped = false;
     const fail = (code) => { throw clientApi.error(code); };
-    const watchedKeys = [...settings.CHROME_SYNC_STORAGE_KEYS, contract.ICONS_KEY, contract.LOCAL_WALLPAPER_KEY,
+    const watchedKeys = [...settings.CHROME_SYNC_STORAGE_KEYS, contract.ICONS_KEY, ...contract.LOCAL_PREFERENCE_KEYS,
       contract.OVERFLOW_KEY, settings.ASSET_REVISION_STORAGE_KEY];
     function storage(area, method, value) {
       return new Promise((resolve, reject) => {
@@ -157,6 +157,10 @@
       for (let offset = 0; offset < bytes.length; offset += 8192) chunks.push(String.fromCharCode(...bytes.subarray(offset, offset + 8192)));
       return `data:${mime};base64,${root.btoa(chunks.join(''))}`;
     }
+    function pickLocalPreferences(values) {
+      return Object.fromEntries(contract.LOCAL_PREFERENCE_KEYS
+        .filter((key) => Object.prototype.hasOwnProperty.call(values, key)).map((key) => [key, values[key]]));
+    }
     function assetPath(hashValue, mime) { return `assets/${hashValue}.${mime === 'image/png' ? 'png' : 'webp'}`; }
     function capture(recovering = false) {
       return withLocalWrite(async () => {
@@ -173,9 +177,7 @@
       const regular = list.filter((item) => item.type !== 'folder' || item.folderRef);
       const ids = new Set(regular.map((item) => item.id));
       const state = { version: regular.some((item) => item.type === 'folder') || (await session()).base?.version === 2 ? 2 : 1,
-        data: contract.selectPreferences({ ...values,
-        ...(Object.prototype.hasOwnProperty.call(local, contract.LOCAL_WALLPAPER_KEY)
-          ? { [contract.LOCAL_WALLPAPER_KEY]: local[contract.LOCAL_WALLPAPER_KEY] } : {}) }),
+        data: contract.selectPreferences({ ...values, ...pickLocalPreferences(local) }),
         shortcuts: regular, icons: {}, wallpapers: [], assets: {} };
       async function addAsset(dataUrl, mime, maximum) {
         const bytes = decodeImage(dataUrl, mime, maximum);
@@ -275,7 +277,7 @@
       }
       return withLocalWrite(async () => {
         if (captured.generation !== generation) fail('local-changed');
-        const removed = [contract.LOCAL_WALLPAPER_KEY].filter((key) =>
+        const removed = contract.LOCAL_PREFERENCE_KEYS.filter((key) =>
           Object.prototype.hasOwnProperty.call(captured.local, key) && !Object.prototype.hasOwnProperty.call(state.data, key));
         // Stage the complete operation before changing either local store. Chrome
         // may terminate the worker between the media transaction and preferences.
@@ -286,8 +288,7 @@
         await storage(chromeFallbackArea || localPrefsArea, 'set', synced);
         if (removed.length) await storage(localPrefsArea, 'remove', removed);
         await storage(localPrefsArea, 'set', {
-          ...(Object.prototype.hasOwnProperty.call(payload, contract.LOCAL_WALLPAPER_KEY)
-            ? { [contract.LOCAL_WALLPAPER_KEY]: payload[contract.LOCAL_WALLPAPER_KEY] } : {}),
+          ...pickLocalPreferences(payload),
           [contract.OVERFLOW_KEY]: payload[contract.OVERFLOW_KEY], [contract.ICONS_KEY]: icons,
           [settings.ASSET_REVISION_STORAGE_KEY]: cryptoApi.randomUUID(),
           ...(runtime.isActiveAreaName('local') && chromeFallbackArea ? { [settings.LOCAL_PRIMARY_STORAGE_KEY]: false } : {}) });

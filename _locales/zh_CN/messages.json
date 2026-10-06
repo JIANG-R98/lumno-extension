@@ -1082,6 +1082,9 @@
   "newtab_wallpaper_save_error": {
     "message": "壁纸保存失败"
   },
+  "newtab_wallpaper_importing": {
+    "message": "正在导入壁纸…"
+  },
   "newtab_wallpaper_import_done": {
     "message": "壁纸导入成功"
   },
@@ -2000,6 +2003,9 @@
   "sync_export_done": {
     "message": "已导出配置"
   },
+  "sync_importing": {
+    "message": "正在导入配置…"
+  },
   "sync_import_done": {
     "message": "导入完成"
   },
@@ -2663,9 +2669,6 @@
   "webdav_never_synced": {
     "message": "尚未同步"
   },
-  "webdav_state_testing": {
-    "message": "正在测试连通性…"
-  },
   "webdav_choice_title": {
     "message": "选择初始同步版本"
   },
@@ -2704,9 +2707,6 @@
   },
   "webdav_provider_jianguoyun": {
     "message": "坚果云"
-  },
-  "webdav_connecting": {
-    "message": "正在连接…"
   },
   "webdav_upload_local": {
     "message": "上传本机配置"
@@ -2818,6 +2818,12 @@
   },
   "newtab_quote_poetry": {
     "message": "诗词"
+  },
+  "newtab_quote_shuffle": {
+    "message": "换一句"
+  },
+  "newtab_quote_shuffle_error": {
+    "message": "换一句失败，请稍后再试"
   },
   "newtab_quote_save_error": {
     "message": "名句设置保存失败"

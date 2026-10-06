@@ -45,6 +45,68 @@
     return { index: lastRowIndex + 1, anchorIndex: lastRowIndex, markerPosition: 'after' };
   }
 
+  // The two items on either side of an insertion point, in DOM order.
+  // `isSameLine(item, anchor)` drops a neighbour that wrapped to another row.
+  function getInsertionGapNeighbors(items, anchor, markerPosition, isSameLine) {
+    const list = Array.isArray(items) ? items : [];
+    const index = anchor ? list.indexOf(anchor) : -1;
+    if (index < 0) {
+      return { before: null, after: null };
+    }
+    const isAfter = markerPosition === 'after';
+    const before = isAfter ? anchor : list[index - 1] || null;
+    const after = isAfter ? list[index + 1] || null : anchor;
+    const keep = (item) => Boolean(item) &&
+      (item === anchor || typeof isSameLine !== 'function' || isSameLine(item, anchor));
+    return {
+      before: keep(before) ? before : null,
+      after: keep(after) ? after : null
+    };
+  }
+
+  const INSERTION_GAP_ATTRIBUTE = 'data-drag-gap';
+  const INSERTION_GAP_REST_MS = 240;
+
+  function releaseInsertionGapElement(element) {
+    const side = element.getAttribute(INSERTION_GAP_ATTRIBUTE);
+    if (!side || side === 'rest') {
+      return;
+    }
+    // Keep the transition rule while the neighbour slides back.
+    element.setAttribute(INSERTION_GAP_ATTRIBUTE, 'rest');
+    element._xInsertionGapRestTimer = setTimeout(() => {
+      element._xInsertionGapRestTimer = 0;
+      if (element.getAttribute(INSERTION_GAP_ATTRIBUTE) === 'rest') {
+        element.removeAttribute(INSERTION_GAP_ATTRIBUTE);
+      }
+    }, INSERTION_GAP_REST_MS);
+  }
+
+  // Leans the neighbours of an insertion point apart. `owner` remembers the
+  // leaning pair so the next call releases whichever is no longer adjacent.
+  function setInsertionGap(owner, before, after) {
+    if (!owner) {
+      return;
+    }
+    const next = new Map();
+    if (before) next.set(before, 'before');
+    if (after && after !== before) next.set(after, 'after');
+    const previous = owner.insertionGapElements instanceof Map ? owner.insertionGapElements : new Map();
+    previous.forEach((side, element) => {
+      if (!next.has(element)) releaseInsertionGapElement(element);
+    });
+    next.forEach((side, element) => {
+      if (element._xInsertionGapRestTimer) {
+        clearTimeout(element._xInsertionGapRestTimer);
+        element._xInsertionGapRestTimer = 0;
+      }
+      if (element.getAttribute(INSERTION_GAP_ATTRIBUTE) !== side) {
+        element.setAttribute(INSERTION_GAP_ATTRIBUTE, side);
+      }
+    });
+    owner.insertionGapElements = next;
+  }
+
   function isBookmarkFolderDropTarget(folderId, nodeMap) {
     const id = String(folderId || '');
     const node = id && nodeMap && typeof nodeMap.get === 'function'
@@ -130,8 +192,10 @@
   }
 
   return Object.freeze({
+    getInsertionGapNeighbors,
     getRowInsertionSlot,
     isBookmarkFolderDropTarget,
+    setInsertionGap,
     planBookmarkToShortcut,
     planTransferShortcuts,
     planShortcutReorder

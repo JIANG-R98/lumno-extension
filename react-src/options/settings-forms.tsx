@@ -15,6 +15,7 @@ import {
   useExclusiveAsyncAction
 } from '../shared/use-exclusive-async-action';
 import { InfoButton } from './info-button';
+import { BusyLabel } from '../shared/busy-label';
 
 export interface SiteSearchFormCopyModel
   extends SiteSearchProviderCategoryCopyModel {
@@ -300,7 +301,7 @@ function SiteSearchForm({
             }}
             type="button"
           >
-            {model.copy.addLabel}
+            <BusyLabel busy={saving}>{model.copy.addLabel}</BusyLabel>
           </button>
         </div>
         <div
@@ -472,7 +473,7 @@ function BlacklistForm({
             }}
             type="button"
           >
-            {model.copy.addLabel}
+            <BusyLabel busy={saving}>{model.copy.addLabel}</BusyLabel>
           </button>
         </div>
         <div

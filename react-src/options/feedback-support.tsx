@@ -46,7 +46,7 @@ function FeedbackSupportView({ heading, headingKey, items }: FeedbackSupportRend
             target="_blank"
           >
             <i
-              className={`ri-icon ri-size-20 ${item.iconClass}`}
+              className={`ri-icon ri-size-16 ${item.iconClass}`}
               aria-hidden="true"
             />
             <span data-i18n={item.labelKey}>{item.label}</span>

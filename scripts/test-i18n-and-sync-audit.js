@@ -243,6 +243,25 @@ assert(
   'background local-to-sync migration should include the bookmark view mode'
 );
 {
+  // Folder colors are user choices, so they sync; bookmark ids are not
+  // portable, so the synced map is keyed by folder path instead.
+  [settings.BOOKMARK_FOLDER_COLOR_REFS_STORAGE_KEY, settings.BOOKMARK_FOLDER_COLOR_PRESETS_STORAGE_KEY].forEach((key) => {
+    assert(chromeSyncKeys.includes(key), `${key} should be in the Chrome Sync and WebDAV contract`);
+  });
+  assert(!chromeSyncKeys.includes('_x_extension_bookmark_folder_colors_2026_unique_'),
+    'the legacy folder color map is keyed by device-only bookmark ids and must not sync');
+  const readRefs = getFunctionSource(newtabSource, 'readFolderColorRefs');
+  const writeRefs = getFunctionSource(newtabSource, 'writeFolderColorRefs');
+  assert(/folderColorStorage\(storageArea,/.test(readRefs) && /folderColorStorage\(storageArea,/.test(writeRefs),
+    'new tab should read and write folder colors through the synced storage area');
+  assert(/readSavedColors: \(\) => folderColorStorage\(storageArea,/.test(newtabSource) &&
+    /saveSavedColors: \(colors\) => folderColorStorage\(storageArea,/.test(newtabSource),
+    'saved folder colors should use the synced storage area');
+  assert(/normalizeFolderColorRefs\(changes\[FOLDER_COLOR_REFS_STORAGE_KEY\]\.newValue\);\s*syncFolderColorsWithBookmarks\(false\)/.test(newtabSource),
+    'a folder color map from another device is resolved without writing back, so two devices never bounce a renamed folder');
+}
+
+{
   const topbarLocalKeys = [
     '_x_extension_bookmark_topbar_surface_mode_2026_unique_',
     '_x_extension_bookmark_topbar_surface_color_light_2026_unique_',
