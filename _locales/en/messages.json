@@ -2920,5 +2920,8 @@
   },
   "recent_progress_auto_toast": {
     "message": "Pinned and tracking progress. Stop it from the card’s menu."
+  },
+  "settings_general_newtab_section_title": {
+    "message": "New Tab Settings"
   }
 }

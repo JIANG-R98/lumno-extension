@@ -2920,5 +2920,8 @@
   },
   "recent_progress_auto_toast": {
     "message": "已置頂並追蹤觀看進度，可在右鍵選單中停止"
+  },
+  "settings_general_newtab_section_title": {
+    "message": "新分頁設定"
   }
 }

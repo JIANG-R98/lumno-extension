@@ -2920,5 +2920,8 @@
   },
   "recent_progress_auto_toast": {
     "message": "固定して進捗の追跡を開始しました。カードのメニューから停止できます。"
+  },
+  "settings_general_newtab_section_title": {
+    "message": "新しいタブ設定"
   }
 }

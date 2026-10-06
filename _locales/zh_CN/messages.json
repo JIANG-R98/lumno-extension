@@ -2920,5 +2920,8 @@
   },
   "recent_progress_auto_toast": {
     "message": "已置顶并跟踪观看进度，可在右键菜单中停止"
+  },
+  "settings_general_newtab_section_title": {
+    "message": "新标签页设置"
   }
 }

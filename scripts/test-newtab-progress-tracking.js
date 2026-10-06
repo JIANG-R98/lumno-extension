@@ -251,11 +251,12 @@ const menuValues = (controller, item) => controller.getRecentContextMenuOptions(
     const optionsHtml = fs.readFileSync('src/options/options.html', 'utf8');
     assert(/id="_x_extension_progress_tracking_toggle_2026_unique_" type="checkbox" checked>/.test(optionsHtml),
       'the switch is on by default');
-    const siteCardsIndex = optionsHtml.indexOf('data-i18n="settings_recent_sites_title"');
+    const generalStart = optionsHtml.indexOf('data-content="general"');
+    const generalEnd = optionsHtml.indexOf('data-content="', generalStart + 1);
+    const sectionIndex = optionsHtml.indexOf('data-i18n="settings_general_newtab_section_title"');
     const switchIndex = optionsHtml.indexOf('id="_x_extension_progress_tracking_toggle_2026_unique_"');
-    const labsIndex = optionsHtml.indexOf('data-content="labs"');
-    assert(siteCardsIndex >= 0 && switchIndex > siteCardsIndex && switchIndex < labsIndex,
-      'the switch sits under the site cards setting, not in Labs');
+    assert(generalStart >= 0 && sectionIndex > generalStart && switchIndex > sectionIndex && switchIndex < generalEnd,
+      'the switch sits in the New Tab section of General settings');
     const settings = require('../src/shared/settings.js');
     assert.strictEqual(settings.normalizeProgressTrackingEnabled(undefined), true);
     assert.strictEqual(settings.normalizeProgressTrackingEnabled(false), false);
