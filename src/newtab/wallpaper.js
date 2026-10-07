@@ -864,6 +864,7 @@
     let bingDailyCheckedDay = '';
     let hasBingDailyRolloverListeners = false;
     let activeWallpaperTab = 'built-in';
+    let lastSyncedWallpaperSourceId = null;
     let activeWallpaperMode = NEWTAB_WALLPAPER_MODE_LIGHT;
     let wallpaperPanelRendered = false;
     let currentWallpaperPrefs = null;
@@ -2933,9 +2934,18 @@
       if (nextTab === 'bing' && isWallpaperPanelOpen()) loadBingCatalog();
     }
 
-    function syncWallpaperSourceTabToEditMode() {
+    // Follow the selection only when it moves, so storage reloads (deleting a
+    // local wallpaper, syncs, theme changes) keep the tab the user is browsing.
+    function syncWallpaperSourceTabToEditMode(options) {
       const selectedId = getWallpaperSelectionIdForUi();
-      setWallpaperActiveTab(getWallpaperSourceTabForId(selectedId));
+      const force = Boolean(options && options.force);
+      if (!force && selectedId === lastSyncedWallpaperSourceId) {
+        return;
+      }
+      lastSyncedWallpaperSourceId = selectedId;
+      if (selectedId) {
+        setWallpaperActiveTab(getWallpaperSourceTabForId(selectedId));
+      }
     }
 
     function setWallpaperActiveMode(mode) {
@@ -2954,7 +2964,7 @@
         updateWallpaperModeControlsUi({ animate: false });
         updateWallpaperSelectionUi();
         updateWallpaperEffectControlUi();
-        syncWallpaperSourceTabToEditMode();
+        syncWallpaperSourceTabToEditMode({ force: true });
         playWallpaperEnterMotion(getWallpaperGridForTab(activeWallpaperTab), 'enter');
       });
       scheduleWallpaperPanelTabIndicatorsRefresh();
@@ -5981,7 +5991,7 @@
       bindReactWallpaperPanel();
       renderCustomWallpaperTiles();
       updateWallpaperLanguageStrings();
-      syncWallpaperSourceTabToEditMode();
+      syncWallpaperSourceTabToEditMode({ force: true });
       updateCustomWallpaperUploadTile();
       updateWallpaperSelectionUi();
       updateWallpaperModeControlsUi({ animate: false });

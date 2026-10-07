@@ -1907,7 +1907,11 @@ function createLocalWallpaperStoreApi(records, metrics) {
         write() {
           return Promise.resolve();
         },
-        remove() {
+        remove(record) {
+          const index = items.findIndex((item) => item && item.id === (record && record.id));
+          if (index !== -1) {
+            items.splice(index, 1);
+          }
           return Promise.resolve();
         },
         buildRecordFromFile() {
@@ -3049,6 +3053,76 @@ async function testSplitLocalWallpaperSelectionStaysLocalOnly() {
   );
 }
 
+async function testDeletingLocalWallpapersKeepsTheLocalTabOpen() {
+  const ASSET_REVISION_STORAGE_KEY = '_x_extension_asset_revision_2026_unique_';
+  const firstId = `${CUSTOM_WALLPAPER_ID_PREFIX}first`;
+  const secondId = `${CUSTOM_WALLPAPER_ID_PREFIX}second`;
+  const syncStorage = createMemoryStorage({ [WALLPAPER_STORAGE_KEY]: DEFAULT_WALLPAPER_ID });
+  const localStorageArea = createMemoryStorage();
+  const localStoreApi = createLocalWallpaperStoreApi([firstId, secondId].map((id, index) => ({
+    id,
+    imageDataUrl: `data:image/webp;base64,${id}`,
+    thumbnailDataUrl: `data:image/webp;base64,${id}-thumb`,
+    updatedAt: index + 1
+  })));
+  const { documentObj: testDocument, windowObj: testWindow, sandbox: testSandbox } = createWallpaperSandbox({
+    localStoreApi
+  });
+  testDocument.body.setAttribute('data-theme', 'light');
+  const testRuntime = testSandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
+    documentObj: testDocument,
+    windowObj: testWindow,
+    storageArea: syncStorage,
+    localWallpaperStorageArea: localStorageArea,
+    storageKeys: {
+      wallpaper: WALLPAPER_STORAGE_KEY,
+      localWallpaper: LOCAL_WALLPAPER_STORAGE_KEY
+    },
+    t: (_key, fallback) => fallback || '',
+    getRiSvg: () => ''
+  });
+
+  await testRuntime.bootstrapInitialWallpaper();
+  testRuntime.createControls();
+  const testControl = testRuntime.getControlElement();
+  testControl.children[1].click();
+  getDescendantByAttribute(testControl.children[0], 'data-wallpaper-tab', 'local').click();
+  await waitForAsyncWallpaperApply();
+  const body = getDescendantByAttribute(testControl.children[0], 'data-active-tab', 'local');
+  assert.ok(body, 'the local tab should open');
+
+  // Every IndexedDB write publishes an asset revision, which reloads the stored state.
+  const deleteWallpaper = async (id) => {
+    getDescendantByAttribute(testControl.children[0], 'data-wallpaper-id', id)
+      .querySelector('.x-nt-wallpaper-delete-button')
+      .click();
+    await waitForAsyncWallpaperApply();
+    testRuntime.handleStorageChange({ [ASSET_REVISION_STORAGE_KEY]: { newValue: id } });
+    await waitForAsyncWallpaperApply();
+  };
+
+  await deleteWallpaper(firstId);
+  assert.strictEqual(body.getAttribute('data-active-tab'), 'local',
+    'deleting an unselected local wallpaper should keep the local tab open');
+  assert.strictEqual(getDescendantByAttribute(testControl.children[0], 'data-wallpaper-id', firstId), null);
+
+  getDescendantByAttribute(testControl.children[0], 'data-wallpaper-id', secondId).click();
+  testRuntime.handleStorageChange({ [LOCAL_WALLPAPER_STORAGE_KEY]: { newValue: localStorageArea.data[LOCAL_WALLPAPER_STORAGE_KEY] } });
+  await waitForAsyncWallpaperApply();
+  await deleteWallpaper(secondId);
+  testRuntime.handleStorageChange({ [LOCAL_WALLPAPER_STORAGE_KEY]: { newValue: localStorageArea.data[LOCAL_WALLPAPER_STORAGE_KEY] } });
+  await waitForAsyncWallpaperApply();
+  assert.strictEqual(body.getAttribute('data-active-tab'), 'local',
+    'deleting the selected local wallpaper should keep the local tab open');
+
+  getDescendantByAttribute(testControl.children[0], 'data-wallpaper-tab', 'bing').click();
+  testDocument.body.setAttribute('data-theme', 'dark');
+  testRuntime.handleThemeModeChange();
+  await waitForAsyncWallpaperApply();
+  assert.strictEqual(body.getAttribute('data-active-tab'), 'bing',
+    'a theme change that keeps the same selection should not switch source tabs');
+}
+
 async function testNewtabFaviconOptionsRenderBelowLogoAndPersistSelection() {
   const syncStorage = createMemoryStorage({
     [NEWTAB_FAVICON_STORAGE_KEY]: 'default'
@@ -4010,6 +4084,7 @@ Promise.resolve()
   .then(testSplitBuiltInWallpaperSelectionFollowsResolvedTheme)
   .then(testWallpaperPreloadCacheRetainsMinimumLightOverlay)
   .then(testSplitLocalWallpaperSelectionStaysLocalOnly)
+  .then(testDeletingLocalWallpapersKeepsTheLocalTabOpen)
   .then(testNewtabFaviconOptionsRenderBelowLogoAndPersistSelection)
   .then(testNewtabFaviconThemeBroadcastRefreshesBackgroundTabs)
   .then(testWallpaperEffectInkToneControlPersistsAndFollowsEffectType)
