@@ -887,6 +887,47 @@ async function run() {
   assert.strictEqual(autoServer.requests.length, beforePausedEdits, 'turning off WebDAV stops remote requests while Chrome still accepts edits');
   assert.strictEqual(auto.chrome.storage.sync.values[theme], 'light');
 
+  // A first join can merge wallpapers: the server's settings and selection win, uploads
+  // from both sides are kept once per image, and links are kept once per address.
+  const mergeServer = createServer();
+  const links = settings.NEWTAB_LINK_WALLPAPERS_STORAGE_KEY;
+  const sharedImage = fs.readFileSync('assets/wallpapers/lumno-newtab-seurat-coast-white-thumb.webp');
+  const onlyB = fs.readFileSync('assets/wallpapers/lumno-newtab-monet-coastal-white-thumb.webp');
+  const record = (id, bytes, updatedAt) => ({ id, key: id, name: id, width: 0, height: 0, updatedAt,
+    imageDataUrl: `data:image/webp;base64,${bytes.toString('base64')}`, thumbnailDataUrl: `data:image/webp;base64,${bytes.toString('base64')}` });
+  const deviceA = createDevice(mergeServer, {
+    sync: { [theme]: 'light', [links]: [{ id: 'link-aaaa01', url: 'https://a.example/one.jpg', addedAt: 1 }] },
+    local: { [contract.LOCAL_WALLPAPER_KEY]: { version: 1, light: 'custom-wallpaper-a', dark: 'custom-wallpaper-a' } }
+  }, [record('custom-wallpaper-a', sharedImage, 10)]);
+  await deviceA.controller.handle({ operation: 'connect', config });
+  const deviceB = createDevice(mergeServer, {
+    sync: { [theme]: 'dark', [links]: [{ id: 'link-bbbb01', url: 'https://b.example/two.jpg', addedAt: 2 },
+      { id: 'link-bbbb02', url: 'https://a.example/one.jpg', addedAt: 3 }] },
+    local: { [contract.LOCAL_WALLPAPER_KEY]: { version: 1, light: 'custom-wallpaper-b2', dark: 'custom-wallpaper-b2' } }
+  }, [record('custom-wallpaper-b1', sharedImage, 20), record('custom-wallpaper-b2', onlyB, 30)]);
+  assert.deepStrictEqual(await deviceB.controller.handle({ operation: 'connect', config }), { needsChoice: true });
+  await deviceB.controller.handle({ operation: 'connect', config, decision: 'merge' });
+  assert.deepStrictEqual(mergeServer.state().wallpapers.map((item) => item.id), ['custom-wallpaper-a', 'custom-wallpaper-b2'],
+    'the same image from both devices is kept once');
+  assert.deepStrictEqual(mergeServer.state().data[links].map((item) => item.url), ['https://a.example/one.jpg', 'https://b.example/two.jpg'],
+    'links are kept once per address');
+  assert.strictEqual(mergeServer.state().data[theme], 'light', 'settings follow the server');
+  assert.strictEqual(deviceB.chrome.storage.sync.values[theme], 'light');
+  assert.deepStrictEqual((await deviceB.wallpaperStore.readAll()).map((item) => item.id).sort(), ['custom-wallpaper-a', 'custom-wallpaper-b2']);
+  assert.deepStrictEqual(deviceB.chrome.storage.local.values[contract.LOCAL_WALLPAPER_KEY].light, 'custom-wallpaper-a',
+    'the wallpaper in use follows the server too');
+  assert.strictEqual(deviceB.chrome.storage.sync.values[links].length, 2);
+  assert(deviceB.privateValues.get('migrationBackup'), 'the joining device is backed up before the merge');
+  await deviceA.controller.handle({ operation: 'sync' });
+  assert.deepStrictEqual((await deviceA.wallpaperStore.readAll()).map((item) => item.id).sort(), ['custom-wallpaper-a', 'custom-wallpaper-b2'],
+    'the first device receives the merged wallpapers on its next sync');
+  assert.strictEqual(deviceA.chrome.storage.sync.values[links].length, 2);
+  assert.strictEqual(deviceA.chrome.storage.sync.values[theme], 'light');
+
+  const bigLinks = Array.from({ length: 40 }, (_, index) => ({ id: `link-big${index}xx`, url: `https://big.example/${'x'.repeat(200)}/${index}.jpg`, addedAt: index }));
+  assert.throws(() => contract.mergeInitialWallpapers(empty({ [links]: bigLinks.slice(20) }), empty({ [links]: bigLinks.slice(0, 20) })),
+    /merge-too-large/, 'a merge past the browser sync item limit fails instead of dropping links');
+
   console.log('WebDAV sync tests passed: parallel Chrome sync, media, merge, conflict, offline, quota, concurrent edits, restart recovery and integrity');
 }
 if (require.main === module) run().catch((error) => { console.error(error); process.exitCode = 1; });

@@ -2550,7 +2550,7 @@
     "message": "Last synced"
   },
   "webdav_choice_hint": {
-    "message": "The server already has Lumno settings. Pick which copy to keep; the other one is backed up first."
+    "message": "The server already has Lumno settings. Keep one side, or merge wallpapers from both and keep the server’s other settings. This device’s data is backed up first."
   },
   "webdav_conflict_hint": {
     "message": "This device and the server changed the same thing. Pick a version to keep; other changes merge automatically."
@@ -2677,6 +2677,12 @@
   },
   "webdav_restore_backup": {
     "message": "Restore settings from before replacement"
+  },
+  "webdav_merge_wallpapers": {
+    "message": "Merge wallpapers"
+  },
+  "webdav_error_merge_too_large": {
+    "message": "Together the wallpapers exceed the sync limit (256 wallpapers, 2 MB of settings, 8 KB of image links). Remove some, or keep one side. Nothing was changed."
   },
   "webdav_use_remote": {
     "message": "Use server version"

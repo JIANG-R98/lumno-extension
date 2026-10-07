@@ -140,6 +140,15 @@ describe('WebDAV connection cards', () => {
     const compact = '._x_extension_shortcut_compact_2026_unique_';
     expect([...card('b').querySelectorAll('.lumno-webdav-actions button')].every((button) => button.matches(compact))).toBe(true);
   });
+  it('offers merging wallpapers only on a first join with a server copy', async () => {
+    const { card, onAction } = fixture({ ...model, connections: [{ ...item, state: 'choice' },
+      { ...item, id: 'b', state: 'conflict', enabled: true }, { ...item, id: 'c', state: 'choice', remoteMissing: true }] });
+    const merge = (id: string) => [...card(id).querySelectorAll('button')].find((button) => button.textContent === copy.webdav_merge_wallpapers);
+    expect(merge('b')).toBeUndefined();
+    expect(merge('c')).toBeUndefined();
+    await click(merge('a')!);
+    expect(onAction).toHaveBeenCalledWith('enable', 'a', { decision: 'merge' });
+  });
   it('loads conflict differences on demand and shows both sides', async () => {
     const { card, onAction } = fixture({ ...model, connections: [{ ...item, enabled: true, state: 'conflict', conflictsText: 'Shortcuts and icons' }] });
     onAction.mockResolvedValueOnce({ items: [

@@ -22,13 +22,14 @@
       webdav_password_show: t("webdav_password_show", "显示密码"),
       webdav_password_hide: t("webdav_password_hide", "隐藏密码"),
       webdav_last_sync: t("webdav_last_sync", "最近同步"),
-      webdav_choice_hint: t("webdav_choice_hint", "服务器上已经有 Lumno 的配置。选一边为准，另一边会先自动备份。"),
+      webdav_choice_hint: t("webdav_choice_hint", "服务器上已经有 Lumno 的配置。可以选一边为准，或合并两边的壁纸、其他设置以服务器为准；本机数据会先自动备份。"),
       webdav_conflict_hint: t("webdav_conflict_hint", "本机和服务器改了同一处内容。选一个版本保留，其他不冲突的改动会自动合并。"),
       webdav_test: t("webdav_test", "测试连通性"),
       webdav_sync: t("webdav_sync", "立即同步"),
       webdav_restore_backup: t("webdav_restore_backup", "恢复替换前的本机配置"),
       webdav_use_remote: t("webdav_use_remote", "使用服务器版本"),
       webdav_use_local: t("webdav_use_local", "保留本机版本"),
+      webdav_merge_wallpapers: t("webdav_merge_wallpapers", "合并壁纸"),
       webdav_test_success: t("webdav_test_success", "连接、读写和并发保护验证通过"),
       webdav_state_browser: t("webdav_state_browser", "未开启"),
       webdav_state_ready: t("webdav_state_ready", "已同步"),
@@ -196,7 +197,8 @@
     const DETAILED_CODES = ['remote-unreadable', 'remote-corrupt', 'invalid-state', 'state-too-large', 'response-too-large',
       'invalid-shortcuts', 'invalid-icon', 'invalid-wallpaper', 'invalid-asset', 'asset-missing', 'asset-integrity',
       'local-invalid-state', 'local-state-too-large', 'local-invalid-shortcuts', 'local-invalid-icon', 'local-invalid-wallpaper',
-      'local-invalid-asset', 'local-asset-too-large', 'shortcut-id-conflict', 'write-failed', 'directory-unavailable'];
+      'local-invalid-asset', 'local-asset-too-large', 'shortcut-id-conflict', 'write-failed', 'directory-unavailable',
+      'merge-too-large'];
     function errorText(code) {
       const generic = t('webdav_error_generic', '同步失败，请稍后重试。');
       if (DETAILED_CODES.includes(code)) return t(`webdav_error_${code.replace(/-/g, '_')}`, generic);

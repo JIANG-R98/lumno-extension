@@ -2550,7 +2550,7 @@
     "message": "上次同步"
   },
   "webdav_choice_hint": {
-    "message": "伺服器上已經有 Lumno 的設定。選一邊為準，另一邊會先自動備份。"
+    "message": "伺服器上已經有 Lumno 的設定。可以選一邊為準，或合併兩邊的桌布、其他設定以伺服器為準；本機資料會先自動備份。"
   },
   "webdav_conflict_hint": {
     "message": "本機和伺服器改了同一處內容。選一個版本保留，其他不衝突的變更會自動合併。"
@@ -2677,6 +2677,12 @@
   },
   "webdav_restore_backup": {
     "message": "還原替換前的本機設定"
+  },
+  "webdav_merge_wallpapers": {
+    "message": "合併桌布"
+  },
+  "webdav_error_merge_too_large": {
+    "message": "兩邊的桌布合在一起超出同步上限（最多 256 張桌布、2 MB 設定資料、8 KB 圖片連結）。請先刪除一些，或選一邊為準。資料未做變更。"
   },
   "webdav_use_remote": {
     "message": "使用伺服器版本"

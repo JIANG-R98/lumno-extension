@@ -11,6 +11,9 @@
   const ICONS_KEY = '_x_extension_newtab_shortcut_icons_2026_unique_';
   const WALLPAPER_KEY = '_x_extension_newtab_wallpaper_2026_unique_';
   const LOCAL_WALLPAPER_KEY = '_x_extension_newtab_local_wallpaper_2026_unique_';
+  const LINK_WALLPAPERS_KEY = settings.NEWTAB_LINK_WALLPAPERS_STORAGE_KEY;
+  // Browser sync stores the link list as one item of at most 8 KB.
+  const MAX_LINK_WALLPAPERS_BYTES = 8000;
   const PREFERENCE_KEYS = settings.CHROME_SYNC_STORAGE_KEYS.filter((key) => !SHORTCUT_KEYS.includes(key));
   // Preferences kept in chrome.storage.local that WebDAV carries but browser
   // sync never does: the custom wallpaper selection and the bookmark bar
@@ -95,6 +98,33 @@
     const state = { version: value.version, data: selectPreferences(value.data), shortcuts, icons, wallpapers, assets };
     state.assets = collectAssets(state);
     return state;
+  }
+  // A first join that merges keeps the server's settings and selection, and adds this
+  // device's wallpapers to them: uploads not already on the server (the same image
+  // counts once) and links to new addresses. Nothing is dropped to fit; a merge
+  // past the sync limits fails with merge-too-large and changes nothing.
+  function mergeInitialWallpapers(local, remote) {
+    const remoteImages = new Set(remote.wallpapers.map((item) => item.image));
+    const remoteIds = new Set(remote.wallpapers.map((item) => item.id));
+    const wallpapers = remote.wallpapers.concat(local.wallpapers.filter((item) =>
+      !remoteImages.has(item.image) && !remoteIds.has(item.id)));
+    const data = { ...remote.data };
+    const remoteLinks = Array.isArray(remote.data[LINK_WALLPAPERS_KEY]) ? remote.data[LINK_WALLPAPERS_KEY] : [];
+    const localLinks = Array.isArray(local.data[LINK_WALLPAPERS_KEY]) ? local.data[LINK_WALLPAPERS_KEY] : [];
+    const linkUrls = new Set(remoteLinks.map((item) => item && item.url));
+    const linkIds = new Set(remoteLinks.map((item) => item && item.id));
+    const links = remoteLinks.concat(localLinks.filter((item) => item && !linkUrls.has(item.url) && !linkIds.has(item.id)));
+    if (LINK_WALLPAPERS_KEY && links.length) {
+      if (byteLength(JSON.stringify(links)) > MAX_LINK_WALLPAPERS_BYTES) fail('merge-too-large');
+      data[LINK_WALLPAPERS_KEY] = links;
+    }
+    try {
+      return validateState({ version: Math.max(local.version, remote.version), data, shortcuts: remote.shortcuts,
+        icons: remote.icons, wallpapers, assets: { ...local.assets, ...remote.assets } });
+    } catch (cause) {
+      if (cause.code === 'state-too-large') fail('merge-too-large');
+      throw cause;
+    }
   }
   // Whole lists are deliberate merge domains in v1. Sorting and deletes cannot
   // safely be resolved by joining arrays or choosing a device timestamp, so a
@@ -258,5 +288,5 @@
   }
   return Object.freeze({ SHORTCUT_KEYS, FIELD_MERGE_KEYS, OVERFLOW_KEY, ICONS_KEY, WALLPAPER_KEY, LOCAL_WALLPAPER_KEY, LOCAL_PREFERENCE_KEYS,
     PREFERENCE_KEYS, MAX_STATE_BYTES, MAX_ASSET_BYTES, canonical, equal, byteLength, readShortcuts,
-    selectPreferences, validateState, mergeStates, describeConflict, planChromeBackup });
+    selectPreferences, validateState, mergeStates, mergeInitialWallpapers, describeConflict, planChromeBackup });
 });

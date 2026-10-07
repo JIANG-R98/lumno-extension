@@ -378,20 +378,25 @@
       if (!verified || !contract.equal(state, verified.state)) fail('remote-changed');
       return verified;
     }
+    // Answers to the first-join choice: keep one side, or merge wallpapers onto the server's copy.
+    const INITIAL_DECISIONS = ['local', 'remote', 'merge'];
     async function syncInternal(decision) {
       const { config, base } = await session();
       if (!config || !config.enabled) return { paused: true };
       await setStatus({ state: 'syncing', error: null });
       const client = await verifiedClient(config);
       await saveConfig(config);
-      const captured = await capture(['local', 'remote'].includes(decision));
+      const captured = await capture(INITIAL_DECISIONS.includes(decision));
       const remote = await readRemote(client);
-      if (decision === 'local' || decision === 'remote') {
+      if (INITIAL_DECISIONS.includes(decision)) {
         await privateStore.put('replacementBackup', { captured, savedAt: Date.now() });
         await privateStore.put('replacementBackupMeta', { savedAt: Date.now() });
       }
       let target;
-      if (base && remote && ['local', 'remote'].includes(decision)) target = contract.mergeStates(base, captured.state, remote.state, decision).state;
+      if (decision === 'merge') {
+        if (!remote) fail('remote-missing');
+        target = contract.mergeInitialWallpapers(captured.state, remote.state);
+      } else if (base && remote && ['local', 'remote'].includes(decision)) target = contract.mergeStates(base, captured.state, remote.state, decision).state;
       else if (decision === 'local') target = captured.state;
       else if (decision === 'remote') {
         if (!remote) fail('remote-missing');
@@ -470,16 +475,20 @@
         schedule();
         return guardedSync();
       }
-      if (remote && !['local', 'remote'].includes(decision)) {
+      if (remote && !INITIAL_DECISIONS.includes(decision)) {
         await setStatus({ state: 'choice', conflicts: [], error: null });
         return { needsChoice: true };
       }
-      const captured = await capture(['local', 'remote'].includes(decision));
+      const captured = await capture(INITIAL_DECISIONS.includes(decision));
       await privateStore.put('migrationBackup', { captured, savedAt: Date.now() });
       await privateStore.put('migrationBackupMeta', { savedAt: Date.now() });
-      const target = remote && decision === 'remote' ? remote.state : captured.state;
+      const target = remote && decision === 'remote' ? remote.state
+        : remote && decision === 'merge' ? contract.mergeInitialWallpapers(captured.state, remote.state)
+          : captured.state;
       await prepareChrome(target, captured);
-      if (!remote || decision === 'local') await publish(target, remote, client, captured.generation);
+      if (!remote || decision === 'local' || !contract.equal(target, remote.state)) {
+        await publish(target, remote, client, captured.generation);
+      }
       if (opts.managed && contract.equal(target, captured.state) && runtime.isActiveAreaName('sync')) {
         if (captured.generation !== generation) fail('local-changed');
         await privateStore.put('session', { config: { ...config, enabled: true }, base: target });

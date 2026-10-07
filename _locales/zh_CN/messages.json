@@ -2550,7 +2550,7 @@
     "message": "最近同步"
   },
   "webdav_choice_hint": {
-    "message": "服务器上已经有 Lumno 的配置。选一边为准，另一边会先自动备份。"
+    "message": "服务器上已经有 Lumno 的配置。可以选一边为准，或合并两边的壁纸、其他设置以服务器为准；本机数据会先自动备份。"
   },
   "webdav_conflict_hint": {
     "message": "本机和服务器改了同一处内容。选一个版本保留，其他不冲突的改动会自动合并。"
@@ -2677,6 +2677,12 @@
   },
   "webdav_restore_backup": {
     "message": "恢复替换前的本机配置"
+  },
+  "webdav_merge_wallpapers": {
+    "message": "合并壁纸"
+  },
+  "webdav_error_merge_too_large": {
+    "message": "两边的壁纸合在一起超出同步上限（最多 256 张壁纸、2 MB 配置数据、8 KB 图片链接）。请先删除一些，或选一边为准。数据未做改动。"
   },
   "webdav_use_remote": {
     "message": "使用服务器版本"

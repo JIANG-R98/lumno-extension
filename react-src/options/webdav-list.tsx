@@ -451,6 +451,12 @@ function ConnectionCard({ item, expanded, model, now, options, onEdit, onClose }
               {copy[`webdav_use_${decision}`]}
             </button>
           ))}
+          {/* Only the first join can merge; a later conflict compares against the last sync instead. */}
+          {item.state === 'choice' && !item.remoteMissing ? (
+            <button className={compactPrimaryClass} disabled={busy || model.outdated} onClick={() => decide('merge')} type="button">
+              {copy.webdav_merge_wallpapers}
+            </button>
+          ) : null}
         </div>
       </div>
     );
