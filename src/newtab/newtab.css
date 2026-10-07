@@ -4323,8 +4323,8 @@ body[data-theme="dark"] .x-nt-wallpaper-panel {
   align-items: center;
   justify-content: space-between;
   gap: var(--x-nt-panel-inline-gap);
-  margin: -2px -2px var(--x-nt-panel-content-gap);
-  padding: 2px 2px 12px;
+  margin: -2px -2px 14px;
+  padding: 2px;
   background: rgb(255 255 255);
 }
 body[data-theme="dark"] .x-nt-appearance-header {
