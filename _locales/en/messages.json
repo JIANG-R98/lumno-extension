@@ -809,14 +809,26 @@
   "newtab_wallpaper_mode_select_label": {
     "message": "Edit {mode} wallpaper"
   },
-  "newtab_wallpaper_feature_hint_badge": {
+  "newtab_wallpaper_sources_feature_hint_badge": {
     "message": "New"
   },
-  "newtab_wallpaper_feature_hint_text": {
-    "message": "New Tab now supports changing wallpaper!"
+  "newtab_wallpaper_sources_feature_hint_text": {
+    "message": "New wallpapers: curated nature, city and art collections that can update daily, or add one by image link."
   },
-  "newtab_wallpaper_feature_hint_close": {
-    "message": "Dismiss wallpaper tip"
+  "newtab_wallpaper_sources_feature_hint_close": {
+    "message": "Dismiss new wallpapers tip"
+  },
+  "newtab_webdav_feature_hint_badge": {
+    "message": "Beta"
+  },
+  "newtab_webdav_feature_hint_text": {
+    "message": "Try WebDAV sync: keep settings, icons and wallpapers in step through a WebDAV drive or NAS, even across browsers."
+  },
+  "newtab_webdav_feature_hint_link": {
+    "message": "Set up"
+  },
+  "newtab_webdav_feature_hint_close": {
+    "message": "Dismiss WebDAV tip"
   },
   "newtab_ai_quick_jump_feature_hint_badge": {
     "message": "New"
@@ -847,15 +859,6 @@
   },
   "newtab_input_auto_focus_help": {
     "message": "If you prefer to use the browser’s native address bar, turn this option off. The extension URL will no longer appear in the address bar."
-  },
-  "newtab_input_auto_focus_feature_hint_badge": {
-    "message": "Tip"
-  },
-  "newtab_input_auto_focus_feature_hint_text": {
-    "message": "Turn off auto-focus under Appearance / New Tab."
-  },
-  "newtab_input_auto_focus_feature_hint_close": {
-    "message": "Dismiss input auto-focus tip"
   },
   "update_notice_badge": {
     "message": "Updated to {version}"

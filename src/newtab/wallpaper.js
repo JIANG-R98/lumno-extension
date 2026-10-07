@@ -187,16 +187,13 @@
     const setInputAutoFocusEnabled = typeof options.setInputAutoFocusEnabled === 'function'
       ? options.setInputAutoFocusEnabled
       : function() {};
-    const getInputAutoFocusHintAnchor = typeof options.getInputAutoFocusHintAnchor === 'function'
-      ? options.getInputAutoFocusHintAnchor
-      : function() { return null; };
     const inputAutoFocusReady = options.inputAutoFocusReady &&
       typeof options.inputAutoFocusReady.then === 'function'
       ? options.inputAutoFocusReady
       : Promise.resolve();
-    const inputAutoFocusVisibilityGate = options.inputAutoFocusVisibilityGate &&
-      typeof options.inputAutoFocusVisibilityGate.then === 'function'
-      ? options.inputAutoFocusVisibilityGate
+    const featureHintVisibilityGate = options.featureHintVisibilityGate &&
+      typeof options.featureHintVisibilityGate.then === 'function'
+      ? options.featureHintVisibilityGate
       : null;
     const getRiSvg = typeof options.getRiSvg === 'function'
       ? options.getRiSvg
@@ -510,8 +507,7 @@
     let wallpaperInputAutoFocusTitle = null;
     let wallpaperInputAutoFocusInfoButton = null;
     let wallpaperInputAutoFocusToggle = null;
-    let wallpaperInputAutoFocusHintController = null;
-    let inputAutoFocusReadyResolved = false;
+    let wallpaperSourcesHintController = null;
     let wallpaperShortcutsAccordion = null;
     let wallpaperShortcutsAccordionTrigger = null;
     let wallpaperShortcutsTitle = null;
@@ -5353,45 +5349,43 @@
       }
     }
 
-    function isInputAutoFocusRoutePending() {
+    function isFocusRoutePending() {
       return Boolean(
         document.documentElement &&
         document.documentElement.getAttribute('data-nt-focus-route-pending') === 'true'
       );
     }
 
-    function createInputAutoFocusFeatureHint() {
-      const inputAutoFocusHintAnchor = getInputAutoFocusHintAnchor();
-      if (wallpaperInputAutoFocusHintController ||
-          !inputAutoFocusReadyResolved ||
-          !getInputAutoFocusEnabled() ||
-          isInputAutoFocusRoutePending() ||
-          !inputAutoFocusHintAnchor ||
+    // Points at the appearance button until the panel is opened once.
+    function createWallpaperSourcesFeatureHint() {
+      if (wallpaperSourcesHintController ||
+          isFocusRoutePending() ||
+          !wallpaperControl ||
           !featureHints ||
           typeof featureHints.createFeatureHint !== 'function') {
-        return wallpaperInputAutoFocusHintController;
+        return wallpaperSourcesHintController;
       }
       const controller = featureHints.createFeatureHint({
         documentObj: document,
         windowObj: window,
         chromeApi: chrome,
-        definition: 'newtab-input-auto-focus',
-        visibilityGate: inputAutoFocusVisibilityGate,
+        definition: 'newtab-wallpaper-sources',
+        visibilityGate: featureHintVisibilityGate,
         t,
         getRiSvg
       });
       if (!controller || !controller.element) {
         return null;
       }
-      wallpaperInputAutoFocusHintController = controller;
-      inputAutoFocusHintAnchor.appendChild(controller.element);
+      wallpaperSourcesHintController = controller;
+      wallpaperControl.appendChild(controller.element);
       return controller;
     }
 
-    function dismissInputAutoFocusFeatureHint() {
-      if (wallpaperInputAutoFocusHintController &&
-          typeof wallpaperInputAutoFocusHintController.dismiss === 'function') {
-        wallpaperInputAutoFocusHintController.dismiss();
+    function dismissWallpaperSourcesFeatureHint() {
+      if (wallpaperSourcesHintController &&
+          typeof wallpaperSourcesHintController.dismiss === 'function') {
+        wallpaperSourcesHintController.dismiss();
       }
     }
 
@@ -5400,12 +5394,6 @@
       if (wallpaperInputAutoFocusToggle) {
         wallpaperInputAutoFocusToggle.checked = enabled;
         wallpaperInputAutoFocusToggle.setAttribute('aria-checked', enabled ? 'true' : 'false');
-      }
-      if (enabled) {
-        createInputAutoFocusFeatureHint();
-      } else if (wallpaperInputAutoFocusHintController &&
-          typeof wallpaperInputAutoFocusHintController.setVisible === 'function') {
-        wallpaperInputAutoFocusHintController.setVisible(false);
       }
     }
 
@@ -5448,9 +5436,9 @@
           t('newtab_input_auto_focus_title', 'Automatically focus input')
         );
       }
-      if (wallpaperInputAutoFocusHintController &&
-          typeof wallpaperInputAutoFocusHintController.updateLanguage === 'function') {
-        wallpaperInputAutoFocusHintController.updateLanguage();
+      if (wallpaperSourcesHintController &&
+          typeof wallpaperSourcesHintController.updateLanguage === 'function') {
+        wallpaperSourcesHintController.updateLanguage();
       }
       updateWallpaperShortcutsUi();
       if (wallpaperAppearanceScopeTabs) {
@@ -6668,7 +6656,7 @@
         return;
       }
       renderWallpaperPanel();
-      dismissInputAutoFocusFeatureHint();
+      dismissWallpaperSourcesFeatureHint();
       wallpaperPanel.setAttribute('data-open', 'true');
       wallpaperButton.setAttribute('data-open', 'true');
       wallpaperButton.setAttribute('aria-expanded', 'true');
@@ -6741,16 +6729,14 @@
       wallpaperButton.addEventListener('mouseleave', hideTopActionTooltip);
       wallpaperButton.addEventListener('focus', showWallpaperButtonTooltip);
       wallpaperButton.addEventListener('blur', hideTopActionTooltip);
-      inputAutoFocusReady.then(() => {
-        inputAutoFocusReadyResolved = true;
-        updateInputAutoFocusUi();
-      });
+      inputAutoFocusReady.then(updateInputAutoFocusUi);
       window.addEventListener('resize', scheduleWallpaperPanelTabIndicatorsRefresh, { passive: true });
       window.addEventListener('resize', () => {
         hideWallpaperSliderValueBubble(null, { force: true });
       }, { passive: true });
       updateWallpaperLanguageStrings();
       updateWallpaperSelectionUi();
+      createWallpaperSourcesFeatureHint();
     }
 
     function handleThemeModeChange() {

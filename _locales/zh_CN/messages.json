@@ -809,14 +809,26 @@
   "newtab_wallpaper_mode_select_label": {
     "message": "设置{mode}模式壁纸"
   },
-  "newtab_wallpaper_feature_hint_badge": {
+  "newtab_wallpaper_sources_feature_hint_badge": {
     "message": "新功能"
   },
-  "newtab_wallpaper_feature_hint_text": {
-    "message": "新标签页现已支持更换壁纸！"
+  "newtab_wallpaper_sources_feature_hint_text": {
+    "message": "新增精选壁纸：自然、城市、艺术等分类可每日自动更新，也能添加图片链接。"
   },
-  "newtab_wallpaper_feature_hint_close": {
-    "message": "关闭壁纸提示"
+  "newtab_wallpaper_sources_feature_hint_close": {
+    "message": "关闭新壁纸提示"
+  },
+  "newtab_webdav_feature_hint_badge": {
+    "message": "测试中"
+  },
+  "newtab_webdav_feature_hint_text": {
+    "message": "WebDAV 同步开放测试：通过网盘或 NAS 同步设置、图标和壁纸，还能跨浏览器使用。"
+  },
+  "newtab_webdav_feature_hint_link": {
+    "message": "去设置"
+  },
+  "newtab_webdav_feature_hint_close": {
+    "message": "关闭 WebDAV 提示"
   },
   "newtab_ai_quick_jump_feature_hint_badge": {
     "message": "新功能"
@@ -847,15 +859,6 @@
   },
   "newtab_input_auto_focus_help": {
     "message": "如倾向使用浏览器原生地址栏，可关闭该选项。关闭后地址栏中的扩展 URL 将不再显示。"
-  },
-  "newtab_input_auto_focus_feature_hint_badge": {
-    "message": "提示"
-  },
-  "newtab_input_auto_focus_feature_hint_text": {
-    "message": "自动聚焦可在「外观/新标签页」处关闭。"
-  },
-  "newtab_input_auto_focus_feature_hint_close": {
-    "message": "关闭输入框自动聚焦提示"
   },
   "update_notice_badge": {
     "message": "已更新至 {version}"

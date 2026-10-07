@@ -9,9 +9,9 @@
     ? root.LumnoNavigationDisposition
     : {};
   const FEATURE_HINTS = Object.freeze({
-    NEWTAB_WALLPAPER: Object.freeze({
-      id: 'newtab-wallpaper',
-      introducedIn: '0.9.9',
+    NEWTAB_WALLPAPER_SOURCES: Object.freeze({
+      id: 'newtab-wallpaper-sources',
+      introducedIn: '0.9.58',
       surface: 'newtab',
       placement: 'bottom-right wallpaper control',
       className: 'x-lumno-feature-hint--newtab-wallpaper',
@@ -19,15 +19,15 @@
       arrowAlign: 'center',
       widthMode: 'content',
       dismissStorage: 'sync',
-      rememberOnFirstShow: true,
+      rememberOnFirstShow: false,
       roundedArrowTip: true,
       badgeIcon: 'ri-asterisk',
-      badgeKey: 'newtab_wallpaper_feature_hint_badge',
+      badgeKey: 'newtab_wallpaper_sources_feature_hint_badge',
       badgeFallback: 'New',
-      textKey: 'newtab_wallpaper_feature_hint_text',
-      textFallback: 'New Tab now supports changing wallpaper!',
-      closeLabelKey: 'newtab_wallpaper_feature_hint_close',
-      closeLabelFallback: 'Dismiss wallpaper tip'
+      textKey: 'newtab_wallpaper_sources_feature_hint_text',
+      textFallback: 'New wallpapers: curated nature, city and art collections that can update daily, or add one by image link.',
+      closeLabelKey: 'newtab_wallpaper_sources_feature_hint_close',
+      closeLabelFallback: 'Dismiss new wallpapers tip'
     }),
     NEWTAB_AI_QUICK_JUMP: Object.freeze({
       id: 'newtab-ai-quick-jump',
@@ -73,12 +73,12 @@
       closeLabelKey: 'newtab_tab_switcher_feature_hint_close',
       closeLabelFallback: 'Dismiss tab switcher tip'
     }),
-    NEWTAB_INPUT_AUTO_FOCUS: Object.freeze({
-      id: 'newtab-input-auto-focus',
-      introducedIn: '0.9.41',
+    NEWTAB_WEBDAV_SYNC: Object.freeze({
+      id: 'newtab-webdav-sync',
+      introducedIn: '0.9.58',
       surface: 'newtab',
       placement: 'above newtab settings button',
-      className: 'x-lumno-feature-hint--newtab-input-auto-focus',
+      className: 'x-lumno-feature-hint--newtab-webdav-sync',
       arrowSide: 'bottom',
       arrowAlign: 'end',
       widthMode: 'content',
@@ -87,12 +87,14 @@
       rememberOnFirstShow: false,
       roundedArrowTip: true,
       badgeIcon: 'ri-asterisk',
-      badgeKey: 'newtab_input_auto_focus_feature_hint_badge',
-      badgeFallback: 'Tip',
-      textKey: 'newtab_input_auto_focus_feature_hint_text',
-      textFallback: 'Turn off auto-focus under Appearance / New Tab.',
-      closeLabelKey: 'newtab_input_auto_focus_feature_hint_close',
-      closeLabelFallback: 'Dismiss input auto-focus tip'
+      badgeKey: 'newtab_webdav_feature_hint_badge',
+      badgeFallback: 'Beta',
+      textKey: 'newtab_webdav_feature_hint_text',
+      textFallback: 'Try WebDAV sync: keep settings, icons and wallpapers in step through a WebDAV drive or NAS, even across browsers.',
+      linkKey: 'newtab_webdav_feature_hint_link',
+      linkFallback: 'Set up',
+      closeLabelKey: 'newtab_webdav_feature_hint_close',
+      closeLabelFallback: 'Dismiss WebDAV tip'
     })
   });
 

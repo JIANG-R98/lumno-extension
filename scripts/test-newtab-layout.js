@@ -958,14 +958,15 @@ function testInitialEntryMotionIsStaggeredAndTransient() {
   );
   // The gate promise lives in newtab.js; the entry motion that resolves it is split out.
   const autoFocusGateMessage =
-    'the input auto-focus hint component gate should release after normal, interrupted, or reduced-motion entry completion';
+    'the New Tab feature hint gate should release after normal, interrupted, or reduced-motion entry completion';
   assert.match(newtabSource, /const newtabEntryAnimationReadyPromise = new Promise/, autoFocusGateMessage);
   assert.match(
     newtabSource,
     /function finishNewtabEntryAnimation\(\)[\s\S]*?resolveNewtabEntryAnimationReady\(\)[\s\S]*?function startNewtabEntryAnimation\(\)[\s\S]*?if \(reduceMotion\)[\s\S]*?resolveNewtabEntryAnimationReady\(\)/,
     autoFocusGateMessage
   );
-  assert.match(newtabSource, /inputAutoFocusVisibilityGate:\s*newtabEntryAnimationReadyPromise/, autoFocusGateMessage);
+  assert.match(newtabSource, /featureHintVisibilityGate:\s*newtabEntryAnimationReadyPromise/, autoFocusGateMessage);
+  assert.match(newtabSource, /definition: 'newtab-webdav-sync',\s*visibilityGate: newtabEntryAnimationReadyPromise/, autoFocusGateMessage);
   assert.match(
     newtabSource,
     /setAttribute\('data-nt-ready', '1'\);\s*startNewtabEntryAnimation\(\);/,
@@ -1026,7 +1027,7 @@ function testInitialEntryMotionIsStaggeredAndTransient() {
     ['.x-lumno-feature-hint--newtab-wallpaper', 'translateY(-50%)'],
     ['.x-lumno-feature-hint--newtab-ai-quick-jump', 'translateX(-50%)'],
     ['.x-lumno-feature-hint--newtab-tab-switcher', ''],
-    ['.x-lumno-feature-hint--newtab-input-auto-focus', ''],
+    ['.x-lumno-feature-hint--newtab-webdav-sync', ''],
     ['.x-lumno-feature-hint--update-notice-newtab', '']
   ].forEach(([selector, allowedPositionTransform]) => {
     const block = getCssBlock(featureHintsCss, selector);
@@ -1037,6 +1038,11 @@ function testInitialEntryMotionIsStaggeredAndTransient() {
       `${selector} should keep only its fixed positioning transform during entry`
     );
   });
+  assert.match(
+    newtabHtml,
+    /\.x-nt-wallpaper-control:has\(> \.x-lumno-feature-hint\[data-visible="true"\]\)\s*\{\s*z-index:\s*20;/,
+    'a visible appearance-button hint should sit above the neighbouring feedback button'
+  );
   assert.match(
     newtabHtml,
     /body\[data-nt-enter="run"\] \.x-nt-shortcuts-section\[data-visible="true"\] \.x-nt-shortcut-tile\s*\{[\s\S]*?calc\(80ms \+ \(var\(--x-nt-shortcut-enter-index\) \* 18ms\)\) both;/,

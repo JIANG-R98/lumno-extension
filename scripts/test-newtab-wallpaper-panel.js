@@ -2281,7 +2281,7 @@ assert.strictEqual(
   '如倾向使用浏览器原生地址栏，可关闭该选项。关闭后地址栏中的扩展 URL 将不再显示。'
 );
 
-async function testInputAutoFocusHintWaitsForFinalFocusRoute() {
+async function testWallpaperSourcesHintWaitsForFinalFocusRoute() {
   const pendingRoute = createWallpaperSandbox();
   pendingRoute.documentObj.documentElement.setAttribute(
     'data-nt-focus-route-pending',
@@ -2298,8 +2298,6 @@ async function testInputAutoFocusHintWaitsForFinalFocusRoute() {
         return null;
       }
     },
-    inputAutoFocusReady: Promise.resolve(true),
-    getInputAutoFocusEnabled: () => true,
     t: (_key, fallback) => fallback || '',
     getRiSvg: () => ''
   });
@@ -2316,10 +2314,9 @@ async function testInputAutoFocusHintWaitsForFinalFocusRoute() {
   let settledRouteCreates = 0;
   let settledRouteDismissals = 0;
   let createdHintOptions = null;
-  const inputAutoFocusVisibilityGate = Promise.resolve();
-  const inputAutoFocusHintAnchor = settledRoute.documentObj.createElement('div');
+  const featureHintVisibilityGate = Promise.resolve();
   const hintElement = settledRoute.documentObj.createElement('span');
-  hintElement.setAttribute('data-feature-hint-id', 'newtab-input-auto-focus');
+  hintElement.setAttribute('data-feature-hint-id', 'newtab-wallpaper-sources');
   hintElement.setAttribute('data-visible', 'true');
   const settledRuntime = settledRoute.sandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
     documentObj: settledRoute.documentObj,
@@ -2343,36 +2340,29 @@ async function testInputAutoFocusHintWaitsForFinalFocusRoute() {
         };
       }
     },
-    inputAutoFocusReady: Promise.resolve(true),
-    inputAutoFocusVisibilityGate,
-    getInputAutoFocusEnabled: () => true,
-    getInputAutoFocusHintAnchor: () => inputAutoFocusHintAnchor,
+    featureHintVisibilityGate,
     t: (_key, fallback) => fallback || '',
     getRiSvg: () => ''
   });
   settledRuntime.createControls();
   await Promise.resolve();
   await Promise.resolve();
-  assert.strictEqual(
-    settledRouteCreates,
-    1,
-    'the final focus=1 New Tab route should create the input auto-focus feature hint once'
-  );
-  assert.strictEqual(createdHintOptions.definition, 'newtab-input-auto-focus');
+  assert.strictEqual(settledRouteCreates, 1, 'the New Tab should create the new wallpapers hint once');
+  assert.strictEqual(createdHintOptions.definition, 'newtab-wallpaper-sources');
   assert.strictEqual(
     createdHintOptions.dismissStorage,
     undefined,
-    'the input auto-focus feature hint should use its normal Sync dismissal state'
+    'the new wallpapers hint should use its normal Sync dismissal state'
   );
   assert.strictEqual(
     createdHintOptions.visibilityGate,
-    inputAutoFocusVisibilityGate,
-    'the input auto-focus feature hint should receive the page entrance completion gate'
+    featureHintVisibilityGate,
+    'the new wallpapers hint should receive the page entrance completion gate'
   );
   assert.strictEqual(
     hintElement.parentNode,
-    inputAutoFocusHintAnchor,
-    'the feature hint should mount in the New Tab input container above its settings button'
+    settledRuntime.getControlElement(),
+    'the hint should mount beside the appearance button it points at'
   );
   settledRuntime.getControlElement().children[1].click();
   assert.strictEqual(
@@ -4452,7 +4442,7 @@ Promise.resolve()
   .then(testLinkedWallpaperSyncsItsUrlAndCachesTheImage)
   .then(testRandomDailyWallpaperReopensOnTheRandomMix)
   .then(testCuratedArtCachesOneDownscaledPrintPerDevice)
-  .then(testInputAutoFocusHintWaitsForFinalFocusRoute)
+  .then(testWallpaperSourcesHintWaitsForFinalFocusRoute)
   .then(testNewtabFaviconPreloadAppliesCachedAlternateBeforeMainRuntime)
   .then(testWallpaperPreloadUsesTheCachedResolvedMode)
   .then(testBuiltInWallpaperBootstrapDefersCustomCatalogRead)

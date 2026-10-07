@@ -3340,6 +3340,10 @@ body[data-theme="dark"] .x-nt-recent-track.x-nt-recent-track--active {
   justify-content: flex-end;
   pointer-events: none;
 }
+/* A visible feature hint stretches left over the feedback button, so lift the control above it. */
+.x-nt-wallpaper-control:has(> .x-lumno-feature-hint[data-visible="true"]) {
+  z-index: 20;
+}
 .x-nt-wallpaper-control[data-panel-open="true"] {
   z-index: 30;
 }

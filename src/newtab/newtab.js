@@ -616,6 +616,7 @@
   let feedbackLinks = LUMNO_FEEDBACK_LINKS_FALLBACK;
   let updateNoticeController = null;
   let engagementNoticeController = null;
+  let webdavFeatureHintController = null;
   let pageNoticeController = null;
   let newtabTopContentMode = 'brand';
   let newtabTimeFontWeight = NEWTAB_TIME_FONT_WEIGHT_DEFAULT;
@@ -1499,6 +1500,9 @@
       },
       get engagementNoticeController() {
         return engagementNoticeController;
+      },
+      get webdavFeatureHintController() {
+        return webdavFeatureHintController;
       },
       get inputParts() {
         return inputParts;
@@ -2414,11 +2418,10 @@
     getShortcutGap: () => newtabShortcutGap,
     setShortcutGap: setNewtabShortcutGap,
     featureHints: FEATURE_HINTS,
+    featureHintVisibilityGate: newtabEntryAnimationReadyPromise,
     inputAutoFocusReady: initialNewtabInputAutoFocusReadyTask,
-    inputAutoFocusVisibilityGate: newtabEntryAnimationReadyPromise,
     getInputAutoFocusEnabled: () => newtabInputAutoFocusEnabled,
     setInputAutoFocusEnabled: setNewtabInputAutoFocusEnabled,
-    getInputAutoFocusHintAnchor: () => inputParts && inputParts.container,
     getAdaptiveToneTargets: createWallpaperAdaptiveToneTargets,
     view: NEWTAB_WALLPAPER_VIEW
   });
@@ -7177,6 +7180,7 @@
       event.preventDefault();
       event.stopPropagation();
       hideSearchInputCursorTooltip();
+      dismissWebdavFeatureHint();
       const runtime = typeof chrome !== 'undefined' && chrome && chrome.runtime
         ? chrome.runtime
         : null;
@@ -7190,6 +7194,36 @@
         : getExtensionResourceUrl('src/options/options.html');
       window.open(optionsUrl, '_blank');
     });
+    // Above the settings icon, point to WebDAV sync under Account & sync until it is dismissed.
+    if (typeof FEATURE_HINTS.createFeatureHint === 'function' &&
+        document.documentElement.getAttribute('data-nt-focus-route-pending') !== 'true') {
+      webdavFeatureHintController = FEATURE_HINTS.createFeatureHint({
+        documentObj: document,
+        windowObj: window,
+        chromeApi: chrome,
+        definition: 'newtab-webdav-sync',
+        visibilityGate: newtabEntryAnimationReadyPromise,
+        t,
+        getRiSvg,
+        onLinkClick(event) {
+          dismissWebdavFeatureHint();
+          chrome.runtime.sendMessage({
+            action: 'openOptionsPage',
+            hash: 'account',
+            disposition: getOpenDisposition(event, 'newTab')
+          });
+        }
+      });
+      if (webdavFeatureHintController && webdavFeatureHintController.element) {
+        inputParts.container.appendChild(webdavFeatureHintController.element);
+      }
+    }
+  }
+
+  function dismissWebdavFeatureHint() {
+    if (webdavFeatureHintController && typeof webdavFeatureHintController.dismiss === 'function') {
+      webdavFeatureHintController.dismiss();
+    }
   }
 
   function updateInputRightPadding() {

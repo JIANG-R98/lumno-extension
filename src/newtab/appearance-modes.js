@@ -89,6 +89,10 @@
           typeof pageState.engagementNoticeController.updateLanguage === 'function') {
         pageState.engagementNoticeController.updateLanguage();
       }
+      if (pageState.webdavFeatureHintController &&
+          typeof pageState.webdavFeatureHintController.updateLanguage === 'function') {
+        pageState.webdavFeatureHintController.updateLanguage();
+      }
       if (pageState.inputParts && pageState.inputParts.input) {
         pageState.defaultPlaceholderText = t('search_placeholder', pageState.defaultPlaceholderText);
         if (!pageState.siteSearchState && !pageState.localSearchScopeState) {

@@ -90,7 +90,7 @@ const verticalTranslationPattern = /\btranslate(?:Y|3d)?\s*\(|\btranslate\s*:/;
 [
   '.x-lumno-feature-hint--newtab-ai-quick-jump',
   '.x-lumno-feature-hint--newtab-tab-switcher',
-  '.x-lumno-feature-hint--newtab-input-auto-focus',
+  '.x-lumno-feature-hint--newtab-webdav-sync',
   '.x-lumno-feature-hint--update-notice-newtab'
 ].forEach((selectorFragment) => {
   const matchingBlocks = featureHintRuleBlocks.filter(({ selector }) => (

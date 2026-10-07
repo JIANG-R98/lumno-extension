@@ -19,7 +19,7 @@ const expectedMessages = {
   settings_search_result_priority_title: '検索結果の先頭表示優先度',
   settings_overlay_tab_priority_desc: '入力内容が開いているタブに一致したとき、先頭候補でEnterを押して実行する操作',
   settings_version_label: 'バージョン',
-  newtab_input_auto_focus_feature_hint_text: '自動フォーカスは「外観 / 新しいタブ」でオフにできます。',
+  newtab_webdav_feature_hint_link: '設定する',
   document_pip_picker_hint: 'マウスを動かして要素を選択し、クリックするとWebクリップで表示します。ホイールで親要素へ切り替え、Escでキャンセルできます。',
   settings_shortcuts_section_title: 'キー設定',
   settings_shortcuts_action: 'キー設定へ',

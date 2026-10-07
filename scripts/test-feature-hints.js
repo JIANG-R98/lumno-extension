@@ -29,7 +29,7 @@ assert.strictEqual(
 );
 assert.doesNotMatch(
   featureHintsCss,
-  /x-lumno-feature-hint--newtab-input-auto-focus[^{}]*\{[^}]*--x-lumno-feature-hint-arrow-border:/s,
+  /x-lumno-feature-hint--newtab-webdav-sync[^{}]*\{[^}]*--x-lumno-feature-hint-arrow-border:/s,
   'the dark arrow fix should stay at the shared component level'
 );
 
@@ -243,43 +243,53 @@ function flushMicrotasks() {
     'newtab tab switcher feature hint fallback should use a platform shortcut placeholder'
   );
 
-  const inputAutoFocusHint = featureHints.getFeatureHint('newtab-input-auto-focus');
-  assert(inputAutoFocusHint, 'newtab input auto-focus feature hint should be registered');
+  const webdavHint = featureHints.getFeatureHint('newtab-webdav-sync');
+  assert(webdavHint, 'newtab WebDAV feature hint should be registered');
   assert.strictEqual(
-    inputAutoFocusHint.introducedIn,
-    '0.9.41',
-    'newtab input auto-focus feature hint should be keyed to the release version'
+    webdavHint.introducedIn,
+    '0.9.58',
+    'newtab WebDAV feature hint should be keyed to the release version'
   );
   assert.strictEqual(
-    inputAutoFocusHint.placement,
+    webdavHint.placement,
     'above newtab settings button',
-    'newtab input auto-focus feature hint should point to the settings button'
+    'newtab WebDAV feature hint should point to the settings button'
   );
   assert.strictEqual(
-    inputAutoFocusHint.arrowAlign,
+    webdavHint.arrowAlign,
     'end',
-    'newtab input auto-focus feature hint should point to the right-side settings button'
+    'newtab WebDAV feature hint should point to the right-side settings button'
   );
   assert.strictEqual(
-    inputAutoFocusHint.widthMode,
+    webdavHint.widthMode,
     'content',
-    'newtab input auto-focus feature hint should prefer a single content-width row'
+    'newtab WebDAV feature hint should prefer a single content-width row'
   );
   assert.strictEqual(
-    inputAutoFocusHint.badgeFallback,
-    'Tip',
-    'newtab input auto-focus feature hint should use the tip badge fallback'
+    webdavHint.badgeFallback,
+    'Beta',
+    'the WebDAV feature hint should mark the feature as a beta'
   );
   assert.strictEqual(
-    inputAutoFocusHint.className,
-    'x-lumno-feature-hint--newtab-input-auto-focus',
-    'newtab input auto-focus feature hint should expose a dedicated placement class'
+    webdavHint.className,
+    'x-lumno-feature-hint--newtab-webdav-sync',
+    'newtab WebDAV feature hint should expose a dedicated placement class'
   );
   assert.strictEqual(
-    inputAutoFocusHint.rememberOnFirstShow,
+    webdavHint.rememberOnFirstShow,
     false,
-    'input auto-focus hint should wait for user acknowledgement before remembering dismissal'
+    'WebDAV hint should wait for user acknowledgement before remembering dismissal'
   );
+  assert.strictEqual(webdavHint.linkKey, 'newtab_webdav_feature_hint_link',
+    'the WebDAV hint should link to its settings');
+
+  const wallpaperSourcesHint = featureHints.getFeatureHint('newtab-wallpaper-sources');
+  assert(wallpaperSourcesHint, 'the new wallpapers hint should be registered');
+  assert.strictEqual(wallpaperSourcesHint.introducedIn, '0.9.58');
+  assert.strictEqual(wallpaperSourcesHint.placement, 'bottom-right wallpaper control');
+  assert.strictEqual(wallpaperSourcesHint.arrowSide, 'right', 'the new wallpapers hint should point at the appearance button');
+  assert.strictEqual(featureHints.getFeatureHint('newtab-input-auto-focus'), null,
+    'the retired input auto-focus hint should no longer be offered');
 
   const macHintController = featureHints.createFeatureHint({
     documentObj: createFakeDocument(),
@@ -399,76 +409,76 @@ function flushMicrotasks() {
     'second feature hint should load the sync dismissed state'
   );
 
-  const inputAutoFocusSyncKey = featureHints.getFeatureHintSyncDismissKey(
-    'newtab-input-auto-focus'
+  const webdavSyncKey = featureHints.getFeatureHintSyncDismissKey(
+    'newtab-webdav-sync'
   );
-  const previousInputAutoFocusSyncKey = featureHints.getFeatureHintSyncDismissKey({
-    id: 'newtab-input-auto-focus',
-    introducedIn: '0.9.40'
+  const previousWebdavSyncKey = featureHints.getFeatureHintSyncDismissKey({
+    id: 'newtab-webdav-sync',
+    introducedIn: '0.9.57'
   });
-  const inputAutoFocusSyncStore = {
-    [previousInputAutoFocusSyncKey]: true
+  const webdavSyncStore = {
+    [previousWebdavSyncKey]: true
   };
-  const inputAutoFocusController = featureHints.createFeatureHint({
+  const webdavController = featureHints.createFeatureHint({
     documentObj: createFakeDocument(),
-    definition: 'newtab-input-auto-focus',
-    chromeApi: createStorageBackedChrome({}, inputAutoFocusSyncStore),
+    definition: 'newtab-webdav-sync',
+    chromeApi: createStorageBackedChrome({}, webdavSyncStore),
     t: (key, fallback) => fallback,
     getRiSvg: () => ''
   });
-  assert(inputAutoFocusController, 'input auto-focus feature hint should be created');
+  assert(webdavController, 'WebDAV feature hint should be created');
   assert.strictEqual(
-    await inputAutoFocusController.ready,
+    await webdavController.ready,
     true,
-    'an upgrade from 0.9.40 should expose the new 0.9.41 input auto-focus hint'
+    'an upgrade from 0.9.57 should expose the new 0.9.58 WebDAV hint'
   );
   await flushMicrotasks();
   assert.strictEqual(
-    inputAutoFocusController.element.getAttribute('data-visible'),
+    webdavController.element.getAttribute('data-visible'),
     'true',
-    'the 0.9.41 input auto-focus hint should become visible without a current dismissal'
+    'the 0.9.58 WebDAV hint should become visible without a current dismissal'
   );
   assert.strictEqual(
-    inputAutoFocusSyncStore[inputAutoFocusSyncKey],
+    webdavSyncStore[webdavSyncKey],
     undefined,
-    'becoming visible should not remember the input auto-focus hint before acknowledgement'
+    'becoming visible should not remember the WebDAV hint before acknowledgement'
   );
-  inputAutoFocusController.setVisible(false);
-  inputAutoFocusController.setVisible(true);
+  webdavController.setVisible(false);
+  webdavController.setVisible(true);
   assert.strictEqual(
-    inputAutoFocusSyncStore[inputAutoFocusSyncKey],
+    webdavSyncStore[webdavSyncKey],
     undefined,
-    'an interrupted visible state should not remember the input auto-focus hint'
+    'an interrupted visible state should not remember the WebDAV hint'
   );
-  inputAutoFocusController.dismiss();
+  webdavController.dismiss();
   assert.strictEqual(
-    inputAutoFocusSyncStore[inputAutoFocusSyncKey],
+    webdavSyncStore[webdavSyncKey],
     true,
-    'actively dismissing the input auto-focus hint should persist acknowledgement'
+    'actively dismissing the WebDAV hint should persist acknowledgement'
   );
 
-  const acknowledgedInputAutoFocusController = featureHints.createFeatureHint({
+  const acknowledgedWebdavController = featureHints.createFeatureHint({
     documentObj: createFakeDocument(),
-    definition: 'newtab-input-auto-focus',
-    chromeApi: createStorageBackedChrome({}, inputAutoFocusSyncStore),
+    definition: 'newtab-webdav-sync',
+    chromeApi: createStorageBackedChrome({}, webdavSyncStore),
     t: (key, fallback) => fallback,
     getRiSvg: () => ''
   });
   assert.strictEqual(
-    await acknowledgedInputAutoFocusController.ready,
+    await acknowledgedWebdavController.ready,
     false,
-    'an acknowledged input auto-focus hint should stay hidden on later New Tabs'
+    'an acknowledged WebDAV hint should stay hidden on later New Tabs'
   );
   assert.strictEqual(
-    acknowledgedInputAutoFocusController.element.getAttribute('data-dismissed'),
+    acknowledgedWebdavController.element.getAttribute('data-dismissed'),
     'true',
-    'a later New Tab should load the acknowledged input auto-focus hint state'
+    'a later New Tab should load the acknowledged WebDAV hint state'
   );
 
   let releaseVisibilityGate = null;
-  const gatedInputAutoFocusController = featureHints.createFeatureHint({
+  const gatedWebdavController = featureHints.createFeatureHint({
     documentObj: createFakeDocument(),
-    definition: 'newtab-input-auto-focus',
+    definition: 'newtab-webdav-sync',
     dismissStorage: 'none',
     visibilityGate: new Promise((resolve) => {
       releaseVisibilityGate = resolve;
@@ -476,14 +486,14 @@ function flushMicrotasks() {
     t: (key, fallback) => fallback,
     getRiSvg: () => ''
   });
-  assert(gatedInputAutoFocusController, 'gated input auto-focus feature hint should be created');
+  assert(gatedWebdavController, 'gated WebDAV feature hint should be created');
   assert.strictEqual(
-    gatedInputAutoFocusController.element.getAttribute('data-visible'),
+    gatedWebdavController.element.getAttribute('data-visible'),
     'false',
     'a feature hint should stay hidden while its component visibility gate is pending'
   );
   let gatedReadySettled = false;
-  gatedInputAutoFocusController.ready.then(() => {
+  gatedWebdavController.ready.then(() => {
     gatedReadySettled = true;
   });
   await flushMicrotasks();
@@ -494,12 +504,12 @@ function flushMicrotasks() {
   );
   releaseVisibilityGate();
   assert.strictEqual(
-    await gatedInputAutoFocusController.ready,
+    await gatedWebdavController.ready,
     true,
     'the feature hint should become visible only after its visibility gate resolves'
   );
   assert.strictEqual(
-    gatedInputAutoFocusController.element.getAttribute('data-visible'),
+    gatedWebdavController.element.getAttribute('data-visible'),
     'true',
     'the feature hint should run its own entrance after the anchor entrance gate settles'
   );

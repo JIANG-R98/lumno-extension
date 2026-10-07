@@ -142,7 +142,7 @@ body[data-nt-suggestions-open="true"] .x-lumno-feature-hint--newtab-tab-switcher
   transform: scale(0.98);
 }
 
-.x-lumno-feature-hint--newtab-input-auto-focus {
+.x-lumno-feature-hint--newtab-webdav-sync {
   left: auto;
   right: 0;
   bottom: calc(100% + 14px);
@@ -153,11 +153,11 @@ body[data-nt-suggestions-open="true"] .x-lumno-feature-hint--newtab-tab-switcher
   transform-origin: right bottom;
 }
 
-.x-lumno-feature-hint--newtab-input-auto-focus[data-visible="true"] {
+.x-lumno-feature-hint--newtab-webdav-sync[data-visible="true"] {
   transform: scale(1);
 }
 
-body[data-nt-suggestions-open="true"] .x-lumno-feature-hint--newtab-input-auto-focus {
+body[data-nt-suggestions-open="true"] .x-lumno-feature-hint--newtab-webdav-sync {
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
