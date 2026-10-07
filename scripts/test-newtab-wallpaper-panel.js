@@ -21,6 +21,8 @@ const REAL_WALLPAPER_DEPENDENCIES = {
 const WALLPAPER_STORAGE_KEY = '_x_extension_newtab_wallpaper_2026_unique_';
 const LOCAL_WALLPAPER_STORAGE_KEY = '_x_extension_newtab_local_wallpaper_2026_unique_';
 const ONLINE_WALLPAPER_STORAGE_KEY = '_x_extension_newtab_online_wallpaper_2026_unique_';
+const LINK_WALLPAPERS_STORAGE_KEY = '_x_extension_newtab_link_wallpapers_2026_unique_';
+const DAILY_WALLPAPER_PICKS_STORAGE_KEY = '_x_extension_newtab_daily_wallpaper_picks_2026_unique_';
 const WALLPAPER_OVERLAY_STORAGE_KEY = '_x_extension_newtab_wallpaper_overlay_2026_unique_';
 const WALLPAPER_EFFECT_STORAGE_KEY = '_x_extension_newtab_wallpaper_effect_2026_unique_';
 const NEWTAB_FAVICON_STORAGE_KEY = '_x_extension_newtab_favicon_2026_unique_';
@@ -706,11 +708,14 @@ function createFakeWallpaperViewController(config) {
   const modeSync = add(body, 'div', 'x-nt-wallpaper-mode-sync');
   add(modeSync, 'span', 'x-nt-wallpaper-mode-sync-title', {}, 'modeSyncTitle');
   addSwitch(modeSync, 'modeSyncToggle');
+  const modeRow = add(body, 'div', 'x-nt-appearance-setting-row x-nt-wallpaper-mode-row',
+    { 'data-visible': 'false' }, 'modeRow');
+  add(modeRow, 'span', 'x-nt-appearance-setting-title', {}, 'modeLabel');
   const modeTabs = add(
-    body,
+    modeRow,
     'div',
     'x-nt-segmented-tabs x-nt-wallpaper-tabs x-nt-wallpaper-mode-tabs',
-    { 'data-visible': 'false' },
+    {},
     'modeTabs'
   );
   add(
@@ -733,13 +738,6 @@ function createFakeWallpaperViewController(config) {
     'x-nt-segmented-tab x-nt-wallpaper-tab x-nt-wallpaper-mode-tab',
     { 'data-wallpaper-mode': 'dark', 'data-active': 'false' },
     'darkModeTab'
-  );
-  add(
-    body,
-    'div',
-    'x-nt-wallpaper-mode-hint',
-    { 'data-visible': 'false' },
-    'modeHint'
   );
   const tabs = add(body, 'div', 'x-nt-segmented-tabs x-nt-wallpaper-tabs', {}, 'tabs');
   add(
@@ -765,6 +763,8 @@ function createFakeWallpaperViewController(config) {
   );
   add(tabs, 'button', 'x-nt-segmented-tab x-nt-wallpaper-tab',
     { 'data-wallpaper-tab': 'bing', 'data-active': 'false' }, 'bingTab');
+  add(tabs, 'button', 'x-nt-segmented-tab x-nt-wallpaper-tab',
+    { 'data-wallpaper-tab': 'curated', 'data-active': 'false' }, 'curatedTab');
   const builtInGrid = add(
     body,
     'div',
@@ -793,6 +793,8 @@ function createFakeWallpaperViewController(config) {
     { 'data-upload': 'true', 'data-loading': 'false', 'data-selected': 'false' },
     'uploadTile'
   );
+  add(localGrid, 'div', 'x-nt-wallpaper-tile x-nt-wallpaper-upload-tile x-nt-wallpaper-url-tile',
+    { 'data-selected': 'false' }, 'urlTile');
   const customItemsHost = add(
     localGrid,
     'span',
@@ -800,16 +802,40 @@ function createFakeWallpaperViewController(config) {
     { 'data-wallpaper-custom-items': '' },
     'customItemsHost'
   );
+  const urlForm = add(body, 'form', 'x-nt-wallpaper-url-form', {}, 'urlForm');
+  urlForm.hidden = true;
+  add(urlForm, 'input', 'x-nt-wallpaper-url-input', { type: 'url' }, 'urlInput');
+  add(urlForm, 'button', 'x-nt-wallpaper-url-submit', { type: 'submit' }, 'urlSubmit');
   const bingPanel = add(body, 'div', 'x-nt-bing-panel', { 'data-wallpaper-panel': 'bing' }, 'bingPanel');
   for (const name of ['bingDailyLabel', 'bingRecentLabel', 'bingStatus', 'bingSelectedTitle', 'bingSelectedMeta']) {
     add(bingPanel, 'span', '', {}, name);
   }
   addSwitch(bingPanel, 'bingDailyToggle');
+  add(bingPanel, 'button', '', {}, 'bingDailyRestore').hidden = true;
   add(bingPanel, 'button', '', {}, 'bingRefresh');
   add(bingPanel, 'div', '', {}, 'bingSelectedSource');
   add(bingPanel, 'a', '', {}, 'bingSelectedLink');
   add(bingPanel, 'button', '', {}, 'bingDailyInfoButton');
   const bingItemsHost = add(bingPanel, 'div', 'x-nt-wallpaper-grid x-nt-wallpaper-grid--bing', {}, 'bingItemsHost');
+  const curatedPanel = add(body, 'div', 'x-nt-curated-panel', { 'data-wallpaper-panel': 'curated' }, 'curatedPanel');
+  for (const name of ['curatedDailyLabel', 'curatedCategoryLabel', 'curatedListLabel', 'curatedSelectedTitle',
+    'curatedSelectedMeta']) {
+    add(curatedPanel, 'span', '', {}, name);
+  }
+  addSwitch(curatedPanel, 'curatedDailyToggle');
+  add(curatedPanel, 'button', '', {}, 'curatedDailyRestore').hidden = true;
+  add(curatedPanel, 'button', '', {}, 'curatedDailyInfoButton');
+  const curatedCategoryTabs = add(curatedPanel, 'div', 'x-nt-segmented-tabs', {}, 'curatedCategoryTabs');
+  add(curatedCategoryTabs, 'span', 'x-nt-segmented-tabs-indicator', {}, 'curatedCategoryIndicator');
+  (model.curatedCategories || []).forEach((item) => {
+    add(curatedCategoryTabs, 'button', 'x-nt-segmented-tab',
+      { 'data-curated-category': item.value, 'data-active': 'false' });
+  });
+  add(curatedPanel, 'button', '', {}, 'curatedRefresh');
+  add(curatedPanel, 'div', '', {}, 'curatedSelectedSource');
+  add(curatedPanel, 'a', '', {}, 'curatedSelectedLink');
+  const curatedItemsHost = add(curatedPanel, 'div', 'x-nt-wallpaper-grid x-nt-wallpaper-grid--curated', {},
+    'curatedItemsHost');
   const effectControl = add(body, 'div', 'x-nt-effect-control');
   addSliderControl(
     effectControl,
@@ -1076,6 +1102,11 @@ function createFakeWallpaperViewController(config) {
       bingItemsHost.children.length = 0;
       return items.map((item) => add(bingItemsHost, 'button', 'x-nt-wallpaper-tile',
         { 'data-wallpaper-id': item.id, 'data-selected': 'false' }));
+    },
+    renderCuratedWallpapers(items) {
+      curatedItemsHost.children.length = 0;
+      return items.map((item) => add(curatedItemsHost, 'button', 'x-nt-wallpaper-tile',
+        { 'data-wallpaper-id': item.id, 'data-selected': 'false', 'data-thumbnail-url': item.thumbnailUrl }));
     },
     renderCustomWallpapers(items) {
       customItemsHost.children.length = 0;
@@ -1799,6 +1830,27 @@ async function testWallpaperPreloadUsesTheCachedResolvedMode() {
     'a local-only dark wallpaper should not preload the synced white fallback'
   );
 
+  const preloadRemote = (url) => {
+    const remoteDocument = createFakeDocument();
+    const remoteWindow = createFakeWindow();
+    remoteWindow.localStorage.setItem(WALLPAPER_PRELOAD_STORAGE_KEY, JSON.stringify({
+      version: WALLPAPER_PRELOAD_STORAGE_VERSION,
+      mode: 'light',
+      themeMode: 'light',
+      overlayStops: {
+        light: { top: 0, mid: 0, bottom: 0 },
+        dark: { top: 0, mid: 0, bottom: 0 }
+      },
+      wallpapers: { light: { id: 'picsum-28', url }, dark: null }
+    }));
+    runWallpaperPreload(remoteDocument, remoteWindow);
+    return remoteDocument.documentElement.style.getPropertyValue('--x-nt-wallpaper-image');
+  };
+  assert.ok(preloadRemote('https://picsum.photos/id/28/2560/1440').includes('picsum.photos/id/28/2560/1440'),
+    'a curated photo paints on the first frame like a Bing photo');
+  assert.doesNotMatch(preloadRemote('https://evil.example/id/28/2560/1440'), /evil\.example/,
+    'the first frame only loads images from known wallpaper hosts');
+
   const staleDocument = createFakeDocument();
   const staleWindow = createFakeWindow();
   staleWindow.localStorage.setItem(WALLPAPER_PRELOAD_STORAGE_KEY, JSON.stringify({
@@ -1932,6 +1984,8 @@ function createWallpaperSandbox(options) {
     requestAnimationFrame: testWindow.requestAnimationFrame,
     cancelAnimationFrame: testWindow.cancelAnimationFrame,
     URL,
+    AbortController,
+    File,
     Event: testWindow.Event,
     Image: options && options.Image ? options.Image : createFakeImageClass(),
     globalThis: null,
@@ -2759,13 +2813,11 @@ async function testWallpaperModeConsistencyDefaultsOnAndCopiesLegacySelectionWhe
   const testPanel = testControl.children[0];
   const modeSyncControl = getDescendantByClassName(testPanel, 'x-nt-wallpaper-mode-sync');
   const modeSyncToggle = getDescendantByTagName(modeSyncControl, 'input');
-  const modeTabs = getDescendantByClassName(testPanel, 'x-nt-wallpaper-mode-tabs');
-  const modeHint = getDescendantByClassName(testPanel, 'x-nt-wallpaper-mode-hint');
+  const modeRow = getDescendantByClassName(testPanel, 'x-nt-wallpaper-mode-row');
 
   assert.ok(modeSyncControl, 'wallpaper panel should render a light/dark consistency switch below the main toggle');
   assert.strictEqual(modeSyncToggle.checked, true, 'light/dark consistency should default on for legacy wallpaper values');
-  assert.strictEqual(modeTabs.getAttribute('data-visible'), 'false', 'mode tabs should stay hidden while consistency is on');
-  assert.strictEqual(modeHint.getAttribute('data-visible'), 'false', 'mode hint should stay hidden while consistency is on');
+  assert.strictEqual(modeRow.getAttribute('data-visible'), 'false', 'the mode row should stay hidden while consistency is on');
 
   modeSyncToggle.checked = false;
   modeSyncToggle._listeners.change[0]();
@@ -2787,9 +2839,9 @@ async function testWallpaperModeConsistencyDefaultsOnAndCopiesLegacySelectionWhe
       .includes('lumno-newtab-white-shanshui.webp'),
     'disabling light/dark consistency should keep the current wallpaper image applied'
   );
-  assert.strictEqual(modeTabs.getAttribute('data-visible'), 'true', 'mode tabs should appear after consistency is disabled');
-  assert.strictEqual(modeHint.getAttribute('data-visible'), 'true', 'mode hint should appear between the two tab rows');
-  assert.strictEqual(modeHint.textContent, 'Light mode wallpaper');
+  assert.strictEqual(modeRow.getAttribute('data-visible'), 'true', 'the mode row should appear after consistency is disabled');
+  assert.strictEqual(getDescendantByClassName(modeRow, 'x-nt-appearance-setting-title').textContent, 'Mode',
+    'the light/dark switch reads as a setting row like Source and Category');
 }
 
 async function testDisablingWallpaperModeConsistencyIgnoresStaleLocalDisabledOverride() {
@@ -4056,6 +4108,332 @@ async function testOnlineWallpaperSurvivesOlderVersions() {
   assert.strictEqual(prefs.data[WALLPAPER_STORAGE_KEY], 'dark-linocut-topographic');
 }
 
+function createCuratedRuntime(prefs, options) {
+  const context = createWallpaperSandbox(options && options.sandbox);
+  const toasts = [];
+  const runtime = context.sandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
+    documentObj: context.documentObj, windowObj: context.windowObj,
+    storageArea: prefs, localWallpaperStorageArea: (options && options.localStorageArea) || createMemoryStorage(),
+    showToast: (message, isError) => toasts.push({ message, isError }),
+    fetchRemoteContent: options && options.fetchRemoteContent,
+    t: (_key, fallback) => fallback || '',
+    getRiSvg: () => ''
+  });
+  return { context, runtime, toasts };
+}
+
+function getCuratedTileIds(control) {
+  return getDescendantByAttribute(control, 'data-wallpaper-ref', 'curatedItemsHost').children
+    .map((tile) => tile.getAttribute('data-wallpaper-id'));
+}
+
+async function testCuratedWallpapersSyncAsIdsAndRotateDaily() {
+  const remote = require('../src/newtab/remote-content.js');
+  const prefs = createMemoryStorage({ [WALLPAPER_STORAGE_KEY]: DEFAULT_WALLPAPER_ID });
+  const { context, runtime } = createCuratedRuntime(prefs);
+  await runtime.bootstrapInitialWallpaper();
+  runtime.createControls();
+  const control = runtime.getControlElement();
+  const ref = (name) => getDescendantByAttribute(control, 'data-wallpaper-ref', name);
+  control.querySelector('.x-nt-wallpaper-button').click();
+  getDescendantByAttribute(control, 'data-wallpaper-tab', 'curated').click();
+  await waitForAsyncWallpaperApply();
+  assert.deepStrictEqual(getCuratedTileIds(control),
+    remote.getCuratedWallpapers('random').slice(0, 9).map((item) => item.id),
+    'The curated source opens on the random mix with three full rows');
+  getDescendantByAttribute(control, 'data-curated-category', 'nature').click();
+  await waitForAsyncWallpaperApply();
+  const nature = remote.getCuratedWallpapers('nature');
+  assert.deepStrictEqual(getCuratedTileIds(control), nature.slice(0, 9).map((item) => item.id));
+
+  const picked = nature[1];
+  getDescendantByAttribute(control, 'data-wallpaper-id', picked.id).onclick();
+  await waitForAsyncWallpaperApply();
+  assert.strictEqual(readPickedWallpaper(prefs), picked.id, 'A curated photo syncs as its ID alone');
+  assert.strictEqual(prefs.data[WALLPAPER_STORAGE_KEY], DEFAULT_WALLPAPER_ID,
+    'The shared key keeps a built-in stand-in that older versions accept');
+  assert.ok(context.documentObj.documentElement.style.getPropertyValue('--x-nt-wallpaper-image')
+    .includes(picked.imageUrl), 'The photo loads from its Picsum URL');
+  assert.strictEqual(ref('curatedSelectedTitle').textContent, `Photo by ${picked.name}`,
+    'Bundled credits name the photographer');
+  assert.strictEqual(ref('curatedSelectedLink').href, picked.sourceUrl);
+
+  ref('curatedRefresh').click();
+  assert.deepStrictEqual(getCuratedTileIds(control), nature.slice(9, 18).map((item) => item.id),
+    'Showing others pages through the category without moving the chosen photo into it');
+  getDescendantByAttribute(control, 'data-curated-category', 'city').click();
+  await waitForAsyncWallpaperApply();
+  assert.strictEqual(readPickedWallpaper(prefs), picked.id, 'Browsing another category keeps the wallpaper');
+  assert.deepStrictEqual(getCuratedTileIds(control),
+    remote.getCuratedWallpapers('city').slice(0, 9).map((item) => item.id));
+
+  const daily = ref('curatedDailyToggle');
+  daily.checked = true;
+  daily.dispatchEvent(new context.windowObj.Event('change'));
+  await waitForAsyncWallpaperApply();
+  const todayCity = remote.getCuratedDailyWallpaper('city', Date.now());
+  assert.strictEqual(readPickedWallpaper(prefs), 'curated-daily-city',
+    'Daily mode syncs the category, so each device resolves the same photo for the date');
+  assert.strictEqual(daily.checked, true);
+  assert.strictEqual(getDescendantByAttribute(control, 'data-wallpaper-id', todayCity.id).getAttribute('data-selected'),
+    'true', 'The list opens on the page that holds the daily photo');
+
+  const shownBefore = context.documentObj.documentElement.style.getPropertyValue('--x-nt-wallpaper-image');
+  getDescendantByAttribute(control, 'data-curated-category', 'water').click();
+  await waitForAsyncWallpaperApply();
+  assert.strictEqual(readPickedWallpaper(prefs), 'curated-daily-city', 'A category tab only browses, even with daily on');
+  assert.strictEqual(context.documentObj.documentElement.style.getPropertyValue('--x-nt-wallpaper-image'), shownBefore,
+    'Browsing another category keeps the wallpaper');
+  daily.checked = false;
+  daily.dispatchEvent(new context.windowObj.Event('change'));
+  await waitForAsyncWallpaperApply();
+  daily.checked = true;
+  daily.dispatchEvent(new context.windowObj.Event('change'));
+  await waitForAsyncWallpaperApply();
+  assert.strictEqual(readPickedWallpaper(prefs), 'curated-daily-water',
+    'Turning daily on uses the category on screen');
+
+  const todayWater = remote.getCuratedDailyWallpaper('water', Date.now());
+  const otherWater = getCuratedTileIds(control).find((tileId) => tileId !== todayWater.id);
+  getDescendantByAttribute(control, 'data-wallpaper-id', otherWater).onclick();
+  await waitForAsyncWallpaperApply();
+  assert.strictEqual(readPickedWallpaper(prefs), 'curated-daily-water', 'Picking a photo keeps daily updates on');
+  assert.strictEqual(daily.checked, true);
+  assert.deepStrictEqual(clonePlain(prefs.data[DAILY_WALLPAPER_PICKS_STORAGE_KEY].picks),
+    { 'curated-daily-water': otherWater }, 'The pick for today syncs with the daily choice');
+  assert.ok(context.documentObj.documentElement.style.getPropertyValue('--x-nt-wallpaper-image')
+    .includes(remote.wallpaperFromId(otherWater).imageUrl), 'The picked photo shows instead of the scheduled one');
+  assert.strictEqual(getDescendantByAttribute(control, 'data-wallpaper-id', otherWater).getAttribute('data-selected'), 'true');
+  assert.strictEqual(ref('curatedDailyRestore').hidden, false, 'A restore button appears once today is overridden');
+
+  ref('curatedDailyRestore').click();
+  await waitForAsyncWallpaperApply();
+  assert.strictEqual(prefs.data[DAILY_WALLPAPER_PICKS_STORAGE_KEY], '', 'Restoring drops the pick');
+  assert.strictEqual(ref('curatedDailyRestore').hidden, true);
+  assert.strictEqual(getDescendantByAttribute(control, 'data-wallpaper-id', todayWater.id).getAttribute('data-selected'),
+    'true', 'Restoring shows the scheduled photo again');
+
+  getDescendantByAttribute(control, 'data-wallpaper-id', otherWater).onclick();
+  await waitForAsyncWallpaperApply();
+  const stalePicks = createMemoryStorage(clonePlain(prefs.data));
+  stalePicks.data[DAILY_WALLPAPER_PICKS_STORAGE_KEY] = { day: '2000-1-1', picks: { 'curated-daily-water': otherWater } };
+  const nextDay = createCuratedRuntime(stalePicks);
+  await nextDay.runtime.bootstrapInitialWallpaper();
+  assert.ok(nextDay.context.documentObj.documentElement.style.getPropertyValue('--x-nt-wallpaper-image')
+    .includes(todayWater.imageUrl), 'A pick from another day no longer counts');
+
+  daily.checked = false;
+  daily.dispatchEvent(new context.windowObj.Event('change'));
+  await waitForAsyncWallpaperApply();
+  assert.strictEqual(readPickedWallpaper(prefs), otherWater,
+    'Turning off daily keeps the photo on screen, including today\'s pick');
+
+  const second = createCuratedRuntime(prefs);
+  await second.runtime.bootstrapInitialWallpaper();
+  second.runtime.createControls();
+  await waitForAsyncWallpaperApply();
+  const restored = second.runtime.getControlElement();
+  restored.querySelector('.x-nt-wallpaper-button').click();
+  await waitForAsyncWallpaperApply();
+  assert.ok(getDescendantByAttribute(restored, 'data-active-tab', 'curated'),
+    'Another device opens the curated source for a synced curated pick');
+  assert.strictEqual(getDescendantByAttribute(restored, 'data-curated-category', 'water').getAttribute('data-active'),
+    'true', 'The list shows the category of the synced photo');
+}
+
+function createWallpaperImageCacheDouble(records) {
+  const images = new Map((records || []).map((record) => [record.id, record]));
+  return {
+    images,
+    createWallpaperImageCache: () => ({
+      readByIds: async (ids) => ids.map((id) => images.get(id)).filter(Boolean),
+      write: async (record) => { images.set(record.id, record); },
+      remove: async (id) => { images.delete(id); },
+      keys: async () => Array.from(images.keys())
+    })
+  };
+}
+
+function createLinkLocalStoreApi(cache, built) {
+  const localStoreApi = { ...createLocalWallpaperStoreApi([]), ...cache };
+  const createStore = localStoreApi.createWallpaperLocalStore;
+  localStoreApi.createWallpaperLocalStore = () => ({
+    ...createStore(),
+    write() { throw new Error('Link images must stay out of the custom wallpaper library'); },
+    buildRecordFromFile(file) {
+      built.push({ name: file.name, type: file.type });
+      return Promise.resolve({ id: `${CUSTOM_WALLPAPER_ID_PREFIX}unused`, name: file.name,
+        imageDataUrl: 'data:image/webp;base64,bGluaw==', thumbnailDataUrl: 'data:image/webp;base64,dGh1bWI=',
+        updatedAt: 1 });
+    }
+  });
+  return localStoreApi;
+}
+
+async function testCuratedArtCachesOneDownscaledPrintPerDevice() {
+  const remote = require('../src/newtab/remote-content.js');
+  const requests = [];
+  const cache = createWallpaperImageCacheDouble();
+  const prefs = createMemoryStorage({ [WALLPAPER_STORAGE_KEY]: DEFAULT_WALLPAPER_ID });
+  const { context, runtime } = createCuratedRuntime(prefs, {
+    sandbox: { localStoreApi: createLinkLocalStoreApi(cache, []) },
+    fetchRemoteContent: async (url) => {
+      requests.push(url);
+      return { ok: true, status: 200, url, blob: async () => new Blob(['print'], { type: 'image/jpeg' }) };
+    }
+  });
+  await runtime.bootstrapInitialWallpaper();
+  runtime.createControls();
+  const control = runtime.getControlElement();
+  const image = () => context.documentObj.documentElement.style.getPropertyValue('--x-nt-wallpaper-image');
+  control.querySelector('.x-nt-wallpaper-button').click();
+  getDescendantByAttribute(control, 'data-wallpaper-tab', 'curated').click();
+  getDescendantByAttribute(control, 'data-curated-category', 'art').click();
+  await waitForAsyncWallpaperApply();
+  const [first, second] = remote.getCuratedWallpapers('art');
+  assert.strictEqual(getCuratedTileIds(control)[0], first.id);
+  assert.ok(getDescendantByAttribute(control, 'data-wallpaper-id', first.id).getAttribute('data-thumbnail-url')
+    .endsWith('_web.jpg'), 'Tiles use the museum web image');
+
+  getDescendantByAttribute(control, 'data-wallpaper-id', first.id).onclick();
+  await waitForAsyncWallpaperApply();
+  await waitForAsyncWallpaperApply();
+  assert.strictEqual(readPickedWallpaper(prefs), first.id, 'A painting syncs as its ID alone');
+  assert.deepStrictEqual(requests, [first.imageUrl], 'The print downloads once');
+  assert.ok(cache.images.has(first.id), 'The downscaled print is cached on this device');
+  assert.ok(image().includes('data:image/webp;base64,bGluaw=='), 'The wallpaper shows the cached copy');
+  const ref = (name) => getDescendantByAttribute(control, 'data-wallpaper-ref', name);
+  assert.strictEqual(ref('curatedSelectedTitle').textContent, first.title, 'Paintings are credited by title');
+  assert.ok(ref('curatedSelectedMeta').textContent.includes('The Cleveland Museum of Art'));
+  assert.strictEqual(ref('curatedSelectedLink').href, first.sourceUrl);
+
+  getDescendantByAttribute(control, 'data-wallpaper-id', second.id).onclick();
+  await waitForAsyncWallpaperApply();
+  await waitForAsyncWallpaperApply();
+  assert.deepStrictEqual(Array.from(cache.images.keys()), [second.id],
+    'A print no mode shows is dropped, so daily art does not pile up');
+
+  const preload = JSON.parse(context.windowObj.localStorage.getItem(WALLPAPER_PRELOAD_STORAGE_KEY));
+  assert.strictEqual(preload.wallpapers.light, null, 'The first frame never loads a multi-megabyte print');
+}
+
+async function testRandomDailyWallpaperReopensOnTheRandomMix() {
+  const remote = require('../src/newtab/remote-content.js');
+  const prefs = createMemoryStorage({ [WALLPAPER_STORAGE_KEY]: DEFAULT_WALLPAPER_ID });
+  const { context, runtime } = createCuratedRuntime(prefs);
+  await runtime.bootstrapInitialWallpaper();
+  runtime.createControls();
+  const control = runtime.getControlElement();
+  control.querySelector('.x-nt-wallpaper-button').click();
+  getDescendantByAttribute(control, 'data-wallpaper-tab', 'curated').click();
+  await waitForAsyncWallpaperApply();
+  const daily = getDescendantByAttribute(control, 'data-wallpaper-ref', 'curatedDailyToggle');
+  daily.checked = true;
+  daily.dispatchEvent(new context.windowObj.Event('change'));
+  await waitForAsyncWallpaperApply();
+  assert.strictEqual(readPickedWallpaper(prefs), 'curated-daily-random', 'Daily updates can draw from every category');
+  const today = remote.getCuratedDailyWallpaper('random', Date.now());
+
+  const other = createCuratedRuntime(prefs);
+  await other.runtime.bootstrapInitialWallpaper();
+  other.runtime.createControls();
+  const otherControl = other.runtime.getControlElement();
+  otherControl.querySelector('.x-nt-wallpaper-button').click();
+  await waitForAsyncWallpaperApply();
+  assert.strictEqual(getDescendantByAttribute(otherControl, 'data-curated-category', 'random').getAttribute('data-active'),
+    'true', 'A random daily choice reopens on the random mix, not on the photo\'s own category');
+  assert.strictEqual(getDescendantByAttribute(otherControl, 'data-wallpaper-id', today.id).getAttribute('data-selected'),
+    'true', 'The mix opens on the page that holds today\'s photo');
+}
+
+async function testLinkedWallpaperSyncsItsUrlAndCachesTheImage() {
+  const requests = [];
+  const built = [];
+  const cache = createWallpaperImageCacheDouble();
+  const prefs = createMemoryStorage({ [WALLPAPER_STORAGE_KEY]: DEFAULT_WALLPAPER_ID });
+  const localStorageArea = createMemoryStorage();
+  const fetchRemoteContent = async (url, init) => {
+    requests.push({ url, init });
+    return { ok: true, status: 200, url, blob: async () => new Blob(['image'], { type: 'application/octet-stream' }) };
+  };
+  const { context, runtime, toasts } = createCuratedRuntime(prefs, {
+    sandbox: { localStoreApi: createLinkLocalStoreApi(cache, built) },
+    localStorageArea,
+    fetchRemoteContent
+  });
+  await runtime.bootstrapInitialWallpaper();
+  runtime.createControls();
+  const control = runtime.getControlElement();
+  const ref = (name) => getDescendantByAttribute(control, 'data-wallpaper-ref', name);
+  control.querySelector('.x-nt-wallpaper-button').click();
+  getDescendantByAttribute(control, 'data-wallpaper-tab', 'local').click();
+  ref('urlTile').click();
+  await waitForAsyncWallpaperApply();
+  assert.strictEqual(ref('urlForm').hidden, false, 'The link tile opens the link form');
+  const submit = () => ref('urlForm').dispatchEvent({ type: 'submit', preventDefault() {} });
+
+  ref('urlInput').value = 'javascript:alert(1)';
+  submit();
+  assert.strictEqual(requests.length, 0, 'Only web links are fetched');
+  assert.strictEqual(ref('urlInput').getAttribute('aria-invalid'), 'true');
+  assert.ok(toasts.some((toast) => toast.isError));
+
+  const url = 'https://images.example/photos/Lake%20View.JPG';
+  ref('urlInput').value = ` ${url} `;
+  submit();
+  await waitForAsyncWallpaperApply();
+  await waitForAsyncWallpaperApply();
+  assert.strictEqual(requests[0].url, url);
+  assert.strictEqual(requests[0].init.credentials, 'omit', 'Linked images load without cookies');
+  assert.deepStrictEqual(built, [{ name: 'Lake View', type: 'image/jpeg' }],
+    'A generic binary type falls back to the file extension');
+  const links = JSON.parse(JSON.stringify(prefs.data[LINK_WALLPAPERS_STORAGE_KEY]));
+  assert.strictEqual(links.length, 1);
+  assert.strictEqual(links[0].url, url, 'The link itself syncs');
+  const linkId = links[0].id;
+  assert.strictEqual(readPickedWallpaper(prefs), linkId, 'The selection syncs like an online pick');
+  assert.strictEqual(prefs.data[WALLPAPER_STORAGE_KEY], DEFAULT_WALLPAPER_ID,
+    'Older versions see a built-in stand-in instead of an ID they would clear');
+  assert.ok(!localStorageArea.data[LOCAL_WALLPAPER_STORAGE_KEY], 'No device-only selection is left behind');
+  assert.strictEqual(cache.images.get(linkId).url, url, 'This device keeps a cached copy');
+  assert.ok(context.documentObj.documentElement.style.getPropertyValue('--x-nt-wallpaper-image')
+    .includes('data:image/webp;base64,bGluaw=='), 'The wallpaper shows the cached copy');
+  assert.strictEqual(ref('urlForm').hidden, true, 'A successful import closes the form');
+  assert.strictEqual(ref('urlInput').value, '');
+  assert.ok(getDescendantByAttribute(control, 'data-wallpaper-id', linkId), 'The link appears among local tiles');
+
+  ref('urlTile').click();
+  await waitForAsyncWallpaperApply();
+  assert.strictEqual(runtime.closeOpenMenu(), true, 'Escape closes the link form before the panel');
+  assert.strictEqual(ref('urlForm').hidden, true);
+  assert.strictEqual(runtime.closeOpenMenu(), false);
+
+  // Another device receives the link and selection, then caches the image on its own.
+  const otherRequests = [];
+  const otherCache = createWallpaperImageCacheDouble();
+  const other = createCuratedRuntime(prefs, {
+    sandbox: { localStoreApi: createLinkLocalStoreApi(otherCache, []) },
+    fetchRemoteContent: async (target, init) => {
+      otherRequests.push(target);
+      return fetchRemoteContent(target, init);
+    }
+  });
+  await other.runtime.bootstrapInitialWallpaper();
+  await waitForAsyncWallpaperApply();
+  assert.deepStrictEqual(otherRequests, [url], 'The other device downloads the synced link once');
+  assert.strictEqual(otherCache.images.get(linkId).url, url);
+  assert.ok(other.context.documentObj.documentElement.style.getPropertyValue('--x-nt-wallpaper-image')
+    .includes('data:image/webp;base64,bGluaw=='));
+
+  getDescendantByAttribute(control, 'data-wallpaper-id', linkId)
+    .querySelector('.x-nt-wallpaper-delete-button').click();
+  await waitForAsyncWallpaperApply();
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(prefs.data[LINK_WALLPAPERS_STORAGE_KEY])), [],
+    'Deleting a link removes it from every synced device');
+  assert.strictEqual(readPickedWallpaper(prefs), DEFAULT_WALLPAPER_ID, 'A deleted selected link falls back to the default');
+  assert.strictEqual(cache.images.has(linkId), false);
+}
+
 Promise.resolve()
   .then(() => {
     assertBrandMarkCopy();
@@ -4070,6 +4448,10 @@ Promise.resolve()
   .then(testLegacyOnlineWallpaperMigratesToBing)
   .then(testUnrecognizedSyncedWallpaperIsNotWrittenBack)
   .then(testOnlineWallpaperSurvivesOlderVersions)
+  .then(testCuratedWallpapersSyncAsIdsAndRotateDaily)
+  .then(testLinkedWallpaperSyncsItsUrlAndCachesTheImage)
+  .then(testRandomDailyWallpaperReopensOnTheRandomMix)
+  .then(testCuratedArtCachesOneDownscaledPrintPerDevice)
   .then(testInputAutoFocusHintWaitsForFinalFocusRoute)
   .then(testNewtabFaviconPreloadAppliesCachedAlternateBeforeMainRuntime)
   .then(testWallpaperPreloadUsesTheCachedResolvedMode)

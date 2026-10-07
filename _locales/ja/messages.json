@@ -771,7 +771,7 @@
     "message": "favicon を保存できませんでした"
   },
   "newtab_wallpaper_source_title": {
-    "message": "壁紙ソース"
+    "message": "ソース"
   },
   "newtab_wallpaper_builtin_section": {
     "message": "内蔵"
@@ -794,6 +794,9 @@
   "newtab_wallpaper_mode_sync_toggle_label": {
     "message": "ライト/ダークで同じ壁紙を使う"
   },
+  "newtab_wallpaper_mode_row_title": {
+    "message": "モード"
+  },
   "newtab_wallpaper_mode_tabs_label": {
     "message": "壁紙のカラーモード"
   },
@@ -805,12 +808,6 @@
   },
   "newtab_wallpaper_mode_select_label": {
     "message": "{mode}モードの壁紙を編集"
-  },
-  "newtab_wallpaper_mode_hint_light": {
-    "message": "ライトモードの壁紙"
-  },
-  "newtab_wallpaper_mode_hint_dark": {
-    "message": "ダークモードの壁紙"
   },
   "newtab_wallpaper_feature_hint_badge": {
     "message": "新機能"
@@ -2913,10 +2910,13 @@
     "message": "道徳経"
   },
   "newtab_bing_daily": {
-    "message": "毎日の壁紙"
+    "message": "毎日自動更新"
   },
   "newtab_bing_daily_hint": {
-    "message": "毎日 Bing の写真に更新します。オフにすると現在の壁紙を固定します。"
+    "message": "毎日 Bing の写真に更新します。オンのまま選んだ壁紙はその日のみ有効で、翌日に自動で戻ります。"
+  },
+  "newtab_daily_restore": {
+    "message": "今日の壁紙に戻す"
   },
   "newtab_bing_recent": {
     "message": "最近の壁紙"
@@ -2938,6 +2938,66 @@
   },
   "newtab_bing_source": {
     "message": "壁紙の出典を見る"
+  },
+  "newtab_wallpaper_curated_section": {
+    "message": "厳選"
+  },
+  "newtab_curated_daily_hint": {
+    "message": "オンにしたときのカテゴリから毎日 1 枚を表示し、同期した端末では同じ写真になります。手動で選んだ壁紙はその日のみ有効で、翌日に自動で戻ります。"
+  },
+  "newtab_curated_category": {
+    "message": "分類"
+  },
+  "newtab_curated_category_random": {
+    "message": "ランダム"
+  },
+  "newtab_curated_category_nature": {
+    "message": "自然"
+  },
+  "newtab_curated_category_water": {
+    "message": "水辺"
+  },
+  "newtab_curated_category_city": {
+    "message": "都市"
+  },
+  "newtab_curated_category_minimal": {
+    "message": "ミニマル"
+  },
+  "newtab_curated_category_art": {
+    "message": "アート"
+  },
+  "newtab_curated_art_meta": {
+    "message": "クリーブランド美術館"
+  },
+  "newtab_curated_list": {
+    "message": "写真"
+  },
+  "newtab_curated_more": {
+    "message": "ほかの写真"
+  },
+  "newtab_curated_photo_by": {
+    "message": "撮影：{name}"
+  },
+  "newtab_curated_source_meta": {
+    "message": "Unsplash・Lorem Picsum 経由"
+  },
+  "newtab_wallpaper_add_url": {
+    "message": "画像のリンクを追加"
+  },
+  "newtab_wallpaper_url_placeholder": {
+    "message": "画像のリンクを貼り付け（https://…）"
+  },
+  "newtab_wallpaper_url_submit": {
+    "message": "追加"
+  },
+  "newtab_wallpaper_url_invalid": {
+    "message": "http:// または https:// で始まるリンクを入力してください"
+  },
+  "newtab_wallpaper_url_limit": {
+    "message": "リンクが長すぎるか、保存したリンクが多すぎます。いくつか削除してからもう一度お試しください。"
+  },
+  "newtab_wallpaper_url_import_error": {
+    "message": "このリンクから画像を追加できませんでした"
   },
   "newtab_quote_font_size": {
     "message": "文字サイズ"

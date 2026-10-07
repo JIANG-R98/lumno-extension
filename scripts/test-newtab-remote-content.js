@@ -254,6 +254,69 @@ async function main() {
   const jaDaily = await zhClient.ensureWallpaper(remote.BING_DAILY_ID);
   assert.equal(jaDaily.date, zhDaily.date);
   assert(jaDaily.dailyId.includes('JA-JP'), 'The same date in another market still switches to that market');
+
+  const catalog = require('../src/newtab/wallpaper-catalog.js');
+  const morning0 = () => new Date(2026, 9, 7, 9).getTime();
+  assert.deepEqual(remote.CURATED_CATEGORIES, ['random', 'nature', 'water', 'city', 'minimal', 'art']);
+  const curatedIds = Object.values(catalog).flat().map(([id]) => id);
+  assert.equal(new Set(curatedIds).size, curatedIds.length, 'Each photo belongs to one category');
+  const curated = remote.wallpaperFromId(`picsum-${catalog.city[0][0]}`);
+  assert.equal(curated.provider, 'curated');
+  assert.equal(curated.category, 'city');
+  assert.equal(curated.name, catalog.city[0][1], 'Bundled credits name the photographer');
+  assert.equal(curated.sourceUrl, `https://unsplash.com/photos/${catalog.city[0][2]}`);
+  assert.equal(curated.imageUrl, `https://picsum.photos/id/${catalog.city[0][0]}/2560/1440`);
+  const unknown = remote.wallpaperFromId('picsum-5');
+  assert.equal(unknown.imageUrl, 'https://picsum.photos/id/5/2560/1440',
+    'A photo synced from a version with a larger catalog still resolves from its ID');
+  assert.equal(unknown.sourceUrl, 'https://picsum.photos');
+  for (const bad of ['picsum-05', 'picsum-12345', 'picsum-1/../x', 'curated-daily-', 'curated-daily-Nature']) {
+    assert.equal(remote.wallpaperFromId(bad), null, `${bad} must be rejected`);
+  }
+  assert.equal(remote.getWallpaperProvider(todayId), 'bing');
+  assert.equal(remote.getWallpaperProvider('picsum-28'), 'curated');
+  assert.equal(remote.getWallpaperProvider('monet-coastal-white'), '');
+  assert(remote.isDailyWallpaperId(remote.BING_DAILY_ID) && remote.isDailyWallpaperId('curated-daily-city'));
+  assert(!remote.isDailyWallpaperId('picsum-28'));
+  assert.equal(remote.curatedDailyId('water'), 'curated-daily-water');
+  assert.equal(remote.curatedDailyId('bogus'), 'curated-daily-random');
+  const painting = remote.wallpaperFromId(`cma-${catalog.art[0][0]}`);
+  assert.equal(painting.category, 'art');
+  assert.equal(painting.name, catalog.art[0][1]);
+  assert.equal(painting.title, catalog.art[0][2]);
+  assert.equal(painting.cacheImage, true, 'Museum prints are downscaled and cached before showing');
+  assert.equal(painting.imageUrl,
+    `https://openaccess-cdn.clevelandart.org/${catalog.art[0][0]}/${catalog.art[0][0]}_print.jpg`);
+  assert.equal(painting.sourceUrl, `https://clevelandart.org/art/${catalog.art[0][0]}`);
+  for (const bad of ['cma-1980', 'cma-../../x', 'cma-1980.262/evil']) {
+    assert.equal(remote.wallpaperFromId(bad), null, `${bad} must be rejected`);
+  }
+  assert.equal(remote.getCuratedDailyWallpaper('art', morning0()).provider, 'curated');
+  assert.equal(remote.wallpaperFromId('curated-daily-sculpture').category, 'random',
+    'A category from a newer version falls back instead of losing the pick');
+
+  const morning = new Date(2026, 9, 7, 0, 5).getTime();
+  const evening = new Date(2026, 9, 7, 23, 55).getTime();
+  const deviceA = remote.createClient({ storageArea: storage(), now: () => morning, fetch: async () => assert.fail() });
+  const deviceB = remote.createClient({ storageArea: storage(), now: () => evening, fetch: async () => assert.fail() });
+  const dailyA = deviceA.getWallpaper('curated-daily-minimal');
+  assert.equal(dailyA.id, 'curated-daily-minimal');
+  assert.equal(dailyA.dailyId, deviceB.getWallpaper('curated-daily-minimal').dailyId,
+    'Devices on the same date resolve the same photo without any request');
+  assert.equal((await deviceA.ensureWallpaper('curated-daily-minimal')).dailyId, dailyA.dailyId);
+  assert.equal((await deviceA.restoreWallpaper('picsum-28')).id, 'picsum-28');
+  const nature = catalog.nature.map(([picsumId]) => `picsum-${picsumId}`);
+  const days = Array.from({ length: nature.length }, (_, index) =>
+    remote.getCuratedDailyWallpaper('nature', new Date(2026, 0, 1 + index, 12).getTime()).id);
+  assert.equal(new Set(days).size, nature.length, 'The daily photo walks the whole category before repeating');
+  assert.notEqual(days[0], days[1]);
+  const mix = (hour, date = 7) => remote.getCuratedWallpapers('random', new Date(2026, 9, date, hour).getTime())
+    .map((item) => item.id);
+  const allIds = Object.keys(catalog).flatMap((category) => remote.getCuratedWallpapers(category).map((item) => item.id));
+  assert.deepEqual([...mix(9)].sort(), [...allIds].sort(), 'The random category mixes every photo once');
+  assert.deepEqual(mix(9), mix(23), 'The mix keeps its order through the day');
+  assert.notDeepEqual(mix(9), mix(9, 8), 'The mix reshuffles on the next day');
+  assert(allIds.includes(remote.getCuratedDailyWallpaper('random', morning).id));
   console.log('newtab remote content tests passed');
 }
 main().catch((error) => { console.error(error); process.exitCode = 1; });

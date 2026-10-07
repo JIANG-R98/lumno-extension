@@ -4371,6 +4371,36 @@ body[data-theme="dark"] .x-nt-appearance-header {
   outline: 2px solid var(--x-nt-bookmark-focus, rgba(0, 0, 0, 0.22));
   outline-offset: 2px;
 }
+/* Square icon actions such as refresh and restore; info buttons only explain and keep their help cursor. */
+.x-nt-panel-icon-button {
+  all: unset;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--lumno-radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  color: var(--x-nt-subtext, #6b7280);
+  background: transparent;
+  cursor: pointer;
+  transition: background-color var(--lumno-duration-xs) ease, color var(--lumno-duration-xs) ease;
+}
+.x-nt-panel-icon-button[hidden] {
+  display: none;
+}
+.x-nt-panel-icon-button .ri-icon {
+  --ri-size: 14px;
+}
+.x-nt-panel-icon-button:hover {
+  background: rgba(17, 24, 39, 0.05);
+  color: var(--x-nt-text, #111827);
+}
+.x-nt-panel-icon-button:focus-visible {
+  outline: 2px solid var(--x-nt-bookmark-focus, rgba(0, 0, 0, 0.22));
+  outline-offset: 2px;
+}
 .x-nt-appearance-section,
 .x-nt-wallpaper-section {
   min-width: 0;
@@ -4424,7 +4454,7 @@ body[data-theme="dark"] .x-nt-appearance-header {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--x-nt-panel-content-gap);
 }
 .x-nt-segmented-tabs {
   --x-nt-segmented-tabs-radius: 10px;
@@ -4558,34 +4588,20 @@ body[data-theme="dark"] .x-nt-appearance-header {
   font-family: "Open Sans", "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI",
     "Helvetica Neue", Arial, sans-serif;
 }
-.x-nt-wallpaper-mode-tabs,
-.x-nt-wallpaper-mode-hint {
+.x-nt-wallpaper-mode-row {
   opacity: 1;
   visibility: visible;
   transition: opacity var(--x-nt-wallpaper-transition-short) ease;
   will-change: opacity;
 }
-.x-nt-wallpaper-mode-tabs[data-visible="false"],
-.x-nt-wallpaper-mode-hint[data-visible="false"] {
+.x-nt-wallpaper-mode-row[data-visible="false"] {
   display: none;
   opacity: 0;
   pointer-events: none;
   visibility: hidden;
 }
-.x-nt-wallpaper-mode-tabs[data-motion="enter"],
-.x-nt-wallpaper-mode-hint[data-motion="enter"] {
+.x-nt-wallpaper-mode-row[data-motion="enter"] {
   opacity: 0;
-}
-.x-nt-wallpaper-mode-hint {
-  min-width: 0;
-  margin-top: 24px;
-  padding: 0 2px;
-  color: var(--x-nt-subtext, #6b7280);
-  font-size: var(--lumno-font-size-xs);
-  line-height: 1.25;
-  font-weight: 400;
-  font-family: "Open Sans", "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI",
-    "Helvetica Neue", Arial, sans-serif;
 }
 .x-nt-wallpaper-body[data-active-tab="built-in"] .x-nt-wallpaper-grid--local,
 .x-nt-wallpaper-body[data-active-tab="local"] .x-nt-wallpaper-grid--built-in {
@@ -4612,8 +4628,7 @@ body[data-theme="dark"] .x-nt-appearance-header {
 }
 @media (prefers-reduced-motion: reduce) {
   .x-nt-wallpaper-tabs-indicator,
-  .x-nt-wallpaper-mode-tabs,
-  .x-nt-wallpaper-mode-hint,
+  .x-nt-wallpaper-mode-row,
   .x-nt-wallpaper-body,
   .x-nt-wallpaper-grid {
     transition: none;
@@ -5013,9 +5028,6 @@ body[data-theme="dark"] .x-nt-wallpaper-tab:hover:not([data-active="true"]) {
 body[data-theme="dark"] .x-nt-wallpaper-tab[data-active="true"] {
   color: #f8fafc;
 }
-body[data-theme="dark"] .x-nt-wallpaper-mode-hint {
-  color: #a3a3a3;
-}
 body[data-theme="dark"] .x-nt-effect-options {
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.12);
@@ -5411,6 +5423,13 @@ body[data-theme="dark"] .x-nt-appearance-info-button {
   color: #a3a3a3;
 }
 body[data-theme="dark"] .x-nt-appearance-info-button:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--x-nt-text, #e5e7eb);
+}
+body[data-theme="dark"] .x-nt-panel-icon-button {
+  color: #a3a3a3;
+}
+body[data-theme="dark"] .x-nt-panel-icon-button:hover {
   background: rgba(255, 255, 255, 0.06);
   color: var(--x-nt-text, #e5e7eb);
 }
@@ -6601,6 +6620,7 @@ body[data-lumno-page="newtab"] [role="button"] .ri-icon {
   .x-nt-feedback-detail-action,
   .x-nt-feedback-qr-image,
   .x-nt-appearance-info-button,
+  .x-nt-panel-icon-button,
   .x-nt-wallpaper-tabs,
   .x-nt-effect-options,
   .x-nt-segmented-tabs-indicator,

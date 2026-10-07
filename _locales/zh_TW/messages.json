@@ -771,7 +771,7 @@
     "message": "favicon 儲存失敗"
   },
   "newtab_wallpaper_source_title": {
-    "message": "壁紙來源"
+    "message": "來源"
   },
   "newtab_wallpaper_builtin_section": {
     "message": "內建"
@@ -794,6 +794,9 @@
   "newtab_wallpaper_mode_sync_toggle_label": {
     "message": "深淺模式使用同一張壁紙"
   },
+  "newtab_wallpaper_mode_row_title": {
+    "message": "模式"
+  },
   "newtab_wallpaper_mode_tabs_label": {
     "message": "壁紙深淺模式"
   },
@@ -805,12 +808,6 @@
   },
   "newtab_wallpaper_mode_select_label": {
     "message": "設定{mode}模式壁紙"
-  },
-  "newtab_wallpaper_mode_hint_light": {
-    "message": "淺色模式壁紙"
-  },
-  "newtab_wallpaper_mode_hint_dark": {
-    "message": "深色模式壁紙"
   },
   "newtab_wallpaper_feature_hint_badge": {
     "message": "新功能"
@@ -2913,10 +2910,13 @@
     "message": "道德經"
   },
   "newtab_bing_daily": {
-    "message": "每日桌布"
+    "message": "每日自動更新"
   },
   "newtab_bing_daily_hint": {
-    "message": "每天跟隨 Bing 更新，關閉後固定目前桌布。"
+    "message": "每天跟隨 Bing 更新。開啟時手動選的桌布當天有效，隔天自動換回。"
+  },
+  "newtab_daily_restore": {
+    "message": "恢復今日桌布"
   },
   "newtab_bing_recent": {
     "message": "最近一週"
@@ -2938,6 +2938,66 @@
   },
   "newtab_bing_source": {
     "message": "查看桌布來源"
+  },
+  "newtab_wallpaper_curated_section": {
+    "message": "精選"
+  },
+  "newtab_curated_daily_hint": {
+    "message": "每天從開啟時所在的分類換一張，同步的裝置看到同一張。手動選的桌布當天有效，隔天自動換回。"
+  },
+  "newtab_curated_category": {
+    "message": "分類"
+  },
+  "newtab_curated_category_random": {
+    "message": "隨機"
+  },
+  "newtab_curated_category_nature": {
+    "message": "自然"
+  },
+  "newtab_curated_category_water": {
+    "message": "海與湖"
+  },
+  "newtab_curated_category_city": {
+    "message": "城市"
+  },
+  "newtab_curated_category_minimal": {
+    "message": "極簡"
+  },
+  "newtab_curated_category_art": {
+    "message": "藝術"
+  },
+  "newtab_curated_art_meta": {
+    "message": "克里夫蘭藝術博物館"
+  },
+  "newtab_curated_list": {
+    "message": "圖片"
+  },
+  "newtab_curated_more": {
+    "message": "換一批"
+  },
+  "newtab_curated_photo_by": {
+    "message": "攝影：{name}"
+  },
+  "newtab_curated_source_meta": {
+    "message": "Unsplash · 經由 Lorem Picsum"
+  },
+  "newtab_wallpaper_add_url": {
+    "message": "新增圖片連結"
+  },
+  "newtab_wallpaper_url_placeholder": {
+    "message": "貼上圖片連結（https://…）"
+  },
+  "newtab_wallpaper_url_submit": {
+    "message": "新增"
+  },
+  "newtab_wallpaper_url_invalid": {
+    "message": "請輸入以 http:// 或 https:// 開頭的連結"
+  },
+  "newtab_wallpaper_url_limit": {
+    "message": "連結太長或已儲存的連結太多，請刪除一些後再試"
+  },
+  "newtab_wallpaper_url_import_error": {
+    "message": "無法從這個連結新增圖片"
   },
   "newtab_quote_font_size": {
     "message": "字號"

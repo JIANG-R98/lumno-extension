@@ -6,7 +6,10 @@
   const FAVICON_PRELOAD_STORAGE_KEY = '_x_extension_newtab_favicon_preload_2026_unique_';
   const providerStorageRuntime = globalThis.LumnoSettings.createProviderStorageRuntime(window.chrome);
   const WALLPAPER_PATH_PATTERN = /^(?:assets\/wallpapers|output\/imagegen)\/[-.\w]+\.webp$/;
-  const BING_WALLPAPER_URL_PATTERN = /^https:\/\/www\.bing\.com\/th\?id=OHR\.[-\w]{1,160}_1920x1080\.jpg&pid=hp$/;
+  const REMOTE_WALLPAPER_URL_PATTERNS = [
+    /^https:\/\/www\.bing\.com\/th\?id=OHR\.[-\w]{1,160}_1920x1080\.jpg&pid=hp$/,
+    /^https:\/\/picsum\.photos\/id\/\d{1,4}\/2560\/1440$/
+  ];
   const FAVICON_OPTIONS = {
     default: {
       file: 'assets/images/lumno.png',
@@ -100,7 +103,7 @@
       return {
         mode,
         path: WALLPAPER_PATH_PATTERN.test(path) ? path : '',
-        url: BING_WALLPAPER_URL_PATTERN.test(remoteUrl) ? remoteUrl : '',
+        url: REMOTE_WALLPAPER_URL_PATTERNS.some((pattern) => pattern.test(remoteUrl)) ? remoteUrl : '',
         overlayStops,
         effectPrefs: getEffectPrefsForMode(data.wallpaperEffects, mode)
       };

@@ -20,6 +20,18 @@ type FaviconItem = {
   previewUrl?: string;
 };
 
+type CuratedCategoryItem = {
+  label: string;
+  value: string;
+};
+
+const WALLPAPER_SOURCE_TABS = [
+  { label: 'Built-in', name: 'builtInTab', tab: 'built-in' },
+  { label: 'Local', name: 'localTab', tab: 'local' },
+  { label: 'Bing', name: 'bingTab', tab: 'bing' },
+  { label: 'Curated', name: 'curatedTab', tab: 'curated' }
+];
+
 type TopContentItem = {
   label: string;
   value: 'brand' | 'time' | 'off';
@@ -269,6 +281,9 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
     },
     { align: 'end', label: String(timeFontWeightMax) }
   ];
+  const curatedCategories: CuratedCategoryItem[] = Array.isArray(model.curatedCategories)
+    ? model.curatedCategories
+    : [];
   const effectInkTones: EffectInkToneItem[] = Array.isArray(model.effectInkTones)
     ? model.effectInkTones
     : DEFAULT_EFFECT_INK_TONES;
@@ -840,36 +855,36 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                 <Switch name="modeSyncToggle" />
               </div>
               <div className="x-nt-wallpaper-tab-group">
-                <SegmentedTabs
-                  ariaHidden="true"
-                  className="x-nt-wallpaper-tabs x-nt-wallpaper-mode-tabs"
-                  dataVisible="false"
-                  indicatorClassName="x-nt-wallpaper-tabs-indicator x-nt-wallpaper-mode-tabs-indicator"
-                  indicatorRef="modeTabsIndicator"
-                  name="modeTabs"
-                  role="tablist"
-                >
-                  {['light', 'dark'].map((mode) => (
-                    <button
-                      {...ref(mode === 'light' ? 'lightModeTab' : 'darkModeTab')}
-                      aria-selected="false"
-                      className="x-nt-segmented-tab x-nt-wallpaper-tab x-nt-wallpaper-mode-tab"
-                      data-active="false"
-                      data-wallpaper-mode={mode}
-                      key={mode}
-                      role="tab"
-                      type="button"
-                    >
-                      {mode === 'light' ? 'Light' : 'Dark'}
-                    </button>
-                  ))}
-                </SegmentedTabs>
                 <div
-                  {...ref('modeHint')}
+                  {...ref('modeRow')}
                   aria-hidden="true"
-                  className="x-nt-wallpaper-mode-hint"
+                  className="x-nt-appearance-setting-row x-nt-wallpaper-mode-row"
                   data-visible="false"
-                />
+                >
+                  <span {...ref('modeLabel')} className="x-nt-appearance-setting-title" />
+                  <SegmentedTabs
+                    className="x-nt-wallpaper-tabs x-nt-wallpaper-mode-tabs x-nt-row-tabs"
+                    indicatorClassName="x-nt-wallpaper-tabs-indicator x-nt-wallpaper-mode-tabs-indicator"
+                    indicatorRef="modeTabsIndicator"
+                    name="modeTabs"
+                    role="tablist"
+                  >
+                    {['light', 'dark'].map((mode) => (
+                      <button
+                        {...ref(mode === 'light' ? 'lightModeTab' : 'darkModeTab')}
+                        aria-selected="false"
+                        className="x-nt-segmented-tab x-nt-wallpaper-tab x-nt-wallpaper-mode-tab"
+                        data-active="false"
+                        data-wallpaper-mode={mode}
+                        key={mode}
+                        role="tab"
+                        type="button"
+                      >
+                        {mode === 'light' ? 'Light' : 'Dark'}
+                      </button>
+                    ))}
+                  </SegmentedTabs>
+                </div>
                 <div className="x-nt-appearance-setting-row">
                   <span {...ref('sourceLabel')} className="x-nt-appearance-setting-title" />
                   <SegmentedTabs
@@ -879,18 +894,18 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                     name="tabs"
                     role="tablist"
                   >
-                    {['built-in', 'local', 'bing'].map((tab) => (
+                    {WALLPAPER_SOURCE_TABS.map((item) => (
                       <button
-                        {...ref(tab === 'built-in' ? 'builtInTab' : tab === 'local' ? 'localTab' : 'bingTab')}
+                        {...ref(item.name)}
                         aria-selected="false"
                         className="x-nt-segmented-tab x-nt-wallpaper-tab"
                         data-active="false"
-                        data-wallpaper-tab={tab}
-                        key={tab}
+                        data-wallpaper-tab={item.tab}
+                        key={item.tab}
                         role="tab"
                         type="button"
                       >
-                        {tab === 'built-in' ? 'Built-in' : tab === 'local' ? 'Local' : 'Bing'}
+                        {item.label}
                       </button>
                     ))}
                   </SegmentedTabs>
@@ -935,12 +950,51 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                     />
                   </span>
                 </div>
+                <div
+                  {...ref('urlTile')}
+                  aria-controls="_x_extension_newtab_wallpaper_url_form_2026_unique_"
+                  aria-expanded="false"
+                  className="x-nt-wallpaper-tile x-nt-wallpaper-upload-tile x-nt-wallpaper-url-tile"
+                  data-selected="false"
+                  role="button"
+                  tabIndex={0}
+                >
+                  <span className="x-nt-wallpaper-thumb x-nt-wallpaper-upload-thumb">
+                    <span
+                      className="x-nt-wallpaper-upload-placeholder"
+                      dangerouslySetInnerHTML={{
+                        __html: String(model.icons?.link || '')
+                      }}
+                    />
+                  </span>
+                </div>
                 <span
                   {...ref('customItemsHost')}
                   data-wallpaper-custom-items=""
                   style={{ display: 'contents' }}
                 />
               </div>
+              <form
+                {...ref('urlForm')}
+                className="x-nt-wallpaper-url-form"
+                hidden
+                id="_x_extension_newtab_wallpaper_url_form_2026_unique_"
+                noValidate
+              >
+                <input
+                  {...ref('urlInput')}
+                  autoComplete="off"
+                  className="_x_extension_shortcut_input_2024_unique_ x-nt-wallpaper-url-input"
+                  inputMode="url"
+                  spellCheck={false}
+                  type="url"
+                />
+                <button
+                  {...ref('urlSubmit')}
+                  className="x-lumno-action-button x-lumno-action-button--secondary x-nt-wallpaper-url-submit"
+                  type="submit"
+                />
+              </form>
               <div {...ref('bingPanel')} className="x-nt-bing-panel" data-wallpaper-panel="bing" role="tabpanel" aria-hidden="true">
                 <div className="x-nt-wallpaper-mode-sync">
                   <span className="x-nt-appearance-setting-title-group">
@@ -954,15 +1008,26 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                       type="button"
                     />
                   </span>
-                  <Switch name="bingDailyToggle" />
+                  <span className="x-nt-daily-actions">
+                    <button
+                      {...ref('bingDailyRestore')}
+                      className="x-nt-panel-icon-button x-nt-daily-restore"
+                      dangerouslySetInnerHTML={{
+                        __html: String(model.icons?.restore || '')
+                      }}
+                      hidden
+                      type="button"
+                    />
+                    <Switch name="bingDailyToggle" />
+                  </span>
                 </div>
                 <div className="x-nt-bing-recent">
                   <div className="x-nt-overlay-control-header">
-                    <span {...ref('bingRecentLabel')} />
+                    <span {...ref('bingRecentLabel')} className="x-nt-appearance-setting-title" />
                     <button
                       {...ref('bingRefresh')}
                       aria-busy="false"
-                      className="x-nt-appearance-info-button x-nt-bing-refresh"
+                      className="x-nt-panel-icon-button x-nt-bing-refresh"
                       type="button"
                     >
                       <span
@@ -984,6 +1049,84 @@ function WallpaperPanel({ model }: { model: Record<string, any> }) {
                       labelProps={ref('bingSelectedTitle')}
                     />
                     <p {...ref('bingSelectedMeta')} className="x-nt-bing-source-meta" />
+                  </div>
+                </div>
+              </div>
+              <div {...ref('curatedPanel')} className="x-nt-curated-panel" data-wallpaper-panel="curated" role="tabpanel" aria-hidden="true">
+                <div className="x-nt-wallpaper-mode-sync">
+                  <span className="x-nt-appearance-setting-title-group">
+                    <span {...ref('curatedDailyLabel')} className="x-nt-wallpaper-mode-sync-title" />
+                    <button
+                      {...ref('curatedDailyInfoButton')}
+                      className="x-nt-appearance-info-button"
+                      dangerouslySetInnerHTML={{
+                        __html: String(model.icons?.info || '')
+                      }}
+                      type="button"
+                    />
+                  </span>
+                  <span className="x-nt-daily-actions">
+                    <button
+                      {...ref('curatedDailyRestore')}
+                      className="x-nt-panel-icon-button x-nt-daily-restore"
+                      dangerouslySetInnerHTML={{
+                        __html: String(model.icons?.restore || '')
+                      }}
+                      hidden
+                      type="button"
+                    />
+                    <Switch name="curatedDailyToggle" />
+                  </span>
+                </div>
+                <div className="x-nt-appearance-setting-row">
+                  <span {...ref('curatedCategoryLabel')} className="x-nt-appearance-setting-title" />
+                  <SegmentedTabs
+                    className="x-nt-wallpaper-tabs x-nt-row-tabs"
+                    indicatorClassName="x-nt-wallpaper-tabs-indicator"
+                    indicatorRef="curatedCategoryIndicator"
+                    name="curatedCategoryTabs"
+                    role="group"
+                  >
+                    {curatedCategories.map((item) => (
+                      <button
+                        aria-pressed="false"
+                        className="x-nt-segmented-tab x-nt-wallpaper-tab"
+                        data-active="false"
+                        data-curated-category={item.value}
+                        key={item.value}
+                        type="button"
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </SegmentedTabs>
+                </div>
+                <div className="x-nt-bing-recent">
+                  <div className="x-nt-overlay-control-header">
+                    <span {...ref('curatedListLabel')} className="x-nt-appearance-setting-title" />
+                    <button
+                      {...ref('curatedRefresh')}
+                      className="x-nt-panel-icon-button x-nt-bing-refresh"
+                      type="button"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="x-nt-bing-refresh-glyph"
+                        dangerouslySetInnerHTML={{
+                          __html: String(model.icons?.refresh || '')
+                        }}
+                      />
+                    </button>
+                  </div>
+                  <div {...ref('curatedItemsHost')} className="x-nt-wallpaper-grid x-nt-wallpaper-grid--curated" />
+                  <div {...ref('curatedSelectedSource')} className="x-nt-bing-source" hidden>
+                    <LinkButton
+                      {...ref('curatedSelectedLink')}
+                      className="x-nt-bing-source-link"
+                      external
+                      labelProps={ref('curatedSelectedTitle')}
+                    />
+                    <p {...ref('curatedSelectedMeta')} className="x-nt-bing-source-meta" />
                   </div>
                 </div>
               </div>
@@ -1214,6 +1357,7 @@ export interface WallpaperViewController {
   renderCustomWallpapers(items: WallpaperItem[]): HTMLElement[];
   renderEffectSelect(select: PanelSelectModel): void;
   renderQuotePositionSelect(select: PanelSelectModel): void;
+  renderCuratedWallpapers(items: WallpaperItem[]): HTMLElement[];
   renderOnlineWallpapers(items: WallpaperItem[]): HTMLElement[];
 }
 
@@ -1244,6 +1388,14 @@ export function createWallpaperViewController(
   const customRoot: Root = createRoot(customItemsHost);
   const onlineItemsHost = control.querySelector<HTMLElement>('[data-wallpaper-ref="bingItemsHost"]')!;
   const onlineRoot: Root = createRoot(onlineItemsHost);
+  const curatedItemsHost = control.querySelector<HTMLElement>('[data-wallpaper-ref="curatedItemsHost"]')!;
+  const curatedRoot: Root = createRoot(curatedItemsHost);
+  const renderTiles = (tileRoot: Root, host: HTMLElement, items: WallpaperItem[]) => {
+    flushSync(() => tileRoot.render(<>{items.map((item) => (
+      <WallpaperTile checkIcon={String(model.icons?.check || '')} item={item} key={item.id} />
+    ))}</>));
+    return Array.from(host.querySelectorAll<HTMLElement>('.x-nt-wallpaper-tile'));
+  };
   // Panel selects render as their own roots; their menus portal to the body.
   const selects = [
     { id: EFFECT_SELECT_ID, ref: 'effectSelectHost' },
@@ -1303,6 +1455,7 @@ export function createWallpaperViewController(
       destroyed = true;
       flushSync(() => customRoot.unmount());
       flushSync(() => onlineRoot.unmount());
+      flushSync(() => curatedRoot.unmount());
       selects.forEach((select) => flushSync(() => select.root.unmount()));
       flushSync(() => root.unmount());
     },
@@ -1331,11 +1484,10 @@ export function createWallpaperViewController(
       if (!destroyed) renderSelect(quotePositionSelect, select);
     },
     renderOnlineWallpapers(items: WallpaperItem[]) {
-      if (destroyed) return [];
-      flushSync(() => onlineRoot.render(<>{items.map((item) => (
-        <WallpaperTile checkIcon={String(model.icons?.check || '')} item={item} key={item.id} />
-      ))}</>));
-      return Array.from(onlineItemsHost.querySelectorAll<HTMLElement>('.x-nt-wallpaper-tile'));
+      return destroyed ? [] : renderTiles(onlineRoot, onlineItemsHost, items);
+    },
+    renderCuratedWallpapers(items: WallpaperItem[]) {
+      return destroyed ? [] : renderTiles(curatedRoot, curatedItemsHost, items);
     },
     renderCustomWallpapers(items: WallpaperItem[]) {
       if (destroyed) {

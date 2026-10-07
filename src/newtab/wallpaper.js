@@ -8,6 +8,8 @@
     wallpaper: '_x_extension_newtab_wallpaper_2026_unique_',
     localWallpaper: '_x_extension_newtab_local_wallpaper_2026_unique_',
     onlineWallpaper: SETTINGS.NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY,
+    linkWallpapers: SETTINGS.NEWTAB_LINK_WALLPAPERS_STORAGE_KEY,
+    dailyWallpaperPicks: SETTINGS.NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY,
     overlay: '_x_extension_newtab_wallpaper_overlay_2026_unique_',
     effect: '_x_extension_newtab_wallpaper_effect_2026_unique_',
     topContentMode: SETTINGS.NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY ||
@@ -72,6 +74,8 @@
     const NEWTAB_WALLPAPER_STORAGE_KEY = storageKeys.wallpaper;
     const NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY = storageKeys.localWallpaper;
     const NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY = storageKeys.onlineWallpaper;
+    const NEWTAB_LINK_WALLPAPERS_STORAGE_KEY = storageKeys.linkWallpapers;
+    const NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY = storageKeys.dailyWallpaperPicks;
     const NEWTAB_WALLPAPER_OVERLAY_STORAGE_KEY = storageKeys.overlay;
     const NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY = storageKeys.effect;
     const NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY = storageKeys.topContentMode;
@@ -248,6 +252,9 @@
       documentObj,
       windowObj
     });
+    const wallpaperImageCache = typeof WALLPAPER_LOCAL_STORE.createWallpaperImageCache === 'function'
+      ? WALLPAPER_LOCAL_STORE.createWallpaperImageCache({ windowObj })
+      : null;
     const remoteClient = REMOTE_CONTENT.createClient({
       storageArea: localWallpaperStorageArea,
       fetch: options.fetchRemoteContent,
@@ -590,6 +597,19 @@
     let customWallpaperUploadTile = null;
     let customWallpaperInput = null;
     let customWallpaperImporting = false;
+    let customWallpaperUrlTile = null;
+    let customWallpaperUrlForm = null;
+    let customWallpaperUrlInput = null;
+    let customWallpaperUrlSubmit = null;
+    // Link wallpapers sync as { id, url, addedAt } entries. Their images, and museum prints, are
+    // downscaled once per device and cached by photo ID.
+    let linkWallpapers = [];
+    const cachedWallpaperImages = new Map();
+    const wallpaperImageCaching = new Map();
+    const LINK_WALLPAPER_ID_PATTERN = /^link-[a-z0-9]{4,32}$/;
+    const LINK_WALLPAPER_URL_MAX_LENGTH = 2048;
+    // chrome.storage.sync holds 8 KB per item; normalized URLs are ASCII, so length counts bytes.
+    const LINK_WALLPAPERS_MAX_BYTES = 8000;
     let wallpaperStorageChangeSeq = 0;
     let wallpaperVisualSeq = 0;
     let wallpaperVisualRefreshTimer = 0;
@@ -843,7 +863,8 @@
     let wallpaperModeTabsIndicator = null;
     let wallpaperLightModeTab = null;
     let wallpaperDarkModeTab = null;
-    let wallpaperModeHint = null;
+    let wallpaperModeRow = null;
+    let wallpaperModeLabel = null;
     let wallpaperTabs = null;
     let wallpaperTabsIndicator = null;
     let wallpaperSourceLabel = null;
@@ -861,8 +882,23 @@
     let bingLoading = false;
     let bingSelecting = false;
     const BING_RECENT_TILE_LIMIT = 6;
-    let bingDailyCheckedDay = '';
-    let hasBingDailyRolloverListeners = false;
+    let wallpaperCuratedTab = null;
+    let wallpaperCuratedPanel = null;
+    let wallpaperCuratedGrid = null;
+    let wallpaperCuratedRefresh = null;
+    let wallpaperCuratedCategoryTabs = null;
+    // Three full rows; the refresh button pages through the category.
+    const CURATED_TILE_LIMIT = 9;
+    let curatedCategory = REMOTE_CONTENT.CURATED_CATEGORIES[0] || '';
+    let curatedPage = 0;
+    const WALLPAPER_SOURCE_TABS = ['built-in', 'local', 'bing', 'curated'];
+    const BING_DAILY_HINT = 'A new Bing photo every day. A photo you pick while this is on stays for the rest of the day.';
+    const CURATED_DAILY_HINT = 'A new photo every day from the category shown when you turn this on, ' +
+      'the same on every synced device. A photo you pick stays for the rest of the day.';
+    let dailyWallpaperCheckedDay = '';
+    // { day, picks: { [daily ID]: photo ID } }; picks from another date no longer count.
+    let dailyWallpaperPicks = { day: '', picks: {} };
+    let hasDailyWallpaperRolloverListeners = false;
     let activeWallpaperTab = 'built-in';
     let lastSyncedWallpaperSourceId = null;
     let activeWallpaperMode = NEWTAB_WALLPAPER_MODE_LIGHT;
@@ -946,14 +982,21 @@
       if (isCustomWallpaperId(normalizedId)) {
         return getCustomWallpaperById(normalizedId);
       }
+      if (isLinkWallpaperId(normalizedId)) {
+        return getLinkWallpaperById(normalizedId);
+      }
       if (REMOTE_CONTENT.wallpaperFromId(normalizedId)) {
-        return remoteClient.getWallpaper(normalizedId);
+        const pickId = getDailyWallpaperPick(normalizedId);
+        const pick = pickId && remoteClient.getWallpaper(pickId);
+        return pick
+          ? Object.assign({}, pick, { id: normalizedId, daily: true, dailyId: pickId, picked: true })
+          : remoteClient.getWallpaper(normalizedId);
       }
       return NEWTAB_WALLPAPER_OPTIONS.find((item) => item && item.id === normalizedId) || null;
     }
 
     function getWallpaperTileContainers() {
-      return [wallpaperBuiltInGrid, wallpaperLocalGrid, wallpaperBingGrid].filter(Boolean);
+      return [wallpaperBuiltInGrid, wallpaperLocalGrid, wallpaperBingGrid, wallpaperCuratedGrid].filter(Boolean);
     }
 
     function getWallpaperRestoreId() {
@@ -1240,12 +1283,24 @@
       return file ? `${NEWTAB_WALLPAPER_EXTENSION_DIRECTORY}/${file}` : '';
     }
 
+    function getCachedWallpaperImage(photoId, url) {
+      const image = cachedWallpaperImages.get(photoId);
+      return image && image.url === url ? image : null;
+    }
+
     function getWallpaperImageUrl(item) {
+      if (item && remoteClient && item.cacheImage) {
+        const cached = getCachedWallpaperImage(item.dailyId || item.id, item.imageUrl);
+        return cached ? cached.imageDataUrl : item.thumbnailUrl;
+      }
       if (item && remoteClient && REMOTE_CONTENT.wallpaperFromId(item.id)) {
         return item.imageUrl || getWallpaperImageUrl(getWallpaperById(NEWTAB_WALLPAPER_DEFAULT_ID));
       }
       if (item && isCustomWallpaperId(item.id)) {
         return item.imageDataUrl || '';
+      }
+      if (item && isLinkWallpaperId(item.id)) {
+        return item.imageDataUrl || item.url;
       }
       const runtimePath = getWallpaperRuntimePath(item);
       if (!runtimePath) {
@@ -1263,6 +1318,9 @@
       }
       if (item && isCustomWallpaperId(item.id)) {
         return item.thumbnailDataUrl || item.imageDataUrl || '';
+      }
+      if (item && isLinkWallpaperId(item.id)) {
+        return item.thumbnailDataUrl || item.url;
       }
       const runtimePath = getWallpaperRuntimePath(item, { thumbnail: true });
       if (!runtimePath) {
@@ -1586,7 +1644,8 @@
     }
 
     function isOnlineWallpaperId(value) {
-      return Boolean(REMOTE_CONTENT.wallpaperFromId(String(getRawWallpaperId(value) || '').trim()));
+      const id = String(getRawWallpaperId(value) || '').trim();
+      return Boolean(REMOTE_CONTENT.wallpaperFromId(id)) || isLinkWallpaperId(id);
     }
 
     // Versions without online wallpapers clear IDs they do not recognize, and that clear syncs to every device.
@@ -1914,10 +1973,10 @@
       return normalizeWallpaperMode(activeWallpaperMode);
     }
 
-    // Daily mode highlights the dated Bing tile it currently resolves to.
+    // Daily mode highlights the photo it currently resolves to.
     function getWallpaperTileSelectionId(id) {
-      if (id !== REMOTE_CONTENT.BING_DAILY_ID) return id;
-      const daily = remoteClient.getWallpaper(id);
+      if (!REMOTE_CONTENT.isDailyWallpaperId(id)) return id;
+      const daily = getWallpaperById(id);
       return daily && daily.dailyId || id;
     }
 
@@ -1929,9 +1988,14 @@
       return NEWTAB_WALLPAPER_MODES.some((mode) => Boolean(getEffectiveWallpaperIdForMode(mode)));
     }
 
+    function normalizeWallpaperSourceTab(tab) {
+      return WALLPAPER_SOURCE_TABS.includes(tab) ? tab : 'built-in';
+    }
+
     function getWallpaperSourceTabForId(id) {
-      if (REMOTE_CONTENT.wallpaperFromId(id)) return 'bing';
-      return isCustomWallpaperId(id) ? 'local' : 'built-in';
+      const provider = REMOTE_CONTENT.getWallpaperProvider(id);
+      if (provider) return normalizeWallpaperSourceTab(provider);
+      return isCustomWallpaperId(id) || isLinkWallpaperId(id) ? 'local' : 'built-in';
     }
 
     function getWallpaperModeLabel(mode) {
@@ -2026,7 +2090,8 @@
     function getWallpaperPreloadEntryForMode(mode) {
       const wallpaper = getWallpaperById(getEffectiveWallpaperIdForMode(mode));
       if (wallpaper && REMOTE_CONTENT.wallpaperFromId(wallpaper.id)) {
-        return wallpaper.imageUrl ? { id: wallpaper.id, url: wallpaper.imageUrl } : null;
+        // Cached museum prints load from IndexedDB, which the first frame cannot read.
+        return wallpaper.imageUrl && !wallpaper.cacheImage ? { id: wallpaper.id, url: wallpaper.imageUrl } : null;
       }
       const path = wallpaper && !isCustomWallpaperId(wallpaper.id)
         ? getWallpaperRuntimePath(wallpaper)
@@ -2786,14 +2851,15 @@
     }
 
     function updateWallpaperTabSelectionUi(tab) {
-      const nextTab = ['local', 'bing'].includes(tab) ? tab : 'built-in';
+      const nextTab = normalizeWallpaperSourceTab(tab);
       if (wallpaperBody) {
         wallpaperBody.setAttribute('data-active-tab', nextTab);
       }
       [
         { tab: 'built-in', button: wallpaperBuiltInTab, panel: wallpaperBuiltInGrid },
         { tab: 'local', button: wallpaperLocalTab, panel: wallpaperLocalGrid },
-        { tab: 'bing', button: wallpaperBingTab, panel: wallpaperBingPanel }
+        { tab: 'bing', button: wallpaperBingTab, panel: wallpaperBingPanel },
+        { tab: 'curated', button: wallpaperCuratedTab, panel: wallpaperCuratedPanel }
       ].forEach((item) => {
         const selected = item.tab === nextTab;
         if (item.button) {
@@ -2838,19 +2904,6 @@
       scheduleWallpaperModeTabsIndicatorRefresh();
     }
 
-    function updateWallpaperModeHintText() {
-      if (!wallpaperModeHint) {
-        return;
-      }
-      const mode = normalizeWallpaperMode(activeWallpaperMode);
-      const key = mode === NEWTAB_WALLPAPER_MODE_DARK
-        ? 'newtab_wallpaper_mode_hint_dark'
-        : 'newtab_wallpaper_mode_hint_light';
-      const fallback = mode === NEWTAB_WALLPAPER_MODE_DARK
-        ? 'Dark mode wallpaper'
-        : 'Light mode wallpaper';
-      wallpaperModeHint.textContent = t(key, fallback);
-    }
 
     function updateWallpaperModeControlsUi(options) {
       const animate = !options || options.animate !== false;
@@ -2882,22 +2935,17 @@
             ));
           });
         }
-        updateWallpaperModeHintText();
-        const changed = [
-          setWallpaperElementVisible(wallpaperModeTabs, showSplitControls),
-          setWallpaperElementVisible(wallpaperModeHint, showSplitControls)
-        ].some(Boolean);
+        if (wallpaperModeLabel) {
+          wallpaperModeLabel.textContent = t('newtab_wallpaper_mode_row_title', 'Mode');
+        }
+        const changed = setWallpaperElementVisible(wallpaperModeRow, showSplitControls);
         updateWallpaperModeTabsUi();
         if (changed) {
           scheduleWallpaperPanelTabIndicatorsRefresh();
         }
       };
-      const modeTabsVisible = Boolean(wallpaperModeTabs &&
-        wallpaperModeTabs.getAttribute('data-visible') === 'true');
-      const modeHintVisible = Boolean(wallpaperModeHint &&
-        wallpaperModeHint.getAttribute('data-visible') === 'true');
-      const shouldResize = modeTabsVisible !== showSplitControls ||
-        modeHintVisible !== showSplitControls;
+      const shouldResize = Boolean(wallpaperModeRow) &&
+        (wallpaperModeRow.getAttribute('data-visible') === 'true') !== showSplitControls;
       if (animate && shouldResize) {
         animateWallpaperPanelResize(apply);
         return;
@@ -2906,7 +2954,7 @@
     }
 
     function setWallpaperActiveTab(tab) {
-      const nextTab = ['local', 'bing'].includes(tab) ? tab : 'built-in';
+      const nextTab = normalizeWallpaperSourceTab(tab);
       const isSameTab = activeWallpaperTab === nextTab &&
         wallpaperBody &&
         wallpaperBody.getAttribute('data-active-tab') === nextTab;
@@ -2921,10 +2969,11 @@
       animateWallpaperPanelResize(() => {
         const previousTab = activeWallpaperTab;
         activeWallpaperTab = nextTab;
+        if (nextTab === 'curated') showCuratedCategoryOfSelection();
         updateWallpaperTabSelectionUi(nextTab);
         playWallpaperEnterMotion(
           getWallpaperGridForTab(nextTab),
-          previousTab === 'local' && nextTab === 'built-in' ? 'enter-prev' : 'enter-next'
+          WALLPAPER_SOURCE_TABS.indexOf(nextTab) < WALLPAPER_SOURCE_TABS.indexOf(previousTab) ? 'enter-prev' : 'enter-next'
         );
       });
       scheduleWallpaperTabsIndicatorRefresh();
@@ -2932,6 +2981,22 @@
         loadCustomWallpapers();
       }
       if (nextTab === 'bing' && isWallpaperPanelOpen()) loadBingCatalog();
+    }
+
+    // Opening the curated source shows the category and page of the chosen or daily photo.
+    function showCuratedCategoryOfSelection() {
+      const selectedId = getWallpaperSelectionIdForUi();
+      const selected = getWallpaperById(selectedId);
+      // A daily choice keeps its own category, which may be the random mix.
+      const category = selected && selected.provider === 'curated'
+        ? (REMOTE_CONTENT.isDailyWallpaperId(selectedId) ? REMOTE_CONTENT.wallpaperFromId(selectedId).category : selected.category)
+        : '';
+      if (!category) {
+        return;
+      }
+      curatedCategory = category;
+      showCuratedPageOfSelection();
+      renderCuratedTiles();
     }
 
     // Follow the selection only when it moves, so storage reloads (deleting a
@@ -3402,6 +3467,7 @@
         });
       });
       updateBingUi();
+      updateCuratedUi();
     }
 
     function updateTopContentModeUi() {
@@ -4198,6 +4264,7 @@
       if (customWallpaperImporting) {
         hideCustomWallpaperTooltip();
       }
+      updateCustomWallpaperUrlControls();
     }
 
     function primeWallpaperTileImage(tile) {
@@ -4255,8 +4322,10 @@
         return;
       }
       animateWallpaperPanelResize(() => {
+        const items = customWallpapers.concat(linkWallpapers.map((item) => getLinkWallpaperById(item.id)))
+          .sort((a, b) => a.updatedAt - b.updatedAt);
         const tiles = wallpaperViewController.renderCustomWallpapers(
-          customWallpapers.map((item) => ({
+          items.map((item) => ({
             id: item.id,
             thumbnailUrl: getWallpaperThumbnailUrl(item)
           }))
@@ -4289,18 +4358,24 @@
       if (customWallpaperCatalogPromise) {
         return customWallpaperCatalogPromise;
       }
+      const linkImagesTask = readCachedWallpaperImages(linkWallpapers.map((item) => item.id));
       customWallpaperCatalogPromise = readCustomWallpaperRecords().then((records) => {
-        customWallpapers = records;
-        customWallpaperCatalogLoaded = true;
-        updateCustomWallpaperUploadTile();
-        renderCustomWallpaperTiles();
-        return records;
+        const showRecords = () => {
+          customWallpapers = records;
+          customWallpaperCatalogLoaded = true;
+          updateCustomWallpaperUploadTile();
+          renderCustomWallpaperTiles();
+          return records;
+        };
+        // Wait for cached link images so the tiles do not load full images from the links first.
+        return linkWallpapers.length ? linkImagesTask.then(showRecords) : showRecords();
       }).catch(() => {
         updateCustomWallpaperUploadTile();
         renderCustomWallpaperTiles();
         return customWallpapers;
       }).finally(() => {
         customWallpaperCatalogPromise = null;
+        cacheListedLinkWallpapers();
       });
       return customWallpaperCatalogPromise;
     }
@@ -4381,6 +4456,7 @@
     function applyResolvedNewtabWallpaper(options) {
       const mode = getResolvedWallpaperMode();
       applyNewtabWallpaper(getEffectiveWallpaperIdForMode(mode), Object.assign({}, options || {}, { mode }));
+      if (hasStoredWallpaperStateLoaded) cacheShownWallpaperImages();
     }
 
     function applyStoredWallpaperState(syncedValue, localValue) {
@@ -4426,9 +4502,14 @@
       return Promise.all([
         readStorageValue(storageArea, NEWTAB_WALLPAPER_STORAGE_KEY),
         readStorageValue(localWallpaperStorageArea, NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY),
-        readStorageValue(storageArea, NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY)
+        readStorageValue(storageArea, NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY),
+        readStorageValue(storageArea, NEWTAB_LINK_WALLPAPERS_STORAGE_KEY),
+        readStorageValue(storageArea, NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY)
       ]).then((stored) => {
+        dailyWallpaperPicks = normalizeDailyWallpaperPicks(stored[4].value);
         const results = [mergeOnlineWallpaperValue(stored[0], stored[2]), stored[1]];
+        const linksChanged = setLinkWallpapers(stored[3].value);
+        const linkIds = getWallpaperStorageRawIds(results[0].value).filter(isLinkWallpaperId);
         const customWallpaperIds = getStoredCustomWallpaperIds(results)
           .filter((id) => !hasLoadedStoredCustomWallpaper(id));
         const customWallpaperPromise = customWallpaperIds.length > 0
@@ -4439,13 +4520,23 @@
         const remoteIds = getWallpaperStorageRawIds(results[0].value)
           .map((id) => normalizeNewtabWallpaperId(id))
           .filter((id) => REMOTE_CONTENT.wallpaperFromId(id));
-        const remoteTask = Promise.all(remoteIds.map((id) => remoteClient.restoreWallpaper(id)));
-        return Promise.all([customWallpaperPromise, remoteTask]).then(() => {
+        // Picks are dated Bing photos or bundled ones; restore them like any chosen photo.
+        const pickIds = remoteIds.map(getDailyWallpaperPick).filter(Boolean);
+        const remoteTask = Promise.all(remoteIds.concat(pickIds).map((id) => remoteClient.restoreWallpaper(id)));
+        const cachedPhotoIds = linkIds.concat(remoteIds.map((id) => getWallpaperById(id))
+          .filter((item) => item && item.cacheImage).map((item) => item.dailyId || item.id));
+        const linkTask = readCachedWallpaperImages(cachedPhotoIds);
+        return Promise.all([customWallpaperPromise, remoteTask, linkTask]).then(() => {
           if (changeSeq !== wallpaperStorageChangeSeq ||
               typeof config.shouldApply === 'function' && !config.shouldApply()) {
             return false;
           }
           applyStoredWallpaperState(results[0], results[1]);
+          cacheShownWallpaperImages();
+          if (linksChanged && customWallpaperCatalogLoaded) {
+            renderCustomWallpaperTiles();
+            cacheListedLinkWallpapers();
+          }
           remoteClient.setPinnedIds(remoteIds);
           if (remoteIds.includes(REMOTE_CONTENT.BING_DAILY_ID)) {
             remoteClient.ensureWallpaper(REMOTE_CONTENT.BING_DAILY_ID).then(() => {
@@ -4708,7 +4799,318 @@
       });
     }
 
+    function normalizeCustomWallpaperUrl(value) {
+      try {
+        const url = new URL(String(value || '').trim());
+        return ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password ? url.href : '';
+      } catch (_error) {
+        return '';
+      }
+    }
+
+    function getCustomWallpaperUrlName(url) {
+      try {
+        const parsed = new URL(url);
+        const file = decodeURIComponent(parsed.pathname.split('/').filter(Boolean).pop() || '');
+        return (file.replace(/\.[^.]+$/, '') || parsed.hostname).slice(0, 80);
+      } catch (_error) {
+        return '';
+      }
+    }
+
+    // Some hosts label images as generic binaries; the file extension then names the type.
+    function getCustomWallpaperUrlMimeType(url, type) {
+      const mime = String(type || '').split(';')[0].trim().toLowerCase();
+      if (mime.startsWith('image/')) return mime === 'image/jpg' ? 'image/jpeg' : mime;
+      const extension = (/\.([a-z0-9]{3,4})$/i.exec(new URL(url).pathname) || [])[1] || '';
+      return { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }[extension.toLowerCase()] || mime;
+    }
+
+    async function fetchCustomWallpaperFile(url) {
+      const fetcher = typeof options.fetchRemoteContent === 'function'
+        ? options.fetchRemoteContent
+        : windowObj.fetch.bind(windowObj);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 20000);
+      try {
+        const response = await fetcher(url, {
+          signal: controller.signal,
+          credentials: 'omit',
+          referrerPolicy: 'no-referrer'
+        });
+        if (!response.ok) {
+          throw new Error(`Request failed (${response.status}).`);
+        }
+        const blob = await response.blob();
+        return new File([blob], getCustomWallpaperUrlName(response.url || url), {
+          type: getCustomWallpaperUrlMimeType(response.url || url, blob.type)
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    function updateCustomWallpaperUrlControls() {
+      if (!customWallpaperUrlTile) {
+        return;
+      }
+      const label = t('newtab_wallpaper_add_url', 'Add image link');
+      customWallpaperUrlTile.setAttribute('aria-label', label);
+      customWallpaperUrlTile.setAttribute('aria-expanded', customWallpaperUrlForm.hidden ? 'false' : 'true');
+      customWallpaperUrlTile.setAttribute('aria-disabled', customWallpaperImporting ? 'true' : 'false');
+      customWallpaperUrlInput.placeholder = t('newtab_wallpaper_url_placeholder', 'Paste an image link (https://…)');
+      customWallpaperUrlInput.setAttribute('aria-label', label);
+      customWallpaperUrlInput.disabled = customWallpaperImporting;
+      customWallpaperUrlSubmit.textContent = t('newtab_wallpaper_url_submit', 'Add');
+      customWallpaperUrlSubmit.disabled = customWallpaperImporting;
+    }
+
+    function setCustomWallpaperUrlFormOpen(open) {
+      if (!customWallpaperUrlForm || customWallpaperUrlForm.hidden === !open) {
+        if (open && customWallpaperUrlInput) customWallpaperUrlInput.focus();
+        return;
+      }
+      animateWallpaperPanelResize(() => {
+        customWallpaperUrlForm.hidden = !open;
+        customWallpaperUrlInput.removeAttribute('aria-invalid');
+        updateCustomWallpaperUrlControls();
+      });
+      if (open) {
+        customWallpaperUrlInput.focus();
+      }
+    }
+
+    function isLinkWallpaperId(id) {
+      return LINK_WALLPAPER_ID_PATTERN.test(String(id || ''));
+    }
+
+    function normalizeLinkWallpapers(value) {
+      const ids = new Set();
+      return (Array.isArray(value) ? value : []).map((entry) => ({
+        id: String(entry && entry.id || ''),
+        url: normalizeCustomWallpaperUrl(entry && entry.url),
+        addedAt: Number(entry && entry.addedAt) || 0
+      })).filter((entry) => {
+        if (!isLinkWallpaperId(entry.id) || !entry.url || ids.has(entry.id)) return false;
+        ids.add(entry.id);
+        return true;
+      });
+    }
+
+    function setLinkWallpapers(value) {
+      const next = normalizeLinkWallpapers(value);
+      const changed = JSON.stringify(next) !== JSON.stringify(linkWallpapers);
+      linkWallpapers = next;
+      return changed;
+    }
+
+    function getLinkWallpaperById(id) {
+      const entry = linkWallpapers.find((item) => item.id === id);
+      if (!entry) return null;
+      const cached = getCachedWallpaperImage(id, entry.url);
+      return {
+        id,
+        url: entry.url,
+        name: getCustomWallpaperUrlName(entry.url),
+        imageDataUrl: cached ? cached.imageDataUrl : '',
+        thumbnailDataUrl: cached ? cached.thumbnailDataUrl : '',
+        updatedAt: entry.addedAt
+      };
+    }
+
+    function readCachedWallpaperImages(ids) {
+      const missing = ids.filter((id) => !cachedWallpaperImages.has(id));
+      if (!wallpaperImageCache || !missing.length) return Promise.resolve();
+      return wallpaperImageCache.readByIds(missing).then((records) => {
+        records.forEach((record) => {
+          if (record && record.imageDataUrl) cachedWallpaperImages.set(record.id, record);
+        });
+      }).catch(() => {});
+    }
+
+    function rememberCachedWallpaperImage(id, url, record) {
+      const image = { id, url, imageDataUrl: record.imageDataUrl, thumbnailDataUrl: record.thumbnailDataUrl,
+        cachedAt: Date.now() };
+      cachedWallpaperImages.set(id, image);
+      if (wallpaperImageCache) wallpaperImageCache.write(image).catch(() => {});
+    }
+
+    // A link names a single image. Each device downloads it, or a museum print, once and keeps a
+    // downscaled copy, so the wallpaper keeps showing if the link later breaks.
+    function cacheWallpaperImage(photoId, url) {
+      if (getCachedWallpaperImage(photoId, url)) return Promise.resolve(true);
+      if (wallpaperImageCaching.has(photoId)) return wallpaperImageCaching.get(photoId);
+      const task = readCachedWallpaperImages([photoId]).then(() => getCachedWallpaperImage(photoId, url) ||
+        fetchCustomWallpaperFile(url).then(buildCustomWallpaperRecordFromFile).then((record) => {
+          rememberCachedWallpaperImage(photoId, url, record);
+          pruneCachedWallpaperImages();
+        }))
+        .then(() => {
+          const showing = NEWTAB_WALLPAPER_MODES.some((mode) => getEffectiveWallpaperPhotoId(mode) === photoId);
+          if (showing) applyResolvedNewtabWallpaper();
+          if (customWallpaperCatalogLoaded && isLinkWallpaperId(photoId)) renderCustomWallpaperTiles();
+          return true;
+        })
+        .catch(() => false)
+        .finally(() => wallpaperImageCaching.delete(photoId));
+      wallpaperImageCaching.set(photoId, task);
+      return task;
+    }
+
+    function cacheLinkWallpaper(id) {
+      const entry = linkWallpapers.find((item) => item.id === id);
+      return entry ? cacheWallpaperImage(id, entry.url) : Promise.resolve(false);
+    }
+
+    // The photo a mode shows: the link itself, or the print a curated or daily pick resolves to.
+    function getEffectiveWallpaperPhotoId(mode) {
+      const id = getEffectiveWallpaperIdForMode(mode);
+      if (isLinkWallpaperId(id)) return id;
+      const item = id && REMOTE_CONTENT.wallpaperFromId(id) ? getWallpaperById(id) : null;
+      return item && item.cacheImage ? item.dailyId || item.id : '';
+    }
+
+    function cacheShownWallpaperImages() {
+      NEWTAB_WALLPAPER_MODES.forEach((mode) => {
+        const id = getEffectiveWallpaperIdForMode(mode);
+        if (isLinkWallpaperId(id)) {
+          cacheLinkWallpaper(id);
+          return;
+        }
+        const item = id && REMOTE_CONTENT.wallpaperFromId(id) ? getWallpaperById(id) : null;
+        if (item && item.cacheImage) cacheWallpaperImage(item.dailyId || item.id, item.imageUrl);
+      });
+    }
+
+    // Saved links keep their copies; a print stays only while a mode shows it, so daily art
+    // does not pile up one image per day.
+    function pruneCachedWallpaperImages() {
+      if (!wallpaperImageCache || !hasStoredWallpaperStateLoaded) return;
+      const keep = new Set(linkWallpapers.map((item) => item.id)
+        .concat(NEWTAB_WALLPAPER_MODES.map(getEffectiveWallpaperPhotoId)));
+      wallpaperImageCache.keys().then((keys) => keys.filter((key) => !keep.has(key)).forEach((key) => {
+        cachedWallpaperImages.delete(key);
+        wallpaperImageCache.remove(key).catch(() => {});
+      })).catch(() => {});
+    }
+
+    function cacheListedLinkWallpapers() {
+      linkWallpapers.forEach((item) => cacheLinkWallpaper(item.id));
+    }
+
+    function writeLinkWallpapers(list) {
+      linkWallpapers = list;
+      writeStorageValue(storageArea, NEWTAB_LINK_WALLPAPERS_STORAGE_KEY, list, () => {
+        showToast(t('newtab_wallpaper_save_error', 'Failed to save wallpaper'), true);
+      });
+    }
+
+    // Deleting a link removes it from every synced device, like the other synced settings.
+    function deleteLinkWallpaper(id) {
+      hideTopActionTooltip();
+      // Read the selection while the link still resolves.
+      const prefs = getWritableWallpaperPrefs();
+      const selected = NEWTAB_WALLPAPER_MODES.filter((mode) => prefs[mode] === id);
+      selected.forEach((mode) => { prefs[mode] = NEWTAB_WALLPAPER_DEFAULT_ID; });
+      writeLinkWallpapers(linkWallpapers.filter((item) => item.id !== id));
+      cachedWallpaperImages.delete(id);
+      if (wallpaperImageCache) wallpaperImageCache.remove(id).catch(() => {});
+      if (selected.length) {
+        setWallpaperPrefs(prefs, getWritableLocalWallpaperOverrides());
+        applyResolvedNewtabWallpaper();
+        writeCurrentWallpaperPrefs({ showError: true });
+      }
+      renderCustomWallpaperTiles();
+      showToast(t('newtab_wallpaper_delete_done', 'Deleted'), false);
+    }
+
+    function finishCustomWallpaperUrlEntry() {
+      customWallpaperUrlInput.value = '';
+      setCustomWallpaperUrlFormOpen(false);
+    }
+
+    function submitCustomWallpaperUrl() {
+      const url = normalizeCustomWallpaperUrl(customWallpaperUrlInput.value);
+      if (!url) {
+        customWallpaperUrlInput.setAttribute('aria-invalid', 'true');
+        showToast(t('newtab_wallpaper_url_invalid', 'Enter a link that starts with http:// or https://'), true);
+        customWallpaperUrlInput.focus();
+        return;
+      }
+      customWallpaperUrlInput.removeAttribute('aria-invalid');
+      const existing = linkWallpapers.find((item) => item.url === url);
+      if (existing) {
+        persistNewtabWallpaper(existing.id);
+        finishCustomWallpaperUrlEntry();
+        return;
+      }
+      const entry = {
+        id: `link-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`,
+        url,
+        addedAt: Date.now()
+      };
+      if (url.length > LINK_WALLPAPER_URL_MAX_LENGTH ||
+          JSON.stringify(linkWallpapers.concat(entry)).length > LINK_WALLPAPERS_MAX_BYTES) {
+        showToast(t('newtab_wallpaper_url_limit',
+          'This link is too long, or too many links are saved. Remove some and try again.'), true);
+        return;
+      }
+      customWallpaperImporting = true;
+      updateCustomWallpaperUploadTile();
+      const toastTask = beginToast(t('newtab_wallpaper_importing', 'Importing wallpaper…'));
+      // Load the image before saving the link, so a broken link never reaches other devices.
+      fetchCustomWallpaperFile(url).then(buildCustomWallpaperRecordFromFile).then((record) => {
+        rememberCachedWallpaperImage(entry.id, url, record);
+        writeLinkWallpapers(linkWallpapers.concat(entry));
+        persistNewtabWallpaper(entry.id);
+        renderCustomWallpaperTiles();
+        finishCustomWallpaperUrlEntry();
+        toastTask.done(t('newtab_wallpaper_import_done', 'Wallpaper imported'));
+      }).catch(() => {
+        toastTask.fail(t('newtab_wallpaper_url_import_error', 'Could not add an image from this link'));
+        if (customWallpaperUrlInput.isConnected) customWallpaperUrlInput.focus();
+      }).finally(() => {
+        customWallpaperImporting = false;
+        updateCustomWallpaperUploadTile();
+      });
+    }
+
+    function bindCustomWallpaperUrlControls() {
+      if (!customWallpaperUrlTile || !customWallpaperUrlForm) {
+        return;
+      }
+      const label = () => t('newtab_wallpaper_add_url', 'Add image link');
+      bindWallpaperTileActivation(customWallpaperUrlTile, () => {
+        if (!customWallpaperImporting) setCustomWallpaperUrlFormOpen(customWallpaperUrlForm.hidden);
+      });
+      customWallpaperUrlTile.addEventListener('mouseenter', () => showTopActionTooltip(customWallpaperUrlTile, label()));
+      customWallpaperUrlTile.addEventListener('mouseleave', hideTopActionTooltip);
+      customWallpaperUrlTile.addEventListener('focus', () => showTopActionTooltip(customWallpaperUrlTile, label()));
+      customWallpaperUrlTile.addEventListener('blur', hideTopActionTooltip);
+      customWallpaperUrlForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (!customWallpaperImporting) submitCustomWallpaperUrl();
+      });
+      customWallpaperUrlInput.addEventListener('input', () => customWallpaperUrlInput.removeAttribute('aria-invalid'));
+      updateCustomWallpaperUrlControls();
+    }
+
+    // Escape closes an open link form before it closes the whole panel.
+    function closeCustomWallpaperUrlForm() {
+      if (!customWallpaperUrlForm || customWallpaperUrlForm.hidden || activeWallpaperTab !== 'local') {
+        return false;
+      }
+      const hadFocus = customWallpaperUrlForm.contains(document.activeElement);
+      setCustomWallpaperUrlFormOpen(false);
+      if (hadFocus) customWallpaperUrlTile.focus();
+      return true;
+    }
+
     function deleteCustomWallpaper(id) {
+      if (isLinkWallpaperId(id)) {
+        deleteLinkWallpaper(id);
+        return;
+      }
       const targetWallpaper = getCustomWallpaperById(id);
       if (!targetWallpaper || customWallpaperImporting) {
         return;
@@ -4841,6 +5243,7 @@
 
     function getWallpaperGridForTab(tab) {
       if (tab === 'bing') return wallpaperBingPanel;
+      if (tab === 'curated') return wallpaperCuratedPanel;
       return tab === 'local' ? wallpaperLocalGrid : wallpaperBuiltInGrid;
     }
 
@@ -5202,13 +5605,14 @@
       const refs = wallpaperViewController.getRefs();
       const selectedId = getWallpaperSelectionIdForUi();
       const daily = selectedId === REMOTE_CONTENT.BING_DAILY_ID;
-      const selected = REMOTE_CONTENT.wallpaperFromId(selectedId) && remoteClient.getWallpaper(selectedId);
+      const selected = REMOTE_CONTENT.getWallpaperProvider(selectedId) === 'bing' && getWallpaperById(selectedId);
       const busy = bingLoading || bingSelecting;
-      refs.bingDailyLabel.textContent = t('newtab_bing_daily', 'Daily wallpaper');
-      refs.bingDailyInfoButton.setAttribute('aria-label', t('newtab_bing_daily_hint', 'A new Bing photo every day. Turn off to keep the current wallpaper.'));
+      updateDailyRestoreButton(refs.bingDailyRestore, selected);
+      refs.bingDailyLabel.textContent = t('newtab_bing_daily', 'Auto-update daily');
+      refs.bingDailyInfoButton.setAttribute('aria-label', t('newtab_bing_daily_hint', BING_DAILY_HINT));
       refs.bingDailyToggle.checked = daily;
       refs.bingDailyToggle.disabled = bingSelecting;
-      refs.bingDailyToggle.setAttribute('aria-label', t('newtab_bing_daily', 'Daily wallpaper'));
+      refs.bingDailyToggle.setAttribute('aria-label', t('newtab_bing_daily', 'Auto-update daily'));
       refs.bingRecentLabel.textContent = t('newtab_bing_recent', 'Recent wallpapers');
       wallpaperBingRefresh.disabled = busy;
       wallpaperBingRefresh.setAttribute('aria-busy', bingLoading ? 'true' : 'false');
@@ -5233,7 +5637,7 @@
     function renderBingTiles() {
       if (!wallpaperBingGrid || !wallpaperViewController.renderOnlineWallpapers) return;
       const selectedId = getWallpaperSelectionIdForUi();
-      const selected = REMOTE_CONTENT.wallpaperFromId(selectedId) && remoteClient.getWallpaper(selectedId);
+      const selected = REMOTE_CONTENT.getWallpaperProvider(selectedId) === 'bing' && getWallpaperById(selectedId);
       // Bing skips some days, so cap the list to two full rows instead of leaving a ragged last row.
       const items = (selected && selectedId !== REMOTE_CONTENT.BING_DAILY_ID && !bingItems.some((item) => item.id === selectedId)
         ? [selected, ...bingItems] : bingItems).slice(0, BING_RECENT_TILE_LIMIT);
@@ -5246,7 +5650,7 @@
         tile.onclick = () => {
           // The highlighted tile is already applied; re-clicking it should not leave daily mode.
           if (tile.getAttribute('data-selected') === 'true') return;
-          selectBingWallpaper(id);
+          selectBingWallpaper(id, { asDailyPick: true });
         };
         tile.onmouseenter = () => showTopActionTooltip(tile, label);
         tile.onfocus = tile.onmouseenter;
@@ -5300,12 +5704,20 @@
     }
 
     // A New Tab can stay open past midnight; pick up the new daily photo when it is shown again.
-    function refreshBingDailyWallpaperIfStale() {
+    function refreshDailyWallpapersIfStale() {
       if (!hasStoredWallpaperStateLoaded || document.visibilityState === 'hidden') return;
       const day = REMOTE_CONTENT.localDay(Date.now());
-      if (day === bingDailyCheckedDay) return;
-      if (!NEWTAB_WALLPAPER_MODES.some((mode) => getEffectiveWallpaperIdForMode(mode) === REMOTE_CONTENT.BING_DAILY_ID)) return;
-      bingDailyCheckedDay = day;
+      if (day === dailyWallpaperCheckedDay) return;
+      const dailyIds = NEWTAB_WALLPAPER_MODES.map((mode) => getEffectiveWallpaperIdForMode(mode))
+        .filter((id) => REMOTE_CONTENT.isDailyWallpaperId(id));
+      if (!dailyIds.length) return;
+      dailyWallpaperCheckedDay = day;
+      // Curated picks follow the date alone, so the new one is ready without a request.
+      if (dailyIds.some((id) => id !== REMOTE_CONTENT.BING_DAILY_ID)) {
+        applyResolvedNewtabWallpaper();
+        renderCuratedTiles();
+      }
+      if (!dailyIds.includes(REMOTE_CONTENT.BING_DAILY_ID)) return;
       remoteClient.ensureWallpaper(REMOTE_CONTENT.BING_DAILY_ID).then(() => {
         if (getEffectiveWallpaperIdForMode(getResolvedWallpaperMode()) === REMOTE_CONTENT.BING_DAILY_ID) {
           applyResolvedNewtabWallpaper();
@@ -5314,20 +5726,221 @@
       }).catch(() => {});
     }
 
-    function bindBingDailyRolloverListeners() {
-      if (hasBingDailyRolloverListeners) return;
-      hasBingDailyRolloverListeners = true;
-      bingDailyCheckedDay = REMOTE_CONTENT.localDay(Date.now());
+    function bindDailyWallpaperRolloverListeners() {
+      if (hasDailyWallpaperRolloverListeners) return;
+      hasDailyWallpaperRolloverListeners = true;
+      dailyWallpaperCheckedDay = REMOTE_CONTENT.localDay(Date.now());
       if (window && typeof window.addEventListener === 'function') {
-        window.addEventListener('focus', refreshBingDailyWallpaperIfStale, { passive: true });
+        window.addEventListener('focus', refreshDailyWallpapersIfStale, { passive: true });
       }
       if (document && typeof document.addEventListener === 'function') {
-        document.addEventListener('visibilitychange', refreshBingDailyWallpaperIfStale, { passive: true });
+        document.addEventListener('visibilitychange', refreshDailyWallpapersIfStale, { passive: true });
       }
     }
 
-    async function selectBingWallpaper(id) {
+    function normalizeDailyWallpaperPicks(value) {
+      const picks = {};
+      const source = value && typeof value === 'object' && value.picks && typeof value.picks === 'object'
+        ? value.picks
+        : {};
+      Object.keys(source).forEach((dailyId) => {
+        const pickId = String(source[dailyId] || '');
+        if (REMOTE_CONTENT.isDailyWallpaperId(dailyId) && !REMOTE_CONTENT.isDailyWallpaperId(pickId) &&
+            REMOTE_CONTENT.getWallpaperProvider(pickId) === REMOTE_CONTENT.getWallpaperProvider(dailyId)) {
+          picks[dailyId] = pickId;
+        }
+      });
+      return { day: value && typeof value.day === 'string' ? value.day : '', picks };
+    }
+
+    function getDailyWallpaperPick(dailyId) {
+      if (!REMOTE_CONTENT.isDailyWallpaperId(dailyId) ||
+          dailyWallpaperPicks.day !== REMOTE_CONTENT.localDay(Date.now())) {
+        return '';
+      }
+      return dailyWallpaperPicks.picks[dailyId] || '';
+    }
+
+    function getActiveDailyWallpaperId(provider) {
+      const id = getWallpaperSelectionIdForUi();
+      return REMOTE_CONTENT.isDailyWallpaperId(id) && REMOTE_CONTENT.getWallpaperProvider(id) === provider ? id : '';
+    }
+
+    // Choosing today's own photo, or restoring it, simply drops the pick.
+    function setDailyWallpaperPick(dailyId, pickId) {
+      const today = REMOTE_CONTENT.localDay(Date.now());
+      const picks = dailyWallpaperPicks.day === today ? Object.assign({}, dailyWallpaperPicks.picks) : {};
+      const scheduled = remoteClient.getWallpaper(dailyId);
+      if (!pickId || scheduled && scheduled.dailyId === pickId) delete picks[dailyId];
+      else picks[dailyId] = pickId;
+      dailyWallpaperPicks = { day: today, picks };
+      writeStorageValue(storageArea, NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY,
+        Object.keys(picks).length ? dailyWallpaperPicks : '', () => {
+          showToast(t('newtab_wallpaper_save_error', 'Failed to save wallpaper'), true);
+        });
+      applyResolvedNewtabWallpaper();
+      renderBingTiles();
+      renderCuratedTiles();
+    }
+
+    function clearDailyWallpaperPick(dailyId) {
+      if (getDailyWallpaperPick(dailyId)) setDailyWallpaperPick(dailyId, '');
+    }
+
+    function updateDailyRestoreButton(button, selected) {
+      if (!button) return;
+      const label = t('newtab_daily_restore', "Back to today's wallpaper");
+      button.hidden = !(selected && selected.picked);
+      button.setAttribute('aria-label', label);
+    }
+
+    function getCuratedTileItems() {
+      const items = REMOTE_CONTENT.getCuratedWallpapers(curatedCategory);
+      if (!items.length) return [];
+      // Wrap around the end of the category so every page fills both rows.
+      const start = (curatedPage * CURATED_TILE_LIMIT) % items.length;
+      return Array.from({ length: Math.min(CURATED_TILE_LIMIT, items.length) },
+        (_, index) => items[(start + index) % items.length]);
+    }
+
+    // Pages keep a fixed order, so choosing a photo never reshuffles the grid; instead the list
+    // opens on the page that holds the chosen or daily photo.
+    function showCuratedPageOfSelection() {
+      const selectedId = getWallpaperTileSelectionId(getWallpaperSelectionIdForUi());
+      const index = REMOTE_CONTENT.getCuratedWallpapers(curatedCategory).findIndex((item) => item.id === selectedId);
+      curatedPage = index >= 0 ? Math.floor(index / CURATED_TILE_LIMIT) : 0;
+    }
+
+    // Paintings are named by title, photos by photographer.
+    function getCuratedPhotoLabel(item) {
+      if (item && item.title) return item.title;
+      return item && item.name && item.name !== 'Picsum'
+        ? formatMessage('newtab_curated_photo_by', 'Photo by {name}', { name: item.name })
+        : '';
+    }
+
+    function getCuratedPhotoMeta(item) {
+      if (item && item.title) {
+        return [item.name, t('newtab_curated_art_meta', 'The Cleveland Museum of Art')].filter(Boolean).join(' · ');
+      }
+      return t('newtab_curated_source_meta', 'Unsplash · via Lorem Picsum');
+    }
+
+    function getCuratedCategoryLabel(category) {
+      const fallbacks = { random: 'Mix', nature: 'Nature', water: 'Water', city: 'City', minimal: 'Minimal', art: 'Art' };
+      return t(`newtab_curated_category_${category}`, fallbacks[category] || category);
+    }
+
+    function isCuratedDailyWallpaperActive() {
+      const selectedId = getWallpaperSelectionIdForUi();
+      return REMOTE_CONTENT.isDailyWallpaperId(selectedId) &&
+        REMOTE_CONTENT.getWallpaperProvider(selectedId) === 'curated';
+    }
+
+    function updateCuratedUi() {
+      if (!wallpaperCuratedPanel || !wallpaperViewController) return;
+      const refs = wallpaperViewController.getRefs();
+      const selectedId = getWallpaperSelectionIdForUi();
+      const selected = REMOTE_CONTENT.getWallpaperProvider(selectedId) === 'curated'
+        ? getWallpaperById(selectedId)
+        : null;
+      updateDailyRestoreButton(refs.curatedDailyRestore, selected);
+      const dailyLabel = t('newtab_bing_daily', 'Auto-update daily');
+      refs.curatedDailyLabel.textContent = dailyLabel;
+      refs.curatedDailyInfoButton.setAttribute('aria-label', t(
+        'newtab_curated_daily_hint',
+        CURATED_DAILY_HINT
+      ));
+      refs.curatedDailyToggle.checked = isCuratedDailyWallpaperActive();
+      refs.curatedDailyToggle.setAttribute('aria-label', dailyLabel);
+      refs.curatedCategoryLabel.textContent = t('newtab_curated_category', 'Category');
+      wallpaperCuratedCategoryTabs.setAttribute('aria-label', t('newtab_curated_category', 'Category'));
+      wallpaperCuratedCategoryTabs.querySelectorAll('[data-curated-category]').forEach((button) => {
+        const category = button.getAttribute('data-curated-category');
+        const active = category === curatedCategory;
+        button.textContent = getCuratedCategoryLabel(category);
+        button.setAttribute('data-active', active ? 'true' : 'false');
+        button.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+      if (globalThis.LumnoSegmentedIndicator) {
+        globalThis.LumnoSegmentedIndicator.sync(refs.curatedCategoryIndicator);
+      }
+      refs.curatedListLabel.textContent = t('newtab_curated_list', 'Photos');
+      wallpaperCuratedRefresh.setAttribute('aria-label', t('newtab_curated_more', 'Show others'));
+      const label = t('newtab_wallpaper_curated_section', 'Curated');
+      wallpaperCuratedPanel.setAttribute('aria-label', label);
+      wallpaperCuratedTab.textContent = label;
+      wallpaperCuratedTab.setAttribute('aria-label', label);
+      const hasSource = Boolean(selected && selected.imageUrl && getCuratedPhotoLabel(selected));
+      refs.curatedSelectedSource.hidden = !hasSource;
+      refs.curatedSelectedTitle.textContent = hasSource ? getCuratedPhotoLabel(selected) : '';
+      refs.curatedSelectedMeta.textContent = hasSource ? getCuratedPhotoMeta(selected) : '';
+      refs.curatedSelectedLink.setAttribute('aria-label', hasSource
+        ? `${getCuratedPhotoLabel(selected)} · ${t('newtab_bing_source', 'View wallpaper source')}` : '');
+      if (hasSource) refs.curatedSelectedLink.href = selected.sourceUrl;
+    }
+
+    function renderCuratedTiles() {
+      if (!wallpaperCuratedGrid || !wallpaperViewController.renderCuratedWallpapers) return;
+      const tiles = wallpaperViewController.renderCuratedWallpapers(getCuratedTileItems().map((item) => ({
+        id: item.id, thumbnailUrl: item.thumbnailUrl
+      })));
+      tiles.forEach((tile) => {
+        const id = tile.getAttribute('data-wallpaper-id');
+        const item = remoteClient.getWallpaper(id);
+        const label = [getCuratedPhotoLabel(item), item && item.title ? item.name : ''].filter(Boolean).join(' · ');
+        tile.onclick = () => {
+          // The highlighted tile is already applied; re-clicking it should not leave daily mode.
+          if (tile.getAttribute('data-selected') === 'true') return;
+          const daily = getActiveDailyWallpaperId('curated');
+          if (daily) setDailyWallpaperPick(daily, id);
+          else persistNewtabWallpaper(id);
+        };
+        tile.onpointerenter = () => primeWallpaperTileImage(tile);
+        tile.onmouseenter = () => showTopActionTooltip(tile, label);
+        tile.onfocus = tile.onmouseenter;
+        tile.onmouseleave = hideTopActionTooltip;
+        tile.onblur = hideTopActionTooltip;
+        tile.setAttribute('aria-label', formatMessage('newtab_wallpaper_select_label', 'Select {name}', { name: label }));
+      });
+      updateWallpaperSelectionUi();
+    }
+
+    // Category tabs only browse; the wallpaper and the daily category stay as they are.
+    function selectCuratedCategory(category) {
+      if (!REMOTE_CONTENT.CURATED_CATEGORIES.includes(category) || category === curatedCategory) return;
+      animateWallpaperPanelResize(() => {
+        curatedCategory = category;
+        showCuratedPageOfSelection();
+        renderCuratedTiles();
+        playWallpaperEnterMotion(wallpaperCuratedGrid, 'enter');
+      });
+    }
+
+    function showMoreCuratedWallpapers() {
+      curatedPage += 1;
+      renderCuratedTiles();
+      playWallpaperEnterMotion(wallpaperCuratedGrid, 'enter');
+    }
+
+    function setCuratedDailyWallpaper(enabled) {
+      if (enabled) {
+        const dailyId = REMOTE_CONTENT.curatedDailyId(curatedCategory);
+        clearDailyWallpaperPick(dailyId);
+        persistNewtabWallpaper(dailyId);
+        showCuratedPageOfSelection();
+      } else {
+        // Keep the photo on screen, picked or not, as turning off the Bing daily wallpaper does.
+        const daily = getWallpaperById(getWallpaperSelectionIdForUi());
+        persistNewtabWallpaper(daily && daily.dailyId || NEWTAB_WALLPAPER_DEFAULT_ID);
+      }
+      renderCuratedTiles();
+    }
+
+    async function selectBingWallpaper(id, options) {
       if (bingSelecting) return;
+      // A tile chosen while the daily photo is on replaces it for today only.
+      const dailyId = options && options.asDailyPick ? getActiveDailyWallpaperId('bing') : '';
       const seq = ++bingSelectionSeq;
       const mode = getWallpaperEditMode();
       const sameForModes = currentWallpaperPrefs.sameForModes;
@@ -5340,7 +5953,8 @@
         toastTask.done();
         if (seq !== bingSelectionSeq || mode !== getWallpaperEditMode() ||
             sameForModes !== currentWallpaperPrefs.sameForModes) return;
-        persistNewtabWallpaper(id);
+        if (dailyId) setDailyWallpaperPick(dailyId, id);
+        else persistNewtabWallpaper(id);
       } catch (_error) {
         toastTask.fail(seq === bingSelectionSeq
           ? t('newtab_bing_save_error', 'Could not save wallpaper. Please try again.')
@@ -5419,6 +6033,10 @@
           { mode: 'dark', imageUrl: getRuntimeAssetUrl('assets/images/dark.svg') }
         ],
         effectInkTones: NEWTAB_WALLPAPER_EFFECT_INK_TONES,
+        curatedCategories: REMOTE_CONTENT.CURATED_CATEGORIES.map((value) => ({
+          value,
+          label: getCuratedCategoryLabel(value)
+        })),
         favicons: NEWTAB_FAVICON_OPTIONS.map((item) => ({
           id: item.id,
           inlineSvg: item.preview === 'inlineSvg' ? faviconInlineSvg : '',
@@ -5431,6 +6049,8 @@
         delete: getRiSvg('ri-close-line', 'ri-size-14'),
           refresh: getRiSvg('ri-refresh-line', 'ri-size-14'),
           info: getRiSvg('ri-information-line', 'ri-size-14'),
+          restore: getRiSvg('ri-arrow-go-back-line', 'ri-size-14'),
+          link: getRiSvg('ri-link', 'ri-size-18'),
           wallpaper: getRiSvg('ri-t-shirt-2-line', 'ri-size-20')
         },
         moreSettingsUrl: buildAppearanceSettingsUrl(),
@@ -5603,7 +6223,8 @@
       wallpaperModeTabsIndicator = refs.modeTabsIndicator;
       wallpaperLightModeTab = refs.lightModeTab;
       wallpaperDarkModeTab = refs.darkModeTab;
-      wallpaperModeHint = refs.modeHint;
+      wallpaperModeRow = refs.modeRow;
+      wallpaperModeLabel = refs.modeLabel;
       wallpaperSourceLabel = refs.sourceLabel;
       wallpaperTabs = refs.tabs;
       wallpaperTabsIndicator = refs.tabsIndicator;
@@ -5614,6 +6235,15 @@
       wallpaperBingGrid = refs.bingItemsHost;
       wallpaperBingRefresh = refs.bingRefresh;
       wallpaperBingStatus = refs.bingStatus;
+      wallpaperCuratedTab = refs.curatedTab;
+      wallpaperCuratedPanel = refs.curatedPanel;
+      wallpaperCuratedGrid = refs.curatedItemsHost;
+      wallpaperCuratedRefresh = refs.curatedRefresh;
+      wallpaperCuratedCategoryTabs = refs.curatedCategoryTabs;
+      customWallpaperUrlTile = refs.urlTile;
+      customWallpaperUrlForm = refs.urlForm;
+      customWallpaperUrlInput = refs.urlInput;
+      customWallpaperUrlSubmit = refs.urlSubmit;
       const quoteRuntime = options.getQuoteRuntime && options.getQuoteRuntime();
       if (quoteRuntime) quoteRuntime.bindSettings(refs, wallpaperViewController);
       bindPanelSectionDisclosure(refs.themeSectionTrigger, refs.themeSectionBody);
@@ -5856,6 +6486,29 @@
         setWallpaperActiveTab('local');
       });
       if (wallpaperBingTab) wallpaperBingTab.addEventListener('click', () => setWallpaperActiveTab('bing'));
+      if (wallpaperCuratedTab) wallpaperCuratedTab.addEventListener('click', () => setWallpaperActiveTab('curated'));
+      if (wallpaperCuratedRefresh) {
+        const showCuratedRefreshTooltip = () => showTopActionTooltip(wallpaperCuratedRefresh, t('newtab_curated_more', 'Show others'));
+        wallpaperCuratedRefresh.addEventListener('click', showMoreCuratedWallpapers);
+        wallpaperCuratedRefresh.addEventListener('mouseenter', showCuratedRefreshTooltip);
+        wallpaperCuratedRefresh.addEventListener('mouseleave', hideTopActionTooltip);
+        wallpaperCuratedRefresh.addEventListener('focus', showCuratedRefreshTooltip);
+        wallpaperCuratedRefresh.addEventListener('blur', hideTopActionTooltip);
+      }
+      if (wallpaperCuratedCategoryTabs) {
+        wallpaperCuratedCategoryTabs.querySelectorAll('[data-curated-category]').forEach((button) => {
+          button.addEventListener('click', () => selectCuratedCategory(button.getAttribute('data-curated-category')));
+        });
+      }
+      bindInfoButtonTooltip(refs.curatedDailyInfoButton, () => t(
+        'newtab_curated_daily_hint',
+        CURATED_DAILY_HINT
+      ));
+      if (refs.curatedDailyToggle) {
+        refs.curatedDailyToggle.addEventListener('change', () => setCuratedDailyWallpaper(refs.curatedDailyToggle.checked));
+      }
+      renderCuratedTiles();
+      bindCustomWallpaperUrlControls();
       if (wallpaperBingRefresh) {
         const showBingRefreshTooltip = () => showTopActionTooltip(wallpaperBingRefresh, t('newtab_bing_refresh', 'Refresh'));
         wallpaperBingRefresh.addEventListener('click', () => loadBingCatalog(true));
@@ -5864,15 +6517,24 @@
         wallpaperBingRefresh.addEventListener('focus', showBingRefreshTooltip);
         wallpaperBingRefresh.addEventListener('blur', hideTopActionTooltip);
       }
-      bindInfoButtonTooltip(refs.bingDailyInfoButton, () => t(
-        'newtab_bing_daily_hint',
-        'A new Bing photo every day. Turn off to keep the current wallpaper.'
-      ));
+      bindInfoButtonTooltip(refs.bingDailyInfoButton, () => t('newtab_bing_daily_hint', BING_DAILY_HINT));
+      [refs.bingDailyRestore, refs.curatedDailyRestore].forEach((button) => {
+        if (!button) return;
+        bindInfoButtonTooltip(button, () => t('newtab_daily_restore', "Back to today's wallpaper"));
+        button.addEventListener('click', () => {
+          const dailyId = getWallpaperSelectionIdForUi();
+          hideTopActionTooltip();
+          if (REMOTE_CONTENT.isDailyWallpaperId(dailyId)) clearDailyWallpaperPick(dailyId);
+        });
+      });
       bindInfoButtonTooltip(refs.quoteInfoButton, () => t('newtab_quote_provider', 'Powered by Hitokoto'));
-      bindBingDailyRolloverListeners();
+      bindDailyWallpaperRolloverListeners();
       if (refs.bingDailyToggle) refs.bingDailyToggle.addEventListener('change', () => {
-        const daily = remoteClient.getWallpaper(REMOTE_CONTENT.BING_DAILY_ID);
-        if (refs.bingDailyToggle.checked) selectBingWallpaper(REMOTE_CONTENT.BING_DAILY_ID);
+        const daily = getWallpaperById(REMOTE_CONTENT.BING_DAILY_ID);
+        if (refs.bingDailyToggle.checked) {
+          clearDailyWallpaperPick(REMOTE_CONTENT.BING_DAILY_ID);
+          selectBingWallpaper(REMOTE_CONTENT.BING_DAILY_ID);
+        }
         else if (daily && daily.dailyId) selectBingWallpaper(daily.dailyId);
         // An unresolved daily photo shows the built-in default, so keep that one.
         else persistNewtabWallpaper(NEWTAB_WALLPAPER_DEFAULT_ID);
@@ -6132,7 +6794,9 @@
       const wallpaperStorageChanged = Boolean(
         (NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY && changes[NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY]) ||
         changes[NEWTAB_WALLPAPER_STORAGE_KEY] ||
-        (NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY && changes[NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY])
+        (NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY && changes[NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY]) ||
+        (NEWTAB_LINK_WALLPAPERS_STORAGE_KEY && changes[NEWTAB_LINK_WALLPAPERS_STORAGE_KEY]) ||
+        (NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY && changes[NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY])
       );
       if (wallpaperStorageChanged) {
         bingSelectionSeq += 1;
@@ -6215,7 +6879,7 @@
       getControlElement,
       containsTarget,
       closeOpenMenu: () => Boolean(wallpaperViewController &&
-        wallpaperViewController.closeOpenSelect({ restoreFocus: true })),
+        wallpaperViewController.closeOpenSelect({ restoreFocus: true })) || closeCustomWallpaperUrlForm(),
       isPanelOpen: isWallpaperPanelOpen,
       closePanel: closeWallpaperPanel,
       updateLanguageStrings: updateWallpaperLanguageStrings,

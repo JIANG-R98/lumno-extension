@@ -771,7 +771,7 @@
     "message": "favicon 保存失败"
   },
   "newtab_wallpaper_source_title": {
-    "message": "壁纸来源"
+    "message": "来源"
   },
   "newtab_wallpaper_builtin_section": {
     "message": "内置"
@@ -794,6 +794,9 @@
   "newtab_wallpaper_mode_sync_toggle_label": {
     "message": "深浅模式使用同一张壁纸"
   },
+  "newtab_wallpaper_mode_row_title": {
+    "message": "模式"
+  },
   "newtab_wallpaper_mode_tabs_label": {
     "message": "壁纸深浅模式"
   },
@@ -805,12 +808,6 @@
   },
   "newtab_wallpaper_mode_select_label": {
     "message": "设置{mode}模式壁纸"
-  },
-  "newtab_wallpaper_mode_hint_light": {
-    "message": "浅色模式壁纸"
-  },
-  "newtab_wallpaper_mode_hint_dark": {
-    "message": "深色模式壁纸"
   },
   "newtab_wallpaper_feature_hint_badge": {
     "message": "新功能"
@@ -2913,10 +2910,13 @@
     "message": "道德经"
   },
   "newtab_bing_daily": {
-    "message": "每日壁纸"
+    "message": "每日自动更新"
   },
   "newtab_bing_daily_hint": {
-    "message": "每天跟随 Bing 更新，关闭后固定当前壁纸。"
+    "message": "每天跟随 Bing 更新。开启时手动选的壁纸当天有效，次日自动换回。"
+  },
+  "newtab_daily_restore": {
+    "message": "恢复今日壁纸"
   },
   "newtab_bing_recent": {
     "message": "最近一周"
@@ -2938,6 +2938,66 @@
   },
   "newtab_bing_source": {
     "message": "查看壁纸来源"
+  },
+  "newtab_wallpaper_curated_section": {
+    "message": "精选"
+  },
+  "newtab_curated_daily_hint": {
+    "message": "每天从开启时所在的分类换一张，同步的设备看到同一张。手动选的壁纸当天有效，次日自动换回。"
+  },
+  "newtab_curated_category": {
+    "message": "分类"
+  },
+  "newtab_curated_category_random": {
+    "message": "随机"
+  },
+  "newtab_curated_category_nature": {
+    "message": "自然"
+  },
+  "newtab_curated_category_water": {
+    "message": "海与湖"
+  },
+  "newtab_curated_category_city": {
+    "message": "城市"
+  },
+  "newtab_curated_category_minimal": {
+    "message": "极简"
+  },
+  "newtab_curated_category_art": {
+    "message": "艺术"
+  },
+  "newtab_curated_art_meta": {
+    "message": "克利夫兰艺术博物馆"
+  },
+  "newtab_curated_list": {
+    "message": "图片"
+  },
+  "newtab_curated_more": {
+    "message": "换一批"
+  },
+  "newtab_curated_photo_by": {
+    "message": "摄影：{name}"
+  },
+  "newtab_curated_source_meta": {
+    "message": "Unsplash · 经由 Lorem Picsum"
+  },
+  "newtab_wallpaper_add_url": {
+    "message": "添加图片链接"
+  },
+  "newtab_wallpaper_url_placeholder": {
+    "message": "粘贴图片链接（https://…）"
+  },
+  "newtab_wallpaper_url_submit": {
+    "message": "添加"
+  },
+  "newtab_wallpaper_url_invalid": {
+    "message": "请输入以 http:// 或 https:// 开头的链接"
+  },
+  "newtab_wallpaper_url_limit": {
+    "message": "链接太长或已保存的链接太多，请删除一些后再试"
+  },
+  "newtab_wallpaper_url_import_error": {
+    "message": "无法从这个链接添加图片"
   },
   "newtab_quote_font_size": {
     "message": "字号"

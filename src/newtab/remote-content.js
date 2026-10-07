@@ -11,6 +11,26 @@
   const BING_DAILY_ID = 'bing-daily';
   const BING_ID_PATTERN = /^bing-(\d{8})-(OHR\.[a-zA-Z0-9_-]{1,160})$/;
   const BING_ORIGIN = 'https://www.bing.com';
+  const CATALOG = root.LumnoNewtabWallpaperCatalog ||
+    (typeof require === 'function' ? require('./wallpaper-catalog.js') : {});
+  // The random category mixes every bundled category, so it leads the list as the default view.
+  const RANDOM_CATEGORY = 'random';
+  const CURATED_CATEGORIES = Object.freeze([RANDOM_CATEGORY, ...Object.keys(CATALOG)]);
+  const CURATED_DAILY_PREFIX = 'curated-daily-';
+  const CURATED_DAILY_ID_PATTERN = /^curated-daily-([a-z]{1,24})$/;
+  // Any Picsum photo resolves from its ID alone, so a pick synced from a version with a larger
+  // catalog still shows here; only bundled photos carry credits.
+  const PICSUM_ID_PATTERN = /^picsum-(0|[1-9]\d{0,3})$/;
+  const PICSUM_ORIGIN = 'https://picsum.photos';
+  const CMA_ID_PATTERN = /^cma-(\d{4}\.[0-9a-z.]{1,20})$/;
+  const CMA_IMAGE_ORIGIN = 'https://openaccess-cdn.clevelandart.org';
+  const CURATED_DAILY_STRIDES = [37, 41, 43, 47, 53];
+  const curatedCredits = new Map();
+  // Photo rows start with a numeric Picsum ID; art rows start with an accession number.
+  const curatedRowId = (row) => typeof row[0] === 'number' ? `picsum-${row[0]}` : `cma-${row[0]}`;
+  Object.keys(CATALOG).forEach((category) => CATALOG[category].forEach((row) => {
+    curatedCredits.set(curatedRowId(row), { category, author: row[1], detail: row[2] });
+  }));
 
   function normalizeMarket(language) {
     const locale = String(language || '').replace(/_/g, '-').toLowerCase();
@@ -54,12 +74,99 @@
     };
   }
 
+  function curatedWallpaperFromId(id) {
+    const daily = CURATED_DAILY_ID_PATTERN.exec(id);
+    if (daily) {
+      // A category from a newer version falls back to the first one instead of losing the pick.
+      const category = CURATED_CATEGORIES.includes(daily[1]) ? daily[1] : CURATED_CATEGORIES[0] || '';
+      return { id, provider: 'curated', category, daily: true, name: 'Picsum', sourceUrl: PICSUM_ORIGIN };
+    }
+    const credit = curatedCredits.get(id);
+    const art = CMA_ID_PATTERN.exec(id);
+    if (art) {
+      // Museum prints run 1–8 MB, so the page downscales and caches one copy per device and shows
+      // the 900px web image until that copy exists.
+      const base = `${CMA_IMAGE_ORIGIN}/${art[1]}/${art[1]}`;
+      return { id, provider: 'curated', category: credit ? credit.category : 'art',
+        name: credit ? credit.author : '', title: credit ? credit.detail : '',
+        sourceUrl: `https://clevelandart.org/art/${art[1]}`,
+        imageUrl: `${base}_print.jpg`, thumbnailUrl: `${base}_web.jpg`, cacheImage: true };
+    }
+    const match = PICSUM_ID_PATTERN.exec(id);
+    if (!match) return null;
+    return { id, provider: 'curated', category: credit ? credit.category : '',
+      name: credit ? credit.author : 'Picsum',
+      sourceUrl: credit ? `https://unsplash.com/photos/${credit.detail}` : PICSUM_ORIGIN,
+      imageUrl: `${PICSUM_ORIGIN}/id/${match[1]}/2560/1440`,
+      thumbnailUrl: `${PICSUM_ORIGIN}/id/${match[1]}/480/270` };
+  }
+
   function wallpaperFromId(id) {
-    if (id === BING_DAILY_ID) return { id, name: 'Bing', sourceUrl: BING_ORIGIN };
-    const match = BING_ID_PATTERN.exec(String(id || ''));
-    return match ? { id, date: match[1], rawId: match[2], name: 'Bing', sourceUrl: BING_ORIGIN,
+    const value = String(id || '');
+    if (value === BING_DAILY_ID) return { id, provider: 'bing', name: 'Bing', sourceUrl: BING_ORIGIN };
+    const match = BING_ID_PATTERN.exec(value);
+    return match ? { id, provider: 'bing', date: match[1], rawId: match[2], name: 'Bing', sourceUrl: BING_ORIGIN,
       imageUrl: `${BING_ORIGIN}/th?id=${match[2]}_1920x1080.jpg&pid=hp`,
-      thumbnailUrl: `${BING_ORIGIN}/th?id=${match[2]}_1920x1080.jpg&pid=hp&w=480&h=270&c=1` } : null;
+      thumbnailUrl: `${BING_ORIGIN}/th?id=${match[2]}_1920x1080.jpg&pid=hp&w=480&h=270&c=1` }
+      : curatedWallpaperFromId(value);
+  }
+
+  function getWallpaperProvider(id) {
+    const item = wallpaperFromId(id);
+    return item ? item.provider : '';
+  }
+
+  function isDailyWallpaperId(id) {
+    return id === BING_DAILY_ID || CURATED_DAILY_ID_PATTERN.test(String(id || ''));
+  }
+
+  function curatedDailyId(category) {
+    return `${CURATED_DAILY_PREFIX}${CURATED_CATEGORIES.includes(category) ? category : CURATED_CATEGORIES[0]}`;
+  }
+
+  function getCuratedRows(category) {
+    return category === RANDOM_CATEGORY ? Object.values(CATALOG).flat() : CATALOG[category] || [];
+  }
+
+  function localDayNumber(timestamp) {
+    const date = new Date(timestamp);
+    return Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000);
+  }
+
+  // The random mix reshuffles once a day: pages and highlights stay put within the day, and
+  // devices on the same date list the photos in the same order.
+  function shuffleForDay(rows, timestamp) {
+    let seed = localDayNumber(timestamp) * 2654435761 >>> 0;
+    const next = () => {
+      seed = seed + 0x6D2B79F5 >>> 0;
+      let value = Math.imul(seed ^ seed >>> 15, 1 | seed);
+      value ^= value + Math.imul(value ^ value >>> 7, 61 | value);
+      return ((value ^ value >>> 14) >>> 0) / 4294967296;
+    };
+    const shuffled = rows.slice();
+    for (let index = shuffled.length - 1; index > 0; index -= 1) {
+      const swap = Math.floor(next() * (index + 1));
+      [shuffled[index], shuffled[swap]] = [shuffled[swap], shuffled[index]];
+    }
+    return shuffled;
+  }
+
+  function getCuratedWallpapers(category, timestamp) {
+    const rows = category === RANDOM_CATEGORY
+      ? shuffleForDay(getCuratedRows(category), timestamp === undefined ? Date.now() : timestamp)
+      : getCuratedRows(category);
+    return rows.map((row) => curatedWallpaperFromId(curatedRowId(row)));
+  }
+
+  // Devices on the same local date pick the same photo without talking to each other. A stride
+  // coprime to the list length walks the whole category before repeating, and consecutive days
+  // land far apart in the list.
+  function getCuratedDailyWallpaper(category, timestamp) {
+    const list = getCuratedRows(category);
+    if (!list.length) return null;
+    const day = localDayNumber(timestamp);
+    const stride = CURATED_DAILY_STRIDES.find((step) => list.length % step !== 0) || 1;
+    return curatedWallpaperFromId(curatedRowId(list[((day * stride) % list.length + list.length) % list.length]));
   }
 
   // Credit links are optional, so a relative or malformed one falls back to Bing instead of dropping the photo.
@@ -246,6 +353,7 @@
     async function restoreWallpaper(id) {
       const descriptor = wallpaperFromId(id);
       if (!descriptor) return null;
+      if (descriptor.provider === 'curated') return getWallpaper(id);
       if (id === BING_DAILY_ID) {
         const market = getMarket();
         const entry = ((await read(area, BING_DAILY_CACHE_KEY)) || {})[market];
@@ -265,7 +373,10 @@
       return images.get(id);
     }
     function ensureWallpaper(id) {
-      if (!wallpaperFromId(id)) return Promise.reject(new Error('Invalid wallpaper ID.'));
+      const descriptor = wallpaperFromId(id);
+      if (!descriptor) return Promise.reject(new Error('Invalid wallpaper ID.'));
+      // Curated photos resolve from the bundle; the image itself loads like any other.
+      if (descriptor.provider === 'curated') return Promise.resolve(getWallpaper(id));
       if (id === BING_DAILY_ID) return ensureDailyWallpaper();
       if (pendingImages.has(id)) return pendingImages.get(id);
       const task = restoreWallpaper(id).then(async (item) => {
@@ -308,6 +419,11 @@
       if (id === BING_DAILY_ID && dailyWallpaper) {
         return { ...dailyWallpaper, id, dailyId: dailyWallpaper.id };
       }
+      const descriptor = wallpaperFromId(id);
+      if (descriptor && descriptor.daily && descriptor.provider === 'curated') {
+        const pick = getCuratedDailyWallpaper(descriptor.category, now());
+        return pick ? { ...pick, id, daily: true, dailyId: pick.id } : descriptor;
+      }
       return images.get(id) || wallpaperFromId(id);
     }
     return Object.freeze({ getQuote, getCatalog, ensureWallpaper, restoreWallpaper, getWallpaper,
@@ -315,5 +431,7 @@
   }
 
   return Object.freeze({ QUOTE_CACHE_KEY, BING_CACHE_KEY, BING_DAILY_CACHE_KEY, BING_META_CACHE_KEY, BING_DAILY_ID,
-    normalizeMarket, localDay, normalizeQuote, normalizeWallpaper, wallpaperFromId, createClient });
+    CURATED_CATEGORIES, RANDOM_CATEGORY, normalizeMarket, localDay, normalizeQuote, normalizeWallpaper, wallpaperFromId,
+    getWallpaperProvider, isDailyWallpaperId, curatedDailyId, getCuratedWallpapers, getCuratedDailyWallpaper,
+    createClient });
 });

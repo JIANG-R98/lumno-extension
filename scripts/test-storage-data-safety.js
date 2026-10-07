@@ -23,6 +23,8 @@ const expectedSyncKeys = [
   '_x_extension_newtab_zen_mode_2026_unique_',
   '_x_extension_newtab_wallpaper_2026_unique_',
   '_x_extension_newtab_online_wallpaper_2026_unique_',
+  '_x_extension_newtab_link_wallpapers_2026_unique_',
+  '_x_extension_newtab_daily_wallpaper_picks_2026_unique_',
   '_x_extension_newtab_wallpaper_overlay_2026_unique_',
   '_x_extension_newtab_wallpaper_effect_2026_unique_',
   '_x_extension_newtab_favicon_2026_unique_',

@@ -428,6 +428,68 @@
     };
   }
 
+  // Downscaled copies of link wallpapers and museum prints live in their own database: only their
+  // IDs and links sync, and WebDAV, which uploads the custom wallpaper library, never carries them.
+  const IMAGE_CACHE_DB_NAME = 'lumno-newtab-wallpaper-cache';
+  const IMAGE_CACHE_STORE_NAME = 'images';
+
+  function createWallpaperImageCache(options) {
+    const windowObj = getOption(options, 'windowObj', root.window || root);
+    function run(mode, task) {
+      return new Promise((resolve, reject) => {
+        if (!windowObj || !windowObj.indexedDB) {
+          reject(new Error('IndexedDB is not available.'));
+          return;
+        }
+        const request = windowObj.indexedDB.open(IMAGE_CACHE_DB_NAME, 1);
+        request.onupgradeneeded = () => {
+          if (!request.result.objectStoreNames.contains(IMAGE_CACHE_STORE_NAME)) {
+            request.result.createObjectStore(IMAGE_CACHE_STORE_NAME, { keyPath: 'id' });
+          }
+        };
+        request.onerror = () => reject(request.error || new Error('Failed to open wallpaper image cache.'));
+        request.onsuccess = () => {
+          const db = request.result;
+          const transaction = db.transaction(IMAGE_CACHE_STORE_NAME, mode);
+          const result = task(transaction.objectStore(IMAGE_CACHE_STORE_NAME));
+          transaction.oncomplete = () => { db.close(); resolve(result.value); };
+          transaction.onerror = transaction.onabort = () => {
+            db.close();
+            reject(transaction.error || new Error('Failed to use wallpaper image cache.'));
+          };
+        };
+      });
+    }
+    return {
+      readByIds(ids) {
+        const keys = (Array.isArray(ids) ? ids : []).filter(Boolean);
+        if (!keys.length) return Promise.resolve([]);
+        return run('readonly', (store) => {
+          const result = { value: [] };
+          keys.forEach((key) => {
+            const request = store.get(key);
+            request.onsuccess = () => { if (request.result) result.value.push(request.result); };
+          });
+          return result;
+        });
+      },
+      write(record) {
+        return run('readwrite', (store) => { store.put(record); return {}; });
+      },
+      remove(id) {
+        return run('readwrite', (store) => { store.delete(id); return {}; });
+      },
+      keys() {
+        return run('readonly', (store) => {
+          const result = { value: [] };
+          const request = store.getAllKeys();
+          request.onsuccess = () => { result.value = request.result || []; };
+          return result;
+        });
+      }
+    };
+  }
+
   const api = {
     CUSTOM_WALLPAPER_ID,
     CUSTOM_WALLPAPER_ID_PREFIX,
@@ -437,6 +499,7 @@
     MAX_WALLPAPER_BYTES,
     MAX_THUMBNAIL_BYTES,
     ACCEPTED_SOURCE_MIME_TYPES,
+    createWallpaperImageCache,
     createWallpaperLocalStore
   };
   root.LumnoNewtabWallpaperLocalStore = api;

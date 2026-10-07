@@ -339,6 +339,48 @@ describe('New Tab React wallpaper view', () => {
     expect(controller.panel).toBe(panel);
   });
 
+  it('renders the curated source and the link form', () => {
+    act(() => {
+      controller = createWallpaperViewController({
+        documentObj: document,
+        model: {
+          appearanceOptions: [],
+          curatedCategories: [
+            { value: 'nature', label: 'Nature' },
+            { value: 'city', label: 'City' }
+          ],
+          favicons: [],
+          icons: {},
+          searchWidth: { min: 720, max: 1040, ticks: [] },
+          wallpapers: []
+        }
+      });
+    });
+    if (!controller) {
+      throw new Error('Expected wallpaper view controller');
+    }
+    const refs = controller.getRefs();
+    expect(Array.from(refs.tabs.querySelectorAll('[data-wallpaper-tab]'), (tab) => tab.getAttribute('data-wallpaper-tab')))
+      .toEqual(['built-in', 'local', 'bing', 'curated']);
+    expect(Array.from(refs.curatedCategoryTabs.querySelectorAll('[data-curated-category]'), (tab) => tab.textContent))
+      .toEqual(['Nature', 'City']);
+    expect(refs.curatedDailyToggle.getAttribute('role')).toBe('switch');
+    expect(refs.curatedSelectedSource.hidden).toBe(true);
+    expect(refs.urlTile.closest('[data-wallpaper-panel="local"]')).not.toBeNull();
+    expect(refs.urlForm.hidden).toBe(true);
+    expect(refs.urlTile.getAttribute('aria-controls')).toBe(refs.urlForm.id);
+    expect(refs.urlSubmit.getAttribute('type')).toBe('submit');
+    let tiles: HTMLElement[] = [];
+    act(() => {
+      tiles = controller?.renderCuratedWallpapers([
+        { id: 'picsum-28', thumbnailUrl: 'https://picsum.photos/id/28/480/270' }
+      ]) || [];
+    });
+    expect(tiles).toHaveLength(1);
+    expect(tiles[0].closest('[data-wallpaper-ref="curatedItemsHost"]')).not.toBeNull();
+    expect(refs.bingItemsHost.children).toHaveLength(0);
+  });
+
   it('preserves zero as an explicit shortcut spacing value', () => {
     act(() => {
       controller = createWallpaperViewController({

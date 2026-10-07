@@ -50,6 +50,10 @@
   const NEWTAB_QUOTE_PREFS_STORAGE_KEY = '_x_extension_newtab_quote_prefs_2026_unique_';
   // Online wallpaper picks live apart from the shared wallpaper key, which older versions sanitize.
   const NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY = '_x_extension_newtab_online_wallpaper_2026_unique_';
+  // Wallpapers added from a link sync as their URLs; each device caches the image itself.
+  const NEWTAB_LINK_WALLPAPERS_STORAGE_KEY = '_x_extension_newtab_link_wallpapers_2026_unique_';
+  // A photo picked while a daily wallpaper is on replaces it until the local date changes.
+  const NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY = '_x_extension_newtab_daily_wallpaper_picks_2026_unique_';
   const NEWTAB_QUOTE_FONT_SIZE_MIN = 12;
   const NEWTAB_QUOTE_FONT_SIZE_MAX = 24;
   const NEWTAB_QUOTE_FONT_SIZE_DEFAULT = 15;
@@ -103,6 +107,8 @@
     '_x_extension_newtab_zen_mode_2026_unique_',
     '_x_extension_newtab_wallpaper_2026_unique_',
     NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY,
+    NEWTAB_LINK_WALLPAPERS_STORAGE_KEY,
+    NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY,
     '_x_extension_newtab_wallpaper_overlay_2026_unique_',
     '_x_extension_newtab_wallpaper_effect_2026_unique_',
     '_x_extension_newtab_favicon_2026_unique_',
@@ -966,6 +972,8 @@
     NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY,
     NEWTAB_QUOTE_PREFS_STORAGE_KEY,
     NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY,
+    NEWTAB_LINK_WALLPAPERS_STORAGE_KEY,
+    NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY,
     NEWTAB_QUOTE_FONT_SIZE_MIN,
     NEWTAB_QUOTE_FONT_SIZE_MAX,
     NEWTAB_QUOTE_FONT_SIZE_DEFAULT,

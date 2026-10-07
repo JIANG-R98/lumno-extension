@@ -794,6 +794,9 @@
   "newtab_wallpaper_mode_sync_toggle_label": {
     "message": "Use the same wallpaper for light and dark mode"
   },
+  "newtab_wallpaper_mode_row_title": {
+    "message": "Mode"
+  },
   "newtab_wallpaper_mode_tabs_label": {
     "message": "Wallpaper color mode"
   },
@@ -805,12 +808,6 @@
   },
   "newtab_wallpaper_mode_select_label": {
     "message": "Edit {mode} wallpaper"
-  },
-  "newtab_wallpaper_mode_hint_light": {
-    "message": "Light mode wallpaper"
-  },
-  "newtab_wallpaper_mode_hint_dark": {
-    "message": "Dark mode wallpaper"
   },
   "newtab_wallpaper_feature_hint_badge": {
     "message": "New"
@@ -2913,10 +2910,13 @@
     "message": "Tao Te Ching"
   },
   "newtab_bing_daily": {
-    "message": "Daily wallpaper"
+    "message": "Auto-update daily"
   },
   "newtab_bing_daily_hint": {
-    "message": "A new Bing photo every day. Turn off to keep the current wallpaper."
+    "message": "A new Bing photo every day. A photo you pick while this is on stays for the rest of the day."
+  },
+  "newtab_daily_restore": {
+    "message": "Back to today's wallpaper"
   },
   "newtab_bing_recent": {
     "message": "Recent wallpapers"
@@ -2938,6 +2938,66 @@
   },
   "newtab_bing_source": {
     "message": "View wallpaper source"
+  },
+  "newtab_wallpaper_curated_section": {
+    "message": "Curated"
+  },
+  "newtab_curated_daily_hint": {
+    "message": "A new photo every day from the category shown when you turn this on, the same on every synced device. A photo you pick stays for the rest of the day."
+  },
+  "newtab_curated_category": {
+    "message": "Category"
+  },
+  "newtab_curated_category_random": {
+    "message": "Mix"
+  },
+  "newtab_curated_category_nature": {
+    "message": "Nature"
+  },
+  "newtab_curated_category_water": {
+    "message": "Water"
+  },
+  "newtab_curated_category_city": {
+    "message": "City"
+  },
+  "newtab_curated_category_minimal": {
+    "message": "Minimal"
+  },
+  "newtab_curated_category_art": {
+    "message": "Art"
+  },
+  "newtab_curated_art_meta": {
+    "message": "The Cleveland Museum of Art"
+  },
+  "newtab_curated_list": {
+    "message": "Photos"
+  },
+  "newtab_curated_more": {
+    "message": "Show others"
+  },
+  "newtab_curated_photo_by": {
+    "message": "Photo by {name}"
+  },
+  "newtab_curated_source_meta": {
+    "message": "Unsplash · via Lorem Picsum"
+  },
+  "newtab_wallpaper_add_url": {
+    "message": "Add image link"
+  },
+  "newtab_wallpaper_url_placeholder": {
+    "message": "Paste an image link (https://…)"
+  },
+  "newtab_wallpaper_url_submit": {
+    "message": "Add"
+  },
+  "newtab_wallpaper_url_invalid": {
+    "message": "Enter a link that starts with http:// or https://"
+  },
+  "newtab_wallpaper_url_limit": {
+    "message": "This link is too long, or too many links are saved. Remove some and try again."
+  },
+  "newtab_wallpaper_url_import_error": {
+    "message": "Could not add an image from this link"
   },
   "newtab_quote_font_size": {
     "message": "Font size"
