@@ -2514,7 +2514,22 @@
     "message": "アプリパスワード"
   },
   "webdav_credentials_hint": {
-    "message": "この端末にのみ保存されます。他の端末ではこの接続をもう一度追加してください。"
+    "message": "アプリパスワードはこの端末にのみ保存されます。サーバーのアドレス、フォルダー、ユーザー名はブラウザーの同期で他の端末に届きます。"
+  },
+  "webdav_password_hint": {
+    "message": "サーバーのアドレス、フォルダー、ユーザー名はブラウザーの同期で他の端末に届きますが、アプリパスワードは同期されません。新しい端末で入力できるよう控えておいてください。"
+  },
+  "webdav_password_hint_synced": {
+    "message": "サーバーのアドレス、フォルダー、ユーザー名は他の端末から同期されました。アプリパスワードは同期されないため、ここで入力してください。"
+  },
+  "webdav_suggestion_label": {
+    "message": "他の端末から"
+  },
+  "webdav_suggestion_add": {
+    "message": "パスワードを入力して接続"
+  },
+  "webdav_suggestion_dismiss": {
+    "message": "無視"
   },
   "webdav_password_saved": {
     "message": "保存済み"

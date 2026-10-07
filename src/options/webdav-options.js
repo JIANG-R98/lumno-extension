@@ -10,7 +10,12 @@
       webdav_directory: t("webdav_directory", "同步目录"),
       webdav_username: t("webdav_username", "用户名"),
       webdav_password: t("webdav_password", "应用密码"),
-      webdav_credentials_hint: t("webdav_credentials_hint", "只保存在这台设备上，其他设备需要重新添加这条连接。"),
+      webdav_credentials_hint: t("webdav_credentials_hint", "应用密码只保存在这台设备上。服务器地址、目录和用户名会通过浏览器同步到你的其他设备。"),
+      webdav_password_hint: t("webdav_password_hint", "服务器地址、目录和用户名会通过浏览器同步到你的其他设备，应用密码不会。请记好密码，在新设备上需要重新填写。"),
+      webdav_password_hint_synced: t("webdav_password_hint_synced", "服务器地址、目录和用户名已从你的其他设备同步过来。应用密码不会同步，请在这里重新填写。"),
+      webdav_suggestion_label: t("webdav_suggestion_label", "来自其他设备"),
+      webdav_suggestion_add: t("webdav_suggestion_add", "填写密码并连接"),
+      webdav_suggestion_dismiss: t("webdav_suggestion_dismiss", "忽略"),
       webdav_password_saved: t("webdav_password_saved", "已保存"),
       webdav_password_change: t("webdav_password_change", "更换"),
       webdav_password_keep: t("webdav_password_keep", "保留原密码"),
@@ -263,6 +268,7 @@
       };
       listController.render({
         ready: initialized, outdated: requiresReload(), copy, lang: document.documentElement.lang || '',
+        suggestions: Array.isArray(current.suggestions) ? current.suggestions : [],
         connections: connections.map((item) => ({ ...item, errorText: describeError(item), remoteMissing: item.error === 'remote-missing',
           diagnosticText: diagnosticText(item.error, item.diagnostic),
           conflictsText: [...new Set((item.conflicts || []).map((key) => copy[
@@ -284,8 +290,11 @@
       render();
     }
     chromeApi.storage.onChanged.addListener((changes, area) => {
-      const key = root.LumnoSettings.WEBDAV_STATUS_STORAGE_KEY;
-      if (area === 'local' && Object.keys(changes).some((name) => name === key || name.startsWith(`${key}:`))) refresh().catch(() => {});
+      const { WEBDAV_STATUS_STORAGE_KEY: key, WEBDAV_CONNECTIONS_SYNC_STORAGE_KEY: synced,
+        WEBDAV_DISMISSED_CONNECTIONS_STORAGE_KEY: dismissed } = root.LumnoSettings;
+      const names = Object.keys(changes);
+      if ((area === 'local' && names.some((name) => name === key || name.startsWith(`${key}:`) || name === dismissed)) ||
+          (area === 'sync' && names.includes(synced))) refresh().catch(() => {});
     });
     render();
     refresh().catch((error) => {

@@ -2514,7 +2514,22 @@
     "message": "應用程式密碼"
   },
   "webdav_credentials_hint": {
-    "message": "只儲存在這台裝置上，其他裝置需要重新新增這條連線。"
+    "message": "應用程式密碼只儲存在這台裝置上。伺服器位址、資料夾和使用者名稱會透過瀏覽器同步到你的其他裝置。"
+  },
+  "webdav_password_hint": {
+    "message": "伺服器位址、資料夾和使用者名稱會透過瀏覽器同步到你的其他裝置，應用程式密碼不會。請記好密碼，在新裝置上需要重新填寫。"
+  },
+  "webdav_password_hint_synced": {
+    "message": "伺服器位址、資料夾和使用者名稱已從你的其他裝置同步過來。應用程式密碼不會同步，請在這裡重新填寫。"
+  },
+  "webdav_suggestion_label": {
+    "message": "來自其他裝置"
+  },
+  "webdav_suggestion_add": {
+    "message": "填寫密碼並連線"
+  },
+  "webdav_suggestion_dismiss": {
+    "message": "忽略"
   },
   "webdav_password_saved": {
     "message": "已儲存"

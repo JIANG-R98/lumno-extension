@@ -10,6 +10,13 @@
   // keep Chrome Sync as the preferences source and add WebDAV alongside it.
   const LOCAL_PRIMARY_STORAGE_KEY = '_x_extension_local_primary_2026_unique_';
   const WEBDAV_STATUS_STORAGE_KEY = '_x_extension_webdav_status_2026_unique_';
+  // Server address, directory and username of each WebDAV connection, in
+  // chrome.storage.sync so another device can offer to fill them in. The app
+  // password never goes here. Kept out of CHROME_SYNC_STORAGE_KEYS: it is not
+  // a preference and never travels through WebDAV or settings export.
+  const WEBDAV_CONNECTIONS_SYNC_STORAGE_KEY = '_x_extension_webdav_connections_2026_unique_';
+  // Synced connections this device chose not to add, kept on this device only.
+  const WEBDAV_DISMISSED_CONNECTIONS_STORAGE_KEY = '_x_extension_webdav_dismissed_connections_2026_unique_';
   const ASSET_REVISION_STORAGE_KEY = '_x_extension_asset_revision_2026_unique_';
   const NEWTAB_THEME_MODE_STORAGE_KEY = '_x_extension_newtab_theme_mode_2026_unique_';
   const NEWTAB_THEME_SCOPE_STORAGE_KEY = '_x_extension_newtab_theme_scope_2026_unique_';
@@ -927,6 +934,8 @@
   return Object.freeze({
     LOCAL_PRIMARY_STORAGE_KEY,
     WEBDAV_STATUS_STORAGE_KEY,
+    WEBDAV_CONNECTIONS_SYNC_STORAGE_KEY,
+    WEBDAV_DISMISSED_CONNECTIONS_STORAGE_KEY,
     ASSET_REVISION_STORAGE_KEY,
     THEME_STORAGE_KEY,
     NEWTAB_THEME_MODE_STORAGE_KEY,

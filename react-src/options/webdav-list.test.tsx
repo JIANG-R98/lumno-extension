@@ -202,6 +202,36 @@ describe('WebDAV connection cards', () => {
     await act(async () => { host.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
     expect(onAction).toHaveBeenCalledWith('add', undefined, { config: { endpoint: 'https://dav.jianguoyun.com/dav/', directory: 'lumno', username: '', password: '' }, enable: true });
   });
+  it('offers connections from other devices with only the password left to fill in', async () => {
+    const synced = { endpoint: 'https://dav.jianguoyun.com/dav/', directory: 'notes', username: 'me@example.com' };
+    const { host, onAction } = fixture({ ...model, connections: [], suggestions: [synced] });
+    const suggestion = host.querySelector<HTMLElement>('.lumno-webdav-suggestion')!;
+    expect(suggestion.textContent).toContain(copy.webdav_provider_jianguoyun);
+    expect(suggestion.textContent).toContain('me@example.com · /notes');
+    expect(suggestion.textContent).toContain(copy.webdav_suggestion_label);
+    await click([...suggestion.querySelectorAll('button')].find((button) => button.textContent === copy.webdav_suggestion_add)!);
+    const form = host.querySelector<HTMLFormElement>('.lumno-webdav-editor form')!;
+    expect(form.hasAttribute('inert')).toBe(false);
+    expect(form.querySelector<HTMLInputElement>('[name="endpoint"]')!.value).toBe(synced.endpoint);
+    expect(form.querySelector<HTMLInputElement>('[name="directory"]')!.value).toBe('notes');
+    expect(form.querySelector<HTMLInputElement>('[name="username"]')!.value).toBe('me@example.com');
+    expect(form.querySelector<HTMLInputElement>('[name="password"]')!.value).toBe('');
+    expect(document.activeElement).toBe(form.querySelector('[name="password"]'));
+    expect(form.textContent).toContain(copy.webdav_password_hint_synced);
+    await type(form.querySelector<HTMLInputElement>('[name="password"]')!, 'secret');
+    await act(async () => { form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    expect(onAction).toHaveBeenCalledWith('add', undefined, { config: { ...synced, password: 'secret' }, enable: true });
+  });
+  it('dismisses a synced connection and keeps the plain add form generic', async () => {
+    const synced = { endpoint: 'https://dav.test/', directory: 'lumno', username: 'user' };
+    const { host, onAction } = fixture({ ...model, connections: [], suggestions: [synced] });
+    await click([...host.querySelectorAll('.lumno-webdav-suggestion button')].find((button) => button.textContent === copy.webdav_suggestion_dismiss)!);
+    expect(onAction).toHaveBeenCalledWith('dismissSuggestion', undefined, { config: synced });
+    await click([...host.querySelectorAll('button')].find((button) => button.textContent?.includes('Add WebDAV'))!);
+    const form = host.querySelector<HTMLFormElement>('.lumno-webdav-editor form')!;
+    expect(form.querySelector<HTMLInputElement>('[name="endpoint"]')!.value).toBe('');
+    expect(form.textContent).toContain(copy.webdav_password_hint);
+  });
   it('explains local-only credentials with a lock tooltip after the connection name', () => {
     const { card } = fixture();
     const lock = card('a').querySelector<HTMLElement>('.lumno-webdav-local-only')!;

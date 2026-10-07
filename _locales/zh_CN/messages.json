@@ -2514,7 +2514,22 @@
     "message": "应用密码"
   },
   "webdav_credentials_hint": {
-    "message": "只保存在这台设备上，其他设备需要重新添加这条连接。"
+    "message": "应用密码只保存在这台设备上。服务器地址、目录和用户名会通过浏览器同步到你的其他设备。"
+  },
+  "webdav_password_hint": {
+    "message": "服务器地址、目录和用户名会通过浏览器同步到你的其他设备，应用密码不会。请记好密码，在新设备上需要重新填写。"
+  },
+  "webdav_password_hint_synced": {
+    "message": "服务器地址、目录和用户名已从你的其他设备同步过来。应用密码不会同步，请在这里重新填写。"
+  },
+  "webdav_suggestion_label": {
+    "message": "来自其他设备"
+  },
+  "webdav_suggestion_add": {
+    "message": "填写密码并连接"
+  },
+  "webdav_suggestion_dismiss": {
+    "message": "忽略"
   },
   "webdav_password_saved": {
     "message": "已保存"

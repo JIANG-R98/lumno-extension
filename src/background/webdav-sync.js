@@ -9,6 +9,9 @@
   const SYNC_REVISION = 'dav-multi-1';
   const PROBE_CACHE_MS = 10 * 60 * 1000;
   const CHROME_SYNC_META_KEY = '_x_extension_sync_meta_2024_unique_';
+  // Synced connection hints stay far below chrome.storage.sync's 8 KB item quota.
+  const MAX_HINTS = 10;
+  const MAX_HINT_BYTES = 600;
   // Contract failures in this device's own data; capture reports them as
   // local-<code> so the settings card never blames the remote copy.
   const LOCAL_DATA_CODES = ['invalid-state', 'state-too-large', 'invalid-shortcuts', 'invalid-icon', 'invalid-wallpaper',
@@ -649,6 +652,7 @@
     const recordKeys = ['session', 'pendingApply', 'recoveryBlocked', 'conflict', 'replacementBackup', 'replacementBackupMeta', 'migrationBackup', 'migrationBackupMeta'];
     let ids = [];
     let registryChain = Promise.resolve();
+    let hintChain = Promise.resolve();
     let localChain = Promise.resolve();
     let started = false;
     const clientApi = opts.client || root.LumnoWebDavClient;
@@ -658,6 +662,11 @@
     function serialRegistry(fn) {
       const job = registryChain.then(fn);
       registryChain = job.catch(() => {});
+      return job;
+    }
+    function serialHints(fn) {
+      const job = hintChain.then(fn);
+      hintChain = job.catch(() => {});
       return job;
     }
     function withLocalWrite(fn) {
@@ -672,6 +681,44 @@
     }
     async function notifyRegistry() {
       await localStorage('set', { [`${settings.WEBDAV_STATUS_STORAGE_KEY}:connections`]: cryptoApi.randomUUID() });
+    }
+    // Every device publishes the address, directory and username of its
+    // connections through browser sync, so a new device only asks for the app
+    // password. The password itself never leaves the device that holds it.
+    const sameConnection = (left, right) => ['endpoint', 'directory', 'username'].every((key) => left[key] === right[key]);
+    function connectionHints(value) {
+      const hints = [];
+      for (const item of value && value.version === 1 && Array.isArray(value.items) ? value.items : []) {
+        let config;
+        try { config = clientApi.normalizeConfig({ ...item, password: 'placeholder' }); } catch (_error) { continue; }
+        const hint = { endpoint: config.endpoint, directory: config.directory, username: config.username };
+        if (JSON.stringify(hint).length <= MAX_HINT_BYTES && !hints.some((existing) => sameConnection(existing, hint))) hints.push(hint);
+      }
+      return hints.slice(-MAX_HINTS);
+    }
+    function syncStorage(method, value) {
+      return new Promise((resolve, reject) => {
+        if (!chromeApi.storage.sync) { resolve({}); return; }
+        chromeApi.storage.sync[method](value, (result) => {
+          if (chromeApi.runtime.lastError) reject(new Error('sync-storage-failed')); else resolve(result || {});
+        });
+      });
+    }
+    // Hints are a convenience: failing to publish one never fails the
+    // connection change that triggered it.
+    function publishHints(removed, added) {
+      return serialHints(async () => {
+        const key = settings.WEBDAV_CONNECTIONS_SYNC_STORAGE_KEY;
+        const current = connectionHints((await syncStorage('get', [key]))[key]);
+        const next = connectionHints({ version: 1, items: [
+          ...current.filter((item) => !removed.some((config) => config && sameConnection(config, item))),
+          ...added.filter(Boolean)] });
+        if (JSON.stringify(next) !== JSON.stringify(current)) await syncStorage('set', { [key]: { version: 1, items: next } });
+      }).catch(() => {});
+    }
+    async function configOf(id) {
+      const { config } = await worker(id).status();
+      return config ? { endpoint: config.endpoint, directory: config.directory, username: config.username } : null;
     }
     function worker(id) {
       if (!workers.has(id)) {
@@ -704,6 +751,8 @@
         const current = await worker(id).status();
         if (!current.enabled && current.error === 'interrupted-apply' && current.hasMigrationBackup) await store.put(keyFor(id, 'recoveryBlocked'), true);
       }
+      // Connections added before hints existed reach other devices too.
+      await publishHints([], await Promise.all(ids.map(configOf)));
     })();
     // Two connections to the same account and directory would sync one remote
     // with two independent baselines and treat each other's writes as changes.
@@ -733,11 +782,37 @@
       await ready;
       const connections = (await Promise.all(ids.map(async (id) => ({ id, ...await worker(id).status() })))).filter((item) => item.config);
       return { ...(connections[0] || { state: 'browser', enabled: false, config: null }),
-        clientRevision: clientApi.REVISION, syncRevision: SYNC_REVISION, connections };
+        clientRevision: clientApi.REVISION, syncRevision: SYNC_REVISION, connections, suggestions: await suggestions(connections) };
+    }
+    // Synced connections this device has neither added nor dismissed.
+    async function suggestions(connections) {
+      const syncKey = settings.WEBDAV_CONNECTIONS_SYNC_STORAGE_KEY;
+      const dismissedKey = settings.WEBDAV_DISMISSED_CONNECTIONS_STORAGE_KEY;
+      let hints = [];
+      let dismissed = [];
+      try {
+        hints = connectionHints((await syncStorage('get', [syncKey]))[syncKey]);
+        dismissed = connectionHints((await localStorage('get', [dismissedKey]))[dismissedKey]);
+      } catch (_error) { return []; }
+      return hints.filter((hint) => ![...connections.map((item) => item.config), ...dismissed].some((config) => sameConnection(config, hint)));
+    }
+    async function dismissSuggestion(input) {
+      const key = settings.WEBDAV_DISMISSED_CONNECTIONS_STORAGE_KEY;
+      const [hint] = connectionHints({ version: 1, items: [input] });
+      if (!hint) fail('connection-missing');
+      const current = connectionHints((await localStorage('get', [key]))[key]);
+      await localStorage('set', { [key]: { version: 1, items: connectionHints({ version: 1, items: [...current, hint] }) } });
+      return { ok: true };
     }
     function start() {
       if (started) return;
       started = true;
+      // Another device withdrawing a connection this one still uses puts it
+      // back at once, so a new device never misses it in the meantime.
+      chromeApi.storage.onChanged.addListener((changes, areaName) => {
+        if (areaName !== 'sync' || !changes[settings.WEBDAV_CONNECTIONS_SYNC_STORAGE_KEY]) return;
+        ready.then(async () => publishHints([], await Promise.all(ids.map(configOf)))).catch(() => {});
+      });
       ready.then(() => Promise.all(ids.map(async (id) => {
         const current = await worker(id).status();
         if (current.enabled) {
@@ -749,6 +824,7 @@
     async function handle(request) {
       await ready;
       if (request.operation === 'status') return status();
+      if (request.operation === 'dismissSuggestion') return dismissSuggestion(request.config);
       if (request.operation === 'add' || (request.operation === 'test' && !request.id)) {
         return serialRegistry(async () => {
           if (request.operation === 'add') await assertUnique(request.config);
@@ -773,7 +849,10 @@
                 throw cause;
               }
             }
-            if (request.operation === 'add') await retain();
+            if (request.operation === 'add') {
+              await retain();
+              await publishHints([], [await configOf(id)]);
+            }
             return { ...result, id };
           } finally {
             if (!retained) await discard(id);
@@ -782,12 +861,19 @@
       }
       const id = request.id || (ids.length === 1 ? ids[0] : null);
       if (!id || !ids.includes(id)) fail('connection-missing');
-      if (request.operation === 'save') await assertUnique(request.config, id);
+      if (request.operation === 'save') {
+        await assertUnique(request.config, id);
+        const before = await configOf(id);
+        const result = await worker(id).handle(request);
+        await publishHints([before], [await configOf(id)]);
+        return result;
+      }
       if (request.operation === 'remove') {
         return serialRegistry(async () => {
           if (!ids.includes(id)) fail('connection-missing');
           await worker(id).handle({ operation: 'recover' });
           if (await store.get(keyFor(id, 'recoveryBlocked'))) fail('interrupted-apply');
+          const removed = await configOf(id);
           await worker(id).stop();
           const nextIds = ids.filter((value) => value !== id);
           // Remove the index first: a restart cannot revive this connection.
@@ -795,6 +881,7 @@
           ids = nextIds;
           await discard(id);
           await notifyRegistry();
+          await publishHints([removed], []);
           return { ok: true };
         });
       }

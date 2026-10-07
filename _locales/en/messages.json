@@ -2514,7 +2514,22 @@
     "message": "App password"
   },
   "webdav_credentials_hint": {
-    "message": "Saved only on this device. Add this connection again on your other devices."
+    "message": "The app password stays on this device. The server address, folder and username sync to your other devices through your browser."
+  },
+  "webdav_password_hint": {
+    "message": "The server address, folder and username sync to your other devices through your browser, but the app password doesn’t. Keep it somewhere safe to enter on new devices."
+  },
+  "webdav_password_hint_synced": {
+    "message": "The server address, folder and username came from your other device. The app password doesn’t sync, so enter it here."
+  },
+  "webdav_suggestion_label": {
+    "message": "From another device"
+  },
+  "webdav_suggestion_add": {
+    "message": "Enter password to connect"
+  },
+  "webdav_suggestion_dismiss": {
+    "message": "Dismiss"
   },
   "webdav_password_saved": {
     "message": "Saved"

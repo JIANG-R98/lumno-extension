@@ -75,7 +75,11 @@ async function run() {
   const firstFiles = structuredClone([...first.files]);
   const chromeBefore = structuredClone(device.chrome.storage.sync.values);
   await manager.handle({ operation: 'remove', id: a.id });
-  assert.deepStrictEqual(device.chrome.storage.sync.values, chromeBefore, 'removing a connection retains Chrome preferences');
+  const hintKey = settings.WEBDAV_CONNECTIONS_SYNC_STORAGE_KEY;
+  const withoutHints = (values) => Object.fromEntries(Object.entries(values).filter(([key]) => key !== hintKey));
+  assert.deepStrictEqual(withoutHints(device.chrome.storage.sync.values), withoutHints(chromeBefore), 'removing a connection retains Chrome preferences');
+  assert.deepStrictEqual(device.chrome.storage.sync.values[hintKey].items.map((item) => item.endpoint), ['https://second.test/dav/'],
+    'removing a connection withdraws it from other devices');
   assert.deepStrictEqual([...first.files], firstFiles, 'removing makes no remote request');
   assert.deepStrictEqual([...second.files], secondFiles);
   assert(![...device.privateValues.keys()].some((key) => key.startsWith(`connection:${a.id}:`)), 'credentials and private per-connection history are removed');
@@ -166,6 +170,50 @@ async function run() {
   await flow.controller.handle({ operation: 'pause', id: added.id });
   assert.strictEqual((await flow.controller.status()).connections[0].error, null);
   await flow.controller.handle({ operation: 'remove', id: added.id });
-  console.log('WebDAV multiple-connection tests passed: migration, parallel requests, isolation, deletion, restart, duplicates and one-step enable');
+  // Connection details follow the user to other devices through browser sync;
+  // the app password never does.
+  {
+    const hintKey = settings.WEBDAV_CONNECTIONS_SYNC_STORAGE_KEY;
+    const server = createServer();
+    const laptop = createDevice(server, {}, [], syncApi.createController);
+    const added = await laptop.controller.handle({ operation: 'add', config });
+    const published = structuredClone(laptop.chrome.storage.sync.values[hintKey]);
+    assert.deepStrictEqual(published, { version: 1, items: [{ endpoint: config.endpoint, directory: 'lumno', username: 'user' }] });
+    assert(!JSON.stringify(laptop.chrome.storage.sync.values).includes(config.password), 'the app password never enters browser sync');
+    assert.deepStrictEqual((await laptop.controller.status()).suggestions, [], 'a device never suggests its own connection');
+
+    const desktop = createDevice(server, { sync: { [hintKey]: published } }, [], syncApi.createController);
+    assert.deepStrictEqual((await desktop.controller.status()).suggestions, published.items, 'another device offers the synced connection');
+    await desktop.controller.handle({ operation: 'dismissSuggestion', config: published.items[0] });
+    assert.deepStrictEqual((await desktop.controller.status()).suggestions, []);
+    assert.deepStrictEqual(desktop.chrome.storage.sync.values[hintKey], published, 'dismissing stays on this device');
+    const phone = createDevice(server, { sync: { [hintKey]: published } }, [], syncApi.createController);
+    await phone.controller.handle({ operation: 'add', config });
+    assert.deepStrictEqual((await phone.controller.status()).suggestions, [], 'adding a suggested connection consumes it');
+    assert.deepStrictEqual(phone.chrome.storage.sync.values[hintKey], published, 'the same connection is published once');
+
+    await laptop.controller.handle({ operation: 'save', id: added.id, config: { ...config, directory: 'moved' } });
+    assert.deepStrictEqual(laptop.chrome.storage.sync.values[hintKey].items.map((item) => item.directory), ['moved'],
+      'editing a connection replaces what other devices see');
+    // A device that still uses a connection restores it right after another
+    // device withdraws it, without waiting for a restart.
+    await new Promise((resolve) => laptop.chrome.storage.sync.set({ [hintKey]: { version: 1, items: [] } }, resolve));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await laptop.controller.status();
+    assert.deepStrictEqual(laptop.chrome.storage.sync.values[hintKey].items.map((item) => item.directory), ['moved']);
+    // Connections added before hints existed are published on the next start.
+    await new Promise((resolve) => laptop.chrome.storage.sync.remove([hintKey], resolve));
+    await laptop.createController().status();
+    assert.deepStrictEqual(laptop.chrome.storage.sync.values[hintKey].items.map((item) => item.directory), ['moved']);
+    // Malformed or oversized entries from another version are ignored, not trusted.
+    const noisy = createDevice(server, { sync: { [hintKey]: { version: 1, items: [
+      { endpoint: 'http://plain.test/', directory: 'lumno', username: 'user' },
+      { endpoint: 'https://long.test/', directory: 'lumno', username: 'x'.repeat(250), password: 'leak' },
+      { endpoint: `https://${'a'.repeat(600)}.test/`, directory: 'lumno', username: 'user' }] } } }, [], syncApi.createController);
+    const offered = (await noisy.controller.status()).suggestions;
+    assert.deepStrictEqual(offered.map((item) => item.endpoint), ['https://long.test/']);
+    assert.strictEqual(Object.hasOwn(offered[0], 'password'), false);
+  }
+  console.log('WebDAV multiple-connection tests passed: migration, parallel requests, isolation, deletion, restart, duplicates, one-step enable and synced connection hints');
 }
 run().catch((error) => { console.error(error); process.exitCode = 1; });

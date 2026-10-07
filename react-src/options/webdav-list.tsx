@@ -26,6 +26,8 @@ export interface WebDavConnection {
 }
 export interface WebDavListModel {
   connections: WebDavConnection[];
+  // Connections other devices published through browser sync, without passwords.
+  suggestions?: WebDavConfig[];
   copy: Record<string, string>;
   lang?: string;
   ready: boolean;
@@ -53,9 +55,9 @@ function isJianguoyun(endpoint: string) {
   catch { return false; }
 }
 
-function connectionTitle(item: WebDavConnection, copy: Record<string, string>) {
-  if (isJianguoyun(item.config.endpoint)) return copy.webdav_provider_jianguoyun;
-  try { return new URL(item.config.endpoint).host; } catch { return item.config.endpoint; }
+function connectionTitle(config: WebDavConfig, copy: Record<string, string>) {
+  if (isJianguoyun(config.endpoint)) return copy.webdav_provider_jianguoyun;
+  try { return new URL(config.endpoint).host; } catch { return config.endpoint; }
 }
 
 function formatTime(timestamp: number, lang: string) {
@@ -190,14 +192,16 @@ function ConflictDiff({ items, copy, lang }: { items: WebDavConflictItem[]; copy
   );
 }
 
-const initialDraft = (item?: WebDavConnection) => ({ endpoint: item?.config.endpoint || '',
-  directory: item?.config.directory || 'lumno', username: item?.config.username || '', password: '' });
+const initialDraft = (config?: WebDavConfig) => ({ endpoint: config?.endpoint || '',
+  directory: config?.directory || 'lumno', username: config?.username || '', password: '' });
 
 // The editor stays mounted so it can slide open and closed like the other
 // settings lists; each opening starts again from the saved connection.
-function ConnectionEditor({ id, item, model, open, options, onClose }: {
+function ConnectionEditor({ id, item, preset, model, open, options, onClose }: {
   id: string;
   item?: WebDavConnection;
+  // A connection synced from another device; only the password is missing.
+  preset?: WebDavConfig | null;
   model: WebDavListModel;
   open: boolean;
   options: WebDavListOptions;
@@ -205,24 +209,27 @@ function ConnectionEditor({ id, item, model, open, options, onClose }: {
 }) {
   const { copy } = model;
   const formId = useId();
-  const [draft, setDraft] = useState(() => initialDraft(item));
+  const [draft, setDraft] = useState(() => initialDraft(item?.config || preset || undefined));
   const [feedback, setFeedback] = useState<{ text: string; failed: boolean; diagnostic?: string } | null>(null);
   const [pendingOperation, setPendingOperation] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [wasOpen, setWasOpen] = useState(open);
-  if (open !== wasOpen) {
+  const [wasPreset, setWasPreset] = useState(preset);
+  if (open !== wasOpen || preset !== wasPreset) {
     setWasOpen(open);
+    setWasPreset(preset);
     if (open) {
-      setDraft(initialDraft(item));
+      setDraft(initialDraft(item?.config || preset || undefined));
       setFeedback(null);
       setChangingPassword(false);
       setPasswordVisible(false);
     }
   }
   const endpointRef = useRef<HTMLInputElement>(null);
-  useEffect(() => { if (open) endpointRef.current?.focus(); }, [open]);
   const passwordRef = useRef<HTMLInputElement>(null);
+  // A synced connection already has everything but the password.
+  useEffect(() => { if (open) (preset ? passwordRef : endpointRef).current?.focus(); }, [open, preset]);
   const action = useExclusiveAsyncAction(async (operation: string) => {
     setFeedback(null);
     setPendingOperation(operation);
@@ -321,6 +328,11 @@ function ConnectionEditor({ id, item, model, open, options, onClose }: {
             </div>
           )}
         </div>
+        {keepPassword ? null : (
+          <p className={`${classes('setting_desc')} lumno-webdav-password-hint`}>
+            {preset && !item ? copy.webdav_password_hint_synced : copy.webdav_password_hint}
+          </p>
+        )}
       </div>
       {feedback ? (
         <div className="lumno-webdav-form-feedback" data-tone={feedback.failed ? 'danger' : 'success'} role="status">
@@ -338,10 +350,12 @@ function ConnectionEditor({ id, item, model, open, options, onClose }: {
             {copy.webdav_test}
           </BusyLabel>
         </button>
-        <button className={compactClass} disabled={action.pending} onClick={onClose} type="button">{copy.confirm_cancel}</button>
-        <button aria-busy={pendingOperation === 'submit'} className={compactPrimaryClass} disabled={disabled} type="submit">
-          <BusyLabel busy={pendingOperation === 'submit'}>{item ? copy.webdav_save : copy.webdav_enable}</BusyLabel>
-        </button>
+        <div className="lumno-webdav-editor-buttons">
+          <button className={compactClass} disabled={action.pending} onClick={onClose} type="button">{copy.confirm_cancel}</button>
+          <button aria-busy={pendingOperation === 'submit'} className={compactPrimaryClass} disabled={disabled} type="submit">
+            <BusyLabel busy={pendingOperation === 'submit'}>{item ? copy.webdav_save : copy.webdav_enable}</BusyLabel>
+          </button>
+        </div>
       </div>
     </form>
   );
@@ -390,7 +404,7 @@ function ConnectionCard({ item, expanded, model, now, options, onEdit, onClose }
   const busy = action.pending || item.state === 'syncing';
   const choice = item.state === 'choice' || item.state === 'conflict';
   const status = describeStatus(item, copy, syncing, now, lang);
-  const title = connectionTitle(item, copy);
+  const title = connectionTitle(item.config, copy);
   const lastSyncAt = validTime(item.lastSyncAt);
   const errorText = feedback?.text || item.errorText || '';
   const diagnostic = feedback ? feedback.diagnostic : item.diagnosticText || '';
@@ -504,27 +518,65 @@ function ConnectionCard({ item, expanded, model, now, options, onEdit, onClose }
   );
 }
 
+// A connection another device published. Adding it opens the form with
+// everything filled in except the password, which never syncs.
+function SuggestionCard({ config, model, options, onAdd }: {
+  config: WebDavConfig;
+  model: WebDavListModel;
+  options: WebDavListOptions;
+  onAdd(): void;
+}) {
+  const { copy } = model;
+  const action = useExclusiveAsyncAction(() => options.onAction('dismissSuggestion', undefined, { config }));
+  const disabled = action.pending || !model.ready || model.outdated;
+  return (
+    <div className={`${classes('shortcut_item')} lumno-webdav-card lumno-webdav-suggestion`} data-type="custom">
+      <div className={classes('shortcut_item_header')}>
+        <div className={classes('shortcut_item_info')}>
+          <div className={classes('shortcut_item_title')}>
+            <span className="lumno-webdav-name" title={`${config.endpoint}${config.directory}`}>{connectionTitle(config, copy)}</span>
+            <span className={classes('sync_status')}>{copy.webdav_suggestion_label}</span>
+          </div>
+          <div className={classes('shortcut_item_meta')}>{config.username} · /{config.directory}</div>
+        </div>
+        <div className={classes('shortcut_item_actions')}>
+          <button className={compactClass} disabled={disabled} onClick={() => { void action.run(); }} type="button">
+            {copy.webdav_suggestion_dismiss}
+          </button>
+          <button className={compactPrimaryClass} disabled={disabled} onClick={onAdd} type="button">
+            {copy.webdav_suggestion_add}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function WebDavList({ model, options }: { model: WebDavListModel; options: WebDavListOptions }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [preset, setPreset] = useState<WebDavConfig | null>(null);
   const addRef = useRef<HTMLButtonElement>(null);
   const addId = useId();
   const now = useNow(30000);
   const closeAdd = () => { setAdding(false); requestAnimationFrame(() => addRef.current?.focus()); };
+  const startAdd = (config: WebDavConfig | null) => { setExpandedId(null); setPreset(config); setAdding(true); };
   return <>
     <div className={classes('shortcut_list')}>
       {model.connections.map((item) => <ConnectionCard key={item.id} item={item} model={model} now={now} options={options}
         expanded={expandedId === item.id} onClose={() => setExpandedId(null)}
         onEdit={() => { setAdding(false); setExpandedId((value) => value === item.id ? null : item.id); }} />)}
+      {(model.suggestions || []).map((config) => <SuggestionCard config={config} model={model} options={options}
+        key={`${config.endpoint}${config.directory}|${config.username}`} onAdd={() => startAdd(config)} />)}
     </div>
     <div className={`${classes('shortcut_form')} lumno-webdav-editor`} data-expanded={adding}>
       <div className={classes('shortcut_form_trigger')}>
         <button aria-controls={addId} aria-expanded={adding} className={classes('shortcut_submit')}
-          disabled={!model.ready || model.outdated} onClick={() => { setExpandedId(null); setAdding(true); }} ref={addRef} type="button">
+          disabled={!model.ready || model.outdated} onClick={() => startAdd(null)} ref={addRef} type="button">
           <i className="ri-icon ri-size-14 ri-add-line" aria-hidden="true" />{model.copy.webdav_add}
         </button>
       </div>
-      <ConnectionEditor id={addId} model={model} open={adding} options={options} onClose={closeAdd} />
+      <ConnectionEditor id={addId} model={model} open={adding} options={options} preset={preset} onClose={closeAdd} />
     </div>
   </>;
 }

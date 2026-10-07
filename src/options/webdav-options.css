@@ -79,7 +79,15 @@
 }
 .lumno-webdav-form-grid ._x_extension_shortcut_field_2024_unique_ { min-width: 0; }
 .lumno-webdav-form-grid input { width: 100%; box-sizing: border-box; }
+/* Says once, under all four fields, which of them follow the user to other
+   devices and which must be typed again there. */
+.lumno-webdav-form-grid > .lumno-webdav-password-hint { grid-column: 1 / -1; margin: -6px 0 0; }
+/* Cancel and save stay together: on a narrow screen they move to their own
+   row instead of squeezing their labels onto two lines. */
+.lumno-webdav-editor-actions { flex-wrap: wrap; }
 .lumno-webdav-editor-actions > .lumno-webdav-test { margin-right: auto; }
+.lumno-webdav-editor-buttons { display: flex; gap: 10px; margin-left: auto; }
+.lumno-webdav-editor-actions button { white-space: nowrap; }
 .lumno-webdav-card ._x_extension_shortcut_item_title_2024_unique_ > .lumno-webdav-local-only { margin-left: -4px; flex: 0 0 auto; }
 .lumno-webdav-form-feedback {
   display: flex;
@@ -102,6 +110,10 @@
   .lumno-webdav-diff-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .lumno-webdav-diff-label { grid-column: 1 / -1; }
   .lumno-webdav-diff-head > :first-child { display: none; }
+  /* A synced connection's two text buttons move under its name instead of
+     squeezing the address out. */
+  .lumno-webdav-suggestion ._x_extension_shortcut_item_header_2024_unique_ { flex-wrap: wrap; }
+  .lumno-webdav-suggestion ._x_extension_shortcut_item_actions_2024_unique_ { flex: 1 0 100%; justify-content: flex-end; }
 }
 
 /* Password: a saved one never returns to the page, so it shows as a locked
