@@ -2576,17 +2576,77 @@
   "webdav_error_network": {
     "message": "接続に失敗またはタイムアウトしました。ネットワーク、サーバー URL、証明書を確認してください。端末のデータは保持しています。"
   },
-  "webdav_error_invalid": {
-    "message": "サーバーの設定が無効または大きすぎます。端末のデータは置換していません。"
-  },
-  "webdav_error_asset": {
-    "message": "画像が見つからない、破損している、または未対応です。端末の設定は保持しています。"
-  },
   "webdav_error_storage": {
     "message": "同期データを保存できません。ブラウザーのローカルストレージを確認してください。"
   },
   "webdav_error_shortcuts": {
     "message": "復元するとショートカット数の上限を超えます。端末のフォルダーショートカットを減らしてください。"
+  },
+  "webdav_error_remote_unreadable": {
+    "message": "サーバーがリモート設定を正しく返しませんでした。サーバーの状態を確認するか、後で再試行してください。端末のデータは置換していません。"
+  },
+  "webdav_error_remote_corrupt": {
+    "message": "リモートの設定ファイルが破損しています（有効な JSON ではありません）。アップロードの中断や他のアプリによる書き換えが考えられます。端末のデータは置換していません。"
+  },
+  "webdav_error_invalid_state": {
+    "message": "リモート設定の構造またはバージョンを認識できません。新しいバージョンの Lumno で作成された可能性があります。すべての端末を最新版に更新してください。端末のデータは置換していません。"
+  },
+  "webdav_error_state_too_large": {
+    "message": "リモート設定が同期の上限（ショートカット 60 件、壁紙 256 枚、設定データ 2 MB）を超えています。端末のデータは置換していません。"
+  },
+  "webdav_error_response_too_large": {
+    "message": "サーバーから返されたファイルが上限の 2 MB を超えています。端末のデータは置換していません。"
+  },
+  "webdav_error_invalid_shortcuts": {
+    "message": "リモートのショートカットデータが無効です（形式の誤りまたは ID の重複）。端末のデータは置換していません。"
+  },
+  "webdav_error_invalid_icon": {
+    "message": "リモートのショートカットアイコンの記録が無効です。端末のデータは置換していません。"
+  },
+  "webdav_error_invalid_wallpaper": {
+    "message": "リモートの壁紙の記録が無効です（ID またはサイズの誤り）。端末のデータは置換していません。"
+  },
+  "webdav_error_invalid_asset": {
+    "message": "リモートの画像が無効です（種類、サイズ、内容が要件を満たしていません）。端末のデータは置換していません。"
+  },
+  "webdav_error_asset_missing": {
+    "message": "サーバー上の画像ファイルが見つかりません。アップロードが完了していないか、削除された可能性があります。端末のデータは保持しています。"
+  },
+  "webdav_error_asset_integrity": {
+    "message": "サーバー上の画像ファイルが破損しています（内容が記録と一致しません）。端末のデータは保持しています。"
+  },
+  "webdav_error_local_invalid_state": {
+    "message": "この端末の設定の構造が無効なため同期できません。サーバーと端末のデータはどちらも変更していません。"
+  },
+  "webdav_error_local_state_too_large": {
+    "message": "この端末の設定が同期の上限（壁紙 256 枚、設定データ 2 MB）を超えています。壁紙をいくつか削除してから再試行してください。サーバーと端末のデータはどちらも変更していません。"
+  },
+  "webdav_error_local_invalid_shortcuts": {
+    "message": "この端末のショートカットデータが無効なため（形式の誤りまたは ID の重複）同期できません。サーバーと端末のデータはどちらも変更していません。"
+  },
+  "webdav_error_local_invalid_icon": {
+    "message": "この端末のショートカットアイコンの記録が無効なため同期できません。サーバーと端末のデータはどちらも変更していません。"
+  },
+  "webdav_error_local_invalid_wallpaper": {
+    "message": "この端末の壁紙の記録が無効なため（ID またはサイズの誤り）同期できません。サーバーと端末のデータはどちらも変更していません。"
+  },
+  "webdav_error_local_invalid_asset": {
+    "message": "この端末の画像が破損しているか未対応の形式のため同期できません。削除してから追加し直してください。サーバーと端末のデータはどちらも変更していません。"
+  },
+  "webdav_error_local_asset_too_large": {
+    "message": "この端末の画像が同期の上限（アイコン 96 KB、壁紙 2 MB）を超えています。サーバーと端末のデータはどちらも変更していません。"
+  },
+  "webdav_error_shortcut_id_conflict": {
+    "message": "リモートのショートカットとこの端末のブックマークフォルダーのショートカットで ID が重複しているため、統合できません。端末のデータは保持しています。"
+  },
+  "webdav_error_write_failed": {
+    "message": "サーバーが同期ファイルの書き込みを拒否しました。フォルダーの書き込み権限と空き容量を確認してください。端末のデータは保持しています。"
+  },
+  "webdav_error_directory_unavailable": {
+    "message": "サーバーに同期フォルダーを作成できませんでした。サーバーのアドレスとフォルダーの権限を確認してください。"
+  },
+  "webdav_error_http": {
+    "message": "サーバーがエラーを返しました（HTTP {status}）。後で再試行してください。端末のデータは保持しています。"
   },
   "webdav_error_generic": {
     "message": "同期に失敗しました。後で再試行してください。端末のデータは保持しています。"

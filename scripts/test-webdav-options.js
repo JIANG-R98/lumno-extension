@@ -15,7 +15,7 @@ async function run() {
   let actions;
   let nextError;
   let model = { connections: [], clientRevision: 'dav-lock-5', syncRevision: 'dav-multi-1' };
-  const chrome = { runtime: { lastError: null, sendMessage(request, callback) {
+  const chrome = { runtime: { lastError: null, getManifest: () => ({ version: '9.9.9' }), sendMessage(request, callback) {
     requests.push(request);
     if (request.operation === 'status') return callback({ ok: true, ...model });
     if (nextError) { const error = nextError; nextError = null; return callback({ ok: false, ...error }); }
@@ -74,7 +74,8 @@ async function run() {
   await controller.refresh();
   assert.strictEqual(renderModel.connections[0].needsRecovery, true);
   assert(renderModel.connections[1].errorText.includes('broken.test'), 'other blocked connections point to the one that needs restoring');
-  assert.strictEqual(renderModel.connections[1].diagnosticText, 'dav-lock-5 / move-race / 201,201');
+  assert.strictEqual(renderModel.connections[1].diagnosticText, 'Lumno 9.9.9 · interrupted-apply · dav-lock-5 / move-race / 201,201');
+  assert.strictEqual(renderModel.connections[0].diagnosticText, 'Lumno 9.9.9 · interrupted-apply', 'every failure offers its exact code');
   model.connections = [a, { ...a, id: 'b', state: 'conflict', conflicts: ['shortcuts', 'wallpapers'], error: 'remote-missing' }];
   await controller.refresh();
   assert.strictEqual(window.document.querySelector('#lumno-webdav-setup-hint').hidden, true);
@@ -100,10 +101,23 @@ async function run() {
   await actions.onAction('add', undefined, { config: { endpoint: 'https://new.test/' } });
   assert(requests.some((request) => request.operation === 'add' && !request.id));
   nextError = { error: 'conditional-write-unsupported', diagnostic: { revision: 'dav-lock-5', phase: 'move-race', statuses: [201, 201], password: 'never-display' } };
-  await assert.rejects(actions.onAction('test', 'a'), (error) => error.diagnostic === 'dav-lock-5 / move-race / 201,201' &&
+  await assert.rejects(actions.onAction('test', 'a'), (error) => error.diagnostic === 'Lumno 9.9.9 · conditional-write-unsupported · dav-lock-5 / move-race / 201,201' &&
     !error.message.includes('move-race') && !error.message.includes('never-display'));
   nextError = { error: 'duplicate-connection' };
   await assert.rejects(actions.onAction('add'), /same server, folder and username/);
+  // A bad record on this device and a bad copy on the server read differently,
+  // and each record kind names itself.
+  const reject = async (error, operation = 'sync') => { nextError = error; return actions.onAction(operation, 'a').then(() => null, (cause) => cause); };
+  const local = await reject({ error: 'local-invalid-wallpaper' });
+  assert.strictEqual(local.message, messages.webdav_error_local_invalid_wallpaper.message);
+  assert.match(local.message, /This device’s wallpaper/);
+  assert.strictEqual(local.diagnostic, 'Lumno 9.9.9 · local-invalid-wallpaper');
+  assert.strictEqual((await reject({ error: 'invalid-wallpaper' })).message, messages.webdav_error_invalid_wallpaper.message);
+  assert.notStrictEqual(messages.webdav_error_invalid_wallpaper.message, messages.webdav_error_invalid_shortcuts.message);
+  const unreadable = await reject({ error: 'remote-unreadable', diagnostic: { revision: 'dav-lock-5', phase: 'state-read', statuses: [204] } });
+  assert.strictEqual(unreadable.diagnostic, 'Lumno 9.9.9 · remote-unreadable · dav-lock-5 / state-read / 204');
+  assert.match((await reject({ error: 'http-502' })).message, /HTTP 502/);
+  assert.strictEqual((await reject({ error: 'unknown-thing' })).message, messages.webdav_error_generic.message);
   nextError = { error: 'network-error' };
   await assert.rejects(actions.onAction('sync', 'a'), /Local data is retained/);
   model.syncRevision = 'dav-parallel-1';

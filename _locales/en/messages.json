@@ -2576,17 +2576,77 @@
   "webdav_error_network": {
     "message": "Connection failed or timed out. Check the network, server address and certificate. Local data is retained."
   },
-  "webdav_error_invalid": {
-    "message": "Remote settings are invalid or too large. Local data was not replaced."
-  },
-  "webdav_error_asset": {
-    "message": "An image is missing, damaged or unsupported. Local settings are retained."
-  },
   "webdav_error_storage": {
     "message": "Sync data could not be saved. Check the browser’s local storage."
   },
   "webdav_error_shortcuts": {
     "message": "Restoring would exceed the shortcut limit. Remove some local folder shortcuts first."
+  },
+  "webdav_error_remote_unreadable": {
+    "message": "The server did not return the remote settings normally. Check the server or try again later. Local data was not replaced."
+  },
+  "webdav_error_remote_corrupt": {
+    "message": "The remote settings file is damaged (not valid JSON), possibly from an interrupted upload or another app. Local data was not replaced."
+  },
+  "webdav_error_invalid_state": {
+    "message": "The remote settings use a structure or version this Lumno doesn’t recognize, possibly from a newer release. Update Lumno on every device. Local data was not replaced."
+  },
+  "webdav_error_state_too_large": {
+    "message": "The remote settings exceed the sync limit (60 shortcuts, 256 wallpapers, 2 MB of settings). Local data was not replaced."
+  },
+  "webdav_error_response_too_large": {
+    "message": "A file returned by the server exceeds the 2 MB limit. Local data was not replaced."
+  },
+  "webdav_error_invalid_shortcuts": {
+    "message": "The remote shortcut data is invalid (malformed or duplicate IDs). Local data was not replaced."
+  },
+  "webdav_error_invalid_icon": {
+    "message": "The remote shortcut icon records are invalid. Local data was not replaced."
+  },
+  "webdav_error_invalid_wallpaper": {
+    "message": "The remote wallpaper records are invalid (bad ID or dimensions). Local data was not replaced."
+  },
+  "webdav_error_invalid_asset": {
+    "message": "A remote image is invalid (wrong type, size or content). Local data was not replaced."
+  },
+  "webdav_error_asset_missing": {
+    "message": "An image file is missing on the server, possibly from an unfinished upload or a deleted file. Local data is retained."
+  },
+  "webdav_error_asset_integrity": {
+    "message": "An image file on the server is damaged (its content doesn’t match the record). Local data is retained."
+  },
+  "webdav_error_local_invalid_state": {
+    "message": "This device’s settings have an invalid structure and can’t be synced. Nothing was changed on either side."
+  },
+  "webdav_error_local_state_too_large": {
+    "message": "This device’s settings exceed the sync limit (256 wallpapers, 2 MB of settings). Remove some wallpapers and try again. Nothing was changed on either side."
+  },
+  "webdav_error_local_invalid_shortcuts": {
+    "message": "This device’s shortcut data is invalid (malformed or duplicate IDs) and can’t be synced. Nothing was changed on either side."
+  },
+  "webdav_error_local_invalid_icon": {
+    "message": "This device’s shortcut icon records are invalid and can’t be synced. Nothing was changed on either side."
+  },
+  "webdav_error_local_invalid_wallpaper": {
+    "message": "This device’s wallpaper records are invalid (bad ID or dimensions) and can’t be synced. Nothing was changed on either side."
+  },
+  "webdav_error_local_invalid_asset": {
+    "message": "An image on this device is damaged or unsupported and can’t be synced. Remove it and add it again. Nothing was changed on either side."
+  },
+  "webdav_error_local_asset_too_large": {
+    "message": "An image on this device exceeds the sync limit (96 KB per icon, 2 MB per wallpaper). Nothing was changed on either side."
+  },
+  "webdav_error_shortcut_id_conflict": {
+    "message": "A remote shortcut shares an ID with a bookmark folder shortcut on this device, so they can’t be merged. Local data is retained."
+  },
+  "webdav_error_write_failed": {
+    "message": "The server refused to write the sync files. Check the folder’s write permission and free space. Local data is retained."
+  },
+  "webdav_error_directory_unavailable": {
+    "message": "Couldn’t create the sync folder on the server. Check the server address and folder permissions."
+  },
+  "webdav_error_http": {
+    "message": "The server returned an error (HTTP {status}). Try again later. Local data is retained."
   },
   "webdav_error_generic": {
     "message": "Sync failed. Try again later. Local data is retained."

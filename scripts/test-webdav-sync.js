@@ -41,6 +41,7 @@ function createServer() {
       return response(201);
     }
     if (options.method === 'GET' || options.method === 'HEAD') {
+      if (server.stateStatus && path.endsWith('/state.json')) return response(server.stateStatus);
       if (!entry) return response(404);
       if (headers.get('If-None-Match') === entry.etag) return response(304, null, entry.etag);
       return response(200, entry.bytes, entry.etag);
@@ -514,6 +515,22 @@ async function run() {
   assert.strictEqual(second.chrome.storage.local.values[contract.ICONS_KEY].first, first.chrome.storage.local.values[contract.ICONS_KEY].first);
   assert.strictEqual((await second.wallpaperStore.readAll())[0].imageDataUrl, (await first.wallpaperStore.readAll())[0].imageDataUrl);
   assert.deepStrictEqual(second.chrome.storage.local.values[contract.LOCAL_WALLPAPER_KEY], first.chrome.storage.local.values[contract.LOCAL_WALLPAPER_KEY]);
+  assert.deepStrictEqual([server.state().wallpapers[0].width, server.state().wallpapers[0].height], [512, 288],
+    'wallpaper dimensions come from the image, not the stored record');
+  // Wallpapers saved before dimensions were recorded read back as 0x0 and
+  // must not block a new device from joining.
+  const legacy = createDevice(server, { sync: { [theme]: 'system' } }, [{ id: 'custom-wallpaper-legacy-1', key: 'custom-wallpaper-legacy-1',
+    name: 'Old', width: 0, height: 0, updatedAt: 50, imageDataUrl: `data:image/webp;base64,${wallpaper.toString('base64')}`,
+    thumbnailDataUrl: `data:image/webp;base64,${wallpaper.toString('base64')}` }]);
+  assert.deepStrictEqual(await legacy.controller.handle({ operation: 'connect', config }), { needsChoice: true });
+  await legacy.controller.handle({ operation: 'connect', config, decision: 'remote' });
+  assert.deepStrictEqual((await legacy.wallpaperStore.readAll()).map((item) => item.id), ['custom-wallpaper-test']);
+  // A record this device cannot sync is reported as local, never as a bad remote copy.
+  const damaged = createDevice(server, { sync: { [theme]: 'system' } }, [{ id: 'custom-wallpaper-damaged', key: 'custom-wallpaper-damaged',
+    name: 'Damaged', width: 10, height: 10, updatedAt: 50, imageDataUrl: `data:image/png;base64,${icon.toString('base64')}`,
+    thumbnailDataUrl: `data:image/webp;base64,${wallpaper.toString('base64')}` }]);
+  await assert.rejects(damaged.controller.handle({ operation: 'connect', config, decision: 'remote' }), /local-invalid-asset/);
+  assert.deepStrictEqual((await damaged.wallpaperStore.readAll()).map((item) => item.id), ['custom-wallpaper-damaged']);
   // The bookmark bar material travels with the wallpapers through WebDAV only.
   assert.deepStrictEqual([topbarMode, topbarLight, topbarDark].map((key) => second.chrome.storage.local.values[key]),
     ['custom', '#112233', '#445566'], 'WebDAV carries the bookmark bar material into local storage');
@@ -596,6 +613,15 @@ async function run() {
   const goodState = server.state();
   server.replaceState({ bad: true });
   await assert.rejects(second.controller.handle({ operation: 'sync' }), /invalid-state/);
+  assert.strictEqual(second.chrome.storage.sync.values[theme], 'system');
+  // Each way a remote copy can be unreadable keeps its own code.
+  server.files.set('/dav/lumno/v1/state.json', { bytes: new TextEncoder().encode('{"version":2,'), etag: '"torn"' });
+  await assert.rejects(second.controller.handle({ operation: 'sync' }), /remote-corrupt/);
+  server.replaceState(goodState);
+  server.stateStatus = 204;
+  await assert.rejects(second.controller.handle({ operation: 'sync' }), (error) => error.code === 'remote-unreadable' &&
+    error.diagnostic.phase === 'state-read' && error.diagnostic.statuses[0] === 204);
+  server.stateStatus = 0;
   assert.strictEqual(second.chrome.storage.sync.values[theme], 'system');
   server.replaceState(goodState);
   await set(first.chrome.storage.sync, { [customSearch]: [] });

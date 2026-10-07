@@ -11,7 +11,7 @@
   // every refusal is confirmed by reading the owner files afterwards.
   const MOVE_REFUSALS = [405, 409, 412, 423, 500];
   const DIAGNOSTIC_PHASES = ['state-etag', 'state-lock-create', 'directory-race', 'directory-delete', 'directory-recreate',
-    'move-race', 'move-owner', 'move-delete', 'move-recreate', 'move-claim'];
+    'move-race', 'move-owner', 'move-delete', 'move-recreate', 'move-claim', 'state-read'];
   function error(code, status) { return Object.assign(new Error(code), { code, status }); }
   function diagnostic(input) {
     if (!input || input.revision !== REVISION || !DIAGNOSTIC_PHASES.includes(input.phase)) return null;
@@ -100,7 +100,9 @@
     async function readState(etag) {
       const result = await request('state.json', 'GET');
       if (result.status === 404) return null;
-      if (result.status !== 200) throw error('invalid-state');
+      if (result.status !== 200) {
+        throw Object.assign(error('remote-unreadable'), { diagnostic: diagnostic({ revision: REVISION, phase: 'state-read', statuses: [result.status] }) });
+      }
       if (concurrency === 'conditional' && !/^"[^"\r\n]+"$/.test(result.etag || '')) throw unsupported('state-etag', [result.status]);
       // The revision is a local content digest, never an HTTP validator. Weak
       // or absent ETags, and strong ones derived from size plus a one-second
@@ -110,7 +112,7 @@
       if (etag === revision) return { unchanged: true };
       let state;
       try { state = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(result.bytes)); }
-      catch (_cause) { throw error('invalid-state'); }
+      catch (_cause) { throw error('remote-corrupt'); }
       return { state, etag: revision, httpEtag: result.etag };
     }
     async function writeState(state, etag) {

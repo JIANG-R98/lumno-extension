@@ -2576,17 +2576,77 @@
   "webdav_error_network": {
     "message": "连接失败或超时，请检查网络、服务器地址和证书。本机数据已保留。"
   },
-  "webdav_error_invalid": {
-    "message": "远端配置格式无效或过大，本机数据未被替换。"
-  },
-  "webdav_error_asset": {
-    "message": "图片缺失、损坏或格式不支持，本机配置已保留。"
-  },
   "webdav_error_storage": {
     "message": "无法保存同步数据，请检查浏览器的本地存储。"
   },
   "webdav_error_shortcuts": {
     "message": "恢复后快捷方式数量会超出上限，请先减少本机文件夹快捷方式。"
+  },
+  "webdav_error_remote_unreadable": {
+    "message": "服务器没有正常返回远端配置，请检查服务器状态或稍后重试。本机数据未被替换。"
+  },
+  "webdav_error_remote_corrupt": {
+    "message": "远端配置文件已损坏（不是有效的 JSON），可能是上传中断或被其他程序改写。本机数据未被替换。"
+  },
+  "webdav_error_invalid_state": {
+    "message": "远端配置的结构或版本无法识别，可能来自更新版本的 Lumno，请将各设备升级到最新版本。本机数据未被替换。"
+  },
+  "webdav_error_state_too_large": {
+    "message": "远端配置超出同步上限（最多 60 个快捷方式、256 张壁纸、2 MB 配置数据）。本机数据未被替换。"
+  },
+  "webdav_error_response_too_large": {
+    "message": "服务器返回的文件超过 2 MB 上限。本机数据未被替换。"
+  },
+  "webdav_error_invalid_shortcuts": {
+    "message": "远端快捷方式数据无效（格式错误或编号重复）。本机数据未被替换。"
+  },
+  "webdav_error_invalid_icon": {
+    "message": "远端快捷方式图标记录无效。本机数据未被替换。"
+  },
+  "webdav_error_invalid_wallpaper": {
+    "message": "远端壁纸记录无效（编号或尺寸错误）。本机数据未被替换。"
+  },
+  "webdav_error_invalid_asset": {
+    "message": "远端图片无效（类型、大小或内容不符合要求）。本机数据未被替换。"
+  },
+  "webdav_error_asset_missing": {
+    "message": "远端缺少图片文件，可能是上传未完成或文件被删除。本机数据已保留。"
+  },
+  "webdav_error_asset_integrity": {
+    "message": "远端图片文件已损坏（内容与记录不一致）。本机数据已保留。"
+  },
+  "webdav_error_local_invalid_state": {
+    "message": "本机配置结构无效，无法同步。远端和本机数据均未改动。"
+  },
+  "webdav_error_local_state_too_large": {
+    "message": "本机配置超出同步上限（最多 256 张壁纸、2 MB 配置数据），请删除部分壁纸后重试。远端和本机数据均未改动。"
+  },
+  "webdav_error_local_invalid_shortcuts": {
+    "message": "本机快捷方式数据无效（格式错误或编号重复），无法同步。远端和本机数据均未改动。"
+  },
+  "webdav_error_local_invalid_icon": {
+    "message": "本机快捷方式图标记录无效，无法同步。远端和本机数据均未改动。"
+  },
+  "webdav_error_local_invalid_wallpaper": {
+    "message": "本机壁纸记录无效（编号或尺寸错误），无法同步。远端和本机数据均未改动。"
+  },
+  "webdav_error_local_invalid_asset": {
+    "message": "本机有图片已损坏或格式不支持，无法同步，请删除后重新添加。远端和本机数据均未改动。"
+  },
+  "webdav_error_local_asset_too_large": {
+    "message": "本机有图片超过同步上限（图标 96 KB、壁纸 2 MB），无法同步。远端和本机数据均未改动。"
+  },
+  "webdav_error_shortcut_id_conflict": {
+    "message": "远端快捷方式与本机的书签文件夹快捷方式编号冲突，无法合并。本机数据已保留。"
+  },
+  "webdav_error_write_failed": {
+    "message": "服务器拒绝写入同步文件，请检查目录的写入权限和剩余空间。本机数据已保留。"
+  },
+  "webdav_error_directory_unavailable": {
+    "message": "无法在服务器上创建同步目录，请检查服务器地址和目录权限。"
+  },
+  "webdav_error_http": {
+    "message": "服务器返回错误（HTTP {status}），请稍后重试。本机数据已保留。"
   },
   "webdav_error_generic": {
     "message": "同步失败，请稍后重试。本机数据已保留。"

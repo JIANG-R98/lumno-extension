@@ -2576,17 +2576,77 @@
   "webdav_error_network": {
     "message": "連線失敗或逾時，請檢查網路、伺服器位址與憑證。本機資料已保留。"
   },
-  "webdav_error_invalid": {
-    "message": "遠端設定格式無效或過大，本機資料未被取代。"
-  },
-  "webdav_error_asset": {
-    "message": "圖片遺失、損毀或格式不支援，本機設定已保留。"
-  },
   "webdav_error_storage": {
     "message": "無法儲存同步資料，請檢查瀏覽器的本機儲存空間。"
   },
   "webdav_error_shortcuts": {
     "message": "還原後捷徑數量將超過上限，請先減少本機資料夾捷徑。"
+  },
+  "webdav_error_remote_unreadable": {
+    "message": "伺服器沒有正常回傳遠端設定，請檢查伺服器狀態或稍後重試。本機資料未被取代。"
+  },
+  "webdav_error_remote_corrupt": {
+    "message": "遠端設定檔已損毀（不是有效的 JSON），可能是上傳中斷或被其他程式改寫。本機資料未被取代。"
+  },
+  "webdav_error_invalid_state": {
+    "message": "無法辨識遠端設定的結構或版本，可能來自較新版本的 Lumno，請將各裝置升級到最新版本。本機資料未被取代。"
+  },
+  "webdav_error_state_too_large": {
+    "message": "遠端設定超出同步上限（最多 60 個捷徑、256 張桌布、2 MB 設定資料）。本機資料未被取代。"
+  },
+  "webdav_error_response_too_large": {
+    "message": "伺服器回傳的檔案超過 2 MB 上限。本機資料未被取代。"
+  },
+  "webdav_error_invalid_shortcuts": {
+    "message": "遠端捷徑資料無效（格式錯誤或編號重複）。本機資料未被取代。"
+  },
+  "webdav_error_invalid_icon": {
+    "message": "遠端捷徑圖示記錄無效。本機資料未被取代。"
+  },
+  "webdav_error_invalid_wallpaper": {
+    "message": "遠端桌布記錄無效（編號或尺寸錯誤）。本機資料未被取代。"
+  },
+  "webdav_error_invalid_asset": {
+    "message": "遠端圖片無效（類型、大小或內容不符合要求）。本機資料未被取代。"
+  },
+  "webdav_error_asset_missing": {
+    "message": "遠端缺少圖片檔，可能是上傳未完成或檔案被刪除。本機資料已保留。"
+  },
+  "webdav_error_asset_integrity": {
+    "message": "遠端圖片檔已損毀（內容與記錄不一致）。本機資料已保留。"
+  },
+  "webdav_error_local_invalid_state": {
+    "message": "本機設定結構無效，無法同步。遠端和本機資料均未變動。"
+  },
+  "webdav_error_local_state_too_large": {
+    "message": "本機設定超出同步上限（最多 256 張桌布、2 MB 設定資料），請刪除部分桌布後重試。遠端和本機資料均未變動。"
+  },
+  "webdav_error_local_invalid_shortcuts": {
+    "message": "本機捷徑資料無效（格式錯誤或編號重複），無法同步。遠端和本機資料均未變動。"
+  },
+  "webdav_error_local_invalid_icon": {
+    "message": "本機捷徑圖示記錄無效，無法同步。遠端和本機資料均未變動。"
+  },
+  "webdav_error_local_invalid_wallpaper": {
+    "message": "本機桌布記錄無效（編號或尺寸錯誤），無法同步。遠端和本機資料均未變動。"
+  },
+  "webdav_error_local_invalid_asset": {
+    "message": "本機有圖片已損毀或格式不支援，無法同步，請刪除後重新新增。遠端和本機資料均未變動。"
+  },
+  "webdav_error_local_asset_too_large": {
+    "message": "本機有圖片超過同步上限（圖示 96 KB、桌布 2 MB），無法同步。遠端和本機資料均未變動。"
+  },
+  "webdav_error_shortcut_id_conflict": {
+    "message": "遠端捷徑與本機的書籤資料夾捷徑編號衝突，無法合併。本機資料已保留。"
+  },
+  "webdav_error_write_failed": {
+    "message": "伺服器拒絕寫入同步檔案，請檢查資料夾的寫入權限和剩餘空間。本機資料已保留。"
+  },
+  "webdav_error_directory_unavailable": {
+    "message": "無法在伺服器上建立同步資料夾，請檢查伺服器位址和資料夾權限。"
+  },
+  "webdav_error_http": {
+    "message": "伺服器回傳錯誤（HTTP {status}），請稍後重試。本機資料已保留。"
   },
   "webdav_error_generic": {
     "message": "同步失敗，請稍後重試。本機資料已保留。"

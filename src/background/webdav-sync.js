@@ -9,6 +9,10 @@
   const SYNC_REVISION = 'dav-multi-1';
   const PROBE_CACHE_MS = 10 * 60 * 1000;
   const CHROME_SYNC_META_KEY = '_x_extension_sync_meta_2024_unique_';
+  // Contract failures in this device's own data; capture reports them as
+  // local-<code> so the settings card never blames the remote copy.
+  const LOCAL_DATA_CODES = ['invalid-state', 'state-too-large', 'invalid-shortcuts', 'invalid-icon', 'invalid-wallpaper',
+    'invalid-asset', 'asset-too-large'];
   function isTrustedSender(chromeApi, sender) {
     const page = String(sender && sender.url || '').split(/[?#]/)[0];
     return Boolean(sender && sender.id === chromeApi.runtime.id && page === chromeApi.runtime.getURL('src/options/options.html'));
@@ -120,8 +124,7 @@
       try { bytes = Uint8Array.from(root.atob(dataUrl.slice(dataUrl.indexOf(',') + 1)), (character) => character.charCodeAt(0)); }
       catch (_error) { fail('invalid-asset'); }
       if (!bytes.byteLength || bytes.byteLength > maximum) fail('asset-too-large');
-      checkImage(bytes, mime);
-      return bytes;
+      return { bytes, ...checkImage(bytes, mime) };
     }
     function checkImage(bytes, mime) {
       const header = Array.from(bytes.slice(0, 12));
@@ -151,6 +154,7 @@
         } else fail('invalid-asset');
       }
       if (!width || !height || width > 8192 || height > 8192 || width * height > 40000000) fail('invalid-asset');
+      return { width, height };
     }
     function toDataUrl(bytes, mime) {
       const chunks = [];
@@ -179,27 +183,41 @@
       const state = { version: regular.some((item) => item.type === 'folder') || (await session()).base?.version === 2 ? 2 : 1,
         data: contract.selectPreferences({ ...values, ...pickLocalPreferences(local) }),
         shortcuts: regular, icons: {}, wallpapers: [], assets: {} };
+      // This device's own data failing the contract must not read as a bad
+      // remote copy, so its codes carry a local- prefix.
+      try {
+        const { validated, records } = await collectMedia(state, local, ids);
+        if (capturedGeneration !== generation) fail('local-changed');
+        return { state: validated, values, local, records, folders: list.filter((item) => item.type === 'folder' && !item.folderRef),
+          shortcutOrder: list.map((item) => item.id), generation: capturedGeneration };
+      } catch (cause) {
+        if (LOCAL_DATA_CODES.includes(cause.code)) fail(`local-${cause.code}`);
+        throw cause;
+      }
+    }
+    async function collectMedia(state, local, ids) {
       async function addAsset(dataUrl, mime, maximum) {
-        const bytes = decodeImage(dataUrl, mime, maximum);
+        const { bytes, width, height } = decodeImage(dataUrl, mime, maximum);
         const digest = await hash(bytes);
         state.assets[digest] = { mime, size: bytes.byteLength };
         // Binary cache and credentials live in extension-origin IndexedDB,
         // never in content-script-accessible chrome.storage.local.
         if (!await privateStore.get(`asset:${digest}`)) await privateStore.put(`asset:${digest}`, bytes);
-        return digest;
+        return { digest, width, height };
       }
       for (const [id, dataUrl] of Object.entries(local[contract.ICONS_KEY] || {})) {
-        if (ids.has(id)) state.icons[id] = await addAsset(dataUrl, 'image/png', 96 * 1024);
+        if (ids.has(id)) state.icons[id] = (await addAsset(dataUrl, 'image/png', 96 * 1024)).digest;
       }
       const records = await wallpaperStore.readAll();
       for (const record of records) {
-        state.wallpapers.push({ id: record.id, name: record.name, width: record.width, height: record.height,
-          updatedAt: record.updatedAt, image: await addAsset(record.imageDataUrl, 'image/webp', contract.MAX_ASSET_BYTES),
-          thumbnail: await addAsset(record.thumbnailDataUrl, 'image/webp', 160 * 1024) });
+        // Wallpapers saved before dimensions were recorded read back as 0x0,
+        // so the size comes from the image itself.
+        const image = await addAsset(record.imageDataUrl, 'image/webp', contract.MAX_ASSET_BYTES);
+        const thumbnail = await addAsset(record.thumbnailDataUrl, 'image/webp', 160 * 1024);
+        state.wallpapers.push({ id: record.id, name: record.name, width: image.width, height: image.height,
+          updatedAt: record.updatedAt, image: image.digest, thumbnail: thumbnail.digest });
       }
-      if (capturedGeneration !== generation) fail('local-changed');
-      return { state: contract.validateState(state), values, local, records, folders: list.filter((item) => item.type === 'folder' && !item.folderRef),
-        shortcutOrder: list.map((item) => item.id), generation: capturedGeneration };
+      return { validated: contract.validateState(state), records };
     }
     async function getAsset(digest, asset, client) {
       let bytes = await privateStore.get(`asset:${digest}`);
@@ -241,7 +259,7 @@
         list.splice(index < 0 ? list.length : Math.min(index, list.length), 0, folder);
       }
       if (list.length > 60) fail('shortcut-capacity');
-      if (new Set(list.map((item) => item.id)).size !== list.length) fail('invalid-shortcuts');
+      if (new Set(list.map((item) => item.id)).size !== list.length) fail('shortcut-id-conflict');
       const plan = shortcuts.createShortcutStoragePlan(list);
       return { ...state.data, ...plan.payload, [contract.OVERFLOW_KEY]: { authoritative: false, items: plan.overflowItems } };
     }

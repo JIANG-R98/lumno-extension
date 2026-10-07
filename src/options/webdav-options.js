@@ -186,31 +186,45 @@
         else resolve(response);
       });
     });
+    // Data errors name the exact record kind and whether this device or the
+    // server holds it; connection errors share a sentence per cause.
+    const DETAILED_CODES = ['remote-unreadable', 'remote-corrupt', 'invalid-state', 'state-too-large', 'response-too-large',
+      'invalid-shortcuts', 'invalid-icon', 'invalid-wallpaper', 'invalid-asset', 'asset-missing', 'asset-integrity',
+      'local-invalid-state', 'local-state-too-large', 'local-invalid-shortcuts', 'local-invalid-icon', 'local-invalid-wallpaper',
+      'local-invalid-asset', 'local-asset-too-large', 'shortcut-id-conflict', 'write-failed', 'directory-unavailable'];
     function errorText(code) {
+      const generic = t('webdav_error_generic', '同步失败，请稍后重试。');
+      if (DETAILED_CODES.includes(code)) return t(`webdav_error_${code.replace(/-/g, '_')}`, generic);
       const categories = {
         'invalid-endpoint': 'endpoint', 'invalid-directory': 'directory', 'missing-credentials': 'credentials',
         'http-401': 'auth', 'http-403': 'permission', 'http-429': 'rate', 'http-507': 'capacity',
         'conditional-write-unsupported': 'conditional', 'remote-changed': 'changed', 'local-changed': 'changed',
         'remote-locked': 'locked', 'lock-write-uncertain': 'lock_recovery', 'lock-release-failed': 'lock_recovery',
         'remote-missing': 'missing', 'chrome-capacity': 'chrome_capacity', 'timeout': 'network', 'network-error': 'network',
-        'invalid-state': 'invalid', 'state-too-large': 'invalid', 'invalid-shortcuts': 'invalid', 'invalid-wallpaper': 'invalid',
-        'invalid-asset': 'asset', 'asset-missing': 'asset', 'asset-integrity': 'asset', 'asset-too-large': 'asset',
-        'response-too-large': 'invalid', 'private-storage-unavailable': 'storage', 'local-storage-failed': 'storage',
+        'private-storage-unavailable': 'storage', 'local-storage-failed': 'storage',
         'shortcut-capacity': 'shortcuts', 'interrupted-apply': 'interrupted', 'duplicate-connection': 'duplicate'
       };
-      return t(`webdav_error_${categories[code] || 'generic'}`, t('webdav_error_generic', '同步失败，请稍后重试。'));
+      if (categories[code]) return t(`webdav_error_${categories[code]}`, generic);
+      const status = /^http-(\d{3})$/.exec(String(code || ''));
+      return status ? t('webdav_error_http', generic).replace('{status}', status[1]) : generic;
     }
     // Diagnostics stay out of the sentence users read; the card offers them
-    // through a copy action for bug reports.
-    function diagnosticText(diagnostic) {
-      if (!diagnostic || diagnostic.revision !== EXPECTED_CLIENT_REVISION ||
-          !['state-etag', 'state-lock-create', 'directory-race', 'directory-delete', 'directory-recreate',
-            'move-race', 'move-owner', 'move-delete', 'move-recreate', 'move-claim'].includes(diagnostic.phase)) return '';
-      const statuses = (Array.isArray(diagnostic.statuses) ? diagnostic.statuses : []).filter((status) => Number.isInteger(status) && status >= 0 && status <= 599).slice(0, 2);
-      return `${diagnostic.revision} / ${diagnostic.phase} / ${statuses.join(',')}`;
+    // through a copy action for bug reports. Every failure carries its exact
+    // code, plus the protocol phase and HTTP statuses when the client saw them.
+    function diagnosticText(code, diagnostic) {
+      if (!code) return '';
+      const version = chromeApi.runtime.getManifest?.()?.version;
+      const parts = [version ? `Lumno ${version}` : 'Lumno', String(code)];
+      if (diagnostic && diagnostic.revision === EXPECTED_CLIENT_REVISION &&
+          ['state-etag', 'state-lock-create', 'directory-race', 'directory-delete', 'directory-recreate',
+            'move-race', 'move-owner', 'move-delete', 'move-recreate', 'move-claim', 'state-read'].includes(diagnostic.phase)) {
+        const statuses = (Array.isArray(diagnostic.statuses) ? diagnostic.statuses : []).filter((status) => Number.isInteger(status) && status >= 0 && status <= 599).slice(0, 2);
+        parts.push(`${diagnostic.revision} / ${diagnostic.phase} / ${statuses.join(',')}`);
+      }
+      return parts.join(' · ');
     }
     function failure(error) {
-      return Object.assign(new Error(errorText(error.message)), { diagnostic: diagnosticText(error.diagnostic) });
+      return Object.assign(new Error(errorText(error.message)), { diagnostic: diagnosticText(error.message, error.diagnostic) });
     }
     function connectionName(item) {
       try { return new URL(item.config.endpoint).host; } catch (_error) { return item.config.endpoint; }
@@ -250,7 +264,7 @@
       listController.render({
         ready: initialized, outdated: requiresReload(), copy, lang: document.documentElement.lang || '',
         connections: connections.map((item) => ({ ...item, errorText: describeError(item), remoteMissing: item.error === 'remote-missing',
-          diagnosticText: item.error ? diagnosticText(item.diagnostic) : '',
+          diagnosticText: diagnosticText(item.error, item.diagnostic),
           conflictsText: [...new Set((item.conflicts || []).map((key) => copy[
             key === 'shortcuts' ? 'webdav_conflict_shortcuts' : key === 'wallpapers' ? 'webdav_conflict_wallpapers' : 'webdav_conflict_preferences'
           ]))].join(/^(zh|ja)/.test(document.documentElement.lang) ? '、' : ', ') }))
