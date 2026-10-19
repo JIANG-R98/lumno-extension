@@ -2316,6 +2316,187 @@ async function testWallpaperPlaceholderIsCachedForThePreload() {
   assert.strictEqual(second.readPreload().wallpapers.light.placeholder, placeholder);
 }
 
+async function testBlurredWallpaperRemembersItsLuminanceAndBackdrop() {
+  const placeholder = 'data:image/webp;base64,UklGRhIAAABXRUJQVlA4TAYAAAAvQWxvAGs=';
+  const backdrop = 'data:image/webp;base64,YmFja2Ryb3A=';
+  const run = async (effectType) => {
+    let toneOptions = null;
+    const drawn = [];
+    const { documentObj: testDocument, windowObj: testWindow, sandbox: testSandbox } = createWallpaperSandbox({
+      adaptiveToneApi: {
+        createWallpaperAdaptiveTone(options) {
+          toneOptions = options;
+          return { clear() {}, refresh() {}, schedule() {}, whenSettled: () => Promise.resolve() };
+        }
+      },
+      prepareWindow(preparedWindow, preparedDocument) {
+        preparedWindow.requestIdleCallback = (callback) => setTimeout(callback, 0);
+        const createElement = preparedDocument.createElement;
+        preparedDocument.createElement = (tagName) => {
+          if (String(tagName).toLowerCase() !== 'canvas') return createElement(tagName);
+          // Also serves as the blur effect's canvas, which only sets styles and attributes on it.
+          const attributes = new Map();
+          const canvas = {
+            width: 0,
+            height: 0,
+            style: { setProperty() {}, removeProperty() {} },
+            getAttribute: (name) => (attributes.has(name) ? attributes.get(name) : null),
+            setAttribute: (name, value) => attributes.set(name, String(value)),
+            removeAttribute: (name) => attributes.delete(name),
+            getContext: () => ({ drawImage(source) { drawn.push([source, canvas.width]); }, clearRect() {} }),
+            toDataURL: () => (canvas.width === 480 ? backdrop : placeholder)
+          };
+          return canvas;
+        };
+      }
+    });
+    testDocument.body.setAttribute('data-theme', 'light');
+    const runtime = testSandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
+      documentObj: testDocument,
+      windowObj: testWindow,
+      storageArea: createMemoryStorage({
+        [WALLPAPER_STORAGE_KEY]: 'dark-shanshui-moonlit',
+        [WALLPAPER_EFFECT_STORAGE_KEY]: { light: { type: effectType }, dark: { type: effectType } }
+      }),
+      storageKeys: { wallpaper: WALLPAPER_STORAGE_KEY, localWallpaper: LOCAL_WALLPAPER_STORAGE_KEY },
+      t: (_key, fallback) => fallback || '',
+      getRiSvg: () => ''
+    });
+    await Promise.all([runtime.bootstrapInitialWallpaper(), runtime.bootstrapInitialWallpaperEffect()]);
+    await waitForAsyncWallpaperApply();
+    const shownUrl = testDocument.documentElement.style.getPropertyValue('--x-nt-wallpaper-image')
+      .replace(/^url\("|"\)$/g, '');
+    // A mid-gray sample: luminance 0.5.
+    const imageData = new Uint8ClampedArray([128, 128, 128, 255, 127, 127, 127, 255]);
+    const fullImage = { naturalWidth: 2048, naturalHeight: 1152 };
+    toneOptions.onSamplerReady({ url: shownUrl, canvas: { width: 420, height: 236 }, imageData }, fullImage);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const entry = JSON.parse(testWindow.localStorage.getItem(WALLPAPER_PRELOAD_STORAGE_KEY)).wallpapers.light;
+    return { entry, drawn, fullImage };
+  };
+
+  const blurred = await run('blur');
+  assert.ok(Math.abs(blurred.entry.luminance - 0.5) < 0.01,
+    'the next page knows how bright the wallpaper is, so the blur frost needs no full-size decode');
+  assert.strictEqual(blurred.entry.backdrop, backdrop, 'a blurred wallpaper opens on its ~480px copy');
+  assert.ok(blurred.drawn.some(([source, width]) => source === blurred.fullImage && width === 480),
+    'the copy is scaled from the full image, not the small tone sample');
+  assert.strictEqual(blurred.entry.placeholder, placeholder);
+
+  const plain = await run('none');
+  assert.ok(Math.abs(plain.entry.luminance - 0.5) < 0.01);
+  assert.strictEqual(plain.entry.backdrop, undefined, 'without blur the larger copy is neither made nor stored');
+  assert.ok(!plain.drawn.some(([, width]) => width === 480));
+}
+
+function runPreloadForInstantWallpaper(entry, wallpaperEffects, prepareWindow) {
+  const documentObj = createFakeDocument();
+  const windowObj = createFakeWindow();
+  windowObj.localStorage.setItem(WALLPAPER_PRELOAD_STORAGE_KEY, JSON.stringify({
+    version: WALLPAPER_PRELOAD_STORAGE_VERSION,
+    mode: 'light',
+    themeMode: 'light',
+    overlayStops: { light: { top: 0, mid: 0, bottom: 0 }, dark: { top: 0, mid: 0, bottom: 0 } },
+    wallpapers: { light: entry, dark: null },
+    ...(wallpaperEffects ? { wallpaperEffects } : {})
+  }));
+  windowObj.chrome = { runtime: { getURL: (path) => `chrome-extension://abc/${path}` } };
+  if (prepareWindow) prepareWindow(windowObj);
+  const sandbox = { ...REAL_WALLPAPER_DEPENDENCIES, document: documentObj, window: windowObj, chrome: windowObj.chrome };
+  vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper-preload.js', 'utf8'), sandbox, {
+    filename: 'src/newtab/wallpaper-preload.js'
+  });
+  return { root: documentObj.documentElement, preload: sandbox.LumnoNewtabWallpaperPreload };
+}
+
+async function testPreloadOpensCssOnlyWallpapersInstantly() {
+  const placeholder = 'data:image/webp;base64,cGxhY2Vob2xkZXI=';
+  const backdrop = 'data:image/webp;base64,YmFja2Ryb3A=';
+  const bundled = {
+    id: 'dark-shanshui-moonlit',
+    path: 'assets/wallpapers/lumno-newtab-dark-shanshui-moonlit.webp',
+    placeholder,
+    placeholderKey: 'dark-shanshui-moonlit',
+    luminance: 0.31,
+    backdrop
+  };
+  const effectsOf = (type) => ({ light: { type }, dark: { type } });
+  const backdropOf = (root) => root.style.getPropertyValue('--x-nt-wallpaper-backdrop');
+
+  const blurred = runPreloadForInstantWallpaper(bundled, effectsOf('blur'));
+  assert.strictEqual(blurred.preload.instant, true, 'blur is CSS alone, so its wallpaper shows from the first frame');
+  assert.strictEqual(blurred.preload.effectPrefs.type, 'blur');
+  assert.strictEqual(blurred.preload.luminance, 0.31);
+  assert.strictEqual(blurred.preload.initialImageUrl,
+    'chrome-extension://abc/assets/wallpapers/lumno-newtab-dark-shanshui-moonlit.webp');
+  assert.strictEqual(backdropOf(blurred.root), `url("${backdrop}")`,
+    'a blurred wallpaper lies over its ~480px copy, which blurs to the same picture');
+
+  const plain = runPreloadForInstantWallpaper(bundled, effectsOf('none'));
+  assert.strictEqual(plain.preload.instant, true);
+  assert.strictEqual(backdropOf(plain.root), `url("${placeholder}")`,
+    'a sharp wallpaper keeps the 32px copy under it until the full image decodes');
+
+  const grain = runPreloadForInstantWallpaper(bundled, effectsOf('grain'));
+  assert.strictEqual(grain.preload.instant, false, 'a canvas-drawn effect waits for its first render');
+  assert.strictEqual(runPreloadForInstantWallpaper(bundled, null).preload.instant, false,
+    'without the cached effect the page cannot know what to draw first');
+
+  const forged = runPreloadForInstantWallpaper(Object.assign({}, bundled, { luminance: 4, backdrop: 'javascript:alert(1)' }),
+    effectsOf('blur'));
+  assert.strictEqual(forged.preload.luminance, null);
+  assert.strictEqual(backdropOf(forged.root), `url("${placeholder}")`);
+
+  const id = `${CUSTOM_WALLPAPER_ID_PREFIX}instant`;
+  const dataUrl = 'data:image/webp;base64,dXBsb2Fk';
+  const upload = runPreloadForInstantWallpaper({ id, customImage: { id }, placeholder, placeholderKey: id, backdrop },
+    effectsOf('blur'), (windowObj) => {
+      windowObj.indexedDB = createFakeImageCacheDatabase([{ key: id, id, imageDataUrl: dataUrl }], 'key');
+    });
+  assert.strictEqual(upload.root.getAttribute('data-wallpaper-active'), 'true',
+    'an upload still being read already shows its backdrop under the blur');
+  assert.strictEqual(upload.preload.initialImageUrl, '');
+  assert.strictEqual(await upload.preload.imageReady, dataUrl);
+  assert.strictEqual(upload.preload.initialImageUrl, dataUrl, 'the backdrop and luminance belong to this image');
+}
+
+async function testRuntimeDropsTheBackdropOnceItsImageHasShown() {
+  const backdrop = 'data:image/webp;base64,YmFja2Ryb3A=';
+  const create = (initialImageUrl) => {
+    const { documentObj, windowObj, sandbox: runtimeSandbox } = createWallpaperSandbox({
+      preload: { initialImageUrl },
+      prepareWindow(preparedWindow, preparedDocument) {
+        preparedWindow.requestIdleCallback = (callback) => setTimeout(callback, 0);
+        preparedDocument.documentElement.style.setProperty('--x-nt-wallpaper-backdrop', `url("${backdrop}")`);
+      }
+    });
+    const runtime = runtimeSandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
+      documentObj,
+      windowObj,
+      storageArea: createMemoryStorage({ [WALLPAPER_STORAGE_KEY]: 'dark-shanshui-moonlit' }),
+      storageKeys: { wallpaper: WALLPAPER_STORAGE_KEY, localWallpaper: LOCAL_WALLPAPER_STORAGE_KEY },
+      t: (_key, fallback) => fallback || '',
+      getRiSvg: () => ''
+    });
+    return { documentObj, runtime };
+  };
+  const shownUrl = 'chrome-extension://abc/assets/wallpapers/lumno-newtab-dark-shanshui-moonlit.webp';
+
+  const same = create(shownUrl);
+  await same.runtime.bootstrapInitialWallpaper();
+  assert.strictEqual(same.documentObj.documentElement.style.getPropertyValue('--x-nt-wallpaper-backdrop'),
+    `url("${backdrop}")`, 'the copy stays while the image it stands in for may still be decoding');
+  await waitForAsyncWallpaperApply();
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.strictEqual(same.documentObj.documentElement.style.getPropertyValue('--x-nt-wallpaper-backdrop'), '',
+    'once the image has shown, the copy under it goes');
+
+  const other = create('chrome-extension://abc/assets/wallpapers/another.webp');
+  await other.runtime.bootstrapInitialWallpaper();
+  assert.strictEqual(other.documentObj.documentElement.style.getPropertyValue('--x-nt-wallpaper-backdrop'), '',
+    'another wallpaper never shows over the previous one\'s copy');
+}
+
 async function testSplitBuiltInWallpaperSelectionFollowsResolvedTheme() {
   const syncStorage = createMemoryStorage({
     [WALLPAPER_STORAGE_KEY]: {
@@ -4214,6 +4395,9 @@ Promise.resolve()
   .then(testPreloadPaintsTheUploadFromTheLocalLibrary)
   .then(testRuntimeAdoptsThePreloadedUploadAndItsBlobUrl)
   .then(testShortDataUrlsStayInlineForCss)
+  .then(testBlurredWallpaperRemembersItsLuminanceAndBackdrop)
+  .then(testPreloadOpensCssOnlyWallpapersInstantly)
+  .then(testRuntimeDropsTheBackdropOnceItsImageHasShown)
   .then(testOpenTabRollsOverWithoutOpeningThePanel)
   .then(testWallpaperSourcesHintWaitsForFinalFocusRoute)
   .then(testNewtabFaviconPreloadAppliesCachedAlternateBeforeMainRuntime)

@@ -22,6 +22,11 @@
   // Chrome drops a CSS custom property longer than this (MAX_CSS_URL_LENGTH in wallpaper-local-store.js).
   const CSS_CUSTOM_PROPERTY_MAX_LENGTH = 2 * 1024 * 1024;
   const PLACEHOLDER_MAX_LENGTH = 4096;
+  // The ~480px copy a blurred wallpaper opens on (wallpaper.js, WALLPAPER_BACKDROP_MAX_LENGTH).
+  const BACKDROP_MAX_LENGTH = 96 * 1024;
+  // Effects drawn by CSS alone; their wallpaper can show from the first frame, before any script
+  // has rendered anything.
+  const INSTANT_EFFECT_TYPES = ['none', 'blur'];
   const FAVICON_OPTIONS = {
     default: {
       file: 'assets/images/lumno.png',
@@ -118,7 +123,10 @@
         cachedImage: normalizeCachedImage(entry && entry.cachedImage),
         customImage: normalizeCustomImage(entry && entry.customImage),
         placeholder: normalizePlaceholder(entry && entry.placeholder),
+        backdrop: normalizeImageDataUrl(entry && entry.backdrop, BACKDROP_MAX_LENGTH),
+        luminance: normalizeLuminance(entry && entry.luminance),
         overlayStops,
+        hasEffectPrefs: Boolean(data.wallpaperEffects),
         effectPrefs: getEffectPrefsForMode(data.wallpaperEffects, mode)
       };
     } catch (e) {
@@ -140,11 +148,21 @@
 
   // A 32px copy of the wallpaper that wallpaper.js sampled last time.
   function normalizePlaceholder(value) {
+    return normalizeImageDataUrl(value, PLACEHOLDER_MAX_LENGTH);
+  }
+
+  function normalizeImageDataUrl(value, maxLength) {
     return typeof value === 'string' &&
-      value.length <= PLACEHOLDER_MAX_LENGTH &&
+      value.length <= maxLength &&
       /^data:image\/(?:webp|png|jpeg);base64,[a-z0-9+/=]+$/i.test(value)
       ? value
       : '';
+  }
+
+  // The wallpaper's average luminance (0–1), which the blur effect's frost blends by.
+  function normalizeLuminance(value) {
+    const luminance = typeof value === 'number' ? value : NaN;
+    return Number.isFinite(luminance) && luminance >= 0 && luminance <= 1 ? luminance : null;
   }
 
   // Reads one record from an IndexedDB store wallpaper.js keeps, and only one holding an image.
@@ -404,6 +422,32 @@
       });
     });
   }
+  const effectType = cachedWallpaper.effectPrefs ? cachedWallpaper.effectPrefs.type : '';
+  // Lies under the wallpaper itself (newtab.css), so frames before the full image decodes show this
+  // copy instead of the page color. Under blur, the ~480px copy blurs to the same picture.
+  const backdrop = effectType === 'blur' && cachedWallpaper.backdrop
+    ? cachedWallpaper.backdrop
+    : cachedWallpaper.placeholder;
+  if (root && backdrop) {
+    root.style.setProperty('--x-nt-wallpaper-backdrop', getCssUrlValue(backdrop));
+  }
+  // wallpaper-effect-preload.js shows the wallpaper as soon as the body exists when its effect is
+  // CSS alone; the page's controls stay hidden until the New Tab is ready.
+  const instant = cachedWallpaper.hasEffectPrefs && INSTANT_EFFECT_TYPES.includes(effectType);
+
+  function createPreloadState(fields) {
+    return Object.assign({
+      effectPrefsReady: readStoredEffectPrefs(cachedWallpaper.mode, cachedWallpaper.effectPrefs),
+      effectPrefs: cachedWallpaper.effectPrefs,
+      instant,
+      // The URL of the image this page preloaded, once known; the backdrop and the luminance belong
+      // to it. Unlike imageUrl, wallpaper.js never changes it.
+      initialImageUrl: '',
+      luminance: cachedWallpaper.luminance,
+      hasBackdrop: Boolean(backdrop),
+      mode: cachedWallpaper.mode
+    }, fields);
+  }
   // Decodes the wallpaper while the page loads; wallpaper.js samples its tones from this image
   // (decodedImage) instead of loading and decoding the same file again.
   function decodeWallpaperImage(url, sourceUrl) {
@@ -435,16 +479,15 @@
 
   if (cachedWallpaper.path) {
     const url = getRuntimeUrl(cachedWallpaper.path);
-    globalThis.LumnoNewtabWallpaperPreload = {
-      effectPrefsReady: readStoredEffectPrefs(cachedWallpaper.mode, cachedWallpaper.effectPrefs),
+    globalThis.LumnoNewtabWallpaperPreload = createPreloadState({
       imageUrl: url,
+      initialImageUrl: url,
       decodedImage: decodeWallpaperImage(url),
-      mode: cachedWallpaper.mode,
       wallpaper: {
         id: cachedWallpaper.path,
         path: cachedWallpaper.path
       }
-    };
+    });
     applyWallpaperImage(url);
     if (document.head) {
       const link = document.createElement('link');
@@ -462,8 +505,7 @@
   }
   // wallpaper.js sets runtimeApplied once it paints, and reuses cachedImageRecord instead of reading
   // the same copy or upload again.
-  const preloadState = {
-    effectPrefsReady: readStoredEffectPrefs(cachedWallpaper.mode, cachedWallpaper.effectPrefs),
+  const preloadState = createPreloadState({
     imageUrl: '',
     imageReady: null,
     cachedImageRecord: null,
@@ -471,11 +513,14 @@
     cssObjectUrl: null,
     decodedImage: null,
     runtimeApplied: false,
-    mode: cachedWallpaper.mode,
     wallpaper: {
       id: customImage ? customImage.id : cachedWallpaper.id || cachedWallpaper.cachedImage.id
     }
-  };
+  });
+  // The image is on its way from IndexedDB; an instant wallpaper already shows its backdrop.
+  if (instant && root) {
+    root.setAttribute('data-wallpaper-active', 'true');
+  }
   const recordRead = customImage
     ? readCustomImage(customImage)
     : readCachedImage(cachedWallpaper.cachedImage);
@@ -489,6 +534,7 @@
       return '';
     }
     preloadState.imageUrl = record.imageDataUrl;
+    preloadState.initialImageUrl = record.imageDataUrl;
     preloadState.cssObjectUrl = cssImage.objectUrl;
     preloadState.decodedImage = decodeWallpaperImage(cssImage.url, record.imageDataUrl);
     applyWallpaperImage(cssImage.url);

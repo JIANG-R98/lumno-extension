@@ -783,7 +783,8 @@
       return null;
     });
     const applyWordmarkThemeAppearance = getFunction(options, 'applyWordmarkThemeAppearance');
-    // Hears each new sampler, whose canvas holds the shown image scaled down.
+    // Hears each new sampler, whose canvas holds the shown image scaled down, and the full image it
+    // was drawn from.
     const onSamplerReady = getFunction(options, 'onSamplerReady');
     // An image another script already loaded and decoded for this URL (the wallpaper preload), or null.
     const getPreloadedImage = getFunction(options, 'getPreloadedImage', function() {
@@ -1395,9 +1396,14 @@
       const token = ++loadToken;
       pendingImageUrl = imageUrl;
       cancelScheduledApply();
-      loadImage(imageUrl).then((image) => (
-        token === loadToken ? createSampler(image, imageUrl) : null
-      )).then((nextSampler) => {
+      let sourceImage = null;
+      loadImage(imageUrl).then((image) => {
+        if (token !== loadToken) {
+          return null;
+        }
+        sourceImage = image;
+        return createSampler(image, imageUrl);
+      }).then((nextSampler) => {
         if (token !== loadToken) {
           return;
         }
@@ -1406,7 +1412,7 @@
         apply({ resetInk: true });
         schedule();
         if (sampler) {
-          onSamplerReady(sampler);
+          onSamplerReady(sampler, sourceImage);
         }
         notifySettled();
       }).catch(() => {

@@ -364,6 +364,11 @@
       return true;
     });
     const onRender = getFunction(options, 'onRender');
+    // The wallpaper's average luminance remembered from an earlier page (0–1), or null. The blur
+    // frost picks its blend from it, so the first frame needs no full-size decode.
+    const getLuminanceHint = getFunction(options, 'getLuminanceHint', function() {
+      return null;
+    });
     const EFFECT_CROSSFADE_MS = 150;
     const RESIZE_RENDER_SETTLE_MS = 140;
     const RESIZE_CROSSFADE_MS = 180;
@@ -1871,19 +1876,29 @@
           completeRender(revision);
           return;
         }
-        drawStandardGlassTexture(normalized.texture, null);
-        if (!imageUrl) {
-          renderedSourceUrl = '';
+        const rawHint = getLuminanceHint(imageUrl);
+        const hint = Number(rawHint);
+        const hasHint = rawHint !== null && rawHint !== undefined && Number.isFinite(hint);
+        drawStandardGlassTexture(normalized.texture, hasHint ? hint : null);
+        if (!imageUrl || hasHint) {
+          // With a remembered luminance the frost is already right; the image still loads below to
+          // confirm it, and redraws only if the blend it picks differs.
+          renderedSourceUrl = imageUrl;
           completeRender(revision);
-          return;
+          if (!imageUrl) {
+            return;
+          }
         }
         loadImage(imageUrl, token).then((image) => {
           if (token !== renderToken) {
             return;
           }
           const sampler = image ? getSampler(image, imageUrl) : null;
-          if (sampler) {
+          if (sampler && (!hasHint ||
+              resolveMaterialBlendMode(sampler.averageLuminance) !== resolveMaterialBlendMode(hint))) {
             drawStandardGlassTexture(normalized.texture, sampler.averageLuminance);
+          }
+          if (sampler) {
             renderedSourceUrl = imageUrl;
           }
           completeRender(revision);

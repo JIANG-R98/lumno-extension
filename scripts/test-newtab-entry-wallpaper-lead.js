@@ -139,7 +139,17 @@ function testSampledColorsSnapUntilTheEntryIsDone() {
     'glass shortcut plates take their sampled tint at once during the entry too');
 }
 
+function testBackdropLiesUnderTheWallpaper() {
+  assert.match(newtabCss,
+    /body \{[^}]*background-image: var\(--x-nt-wallpaper-overlay, none\), var\(--x-nt-wallpaper-image, none\),\s*var\(--x-nt-wallpaper-backdrop, none\);[^}]*background-size: cover, var\(--x-nt-wallpaper-size, cover\), cover;/,
+    'the preload\'s copy shows under the wallpaper until the full image decodes, never the page color');
+  assert.match(newtabCss,
+    /body\[data-wallpaper-active="true"\]\[data-wallpaper-effect="blur"\]::before \{\s*background-image: var\(--x-nt-wallpaper-image, none\), var\(--x-nt-wallpaper-backdrop, none\);/,
+    'a blurred wallpaper blurs the copy under it too');
+}
+
 (async () => {
+  testBackdropLiesUnderTheWallpaper();
   await testContentWaitsForTheWallpaperLead();
   await testEffectPreloadRecordsWhenTheWallpaperShowed();
   testRevealWaitsForTheWallpaperTones();

@@ -45,7 +45,18 @@
     getCurrentWallpaper: () => preloadState.wallpaper,
     getWallpaperImageUrl: () => preloadState.imageUrl,
     shouldAnimateTransition: () => liveState.shouldAnimateTransition(),
-    onRender: () => liveState.onRender()
+    onRender: () => liveState.onRender(),
+    // The luminance an earlier page measured belongs to the image this page preloaded.
+    getLuminanceHint: (imageUrl) => {
+      const luminance = preloadState.luminance;
+      if (typeof luminance !== 'number') {
+        return null;
+      }
+      if (preloadState.initialImageUrl) {
+        return imageUrl === preloadState.initialImageUrl ? luminance : null;
+      }
+      return preloadState.runtimeApplied ? null : luminance;
+    }
   });
   let runtimeAppliedPrefs = false;
   preloadRuntime.controller = Object.assign({}, controller, {
@@ -82,6 +93,21 @@
     body.setAttribute('data-wallpaper-effect', normalized.type);
     controller.apply(normalized);
     controller.refresh({ immediate: true }).then(markWallpaperReady);
+  }
+
+  // With no effect or blur, CSS draws the whole wallpaper, so it shows from the first frame the body
+  // paints: the image when it has decoded, the backdrop under it until then. Only the page's
+  // controls wait (newtab.html hides them until data-nt-wallpaper-ready).
+  if (preloadState.instant && preloadState.effectPrefs) {
+    const instantPrefs = effects.resolvePrefsForMode(preloadState.effectPrefs, preloadState.mode);
+    if (instantPrefs.type === 'none' || instantPrefs.type === 'blur') {
+      body.setAttribute('data-wallpaper-active', 'true');
+      body.setAttribute('data-wallpaper-effect', instantPrefs.type);
+      if (instantPrefs.type === 'blur') {
+        controller.apply(instantPrefs);
+      }
+      body.setAttribute('data-wallpaper-instant', 'true');
+    }
   }
 
   // An online photo's IndexedDB copy may still be loading; without one, wallpaper.js takes over.
