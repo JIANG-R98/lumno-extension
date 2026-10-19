@@ -166,11 +166,13 @@ const assertWithinBudget = (actualBytes, budgetKiB, label) => {
 // 814 KiB. The 12-hour clock and its AM/PM mark moved the New Tab route to 420 KiB and the
 // total to 815 KiB. Plates behind see-through shortcut icons, and their choice in the shortcut
 // dialog, moved the New Tab route to 421 KiB / 126 KiB gzip and the total to 816 KiB.
+// Reading shortcut icons again once the favicon runtime clears its placeholder mark moved the
+// total to 817 KiB.
 const bundleBudgets = {
   newtab: { uncompressed: 421, gzip: 126 },
   options: { uncompressed: 290, gzip: 85 },
   overlay: { uncompressed: 274, gzip: 83 },
-  total: { uncompressed: 816, gzip: 237 }
+  total: { uncompressed: 817, gzip: 237 }
 };
 
 const retiredNewtabRendererScripts = [

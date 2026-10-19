@@ -2421,7 +2421,7 @@
     "message": "サイト設定により、通知バッジや低画質の場合も。"
   },
   "newtab_shortcuts_icon_plate_label": {
-    "message": "アイコンの背景"
+    "message": "不規則なアイコンに背景を付ける"
   },
   "newtab_shortcuts_icon_plate_color_label": {
     "message": "背景色"

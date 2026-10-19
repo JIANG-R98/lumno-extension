@@ -354,6 +354,35 @@ function ShortcutFavicon({
     });
   }, [fallbackFaviconDataUrl, host, localIconDataUrl, options, primaryFaviconUrl, url]);
 
+  // Read the artwork whenever it loads or the favicon runtime relabels it:
+  // the runtime marks an image as a placeholder until its own load handler,
+  // which runs after a React one, clears the mark.
+  useEffect(() => {
+    const image = imageRef.current;
+    if (!image) {
+      return undefined;
+    }
+    const read = () => {
+      if (!image.complete || !image.naturalWidth) return;
+      const src = image.currentSrc || image.src;
+      // Letter fallbacks and placeholders are not the site's artwork.
+      const isFallback = image.getAttribute('data-fallback-icon') === 'true' ||
+        image.getAttribute('data-favicon-placeholder') === 'true';
+      const analysis = isFallback ? null : options.analyzeShortcutIcon(image);
+      setIconAnalysis((current) => (current.key === iconKey && current.src === src &&
+        current.analysis === analysis ? current : { key: iconKey, src, analysis }));
+    };
+    const MutationObserverCtor = image.ownerDocument.defaultView?.MutationObserver;
+    const observer = MutationObserverCtor ? new MutationObserverCtor(read) : null;
+    observer?.observe(image, { attributes: true, attributeFilter: ['src', 'data-fallback-icon', 'data-favicon-placeholder'] });
+    image.addEventListener('load', read);
+    read();
+    return () => {
+      observer?.disconnect();
+      image.removeEventListener('load', read);
+    };
+  }, [iconKey, options]);
+
   return (
     <span className="x-nt-shortcut-icon">
       <span
@@ -371,16 +400,6 @@ function ShortcutFavicon({
           loading="lazy"
           draggable={false}
           src={localIconDataUrl || undefined}
-          onLoad={(event) => {
-            const image = event.currentTarget;
-            const src = image.currentSrc || image.src;
-            // Letter fallbacks and placeholders are not the site's artwork.
-            const isFallback = image.getAttribute('data-fallback-icon') === 'true' ||
-              image.getAttribute('data-favicon-placeholder') === 'true';
-            const analysis = isFallback ? null : options.analyzeShortcutIcon(image);
-            setIconAnalysis((current) => (current.key === iconKey && current.src === src &&
-              current.analysis === analysis ? current : { key: iconKey, src, analysis }));
-          }}
         />
       </span>
     </span>

@@ -2421,7 +2421,7 @@
     "message": "受网站设置影响，可能带通知红点或较模糊。"
   },
   "newtab_shortcuts_icon_plate_label": {
-    "message": "图标背景"
+    "message": "为不规则图标添加背景"
   },
   "newtab_shortcuts_icon_plate_color_label": {
     "message": "背景颜色"

@@ -772,7 +772,7 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
     const previewPlateStyle = getIconPlateStyle(plate);
     const autoPlate = options.resolveIconPlate({ mode: 'on', color: '', analysis: previewAnalysis });
     const plateColorChoices = options.getIconPlateColorChoices(previewAnalysis);
-    const plateLabel = options.t('newtab_shortcuts_icon_plate_label', 'Icon background');
+    const plateLabel = options.t('newtab_shortcuts_icon_plate_label', 'Add a background to irregular icons');
     // Until it is switched, a shortcut follows its artwork: see-through icons
     // show the switch on.
     const plateOn = Boolean(plate);

@@ -257,9 +257,11 @@
       .x-nt-shortcut-icon-plate-colors {
         --control-hover-bg: rgb(0 0 0 / 0.05);
         --control-open-bg: rgb(0 0 0 / 0.08);
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
+        /* The folder color picker's preset grid, so swatches sit as far apart. */
+        display: grid;
+        grid-template-columns: repeat(8, minmax(0, 24px));
+        justify-content: space-between;
+        justify-items: center;
         gap: 8px;
         padding: 4px 0;
       }
