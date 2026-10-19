@@ -66,6 +66,21 @@
     }
   });
 
+  // The page stays hidden until the wallpaper image has decoded, so it appears whole and never
+  // part-drawn; an image that takes longer than this shows as it arrives.
+  const IMAGE_DECODE_WAIT_MAX_MS = 1000;
+  // null when there is nothing to wait on.
+  function whenImageDecoded() {
+    const decoded = preloadState.imageDecoded;
+    if (!decoded || typeof decoded.then !== 'function' || typeof globalThis.setTimeout !== 'function') {
+      return null;
+    }
+    return Promise.race([
+      decoded,
+      new Promise((resolve) => globalThis.setTimeout(resolve, IMAGE_DECODE_WAIT_MAX_MS))
+    ]);
+  }
+
   let wallpaperMarkedReady = false;
   function markWallpaperReady() {
     if (!document.body || wallpaperMarkedReady) {
@@ -85,29 +100,21 @@
     const normalized = effects.resolvePrefsForMode(prefs, preloadState.mode);
     if (normalized.type === 'none') {
       body.setAttribute('data-wallpaper-effect', 'none');
-      markWallpaperReady();
+      const decoded = whenImageDecoded();
+      if (decoded) {
+        decoded.then(markWallpaperReady);
+      } else {
+        markWallpaperReady();
+      }
       return;
     }
 
     body.setAttribute('data-wallpaper-active', 'true');
     body.setAttribute('data-wallpaper-effect', normalized.type);
     controller.apply(normalized);
-    controller.refresh({ immediate: true }).then(markWallpaperReady);
-  }
-
-  // With no effect or blur, CSS draws the whole wallpaper, so it shows from the first frame the body
-  // paints: the image when it has decoded, the backdrop under it until then. Only the page's
-  // controls wait (newtab.html hides them until data-nt-wallpaper-ready).
-  if (preloadState.instant && preloadState.effectPrefs) {
-    const instantPrefs = effects.resolvePrefsForMode(preloadState.effectPrefs, preloadState.mode);
-    if (instantPrefs.type === 'none' || instantPrefs.type === 'blur') {
-      body.setAttribute('data-wallpaper-active', 'true');
-      body.setAttribute('data-wallpaper-effect', instantPrefs.type);
-      if (instantPrefs.type === 'blur') {
-        controller.apply(instantPrefs);
-      }
-      body.setAttribute('data-wallpaper-instant', 'true');
-    }
+    const rendered = controller.refresh({ immediate: true });
+    const decoded = whenImageDecoded();
+    (decoded ? Promise.all([rendered, decoded]) : rendered).then(markWallpaperReady);
   }
 
   // An online photo's IndexedDB copy may still be loading; without one, wallpaper.js takes over.

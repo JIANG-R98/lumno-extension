@@ -389,7 +389,7 @@ assert.strictEqual(
 const newtabHtml = readPageSource('newtab.html');
 assert.match(
   newtabHtml,
-  /body\[data-wallpaper-active="true"\]\[data-wallpaper-effect="blur"\]::before,[\s\S]*?\.x-nt-wallpaper-transition-layer\[data-wallpaper-effect="blur"\]\s*\{[\s\S]*?inset:\s*calc\(0px - var\(--x-nt-wallpaper-blur-overscan[\s\S]*?filter:\s*blur\(var\(--x-nt-wallpaper-blur-radius\)\)[\s\S]*?saturate\(var\(--x-nt-wallpaper-blur-saturate\)\)[\s\S]*?brightness\(var\(--x-nt-wallpaper-blur-brightness\)\)[\s\S]*?contrast\(var\(--x-nt-wallpaper-blur-contrast\)\);[\s\S]*?body\[data-wallpaper-active="true"\]\[data-wallpaper-effect="blur"\]::before\s*\{[\s\S]*?background-image:\s*var\(--x-nt-wallpaper-image,[^)]+\), var\(--x-nt-wallpaper-backdrop, none\);/,
+  /body\[data-wallpaper-active="true"\]\[data-wallpaper-effect="blur"\]::before,[\s\S]*?\.x-nt-wallpaper-transition-layer\[data-wallpaper-effect="blur"\]\s*\{[\s\S]*?inset:\s*calc\(0px - var\(--x-nt-wallpaper-blur-overscan[\s\S]*?filter:\s*blur\(var\(--x-nt-wallpaper-blur-radius\)\)[\s\S]*?saturate\(var\(--x-nt-wallpaper-blur-saturate\)\)[\s\S]*?brightness\(var\(--x-nt-wallpaper-blur-brightness\)\)[\s\S]*?contrast\(var\(--x-nt-wallpaper-blur-contrast\)\);[\s\S]*?body\[data-wallpaper-active="true"\]\[data-wallpaper-effect="blur"\]::before\s*\{[\s\S]*?background-image:\s*var\(--x-nt-wallpaper-image,[^)]+\);/,
   'glass blur should filter an overscanned copy of the wallpaper behind the page content'
 );
 assert.match(
@@ -1529,78 +1529,42 @@ async function testBlurFrostUsesTheRememberedLuminance() {
   }
 }
 
-function runInstantEffectPreload(preloadOverrides) {
-  const attributes = new Map();
-  const body = {
-    setAttribute(name, value) {
-      attributes.set(name, String(value));
-    }
-  };
-  const appliedPrefs = [];
-  let effectOptions = null;
-  const controller = {
-    apply(prefs) {
-      appliedPrefs.push(prefs);
-    },
-    refresh: () => Promise.resolve()
-  };
-  const preloadState = Object.assign({
-    effectPrefsReady: new Promise(() => {}),
-    imageUrl: 'chrome-extension://abc/assets/wallpapers/test.webp',
-    initialImageUrl: 'chrome-extension://abc/assets/wallpapers/test.webp',
-    luminance: 0.3,
-    mode: 'light',
-    wallpaper: { id: 'test' }
-  }, preloadOverrides);
-  const sandbox = {
-    console,
-    performance,
-    document: { body, documentElement: { getAttribute: () => null } },
-    LumnoNewtabWallpaperEffects: {
-      createWallpaperEffects(options) {
-        effectOptions = options;
-        return controller;
+async function testWallpaperShowsOnlyOnceItsImageHasDecoded() {
+  const run = (effectType) => {
+    const attributes = new Map();
+    let resolveDecoded;
+    const sandbox = {
+      console,
+      performance,
+      setTimeout,
+      document: { body: { setAttribute: (name, value) => attributes.set(name, String(value)) },
+        documentElement: { getAttribute: () => null } },
+      LumnoNewtabWallpaperEffects: {
+        createWallpaperEffects: () => ({ apply() {}, refresh: () => Promise.resolve() }),
+        resolvePrefsForMode: (value) => value
       },
-      resolvePrefsForMode: (value) => value
-    },
-    LumnoNewtabWallpaperPreload: preloadState,
-    window: {}
+      LumnoNewtabWallpaperPreload: {
+        effectPrefsReady: Promise.resolve({ type: effectType }),
+        imageUrl: 'chrome-extension://abc/assets/wallpapers/test.webp',
+        imageDecoded: new Promise((resolve) => { resolveDecoded = resolve; }),
+        mode: 'light',
+        wallpaper: { id: 'test' }
+      },
+      window: {}
+    };
+    sandbox.globalThis = sandbox;
+    vm.runInNewContext(effectPreloadSource, sandbox, { filename: 'src/newtab/wallpaper-effect-preload.js' });
+    return { attributes, decode: () => resolveDecoded() };
   };
-  sandbox.globalThis = sandbox;
-  vm.runInNewContext(effectPreloadSource, sandbox, { filename: 'src/newtab/wallpaper-effect-preload.js' });
-  return { attributes, appliedPrefs, effectOptions, preloadState };
-}
-
-async function testInstantWallpaperShowsBeforeItsEffectIsReady() {
-  const blur = runInstantEffectPreload({ instant: true, effectPrefs: { type: 'blur', texture: 20 } });
-  assert.strictEqual(blur.attributes.get('data-wallpaper-instant'), 'true',
-    'a blurred wallpaper shows as soon as the body exists, before any preference read settles');
-  assert.strictEqual(blur.attributes.get('data-wallpaper-active'), 'true');
-  assert.strictEqual(blur.attributes.get('data-wallpaper-effect'), 'blur');
-  assert.strictEqual(blur.attributes.get('data-nt-wallpaper-ready'), undefined,
-    'the page\'s controls still wait for the effect');
-  assert.deepStrictEqual(blur.appliedPrefs.map((prefs) => prefs.type), ['blur'], 'the frost starts drawing at once');
-  const hint = blur.effectOptions.getLuminanceHint;
-  assert.strictEqual(hint('chrome-extension://abc/assets/wallpapers/test.webp'), 0.3);
-  assert.strictEqual(hint('chrome-extension://abc/assets/wallpapers/other.webp'), null,
-    'a remembered luminance belongs only to the image this page preloaded');
-
-  const pending = runInstantEffectPreload({ instant: true, effectPrefs: { type: 'blur' }, imageUrl: '',
-    initialImageUrl: '', imageReady: new Promise(() => {}), runtimeApplied: false });
-  assert.strictEqual(pending.effectOptions.getLuminanceHint(''), 0.3,
-    'an upload still being read already blends its frost by the remembered luminance');
-  pending.preloadState.runtimeApplied = true;
-  assert.strictEqual(pending.effectOptions.getLuminanceHint(''), null);
-
-  const plain = runInstantEffectPreload({ instant: true, effectPrefs: { type: 'none' } });
-  assert.strictEqual(plain.attributes.get('data-wallpaper-instant'), 'true');
-  assert.strictEqual(plain.attributes.get('data-wallpaper-effect'), 'none');
-  assert.deepStrictEqual(plain.appliedPrefs, [], 'no effect has nothing to draw');
-
-  const grain = runInstantEffectPreload({ instant: false, effectPrefs: { type: 'grain' } });
-  assert.strictEqual(grain.attributes.get('data-wallpaper-instant'), undefined,
-    'a canvas-drawn effect keeps the wallpaper hidden until it has rendered');
-  assert.strictEqual(grain.attributes.get('data-wallpaper-effect'), undefined);
+  for (const effectType of ['none', 'blur']) {
+    const page = run(effectType);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    assert.strictEqual(page.attributes.get('data-nt-wallpaper-ready'), undefined,
+      `with ${effectType}, the page stays hidden while the wallpaper image decodes, never showing a part-drawn page`);
+    page.decode();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.strictEqual(page.attributes.get('data-nt-wallpaper-ready'), '1', 'it appears whole once decoded');
+  }
 }
 
 async function testEffectReportsAStaleSourceUntilRedrawn() {
@@ -1679,7 +1643,7 @@ Promise.resolve()
   .then(testCrtRendersPhosphorScanlinesAndColorFringe)
   .then(testFocusedRoutePreloadsEffectBeforeContent)
   .then(testBlurFrostUsesTheRememberedLuminance)
-  .then(testInstantWallpaperShowsBeforeItsEffectIsReady)
+  .then(testWallpaperShowsOnlyOnceItsImageHasDecoded)
   .then(() => {
   process.stdout.write('new tab wallpaper effects tests passed\n');
 }).catch((error) => {

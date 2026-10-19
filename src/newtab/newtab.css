@@ -10,42 +10,13 @@ html[data-wallpaper-preload-theme="dark"] body:not([data-theme]) {
   --x-nt-bg: #111111;
   color-scheme: dark;
 }
-/* wallpaper-preload.js sets a 32px copy of the last wallpaper here before anything paints, under the
-   same mask the wallpaper gets, so the page opens in its tones while the body waits for the wallpaper. */
-html[data-wallpaper-placeholder="true"] {
-  background-color: #808080;
-  background-image:
-    linear-gradient(
-      180deg,
-      rgb(255 255 255 / var(--x-nt-wallpaper-overlay-light-top, 54%)) 0%,
-      rgb(255 255 255 / var(--x-nt-wallpaper-overlay-light-mid, 20%)) 42%,
-      rgb(255 255 255 / var(--x-nt-wallpaper-overlay-light-bottom, 38%)) 100%
-    ),
-    var(--x-nt-wallpaper-placeholder);
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: center center;
-}
-html[data-wallpaper-placeholder="true"][data-wallpaper-preload-theme="dark"] {
-  background-image:
-    linear-gradient(
-      180deg,
-      rgb(0 0 0 / var(--x-nt-wallpaper-overlay-dark-top, 44%)) 0%,
-      rgb(0 0 0 / var(--x-nt-wallpaper-overlay-dark-mid, 20%)) 42%,
-      rgb(0 0 0 / var(--x-nt-wallpaper-overlay-dark-bottom, 50%)) 100%
-    ),
-    var(--x-nt-wallpaper-placeholder);
-}
-/* The backdrop (wallpaper-preload.js: a copy of the last wallpaper) lies under the wallpaper, so the
-   frames before the full image decodes show the wallpaper's own picture instead of the page color. */
 body {
   margin: 0;
   background-color: var(--x-nt-bg);
-  background-image: var(--x-nt-wallpaper-overlay, none), var(--x-nt-wallpaper-image, none),
-    var(--x-nt-wallpaper-backdrop, none);
+  background-image: var(--x-nt-wallpaper-overlay, none), var(--x-nt-wallpaper-image, none);
   background-repeat: no-repeat;
-  background-size: cover, var(--x-nt-wallpaper-size, cover), cover;
-  background-position: center center, var(--x-nt-wallpaper-position, center center), center center;
+  background-size: cover, var(--x-nt-wallpaper-size, cover);
+  background-position: center center, var(--x-nt-wallpaper-position, center center);
   background-attachment: fixed;
   display: flex;
   flex-direction: column;
@@ -712,7 +683,7 @@ body[data-wallpaper-active="true"][data-wallpaper-effect="blur"]::before,
     contrast(var(--x-nt-wallpaper-blur-contrast));
 }
 body[data-wallpaper-active="true"][data-wallpaper-effect="blur"]::before {
-  background-image: var(--x-nt-wallpaper-image, none), var(--x-nt-wallpaper-backdrop, none);
+  background-image: var(--x-nt-wallpaper-image, none);
   opacity: 1;
   will-change: opacity, filter;
 }

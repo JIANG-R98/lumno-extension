@@ -139,17 +139,14 @@ function testSampledColorsSnapUntilTheEntryIsDone() {
     'glass shortcut plates take their sampled tint at once during the entry too');
 }
 
-function testBackdropLiesUnderTheWallpaper() {
-  assert.match(newtabCss,
-    /body \{[^}]*background-image: var\(--x-nt-wallpaper-overlay, none\), var\(--x-nt-wallpaper-image, none\),\s*var\(--x-nt-wallpaper-backdrop, none\);[^}]*background-size: cover, var\(--x-nt-wallpaper-size, cover\), cover;/,
-    'the preload\'s copy shows under the wallpaper until the full image decodes, never the page color');
-  assert.match(newtabCss,
-    /body\[data-wallpaper-active="true"\]\[data-wallpaper-effect="blur"\]::before \{\s*background-image: var\(--x-nt-wallpaper-image, none\), var\(--x-nt-wallpaper-backdrop, none\);/,
-    'a blurred wallpaper blurs the copy under it too');
+function testNoBlurredStandInForTheWallpaper() {
+  ['--x-nt-wallpaper-placeholder', '--x-nt-wallpaper-backdrop', 'data-wallpaper-placeholder'].forEach((name) => {
+    assert.ok(!newtabCss.includes(name), `the New Tab never shows a blurred copy of its wallpaper (${name})`);
+  });
 }
 
 (async () => {
-  testBackdropLiesUnderTheWallpaper();
+  testNoBlurredStandInForTheWallpaper();
   await testContentWaitsForTheWallpaperLead();
   await testEffectPreloadRecordsWhenTheWallpaperShowed();
   testRevealWaitsForTheWallpaperTones();
