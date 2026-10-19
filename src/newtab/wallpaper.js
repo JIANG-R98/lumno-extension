@@ -559,6 +559,8 @@
     const WALLPAPER_TONE_REVEAL_WAIT_MAX_MS = 200;
     const WALLPAPER_IMAGE_READY_CACHE_LIMIT = 8;
     const WALLPAPER_NETWORK_IMAGE_TIMEOUT_MS = 8000;
+    // Tomorrow's curated photo downloads once the page idles, or after this long at the latest.
+    const UPCOMING_WALLPAPER_IDLE_TIMEOUT_MS = 30000;
 
     let initialWallpaperApplied = false;
     let hasWallpaperBootstrapStarted = false;
@@ -616,6 +618,12 @@
     let linkWallpapers = [];
     const cachedWallpaperImages = new Map();
     const wallpaperImageCaching = new Map();
+    // Per daily slot (bing-daily, curated-daily-*): the cached copy it last showed. When the day's new
+    // photo has no copy yet (after a weekend away, or Bing publishing overnight), the slot keeps
+    // showing this one until the new copy is cached, instead of a network thumbnail the page waits on.
+    const dailyWallpaperStandIns = new Map();
+    // The upcoming photos the page has scheduled to cache, so repeated applies do not queue them again.
+    let upcomingWallpaperCacheKey = '';
     const LINK_WALLPAPER_ID_PATTERN = /^link-[a-z0-9]{4,32}$/;
     const LINK_WALLPAPER_URL_MAX_LENGTH = 2048;
     // chrome.storage.sync holds 8 KB per item; normalized URLs are ASCII, so length counts bytes.
@@ -1049,9 +1057,20 @@
       return image && image.url === url ? image : null;
     }
 
+    // The cached copy an online photo shows: its own, or for a daily slot whose photo of the day has
+    // no copy yet, the copy the slot showed before. A photo picked for today is the user's choice, so
+    // it loads like any other instead of hiding behind the previous one.
+    function getShownWallpaperCopy(item) {
+      if (!item || !item.cacheImage) return null;
+      const own = getCachedWallpaperImage(item.dailyId || item.id, item.imageUrl);
+      const isSlot = REMOTE_CONTENT.isDailyWallpaperId(item.id) && !item.picked;
+      if (own && isSlot) dailyWallpaperStandIns.set(item.id, own);
+      return own || (isSlot && dailyWallpaperStandIns.get(item.id)) || null;
+    }
+
     function getWallpaperImageUrl(item) {
       if (item && remoteClient && item.cacheImage) {
-        const cached = getCachedWallpaperImage(item.dailyId || item.id, item.imageUrl);
+        const cached = getShownWallpaperCopy(item);
         return cached ? cached.imageDataUrl : item.thumbnailUrl;
       }
       if (item && remoteClient && REMOTE_CONTENT.wallpaperFromId(item.id)) {
@@ -1095,7 +1114,9 @@
 
     function getWallpaperThumbnailUrl(item) {
       if (item && remoteClient && REMOTE_CONTENT.wallpaperFromId(item.id)) {
-        return item.thumbnailUrl || getWallpaperImageUrl(item);
+        // A photo cached on this device shows in the panel without waiting on the network.
+        const cached = item.cacheImage && getCachedWallpaperImage(item.dailyId || item.id, item.imageUrl);
+        return cached && cached.thumbnailDataUrl || item.thumbnailUrl || getWallpaperImageUrl(item);
       }
       if (item && isCustomWallpaperId(item.id)) {
         return item.thumbnailDataUrl || item.imageDataUrl || '';
@@ -2014,12 +2035,24 @@
     function getWallpaperPreloadImageEntry(wallpaper) {
       // Online photos and links cannot paint on the first frame, but the preload reads this device's
       // IndexedDB copy while the page is still parsing.
-      if (wallpaper && (REMOTE_CONTENT.wallpaperFromId(wallpaper.id) || isLinkWallpaperId(wallpaper.id))) {
-        const photoId = isLinkWallpaperId(wallpaper.id) ? wallpaper.id : wallpaper.dailyId || wallpaper.id;
-        const sourceUrl = isLinkWallpaperId(wallpaper.id) ? wallpaper.url : wallpaper.imageUrl;
-        return (wallpaper.cacheImage || isLinkWallpaperId(wallpaper.id)) && getCachedWallpaperImage(photoId, sourceUrl)
-          ? { id: wallpaper.id, cachedImage: { id: photoId, url: sourceUrl } }
+      if (wallpaper && isLinkWallpaperId(wallpaper.id)) {
+        return getCachedWallpaperImage(wallpaper.id, wallpaper.url)
+          ? { id: wallpaper.id, cachedImage: { id: wallpaper.id, url: wallpaper.url } }
           : null;
+      }
+      if (wallpaper && REMOTE_CONTENT.wallpaperFromId(wallpaper.id)) {
+        const copy = getShownWallpaperCopy(wallpaper);
+        // Tomorrow's copy, once cached, lets the first tab after midnight open on the new photo.
+        const upcoming = getUpcomingDailyWallpaper(wallpaper.id);
+        const next = upcoming && getCachedWallpaperImage(upcoming.id, upcoming.imageUrl);
+        if (!copy && !next) return null;
+        const entry = { id: wallpaper.id };
+        if (copy) entry.cachedImage = { id: copy.id, url: copy.url };
+        if (next) {
+          entry.next = { day: REMOTE_CONTENT.localDay(getNextLocalDayTimestamp(Date.now())),
+            cachedImage: { id: next.id, url: next.url } };
+        }
+        return entry;
       }
       // An upload lives only in this device's IndexedDB; the preload reads it there by its record key.
       if (wallpaper && isCustomWallpaperId(wallpaper.id)) {
@@ -2030,12 +2063,17 @@
       return path ? { id: wallpaper.id, path } : null;
     }
 
-    // A daily photo keeps its catalog id while the image changes, so its luminance follows the photo.
+    // A daily photo keeps its catalog id while the image changes, so its luminance follows the photo
+    // on screen, which is the previous copy until the new photo's is cached.
     function getWallpaperLuminanceKey(wallpaper) {
       if (!wallpaper) {
         return '';
       }
-      return REMOTE_CONTENT.wallpaperFromId(wallpaper.id) ? wallpaper.dailyId || wallpaper.id : wallpaper.id;
+      if (!REMOTE_CONTENT.wallpaperFromId(wallpaper.id)) {
+        return wallpaper.id;
+      }
+      const copy = remoteClient ? getShownWallpaperCopy(wallpaper) : null;
+      return copy ? copy.id : wallpaper.dailyId || wallpaper.id;
     }
 
     function readWallpaperPreloadLuminances() {
@@ -3263,10 +3301,16 @@
           .filter((id) => REMOTE_CONTENT.wallpaperFromId(id));
         // Picks are dated Bing photos or bundled ones; restore them like any chosen photo.
         const pickIds = remoteIds.map(getDailyWallpaperPick).filter(Boolean);
+        const preloadedDailyCopies = readPreloadedDailyWallpaperCopies();
         // Read cached copies only once photos are restored: the daily Bing photo resolves from storage.
         const cachedImagesTask = Promise.all(remoteIds.concat(pickIds).map((id) => remoteClient.restoreWallpaper(id)))
           .then(() => readCachedWallpaperImages(linkIds.concat(remoteIds.map((id) => getWallpaperById(id))
-            .filter((item) => item && item.cacheImage).map((item) => item.dailyId || item.id))));
+            .filter((item) => item && item.cacheImage).map((item) => item.dailyId || item.id))
+            .concat(Array.from(preloadedDailyCopies.values()).map((image) => image.id))))
+          .then(() => preloadedDailyCopies.forEach((image, slotId) => {
+            const copy = getCachedWallpaperImage(image.id, image.url);
+            if (copy && !dailyWallpaperStandIns.has(slotId)) dailyWallpaperStandIns.set(slotId, copy);
+          }));
         return Promise.all([customWallpaperPromise, cachedImagesTask]).then(() => {
           if (changeSeq !== wallpaperStorageChangeSeq ||
               typeof config.shouldApply === 'function' && !config.shouldApply()) {
@@ -3292,6 +3336,25 @@
           return true;
         });
       });
+    }
+
+    // The copy the preload painted for each daily slot (see wallpaper-preload.js), which stands in
+    // until the slot's photo of the day has its own copy, so the first frame and the runtime agree.
+    function readPreloadedDailyWallpaperCopies() {
+      const copies = new Map();
+      try {
+        const data = JSON.parse(window.localStorage.getItem(PRELOAD_STORAGE_KEY) || 'null');
+        const today = REMOTE_CONTENT.localDay(Date.now());
+        NEWTAB_WALLPAPER_MODES.forEach((mode) => {
+          const entry = data && data.wallpapers && data.wallpapers[mode];
+          if (!entry || !REMOTE_CONTENT.isDailyWallpaperId(entry.id)) return;
+          const image = entry.next && entry.next.day === today ? entry.next.cachedImage : entry.cachedImage;
+          if (image && typeof image.id === 'string' && typeof image.url === 'string') copies.set(entry.id, image);
+        });
+      } catch (_error) {
+        // Only a head start; a slot without a stand-in shows its photo once cached.
+      }
+      return copies;
     }
 
     function bootstrapInitialWallpaper() {
@@ -3696,16 +3759,91 @@
         const item = id && REMOTE_CONTENT.wallpaperFromId(id) ? getWallpaperById(id) : null;
         if (item && item.cacheImage) cacheWallpaperImage(item.dailyId || item.id, item.imageUrl);
       });
+      scheduleUpcomingDailyWallpaperCache();
     }
 
-    // Saved links keep their copies; a curated photo or print stays only while a mode shows it, so
-    // daily picks do not pile up one image per day.
+    // Noon of the next local day, which stays on that date across a daylight-saving change.
+    function getNextLocalDayTimestamp(timestamp) {
+      const date = new Date(timestamp);
+      return new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1, 12).getTime();
+    }
+
+    // A curated daily slot follows the date alone, so tomorrow's photo is known today. Bing publishes
+    // tomorrow's only tomorrow; its slot keeps today's copy until then.
+    function getUpcomingDailyWallpaper(id) {
+      if (!REMOTE_CONTENT.isDailyWallpaperId(id) || id === REMOTE_CONTENT.BING_DAILY_ID) return null;
+      const slot = REMOTE_CONTENT.wallpaperFromId(id);
+      const pick = slot && REMOTE_CONTENT.getCuratedDailyWallpaper(slot.category,
+        getNextLocalDayTimestamp(Date.now()));
+      return pick && pick.cacheImage ? pick : null;
+    }
+
+    function getUpcomingDailyWallpapers() {
+      const items = [];
+      NEWTAB_WALLPAPER_MODES.forEach((mode) => {
+        const item = getUpcomingDailyWallpaper(getEffectiveWallpaperIdForMode(mode));
+        if (item && !items.some((existing) => existing.id === item.id)) items.push(item);
+      });
+      return items;
+    }
+
+    // Caches tomorrow's curated photo once the page is idle, so the first tab after midnight opens
+    // on the new photo from this device's copy instead of waiting on Picsum. The copy is one more
+    // download a day and, like every cached photo, stays on this device: sync and WebDAV never see it.
+    function scheduleUpcomingDailyWallpaperCache() {
+      const upcoming = getUpcomingDailyWallpapers()
+        .filter((item) => !getCachedWallpaperImage(item.id, item.imageUrl));
+      const key = upcoming.map((item) => item.id).join(' ');
+      // Without idle callbacks the download could compete with the page, so it waits for the next tab.
+      if (!key || key === upcomingWallpaperCacheKey || !wallpaperImageCache ||
+          typeof window.requestIdleCallback !== 'function') {
+        return;
+      }
+      upcomingWallpaperCacheKey = key;
+      const cacheUpcoming = () => {
+        // Today's copies go first, and open tabs take turns, so one tab downloads and the others
+        // find its copy in IndexedDB.
+        const task = () => Promise.all(upcoming.map((item) => cacheWallpaperImage(item.id, item.imageUrl)));
+        const locks = window.navigator && window.navigator.locks;
+        return Promise.all(Array.from(wallpaperImageCaching.values()))
+          .then(() => locks && typeof locks.request === 'function'
+            ? locks.request('lumno-newtab-upcoming-wallpaper', task)
+            : task())
+          .then((results) => {
+            if (results.every(Boolean)) {
+              writeWallpaperPreloadCache();
+            } else if (upcomingWallpaperCacheKey === key) {
+              // Offline or the photo failed: the next apply or tab tries again.
+              upcomingWallpaperCacheKey = '';
+            }
+          });
+      };
+      waitForDocumentLoad().then(() => {
+        window.requestIdleCallback(() => {
+          cacheUpcoming().catch(() => {
+            if (upcomingWallpaperCacheKey === key) upcomingWallpaperCacheKey = '';
+          });
+        }, { timeout: UPCOMING_WALLPAPER_IDLE_TIMEOUT_MS });
+      });
+    }
+
+    // Saved links keep their copies; a curated photo or print stays only while a mode shows it, or
+    // stands in for it, or is tomorrow's, so daily picks do not pile up one image per day.
     function pruneCachedWallpaperImages() {
       if (!wallpaperImageCache || !hasStoredWallpaperStateLoaded) return;
+      const shownCopyIds = NEWTAB_WALLPAPER_MODES.map((mode) => {
+        const id = getEffectiveWallpaperIdForMode(mode);
+        const copy = id && REMOTE_CONTENT.wallpaperFromId(id) ? getShownWallpaperCopy(getWallpaperById(id)) : null;
+        return copy ? copy.id : '';
+      });
       const keep = new Set(linkWallpapers.map((item) => item.id)
-        .concat(NEWTAB_WALLPAPER_MODES.map(getEffectiveWallpaperPhotoId)));
+        .concat(NEWTAB_WALLPAPER_MODES.map(getEffectiveWallpaperPhotoId), shownCopyIds,
+          getUpcomingDailyWallpapers().map((item) => item.id)));
       wallpaperImageCache.keys().then((keys) => keys.filter((key) => !keep.has(key)).forEach((key) => {
         cachedWallpaperImages.delete(key);
+        dailyWallpaperStandIns.forEach((copy, slotId) => {
+          if (copy.id === key) dailyWallpaperStandIns.delete(slotId);
+        });
         wallpaperImageCache.remove(key).catch(warnWallpaperStoreFailure('Could not prune a cached wallpaper image.'));
       })).catch(warnWallpaperStoreFailure('Could not list cached wallpaper images.'));
     }
@@ -4644,7 +4782,7 @@
             .join(' · ');
           return {
             id: item.id,
-            thumbnailUrl: item.thumbnailUrl,
+            thumbnailUrl: getWallpaperThumbnailUrl(item),
             selected: item.id === selectedTileId,
             tooltip: tileLabel,
             label: getWallpaperSelectLabel(tileLabel)

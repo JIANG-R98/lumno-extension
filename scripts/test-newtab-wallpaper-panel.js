@@ -3972,6 +3972,170 @@ async function testOpenTabRollsOverWithoutOpeningThePanel() {
   }
 }
 
+// Each downloaded photo becomes a copy whose data URL names its source, so a test can tell copies apart.
+function createDailyCopyHarness(records) {
+  const cache = createWallpaperImageCacheDouble(records);
+  const requests = [];
+  const pending = new Map();
+  const localStoreApi = createLinkLocalStoreApi(cache, []);
+  const createStore = localStoreApi.createWallpaperLocalStore;
+  localStoreApi.createWallpaperLocalStore = () => ({
+    ...createStore(),
+    async buildRecordFromFile(file) {
+      const dataUrl = copyDataUrl(await file.text());
+      return { id: `${CUSTOM_WALLPAPER_ID_PREFIX}unused`, name: file.name, imageDataUrl: dataUrl,
+        thumbnailDataUrl: `${dataUrl}#thumb`, updatedAt: 1 };
+    }
+  });
+  return {
+    cache,
+    requests,
+    // Downloads of URLs listed here wait until release() lets them through.
+    hold(url) { pending.set(url, null); },
+    release(url) { const resolve = pending.get(url); pending.delete(url); if (resolve) resolve(); },
+    options: {
+      sandbox: { localStoreApi },
+      fetchRemoteContent: async (url) => {
+        requests.push(url);
+        if (pending.has(url)) await new Promise((resolve) => pending.set(url, resolve));
+        return { ok: true, status: 200, url, blob: async () => new Blob([url], { type: 'image/jpeg' }) };
+      }
+    }
+  };
+}
+
+function copyDataUrl(sourceUrl) {
+  return `data:image/webp;base64,${Buffer.from(sourceUrl).toString('base64')}`;
+}
+
+function copyRecord(photo) {
+  const dataUrl = copyDataUrl(photo.imageUrl);
+  return { id: photo.id, url: photo.imageUrl, imageDataUrl: dataUrl, thumbnailDataUrl: `${dataUrl}#thumb` };
+}
+
+// The runtime reads the clock in its own context and through the remote client in this one.
+function createDailyRuntimeAt(prefs, harness, clock, localStorageValue) {
+  const remote = require('../src/newtab/remote-content.js');
+  const options = { ...harness.options, sandbox: { ...harness.options.sandbox, remoteApi: {
+    ...remote, createClient: (config) => remote.createClient({ ...config, now: clock })
+  } } };
+  const created = createCuratedRuntime(prefs, options);
+  vm.runInContext('Date.now = globalThis.__clock;', Object.assign(created.context.sandbox, { __clock: clock }));
+  created.context.windowObj.requestIdleCallback = (callback) => setTimeout(callback, 0);
+  if (localStorageValue) created.context.windowObj.localStorage.setItem(WALLPAPER_PRELOAD_STORAGE_KEY, localStorageValue);
+  return created;
+}
+
+async function settleWallpaperCaching() {
+  for (let index = 0; index < 6; index += 1) await waitForAsyncWallpaperApply();
+}
+
+async function testCuratedDailyCachesTomorrowsPhotoAhead() {
+  const remote = require('../src/newtab/remote-content.js');
+  const DAY = 24 * 60 * 60 * 1000;
+  const start = new Date();
+  const todayAt = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 15).getTime();
+  const at = (days) => () => todayAt + days * DAY;
+  const [today, tomorrow, dayAfter] = [0, 1, 2]
+    .map((days) => remote.getCuratedDailyWallpaper('nature', at(days)()));
+  const prefs = () => createMemoryStorage({
+    [WALLPAPER_STORAGE_KEY]: DEFAULT_WALLPAPER_ID,
+    [ONLINE_WALLPAPER_STORAGE_KEY]: { value: 'curated-daily-nature', shared: DEFAULT_WALLPAPER_ID }
+  });
+  const harness = createDailyCopyHarness();
+  const first = createDailyRuntimeAt(prefs(), harness, at(0));
+  await first.runtime.bootstrapInitialWallpaper();
+  first.context.windowObj.__dispatchEvent('load');
+  await settleWallpaperCaching();
+  assert.deepStrictEqual(harness.requests, [today.imageUrl, tomorrow.imageUrl],
+    'Once today\'s photo is cached, the idle page downloads tomorrow\'s');
+  assert.deepStrictEqual(Array.from(harness.cache.images.keys()).sort(), [today.id, tomorrow.id].sort());
+  const stored = first.context.windowObj.localStorage.getItem(WALLPAPER_PRELOAD_STORAGE_KEY);
+  const entry = JSON.parse(stored).wallpapers.light;
+  assert.deepStrictEqual(entry.cachedImage, { id: today.id, url: today.imageUrl });
+  assert.deepStrictEqual(entry.next, { day: remote.localDay(at(1)()),
+    cachedImage: { id: tomorrow.id, url: tomorrow.imageUrl } }, 'The next tab learns tomorrow\'s copy');
+
+  first.runtime.createControls();
+  openPanel(first.runtime);
+  panelActions(first.runtime).selectSourceTab('curated');
+  panelActions(first.runtime).selectCuratedCategory('nature');
+  const todayTile = panelState(first.runtime).wallpaper.curated.tiles.find((tile) => tile.id === today.id);
+  assert.strictEqual(todayTile.thumbnailUrl, `${copyDataUrl(today.imageUrl)}#thumb`,
+    'The panel shows a cached photo from its local thumbnail, not the network');
+
+  // After midnight the first frame paints tomorrow's copy.
+  const preloadDocument = createFakeDocument();
+  const preloadWindow = createFakeWindow();
+  preloadWindow.localStorage.setItem(WALLPAPER_PRELOAD_STORAGE_KEY, stored);
+  preloadWindow.indexedDB = createFakeImageCacheDatabase(Array.from(harness.cache.images.values()));
+  class TomorrowDate extends Date {
+    static now() { return at(1)(); }
+  }
+  const preloadSandbox = { ...REAL_WALLPAPER_DEPENDENCIES, document: preloadDocument, window: preloadWindow,
+    chrome: {}, Date: TomorrowDate };
+  vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper-preload.js', 'utf8'), preloadSandbox, {
+    filename: 'src/newtab/wallpaper-preload.js'
+  });
+  assert.strictEqual(await preloadSandbox.LumnoNewtabWallpaperPreload.imageReady, copyDataUrl(tomorrow.imageUrl),
+    'The first tab after midnight paints the new photo from this device');
+  assert.strictEqual(preloadSandbox.LumnoNewtabWallpaperPreload.luminance, null,
+    'Today\'s luminance does not carry over to tomorrow\'s photo');
+
+  const next = createDailyRuntimeAt(prefs(), harness, at(1), stored);
+  await next.runtime.bootstrapInitialWallpaper();
+  const image = () => next.context.documentObj.documentElement.style.getPropertyValue('--x-nt-wallpaper-image');
+  assert.ok(image().includes(copyDataUrl(tomorrow.imageUrl)), 'The runtime opens on tomorrow\'s copy at once');
+  next.context.windowObj.__dispatchEvent('load');
+  await settleWallpaperCaching();
+  assert.deepStrictEqual(harness.requests.slice(2), [dayAfter.imageUrl],
+    'Tomorrow\'s photo never downloads again; the day after\'s is fetched ahead');
+  assert.deepStrictEqual(Array.from(harness.cache.images.keys()).sort(), [tomorrow.id, dayAfter.id].sort(),
+    'Yesterday\'s copy is dropped, so copies do not pile up');
+}
+
+async function testDailySlotKeepsThePreviousCopyUntilTheNewOneIsCached() {
+  const remote = require('../src/newtab/remote-content.js');
+  const DAY = 24 * 60 * 60 * 1000;
+  const start = new Date();
+  const todayAt = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 15).getTime();
+  const at = (days) => () => todayAt + days * DAY;
+  const friday = remote.getCuratedDailyWallpaper('city', at(0)());
+  const monday = remote.getCuratedDailyWallpaper('city', at(3)());
+  const prefs = createMemoryStorage({
+    [WALLPAPER_STORAGE_KEY]: DEFAULT_WALLPAPER_ID,
+    [ONLINE_WALLPAPER_STORAGE_KEY]: { value: 'curated-daily-city', shared: DEFAULT_WALLPAPER_ID }
+  });
+  // Away since Friday: the page remembers Friday's copy, and the copy fetched ahead was for Saturday.
+  const saturday = remote.getCuratedDailyWallpaper('city', at(1)());
+  const harness = createDailyCopyHarness([copyRecord(friday), copyRecord(saturday)]);
+  const stored = JSON.stringify({
+    version: WALLPAPER_PRELOAD_STORAGE_VERSION, mode: 'light', themeMode: 'light',
+    overlayStops: { light: { top: 0, mid: 0, bottom: 0 }, dark: { top: 0, mid: 0, bottom: 0 } },
+    wallpapers: {
+      light: { id: 'curated-daily-city', cachedImage: { id: friday.id, url: friday.imageUrl },
+        next: { day: remote.localDay(at(1)()), cachedImage: { id: saturday.id, url: saturday.imageUrl } } },
+      dark: null
+    }
+  });
+  harness.hold(monday.imageUrl);
+  const { context, runtime } = createDailyRuntimeAt(prefs, harness, at(3), stored);
+  const image = () => context.documentObj.documentElement.style.getPropertyValue('--x-nt-wallpaper-image');
+  await runtime.bootstrapInitialWallpaper();
+  context.windowObj.__dispatchEvent('load');
+  await settleWallpaperCaching();
+  assert.deepStrictEqual(harness.requests, [monday.imageUrl]);
+  assert.ok(image().includes(copyDataUrl(friday.imageUrl)),
+    'While Monday\'s photo downloads, the slot keeps the copy the first frame painted');
+  assert.ok(!image().includes(monday.thumbnailUrl), 'The page never waits on a network thumbnail');
+  assert.ok(harness.cache.images.has(friday.id), 'The copy on screen is not pruned while it stands in');
+
+  harness.release(monday.imageUrl);
+  await settleWallpaperCaching();
+  assert.ok(image().includes(copyDataUrl(monday.imageUrl)), 'Monday\'s photo replaces it once cached');
+  assert.ok(!harness.cache.images.has(friday.id), 'The stand-in is dropped once it is no longer shown');
+}
+
 async function testCuratedPhotoOpensNewTabsFromTheCachedCopy() {
   const remote = require('../src/newtab/remote-content.js');
   const requests = [];
@@ -4246,6 +4410,8 @@ Promise.resolve()
   .then(testShortDataUrlsStayInlineForCss)
   .then(testPreloadHandsOverLuminanceAndTheDecodedImage)
   .then(testOpenTabRollsOverWithoutOpeningThePanel)
+  .then(testCuratedDailyCachesTomorrowsPhotoAhead)
+  .then(testDailySlotKeepsThePreviousCopyUntilTheNewOneIsCached)
   .then(testWallpaperSourcesHintWaitsForFinalFocusRoute)
   .then(testNewtabFaviconPreloadAppliesCachedAlternateBeforeMainRuntime)
   .then(testWallpaperPreloadUsesTheCachedResolvedMode)

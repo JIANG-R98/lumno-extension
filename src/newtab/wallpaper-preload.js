@@ -110,19 +110,29 @@
       if (!overlayStops) {
         return null;
       }
+      // A daily photo's slot also names tomorrow's photo once its copy is cached, so the first tab
+      // after midnight paints the new photo. Its luminance is not measured yet.
+      const next = entry && entry.next;
+      const nextImage = next && next.day === getLocalDay(Date.now()) ? normalizeCachedImage(next.cachedImage) : null;
       return {
         mode,
         id: entry && typeof entry.id === 'string' ? entry.id : '',
         path: WALLPAPER_PATH_PATTERN.test(path) ? path : '',
-        cachedImage: normalizeCachedImage(entry && entry.cachedImage),
+        cachedImage: nextImage || normalizeCachedImage(entry && entry.cachedImage),
         customImage: normalizeCustomImage(entry && entry.customImage),
-        luminance: normalizeLuminance(entry && entry.luminance),
+        luminance: nextImage ? null : normalizeLuminance(entry && entry.luminance),
         overlayStops,
         effectPrefs: getEffectPrefsForMode(data.wallpaperEffects, mode)
       };
     } catch (e) {
       return null;
     }
+  }
+
+  // Matches localDay in remote-content.js, which loads after this script.
+  function getLocalDay(timestamp) {
+    const date = new Date(timestamp);
+    return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
   }
 
   function normalizeCachedImage(value) {
