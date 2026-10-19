@@ -95,6 +95,56 @@ async function testRecentStore() {
     'browser newtab pages should still be filtered from recent sites'
   );
 
+  const sparseTopSitesMerged = recentStore.mergeRecentSiteSources({
+    ...options,
+    mode: 'most',
+    limit: 6,
+    candidateLimit: 6,
+    pinned: [],
+    hidden: [],
+    topSites: [
+      { title: 'Bing', url: 'https://www.bing.com/' },
+      { title: 'Bing search', url: 'https://www.bing.com/search?q=a' },
+      { title: 'GitHub', url: 'https://github.com/' },
+      { title: 'MSN', url: 'https://www.msn.com/' }
+    ],
+    historyItems: [
+      { title: 'Rare', url: 'https://rare.example/', visitCount: 1, lastVisitTime: 50 },
+      { title: 'Docs A', url: 'https://docs.example/a', visitCount: 4, lastVisitTime: 40 },
+      { title: 'GitHub repo', url: 'https://github.com/lumno', visitCount: 30, lastVisitTime: 35 },
+      { title: 'Mail', url: 'https://mail.example/', visitCount: 6, lastVisitTime: 30 },
+      { title: 'Docs B', url: 'https://docs.example/b', visitCount: 5, lastVisitTime: 20 }
+    ]
+  });
+  assert.deepStrictEqual(
+    sparseTopSitesMerged.map((item) => item.host),
+    ['bing.com', 'github.com', 'msn.com', 'docs.example', 'mail.example', 'rare.example'],
+    'most-visited should fill a short topSites list from history ranked by per-site visits'
+  );
+  assert.strictEqual(sparseTopSitesMerged[3].url, 'https://docs.example/b');
+
+  const historyOnlyMostVisited = recentStore.mergeRecentSiteSources({
+    ...options,
+    mode: 'most',
+    limit: 3,
+    candidateLimit: 3,
+    pinned: [],
+    hidden: [],
+    topSites: [],
+    historyItems: [
+      { title: 'Latest', url: 'https://latest.example/', visitCount: 2, lastVisitTime: 90 },
+      { title: 'Busy page 1', url: 'https://busy.example/1', visitCount: 3, lastVisitTime: 80 },
+      { title: 'Steady', url: 'https://steady.example/', visitCount: 7, lastVisitTime: 70 },
+      { title: 'Busy page 2', url: 'https://busy.example/2', visitCount: 6, lastVisitTime: 60 },
+      { title: 'Unvisited', url: 'https://unvisited.example/', lastVisitTime: 50 }
+    ]
+  });
+  assert.deepStrictEqual(
+    historyOnlyMostVisited.map((item) => item.host),
+    ['busy.example', 'steady.example', 'latest.example'],
+    'without topSites, most-visited should rank by summed visit counts rather than recency'
+  );
+
   const storage = createMemoryStorage({
     [recentStore.DEFAULT_PINNED_KEY]: [
       { title: 'A', url: 'https://a.example/' },

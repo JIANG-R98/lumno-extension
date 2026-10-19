@@ -419,6 +419,32 @@
     }
   }
 
+  // Ranks history sites by the summed visitCount of their URLs, most visited first.
+  function rankHistoryByVisits(items, options) {
+    const sites = new Map();
+    (Array.isArray(items) ? items : []).forEach((item, index) => {
+      const url = item && item.url ? String(item.url) : '';
+      const host = url ? getHostFromUrl(url, options) : '';
+      if (!host) {
+        return;
+      }
+      const visits = Math.max(0, Number(item.visitCount) || 0);
+      const site = sites.get(host);
+      if (!site) {
+        sites.set(host, { item, visits, total: visits, index });
+        return;
+      }
+      site.total += visits;
+      if (visits > site.visits) {
+        site.item = item;
+        site.visits = visits;
+      }
+    });
+    return Array.from(sites.values())
+      .sort((a, b) => (b.total - a.total) || (a.index - b.index))
+      .map((site) => site.item);
+  }
+
   function sortTabCandidates(items) {
     return (Array.isArray(items) ? items : [])
       .slice()
@@ -484,10 +510,7 @@
     appendSource(priorityTabCandidates, 'tabs');
     if (mode === 'most') {
       appendSource(options.topSites, 'topSites');
-      if (candidateState.count === 0) {
-        appendSource(options.historyItems, 'history');
-        appendSource(options.topSites, 'topSites');
-      }
+      appendSource(rankHistoryByVisits(options.historyItems, options), 'history');
     } else {
       appendSource(options.historyItems, 'history');
       appendSource(options.topSites, 'topSites');
