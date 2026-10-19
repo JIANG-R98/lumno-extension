@@ -12,9 +12,14 @@
         visibility: hidden;
       }
       html[data-nt-focus-route-pending="true"] body,
-      body:not([data-nt-wallpaper-ready="1"]) {
+      body:not([data-nt-wallpaper-ready="1"]):not([data-wallpaper-instant="true"]) {
         visibility: hidden;
         background-image: none !important;
+      }
+      /* A wallpaper drawn by CSS alone shows from the first frame (wallpaper-effect-preload.js);
+         the page's controls still wait for it. */
+      body:not([data-nt-wallpaper-ready="1"]) > :not(.x-nt-wallpaper-effect-canvas):not(.x-nt-wallpaper-transition-layer) {
+        visibility: hidden;
       }
     </style>
     <script src="../shared/settings.js"></script>

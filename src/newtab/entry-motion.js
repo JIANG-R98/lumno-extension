@@ -17,10 +17,22 @@
 
     const NEWTAB_INITIAL_VIEWPORT_SETTLE_MS = 32;
     const NEWTAB_ENTRY_ANIMATION_TOTAL_MS = 260;
+    // The wallpaper leads: the content starts entering at least this long after the wallpaper
+    // showed (pageState.wallpaperShownAt), so the two never land in the same moment.
+    const NEWTAB_WALLPAPER_LEAD_MS = 120;
     // Compared at reveal time: a viewport that never changed while the page loaded has settled.
     const startupViewport = getSearchEntryViewportSnapshot();
     let newtabReadySettleTimer = 0;
     let newtabEntryAnimationTimer = 0;
+    let newtabWallpaperLeadTimer = 0;
+
+    function getWallpaperLeadDelay() {
+      const shownAt = Number(pageState.wallpaperShownAt) || 0;
+      if (!shownAt || !document.body || document.body.getAttribute('data-wallpaper-active') !== 'true') {
+        return 0;
+      }
+      return Math.max(0, shownAt + NEWTAB_WALLPAPER_LEAD_MS - performance.now());
+    }
 
     function finishNewtabEntryAnimation() {
       if (newtabEntryAnimationTimer) {
@@ -132,10 +144,19 @@
     }
 
     function markNewtabReady() {
-      if (!document.body) {
+      if (!document.body || newtabWallpaperLeadTimer) {
         return;
       }
       markNewtabStartupMilestone('ready-requested');
+      const leadDelay = getWallpaperLeadDelay();
+      if (leadDelay > 0) {
+        newtabWallpaperLeadTimer = window.setTimeout(() => {
+          newtabWallpaperLeadTimer = 0;
+          pageState.newtabReadyRequested = true;
+          scheduleNewtabReadyAfterViewportSettle();
+        }, leadDelay);
+        return;
+      }
       pageState.newtabReadyRequested = true;
       scheduleNewtabReadyAfterViewportSettle();
     }

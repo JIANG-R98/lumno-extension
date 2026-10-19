@@ -36,13 +36,16 @@ html[data-wallpaper-placeholder="true"][data-wallpaper-preload-theme="dark"] {
     ),
     var(--x-nt-wallpaper-placeholder);
 }
+/* The backdrop (wallpaper-preload.js: a copy of the last wallpaper) lies under the wallpaper, so the
+   frames before the full image decodes show the wallpaper's own picture instead of the page color. */
 body {
   margin: 0;
   background-color: var(--x-nt-bg);
-  background-image: var(--x-nt-wallpaper-overlay, none), var(--x-nt-wallpaper-image, none);
+  background-image: var(--x-nt-wallpaper-overlay, none), var(--x-nt-wallpaper-image, none),
+    var(--x-nt-wallpaper-backdrop, none);
   background-repeat: no-repeat;
-  background-size: cover, var(--x-nt-wallpaper-size, cover);
-  background-position: center center, var(--x-nt-wallpaper-position, center center);
+  background-size: cover, var(--x-nt-wallpaper-size, cover), cover;
+  background-position: center center, var(--x-nt-wallpaper-position, center center), center center;
   background-attachment: fixed;
   display: flex;
   flex-direction: column;
@@ -709,7 +712,7 @@ body[data-wallpaper-active="true"][data-wallpaper-effect="blur"]::before,
     contrast(var(--x-nt-wallpaper-blur-contrast));
 }
 body[data-wallpaper-active="true"][data-wallpaper-effect="blur"]::before {
-  background-image: var(--x-nt-wallpaper-image, none);
+  background-image: var(--x-nt-wallpaper-image, none), var(--x-nt-wallpaper-backdrop, none);
   opacity: 1;
   will-change: opacity, filter;
 }
@@ -1212,6 +1215,12 @@ body[data-glass-style] .x-nt-shortcut-icon[data-glass-ink-theme="dark"] {
 .x-nt-shortcut-tile[data-bookmark-drop-target="true"]::before {
   opacity: 1;
   transform: translate(-50%, -50%) scale(1);
+}
+/* The content shows just after the first wallpaper sample tints it, so until the entry finishes those
+   colors apply at once; a fade from the theme's default would play in view (the add tile, light on
+   a dark wallpaper, passed through the wallpaper's own gray and seemed to vanish). */
+body:not([data-nt-enter="done"]) .x-nt-shortcut-icon {
+  transition: none;
 }
 body[data-theme="dark"] .x-nt-shortcut-icon--add,
 body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-shortcut-icon--add,

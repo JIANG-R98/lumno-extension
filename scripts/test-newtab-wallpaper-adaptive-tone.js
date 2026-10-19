@@ -601,6 +601,63 @@ function getCssRgbChannels(value) {
     'icons in one row should share one ink');
   extraTargets = [];
 
+  // The New Tab reveals its content once the first sample is on the page (whenSettled), and that
+  // sample reads the image the preload already decoded instead of loading the file again.
+  const settledTarget = createElement();
+  let settledWallpaper = { id: 'preloaded-wallpaper', url: 'test://preloaded-wallpaper' };
+  const preloadedRequests = [];
+  let resolvePreloaded = null;
+  const preloadedImages = new Map([
+    ['test://preloaded-wallpaper', new Promise((resolve) => { resolvePreloaded = resolve; })],
+    ['test://preload-missing', Promise.resolve(null)]
+  ]);
+  const settledRuntime = sandbox.LumnoNewtabWallpaperAdaptiveTone.createWallpaperAdaptiveTone({
+    documentObj,
+    windowObj,
+    getTargets: () => [{ element: settledTarget, sampleElement: settledTarget, minWidth: 42, minHeight: 42, iconButton: true }],
+    getCurrentWallpaper: () => settledWallpaper,
+    getWallpaperImageUrl: (wallpaper) => wallpaper.url,
+    getPreloadedImage(url) {
+      preloadedRequests.push(url);
+      return preloadedImages.get(url) || null;
+    }
+  });
+  let settled = false;
+  await settledRuntime.whenSettled();
+  settledRuntime.refresh();
+  settledRuntime.whenSettled().then(() => { settled = true; });
+  await flushAsyncWork();
+  assert.deepStrictEqual(preloadedRequests, ['test://preloaded-wallpaper']);
+  assert.strictEqual(settled, false, 'the reveal waits while the wallpaper image is still decoding');
+  assert.strictEqual(pendingImages.some((image) => image.src === 'test://preloaded-wallpaper'), false,
+    'a preloaded image is never loaded a second time');
+  resolvePreloaded({ width: 10, height: 10, naturalWidth: 10, naturalHeight: 10, pixel: { red: 16, green: 24, blue: 32 } });
+  await flushAsyncWork();
+  assert.strictEqual(settled, true, 'the first sample settles the wait');
+  assert.strictEqual(settledTarget.getAttribute('data-wallpaper-ink'), 'light',
+    'the controls carry the wallpaper tones by the time the wait settles');
+
+  settledWallpaper = { id: 'preload-missing', url: 'test://preload-missing' };
+  settledRuntime.refresh();
+  settled = false;
+  settledRuntime.whenSettled().then(() => { settled = true; });
+  await flushAsyncWork();
+  getPendingImage('test://preload-missing').resolve({ red: 236, green: 238, blue: 240 });
+  await flushAsyncWork();
+  assert.strictEqual(settled, true, 'without a preloaded image the sampler loads the file itself');
+
+  settledWallpaper = { id: 'broken-wallpaper', url: 'test://broken-wallpaper' };
+  settledRuntime.refresh();
+  settled = false;
+  settledRuntime.whenSettled().then(() => { settled = true; });
+  getPendingImage('test://broken-wallpaper').reject();
+  await flushAsyncWork();
+  assert.strictEqual(settled, true, 'a wallpaper that fails to load never holds the page');
+
+  settledWallpaper = null;
+  settledRuntime.refresh();
+  await settledRuntime.whenSettled();
+
   console.log('new tab wallpaper adaptive tone transition tests passed');
 })().catch((error) => {
   console.error(error);
