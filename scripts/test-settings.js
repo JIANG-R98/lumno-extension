@@ -25,7 +25,9 @@ assert.strictEqual(settings.addStorageChangeListener({
 // So are the time size and opacity: absent values keep 54px and 100%.
 // And the time ink: an absent value keeps the automatic ink.
 // And the 12-hour clock: an absent value keeps the 24-hour clock.
-assert.strictEqual(settings.CHROME_SYNC_STORAGE_KEYS.length, 84);
+// And the random mix's categories: an absent value keeps every category in.
+assert.strictEqual(settings.CHROME_SYNC_STORAGE_KEYS.length, 85);
+assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_CURATED_MIX_EXCLUDED_STORAGE_KEY));
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_TIME_12_HOUR_STORAGE_KEY));
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_newtab_time_font_2026_unique_'));
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_search_source_order_2026_unique_'));

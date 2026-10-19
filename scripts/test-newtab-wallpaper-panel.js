@@ -23,6 +23,7 @@ const LOCAL_WALLPAPER_STORAGE_KEY = '_x_extension_newtab_local_wallpaper_2026_un
 const ONLINE_WALLPAPER_STORAGE_KEY = '_x_extension_newtab_online_wallpaper_2026_unique_';
 const LINK_WALLPAPERS_STORAGE_KEY = '_x_extension_newtab_link_wallpapers_2026_unique_';
 const DAILY_WALLPAPER_PICKS_STORAGE_KEY = '_x_extension_newtab_daily_wallpaper_picks_2026_unique_';
+const CURATED_MIX_EXCLUDED_STORAGE_KEY = '_x_extension_newtab_curated_mix_excluded_2026_unique_';
 const WALLPAPER_OVERLAY_STORAGE_KEY = '_x_extension_newtab_wallpaper_overlay_2026_unique_';
 const WALLPAPER_EFFECT_STORAGE_KEY = '_x_extension_newtab_wallpaper_effect_2026_unique_';
 const NEWTAB_FAVICON_STORAGE_KEY = '_x_extension_newtab_favicon_2026_unique_';
@@ -3521,6 +3522,72 @@ function getCuratedTileIds(runtime) {
   return panelState(runtime).wallpaper.curated.tiles.map((tile) => tile.id);
 }
 
+async function testCuratedMixChoosesItsCategories() {
+  const remote = require('../src/newtab/remote-content.js');
+  const prefs = createMemoryStorage({ [WALLPAPER_STORAGE_KEY]: DEFAULT_WALLPAPER_ID });
+  const { context, runtime } = createCuratedRuntime(prefs);
+  await runtime.bootstrapInitialWallpaper();
+  runtime.createControls();
+  const mix = () => panelState(runtime).wallpaper.curated.mix;
+  openPanel(runtime);
+  panelActions(runtime).selectSourceTab('curated');
+  await waitForAsyncWallpaperApply();
+  const categories = remote.CURATED_CATEGORIES.filter((value) => value !== 'random');
+  assert.strictEqual(mix().visible, true, 'The random tab shows which categories it mixes');
+  assert.strictEqual(mix().label, 'All categories');
+  assert.deepStrictEqual(mix().options.map((option) => [option.value, option.checked]),
+    categories.map((value) => [value, true]));
+
+  panelActions(runtime).setCuratedDaily(true);
+  await waitForAsyncWallpaperApply();
+  assert.strictEqual(readPickedWallpaper(prefs), 'curated-daily-random');
+  const keep = ['city', 'water'];
+  categories.filter((value) => !keep.includes(value))
+    .forEach((value) => panelActions(runtime).setCuratedMixCategory(value, false));
+  await waitForAsyncWallpaperApply();
+  const excluded = categories.filter((value) => !keep.includes(value));
+  assert.deepStrictEqual(clonePlain(prefs.data[CURATED_MIX_EXCLUDED_STORAGE_KEY]), excluded,
+    'The categories left out sync, so every device mixes the same photos');
+  assert.strictEqual(mix().label, 'Water, City', 'A short mix names its categories');
+  // The page shares this module, so it already lists the narrowed mix.
+  assert.ok(getCuratedTileIds(runtime).every((id) => keep.includes(remote.wallpaperFromId(id).category)),
+    'The mix lists only the chosen categories');
+  const today = remote.getCuratedDailyWallpaper('random', Date.now());
+  assert.ok(keep.includes(today.category), 'The daily photo comes from the chosen categories');
+  assert.ok(context.documentObj.documentElement.style.getPropertyValue('--x-nt-wallpaper-image')
+    .includes(today.thumbnailUrl), 'The daily wallpaper follows the new mix right away');
+  assert.strictEqual(findTile(runtime, today.id).selected, true, 'The list opens on the page that holds it');
+
+  panelActions(runtime).setCuratedMixCategory('city', false);
+  await waitForAsyncWallpaperApply();
+  const water = mix().options.find((option) => option.value === 'water');
+  assert.strictEqual(water.disabled, true, 'The last category in the mix cannot be left out');
+  const writes = prefs.sets.length;
+  panelActions(runtime).setCuratedMixCategory('water', false);
+  assert.strictEqual(prefs.sets.length, writes, 'Leaving out the last category changes nothing');
+
+  categories.forEach((value) => panelActions(runtime).setCuratedMixCategory(value, true));
+  await waitForAsyncWallpaperApply();
+  assert.strictEqual(prefs.data[CURATED_MIX_EXCLUDED_STORAGE_KEY], '', 'A full mix clears the setting');
+  assert.strictEqual(mix().label, 'All categories');
+
+  panelActions(runtime).selectCuratedCategory('nature');
+  await waitForAsyncWallpaperApply();
+  assert.strictEqual(mix().visible, false, 'Other categories hide the mix menu');
+
+  // A choice synced from another device applies on the next read.
+  prefs.data[CURATED_MIX_EXCLUDED_STORAGE_KEY] = ['art'];
+  const second = createCuratedRuntime(prefs);
+  await second.runtime.bootstrapInitialWallpaper();
+  second.runtime.createControls();
+  openPanel(second.runtime);
+  panelActions(second.runtime).selectSourceTab('curated');
+  await waitForAsyncWallpaperApply();
+  assert.strictEqual(panelState(second.runtime).wallpaper.curated.mix.options
+    .find((option) => option.value === 'art').checked, false);
+  remote.setRandomMixExcluded([]);
+}
+
 async function testCuratedWallpapersSyncAsIdsAndRotateDaily() {
   const remote = require('../src/newtab/remote-content.js');
   const prefs = createMemoryStorage({ [WALLPAPER_STORAGE_KEY]: DEFAULT_WALLPAPER_ID });
@@ -4398,6 +4465,7 @@ Promise.resolve()
   .then(testUnrecognizedSyncedWallpaperIsNotWrittenBack)
   .then(testOnlineWallpaperSurvivesOlderVersions)
   .then(testCuratedWallpapersSyncAsIdsAndRotateDaily)
+  .then(testCuratedMixChoosesItsCategories)
   .then(testLinkedWallpaperSyncsItsUrlAndCachesTheImage)
   .then(testRandomDailyWallpaperReopensOnTheRandomMix)
   .then(testCuratedArtCachesOneDownscaledPrintPerDevice)

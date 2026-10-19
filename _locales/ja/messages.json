@@ -3161,6 +3161,18 @@
   "newtab_curated_list": {
     "message": "写真"
   },
+  "newtab_curated_mix_all": {
+    "message": "すべての分類"
+  },
+  "newtab_curated_mix_count": {
+    "message": "{count} 分類"
+  },
+  "newtab_curated_mix_separator": {
+    "message": "、"
+  },
+  "newtab_curated_mix_aria": {
+    "message": "ランダムに含める分類"
+  },
   "newtab_curated_more": {
     "message": "ほかの写真"
   },

@@ -168,10 +168,12 @@ const assertWithinBudget = (actualBytes, budgetKiB, label) => {
 // dialog, moved the New Tab route to 421 KiB / 126 KiB gzip and the total to 816 KiB.
 // Reading shortcut icons again once the favicon runtime clears its placeholder mark moved the
 // total to 817 KiB.
+// Checkbox rows in the shared select menu, and the random mix's category menu in the curated
+// wallpaper list, moved the New Tab route to 422 KiB.
 // The total moved to 238 KiB gzip at 1.1.1: it measures 236.9 KiB locally, but CI's Node 22 build
 // compresses the same bundles to 237.4 KiB and failed the 1.1.1 release.
 const bundleBudgets = {
-  newtab: { uncompressed: 421, gzip: 126 },
+  newtab: { uncompressed: 422, gzip: 126 },
   options: { uncompressed: 290, gzip: 85 },
   overlay: { uncompressed: 274, gzip: 83 },
   total: { uncompressed: 817, gzip: 238 }

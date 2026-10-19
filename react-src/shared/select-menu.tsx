@@ -15,6 +15,8 @@ export interface SelectMenuOption {
   action?: string;
   /** Short tag after the label in the menu (for example "Beta"); not shown on the trigger. */
   badge?: string;
+  /** Toggles `checked` through `onCheckedChange` and keeps the menu open, for picking several values. */
+  checkbox?: boolean;
   checked?: boolean;
   disabled?: boolean;
   dividerBefore?: boolean;
@@ -73,11 +75,14 @@ export interface SelectMenuConfig {
   menuTitle?: string;
   menuWidth?: 'auto' | 'content' | 'trigger';
   onAction?(payload: { action: string; option: SelectMenuOption }): void;
+  onCheckedChange?(value: string, checked: boolean): void;
   onValueChange?(value: string): boolean | void;
   options?: SelectMenuOption[];
   selectId?: string;
   tooltip?: string;
   triggerIconClass?: string;
+  /** Trigger text in place of the chosen option's label, for menus of checkbox options. */
+  triggerLabel?: string;
   value?: string;
 }
 
@@ -227,7 +232,7 @@ export function SelectMenu({
       return undefined;
     }
     const selectedIndex = options.findIndex(
-      (option) => !option.action &&
+      (option) => !option.action && !option.checkbox &&
         option.value === selectedValue &&
         !option.disabled
     );
@@ -318,6 +323,10 @@ export function SelectMenu({
       setOpen(false);
       return;
     }
+    if (option.checkbox) {
+      config.onCheckedChange?.(option.value, option.checked !== true);
+      return;
+    }
     if (config.onValueChange?.(option.value) === false) {
       setOpen(false);
       triggerRef.current?.focus();
@@ -332,11 +341,12 @@ export function SelectMenu({
     setOpen(false);
     triggerRef.current?.focus();
   };
+  const isValueOption = (option: SelectMenuOption) => !option.action && !option.checkbox;
   const selectedOption =
-    options.find((option) => !option.action && option.value === selectedValue) ||
-    options.find((option) => !option.action);
+    options.find((option) => isValueOption(option) && option.value === selectedValue) ||
+    options.find(isValueOption);
   const usesMenuSemantics = options.some(
-    (option) => Boolean(option.action || option.radio)
+    (option) => Boolean(option.action || option.radio || option.checkbox)
   );
   const getOptionId = (index: number) =>
     config.id ? `${config.id}_option_${index}` : undefined;
@@ -386,9 +396,9 @@ export function SelectMenu({
         </div>
       ) : null}
       {options.map((option, index) => {
-        const selected = !option.action && option.value === selectedValue;
-        const radioItem = usesMenuSemantics && (!option.action || option.radio);
-        const checked = option.radio ? option.checked === true : selected;
+        const selected = isValueOption(option) && option.value === selectedValue;
+        const radioItem = usesMenuSemantics && !option.checkbox && (!option.action || option.radio);
+        const checked = option.radio || option.checkbox ? option.checked === true : selected;
         const trailingIconClass = String(option.trailingIconClass || '').trim();
         return (
           <Fragment key={`${option.action || option.value}:${index}`}>
@@ -408,7 +418,7 @@ export function SelectMenu({
               </div>
             ) : null}
             <div
-              aria-checked={radioItem ? checked : undefined}
+              aria-checked={radioItem || option.checkbox ? checked : undefined}
               aria-disabled={option.disabled ? 'true' : undefined}
               aria-selected={!usesMenuSemantics ? selected : undefined}
               className={`_x_extension_select_option_2024_unique_${
@@ -426,12 +436,20 @@ export function SelectMenu({
               onMouseLeave={() => setActiveIndex(-1)}
               role={
                 usesMenuSemantics
-                  ? radioItem
-                    ? 'menuitemradio'
-                    : 'menuitem'
+                  ? option.checkbox
+                    ? 'menuitemcheckbox'
+                    : radioItem
+                      ? 'menuitemradio'
+                      : 'menuitem'
                   : 'option'
               }
             >
+              {option.checkbox ? (
+                <span
+                  aria-hidden="true"
+                  className="_x_extension_select_option_checkbox_2026_unique_"
+                />
+              ) : null}
               {option.iconUrl ? (
                 <img
                   alt=""
@@ -481,7 +499,7 @@ export function SelectMenu({
         onChange={(event) => setSelectedValue(event.currentTarget.value)}
       >
         {options
-          .filter((option) => !option.action)
+          .filter(isValueOption)
           .map((option) => (
             <option
               disabled={option.disabled}
@@ -562,7 +580,7 @@ export function SelectMenu({
           className="_x_extension_select_label_2024_unique_"
           id={valueId}
         >
-          {selectedOption?.label || ''}
+          {config.triggerLabel ?? (selectedOption?.label || '')}
         </span>
         <i
           aria-hidden="true"

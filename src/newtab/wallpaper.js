@@ -10,6 +10,7 @@
     onlineWallpaper: SETTINGS.NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY,
     linkWallpapers: SETTINGS.NEWTAB_LINK_WALLPAPERS_STORAGE_KEY,
     dailyWallpaperPicks: SETTINGS.NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY,
+    curatedMixExcluded: SETTINGS.NEWTAB_CURATED_MIX_EXCLUDED_STORAGE_KEY,
     overlay: '_x_extension_newtab_wallpaper_overlay_2026_unique_',
     effect: '_x_extension_newtab_wallpaper_effect_2026_unique_',
     topContentMode: SETTINGS.NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY ||
@@ -121,6 +122,7 @@
     const NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY = storageKeys.onlineWallpaper;
     const NEWTAB_LINK_WALLPAPERS_STORAGE_KEY = storageKeys.linkWallpapers;
     const NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY = storageKeys.dailyWallpaperPicks;
+    const NEWTAB_CURATED_MIX_EXCLUDED_STORAGE_KEY = storageKeys.curatedMixExcluded;
     const NEWTAB_WALLPAPER_OVERLAY_STORAGE_KEY = storageKeys.overlay;
     const NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY = storageKeys.effect;
     const NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY = storageKeys.topContentMode;
@@ -3281,9 +3283,12 @@
         readStorageValue(localWallpaperStorageArea, NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY),
         readStorageValue(storageArea, NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY),
         readStorageValue(storageArea, NEWTAB_LINK_WALLPAPERS_STORAGE_KEY),
-        readStorageValue(storageArea, NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY)
+        readStorageValue(storageArea, NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY),
+        readStorageValue(storageArea, NEWTAB_CURATED_MIX_EXCLUDED_STORAGE_KEY)
       ]).then((stored) => {
         dailyWallpaperPicks = normalizeDailyWallpaperPicks(stored[4].value);
+        // Before any photo resolves: the random daily photo and the mix's pages follow it.
+        REMOTE_CONTENT.setRandomMixExcluded(stored[5].value);
         const results = [mergeOnlineWallpaperValue(stored[0], stored[2]), stored[1]];
         const linksChanged = setLinkWallpapers(stored[3].value);
         const linkIds = getWallpaperStorageRawIds(results[0].value).filter(isLinkWallpaperId);
@@ -4771,6 +4776,7 @@
           }
         },
         listLabel: t('newtab_curated_list', 'Photos'),
+        mix: buildCuratedMixState(),
         refreshLabel: t('newtab_curated_more', 'Show others'),
         selected: photoLabel
           ? buildSelectedSourceState(photoLabel, getCuratedPhotoMeta(selected), selected.sourceUrl)
@@ -4786,6 +4792,35 @@
             selected: item.id === selectedTileId,
             tooltip: tileLabel,
             label: getWallpaperSelectLabel(tileLabel)
+          };
+        })
+      };
+    }
+
+    // Shown on the random tab only: which categories the mix, and its daily photo, draw from.
+    function buildCuratedMixState() {
+      const included = REMOTE_CONTENT.getRandomMixCategories();
+      const categories = REMOTE_CONTENT.CURATED_CATEGORIES.filter((value) => value !== REMOTE_CONTENT.RANDOM_CATEGORY);
+      const names = included.map(getCuratedCategoryLabel);
+      let label = t('newtab_curated_mix_all', 'All categories');
+      if (included.length < categories.length) {
+        label = included.length <= 2
+          ? names.join(t('newtab_curated_mix_separator', ', '))
+          : formatMessage('newtab_curated_mix_count', '{count} categories', { count: included.length });
+      }
+      return {
+        visible: curatedCategory === REMOTE_CONTENT.RANDOM_CATEGORY,
+        label,
+        ariaLabel: t('newtab_curated_mix_aria', 'Categories in the mix'),
+        options: categories.map((value) => {
+          const checked = included.includes(value);
+          return {
+            value,
+            label: getCuratedCategoryLabel(value),
+            checkbox: true,
+            checked,
+            // The mix keeps at least one category.
+            disabled: checked && included.length === 1
           };
         })
       };
@@ -5223,6 +5258,7 @@
         },
         setCuratedDaily: (enabled) => setCuratedDailyWallpaper(enabled),
         selectCuratedCategory: (category) => selectCuratedCategory(category),
+        setCuratedMixCategory: (category, included) => setCuratedMixCategory(category, included),
         showMoreCurated: () => showMoreCuratedWallpapers(),
         selectCuratedWallpaper(id) {
           if (isWallpaperTileSelected(id)) {
@@ -5582,6 +5618,23 @@
       renderWallpaperPanelState();
       playWallpaperEnterMotion(getWallpaperPanelRefs().curatedItemsHost, 'enter');
     }
+    function setCuratedMixCategory(category, included) {
+      const excluded = REMOTE_CONTENT.CURATED_CATEGORIES
+        .filter((value) => value !== REMOTE_CONTENT.RANDOM_CATEGORY &&
+          !REMOTE_CONTENT.getRandomMixCategories().includes(value));
+      const next = included ? excluded.filter((value) => value !== category) : excluded.concat(category);
+      const normalized = REMOTE_CONTENT.normalizeRandomMixExcluded(next);
+      if (normalized.length !== next.length || normalized.join() === excluded.join()) return;
+      REMOTE_CONTENT.setRandomMixExcluded(normalized);
+      writeStorageValue(storageArea, NEWTAB_CURATED_MIX_EXCLUDED_STORAGE_KEY, normalized.length ? normalized : '', () => {
+        showToast(t('newtab_wallpaper_save_error', 'Failed to save wallpaper'), true);
+      });
+      showCuratedPageOfSelection();
+      // The random daily photo may now come from another category.
+      applyResolvedNewtabWallpaper();
+      renderWallpaperPanelState();
+      playWallpaperEnterMotion(getWallpaperPanelRefs().curatedItemsHost, 'enter');
+    }
     function showMoreCuratedWallpapers() {
       curatedPage += 1;
       renderWallpaperPanelState();
@@ -5772,7 +5825,8 @@
         changes[NEWTAB_WALLPAPER_STORAGE_KEY] ||
         (NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY && changes[NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY]) ||
         (NEWTAB_LINK_WALLPAPERS_STORAGE_KEY && changes[NEWTAB_LINK_WALLPAPERS_STORAGE_KEY]) ||
-        (NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY && changes[NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY])
+        (NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY && changes[NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY]) ||
+        (NEWTAB_CURATED_MIX_EXCLUDED_STORAGE_KEY && changes[NEWTAB_CURATED_MIX_EXCLUDED_STORAGE_KEY])
       );
       if (wallpaperStorageChanged) {
         bingSelectionSeq += 1;

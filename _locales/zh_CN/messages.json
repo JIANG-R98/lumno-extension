@@ -3161,6 +3161,18 @@
   "newtab_curated_list": {
     "message": "图片"
   },
+  "newtab_curated_mix_all": {
+    "message": "全部分类"
+  },
+  "newtab_curated_mix_count": {
+    "message": "{count} 个分类"
+  },
+  "newtab_curated_mix_separator": {
+    "message": "、"
+  },
+  "newtab_curated_mix_aria": {
+    "message": "随机包含的分类"
+  },
   "newtab_curated_more": {
     "message": "换一批"
   },

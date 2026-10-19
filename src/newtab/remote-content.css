@@ -312,6 +312,45 @@ body[data-theme="dark"] .x-nt-quote-import-status[data-error="true"] { color: #f
   min-height: 22px;
   padding-left: 2px;
 }
+/* The random mix's categories: a text trigger beside the refresh button, styled like it. */
+.x-nt-curated-mix-select {
+  min-width: 0;
+  margin-left: auto;
+  margin-right: -8px;
+}
+.x-nt-curated-mix-select ._x_extension_select_trigger_2024_unique_ {
+  width: auto;
+  min-width: 0;
+  height: 24px;
+  padding: 0 22px 0 8px;
+  gap: 4px;
+  border-color: transparent;
+  border-radius: var(--lumno-radius-md);
+  background: transparent;
+  color: var(--x-nt-panel-muted-ink);
+  font-size: var(--lumno-font-size-sm);
+  font-weight: 400;
+}
+.x-nt-curated-mix-select:hover ._x_extension_select_trigger_2024_unique_,
+.x-nt-curated-mix-select[data-open="true"] ._x_extension_select_trigger_2024_unique_ {
+  background: var(--x-nt-panel-icon-hover-bg);
+  /* The shared open ring is set again per theme with body-level selectors. */
+  box-shadow: none !important;
+  color: var(--x-nt-text, #111827);
+}
+.x-nt-curated-mix-select ._x_extension_select_trigger_2024_unique_:focus-visible {
+  outline: 2px solid var(--lumno-color-focus-ring);
+  outline-offset: 2px;
+}
+.x-nt-curated-mix-select ._x_extension_select_label_2024_unique_ {
+  padding-right: 0;
+}
+.x-nt-curated-mix-select ._x_extension_select_icon_2024_unique_,
+.x-nt-curated-mix-select:hover ._x_extension_select_icon_2024_unique_,
+.x-nt-curated-mix-select[data-open="true"] ._x_extension_select_icon_2024_unique_ {
+  right: 5px;
+  color: inherit;
+}
 .x-nt-bing-refresh {
   cursor: pointer;
 }

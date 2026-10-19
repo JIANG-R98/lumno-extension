@@ -3161,6 +3161,18 @@
   "newtab_curated_list": {
     "message": "Photos"
   },
+  "newtab_curated_mix_all": {
+    "message": "All categories"
+  },
+  "newtab_curated_mix_count": {
+    "message": "{count} categories"
+  },
+  "newtab_curated_mix_separator": {
+    "message": ", "
+  },
+  "newtab_curated_mix_aria": {
+    "message": "Categories in the mix"
+  },
   "newtab_curated_more": {
     "message": "Show others"
   },

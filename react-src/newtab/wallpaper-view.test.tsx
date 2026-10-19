@@ -448,6 +448,41 @@ describe('New Tab React wallpaper view', () => {
     expect(actions.selectEffect).toHaveBeenCalledWith('grain');
   });
 
+  it('shows the random mix categories as checkboxes that toggle without closing', () => {
+    const { actions, state } = createState((draft) => {
+      draft.wallpaper.activeTab = 'curated';
+      draft.wallpaper.curated.mix = {
+        ariaLabel: 'Categories in the mix',
+        label: '2 categories',
+        options: [
+          { value: 'nature', label: 'Nature', checkbox: true, checked: true },
+          { value: 'city', label: 'City', checkbox: true, checked: false }
+        ],
+        visible: true
+      };
+    });
+    mount(state);
+    const host = refs().curatedMixSelectHost;
+    expect(host.closest('.x-nt-overlay-control-header')?.contains(refs().curatedRefresh)).toBe(true);
+    expect(host.querySelector('._x_extension_select_label_2024_unique_')?.textContent).toBe('2 categories');
+    act(() => host.querySelector<HTMLButtonElement>('button')!.click());
+    const city = document.querySelector<HTMLElement>('[data-react-select-owner="x-nt-curated-mix"] [data-value="city"]')!;
+    expect(city.getAttribute('role')).toBe('menuitemcheckbox');
+    expect(city.getAttribute('aria-checked')).toBe('false');
+    expect(controller!.containsSelectMenuTarget(city)).toBe(true);
+    act(() => city.click());
+    expect(actions.setCuratedMixCategory).toHaveBeenCalledWith('city', true);
+    expect(host.dataset.open).toBe('true');
+  });
+
+  it('hides the mix categories outside the random tab', () => {
+    const { state } = createState((draft) => {
+      draft.wallpaper.curated.mix = { ariaLabel: '', label: '', options: [], visible: false };
+    });
+    mount(state);
+    expect(refs().curatedMixSelectHost).toBeUndefined();
+  });
+
   it('moves between source tabs with the arrow keys as one tab stop', () => {
     const { actions, state } = createState();
     mount(state);

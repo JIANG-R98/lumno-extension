@@ -25,6 +25,9 @@
   const CMA_ID_PATTERN = /^cma-(\d{4}\.[0-9a-z.]{1,20})$/;
   const CMA_IMAGE_ORIGIN = 'https://openaccess-cdn.clevelandart.org';
   const CURATED_DAILY_STRIDES = [37, 41, 43, 47, 53];
+  // Categories the user left out of the random mix. The choice syncs, so devices on the same date
+  // still list and pick the same photos; the mix always keeps at least one category.
+  let randomMixExcluded = [];
   const curatedCredits = new Map();
   // Photo rows start with a numeric Picsum ID; art rows start with an accession number.
   const curatedRowId = (row) => typeof row[0] === 'number' ? `picsum-${row[0]}` : `cma-${row[0]}`;
@@ -131,8 +134,24 @@
     return `${CURATED_DAILY_PREFIX}${CURATED_CATEGORIES.includes(category) ? category : CURATED_CATEGORIES[0]}`;
   }
 
+  function normalizeRandomMixExcluded(value) {
+    const bundled = Object.keys(CATALOG);
+    const excluded = Array.isArray(value) ? bundled.filter((category) => value.includes(category)) : [];
+    return excluded.length < bundled.length ? excluded : [];
+  }
+
+  function setRandomMixExcluded(value) {
+    randomMixExcluded = normalizeRandomMixExcluded(value);
+  }
+
+  function getRandomMixCategories() {
+    return Object.keys(CATALOG).filter((category) => !randomMixExcluded.includes(category));
+  }
+
   function getCuratedRows(category) {
-    return category === RANDOM_CATEGORY ? Object.values(CATALOG).flat() : CATALOG[category] || [];
+    return category === RANDOM_CATEGORY
+      ? getRandomMixCategories().flatMap((key) => CATALOG[key])
+      : CATALOG[category] || [];
   }
 
   function localDayNumber(timestamp) {
@@ -445,5 +464,5 @@
   return Object.freeze({ QUOTE_CACHE_KEY, BING_CACHE_KEY, BING_DAILY_CACHE_KEY, BING_META_CACHE_KEY, BING_DAILY_ID,
     CURATED_CATEGORIES, RANDOM_CATEGORY, normalizeMarket, localDay, normalizeQuote, normalizeWallpaper, wallpaperFromId,
     getWallpaperProvider, isDailyWallpaperId, curatedDailyId, getCuratedWallpapers, getCuratedDailyWallpaper,
-    createClient });
+    normalizeRandomMixExcluded, setRandomMixExcluded, getRandomMixCategories, createClient });
 });

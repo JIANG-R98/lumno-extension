@@ -314,12 +314,34 @@ body[data-glass-style] ._x_extension_select_wrap_2024_unique_[data-open="true"][
   color: var(--panel-text, #111827);
 }
 
+/* Checkbox rows toggle in place. The mark takes the row's text color, and its check is cut out
+   of it, so it reads on every menu surface and theme. */
+._x_extension_select_option_checkbox_2026_unique_ {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, currentColor 36%, transparent);
+  border-radius: 5px;
+  pointer-events: none;
+  transition: background-color var(--lumno-duration-sm) ease, border-color var(--lumno-duration-sm) ease;
+}
+
+._x_extension_select_option_2024_unique_[aria-checked="true"] ._x_extension_select_option_checkbox_2026_unique_ {
+  --x-extension-select-check-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cmask id='m'%3E%3Crect width='16' height='16' fill='white'/%3E%3Cpath d='M4.5 8.2l2.4 2.4 4.6-4.9' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/mask%3E%3Crect width='16' height='16' fill='white' mask='url(%23m)'/%3E%3C/svg%3E");
+  border-color: transparent;
+  background: currentColor;
+  -webkit-mask: var(--x-extension-select-check-mask) center / 100% 100% no-repeat;
+  mask: var(--x-extension-select-check-mask) center / 100% 100% no-repeat;
+}
+
 @supports (corner-shape: superellipse(1.25)) {
   ._x_extension_select_trigger_2024_unique_,
   ._x_extension_select_value_icon_2026_unique_,
   ._x_extension_select_menu_2024_unique_,
   ._x_extension_select_option_2024_unique_,
-  ._x_extension_select_option_icon_2026_unique_ {
+  ._x_extension_select_option_icon_2026_unique_,
+  ._x_extension_select_option_checkbox_2026_unique_ {
     corner-shape: superellipse(1.25);
   }
 }

@@ -119,6 +119,13 @@ export interface PanelSelectModel {
   value: string;
 }
 
+export interface CuratedMixState {
+  ariaLabel: string;
+  label: string;
+  options: SelectMenuOption[];
+  visible: boolean;
+}
+
 export interface WallpaperPanelActions extends TooltipActions {
   clearUrlInvalid(): void;
   deleteWallpaper(id: string): void;
@@ -135,6 +142,7 @@ export interface WallpaperPanelActions extends TooltipActions {
   restoreDailyWallpaper(): void;
   selectBingWallpaper(id: string): void;
   selectCuratedCategory(category: string): void;
+  setCuratedMixCategory(category: string, included: boolean): void;
   selectCuratedWallpaper(id: string): void;
   selectEffect(type: string): void;
   selectFavicon(id: string): void;
@@ -253,6 +261,7 @@ export interface WallpaperPanelState {
       daily: DailyState;
       label: string;
       listLabel: string;
+      mix?: CuratedMixState;
       refreshLabel: string;
       selected: SelectedSourceState;
       tiles: OnlineTileState[];
@@ -834,7 +843,50 @@ function PanelSelect({
   );
 }
 
+// A quiet text trigger in the photo list's header; each category toggles without closing the menu.
+function CuratedMixSelect({
+  documentObj,
+  mix,
+  onCheckedChange,
+  registerControls
+}: {
+  documentObj: Document;
+  mix: CuratedMixState;
+  onCheckedChange(value: string, checked: boolean): void;
+  registerControls(id: string, controls: SelectMenuControls): void;
+}) {
+  const [host, setHost] = useState<HTMLDivElement | null>(null);
+  return (
+    <div
+      {...ref('curatedMixSelectHost')}
+      className="_x_extension_select_wrap_2024_unique_ _x_extension_custom_select_2024_unique_ x-nt-curated-mix-select"
+      ref={setHost}
+    >
+      {host ? (
+        <SelectMenu
+          config={{
+            id: CURATED_MIX_SELECT_ID,
+            ariaLabel: mix.ariaLabel,
+            options: mix.options,
+            triggerLabel: mix.label,
+            menuAlign: 'right',
+            menuPortal: true,
+            menuPortalZIndex: 10020,
+            menuWidth: 'content',
+            onCheckedChange
+          }}
+          documentObj={documentObj}
+          host={host}
+          registerControls={(controls) => registerControls(CURATED_MIX_SELECT_ID, controls)}
+          windowObj={documentObj.defaultView || window}
+        />
+      ) : null}
+    </div>
+  );
+}
+
 const EFFECT_SELECT_ID = 'x-nt-wallpaper-effect';
+const CURATED_MIX_SELECT_ID = 'x-nt-curated-mix';
 const QUOTE_POSITION_SELECT_ID = 'x-nt-quote-position';
 const BOOKMARK_VIEW_MODE_SELECT_ID = 'x-nt-bookmark-view-mode';
 const BOOKMARK_TOPBAR_SURFACE_SELECT_ID = 'x-nt-bookmark-topbar-surface';
@@ -844,6 +896,7 @@ const SELECT_HOST_REFS: Record<string, string> = {
   [GLASS_STYLE_SELECT_ID]: 'glassStyleSelectHost',
   [TIME_FONT_SELECT_ID]: 'timeFontSelectHost',
   [EFFECT_SELECT_ID]: 'effectSelectHost',
+  [CURATED_MIX_SELECT_ID]: 'curatedMixSelectHost',
   [QUOTE_POSITION_SELECT_ID]: 'quotePositionSelectHost',
   [BOOKMARK_VIEW_MODE_SELECT_ID]: 'bookmarkViewModeSelectHost',
   [BOOKMARK_TOPBAR_SURFACE_SELECT_ID]: 'bookmarkTopbarSurfaceSelectHost'
@@ -1921,6 +1974,14 @@ function WallpaperPanel({
                 <div className="x-nt-bing-recent">
                   <div className="x-nt-overlay-control-header">
                     <span {...ref('curatedListLabel')} className="x-nt-appearance-setting-title">{curated.listLabel}</span>
+                    {curated.mix?.visible ? (
+                      <CuratedMixSelect
+                        documentObj={documentObj}
+                        mix={curated.mix}
+                        onCheckedChange={actions.setCuratedMixCategory}
+                        registerControls={registerSelect}
+                      />
+                    ) : null}
                     <button
                       {...ref('curatedRefresh')}
                       {...tooltipHandlers(actions, curated.refreshLabel)}
