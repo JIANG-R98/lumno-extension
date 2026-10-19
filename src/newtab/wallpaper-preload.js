@@ -402,9 +402,6 @@
       // imageUrl, wallpaper.js never changes it.
       initialImageUrl: '',
       luminance: cachedWallpaper.luminance,
-      // Resolves once that image has loaded and decoded: the page stays hidden until then, so the
-      // wallpaper appears whole, never part-drawn.
-      imageDecoded: null,
       mode: cachedWallpaper.mode
     }, fields);
   }
@@ -439,12 +436,10 @@
 
   if (cachedWallpaper.path) {
     const url = getRuntimeUrl(cachedWallpaper.path);
-    const decodedImage = decodeWallpaperImage(url);
     globalThis.LumnoNewtabWallpaperPreload = createPreloadState({
       imageUrl: url,
       initialImageUrl: url,
-      decodedImage,
-      imageDecoded: decodedImage ? decodedImage.ready : null,
+      decodedImage: decodeWallpaperImage(url),
       wallpaper: {
         id: cachedWallpaper.path,
         path: cachedWallpaper.path
@@ -495,7 +490,6 @@
     preloadState.initialImageUrl = record.imageDataUrl;
     preloadState.cssObjectUrl = cssImage.objectUrl;
     preloadState.decodedImage = decodeWallpaperImage(cssImage.url, record.imageDataUrl);
-    preloadState.imageDecoded = preloadState.decodedImage ? preloadState.decodedImage.ready : null;
     applyWallpaperImage(cssImage.url);
     return record.imageDataUrl;
   });

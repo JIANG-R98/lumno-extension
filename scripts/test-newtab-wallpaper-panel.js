@@ -2289,30 +2289,6 @@ async function testWallpaperLuminanceIsCachedForThePreload() {
   assert.strictEqual(second.readPreload().wallpapers.light.luminance, cached.wallpapers.light.luminance);
 }
 
-async function testRevealWaitsForTheWallpaperImageToDecode() {
-  const harness = createDeferredWallpaperImageHarness();
-  const { documentObj, windowObj, sandbox: runtimeSandbox } = createWallpaperSandbox({ Image: harness.Image });
-  documentObj.body.setAttribute('data-theme', 'light');
-  const runtime = runtimeSandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
-    documentObj,
-    windowObj,
-    storageArea: createMemoryStorage({ [WALLPAPER_STORAGE_KEY]: 'dark-shanshui-moonlit' }),
-    storageKeys: { wallpaper: WALLPAPER_STORAGE_KEY, localWallpaper: LOCAL_WALLPAPER_STORAGE_KEY },
-    t: (_key, fallback) => fallback || '',
-    getRiSvg: () => ''
-  });
-  await runtime.bootstrapInitialWallpaper();
-  let revealed = false;
-  runtime.waitForInitialWallpaperEffectVisual().then(() => { revealed = true; });
-  await waitForAsyncWallpaperApply();
-  assert.strictEqual(revealed, false, 'the page stays hidden while the wallpaper image decodes');
-  harness.requests
-    .filter((image) => image.src.includes('lumno-newtab-dark-shanshui-moonlit.webp'))
-    .forEach((image) => image.resolveDecode());
-  await waitForAsyncWallpaperApply();
-  assert.strictEqual(revealed, true, 'the wallpaper appears whole once its image has decoded');
-}
-
 function runPreloadForWallpaper(entry, wallpaperEffects, prepareWindow) {
   const documentObj = createFakeDocument();
   const windowObj = createFakeWindow();
@@ -2333,7 +2309,7 @@ function runPreloadForWallpaper(entry, wallpaperEffects, prepareWindow) {
   return { root: documentObj.documentElement, preload: sandbox.LumnoNewtabWallpaperPreload };
 }
 
-async function testPreloadHandsOverLuminanceAndTheDecodeWait() {
+async function testPreloadHandsOverLuminanceAndTheDecodedImage() {
   const bundled = {
     id: 'dark-shanshui-moonlit',
     path: 'assets/wallpapers/lumno-newtab-dark-shanshui-moonlit.webp',
@@ -2349,9 +2325,8 @@ async function testPreloadHandsOverLuminanceAndTheDecodeWait() {
   assert.strictEqual(shown.preload.luminance, 0.31, 'the blur frost blends by the remembered luminance');
   assert.strictEqual(shown.preload.initialImageUrl,
     'chrome-extension://abc/assets/wallpapers/lumno-newtab-dark-shanshui-moonlit.webp');
-  assert.ok(shown.preload.imageDecoded && typeof shown.preload.imageDecoded.then === 'function',
-    'the effect preload keeps the page hidden until the image has decoded');
-  assert.strictEqual((await shown.preload.imageDecoded).src, shown.preload.initialImageUrl);
+  assert.strictEqual((await shown.preload.decodedImage.ready).src, shown.preload.initialImageUrl,
+    'the first tone sample reuses the image the preload decoded');
   assert.strictEqual(shown.root.style.getPropertyValue('--x-nt-wallpaper-backdrop'), '',
     'no blurred copy lies under the wallpaper');
   assert.strictEqual(shown.root.style.getPropertyValue('--x-nt-wallpaper-placeholder'), '');
@@ -2365,10 +2340,10 @@ async function testPreloadHandsOverLuminanceAndTheDecodeWait() {
     windowObj.indexedDB = createFakeImageCacheDatabase([{ key: id, id, imageDataUrl: dataUrl }], 'key');
     withImage(windowObj);
   });
-  assert.strictEqual(upload.preload.imageDecoded, null, 'nothing to wait on before the upload is read');
+  assert.strictEqual(upload.preload.decodedImage, null, 'nothing to decode before the upload is read');
   assert.strictEqual(await upload.preload.imageReady, dataUrl);
   assert.strictEqual(upload.preload.initialImageUrl, dataUrl);
-  assert.strictEqual((await upload.preload.imageDecoded).src, dataUrl);
+  assert.strictEqual((await upload.preload.decodedImage.ready).src, dataUrl);
 }
 
 async function testSplitBuiltInWallpaperSelectionFollowsResolvedTheme() {
@@ -4269,8 +4244,7 @@ Promise.resolve()
   .then(testPreloadPaintsTheUploadFromTheLocalLibrary)
   .then(testRuntimeAdoptsThePreloadedUploadAndItsBlobUrl)
   .then(testShortDataUrlsStayInlineForCss)
-  .then(testPreloadHandsOverLuminanceAndTheDecodeWait)
-  .then(testRevealWaitsForTheWallpaperImageToDecode)
+  .then(testPreloadHandsOverLuminanceAndTheDecodedImage)
   .then(testOpenTabRollsOverWithoutOpeningThePanel)
   .then(testWallpaperSourcesHintWaitsForFinalFocusRoute)
   .then(testNewtabFaviconPreloadAppliesCachedAlternateBeforeMainRuntime)

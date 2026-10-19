@@ -19,7 +19,7 @@
     const NEWTAB_ENTRY_ANIMATION_TOTAL_MS = 260;
     // The wallpaper leads: the content starts entering at least this long after the wallpaper
     // showed (pageState.wallpaperShownAt), so the two never land in the same moment.
-    const NEWTAB_WALLPAPER_LEAD_MS = 120;
+    const NEWTAB_WALLPAPER_LEAD_MS = 60;
     // Compared at reveal time: a viewport that never changed while the page loaded has settled.
     const startupViewport = getSearchEntryViewportSnapshot();
     let newtabReadySettleTimer = 0;

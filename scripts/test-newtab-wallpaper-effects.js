@@ -1529,44 +1529,6 @@ async function testBlurFrostUsesTheRememberedLuminance() {
   }
 }
 
-async function testWallpaperShowsOnlyOnceItsImageHasDecoded() {
-  const run = (effectType) => {
-    const attributes = new Map();
-    let resolveDecoded;
-    const sandbox = {
-      console,
-      performance,
-      setTimeout,
-      document: { body: { setAttribute: (name, value) => attributes.set(name, String(value)) },
-        documentElement: { getAttribute: () => null } },
-      LumnoNewtabWallpaperEffects: {
-        createWallpaperEffects: () => ({ apply() {}, refresh: () => Promise.resolve() }),
-        resolvePrefsForMode: (value) => value
-      },
-      LumnoNewtabWallpaperPreload: {
-        effectPrefsReady: Promise.resolve({ type: effectType }),
-        imageUrl: 'chrome-extension://abc/assets/wallpapers/test.webp',
-        imageDecoded: new Promise((resolve) => { resolveDecoded = resolve; }),
-        mode: 'light',
-        wallpaper: { id: 'test' }
-      },
-      window: {}
-    };
-    sandbox.globalThis = sandbox;
-    vm.runInNewContext(effectPreloadSource, sandbox, { filename: 'src/newtab/wallpaper-effect-preload.js' });
-    return { attributes, decode: () => resolveDecoded() };
-  };
-  for (const effectType of ['none', 'blur']) {
-    const page = run(effectType);
-    await new Promise((resolve) => setTimeout(resolve, 5));
-    assert.strictEqual(page.attributes.get('data-nt-wallpaper-ready'), undefined,
-      `with ${effectType}, the page stays hidden while the wallpaper image decodes, never showing a part-drawn page`);
-    page.decode();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    assert.strictEqual(page.attributes.get('data-nt-wallpaper-ready'), '1', 'it appears whole once decoded');
-  }
-}
-
 async function testEffectReportsAStaleSourceUntilRedrawn() {
   const previousImage = sandbox.Image;
   sandbox.Image = class FakeImage {
@@ -1643,7 +1605,6 @@ Promise.resolve()
   .then(testCrtRendersPhosphorScanlinesAndColorFringe)
   .then(testFocusedRoutePreloadsEffectBeforeContent)
   .then(testBlurFrostUsesTheRememberedLuminance)
-  .then(testWallpaperShowsOnlyOnceItsImageHasDecoded)
   .then(() => {
   process.stdout.write('new tab wallpaper effects tests passed\n');
 }).catch((error) => {
