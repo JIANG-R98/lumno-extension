@@ -107,7 +107,8 @@
       name: credit ? credit.author : 'Picsum',
       sourceUrl: credit ? `https://unsplash.com/photos/${credit.detail}` : PICSUM_ORIGIN,
       imageUrl: `${PICSUM_ORIGIN}/id/${match[1]}/2560/1440`,
-      thumbnailUrl: `${PICSUM_ORIGIN}/id/${match[1]}/480/270`, cacheImage: true };
+      // Panel tiles are about 117×66 CSS pixels, so 320×180 stays sharp on 2x screens at half the bytes.
+      thumbnailUrl: `${PICSUM_ORIGIN}/id/${match[1]}/320/180`, cacheImage: true };
   }
 
   function wallpaperFromId(id) {

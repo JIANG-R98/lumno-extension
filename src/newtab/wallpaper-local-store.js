@@ -21,6 +21,9 @@
   const MAX_WALLPAPER_BYTES =
     Math.floor((MAX_CSS_URL_LENGTH - WEBP_DATA_URL_PREFIX.length - 'url("")'.length) / 4) * 3;
   const MAX_THUMBNAIL_BYTES = 160 * 1024;
+  // Panel tiles are about 117×66 CSS pixels; 320 wide stays sharp on 2x screens.
+  const TILE_THUMBNAIL_WIDTH = 320;
+  const MAX_TILE_THUMBNAIL_BYTES = 32 * 1024;
   const WEBP_QUALITIES = Object.freeze([0.88, 0.82, 0.76, 0.7, 0.64, 0.58]);
   const ACCEPTED_SOURCE_MIME_TYPES = Object.freeze([
     'image/jpeg',
@@ -422,8 +425,18 @@
       });
     }
 
+    // A small WebP of a panel tile's photo, cropped to the tile's 16:9 like the wallpaper itself.
+    function buildTileThumbnail(blob) {
+      return readFileAsDataUrl(blob).then(loadImageFromDataUrl).then((image) => {
+        const crop = getCenteredCrop(image.naturalWidth || image.width, image.naturalHeight || image.height);
+        return renderCroppedDataUrl(image, crop, Math.min(TILE_THUMBNAIL_WIDTH, crop.width),
+          MAX_TILE_THUMBNAIL_BYTES).dataUrl;
+      });
+    }
+
     return {
       buildRecordFromFile,
+      buildTileThumbnail,
       isCustomWallpaperId,
       normalizeRecord,
       readAll,
@@ -503,6 +516,87 @@
     };
   }
 
+  // Tiles of the curated photos the panel has shown, so reopening it paints them without asking
+  // Picsum again (each tile there costs a redirect that the HTTP cache keeps for only a day). Like
+  // the image cache it stays on this device: sync and WebDAV never read it. It keeps the tiles seen
+  // most recently and drops the rest.
+  const THUMBNAIL_CACHE_DB_NAME = 'lumno-newtab-wallpaper-thumbs';
+  const THUMBNAIL_CACHE_STORE_NAME = 'thumbs';
+  const THUMBNAIL_CACHE_LIMIT = 60;
+  // A tile shown again moves to the front at most this often, so reopening the panel rarely writes.
+  const THUMBNAIL_TOUCH_INTERVAL_MS = 60 * 60 * 1000;
+
+  function createWallpaperThumbnailCache(options) {
+    const windowObj = getOption(options, 'windowObj', root.window || root);
+    const limit = getOption(options, 'limit', THUMBNAIL_CACHE_LIMIT);
+    const now = getOption(options, 'now', Date.now);
+    function run(task) {
+      return new Promise((resolve, reject) => {
+        if (!windowObj || !windowObj.indexedDB) {
+          reject(new Error('IndexedDB is not available.'));
+          return;
+        }
+        const request = windowObj.indexedDB.open(THUMBNAIL_CACHE_DB_NAME, 1);
+        request.onupgradeneeded = () => {
+          if (!request.result.objectStoreNames.contains(THUMBNAIL_CACHE_STORE_NAME)) {
+            request.result.createObjectStore(THUMBNAIL_CACHE_STORE_NAME, { keyPath: 'id' })
+              .createIndex('usedAt', 'usedAt');
+          }
+        };
+        request.onerror = () => reject(request.error || new Error('Failed to open wallpaper thumbnail cache.'));
+        request.onsuccess = () => {
+          const db = request.result;
+          const transaction = db.transaction(THUMBNAIL_CACHE_STORE_NAME, 'readwrite');
+          const result = task(transaction.objectStore(THUMBNAIL_CACHE_STORE_NAME));
+          transaction.oncomplete = () => { db.close(); resolve(result.value); };
+          transaction.onerror = transaction.onabort = () => {
+            db.close();
+            reject(transaction.error || new Error('Failed to use wallpaper thumbnail cache.'));
+          };
+        };
+      });
+    }
+    return {
+      // Records are { id, url, dataUrl, usedAt }.
+      readByIds(ids) {
+        const keys = (Array.isArray(ids) ? ids : []).filter(Boolean);
+        if (!keys.length) return Promise.resolve([]);
+        return run((store) => {
+          const result = { value: [] };
+          const time = now();
+          keys.forEach((key) => {
+            const request = store.get(key);
+            request.onsuccess = () => {
+              const record = request.result;
+              if (!record) return;
+              result.value.push(record);
+              if (!(time - record.usedAt < THUMBNAIL_TOUCH_INTERVAL_MS)) store.put({ ...record, usedAt: time });
+            };
+          });
+          return result;
+        });
+      },
+      write(record) {
+        return run((store) => {
+          store.put({ ...record, usedAt: now() });
+          const count = store.count();
+          count.onsuccess = () => {
+            let extra = count.result - limit;
+            if (extra <= 0) return;
+            const cursor = store.index('usedAt').openCursor();
+            cursor.onsuccess = () => {
+              if (!cursor.result || extra <= 0) return;
+              cursor.result.delete();
+              extra -= 1;
+              cursor.result.continue();
+            };
+          };
+          return {};
+        });
+      }
+    };
+  }
+
   const api = {
     CUSTOM_WALLPAPER_ID,
     CUSTOM_WALLPAPER_ID_PREFIX,
@@ -514,7 +608,8 @@
     MAX_THUMBNAIL_BYTES,
     ACCEPTED_SOURCE_MIME_TYPES,
     createWallpaperImageCache,
-    createWallpaperLocalStore
+    createWallpaperLocalStore,
+    createWallpaperThumbnailCache
   };
   root.LumnoNewtabWallpaperLocalStore = api;
   if (typeof module === 'object' && module.exports) {

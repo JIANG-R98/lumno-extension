@@ -193,7 +193,124 @@ async function run() {
   );
   assert.strictEqual(indexedDbCalls.getAll, 0, 'targeted reads should never scan the full object store');
 
+  await testTileThumbnailIsASmallCroppedWebp();
+  await testThumbnailCacheKeepsTheMostRecentlySeenTiles();
+
   console.log('newtab wallpaper local store tests passed');
+}
+
+async function testTileThumbnailIsASmallCroppedWebp() {
+  const drawn = [];
+  const canvas = {
+    width: 0,
+    height: 0,
+    getContext: () => ({ drawImage: (...args) => drawn.push(args.slice(1)) }),
+    toDataURL: () => `data:image/webp;base64,${Buffer.alloc(9000, 1).toString('base64')}`
+  };
+  class FakeFileReader {
+    readAsDataURL() { this.result = 'data:image/jpeg;base64,c291cmNl'; this.onload(); }
+  }
+  class FakeImage {
+    set src(_value) { this.naturalWidth = 900; this.naturalHeight = 720; this.onload(); }
+  }
+  const store = wallpaperStoreApi.createWallpaperLocalStore({
+    documentObj: { createElement: () => canvas },
+    windowObj: { FileReader: FakeFileReader, Image: FakeImage }
+  });
+  const dataUrl = await store.buildTileThumbnail({ type: 'image/jpeg' });
+  assert.match(dataUrl, /^data:image\/webp;base64,/);
+  assert.strictEqual(canvas.width, 320, 'Tiles are encoded at 320 wide, enough for a 2x panel tile');
+  assert.strictEqual(canvas.height, 180);
+  assert.deepStrictEqual(drawn[0], [0, 107, 900, 506, 0, 0, 320, 180], 'A painting is cropped to the 16:9 tile');
+}
+
+// An in-memory IndexedDB with what the thumbnail cache uses: get, put, count and a cursor over an index.
+function createMemoryIndexedDb() {
+  const records = new Map();
+  let created = false;
+  return {
+    records,
+    open() {
+      const request = {};
+      setTimeout(() => {
+        const db = {
+          objectStoreNames: { contains: () => created },
+          createObjectStore: () => { created = true; return { createIndex() {} }; },
+          close() {},
+          transaction() {
+            let pending = 0;
+            const transaction = {};
+            const schedule = (step) => {
+              pending += 1;
+              setTimeout(() => {
+                step();
+                pending -= 1;
+                if (pending === 0) setTimeout(() => { if (pending === 0 && transaction.oncomplete) transaction.oncomplete(); }, 0);
+              }, 0);
+            };
+            const respond = (compute) => {
+              const op = {};
+              schedule(() => { op.result = compute(); if (op.onsuccess) op.onsuccess(); });
+              return op;
+            };
+            const store = {
+              get: (key) => respond(() => records.get(key)),
+              put: (value) => respond(() => { records.set(value.id, value); }),
+              count: () => respond(() => records.size),
+              index: () => ({
+                openCursor() {
+                  const keys = Array.from(records.values()).sort((a, b) => a.usedAt - b.usedAt).map((value) => value.id);
+                  let position = 0;
+                  const cursorRequest = {};
+                  const step = () => {
+                    const key = keys[position];
+                    cursorRequest.result = key === undefined ? null : {
+                      value: records.get(key),
+                      delete() { records.delete(key); },
+                      continue() { position += 1; schedule(step); }
+                    };
+                    if (cursorRequest.onsuccess) cursorRequest.onsuccess();
+                  };
+                  schedule(step);
+                  return cursorRequest;
+                }
+              })
+            };
+            transaction.objectStore = () => store;
+            return transaction;
+          }
+        };
+        request.result = db;
+        if (!created && request.onupgradeneeded) request.onupgradeneeded();
+        if (request.onsuccess) request.onsuccess();
+      }, 0);
+      return request;
+    }
+  };
+}
+
+async function testThumbnailCacheKeepsTheMostRecentlySeenTiles() {
+  const indexedDB = createMemoryIndexedDb();
+  let time = 1000;
+  const cache = wallpaperStoreApi.createWallpaperThumbnailCache({ windowObj: { indexedDB }, limit: 2, now: () => time });
+  const tile = (id) => ({ id, url: `https://picsum.photos/id/${id}/320/180`, dataUrl: `data:image/webp;base64,${id}` });
+  await cache.write(tile('a'));
+  time += 1;
+  await cache.write(tile('b'));
+  assert.deepStrictEqual((await cache.readByIds(['a', 'missing'])).map((record) => record.dataUrl),
+    ['data:image/webp;base64,a'], 'Only cached tiles are returned');
+  assert.strictEqual(indexedDB.records.get('a').usedAt, 1000, 'A tile read again within the hour is not rewritten');
+
+  time += 2 * 60 * 60 * 1000;
+  await cache.readByIds(['a']);
+  assert.strictEqual(indexedDB.records.get('a').usedAt, time, 'A tile shown again later moves to the front');
+  time += 1;
+  await cache.write(tile('c'));
+  assert.deepStrictEqual(Array.from(indexedDB.records.keys()).sort(), ['a', 'c'],
+    'Past the limit the tile seen longest ago is dropped');
+
+  await assert.rejects(() => wallpaperStoreApi.createWallpaperThumbnailCache({ windowObj: {} }).readByIds(['a']),
+    /IndexedDB is not available/);
 }
 
 run().catch((error) => {

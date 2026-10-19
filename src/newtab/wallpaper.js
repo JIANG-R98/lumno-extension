@@ -342,6 +342,11 @@
     const wallpaperImageCache = typeof WALLPAPER_LOCAL_STORE.createWallpaperImageCache === 'function'
       ? WALLPAPER_LOCAL_STORE.createWallpaperImageCache({ windowObj })
       : null;
+    // Without IndexedDB the tiles load from Picsum as before.
+    const wallpaperThumbnailCache = typeof WALLPAPER_LOCAL_STORE.createWallpaperThumbnailCache === 'function' &&
+      typeof localWallpaperStore.buildTileThumbnail === 'function' && windowObj && windowObj.indexedDB
+      ? WALLPAPER_LOCAL_STORE.createWallpaperThumbnailCache({ windowObj })
+      : null;
     // Pages without IndexedDB (some private windows) simply have no local copies;
     // any other failure of the stores is unexpected and worth a warning.
     function warnWallpaperStoreFailure(message) {
@@ -626,6 +631,11 @@
     const dailyWallpaperStandIns = new Map();
     // The upcoming photos the page has scheduled to cache, so repeated applies do not queue them again.
     let upcomingWallpaperCacheKey = '';
+    // Per curated photo: its panel tile from the thumbnail cache, '' while it is read or downloaded,
+    // or null when that failed and the tile loads from Picsum as before.
+    const curatedTileThumbnails = new Map();
+    // Shown while a tile is being read, so the tile does not start a Picsum request it may not need.
+    const EMPTY_TILE_IMAGE = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
     const LINK_WALLPAPER_ID_PATTERN = /^link-[a-z0-9]{4,32}$/;
     const LINK_WALLPAPER_URL_MAX_LENGTH = 2048;
     // chrome.storage.sync holds 8 KB per item; normalized URLs are ASCII, so length counts bytes.
@@ -4751,6 +4761,54 @@
       };
     }
 
+    function getCuratedTileThumbnailUrl(item) {
+      const url = getWallpaperThumbnailUrl(item);
+      // A photo with a cached wallpaper copy already shows that copy's thumbnail.
+      if (!wallpaperThumbnailCache || url !== item.thumbnailUrl) return url;
+      const tile = curatedTileThumbnails.get(item.id);
+      // The closed panel keeps its grid in the page, where a Picsum URL would load on every new tab;
+      // a tile not read yet stays empty until the curated tab shows it.
+      return tile === null ? url : tile || EMPTY_TILE_IMAGE;
+    }
+
+    // Tiles the curated tab shows come from this device's thumbnail cache; a tile seen for the
+    // first time downloads once and is kept, so reopening the panel, even days later, asks Picsum
+    // only for photos it has not shown before.
+    function loadCuratedTileThumbnails(items) {
+      if (!wallpaperThumbnailCache || !wallpaperPanelOpen || activeWallpaperTab !== 'curated') return items;
+      const pending = items.filter((item) => item.thumbnailUrl && !curatedTileThumbnails.has(item.id) &&
+        getWallpaperThumbnailUrl(item) === item.thumbnailUrl);
+      if (!pending.length) return items;
+      pending.forEach((item) => curatedTileThumbnails.set(item.id, ''));
+      wallpaperThumbnailCache.readByIds(pending.map((item) => item.id)).catch(() => []).then((records) => {
+        const stored = new Map(records.filter((record) => record && record.dataUrl)
+          .map((record) => [record.id, record]));
+        pending.forEach((item) => {
+          const record = stored.get(item.id);
+          if (record && record.url === item.thumbnailUrl) {
+            curatedTileThumbnails.set(item.id, record.dataUrl);
+          } else {
+            downloadCuratedTileThumbnail(item);
+          }
+        });
+        renderWallpaperPanelState();
+      });
+      return items;
+    }
+
+    function downloadCuratedTileThumbnail(item) {
+      fetchCustomWallpaperFile(item.thumbnailUrl)
+        .then((file) => localWallpaperStore.buildTileThumbnail(file))
+        .then((dataUrl) => {
+          curatedTileThumbnails.set(item.id, dataUrl);
+          wallpaperThumbnailCache.write({ id: item.id, url: item.thumbnailUrl, dataUrl })
+            .catch(warnWallpaperStoreFailure('Could not cache a wallpaper thumbnail.'));
+        }, () => {
+          curatedTileThumbnails.set(item.id, null);
+        })
+        .then(() => renderWallpaperPanelState());
+    }
+
     function buildCuratedWallpaperState(label, selectedId, selectedTileId) {
       const selected = REMOTE_CONTENT.getWallpaperProvider(selectedId) === 'curated'
         ? getWallpaperById(selectedId)
@@ -4781,14 +4839,14 @@
         selected: photoLabel
           ? buildSelectedSourceState(photoLabel, getCuratedPhotoMeta(selected), selected.sourceUrl)
           : NO_SELECTED_SOURCE,
-        tiles: getCuratedTileItems().map((item) => {
+        tiles: loadCuratedTileThumbnails(getCuratedTileItems()).map((item) => {
           const wallpaper = remoteClient.getWallpaper(item.id);
           const tileLabel = [getCuratedPhotoLabel(wallpaper), wallpaper && wallpaper.title ? wallpaper.name : '']
             .filter(Boolean)
             .join(' · ');
           return {
             id: item.id,
-            thumbnailUrl: getWallpaperThumbnailUrl(item),
+            thumbnailUrl: getCuratedTileThumbnailUrl(item),
             selected: item.id === selectedTileId,
             tooltip: tileLabel,
             label: getWallpaperSelectLabel(tileLabel)

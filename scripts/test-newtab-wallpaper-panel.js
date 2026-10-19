@@ -4203,6 +4203,64 @@ async function testDailySlotKeepsThePreviousCopyUntilTheNewOneIsCached() {
   assert.ok(!harness.cache.images.has(friday.id), 'The stand-in is dropped once it is no longer shown');
 }
 
+async function testCuratedTilesComeFromTheThumbnailCache() {
+  const remote = require('../src/newtab/remote-content.js');
+  const thumbs = new Map();
+  const requests = [];
+  const localStoreApi = createLinkLocalStoreApi(createWallpaperImageCacheDouble(), []);
+  const createStore = localStoreApi.createWallpaperLocalStore;
+  localStoreApi.createWallpaperLocalStore = () => ({
+    ...createStore(),
+    buildTileThumbnail: async (file) => copyDataUrl(await file.text())
+  });
+  localStoreApi.createWallpaperThumbnailCache = () => ({
+    readByIds: async (ids) => ids.map((id) => thumbs.get(id)).filter(Boolean),
+    write: async (record) => { thumbs.set(record.id, record); }
+  });
+  const openCuratedTab = async (fetchRemoteContent) => {
+    const { runtime } = createCuratedRuntime(createMemoryStorage({ [WALLPAPER_STORAGE_KEY]: DEFAULT_WALLPAPER_ID }), {
+      sandbox: { localStoreApi, prepareWindow: (windowObj) => { windowObj.indexedDB = {}; } },
+      fetchRemoteContent
+    });
+    await runtime.bootstrapInitialWallpaper();
+    runtime.createControls();
+    assert.ok(panelState(runtime).wallpaper.curated.tiles.every((tile) => tile.thumbnailUrl.startsWith('data:image/gif')),
+      'The closed panel loads no curated tiles, so a new tab asks Picsum for nothing');
+    openPanel(runtime);
+    // The curated tab opens on the random mix.
+    panelActions(runtime).selectSourceTab('curated');
+    return runtime;
+  };
+  const online = async (url) => {
+    requests.push(url);
+    return { ok: true, status: 200, url, blob: async () => new Blob([url], { type: 'image/jpeg' }) };
+  };
+  const tiles = (runtime) => panelState(runtime).wallpaper.curated.tiles;
+
+  const first = await openCuratedTab(online);
+  const shown = tiles(first).map((tile) => remote.wallpaperFromId(tile.id));
+  assert.ok(shown.every((photo) => photo.thumbnailUrl.endsWith('/320/180')), 'Tiles ask Picsum for 320×180');
+  assert.ok(tiles(first).every((tile) => tile.thumbnailUrl.startsWith('data:image/gif')),
+    'While the cache is read, tiles start no Picsum request of their own');
+  await settleWallpaperCaching();
+  assert.deepStrictEqual(requests, shown.map((photo) => photo.thumbnailUrl), 'Each tile downloads once');
+  assert.deepStrictEqual(tiles(first).map((tile) => tile.thumbnailUrl),
+    shown.map((photo) => copyDataUrl(photo.thumbnailUrl)), 'Tiles show the copies kept on this device');
+  assert.deepStrictEqual(Array.from(thumbs.keys()), shown.map((photo) => photo.id));
+
+  const reopened = await openCuratedTab(online);
+  await settleWallpaperCaching();
+  assert.strictEqual(requests.length, shown.length, 'Opening the panel again asks Picsum for nothing');
+  assert.deepStrictEqual(tiles(reopened).map((tile) => tile.thumbnailUrl),
+    shown.map((photo) => copyDataUrl(photo.thumbnailUrl)));
+
+  thumbs.clear();
+  const offline = await openCuratedTab(async () => { throw new Error('offline'); });
+  await settleWallpaperCaching();
+  assert.deepStrictEqual(tiles(offline).map((tile) => tile.thumbnailUrl), shown.map((photo) => photo.thumbnailUrl),
+    'A tile that cannot be cached loads from Picsum as before');
+}
+
 async function testCuratedPhotoOpensNewTabsFromTheCachedCopy() {
   const remote = require('../src/newtab/remote-content.js');
   const requests = [];
@@ -4480,6 +4538,7 @@ Promise.resolve()
   .then(testOpenTabRollsOverWithoutOpeningThePanel)
   .then(testCuratedDailyCachesTomorrowsPhotoAhead)
   .then(testDailySlotKeepsThePreviousCopyUntilTheNewOneIsCached)
+  .then(testCuratedTilesComeFromTheThumbnailCache)
   .then(testWallpaperSourcesHintWaitsForFinalFocusRoute)
   .then(testNewtabFaviconPreloadAppliesCachedAlternateBeforeMainRuntime)
   .then(testWallpaperPreloadUsesTheCachedResolvedMode)
