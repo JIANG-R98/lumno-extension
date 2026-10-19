@@ -663,6 +663,24 @@ assert.strictEqual(
   '127.0.0.1:8765/path',
   'current-page matching may ignore the query while still preserving the port'
 );
+[
+  ['baidu。com', 'https://baidu.com'],
+  ['www．example。co。uk/docs', 'https://www.example.co.uk/docs'],
+  ['example｡com:8080/a。b', 'https://example.com:8080/a。b']
+].forEach(([input, expected]) => {
+  assert.strictEqual(
+    search.getDirectNavigationUrl(input),
+    expected,
+    `${input} should read full-width stops in the host as dots`
+  );
+});
+['你好。世界', '今天天气不错。', '1。2', 'hello。', 'vue。js 教程'].forEach((input) => {
+  assert.strictEqual(
+    search.getDirectNavigationUrl(input),
+    '',
+    `${input} should still be searched, not opened`
+  );
+});
 assert.strictEqual(
   search.getDirectNavigationUrl('site:example.com'),
   '',

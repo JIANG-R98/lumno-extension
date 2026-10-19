@@ -441,14 +441,33 @@
     return DIRECT_NAVIGATION_SINGLE_COLON_PROTOCOLS.has(protocol);
   }
 
+  // A CJK input method types "baidu。com" for "baidu.com". Read the full-width
+  // stops in the host as dots, but only when that yields a plain ASCII domain,
+  // so a sentence ending in "。" still searches.
+  function normalizeFullWidthHostDots(input) {
+    if (!/[。．｡]/.test(input)) {
+      return input;
+    }
+    const match = input.match(/^([^/?#\s]+)([/?#].*)?$/);
+    if (!match) {
+      return input;
+    }
+    const authority = match[1].replace(/[。．｡]/g, '.');
+    if (!/^(?:[a-z0-9-]+\.)+[a-z]{2,}(?::\d{1,5})?$/i.test(authority)) {
+      return input;
+    }
+    return `${authority}${match[2] || ''}`;
+  }
+
   function getDirectNavigationUrl(input) {
-    const raw = String(input || '').trim();
-    if (!raw) {
+    const trimmed = String(input || '').trim();
+    if (!trimmed) {
       return '';
     }
-    if (isExplicitDirectNavigationUrl(raw)) {
-      return raw;
+    if (isExplicitDirectNavigationUrl(trimmed)) {
+      return trimmed;
     }
+    const raw = normalizeFullWidthHostDots(trimmed);
     let normalizedInput = raw.match(/^(\d{1,3})([.\s]\d{1,3}){0,3}(?::\d{1,5})?(?:[/?#].*)?$/)
       ? raw.replace(/\s+/g, '.').replace(/\.{2,}/g, '.')
       : raw;
