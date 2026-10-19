@@ -2853,7 +2853,29 @@ chrome.tabs.onCreated.addListener((tab) => {
   schedulePersistPinnedTabSnapshot();
 });
 
+// A development build in August 2026 restricted chrome.storage.local to
+// trusted contexts. Chrome keeps an area's access level after the code that
+// set it is gone, so content scripts in those profiles still cannot read local
+// storage, and the overlay waited out every settings-mode retry (about two
+// seconds) before it showed; a second shortcut press closed it unseen. Put
+// the default back whenever the extension is installed or updated.
+function restoreLocalStorageContentScriptAccess() {
+  const localArea = chrome && chrome.storage ? chrome.storage.local : null;
+  if (!localArea || typeof localArea.setAccessLevel !== 'function') {
+    return;
+  }
+  try {
+    const pending = localArea.setAccessLevel({ accessLevel: 'TRUSTED_AND_UNTRUSTED_CONTEXTS' });
+    if (pending && typeof pending.catch === 'function') {
+      pending.catch(warnBackgroundFailure('Failed to restore content script access to local storage.'));
+    }
+  } catch (error) {
+    warnBackgroundFailure('Failed to restore content script access to local storage.')(error);
+  }
+}
+
 chrome.runtime.onInstalled.addListener((details) => {
+  restoreLocalStorageContentScriptAccess();
   // Static manifest content scripts only apply to future document loads. A
   // development-extension reload keeps existing tabs alive, so install the
   // shortcut observer there now instead of waiting for the next shortcut.

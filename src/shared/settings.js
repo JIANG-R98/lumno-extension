@@ -964,6 +964,9 @@
   // attempt goes through unless the burst keeps going.
   const STORAGE_RATE_LIMIT_RETRY_MS = 2500;
   const STORAGE_RATE_LIMIT_PATTERN = /MAX_(?:SUSTAINED_)?WRITE_OPERATIONS_PER_(?:MINUTE|HOUR)/;
+  // Chrome's answer to a content script reading an area restricted to trusted
+  // contexts. It holds for the life of the context, so retrying cannot help.
+  const STORAGE_ACCESS_DENIED_PATTERN = /Access to storage is not allowed from this context/i;
   function isStorageRateLimitError(error) {
     return STORAGE_RATE_LIMIT_PATTERN.test(String(error && error.message || error || ''));
   }
@@ -1273,7 +1276,8 @@
           settled = true;
           const lastError = error || (chromeApi && chromeApi.runtime && chromeApi.runtime.lastError);
           if (lastError && !observedModeChange) {
-            if (attempt < modeRetryDelays.length) {
+            const accessDenied = STORAGE_ACCESS_DENIED_PATTERN.test(String(lastError.message || lastError));
+            if (!accessDenied && attempt < modeRetryDelays.length) {
               setTimeout(() => readMode(attempt + 1), modeRetryDelays[attempt]);
               return;
             }

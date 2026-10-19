@@ -596,13 +596,15 @@ async function testStorageFailures() {
     assert.strictEqual(chromeApi.storage.sync.calls - providerCalls, 2, 'a provider area is retried once in total');
 
     // The local-primary flag decides where settings live.
-    function modeApi(failuresBeforeRead) {
+    function modeApi(failuresBeforeRead, failureMessage = 'IO error') {
       const api = { runtime: { lastError: null }, storage: { sync: failingArea({ runtime: {} }, []) } };
       let remaining = failuresBeforeRead;
+      api.modeReads = 0;
       api.storage.local = { get(_keys, callback) {
+        api.modeReads += 1;
         if (remaining > 0) {
           remaining -= 1;
-          api.runtime.lastError = { message: 'IO error' };
+          api.runtime.lastError = { message: failureMessage };
           callback(undefined);
           api.runtime.lastError = null;
           return;
@@ -619,6 +621,14 @@ async function testStorageFailures() {
     await unknown.ready;
     assert.deepStrictEqual([unknown.getActiveAreaName(), unknown.isModeKnown()], ['sync', false],
       'an unreadable mode is reported as unknown');
+    // A content script denied local storage gets the same answer on every
+    // read; the overlay waits for this mode before it shows, so it must not
+    // sit through the retries.
+    const deniedApi = modeApi(10, 'Access to storage is not allowed from this context.');
+    const denied = settings.createProviderStorageRuntime(deniedApi, { modeRetryDelaysMs: [60000] });
+    await denied.ready;
+    assert.deepStrictEqual([denied.getActiveAreaName(), denied.isModeKnown(), deniedApi.modeReads], ['sync', false, 1],
+      'a denied mode read is not retried');
   } finally {
     console.warn = quietConsole;
   }
