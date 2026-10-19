@@ -128,6 +128,10 @@
       syncFontSizeControls(true);
     }
 
+    function getFont() {
+      return settings.NEWTAB_QUOTE_FONTS.find((font) => font.id === prefs.font) || settings.NEWTAB_QUOTE_FONTS[0];
+    }
+
     // Listed in on-page order, top to bottom.
     const POSITIONS = ['top', 'input', 'search', 'bottom'];
     function labels() {
@@ -219,6 +223,15 @@
           onChange: (position) => persist({ position })
         });
       }
+      if (refs.quoteFontLabel) refs.quoteFontLabel.textContent = t('newtab_quote_font', 'Font');
+      if (view && view.renderQuoteFontSelect) {
+        view.renderQuoteFontSelect({
+          ariaLabel: t('newtab_quote_font_label', 'Quote font'),
+          options: settings.NEWTAB_QUOTE_FONTS.map((font) => ({ value: font.id, label: t(font.labelKey, font.label) })),
+          value: getFont().id,
+          onChange: (font) => persist({ font })
+        });
+      }
     }
     // Tabs hug their labels, so the indicator follows the active button's measured box.
     function syncTabIndicator(group) {
@@ -263,6 +276,7 @@
       element.dataset.position = prefs.position;
       document.body.dataset.quotePosition = isActive() ? prefs.position : 'off';
       element.style.setProperty('--x-nt-quote-font-size', `${draftFontSize === null ? prefs.fontSize : draftFontSize}px`);
+      element.style.setProperty('--x-nt-quote-font-family', getFont().family);
       element.hidden = !isActive() || !quote;
       // Re-inserting a node restarts its entry animation, so only move it when its slot changed.
       const place = (parent, before) => {

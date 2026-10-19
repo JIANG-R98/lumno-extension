@@ -3,7 +3,7 @@
 
   // The daily quote on the Options page: the same settings as the quote section
   // of New Tab's appearance panel. Both edit one synced preference record
-  // (enabled, provider, category, position, font size); the custom collection
+  // (enabled, provider, category, position, font, font size); the custom collection
   // lives in chrome.storage.local and travels with WebDAV, not browser sync.
   const POSITIONS = Object.freeze(['top', 'input', 'search', 'bottom']);
 
@@ -30,6 +30,8 @@
       categoryTabs: byId('_x_extension_newtab_quote_category_tabs_wrap_2026_unique_'),
       positionRow: byId('_x_extension_newtab_quote_position_row_2026_unique_'),
       position: byId('_x_extension_newtab_quote_position_select_2026_unique_'),
+      fontRow: byId('_x_extension_newtab_quote_font_row_2026_unique_'),
+      font: byId('_x_extension_newtab_quote_font_select_2026_unique_'),
       fontSizeRow: byId('_x_extension_newtab_quote_font_size_row_2026_unique_'),
       fontSizeHost: byId('_x_extension_newtab_quote_font_size_control_2026_unique_')
     };
@@ -56,6 +58,7 @@
     });
     options.registerToggle(els.toggle, 'newtab-quote');
     options.registerSelect(els.position, 'newtab-quote-position');
+    options.registerSelect(els.font, 'newtab-quote-font');
 
     function persist(patch) {
       const next = settings.normalizeNewtabQuotePrefs(Object.assign({}, prefs, patch));
@@ -150,6 +153,7 @@
     function render() {
       options.setToggleState(els.toggle, prefs.enabled);
       options.setSelectState(els.position, POSITIONS.includes(prefs.position) ? prefs.position : 'search');
+      options.setSelectState(els.font, prefs.font);
       const isCustom = prefs.provider === 'custom';
       const infoKey = isCustom ? 'newtab_quote_provider_custom' : 'newtab_quote_provider';
       const infoText = isCustom
@@ -170,6 +174,7 @@
           [els.libraryRow, prefs.enabled && isCustom],
           [els.categoryRow, prefs.enabled && !isCustom],
           [els.positionRow, prefs.enabled],
+          [els.fontRow, prefs.enabled],
           [els.fontSizeRow, prefs.enabled]
         ].forEach(([row, visible]) => {
           changed = options.setRowVisible(row, visible) || changed;
@@ -227,6 +232,7 @@
 
     els.toggle.addEventListener('change', () => persist({ enabled: Boolean(els.toggle.checked) }));
     els.position.addEventListener('change', () => persist({ position: els.position.value }));
+    els.font.addEventListener('change', () => persist({ font: els.font.value }));
     els.importButton.addEventListener('click', () => els.file.click());
     els.file.addEventListener('change', () => {
       const file = els.file.files && els.file.files[0];

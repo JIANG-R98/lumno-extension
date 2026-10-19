@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Rebuild the LXGW WenKai subset used by the New Tab quote.
+"""Rebuild a bundled face for the New Tab quote.
 
 Requires fonttools and brotli (pip install fonttools brotli). Inputs:
-  - LXGWWenKai-Regular.ttf from https://github.com/lxgw/LxgwWenKai/releases
+  - the face's TTF:
+      wenkai   LXGWWenKai-Regular.ttf from https://github.com/lxgw/LxgwWenKai/releases
+      xiaowei  ofl/zcoolxiaowei/ZCOOLXiaoWei-Regular.ttf from https://github.com/google/fonts
   - d.json and i.json from https://github.com/hitokoto-osc/sentences-bundle/tree/master/sentences
     (the literature and poetry categories the quote requests)
 
@@ -11,7 +13,9 @@ The primary file covers ASCII, Latin-1, CJK punctuation, GB2312 symbols and the
 other character seen in the hitokoto bundle. Both are declared with
 unicode-range so the extended file only loads when a quote needs it.
 
-Usage: python3 scripts/subset-quote-font.py <ttf> <d.json> <i.json>
+The face ids match NEWTAB_QUOTE_FONTS in src/shared/settings.js.
+
+Usage: python3 scripts/subset-quote-font.py <face> <ttf> <d.json> <i.json>
 """
 import json
 import sys
@@ -20,7 +24,13 @@ from pathlib import Path
 from fontTools import subset
 from fontTools.ttLib import TTFont
 
-OUT_DIR = Path(__file__).resolve().parent.parent / 'assets' / 'fonts' / 'lxgw-wenkai'
+FONTS_DIR = Path(__file__).resolve().parent.parent / 'assets' / 'fonts'
+
+# id: (output directory, CSS family, file prefix, header label)
+FACES = {
+    'wenkai': ('lxgw-wenkai', 'LXGW WenKai', 'LXGWWenKai-Regular', 'LXGW WenKai v1.522 Regular'),
+    'xiaowei': ('zcool-xiaowei', 'Lumno Quote XiaoWei', 'ZCOOLXiaoWei-Regular', 'ZCOOL XiaoWei v1.000 Regular'),
+}
 
 
 def gb2312_rows(first, last):
@@ -62,7 +72,9 @@ def write_subset(ttf, codepoints, out):
     font.save(out)
 
 
-def main(ttf, *sentence_files):
+def main(face, ttf, *sentence_files):
+    directory, family, prefix, label = FACES[face]
+    out_dir = FONTS_DIR / directory
     available = set(TTFont(ttf).getBestCmap())
     base = set(range(0x20, 0x7F)) | set(range(0xA0, 0x100))
     base |= set(range(0x2010, 0x2027)) | set(range(0x3000, 0x3020)) | set(range(0xFF01, 0xFF5F))
@@ -78,11 +90,11 @@ def main(ttf, *sentence_files):
 
     faces = []
     for name, codepoints in (('primary', primary), ('extended', extended)):
-        filename = f'LXGWWenKai-Regular-{name}.woff2'
-        write_subset(ttf, codepoints, OUT_DIR / filename)
+        filename = f'{prefix}-{name}.woff2'
+        write_subset(ttf, codepoints, out_dir / filename)
         faces.append(
             '@font-face {\n'
-            '  font-family: "LXGW WenKai";\n'
+            f'  font-family: "{family}";\n'
             f'  src: url("./{filename}") format("woff2");\n'
             '  font-style: normal;\n'
             '  font-weight: 400;\n'
@@ -90,13 +102,13 @@ def main(ttf, *sentence_files):
             f'  unicode-range: {unicode_range(codepoints)};\n'
             '}\n'
         )
-    header = ('/* LXGW WenKai v1.522 Regular, subset to woff2 for the New Tab quote (SIL OFL 1.1, see OFL.txt).\n'
-              '   Rebuild with scripts/subset-quote-font.py. */\n')
-    (OUT_DIR / 'lxgw-wenkai.css').write_text(header + ''.join(faces), encoding='utf-8')
+    header = (f'/* {label}, subset to woff2 for the New Tab quote (SIL OFL 1.1, see OFL.txt).\n'
+              f'   Rebuild with scripts/subset-quote-font.py {face}. */\n')
+    (out_dir / f'{directory}.css').write_text(header + ''.join(faces), encoding='utf-8')
     print(f'primary {len(primary)} glyphs, extended {len(extended)} glyphs')
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 4 or sys.argv[1] not in FACES:
         sys.exit(__doc__)
-    main(sys.argv[1], *sys.argv[2:])
+    main(sys.argv[1], sys.argv[2], *sys.argv[3:])

@@ -888,6 +888,7 @@ function CuratedMixSelect({
 const EFFECT_SELECT_ID = 'x-nt-wallpaper-effect';
 const CURATED_MIX_SELECT_ID = 'x-nt-curated-mix';
 const QUOTE_POSITION_SELECT_ID = 'x-nt-quote-position';
+const QUOTE_FONT_SELECT_ID = 'x-nt-quote-font';
 const BOOKMARK_VIEW_MODE_SELECT_ID = 'x-nt-bookmark-view-mode';
 const BOOKMARK_TOPBAR_SURFACE_SELECT_ID = 'x-nt-bookmark-topbar-surface';
 const GLASS_STYLE_SELECT_ID = 'x-nt-glass-style';
@@ -898,12 +899,13 @@ const SELECT_HOST_REFS: Record<string, string> = {
   [EFFECT_SELECT_ID]: 'effectSelectHost',
   [CURATED_MIX_SELECT_ID]: 'curatedMixSelectHost',
   [QUOTE_POSITION_SELECT_ID]: 'quotePositionSelectHost',
+  [QUOTE_FONT_SELECT_ID]: 'quoteFontSelectHost',
   [BOOKMARK_VIEW_MODE_SELECT_ID]: 'bookmarkViewModeSelectHost',
   [BOOKMARK_TOPBAR_SURFACE_SELECT_ID]: 'bookmarkTopbarSurfaceSelectHost'
 };
 const SELECT_IDS = Object.keys(SELECT_HOST_REFS);
 
-type ExternalSelectKey = 'quotePosition' | 'bookmarkViewMode' | 'bookmarkTopbarSurface';
+type ExternalSelectKey = 'quotePosition' | 'quoteFont' | 'bookmarkViewMode' | 'bookmarkTopbarSurface';
 
 const EFFECT_SLIDER_REFS: Record<EffectSliderKey, string> = {
   strength: 'effectStrength',
@@ -1659,6 +1661,15 @@ function WallpaperPanel({
                   select={externalSelects.quotePosition}
                 />
               </SettingRow>
+              <SettingRow titleRef="quoteFontLabel">
+                <PanelSelect
+                  documentObj={documentObj}
+                  hostRef="quoteFontSelectHost"
+                  id={QUOTE_FONT_SELECT_ID}
+                  registerControls={registerSelect}
+                  select={externalSelects.quoteFont}
+                />
+              </SettingRow>
               <div {...ref('quoteFontSizeRow')} className="x-nt-overlay-control x-nt-quote-font-size">
                 <RangeSliderField
                   label={<span {...ref('quoteFontSizeTitle')} className="x-nt-appearance-setting-title" />}
@@ -2195,6 +2206,7 @@ export interface WallpaperViewController {
   renderBookmarkTopbarSurfaceSelect(select: PanelSelectModel): void;
   renderBookmarkViewModeSelect(select: PanelSelectModel): void;
   renderQuotePositionSelect(select: PanelSelectModel): void;
+  renderQuoteFontSelect(select: PanelSelectModel): void;
 }
 
 export function createWallpaperViewController(
@@ -2288,6 +2300,9 @@ export function createWallpaperViewController(
     },
     renderQuotePositionSelect(select: PanelSelectModel) {
       renderExternalSelect('quotePosition', select);
+    },
+    renderQuoteFontSelect(select: PanelSelectModel) {
+      renderExternalSelect('quoteFont', select);
     },
     renderBookmarkViewModeSelect(select: PanelSelectModel) {
       renderExternalSelect('bookmarkViewMode', select);

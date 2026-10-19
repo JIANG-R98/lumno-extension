@@ -73,6 +73,33 @@
   const NEWTAB_QUOTE_FONT_SIZE_MIN = 12;
   const NEWTAB_QUOTE_FONT_SIZE_MAX = 24;
   const NEWTAB_QUOTE_FONT_SIZE_DEFAULT = 15;
+  const NEWTAB_QUOTE_FONT_DEFAULT = 'wenkai';
+  // The bundled faces are subsets declared in assets/fonts/<face>/<face>.css
+  // (scripts/subset-quote-font.py); the sans face only names system fonts.
+  // Glyphs a face lacks fall back along its own stack.
+  const NEWTAB_QUOTE_SERIF_FALLBACK = '"Songti SC", "Songti TC", "STSong", "SimSun", "NSimSun", ' +
+    '"Noto Serif CJK SC", "Source Han Serif SC", Georgia, "Times New Roman", serif';
+  const NEWTAB_QUOTE_FONTS = Object.freeze([
+    Object.freeze({
+      id: 'wenkai',
+      labelKey: 'newtab_quote_font_wenkai',
+      label: 'LXGW WenKai',
+      family: `"LXGW WenKai", ${NEWTAB_QUOTE_SERIF_FALLBACK}`
+    }),
+    Object.freeze({
+      id: 'xiaowei',
+      labelKey: 'newtab_quote_font_xiaowei',
+      label: 'ZCOOL XiaoWei',
+      family: `"Lumno Quote XiaoWei", ${NEWTAB_QUOTE_SERIF_FALLBACK}`
+    }),
+    Object.freeze({
+      id: 'sans',
+      labelKey: 'newtab_quote_font_sans',
+      label: 'Sans-serif',
+      family: '"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", ' +
+        '"Source Han Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+    })
+  ]);
   const BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY = '_x_extension_bookmark_folder_icons_visible_2026_unique_';
   // Folder colors are keyed by bookmark path, not the device-only bookmark id.
   const BOOKMARK_FOLDER_COLOR_REFS_STORAGE_KEY = '_x_extension_bookmark_folder_color_refs_2026_unique_';
@@ -483,6 +510,7 @@
       category: source.category === 'poetry' ? 'poetry' : 'literature',
       // 'custom' reads the reader's imported collection on this device.
       provider: source.provider === 'custom' ? 'custom' : 'hitokoto',
+      font: NEWTAB_QUOTE_FONTS.some((font) => font.id === source.font) ? source.font : NEWTAB_QUOTE_FONT_DEFAULT,
       fontSize: Number.isFinite(size)
         ? Math.min(NEWTAB_QUOTE_FONT_SIZE_MAX, Math.max(NEWTAB_QUOTE_FONT_SIZE_MIN, Math.round(size)))
         : NEWTAB_QUOTE_FONT_SIZE_DEFAULT
@@ -1522,6 +1550,8 @@
     NEWTAB_QUOTE_FONT_SIZE_MIN,
     NEWTAB_QUOTE_FONT_SIZE_MAX,
     NEWTAB_QUOTE_FONT_SIZE_DEFAULT,
+    NEWTAB_QUOTE_FONT_DEFAULT,
+    NEWTAB_QUOTE_FONTS,
     BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY,
     BOOKMARK_FOLDER_COLOR_REFS_STORAGE_KEY,
     BOOKMARK_FOLDER_COLOR_PRESETS_STORAGE_KEY,

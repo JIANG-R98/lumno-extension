@@ -3218,6 +3218,21 @@
   "newtab_wallpaper_context_menu_label": {
     "message": "壁纸操作"
   },
+  "newtab_quote_font": {
+    "message": "字体"
+  },
+  "newtab_quote_font_label": {
+    "message": "名句字体"
+  },
+  "newtab_quote_font_wenkai": {
+    "message": "霞鹜文楷"
+  },
+  "newtab_quote_font_xiaowei": {
+    "message": "站酷小薇"
+  },
+  "newtab_quote_font_sans": {
+    "message": "系统黑体"
+  },
   "newtab_quote_font_size": {
     "message": "字号"
   },

@@ -3218,6 +3218,21 @@
   "newtab_wallpaper_context_menu_label": {
     "message": "Wallpaper actions"
   },
+  "newtab_quote_font": {
+    "message": "Font"
+  },
+  "newtab_quote_font_label": {
+    "message": "Quote font"
+  },
+  "newtab_quote_font_wenkai": {
+    "message": "LXGW WenKai"
+  },
+  "newtab_quote_font_xiaowei": {
+    "message": "ZCOOL XiaoWei"
+  },
+  "newtab_quote_font_sans": {
+    "message": "System sans-serif"
+  },
   "newtab_quote_font_size": {
     "message": "Font size"
   },

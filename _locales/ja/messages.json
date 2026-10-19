@@ -3218,6 +3218,21 @@
   "newtab_wallpaper_context_menu_label": {
     "message": "壁紙の操作"
   },
+  "newtab_quote_font": {
+    "message": "フォント"
+  },
+  "newtab_quote_font_label": {
+    "message": "一言のフォント"
+  },
+  "newtab_quote_font_wenkai": {
+    "message": "LXGW WenKai"
+  },
+  "newtab_quote_font_xiaowei": {
+    "message": "ZCOOL XiaoWei"
+  },
+  "newtab_quote_font_sans": {
+    "message": "システムゴシック"
+  },
   "newtab_quote_font_size": {
     "message": "文字サイズ"
   },

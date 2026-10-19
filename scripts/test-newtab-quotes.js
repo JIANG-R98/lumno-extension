@@ -37,7 +37,11 @@ async function main() {
   };
   // Stands in for the panel view, which renders the position dropdown.
   let positionSelect = null;
-  const view = { renderQuotePositionSelect(model) { positionSelect = model; } };
+  let fontSelect = null;
+  const view = {
+    renderQuotePositionSelect(model) { positionSelect = model; },
+    renderQuoteFontSelect(model) { fontSelect = model; }
+  };
   const choosePosition = (value) => {
     assert(positionSelect.options.some((option) => option.value === value));
     positionSelect.onChange(value);
@@ -102,6 +106,16 @@ async function main() {
   assert.equal(prefs.fontSize, 24, 'An empty input must retain the saved font size');
   assert.equal(sizeInput.value, '24');
   assert.equal(requests, 1, 'Adjusting font size should reuse the current daily quote');
+  assert.deepEqual(fontSelect.options.map((option) => option.value), ['wenkai', 'xiaowei', 'sans']);
+  assert.equal(fontSelect.value, 'wenkai', 'Older saved preferences keep WenKai');
+  assert(runtime.element.style.getPropertyValue('--x-nt-quote-font-family').startsWith('"LXGW WenKai"'));
+  fontSelect.onChange('xiaowei');
+  assert.equal(prefs.font, 'xiaowei');
+  assert.equal(fontSelect.value, 'xiaowei');
+  assert(runtime.element.style.getPropertyValue('--x-nt-quote-font-family').startsWith('"Lumno Quote XiaoWei"'));
+  fontSelect.onChange('sans');
+  assert(runtime.element.style.getPropertyValue('--x-nt-quote-font-family').startsWith('"PingFang SC"'));
+  assert.equal(requests, 1, 'Changing the font should reuse the current daily quote');
   assert.deepEqual(positionSelect.options.map((option) => option.value), ['top', 'input', 'search', 'bottom'],
     'Positions are listed in on-page order');
   assert.equal(positionSelect.value, 'search');
@@ -155,8 +169,8 @@ async function main() {
   assert.equal(refs.quoteBody.hidden, true);
   assert.equal(refs.quoteEnabledToggle.checked, false);
   assert.equal(document.body.dataset.quotePosition, 'off');
-  assert.deepEqual(prefs, { enabled: false, position: 'bottom', category: 'poetry', fontSize: 24, provider: 'hitokoto' },
-    'The switch must preserve category, position and font size');
+  assert.deepEqual(prefs, { enabled: false, position: 'bottom', category: 'poetry', fontSize: 24, provider: 'hitokoto', font: 'sans' },
+    'The switch must preserve category, position, font and font size');
   refs.quoteEnabledToggle.click();
   await tick();
   resolveQuote({ text: 'restored poem', author: '', source: '', url: 'https://hitokoto.cn/' });
