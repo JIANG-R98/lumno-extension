@@ -206,6 +206,13 @@
       outgoing.querySelectorAll('[id]').forEach((element) => element.removeAttribute('id'));
       outgoing.setAttribute('aria-hidden', 'true');
       outgoing.inert = true;
+      // The copied cards still name lenses that go with the cards React is about to replace, and a
+      // missing filter voids a backdrop-filter, so they slide out with their blur alone. The marker
+      // keeps the liquid surfaces from building lenses for a page that is leaving.
+      outgoing.setAttribute('data-bookmark-page-outgoing', 'true');
+      outgoing.querySelectorAll('*').forEach((element) => {
+        if (element.style) element.style.removeProperty('--x-nt-glass-refraction');
+      });
       Object.assign(outgoing.style, {
         position: 'absolute', inset: '0', width: '100%', display: 'grid',
         gridTemplateColumns: gridStyle.gridTemplateColumns,
@@ -216,9 +223,10 @@
       renderCurrentBookmarkPage();
       updateBookmarkSectionPosition();
       const incomingCards = Array.from(grid.children);
-      const previousOverflow = grid.style.getPropertyValue('overflow');
-      const previousPriority = grid.style.getPropertyPriority('overflow');
-      grid.style.setProperty('overflow', 'hidden');
+      // Clip only across the slide, so the cards' shadows above and below stay drawn.
+      const previousOverflow = grid.style.getPropertyValue('overflow-x');
+      const previousPriority = grid.style.getPropertyPriority('overflow-x');
+      grid.style.setProperty('overflow-x', 'clip');
       grid.appendChild(outgoing);
       pageState.bookmarkPageAnimating = true;
       // Slide directly to the destination with a long, smooth deceleration.
@@ -239,8 +247,8 @@
           pageSlide = null;
           animations.forEach((animation) => animation.cancel());
           outgoing.remove();
-          if (previousOverflow) grid.style.setProperty('overflow', previousOverflow, previousPriority);
-          else grid.style.removeProperty('overflow');
+          if (previousOverflow) grid.style.setProperty('overflow-x', previousOverflow, previousPriority);
+          else grid.style.removeProperty('overflow-x');
           pageState.bookmarkPageAnimating = false;
         }
       };

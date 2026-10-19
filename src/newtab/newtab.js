@@ -197,7 +197,8 @@
   const NEWTAB_GLASS_ADAPTIVE_SELECTOR = [
     '#_x_extension_newtab_root_2024_unique_',
     '.x-nt-shortcut-icon',
-    '.x-nt-bookmark-card:not(.x-nt-bookmarks-topbar .x-nt-bookmark-card):not(.x-nt-bookmark-card-drag-preview)',
+    '.x-nt-bookmark-card:not(.x-nt-bookmarks-topbar .x-nt-bookmark-card):not(.x-nt-bookmark-card-drag-preview)' +
+      ':not([data-bookmark-page-outgoing] .x-nt-bookmark-card)',
     '.x-nt-recent-card-visual',
     '.x-nt-wallpaper-button',
     '.x-nt-feedback-button',

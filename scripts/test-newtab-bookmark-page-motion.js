@@ -35,6 +35,7 @@ function setup() {
         const card = window.document.createElement('button');
         card.id = `card-${item.id}`;
         card.textContent = String(item.id);
+        card.style.setProperty('--x-nt-glass-refraction', `url(#lens-${item.id})`);
         return card;
       }));
     }
@@ -59,6 +60,12 @@ async function run() {
   assert.equal(outgoing.getAttribute('aria-hidden'), 'true');
   assert.equal(outgoing.inert, true);
   assert.equal(outgoing.querySelectorAll('[id]').length, 0);
+  assert.equal(outgoing.getAttribute('data-bookmark-page-outgoing'), 'true', 'the leaving page builds no lenses');
+  assert([...outgoing.children].every(card => card.style.getPropertyValue('--x-nt-glass-refraction') === ''),
+    'the leaving cards drop the lenses of the cards they copy');
+  assert([...grid.children].filter(card => card !== outgoing)
+    .every(card => card.style.getPropertyValue('--x-nt-glass-refraction') !== ''), 'the arriving cards keep theirs');
+  assert.equal(grid.style.overflowX, 'clip', 'only the slide axis is clipped, so card shadows stay');
 
   // Early in a slide, further turns wait (only the latest one) for its tail.
   env.clock = 100;
@@ -85,7 +92,7 @@ async function run() {
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(state.bookmarkPageAnimating, false);
   assert.equal(grid.children.length, 2);
-  assert.equal(grid.style.overflow, '');
+  assert.equal(grid.style.overflowX, '');
 
   // Asking for the page already sliding in drops a queued turn.
   env.clock = 1000;
