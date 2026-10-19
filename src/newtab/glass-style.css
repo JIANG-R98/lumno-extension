@@ -275,12 +275,15 @@ body[data-glass-style] .x-nt-feedback-popover {
    blur, tint and refraction, so opening or closing the list changes nothing under the bar (the
    sampler gives the bar and the plate one tint, measured over the area the plate can cover). */
 /* One rim for the bar and the plate (read by createLiquidSurfaces): the plate takes over the bar's
-   backdrop as it opens, so a rim of its own would visibly bend and fringe the bar differently. */
+   backdrop as it opens, so a rim of its own would visibly bend and fringe the bar differently. The
+   rim is wide and bends further than a card's, as a thick glass edge does: the bar and its results
+   carry a denser tint, which would otherwise hide a narrow bend. */
 body[data-glass-style="liquid"] :is(
   #_x_extension_newtab_root_2024_unique_,
   #_x_extension_newtab_suggestions_surface_2026_unique_
 ) {
-  --x-nt-glass-rim: 16px;
+  --x-nt-glass-rim: 30px;
+  --x-nt-glass-refraction-strength: 1.6;
 }
 body[data-glass-style="liquid"] #_x_extension_newtab_suggestions_surface_2026_unique_ {
   background: var(--x-nt-glass-fill);
@@ -456,15 +459,17 @@ body[data-glass-style="liquid"][data-nt-ready="1"]:not([data-theme="dark"]) :is(
 }
 /* The search bar takes the results' veil and tint, so it reads the same pane closed and open.
    The open results run over the bookmark cards, whose labels and icons ghosted through the plain
-   veil's light blur and thin tint and competed with the rows; the search stack takes a softer blur,
-   a deeper veil and a denser tint (a pale, quiet wallpaper samples near the thin end). On a near
-   white wallpaper white glass also loses its outline, so its outer hairline and drop shadow are a
-   little stronger. */
+   veil's light blur and thin tint and competed with the rows; the search stack takes a deeper veil,
+   a denser tint (a pale, quiet wallpaper samples near the thin end) and a little more blur. Only a
+   little: the blur comes ahead of the lens, so a heavy one leaves the rim nothing sharp to bend.
+   White glass on a near white wallpaper also loses its outline, and a bent rim alone cannot show
+   there, so the edge is shaded as a thick pane is: a bright rim and a broad glow along the top
+   left, light caught again on the bottom right over a soft shade, and a firmer outer hairline. */
 body[data-glass-style="liquid"][data-nt-ready="1"]:not([data-theme="dark"]) :is(
   #_x_extension_newtab_root_2024_unique_,
   #_x_extension_newtab_suggestions_surface_2026_unique_
 )[data-glass-ink="dark"] {
-  --x-nt-glass-filter: blur(7px) saturate(112%) contrast(0.68) brightness(1.19);
+  --x-nt-glass-filter: blur(3px) saturate(115%) contrast(0.7) brightness(1.18);
 }
 body[data-glass-style="liquid"]:not([data-theme="dark"]) :is(
   #_x_extension_newtab_root_2024_unique_,
@@ -473,10 +478,12 @@ body[data-glass-style="liquid"]:not([data-theme="dark"]) :is(
   --x-nt-glass-tint-thin: 0.6;
   --x-nt-glass-tint-dense: 0.74;
   --x-nt-glass-edge:
-    inset 1px 1px 0.5px -0.5px rgba(255, 255, 255, 0.7),
-    inset -1px -1px 0.5px -0.5px rgba(255, 255, 255, 0.3),
-    inset 0 0 0 0.5px rgba(255, 255, 255, 0.14),
-    0 0 0 0.5px rgba(0, 0, 0, 0.11),
+    inset 1.5px 1.5px 1px -1px rgba(255, 255, 255, 1),
+    inset 6px 6px 14px -8px rgba(255, 255, 255, 1),
+    inset -1.5px -1.5px 1px -1px rgba(255, 255, 255, 0.7),
+    inset -6px -8px 16px -10px rgba(0, 0, 0, 0.16),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.25),
+    0 0 0 0.5px rgba(0, 0, 0, 0.12),
     0 4px 16px rgba(0, 0, 0, 0.1);
   --x-nt-glass-float-shadow: 0 18px 52px rgba(0, 0, 0, 0.16);
 }
@@ -588,7 +595,8 @@ body[data-glass-style] .x-lumno-search-input-mode__menu[data-surface="newtab"] {
   /* It sits inside the search bar: until its own lens is ready, none, rather than the bar's, which
      is sized to the bar. */
   --x-nt-glass-refraction: initial;
-  --x-nt-glass-rim: 16px;
+  --x-nt-glass-rim: 30px;
+  --x-nt-glass-refraction-strength: 1.6;
   background: var(--x-nt-glass-fill) !important;
   border-color: transparent !important;
   box-shadow: var(--x-nt-glass-edge), var(--x-nt-glass-float-shadow) !important;

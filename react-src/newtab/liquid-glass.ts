@@ -457,9 +457,9 @@ export function getSurfaceBezel(width: number, height: number) {
 }
 
 // How far the rim moves the backdrop. feDisplacementMap moves a pixel by up to half the scale, so
-// the outer edge samples LIQUID_GLASS_REFRACTION of the rim inward.
-export function getSurfaceDisplacementScale(bezel: number) {
-  return Math.round(2 * LIQUID_GLASS_REFRACTION * bezel);
+// the outer edge samples LIQUID_GLASS_REFRACTION of the rim inward, times the surface's `strength`.
+export function getSurfaceDisplacementScale(bezel: number, strength = 1) {
+  return Math.round(2 * LIQUID_GLASS_REFRACTION * strength * bezel);
 }
 
 function readCornerRadius(style: CSSStyleDeclaration, width: number, height: number) {
@@ -478,7 +478,8 @@ export interface LiquidSurfaces {
 // three displacement passes instead of one. A surface may
 // set its own rim width in the CSS property `rimProperty`, held whatever its size (narrowed only
 // on a surface too short for it), so a plate that grows keeps one lens instead of a new one at
-// every step. Sizes are followed from a ResizeObserver, which runs after layout and before paint,
+// every step. It may also scale how far its rim bends in the CSS property `strengthProperty` (1 when
+// unset), for a plate whose dense tint would otherwise hide the bend. Sizes are followed from a ResizeObserver, which runs after layout and before paint,
 // so a surface's lens fits its new size in the frame it changes.
 export function createLiquidSurfaces(options: {
   documentObj: Document;
@@ -486,9 +487,10 @@ export function createLiquidSurfaces(options: {
   property: string;
   rimProperty?: string;
   selector: string;
+  strengthProperty?: string;
   windowObj: Window;
 }): LiquidSurfaces {
-  const { documentObj, dispersionSelector, property, rimProperty, selector, windowObj } = options;
+  const { documentObj, dispersionSelector, property, rimProperty, selector, strengthProperty, windowObj } = options;
   const supported = isLiquidGlassSupported(windowObj);
   const idPrefix = '_x_extension_newtab_liquid_surface';
   const lenses = new Map<HTMLElement, ReturnType<typeof createLensSwitcher>>();
@@ -538,8 +540,10 @@ export function createLiquidSurfaces(options: {
     const rim = rimProperty ? Number.parseFloat(style.getPropertyValue(rimProperty)) : 0;
     const bezel = Math.round(rim > 0 ? Math.min(rim, Math.min(width, height) / 2) : getSurfaceBezel(width, height));
     const dispersion = Boolean(dispersionSelector && element.matches(dispersionSelector));
-    lens.update(`${radius}:${bezel}:${dispersion ? 'rgb' : 'g'}`, 'floating', radius, bezel,
-      getSurfaceDisplacementScale(bezel), dispersion);
+    const setStrength = strengthProperty ? Number.parseFloat(style.getPropertyValue(strengthProperty)) : 0;
+    const strength = setStrength > 0 ? setStrength : 1;
+    lens.update(`${radius}:${bezel}:${strength}:${dispersion ? 'rgb' : 'g'}`, 'floating', radius, bezel,
+      getSurfaceDisplacementScale(bezel, strength), dispersion);
   };
 
   const ResizeObserverCtor = (windowObj as Window & { ResizeObserver?: typeof ResizeObserver }).ResizeObserver;

@@ -53,6 +53,8 @@ describe('New Tab bookmarks bar liquid glass', () => {
     // The outer edge samples 0.8 of the rim inward, half the map's scale.
     expect(getSurfaceDisplacementScale(16)).toBe(26);
     expect(getSurfaceDisplacementScale(30)).toBe(48);
+    // A surface's strength scales the bend.
+    expect(getSurfaceDisplacementScale(30, 1.6)).toBe(77);
     // A rounder corner pushes the rim's bend off the straight edge near the corner.
     const straight = getRimDisplacement(40, 2, 120, 120, 'floating', { radius: 4, bezel: 16 });
     const round = getRimDisplacement(4, 2, 48, 48, 'floating', { radius: 16, bezel: 16 });
@@ -175,7 +177,7 @@ describe('New Tab bookmarks bar liquid glass', () => {
         return element;
       };
       const size = { width: 200, height: 64 };
-      const corner = { radius: '16px', rim: '' };
+      const corner = { radius: '16px', rim: '', strength: '' };
       const card = addSurface(size);
       let resized: ResizeObserverCallback = () => {};
       class FakeResizeObserver {
@@ -191,7 +193,7 @@ describe('New Tab bookmarks bar liquid glass', () => {
         navigator: { userAgent: 'Chrome/140.0' },
         getComputedStyle: () => ({
           borderTopLeftRadius: corner.radius,
-          getPropertyValue: (name: string) => (name === '--rim' ? corner.rim : '')
+          getPropertyValue: (name: string) => (name === '--rim' ? corner.rim : name === '--strength' ? corner.strength : '')
         }),
         requestAnimationFrame: (callback: FrameRequestCallback) => frames.push(callback),
         cancelAnimationFrame() {},
@@ -204,6 +206,7 @@ describe('New Tab bookmarks bar liquid glass', () => {
         property: '--refraction',
         rimProperty: '--rim',
         selector: '.glass',
+        strengthProperty: '--strength',
         windowObj
       });
       const resize = (width: number, height: number) => {
@@ -330,6 +333,23 @@ describe('New Tab bookmarks bar liquid glass', () => {
       resize(640, 40);
       await settle();
       expect(map()).toBe(getSurfaceDisplacementScale(20).toFixed(1));
+      surfaces.destroy();
+    });
+
+    it('bends further for a surface that sets its own strength', async () => {
+      const { corner, filters, pointedAt, resize, settle, surfaces } = setup();
+      corner.rim = '30px';
+      resize(640, 180);
+      await settle();
+      const first = pointedAt();
+      const map = () => (filters().at(-1)!.querySelector('feDisplacementMap') as Element).getAttribute('scale');
+      expect(map()).toBe(getSurfaceDisplacementScale(30).toFixed(1));
+      // A new strength is a new lens, with the same tiles.
+      corner.strength = '1.6';
+      resize(640, 181);
+      await settle();
+      expect(pointedAt()).not.toBe(first);
+      expect(map()).toBe(getSurfaceDisplacementScale(30, 1.6).toFixed(1));
       surfaces.destroy();
     });
 
