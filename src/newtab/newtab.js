@@ -6824,9 +6824,7 @@
   // site search panel fringe into colors along the rim: a card's wide rim turns even a slight split,
   // softened by the blur ahead of the lens, into an orange and blue haze in its corners. A surface
   // can set its rim in --x-nt-glass-rim and scale its bend in --x-nt-glass-refraction-strength (the
-  // search bar, its results plate and the site search panel share both, in glass-style.css), and
-  // hand its blur to the lens in --x-nt-glass-lens-blur, so the rim bends a sharp scene while the
-  // middle stays soft.
+  // search bar, its results plate and the site search panel share both, in glass-style.css).
   const NEWTAB_LIQUID_SEARCH_SELECTOR = [
     '#_x_extension_newtab_root_2024_unique_',
     '#_x_extension_newtab_suggestions_surface_2026_unique_',
@@ -6858,8 +6856,7 @@
       dispersionSelector: NEWTAB_LIQUID_SEARCH_SELECTOR,
       property: '--x-nt-glass-refraction',
       rimProperty: '--x-nt-glass-rim',
-      strengthProperty: '--x-nt-glass-refraction-strength',
-      blurProperty: '--x-nt-glass-lens-blur'
+      strengthProperty: '--x-nt-glass-refraction-strength'
     });
   }
 

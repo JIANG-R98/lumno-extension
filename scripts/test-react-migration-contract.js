@@ -165,14 +165,12 @@ const assertWithinBudget = (actualBytes, budgetKiB, label) => {
 // total to 813 KiB. The time color choice moved the New Tab route to 419 KiB and the total to
 // 814 KiB. The 12-hour clock and its AM/PM mark moved the New Tab route to 420 KiB and the
 // total to 815 KiB. Plates behind see-through shortcut icons, and their choice in the shortcut
-// dialog, moved the New Tab route to 421 KiB / 126 KiB gzip and the total to 816 KiB. The liquid
-// lens's Snell rim, its blur carried by the lens and its rereading on theme and ink changes moved
-// the New Tab route to 422 KiB and the total to 817 KiB / 238 KiB gzip.
+// dialog, moved the New Tab route to 421 KiB / 126 KiB gzip and the total to 816 KiB.
 const bundleBudgets = {
-  newtab: { uncompressed: 422, gzip: 126 },
+  newtab: { uncompressed: 421, gzip: 126 },
   options: { uncompressed: 290, gzip: 85 },
   overlay: { uncompressed: 274, gzip: 83 },
-  total: { uncompressed: 817, gzip: 238 }
+  total: { uncompressed: 816, gzip: 237 }
 };
 
 const retiredNewtabRendererScripts = [

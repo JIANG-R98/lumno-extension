@@ -458,39 +458,25 @@ body[data-glass-style="liquid"][data-nt-ready="1"]:not([data-theme="dark"]) :is(
   --x-nt-glass-filter: blur(2px) saturate(115%) contrast(0.74) brightness(1.15);
   --x-nt-glass-float-filter: blur(10px) saturate(125%) contrast(0.76) brightness(1.14);
 }
-body[data-glass-style="liquid"][data-nt-ready="1"]:not([data-theme="dark"]) :is(.x-nt-recent-card-visual, .x-nt-bookmark-card)[data-glass-ink="dark"] {
-  --x-nt-glass-filter: blur(2px) saturate(118%) contrast(0.8) brightness(1.11);
-  --x-nt-glass-lens-blur: 3;
-}
-/* A lens that carries the blur (createLiquidSurfaces marks the surface once it is on) bends the
-   sharp scene at the rim and blurs the middle itself, so the chain ahead of it drops its blur. */
-body[data-glass-style="liquid"][data-nt-ready="1"]:not([data-theme="dark"]) :is(.x-nt-recent-card-visual, .x-nt-bookmark-card)[data-glass-ink="dark"][data-liquid-lens-blur] {
-  --x-nt-glass-filter: saturate(118%) contrast(0.8) brightness(1.11);
+/* The dock's cards and the shortcut plates carry labels and icons too, and on light glass they
+   read like the results plate: the same veil, blur and tint (below), so each is as solid as the
+   open results rather than a thin film over the wallpaper. */
+body[data-glass-style="liquid"][data-nt-ready="1"]:not([data-theme="dark"]) :is(.x-nt-recent-card-visual, .x-nt-bookmark-card, .x-nt-shortcut-icon)[data-glass-ink="dark"] {
+  --x-nt-glass-filter: blur(3px) saturate(115%) contrast(0.7) brightness(1.18);
 }
 /* The search bar takes the results' veil and tint, so it reads the same pane closed and open.
    The open results run over the bookmark cards, whose labels and icons ghosted through the plain
    veil's light blur and thin tint and competed with the rows; the search stack takes a deeper veil,
-   a denser tint (a pale, quiet wallpaper samples near the thin end) and more blur. The lens carries
-   that blur, after the bend, so the rim still bends a sharp scene; until the lens is on, the chain
-   blurs a little instead. White glass on a near white wallpaper also loses its outline, so the edge
-   catches light along the top left and faintly on the bottom right, over a firmer outer hairline:
-   no shading inside, which made the plate look domed. */
+   a denser tint (a pale, quiet wallpaper samples near the thin end) and a little more blur. Only a
+   little: the blur comes ahead of the lens, so a heavy one leaves the rim nothing sharp to bend.
+   White glass on a near white wallpaper also loses its outline, and a bent rim alone cannot show
+   there, so the edge catches light along the top left and faintly on the bottom right, over a
+   firmer outer hairline. Only at the edge: a glow along the inside and a shade on the far side
+   made the plate look embossed. */
 body[data-glass-style="liquid"][data-nt-ready="1"]:not([data-theme="dark"]) :is(
   #_x_extension_newtab_root_2024_unique_,
   #_x_extension_newtab_suggestions_surface_2026_unique_
 )[data-glass-ink="dark"] {
-  --x-nt-glass-filter: blur(3px) saturate(115%) contrast(0.7) brightness(1.18);
-  --x-nt-glass-lens-blur: 6;
-}
-body[data-glass-style="liquid"][data-nt-ready="1"]:not([data-theme="dark"]) :is(
-  #_x_extension_newtab_root_2024_unique_,
-  #_x_extension_newtab_suggestions_surface_2026_unique_
-)[data-glass-ink="dark"][data-liquid-lens-blur] {
-  --x-nt-glass-filter: saturate(115%) contrast(0.7) brightness(1.18);
-}
-/* The site search panel inherits the bar's chain and lens blur; until its own lens is on, it keeps
-   the chain's blur rather than the bar's, which its lens already replaced. */
-body[data-glass-style="liquid"][data-nt-ready="1"]:not([data-theme="dark"]) #_x_extension_newtab_root_2024_unique_[data-liquid-lens-blur] .x-lumno-search-input-mode__menu[data-surface="newtab"]:not([data-liquid-lens-blur]) {
   --x-nt-glass-filter: blur(3px) saturate(115%) contrast(0.7) brightness(1.18);
 }
 body[data-glass-style="liquid"]:not([data-theme="dark"]) :is(
@@ -508,9 +494,9 @@ body[data-glass-style="liquid"]:not([data-theme="dark"]) :is(
   --x-nt-glass-float-shadow: 0 18px 52px rgba(0, 0, 0, 0.16);
 }
 /* The rest of the light glass takes the search stack's edge: light caught along the top left and
-   faintly on the bottom right, over a firmer hairline, with no shading inside. Only the edge: the
-   shortcuts, buttons, menus, the panel and toasts go without a lens (newtab.js says why), and the
-   catch needs nothing behind the glass to show. */
+   faintly on the bottom right, over a firmer hairline, with no glow or shade inside. Only the edge:
+   the shortcuts, buttons, menus, the panel and toasts go without a lens (newtab.js says why), and
+   the catch needs nothing behind the glass to show. */
 body[data-glass-style="liquid"]:not([data-theme="dark"]) :is(
   .x-nt-bookmark-card,
   .x-nt-recent-card-visual,
@@ -569,9 +555,14 @@ body[data-glass-style="frosted"]:not([data-theme="dark"]) .x-nt-bookmarks-topbar
   --x-nt-glass-tint-dense: 0.76;
 }
 body[data-glass-style="liquid"]:not([data-theme="dark"]) :is(.x-nt-recent-card-visual, .x-nt-bookmark-card)[data-glass-ink="dark"] {
-  --x-nt-glass-tint-thin: 0.3;
-  --x-nt-glass-tint-dense: 0.54;
-  --x-nt-glass-inset: rgba(255, 255, 255, 0.42);
+  --x-nt-glass-tint-thin: 0.6;
+  --x-nt-glass-tint-dense: 0.74;
+  /* The recent card's inner sheet stays a lighter layer of the denser plate. */
+  --x-nt-glass-inset: rgba(255, 255, 255, 0.5);
+}
+body[data-glass-style="liquid"]:not([data-theme="dark"]) .x-nt-shortcut-icon[data-glass-ink="dark"] {
+  --x-nt-glass-tint-thin: 0.6;
+  --x-nt-glass-tint-dense: 0.74;
 }
 body[data-glass-style="liquid"]:not([data-theme="dark"]) :is(
   ._x_extension_menu_surface_2024_unique_,

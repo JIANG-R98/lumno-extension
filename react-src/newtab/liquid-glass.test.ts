@@ -5,7 +5,6 @@ import {
   getLensLayout,
   getLensTilePixels,
   getRimDisplacement,
-  getRimSharpness,
   getSurfaceBezel,
   getSurfaceDisplacementScale,
   isLiquidGlassSupported,
@@ -31,16 +30,16 @@ describe('New Tab bookmarks bar liquid glass', () => {
     expect(getRimDisplacement(400, 18, 800, 36, 'docked')).toEqual([0, 0]);
     const [dx, dy] = getRimDisplacement(400, 35.5, 800, 36, 'docked');
     expect(dx).toBe(0);
-    expect(dy).toBeLessThan(-0.5);
+    expect(dy).toBeLessThan(-0.6);
     expect(getRimDisplacement(400, 30, 800, 36, 'docked')[1]).toBeGreaterThan(dy);
   });
 
   it('bends every floating rim toward the middle and leaves the middle flat', () => {
     expect(getRimDisplacement(400, 18, 800, 36, 'floating')).toEqual([0, 0]);
-    expect(getRimDisplacement(400, 0.5, 800, 36, 'floating')[1]).toBeGreaterThan(0.5);
-    expect(getRimDisplacement(400, 35.5, 800, 36, 'floating')[1]).toBeLessThan(-0.5);
-    expect(getRimDisplacement(0.5, 18, 800, 36, 'floating')[0]).toBeGreaterThan(0.5);
-    expect(getRimDisplacement(799.5, 18, 800, 36, 'floating')[0]).toBeLessThan(-0.5);
+    expect(getRimDisplacement(400, 0.5, 800, 36, 'floating')[1]).toBeGreaterThan(0.6);
+    expect(getRimDisplacement(400, 35.5, 800, 36, 'floating')[1]).toBeLessThan(-0.6);
+    expect(getRimDisplacement(0.5, 18, 800, 36, 'floating')[0]).toBeGreaterThan(0.6);
+    expect(getRimDisplacement(799.5, 18, 800, 36, 'floating')[0]).toBeLessThan(-0.6);
     const [cornerX, cornerY] = getRimDisplacement(2, 2, 800, 36, 'floating');
     expect(cornerX).toBeGreaterThan(0);
     expect(cornerY).toBeGreaterThan(0);
@@ -73,44 +72,24 @@ describe('New Tab bookmarks bar liquid glass', () => {
     expect(Math.abs(beforeY - afterY)).toBeLessThan(0.03);
   });
 
-  it('bends hardest at the very edge by Snell\'s law and is nearly flat halfway in', () => {
+  it('bends hardest at the edge and fades out 0.7 of the way across the rim, as Figma\'s glass does', () => {
     const bezel = 20;
     const at = (y: number) => getRimDisplacement(400, y, 800, 72, 'floating', { bezel, radius: 36 })[1];
     expect(at(0)).toBe(1);
-    // Steep at the edge: a ray a tenth of the way in bends about a third as far, one halfway in
-    // barely at all; nothing past the rim.
-    expect(at(2)).toBeCloseTo(0.35, 2);
-    expect(at(10)).toBeLessThan(0.08);
-    expect(at(19.9)).toBeLessThan(0.0001);
-    expect(at(20)).toBe(0);
-    // Where each point samples the scene runs back from the edge before it runs forward: a thin
-    // outer band mirrors the scene, squeezed, and the rest of the rim barely magnifies it.
+    // Quadratic falloff, measured off Figma's renders: a quarter strength halfway to the reach.
+    expect(at(7)).toBeCloseTo(0.25, 5);
+    // No slope left where the bend ends, so no line where the rim meets the flat middle.
+    expect(at(13.5)).toBeLessThan(0.01);
+    expect(at(14)).toBe(0);
+    expect(at(18)).toBe(0);
+    // Where each point samples the scene runs back from the edge before it runs forward: the outer
+    // rim mirrors the scene, squeezed, and the inner rim magnifies it into the flat middle.
     const shift = getSurfaceDisplacementScale(bezel) / 2;
     const sampled = (y: number) => y + at(y) * shift;
     expect(sampled(0)).toBe(16);
     expect(sampled(2)).toBeLessThan(sampled(0));
-    expect(sampled(14)).toBeGreaterThan(sampled(8));
-    expect(sampled(20)).toBe(20);
-  });
-
-  it('keeps the scene sharp at the edge and blurred in the middle', () => {
-    const geometry = { bezel: 20, radius: 36 };
-    const sharp = (y: number) => getRimSharpness(400, y, 800, 72, 'floating', geometry);
-    expect(sharp(0)).toBe(1);
-    expect(sharp(10)).toBeCloseTo(0.25, 5);
-    expect(sharp(20)).toBe(0);
-    expect(sharp(36)).toBe(0);
-    // The tiles carry it in blue, over a flood that blurs.
-    const { tiles } = getLensTilePixels('floating', 36, 20);
-    expect(tiles[4].data[2]).toBe(Math.round(255 * getRimSharpness(36.5, 0.5, 73, 73, 'floating', geometry)));
-    const lensTiles = { shape: 'floating' as const, size: 20, urls: Array.from({ length: 8 }, (_, i) => `data:t${i}`) };
-    const plain = buildLensFilter('lens', 120, 70, lensTiles, 90, true);
-    expect(plain).toContain('flood-color="rgb(128,128,0)"');
-    expect(plain).not.toContain('feGaussianBlur');
-    const soft = buildLensFilter('lens', 120, 70, lensTiles, 90, true, 6);
-    expect(soft).toContain('<feGaussianBlur in="bent" stdDeviation="6" result="soft"/>');
-    expect(soft).toContain('values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0" result="edge"');
-    expect(soft.match(/<feDisplacementMap/g)).toHaveLength(3);
+    expect(sampled(14)).toBeGreaterThan(sampled(10));
+    expect(sampled(14)).toBe(14);
   });
 
   it('rebuilds the whole rim from nine-slice tiles at any size', () => {
@@ -198,7 +177,7 @@ describe('New Tab bookmarks bar liquid glass', () => {
         return element;
       };
       const size = { width: 200, height: 64 };
-      const corner = { radius: '16px', rim: '', strength: '', blur: '' };
+      const corner = { radius: '16px', rim: '', strength: '' };
       const card = addSurface(size);
       let resized: ResizeObserverCallback = () => {};
       class FakeResizeObserver {
@@ -214,8 +193,7 @@ describe('New Tab bookmarks bar liquid glass', () => {
         navigator: { userAgent: 'Chrome/140.0' },
         getComputedStyle: () => ({
           borderTopLeftRadius: corner.radius,
-          getPropertyValue: (name: string) =>
-            ({ '--rim': corner.rim, '--strength': corner.strength, '--blur': corner.blur } as Record<string, string>)[name] ?? ''
+          getPropertyValue: (name: string) => (name === '--rim' ? corner.rim : name === '--strength' ? corner.strength : '')
         }),
         requestAnimationFrame: (callback: FrameRequestCallback) => frames.push(callback),
         cancelAnimationFrame() {},
@@ -229,7 +207,6 @@ describe('New Tab bookmarks bar liquid glass', () => {
         rimProperty: '--rim',
         selector: '.glass',
         strengthProperty: '--strength',
-        blurProperty: '--blur',
         windowObj
       });
       const resize = (width: number, height: number) => {
@@ -374,24 +351,6 @@ describe('New Tab bookmarks bar liquid glass', () => {
       expect(pointedAt()).not.toBe(first);
       expect(map()).toBe(getSurfaceDisplacementScale(30, 1.6).toFixed(1));
       surfaces.destroy();
-    });
-
-    it('marks a surface whose lens carries the blur, once that lens is on', async () => {
-      const { corner, filters, pointedAt, resize, settle, surfaces } = setup();
-      resize(640, 180);
-      await settle();
-      const card = document.querySelector('.glass') as HTMLElement;
-      expect(card.hasAttribute('data-liquid-lens-blur')).toBe(false);
-      corner.blur = '6';
-      resize(640, 181);
-      // Until the new lens is ready, the chain keeps its own blur.
-      expect(card.hasAttribute('data-liquid-lens-blur')).toBe(false);
-      await settle();
-      expect(card.hasAttribute('data-liquid-lens-blur')).toBe(true);
-      expect(filters().at(-1)!.querySelector('feGaussianBlur')!.getAttribute('stdDeviation')).toBe('6');
-      expect(pointedAt()).not.toBe('');
-      surfaces.destroy();
-      expect(card.hasAttribute('data-liquid-lens-blur')).toBe(false);
     });
 
     it('leaves small controls without a lens', async () => {

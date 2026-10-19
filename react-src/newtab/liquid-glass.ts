@@ -10,21 +10,18 @@
 // every surface; a surface that resizes only moves its tiles, in the same frame, so nothing is
 // rebuilt, encoded or decoded while the page resizes or the results plate grows.
 
-// The rim bends the way light through a thick glass edge does (after Liquid Glass Studio and
-// kube.io): the edge's surface curves down on a bevel whose slope, as the sine of the angle a ray
-// meets it at, runs as the square of the way out across the rim, and the ray refracts by Snell's
-// law into glass of index GLASS_IOR. The bend, tan(incidence - refraction), is steepest at the very
-// edge and nearly gone halfway in: a thin band at the edge folds the scene back on itself (mirrored
-// and squeezed, as a thick pane's edge shows), with little of the broad magnifying ring that made a
-// plate look domed. The outer edge samples `refraction` times the rim width inward.
+// The rim follows Figma's glass effect, measured off its renders: the outer edge samples the
+// scene `refraction` times the rim width inward, and the bend falls off quadratically to nothing
+// 0.7 of the way across the rim. The falloff is steepest at the edge, so the outer part of the rim
+// folds the scene back on itself (a mirrored, squeezed band, as a thick glass edge shows) and the
+// inner part magnifies it into the flat middle.
 const BEZEL_PX = 16;
 export const LIQUID_GLASS_REFRACTION = 0.8;
-const GLASS_IOR = 1.5;
-const EDGE_BEND = Math.tan(Math.PI / 2 - Math.asin(1 / GLASS_IOR));
-// Red bends further than blue: each channel samples the backdrop at its own share of the bend, so
-// the rim fringes where the wallpaper has edges. Nothing splits in the flat middle. Liquid Glass
-// Studio splits about twice this; behind a blurred middle a smaller split never showed.
-export const LIQUID_GLASS_DISPERSION = 0.12;
+const RIM_REACH = 0.7;
+// Red bends further than blue, as in Figma: each channel samples the backdrop at its own share of
+// the bend, so the rim fringes where the wallpaper has edges. Nothing splits in the flat middle.
+// About Figma's dispersion at 50%; the split grows with the bend, so it stays small.
+export const LIQUID_GLASS_DISPERSION = 0.06;
 const FLOATING_RADIUS_PX = 14;
 
 export type LiquidGlassShape = 'docked' | 'floating';
@@ -58,44 +55,14 @@ export function getRimDisplacement(
   shape: LiquidGlassShape,
   geometry: LiquidGlassGeometry = {}
 ): [number, number] {
-  const rim = getRimPoint(x, y, width, height, shape, geometry);
-  if (!rim) {
-    return [0, 0];
-  }
-  const strength = rimStrength(rim[2]);
-  return [rim[0] * strength, rim[1] * strength];
-}
-
-// How much of the scene a point shows sharp rather than blurred, for a lens that carries the blur
-// (1 at the edge, 0 in the middle): the rim bends the sharp scene, so its fold and fringe stay crisp,
-// and gives way to the blurred middle across its width, as Liquid Glass Studio's edge does.
-export function getRimSharpness(
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  shape: LiquidGlassShape,
-  geometry: LiquidGlassGeometry = {}
-) {
-  const rim = getRimPoint(x, y, width, height, shape, geometry);
-  return rim ? (1 - rim[2]) * (1 - rim[2]) : 0;
-}
-
-// The inward unit direction at a point of the rim and how far across the rim it lies (0 at the
-// edge, toward 1 at its inner edge); null in the flat middle.
-function getRimPoint(
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  shape: LiquidGlassShape,
-  geometry: LiquidGlassGeometry
-): [number, number, number] | null {
   const bezel = Math.min(geometry.bezel ?? BEZEL_PX, height / 2);
   if (shape === 'docked') {
     // The docked bar meets the browser and window at its top and sides; only its bottom edge shows.
     const distance = height - y;
-    return distance >= bezel ? null : [0, -1, distance / bezel];
+    if (distance >= bezel) {
+      return [0, 0];
+    }
+    return [0, -rimStrength(distance / bezel)];
   }
   // The rim turns its corners on a curve at least as wide as the rim. On a tighter one, the rim's
   // inner edge has a sharp corner, so the bend snaps from sideways to upward along its diagonal: a
@@ -122,22 +89,20 @@ function getRimPoint(
     distance = radius - qy;
   }
   if (distance >= bezel) {
-    return null;
+    return [0, 0];
   }
+  const strength = rimStrength(Math.max(0, distance) / bezel);
   return [
-    -normalX * Math.sign(x - centerX || 1),
-    -normalY * Math.sign(y - centerY || 1),
-    Math.max(0, distance) / bezel
+    -normalX * Math.sign(x - centerX || 1) * strength,
+    -normalY * Math.sign(y - centerY || 1) * strength
   ];
 }
 
-// 1 at the outer edge, falling to nothing at the rim's inner edge with no slope left there, so the
-// rim melts into the flat middle without a visible line.
+// Full at the outer edge, falling off quadratically to nothing at RIM_REACH of the rim, where its
+// slope also reaches zero, so the rim melts into the flat middle without a visible line.
 function rimStrength(progressFromRim: number) {
-  const out = 1 - Math.min(1, progressFromRim);
-  const incidence = Math.asin(out * out);
-  const refraction = Math.asin(Math.sin(incidence) / GLASS_IOR);
-  return Math.tan(incidence - refraction) / EDGE_BEND;
+  const rest = 1 - Math.min(1, progressFromRim / RIM_REACH);
+  return rest * rest;
 }
 
 export interface LensTiles {
@@ -181,14 +146,11 @@ export function getLensTilePixels(shape: LiquidGlassShape, radius: number, bezel
       const data = new Uint8ClampedArray(w * h * 4);
       for (let y = 0; y < h; y += 1) {
         for (let x = 0; x < w; x += 1) {
-          const px = left + x + 0.5;
-          const py = top + y + 0.5;
-          const [dx, dy] = getRimDisplacement(px, py, probeWidth, probe, shape, geometry);
+          const [dx, dy] = getRimDisplacement(left + x + 0.5, top + y + 0.5, probeWidth, probe, shape, geometry);
           const offset = (y * w + x) * 4;
-          // Red and green carry the bend, blue how sharp the scene stays there.
           data[offset] = Math.round(128 + dx * 127);
           data[offset + 1] = Math.round(128 + dy * 127);
-          data[offset + 2] = Math.round(255 * getRimSharpness(px, py, probeWidth, probe, shape, geometry));
+          data[offset + 2] = 128;
           data[offset + 3] = 255;
         }
       }
@@ -249,18 +211,13 @@ const at = (rect: Rect) => `x="${rect[0]}" y="${rect[1]}" width="${rect[2]}" hei
 // single channels is a sum). Every pass covers the whole surface: Chrome 155 draws displacement
 // passes held to a primitive subregion wrong over a backdrop (parts left unblurred, rims lit), so
 // limiting the passes to the rim is not an option.
-// With a `blur`, the lens blurs the scene itself, after the bend, and lets the sharp bent scene
-// show through across the rim by the map's blue channel: the backdrop chain ahead of it then blurs
-// little, and the rim bends a crisp scene while the middle stays soft under text. The blurred layer
-// sits over the sharp one first, so the blur's fade at the surface's edge never shows through.
 export function buildLensFilter(
   id: string,
   width: number,
   height: number,
   tiles: LensTiles,
   scale: number,
-  dispersion: boolean,
-  blur = 0
+  dispersion: boolean
 ) {
   const tileRects = getLensLayout(tiles.shape, width, height, tiles.size);
   const pieces = tileRects.map((rect, index) =>
@@ -273,21 +230,13 @@ export function buildLensFilter(
       // Keeps this channel and alpha only: a 1 on the diagonal of the 4x5 color matrix.
       `<feColorMatrix type="matrix" values="${Array.from({ length: 20 }, (_, cell) =>
         Number(cell === index * 6 || cell === 18)).join(' ')}" result="${name}"/>`).join('') +
-      '<feBlend in="r" in2="g" mode="screen"/><feBlend in2="b" mode="screen" result="bent"/>'
-    : `${pass(scale)} result="bent"/>`;
-  const soften = blur > 0
-    ? `<feGaussianBlur in="bent" stdDeviation="${blur}" result="soft"/>` +
-      '<feComposite in="soft" in2="bent" operator="over" result="middle"/>' +
-      // Alpha from the map's blue channel: how sharp the scene stays at each point.
-      '<feColorMatrix in="map" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0" result="edge"/>' +
-      '<feComposite in="bent" in2="edge" operator="in" result="crisp"/>' +
-      '<feComposite in="crisp" in2="middle" operator="over"/>'
-    : '';
+      '<feBlend in="r" in2="g" mode="screen"/><feBlend in2="b" mode="screen"/>'
+    : `${pass(scale)}/>`;
   return `<filter id="${id}" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB" ` +
     `x="0" y="0" width="${width}" height="${height}">` +
-    `<feFlood flood-color="rgb(128,128,0)" result="flat"/>${pieces.join('')}` +
+    `<feFlood flood-color="rgb(128,128,128)" result="flat"/>${pieces.join('')}` +
     `<feMerge result="map"><feMergeNode in="flat"/>${tileRects.map((_rect, index) =>
-      `<feMergeNode in="t${index}"/>`).join('')}</feMerge>${bend}${soften}</filter>`;
+      `<feMergeNode in="t${index}"/>`).join('')}</feMerge>${bend}</filter>`;
 }
 
 // Fits a lens filter to a new size by moving its tiles; the images stay as they are.
@@ -317,8 +266,6 @@ function createFilterHost(documentObj: Document, markup: string) {
 // One surface's lens: which tiles it uses and the filter that draws them.
 interface Lens {
   key: string;
-  // How far the lens blurs the scene itself (0: the backdrop chain does).
-  blur: number;
   host: SVGSVGElement;
   filter: Element;
   tiles: LensTiles;
@@ -356,8 +303,7 @@ function createLensSwitcher(options: {
       radius: number,
       bezel: number,
       scale: number,
-      dispersion: boolean,
-      blur = 0
+      dispersion: boolean
     ) {
       const [width, height] = measure();
       // The current lens follows the size even while a lens for a new key is prepared, so its filter
@@ -383,7 +329,7 @@ function createLensSwitcher(options: {
         const filterId = `${idPrefix}_${(filterCount += 1)}_2026_unique_`;
         const host = createFilterHost(
           documentObj,
-          buildLensFilter(filterId, nextWidth, nextHeight, tiles, scale, dispersion, blur)
+          buildLensFilter(filterId, nextWidth, nextHeight, tiles, scale, dispersion)
         );
         windowObj.requestAnimationFrame(() => {
           if (destroyed || wanted !== key) {
@@ -393,7 +339,6 @@ function createLensSwitcher(options: {
           const previous = current;
           current = {
             key,
-            blur,
             host,
             filter: host.firstElementChild as Element,
             tiles,
@@ -534,16 +479,9 @@ export interface LiquidSurfaces {
 // set its own rim width in the CSS property `rimProperty`, held whatever its size (narrowed only
 // on a surface too short for it), so a plate that grows keeps one lens instead of a new one at
 // every step. It may also scale how far its rim bends in the CSS property `strengthProperty` (1 when
-// unset), for a plate whose dense tint would otherwise hide the bend, and hand its blur to the lens
-// in `blurProperty` (px; none leaves the blur to the backdrop chain): while such a lens is on, the
-// surface carries LIQUID_LENS_BLUR_ATTRIBUTE, so its CSS can drop the chain's own blur, and keeps it
-// until then. Sizes are followed from a ResizeObserver, which runs after layout and before paint,
-// so a surface's lens fits its new size in the frame it changes. The theme and a plate's ink can
-// change what it sets in these properties, so either change reads them again.
-export const LIQUID_LENS_BLUR_ATTRIBUTE = 'data-liquid-lens-blur';
-
+// unset), for a plate whose dense tint would otherwise hide the bend. Sizes are followed from a ResizeObserver, which runs after layout and before paint,
+// so a surface's lens fits its new size in the frame it changes.
 export function createLiquidSurfaces(options: {
-  blurProperty?: string;
   documentObj: Document;
   dispersionSelector?: string;
   property: string;
@@ -552,8 +490,7 @@ export function createLiquidSurfaces(options: {
   strengthProperty?: string;
   windowObj: Window;
 }): LiquidSurfaces {
-  const { blurProperty, documentObj, dispersionSelector, property, rimProperty, selector, strengthProperty, windowObj } =
-    options;
+  const { documentObj, dispersionSelector, property, rimProperty, selector, strengthProperty, windowObj } = options;
   const supported = isLiquidGlassSupported(windowObj);
   const idPrefix = '_x_extension_newtab_liquid_surface';
   const lenses = new Map<HTMLElement, ReturnType<typeof createLensSwitcher>>();
@@ -566,7 +503,6 @@ export function createLiquidSurfaces(options: {
     lenses.get(element)?.destroy();
     lenses.delete(element);
     element.style.removeProperty(property);
-    element.removeAttribute(LIQUID_LENS_BLUR_ATTRIBUTE);
   };
 
   const update = (element: HTMLElement) => {
@@ -594,10 +530,7 @@ export function createLiquidSurfaces(options: {
         windowObj,
         idPrefix,
         measure: () => size(element),
-        apply: (filterId, current) => {
-          element.style.setProperty(property, `url(#${filterId})`);
-          element.toggleAttribute(LIQUID_LENS_BLUR_ATTRIBUTE, current.blur > 0);
-        }
+        apply: (filterId) => element.style.setProperty(property, `url(#${filterId})`)
       });
       lenses.set(element, lens);
     }
@@ -609,10 +542,8 @@ export function createLiquidSurfaces(options: {
     const dispersion = Boolean(dispersionSelector && element.matches(dispersionSelector));
     const setStrength = strengthProperty ? Number.parseFloat(style.getPropertyValue(strengthProperty)) : 0;
     const strength = setStrength > 0 ? setStrength : 1;
-    const setBlur = blurProperty ? Number.parseFloat(style.getPropertyValue(blurProperty)) : 0;
-    const blur = setBlur > 0 ? setBlur : 0;
-    lens.update(`${radius}:${bezel}:${strength}:${blur}:${dispersion ? 'rgb' : 'g'}`, 'floating', radius, bezel,
-      getSurfaceDisplacementScale(bezel, strength), dispersion, blur);
+    lens.update(`${radius}:${bezel}:${strength}:${dispersion ? 'rgb' : 'g'}`, 'floating', radius, bezel,
+      getSurfaceDisplacementScale(bezel, strength), dispersion);
   };
 
   const ResizeObserverCtor = (windowObj as Window & { ResizeObserver?: typeof ResizeObserver }).ResizeObserver;
@@ -630,9 +561,6 @@ export function createLiquidSurfaces(options: {
     ((node as Element).matches(selector) || Boolean((node as Element).querySelector(selector))));
   const mutationObserver = supported && MutationObserverCtor
     ? new MutationObserverCtor((records) => {
-      if (records.some((record) => record.type === 'attributes')) {
-        lenses.forEach((_lens, element) => update(element));
-      }
       if (records.some((record) => touchesSurface(record.removedNodes))) {
         Array.from(lenses.keys()).filter((element) => !element.isConnected).forEach(drop);
       }
@@ -643,12 +571,7 @@ export function createLiquidSurfaces(options: {
     : null;
 
   if (supported) {
-    mutationObserver?.observe(documentObj.body || documentObj.documentElement, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['data-theme', 'data-glass-ink']
-    });
+    mutationObserver?.observe(documentObj.body || documentObj.documentElement, { childList: true, subtree: true });
     observeAll();
   }
 
