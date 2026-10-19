@@ -11,6 +11,12 @@ interface OpenOptions {
   title: string;
   color?: string;
   sourceElement?: HTMLElement | null;
+  // Other callers (a shortcut icon's plate) bring their own presets, whose
+  // first entry is the default that removes the customization, and an image
+  // shown on the chosen color instead of the folder.
+  presets?: string[];
+  previewImageUrl?: string;
+  labels?: { dialog?: string; picker?: string; defaultColor?: string };
 }
 interface PickerOptions {
   documentObj?: Document;
@@ -41,7 +47,10 @@ function FolderColorForm({ initial, options, initialSavedColors, updateSavedColo
   updateSavedColors: (colors: string[]) => void; close: () => void;
 }) {
   const t = options.t || ((_key, fallback) => fallback);
-  const [color, setColor] = useState(parseFolderColor(initial.color) || DEFAULT_FOLDER_COLOR);
+  const presets = initial.presets?.length ? initial.presets : PRESETS;
+  const defaultColor = presets[0];
+  const previewImageUrl = initial.previewImageUrl || '';
+  const [color, setColor] = useState(parseFolderColor(initial.color) || defaultColor);
   const [colorSource, setColorSource] = useState<ColorSource | null>(null);
   const [hexText, setHexText] = useState(color);
   const [rgbTexts, setRgbTexts] = useState(folderColorToChannels(color));
@@ -64,9 +73,9 @@ function FolderColorForm({ initial, options, initialSavedColors, updateSavedColo
   const invalidChannels = rgbTexts.map((channel) => !/^\d{1,3}$/.test(channel) || Number(channel) > 255);
   const invalid = format === 'hex' ? invalidHex : invalidChannels.some(Boolean);
   // Presets are always one click away, so only new colors can be saved.
-  const isKnownColor = PRESETS.includes(color) || savedColors.includes(color);
+  const isKnownColor = presets.includes(color) || savedColors.includes(color);
   const invalidMessage = t('folder_color_invalid', 'Enter a valid HEX color or RGB values from 0 to 255.');
-  const previewHtml = useRef({ __html: options.getFolderSvg?.('color-picker-preview') || '' });
+  const previewHtml = useRef({ __html: previewImageUrl ? '' : options.getFolderSvg?.('color-picker-preview') || '' });
 
   // Rest on the selected swatch, or the saturation area for a custom color, so the dialog opens in a browsing state.
   function focusCurrentColor() {
@@ -101,12 +110,12 @@ function FolderColorForm({ initial, options, initialSavedColors, updateSavedColo
     return () => { active = false; options.hideTooltip?.(); };
   }, [options, updateSavedColors]);
   useLayoutEffect(() => {
-    if (previewRef.current) {
+    if (previewRef.current && !previewImageUrl) {
       options.initFolderIcon?.(previewRef.current);
       options.applyFolderColor?.(previewRef.current, color);
     }
     options.onPreview?.(initial.folderId, color);
-  }, [color, initial.folderId, options]);
+  }, [color, initial.folderId, options, previewImageUrl]);
 
   function selectColor(value: string, source: ColorSource = 'custom', isReset = false) {
     const nextColor = parseFolderColor(value);
@@ -181,30 +190,36 @@ function FolderColorForm({ initial, options, initialSavedColors, updateSavedColo
   return <div className="x-nt-shortcut-dialog-backdrop x-nt-folder-color-backdrop"
     onPointerDown={(event) => { if (event.target === event.currentTarget && !busy) close(); }}>
     <div className="x-nt-shortcut-dialog x-nt-folder-color-dialog" role="dialog" aria-modal="true"
-      aria-label={t('folder_color_change', 'Change color')}>
+      aria-label={initial.labels?.dialog || t('folder_color_change', 'Change color')}>
       <form className="x-nt-shortcut-form x-nt-folder-color-form" onSubmit={submit}>
         <div className="x-nt-folder-color-layout">
           <figure className="x-nt-folder-color-stage">
-            <span className="x-nt-folder-color-preview" ref={previewRef} aria-hidden="true" dangerouslySetInnerHTML={previewHtml.current}
+            {previewImageUrl ? <span className="x-nt-folder-color-preview x-nt-folder-color-plate-preview" aria-hidden="true"
+              style={{ backgroundColor: color }}><img src={previewImageUrl} alt="" draggable={false} /></span>
+            : <span className="x-nt-folder-color-preview" ref={previewRef} aria-hidden="true" dangerouslySetInnerHTML={previewHtml.current}
               onPointerEnter={() => { if (previewRef.current) options.animateFolderIcon?.(previewRef.current, true); }}
-              onPointerLeave={() => { if (previewRef.current) options.animateFolderIcon?.(previewRef.current, false); }} />
+              onPointerLeave={() => { if (previewRef.current) options.animateFolderIcon?.(previewRef.current, false); }} />}
             <figcaption className="x-nt-folder-color-name" title={initial.title}>{initial.title}</figcaption>
           </figure>
           <div className="x-nt-folder-color-editor" ref={editorRef}>
             <fieldset className="x-nt-folder-color-controls" disabled={busy}>
               <div inert={busy}>
-                <HexColorPicker color={color} onChange={(value) => selectColor(value)} aria-label={t('folder_color_title', 'Folder color')} />
+                <HexColorPicker color={color} onChange={(value) => selectColor(value)} aria-label={initial.labels?.picker || t('folder_color_title', 'Folder color')} />
               </div>
               <div className="x-nt-folder-color-palettes">
                 <div className="x-nt-folder-color-presets" role="group" aria-label={t('folder_color_presets', 'Preset colors')}>
-                  {PRESETS.map((preset) => {
+                  {presets.map((preset) => {
                     // The default swatch removes the customization instead of pinning its value.
-                    const isDefault = preset === DEFAULT_FOLDER_COLOR;
-                    const label = isDefault ? t('folder_color_default', 'Default color') : preset;
+                    const isDefault = preset === defaultColor;
+                    const label = isDefault ? initial.labels?.defaultColor || t('folder_color_default', 'Default color') : preset;
                     return <button key={preset} type="button" className="x-nt-folder-color-swatch" data-color={preset}
+                      data-default={isDefault && initial.labels?.defaultColor ? 'true' : undefined}
                       ref={isDefault ? defaultSwatchRef : undefined} title={isDefault ? label : undefined} data-tooltip={isDefault ? label : undefined}
                       style={{ backgroundColor: preset }} aria-label={label} aria-pressed={selectedSource === 'preset' && color === preset}
-                      onClick={() => selectColor(preset, 'preset', isDefault)} />;
+                      onClick={() => selectColor(preset, 'preset', isDefault)}>
+                      {isDefault && initial.labels?.defaultColor
+                        ? <i className="ri-icon ri-size-14 ri-magic-line" aria-hidden="true" /> : null}
+                    </button>;
                   })}
                 </div>
                 <div className="x-nt-folder-color-saved" role="group" ref={savedColorsRef}

@@ -19,6 +19,7 @@ import {
   MODE_EDIT,
   clampEnterOffset,
   getEnterOffset,
+  cssColorToHex,
   getIconPlateStyle,
   normalizeIconPlateMode,
   normalizeMode,
@@ -64,6 +65,16 @@ export interface ShortcutDialogPayload {
   // Shortcuts only.
   iconPlate?: IconPlateMode;
   iconPlateColor?: string;
+}
+
+// Opens the full color picker over the dialog. Resolves with the chosen
+// color, null to follow the icon again, or undefined when cancelled.
+export interface IconPlateColorRequest {
+  title: string;
+  imageUrl: string;
+  color: string;
+  presets: string[];
+  sourceElement: HTMLElement;
 }
 
 export interface ShortcutDialogOpenOptions {
@@ -112,6 +123,7 @@ export interface ShortcutDialogOptions {
   analyzeIcon?: (image: HTMLImageElement) => IconPlateAnalysis | null;
   resolveIconPlate?: (input: IconPlateInput) => IconPlateColors | null;
   getIconPlateColorChoices?: (analysis: IconPlateAnalysis | null) => string[];
+  pickIconPlateColor?: (request: IconPlateColorRequest) => Promise<string | null | undefined>;
   getRiSvg?: (id: string, sizeClass?: string) => string;
   bindTooltip?: (
     target: HTMLElement,
@@ -175,6 +187,7 @@ interface NormalizedOptions {
   analyzeIcon: NonNullable<ShortcutDialogOptions['analyzeIcon']>;
   resolveIconPlate: NonNullable<ShortcutDialogOptions['resolveIconPlate']>;
   getIconPlateColorChoices: NonNullable<ShortcutDialogOptions['getIconPlateColorChoices']>;
+  pickIconPlateColor?: ShortcutDialogOptions['pickIconPlateColor'];
   getRiSvg: (id: string, sizeClass?: string) => string;
   bindTooltip: NonNullable<ShortcutDialogOptions['bindTooltip']>;
   hideTooltip: () => void;
@@ -580,6 +593,14 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
       commitState({ ...current, iconPlateColor: color });
     }
 
+    async function pickCustomPlateColor(request: IconPlateColorRequest): Promise<void> {
+      if (!options.pickIconPlateColor || stateRef.current.busy) return;
+      options.hideTooltip();
+      const picked = await options.pickIconPlateColor(request);
+      if (destroyedRef.current || typeof picked === 'undefined') return;
+      selectPlateColor(picked ? cssColorToHex(picked) : '');
+    }
+
     async function handleIconRefresh(): Promise<void> {
       const current = stateRef.current;
       if (current.busy || current.iconBusy || !isOnlineIconSource(current.iconMode) || !current.url.trim() ||
@@ -757,6 +778,7 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
     const plateOn = Boolean(plate);
     const plateColorLabel = options.t('newtab_shortcuts_icon_plate_color_label', 'Background color');
     const plateAutoColorLabel = options.t('newtab_shortcuts_icon_plate_color_auto', 'From the icon');
+    const plateCustomLabel = options.t('newtab_shortcuts_icon_plate_color_custom', 'Custom color');
     const chooseText = hasIcon
       ? options.t('newtab_shortcuts_icon_replace', 'Replace image')
       : options.t('newtab_shortcuts_icon_choose', 'Choose image');
@@ -1155,7 +1177,7 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
                 <div className="x-nt-shortcut-icon-plate-colors" role="group" aria-label={plateColorLabel}>
                   <button
                     type="button"
-                    className="x-nt-shortcut-icon-plate-swatch"
+                    className="x-nt-folder-color-swatch x-nt-shortcut-icon-plate-swatch"
                     data-auto="true"
                     aria-pressed={formState.iconPlateColor ? 'false' : 'true'}
                     aria-label={plateAutoColorLabel}
@@ -1169,24 +1191,45 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
                     <button
                       key={color}
                       type="button"
-                      className="x-nt-shortcut-icon-plate-swatch"
+                      className="x-nt-folder-color-swatch x-nt-shortcut-icon-plate-swatch"
                       aria-pressed={formState.iconPlateColor === color ? 'true' : 'false'}
                       aria-label={color}
                       title={color}
                       disabled={formState.busy}
-                      style={{ background: color }}
+                      style={{ backgroundColor: color }}
                       onClick={() => selectPlateColor(color)}
                     />
                   ))}
                   {formState.iconPlateColor && !plateColorChoices.includes(formState.iconPlateColor) ? (
                     <button
                       type="button"
-                      className="x-nt-shortcut-icon-plate-swatch"
+                      className="x-nt-folder-color-swatch x-nt-shortcut-icon-plate-swatch"
                       aria-pressed="true"
                       aria-label={formState.iconPlateColor}
                       title={formState.iconPlateColor}
                       disabled={formState.busy}
-                      style={{ background: formState.iconPlateColor }}
+                      style={{ backgroundColor: formState.iconPlateColor }}
+                    />
+                  ) : null}
+                  {options.pickIconPlateColor ? (
+                    <button
+                      type="button"
+                      className="x-nt-folder-color-swatch x-nt-folder-color-add x-nt-shortcut-icon-plate-custom"
+                      aria-label={plateCustomLabel}
+                      title={plateCustomLabel}
+                      disabled={formState.busy}
+                      onClick={(event) => {
+                        const autoColor = cssColorToHex(autoPlate?.light || '') || '#FFFFFF';
+                        void pickCustomPlateColor({
+                          title: formState.name || formState.url,
+                          imageUrl: previewSrc,
+                          color: formState.iconPlateColor || autoColor,
+                          // The first preset follows the icon again.
+                          presets: [autoColor, ...plateColorChoices.filter((color) => color !== autoColor)].slice(0, 8),
+                          sourceElement: event.currentTarget
+                        });
+                      }}
+                      dangerouslySetInnerHTML={{ __html: options.getRiSvg('ri-palette-line', 'ri-size-16') }}
                     />
                   ) : null}
                 </div>
@@ -1269,6 +1312,8 @@ function normalizeOptions(options: ShortcutDialogOptions, root: typeof globalThi
       ? options.resolveIconPlate : () => null,
     getIconPlateColorChoices: typeof options.getIconPlateColorChoices === 'function'
       ? options.getIconPlateColorChoices : () => [],
+    pickIconPlateColor: typeof options.pickIconPlateColor === 'function'
+      ? options.pickIconPlateColor : undefined,
     getRiSvg: typeof options.getRiSvg === 'function'
       ? options.getRiSvg
       : (id, sizeClass = 'ri-size-16') =>
@@ -1328,7 +1373,17 @@ export function createShortcutDialog(
   if (!normalizedOptions) {
     return null;
   }
-  const options: NormalizedOptions = normalizedOptions;
+  // While the color picker is open over the dialog, focus belongs to it.
+  let childModalOpen = false;
+  const options: NormalizedOptions = {
+    ...normalizedOptions,
+    pickIconPlateColor: normalizedOptions.pickIconPlateColor && ((request) => {
+      childModalOpen = true;
+      return Promise.resolve(normalizedOptions.pickIconPlateColor!(request)).finally(() => {
+        childModalOpen = false;
+      });
+    })
+  };
 
   const host = options.documentObj.createElement('div');
   host.className = 'x-nt-shortcut-dialog-backdrop';
@@ -1576,7 +1631,7 @@ export function createShortcutDialog(
   }
 
   function handleDocumentFocusIn(event: FocusEvent): void {
-    if (!modalActive || host.contains(event.target as Node)) {
+    if (!modalActive || childModalOpen || host.contains(event.target as Node)) {
       return;
     }
     keepFocusInDialog();

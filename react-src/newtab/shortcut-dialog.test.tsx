@@ -242,6 +242,48 @@ describe('shortcut dialog React island', () => {
     expect(submissions[0]).toEqual(expect.objectContaining({ iconPlate: 'on', iconPlateColor: '#FFFFFF' }));
   });
 
+  it('hands custom plate colors to the full color picker', async () => {
+    const submissions: ShortcutDialogPayload[] = [];
+    const picked: Array<string | null | undefined> = ['#3A2A5F', undefined, null];
+    const pickIconPlateColor = vi.fn(async () => picked.shift());
+    const controller = createController((payload) => {
+      submissions.push({ ...payload });
+      return true;
+    }, {
+      getOnlineIconUrl: () => 'data:image/png;base64,bG9nbw==',
+      analyzeIcon: () => ({ transparent: true, accent: [238, 77, 45], palette: [[238, 77, 45]] }),
+      resolveIconPlate: ({ mode, color, analysis }) => (mode === 'off' || (mode !== 'on' && !analysis?.transparent)
+        ? null : { light: color || 'rgb(253, 237, 234)', dark: color || 'rgb(128, 57, 44)', custom: Boolean(color) }),
+      getIconPlateColorChoices: () => ['#FDECE7', '#FFFFFF'],
+      pickIconPlateColor
+    });
+    act(() => {
+      controller.open({ mode: 'edit', shortcut: { id: 'shopee', title: 'Shopee', url: 'https://shopee.example/' } });
+    });
+    act(() => {
+      controller.element.querySelector('.x-nt-shortcut-online-icon-preview img')!.dispatchEvent(new Event('load'));
+    });
+    const custom = () => controller.element.querySelector<HTMLButtonElement>('.x-nt-shortcut-icon-plate-custom')!;
+    await act(async () => { custom().click(); });
+    expect(pickIconPlateColor).toHaveBeenLastCalledWith(expect.objectContaining({
+      title: 'Shopee',
+      imageUrl: 'data:image/png;base64,bG9nbw==',
+      color: '#FDEDEA',
+      presets: ['#FDEDEA', '#FDECE7', '#FFFFFF'],
+      sourceElement: custom()
+    }));
+    const pressed = () => Array.from(controller.element.querySelectorAll('.x-nt-shortcut-icon-plate-swatch[aria-pressed="true"]'))
+      .map((element) => element.getAttribute('aria-label'));
+    expect(pressed()).toEqual(['#3A2A5F']);
+    // Cancelling keeps the color; the default preset follows the icon again.
+    await act(async () => { custom().click(); });
+    expect(pressed()).toEqual(['#3A2A5F']);
+    await act(async () => { custom().click(); });
+    expect(pressed()).toEqual(['From the icon']);
+    await act(async () => { await controller.submit(); });
+    expect(submissions[0]).toEqual(expect.objectContaining({ iconPlate: '', iconPlateColor: '' }));
+  });
+
   it('shows the plate switch on for see-through icons and saves the switched choice', async () => {
     const submissions: ShortcutDialogPayload[] = [];
     const transparent = false;

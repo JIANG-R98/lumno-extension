@@ -2429,6 +2429,9 @@
   "newtab_shortcuts_icon_plate_color_auto": {
     "message": "從圖示取色"
   },
+  "newtab_shortcuts_icon_plate_color_custom": {
+    "message": "自訂顏色"
+  },
   "newtab_shortcuts_icon_custom_sync_hint": {
     "message": "可透過 WebDAV 跨裝置同步。"
   },

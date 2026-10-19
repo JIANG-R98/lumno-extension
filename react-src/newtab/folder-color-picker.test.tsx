@@ -114,6 +114,32 @@ describe('folder color picker', () => {
     await act(async () => { document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
     expect(submit).toHaveBeenLastCalledWith('123', null);
   });
+  it('takes presets, a default swatch and an image preview from other callers', async () => {
+    const submit = vi.fn(async () => {});
+    act(() => {
+      picker = createFolderColorPicker({ onSubmit: submit });
+      picker.open({
+        folderId: 'shortcut-icon-plate', title: 'Shopee', color: '#FDEDEA',
+        presets: ['#FDEDEA', '#F8C9C0', '#FFFFFF'], previewImageUrl: 'data:image/png;base64,bG9nbw==',
+        labels: { dialog: 'Background color', picker: 'Background color', defaultColor: 'From the icon' }
+      });
+    });
+    expect(document.querySelector('[role="dialog"]')!.getAttribute('aria-label')).toBe('Background color');
+    const preview = document.querySelector<HTMLElement>('.x-nt-folder-color-plate-preview')!;
+    expect(preview.querySelector('img')!.getAttribute('src')).toBe('data:image/png;base64,bG9nbw==');
+    expect(preview.style.backgroundColor).toBe('rgb(253, 237, 234)');
+    expect(Array.from(document.querySelectorAll('.x-nt-folder-color-presets .x-nt-folder-color-swatch'))
+      .map((element) => element.getAttribute('data-color'))).toEqual(['#FDEDEA', '#F8C9C0', '#FFFFFF']);
+    expect(swatch('presets', '#FDEDEA').getAttribute('aria-label')).toBe('From the icon');
+    act(() => swatch('presets', '#FFFFFF').click());
+    expect(preview.style.backgroundColor).toBe('rgb(255, 255, 255)');
+    await act(async () => { document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    expect(submit).toHaveBeenLastCalledWith('shortcut-icon-plate', '#FFFFFF');
+    act(() => picker!.open({ folderId: 'shortcut-icon-plate', title: 'Shopee', color: '#FFFFFF', presets: ['#FDEDEA', '#FFFFFF'] }));
+    act(() => swatch('presets', '#FDEDEA').click());
+    await act(async () => { document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    expect(submit).toHaveBeenLastCalledWith('shortcut-icon-plate', null);
+  });
   it('animates in on the next frame and fades out before unmounting', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame'] });
     try {

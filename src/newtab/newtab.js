@@ -1206,6 +1206,51 @@
     }
     pageState.folderColorPicker.open({ folderId: String(folderId), title, color: getFolderColor(folderId), sourceElement });
   }
+
+  // The folder color picker, over the shortcut dialog, for an icon's plate.
+  // It shares the saved colors with folders; the shortcut dialog saves the
+  // result. Resolves with a color, null to follow the icon, or undefined.
+  async function pickShortcutIconPlateColor(request) {
+    if (!pageState.shortcutPlateColorPicker) {
+      try {
+        pageState.shortcutPlateColorPicker = await folderColorApi.createFolderColorPicker({
+          documentObj: document, t,
+          bindTooltip: bindShortcutDialogTooltip,
+          hideTooltip: hideShortcutDialogTooltip,
+          readSavedColors: () => folderColorStorage(storageArea, 'get', [FOLDER_COLOR_PRESETS_STORAGE_KEY])
+            .then((data) => data[FOLDER_COLOR_PRESETS_STORAGE_KEY]),
+          saveSavedColors: (colors) => folderColorStorage(storageArea, 'set', { [FOLDER_COLOR_PRESETS_STORAGE_KEY]: colors }),
+          onSubmit: (_id, color) => {
+            pageState.shortcutPlateColorPick?.(color);
+            return Promise.resolve();
+          },
+          onClose: () => pageState.shortcutPlateColorPick?.(undefined)
+        });
+      } catch {
+        return undefined;
+      }
+    }
+    return new Promise((resolve) => {
+      pageState.shortcutPlateColorPick = (color) => {
+        pageState.shortcutPlateColorPick = null;
+        resolve(color);
+      };
+      const label = t('newtab_shortcuts_icon_plate_color_label', 'Background color');
+      pageState.shortcutPlateColorPicker.open({
+        folderId: 'shortcut-icon-plate',
+        title: request.title,
+        color: request.color,
+        presets: request.presets,
+        previewImageUrl: request.imageUrl,
+        labels: {
+          dialog: label,
+          picker: label,
+          defaultColor: t('newtab_shortcuts_icon_plate_color_auto', 'From the icon')
+        },
+        sourceElement: request.sourceElement
+      });
+    });
+  }
   const shortcutIconStore = NEWTAB_SHORTCUT_ICON_STORE.createShortcutIconStore({
     documentObj: document,
     windowObj: window,
@@ -3881,6 +3926,7 @@
     storageArea,
     NEWTAB_SHORTCUT_ICON_STORE,
     NEWTAB_SHORTCUT_ICON_PLATE,
+    pickShortcutIconPlateColor,
     NEWTAB_SHORTCUT_COLUMNS_DEFAULT,
     NEWTAB_SHORTCUT_SIZE_DEFAULT,
     NEWTAB_SHORTCUT_GAP_DEFAULT,

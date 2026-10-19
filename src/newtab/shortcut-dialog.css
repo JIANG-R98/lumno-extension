@@ -253,49 +253,33 @@
         gap: 12px;
         cursor: pointer;
       }
+      /* Swatches are the folder color picker's (folder-color-picker.css). */
       .x-nt-shortcut-icon-plate-colors {
+        --control-hover-bg: rgb(0 0 0 / 0.05);
+        --control-open-bg: rgb(0 0 0 / 0.08);
         display: flex;
         flex-wrap: wrap;
         align-items: center;
         gap: 8px;
+        padding: 4px 0;
       }
-      .x-nt-shortcut-icon-plate-swatch {
-        all: unset;
-        position: relative;
-        width: 24px;
-        height: 24px;
+      body[data-theme="dark"] .x-nt-shortcut-icon-plate-colors {
+        --control-hover-bg: #363636;
+        --control-open-bg: #404040;
+      }
+      .x-nt-shortcut-icon-plate-swatch[data-auto="true"] {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        border-radius: 50%;
-        box-sizing: border-box;
-        box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.14);
-        color: rgba(15, 23, 42, 0.62);
-        cursor: pointer;
-        transition: box-shadow var(--lumno-duration-sm) ease, transform var(--lumno-duration-2xs) ease;
-      }
-      .x-nt-shortcut-icon-plate-swatch[data-auto="true"] {
+        color: rgb(15 23 42 / 0.62);
         background: var(--x-nt-shortcut-icon-plate-light, #ffffff);
       }
       body[data-theme="dark"] .x-nt-shortcut-icon-plate-swatch[data-auto="true"] {
         background: var(--x-nt-shortcut-icon-plate-dark, #3a3a3c);
-        color: rgba(248, 250, 252, 0.72);
+        color: rgb(248 250 252 / 0.72);
       }
-      body[data-theme="dark"] .x-nt-shortcut-icon-plate-swatch {
-        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
-      }
-      .x-nt-shortcut-icon-plate-swatch[aria-pressed="true"] {
-        box-shadow:
-          inset 0 0 0 1px rgba(15, 23, 42, 0.14),
-          0 0 0 2px var(--panel-bg, #ffffff),
-          0 0 0 4px var(--input-focus-color, #3b82f6);
-      }
-      .x-nt-shortcut-icon-plate-swatch:focus-visible {
-        outline: 2px solid var(--input-focus-color, #3b82f6);
-        outline-offset: 2px;
-      }
-      .x-nt-shortcut-icon-plate-swatch:active {
-        transform: scale(0.94);
+      .x-nt-shortcut-icon-plate-swatch .ri-icon {
+        pointer-events: none;
       }
       .x-nt-shortcut-icon-plate-swatch:disabled {
         cursor: default;

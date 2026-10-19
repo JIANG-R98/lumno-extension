@@ -36,6 +36,7 @@
       storageArea,
       NEWTAB_SHORTCUT_ICON_STORE,
       NEWTAB_SHORTCUT_ICON_PLATE,
+      pickShortcutIconPlateColor,
       NEWTAB_SHORTCUT_COLUMNS_DEFAULT,
       NEWTAB_SHORTCUT_SIZE_DEFAULT,
       NEWTAB_SHORTCUT_GAP_DEFAULT,
@@ -1585,6 +1586,7 @@
         analyzeIcon: (image) => NEWTAB_SHORTCUT_ICON_PLATE.analyzeImage(image, { documentObj: document }),
         resolveIconPlate: NEWTAB_SHORTCUT_ICON_PLATE.resolvePlate,
         getIconPlateColorChoices: NEWTAB_SHORTCUT_ICON_PLATE.getPlateColorChoices,
+        pickIconPlateColor: pickShortcutIconPlateColor,
         onSubmit(payload) {
           if (payload.itemType === 'group') {
             return saveShortcutGroupFromDialog(payload.title);

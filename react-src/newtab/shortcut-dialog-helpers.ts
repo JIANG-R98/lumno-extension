@@ -41,6 +41,15 @@ export function normalizeIconPlateMode(value: unknown): IconPlateMode {
   return value === 'on' || value === 'off' ? value : '';
 }
 
+// 'rgb(r, g, b)' or '#rrggbb' as '#RRGGBB'; '' for anything else.
+export function cssColorToHex(value: string): string {
+  const text = String(value || '').trim();
+  if (/^#[\da-f]{6}$/i.test(text)) return text.toUpperCase();
+  const match = /^rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)$/i.exec(text);
+  if (!match) return '';
+  return `#${match.slice(1).map((channel) => Math.min(255, Number(channel)).toString(16).padStart(2, '0')).join('').toUpperCase()}`;
+}
+
 export function getIconPlateStyle(plate: IconPlateColors | null): Record<string, string> | undefined {
   return plate
     ? { '--x-nt-shortcut-icon-plate-light': plate.light, '--x-nt-shortcut-icon-plate-dark': plate.dark }

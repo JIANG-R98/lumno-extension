@@ -2429,6 +2429,9 @@
   "newtab_shortcuts_icon_plate_color_auto": {
     "message": "From the icon"
   },
+  "newtab_shortcuts_icon_plate_color_custom": {
+    "message": "Custom color"
+  },
   "newtab_shortcuts_icon_custom_sync_hint": {
     "message": "Sync across devices with WebDAV."
   },

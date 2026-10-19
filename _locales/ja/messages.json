@@ -2429,6 +2429,9 @@
   "newtab_shortcuts_icon_plate_color_auto": {
     "message": "アイコンから取得"
   },
+  "newtab_shortcuts_icon_plate_color_custom": {
+    "message": "カスタムカラー"
+  },
   "newtab_shortcuts_icon_custom_sync_hint": {
     "message": "WebDAV で端末間の同期ができます。"
   },
