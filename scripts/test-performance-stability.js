@@ -141,7 +141,7 @@ assertMatches(
 );
 assertMatches(
   newtabJs,
-  /function setShortcutDockHover\(activeTile, pointerX\) \{[\s\S]*?getShortcutDockInfluence\(pointerX, icon\)[\s\S]*?shortcutGrid\.setAttribute\('data-dock-active', 'true'\)/,
+  /function setShortcutDockHover\(activeTile, pointerX, options\) \{[\s\S]*?getShortcutDockInfluence\(pointerX, icon\)[\s\S]*?shortcutGrid\.setAttribute\('data-dock-active', 'true'\)/,
   'shortcut dock geometry reads should finish before hover state writes begin'
 );
 assertMatches(

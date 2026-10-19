@@ -200,14 +200,15 @@
       }
       const folderMenuTile = getOpenShortcutFolderMenuTile();
       if (folderMenuTile) {
-        setShortcutDockHover(folderMenuTile, getShortcutDockIconCenterX(folderMenuTile));
+        setShortcutDockHover(folderMenuTile, getShortcutDockIconCenterX(folderMenuTile), { settle: true });
         return;
       }
       clearShortcutDockMagnificationState();
       clearShortcutContextMenuTileActive();
     }
 
-    function setShortcutDockHover(activeTile, pointerX) {
+    // `settle` marks a resting position (a menu's tile) rather than the pointer.
+    function setShortcutDockHover(activeTile, pointerX, options) {
       if (!pageState.shortcutGrid || !activeTile) {
         return;
       }
@@ -234,10 +235,11 @@
           };
         })
         : [];
+      const wasActive = pageState.shortcutGrid.getAttribute('data-dock-active') === 'true';
       pageState.shortcutGrid.setAttribute('data-dock-active', 'true');
       // While the pointer drives the icons they follow it closely; the slower
-      // swell is kept for settling once it leaves.
-      if (Number.isFinite(pointerX)) {
+      // swell is kept for growing in from rest and for settling.
+      if (Number.isFinite(pointerX) && wasActive && !(options && options.settle)) {
         pageState.shortcutGrid.setAttribute('data-dock-following', 'true');
       } else {
         pageState.shortcutGrid.removeAttribute('data-dock-following');

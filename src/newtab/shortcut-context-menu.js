@@ -109,7 +109,7 @@
       if (!tile || !tile.classList || !tile.classList.contains('x-nt-shortcut-tile')) {
         return;
       }
-      setShortcutDockHover(tile, getShortcutContextMenuAnchorX(tile));
+      setShortcutDockHover(tile, getShortcutContextMenuAnchorX(tile), { settle: true });
       tile.setAttribute('data-shortcut-context-menu-open', 'true');
     }
 

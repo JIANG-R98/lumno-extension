@@ -913,6 +913,11 @@ assertContains(
   "shortcutGrid.setAttribute('data-dock-following', 'true')",
   'shortcut dock should switch to the short follow duration while the pointer drives it'
 );
+assertContains(
+  newtabJs,
+  "Number.isFinite(pointerX) && wasActive && !(options && options.settle)",
+  'shortcut dock should keep the slower swell for growing in from rest and settling on a menu tile'
+);
 
 assertContains(
   newtabJs,
@@ -1389,7 +1394,7 @@ assertNotContains(
 
 assertContains(
   newtabJs,
-  'function setShortcutDockHover(activeTile, pointerX) {',
+  'function setShortcutDockHover(activeTile, pointerX, options) {',
   'newtab runtime should calculate shortcut dock hover states'
 );
 
