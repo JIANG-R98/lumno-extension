@@ -212,6 +212,95 @@
       body[data-theme="dark"] .x-nt-shortcut-online-icon-preview[data-builtin-monochrome="true"] img {
         filter: invert(1);
       }
+      /* Shows the plate the shortcut tile will get, at the tile's proportions. */
+      .x-nt-shortcut-icon-plate-preview {
+        width: 40px;
+        height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--lumno-radius-md);
+        transition: background-color var(--lumno-duration-sm) ease;
+      }
+      .x-nt-shortcut-icon-plate-preview[hidden] {
+        display: none;
+      }
+      .x-nt-shortcut-icon-upload-tile .x-nt-shortcut-icon-plate-preview:not([data-icon-plate="true"]) {
+        width: 100%;
+        height: 100%;
+        border-radius: inherit;
+      }
+      .x-nt-shortcut-icon-plate-preview[data-icon-plate="true"] {
+        border-radius: 12px;
+        background: var(--x-nt-shortcut-icon-plate-light, #ffffff);
+      }
+      body[data-theme="dark"] .x-nt-shortcut-icon-plate-preview[data-icon-plate="true"] {
+        background: var(--x-nt-shortcut-icon-plate-dark, #3a3a3c);
+      }
+      .x-nt-shortcut-online-icon-preview .x-nt-shortcut-icon-plate-preview img {
+        width: 100%;
+        height: 100%;
+      }
+      .x-nt-shortcut-dialog .x-nt-shortcut-icon-plate-preview[data-icon-plate="true"] img {
+        width: 70%;
+        height: 70%;
+        border-radius: 0;
+      }
+      .x-nt-shortcut-icon-plate-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        cursor: pointer;
+      }
+      .x-nt-shortcut-icon-plate-colors {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+      .x-nt-shortcut-icon-plate-swatch {
+        all: unset;
+        position: relative;
+        width: 24px;
+        height: 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        box-sizing: border-box;
+        box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.14);
+        color: rgba(15, 23, 42, 0.62);
+        cursor: pointer;
+        transition: box-shadow var(--lumno-duration-sm) ease, transform var(--lumno-duration-2xs) ease;
+      }
+      .x-nt-shortcut-icon-plate-swatch[data-auto="true"] {
+        background: var(--x-nt-shortcut-icon-plate-light, #ffffff);
+      }
+      body[data-theme="dark"] .x-nt-shortcut-icon-plate-swatch[data-auto="true"] {
+        background: var(--x-nt-shortcut-icon-plate-dark, #3a3a3c);
+        color: rgba(248, 250, 252, 0.72);
+      }
+      body[data-theme="dark"] .x-nt-shortcut-icon-plate-swatch {
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+      }
+      .x-nt-shortcut-icon-plate-swatch[aria-pressed="true"] {
+        box-shadow:
+          inset 0 0 0 1px rgba(15, 23, 42, 0.14),
+          0 0 0 2px var(--panel-bg, #ffffff),
+          0 0 0 4px var(--input-focus-color, #3b82f6);
+      }
+      .x-nt-shortcut-icon-plate-swatch:focus-visible {
+        outline: 2px solid var(--input-focus-color, #3b82f6);
+        outline-offset: 2px;
+      }
+      .x-nt-shortcut-icon-plate-swatch:active {
+        transform: scale(0.94);
+      }
+      .x-nt-shortcut-icon-plate-swatch:disabled {
+        cursor: default;
+        opacity: 0.65;
+      }
       .x-nt-shortcut-dialog .x-nt-shortcut-icon-refresh {
         min-width: 0;
         min-height: 32px;

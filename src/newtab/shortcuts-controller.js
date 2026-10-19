@@ -35,6 +35,7 @@
       updateBookmarkSectionPosition,
       storageArea,
       NEWTAB_SHORTCUT_ICON_STORE,
+      NEWTAB_SHORTCUT_ICON_PLATE,
       NEWTAB_SHORTCUT_COLUMNS_DEFAULT,
       NEWTAB_SHORTCUT_SIZE_DEFAULT,
       NEWTAB_SHORTCUT_GAP_DEFAULT,
@@ -1266,7 +1267,9 @@
     function saveNewShortcutFromDialog(title, url, iconState) {
       const options = getShortcutStoreOptions();
       const nextShortcut = NEWTAB_SHORTCUTS_STORE.createShortcutRecord({ title, url,
-        iconSource: iconState && iconState.source }, options);
+        iconSource: iconState && iconState.source,
+        iconPlate: iconState && iconState.plate,
+        iconPlateColor: iconState && iconState.plateColor }, options);
       if (!nextShortcut) {
         setShortcutError(t('newtab_shortcuts_invalid_url', 'Enter a valid http, https, or browser internal URL.'));
         return Promise.resolve(false);
@@ -1347,8 +1350,11 @@
         return Promise.resolve(false);
       }
       const options = getShortcutStoreOptions();
+      const keepsPlate = !iconState || typeof iconState.plate === 'undefined';
       const nextShortcut = NEWTAB_SHORTCUTS_STORE.createShortcutRecord({ title, url,
-        iconSource: iconState && iconState.source || currentShortcut.iconSource }, options);
+        iconSource: iconState && iconState.source || currentShortcut.iconSource,
+        iconPlate: keepsPlate ? currentShortcut.iconPlate : iconState.plate,
+        iconPlateColor: keepsPlate ? currentShortcut.iconPlateColor : iconState.plateColor }, options);
       if (!nextShortcut) {
         setShortcutError(t('newtab_shortcuts_invalid_url', 'Enter a valid http, https, or browser internal URL.'));
         return Promise.resolve(false);
@@ -1386,7 +1392,9 @@
       const iconState = {
         action: dialogState && dialogState.iconAction,
         dataUrl: dialogState && dialogState.iconDataUrl,
-        source: dialogState && dialogState.iconSource
+        source: dialogState && dialogState.iconSource,
+        plate: dialogState && dialogState.iconPlate,
+        plateColor: dialogState && dialogState.iconPlateColor
       };
       if (dialogState && dialogState.mode === SHORTCUT_DIALOG_MODE_EDIT) {
         return saveEditedShortcutFromDialog(title, url, dialogState.shortcutId, iconState);
@@ -1519,6 +1527,8 @@
         resolveShortcutFaviconDataUrl,
         getShortcutFaviconPolicyRevision: () => pageState.shortcutFaviconPolicyRevision,
         getShortcutFaviconCandidateUrl,
+        analyzeShortcutIcon: (image) => NEWTAB_SHORTCUT_ICON_PLATE.analyzeImage(image, { documentObj: document }),
+        resolveShortcutIconPlate: NEWTAB_SHORTCUT_ICON_PLATE.resolvePlate,
         getImmediateThemeForSuggestion,
         applyShortcutTileTheme,
         queueThemeForTarget,
@@ -1572,6 +1582,9 @@
         getBuiltinIconUrl: getShortcutDialogBuiltinIconUrl,
         isIconSourceAvailable: isShortcutDialogIconSourceAvailable,
         refreshOnlineIcon: refreshShortcutDialogOnlineIcon,
+        analyzeIcon: (image) => NEWTAB_SHORTCUT_ICON_PLATE.analyzeImage(image, { documentObj: document }),
+        resolveIconPlate: NEWTAB_SHORTCUT_ICON_PLATE.resolvePlate,
+        getIconPlateColorChoices: NEWTAB_SHORTCUT_ICON_PLATE.getPlateColorChoices,
         onSubmit(payload) {
           if (payload.itemType === 'group') {
             return saveShortcutGroupFromDialog(payload.title);
@@ -1593,7 +1606,9 @@
             shortcutId: payload.shortcutId,
             iconAction: payload.iconAction,
             iconDataUrl: payload.iconDataUrl,
-            iconSource: payload.iconSource
+            iconSource: payload.iconSource,
+            iconPlate: payload.iconPlate,
+            iconPlateColor: payload.iconPlateColor
           }).then((saved) => {
             const onlineIcon = payload.onlineIcon;
             const pageUrl = SHORTCUT_FAVICON.normalizePageUrl(

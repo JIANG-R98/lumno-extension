@@ -2420,6 +2420,15 @@
   "newtab_shortcuts_icon_cache_caution": {
     "message": "Site settings may add notification dots or reduce clarity."
   },
+  "newtab_shortcuts_icon_plate_label": {
+    "message": "Icon background"
+  },
+  "newtab_shortcuts_icon_plate_color_label": {
+    "message": "Background color"
+  },
+  "newtab_shortcuts_icon_plate_color_auto": {
+    "message": "From the icon"
+  },
   "newtab_shortcuts_icon_custom_sync_hint": {
     "message": "Sync across devices with WebDAV."
   },

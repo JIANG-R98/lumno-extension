@@ -10,6 +10,13 @@ import {
 } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
+import {
+  getIconPlateStyle,
+  normalizeIconPlateMode,
+  type IconPlateAnalysis,
+  type IconPlateColors,
+  type IconPlateInput
+} from './shortcut-dialog-helpers';
 
 type ThemeValue = unknown;
 
@@ -61,6 +68,9 @@ export interface ShortcutsViewOptions {
   resolveShortcutFaviconDataUrl?: (pageUrl: string) => Promise<string>;
   getShortcutFaviconPolicyRevision?: () => number;
   getShortcutFaviconCandidateUrl?: (url: string) => string;
+  // Reads a loaded icon's pixels: is it see-through, and which colors.
+  analyzeShortcutIcon?: (image: HTMLImageElement) => IconPlateAnalysis | null;
+  resolveShortcutIconPlate?: (input: IconPlateInput) => IconPlateColors | null;
   getImmediateThemeForSuggestion?: (
     suggestion: ThemeSuggestion
   ) => ThemeValue;
@@ -146,6 +156,8 @@ interface NormalizedOptions {
   resolveShortcutFaviconDataUrl: (pageUrl: string) => Promise<string>;
   getShortcutFaviconPolicyRevision: () => number;
   getShortcutFaviconCandidateUrl: (url: string) => string;
+  analyzeShortcutIcon: NonNullable<ShortcutsViewOptions['analyzeShortcutIcon']>;
+  resolveShortcutIconPlate: NonNullable<ShortcutsViewOptions['resolveShortcutIconPlate']>;
   getImmediateThemeForSuggestion: (
     suggestion: ThemeSuggestion
   ) => ThemeValue;
@@ -230,6 +242,8 @@ function normalizeOptions(
       options.getShortcutFaviconPolicyRevision || (() => 0),
     getShortcutFaviconCandidateUrl:
       options.getShortcutFaviconCandidateUrl || (() => ''),
+    analyzeShortcutIcon: options.analyzeShortcutIcon || (() => null),
+    resolveShortcutIconPlate: options.resolveShortcutIconPlate || (() => null),
     getImmediateThemeForSuggestion:
       options.getImmediateThemeForSuggestion || (() => null),
     applyShortcutTileTheme: options.applyShortcutTileTheme || (() => {}),
@@ -285,6 +299,20 @@ function ShortcutFavicon({
   const cachedFaviconDataUrl = options.getShortcutFaviconDataUrl(url);
   const faviconPolicyRevision = options.getShortcutFaviconPolicyRevision();
   const [resolvedFavicon, setResolvedFavicon] = useState({ url, iconSource, dataUrl: cachedFaviconDataUrl });
+  // Keyed by the artwork it was read from, so a changed URL or icon never
+  // shows the previous icon's plate.
+  const iconKey = localIconDataUrl || url;
+  const [iconAnalysis, setIconAnalysis] = useState<{ key: string; src: string; analysis: IconPlateAnalysis | null }>({
+    key: '', src: '', analysis: null
+  });
+  const plateMode = normalizeIconPlateMode(shortcut.iconPlate);
+  const plate = plateMode === 'off' ? null : options.resolveShortcutIconPlate({
+    mode: plateMode,
+    color: String(shortcut.iconPlateColor || ''),
+    // Built-in glyphs are drawn for the bare tile.
+    eligible: !isBuiltinIcon || plateMode === 'on',
+    analysis: iconAnalysis.key === iconKey ? iconAnalysis.analysis : null
+  });
   const fallbackFaviconDataUrl =
     cachedFaviconDataUrl || (resolvedFavicon.url === url && resolvedFavicon.iconSource === iconSource ? resolvedFavicon.dataUrl : '');
 
@@ -328,15 +356,31 @@ function ShortcutFavicon({
 
   return (
     <span className="x-nt-shortcut-icon">
-      <span className="x-nt-shortcut-favicon-mask" data-builtin-icon={isBuiltinIcon ? 'true' : undefined} data-builtin-monochrome={isMonochromeBuiltinIcon ? 'true' : undefined}>
+      <span
+        className="x-nt-shortcut-favicon-mask"
+        data-builtin-icon={isBuiltinIcon ? 'true' : undefined}
+        data-builtin-monochrome={isMonochromeBuiltinIcon ? 'true' : undefined}
+        data-icon-plate={plate ? 'true' : undefined}
+        style={getIconPlateStyle(plate)}
+      >
         <img
-          key={localIconDataUrl || url}
+          key={iconKey}
           ref={imageRef}
           className="x-nt-shortcut-favicon"
           alt=""
           loading="lazy"
           draggable={false}
           src={localIconDataUrl || undefined}
+          onLoad={(event) => {
+            const image = event.currentTarget;
+            const src = image.currentSrc || image.src;
+            // Letter fallbacks and placeholders are not the site's artwork.
+            const isFallback = image.getAttribute('data-fallback-icon') === 'true' ||
+              image.getAttribute('data-favicon-placeholder') === 'true';
+            const analysis = isFallback ? null : options.analyzeShortcutIcon(image);
+            setIconAnalysis((current) => (current.key === iconKey && current.src === src &&
+              current.analysis === analysis ? current : { key: iconKey, src, analysis }));
+          }}
         />
       </span>
     </span>

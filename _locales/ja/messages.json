@@ -2420,6 +2420,15 @@
   "newtab_shortcuts_icon_cache_caution": {
     "message": "サイト設定により、通知バッジや低画質の場合も。"
   },
+  "newtab_shortcuts_icon_plate_label": {
+    "message": "アイコンの背景"
+  },
+  "newtab_shortcuts_icon_plate_color_label": {
+    "message": "背景色"
+  },
+  "newtab_shortcuts_icon_plate_color_auto": {
+    "message": "アイコンから取得"
+  },
   "newtab_shortcuts_icon_custom_sync_hint": {
     "message": "WebDAV で端末間の同期ができます。"
   },

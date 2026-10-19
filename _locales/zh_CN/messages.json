@@ -2420,6 +2420,15 @@
   "newtab_shortcuts_icon_cache_caution": {
     "message": "受网站设置影响，可能带通知红点或较模糊。"
   },
+  "newtab_shortcuts_icon_plate_label": {
+    "message": "图标背景"
+  },
+  "newtab_shortcuts_icon_plate_color_label": {
+    "message": "背景颜色"
+  },
+  "newtab_shortcuts_icon_plate_color_auto": {
+    "message": "从图标取色"
+  },
   "newtab_shortcuts_icon_custom_sync_hint": {
     "message": "可通过 WebDAV 跨设备同步。"
   },

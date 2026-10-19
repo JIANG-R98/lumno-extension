@@ -26,6 +26,7 @@ const pageState = {
 const noop = () => {};
 const controller = globalThis.LumnoNewtabShortcutsController.createShortcutsController({
   NEWTAB_SHORTCUTS_STORE,
+  NEWTAB_SHORTCUT_ICON_PLATE: require(path.join(repoRoot, 'src/newtab/shortcut-icon-plate.js')),
   isShortcutDragActive: () => dragActive,
   shortcutFolderRuntime: { visibleItems: (items) => items, flush: () => Promise.resolve() },
   bookmarksRuntime: { getNodeMap: () => new Map() },

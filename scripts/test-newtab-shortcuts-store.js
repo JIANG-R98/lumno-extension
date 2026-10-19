@@ -548,7 +548,37 @@ async function testFolderReferencesSurviveStorageAndDeduplicateIndependentlyFrom
   assert.strictEqual(loaded[3].url, 'https://example.com/');
 }
 
+async function testIconPlatePreferencesSurviveStorage() {
+  const storage = createMemoryStorage();
+  await shortcutsStore.saveShortcuts(storage, [
+    { url: 'https://auto.example/' },
+    { url: 'https://off.example/', iconPlate: 'off', iconPlateColor: '#ff0000' },
+    { url: 'https://on.example/', iconPlate: 'on' },
+    { url: 'https://tint.example/', iconSource: 'cache', iconPlate: 'on', iconPlateColor: '#fdeee4' },
+    { url: 'https://color-only.example/', iconPlateColor: '#123ABC' },
+    { url: 'https://invalid.example/', iconPlate: 'sometimes', iconPlateColor: 'red' }
+  ]);
+  const loaded = await shortcutsStore.loadShortcuts(storage);
+  assert.deepStrictEqual(loaded.map((item) => [item.iconPlate, item.iconPlateColor, item.iconSource]), [
+    [undefined, undefined, undefined],
+    ['off', undefined, undefined],
+    ['on', undefined, undefined],
+    ['on', '#FDEEE4', 'cache'],
+    [undefined, '#123ABC', undefined],
+    [undefined, undefined, undefined]
+  ], 'icon plate choices survive the compact form; "off" drops its color and invalid values are ignored');
+  const plan = shortcutsStore.createShortcutStoragePlan({
+    groups: shortcutsStore.normalizeShortcutGroups(null),
+    items: [{ id: 'a', url: 'https://plate.example/', iconPlate: 'on' }]
+  }, { rev: 'r1', now: 1 });
+  const entry = plan.payload[shortcutsStore.SHORTCUTS_SYNC_KEYS[0]].s[0];
+  assert.strictEqual(entry[4], '', 'a missing icon source stays an empty slot older versions ignore');
+  assert.strictEqual(entry[5], 'on');
+  assert.strictEqual(entry.length, 6, 'trailing empty plate fields are not stored');
+}
+
 async function run() {
+  await testIconPlatePreferencesSurviveStorage();
   const sourceStorage = createMemoryStorage();
   await shortcutsStore.saveShortcuts(sourceStorage, [
     { url: 'https://service.example/', iconSource: 'service' },

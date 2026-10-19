@@ -195,11 +195,85 @@ describe('shortcut dialog React island', () => {
         shortcutId: 'shortcut-one',
         iconAction: 'keep',
         iconDataUrl: '',
-        iconSource: 'cache'
+        iconSource: 'cache',
+        iconPlate: '',
+        iconPlateColor: ''
       }
     ]);
     expect(controller.element.hidden).toBe(true);
     expect(document.activeElement).toBe(trigger);
+  });
+
+  it('previews the icon plate and saves a color picked from the icon', async () => {
+    const submissions: ShortcutDialogPayload[] = [];
+    const analysis = { transparent: true, accent: [238, 77, 45], palette: [[238, 77, 45]] };
+    const controller = createController((payload) => {
+      submissions.push({ ...payload });
+      return true;
+    }, {
+      getOnlineIconUrl: () => 'data:image/png;base64,bG9nbw==',
+      analyzeIcon: () => analysis,
+      resolveIconPlate: ({ mode, color, analysis: read }) => (mode === 'off' || (mode !== 'on' && !read?.transparent)
+        ? null : { light: color || 'rgb(253, 236, 231)', dark: color || 'rgb(80, 40, 30)', custom: Boolean(color) }),
+      getIconPlateColorChoices: () => ['#FDECE7', '#FFFFFF']
+    });
+    act(() => {
+      controller.open({
+        mode: 'edit',
+        shortcut: { id: 'shopee', title: 'Shopee', url: 'https://shopee.example/', iconPlate: 'on' }
+      });
+    });
+    const preview = controller.element.querySelector<HTMLElement>('.x-nt-shortcut-online-icon-preview .x-nt-shortcut-icon-plate-preview')!;
+    expect(preview.dataset.iconPlate).toBe('true');
+    act(() => {
+      preview.querySelector('img')!.dispatchEvent(new Event('load'));
+    });
+    expect(preview.style.getPropertyValue('--x-nt-shortcut-icon-plate-light')).toBe('rgb(253, 236, 231)');
+    const swatches = Array.from(controller.element.querySelectorAll<HTMLButtonElement>('.x-nt-shortcut-icon-plate-swatch'));
+    expect(swatches.map((swatch) => swatch.getAttribute('aria-label'))).toEqual(['From the icon', '#FDECE7', '#FFFFFF']);
+    expect(swatches[0].getAttribute('aria-pressed')).toBe('true');
+    act(() => {
+      swatches[2].click();
+    });
+    expect(preview.style.getPropertyValue('--x-nt-shortcut-icon-plate-light')).toBe('#FFFFFF');
+    await act(async () => {
+      await controller.submit();
+    });
+    expect(submissions[0]).toEqual(expect.objectContaining({ iconPlate: 'on', iconPlateColor: '#FFFFFF' }));
+  });
+
+  it('shows the plate switch on for see-through icons and saves the switched choice', async () => {
+    const submissions: ShortcutDialogPayload[] = [];
+    const transparent = false;
+    const controller = createController((payload) => {
+      submissions.push({ ...payload });
+      return true;
+    }, {
+      getOnlineIconUrl: () => 'data:image/png;base64,bG9nbw==',
+      analyzeIcon: () => ({ transparent, accent: [17, 17, 17], palette: [[17, 17, 17]] }),
+      resolveIconPlate: ({ mode, analysis }) => (mode === 'off' || (mode !== 'on' && !analysis?.transparent)
+        ? null : { light: '#FFFFFF', dark: '#E2E2E2', custom: false }),
+      getIconPlateColorChoices: () => ['#FFFFFF']
+    });
+    act(() => {
+      controller.open({ mode: 'edit', shortcut: { id: 'gh', title: 'GitHub', url: 'https://github.com/' } });
+    });
+    const toggle = controller.element.querySelector<HTMLInputElement>('.x-nt-shortcut-icon-plate-toggle input[role="switch"]')!;
+    const image = controller.element.querySelector<HTMLImageElement>('.x-nt-shortcut-online-icon-preview img')!;
+    act(() => {
+      image.dispatchEvent(new Event('load'));
+    });
+    expect(toggle.checked).toBe(false);
+    expect(controller.element.querySelector('.x-nt-shortcut-icon-plate-colors')).toBeNull();
+    act(() => {
+      toggle.click();
+    });
+    expect(toggle.checked).toBe(true);
+    expect(controller.element.querySelector('.x-nt-shortcut-icon-plate-colors')).not.toBeNull();
+    await act(async () => {
+      await controller.submit();
+    });
+    expect(submissions[0]).toEqual(expect.objectContaining({ iconPlate: 'on', iconPlateColor: '' }));
   });
 
   it('isolates the page while open and redirects escaped focus into the dialog', () => {

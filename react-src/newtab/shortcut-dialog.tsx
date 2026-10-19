@@ -19,7 +19,13 @@ import {
   MODE_EDIT,
   clampEnterOffset,
   getEnterOffset,
+  getIconPlateStyle,
+  normalizeIconPlateMode,
   normalizeMode,
+  type IconPlateAnalysis,
+  type IconPlateColors,
+  type IconPlateInput,
+  type IconPlateMode,
   type ShortcutDialogMode,
   type ShortcutRecord
 } from './shortcut-dialog-helpers';
@@ -55,6 +61,9 @@ export interface ShortcutDialogPayload {
   iconDataUrl: string;
   iconSource?: IconMode;
   onlineIcon?: OnlineShortcutIcon;
+  // Shortcuts only.
+  iconPlate?: IconPlateMode;
+  iconPlateColor?: string;
 }
 
 export interface ShortcutDialogOpenOptions {
@@ -100,6 +109,9 @@ export interface ShortcutDialogOptions {
   getBuiltinIconUrl?: (url: string) => string;
   isIconSourceAvailable?: (source: OnlineIconSource, url: string) => boolean;
   refreshOnlineIcon?: (url: string, source?: OnlineIconSource) => Promise<OnlineShortcutIcon | null>;
+  analyzeIcon?: (image: HTMLImageElement) => IconPlateAnalysis | null;
+  resolveIconPlate?: (input: IconPlateInput) => IconPlateColors | null;
+  getIconPlateColorChoices?: (analysis: IconPlateAnalysis | null) => string[];
   getRiSvg?: (id: string, sizeClass?: string) => string;
   bindTooltip?: (
     target: HTMLElement,
@@ -140,6 +152,10 @@ interface FormState {
   iconDataUrl: string;
   onlineIconUrl: string;
   onlineIcon: OnlineShortcutIcon | null;
+  iconPlateMode: IconPlateMode;
+  iconPlateColor: string;
+  // The preview image's pixels, keyed by its source.
+  iconAnalysis: { src: string; analysis: IconPlateAnalysis | null };
   error: string;
   iconError: string;
   confirmation: ShortcutDialogOpenOptions | null;
@@ -156,6 +172,9 @@ interface NormalizedOptions {
   getBuiltinIconUrl: NonNullable<ShortcutDialogOptions['getBuiltinIconUrl']>;
   isIconSourceAvailable: NonNullable<ShortcutDialogOptions['isIconSourceAvailable']>;
   refreshOnlineIcon: NonNullable<ShortcutDialogOptions['refreshOnlineIcon']>;
+  analyzeIcon: NonNullable<ShortcutDialogOptions['analyzeIcon']>;
+  resolveIconPlate: NonNullable<ShortcutDialogOptions['resolveIconPlate']>;
+  getIconPlateColorChoices: NonNullable<ShortcutDialogOptions['getIconPlateColorChoices']>;
   getRiSvg: (id: string, sizeClass?: string) => string;
   bindTooltip: NonNullable<ShortcutDialogOptions['bindTooltip']>;
   hideTooltip: () => void;
@@ -202,6 +221,9 @@ const INITIAL_FORM_STATE: FormState = {
   iconDataUrl: '',
   onlineIconUrl: '',
   onlineIcon: null,
+  iconPlateMode: '',
+  iconPlateColor: '',
+  iconAnalysis: { src: '', analysis: null },
   error: '',
   iconError: '',
   confirmation: null
@@ -238,6 +260,9 @@ function createInitialFormState(
     iconEditable,
     iconMode,
     iconDataUrl: customIcon,
+    iconPlateMode: itemType === 'shortcut' ? normalizeIconPlateMode(shortcut?.iconPlate) : '',
+    iconPlateColor: itemType === 'shortcut' && shortcut?.iconPlate !== 'off'
+      ? String(shortcut?.iconPlateColor || '') : '',
     onlineIconUrl: iconEditable && url
       ? iconMode === 'builtin' ? options.getBuiltinIconUrl(url)
         : String(openOptions.iconPreviewUrl || '') || options.getOnlineIconUrl(url) : '',
@@ -387,6 +412,10 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
             ? current.iconDataUrl
             : '',
         ...(current.iconEditable ? { iconSource: current.iconMode } : {}),
+        ...(current.itemType === 'shortcut' ? {
+          iconPlate: current.iconPlateMode,
+          iconPlateColor: current.iconPlateMode === 'off' ? '' : current.iconPlateColor
+        } : {}),
         ...(current.iconEditable && current.iconMode !== 'custom' && current.iconMode !== 'builtin' && current.onlineIcon
           ? { onlineIcon: Object.freeze({ ...current.onlineIcon }) }
           : {})
@@ -535,6 +564,20 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
         onlineIconUrl: mode === 'builtin' ? options.getBuiltinIconUrl(current.url)
           : restoreOriginal ? original.iconUrl : current.onlineIconUrl });
       if (isOnlineIconSource(mode) && !restoreOriginal && current.url.trim()) void handleIconRefresh();
+    }
+
+    function handlePreviewLoad(event: { currentTarget: HTMLImageElement }): void {
+      const image = event.currentTarget;
+      const src = image.getAttribute('src') || '';
+      const analysis = src ? options.analyzeIcon(image) : null;
+      commitState((current) => (current.iconAnalysis.src === src && current.iconAnalysis.analysis === analysis
+        ? current : { ...current, iconAnalysis: { src, analysis } }));
+    }
+
+    function selectPlateColor(color: string): void {
+      const current = stateRef.current;
+      if (current.busy || current.iconPlateColor === color) return;
+      commitState({ ...current, iconPlateColor: color });
     }
 
     async function handleIconRefresh(): Promise<void> {
@@ -697,6 +740,23 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
       : formState.iconMode === 'favicon-is'
       ? options.t('newtab_shortcuts_icon_favicon_is_caution', 'Domain icons may differ from the current page’s icon.')
       : options.t('newtab_shortcuts_icon_cache_caution', 'Site settings may add notification dots or reduce clarity.');
+    const previewSrc = isOnlineIcon ? formState.onlineIconUrl : (hasIcon ? formState.iconDataUrl : '');
+    const previewAnalysis = previewSrc && formState.iconAnalysis.src === previewSrc ? formState.iconAnalysis.analysis : null;
+    const plate = isShortcutItem ? options.resolveIconPlate({
+      mode: formState.iconPlateMode,
+      color: formState.iconPlateColor,
+      eligible: !isBuiltinIcon || formState.iconPlateMode === 'on',
+      analysis: previewAnalysis
+    }) : null;
+    const previewPlateStyle = getIconPlateStyle(plate);
+    const autoPlate = options.resolveIconPlate({ mode: 'on', color: '', analysis: previewAnalysis });
+    const plateColorChoices = options.getIconPlateColorChoices(previewAnalysis);
+    const plateLabel = options.t('newtab_shortcuts_icon_plate_label', 'Icon background');
+    // Until it is switched, a shortcut follows its artwork: see-through icons
+    // show the switch on.
+    const plateOn = Boolean(plate);
+    const plateColorLabel = options.t('newtab_shortcuts_icon_plate_color_label', 'Background color');
+    const plateAutoColorLabel = options.t('newtab_shortcuts_icon_plate_color_auto', 'From the icon');
     const chooseText = hasIcon
       ? options.t('newtab_shortcuts_icon_replace', 'Replace image')
       : options.t('newtab_shortcuts_icon_choose', 'Choose image');
@@ -937,12 +997,15 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
                 <div className="x-nt-shortcut-icon-control x-nt-shortcut-online-icon-control">
                   <span className="x-nt-shortcut-online-icon-preview" data-icon-source={formState.iconMode} data-builtin-monochrome={isMonochromeBuiltinIcon ? 'true' : undefined} aria-busy={formState.iconBusy}>
                     {formState.onlineIconUrl ? (
-                      <img
-                        className="x-nt-shortcut-icon-preview-image"
-                        src={formState.onlineIconUrl}
-                        alt=""
-                        draggable={false}
-                      />
+                      <span className="x-nt-shortcut-icon-plate-preview" data-icon-plate={plate ? 'true' : undefined} style={previewPlateStyle}>
+                        <img
+                          className="x-nt-shortcut-icon-preview-image"
+                          src={formState.onlineIconUrl}
+                          alt=""
+                          draggable={false}
+                          onLoad={handlePreviewLoad}
+                        />
+                      </span>
                     ) : (
                       <span aria-hidden="true" dangerouslySetInnerHTML={{
                         __html: options.getRiSvg('ri-link', 'ri-size-24')
@@ -994,13 +1057,16 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
                   onKeyDown={handleIconChooseKeydown}
                 >
                   <span className="x-nt-wallpaper-thumb x-nt-wallpaper-upload-thumb x-nt-shortcut-icon-preview">
-                    <img
-                      className="x-nt-shortcut-icon-preview-image"
-                      src={hasIcon ? formState.iconDataUrl : undefined}
-                      alt=""
-                      draggable={false}
-                      hidden={!hasIcon}
-                    />
+                    <span className="x-nt-shortcut-icon-plate-preview" data-icon-plate={plate && hasIcon ? 'true' : undefined} style={previewPlateStyle} hidden={!hasIcon}>
+                      <img
+                        className="x-nt-shortcut-icon-preview-image"
+                        src={hasIcon ? formState.iconDataUrl : undefined}
+                        alt=""
+                        draggable={false}
+                        hidden={!hasIcon}
+                        onLoad={handlePreviewLoad}
+                      />
+                    </span>
                     <span
                       className="x-nt-wallpaper-upload-placeholder x-nt-shortcut-icon-placeholder"
                       hidden={hasIcon}
@@ -1063,6 +1129,68 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
                 {formState.iconError}
               </div>
               </div>
+            </div>
+          ) : null}
+
+          {!isConfirmVariant && formState.iconEditable && isShortcutItem ? (
+            <div className="x-nt-shortcut-field x-nt-shortcut-icon-plate-field">
+              <label className="x-nt-shortcut-icon-plate-toggle">
+                <span>{plateLabel}</span>
+                <span className="x-nt-wallpaper-switch">
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    aria-checked={plateOn ? 'true' : 'false'}
+                    checked={plateOn}
+                    disabled={formState.busy}
+                    onChange={(event) => {
+                      const iconPlateMode: IconPlateMode = event.currentTarget.checked ? 'on' : 'off';
+                      commitState((current) => ({ ...current, iconPlateMode }));
+                    }}
+                  />
+                  <span aria-hidden="true" className="x-nt-wallpaper-switch-slider" />
+                </span>
+              </label>
+              {plateOn ? (
+                <div className="x-nt-shortcut-icon-plate-colors" role="group" aria-label={plateColorLabel}>
+                  <button
+                    type="button"
+                    className="x-nt-shortcut-icon-plate-swatch"
+                    data-auto="true"
+                    aria-pressed={formState.iconPlateColor ? 'false' : 'true'}
+                    aria-label={plateAutoColorLabel}
+                    title={plateAutoColorLabel}
+                    disabled={formState.busy}
+                    style={getIconPlateStyle(autoPlate)}
+                    onClick={() => selectPlateColor('')}
+                    dangerouslySetInnerHTML={{ __html: options.getRiSvg('ri-magic-line', 'ri-size-14') }}
+                  />
+                  {plateColorChoices.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      className="x-nt-shortcut-icon-plate-swatch"
+                      aria-pressed={formState.iconPlateColor === color ? 'true' : 'false'}
+                      aria-label={color}
+                      title={color}
+                      disabled={formState.busy}
+                      style={{ background: color }}
+                      onClick={() => selectPlateColor(color)}
+                    />
+                  ))}
+                  {formState.iconPlateColor && !plateColorChoices.includes(formState.iconPlateColor) ? (
+                    <button
+                      type="button"
+                      className="x-nt-shortcut-icon-plate-swatch"
+                      aria-pressed="true"
+                      aria-label={formState.iconPlateColor}
+                      title={formState.iconPlateColor}
+                      disabled={formState.busy}
+                      style={{ background: formState.iconPlateColor }}
+                    />
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           ) : null}
 
@@ -1135,6 +1263,12 @@ function normalizeOptions(options: ShortcutDialogOptions, root: typeof globalThi
       ? options.isIconSourceAvailable : () => true,
     refreshOnlineIcon: typeof options.refreshOnlineIcon === 'function'
       ? options.refreshOnlineIcon : () => Promise.resolve(null),
+    analyzeIcon: typeof options.analyzeIcon === 'function'
+      ? options.analyzeIcon : () => null,
+    resolveIconPlate: typeof options.resolveIconPlate === 'function'
+      ? options.resolveIconPlate : () => null,
+    getIconPlateColorChoices: typeof options.getIconPlateColorChoices === 'function'
+      ? options.getIconPlateColorChoices : () => [],
     getRiSvg: typeof options.getRiSvg === 'function'
       ? options.getRiSvg
       : (id, sizeClass = 'ri-size-16') =>

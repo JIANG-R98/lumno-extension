@@ -161,6 +161,7 @@ function createFrontend(acquisition, pageUrl, options = {}) {
     const hideShortcutDialogTooltip = () => {};
     const shortcutIconStore = { prepareFile: () => {} };
     const NEWTAB_SHORTCUT_DIALOG = { createShortcutDialog: (options) => options };
+    const NEWTAB_SHORTCUT_ICON_PLATE = { analyzeImage: () => null, resolvePlate: () => null, getPlateColorChoices: () => [] };
     const SHORTCUT_DIALOG_ITEM_BOOKMARK = 'bookmark';
     const SHORTCUT_DIALOG_ITEM_FOLDER = 'folder';
     const saveBookmarkFromDialog = () => Promise.resolve(true);

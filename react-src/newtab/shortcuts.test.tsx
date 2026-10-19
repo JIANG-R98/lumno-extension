@@ -401,6 +401,32 @@ describe('Shortcuts React island', () => {
     );
   });
 
+  it('puts see-through artwork on a plate unless the shortcut turns it off', () => {
+    const analyze = vi.fn(() => ({ transparent: true, accent: [238, 77, 45], palette: [[238, 77, 45]] }));
+    const { view } = createView({
+      analyzeShortcutIcon: analyze,
+      resolveShortcutIconPlate: ({ mode, analysis, eligible }) => (
+        mode !== 'off' && eligible !== false && (mode === 'on' || analysis?.transparent)
+          ? { light: 'rgb(253, 236, 231)', dark: 'rgb(80, 40, 30)', custom: false } : null)
+    });
+    renderItems(view, [{ id: 'shopee', title: 'Shopee', url: 'https://shopee.example/' }]);
+    const mask = () => view.getTiles()[0].querySelector<HTMLElement>('.x-nt-shortcut-favicon-mask')!;
+    expect(mask().dataset.iconPlate).toBeUndefined();
+    act(() => {
+      mask().querySelector('img')!.dispatchEvent(new Event('load'));
+    });
+    expect(analyze).toHaveBeenCalledTimes(1);
+    expect(mask().dataset.iconPlate).toBe('true');
+    expect(mask().style.getPropertyValue('--x-nt-shortcut-icon-plate-light')).toBe('rgb(253, 236, 231)');
+
+    renderItems(view, [{ id: 'shopee', title: 'Shopee', url: 'https://shopee.example/', iconPlate: 'off' }]);
+    expect(mask().dataset.iconPlate).toBeUndefined();
+
+    // Another site's artwork is read again before it gets a plate.
+    renderItems(view, [{ id: 'shopee', title: 'Shopee', url: 'https://other.example/' }]);
+    expect(mask().dataset.iconPlate).toBeUndefined();
+  });
+
   it('uses bundled artwork without acquiring an icon from the browser or a remote service', () => {
     const assetUrl = 'chrome-extension://abc/assets/images/site-search/glyph-xhs.png';
     const attachFavicon = vi.fn();

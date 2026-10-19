@@ -11,6 +11,40 @@ export interface ShortcutRecord {
   url?: string;
   iconDataUrl?: string;
   iconSource?: 'service' | 'favicon-is' | 'cache' | 'custom' | 'builtin';
+  iconPlate?: IconPlateMode;
+  iconPlateColor?: string;
+}
+
+// '' lets the artwork decide: see-through icons get a plate.
+export type IconPlateMode = '' | 'on' | 'off';
+
+export interface IconPlateAnalysis {
+  transparent: boolean;
+  accent: number[] | null;
+  palette: number[][];
+}
+
+export interface IconPlateColors {
+  light: string;
+  dark: string;
+  custom: boolean;
+}
+
+export interface IconPlateInput {
+  mode?: string;
+  color?: string;
+  eligible?: boolean;
+  analysis?: IconPlateAnalysis | null;
+}
+
+export function normalizeIconPlateMode(value: unknown): IconPlateMode {
+  return value === 'on' || value === 'off' ? value : '';
+}
+
+export function getIconPlateStyle(plate: IconPlateColors | null): Record<string, string> | undefined {
+  return plate
+    ? { '--x-nt-shortcut-icon-plate-light': plate.light, '--x-nt-shortcut-icon-plate-dark': plate.dark }
+    : undefined;
 }
 
 export function normalizeMode(

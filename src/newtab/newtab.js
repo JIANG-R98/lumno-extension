@@ -311,6 +311,7 @@
   const NEWTAB_SHORTCUTS_STORE = globalThis.LumnoNewtabShortcutsStore;
   const FOLDER_REFERENCES = globalThis.LumnoBookmarkFolderReference;
   const NEWTAB_SHORTCUT_ICON_STORE = globalThis.LumnoNewtabShortcutIconStore;
+  const NEWTAB_SHORTCUT_ICON_PLATE = globalThis.LumnoNewtabShortcutIconPlate;
   const NEWTAB_SHORTCUT_DIALOG = globalThis.LumnoNewtabShortcutDialog;
   const NEWTAB_RECENT_HISTORY_DIALOG = globalThis.LumnoNewtabRecentHistoryDialog;
   const PROGRESS_MATCH = globalThis.LumnoProgressMatch;
@@ -3879,6 +3880,7 @@
     updateBookmarkSectionPosition,
     storageArea,
     NEWTAB_SHORTCUT_ICON_STORE,
+    NEWTAB_SHORTCUT_ICON_PLATE,
     NEWTAB_SHORTCUT_COLUMNS_DEFAULT,
     NEWTAB_SHORTCUT_SIZE_DEFAULT,
     NEWTAB_SHORTCUT_GAP_DEFAULT,

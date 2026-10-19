@@ -54,6 +54,10 @@
     'chrome:', 'edge:', 'brave:', 'vivaldi:', 'opera:'
   ]);
   const ICON_SOURCES = ['service', 'favicon-is', 'cache', 'custom', 'builtin'];
+  // Plate behind the icon: absent follows the artwork (see-through icons get
+  // one), 'on' or 'off' overrides it; a color replaces the picked tint.
+  const ICON_PLATE_MODES = ['on', 'off'];
+  const ICON_PLATE_COLOR_PATTERN = /^#[\dA-F]{6}$/;
   const ID_PATTERN = /^[\w-]{1,120}$/;
   const SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*:/i;
 
@@ -236,7 +240,17 @@
       title,
       url,
       host,
-      ...(ICON_SOURCES.includes(source.iconSource) ? { iconSource: source.iconSource } : {})
+      ...(ICON_SOURCES.includes(source.iconSource) ? { iconSource: source.iconSource } : {}),
+      ...normalizeIconPlate(source)
+    };
+  }
+
+  function normalizeIconPlate(source) {
+    const mode = ICON_PLATE_MODES.includes(source.iconPlate) ? source.iconPlate : '';
+    const color = typeof source.iconPlateColor === 'string' ? source.iconPlateColor.trim().toUpperCase() : '';
+    return {
+      ...(mode ? { iconPlate: mode } : {}),
+      ...(mode !== 'off' && ICON_PLATE_COLOR_PATTERN.test(color) ? { iconPlateColor: color } : {})
     };
   }
 
@@ -365,10 +379,12 @@
       return [item.id, groupPosition, item.title, 1, item.folderId];
     }
     const entry = [item.id, groupPosition, item.title === item.host ? '' : item.title, compactUrl(item.url)];
-    if (item.iconSource) {
-      entry.push(item.iconSource);
+    // Older versions read only the first five fields.
+    const plate = [item.iconSource || '', item.iconPlate || '', item.iconPlateColor || ''];
+    while (plate.length && !plate[plate.length - 1]) {
+      plate.pop();
     }
-    return entry;
+    return entry.concat(plate);
   }
 
   function decodeEntry(entry, groups) {
@@ -378,7 +394,9 @@
     const group = Number.isInteger(entry[1]) ? groups[entry[1]] : null;
     const base = { id: entry[0], ...(group ? { groupId: group.id } : {}), title: String(entry[2] || '') };
     if (typeof entry[3] === 'string') {
-      return { ...base, url: expandUrl(entry[3]), ...(typeof entry[4] === 'string' ? { iconSource: entry[4] } : {}) };
+      return { ...base, url: expandUrl(entry[3]), ...(typeof entry[4] === 'string' && entry[4] ? { iconSource: entry[4] } : {}),
+        ...(typeof entry[5] === 'string' && entry[5] ? { iconPlate: entry[5] } : {}),
+        ...(typeof entry[6] === 'string' && entry[6] ? { iconPlateColor: entry[6] } : {}) };
     }
     if (entry[3] === 0 && Array.isArray(entry[4])) {
       const [refRoot, scope, path, fingerprint] = entry[4];

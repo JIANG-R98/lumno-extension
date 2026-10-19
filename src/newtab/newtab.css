@@ -1366,6 +1366,25 @@ body[data-glass-style] .x-nt-shortcut-favicon-mask[data-builtin-monochrome="true
   -webkit-user-drag: none;
   user-select: none;
 }
+/* See-through artwork sits on a plate tinted from its own color, the size of
+   the icons that bring their own square. */
+.x-nt-shortcut-favicon-mask[data-icon-plate="true"] {
+  border-radius: var(--x-nt-shortcut-favicon-radius, 8px);
+  -webkit-mask-image: var(--x-nt-shortcut-smooth-mask-inner);
+  mask-image: var(--x-nt-shortcut-smooth-mask-inner);
+  background: var(--x-nt-shortcut-icon-plate-light, rgb(255 255 255));
+  transition: background-color var(--lumno-duration-sm) ease;
+}
+body[data-theme="dark"] .x-nt-shortcut-favicon-mask[data-icon-plate="true"],
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-shortcut-favicon-mask[data-icon-plate="true"],
+body[data-glass-style] .x-nt-shortcut-favicon-mask[data-icon-plate="true"][data-glass-ink-theme="dark"] {
+  background: var(--x-nt-shortcut-icon-plate-dark, rgb(58 58 60));
+}
+.x-nt-shortcut-favicon-mask[data-icon-plate="true"] .x-nt-shortcut-favicon {
+  width: 70%;
+  height: 70%;
+  border-radius: 0;
+}
 .x-nt-shortcut-favicon-mask .x-nt-favicon-fallback {
   width: 100%;
   height: 100%;
