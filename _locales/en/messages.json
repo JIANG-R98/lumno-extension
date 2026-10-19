@@ -2567,6 +2567,12 @@
   "newtab_shortcuts_added": {
     "message": "Shortcut added"
   },
+  "context_menu_add_page_shortcut": {
+    "message": "Add to Lumno New Tab"
+  },
+  "page_shortcut_added": {
+    "message": "Added to Lumno New Tab"
+  },
   "newtab_shortcuts_already_added": {
     "message": "Already in shortcuts"
   },

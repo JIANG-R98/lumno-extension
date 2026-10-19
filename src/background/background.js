@@ -13,6 +13,8 @@ importScripts(
   chrome.runtime.getURL('src/shared/settings.js'),
   chrome.runtime.getURL('src/shared/bookmark-folder-reference.js'),
   chrome.runtime.getURL('src/newtab/shortcuts-store.js'),
+  chrome.runtime.getURL('src/shared/site-display-name.js'),
+  chrome.runtime.getURL('src/background/page-shortcut-menu.js'),
   chrome.runtime.getURL('src/newtab/wallpaper-local-store.js'),
   chrome.runtime.getURL('src/shared/webdav-contract.js'),
   chrome.runtime.getURL('src/background/webdav-client.js'),
@@ -4117,6 +4119,12 @@ function loadLocaleMessages(rawLocale) {
   localeMessagesByLocale.set(locale, loading);
   return loading;
 }
+
+// The page context menu item that adds the page to the New Tab shortcuts.
+const pageShortcutMenuController = providerStorageRuntime && chrome.contextMenus
+  ? globalThis.LumnoPageShortcutMenu.createController({ chrome, provider: providerStorageRuntime,
+    loadLocaleMessages, themeStorageKey: THEME_STORAGE_KEY }) : null;
+if (pageShortcutMenuController) pageShortcutMenuController.start();
 
 // A page script that names the few strings it shows gets only those.
 function pickLocaleMessages(messages, keys) {
