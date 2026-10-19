@@ -29,6 +29,8 @@ export interface TopContentModel {
   /** The clock's opacity, 0-1. */
   opacity?: number;
   showSeconds?: boolean;
+  /** Draws hours 1-12 with the locale's AM/PM. */
+  twelveHour?: boolean;
 }
 
 export interface TopContentControllerOptions {
@@ -122,6 +124,22 @@ const twoDigitFormat = Object.freeze({
   useGrouping: false
 });
 
+// 12-hour clocks read "9:41", not "09:41".
+const twelveHourFormat = Object.freeze({
+  minimumIntegerDigits: 1,
+  useGrouping: false
+});
+
+// AM/PM sits small beside the digits, on the side the locale puts it.
+const dayPeriodStyle: CSSProperties = {
+  fontSize: '0.34em',
+  fontStretch: 'normal',
+  letterSpacing: '0.02em',
+  lineHeight: 1,
+  opacity: 0.72,
+  whiteSpace: 'nowrap'
+};
+
 const hourDigits = Object.freeze({ 1: Object.freeze({ max: 2 }) });
 const minuteDigits = Object.freeze({ 1: Object.freeze({ max: 5 }) });
 const CLOCK_LETTER_SPACING_BASE_EM = -0.055;
@@ -166,16 +184,42 @@ function getClockDateTime(
   return showSeconds ? `${hours}:${minutes}:${seconds}` : `${hours}:${minutes}`;
 }
 
+function getTwelveHour(hours: number) {
+  return hours % 12 || 12;
+}
+
+// The locale's AM/PM word for this hour and whether it comes before the
+// digits ("下午 9:41") or after them ("9:41 PM").
+function getDayPeriod(locale: string | undefined, hours: number) {
+  const value = new Date(2000, 0, 1, hours, 0, 0, 0);
+  try {
+    const parts = new Intl.DateTimeFormat(locale || undefined, {
+      hour: 'numeric',
+      hourCycle: 'h12'
+    }).formatToParts(value);
+    const periodIndex = parts.findIndex((part) => part.type === 'dayPeriod');
+    const hourIndex = parts.findIndex((part) => part.type === 'hour');
+    if (periodIndex >= 0) {
+      return {
+        leading: hourIndex >= 0 && periodIndex < hourIndex,
+        text: parts[periodIndex].value
+      };
+    }
+  } catch (_error) {
+    // Falls through to the English labels.
+  }
+  return { leading: false, text: hours < 12 ? 'AM' : 'PM' };
+}
+
 function createLocalizedTimeFormatter(
   locale: string | undefined,
-  showSeconds: boolean
+  showSeconds: boolean,
+  twelveHour: boolean
 ) {
   try {
-    const format: Intl.DateTimeFormatOptions = {
-      hour: '2-digit',
-      hourCycle: 'h23',
-      minute: '2-digit'
-    };
+    const format: Intl.DateTimeFormatOptions = twelveHour
+      ? { hour: 'numeric', hourCycle: 'h12', minute: '2-digit' }
+      : { hour: '2-digit', hourCycle: 'h23', minute: '2-digit' };
     if (showSeconds) {
       format.second = '2-digit';
     }
@@ -198,21 +242,23 @@ function getLocalizedTimeLabel(
 const ClockHourMinuteDigits = memo(function ClockHourMinuteDigits({
   hours,
   locale,
-  minutes
+  minutes,
+  twelveHour
 }: {
   hours: number;
   locale?: string;
   minutes: number;
+  twelveHour: boolean;
 }) {
   return (
     <NumberFlowGroup>
       <NumberFlow
         digits={hourDigits}
-        format={twoDigitFormat}
+        format={twelveHour ? twelveHourFormat : twoDigitFormat}
         locales={locale}
         style={clockDigitsStyle}
         trend={0}
-        value={hours}
+        value={twelveHour ? getTwelveHour(hours) : hours}
       />
       <span style={colonStyle}>:</span>
       <NumberFlow
@@ -336,6 +382,7 @@ function ClockMark({
   onEntryAnimationComplete(animationName?: string): void;
 }) {
   const showSeconds = model.showSeconds === true;
+  const twelveHour = model.twelveHour === true;
   const fontWeight = model.fontWeight ?? 320;
   const font = model.font;
   const fontStyle = font
@@ -354,9 +401,26 @@ function ClockMark({
   const dateTime = getClockDateTime(time, showSeconds);
   const secondsText = String(time.seconds).padStart(2, '0');
   const localizedTimeFormatter = useMemo(
-    () => createLocalizedTimeFormatter(model.locale, showSeconds),
-    [model.locale, showSeconds]
+    () => createLocalizedTimeFormatter(model.locale, showSeconds, twelveHour),
+    [model.locale, showSeconds, twelveHour]
   );
+  const isAfternoon = time.hours >= 12;
+  const dayPeriod = useMemo(
+    () => (twelveHour ? getDayPeriod(model.locale, isAfternoon ? 12 : 0) : null),
+    [model.locale, twelveHour, isAfternoon]
+  );
+  const dayPeriodMark = dayPeriod ? (
+    <span
+      className="x-nt-time-day-period"
+      data-day-period={isAfternoon ? 'pm' : 'am'}
+      style={{
+        ...dayPeriodStyle,
+        [dayPeriod.leading ? 'marginRight' : 'marginLeft']: '0.3em'
+      }}
+    >
+      {dayPeriod.text}
+    </span>
+  ) : null;
 
   useEffect(() => {
     let timer = 0;
@@ -412,6 +476,7 @@ function ClockMark({
       aria-label={getLocalizedTimeLabel(localizedTimeFormatter, dateTime)}
       className="x-nt-wordmark-content x-nt-time-mark"
       data-show-seconds={showSeconds ? 'true' : 'false'}
+      data-twelve-hour={twelveHour ? 'true' : 'false'}
       data-time-font={font?.id}
       dateTime={dateTime}
       onAnimationEnd={(event) =>
@@ -432,10 +497,12 @@ function ClockMark({
           ? { opacity: model.opacity }
           : undefined}
       >
+        {dayPeriod?.leading ? dayPeriodMark : null}
         <ClockHourMinuteDigits
           hours={time.hours}
           locale={model.locale}
           minutes={time.minutes}
+          twelveHour={twelveHour}
         />
         {showSeconds ? (
           <>
@@ -463,6 +530,7 @@ function ClockMark({
             </span>
           </>
         ) : null}
+        {dayPeriod && !dayPeriod.leading ? dayPeriodMark : null}
       </span>
     </time>
   );

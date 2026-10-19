@@ -67,6 +67,12 @@
         normalize: S.normalizeNewtabTimeSecondsVisible
       },
       {
+        inputId: '_x_extension_newtab_time_12_hour_toggle_2026_unique_',
+        kind: 'newtab-time-12-hour',
+        key: S.NEWTAB_TIME_12_HOUR_STORAGE_KEY,
+        normalize: S.normalizeNewtabTime12Hour
+      },
+      {
         inputId: '_x_extension_newtab_input_auto_focus_toggle_2026_unique_',
         kind: 'newtab-input-auto-focus',
         key: S.NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY,

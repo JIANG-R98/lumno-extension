@@ -26,6 +26,8 @@
       '_x_extension_newtab_time_font_2026_unique_',
     timeSecondsVisible: SETTINGS.NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY ||
       '_x_extension_newtab_time_seconds_visible_2026_unique_',
+    time12Hour: SETTINGS.NEWTAB_TIME_12_HOUR_STORAGE_KEY ||
+      '_x_extension_newtab_time_12_hour_2026_unique_',
     favicon: '_x_extension_newtab_favicon_2026_unique_'
   };
   const PRELOAD_STORAGE_KEY = '_x_extension_newtab_wallpaper_preload_2026_unique_';
@@ -128,6 +130,7 @@
     const NEWTAB_TIME_INK_STORAGE_KEY = storageKeys.timeInk;
     const NEWTAB_TIME_FONT_STORAGE_KEY = storageKeys.timeFont;
     const NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY = storageKeys.timeSecondsVisible;
+    const NEWTAB_TIME_12_HOUR_STORAGE_KEY = storageKeys.time12Hour;
     const NEWTAB_FAVICON_STORAGE_KEY = storageKeys.favicon;
     const t = typeof options.t === 'function'
       ? options.t
@@ -320,6 +323,12 @@
       : function() { return false; };
     const setTimeSecondsVisible = typeof options.setTimeSecondsVisible === 'function'
       ? options.setTimeSecondsVisible
+      : function() {};
+    const getTime12Hour = typeof options.getTime12Hour === 'function'
+      ? options.getTime12Hour
+      : function() { return false; };
+    const setTime12Hour = typeof options.setTime12Hour === 'function'
+      ? options.setTime12Hour
       : function() {};
     const getAdaptiveToneTargets = typeof options.getAdaptiveToneTargets === 'function'
       ? options.getAdaptiveToneTargets
@@ -2761,6 +2770,15 @@
       storageArea.set({ [NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY]: nextValue });
     }
 
+    function persistTime12Hour(value) {
+      const nextValue = SETTINGS.normalizeNewtabTime12Hour(value);
+      setTime12Hour(nextValue);
+      renderWallpaperPanelState();
+      if (storageArea && NEWTAB_TIME_12_HOUR_STORAGE_KEY) {
+        storageArea.set({ [NEWTAB_TIME_12_HOUR_STORAGE_KEY]: nextValue });
+      }
+    }
+
     function getNewtabFaviconLink() {
       const head = document.head || document.getElementsByTagName && document.getElementsByTagName('head')[0];
       if (!head) {
@@ -4280,6 +4298,7 @@
       const autoFocusTitle = t('newtab_input_auto_focus_title', 'Automatically focus input');
       const topContentTitle = t('settings_newtab_wordmark_title', 'Content above the search bar');
       const secondsTitle = t('newtab_time_show_seconds_title', 'Show seconds');
+      const twelveHourTitle = t('newtab_time_12_hour_title', '12-hour clock');
       return {
         title: t('newtab_search_section_title', 'Search box'),
         width: {
@@ -4366,6 +4385,11 @@
           visible: timeVisible,
           title: secondsTitle,
           toggle: buildPanelToggle(currentTimeSecondsVisible, secondsTitle)
+        },
+        twelveHour: {
+          visible: timeVisible,
+          title: twelveHourTitle,
+          toggle: buildPanelToggle(SETTINGS.normalizeNewtabTime12Hour(getTime12Hour()), twelveHourTitle)
         }
       };
     }
@@ -4936,6 +4960,7 @@
         selectTimeInk: (value) => persistTimeInk(value),
         setTimeFont: (value) => persistTimeFont(value),
         setTimeSecondsVisible: (visible) => persistTimeSecondsVisible(visible),
+        setTime12Hour: (enabled) => persistTime12Hour(enabled),
         setShortcutsVisible(visible) {
           setShortcutsVisible(visible, { persist: true });
           renderWallpaperPanelState();

@@ -153,6 +153,14 @@ assert.match(
   optionsHtml,
   /id="_x_extension_newtab_time_seconds_toggle_2026_unique_"[^>]*type="checkbox"/
 );
+assert.match(
+  optionsHtml,
+  /id="_x_extension_newtab_time_12_hour_row_2026_unique_"[^>]*aria-hidden="true"[^>]*hidden/
+);
+assert.match(
+  optionsHtml,
+  /id="_x_extension_newtab_time_12_hour_toggle_2026_unique_"[^>]*type="checkbox"[^>]*data-i18n-aria-label="newtab_time_12_hour_title"/
+);
 const syncOptionsVisibility = getFunctionSource(
   optionsSource,
   'syncNewtabTimeSecondsVisibility'
@@ -160,7 +168,7 @@ const syncOptionsVisibility = getFunctionSource(
 assert.match(syncOptionsVisibility, /currentNewtabTopContentMode === 'time'/);
 assert.match(
   syncOptionsVisibility,
-  /\[\s*newtabTimeFontRow,\s*newtabTimeFontWeightRow,\s*newtabTimeFontSizeRow,\s*newtabTimeOpacityRow,\s*newtabTimeInkRow,\s*newtabTimeSecondsRow\s*\]/
+  /\[\s*newtabTimeFontRow,\s*newtabTimeFontWeightRow,\s*newtabTimeFontSizeRow,\s*newtabTimeOpacityRow,\s*newtabTimeInkRow,\s*newtabTimeSecondsRow,\s*newtabTime12HourRow\s*\]/
 );
 assert.match(
   syncOptionsVisibility,

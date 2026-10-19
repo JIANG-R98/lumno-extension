@@ -77,6 +77,7 @@
   const newtabTimeInkRow = document.getElementById('_x_extension_newtab_time_ink_row_2026_unique_');
   const newtabTimeInkTabsWrap = document.getElementById('_x_extension_newtab_time_ink_tabs_wrap_2026_unique_');
   const newtabTimeSecondsRow = document.getElementById('_x_extension_newtab_time_seconds_row_2026_unique_');
+  const newtabTime12HourRow = document.getElementById('_x_extension_newtab_time_12_hour_row_2026_unique_');
   const newtabShortcutsToggle = document.getElementById('_x_extension_newtab_shortcuts_toggle_2026_unique_');
   const newtabShortcutAddRow = document.getElementById('_x_extension_newtab_shortcut_add_row_2026_unique_');
   const newtabShortcutAddToggle = document.getElementById('_x_extension_newtab_shortcut_add_toggle_2026_unique_');
@@ -2001,7 +2002,8 @@
         newtabTimeFontSizeRow,
         newtabTimeOpacityRow,
         newtabTimeInkRow,
-        newtabTimeSecondsRow
+        newtabTimeSecondsRow,
+        newtabTime12HourRow
       ].forEach((row) => {
         changed = setConditionalSettingsElementVisibility(row, visible) || changed;
       });

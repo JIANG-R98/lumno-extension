@@ -231,6 +231,8 @@
   const NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY =
     SETTINGS.NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY ||
     '_x_extension_newtab_time_seconds_visible_2026_unique_';
+  const NEWTAB_TIME_12_HOUR_STORAGE_KEY = SETTINGS.NEWTAB_TIME_12_HOUR_STORAGE_KEY ||
+    '_x_extension_newtab_time_12_hour_2026_unique_';
   const NEWTAB_ZEN_MODE_STORAGE_KEY = '_x_extension_newtab_zen_mode_2026_unique_';
   const NEWTAB_THEME_MODE_STORAGE_KEY = '_x_extension_newtab_theme_mode_2026_unique_';
   const NEWTAB_THEME_SCOPE_STORAGE_KEY = '_x_extension_newtab_theme_scope_2026_unique_';
@@ -642,6 +644,7 @@
   pageState.newtabTimeInk = SETTINGS.NEWTAB_TIME_INK_DEFAULT || 'auto';
   pageState.newtabTimeFont = SETTINGS.NEWTAB_TIME_FONT_DEFAULT || 'open-sans';
   pageState.newtabTimeSecondsVisible = false;
+  pageState.newtabTime12Hour = false;
   pageState.newtabInputAutoFocusEnabled = false;
   let newtabFeedbackButtonVisible = true;
   let newtabAppearanceButtonVisible = true;
@@ -2282,6 +2285,7 @@
       timeInk: NEWTAB_TIME_INK_STORAGE_KEY,
       timeFont: NEWTAB_TIME_FONT_STORAGE_KEY,
       timeSecondsVisible: NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY,
+      time12Hour: NEWTAB_TIME_12_HOUR_STORAGE_KEY,
       favicon: NEWTAB_FAVICON_STORAGE_KEY
     },
     searchWidthConfig: NEWTAB_SEARCH_WIDTH_CONFIG,
@@ -2314,6 +2318,8 @@
     setTimeFont: (...args) => setNewtabTimeFont(...args),
     getTimeSecondsVisible: () => pageState.newtabTimeSecondsVisible,
     setTimeSecondsVisible: (...args) => setNewtabTimeSecondsVisible(...args),
+    getTime12Hour: () => pageState.newtabTime12Hour,
+    setTime12Hour: (...args) => setNewtabTime12Hour(...args),
     getSearchWidth: getEffectiveNewtabSearchWidth,
     setSearchWidth: (value, options) => {
       setNewtabSearchWidth(value, options);
@@ -2766,6 +2772,14 @@
     }
     setNewtabTimeSecondsVisible(nextValue);
   });
+  storageChanges.on(NEWTAB_TIME_12_HOUR_STORAGE_KEY, (changes) => {
+    const raw = changes[NEWTAB_TIME_12_HOUR_STORAGE_KEY].newValue;
+    const nextValue = SETTINGS.normalizeNewtabTime12Hour(raw);
+    if (storageArea && raw !== undefined && raw !== nextValue) {
+      storageArea.set({ [NEWTAB_TIME_12_HOUR_STORAGE_KEY]: nextValue });
+    }
+    setNewtabTime12Hour(nextValue);
+  });
   storageChanges.on(NEWTAB_GLASS_STYLE_STORAGE_KEY, (changes) => {
     applyNewtabGlassStyle(changes[NEWTAB_GLASS_STYLE_STORAGE_KEY].newValue);
   });
@@ -3064,7 +3078,8 @@
       NEWTAB_TIME_OPACITY_STORAGE_KEY,
       NEWTAB_TIME_INK_STORAGE_KEY,
       NEWTAB_TIME_FONT_STORAGE_KEY,
-      NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY
+      NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY,
+      NEWTAB_TIME_12_HOUR_STORAGE_KEY
     ], (result) => {
       const raw = result[NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY];
       const nextValue = normalizeNewtabTopContentMode(raw);
@@ -3096,6 +3111,8 @@
       setNewtabTimeOpacity(result[NEWTAB_TIME_OPACITY_STORAGE_KEY]);
       setNewtabTimeInk(result[NEWTAB_TIME_INK_STORAGE_KEY]);
       setNewtabTimeSecondsVisible(nextSecondsVisible);
+      // Unset stays unset, so the clock keeps 24 hours until it's turned on.
+      setNewtabTime12Hour(result[NEWTAB_TIME_12_HOUR_STORAGE_KEY]);
       setNewtabTopContentMode(nextValue);
       if (pageState.wallpaperRuntime && typeof pageState.wallpaperRuntime.updateTopContentModeUi === 'function') {
         pageState.wallpaperRuntime.updateTopContentModeUi();
@@ -3328,6 +3345,7 @@
     NEWTAB_TIME_INK_STORAGE_KEY,
     NEWTAB_TIME_FONT_STORAGE_KEY,
     NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY,
+    NEWTAB_TIME_12_HOUR_STORAGE_KEY,
     NEWTAB_THEME_MODE_STORAGE_KEY,
     NEWTAB_THEME_SCOPE_STORAGE_KEY,
     NEWTAB_ZEN_MODE_STORAGE_KEY,
@@ -3628,7 +3646,8 @@
     setNewtabTimeInk,
     setNewtabTimeFont,
     loadNewtabTimeFont,
-    setNewtabTimeSecondsVisible
+    setNewtabTimeSecondsVisible,
+    setNewtabTime12Hour
   } = NEWTAB_TOP_CONTENT_RUNTIME.createTopContentRuntime({
     root,
     COMMUNITY_LINKS,

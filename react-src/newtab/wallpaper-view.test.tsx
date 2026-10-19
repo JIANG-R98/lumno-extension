@@ -262,6 +262,7 @@ describe('New Tab React wallpaper view', () => {
       };
       draft.search.timeInk = { ...draft.search.timeInk, visible: true, tabs: { ...draft.search.timeInk.tabs, active: 'dark' } };
       draft.search.seconds = { ...draft.search.seconds, visible: true, toggle: { checked: true, label: 'Show seconds' } };
+      draft.search.twelveHour = { ...draft.search.twelveHour, visible: true, toggle: { checked: false, label: '12-hour clock' } };
       draft.wallpaper.overlay = { ...draft.wallpaper.overlay, value: 72 };
       draft.wallpaper.effect.sliders.spacing = {
         ...draft.wallpaper.effect.sliders.spacing,
@@ -310,6 +311,11 @@ describe('New Tab React wallpaper view', () => {
     act(() => refs().topContentInkTabs.querySelector<HTMLElement>('[data-newtab-time-ink="light"]')!.click());
     expect(next.actions.selectTimeInk).toHaveBeenCalledWith('light');
     expect((refs().topContentSecondsToggle as HTMLInputElement).checked).toBe(true);
+    expect(refs().topContentTwelveHourRow.hidden).toBe(false);
+    expect(refs().topContentTwelveHourTitle.textContent).toBe('12-hour clock');
+    expect((refs().topContentTwelveHourToggle as HTMLInputElement).checked).toBe(false);
+    act(() => (refs().topContentTwelveHourToggle as HTMLInputElement).click());
+    expect(next.actions.setTime12Hour).toHaveBeenCalledWith(true);
     expect((refs().overlaySlider as HTMLInputElement).value).toBe('72');
     expect((refs().overlaySliderValueInput as HTMLInputElement).value).toBe('72');
     expect(refs().effectSpacingControl.dataset.visible).toBe('true');

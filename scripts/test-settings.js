@@ -24,7 +24,9 @@ assert.strictEqual(settings.addStorageChangeListener({
 // The New Tab time font is another: an absent value keeps Open Sans.
 // So are the time size and opacity: absent values keep 54px and 100%.
 // And the time ink: an absent value keeps the automatic ink.
-assert.strictEqual(settings.CHROME_SYNC_STORAGE_KEYS.length, 83);
+// And the 12-hour clock: an absent value keeps the 24-hour clock.
+assert.strictEqual(settings.CHROME_SYNC_STORAGE_KEYS.length, 84);
+assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_TIME_12_HOUR_STORAGE_KEY));
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_newtab_time_font_2026_unique_'));
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_search_source_order_2026_unique_'));
 assert.strictEqual(
@@ -175,6 +177,14 @@ assert.strictEqual(settings.normalizeNewtabTimeSecondsVisible('true'), false);
 assert.strictEqual(
   settings.NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY,
   '_x_extension_newtab_time_seconds_visible_2026_unique_'
+);
+assert.strictEqual(settings.normalizeNewtabTime12Hour(undefined), false);
+assert.strictEqual(settings.normalizeNewtabTime12Hour(false), false);
+assert.strictEqual(settings.normalizeNewtabTime12Hour(true), true);
+assert.strictEqual(settings.normalizeNewtabTime12Hour('true'), false);
+assert.strictEqual(
+  settings.NEWTAB_TIME_12_HOUR_STORAGE_KEY,
+  '_x_extension_newtab_time_12_hour_2026_unique_'
 );
 
 assert.strictEqual(settings.normalizeNewtabShortcutsVisible(false), false);

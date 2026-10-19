@@ -69,6 +69,7 @@ export function createDefaultPanelState(): WallpaperPanelState {
     search: {
       autoFocus: { infoLabel: '', infoTooltip: '', title: '', toggle: toggle('Automatically focus input') },
       seconds: { title: 'Show seconds', toggle: toggle('Show seconds'), visible: false },
+      twelveHour: { title: '12-hour clock', toggle: toggle('12-hour clock'), visible: false },
       timeFont: {
         ariaLabel: 'Time font',
         options: [

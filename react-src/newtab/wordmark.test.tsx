@@ -167,6 +167,51 @@ describe('New Tab top-content React island', () => {
     });
   });
 
+  it('draws a 12-hour clock with the AM/PM mark where the locale puts it', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 19, 21, 5, 0));
+    const render = (locale: string, twelveHour: boolean) => {
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const controller = createTopContentController(host, {
+        onActivate: vi.fn(),
+        onEntryAnimationComplete: vi.fn()
+      });
+      controllers.push(controller);
+      act(() => {
+        controller.render({
+          animateEntry: false,
+          ariaLabel: 'Lumno',
+          imageSrc: '/wordmark.svg',
+          locale,
+          mode: 'time',
+          twelveHour
+        });
+      });
+      return host.querySelector<HTMLElement>('time.x-nt-time-mark')!;
+    };
+
+    const english = render('en-US', true);
+    const englishDigits = english.querySelector('[aria-hidden="true"]')!;
+    const englishPeriod = english.querySelector<HTMLElement>('.x-nt-time-day-period');
+    expect(english.dataset.twelveHour).toBe('true');
+    expect(english.getAttribute('datetime')).toBe('21:05');
+    expect(english.getAttribute('aria-label')).toMatch(/^9:05\sPM$/);
+    expect(englishPeriod?.textContent).toBe('PM');
+    expect(englishPeriod?.dataset.dayPeriod).toBe('pm');
+    expect(englishDigits.lastElementChild).toBe(englishPeriod);
+
+    const chinese = render('zh-CN', true);
+    const chinesePeriod = chinese.querySelector<HTMLElement>('.x-nt-time-day-period');
+    expect(chinesePeriod?.textContent).toBe('下午');
+    expect(chinese.querySelector('[aria-hidden="true"]')!.firstElementChild).toBe(chinesePeriod);
+
+    const twentyFourHour = render('en-US', false);
+    expect(twentyFourHour.dataset.twelveHour).toBe('false');
+    expect(twentyFourHour.getAttribute('aria-label')).toBe('21:05');
+    expect(twentyFourHour.querySelector('.x-nt-time-day-period')).toBeNull();
+  });
+
   it('uses a restrained soft-swap element instead of rolling seconds', () => {
     const { host, onEntryAnimationComplete } = createController(
       true,

@@ -737,6 +737,9 @@
   "newtab_time_show_seconds_title": {
     "message": "Show seconds"
   },
+  "newtab_time_12_hour_title": {
+    "message": "12-hour clock"
+  },
   "settings_newtab_page_buttons_title": {
     "message": "Page buttons"
   },

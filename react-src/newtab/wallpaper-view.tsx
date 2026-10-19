@@ -165,6 +165,7 @@ export interface WallpaperPanelActions extends TooltipActions {
   setTimeOpacity(value: number, change: SliderChange): void;
   setTimeFont(value: string): void;
   setTimeSecondsVisible(visible: boolean): void;
+  setTime12Hour(enabled: boolean): void;
   setWallpaperEnabled(enabled: boolean): void;
   showButtonTooltip(anchor: HTMLElement): void;
   showLocalWallpaperLimit(): void;
@@ -206,6 +207,7 @@ export interface WallpaperPanelState {
   search: {
     autoFocus: { infoLabel: string; infoTooltip: string; title: string; toggle: ToggleState };
     seconds: { title: string; toggle: ToggleState; visible: boolean };
+    twelveHour: { title: string; toggle: ToggleState; visible: boolean };
     timeFont: { ariaLabel: string; options: SelectMenuOption[]; title: string; value: string; visible: boolean };
     timeWeight: SliderState & { resetLabel: string; resetVisible: boolean; visible: boolean };
     timeSize: SliderState & { resetLabel: string; resetVisible: boolean; visible: boolean };
@@ -1286,6 +1288,20 @@ function WallpaperPanel({
                   name="topContentSecondsToggle"
                   onChange={actions.setTimeSecondsVisible}
                   toggle={state.search.seconds.toggle}
+                />
+              </div>
+              <div
+                {...ref('topContentTwelveHourRow')}
+                {...collapsible(state.search.twelveHour.visible)}
+                className="x-nt-top-content-seconds-row x-nt-panel-collapsible"
+              >
+                <span {...ref('topContentTwelveHourTitle')} className="x-nt-top-content-seconds-title">
+                  {state.search.twelveHour.title}
+                </span>
+                <Switch
+                  name="topContentTwelveHourToggle"
+                  onChange={actions.setTime12Hour}
+                  toggle={state.search.twelveHour.toggle}
                 />
               </div>
             </div>

@@ -270,6 +270,8 @@
   ]);
   const NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY =
     '_x_extension_newtab_time_seconds_visible_2026_unique_';
+  // Off keeps the 24-hour clock; on draws 1-12 with the locale's AM/PM.
+  const NEWTAB_TIME_12_HOUR_STORAGE_KEY = '_x_extension_newtab_time_12_hour_2026_unique_';
   // User-controlled preferences that are safe to store in chrome.storage.sync.
   // Keep generated caches, device state, and custom wallpaper media out of this list.
   const CHROME_SYNC_STORAGE_KEYS = Object.freeze([
@@ -336,6 +338,7 @@
     NEWTAB_TIME_INK_STORAGE_KEY,
     NEWTAB_TIME_FONT_STORAGE_KEY,
     NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY,
+    NEWTAB_TIME_12_HOUR_STORAGE_KEY,
     RESTRICTED_ACTION_STORAGE_KEY,
     SEARCH_RESULT_PRIORITY_STORAGE_KEY,
     SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY,
@@ -488,6 +491,10 @@
   }
 
   function normalizeNewtabTimeSecondsVisible(value) {
+    return value === true;
+  }
+
+  function normalizeNewtabTime12Hour(value) {
     return value === true;
   }
 
@@ -1555,6 +1562,7 @@
     NEWTAB_TIME_FONT_DEFAULT,
     NEWTAB_TIME_FONTS,
     NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY,
+    NEWTAB_TIME_12_HOUR_STORAGE_KEY,
     normalizeLocale,
     localeToHtmlLang,
     normalizeNewtabWidthMode,
@@ -1571,6 +1579,7 @@
     resolveNewtabTimeFontWeight,
     getNewtabTimeFontTracking,
     normalizeNewtabTimeSecondsVisible,
+    normalizeNewtabTime12Hour,
     normalizeNewtabShortcutsVisible,
     normalizeNewtabShortcutAddVisible,
     normalizeNewtabShortcutDockMagnificationEnabled,

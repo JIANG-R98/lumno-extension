@@ -374,7 +374,8 @@
         locale: document.documentElement ? document.documentElement.lang : undefined,
         mode: pageState.newtabTopContentMode === 'time' ? 'time' : 'brand',
         opacity: SETTINGS.normalizeNewtabTimeOpacity(pageState.newtabTimeOpacity) / 100,
-        showSeconds: pageState.newtabTimeSecondsVisible
+        showSeconds: pageState.newtabTimeSecondsVisible,
+        twelveHour: pageState.newtabTime12Hour
       });
       pageState.wordmarkImageEl = pageState.topContentController.getImage();
       wordmarkSolidEl = pageState.topContentController.getSolid();
@@ -486,6 +487,17 @@
       return nextValue;
     }
 
+    function setNewtabTime12Hour(value) {
+      const nextValue = SETTINGS.normalizeNewtabTime12Hour(value);
+      const changed = nextValue !== pageState.newtabTime12Hour;
+      pageState.newtabTime12Hour = nextValue;
+      if (changed && pageState.newtabTopContentMode === 'time') {
+        renderNewtabTopContent(false);
+      }
+      updateNewtabTimeSecondsVisibleUi();
+      return nextValue;
+    }
+
     function setNewtabTimeSecondsVisible(value) {
       const nextValue = normalizeNewtabTimeSecondsVisible(value);
       const changed = nextValue !== pageState.newtabTimeSecondsVisible;
@@ -517,7 +529,8 @@
       setNewtabTimeInk,
       setNewtabTimeFont,
       loadNewtabTimeFont,
-      setNewtabTimeSecondsVisible
+      setNewtabTimeSecondsVisible,
+      setNewtabTime12Hour
     };
   }
 

@@ -163,12 +163,13 @@ const assertWithinBudget = (actualBytes, budgetKiB, label) => {
 // The time font picker in the appearance panel moved the New Tab route to 417 KiB and the total
 // to 812 KiB. The time size and opacity sliders moved the New Tab route to 418 KiB and the
 // total to 813 KiB. The time color choice moved the New Tab route to 419 KiB and the total to
-// 814 KiB.
+// 814 KiB. The 12-hour clock and its AM/PM mark moved the New Tab route to 420 KiB and the
+// total to 815 KiB.
 const bundleBudgets = {
-  newtab: { uncompressed: 419, gzip: 125 },
+  newtab: { uncompressed: 420, gzip: 125 },
   options: { uncompressed: 290, gzip: 85 },
   overlay: { uncompressed: 274, gzip: 83 },
-  total: { uncompressed: 814, gzip: 237 }
+  total: { uncompressed: 815, gzip: 237 }
 };
 
 const retiredNewtabRendererScripts = [

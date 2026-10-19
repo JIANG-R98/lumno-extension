@@ -737,6 +737,9 @@
   "newtab_time_show_seconds_title": {
     "message": "顯示秒數"
   },
+  "newtab_time_12_hour_title": {
+    "message": "12 小時制"
+  },
   "settings_newtab_page_buttons_title": {
     "message": "頁面按鈕"
   },
