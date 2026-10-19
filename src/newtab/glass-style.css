@@ -454,13 +454,31 @@ body[data-glass-style="liquid"][data-nt-ready="1"]:not([data-theme="dark"]) :is(
 body[data-glass-style="liquid"][data-nt-ready="1"]:not([data-theme="dark"]) :is(.x-nt-recent-card-visual, .x-nt-bookmark-card)[data-glass-ink="dark"] {
   --x-nt-glass-filter: blur(2px) saturate(118%) contrast(0.8) brightness(1.11);
 }
-/* The search bar takes the results' veil and tint, so it reads the same pane closed and open. */
+/* The search bar takes the results' veil and tint, so it reads the same pane closed and open.
+   The open results run over the bookmark cards, whose labels and icons ghosted through the plain
+   veil's light blur and thin tint and competed with the rows; the search stack takes a softer blur,
+   a deeper veil and a denser tint (a pale, quiet wallpaper samples near the thin end). On a near
+   white wallpaper white glass also loses its outline, so its outer hairline and drop shadow are a
+   little stronger. */
+body[data-glass-style="liquid"][data-nt-ready="1"]:not([data-theme="dark"]) :is(
+  #_x_extension_newtab_root_2024_unique_,
+  #_x_extension_newtab_suggestions_surface_2026_unique_
+)[data-glass-ink="dark"] {
+  --x-nt-glass-filter: blur(7px) saturate(112%) contrast(0.68) brightness(1.19);
+}
 body[data-glass-style="liquid"]:not([data-theme="dark"]) :is(
   #_x_extension_newtab_root_2024_unique_,
   #_x_extension_newtab_suggestions_surface_2026_unique_
 )[data-glass-ink="dark"] {
-  --x-nt-glass-tint-thin: 0.42;
-  --x-nt-glass-tint-dense: 0.62;
+  --x-nt-glass-tint-thin: 0.6;
+  --x-nt-glass-tint-dense: 0.74;
+  --x-nt-glass-edge:
+    inset 1px 1px 0.5px -0.5px rgba(255, 255, 255, 0.7),
+    inset -1px -1px 0.5px -0.5px rgba(255, 255, 255, 0.3),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.14),
+    0 0 0 0.5px rgba(0, 0, 0, 0.11),
+    0 4px 16px rgba(0, 0, 0, 0.1);
+  --x-nt-glass-float-shadow: 0 18px 52px rgba(0, 0, 0, 0.16);
 }
 /* The bookmarks bar's clear glass follows the page's liquid material: a small saturation boost,
    and on dark glass the same dim. */
@@ -517,6 +535,19 @@ body[data-glass-style="liquid"]:not([data-theme="dark"]) #_x_extension_newtab_su
 }
 body[data-glass-style="liquid"]:not([data-theme="dark"]) #_x_extension_newtab_suggestions_container_2024_unique_[data-glass-ink="dark"] .x-nt-suggestion-item[data-row-state="active"] {
   border-color: rgba(255, 255, 255, 0.9);
+}
+/* The results plate is close to white (its denser tint, above), so a lighter layer alone no longer
+   shows on it: there the rows are lit further and lifted by a soft shadow, the way a selected tile
+   rises off the glass. */
+body[data-glass-style="liquid"]:not([data-theme="dark"]) #_x_extension_newtab_suggestions_container_2024_unique_[data-glass-ink="dark"] {
+  --x-nt-glass-row-hover: rgba(255, 255, 255, 0.64);
+  --x-nt-glass-row-active: rgba(255, 255, 255, 0.94);
+}
+body[data-glass-style="liquid"]:not([data-theme="dark"]) #_x_extension_newtab_suggestions_container_2024_unique_[data-glass-ink="dark"] .x-nt-suggestion-item[data-row-state="hover"] {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+body[data-glass-style="liquid"]:not([data-theme="dark"]) #_x_extension_newtab_suggestions_container_2024_unique_[data-glass-ink="dark"] .x-nt-suggestion-item[data-row-state="active"] {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 3px 12px rgba(0, 0, 0, 0.06);
 }
 
 /* The bookmarks bar under "match style" with the frosted material: the plates' glass, sampled and
