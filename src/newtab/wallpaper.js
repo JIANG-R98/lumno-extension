@@ -538,6 +538,7 @@
     const WALLPAPER_VISUAL_TRANSITION_MS = 220;
     const WALLPAPER_FILTER_TRANSITION_MS = 180;
     const WALLPAPER_VISUAL_REFRESH_DELAY_MS = 80;
+    const WALLPAPER_TONE_REVEAL_WAIT_MAX_MS = 200;
     const WALLPAPER_IMAGE_READY_CACHE_LIMIT = 8;
     const WALLPAPER_NETWORK_IMAGE_TIMEOUT_MS = 8000;
 
@@ -1170,7 +1171,8 @@
           : null;
       },
       applyWordmarkThemeAppearance,
-      onSamplerReady: rememberWallpaperPlaceholder
+      onSamplerReady: rememberWallpaperPlaceholder,
+      getPreloadedImage: takePreloadedDecodedImage
     });
     const wallpaperEffectPreload = globalThis.LumnoNewtabWallpaperEffectPreload || null;
     const wallpaperEffectRuntimeOptions = {
@@ -1232,10 +1234,11 @@
       return safe ? `url("${safe}")` : 'none';
     }
 
-    // Chrome drops a CSS custom property longer than 2 MB, so a large data URL set through
-    // --x-nt-wallpaper-image leaves the page with no wallpaper. Uploads and cached museum prints
-    // stored before that was capped can exceed it; those are handed to CSS as a blob URL instead.
-    const WALLPAPER_CSS_URL_MAX_LENGTH = WALLPAPER_LOCAL_STORE.MAX_CSS_URL_LENGTH || 2 * 1024 * 1024;
+    // Uploads and cached photos reach CSS as a blob URL rather than their data URL. Every style
+    // recalculation re-reads the whole value of --x-nt-wallpaper-image, so a megabyte-long data URL
+    // there costs ~10ms per recalc while the page builds; and Chrome drops a custom property longer
+    // than 2 MB, which uploads stored before that was capped can exceed. Matches wallpaper-preload.js.
+    const WALLPAPER_CSS_INLINE_URL_MAX_LENGTH = 32 * 1024;
     const WALLPAPER_PLACEHOLDER_WIDTH = 32;
     // Matches wallpaper-preload.js, which ignores anything longer.
     const WALLPAPER_PLACEHOLDER_MAX_LENGTH = 4096;
@@ -1249,7 +1252,9 @@
       const type = meta.replace(/;base64$/i, '') || 'application/octet-stream';
       const payload = dataUrl.slice(comma + 1);
       let bytes;
-      if (isBase64) {
+      if (isBase64 && typeof Uint8Array.fromBase64 === 'function') {
+        bytes = Uint8Array.fromBase64(payload);
+      } else if (isBase64) {
         const binary = windowObj.atob(payload);
         bytes = new Uint8Array(binary.length);
         for (let index = 0; index < binary.length; index += 1) {
@@ -1276,8 +1281,18 @@
       if (wallpaperCssObjectUrl.source && wallpaperCssObjectUrl.source === value) {
         return wallpaperCssObjectUrl.url;
       }
-      const tooLong = value.startsWith('data:') &&
-        getCssUrlValue(value).length > WALLPAPER_CSS_URL_MAX_LENGTH;
+      // The preload may have painted this image through its own blob URL already; keeping that URL
+      // means the background never swaps to a second, still undecoded copy. Otherwise it is released
+      // like any URL this page no longer shows.
+      const preloaded = takePreloadedCssObjectUrl();
+      if (preloaded) {
+        releaseWallpaperCssObjectUrl();
+        wallpaperCssObjectUrl = preloaded;
+        if (preloaded.source === value) {
+          return preloaded.url;
+        }
+      }
+      const tooLong = value.startsWith('data:') && value.length > WALLPAPER_CSS_INLINE_URL_MAX_LENGTH;
       if (!tooLong || !windowObj.URL || typeof windowObj.URL.createObjectURL !== 'function') {
         releaseWallpaperCssObjectUrl();
         return value;
@@ -1292,6 +1307,30 @@
       releaseWallpaperCssObjectUrl();
       wallpaperCssObjectUrl = { source: value, url: objectUrl };
       return objectUrl;
+    }
+
+    // The preload decoded the wallpaper it painted; the first sample uses that image. Taken once, so
+    // the page does not keep a full-size image alive after the wallpaper changes.
+    function takePreloadedDecodedImage(url) {
+      const wallpaperPreload = globalThis.LumnoNewtabWallpaperPreload;
+      const decoded = wallpaperPreload && wallpaperPreload.decodedImage;
+      if (!decoded) {
+        return null;
+      }
+      wallpaperPreload.decodedImage = null;
+      return decoded.url === url && decoded.ready && typeof decoded.ready.then === 'function'
+        ? decoded.ready
+        : null;
+    }
+
+    function takePreloadedCssObjectUrl() {
+      const wallpaperPreload = globalThis.LumnoNewtabWallpaperPreload;
+      const handed = wallpaperPreload && wallpaperPreload.cssObjectUrl;
+      if (!handed || !handed.source || !handed.url) {
+        return null;
+      }
+      wallpaperPreload.cssObjectUrl = null;
+      return { source: String(handed.source), url: String(handed.url) };
     }
 
     function cacheWallpaperImageReady(url, promise) {
@@ -1965,9 +2004,12 @@
           ? { id: wallpaper.id, cachedImage: { id: photoId, url: sourceUrl } }
           : null;
       }
-      const path = wallpaper && !isCustomWallpaperId(wallpaper.id)
-        ? getWallpaperRuntimePath(wallpaper)
-        : '';
+      // An upload lives only in this device's IndexedDB; the preload reads it there by its record key.
+      if (wallpaper && isCustomWallpaperId(wallpaper.id)) {
+        const key = String(wallpaper.key || wallpaper.id);
+        return { id: wallpaper.id, customImage: key === wallpaper.id ? { id: wallpaper.id } : { id: wallpaper.id, key } };
+      }
+      const path = wallpaper ? getWallpaperRuntimePath(wallpaper) : '';
       return path ? { id: wallpaper.id, path } : null;
     }
 
@@ -2642,11 +2684,28 @@
       });
     }
 
+    // The page's content shows once the wallpaper's tones are on its controls, so nothing enters in
+    // the theme's default colors and changes a moment later. A slow image never holds it for long.
+    function waitForInitialWallpaperTone() {
+      return initialWallpaperReadyPromise.then(() => new Promise((resolve) => {
+        const timer = window.setTimeout(resolve, WALLPAPER_TONE_REVEAL_WAIT_MAX_MS);
+        wallpaperAdaptiveTone.whenSettled().then(() => {
+          window.clearTimeout(timer);
+          resolve();
+        });
+      }));
+    }
+
     function finalizeInitialWallpaper() {
       if (initialWallpaperApplied) {
         return;
       }
       initialWallpaperApplied = true;
+      // The first sample has taken the preload's decoded image if it showed the same wallpaper.
+      const wallpaperPreload = globalThis.LumnoNewtabWallpaperPreload;
+      if (wallpaperPreload && wallpaperPreload.decodedImage) {
+        wallpaperPreload.decodedImage = null;
+      }
       if (typeof resolveInitialWallpaperReady === 'function') {
         resolveInitialWallpaperReady();
       }
@@ -3175,13 +3234,15 @@
         const results = [mergeOnlineWallpaperValue(stored[0], stored[2]), stored[1]];
         const linksChanged = setLinkWallpapers(stored[3].value);
         const linkIds = getWallpaperStorageRawIds(results[0].value).filter(isLinkWallpaperId);
-        const customWallpaperIds = getStoredCustomWallpaperIds(results)
-          .filter((id) => !hasLoadedStoredCustomWallpaper(id));
-        const customWallpaperPromise = customWallpaperIds.length > 0
-          ? readCustomWallpaperRecordsByIds(customWallpaperIds).then((records) => {
-            mergeCustomWallpaperRecords(records);
-          }).catch(warnWallpaperStoreFailure('Could not read local wallpapers; showing the default.'))
-          : Promise.resolve();
+        const customWallpaperPromise = takePreloadedCustomWallpaper().then(() => {
+          const customWallpaperIds = getStoredCustomWallpaperIds(results)
+            .filter((id) => !hasLoadedStoredCustomWallpaper(id));
+          return customWallpaperIds.length > 0
+            ? readCustomWallpaperRecordsByIds(customWallpaperIds).then((records) => {
+              mergeCustomWallpaperRecords(records);
+            })
+            : null;
+        }).catch(warnWallpaperStoreFailure('Could not read local wallpapers; showing the default.'));
         const remoteIds = getWallpaperStorageRawIds(results[0].value)
           .map((id) => normalizeNewtabWallpaperId(id))
           .filter((id) => REMOTE_CONTENT.wallpaperFromId(id));
@@ -3522,7 +3583,7 @@
     // The preload already reads the shown photo's copy; take it instead of opening the cache again.
     function takePreloadedWallpaperImage() {
       const wallpaperPreload = globalThis.LumnoNewtabWallpaperPreload;
-      const ready = wallpaperPreload && wallpaperPreload.imageReady;
+      const ready = wallpaperPreload && !wallpaperPreload.customImageId && wallpaperPreload.imageReady;
       if (!ready || typeof ready.then !== 'function') return Promise.resolve();
       wallpaperPreload.imageReady = null;
       return ready.then(() => {
@@ -3532,6 +3593,22 @@
         }
       }, () => {
         // The preload found no copy; the runtime reads the cache itself next.
+      });
+    }
+
+    // Likewise for an upload: the preload read its record from the local wallpaper library.
+    function takePreloadedCustomWallpaper() {
+      const wallpaperPreload = globalThis.LumnoNewtabWallpaperPreload;
+      const ready = wallpaperPreload && wallpaperPreload.customImageId && wallpaperPreload.imageReady;
+      if (!ready || typeof ready.then !== 'function') return Promise.resolve();
+      wallpaperPreload.imageReady = null;
+      return ready.then(() => {
+        const record = wallpaperPreload.cachedImageRecord;
+        if (record) {
+          mergeCustomWallpaperRecords([record]);
+        }
+      }, () => {
+        // The preload found no record; the runtime reads the library itself next.
       });
     }
 
@@ -5632,6 +5709,7 @@
       bootstrapInitialWallpaperOverlay,
       bootstrapInitialWallpaperEffect,
       waitForInitialWallpaperEffectVisual,
+      waitForInitialWallpaperTone,
       bootstrapInitialNewtabFavicon,
       handleStorageChange,
       handleThemeModeChange,

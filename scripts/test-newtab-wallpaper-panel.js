@@ -1371,7 +1371,9 @@ function createWallpaperSandbox(options) {
     ),
     LumnoNewtabWallpaperView: {
       createController: createRecordingWallpaperViewController
-    }
+    },
+    // What wallpaper-preload.js left for the runtime, when a test ran it first.
+    LumnoNewtabWallpaperPreload: options && options.preload ? options.preload : undefined
   };
   if (options && typeof options.prepareWindow === 'function') {
     options.prepareWindow(testWindow, testDocument);
@@ -2123,10 +2125,10 @@ async function testInitialThemeResolutionDoesNotPaintFallbackBeforeCustomWallpap
       WALLPAPER_PRELOAD_STORAGE_VERSION,
       `${mode} mode should replace stale preload data with the pending-safe cache format`
     );
-    assert.strictEqual(
+    assert.deepStrictEqual(
       preloadCache.wallpapers[mode],
-      null,
-      `${mode} mode should remember that its local wallpaper has no built-in preload image`
+      { id: customWallpaperId, customImage: { id: customWallpaperId } },
+      `${mode} mode should point the preload at its upload in IndexedDB, never at a bundled file`
     );
 
     assert.ok(
@@ -2508,10 +2510,10 @@ async function testSplitLocalWallpaperSelectionStaysLocalOnly() {
   await waitForAsyncWallpaperApply();
 
   const preloadCache = JSON.parse(testWindow.localStorage.getItem(WALLPAPER_PRELOAD_STORAGE_KEY));
-  assert.strictEqual(
+  assert.deepStrictEqual(
     preloadCache.wallpapers.dark,
-    null,
-    'a local-only dark wallpaper should suppress the synced white fallback during preload'
+    { id: 'custom-wallpaper-dark-local', customImage: { id: 'custom-wallpaper-dark-local' } },
+    'a local-only dark wallpaper should preload its upload instead of the synced white fallback'
   );
 
   assert.ok(
@@ -3676,8 +3678,8 @@ async function testCuratedArtCachesOneDownscaledPrintPerDevice() {
   assert.strictEqual(preload.wallpapers.light.path, undefined, 'The preload names no network file to load');
 }
 
-function createFakeImageCacheDatabase(records) {
-  const store = new Map((records || []).map((record) => [record.id, record]));
+function createFakeImageCacheDatabase(records, keyPath) {
+  const store = new Map((records || []).map((record) => [record[keyPath || 'id'], record]));
   const later = (callback) => setTimeout(callback, 0);
   return {
     opened: [],
@@ -3752,6 +3754,158 @@ async function testPreloadPaintsTheCachedOnlineCopyBeforeTheRuntime() {
   assert.strictEqual(await late.preload.imageReady, '');
   assert.strictEqual(late.documentObj.documentElement.style.getPropertyValue('--x-nt-wallpaper-image'), '',
     'A copy read after the runtime painted must not cover its choice');
+}
+
+function runWallpaperPreloadWithEntry(entry, prepareWindow) {
+  const documentObj = createFakeDocument();
+  const windowObj = createFakeWindow();
+  windowObj.localStorage.setItem(WALLPAPER_PRELOAD_STORAGE_KEY, JSON.stringify({
+    version: WALLPAPER_PRELOAD_STORAGE_VERSION,
+    mode: 'light',
+    themeMode: 'light',
+    overlayStops: {
+      light: { top: 0, mid: 0, bottom: 0 },
+      dark: { top: 0, mid: 0, bottom: 0 }
+    },
+    wallpapers: { light: entry, dark: null }
+  }));
+  if (prepareWindow) prepareWindow(windowObj);
+  const sandbox = { ...REAL_WALLPAPER_DEPENDENCIES, document: documentObj, window: windowObj, chrome: {} };
+  vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper-preload.js', 'utf8'), sandbox, {
+    filename: 'src/newtab/wallpaper-preload.js'
+  });
+  return { documentObj, windowObj, preload: sandbox.LumnoNewtabWallpaperPreload };
+}
+
+function createRecordingObjectUrls() {
+  const created = [];
+  const revoked = [];
+  return {
+    created,
+    revoked,
+    install(windowObj) {
+      windowObj.atob = (value) => Buffer.from(value, 'base64').toString('binary');
+      windowObj.Blob = Blob;
+      windowObj.URL = {
+        createObjectURL(blob) {
+          created.push(blob);
+          return `blob:chrome-extension://abc/wallpaper-${created.length}`;
+        },
+        revokeObjectURL(url) {
+          revoked.push(url);
+        }
+      };
+    }
+  };
+}
+
+async function testPreloadPaintsTheUploadFromTheLocalLibrary() {
+  const id = `${CUSTOM_WALLPAPER_ID_PREFIX}1760000000000`;
+  const dataUrl = 'data:image/webp;base64,dXBsb2Fk';
+  const record = { key: id, id, imageDataUrl: dataUrl, thumbnailDataUrl: dataUrl, updatedAt: 1 };
+  const entry = { id, customImage: { id } };
+  const withLibrary = (records) => (windowObj) => {
+    windowObj.indexedDB = createFakeImageCacheDatabase(records, 'key');
+    windowObj.Image = createFakeImageClass();
+  };
+
+  const painted = runWallpaperPreloadWithEntry(entry, withLibrary([record]));
+  assert.strictEqual(painted.preload.customImageId, id);
+  assert.strictEqual(painted.preload.wallpaper.id, id, 'effects render the upload the preload paints');
+  assert.strictEqual(painted.documentObj.documentElement.style.getPropertyValue('--x-nt-wallpaper-image'), '',
+    'IndexedDB is asynchronous, so nothing paints before the upload is read');
+  assert.strictEqual(await painted.preload.imageReady, dataUrl);
+  assert.deepStrictEqual(painted.windowObj.indexedDB.opened, [['lumno-newtab-wallpaper', 1]],
+    'the upload is read from the local wallpaper library');
+  assert.strictEqual(painted.documentObj.documentElement.style.getPropertyValue('--x-nt-wallpaper-image'),
+    `url("${dataUrl}")`, 'the upload paints at full resolution while the page is still loading');
+  assert.strictEqual(painted.documentObj.documentElement.getAttribute('data-wallpaper-active'), 'true');
+  assert.strictEqual(painted.preload.cachedImageRecord, record, 'the runtime reuses the record instead of reading it again');
+  assert.strictEqual(painted.preload.imageUrl, dataUrl);
+  assert.strictEqual(painted.preload.decodedImage.url, dataUrl, 'the image decodes for the first tone sample');
+  assert.strictEqual((await painted.preload.decodedImage.ready).src, dataUrl);
+
+  const legacy = runWallpaperPreloadWithEntry({ id: `${CUSTOM_WALLPAPER_ID_PREFIX}legacy`,
+    customImage: { id: `${CUSTOM_WALLPAPER_ID_PREFIX}legacy`, key: 'custom' } },
+  withLibrary([{ key: 'custom', imageDataUrl: dataUrl, thumbnailDataUrl: dataUrl }]));
+  assert.strictEqual(await legacy.preload.imageReady, dataUrl, 'an upload stored under the legacy key is read by that key');
+
+  const removed = runWallpaperPreloadWithEntry(entry, withLibrary([]));
+  assert.strictEqual(await removed.preload.imageReady, '', 'a removed upload paints nothing; the runtime decides');
+  assert.strictEqual(removed.documentObj.documentElement.style.getPropertyValue('--x-nt-wallpaper-image'), '');
+
+  const late = runWallpaperPreloadWithEntry(entry, withLibrary([record]));
+  late.preload.runtimeApplied = true;
+  assert.strictEqual(await late.preload.imageReady, '');
+  assert.strictEqual(late.documentObj.documentElement.style.getPropertyValue('--x-nt-wallpaper-image'), '',
+    'an upload read after the runtime painted must not cover its choice');
+
+  const forged = runWallpaperPreloadWithEntry({ id: 'dark-shanshui-moonlit', customImage: { id: 'dark-shanshui-moonlit' } },
+    withLibrary([record]));
+  assert.strictEqual(forged.preload, undefined, 'only upload IDs are read from the library');
+}
+
+async function testRuntimeAdoptsThePreloadedUploadAndItsBlobUrl() {
+  const id = `${CUSTOM_WALLPAPER_ID_PREFIX}1760000000001`;
+  // Past the inline limit: every style recalculation re-reads --x-nt-wallpaper-image, so long data
+  // URLs reach CSS as blob URLs.
+  const dataUrl = `data:image/webp;base64,${'A'.repeat(40 * 1024)}`;
+  const record = { key: id, id, imageDataUrl: dataUrl, thumbnailDataUrl: 'data:image/webp;base64,dGh1bWI=', updatedAt: 1 };
+  const objectUrls = createRecordingObjectUrls();
+  const { documentObj: preloadDocument, preload } = runWallpaperPreloadWithEntry({ id, customImage: { id } }, (windowObj) => {
+    windowObj.indexedDB = createFakeImageCacheDatabase([record], 'key');
+    objectUrls.install(windowObj);
+  });
+  assert.strictEqual(await preload.imageReady, dataUrl);
+  assert.strictEqual(preloadDocument.documentElement.style.getPropertyValue('--x-nt-wallpaper-image'),
+    'url("blob:chrome-extension://abc/wallpaper-1")', 'the preload paints a long upload through a blob URL');
+  assert.strictEqual(preload.cssObjectUrl.source, dataUrl);
+  assert.strictEqual(preload.cssObjectUrl.url, 'blob:chrome-extension://abc/wallpaper-1');
+  assert.strictEqual(objectUrls.created[0].size, 30 * 1024);
+  assert.strictEqual(preload.imageUrl, dataUrl, 'effects and samples keep the data URL the runtime uses');
+
+  const metrics = {};
+  const { documentObj, windowObj, sandbox: runtimeSandbox } = createWallpaperSandbox({
+    localStoreApi: createLocalWallpaperStoreApi([record], metrics),
+    preload,
+    prepareWindow: (testWindow) => objectUrls.install(testWindow)
+  });
+  documentObj.documentElement.style.setProperty('--x-nt-wallpaper-image',
+    preloadDocument.documentElement.style.getPropertyValue('--x-nt-wallpaper-image'));
+  const runtime = runtimeSandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
+    documentObj,
+    windowObj,
+    storageArea: createMemoryStorage({ [WALLPAPER_STORAGE_KEY]: 'custom-upload' }),
+    localWallpaperStorageArea: createMemoryStorage({ [LOCAL_WALLPAPER_STORAGE_KEY]: id }),
+    storageKeys: { wallpaper: WALLPAPER_STORAGE_KEY, localWallpaper: LOCAL_WALLPAPER_STORAGE_KEY },
+    t: (_key, fallback) => fallback || '',
+    getRiSvg: () => ''
+  });
+  await runtime.bootstrapInitialWallpaper();
+  assert.deepStrictEqual(metrics.readByIds, [], 'the runtime takes the preloaded record instead of reading the library');
+  assert.strictEqual(documentObj.documentElement.style.getPropertyValue('--x-nt-wallpaper-image'),
+    'url("blob:chrome-extension://abc/wallpaper-1")',
+    'the runtime keeps the blob URL the preload painted, so the background never swaps to an undecoded copy');
+  assert.strictEqual(objectUrls.created.length, 1, 'the upload is turned into a blob once');
+  assert.deepStrictEqual(objectUrls.revoked, []);
+  assert.strictEqual(preload.cssObjectUrl, null, 'the handed-over URL is the runtime\'s to release now');
+  const cached = JSON.parse(windowObj.localStorage.getItem(WALLPAPER_PRELOAD_STORAGE_KEY));
+  assert.deepStrictEqual(cached.wallpapers.light.customImage, { id }, 'the next tab preloads the upload again');
+  await runtime.waitForInitialWallpaperTone();
+}
+
+async function testShortDataUrlsStayInlineForCss() {
+  const id = `${CUSTOM_WALLPAPER_ID_PREFIX}short`;
+  const dataUrl = 'data:image/webp;base64,c2hvcnQ=';
+  const objectUrls = createRecordingObjectUrls();
+  const { documentObj, preload } = runWallpaperPreloadWithEntry({ id, customImage: { id } }, (windowObj) => {
+    windowObj.indexedDB = createFakeImageCacheDatabase([{ key: id, id, imageDataUrl: dataUrl }], 'key');
+    objectUrls.install(windowObj);
+  });
+  assert.strictEqual(await preload.imageReady, dataUrl);
+  assert.strictEqual(documentObj.documentElement.style.getPropertyValue('--x-nt-wallpaper-image'), `url("${dataUrl}")`);
+  assert.strictEqual(preload.cssObjectUrl, null);
+  assert.strictEqual(objectUrls.created.length, 0, 'a short data URL needs no blob');
 }
 
 async function testOpenTabRollsOverWithoutOpeningThePanel() {
@@ -4057,6 +4211,9 @@ Promise.resolve()
   .then(testNetworkWallpaperWaitsForThePageAndFallsBackOffline)
   .then(testBingPhotoOpensNewTabsFromTheCachedCopy)
   .then(testPreloadPaintsTheCachedOnlineCopyBeforeTheRuntime)
+  .then(testPreloadPaintsTheUploadFromTheLocalLibrary)
+  .then(testRuntimeAdoptsThePreloadedUploadAndItsBlobUrl)
+  .then(testShortDataUrlsStayInlineForCss)
   .then(testOpenTabRollsOverWithoutOpeningThePanel)
   .then(testWallpaperSourcesHintWaitsForFinalFocusRoute)
   .then(testNewtabFaviconPreloadAppliesCachedAlternateBeforeMainRuntime)

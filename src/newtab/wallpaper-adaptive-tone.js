@@ -785,11 +785,36 @@
     const applyWordmarkThemeAppearance = getFunction(options, 'applyWordmarkThemeAppearance');
     // Hears each new sampler, whose canvas holds the shown image scaled down.
     const onSamplerReady = getFunction(options, 'onSamplerReady');
+    // An image another script already loaded and decoded for this URL (the wallpaper preload), or null.
+    const getPreloadedImage = getFunction(options, 'getPreloadedImage', function() {
+      return null;
+    });
 
     let sampler = null;
     let pendingImageUrl = '';
     let loadToken = 0;
     let toneFrame = 0;
+    let settledWaiters = [];
+
+    // Resolves once no wallpaper image is still loading for a sample: the shown wallpaper's tones
+    // are on the page, or there is nothing to sample.
+    function whenSettled() {
+      if (!pendingImageUrl) {
+        return Promise.resolve();
+      }
+      return new Promise((resolve) => {
+        settledWaiters.push(resolve);
+      });
+    }
+
+    function notifySettled() {
+      if (pendingImageUrl || settledWaiters.length === 0) {
+        return;
+      }
+      const waiters = settledWaiters;
+      settledWaiters = [];
+      waiters.forEach((resolve) => resolve());
+    }
 
     function getDocumentThemeMode() {
       return documentObj && documentObj.body && documentObj.body.getAttribute('data-theme') === 'dark'
@@ -910,6 +935,14 @@
     }
 
     function loadImage(url) {
+      const preloaded = getPreloadedImage(url);
+      if (preloaded && typeof preloaded.then === 'function') {
+        return preloaded.then((image) => image || loadImageFromUrl(url), () => loadImageFromUrl(url));
+      }
+      return loadImageFromUrl(url);
+    }
+
+    function loadImageFromUrl(url) {
       return new Promise((resolve, reject) => {
         const image = new Image();
         image.decoding = 'async';
@@ -1344,12 +1377,14 @@
         pendingImageUrl = '';
         sampler = null;
         clear();
+        notifySettled();
         return;
       }
       if (sampler && sampler.url === imageUrl) {
         if (pendingImageUrl) {
           loadToken += 1;
           pendingImageUrl = '';
+          notifySettled();
         }
         schedule();
         return;
@@ -1373,6 +1408,7 @@
         if (sampler) {
           onSamplerReady(sampler);
         }
+        notifySettled();
       }).catch(() => {
         if (token !== loadToken) {
           return;
@@ -1380,13 +1416,15 @@
         pendingImageUrl = '';
         sampler = null;
         clear();
+        notifySettled();
       });
     }
 
     return {
       clear,
       refresh,
-      schedule
+      schedule,
+      whenSettled
     };
   }
 

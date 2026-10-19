@@ -601,6 +601,8 @@
   let searchEntryRestoreLayoutLockUntil = 0;
   pageState.newtabResizeLayoutLocked = false;
   pageState.newtabReadyRequested = false;
+  // When the wallpaper was revealed (performance.now()); entry-motion.js lets it lead the content.
+  pageState.wallpaperShownAt = 0;
   pageState.newtabReadyViewportRevision = 0;
   pageState.resolveNewtabEntryAnimationReady = null;
   const newtabEntryAnimationReadyPromise = new Promise((resolve) => {
@@ -2383,9 +2385,25 @@
       : Promise.resolve();
   }
 
+  function waitForInitialWallpaperTone() {
+    return pageState.wallpaperRuntime && typeof pageState.wallpaperRuntime.waitForInitialWallpaperTone === 'function'
+      ? pageState.wallpaperRuntime.waitForInitialWallpaperTone()
+      : Promise.resolve();
+  }
+
   function markInitialWallpaperVisualReady() {
-    if (document.body) {
+    if (!document.body) {
+      return;
+    }
+    if (document.body.getAttribute('data-nt-wallpaper-ready') !== '1') {
       document.body.setAttribute('data-nt-wallpaper-ready', '1');
+      pageState.wallpaperShownAt = performance.now();
+      return;
+    }
+    // The preload revealed it already.
+    const effectPreload = globalThis.LumnoNewtabWallpaperEffectPreload;
+    if (!pageState.wallpaperShownAt && effectPreload && effectPreload.wallpaperShownAt) {
+      pageState.wallpaperShownAt = effectPreload.wallpaperShownAt;
     }
   }
 
@@ -7529,6 +7547,9 @@
     return Promise.all([recentSitesReadyTask, bookmarksReadyTask]);
   }).catch((error) => {
     console.warn('[Lumno] Initial new tab content setup failed.', error);
+  }).then(() => {
+    // The wallpaper leads: content enters once its tones are on the controls.
+    return observeNewtabStartupTask('wallpaper-tone', waitForInitialWallpaperTone());
   }).then(() => {
     maybeShowFileAccessNotice();
     markNewtabReady();

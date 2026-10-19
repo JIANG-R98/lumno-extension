@@ -422,6 +422,10 @@ body[data-glass-style] .x-nt-shortcut-group-header {
     filter var(--lumno-duration-sm) ease,
     opacity var(--lumno-duration-sm) ease;
 }
+/* The first wallpaper sample's tints apply at once until the entry finishes (see newtab.css). */
+body[data-glass-style]:not([data-nt-enter="done"]) :is(.x-nt-shortcut-icon, .x-nt-shortcut-group-header) {
+  transition: none;
+}
 /* They leave at once, so none shows half under the plate as it grows or as a blur behind it,
    and come back with a fade once it has closed. The site search panel covers them the same way. */
 body[data-glass-style][data-nt-suggestions-open="true"] :is(.x-nt-shortcut-icon, .x-nt-shortcut-group-header),

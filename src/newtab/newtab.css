@@ -1210,6 +1210,12 @@ body[data-glass-style] .x-nt-shortcut-icon[data-glass-ink-theme="dark"] {
   opacity: 1;
   transform: translate(-50%, -50%) scale(1);
 }
+/* The content shows just after the first wallpaper sample tints it, so until the entry finishes those
+   colors apply at once; a fade from the theme's default would play in view (the add tile, light on
+   a dark wallpaper, passed through the wallpaper's own gray and seemed to vanish). */
+body:not([data-nt-enter="done"]) .x-nt-shortcut-icon {
+  transition: none;
+}
 body[data-theme="dark"] .x-nt-shortcut-icon--add,
 body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-shortcut-icon--add,
 body[data-glass-style] .x-nt-shortcut-icon--add[data-glass-ink-theme="dark"] {

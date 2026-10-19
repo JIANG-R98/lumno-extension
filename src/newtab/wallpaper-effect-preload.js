@@ -19,6 +19,8 @@
   const preloadRuntime = {
     claimed: false,
     controller: null,
+    // When this script revealed the wallpaper (performance.now()); the entry starts a beat later.
+    wallpaperShownAt: 0,
     attach(options) {
       const config = options || {};
       if (typeof config.onRender === 'function') {
@@ -53,6 +55,16 @@
     }
   });
 
+  let wallpaperMarkedReady = false;
+  function markWallpaperReady() {
+    if (!document.body || wallpaperMarkedReady) {
+      return;
+    }
+    wallpaperMarkedReady = true;
+    document.body.setAttribute('data-nt-wallpaper-ready', '1');
+    preloadRuntime.wallpaperShownAt = globalThis.performance ? globalThis.performance.now() : 0;
+  }
+
   // The page stays unpainted until this resolves, so the wallpaper and its effect appear together.
   function startEffects(prefs, imageUrl) {
     // Once wallpaper.js applies its own preferences it also decides when the wallpaper is ready.
@@ -62,18 +74,14 @@
     const normalized = effects.resolvePrefsForMode(prefs, preloadState.mode);
     if (normalized.type === 'none') {
       body.setAttribute('data-wallpaper-effect', 'none');
-      body.setAttribute('data-nt-wallpaper-ready', '1');
+      markWallpaperReady();
       return;
     }
 
     body.setAttribute('data-wallpaper-active', 'true');
     body.setAttribute('data-wallpaper-effect', normalized.type);
     controller.apply(normalized);
-    controller.refresh({ immediate: true }).then(() => {
-      if (document.body) {
-        document.body.setAttribute('data-nt-wallpaper-ready', '1');
-      }
-    });
+    controller.refresh({ immediate: true }).then(markWallpaperReady);
   }
 
   // An online photo's IndexedDB copy may still be loading; without one, wallpaper.js takes over.
@@ -83,9 +91,5 @@
       return startEffects(prefs, preloadState.imageUrl);
     }
     return imageReady.then((imageUrl) => startEffects(prefs, imageUrl));
-  }).catch(() => {
-    if (document.body) {
-      document.body.setAttribute('data-nt-wallpaper-ready', '1');
-    }
-  });
+  }).catch(markWallpaperReady);
 })();
