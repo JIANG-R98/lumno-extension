@@ -128,9 +128,12 @@ describe('folder color picker', () => {
     const preview = document.querySelector<HTMLElement>('.x-nt-folder-color-plate-preview')!;
     expect(preview.querySelector('img')!.getAttribute('src')).toBe('data:image/png;base64,bG9nbw==');
     expect(preview.style.backgroundColor).toBe('rgb(253, 237, 234)');
-    expect(Array.from(document.querySelectorAll('.x-nt-folder-color-presets .x-nt-folder-color-swatch'))
+    expect(Array.from(document.querySelectorAll('.x-nt-folder-color-presets .x-nt-folder-color-swatch[data-color]'))
       .map((element) => element.getAttribute('data-color'))).toEqual(['#FDEDEA', '#F8C9C0', '#FFFFFF']);
     expect(swatch('presets', '#FDEDEA').getAttribute('aria-label')).toBe('From the icon');
+    // The short preset row carries the saved colors and "+" on, in one group.
+    expect(document.querySelector('.x-nt-folder-color-saved')).toBeNull();
+    expect(document.querySelector('.x-nt-folder-color-presets .x-nt-folder-color-add')).not.toBeNull();
     act(() => swatch('presets', '#FFFFFF').click());
     expect(preview.style.backgroundColor).toBe('rgb(255, 255, 255)');
     await act(async () => { document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });

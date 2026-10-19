@@ -88,7 +88,7 @@ function FolderColorForm({ initial, options, initialSavedColors, updateSavedColo
       if (target) options.bindTooltip?.(target, () => target.getAttribute('data-tooltip') || '', { placement: 'top', maxWidth: 260 });
     }
     if (focusSavedColorRef.current !== null) {
-      const target = savedColorsRef.current?.querySelectorAll<HTMLButtonElement>('.x-nt-folder-color-swatch:not(.x-nt-folder-color-add)')[focusSavedColorRef.current] || addColorRef.current;
+      const target = savedColorsRef.current?.querySelectorAll<HTMLButtonElement>('.x-nt-folder-color-saved-item .x-nt-folder-color-swatch')[focusSavedColorRef.current] || addColorRef.current;
       focusSavedColorRef.current = null;
       if (target && !target.disabled) target.focus();
       else focusCurrentColor();
@@ -187,6 +187,46 @@ function FolderColorForm({ initial, options, initialSavedColors, updateSavedColo
     }
   }
 
+  const presetSwatches = <>
+    {presets.map((preset) => {
+      // The default swatch removes the customization instead of pinning its value.
+      const isDefault = preset === defaultColor;
+      const label = isDefault ? initial.labels?.defaultColor || t('folder_color_default', 'Default color') : preset;
+      return <button key={preset} type="button" className="x-nt-folder-color-swatch" data-color={preset}
+        data-default={isDefault && initial.labels?.defaultColor ? 'true' : undefined}
+        ref={isDefault ? defaultSwatchRef : undefined} title={isDefault ? label : undefined} data-tooltip={isDefault ? label : undefined}
+        style={{ backgroundColor: preset }} aria-label={label} aria-pressed={selectedSource === 'preset' && color === preset}
+        onClick={() => selectColor(preset, 'preset', isDefault)}>
+        {isDefault && initial.labels?.defaultColor
+          ? <i className="ri-icon ri-size-14 ri-magic-line" aria-hidden="true" /> : null}
+      </button>;
+    })}
+  </>;
+  const savedSwatches = <>
+    {savedColors.map((saved) => <span key={saved} className="x-nt-folder-color-saved-item" data-color={saved}>
+      <button type="button" className="x-nt-folder-color-swatch"
+        style={{ backgroundColor: saved }} aria-label={saved} aria-pressed={selectedSource === 'saved' && color === saved}
+        onClick={() => selectColor(saved, 'saved')} />
+      <button type="button" className="x-nt-folder-color-remove" disabled={!savedColorsReady}
+        aria-label={`${t('folder_color_remove_saved', 'Delete saved color')} ${saved}`}
+        onClick={(event) => { event.stopPropagation(); void removeSavedColor(saved); }}>
+        <i className="ri-icon ri-size-12 ri-close-line" aria-hidden="true" />
+      </button>
+    </span>)}
+    {savedColors.length < MAX_SAVED_FOLDER_COLORS ? <button type="button" ref={addColorRef}
+      className="x-nt-folder-color-swatch x-nt-folder-color-add"
+      aria-label={t('folder_color_save_current', 'Save current color')}
+      title={t('folder_color_save_current', 'Save current color')}
+      data-tooltip={t('folder_color_save_current', 'Save current color')}
+      disabled={!savedColorsReady || invalid || isKnownColor} onClick={() => { void saveCurrentColor(); }}>
+      <i className="ri-icon ri-size-16 ri-add-line" aria-hidden="true" />
+    </button> : null}
+  </>;
+  const presetsLabel = t('folder_color_presets', 'Preset colors');
+  // A caller's short preset row (a shortcut plate's) leaves room, so the
+  // saved colors and "+" carry on in it instead of starting a row of their own.
+  const mergePalettes = presets.length < PRESETS.length;
+
   return <div className="x-nt-shortcut-dialog-backdrop x-nt-folder-color-backdrop"
     onPointerDown={(event) => { if (event.target === event.currentTarget && !busy) close(); }}>
     <div className="x-nt-shortcut-dialog x-nt-folder-color-dialog" role="dialog" aria-modal="true"
@@ -207,42 +247,19 @@ function FolderColorForm({ initial, options, initialSavedColors, updateSavedColo
                 <HexColorPicker color={color} onChange={(value) => selectColor(value)} aria-label={initial.labels?.picker || t('folder_color_title', 'Folder color')} />
               </div>
               <div className="x-nt-folder-color-palettes">
-                <div className="x-nt-folder-color-presets" role="group" aria-label={t('folder_color_presets', 'Preset colors')}>
-                  {presets.map((preset) => {
-                    // The default swatch removes the customization instead of pinning its value.
-                    const isDefault = preset === defaultColor;
-                    const label = isDefault ? initial.labels?.defaultColor || t('folder_color_default', 'Default color') : preset;
-                    return <button key={preset} type="button" className="x-nt-folder-color-swatch" data-color={preset}
-                      data-default={isDefault && initial.labels?.defaultColor ? 'true' : undefined}
-                      ref={isDefault ? defaultSwatchRef : undefined} title={isDefault ? label : undefined} data-tooltip={isDefault ? label : undefined}
-                      style={{ backgroundColor: preset }} aria-label={label} aria-pressed={selectedSource === 'preset' && color === preset}
-                      onClick={() => selectColor(preset, 'preset', isDefault)}>
-                      {isDefault && initial.labels?.defaultColor
-                        ? <i className="ri-icon ri-size-14 ri-magic-line" aria-hidden="true" /> : null}
-                    </button>;
-                  })}
-                </div>
-                <div className="x-nt-folder-color-saved" role="group" ref={savedColorsRef}
-                  aria-label={t('folder_color_saved', 'Saved colors')}>
-                  {savedColors.map((saved) => <span key={saved} className="x-nt-folder-color-saved-item" data-color={saved}>
-                    <button type="button" className="x-nt-folder-color-swatch"
-                      style={{ backgroundColor: saved }} aria-label={saved} aria-pressed={selectedSource === 'saved' && color === saved}
-                      onClick={() => selectColor(saved, 'saved')} />
-                    <button type="button" className="x-nt-folder-color-remove" disabled={!savedColorsReady}
-                      aria-label={`${t('folder_color_remove_saved', 'Delete saved color')} ${saved}`}
-                      onClick={(event) => { event.stopPropagation(); void removeSavedColor(saved); }}>
-                      <i className="ri-icon ri-size-12 ri-close-line" aria-hidden="true" />
-                    </button>
-                  </span>)}
-                  {savedColors.length < MAX_SAVED_FOLDER_COLORS ? <button type="button" ref={addColorRef}
-                    className="x-nt-folder-color-swatch x-nt-folder-color-add"
-                    aria-label={t('folder_color_save_current', 'Save current color')}
-                    title={t('folder_color_save_current', 'Save current color')}
-                    data-tooltip={t('folder_color_save_current', 'Save current color')}
-                    disabled={!savedColorsReady || invalid || isKnownColor} onClick={() => { void saveCurrentColor(); }}>
-                    <i className="ri-icon ri-size-16 ri-add-line" aria-hidden="true" />
-                  </button> : null}
-                </div>
+                {mergePalettes ? <div className="x-nt-folder-color-presets" role="group" ref={savedColorsRef}
+                  aria-label={presetsLabel} data-merged="true">
+                  {presetSwatches}
+                  {savedSwatches}
+                </div> : <>
+                  <div className="x-nt-folder-color-presets" role="group" aria-label={presetsLabel}>
+                    {presetSwatches}
+                  </div>
+                  <div className="x-nt-folder-color-saved" role="group" ref={savedColorsRef}
+                    aria-label={t('folder_color_saved', 'Saved colors')}>
+                    {savedSwatches}
+                  </div>
+                </>}
               </div>
               <div className="x-nt-folder-color-value-row">
                 <div ref={setFormatHost} className="_x_extension_select_wrap_2024_unique_ _x_extension_custom_select_2024_unique_ x-nt-folder-color-format">
