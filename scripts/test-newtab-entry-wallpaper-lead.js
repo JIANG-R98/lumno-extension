@@ -63,14 +63,14 @@ function createEntryMotion({ wallpaperActive, wallpaperShownAgoMs }) {
 }
 
 async function testContentWaitsForTheWallpaperLead() {
-  const fresh = createEntryMotion({ wallpaperActive: true, wallpaperShownAgoMs: 20 });
+  const fresh = createEntryMotion({ wallpaperActive: true, wallpaperShownAgoMs: 0 });
   fresh.motion.markNewtabReady();
-  await delay(40);
+  await delay(20);
   assert.strictEqual(fresh.body.getAttribute('data-nt-ready'), null,
     'content shown right after the wallpaper waits, so the two never land in one moment');
   assert.strictEqual(fresh.pageState.newtabReadyRequested, false);
   fresh.motion.markNewtabReady();
-  await delay(120);
+  await delay(80);
   assert.strictEqual(fresh.body.getAttribute('data-nt-ready'), '1', 'the content enters once the wallpaper has led');
   assert.strictEqual(fresh.body.getAttribute('data-nt-enter'), 'run');
 

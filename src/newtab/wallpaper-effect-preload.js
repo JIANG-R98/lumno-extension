@@ -66,21 +66,6 @@
     }
   });
 
-  // The page stays hidden until the wallpaper image has decoded, so it appears whole and never
-  // part-drawn; an image that takes longer than this shows as it arrives.
-  const IMAGE_DECODE_WAIT_MAX_MS = 1000;
-  // null when there is nothing to wait on.
-  function whenImageDecoded() {
-    const decoded = preloadState.imageDecoded;
-    if (!decoded || typeof decoded.then !== 'function' || typeof globalThis.setTimeout !== 'function') {
-      return null;
-    }
-    return Promise.race([
-      decoded,
-      new Promise((resolve) => globalThis.setTimeout(resolve, IMAGE_DECODE_WAIT_MAX_MS))
-    ]);
-  }
-
   let wallpaperMarkedReady = false;
   function markWallpaperReady() {
     if (!document.body || wallpaperMarkedReady) {
@@ -100,21 +85,14 @@
     const normalized = effects.resolvePrefsForMode(prefs, preloadState.mode);
     if (normalized.type === 'none') {
       body.setAttribute('data-wallpaper-effect', 'none');
-      const decoded = whenImageDecoded();
-      if (decoded) {
-        decoded.then(markWallpaperReady);
-      } else {
-        markWallpaperReady();
-      }
+      markWallpaperReady();
       return;
     }
 
     body.setAttribute('data-wallpaper-active', 'true');
     body.setAttribute('data-wallpaper-effect', normalized.type);
     controller.apply(normalized);
-    const rendered = controller.refresh({ immediate: true });
-    const decoded = whenImageDecoded();
-    (decoded ? Promise.all([rendered, decoded]) : rendered).then(markWallpaperReady);
+    controller.refresh({ immediate: true }).then(markWallpaperReady);
   }
 
   // An online photo's IndexedDB copy may still be loading; without one, wallpaper.js takes over.

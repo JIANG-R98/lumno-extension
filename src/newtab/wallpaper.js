@@ -557,7 +557,6 @@
     const WALLPAPER_FILTER_TRANSITION_MS = 180;
     const WALLPAPER_VISUAL_REFRESH_DELAY_MS = 80;
     const WALLPAPER_TONE_REVEAL_WAIT_MAX_MS = 200;
-    const WALLPAPER_REVEAL_DECODE_WAIT_MAX_MS = 1000;
     const WALLPAPER_IMAGE_READY_CACHE_LIMIT = 8;
     const WALLPAPER_NETWORK_IMAGE_TIMEOUT_MS = 8000;
 
@@ -2669,27 +2668,13 @@
       return Promise.all([
         initialWallpaperReadyPromise,
         effectPreferencesReady
-      ]).then(() => Promise.all([
-        waitForInitialWallpaperImageDecoded(),
-        !wallpaperEffects || !currentWallpaperId || currentAppliedWallpaperEffectPrefs.type === 'none'
-          ? null
-          : wallpaperEffects.refresh({ immediate: true })
-      ]));
-    }
-
-    // The page stays hidden until the wallpaper image has decoded, so it appears whole, never on the
-    // page color first; an image that takes longer than this shows as it arrives.
-    function waitForInitialWallpaperImageDecoded() {
-      const imageUrl = appliedWallpaperVisualUrl;
-      if (!imageUrl) {
-        return Promise.resolve();
-      }
-      return new Promise((resolve) => {
-        const timer = window.setTimeout(resolve, WALLPAPER_REVEAL_DECODE_WAIT_MAX_MS);
-        waitForWallpaperImageReady(getCssSafeWallpaperUrl(imageUrl)).then(() => {
-          window.clearTimeout(timer);
-          resolve();
-        });
+      ]).then(() => {
+        if (!wallpaperEffects ||
+            !currentWallpaperId ||
+            currentAppliedWallpaperEffectPrefs.type === 'none') {
+          return;
+        }
+        return wallpaperEffects.refresh({ immediate: true });
       });
     }
 
