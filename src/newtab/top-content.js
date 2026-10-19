@@ -270,8 +270,9 @@
       if (fixedInk && !wallpaperActive) {
         return fixedInk === 'light' ? 'rgb(248 250 252)' : 'rgb(31 41 55)';
       }
+      // Until the wallpaper is sampled, the fallback draws the ink already known.
       if (wallpaperActive) {
-        return wallpaperInk === 'dark'
+        return (fixedInk || wallpaperInk) === 'light'
           ? 'var(--x-nt-wallpaper-wordmark-ink, rgb(238 240 242))'
           : 'var(--x-nt-wallpaper-wordmark-ink, rgb(78 84 94))';
       }
@@ -401,7 +402,7 @@
       }
     }
 
-    function updateNewtabTimeFontWeightUi() {
+    function updateNewtabTimePanelUi() {
       if (pageState.wallpaperRuntime && typeof pageState.wallpaperRuntime.updateTimeFontWeightUi === 'function') {
         pageState.wallpaperRuntime.updateTimeFontWeightUi();
       }
@@ -414,7 +415,7 @@
       if (changed && pageState.newtabTopContentMode === 'time') {
         renderNewtabTopContent(false);
       }
-      updateNewtabTimeFontWeightUi();
+      updateNewtabTimePanelUi();
       return nextValue;
     }
 
@@ -431,7 +432,7 @@
           updateSuggestionsFloatingLayout();
         }
       }
-      updateNewtabTimeFontWeightUi();
+      updateNewtabTimePanelUi();
       return nextValue;
     }
 
@@ -442,8 +443,8 @@
       if (changed) {
         applyWordmarkThemeAppearance();
         scheduleWallpaperAdaptiveToneUpdate();
+        updateNewtabTimePanelUi();
       }
-      updateNewtabTimeFontWeightUi();
       return nextValue;
     }
 
@@ -454,7 +455,7 @@
       if (changed && pageState.newtabTopContentMode === 'time') {
         renderNewtabTopContent(false);
       }
-      updateNewtabTimeFontWeightUi();
+      updateNewtabTimePanelUi();
       return nextValue;
     }
 
@@ -481,7 +482,7 @@
           }
         });
       }
-      updateNewtabTimeFontWeightUi();
+      updateNewtabTimePanelUi();
       return nextValue;
     }
 

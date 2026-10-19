@@ -242,10 +242,9 @@ assert.match(
   /_x_nt_time_seconds_soft_swap_2026_unique_ 120ms[\s\S]*?@keyframes _x_nt_time_seconds_soft_swap_2026_unique_[\s\S]*?transform: scale\(0\.985\);[\s\S]*?transform: scale\(1\);/
 );
 // The new seconds never dim on their way in: an opacity dip reads as a blink each tick.
-assert.doesNotMatch(
-  newtabHtml.match(/@keyframes _x_nt_time_seconds_soft_swap_2026_unique_[\s\S]*?\n\}/)?.[0] || '',
-  /opacity/
-);
+const secondsSwapKeyframes = newtabHtml.match(/@keyframes _x_nt_time_seconds_soft_swap_2026_unique_ \{[\s\S]*?\n\s*\}\s*\n\s*\}/)?.[0];
+assert(secondsSwapKeyframes, 'the seconds swap keyframes should be found');
+assert.doesNotMatch(secondsSwapKeyframes, /opacity/);
 const secondsAnimationSource = newtabHtml.match(
   /\.x-nt-time-seconds-digit \{[\s\S]*?@keyframes _x_nt_time_seconds_soft_swap_2026_unique_[\s\S]*?\n\s{6}\}/
 )?.[0] || '';

@@ -553,23 +553,29 @@ function getCssRgbChannels(value) {
     'a grouped caption should share its heading adaptive ink'
   );
 
-  // A clock ink the user fixed holds whatever the sample says, the caption follows it, and
-  // going back to automatic returns to the sampled ink.
+  // A clock ink the user fixed holds whatever the sample says and gets that ink's shadow; its
+  // caption keeps the sampled ink, and going back to automatic returns to it.
   const sampledInk = heading.getAttribute('data-wallpaper-ink');
   const fixedInk = sampledInk === 'dark' ? 'light' : 'dark';
   extraTargets = captionTargets(true).map((target) => (target.element === heading ? { ...target, ink: fixedInk } : target));
   runtime.schedule();
   runFrames();
   assert.strictEqual(heading.getAttribute('data-wallpaper-ink'), fixedInk, 'a fixed ink should override the sample');
-  assert.strictEqual(caption.getAttribute('data-wallpaper-ink'), fixedInk, 'a grouped caption should follow a fixed ink');
+  assert.strictEqual(caption.getAttribute('data-wallpaper-ink'), sampledInk,
+    'a grouped caption should keep the sampled ink, not the clock\'s fixed one');
   const fixedWordmarkInk = getCssRgbChannels(heading.style.getPropertyValue('--x-nt-wallpaper-wordmark-ink'));
   assert.ok(fixedInk === 'light' ? Math.min(...fixedWordmarkInk) > 200 : Math.max(...fixedWordmarkInk) < 120,
     `the wordmark ink should be drawn in the fixed ${fixedInk} ink (${fixedWordmarkInk})`);
+  assert.strictEqual(
+    heading.style.getPropertyValue('--x-nt-wallpaper-wordmark-shadow') === 'transparent',
+    fixedInk === 'dark',
+    'the wordmark shadow should follow the fixed ink: an offset shadow for light ink, none for dark'
+  );
   extraTargets = captionTargets(true);
   runtime.schedule();
   runFrames();
   assert.strictEqual(heading.getAttribute('data-wallpaper-ink'), sampledInk,
-    'back to automatic, the fixed ink should not hold the next choice');
+    'back to automatic, the clock should take the sampled ink again');
 
   // A row of icons scrolled partly out of view reads only the icons on screen:
   // one far off the left edge must not drag the sample over the dark half.

@@ -1256,14 +1256,14 @@ function WallpaperPanel({
               <div
                 {...ref('topContentInkRow')}
                 {...collapsible(state.search.timeInk.visible)}
-                className="x-nt-top-content-font-row x-nt-time-ink-row x-nt-panel-collapsible"
+                className="x-nt-top-content-font-row x-nt-panel-collapsible"
               >
                 <span {...ref('topContentInkTitle')} className="x-nt-top-content-seconds-title">
                   {state.search.timeInk.title}
                 </span>
                 <SegmentedChoice
                   buttonClassName="x-nt-segmented-tab x-nt-wallpaper-tab"
-                  className="x-nt-wallpaper-tabs x-nt-row-tabs x-nt-time-ink-tabs"
+                  className="x-nt-wallpaper-tabs x-nt-row-tabs"
                   indicatorClassName="x-nt-wallpaper-tabs-indicator"
                   indicatorRef="topContentInkIndicator"
                   name="topContentInkTabs"

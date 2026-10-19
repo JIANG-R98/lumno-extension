@@ -517,12 +517,12 @@
       formatSolidRgb(getIconSolidForegroundColor(hoverBackgroundColor)));
   }
 
-  function applyWordmarkToneStyles(element, luminance, wordmarkInk, protection, color) {
-    // The shadow follows the ink actually rendered. Light ink gets a soft,
+  function applyWordmarkToneStyles(element, ink, wordmarkInk, protection, color) {
+    // The shadow follows the ink family, a fixed one included. Light ink gets a soft,
     // diffuse shadow in a deep tone of the wallpaper's own hue, so it lifts
     // the ink without a grey smudge; dark ink has no offset shadow at all, only
     // a light bloom where busy textures or mid tones need separating.
-    if (getColorLuminance(wordmarkInk) > luminance) {
+    if (ink === 'light') {
       const tint = getWordmarkTint(getValidToneColor(color));
       const shadow = hslToRgb(tint.hue, tint.saturation, 0.1);
       setStyleProperty(element, '--x-nt-wallpaper-wordmark-shadow',
@@ -661,7 +661,7 @@
       effectType
     );
     setStyleProperty(element, '--x-nt-wallpaper-wordmark-ink', formatSolidRgb(wordmarkInk));
-    applyWordmarkToneStyles(element, luminance, wordmarkInk, protection, color);
+    applyWordmarkToneStyles(element, ink, wordmarkInk, protection, color);
     const tones = getAdaptiveInkTones(luminance, ink, color, effectType);
     const amount = tones.amount;
     const hover = tones.hoverColor;
@@ -790,8 +790,6 @@
     let pendingImageUrl = '';
     let loadToken = 0;
     let toneFrame = 0;
-    // Targets drawn in an ink the user fixed (target.ink) rather than one sampled.
-    const fixedInkElements = new WeakSet();
 
     function getDocumentThemeMode() {
       return documentObj && documentObj.body && documentObj.body.getAttribute('data-theme') === 'dark'
@@ -832,7 +830,6 @@
         return;
       }
       element.removeAttribute('data-wallpaper-ink');
-      fixedInkElements.delete(element);
       element.removeAttribute('data-wallpaper-icon-bg');
       element.removeAttribute('data-wallpaper-overlay-cover');
       element.style.removeProperty('--x-nt-wallpaper-local-luma');
@@ -1198,28 +1195,22 @@
           clearAdaptiveToneStyles(target.element);
           return;
         }
-        // An ink the user fixed is not the sampled one, so it never holds the next choice.
-        const currentInk = config.resetInk === true || fixedInkElements.has(target.element)
+        const currentInk = config.resetInk === true
           ? null
           : target.element.getAttribute('data-wallpaper-ink');
-        if (target.ink) {
-          fixedInkElements.add(target.element);
-        } else {
-          fixedInkElements.delete(target.element);
-        }
-        const nextInk = shared
+        const sampledInk = shared
           ? shared.ink
-          : target.ink
-            ? target.ink
-            : target.surface === 'topbar' && target.preferOverlayPolarity === true
-              ? chooseSurfaceInk(
-                  sample.overlayAlpha,
-                  overlayLuminance,
-                  chooseInk(luminance, currentInk)
-                )
-              : chooseReadableInk(chooseInk(luminance, currentInk), luminance, sample.color, effectType);
+          : target.surface === 'topbar' && target.preferOverlayPolarity === true
+            ? chooseSurfaceInk(
+                sample.overlayAlpha,
+                overlayLuminance,
+                chooseInk(luminance, currentInk)
+              )
+            : chooseReadableInk(chooseInk(luminance, currentInk), luminance, sample.color, effectType);
+        // An ink the user fixed (the clock's) is its own; the rest of its group keeps the sampled one.
+        const nextInk = target.ink || sampledInk;
         if (target.toneGroup && !shared) {
-          toneGroups.set(target.toneGroup, { sample, ink: nextInk });
+          toneGroups.set(target.toneGroup, { sample, ink: sampledInk });
         }
         const overlayCovered = isWallpaperOverlayCovered(sample.overlayAlpha);
         target.element.setAttribute('data-wallpaper-ink', nextInk);

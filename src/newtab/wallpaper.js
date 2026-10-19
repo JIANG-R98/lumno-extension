@@ -2716,8 +2716,8 @@
 
     function persistTimeInk(value) {
       const ink = SETTINGS.normalizeNewtabTimeInk(value);
+      // Redraws the panel when the ink changes.
       setTimeInk(ink);
-      renderWallpaperPanelState();
       if (storageArea && NEWTAB_TIME_INK_STORAGE_KEY) {
         storageArea.set({ [NEWTAB_TIME_INK_STORAGE_KEY]: ink });
       }

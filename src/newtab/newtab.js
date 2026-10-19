@@ -2013,7 +2013,7 @@
         element: pageState.topContentContainer,
         sampleElement: captionSample || topContentSample,
         toneGroup: captionSample ? 'top-caption' : '',
-        // A clock ink the user fixed; a caption under the clock takes it too.
+        // A clock ink the user fixed; a caption under the clock keeps the sampled one.
         ink: getFixedTimeInk(),
         minWidth: 220,
         minHeight: 72
