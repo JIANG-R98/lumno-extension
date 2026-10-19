@@ -1178,7 +1178,9 @@ function getTopSitesCached() {
   if (topSitesCache.expiresAt > now && Array.isArray(topSitesCache.items)) {
     return Promise.resolve(topSitesCache.items);
   }
-  if (!chrome || !chrome.topSites || typeof chrome.topSites.get !== 'function') {
+  // Edge's topSites lists its own promoted sites, not ones the user visits.
+  if (!chrome || !chrome.topSites || typeof chrome.topSites.get !== 'function' ||
+      BROWSER_PROFILE.getBrowserInternalScheme(navigator.userAgent) === 'edge://') {
     return Promise.resolve([]);
   }
   return callChromeApiWithTimeout((done) => {

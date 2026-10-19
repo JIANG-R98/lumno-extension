@@ -434,7 +434,7 @@ function loadBackgroundForTest(options) {
     URLSearchParams,
     Blob,
     AbortController,
-    navigator: { userAgent: 'Fake Chrome' },
+    navigator: { userAgent: config.userAgent || 'Fake Chrome' },
     fetch: config.fetch || (async () => {
       throw new Error('network disabled in background search test');
     })
@@ -623,6 +623,27 @@ async function run() {
       topSiteOnlyResponse.suggestions.length > 0 &&
       topSiteOnlyResponse.suggestions.every((item) => item && item.type === 'topSite'),
     'message-scoped frequent-site search should only return top-site suggestions'
+  );
+
+  const edgeBackground = loadBackgroundForTest({
+    userAgent: 'Mozilla/5.0 (Macintosh) Chrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0'
+  });
+  const edgeTopSiteOnly = await edgeBackground.context.__testGetSearchSuggestions('github', {
+    sourceTypes: ['topSite'],
+    includeOpenTabs: false
+  });
+  assert.strictEqual(
+    edgeTopSiteOnly.length,
+    0,
+    "Edge's promoted topSites should never surface as frequent-site suggestions"
+  );
+  const edgeAllSources = await edgeBackground.context.__testGetSearchSuggestions('github', {
+    includeOpenTabs: false
+  });
+  assert.ok(
+    edgeAllSources.some((item) => item && item.type === 'history') &&
+      edgeAllSources.every((item) => item && item.type !== 'topSite' && !item.isTopSite),
+    'Edge should keep history suggestions without top-site boosts'
   );
   assert.strictEqual(
     typeof context.__testGetSearchSuggestions,
