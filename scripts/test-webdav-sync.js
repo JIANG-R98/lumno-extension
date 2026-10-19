@@ -1248,10 +1248,13 @@ async function testShortcutGroups() {
 function testOlderWriters() {
   const glass = settings.NEWTAB_GLASS_STYLE_STORAGE_KEY;
   const size = settings.NEWTAB_TIME_FONT_SIZE_STORAGE_KEY;
+  const ink = settings.NEWTAB_TIME_INK_STORAGE_KEY;
+  const twelveHour = settings.NEWTAB_TIME_12_HOUR_STORAGE_KEY;
   const quotes = '_x_extension_custom_quotes_2026_unique_';
   const shared = '_x_extension_recent_count_2024_unique_';
   const own = (data) => contract.validateState({ ...empty(data), keys: contract.KNOWN_KEYS });
-  const mine = own({ [shared]: 1, [glass]: 'liquid', [size]: 72, [quotes]: { v: 1, items: ['a'] } });
+  const mine = own({ [shared]: 1, [glass]: 'liquid', [size]: 72, [ink]: 'light', [twelveHour]: true,
+    [quotes]: { v: 1, items: ['a'] } });
   assert.strictEqual(contract.validateState(mine).keys.length, contract.KNOWN_KEYS.length, 'a state keeps its writer list');
 
   // 1.0.0 saved a change of its own and dropped the keys it never knew.
@@ -1261,14 +1264,16 @@ function testOlderWriters() {
   assert.strictEqual(merged.state.data[shared], 2, 'the older device\'s own change arrives');
   assert.strictEqual(merged.state.data[glass], 'liquid', 'a setting the older device never knew stays');
   assert.strictEqual(merged.state.data[size], 72);
+  assert.strictEqual(merged.state.data[ink], 'light');
+  assert.strictEqual(merged.state.data[twelveHour], true);
   assert.deepStrictEqual(merged.state.data[quotes], { v: 1, items: ['a'] });
   assert.ok(!contract.sameContent(merged.state, legacy), 'the restored settings go back to the server');
   assert.deepStrictEqual(contract.adoptRemote(mine, legacy).data,
-    { [shared]: 2, [glass]: 'liquid', [size]: 72, [quotes]: { v: 1, items: ['a'] } },
+    { [shared]: 2, [glass]: 'liquid', [size]: 72, [ink]: 'light', [twelveHour]: true, [quotes]: { v: 1, items: ['a'] } },
     'choosing the server copy keeps what its writer never knew');
 
   // A writer that knows a key and leaves it out removed it.
-  const removed = own({ [shared]: 1, [size]: 72, [quotes]: { v: 1, items: ['a'] } });
+  const removed = own({ [shared]: 1, [size]: 72, [ink]: 'light', [twelveHour]: true, [quotes]: { v: 1, items: ['a'] } });
   assert.ok(!Object.prototype.hasOwnProperty.call(contract.mergeStates(mine, mine, removed).state.data, glass));
 
   // Two versions with different lists do not rewrite the server after each other.
