@@ -260,6 +260,7 @@ describe('New Tab React wallpaper view', () => {
         valueText: '100%',
         visible: true
       };
+      draft.search.timeInk = { ...draft.search.timeInk, visible: true, tabs: { ...draft.search.timeInk.tabs, active: 'dark' } };
       draft.search.seconds = { ...draft.search.seconds, visible: true, toggle: { checked: true, label: 'Show seconds' } };
       draft.wallpaper.overlay = { ...draft.wallpaper.overlay, value: 72 };
       draft.wallpaper.effect.sliders.spacing = {
@@ -303,6 +304,11 @@ describe('New Tab React wallpaper view', () => {
     expect(refs().topContentOpacitySlider.getAttribute('aria-valuetext')).toBe('100%');
     expect(refs().topContentOpacitySlider.closest('.x-nt-range-slider-row')?.getAttribute('data-value-suffix')).toBe('%');
     expect((refs().topContentOpacityResetButton as HTMLButtonElement).disabled).toBe(true);
+    expect(refs().topContentInkRow.hidden).toBe(false);
+    expect(refs().topContentInkTitle.textContent).toBe('Time color');
+    expect(refs().topContentInkTabs.querySelector('[data-newtab-time-ink="dark"]')?.getAttribute('aria-pressed')).toBe('true');
+    act(() => refs().topContentInkTabs.querySelector<HTMLElement>('[data-newtab-time-ink="light"]')!.click());
+    expect(next.actions.selectTimeInk).toHaveBeenCalledWith('light');
     expect((refs().topContentSecondsToggle as HTMLInputElement).checked).toBe(true);
     expect((refs().overlaySlider as HTMLInputElement).value).toBe('72');
     expect((refs().overlaySliderValueInput as HTMLInputElement).value).toBe('72');

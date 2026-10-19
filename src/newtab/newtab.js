@@ -224,6 +224,8 @@
     '_x_extension_newtab_time_font_size_2026_unique_';
   const NEWTAB_TIME_OPACITY_STORAGE_KEY = SETTINGS.NEWTAB_TIME_OPACITY_STORAGE_KEY ||
     '_x_extension_newtab_time_opacity_2026_unique_';
+  const NEWTAB_TIME_INK_STORAGE_KEY = SETTINGS.NEWTAB_TIME_INK_STORAGE_KEY ||
+    '_x_extension_newtab_time_ink_2026_unique_';
   const NEWTAB_TIME_FONT_STORAGE_KEY = SETTINGS.NEWTAB_TIME_FONT_STORAGE_KEY ||
     '_x_extension_newtab_time_font_2026_unique_';
   const NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY =
@@ -637,6 +639,7 @@
   pageState.newtabTimeFontWeight = NEWTAB_TIME_FONT_WEIGHT_DEFAULT;
   pageState.newtabTimeFontSize = Number(SETTINGS.NEWTAB_TIME_FONT_SIZE_DEFAULT) || 54;
   pageState.newtabTimeOpacity = Number(SETTINGS.NEWTAB_TIME_OPACITY_DEFAULT) || 100;
+  pageState.newtabTimeInk = SETTINGS.NEWTAB_TIME_INK_DEFAULT || 'auto';
   pageState.newtabTimeFont = SETTINGS.NEWTAB_TIME_FONT_DEFAULT || 'open-sans';
   pageState.newtabTimeSecondsVisible = false;
   pageState.newtabInputAutoFocusEnabled = false;
@@ -1938,6 +1941,12 @@
     return `<i class="ri-icon ${size}${extra} ${id}" aria-hidden="true"></i>`;
   }
 
+  // The clock's ink when the user fixed it; '' leaves it to the wallpaper or theme.
+  function getFixedTimeInk() {
+    const ink = SETTINGS.normalizeNewtabTimeInk(pageState.newtabTimeInk);
+    return pageState.newtabTopContentMode === 'time' && ink !== 'auto' ? ink : '';
+  }
+
   function createWallpaperAdaptiveToneTargets() {
     const bookmarkPager = pageState.bookmarkPagerPrevButton && pageState.bookmarkPagerPrevButton.parentElement
       ? pageState.bookmarkPagerPrevButton.parentElement
@@ -2004,6 +2013,8 @@
         element: pageState.topContentContainer,
         sampleElement: captionSample || topContentSample,
         toneGroup: captionSample ? 'top-caption' : '',
+        // A clock ink the user fixed; a caption under the clock takes it too.
+        ink: getFixedTimeInk(),
         minWidth: 220,
         minHeight: 72
       },
@@ -2270,6 +2281,7 @@
       timeFontWeight: NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY,
       timeFontSize: NEWTAB_TIME_FONT_SIZE_STORAGE_KEY,
       timeOpacity: NEWTAB_TIME_OPACITY_STORAGE_KEY,
+      timeInk: NEWTAB_TIME_INK_STORAGE_KEY,
       timeFont: NEWTAB_TIME_FONT_STORAGE_KEY,
       timeSecondsVisible: NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY,
       favicon: NEWTAB_FAVICON_STORAGE_KEY
@@ -2298,6 +2310,8 @@
     setTimeFontSize: (...args) => setNewtabTimeFontSize(...args),
     getTimeOpacity: () => pageState.newtabTimeOpacity,
     setTimeOpacity: (...args) => setNewtabTimeOpacity(...args),
+    getTimeInk: () => pageState.newtabTimeInk,
+    setTimeInk: (...args) => setNewtabTimeInk(...args),
     getTimeFont: () => pageState.newtabTimeFont,
     setTimeFont: (...args) => setNewtabTimeFont(...args),
     getTimeSecondsVisible: () => pageState.newtabTimeSecondsVisible,
@@ -2730,6 +2744,14 @@
     }
     setNewtabTimeOpacity(nextValue);
   });
+  storageChanges.on(NEWTAB_TIME_INK_STORAGE_KEY, (changes) => {
+    const raw = changes[NEWTAB_TIME_INK_STORAGE_KEY].newValue;
+    const nextValue = SETTINGS.normalizeNewtabTimeInk(raw);
+    if (storageArea && raw !== undefined && raw !== nextValue) {
+      storageArea.set({ [NEWTAB_TIME_INK_STORAGE_KEY]: nextValue });
+    }
+    setNewtabTimeInk(nextValue);
+  });
   storageChanges.on(NEWTAB_TIME_FONT_STORAGE_KEY, (changes) => {
     const raw = changes[NEWTAB_TIME_FONT_STORAGE_KEY].newValue;
     const nextValue = normalizeNewtabTimeFont(raw);
@@ -3042,6 +3064,7 @@
       NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY,
       NEWTAB_TIME_FONT_SIZE_STORAGE_KEY,
       NEWTAB_TIME_OPACITY_STORAGE_KEY,
+      NEWTAB_TIME_INK_STORAGE_KEY,
       NEWTAB_TIME_FONT_STORAGE_KEY,
       NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY
     ], (result) => {
@@ -3073,6 +3096,7 @@
       // Unset stays unset, so the defaults can still change later.
       setNewtabTimeFontSize(result[NEWTAB_TIME_FONT_SIZE_STORAGE_KEY]);
       setNewtabTimeOpacity(result[NEWTAB_TIME_OPACITY_STORAGE_KEY]);
+      setNewtabTimeInk(result[NEWTAB_TIME_INK_STORAGE_KEY]);
       setNewtabTimeSecondsVisible(nextSecondsVisible);
       setNewtabTopContentMode(nextValue);
       if (pageState.wallpaperRuntime && typeof pageState.wallpaperRuntime.updateTopContentModeUi === 'function') {
@@ -3303,6 +3327,7 @@
     NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY,
     NEWTAB_TIME_FONT_SIZE_STORAGE_KEY,
     NEWTAB_TIME_OPACITY_STORAGE_KEY,
+    NEWTAB_TIME_INK_STORAGE_KEY,
     NEWTAB_TIME_FONT_STORAGE_KEY,
     NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY,
     NEWTAB_THEME_MODE_STORAGE_KEY,
@@ -3602,6 +3627,7 @@
     setNewtabTimeFontWeight,
     setNewtabTimeFontSize,
     setNewtabTimeOpacity,
+    setNewtabTimeInk,
     setNewtabTimeFont,
     loadNewtabTimeFont,
     setNewtabTimeSecondsVisible
@@ -3619,6 +3645,7 @@
     normalizeNewtabTimeFontWeight,
     normalizeNewtabTimeFont,
     normalizeNewtabTimeSecondsVisible,
+    getFixedTimeInk,
     pageState
   });
 

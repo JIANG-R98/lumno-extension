@@ -20,6 +20,8 @@
       '_x_extension_newtab_time_font_size_2026_unique_',
     timeOpacity: SETTINGS.NEWTAB_TIME_OPACITY_STORAGE_KEY ||
       '_x_extension_newtab_time_opacity_2026_unique_',
+    timeInk: SETTINGS.NEWTAB_TIME_INK_STORAGE_KEY ||
+      '_x_extension_newtab_time_ink_2026_unique_',
     timeFont: SETTINGS.NEWTAB_TIME_FONT_STORAGE_KEY ||
       '_x_extension_newtab_time_font_2026_unique_',
     timeSecondsVisible: SETTINGS.NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY ||
@@ -123,6 +125,7 @@
     const NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY = storageKeys.timeFontWeight;
     const NEWTAB_TIME_FONT_SIZE_STORAGE_KEY = storageKeys.timeFontSize;
     const NEWTAB_TIME_OPACITY_STORAGE_KEY = storageKeys.timeOpacity;
+    const NEWTAB_TIME_INK_STORAGE_KEY = storageKeys.timeInk;
     const NEWTAB_TIME_FONT_STORAGE_KEY = storageKeys.timeFont;
     const NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY = storageKeys.timeSecondsVisible;
     const NEWTAB_FAVICON_STORAGE_KEY = storageKeys.favicon;
@@ -297,6 +300,12 @@
       : function() { return SETTINGS.NEWTAB_TIME_OPACITY_DEFAULT; };
     const setTimeOpacity = typeof options.setTimeOpacity === 'function'
       ? options.setTimeOpacity
+      : function() {};
+    const getTimeInk = typeof options.getTimeInk === 'function'
+      ? options.getTimeInk
+      : function() { return SETTINGS.NEWTAB_TIME_INK_DEFAULT; };
+    const setTimeInk = typeof options.setTimeInk === 'function'
+      ? options.setTimeInk
       : function() {};
     const hasTimeFontGetter = typeof options.getTimeFont === 'function';
     const getTimeFont = hasTimeFontGetter
@@ -2705,6 +2714,15 @@
       }, change);
     }
 
+    function persistTimeInk(value) {
+      const ink = SETTINGS.normalizeNewtabTimeInk(value);
+      setTimeInk(ink);
+      renderWallpaperPanelState();
+      if (storageArea && NEWTAB_TIME_INK_STORAGE_KEY) {
+        storageArea.set({ [NEWTAB_TIME_INK_STORAGE_KEY]: ink });
+      }
+    }
+
     function applyTimeFont(value) {
       currentTimeFont = SETTINGS.normalizeNewtabTimeFont(value);
       setTimeFont(currentTimeFont);
@@ -4256,6 +4274,7 @@
       const timeFontTitle = t('newtab_time_font_title', 'Time font');
       const timeFontSize = SETTINGS.normalizeNewtabTimeFontSize(getTimeFontSize());
       const timeOpacity = SETTINGS.normalizeNewtabTimeOpacity(getTimeOpacity());
+      const timeInkTitle = t('newtab_time_ink_title', 'Time color');
       const width = normalizeSearchWidthValue(getSearchWidth());
       const timeVisible = currentTopContentMode === 'time';
       const autoFocusTitle = t('newtab_input_auto_focus_title', 'Automatically focus input');
@@ -4329,6 +4348,19 @@
           valueText: `${timeOpacity}%`,
           resetLabel: t('newtab_time_opacity_reset', 'Reset time opacity'),
           resetVisible: timeOpacity !== SETTINGS.NEWTAB_TIME_OPACITY_DEFAULT
+        },
+        timeInk: {
+          visible: timeVisible,
+          title: timeInkTitle,
+          tabs: {
+            active: SETTINGS.normalizeNewtabTimeInk(getTimeInk()),
+            label: timeInkTitle,
+            options: [
+              { value: 'auto', label: t('newtab_time_ink_auto', 'Auto') },
+              { value: 'light', label: t('newtab_time_ink_light', 'Light') },
+              { value: 'dark', label: t('newtab_time_ink_dark', 'Dark') }
+            ].map((option) => Object.assign(option, { ariaLabel: option.label }))
+          }
         },
         seconds: {
           visible: timeVisible,
@@ -4901,6 +4933,7 @@
         resetTimeFontSize: () => persistTimeFontSizeFromSlider(SETTINGS.NEWTAB_TIME_FONT_SIZE_DEFAULT, { final: true }),
         setTimeOpacity: (value, change) => persistTimeOpacityFromSlider(value, change),
         resetTimeOpacity: () => persistTimeOpacityFromSlider(SETTINGS.NEWTAB_TIME_OPACITY_DEFAULT, { final: true }),
+        selectTimeInk: (value) => persistTimeInk(value),
         setTimeFont: (value) => persistTimeFont(value),
         setTimeSecondsVisible: (visible) => persistTimeSecondsVisible(visible),
         setShortcutsVisible(visible) {

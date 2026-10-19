@@ -38,6 +38,7 @@ export type WallpaperSourceTab = 'built-in' | 'local' | 'bing' | 'curated';
 export type WallpaperMode = 'light' | 'dark';
 export type ThemeScope = 'global' | 'home';
 export type TopContentMode = 'brand' | 'time' | 'off';
+export type TimeInk = 'auto' | 'light' | 'dark';
 export type EffectSliderKey =
   | 'strength'
   | 'size'
@@ -141,6 +142,7 @@ export interface WallpaperPanelActions extends TooltipActions {
   selectSourceTab(tab: WallpaperSourceTab): void;
   selectThemeMode(mode: string): void;
   selectThemeScope(scope: ThemeScope): void;
+  selectTimeInk(ink: TimeInk): void;
   selectTopContent(mode: TopContentMode): void;
   selectWallpaper(id: string): void;
   selectWallpaperMode(mode: WallpaperMode): void;
@@ -208,6 +210,7 @@ export interface WallpaperPanelState {
     timeWeight: SliderState & { resetLabel: string; resetVisible: boolean; visible: boolean };
     timeSize: SliderState & { resetLabel: string; resetVisible: boolean; visible: boolean };
     timeOpacity: SliderState & { resetLabel: string; resetVisible: boolean; visible: boolean };
+    timeInk: { tabs: SegmentState<TimeInk>; title: string; visible: boolean };
     title: string;
     topContent: { title: string; tabs: SegmentState<TopContentMode> };
     width: SliderState;
@@ -1248,6 +1251,27 @@ function WallpaperPanel({
                     visible: state.search.timeOpacity.resetVisible
                   }}
                   slider={state.search.timeOpacity}
+                />
+              </div>
+              <div
+                {...ref('topContentInkRow')}
+                {...collapsible(state.search.timeInk.visible)}
+                className="x-nt-top-content-font-row x-nt-time-ink-row x-nt-panel-collapsible"
+              >
+                <span {...ref('topContentInkTitle')} className="x-nt-top-content-seconds-title">
+                  {state.search.timeInk.title}
+                </span>
+                <SegmentedChoice
+                  buttonClassName="x-nt-segmented-tab x-nt-wallpaper-tab"
+                  className="x-nt-wallpaper-tabs x-nt-row-tabs x-nt-time-ink-tabs"
+                  indicatorClassName="x-nt-wallpaper-tabs-indicator"
+                  indicatorRef="topContentInkIndicator"
+                  name="topContentInkTabs"
+                  onSelect={actions.selectTimeInk}
+                  role="group"
+                  segment={state.search.timeInk.tabs}
+                  valueAttribute="data-newtab-time-ink"
+                  visible={state.open && searchExpanded && state.search.timeInk.visible}
                 />
               </div>
               <div

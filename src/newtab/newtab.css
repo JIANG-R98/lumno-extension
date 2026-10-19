@@ -1478,13 +1478,13 @@ body[data-glass-style] .x-nt-shortcut-context-menu-portal[data-glass-ink-theme="
 #_x_extension_newtab_wordmark_2026_unique_[data-enter="done"] .x-nt-time-seconds-digit {
   animation: _x_nt_time_seconds_soft_swap_2026_unique_ var(--lumno-duration-2xs) cubic-bezier(0.22, 1, 0.36, 1);
 }
+/* Only the size settles: an opacity dip blinks the new seconds each tick, plainly so with light ink
+   on a dark wallpaper. */
 @keyframes _x_nt_time_seconds_soft_swap_2026_unique_ {
   0% {
-    opacity: 0.68;
     transform: scale(0.985);
   }
   100% {
-    opacity: 1;
     transform: scale(1);
   }
 }

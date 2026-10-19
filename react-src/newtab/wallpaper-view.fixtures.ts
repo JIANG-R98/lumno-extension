@@ -97,6 +97,18 @@ export function createDefaultPanelState(): WallpaperPanelState {
         resetVisible: false,
         visible: false
       },
+      timeInk: {
+        tabs: {
+          active: 'auto',
+          options: [
+            { label: 'Auto', value: 'auto' },
+            { label: 'Light', value: 'light' },
+            { label: 'Dark', value: 'dark' }
+          ]
+        },
+        title: 'Time color',
+        visible: false
+      },
       title: 'Search box',
       topContent: {
         tabs: {

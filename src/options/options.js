@@ -74,6 +74,8 @@
   const newtabTimeFontSizeControlHost = document.getElementById('_x_extension_newtab_time_font_size_control_2026_unique_');
   const newtabTimeOpacityRow = document.getElementById('_x_extension_newtab_time_opacity_row_2026_unique_');
   const newtabTimeOpacityControlHost = document.getElementById('_x_extension_newtab_time_opacity_control_2026_unique_');
+  const newtabTimeInkRow = document.getElementById('_x_extension_newtab_time_ink_row_2026_unique_');
+  const newtabTimeInkTabsWrap = document.getElementById('_x_extension_newtab_time_ink_tabs_wrap_2026_unique_');
   const newtabTimeSecondsRow = document.getElementById('_x_extension_newtab_time_seconds_row_2026_unique_');
   const newtabShortcutsToggle = document.getElementById('_x_extension_newtab_shortcuts_toggle_2026_unique_');
   const newtabShortcutAddRow = document.getElementById('_x_extension_newtab_shortcut_add_row_2026_unique_');
@@ -242,6 +244,11 @@
     newtabTopContentTabsWrap,
     'newtab-top-content',
     handleNewtabTopContentSelection
+  );
+  const newtabTimeInkTabsController = createOptionsSegmentedControlController(
+    newtabTimeInkTabsWrap,
+    'newtab-time-ink',
+    handleNewtabTimeInkSelection
   );
   const optionsToggleControlRecords = new Map();
   const unsupportedSettingInputIds = new Set();
@@ -858,6 +865,7 @@
   let currentNewtabTimeFontWeight = NEWTAB_TIME_FONT_WEIGHT_DEFAULT;
   let currentNewtabTimeFontSize = SETTINGS.NEWTAB_TIME_FONT_SIZE_DEFAULT;
   let currentNewtabTimeOpacity = SETTINGS.NEWTAB_TIME_OPACITY_DEFAULT;
+  let currentNewtabTimeInk = SETTINGS.NEWTAB_TIME_INK_DEFAULT;
   let currentNewtabTimeFont = SETTINGS.NEWTAB_TIME_FONT_DEFAULT;
   // Set once the daily quote rows are wired; language refreshes may run earlier.
   let dailyQuoteSettings = null;
@@ -1967,6 +1975,22 @@
     syncNewtabTimeSecondsVisibility();
   }
 
+  function setNewtabTimeInkTabState(ink) {
+    currentNewtabTimeInk = SETTINGS.normalizeNewtabTimeInk(ink);
+    renderSegmentedControlState(
+      newtabTimeInkTabsController,
+      {
+        activeValue: currentNewtabTimeInk,
+        dataAttribute: 'data-newtab-time-ink',
+        items: [
+          { value: 'auto', labelKey: 'newtab_time_ink_auto', label: getMessage('newtab_time_ink_auto', '自动') },
+          { value: 'light', labelKey: 'newtab_time_ink_light', label: getMessage('newtab_time_ink_light', '浅色') },
+          { value: 'dark', labelKey: 'newtab_time_ink_dark', label: getMessage('newtab_time_ink_dark', '深色') }
+        ]
+      }
+    );
+  }
+
   function syncNewtabTimeSecondsVisibility() {
     const visible = currentNewtabTopContentMode === 'time';
     animateOptionsPanelHeight(() => {
@@ -1976,6 +2000,7 @@
         newtabTimeFontWeightRow,
         newtabTimeFontSizeRow,
         newtabTimeOpacityRow,
+        newtabTimeInkRow,
         newtabTimeSecondsRow
       ].forEach((row) => {
         changed = setConditionalSettingsElementVisibility(row, visible) || changed;
@@ -2118,6 +2143,15 @@
     storageArea.set({ [NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY]: nextMode });
   }
 
+  function handleNewtabTimeInkSelection(value) {
+    const nextInk = SETTINGS.normalizeNewtabTimeInk(value);
+    setNewtabTimeInkTabState(nextInk);
+    if (!storageArea) {
+      return;
+    }
+    storageArea.set({ [SETTINGS.NEWTAB_TIME_INK_STORAGE_KEY]: nextInk });
+  }
+
   function handleRecentModeSelection(value) {
     const nextMode = value === 'most' ? 'most' : 'latest';
     setRecentModeTabState(nextMode);
@@ -2150,6 +2184,7 @@
   setRecentModeTabState(currentRecentMode);
   setRestrictedActionTabState(currentRestrictedAction);
   setNewtabTopContentTabState(currentNewtabTopContentMode);
+  setNewtabTimeInkTabState(currentNewtabTimeInk);
 
   function notifyNewtabSectionsRefresh(section) {
     if (!chrome || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
@@ -2722,6 +2757,7 @@
       renderNewtabTimeFontWeightControl(currentNewtabTimeFontWeight);
       renderNewtabTimeFontSizeControl(currentNewtabTimeFontSize);
       renderNewtabTimeOpacityControl(currentNewtabTimeOpacity);
+      setNewtabTimeInkTabState(currentNewtabTimeInk);
       if (dailyQuoteSettings) {
         dailyQuoteSettings.updateLanguage();
       }
@@ -3792,6 +3828,13 @@
     key: SETTINGS.NEWTAB_TIME_OPACITY_STORAGE_KEY,
     normalize: SETTINGS.normalizeNewtabTimeOpacity,
     apply: renderNewtabTimeOpacityControl,
+    repairOnLoad: false,
+    repairOnChange: false
+  });
+  settingBinder.bindSetting({
+    key: SETTINGS.NEWTAB_TIME_INK_STORAGE_KEY,
+    normalize: SETTINGS.normalizeNewtabTimeInk,
+    apply: setNewtabTimeInkTabState,
     repairOnLoad: false,
     repairOnChange: false
   });

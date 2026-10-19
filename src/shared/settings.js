@@ -179,6 +179,11 @@
   const NEWTAB_TIME_OPACITY_MIN = 20;
   const NEWTAB_TIME_OPACITY_MAX = 100;
   const NEWTAB_TIME_OPACITY_DEFAULT = 100;
+  // The clock's ink: 'auto' follows the wallpaper or theme behind it; 'light'
+  // and 'dark' hold it there.
+  const NEWTAB_TIME_INK_STORAGE_KEY = '_x_extension_newtab_time_ink_2026_unique_';
+  const NEWTAB_TIME_INKS = Object.freeze(['auto', 'light', 'dark']);
+  const NEWTAB_TIME_INK_DEFAULT = 'auto';
   const NEWTAB_TIME_FONT_STORAGE_KEY = '_x_extension_newtab_time_font_2026_unique_';
   const NEWTAB_TIME_FONT_DEFAULT = 'open-sans';
   // The stored weight stays within 300-800; each face clamps it to the range
@@ -328,6 +333,7 @@
     NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY,
     NEWTAB_TIME_FONT_SIZE_STORAGE_KEY,
     NEWTAB_TIME_OPACITY_STORAGE_KEY,
+    NEWTAB_TIME_INK_STORAGE_KEY,
     NEWTAB_TIME_FONT_STORAGE_KEY,
     NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY,
     RESTRICTED_ACTION_STORAGE_KEY,
@@ -516,6 +522,10 @@
       NEWTAB_TIME_OPACITY_MAX,
       Math.max(NEWTAB_TIME_OPACITY_MIN, Math.round(number))
     );
+  }
+
+  function normalizeNewtabTimeInk(value) {
+    return NEWTAB_TIME_INKS.includes(value) ? value : NEWTAB_TIME_INK_DEFAULT;
   }
 
   function getNewtabTimeFont(value) {
@@ -1538,6 +1548,9 @@
     NEWTAB_TIME_OPACITY_MIN,
     NEWTAB_TIME_OPACITY_MAX,
     NEWTAB_TIME_OPACITY_DEFAULT,
+    NEWTAB_TIME_INK_STORAGE_KEY,
+    NEWTAB_TIME_INKS,
+    NEWTAB_TIME_INK_DEFAULT,
     NEWTAB_TIME_FONT_STORAGE_KEY,
     NEWTAB_TIME_FONT_DEFAULT,
     NEWTAB_TIME_FONTS,
@@ -1552,6 +1565,7 @@
     normalizeNewtabTimeFontWeight,
     normalizeNewtabTimeFontSize,
     normalizeNewtabTimeOpacity,
+    normalizeNewtabTimeInk,
     getNewtabTimeFont,
     normalizeNewtabTimeFont,
     resolveNewtabTimeFontWeight,

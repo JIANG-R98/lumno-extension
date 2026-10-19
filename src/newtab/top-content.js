@@ -15,7 +15,8 @@
       normalizeNewtabTopContentMode,
       normalizeNewtabTimeFontWeight,
       normalizeNewtabTimeFont,
-      normalizeNewtabTimeSecondsVisible
+      normalizeNewtabTimeSecondsVisible,
+      getFixedTimeInk
     } = deps;
 
     // The page state object shared with newtab.js and the other modules.
@@ -263,6 +264,12 @@
     }
 
     function getWordmarkSolidFill(wallpaperActive, wallpaperInk, theme) {
+      // A fixed clock ink keeps its tone off the wallpaper too (the adaptive
+      // tone already sampled it in that ink on a wallpaper).
+      const fixedInk = getFixedTimeInk();
+      if (fixedInk && !wallpaperActive) {
+        return fixedInk === 'light' ? 'rgb(248 250 252)' : 'rgb(31 41 55)';
+      }
       if (wallpaperActive) {
         return wallpaperInk === 'dark'
           ? 'var(--x-nt-wallpaper-wordmark-ink, rgb(238 240 242))'
@@ -428,6 +435,18 @@
       return nextValue;
     }
 
+    function setNewtabTimeInk(value) {
+      const nextValue = SETTINGS.normalizeNewtabTimeInk(value);
+      const changed = nextValue !== pageState.newtabTimeInk;
+      pageState.newtabTimeInk = nextValue;
+      if (changed) {
+        applyWordmarkThemeAppearance();
+        scheduleWallpaperAdaptiveToneUpdate();
+      }
+      updateNewtabTimeFontWeightUi();
+      return nextValue;
+    }
+
     function setNewtabTimeOpacity(value) {
       const nextValue = SETTINGS.normalizeNewtabTimeOpacity(value);
       const changed = nextValue !== pageState.newtabTimeOpacity;
@@ -494,6 +513,7 @@
       setNewtabTimeFontWeight,
       setNewtabTimeFontSize,
       setNewtabTimeOpacity,
+      setNewtabTimeInk,
       setNewtabTimeFont,
       loadNewtabTimeFont,
       setNewtabTimeSecondsVisible

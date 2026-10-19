@@ -162,12 +162,13 @@ const assertWithinBudget = (actualBytes, budgetKiB, label) => {
 // wallpaper limit, moved the New Tab route to 416 KiB and the total to 811 KiB.
 // The time font picker in the appearance panel moved the New Tab route to 417 KiB and the total
 // to 812 KiB. The time size and opacity sliders moved the New Tab route to 418 KiB and the
-// total to 813 KiB.
+// total to 813 KiB. The time color choice moved the New Tab route to 419 KiB and the total to
+// 814 KiB.
 const bundleBudgets = {
-  newtab: { uncompressed: 418, gzip: 125 },
+  newtab: { uncompressed: 419, gzip: 125 },
   options: { uncompressed: 290, gzip: 85 },
   overlay: { uncompressed: 274, gzip: 83 },
-  total: { uncompressed: 813, gzip: 237 }
+  total: { uncompressed: 814, gzip: 237 }
 };
 
 const retiredNewtabRendererScripts = [

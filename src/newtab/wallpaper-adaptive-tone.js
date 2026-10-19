@@ -790,6 +790,8 @@
     let pendingImageUrl = '';
     let loadToken = 0;
     let toneFrame = 0;
+    // Targets drawn in an ink the user fixed (target.ink) rather than one sampled.
+    const fixedInkElements = new WeakSet();
 
     function getDocumentThemeMode() {
       return documentObj && documentObj.body && documentObj.body.getAttribute('data-theme') === 'dark'
@@ -830,6 +832,7 @@
         return;
       }
       element.removeAttribute('data-wallpaper-ink');
+      fixedInkElements.delete(element);
       element.removeAttribute('data-wallpaper-icon-bg');
       element.removeAttribute('data-wallpaper-overlay-cover');
       element.style.removeProperty('--x-nt-wallpaper-local-luma');
@@ -1195,18 +1198,26 @@
           clearAdaptiveToneStyles(target.element);
           return;
         }
-        const currentInk = config.resetInk === true
+        // An ink the user fixed is not the sampled one, so it never holds the next choice.
+        const currentInk = config.resetInk === true || fixedInkElements.has(target.element)
           ? null
           : target.element.getAttribute('data-wallpaper-ink');
+        if (target.ink) {
+          fixedInkElements.add(target.element);
+        } else {
+          fixedInkElements.delete(target.element);
+        }
         const nextInk = shared
           ? shared.ink
-          : target.surface === 'topbar' && target.preferOverlayPolarity === true
-            ? chooseSurfaceInk(
-                sample.overlayAlpha,
-                overlayLuminance,
-                chooseInk(luminance, currentInk)
-              )
-            : chooseReadableInk(chooseInk(luminance, currentInk), luminance, sample.color, effectType);
+          : target.ink
+            ? target.ink
+            : target.surface === 'topbar' && target.preferOverlayPolarity === true
+              ? chooseSurfaceInk(
+                  sample.overlayAlpha,
+                  overlayLuminance,
+                  chooseInk(luminance, currentInk)
+                )
+              : chooseReadableInk(chooseInk(luminance, currentInk), luminance, sample.color, effectType);
         if (target.toneGroup && !shared) {
           toneGroups.set(target.toneGroup, { sample, ink: nextInk });
         }

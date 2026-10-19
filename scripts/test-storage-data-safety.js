@@ -78,6 +78,8 @@ const expectedSyncKeys = [
   // Additive preferences: absent values keep the 54px clock at full opacity.
   '_x_extension_newtab_time_font_size_2026_unique_',
   '_x_extension_newtab_time_opacity_2026_unique_',
+  // Additive preference: an absent value keeps the automatic clock ink.
+  '_x_extension_newtab_time_ink_2026_unique_',
   // Additive preference: an absent value keeps the Open Sans clock.
   '_x_extension_newtab_time_font_2026_unique_',
   '_x_extension_newtab_time_seconds_visible_2026_unique_',

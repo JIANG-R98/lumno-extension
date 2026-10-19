@@ -722,6 +722,18 @@
   "newtab_time_opacity_reset": {
     "message": "還原預設不透明度"
   },
+  "newtab_time_ink_title": {
+    "message": "時間顏色"
+  },
+  "newtab_time_ink_auto": {
+    "message": "自動"
+  },
+  "newtab_time_ink_light": {
+    "message": "淺色"
+  },
+  "newtab_time_ink_dark": {
+    "message": "深色"
+  },
   "newtab_time_show_seconds_title": {
     "message": "顯示秒數"
   },

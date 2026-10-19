@@ -160,7 +160,7 @@ const syncOptionsVisibility = getFunctionSource(
 assert.match(syncOptionsVisibility, /currentNewtabTopContentMode === 'time'/);
 assert.match(
   syncOptionsVisibility,
-  /\[\s*newtabTimeFontRow,\s*newtabTimeFontWeightRow,\s*newtabTimeFontSizeRow,\s*newtabTimeOpacityRow,\s*newtabTimeSecondsRow\s*\]/
+  /\[\s*newtabTimeFontRow,\s*newtabTimeFontWeightRow,\s*newtabTimeFontSizeRow,\s*newtabTimeOpacityRow,\s*newtabTimeInkRow,\s*newtabTimeSecondsRow\s*\]/
 );
 assert.match(
   syncOptionsVisibility,
@@ -239,7 +239,12 @@ assert.match(wordmarkSource, /key=\{`ones-\$\{secondsText\[1\]\}`\}/);
 assert.doesNotMatch(wordmarkSource, /value=\{time\.seconds\}/);
 assert.match(
   newtabHtml,
-  /_x_nt_time_seconds_soft_swap_2026_unique_ 120ms[\s\S]*?@keyframes _x_nt_time_seconds_soft_swap_2026_unique_[\s\S]*?opacity: 0\.68;[\s\S]*?transform: scale\(0\.985\);[\s\S]*?transform: scale\(1\);/
+  /_x_nt_time_seconds_soft_swap_2026_unique_ 120ms[\s\S]*?@keyframes _x_nt_time_seconds_soft_swap_2026_unique_[\s\S]*?transform: scale\(0\.985\);[\s\S]*?transform: scale\(1\);/
+);
+// The new seconds never dim on their way in: an opacity dip reads as a blink each tick.
+assert.doesNotMatch(
+  newtabHtml.match(/@keyframes _x_nt_time_seconds_soft_swap_2026_unique_[\s\S]*?\n\}/)?.[0] || '',
+  /opacity/
 );
 const secondsAnimationSource = newtabHtml.match(
   /\.x-nt-time-seconds-digit \{[\s\S]*?@keyframes _x_nt_time_seconds_soft_swap_2026_unique_[\s\S]*?\n\s{6}\}/

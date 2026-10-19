@@ -23,7 +23,8 @@ assert.strictEqual(settings.addStorageChangeListener({
 // value keeps every list in its usual order, so it carries no migration.
 // The New Tab time font is another: an absent value keeps Open Sans.
 // So are the time size and opacity: absent values keep 54px and 100%.
-assert.strictEqual(settings.CHROME_SYNC_STORAGE_KEYS.length, 82);
+// And the time ink: an absent value keeps the automatic ink.
+assert.strictEqual(settings.CHROME_SYNC_STORAGE_KEYS.length, 83);
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_newtab_time_font_2026_unique_'));
 assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_search_source_order_2026_unique_'));
 assert.strictEqual(
@@ -158,6 +159,11 @@ assert.strictEqual(settings.normalizeNewtabTimeOpacity(undefined), 100);
 assert.strictEqual(settings.normalizeNewtabTimeOpacity(0), 20);
 assert.strictEqual(settings.normalizeNewtabTimeOpacity(65), 65);
 assert.strictEqual(settings.normalizeNewtabTimeOpacity(140), 100);
+assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_TIME_INK_STORAGE_KEY));
+assert.strictEqual(settings.normalizeNewtabTimeInk(undefined), 'auto');
+assert.strictEqual(settings.normalizeNewtabTimeInk('light'), 'light');
+assert.strictEqual(settings.normalizeNewtabTimeInk('dark'), 'dark');
+assert.strictEqual(settings.normalizeNewtabTimeInk('purple'), 'auto');
 assert.strictEqual(
   settings.NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY,
   '_x_extension_newtab_time_font_weight_2026_unique_'

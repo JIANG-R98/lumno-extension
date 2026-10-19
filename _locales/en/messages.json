@@ -722,6 +722,18 @@
   "newtab_time_opacity_reset": {
     "message": "Reset time opacity"
   },
+  "newtab_time_ink_title": {
+    "message": "Time color"
+  },
+  "newtab_time_ink_auto": {
+    "message": "Auto"
+  },
+  "newtab_time_ink_light": {
+    "message": "Light"
+  },
+  "newtab_time_ink_dark": {
+    "message": "Dark"
+  },
   "newtab_time_show_seconds_title": {
     "message": "Show seconds"
   },

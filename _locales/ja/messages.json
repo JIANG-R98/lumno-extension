@@ -722,6 +722,18 @@
   "newtab_time_opacity_reset": {
     "message": "時刻の不透明度を初期値に戻す"
   },
+  "newtab_time_ink_title": {
+    "message": "時刻の色"
+  },
+  "newtab_time_ink_auto": {
+    "message": "自動"
+  },
+  "newtab_time_ink_light": {
+    "message": "ライト"
+  },
+  "newtab_time_ink_dark": {
+    "message": "ダーク"
+  },
   "newtab_time_show_seconds_title": {
     "message": "秒を表示"
   },
