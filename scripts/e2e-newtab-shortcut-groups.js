@@ -409,12 +409,26 @@ check('many shortcuts stay clickable above the dock', { width: 1440, height: 900
 // that row fits whole instead of scrolling out under the area's edge.
 check('the add tile on its own row shows whole on a short screen', { width: 1180, height: 650 }, async (page) => {
   await page.load();
-  await page.evaluate(`(async () => {
+  const folderIds = await page.evaluate(`(async () => {
+    const ids = [];
     for (const title of ['网站', '工具', '科技', '文章']) {
       const folder = await chrome.bookmarks.create({ parentId: '1', title });
+      ids.push(folder.id);
       await chrome.bookmarks.create({ parentId: folder.id, title, url: 'https://' + folder.id + '.example.com/' });
     }
+    return ids;
   })()`);
+  // Later checks share the profile and expect an empty bookmarks bar in the
+  // default view.
+  try {
+    return await addTileShowsWholeOnShortScreen(page);
+  } finally {
+    await page.evaluate(`Promise.all(${JSON.stringify(folderIds)}.map((id) => chrome.bookmarks.removeTree(id)))
+      .then(() => chrome.storage.sync.remove('_x_extension_bookmark_view_mode_2026_unique_'))`);
+  }
+});
+
+async function addTileShowsWholeOnShortScreen(page) {
   await page.seed([{ id: 'g0', title: '' }], Array.from({ length: 20 }, (_, index) => link(`m${index}`, 'g0')),
     { _x_extension_bookmark_view_mode_2026_unique_: 'top' });
   const state = await page.evaluate(`(() => {
@@ -429,7 +443,7 @@ check('the add tile on its own row shows whole on a short screen', { width: 1180
   return state.missing || state.clipped > 0 || !state.clickable || !state.dock
     ? [{ key: `add tile ${JSON.stringify(state)}`, dx: 0, dy: 0 }]
     : [];
-});
+}
 
 // The add tile asks what to add on a click and has no right-click menu.
 check('the add tile offers a site, a group or hiding it', WIDE, async (page) => {
