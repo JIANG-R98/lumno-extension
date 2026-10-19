@@ -606,6 +606,7 @@
   let toastElement = null;
   let toastController = null;
   let layoutController = null;
+  let layoutMotion = null;
   let bottomDockScroller = null;
   pageState.faviconViewRuntime = null;
   let searchEntryRestoreLayoutLockUntil = 0;
@@ -3696,13 +3697,10 @@
 
   const NEWTAB_TOP_CONTENT_RUNTIME = globalThis.LumnoNewtabTopContentRuntime;
   const {
-    captureTopContentLayout,
     captureRecentCardLayout,
-    cancelTopContentLayoutAnimations,
     cancelRecentResizeLayoutAnimations,
     shouldSkipNewtabEntryMotion,
     shouldAnimateNewtabLayoutShift,
-    animateTopContentLayout,
     animateRecentResizeLayout,
     applyNewtabTopContentVisibility,
     finishWordmarkEntryAnimation,
@@ -3720,8 +3718,6 @@
   } = NEWTAB_TOP_CONTENT_RUNTIME.createTopContentRuntime({
     root,
     COMMUNITY_LINKS,
-    bookmarkSection,
-    recentSection,
     recentCards,
     SETTINGS,
     updateSearchEntryLayout,
@@ -5057,6 +5053,28 @@
   const bottomDock = bottomDockRuntime.element;
   bottomDockScroller = bottomDockRuntime.scroller;
   layoutController = bottomDockRuntime.layoutController;
+  // The dock moves as a whole when its sections slide together.
+  layoutMotion = globalThis.LumnoNewtabLayoutMotion.createLayoutMotion({
+    documentObj: document,
+    windowObj: window,
+    getTargets: () => [
+      { key: 'topContent', element: pageState.topContentContainer },
+      { key: 'search', element: root },
+      { key: 'shortcuts', element: pageState.shortcutSection },
+      { key: 'quote', element: pageState.quoteRuntime && pageState.quoteRuntime.element },
+      { key: 'updateNotice', element: pageState.updateNoticeController && pageState.updateNoticeController.element },
+      {
+        key: 'engagementNotice',
+        element: pageState.engagementNoticeController && pageState.engagementNoticeController.element
+      },
+      { key: 'bookmarks', element: bookmarkSection, mover: bottomDock },
+      { key: 'recent', element: recentSection, mover: bottomDock }
+    ],
+    canAnimate: () => shouldAnimateNewtabLayoutShift() &&
+      !pageState.newtabResizeLayoutLocked &&
+      document.visibilityState === 'visible' &&
+      document.documentElement.getAttribute('data-lumno-motion-effects') !== 'off'
+  });
   applyNewtabWidthMode();
   markNewtabStartupMilestone('dock-runtime-created');
 
@@ -5342,6 +5360,9 @@
         }
       });
     }
+    if (layoutMotion) {
+      layoutMotion.commit();
+    }
     rememberSearchEntryViewport();
     scheduleWallpaperAdaptiveToneUpdate();
   }
@@ -5349,6 +5370,9 @@
   function updateSearchEntryLayout(options) {
     if (layoutController && typeof layoutController.updateSearchEntryLayout === 'function') {
       layoutController.updateSearchEntryLayout(options);
+    }
+    if (layoutMotion) {
+      layoutMotion.commit();
     }
   }
 
@@ -5535,6 +5559,11 @@
   }
 
   function setSuggestionsVisible(visible) {
+    // The open list is placed from the search box's drawn position, so the
+    // box lands first.
+    if (visible && layoutMotion) {
+      layoutMotion.cancelAll();
+    }
     if (layoutController && typeof layoutController.setSuggestionsVisible === 'function') {
       layoutController.setSuggestionsVisible(visible);
     }
@@ -7143,15 +7172,12 @@
     if (newtabResizeSettleTimer) {
       window.clearTimeout(newtabResizeSettleTimer);
     }
+    // Releasing the lock re-centers the search box; layout motion eases it
+    // there from where the resize held it.
     newtabResizeSettleTimer = window.setTimeout(() => {
       newtabResizeSettleTimer = 0;
-      const fromLayout = shouldAnimateNewtabLayoutShift()
-        ? captureTopContentLayout()
-        : null;
-      cancelTopContentLayoutAnimations();
       pageState.newtabResizeLayoutLocked = false;
       updateBookmarkSectionPosition();
-      animateTopContentLayout(fromLayout);
     }, NEWTAB_RESIZE_DENSITY_SETTLE_MS);
     if (pageState.newtabReadyRequested &&
         document.body &&

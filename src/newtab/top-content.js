@@ -1,12 +1,10 @@
 (function(root) {
-  // The wordmark/clock area above the search box and the layout motion
-  // around it.
+  // The wordmark/clock area above the search box. Moving the blocks around
+  // it when it shows, hides or changes height is layout-motion.js's job.
   function createTopContentRuntime(deps) {
     const {
       root,
       COMMUNITY_LINKS,
-      bookmarkSection,
-      recentSection,
       recentCards,
       SETTINGS,
       updateSearchEntryLayout,
@@ -23,15 +21,14 @@
     const pageState = deps.pageState;
 
     let wordmarkSolidEl = null;
-    const topContentLayoutAnimations = new Set();
     const recentResizeLayoutAnimations = new Set();
     let wordmarkEntryTransitionTimer = 0;
     const WORDMARK_ENTRY_ANIMATION_TOTAL_MS = 260;
     const WORDMARK_WALLPAPER_COVER_DARK_OPACITY = '0.32';
     const WORDMARK_WALLPAPER_COVER_LIGHT_OPACITY = '0.32';
     const WORDMARK_WALLPAPER_SOLID_OPACITY = '0.6';
-    const TOP_CONTENT_LAYOUT_TRANSITION_MS = 260;
-    const TOP_CONTENT_LAYOUT_TRANSITION_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
+    const RECENT_RESIZE_LAYOUT_TRANSITION_MS = 260;
+    const RECENT_RESIZE_LAYOUT_TRANSITION_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
     // The area fits the wordmark and the default 54px clock; a larger clock
     // gets the same headroom for its size.
     const TOP_CONTENT_MAX_HEIGHT_PX = 74;
@@ -48,36 +45,6 @@
       );
     }
 
-    function getTopContentMotionElements() {
-      return [
-        pageState.topContentContainer,
-        root,
-        pageState.shortcutSection,
-        bookmarkSection,
-        recentSection,
-        pageState.updateNoticeController && pageState.updateNoticeController.element,
-        pageState.engagementNoticeController && pageState.engagementNoticeController.element
-      ].filter((element, index, elements) => (
-        element &&
-        element.isConnected &&
-        typeof element.getBoundingClientRect === 'function' &&
-        elements.indexOf(element) === index
-      ));
-    }
-
-    function captureTopContentLayout() {
-      const positions = new Map();
-      getTopContentMotionElements().forEach((element) => {
-        const rect = element.getBoundingClientRect();
-        if (!rect || !Number.isFinite(rect.left) || !Number.isFinite(rect.top) ||
-            (rect.width <= 0 && rect.height <= 0)) {
-          return;
-        }
-        positions.set(element, { left: rect.left, top: rect.top });
-      });
-      return positions;
-    }
-
     function captureRecentCardLayout() {
       const positions = new Map();
       recentCards.forEach((card) => {
@@ -92,11 +59,6 @@
         positions.set(card, { left: rect.left, top: rect.top });
       });
       return positions;
-    }
-
-    function cancelTopContentLayoutAnimations() {
-      topContentLayoutAnimations.forEach((animation) => animation.cancel());
-      topContentLayoutAnimations.clear();
     }
 
     function cancelRecentResizeLayoutAnimations() {
@@ -149,8 +111,8 @@
             { translate: '0 0' }
           ],
           {
-            duration: TOP_CONTENT_LAYOUT_TRANSITION_MS,
-            easing: TOP_CONTENT_LAYOUT_TRANSITION_EASING,
+            duration: RECENT_RESIZE_LAYOUT_TRANSITION_MS,
+            easing: RECENT_RESIZE_LAYOUT_TRANSITION_EASING,
             fill: 'both'
           }
         );
@@ -163,10 +125,6 @@
           animation.cancel();
         };
       });
-    }
-
-    function animateTopContentLayout(fromPositions) {
-      animateLayoutShift(fromPositions, topContentLayoutAnimations);
     }
 
     function animateRecentResizeLayout(fromPositions) {
@@ -193,10 +151,6 @@
         !suggestionsOpen &&
         !prefersSystemReducedMotion()
       );
-      const fromLayout = shouldAnimate
-        ? (transitionOptions.fromLayout || captureTopContentLayout())
-        : null;
-      cancelTopContentLayoutAnimations();
       pageState.topContentContainer.setAttribute('data-visible', nextVisible ? 'true' : 'false');
       pageState.topContentContainer.style.setProperty('display', 'flex');
       pageState.topContentContainer.style.setProperty('transition', 'none');
@@ -223,9 +177,6 @@
       }
       updateSearchEntryLayout();
       updateSuggestionsFloatingLayout();
-      if (shouldAnimate) {
-        animateTopContentLayout(fromLayout);
-      }
       scheduleWallpaperAdaptiveToneUpdate();
     }
 
@@ -389,12 +340,11 @@
       if (!contentChanged) {
         return;
       }
-      const fromLayout = captureTopContentLayout();
       pageState.newtabTopContentMode = nextMode;
       if (nextMode !== 'off') {
         renderNewtabTopContent(false);
       }
-      applyNewtabTopContentVisibility({ contentChanged, fromLayout });
+      applyNewtabTopContentVisibility({ contentChanged });
     }
 
     function updateNewtabTimeSecondsVisibleUi() {
@@ -510,13 +460,10 @@
     }
 
     return {
-      captureTopContentLayout,
       captureRecentCardLayout,
-      cancelTopContentLayoutAnimations,
       cancelRecentResizeLayoutAnimations,
       shouldSkipNewtabEntryMotion,
       shouldAnimateNewtabLayoutShift,
-      animateTopContentLayout,
       animateRecentResizeLayout,
       applyNewtabTopContentVisibility,
       finishWordmarkEntryAnimation,

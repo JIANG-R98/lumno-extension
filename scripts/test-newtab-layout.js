@@ -9,6 +9,7 @@ require('../src/shared/suggestions-height-layout.js');
 require('../src/newtab/layout.js');
 
 const layoutRuntime = globalThis.LumnoNewtabLayout;
+const layoutMotionRuntime = require('../src/newtab/layout-motion.js');
 const repoRoot = path.resolve(__dirname, '..');
 const newtabHtml = readPageSource('newtab.html');
 const newtabSource = readNewtabRuntimeSource();
@@ -1663,22 +1664,166 @@ function testResizeSettleAnimatesSearchPositionChange() {
   );
   assert.match(
     resizeListenerSource,
-    /captureTopContentLayout\(\)[\s\S]*?cancelTopContentLayoutAnimations\(\)[\s\S]*?newtabResizeLayoutLocked\s*=\s*false;[\s\S]*?updateBookmarkSectionPosition\(\);[\s\S]*?animateTopContentLayout\(fromLayout\)/,
-    'resize settle should animate the search and content from the locked position to the final layout'
+    /newtabResizeLayoutLocked\s*=\s*false;[\s\S]*?updateBookmarkSectionPosition\(\);/,
+    'resize settle should lay the page out again once the lock is released'
+  );
+  const positionSource = newtabSource.slice(
+    newtabSource.indexOf('function updateBookmarkSectionPosition(options)'),
+    newtabSource.indexOf('// The change history dialog is loaded the first time someone opens it.')
+  );
+  assert.match(
+    positionSource,
+    /updateBottomDockLayout\([\s\S]*?layoutMotion\.commit\(\)/,
+    'every bottom dock layout pass should report to layout motion'
+  );
+  assert.match(
+    positionSource,
+    /function updateSearchEntryLayout\(options\)[\s\S]*?layoutController\.updateSearchEntryLayout\(options\);[\s\S]*?layoutMotion\.commit\(\)/,
+    'every search entry layout pass should report to layout motion'
   );
   assert.match(
     newtabSource,
-    /function getTopContentMotionElements\(\)[\s\S]*?topContentContainer,[\s\S]*?root,/,
-    'wordmark and search input should move together during a resize layout transition'
-  );
-  assert.match(
-    newtabSource,
-    /function animateLayoutShift\([\s\S]*?deltaX[\s\S]*?deltaY[\s\S]*?translate:\s*`\$\{deltaX\}px \$\{deltaY\}px`/,
-    'layout shifts should animate both horizontal and vertical position changes'
+    /canAnimate:[\s\S]*?newtabResizeLayoutLocked/,
+    'layout motion should hold still during a live resize'
   );
 }
 
 testResizeSettleAnimatesSearchPositionChange();
+
+function createLayoutMotionFixture(options) {
+  const config = options || {};
+  const viewport = { width: 1440, height: 900 };
+  const played = [];
+  const createElement = (top, parentElement) => {
+    const element = {
+      top,
+      isConnected: true,
+      parentElement: parentElement || null,
+      scrollLeft: 0,
+      scrollTop: 0,
+      translate: 'none',
+      getBoundingClientRect() {
+        const offset = layoutMotionRuntime.parseTranslate(element.translate);
+        const ancestorScroll = element.parentElement ? element.parentElement.scrollTop : 0;
+        return { left: 40 + offset.x, top: element.top + offset.y - ancestorScroll, width: 320, height: 48 };
+      },
+      animate(keyframes, timing) {
+        element.translate = keyframes[0].translate;
+        const animation = {
+          cancel() {
+            element.translate = 'none';
+            if (animation.oncancel) animation.oncancel();
+          }
+        };
+        played.push({ element, keyframes, timing, animation });
+        return animation;
+      }
+    };
+    return element;
+  };
+  const search = createElement(156);
+  const dock = createElement(400);
+  const bookmarks = createElement(408, dock);
+  const recent = createElement(650, dock);
+  let allowed = true;
+  const motion = layoutMotionRuntime.createLayoutMotion({
+    documentObj: { body: null },
+    windowObj: {
+      get innerWidth() { return viewport.width; },
+      get innerHeight() { return viewport.height; },
+      scrollX: 0,
+      scrollY: 0,
+      getComputedStyle: (element) => ({ translate: element.translate })
+    },
+    getTargets: () => [
+      { key: 'search', element: search },
+      { key: 'bookmarks', element: bookmarks, mover: dock },
+      { key: 'recent', element: recent, mover: dock }
+    ].filter((target) => !(config.hidden || []).includes(target.key)),
+    canAnimate: () => allowed
+  });
+  return {
+    motion,
+    played,
+    search,
+    dock,
+    bookmarks,
+    recent,
+    viewport,
+    setAllowed(value) { allowed = value; }
+  };
+}
+
+function testLayoutMotionEasesShiftedBlocks() {
+  assert.strictEqual(layoutMotionRuntime.LAYOUT_MOTION_EASING, 'cubic-bezier(0.65, 0, 0.35, 1)',
+    'layout motion should ease in and out');
+
+  const fixture = createLayoutMotionFixture();
+  fixture.motion.commit();
+  assert.strictEqual(fixture.played.length, 0, 'the first pass only records where the blocks sit');
+
+  fixture.search.top = 263;
+  fixture.motion.commit();
+  assert.strictEqual(fixture.played.length, 1, 'a block that moved should ease to its new place');
+  assert.strictEqual(fixture.played[0].element, fixture.search);
+  assert.deepStrictEqual(fixture.played[0].keyframes, [{ translate: '0px -107px' }, { translate: '0px 0px' }],
+    'the move should start where the block was drawn');
+  assert.strictEqual(fixture.played[0].timing.easing, layoutMotionRuntime.LAYOUT_MOTION_EASING);
+
+  // A second pass halfway through picks up from where the block is drawn.
+  fixture.search.translate = '0px -50px';
+  fixture.search.top = 156;
+  fixture.motion.commit();
+  assert.deepStrictEqual(fixture.played[1].keyframes[0], { translate: '0px 57px' },
+    'a pass during a move should continue from the drawn position');
+}
+
+testLayoutMotionEasesShiftedBlocks();
+
+function testLayoutMotionMovesTheDockOnlyWhenItsSectionsShiftAlike() {
+  const fixture = createLayoutMotionFixture();
+  fixture.motion.commit();
+  fixture.bookmarks.top = 678;
+  fixture.recent.top = 920;
+  fixture.motion.commit();
+  assert.strictEqual(fixture.played.length, 1, 'sections sliding together should move the dock once');
+  assert.strictEqual(fixture.played[0].element, fixture.dock, 'the dock moves, not a section its scroller clips');
+  assert.deepStrictEqual(fixture.played[0].keyframes[0], { translate: '0px -270px' });
+
+  const mixed = createLayoutMotionFixture();
+  mixed.motion.commit();
+  mixed.bookmarks.top = 338;
+  mixed.motion.commit();
+  assert.strictEqual(mixed.played.length, 0, 'sections shifting apart should leave the dock in place');
+
+  const scrolled = createLayoutMotionFixture();
+  scrolled.motion.commit();
+  scrolled.dock.scrollTop = 120;
+  scrolled.motion.commit();
+  assert.strictEqual(scrolled.played.length, 0, 'scrolling the dock is not a layout move');
+}
+
+testLayoutMotionMovesTheDockOnlyWhenItsSectionsShiftAlike();
+
+function testLayoutMotionHoldsStillWhenItMayNotAnimate() {
+  const blocked = createLayoutMotionFixture();
+  blocked.motion.commit();
+  blocked.setAllowed(false);
+  blocked.search.top = 263;
+  blocked.motion.commit();
+  blocked.setAllowed(true);
+  blocked.motion.commit();
+  assert.strictEqual(blocked.played.length, 0, 'a pass that may not animate still records the new place');
+
+  const resized = createLayoutMotionFixture();
+  resized.motion.commit();
+  resized.viewport.height = 760;
+  resized.search.top = 120;
+  resized.motion.commit();
+  assert.strictEqual(resized.played.length, 0, 'a new viewport size jumps to its layout');
+}
+
+testLayoutMotionHoldsStillWhenItMayNotAnimate();
 
 function testWideRecentGridCanReachMaximumColumns() {
   assert.strictEqual(
