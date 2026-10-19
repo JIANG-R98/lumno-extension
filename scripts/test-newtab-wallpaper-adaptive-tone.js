@@ -185,6 +185,7 @@ function getCssRgbChannels(value) {
     { filename: 'src/newtab/wallpaper-adaptive-tone.js' }
   );
 
+  const readySamplers = [];
   const runtime = sandbox.LumnoNewtabWallpaperAdaptiveTone.createWallpaperAdaptiveTone({
     documentObj,
     windowObj,
@@ -214,12 +215,21 @@ function getCssRgbChannels(value) {
     getEffectLuminanceAtViewport() {
       return null;
     },
-    applyWordmarkThemeAppearance() {}
+    applyWordmarkThemeAppearance() {},
+    onSamplerReady(sampler) {
+      readySamplers.push(sampler);
+    }
   });
 
   runtime.refresh();
   getPendingImage('test://dark-wallpaper').resolve({ red: 16, green: 24, blue: 32 });
   await flushAsyncWork();
+  assert.deepStrictEqual(
+    readySamplers.map((sampler) => sampler.url),
+    ['test://dark-wallpaper'],
+    'each new sampler should be handed out once, so wallpaper.js can cache a placeholder from it'
+  );
+  assert.strictEqual(readySamplers[0].canvas, canvas, 'the handed-out sampler should carry its scaled canvas');
 
   const darkInk = target.getAttribute('data-wallpaper-ink');
   const darkAdaptiveColor = target.style.getPropertyValue('--x-nt-wallpaper-adaptive-ink');

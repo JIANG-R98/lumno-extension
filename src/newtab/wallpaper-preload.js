@@ -12,6 +12,7 @@
   // Shared with createWallpaperImageCache in wallpaper-local-store.js.
   const IMAGE_CACHE_DB_NAME = 'lumno-newtab-wallpaper-cache';
   const IMAGE_CACHE_STORE_NAME = 'images';
+  const PLACEHOLDER_MAX_LENGTH = 4096;
   const FAVICON_OPTIONS = {
     default: {
       file: 'assets/images/lumno.png',
@@ -106,6 +107,7 @@
         id: entry && typeof entry.id === 'string' ? entry.id : '',
         path: WALLPAPER_PATH_PATTERN.test(path) ? path : '',
         cachedImage: normalizeCachedImage(entry && entry.cachedImage),
+        placeholder: normalizePlaceholder(entry && entry.placeholder),
         overlayStops,
         effectPrefs: getEffectPrefsForMode(data.wallpaperEffects, mode)
       };
@@ -118,6 +120,15 @@
     const id = value && typeof value.id === 'string' ? value.id : '';
     const url = value && typeof value.url === 'string' ? value.url : '';
     return id && url ? { id, url } : null;
+  }
+
+  // A 32px copy of the wallpaper that wallpaper.js sampled last time.
+  function normalizePlaceholder(value) {
+    return typeof value === 'string' &&
+      value.length <= PLACEHOLDER_MAX_LENGTH &&
+      /^data:image\/(?:webp|png|jpeg);base64,[a-z0-9+/=]+$/i.test(value)
+      ? value
+      : '';
   }
 
   // Reads the copy wallpaper.js saved, and only when it is still the copy of the same image.
@@ -314,6 +325,12 @@
   const root = document.documentElement;
   if (root) {
     root.setAttribute('data-wallpaper-preload-theme', cachedWallpaper.mode);
+    // Painted under the hidden page from its first frame, so the tab opens in the wallpaper's tones
+    // instead of a blank page while the wallpaper itself loads and decodes.
+    if (cachedWallpaper.placeholder) {
+      root.style.setProperty('--x-nt-wallpaper-placeholder', getCssUrlValue(cachedWallpaper.placeholder));
+      root.setAttribute('data-wallpaper-placeholder', 'true');
+    }
     ['light', 'dark'].forEach((mode) => {
       ['top', 'mid', 'bottom'].forEach((position) => {
         root.style.setProperty(

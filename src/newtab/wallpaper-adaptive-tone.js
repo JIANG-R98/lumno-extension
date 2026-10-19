@@ -783,6 +783,8 @@
       return null;
     });
     const applyWordmarkThemeAppearance = getFunction(options, 'applyWordmarkThemeAppearance');
+    // Hears each new sampler, whose canvas holds the shown image scaled down.
+    const onSamplerReady = getFunction(options, 'onSamplerReady');
 
     let sampler = null;
     let pendingImageUrl = '';
@@ -1368,6 +1370,9 @@
         sampler = nextSampler;
         apply({ resetInk: true });
         schedule();
+        if (sampler) {
+          onSamplerReady(sampler);
+        }
       }).catch(() => {
         if (token !== loadToken) {
           return;

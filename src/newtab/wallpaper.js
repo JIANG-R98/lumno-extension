@@ -1169,7 +1169,8 @@
           ? wallpaperEffects.getLuminanceAtViewport(viewportX, viewportY, baseLuminance)
           : null;
       },
-      applyWordmarkThemeAppearance
+      applyWordmarkThemeAppearance,
+      onSamplerReady: rememberWallpaperPlaceholder
     });
     const wallpaperEffectPreload = globalThis.LumnoNewtabWallpaperEffectPreload || null;
     const wallpaperEffectRuntimeOptions = {
@@ -1235,6 +1236,10 @@
     // --x-nt-wallpaper-image leaves the page with no wallpaper. Uploads and cached museum prints
     // stored before that was capped can exceed it; those are handed to CSS as a blob URL instead.
     const WALLPAPER_CSS_URL_MAX_LENGTH = WALLPAPER_LOCAL_STORE.MAX_CSS_URL_LENGTH || 2 * 1024 * 1024;
+    const WALLPAPER_PLACEHOLDER_WIDTH = 32;
+    // Matches wallpaper-preload.js, which ignores anything longer.
+    const WALLPAPER_PLACEHOLDER_MAX_LENGTH = 4096;
+    const wallpaperPlaceholders = readWallpaperPreloadPlaceholders();
     let wallpaperCssObjectUrl = { source: '', url: '' };
 
     function dataUrlToObjectUrl(dataUrl) {
@@ -1941,6 +1946,16 @@
 
     function getWallpaperPreloadEntryForMode(mode) {
       const wallpaper = getWallpaperById(getEffectiveWallpaperIdForMode(mode));
+      const entry = getWallpaperPreloadImageEntry(wallpaper);
+      const placeholderKey = getWallpaperPlaceholderKey(wallpaper);
+      const placeholder = wallpaperPlaceholders.get(placeholderKey);
+      if (!placeholder) {
+        return entry;
+      }
+      return Object.assign(entry || { id: wallpaper.id }, { placeholder, placeholderKey });
+    }
+
+    function getWallpaperPreloadImageEntry(wallpaper) {
       // Online photos and links cannot paint on the first frame, but the preload reads this device's
       // IndexedDB copy while the page is still parsing.
       if (wallpaper && (REMOTE_CONTENT.wallpaperFromId(wallpaper.id) || isLinkWallpaperId(wallpaper.id))) {
@@ -1954,6 +1969,85 @@
         ? getWallpaperRuntimePath(wallpaper)
         : '';
       return path ? { id: wallpaper.id, path } : null;
+    }
+
+    // A daily photo keeps its catalog id while the image changes, so its placeholder follows the photo.
+    function getWallpaperPlaceholderKey(wallpaper) {
+      if (!wallpaper) {
+        return '';
+      }
+      return REMOTE_CONTENT.wallpaperFromId(wallpaper.id) ? wallpaper.dailyId || wallpaper.id : wallpaper.id;
+    }
+
+    function readWallpaperPreloadPlaceholders() {
+      const placeholders = new Map();
+      try {
+        const data = JSON.parse(window.localStorage.getItem(PRELOAD_STORAGE_KEY) || 'null');
+        NEWTAB_WALLPAPER_MODES.forEach((mode) => {
+          const entry = data && data.wallpapers && data.wallpapers[mode];
+          if (entry && typeof entry.placeholderKey === 'string' && entry.placeholderKey &&
+              isWallpaperPlaceholderDataUrl(entry.placeholder)) {
+            placeholders.set(entry.placeholderKey, entry.placeholder);
+          }
+        });
+      } catch (_error) {
+        // The placeholders are only a head start; the next sample makes them again.
+      }
+      return placeholders;
+    }
+
+    function isWallpaperPlaceholderDataUrl(value) {
+      return typeof value === 'string' &&
+        value.length <= WALLPAPER_PLACEHOLDER_MAX_LENGTH &&
+        /^data:image\/(?:webp|png|jpeg);base64,[a-z0-9+/=]+$/i.test(value);
+    }
+
+    // Scaled from the adaptive-tone sample, which already holds the shown image at a few hundred pixels.
+    function createWallpaperPlaceholder(source) {
+      try {
+        const width = WALLPAPER_PLACEHOLDER_WIDTH;
+        const height = Math.max(1, Math.round(width * source.height / Math.max(1, source.width)));
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext('2d');
+        if (!context) {
+          return '';
+        }
+        context.imageSmoothingQuality = 'high';
+        context.drawImage(source, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/webp', 0.8);
+        return isWallpaperPlaceholderDataUrl(dataUrl) ? dataUrl : '';
+      } catch (_error) {
+        // A cross-origin image without CORS taints the canvas; that wallpaper simply has no placeholder.
+        return '';
+      }
+    }
+
+    function rememberWallpaperPlaceholder(sampler) {
+      const wallpaper = getWallpaperById(currentWallpaperId);
+      const key = getWallpaperPlaceholderKey(wallpaper);
+      if (!key || !sampler.canvas || sampler.url !== getDisplayedWallpaperImageUrl(wallpaper) ||
+          wallpaperPlaceholders.has(key)) {
+        return;
+      }
+      const placeholder = createWallpaperPlaceholder(sampler.canvas);
+      if (!placeholder) {
+        return;
+      }
+      wallpaperPlaceholders.set(key, placeholder);
+      // Previews in the wallpaper panel sample too; keep only the wallpapers a New Tab can open with.
+      const shownKeys = NEWTAB_WALLPAPER_MODES.map((mode) => {
+        return getWallpaperPlaceholderKey(getWallpaperById(getEffectiveWallpaperIdForMode(mode)));
+      });
+      Array.from(wallpaperPlaceholders.keys()).forEach((cachedKey) => {
+        if (!shownKeys.includes(cachedKey)) {
+          wallpaperPlaceholders.delete(cachedKey);
+        }
+      });
+      if (shownKeys.includes(key)) {
+        writeWallpaperPreloadCache();
+      }
     }
 
     function getWallpaperPreloadOverlayStops() {

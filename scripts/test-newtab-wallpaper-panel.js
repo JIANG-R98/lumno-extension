@@ -1141,6 +1141,44 @@ async function testWallpaperPreloadUsesTheCachedResolvedMode() {
     'a local-only dark wallpaper should not preload the synced white fallback'
   );
 
+  const preloadPlaceholder = (placeholder) => {
+    const placeholderDocument = createFakeDocument();
+    const placeholderWindow = createFakeWindow();
+    placeholderWindow.localStorage.setItem(WALLPAPER_PRELOAD_STORAGE_KEY, JSON.stringify({
+      version: WALLPAPER_PRELOAD_STORAGE_VERSION,
+      mode: 'light',
+      themeMode: 'light',
+      overlayStops: {
+        light: { top: 54, mid: 20, bottom: 38 },
+        dark: { top: 44, mid: 20, bottom: 50 }
+      },
+      // A custom upload has no bundled path; only its placeholder can paint before the runtime runs.
+      wallpapers: { light: { id: 'custom-wallpaper-1', placeholder, placeholderKey: 'custom-wallpaper-1' }, dark: null }
+    }));
+    runWallpaperPreload(placeholderDocument, placeholderWindow);
+    return placeholderDocument.documentElement;
+  };
+  const placeholder = 'data:image/webp;base64,UklGRhIAAABXRUJQVlA4TAYAAAAvQWxvAGs=';
+  const placeholderRoot = preloadPlaceholder(placeholder);
+  assert.strictEqual(
+    placeholderRoot.style.getPropertyValue('--x-nt-wallpaper-placeholder'),
+    `url("${placeholder}")`,
+    'the cached placeholder should paint under the page before the wallpaper itself loads'
+  );
+  assert.strictEqual(placeholderRoot.getAttribute('data-wallpaper-placeholder'), 'true');
+  assert.strictEqual(
+    placeholderRoot.style.getPropertyValue('--x-nt-wallpaper-image'),
+    '',
+    'a placeholder should not stand in for the wallpaper image itself'
+  );
+  for (const unsafe of ['data:text/html;base64,PHNjcmlwdD4=', 'https://evil.example/a.webp',
+    'data:image/webp;base64,") , url("https://evil.example/', `data:image/webp;base64,${'A'.repeat(5000)}`]) {
+    const unsafeRoot = preloadPlaceholder(unsafe);
+    assert.strictEqual(unsafeRoot.style.getPropertyValue('--x-nt-wallpaper-placeholder'), '',
+      'only a small inline image may be used as the placeholder');
+    assert.strictEqual(unsafeRoot.getAttribute('data-wallpaper-placeholder'), null);
+  }
+
   const preloadRemote = (url) => {
     const remoteDocument = createFakeDocument();
     const remoteWindow = createFakeWindow();
@@ -1326,10 +1364,18 @@ function createWallpaperSandbox(options) {
       REAL_WALLPAPER_DEPENDENCIES.LumnoNewtabWallpaperLocalStore,
       options && options.localStoreApi
     ),
+    LumnoNewtabWallpaperAdaptiveTone: Object.assign(
+      {},
+      REAL_WALLPAPER_DEPENDENCIES.LumnoNewtabWallpaperAdaptiveTone,
+      options && options.adaptiveToneApi
+    ),
     LumnoNewtabWallpaperView: {
       createController: createRecordingWallpaperViewController
     }
   };
+  if (options && typeof options.prepareWindow === 'function') {
+    options.prepareWindow(testWindow, testDocument);
+  }
   testSandbox.globalThis = testSandbox;
   vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper.js', 'utf8'), testSandbox, {
     filename: 'src/newtab/wallpaper.js'
@@ -2196,6 +2242,76 @@ async function testDisablingWallpaperModeConsistencyIgnoresStaleLocalDisabledOve
     'true',
     'disabling light/dark consistency should keep wallpaper enabled when a synced wallpaper exists'
   );
+}
+
+async function testWallpaperPlaceholderIsCachedForThePreload() {
+  const placeholder = 'data:image/webp;base64,UklGRhIAAABXRUJQVlA4TAYAAAAvQWxvAGs=';
+  const createRuntime = (cachedPreload) => {
+    let toneOptions = null;
+    const { documentObj: testDocument, windowObj: testWindow, sandbox: testSandbox } = createWallpaperSandbox({
+      adaptiveToneApi: {
+        createWallpaperAdaptiveTone(options) {
+          toneOptions = options;
+          return { clear() {}, refresh() {}, schedule() {} };
+        }
+      },
+      prepareWindow(preparedWindow, preparedDocument) {
+        if (cachedPreload) {
+          preparedWindow.localStorage.setItem(WALLPAPER_PRELOAD_STORAGE_KEY, JSON.stringify(cachedPreload));
+        }
+        const createElement = preparedDocument.createElement;
+        preparedDocument.createElement = (tagName) => {
+          if (String(tagName).toLowerCase() !== 'canvas') return createElement(tagName);
+          return {
+            width: 0,
+            height: 0,
+            getContext: () => ({ drawImage() {} }),
+            toDataURL: () => placeholder
+          };
+        };
+      }
+    });
+    testDocument.body.setAttribute('data-theme', 'light');
+    const testRuntime = testSandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
+      documentObj: testDocument,
+      windowObj: testWindow,
+      storageArea: createMemoryStorage({ [WALLPAPER_STORAGE_KEY]: 'dark-shanshui-moonlit' }),
+      storageKeys: {
+        wallpaper: WALLPAPER_STORAGE_KEY,
+        localWallpaper: LOCAL_WALLPAPER_STORAGE_KEY
+      },
+      t: (_key, fallback) => fallback || '',
+      getRiSvg: () => ''
+    });
+    const readPreload = () => JSON.parse(testWindow.localStorage.getItem(WALLPAPER_PRELOAD_STORAGE_KEY));
+    return { testDocument, testRuntime, readPreload, getToneOptions: () => toneOptions };
+  };
+
+  const first = createRuntime(null);
+  await first.testRuntime.bootstrapInitialWallpaper();
+  await waitForAsyncWallpaperApply();
+  const shownUrl = first.testDocument.documentElement.style.getPropertyValue('--x-nt-wallpaper-image')
+    .replace(/^url\("|"\)$/g, '');
+  assert.ok(shownUrl.includes('lumno-newtab-dark-shanshui-moonlit.webp'));
+  first.getToneOptions().onSamplerReady({ url: 'chrome-extension://abc/stale.webp', canvas: { width: 420, height: 236 } });
+  assert.strictEqual(first.readPreload().wallpapers.light.placeholder, undefined,
+    'a sample of an image that is no longer shown should not become the placeholder');
+
+  first.getToneOptions().onSamplerReady({ url: shownUrl, canvas: { width: 420, height: 236 } });
+  const cached = first.readPreload();
+  ['light', 'dark'].forEach((mode) => {
+    assert.strictEqual(cached.wallpapers[mode].placeholder, placeholder,
+      `the ${mode} preload entry should carry the shown wallpaper's placeholder`);
+    assert.strictEqual(cached.wallpapers[mode].placeholderKey, 'dark-shanshui-moonlit');
+    assert.ok(cached.wallpapers[mode].path.includes('lumno-newtab-dark-shanshui-moonlit.webp'),
+      'the placeholder should not replace the bundled path');
+  });
+
+  // The next New Tab keeps the placeholder it was opened with instead of dropping it until the next sample.
+  const second = createRuntime(cached);
+  await second.testRuntime.bootstrapInitialWallpaper();
+  await waitForAsyncWallpaperApply();
+  assert.strictEqual(second.readPreload().wallpapers.light.placeholder, placeholder);
 }
 
 async function testSplitBuiltInWallpaperSelectionFollowsResolvedTheme() {
@@ -3954,6 +4070,7 @@ Promise.resolve()
   .then(testInitialThemeResolutionDoesNotPaintFallbackBeforeCustomWallpaper)
   .then(testWallpaperModeConsistencyDefaultsOnAndCopiesLegacySelectionWhenDisabled)
   .then(testDisablingWallpaperModeConsistencyIgnoresStaleLocalDisabledOverride)
+  .then(testWallpaperPlaceholderIsCachedForThePreload)
   .then(testSplitBuiltInWallpaperSelectionFollowsResolvedTheme)
   .then(testWallpaperPreloadCacheRetainsMinimumLightOverlay)
   .then(testSplitLocalWallpaperSelectionStaysLocalOnly)
