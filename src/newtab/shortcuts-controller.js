@@ -1008,21 +1008,33 @@
         });
     }
 
-    function isWebDavSyncEnabled() {
+    function readWebDavStatus() {
       const localArea = chrome && chrome.storage ? chrome.storage.local : null;
       if (!localArea || !WEBDAV_STATUS_STORAGE_KEY) {
-        return Promise.resolve(false);
+        return Promise.resolve(null);
       }
       return new Promise((resolve) => {
         try {
           localArea.get([WEBDAV_STATUS_STORAGE_KEY], (result) => {
             const status = result && result[WEBDAV_STATUS_STORAGE_KEY];
-            resolve(Boolean(!getShortcutStorageLastError() && status && status.enabled === true));
+            resolve(!getShortcutStorageLastError() && status && status.enabled === true ? status : null);
           });
         } catch (error) {
-          resolve(false);
+          resolve(null);
         }
       });
+    }
+
+    function isWebDavSyncEnabled() {
+      return readWebDavStatus().then(Boolean);
+    }
+
+    // Whether WebDAV is backing up shortcuts right now. An error, or a
+    // first-join choice or conflict waiting on the user, holds every upload.
+    function isWebDavBackingUpShortcuts() {
+      return readWebDavStatus().then((status) => Boolean(
+        status && ['ready', 'syncing', 'pending'].includes(status.state)
+      ));
     }
 
     function getShortcutGroups() {
@@ -1355,7 +1367,9 @@
       const nextShortcut = NEWTAB_SHORTCUTS_STORE.createShortcutRecord({ title, url,
         iconSource: iconState && iconState.source || currentShortcut.iconSource,
         iconPlate: keepsPlate ? currentShortcut.iconPlate : iconState.plate,
-        iconPlateColor: keepsPlate ? currentShortcut.iconPlateColor : iconState.plateColor }, options);
+        iconPlateColor: keepsPlate ? currentShortcut.iconPlateColor : iconState.plateColor,
+        fromBookmark: currentShortcut.fromBookmark === true &&
+          NEWTAB_SHORTCUTS_STORE.normalizeShortcutUrl(url) === currentShortcut.url }, options);
       if (!nextShortcut) {
         setShortcutError(t('newtab_shortcuts_invalid_url', 'Enter a valid http, https, or browser internal URL.'));
         return Promise.resolve(false);
@@ -1653,6 +1667,7 @@
       createShortcutsSection,
       createShortcutDialogComponent,
       getShortcutGroups,
+      isWebDavBackingUpShortcuts,
       isShortcutGroupLayoutActive,
       fitShortcutGroupColumns,
       getShortcutGroupDisplayTitle,

@@ -556,7 +556,14 @@ assertOrder(
   'persistBookmarkCrossLevelMove(state, dropTarget);',
   'dropping a bookmark on shortcuts should branch before bookmark moves'
 );
-const moveBookmarkToShortcutsSource = getFunctionSource(newtabJs, 'moveBookmarkToShortcuts');
+const moveBookmarkToShortcutsSource = getFunctionSource(newtabJs, 'moveBookmarkToShortcuts') +
+  getFunctionSource(newtabJs, 'transferBookmarkToShortcuts');
+assert.ok(
+  moveBookmarkToShortcutsSource.includes('isWebDavBackingUpShortcuts()') &&
+    moveBookmarkToShortcutsSource.includes('to: keepsBookmark ? from : null') &&
+    moveBookmarkToShortcutsSource.includes('fromBookmark: true'),
+  'a website bookmark should leave the bookmarks only while WebDAV backs up the shortcuts'
+);
 assertOrder(
   applyTransferSource,
   'persistShortcutState(nextShortcuts, destinationShortcut)',

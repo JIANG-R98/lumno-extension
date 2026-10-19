@@ -49,7 +49,8 @@
       applyShortcutGroupDeleteRecord,
       autoScrollShortcutArea,
       closeBookmarkContextMenu,
-      getShortcutGroups
+      getShortcutGroups,
+      isWebDavBackingUpShortcuts
     } = deps;
 
     // The page state object shared with newtab.js and the other modules.
@@ -704,7 +705,22 @@
       });
     }
 
+    // A website bookmark moves into the shortcuts only while WebDAV backs
+    // them up. Otherwise the drop adds a copy marked as coming from the
+    // bookmarks and the bookmark stays, like a folder always does.
     function moveBookmarkToShortcuts(state, target) {
+      if (pageState.bookmarkMoveHistoryBusy) return Promise.resolve(false);
+      if (target.record.type === 'folder' || typeof isWebDavBackingUpShortcuts !== 'function') {
+        return transferBookmarkToShortcuts(state, target, true);
+      }
+      pageState.bookmarkMoveHistoryBusy = true;
+      return isWebDavBackingUpShortcuts().then((backedUp) => {
+        pageState.bookmarkMoveHistoryBusy = false;
+        return transferBookmarkToShortcuts(state, target, !backedUp);
+      });
+    }
+
+    function transferBookmarkToShortcuts(state, target, keepsBookmark) {
       if (pageState.bookmarkMoveHistoryBusy) return Promise.resolve(false);
       const node = bookmarksRuntime.getNode(state.bookmarkId);
       if (!node) return Promise.resolve(false);
@@ -735,6 +751,9 @@
         const { folderId: _localId, ...entry } = original;
         plan.shortcuts[index] = { ...entry, id, folderRef };
         plan.shortcutId = id;
+      } else if (keepsBookmark && !beforeShortcut) {
+        const index = plan.shortcuts.findIndex((item) => item.id === plan.shortcutId);
+        plan.shortcuts[index] = { ...plan.shortcuts[index], fromBookmark: true };
       }
       const afterIndex = plan.shortcuts.findIndex((item) => item.id === plan.shortcutId);
       const isFolder = target.record.type === 'folder';
@@ -743,7 +762,7 @@
         bookmarkId: node.id,
         snapshot: { title: node.title, url: node.url },
         from,
-        to: isFolder ? from : null,
+        to: keepsBookmark ? from : null,
         beforeShortcut,
         afterShortcut: {
           snapshot: plan.shortcuts[afterIndex],
@@ -759,6 +778,8 @@
         bookmarkMoveHistory.push(record);
         if (isFolder) {
           showToast(t('newtab_shortcuts_folder_added', 'Folder added to shortcuts'));
+        } else if (keepsBookmark && !beforeShortcut) {
+          showToast(t('newtab_shortcuts_added', 'Shortcut added'));
         }
         return true;
       }).finally(() => {

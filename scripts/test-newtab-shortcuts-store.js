@@ -577,8 +577,27 @@ async function testIconPlatePreferencesSurviveStorage() {
   assert.strictEqual(entry.length, 6, 'trailing empty plate fields are not stored');
 }
 
+async function testBookmarkOriginSurvivesStorage() {
+  const storage = createMemoryStorage();
+  await shortcutsStore.saveShortcuts(storage, [
+    { url: 'https://copied.example/', fromBookmark: true },
+    { url: 'https://plain.example/', fromBookmark: 'yes' },
+    { type: 'folder', folderId: '42', title: 'Folder', fromBookmark: true }
+  ]);
+  const loaded = await shortcutsStore.loadShortcuts(storage);
+  assert.deepStrictEqual(loaded.map((item) => item.fromBookmark), [true, undefined, undefined],
+    'only website shortcuts copied from a bookmark keep the mark');
+  const plan = shortcutsStore.createShortcutStoragePlan({
+    groups: shortcutsStore.normalizeShortcutGroups(null),
+    items: [{ id: 'a', url: 'https://copied.example/', fromBookmark: true }]
+  }, { rev: 'r1', now: 1 });
+  const entry = plan.payload[shortcutsStore.SHORTCUTS_SYNC_KEYS[0]].s[0];
+  assert.deepStrictEqual(entry.slice(4), ['', '', '', 1], 'the mark follows the plate fields');
+}
+
 async function run() {
   await testIconPlatePreferencesSurviveStorage();
+  await testBookmarkOriginSurvivesStorage();
   const sourceStorage = createMemoryStorage();
   await shortcutsStore.saveShortcuts(sourceStorage, [
     { url: 'https://service.example/', iconSource: 'service' },

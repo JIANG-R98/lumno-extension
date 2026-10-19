@@ -67,9 +67,10 @@
           return '';
         }
         const tooltip = shortcutTooltipController.element;
-        if (tooltip && tooltipTarget.classList.contains('x-nt-shortcut-tile--folder')) {
+        if (tooltip && (tooltipTarget.classList.contains('x-nt-shortcut-tile--folder') ||
+            tooltipTarget.getAttribute('data-shortcut-from-bookmark') === 'true')) {
           tooltip.setAttribute('data-shortcut-origin-label',
-            t('newtab_shortcuts_from_bookmarks', '(from bookmarks bar)'));
+            t('newtab_shortcuts_from_bookmarks', '(from bookmarks)'));
         } else if (tooltip) {
           tooltip.removeAttribute('data-shortcut-origin-label');
         }

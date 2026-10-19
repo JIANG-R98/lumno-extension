@@ -3906,6 +3906,7 @@
     createShortcutsSection,
     createShortcutDialogComponent,
     getShortcutGroups,
+    isWebDavBackingUpShortcuts,
     isShortcutGroupLayoutActive,
     fitShortcutGroupColumns,
     openShortcutAddDialog,
@@ -4105,6 +4106,7 @@
     autoScrollShortcutArea: (...args) => autoScrollShortcutArea(...args),
     closeBookmarkContextMenu,
     getShortcutGroups: (...args) => getShortcutGroups(...args),
+    isWebDavBackingUpShortcuts,
     pageState
   });
 

@@ -50,6 +50,8 @@ function createRuntime() {
     },
     referenceRefreshes: 0,
     isShortcutDragActive: () => false,
+    webdavBackup: true,
+    isWebDavBackingUpShortcuts: () => Promise.resolve(context.webdavBackup),
     persistShortcuts(items, message, iconChange) {
       context.calls.push({ kind: 'save', ids: items.map((item) => item.id) });
       if (context.failSave > 0) {
@@ -150,6 +152,7 @@ function createRuntime() {
     }
   };
   vm.runInContext(['refreshShortcutFolderReferences', 'applyBookmarkShortcutTransfer', 'moveBookmarkToShortcuts',
+    'transferBookmarkToShortcuts',
     'moveShortcutToBookmarks', 'performBookmarkMoveHistoryAction', 'removeShortcutById',
     'getShortcutGroupHeader', 'restoreShortcutDragOrder', 'persistShortcutOrder', 'finishShortcutDrag', 'endShortcutDrag']
     .map(extractFunction).join('\n'), context);
@@ -207,6 +210,27 @@ function createRuntime() {
   }
   assert.deepStrictEqual(bookmark.toasts, [], 'website moves, undo and redo must be silent');
   assert.deepStrictEqual(bookmark.calls.slice(0, 2).map((call) => call.kind), ['save', 'remove']);
+
+  // Without a WebDAV backup the drop only adds a shortcut; the bookmark stays.
+  const copied = createRuntime();
+  copied.webdavBackup = false;
+  const copiedBar = copied.bar();
+  const copiedShortcuts = json(copied.newtabShortcuts);
+  assert.strictEqual(await copied.toShortcuts(), true);
+  assert.deepStrictEqual(copied.bar(), copiedBar);
+  assert.strictEqual(copied.link().id, 'link');
+  assert.strictEqual(copied.newtabShortcuts[1].url, 'https://link.example/');
+  assert.strictEqual(copied.newtabShortcuts[1].fromBookmark, true);
+  for (let cycle = 0; cycle < 3; cycle += 1) {
+    await copied.action('undo');
+    assert.deepStrictEqual(json(copied.newtabShortcuts), copiedShortcuts);
+    assert.deepStrictEqual(copied.bar(), copiedBar);
+    await copied.action('redo');
+    assert.strictEqual(copied.newtabShortcuts[1].fromBookmark, true);
+    assert.strictEqual(copied.link().id, 'link');
+  }
+  assert.ok(!copied.calls.some((call) => call.kind === 'create' || call.kind === 'remove' || call.kind === 'move'));
+  assert.deepStrictEqual(copied.toasts, ['Shortcut added']);
 
   const shortcut = createRuntime();
   const original = json(shortcut.newtabShortcuts);

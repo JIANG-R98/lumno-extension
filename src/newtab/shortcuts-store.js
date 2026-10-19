@@ -241,7 +241,9 @@
       url,
       host,
       ...(ICON_SOURCES.includes(source.iconSource) ? { iconSource: source.iconSource } : {}),
-      ...normalizeIconPlate(source)
+      ...normalizeIconPlate(source),
+      // Copied from a bookmark that was kept where it was.
+      ...(source.fromBookmark === true ? { fromBookmark: true } : {})
     };
   }
 
@@ -380,11 +382,11 @@
     }
     const entry = [item.id, groupPosition, item.title === item.host ? '' : item.title, compactUrl(item.url)];
     // Older versions read only the first five fields.
-    const plate = [item.iconSource || '', item.iconPlate || '', item.iconPlateColor || ''];
-    while (plate.length && !plate[plate.length - 1]) {
-      plate.pop();
+    const extra = [item.iconSource || '', item.iconPlate || '', item.iconPlateColor || '', item.fromBookmark ? 1 : ''];
+    while (extra.length && !extra[extra.length - 1]) {
+      extra.pop();
     }
-    return entry.concat(plate);
+    return entry.concat(extra);
   }
 
   function decodeEntry(entry, groups) {
@@ -396,7 +398,8 @@
     if (typeof entry[3] === 'string') {
       return { ...base, url: expandUrl(entry[3]), ...(typeof entry[4] === 'string' && entry[4] ? { iconSource: entry[4] } : {}),
         ...(typeof entry[5] === 'string' && entry[5] ? { iconPlate: entry[5] } : {}),
-        ...(typeof entry[6] === 'string' && entry[6] ? { iconPlateColor: entry[6] } : {}) };
+        ...(typeof entry[6] === 'string' && entry[6] ? { iconPlateColor: entry[6] } : {}),
+        ...(entry[7] === 1 ? { fromBookmark: true } : {}) };
     }
     if (entry[3] === 0 && Array.isArray(entry[4])) {
       const [refRoot, scope, path, fingerprint] = entry[4];

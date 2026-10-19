@@ -533,6 +533,7 @@ function ShortcutTile({
       aria-haspopup={isFolder ? 'menu' : undefined}
       aria-expanded={isFolder ? false : undefined}
       data-shortcut-custom-icon={localIconDataUrl ? 'true' : undefined}
+      data-shortcut-from-bookmark={!isFolder && shortcut.fromBookmark === true ? 'true' : undefined}
       data-tooltip={title}
       aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
       aria-label={options.formatOpenLabel(title)}

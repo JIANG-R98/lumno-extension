@@ -198,6 +198,7 @@ async function run() {
     let bookmarkPendingLayoutAnimation;
     ${functionSource(pageSource, 'applyBookmarkShortcutTransfer')}
     ${functionSource(pageSource, 'moveBookmarkToShortcuts')}
+    ${functionSource(pageSource, 'transferBookmarkToShortcuts')}
     return { move: moveBookmarkToShortcuts, getItems: () => newtabShortcuts };
   `)(dropRuntime, refs, drag, shortcuts, ambiguousMap, require('../src/newtab/bookmark-move-history'));
   const dropTarget = { record: shortcuts.createShortcutRecord({ type: 'folder', folderId: '118', title: '灵感' }), index: 0 };
