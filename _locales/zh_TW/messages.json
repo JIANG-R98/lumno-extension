@@ -2568,10 +2568,10 @@
     "message": "已新增捷徑"
   },
   "context_menu_add_page_shortcut": {
-    "message": "新增到 Lumno 新分頁"
+    "message": "新增到 Lumno 新分頁的捷徑"
   },
   "page_shortcut_added": {
-    "message": "已新增到 Lumno 新分頁"
+    "message": "已新增到 Lumno 新分頁的捷徑"
   },
   "newtab_shortcuts_already_added": {
     "message": "已在捷徑中"

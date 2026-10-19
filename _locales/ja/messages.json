@@ -2568,10 +2568,10 @@
     "message": "ショートカットを追加しました"
   },
   "context_menu_add_page_shortcut": {
-    "message": "Lumno の新しいタブに追加"
+    "message": "Lumno の新しいタブのショートカットに追加"
   },
   "page_shortcut_added": {
-    "message": "Lumno の新しいタブに追加しました"
+    "message": "Lumno の新しいタブのショートカットに追加しました"
   },
   "newtab_shortcuts_already_added": {
     "message": "すでにショートカットにあります"

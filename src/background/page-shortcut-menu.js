@@ -12,7 +12,7 @@
   // Shortcuts hold http and https pages; browser pages never show the menu.
   const DOCUMENT_URL_PATTERNS = Object.freeze(['http://*/*', 'https://*/*']);
   const TOAST_FILES = Object.freeze(['src/shared/toast.js', 'src/content/page-shortcut-toast.js']);
-  const MENU_TITLE_FALLBACK = 'Add to Lumno New Tab';
+  const MENU_TITLE_FALLBACK = 'Add to Lumno New Tab shortcuts';
 
   function createController(options) {
     const opts = options || {};
@@ -187,7 +187,7 @@
           duration: 5200
         };
       }
-      return { message: translate(messages, 'page_shortcut_added', 'Added to Lumno New Tab') };
+      return { message: translate(messages, 'page_shortcut_added', 'Added to Lumno New Tab shortcuts') };
     }
 
     // A page that does not take scripts (a store page, a PDF viewer) still

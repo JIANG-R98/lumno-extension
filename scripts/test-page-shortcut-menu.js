@@ -117,13 +117,13 @@ async function run() {
   assert.strictEqual(sync.clickListeners.length, 1, 'the click listener registers while the worker starts');
   assert.deepStrictEqual(sync.menuItem(), {
     id: menu.MENU_ITEM_ID,
-    title: '添加到 Lumno 新标签页',
+    title: '添加到 Lumno 新标签页的快捷方式',
     contexts: ['page'],
     documentUrlPatterns: ['http://*/*', 'https://*/*']
   });
   sync.chrome.storage.sync.set({ [LANGUAGE_KEY]: 'en' });
   await settle();
-  assert.strictEqual(sync.menuItem().title, 'Add to Lumno New Tab', 'a language change retitles the item');
+  assert.strictEqual(sync.menuItem().title, 'Add to Lumno New Tab shortcuts', 'a language change retitles the item');
   sync.chrome.storage.sync.set({ [LANGUAGE_KEY]: 'zh_CN' });
   await settle();
 
@@ -148,7 +148,7 @@ async function run() {
   assert.deepStrictEqual(state.groups.map((group) => group.id), ['g0', 'gwork'], 'groups are kept');
   assert.deepStrictEqual(sync.scripts[0].files, ['src/shared/toast.js', 'src/content/page-shortcut-toast.js']);
   assert.strictEqual(sync.scripts[0].target.tabId, 7);
-  assert.deepStrictEqual(sync.toastArgs()[0], ['已添加到 Lumno 新标签页', { error: false, duration: undefined, themeMode: 'dark' }]);
+  assert.deepStrictEqual(sync.toastArgs()[0], ['已添加到 Lumno 新标签页的快捷方式', { error: false, duration: undefined, themeMode: 'dark' }]);
 
   // The same page again is reported, not duplicated.
   const repeat = await sync.click({ pageUrl: 'https://github.com/kubai087/lumno-extension' }, { id: 7, title: 'x' });
@@ -173,7 +173,7 @@ async function run() {
   const local = device({ local: { [settings.LOCAL_PRIMARY_STORAGE_KEY]: true } }, { uiLanguage: 'ja', scriptingFails: true });
   local.controller.start();
   await settle();
-  assert.strictEqual(local.menuItem().title, 'Lumno の新しいタブに追加', 'the browser language applies without a Lumno one');
+  assert.strictEqual(local.menuItem().title, 'Lumno の新しいタブのショートカットに追加', 'the browser language applies without a Lumno one');
   const localResult = await local.click({ pageUrl: 'https://example.com/' }, { id: 3, title: 'Example Domain' });
   assert.strictEqual(localResult.status, 'added');
   const localState = await shortcuts.loadShortcutState(local.chrome.storage.local);
