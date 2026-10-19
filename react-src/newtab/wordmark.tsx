@@ -130,12 +130,14 @@ const twelveHourFormat = Object.freeze({
   useGrouping: false
 });
 
-// AM/PM sits small beside the digits, on the side the locale puts it.
+// AM/PM sits small after the digits, in every language. At a third of the
+// clock's size it needs more weight than the digits to read as clearly.
 const dayPeriodStyle: CSSProperties = {
   fontSize: '0.34em',
   fontStretch: 'normal',
   letterSpacing: '0.02em',
   lineHeight: 1,
+  marginLeft: '0.3em',
   opacity: 0.72,
   whiteSpace: 'nowrap'
 };
@@ -186,29 +188,6 @@ function getClockDateTime(
 
 function getTwelveHour(hours: number) {
   return hours % 12 || 12;
-}
-
-// The locale's AM/PM word for this hour and whether it comes before the
-// digits ("下午 9:41") or after them ("9:41 PM").
-function getDayPeriod(locale: string | undefined, hours: number) {
-  const value = new Date(2000, 0, 1, hours, 0, 0, 0);
-  try {
-    const parts = new Intl.DateTimeFormat(locale || undefined, {
-      hour: 'numeric',
-      hourCycle: 'h12'
-    }).formatToParts(value);
-    const periodIndex = parts.findIndex((part) => part.type === 'dayPeriod');
-    const hourIndex = parts.findIndex((part) => part.type === 'hour');
-    if (periodIndex >= 0) {
-      return {
-        leading: hourIndex >= 0 && periodIndex < hourIndex,
-        text: parts[periodIndex].value
-      };
-    }
-  } catch (_error) {
-    // Falls through to the English labels.
-  }
-  return { leading: false, text: hours < 12 ? 'AM' : 'PM' };
 }
 
 function createLocalizedTimeFormatter(
@@ -405,22 +384,6 @@ function ClockMark({
     [model.locale, showSeconds, twelveHour]
   );
   const isAfternoon = time.hours >= 12;
-  const dayPeriod = useMemo(
-    () => (twelveHour ? getDayPeriod(model.locale, isAfternoon ? 12 : 0) : null),
-    [model.locale, twelveHour, isAfternoon]
-  );
-  const dayPeriodMark = dayPeriod ? (
-    <span
-      className="x-nt-time-day-period"
-      data-day-period={isAfternoon ? 'pm' : 'am'}
-      style={{
-        ...dayPeriodStyle,
-        [dayPeriod.leading ? 'marginRight' : 'marginLeft']: '0.3em'
-      }}
-    >
-      {dayPeriod.text}
-    </span>
-  ) : null;
 
   useEffect(() => {
     let timer = 0;
@@ -497,7 +460,6 @@ function ClockMark({
           ? { opacity: model.opacity }
           : undefined}
       >
-        {dayPeriod?.leading ? dayPeriodMark : null}
         <ClockHourMinuteDigits
           hours={time.hours}
           locale={model.locale}
@@ -530,7 +492,15 @@ function ClockMark({
             </span>
           </>
         ) : null}
-        {dayPeriod && !dayPeriod.leading ? dayPeriodMark : null}
+        {twelveHour ? (
+          <span
+            className="x-nt-time-day-period"
+            data-day-period={isAfternoon ? 'pm' : 'am'}
+            style={{ ...dayPeriodStyle, fontWeight: Math.min(700, fontWeight + 200) }}
+          >
+            {isAfternoon ? 'PM' : 'AM'}
+          </span>
+        ) : null}
       </span>
     </time>
   );

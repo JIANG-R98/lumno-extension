@@ -167,7 +167,7 @@ describe('New Tab top-content React island', () => {
     });
   });
 
-  it('draws a 12-hour clock with the AM/PM mark where the locale puts it', () => {
+  it('draws a 12-hour clock with AM/PM after the digits in every language', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(2026, 9, 19, 21, 5, 0));
     const render = (locale: string, twelveHour: boolean) => {
@@ -199,12 +199,13 @@ describe('New Tab top-content React island', () => {
     expect(english.getAttribute('aria-label')).toMatch(/^9:05\sPM$/);
     expect(englishPeriod?.textContent).toBe('PM');
     expect(englishPeriod?.dataset.dayPeriod).toBe('pm');
+    expect(englishPeriod?.style.fontWeight).toBe('520');
     expect(englishDigits.lastElementChild).toBe(englishPeriod);
 
     const chinese = render('zh-CN', true);
     const chinesePeriod = chinese.querySelector<HTMLElement>('.x-nt-time-day-period');
-    expect(chinesePeriod?.textContent).toBe('下午');
-    expect(chinese.querySelector('[aria-hidden="true"]')!.firstElementChild).toBe(chinesePeriod);
+    expect(chinesePeriod?.textContent).toBe('PM');
+    expect(chinese.querySelector('[aria-hidden="true"]')!.lastElementChild).toBe(chinesePeriod);
 
     const twentyFourHour = render('en-US', false);
     expect(twentyFourHour.dataset.twelveHour).toBe('false');
