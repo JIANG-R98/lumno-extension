@@ -268,7 +268,7 @@ describe('shortcut dialog React island', () => {
     expect(pickIconPlateColor).toHaveBeenLastCalledWith(expect.objectContaining({
       title: 'Shopee',
       imageUrl: 'data:image/png;base64,bG9nbw==',
-      color: '#FDEDEA',
+      color: '',
       presets: ['#FDEDEA', '#FDECE7', '#FFFFFF'],
       sourceElement: custom()
     }));

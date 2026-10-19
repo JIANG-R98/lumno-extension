@@ -142,6 +142,11 @@ describe('folder color picker', () => {
     act(() => swatch('presets', '#FDEDEA').click());
     await act(async () => { document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
     expect(submit).toHaveBeenLastCalledWith('shortcut-icon-plate', null);
+    // Opened while the plate follows the icon, saving untouched keeps following it.
+    act(() => picker!.open({ folderId: 'shortcut-icon-plate', title: 'Shopee', color: '', presets: ['#FDEDEA', '#FFFFFF'] }));
+    expect(swatch('presets', '#FDEDEA').getAttribute('aria-pressed')).toBe('true');
+    await act(async () => { document.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    expect(submit).toHaveBeenLastCalledWith('shortcut-icon-plate', null);
   });
   it('animates in on the next frame and fades out before unmounting', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame'] });

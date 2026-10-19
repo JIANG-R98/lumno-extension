@@ -56,7 +56,9 @@ function FolderColorForm({ initial, options, initialSavedColors, updateSavedColo
   const [rgbTexts, setRgbTexts] = useState(folderColorToChannels(color));
   const [format, setFormat] = useState<ColorFormat>('hex');
   const [formatHost, setFormatHost] = useState<HTMLDivElement | null>(null);
-  const [reset, setReset] = useState(false);
+  // Opened without a color of its own, the picker starts on the default, so
+  // saving it untouched keeps following the default instead of pinning it.
+  const [reset, setReset] = useState(!parseFolderColor(initial.color));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [savedColors, setSavedColors] = useState(initialSavedColors);

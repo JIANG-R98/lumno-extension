@@ -1223,7 +1223,8 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
                         void pickCustomPlateColor({
                           title: formState.name || formState.url,
                           imageUrl: previewSrc,
-                          color: formState.iconPlateColor || autoColor,
+                          // Empty while the plate follows the icon.
+                          color: formState.iconPlateColor,
                           // The first preset follows the icon again.
                           presets: [autoColor, ...plateColorChoices.filter((color) => color !== autoColor)].slice(0, 8),
                           sourceElement: event.currentTarget
