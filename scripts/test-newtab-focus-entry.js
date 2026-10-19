@@ -46,13 +46,8 @@ assert.ok(
 );
 assert.match(
   html,
-  /html\[data-nt-focus-route-pending="true"\] body,\s*body:not\(\[data-nt-wallpaper-ready="1"\]\):not\(\[data-wallpaper-instant="true"\]\)\s*\{\s*visibility:\s*hidden;\s*background-image:\s*none !important;/,
-  'every New Tab route should suppress the body wallpaper until its effect is ready, so both appear together, unless CSS alone draws that effect'
-);
-assert.match(
-  html,
-  /body:not\(\[data-nt-wallpaper-ready="1"\]\) > :not\(\.x-nt-wallpaper-effect-canvas\):not\(\.x-nt-wallpaper-transition-layer\)\s*\{\s*visibility:\s*hidden;/,
-  'while an instant wallpaper shows, the page\'s controls stay hidden until the wallpaper is ready'
+  /html\[data-nt-focus-route-pending="true"\] body,\s*body:not\(\[data-nt-wallpaper-ready="1"\]\)\s*\{\s*visibility:\s*hidden;\s*background-image:\s*none !important;/,
+  'every New Tab route should suppress the propagated body wallpaper until its effect is ready, so both appear together'
 );
 assert.match(
   html,

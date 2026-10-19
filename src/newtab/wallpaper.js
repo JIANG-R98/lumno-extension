@@ -539,6 +539,7 @@
     const WALLPAPER_FILTER_TRANSITION_MS = 180;
     const WALLPAPER_VISUAL_REFRESH_DELAY_MS = 80;
     const WALLPAPER_TONE_REVEAL_WAIT_MAX_MS = 200;
+    const WALLPAPER_REVEAL_DECODE_WAIT_MAX_MS = 1000;
     const WALLPAPER_IMAGE_READY_CACHE_LIMIT = 8;
     const WALLPAPER_NETWORK_IMAGE_TIMEOUT_MS = 8000;
 
@@ -1171,7 +1172,7 @@
           : null;
       },
       applyWordmarkThemeAppearance,
-      onSamplerReady: rememberWallpaperPlaceholder,
+      onSamplerReady: rememberWallpaperLuminance,
       getPreloadedImage: takePreloadedDecodedImage
     });
     const wallpaperEffectPreload = globalThis.LumnoNewtabWallpaperEffectPreload || null;
@@ -1239,19 +1240,9 @@
     // there costs ~10ms per recalc while the page builds; and Chrome drops a custom property longer
     // than 2 MB, which uploads stored before that was capped can exceed. Matches wallpaper-preload.js.
     const WALLPAPER_CSS_INLINE_URL_MAX_LENGTH = 32 * 1024;
-    const WALLPAPER_PLACEHOLDER_WIDTH = 32;
-    // Matches wallpaper-preload.js, which ignores anything longer.
-    const WALLPAPER_PLACEHOLDER_MAX_LENGTH = 4096;
-    // A blurred wallpaper opens on a ~480px copy: blurred, it looks the same as the full image, and it
-    // decodes in no time. Matches wallpaper-preload.js (BACKDROP_MAX_LENGTH).
-    const WALLPAPER_BACKDROP_WIDTH = 480;
-    const WALLPAPER_BACKDROP_MAX_LENGTH = 96 * 1024;
-    // Per wallpaper (getWallpaperPlaceholderKey): what the next New Tab paints before this script
-    // runs. { placeholder: 32px copy, luminance: 0–1 average, backdrop: ~480px copy }.
-    const wallpaperPreloadCopies = readWallpaperPreloadCopies();
-    // The preload put a copy under the wallpaper; it goes once the full image has shown.
-    let wallpaperBackdropActive = Boolean(document.documentElement && document.documentElement.style &&
-      document.documentElement.style.getPropertyValue('--x-nt-wallpaper-backdrop'));
+    // Per wallpaper (getWallpaperLuminanceKey): its average luminance (0–1), kept in the preload cache
+    // so the next page's blur frost blends by it without decoding the full image first.
+    const wallpaperLuminances = readWallpaperPreloadLuminances();
     let wallpaperCssObjectUrl = { source: '', url: '' };
 
     function dataUrlToObjectUrl(dataUrl) {
@@ -1483,7 +1474,6 @@
       if (target) {
         target.style.setProperty('--x-nt-wallpaper-image',
           imageUrl ? getCssUrlValue(getCssSafeWallpaperUrl(imageUrl)) : 'none');
-        releaseWallpaperBackdrop(imageUrl);
         target.style.setProperty('--x-nt-wallpaper-size', 'cover');
         target.style.setProperty('--x-nt-wallpaper-position', 'center center');
         target.setAttribute('data-wallpaper-active', wallpaper ? 'true' : 'false');
@@ -1996,23 +1986,12 @@
     function getWallpaperPreloadEntryForMode(mode) {
       const wallpaper = getWallpaperById(getEffectiveWallpaperIdForMode(mode));
       const entry = getWallpaperPreloadImageEntry(wallpaper);
-      const placeholderKey = getWallpaperPlaceholderKey(wallpaper);
-      const copies = wallpaperPreloadCopies.get(placeholderKey);
-      if (!copies) {
+      const luminanceKey = getWallpaperLuminanceKey(wallpaper);
+      const luminance = wallpaperLuminances.get(luminanceKey);
+      if (!entry || !isWallpaperLuminance(luminance)) {
         return entry;
       }
-      const extra = { placeholderKey };
-      if (copies.placeholder) {
-        extra.placeholder = copies.placeholder;
-      }
-      if (Number.isFinite(copies.luminance)) {
-        extra.luminance = copies.luminance;
-      }
-      // Only a blurred wallpaper opens on the larger copy.
-      if (copies.backdrop && getWallpaperEffectPrefsForMode(mode).type === 'blur') {
-        extra.backdrop = copies.backdrop;
-      }
-      return Object.assign(entry || { id: wallpaper.id }, extra);
+      return Object.assign(entry, { luminance, luminanceKey });
     }
 
     function getWallpaperPreloadImageEntry(wallpaper) {
@@ -2034,207 +2013,60 @@
       return path ? { id: wallpaper.id, path } : null;
     }
 
-    // A daily photo keeps its catalog id while the image changes, so its placeholder follows the photo.
-    function getWallpaperPlaceholderKey(wallpaper) {
+    // A daily photo keeps its catalog id while the image changes, so its luminance follows the photo.
+    function getWallpaperLuminanceKey(wallpaper) {
       if (!wallpaper) {
         return '';
       }
       return REMOTE_CONTENT.wallpaperFromId(wallpaper.id) ? wallpaper.dailyId || wallpaper.id : wallpaper.id;
     }
 
-    function readWallpaperPreloadCopies() {
-      const copiesByKey = new Map();
+    function readWallpaperPreloadLuminances() {
+      const luminances = new Map();
       try {
         const data = JSON.parse(window.localStorage.getItem(PRELOAD_STORAGE_KEY) || 'null');
         NEWTAB_WALLPAPER_MODES.forEach((mode) => {
           const entry = data && data.wallpapers && data.wallpapers[mode];
-          if (!entry || typeof entry.placeholderKey !== 'string' || !entry.placeholderKey) {
-            return;
-          }
-          const copies = Object.assign({}, copiesByKey.get(entry.placeholderKey));
-          if (isWallpaperPlaceholderDataUrl(entry.placeholder)) {
-            copies.placeholder = entry.placeholder;
-          }
-          if (isWallpaperLuminance(entry.luminance)) {
-            copies.luminance = entry.luminance;
-          }
-          if (isImageDataUrl(entry.backdrop, WALLPAPER_BACKDROP_MAX_LENGTH)) {
-            copies.backdrop = entry.backdrop;
-          }
-          if (Object.keys(copies).length) {
-            copiesByKey.set(entry.placeholderKey, copies);
+          if (entry && typeof entry.luminanceKey === 'string' && entry.luminanceKey &&
+              isWallpaperLuminance(entry.luminance)) {
+            luminances.set(entry.luminanceKey, entry.luminance);
           }
         });
       } catch (_error) {
-        // The copies are only a head start; the next sample makes them again.
+        // Only a head start; the next sample measures it again.
       }
-      return copiesByKey;
-    }
-
-    function isWallpaperPlaceholderDataUrl(value) {
-      return isImageDataUrl(value, WALLPAPER_PLACEHOLDER_MAX_LENGTH);
-    }
-
-    function isImageDataUrl(value, maxLength) {
-      return typeof value === 'string' &&
-        value.length <= maxLength &&
-        /^data:image\/(?:webp|png|jpeg);base64,[a-z0-9+/=]+$/i.test(value);
+      return luminances;
     }
 
     function isWallpaperLuminance(value) {
       return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1;
     }
 
-    // Scaled from the adaptive-tone sample, which already holds the shown image at a few hundred pixels.
-    function createWallpaperPlaceholder(source) {
-      try {
-        const width = WALLPAPER_PLACEHOLDER_WIDTH;
-        const height = Math.max(1, Math.round(width * source.height / Math.max(1, source.width)));
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const context = canvas.getContext('2d');
-        if (!context) {
-          return '';
-        }
-        context.imageSmoothingQuality = 'high';
-        context.drawImage(source, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL('image/webp', 0.8);
-        return isWallpaperPlaceholderDataUrl(dataUrl) ? dataUrl : '';
-      } catch (_error) {
-        // A cross-origin image without CORS taints the canvas; that wallpaper simply has no placeholder.
-        return '';
+    // Measured from the adaptive-tone sample, which already holds the shown image at a few hundred pixels.
+    function rememberWallpaperLuminance(sampler) {
+      const wallpaper = getWallpaperById(currentWallpaperId);
+      const key = getWallpaperLuminanceKey(wallpaper);
+      if (!key || !sampler || !sampler.imageData || sampler.url !== getDisplayedWallpaperImageUrl(wallpaper) ||
+          wallpaperLuminances.has(key) || typeof WALLPAPER_EFFECTS.analyzeImageData !== 'function') {
+        return;
       }
-    }
-
-    // Scaled from the full image; an idle task makes it, once per wallpaper a blurred mode shows.
-    function createWallpaperBackdrop(image) {
-      try {
-        const naturalWidth = Math.max(1, image.naturalWidth || image.width || 1);
-        const naturalHeight = Math.max(1, image.naturalHeight || image.height || 1);
-        const width = Math.min(WALLPAPER_BACKDROP_WIDTH, naturalWidth);
-        const height = Math.max(1, Math.round(width * naturalHeight / naturalWidth));
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const context = canvas.getContext('2d');
-        if (!context) {
-          return '';
-        }
-        context.imageSmoothingQuality = 'high';
-        context.drawImage(image, 0, 0, width, height);
-        for (const quality of [0.75, 0.55]) {
-          const dataUrl = canvas.toDataURL('image/webp', quality);
-          if (isImageDataUrl(dataUrl, WALLPAPER_BACKDROP_MAX_LENGTH)) {
-            return dataUrl;
-          }
-        }
-        return '';
-      } catch (_error) {
-        return '';
+      const luminance = WALLPAPER_EFFECTS.analyzeImageData(sampler.imageData).averageLuminance;
+      if (!isWallpaperLuminance(luminance)) {
+        return;
       }
-    }
-
-    function isBlurredWallpaperKey(key) {
-      return NEWTAB_WALLPAPER_MODES.some((mode) => {
-        return getWallpaperEffectPrefsForMode(mode).type === 'blur' &&
-          getWallpaperPlaceholderKey(getWallpaperById(getEffectiveWallpaperIdForMode(mode))) === key;
-      });
-    }
-
-    function storeWallpaperPreloadCopies(key, copies) {
-      wallpaperPreloadCopies.set(key, copies);
+      wallpaperLuminances.set(key, Math.round(luminance * 1000) / 1000);
       // Previews in the wallpaper panel sample too; keep only the wallpapers a New Tab can open with.
       const shownKeys = NEWTAB_WALLPAPER_MODES.map((mode) => {
-        return getWallpaperPlaceholderKey(getWallpaperById(getEffectiveWallpaperIdForMode(mode)));
+        return getWallpaperLuminanceKey(getWallpaperById(getEffectiveWallpaperIdForMode(mode)));
       });
-      Array.from(wallpaperPreloadCopies.keys()).forEach((cachedKey) => {
+      Array.from(wallpaperLuminances.keys()).forEach((cachedKey) => {
         if (!shownKeys.includes(cachedKey)) {
-          wallpaperPreloadCopies.delete(cachedKey);
+          wallpaperLuminances.delete(cachedKey);
         }
       });
       if (shownKeys.includes(key)) {
         writeWallpaperPreloadCache();
       }
-    }
-
-    function scheduleWallpaperBackdrop(key, image) {
-      const run = () => {
-        const current = wallpaperPreloadCopies.get(key);
-        if (!current || current.backdrop ||
-            getWallpaperPlaceholderKey(getWallpaperById(currentWallpaperId)) !== key) {
-          return;
-        }
-        const backdrop = createWallpaperBackdrop(image);
-        if (backdrop) {
-          storeWallpaperPreloadCopies(key, Object.assign({}, current, { backdrop }));
-        }
-      };
-      if (typeof window.requestIdleCallback === 'function') {
-        window.requestIdleCallback(run, { timeout: 3000 });
-      } else {
-        window.setTimeout(run, 1000);
-      }
-    }
-
-    function rememberWallpaperPlaceholder(sampler, image) {
-      const wallpaper = getWallpaperById(currentWallpaperId);
-      const key = getWallpaperPlaceholderKey(wallpaper);
-      if (!key || !sampler.canvas || sampler.url !== getDisplayedWallpaperImageUrl(wallpaper)) {
-        return;
-      }
-      const copies = Object.assign({}, wallpaperPreloadCopies.get(key));
-      let changed = false;
-      if (!copies.placeholder) {
-        const placeholder = createWallpaperPlaceholder(sampler.canvas);
-        if (placeholder) {
-          copies.placeholder = placeholder;
-          changed = true;
-        }
-      }
-      // What the blur effect's frost blends by, so the next page draws it without decoding the image.
-      if (!isWallpaperLuminance(copies.luminance) && sampler.imageData &&
-          typeof WALLPAPER_EFFECTS.analyzeImageData === 'function') {
-        const luminance = WALLPAPER_EFFECTS.analyzeImageData(sampler.imageData).averageLuminance;
-        if (isWallpaperLuminance(luminance)) {
-          copies.luminance = Math.round(luminance * 1000) / 1000;
-          changed = true;
-        }
-      }
-      if (changed) {
-        storeWallpaperPreloadCopies(key, copies);
-      }
-      if (!copies.backdrop && image && wallpaperPreloadCopies.has(key) && isBlurredWallpaperKey(key)) {
-        scheduleWallpaperBackdrop(key, image);
-      }
-    }
-
-    // The preload's copy only covers the first image while it decodes: another image never shows
-    // over it, and the first one drops it once the page has settled.
-    function releaseWallpaperBackdrop(imageUrl) {
-      if (!wallpaperBackdropActive) {
-        return;
-      }
-      const clear = () => {
-        if (!wallpaperBackdropActive) {
-          return;
-        }
-        wallpaperBackdropActive = false;
-        document.documentElement.style.removeProperty('--x-nt-wallpaper-backdrop');
-      };
-      const wallpaperPreload = globalThis.LumnoNewtabWallpaperPreload;
-      if (!imageUrl || !wallpaperPreload || imageUrl !== wallpaperPreload.initialImageUrl) {
-        clear();
-        return;
-      }
-      // Waits on the very URL CSS shows (a blob URL for a long data URL), then for a quiet moment.
-      waitForWallpaperImageReady(getCssSafeWallpaperUrl(imageUrl)).then(() => {
-        if (typeof window.requestIdleCallback === 'function') {
-          window.requestIdleCallback(clear, { timeout: 3000 });
-        } else {
-          window.setTimeout(clear, 1000);
-        }
-      });
     }
 
     function getWallpaperPreloadOverlayStops() {
@@ -2819,13 +2651,27 @@
       return Promise.all([
         initialWallpaperReadyPromise,
         effectPreferencesReady
-      ]).then(() => {
-        if (!wallpaperEffects ||
-            !currentWallpaperId ||
-            currentAppliedWallpaperEffectPrefs.type === 'none') {
-          return;
-        }
-        return wallpaperEffects.refresh({ immediate: true });
+      ]).then(() => Promise.all([
+        waitForInitialWallpaperImageDecoded(),
+        !wallpaperEffects || !currentWallpaperId || currentAppliedWallpaperEffectPrefs.type === 'none'
+          ? null
+          : wallpaperEffects.refresh({ immediate: true })
+      ]));
+    }
+
+    // The page stays hidden until the wallpaper image has decoded, so it appears whole, never on the
+    // page color first; an image that takes longer than this shows as it arrives.
+    function waitForInitialWallpaperImageDecoded() {
+      const imageUrl = appliedWallpaperVisualUrl;
+      if (!imageUrl) {
+        return Promise.resolve();
+      }
+      return new Promise((resolve) => {
+        const timer = window.setTimeout(resolve, WALLPAPER_REVEAL_DECODE_WAIT_MAX_MS);
+        waitForWallpaperImageReady(getCssSafeWallpaperUrl(imageUrl)).then(() => {
+          window.clearTimeout(timer);
+          resolve();
+        });
       });
     }
 
