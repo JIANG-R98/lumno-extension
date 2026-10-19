@@ -909,6 +909,11 @@ body[data-glass-style] :is(.x-nt-shortcut-dialog, .x-nt-recent-history-dialog, .
   --x-lumno-action-hover-shadow: var(--x-nt-glass-raised-edge);
 }
 /* The dark theme's colors that the dialog sets per theme, for a dialog flipped to light ink. */
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-shortcut-dialog {
+  --input-focus-color: rgba(191, 219, 254, 0.7);
+  --input-focus-shadow: rgba(59, 130, 246, 0.3);
+  --panel-text: #f8fafc;
+}
 body[data-glass-style] [data-glass-ink-theme="dark"] :is(.x-nt-shortcut-error, .x-nt-shortcut-icon-error) {
   color: #fca5a5;
 }

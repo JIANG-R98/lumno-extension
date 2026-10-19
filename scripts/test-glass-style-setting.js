@@ -96,6 +96,23 @@ async function main() {
         `the default style must stay untouched: ${selector}`);
     }
   });
+  // A light-theme dialog flipped to dark glass must take every color the dark theme gives it, or its
+  // text stays dark on the dark plate.
+  const darkDialogProps = new Set();
+  postcss.parse(fs.readFileSync('src/newtab/shortcut-dialog.css', 'utf8')).walkRules((rule) => {
+    if (rule.selectors.includes('body[data-theme="dark"] .x-nt-shortcut-dialog')) {
+      rule.walkDecls(/^--/, (decl) => darkDialogProps.add(decl.prop));
+    }
+  });
+  const glassDialogProps = new Set();
+  css.walkRules((rule) => {
+    if (rule.selectors.some((selector) => /^body\[data-glass-style\] (\.x-nt-shortcut-dialog|:is\(\.x-nt-shortcut-dialog, \.x-nt-shortcut-dialog \*\)|\[data-glass-ink-theme="dark"\] \.x-nt-shortcut-dialog)$/.test(selector))) {
+      rule.walkDecls(/^--/, (decl) => glassDialogProps.add(decl.prop));
+    }
+  });
+  assert(darkDialogProps.has('--panel-text'), 'the dark shortcut dialog sets its text color');
+  assert.deepStrictEqual([...darkDialogProps].filter((prop) => !glassDialogProps.has(prop)), [],
+    'a shortcut dialog flipped to light ink takes the dark theme\'s colors');
   const html = fs.readFileSync('newtab.html', 'utf8');
   assert(html.indexOf('href="glass-style.css"') > html.indexOf('href="newtab.css"'),
     'the glass styles load after the page styles they override');
