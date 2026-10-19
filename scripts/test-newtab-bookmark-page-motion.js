@@ -2,26 +2,29 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { JSDOM } = require('jsdom');
 
-async function run() {
+function setup() {
   const dom = new JSDOM('<div id="grid"></div>', { runScripts: 'outside-only' });
   const { window } = dom;
   const grid = window.document.getElementById('grid');
   grid.style.columnGap = '12px';
   grid.style.gridTemplateColumns = '200px 200px';
   grid.getBoundingClientRect = () => ({ width: 412 });
-  let reducedMotion = false;
-  const animations = [];
+  const env = { window, grid, clock: 0, reducedMotion: false, animations: [], timers: [] };
   window.Element.prototype.animate = function(keyframes, options) {
     let resolve;
     const animation = { element: this, keyframes, options, startTime: 0,
       finished: new Promise(done => { resolve = done; }), cancel() { this.cancelled = true; }, resolve: () => resolve() };
-    animations.push(animation);
+    env.animations.push(animation);
     return animation;
   };
-  window.LumnoNewtabCrossSurfaceDrag = { prefersReducedMotion: () => reducedMotion };
+  window.setTimeout = (fn, ms) => env.timers.push({ fn, ms, cancelled: false });
+  window.clearTimeout = (id) => { if (env.timers[id - 1]) env.timers[id - 1].cancelled = true; };
+  env.runTimers = () => env.timers.splice(0).filter(timer => !timer.cancelled).forEach(timer => timer.fn());
+  env.pendingTimers = () => env.timers.filter(timer => !timer.cancelled);
+  window.LumnoNewtabCrossSurfaceDrag = { prefersReducedMotion: () => env.reducedMotion };
   window.eval(fs.readFileSync(require.resolve('../src/newtab/bookmark-pager.js'), 'utf8'));
-  const state = { bookmarkGrid: grid, bookmarkAllItems: Array.from({ length: 8 }, (_, id) => ({ id })), bookmarkCurrentPage: 0 };
-  const pager = window.LumnoNewtabBookmarkPager.createBookmarkPager({ pageState: state,
+  env.state = { bookmarkGrid: grid, bookmarkAllItems: Array.from({ length: 8 }, (_, id) => ({ id })), bookmarkCurrentPage: 0 };
+  env.pager = window.LumnoNewtabBookmarkPager.createBookmarkPager({ pageState: env.state, now: () => env.clock,
     isBookmarkTopbarMode: () => false, getBookmarkLimit: () => 2,
     NEWTAB_BOOKMARKS_STORE: { getBookmarkPageItems: (items, page, limit) => items.slice(page * limit, (page + 1) * limit) },
     hideTopActionTooltip() {}, getBookmarkGridColumnCount: () => 2, updateBookmarkSectionPosition() {},
@@ -36,7 +39,14 @@ async function run() {
       }));
     }
   });
-  pager.renderCurrentBookmarkPage();
+  env.pager.renderCurrentBookmarkPage();
+  return env;
+}
+
+async function run() {
+  const env = setup();
+  const { pager, state, grid, animations } = env;
+
   pager.switchBookmarkPage(1);
   assert.equal(state.bookmarkCurrentPage, 1);
   assert.equal(animations.length, 3, 'both pages animate together');
@@ -49,30 +59,63 @@ async function run() {
   assert.equal(outgoing.getAttribute('aria-hidden'), 'true');
   assert.equal(outgoing.inert, true);
   assert.equal(outgoing.querySelectorAll('[id]').length, 0);
-  for (let index = 0; index < 120; index++) pager.switchBookmarkPage(index % 4);
-  assert.equal(state.bookmarkCurrentPage, 1, 'ignore rapid clicks until the current page settles');
+
+  // Early in a slide, further turns wait (only the latest one) for its tail.
+  env.clock = 100;
+  for (let index = 0; index < 120; index++) pager.switchBookmarkPage(state.bookmarkCurrentPage + 1);
+  assert.equal(state.bookmarkCurrentPage, 1, 'the page does not change before the slide reaches its tail');
   assert.equal(animations.length, 3, 'rapid clicks never start overlapping animations');
   assert.equal(grid.children.length, 3, 'only one outgoing page exists');
+  assert.equal(env.pendingTimers().length, 1, 'one queued turn');
+  assert.equal(env.pendingTimers()[0].ms, 160, 'the queued turn starts once the slide is 260ms in');
+  env.clock = 260;
+  env.runTimers();
+  assert.equal(state.bookmarkCurrentPage, 2, 'the queued turn runs once');
+  assert.equal(animations.length, 6);
+  assert(animations.slice(0, 3).every(animation => animation.cancelled), 'the earlier slide hands over');
+  assert.equal(grid.children.length, 3, 'still only one outgoing page');
+  assert.equal(env.pendingTimers().length, 0);
+
+  // In the tail, a turn starts at once.
+  env.clock = 600;
+  pager.switchBookmarkPage(1);
+  assert.equal(state.bookmarkCurrentPage, 1);
+  assert.equal(animations[6].keyframes[1].transform, 'translateX(424px)', 'previous page reverses the direction');
   animations.forEach(animation => animation.resolve());
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(state.bookmarkPageAnimating, false);
-  assert.equal(state.bookmarkCurrentPage, 1, 'rapid requests are not queued');
   assert.equal(grid.children.length, 2);
   assert.equal(grid.style.overflow, '');
-  pager.switchBookmarkPage(0);
-  assert.equal(animations[3].keyframes[1].transform, 'translateX(424px)', 'previous page reverses the direction');
+
+  // Asking for the page already sliding in drops a queued turn.
+  env.clock = 1000;
+  pager.switchBookmarkPage(2);
+  env.clock = 1050;
+  pager.switchBookmarkPage(3);
+  assert.equal(env.pendingTimers().length, 1);
+  pager.switchBookmarkPage(2);
+  assert.equal(env.pendingTimers().length, 0, 'turning back to the current page cancels the queued turn');
+
+  // A data refresh or folder change drops the queued turn and the slide.
+  pager.switchBookmarkPage(3);
+  assert.equal(env.pendingTimers().length, 1);
   pager.renderCurrentBookmarkPage();
+  assert.equal(env.pendingTimers().length, 0, 'a re-render drops the queued turn');
   assert.equal(state.bookmarkPageAnimating, false, 'data refresh cleans up the interrupted animation');
   assert.equal(grid.children.length, 2);
-  reducedMotion = true;
+  assert.equal(state.bookmarkCurrentPage, 2);
+
+  env.reducedMotion = true;
   const previousCount = animations.length;
   pager.switchBookmarkPage(1);
+  assert.equal(state.bookmarkCurrentPage, 1);
   assert.equal(animations.length, previousCount);
-  reducedMotion = false;
-  window.document.documentElement.setAttribute('data-lumno-motion-effects', 'off');
+  env.reducedMotion = false;
+  env.window.document.documentElement.setAttribute('data-lumno-motion-effects', 'off');
   pager.switchBookmarkPage(0);
+  assert.equal(state.bookmarkCurrentPage, 0);
   assert.equal(animations.length, previousCount, 'motion preference is respected');
-  dom.window.close();
-  console.log('Bookmark page motion tests passed: single-page sliding, rapid click lock, cleanup and motion preferences');
+  env.window.close();
+  console.log('Bookmark page motion tests passed: single-page sliding, queued and interrupted turns, cleanup and motion preferences');
 }
 run().catch(error => { console.error(error); process.exitCode = 1; });

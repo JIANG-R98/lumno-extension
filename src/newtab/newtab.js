@@ -679,7 +679,6 @@
   pageState.bookmarkContextMenuTarget = null;
   pageState.recentContextMenu = null;
   pageState.recentContextMenuTarget = null;
-  let bookmarkWheelLastAt = 0;
   pageState.recentMouseInsideSection = false;
   pageState.recentMouseLeftAt = 0;
   pageState.recentSitesView = null;
@@ -1290,7 +1289,6 @@
       },
       getViewportTopInset: (...args) => getNewtabViewportTopPaddingPx(...args)
     });
-  const BOOKMARK_WHEEL_SWITCH_COOLDOWN_MS = 220;
   const BOOKMARK_HOVER_DELAY_FROM_RECENT_MS = 56;
 
   const NEWTAB_CARD_THEMES = globalThis.LumnoNewtabCardThemes;
@@ -4990,43 +4988,10 @@
     chrome.runtime.sendMessage({ action: 'openBookmarkManager' });
   });
   bookmarkSection.addEventListener('wheel', (event) => {
-    if (!event || event.ctrlKey) {
+    if (!event || !isContentSectionVisible(bookmarkSection)) {
       return;
     }
-    if (!isContentSectionVisible(bookmarkSection)) {
-      return;
-    }
-    const pageCount = getBookmarkPageCount();
-    if (pageCount <= 1) {
-      return;
-    }
-    const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerWidth : 1;
-    const deltaX = (Number(event.deltaX) || 0) * unit;
-    const deltaY = (Number(event.deltaY) || 0) * unit;
-    // Trackpads can report both axes; use the dominant one for a single turn.
-    const delta = Math.abs(deltaX) > Math.abs(deltaY) ? deltaX : deltaY;
-    if (Math.abs(delta) < 6) {
-      return;
-    }
-    event.preventDefault();
-    if (pageState.bookmarkPageAnimating) {
-      return;
-    }
-    const now = Date.now();
-    if ((now - bookmarkWheelLastAt) < BOOKMARK_WHEEL_SWITCH_COOLDOWN_MS) {
-      return;
-    }
-    let targetPage = pageState.bookmarkCurrentPage;
-    if (delta > 0 && pageState.bookmarkCurrentPage < (pageCount - 1)) {
-      targetPage = pageState.bookmarkCurrentPage + 1;
-    } else if (delta < 0 && pageState.bookmarkCurrentPage > 0) {
-      targetPage = pageState.bookmarkCurrentPage - 1;
-    }
-    if (targetPage === pageState.bookmarkCurrentPage) {
-      return;
-    }
-    bookmarkWheelLastAt = now;
-    switchBookmarkPage(targetPage);
+    handleBookmarkWheel(event);
   }, { passive: false });
 
   const NEWTAB_BOOKMARK_PAGER = globalThis.LumnoNewtabBookmarkPager;
@@ -5036,7 +5001,8 @@
     updateBookmarkGridHeightLock,
     renderCurrentBookmarkPage,
     switchBookmarkPageDuringDrag,
-    switchBookmarkPage
+    switchBookmarkPage,
+    handleBookmarkWheel
   } = NEWTAB_BOOKMARK_PAGER.createBookmarkPager({
     isBookmarkTopbarMode,
     getBookmarkLimit,

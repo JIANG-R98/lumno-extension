@@ -116,10 +116,48 @@
       pageState.bookmarkGrid.style.setProperty('min-height', `${Math.ceil(minHeight)}px`);
     }
 
-    let finishPageAnimation = null;
+    // A page slide lasts PAGE_SLIDE_MS. Past PAGE_SLIDE_INTERRUPTIBLE_MS the new
+    // page is ~97% of the way in, so the next turn may start from where its
+    // cards are; a turn asked for before then waits for that point.
+    const PAGE_SLIDE_MS = 520;
+    const PAGE_SLIDE_INTERRUPTIBLE_MS = 260;
+    const now = typeof deps.now === 'function' ? deps.now : () => performance.now();
+    let pageSlide = null;
+    let queuedPage = null;
+    let queuedPageTimer = 0;
+
+    function clearQueuedBookmarkPage() {
+      if (queuedPageTimer) window.clearTimeout(queuedPageTimer);
+      queuedPageTimer = 0;
+      queuedPage = null;
+    }
+
+    function queueBookmarkPage(targetPage) {
+      if (targetPage === pageState.bookmarkCurrentPage) {
+        clearQueuedBookmarkPage();
+        return;
+      }
+      queuedPage = targetPage;
+      if (queuedPageTimer) return;
+      const wait = Math.max(0, PAGE_SLIDE_INTERRUPTIBLE_MS - (now() - pageSlide.startedAt));
+      queuedPageTimer = window.setTimeout(() => {
+        const page = queuedPage;
+        queuedPageTimer = 0;
+        queuedPage = null;
+        if (page !== null) switchBookmarkPage(page);
+      }, wait);
+    }
+
+    // The horizontal offset an interrupted slide has left on a card.
+    function readSlideOffset(element) {
+      const transform = element ? window.getComputedStyle(element).transform : '';
+      if (!transform || transform === 'none' || typeof DOMMatrixReadOnly !== 'function') return 0;
+      return new DOMMatrixReadOnly(transform).m41 || 0;
+    }
 
     function renderCurrentBookmarkPage() {
-      if (finishPageAnimation) finishPageAnimation();
+      clearQueuedBookmarkPage();
+      if (pageSlide) pageSlide.finish();
       renderBookmarks(getBookmarkPageItems());
       updateBookmarkPagerState();
     }
@@ -139,10 +177,12 @@
     function switchBookmarkPage(nextPage) {
       const pageCount = getBookmarkPageCount();
       const targetPage = Math.min(Math.max(0, Number(nextPage) || 0), pageCount - 1);
-      if (targetPage === pageState.bookmarkCurrentPage) {
+      if (pageSlide && now() - pageSlide.startedAt < PAGE_SLIDE_INTERRUPTIBLE_MS) {
+        queueBookmarkPage(targetPage);
         return;
       }
-      if (pageState.bookmarkPageAnimating) {
+      clearQueuedBookmarkPage();
+      if (targetPage === pageState.bookmarkCurrentPage) {
         return;
       }
       const grid = pageState.bookmarkGrid;
@@ -155,6 +195,9 @@
         updateBookmarkSectionPosition();
         return;
       }
+      // Pick up from where an interrupted slide left the cards, so they never jump.
+      const carry = pageSlide ? readSlideOffset(pageSlide.cards[0]) : 0;
+      if (pageSlide) pageSlide.finish();
       const direction = targetPage > pageState.bookmarkCurrentPage ? 1 : -1;
       const gridStyle = window.getComputedStyle(grid);
       const distance = grid.getBoundingClientRect().width + (Number.parseFloat(gridStyle.columnGap) || 0);
@@ -179,28 +222,99 @@
       grid.appendChild(outgoing);
       pageState.bookmarkPageAnimating = true;
       // Slide directly to the destination with a long, smooth deceleration.
-      const timing = { duration: 520, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'both' };
+      const timing = { duration: PAGE_SLIDE_MS, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'both' };
       const slideFrames = (from, to) => [
         { transform: `translateX(${from}px)`, offset: 0 },
         { transform: `translateX(${to}px)`, offset: 1 }
       ];
-      const animations = [outgoing.animate(slideFrames(0, -direction * distance), timing),
+      const animations = [outgoing.animate(slideFrames(carry, -direction * distance), timing),
         ...incomingCards.map((card) => card.animate(slideFrames(direction * distance, 0), timing))];
       const startTime = animations[0].startTime;
       if (startTime !== null) animations.forEach((animation) => { animation.startTime = startTime; });
-      let finished = false;
-      const cleanup = () => {
-        if (finished) return;
-        finished = true;
-        animations.forEach((animation) => animation.cancel());
-        outgoing.remove();
-        if (previousOverflow) grid.style.setProperty('overflow', previousOverflow, previousPriority);
-        else grid.style.removeProperty('overflow');
-        pageState.bookmarkPageAnimating = false;
-        finishPageAnimation = null;
+      const slide = {
+        startedAt: now(),
+        cards: incomingCards,
+        finish() {
+          if (pageSlide !== slide) return;
+          pageSlide = null;
+          animations.forEach((animation) => animation.cancel());
+          outgoing.remove();
+          if (previousOverflow) grid.style.setProperty('overflow', previousOverflow, previousPriority);
+          else grid.style.removeProperty('overflow');
+          pageState.bookmarkPageAnimating = false;
+        }
       };
-      finishPageAnimation = cleanup;
-      Promise.all(animations.map((animation) => animation.finished)).then(cleanup).catch(cleanup);
+      pageSlide = slide;
+      Promise.all(animations.map((animation) => animation.finished)).then(slide.finish).catch(slide.finish);
+    }
+
+    // Wheel and trackpad paging. A trackpad swipe arrives as a stream of events
+    // (finger movement, then momentum) and turns one page; each mouse wheel
+    // notch turns one page.
+    const WHEEL_GESTURE_GAP_MS = 160;
+    const WHEEL_TURN_DISTANCE_PX = 6;
+    const WHEEL_REVERSE_MIN_PX = 4;
+    const wheelGesture = { lastAt: -Infinity, horizontal: false, sign: 0, notched: false,
+      total: 0, turned: false, peak: 0, floor: 0 };
+
+    // Chrome reports a trackpad's wheelDelta as -3x its pixel delta; a mouse
+    // notch is a multiple of 120 that does not follow that ratio.
+    function isWheelNotch(event, horizontal) {
+      if (event.deltaMode === 1 || event.deltaMode === 2) return true;
+      const wheelDelta = Number(horizontal ? event.wheelDeltaX : event.wheelDeltaY) || 0;
+      const delta = Number(horizontal ? event.deltaX : event.deltaY) || 0;
+      return wheelDelta !== 0 && wheelDelta % 120 === 0 && Math.abs(wheelDelta + delta * 3) >= 1;
+    }
+
+    function handleBookmarkWheel(event) {
+      if (!event || event.ctrlKey || getBookmarkPageCount() <= 1) {
+        return;
+      }
+      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerWidth : 1;
+      const deltaX = (Number(event.deltaX) || 0) * unit;
+      const deltaY = (Number(event.deltaY) || 0) * unit;
+      if (!deltaX && !deltaY) {
+        return;
+      }
+      event.preventDefault();
+      const gesture = wheelGesture;
+      const at = Number.isFinite(event.timeStamp) && event.timeStamp > 0 ? event.timeStamp : now();
+      // A gesture keeps the axis it started on, so trackpad drift on the other
+      // axis cannot split one swipe into two.
+      const ongoing = at - gesture.lastAt <= WHEEL_GESTURE_GAP_MS;
+      const horizontal = ongoing ? gesture.horizontal : Math.abs(deltaX) > Math.abs(deltaY);
+      const delta = horizontal ? deltaX : deltaY;
+      gesture.lastAt = at;
+      if (!delta) {
+        return;
+      }
+      const size = Math.abs(delta);
+      const reversed = Math.sign(delta) !== gesture.sign && size >= WHEEL_REVERSE_MIN_PX;
+      // Once a swipe has turned the page its momentum only slows down, so a
+      // burst well above where it slowed to is a new swipe.
+      const renewed = gesture.turned && !gesture.notched &&
+        gesture.floor <= gesture.peak / 4 && size >= Math.max(16, gesture.floor * 3);
+      if (!ongoing || reversed || renewed) {
+        Object.assign(gesture, { horizontal, sign: Math.sign(delta), notched: isWheelNotch(event, horizontal),
+          total: 0, turned: false, peak: 0, floor: 0 });
+      } else if (Math.sign(delta) !== gesture.sign) {
+        return;
+      }
+      gesture.total += size;
+      if (size >= gesture.peak) {
+        gesture.peak = size;
+        gesture.floor = size;
+      } else {
+        gesture.floor = Math.min(gesture.floor, size);
+      }
+      if (!gesture.notched && (gesture.turned || gesture.total < WHEEL_TURN_DISTANCE_PX)) {
+        return;
+      }
+      gesture.turned = true;
+      const targetPage = pageState.bookmarkCurrentPage + gesture.sign;
+      if (targetPage >= 0 && targetPage < getBookmarkPageCount()) {
+        switchBookmarkPage(targetPage);
+      }
     }
 
     return {
@@ -209,7 +323,8 @@
       updateBookmarkGridHeightLock,
       renderCurrentBookmarkPage,
       switchBookmarkPageDuringDrag,
-      switchBookmarkPage
+      switchBookmarkPage,
+      handleBookmarkWheel
     };
   }
 
