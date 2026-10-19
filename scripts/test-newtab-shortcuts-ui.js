@@ -904,6 +904,24 @@ assertContains(
 
 assertContains(
   newtabHtml,
+  '--x-nt-shortcut-dock-follow-duration: 90ms;',
+  'shortcut dock icons should trail a moving pointer by about a frame, not the full settle duration'
+);
+
+assertContains(
+  newtabJs,
+  "shortcutGrid.setAttribute('data-dock-following', 'true')",
+  'shortcut dock should switch to the short follow duration while the pointer drives it'
+);
+
+assertContains(
+  newtabJs,
+  "icon.closest('.x-nt-shortcut-tile')",
+  'shortcut dock influence should measure the untransformed tile, not the magnified icon'
+);
+
+assertContains(
+  newtabHtml,
   '--x-nt-shortcut-user-icon-radius: 16px;',
   'shortcut icons should define a smooth rounded-rectangle radius'
 );

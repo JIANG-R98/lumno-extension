@@ -448,6 +448,49 @@
     };
   }
 
+  // Sampling a shape with getPointAtLength takes tens of milliseconds for the
+  // folder's parts, and ran inside the pointer event, so every hover stalled a
+  // frame before the lid moved. Every folder icon draws the same shapes, so
+  // each pair is sampled and aligned once per page, and a pair already
+  // sampled the other way round is reused swapped.
+  const pointMorphTemplateCache = new Map();
+
+  function getPointMorphTemplate(pathEl, fromD, toD) {
+    const key = `${fromD}\n${toD}`;
+    if (pointMorphTemplateCache.has(key)) {
+      return pointMorphTemplateCache.get(key);
+    }
+    const reverse = pointMorphTemplateCache.get(`${toD}\n${fromD}`);
+    const template = reverse
+      ? { type: 'point', fromPoints: reverse.toPoints, toPoints: reverse.fromPoints, closed: reverse.closed }
+      : buildPointMorphTemplate(pathEl, fromD, toD);
+    pointMorphTemplateCache.set(key, template);
+    return template;
+  }
+
+  // Samples one part's shapes per idle slot, so the first hover finds them ready.
+  function warmFolderPathMorph(parts) {
+    if (typeof requestIdleCallback !== 'function') {
+      return;
+    }
+    const pending = parts.filter((part) => part.partName !== 'upper-overlay' &&
+      !buildPathMorphTemplate(part.baseD, part.hoverD) &&
+      !pointMorphTemplateCache.has(`${part.baseD}\n${part.hoverD}`));
+    const next = () => {
+      const part = pending.shift();
+      if (!part) {
+        return;
+      }
+      if (part.pathEl.isConnected) {
+        getPointMorphTemplate(part.pathEl, part.baseD, part.hoverD);
+      }
+      requestIdleCallback(next, { timeout: 2000 });
+    };
+    if (pending.length) {
+      requestIdleCallback(next, { timeout: 2000 });
+    }
+  }
+
   function composePointPathD(points, closed) {
     if (!Array.isArray(points) || !points.length) {
       return '';
@@ -741,13 +784,27 @@
 
   function animatePathDWithCurve(part, fromD, toD) {
     let template = buildPathMorphTemplate(fromD, toD);
-    if (!template) {
-      template = buildPointMorphTemplate(part.pathEl, fromD, toD);
+    // Turned back mid-morph: carry on from the points on screen towards the
+    // other shape of the same pair, with no new sampling.
+    const previous = part.pointMorph;
+    let ends = null;
+    if (!template && previous && previous.d === fromD && previous.ends.has(toD)) {
+      ends = previous.ends;
+      template = { type: 'point', fromPoints: previous.points, toPoints: ends.get(toD), closed: previous.closed };
     }
     if (!template) {
+      template = getPointMorphTemplate(part.pathEl, fromD, toD);
+      if (template && template.type === 'point') {
+        ends = new Map([[fromD, template.fromPoints], [toD, template.toPoints]]);
+      }
+    }
+    if (!template) {
+      part.pointMorph = null;
       part.pathEl.setAttribute('d', toD);
       return false;
     }
+    // The shapes this morph runs between and the points it last drew.
+    part.pointMorph = ends ? { ends, closed: template.closed, points: template.fromPoints, d: fromD } : null;
     cancelFolderPathMorph(part);
     const startTime = performance.now();
     const syncFollowers = (dValue) => {
@@ -783,6 +840,10 @@
         const nextD = composePointPathD(points, template.closed);
         part.pathEl.setAttribute('d', nextD);
         syncFollowers(nextD);
+        if (part.pointMorph) {
+          part.pointMorph.points = points;
+          part.pointMorph.d = nextD;
+        }
       }
       if (rawProgress < 1) {
         part.animationFrameId = requestAnimationFrame(tick);
@@ -790,6 +851,10 @@
       }
       part.pathEl.setAttribute('d', toD);
       syncFollowers(toD);
+      if (part.pointMorph) {
+        part.pointMorph.points = template.toPoints;
+        part.pointMorph.d = toD;
+      }
       part.animationFrameId = 0;
     };
     part.animationFrameId = requestAnimationFrame(tick);
@@ -860,6 +925,7 @@
     });
     folderIcon._xFolderMorphParts = parts;
     folderIcon._xFolderMorphState = 'base';
+    warmFolderPathMorph(parts);
   }
 
   function setFolderPathMorphState(folderIcon, toHover) {

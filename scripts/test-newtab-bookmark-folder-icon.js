@@ -130,6 +130,70 @@ folderIcon.playFolderPathMorph(iconElement, true, { instant: true });
 assert.strictEqual(iconElement._xFolderMorphParts.find((part) => part.partName === 'upper-body').pathEl, iconElement.querySelector('[data-folder-part="upper-body"]'), 'reordered folders must animate the current SVG');
 assert.strictEqual(iconElement.querySelector('svg').getAttribute('data-folder-color-id'), '123');
 
+{
+  // Hovering a folder must not sample its shapes again: every icon draws the
+  // same ones, and turning back mid-morph starts from the points on screen.
+  const dom = new JSDOM('<!doctype html><body></body>');
+  const frames = [];
+  let now = 0;
+  let samples = 0;
+  const saved = {};
+  const globals = {
+    document: dom.window.document,
+    window: dom.window,
+    performance: { now: () => now },
+    requestAnimationFrame: (callback) => frames.push(callback),
+    cancelAnimationFrame: () => {}
+  };
+  Object.keys(globals).forEach((key) => { saved[key] = globalThis[key]; globalThis[key] = globals[key]; });
+  // jsdom has no path geometry; a closed square is enough to sample.
+  dom.window.SVGElement.prototype.getTotalLength = function() { return 4; };
+  dom.window.SVGElement.prototype.getPointAtLength = function(length) {
+    samples += 1;
+    const t = Number(length) % 4;
+    return t < 1 ? { x: t, y: 0 } : t < 2 ? { x: 1, y: t - 1 } : t < 3 ? { x: 3 - t, y: 1 } : { x: 0, y: 4 - t };
+  };
+  const runFrames = (ms) => {
+    now += ms;
+    const pending = frames.splice(0);
+    pending.forEach((callback) => callback(now));
+  };
+  try {
+    const makeIcon = (suffix) => {
+      const icon = dom.window.document.createElement('span');
+      icon.innerHTML = folderIcon.getFigmaFolderSvg(suffix);
+      dom.window.document.body.appendChild(icon);
+      folderIcon.initFolderPathMorph(icon);
+      return icon;
+    };
+    const first = makeIcon('a');
+    folderIcon.playFolderPathMorph(first, true);
+    const firstSamples = samples;
+    assert.ok(firstSamples > 0, 'the first hover samples the folder shapes it cannot morph by number');
+    runFrames(16);
+    runFrames(16);
+    folderIcon.playFolderPathMorph(first, false);
+    runFrames(16);
+    assert.strictEqual(samples, firstSamples, 'turning back mid-morph reuses the points on screen');
+    runFrames(1000);
+    runFrames(16);
+    const second = makeIcon('b');
+    folderIcon.playFolderPathMorph(second, true);
+    runFrames(1000);
+    runFrames(16);
+    folderIcon.playFolderPathMorph(second, false);
+    runFrames(1000);
+    runFrames(16);
+    assert.strictEqual(samples, firstSamples, 'another folder icon reuses the shapes already sampled');
+    const settled = Array.from(second.querySelectorAll('[data-folder-part]')).map((part) => part.getAttribute('d'));
+    const fresh = makeIcon('c');
+    assert.deepStrictEqual(settled, Array.from(fresh.querySelectorAll('[data-folder-part]')).map((part) => part.getAttribute('d')),
+      'a morph back ends on the original folder shapes');
+  } finally {
+    Object.keys(saved).forEach((key) => { globalThis[key] = saved[key]; });
+  }
+}
+
 const scriptPath = 'bookmark-folder-icon.js';
 assert.ok(newtabHtml.includes(`<script src="${scriptPath}"></script>`));
 assert.ok(

@@ -49,6 +49,7 @@
         return;
       }
       pageState.shortcutGrid.removeAttribute('data-dock-active');
+      pageState.shortcutGrid.removeAttribute('data-dock-following');
       Array.from(pageState.shortcutGrid.querySelectorAll('.x-nt-shortcut-tile')).forEach((tile) => {
         resetShortcutDockTile(tile);
       });
@@ -71,11 +72,17 @@
       if (!icon || typeof icon.getBoundingClientRect !== 'function' || !Number.isFinite(pointerX)) {
         return null;
       }
-      const rect = icon.getBoundingClientRect();
-      const iconWidth = Math.max(1, rect.width || rect.height || 48);
+      // Measure where the icon sits at rest, not where its magnification has
+      // moved and grown it: the tile centers the icon and is not transformed,
+      // and offsetWidth ignores the scale. Measuring the magnified icon fed its
+      // own size back into the radius, so a grown icon held on as the pointer
+      // left it.
+      const tile = typeof icon.closest === 'function' ? icon.closest('.x-nt-shortcut-tile') : null;
+      const rect = (tile || icon).getBoundingClientRect();
+      const iconWidth = Math.max(1, icon.offsetWidth || rect.width || rect.height || 48);
       const centerX = rect.left + ((rect.width || iconWidth) / 2);
       const distancePx = Math.abs(pointerX - centerX);
-      const influenceRadius = Math.max(144, iconWidth * 4);
+      const influenceRadius = Math.max(144, iconWidth * 4.5);
       const raw = Math.max(0, 1 - (distancePx / influenceRadius));
       const eased = raw * raw * (3 - (2 * raw));
       return {
@@ -228,6 +235,13 @@
         })
         : [];
       pageState.shortcutGrid.setAttribute('data-dock-active', 'true');
+      // While the pointer drives the icons they follow it closely; the slower
+      // swell is kept for settling once it leaves.
+      if (Number.isFinite(pointerX)) {
+        pageState.shortcutGrid.setAttribute('data-dock-following', 'true');
+      } else {
+        pageState.shortcutGrid.removeAttribute('data-dock-following');
+      }
       tiles.forEach((tile, index) => {
         const offset = index - activeIndex;
         const distance = Math.abs(offset);
