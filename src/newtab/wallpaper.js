@@ -2063,7 +2063,10 @@
     function rememberWallpaperLuminance(sampler) {
       const wallpaper = getWallpaperById(currentWallpaperId);
       const key = getWallpaperLuminanceKey(wallpaper);
-      if (!key || !sampler || !sampler.imageData || sampler.url !== getDisplayedWallpaperImageUrl(wallpaper) ||
+      const displayedUrl = getDisplayedWallpaperImageUrl(wallpaper);
+      // A failed network photo shows the bundled default instead, whose luminance is not the photo's.
+      if (!key || !sampler || !sampler.imageData || sampler.url !== displayedUrl ||
+          displayedUrl !== getWallpaperImageUrl(wallpaper) ||
           wallpaperLuminances.has(key) || typeof WALLPAPER_EFFECTS.analyzeImageData !== 'function') {
         return;
       }

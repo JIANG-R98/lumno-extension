@@ -464,7 +464,8 @@
     const template = reverse
       ? { type: 'point', fromPoints: reverse.toPoints, toPoints: reverse.fromPoints, closed: reverse.closed }
       : buildPointMorphTemplate(pathEl, fromD, toD);
-    pointMorphTemplateCache.set(key, template);
+    // A path that could not be measured yet (not rendered) is sampled again next time.
+    if (template) pointMorphTemplateCache.set(key, template);
     return template;
   }
 
