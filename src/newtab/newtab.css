@@ -33,6 +33,12 @@ body {
   position: relative;
   isolation: isolate;
 }
+/* Chrome fills a window it shows again (after minimizing) with this color until the wallpaper is
+   redrawn; the wallpaper's mean color keeps that moment from flashing. Only once the wallpaper is in,
+   so a New Tab still opens on its plain page color. */
+body[data-wallpaper-active="true"][data-nt-wallpaper-ready="1"] {
+  background-color: var(--x-nt-wallpaper-base-color, var(--x-nt-bg));
+}
 /* Native scrollbars (macOS overlay bars) and form controls take their tone
    from color-scheme, so the resolved dark theme declares it; without it a dark
    thumb would scroll over dark panels. */

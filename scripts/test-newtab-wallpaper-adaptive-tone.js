@@ -245,6 +245,11 @@ function getCssRgbChannels(value) {
     'mist and clear surfaces should retain different opacity levels'
   );
   assert.strictEqual(scheduledFrames.size, 1, 'the initial apply should schedule a follow-up sample');
+  assert.strictEqual(
+    body.style.getPropertyValue('--x-nt-wallpaper-base-color'),
+    'rgb(16 24 32)',
+    'the page color under the wallpaper should take its mean, so a restored window does not flash'
+  );
 
   currentWallpaper = {
     id: 'middle-wallpaper',
@@ -354,6 +359,11 @@ function getCssRgbChannels(value) {
     '',
     'a current wallpaper load failure should clear the sampled topbar material'
   );
+  assert.strictEqual(
+    body.style.getPropertyValue('--x-nt-wallpaper-base-color'),
+    '',
+    'a current wallpaper load failure should hand the page its theme color back'
+  );
 
   body.setAttribute('data-theme', 'dark');
   overlayAlpha = 0.44;
@@ -382,6 +392,11 @@ function getCssRgbChannels(value) {
   assert.ok(
     Math.max(...maskedDarkSurfaceChannels) < 80,
     'a black mask over a bright wallpaper should produce a dark topbar surface for light text'
+  );
+  assert.strictEqual(
+    body.style.getPropertyValue('--x-nt-wallpaper-base-color'),
+    'rgb(143 143 143)',
+    'the page color under the wallpaper should include the mask drawn over it'
   );
 
   body.setAttribute('data-theme', 'light');

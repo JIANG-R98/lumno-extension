@@ -66,6 +66,15 @@
   const TONE_LIGHT_TARGET = { red: 248, green: 250, blue: 252 };
   const TONE_DARK_TARGET = { red: 15, green: 23, blue: 42 };
   const TOPBAR_MASK_POLARITY_MIN_ALPHA = 0.36;
+  // Chrome drops a hidden window's last frame (a minimized one, say) and, once the window is shown
+  // again, fills it with the page's background color until the wallpaper is drawn anew. The wallpaper
+  // covers that color at every other moment, so it takes the mean of what the wallpaper shows, mask
+  // and effect included, and the gap no longer flashes white or black (newtab.css reads it).
+  const PAGE_BASE_COLOR_PROP = '--x-nt-wallpaper-base-color';
+  const PAGE_BASE_COLOR_COLUMNS = 8;
+  const PAGE_BASE_COLOR_ROWS = 6;
+  const BLACK = { red: 0, green: 0, blue: 0 };
+  const WHITE = { red: 255, green: 255, blue: 255 };
 
   function mixNumber(start, end, amount) {
     return start + ((end - start) * clampNumber(amount, 0, 1));
@@ -114,6 +123,19 @@
       green: mixChannel(color.green, target.green, amount),
       blue: mixChannel(color.blue, target.blue, amount)
     };
+  }
+
+  // Moves a color toward black or white until it has the given luminance, keeping its hue.
+  function matchColorLuminance(color, luminance) {
+    const current = getColorLuminance(color);
+    const target = clampNumber(luminance, 0, 1);
+    if (target < current) {
+      return mixColor(color, BLACK, 1 - (target / current));
+    }
+    if (target > current) {
+      return mixColor(color, WHITE, (target - current) / (1 - current));
+    }
+    return color;
   }
 
   function smoothstep(value) {
@@ -878,6 +900,9 @@
         }
         clearTargetTone(target.element);
       });
+      if (documentObj.body) {
+        documentObj.body.style.removeProperty(PAGE_BASE_COLOR_PROP);
+      }
       if (!options || options.updateWordmark !== false) {
         applyWordmarkThemeAppearance();
       }
@@ -1071,8 +1096,68 @@
       return {
         red: (red * alpha) + (255 * (1 - alpha)),
         green: (green * alpha) + (255 * (1 - alpha)),
-        blue: (blue * alpha) + (255 * (1 - alpha))
+        blue: (blue * alpha) + (255 * (1 - alpha)),
+        alpha
       };
+    }
+
+    function getSamplePixelAtViewport(sourceSampler, metrics, viewportX, viewportY) {
+      const sourceX = ((viewportX - metrics.offsetX) / metrics.scale) * sourceSampler.sampleScaleX;
+      const sourceY = ((viewportY - metrics.offsetY) / metrics.scale) * sourceSampler.sampleScaleY;
+      return getPixelColor(
+        sourceSampler,
+        Math.round(clampNumber(sourceX, 0, sourceSampler.canvas.width - 1)),
+        Math.round(clampNumber(sourceY, 0, sourceSampler.canvas.height - 1))
+      );
+    }
+
+    // The mean color of the whole screen as shown; null for a see-through wallpaper, whose clear
+    // parts show the page color itself.
+    function samplePageBaseColor(sourceSampler, overlayLuminance, effectType) {
+      const viewport = getViewportSize();
+      const metrics = getRenderedMetrics(sourceSampler);
+      const total = { red: 0, green: 0, blue: 0 };
+      for (let row = 0; row < PAGE_BASE_COLOR_ROWS; row += 1) {
+        for (let column = 0; column < PAGE_BASE_COLOR_COLUMNS; column += 1) {
+          const viewportX = viewport.width * ((column + 0.5) / PAGE_BASE_COLOR_COLUMNS);
+          const viewportY = viewport.height * ((row + 0.5) / PAGE_BASE_COLOR_ROWS);
+          const sourceColor = getSamplePixelAtViewport(sourceSampler, metrics, viewportX, viewportY);
+          if (sourceColor.alpha < 1) {
+            return null;
+          }
+          const effectLuminance = effectType && effectType !== 'none'
+            ? getEffectLuminanceAtViewport(viewportX, viewportY, getColorLuminance(sourceColor))
+            : null;
+          const effectColor = Number.isFinite(effectLuminance)
+            ? matchColorLuminance(sourceColor, effectLuminance)
+            : sourceColor;
+          const overlayAlpha = clampNumber(getOverlayAlphaAtViewportY(viewportY), 0, 1);
+          const color = applyOverlayToColor(effectColor, overlayAlpha, overlayLuminance).color;
+          total.red += color.red;
+          total.green += color.green;
+          total.blue += color.blue;
+        }
+      }
+      const count = PAGE_BASE_COLOR_COLUMNS * PAGE_BASE_COLOR_ROWS;
+      return {
+        red: total.red / count,
+        green: total.green / count,
+        blue: total.blue / count
+      };
+    }
+
+    function applyPageBaseColor(sourceSampler, overlayLuminance, effectType) {
+      let color = null;
+      try {
+        color = samplePageBaseColor(sourceSampler, overlayLuminance, effectType);
+      } catch (e) {
+        color = null;
+      }
+      if (color) {
+        setStyleProperty(documentObj.body, PAGE_BASE_COLOR_PROP, formatSolidRgb(color));
+      } else {
+        documentObj.body.style.removeProperty(PAGE_BASE_COLOR_PROP);
+      }
     }
 
     function sampleToneForRect(sourceSampler, rect, target, overlayLuminance, effectType) {
@@ -1094,11 +1179,7 @@
           xs.forEach((xRatio) => {
             const viewportX = rect.left + (rect.width * xRatio);
             const viewportY = rect.top + (rect.height * yRatio);
-            const sourceX = ((viewportX - metrics.offsetX) / metrics.scale) * sourceSampler.sampleScaleX;
-            const sourceY = ((viewportY - metrics.offsetY) / metrics.scale) * sourceSampler.sampleScaleY;
-            const x = Math.round(clampNumber(sourceX, 0, sourceSampler.canvas.width - 1));
-            const y = Math.round(clampNumber(sourceY, 0, sourceSampler.canvas.height - 1));
-            const sourceColor = getPixelColor(sourceSampler, x, y);
+            const sourceColor = getSamplePixelAtViewport(sourceSampler, metrics, viewportX, viewportY);
             const sourceLuminance = getColorLuminance(sourceColor);
             const effectLuminance = effectType && effectType !== 'none'
               ? getEffectLuminanceAtViewport(viewportX, viewportY, sourceLuminance)
@@ -1183,6 +1264,7 @@
       const effectType = documentObj.body.getAttribute('data-wallpaper-effect') || '';
       const overlayLuminance = clampNumber(getOverlayLuminance(), 0, 1);
       const themeMode = getDocumentThemeMode();
+      applyPageBaseColor(sampler, overlayLuminance, effectType);
       const glassSamples = [];
       // Targets in one tone group read a single sample over all their elements and
       // keep one ink, so a caption never takes a different color from its heading.
