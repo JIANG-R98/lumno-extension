@@ -1731,6 +1731,16 @@ body.x-nt-bottom-layout.x-nt-no-bookmarks #_x_extension_newtab_recent_sites_2024
 body:not([data-nt-ready="1"]) #_x_extension_newtab_bottom_dock_2024_unique_ {
   visibility: hidden;
 }
+/* Chrome still draws a hidden element's backdrop-filter, so before the page is revealed the default
+   style's bookmark cards showed as bare blurred rectangles over the wallpaper (Chrome 155). Nothing
+   blurs the wallpaper until the content enters; the cards' own transition then fades their blur in
+   with them. The ID inside :is() lifts this above every style's own backdrop-filter rule. */
+body:not([data-nt-ready="1"]) :is(*, #_x_extension_newtab_root_2024_unique_),
+body:not([data-nt-ready="1"]) :is(*, #_x_extension_newtab_root_2024_unique_)::before,
+body:not([data-nt-ready="1"]) :is(*, #_x_extension_newtab_root_2024_unique_)::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
 body[data-nt-enter="run"] .x-nt-shortcuts-section[data-visible="true"] .x-nt-shortcut-tile {
   --x-nt-shortcut-enter-index: 0;
   animation: _x_nt_shortcut_entry_2026_unique_ var(--lumno-duration-sm) cubic-bezier(0.16, 1, 0.3, 1)

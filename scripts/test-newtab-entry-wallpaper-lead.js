@@ -145,8 +145,15 @@ function testNoBlurredStandInForTheWallpaper() {
   });
 }
 
+function testNothingBlursTheWallpaperBeforeTheReveal() {
+  assert.match(newtabCss,
+    /body:not\(\[data-nt-ready="1"\]\) :is\(\*, #_x_extension_newtab_root_2024_unique_\),\s*body:not\(\[data-nt-ready="1"\]\) :is\(\*, #_x_extension_newtab_root_2024_unique_\)::before,\s*body:not\(\[data-nt-ready="1"\]\) :is\(\*, #_x_extension_newtab_root_2024_unique_\)::after \{\s*backdrop-filter: none !important;\s*-webkit-backdrop-filter: none !important;/,
+    'hidden cards must not show their blur over the wallpaper before the page is revealed');
+}
+
 (async () => {
   testNoBlurredStandInForTheWallpaper();
+  testNothingBlursTheWallpaperBeforeTheReveal();
   await testContentWaitsForTheWallpaperLead();
   await testEffectPreloadRecordsWhenTheWallpaperShowed();
   testRevealWaitsForTheWallpaperTones();
