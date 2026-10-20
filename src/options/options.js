@@ -93,6 +93,8 @@
   const searchResultPrioritySelect = document.getElementById('_x_extension_search_result_priority_select_2026_unique_');
   const searchResultTabPositionSelect = document.getElementById('_x_extension_search_result_tab_position_select_2026_unique_');
   const newtabGlassStyleSelect = document.getElementById('_x_extension_newtab_glass_style_select_2026_unique_');
+  const newtabGlassThemeRow = document.getElementById('_x_extension_newtab_glass_theme_row_2026_unique_');
+  const newtabGlassThemeTabsWrap = document.getElementById('_x_extension_newtab_glass_theme_tabs_wrap_2026_unique_');
   const searchResultSourceTypeGroupHost = document.getElementById('_x_extension_search_result_source_types_2026_unique_');
   const searchResultSourceTypeInputs = Array.from(document.querySelectorAll('input[data-search-result-source-type]'));
   const overlayPageThemeAdaptationRow = document.getElementById('_x_extension_overlay_page_theme_adaptation_row_2026_unique_');
@@ -250,6 +252,11 @@
     newtabTimeInkTabsWrap,
     'newtab-time-ink',
     handleNewtabTimeInkSelection
+  );
+  const newtabGlassThemeTabsController = createOptionsSegmentedControlController(
+    newtabGlassThemeTabsWrap,
+    'newtab-glass-theme',
+    handleNewtabGlassThemeSelection
   );
   const optionsToggleControlRecords = new Map();
   const unsupportedSettingInputIds = new Set();
@@ -867,6 +874,8 @@
   let currentNewtabTimeFontSize = SETTINGS.NEWTAB_TIME_FONT_SIZE_DEFAULT;
   let currentNewtabTimeOpacity = SETTINGS.NEWTAB_TIME_OPACITY_DEFAULT;
   let currentNewtabTimeInk = SETTINGS.NEWTAB_TIME_INK_DEFAULT;
+  let currentNewtabGlassStyle = 'none';
+  let currentNewtabGlassTheme = 'follow';
   let currentNewtabTimeFont = SETTINGS.NEWTAB_TIME_FONT_DEFAULT;
   // Set once the daily quote rows are wired; language refreshes may run earlier.
   let dailyQuoteSettings = null;
@@ -1992,6 +2001,30 @@
     );
   }
 
+  function setNewtabGlassThemeTabState(theme) {
+    currentNewtabGlassTheme = SETTINGS.normalizeNewtabGlassTheme(theme);
+    renderSegmentedControlState(
+      newtabGlassThemeTabsController,
+      {
+        activeValue: currentNewtabGlassTheme,
+        dataAttribute: 'data-newtab-glass-theme',
+        items: [
+          { value: 'follow', labelKey: 'settings_newtab_glass_theme_follow', label: getMessage('settings_newtab_glass_theme_follow', '跟随新标签页') },
+          { value: 'light', labelKey: 'settings_newtab_glass_theme_light', label: getMessage('settings_newtab_glass_theme_light', '浅色') },
+          { value: 'dark', labelKey: 'settings_newtab_glass_theme_dark', label: getMessage('settings_newtab_glass_theme_dark', '深色') }
+        ]
+      }
+    );
+  }
+
+  // The material's light/dark choice only matters while a glass material is on.
+  function syncNewtabGlassThemeVisibility() {
+    animateOptionsPanelHeight(() => setConditionalSettingsElementVisibility(
+      newtabGlassThemeRow,
+      currentNewtabGlassStyle !== 'none'
+    ));
+  }
+
   function syncNewtabTimeSecondsVisibility() {
     const visible = currentNewtabTopContentMode === 'time';
     animateOptionsPanelHeight(() => {
@@ -2145,6 +2178,15 @@
     storageArea.set({ [NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY]: nextMode });
   }
 
+  function handleNewtabGlassThemeSelection(value) {
+    const nextTheme = SETTINGS.normalizeNewtabGlassTheme(value);
+    setNewtabGlassThemeTabState(nextTheme);
+    if (!storageArea) {
+      return;
+    }
+    storageArea.set({ [SETTINGS.NEWTAB_GLASS_THEME_STORAGE_KEY]: nextTheme });
+  }
+
   function handleNewtabTimeInkSelection(value) {
     const nextInk = SETTINGS.normalizeNewtabTimeInk(value);
     setNewtabTimeInkTabState(nextInk);
@@ -2187,6 +2229,7 @@
   setRestrictedActionTabState(currentRestrictedAction);
   setNewtabTopContentTabState(currentNewtabTopContentMode);
   setNewtabTimeInkTabState(currentNewtabTimeInk);
+  setNewtabGlassThemeTabState(currentNewtabGlassTheme);
 
   function notifyNewtabSectionsRefresh(section) {
     if (!chrome || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
@@ -2760,6 +2803,7 @@
       renderNewtabTimeFontSizeControl(currentNewtabTimeFontSize);
       renderNewtabTimeOpacityControl(currentNewtabTimeOpacity);
       setNewtabTimeInkTabState(currentNewtabTimeInk);
+      setNewtabGlassThemeTabState(currentNewtabGlassTheme);
       if (dailyQuoteSettings) {
         dailyQuoteSettings.updateLanguage();
       }
@@ -3390,6 +3434,8 @@
     newtabGlassStyleSelect.addEventListener('change', () => {
       const style = SETTINGS.normalizeNewtabGlassStyle(newtabGlassStyleSelect.value);
       newtabGlassStyleSelect.value = style;
+      currentNewtabGlassStyle = style;
+      syncNewtabGlassThemeVisibility();
       if (storageArea) {
         storageArea.set({ [SETTINGS.NEWTAB_GLASS_STYLE_STORAGE_KEY]: style });
       }
@@ -3700,10 +3746,19 @@
       if (newtabGlassStyleSelect) {
         newtabGlassStyleSelect.value = style;
       }
+      currentNewtabGlassStyle = style;
+      syncNewtabGlassThemeVisibility();
     },
     repairOnLoad: false,
     repairOnChange: false,
     refreshSelects: true
+  });
+  settingBinder.bindSetting({
+    key: SETTINGS.NEWTAB_GLASS_THEME_STORAGE_KEY,
+    normalize: SETTINGS.normalizeNewtabGlassTheme,
+    apply: setNewtabGlassThemeTabState,
+    repairOnLoad: false,
+    repairOnChange: false
   });
   // The daily quote mirrors the quote section of New Tab's appearance panel.
   const CUSTOM_QUOTES = globalThis.LumnoCustomQuotes;

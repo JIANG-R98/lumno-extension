@@ -3425,6 +3425,21 @@
   "settings_newtab_glass_style_liquid": {
     "message": "液态玻璃"
   },
+  "settings_newtab_glass_theme_title": {
+    "message": "材质深浅色"
+  },
+  "settings_newtab_glass_theme_desc": {
+    "message": "选浅色或深色时，新标签页固定为该深浅色，壁纸也换成对应模式的那张"
+  },
+  "settings_newtab_glass_theme_follow": {
+    "message": "跟随新标签页"
+  },
+  "settings_newtab_glass_theme_light": {
+    "message": "浅色"
+  },
+  "settings_newtab_glass_theme_dark": {
+    "message": "深色"
+  },
   "settings_search_source_group_order_title": {
     "message": "搜索面板顺序"
   },

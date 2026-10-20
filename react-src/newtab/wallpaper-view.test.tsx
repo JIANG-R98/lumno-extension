@@ -134,6 +134,20 @@ describe('New Tab React wallpaper view', () => {
     expect(refs().glassStyleTitle.textContent).toBe(state.glassStyle.title);
   });
 
+  it('shows the material theme only under a glass style', () => {
+    const { state, actions } = createState();
+    mount(state);
+    expect(refs().glassThemeRow.hidden).toBe(true);
+    state.glassStyle.value = 'liquid';
+    state.glassStyle.theme.visible = true;
+    rerender(state);
+    expect(refs().glassThemeRow.hidden).toBe(false);
+    expect(refs().glassThemeTitle.textContent).toBe('Material theme');
+    expect(refs().glassThemeTabs.querySelector('[data-newtab-glass-theme="follow"]')?.getAttribute('aria-pressed')).toBe('true');
+    act(() => refs().glassThemeTabs.querySelector<HTMLElement>('[data-newtab-glass-theme="dark"]')!.click());
+    expect(actions.selectGlassTheme).toHaveBeenCalledWith('dark');
+  });
+
   it('renders the complete appearance panel contract', () => {
     const { state } = createState();
     mount(state);

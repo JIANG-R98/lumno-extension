@@ -62,6 +62,20 @@ export function createDefaultPanelState(): WallpaperPanelState {
         { value: 'liquid', label: 'Liquid glass' }
       ],
       sectionTitle: 'Style',
+      theme: {
+        infoTooltip: '',
+        tabs: {
+          active: 'follow',
+          label: 'Material theme',
+          options: [
+            { value: 'follow', label: 'Match New Tab', ariaLabel: 'Match New Tab' },
+            { value: 'light', label: 'Light', ariaLabel: 'Light' },
+            { value: 'dark', label: 'Dark', ariaLabel: 'Dark' }
+          ]
+        },
+        title: 'Material theme',
+        visible: false
+      },
       title: 'Material',
       value: 'none'
     },

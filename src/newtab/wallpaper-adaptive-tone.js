@@ -1391,6 +1391,8 @@
       }
       const pageLuminance = entries.reduce((total, entry) => total + entry.sample.luminance, 0) / entries.length;
       const previousInk = documentObj.body ? documentObj.body.getAttribute('data-glass-ink-hint') : '';
+      // A material held light (newtab.js sets data-glass-theme) keeps dark ink over any wallpaper.
+      const heldLight = Boolean(documentObj.body) && documentObj.body.getAttribute('data-glass-theme') === 'light';
       [entries].forEach((members) => {
         const groupLuminance = pageLuminance;
         members.forEach((entry) => {
@@ -1401,7 +1403,7 @@
               themeMode,
               previousInk,
               groupLuminance,
-              entry.target.themeInk ? (themeMode === 'dark' ? 'light' : 'dark') : ''
+              entry.target.themeInk || heldLight ? (themeMode === 'dark' ? 'light' : 'dark') : ''
           );
           applyGlassAdaptationStyles(entry.target.element, adaptation);
           // Panels and menus carry controls styled per theme; flipped to light ink under the light
@@ -1417,7 +1419,9 @@
           }
         });
       });
-      rememberGlassInkHint(inkCounts);
+      if (!heldLight) {
+        rememberGlassInkHint(inkCounts);
+      }
     }
 
     // The ink most plates settled on, for the next page to open in (newtab.js reads it back).

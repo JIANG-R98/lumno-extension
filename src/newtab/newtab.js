@@ -197,6 +197,7 @@
   const NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY = SETTINGS.NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY ||
     '_x_extension_newtab_appearance_button_visible_2026_unique_';
   const NEWTAB_GLASS_STYLE_STORAGE_KEY = SETTINGS.NEWTAB_GLASS_STYLE_STORAGE_KEY;
+  const NEWTAB_GLASS_THEME_STORAGE_KEY = SETTINGS.NEWTAB_GLASS_THEME_STORAGE_KEY;
   // The plates that sit straight on the wallpaper; floating menus and panels keep a fixed dense tint.
   const NEWTAB_GLASS_ADAPTIVE_SELECTOR = [
     '#_x_extension_newtab_root_2024_unique_',
@@ -515,6 +516,8 @@
   pageState.globalThemeMode = 'system';
   pageState.newtabThemeMode = 'global';
   pageState.newtabThemeScope = 'global';
+  pageState.newtabGlassTheme = 'follow';
+  pageState.glassThemeOverride = '';
   pageState.currentThemeMode = 'system';
   pageState.initialThemeApplied = false;
   pageState.resolveInitialThemeReady = null;
@@ -1433,6 +1436,9 @@
     THEME_STORAGE_KEY,
     NEWTAB_THEME_MODE_STORAGE_KEY,
     NEWTAB_THEME_SCOPE_STORAGE_KEY,
+    NEWTAB_GLASS_STYLE_STORAGE_KEY,
+    NEWTAB_GLASS_THEME_STORAGE_KEY,
+    getGlassThemeOverride: SETTINGS.getNewtabGlassThemeOverride,
     initialLanguageReadyPromise,
     LANGUAGE_STORAGE_KEY,
     pageState
@@ -2418,6 +2424,14 @@
         storageArea.set({ [NEWTAB_GLASS_STYLE_STORAGE_KEY]: style });
       }
     },
+    getGlassTheme: () => pageState.newtabGlassTheme,
+    setGlassTheme(value) {
+      const theme = SETTINGS.normalizeNewtabGlassTheme(value);
+      applyNewtabGlassTheme(theme);
+      if (storageArea) {
+        storageArea.set({ [NEWTAB_GLASS_THEME_STORAGE_KEY]: theme });
+      }
+    },
     getAdaptiveToneTargets: createWallpaperAdaptiveToneTargets,
     view: NEWTAB_WALLPAPER_VIEW
   });
@@ -2852,6 +2866,9 @@
   });
   storageChanges.on(NEWTAB_GLASS_STYLE_STORAGE_KEY, (changes) => {
     applyNewtabGlassStyle(changes[NEWTAB_GLASS_STYLE_STORAGE_KEY].newValue);
+  });
+  storageChanges.on(NEWTAB_GLASS_THEME_STORAGE_KEY, (changes) => {
+    applyNewtabGlassTheme(changes[NEWTAB_GLASS_THEME_STORAGE_KEY].newValue);
   });
   storageChanges.on(NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY, (changes) => {
     const raw = changes[NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY].newValue;
@@ -6944,10 +6961,44 @@
       document.body.setAttribute('data-glass-style', style);
       applyRememberedGlassInkHint();
     }
+    syncNewtabGlassThemeOverride();
     syncNewtabLiquidSurfaces(style === 'liquid');
     syncNewtabGlassOpenObserver(style !== 'none');
     // The bookmarks bar's "match style" background follows the page's material.
     syncBookmarkTopbarSurfaceAppearance({ updateMenu: false });
+    updateWallpaperAppearanceSelectionUi();
+    scheduleWallpaperAdaptiveToneUpdate();
+  }
+
+  // A material set to light or dark holds the page's theme there (appearance-modes.js reads
+  // pageState.glassThemeOverride) and marks the body, so the wallpaper sampler keeps light glass
+  // light instead of turning it dark over a dark wallpaper.
+  function syncNewtabGlassThemeOverride() {
+    const override = SETTINGS.getNewtabGlassThemeOverride(
+      document.body.getAttribute('data-glass-style'),
+      pageState.newtabGlassTheme
+    );
+    if (override) {
+      document.body.setAttribute('data-glass-theme', override);
+      if (override === 'light') {
+        document.body.setAttribute('data-glass-ink-hint', 'dark');
+      }
+    } else {
+      document.body.removeAttribute('data-glass-theme');
+    }
+    if (override === pageState.glassThemeOverride) {
+      return;
+    }
+    pageState.glassThemeOverride = override;
+    // Until the stored theme lands, the theme bootstrap applies the override itself.
+    if (pageState.initialThemeApplied) {
+      applyScopedThemeMode();
+    }
+  }
+
+  function applyNewtabGlassTheme(value) {
+    pageState.newtabGlassTheme = SETTINGS.normalizeNewtabGlassTheme(value);
+    syncNewtabGlassThemeOverride();
     updateWallpaperAppearanceSelectionUi();
     scheduleWallpaperAdaptiveToneUpdate();
   }
@@ -6958,7 +7009,8 @@
       return Promise.resolve();
     }
     return new Promise((resolve) => {
-      storageArea.get([NEWTAB_GLASS_STYLE_STORAGE_KEY], (result) => {
+      storageArea.get([NEWTAB_GLASS_STYLE_STORAGE_KEY, NEWTAB_GLASS_THEME_STORAGE_KEY], (result) => {
+        pageState.newtabGlassTheme = SETTINGS.normalizeNewtabGlassTheme(result && result[NEWTAB_GLASS_THEME_STORAGE_KEY]);
         applyNewtabGlassStyle(result && result[NEWTAB_GLASS_STYLE_STORAGE_KEY]);
         resolve();
       });

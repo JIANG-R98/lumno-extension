@@ -46,6 +46,9 @@
       THEME_STORAGE_KEY,
       NEWTAB_THEME_MODE_STORAGE_KEY,
       NEWTAB_THEME_SCOPE_STORAGE_KEY,
+      NEWTAB_GLASS_STYLE_STORAGE_KEY,
+      NEWTAB_GLASS_THEME_STORAGE_KEY,
+      getGlassThemeOverride,
       initialLanguageReadyPromise,
       LANGUAGE_STORAGE_KEY
     } = deps;
@@ -274,7 +277,11 @@
       return pageState.newtabThemeMode === 'global';
     }
 
+    // A glass material set to light or dark holds the page there, over whatever the theme says.
     function getScopedThemeMode() {
+      if (pageState.glassThemeOverride) {
+        return pageState.glassThemeOverride;
+      }
       return isNewtabThemeFollowingGlobal() ? pageState.globalThemeMode : pageState.newtabThemeMode;
     }
 
@@ -304,11 +311,18 @@
       storageArea.get([
         THEME_STORAGE_KEY,
         NEWTAB_THEME_MODE_STORAGE_KEY,
-        NEWTAB_THEME_SCOPE_STORAGE_KEY
+        NEWTAB_THEME_SCOPE_STORAGE_KEY,
+        NEWTAB_GLASS_STYLE_STORAGE_KEY,
+        NEWTAB_GLASS_THEME_STORAGE_KEY
       ], (result) => {
         pageState.globalThemeMode = normalizeThemeMode(result ? result[THEME_STORAGE_KEY] : 'system');
         pageState.newtabThemeMode = normalizeNewtabThemeMode(result ? result[NEWTAB_THEME_MODE_STORAGE_KEY] : 'global');
         pageState.newtabThemeScope = normalizeNewtabThemeScope(result ? result[NEWTAB_THEME_SCOPE_STORAGE_KEY] : 'global');
+        // Read with the theme so a page held light or dark by its material opens in it, not after.
+        pageState.glassThemeOverride = getGlassThemeOverride(
+          result ? result[NEWTAB_GLASS_STYLE_STORAGE_KEY] : 'none',
+          result ? result[NEWTAB_GLASS_THEME_STORAGE_KEY] : 'follow'
+        );
         applyScopedThemeMode();
       });
       return initialThemeReadyPromise;

@@ -3425,6 +3425,21 @@
   "settings_newtab_glass_style_liquid": {
     "message": "Liquid glass"
   },
+  "settings_newtab_glass_theme_title": {
+    "message": "Material theme"
+  },
+  "settings_newtab_glass_theme_desc": {
+    "message": "Light or Dark holds the New Tab in that theme, with that mode's wallpaper."
+  },
+  "settings_newtab_glass_theme_follow": {
+    "message": "Match New Tab"
+  },
+  "settings_newtab_glass_theme_light": {
+    "message": "Light"
+  },
+  "settings_newtab_glass_theme_dark": {
+    "message": "Dark"
+  },
   "settings_search_source_group_order_title": {
     "message": "Search Panel Order"
   },

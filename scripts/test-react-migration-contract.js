@@ -170,13 +170,15 @@ const assertWithinBudget = (actualBytes, budgetKiB, label) => {
 // total to 817 KiB.
 // Checkbox rows in the shared select menu, and the random mix's category menu in the curated
 // wallpaper list, moved the New Tab route to 422 KiB.
+// The material's own light/dark choice in the Style section moved the New Tab route to 423 KiB
+// and the total to 818 KiB.
 // The total moved to 238 KiB gzip at 1.1.1: it measures 236.9 KiB locally, but CI's Node 22 build
 // compresses the same bundles to 237.4 KiB and failed the 1.1.1 release.
 const bundleBudgets = {
-  newtab: { uncompressed: 422, gzip: 126 },
+  newtab: { uncompressed: 423, gzip: 126 },
   options: { uncompressed: 290, gzip: 85 },
   overlay: { uncompressed: 274, gzip: 83 },
-  total: { uncompressed: 817, gzip: 238 }
+  total: { uncompressed: 818, gzip: 238 }
 };
 
 const retiredNewtabRendererScripts = [

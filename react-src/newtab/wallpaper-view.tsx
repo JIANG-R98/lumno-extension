@@ -39,6 +39,7 @@ export type WallpaperMode = 'light' | 'dark';
 export type ThemeScope = 'global' | 'home';
 export type TopContentMode = 'brand' | 'time' | 'off';
 export type TimeInk = 'auto' | 'light' | 'dark';
+export type GlassTheme = 'follow' | 'light' | 'dark';
 export type EffectSliderKey =
   | 'strength'
   | 'size'
@@ -158,6 +159,7 @@ export interface WallpaperPanelActions extends TooltipActions {
   setCuratedDaily(enabled: boolean): void;
   setEffectParameter(key: EffectSliderKey, value: number, change: SliderChange): void;
   setInputAutoFocus(enabled: boolean): void;
+  selectGlassTheme(theme: GlassTheme): void;
   setGlassStyle(value: string): void;
   setModeSync(enabled: boolean): void;
   setOverlay(value: number, change: SliderChange): void;
@@ -205,6 +207,7 @@ export interface WallpaperPanelState {
     infoTooltip: string;
     options: SelectMenuOption[];
     sectionTitle: string;
+    theme: { infoTooltip: string; tabs: SegmentState<GlassTheme>; title: string; visible: boolean };
     title: string;
     value: string;
   };
@@ -1148,6 +1151,36 @@ function WallpaperPanel({
                     options: glassStyle.options,
                     value: glassStyle.value
                   }}
+                />
+              </div>
+              <div
+                {...ref('glassThemeRow')}
+                {...collapsible(glassStyle.theme.visible)}
+                className="x-nt-appearance-setting-row x-nt-panel-collapsible"
+              >
+                <span className="x-nt-appearance-setting-title-group">
+                  <span {...ref('glassThemeTitle')} className="x-nt-appearance-setting-title">
+                    {glassStyle.theme.title}
+                  </span>
+                  <InfoButton
+                    actions={actions}
+                    icon={infoIcon}
+                    label={glassStyle.theme.title}
+                    name="glassThemeInfoButton"
+                    tooltip={glassStyle.theme.infoTooltip}
+                  />
+                </span>
+                <SegmentedChoice
+                  buttonClassName="x-nt-segmented-tab x-nt-wallpaper-tab"
+                  className="x-nt-wallpaper-tabs x-nt-row-tabs"
+                  indicatorClassName="x-nt-wallpaper-tabs-indicator"
+                  indicatorRef="glassThemeIndicator"
+                  name="glassThemeTabs"
+                  onSelect={actions.selectGlassTheme}
+                  role="group"
+                  segment={glassStyle.theme.tabs}
+                  valueAttribute="data-newtab-glass-theme"
+                  visible={state.open && styleExpanded && glassStyle.theme.visible}
                 />
               </div>
             </div>

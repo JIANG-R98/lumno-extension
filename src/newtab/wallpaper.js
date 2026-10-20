@@ -250,6 +250,12 @@
     const setGlassStyle = typeof options.setGlassStyle === 'function'
       ? options.setGlassStyle
       : function() {};
+    const getGlassTheme = typeof options.getGlassTheme === 'function'
+      ? options.getGlassTheme
+      : function() { return 'follow'; };
+    const setGlassTheme = typeof options.setGlassTheme === 'function'
+      ? options.setGlassTheme
+      : function() {};
     const featureHintVisibilityGate = options.featureHintVisibilityGate &&
       typeof options.featureHintVisibilityGate.then === 'function'
       ? options.featureHintVisibilityGate
@@ -5067,6 +5073,8 @@
     }
 
     function buildWallpaperPanelState() {
+      const glassStyleValue = getGlassStyle();
+      const glassThemeTitle = t('settings_newtab_glass_theme_title', 'Material theme');
       return {
         actions: wallpaperPanelActions,
         open: wallpaperPanelOpen,
@@ -5079,12 +5087,26 @@
           title: t('settings_newtab_glass_style_title', 'Material'),
           infoTooltip: t('settings_newtab_glass_style_desc', 'Give the search bar, cards, buttons, menus, and this panel a glass finish. Works best with a wallpaper.'),
           ariaLabel: t('settings_newtab_glass_style_title', 'Material'),
-          value: getGlassStyle(),
+          value: glassStyleValue,
           options: [
             { value: 'none', label: t('settings_newtab_glass_style_none', 'Default') },
             { value: 'frosted', label: t('settings_newtab_glass_style_frosted', 'Frosted glass'), badge: 'Beta' },
             { value: 'liquid', label: t('settings_newtab_glass_style_liquid', 'Liquid glass'), badge: 'Beta' }
-          ]
+          ],
+          theme: {
+            visible: glassStyleValue !== 'none',
+            title: glassThemeTitle,
+            infoTooltip: t('settings_newtab_glass_theme_desc', 'Light or Dark holds the New Tab in that theme, with that mode\'s wallpaper.'),
+            tabs: {
+              active: SETTINGS.normalizeNewtabGlassTheme(getGlassTheme()),
+              label: glassThemeTitle,
+              options: [
+                { value: 'follow', label: t('settings_newtab_glass_theme_follow', 'Match New Tab') },
+                { value: 'light', label: t('settings_newtab_glass_theme_light', 'Light') },
+                { value: 'dark', label: t('settings_newtab_glass_theme_dark', 'Dark') }
+              ].map((option) => Object.assign(option, { ariaLabel: option.label }))
+            }
+          }
         },
         search: buildWallpaperSearchState(),
         shortcuts: buildWallpaperShortcutsState(),
@@ -5235,6 +5257,10 @@
         },
         setGlassStyle(value) {
           setGlassStyle(value);
+          renderWallpaperPanelState();
+        },
+        selectGlassTheme(value) {
+          setGlassTheme(value);
           renderWallpaperPanelState();
         },
         selectTopContent: (mode) => persistTopContentMode(mode),

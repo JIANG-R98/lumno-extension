@@ -3425,6 +3425,21 @@
   "settings_newtab_glass_style_liquid": {
     "message": "リキッドグラス"
   },
+  "settings_newtab_glass_theme_title": {
+    "message": "ガラスの明暗"
+  },
+  "settings_newtab_glass_theme_desc": {
+    "message": "ライトまたはダークを選ぶと、新しいタブはそのテーマに固定され、壁紙もそのモードのものになります。"
+  },
+  "settings_newtab_glass_theme_follow": {
+    "message": "新しいタブと同じ"
+  },
+  "settings_newtab_glass_theme_light": {
+    "message": "ライト"
+  },
+  "settings_newtab_glass_theme_dark": {
+    "message": "ダーク"
+  },
   "settings_search_source_group_order_title": {
     "message": "検索パネルの並び順"
   },

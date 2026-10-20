@@ -36,6 +36,10 @@
   const NEWTAB_GLASS_STYLE_STORAGE_KEY = '_x_extension_newtab_glass_style_2026_unique_';
   // 'none' keeps the original New Tab surfaces; the others swap in a glass material.
   const NEWTAB_GLASS_STYLES = Object.freeze(['none', 'frosted', 'liquid']);
+  // Light or dark under a glass material: 'follow' takes the New Tab's own theme (where the light
+  // theme still turns plates dark over a dark wallpaper); 'light' and 'dark' hold the page there.
+  const NEWTAB_GLASS_THEME_STORAGE_KEY = '_x_extension_newtab_glass_theme_2026_unique_';
+  const NEWTAB_GLASS_THEMES = Object.freeze(['follow', 'light', 'dark']);
   const NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY = '_x_extension_newtab_shortcut_width_2026_unique_';
   const NEWTAB_SHORTCUT_WIDTH_MIN = 360;
   const NEWTAB_SHORTCUT_WIDTH_MAX = 1440;
@@ -344,6 +348,7 @@
     NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,
     NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY,
     NEWTAB_GLASS_STYLE_STORAGE_KEY,
+    NEWTAB_GLASS_THEME_STORAGE_KEY,
     NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY,
     NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY,
     NEWTAB_SHORTCUT_SIZE_STORAGE_KEY,
@@ -621,6 +626,16 @@
 
   function normalizeNewtabGlassStyle(value) {
     return NEWTAB_GLASS_STYLES.includes(value) ? value : 'none';
+  }
+
+  function normalizeNewtabGlassTheme(value) {
+    return NEWTAB_GLASS_THEMES.includes(value) ? value : 'follow';
+  }
+
+  // The theme a glass material holds the New Tab in, or '' when the page keeps its own theme.
+  function getNewtabGlassThemeOverride(style, theme) {
+    const glassTheme = normalizeNewtabGlassTheme(theme);
+    return normalizeNewtabGlassStyle(style) !== 'none' && glassTheme !== 'follow' ? glassTheme : '';
   }
 
   function normalizeNewtabShortcutWidth(value, options) {
@@ -1520,6 +1535,8 @@
     NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY,
     NEWTAB_GLASS_STYLE_STORAGE_KEY,
     NEWTAB_GLASS_STYLES,
+    NEWTAB_GLASS_THEME_STORAGE_KEY,
+    NEWTAB_GLASS_THEMES,
     NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY,
     NEWTAB_SHORTCUT_WIDTH_MIN,
     NEWTAB_SHORTCUT_WIDTH_MAX,
@@ -1624,6 +1641,8 @@
     normalizeNewtabFeedbackButtonVisible,
     normalizeNewtabAppearanceButtonVisible,
     normalizeNewtabGlassStyle,
+    normalizeNewtabGlassTheme,
+    getNewtabGlassThemeOverride,
     normalizeNewtabShortcutWidth,
     normalizeNewtabShortcutColumns,
     normalizeNewtabShortcutSize,
