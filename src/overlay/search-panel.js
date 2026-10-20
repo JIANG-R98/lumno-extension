@@ -4544,11 +4544,13 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
         clearAutocomplete();
         return;
       }
-      const displayText = candidate.completion;
+      // The typed part stays as typed: "4A" completes to "4Anet.com", not
+      // the candidate's own "4anet.com".
+      const displayText = rawQuery + candidate.completion.slice(rawQuery.length);
       searchInput.value = displayText;
       searchInput.setSelectionRange(rawQuery.length, displayText.length);
       autocompleteState = {
-        completion: candidate.completion,
+        completion: displayText,
         displayText: displayText,
         url: candidate.url || '',
         rawQuery: rawQuery,

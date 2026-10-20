@@ -249,11 +249,13 @@
         clearAutocomplete();
         return;
       }
-      const displayText = candidate.completion;
+      // The typed part stays as typed: "4A" completes to "4Anet.com", not
+      // the candidate's own "4anet.com".
+      const displayText = rawQuery + candidate.completion.slice(rawQuery.length);
       pageState.inputParts.input.value = displayText;
       pageState.inputParts.input.setSelectionRange(rawQuery.length, displayText.length);
       pageState.autocompleteState = {
-        completion: candidate.completion,
+        completion: displayText,
         displayText: displayText,
         url: candidate.url || '',
         rawQuery: rawQuery,
