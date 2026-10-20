@@ -20,6 +20,7 @@
 
 <p align="center">
   <a href="https://lumno.kubai.design/">Website</a> ·
+  <a href="https://lumno.kubai.design/en/help/">Help Center</a> ·
   <a href="#installation">Install</a> ·
   <a href="#features">Features</a> ·
   <a href="#faq">FAQ</a> ·
@@ -56,7 +57,7 @@ Open a floating command bar on top of the current page to visit URLs, search key
 
 ### Search tabs, bookmarks and history in one place
 
-Results combine bookmarks, browsing history, top sites, browser suggestions and open tabs. Filter by source, prioritize the first result, learn from what you pick, match Chinese with pinyin, and hide sites with blacklist rules. Choose whether results open in the current tab, to its left or right, or at the end of the tab strip.
+Results combine bookmarks, browsing history, top sites, browser suggestions and open tabs. Filter by source, prioritize the first result, learn from what you pick, and hide sites with blacklist rules. Chinese titles match by full pinyin, initials or a mix of both (with optional fuzzy pinyin), and a query typed on the wrong keyboard layout (Russian, Ukrainian, Hebrew, Arabic or Korean) still finds what you meant. Choose whether results open in the current tab, to its left or right, or at the end of the tab strip.
 
 ### Site search and AI search shortcuts
 
@@ -76,24 +77,34 @@ Select text on any page to answer, translate, explain, summarize, research or ca
 
 ### Customizable new tab page
 
-A clean new tab replacement with a search box, recent and most-visited site shortcuts, bookmark grids with cascading folder menus, bookmark paging and custom folder colors. Drag items between shortcuts and bookmarks, pin or hide recent sites, track the latest episode or chapter of a show or novel with progress cards, show a daily quote (Chinese interface), adjust content width, or type `/zen` for a distraction-free Zen mode.
+A clean new tab replacement with a search box, up to 200 shortcuts organized into named groups, recent and most-visited site cards, bookmark grids with cascading folder menus, bookmark paging and custom folder colors. Drag items between shortcuts and bookmarks, pin or hide recent sites, track the latest episode or chapter of a show or novel with progress cards, adjust content width, or type `/zen` for a distraction-free Zen mode. Add any page to your shortcuts from its right-click menu or the toolbar popup; icons without a background of their own sit on a plate tinted from their main color.
+
+Show a clock in one of six fonts, with its own size, opacity, color and an optional 12-hour format, or a daily quote from your own TXT or Markdown collection in the font you choose.
 
 ### Wallpapers and themes
 
-System, light and dark themes, applied globally or only to the new tab page. Pick built-in wallpapers, the Bing daily wallpaper, curated photos and open-access artwork, or your own image file or image URL. Fine-tune overlay opacity, grain, halftone, dither and ASCII filters, search-box width and the Lumno wordmark.
+System, light and dark themes, applied globally or only to the new tab page. Pick built-in wallpapers, the Bing daily wallpaper, curated photos and open-access artwork (limit the random mix to the categories you like), or your own image file or image URL, and save Bing or curated wallpapers you like to your local library. Fine-tune overlay opacity, grain, halftone, dither and ASCII filters, search-box width and the Lumno wordmark.
+
+Give the search bar, cards, menus and dialogs an **Acrylic** or **Liquid glass** material that refracts the wallpaper behind it, and keep the glass in light or dark with Material theme.
 
 ### Picture-in-Picture: Web Clip and auto video PiP
 
 - **Web Clip PiP**: select part of any supported HTTPS page and float it in a Document Picture-in-Picture window for reference or side-by-side comparison.
 - **Auto video PiP**: when you switch away from a playing video, Lumno tries to enter Picture-in-Picture automatically on YouTube, Bilibili, Netflix, Twitch, Vimeo, Prime Video, Disney+, TikTok, Douyin, Youku, Tencent Video and more.
 
+### Toolbar popup
+
+Click the Lumno icon in the toolbar to add the current page to your New Tab shortcuts, copy its link, open the command bar, clip the page or start picture-in-picture. Quick settings switch the theme and command bar options, and the footer shows the WebDAV sync status.
+
 ### Sync with Chrome or your own WebDAV server
 
-Settings sync through Chrome's built-in sync by default. Optional [WebDAV sync](#webdav-sync) (Beta) also carries custom shortcut icons and uploaded wallpapers, and works with Nutstore (Jianguoyun) and self-hosted servers.
+Settings sync through Chrome's built-in sync by default. Optional [WebDAV sync](#webdav-sync) (Beta) also carries custom shortcut icons and uploaded wallpapers, and works with Nutstore (Jianguoyun) and self-hosted servers. When a server throttles requests, Lumno backs off and retries on its own.
 
 ### Browser helpers and languages
 
 Restore pinned tabs after a restart, fall back from restricted pages to the new tab page, copy the current page URL with one shortcut, and open extension shortcut or details pages. The interface is available in English, Simplified Chinese, Traditional Chinese and Japanese, or follows your browser language.
+
+Step-by-step guides for every feature, with screenshots, are in the [Lumno Help Center](https://lumno.kubai.design/en/help/).
 
 ## Screenshots
 
@@ -162,6 +173,9 @@ Lumno is built for Chromium browsers and also ships a Firefox build. Browsers bu
 Lumno is local-first. Bookmarks, history and tabs are read on your device to power search and are never sent to Lumno or developer servers. There is no Lumno account, analytics or ad tracking. Two features contact third parties by default: search suggestions send what you type to your default search engine's suggestion service (never URLs, host names, file paths or the prefilled page address), and site icons the browser has not cached come from Google's icon service (Gstatic), which learns only the site's origin, never the page. Daily quotes, online wallpapers and WebDAV only connect after you turn them on. Read the full [privacy policy](https://lumno.kubai.design/privacy/).
 
 ## FAQ
+
+**Where can I find guides for each feature?**
+The [Lumno Help Center](https://lumno.kubai.design/en/help/) covers setup, the command bar, the new tab, sync, compatibility and privacy, in ten languages.
 
 **Is Lumno free?**
 Yes. Lumno is free and open source under the GPL-3.0 license. If you would like to support development, see [Sponsoring](SPONSORING.md).
