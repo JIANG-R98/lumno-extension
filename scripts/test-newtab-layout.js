@@ -683,6 +683,11 @@ function testTopbarBookmarkTitlesStayReadableUntilWallpaperToneIsReady() {
     'only the default adaptive topbar material should let a meaningful mask define its material polarity'
   );
   assert.match(
+    newtabSource,
+    /surface:\s*'topbar',[\s\S]*?disabled:[\s\S]*?getEffectiveBookmarkTopbarSurfaceMode\(\) === 'adaptive' &&\s*!document\.body\.hasAttribute\('data-glass-style'\)/,
+    'without a glass style the matching topbar should keep the theme tone like the search box and cards'
+  );
+  assert.match(
     newtabHtml,
     /body\[data-wallpaper-active="true"\] \.x-nt-bookmarks-topbar\[data-surface-mode="adaptive"\],[\s\S]*?--x-nt-bookmarks-topbar-ink:\s*var\(--x-nt-bookmark-title,\s*#111827\);/,
     'topbar bookmark titles should use the theme foreground before wallpaper sampling finishes'

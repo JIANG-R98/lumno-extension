@@ -2067,8 +2067,12 @@
         minHeight: 64,
         surface: 'topbar',
         preferOverlayPolarity: getEffectiveBookmarkTopbarSurfaceMode() === 'adaptive',
+        // Without a glass style the search box and cards keep the theme's light or dark, so the
+        // "match style" bar keeps it too instead of flipping over the wallpaper at the top.
         disabled: !isBookmarkTopbarMode() ||
-          getEffectiveBookmarkTopbarSurfaceMode() === 'custom'
+          getEffectiveBookmarkTopbarSurfaceMode() === 'custom' ||
+          (getEffectiveBookmarkTopbarSurfaceMode() === 'adaptive' &&
+            !document.body.hasAttribute('data-glass-style'))
       },
       {
         element: pageState.topContentContainer,
