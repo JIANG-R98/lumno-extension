@@ -4239,7 +4239,9 @@ async function testCuratedTilesComeFromTheThumbnailCache() {
 
   const first = await openCuratedTab(online);
   const shown = tiles(first).map((tile) => remote.wallpaperFromId(tile.id));
-  assert.ok(shown.every((photo) => photo.thumbnailUrl.endsWith('/320/180')), 'Tiles ask Picsum for 320×180');
+  // The random mix also draws Cleveland Museum of Art prints on some days, so check each source's own size.
+  assert.ok(shown.every((photo) => (photo.id.startsWith('picsum-') ? photo.thumbnailUrl.endsWith('/320/180')
+    : photo.thumbnailUrl.endsWith('_web.jpg'))), 'Tiles ask for small thumbnails, such as Picsum at 320×180');
   assert.ok(tiles(first).every((tile) => tile.thumbnailUrl.startsWith('data:image/gif')),
     'While the cache is read, tiles start no Picsum request of their own');
   await settleWallpaperCaching();
