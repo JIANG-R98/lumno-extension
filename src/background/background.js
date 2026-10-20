@@ -2485,11 +2485,17 @@ function triggerShowSearchForTab(tab, source) {
   });
 }
 
+// A frozen tab (tab freezing, Memory Saver) never runs an injected script, so
+// asking it would wait forever and web clip would never open. A tab playing
+// picture-in-picture is never frozen or discarded, so those are skipped, and
+// tabs that still do not answer in time count as having none.
+const VIDEO_PIP_DETECT_TIMEOUT_MS = 400;
+
 function detectAnyActiveVideoPiP(callback) {
   chrome.tabs.query({}, (tabs) => {
     const tabList = Array.isArray(tabs) ? tabs : [];
     const candidates = tabList.filter((tab) => {
-      if (!tab || typeof tab.id !== 'number') {
+      if (!tab || typeof tab.id !== 'number' || tab.discarded === true || tab.frozen === true) {
         return false;
       }
       const tabUrl = getResolvedTabUrl(tab);
@@ -2505,16 +2511,19 @@ function detectAnyActiveVideoPiP(callback) {
     let pending = candidates.length;
     let finished = false;
     let checked = 0;
+    let timeoutId = null;
     const done = (active, tabId) => {
       if (finished) {
         return;
       }
       finished = true;
+      clearTimeout(timeoutId);
       callback(Boolean(active), {
         checked: checked,
         foundTabId: typeof tabId === 'number' ? tabId : null
       });
     };
+    timeoutId = setTimeout(() => done(false, null), VIDEO_PIP_DETECT_TIMEOUT_MS);
     candidates.forEach((tab) => {
       chrome.scripting.executeScript({
         target: { tabId: tab.id },
@@ -2960,12 +2969,6 @@ if (chrome && chrome.runtime && chrome.runtime.onSuspend) {
 }
 cleanupRemovedAiStorageKeys();
 cleanupLocalOnlyBookmarkTopbarSyncStorage();
-
-if (chrome.action && chrome.action.onClicked) {
-  chrome.action.onClicked.addListener((tab) => {
-    openDocumentPipPickerOnTab(tab, 'action');
-  });
-}
 
 if (chrome && chrome.tabs && chrome.tabs.onActivated) {
   chrome.tabs.onActivated.addListener((activeInfo) => {
@@ -4396,6 +4399,72 @@ const FAVICON_MESSAGE_HANDLERS = Object.freeze({
   }
 });
 
+// The tab a toolbar popup action works on. The popup names the tab it showed;
+// a tab that has gone since resolves to null.
+function getPopupTargetTab(tabId, callback) {
+  if (typeof tabId !== 'number' || !chrome.tabs || typeof chrome.tabs.get !== 'function') {
+    callback(null);
+    return;
+  }
+  chrome.tabs.get(tabId, (tab) => {
+    callback(chrome.runtime.lastError || !tab ? null : tab);
+  });
+}
+
+// The toolbar popup's page actions. The popup closes once the clip or the
+// search starts, so those answer first and then act on the tab. A finished
+// copy or add is announced by Lumno's top toast in the page.
+const POPUP_MESSAGE_HANDLERS = Object.freeze({
+  popupOpenDocumentPipPicker(request, sender, sendResponse) {
+    getPopupTargetTab(request.tabId, (tab) => {
+      sendResponse({ ok: Boolean(tab) });
+      if (tab) {
+        openDocumentPipPickerOnTab(tab, 'popup');
+      }
+    });
+    return true;
+  },
+  popupShowSearch(request, sender, sendResponse) {
+    getPopupTargetTab(request.tabId, (tab) => {
+      sendResponse({ ok: Boolean(tab) });
+      if (!tab) {
+        return;
+      }
+      // A New Tab already has a search box; the shortcut focuses it as well.
+      const tabUrl = getResolvedTabUrl(tab);
+      if (isLumnoNewtabUrl(tabUrl) || isBrowserNewtabUrl(tabUrl)) {
+        requestFocusVisibleNewtabInput('popup', tab.id);
+        return;
+      }
+      triggerShowSearchForTab(tab, 'popup');
+    });
+    return true;
+  },
+  popupShowPageToast(request, sender, sendResponse) {
+    if (!pageShortcutMenuController) {
+      sendResponse({ ok: false });
+      return false;
+    }
+    const message = typeof request.message === 'string' ? request.message.slice(0, 200) : '';
+    pageShortcutMenuController.showToast(request.tabId, { message }).then((shown) => {
+      sendResponse({ ok: shown === true });
+    });
+    return true;
+  },
+  popupAddPageShortcut(request, sender, sendResponse) {
+    if (!pageShortcutMenuController) {
+      sendResponse({ status: 'failed', message: '', error: true });
+      return false;
+    }
+    getPopupTargetTab(request.tabId, (tab) => {
+      pageShortcutMenuController.addTabPage(tab).then(sendResponse, () => {
+        sendResponse({ status: 'failed', message: '', error: true });
+      });
+    });
+    return true;
+  }
+});
+
 // One action -> handler registry for runtime messages. Each feature area
 // above owns its handlers; adding an action is one entry in its area's map,
 // and the router rejects an action registered twice.
@@ -4409,6 +4478,7 @@ const backgroundMessageRouter = BACKGROUND_MESSAGE_ROUTER.createRouter(
   SELECTION_QUICK_ACTION_MESSAGE_HANDLERS,
   LOCALE_AND_PERMISSION_MESSAGE_HANDLERS,
   EXTENSION_PAGE_MESSAGE_HANDLERS,
+  POPUP_MESSAGE_HANDLERS,
   FAVICON_MESSAGE_HANDLERS
 );
 

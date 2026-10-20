@@ -1,5 +1,6 @@
 {
    "action": {
+      "default_popup": "src/popup/popup.html",
       "default_title": "__MSG_ext_name__"
    },
    "background": {

@@ -99,6 +99,13 @@
     const CONTENTION_CODES = ['remote-locked', 'remote-changed'];
     const contentionDelays = opts.contentionDelays || [3000, 10000, 30000];
     let contention = 0;
+    // A server that rate limits this account (Nutstore's 503) or is briefly
+    // unavailable is left alone for a while: polling it again every round only
+    // prolongs the block. Background rounds wait until the saved time; the
+    // user can still sync by hand. The waits grow while refusals continue.
+    const THROTTLE_CODES = ['http-429', 'http-503'];
+    const throttleDelays = opts.throttleDelays || [5, 15, 30, 60].map((minutes) => minutes * 60 * 1000);
+    const clock = opts.now || Date.now;
     const fail = (code) => { throw clientApi.error(code); };
     const logger = opts.logger || root.console;
     function report(context, cause) {
@@ -132,7 +139,8 @@
     }
     async function setStatus(update) {
       const old = await storage(localPrefsArea, 'get', [statusKey]);
-      const status = { ...(old[statusKey] || {}), ...update };
+      // A planned retry time belongs to the state that announced it.
+      const status = { ...(old[statusKey] || {}), ...('state' in update ? { retryAt: null } : {}), ...update };
       await storage(localPrefsArea, 'set', { [statusKey]: status });
       return status;
     }
@@ -605,8 +613,10 @@
         await recoverPendingApply();
         const result = await syncInternal(decision);
         contention = 0;
+        if (await privateStore.get('throttle')) await privateStore.put('throttle', null);
         return result;
       } catch (cause) {
+        if (!decision && THROTTLE_CODES.includes(cause.code) && !stopped) return throttled(cause);
         // A first-join choice is retried by the user, who is still on the page.
         if (!decision && CONTENTION_CODES.includes(cause.code) && contention < contentionDelays.length && !stopped) {
           const delay = contentionDelays[contention] * (0.75 + Math.random() * 0.5);
@@ -622,6 +632,23 @@
         // Callers without a page to report to know the card already shows it.
         throw Object.assign(clientApi.error(cause.code || 'sync-failed'), { diagnostic, recorded: true });
       }
+    }
+    async function throttled(cause) {
+      contention = 0;
+      const previous = await privateStore.get('throttle');
+      const attempt = previous && Number.isInteger(previous.attempt) ? Math.min(previous.attempt + 1, throttleDelays.length - 1) : 0;
+      const delay = Math.max(throttleDelays[attempt] * (0.9 + Math.random() * 0.2), Number(cause.retryAfterMs) || 0);
+      const retryAt = clock() + delay;
+      await privateStore.put('throttle', { until: retryAt, attempt });
+      await setStatus({ state: 'pending', error: cause.code, diagnostic: null, retryAt });
+      // The alarm also resumes after the wait if this worker is unloaded first.
+      queueSync(delay);
+      return { pending: true, retryAt };
+    }
+    // Rounds nobody asked for skip the server while it is refusing requests.
+    async function throttledUntil() {
+      const saved = await privateStore.get('throttle');
+      return saved && Number(saved.until) > clock() ? saved.until : null;
     }
     const sameAccount = (left, right) => ['endpoint', 'directory', 'username'].every((key) => left[key] === right[key]);
     async function connection(input) {
@@ -702,6 +729,7 @@
     async function pause() {
       const { config } = await session();
       if (config) await saveConfig({ ...config, enabled: false });
+      await privateStore.put('throttle', null);
       await setStatus({ state: 'paused', enabled: false, error: null, diagnostic: null });
       if (timer) { clearTimeout(timer); timer = null; }
       if (chromeApi.alarms && typeof chromeApi.alarms.clear === 'function') await chromeApi.alarms.clear(alarmName);
@@ -786,6 +814,7 @@
         }
         // A partially applied state must not reach browser sync either.
         if (recovered) await mirrorReporting();
+        if (await throttledUntil()) return;
         await guardedSync();
       }).catch((cause) => { if (!cause || !cause.recorded) report('WebDAV sync failed.', cause); });
     }
@@ -886,7 +915,7 @@
     const workers = new Map();
     const probeCache = opts.probeCache || createProbeCache();
     const recordKeys = ['session', 'pendingApply', 'recoveryBlocked', 'conflict', 'replacementBackup', 'replacementBackupMeta', 'migrationBackup', 'migrationBackupMeta',
-      'staleLock', 'snapshotRing'];
+      'staleLock', 'snapshotRing', 'throttle'];
     let ids = [];
     let registryChain = Promise.resolve();
     let hintChain = Promise.resolve();

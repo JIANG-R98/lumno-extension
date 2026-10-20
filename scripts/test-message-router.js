@@ -137,6 +137,7 @@ const EXPECTED_BACKGROUND_ACTIONS = [
   'openOptionsPage', 'openOnboardingPage', 'openExtensionShortcutsPage', 'openSiteSearchOptionsPage',
   'openReleasePage', 'openBookmarkManager', 'openBookmarkFolderInNewTabGroup', 'createTab', 'openNewTab',
   'openExtensionDetailsPage', 'probeProgressSeries',
+  'popupOpenDocumentPipPicker', 'popupShowSearch', 'popupAddPageShortcut', 'popupShowPageToast',
   'resolveFaviconCandidates', 'getFaviconData', 'getShortcutFaviconData', 'resolveSiteThemeColor'
 ];
 
@@ -185,7 +186,8 @@ async function testBackgroundRegistry() {
   // Content scripts and the in-page overlay run inside web pages.
   const webPageSender = { tab: senderTab, url: senderTab.url };
   for (const action of ['webdav', 'openBookmarkManager', 'getShortcutFaviconData', 'resolveFaviconCandidates',
-    'openExtensionDetailsPage', 'swapNewtabForFocus', 'trackSearchTab', 'getFileSchemeAccessStatus']) {
+    'openExtensionDetailsPage', 'swapNewtabForFocus', 'trackSearchTab', 'getFileSchemeAccessStatus',
+    'popupOpenDocumentPipPicker', 'popupShowSearch', 'popupAddPageShortcut', 'popupShowPageToast']) {
     const rejected = await harness.sendMessage({ action, op: 'status' }, webPageSender);
     assert.deepStrictEqual(JSON.parse(JSON.stringify(rejected)), { ok: false, reason: 'sender-not-allowed' },
       `${action} should be refused when a web page context sends it`);
@@ -213,6 +215,15 @@ async function testBackgroundRegistry() {
   await wait(30);
   assert.notDeepStrictEqual(JSON.parse(JSON.stringify((await fromExtensionPage) || {})),
     { ok: false, reason: 'sender-not-allowed' }, 'extension pages may send every action');
+
+  // The toolbar popup names the tab it showed; a tab closed since then is a no-op.
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(await harness.sendMessage({ action: 'popupShowSearch', tabId: 404 }))),
+    { ok: false });
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(await harness.sendMessage({ action: 'popupShowSearch', tabId: 5 }))),
+    { ok: true });
+  assert.deepStrictEqual(
+    JSON.parse(JSON.stringify(await harness.sendMessage({ action: 'popupOpenDocumentPipPicker', tabId: 404 }))),
+    { ok: false });
 }
 
 (async () => {

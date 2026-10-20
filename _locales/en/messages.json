@@ -2741,6 +2741,12 @@
   "webdav_error_rate": {
     "message": "The server rate limit was reached. Try again later."
   },
+  "webdav_error_unavailable": {
+    "message": "The server is temporarily unavailable (HTTP 503). Nutstore also answers this way after too many requests in a short time, so try again in a few minutes. Data on this device is kept."
+  },
+  "webdav_warning_throttled": {
+    "message": "The server is refusing requests for now (HTTP {status}), usually because too many were sent in a short time; Nutstore and similar services limit them this way. Lumno will try again automatically after {time}. Data on this device is kept."
+  },
   "webdav_error_capacity": {
     "message": "WebDAV storage is full. Free up space and try again."
   },
@@ -3508,5 +3514,89 @@
   },
   "newtab_quote_font_size_reset": {
     "message": "Reset quote font size"
+  },
+  "popup_actions_label": {
+    "message": "Page actions"
+  },
+  "popup_action_shortcut": {
+    "message": "Add shortcut"
+  },
+  "popup_action_copy": {
+    "message": "Copy link"
+  },
+  "popup_copy_failed": {
+    "message": "Couldn’t copy the link. Try again."
+  },
+  "popup_theme_label": {
+    "message": "Theme"
+  },
+  "popup_link_settings": {
+    "message": "Settings"
+  },
+  "popup_link_shortcuts": {
+    "message": "Set shortcuts"
+  },
+  "popup_link_feedback": {
+    "message": "Feedback"
+  },
+  "popup_sync_error": {
+    "message": "WebDAV sync failed"
+  },
+  "popup_sync_attention": {
+    "message": "WebDAV sync needs you"
+  },
+  "popup_sync_busy": {
+    "message": "WebDAV syncing"
+  },
+  "popup_release_notes": {
+    "message": "What’s new"
+  },
+  "popup_section_command_bar": {
+    "message": "Command bar"
+  },
+  "popup_overlay_page_theme": {
+    "message": "Match page colors"
+  },
+  "popup_overlay_open_tabs": {
+    "message": "Show open tabs by default"
+  },
+  "popup_action_shortcut_tooltip": {
+    "message": "Add to your New Tab shortcuts"
+  },
+  "popup_action_clip_tooltip": {
+    "message": "Clip part of the page into a floating window"
+  },
+  "popup_settings_label": {
+    "message": "Quick settings"
+  },
+  "popup_sync_ready": {
+    "message": "WebDAV synced"
+  },
+  "popup_open_command_bar": {
+    "message": "Open command bar"
+  },
+  "popup_action_pip": {
+    "message": "Picture-in-picture"
+  },
+  "popup_action_pip_exit": {
+    "message": "Exit picture-in-picture"
+  },
+  "popup_action_pip_tooltip": {
+    "message": "Float this page’s video in a small window"
+  },
+  "popup_action_pip_no_video": {
+    "message": "No video on this page"
+  },
+  "popup_action_pip_menu": {
+    "message": "Auto picture-in-picture"
+  },
+  "popup_pip_failed": {
+    "message": "This video can’t play picture-in-picture."
+  },
+  "popup_auto_pip_hint": {
+    "message": "Videos float when you switch tabs"
+  },
+  "popup_action_unavailable": {
+    "message": "Not available on this page"
   }
 }

@@ -190,14 +190,14 @@
       return { message: translate(messages, 'page_shortcut_added', 'Added to Lumno New Tab shortcuts') };
     }
 
-    // A page that does not take scripts (a store page, a PDF viewer) still
-    // gets the shortcut; it just shows no confirmation.
+    // Shows Lumno's top toast in a page. A page that does not take scripts (a
+    // store page, a PDF viewer) shows none; resolves to whether it showed.
     async function showToast(tabId, toast) {
-      if (!chromeApi.scripting || typeof tabId !== 'number') return;
+      if (!chromeApi.scripting || typeof tabId !== 'number' || !toast || !toast.message) return false;
       const themeMode = themeStorageKey ? await readProviderValue(themeStorageKey) : '';
       try {
         await chromeApi.scripting.executeScript({ target: { tabId }, files: TOAST_FILES.slice() });
-        await chromeApi.scripting.executeScript({
+        const results = await chromeApi.scripting.executeScript({
           target: { tabId },
           func: (message, toastOptions) => {
             const toastApi = window.__lumnoPageShortcutToast2026;
@@ -205,9 +205,25 @@
           },
           args: [toast.message, { error: toast.error === true, duration: toast.duration, themeMode: themeMode || 'system' }]
         });
+        return Boolean(Array.isArray(results) && results[0] && results[0].result === true);
       } catch (error) {
-        // Nothing to report: the shortcut is saved either way.
+        return false;
       }
+    }
+
+    // One add at a time, so two quick adds both land. Resolves to the result
+    // and the message that describes it.
+    function enqueueAdd(page) {
+      const job = chain.catch(() => {}).then(async () => {
+        const messages = await getMessages().catch(() => ({}));
+        const result = await addPage(page, messages).catch((error) => {
+          console.warn('[Lumno] Could not add the page to shortcuts.', error);
+          return { status: 'failed' };
+        });
+        return { result, toast: await describeResult(result, messages) };
+      });
+      chain = job;
+      return job;
     }
 
     function handleClick(info, tab) {
@@ -217,18 +233,23 @@
         title: String((tab && tab.title) || '')
       };
       const tabId = tab && typeof tab.id === 'number' ? tab.id : null;
-      // One click at a time, so two quick adds both land.
-      const job = chain.catch(() => {}).then(async () => {
-        const messages = await getMessages().catch(() => ({}));
-        const result = await addPage(page, messages).catch((error) => {
-          console.warn('[Lumno] Could not add the page to shortcuts.', error);
-          return { status: 'failed' };
-        });
-        await showToast(tabId, await describeResult(result, messages));
+      return enqueueAdd(page).then(async ({ result, toast }) => {
+        await showToast(tabId, toast);
         return result;
       });
-      chain = job;
-      return job;
+    }
+
+    // From the toolbar popup: a page that was added (or already there) says so
+    // in the page's top toast; the popup shows failures itself.
+    function addTabPage(tab) {
+      const url = String((tab && tab.url) || '');
+      if (!/^https?:\/\//i.test(url)) return Promise.resolve({ status: 'invalid', message: '', error: true, toastShown: false });
+      return enqueueAdd({ url, title: String(tab.title || '') }).then(async ({ result, toast }) => ({
+        status: result.status,
+        message: toast.message,
+        error: toast.error === true,
+        toastShown: toast.error === true ? false : await showToast(tab.id, toast)
+      }));
     }
 
     function start() {
@@ -245,7 +266,7 @@
       syncMenu().catch(() => {});
     }
 
-    return { start, syncMenu, handleClick };
+    return { start, syncMenu, handleClick, addTabPage, showToast };
   }
 
   return Object.freeze({ MENU_ITEM_ID, DOCUMENT_URL_PATTERNS, createController });

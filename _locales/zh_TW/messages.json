@@ -2741,6 +2741,12 @@
   "webdav_error_rate": {
     "message": "已達伺服器請求次數上限，請稍後重試。"
   },
+  "webdav_error_unavailable": {
+    "message": "伺服器暫時無法使用（HTTP 503）。堅果雲在短時間內請求過多時也會這樣回應，請過幾分鐘再試。本機資料已保留。"
+  },
+  "webdav_warning_throttled": {
+    "message": "伺服器暫時拒絕了請求（HTTP {status}），通常是短時間內請求過多，堅果雲等雲端硬碟會這樣限流。Lumno 會在 {time} 後自動重試，本機資料已保留。"
+  },
   "webdav_error_capacity": {
     "message": "WebDAV 空間不足，請釋放空間後重試。"
   },
@@ -3508,5 +3514,89 @@
   },
   "newtab_quote_font_size_reset": {
     "message": "恢復預設字級"
+  },
+  "popup_actions_label": {
+    "message": "頁面操作"
+  },
+  "popup_action_shortcut": {
+    "message": "新增捷徑"
+  },
+  "popup_action_copy": {
+    "message": "複製連結"
+  },
+  "popup_copy_failed": {
+    "message": "無法複製連結，請重試。"
+  },
+  "popup_theme_label": {
+    "message": "主題"
+  },
+  "popup_link_settings": {
+    "message": "設定"
+  },
+  "popup_link_shortcuts": {
+    "message": "設定快速鍵"
+  },
+  "popup_link_feedback": {
+    "message": "回饋"
+  },
+  "popup_sync_error": {
+    "message": "WebDAV 同步失敗"
+  },
+  "popup_sync_attention": {
+    "message": "WebDAV 同步待處理"
+  },
+  "popup_sync_busy": {
+    "message": "WebDAV 正在同步"
+  },
+  "popup_release_notes": {
+    "message": "更新日誌"
+  },
+  "popup_section_command_bar": {
+    "message": "命令列"
+  },
+  "popup_overlay_page_theme": {
+    "message": "跟隨網頁配色"
+  },
+  "popup_overlay_open_tabs": {
+    "message": "預設顯示已開啟的分頁"
+  },
+  "popup_action_shortcut_tooltip": {
+    "message": "新增到新分頁的捷徑"
+  },
+  "popup_action_clip_tooltip": {
+    "message": "剪下網頁局部，放進置頂小視窗"
+  },
+  "popup_settings_label": {
+    "message": "快速設定"
+  },
+  "popup_sync_ready": {
+    "message": "WebDAV 已同步"
+  },
+  "popup_open_command_bar": {
+    "message": "開啟命令列"
+  },
+  "popup_action_pip": {
+    "message": "子母畫面"
+  },
+  "popup_action_pip_exit": {
+    "message": "結束子母畫面"
+  },
+  "popup_action_pip_tooltip": {
+    "message": "讓網頁影片懸浮播放"
+  },
+  "popup_action_pip_no_video": {
+    "message": "這個網頁沒有影片"
+  },
+  "popup_action_pip_menu": {
+    "message": "自動子母畫面"
+  },
+  "popup_pip_failed": {
+    "message": "這部影片無法子母畫面播放。"
+  },
+  "popup_auto_pip_hint": {
+    "message": "切到其他分頁時，影片自動懸浮"
+  },
+  "popup_action_unavailable": {
+    "message": "這個網頁不支援"
   }
 }

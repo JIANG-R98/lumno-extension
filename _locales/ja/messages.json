@@ -2741,6 +2741,12 @@
   "webdav_error_rate": {
     "message": "サーバーのリクエスト上限に達しました。しばらくしてから再試行してください。"
   },
+  "webdav_error_unavailable": {
+    "message": "サーバーが一時的に利用できません（HTTP 503）。Nutstore（坚果云）は短時間にリクエストが多すぎる場合にもこう応答します。数分後に再試行してください。この端末のデータは保持されています。"
+  },
+  "webdav_warning_throttled": {
+    "message": "サーバーが一時的にリクエストを拒否しています（HTTP {status}）。短時間にリクエストが多すぎると、Nutstore（坚果云）などはこのように制限します。Lumno は {time} 以降に自動で再試行します。この端末のデータは保持されています。"
+  },
   "webdav_error_capacity": {
     "message": "WebDAV の空き容量が不足しています。空き容量を確保して再試行してください。"
   },
@@ -3508,5 +3514,89 @@
   },
   "newtab_quote_font_size_reset": {
     "message": "名言の文字サイズを元に戻す"
+  },
+  "popup_actions_label": {
+    "message": "ページの操作"
+  },
+  "popup_action_shortcut": {
+    "message": "ショートカット\u200b追加"
+  },
+  "popup_action_copy": {
+    "message": "リンクをコピー"
+  },
+  "popup_copy_failed": {
+    "message": "リンクをコピーできませんでした。もう一度お試しください。"
+  },
+  "popup_theme_label": {
+    "message": "テーマ"
+  },
+  "popup_link_settings": {
+    "message": "設定"
+  },
+  "popup_link_shortcuts": {
+    "message": "キー設定"
+  },
+  "popup_link_feedback": {
+    "message": "フィードバック"
+  },
+  "popup_sync_error": {
+    "message": "WebDAV同期エラー"
+  },
+  "popup_sync_attention": {
+    "message": "WebDAV同期の確認が必要"
+  },
+  "popup_sync_busy": {
+    "message": "WebDAV同期中"
+  },
+  "popup_release_notes": {
+    "message": "更新履歴"
+  },
+  "popup_section_command_bar": {
+    "message": "検索バー"
+  },
+  "popup_overlay_page_theme": {
+    "message": "ページの色に合わせる"
+  },
+  "popup_overlay_open_tabs": {
+    "message": "開いているタブを既定で表示"
+  },
+  "popup_action_shortcut_tooltip": {
+    "message": "新しいタブのショートカットに追加"
+  },
+  "popup_action_clip_tooltip": {
+    "message": "ページの一部を手前の小窓で表示"
+  },
+  "popup_settings_label": {
+    "message": "クイック設定"
+  },
+  "popup_sync_ready": {
+    "message": "WebDAV同期済み"
+  },
+  "popup_open_command_bar": {
+    "message": "検索バーを開く"
+  },
+  "popup_action_pip": {
+    "message": "小窓で再生"
+  },
+  "popup_action_pip_exit": {
+    "message": "小窓を閉じる"
+  },
+  "popup_action_pip_tooltip": {
+    "message": "このページの動画を小窓で再生"
+  },
+  "popup_action_pip_no_video": {
+    "message": "このページに動画はありません"
+  },
+  "popup_action_pip_menu": {
+    "message": "自動ピクチャーインピクチャー"
+  },
+  "popup_pip_failed": {
+    "message": "この動画は小窓で再生できません。"
+  },
+  "popup_auto_pip_hint": {
+    "message": "タブを切り替えると動画を小窓で表示"
+  },
+  "popup_action_unavailable": {
+    "message": "このページでは使えません"
   }
 }

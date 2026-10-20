@@ -22,6 +22,8 @@ function createServer() {
     unsafeCollections: false, brokenDelete: false, etagMode: 'strong', beforeRequest: null, afterPut: null,
     rejectStatePut: 0, ignoreMoveOverwrite: false, moveConflictStatus: 412, moveUnsupported: false,
     loseMoveSource: false, refuseMoves: 0, refusalStillMoves: false, refuseCollections: false, compressAbove: 0,
+    // { status, retryAfter?, when?(path, method) }: a rate limit such as Nutstore's 503 BlockedTemporarily.
+    refuseWith: null,
     // The server clock behind Date and Last-Modified.
     now: () => Date.now() };
   server.fetch = async (url, options) => {
@@ -33,6 +35,10 @@ function createServer() {
     assert.strictEqual(options.credentials, 'omit');
     server.requests.push({ path, method: options.method });
     if (server.beforeRequest) await server.beforeRequest(path, options);
+    if (server.refuseWith && (!server.refuseWith.when || server.refuseWith.when(path, options.method))) {
+      return new Response('BlockedTemporarily', { status: server.refuseWith.status,
+        headers: server.refuseWith.retryAfter ? { 'Retry-After': server.refuseWith.retryAfter } : {} });
+    }
     const entry = files.get(path);
     const response = (status, bytes, etag, modified) => new Response([204, 304].includes(status) || options.method === 'HEAD' ? null : bytes || '', {
       // compressAbove mimics Cloudflare weakening strong ETags on bodies it compresses.
@@ -888,6 +894,65 @@ async function run() {
     await new Promise((resolve) => setTimeout(resolve, 60));
     assert.strictEqual(waitTicks, doneAt, 'the keep-alive stops once the retry has run');
     await waiting.controller.handle({ operation: 'pause' });
+  }
+
+  {
+    // Nutstore answers 503 once an account sent too many requests, and keeps
+    // refusing while it is polled. Background rounds leave the server alone
+    // until the planned retry; the card says when that is.
+    const busyServer = createServer();
+    let clockNow = Date.now();
+    const busy = createDevice(busyServer, { sync: { [theme]: 'light' } }, [], (input) =>
+      syncApi.createConnectionController({ ...input, throttleDelays: [60000, 120000], now: () => clockNow }));
+    await busy.controller.handle({ operation: 'connect', config });
+    await new Promise((resolve) => setTimeout(resolve, 1600));
+    busyServer.refuseWith = { status: 503, retryAfter: '600' };
+    await set(busy.chrome.storage.sync, { [theme]: 'dark' });
+    const refused = await busy.controller.handle({ operation: 'sync' });
+    assert.deepStrictEqual(refused, { pending: true, retryAt: clockNow + 600000 }, 'a longer Retry-After wins over the first wait');
+    let busyStatus = await busy.controller.handle({ operation: 'status' });
+    assert.strictEqual(busyStatus.state, 'pending');
+    assert.strictEqual(busyStatus.error, 'http-503');
+    assert.strictEqual(busyStatus.retryAt, refused.retryAt);
+    const quietFrom = busyServer.requests.length;
+    busy.chrome.alarms.fire(syncApi.ALARM_NAME);
+    await set(busy.chrome.storage.sync, { [language]: 'ja' });
+    await new Promise((resolve) => setTimeout(resolve, 1600));
+    await busy.controller.handle({ operation: 'status' });
+    assert.strictEqual(busyServer.requests.length, quietFrom, 'alarm and change rounds skip a server that is refusing requests');
+    // Without Retry-After the waits grow while the refusals continue; a sync
+    // the user asks for still reaches the server.
+    busyServer.refuseWith = { status: 429 };
+    const again = await busy.controller.handle({ operation: 'sync' });
+    assert(busyServer.requests.length > quietFrom);
+    assert(again.retryAt >= clockNow + 108000 && again.retryAt <= clockNow + 132000, 'the second refusal waits longer');
+    assert.strictEqual((await busy.controller.handle({ operation: 'status' })).error, 'http-429');
+    busyServer.refuseWith = null;
+    clockNow = again.retryAt + 1;
+    busy.chrome.alarms.fire(syncApi.ALARM_NAME);
+    busyStatus = await busy.controller.handle({ operation: 'status' });
+    assert.strictEqual(busyStatus.state, 'ready');
+    assert.strictEqual(busyStatus.retryAt, null);
+    assert.strictEqual(busyServer.state().data[theme], 'dark');
+    assert.strictEqual(busyServer.state().data[language], 'ja', 'changes made during the wait are synced afterwards');
+    assert.strictEqual(await busy.privateStore.get('throttle'), null);
+    busyServer.refuseWith = { status: 503 };
+    await set(busy.chrome.storage.sync, { [theme]: 'light' });
+    const fresh = await busy.controller.handle({ operation: 'sync' });
+    assert(fresh.retryAt <= clockNow + 66000, 'a success resets the waits');
+    await busy.controller.handle({ operation: 'pause' });
+    assert.strictEqual(await busy.privateStore.get('throttle'), null);
+
+    // A refused state write never committed, so it releases the lock instead
+    // of holding every device at remote-locked as an uncertain write.
+    const refusingServer = createServer();
+    const refusedWriter = client.createClient(config, { fetch: refusingServer.fetch });
+    await refusedWriter.ensureDirectories();
+    refusingServer.refuseWith = { status: 503, when: (path, method) => method === 'PUT' && path.endsWith('/state.json') };
+    await assert.rejects(refusedWriter.writeState(empty(), null), (error) => error.code === 'http-503' && !error.staleLock);
+    assert(!refusingServer.directories.has('/dav/lumno/v1/write-lock/'), 'the lock is released after a refused write');
+    refusingServer.refuseWith = null;
+    await refusedWriter.writeState(empty(), null);
   }
 
   const interruptedServer = createServer();

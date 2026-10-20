@@ -208,7 +208,7 @@
       if (DETAILED_CODES.includes(code)) return t(`webdav_error_${code.replace(/-/g, '_')}`, generic);
       const categories = {
         'invalid-endpoint': 'endpoint', 'invalid-directory': 'directory', 'missing-credentials': 'credentials',
-        'http-401': 'auth', 'http-403': 'permission', 'http-429': 'rate', 'http-507': 'capacity',
+        'http-401': 'auth', 'http-403': 'permission', 'http-429': 'rate', 'http-503': 'unavailable', 'http-507': 'capacity',
         'conditional-write-unsupported': 'conditional', 'remote-changed': 'changed', 'local-changed': 'changed',
         'remote-locked': 'locked', 'lock-write-uncertain': 'lock_recovery', 'lock-release-failed': 'lock_recovery',
         'remote-missing': 'missing', 'chrome-capacity': 'chrome_capacity', 'timeout': 'network', 'network-error': 'network',
@@ -273,14 +273,24 @@
         }
         return errorText(item.error);
       };
+      // A server refusing requests for a while is waited out in the background,
+      // so the card says when the next try is instead of reporting a failure.
+      const throttleText = (item) => {
+        if (item.state !== 'pending' || !['http-429', 'http-503'].includes(item.error) || !Number.isFinite(item.retryAt)) return '';
+        const time = new Date(Math.max(item.retryAt, Date.now())).toLocaleTimeString(document.documentElement.lang || undefined,
+          { hour: '2-digit', minute: '2-digit' });
+        return t('webdav_warning_throttled', '服务器暂时拒绝了请求（HTTP {status}），通常是短时间内请求过多，坚果云等网盘会这样限流。Lumno 会在 {time} 后自动重试，本机数据已保留。')
+          .replace('{status}', item.error.slice(5)).replace('{time}', time);
+      };
       listController.render({
         ready: initialized, outdated: requiresReload(), copy, lang: document.documentElement.lang || '',
         suggestions: Array.isArray(current.suggestions) ? current.suggestions : [],
-        connections: connections.map((item) => ({ ...item, errorText: describeError(item), remoteMissing: item.error === 'remote-missing',
+        connections: connections.map((item) => ({ ...item, errorText: throttleText(item) ? '' : describeError(item),
+          remoteMissing: item.error === 'remote-missing',
           // An older local-only installation whose settings do not fit browser
           // sync keeps syncing through WebDAV; the card says the backup waits.
-          warningText: item.localPrimary && ['incomplete', 'failed'].includes(item.chromeBackup)
-            ? t('webdav_warning_chrome_backup', '本机配置超过 Chrome 同步容量，暂未备份到 Chrome 同步。WebDAV 同步照常进行，本机数据保留；减少配置内容后会完成备份。') : '',
+          warningText: throttleText(item) || (item.localPrimary && ['incomplete', 'failed'].includes(item.chromeBackup)
+            ? t('webdav_warning_chrome_backup', '本机配置超过 Chrome 同步容量，暂未备份到 Chrome 同步。WebDAV 同步照常进行，本机数据保留；减少配置内容后会完成备份。') : ''),
           diagnosticText: diagnosticText(item.error, item.diagnostic),
           conflictsText: [...new Set((item.conflicts || []).map((key) => copy[
             key === 'shortcuts' ? 'webdav_conflict_shortcuts' : key === 'wallpapers' ? 'webdav_conflict_wallpapers' : 'webdav_conflict_preferences'

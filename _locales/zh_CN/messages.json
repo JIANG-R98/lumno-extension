@@ -2741,6 +2741,12 @@
   "webdav_error_rate": {
     "message": "服务器请求次数受限，请稍后重试。"
   },
+  "webdav_error_unavailable": {
+    "message": "服务器暂时不可用（HTTP 503）。坚果云在短时间内请求过多时也会这样回应，请过几分钟再试。本机数据已保留。"
+  },
+  "webdav_warning_throttled": {
+    "message": "服务器暂时拒绝了请求（HTTP {status}），通常是短时间内请求过多，坚果云等网盘会这样限流。Lumno 会在 {time} 后自动重试，本机数据已保留。"
+  },
   "webdav_error_capacity": {
     "message": "WebDAV 空间不足，请释放空间后重试。"
   },
@@ -3508,5 +3514,89 @@
   },
   "newtab_quote_font_size_reset": {
     "message": "恢复默认字号"
+  },
+  "popup_actions_label": {
+    "message": "页面操作"
+  },
+  "popup_action_shortcut": {
+    "message": "添加快捷方式"
+  },
+  "popup_action_copy": {
+    "message": "复制链接"
+  },
+  "popup_copy_failed": {
+    "message": "没能复制链接，请重试。"
+  },
+  "popup_theme_label": {
+    "message": "主题"
+  },
+  "popup_link_settings": {
+    "message": "设置"
+  },
+  "popup_link_shortcuts": {
+    "message": "设置快捷键"
+  },
+  "popup_link_feedback": {
+    "message": "反馈"
+  },
+  "popup_sync_error": {
+    "message": "WebDAV 同步失败"
+  },
+  "popup_sync_attention": {
+    "message": "WebDAV 同步待处理"
+  },
+  "popup_sync_busy": {
+    "message": "WebDAV 正在同步"
+  },
+  "popup_release_notes": {
+    "message": "更新日志"
+  },
+  "popup_section_command_bar": {
+    "message": "命令栏"
+  },
+  "popup_overlay_page_theme": {
+    "message": "跟随网页配色"
+  },
+  "popup_overlay_open_tabs": {
+    "message": "默认显示已打开的标签页"
+  },
+  "popup_action_shortcut_tooltip": {
+    "message": "添加到新标签页的快捷方式"
+  },
+  "popup_action_clip_tooltip": {
+    "message": "剪下网页局部，放进置顶小窗"
+  },
+  "popup_settings_label": {
+    "message": "快速设置"
+  },
+  "popup_sync_ready": {
+    "message": "WebDAV 已同步"
+  },
+  "popup_open_command_bar": {
+    "message": "打开命令栏"
+  },
+  "popup_action_pip": {
+    "message": "画中画"
+  },
+  "popup_action_pip_exit": {
+    "message": "退出画中画"
+  },
+  "popup_action_pip_tooltip": {
+    "message": "让网页视频悬浮播放"
+  },
+  "popup_action_pip_no_video": {
+    "message": "这个网页没有视频"
+  },
+  "popup_action_pip_menu": {
+    "message": "自动画中画"
+  },
+  "popup_pip_failed": {
+    "message": "这个视频无法画中画播放。"
+  },
+  "popup_auto_pip_hint": {
+    "message": "切到其他标签页时，视频自动悬浮"
+  },
+  "popup_action_unavailable": {
+    "message": "这个网页不支持"
   }
 }

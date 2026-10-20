@@ -1,0 +1,487 @@
+/* The toolbar popup. The browser sizes the window to this content, up to
+   600px tall; the layout keeps every state under that. */
+html {
+  overflow-x: hidden;
+}
+
+body {
+  --popup-bg: #ffffff;
+  --popup-text: var(--lumno-color-text);
+  --popup-subtext: var(--lumno-color-text-muted);
+  --popup-divider: rgba(15, 23, 42, 0.08);
+  --popup-tile-hover-bg: rgba(15, 23, 42, 0.065);
+  --popup-icon-bg: rgba(15, 23, 42, 0.05);
+  --popup-segmented-bg: rgba(15, 23, 42, 0.05);
+  --popup-segmented-active-bg: #ffffff;
+  --popup-segmented-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+  --popup-error-text: #b91c1c;
+  --popup-hero: url("../../assets/images/settings-bg-light.webp");
+  --popup-hero-opacity: 0.85;
+  --popup-action-bg: #ffffff;
+  --popup-action-hover-bg: #f8fafc;
+  --popup-action-border: rgba(15, 23, 42, 0.1);
+  --popup-action-hover-border: rgba(15, 23, 42, 0.16);
+  --popup-action-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  margin: 0;
+  width: 320px;
+  background: var(--popup-bg);
+  color: var(--popup-text);
+  font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  font-size: var(--lumno-font-size-md);
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+body[data-theme="dark"] {
+  --popup-bg: rgb(25, 25, 25);
+  --popup-divider: rgba(255, 255, 255, 0.1);
+  --popup-tile-hover-bg: rgba(255, 255, 255, 0.09);
+  --popup-icon-bg: rgba(255, 255, 255, 0.08);
+  --popup-segmented-bg: #2f2f2f;
+  --popup-segmented-active-bg: #3f3f46;
+  --popup-segmented-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --popup-error-text: #fecaca;
+  --popup-hero: url("../../assets/images/settings-bg-dark.webp");
+  --popup-hero-opacity: 1;
+  --popup-action-bg: rgba(255, 255, 255, 0.06);
+  --popup-action-hover-bg: rgba(255, 255, 255, 0.1);
+  --popup-action-border: rgba(255, 255, 255, 0.08);
+  --popup-action-hover-border: rgba(255, 255, 255, 0.14);
+  --popup-action-shadow: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  body:not([data-theme]) {
+    --popup-bg: rgb(25, 25, 25);
+    --popup-divider: rgba(255, 255, 255, 0.1);
+    --popup-tile-hover-bg: rgba(255, 255, 255, 0.09);
+    --popup-icon-bg: rgba(255, 255, 255, 0.08);
+    --popup-segmented-bg: #2f2f2f;
+    --popup-segmented-active-bg: #3f3f46;
+    --popup-segmented-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --popup-error-text: #fecaca;
+    --popup-hero: url("../../assets/images/settings-bg-dark.webp");
+    --popup-hero-opacity: 1;
+    --popup-action-bg: rgba(255, 255, 255, 0.06);
+    --popup-action-hover-bg: rgba(255, 255, 255, 0.1);
+    --popup-action-border: rgba(255, 255, 255, 0.08);
+  --popup-action-hover-border: rgba(255, 255, 255, 0.14);
+  --popup-action-shadow: none;
+  }
+}
+
+.x-lumno-popup {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 0 14px 12px;
+  box-sizing: border-box;
+}
+
+.x-lumno-popup :where(button) {
+  font: inherit;
+  color: inherit;
+}
+
+.x-lumno-popup button:focus-visible {
+  outline: 2px solid var(--lumno-color-focus-ring);
+  outline-offset: 1px;
+}
+
+.x-lumno-popup .ri-icon {
+  line-height: 1;
+}
+
+/* The meadow from the Settings page, with its Lumno script, fading into the popup. */
+.x-lumno-popup__hero {
+  height: 56px;
+  margin: 0 -14px;
+  background: var(--popup-hero) center -54px / 420px auto no-repeat;
+  opacity: var(--popup-hero-opacity);
+  -webkit-mask-image: linear-gradient(to bottom, #000 50%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 50%, transparent 100%);
+  pointer-events: none;
+}
+
+/* This page: what it is and what Lumno can do with it. */
+/* No container: the site on top, its actions right under it. */
+.x-lumno-popup__page {
+  margin-top: 2px;
+}
+
+.x-lumno-popup__page-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.x-lumno-popup__page-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--lumno-radius-sm);
+  background: var(--popup-icon-bg);
+  color: var(--popup-subtext);
+  font-size: 15px;
+}
+
+.x-lumno-popup__page-icon img {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+}
+
+.x-lumno-popup__page-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.x-lumno-popup__page-title,
+.x-lumno-popup__page-host {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.x-lumno-popup__page-title {
+  font-weight: 500;
+}
+
+.x-lumno-popup__page-host {
+  color: var(--popup-subtext);
+  font-size: var(--lumno-font-size-xs);
+}
+
+.x-lumno-popup__notice {
+  margin: 10px 0 0;
+  color: var(--popup-subtext);
+  font-size: var(--lumno-font-size-xs);
+}
+
+.x-lumno-popup__notice[data-tone="error"] {
+  color: var(--popup-error-text);
+}
+
+.x-lumno-popup__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* Three actions sit in one row; four make two rows of two. */
+.x-lumno-popup__actions[data-count="3"] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.x-lumno-popup__action {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 58px;
+  padding: 8px 2px;
+  border: 1px solid var(--popup-action-border);
+  border-radius: var(--lumno-radius-sm);
+  background: var(--popup-action-bg);
+  box-shadow: var(--popup-action-shadow);
+  font-size: var(--lumno-font-size-sm);
+  text-align: center;
+  cursor: pointer;
+  transition:
+    background-color var(--lumno-duration-sm) ease,
+    transform var(--lumno-duration-2xs) ease;
+}
+
+.x-lumno-popup__action:hover:not(:disabled) {
+  border-color: var(--popup-action-hover-border);
+  background: var(--popup-action-hover-bg);
+}
+
+.x-lumno-popup__action:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.x-lumno-popup__action:disabled {
+  cursor: default;
+  color: var(--popup-subtext);
+  opacity: 0.55;
+}
+
+.x-lumno-popup__action > .ri-icon {
+  font-size: 17px;
+}
+
+
+/* Four or five actions make rows of two, with the icon beside the label so
+   the popup stays inside the browser's 600px height limit; a fifth takes the
+   whole last row. */
+.x-lumno-popup__actions[data-count="5"] > :last-child {
+  grid-column: 1 / -1;
+}
+
+.x-lumno-popup__actions:is([data-count="4"], [data-count="5"]) .x-lumno-popup__action {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 8px;
+  min-height: 40px;
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.x-lumno-popup__actions:is([data-count="4"], [data-count="5"]) .x-lumno-popup__action > .ri-icon {
+  flex: 0 0 auto;
+  font-size: 16px;
+}
+
+/* An action with options: the cell holds the action and a corner chevron. */
+.x-lumno-popup__action-cell {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+
+.x-lumno-popup__action-cell > .x-lumno-popup__action {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.x-lumno-popup__action-cell[data-has-menu="true"] > .x-lumno-popup__action {
+  padding-right: 30px;
+}
+
+.x-lumno-popup__action-menu {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-top: -12px;
+  border: 0;
+  border-radius: var(--lumno-radius-xs);
+  background: transparent;
+  color: var(--popup-subtext);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.x-lumno-popup__action-menu:hover {
+  background: var(--lumno-color-hover);
+  color: var(--popup-text);
+}
+
+.x-lumno-popup__action-menu > .ri-icon {
+  transition: transform var(--lumno-duration-md) var(--lumno-ease-emphasized);
+}
+
+.x-lumno-popup__action-menu[aria-expanded="true"] > .ri-icon {
+  transform: rotate(180deg);
+}
+
+.x-lumno-popup__action-panel {
+  margin-top: 8px;
+}
+
+/* Labels wrap rather than cut off; English and Japanese run longer. */
+.x-lumno-popup__action-label {
+  max-width: 100%;
+  line-height: 1.25;
+  overflow-wrap: break-word;
+  line-break: strict;
+}
+
+/* Quick settings: folded by default, since they are rarely changed. */
+.x-lumno-popup__settings {
+  margin-top: 10px;
+}
+
+.x-lumno-popup__settings-toggle {
+  display: flex;
+  width: calc(100% + 12px);
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  margin: 0 -6px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--lumno-radius-sm);
+  background: transparent;
+  color: var(--popup-subtext);
+  font-size: var(--lumno-font-size-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.x-lumno-popup__settings-toggle:hover {
+  background: var(--lumno-color-hover);
+  color: var(--popup-text);
+}
+
+.x-lumno-popup__settings-toggle > span {
+  flex: 1 1 auto;
+}
+
+.x-lumno-popup__settings-chevron {
+  font-size: 16px;
+  transition: transform var(--lumno-duration-md) var(--lumno-ease-emphasized);
+}
+
+.x-lumno-popup__settings[data-expanded="true"] .x-lumno-popup__settings-chevron {
+  transform: rotate(180deg);
+}
+
+.x-lumno-popup__settings-panel {
+  padding-bottom: 4px;
+}
+
+.x-lumno-popup__section + .x-lumno-popup__section {
+  margin-top: 8px;
+}
+
+.x-lumno-popup__section-title {
+  margin: 4px 0 0;
+  color: var(--popup-subtext);
+  font-size: var(--lumno-font-size-xs);
+  font-weight: 400;
+}
+
+.x-lumno-popup__row {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.x-lumno-popup__row-label {
+  min-width: 0;
+  cursor: default;
+}
+
+label.x-lumno-popup__row-label {
+  cursor: pointer;
+}
+
+.x-lumno-popup__row-hint {
+  display: block;
+  color: var(--popup-subtext);
+  font-size: var(--lumno-font-size-xs);
+}
+
+.x-lumno-popup__switch {
+  --switch-width: 34px;
+  --switch-height: 20px;
+  --switch-knob-size: 16px;
+  --switch-knob-stretch: 3px;
+}
+
+.x-lumno-popup__segmented {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  padding: 2px;
+  border-radius: var(--lumno-radius-sm);
+  background: var(--popup-segmented-bg);
+}
+
+.x-lumno-popup__segmented-indicator {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 0;
+  height: calc(100% - 4px);
+  border-radius: var(--lumno-radius-xs);
+  background: var(--popup-segmented-active-bg);
+  box-shadow: var(--popup-segmented-shadow);
+  pointer-events: none;
+  transition:
+    transform var(--lumno-duration-xl) var(--lumno-ease-emphasized),
+    width var(--lumno-duration-xl) var(--lumno-ease-emphasized);
+}
+
+.x-lumno-popup__segmented-option {
+  position: relative;
+  z-index: 1;
+  height: 24px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: var(--lumno-radius-xs);
+  background: transparent;
+  color: var(--popup-subtext);
+  font-size: var(--lumno-font-size-sm);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.x-lumno-popup__segmented-option[data-active="true"] {
+  color: var(--popup-text);
+  font-weight: 500;
+}
+
+.x-lumno-popup__segmented-indicator[data-ready="false"] ~ .x-lumno-popup__segmented-option[data-active="true"] {
+  background: var(--popup-segmented-active-bg);
+  box-shadow: var(--popup-segmented-shadow);
+}
+
+/* Footer: the version, then links as icons whose names show in tooltips. */
+.x-lumno-popup__footer {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--popup-divider);
+}
+
+.x-lumno-popup__version {
+  margin-right: 2px;
+  color: var(--popup-subtext);
+  font-size: var(--lumno-font-size-xs);
+  white-space: nowrap;
+}
+
+.x-lumno-popup__links {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  margin-right: -4px;
+}
+
+.x-lumno-popup__icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--lumno-radius-sm);
+  background: transparent;
+  color: var(--popup-subtext);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.x-lumno-popup__icon-button:hover {
+  background: var(--lumno-color-hover);
+  color: var(--popup-text);
+}
+
+.x-lumno-popup__sync[data-tone="error"] {
+  color: var(--popup-error-text);
+}
+
+/* Japanese labels break only where the copy marks it (U+200B). */
+:lang(ja) .x-lumno-popup__action-label {
+  word-break: keep-all;
+}

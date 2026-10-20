@@ -17,7 +17,18 @@
   const STALE_LOCK_MS = 10 * 60 * 1000;
   const DIAGNOSTIC_PHASES = ['state-etag', 'state-lock-create', 'directory-race', 'directory-delete', 'directory-recreate',
     'move-race', 'move-owner', 'move-delete', 'move-recreate', 'move-claim', 'state-read'];
+  // Rate limits and temporary blocks: the server refused the request without
+  // acting on it. Nutstore answers 503 "BlockedTemporarily" once an account
+  // sent too many requests, and keeps refusing while it is still being polled.
+  const REFUSED_STATUSES = [429, 503];
   function error(code, status) { return Object.assign(new Error(code), { code, status }); }
+  // Retry-After holds seconds or an HTTP date, read against the server's clock.
+  function retryAfterMs(value, date) {
+    const text = String(value || '').trim();
+    if (!text) return null;
+    const ms = /^\d+$/.test(text) ? Number(text) * 1000 : Date.parse(text) - (Date.parse(date || '') || Date.now());
+    return Number.isFinite(ms) ? Math.min(Math.max(ms, 0), 6 * 60 * 60 * 1000) : null;
+  }
   function diagnostic(input) {
     if (!input || input.revision !== REVISION || !DIAGNOSTIC_PHASES.includes(input.phase)) return null;
     return { revision: REVISION, phase: input.phase,
@@ -84,7 +95,13 @@
           chunks.forEach((chunk) => { bytes.set(chunk, offset); offset += chunk.byteLength; });
         } else bytes = new Uint8Array(await response.arrayBuffer());
         if (bytes.byteLength > limit) throw error('response-too-large');
-        if (![200, 201, 204, 304, 404, 405, 412].includes(response.status) && !(method === 'MOVE' && MOVE_REFUSALS.includes(response.status))) throw error(`http-${response.status}`, response.status);
+        if (![200, 201, 204, 304, 404, 405, 412].includes(response.status) && !(method === 'MOVE' && MOVE_REFUSALS.includes(response.status))) {
+          const failure = error(`http-${response.status}`, response.status);
+          if (REFUSED_STATUSES.includes(response.status)) {
+            failure.retryAfterMs = retryAfterMs(response.headers.get('Retry-After'), response.headers.get('Date'));
+          }
+          throw failure;
+        }
         const length = response.headers.get('Content-Length');
         return { status: response.status, etag: response.headers.get('ETag'), bytes,
           size: length !== null && /^\d+$/.test(length) ? Number(length) : null,
@@ -196,7 +213,7 @@
         catch (cause) {
           // A late MOVE can still acquire the lock. Preserve both paths when
           // its result is unknown; never remove the shared destination here.
-          if (!cause.status || cause.status >= 500) {
+          if (!cause.status || (cause.status >= 500 && !REFUSED_STATUSES.includes(cause.status))) {
             cleanup = false;
             throw Object.assign(error('lock-write-uncertain'), { staleLock: staleMarker(owner, true) });
           }
@@ -268,7 +285,7 @@
         } catch (cause) {
           // Explicit client-error responses reject the write. Retrying a rate
           // limit or fixing credentials must not leave a lock unnecessarily.
-          if ((cause.status >= 400 && cause.status < 500) || cause.status === 507) throw cause;
+          if ((cause.status >= 400 && cause.status < 500) || [507, ...REFUSED_STATUSES].includes(cause.status)) throw cause;
           // A timed-out request may still commit on the server. Releasing or
           // expiring the lock could let that late PUT overwrite a later writer.
           uncertain = true;
@@ -406,5 +423,5 @@
     }
     return Object.freeze({ request, ensureDirectories, readState, writeState, releaseStaleLock, testConnection });
   }
-  return Object.freeze({ normalizeConfig, createClient, error, diagnostic, REVISION, MOVE_REFUSALS, STALE_LOCK_MS });
+  return Object.freeze({ normalizeConfig, createClient, error, diagnostic, REVISION, MOVE_REFUSALS, REFUSED_STATUSES, STALE_LOCK_MS });
 });

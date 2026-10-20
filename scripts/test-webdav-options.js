@@ -66,6 +66,15 @@ async function run() {
     'an incomplete browser-sync backup is a warning on the card');
   assert.strictEqual(renderModel.connections[0].errorText, '', 'it is not a sync failure');
   assert.strictEqual(renderModel.connections[1].warningText, '', 'the warning ends once the installation left local-only mode');
+  // A server refusing requests (Nutstore's 503) is waited out: the card names
+  // the next try instead of reporting a failure.
+  model.connections = [{ ...a, id: 'busy', enabled: true, state: 'pending', error: 'http-503', retryAt: Date.now() + 600000 },
+    { ...a, id: 'failed', enabled: true, state: 'error', error: 'http-503' }];
+  await controller.refresh();
+  assert.strictEqual(renderModel.connections[0].errorText, '');
+  assert.match(renderModel.connections[0].warningText, /HTTP 503.*try again automatically after \S/);
+  assert.strictEqual(renderModel.connections[1].warningText, '');
+  assert.strictEqual(renderModel.connections[1].errorText, messages.webdav_error_unavailable.message);
   model.connections = [a, { ...a, id: 'b', state: 'conflict', conflicts: ['shortcuts', 'wallpapers'], error: 'remote-missing' }];
   await controller.refresh();
   assert.strictEqual(renderModel.connections.length, 2);

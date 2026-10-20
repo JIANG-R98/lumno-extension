@@ -131,6 +131,41 @@ async function testWebClipCommandOpensPickerOnSenderTab() {
   assert.deepStrictEqual(plain(noTab), { ok: false, reason: 'no-sender-tab' });
 }
 
+// The toolbar popup's web clip must open even when another tab cannot answer
+// the "is a video already in picture-in-picture?" check: a frozen tab (tab
+// freezing, Memory Saver) never runs the injected script.
+async function testPopupWebClipIsNotBlockedByTabsThatNeverAnswer() {
+  const frozenTab = { id: 6, windowId: 1, index: 1, url: 'https://frozen.example/', title: 'Frozen', frozen: true };
+  const discardedTab = { id: 7, windowId: 1, index: 2, url: 'https://discarded.example/', title: 'Discarded', discarded: true };
+  const silentTab = { id: 8, windowId: 1, index: 3, url: 'https://silent.example/', title: 'Silent' };
+  const harness = boot({
+    tabs: [Object.assign({ active: true }, senderTab), frozenTab, discardedTab, silentTab],
+    sync: { [DOCUMENT_PIP_ENABLED_KEY]: true },
+    configureChrome(chromeApi, calls) {
+      const executeScript = chromeApi.scripting.executeScript;
+      chromeApi.scripting.executeScript = (options, callback) => {
+        if (options && options.target && options.target.tabId === silentTab.id) {
+          calls.push({ name: 'scripting.executeScript', args: [options] });
+          return undefined; // never answers
+        }
+        return executeScript(options, callback);
+      };
+    }
+  });
+  const response = await harness.sendMessage({ action: 'popupOpenDocumentPipPicker', tabId: senderTab.id });
+  assert.deepStrictEqual(plain(response), { ok: true });
+  await wait(700);
+  const injected = harness.calls
+    .filter((call) => call.name === 'scripting.executeScript')
+    .map((call) => call.args[0]);
+  assert.ok(!injected.some((options) => [frozenTab.id, discardedTab.id].includes(options.target.tabId)),
+    'frozen and discarded tabs are not asked');
+  assert.ok(injected.some((options) => options.target.tabId === silentTab.id), 'other tabs are still checked');
+  assert.ok(injected.some((options) => options.target.tabId === senderTab.id &&
+      Array.isArray(options.files) && options.files.includes('src/content/document-pip-picker.js')),
+    'the picker opens once the check gives up on a tab that never answers');
+}
+
 async function testAggregateSearchIgnoresPageSuppliedTargets() {
   const harness = boot();
   await harness.sendMessage({
@@ -191,6 +226,7 @@ async function testLocaleMessagesAreCachedAndCanBeNarrowed() {
   await testTopFrameDocumentStartIsAnswered();
   await testColdStartPageHotkeyIsVerifiedAgainstLiveShortcut();
   await testWebClipCommandOpensPickerOnSenderTab();
+  await testPopupWebClipIsNotBlockedByTabsThatNeverAnswer();
   await testAggregateSearchIgnoresPageSuppliedTargets();
   console.log('background message handler tests passed');
   process.exit(0);

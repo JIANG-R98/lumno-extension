@@ -83,6 +83,9 @@ const onboardingBundlePath = path.join(
   'src/react/onboarding-islands.js'
 );
 const overlayBundlePath = path.join(repoRoot, 'src/react/overlay-islands.js');
+const popupBundlePath = path.join(repoRoot, 'src/react/popup-islands.js');
+const popupBundle = fs.readFileSync(popupBundlePath, 'utf8');
+const popupHtml = readPageSource('src/popup/popup.html');
 const sharedBundlePath = path.join(repoRoot, 'src/react/react-shared.js');
 const tabSwitcherSharedBundlePath = path.join(
   repoRoot,
@@ -178,6 +181,9 @@ const bundleBudgets = {
   newtab: { uncompressed: 423, gzip: 126 },
   options: { uncompressed: 290, gzip: 85 },
   overlay: { uncompressed: 274, gzip: 83 },
+  // The toolbar popup opens on every click, so it loads only the runtime, the
+  // shared chunk and its own small entry.
+  popup: { uncompressed: 220, gzip: 70 },
   total: { uncompressed: 818, gzip: 238 }
 };
 
@@ -336,6 +342,27 @@ assertWithinBudget(
   gzipSize(overlayBundle),
   bundleBudgets.overlay.gzip,
   'the injected Overlay React route (gzip)'
+);
+assertWithinBudget(
+  fs.statSync(runtimeBundlePath).size +
+    fs.statSync(sharedBundlePath).size +
+    fs.statSync(popupBundlePath).size,
+  bundleBudgets.popup.uncompressed,
+  'the toolbar popup React route (uncompressed)'
+);
+assertWithinBudget(
+  gzipSize(runtimeBundle) + gzipSize(sharedBundle) + gzipSize(popupBundle),
+  bundleBudgets.popup.gzip,
+  'the toolbar popup React route (gzip)'
+);
+assert(
+  popupHtml.includes(bootstrapScript) &&
+    popupHtml.includes('data-react-entry="../react/popup-islands.js"') &&
+    popupHtml.includes('data-page-entry="../popup/popup.js"') &&
+    popupHtml.includes('data-react-state="LumnoPopupReactBootstrap"') &&
+    popupBundle.includes('from"./react-runtime.js"') &&
+    !popupBundle.includes('from"./tab-switcher-shared.js"'),
+  'the toolbar popup should start through the shared bootstrap without the tab-switcher chunk'
 );
 assertWithinBudget(
   bundlePaths.reduce((total, file) => total + fs.statSync(file).size, 0),

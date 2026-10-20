@@ -192,7 +192,28 @@ async function run() {
   assert.deepStrictEqual(full.toastArgs()[0].slice(0, 1), [`You can add up to ${shortcuts.DEFAULT_MAX_SHORTCUTS} shortcuts.`]);
   assert.strictEqual(full.toastArgs()[0][1].error, true);
 
-  console.log('Page shortcut menu tests passed: localized item, add to last group, duplicates, queued clicks, local mode and limit.');
+  // The toolbar popup adds a tab's page; a success shows Lumno's top toast in
+  // the page and says whether it did.
+  const popup = device({}, { uiLanguage: 'en' });
+  const popupAdded = await popup.controller.addTabPage({ id: 4, url: 'https://example.net/page', title: 'Example' });
+  assert.deepStrictEqual(popupAdded, {
+    status: 'added', message: 'Added to Lumno New Tab shortcuts', error: false, toastShown: true
+  });
+  assert.strictEqual(popup.toastArgs()[0][0], 'Added to Lumno New Tab shortcuts');
+  const popupRepeat = await popup.controller.addTabPage({ id: 4, url: 'https://example.net/page', title: 'Example' });
+  assert.strictEqual(popupRepeat.status, 'exists');
+  assert.strictEqual(popupRepeat.message, 'Already in shortcuts');
+  assert.strictEqual(popup.toastArgs()[1][0], 'Already in shortcuts');
+  assert.strictEqual((await popup.controller.addTabPage({ id: 5, url: 'chrome://extensions/', title: 'Extensions' })).status,
+    'invalid', 'browser pages are not added');
+  assert.strictEqual((await popup.controller.addTabPage(null)).status, 'invalid', 'a closed tab adds nothing');
+  const noScripts = device({}, { uiLanguage: 'en', scriptingFails: true });
+  assert.strictEqual((await noScripts.controller.addTabPage({ id: 6, url: 'https://example.org/', title: 'Org' })).toastShown,
+    false, 'a page without scripts leaves the toast to the popup');
+  assert.strictEqual(await popup.controller.showToast(4, { message: 'Current page URL copied' }), true);
+  assert.strictEqual(popup.toastArgs()[2][0], 'Current page URL copied');
+
+  console.log('Page shortcut menu tests passed: localized item, add to last group, duplicates, queued clicks, local mode, limit, popup adds and toasts.');
 }
 
 run().catch((error) => { console.error(error); process.exitCode = 1; });
