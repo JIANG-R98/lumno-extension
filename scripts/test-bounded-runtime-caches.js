@@ -75,7 +75,7 @@ function testRuntimeCachesUseBoundedWrites() {
   assert.ok(
     background.includes('BACKGROUND_FAVICON_DATA_CACHE_MAX_ENTRIES = 256') &&
       background.includes('BACKGROUND_SITE_THEME_CACHE_MAX_ENTRIES = 512') &&
-      background.includes('BACKGROUND_TITLE_PINYIN_CACHE_MAX_ENTRIES = 2048'),
+      background.includes('BACKGROUND_TITLE_PINYIN_CACHE_MAX_ENTRIES = 6144'),
     'background runtime caches should declare explicit memory bounds'
   );
   assert.strictEqual(

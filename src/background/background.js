@@ -20,6 +20,8 @@ importScripts(
   chrome.runtime.getURL('src/background/webdav-client.js'),
   chrome.runtime.getURL('src/background/webdav-sync.js'),
   chrome.runtime.getURL('src/shared/update-notice.js'),
+  // Folds traditional characters to simplified ones for local search matching.
+  chrome.runtime.getURL('src/shared/search-han-variants.js'),
   chrome.runtime.getURL('src/shared/search-utils.js'),
   chrome.runtime.getURL('src/shared/selection-intent.js'),
   chrome.runtime.getURL('src/shared/site-search-store.js'),
@@ -55,8 +57,9 @@ importScripts(
   chrome.runtime.getURL('src/background/search-suggestions-service.js')
 );
 // pinyin-pro (~320 KB) only matters when a Han-character title is matched
-// against a pinyin query, so the worker loads it on first use instead of on
-// every wake (see getPinyinPro). A service worker may only importScripts() a
+// against a pinyin query, or a Han query against site addresses, so the
+// worker loads it on first use instead of on every wake (see getPinyinPro).
+// A service worker may only importScripts() a
 // file after installation if it imported that file while installing, hence
 // the install hook. Firefox's build lists this path in background.scripts.
 const PINYIN_PRO_SCRIPT_PATH = 'assets/vendor/pinyin-pro.js';
@@ -705,7 +708,7 @@ const SHOW_SEARCH_PREFILL_V_COMMAND_NAME = 'show-search-prefill-v';
 const SHOW_TAB_SWITCHER_COMMAND_NAME = 'show-tab-switcher';
 const HOTKEY_DUP_GUARD_MS = 180;
 const OVERLAY_OPENING_GUARD_MS = 5000;
-const OVERLAY_RUNTIME_VERSION = '2026-10-01-favicon-source-scope-v16';
+const OVERLAY_RUNTIME_VERSION = '2026-10-20-search-title-units-v17';
 const OVERLAY_HOST_ID = '_x_extension_overlay_host_2026_unique_';
 const OVERLAY_NAVIGATION_STATE_STORAGE_PREFIX =
   '_x_extension_overlay_navigation_state_2026_unique_:';
@@ -4699,6 +4702,11 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   if (changes[SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY]) {
     searchResultSourceTypesCache = null;
     searchResultSourceTypesPromise = null;
+  }
+  if (changes[SETTINGS.SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY]) {
+    setSearchFuzzyPinyinEnabled(SETTINGS.normalizeSearchFuzzyPinyinEnabled(
+      changes[SETTINGS.SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY].newValue
+    ));
   }
 });
 

@@ -81,6 +81,20 @@ let historyFallbackCache = {
   items: []
 };
 
+// History pages whose titles hold Han characters, from further back than the
+// recent list. Pinyin and initials ("wxds") can only be matched against
+// titles already in hand, because the browser's history search reads typed
+// text. New visits land in the recent list, so this one only refreshes on a
+// long interval; removed history leaves it at once.
+const HAN_TITLE_HISTORY_CACHE_TTL_MS = 10 * 60 * 1000;
+
+let hanTitleHistoryCache = {
+  expiresAt: 0,
+  items: []
+};
+
+let hanTitleHistoryRequest = null;
+
 let topSitesCache = {
   expiresAt: 0,
   items: []
@@ -104,9 +118,17 @@ let bookmarkTreeCacheListenersBound = false;
 
 const searchEngineSuggestionRequests = new Map();
 
-const titlePinyinCache = new Map();
+// Titles whose units (and pinyin readings) were built for matching, about
+// 1 KB each. It holds the Han-title history and the bookmarks, so typing one
+// more letter never rebuilds them.
+const BACKGROUND_TITLE_PINYIN_CACHE_MAX_ENTRIES = 6144;
 
-const BACKGROUND_TITLE_PINYIN_CACHE_MAX_ENTRIES = 2048;
+let titleTextMatcher = null;
+
+// Fuzzy pinyin (模糊音) is off unless the reader turns it on in Options.
+let searchFuzzyPinyinEnabled = false;
+let searchFuzzyPinyinEnabledLoaded = false;
+let searchFuzzyPinyinEnabledPromise = null;
 
 const SEARCH_ENGINE_DEFS = [
   {
@@ -600,6 +622,40 @@ function loadSearchResultSourceTypes() {
   return searchResultSourceTypesPromise;
 }
 
+function loadSearchFuzzyPinyinEnabled() {
+  if (searchFuzzyPinyinEnabledLoaded) {
+    return Promise.resolve(searchFuzzyPinyinEnabled);
+  }
+  if (searchFuzzyPinyinEnabledPromise) {
+    return searchFuzzyPinyinEnabledPromise;
+  }
+  searchFuzzyPinyinEnabledPromise = SETTINGS.readStorageValue(
+    storageArea,
+    chrome,
+    SETTINGS.SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY
+  )
+    .catch(() => undefined)
+    .then((value) => {
+      setSearchFuzzyPinyinEnabled(SETTINGS.normalizeSearchFuzzyPinyinEnabled(value));
+      return searchFuzzyPinyinEnabled;
+    })
+    .finally(() => {
+      searchFuzzyPinyinEnabledPromise = null;
+    });
+  return searchFuzzyPinyinEnabledPromise;
+}
+
+// Titles were indexed with the readings of the old choice, so they are
+// indexed again.
+function setSearchFuzzyPinyinEnabled(enabled) {
+  const next = enabled === true;
+  if (searchFuzzyPinyinEnabledLoaded && next !== searchFuzzyPinyinEnabled && titleTextMatcher) {
+    titleTextMatcher.clear();
+  }
+  searchFuzzyPinyinEnabled = next;
+  searchFuzzyPinyinEnabledLoaded = true;
+}
+
 function loadSearchBlacklistItems() {
   if (searchBlacklistCache) {
     return Promise.resolve(searchBlacklistCache);
@@ -1058,6 +1114,24 @@ function invalidateLocalSearchSourceCaches() {
   };
 }
 
+function removeHanTitleHistoryItems(removed) {
+  if (!removed || removed.allHistory) {
+    hanTitleHistoryCache = {
+      expiresAt: 0,
+      items: []
+    };
+    hanTitleHistoryRequest = null;
+    return;
+  }
+  const removedUrls = new Set(Array.isArray(removed.urls) ? removed.urls : []);
+  if (removedUrls.size > 0) {
+    hanTitleHistoryCache = {
+      ...hanTitleHistoryCache,
+      items: hanTitleHistoryCache.items.filter((item) => !removedUrls.has(item && item.url))
+    };
+  }
+}
+
 function ensureLocalSearchSourceCacheListeners() {
   if (localSearchSourceCacheListenersBound || !chrome || !chrome.history) {
     return;
@@ -1070,6 +1144,9 @@ function ensureLocalSearchSourceCacheListeners() {
       eventTarget.addListener(invalidateLocalSearchSourceCaches);
     }
   });
+  if (chrome.history.onVisitRemoved && typeof chrome.history.onVisitRemoved.addListener === 'function') {
+    chrome.history.onVisitRemoved.addListener(removeHanTitleHistoryItems);
+  }
   localSearchSourceCacheListenersBound = true;
 }
 
@@ -1226,6 +1303,63 @@ function getFallbackHistoryItemsCached(policy) {
   }, [], LOCAL_SUGGEST_SOURCE_TIMEOUT_MS).catch(() => []);
 }
 
+function getHanTitleHistoryItemsCached(policy) {
+  if (hanTitleHistoryCache.expiresAt > Date.now()) {
+    return Promise.resolve(hanTitleHistoryCache.items);
+  }
+  if (hanTitleHistoryRequest) {
+    return hanTitleHistoryRequest;
+  }
+  if (!chrome || !chrome.history || typeof chrome.history.search !== 'function') {
+    return Promise.resolve([]);
+  }
+  const settings = policy && typeof policy === 'object' ? policy : {};
+  const scanLimit = Number(settings.hanTitleHistoryScanLimit) > 0
+    ? Math.floor(Number(settings.hanTitleHistoryScanLimit))
+    : 5000;
+  const windowDays = Number(settings.fallbackHistoryWindowDays) > 0
+    ? Number(settings.fallbackHistoryWindowDays)
+    : 365;
+  const request = callChromeApiWithTimeout((done) => {
+    chrome.history.search({
+      text: '',
+      maxResults: scanLimit,
+      startTime: Date.now() - (windowDays * 24 * 60 * 60 * 1000)
+    }, (items) => {
+      const list = (Array.isArray(items) ? items : [])
+        .filter((item) => item && SEARCH_UTILS.hasSearchHanCharacters(item.title));
+      if (hanTitleHistoryRequest === request) {
+        hanTitleHistoryCache = {
+          items: list,
+          expiresAt: Date.now() + HAN_TITLE_HISTORY_CACHE_TTL_MS
+        };
+      }
+      done(list);
+    });
+  }, [], LOCAL_SUGGEST_SOURCE_TIMEOUT_MS)
+    .catch(() => [])
+    .finally(() => {
+      if (hanTitleHistoryRequest === request) {
+        hanTitleHistoryRequest = null;
+      }
+    });
+  hanTitleHistoryRequest = request;
+  return request;
+}
+
+// The first typed letter starts the scan without waiting for it; the next
+// keystrokes use it.
+function getCachedHanTitleHistoryItemsOrWarm(policy) {
+  if (hanTitleHistoryCache.expiresAt > Date.now()) {
+    return Promise.resolve(hanTitleHistoryCache.items);
+  }
+  return withTimeout(
+    getHanTitleHistoryItemsCached(policy),
+    LOCAL_SEARCH_INDEX_WARMUP_TIMEOUT_MS,
+    []
+  );
+}
+
 function getCachedFallbackHistoryItemsOrWarm(policy) {
   const now = Date.now();
   if (historyFallbackCache.expiresAt > now && Array.isArray(historyFallbackCache.items)) {
@@ -1282,23 +1416,6 @@ function getOpenTabSearchItems() {
   }, [], LOCAL_SUGGEST_SOURCE_TIMEOUT_MS).catch(() => []);
 }
 
-function normalizeAsciiQueryForPinyin(value) {
-  return String(value || '')
-    .toLowerCase()
-    .replace(/\s+/g, '')
-    .trim();
-}
-
-function shouldUseTitlePinyinMatch(value) {
-  const normalized = normalizeAsciiQueryForPinyin(value);
-  return Boolean(normalized) && /^[a-z]+$/.test(normalized);
-}
-
-function getChineseCharacters(text) {
-  const matches = String(text || '').match(/[\u4e00-\u9fff]/g);
-  return Array.isArray(matches) ? matches : [];
-}
-
 let pinyinProImportAttempted = false;
 
 function getPinyinPro() {
@@ -1314,104 +1431,65 @@ function getPinyinPro() {
   return api && typeof api.pinyin === 'function' ? api : null;
 }
 
-function buildTitlePinyinIndex(title) {
-  const rawTitle = String(title || '').trim();
-  if (!rawTitle) {
-    return {
-      full: '',
-      initials: '',
-      chineseLength: 0
-    };
+// Every reading of each Han character, so a polyphone matches either way:
+// 重庆 matches "chongqing" and "zhongqing", 银行 "yinhang" and "yinxing".
+// Readings depend on the character alone, so a few thousand entries cover
+// every title.
+const hanCharacterReadingsCache = new Map();
+const hanCharacterFuzzyReadingsCache = new Map();
+const BACKGROUND_HAN_READINGS_CACHE_MAX_ENTRIES = 8192;
+
+function getTitleHanReadings(text, characters) {
+  const pinyinApi = getPinyinPro();
+  if (!pinyinApi) {
+    return null;
   }
-  if (titlePinyinCache.has(rawTitle)) {
-    return titlePinyinCache.get(rawTitle);
+  if (!searchFuzzyPinyinEnabled) {
+    return characters.map((character) => getHanCharacterReadings(pinyinApi, character));
   }
-  let full = '';
-  let initials = '';
-  const chineseChars = getChineseCharacters(rawTitle);
-  try {
-    // Pure-ASCII titles have no Han characters to convert, so they never load pinyin-pro.
-    const pinyinApi = /[^\x00-\x7f]/.test(rawTitle) ? getPinyinPro() : null;
-    if (pinyinApi) {
-      const converted = pinyinApi.pinyin(rawTitle, {
-        toneType: 'none',
-        type: 'array',
-        nonZh: 'removed',
-        v: false
-      });
-      const syllables = (Array.isArray(converted) ? converted : [])
-        .map((item) => String(item || '').toLowerCase().replace(/[^a-z]+/g, ''))
-        .filter(Boolean);
-      full = syllables.join('');
-      initials = syllables.map((item) => item.charAt(0)).join('');
+  return characters.map((character) => {
+    if (hanCharacterFuzzyReadingsCache.has(character)) {
+      return hanCharacterFuzzyReadingsCache.get(character);
     }
-  } catch (error) {
-    full = '';
-    initials = '';
-  }
-  const result = {
-    full: full,
-    initials: initials,
-    chineseLength: chineseChars.length
-  };
-  FAVICON_UTILS.setBoundedCacheEntry(
-    titlePinyinCache,
-    rawTitle,
-    result,
-    BACKGROUND_TITLE_PINYIN_CACHE_MAX_ENTRIES
-  );
-  return result;
+    const readings = SEARCH_UTILS.expandSearchFuzzyPinyinReadings(getHanCharacterReadings(pinyinApi, character));
+    FAVICON_UTILS.setBoundedCacheEntry(
+      hanCharacterFuzzyReadingsCache,
+      character,
+      readings,
+      BACKGROUND_HAN_READINGS_CACHE_MAX_ENTRIES
+    );
+    return readings;
+  });
 }
 
-function getTitlePinyinMatchScore(title, normalizedQuery) {
-  if (!normalizedQuery || normalizedQuery.length < 2) {
-    return {
-      score: 0,
-      reason: ''
-    };
+function getHanCharacterReadings(pinyinApi, character) {
+  if (hanCharacterReadingsCache.has(character)) {
+    return hanCharacterReadingsCache.get(character);
   }
-  const index = buildTitlePinyinIndex(title);
-  if (!index || (!index.full && !index.initials)) {
-    return {
-      score: 0,
-      reason: ''
-    };
+  const converted = pinyinApi.pinyin(character, {
+    toneType: 'none',
+    type: 'array',
+    multiple: true,
+    v: true
+  });
+  const readings = Array.isArray(converted) ? converted : [];
+  FAVICON_UTILS.setBoundedCacheEntry(
+    hanCharacterReadingsCache,
+    character,
+    readings,
+    BACKGROUND_HAN_READINGS_CACHE_MAX_ENTRIES
+  );
+  return readings;
+}
+
+function getTitleTextMatcher() {
+  if (!titleTextMatcher && SEARCH_UTILS && typeof SEARCH_UTILS.createSearchTextMatcher === 'function') {
+    titleTextMatcher = SEARCH_UTILS.createSearchTextMatcher({
+      getHanReadings: getTitleHanReadings,
+      maxEntries: BACKGROUND_TITLE_PINYIN_CACHE_MAX_ENTRIES
+    });
   }
-  if (index.full === normalizedQuery) {
-    return {
-      score: 42,
-      reason: 'full-exact'
-    };
-  }
-  if (index.full.startsWith(normalizedQuery)) {
-    return {
-      score: 28,
-      reason: 'full-prefix'
-    };
-  }
-  if (index.full.includes(normalizedQuery)) {
-    return {
-      score: 14,
-      reason: 'full-contains'
-    };
-  }
-  const canUseInitials = index.chineseLength >= 2 && normalizedQuery.length >= 2;
-  if (canUseInitials && index.initials === normalizedQuery) {
-    return {
-      score: 18,
-      reason: 'initials-exact'
-    };
-  }
-  if (canUseInitials && index.initials.startsWith(normalizedQuery)) {
-    return {
-      score: 12,
-      reason: 'initials-prefix'
-    };
-  }
-  return {
-    score: 0,
-    reason: ''
-  };
+  return titleTextMatcher;
 }
 
 function getBackgroundSearchPolicy(searchUtils) {
@@ -1426,25 +1504,71 @@ function getBackgroundSearchPolicy(searchUtils) {
   };
 }
 
-function buildBackgroundSearchQueryContext(query, searchUtils) {
-  const normalizedPinyinQuery = shouldUseTitlePinyinMatch(query)
-    ? normalizeAsciiQueryForPinyin(query)
+// A query of Han characters alone, as a site's address would spell it: its
+// pinyin and its initials: 知乎 is zhihu, 京东 is jd.
+function getQueryHostSpellings(context, searchUtils) {
+  const compact = typeof searchUtils.compactSearchQuery === 'function'
+    ? searchUtils.compactSearchQuery(context.queryLower)
     : '';
+  if (compact.length < 2 || compact.length > 8 ||
+      !Array.from(compact).every((character) => searchUtils.hasSearchHanCharacters(character))) {
+    return [];
+  }
+  const pinyinApi = getPinyinPro();
+  if (!pinyinApi) {
+    return [];
+  }
+  try {
+    const syllables = pinyinApi.pinyin(compact, { toneType: 'none', type: 'array', v: true })
+      .map((syllable) => String(syllable || '').toLowerCase().replace(/[^a-z]+/g, ''))
+      .filter(Boolean);
+    if (syllables.length !== compact.length) {
+      return [];
+    }
+    const full = syllables.join('');
+    const initials = syllables.map((syllable) => syllable.charAt(0)).join('');
+    return full === initials ? [full] : [full, initials];
+  } catch (error) {
+    return [];
+  }
+}
+
+function buildBackgroundSearchQueryContext(query, searchUtils) {
   if (searchUtils && typeof searchUtils.buildSearchQueryContext === 'function') {
-    return searchUtils.buildSearchQueryContext(query, { normalizedPinyinQuery });
+    const context = searchUtils.buildSearchQueryContext(query);
+    context.queryHostSpellings = getQueryHostSpellings(context, searchUtils);
+    return context;
   }
   const queryLower = String(query || '').trim().toLowerCase();
   const queryTerms = queryLower.split(/\s+/).filter(Boolean);
   return {
     lookupQuery: String(query || ''),
     queryLower,
-    normalizedPinyinQuery,
-    useTitlePinyinMatch: Boolean(normalizedPinyinQuery),
+    unitQuery: '',
     queryTerms,
     coreQueryTerms: queryTerms.slice(),
     intentType: 'object',
     hasSettingsIntent: false,
     hasInformationalIntent: false
+  };
+}
+
+// Marks where a local result's title shows the query, by the same rules that
+// matched it, so a pinyin or initials match marks the characters it spelled.
+// The view uses the ranges only while its title text and query are these.
+function attachSuggestionTitleHighlight(suggestion, context, scoreOptions, searchUtils) {
+  if (!suggestion || !suggestion.title || !searchUtils ||
+      typeof searchUtils.getSearchTitleHighlightRanges !== 'function') {
+    return suggestion;
+  }
+  const text = searchUtils.sanitizeDisplayText(suggestion.title);
+  return {
+    ...suggestion,
+    titleHighlight: {
+      text,
+      query: String(context.lookupQuery || '').trim().toLowerCase(),
+      ranges: searchUtils.getSearchTitleHighlightRanges(text, context, scoreOptions)
+    }
   };
 }
 
@@ -1462,12 +1586,16 @@ async function getSearchSuggestions(query, options) {
   const lookupStartTime = Date.now() - (searchPolicy.lookupWindowDays * 24 * 60 * 60 * 1000);
   const lookupEndTime = Date.now();
   const lookupMaxResults = searchPolicy.lookupMaxResults || 120;
+  const titleMatcher = getTitleTextMatcher();
   const searchScoreOptions = {
-    getTitlePinyinMatchScore,
+    titleMatcher,
     isLocalNetworkHost: FAVICON_UTILS.isLocalNetworkHost,
     isOwnExtensionUrl
   };
-  const configuredSourceTypes = await loadSearchResultSourceTypes();
+  const [configuredSourceTypes] = await Promise.all([
+    loadSearchResultSourceTypes(),
+    loadSearchFuzzyPinyinEnabled()
+  ]);
   const requestedSourceTypes = Array.isArray(requestOptions.sourceTypes)
     ? requestOptions.sourceTypes
       .map((item) => String(item || '').trim())
@@ -1493,6 +1621,7 @@ async function getSearchSuggestions(query, options) {
       bookmarksRaw,
       fallbackHistoryItems,
       allBookmarks,
+      hanTitleHistoryItems,
       searchBlacklistItems,
       faviconRequestBlacklistItems,
       _faviconEnhancedFetchEnabled,
@@ -1516,6 +1645,9 @@ async function getSearchSuggestions(query, options) {
         : Promise.resolve([]),
       allowHistory ? getCachedFallbackHistoryItemsOrWarm(searchPolicy) : Promise.resolve([]),
       allowBookmarks ? getCachedBookmarkItemsOrWarm() : Promise.resolve([]),
+      allowHistory && /[a-z]/.test(context.unitQuery || '')
+        ? getCachedHanTitleHistoryItemsOrWarm(searchPolicy)
+        : Promise.resolve([]),
       loadSearchBlacklistItems(),
       loadFaviconRequestBlacklistItems(),
       loadFaviconEnhancedFetchEnabled(),
@@ -1523,12 +1655,15 @@ async function getSearchSuggestions(query, options) {
     ]);
     const collectSearchMatches = (items) => {
       return searchUtils.collectSearchMatches(items, context, searchBlacklistItems, {
-        getTitlePinyinMatchScore,
+        titleMatcher,
         isUrlBlockedBySearchBlacklist
       });
     };
     const mergeSearchItems = searchUtils.mergeItemsByUrl;
-    const fallbackHistoryMatches = collectSearchMatches(fallbackHistoryItems);
+    const fallbackHistoryMatches = collectSearchMatches(mergeSearchItems([
+      fallbackHistoryItems,
+      hanTitleHistoryItems
+    ]));
     const historyItems = collectSearchMatches(mergeSearchItems([
       Array.isArray(historyItemsRaw) ? historyItemsRaw : [],
       fallbackHistoryMatches
@@ -1563,10 +1698,12 @@ async function getSearchSuggestions(query, options) {
       } else if (sourceType === 'history') {
         reasons.push('来源：浏览历史');
       }
-      const pinyinMatch = getTitlePinyinMatchScore(item && item.title, context.normalizedPinyinQuery);
-      if (pinyinMatch.reason === 'initials-exact' || pinyinMatch.reason === 'initials-prefix') {
+      const unitMatch = context.unitQuery
+        ? searchUtils.getSearchTitleUnitMatch(item && item.title, context.unitQuery, searchScoreOptions, { skipLiteral: true })
+        : null;
+      if (unitMatch && unitMatch.abbreviation) {
         reasons.push('标题首字母匹配');
-      } else if (pinyinMatch.score > 0) {
+      } else if (unitMatch && unitMatch.usesPinyin) {
         reasons.push('标题拼音匹配');
       }
       if (item && item.lastVisitTime) {
@@ -1796,7 +1933,9 @@ async function getSearchSuggestions(query, options) {
     finalSuggestions = searchUtils.filterSearchSuggestionsBySourceTypes(finalSuggestions, sourceTypes);
     finalSuggestions = searchUtils.applySearchSuggestionHostDiversity(finalSuggestions, { context });
 
-    return finalSuggestions;
+    return finalSuggestions.map((suggestion) => (
+      attachSuggestionTitleHighlight(suggestion, context, searchScoreOptions, searchUtils)
+    ));
 
   } catch (error) {
     console.error('Error getting search suggestions:', error);

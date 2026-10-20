@@ -1,5 +1,5 @@
 (function(root) {
-  const SEARCH_INPUT_MODE_RUNTIME_VERSION = '2026-09-02-scope-action-disabled-v35';
+  const SEARCH_INPUT_MODE_RUNTIME_VERSION = '2026-10-20-scope-title-units-v36';
   if (root.LumnoSearchInputMode &&
       root.LumnoSearchInputMode.runtimeVersion === SEARCH_INPUT_MODE_RUNTIME_VERSION &&
       typeof root.LumnoSearchInputMode.createInputModeController === 'function') {
@@ -484,6 +484,27 @@
         return null;
       }
     }
+    // The traditional-to-simplified table the shared matcher folds with, so
+    // 臺灣 finds a card named 台湾 and the other way round.
+    function ensureModeMenuHanVariants() {
+      const loaded = root.LumnoSearchHanVariants || (
+        typeof globalThis !== 'undefined' ? globalThis.LumnoSearchHanVariants : null
+      );
+      const chromeApi = root.chrome || (
+        typeof globalThis !== 'undefined' ? globalThis.chrome : null
+      );
+      if (loaded || !chromeApi || !chromeApi.runtime ||
+          typeof chromeApi.runtime.getURL !== 'function') {
+        return null;
+      }
+      try {
+        return import(chromeApi.runtime.getURL('src/shared/search-han-variants.js'))
+          .then(() => true)
+          .catch(() => null);
+      } catch (error) {
+        return null;
+      }
+    }
     // Only the scope panel's filter reads pinyin, so the runtime loads on the first typed
     // character or the first panel open, not while the page is opening.
     let modeMenuPinyinRuntimeReady;
@@ -492,6 +513,14 @@
       if (!modeMenuPinyinRuntimeRequested) {
         modeMenuPinyinRuntimeRequested = true;
         modeMenuPinyinRuntimeReady = ensureModeMenuPinyinRuntime();
+        // Cards indexed from the fallback table pick up every reading, and
+        // the simplified forms, once the runtime and the table arrive.
+        Promise.all([modeMenuPinyinRuntimeReady, ensureModeMenuHanVariants()])
+          .then(([api, variantsLoaded]) => {
+            if ((api && typeof api.pinyin === 'function') || variantsLoaded) {
+              refreshModeMenuSearchIndexes();
+            }
+          });
       }
       return modeMenuPinyinRuntimeReady;
     }
@@ -2510,12 +2539,17 @@
       return wrap;
     }
 
+    // The panel reads names and the typed filter by the same rules as the
+    // search results: kana, Hangul and Cyrillic included, accents and
+    // full-width forms folded.
     function normalizeModeMenuSearchText(value) {
-      return Array.from(
-        String(value || '').normalize('NFKD').toLowerCase()
-      ).filter((character) => !/[\u0300-\u036f]/.test(character))
-        .filter((character) => /[a-z0-9\u3400-\u9fff]/.test(character))
-        .join('');
+      const searchUtils = getModeMenuSearchUtils();
+      if (searchUtils && typeof searchUtils.compactSearchQuery === 'function') {
+        return searchUtils.compactSearchQuery(value);
+      }
+      return String(value || '').normalize('NFKD').toLowerCase()
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\p{L}\p{M}\p{N}]+/gu, '');
     }
 
     function appendModeMenuSearchSequence(sequence, characterMap, value, range) {
@@ -2526,64 +2560,56 @@
       });
     }
 
-    function getModeMenuPinyinSyllable(character) {
-      if (!/[\u3400-\u9fff]/.test(character)) {
-        return normalizeModeMenuSearchText(character);
-      }
+    function getModeMenuSearchUtils() {
+      const searchUtils = root.LumnoSearchUtils || (
+        typeof globalThis !== 'undefined' ? globalThis.LumnoSearchUtils : null
+      );
+      return searchUtils && typeof searchUtils.buildSearchTextIndex === 'function' &&
+        typeof searchUtils.matchSearchTextIndex === 'function'
+        ? searchUtils
+        : null;
+    }
+
+    // Every reading of each character once pinyin-pro is in; until then the
+    // built-in scope names still spell from the fallback table.
+    function getModeMenuHanReadings(text, characters) {
       const pinyinApi = getModeMenuPinyinApi();
-      if (!pinyinApi || typeof pinyinApi.pinyin !== 'function') {
-        return MODE_MENU_PINYIN_FALLBACKS[character] || '';
-      }
-      try {
-        const result = pinyinApi.pinyin(character, {
-          toneType: 'none',
-          type: 'array',
-          nonZh: 'removed',
-          v: false
-        });
-        return normalizeModeMenuSearchText(
-          Array.isArray(result) ? result.join('') : result
-        ) || MODE_MENU_PINYIN_FALLBACKS[character] || '';
-      } catch (error) {
-        return MODE_MENU_PINYIN_FALLBACKS[character] || '';
-      }
+      return characters.map((character) => {
+        const fallback = MODE_MENU_PINYIN_FALLBACKS[character];
+        if (!pinyinApi || typeof pinyinApi.pinyin !== 'function') {
+          return fallback ? [fallback] : [];
+        }
+        try {
+          const result = pinyinApi.pinyin(character, {
+            toneType: 'none',
+            type: 'array',
+            multiple: true,
+            v: true
+          });
+          const readings = Array.isArray(result) ? result : [result];
+          return readings.filter(Boolean).length > 0 ? readings : (fallback ? [fallback] : []);
+        } catch (error) {
+          return fallback ? [fallback] : [];
+        }
+      });
     }
 
     function buildModeMenuSearchIndex(item) {
       const labelText = String(item && item.label ? item.label : '');
       const labelSequence = [];
       const labelMap = [];
-      const pinyinSequence = [];
-      const pinyinMap = [];
-      const initialSequence = [];
-      const initialMap = [];
       let sourceOffset = 0;
       Array.from(labelText).forEach((character) => {
         const start = sourceOffset;
         sourceOffset += character.length;
-        const range = Object.freeze({ start, end: sourceOffset });
         appendModeMenuSearchSequence(
           labelSequence,
           labelMap,
           character,
-          range
+          Object.freeze({ start, end: sourceOffset })
         );
-        const syllable = getModeMenuPinyinSyllable(character);
-        appendModeMenuSearchSequence(
-          pinyinSequence,
-          pinyinMap,
-          syllable,
-          range
-        );
-        if (syllable) {
-          appendModeMenuSearchSequence(
-            initialSequence,
-            initialMap,
-            syllable.charAt(0),
-            range
-          );
-        }
       });
+      const searchUtils = getModeMenuSearchUtils();
       const provider = item && item.provider ? item.provider : null;
       const searchTerms = []
         .concat(Array.isArray(item && item.searchTerms) ? item.searchTerms : [])
@@ -2594,10 +2620,11 @@
       return Object.freeze({
         label: labelSequence.join(''),
         labelMap,
-        pinyin: pinyinSequence.join(''),
-        pinyinMap,
-        initials: initialSequence.join(''),
-        initialMap,
+        // Pinyin, initials and mixed spellings ("db", "douban", "doub"), by the
+        // same rules as the search results.
+        units: searchUtils
+          ? searchUtils.buildSearchTextIndex(labelText, { getHanReadings: getModeMenuHanReadings })
+          : null,
         searchTerms
       });
     }
@@ -2630,23 +2657,15 @@
       if (directRange) {
         return { matched: true, ranges: [directRange] };
       }
-      const pinyinRange = getModeMenuSearchRange(
-        index.pinyin,
-        index.pinyinMap,
-        normalizedQuery
-      );
-      if (pinyinRange) {
-        return { matched: true, ranges: [pinyinRange] };
-      }
-      const initialsRange = normalizedQuery.length >= 2
-        ? getModeMenuSearchRange(
-          index.initials,
-          index.initialMap,
-          normalizedQuery
-        )
+      const searchUtils = getModeMenuSearchUtils();
+      const unitMatch = searchUtils && index.units
+        ? searchUtils.matchSearchTextIndex(index.units, normalizedQuery)
         : null;
-      if (initialsRange) {
-        return { matched: true, ranges: [initialsRange] };
+      if (unitMatch) {
+        return {
+          matched: true,
+          ranges: unitMatch.ranges.map((range) => ({ start: range[0], end: range[1] }))
+        };
       }
       const matchedSearchTerm = index.searchTerms.some((term) => (
         term.includes(normalizedQuery)
@@ -3197,6 +3216,18 @@
       });
     }
 
+    function refreshModeMenuSearchIndexes() {
+      if (renderedModeMenuEntries.length === 0) {
+        return;
+      }
+      renderedModeMenuEntries.forEach((entry) => {
+        entry.searchIndex = buildModeMenuSearchIndex(entry.item);
+      });
+      if (normalizeModeMenuSearchText(modeMenuFilterQuery)) {
+        applyModeMenuFilter(modeMenuFilterQuery, { preserveScroll: true });
+      }
+    }
+
     function applyModeMenuFilter(query, filterOptions) {
       modeMenuFilterQuery = String(query || '');
       refreshModeMenuFilterText();
@@ -3677,7 +3708,7 @@
       } else if (!event.isComposing && !event.repeat &&
           !event.metaKey && !event.ctrlKey && !event.altKey &&
           typeof event.key === 'string' && event.key.length === 1 &&
-          /[a-z0-9\u3400-\u9fff\s]/i.test(event.key)) {
+          /^[\p{L}\p{N}\s]$/u.test(event.key)) {
         stopModeMenuKeyEvent(event);
         applyModeMenuFilter(modeMenuFilterQuery + event.key);
         focusFirstModeMenuFilterResult();

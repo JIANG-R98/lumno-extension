@@ -10,6 +10,10 @@
     fallbackHistoryWindowDays: 365,
     lookupMaxResults: 120,
     fallbackHistoryMaxResults: 600,
+    // Pinyin and initials can only match titles already in hand, since the
+    // browser's history search reads typed text; this many recent pages are
+    // scanned for titles with Han characters.
+    hanTitleHistoryScanLimit: 5000,
     maxEngineSuggestions: 5,
     maxEngineSuggestionsWithLocalResults: 3,
     candidatePoolLimit: 20,
@@ -513,75 +517,1190 @@
     return Boolean(getDirectNavigationUrl(value));
   }
 
+  // Han ideographs: the unified block, its Extension A and the compatibility block.
+  const SEARCH_HAN_PATTERN = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/;
+  const SEARCH_TEXT_MATCHER_CACHE_MAX_ENTRIES = 1024;
+
+  let searchHanVariantMap = null;
+  const SEARCH_FOLDED_CHARACTER_CACHE_MAX_ENTRIES = 16384;
+  const searchFoldedCharacters = new Map();
+  // Titles are folded again on every keystroke, so their folded and
+  // lowercased forms are kept; a full cache starts over.
+  const SEARCH_FOLDED_TEXT_CACHE_MAX_ENTRIES = 8192;
+  const searchFoldedTexts = new Map();
+  const searchNormalizedTexts = new Map();
+
+  // Traditional characters fold to simplified ones where the variant table is
+  // loaded (the background worker loads search-han-variants.js, pages load it
+  // with the pinyin runtime). Each character stays one character, so highlight
+  // ranges keep their places.
+  function getSearchHanVariantMap() {
+    if (searchHanVariantMap) {
+      return searchHanVariantMap;
+    }
+    const pairs = typeof globalThis !== 'undefined' ? globalThis.LumnoSearchHanVariants : '';
+    if (typeof pairs !== 'string' || !pairs) {
+      return null;
+    }
+    searchHanVariantMap = new Map();
+    for (let i = 0; i + 1 < pairs.length; i += 2) {
+      searchHanVariantMap.set(pairs.charAt(i), pairs.charAt(i + 1));
+    }
+    // Text folded before the table arrived folds again with it.
+    searchFoldedCharacters.clear();
+    searchFoldedTexts.clear();
+    searchNormalizedTexts.clear();
+    return searchHanVariantMap;
+  }
+
+  // Letters that read as other letters without a Unicode decomposition, and
+  // letters whose mark is part of the letter itself.
+  const SEARCH_FOLD_LETTERS = new Map([
+    ['ß', 'ss'], ['ẞ', 'SS'], ['Ł', 'L'], ['ł', 'l'], ['Ø', 'O'], ['ø', 'o'], ['Đ', 'D'], ['đ', 'd'],
+    ['Æ', 'AE'], ['æ', 'ae'], ['Œ', 'OE'], ['œ', 'oe'], ['Þ', 'TH'], ['þ', 'th'], ['Ħ', 'H'], ['ħ', 'h'],
+    ['ı', 'i'],
+    // Greek: the word-final sigma is the same letter as σ.
+    ['ς', 'σ'],
+    // Cyrillic: й, ї and ў are letters of their own, not и, і and у with a
+    // mark (ё still reads as е).
+    ['й', 'й'], ['Й', 'Й'], ['ї', 'ї'], ['Ї', 'Ї'], ['ў', 'ў'], ['Ў', 'Ў'],
+    // Arabic and Persian: one letter written several ways.
+    ['أ', 'ا'], ['إ', 'ا'], ['آ', 'ا'], ['ٱ', 'ا'], ['ة', 'ه'], ['ى', 'ي'], ['ی', 'ي'], ['ک', 'ك']
+  ]);
+
+  // Second spellings a reader may type for a Latin letter: "mueller" for
+  // Müller, "aa" for å, "oe" for ø.
+  const SEARCH_LETTER_ALTERNATES = new Map([
+    ['ä', 'ae'], ['ö', 'oe'], ['ü', 'ue'], ['Ä', 'Ae'], ['Ö', 'Oe'], ['Ü', 'Ue'],
+    ['å', 'aa'], ['Å', 'Aa'], ['ø', 'oe'], ['Ø', 'Oe']
+  ]);
+
+  // Digits of other scripts (Arabic-Indic, Devanagari, Thai and more) read as
+  // 0-9; each entry is the code point of a script's zero.
+  const SEARCH_DIGIT_ZEROS = [
+    0x0660, 0x06f0, 0x07c0, 0x0966, 0x09e6, 0x0a66, 0x0ae6, 0x0b66, 0x0be6, 0x0c66,
+    0x0ce6, 0x0d66, 0x0de6, 0x0e50, 0x0ed0, 0x0f20, 0x1040, 0x1090, 0x17e0, 0x1810
+  ];
+
+  // Marks a reader leaves out when typing: Latin, Greek and Cyrillic accents,
+  // Arabic vowel signs and the tatweel, Hebrew points. Marks that change a
+  // word, such as the vowel signs of Devanagari or Thai, stay.
+  function isSearchOptionalMark(code) {
+    return (code >= 0x0300 && code <= 0x036f) ||
+      (code >= 0x0591 && code <= 0x05bd) || code === 0x05bf ||
+      (code >= 0x05c1 && code <= 0x05c2) || (code >= 0x05c4 && code <= 0x05c5) || code === 0x05c7 ||
+      (code >= 0x0610 && code <= 0x061a) || code === 0x0640 ||
+      (code >= 0x064b && code <= 0x065f) || code === 0x0670 ||
+      (code >= 0x06d6 && code <= 0x06dc) || (code >= 0x06df && code <= 0x06e4) ||
+      (code >= 0x06e7 && code <= 0x06e8) || (code >= 0x06ea && code <= 0x06ed);
+  }
+
+  // One character after decomposition: kana as hiragana, digits as 0-9,
+  // traditional Han characters as simplified ones.
+  function foldSearchSimpleCharacter(character) {
+    if (SEARCH_FOLD_LETTERS.has(character)) {
+      return SEARCH_FOLD_LETTERS.get(character);
+    }
+    const code = character.codePointAt(0);
+    if ((code >= 0x30a1 && code <= 0x30f6) || code === 0x30fd || code === 0x30fe) {
+      return String.fromCharCode(code - 0x60);
+    }
+    for (let i = 0; i < SEARCH_DIGIT_ZEROS.length; i += 1) {
+      if (code >= SEARCH_DIGIT_ZEROS[i] && code <= SEARCH_DIGIT_ZEROS[i] + 9) {
+        return String(code - SEARCH_DIGIT_ZEROS[i]);
+      }
+    }
+    if (code >= 0x3400 && code <= 0x9fff) {
+      const variants = getSearchHanVariantMap();
+      return (variants && variants.get(character)) || character;
+    }
+    return character;
+  }
+
+  function computeSearchFoldedCharacter(character) {
+    if (SEARCH_FOLD_LETTERS.has(character)) {
+      return SEARCH_FOLD_LETTERS.get(character);
+    }
+    const code = character.codePointAt(0);
+    if (isSearchOptionalMark(code)) {
+      return '';
+    }
+    // Hangul letters typed alone (ㅅ) stay as typed: compatibility
+    // decomposition would turn them into the jamo that only build syllables.
+    if (code >= 0x3131 && code <= 0x318e) {
+      return character;
+    }
+    const decomposed = character.normalize('NFKD');
+    const composed = decomposed === character
+      ? character
+      : Array.from(decomposed)
+        .filter((piece) => !isSearchOptionalMark(piece.codePointAt(0)))
+        .join('')
+        .normalize('NFC');
+    return Array.from(composed).map(foldSearchSimpleCharacter).join('');
+  }
+
+  // Folds one character the way a reader sees letters as the same: full-width
+  // forms an input method types ("ｇ"), ligatures, accents ("é"), letters
+  // spelled several ways (ß, أ), digits of other scripts, katakana as
+  // hiragana and traditional Han characters as simplified ones. Case is kept
+  // so camel-case words can still be found. A mark a reader leaves out folds
+  // to nothing; every other character folds on its own, so a title is indexed
+  // character by character.
+  function foldSearchCharacter(character) {
+    if (character.length === 1 && character.charCodeAt(0) < 0x80) {
+      return character;
+    }
+    const cached = searchFoldedCharacters.get(character);
+    if (typeof cached === 'string') {
+      return cached;
+    }
+    const folded = computeSearchFoldedCharacter(character);
+    if (searchFoldedCharacters.size < SEARCH_FOLDED_CHARACTER_CACHE_MAX_ENTRIES) {
+      searchFoldedCharacters.set(character, folded);
+    }
+    return folded;
+  }
+
+  // Pages load the variant table later than this file; once it is there,
+  // building the map empties the caches folded without it.
+  function ensureSearchHanVariants() {
+    if (!searchHanVariantMap && typeof globalThis !== 'undefined' &&
+        typeof globalThis.LumnoSearchHanVariants === 'string') {
+      getSearchHanVariantMap();
+    }
+  }
+
+  function rememberSearchText(cache, text, result) {
+    if (cache.size >= SEARCH_FOLDED_TEXT_CACHE_MAX_ENTRIES) {
+      cache.clear();
+    }
+    cache.set(text, result);
+    return result;
+  }
+
+  function foldSearchText(value) {
+    const text = String(value || '');
+    if (!/[^\x00-\x7f]/.test(text)) {
+      return text;
+    }
+    ensureSearchHanVariants();
+    const cached = searchFoldedTexts.get(text);
+    if (typeof cached === 'string') {
+      return cached;
+    }
+    // Built only once a character changes, so unchanged text is returned as is.
+    let folded = null;
+    let position = 0;
+    for (const character of text) {
+      const piece = foldSearchCharacter(character);
+      if (folded !== null) {
+        folded += piece;
+      } else if (piece !== character) {
+        folded = text.slice(0, position) + piece;
+      }
+      position += character.length;
+    }
+    return rememberSearchText(searchFoldedTexts, text, folded === null ? text : folded);
+  }
+
+  function hasSearchHanCharacters(value) {
+    return SEARCH_HAN_PATTERN.test(String(value || ''));
+  }
+
+  function normalizeSearchText(value) {
+    const text = String(value || '');
+    if (!/[^\x00-\x7f]/.test(text)) {
+      return text.toLowerCase();
+    }
+    ensureSearchHanVariants();
+    const cached = searchNormalizedTexts.get(text);
+    if (typeof cached === 'string') {
+      return cached;
+    }
+    return rememberSearchText(searchNormalizedTexts, text, foldSearchText(text).toLowerCase());
+  }
+
+  // The query as one run of letters, marks and digits: "gh ck" and "wx 读书"
+  // are typed the way the title reads, without the spaces between its words.
+  function compactSearchQuery(value) {
+    return normalizeSearchText(value).replace(/[^\p{L}\p{M}\p{N}]+/gu, '');
+  }
+
   function splitSearchTerms(value) {
     return Array.from(new Set(
-      String(value || '')
-        .toLowerCase()
-        .split(/[^a-z0-9\u4e00-\u9fff]+/i)
+      normalizeSearchText(value)
+        .split(/[^\p{L}\p{M}\p{N}]+/u)
         .map((item) => item.trim())
         .filter(Boolean)
     ));
   }
 
-  // Chinese text has no spaces, so a Latin or digit run inside it (the "4a"
-  // in "移动4a平台") is a word of its own and must be matchable as a token.
+  // Scripts that write words apart and have letter case. Their words split
+  // at camel case and digits, abbreviate by initials, and a term of one or
+  // two of their letters only matches where a word starts, as in English.
+  const SEARCH_WORD_LETTERS = '\\p{Script=Latin}\\p{Script=Cyrillic}\\p{Script=Greek}' +
+    '\\p{Script=Armenian}\\p{Script=Georgian}';
+  const SEARCH_WORD_CHARACTERS_PATTERN = new RegExp(`^[${SEARCH_WORD_LETTERS}\\d]+$`, 'u');
+  const SEARCH_WORD_RUN_PATTERN = new RegExp(`[${SEARCH_WORD_LETTERS}\\d]+`, 'gu');
+  const SEARCH_WORD_PART_PATTERN = /\p{Lu}+(?!\p{Ll})|\p{Lu}?\p{Ll}+|\d+|\p{L}+/gu;
+
+  // The words of a run: "OpenAI" is "open" and "ai", "iPhone15" is "i",
+  // "phone" and "15", "HTMLParser" is "html" and "parser", "ВКонтакте" is
+  // "в" and "контакте".
+  function splitSearchRunWords(run) {
+    return String(run || '').match(SEARCH_WORD_PART_PATTERN) || [];
+  }
+
+  // A title token is also every word inside it, so a short term finds the
+  // "4a" in "移动4a平台", the "15" in "iPhone15" and the "ai" in "OpenAI".
   function splitSearchTitleTokens(value) {
     const tokens = splitSearchTerms(value);
-    const embeddedRuns = [];
-    tokens.forEach((token) => {
-      if (!/[\u4e00-\u9fff]/.test(token)) {
+    const seen = new Set(tokens);
+    const add = (word) => {
+      const token = String(word || '').toLowerCase();
+      if (token && !seen.has(token)) {
+        seen.add(token);
+        tokens.push(token);
+      }
+    };
+    (foldSearchText(value).match(SEARCH_WORD_RUN_PATTERN) || []).forEach((run) => {
+      add(run);
+      splitSearchRunWords(run).forEach(add);
+    });
+    return tokens;
+  }
+
+  const SEARCH_HAN_READINGS_CACHE_MAX_ENTRIES = 8192;
+  const normalizedSearchHanReadingsCache = new Map();
+
+  // Readings as typed, longest first; one shared array per distinct set.
+  // The reading lists a caller keeps per character come back as the same
+  // arrays, so their normalized form is found without joining them again.
+  const normalizedSearchHanReadingsByList = new WeakMap();
+
+  function normalizeSearchHanReadings(readings) {
+    if (Array.isArray(readings) && normalizedSearchHanReadingsByList.has(readings)) {
+      return normalizedSearchHanReadingsByList.get(readings);
+    }
+    const raw = (Array.isArray(readings) ? readings : [readings]).map((reading) => String(reading || ''));
+    const key = raw.join(',');
+    if (normalizedSearchHanReadingsCache.has(key)) {
+      const cached = normalizedSearchHanReadingsCache.get(key);
+      if (Array.isArray(readings)) {
+        normalizedSearchHanReadingsByList.set(readings, cached);
+      }
+      return cached;
+    }
+    const result = [];
+    raw.forEach((reading) => {
+      const value = normalizeSearchText(reading).replace(/[^a-z]+/g, '');
+      if (!value) {
         return;
       }
-      (token.match(/[a-z0-9]+/g) || []).forEach((run) => {
-        if (!tokens.includes(run) && !embeddedRuns.includes(run)) {
-          embeddedRuns.push(run);
+      // "ü" is typed as "v" or as "u": 绿 reads as "lv" and "lu".
+      [value, value.replace(/v/g, 'u')].forEach((variant) => {
+        if (!result.includes(variant)) {
+          result.push(variant);
         }
       });
     });
-    return tokens.concat(embeddedRuns);
+    result.sort((left, right) => right.length - left.length);
+    if (Array.isArray(readings)) {
+      normalizedSearchHanReadingsByList.set(readings, result);
+    }
+    normalizedSearchHanReadingsCache.set(key, result);
+    if (normalizedSearchHanReadingsCache.size > SEARCH_HAN_READINGS_CACHE_MAX_ENTRIES) {
+      normalizedSearchHanReadingsCache.delete(normalizedSearchHanReadingsCache.keys().next().value);
+    }
+    return result;
   }
 
-  function splitSearchInitialWords(value) {
-    const words = [];
-    const asciiRuns = String(value || '').match(/[a-z]+/gi) || [];
-    asciiRuns.forEach((run) => {
-      const parts = String(run).match(/[A-Z]+(?=[A-Z][a-z]|$)|[A-Z]?[a-z]+/g) || [run];
-      parts.forEach((part) => {
-        const normalized = String(part || '').toLowerCase().replace(/[^a-z]+/g, '');
-        if (normalized) {
-          words.push(normalized);
-        }
+  // Fuzzy pinyin (模糊音), an opt-in setting: readings also spelled with the
+  // initials and finals many speakers and input methods treat as one sound.
+  // z/zh, c/ch, s/sh and n/l swap initials; an/ang, en/eng and in/ing swap
+  // finals (so ian/iang and uan/uang as well).
+  function expandSearchFuzzyPinyinReadings(readings) {
+    const expanded = [];
+    const add = (reading) => {
+      if (reading && !expanded.includes(reading)) {
+        expanded.push(reading);
+      }
+    };
+    (Array.isArray(readings) ? readings : []).forEach((value) => {
+      const reading = String(value || '').toLowerCase();
+      add(reading);
+      const match = /^(zh|ch|sh|[bpmfdtnlgkhjqxrzcsyw]?)([aeiouv].*)$/.exec(reading);
+      if (!match) {
+        return;
+      }
+      const initial = match[1];
+      const final = match[2];
+      const initials = [initial];
+      if (/^[zcs]h$/.test(initial)) {
+        initials.push(initial.charAt(0));
+      } else if (/^[zcs]$/.test(initial)) {
+        initials.push(`${initial}h`);
+      } else if (initial === 'n' || initial === 'l') {
+        initials.push(initial === 'n' ? 'l' : 'n');
+      }
+      const finals = [final];
+      if (/[aei]ng$/.test(final)) {
+        finals.push(final.slice(0, -1));
+      } else if (/[aei]n$/.test(final)) {
+        finals.push(`${final}g`);
+      }
+      initials.forEach((start) => {
+        finals.forEach((end) => add(start + end));
       });
     });
-    return words;
+    return expanded;
   }
 
-  function buildSearchTitleInitials(value) {
-    return splitSearchInitialWords(value)
-      .map((word) => word.charAt(0))
-      .join('');
+  const SEARCH_UNIT_WORD = 'w';
+  const SEARCH_UNIT_DIGIT = 'd';
+  const SEARCH_UNIT_HAN = 'h';
+  const SEARCH_UNIT_CHAR = 'c';
+
+  // Hiragana (katakana fold to it), except の, which Chinese titles borrow.
+  function isSearchKanaCode(code) {
+    return (code >= 0x3041 && code <= 0x3096 && code !== 0x306e) || (code >= 0x30f7 && code <= 0x30fa);
   }
 
-  function getSearchTitleInitialsMatchType(title, term) {
-    const query = String(term || '').toLowerCase().replace(/[^a-z]+/g, '');
-    if (!query || query.length < 2) {
-      return '';
-    }
-    const initials = buildSearchTitleInitials(title);
-    if (!initials || initials.length < query.length) {
-      return '';
-    }
-    if (initials === query) {
-      return 'exact';
-    }
-    return initials.startsWith(query) ? 'prefix' : '';
-  }
-
-  function buildSearchQueryContext(query, options) {
+  // A title as the sequence of units a query spells: words of the scripts
+  // that write words apart (split at camel case and digits), digit runs, and
+  // single characters. A Han character carries its pinyin readings, every
+  // reading of a polyphone. Marks stay with the letter they sit on. Units
+  // remember where they sit in the original text for highlighting. Thousands
+  // of these stay cached, so each field is one compact value: kinds and
+  // segment starts as strings, spans as start/end pairs.
+  function buildSearchTextIndex(text, options) {
     const settings = options && typeof options === 'object' ? options : {};
+    const source = String(text || '');
+    let kinds = '';
+    let segments = '';
+    const texts = [];
+    const spans = [];
+    // Per word: where each of its letters ends, when the letters are not one
+    // source character each ("ﬁ", accents typed apart), and its second
+    // spelling ("mueller" for Müller).
+    let letterEnds = null;
+    let alternates = null;
+    let segmentStart = true;
+    let spaceBefore = false;
+    let lastKind = '';
+    let attachable = false;
+    let hasKana = false;
+    let run = null;
+    const isCjkKind = (kind) => kind === SEARCH_UNIT_HAN || kind === SEARCH_UNIT_CHAR;
+
+    const pushUnit = (kind, unitText, start, end, ends, alternate) => {
+      if (ends) {
+        letterEnds = letterEnds || {};
+        letterEnds[texts.length] = ends;
+      }
+      if (alternate) {
+        alternates = alternates || {};
+        alternates[texts.length] = alternate;
+      }
+      // A space next to Han text separates word groups ("GitHub 仓库",
+      // "微信 读书"); between words of other scripts it only separates words.
+      const startsSegment = segmentStart || (spaceBefore && (isCjkKind(kind) || isCjkKind(lastKind)));
+      kinds += kind;
+      segments += startsSegment ? '1' : '0';
+      texts.push(unitText);
+      spans.push(start, end);
+      segmentStart = false;
+      spaceBefore = false;
+      lastKind = kind;
+      attachable = true;
+    };
+    const flushRun = () => {
+      if (!run) {
+        return;
+      }
+      SEARCH_WORD_PART_PATTERN.lastIndex = 0;
+      let match = SEARCH_WORD_PART_PATTERN.exec(run.text);
+      while (match) {
+        const from = match.index;
+        const to = from + match[0].length;
+        const word = match[0].toLowerCase();
+        const alternate = run.hasAlternate ? run.alternates.slice(from, to).join('').toLowerCase() : '';
+        pushUnit(
+          /^\d/.test(match[0]) ? SEARCH_UNIT_DIGIT : SEARCH_UNIT_WORD,
+          word,
+          run.starts[from],
+          run.ends[to - 1],
+          run.simple ? null : run.ends.slice(from, to),
+          alternate && alternate !== word ? alternate : ''
+        );
+        match = SEARCH_WORD_PART_PATTERN.exec(run.text);
+      }
+      run = null;
+    };
+    const extendLastUnit = (end, addedText) => {
+      const last = texts.length - 1;
+      spans[last * 2 + 1] = end;
+      if (addedText) {
+        texts[last] += addedText;
+      }
+    };
+
+    let offset = 0;
+    Array.from(source).forEach((character) => {
+      const start = offset;
+      offset += character.length;
+      if (SEARCH_HAN_PATTERN.test(character)) {
+        flushRun();
+        pushUnit(SEARCH_UNIT_HAN, foldSearchCharacter(character), start, offset);
+        return;
+      }
+      const folded = foldSearchCharacter(character);
+      if (!folded || /^\p{M}+$/u.test(folded)) {
+        // A mark belongs to the letter before it: an accent typed on its own
+        // folds away, a Devanagari or Thai vowel sign stays part of it.
+        if (run) {
+          run.simple = false;
+          run.ends[run.ends.length - 1] = offset;
+        } else if (attachable && texts.length > 0) {
+          extendLastUnit(offset, folded.toLowerCase());
+        } else if (folded) {
+          pushUnit(SEARCH_UNIT_CHAR, folded.toLowerCase(), start, offset);
+        }
+        return;
+      }
+      if (SEARCH_WORD_CHARACTERS_PATTERN.test(folded)) {
+        if (!run) {
+          run = { text: '', starts: [], ends: [], alternates: [], simple: true, hasAlternate: false };
+        }
+        if (folded.length !== 1 || character.length !== 1) {
+          run.simple = false;
+        }
+        const alternate = SEARCH_LETTER_ALTERNATES.get(character);
+        if (alternate) {
+          run.hasAlternate = true;
+        }
+        run.text += folded;
+        for (let i = 0; i < folded.length; i += 1) {
+          run.starts.push(start);
+          run.ends.push(offset);
+          run.alternates.push(i === 0 && alternate ? alternate : (i === 0 ? folded : ''));
+        }
+        return;
+      }
+      flushRun();
+      const lower = folded.toLowerCase();
+      if (/^[\p{L}\p{N}][\p{L}\p{M}\p{N}]*$/u.test(lower)) {
+        if (isSearchKanaCode(lower.codePointAt(0))) {
+          hasKana = true;
+        }
+        pushUnit(SEARCH_UNIT_CHAR, lower, start, offset);
+        return;
+      }
+      attachable = false;
+      // Punctuation such as the "-" or "|" in "Home - Visual Studio Code"
+      // starts a new segment.
+      if (/[^\s\p{M}]/u.test(character)) {
+        segmentStart = true;
+      } else if (/\s/.test(character)) {
+        spaceBefore = true;
+      }
+    });
+    flushRun();
+    return {
+      text: source,
+      count: texts.length,
+      kinds,
+      segments,
+      texts: texts.slice(),
+      spans: spans.slice(),
+      letterEnds,
+      alternates,
+      readings: null,
+      getHanReadings: typeof settings.getHanReadings === 'function' ? settings.getHanReadings : null,
+      // Kanji in a Japanese title are not read as Chinese pinyin.
+      readingsResolved: !kinds.includes(SEARCH_UNIT_HAN) || hasKana
+    };
+  }
+
+  // Readings are looked up the first time a typed letter meets the index, so
+  // a query of Han characters never needs the pinyin data.
+  function resolveSearchTextIndexReadings(index) {
+    if (index.readingsResolved) {
+      return;
+    }
+    index.readingsResolved = true;
+    if (!index.getHanReadings) {
+      return;
+    }
+    const hanUnits = [];
+    for (let unit = 0; unit < index.count; unit += 1) {
+      if (index.kinds.charAt(unit) === SEARCH_UNIT_HAN) {
+        hanUnits.push(unit);
+      }
+    }
+    let readings = null;
+    try {
+      readings = index.getHanReadings(index.text, hanUnits.map((unit) => index.texts[unit]));
+    } catch (error) {
+      readings = null;
+    }
+    if (Array.isArray(readings)) {
+      index.readings = new Array(index.count).fill(null);
+      hanUnits.forEach((unit, position) => {
+        index.readings[unit] = normalizeSearchHanReadings(readings[position]);
+      });
+    }
+  }
+
+  // Hangul syllables are built from jamo by arithmetic, so a syllable reads as
+  // its initial consonant ("ㅅㅇ" for 서울, the 초성 search Korean apps offer),
+  // and the syllable still being typed at the end of the query reads as the
+  // start of a fuller one ("삼서" while typing 삼성).
+  const HANGUL_FIRST = 0xac00;
+  const HANGUL_LAST = 0xd7a3;
+  const HANGUL_INITIAL_JAMO = [
+    0x3131, 0x3132, 0x3134, 0x3137, 0x3138, 0x3139, 0x3141, 0x3142, 0x3143, 0x3145,
+    0x3146, 0x3147, 0x3148, 0x3149, 0x314a, 0x314b, 0x314c, 0x314d, 0x314e
+  ];
+  // Final consonants by index, as the jamo typed for them; clusters as two.
+  const HANGUL_FINAL_JAMO = [
+    [], [0x3131], [0x3132], [0x3131, 0x3145], [0x3134], [0x3134, 0x3148], [0x3134, 0x314e],
+    [0x3137], [0x3139], [0x3139, 0x3131], [0x3139, 0x3141], [0x3139, 0x3142], [0x3139, 0x3145],
+    [0x3139, 0x314c], [0x3139, 0x314d], [0x3139, 0x314e], [0x3141], [0x3142], [0x3142, 0x3145],
+    [0x3145], [0x3146], [0x3147], [0x3148], [0x314a], [0x314b], [0x314c], [0x314d], [0x314e]
+  ];
+  // Compound vowels by index, as the vowels typed for them.
+  const HANGUL_VOWEL_PARTS = { 9: [8, 0], 10: [8, 1], 11: [8, 20], 14: [13, 4], 15: [13, 5], 16: [13, 20], 19: [18, 20] };
+
+  function getHangulParts(character) {
+    const code = String(character || '').codePointAt(0);
+    if (!(code >= HANGUL_FIRST && code <= HANGUL_LAST)) {
+      return null;
+    }
+    const index = code - HANGUL_FIRST;
+    return {
+      initial: Math.floor(index / 588),
+      vowel: Math.floor((index % 588) / 28),
+      final: index % 28
+    };
+  }
+
+  // A syllable as the jamo keystrokes that build it.
+  function getHangulKeystrokes(parts) {
+    const vowels = HANGUL_VOWEL_PARTS[parts.vowel] || [parts.vowel];
+    return [HANGUL_INITIAL_JAMO[parts.initial]]
+      .concat(vowels.map((vowel) => -1 - vowel))
+      .concat(HANGUL_FINAL_JAMO[parts.final]);
+  }
+
+  function addHangulSteps(text, query, position, add) {
+    const unitParts = text.length === 1 ? getHangulParts(text) : null;
+    if (!unitParts) {
+      return;
+    }
+    const typed = query.charAt(position);
+    if (typed.charCodeAt(0) === HANGUL_INITIAL_JAMO[unitParts.initial]) {
+      add(1, 'initial', false);
+      return;
+    }
+    const typedParts = position === query.length - 1 ? getHangulParts(typed) : null;
+    if (!typedParts) {
+      return;
+    }
+    const typedKeys = getHangulKeystrokes(typedParts);
+    const unitKeys = getHangulKeystrokes(unitParts);
+    if (typedKeys.length < unitKeys.length && typedKeys.every((key, i) => key === unitKeys[i])) {
+      add(1, 'partial', false);
+    }
+  }
+
+  // While typing, a final consonant may still become the next syllable's
+  // initial ("간" on the way to 가나): the query with that consonant moved out.
+  function getHangulCarriedQuery(compact) {
+    const last = compact.charAt(compact.length - 1);
+    const parts = getHangulParts(last);
+    if (!parts || parts.final === 0) {
+      return '';
+    }
+    const finals = HANGUL_FINAL_JAMO[parts.final];
+    const carried = finals[finals.length - 1];
+    const remaining = finals.length > 1
+      ? HANGUL_FINAL_JAMO.findIndex((jamo) => jamo.length === 1 && jamo[0] === finals[0])
+      : 0;
+    const syllable = String.fromCharCode(HANGUL_FIRST + (parts.initial * 21 + parts.vowel) * 28 + remaining);
+    return compact.slice(0, -1) + syllable + String.fromCharCode(carried);
+  }
+
+  // The ways one unit can spell the query from position p: the whole word
+  // or reading, its initial ("zh", "ch" and "sh" count as initials), or any
+  // prefix when the query ends inside it.
+  function getSearchUnitSteps(index, unit, query, position) {
+    const steps = [];
+    const rest = query.length - position;
+    const tail = query.slice(position);
+    const add = (length, type, reading, alternate) => {
+      if (length > 0 && length <= rest &&
+          !steps.some((step) => step.length === length && step.type === type)) {
+        steps.push({ unit, length, type, reading, alternate: Boolean(alternate) });
+      }
+    };
+    const kind = index.kinds.charAt(unit);
+    const text = index.texts[unit];
+    if (kind === SEARCH_UNIT_HAN) {
+      if (query.charAt(position) === text) {
+        add(1, 'full', false);
+      }
+      const readings = (index.readings && index.readings[unit]) || [];
+      readings.forEach((reading) => {
+        if (query.startsWith(reading, position)) {
+          add(reading.length, 'full', true);
+        }
+      });
+      readings.forEach((reading) => {
+        if (tail.length > 1 && tail.length < reading.length && reading.startsWith(tail)) {
+          add(tail.length, 'partial', true);
+        }
+      });
+      readings.forEach((reading) => {
+        if (/^[zcs]h./.test(reading) && query.startsWith(reading.slice(0, 2), position)) {
+          add(2, 'initial', true);
+        }
+      });
+      readings.forEach((reading) => {
+        if (reading.length > 1 && query.charAt(position) === reading.charAt(0)) {
+          add(1, 'initial', true);
+        }
+      });
+      return steps;
+    }
+    if (query.startsWith(text, position)) {
+      add(text.length, 'full', false);
+    }
+    if (kind === SEARCH_UNIT_CHAR) {
+      // A letter whose vowel sign is still being typed ("भ" for "भा").
+      if (tail.length < text.length && text.startsWith(tail)) {
+        add(tail.length, 'partial', false);
+      }
+      addHangulSteps(text, query, position, add);
+      return steps;
+    }
+    const alternate = index.alternates && index.alternates[unit];
+    if (alternate) {
+      if (query.startsWith(alternate, position)) {
+        add(alternate.length, 'full', false, true);
+      } else if (tail.length > 1 && tail.length < alternate.length && alternate.startsWith(tail)) {
+        add(tail.length, 'partial', false, true);
+      }
+    }
+    if (tail.length > 1 && tail.length < text.length && text.startsWith(tail)) {
+      add(tail.length, 'partial', false);
+    }
+    // A digit run is not abbreviated: "1" only spells "15" where the query ends.
+    if (text.length > 1 && query.charAt(position) === text.charAt(0)) {
+      if (kind === SEARCH_UNIT_WORD) {
+        add(1, 'initial', false);
+      } else if (rest === 1) {
+        add(1, 'partial', false);
+      }
+    }
+    return steps;
+  }
+
+  // A mark is drawn with the letter it sits on, so a highlight never ends
+  // before it: splitting a word there would also break the joining of Arabic
+  // letters.
+  function extendSearchRangesOverMarks(text, ranges) {
+    const isMark = (position) => position < text.length && /^\p{M}$/u.test(text.charAt(position));
+    const extended = ranges.map(([start, end]) => {
+      let stop = end;
+      while (isMark(stop)) {
+        stop += 1;
+      }
+      return [start, stop];
+    });
+    return mergeSearchRanges(extended);
+  }
+
+  function mergeSearchRanges(ranges) {
+    const sorted = (Array.isArray(ranges) ? ranges : [])
+      .filter((range) => Array.isArray(range) && range[1] > range[0])
+      .map((range) => [range[0], range[1]])
+      .sort((left, right) => left[0] - right[0] || left[1] - right[1]);
+    const merged = [];
+    sorted.forEach((range) => {
+      const last = merged[merged.length - 1];
+      if (last && range[0] <= last[1]) {
+        last[1] = Math.max(last[1], range[1]);
+      } else {
+        merged.push(range);
+      }
+    });
+    return merged;
+  }
+
+  function describeSearchUnitPath(index, path) {
+    const firstUnit = path[0].unit;
+    const lastStep = path[path.length - 1];
+    const abbreviation = path.every((step) => (
+      step.type === 'initial' ||
+      (step.type === 'full' && index.kinds.charAt(step.unit) === SEARCH_UNIT_WORD &&
+        index.texts[step.unit].length === 1)
+    ));
+    const anchored = firstUnit === 0;
+    const firstInitial = path.findIndex((step) => step.type === 'initial');
+    return {
+      segmentStart: index.segments.charAt(firstUnit) === '1',
+      usesInitial: firstInitial >= 0,
+      // An initial followed by a spelled unit: "t" + "he" (他和), "wx" + "dushu".
+      initialThenSpelled: firstInitial >= 0 &&
+        path.slice(firstInitial + 1).some((step) => step.type !== 'initial'),
+      singleHan: path.length === 1 && index.kinds.charAt(firstUnit) === SEARCH_UNIT_HAN,
+      hasHan: path.some((step) => index.kinds.charAt(step.unit) === SEARCH_UNIT_HAN),
+      // Characters typed as themselves ("文档"), not read through pinyin.
+      literal: path.every((step) => (
+        !step.reading && step.type === 'full' &&
+        (index.kinds.charAt(step.unit) === SEARCH_UNIT_HAN || index.kinds.charAt(step.unit) === SEARCH_UNIT_CHAR)
+      )),
+      usesPinyin: path.some((step) => step.reading),
+      abbreviation,
+      anchored,
+      exact: anchored && lastStep.unit === index.count - 1 && (lastStep.type === 'full' || abbreviation)
+    };
+  }
+
+  function getSearchUnitStepRange(index, step) {
+    const start = index.spans[step.unit * 2];
+    const kind = index.kinds.charAt(step.unit);
+    if (step.type === 'full' || step.alternate || (kind !== SEARCH_UNIT_WORD && kind !== SEARCH_UNIT_DIGIT)) {
+      return [start, index.spans[step.unit * 2 + 1]];
+    }
+    const letterEnds = index.letterEnds && index.letterEnds[step.unit];
+    return [start, letterEnds ? letterEnds[step.length - 1] : start + step.length];
+  }
+
+  // Whether a unit can spell the given first letter or character at all; a
+  // quick test before working out its steps.
+  function canSearchUnitStartWith(index, unit, character) {
+    const text = index.texts[unit];
+    if (index.kinds.charAt(unit) !== SEARCH_UNIT_HAN) {
+      if (text.charAt(0) === character) {
+        return true;
+      }
+      // A Hangul syllable starts with its initial consonant, typed alone or
+      // as the first part of the syllable being typed.
+      const unitParts = text.length === 1 ? getHangulParts(text) : null;
+      if (!unitParts) {
+        return false;
+      }
+      const typedParts = getHangulParts(character);
+      return character.charCodeAt(0) === HANGUL_INITIAL_JAMO[unitParts.initial] ||
+        Boolean(typedParts && typedParts.initial === unitParts.initial);
+    }
+    if (text === character) {
+      return true;
+    }
+    const readings = index.readings && index.readings[unit];
+    return Boolean(readings) && readings.some((reading) => reading.charAt(0) === character);
+  }
+
+  // The first place the query reads as consecutive units of the text, each
+  // spelled in full, by its initial, or by a prefix where the query ends.
+  function findSearchUnitRun(index, compact) {
+    const failed = new Set();
+    const path = [];
+    const walk = (unit, position) => {
+      if (position === compact.length) {
+        return true;
+      }
+      if (unit >= index.count) {
+        return false;
+      }
+      const key = unit * (compact.length + 1) + position;
+      if (failed.has(key) || !canSearchUnitStartWith(index, unit, compact.charAt(position))) {
+        return false;
+      }
+      const steps = getSearchUnitSteps(index, unit, compact, position);
+      for (let i = 0; i < steps.length; i += 1) {
+        path.push(steps[i]);
+        if (walk(unit + 1, position + steps[i].length)) {
+          return true;
+        }
+        path.pop();
+      }
+      failed.add(key);
+      return false;
+    };
+
+    for (let start = 0; start < index.count; start += 1) {
+      path.length = 0;
+      if (!walk(start, 0)) {
+        continue;
+      }
+      const shape = describeSearchUnitPath(index, path);
+      // Initials, a lone syllable and two letters are weak evidence: inside a
+      // phrase "js" would find every 技术 and "pin" every 品牌, so they have to
+      // start one. Spelling across units ("shipin", "iphone15") and Han
+      // characters typed as themselves may sit anywhere.
+      if (!shape.literal && (compact.length <= 2 || shape.usesInitial || shape.singleHan) &&
+          !shape.segmentStart) {
+        continue;
+      }
+      // Mixing an initial with spelling needs three units: "wxdushu" is typed
+      // for 微信读书, while English words such as "the" read as 他和.
+      if (shape.initialThenSpelled && path.length < 3) {
+        continue;
+      }
+      return { path: path.slice(), shape };
+    }
+    return null;
+  }
+
+  // Longer queries are split into pieces only up to this length, which keeps
+  // the split search small.
+  const SEARCH_PIECES_QUERY_MAX_LENGTH = 24;
+
+  // A query that is not in the title as one run may still be there in pieces
+  // with other text between or around them: "飞书文档" in 飞书云文档 and in
+  // "文档 - 飞书", "feishuwendang" in 飞书云文档. Each piece has to hold on its
+  // own: two characters at least, under the same rules as a whole query, so
+  // initials still start a phrase. Every character of the query is covered,
+  // nothing is skipped, and no two pieces share a unit, so "中国银行" does not
+  // find 美国银行. Pieces typed as letters have to read Han characters, since
+  // English already separates its words with spaces. The split with the
+  // fewest pieces wins.
+  function findSearchUnitPieces(index, compact) {
+    if (compact.length < 4 || compact.length > SEARCH_PIECES_QUERY_MAX_LENGTH) {
+      return null;
+    }
+    const queryHasHan = SEARCH_HAN_PATTERN.test(compact);
+    const runs = new Map();
+    const getRun = (from, to) => {
+      const key = from * (compact.length + 1) + to;
+      if (!runs.has(key)) {
+        const run = findSearchUnitRun(index, compact.slice(from, to));
+        runs.set(key, run && (queryHasHan || run.shape.hasHan) ? run : null);
+      }
+      return runs.get(key);
+    };
+    // How far a piece starting at `from` could reach at most, from one pass
+    // over the units without the piece rules. Splits that end beyond it
+    // cannot match, so most titles are rejected after one short walk.
+    const getReach = (from) => {
+      let reach = from;
+      const seen = new Set();
+      const stack = [];
+      for (let unit = 0; unit < index.count; unit += 1) {
+        if (canSearchUnitStartWith(index, unit, compact.charAt(from))) {
+          stack.push(unit, from);
+        }
+      }
+      while (stack.length > 0) {
+        const position = stack.pop();
+        const unit = stack.pop();
+        const key = unit * (compact.length + 1) + position;
+        if (seen.has(key)) {
+          continue;
+        }
+        seen.add(key);
+        const spellings = index.kinds.charAt(unit) === SEARCH_UNIT_HAN
+          ? [index.texts[unit]].concat((index.readings && index.readings[unit]) || [])
+          : [index.texts[unit]];
+        spellings.forEach((spelling) => {
+          let shared = 0;
+          while (shared < spelling.length && compact.charAt(position + shared) === spelling.charAt(shared)) {
+            shared += 1;
+          }
+          reach = Math.max(reach, position + shared);
+        });
+        getSearchUnitSteps(index, unit, compact, position).forEach((step) => {
+          const next = position + step.length;
+          if (next < compact.length && unit + 1 < index.count &&
+              canSearchUnitStartWith(index, unit + 1, compact.charAt(next))) {
+            stack.push(unit + 1, next);
+          }
+        });
+      }
+      return reach;
+    };
+    const covers = new Map();
+    const cover = (from) => {
+      if (from === compact.length) {
+        return [];
+      }
+      if (covers.has(from)) {
+        return covers.get(from);
+      }
+      let best = null;
+      for (let to = getReach(from); to >= from + 2; to -= 1) {
+        const run = getRun(from, to);
+        const rest = run ? cover(to) : null;
+        if (rest && (!best || rest.length + 1 < best.length)) {
+          best = [run].concat(rest);
+        }
+      }
+      covers.set(from, best);
+      return best;
+    };
+    const pieces = cover(0);
+    if (!pieces || pieces.length < 2) {
+      return null;
+    }
+    const used = new Set();
+    for (let i = 0; i < pieces.length; i += 1) {
+      for (let j = 0; j < pieces[i].path.length; j += 1) {
+        const unit = pieces[i].path[j].unit;
+        if (used.has(unit)) {
+          return null;
+        }
+        used.add(unit);
+      }
+    }
+    return pieces;
+  }
+
+  // Finds the query in the text: as one run first ("wxds", "wxdushu" and
+  // "weixinds" all find 微信读书, "vscode" finds Visual Studio Code, "gh ck"
+  // finds "GitHub 仓库"), then in pieces. Readings come from the simplified
+  // form, so "taiwan" finds 臺灣 too. One run outranks pieces, and pieces in
+  // the query's order outrank pieces out of it.
+  function matchSearchTextIndex(index, query) {
+    const compact = compactSearchQuery(query);
+    if (!compact || !index || !(index.count > 0)) {
+      return null;
+    }
+    if (/[a-z]/.test(compact)) {
+      resolveSearchTextIndexReadings(index);
+    }
+    const result = matchSearchTextCompact(index, compact);
+    const carried = result ? '' : getHangulCarriedQuery(compact);
+    return carried ? matchSearchTextCompact(index, carried) : result;
+  }
+
+  function matchSearchTextCompact(index, compact) {
+    const run = findSearchUnitRun(index, compact);
+    if (run) {
+      const shape = run.shape;
+      let score = 14;
+      if (shape.exact) {
+        score = 42;
+      } else if (shape.anchored) {
+        score = 28;
+      } else if (shape.segmentStart) {
+        score = 20;
+      } else if (shape.abbreviation) {
+        score = 16;
+      }
+      return {
+        score,
+        reason: `${shape.abbreviation ? 'initials' : 'full'}-${shape.exact ? 'exact' : (shape.anchored ? 'prefix' : 'contains')}`,
+        usesPinyin: shape.usesPinyin,
+        abbreviation: shape.abbreviation,
+        anchored: shape.anchored,
+        exact: shape.exact,
+        pieces: 1,
+        ranges: mergeSearchRanges(run.path.map((step) => getSearchUnitStepRange(index, step)))
+      };
+    }
+    const pieces = findSearchUnitPieces(index, compact);
+    if (!pieces) {
+      return null;
+    }
+    const starts = pieces.map((piece) => piece.path[0].unit);
+    const inOrder = starts.every((unit, i) => i === 0 || unit > starts[i - 1]);
+    return {
+      score: Math.max(4, (inOrder ? 12 : 8) - (pieces.length - 2) * 2),
+      reason: inOrder ? 'pieces-in-order' : 'pieces-reordered',
+      usesPinyin: pieces.some((piece) => piece.shape.usesPinyin),
+      abbreviation: false,
+      anchored: starts[0] === 0,
+      exact: false,
+      pieces: pieces.length,
+      ranges: mergeSearchRanges([].concat(...pieces.map((piece) => (
+        piece.path.map((step) => getSearchUnitStepRange(index, step))
+      ))))
+    };
+  }
+
+  // Cheap checks before building an index. Han characters in the query are
+  // matched as themselves, so the title must hold every one of them. Without
+  // Han characters in the title every unit is the title's own letters, so the
+  // query's letters have to appear in order.
+  function canSearchTextMatchQuery(text, compact) {
+    const folded = normalizeSearchText(text);
+    if (SEARCH_HAN_PATTERN.test(folded)) {
+      return Array.from(compact).every((character) => (
+        !SEARCH_HAN_PATTERN.test(character) || folded.includes(character)
+      ));
+    }
+    if (SEARCH_HAN_PATTERN.test(compact)) {
+      return false;
+    }
+    // Korean initials and half-typed syllables are not the title's own text.
+    if (/[\p{Script=Hangul}]/u.test(compact) && /[\p{Script=Hangul}]/u.test(folded)) {
+      return true;
+    }
+    // Second spellings ("mueller" for Müller) add letters to the title's own.
+    let letters = folded;
+    if (Array.from(SEARCH_LETTER_ALTERNATES.keys()).some((letter) => text.includes(letter))) {
+      letters = '';
+      for (const character of text) {
+        letters += (SEARCH_LETTER_ALTERNATES.get(character) || foldSearchCharacter(character)).toLowerCase();
+      }
+    }
+    let position = 0;
+    for (let i = 0; i < letters.length && position < compact.length; i += 1) {
+      if (letters.charAt(i) === compact.charAt(position)) {
+        position += 1;
+      }
+    }
+    return position === compact.length;
+  }
+
+  // Keeps the index of recently seen titles, so typing one more letter only
+  // walks the units again. Pinyin comes from getHanReadings(text, characters),
+  // which returns the readings of each Han character in order.
+  function createSearchTextMatcher(options) {
+    const settings = options && typeof options === 'object' ? options : {};
+    const maxEntries = Number(settings.maxEntries) >= 0
+      ? Math.floor(Number(settings.maxEntries))
+      : SEARCH_TEXT_MATCHER_CACHE_MAX_ENTRIES;
+    const cache = new Map();
+    const getIndex = (text) => {
+      const key = String(text || '');
+      if (cache.has(key)) {
+        const cached = cache.get(key);
+        cache.delete(key);
+        cache.set(key, cached);
+        return cached;
+      }
+      const index = buildSearchTextIndex(key, settings);
+      if (maxEntries > 0) {
+        cache.set(key, index);
+        while (cache.size > maxEntries) {
+          cache.delete(cache.keys().next().value);
+        }
+      }
+      return index;
+    };
+    return {
+      getIndex,
+      match(text, query) {
+        const source = String(text || '');
+        const compact = compactSearchQuery(query);
+        if (!source || !compact || !canSearchTextMatchQuery(source, compact)) {
+          return null;
+        }
+        return matchSearchTextIndex(getIndex(source), compact);
+      },
+      clear() {
+        cache.clear();
+      }
+    };
+  }
+
+  const DEFAULT_SEARCH_TEXT_MATCHER = createSearchTextMatcher();
+
+  function getSearchTitleMatcher(options) {
+    const matcher = options && options.titleMatcher;
+    return matcher && typeof matcher.match === 'function' ? matcher : DEFAULT_SEARCH_TEXT_MATCHER;
+  }
+
+  // Two letters at least, and more than a number: digits alone match the
+  // title text itself.
+  function isSearchUnitQueryEligible(term) {
+    const compact = compactSearchQuery(term);
+    // One Hangul syllable may still be half typed ("서" on the way to 성).
+    return (compact.length >= 2 && /\D/.test(compact)) ||
+      (compact.length === 1 && /[\p{Script=Hangul}]/u.test(compact));
+  }
+
+  // A unit match the plain text checks already credit (the title holds the
+  // query as typed) adds nothing to the score.
+  function getSearchTitleUnitMatch(title, term, options, matchOptions) {
+    const text = String(title || '');
+    const extra = matchOptions && typeof matchOptions === 'object' ? matchOptions : {};
+    if (!text || !isSearchUnitQueryEligible(term)) {
+      return null;
+    }
+    const result = getSearchTitleMatcher(options).match(text, term);
+    if (!result || !extra.skipLiteral) {
+      return result;
+    }
+    return normalizeSearchText(text).includes(normalizeSearchText(term).trim()) ? null : result;
+  }
+
+  // Where a title shows the query: the text as typed, each term, and when
+  // neither is there literally, the units a pinyin or initials match spelled.
+  // A short ASCII term is only marked where a word starts, the way it matches,
+  // so "ai" marks OpenAI but not "Detail". Ranges index the given text.
+  function getSearchTitleHighlightRanges(title, context, options) {
+    const text = String(title || '');
+    const queryLower = context && context.queryLower ? String(context.queryLower) : '';
+    if (!text || !queryLower) {
+      return [];
+    }
+    // Word starts need no pinyin, so a Han query never loads the readings.
+    const wordIndex = buildSearchTextIndex(text);
+    const unitStarts = new Set(wordIndex.spans.filter((value, position) => position % 2 === 0));
+    let foldedText = '';
+    const foldedStarts = [];
+    const foldedEnds = [];
+    let offset = 0;
+    Array.from(text).forEach((character) => {
+      const start = offset;
+      offset += character.length;
+      Array.from(foldSearchCharacter(character).toLowerCase()).forEach((piece) => {
+        foldedText += piece;
+        for (let i = 0; i < piece.length; i += 1) {
+          foldedStarts.push(start);
+          foldedEnds.push(offset);
+        }
+      });
+    });
+    const ranges = [];
+    const markLiteral = (needle) => {
+      if (!needle) {
+        return false;
+      }
+      const wordStartOnly = !shouldAllowLooseTextContains(needle);
+      let found = false;
+      let position = foldedText.indexOf(needle);
+      while (position >= 0) {
+        const start = foldedStarts[position];
+        if (!wordStartOnly || unitStarts.has(start)) {
+          ranges.push([start, foldedEnds[position + needle.length - 1]]);
+          found = true;
+        }
+        position = foldedText.indexOf(needle, position + needle.length);
+      }
+      return found;
+    };
+    const markUnits = (term) => {
+      const result = getSearchTitleUnitMatch(text, term, options);
+      if (result) {
+        ranges.push(...result.ranges);
+        return true;
+      }
+      return false;
+    };
+    if (!markLiteral(queryLower) && !markUnits(queryLower)) {
+      const terms = Array.isArray(context.coreQueryTerms) ? context.coreQueryTerms : [];
+      terms.forEach((term) => {
+        if (!markLiteral(term)) {
+          markUnits(term);
+        }
+      });
+    }
+    return extendSearchRangesOverMarks(text, mergeSearchRanges(ranges));
+  }
+
+  function buildSearchQueryContext(query) {
     const lookupQuery = String(query || '');
-    const queryLower = lookupQuery.trim().toLowerCase();
-    const normalizedPinyinQuery = String(settings.normalizedPinyinQuery || '').trim();
+    const queryLower = normalizeSearchText(lookupQuery).trim();
+    // The query as title units spell it ("wxds", "gh ck", "微信 读书"); empty
+    // when only plain text matching applies.
+    const unitQuery = isSearchUnitQueryEligible(queryLower) ? compactSearchQuery(queryLower) : '';
     const coreQueryTerms = splitSearchTerms(queryLower);
     const queryTerms = splitSearchTerms(queryLower);
     if (queryLower && !queryTerms.includes(queryLower)) {
@@ -590,8 +1709,7 @@
     return {
       lookupQuery,
       queryLower,
-      normalizedPinyinQuery,
-      useTitlePinyinMatch: Boolean(normalizedPinyinQuery),
+      unitQuery,
       coreQueryTerms,
       queryTerms,
       intentType: classifySearchIntent(lookupQuery, queryTerms),
@@ -931,7 +2049,7 @@
       return 0;
     }
     const info = getSearchSuggestionClusterInfo(item.url);
-    const titleLower = String(item.title || '').toLowerCase();
+    const titleLower = normalizeSearchText(item.title);
     const hasHomeTitle = hasSearchHomeTitle(titleLower);
     let signal = 0;
 
@@ -986,14 +2104,14 @@
     return signal;
   }
 
-  function getSearchDirectNavigationAdjustment(item, sourceType, context) {
+  function getSearchDirectNavigationAdjustment(item, sourceType, context, options) {
     if (!isSearchLikelyDirectNavigationQuery(context) || !item || !item.url) {
       return 0;
     }
     const info = getSearchSuggestionClusterInfo(item.url);
     const hasHomeTitle = hasSearchHomeTitle(item.title);
     const representativeSignal = getSearchNavigationRepresentativeSignal(item, context);
-    const titleLower = String(item.title || '').toLowerCase();
+    const titleLower = normalizeSearchText(item.title);
     const pathTokens = [];
     let hostname = '';
     let hostLabels = [];
@@ -1018,9 +2136,10 @@
       titleLower,
       hostname,
       urlLower: String(item.url || '').toLowerCase(),
-      titleTokens: splitSearchTitleTokens(titleLower),
+      titleTokens: splitSearchTitleTokens(item.title),
       hostLabels,
-      pathTokens
+      pathTokens,
+      matchesTitleUnits: (term) => Boolean(getSearchTitleUnitMatch(item.title, term, options))
     });
     let adjustment = 0;
 
@@ -1617,14 +2736,24 @@
     return 0;
   }
 
-  function matchesSearchQueryText(item, context) {
+  // A Han query spelled the way a site's address writes it: 知乎 is
+  // zhihu.com, 京东 is jd.com. The background fills queryHostSpellings with
+  // the query's pinyin and initials; only a whole address label counts.
+  function matchesSearchHostSpelling(hostLabels, context) {
+    const spellings = context && Array.isArray(context.queryHostSpellings) ? context.queryHostSpellings : [];
+    return spellings.length > 0 && hostLabels.some((label) => spellings.includes(label));
+  }
+
+  // Title units (pinyin, initials, words across spaces) are walked only when
+  // the plain text checks fail, since most queries match the text itself.
+  function matchesSearchQueryText(item, context, options) {
     if (!item || !item.url) {
       return false;
     }
     const title = item.title ? String(item.title) : '';
-    const titleLower = title.toLowerCase();
+    const titleLower = normalizeSearchText(title);
     const urlLower = item.url.toLowerCase();
-    const titleTokens = splitSearchTitleTokens(titleLower);
+    const titleTokens = splitSearchTitleTokens(title);
     let hostname = '';
     let hostLabels = [];
     try {
@@ -1642,8 +2771,7 @@
         titleLower === term ||
         titleLower.startsWith(term) ||
         titleTokens.includes(term) ||
-        titleTokens.some((token) => token.startsWith(term)) ||
-        getSearchTitleInitialsMatchType(title, term)
+        titleTokens.some((token) => token.startsWith(term))
       ) {
         return true;
       }
@@ -1657,9 +2785,9 @@
       if (shouldAllowLooseTextContains(term) && (titleLower.includes(term) || urlLower.includes(term))) {
         return true;
       }
-      return false;
+      return Boolean(getSearchTitleUnitMatch(title, term, options));
     };
-    if (matchesTerm(context.queryLower)) {
+    if (matchesTerm(context.queryLower) || matchesSearchHostSpelling(hostLabels, context)) {
       return true;
     }
     const coreTerms = Array.isArray(context.coreQueryTerms) && context.coreQueryTerms.length > 0
@@ -1668,12 +2796,9 @@
     return coreTerms.length > 0 && coreTerms.every((term) => matchesTerm(term));
   }
 
-  function isShortAsciiSearchTerm(term) {
-    const value = String(term || '').trim().toLowerCase();
-    if (!value) {
-      return false;
-    }
-    return /^[a-z0-9]+$/i.test(value) && value.length <= 2;
+  function isShortWordSearchTerm(term) {
+    const value = String(term || '').trim();
+    return Boolean(value) && Array.from(value).length <= 2 && SEARCH_WORD_CHARACTERS_PATTERN.test(value);
   }
 
   function shouldAllowLooseTextContains(term) {
@@ -1681,10 +2806,10 @@
     if (!value) {
       return false;
     }
-    if (/[\u4e00-\u9fff]/.test(value)) {
+    if (SEARCH_HAN_PATTERN.test(value)) {
       return true;
     }
-    return !isShortAsciiSearchTerm(value);
+    return !isShortWordSearchTerm(value);
   }
 
   function getSearchTermCoverageStats(context, candidateParts) {
@@ -1708,6 +2833,9 @@
     const titleTokens = Array.isArray(normalizedCandidate.titleTokens) ? normalizedCandidate.titleTokens : [];
     const hostLabels = Array.isArray(normalizedCandidate.hostLabels) ? normalizedCandidate.hostLabels : [];
     const pathTokens = Array.isArray(normalizedCandidate.pathTokens) ? normalizedCandidate.pathTokens : [];
+    const matchesTitleUnits = typeof normalizedCandidate.matchesTitleUnits === 'function'
+      ? normalizedCandidate.matchesTitleUnits
+      : () => false;
     let matchedCount = 0;
 
     terms.forEach((term) => {
@@ -1725,7 +2853,8 @@
           titleLower.includes(term) ||
           hostname.includes(term) ||
           urlLower.includes(term)
-        ))
+        )) ||
+        matchesTitleUnits(term)
       );
       if (matched) {
         matchedCount += 1;
@@ -1837,19 +2966,10 @@
     return Number(settings.now) || Date.now();
   }
 
-  function getTitlePinyinScore(item, context, options) {
-    const settings = options && typeof options === 'object' ? options : {};
-    if (typeof settings.getTitlePinyinMatchScore !== 'function') {
-      return 0;
-    }
-    const result = settings.getTitlePinyinMatchScore(item && item.title, context && context.normalizedPinyinQuery);
-    return Number(result && result.score) || 0;
-  }
-
   function calculateSearchRelevanceScore(item, sourceType, context, options) {
     const settings = options && typeof options === 'object' ? options : {};
     const title = item.title ? String(item.title) : '';
-    const titleLower = title.toLowerCase();
+    const titleLower = normalizeSearchText(title);
     const urlLower = item.url.toLowerCase();
     let hostname = '';
     let hostLabels = [];
@@ -1871,16 +2991,18 @@
     if (titleLower === context.queryLower) textScore += 140;
     if (titleLower.startsWith(context.queryLower)) textScore += 70;
 
-    titleTokens = splitSearchTitleTokens(titleLower);
+    titleTokens = splitSearchTitleTokens(title);
     if (titleTokens.includes(context.queryLower)) {
       textScore += 45;
     }
 
-    const fullInitialsMatch = getSearchTitleInitialsMatchType(title, context.queryLower);
-    if (fullInitialsMatch === 'exact') {
-      textScore += 42;
-    } else if (fullInitialsMatch === 'prefix') {
-      textScore += 28;
+    // Pinyin, initials and words spelled across spaces, where the title does
+    // not already hold the query as typed.
+    const titleUnitMatch = context.unitQuery
+      ? getSearchTitleUnitMatch(title, context.unitQuery, settings, { skipLiteral: true })
+      : null;
+    if (titleUnitMatch) {
+      textScore += titleUnitMatch.score;
     }
 
     context.queryTerms.forEach((word) => {
@@ -1895,16 +3017,18 @@
         textScore += 14;
         return;
       }
-      const initialsMatch = getSearchTitleInitialsMatchType(title, word);
-      if (initialsMatch === 'exact') {
-        textScore += 24;
+      if (shouldAllowLooseTextContains(word) && titleLower.includes(word)) {
+        textScore += 8;
         return;
       }
-      if (initialsMatch === 'prefix') {
-        textScore += 16;
-        return;
+      const wordUnitMatch = getSearchTitleUnitMatch(title, word, settings, { skipLiteral: true });
+      if (wordUnitMatch) {
+        if (wordUnitMatch.pieces > 1) {
+          textScore += 6;
+        } else {
+          textScore += wordUnitMatch.exact ? 24 : (wordUnitMatch.anchored ? 16 : 10);
+        }
       }
-      if (shouldAllowLooseTextContains(word) && titleLower.includes(word)) textScore += 8;
     });
 
     if (shouldAllowLooseTextContains(context.queryLower) && titleLower.includes(context.queryLower)) textScore += 24;
@@ -1916,6 +3040,8 @@
       if (hostname.startsWith(context.queryLower)) textScore += 20;
       if (hostLabels.includes(context.queryLower)) {
         textScore += 42;
+      } else if (matchesSearchHostSpelling(hostLabels, context)) {
+        textScore += 28;
       }
       context.queryTerms.forEach((word) => {
         if (!word) {
@@ -1981,10 +3107,12 @@
       urlLower,
       titleTokens,
       hostLabels,
-      pathTokens
+      pathTokens,
+      matchesTitleUnits: (term) => (
+        Boolean(getSearchTitleUnitMatch(title, term, settings)) ||
+        matchesSearchHostSpelling(hostLabels, context)
+      )
     });
-
-    textScore += getTitlePinyinScore(item, context, settings);
 
     const isLocalNetworkHost = typeof settings.isLocalNetworkHost === 'function'
       ? settings.isLocalNetworkHost
@@ -2035,7 +3163,7 @@
       behaviorScore +
       sourceScore +
       getSearchSuggestionCategoryAdjustment(item, context, coverageStats) +
-      getSearchDirectNavigationAdjustment(item, sourceType, context) -
+      getSearchDirectNavigationAdjustment(item, sourceType, context, settings) -
       (isGenericBrandDeepTitle ? SEARCH_POLICY.genericBrandDeepTitlePenalty : 0) -
       getOwnExtensionUtilityPenalty(item, {
         hasSettingsIntent: context.hasSettingsIntent,
@@ -2476,26 +3604,13 @@
     });
   }
 
-  function getTitlePinyinMatchResult(item, context, options) {
-    const settings = options && typeof options === 'object' ? options : {};
-    if (!context || !context.useTitlePinyinMatch || !item || !item.title ||
-        typeof settings.getTitlePinyinMatchScore !== 'function') {
-      return { score: 0, reason: '' };
-    }
-    return settings.getTitlePinyinMatchScore(item.title, context.normalizedPinyinQuery) || { score: 0, reason: '' };
-  }
-
-  function matchesSearchTitlePinyin(item, context, options) {
-    return getTitlePinyinMatchResult(item, context, options).score > 0;
-  }
-
   function collectSearchMatches(items, context, searchBlacklistItems, options) {
     const settings = options && typeof options === 'object' ? options : {};
     const isUrlBlocked = typeof settings.isUrlBlockedBySearchBlacklist === 'function'
       ? settings.isUrlBlockedBySearchBlacklist
       : () => false;
     return (Array.isArray(items) ? items : []).filter((item) => (
-      (matchesSearchQueryText(item, context) || matchesSearchTitlePinyin(item, context, settings)) &&
+      matchesSearchQueryText(item, context, settings) &&
       !isUrlBlocked(item && item.url, searchBlacklistItems)
     ));
   }
@@ -2641,7 +3756,7 @@
       ? settings.getUrlDisplay
       : getDefaultNavigationUrlDisplay;
     const suggestionUrlText = (getUrlDisplay(suggestion.url) || '').toLowerCase();
-    const titleLower = String(suggestion.title || '').toLowerCase();
+    const titleLower = normalizeSearchText(suggestion.title);
 
     if (directUrl) {
       const isDirectMatch = isDirectNavigationMatch(suggestion, query, {
@@ -3489,14 +4604,15 @@
     if (!isSiteSearchProviderTokenEligible(needle)) {
       return false;
     }
-    const titleLower = String(suggestion && suggestion.title || '').trim().toLowerCase();
+    const title = String(suggestion && suggestion.title || '').trim();
+    const titleLower = normalizeSearchText(title);
     if (!titleLower) {
       return false;
     }
     if (titleLower === needle || titleLower.startsWith(needle)) {
       return true;
     }
-    const titleTokens = splitSearchTitleTokens(titleLower);
+    const titleTokens = splitSearchTitleTokens(title);
     return titleTokens.includes(needle) ||
       titleTokens.some((token) => token.startsWith(needle)) ||
       (shouldAllowLooseTextContains(needle) && titleLower.includes(needle));
@@ -3611,7 +4727,7 @@
     isSearchLikelyBrandProductQuery,
     isSearchLikelyDirectNavigationQuery,
     isSearchEngineSuggestion,
-    isShortAsciiSearchTerm,
+    isShortWordSearchTerm,
     isSiteSearchProviderTokenEligible,
     limitSearchSuggestionsForDisplay,
     findProviderForSiteSearchSuggestion,
@@ -3624,7 +4740,7 @@
     mergeCustomProviders,
     mergeItemsByUrl,
     matchesSearchQueryText,
-    matchesSearchTitlePinyin,
+    matchSearchTextIndex,
     normalizeSearchEngineSuggestions,
     normalizeSearchSelectionQuery,
     normalizeSearchSelectionStats,
@@ -3637,10 +4753,19 @@
     promoteStrongNavigationMatch,
     recordSearchSelectionInStats,
     sanitizeDisplayText,
+    normalizeSearchText,
+    compactSearchQuery,
+    buildSearchTextIndex,
+    createSearchTextMatcher,
+    getSearchTitleHighlightRanges,
+    getSearchTitleUnitMatch,
+    hasSearchHanCharacters,
+    expandSearchFuzzyPinyinReadings,
     sanitizeSiteSearchProviders,
     shouldAllowLooseTextContains,
     siteSearchHostsMatch,
     splitSearchTitleTokens,
+    splitSearchTerms,
     suggestionMatchesSiteSearchProvider
   });
 });

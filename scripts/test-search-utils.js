@@ -2,7 +2,9 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
+require('../src/shared/search-han-variants.js');
 const search = require('../src/shared/search-utils.js');
+const pinyinPro = require('../assets/vendor/pinyin-pro.js');
 
 const repoRoot = path.resolve(__dirname, '..');
 
@@ -73,7 +75,6 @@ function assertKeywordOnlySuggestionsKeepSearchActionFirst(relativePath) {
 function score(item, query, sourceType = 'history') {
   const context = search.buildSearchQueryContext(query);
   return search.calculateSearchRelevanceScore(item, sourceType, context, {
-    getTitlePinyinMatchScore: () => ({ score: 0, reason: '' }),
     isLocalNetworkHost: () => false,
     isOwnExtensionUrl: () => false
   });
@@ -144,8 +145,230 @@ assert.ok(
 );
 assert.deepStrictEqual(
   search.splitSearchTitleTokens('移动4a平台 home'),
-  ['移动4a平台', 'home', '4a'],
+  ['移动4a平台', 'home', '4a', '4', 'a'],
   'title tokens should keep whole tokens and add runs embedded in Chinese text'
+);
+// Title units: pinyin (every reading), initials, and words spelled across
+// spaces, camel case and digits, all by one matcher.
+const pinyinTitleMatcher = search.createSearchTextMatcher({
+  getHanReadings: (text, characters) => characters.map((character) => (
+    pinyinPro.pinyin(character, { toneType: 'none', type: 'array', multiple: true, v: true })
+  ))
+});
+const pinyinOptions = { titleMatcher: pinyinTitleMatcher };
+function matchesWithPinyin(query, title) {
+  return search.matchesSearchQueryText(
+    { title, url: 'https://example.com/page' },
+    search.buildSearchQueryContext(query),
+    pinyinOptions
+  );
+}
+function highlightWithPinyin(query, title) {
+  return search.getSearchTitleHighlightRanges(title, search.buildSearchQueryContext(query), pinyinOptions)
+    .map(([start, end]) => title.slice(start, end));
+}
+[
+  ['wxds', '微信读书', 'pinyin initials'],
+  ['wxdushu', '微信读书', 'initials followed by full pinyin'],
+  ['weixinds', '微信读书', 'full pinyin followed by initials'],
+  ['txsp', '腾讯视频', 'initials of every character'],
+  ['shipin', '腾讯视频', 'full pinyin in the middle of a title'],
+  ['zhongq', '重庆火锅', 'full pinyin followed by the next initial'],
+  ['xs', 'Google 学术', 'initials after a space before Han text'],
+  ['台湾', '臺灣銀行', 'simplified characters for a traditional title'],
+  ['臺灣', '台湾银行', 'traditional characters for a simplified title'],
+  ['wysj', '網頁設計教程', 'pinyin initials of traditional characters'],
+  ['lvse', '绿色出行', 'ü typed as v'],
+  ['luse', '绿色出行', 'ü typed as u'],
+  ['zhongqing', '重庆火锅', 'any reading of a polyphone'],
+  ['chongqing', '重庆火锅', 'the usual reading of a polyphone'],
+  ['wx读书', '微信读书', 'pinyin mixed with Han characters'],
+  ['gh ck', 'GitHub 仓库设置', 'Latin initials followed by pinyin initials'],
+  ['ck github', 'GitHub 仓库设置', 'separate terms in any order'],
+  ['bz', 'B站 哔哩哔哩', 'a Latin letter next to a Han character'],
+  ['yd4a', '移动4A平台', 'pinyin initials followed by an embedded run'],
+  ['iphone15', 'iPhone 15 Pro', 'a word and digits typed without the space'],
+  ['iphone 15', 'iPhone15 Pro', 'a word and digits typed with a space'],
+  ['ps5', 'PS 5 游戏', 'letters and a digit across a space'],
+  ['vscode', 'Visual Studio Code', 'initials followed by a whole word'],
+  ['ai', 'OpenAI ChatGPT', 'a short term at a camel-case word'],
+  ['ｇｉｔｈｕｂ', 'GitHub', 'full-width letters'],
+  ['cafe', 'Café Paris', 'letters without their accents'],
+  ['微信读书', '微信 读书', 'Han characters across a space']
+].forEach(([query, title, label]) => {
+  assert.strictEqual(matchesWithPinyin(query, title), true, `"${query}" should match "${title}" (${label})`);
+});
+[
+  ['ai', '我在杭州开会', 'a short query inside a syllable'],
+  ['an', '看电影', 'a short query inside a syllable'],
+  ['de', '我的世界', 'a short syllable in the middle of a title'],
+  ['ai', 'Detail page', 'a short term inside a word'],
+  ['ouba', '豆包书签', 'pinyin that starts inside a syllable'],
+  ['wd', '微信读书', 'initials that skip a character'],
+  ['vsc', 'Download Visual Studio Code', 'Latin initials in the middle of a phrase'],
+  ['sp', '腾讯视频', 'initials in the middle of a title'],
+  ['js', '前端技术分享', 'English initials that read as Han initials'],
+  ['cs', '自动化测试', 'English initials that read as Han initials'],
+  ['pin', '中文拼音', 'a lone syllable in the middle of a title'],
+  ['the', '他和她', 'an English word read as an initial and a syllable'],
+  ['and', '我按的时候', 'an English word read as a syllable and an initial inside a title']
+].forEach(([query, title, label]) => {
+  assert.strictEqual(matchesWithPinyin(query, title), false, `"${query}" should not match "${title}" (${label})`);
+});
+// A query that is in the title only in pieces: other text between them, or
+// the pieces in another order.
+[
+  ['飞书文档', '飞书云文档', 'Han pieces with a character between them'],
+  ['飞书文档', '文档 - 飞书', 'Han pieces in the other order'],
+  ['飛書文檔', '飞书云文档', 'traditional pieces'],
+  ['feishuwendang', '飞书云文档', 'pinyin pieces'],
+  ['飞书wendang', '飞书云文档', 'a Han piece and a pinyin piece'],
+  ['中国银行', '中国建设银行', 'pieces around another word'],
+  ['zhongguoyinhang', '中国建设银行', 'pinyin pieces around another word'],
+  ['docs飞书', '飞书 Docs', 'a Latin piece next to a Han piece']
+].forEach(([query, title, label]) => {
+  assert.strictEqual(matchesWithPinyin(query, title), true, `"${query}" should match "${title}" (${label})`);
+});
+[
+  ['飞书文档', '飞机书籍文档', 'single characters scattered through a title'],
+  ['中国银行', '美国银行', 'a query character the title does not have'],
+  ['飞书云文档', '飞书文档', 'a query character the title does not have'],
+  ['哔哩哔哩', '哔哩 bilibili', 'two pieces that would share the same characters'],
+  ['fswd', '飞书云文档', 'an initials piece inside a phrase'],
+  ['notebook', 'Book notes', 'English words without spaces']
+].forEach(([query, title, label]) => {
+  assert.strictEqual(matchesWithPinyin(query, title), false, `"${query}" should not match "${title}" (${label})`);
+});
+assert.deepStrictEqual(
+  highlightWithPinyin('飞书文档', '飞书云文档'),
+  ['飞书', '文档'],
+  'a match in pieces should mark each piece'
+);
+// Fuzzy pinyin (an opt-in setting) also reads the initials and finals many
+// speakers treat as one sound.
+assert.deepStrictEqual(
+  search.expandSearchFuzzyPinyinReadings(['zhong', 'lan', 'ning']),
+  ['zhong', 'zong', 'lan', 'lang', 'nan', 'nang', 'ning', 'nin', 'ling', 'lin'],
+  'fuzzy pinyin should swap z/zh, n/l and an/ang, in/ing while keeping ong'
+);
+const fuzzyOptions = {
+  titleMatcher: search.createSearchTextMatcher({
+    getHanReadings: (text, characters) => characters.map((character) => search.expandSearchFuzzyPinyinReadings(
+      pinyinPro.pinyin(character, { toneType: 'none', type: 'array', multiple: true, v: true })
+    ))
+  })
+};
+const matchesFuzzy = (query, title) => search.matchesSearchQueryText(
+  { title, url: 'https://example.com/page' },
+  search.buildSearchQueryContext(query),
+  fuzzyOptions
+);
+assert.strictEqual(matchesFuzzy('zongguo', '中国银行'), true, 'fuzzy pinyin should read zh as z');
+assert.strictEqual(matchesFuzzy('xingyongka', '信用卡'), true, 'fuzzy pinyin should read in as ing');
+assert.strictEqual(matchesFuzzy('lanjing', '南京路'), true, 'fuzzy pinyin should read n as l and an as an');
+assert.strictEqual(matchesWithPinyin('zongguo', '中国银行'), false, 'exact pinyin should keep z and zh apart');
+
+// A Han query matches a site address spelled in its pinyin or initials; the
+// background fills queryHostSpellings.
+const hostSpellingContext = (query, spellings) => ({
+  ...search.buildSearchQueryContext(query),
+  queryHostSpellings: spellings
+});
+assert.strictEqual(
+  search.matchesSearchQueryText(
+    { title: 'Zhihu', url: 'https://www.zhihu.com/' },
+    hostSpellingContext('知乎', ['zhihu', 'zh']),
+    pinyinOptions
+  ),
+  true,
+  'a Han query should match a site address spelled in its pinyin'
+);
+assert.strictEqual(
+  search.matchesSearchQueryText(
+    { title: 'JD.com', url: 'https://www.jd.com/' },
+    hostSpellingContext('京东', ['jingdong', 'jd']),
+    pinyinOptions
+  ),
+  true,
+  'a Han query should match a site address spelled in its initials'
+);
+assert.strictEqual(
+  search.matchesSearchQueryText(
+    { title: 'Zhihu Daily', url: 'https://daily.zhihuapp.com/' },
+    hostSpellingContext('知乎', ['zhihu', 'zh']),
+    pinyinOptions
+  ),
+  false,
+  'a Han query should only match a whole address label'
+);
+assert.strictEqual(
+  matchesWithPinyin('vsc', 'Home - Visual Studio Code'),
+  true,
+  'Latin initials should match from the start of a title segment'
+);
+assert.deepStrictEqual(
+  highlightWithPinyin('shipin', '腾讯视频 - 在线视频'),
+  ['视频'],
+  'a pinyin match should mark the characters it spelled'
+);
+assert.deepStrictEqual(
+  highlightWithPinyin('台湾', '臺灣銀行'),
+  ['臺灣'],
+  'a simplified query should mark the traditional characters it matched'
+);
+assert.deepStrictEqual(
+  highlightWithPinyin('gh ck', 'GitHub 仓库设置'),
+  ['G', 'H', '仓库'],
+  'a mixed initials match should mark each letter and character it used'
+);
+assert.deepStrictEqual(
+  highlightWithPinyin('ai', 'Detail of OpenAI'),
+  ['AI'],
+  'a short term should be marked only where a word starts'
+);
+assert.deepStrictEqual(
+  highlightWithPinyin('ｇｉｔ', 'GitHub'),
+  ['Git'],
+  'folded query text should mark the original characters'
+);
+const pinyinScore = (query, title) => search.calculateSearchRelevanceScore(
+  { title, url: 'https://example.com/page' },
+  'history',
+  search.buildSearchQueryContext(query),
+  { ...pinyinOptions, isLocalNetworkHost: () => false, isOwnExtensionUrl: () => false }
+);
+assert.ok(
+  pinyinScore('飞书文档', '飞书文档 - 协作') > pinyinScore('飞书文档', '飞书云文档') &&
+    pinyinScore('飞书文档', '飞书云文档') > pinyinScore('飞书文档', '文档 - 飞书'),
+  'one run should outrank pieces, and pieces in order should outrank pieces out of order'
+);
+assert.ok(
+  pinyinScore('wxds', '微信读书') > pinyinScore('wxds', '我的微信读书笔记'),
+  'a pinyin match at the start of a title should outrank one in its middle'
+);
+assert.ok(
+  pinyinScore('github', 'GitHub') === score({ title: 'GitHub', url: 'https://example.com/page' }, 'github'),
+  'a title that holds the query as typed should gain nothing from unit matching'
+);
+let hanReadingLookups = 0;
+const countingMatcher = search.createSearchTextMatcher({
+  getHanReadings: (text, characters) => {
+    hanReadingLookups += 1;
+    return characters.map(() => []);
+  }
+});
+search.collectSearchMatches(
+  [{ title: '微信 读书', url: 'https://example.com/' }],
+  search.buildSearchQueryContext('微信读书'),
+  [],
+  { titleMatcher: countingMatcher }
+);
+assert.strictEqual(hanReadingLookups, 0, 'a query of Han characters should not look up pinyin readings');
+
+assert.deepStrictEqual(
+  search.splitSearchTitleTokens('OpenAI iPhone15 HTMLParser'),
+  ['openai', 'iphone15', 'htmlparser', 'open', 'ai', 'i', 'phone', '15', 'html', 'parser'],
+  'title tokens should add the camel-case words and digit runs inside each token'
 );
 
 const multiTermContext = search.buildSearchQueryContext('codex 最爱');
@@ -425,7 +648,6 @@ const topSiteCandidate = {
 };
 const selectionOptions = {
   now: selectionNow + 12,
-  getTitlePinyinMatchScore: () => ({ score: 0, reason: '' }),
   isLocalNetworkHost: () => false,
   isOwnExtensionUrl: () => false
 };

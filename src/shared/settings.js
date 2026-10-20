@@ -117,6 +117,7 @@
   const FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY = '_x_extension_favicon_enhanced_fetch_enabled_2026_unique_';
   const SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY = '_x_extension_search_result_display_limit_2026_unique_';
   const SEARCH_RESULT_TAB_POSITION_STORAGE_KEY = '_x_extension_search_result_tab_position_2026_unique_';
+  const SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY = '_x_extension_search_fuzzy_pinyin_enabled_2026_unique_';
   const OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY = '_x_extension_overlay_open_tabs_default_visible_2026_unique_';
   const OVERLAY_ENTER_ANIMATION_STORAGE_KEY = '_x_extension_overlay_enter_animation_2026_unique_';
   const OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY = '_x_extension_overlay_page_theme_adaptation_enabled_2026_unique_';
@@ -379,6 +380,7 @@
     SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY,
     SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
     SEARCH_RESULT_TAB_POSITION_STORAGE_KEY,
+    SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY,
     OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY,
     FALLBACK_SHORTCUT_STORAGE_KEY,
     SITE_SEARCH_STORAGE_KEY,
@@ -809,6 +811,10 @@
   }
 
   function normalizeNumberShortcutInstantEnabled(value) {
+    return value === true;
+  }
+
+  function normalizeSearchFuzzyPinyinEnabled(value) {
     return value === true;
   }
 
@@ -1580,6 +1586,7 @@
     FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY,
     SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
     SEARCH_RESULT_TAB_POSITION_STORAGE_KEY,
+    SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY,
     OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY,
     OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
     OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY,
@@ -1659,6 +1666,7 @@
     normalizeMotionEffectsEnabled,
     normalizeSimpleModeEnabled,
     normalizeNumberShortcutInstantEnabled,
+    normalizeSearchFuzzyPinyinEnabled,
     normalizeMacosCtrlSuggestionNavigationEnabled,
     shouldSkipEntryMotion,
     normalizeFaviconEnhancedFetchEnabled,

@@ -58,7 +58,7 @@ const factory = new Function('deps', 'Buffer', `
   const siteThemeColorPending = new Map();
   const BACKGROUND_FAVICON_DATA_CACHE_MAX_ENTRIES = 256;
   const BACKGROUND_SITE_THEME_CACHE_MAX_ENTRIES = 512;
-  const BACKGROUND_TITLE_PINYIN_CACHE_MAX_ENTRIES = 2048;
+  const BACKGROUND_TITLE_PINYIN_CACHE_MAX_ENTRIES = 6144;
 
   function logBlockedLocalFavicon(url, source) {
     deps.blockedLogs.push({ url, source });

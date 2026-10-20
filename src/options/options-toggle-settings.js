@@ -148,6 +148,11 @@
         refreshSelects: true
       },
       {
+        inputId: '_x_extension_search_fuzzy_pinyin_toggle_2026_unique_',
+        key: S.SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY,
+        normalize: S.normalizeSearchFuzzyPinyinEnabled
+      },
+      {
         inputId: '_x_extension_macos_ctrl_suggestion_navigation_toggle_2026_unique_',
         key: S.MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY,
         normalize: S.normalizeMacosCtrlSuggestionNavigationEnabled,

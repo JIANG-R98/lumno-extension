@@ -122,6 +122,7 @@
     ['search_result_source_types', 'settings_search_result_sources_title'],
     ['search_result_display_limit', 'settings_search_result_display_limit_title'],
     ['search_result_tab_position', 'settings_search_result_tab_position_title'],
+    ['search_fuzzy_pinyin', 'settings_search_fuzzy_pinyin_title'],
     ['open_tabs_default_visible', 'settings_overlay_open_tabs_default_visible_title'],
     ['fallback_hotkey', 'settings_shortcuts_title'],
     ['aggregate_search_auto_group', 'settings_aggregate_search_auto_group_title'],

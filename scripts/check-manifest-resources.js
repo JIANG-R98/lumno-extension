@@ -33,6 +33,7 @@ const injectedScriptFiles = [
   'src/react/overlay-islands.js',
   'src/shared/search-input-history.js',
   'assets/vendor/pinyin-pro.js',
+  'src/shared/search-han-variants.js',
   'src/shared/search-input-mode.js',
   'src/shared/search-source-order.js',
   'src/shared/sortable-drag.js',

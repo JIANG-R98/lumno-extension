@@ -326,6 +326,12 @@
   "search_result_tab_position_before_current": {
     "message": "Left of current tab (above)"
   },
+  "settings_search_fuzzy_pinyin_title": {
+    "message": "Fuzzy pinyin"
+  },
+  "settings_search_fuzzy_pinyin_desc": {
+    "message": "When on, pinyin and initials searches treat z and zh, c and ch, s and sh, n and l, an and ang, en and eng, and in and ing as the same"
+  },
   "settings_search_result_sources_title": {
     "message": "Visible Result Types"
   },

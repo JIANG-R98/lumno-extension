@@ -326,6 +326,12 @@
   "search_result_tab_position_before_current": {
     "message": "現在のタブの左隣（上）"
   },
+  "settings_search_fuzzy_pinyin_title": {
+    "message": "ピンインのあいまい音"
+  },
+  "settings_search_fuzzy_pinyin_desc": {
+    "message": "オンにすると、ピンインや頭文字で検索するとき、z と zh、c と ch、s と sh、n と l、an と ang、en と eng、in と ing を同じ音として扱います"
+  },
   "settings_search_result_sources_title": {
     "message": "表示する結果タイプ"
   },

@@ -115,7 +115,7 @@ assert.match(
 );
 assert.match(
   inputModeSource,
-  /function buildModeMenuSearchIndex\(item\)[\s\S]*?getModeMenuPinyinSyllable\(character\)[\s\S]*?function applyModeMenuFilter\(query, filterOptions\)[\s\S]*?entry\.button\.hidden = !match\.matched/,
+  /function buildModeMenuSearchIndex\(item\)[\s\S]*?buildSearchTextIndex\(labelText, \{ getHanReadings: getModeMenuHanReadings \}\)[\s\S]*?function applyModeMenuFilter\(query, filterOptions\)[\s\S]*?entry\.button\.hidden = !match\.matched/,
   'the shared scope panel should filter its rendered cards with direct and pinyin indexes'
 );
 assert.match(

@@ -326,6 +326,12 @@
   "search_result_tab_position_before_current": {
     "message": "当前标签页左侧（上方）"
   },
+  "settings_search_fuzzy_pinyin_title": {
+    "message": "拼音模糊音"
+  },
+  "settings_search_fuzzy_pinyin_desc": {
+    "message": "开启后，用拼音或首字母搜索时，z 与 zh、c 与 ch、s 与 sh、n 与 l、an 与 ang、en 与 eng、in 与 ing 视为相同"
+  },
   "settings_search_result_sources_title": {
     "message": "显示结果类型"
   },

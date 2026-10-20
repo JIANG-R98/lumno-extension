@@ -13,11 +13,17 @@ assert.ok(
 );
 
 function createEvent() {
+  const listeners = [];
   return {
-    addListener() {},
+    addListener(listener) {
+      listeners.push(listener);
+    },
     removeListener() {},
     hasListener() {
       return false;
+    },
+    dispatch(...args) {
+      listeners.forEach((listener) => listener(...args));
     }
   };
 }
@@ -185,7 +191,8 @@ function createChromeStub(options) {
       visitCount: 3,
       typedCount: 0,
       lastVisitTime: now - 20_000
-    }]
+    }],
+    typeof config.extraHistoryItems === 'function' ? config.extraHistoryItems(now) : []
   );
   const topSiteItems = [
     { title: 'GitHub', url: 'https://github.com/' },
@@ -456,7 +463,7 @@ function loadBackgroundForTest(options) {
   vm.runInContext(backgroundSource, context, {
     filename: 'src/background/background.js'
   });
-  return { context, messageListeners };
+  return { context, messageListeners, chromeApi };
 }
 
 function sendBackgroundMessage(messageListeners, request, timeoutMs) {
@@ -1202,6 +1209,29 @@ async function run() {
     pinyinInitialSuggestions.some((item) => item && item.url === 'https://weread.qq.com/'),
     'background search suggestions should match Chinese title pinyin initials'
   );
+  const pinyinInitialSuggestion = pinyinInitialSuggestions.find((item) => item && item.url === 'https://weread.qq.com/');
+  assert.deepStrictEqual(
+    JSON.parse(JSON.stringify(pinyinInitialSuggestion && pinyinInitialSuggestion.titleHighlight)),
+    { text: '微信读书', query: 'wxds', ranges: [[0, 4]] },
+    'a pinyin match should send the title characters it spelled for highlighting'
+  );
+  const traditionalSuggestions = await context.__testGetSearchSuggestions('微信讀書');
+  assert.ok(
+    traditionalSuggestions.some((item) => item && item.url === 'https://weread.qq.com/'),
+    'background search suggestions should match a simplified title from traditional characters'
+  );
+  const reorderedSuggestions = await context.__testGetSearchSuggestions('读书微信');
+  const reorderedSuggestion = reorderedSuggestions.find((item) => item && item.url === 'https://weread.qq.com/');
+  assert.deepStrictEqual(
+    JSON.parse(JSON.stringify(reorderedSuggestion && reorderedSuggestion.titleHighlight)),
+    { text: '微信读书', query: '读书微信', ranges: [[0, 4]] },
+    'background search suggestions should match a title holding the query in pieces'
+  );
+  const mixedPinyinSuggestions = await context.__testGetSearchSuggestions('weixinds');
+  assert.ok(
+    mixedPinyinSuggestions.some((item) => item && item.url === 'https://weread.qq.com/'),
+    'background search suggestions should match full pinyin mixed with initials'
+  );
 
   const openTabInitialSuggestions = await context.__testGetSearchSuggestions('DETC');
   assert.ok(
@@ -1233,6 +1263,95 @@ async function run() {
   assert.ok(
     warmedFuzzySuggestions.some((item) => item && item.url === 'https://apps.apple.com/final-cut-camera'),
     'the warmed history index should continue to support fuzzy initial matching after the fast first response'
+  );
+
+  const hostSpellingContext = loadBackgroundForTest({
+    extraHistoryItems: (now) => [{
+      title: 'Zhihu - Have a question',
+      url: 'https://www.zhihu.com/question/1',
+      visitCount: 3,
+      typedCount: 0,
+      lastVisitTime: now - 5_500
+    }]
+  }).context;
+  const hostSpellingSuggestions = await hostSpellingContext.__testGetSearchSuggestions('知乎');
+  assert.ok(
+    hostSpellingSuggestions.some((item) => item && item.url === 'https://www.zhihu.com/question/1'),
+    'a Han query should find a page whose address spells it in pinyin'
+  );
+
+  // Fuzzy pinyin is off until the reader turns it on, and follows the setting.
+  const fuzzyHistory = (now) => [{
+    title: '中国银行',
+    url: 'https://www.boc.cn/',
+    visitCount: 2,
+    typedCount: 0,
+    lastVisitTime: now - 5_600
+  }];
+  const findBankByFuzzyPinyin = async (fuzzyContext) => (
+    (await fuzzyContext.__testGetSearchSuggestions('zongguoyinhang'))
+      .some((item) => item && item.url === 'https://www.boc.cn/')
+  );
+  const exactPinyin = loadBackgroundForTest({ extraHistoryItems: fuzzyHistory });
+  assert.strictEqual(
+    await findBankByFuzzyPinyin(exactPinyin.context),
+    false,
+    'pinyin should keep z and zh apart while fuzzy pinyin is off'
+  );
+  exactPinyin.chromeApi.storage.onChanged.dispatch({
+    _x_extension_search_fuzzy_pinyin_enabled_2026_unique_: { newValue: true }
+  }, 'sync');
+  assert.strictEqual(
+    await findBankByFuzzyPinyin(exactPinyin.context),
+    true,
+    'turning fuzzy pinyin on should index the titles again with its readings'
+  );
+  const storedFuzzyPinyin = loadBackgroundForTest({
+    extraHistoryItems: fuzzyHistory,
+    initialSyncData: { _x_extension_search_fuzzy_pinyin_enabled_2026_unique_: true }
+  });
+  assert.strictEqual(
+    await findBankByFuzzyPinyin(storedFuzzyPinyin.context),
+    true,
+    'a stored fuzzy pinyin choice should apply from the first search'
+  );
+
+  // Pinyin reaches history older than the recent list: the browser's own
+  // history search cannot read pinyin, so Han titles are kept from further back.
+  const { context: olderHistoryContext, chromeApi: olderHistoryChrome } = loadBackgroundForTest({
+    extraHistoryItems: (now) => Array.from({ length: 400 }, (_, index) => ({
+      title: `Older Filler ${index + 1}`,
+      url: `https://older-filler.example.com/${index + 1}`,
+      visitCount: 1,
+      typedCount: 0,
+      lastVisitTime: now - 30_000 - index
+    })).concat([{
+      title: '飞书云文档',
+      url: 'https://feishu.example.com/drive',
+      visitCount: 2,
+      typedCount: 0,
+      lastVisitTime: now - 40_000
+    }])
+  });
+  const findOlderFeishu = async (query) => {
+    await olderHistoryContext.__testGetSearchSuggestions(query);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const suggestions = await olderHistoryContext.__testGetSearchSuggestions(query);
+    return suggestions.some((item) => item && item.url === 'https://feishu.example.com/drive');
+  };
+  assert.strictEqual(
+    await findOlderFeishu('feishuwendang'),
+    true,
+    'pinyin should find a Han title older than the recent history list'
+  );
+  olderHistoryChrome.history.onVisitRemoved.dispatch({
+    allHistory: false,
+    urls: ['https://feishu.example.com/drive']
+  });
+  assert.strictEqual(
+    await findOlderFeishu('feishuwendang'),
+    false,
+    'removed history should leave the Han title history at once'
   );
 
   let delayedDefaultEngineFetchCount = 0;

@@ -32,6 +32,11 @@ export interface Suggestion {
   path?: string;
   commandText?: string;
   reasons?: unknown[];
+  titleHighlight?: {
+    text: string;
+    query: string;
+    ranges: Array<[number, number]>;
+  };
   isTopSite?: boolean;
   provider?: Record<string, unknown> | null;
   searchQuery?: string;
@@ -781,7 +786,7 @@ function getHighlightNeedles(query: string): string[] {
   }
   const needles = [
     fullQuery,
-    ...fullQuery.split(/[^a-z0-9\u4e00-\u9fff]+/i)
+    ...fullQuery.split(/[^\p{L}\p{M}\p{N}]+/u)
   ];
   const seen = new Set<string>();
   return needles
@@ -797,39 +802,76 @@ function getHighlightNeedles(query: string): string[] {
     .sort((left, right) => right.length - left.length);
 }
 
+// A term of one or two letters or digits from a script that writes words
+// apart and has letter case matches only where a word starts ("ai" in
+// OpenAI, not in "detail"; "да" not inside "когда"), so it is only marked
+// there. The same rule as the search matcher.
+const SHORT_WORD_TERM_PATTERN = /^[\p{sc=Latn}\p{sc=Cyrl}\p{sc=Grek}\p{sc=Armn}\p{sc=Geor}\d]{1,2}$/u;
+
+function isHighlightWordStart(text: string, index: number): boolean {
+  const previous = text.charAt(index - 1);
+  const current = text.charAt(index);
+  return !/[\p{L}\p{N}]/u.test(previous) ||
+    /\d/.test(previous) !== /\d/.test(current) ||
+    (/\p{Ll}/u.test(previous) && /\p{Lu}/u.test(current));
+}
+
+// The background marks a local result's title by the rules that matched it,
+// pinyin and initials included. Its ranges only fit the text and query they
+// were computed for; anywhere else, and while a newer query waits for
+// results, the view marks the typed text.
 function getHighlightedParts(
   options: NormalizedOptions,
   text: unknown,
-  query: string
+  query: string,
+  highlight?: Suggestion['titleHighlight']
 ): Array<{ text: string; highlighted: boolean }> {
   const safeText = options.sanitizeDisplayText(text);
-  const needles = getHighlightNeedles(query);
-  if (needles.length === 0) {
-    return [{ text: safeText, highlighted: false }];
+  let ranges: Array<[number, number]> = [];
+  if (
+    highlight?.text === safeText &&
+    highlight.query === query.trim().toLowerCase()
+  ) {
+    ranges = highlight.ranges;
+  } else {
+    const needles = getHighlightNeedles(query);
+    if (needles.length > 0) {
+      const pattern = new RegExp(needles.map(escapeRegExp).join('|'), 'gi');
+      for (const match of safeText.matchAll(pattern)) {
+        const start = match.index || 0;
+        if (!SHORT_WORD_TERM_PATTERN.test(match[0]) || isHighlightWordStart(safeText, start)) {
+          ranges.push([start, start + match[0].length]);
+        }
+      }
+    }
   }
-  const needleSet = new Set(needles.map((needle) => needle.toLowerCase()));
-  const parts = safeText.split(
-    new RegExp(`(${needles.map(escapeRegExp).join('|')})`, 'gi')
-  );
-  if (parts.length === 1) {
-    return [{ text: safeText, highlighted: false }];
-  }
-  return parts.filter(Boolean).map((part) => ({
-    text: part,
-    highlighted: needleSet.has(part.toLowerCase())
-  }));
+  const parts: Array<{ text: string; highlighted: boolean }> = [];
+  let offset = 0;
+  ranges.forEach(([start, end]) => {
+    if (start >= offset) {
+      parts.push(
+        { text: safeText.slice(offset, start), highlighted: false },
+        { text: safeText.slice(start, end), highlighted: true }
+      );
+      offset = end;
+    }
+  });
+  parts.push({ text: safeText.slice(offset), highlighted: false });
+  return parts.filter((part) => part.text);
 }
 
 function HighlightedText({
   options,
   text,
   queryStore,
-  simpleMode
+  simpleMode,
+  highlight
 }: {
   options: NormalizedOptions;
   text: unknown;
   queryStore: QueryStore;
   simpleMode: boolean;
+  highlight?: Suggestion['titleHighlight'];
 }) {
   const query = useSyncExternalStore(
     queryStore.subscribe,
@@ -839,7 +881,7 @@ function HighlightedText({
   if (simpleMode) {
     return options.sanitizeDisplayText(text);
   }
-  return getHighlightedParts(options, text, query).map((part, index) =>
+  return getHighlightedParts(options, text, query, highlight).map((part, index) =>
     part.highlighted ? (
       <mark
         key={`highlight:${index}`}
@@ -2389,6 +2431,7 @@ function SearchSuggestionRowComponent({
                 text={suggestion.title || ''}
                 queryStore={queryStore}
                 simpleMode={simpleMode}
+                highlight={suggestion.titleHighlight}
               />
             )}
           </span>

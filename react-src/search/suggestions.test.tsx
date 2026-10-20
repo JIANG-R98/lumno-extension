@@ -528,6 +528,61 @@ describe('Suggestions React island', () => {
     ).toEqual(['Codex', '最爱']);
   });
 
+  it('marks the title characters a pinyin match spelled while its query is current', () => {
+    const { view, items } = createView();
+    const suggestion = {
+      type: 'history',
+      title: '腾讯视频 - 中国领先的在线视频平台',
+      url: 'https://v.qq.com/',
+      titleHighlight: {
+        text: '腾讯视频 - 中国领先的在线视频平台',
+        query: 'shipin',
+        ranges: [[2, 4]] as Array<[number, number]>
+      }
+    };
+
+    render(view, [suggestion], { query: 'ShiPin' });
+    expect(
+      Array.from(items[0]._xTitle?.querySelectorAll('mark') || []).map((mark) => mark.textContent)
+    ).toEqual(['视频']);
+
+    render(view, [suggestion], { query: 'shipinx' });
+    expect(items[0]._xTitle?.querySelectorAll('mark')).toHaveLength(0);
+  });
+
+  it('marks a short typed term only where a word starts', () => {
+    const { view, items } = createView();
+
+    render(view, [{
+      type: 'history',
+      title: 'Detail of OpenAI',
+      url: 'https://example.com/detail'
+    }], {
+      query: 'ai'
+    });
+
+    expect(
+      Array.from(items[0].querySelectorAll('mark')).map((mark) => mark.textContent)
+    ).toEqual(['AI']);
+  });
+
+  it('marks a short Cyrillic term only where a word starts', () => {
+    const { view, items } = createView();
+
+    render(view, [{
+      type: 'history',
+      title: 'Когда да',
+      url: 'https://example.com/ru'
+    }], {
+      query: 'да'
+    });
+
+    expect(
+      Array.from(items[0].querySelectorAll('mark')).map((mark) => mark.textContent)
+    ).toEqual(['да']);
+    expect(items[0]._xTitle?.textContent).toBe('Когда да');
+  });
+
   it('reports whether highlighted text belongs to the selected row', () => {
     const markStates = new Map<SuggestionElement, unknown>();
     const { view, items } = createView({

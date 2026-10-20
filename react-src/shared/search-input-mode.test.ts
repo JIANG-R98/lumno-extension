@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import '../../src/shared/menu-surface.js';
 import '../../src/shared/shortcut-display.js';
 import '../../src/shared/favicon-utils.js';
+import '../../src/shared/search-han-variants.js';
+import '../../src/shared/search-utils.js';
 import '../../src/shared/search-input-mode.js';
 
 Object.assign(globalThis, {
@@ -1264,6 +1266,112 @@ describe('Shared search scope menu', () => {
     ).toBe('书');
     controller.destroy();
     pinyinGlobal.pinyinPro = existingPinyinApi;
+  });
+
+  it('filters scope cards by mixed pinyin and initials from the start of the name', () => {
+    const parts = createModeParts();
+    const controller = window.LumnoSearchInputMode.createInputModeController(
+      parts,
+      {
+        getModeMenuItems: () => [{
+          group: 'Site search',
+          id: 'provider:mixed',
+          kind: 'provider',
+          label: '豆包书签'
+        }]
+      }
+    );
+    expect(controller.openModeMenu('none')).toBe(true);
+    const item = controller.menuElement.querySelector<HTMLButtonElement>(
+      '[role="menuitemradio"]'
+    );
+    const typeFilter = (value: string) => {
+      controller.menuElement.dispatchEvent(new KeyboardEvent('keydown', {
+        bubbles: true,
+        cancelable: true,
+        key: 'Escape'
+      }));
+      value.split('').forEach((key) => {
+        controller.menuElement.dispatchEvent(new KeyboardEvent('keydown', {
+          bubbles: true,
+          cancelable: true,
+          key
+        }));
+      });
+      return Array.from(
+        item?.querySelectorAll('.x-lumno-search-input-mode__menu-match') || []
+      ).map((mark) => mark.textContent);
+    };
+
+    expect(typeFilter('dbsq')).toEqual(['豆包书签']);
+    expect(typeFilter('doubsq')).toEqual(['豆包书签']);
+    expect(typeFilter('dbs')).toEqual(['豆包书']);
+    expect(typeFilter('ouba')).toEqual([]);
+    expect(item?.hidden).toBe(true);
+    expect(typeFilter('sq')).toEqual([]);
+    expect(item?.hidden).toBe(true);
+    controller.destroy();
+  });
+
+  it('filters scope cards by letters typed on a Cyrillic keyboard layout', () => {
+    const parts = createModeParts();
+    const controller = window.LumnoSearchInputMode.createInputModeController(
+      parts,
+      {
+        getModeMenuItems: () => [
+          { group: 'Site search', id: 'provider:yandex', kind: 'provider', label: 'Яндекс' },
+          { group: 'Site search', id: 'provider:google', kind: 'provider', label: 'Google' }
+        ]
+      }
+    );
+    expect(controller.openModeMenu('none')).toBe(true);
+    ['я', 'н', 'д'].forEach((key) => {
+      controller.menuElement.dispatchEvent(new KeyboardEvent('keydown', {
+        bubbles: true,
+        cancelable: true,
+        key
+      }));
+    });
+    const items = Array.from(controller.menuElement.querySelectorAll<HTMLButtonElement>(
+      '[role="menuitemradio"]'
+    ));
+    expect(controller.getModeMenuFilterQuery()).toBe('янд');
+    expect(items.map((item) => item.hidden)).toEqual([false, true]);
+    expect(
+      items[0].querySelector('.x-lumno-search-input-mode__menu-match')?.textContent
+    ).toBe('Янд');
+    controller.destroy();
+  });
+
+  it('finds a scope card from traditional characters', () => {
+    const parts = createModeParts();
+    const controller = window.LumnoSearchInputMode.createInputModeController(
+      parts,
+      {
+        getModeMenuItems: () => [{
+          group: 'Site search',
+          id: 'provider:bank',
+          kind: 'provider',
+          label: '台湾银行'
+        }]
+      }
+    );
+    expect(controller.openModeMenu('none')).toBe(true);
+    ['臺', '灣'].forEach((key) => {
+      controller.menuElement.dispatchEvent(new KeyboardEvent('keydown', {
+        bubbles: true,
+        cancelable: true,
+        key
+      }));
+    });
+    const item = controller.menuElement.querySelector<HTMLButtonElement>(
+      '[role="menuitemradio"]'
+    );
+    expect(item?.hidden).toBe(false);
+    expect(
+      item?.querySelector('.x-lumno-search-input-mode__menu-match')?.textContent
+    ).toBe('台湾');
+    controller.destroy();
   });
 
   it('reuses lighter vector glyphs in browser-content cards and the active tag', () => {

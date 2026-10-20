@@ -257,6 +257,9 @@ assert.strictEqual(settings.normalizeNumberShortcutInstantEnabled(false), false)
 assert.strictEqual(settings.normalizeNumberShortcutInstantEnabled(true), true);
 assert.strictEqual(settings.normalizeNumberShortcutInstantEnabled(undefined), false);
 assert.strictEqual(settings.normalizeNumberShortcutInstantEnabled('true'), false);
+assert.strictEqual(settings.normalizeSearchFuzzyPinyinEnabled(true), true);
+assert.strictEqual(settings.normalizeSearchFuzzyPinyinEnabled(undefined), false);
+assert.strictEqual(settings.normalizeSearchFuzzyPinyinEnabled('true'), false);
 assert.strictEqual(settings.normalizeMacosCtrlSuggestionNavigationEnabled(false), false);
 assert.strictEqual(settings.normalizeMacosCtrlSuggestionNavigationEnabled(true), true);
 assert.strictEqual(settings.normalizeMacosCtrlSuggestionNavigationEnabled(undefined), false);
