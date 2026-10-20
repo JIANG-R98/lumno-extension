@@ -228,6 +228,13 @@ describe('Toolbar popup', () => {
       .toEqual(['shortcuts', 'sync', 'release']);
   });
 
+  it('shows a throttled sync as waiting', () => {
+    const { host } = mount(createModel({ sync: { label: 'WebDAV waiting to retry', tone: 'waiting' } }));
+    const sync = host.querySelector<HTMLButtonElement>('.x-lumno-popup__sync');
+    expect(sync?.dataset.tone).toBe('waiting');
+    expect(sync?.querySelector('.ri-time-line')).not.toBeNull();
+  });
+
   it('leaves the sync link out without WebDAV', () => {
     const { host } = mount(createModel({ sync: null }));
     expect(host.querySelector('.x-lumno-popup__sync')).toBeNull();

@@ -72,7 +72,7 @@ export interface PopupLinkModel {
 export interface PopupSyncModel {
   /** Tooltip and accessible name, such as "WebDAV synced 3 minutes ago". */
   label: string;
-  tone: 'ok' | 'busy' | 'error';
+  tone: 'ok' | 'busy' | 'waiting' | 'error';
 }
 
 export interface PopupModel {
@@ -96,6 +96,12 @@ export interface PopupHandlers {
   onActionMenuToggle(id: PopupActionId, expanded: boolean): void;
   onLink(id: PopupLinkId): void;
 }
+
+// Synced and syncing share the cloud; a wait or a failure gets its own icon.
+const SYNC_ICONS: Partial<Record<PopupSyncModel['tone'], string>> = {
+  waiting: 'ri-time-line',
+  error: 'ri-error-warning-line'
+};
 
 function ActionCell({
   action,
@@ -329,7 +335,7 @@ export function PopupView({ model, handlers }: { model: PopupModel; handlers: Po
           >
             <i
               aria-hidden="true"
-              className={`ri-icon ${model.sync.tone === 'error' ? 'ri-error-warning-line' : 'ri-cloud-line'}`}
+              className={`ri-icon ${SYNC_ICONS[model.sync.tone] || 'ri-cloud-line'}`}
             />
           </button>
         ) : null}

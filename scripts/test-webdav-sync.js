@@ -982,6 +982,24 @@ async function run() {
     await set(busy.chrome.storage.sync, { [theme]: 'light' });
     const fresh = await busy.controller.handle({ operation: 'sync' });
     assert(fresh.retryAt <= clockNow + 66000, 'a success resets the waits');
+    // A device clock set back leaves the saved end far ahead, longer than any
+    // wait; background rounds ignore it instead of staying quiet that long.
+    busyServer.refuseWith = null;
+    clockNow -= 24 * 60 * 60 * 1000;
+    const rewoundFrom = busyServer.requests.length;
+    busy.chrome.alarms.fire(syncApi.ALARM_NAME);
+    assert.strictEqual((await busy.controller.handle({ operation: 'status' })).state, 'ready');
+    assert(busyServer.requests.length > rewoundFrom, 'a wait that ends past the longest delay does not hold back sync');
+    assert.strictEqual(await busy.privateStore.get('throttle'), null);
+    // A full join the server answers starts the waits over as well.
+    busyServer.refuseWith = { status: 429 };
+    await set(busy.chrome.storage.sync, { [theme]: 'dark' });
+    await busy.controller.handle({ operation: 'sync' });
+    await busy.controller.handle({ operation: 'sync' });
+    assert.strictEqual((await busy.privateStore.get('throttle')).attempt, 1);
+    busyServer.refuseWith = null;
+    assert.deepStrictEqual(await busy.controller.handle({ operation: 'connect', config, decision: 'remote' }), { ok: true });
+    assert.strictEqual(await busy.privateStore.get('throttle'), null, 'connecting clears the throttle record');
     await busy.controller.handle({ operation: 'pause' });
     assert.strictEqual(await busy.privateStore.get('throttle'), null);
 

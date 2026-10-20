@@ -21,13 +21,14 @@
   // acting on it. Nutstore answers 503 "BlockedTemporarily" once an account
   // sent too many requests, and keeps refusing while it is still being polled.
   const REFUSED_STATUSES = [429, 503];
+  const RETRY_AFTER_MAX_MS = 6 * 60 * 60 * 1000;
   function error(code, status) { return Object.assign(new Error(code), { code, status }); }
   // Retry-After holds seconds or an HTTP date, read against the server's clock.
   function retryAfterMs(value, date) {
     const text = String(value || '').trim();
     if (!text) return null;
     const ms = /^\d+$/.test(text) ? Number(text) * 1000 : Date.parse(text) - (Date.parse(date || '') || Date.now());
-    return Number.isFinite(ms) ? Math.min(Math.max(ms, 0), 6 * 60 * 60 * 1000) : null;
+    return Number.isFinite(ms) ? Math.min(Math.max(ms, 0), RETRY_AFTER_MAX_MS) : null;
   }
   function diagnostic(input) {
     if (!input || input.revision !== REVISION || !DIAGNOSTIC_PHASES.includes(input.phase)) return null;
@@ -463,5 +464,5 @@
     }
     return Object.freeze({ request, ensureDirectories, readState, writeState, releaseStaleLock, sweepAbandoned, testConnection });
   }
-  return Object.freeze({ normalizeConfig, createClient, error, diagnostic, REVISION, MOVE_REFUSALS, REFUSED_STATUSES, STALE_LOCK_MS });
+  return Object.freeze({ normalizeConfig, createClient, error, diagnostic, REVISION, MOVE_REFUSALS, REFUSED_STATUSES, RETRY_AFTER_MAX_MS, STALE_LOCK_MS });
 });
