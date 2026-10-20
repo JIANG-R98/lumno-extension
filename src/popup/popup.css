@@ -12,11 +12,13 @@ body {
   --popup-tile-hover-bg: rgba(15, 23, 42, 0.065);
   --popup-icon-bg: rgba(15, 23, 42, 0.05);
   --popup-segmented-bg: rgba(15, 23, 42, 0.05);
+  --popup-settings-bg: #f5f6f8;
+  --popup-settings-hover-bg: #eef0f3;
   --popup-segmented-active-bg: #ffffff;
   --popup-segmented-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
   --popup-error-text: #b91c1c;
   --popup-hero: url("../../assets/images/settings-bg-light.webp");
-  --popup-hero-opacity: 0.85;
+  --popup-hero-opacity: 1;
   --popup-action-bg: #ffffff;
   --popup-action-hover-bg: #f8fafc;
   --popup-action-border: rgba(15, 23, 42, 0.1);
@@ -39,6 +41,8 @@ body[data-theme="dark"] {
   --popup-tile-hover-bg: rgba(255, 255, 255, 0.09);
   --popup-icon-bg: rgba(255, 255, 255, 0.08);
   --popup-segmented-bg: #2f2f2f;
+  --popup-settings-bg: rgba(255, 255, 255, 0.04);
+  --popup-settings-hover-bg: rgba(255, 255, 255, 0.07);
   --popup-segmented-active-bg: #3f3f46;
   --popup-segmented-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
   --popup-error-text: #fecaca;
@@ -58,6 +62,8 @@ body[data-theme="dark"] {
     --popup-tile-hover-bg: rgba(255, 255, 255, 0.09);
     --popup-icon-bg: rgba(255, 255, 255, 0.08);
     --popup-segmented-bg: #2f2f2f;
+    --popup-settings-bg: rgba(255, 255, 255, 0.04);
+    --popup-settings-hover-bg: rgba(255, 255, 255, 0.07);
     --popup-segmented-active-bg: #3f3f46;
     --popup-segmented-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
     --popup-error-text: #fecaca;
@@ -95,12 +101,12 @@ body[data-theme="dark"] {
 
 /* The meadow from the Settings page, with its Lumno script, fading into the popup. */
 .x-lumno-popup__hero {
-  height: 56px;
+  height: 68px;
   margin: 0 -14px;
-  background: var(--popup-hero) center -54px / 420px auto no-repeat;
+  background: var(--popup-hero) center -62px / 460px auto no-repeat;
   opacity: var(--popup-hero-opacity);
-  -webkit-mask-image: linear-gradient(to bottom, #000 50%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 50%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
   pointer-events: none;
 }
 
@@ -303,27 +309,38 @@ body[data-theme="dark"] {
 /* Quick settings: folded by default, since they are rarely changed. */
 .x-lumno-popup__settings {
   margin-top: 10px;
+  padding: 0 12px;
+  border-radius: var(--lumno-radius-md);
+  background: var(--popup-settings-bg);
+  transition: background-color var(--lumno-duration-md) ease;
+}
+
+/* Folded, the whole card is the button; open, the header only brightens, so
+   no hover band cuts across the first group. */
+.x-lumno-popup__settings[data-expanded="false"]:has(> .x-lumno-popup__settings-toggle:hover) {
+  background: var(--popup-settings-hover-bg);
 }
 
 .x-lumno-popup__settings-toggle {
   display: flex;
-  width: calc(100% + 12px);
+  width: calc(100% + 24px);
   align-items: center;
   gap: 6px;
-  height: 36px;
-  margin: 0 -6px;
-  padding: 0 6px;
+  height: 40px;
+  margin: 0 -12px;
+  padding: 0 12px;
   border: 0;
-  border-radius: var(--lumno-radius-sm);
+  border-radius: var(--lumno-radius-md);
   background: transparent;
   color: var(--popup-subtext);
   font-size: var(--lumno-font-size-sm);
   text-align: left;
   cursor: pointer;
+  transition: color var(--lumno-duration-md) ease;
 }
 
-.x-lumno-popup__settings-toggle:hover {
-  background: var(--lumno-color-hover);
+.x-lumno-popup__settings-toggle:hover,
+.x-lumno-popup__settings[data-expanded="true"] .x-lumno-popup__settings-toggle {
   color: var(--popup-text);
 }
 
@@ -332,8 +349,15 @@ body[data-theme="dark"] {
 }
 
 .x-lumno-popup__settings-chevron {
+  color: var(--popup-subtext);
   font-size: 16px;
-  transition: transform var(--lumno-duration-md) var(--lumno-ease-emphasized);
+  transition:
+    color var(--lumno-duration-md) ease,
+    transform var(--lumno-duration-md) var(--lumno-ease-emphasized);
+}
+
+.x-lumno-popup__settings-toggle:hover .x-lumno-popup__settings-chevron {
+  color: var(--popup-text);
 }
 
 .x-lumno-popup__settings[data-expanded="true"] .x-lumno-popup__settings-chevron {
@@ -371,15 +395,15 @@ body[data-theme="dark"] {
 
 /* Inside the folding box, so the gap folds with it. */
 .x-lumno-popup__section:last-child {
-  padding-bottom: 4px;
+  padding-bottom: 10px;
 }
 
 .x-lumno-popup__section + .x-lumno-popup__section {
-  margin-top: 8px;
+  margin-top: 16px;
 }
 
 .x-lumno-popup__section-title {
-  margin: 4px 0 0;
+  margin: 0 0 2px;
   color: var(--popup-subtext);
   font-size: var(--lumno-font-size-xs);
   font-weight: 400;
