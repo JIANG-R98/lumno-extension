@@ -1165,7 +1165,11 @@
       step: 1,
       ticks: [
         { align: 'start', label: String(NEWTAB_SHORTCUT_SIZE_MIN), percent: 0 },
-        { label: String(NEWTAB_SHORTCUT_SIZE_DEFAULT), percent: 50 },
+        {
+          label: String(NEWTAB_SHORTCUT_SIZE_DEFAULT),
+          percent: ((NEWTAB_SHORTCUT_SIZE_DEFAULT - NEWTAB_SHORTCUT_SIZE_MIN) /
+            (NEWTAB_SHORTCUT_SIZE_MAX - NEWTAB_SHORTCUT_SIZE_MIN)) * 100
+        },
         { align: 'end', label: String(NEWTAB_SHORTCUT_SIZE_MAX), percent: 100 }
       ],
       value: currentNewtabShortcutSize,

@@ -144,7 +144,7 @@ export function createDefaultPanelState(): WallpaperPanelState {
       dock: { title: '', toggle: toggle('', true) },
       enabled: true,
       gap: { ...slider('Shortcut spacing', 4, 0, 24, { suffix: ' px' }), resetLabel: '', resetVisible: false },
-      size: { ...slider('Shortcut size', 64, 48, 80, { suffix: ' px' }), resetLabel: '', resetVisible: false },
+      size: { ...slider('Shortcut size', 64, 48, 112, { suffix: ' px' }), resetLabel: '', resetVisible: false },
       title: 'Shortcuts',
       toggle: toggle('Shortcuts', true)
     },

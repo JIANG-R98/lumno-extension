@@ -1697,6 +1697,8 @@ function createLayoutMotionFixture(options) {
   const createElement = (top, parentElement) => {
     const element = {
       top,
+      left: 40,
+      width: 320,
       isConnected: true,
       parentElement: parentElement || null,
       scrollLeft: 0,
@@ -1705,7 +1707,7 @@ function createLayoutMotionFixture(options) {
       getBoundingClientRect() {
         const offset = layoutMotionRuntime.parseTranslate(element.translate);
         const ancestorScroll = element.parentElement ? element.parentElement.scrollTop : 0;
-        return { left: 40 + offset.x, top: element.top + offset.y - ancestorScroll, width: 320, height: 48 };
+        return { left: element.left + offset.x, top: element.top + offset.y - ancestorScroll, width: element.width, height: 48 };
       },
       animate(keyframes, timing) {
         element.translate = keyframes[0].translate;
@@ -1804,6 +1806,24 @@ function testLayoutMotionMovesTheDockOnlyWhenItsSectionsShiftAlike() {
 }
 
 testLayoutMotionMovesTheDockOnlyWhenItsSectionsShiftAlike();
+
+function testLayoutMotionLetsCenteredBlocksResizeInPlace() {
+  // A shortcut size step narrows the centered shortcut row; its left edge
+  // moves but the row has not, so nothing eases it back from the old edge.
+  const fixture = createLayoutMotionFixture();
+  fixture.motion.commit();
+  fixture.search.left = 120;
+  fixture.search.width = 160;
+  fixture.motion.commit();
+  assert.strictEqual(fixture.played.length, 0, 'a block resized around its center should not move');
+
+  fixture.search.left = 160;
+  fixture.motion.commit();
+  assert.deepStrictEqual(fixture.played[0].keyframes[0], { translate: '-40px 0px' },
+    'a block whose center shifted should still ease sideways');
+}
+
+testLayoutMotionLetsCenteredBlocksResizeInPlace();
 
 function testLayoutMotionHoldsStillWhenItMayNotAnimate() {
   const blocked = createLayoutMotionFixture();

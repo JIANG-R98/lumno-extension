@@ -110,10 +110,12 @@
         const mover = target.mover || element;
         const offset = getPlayingOffset(mover);
         const scroll = getAncestorScroll(element);
+        // Blocks sit centered across the page, so their center is where they
+        // are: a block that only grows or shrinks around it has not moved.
         positions.set(target.key, {
           element,
           mover,
-          left: rect.left + scrollX + scroll.x - offset.x,
+          x: rect.left + (rect.width / 2) + scrollX + scroll.x - offset.x,
           top: rect.top + scrollY + scroll.y - offset.y
         });
       });
@@ -185,7 +187,7 @@
             return;
           }
           const shifts = shiftsByMover.get(position.mover) || [];
-          shifts.push({ x: previous.left - position.left, y: previous.top - position.top });
+          shifts.push({ x: previous.x - position.x, y: previous.top - position.top });
           shiftsByMover.set(position.mover, shifts);
         });
         shiftsByMover.forEach((shifts, mover) => {

@@ -187,7 +187,7 @@
     }, options.shortcutColumnsConfig || {});
     const shortcutSizeConfig = Object.assign({
       min: 48,
-      max: 80,
+      max: 112,
       fallback: 64
     }, options.shortcutSizeConfig || {});
     const shortcutGapConfig = Object.assign({
@@ -3115,7 +3115,7 @@
     }
 
     function normalizeShortcutSizeValue(value) {
-      return normalizeShortcutLayoutValue(value, shortcutSizeConfig, 48, 80, 64);
+      return normalizeShortcutLayoutValue(value, shortcutSizeConfig, 48, 112, 64);
     }
 
     function normalizeShortcutGapValue(value) {
@@ -4406,8 +4406,8 @@
           searchWidth: getSliderMarks(getSearchWidthSnapPoints(), getSearchWidthPercent),
           shortcutColumns: getSliderMarks(getShortcutColumnsTickValues(), getShortcutColumnsPercent),
           shortcutSize: getSliderMarks(
-            uniqueSorted([48, 64, 80].map(normalizeShortcutSizeValue)),
-            (value) => getShortcutLayoutPercent(value, shortcutSizeConfig, 48, 80, 64)
+            uniqueSorted([48, 64, 80, 96, 112].map(normalizeShortcutSizeValue)),
+            (value) => getShortcutLayoutPercent(value, shortcutSizeConfig, 48, 112, 64)
           ),
           shortcutGap: getSliderMarks(
             uniqueSorted([0, 8, 16, 24].map(normalizeShortcutGapValue)),
@@ -4635,11 +4635,11 @@
           label: t('settings_newtab_shortcut_size_title', 'Shortcut size'),
           value: size,
           min: getShortcutLayoutMin(shortcutSizeConfig, 48),
-          max: getShortcutLayoutMax(shortcutSizeConfig, 48, 80),
+          max: getShortcutLayoutMax(shortcutSizeConfig, 48, 112),
           suffix: ' px',
           valueText: `${size} px`,
           resetLabel: t('settings_newtab_shortcut_size_reset', 'Reset shortcut size'),
-          resetVisible: size !== getShortcutLayoutDefault(shortcutSizeConfig, 48, 80, 64)
+          resetVisible: size !== getShortcutLayoutDefault(shortcutSizeConfig, 48, 112, 64)
         },
         gap: {
           label: t('settings_newtab_shortcut_gap_title', 'Shortcut spacing'),
@@ -5290,7 +5290,7 @@
         setShortcutSize: (value, change) => persistShortcutSizeFromSlider(value, change),
         setShortcutGap: (value, change) => persistShortcutGapFromSlider(value, change),
         resetShortcutSize: () => persistShortcutSizeFromSlider(
-          getShortcutLayoutDefault(shortcutSizeConfig, 48, 80, 64),
+          getShortcutLayoutDefault(shortcutSizeConfig, 48, 112, 64),
           { final: true }
         ),
         resetShortcutGap: () => persistShortcutGapFromSlider(

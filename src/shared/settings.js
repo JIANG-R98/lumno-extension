@@ -52,7 +52,7 @@
   const NEWTAB_SHORTCUT_SIZE_STORAGE_KEY =
     '_x_extension_newtab_shortcut_size_2026_unique_';
   const NEWTAB_SHORTCUT_SIZE_MIN = 48;
-  const NEWTAB_SHORTCUT_SIZE_MAX = 80;
+  const NEWTAB_SHORTCUT_SIZE_MAX = 112;
   const NEWTAB_SHORTCUT_SIZE_DEFAULT = 64;
   const NEWTAB_SHORTCUT_GAP_STORAGE_KEY =
     '_x_extension_newtab_shortcut_gap_2026_unique_';
