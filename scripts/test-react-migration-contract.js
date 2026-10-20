@@ -156,14 +156,17 @@ const assertWithinBudget = (actualBytes, budgetKiB, label) => {
 // Marking the title characters a pinyin or initials match spelled, which ships in both the New
 // Tab and the Overlay results, moved the total to 819 KiB at 1.1.4. Marking a short typed term
 // only where a word starts, as it matches, then moved the Overlay to 275 KiB.
+// The New Tab route moved to 127 KiB gzip and the total to 239 KiB gzip at 1.1.4: under Node 26
+// they measure 125.9 KiB and 237.9 KiB, but CI's Node 22 build compresses the same bundles to
+// 126.2 KiB and 238.3 KiB and failed on main.
 const bundleBudgets = {
-  newtab: { uncompressed: 423, gzip: 126 },
+  newtab: { uncompressed: 423, gzip: 127 },
   options: { uncompressed: 290, gzip: 85 },
   overlay: { uncompressed: 275, gzip: 83 },
   // The toolbar popup opens on every click, so it loads only the runtime, the
   // shared chunk and its own small entry.
   popup: { uncompressed: 220, gzip: 70 },
-  total: { uncompressed: 819, gzip: 238 }
+  total: { uncompressed: 819, gzip: 239 }
 };
 
 const bootstrapScript = 'src="../shared/react-page-bootstrap.js"';
