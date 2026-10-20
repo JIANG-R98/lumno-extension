@@ -189,6 +189,13 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
     label: 'WebDAV 已同步 · 2分钟前', tone: 'ok'
   });
   assert.strictEqual(sync({ enabled: true, state: 'syncing' }).tone, 'busy');
+  assert.strictEqual(sync({ enabled: true, state: 'pending' }).tone, 'busy');
+  // A rate-limited connection waits minutes to hours before its next try.
+  ['http-429', 'http-503'].forEach((error) => {
+    assert.deepStrictEqual(sync({ enabled: true, state: 'pending', error, retryAt: now + 600000 }), {
+      label: 'WebDAV 等待重试', tone: 'waiting'
+    });
+  });
   assert.strictEqual(sync({ enabled: true, state: 'error' }).label, 'WebDAV 同步失败');
   assert.strictEqual(sync({ enabled: true, state: 'conflict' }).tone, 'error');
   assert.strictEqual(popup.formatSyncTime(now - 3 * 3600 * 1000, now, 'en'), '3 hours ago');

@@ -106,6 +106,9 @@
     // user can still sync by hand. The waits grow while refusals continue.
     const THROTTLE_CODES = ['http-429', 'http-503'];
     const throttleDelays = opts.throttleDelays || [5, 15, 30, 60].map((minutes) => minutes * 60 * 1000);
+    // The longest wait throttled() can save: the client's Retry-After cap or
+    // the last delay with its jitter.
+    const THROTTLE_MAX_MS = Math.max(clientApi.RETRY_AFTER_MAX_MS, ...throttleDelays.map((delay) => delay * 1.1));
     const clock = opts.now || Date.now;
     const fail = (code) => { throw clientApi.error(code); };
     const logger = opts.logger || root.console;
@@ -656,9 +659,12 @@
       return { pending: true, retryAt };
     }
     // Rounds nobody asked for skip the server while it is refusing requests.
+    // A saved end further away than any wait means the device clock went back;
+    // trusting it would suppress background sync for that long.
     async function throttledUntil() {
       const saved = await privateStore.get('throttle');
-      return saved && Number(saved.until) > clock() ? saved.until : null;
+      const until = saved ? Number(saved.until) : NaN;
+      return until > clock() && until - clock() <= THROTTLE_MAX_MS ? until : null;
     }
     const sameAccount = (left, right) => ['endpoint', 'directory', 'username'].every((key) => left[key] === right[key]);
     async function connection(input) {
@@ -721,6 +727,9 @@
         await privateStore.put('recoveryBlocked', false);
       } else await apply(target, captured, client, true, { config: { ...config, enabled: true }, base: target });
       await privateStore.put('conflict', null);
+      // The server answered every request of a full join, so a later refusal
+      // starts again from the shortest wait.
+      await privateStore.put('throttle', null);
       await mirrorReporting();
       await setStatus({ state: 'ready', enabled: true, error: null, diagnostic: null, conflicts: [], lastSyncAt: Date.now() });
       schedule();

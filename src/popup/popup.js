@@ -19,6 +19,8 @@
   const THEME_MODES = Object.freeze(['system', 'light', 'dark']);
   const SYNC_ATTENTION_STATES = Object.freeze(['conflict', 'choice']);
   const SYNC_BUSY_STATES = Object.freeze(['syncing', 'pending']);
+  // Rate limits the background waits out for minutes to hours before retrying.
+  const SYNC_THROTTLE_ERRORS = Object.freeze(['http-429', 'http-503']);
   const SETTINGS_EXPANDED_CACHE_KEY = 'lumno-popup-settings-expanded';
   const OVERFLOW_TOLERANCE_PX = 2;
   const VIDEO_PROBE_TIMEOUT_MS = 250;
@@ -103,6 +105,11 @@
     }
     if (SYNC_ATTENTION_STATES.includes(status.state)) {
       return { label: t('popup_sync_attention', 'WebDAV sync needs you'), tone: 'error' };
+    }
+    // A throttled connection is pending too, but nothing runs until the server's
+    // wait is over, so it must not look like a sync in progress.
+    if (status.state === 'pending' && SYNC_THROTTLE_ERRORS.includes(status.error)) {
+      return { label: t('popup_sync_waiting', 'WebDAV waiting to retry'), tone: 'waiting' };
     }
     if (SYNC_BUSY_STATES.includes(status.state)) {
       return { label: t('popup_sync_busy', 'WebDAV syncing'), tone: 'busy' };

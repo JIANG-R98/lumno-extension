@@ -3548,6 +3548,9 @@
   "popup_sync_busy": {
     "message": "WebDAV 正在同步"
   },
+  "popup_sync_waiting": {
+    "message": "WebDAV 等待重试"
+  },
   "popup_release_notes": {
     "message": "更新日志"
   },

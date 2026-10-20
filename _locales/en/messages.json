@@ -3548,6 +3548,9 @@
   "popup_sync_busy": {
     "message": "WebDAV syncing"
   },
+  "popup_sync_waiting": {
+    "message": "WebDAV waiting to retry"
+  },
   "popup_release_notes": {
     "message": "What’s new"
   },
