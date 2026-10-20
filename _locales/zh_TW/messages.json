@@ -3584,9 +3584,6 @@
   "popup_action_pip_tooltip": {
     "message": "讓網頁影片懸浮播放"
   },
-  "popup_action_pip_no_video": {
-    "message": "這個網頁沒有影片"
-  },
   "popup_action_pip_menu": {
     "message": "自動子母畫面"
   },

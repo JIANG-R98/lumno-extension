@@ -183,9 +183,10 @@
         label: pip.active
           ? t('popup_action_pip_exit', 'Exit picture-in-picture')
           : t('popup_action_pip', 'Picture-in-picture'),
+        // Without a video the button is simply off; it needs no explanation.
         tooltip: pip.hasVideo || pip.active
           ? t('popup_action_pip_tooltip', 'Float this page’s video in a small window')
-          : t('popup_action_pip_no_video', 'No video on this page'),
+          : '',
         iconClass: 'ri-picture-in-picture-2-line',
         disabled: !pip.hasVideo && !pip.active,
         menu: {
@@ -337,6 +338,16 @@
       id: 'x-lumno-popup-tooltip',
       appendTo: documentObj.body,
       maxWidth: 272
+    });
+    // A page title or address cut short shows in full beside the pointer.
+    const cursorTooltip = root.LumnoCursorTooltip.createController({
+      documentObj,
+      windowObj: root,
+      id: 'x-lumno-popup-cursor-tooltip',
+      appendTo: documentObj.body,
+      maxWidth: 280,
+      offsetX: 12,
+      offsetY: 16
     });
     let messages = {};
     let languageMode = 'system';
@@ -504,6 +515,11 @@
       state.now = Date.now();
       controller.render(buildModel(state, t));
       tooltip.bindAll(host, { placement: 'top' });
+      host.querySelectorAll('.x-lumno-popup__page-title, .x-lumno-popup__page-host').forEach((line) => {
+        cursorTooltip.bind(line, () => line.textContent, {
+          shouldShow: (target) => root.LumnoCursorTooltip.isElementTextTruncated(target)
+        });
+      });
       root.requestAnimationFrame(syncOverflow);
     }
 

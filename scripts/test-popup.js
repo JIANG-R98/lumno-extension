@@ -98,7 +98,7 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
   const noVideo = byId(popup.buildModel(state(), t)).pip;
   assert.strictEqual(noVideo.disabled, true);
   assert.strictEqual(noVideo.label, '画中画');
-  assert.strictEqual(noVideo.tooltip, '这个网页没有视频');
+  assert.strictEqual(noVideo.tooltip, '', 'no tooltip without a video');
   assert.deepStrictEqual(noVideo.menu, { label: '自动画中画', expanded: false });
   const withVideo = byId(popup.buildModel(state({ pip: { supported: true, hasVideo: true, active: false } }), t)).pip;
   assert.strictEqual(withVideo.disabled, false);
@@ -213,7 +213,7 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
   assert.strictEqual(manifest.action.default_popup, 'src/popup/popup.html');
   const html = read('src/popup/popup.html');
   ['../shared/settings.js', 'popup-theme-preload.js', '../shared/url-guards.js', '../shared/shortcut-display.js',
-    '../shared/tooltip.js', '../shared/toast.js', '../background/pip-main-world.js', '../shared/browser-profile.js']
+    '../shared/tooltip.js', '../shared/cursor-tooltip.js', '../shared/toast.js', '../background/pip-main-world.js', '../shared/browser-profile.js']
     .forEach((script) => assert(html.includes(`src="${script}"`), `the popup loads ${script}`));
   assert(html.indexOf('popup-theme-preload.js') < html.indexOf('x-lumno-popup-root'),
     'the theme is painted before the popup renders');

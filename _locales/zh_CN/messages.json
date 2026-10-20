@@ -3584,9 +3584,6 @@
   "popup_action_pip_tooltip": {
     "message": "让网页视频悬浮播放"
   },
-  "popup_action_pip_no_video": {
-    "message": "这个网页没有视频"
-  },
   "popup_action_pip_menu": {
     "message": "自动画中画"
   },

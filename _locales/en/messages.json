@@ -3584,9 +3584,6 @@
   "popup_action_pip_tooltip": {
     "message": "Float this page’s video in a small window"
   },
-  "popup_action_pip_no_video": {
-    "message": "No video on this page"
-  },
   "popup_action_pip_menu": {
     "message": "Auto picture-in-picture"
   },

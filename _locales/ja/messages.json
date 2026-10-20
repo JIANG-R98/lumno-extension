@@ -3584,9 +3584,6 @@
   "popup_action_pip_tooltip": {
     "message": "このページの動画を小窓で再生"
   },
-  "popup_action_pip_no_video": {
-    "message": "このページに動画はありません"
-  },
   "popup_action_pip_menu": {
     "message": "自動ピクチャーインピクチャー"
   },
