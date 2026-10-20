@@ -190,6 +190,33 @@ assert.strictEqual(
   'browser newtab fallback should omit url so the browser-selected newtab provider handles it'
 );
 
+{
+  const createdBefore = createdTabs.length;
+  fallback.openNewtabFallbackForUrl('file:///Users/example/document.pdf', { followBrowserNewtab: true });
+  assert.strictEqual(
+    createdTabs[createdBefore].url,
+    'chrome-extension://abc/src/newtab/lumno-newtab.html?focus=1&notice=file-access',
+    'following the browser New Tab should still show the file-access notice when access is off'
+  );
+  fallback.openNewtabFallbackForUrl('https://example.com/', { followBrowserNewtab: true });
+  assert.strictEqual(
+    createdTabs[createdBefore + 1].url,
+    undefined,
+    'following the browser New Tab should let the browser pick the page for web URLs'
+  );
+  const originalIsAllowed = globalThis.chrome.extension.isAllowedFileSchemeAccess;
+  // Firefox reports file access as unknown, so its PDF viewer follows the browser too.
+  globalThis.chrome.extension.isAllowedFileSchemeAccess = undefined;
+  fallback.openNewtabFallbackForUrl('https://example.com/docs/report.pdf', { followBrowserNewtab: true });
+  assert.strictEqual(
+    createdTabs[createdBefore + 2].url,
+    undefined,
+    'a PDF that refused the overlay should follow the browser New Tab when file access is unknown'
+  );
+  globalThis.chrome.extension.isAllowedFileSchemeAccess = originalIsAllowed;
+  createdTabs.splice(createdBefore);
+}
+
 fallback.openNewtabFallback({
   sourceTab: { id: 20, windowId: 5, groupId: 9 }
 });
@@ -277,5 +304,27 @@ assert.deepStrictEqual(
 }
 
 globalThis.chrome = originalChrome;
+
+{
+  const backgroundSource = fs.readFileSync(path.join(repoRoot, 'src', 'background', 'background.js'), 'utf8');
+  const overlayOnTabStart = backgroundSource.indexOf('function openOverlayOnTab(');
+  const overlayOnTabEnd = backgroundSource.indexOf('\nfunction ', overlayOnTabStart + 1);
+  const overlayOnTabSource = backgroundSource.slice(overlayOnTabStart, overlayOnTabEnd);
+  assert.strictEqual(
+    (overlayOnTabSource.match(/openOverlayInjectionFallback\(activeTab, activeUrl, source\)/g) || []).length,
+    3,
+    'every failed overlay injection should go through the restricted page rule'
+  );
+  assert.doesNotMatch(
+    overlayOnTabSource,
+    /openNewtabFallback(ForUrl)?\(\{ sourceTab: activeTab \}\)|openNewtabFallbackForUrl\(activeUrl, \{ sourceTab: activeTab \}\)/,
+    'a failed overlay injection should not open Lumno New Tab regardless of the restricted page rule'
+  );
+  assert.match(
+    backgroundSource,
+    /followBrowserNewtab = restrictedActionCache === 'none'/,
+    'the injection fallback should follow the browser New Tab when the restricted rule says so'
+  );
+}
 
 console.log('newtab fallback tests passed');

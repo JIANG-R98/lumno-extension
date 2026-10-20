@@ -171,10 +171,15 @@
     });
   }
 
+  // followBrowserNewtab opens the browser's own New Tab instead of Lumno's,
+  // except when the file-access notice still needs Lumno's page to explain it.
   function openNewtabFallbackForUrl(url, options) {
     const openOptions = options && typeof options === 'object' ? options : {};
+    const openFallback = openOptions.followBrowserNewtab === true
+      ? openBrowserNewtabFallback
+      : openNewtabFallback;
     if (!isLocalFileLikeTargetUrl(url)) {
-      openNewtabFallback(openOptions);
+      openFallback(openOptions);
       return;
     }
     checkFileSchemeAccess((isAllowed) => {
@@ -185,7 +190,7 @@
         });
         return;
       }
-      openNewtabFallback(openOptions);
+      openFallback(openOptions);
     });
   }
 

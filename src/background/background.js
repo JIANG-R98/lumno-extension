@@ -2105,6 +2105,22 @@ function openRestrictedOverlayFallback(activeTab, activeUrl, source) {
   openNewtabFallbackForUrl(activeUrl, { sourceTab: activeTab });
 }
 
+// Some pages pass the URL check yet refuse the overlay, such as Firefox's PDF
+// viewer, so a failed injection follows the restricted page rule too.
+function openOverlayInjectionFallback(activeTab, activeUrl, source) {
+  whenBackgroundSettingsReady(() => {
+    const followBrowserNewtab = restrictedActionCache === 'none';
+    logHotkeyDebug('fallback-open-after-inject-failed', {
+      followBrowserNewtab: followBrowserNewtab,
+      source: source || ''
+    });
+    openNewtabFallbackForUrl(activeUrl, {
+      sourceTab: activeTab,
+      followBrowserNewtab: followBrowserNewtab
+    });
+  });
+}
+
 function openOverlayOnTab(activeTab, tabs, source, options) {
   const openOptions = options && typeof options === 'object' ? options : {};
   const overlayOpenStartedAt = Date.now();
@@ -2293,7 +2309,7 @@ function openOverlayOnTab(activeTab, tabs, source, options) {
               });
               if (openOptions.loadingRecovery !== true &&
                   !overlayLoadingRecordsByTabId.has(activeTab.id)) {
-                openNewtabFallback({ sourceTab: activeTab });
+                openOverlayInjectionFallback(activeTab, activeUrl, source);
               }
               finishOpenAttempt(false);
               return;
@@ -2309,7 +2325,7 @@ function openOverlayOnTab(activeTab, tabs, source, options) {
               });
               if (openOptions.loadingRecovery !== true &&
                   !overlayLoadingRecordsByTabId.has(activeTab.id)) {
-                openNewtabFallback({ sourceTab: activeTab });
+                openOverlayInjectionFallback(activeTab, activeUrl, source);
               }
               finishOpenAttempt(false);
               return;
@@ -2353,7 +2369,7 @@ function openOverlayOnTab(activeTab, tabs, source, options) {
         });
         if (openOptions.loadingRecovery !== true &&
             !overlayLoadingRecordsByTabId.has(activeTab.id)) {
-          openNewtabFallbackForUrl(activeUrl, { sourceTab: activeTab });
+          openOverlayInjectionFallback(activeTab, activeUrl, source);
         }
         finishOpenAttempt(false);
         return;
