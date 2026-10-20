@@ -368,8 +368,13 @@ function testBootstrapDisablesRightButtonTransitions() {
   );
   assert.match(
     backgroundSource,
-    /const overlayOpenStartedAt = Date\.now\(\);[\s\S]*?openedAt:\s*overlayOpenStartedAt/,
-    'the renderer should receive the actual command-start timestamp for adaptive entry motion'
+    /const overlayOpenStartedAt = Date\.now\(\);\s*[\s\S]*?let overlayEntryMotionStartedAt = overlayOpenStartedAt;[\s\S]*?openedAt:\s*overlayEntryMotionStartedAt/,
+    'the renderer should receive the command-start timestamp for adaptive entry motion'
+  );
+  assert.match(
+    backgroundSource,
+    /files: overlayInjectionFiles[\s\S]*?overlayEntryMotionStartedAt = Date\.now\(\);\s*runOverlayWithResolvedZoom\(\);/,
+    'a tab\'s one-time runtime injection must not spend the entry motion budget'
   );
   assert.match(
     backgroundSource,

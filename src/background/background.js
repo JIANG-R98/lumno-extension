@@ -2124,6 +2124,9 @@ function openOverlayInjectionFallback(activeTab, activeUrl, source) {
 function openOverlayOnTab(activeTab, tabs, source, options) {
   const openOptions = options && typeof options === 'object' ? options : {};
   const overlayOpenStartedAt = Date.now();
+  // The entry motion budget measures how long the user has waited on the
+  // renderer, so a tab's one-time runtime injection restarts it below.
+  let overlayEntryMotionStartedAt = overlayOpenStartedAt;
   let overlayOpening = null;
   let didFinishOpenAttempt = false;
   let shouldRetryPreCompleteFailure = false;
@@ -2290,7 +2293,7 @@ function openOverlayOnTab(activeTab, tabs, source, options) {
               prioritizeCurrentPageMatch: prioritizeCurrentPageMatch,
               currentTabId: typeof activeTab.id === 'number' ? activeTab.id : null,
               currentTabUrl: getResolvedTabUrl(activeTab),
-              openedAt: overlayOpenStartedAt,
+              openedAt: overlayEntryMotionStartedAt,
               documentPipEnabled: documentPipEnabledCache,
               siteSearchProviders: Array.isArray(siteSearchProviders) ? siteSearchProviders : [],
               ensureOpen: openOptions.ensureOpen === true,
@@ -2374,6 +2377,9 @@ function openOverlayOnTab(activeTab, tabs, source, options) {
         finishOpenAttempt(false);
         return;
       }
+      // Parsing about 1.5MB of scripts can exceed the whole budget on slower
+      // Windows machines, which used to drop every first open's motion.
+      overlayEntryMotionStartedAt = Date.now();
       runOverlayWithResolvedZoom();
     });
   };
