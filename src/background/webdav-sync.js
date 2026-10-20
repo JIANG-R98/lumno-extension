@@ -8,6 +8,7 @@
   const ALARM_NAME = 'lumno-webdav-sync';
   const SYNC_REVISION = 'dav-multi-1';
   const PROBE_CACHE_MS = 10 * 60 * 1000;
+  const SWEEP_INTERVAL_MS = 24 * 60 * 60 * 1000;
   // Below the 30 s idle limit of Firefox event pages and Chrome service workers.
   const KEEP_ALIVE_INTERVAL_MS = 20 * 1000;
   const CHROME_SYNC_META_KEY = '_x_extension_sync_meta_2024_unique_';
@@ -606,7 +607,16 @@
       await privateStore.put('conflict', null);
       await mirrorReporting();
       await setStatus({ state: 'ready', error: null, diagnostic: null, conflicts: [], lastSyncAt: Date.now() });
+      await sweepDaily(client);
       return { ok: true };
+    }
+    // Folders of abandoned lock attempts pile up on the server otherwise; a
+    // daily sweep costs one listing. It never fails the sync that ran it.
+    async function sweepDaily(client) {
+      if (typeof client.sweepAbandoned !== 'function' || clock() - (Number(await privateStore.get('sweptAt')) || 0) < SWEEP_INTERVAL_MS) return;
+      await privateStore.put('sweptAt', clock());
+      try { await client.sweepAbandoned(); }
+      catch (cause) { report('Could not remove abandoned WebDAV lock folders.', cause); }
     }
     async function guardedSync(decision) {
       try {
@@ -915,7 +925,7 @@
     const workers = new Map();
     const probeCache = opts.probeCache || createProbeCache();
     const recordKeys = ['session', 'pendingApply', 'recoveryBlocked', 'conflict', 'replacementBackup', 'replacementBackupMeta', 'migrationBackup', 'migrationBackupMeta',
-      'staleLock', 'snapshotRing', 'throttle'];
+      'staleLock', 'snapshotRing', 'throttle', 'sweptAt'];
     let ids = [];
     let registryChain = Promise.resolve();
     let hintChain = Promise.resolve();

@@ -95,7 +95,8 @@
           chunks.forEach((chunk) => { bytes.set(chunk, offset); offset += chunk.byteLength; });
         } else bytes = new Uint8Array(await response.arrayBuffer());
         if (bytes.byteLength > limit) throw error('response-too-large');
-        if (![200, 201, 204, 304, 404, 405, 412].includes(response.status) && !(method === 'MOVE' && MOVE_REFUSALS.includes(response.status))) {
+        if (![200, 201, 204, 304, 404, 405, 412].includes(response.status) && !(method === 'MOVE' && MOVE_REFUSALS.includes(response.status)) &&
+            !(method === 'PROPFIND' && response.status === 207)) {
           const failure = error(`http-${response.status}`, response.status);
           if (REFUSED_STATUSES.includes(response.status)) {
             failure.retryAfterMs = retryAfterMs(response.headers.get('Retry-After'), response.headers.get('Date'));
@@ -172,19 +173,58 @@
       const current = await requestUrl(lockUrl + 'owner.txt', 'GET', undefined, {}, 65536);
       // A collection-create lock has no owner file; its age is never guessed.
       if (current.status !== 200) return false;
-      const modified = Date.parse(current.lastModified || '');
       const now = Date.parse(current.date || '');
-      if (!Number.isFinite(modified) || !Number.isFinite(now) || now - modified < STALE_LOCK_MS) return false;
+      if (!Number.isFinite(now)) return false;
+      // Nutstore sends no Last-Modified with GET; the WebDAV property has it.
+      let modified = Date.parse(current.lastModified || '');
+      if (!Number.isFinite(modified)) {
+        const own = await modifiedTimes(lockUrl + 'owner.txt', '0');
+        modified = own.get(lockUrl + 'owner.txt') ?? (own.size === 1 ? [...own.values()][0] : NaN);
+      }
+      if (!Number.isFinite(modified) || now - modified < STALE_LOCK_MS) return false;
       const staleOwner = text(current);
       const aside = `${prefix}lock-stale-${root.crypto.randomUUID()}/`;
       const moved = await requestUrl(lockUrl, 'MOVE', undefined, { Destination: aside, Overwrite: 'F' }, 65536);
       if (moved.status !== 201) return false;
       if (await ownerMatches(aside, staleOwner)) {
         await requestUrl(aside, 'DELETE', undefined, {}, 65536).catch(() => {});
+        await sweepAbandoned().catch(() => {});
         return true;
       }
       await requestUrl(aside, 'MOVE', undefined, { Destination: lockUrl, Overwrite: 'F' }, 65536).catch(() => {});
       return false;
+    }
+    // Server modification times by absolute URL, from a PROPFIND of one path
+    // (depth 0) or of a folder and its children (depth 1), plus the server's
+    // own time. A server without PROPFIND, or without the property, yields no
+    // time and so no stale lock. Folder URLs keep the trailing slash some
+    // servers (Nutstore) leave out.
+    async function modifiedTimes(url, depth) {
+      const times = new Map();
+      const result = await requestUrl(url, 'PROPFIND',
+        '<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:"><d:prop><d:getlastmodified/></d:prop></d:propfind>',
+        { Depth: depth, 'Content-Type': 'application/xml; charset=utf-8' }, 1024 * 1024);
+      times.now = Date.parse(result.date || '');
+      if (result.status !== 207) return times;
+      for (const [, body] of text(result).matchAll(/<(?:[\w-]+:)?response\b[^>]*>([\s\S]*?)<\/(?:[\w-]+:)?response>/gi)) {
+        const href = /<(?:[\w-]+:)?href\b[^>]*>([^<]+)</i.exec(body);
+        const modified = /<(?:[\w-]+:)?getlastmodified\b[^>]*>([^<]+)</i.exec(body);
+        if (!href || !modified) continue;
+        try { times.set(new URL(href[1].trim().replace(/&amp;/g, '&'), url).href, Date.parse(modified[1].trim())); }
+        catch (_cause) { /* An unreadable entry has no age. */ }
+      }
+      return times;
+    }
+    // Candidates whose MOVE was never confirmed and broken locks that could
+    // not be deleted stay behind as folders. Once they are as old as a stale
+    // lock no write can still be using them.
+    async function sweepAbandoned() {
+      const times = await modifiedTimes(prefix, '1');
+      if (!Number.isFinite(times.now)) return 0;
+      const abandoned = [...times].filter(([url, modified]) => url.startsWith(prefix) &&
+        /^lock-(?:candidate|stale)-[-\w]+\/?$/.test(url.slice(prefix.length)) && times.now - modified >= STALE_LOCK_MS);
+      for (const [url] of abandoned.slice(0, 50)) await requestUrl(url.replace(/\/?$/, '/'), 'DELETE', undefined, {}, 65536);
+      return abandoned.length;
     }
     async function acquireCollectionLock(allowTakeover = true) {
       if (lockStrategy === 'collection-create') {
@@ -421,7 +461,7 @@
       }
       return { ok: true, concurrency: conditional ? 'conditional' : 'collection-lock', lockStrategy };
     }
-    return Object.freeze({ request, ensureDirectories, readState, writeState, releaseStaleLock, testConnection });
+    return Object.freeze({ request, ensureDirectories, readState, writeState, releaseStaleLock, sweepAbandoned, testConnection });
   }
   return Object.freeze({ normalizeConfig, createClient, error, diagnostic, REVISION, MOVE_REFUSALS, REFUSED_STATUSES, STALE_LOCK_MS });
 });

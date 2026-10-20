@@ -24,6 +24,8 @@ function createServer() {
     loseMoveSource: false, refuseMoves: 0, refusalStillMoves: false, refuseCollections: false, compressAbove: 0,
     // { status, retryAfter?, when?(path, method) }: a rate limit such as Nutstore's 503 BlockedTemporarily.
     refuseWith: null,
+    // Nutstore answers GET without Last-Modified; PROPFIND still reports it.
+    omitLastModified: false, directoryTimes: new Map(),
     // The server clock behind Date and Last-Modified.
     now: () => Date.now() };
   server.fetch = async (url, options) => {
@@ -44,13 +46,32 @@ function createServer() {
       // compressAbove mimics Cloudflare weakening strong ETags on bodies it compresses.
       status, headers: { ...(etag && server.etagMode !== 'none' ? { ETag: server.etagMode === 'weak' ||
         (server.compressAbove && bytes && bytes.byteLength > server.compressAbove) ? `W/${etag}` : etag } : {}), 'Content-Length': String(bytes && bytes.byteLength || 0),
-      Date: new Date(server.now()).toUTCString(), ...(modified ? { 'Last-Modified': new Date(modified).toUTCString() } : {}) }
+      Date: new Date(server.now()).toUTCString(), ...(modified && !server.omitLastModified ? { 'Last-Modified': new Date(modified).toUTCString() } : {}) }
     });
     if (options.method === 'MKCOL') {
       if (server.refuseCollections) return response(405);
       if (directories.has(path) && !server.unsafeCollections) return response(405);
       directories.add(path);
+      server.directoryTimes.set(path, server.now());
       return response(201);
+    }
+    if (options.method === 'PROPFIND') {
+      const depth = headers.get('Depth');
+      const entries = [];
+      if (files.has(path)) entries.push([path, files.get(path).modified]);
+      else if (directories.has(path)) {
+        entries.push([path, server.directoryTimes.get(path)]);
+        if (depth === '1') {
+          const children = new Set([...directories, ...files.keys()].filter((name) => name !== path && name.startsWith(path) &&
+            !name.slice(path.length).replace(/\/$/, '').includes('/')));
+          // Nutstore lists child folders without their trailing slash.
+          for (const name of children) entries.push([directories.has(name) ? name.replace(/\/$/, '') : name,
+            directories.has(name) ? server.directoryTimes.get(name) : files.get(name).modified]);
+        }
+      } else return response(404);
+      const xml = '<?xml version="1.0"?><d:multistatus xmlns:d="DAV:">' + entries.map(([name, time]) =>
+        `<d:response><d:href>${name}</d:href><d:propstat><d:prop>${time ? `<d:getlastmodified>${new Date(time).toUTCString()}</d:getlastmodified>` : ''}</d:prop></d:propstat></d:response>`).join('') + '</d:multistatus>';
+      return response(207, new TextEncoder().encode(xml));
     }
     if (options.method === 'GET' || options.method === 'HEAD') {
       if (server.stateStatus && path.endsWith('/state.json')) return response(server.stateStatus);
@@ -503,6 +524,27 @@ async function run() {
   stale.beforeRequest = null;
   assert.strictEqual(new TextDecoder().decode(stale.files.get(lockPath + 'owner.txt').bytes), 'fresh-owner', 'a fresh lock moved aside by mistake is put back');
   stale.directories.delete(lockPath);
+  // Nutstore sends no Last-Modified with GET, which once left a stale lock in
+  // place forever. The age comes from PROPFIND instead, and the folders
+  // abandoned candidates left behind go with the broken lock.
+  stale.omitLastModified = true;
+  plantLock('young-owner', client.STALE_LOCK_MS - 60 * 1000);
+  await assert.rejects(staleClient.writeState(empty(), (await staleClient.readState()).etag), /remote-locked/, 'a recent lock is still honored');
+  const abandoned = '/dav/lumno/v1/lock-candidate-abandoned/';
+  const inFlight = '/dav/lumno/v1/lock-candidate-in-flight/';
+  stale.directories.add(abandoned);
+  stale.directoryTimes.set(abandoned, Date.now() - client.STALE_LOCK_MS - 1000);
+  stale.files.set(abandoned + 'owner.txt', { bytes: new TextEncoder().encode('abandoned'), modified: Date.now() - client.STALE_LOCK_MS - 1000 });
+  stale.directories.add(inFlight);
+  stale.directoryTimes.set(inFlight, Date.now());
+  plantLock('old-owner', client.STALE_LOCK_MS + 60 * 1000);
+  await staleClient.writeState(empty({ [theme]: 'light' }), (await staleClient.readState()).etag);
+  assert.strictEqual(stale.state().data[theme], 'light', 'a stale lock without Last-Modified is taken over');
+  assert.strictEqual(stale.directories.has(abandoned), false, 'abandoned candidates are removed');
+  assert.strictEqual(stale.files.has(abandoned + 'owner.txt'), false);
+  assert.strictEqual(stale.directories.has(inFlight), true, 'a candidate another device may still be using stays');
+  stale.directories.delete(inFlight);
+  stale.omitLastModified = false;
   // An uncertain write keeps its own lock until it must have settled.
   const uncertainMarker = { owner: 'aaaa-bbbb', at: Date.now(), uncertain: true };
   plantLock(uncertainMarker.owner, 0);
@@ -953,6 +995,27 @@ async function run() {
     assert(!refusingServer.directories.has('/dav/lumno/v1/write-lock/'), 'the lock is released after a refused write');
     refusingServer.refuseWith = null;
     await refusedWriter.writeState(empty(), null);
+  }
+
+  {
+    // Folders of abandoned lock attempts are swept once a day by the first
+    // sync, so servers that already collected them are cleaned up too.
+    const sweepServer = createServer();
+    let clockNow = Date.now();
+    const sweeper = createDevice(sweepServer, { sync: { [theme]: 'light' } }, [], (input) =>
+      syncApi.createConnectionController({ ...input, now: () => clockNow }));
+    await sweeper.controller.handle({ operation: 'connect', config });
+    const leftover = '/dav/lumno/v1/lock-candidate-left-over/';
+    sweepServer.directories.add(leftover);
+    sweepServer.directoryTimes.set(leftover, Date.now() - client.STALE_LOCK_MS - 1000);
+    clockNow += 25 * 60 * 60 * 1000;
+    await sweeper.controller.handle({ operation: 'sync' });
+    assert.strictEqual(sweepServer.directories.has(leftover), false, 'the daily sweep removes abandoned lock folders');
+    sweepServer.directories.add(leftover);
+    const listedBefore = sweepServer.requests.filter((request) => request.method === 'PROPFIND').length;
+    await sweeper.controller.handle({ operation: 'sync' });
+    assert.strictEqual(sweepServer.requests.filter((request) => request.method === 'PROPFIND').length, listedBefore, 'at most once a day');
+    await sweeper.controller.handle({ operation: 'pause' });
   }
 
   const interruptedServer = createServer();
