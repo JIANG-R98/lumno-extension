@@ -34,8 +34,9 @@
   --lumno-font-size-xl: 16px;
 
   /*
-   * Motion. Prefer 2xs for press feedback, sm for color and opacity, xl for moving
-   * indicators and 3xl for spring-driven knobs; the in-between steps exist for
+   * Motion. Prefer 2xs for press feedback, sm for color and opacity, and
+   * --lumno-slide for things that slide to a new spot, such as segmented
+   * indicators (switch knobs move the same way); the in-between steps exist for
    * values already shipped and should not gain new uses.
    */
   --lumno-duration-2xs: 120ms;
@@ -50,6 +51,8 @@
   --lumno-ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
   --lumno-ease-overshoot: cubic-bezier(0.34, 1.56, 0.64, 1);
   --lumno-ease-menu: cubic-bezier(0.2, 1.45, 0.35, 1);
+  /* Gentle enough at the start that a short hop between neighbors still reads as a slide. */
+  --lumno-slide: var(--lumno-duration-3xl) var(--lumno-ease-spring);
   /*
    * Accordion height, taken from the WebDAV card: opening, the box is there almost at
    * once and its content fades in; closing, the content fades first and the box follows.

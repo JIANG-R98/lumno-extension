@@ -308,18 +308,21 @@ export function PopupView({ model, handlers }: { model: PopupModel; handlers: Po
           <span>{model.settings.label}</span>
           <i aria-hidden="true" className="ri-icon ri-arrow-down-s-line x-lumno-popup__settings-chevron" />
         </button>
-        {model.settings.expanded ? (
-          <div className="x-lumno-popup__settings-panel" id="x-lumno-popup-settings-panel">
-            {model.settings.sections.map((section) => (
-              <div className="x-lumno-popup__section" data-section={section.id} key={section.id}>
-                <h2 className="x-lumno-popup__section-title">{section.title}</h2>
-                {section.rows.map((row) => (
-                  <SettingRow handlers={handlers} key={row.id} row={row} />
-                ))}
-              </div>
-            ))}
-          </div>
-        ) : null}
+        {/* Always mounted so it can fold and unfold; inert while folded. */}
+        <div
+          className="x-lumno-popup__settings-panel"
+          id="x-lumno-popup-settings-panel"
+          inert={!model.settings.expanded}
+        >
+          {model.settings.sections.map((section) => (
+            <div className="x-lumno-popup__section" data-section={section.id} key={section.id}>
+              <h2 className="x-lumno-popup__section-title">{section.title}</h2>
+              {section.rows.map((row) => (
+                <SettingRow handlers={handlers} key={row.id} row={row} />
+              ))}
+            </div>
+          ))}
+        </div>
       </section>
 
       <footer className="x-lumno-popup__footer">

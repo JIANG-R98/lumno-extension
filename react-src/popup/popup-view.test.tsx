@@ -199,7 +199,7 @@ describe('Toolbar popup', () => {
     expect(toggle?.textContent).toBe('Quick settings');
     expect(toggle?.querySelectorAll('.ri-icon')).toHaveLength(1);
     expect(toggle?.getAttribute('aria-expanded')).toBe('false');
-    expect(host.querySelector('.x-lumno-popup__settings-panel')).toBeNull();
+    expect(host.querySelector('.x-lumno-popup__settings-panel')?.hasAttribute('inert')).toBe(true);
     act(() => toggle?.click());
     expect(handlers.onSettingsToggle).toHaveBeenCalledWith(true);
   });

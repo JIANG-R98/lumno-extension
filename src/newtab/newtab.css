@@ -1980,8 +1980,8 @@ body[data-glass-style] .x-nt-recent-mode-switch[data-glass-ink-theme="dark"] {
   box-shadow: var(--x-nt-recent-mode-pill-shadow);
   opacity: 0;
   pointer-events: none;
-  transition: transform var(--lumno-duration-xl) var(--lumno-ease-emphasized),
-    width var(--lumno-duration-xl) var(--lumno-ease-emphasized),
+  transition: transform var(--lumno-slide),
+    width var(--lumno-slide),
     opacity var(--lumno-duration-sm) ease;
 }
 .x-nt-recent-mode-switch[data-expanded="true"] .x-nt-recent-mode-switch-indicator {
@@ -2007,8 +2007,8 @@ body[data-glass-style] .x-nt-recent-mode-switch[data-glass-ink-theme="dark"] {
   line-height: 1;
   white-space: nowrap;
   color: inherit;
-  transition: width var(--lumno-duration-xl) var(--lumno-ease-emphasized),
-    padding var(--lumno-duration-xl) var(--lumno-ease-emphasized),
+  transition: width var(--lumno-slide),
+    padding var(--lumno-slide),
     opacity var(--lumno-duration-md) ease;
 }
 .x-nt-recent-mode-switch-label {
@@ -5362,8 +5362,8 @@ body[data-wallpaper-active="true"] .x-nt-wallpaper-button[data-open="true"]:not(
   );
   background: var(--x-nt-segmented-indicator-bg);
   box-shadow: var(--x-nt-segmented-indicator-shadow);
-  transition: transform var(--lumno-duration-xl) var(--lumno-ease-emphasized),
-    width var(--lumno-duration-xl) var(--lumno-ease-emphasized);
+  transition: transform var(--lumno-slide),
+    width var(--lumno-slide);
   pointer-events: none;
 }
 .x-nt-wallpaper-tab {
@@ -5762,8 +5762,8 @@ body[data-glass-style] .x-nt-row-select[data-glass-ink-theme="dark"] {
   );
   background: var(--x-nt-segmented-indicator-bg);
   box-shadow: var(--x-nt-segmented-indicator-shadow);
-  transition: transform var(--lumno-duration-xl) var(--lumno-ease-emphasized),
-    width var(--lumno-duration-xl) var(--lumno-ease-emphasized);
+  transition: transform var(--lumno-slide),
+    width var(--lumno-slide);
   pointer-events: none;
 }
 .x-nt-effect-option {

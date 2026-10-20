@@ -340,7 +340,37 @@ body[data-theme="dark"] {
   transform: rotate(180deg);
 }
 
+/* The accordion from the Settings page: opening, the box is there almost at
+   once and the rows fade in; closing, the rows fade first and the box follows.
+   Folded rows drop out of layout and paint. */
 .x-lumno-popup__settings-panel {
+  height: 0;
+  interpolate-size: allow-keywords;
+  content-visibility: hidden;
+  opacity: 0;
+  transform: translateY(-6px);
+  overflow: hidden;
+  transition:
+    height var(--lumno-accordion-close),
+    opacity var(--lumno-duration-md) ease,
+    transform var(--lumno-duration-xl) ease,
+    content-visibility 0s linear var(--lumno-duration-xl) allow-discrete;
+}
+
+.x-lumno-popup__settings[data-expanded="true"] .x-lumno-popup__settings-panel {
+  height: auto;
+  content-visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
+  overflow: visible;
+  transition:
+    height var(--lumno-accordion-open),
+    opacity var(--lumno-duration-md) ease,
+    transform var(--lumno-duration-xl) ease;
+}
+
+/* Inside the folding box, so the gap folds with it. */
+.x-lumno-popup__section:last-child {
   padding-bottom: 4px;
 }
 
@@ -405,8 +435,8 @@ label.x-lumno-popup__row-label {
   box-shadow: var(--popup-segmented-shadow);
   pointer-events: none;
   transition:
-    transform var(--lumno-duration-xl) var(--lumno-ease-emphasized),
-    width var(--lumno-duration-xl) var(--lumno-ease-emphasized);
+    transform var(--lumno-slide),
+    width var(--lumno-slide);
 }
 
 .x-lumno-popup__segmented-option {

@@ -749,6 +749,10 @@
       applyTheme();
       render();
       root.addEventListener('resize', syncOverflow);
+      // Quick settings fold over a few frames; measure once they settle.
+      host.addEventListener('transitionend', (event) => {
+        if (event.propertyName === 'height') syncOverflow();
+      });
       darkQuery.addEventListener('change', () => {
         if (state.settings.theme === 'system') applyTheme();
       });
