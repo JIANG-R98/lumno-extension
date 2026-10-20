@@ -3,7 +3,6 @@ const fs = require('fs');
 const path = require('path');
 const recentStore = require('../src/newtab/recent-sites-store.js');
 const bookmarkStore = require('../src/newtab/bookmarks-store.js');
-const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 const repoRoot = path.resolve(__dirname, '..');
 
@@ -387,19 +386,9 @@ function testBookmarkStore() {
   });
 }
 
-function testNewtabRejectsProvisionalSectionCacheHydration() {
-  const newtabJs = readNewtabRuntimeSource();
-  assert.doesNotMatch(
-    newtabJs,
-    /shouldApplyBookmarkCacheHydration|hydrateSectionsFromCache|_x_extension_newtab_(?:recent|bookmark)_cache_2024_unique_/,
-    'newtab should not render provisional cached section geometry before authoritative startup data'
-  );
-}
-
 testRecentStore()
   .then(() => {
     testBookmarkStore();
-    testNewtabRejectsProvisionalSectionCacheHydration();
     console.log('newtab store tests passed');
   })
   .catch((error) => {

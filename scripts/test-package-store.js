@@ -63,24 +63,6 @@ assert(
     entries.includes('src/shared/react-page-bootstrap.js'),
   'store package should include both page entries, shared React chunks, and bootstrap'
 );
-const retiredRenderers = [
-  'src/shared/search-input-ui.js',
-  'src/newtab/bookmarks-topbar.js',
-  'src/newtab/page-notice.js',
-  'src/newtab/toast.js',
-  'src/newtab/dock.js',
-  'src/newtab/recent-sites-view.js',
-  'src/newtab/bookmarks-view.js',
-  'src/newtab/suggestions-view.js',
-  'src/newtab/shortcut-dialog.js',
-  'src/newtab/shortcuts-view.js',
-  'src/overlay/input-ui.js',
-  'src/overlay/shell.js'
-];
-assert(
-  retiredRenderers.every((file) => !entries.includes(file)),
-  'store package should not include retired UI renderers'
-);
 assert(
   entries.every((entry) => !entry.startsWith('react-src/')),
   'store package should not include React source or test files'

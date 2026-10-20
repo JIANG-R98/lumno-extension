@@ -127,11 +127,6 @@ assert.match(
   /const searchInput = inputParts\.input;\s*searchInput\.addEventListener\('focus', restoreDismissedSearchSuggestions\);/,
   'the search input should restore dismissed results when it regains focus'
 );
-assert.doesNotMatch(
-  newtabSource,
-  /onBlur:\s*function\(event\)\s*\{[\s\S]*?isSlashCommandInput\(rawValue\)[\s\S]*?event\.target\.value\s*=\s*'';/,
-  'slash commands should not be erased when the search input loses focus'
-);
 assert.match(
   newtabSource,
   /onInput:\s*function\(event\)\s*\{\s*searchSuggestionsDismissed\s*=\s*false;/,

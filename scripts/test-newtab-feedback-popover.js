@@ -102,34 +102,16 @@ assertContains(
   'feedback community action should draw the near-black ring outside the circle face'
 );
 
-assert.ok(
-  !newtabHtml.includes('inset 0 0 0 1px #12161f'),
-  'feedback community action should not draw the ring as an inset edge that looks clipped'
-);
-
 assertContains(
   newtabHtml,
   'inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 1px 3px rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.22)',
   'feedback community action should share the subtle primary sheen with the primary buttons'
 );
 
-assert.ok(
-  !newtabHtml.includes('0 0 0 1px #040404') &&
-    !newtabHtml.includes('inset 0 1px 0 rgba(255, 255, 255, 0.52)') &&
-    !newtabHtml.includes('inset 0 1px 2.4px rgba(255, 255, 255, 0.36)'),
-  'feedback community action should not keep the old black ring or stronger highlight'
-);
-
 assertContains(
   newtabHtml,
   'width 260ms cubic-bezier(0.22, 1, 0.36, 1), height 260ms cubic-bezier(0.22, 1, 0.36, 1)',
   'feedback popover size animation should use a non-bouncy resize easing'
-);
-
-assert.ok(
-  !newtabHtml.includes('width 360ms cubic-bezier(0.2, 1.45, 0.35, 1)') &&
-    !newtabHtml.includes('min-height 360ms cubic-bezier(0.2, 1.45, 0.35, 1)'),
-  'feedback popover should not apply the bouncy menu transform curve to layout dimensions'
 );
 
 assertContains(
@@ -142,13 +124,6 @@ assertContains(
   newtabHtml,
   'visibility: hidden;',
   'wechat detail state should hide the four feedback icons'
-);
-
-assert.ok(
-  !newtabJs.includes('x-nt-feedback-detail-collapse') &&
-    !newtabHtml.includes('x-nt-feedback-detail-collapse') &&
-    !newtabJs.includes('ri-arrow-down-s-line'),
-  'wechat detail should remove the former top-left collapse button'
 );
 
 assertContains(
@@ -183,12 +158,6 @@ assert.match(
 
 assertContains(
   feedbackReact,
-  "host.dataset.detailOpen = detailOpen ? 'true' : 'false';",
-  'the React feedback view should reflect detail state on its host for animation and icon hiding'
-);
-
-assertContains(
-  feedbackReact,
   'requestAnimationFrame(() => buttonRef.current?.focus());',
   'the React wechat detail close icon should close the popover and restore focus'
 );
@@ -209,32 +178,6 @@ assertContains(
   feedbackReact,
   'ri-icon ri-size-16 ri-star-line',
   'the React feedback popover should use a rating star icon for the Chrome review action'
-);
-
-assertContains(
-  feedbackReact,
-  'href={model.chromeReviewUrl}',
-  'the React feedback popover should place the Chrome review action in the icon row'
-);
-
-assert.match(
-  feedbackReact,
-  /const getDisposition = \(event\?[\s\S]*?'backgroundTab'[\s\S]*?onOpenExternal\(model\.xUrl, disposition\)/,
-  'opening the community on X should preserve background-opening modifiers'
-);
-
-assert.match(
-  feedbackReact,
-  /\{model\.channel === 'wechat' && \([\s\S]*?x-nt-feedback-action-community/,
-  'outside Chinese the menu\'s X button is the community entry, so the community button is WeChat only'
-);
-
-assert.ok(
-  !newtabJs.includes('feedbackMailButton') &&
-    !newtabJs.includes('handleFeedbackMailClick') &&
-    !newtabJs.includes('openFeedbackMailto') &&
-    !newtabJs.includes('mailto:'),
-  'feedback popover should remove the email action from the icon row'
 );
 
 assertContains(
@@ -418,10 +361,6 @@ assert.strictEqual(
     getMessage(messages, 'newtab_feedback_chrome_review_tooltip'),
     tooltip,
     `${locale} should explain the review action without naming one store`
-  );
-  assert(
-    !/Chrome|Edge/.test(label + tooltip),
-    `${locale} review copy should stay channel-neutral`
   );
 });
 

@@ -94,12 +94,6 @@ assert.match(
   'newtab dark active favicon slots should render on a white rounded rectangle'
 );
 
-assert.doesNotMatch(
-  overlayCss + newtabHtml,
-  /x-(?:ov|nt)-suggestion-item:last-child/,
-  'suggestion list spacing should come from synchronized data-last state, not a last-child fallback'
-);
-
 assert.match(
   overlayJs,
   /function syncSuggestionLastState\(\)[\s\S]*?data-last[\s\S]*?index === suggestionItems\.length - 1 \? 'true' : 'false'/,
@@ -121,12 +115,6 @@ assert.match(
   suggestionsReact,
   /simpleMode[\s\S]*?'var\(--x-ov-hover-bg, #F3F4F6\)'[\s\S]*?'var\(--x-nt-hover-bg, #F3F4F6\)'/,
   'simple mode should use neutral active backgrounds on both search surfaces'
-);
-
-assert.doesNotMatch(
-  newtabHtml + newtabJs + overlayCss + suggestionsReact,
-  /--x-(?:nt-suggestion-(?:active|hover)-border|ov-suggestion-row-border)/,
-  'search result rows should not expose active or hover outline variables'
 );
 
 assert.match(
@@ -153,12 +141,6 @@ assert.match(
   suggestionsReact,
   /data-favicon=\{isFavicon \? 'true' : 'false'\}/,
   'React favicon slots should expose whether their child is a favicon'
-);
-
-assert.doesNotMatch(
-  newtabJs + overlayJs,
-  /getSuggestionActiveShadow|suggestion-active-shadow|suggestion-row-shadow|rgba\(255, 255, 255, 0\.40\)/,
-  'search result highlight code should not keep the removed active shadow helpers or variables'
 );
 
 console.log('search result highlight surface tests passed');

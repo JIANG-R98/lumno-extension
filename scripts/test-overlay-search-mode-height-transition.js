@@ -123,28 +123,6 @@ assert.match(
   'a late pending or local render should not overwrite any completed final mix'
 );
 
-[
-  'animateSuggestionsHeight',
-  'captureSuggestionsHeightState',
-  'clipSuggestionsToHeight',
-  'deferCappedShrink',
-  'finishSuggestionsHeightInputSession',
-  'getSuggestionsHeightTransitionProperties',
-  'holdSuggestionsHeightForRemoteMix',
-  'scheduleSearchPanelsLayoutTransition',
-  'scheduleStandaloneSuggestionsHeightTransition',
-  'settleHeightAfterRemoteMix',
-  'suggestionsHeightAnimationFrame',
-  'suggestionsHeightInputSettleTimer',
-  'suggestionsHeightRemoteMixSettleMs'
-].forEach((legacyHeightSymbol) => {
-  assert.strictEqual(
-    overlaySource.includes(legacyHeightSymbol),
-    false,
-    `${legacyHeightSymbol} should be removed with the height animation pipeline`
-  );
-});
-
 assert.match(
   overlaySource,
   /function commitSuggestionsNaturalHeightAfterRender\(\) \{\s*SUGGESTIONS_HEIGHT_LAYOUT\.applyNaturalSuggestionsHeightLayout\(\s*suggestionsContainer\s*\);\s*syncSearchModeMenuResultOffset\(\);\s*\}/,

@@ -1309,12 +1309,6 @@ assertContains(
 );
 
 assertContains(
-  shortcutsReact,
-  'className="x-nt-shortcut-tile x-nt-shortcut-tile--add"',
-  'the React shortcuts view should render a Chrome-like add shortcut tile'
-);
-
-assertContains(
   newtabJs,
   'const MAX_NEWTAB_SHORTCUTS = NEWTAB_SHORTCUTS_STORE.DEFAULT_MAX_SHORTCUTS;',
   'newtab should allow as many shortcuts as the shortcut store keeps'
@@ -1324,18 +1318,6 @@ assertContains(
   newtabJs,
   'maxShortcuts: MAX_NEWTAB_SHORTCUTS,',
   'the React shortcuts view should receive the same capacity as shortcut persistence'
-);
-
-assertContains(
-  shortcutsReact,
-  'hidden={!options.getAddVisible() || items.length >= options.maxShortcuts || lastGroupEmpty}',
-  'the add tile should respect the preference and shortcut capacity, and give way to an empty last group'
-);
-
-assertContains(
-  shortcutsReact,
-  'onContextMenu={(event) => {',
-  'the add tile should keep the browser menu away from its right click'
 );
 
 assertContains(
@@ -1428,18 +1410,6 @@ assertContains(
 
 assertContains(
   shortcutsReact,
-  'data-shortcut-id={shortcutId}',
-  'React shortcut tiles should expose stable ids for drag reordering'
-);
-
-assertContains(
-  shortcutsReact,
-  'data-shortcut-draggable="true"',
-  'React shortcut tiles should opt into pointer drag reordering'
-);
-
-assertContains(
-  shortcutsReact,
   'onDragStart={options.onNativeDragStart}',
   'React shortcut tiles should delegate native drag suppression to the behavior adapter'
 );
@@ -1454,12 +1424,6 @@ assertContains(
   shortcutsReact,
   'draggable={false}',
   'React shortcut favicon images should not be individually draggable'
-);
-
-assertContains(
-  shortcutsReact,
-  "data-shortcut-custom-icon={localIconDataUrl ? 'true' : undefined}",
-  'React shortcut tiles should mark a locally uploaded icon before favicon fallbacks'
 );
 
 assertContains(
@@ -2091,11 +2055,6 @@ assertContains(
   'shortcut drags should release their document listeners when they finish'
 );
 
-assert.ok(
-  !newtabJs.includes("shortcutGrid.addEventListener('pointerup', handleShortcutDragPointerUp);"),
-  'shortcut drag release must not depend on events bubbling to the grid'
-);
-
 assertContains(
   newtabHtml,
   '.x-nt-shortcut-tile[data-shortcut-draggable="true"]',
@@ -2528,12 +2487,6 @@ assertContains(
   'shortcut dialog should write a trigger-aware x enter offset'
 );
 
-assert.ok(
-  !shortcutDialogCss.includes('--x-nt-shortcut-dialog-enter-y') &&
-    !shortcutDialogJs.includes("'--x-nt-shortcut-dialog-enter-y'"),
-  'shortcut dialog should not derive or apply a vertical enter offset'
-);
-
 assertContains(
   shortcutDialogJs,
   "host.setAttribute('data-open', 'false');\n    host.hidden = false;",
@@ -2621,12 +2574,6 @@ assert.match(
   initialVisualDependencyBlock,
   /initialShortcutsReadyTask/,
   'newtab ready transition should reserve final shortcut geometry before first paint'
-);
-
-assert.doesNotMatch(
-  newtabJs,
-  /initialNewtabSkipsEntryMotion|hydrateSectionsFromCache/,
-  'animated and motion-free new tabs should share the same stable first-paint geometry'
 );
 
 assertContains(

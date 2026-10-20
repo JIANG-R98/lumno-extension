@@ -39,7 +39,6 @@ assert.strictEqual(
   settings.SIMPLE_MODE_ENABLED_STORAGE_KEY,
   '_x_extension_simple_mode_enabled_2026_unique_'
 );
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.SIMPLE_MODE_ENABLED_STORAGE_KEY));
 assert.strictEqual(settings.normalizeSimpleModeEnabled(undefined), false);
 assert.strictEqual(settings.normalizeSimpleModeEnabled(false), false);
 assert.strictEqual(settings.normalizeSimpleModeEnabled(true), true);

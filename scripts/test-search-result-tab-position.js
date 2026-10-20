@@ -101,7 +101,6 @@ async function run() {
   assert.strictEqual(settings.normalizeSearchResultTabPosition(undefined), 'end');
   assert.strictEqual(settings.normalizeSearchResultTabPosition('invalid'), 'end');
   assert.strictEqual(settings.normalizeSearchResultTabPosition('beforeCurrent'), 'beforeCurrent');
-  assert.ok(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.SEARCH_RESULT_TAB_POSITION_STORAGE_KEY));
 
   for (const [position, index] of [['afterCurrent', 6], ['beforeCurrent', 5]]) {
     for (const disposition of ['newTab', 'backgroundTab']) {

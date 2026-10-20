@@ -2,10 +2,8 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { readPageSource } = require('./helpers/page-source');
-const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 const repoRoot = path.resolve(__dirname, '..');
-const newtabJs = readNewtabRuntimeSource();
 const newtabHtml = readPageSource('newtab.html');
 const folderIconJs = fs.readFileSync(
   path.join(repoRoot, 'src/newtab/bookmark-folder-icon.js'),
@@ -58,10 +56,6 @@ assertContains(
   cascadeMenuJs,
   'initFolderPathMorph(icon);',
   'the cascade behavior adapter should initialize the same folder morph behavior'
-);
-assert.ok(
-  !cascadeViewReact.includes("getRiSvg('ri-folder"),
-  'React bookmark cascade folder items should not use the Remix folder glyph'
 );
 assertContains(
   cascadeActiveBody,

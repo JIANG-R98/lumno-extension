@@ -104,7 +104,6 @@ const newtabSource = readNewtabRuntimeSource();
 const newtabHtml = readPageSource('newtab.html');
 assert.match(onboardingSource, /SHORTCUT_KEY_MATCHER\.parseShortcut\(normalizeShortcutValue\(shortcut\)\)/);
 assert.match(onboardingSource, /SHORTCUT_KEY_MATCHER\.eventMatchesShortcut\(event, parseShortcutHotkey\(shortcut\)\)/);
-assert.doesNotMatch(onboardingSource, /function getShortcutKeyTokenFromCode\(/);
 assert(
   onboardingHtml.indexOf('../shared/shortcut-key-matcher.js') <
     onboardingHtml.indexOf('onboarding-content.js'),
@@ -115,9 +114,6 @@ assert.match(
   newtabSource,
   /SHORTCUT_KEY_MATCHER\.eventMatchesShortcut\(event, fallbackShortcutSpec\)/
 );
-assert.doesNotMatch(newtabSource, /function parseFallbackShortcut\(/);
-assert.doesNotMatch(newtabSource, /function getFallbackShortcutKeyTokenFromCode\(/);
-assert.doesNotMatch(newtabSource, /function shortcutMatchesEvent\(/);
 assert(
   newtabHtml.indexOf('../shared/shortcut-key-matcher.js') <
     newtabHtml.indexOf('data-page-entry="../newtab/newtab.js"'),

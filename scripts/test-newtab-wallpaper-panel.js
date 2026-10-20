@@ -677,13 +677,6 @@ function waitForAsyncWallpaperApply() {
   return new Promise((resolve) => setTimeout(resolve, 20));
 }
 
-function getChildByClassName(element, className) {
-  return (element.children || []).find((child) => {
-    const classes = String(child.className || '').split(/\s+/);
-    return classes.includes(className);
-  });
-}
-
 function getDescendantsByClassName(element, className, results) {
   const matches = results || [];
   (element && element.children ? element.children : []).forEach((child) => {
@@ -700,46 +693,6 @@ function getDescendantByClassName(element, className) {
   return getDescendantsByClassName(element, className)[0] || null;
 }
 
-function getDescendantByTagName(element, tagName) {
-  const needle = String(tagName || '').toUpperCase();
-  let match = null;
-  (function visit(node) {
-    if (!node || match) {
-      return;
-    }
-    (node.children || []).forEach((child) => {
-      if (match) {
-        return;
-      }
-      if (child.tagName === needle) {
-        match = child;
-        return;
-      }
-      visit(child);
-    });
-  })(element);
-  return match;
-}
-
-function getDescendantByAttribute(element, name, value) {
-  let match = null;
-  (function visit(node) {
-    if (!node || match) {
-      return;
-    }
-    (node.children || []).forEach((child) => {
-      if (match) {
-        return;
-      }
-      if (child.getAttribute && child.getAttribute(name) === value) {
-        match = child;
-        return;
-      }
-      visit(child);
-    });
-  })(element);
-  return match;
-}
 
 function decodeSvgDataUrl(url) {
   const prefix = 'data:image/svg+xml;charset=UTF-8,';
@@ -823,11 +776,6 @@ function assertEffectSelectCss(filePath) {
     /\.x-nt-row-select \._x_extension_select_trigger_2024_unique_\s*\{[\s\S]*?height:\s*30px;/,
     `${filePath} should match the filter trigger height to the slider value inputs`
   );
-  assert.doesNotMatch(
-    source,
-    /\.x-nt-effect-options:not\(\.x-nt-effect-ink-tone-options\)|\.x-nt-effect-select-menu/,
-    `${filePath} should use the shared select menu as-is instead of restyling it`
-  );
 }
 
 function readLocaleMessages(locale) {
@@ -875,8 +823,6 @@ function assertBrandMarkCopy() {
     assert.strictEqual(messages.newtab_top_content_brand.message, expected[locale].brand);
     assert.strictEqual(messages.newtab_top_content_time.message, expected[locale].time);
     assert.strictEqual(messages.newtab_top_content_off.message, expected[locale].off);
-    assert.strictEqual(messages.newtab_time_font_weight_title.message, expected[locale].weight);
-    assert.strictEqual(messages.newtab_time_show_seconds_title.message, expected[locale].seconds);
   });
 
   // The panel shows those messages for the content above the search bar.
@@ -943,11 +889,8 @@ function assertThemeAwareAlternateFaviconAsset() {
   assert.match(svg, /--x-nt-favicon-main-opacity:\s*0\.72/i, 'alternate favicon dark theme should brighten the main mark');
   assert.match(svg, /M14\.1832/, 'alternate favicon should use the supplied lumno1.svg shadow shape');
   assert.match(svg, /M34\.0761/, 'alternate favicon should use the supplied lumno1.svg main shape');
-  assert.doesNotMatch(svg, /M15\.204/, 'alternate favicon should not keep the previous two-path source shape');
   assert.match(wallpaperSource, /M14\.1832/, 'favicon picker preview should use the supplied lumno1.svg shadow shape');
   assert.match(wallpaperSource, /M34\.0761/, 'favicon picker preview should use the supplied lumno1.svg main shape');
-  assert.doesNotMatch(wallpaperSource, /M15\.204/, 'favicon picker preview should not keep the previous two-path source shape');
-  assert.doesNotMatch(svg, /M41\.4736/, 'alternate favicon should not keep the older decorative source path');
   assert.match(svg, /currentColor/, 'alternate favicon SVG should be tintable from its root color');
   assert.doesNotMatch(svg, /fill="black"/i, 'alternate favicon should not keep fixed black fills');
   assert.doesNotMatch(svg, /url\(#paint/i, 'alternate favicon should not depend on fixed gradient paints');

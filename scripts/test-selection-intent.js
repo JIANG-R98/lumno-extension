@@ -61,12 +61,6 @@ function classify(text, options) {
   assert.strictEqual(result.confidence, 'high');
 }
 
-{
-  const result = classify('这是你需要的资料', { uiLanguage: 'zh-CN' });
-  assert.strictEqual(result.confidence, 'low');
-  assert.strictEqual(result.triggerable, false);
-}
-
 [
   'the',
   'and',

@@ -180,11 +180,6 @@ assert.ok(
     overlaySource.includes('return FAVICON_THEME.getHoverColors(theme, {'),
   'overlay and New Tab search results should use the same contrast-aware theme algorithm'
 );
-assert.doesNotMatch(
-  overlaySource,
-  /function buildThemeVariant\(/,
-  'overlay should not keep a second theme palette implementation'
-);
 assert.match(
   newtabHtml,
   /\.x-nt-suggestion-action-button:focus-visible,[\s\S]*?\.x-nt-suggestion-utility-button:focus-visible[\s\S]*?outline:\s*2px solid currentColor;/,

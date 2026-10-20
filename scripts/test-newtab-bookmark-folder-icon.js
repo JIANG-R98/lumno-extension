@@ -203,8 +203,7 @@ assert.ok(
 );
 assert.ok(
   newtabJs.includes('const NEWTAB_BOOKMARK_FOLDER_ICON =') &&
-    newtabJs.includes('NEWTAB_BOOKMARK_FOLDER_ICON.getFigmaFolderSvg') &&
-    !newtabJs.includes('function getFigmaFolderSvg(idSuffix)'),
+    newtabJs.includes('NEWTAB_BOOKMARK_FOLDER_ICON.getFigmaFolderSvg'),
   'newtab should consume the component instead of retaining an embedded implementation'
 );
 

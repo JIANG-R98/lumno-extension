@@ -997,9 +997,6 @@ let wait = null;
     /\.lumno-selection-action-icon\s*\{[\s\S]*?width:\s*16px[\s\S]*?height:\s*16px/.test(selectionStyles),
     'toolbar action icons should use the compact 16px scale'
   );
-  assert(!selectionStyles.includes('lumno-selection-butterfly'),
-    'the selection styles should not retain butterfly-only rules');
-
   await selectDomText(darkCopy);
   assert.strictEqual(host.dataset.entryContrast, 'dark',
     'a butterfly placed over a dark page surface should adapt without a conspicuous global inversion effect');

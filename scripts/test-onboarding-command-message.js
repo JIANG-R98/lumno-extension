@@ -19,12 +19,6 @@ assert.match(
   'onboarding should open the local overlay when background forwards the browser command shortcut'
 );
 
-assert.doesNotMatch(
-  script,
-  /panel\.id = '_x_extension_overlay_2024_unique_';/,
-  'onboarding demo overlay should not reuse the live overlay panel id that shortcut toggling removes'
-);
-
 assert.match(
   script,
   /runtime\.onMessage\.addListener\(handleOnboardingCommandMessage\)/,

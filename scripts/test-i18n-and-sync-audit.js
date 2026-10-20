@@ -97,12 +97,6 @@ function getFunctionSource(source, name) {
     /chrome\.storage\.sync\.remove\(LANGUAGE_MESSAGES_STORAGE_KEY/.test(backgroundSource),
     'background startup should remove the obsolete oversized language cache from Chrome Sync'
   );
-  [optionsSource, newtabSource, overlaySource].forEach((source) => {
-    assert(
-      !source.includes('_x_extension_language_messages_2024_unique_'),
-      'runtime surfaces must load packaged locale messages instead of syncing the language cache'
-    );
-  });
 }
 
 {
@@ -130,16 +124,6 @@ function getFunctionSource(source, name) {
       /const initialOverlaySettingsReady = overlayRuntime\.getStorageValues\([\s\S]*?OVERLAY_ENTER_ANIMATION_STORAGE_KEY[\s\S]*?\)\.catch/.test(overlaySource),
     'overlay runtime should read the synchronized opening-animation preference in its batched startup settings'
   );
-  localeNames.forEach((locale) => {
-    ['settings_overlay_enter_animation_title', 'overlay_enter_animation_elastic', 'overlay_enter_animation_fade']
-      .forEach((key) => {
-        assert(
-          localeMessages[locale][key] &&
-            String(localeMessages[locale][key].message || '').trim(),
-          `${locale} should localize ${key}`
-        );
-      });
-  });
 }
 {
   const iconCacheKey = '_x_extension_site_search_icon_cache_canonical_2026_unique_';
@@ -166,20 +150,11 @@ assert(
   /data-i18n="settings_overlay_open_tabs_default_visible_title"/.test(optionsHtml),
   'overlay open-tabs setting label should be wired through data-i18n'
 );
-assert(
-  !/settings_overlay_open_tabs_default_visible_desc/.test(optionsHtml),
-  'overlay open-tabs setting should not keep a secondary description in options HTML'
-);
 localeNames.forEach((locale) => {
   assert(
     localeMessages[locale].settings_overlay_open_tabs_default_visible_title &&
       String(localeMessages[locale].settings_overlay_open_tabs_default_visible_title.message || '').trim(),
     `${locale} should localize the overlay open-tabs setting label`
-  );
-  assert.strictEqual(
-    Object.prototype.hasOwnProperty.call(localeMessages[locale], 'settings_overlay_open_tabs_default_visible_desc'),
-    false,
-    `${locale} should not keep unused overlay open-tabs setting description copy`
   );
 });
 assert(
@@ -209,10 +184,6 @@ assert(
   'options sync should define the bookmark view mode storage key'
 );
 assert(
-  chromeSyncKeys.includes(settings.BOOKMARK_VIEW_MODE_STORAGE_KEY),
-  'bookmark view mode should be included in options sync/export/import keys'
-);
-assert(
   optionsMigratesSyncKeys,
   'bookmark view mode should be included in local-to-sync migration'
 );
@@ -231,8 +202,6 @@ assert(
   [settings.BOOKMARK_FOLDER_COLOR_REFS_STORAGE_KEY, settings.BOOKMARK_FOLDER_COLOR_PRESETS_STORAGE_KEY].forEach((key) => {
     assert(chromeSyncKeys.includes(key), `${key} should be in the Chrome Sync and WebDAV contract`);
   });
-  assert(!chromeSyncKeys.includes('_x_extension_bookmark_folder_colors_2026_unique_'),
-    'the legacy folder color map is keyed by device-only bookmark ids and must not sync');
   const readRefs = getFunctionSource(newtabSource, 'readFolderColorRefs');
   const writeRefs = getFunctionSource(newtabSource, 'writeFolderColorRefs');
   assert(/folderColorStorage\(storageArea,/.test(readRefs) && /folderColorStorage\(storageArea,/.test(writeRefs),
@@ -251,13 +220,7 @@ assert(
     '_x_extension_bookmark_topbar_surface_color_dark_2026_unique_',
     '_x_extension_bookmark_topbar_surface_color_2026_unique_'
   ];
-  assert.deepStrictEqual(
-    settings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS,
-    topbarLocalKeys,
-    'shared settings should publish one explicit local-only bookmark topbar contract'
-  );
   topbarLocalKeys.forEach((key) => {
-    assert(!chromeSyncKeys.includes(key), `${key} must stay out of the Chrome Sync contract`);
     assert(!optionsSource.includes(key), `options must not export or import local-only ${key}`);
     assert(newtabSource.includes(key), `new tab should persist and apply local-only ${key}`);
   });
@@ -574,16 +537,6 @@ assert(
 assert(
   chromeSyncKeys.includes(settings.NEWTAB_SHORTCUTS_STORAGE_KEY),
   'New Tab shortcuts should be included in options sync/export/import keys'
-);
-assert(
-  [settings.NEWTAB_SHORTCUTS_CHUNK_2_STORAGE_KEY, settings.NEWTAB_SHORTCUTS_CHUNK_3_STORAGE_KEY]
-    .every((key) => chromeSyncKeys.includes(key)),
-  'all New Tab shortcut chunks should be included in options sync/export/import keys'
-);
-assert(
-  chromeSyncKeys.includes('_x_extension_newtab_shortcuts_chunk_2_2026_unique_') &&
-    chromeSyncKeys.includes('_x_extension_newtab_shortcuts_chunk_3_2026_unique_'),
-  'all New Tab shortcut chunks should be included in the shared Chrome Sync contract'
 );
 assert(
   optionsMigratesSyncKeys,

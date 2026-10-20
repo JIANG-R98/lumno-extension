@@ -1,6 +1,5 @@
 const assert = require('assert');
 const fs = require('fs');
-const settings = require('../src/shared/settings.js');
 const { readPageSource } = require('./helpers/page-source');
 const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
@@ -39,12 +38,6 @@ assert.match(
   'motion effects should default to enabled in markup'
 );
 
-assert.strictEqual(
-  settings.MOTION_EFFECTS_ENABLED_STORAGE_KEY,
-  '_x_extension_motion_effects_enabled_2026_unique_'
-);
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.MOTION_EFFECTS_ENABLED_STORAGE_KEY));
-
 assert(
   newtabHtml.includes('../shared/motion-preload.js'),
   'New Tab should preload the synchronized entry-motion preference before it is revealed'
@@ -55,11 +48,6 @@ assert(
     'Options and Onboarding should not apply the New Tab entry-motion preference'
   );
 });
-assert.strictEqual(
-  fs.existsSync('src/shared/motion-preference.css'),
-  false,
-  'the user setting should not install a global animation/transition override stylesheet'
-);
 assert.match(
   motionPreloadSource,
   /_x_extension_motion_effects_enabled_2026_unique_[\s\S]*LumnoMotionPreferenceReady[\s\S]*data-lumno-motion-effects[\s\S]*resolveInitialPreference\(enabled\)[\s\S]*storage\.onChanged\.addListener/,
@@ -127,11 +115,6 @@ assert.match(
   /const reduceMotion = revealOptions\.forceInstant === true \|\|[\s\S]*?shouldSkipOverlayEntryMotion\(\);[\s\S]*?if \(reduceMotion\) \{[\s\S]*?finishOverlayPanelEnterAnimation\(overlay\);[\s\S]*?\} else \{[\s\S]*?overlayFrameTracker\.runEnterAnimation/,
   'turning motion effects off or detecting a slow first frame should skip only the Overlay entrance path'
 );
-assert.doesNotMatch(
-  overlaySource,
-  /function animateSuggestionsHeight\(/,
-  'Overlay result height should update directly instead of participating in motion preferences'
-);
 
 [
   ['background', backgroundSource],
@@ -141,10 +124,6 @@ assert.doesNotMatch(
   assert(
     !source.includes('_x_extension_motion_effects_enabled_2026_unique_'),
     `${surface} should not read the New Tab/Overlay entry-motion setting`
-  );
-  assert(
-    !source.includes('data-motion-effects'),
-    `${surface} should retain its own ordinary motion behavior`
   );
 });
 

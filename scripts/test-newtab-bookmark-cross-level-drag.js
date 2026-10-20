@@ -329,12 +329,6 @@ assert.ok(
   'drag lifecycle should stay on document when live reordering releases element pointer capture'
 );
 assert.ok(
-  !newtabJs.includes('scheduleBookmarkFolderDragOpen') &&
-    !newtabJs.includes('openBookmarkCascadeMenu(item, target.element, {') &&
-    !newtabJs.includes('const relativeY = (pointerY - folderRect.top)'),
-  'a main-grid folder card should remain a whole-card drop target without opening its cascade'
-);
-assert.ok(
   newtabJs.includes("persistBookmarkCrossLevelMove(state, dropTarget)"),
   'dropping on a folder target should persist a cross-level move'
 );
@@ -364,10 +358,6 @@ assert.ok(
     newtabJs.includes('if (change.isControlled)') &&
     newtabJs.includes('skipRuntimeInvalidate: true'),
   'controlled browser move events should mark data dirty without triggering a second render'
-);
-assert.ok(
-  !newtabJs.includes('showBookmarkMoveToast(record);'),
-  'a normal drag move should not show an undo toast before the user presses the shortcut'
 );
 assert.ok(
   bookmarkDragJs.includes("kind: 'insertion'") &&

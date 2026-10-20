@@ -81,7 +81,6 @@ assert.match(
   /kind:\s*'newtab-shortcut-columns'[\s\S]*?label:\s*'4',[\s\S]*?label:\s*'8',[\s\S]*?label:\s*'12',[\s\S]*?label:\s*'16'/,
   'Options should render an editable slider with 4-step ticks'
 );
-assert.doesNotMatch(optionsSource, /snapPoints|snapThreshold/);
 assert.match(
   rangeSliderSource,
   /RANGE_SLIDER_VALUE_INPUT_CLASS_NAMES[\s\S]*?_x_extension_shortcut_input_2024_unique_[\s\S]*?_x_extension_range_slider_value_input_2026_unique_/,
@@ -117,17 +116,11 @@ assert.doesNotMatch(
   /_x_extension_range_slider_value_input_2026_unique_:(?:hover|focus|focus-visible|disabled)/,
   'The slider value input should not define a second Options interaction appearance'
 );
-assert.doesNotMatch(
-  newtabHtml,
-  /\.x-nt-range-slider-value-input/,
-  'New Tab should not define a second slider value-input appearance'
-);
 assert.match(
   shortcutDialogCss,
   /\._x_extension_shortcut_input_2024_unique_\s*\{[\s\S]*?border:\s*1px solid var\(--tab-border\);[\s\S]*?background:\s*var\(--control-bg\);/,
   'New Tab slider values should use the existing input component appearance'
 );
-assert.doesNotMatch(settingsControlsSource, /snapPoints|snapThreshold|pointerActiveRef/);
 assert.match(
   rangeSliderSource,
   /RANGE_SLIDER_VALUE_INPUT_STYLE[\s\S]*?height:\s*'var\(--x-range-slider-value-height, 30px\)',[\s\S]*?width:\s*'var\(--x-range-slider-value-width, 52px\)'/,
@@ -157,7 +150,6 @@ assert.match(
   shortcutSectionCss,
   /width:\s*min\(90vw,\s*var\(--x-nt-shortcuts-target-width,\s*692px\)\);/
 );
-assert.doesNotMatch(shortcutSectionCss, /--x-nt-shortcut-width/);
 assert.match(
   newtabHtml,
   /\.x-nt-shortcuts-grid\s*\{[\s\S]*?display:\s*flex;[\s\S]*?flex-wrap:\s*wrap;[\s\S]*?justify-content:\s*center;/,

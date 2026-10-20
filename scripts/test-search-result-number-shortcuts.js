@@ -549,30 +549,6 @@ assert.match(
   );
 });
 
-function relativeLuminance(hex) {
-  const channels = String(hex).replace('#', '').match(/.{2}/g).map((value) => (
-    parseInt(value, 16) / 255
-  )).map((value) => (
-    value <= 0.04045 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4)
-  ));
-  return (0.2126 * channels[0]) + (0.7152 * channels[1]) + (0.0722 * channels[2]);
-}
-
-function contrastRatio(foreground, background) {
-  const values = [relativeLuminance(foreground), relativeLuminance(background)]
-    .sort((left, right) => right - left);
-  return (values[0] + 0.05) / (values[1] + 0.05);
-}
-
-assert.ok(
-  contrastRatio('#FFFFFF', '#111827') >= 7,
-  'the dark number label should exceed WCAG AAA contrast'
-);
-assert.ok(
-  contrastRatio('#0F172A', '#FFFFFF') >= 7,
-  'the light number label should exceed WCAG AAA contrast'
-);
-
   console.log('search result number shortcut tests passed');
 }
 

@@ -28,7 +28,6 @@ assert.match(
 );
 const buttonMarkup = optionsHtml.match(new RegExp(`<button[^>]+id="${buttonId}"[\\s\\S]*?<\\/button>`));
 assert.ok(buttonMarkup, 'query insert button should exist');
-assert.doesNotMatch(buttonMarkup[0], /ri-braces-line/, 'query insert button should not show a duplicate braces icon');
 
 assert.match(
   optionsHtml,

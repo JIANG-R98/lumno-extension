@@ -34,7 +34,6 @@ assert.strictEqual(
   settings.SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
   '_x_extension_search_result_display_limit_2026_unique_'
 );
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY));
 assert.match(overlayRuntimeSource,
   /searchResultDisplayLimit: '_x_extension_search_result_display_limit_2026_unique_'/,
   'overlay runtime should expose the synced display-limit key');

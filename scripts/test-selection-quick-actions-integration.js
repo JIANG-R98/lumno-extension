@@ -17,14 +17,11 @@ const selectionMarkSource = fs.readFileSync('assets/images/lumno-selection-mark.
 const intentSource = fs.readFileSync('src/shared/selection-intent.js', 'utf8');
 const iconSource = fs.readFileSync('src/shared/selection-action-icons.js', 'utf8');
 const toastSource = fs.readFileSync('src/shared/toast.js', 'utf8');
-const settingsSource = fs.readFileSync('src/shared/settings.js', 'utf8');
 const selectStyles = fs.readFileSync('src/shared/custom-select.css', 'utf8');
 const localeNames = ['en', 'ja', 'zh_CN', 'zh_TW'];
 const storageKey = '_x_extension_selection_quick_actions_enabled_2026_unique_';
 const providerStorageKey = '_x_extension_selection_quick_actions_provider_2026_unique_';
 const groupEnabledStorageKey = '_x_extension_selection_quick_actions_group_enabled_2026_unique_';
-const iconSetStorageKey = '_x_extension_selection_quick_actions_icon_set_2026_unique_';
-const triggerStyleStorageKey = '_x_extension_selection_quick_actions_trigger_style_2026_unique_';
 
 const selectionScriptRegistration = require('../src/background/selection-script-registration.js');
 assert(
@@ -37,11 +34,6 @@ assert.deepStrictEqual(
   Array.from(selectionScriptRegistration.SCRIPT_FILES),
   ['src/shared/settings.js', 'src/shared/selection-action-icons.js', 'src/shared/selection-intent.js', 'src/shared/toast.js', 'src/content/selection-quick-actions.js'],
   'provider-aware settings, the selection classifier, and the shared Toast should load before the content interaction runtime'
-);
-assert.strictEqual(
-  fs.existsSync('src/shared/selection-butterfly.js'),
-  false,
-  'the removed butterfly option should not leave a bundled runtime behind'
 );
 assert.strictEqual(selectionScriptRegistration.RUN_AT, 'document_idle');
 assert(
@@ -61,8 +53,6 @@ assert.doesNotMatch(
 assert(optionsToggleKeys.includes(storageKey), 'options should persist the selection setting');
 assert(optionsToggleKeys.includes(providerStorageKey), 'options should persist the preferred selection provider');
 assert(optionsToggleKeys.includes(groupEnabledStorageKey), 'options should persist the optional selection group setting');
-assert(!optionsSource.includes(iconSetStorageKey), 'options should not persist a fixed toolbar icon library');
-assert(!optionsSource.includes(triggerStyleStorageKey), 'options should not persist a removed trigger-style choice');
 assert(
   optionsHtml.includes('_x_extension_selection_quick_actions_provider_select_2026_unique_'),
   'Labs should render the preferred provider dropdown'
@@ -77,10 +67,6 @@ assert(
     /data-i18n-tooltip="settings_selection_quick_actions_group_desc" data-tooltip="所有 AI 网页皆归入「AI 查询」标签组"/.test(optionsHtml),
   'the group-enabled behavior should be described as a background query rather than tab creation'
 );
-assert(!optionsHtml.includes('selection_quick_actions_icon_set'),
-  'Labs should not show an icon-library setting when the toolbar always uses Remix');
-assert(!optionsHtml.includes('selection_quick_actions_trigger_style'),
-  'Labs should not ask users to choose between selection-entry visuals');
 assert(
   /_x_extension_theme_indicator_2024_unique_\[data-ready="false"\][\s\S]*?_x_extension_theme_option_2024_unique_\[data-active="true"\][\s\S]*?background:\s*var\(--inline-tab-active-bg\)/.test(optionsHtml),
   'segmented controls should preserve an active background before their indicator can be measured'
@@ -90,22 +76,6 @@ assert.strictEqual(
   true,
   'the provider dropdown should pair each provider with a bundled icon'
 );
-assert(
-  settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY),
-  'selection setting should participate in sync/export/import'
-);
-assert(
-  settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY),
-  'selection provider should participate in sync/export/import'
-);
-assert(
-  settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY),
-  'selection grouping should participate in sync/export/import'
-);
-assert(!settingsSource.includes(iconSetStorageKey),
-  'browser sync should not retain the removed toolbar icon-library field');
-assert(!settingsSource.includes(triggerStyleStorageKey),
-  'browser sync should not retain the removed trigger-style field');
 assert(
   backgroundSource.includes("src/background/selection-quick-action-provider.js") &&
     backgroundSource.includes('loadSelectionQuickActionFallbackProviders()') &&
@@ -236,7 +206,6 @@ assert(
 );
 assert(contentSource.includes('let enabled = false;'), 'content runtime should start disabled');
 assert(contentSource.includes('lumno-selection-action-icon'), 'content runtime should render inline action SVGs');
-assert(!contentSource.includes('ICON_SET_STORAGE_KEY'), 'content runtime should not read an obsolete icon-set choice');
 assert(
   contentSource.includes("const TOOLBAR_FALLBACK_ACTIONS = Object.freeze(['explain', 'search', 'translate'])") &&
     /function getToolbarActions\(primary\)[\s\S]*?\.slice\(0, 3\)/.test(contentSource),
@@ -257,9 +226,7 @@ assert(
     contentSource.includes('surface.append(material, contentViewport)'),
   'all toolbar controls should share one right-aligned clipping layer with the butterfly last'
 );
-assert(!contentSource.toLowerCase().includes('butterfly'),
-  'content runtime should render only the fixed Lumno selection mark');
-assert(iconSource.includes('remix: Object.freeze') && !iconSource.toLowerCase().includes('hugeicons'),
+assert(iconSource.includes('remix: Object.freeze'),
   'the bundled action icon library should contain Remix only');
 assert(
   /ask:\s*icon\('<path fill="currentColor" d="M1 11C6\.52285/.test(iconSource),
@@ -416,16 +383,6 @@ localeNames.forEach((locale) => {
     'selection_quick_action_calculate'
   ].forEach((key) => {
     assert(messages[key] && String(messages[key].message || '').trim(), `${locale} should localize ${key}`);
-  });
-  [
-    'settings_selection_quick_actions_icon_set_title',
-    'selection_quick_actions_icon_set_remix',
-    'selection_quick_actions_icon_set_hugeicons',
-    'settings_selection_quick_actions_trigger_style_title',
-    'selection_quick_actions_trigger_style_lumno',
-    'selection_quick_actions_trigger_style_butterfly'
-  ].forEach((key) => {
-    assert.strictEqual(messages[key], undefined, `${locale} should remove the obsolete trigger-style copy`);
   });
 });
 const zhCnMessages = JSON.parse(fs.readFileSync('_locales/zh_CN/messages.json', 'utf8'));

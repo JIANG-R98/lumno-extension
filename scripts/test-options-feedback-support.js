@@ -65,10 +65,6 @@ assert.match(
   /'zh-CN': 'wechat',[\s\S]*?'zh-TW': 'wechat',[\s\S]*?ja: 'x',[\s\S]*?en: 'x'/,
   'Options should use WeChat for both Chinese locales and X for other languages'
 );
-assert.doesNotMatch(
-  optionsJs + fs.readFileSync(path.join(repoRoot, 'src/options/options-feedback-support.js'), 'utf8'),
-  /links\.discord|ri-discord-fill|settings_feedback_support_discord_action/
-);
 
 locales.forEach((locale) => {
   const messages = JSON.parse(fs.readFileSync(
@@ -109,10 +105,6 @@ assert.deepStrictEqual(
   ],
   'Simplified Chinese feedback links should use the requested copy'
 );
-locales.forEach((locale) => {
-  const messages = JSON.parse(fs.readFileSync(path.join(repoRoot, `_locales/${locale}/messages.json`), 'utf8'));
-  assert.ok(!messages.settings_feedback_support_discord_action, `${locale} should no longer carry Discord copy`);
-});
 
 // The "ask in the search box" demo follows the Help Center site search (lm): hidden until the
 // providers load, hidden while lm is off, and refreshed whenever the site search list changes.

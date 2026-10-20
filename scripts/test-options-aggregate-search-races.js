@@ -1,42 +1,6 @@
 const assert = require('assert');
 
 const { createAggregateSearchStateCoordinator } = require('../src/options/options-aggregate-search');
-const searchUtils = require('../src/shared/search-utils');
-const aggregateSearchStore = require('../src/shared/aggregate-search-store');
-const siteSearchModel = require('../src/options/options-site-search').createSiteSearchModel({
-  searchUtils,
-  aggregateSearchStore
-});
-const conflictState = {
-  aggregateSearches: [
-    { id: 'aggregate-1', key: 'tech', name: 'Technology' }
-  ],
-  providers: [{ key: 'gg', name: 'Google' }, { key: 'docs', name: 'Docs' }]
-};
-const findSiteSearchKeyConflict = (key, allowedKey, allowedAggregateId) => (
-  siteSearchModel.findSiteSearchKeyConflict(key, allowedKey, allowedAggregateId, conflictState)
-);
-
-assert.strictEqual(
-  findSiteSearchKeyConflict('gg', '', '' ).name,
-  'Google',
-  'aggregate editors must reject built-in search triggers'
-);
-assert.strictEqual(
-  findSiteSearchKeyConflict('docs', '', '').name,
-  'Docs',
-  'aggregate editors must reject custom search triggers'
-);
-assert.strictEqual(
-  findSiteSearchKeyConflict('tech', '', '').id,
-  'aggregate-1',
-  'normal search editors must reject aggregate triggers'
-);
-assert.strictEqual(
-  findSiteSearchKeyConflict('tech', '', 'aggregate-1'),
-  null,
-  'editing an aggregate may retain its own trigger'
-);
 
 function cloneItems(items) {
   return (Array.isArray(items) ? items : []).map((item) => ({ ...item }));

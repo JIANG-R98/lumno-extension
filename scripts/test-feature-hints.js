@@ -301,8 +301,6 @@ function flushMicrotasks() {
   assert.strictEqual(wallpaperSourcesHint.introducedIn, '0.9.58');
   assert.strictEqual(wallpaperSourcesHint.placement, 'bottom-right wallpaper control');
   assert.strictEqual(wallpaperSourcesHint.arrowSide, 'right', 'the new wallpapers hint should point at the appearance button');
-  assert.strictEqual(featureHints.getFeatureHint('newtab-input-auto-focus'), null,
-    'the retired input auto-focus hint should no longer be offered');
 
   const macHintController = featureHints.createFeatureHint({
     documentObj: createFakeDocument(),

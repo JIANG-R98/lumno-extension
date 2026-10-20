@@ -500,10 +500,6 @@ assertContains(
   'newtab should delegate bookmark cascade behavior to the menu runtime'
 );
 assert.ok(
-  !newtabJs.includes('function scheduleBookmarkCascadeHoverIntent'),
-  'newtab should not own the cascade hover-intent state machine after componentization'
-);
-assert.ok(
   newtabHtml.indexOf('bookmark-cascade-position.js') >= 0 &&
     newtabHtml.indexOf('bookmark-cascade-menu.js') > newtabHtml.indexOf('bookmark-cascade-position.js') &&
     newtabHtml.indexOf('bookmark-cascade-menu.js') < newtabHtml.indexOf('react-page-bootstrap.js'),

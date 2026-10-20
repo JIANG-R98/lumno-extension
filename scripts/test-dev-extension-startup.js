@@ -21,8 +21,6 @@ async function run() {
   assert.strictEqual(runtime.isSameVersionReload({ reason: 'update', previousVersion: '0.9.22' }, '0.9.22'), true);
   assert.strictEqual(runtime.isSameVersionReload({ reason: 'update', previousVersion: '0.9.21' }, '0.9.22'), false);
   assert.strictEqual(runtime.isSameVersionReload({ reason: 'chrome_update', previousVersion: '0.9.22' }, '0.9.22'), false);
-  assert.strictEqual(runtime.reloadDevelopmentExtensionOnStartup, undefined);
-  assert.doesNotMatch(source, /runtime\.reload\s*\(/);
 
   const backgroundSource = fs.readFileSync(
     path.join(repoRoot, 'src/background/background.js'),
@@ -35,7 +33,6 @@ async function run() {
     /chrome\.runtime\.onStartup\.addListener\(\(\) => \{\s*restoreBackgroundStateOnStartup\(\);\s*\}\)/,
     'restored tabs load with the manifest content scripts, so startup should not sweep them'
   );
-  assert.doesNotMatch(backgroundSource, /reloadDevelopmentExtensionOnStartup/);
 }
 
 run().then(() => {

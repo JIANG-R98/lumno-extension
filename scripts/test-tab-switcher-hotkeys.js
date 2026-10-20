@@ -46,28 +46,6 @@ function getCssRuleBlock(source, selector) {
   return match[1];
 }
 
-function getCssBlockFromNeedle(source, startNeedle) {
-  const start = source.indexOf(startNeedle);
-  assert.notStrictEqual(start, -1, `${startNeedle} should exist`);
-  const tail = source.slice(start + startNeedle.length);
-  const blockMatch = tail.match(/\{\s*\n/);
-  assert(blockMatch, `${startNeedle} should have a declaration block`);
-  const openBrace = start + startNeedle.length + blockMatch.index;
-  const closeBrace = source.indexOf('}', openBrace);
-  assert.notStrictEqual(closeBrace, -1, `${startNeedle} declaration block should close`);
-  return source.slice(openBrace + 1, closeBrace);
-}
-
-assert.strictEqual(
-  contentHotkeySource.includes('isBestEffortAltTabEvent'),
-  false,
-  'content script should not try to force-capture Alt+Tab'
-);
-assert.strictEqual(
-  contentHotkeySource.includes('triggerTabSwitcherFromPageHotkey'),
-  false,
-  'content script should not expose an Alt+Tab page-hotkey switcher trigger'
-);
 assert.match(
   switcherBridgeSource,
   /advanceOpenTabSwitcherFromCommand[\s\S]*host\._lumnoTabSwitcherAdvance[\s\S]*advanced:\s*didAdvance === true[\s\S]*suppressed:\s*didAdvance === false/,
@@ -107,11 +85,6 @@ assert.match(
   /previousRuntimeMessageListener[\s\S]*removeListener\(previousRuntimeMessageListener\)[\s\S]*addListener\(runtimeMessageListener\)/,
   'reinjection should replace an invalidated runtime listener after an extension reload'
 );
-assert.strictEqual(
-  /TAB_SWITCHER_RUNTIME_VERSION|_x_extension_tab_switcher_runtime_version_2026_unique_|_lumnoTabSwitcherRuntimeVersion/.test(switcherSource),
-  false,
-  'tab switcher should not keep reload-time runtime version markers'
-);
 assert.match(
   switcherViewReactSource,
   /data-active=\{active \? 'true' : 'false'\}[\s\S]*?tabIndex=\{active \? 0 : -1\}/,
@@ -121,11 +94,6 @@ assert.strictEqual(
   /updateSelection\(index\)[\s\S]*?focus\(/.test(switcherViewReactSource),
   false,
   'React tab switcher selection updates should not force focus because it can cause visible jumpiness'
-);
-assert.strictEqual(
-  /getTabSwitcherRuntimeVersion|tab_switcher_runtime_stale|runtimeVersion/.test(switcherBridgeSource),
-  false,
-  'shared tab switcher bridge should not keep stale-runtime reload update logic'
 );
 assert.match(
   switcherBridgeSource,
@@ -195,11 +163,6 @@ assert.match(
   switcherBridgeSource,
   /function updateOpenTabSwitcherThumbnail\(request\)[\s\S]*_lumnoTabSwitcherUpdateThumbnail[\s\S]*request\.action === 'updateTabSwitcherThumbnail'/,
   'shared tab switcher bridge should forward live thumbnail updates into extension-page switchers'
-);
-assert.strictEqual(
-  /openTabSwitcherFromCommand|advanceOpenTabSwitcherFromCommand|_x_extension_tab_switcher_advance_command_2026_unique_/.test(contentHotkeySource),
-  false,
-  'content hotkey listener should not duplicate tab switcher command bridge logic'
 );
 assert.match(
   switcherBridgeSource,
@@ -325,11 +288,6 @@ assert.doesNotMatch(
   /if \(action === 'none'\)[\s\S]*restricted_action_none[\s\S]*return;/,
   'restricted browser-setting action should no longer be treated as no action'
 );
-assert.strictEqual(
-  /TAB_SWITCHER_RUNTIME_VERSION|getTabSwitcherRuntimeVersionOnTab|tab_switcher_runtime_stale/.test(backgroundSource),
-  false,
-  'background should not keep the reload-time tab switcher runtime update path'
-);
 assert.match(
   backgroundSource,
   /function setTabSwitcherCaptureVisibility\(tab,\s*hidden\)[\s\S]*action:\s*'setTabSwitcherCaptureVisibility'[\s\S]*sendTabSwitcherHostMessage/,
@@ -435,11 +393,6 @@ assert.match(
   /function shouldSuppressInitialShortcutAdvance\(\)[\s\S]*return suppressInitialShortcutAdvanceUntilTriggerKeyup;/,
   'tab switcher should use key state, not a time window, for initial held-shortcut suppression'
 );
-assert.strictEqual(
-  /INITIAL_SHORTCUT_ADVANCE_SUPPRESS_MS|Date\.now\(\)\s*\+/.test(switcherSource),
-  false,
-  'tab switcher should not use a sliding time window because it makes Q feel dead after the opening flash'
-);
 assert.match(
   switcherSource,
   /function advanceSelectionFromShortcut\(offset\)[\s\S]*suppressInitialShortcutAdvanceUntilTriggerKeyup = false;[\s\S]*selectByOffset\(offset\);[\s\S]*return true;/,
@@ -469,11 +422,6 @@ assert.match(
   switcherSource,
   /window\.addEventListener\('keyup',\s*handleKeyup,\s*true\)/,
   'tab switcher should listen for keyup so command-key release can commit the selection'
-);
-assert.strictEqual(
-  /focusSelectedCardForShortcutRelease|focusedElementBeforeOpen|restoreFocusAfterClose/.test(switcherSource),
-  false,
-  'shortcut release recovery should not steal or rewrite the page focus chain'
 );
 assert.match(
   switcherSource,

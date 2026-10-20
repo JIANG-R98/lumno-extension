@@ -246,12 +246,6 @@ assert.match(
   'the current-mode label should use a dedicated reveal state'
 );
 
-assert.doesNotMatch(
-  inputModeCss,
-  /\[data-current-overlay="true"\]|--x-lumno-search-mode-current-overlay-left/,
-  'the current-mode label should never share the chevron coordinate through an overlay state'
-);
-
 assert.match(
   inputModeSource,
   /const previousCurrentState = shouldAnimate[\s\S]*?getInputModePrefixCurrentVisualState\(\)[\s\S]*?cancelInputModePrefixAnimation\(\)[\s\S]*?playInputModePrefixCurrentResizeAnimation\([\s\S]*?previousCurrentState,[\s\S]*?nextCurrentState/,
@@ -262,11 +256,6 @@ assert.match(
   inputModeSource,
   /function playInputModePrefixCurrentResizeAnimation\(fromState, toState\)[\s\S]*?siteSearchPrefixCurrent\.animate\(\[[\s\S]*?marginLeft: `\$\{startMarginLeft\}px`[\s\S]*?width: `\$\{startWidth\}px`[\s\S]*?marginLeft: `\$\{endMarginLeft\}px`[\s\S]*?width: `\$\{endWidth\}px`[\s\S]*?animationRevision !== inputModePrefixAnimationRevision/,
   'the current-mode slot should expand in flow, cancel the extra flex gap, and reject stale completions'
-);
-assert.doesNotMatch(
-  inputModeCss,
-  /_x_lumno_search_mode_current_mask_reveal_2026_unique_/,
-  'the stylesheet should not start a second uncoordinated current-label animation'
 );
 
 (async () => {

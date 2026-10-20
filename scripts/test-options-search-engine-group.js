@@ -65,11 +65,6 @@ assert.match(
   'The custom provider group selector should expose button-group semantics'
 );
 [newtabJs, overlaySearchPanelJs].forEach((source, index) => {
-  assert.doesNotMatch(
-    source,
-    /const isSearchEngine = !isCustom && isSearchEngineSiteSearchProvider\(provider\)/,
-    `${index === 0 ? 'New tab' : 'Overlay'} should classify custom engines by category`
-  );
   assert.match(
     source,
     /providers\s*\.filter\(\(provider\) => isSearchEngineSiteSearchProvider\(provider\)\)/,

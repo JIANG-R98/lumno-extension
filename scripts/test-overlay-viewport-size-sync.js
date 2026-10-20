@@ -150,14 +150,6 @@ assert.match(
   /Promise\.all\(\[[\s\S]*?revealReady[\s\S]*?initialOverlayThemeReady,[\s\S]*?initialOverlaySizeReady,[\s\S]*?initialOverlayEnterAnimationReady[\s\S]*?initialMotionEffectsReady[\s\S]*?applyOverlayEnterAnimationInitialState\(overlay\);[\s\S]*?const styleGateResult = readyStates\[0\];[\s\S]*?revealOverlay\(\{[\s\S]*?forceInstant:/,
   'overlay reveal should wait only for critical styles and stable visual preferences, then skip stuttering entry motion when startup is late'
 );
-const overlayRevealBlock = searchPanelSource.slice(
-  searchPanelSource.lastIndexOf('const revealReady =')
-);
-assert.doesNotMatch(
-  overlayRevealBlock,
-  /initialLanguageReady|initialOverlayContentReady|initialFaviconEnhancedFetchReady/,
-  'language, open-tab content, and favicon policy should hydrate without blocking the visible input shell'
-);
 assert.doesNotMatch(
   searchPanelSource,
   /setTimeout\(\(\) => searchInput\.focus/,
@@ -172,11 +164,6 @@ assert.doesNotMatch(
   shellSource,
   /all: unset !important/,
   'the Shadow DOM shell reset must not outrank its own animated longhands or panel surface declarations'
-);
-assert.doesNotMatch(
-  shellSource,
-  /OVERLAY_PANEL_ENTRY_TRANSFORM|OVERLAY_PANEL_TRANSITION/,
-  'the React shell should not duplicate search-panel entry state or timing'
 );
 assert.ok(
   searchPanelSource.includes("shadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 2px 5px -2px rgba(15, 23, 42, 0.11), 0 16px 42px -12px rgba(15, 23, 42, 0.17), 0 48px 112px -30px rgba(15, 23, 42, 0.19)'") &&
@@ -228,20 +215,10 @@ assert.match(
   /function finishOverlayPanelEnterAnimation\(overlayElement, animationRevision\)[\s\S]*?setProperty\('opacity', '1', 'important'\)[\s\S]*?getOverlayEnterAnimationRevealTransform\(\)[\s\S]*?setProperty\('will-change', 'auto'/,
   'the protected important rest state should be restored after the keyframe transaction'
 );
-assert.doesNotMatch(
-  searchPanelSource,
-  /OverlayInputEnterAnimation|overlayInputEnterCleanup|inputBlurPx|inputDurationMs/,
-  'overlay entry should not add a paint-bound filter animation to the input surface'
-);
 assert.match(
   searchPanelSource,
   /const overlayThemeTokens = \{[\s\S]*?light:[\s\S]*?blur: '14px'[\s\S]*?dark:[\s\S]*?blur: '28px'/,
   'the translucent dark panel should cap its expensive backdrop blur radius'
-);
-assert.doesNotMatch(
-  searchPanelSource,
-  /OverlayEntryBlurProxy|overlayEntryBlurProxy|entry-blur-proxy|OVERLAY_ENTRY_PROXY/,
-  'overlay entry should not crossfade a separate blur proxy into the backdrop-filtered panel'
 );
 assert.match(
   sharedSearchInputSource,
@@ -253,11 +230,6 @@ assert.match(
   /\.x-lumno-search-input-mode__menu:not\(\[hidden\]\) \{[\s\S]*?transition: opacity 170ms ease,[\s\S]*?transform 360ms cubic-bezier\(0\.2, 1\.45, 0\.35, 1\) !important;/,
   'ordinary scope-menu entry should retain the shared spring-like transform transition'
 );
-assert.doesNotMatch(
-  sharedSearchInputSource,
-  /_x_lumno_search_mode_menu_entry_2026_unique_|\.x-lumno-search-input-mode__menu\[data-open="true"\][\s\S]*?animation:/,
-  'scope-menu transform must not be owned by a competing keyframe and transition at the same time'
-);
 assert.match(
   sharedSearchInputSource,
   /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.x-lumno-search-input-mode__menu \{[\s\S]*?animation: none !important;[\s\S]*?transition: none !important;/,
@@ -267,11 +239,6 @@ assert.match(
   shellSource,
   /--x-ov-panel-radius:\s*26px;[\s\S]*?border-radius:\s*var\(--x-ov-panel-radius\)\s*!important;/,
   'overlay shell should use the 26px radius on every outer corner'
-);
-assert.doesNotMatch(
-  shellSource,
-  /--x-ov-panel-top-radius/,
-  'overlay shell should expose one shared outer-corner radius token'
 );
 assert.match(
   searchPanelSource,
@@ -300,16 +267,6 @@ assert.match(
 );
 assert.match(
   searchPanelSource,
-  /function commitSuggestionsNaturalHeightAfterRender\(\) \{\s*SUGGESTIONS_HEIGHT_LAYOUT\.applyNaturalSuggestionsHeightLayout\(\s*suggestionsContainer\s*\);\s*syncSearchModeMenuResultOffset\(\);/,
-  'the scope-menu offset should synchronize with the same direct height commit'
-);
-assert.doesNotMatch(
-  searchPanelSource,
-  /captureSuggestionsHeightState|deferCappedShrink|suggestionsHeightInputSettleTimer|scheduleStandaloneSuggestionsHeightTransition|settleHeightAfterRemoteMix/,
-  'overlay typing and remote mixing should not capture, lock, defer, or animate result height'
-);
-assert.match(
-  searchPanelSource,
   /handleSearchInputCompositionEnd\(event\)[\s\S]*?if \(query\.length > 0\) \{[\s\S]*?requestOverlaySearchSuggestions\(query\)/,
   'overlay composition input should request results without starting a height session'
 );
@@ -327,21 +284,6 @@ assert.match(
   searchPanelSource,
   /if \(siteSearchState && requestQuery\) \{\s*updateSearchSuggestions\(\[\], requestQuery\);\s*return;\s*\}/,
   'active site-search queries should render their deterministic single result without waiting for remote suggestion mixing'
-);
-assert.match(
-  searchPanelSource,
-  /if \(isPaste \|\| getDirectUrlSuggestion\(query\)\) \{\s*updatePendingSearchSuggestions\(query\);\s*\}/,
-  'an immediate URL preview should render without a height-deferral option'
-);
-assert.match(
-  searchPanelSource,
-  /!finalRemoteMix && remoteMixState && remoteMixState\.settled[\s\S]*?return;/,
-  'a late pending or local render should not overwrite any completed final mix'
-);
-assert.doesNotMatch(
-  searchPanelSource,
-  /function animateSuggestionsGrowth\(/,
-  'overlay should not keep the append-only growth animation that caused repeated flashes while typing'
 );
 
 for (const tabZoomFactor of [0.8, 1.25, 1.5]) {

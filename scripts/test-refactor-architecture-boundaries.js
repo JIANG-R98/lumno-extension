@@ -45,16 +45,6 @@ assert.deepStrictEqual(
   'configured shortcut parsing belongs to the shared matcher'
 );
 assert.deepStrictEqual(
-  filesContaining(runtimeFiles, /function parseFallbackShortcut\(/),
-  [],
-  'newtab fallback shortcuts must use the shared matcher'
-);
-assert.deepStrictEqual(
-  filesContaining(runtimeFiles, /function shortcutMatchesEvent\(/),
-  [],
-  'shortcut event matching must not be copied into a page entry'
-);
-assert.deepStrictEqual(
   filesContaining(runtimeFiles, /function setBoundedCacheEntry\(/),
   ['src/shared/favicon-utils.js'],
   'bounded favicon cache writes belong to favicon-utils'
@@ -70,7 +60,6 @@ assert.match(
   newtabSource,
   /SITE_DISPLAY_NAME\.getSiteDisplayName\([\s\S]*?SITE_DISPLAY_NAME_OPTIONS/
 );
-assert.doesNotMatch(newtabSource, /const brandMap = Object\.freeze\(/);
 
 const overlaySource = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
 assert.strictEqual((overlaySource.match(/storageChangeListeners\.add\(/g) || []).length, 18);

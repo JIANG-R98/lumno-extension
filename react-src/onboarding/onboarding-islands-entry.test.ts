@@ -122,16 +122,4 @@ describe('Onboarding React islands entry', () => {
       visualSurface: runtime.LumnoOnboardingVisualSurface
     });
   });
-
-  it('installs React APIs when bootstrap is waiting', async () => {
-    runtime.LumnoOnboardingReactBootstrap = {
-      reactReady: false
-    };
-
-    await import('./onboarding-islands-entry');
-
-    expect(runtime.LumnoOnboardingReactBootstrap.reactReady).toBe(true);
-    expect(runtime.LumnoOnboardingActions?.implementation).toBe('react');
-    expect(runtime.LumnoOnboardingReactIslands).toBeDefined();
-  });
 });

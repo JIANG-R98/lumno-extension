@@ -83,11 +83,6 @@ assert.match(
   /\.x-lumno-search-input-mode__menu-item:focus-visible\s*\{[\s\S]*?border-color:\s*var\([\s\S]*?--x-lumno-search-mode-item-focus-ring[\s\S]*?box-shadow:\s*none !important;/,
   'keyboard-focused scope cards should use a single contrast-safe two-pixel theme border'
 );
-assert.doesNotMatch(
-  inputModeCss,
-  /\.x-lumno-search-input-mode__menu-item:focus-visible\s*\{[^}]*box-shadow:\s*inset/,
-  'keyboard focus should not add a second inset ring'
-);
 assert.match(
   inputModeCss,
   /\.x-lumno-search-input-mode__menu-item:hover:not\(\[aria-checked="true"\]\)[\s\S]*?background:\s*transparent !important/,
@@ -98,25 +93,10 @@ assert.match(
   /\.x-lumno-search-input-mode__menu-item:hover:not\(\[aria-checked="true"\]\):not\(:focus-visible\)\s*\{[\s\S]*?border-color:\s*transparent !important;/,
   'scope menu hover should keep its border transparent without overriding keyboard focus'
 );
-assert.doesNotMatch(
-  inputModeCss,
-  /\.x-lumno-search-input-mode__menu-item:hover:not\(\[aria-checked="true"\]\)\s*\{[\s\S]*?border-color:\s*transparent !important;/,
-  'a hovered keyboard-focus target should retain its focus border'
-);
-assert.doesNotMatch(
-  inputModeCss,
-  /\.x-lumno-search-input-mode__menu-item:focus-visible:not\(\[aria-checked="true"\]\)\s*\{[^}]*border-color:\s*transparent !important;/,
-  'keyboard focus should not be suppressed by the transparent hover border rule'
-);
 assert.match(
   inputModeCss,
   /\.x-lumno-search-input-mode__menu-icon\s*\{[\s\S]*?background:\s*transparent !important/,
   'scope icons should remain background-free in default, hover, focus, and selected states'
-);
-assert.doesNotMatch(
-  inputModeCss,
-  /x-lumno-search-mode-icon-hover-outline/,
-  'scope menu hover should not retain an icon outline'
 );
 assert.match(
   inputModeCss,
@@ -127,11 +107,6 @@ assert.match(
   inputModeCss,
   /\.x-lumno-search-input-mode__menu-item\[aria-checked="true"\]\s*\{[\s\S]*?--x-lumno-search-mode-selected-bg[\s\S]*?border-color:\s*color-mix\([\s\S]*?--x-lumno-search-mode-item-focus-ring[\s\S]*?32%[\s\S]*?transparent[\s\S]*?\) !important;/,
   'the active search scope should use a thicker theme-tinted outer selection border'
-);
-assert.doesNotMatch(
-  inputModeCss,
-  /--x-lumno-search-mode-icon-active-bg/,
-  'scope icons should not retain a stateful middle-square background token'
 );
 assert.match(
   inputModeCss,
@@ -213,11 +188,6 @@ assert.match(
   /:root:not\(\[data-lumno-scrollbars="overlay"\]\) \.x-lumno-search-input-mode__menu\[data-surface="newtab"\]\s*\.x-lumno-search-input-mode__menu-content,\s*:root:not\(\[data-lumno-scrollbars="overlay"\]\) \.x-lumno-search-input-mode__menu\[data-surface="overlay"\]\s*\.x-lumno-search-input-mode__menu-content\s*\{\s*scrollbar-width:\s*thin;\s*scrollbar-color:[^;]+ transparent;/,
   'scope content scrollbars should use compositor-drawn scrollbar-color thumbs that keep pace with scrolling'
 );
-assert.doesNotMatch(
-  inputModeCss,
-  /\.x-lumno-search-input-mode__menu-content::-webkit-scrollbar/,
-  'a ::-webkit-scrollbar thumb is painted on the main thread and stutters behind the scrolling tiles'
-);
 assert.match(
   inputModeCss,
   /\.x-lumno-search-input-mode__menu-footer\s*\{[\s\S]*?display:\s*flex !important;[\s\S]*?justify-content:\s*space-between !important;[\s\S]*?flex:\s*0 0 auto !important;[\s\S]*?font:\s*400 12px\/18px[\s\S]*?text-align:\s*left !important;[\s\S]*?overflow:\s*hidden !important;[\s\S]*?\.x-lumno-search-input-mode__menu-footer-actions\s*\{[\s\S]*?margin-inline-start:\s*0 !important;[\s\S]*?gap:\s*18px !important;[\s\S]*?\.x-lumno-search-input-mode__menu-footer-hint\s*\{[\s\S]*?gap:\s*4px !important;[\s\S]*?\.x-lumno-search-input-mode__menu-footer-key\s*\{[\s\S]*?font:\s*500 11px\/16px[\s\S]*?\.x-lumno-search-input-mode__menu-footer-filter-text\s*\{[\s\S]*?flex:\s*1 1 0 !important;[\s\S]*?text-align:\s*left !important;[\s\S]*?text-overflow:\s*ellipsis !important;/,
@@ -227,11 +197,6 @@ assert.match(
   inputModeSource,
   /modeMenuFooterSelectHint\.appendChild\(modeMenuFooterSelectKey\);[\s\S]*?modeMenuFooterSelectHint\.appendChild\(modeMenuFooterSelectText\);[\s\S]*?modeMenuFooterActions\.appendChild\(modeMenuFooterNavigationHint\);[\s\S]*?modeMenuFooterActions\.appendChild\(modeMenuFooterSelectHint\);[\s\S]*?modeMenuFooterActions\.appendChild\(modeMenuFooterInputHint\);[\s\S]*?modeMenuFooterActions\.appendChild\(modeMenuFooterShortcutHint\);/,
   'each keyboard action should have its own semantic spacing group'
-);
-assert.doesNotMatch(
-  inputModeCss,
-  /\.x-lumno-search-input-mode__menu-footer-divider/,
-  'the fixed scope footer should not retain divider styling'
 );
 assert.match(
   inputModeCss,
@@ -275,16 +240,6 @@ assert.match(
     '.concat(providers.filter((provider) => isAiSiteSearchProvider(provider)))'
   );
   const browserContentIndex = menuSource.indexOf("['topSite', 'bookmark', 'history']");
-  assert.doesNotMatch(
-    menuSource,
-    /id:\s*['"]all['"]/,
-    `${surface} scope switcher should not offer an all-search item`
-  );
-  assert.doesNotMatch(
-    source,
-    /item\.kind === ['"]all['"]/,
-    `${surface} should not retain an unreachable all-search selection branch`
-  );
   assert.ok(
     engineProviderIndex >= 0 &&
       siteProviderIndex > engineProviderIndex &&
@@ -349,20 +304,10 @@ assert.match(
   /function handleGlobalTypingFocus\(event\)[\s\S]*?shouldHandleModeMenuKeyEvent\(event\)[\s\S]*?const activeElement = document\.activeElement/,
   'newtab global typing should not steal text while the scope panel owns focus'
 );
-assert.doesNotMatch(
-  newtabHtml,
-  /assets\/vendor\/pinyin-pro\.js/,
-  'newtab should not parse the pinyin runtime while the page opens'
-);
 assert.match(
   inputModeSource,
   /function handleModeInput\(event\) \{\s*requestModeMenuPinyinRuntime\(\);[\s\S]*?const items = config\.getModeMenuItems\(\);\s*requestModeMenuPinyinRuntime\(\);/,
   'the scope panel should load the pinyin runtime on the first typed character or panel open'
-);
-assert.doesNotMatch(
-  backgroundSource,
-  /const overlayInjectionFiles = \[[\s\S]*?assets\/vendor\/pinyin-pro\.js[\s\S]*?\];/,
-  'overlay injection should not parse the pinyin runtime on the critical open path'
 );
 assert.match(
   inputModeSource,

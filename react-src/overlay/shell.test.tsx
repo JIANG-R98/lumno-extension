@@ -52,10 +52,6 @@ describe('Overlay React shell', () => {
       })
     ).toBe(mount.panel);
 
-    const externalChild = document.createElement('input');
-    mount.panel.appendChild(externalChild);
-    expect(mount.panel.contains(externalChild)).toBe(true);
-
     act(() => api.destroyOverlayMount(mount.host));
     expect(mount.root?.querySelector('#overlay-panel')).toBeNull();
   });

@@ -23,7 +23,6 @@ const featureHintsCss = fs.readFileSync(
   path.join(repoRoot, 'src/shared/feature-hints.css'),
   'utf8'
 );
-const dockReactSource = fs.readFileSync(path.join(repoRoot, 'react-src/newtab/dock.tsx'), 'utf8');
 
 function getCssBlock(source, marker) {
   const markerIndex = source.indexOf(marker);
@@ -92,15 +91,6 @@ function testNewtabRedirectFocusHintIsConsumedOnce() {
     preferenceLoadSource,
     /storageArea\.set/,
     'loading a missing auto-focus preference should not persist the new default over existing users'
-  );
-  const preferenceChangeSource = newtabSource.slice(
-    newtabSource.indexOf('if (changes[NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY])'),
-    newtabSource.indexOf('if (changes[RECENT_COUNT_STORAGE_KEY])')
-  );
-  assert.doesNotMatch(
-    preferenceChangeSource,
-    /storageArea\.set/,
-    'removing the auto-focus preference should restore the default without writing it back'
   );
 }
 
@@ -617,29 +607,14 @@ assert.match(
   /function activateLocalSearchScope\(scope, activationOptions\)[\s\S]*?if \(options\.preserveResults !== true\) \{\s*clearSearchSuggestions\(\);\s*\}[\s\S]*?function activateSiteSearch\(provider, activationOptions\)[\s\S]*?if \(options\.preserveResults !== true\) \{\s*clearSearchSuggestions\(\);\s*\}/,
   'local and provider activation should both avoid clearing a preserved result frame'
 );
-assert.doesNotMatch(
-  `${newtabSource}\n${fs.readFileSync(path.join(repoRoot, 'src/newtab/layout.js'), 'utf8')}`,
-  /beginSuggestionsInputSession|captureSuggestionsResizeState|animateSuggestionsResize|holdSuggestionsInputHeight|settleHeightAfterRemoteMix|setSuggestionsResizeLifecycle/,
-  'New Tab should not capture, lock, defer, or animate result height'
-);
 
 
 function testNewtabLoadsAndUsesDockRuntime() {
   const newtabJs = readNewtabRuntimeSource();
-  assert.ok(
-    !newtabHtml.includes('<script src="dock.js"></script>') &&
-      newtabHtml.includes('data-react-entry="../react/newtab-islands.js"'),
-    'New Tab should receive its dock implementation from the React entry'
-  );
   assert.match(
     newtabJs,
     /const bottomDockRuntime = NEWTAB_DOCK\.createBottomDockRuntime\(/,
     'the browser adapter should create the bottom dock through the React API'
-  );
-  assert.match(
-    dockReactSource,
-    /export function createBottomDockRuntime\([\s\S]*?bottomDock\.dataset\.reactIsland = 'newtab-bottom-dock'/,
-    'React should own the bottom dock structure and diagnostic marker'
   );
   assert.doesNotMatch(
     newtabJs,
@@ -993,11 +968,6 @@ function testInitialEntryMotionIsStaggeredAndTransient() {
     /function loadBookmarks\(options\)[\s\S]*?requestedSectionDataRevision[\s\S]*?requestedSectionDataRevision !== sectionDataRevision[\s\S]*?function loadRecentSites\(options\)[\s\S]*?requestedSectionDataRevision[\s\S]*?requestedSectionDataRevision !== sectionDataRevision/,
     'late section requests from provisional startup preferences should not overwrite the authoritative first layout'
   );
-  assert.doesNotMatch(
-    newtabSource,
-    /hydrateSectionsFromCache|_x_extension_newtab_(?:recent|bookmark)_cache_2024_unique_/,
-    'stale section caches should not paint a provisional dock geometry before authoritative data'
-  );
   assert.match(
     newtabSource,
     /function markInitialWallpaperVisualReady\(\)[\s\S]*?setAttribute\('data-nt-wallpaper-ready', '1'\)/,
@@ -1012,11 +982,6 @@ function testInitialEntryMotionIsStaggeredAndTransient() {
     newtabHtml,
     /body:not\(\[data-nt-ready="1"\]\) \.x-nt-wallpaper-control,\s*body:not\(\[data-nt-ready="1"\]\) \.x-nt-feedback-control,\s*body:not\(\[data-nt-ready="1"\]\) \.x-nt-bookmark-cascade-debug-control\s*\{\s*visibility:\s*hidden;\s*\}/,
     'corner controls should stay hidden until their entrance animation state is installed'
-  );
-  assert.doesNotMatch(
-    newtabHtml,
-    /x-nt-initial-background-veil|_x_nt_background_reveal_2026_unique_/,
-    'the initial page should not overlay an extra wallpaper reveal that can flash during entry'
   );
   assert.match(
     wallpaperSource,
@@ -1105,18 +1070,6 @@ function testInitialEntryMotionIsStaggeredAndTransient() {
     /filter:\s*blur/,
     'the backdrop-filtered search panel should stay on compositor-only opacity and scale motion'
   );
-  [
-    '_x_nt_wordmark_enter_2026_unique_',
-    '_x_nt_shortcut_entry_2026_unique_',
-    '_x_nt_content_section_entry_2026_unique_',
-    '_x_nt_corner_control_entry_2026_unique_'
-  ].forEach((name) => {
-    assert.doesNotMatch(
-      getCssBlock(newtabHtml, `@keyframes ${name}`),
-      /translate(?:3d|Y)?\s*[:(]/,
-      `${name} should preserve its final vertical position throughout entry`
-    );
-  });
   [
     ['.x-lumno-feature-hint--newtab-wallpaper', 'translateY(-50%)'],
     ['.x-lumno-feature-hint--newtab-ai-quick-jump', 'translateX(-50%)'],

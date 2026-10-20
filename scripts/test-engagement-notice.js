@@ -415,8 +415,7 @@ function createEligibleState(surface, now) {
     'newtab should not create the prompt until language and update arbitration are ready'
   );
   assert(
-    newtabSource.includes('loadLocaleMessages(targetLocale).then(applyResolvedMessages);') &&
-      !newtabSource.includes('_x_extension_language_messages_2024_unique_'),
+    newtabSource.includes('loadLocaleMessages(targetLocale).then(applyResolvedMessages);'),
     'newtab should load packaged locale messages without a synced cache payload'
   );
   assert(
@@ -443,12 +442,6 @@ function createEligibleState(surface, now) {
         "import { createFeatureHintViewApi } from '../shared/feature-hint-view';"
       ),
     'newtab and overlay should render engagement hints through the same shared React component'
-  );
-  assert(
-    !newtabSource.includes('previewMode') &&
-      !overlaySource.includes('previewMode') &&
-      !fs.readFileSync('src/shared/engagement-notice.js', 'utf8').includes('previewMode'),
-    'engagement runtime should not ship the temporary visual-review bypass'
   );
   assert(
     newtabSource.includes('exposureGate: updateNoticeController && updateNoticeController.ready') &&

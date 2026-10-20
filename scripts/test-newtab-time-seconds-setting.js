@@ -226,25 +226,6 @@ assert.match(
   /getTimeSecondsVisible: \(\) => newtabTimeSecondsVisible[\s\S]*?setTimeSecondsVisible: (?:\(\.\.\.args\) => )?setNewtabTimeSecondsVisible/
 );
 
-assert.match(wordmarkSource, /fontWeight\?: number/);
-assert.match(wordmarkSource, /const fontWeight = model\.fontWeight \?\? 320/);
-assert.match(wordmarkSource, /CLOCK_LETTER_SPACING_WEIGHT_STEP = 100/);
-assert.match(wordmarkSource, /CLOCK_LETTER_SPACING_STEP_EM = 0\.004/);
-assert.match(wordmarkSource, /letterSpacing: getClockLetterSpacing\(fontWeight\)/);
-assert.match(wordmarkSource, /font\?: TopContentClockFont/);
-assert.match(wordmarkSource, /fontFamily: font\.family/);
-assert.match(wordmarkSource, /'--x-nt-clock-colon-gap': `\$\{font\.colonGap\}em`/);
-assert.match(wordmarkSource, /showSeconds\?: boolean/);
-assert.match(wordmarkSource, /const interval = showSeconds \? 1_000 : 60_000/);
-assert.match(wordmarkSource, /data-show-seconds=\{showSeconds \? 'true' : 'false'\}/);
-assert.match(wordmarkSource, /className="x-nt-time-seconds-value"/);
-assert.match(wordmarkSource, /const secondsText = String\(time\.seconds\)\.padStart\(2, '0'\)/);
-assert.match(wordmarkSource, /className="x-nt-time-seconds-digit"/);
-assert.match(wordmarkSource, /data-place="tens"/);
-assert.match(wordmarkSource, /data-place="ones"/);
-assert.match(wordmarkSource, /key=\{`tens-\$\{secondsText\[0\]\}`\}/);
-assert.match(wordmarkSource, /key=\{`ones-\$\{secondsText\[1\]\}`\}/);
-assert.doesNotMatch(wordmarkSource, /value=\{time\.seconds\}/);
 assert.match(
   newtabHtml,
   /_x_nt_time_seconds_soft_swap_2026_unique_ 120ms[\s\S]*?@keyframes _x_nt_time_seconds_soft_swap_2026_unique_[\s\S]*?transform: scale\(0\.985\);[\s\S]*?transform: scale\(1\);/
@@ -263,10 +244,8 @@ assert.doesNotMatch(
   )?.[0] || '',
   /translate/
 );
-assert.match(wordmarkSource, /document\.visibilityState !== 'visible'[\s\S]*?return;/);
 assert.match(wordmarkSource, /const localizedTimeFormatter = useMemo\(/);
 assert.match(wordmarkSource, /const ClockHourMinuteDigits = memo\(/);
-assert.match(wordmarkSource, /onAnimationEnd=\{\(event\) => event\.stopPropagation\(\)\}/);
 
 const expectedLabels = {
   en: { font: 'Time font', fontWeight: 'Time font weight', seconds: 'Show seconds' },

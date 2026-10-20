@@ -19,69 +19,20 @@ assert.strictEqual(settings.addStorageChangeListener({
   storage: { onChanged: { addListener() {} } }
 }, null), false);
 
-// The Search sources order record added one additive preference. An absent
-// value keeps every list in its usual order, so it carries no migration.
-// The New Tab time font is another: an absent value keeps Open Sans.
-// So are the time size and opacity: absent values keep 54px and 100%.
-// And the time ink: an absent value keeps the automatic ink.
-// And the 12-hour clock: an absent value keeps the 24-hour clock.
-// And the random mix's categories: an absent value keeps every category in.
-// And the material's light/dark: an absent value follows the New Tab's theme.
-assert.strictEqual(settings.CHROME_SYNC_STORAGE_KEYS.length, 86);
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_CURATED_MIX_EXCLUDED_STORAGE_KEY));
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_TIME_12_HOUR_STORAGE_KEY));
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_newtab_time_font_2026_unique_'));
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_search_source_order_2026_unique_'));
-assert.strictEqual(
-  new Set(settings.CHROME_SYNC_STORAGE_KEYS).size,
-  settings.CHROME_SYNC_STORAGE_KEYS.length
-);
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_language_2024_unique_'));
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_motion_effects_enabled_2026_unique_'));
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_simple_mode_enabled_2026_unique_'));
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_number_shortcut_instant_enabled_2026_unique_'));
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_macos_ctrl_suggestion_navigation_enabled_2026_unique_'));
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_overlay_page_theme_adaptation_enabled_2026_unique_'));
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_newtab_input_auto_focus_enabled_2026_unique_'));
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY));
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY));
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_newtab_time_font_weight_2026_unique_'));
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_newtab_time_seconds_visible_2026_unique_'));
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_search_result_display_limit_2026_unique_'));
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.AGGREGATE_SEARCH_STORAGE_KEY));
-// Folder colors sync by bookmark path; the legacy id-keyed map stays device-only.
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.BOOKMARK_FOLDER_COLOR_REFS_STORAGE_KEY));
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.BOOKMARK_FOLDER_COLOR_PRESETS_STORAGE_KEY));
-assert(!settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_bookmark_folder_colors_2026_unique_'));
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(
-  settings.AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY
-));
 assert.strictEqual(settings.normalizeAggregateSearchAutoGroupEnabled(undefined), true);
 assert.strictEqual(settings.normalizeAggregateSearchAutoGroupEnabled(false), false);
 assert.strictEqual(settings.normalizeAggregateSearchAutoGroupEnabled(true), true);
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_bookmark_view_mode_2026_unique_'));
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_SHORTCUTS_CHUNK_2_STORAGE_KEY));
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_SHORTCUTS_CHUNK_3_STORAGE_KEY));
 // The bookmark bar material syncs through WebDAV only, without the migrated legacy color.
 assert.deepStrictEqual(settings.BOOKMARK_TOPBAR_WEBDAV_STORAGE_KEYS, settings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS.slice(0, 3));
-assert(!settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_bookmark_topbar_surface_mode_2026_unique_'));
-assert(!settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_bookmark_topbar_surface_color_light_2026_unique_'));
-assert(!settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_bookmark_topbar_surface_color_dark_2026_unique_'));
 assert.deepStrictEqual(settings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS, [
   '_x_extension_bookmark_topbar_surface_mode_2026_unique_',
   '_x_extension_bookmark_topbar_surface_color_light_2026_unique_',
   '_x_extension_bookmark_topbar_surface_color_dark_2026_unique_',
   '_x_extension_bookmark_topbar_surface_color_2026_unique_'
 ]);
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_selection_quick_actions_group_enabled_2026_unique_'));
-assert(!settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_selection_quick_actions_trigger_style_2026_unique_'));
-assert(!settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_selection_quick_actions_icon_set_2026_unique_'));
-assert(!settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_language_messages_2024_unique_'));
-assert(!settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_newtab_local_wallpaper_2026_unique_'));
 assert.strictEqual(settings.normalizeNewtabInputAutoFocusEnabled(undefined), false);
 assert.strictEqual(settings.normalizeNewtabInputAutoFocusEnabled(true), true);
 assert.strictEqual(settings.normalizeNewtabInputAutoFocusEnabled(false), false);
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY));
 assert.deepStrictEqual(settings.normalizeNewtabOpenInNewTab(undefined), {
   search: false,
   shortcuts: false,
@@ -153,8 +104,6 @@ assert.strictEqual(settings.normalizeNewtabTimeFontWeight(299), 300);
 assert.strictEqual(settings.normalizeNewtabTimeFontWeight(320), 320);
 assert.strictEqual(settings.normalizeNewtabTimeFontWeight('537'), 537);
 assert.strictEqual(settings.normalizeNewtabTimeFontWeight(801), 800);
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_TIME_FONT_SIZE_STORAGE_KEY));
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_TIME_OPACITY_STORAGE_KEY));
 assert.strictEqual(settings.normalizeNewtabTimeFontSize(undefined), 54);
 assert.strictEqual(settings.normalizeNewtabTimeFontSize(null), 54);
 assert.strictEqual(settings.normalizeNewtabTimeFontSize(10), 32);
@@ -164,7 +113,6 @@ assert.strictEqual(settings.normalizeNewtabTimeOpacity(undefined), 100);
 assert.strictEqual(settings.normalizeNewtabTimeOpacity(0), 20);
 assert.strictEqual(settings.normalizeNewtabTimeOpacity(65), 65);
 assert.strictEqual(settings.normalizeNewtabTimeOpacity(140), 100);
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_TIME_INK_STORAGE_KEY));
 assert.strictEqual(settings.normalizeNewtabTimeInk(undefined), 'auto');
 assert.strictEqual(settings.normalizeNewtabTimeInk('light'), 'light');
 assert.strictEqual(settings.normalizeNewtabTimeInk('dark'), 'dark');

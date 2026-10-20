@@ -536,11 +536,6 @@ assert.match(
   /function drawAsciiLayer\([\s\S]*?liftSampleColor\(/,
   'ASCII glyphs should retain locally sampled wallpaper hues'
 );
-assert.doesNotMatch(
-  effectsSource,
-  /shiftSampleColor|getCurvedEffectColor/,
-  'halftone and ASCII colors should not be pushed toward monochrome ink'
-);
 assert.match(
   effectsSource,
   /shouldCrossfadeResize\s*=\s*Boolean\([\s\S]*?normalized\.type === 'dither'/,
@@ -580,21 +575,6 @@ assert.match(
   effectsSource,
   /function handleWindowResize\(\)[\s\S]*?shouldCrossfadeResize\s*=\s*Boolean\([\s\S]*?normalized\.type === 'halftone'[\s\S]*?normalized\.type === 'ascii'[\s\S]*?scheduleRender\(RESIZE_RENDER_SETTLE_MS\)[\s\S]*?windowObj\.addEventListener\('resize', handleWindowResize/,
   'viewport resize settling should opt halftone and ASCII renders into the crossfade'
-);
-assert.doesNotMatch(
-  newtabHtml,
-  /x-nt-wallpaper-effect-hover-canvas/,
-  'new tab styles should not retain the removed wallpaper hover canvas'
-);
-assert.doesNotMatch(
-  effectsSource,
-  /pointermove|pointerleave|hoverPointer|hoverContext|prefs\.hover/,
-  'wallpaper filters should not bind pointer-driven hover rendering'
-);
-assert.doesNotMatch(
-  wallpaperSource,
-  /newtab_wallpaper_effect_hover|wallpaperEffectHover|createEffectToggleControl/,
-  'wallpaper settings should not render or localize a hover-effect control'
 );
 assert.match(
   wallpaperSource,
@@ -676,7 +656,6 @@ assert.match(
   /function drawCrtFallbackLayer\([\s\S]*?details\.crtRgbOffset[\s\S]*?details\.crtBloom[\s\S]*?details\.crtCurvature/,
   'the Canvas CRT fallback should respond to every visible optical control'
 );
-assert.doesNotMatch(effectsSource, /ensureMaterialNoiseTile\('electron'\)/, 'CRT electron grain should be removed');
 assert.match(effectsSource, /const scanlinePeriod = 2;/, 'Canvas CRT fallback should use fixed two-pixel scanlines');
 assert.match(
   effectsSource,
@@ -712,12 +691,6 @@ assert.match(
   effectsSource,
   /rightNeighbor[\s\S]*?bottomNeighbor[\s\S]*?mixBlockColors[\s\S]*?wearLength/,
   'Blocks should retain neighbor color bounce and restrained edge wear'
-);
-const drawBlocksSource = effectsSource.match(/function drawBlocks[\s\S]*?\n    function getGridStart/)?.[0] || '';
-assert.doesNotMatch(
-  drawBlocksSource,
-  /sample\.signal|rightExposure|bottomExposure|ambientOcclusion/,
-  'Blocks should use one uniform extrusion height instead of image-driven height differences'
 );
 assert.doesNotMatch(
   effectsSource.match(/function drawBlocks[\s\S]*?\n    function getGridStart/)?.[0] || '',

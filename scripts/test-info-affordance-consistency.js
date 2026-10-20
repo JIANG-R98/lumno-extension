@@ -8,7 +8,6 @@ const infoButtonCss = readStylesheet('src/shared/info-button.css');
 const newtabHtml = readPageSource('newtab.html');
 const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
 const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
-const infoButtonSource = fs.readFileSync('react-src/options/info-button.tsx', 'utf8');
 const optionReactSources = [
   'react-src/options/blacklist-list.tsx',
   'react-src/options/settings-forms.tsx',
@@ -52,10 +51,6 @@ for (const [source, selector, label] of [
   );
 }
 
-assert.match(infoButtonSource, /ri-information-line/, 'the shared component should use the information icon');
-assert.doesNotMatch(infoButtonSource, /ri-question-line/, 'the shared component should not use the question icon');
-// Its button element, name and description are covered by react-src/options/info-button.test.tsx.
-
 const staticHosts = [
   '_x_extension_restricted_action_info_2026_unique_',
   '_x_extension_bookmark_rows_info_2026_unique_',
@@ -75,25 +70,6 @@ assert.match(
 for (const source of optionReactSources) {
   assert.match(source, /import \{ InfoButton \} from '\.\/info-button';/);
   assert.match(source, /<InfoButton[\s\S]*?tooltip=/, 'dynamic Options info affordances should reuse InfoButton');
-}
-
-const adaptationHostStart = optionsHtml.indexOf('_x_extension_overlay_page_theme_adaptation_info_2026_unique_');
-const adaptationToggleStart = optionsHtml.indexOf('_x_extension_overlay_page_theme_adaptation_toggle_2026_unique_');
-assert(adaptationHostStart >= 0 && adaptationHostStart < adaptationToggleStart);
-assert.doesNotMatch(
-  optionsHtml.slice(adaptationHostStart, adaptationToggleStart),
-  /ri-question-line/,
-  'the webpage theme adaptation info should not retain the old question icon'
-);
-
-for (const [label, source] of [
-  ['options.html', optionsHtml],
-  ['site-search-list.tsx', optionReactSources[2]],
-  ['wallpaper.js', fs.readFileSync('src/newtab/wallpaper.js', 'utf8')],
-  ['wallpaper-view.tsx', fs.readFileSync('react-src/newtab/wallpaper-view.tsx', 'utf8')],
-  ['onboarding-content.js', fs.readFileSync('src/onboarding/onboarding-content.js', 'utf8')]
-]) {
-  assert.doesNotMatch(source, /ri-question-(?:line|fill)|icons\?\.help/, `${label} should use the information icon for help affordances`);
 }
 
 console.log('info affordance consistency tests passed');

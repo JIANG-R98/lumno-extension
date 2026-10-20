@@ -49,11 +49,6 @@ assertMatches(
   /function scheduleOptionsViewportLayoutRefresh\(\) \{[\s\S]*?if \(optionsResizeFrame\)[\s\S]*?requestAnimationFrame/,
   'options resize work should be coalesced with requestAnimationFrame'
 );
-assert.doesNotMatch(
-  optionsJs,
-  /measureTabsIndicator|refreshAllTabsIndicators|scheduleTabsIndicatorsRefresh/,
-  'segmented indicators are positioned by the shared React hook, not re-measured by the options adapter'
-);
 assert.strictEqual(
   (optionsJs.match(/SETTINGS\.addStorageChangeListener\(chrome, listener\)/g) || []).length,
   1,

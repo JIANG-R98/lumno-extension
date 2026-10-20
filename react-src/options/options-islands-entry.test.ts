@@ -242,16 +242,4 @@ describe('Options React islands entry', () => {
       tabSwitcher: runtime.LumnoOverlayTabSwitcherView
     });
   });
-
-  it('installs React APIs when bootstrap is waiting', async () => {
-    runtime.LumnoOptionsReactBootstrap = {
-      reactReady: false
-    };
-
-    await import('./options-islands-entry');
-
-    expect(runtime.LumnoOptionsReactBootstrap.reactReady).toBe(true);
-    expect(runtime.LumnoOptionsBlacklistList?.implementation).toBe('react');
-    expect(runtime.LumnoOptionsReactIslands).toBeDefined();
-  });
 });

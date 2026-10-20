@@ -15,11 +15,6 @@ assert.match(
   /if \(shouldAnimateScopeResultEnter\) \{[\s\S]*?data-scope-result-enter', 'run'[\s\S]*?\} else \{\s*suggestionsContainer\.removeAttribute\('data-scope-result-enter'\);/,
   'site-search results without a lower panel should clear the expansion marker'
 );
-assert.doesNotMatch(
-  overlaySource,
-  /allowFromZero|scheduleSearchPanelsLayoutTransition|animateSuggestionsHeight/,
-  'the optional row entrance should not reintroduce a coordinated container-height animation'
-);
 assert.match(
   overlaySource,
   /if \(shouldAnimateScopeResultEnter\) \{[\s\S]*?commitSuggestionsNaturalHeightAfterRender\(\);/,

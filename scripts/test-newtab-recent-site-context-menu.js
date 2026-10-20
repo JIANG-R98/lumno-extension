@@ -7,28 +7,7 @@ const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 const repoRoot = path.resolve(__dirname, '..');
 const newtabJs = readNewtabRuntimeSource();
 const newtabHtml = readPageSource('newtab.html');
-const recentSitesReact = fs.readFileSync(
-  path.join(repoRoot, 'react-src', 'newtab', 'recent-sites.tsx'),
-  'utf8'
-);
-const onboardingPreviewReact = fs.readFileSync(
-  path.join(repoRoot, 'react-src', 'onboarding', 'newtab-preview.tsx'),
-  'utf8'
-);
-const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
 
-assert.ok(
-  recentSitesReact.includes('onContextMenu={(event) => {') &&
-    recentSitesReact.includes('options.onItemContextMenu({') &&
-    recentSitesReact.includes('event: event.nativeEvent'),
-  'recent-site cards should route right-clicks to the New Tab context-menu controller'
-);
-assert.ok(
-  !recentSitesReact.includes('className="x-nt-recent-dismiss"') &&
-    !recentSitesReact.includes('data-recent-dismiss-icon') &&
-    !recentSitesReact.includes('_xDismissButton'),
-  'recent-site cards should not render the old top-right remove button'
-);
 assert.ok(
   newtabJs.includes("className: 'x-nt-shortcut-context-menu x-nt-recent-context-menu'") &&
     newtabJs.includes("menuClassName: 'x-nt-shortcut-context-menu-portal x-nt-recent-context-menu-portal'") &&
@@ -59,11 +38,6 @@ assert.ok(
   newtabHtml.includes('[data-recent-context-menu-open="true"]') &&
     !newtabHtml.includes('.x-nt-recent-dismiss'),
   'the context-menu target should remain visibly active without old dismiss-button styles'
-);
-assert.ok(
-  !onboardingPreviewReact.includes('className="x-nt-recent-dismiss"') &&
-    !onboardingHtml.includes('.newtab-preview-viewport .x-nt-recent-dismiss'),
-  'the onboarding New Tab preview should match the button-free recent card'
 );
 
 ['en', 'zh_CN', 'zh_TW', 'ja'].forEach((locale) => {

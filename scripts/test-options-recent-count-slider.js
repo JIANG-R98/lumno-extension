@@ -27,11 +27,6 @@ assert.match(
   /id="_x_extension_recent_count_control_2026_unique_"/,
   'recent site cards should mount the shared range slider control'
 );
-assert.doesNotMatch(
-  optionsHtml,
-  /_x_extension_recent_count_select_2024_unique_/,
-  'recent site cards should not keep the old select control'
-);
 assert.ok(
   recentSettingsRow.indexOf('_x_extension_recent_count_control_2026_unique_') <
     recentSettingsRow.indexOf('_x_extension_recent_mode_tabs_wrap_2024_unique_'),

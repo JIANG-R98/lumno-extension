@@ -127,10 +127,6 @@ function testBrowserProfileRuntimeWiring() {
   );
   assert.match(newtabSource, /BROWSER_PROFILE\.getBrowserInternalProfile\(navigator\)/);
   assert.match(overlaySource, /BROWSER_PROFILE\.getBrowserInternalProfile\(navigator\)/);
-  [newtabSource, overlaySource].forEach((source) => {
-    assert.doesNotMatch(source, /function getBrowserInternalScheme\(/);
-    assert.doesNotMatch(source, /function getClientHintBrowserName\(/);
-  });
 }
 
 function testShortcutUrlMatching() {

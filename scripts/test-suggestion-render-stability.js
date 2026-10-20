@@ -146,11 +146,6 @@ assert.match(
   /function commitSuggestionsNaturalHeightAfterRender\(\) \{[\s\S]*?SUGGESTIONS_HEIGHT_LAYOUT\.applyNaturalSuggestionsHeightLayout\([\s\S]*?suggestionsContainer[\s\S]*?syncSearchModeMenuResultOffset\(\);/,
   'Overlay result commits should adopt natural height and publish the final menu offset synchronously'
 );
-assert.doesNotMatch(
-  `${newtabSource}\n${newtabLayoutSource}\n${overlaySource}`,
-  /captureSuggestionsHeightState|deferCappedShrink|animateSuggestionsHeight|beginSuggestionsInputSession|captureSuggestionsResizeState|animateSuggestionsResize|holdSuggestionsInputHeight|settleHeightAfterRemoteMix/,
-  'New Tab and Overlay should not capture, lock, defer, or animate result height'
-);
 assert.match(
   newtabHtml,
   /<script src="direct-navigation-settle\.js"><\/script>/,

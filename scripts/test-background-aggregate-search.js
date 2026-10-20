@@ -1,21 +1,10 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
 const vm = require('vm');
 const aggregateSearch = require('../src/background/aggregate-search.js');
 const aggregateStore = require('../src/shared/aggregate-search-store.js');
 const { readBackgroundSource } = require('./helpers/background-source');
 
 const backgroundSource = readBackgroundSource();
-const aggregateSearchSource = fs.readFileSync(
-  path.join(__dirname, '..', 'src/background/aggregate-search.js'),
-  'utf8'
-);
-assert.doesNotMatch(
-  aggregateSearchSource,
-  /MAX_PROVIDER_COUNT/,
-  'aggregate execution must rely on the store normalization limit instead of duplicating it'
-);
 assert.strictEqual(
   aggregateSearch.resolveAggregateSearchAutoGroupEnabled(undefined, []),
   true,

@@ -73,11 +73,6 @@ assert.match(
   /function playInputModePrefixCurrentResizeAnimation\(fromState, toState\)[\s\S]*?siteSearchPrefixCurrent\.animate\(\[[\s\S]*?marginLeft:[\s\S]*?width:/,
   'the overlay current label should expand in normal flow and continuously move the chevron'
 );
-assert.doesNotMatch(
-  searchInputModeSource,
-  /setInputModePrefixCurrentOverlay|data-current-overlay|current-overlay-left/,
-  'the current label should not reintroduce the overlapping chevron overlay state'
-);
 assert.match(
   searchInputCss,
   /\.x-lumno-search-input__icon\[data-search-scope-action="true"\]\[data-hover-active="true"\][\s\S]*?var\(--x-ext-input-icon-hover-bg/,

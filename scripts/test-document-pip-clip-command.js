@@ -37,11 +37,6 @@ assert.match(
   /session\.contentObserver\.observe\(element,[\s\S]*characterData:\s*true[\s\S]*attributes:\s*true/,
   'web clip should observe source DOM changes so dynamic text can refresh in PiP'
 );
-assert.doesNotMatch(
-  contentJs,
-  /contextChain\.mountPoint\.appendChild\(element\)/,
-  'web clip should mirror the selected element instead of moving it out of the live page DOM'
-);
 
 assert.match(
   overlayJs,
@@ -107,11 +102,6 @@ assert.match(
   /attachShadow\(\{ mode: 'closed' \}\)[\s\S]*?getURL\('src\/shared\/toast\.css'\)/,
   'the web clip Toast should load the shared Toast styles inside its own shadow root'
 );
-assert.doesNotMatch(
-  contentJs,
-  /errorToastBackground|toastTimer/,
-  'the web clip picker should not keep its own Toast palette or timer'
-);
 
 assert.match(
   backgroundJs,
@@ -132,11 +122,6 @@ assert.match(
   contentJs,
   /requestWindow\([\s\S]*?\}\);[\s\S]*?await requestDocumentPipOwnership\(\);/,
   'the PiP window should open before any background round trip spends the click activation'
-);
-assert.doesNotMatch(
-  contentJs,
-  /DOCUMENT_PIP_BOUNDS_STORAGE_KEY|moveTo\(/,
-  'the picker should not keep position code that PiP windows ignore'
 );
 
 console.log('document PiP clip command tests passed');

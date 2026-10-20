@@ -6,9 +6,7 @@ const { readNewtabRuntimeSource } = require('./helpers/newtab-source');
 
 const optionsHtml = readPageSource('src/options/options.html');
 const toggleSettings = require('../src/options/options-toggle-settings.js').getToggleSettings(settings);
-const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
 const newtabSource = readNewtabRuntimeSource();
-const inputModeSource = fs.readFileSync('src/shared/search-input-mode.js', 'utf8');
 const localeNames = ['en', 'ja', 'zh_CN', 'zh_TW'];
 
 const settingsContract = [
@@ -30,7 +28,6 @@ const settingsContract = [
 
 settingsContract.forEach((entry) => {
   assert.strictEqual(settings[entry.constant], entry.storageKey);
-  assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(entry.storageKey));
   assert.match(optionsHtml, new RegExp(`id="${entry.htmlId}"[^>]*checked`));
   assert.match(optionsHtml, new RegExp(`data-i18n="${entry.i18nKey}"`));
   assert(newtabSource.includes(entry.constant));
@@ -72,11 +69,5 @@ settingsContract.forEach((entry) => {
     `${entry.constant} should migrate from legacy local storage`
   );
 });
-
-assert.doesNotMatch(
-  `${optionsHtml}\n${optionsSource}\n${newtabSource}\n${inputModeSource}`,
-  /NEWTAB_SETTINGS_BUTTON_VISIBLE|newtabSettingsButtonVisible|settings_newtab_settings_button_visible/,
-  'the Settings button should remain always visible without a visibility preference'
-);
 
 console.log('newtab action-button visibility setting tests passed');

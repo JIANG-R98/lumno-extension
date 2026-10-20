@@ -744,15 +744,5 @@ assert.match(
   /bindInputActionCursorTooltip\(closeOtherTabsButton, closeOtherTooltipText\)/,
   'overlay close-other-tabs icon should bind its tooltip to the cursor'
 );
-assert.doesNotMatch(
-  overlayPanel,
-  /rightIcon\.addEventListener\('mouseenter',[\s\S]{0,180}showTopActionTooltip/,
-  'overlay settings icon should no longer use the anchored top-action tooltip'
-);
-assert.doesNotMatch(
-  overlayPanel,
-  /closeOtherTabsButton\.addEventListener\('mouseenter',[\s\S]{0,180}showTopActionTooltip/,
-  'overlay close-other-tabs icon should no longer use the anchored top-action tooltip'
-);
 
 console.log('shared cursor tooltip tests passed');

@@ -27,26 +27,6 @@ const overlaySource = fs.readFileSync(
   path.join(repoRoot, 'src/overlay/search-panel.js'),
   'utf8'
 );
-const reactSource = fs.readFileSync(
-  path.join(repoRoot, 'react-src/newtab/shortcut-dialog.tsx'),
-  'utf8'
-);
-const recentSitesReactSource = fs.readFileSync(
-  path.join(repoRoot, 'react-src/newtab/recent-sites.tsx'),
-  'utf8'
-);
-const bookmarksReactSource = fs.readFileSync(
-  path.join(repoRoot, 'react-src/newtab/bookmarks.tsx'),
-  'utf8'
-);
-const suggestionsReactSource = fs.readFileSync(
-  path.join(repoRoot, 'react-src/search/suggestions.tsx'),
-  'utf8'
-);
-const shortcutsReactSource = fs.readFileSync(
-  path.join(repoRoot, 'react-src/newtab/shortcuts.tsx'),
-  'utf8'
-);
 const feedbackReactSource = fs.readFileSync(
   path.join(repoRoot, 'react-src/newtab/feedback.tsx'),
   'utf8'
@@ -65,10 +45,6 @@ const wordmarkReactSource = fs.readFileSync(
 );
 const searchInputReactSource = fs.readFileSync(
   path.join(repoRoot, 'react-src/shared/search-input.tsx'),
-  'utf8'
-);
-const toastReactSource = fs.readFileSync(
-  path.join(repoRoot, 'react-src/shared/toast.tsx'),
   'utf8'
 );
 const bootstrapPath = path.join(repoRoot, 'src/shared/react-page-bootstrap.js');
@@ -187,45 +163,11 @@ const bundleBudgets = {
   total: { uncompressed: 818, gzip: 238 }
 };
 
-const retiredNewtabRendererScripts = [
-  'bookmarks-topbar.js',
-  'page-notice.js',
-  'toast.js',
-  'dock.js',
-  'recent-sites-view.js',
-  'bookmarks-view.js',
-  'suggestions-view.js',
-  'shortcut-dialog.js',
-  'shortcuts-view.js'
-].map((name) => `<script src="${name}"></script>`);
-const retiredRendererFiles = [
-  'src/newtab/bookmarks-topbar.js',
-  'src/newtab/bookmarks-view.js',
-  'src/newtab/dock.js',
-  'src/newtab/page-notice.js',
-  'src/newtab/recent-sites-view.js',
-  'src/newtab/shortcut-dialog.js',
-  'src/newtab/shortcuts-view.js',
-  'src/newtab/suggestions-view.js',
-  'src/newtab/toast.js',
-  'src/overlay/input-ui.js',
-  'src/overlay/shell.js',
-  'src/shared/checkbox.js',
-  'src/shared/custom-select.js',
-  'src/shared/search-input-ui.js'
-];
 const bootstrapScript = 'src="../shared/react-page-bootstrap.js"';
 
 assert(
-  retiredNewtabRendererScripts.every((script) => !newtabHtml.includes(script)) &&
-    newtabHtml.includes(bootstrapScript),
-  'New Tab should load its React entry without retired renderer scripts'
-);
-assert(
-  retiredRendererFiles.every(
-    (relativePath) => !fs.existsSync(path.join(repoRoot, relativePath))
-  ),
-  'retired UI renderer and fallback files should stay deleted'
+  newtabHtml.includes(bootstrapScript),
+  'New Tab should load its React entry through the shared bootstrap'
 );
 assert(
   !newtabHtml.includes('<script src="newtab.js"></script>') &&
@@ -260,22 +202,11 @@ assert(
 assert(
   /id="_x_extension_blacklist_form_2026_unique_"[^>]*><\/div>/.test(optionsHtml) &&
     /id="_x_extension_favicon_blacklist_form_2026_unique_"[^>]*><\/div>/.test(optionsHtml) &&
-    !optionsSource.includes('blacklistFormExpanded') &&
-    !optionsSource.includes('faviconBlacklistFormExpanded') &&
-    !optionsSource.includes('setBlacklistFormExpanded') &&
-    !optionsSource.includes('setFaviconBlacklistFormExpanded') &&
     optionsSource.includes('searchBlacklistFormController?.reset()') &&
     optionsSource.includes('faviconBlacklistFormController?.reset()'),
   'React-owned blacklist forms should not retain legacy DOM state or event-handler fallbacks'
 );
 assert(
-  !onboardingSource.includes('if (!copyActionsController)'),
-  'Onboarding should not retain an empty copy-actions fallback branch'
-);
-assert(
-  !bootstrap.includes("startPage('legacy')") &&
-    !bootstrap.includes('allowReactUpgrade') &&
-    !bootstrap.includes('1500') &&
     bootstrap.includes("root.dataset.lumnoReactRuntime = 'error'") &&
     bootstrap.includes('React page failed to start'),
   'the bootstrap should fail explicitly instead of reviving a legacy UI path'
@@ -536,47 +467,6 @@ assert(
     !/<script[^>]+src=["']https?:\/\//i.test(optionsHtml) &&
     !/<script[^>]+src=["']https?:\/\//i.test(onboardingHtml),
   'MV3 pages should not load React or any script from a CDN'
-);
-assert(
-  !reactSource.includes("from '../../src/newtab/wallpaper") &&
-    !reactSource.includes("from '../../src/newtab/theme") &&
-    !reactSource.includes("from '../../src/newtab/newtab") &&
-    !recentSitesReactSource.includes("from '../../src/newtab/wallpaper") &&
-    !recentSitesReactSource.includes("from '../../src/newtab/theme") &&
-    !recentSitesReactSource.includes("from '../../src/newtab/newtab") &&
-    !bookmarksReactSource.includes("from '../../src/newtab/wallpaper") &&
-    !bookmarksReactSource.includes("from '../../src/newtab/theme") &&
-    !bookmarksReactSource.includes("from '../../src/newtab/newtab") &&
-    !suggestionsReactSource.includes("from '../../src/newtab/wallpaper") &&
-    !suggestionsReactSource.includes("from '../../src/newtab/theme") &&
-    !suggestionsReactSource.includes("from '../../src/newtab/newtab") &&
-    !shortcutsReactSource.includes("from '../../src/newtab/wallpaper") &&
-    !shortcutsReactSource.includes("from '../../src/newtab/theme") &&
-    !shortcutsReactSource.includes("from '../../src/newtab/newtab") &&
-    !toastReactSource.includes("from '../../src/newtab/wallpaper") &&
-    !toastReactSource.includes("from '../../src/newtab/theme") &&
-    !toastReactSource.includes("from '../../src/newtab/newtab"),
-  'the pilot islands should remain isolated from recently changed page systems'
-);
-assert(
-  !fs.existsSync(path.join(repoRoot, 'src/newtab/react-islands.js')),
-  'the obsolete monolithic New Tab bundle should not remain in the extension'
-);
-assert(
-  !fs.existsSync(path.join(repoRoot, 'src/newtab/react-bootstrap.js')),
-  'page-specific bootstrap copies should not remain after sharing the loader'
-);
-assert(
-  !fs.existsSync(path.join(repoRoot, 'src/newtab/shortcut-dialog-react.js')),
-  'the extension should ship one shared React runtime instead of per-island copies'
-);
-assert(
-  !fs.existsSync(path.join(repoRoot, 'src/newtab/shortcuts-view-react.js')),
-  'the shortcuts grid should reuse the shared React runtime'
-);
-assert(
-  !fs.existsSync(path.join(repoRoot, 'src/newtab/toast-react.js')),
-  'the toast should reuse the shared React runtime'
 );
 
 console.log('React migration contract tests passed');

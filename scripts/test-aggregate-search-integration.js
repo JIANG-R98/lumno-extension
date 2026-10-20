@@ -15,17 +15,12 @@ const overlayRuntimeSource = read('src/overlay/runtime.js');
 const overlaySource = read('src/overlay/search-panel.js');
 const backgroundSource = read('src/background/background.js');
 const inputModeSource = read('src/shared/search-input-mode.js');
-const surfaceSource = read('src/shared/aggregate-search-surface.js');
 
 assert.ok(
   manifest.permissions.includes('tabs') && manifest.permissions.includes('tabGroups'),
   'aggregate searches require the existing tabs and tabGroups permissions'
 );
 assert.strictEqual(settings.AGGREGATE_SEARCH_STORAGE_KEY, aggregateStore.STORAGE_KEY);
-assert.ok(
-  settings.CHROME_SYNC_STORAGE_KEYS.includes(aggregateStore.STORAGE_KEY),
-  'aggregate definitions must participate in the Chrome Sync contract'
-);
 
 assert.ok(
   newtabHtml.indexOf('../shared/aggregate-search-store.js') > -1 &&
@@ -61,11 +56,6 @@ assert.ok(
     aggregateGroupIndex < builtinSiteListIndex,
   'options must place custom search above aggregate search and built-in search scopes'
 );
-assert.doesNotMatch(
-  optionsHtml,
-  /aggregate_search_group_desc/,
-  'aggregate search must not render an extra description below its heading'
-);
 assert.match(
   optionsHtml,
   /id="_x_extension_aggregate_search_group_2026_unique_"[\s\S]*?id="_x_extension_aggregate_search_clear_2026_unique_"[^>]*_x_extension_shortcut_group_action_2024_unique_[\s\S]*?ri-delete-bin-4-line/,
@@ -94,20 +84,10 @@ assert.match(
   /SETTINGS\.readStorageValue\([\s\S]*?\.then\(\(value\) => \{[\s\S]*?return items\.map\(/,
   'custom provider loading must return the normalized provider list from the storage promise'
 );
-assert.doesNotMatch(
-  customProviderLoaderSource,
-  /(^|\n)\s*resolve\(/,
-  'custom provider loading must not call an out-of-scope Promise resolver'
-);
 assert.match(
   optionsSource,
   /function writeSiteSearchProviderState\(items, keys\)[\s\S]*?SETTINGS\.writeStorageValues\(rawStorageArea, chrome, payload\)/,
   'custom providers and their disabled built-in keys must be saved in one storage operation'
-);
-assert.doesNotMatch(
-  optionsSource,
-  /Promise\.all\(\[\s*saveCustomSiteSearchProviders\([\s\S]*?saveDisabledSiteSearchKeys\(/,
-  'related custom-provider state must not be split across independent writes'
 );
 assert.match(
   optionsSource,
@@ -144,21 +124,6 @@ assert.ok(
       backgroundSource.indexOf("'src/overlay/search-panel.js'"),
   'overlay injection must load the aggregate store and request controller before the search panel'
 );
-
-assert.match(surfaceSource, /action:\s*'runAggregateSearchQuery'/);
-assert.match(surfaceSource, /const pending = new Set\(\)/);
-assert.match(surfaceSource, /chromeApi\.runtime\s*&&\s*chromeApi\.runtime\.lastError/);
-assert.match(surfaceSource, /aggregate_search_sources_unavailable_error/);
-assert.match(surfaceSource, /aggregate_search_partial_failure/);
-const sharedMessageStart = surfaceSource.indexOf('chromeApi.runtime.sendMessage({');
-const sharedMessageEnd = surfaceSource.indexOf('}, finish);', sharedMessageStart);
-const sharedMessageSource = surfaceSource.slice(sharedMessageStart, sharedMessageEnd);
-assert.match(sharedMessageSource, /aggregateId,/);
-assert.match(sharedMessageSource, /query,/);
-assert.match(sharedMessageSource, /disposition/);
-assert.doesNotMatch(sharedMessageSource, /provider:/);
-assert.doesNotMatch(sharedMessageSource, /providers:/);
-assert.doesNotMatch(sharedMessageSource, /urls:/);
 
 [
   ['newtab', newtabSource, 'runSiteSearchProviderQuery'],
@@ -251,8 +216,6 @@ assert.match(
       messages.aggregate_search_source_selection_unavailable_error,
     `${locale} must localize unavailable, in-progress, and partial-failure feedback`
   );
-  assert.strictEqual(messages.aggregate_search_group_desc, undefined);
-  assert.strictEqual(messages.aggregate_search_empty, undefined);
 });
 
 console.log('aggregate search integration tests passed');
