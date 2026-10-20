@@ -83,10 +83,13 @@ body[data-theme="dark"] .x-nt-folder-color-stage { --x-nt-folder-color-dot: rgb(
   height: 24px;
   flex: 0 0 24px;
   border-radius: 50%;
-  border: 1px solid rgb(0 0 0 / 0.08);
+  /* The edge contrasts with the dialog, not the swatch, so a color matching the
+     dialog background still shows its outline. */
+  border: 1px solid var(--x-nt-color-swatch-edge, rgb(0 0 0 / 0.12));
   padding: 0;
   cursor: pointer;
 }
+body[data-theme="dark"] .x-nt-folder-color-swatch { --x-nt-color-swatch-edge: rgb(255 255 255 / 0.22); }
 .x-nt-folder-color-swatch[data-default="true"] { display: inline-flex; align-items: center; justify-content: center; color: rgb(15 23 42 / 0.62); }
 .x-nt-folder-color-swatch .ri-icon { pointer-events: none; }
 .x-nt-folder-color-swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--x-nt-shortcut-dialog-bg, white), 0 0 0 4px var(--panel-text); }
