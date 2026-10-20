@@ -523,6 +523,24 @@
     ));
   }
 
+  // Chinese text has no spaces, so a Latin or digit run inside it (the "4a"
+  // in "移动4a平台") is a word of its own and must be matchable as a token.
+  function splitSearchTitleTokens(value) {
+    const tokens = splitSearchTerms(value);
+    const embeddedRuns = [];
+    tokens.forEach((token) => {
+      if (!/[\u4e00-\u9fff]/.test(token)) {
+        return;
+      }
+      (token.match(/[a-z0-9]+/g) || []).forEach((run) => {
+        if (!tokens.includes(run) && !embeddedRuns.includes(run)) {
+          embeddedRuns.push(run);
+        }
+      });
+    });
+    return tokens.concat(embeddedRuns);
+  }
+
   function splitSearchInitialWords(value) {
     const words = [];
     const asciiRuns = String(value || '').match(/[a-z]+/gi) || [];
@@ -1000,7 +1018,7 @@
       titleLower,
       hostname,
       urlLower: String(item.url || '').toLowerCase(),
-      titleTokens: splitSearchTerms(titleLower),
+      titleTokens: splitSearchTitleTokens(titleLower),
       hostLabels,
       pathTokens
     });
@@ -1606,7 +1624,7 @@
     const title = item.title ? String(item.title) : '';
     const titleLower = title.toLowerCase();
     const urlLower = item.url.toLowerCase();
-    const titleTokens = splitSearchTerms(titleLower);
+    const titleTokens = splitSearchTitleTokens(titleLower);
     let hostname = '';
     let hostLabels = [];
     try {
@@ -1853,7 +1871,7 @@
     if (titleLower === context.queryLower) textScore += 140;
     if (titleLower.startsWith(context.queryLower)) textScore += 70;
 
-    titleTokens = splitSearchTerms(titleLower);
+    titleTokens = splitSearchTitleTokens(titleLower);
     if (titleTokens.includes(context.queryLower)) {
       textScore += 45;
     }
@@ -3478,7 +3496,7 @@
     if (titleLower === needle || titleLower.startsWith(needle)) {
       return true;
     }
-    const titleTokens = splitSearchTerms(titleLower);
+    const titleTokens = splitSearchTitleTokens(titleLower);
     return titleTokens.includes(needle) ||
       titleTokens.some((token) => token.startsWith(needle)) ||
       (shouldAllowLooseTextContains(needle) && titleLower.includes(needle));
@@ -3622,6 +3640,7 @@
     sanitizeSiteSearchProviders,
     shouldAllowLooseTextContains,
     siteSearchHostsMatch,
+    splitSearchTitleTokens,
     suggestionMatchesSiteSearchProvider
   });
 });

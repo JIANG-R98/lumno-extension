@@ -114,6 +114,39 @@ assert.strictEqual(
   false,
   'title initials should not match unrelated letter combinations'
 );
+assert.strictEqual(
+  search.matchesSearchQueryText(
+    { title: '移动4A平台', url: 'https://portal.example.com/' },
+    search.buildSearchQueryContext('4A')
+  ),
+  true,
+  'short letter-digit terms should match a run embedded in Chinese titles'
+);
+assert.strictEqual(
+  search.matchesSearchQueryText(
+    { title: '中国移动5G套餐', url: 'https://example.com/plans' },
+    search.buildSearchQueryContext('5g')
+  ),
+  true,
+  'short letter-digit terms should match a mid-title run between Chinese characters'
+);
+assert.strictEqual(
+  search.matchesSearchQueryText(
+    { title: '移动14A平台', url: 'https://portal.example.com/' },
+    search.buildSearchQueryContext('4a')
+  ),
+  false,
+  'embedded runs should match from their start, not anywhere inside'
+);
+assert.ok(
+  score({ title: '移动4A平台', url: 'https://portal.example.com/' }, '4A', 'bookmark') > 0,
+  'a Chinese title with an embedded short term should score as a match'
+);
+assert.deepStrictEqual(
+  search.splitSearchTitleTokens('移动4a平台 home'),
+  ['移动4a平台', 'home', '4a'],
+  'title tokens should keep whole tokens and add runs embedded in Chinese text'
+);
 
 const multiTermContext = search.buildSearchQueryContext('codex 最爱');
 assert.strictEqual(
