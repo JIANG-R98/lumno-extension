@@ -238,7 +238,7 @@ npm run test:onboarding-content
 
 `npm run package:store` reads the version from `manifest.json` and creates `dist/lumno-store-v<version>.zip`. It requires `zip` and `zipinfo` to be available on the system.
 
-`npm run package:firefox` builds the store package and turns it into the Firefox build in `dist/firefox`. `scripts/build-firefox.js` lists every Firefox-specific change: background scripts instead of a service worker, the Gecko add-on ID, Firefox shortcuts, no auto Picture-in-Picture scripts, and locale messages with a `__firefox` suffix that replace their base message. To try it, open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on**, and select `dist/firefox/manifest.json`; run `npm run lint:firefox` to check it with `web-ext`. In shared code, ask `LumnoBrowserProfile.isFirefoxExtensionRuntime()` instead of checking the URL scheme, and mark UI for one browser family with `data-browser-only="chromium"` (hidden elsewhere) or, for settings, `data-browser-unsupported="firefox"` (shown disabled with a reason).
+`npm run package:firefox` builds the store package and turns it into the Firefox build in `dist/firefox`. `scripts/build/build-firefox.js` lists every Firefox-specific change: background scripts instead of a service worker, the Gecko add-on ID, Firefox shortcuts, no auto Picture-in-Picture scripts, and locale messages with a `__firefox` suffix that replace their base message. To try it, open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on**, and select `dist/firefox/manifest.json`; run `npm run lint:firefox` to check it with `web-ext`. In shared code, ask `LumnoBrowserProfile.isFirefoxExtensionRuntime()` instead of checking the URL scheme, and mark UI for one browser family with `data-browser-only="chromium"` (hidden elsewhere) or, for settings, `data-browser-unsupported="firefox"` (shown disabled with a reason).
 
 ### Project structure
 
@@ -256,7 +256,8 @@ npm run test:onboarding-content
 | `_locales/` | Extension UI copy |
 | `assets/data/` | Built-in site-search and browser shortcut data |
 | `assets/wallpapers/` | Built-in new tab wallpapers and thumbnails |
-| `scripts/` | Checks, audits, packaging, and regression tests |
+| `tests/` | Node regression tests by area (`tests/<area>/test-*.js`, shared `tests/helpers/`); `npm run test:legacy -- <filter>` runs a subset |
+| `scripts/` | Tooling by purpose: `build/` (packaging), `check/` (static checks and audits), `dev/` (smoke, e2e, profiling), `release/` (store submissions) |
 
 ## Contributing
 

@@ -238,7 +238,7 @@ npm run test:onboarding-content
 
 `npm run package:store` 会读取 `manifest.json` 的版本号，并生成 `dist/lumno-store-v<version>.zip`。本命令依赖系统可用的 `zip` 和 `zipinfo`。
 
-`npm run package:firefox` 会先生成商店包，再转换为 `dist/firefox` 中的 Firefox 版。所有 Firefox 专属改动都列在 `scripts/build-firefox.js` 中：用后台脚本替代服务工作线程、Gecko 扩展 ID、Firefox 快捷键、去掉自动画中画脚本，以及用带 `__firefox` 后缀的语言条目替换对应的基础文案。试用时打开 `about:debugging#/runtime/this-firefox`，选择「临时加载附加组件」，再选中 `dist/firefox/manifest.json`；运行 `npm run lint:firefox` 可用 `web-ext` 检查。共享代码中请调用 `LumnoBrowserProfile.isFirefoxExtensionRuntime()` 判断运行环境，不要直接检查 URL 协议；只属于某一类浏览器的界面用 `data-browser-only="chromium"` 标记（在其他浏览器中隐藏），设置项则用 `data-browser-unsupported="firefox"`（显示为禁用并说明原因）。
+`npm run package:firefox` 会先生成商店包，再转换为 `dist/firefox` 中的 Firefox 版。所有 Firefox 专属改动都列在 `scripts/build/build-firefox.js` 中：用后台脚本替代服务工作线程、Gecko 扩展 ID、Firefox 快捷键、去掉自动画中画脚本，以及用带 `__firefox` 后缀的语言条目替换对应的基础文案。试用时打开 `about:debugging#/runtime/this-firefox`，选择「临时加载附加组件」，再选中 `dist/firefox/manifest.json`；运行 `npm run lint:firefox` 可用 `web-ext` 检查。共享代码中请调用 `LumnoBrowserProfile.isFirefoxExtensionRuntime()` 判断运行环境，不要直接检查 URL 协议；只属于某一类浏览器的界面用 `data-browser-only="chromium"` 标记（在其他浏览器中隐藏），设置项则用 `data-browser-unsupported="firefox"`（显示为禁用并说明原因）。
 
 ### 目录结构
 
@@ -256,7 +256,8 @@ npm run test:onboarding-content
 | `_locales/` | 扩展 UI 文案 |
 | `assets/data/` | 内置站内搜索和浏览器快捷入口数据 |
 | `assets/wallpapers/` | 新标签页内置壁纸与缩略图 |
-| `scripts/` | 校验、审计、打包和回归测试脚本 |
+| `tests/` | 按区域划分的 Node 回归测试（`tests/<区域>/test-*.js`，共用 `tests/helpers/`）；`npm run test:legacy -- <过滤词>` 只跑部分测试 |
+| `scripts/` | 按用途划分的工具：`build/`（打包）、`check/`（静态检查与审计）、`dev/`（冒烟、e2e、性能剖析）、`release/`（商店提交） |
 
 ## 参与贡献
 

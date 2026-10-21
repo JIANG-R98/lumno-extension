@@ -238,7 +238,7 @@ npm run test:onboarding-content
 
 `npm run package:store` は `manifest.json` のバージョンを読み取り、`dist/lumno-store-v<version>.zip` を生成します。このコマンドにはシステム上の `zip` と `zipinfo` が必要です。
 
-`npm run package:firefox` はストア用パッケージを作り、`dist/firefox` の Firefox 版に変換します。Firefox 固有の変更はすべて `scripts/build-firefox.js` にまとまっています（Service Worker の代わりのバックグラウンドスクリプト、Gecko のアドオン ID、Firefox 用ショートカット、自動ピクチャーインピクチャーのスクリプトの除外、`__firefox` 接尾辞付きのロケールメッセージによる元の文言の置き換え）。試すには `about:debugging#/runtime/this-firefox` を開き、「一時的なアドオンを読み込む」で `dist/firefox/manifest.json` を選びます。`npm run lint:firefox` で `web-ext` によるチェックができます。共有コードでは URL スキームを直接調べず `LumnoBrowserProfile.isFirefoxExtensionRuntime()` を使い、特定のブラウザ系統だけの UI には `data-browser-only="chromium"`（他では非表示）、設定項目には `data-browser-unsupported="firefox"`（無効表示で理由を示す）を付けてください。
+`npm run package:firefox` はストア用パッケージを作り、`dist/firefox` の Firefox 版に変換します。Firefox 固有の変更はすべて `scripts/build/build-firefox.js` にまとまっています（Service Worker の代わりのバックグラウンドスクリプト、Gecko のアドオン ID、Firefox 用ショートカット、自動ピクチャーインピクチャーのスクリプトの除外、`__firefox` 接尾辞付きのロケールメッセージによる元の文言の置き換え）。試すには `about:debugging#/runtime/this-firefox` を開き、「一時的なアドオンを読み込む」で `dist/firefox/manifest.json` を選びます。`npm run lint:firefox` で `web-ext` によるチェックができます。共有コードでは URL スキームを直接調べず `LumnoBrowserProfile.isFirefoxExtensionRuntime()` を使い、特定のブラウザ系統だけの UI には `data-browser-only="chromium"`（他では非表示）、設定項目には `data-browser-unsupported="firefox"`（無効表示で理由を示す）を付けてください。
 
 ### ディレクトリ構成
 
@@ -256,7 +256,8 @@ npm run test:onboarding-content
 | `_locales/` | 拡張 UI 文言 |
 | `assets/data/` | 内蔵サイト内検索とブラウザショートカットのデータ |
 | `assets/wallpapers/` | 新しいタブの内蔵壁紙とサムネイル |
-| `scripts/` | チェック、監査、パッケージング、回帰テスト |
+| `tests/` | 領域ごとの Node 回帰テスト（`tests/<領域>/test-*.js`、共通の `tests/helpers/`）。`npm run test:legacy -- <フィルター>` で一部だけ実行 |
+| `scripts/` | 用途別のツール：`build/`（パッケージング）、`check/`（静的チェックと監査）、`dev/`（スモーク、e2e、プロファイル）、`release/`（ストア提出） |
 
 ## コントリビュート
 

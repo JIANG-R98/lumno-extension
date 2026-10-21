@@ -1,5 +1,5 @@
 /* Digit-only clock faces for the New Tab time (SIL OFL 1.1, see OFL-*.txt).
-   Rebuild with scripts/subset-clock-fonts.py. */
+   Rebuild with scripts/build/subset-clock-fonts.py. */
 @font-face {
   font-family: "Lumno Clock Geist";
   src: url("./geist.woff2") format("woff2");

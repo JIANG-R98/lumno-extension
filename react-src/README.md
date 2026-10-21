@@ -75,7 +75,7 @@ error; there is no timed legacy-renderer fallback.
   owned by a React controller.
 - Add visible structure and state to React components, not to classic adapter
   scripts.
-- Keep the React bundle budgets enforced by `scripts/test-react-bundle-budgets.js`:
+- Keep the React bundle budgets enforced by `tests/repo/test-react-bundle-budgets.js`:
   one change may grow a route by a few KiB over its base commit (a
   `Bundle-Growth: <why>` commit trailer accepts more), under loose absolute
   ceilings.

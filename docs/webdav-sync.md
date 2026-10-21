@@ -24,7 +24,7 @@
 
 连接失败时，设置页会附上安全诊断标识，例如 `dav-lock-5 / move-race / 201,201`，分别表示检测版本、失败步骤和 HTTP 响应码；不包含用户名、密码或服务器正文。重复出现同一提示时，应先拿到真实响应，勿直接移除并发保护。
 
-开发者可使用 `node scripts/probe-webdav.js` 做独立服务探测：在本机 `.tmp/webdav/provider-probe.private.json` 填写 endpoint、directory、username、password；脚本校验后立即删除该临时凭据文件，只创建随机探针，不读取 Chrome 数据，不上传个人配置或媒体。它验证当前连接检测并另做独立 `MOVE / Overwrite: F` 竞争探测；一方 201、另一方拒绝（405 / 409 / 412 / 423 / 500）只有在两方内容均保留时才算通过；两方都被拒绝时，目标必须仍不存在且两方内容均保留。结果保存在 `.tmp/webdav/provider-probe-result.json`，只有响应码、ETag 类型与内容是否保持不变等信息，不包含认证头或响应正文。
+开发者可使用 `node scripts/dev/probe-webdav.js` 做独立服务探测：在本机 `.tmp/webdav/provider-probe.private.json` 填写 endpoint、directory、username、password；脚本校验后立即删除该临时凭据文件，只创建随机探针，不读取 Chrome 数据，不上传个人配置或媒体。它验证当前连接检测并另做独立 `MOVE / Overwrite: F` 竞争探测；一方 201、另一方拒绝（405 / 409 / 412 / 423 / 500）只有在两方内容均保留时才算通过；两方都被拒绝时，目标必须仍不存在且两方内容均保留。结果保存在 `.tmp/webdav/provider-probe-result.json`，只有响应码、ETag 类型与内容是否保持不变等信息，不包含认证头或响应正文。
 
 ## 保存、开关与并行同步
 

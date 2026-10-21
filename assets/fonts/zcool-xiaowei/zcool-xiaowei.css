@@ -1,5 +1,5 @@
 /* ZCOOL XiaoWei v1.000 Regular, subset to woff2 for the New Tab quote (SIL OFL 1.1, see OFL.txt).
-   Rebuild with scripts/subset-quote-font.py xiaowei. */
+   Rebuild with scripts/build/subset-quote-font.py xiaowei. */
 @font-face {
   font-family: "Lumno Quote XiaoWei";
   src: url("./ZCOOLXiaoWei-Regular-primary.woff2") format("woff2");

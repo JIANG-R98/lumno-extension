@@ -79,7 +79,7 @@
   const NEWTAB_QUOTE_FONT_SIZE_DEFAULT = 15;
   const NEWTAB_QUOTE_FONT_DEFAULT = 'wenkai';
   // The bundled faces are subsets declared in assets/fonts/<face>/<face>.css
-  // (scripts/subset-quote-font.py); the sans face only names system fonts.
+  // (scripts/build/subset-quote-font.py); the sans face only names system fonts.
   // Glyphs a face lacks fall back along its own stack.
   const NEWTAB_QUOTE_SERIF_FALLBACK = '"Songti SC", "Songti TC", "STSong", "SimSun", "NSimSun", ' +
     '"Noto Serif CJK SC", "Source Han Serif SC", Georgia, "Times New Roman", serif';
@@ -244,7 +244,7 @@
   const NEWTAB_TIME_FONT_DEFAULT = 'open-sans';
   // The stored weight stays within 300-800; each face clamps it to the range
   // it draws well. The "Lumno Clock" faces are digit-only subsets declared in
-  // assets/fonts/clock/clock-fonts.css (scripts/subset-clock-fonts.py), so
+  // assets/fonts/clock/clock-fonts.css (scripts/build/subset-clock-fonts.py), so
   // their weight ranges must match the ones built there. tracking is the
   // letter spacing in em at the face's lightest and heaviest weight: light
   // strokes leave room to set digits tighter, heavy ones need air. null keeps

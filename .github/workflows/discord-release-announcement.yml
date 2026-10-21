@@ -34,4 +34,4 @@ jobs:
           GITHUB_EVENT_PATH: ${{ github.event_path }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           RELEASE_TAG: ${{ inputs.release_tag }}
-        run: node scripts/discord-release-announcement.js
+        run: node scripts/release/discord-release-announcement.js
