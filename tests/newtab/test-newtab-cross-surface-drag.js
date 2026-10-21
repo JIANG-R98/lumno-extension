@@ -1,13 +1,17 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { readPageSource } = require('../helpers/page-source');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { parsePageCss } = require('../helpers/css-rules');
 const { getPageScripts } = require('../helpers/runtime-scripts');
+const { openDragPage } = require('../helpers/newtab-drag-page');
+
+// Dragging across New Tab's surfaces: the cross-surface planning helpers,
+// unit-tested here, and what a drag shows on the page (the insertion line,
+// a folder's drop highlight, Escape). Where drops land, and their undo, is
+// covered by test-newtab-shortcut-bookmark-drop-targets.js and
+// test-newtab-bookmark-shortcut-transfer-history.js.
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const newtabJs = readNewtabRuntimeSource();
-const newtabHtml = readPageSource('newtab.html');
 const {
   getInsertionGapNeighbors,
   getRowInsertionSlot,
@@ -25,35 +29,6 @@ const {
   assert.strictEqual(prefersReducedMotion(windowWith(true)), true);
   assert.strictEqual(prefersReducedMotion(windowWith(false)), false);
   assert.strictEqual(prefersReducedMotion({}), false, 'no matchMedia means full motion');
-}
-
-function getFunctionSource(source, name) {
-  const marker = `function ${name}(`;
-  const start = source.indexOf(marker);
-  assert.ok(start >= 0, `${name} function should exist`);
-  const bodyStart = source.indexOf('{', start);
-  let depth = 0;
-  for (let index = bodyStart; index < source.length; index += 1) {
-    const char = source[index];
-    if (char === '{') {
-      depth += 1;
-    } else if (char === '}') {
-      depth -= 1;
-      if (depth === 0) {
-        return source.slice(start, index + 1);
-      }
-    }
-  }
-  assert.fail(`${name} function body should end`);
-  return '';
-}
-
-function assertOrder(source, first, second, message) {
-  const firstIndex = source.indexOf(first);
-  const secondIndex = source.indexOf(second);
-  assert.ok(firstIndex >= 0, `${message}: missing ${first}`);
-  assert.ok(secondIndex >= 0, `${message}: missing ${second}`);
-  assert.ok(firstIndex < secondIndex, message);
 }
 
 function rect(left, top, width = 60, height = 60) {
@@ -84,144 +59,6 @@ function rect(left, top, width = 60, height = 60) {
   assert.strictEqual(planBookmarkToShortcut({
     shortcuts: folders, record: { type: 'folder', folderId: '44' }, index: 0, maxShortcuts: 2
   }), null, 'new folders must not evict entries when the dock is full');
-}
-
-// A folder shortcut can return to its own bookmark card/row without moving the
-// real folder into itself. Dropping inside that folder or a descendant remains
-// invalid, and an ordinary bookmark drag cannot use the alias return path.
-{
-  const nodeMap = new Map([
-    ['1', { id: '1', parentId: '0' }],
-    ['42', { id: '42', parentId: '1' }],
-    ['43', { id: '43', parentId: '42' }],
-    ['44', { id: '44', parentId: '1' }]
-  ]);
-  const shortcut = { id: 'folder-entry', type: 'folder', folderId: '42' };
-  const factory = new Function('nodeMap', 'shortcut', 'NEWTAB_CROSS_SURFACE_DRAG', 'NEWTAB_BOOKMARK_MOVE_HISTORY', `
-    const bookmarksRuntime = { getNodeMap: () => nodeMap };
-    const getShortcutById = (id) => id === shortcut.id ? shortcut : null;
-    const getShortcutFolderId = (item) => item.folderId;
-    ${getFunctionSource(newtabJs, 'isValidExternalBookmarkDropTarget')}
-    ${getFunctionSource(newtabJs, 'resolveExternalBookmarkDropTarget')}
-    return { resolveExternalBookmarkDropTarget, isValidExternalBookmarkDropTarget };
-  `);
-  const { resolveExternalBookmarkDropTarget: resolve, isValidExternalBookmarkDropTarget: valid } = factory(
-    nodeMap, shortcut,
-    require(path.join(repoRoot, 'src', 'newtab', 'cross-surface-drag.js')),
-    require(path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-move-history.js'))
-  );
-  const state = { shortcutId: shortcut.id, bookmarkId: shortcut.folderId };
-  const element = {};
-  const returned = resolve(state, { kind: 'card', folderId: '42', element });
-  assert.deepStrictEqual(returned, { kind: 'return', folderId: '1', bookmarkId: '42', element });
-  assert.strictEqual(valid(state, returned), true, 'the original bookmark accepts the shortcut alias');
-  assert.strictEqual(resolve(state, { kind: 'cascade', folderId: '42', element }).kind, 'return');
-  ['breadcrumb', 'shortcut-folder', 'insertion'].forEach((kind) => {
-    assert.strictEqual(resolve(state, { kind, folderId: '42' }).kind, 'blocked',
-      'dropping inside the source folder must remain blocked');
-  });
-  assert.strictEqual(resolve(state, { kind: 'card', folderId: '43' }).kind, 'blocked',
-    'dropping into a descendant remains blocked');
-  assert.strictEqual(resolve({ bookmarkId: '42' }, { kind: 'card', folderId: '42' }).kind, 'blocked',
-    'ordinary bookmark drags cannot return a shortcut alias');
-  assert.strictEqual(resolve(state, { kind: 'card', folderId: '44' }).folderId, '44',
-    'other folders remain actual destinations');
-  nodeMap.get('42').parentId = '44';
-  assert.strictEqual(valid(state, returned), false, 'a stale return target cannot move a folder back after an external move');
-  nodeMap.delete('42');
-  assert.strictEqual(resolve(state, { kind: 'card', folderId: '42' }).kind, 'blocked',
-    'a deleted source folder cannot leave a valid return target');
-}
-
-// Escape must restore both persisted order and DOM nodes moved outside React.
-{
-  const originalShortcuts = [{ id: 'one' }, { id: 'two' }];
-  const domOrder = ['two', 'one'];
-  const tiles = new Map(originalShortcuts.map((item) => [item.id, { id: item.id, removeAttribute() {} }]));
-  const state = { isDragging: true, hasReordered: true, originalShortcuts, tile: tiles.get('one'), dropTarget: null };
-  const finish = new Function('initialState', 'tiles', 'domOrder', 'NEWTAB_CROSS_SURFACE_DRAG', `
-    let shortcutDragState = initialState;
-    let newtabShortcuts = initialState.originalShortcuts.slice().reverse();
-    const document = { body: { removeAttribute() {} } };
-    const window = { setTimeout() {} };
-    const shortcutGrid = null, bookmarkGrid = null;
-    const detachShortcutDragDocumentListeners = () => {};
-    const flushShortcutDragMove = () => {};
-    const clearBookmarkDragPageSwitch = () => {};
-    const clearBookmarkDragFolderSwitch = () => {};
-    const clearDragDropTarget = () => {};
-    const closeBookmarkCascadeMenu = () => {};
-    const settleShortcutDragTile = () => {};
-    const resetShortcutDockHover = () => {};
-    const getShortcutTileById = (id) => tiles.get(id);
-    const moveShortcutTileElement = (tile, index) => {
-      domOrder.splice(domOrder.indexOf(tile.id), 1);
-      domOrder.splice(index, 0, tile.id);
-    };
-    const renderShortcuts = () => {};
-    const flushDeferredShortcutRender = () => {};
-    const getShortcutDropSettleMs = () => 0;
-    const getDragClickGuard = () => ({ armAfterDrag() {} });
-    ${getFunctionSource(newtabJs, 'getShortcutGroupHeader')}
-    ${getFunctionSource(newtabJs, 'restoreShortcutDragOrder')}
-    ${getFunctionSource(newtabJs, 'finishShortcutDrag')}
-    ${getFunctionSource(newtabJs, 'endShortcutDrag')}
-    finishShortcutDrag(null, { cancel: true });
-    return { dataOrder: newtabShortcuts.map((item) => item.id), domOrder, activeState: shortcutDragState };
-  `);
-  const result = finish(state, tiles, domOrder, require('../../src/newtab/cross-surface-drag'));
-  assert.deepStrictEqual(result.dataOrder, ['one', 'two']);
-  assert.deepStrictEqual(result.domOrder, ['one', 'two']);
-  assert.strictEqual(result.activeState, null);
-}
-
-
-// Holding a shortcut at the top-bar edge keeps scrolling without pointer
-// movement; releasing cancels even the frame queued by that final scroll.
-{
-  const frames = new Map();
-  let nextFrame = 0;
-  let scrollCount = 0;
-  let overCascade = false;
-  const state = { isDragging: true, moveFrameId: 0, pendingPointerX: 900, pendingPointerY: 35 };
-  const factory = new Function('state', 'window', 'bookmarkTopbarRuntime', 'isBookmarkCascadeSurfaceAtPoint', `
-    const shortcutDragState = state;
-    const document = { body: { removeAttribute() {} } };
-    const isBookmarkTopbarMode = () => true;
-    const getExternalBookmarkSurfacePoint = () => ({ x: 900, y: 30 });
-    const setShortcutDragTileTransform = () => {};
-    const updateShortcutDragBookmarkTarget = () => true;
-    const isPointOverShortcutDropSurface = () => false;
-    const autoScrollShortcutArea = () => false;
-    ${getFunctionSource(newtabJs, 'cancelShortcutDragMoveFrame')}
-    ${getFunctionSource(newtabJs, 'applyShortcutDragMove')}
-    ${getFunctionSource(newtabJs, 'scheduleShortcutDragMove')}
-    ${getFunctionSource(newtabJs, 'flushShortcutDragMove')}
-    return { scheduleShortcutDragMove, flushShortcutDragMove };
-  `);
-  const scheduler = factory(state, {
-    requestAnimationFrame(callback) { frames.set(++nextFrame, callback); return nextFrame; },
-    cancelAnimationFrame(id) { frames.delete(id); }
-  }, {
-    autoScroll(x, y) { assert.deepStrictEqual([x, y], [900, 30]); scrollCount += 1; return 18; }
-  }, () => overCascade);
-  const runFrame = () => {
-    const [id, callback] = frames.entries().next().value;
-    frames.delete(id);
-    callback();
-  };
-  scheduler.scheduleShortcutDragMove(state, 900, 35);
-  runFrame();
-  runFrame();
-  assert.strictEqual(scrollCount, 2, 'edge scrolling continues while the pointer is held still');
-  assert.strictEqual(frames.size, 1);
-  scheduler.flushShortcutDragMove(state);
-  assert.strictEqual(frames.size, 0, 'release must stop edge scrolling');
-  overCascade = true;
-  scheduler.scheduleShortcutDragMove(state, 900, 35);
-  runFrame();
-  assert.strictEqual(scrollCount, 3, 'hovering a cascade must not scroll the bar behind it');
-  assert.strictEqual(frames.size, 0);
 }
 
 // Two rows: three tiles on top, two below.
@@ -316,311 +153,6 @@ assert.strictEqual(
   null,
   'bookmarks without a shortcut-compatible URL should be rejected'
 );
-
-// The shared insertion-line primitive renders both grid surfaces and keeps
-// cascade rows on their own attribute.
-{
-  function createFakeElement() {
-    const attributes = new Map();
-    const styles = new Map();
-    return {
-      attributes,
-      styles,
-      getAttribute: (name) => (attributes.has(name) ? attributes.get(name) : null),
-      setAttribute: (name, value) => attributes.set(name, String(value)),
-      removeAttribute: (name) => attributes.delete(name),
-      style: {
-        setProperty: (name, value) => styles.set(name, value),
-        removeProperty: (name) => styles.delete(name)
-      }
-    };
-  }
-  const factory = new Function(
-    'bookmarkCascadeRuntime',
-    `${getFunctionSource(newtabJs, 'isInsertLineDropTarget')}
-    // Neighbour leaning reads live layout; it is covered by the gap tests below.
-    function syncInsertionGap() {}
-    ${getFunctionSource(newtabJs, 'clearDropTargetMarker')}
-    ${getFunctionSource(newtabJs, 'clearDragDropTarget')}
-    ${getFunctionSource(newtabJs, 'setDragDropTarget')}
-    return { clearDragDropTarget, setDragDropTarget };`
-  );
-  const { clearDragDropTarget, setDragDropTarget } = factory(null);
-  const shortcutGrid = createFakeElement();
-  const cascadeRow = createFakeElement();
-  const state = { dropTarget: null };
-  setDragDropTarget(state, {
-    kind: 'insertion',
-    surface: 'shortcuts',
-    index: 2,
-    markerElement: shortcutGrid,
-    markerPosition: 'before',
-    markerOffsetPx: 132,
-    markerTopPx: 18,
-    markerHeightPx: 48
-  });
-  assert.strictEqual(shortcutGrid.getAttribute('data-insert-line-position'), 'before');
-  assert.strictEqual(shortcutGrid.styles.get('--x-nt-insert-line-left'), '132px');
-  assert.strictEqual(shortcutGrid.styles.get('--x-nt-insert-line-height'), '48px');
-  assert.strictEqual(shortcutGrid.getAttribute('data-insert-line-motion'), 'a');
-  assert.strictEqual(
-    shortcutGrid.getAttribute('data-bookmark-insert-position'),
-    null,
-    'grid surfaces should not use the cascade row attribute'
-  );
-  setDragDropTarget(state, {
-    kind: 'insertion',
-    surface: 'shortcuts',
-    index: 3,
-    markerElement: shortcutGrid,
-    markerPosition: 'before',
-    markerOffsetPx: 196,
-    markerTopPx: 18,
-    markerHeightPx: 48
-  });
-  assert.strictEqual(
-    shortcutGrid.getAttribute('data-insert-line-motion'),
-    'b',
-    'moving to a new boundary should restart the line motion'
-  );
-  setDragDropTarget(state, {
-    kind: 'insertion',
-    surface: 'cascade',
-    markerElement: cascadeRow,
-    markerPosition: 'after'
-  });
-  assert.strictEqual(cascadeRow.getAttribute('data-bookmark-insert-position'), 'after');
-  assert.strictEqual(shortcutGrid.attributes.size, 0, 'leaving a surface should clear its line attributes');
-  assert.strictEqual(shortcutGrid.styles.size, 0, 'leaving a surface should clear its line variables');
-  clearDragDropTarget(state);
-  assert.strictEqual(cascadeRow.attributes.size, 0);
-  assert.strictEqual(state.dropTarget, null);
-
-  for (const surface of ['grid', 'shortcuts', 'cascade']) {
-    for (const position of ['before', 'after']) {
-      const folder = createFakeElement();
-      const marker = createFakeElement();
-      const folderTarget = {
-        kind: surface === 'cascade' ? 'cascade' : surface === 'shortcuts' ? 'shortcut-folder' : 'card',
-        surface,
-        element: folder,
-        folderId: 'design'
-      };
-      const insertionTarget = {
-        kind: 'insertion',
-        surface,
-        element: folder,
-        folderId: '1',
-        index: 2,
-        markerElement: marker,
-        markerPosition: position,
-        markerOffsetPx: 132,
-        markerTopPx: 18,
-        markerHeightPx: 48
-      };
-      const markerAttribute = surface === 'cascade'
-        ? 'data-bookmark-insert-position' : 'data-insert-line-position';
-      const scenario = `${surface}/${position}`;
-
-      setDragDropTarget(state, folderTarget);
-      assert.strictEqual(folder.getAttribute('data-bookmark-drop-target'), 'true');
-      setDragDropTarget(state, insertionTarget);
-      assert.strictEqual(
-        folder.getAttribute('data-bookmark-drop-target'), null,
-        `${scenario}: inserting beside the same folder must clear its contents-drop highlight`
-      );
-      assert.strictEqual(marker.getAttribute(markerAttribute), position);
-      assert.strictEqual(state.dropTarget, insertionTarget);
-
-      const motion = marker.getAttribute('data-insert-line-motion');
-      setDragDropTarget(state, insertionTarget);
-      assert.strictEqual(folder.getAttribute('data-bookmark-drop-target'), null);
-      assert.strictEqual(marker.getAttribute('data-insert-line-motion'), motion,
-        `${scenario}: staying at the same boundary must preserve its line motion`);
-
-      setDragDropTarget(state, folderTarget);
-      assert.strictEqual(folder.getAttribute('data-bookmark-drop-target'), 'true',
-        `${scenario}: returning to the folder center must restore its contents-drop highlight`);
-      assert.strictEqual(marker.attributes.size, 0);
-      assert.strictEqual(marker.styles.size, 0);
-      clearDragDropTarget(state);
-      assert.strictEqual(folder.attributes.size, 0);
-      assert.strictEqual(state.dropTarget, null);
-    }
-  }
-}
-
-// Wiring contracts.
-assertOrder(
-  getPageScripts('newtab.html'),
-  'src/newtab/bookmarks/bookmark-drag.js',
-  'src/newtab/cross-surface-drag.js',
-  'the cross-surface helpers should load with the other drag helpers'
-);
-assertOrder(
-  getPageScripts('newtab.html'),
-  'src/newtab/cross-surface-drag.js',
-  'src/newtab/newtab.js',
-  'the cross-surface helpers should load before the page runtime'
-);
-assert.ok(
-  newtabJs.includes('NEWTAB_CROSS_SURFACE_DRAG.planBookmarkToShortcut('),
-  'the page runtime should use the cross-surface helpers'
-);
-
-const applyShortcutDragMoveSource = getFunctionSource(newtabJs, 'applyShortcutDragMove');
-assertOrder(
-  applyShortcutDragMoveSource,
-  'if (updateShortcutDragBookmarkTarget(state, pointerX, pointerY)) {',
-  'getShortcutDragInsertionSlot(pointerX, pointerY)',
-  'hovering the bookmarks surface should pause shortcut reordering'
-);
-assert.ok(
-  getFunctionSource(newtabJs, 'getShortcutDragInsertionSlot')
-    .includes('getShortcutInsertionSlotAt(pointerX, pointerY, shortcutDragState.tile)'),
-  'shortcut reordering and bookmark drops should share one slot calculation'
-);
-
-const updateShortcutDragBookmarkTargetSource = getFunctionSource(
-  newtabJs,
-  'updateShortcutDragBookmarkTarget'
-);
-assertOrder(
-  updateShortcutDragBookmarkTargetSource,
-  'getExternalBookmarkSurfacePoint(pointerX, pointerY)',
-  'getExternalBookmarkDropTarget(pointerX, pointerY, state)',
-  'shortcut drags should inspect visible bookmarks and cascade surfaces'
-);
-const externalTargetSource = getFunctionSource(newtabJs, 'getExternalBookmarkDropTarget');
-assert.ok(
-  externalTargetSource.includes('hitZonePx: folderTarget ? undefined : bookmarkGrid.getBoundingClientRect().width') &&
-    !externalTargetSource.includes('getBookmarkCrossLevelDropTarget'),
-  'external drops keep folder edge insertion zones and skip bookmark-only validators'
-);
-assert.ok(
-  getFunctionSource(newtabJs, 'getBookmarkDropSurfaceElement').includes('currentBookmarkCount <= 0') &&
-    getFunctionSource(newtabJs, 'isEmptyBookmarkRootHidden').includes('bookmarkAllItems.length === 0') &&
-    getFunctionSource(newtabJs, 'renderBookmarks').includes('isShortcutDragActive()'),
-  'an empty bookmarks bar should stay droppable during shortcut drags without reviving disabled bookmarks'
-);
-
-const finishShortcutDragSource = getFunctionSource(newtabJs, 'endShortcutDrag');
-assert.ok(
-  finishShortcutDragSource.includes('!(options && options.cancel)'),
-  'canceled shortcut drags should never convert'
-);
-assertOrder(
-  finishShortcutDragSource,
-  'moveShortcutToBookmarks(state, bookmarkDropTarget)',
-  'persistShortcutOrder(state)',
-  'dropping a shortcut on bookmarks should branch before persisting the shortcut order'
-);
-const moveShortcutToBookmarksSource = getFunctionSource(newtabJs, 'moveShortcutToBookmarks');
-const applyTransferSource = getFunctionSource(newtabJs, 'applyBookmarkShortcutTransfer');
-assertOrder(
-  applyTransferSource,
-  'bookmarksRuntime.create({',
-  'persistShortcutState(nextShortcuts, destinationShortcut)',
-  'the bookmark should exist before the shortcut is removed'
-);
-assert.ok(
-  moveShortcutToBookmarksSource.includes("target.kind === 'insertion'") &&
-    moveShortcutToBookmarksSource.includes('settleShortcutDragTile(state.tile);') &&
-    moveShortcutToBookmarksSource.includes('bookmarkMoveHistory.push('),
-  'shortcut-to-bookmark moves should settle the tile back on failure and record successful transfers'
-);
-
-const processBookmarkDragMoveSource = getFunctionSource(newtabJs, 'processBookmarkDragMove');
-assertOrder(
-  processBookmarkDragMoveSource,
-  'isPointOverShortcutDropSurface(pointerX, pointerY)',
-  'getBookmarkCrossLevelDropTarget(state, pointerX, pointerY)',
-  'the shortcut grid should be checked before bookmark targets'
-);
-assert.ok(
-  getFunctionSource(newtabJs, 'isPointOverShortcutDropSurface')
-    .includes('!isBookmarkCascadeSurfaceAtPoint(pointerX, pointerY)'),
-  'an open cascade menu above the shortcuts should keep its own drop targets'
-);
-const shortcutDropTargetSource = getFunctionSource(newtabJs, 'getBookmarkDragShortcutDropTarget') +
-  getFunctionSource(newtabJs, 'getShortcutInsertionDropTarget');
-assert.ok(
-  shortcutDropTargetSource.includes("type: 'folder', folderId: node.id") &&
-    shortcutDropTargetSource.includes('maxShortcuts: MAX_NEWTAB_SHORTCUTS') &&
-    shortcutDropTargetSource.includes("surface: 'shortcuts'"),
-  'folder references should be supported while respecting the shortcut capacity'
-);
-const finishBookmarkDragSource = getFunctionSource(newtabJs, 'finishBookmarkDrag');
-assertOrder(
-  finishBookmarkDragSource,
-  "dropTarget.surface === 'shortcuts'",
-  'persistBookmarkCrossLevelMove(state, dropTarget);',
-  'dropping a bookmark on shortcuts should branch before bookmark moves'
-);
-const moveBookmarkToShortcutsSource = getFunctionSource(newtabJs, 'moveBookmarkToShortcuts') +
-  getFunctionSource(newtabJs, 'transferBookmarkToShortcuts');
-assert.ok(
-  moveBookmarkToShortcutsSource.includes('isWebDavBackingUpShortcuts()') &&
-    moveBookmarkToShortcutsSource.includes('to: keepsBookmark ? from : null') &&
-    moveBookmarkToShortcutsSource.includes('fromBookmark: true'),
-  'a website bookmark should leave the bookmarks only while WebDAV backs up the shortcuts'
-);
-assertOrder(
-  applyTransferSource,
-  'persistShortcutState(nextShortcuts, destinationShortcut)',
-  'bookmarksRuntime.remove(bookmarkId)',
-  'the shortcut should be saved before the bookmark is deleted'
-);
-assert.ok(
-  moveBookmarkToShortcutsSource.includes('if (!saved) return false;') &&
-    moveBookmarkToShortcutsSource.includes('bookmarkMoveHistory.push(record)'),
-  'failed transfers should keep the bookmark and only successful transfers enter undo history'
-);
-
-assert.ok(
-  getFunctionSource(newtabJs, 'handleShortcutDockPointerMove')
-    .includes('isShortcutDragActive() || isBookmarkDragActive()') &&
-    getFunctionSource(newtabJs, 'shouldSuppressBookmarkHover').includes('isShortcutDragActive()'),
-  'dock magnification and bookmark hover should pause during either drag'
-);
-assert.ok(
-  getFunctionSource(newtabJs, 'startShortcutDrag')
-    .includes("document.body.setAttribute('data-drag-source', 'shortcut');") &&
-    finishShortcutDragSource.includes("document.body.removeAttribute('data-drag-source');"),
-  'shortcut drags should use the shared page-wide drag source attribute'
-);
-
-assert.ok(
-  /\n\s*\[data-insert-line-position\]::after\s*\{[^}]*position:\s*absolute;[^}]*left:\s*calc\(var\(--x-nt-insert-line-left/s
-    .test(newtabHtml),
-  'both grids should share one attribute-driven insertion line'
-);
-assert.ok(
-  /\.x-nt-shortcuts-grid\s*\{[^}]*position:\s*relative;/s.test(newtabHtml),
-  'the shortcut grid should position its insertion line'
-);
-assert.ok(
-  /body\[data-drag-source="shortcut"\] \.x-nt-shortcuts-section\s*\{[^}]*z-index:\s*10001;[^}]*pointer-events:\s*none;/s
-    .test(newtabHtml),
-  'a dragged shortcut should paint above the bottom dock and bookmarks bar without blocking hit tests'
-);
-
-['en', 'ja', 'zh_CN', 'zh_TW'].forEach((locale) => {
-  const messages = JSON.parse(fs.readFileSync(
-    path.join(repoRoot, '_locales', locale, 'messages.json'),
-    'utf8'
-  ));
-  [
-    'newtab_shortcuts_moved_to_bookmarks',
-    'newtab_shortcuts_move_to_bookmarks_failed',
-    'bookmarks_moved_to_shortcuts'
-  ].forEach((key) => {
-    assert.ok(
-      messages[key] && messages[key].message,
-      `${locale} should translate ${key}`
-    );
-  });
-});
 
 {
   const [a, b, c, d] = ['a', 'b', 'c', 'd'];
@@ -734,36 +266,91 @@ assert.ok(
     'a removed site without a snapshot cannot be restored');
 }
 
-// An empty group's slot is an insertion point like a tile: the index counts
-// only tiles, and the group comes from whatever the pointer is beside.
-{
-  const element = (attributes) => ({
-    getAttribute: (name) => (Object.hasOwn(attributes, name) ? attributes[name] : null),
-    hasAttribute: (name) => Object.hasOwn(attributes, name)
+// On the page: a bookmark dragged over the shortcuts shows where it would
+// land with the insertion line; over a folder shortcut the folder lights up
+// instead; Escape cancels the drag and clears both.
+async function testDragFeedback() {
+  const newtab = await openDragPage({
+    shortcuts: [{ url: 'https://one.example/', title: 'One' }, { url: 'https://two.example/', title: 'Two' }, { type: 'folder', folderId: 'design', title: 'Design' }],
+    bookmarks: [{ id: 'design', title: 'Design', children: [] }, { id: '20', title: 'Start', url: 'https://start.example/' }]
   });
-  const a = element({ 'data-shortcut-id': 'a', 'data-shortcut-group-id': 'g0' });
-  const b = element({ 'data-shortcut-id': 'b', 'data-shortcut-group-id': 'g0' });
-  const empty = element({ 'data-shortcut-group-id': 'later' });
-  const c = element({ 'data-shortcut-id': 'c', 'data-shortcut-group-id': 'last' });
-  const box = (left, top) => ({ left, top, right: left + 64, bottom: top + 64, width: 64, height: 64,
-    centerX: left + 32, centerY: top + 32 });
-  const rects = new Map([[a, box(0, 0)], [b, box(70, 0)], [empty, box(0, 100)], [c, box(0, 200)]]);
-  const grid = { querySelectorAll: () => [a, b, empty, c] };
-  const slotAt = new Function('NEWTAB_CROSS_SURFACE_DRAG', 'shortcutGrid', 'rects', `
-    const SHORTCUT_SLOT_SELECTOR = '';
-    const getShortcutReorderTiles = () => [];
-    const getShortcutTileLayoutRect = (tile) => rects.get(tile);
-    ${getFunctionSource(newtabJs, 'getShortcutTileGroupId')}
-    ${getFunctionSource(newtabJs, 'getShortcutInsertionSlotAt')}
-    return getShortcutInsertionSlotAt;
-  `)(require('../../src/newtab/cross-surface-drag.js'), grid, rects);
-  const afterB = slotAt(150, 30, null);
-  assert.deepStrictEqual([afterB.index, afterB.markerPosition, afterB.groupId], [2, 'after', 'g0']);
-  const intoEmpty = slotAt(10, 130, null);
-  assert.deepStrictEqual([intoEmpty.index, intoEmpty.anchorTile === empty, intoEmpty.groupId], [2, true, 'later'],
-    'the empty group takes the drop before the next group\'s first tile');
-  const beforeC = slotAt(10, 230, a);
-  assert.deepStrictEqual([beforeC.index, beforeC.groupId], [1, 'last'], 'the dragged tile is left out of the count');
+  const { page } = newtab;
+  const grid = newtab.tile('One').parentElement;
+  const line = () => [grid.getAttribute('data-insert-line-position'), grid.getAttribute('data-insert-line-motion'),
+    grid.style.getPropertyValue('--x-nt-insert-line-left'), grid.style.getPropertyValue('--x-nt-insert-line-height')];
+  const move = async (point) => {
+    page.pointer('pointermove', point[0], point[1]);
+    await page.settle(40);
+  };
+  await page.drag(newtab.card('20'), [newtab.shortcutSlot(1)], { release: false });
+  assert.strictEqual(page.document.body.getAttribute('data-drag-source'), 'bookmark', 'the page should know a bookmark is being dragged');
+  assert.deepStrictEqual(line(), ['before', 'a', '72px', '48px'], 'the insertion line should mark the gap under the pointer');
+  await move(newtab.shortcutSlot(1));
+  assert.strictEqual(line()[1], 'a', 'staying at the same gap keeps the line\'s motion');
+  await move(newtab.shortcutSlot(2));
+  assert.deepStrictEqual(line(), ['before', 'b', '144px', '48px'], 'a new gap moves the line and restarts its motion');
+  const design = newtab.tile('Design').getBoundingClientRect();
+  await move([design.left + design.width / 2, design.top + design.height / 2]);
+  assert.strictEqual(newtab.tile('Design').getAttribute('data-bookmark-drop-target'), 'true', 'over a folder shortcut the folder lights up');
+  assert.deepStrictEqual(line(), [null, null, '', ''], 'and the line goes away');
+  await move(newtab.shortcutSlot(1));
+  assert.strictEqual(newtab.tile('Design').getAttribute('data-bookmark-drop-target'), null, 'leaving the folder clears its highlight');
+  page.trusted(page.document.body, 'keydown', { key: 'Escape', bubbles: true, cancelable: true });
+  await page.settle(200);
+  assert.deepStrictEqual(line(), [null, null, '', ''], 'Escape clears the line');
+  assert.strictEqual(page.document.body.getAttribute('data-drag-source'), null, 'and ends the drag');
+  assert.deepStrictEqual([newtab.shortcuts(), newtab.bar()], [['One', 'Two', 'Design'], ['Design', 'Start']], 'without moving anything');
+  newtab.close();
 }
 
-console.log('New tab cross-surface drag tests passed.');
+// Escape during a shortcut reorder puts the tiles back without saving.
+async function testEscapeRestoresTheOrder() {
+  const newtab = await openDragPage({
+    shortcuts: [{ url: 'https://one.example/', title: 'One' }, { url: 'https://two.example/', title: 'Two' }, { url: 'https://three.example/', title: 'Three' }]
+  });
+  const { page } = newtab;
+  const writes = page.storage.sync.writes.length;
+  await page.drag(newtab.tile('One'), [[newtab.shortcutSlot(3)[0], 432]], { release: false });
+  assert.deepStrictEqual(newtab.shortcuts(), ['Two', 'Three', 'One'], 'the tiles reorder while dragging');
+  assert.strictEqual(page.document.body.getAttribute('data-drag-source'), 'shortcut');
+  page.trusted(page.document.body, 'keydown', { key: 'Escape', bubbles: true, cancelable: true });
+  await page.settle(200);
+  assert.deepStrictEqual(newtab.shortcuts(), ['One', 'Two', 'Three'], 'Escape should restore the order');
+  assert.strictEqual(page.storage.sync.writes.length, writes, 'and save nothing');
+  page.pointer('pointerup', 10, 10);
+  await page.settle(100);
+  assert.deepStrictEqual(newtab.shortcuts(), ['One', 'Two', 'Three'], 'releasing afterwards changes nothing');
+  newtab.close();
+}
+
+function testStylesAndCopy() {
+  const css = parsePageCss('newtab.html');
+  const line = css.entries.find((entry) => entry.selectors.includes('[data-insert-line-position]::after'));
+  assert.ok(line && line.style.getPropertyValue('position') === 'absolute' && /^calc\(var\(--x-nt-insert-line-left/.test(line.style.getPropertyValue('left')),
+    'both grids should share one attribute-driven insertion line');
+  assert.strictEqual(css.rule('.x-nt-shortcuts-grid').get('position'), 'relative', 'the shortcut grid positions its line');
+  const dragging = css.rule('body[data-drag-source="shortcut"] .x-nt-shortcuts-section');
+  assert.deepStrictEqual([dragging.get('z-index'), dragging.get('pointer-events')], ['10001', 'none'],
+    'a dragged shortcut paints above the dock and bookmarks bar without blocking hit tests');
+  ['en', 'ja', 'zh_CN', 'zh_TW'].forEach((locale) => {
+    const messages = JSON.parse(fs.readFileSync(path.join(repoRoot, '_locales', locale, 'messages.json'), 'utf8'));
+    ['newtab_shortcuts_moved_to_bookmarks', 'newtab_shortcuts_move_to_bookmarks_failed', 'bookmarks_moved_to_shortcuts'].forEach((key) => {
+      assert.ok(messages[key] && messages[key].message, `${locale} should translate ${key}`);
+    });
+  });
+  const scripts = getPageScripts('newtab.html');
+  assert.ok(scripts.indexOf('src/newtab/bookmarks/bookmark-drag.js') < scripts.indexOf('src/newtab/cross-surface-drag.js') &&
+    scripts.indexOf('src/newtab/cross-surface-drag.js') < scripts.indexOf('src/newtab/newtab.js'),
+  'the cross-surface helpers load with the drag helpers, before the page runtime');
+}
+
+(async () => {
+  testStylesAndCopy();
+  await testDragFeedback();
+  await testEscapeRestoresTheOrder();
+  console.log('New tab cross-surface drag tests passed.');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
