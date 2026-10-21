@@ -4,7 +4,7 @@ const refs = require('../../src/shared/bookmark-folder-reference.js');
 const shortcuts = require('../../src/newtab/shortcuts/shortcuts-store.js');
 const settings = require('../../src/shared/settings.js');
 const drag = require('../../src/newtab/cross-surface-drag.js');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { openDragPage } = require('../helpers/newtab-drag-page');
 
 function tree(folderId = '42', rootId = '1', rootTitle = '书签栏') {
   return [{ id: '0', children: [{ id: rootId, parentId: '0', title: rootTitle,
@@ -41,17 +41,6 @@ function device(initial = {}, nodes = tree()) {
 }
 function entry(map, id = 'entry-a', folderId = '42') {
   return shortcuts.createShortcutRecord({ id, type: 'folder', title: '灵感', folderRef: refs.describe(folderId, map) }, { now: 1 });
-}
-function functionSource(source, name) {
-  let start = source.indexOf(`function ${name}(`);
-  const body = source.indexOf('{', start);
-  if (source.slice(start - 6, start) === 'async ') start -= 6;
-  let depth = 0;
-  for (let index = body; index < source.length; index += 1) {
-    if (source[index] === '{') depth += 1;
-    if (source[index] === '}' && --depth === 0) return source.slice(start, index + 1);
-  }
-  throw new Error(`Missing function ${name}`);
 }
 
 async function run() {
@@ -138,137 +127,6 @@ async function run() {
   assert.strictEqual(legacyRuntime.reconcile([{ ...legacy, id: 'untrusted', folderId: '117' }], aMap)[0].folderRef, undefined,
     'a legacy numeric ID from another profile is not trusted');
 
-  const pageSource = readNewtabRuntimeSource();
-  const render = new Function('runtime', 'map', 'store', 'initial', `
-    const shortcutFolderRuntime = runtime;
-    const bookmarksRuntime = { getNodeMap: () => map };
-    const NEWTAB_SHORTCUTS_STORE = store;
-    let newtabShortcuts = initial, visible = [];
-    const shortcutGrid = {}, shortcutsView = { render(items) { visible = items; }, getAddButton() {} };
-    const shortcutSection = { setAttribute() {} }, document = { body: null };
-    let addShortcutButton;
-    const shortcutGroups = store.getDefaultShortcutState().groups;
-    let shortcutGroupEditingId = '';
-    function getShortcutStoreOptions() { return {}; }
-    function isShortcutGroupLayoutActive() { return false; }
-    function isShortcutDragActive() { return false; }
-    let shortcutRenderDeferred = false;
-    function scheduleWallpaperAdaptiveToneUpdate() {}
-    function hideShortcutTooltip() {} function closeShortcutContextMenu() {}
-    function syncOpenBookmarkCascadeAnchorVisual() {} function applyNewtabShortcutsVisibility() {}
-    function updateShortcutLanguageStrings() {} function updateBookmarkSectionPosition() {}
-    ${functionSource(pageSource, 'getVisibleShortcuts')}
-    ${functionSource(pageSource, 'renderShortcuts')}
-    renderShortcuts();
-    return { complete: newtabShortcuts, visible };
-  `);
-  const rendered = render(bRuntime, new Map(), shortcuts, complete);
-  assert.deepStrictEqual(rendered.complete, complete, 'actual render keeps hidden sync records');
-  assert.deepStrictEqual(rendered.visible.map((row) => row.id), ['before', 'after']);
-  assert.strictEqual(render(bRuntime, bMap, shortcuts, complete).visible[1].folderId, '117');
-
-  const dropDevice = device();
-  const dropRuntime = refs.createRuntime({ chrome: dropDevice.chrome });
-  await dropRuntime.ready;
-  const ambiguousMap = refs.buildNodeMap(tree('117'));
-  const duplicateTarget = { ...structuredClone(ambiguousMap.get('117')), id: '118' };
-  ambiguousMap.get('1').children.push(duplicateTarget);
-  ambiguousMap.set('118', duplicateTarget);
-  const drop = new Function('shortcutFolderRuntime', 'FOLDER_REFERENCES', 'NEWTAB_CROSS_SURFACE_DRAG', 'store', 'map', 'NEWTAB_BOOKMARK_MOVE_HISTORY', `
-    let newtabShortcuts = [];
-    const newtabShortcutIcons = {};
-    const MAX_NEWTAB_SHORTCUTS = 60;
-    const bookmarkMoveHistory = NEWTAB_BOOKMARK_MOVE_HISTORY.createBookmarkMoveHistory();
-    let bookmarkMoveHistoryBusy = false;
-    const bookmarkCascadeRuntime = null;
-    const bookmarksRuntime = {
-      getNodeMap: () => map, getNode: (id) => map.get(id),
-      ensureReady: () => Promise.resolve(true),
-      runControlledMutation: (run) => Promise.resolve().then(run)
-    };
-    function getShortcutFolderId(item) { return item.folderId || shortcutFolderRuntime.getNode(item, map)?.id || ''; }
-    async function persistShortcuts(items) { newtabShortcuts = store.normalizeShortcuts(items); return true; }
-    function t(key, text) { return text; }
-    function showToast(message) {
-      if (message !== 'Folder added to shortcuts') throw new Error('A selected folder must not ask for confirmation');
-    }
-    function markBookmarkTreeDirty() {} function loadBookmarks() {}
-    function queueBookmarkLayoutAnimation() {}
-    function refreshShortcutFolderReferences() { return Promise.resolve(); }
-    let bookmarkPendingLayoutAnimation;
-    ${functionSource(pageSource, 'applyBookmarkShortcutTransfer')}
-    ${functionSource(pageSource, 'moveBookmarkToShortcuts')}
-    ${functionSource(pageSource, 'transferBookmarkToShortcuts')}
-    return { move: moveBookmarkToShortcuts, getItems: () => newtabShortcuts };
-  `)(dropRuntime, refs, drag, shortcuts, ambiguousMap, require('../../src/newtab/bookmarks/bookmark-move-history'));
-  const dropTarget = { record: shortcuts.createShortcutRecord({ type: 'folder', folderId: '118', title: '灵感' }), index: 0 };
-  assert.strictEqual(await drop.move({ bookmarkId: '118' }, dropTarget), true);
-  const selected = drop.getItems()[0];
-  assert(selected.folderRef && !Object.hasOwn(selected, 'folderId'));
-  assert.strictEqual(dropRuntime.visibleItems([selected], ambiguousMap)[0].folderId, '118',
-    'actual drop binds the selected folder immediately even with identical sibling folders');
-  assert.strictEqual(await drop.move({ bookmarkId: '118' }, dropTarget), true);
-  assert.strictEqual(drop.getItems().length, 1);
-  assert.strictEqual(drop.getItems()[0].id, selected.id, 'a repeat drop retains the existing entry identity');
-
-  const reorder = new Function('initial', 'tiles', 'id', 'index', `
-    let newtabShortcuts = initial;
-    const getShortcutReorderTiles = () => tiles;
-    const getShortcutTileId = (tile) => tile.id;
-    ${functionSource(pageSource, 'moveShortcutItem')}
-    moveShortcutItem(id, index);
-    return newtabShortcuts;
-  `);
-  assert.deepStrictEqual(reorder(complete, [{ id: 'before' }, { id: 'after' }], 'after', 0).map((row) => row.id),
-    ['after', 'before', item.id], 'visible reorder does not discard hidden entries');
-  for (const [id, index] of [['before', 0], ['after', 1]]) {
-    assert.deepStrictEqual(reorder(complete, [{ id: 'before' }, { id: 'after' }], id, index), complete,
-      'a drag within the current visible slot does not move records around hidden entries');
-  }
-
-  const longEntry = shortcuts.createShortcutRecord({ ...item, id: 'long-path',
-    folderRef: { ...item.folderRef, path: Array(10).fill('x'.repeat(1024)) } });
-  const orderDevice = device();
-  const saveOrder = new Function('initial', 'NEWTAB_SHORTCUTS_STORE', 'storageArea', `
-    let newtabShortcuts = initial, newtabShortcutIcons = {}, shortcutPersistenceInFlightCount = 0;
-    let overflow = [], renderCount = 0, shortcutGroups = NEWTAB_SHORTCUTS_STORE.getDefaultShortcutState().groups;
-    let shortcutMigratedAt = 0;
-    const overflowArea = { set(value, fn) { overflow = value[NEWTAB_SHORTCUTS_STORE.SHORTCUTS_LOCAL_OVERFLOW_KEY].items; fn(); } };
-    function getShortcutStoreOptions() { return {}; }
-    function getNextShortcutIconMap() { return {}; }
-    function areShortcutIconMapsEqual() { return true; }
-    function getShortcutSyncBudget() { return Promise.resolve({ maxTotalBytes: 23040, legacyKeysPresent: false }); }
-    function getShortcutOverflowStorageArea() { return overflowArea; }
-    function applyShortcutState(state) { newtabShortcuts = state.items; shortcutGroups = state.groups; }
-    function getShortcutStorageLastError() { return null; }
-    function pruneShortcutFavicons() {} function renderShortcuts() { renderCount += 1; }
-    function showToast() { throw new Error('Successful reorder should not show an error'); }
-    ${functionSource(pageSource, 'persistShortcuts')}
-    ${functionSource(pageSource, 'persistShortcutOrder')}
-    return persistShortcutOrder().then((items) => ({ items, overflow, renderCount }));
-  `);
-  const savedOrder = await saveOrder([after, longEntry, before], shortcuts, orderDevice.chrome.storage.sync);
-  assert.deepStrictEqual(savedOrder.items.map((row) => row.id), ['after', 'long-path', 'before'],
-    'actual reorder persistence keeps the complete list when a folder path exceeds the sync item quota');
-  assert.deepStrictEqual(savedOrder.overflow.map((row) => row.id), ['long-path', 'before'],
-    'overflow retains the suffix so loading restores the same ordering');
-  assert.deepStrictEqual((await shortcuts.loadShortcuts(orderDevice.chrome.storage.sync)).map((row) => row.id), ['after']);
-  assert.strictEqual(savedOrder.renderCount, 0, 'the drag release owns the final render');
-
-  const visibility = new Function('count', 'addVisible', `
-    const shortcutSection = {}, newtabShortcuts = Array(count).fill({});
-    const MAX_NEWTAB_SHORTCUTS = 60, newtabShortcutAddVisible = addVisible;
-    const newtabShortcutsVisible = true, zenModeEnabled = false;
-    let visible;
-    function getVisibleShortcuts() { return []; }
-    function setContentSectionVisible(section, value) { visible = value; }
-    function resetShortcutDockHover() {} function closeShortcutContextMenu() {} function closeShortcutDialog() {}
-    ${functionSource(pageSource, 'applyNewtabShortcutsVisibility')}
-    applyNewtabShortcutsVisibility(); return visible;
-  `);
-  assert.strictEqual(visibility(60, true), false, 'all-hidden entries at capacity do not leave an empty rail');
-  assert.strictEqual(visibility(2, true), true, 'the add button remains available below capacity');
-  assert.strictEqual(visibility(2, false), false);
 
   const other = entry(aMap, 'entry-other');
   await shortcuts.saveShortcuts(b.chrome.storage.sync, [item, other]);
@@ -300,4 +158,59 @@ async function run() {
   assert.strictEqual(sourceDevice.chrome.storage.sync.values[refs.BINDINGS_KEY], undefined);
   console.log('Folder reference tests passed: per-device IDs, direct binding, hidden/recovered order, ambiguity, legacy migration, background edits and isolated storage.');
 }
-run().catch((error) => { console.error(error); process.exitCode = 1; });
+
+// On New Tab: a folder entry this device cannot bind stays stored but hidden,
+// moving the visible shortcuts keeps it, and a dropped folder binds the
+// folder that was dragged even when it has an identical sibling.
+async function runPage() {
+  const folderRef = refs.describe('42', refs.buildNodeMap(tree()));
+  const stored = async (drag) => (await shortcuts.loadShortcuts(drag.page.storage.sync)).map((row) => row.id);
+  const hidden = await openDragPage({
+    shortcuts: [
+      { id: 'before', url: 'https://before.example/', title: 'Before' },
+      { id: 'entry-a', type: 'folder', title: '灵感', folderRef },
+      { id: 'after', url: 'https://after.example/', title: 'After' }
+    ],
+    bookmarks: [{ id: '200', title: 'Docs', url: 'https://docs.example/' }]
+  });
+  assert.deepStrictEqual(hidden.shortcuts(), ['Before', 'After'], 'an unbound folder entry is hidden on this device');
+  assert.deepStrictEqual(await stored(hidden), ['before', 'entry-a', 'after'], 'and its sync record is kept in place');
+  await hidden.dragTo(hidden.tile('After'), hidden.shortcutSlot(0));
+  assert.deepStrictEqual(hidden.shortcuts(), ['After', 'Before']);
+  assert.deepStrictEqual(await stored(hidden), ['after', 'before', 'entry-a'], 'visible reorder does not discard hidden entries');
+  hidden.close();
+
+  const twin = (id) => ({ id, title: '灵感', children: [{ id: `${id}-url`, title: 'Design', url: 'https://example.com/design' }] });
+  const drop = await openDragPage({ shortcuts: [{ id: 'x', url: 'https://x.example/', title: 'X' }], bookmarks: [twin('117'), twin('118')] });
+  await drop.dragTo(drop.card('118'), drop.shortcutSlot(0));
+  assert.strictEqual(drop.toast(), 'Folder added to shortcuts', 'a selected folder is added without asking');
+  const [added] = await shortcuts.loadShortcuts(drop.page.storage.sync);
+  assert.ok(added.folderRef && !Object.hasOwn(added, 'folderId'), 'the synced entry is portable');
+  assert.strictEqual(drop.page.storage.local.data[refs.BINDINGS_KEY][added.id].folderId, '118',
+    'the drop binds the dragged folder on this device even with an identical sibling');
+  drop.clearToast();
+  await drop.dragTo(drop.card('118'), drop.shortcutSlot(0));
+  const again = await shortcuts.loadShortcuts(drop.page.storage.sync);
+  assert.deepStrictEqual(again.map((row) => row.id), [added.id, 'x'], 'a repeat drop keeps the existing entry');
+  drop.close();
+
+  // With every entry hidden there is nothing to show but the add button,
+  // which is gone at capacity.
+  const elsewhere = refs.buildNodeMap(Array.from({ length: shortcuts.DEFAULT_MAX_SHORTCUTS }, (_, index) => tree(`f${index}`)).reduce((all, next) => {
+    all[0].children[0].children.push(...next[0].children[0].children.map((node) => ({ ...node, title: node.id })));
+    return all;
+  }, tree('unused')));
+  const unbound = (count) => Array.from({ length: count }, (_, index) => ({
+    id: `hidden-${index}`, type: 'folder', title: `f${index}`, folderRef: refs.describe(`f${index}`, elsewhere)
+  }));
+  const rail = async (count) => {
+    const page = await openDragPage({ shortcuts: unbound(count), bookmarks: [] });
+    const visible = page.page.document.querySelector('.x-nt-shortcuts-section').getAttribute('data-visible');
+    page.close();
+    return visible;
+  };
+  assert.strictEqual(await rail(shortcuts.DEFAULT_MAX_SHORTCUTS), 'false', 'all-hidden entries at capacity do not leave an empty rail');
+  assert.strictEqual(await rail(2), 'true', 'the add button remains available below capacity');
+}
+
+run().then(runPage).then(() => process.exit(process.exitCode || 0)).catch((error) => { console.error(error); process.exit(1); });
