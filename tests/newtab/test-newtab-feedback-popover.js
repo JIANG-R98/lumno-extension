@@ -1,29 +1,20 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { readPageSource } = require('../helpers/page-source');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const communityLinks = require('../../src/shared/community-links.js');
+const { parsePageCss } = require('../helpers/css-rules');
+const { createNewtabPage } = require('../helpers/newtab-page');
 const { getPageScripts } = require('../helpers/runtime-scripts');
 
+// The New Tab feedback button: a popover of feedback channels that can open
+// a WeChat group panel with a QR code the user can refresh. Its look is read
+// from the stylesheets; the rest runs on the page.
+
 const repoRoot = path.resolve(__dirname, '..', '..');
-const newtabJs = readNewtabRuntimeSource();
-const newtabHtml = readPageSource('newtab.html');
-const communityLinksJs = fs.readFileSync(
-  path.join(repoRoot, 'src/shared/community-links.js'),
-  'utf8'
-);
-const feedbackReact = fs.readFileSync(
-  path.join(repoRoot, 'react-src/newtab/feedback.tsx'),
-  'utf8'
-);
 const zhCnMessages = JSON.parse(fs.readFileSync(path.join(repoRoot, '_locales/zh_CN/messages.json'), 'utf8'));
 const zhTwMessages = JSON.parse(fs.readFileSync(path.join(repoRoot, '_locales/zh_TW/messages.json'), 'utf8'));
 const enMessages = JSON.parse(fs.readFileSync(path.join(repoRoot, '_locales/en/messages.json'), 'utf8'));
 const jaMessages = JSON.parse(fs.readFileSync(path.join(repoRoot, '_locales/ja/messages.json'), 'utf8'));
-
-function assertContains(source, needle, message) {
-  assert.ok(source.includes(needle), message);
-}
 
 function getMessage(messages, key) {
   const item = messages[key];
@@ -31,231 +22,121 @@ function getMessage(messages, key) {
   return item.message;
 }
 
-assertContains(
-  newtabHtml,
-  'transition: opacity 170ms ease, transform 360ms cubic-bezier(0.2, 1.45, 0.35, 1)',
-  'feedback popover should use the same opening motion as menu surfaces'
-);
+function testStyles() {
+  const css = parsePageCss('newtab.html');
+  const popover = css.rule('.x-nt-feedback-popover');
+  assert.match(popover.get('transition'), /opacity 170ms ease, transform 360ms cubic-bezier\(0\.2, 1\.45, 0\.35, 1\)/,
+    'the popover should open like the menu surfaces');
+  assert.match(popover.get('transition'), /width 260ms cubic-bezier\(0\.22, 1, 0\.36, 1\), height 260ms cubic-bezier\(0\.22, 1, 0\.36, 1\)/,
+    'and resize without a bounce');
+  // Four 34px icons, three 6px gaps and 8px side padding, with room above and below.
+  assert.deepStrictEqual([popover.get('width'), popover.get('height'), popover.get('padding')], ['170px', '54px', '10px 8px']);
+  assert.deepStrictEqual([popover.get('contain'), popover.get('overflow')], ['layout', 'visible'],
+    'the collapsed row should let icon rings and shadows paint outside it');
+  assert.strictEqual(css.rule('.x-nt-feedback-popover', /corner-shape/).get('corner-shape'), 'superellipse(1.25)');
+  assert.strictEqual(css.rule('.x-nt-feedback-control[data-detail-open="true"] .x-nt-feedback-popover').get('overflow'), 'hidden',
+    'the QR panel should clip');
+  assert.strictEqual(css.rule('.x-nt-feedback-control[data-detail-open="true"] .x-nt-feedback-menu').get('visibility'), 'hidden',
+    'the QR panel should replace the icon row');
+  const action = css.rule('.x-nt-feedback-action');
+  assert.deepStrictEqual([action.get('position'), action.get('overflow'), action.get('background'), action.get('border')],
+    ['relative', 'visible', 'transparent', '0'], 'the action circle should paint outside its 34px hit target');
+  const circle = css.rule('.x-nt-feedback-action::before');
+  assert.strictEqual(circle.get('inset'), '-1px', 'the circle is drawn outward by a pseudo-element');
+  assert.ok(circle.get('background'));
+  const community = css.rule('.x-nt-feedback-action-community::before').get('box-shadow');
+  assert.match(community, /^0 0 0 1px #12161f,/, 'the community ring should sit outside the circle face');
+  assert.match(community, /inset 0 1px 0 rgba\(255, 255, 255, 0\.18\), inset 0 1px 3px rgba\(255, 255, 255, 0\.1\), inset 0 -1px 0 rgba\(0, 0, 0, 0\.22\)/,
+    'with the primary buttons\' sheen');
+  assert.ok(css.rule('.x-nt-feedback-detail-actions'), 'the panel\'s icon actions should sit at the right of its header');
+  const detailAction = css.rule('.x-nt-feedback-detail-action');
+  assert.deepStrictEqual([detailAction.get('width'), detailAction.get('background')], ['28px', 'transparent']);
+  assert.strictEqual(css.rule('.x-nt-feedback-detail-title').get('font-size'), '14px', 'the panel title should be larger than the labels');
+}
 
-assert.match(
-  newtabHtml,
-  /@supports \(corner-shape: superellipse\(1\.25\)\)[\s\S]*?\.x-nt-feedback-popover,[\s\S]*?corner-shape:\s*superellipse\(1\.25\);/,
-  'feedback popover should use continuous superellipse corners when supported'
-);
+// New Tab in Chinese, where the WeChat group is offered, with the community
+// links request and the QR image loads under the test's control.
+async function openFeedback(options) {
+  const config = options || {};
+  const fetched = [];
+  const page = await createNewtabPage({
+    sync: { _x_extension_language_2024_unique_: 'zh_CN' },
+    fetch: async (url) => {
+      fetched.push(url);
+      return { ok: true, status: 200, json: async () => ({}) };
+    },
+    setup(window) {
+      const Image = window.Image;
+      window.Image = function QrImage() {
+        const image = new Image();
+        Object.defineProperty(image, 'src', {
+          get: () => image.getAttribute('src'),
+          set(value) {
+            image.setAttribute('src', value);
+            window.setTimeout(() => (config.qrFails ? image.onerror : image.onload) && (config.qrFails ? image.onerror() : image.onload()), 5);
+          }
+        });
+        return image;
+      };
+    }
+  });
+  await page.settle(300);
+  const control = page.document.querySelector('.x-nt-feedback-control');
+  return { page, control, fetched };
+}
 
-assertContains(
-  newtabHtml,
-  'width: 170px;',
-  'collapsed feedback popover should exactly fit four 34px icons, three 6px gaps, and 8px side padding'
-);
+async function testPopover() {
+  const { page, control } = await openFeedback();
+  const button = control.querySelector('.x-nt-feedback-button');
+  await page.click(button);
+  await page.settle(200);
+  const actions = Array.from(control.querySelectorAll('.x-nt-feedback-action'));
+  const icons = actions.map((action) => action.querySelector('.ri-icon').className.match(/ri-[a-z-]+-(?:line|fill)/)[0]);
+  assert.ok(icons.includes('ri-star-line'), 'the store review action should use a rating star');
+  const review = actions[icons.indexOf('ri-star-line')];
+  assert.strictEqual(review.getAttribute('aria-label'), getMessage(zhCnMessages, 'newtab_feedback_chrome_review_tooltip'));
+  const wechat = actions[icons.indexOf('ri-wechat-fill')];
+  await page.click(wechat);
+  await page.settle(200);
+  assert.strictEqual(control.getAttribute('data-detail-open'), 'true', 'the WeChat action should open its panel');
+  const detail = control.querySelector('.x-nt-feedback-detail');
+  assert.strictEqual(detail.querySelector('.x-nt-feedback-detail-title').textContent, 'Bug 反馈 & 新功能提需');
+  const headerIcons = Array.from(detail.querySelectorAll('.x-nt-feedback-detail-actions button')).map((item) => [item.getAttribute('aria-label'), item.querySelector('.ri-icon').className.match(/ri-(refresh|close)-line/)[0]]);
+  assert.deepStrictEqual(headerIcons, [['刷新二维码', 'ri-refresh-line'], ['关闭', 'ri-close-line']], 'refresh then close, each labelled');
+  const qr = detail.querySelector('.x-nt-feedback-qr-image');
+  assert.deepStrictEqual([qr.getAttribute('width'), qr.getAttribute('height')], ['1080', '1596'], 'the QR image should reserve its size before loading');
 
-assertContains(
-  newtabHtml,
-  'height: 54px;',
-  'collapsed feedback popover should reserve vertical breathing room so feedback icons are not clipped'
-);
+  await page.click(detail.querySelector('.x-nt-feedback-detail-close'));
+  await page.settle(100);
+  assert.strictEqual(button.getAttribute('aria-expanded'), 'false', 'close should close the popover');
+  assert.strictEqual(page.document.activeElement, button, 'and give focus back to the feedback button');
+  page.close();
+}
 
-assertContains(
-  newtabHtml,
-  'padding: 10px 8px;',
-  'collapsed feedback popover should keep horizontal sizing while adding vertical breathing room'
-);
+async function testRefresh(qrFails) {
+  const { page, control, fetched } = await openFeedback({ qrFails });
+  await page.click(control.querySelector('.x-nt-feedback-button'));
+  await page.settle(150);
+  await page.click(control.querySelector('.x-nt-feedback-action-community'));
+  await page.settle(150);
+  const before = fetched.length;
+  await page.click(control.querySelector('.x-nt-feedback-detail-refresh'));
+  await page.settle(300);
+  assert.ok(fetched.slice(before).includes(communityLinks.COMMUNITY_LINKS_URL), 'refresh should ask for the community links again');
+  const [expected, other] = ['newtab_feedback_wechat_refresh_error', 'newtab_feedback_wechat_refresh_success']
+    .map((key) => getMessage(zhCnMessages, key));
+  const text = page.document.body.textContent;
+  assert.ok(text.includes(qrFails ? expected : other) && !text.includes(qrFails ? other : expected),
+    qrFails ? 'a QR image that cannot load should say the refresh failed' : 'a fresh QR image should say it was loaded');
+  page.close();
+}
 
-assertContains(
-  newtabHtml,
-  'contain: layout;',
-  'collapsed feedback popover should not use paint containment because it clips icon rings and shadows'
-);
+function testPackaging() {
+  assert.ok(getPageScripts('newtab.html').includes('src/shared/community-links.js'), 'New Tab should load the shared community links');
+  assert.strictEqual(getMessage(zhCnMessages, 'newtab_feedback_wechat_panel_title'), 'Bug 反馈 & 新功能提需');
+  assert.strictEqual(getMessage(zhTwMessages, 'newtab_feedback_wechat_panel_title'), '問題回報與功能建議');
+}
 
-assertContains(
-  newtabHtml,
-  'overflow: visible;',
-  'collapsed feedback popover should allow icon rings and shadows to paint beyond the action row'
-);
-
-assert.match(
-  newtabHtml,
-  /\.x-nt-feedback-control\[data-detail-open="true"\] \.x-nt-feedback-popover \{[\s\S]*?overflow: hidden;/,
-  'expanded feedback detail should keep clipping for the QR panel while the collapsed action row can paint freely'
-);
-
-assert.match(
-  newtabHtml,
-  /\.x-nt-feedback-action \{[\s\S]*?position: relative;[\s\S]*?overflow: visible;[\s\S]*?background: transparent;[\s\S]*?border: 0;/,
-  'feedback action buttons should let the visual circle paint outside the 34px hit target'
-);
-
-assert.match(
-  newtabHtml,
-  /\.x-nt-feedback-action::before \{[\s\S]*?inset: -1px;[\s\S]*?background: [^;]+;/,
-  'feedback action visual circles should be drawn by an outward pseudo-element to avoid hard-clipped edges'
-);
-
-assert.match(
-  newtabHtml,
-  /\.x-nt-feedback-action-community::before \{\s*background: [^;]+;\s*box-shadow:\s*0 0 0 1px #12161f,/,
-  'feedback community action ring should extend past the button box instead of being inset at the edge'
-);
-
-assertContains(
-  newtabHtml,
-  '0 0 0 1px #12161f,',
-  'feedback community action should draw the near-black ring outside the circle face'
-);
-
-assertContains(
-  newtabHtml,
-  'inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 1px 3px rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.22)',
-  'feedback community action should share the subtle primary sheen with the primary buttons'
-);
-
-assertContains(
-  newtabHtml,
-  'width 260ms cubic-bezier(0.22, 1, 0.36, 1), height 260ms cubic-bezier(0.22, 1, 0.36, 1)',
-  'feedback popover size animation should use a non-bouncy resize easing'
-);
-
-assertContains(
-  newtabHtml,
-  '.x-nt-feedback-control[data-detail-open="true"] .x-nt-feedback-menu',
-  'wechat detail state should target the menu row'
-);
-
-assertContains(
-  newtabHtml,
-  'visibility: hidden;',
-  'wechat detail state should hide the four feedback icons'
-);
-
-assertContains(
-  feedbackReact,
-  'ri-icon ri-size-16 ri-refresh-line',
-  'the React feedback detail should place a refresh icon in the header actions'
-);
-
-assertContains(
-  feedbackReact,
-  'ri-icon ri-size-16 ri-close-line',
-  'the React feedback detail should place a close icon after the refresh icon'
-);
-
-assert.ok(
-  feedbackReact.indexOf('ri-icon ri-size-16 ri-refresh-line') <
-    feedbackReact.indexOf('ri-icon ri-size-16 ri-close-line'),
-  'the React feedback detail should place refresh to the left of close'
-);
-
-assertContains(
-  newtabHtml,
-  '.x-nt-feedback-detail-actions {',
-  'wechat detail should align its icon actions at the right side of the header'
-);
-
-assert.match(
-  newtabHtml,
-  /\.x-nt-feedback-detail-action \{[\s\S]*?width: 28px;[\s\S]*?background: transparent;/,
-  'wechat detail header icons should use compact transparent hit targets'
-);
-
-assertContains(
-  feedbackReact,
-  'requestAnimationFrame(() => buttonRef.current?.focus());',
-  'the React wechat detail close icon should close the popover and restore focus'
-);
-
-assert.ok(
-  getPageScripts('newtab.html').includes('src/shared/community-links.js'),
-  'newtab should load the shared dynamic community links runtime'
-);
-
-assertContains(
-  communityLinksJs,
-  "chromeReview: 'https://chromewebstore.google.com/detail/lumno-%E8%81%9A%E7%84%A6%E6%90%9C%E7%B4%A2%E6%96%B0%E6%A0%87%E7%AD%BE%E9%A1%B5/nggfkkbmogmadfoikakkfegkoilfcfao/reviews?utm_source=item-share-cb',",
-  'the shared fallback should include the Chrome review URL'
-);
-
-assertContains(
-  feedbackReact,
-  'ri-icon ri-size-16 ri-star-line',
-  'the React feedback popover should use a rating star icon for the Chrome review action'
-);
-
-assertContains(
-  feedbackReact,
-  'width="1080"',
-  'the React wechat QR image should reserve its published width before loading'
-);
-
-assertContains(
-  feedbackReact,
-  'height="1596"',
-  'the React wechat QR image should reserve its published height before loading'
-);
-
-assert.match(
-  newtabJs,
-  /async onRefreshQr\(\)[\s\S]*?loadFeedbackLinks\(\{ force: true \}\)/,
-  'the feedback adapter should force a new remote community-links request'
-);
-
-assertContains(
-  communityLinksJs,
-  "url.searchParams.set(\n    '_lumno_refresh',",
-  'wechat refresh should cache-bust a QR URL even when the server reuses the same path'
-);
-
-assert.match(
-  newtabJs,
-  /const loaded = await preloadFeedbackQrImage\(refreshedUrl\);[\s\S]*?qrUrl:\s*refreshedUrl/,
-  'the feedback adapter should only return a fresh QR URL after its image loads'
-);
-
-assert.match(
-  newtabJs,
-  /t\(\s*'newtab_feedback_wechat_refresh_success',\s*'Latest QR code loaded'\s*\)/,
-  'wechat refresh should show a success tooltip after the latest image loads'
-);
-
-assert.match(
-  newtabJs,
-  /t\(\s*'newtab_feedback_wechat_refresh_error',\s*'Could not refresh\. Try again\.'\s*\)/,
-  'wechat refresh should show an error tooltip when the fresh image cannot be loaded'
-);
-
-assert.match(
-  feedbackReact,
-  /aria-label=\{model\.refreshTooltip\}[\s\S]*?x-lumno-busy-spin/,
-  'the React wechat refresh icon should expose a localized accessible label'
-);
-
-assert.match(
-  feedbackReact,
-  /aria-label=\{model\.closeTooltip\}[\s\S]*?x-nt-feedback-detail-close/,
-  'the React wechat close icon should expose a localized accessible label'
-);
-
-assert.match(
-  newtabJs,
-  /t\(\s*'newtab_feedback_wechat_panel_title',\s*'Bug reports & feature requests'\s*\)/,
-  'wechat detail title should use the bug feedback and feature request copy'
-);
-
-assert.match(
-  newtabHtml,
-  /\.x-nt-feedback-detail-title \{[\s\S]*?font-size: 14px;/,
-  'wechat detail title should be larger than the compact feedback labels'
-);
-
-assert.strictEqual(
-  getMessage(zhCnMessages, 'newtab_feedback_wechat_panel_title'),
-  'Bug 反馈 & 新功能提需',
-  'zh-CN should label the expanded wechat panel as bug feedback and feature requests'
-);
-assert.strictEqual(
-  getMessage(zhTwMessages, 'newtab_feedback_wechat_panel_title'),
-  '問題回報與功能建議',
-  'zh-TW should label the expanded wechat panel idiomatically'
-);
 assert.deepStrictEqual(
   [
     getMessage(zhTwMessages, 'newtab_feedback_wechat_label'),
@@ -364,4 +245,15 @@ assert.strictEqual(
   );
 });
 
-console.log('newtab feedback popover tests passed');
+(async () => {
+  testStyles();
+  testPackaging();
+  await testPopover();
+  await testRefresh(false);
+  await testRefresh(true);
+  console.log('newtab feedback popover tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

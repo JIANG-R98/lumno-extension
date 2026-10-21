@@ -3,11 +3,10 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 const folderIcon = require('../../src/newtab/bookmarks/bookmark-folder-icon.js');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { createNewtabPage } = require('../helpers/newtab-page');
 const { getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const newtabJs = readNewtabRuntimeSource();
 assert.deepStrictEqual(folderIcon.normalizeFolderColorMap(JSON.parse('{"1":"#aabbcc", "2":"#FF0000", "3":"bad-value", "__proto__":"#ffffff", "invalid id":"#ffffff"}')), { '1': '#AABBCC', '2': '#FF0000' });
 
 {
@@ -197,10 +196,23 @@ assert.ok(
   runsBefore(getPageScripts('newtab.html'), 'src/newtab/bookmarks/bookmark-folder-icon.js', 'src/newtab/newtab.js'),
   'the folder icon component should load before the newtab runtime'
 );
-assert.ok(
-  newtabJs.includes("import * as NEWTAB_BOOKMARK_FOLDER_ICON from './bookmarks/bookmark-folder-icon.js';") &&
-    newtabJs.includes('NEWTAB_BOOKMARK_FOLDER_ICON.getFigmaFolderSvg'),
-  'newtab should consume the component instead of retaining an embedded implementation'
-);
-
-console.log('newtab bookmark folder icon tests passed');
+// New Tab draws its folder shortcuts with this component's icon.
+(async () => {
+  const page = await createNewtabPage({
+    shortcuts: [{ type: 'folder', folderId: '10', title: 'Docs' }],
+    bookmarks: [{ id: '10', title: 'Docs', children: [] }]
+  });
+  await page.settle(300);
+  const tile = page.document.querySelector('.x-nt-shortcut-tile--folder');
+  const parts = Array.from(tile.querySelectorAll('svg path[data-folder-part]')).map((part) => part.getAttribute('data-folder-part'));
+  const expected = Array.from(new JSDOM(folderIcon.getFigmaFolderSvg('probe', '10')).window.document.querySelectorAll('path[data-folder-part]'))
+    .map((part) => part.getAttribute('data-folder-part'));
+  assert.ok(parts.length > 0, 'a folder shortcut should show the folder icon');
+  assert.deepStrictEqual(parts, expected, 'drawn by the shared folder icon component');
+  page.close();
+  console.log('newtab bookmark folder icon tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

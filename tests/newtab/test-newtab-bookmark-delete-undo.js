@@ -1,24 +1,14 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { readPageSource } = require('../helpers/page-source');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-const { readBackgroundSource } = require('../helpers/background-source');
+const { parsePageCss } = require('../helpers/css-rules');
+const { createNewtabPage } = require('../helpers/newtab-page');
+
+// Deleting bookmarks from New Tab's bookmark menus, with undo (⌘Z) and redo
+// (⇧⌘Z), and opening a folder as a tab group. The history records are
+// unit-tested first; the rest runs on the page.
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const newtabJs = readNewtabRuntimeSource();
-const newtabHtml = readPageSource('newtab.html');
-const bookmarksRuntimeJs = fs.readFileSync(
-  path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmarks-runtime.js'),
-  'utf8'
-);
-const bookmarkDragJs = fs.readFileSync(
-  path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-drag.js'),
-  'utf8'
-);
-const bookmarksViewJs = fs.readFileSync(path.join(repoRoot, 'react-src', 'newtab', 'bookmarks.tsx'), 'utf8');
-const cascadeJs = fs.readFileSync(path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-cascade-menu.js'), 'utf8');
-const backgroundJs = readBackgroundSource();
 const {
   cloneBookmarkSnapshot,
   createBookmarkMoveHistory,
@@ -94,72 +84,110 @@ storedRecord.runtime.currentBookmarkId = 'restored-folder-a';
 assert.strictEqual(history.commitUndo().runtime.currentBookmarkId, 'restored-folder-a');
 assert.strictEqual(history.peekRedo().runtime.currentBookmarkId, 'restored-folder-a');
 
-assert.ok(
-  bookmarksViewJs.includes('onContextMenu={(event) => {') &&
-    bookmarksViewJs.includes('onItemContextMenu({'),
-  'bookmark cards should expose the shared context-menu action'
-);
-assert.ok(
-  cascadeJs.includes("itemButton.addEventListener('contextmenu'") &&
-    cascadeJs.includes("sourceKind: 'cascade'"),
-  'every cascade level should expose the same context-menu action'
-);
-assert.ok(
-  newtabJs.includes("className: 'x-nt-shortcut-context-menu x-nt-bookmark-context-menu'") &&
-    newtabJs.includes("label: t('bookmarks_delete', 'Delete')"),
-  'bookmark deletion should reuse the shortcut context-menu surface'
-);
-assert.ok(
-  newtabJs.includes("BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE = 'open-in-new-tab-group'") &&
-    newtabJs.includes("label: t('newtab_open_in_new_tab', 'Open in new tab')") &&
-    newtabJs.includes("openExternalNewTabUrl(target.url, 'newTab')") &&
-    newtabJs.includes('dividerBefore: options.length > 0') &&
-    newtabJs.includes("label: t('bookmarks_open_in_new_tab_group'") &&
-    newtabJs.includes('disabled: getBookmarkFolderOpenCount(target) <= 0') &&
-    newtabJs.includes("option.getAttribute('aria-disabled') === 'true'") &&
-    newtabJs.includes("menu.addEventListener('click', handleBookmarkContextMenuActionClick)") &&
-    newtabJs.includes('confirmationTitle: formatMessage(') &&
-    newtabJs.includes("action: 'openBookmarkFolderInNewTabGroup'") &&
-    backgroundJs.includes("from './bookmark-tab-groups.js';"),
-  'folder actions should stay visible when empty, confirm recursively counted tabs, and route grouping through the background'
-);
-assert.ok(
-  newtabJs.includes('bookmarksRuntime.remove(record.bookmarkId, {') &&
-    newtabJs.includes('bookmarksRuntime.restore(record.snapshot, {') &&
-    bookmarksRuntimeJs.includes('async function restore(snapshot, options)'),
-  'deletion should remove folders recursively and restore the complete snapshot at its original location'
-);
-assert.ok(
-  newtabJs.includes("if (record.kind === 'delete')") &&
-    newtabJs.includes("'bookmarks_delete_undone'") &&
-    newtabJs.includes("'bookmarks_delete_redone'"),
-  'keyboard undo and redo should handle deletion records and show feedback only after the shortcut'
-);
-assert.ok(
-  bookmarkDragJs.includes('visualElement.style.left = `${position.left}px`') &&
-    bookmarkDragJs.includes("visualElement.style.transform = 'translate3d(0, 0, 0)'") &&
-    newtabJs.includes('draggedLayoutRect && !state.dragPreviewElement'),
-  'the floating drag preview should stay in viewport coordinates across page rerenders'
-);
-assert.ok(
-  newtabJs.includes('function queueBookmarkLayoutAnimation(excludedBookmarkId, animationOptions)') &&
-    newtabJs.includes('function playPendingBookmarkLayoutAnimation()') &&
-    newtabJs.includes('draggedBookmarkId: state.bookmarkId'),
-  'a completed drag should animate the dragged card and other cards from their pre-drop positions'
-);
-assert.ok(
-  newtabHtml.includes('[data-bookmark-context-menu-open="true"]') &&
-    cascadeJs.includes('shouldKeepOpenForExternalNode(target)'),
-  'the source item should remain visibly active and an open cascade should survive context-menu interaction'
-);
-assert.ok(
-  newtabJs.includes('bookmarksRuntime.runControlledMutation') &&
-    newtabJs.includes('if (change.isControlled)') &&
-    bookmarksRuntimeJs.includes('controlledMutationDepth > 0') &&
-    bookmarksRuntimeJs.includes("'onCreated'") &&
-    bookmarksRuntimeJs.includes("'onRemoved'"),
-  'Chrome bookmark events from controlled moves, deletes, or restores should not repeatedly refresh the cascade'
-);
+
+const MENU = '#_x_extension_newtab_bookmark_context_menu_2026_unique__menu';
+
+async function openDocs() {
+  const page = await createNewtabPage({
+    shortcuts: [{ type: 'folder', folderId: '10', title: 'Docs' }],
+    bookmarks: [{ id: '10', title: 'Docs', children: [
+      { id: '11', title: 'Link A', url: 'https://example.com/a' },
+      { id: '12', title: 'Folder B', children: [
+        { id: '13', title: 'Link B', url: 'https://example.com/b' },
+        { id: '15', title: 'Deep', children: [{ id: '16', title: 'Link C', url: 'https://example.com/c' }] }
+      ] },
+      { id: '14', title: 'Empty', children: [] }
+    ] }]
+  });
+  await page.settle(400);
+  const click = (element) => element.dispatchEvent(new page.window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+  const items = () => Array.from(page.document.querySelectorAll('.x-nt-bookmark-cascade-level[data-level="0"] .x-nt-bookmark-cascade-item'));
+  const ensureOpen = async () => {
+    if (!items().length) {
+      click(page.document.querySelector('.x-nt-shortcut-tile--folder'));
+      await page.settle(200);
+    }
+  };
+  const toast = () => page.document.getElementById('_x_extension_toast_2024_unique_').textContent;
+  const tree = () => page.bookmarks.find('10').children.map(function describe(node) {
+    return node.url ? node.title : { [node.title]: (node.children || []).map(describe) };
+  });
+  return {
+    page,
+    toast,
+    tree,
+    titles: () => items().map((item) => item.textContent.trim()),
+    item: (title) => items().find((item) => item.textContent.trim() === title),
+    async menu(title) {
+      await ensureOpen();
+      this.item(title).dispatchEvent(new page.window.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 20, clientY: 20, button: 2 }));
+      await page.settle(150);
+      return Array.from(page.document.querySelectorAll(`${MENU} [role="menuitem"]`))
+        .map((option) => [option.getAttribute('data-value'), option.getAttribute('aria-disabled') === 'true']);
+    },
+    async choose(value) {
+      const option = page.document.querySelector(`${MENU} [data-value="${value}"]`);
+      option.dispatchEvent(new page.window.MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
+      click(option);
+      await page.settle(250);
+    },
+    async key(init) {
+      page.trusted(page.document.body, 'keydown', Object.assign({ bubbles: true, cancelable: true }, init));
+      await page.settle(300);
+    }
+  };
+}
+
+async function testMenus() {
+  const docs = await openDocs();
+  const link = await docs.menu('Link A');
+  assert.strictEqual(link[0][0], 'open-in-new-tab', 'a website starts with Open in new tab');
+  assert.strictEqual(link[link.length - 1][0], 'remove', 'and ends with Delete');
+  await docs.key({ key: 'Escape' });
+  const folder = await docs.menu('Folder B');
+  assert.deepStrictEqual(folder.map(([value]) => value), ['open-in-new-tab-group', 'add-shortcut', 'folder-color', 'edit', 'remove']);
+  assert.strictEqual(docs.item('Folder B').getAttribute('data-bookmark-context-menu-open'), 'true', 'the item stays marked while its menu is open');
+  assert.ok(docs.page.document.querySelector('.x-nt-bookmark-cascade-level[data-open="true"]'), 'and the folder menu stays open behind it');
+  await docs.key({ key: 'Escape' });
+  const empty = await docs.menu('Empty');
+  assert.deepStrictEqual(empty[0], ['open-in-new-tab-group', true], 'an empty folder keeps the action, unavailable');
+
+  await docs.key({ key: 'Escape' });
+  await docs.menu('Folder B');
+  await docs.choose('open-in-new-tab-group');
+  const confirmation = docs.page.document.body.textContent;
+  assert.match(confirmation, /Open 2 tabs\?/, 'opening a folder as a group should confirm how many tabs, subfolders included');
+  const confirmButton = Array.from(docs.page.document.querySelectorAll('button')).find((button) => button.textContent.trim() === 'Open');
+  confirmButton.dispatchEvent(new docs.page.window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+  await docs.page.settle(150);
+  assert.ok(docs.page.messages.some((message) => message.action === 'openBookmarkFolderInNewTabGroup'), 'the background should open the group');
+  docs.page.close();
+}
+
+async function testDeleteUndoRedo() {
+  const docs = await openDocs();
+  const original = docs.tree();
+  await docs.menu('Folder B');
+  await docs.choose('remove');
+  assert.deepStrictEqual(docs.titles(), ['Link A', 'Empty'], 'Delete should take the folder off the menu');
+  assert.deepStrictEqual(docs.tree(), ['Link A', { Empty: [] }], 'and out of the bookmarks, with everything inside it');
+  assert.strictEqual(docs.toast(), '', 'deleting needs no announcement');
+
+  await docs.key({ key: 'z', code: 'KeyZ', metaKey: true });
+  assert.deepStrictEqual(docs.tree(), original, 'undo should restore the whole folder where it was');
+  assert.deepStrictEqual(docs.titles(), ['Link A', 'Folder B', 'Empty']);
+  assert.match(docs.toast(), /Deletion undone · ⇧⌘Z/, 'and say how to redo');
+
+  await docs.key({ key: 'z', code: 'KeyZ', metaKey: true, shiftKey: true });
+  assert.deepStrictEqual(docs.tree(), ['Link A', { Empty: [] }], 'redo should delete it again');
+  assert.ok(docs.toast().length > 0);
+  docs.page.close();
+}
+
+function testStyles() {
+  assert.ok(parsePageCss('newtab.html').selectors().some((selector) => selector.includes('[data-bookmark-context-menu-open="true"]')),
+    'the item under an open menu should stay visibly active');
+}
 
 ['en', 'zh_CN', 'zh_TW', 'ja'].forEach((locale) => {
   const messages = JSON.parse(fs.readFileSync(
@@ -184,4 +212,14 @@ assert.ok(
   });
 });
 
-console.log('New tab bookmark delete and undo tests passed.');
+
+(async () => {
+  await testMenus();
+  await testDeleteUndoRedo();
+  testStyles();
+  console.log('New tab bookmark delete and undo tests passed.');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

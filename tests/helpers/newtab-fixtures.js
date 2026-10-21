@@ -75,7 +75,7 @@ function createFakeBookmarks(window, barChildren) {
     return null;
   };
   const reindex = (parent) => (parent.children || []).forEach((child, index) => { child.index = index; });
-  const clone = (value) => JSON.parse(JSON.stringify(value));
+  const clone = (value) => (value === undefined ? undefined : JSON.parse(JSON.stringify(value)));
   const withoutChildren = (node) => {
     const copy = clone(node);
     delete copy.children;

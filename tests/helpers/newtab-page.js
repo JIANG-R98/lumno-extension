@@ -34,6 +34,8 @@ const DEFAULT_SYNC = {
 //   userAgent      navigator.userAgent
 //   darkSystem     whether prefers-color-scheme: dark matches
 //   search         the page URL's query, e.g. '?focus=1'
+//   fetch          (url, init) => response for requests outside the extension
+//                  (by default they fail, as offline)
 //   setup          (window) => void, run before the page scripts
 async function createNewtabPage(options) {
   const config = options || {};
@@ -151,9 +153,12 @@ async function createNewtabPage(options) {
       }
     }
   };
-  window.fetch = async (url) => {
+  window.fetch = async (url, init) => {
     const parsed = new URL(String(url), window.location.href);
     if (parsed.protocol !== 'chrome-extension:') {
+      if (typeof config.fetch === 'function') {
+        return config.fetch(parsed.href, init);
+      }
       throw new Error(`network disabled: ${url}`);
     }
     const file = path.join(repoRoot, decodeURIComponent(parsed.pathname));
