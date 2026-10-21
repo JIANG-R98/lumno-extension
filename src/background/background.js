@@ -549,7 +549,7 @@ function isSearchCommandSource(source) {
 
 function requestVisibleNewtabSearch(source, tabId) {
   const payload = {
-    action: source === 'commands'
+    action: source === 'commands' || source === 'page-hotkey'
       ? 'lumno:newtab-toggle-search-overlay'
       : 'lumno:newtab-focus-input',
     source: source || '',
@@ -2195,7 +2195,8 @@ function openOverlayOnTab(activeTab, tabs, source, options) {
   });
   if (restricted) {
     finishOpenAttempt(false);
-    if (isSearchCommandSource(source) && (isLumnoNewtabUrl(activeUrl) || isBrowserNewtabUrl(activeUrl))) {
+    if ((isSearchCommandSource(source) || source === 'page-hotkey') &&
+        (isLumnoNewtabUrl(activeUrl) || isBrowserNewtabUrl(activeUrl))) {
       requestVisibleNewtabSearch(source, activeTab.id);
       return;
     }

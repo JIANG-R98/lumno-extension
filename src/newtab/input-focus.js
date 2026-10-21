@@ -3,7 +3,8 @@
   function createInputFocus(deps) {
     const {
       SHORTCUT_KEY_MATCHER,
-      toggleSearchOverlay,
+      getExtensionResourceUrl,
+      sendRuntimeMessage,
       refreshTabsIfIdle,
       initialNewtabInputAutoFocusReadyTask,
       isImeCompositionEvent
@@ -15,6 +16,7 @@
     let fallbackShortcutRaw = '';
     let fallbackShortcutSpec = null;
     let fallbackShortcutRefreshAt = 0;
+    let searchOverlayOpening = false;
 
     function isEditableElement(el) {
       if (!el) {
@@ -33,23 +35,19 @@
         return;
       }
       fallbackShortcutRefreshAt = now;
-      try {
-        chrome.runtime.sendMessage({ action: 'getShowSearchShortcut' }, (response) => {
-          if (chrome.runtime && chrome.runtime.lastError) {
-            return;
-          }
-          const nextShortcut = response && typeof response.shortcut === 'string'
-            ? response.shortcut
-            : '';
-          if (nextShortcut === fallbackShortcutRaw) {
-            return;
-          }
-          fallbackShortcutRaw = nextShortcut;
-          fallbackShortcutSpec = SHORTCUT_KEY_MATCHER.parseShortcut(nextShortcut);
-        });
-      } catch (e) {
-        // Ignore runtime bridge failures.
-      }
+      sendRuntimeMessage({ action: 'getShowSearchShortcut' }, (response) => {
+        if (chrome.runtime && chrome.runtime.lastError) {
+          return;
+        }
+        const nextShortcut = response && typeof response.shortcut === 'string'
+          ? response.shortcut
+          : '';
+        if (nextShortcut === fallbackShortcutRaw) {
+          return;
+        }
+        fallbackShortcutRaw = nextShortcut;
+        fallbackShortcutSpec = SHORTCUT_KEY_MATCHER.parseShortcut(nextShortcut);
+      });
     }
 
     function focusSearchInputPreservingScroll() {
@@ -98,13 +96,77 @@
       return true;
     }
 
+    async function toggleSearchOverlay(tabId) {
+      if (searchOverlayOpening) {
+        return { ok: true, suppressed: true };
+      }
+      searchOverlayOpening = true;
+      try {
+        // Shared helpers are already loaded by newtab.html. As with the page
+        // bootstrap, import() caches these runtimes after their first use.
+        for (const path of [
+          'src/shared/browser-profile.js',
+          'src/overlay/runtime.js',
+          'src/overlay/favicon-view.js',
+          'src/overlay/lifecycle.js',
+          'src/overlay/site-fixes.js',
+          'src/overlay/page-theme.js',
+          'src/overlay/notices.js',
+          'src/overlay/keyboard.js',
+          'src/react/overlay-islands.js',
+          'src/overlay/search-panel.js'
+        ]) {
+          await import(getExtensionResourceUrl(path));
+        }
+        const tabZoomFactor = await new Promise((resolve) => {
+          chrome.tabs.getZoom(tabId, (zoom) => resolve(chrome.runtime.lastError ? 1 : zoom));
+        });
+        if (document.visibilityState !== 'visible') {
+          return { ok: false, reason: 'inactive-tab' };
+        }
+        const activeElement = document.activeElement;
+        // The overlay fetches its own tabs, just as on ordinary pages.
+        window._x_extension_toggleSearchOverlay_2026_unique_([], {
+          currentTabId: tabId,
+          currentTabUrl: window.location.href,
+          tabZoomFactor
+        });
+        // Release the previous input while the overlay waits to reveal.
+        if (window._x_extension_search_overlay_open_2026_unique_ &&
+            document.activeElement === activeElement && activeElement &&
+            typeof activeElement.blur === 'function') {
+          activeElement.blur();
+        }
+        return { ok: true };
+      } catch (error) {
+        console.warn('[Lumno] New Tab search overlay failed to open.', error);
+        return { ok: false, reason: 'overlay-unavailable' };
+      } finally {
+        searchOverlayOpening = false;
+      }
+    }
+
     if (chrome && chrome.runtime && chrome.runtime.onMessage && typeof chrome.runtime.onMessage.addListener === 'function') {
       chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-        if (!message || message.action !== 'lumno:newtab-focus-input') {
+        if (!message || (message.action !== 'lumno:newtab-focus-input' &&
+            message.action !== 'lumno:newtab-toggle-search-overlay')) {
           return;
         }
         if (document.visibilityState !== 'visible') {
           return;
+        }
+        if (message.action === 'lumno:newtab-toggle-search-overlay') {
+          try {
+            // Runtime messages also reach New Tabs in other windows.
+            chrome.tabs.getCurrent((tab) => {
+              if (!chrome.runtime.lastError && tab && tab.active && tab.id === message.tabId) {
+                toggleSearchOverlay(tab.id).then(sendResponse);
+              }
+            });
+          } catch (error) {
+            // Ignore an extension context invalidated during reload.
+          }
+          return true;
         }
         const focused = activateNewtabShortcutFocus();
         sendResponse({ ok: focused });
@@ -208,7 +270,10 @@
           SHORTCUT_KEY_MATCHER.eventMatchesShortcut(event, fallbackShortcutSpec)) {
         event.preventDefault();
         event.stopPropagation();
-        toggleSearchOverlay();
+        // Share the background's command routing and duplicate guard.
+        sendRuntimeMessage({ action: 'triggerShowSearchFromPageHotkey' }, () => {
+          void chrome.runtime.lastError;
+        });
         return;
       }
       if (window._x_extension_search_overlay_open_2026_unique_) {

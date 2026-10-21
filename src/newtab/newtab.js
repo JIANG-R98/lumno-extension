@@ -6001,7 +6001,6 @@
   });
 
   const NEWTAB_INPUT_FOCUS = globalThis.LumnoNewtabInputFocus;
-  const NEWTAB_SEARCH_OVERLAY = globalThis.LumnoNewtabSearchOverlay;
   const {
     isEditableElement,
     refreshFallbackShortcut,
@@ -6009,7 +6008,8 @@
     handleGlobalTypingFocus
   } = NEWTAB_INPUT_FOCUS.createInputFocus({
     SHORTCUT_KEY_MATCHER,
-    toggleSearchOverlay: NEWTAB_SEARCH_OVERLAY.toggleSearchOverlay,
+    getExtensionResourceUrl,
+    sendRuntimeMessage,
     refreshTabsIfIdle,
     initialNewtabInputAutoFocusReadyTask,
     isImeCompositionEvent,
