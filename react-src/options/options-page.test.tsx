@@ -40,6 +40,20 @@ import settingsSource from '../../src/shared/settings.js?raw';
 import blacklistUtilsSource from '../../src/shared/blacklist-utils.js?raw';
 import navigationDispositionSource from '../../src/shared/navigation-disposition.js?raw';
 import communityLinksSource from '../../src/shared/community-links.js?raw';
+import directNavigationSearchUtilsSource from '../../src/shared/search/utils/direct-navigation.js?raw';
+import textNormalizeSearchUtilsSource from '../../src/shared/search/utils/text-normalize.js?raw';
+import textIndexSearchUtilsSource from '../../src/shared/search/utils/text-index.js?raw';
+import keyboardLayoutsSearchUtilsSource from '../../src/shared/search/utils/keyboard-layouts.js?raw';
+import textMatchingSearchUtilsSource from '../../src/shared/search/utils/text-matching.js?raw';
+import selectionStatsSearchUtilsSource from '../../src/shared/search/utils/selection-stats.js?raw';
+import resultDedupSearchUtilsSource from '../../src/shared/search/utils/result-dedup.js?raw';
+import suggestionSlateSearchUtilsSource from '../../src/shared/search/utils/suggestion-slate.js?raw';
+import queryIntentSearchUtilsSource from '../../src/shared/search/utils/query-intent.js?raw';
+import relevanceScoreSearchUtilsSource from '../../src/shared/search/utils/relevance-score.js?raw';
+import brandSuggestionsSearchUtilsSource from '../../src/shared/search/utils/brand-suggestions.js?raw';
+import navigationMatchingSearchUtilsSource from '../../src/shared/search/utils/navigation-matching.js?raw';
+import siteSearchProvidersSearchUtilsSource from '../../src/shared/search/utils/site-search-providers.js?raw';
+import siteSearchMatchingSearchUtilsSource from '../../src/shared/search/utils/site-search-matching.js?raw';
 import searchUtilsSource from '../../src/shared/search/search-utils.js?raw';
 import searchSourceOrderSource from '../../src/shared/search/search-source-order.js?raw';
 import sortableDragSource from '../../src/shared/ui/sortable-drag.js?raw';
@@ -80,6 +94,20 @@ const PAGE_SCRIPTS = [
   blacklistUtilsSource,
   navigationDispositionSource,
   communityLinksSource,
+  directNavigationSearchUtilsSource,
+  textNormalizeSearchUtilsSource,
+  textIndexSearchUtilsSource,
+  keyboardLayoutsSearchUtilsSource,
+  textMatchingSearchUtilsSource,
+  selectionStatsSearchUtilsSource,
+  resultDedupSearchUtilsSource,
+  suggestionSlateSearchUtilsSource,
+  queryIntentSearchUtilsSource,
+  relevanceScoreSearchUtilsSource,
+  brandSuggestionsSearchUtilsSource,
+  navigationMatchingSearchUtilsSource,
+  siteSearchProvidersSearchUtilsSource,
+  siteSearchMatchingSearchUtilsSource,
   searchUtilsSource,
   searchSourceOrderSource,
   sortableDragSource,
