@@ -11,5 +11,14 @@ coverage/
 *.log
 .DS_Store
 
-# Local agent notes
+# Local secrets (release scripts read their tokens from the environment)
+.env
+.env.*
+
+# Editor settings
+.vscode/
+.idea/
+
+# Local AI agent files
 .claude/
+CLAUDE.local.md
