@@ -1,5 +1,6 @@
 const assert = require('assert');
 const { readStylesheet } = require('../helpers/css-tokens');
+const { extractFunction } = require('../helpers/extract-function');
 const fs = require('fs');
 const path = require('path');
 const { readPageSource } = require('../helpers/page-source');
@@ -1460,14 +1461,8 @@ testAdaptiveGridUsesMobileTierBeforeCompactTier();
 
 function testNewtabUsesDistinctMobileGridColumns() {
   const newtabJs = readNewtabRuntimeSource();
-  const bookmarkColumnsSource = newtabJs.slice(
-    newtabJs.indexOf('function getBookmarkGridColumnCount()'),
-    newtabJs.indexOf('function getNewtabWidthModeBaseConfig()')
-  );
-  const recentColumnsSource = newtabJs.slice(
-    newtabJs.indexOf('function getRecentGridColumnCount()'),
-    newtabJs.indexOf('function clearPageNoticeQueryParam()')
-  );
+  const bookmarkColumnsSource = extractFunction(newtabJs, 'getBookmarkGridColumnCount');
+  const recentColumnsSource = extractFunction(newtabJs, 'getRecentGridColumnCount');
 
   assert.match(bookmarkColumnsSource, /mobileColumns:\s*2,/);
   assert.match(recentColumnsSource, /mobileColumns:\s*2,/);
@@ -1537,7 +1532,7 @@ function testBookmarkGridDefaultsToSixColumns() {
   const settingsSource = fs.readFileSync(path.join(repoRoot, 'src/shared/settings.js'), 'utf8');
   const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
 
-  assert.match(newtabSource, /let currentBookmarkColumns = 6;/);
+  assert.match(newtabSource, /\bcurrentBookmarkColumns = 6;/);
   assert.match(
     newtabSource,
     /function normalizeBookmarkColumns\(value\) \{[\s\S]*?SETTINGS\.normalizeBookmarkColumns/
@@ -1625,10 +1620,8 @@ function testResizeSettleAnimatesSearchPositionChange() {
     /newtabResizeLayoutLocked\s*=\s*false;[\s\S]*?updateBookmarkSectionPosition\(\);/,
     'resize settle should lay the page out again once the lock is released'
   );
-  const positionSource = newtabSource.slice(
-    newtabSource.indexOf('function updateBookmarkSectionPosition(options)'),
-    newtabSource.indexOf('// The change history dialog is loaded the first time someone opens it.')
-  );
+  const positionSource = extractFunction(newtabSource, 'updateBookmarkSectionPosition') +
+    extractFunction(newtabSource, 'updateSearchEntryLayout');
   assert.match(
     positionSource,
     /updateBottomDockLayout\([\s\S]*?layoutMotion\.commit\(\)/,

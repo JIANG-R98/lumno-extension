@@ -33,7 +33,9 @@ const NEWTAB_RUNTIME_MODULES = [
   'src/newtab/section-headers.js',
   'src/newtab/recent/recent-mode-switch.js',
   'src/newtab/input-focus.js',
-  'src/newtab/entry-motion.js'
+  'src/newtab/entry-motion.js',
+  'src/newtab/bookmarks/folder-colors.js',
+  'src/newtab/page-layout.js'
 ];
 
 // Returns newtab.js followed by the modules split out of it, so source checks

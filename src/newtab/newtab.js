@@ -412,7 +412,7 @@
     NEWTAB_CONTEXT_MENU_OPEN_VALUE,
     FOLDER_COLOR_CONTEXT_MENU_VALUE,
     BOOKMARK_CONTEXT_MENU_EDIT_VALUE,
-    openFolderColorPicker,
+    openFolderColorPicker: (...args) => openFolderColorPicker(...args),
     openExternalNewTabUrl: (...args) => openExternalNewTabUrl(...args),
     openBookmarkEditor,
     openBookmarkFolderTabGroupConfirmation,
@@ -434,7 +434,6 @@
   const TAB_RANK_SCORE_DEBUG_STORAGE_KEY = '_x_extension_tab_rank_score_debug_2026_unique_';
   const NEWTAB_OPEN_TAB_SUGGESTION_LIMIT = 8;
   const FAVICON_CACHE_BOOT_WAIT_MS = 120;
-  const RESTORE_SEARCH_LAYOUT_LOCK_MS = 900;
   const PINNED_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_pinned_recent_sites_2026_unique_';
   const HIDDEN_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_hidden_recent_sites_2026_unique_';
   const NEWTAB_SHORTCUTS_LOCAL_OVERFLOW_STORAGE_KEY = NEWTAB_SHORTCUTS_STORE.SHORTCUTS_LOCAL_OVERFLOW_KEY;
@@ -608,11 +607,10 @@
   pageState.defaultPlaceholderText = 'Search or enter URL…';
   let toastElement = null;
   let toastController = null;
-  let layoutController = null;
-  let layoutMotion = null;
+  pageState.layoutController = null;
+  pageState.layoutMotion = null;
   let bottomDockScroller = null;
   pageState.faviconViewRuntime = null;
-  let searchEntryRestoreLayoutLockUntil = 0;
   pageState.newtabResizeLayoutLocked = false;
   pageState.newtabReadyRequested = false;
   // When the wallpaper was revealed (performance.now()); entry-motion.js lets it lead the content.
@@ -622,12 +620,10 @@
   const newtabEntryAnimationReadyPromise = new Promise((resolve) => {
     pageState.resolveNewtabEntryAnimationReady = resolve;
   });
-  let searchEntryLastVisibleViewportWidth = Math.max(0, window.innerWidth || 0);
-  let searchEntryLastVisibleViewportHeight = Math.max(0, window.innerHeight || 0);
   pageState.currentRecentMode = 'most';
-  let currentRecentCount = 4;
+  pageState.currentRecentCount = 4;
   pageState.currentBookmarkCount = 8;
-  let currentBookmarkColumns = 6;
+  pageState.currentBookmarkColumns = 6;
   pageState.currentBookmarkViewMode = 'folder';
   pageState.bookmarkViewModeRevision = 0;
   let bookmarkFolderIconsVisible = true;
@@ -680,7 +676,7 @@
   let recentHeader = null;
   pageState.recentHeading = null;
   pageState.recentModeMenu = null;
-  let recentGrid = null;
+  pageState.recentGrid = null;
   let bookmarkBreadcrumb = null;
   pageState.bookmarkBreadcrumbController = null;
   pageState.bookmarkPagerPrevButton = null;
@@ -738,7 +734,7 @@
     SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE,
     hideShortcutAddFromContextMenu: (...args) => hideShortcutAddFromContextMenu(...args),
     FOLDER_COLOR_CONTEXT_MENU_VALUE,
-    openFolderColorPicker,
+    openFolderColorPicker: (...args) => openFolderColorPicker(...args),
     getShortcutFolderId: (...args) => getShortcutFolderId(...args),
     SHORTCUT_CONTEXT_MENU_EDIT_VALUE,
     openShortcutEditor,
@@ -799,8 +795,7 @@
     '_x_extension_bookmark_folder_color_presets_2026_unique_';
   // Synced colors keyed by folder path, and the colors they resolve to for
   // this device's bookmark ids.
-  let folderColorRefs = {};
-  let folderColors = {};
+  pageState.folderColorRefs = {};
 
   const defaultSiteSearchProviders = SEARCH_UTILS.getDefaultSiteSearchProviders();
 
@@ -1073,150 +1068,34 @@
     pageState
   });
 
-  let folderColorPreview = null;
-  pageState.folderColorPicker = null;
-
-  function getFolderColor(folderId) {
-    return folderColorPreview && folderColorPreview.folderId === String(folderId)
-      ? folderColorPreview.color
-      : folderColors[String(folderId)] || folderColorApi.DEFAULT_FOLDER_COLOR;
-  }
-
-  function applySavedFolderColor(icon) {
-    if (!icon) return;
-    const svg = icon.querySelector('svg[data-folder-color-id]');
-    const folderId = svg && svg.getAttribute('data-folder-color-id');
-    if (folderId) NEWTAB_BOOKMARK_FOLDER_ICON.applyFolderColor(icon, getFolderColor(folderId));
-  }
-
-  function refreshFolderColors() {
-    document.querySelectorAll('svg[data-folder-color-id]').forEach((svg) => {
-      applySavedFolderColor(svg.parentElement);
-    });
-  }
-
-  function folderColorStorage(area, method, value) {
-    return new Promise((resolve, reject) => {
-      if (!area) { reject(new Error('Storage unavailable')); return; }
-      area[method](value, (data) => {
-        const error = chrome.runtime && chrome.runtime.lastError;
-        if (error) reject(new Error(error.message));
-        else resolve(data || {});
-      });
-    });
-  }
-
-  function readFolderColorRefs() {
-    return folderColorStorage(storageArea, 'get', [FOLDER_COLOR_REFS_STORAGE_KEY]).then((data) =>
-      NEWTAB_BOOKMARK_FOLDER_ICON.normalizeFolderColorRefs(data[FOLDER_COLOR_REFS_STORAGE_KEY]));
-  }
-
-  function writeFolderColorRefs(refs) {
-    return folderColorStorage(storageArea, 'set', { [FOLDER_COLOR_REFS_STORAGE_KEY]: refs });
-  }
-
-  // Bookmark ids and paths can change underneath the synced map; resolving
-  // again also moves a renamed or moved folder's color to its new path.
-  // Only this device's own load or bookmark changes write that move back.
-  // A map arriving from another device whose bookmarks have not caught up
-  // would otherwise move the entry back and forth between the two devices.
-  function applyFolderColorRefs(persist) {
-    const resolved = NEWTAB_BOOKMARK_FOLDER_ICON.resolveFolderColors(folderColorRefs, bookmarksRuntime.getNodeMap());
-    folderColors = resolved.colors;
-    refreshFolderColors();
-    if (!resolved.changed || !persist) return Promise.resolve();
-    folderColorRefs = resolved.refs;
-    return writeFolderColorRefs(resolved.refs).catch((error) => {
-      console.warn('[Lumno] Could not update folder color references.', error);
-    });
-  }
-
-  function syncFolderColorsWithBookmarks(persist) {
-    if (!Object.keys(folderColorRefs).length) {
-      folderColors = {};
-      refreshFolderColors();
-      return Promise.resolve();
-    }
-    return bookmarksRuntime.ensureReady(false).then((ready) => {
-      if (ready) return applyFolderColorRefs(persist);
-      return undefined;
-    });
-  }
-
-  // Bookmark sync can deliver many changes at once; resolve after they settle.
-  let folderColorSyncTimer = 0;
-  function scheduleFolderColorSync() {
-    if (!Object.keys(folderColorRefs).length) return;
-    clearTimeout(folderColorSyncTimer);
-    folderColorSyncTimer = setTimeout(() => {
-      folderColorSyncTimer = 0;
-      syncFolderColorsWithBookmarks(true).catch(() => {});
-    }, 200);
-  }
-
-  // Colors saved before they synced were keyed by this device's bookmark ids.
-  async function migrateLegacyFolderColors() {
-    const data = await folderColorStorage(localStorageArea, 'get', [LEGACY_FOLDER_COLORS_STORAGE_KEY]);
-    const legacy = NEWTAB_BOOKMARK_FOLDER_ICON.normalizeFolderColorMap(data[LEGACY_FOLDER_COLORS_STORAGE_KEY]);
-    if (!Object.keys(legacy).length) return;
-    if (!await bookmarksRuntime.ensureReady(false)) return;
-    const refs = await readFolderColorRefs();
-    const next = NEWTAB_BOOKMARK_FOLDER_ICON.importFolderColorMap(legacy, refs, bookmarksRuntime.getNodeMap());
-    if (JSON.stringify(next) !== JSON.stringify(refs)) await writeFolderColorRefs(next);
-    await folderColorStorage(localStorageArea, 'remove', [LEGACY_FOLDER_COLORS_STORAGE_KEY]);
-  }
-
-  function loadFolderColors() {
-    return migrateLegacyFolderColors().catch((error) => {
-      console.warn('[Lumno] Could not migrate folder colors.', error);
-    }).then(readFolderColorRefs).then((refs) => {
-      folderColorRefs = refs;
-      return syncFolderColorsWithBookmarks(true);
-    }).catch(() => {});
-  }
-
-  async function saveFolderColor(folderId, color) {
-    const [refs, ready] = await Promise.all([readFolderColorRefs(), bookmarksRuntime.ensureReady(false)]);
-    const next = ready
-      ? NEWTAB_BOOKMARK_FOLDER_ICON.setFolderColorRef(refs, folderId, color, bookmarksRuntime.getNodeMap())
-      : null;
-    if (!next) throw new Error('Folder is unavailable');
-    await writeFolderColorRefs(next);
-    folderColorRefs = next;
-    await applyFolderColorRefs(true);
-  }
-
-  async function openFolderColorPicker(folderId, title, sourceElement) {
-    closeBookmarkCascadeMenu();
-    closeShortcutDialog();
-    hideCursorTooltip();
-    if (!pageState.folderColorPicker) {
-      try {
-        pageState.folderColorPicker = await folderColorApi.createFolderColorPicker({
-          documentObj: document, t,
-          getFolderSvg: getFigmaFolderSvg,
-          initFolderIcon: NEWTAB_BOOKMARK_FOLDER_ICON.initFolderPathMorph,
-          animateFolderIcon: playFolderPathMorph,
-          applyFolderColor: NEWTAB_BOOKMARK_FOLDER_ICON.applyFolderColor,
-          bindTooltip: bindShortcutDialogTooltip,
-          hideTooltip: hideShortcutDialogTooltip,
-          readSavedColors: () => folderColorStorage(storageArea, 'get', [FOLDER_COLOR_PRESETS_STORAGE_KEY])
-            .then((data) => data[FOLDER_COLOR_PRESETS_STORAGE_KEY]),
-          saveSavedColors: (colors) => folderColorStorage(storageArea, 'set', { [FOLDER_COLOR_PRESETS_STORAGE_KEY]: colors }),
-          onPreview: (id, color) => {
-            folderColorPreview = { folderId: id, color };
-            refreshFolderColors();
-          },
-          onSubmit: saveFolderColor,
-          onClose: () => { folderColorPreview = null; refreshFolderColors(); }
-        });
-      } catch {
-        showToast(t('folder_color_save_failed', 'Could not save the folder color. Try again.'), true);
-        return;
-      }
-    }
-    pageState.folderColorPicker.open({ folderId: String(folderId), title, color: getFolderColor(folderId), sourceElement });
-  }
+  const NEWTAB_FOLDER_COLORS = globalThis.LumnoNewtabFolderColors;
+  const {
+    applySavedFolderColor,
+    folderColorStorage,
+    syncFolderColorsWithBookmarks,
+    scheduleFolderColorSync,
+    loadFolderColors,
+    openFolderColorPicker
+  } = NEWTAB_FOLDER_COLORS.createFolderColors({
+    folderColorApi,
+    NEWTAB_BOOKMARK_FOLDER_ICON,
+    storageArea,
+    FOLDER_COLOR_REFS_STORAGE_KEY,
+    bookmarksRuntime,
+    localStorageArea,
+    LEGACY_FOLDER_COLORS_STORAGE_KEY,
+    closeBookmarkCascadeMenu,
+    closeShortcutDialog,
+    hideCursorTooltip: (...args) => hideCursorTooltip(...args),
+    t,
+    getFigmaFolderSvg,
+    playFolderPathMorph,
+    bindShortcutDialogTooltip: (...args) => bindShortcutDialogTooltip(...args),
+    hideShortcutDialogTooltip: (...args) => hideShortcutDialogTooltip(...args),
+    FOLDER_COLOR_PRESETS_STORAGE_KEY,
+    showToast,
+    pageState
+  });
 
   // The folder color picker, over the shortcut dialog, for an icon's plate.
   // It shares the saved colors with folders; the shortcut dialog saves the
@@ -1465,8 +1344,6 @@
   const SEARCH_LAYOUT_SHORT_VIEWPORT_MAX_HEIGHT_PX = 680;
   const SEARCH_LAYOUT_SHORT_MIN_TOP_PX = 44;
   const WORDMARK_ENTRY_ANIMATION_NAME = '_x_nt_wordmark_enter_2026_unique_';
-  const BOOKMARK_CARD_TARGET_WIDTH_PX = 154;
-  const BOOKMARK_GRID_GAP_PX = 12;
   const RECENT_CARD_TARGET_WIDTH_PX = 248;
   const RECENT_GRID_GAP_PX = 12;
   const NEWTAB_MOBILE_FLOW_BREAKPOINT_PX = 640;
@@ -1489,25 +1366,65 @@
     }
   };
   const NEWTAB_SEARCH_WIDTH_CONFIG = NEWTAB_LAYOUT.SEARCH_WIDTH_CONFIG;
-  let currentNewtabWidthMode = 'wide';
-  let currentNewtabSearchWidth = null;
-  let currentRecentGridColumns = 4;
+  pageState.currentNewtabWidthMode = 'wide';
+  pageState.currentNewtabSearchWidth = null;
   toastElement = document.getElementById('_x_extension_toast_2024_unique_');
   toastController = NEWTAB_TOAST.createToastController(toastElement, { windowObj: window });
   markNewtabStartupMilestone('core-runtimes-created');
 
-  function normalizeRecentCount(value) {
-    return NEWTAB_RECENT_STORE.normalizeRecentCount(value);
-  }
-
-  function normalizeRecentMode(value, fallback) {
-    if (value === 'latest' || value === 'most') {
-      return value;
-    }
-    return fallback === 'latest' || fallback === 'most' ? fallback : 'latest';
-  }
-
   const NEWTAB_PAGE_PREFERENCES = globalThis.LumnoNewtabPagePreferences;
+
+  const NEWTAB_PAGE_LAYOUT = globalThis.LumnoNewtabPageLayout;
+  const {
+    normalizeRecentCount,
+    normalizeRecentMode,
+    getBookmarkGridColumnCount,
+    getEffectiveNewtabSearchWidth,
+    getRecentLimit,
+    getRecentSourceLimit,
+    applyBookmarkGridColumns,
+    keepBookmarkPageAnchorAfterLimitChange,
+    applyRecentGridColumns,
+    applyNewtabWidthMode,
+    updateNewtabSearchWidthLayout,
+    setNewtabSearchWidth,
+    setContentSectionVisible,
+    isContentSectionVisible,
+    applyNewtabShortcutLayoutPreferences,
+    applyNewtabShortcutColumns,
+    applyNewtabShortcutsVisibility,
+    getSearchEntryViewportSnapshot,
+    hasSearchEntryViewportChanged,
+    rememberSearchEntryViewport,
+    beginSearchEntryRestoreLayoutLock,
+    updateBookmarkSectionPosition,
+    updateSearchEntryLayout
+  } = NEWTAB_PAGE_LAYOUT.createPageLayout({
+    NEWTAB_RECENT_STORE,
+    normalizeBookmarkColumns: (...args) => normalizeBookmarkColumns(...args),
+    NEWTAB_LAYOUT,
+    NEWTAB_MOBILE_FLOW_BREAKPOINT_PX,
+    NEWTAB_WIDTH_MODE_CONFIGS,
+    normalizeNewtabWidthMode: (...args) => normalizeNewtabWidthMode(...args),
+    normalizeNewtabSearchWidth: (...args) => normalizeNewtabSearchWidth(...args),
+    NEWTAB_SEARCH_WIDTH_CONFIG,
+    RECENT_CARD_TARGET_WIDTH_PX,
+    RECENT_GRID_GAP_PX,
+    getBookmarkLimit: (...args) => getBookmarkLimit(...args),
+    updateSuggestionsFloatingLayout,
+    storageArea,
+    NEWTAB_SEARCH_WIDTH_STORAGE_KEY,
+    closeRecentContextMenu,
+    scheduleWallpaperAdaptiveToneUpdate,
+    normalizeNewtabShortcutSize: (...args) => normalizeNewtabShortcutSize(...args),
+    normalizeNewtabShortcutGap: (...args) => normalizeNewtabShortcutGap(...args),
+    getVisibleShortcuts: (...args) => getVisibleShortcuts(...args),
+    MAX_NEWTAB_SHORTCUTS,
+    resetShortcutDockHover,
+    closeShortcutContextMenu,
+    closeShortcutDialog,
+    pageState
+  });
   const {
     normalizeNewtabWidthMode,
     normalizeNewtabSearchWidth,
@@ -1600,55 +1517,6 @@
     return `score ${score} · 30m ${count30m} · 24h ${count24h} · ev ${debugTotal} · la ${lastAccessedSec} · s ${sortAtSec} · fs ${fetchSeq} · build 20260308-1`;
   }
 
-  function getBookmarkGridColumnCount() {
-    const config = getNewtabWidthModeConfig();
-    const maxColumns = Math.max(2, normalizeBookmarkColumns(currentBookmarkColumns));
-    return NEWTAB_LAYOUT.getAdaptiveGridColumnCount({
-      viewportWidth: window.innerWidth,
-      mobileBreakpointPx: NEWTAB_MOBILE_FLOW_BREAKPOINT_PX,
-      mobileColumns: 2,
-      compactBreakpointPx: 860,
-      compactColumns: 2,
-      contentMaxWidth: Number(config.contentMaxWidth || NEWTAB_LAYOUT.CONTENT_MAX_WIDTH_PX),
-      targetColumnWidth: BOOKMARK_CARD_TARGET_WIDTH_PX,
-      gap: BOOKMARK_GRID_GAP_PX,
-      minColumns: 2,
-      maxColumns
-    });
-  }
-
-  function getNewtabWidthModeBaseConfig() {
-    return NEWTAB_WIDTH_MODE_CONFIGS[normalizeNewtabWidthMode(currentNewtabWidthMode)] || NEWTAB_WIDTH_MODE_CONFIGS.wide;
-  }
-
-  function getEffectiveNewtabSearchWidth() {
-    const customWidth = normalizeNewtabSearchWidth(currentNewtabSearchWidth, { allowNull: true });
-    return customWidth || getNewtabWidthModeBaseConfig().searchMaxWidth || NEWTAB_SEARCH_WIDTH_CONFIG.fallback;
-  }
-
-  function getNewtabWidthModeConfig() {
-    return Object.assign({}, getNewtabWidthModeBaseConfig(), {
-      searchMaxWidth: getEffectiveNewtabSearchWidth()
-    });
-  }
-
-  function getRecentGridColumnCount() {
-    const config = getNewtabWidthModeConfig();
-    const maxColumns = Math.max(4, Number(config.recentMaxColumns || 4));
-    return NEWTAB_LAYOUT.getAdaptiveGridColumnCount({
-      viewportWidth: window.innerWidth,
-      mobileBreakpointPx: NEWTAB_MOBILE_FLOW_BREAKPOINT_PX,
-      mobileColumns: 2,
-      compactBreakpointPx: 860,
-      compactColumns: 2,
-      contentMaxWidth: Number(config.contentMaxWidth || NEWTAB_LAYOUT.CONTENT_MAX_WIDTH_PX),
-      targetColumnWidth: RECENT_CARD_TARGET_WIDTH_PX,
-      gap: RECENT_GRID_GAP_PX,
-      minColumns: 4,
-      maxColumns
-    });
-  }
-
   function clearPageNoticeQueryParam() {
     try {
       const url = new URL(window.location.href);
@@ -1733,81 +1601,6 @@
       }
       showFileAccessNotice(response.detailsUrl || '');
     });
-  }
-
-  function getRecentLimit() {
-    const normalized = normalizeRecentCount(currentRecentCount);
-    if (normalized <= 0) {
-      return 0;
-    }
-    const rows = Math.max(1, Math.round(normalized / 4));
-    return rows * Math.max(1, getRecentGridColumnCount());
-  }
-
-  function getRecentSourceLimit() {
-    const normalized = normalizeRecentCount(currentRecentCount);
-    if (normalized <= 0) {
-      return 0;
-    }
-    const rows = Math.max(1, Math.round(normalized / 4));
-    const config = getNewtabWidthModeConfig();
-    const maxColumns = Math.max(4, Number(config.recentMaxColumns || 4));
-    return rows * maxColumns;
-  }
-
-  function applyBookmarkGridColumns() {
-    if (!pageState.bookmarkGrid) {
-      return false;
-    }
-    const previousColumns = Number.parseInt(pageState.bookmarkGrid.style.getPropertyValue('--x-nt-bookmark-columns'), 10);
-    const columns = Math.max(1, getBookmarkGridColumnCount());
-    pageState.bookmarkGrid.style.setProperty('--x-nt-bookmark-columns', String(columns));
-    return previousColumns !== columns;
-  }
-
-  function keepBookmarkPageAnchorAfterLimitChange(previousLimit) {
-    const prev = Math.max(1, Number.parseInt(previousLimit, 10) || 1);
-    const next = Math.max(1, getBookmarkLimit());
-    const firstVisibleIndex = Math.max(0, pageState.bookmarkCurrentPage * prev);
-    pageState.bookmarkCurrentPage = Math.floor(firstVisibleIndex / next);
-  }
-
-  function applyRecentGridColumns() {
-    if (!recentGrid) {
-      return false;
-    }
-    const columns = getRecentGridColumnCount();
-    const changed = currentRecentGridColumns !== columns;
-    currentRecentGridColumns = columns;
-    recentGrid.style.setProperty('--x-nt-recent-columns', String(columns));
-    return changed;
-  }
-
-  function applyNewtabWidthMode() {
-    if (layoutController && typeof layoutController.applyWidthMode === 'function') {
-      layoutController.applyWidthMode(getNewtabWidthModeConfig());
-    }
-  }
-
-  function updateNewtabSearchWidthLayout() {
-    applyNewtabWidthMode();
-    updateSuggestionsFloatingLayout();
-    updateBookmarkSectionPosition();
-  }
-
-  function setNewtabSearchWidth(value, options) {
-    const config = options || {};
-    const nextWidth = normalizeNewtabSearchWidth(value, { allowNull: Boolean(config.allowNull) });
-    const changed = currentNewtabSearchWidth !== nextWidth;
-    currentNewtabSearchWidth = nextWidth;
-    updateNewtabSearchWidthLayout();
-    if (pageState.wallpaperRuntime && typeof pageState.wallpaperRuntime.updateSearchWidthUi === 'function') {
-      pageState.wallpaperRuntime.updateSearchWidthUi();
-    }
-    if (config.persist && storageArea && nextWidth !== null) {
-      storageArea.set({ [NEWTAB_SEARCH_WIDTH_STORAGE_KEY]: nextWidth });
-    }
-    return changed;
   }
 
   // 使用本地打包字体，避免外链字体依赖。
@@ -2296,7 +2089,7 @@
       applyBookmarkCountPreference,
       options
     ),
-    getBookmarkColumns: () => currentBookmarkColumns,
+    getBookmarkColumns: () => pageState.currentBookmarkColumns,
     setBookmarkColumns: (value, options) => setSectionPreference(
       BOOKMARK_COLUMNS_STORAGE_KEY,
       normalizeBookmarkColumns(value),
@@ -2320,7 +2113,7 @@
     pickBookmarkTopbarSurfaceColor: () => handleBookmarkModeMenuAction(BOOKMARK_TOPBAR_PICK_COLOR_ACTION),
     getRecentMode: () => pageState.currentRecentMode,
     setRecentMode: (mode) => setRecentMode(mode),
-    getRecentCount: () => currentRecentCount,
+    getRecentCount: () => pageState.currentRecentCount,
     setRecentCount: (value, options) => setSectionPreference(
       RECENT_COUNT_STORAGE_KEY,
       normalizeRecentCount(value),
@@ -2629,11 +2422,11 @@
 
   function applyBookmarkColumnsPreference(value) {
     const nextColumns = normalizeBookmarkColumns(value);
-    if (nextColumns === currentBookmarkColumns) {
+    if (nextColumns === pageState.currentBookmarkColumns) {
       return;
     }
     const previousLimit = getBookmarkLimit();
-    currentBookmarkColumns = nextColumns;
+    pageState.currentBookmarkColumns = nextColumns;
     keepBookmarkPageAnchorAfterLimitChange(previousLimit);
     applyBookmarkGridColumns();
     renderCurrentBookmarkPage();
@@ -2650,10 +2443,10 @@
 
   function applyRecentCountPreference(value) {
     const nextCount = normalizeRecentCount(value);
-    if (nextCount === currentRecentCount) {
+    if (nextCount === pageState.currentRecentCount) {
       return;
     }
-    currentRecentCount = nextCount;
+    pageState.currentRecentCount = nextCount;
     markRecentDataDirty();
     loadRecentSites({ force: true });
   }
@@ -2677,7 +2470,7 @@
     renderShortcuts();
   }, { area: 'local' });
   storageChanges.on(FOLDER_COLOR_REFS_STORAGE_KEY, (changes) => {
-    folderColorRefs = NEWTAB_BOOKMARK_FOLDER_ICON.normalizeFolderColorRefs(changes[FOLDER_COLOR_REFS_STORAGE_KEY].newValue);
+    pageState.folderColorRefs = NEWTAB_BOOKMARK_FOLDER_ICON.normalizeFolderColorRefs(changes[FOLDER_COLOR_REFS_STORAGE_KEY].newValue);
     syncFolderColorsWithBookmarks(false).catch(() => {});
   });
   storageChanges.on(NEWTAB_SHORTCUT_ICONS_STORAGE_KEY, (changes) => {
@@ -2776,7 +2569,7 @@
     const previousBookmarkLimit = getBookmarkLimit();
     const rawMode = changes[NEWTAB_WIDTH_MODE_STORAGE_KEY].newValue;
     const nextMode = normalizeNewtabWidthMode(rawMode);
-    currentNewtabWidthMode = nextMode;
+    pageState.currentNewtabWidthMode = nextMode;
     if (storageArea && rawMode !== nextMode) {
       storageArea.set({ [NEWTAB_WIDTH_MODE_STORAGE_KEY]: nextMode });
     }
@@ -2799,7 +2592,7 @@
   });
   storageChanges.on(NEWTAB_SEARCH_WIDTH_STORAGE_KEY, (changes) => {
     const rawWidth = changes[NEWTAB_SEARCH_WIDTH_STORAGE_KEY].newValue;
-    currentNewtabSearchWidth = normalizeNewtabSearchWidth(rawWidth, { allowNull: true });
+    pageState.currentNewtabSearchWidth = normalizeNewtabSearchWidth(rawWidth, { allowNull: true });
     updateNewtabSearchWidthLayout();
     if (pageState.wallpaperRuntime && typeof pageState.wallpaperRuntime.updateSearchWidthUi === 'function') {
       pageState.wallpaperRuntime.updateSearchWidthUi();
@@ -3124,8 +2917,8 @@
     storageArea.get([RECENT_COUNT_STORAGE_KEY], (result) => {
       const stored = result[RECENT_COUNT_STORAGE_KEY];
       const count = normalizeRecentCount(stored);
-      const changed = currentRecentCount !== count;
-      currentRecentCount = count;
+      const changed = pageState.currentRecentCount !== count;
+      pageState.currentRecentCount = count;
       if (stored !== count) {
         storageArea.set({ [RECENT_COUNT_STORAGE_KEY]: count });
       }
@@ -3138,9 +2931,9 @@
       const previousBookmarkLimit = getBookmarkLimit();
       const stored = result[NEWTAB_WIDTH_MODE_STORAGE_KEY];
       const mode = normalizeNewtabWidthMode(stored);
-      const changed = currentNewtabWidthMode !== mode;
-      currentNewtabWidthMode = mode;
-      currentNewtabSearchWidth = normalizeNewtabSearchWidth(result[NEWTAB_SEARCH_WIDTH_STORAGE_KEY], {
+      const changed = pageState.currentNewtabWidthMode !== mode;
+      pageState.currentNewtabWidthMode = mode;
+      pageState.currentNewtabSearchWidth = normalizeNewtabSearchWidth(result[NEWTAB_SEARCH_WIDTH_STORAGE_KEY], {
         allowNull: true
       });
       if (stored !== mode) {
@@ -3256,7 +3049,7 @@
     storageArea.get([BOOKMARK_COLUMNS_STORAGE_KEY], (result) => {
       const stored = result[BOOKMARK_COLUMNS_STORAGE_KEY];
       const columns = normalizeBookmarkColumns(stored);
-      currentBookmarkColumns = columns;
+      pageState.currentBookmarkColumns = columns;
       if (stored !== columns) {
         storageArea.set({ [BOOKMARK_COLUMNS_STORAGE_KEY]: columns });
       }
@@ -3715,7 +3508,7 @@
   const suggestionsSurface = pageStructureRuntime.suggestions.surface;
   const suggestionsOutline = pageStructureRuntime.suggestions.outline;
   const bookmarkSection = pageStructureRuntime.bookmark.section;
-  const recentSection = pageStructureRuntime.recent.section;
+  pageState.recentSection = pageStructureRuntime.recent.section;
 
   const NEWTAB_TOP_CONTENT_RUNTIME = globalThis.LumnoNewtabTopContentRuntime;
   const {
@@ -4314,98 +4107,6 @@
     return api;
   }
 
-  function setContentSectionVisible(section, visible) {
-    if (!section) {
-      return;
-    }
-    section.setAttribute('data-content-visible', visible ? 'true' : 'false');
-    section.setAttribute('data-visible', visible && !pageState.zenModeEnabled ? 'true' : 'false');
-    if (section === recentSection && (!visible || pageState.zenModeEnabled)) {
-      closeRecentContextMenu();
-    }
-    scheduleWallpaperAdaptiveToneUpdate();
-  }
-
-  function isContentSectionVisible(section) {
-    return Boolean(section && section.getAttribute('data-visible') === 'true');
-  }
-
-  function applyNewtabShortcutLayoutPreferences() {
-    if (!document.documentElement || !document.documentElement.style) {
-      return;
-    }
-    const rootStyle = document.documentElement.style;
-    const size = normalizeNewtabShortcutSize(pageState.newtabShortcutSize);
-    const gap = normalizeNewtabShortcutGap(pageState.newtabShortcutGap);
-    // Whole pixels with matching parity leave an even margin on each side, so
-    // the icon sits centered in its tile and the favicon in its icon on 1x screens.
-    const iconSize = roundToParityOf(size * 0.75, size);
-    const faviconSize = roundToParityOf(size * 0.4375, iconSize);
-    rootStyle.setProperty('--x-nt-shortcut-user-tile-size', `${size}px`);
-    rootStyle.setProperty('--x-nt-shortcut-user-icon-size', `${iconSize}px`);
-    rootStyle.setProperty('--x-nt-shortcut-user-icon-radius', `${size * 0.25}px`);
-    rootStyle.setProperty('--x-nt-shortcut-user-favicon-size', `${faviconSize}px`);
-    rootStyle.setProperty('--x-nt-shortcut-user-tile-padding', `${size * 0.125}px`);
-    rootStyle.setProperty('--x-nt-shortcut-user-column-gap', `${gap}px`);
-    rootStyle.setProperty('--x-nt-shortcut-user-row-gap', `${gap + 6}px`);
-    applyNewtabShortcutColumns();
-  }
-
-  function roundToParityOf(value, reference) {
-    const floor = Math.floor(value);
-    const lower = (floor - reference) % 2 === 0 ? floor : floor - 1;
-    return value - lower <= 1 ? lower : lower + 2;
-  }
-
-  function applyNewtabShortcutColumns() {
-    if (!document.documentElement || !document.documentElement.style) {
-      return;
-    }
-    document.documentElement.style.setProperty(
-      '--x-nt-shortcut-columns',
-      String(pageState.newtabShortcutColumns)
-    );
-    if (!pageState.shortcutGrid || typeof window.getComputedStyle !== 'function') {
-      return;
-    }
-    const gridStyle = window.getComputedStyle(pageState.shortcutGrid);
-    const tileSize = Number.parseFloat(
-      gridStyle.getPropertyValue('--x-nt-shortcut-tile-size')
-    );
-    const columnGap = Number.parseFloat(gridStyle.columnGap);
-    const paddingLeft = Number.parseFloat(gridStyle.paddingLeft);
-    const paddingRight = Number.parseFloat(gridStyle.paddingRight);
-    if (![tileSize, columnGap, paddingLeft, paddingRight].every(Number.isFinite)) {
-      return;
-    }
-    const targetWidth =
-      (tileSize * pageState.newtabShortcutColumns) +
-      (columnGap * Math.max(0, pageState.newtabShortcutColumns - 1)) +
-      paddingLeft +
-      paddingRight;
-    document.documentElement.style.setProperty(
-      '--x-nt-shortcuts-target-width',
-      `${Math.round(targetWidth)}px`
-    );
-  }
-
-  function applyNewtabShortcutsVisibility() {
-    if (!pageState.shortcutSection) {
-      return;
-    }
-    const hasVisibleContent = getVisibleShortcuts().length > 0 ||
-      (pageState.newtabShortcutAddVisible && pageState.newtabShortcuts.length < MAX_NEWTAB_SHORTCUTS);
-    setContentSectionVisible(
-      pageState.shortcutSection,
-      Boolean(pageState.newtabShortcutsVisible && hasVisibleContent)
-    );
-    if (!pageState.newtabShortcutsVisible || !hasVisibleContent || pageState.zenModeEnabled) {
-      resetShortcutDockHover();
-      closeShortcutContextMenu();
-      closeShortcutDialog();
-    }
-  }
-
   function updateShortcutDialogLanguageStrings() {
     if (pageState.shortcutDialogController) {
       pageState.shortcutDialogController.updateLanguage();
@@ -4948,15 +4649,15 @@
   pageState.sectionDataRevision = 0;
   pageState.bookmarkLoadedOnce = false;
 
-  setContentSectionVisible(recentSection, false);
-  recentSection.addEventListener('pointerenter', (event) => {
+  setContentSectionVisible(pageState.recentSection, false);
+  pageState.recentSection.addEventListener('pointerenter', (event) => {
     if (!event || event.pointerType !== 'mouse') {
       return;
     }
     pageState.recentMouseInsideSection = true;
     pageState.recentMouseLeftAt = 0;
   });
-  recentSection.addEventListener('pointerleave', (event) => {
+  pageState.recentSection.addEventListener('pointerleave', (event) => {
     if (!event || event.pointerType !== 'mouse') {
       return;
     }
@@ -4964,7 +4665,7 @@
     pageState.recentMouseLeftAt = Date.now();
     hideTopActionTooltip();
   });
-  recentSection.addEventListener('pointercancel', () => {
+  pageState.recentSection.addEventListener('pointercancel', () => {
     pageState.recentMouseInsideSection = false;
     hideTopActionTooltip();
   });
@@ -4992,12 +4693,12 @@
       }
     ]
   });
-  recentGrid = pageStructureRuntime.recent.grid;
+  pageState.recentGrid = pageStructureRuntime.recent.grid;
   applyRecentGridColumns();
   pageState.recentSitesView = NEWTAB_RECENT_VIEW.createRecentSitesView({
     documentObj: document,
     windowObj: window,
-    grid: recentGrid,
+    grid: pageState.recentGrid,
     cards: recentCards,
     t,
     formatMessage,
@@ -5050,7 +4751,7 @@
     shortcutSection: () => pageState.shortcutSection,
     quoteSection: () => pageState.quoteRuntime && pageState.quoteRuntime.element,
     bookmarkSection,
-    recentSection,
+    recentSection: pageState.recentSection,
     suggestionsContainer,
     suggestionsSurface,
     suggestionsOutline,
@@ -5074,9 +4775,9 @@
   });
   const bottomDock = bottomDockRuntime.element;
   bottomDockScroller = bottomDockRuntime.scroller;
-  layoutController = bottomDockRuntime.layoutController;
+  pageState.layoutController = bottomDockRuntime.layoutController;
   // The dock moves as a whole when its sections slide together.
-  layoutMotion = globalThis.LumnoNewtabLayoutMotion.createLayoutMotion({
+  pageState.layoutMotion = globalThis.LumnoNewtabLayoutMotion.createLayoutMotion({
     documentObj: document,
     windowObj: window,
     getTargets: () => [
@@ -5090,7 +4791,7 @@
         element: pageState.engagementNoticeController && pageState.engagementNoticeController.element
       },
       { key: 'bookmarks', element: bookmarkSection, mover: bottomDock },
-      { key: 'recent', element: recentSection, mover: bottomDock }
+      { key: 'recent', element: pageState.recentSection, mover: bottomDock }
     ],
     canAnimate: () => shouldAnimateNewtabLayoutShift() &&
       !pageState.newtabResizeLayoutLocked &&
@@ -5290,7 +4991,7 @@
     mergeRecentSitesWithPinned,
     getRecentLimit,
     setContentSectionVisible,
-    recentSection,
+    recentSection: pageState.recentSection,
     bookmarksRuntime,
     closeBookmarkCascadeMenu,
     bootstrapInitialThemeMode,
@@ -5310,93 +5011,6 @@
     beginSearchEntryRestoreLayoutLock,
     pageState
   });
-
-  function getCurrentSearchEntryPaddingTop() {
-    if (!document.body || !document.body.style) {
-      return null;
-    }
-    const value = Number.parseFloat(document.body.style.getPropertyValue('padding-top'));
-    return Number.isFinite(value) ? Math.round(value) : null;
-  }
-
-  function getSearchEntryViewportSnapshot() {
-    return {
-      width: Math.max(0, Math.round(window.innerWidth || 0)),
-      height: Math.max(0, Math.round(window.innerHeight || 0))
-    };
-  }
-
-  function hasSearchEntryViewportChanged(referenceViewport) {
-    const currentViewport = getSearchEntryViewportSnapshot();
-    const reference = referenceViewport || {};
-    return Math.abs(currentViewport.width - (Number(reference.width) || 0)) > 1 ||
-      Math.abs(currentViewport.height - (Number(reference.height) || 0)) > 1;
-  }
-
-  function rememberSearchEntryViewport() {
-    const viewport = getSearchEntryViewportSnapshot();
-    searchEntryLastVisibleViewportWidth = viewport.width;
-    searchEntryLastVisibleViewportHeight = viewport.height;
-  }
-
-  function hasSearchEntryViewportChangedSinceLastVisible() {
-    const viewport = getSearchEntryViewportSnapshot();
-    return Math.abs(viewport.width - searchEntryLastVisibleViewportWidth) > 1 ||
-      Math.abs(viewport.height - searchEntryLastVisibleViewportHeight) > 1;
-  }
-
-  function beginSearchEntryRestoreLayoutLock() {
-    if (!document.body ||
-        document.body.getAttribute('data-nt-ready') !== '1' ||
-        hasSearchEntryViewportChangedSinceLastVisible() ||
-        getCurrentSearchEntryPaddingTop() === null) {
-      return;
-    }
-    searchEntryRestoreLayoutLockUntil = Date.now() + RESTORE_SEARCH_LAYOUT_LOCK_MS;
-  }
-
-  function shouldPreserveSearchEntryLayout() {
-    if (!searchEntryRestoreLayoutLockUntil || Date.now() > searchEntryRestoreLayoutLockUntil) {
-      searchEntryRestoreLayoutLockUntil = 0;
-      return false;
-    }
-    if (getCurrentSearchEntryPaddingTop() === null) {
-      searchEntryRestoreLayoutLockUntil = 0;
-      return false;
-    }
-    return true;
-  }
-
-  function updateBookmarkSectionPosition(options) {
-    const layoutOptions = options || {};
-    if (layoutController && typeof layoutController.updateBottomDockLayout === 'function') {
-      layoutController.updateBottomDockLayout({
-        preserveSearchEntryLayout: Boolean(layoutOptions.preserveSearchEntryLayout) ||
-          pageState.newtabResizeLayoutLocked ||
-          shouldPreserveSearchEntryLayout(),
-        // A live resize holds the dock's density until the resize settles.
-        stabilizeDockDensity: Boolean(layoutOptions.stabilizeDockDensity) || pageState.newtabResizeLayoutLocked,
-        onRecentHidden: () => {
-          pageState.recentMouseInsideSection = false;
-          pageState.recentMouseLeftAt = 0;
-        }
-      });
-    }
-    if (layoutMotion) {
-      layoutMotion.commit();
-    }
-    rememberSearchEntryViewport();
-    scheduleWallpaperAdaptiveToneUpdate();
-  }
-
-  function updateSearchEntryLayout(options) {
-    if (layoutController && typeof layoutController.updateSearchEntryLayout === 'function') {
-      layoutController.updateSearchEntryLayout(options);
-    }
-    if (layoutMotion) {
-      layoutMotion.commit();
-    }
-  }
 
   // The change history dialog is loaded the first time someone opens it.
   function openRecentHistoryDialog(item) {
@@ -5583,18 +5197,18 @@
   function setSuggestionsVisible(visible) {
     // The open list is placed from the search box's drawn position, so the
     // box lands first.
-    if (visible && layoutMotion) {
-      layoutMotion.cancelAll();
+    if (visible && pageState.layoutMotion) {
+      pageState.layoutMotion.cancelAll();
     }
-    if (layoutController && typeof layoutController.setSuggestionsVisible === 'function') {
-      layoutController.setSuggestionsVisible(visible);
+    if (pageState.layoutController && typeof pageState.layoutController.setSuggestionsVisible === 'function') {
+      pageState.layoutController.setSuggestionsVisible(visible);
     }
     syncSearchModeMenuResultOffset();
   }
 
   function updateSuggestionsFloatingLayout() {
-    if (layoutController && typeof layoutController.updateSuggestionsFloatingLayout === 'function') {
-      layoutController.updateSuggestionsFloatingLayout();
+    if (pageState.layoutController && typeof pageState.layoutController.updateSuggestionsFloatingLayout === 'function') {
+      pageState.layoutController.updateSuggestionsFloatingLayout();
     }
   }
 
@@ -6049,7 +5663,7 @@
     applyNewtabTopContentVisibility,
     applyNewtabShortcutsVisibility,
     bookmarkSection,
-    recentSection,
+    recentSection: pageState.recentSection,
     isBookmarkTopbarMode,
     bookmarkCards,
     closeBookmarkCascadeMenu,

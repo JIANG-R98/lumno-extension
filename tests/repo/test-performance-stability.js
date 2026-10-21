@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { extractFunction } = require('../helpers/extract-function');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const optionsJs = fs.readFileSync(path.join(repoRoot, 'src/options/options.js'), 'utf8');
@@ -235,10 +236,8 @@ assertMatches(
   'new tab should synchronize native controls with the resolved theme'
 );
 
-const bookmarkPageMotion = newtabJs.slice(
-  newtabJs.indexOf('function switchBookmarkPage(nextPage)'),
-  newtabJs.indexOf('function getCurrentSearchEntryPaddingTop()')
-);
+// Comments may name the properties it avoids.
+const bookmarkPageMotion = extractFunction(newtabJs, 'switchBookmarkPage').replace(/\/\/.*$/gm, '');
 assert.doesNotMatch(
   bookmarkPageMotion,
   /\bfilter\b|blur\(/,
