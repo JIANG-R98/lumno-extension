@@ -1,11 +1,11 @@
 // A search, history, bookmark or help center suggestion row.
+import { useRef, useMemo, useLayoutEffect, type MouseEvent as ReactMouseEvent, memo } from 'react';
 import type {
   SearchSuggestionRowProps,
   SuggestionElement,
   SuggestionActionTagElement,
   SuggestionUtilityActionElements
 } from './types';
-import { useRef, useMemo, useLayoutEffect, type MouseEvent as ReactMouseEvent, memo } from 'react';
 import {
   isLocalUrlSuggestion,
   createActionModel,

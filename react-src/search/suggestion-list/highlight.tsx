@@ -1,7 +1,7 @@
 // Highlighting the query in titles and URLs, and the tooltip a truncated
 // text shows.
-import type { NormalizedOptions, Suggestion, QueryStore } from './types';
 import { useSyncExternalStore } from 'react';
+import type { NormalizedOptions, Suggestion, QueryStore } from './types';
 import { surfaceClass } from './surface-options';
 import { isElementTextTruncated } from '../../shared/text-overflow';
 

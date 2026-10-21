@@ -1,5 +1,12 @@
 // Row icons: favicon candidates with their browser fallbacks, the icon spec
 // for each suggestion type, and the utility (delete, pin) action.
+import {
+  useRef,
+  useState,
+  useLayoutEffect,
+  type RefObject,
+  type PointerEvent as ReactPointerEvent
+} from 'react';
 import type {
   NormalizedOptions,
   FaviconCandidates,
@@ -9,13 +16,6 @@ import type {
   SuggestionElement
 } from './types';
 import { surfaceClass, setSurfaceStyle } from './surface-options';
-import {
-  useRef,
-  useState,
-  useLayoutEffect,
-  type RefObject,
-  type PointerEvent as ReactPointerEvent
-} from 'react';
 
 export function getBrowserFallbackIcon(
   options: NormalizedOptions,

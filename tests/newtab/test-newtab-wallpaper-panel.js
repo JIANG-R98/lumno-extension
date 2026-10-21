@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const vm = require('vm');
+const { readReactSource } = require('../helpers/react-source');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { readWallpaperRuntimeSource, readWallpaperCheckSource } = require('../helpers/wallpaper-source');
@@ -863,10 +864,7 @@ function assertBrandMarkCopy() {
 
 function assertThemeAwareAlternateFaviconAsset() {
   const wallpaperSource = readWallpaperCheckSource();
-  const wallpaperViewReact = fs.readFileSync(
-    'react-src/newtab/wallpaper-view.tsx',
-    'utf8'
-  );
+  const wallpaperViewReact = readReactSource('react-src/newtab/wallpaper-view.tsx');
   assert.match(
     wallpaperSource,
     /id:\s*'alternate'[\s\S]*?file:\s*'assets\/images\/lumno-newtab-favicon\.svg'/,

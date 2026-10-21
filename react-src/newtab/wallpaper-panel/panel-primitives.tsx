@@ -9,8 +9,8 @@ import {
   type ReactNode
 } from 'react';
 import { createPortal } from 'react-dom';
-import { RangeSliderField } from '../shared/range-slider';
-import { useSegmentedIndicator } from '../shared/segmented-indicator';
+import { RangeSliderField } from '../../shared/range-slider';
+import { useSegmentedIndicator } from '../../shared/segmented-indicator';
 
 // Controls of the New Tab appearance panel. Each one renders from the state the
 // wallpaper runtime hands down and reports changes through callbacks; none of them

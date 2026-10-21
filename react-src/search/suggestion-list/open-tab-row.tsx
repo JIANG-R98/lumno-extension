@@ -1,4 +1,5 @@
 // An open tab row.
+import { useRef, useMemo, useLayoutEffect, type MouseEvent as ReactMouseEvent, memo } from 'react';
 import type {
   SuggestionsRuntime,
   OpenTabSuggestion,
@@ -7,7 +8,6 @@ import type {
   IconSpec,
   Suggestion
 } from './types';
-import { useRef, useMemo, useLayoutEffect, type MouseEvent as ReactMouseEvent, memo } from 'react';
 import { getBrowserFallbackIcon, SuggestionIcon, SuggestionUtilityAction } from './suggestion-icon';
 import {
   isLocalUrlSuggestion,

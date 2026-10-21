@@ -8,7 +8,6 @@ import type {
   Suggestion,
   SuggestionsRuntime,
   SuggestionElement,
-  SuggestionActionTagElement,
   OpenTabSuggestion,
   SuggestionsViewController,
   SuggestionValueRef,

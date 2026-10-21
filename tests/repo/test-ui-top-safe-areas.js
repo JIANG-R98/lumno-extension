@@ -1,14 +1,12 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readReactSource } = require('../helpers/react-source');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
 const newtabHtml = readPageSource('newtab.html');
 const newtabJs = readNewtabRuntimeSource();
-const wallpaperViewReact = fs.readFileSync(
-  'react-src/newtab/wallpaper-view.tsx',
-  'utf8'
-);
+const wallpaperViewReact = readReactSource('react-src/newtab/wallpaper-view.tsx');
 const shortcutDialogCss = fs.readFileSync('src/newtab/shortcuts/shortcut-dialog.css', 'utf8');
 const optionsHtml = readPageSource('src/options/options.html');
 const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
@@ -57,8 +55,13 @@ assert.match(
 );
 assert.match(
   wallpaperViewReact,
-  /className="x-nt-wallpaper-panel"[\s\S]*?className="x-nt-appearance-header"[\s\S]*?className="x-nt-wallpaper-panel-scroll"[\s\S]*?className="x-nt-appearance-section"/,
+  /className="x-nt-wallpaper-panel"[\s\S]*?className="x-nt-appearance-header"[\s\S]*?className="x-nt-wallpaper-panel-scroll"[\s\S]*?<ThemeSection panel=\{panel\} \/>/,
   'the React wallpaper view should keep the appearance heading above one shared content scroller'
+);
+assert.match(
+  wallpaperViewReact,
+  /export function ThemeSection[\s\S]*?className="x-nt-appearance-section"/,
+  'the first section inside the scroller should be the appearance (theme) section'
 );
 assert.match(
   newtabHtml,

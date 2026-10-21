@@ -5,7 +5,8 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 // React views split into a folder of parts beside their entry module. Source
 // checks written against the single file read the parts and then the entry.
 const SPLIT_REACT_VIEWS = {
-  'react-src/search/suggestions.tsx': 'react-src/search/suggestion-list'
+  'react-src/search/suggestions.tsx': 'react-src/search/suggestion-list',
+  'react-src/newtab/wallpaper-view.tsx': 'react-src/newtab/wallpaper-panel'
 };
 
 function readReactSource(relativePath) {
