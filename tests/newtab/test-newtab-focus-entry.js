@@ -2,53 +2,37 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
-const { readPageSource } = require('../helpers/page-source');
-const { readBackgroundSource } = require('../helpers/background-source');
+const { JSDOM } = require('jsdom');
+const { parseCss } = require('../helpers/css-rules');
 const { getBundleFiles, runsBefore } = require('../helpers/runtime-scripts');
 const { moduleScript } = require('../helpers/module-script');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const html = readPageSource('newtab.html');
+const newtabDocument = new JSDOM(fs.readFileSync(path.join(repoRoot, 'newtab.html'), 'utf8')).window.document;
 const sourcePath = path.join(repoRoot, 'src/newtab/newtab-focus-entry.js');
-const backgroundSource = readBackgroundSource();
-const legacyHtml = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.html'), 'utf8');
+const legacyDocument = new JSDOM(fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.html'), 'utf8')).window.document;
 const legacyRedirectSourcePath = path.join(repoRoot, 'src/newtab/newtab-route-redirect.js');
 const storageKey = '_x_extension_newtab_input_auto_focus_enabled_2026_unique_';
 
-assert.match(
-  html,
-  /<base href="src\/newtab\/" \/>/,
-  'the short root entry should retain the existing New Tab resource base'
-);
+assert.strictEqual(newtabDocument.querySelector('base').getAttribute('href'), 'src/newtab/',
+  'the short root entry should retain the existing New Tab resource base');
 
-const preloadTag = '<script src="../../build/newtab-preload.js"></script>';
+const preload = newtabDocument.querySelector('script[src="../../build/newtab-preload.js"]');
 const preloadFiles = getBundleFiles('newtab-preload');
-assert.ok(
-  html.includes(preloadTag) && preloadFiles.includes('src/newtab/newtab-focus-entry.js'),
-  'the maintained New Tab page should load the preference-aware focus entry router'
-);
-assert.ok(
-  html.indexOf('<style data-nt-focus-paint-gate="true">') < html.indexOf(preloadTag),
-  'the New Tab paint gate should be parsed before visual preload scripts can expose the wallpaper'
-);
-assert.ok(
-  runsBefore(preloadFiles, 'src/shared/settings.js', 'src/newtab/newtab-focus-entry.js'),
-  'the shared setting contract should load before the focus entry router'
-);
-assert.ok(
-  runsBefore(preloadFiles, 'src/newtab/newtab-focus-entry.js', 'src/newtab/wallpaper/wallpaper-preload.js'),
-  'the focus route should settle before the New Tab starts visual preloading'
-);
-assert.match(
-  html,
-  /html\[data-nt-focus-route-pending="true"\] body,\s*body:not\(\[data-nt-wallpaper-ready="1"\]\)\s*\{\s*visibility:\s*hidden;\s*background-image:\s*none !important;/,
-  'every New Tab route should suppress the propagated body wallpaper until its effect is ready, so both appear together'
-);
-assert.ok(
-  /<style data-nt-focus-paint-gate="true">[\s\S]*?<\/style>\s*<script src="\.\.\/\.\.\/build\/newtab-preload\.js"><\/script>/.test(html) &&
-    runsBefore(preloadFiles, 'src/shared/settings.js', 'src/newtab/newtab-focus-entry.js'),
-  'the focused destination paint gate should be available before focus routing starts'
-);
+assert.ok(preload && preloadFiles.includes('src/newtab/newtab-focus-entry.js'),
+  'the maintained New Tab page should load the preference-aware focus entry router');
+const paintGate = newtabDocument.querySelector('style[data-nt-focus-paint-gate="true"]');
+assert.ok(paintGate && (paintGate.compareDocumentPosition(preload) & 4),
+  'the New Tab paint gate should be parsed before visual preload scripts can expose the wallpaper');
+assert.ok(runsBefore(preloadFiles, 'src/shared/settings.js', 'src/newtab/newtab-focus-entry.js'),
+  'the shared setting contract should load before the focus entry router');
+assert.ok(runsBefore(preloadFiles, 'src/newtab/newtab-focus-entry.js', 'src/newtab/wallpaper/wallpaper-preload.js'),
+  'the focus route should settle before the New Tab starts visual preloading');
+const gate = parseCss(paintGate.textContent).rule('html[data-nt-focus-route-pending="true"] body');
+assert.ok(gate && gate.get('visibility') === 'hidden' && gate.get('background-image') === 'none' && gate.priority('background-image') === 'important',
+  'every New Tab route should hide the body wallpaper until its effect is ready, so both appear together');
+assert.ok(parseCss(paintGate.textContent).entries.some((entry) => entry.selectors.includes('body:not([data-nt-wallpaper-ready="1"])') &&
+  entry.selectors.includes('html[data-nt-focus-route-pending="true"] body')), 'including before the wallpaper is ready');
 
 const autoFocusCacheKey = '_x_extension_newtab_input_auto_focus_cache_2026_unique_';
 
@@ -274,11 +258,8 @@ async function runEntry({
     assert.strictEqual(result.attributes.has('data-nt-focus-route-pending'), false);
   }
 })().then(() => {
-  assert.match(
-    legacyHtml,
-    /<script src="\.\.\/\.\.\/build\/newtab-route-redirect\.js"><\/script>/,
-    'the previous New Tab path should remain as a compatibility redirect'
-  );
+  assert.ok(legacyDocument.querySelector('script[src="../../build/newtab-route-redirect.js"]'),
+    'the previous New Tab path should remain as a compatibility redirect');
   {
     const replacedUrls = [];
     vm.runInNewContext(moduleScript('src/newtab/newtab-route-redirect.js'), {

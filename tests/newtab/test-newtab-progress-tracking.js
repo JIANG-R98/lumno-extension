@@ -3,7 +3,7 @@ const fs = require('fs');
 const store = require('../../src/newtab/recent/recent-sites-store.js');
 const progressMatch = require('../../src/shared/progress-match.js');
 const progressHistory = require('../../src/shared/progress-history.js');
-const { readBackgroundSource } = require('../helpers/background-source');
+const { loadBackground, wait } = require('../helpers/background-harness');
 const { getPageScripts } = require('../helpers/runtime-scripts');
 require('../../src/newtab/dismiss-stack.js');
 const LumnoNewtabRecentSitesController = require('../../src/newtab/recent/recent-sites-controller.js');
@@ -294,24 +294,33 @@ const menuValues = (controller, item) => controller.getRecentContextMenuOptions(
     ), false, 'a card that is not tracked cannot be restored');
   }
 
-  // The background tracker is wired into the service worker and gated by Labs.
+  // The worker answers New Tab's "is this an episode?" probe only while the
+  // setting is on, and follows the setting when it changes.
   {
-    const background = readBackgroundSource();
-    ['../shared/progress-match.js', '../shared/progress-history.js', './progress-tracker.js']
-      .forEach((spec) => assert(background.includes(`'${spec}';`), `background.js should import ${spec}`));
-    assert(background.includes('isEnabled: () => progressTrackingEnabled'));
-    const newtabHtml = fs.readFileSync('newtab.html', 'utf8');
+    const settings = require('../../src/shared/settings.js');
+    const key = settings.PROGRESS_TRACKING_ENABLED_STORAGE_KEY;
+    const episode = { id: 5, index: 0, windowId: 1, url: 'https://vidhub3.top/vodplay/55357-1-2.html', title: '某剧 第2集' };
+    const worker = loadBackground({ tabs: [episode], sync: { [key]: true } });
+    await wait(50);
+    const probe = () => worker.sendMessage({ action: 'probeProgressSeries', url: episode.url }, undefined, 1500);
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(await probe())), { ok: true, series: true }, 'an open episode page reads as a series');
+    worker.storage.sync.data[key] = false;
+    worker.chrome.storage.onChanged.dispatch({ [key]: { oldValue: true, newValue: false } }, 'sync');
+    await wait(20);
+    assert.deepStrictEqual(JSON.parse(JSON.stringify(await probe())), { ok: true, series: false }, 'with tracking turned off, nothing is probed');
+  }
+  {
+    const { JSDOM } = require('jsdom');
     const newtabScripts = getPageScripts('newtab.html');
     assert(newtabScripts.includes('src/shared/progress-match.js') && newtabScripts.includes('src/shared/progress-history.js'));
-    assert(newtabHtml.includes('recent-history-dialog.css'));
-    const optionsHtml = fs.readFileSync('src/options/options.html', 'utf8');
-    assert(/id="_x_extension_progress_tracking_toggle_2026_unique_" type="checkbox" checked>/.test(optionsHtml),
-      'the switch is on by default');
-    const generalStart = optionsHtml.indexOf('data-content="general"');
-    const generalEnd = optionsHtml.indexOf('data-content="', generalStart + 1);
-    const sectionIndex = optionsHtml.indexOf('data-i18n="settings_general_newtab_section_title"');
-    const switchIndex = optionsHtml.indexOf('id="_x_extension_progress_tracking_toggle_2026_unique_"');
-    assert(generalStart >= 0 && sectionIndex > generalStart && switchIndex > sectionIndex && switchIndex < generalEnd,
+    const newtabDocument = new JSDOM(fs.readFileSync('newtab.html', 'utf8')).window.document;
+    assert(newtabDocument.querySelector('link[rel="stylesheet"][href$="recent-history-dialog.css"]'), 'New Tab should style the history dialog');
+    const optionsDocument = new JSDOM(fs.readFileSync('src/options/options.html', 'utf8')).window.document;
+    const toggle = optionsDocument.getElementById('_x_extension_progress_tracking_toggle_2026_unique_');
+    assert.deepStrictEqual([toggle.type, toggle.checked], ['checkbox', true], 'the switch is on by default');
+    const general = optionsDocument.querySelector('[data-content="general"]');
+    const section = general.querySelector('[data-i18n="settings_general_newtab_section_title"]');
+    assert(section && general.contains(toggle) && (section.compareDocumentPosition(toggle) & 4),
       'the switch sits in the New Tab section of General settings');
     const settings = require('../../src/shared/settings.js');
     assert.strictEqual(settings.normalizeProgressTrackingEnabled(undefined), true);

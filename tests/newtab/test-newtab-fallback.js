@@ -5,7 +5,6 @@ const vm = require('vm');
 require('../../src/shared/extension-routes.js');
 require('../../src/background/tab-groups.js');
 const fallback = require('../../src/background/newtab-fallback.js');
-const { readBackgroundSource } = require('../helpers/background-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const lumnoNewtabHtml = fs.readFileSync(path.join(repoRoot, 'src', 'newtab', 'lumno-newtab.html'), 'utf8');
@@ -306,26 +305,38 @@ assert.deepStrictEqual(
 
 globalThis.chrome = originalChrome;
 
-{
-  const backgroundSource = readBackgroundSource();
-  const overlayOnTabStart = backgroundSource.indexOf('function openOverlayOnTab(');
-  const overlayOnTabEnd = backgroundSource.indexOf('\nfunction ', overlayOnTabStart + 1);
-  const overlayOnTabSource = backgroundSource.slice(overlayOnTabStart, overlayOnTabEnd);
-  assert.strictEqual(
-    (overlayOnTabSource.match(/openOverlayInjectionFallback\(activeTab, activeUrl, source\)/g) || []).length,
-    3,
-    'every failed overlay injection should go through the restricted page rule'
-  );
-  assert.doesNotMatch(
-    overlayOnTabSource,
-    /openNewtabFallback(ForUrl)?\(\{ sourceTab: activeTab \}\)|openNewtabFallbackForUrl\(activeUrl, \{ sourceTab: activeTab \}\)/,
-    'a failed overlay injection should not open Lumno New Tab regardless of the restricted page rule'
-  );
-  assert.match(
-    backgroundSource,
-    /followBrowserNewtab = restrictedActionCache === 'none'/,
-    'the injection fallback should follow the browser New Tab when the restricted rule says so'
-  );
+// When the overlay cannot be injected into the page (a store page, a PDF),
+// the worker follows the restricted page rule: Lumno's New Tab by default,
+// the browser's own New Tab when the rule says so.
+async function testFailedInjectionFollowsTheRestrictedPageRule() {
+  const settings = require('../../src/shared/settings.js');
+  const { loadBackground, wait } = require('../helpers/background-harness');
+  const { createFakeTabPages } = require('../helpers/fake-tab-pages');
+  for (const [rule, expected] of [['default', 'lumno'], ['none', 'browser']]) {
+    const pages = createFakeTabPages();
+    const worker = loadBackground({
+      tabs: [{ id: 7, windowId: 1, index: 0, active: true, title: 'Page', url: 'https://page.example.test/a', status: 'complete' }],
+      sync: { [settings.RESTRICTED_ACTION_STORAGE_KEY]: rule },
+      configureChrome: pages.install
+    });
+    await wait(50);
+    pages.page(7).unavailable = true;
+    worker.chrome.commands.onCommand.dispatch('show-search');
+    await wait(1200);
+    const created = worker.calls.filter((call) => call.name === 'tabs.create').map((call) => call.args[0]);
+    assert.strictEqual(created.length, 1, `${rule}: one fallback tab should open`);
+    if (expected === 'lumno') {
+      assert.match(created[0].url, /src\/newtab\/lumno-newtab\.html\?focus=1$/, 'by default the search opens in Lumno New Tab');
+    } else {
+      assert.strictEqual(created[0].url, undefined, 'with the browser rule, the browser\'s own New Tab opens');
+    }
+  }
 }
 
-console.log('newtab fallback tests passed');
+testFailedInjectionFollowsTheRestrictedPageRule().then(() => {
+  console.log('newtab fallback tests passed');
+  process.exit(0);
+}).catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
