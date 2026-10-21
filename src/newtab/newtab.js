@@ -81,13 +81,35 @@
   // ranks most-visited from history visit counts alone.
   const TOP_SITES_FOLLOW_HISTORY =
     globalThis.LumnoBrowserProfile.getBrowserInternalScheme(navigator.userAgent) !== 'edge://';
-  // The first recent-sites pass waits for every layout preference, so the browser reads start now.
-  // Preferences that arrive before it start passes of their own, which it then discards, so every
-  // pass shares these reads until the first pass lands or the history changes; later passes, or
-  // one long after load, read afresh.
-  const STARTUP_RECENT_SOURCE_MAX_AGE_MS = 3000;
   const startupRecentSourceReadsAt = Date.now();
-  let startupRecentSourceReads = {
+  const NEWTAB_RECENT_STORE = globalThis.LumnoNewtabRecentSitesStore;
+
+  const NEWTAB_CONTEXT_MENU_OPEN_VALUE = 'open-in-new-tab';
+
+  const NEWTAB_RECENT_SOURCES = globalThis.LumnoNewtabRecentSources;
+  const {
+    updateRecentContextMenuLanguageStrings,
+    openRecentHistoryDialog,
+    readRecentOpenTabs,
+    readRecentTopSites,
+    readRecentHistoryItems,
+    releaseStartupRecentSourceReads,
+    getRecentSites
+  } = NEWTAB_RECENT_SOURCES.createRecentSources({
+    t: (...args) => t(...args),
+    getRecentContextMenuOptions: (...args) => getRecentContextMenuOptions(...args),
+    NEWTAB_CONTEXT_MENU_OPEN_VALUE,
+    restoreProgressVersion: (...args) => restoreProgressVersion(...args),
+    showToast: (...args) => showToast(...args),
+    TOP_SITES_FOLLOW_HISTORY,
+    startupRecentSourceReadsAt,
+    NEWTAB_RECENT_STORE,
+    getRecentStoreOptions: (...args) => getRecentStoreOptions(...args),
+    isBrowserPageRecentUrl: (...args) => isBrowserPageRecentUrl(...args),
+    pageState
+  });
+
+  pageState.startupRecentSourceReads = {
     historyItems: readRecentHistoryItems(),
     topSites: readRecentTopSites(),
     tabs: readRecentOpenTabs()
@@ -287,7 +309,6 @@
   const SHORTCUT_FAVICON = globalThis.LumnoShortcutFavicon;
   const NEWTAB_FAVICON_THEME = globalThis.LumnoNewtabFaviconTheme;
   const NEWTAB_FAVICON_VIEW = globalThis.LumnoNewtabFaviconView;
-  const NEWTAB_RECENT_STORE = globalThis.LumnoNewtabRecentSitesStore;
   const NEWTAB_BOOKMARKS_STORE = globalThis.LumnoNewtabBookmarksStore;
   const NEWTAB_BOOKMARKS_RUNTIME = globalThis.LumnoNewtabBookmarksRuntime;
   const NEWTAB_BOOKMARKS_TOPBAR = globalThis.LumnoNewtabBookmarksTopbar;
@@ -319,7 +340,6 @@
   const NEWTAB_SHORTCUT_ICON_STORE = globalThis.LumnoNewtabShortcutIconStore;
   const NEWTAB_SHORTCUT_ICON_PLATE = globalThis.LumnoNewtabShortcutIconPlate;
   const NEWTAB_SHORTCUT_DIALOG = globalThis.LumnoNewtabShortcutDialog;
-  const NEWTAB_RECENT_HISTORY_DIALOG = globalThis.LumnoNewtabRecentHistoryDialog;
   const PROGRESS_MATCH = globalThis.LumnoProgressMatch;
   const PROGRESS_HISTORY = globalThis.LumnoProgressHistory;
   const NEWTAB_SHORTCUTS_VIEW = globalThis.LumnoNewtabShortcutsView;
@@ -328,6 +348,28 @@
   const NEWTAB_FEEDBACK_CONTROL = globalThis.LumnoNewtabFeedbackControl;
 
   const NEWTAB_FEEDBACK_CONTROL_RUNTIME = globalThis.LumnoNewtabFeedbackControlRuntime;
+  // Text set once at startup may be read before the chosen language loads;
+  // controls register here to re-read it whenever the language is applied.
+  const languageChangeListeners = [];
+
+  const NEWTAB_PAGE_LANGUAGE = globalThis.LumnoNewtabPageLanguage;
+  const {
+    onLanguageChange,
+    normalizeLocale,
+    applyDocumentLanguage,
+    getSystemLocale,
+    sanitizeDisplayText,
+    loadLocaleMessages,
+    t,
+    formatMessage
+  } = NEWTAB_PAGE_LANGUAGE.createPageLanguage({
+    languageChangeListeners,
+    SETTINGS,
+    SEARCH_UTILS,
+    getExtensionResourceUrl,
+    pageState
+  });
+
   const {
     getFeedbackWebLocale,
     openFeedbackExternalUrl,
@@ -379,8 +421,6 @@
     store: NEWTAB_BOOKMARKS_STORE,
     normalizeHost
   });
-
-  const NEWTAB_CONTEXT_MENU_OPEN_VALUE = 'open-in-new-tab';
   const SHORTCUT_CONTEXT_MENU_EDIT_VALUE = 'edit';
   const SHORTCUT_CONTEXT_MENU_REMOVE_VALUE = 'remove';
   const SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE = 'hide-add';
@@ -399,6 +439,104 @@
   const BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE = 'open-in-new-tab-group';
 
   const NEWTAB_BOOKMARK_CONTEXT_MENU = globalThis.LumnoNewtabBookmarkContextMenu;
+
+  const NEWTAB_CLIPBOARD_ACTIONS = globalThis.LumnoNewtabClipboardActions;
+  const {
+    hideToast,
+    showToast,
+    beginToast,
+    copyBookmarkUrl,
+    copySearchResultUrl
+  } = NEWTAB_CLIPBOARD_ACTIONS.createClipboardActions({
+    t,
+    pageState
+  });
+  const MAX_NEWTAB_SHORTCUTS = NEWTAB_SHORTCUTS_STORE.DEFAULT_MAX_SHORTCUTS;
+  const shortcutTiles = [];
+  const SHORTCUT_DIALOG_MODE_EDIT = NEWTAB_SHORTCUT_DIALOG.MODE_EDIT || 'edit';
+  const folderColorApi = globalThis.LumnoNewtabFolderColorPicker;
+  const FOLDER_COLOR_PRESETS_STORAGE_KEY = SETTINGS.BOOKMARK_FOLDER_COLOR_PRESETS_STORAGE_KEY ||
+    '_x_extension_bookmark_folder_color_presets_2026_unique_';
+
+  const NEWTAB_SHORTCUT_PAGE_ACTIONS = globalThis.LumnoNewtabShortcutPageActions;
+  const SHORTCUT_DIALOG_ITEM_BOOKMARK = 'bookmark';
+  const SHORTCUT_DIALOG_ITEM_FOLDER = 'folder';
+
+  const NEWTAB_BOOKMARK_ACTIONS = globalThis.LumnoNewtabBookmarkActions;
+  const {
+    updateBookmarkContextMenuLanguageStrings,
+    openBookmarkFolderTabGroupConfirmation,
+    openBookmarkEditor
+  } = NEWTAB_BOOKMARK_ACTIONS.createBookmarkActions({
+    t,
+    getBookmarkContextMenuOptions: (...args) => getBookmarkContextMenuOptions(...args),
+    BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE,
+    NEWTAB_CONTEXT_MENU_OPEN_VALUE,
+    BOOKMARK_CONTEXT_MENU_EDIT_VALUE,
+    bookmarksRuntime,
+    NEWTAB_BOOKMARKS_STORE,
+    openShortcutDialog: (...args) => openShortcutDialog(...args),
+    formatMessage,
+    showToast,
+    isShortcutFolderAnchor: (...args) => isShortcutFolderAnchor(...args),
+    getFolderItemIcon: (...args) => getFolderItemIcon(...args),
+    SHORTCUT_DIALOG_MODE_EDIT,
+    SHORTCUT_DIALOG_ITEM_FOLDER,
+    SHORTCUT_DIALOG_ITEM_BOOKMARK,
+    getFolderItemIconUrl: (...args) => getFolderItemIconUrl(...args),
+    getBrowserPageFaviconUrl: (...args) => getBrowserPageFaviconUrl(...args),
+    pageState
+  });
+
+  const {
+    pickShortcutIconPlateColor,
+    getShortcutContextMenuOptions,
+    updateShortcutLanguageStrings,
+    closeShortcutDialog,
+    openShortcutDialog,
+    getShortcutTileFromNode,
+    getShortcutTileId,
+    refreshShortcutTileCacheFromDom,
+    getShortcutReorderTiles,
+    getShortcutById,
+    getShortcutTileById,
+    handleShortcutNativeDragStart,
+    openShortcutEditor,
+    isShortcutFolderAnchor
+  } = NEWTAB_SHORTCUT_PAGE_ACTIONS.createShortcutPageActions({
+    folderColorApi,
+    t,
+    bindShortcutDialogTooltip: (...args) => bindShortcutDialogTooltip(...args),
+    hideShortcutDialogTooltip: (...args) => hideShortcutDialogTooltip(...args),
+    folderColorStorage: (...args) => folderColorStorage(...args),
+    storageArea,
+    FOLDER_COLOR_PRESETS_STORAGE_KEY,
+    SHORTCUT_GROUP_MENU_VALUES,
+    getShortcutGroups: (...args) => getShortcutGroups(...args),
+    NEWTAB_SHORTCUTS_STORE,
+    SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE,
+    MAX_NEWTAB_SHORTCUTS,
+    NEWTAB_CONTEXT_MENU_OPEN_VALUE,
+    BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE,
+    NEWTAB_BOOKMARKS_STORE,
+    bookmarksRuntime,
+    getShortcutFolderId: (...args) => getShortcutFolderId(...args),
+    SHORTCUT_CONTEXT_MENU_EDIT_VALUE,
+    FOLDER_COLOR_CONTEXT_MENU_VALUE,
+    SHORTCUT_CONTEXT_MENU_REMOVE_VALUE,
+    formatMessage,
+    updateBookmarkContextMenuLanguageStrings,
+    updateRecentContextMenuLanguageStrings,
+    createShortcutDialogComponent: (...args) => createShortcutDialogComponent(...args),
+    showToast,
+    shortcutTiles,
+    openBookmarkEditor,
+    getShortcutTitle: (...args) => getShortcutTitle(...args),
+    SHORTCUT_DIALOG_MODE_EDIT,
+    getShortcutIconDataUrl: (...args) => getShortcutIconDataUrl(...args),
+    pageState
+  });
+
   const {
     getBookmarkContextMenuOptions,
     isBookmarkContextMenuNode,
@@ -505,7 +643,6 @@
     maxDataUrlLength: 192 * 1024
   };
   const MAX_PINNED_RECENT_SITES = 3;
-  const MAX_NEWTAB_SHORTCUTS = NEWTAB_SHORTCUTS_STORE.DEFAULT_MAX_SHORTCUTS;
   const NEWTAB_SHORTCUTS_CRITICAL_SYNC_RESERVE_BYTES = NEWTAB_SHORTCUTS_STORE.DEFAULT_SHORTCUTS_SYNC_RESERVE_BYTES;
   const NEWTAB_SHORTCUTS_STORAGE_KEYS = NEWTAB_SHORTCUTS_STORE.SHORTCUT_STORAGE_KEYS;
   const NEWTAB_EXTERNAL_CHANGE_DEBOUNCE_MS = 120;
@@ -596,17 +733,11 @@
   let initialHiddenRecentSitesReadyTask = Promise.resolve([]);
   pageState.searchBlacklistItems = [];
   pageState.currentMessages = null;
-  // Text set once at startup may be read before the chosen language loads;
-  // controls register here to re-read it whenever the language is applied.
-  const languageChangeListeners = [];
-  function onLanguageChange(listener) {
-    languageChangeListeners.push(listener);
-  }
   pageState.currentLanguageMode = 'system';
   pageState.currentResolvedLocale = null;
   pageState.defaultPlaceholderText = 'Search or enter URL…';
   let toastElement = null;
-  let toastController = null;
+  pageState.toastController = null;
   pageState.layoutController = null;
   pageState.layoutMotion = null;
   let bottomDockScroller = null;
@@ -698,10 +829,7 @@
   pageState.shortcutGrid = null;
   pageState.addShortcutButton = null;
   pageState.shortcutDialogController = null;
-  let recentHistoryDialogController = null;
-  let recentHistoryDialogLoadPromise = null;
-  let shortcutDialogLoadPromise = null;
-  let shortcutDialogOpenRevision = 0;
+  pageState.recentHistoryDialogController = null;
   pageState.shortcutContextMenu = null;
   pageState.shortcutContextMenuTarget = null;
   pageState.newtabShortcuts = [];
@@ -783,16 +911,9 @@
   pageState.shortcutDragState = null;
   // Set once the recent-card drag runtime exists; earlier helpers ask it lazily.
   let recentCardDragRuntime = null;
-  const shortcutTiles = [];
   const shortcutGroupHeaders = [];
-  const SHORTCUT_DIALOG_MODE_EDIT = NEWTAB_SHORTCUT_DIALOG.MODE_EDIT || 'edit';
-  const SHORTCUT_DIALOG_ITEM_BOOKMARK = 'bookmark';
-  const SHORTCUT_DIALOG_ITEM_FOLDER = 'folder';
-  const folderColorApi = globalThis.LumnoNewtabFolderColorPicker;
   const LEGACY_FOLDER_COLORS_STORAGE_KEY = NEWTAB_BOOKMARK_FOLDER_ICON.FOLDER_COLORS_STORAGE_KEY;
   const FOLDER_COLOR_REFS_STORAGE_KEY = NEWTAB_BOOKMARK_FOLDER_ICON.FOLDER_COLOR_REFS_STORAGE_KEY;
-  const FOLDER_COLOR_PRESETS_STORAGE_KEY = SETTINGS.BOOKMARK_FOLDER_COLOR_PRESETS_STORAGE_KEY ||
-    '_x_extension_bookmark_folder_color_presets_2026_unique_';
   // Synced colors keyed by folder path, and the colors they resolve to for
   // this device's bookmark ids.
   pageState.folderColorRefs = {};
@@ -940,11 +1061,11 @@
   const NEWTAB_URL_POLICY = globalThis.LumnoNewtabUrlPolicy;
   // Firefox: index the browser's own cached icons, which stand in for the
   // missing _favicon endpoint (see createBrowserIconIndex).
-  const firefoxBrowserIcons = BROWSER_PROFILE.isFirefoxExtensionRuntime()
+  pageState.firefoxBrowserIcons = BROWSER_PROFILE.isFirefoxExtensionRuntime()
     ? FAVICON_UTILS.createBrowserIconIndex()
     : null;
-  const firefoxBrowserIconsReady = firefoxBrowserIcons
-    ? firefoxBrowserIcons.load(chrome).catch(() => {})
+  pageState.firefoxBrowserIconsReady = pageState.firefoxBrowserIcons
+    ? pageState.firefoxBrowserIcons.load(chrome).catch(() => {})
     : Promise.resolve();
   const {
     isEnglishQuery,
@@ -987,7 +1108,7 @@
     FAVICON_REQUEST_BLACKLIST_STORAGE_KEY,
     FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY,
     SEARCH_UTILS,
-    getBrowserIconUrl: firefoxBrowserIcons ? firefoxBrowserIcons.get : null,
+    getBrowserIconUrl: pageState.firefoxBrowserIcons ? pageState.firefoxBrowserIcons.get : null,
     pageState
   });
 
@@ -1096,51 +1217,6 @@
     showToast,
     pageState
   });
-
-  // The folder color picker, over the shortcut dialog, for an icon's plate.
-  // It shares the saved colors with folders; the shortcut dialog saves the
-  // result. Resolves with a color, null to follow the icon, or undefined.
-  async function pickShortcutIconPlateColor(request) {
-    if (!pageState.shortcutPlateColorPicker) {
-      try {
-        pageState.shortcutPlateColorPicker = await folderColorApi.createFolderColorPicker({
-          documentObj: document, t,
-          bindTooltip: bindShortcutDialogTooltip,
-          hideTooltip: hideShortcutDialogTooltip,
-          readSavedColors: () => folderColorStorage(storageArea, 'get', [FOLDER_COLOR_PRESETS_STORAGE_KEY])
-            .then((data) => data[FOLDER_COLOR_PRESETS_STORAGE_KEY]),
-          saveSavedColors: (colors) => folderColorStorage(storageArea, 'set', { [FOLDER_COLOR_PRESETS_STORAGE_KEY]: colors }),
-          onSubmit: (_id, color) => {
-            pageState.shortcutPlateColorPick?.(color);
-            return Promise.resolve();
-          },
-          onClose: () => pageState.shortcutPlateColorPick?.(undefined)
-        });
-      } catch {
-        return undefined;
-      }
-    }
-    return new Promise((resolve) => {
-      pageState.shortcutPlateColorPick = (color) => {
-        pageState.shortcutPlateColorPick = null;
-        resolve(color);
-      };
-      const label = t('newtab_shortcuts_icon_plate_color_label', 'Background color');
-      pageState.shortcutPlateColorPicker.open({
-        folderId: 'shortcut-icon-plate',
-        title: request.title,
-        color: request.color,
-        presets: request.presets,
-        previewImageUrl: request.imageUrl,
-        labels: {
-          dialog: label,
-          picker: label,
-          defaultColor: t('newtab_shortcuts_icon_plate_color_auto', 'From the icon')
-        },
-        sourceElement: request.sourceElement
-      });
-    });
-  }
   const shortcutIconStore = NEWTAB_SHORTCUT_ICON_STORE.createShortcutIconStore({
     documentObj: document,
     windowObj: window,
@@ -1322,11 +1398,6 @@
     LANGUAGE_STORAGE_KEY,
     pageState
   });
-
-  const SECTION_MODE_MENU_MIN_WIDTH_PX = 168;
-  const SECTION_MODE_MENU_MAX_WIDTH_PX = 240;
-  const SECTION_MODE_MENU_PORTAL_Z_INDEX = 10020;
-  const SECTION_MODE_MENU_PORTAL_OFFSET_PX = 8;
   // A heading mode menu opens once the mouse rests on the heading, so a pointer passing over
   // it does not flash the menu, and waits a moment before closing so the pointer can cross
   // the gap into the menu.
@@ -1369,7 +1440,7 @@
   pageState.currentNewtabWidthMode = 'wide';
   pageState.currentNewtabSearchWidth = null;
   toastElement = document.getElementById('_x_extension_toast_2024_unique_');
-  toastController = NEWTAB_TOAST.createToastController(toastElement, { windowObj: window });
+  pageState.toastController = NEWTAB_TOAST.createToastController(toastElement, { windowObj: window });
   markNewtabStartupMilestone('core-runtimes-created');
 
   const NEWTAB_PAGE_PREFERENCES = globalThis.LumnoNewtabPagePreferences;
@@ -1425,6 +1496,7 @@
     closeShortcutDialog,
     pageState
   });
+
   const {
     normalizeNewtabWidthMode,
     normalizeNewtabSearchWidth,
@@ -1709,21 +1781,6 @@
     }
   }
 
-  function normalizeLocale(locale) {
-    return SETTINGS.normalizeLocale(locale);
-  }
-
-  function localeToHtmlLang(locale) {
-    return SETTINGS.localeToHtmlLang(locale);
-  }
-
-  function applyDocumentLanguage(locale) {
-    if (!document.documentElement) {
-      return;
-    }
-    document.documentElement.lang = localeToHtmlLang(locale);
-  }
-
   function migrateStorageIfNeeded(keys, providerReady) {
     if (providerStorageRuntime && !providerReady) {
       providerStorageRuntime.ready.then(() => migrateStorageIfNeeded(keys, true));
@@ -1736,57 +1793,6 @@
       return;
     }
     SETTINGS.migrateLocalSettingsToSync(chrome.storage.local, storageArea, keys);
-  }
-
-  function getSystemLocale() {
-    if (chrome && chrome.i18n && chrome.i18n.getUILanguage) {
-      return normalizeLocale(chrome.i18n.getUILanguage());
-    }
-    return normalizeLocale(navigator.language || 'en');
-  }
-
-  function sanitizeDisplayText(text) {
-    return SEARCH_UTILS.sanitizeDisplayText(text);
-  }
-
-  function loadLocaleMessages(locale) {
-    const normalized = normalizeLocale(locale);
-    SETTINGS.cacheNewtabLocale(normalized);
-    // newtab-storage-prefetch.js started the last New Tab's locale before this script loaded.
-    const prefetch = globalThis.LumnoNewtabLocalePrefetch;
-    globalThis.LumnoNewtabLocalePrefetch = null;
-    if (prefetch && prefetch.locale === normalized) {
-      return prefetch.messages.catch(() => ({}));
-    }
-    const localePath = getExtensionResourceUrl(`_locales/${normalized}/messages.json`);
-    return fetch(localePath, { cache: 'no-store' })
-      .then((response) => response.json())
-      .catch(() => ({}));
-  }
-
-  function t(key, fallback) {
-    if (pageState.currentMessages && pageState.currentMessages[key] && pageState.currentMessages[key].message) {
-      return pageState.currentMessages[key].message;
-    }
-    if (chrome && chrome.i18n && chrome.i18n.getMessage) {
-      const message = chrome.i18n.getMessage(key);
-      if (message) {
-        return message;
-      }
-    }
-    return fallback || '';
-  }
-
-  function formatMessage(key, fallback, params) {
-    let text = t(key, fallback);
-    if (!params) {
-      return text;
-    }
-    Object.keys(params).forEach((token) => {
-      const value = params[token];
-      text = text.replace(new RegExp(`\\{${token}\\}`, 'g'), value);
-    });
-    return text;
   }
 
   function getRiSvg(id, sizeClass, extraClass) {
@@ -2824,8 +2830,8 @@
     pageState.progressTrackingEnabled = settingsRuntimeApi.normalizeProgressTrackingEnabled(
       changes[settingsRuntimeApi.PROGRESS_TRACKING_ENABLED_STORAGE_KEY].newValue
     );
-    if (!pageState.progressTrackingEnabled && recentHistoryDialogController) {
-      recentHistoryDialogController.close({ restoreFocus: false });
+    if (!pageState.progressTrackingEnabled && pageState.recentHistoryDialogController) {
+      pageState.recentHistoryDialogController.close({ restoreFocus: false });
     }
     pageState.recentRenderSignature = '';
     renderRecentSites(pageState.recentSourceItems);
@@ -3689,6 +3695,24 @@
     pageState
   });
 
+  const NEWTAB_SECTION_MODE_SELECT = globalThis.LumnoNewtabSectionModeSelect;
+  const {
+    getBookmarkViewModeOptions,
+    createSectionModeSelect
+  } = NEWTAB_SECTION_MODE_SELECT.createSectionModeSelect({
+    t,
+    getEffectiveBookmarkTopbarSurfaceMode,
+    isBookmarkTopbarMode,
+    getBookmarkTopbarLayout,
+    BOOKMARK_TOPBAR_LAYOUT_ACTION,
+    BOOKMARK_TOPBAR_SURFACE_MODE_ACTION,
+    BOOKMARK_TOPBAR_PICK_COLOR_ACTION,
+    sectionModeSelectController,
+    showTopActionTooltip,
+    hideTopActionTooltip,
+    pageState
+  });
+
   const NEWTAB_SHORTCUTS_CONTROLLER = globalThis.LumnoNewtabShortcutsController;
   const {
     getShortcutFolderId,
@@ -3920,569 +3944,6 @@
     isWebDavBackingUpShortcuts,
     pageState
   });
-
-  function getSectionModeSelectOptions(config) {
-    const rawOptions = config && typeof config.getOptions === 'function'
-      ? config.getOptions()
-      : (config && config.options);
-    const options = Array.isArray(rawOptions) ? rawOptions : [];
-    return options.map((item) => {
-      const value = String(item && item.value !== undefined ? item.value : '');
-      const option = {
-        value,
-        label: t(item && item.labelKey, (item && item.fallback) || value)
-      };
-      if (item && item.action) {
-        option.action = String(item.action);
-      }
-      if (item && item.iconClass) {
-        option.iconClass = String(item.iconClass);
-      }
-      if (item && item.dividerBefore) {
-        option.dividerBefore = true;
-      }
-      if (item && item.groupTitleKey) {
-        option.groupTitle = t(item.groupTitleKey, item.groupTitleFallback || '');
-      }
-      if (item && item.radio) {
-        option.radio = true;
-        option.checked = item.checked === true;
-      }
-      if (item && item.trailingIconClass) {
-        option.trailingIconClass = String(item.trailingIconClass);
-      }
-      return option;
-    });
-  }
-
-  function getBookmarkViewModeOptions() {
-    const effectiveSurfaceMode = getEffectiveBookmarkTopbarSurfaceMode();
-    const options = [
-      {
-        value: 'folder',
-        labelKey: 'bookmark_view_mode_folder',
-        fallback: 'Multi-layer folder view'
-      },
-      {
-        value: 'list',
-        labelKey: 'bookmark_view_mode_list',
-        fallback: 'Multi-level list view'
-      },
-      {
-        value: 'top',
-        labelKey: 'bookmark_view_mode_top',
-        fallback: 'Top bookmarks bar'
-      }
-    ];
-    if (!isBookmarkTopbarMode()) {
-      return options;
-    }
-    const layout = getBookmarkTopbarLayout();
-    options.push({
-      value: '__bookmark_topbar_layout_docked__',
-      action: `${BOOKMARK_TOPBAR_LAYOUT_ACTION}:docked`,
-      labelKey: 'bookmark_topbar_layout_docked',
-      fallback: 'Docked to top',
-      radio: true,
-      checked: layout === 'docked',
-      dividerBefore: true,
-      groupTitleKey: 'bookmark_topbar_layout_title',
-      groupTitleFallback: 'Bar style'
-    });
-    options.push({
-      value: '__bookmark_topbar_layout_floating__',
-      action: `${BOOKMARK_TOPBAR_LAYOUT_ACTION}:floating`,
-      labelKey: 'bookmark_topbar_layout_floating',
-      fallback: 'Floating',
-      radio: true,
-      checked: layout === 'floating'
-    });
-    options.push({
-      value: '__bookmark_topbar_surface_adaptive__',
-      action: `${BOOKMARK_TOPBAR_SURFACE_MODE_ACTION}:adaptive`,
-      labelKey: 'bookmark_topbar_surface_follow',
-      fallback: 'Match style',
-      radio: true,
-      checked: effectiveSurfaceMode === 'adaptive',
-      dividerBefore: true,
-      groupTitleKey: 'bookmark_topbar_surface_title',
-      groupTitleFallback: 'Bar background'
-    });
-    options.push({
-      value: '__bookmark_topbar_surface_transparent__',
-      action: `${BOOKMARK_TOPBAR_SURFACE_MODE_ACTION}:transparent`,
-      labelKey: 'bookmark_topbar_surface_transparent',
-      fallback: 'Transparent',
-      radio: true,
-      checked: effectiveSurfaceMode === 'transparent'
-    });
-    options.push({
-      value: '__pick_bookmark_topbar_color__',
-      action: BOOKMARK_TOPBAR_PICK_COLOR_ACTION,
-      labelKey: 'bookmark_topbar_surface_custom',
-      fallback: 'Custom color',
-      radio: true,
-      trailingIconClass: 'ri-dropper-line',
-      checked: effectiveSurfaceMode === 'custom'
-    });
-    return options;
-  }
-
-  function createSectionModeSelect(config) {
-    if (!sectionModeSelectController || typeof sectionModeSelectController.createSelect !== 'function') {
-      return null;
-    }
-    const currentValue = typeof config.getValue === 'function' ? config.getValue() : '';
-    const title = t(config.menuTitleKey, config.menuTitleFallback || 'Display mode');
-    const created = sectionModeSelectController.createSelect({
-      id: config.id,
-      selectId: config.id ? `${config.id}_select` : '',
-      className: 'x-nt-section-mode-select',
-      iconOnly: true,
-      triggerIconClass: 'ri-more-line',
-      menuClassName: 'x-nt-section-mode-portal',
-      menuAlign: 'left',
-      menuWidth: 'content',
-      menuMinWidth: SECTION_MODE_MENU_MIN_WIDTH_PX,
-      menuMaxWidth: SECTION_MODE_MENU_MAX_WIDTH_PX,
-      menuPortal: true,
-      menuPortalZIndex: SECTION_MODE_MENU_PORTAL_Z_INDEX,
-      menuPortalOffset: SECTION_MODE_MENU_PORTAL_OFFSET_PX,
-      menuTitle: title,
-      value: currentValue,
-      ariaLabel: title,
-      tooltip: title,
-      onAction: typeof config.onAction === 'function'
-        ? ({ action }) => config.onAction(action)
-        : null,
-      options: getSectionModeSelectOptions(config)
-    });
-    const control = created.wrapper;
-    const select = created.select;
-    const trigger = created.trigger;
-    if (!control || !select || !trigger) {
-      return null;
-    }
-    const api = {
-      control,
-      select,
-      trigger,
-      update: () => {
-        const nextTitle = t(config.menuTitleKey, config.menuTitleFallback || 'Display mode');
-        const nextValue = typeof config.getValue === 'function' ? config.getValue() : '';
-        const nextOptions = getSectionModeSelectOptions(config);
-        if (typeof sectionModeSelectController.setMenuTitle === 'function') {
-          sectionModeSelectController.setMenuTitle(control, nextTitle);
-        }
-        sectionModeSelectController.setOptions(control, nextOptions, nextValue);
-        trigger.setAttribute('aria-label', nextTitle);
-        trigger.setAttribute('data-tooltip', nextTitle);
-      }
-    };
-    select.addEventListener('change', () => {
-      const nextMode = String(select.value || '');
-      if (typeof config.onChange === 'function') {
-        config.onChange(nextMode);
-      }
-    });
-    const showButtonTooltip = () => {
-      if (sectionModeSelectController.isOpen(control)) {
-        return;
-      }
-      const placement = trigger.closest &&
-        trigger.closest('.x-nt-bookmarks-topbar')
-        ? 'bottom'
-        : 'top';
-      showTopActionTooltip(
-        trigger,
-        trigger.getAttribute('data-tooltip') || t('display_mode_title', 'Display mode'),
-        { placement }
-      );
-    };
-    trigger.addEventListener('mouseenter', showButtonTooltip);
-    trigger.addEventListener('mouseleave', hideTopActionTooltip);
-    trigger.addEventListener('focus', showButtonTooltip);
-    trigger.addEventListener('blur', hideTopActionTooltip);
-    api.update();
-    return api;
-  }
-
-  function updateShortcutDialogLanguageStrings() {
-    if (pageState.shortcutDialogController) {
-      pageState.shortcutDialogController.updateLanguage();
-    }
-  }
-
-  function getShortcutContextMenuOptions(target) {
-    const createGroupOption = {
-      action: SHORTCUT_GROUP_MENU_VALUES.create,
-      value: SHORTCUT_GROUP_MENU_VALUES.create,
-      label: t('newtab_shortcuts_group_new', 'New group')
-    };
-    if (target && target.kind === 'add') {
-      return [
-        {
-          action: SHORTCUT_GROUP_MENU_VALUES.addShortcut,
-          value: SHORTCUT_GROUP_MENU_VALUES.addShortcut,
-          label: t('newtab_shortcuts_add_site', 'Add site')
-        },
-        { ...createGroupOption, disabled: getShortcutGroups().length >= NEWTAB_SHORTCUTS_STORE.DEFAULT_MAX_SHORTCUT_GROUPS },
-        {
-          value: SHORTCUT_CONTEXT_MENU_HIDE_ADD_VALUE,
-          label: t('newtab_shortcuts_hide_add', 'Hide'),
-          dividerBefore: true
-        }
-      ];
-    }
-    if (target && target.kind === 'group') {
-      const groups = getShortcutGroups();
-      const index = groups.findIndex((group) => group.id === target.groupId);
-      const hasSites = pageState.newtabShortcuts.some((item) => item.groupId === target.groupId);
-      const option = (value, label, extra) => ({ action: value, value, label, ...(extra || {}) });
-      return [
-        option(SHORTCUT_GROUP_MENU_VALUES.rename, t('newtab_shortcuts_group_rename', 'Rename')),
-        option(SHORTCUT_GROUP_MENU_VALUES.addSite, t('newtab_shortcuts_group_add_site', 'Add site'), {
-          disabled: pageState.newtabShortcuts.length >= MAX_NEWTAB_SHORTCUTS
-        }),
-        option(SHORTCUT_GROUP_MENU_VALUES.moveUp, t('newtab_shortcuts_group_move_up', 'Move up'), {
-          dividerBefore: true, disabled: index <= 0
-        }),
-        option(SHORTCUT_GROUP_MENU_VALUES.moveDown, t('newtab_shortcuts_group_move_down', 'Move down'), {
-          disabled: index < 0 || index >= groups.length - 1
-        }),
-        { ...createGroupOption, disabled: groups.length >= NEWTAB_SHORTCUTS_STORE.DEFAULT_MAX_SHORTCUT_GROUPS },
-        option(SHORTCUT_GROUP_MENU_VALUES.delete, t('newtab_shortcuts_group_delete', 'Delete group'), {
-          dividerBefore: true, disabled: groups.length <= 1
-        }),
-        ...(hasSites ? [option(SHORTCUT_GROUP_MENU_VALUES.deleteWithSites,
-          t('newtab_shortcuts_group_delete_with_sites', 'Delete group and sites'), {
-            disabled: groups.length <= 1
-          })] : [])
-      ];
-    }
-    const shortcut = target && getShortcutById(target.shortcutId);
-    if (shortcut && shortcut.type === 'folder') {
-      return [
-        { action: NEWTAB_CONTEXT_MENU_OPEN_VALUE, value: NEWTAB_CONTEXT_MENU_OPEN_VALUE,
-          label: t('newtab_shortcuts_open_folder', 'Open folder') },
-        { action: BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE, value: BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE,
-          label: t('bookmarks_open_in_new_tab_group', 'Open in new tab group'),
-          disabled: NEWTAB_BOOKMARKS_STORE.collectFolderBookmarkUrls(
-            bookmarksRuntime.getNode(getShortcutFolderId(shortcut))
-          ).length <= 0 },
-        { action: SHORTCUT_CONTEXT_MENU_EDIT_VALUE, value: SHORTCUT_CONTEXT_MENU_EDIT_VALUE,
-          label: t('folder_rename', 'Rename'), dividerBefore: true },
-        { action: FOLDER_COLOR_CONTEXT_MENU_VALUE, value: FOLDER_COLOR_CONTEXT_MENU_VALUE,
-          label: t('folder_color_change', 'Change color') },
-        { action: SHORTCUT_CONTEXT_MENU_REMOVE_VALUE, value: SHORTCUT_CONTEXT_MENU_REMOVE_VALUE,
-          label: t('shortcuts_remove', 'Remove') }
-      ];
-    }
-    return [
-      {
-        action: NEWTAB_CONTEXT_MENU_OPEN_VALUE,
-        value: NEWTAB_CONTEXT_MENU_OPEN_VALUE,
-        label: t('newtab_open_in_new_tab', 'Open in new tab')
-      },
-      {
-        action: SHORTCUT_CONTEXT_MENU_EDIT_VALUE,
-        value: SHORTCUT_CONTEXT_MENU_EDIT_VALUE,
-        label: t('shortcuts_edit', 'Edit'),
-        dividerBefore: true
-      },
-      {
-        action: SHORTCUT_CONTEXT_MENU_REMOVE_VALUE,
-        value: SHORTCUT_CONTEXT_MENU_REMOVE_VALUE,
-        label: t('shortcuts_remove', 'Remove')
-      }
-    ];
-  }
-
-  function updateShortcutContextMenuLanguageStrings() {
-    if (!pageState.shortcutContextMenu || !pageState.shortcutContextMenuSelectController) {
-      return;
-    }
-    const label = t('newtab_shortcuts_context_menu_label', 'Shortcut actions');
-    if (pageState.shortcutContextMenu.trigger) {
-      pageState.shortcutContextMenu.trigger.setAttribute('aria-label', label);
-    }
-    if (typeof pageState.shortcutContextMenuSelectController.setOptions === 'function') {
-      pageState.shortcutContextMenuSelectController.setOptions(
-        pageState.shortcutContextMenu.control,
-        getShortcutContextMenuOptions(pageState.shortcutContextMenuTarget),
-        pageState.shortcutContextMenuTarget && pageState.shortcutContextMenuTarget.kind === 'group'
-          ? SHORTCUT_GROUP_MENU_VALUES.rename
-          : pageState.shortcutContextMenuTarget && pageState.shortcutContextMenuTarget.kind === 'add'
-          ? SHORTCUT_GROUP_MENU_VALUES.addShortcut
-          : NEWTAB_CONTEXT_MENU_OPEN_VALUE
-      );
-    }
-  }
-
-  function updateBookmarkContextMenuLanguageStrings() {
-    if (!pageState.bookmarkContextMenu || !pageState.bookmarkContextMenuSelectController) {
-      return;
-    }
-    if (pageState.bookmarkContextMenu.trigger) {
-      pageState.bookmarkContextMenu.trigger.setAttribute(
-        'aria-label',
-        t('bookmarks_context_menu_label', 'Bookmark actions')
-      );
-    }
-    if (typeof pageState.bookmarkContextMenuSelectController.setOptions === 'function') {
-      pageState.bookmarkContextMenuSelectController.setOptions(
-        pageState.bookmarkContextMenu.control,
-        getBookmarkContextMenuOptions(pageState.bookmarkContextMenuTarget),
-        pageState.bookmarkContextMenuTarget && pageState.bookmarkContextMenuTarget.isFolder
-          ? BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE
-          : pageState.bookmarkContextMenuTarget
-            ? NEWTAB_CONTEXT_MENU_OPEN_VALUE
-            : BOOKMARK_CONTEXT_MENU_EDIT_VALUE
-      );
-    }
-  }
-
-  function updateRecentContextMenuLanguageStrings() {
-    if (!pageState.recentContextMenu || !pageState.recentContextMenuSelectController) {
-      return;
-    }
-    if (pageState.recentContextMenu.trigger) {
-      pageState.recentContextMenu.trigger.setAttribute(
-        'aria-label',
-        t('recent_context_menu_label', 'Recent site actions')
-      );
-    }
-    if (typeof pageState.recentContextMenuSelectController.setOptions === 'function') {
-      pageState.recentContextMenuSelectController.setOptions(
-        pageState.recentContextMenu.control,
-        getRecentContextMenuOptions(pageState.recentContextMenuTarget),
-        NEWTAB_CONTEXT_MENU_OPEN_VALUE
-      );
-    }
-  }
-
-  function updateShortcutLanguageStrings() {
-    if (pageState.shortcutSection) {
-      pageState.shortcutSection.setAttribute('aria-label', t('newtab_shortcuts_section_label', 'Shortcuts'));
-    }
-    if (pageState.addShortcutButton) {
-      const addLabel = t('newtab_shortcuts_add', 'Add shortcut');
-      pageState.addShortcutButton.setAttribute('aria-label', addLabel);
-      pageState.addShortcutButton.setAttribute('data-tooltip', addLabel);
-    }
-    updateShortcutDialogLanguageStrings();
-    if (pageState.shortcutGrid) {
-      Array.from(pageState.shortcutGrid.querySelectorAll('.x-nt-shortcut-tile[data-shortcut-url]')).forEach((tile) => {
-        const title = tile.getAttribute('data-shortcut-title') || '';
-        tile.setAttribute('aria-label', formatMessage('open_prefix', '打开 {title}', { title }));
-      });
-    }
-    updateShortcutContextMenuLanguageStrings();
-    updateBookmarkContextMenuLanguageStrings();
-    updateRecentContextMenuLanguageStrings();
-  }
-
-  function closeShortcutDialog(options) {
-    shortcutDialogOpenRevision += 1;
-    if (pageState.shortcutDialogController) {
-      pageState.shortcutDialogController.close({
-        ...(options || {}),
-        force: true
-      });
-    }
-  }
-
-  async function openShortcutDialog(options) {
-    const revision = ++shortcutDialogOpenRevision;
-    try {
-      if (!pageState.shortcutDialogController) {
-        if (!shortcutDialogLoadPromise) {
-          shortcutDialogLoadPromise = Promise.resolve(createShortcutDialogComponent()).then((controller) => {
-            if (!controller) throw new Error('Shortcut dialog unavailable');
-            pageState.shortcutDialogController = controller;
-            controller.mount(document.body);
-          }).finally(() => { shortcutDialogLoadPromise = null; });
-        }
-        await shortcutDialogLoadPromise;
-      }
-      if (revision === shortcutDialogOpenRevision) pageState.shortcutDialogController.open(options);
-    } catch (error) {
-      console.warn('[Lumno] Failed to load shortcut dialog', error);
-      if (revision === shortcutDialogOpenRevision) showToast(t('toast_error', 'Operation failed. Please try again.'), true);
-    }
-  }
-
-  function getShortcutTileFromNode(node) {
-    if (!pageState.shortcutGrid || !node) {
-      return null;
-    }
-    const tile = typeof node.closest === 'function'
-      ? node.closest('.x-nt-shortcut-tile')
-      : null;
-    return tile && pageState.shortcutGrid.contains(tile) ? tile : null;
-  }
-
-  function getShortcutTileId(tile) {
-    return tile && typeof tile.getAttribute === 'function'
-      ? tile.getAttribute('data-shortcut-id') || ''
-      : '';
-  }
-
-  function refreshShortcutTileCacheFromDom() {
-    if (!pageState.shortcutGrid) {
-      return;
-    }
-    shortcutTiles.length = 0;
-    Array.from(pageState.shortcutGrid.querySelectorAll('.x-nt-shortcut-tile[data-shortcut-id]')).forEach((tile) => {
-      shortcutTiles.push(tile);
-    });
-  }
-
-  function getShortcutReorderTiles() {
-    return pageState.shortcutGrid
-      ? Array.from(pageState.shortcutGrid.querySelectorAll('.x-nt-shortcut-tile[data-shortcut-id]'))
-      : [];
-  }
-
-  function getShortcutById(shortcutId) {
-    const id = String(shortcutId || '');
-    if (!id) {
-      return null;
-    }
-    return pageState.newtabShortcuts.find((item) => item && item.id === id) || null;
-  }
-
-  function getShortcutTileById(shortcutId) {
-    const id = String(shortcutId || '');
-    if (!id) {
-      return null;
-    }
-    return getShortcutReorderTiles().find((tile) => getShortcutTileId(tile) === id) || null;
-  }
-
-  function requestBookmarkFolderTabGroup(folderId, title) {
-    return new Promise((resolve) => {
-      if (!chrome || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
-        resolve({ ok: false, reason: 'runtime-unavailable' });
-        return;
-      }
-      chrome.runtime.sendMessage({
-        action: 'openBookmarkFolderInNewTabGroup',
-        folderId,
-        title
-      }, (response) => {
-        const error = chrome.runtime && chrome.runtime.lastError
-          ? chrome.runtime.lastError.message || 'runtime-error'
-          : '';
-        resolve(error ? { ok: false, reason: error } : (response || { ok: false }));
-      });
-    });
-  }
-
-  function openBookmarkFolderTabGroupConfirmation(target) {
-    if (!target || !target.isFolder || !target.bookmarkId) {
-      return;
-    }
-    const node = bookmarksRuntime.getNode(target.bookmarkId);
-    const count = NEWTAB_BOOKMARKS_STORE.collectFolderBookmarkUrls(node).length;
-    if (count <= 0) {
-      return;
-    }
-    const folderTitle = String((node && node.title) || target.title || '').trim() ||
-      t('bookmarks_untitled_folder', 'Untitled folder');
-    openShortcutDialog({
-      sourceElement: target.element,
-      confirmationTitle: formatMessage(
-        'bookmarks_open_group_confirm_title',
-        'Open {count} tabs?',
-        { count }
-      ),
-      confirmationDescription: formatMessage(
-        'bookmarks_open_group_confirm_description',
-        'All bookmarks in “{folder}” and its subfolders will open in one tab group.',
-        { folder: folderTitle }
-      ),
-      confirmLabel: t('bookmarks_open_group_confirm_button', 'Open'),
-      async onConfirm() {
-        const response = await requestBookmarkFolderTabGroup(
-          String(target.bookmarkId),
-          folderTitle
-        );
-        const openedCount = Math.max(0, Number(response && response.openedCount) || 0);
-        const failedCount = Math.max(0, Number(response && response.failedCount) || 0);
-        if (openedCount > 0 && failedCount > 0) {
-          showToast(formatMessage(
-            'bookmarks_open_group_partial_failed',
-            'Opened {openedCount} tabs; {failedCount} could not be opened.',
-            { openedCount, failedCount }
-          ), true);
-        } else if (!response || response.ok !== true) {
-          showToast(t(
-            'bookmarks_open_group_failed',
-            'Could not open the bookmark folder'
-          ), true);
-        }
-        return true;
-      }
-    });
-  }
-
-  function handleShortcutNativeDragStart(event) {
-    if (event && typeof event.preventDefault === 'function') {
-      event.preventDefault();
-    }
-  }
-
-  function openShortcutEditor(shortcut, sourceElement) {
-    if (!shortcut) {
-      return;
-    }
-    if (shortcut.type === 'folder') {
-      openBookmarkEditor({ bookmarkId: getShortcutFolderId(shortcut), isFolder: true,
-        title: getShortcutTitle(shortcut), element: sourceElement });
-      return;
-    }
-    openShortcutDialog({
-      mode: SHORTCUT_DIALOG_MODE_EDIT,
-      shortcut: {
-        ...shortcut,
-        iconDataUrl: getShortcutIconDataUrl(shortcut.id)
-      },
-      sourceElement
-    });
-  }
-
-  function isShortcutFolderAnchor(element) {
-    return Boolean(element && element.classList && element.classList.contains('x-nt-shortcut-tile'));
-  }
-
-  function openBookmarkEditor(target) {
-    if (!target || !target.bookmarkId) {
-      return;
-    }
-    const node = bookmarksRuntime.getNode(target.bookmarkId);
-    const isFolder = Boolean(target.isFolder);
-    const url = isFolder ? '' : String((node && node.url) || target.url || '');
-    // Websites in a folder opened from a shortcut choose an icon like shortcuts.
-    const iconEditable = !isFolder && target.sourceKind === 'cascade' && Boolean(pageState.bookmarkCascadeRuntime) &&
-      isShortcutFolderAnchor(pageState.bookmarkCascadeRuntime.getAnchor());
-    const icon = iconEditable ? getFolderItemIcon(target.bookmarkId) : null;
-    openShortcutDialog({
-      mode: SHORTCUT_DIALOG_MODE_EDIT,
-      itemType: isFolder ? SHORTCUT_DIALOG_ITEM_FOLDER : SHORTCUT_DIALOG_ITEM_BOOKMARK,
-      iconEditable,
-      iconPreviewUrl: iconEditable
-        ? getFolderItemIconUrl(target.bookmarkId, url) || getBrowserPageFaviconUrl(url) : '',
-      shortcut: {
-        id: String(target.bookmarkId),
-        title: String((node && node.title) || target.title || ''),
-        url,
-        ...(icon ? { iconSource: icon.iconSource } : {}),
-        ...(icon && icon.iconSource === 'custom' ? { iconDataUrl: icon.dataUrl } : {})
-      },
-      sourceElement: target.element
-    });
-  }
 
   createShortcutsSection();
   markNewtabStartupMilestone('shortcut-surface-created');
@@ -5012,65 +4473,6 @@
     pageState
   });
 
-  // The change history dialog is loaded the first time someone opens it.
-  function openRecentHistoryDialog(item) {
-    if (!recentHistoryDialogLoadPromise) {
-      recentHistoryDialogLoadPromise = Promise.resolve(
-        NEWTAB_RECENT_HISTORY_DIALOG && typeof NEWTAB_RECENT_HISTORY_DIALOG.createRecentHistoryDialog === 'function'
-          ? NEWTAB_RECENT_HISTORY_DIALOG.createRecentHistoryDialog({
-            documentObj: document,
-            windowObj: window,
-            t,
-            onRestore: restoreProgressVersion,
-            onRestoreSuccess() {
-              showToast(t('recent_history_restore_success', '已恢复为所选版本'), false);
-            }
-          })
-          : null
-      ).then((controller) => {
-        if (!controller) throw new Error('Recent history dialog unavailable');
-        controller.mount(document.body);
-        recentHistoryDialogController = controller;
-        return controller;
-      }).catch((error) => {
-        recentHistoryDialogLoadPromise = null;
-        throw error;
-      });
-    }
-    return recentHistoryDialogLoadPromise.then((controller) => {
-      if (pageState.progressTrackingEnabled) controller.open({ item });
-    }).catch(() => {
-      showToast(t('toast_error', '操作失败，请重试。'), true);
-    });
-  }
-
-  function hideToast() {
-    if (toastController && typeof toastController.hide === 'function') {
-      toastController.hide();
-    }
-  }
-
-  function showToast(message, isError, options) {
-    if (toastController && typeof toastController.show === 'function') {
-      toastController.show(message, Object.assign({}, options, {
-        error: Boolean(isError)
-      }));
-    }
-  }
-
-  // A task that may run long: its loading Toast turns into the result in place.
-  function beginToast(message) {
-    if (toastController && typeof toastController.begin === 'function') {
-      return toastController.begin(message);
-    }
-    return {
-      update() {},
-      done(result) { if (result) showToast(result, false); },
-      fail(result) { if (result) showToast(result, true); },
-      cancel() {}
-    };
-  }
-
   const numberShortcutOptions = {
     onHoldStart: function() {
       showToast(t(
@@ -5081,78 +4483,6 @@
     onHoldEnd: hideToast,
     instantActive: () => pageState.numberShortcutInstantEnabled
   };
-
-  function fallbackCopyText(text) {
-    if (!document || !document.body || typeof document.execCommand !== 'function') {
-      return false;
-    }
-    const activeElement = document.activeElement;
-    const textarea = document.createElement('textarea');
-    textarea.value = String(text || '');
-    textarea.setAttribute('readonly', '');
-    textarea.style.setProperty('position', 'fixed');
-    textarea.style.setProperty('left', '-9999px');
-    textarea.style.setProperty('top', '0');
-    document.body.appendChild(textarea);
-    textarea.select();
-    let copied = false;
-    try {
-      copied = document.execCommand('copy');
-    } catch (error) {
-      copied = false;
-    }
-    textarea.remove();
-    if (activeElement && typeof activeElement.focus === 'function') {
-      activeElement.focus({ preventScroll: true });
-    }
-    return copied;
-  }
-
-  function copyTextToClipboard(text) {
-    const value = String(text || '');
-    const clipboard = window.navigator && window.navigator.clipboard;
-    if (clipboard && typeof clipboard.writeText === 'function') {
-      return Promise.resolve(clipboard.writeText(value)).catch((error) => {
-        if (fallbackCopyText(value)) {
-          return true;
-        }
-        throw error;
-      });
-    }
-    return fallbackCopyText(value)
-      ? Promise.resolve(true)
-      : Promise.reject(new Error('clipboard-write-failed'));
-  }
-
-  function copyBookmarkUrl(url) {
-    const value = String(url || '').trim();
-    if (!value) {
-      showToast(t('bookmarks_copy_url_failed', 'Couldn’t copy the link. Try again.'), true);
-      return Promise.resolve(false);
-    }
-    return copyTextToClipboard(value).then(() => {
-      showToast(t('bookmarks_copy_url_success', 'Bookmark link copied'));
-      return true;
-    }).catch(() => {
-      showToast(t('bookmarks_copy_url_failed', 'Couldn’t copy the link. Try again.'), true);
-      return false;
-    });
-  }
-
-  function copySearchResultUrl(url) {
-    const value = String(url || '').trim();
-    if (!value) {
-      showToast(t('search_copy_url_failed', 'Couldn’t copy the result link. Try again.'), true);
-      return Promise.resolve(false);
-    }
-    return copyTextToClipboard(value).then(() => {
-      showToast(t('search_copy_url_success', 'Result link copied'));
-      return true;
-    }).catch(() => {
-      showToast(t('search_copy_url_failed', 'Couldn’t copy the result link. Try again.'), true);
-      return false;
-    });
-  }
 
   function getSearchModeMenuResultOffset() {
     if (!suggestionsContainer ||
@@ -5210,135 +4540,6 @@
     if (pageState.layoutController && typeof pageState.layoutController.updateSuggestionsFloatingLayout === 'function') {
       pageState.layoutController.updateSuggestionsFloatingLayout();
     }
-  }
-
-  function readRecentOpenTabs() {
-    return new Promise((resolve) => {
-      if (!chrome.tabs || !chrome.tabs.query) {
-        resolve([]);
-        return;
-      }
-      chrome.tabs.query({}, (tabs) => {
-        resolve(chrome.runtime.lastError || !Array.isArray(tabs) ? [] : tabs);
-      });
-    });
-  }
-
-  function readRecentTopSites() {
-    return new Promise((resolve) => {
-      if (!chrome.topSites || !chrome.topSites.get || !TOP_SITES_FOLLOW_HISTORY) {
-        resolve(null);
-        return;
-      }
-      chrome.topSites.get((items) => {
-        resolve(chrome.runtime.lastError || !Array.isArray(items) ? null : items);
-      });
-    });
-  }
-
-  function readRecentHistoryItems() {
-    return new Promise((resolve) => {
-      if (!chrome.history || !chrome.history.search) {
-        resolve(null);
-        return;
-      }
-      // Most-visited ranks sites by summed visit counts, so it needs more than the latest few URLs.
-      chrome.history.search({
-        text: '',
-        maxResults: 500,
-        startTime: Date.now() - 1000 * 60 * 60 * 24 * 90
-      }, (items) => {
-        resolve(chrome.runtime.lastError || !Array.isArray(items) ? null : items);
-      });
-    });
-  }
-
-  function releaseStartupRecentSourceReads() {
-    startupRecentSourceReads = null;
-  }
-
-  function takeStartupRecentSourceRead(name, read) {
-    const pending = startupRecentSourceReads ? startupRecentSourceReads[name] : null;
-    return pending && Date.now() - startupRecentSourceReadsAt <= STARTUP_RECENT_SOURCE_MAX_AGE_MS
-      ? pending
-      : read();
-  }
-
-  function getRecentSites(limit, mode) {
-    const safeLimit = Math.max(0, Number(limit) || 0);
-    if (safeLimit > 0 && firefoxBrowserIcons) {
-      // Render recent cards once Firefox's own icons are indexed.
-      return firefoxBrowserIconsReady.then(() => getRecentSitesNow(safeLimit, mode));
-    }
-    return getRecentSitesNow(limit, mode);
-  }
-
-  function getRecentSitesNow(limit, mode) {
-    const safeLimit = Math.max(0, Number(limit) || 0);
-    const viewMode = mode === 'most' ? 'most' : 'latest';
-    if (safeLimit <= 0) {
-      return Promise.resolve([]);
-    }
-
-    const mergeSources = (sources, mergeMode) => NEWTAB_RECENT_STORE.mergeRecentSiteSources({
-      ...getRecentStoreOptions(),
-      ...(sources || {}),
-      mode: mergeMode || viewMode,
-      limit: safeLimit,
-      candidateLimit: safeLimit,
-      pinned: [],
-      hidden: []
-    });
-
-    const readOpenTabs = () => takeStartupRecentSourceRead('tabs', readRecentOpenTabs);
-    const readTopSites = () => takeStartupRecentSourceRead('topSites', readRecentTopSites);
-    const readHistoryItems = () => takeStartupRecentSourceRead('historyItems', readRecentHistoryItems);
-
-    const mergeWithTabsIfNeeded = (sources, mergeMode) => {
-      const withoutTabs = mergeSources(sources, mergeMode);
-      return readOpenTabs().then((tabs) => {
-        const shouldMergeTabs = withoutTabs.length < safeLimit ||
-          (Array.isArray(tabs) && tabs.some((tab) => isBrowserPageRecentUrl(tab && tab.url)));
-        if (!shouldMergeTabs) {
-          return withoutTabs;
-        }
-        return mergeSources({
-          ...(sources || {}),
-          tabs
-        }, mergeMode);
-      });
-    };
-
-    const loadLatestRecentSites = () => readHistoryItems().then((historyItems) => {
-      if (!Array.isArray(historyItems)) {
-        return [];
-      }
-      const historyOnly = mergeSources({ historyItems }, 'latest');
-      if (historyOnly.length >= safeLimit) {
-        return mergeWithTabsIfNeeded({ historyItems }, 'latest');
-      }
-      return readTopSites().then((topSites) => mergeWithTabsIfNeeded({
-        historyItems,
-        topSites: Array.isArray(topSites) ? topSites : []
-      }, 'latest'));
-    });
-
-    if (viewMode === 'most') {
-      return readTopSites().then((topSites) => {
-        const topSiteItems = Array.isArray(topSites) ? topSites : [];
-        const topOnly = mergeSources({ topSites: topSiteItems }, 'most');
-        if (topOnly.length >= safeLimit) {
-          return mergeWithTabsIfNeeded({ topSites: topSiteItems }, 'most');
-        }
-        // Fill a short topSites list from history ranked by visit counts.
-        return readHistoryItems().then((historyItems) => mergeWithTabsIfNeeded({
-          topSites: topSiteItems,
-          historyItems: Array.isArray(historyItems) ? historyItems : []
-        }, 'most'));
-      });
-    }
-
-    return loadLatestRecentSites();
   }
 
   // Kick off favicon cache warmup early; theme tint work flushes when storage is ready.
