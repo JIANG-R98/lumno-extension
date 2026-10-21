@@ -2,7 +2,6 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
-const { readBackgroundSource } = require('../helpers/background-source');
 
 const { moduleScript } = require('../helpers/module-script');
 
@@ -504,27 +503,7 @@ assert.ok(
   Array.isArray(manifest.permissions) && !manifest.permissions.includes('webNavigation'),
   'loading intent tracking should reuse the existing tabs permission'
 );
-const backgroundSource = readBackgroundSource();
-assert.ok(
-  backgroundSource.includes("if (changeInfo.status === 'loading') {\n      rememberOverlayTopFrameNavigation({"),
-  'the tabs loading event should be recorded independently of the stale tabs.query snapshot'
-);
-assert.ok(
-  backgroundSource.includes('markOverlayLoadingRecordUnstable(tabId);'),
-  'a new loading phase should invalidate an earlier completion grace period'
-);
-assert.ok(
-  backgroundSource.includes('scheduleOverlayLoadingStableCompletion(') &&
-    backgroundSource.includes("stable: true"),
-  'a connected first completion should wait for a stable completion probe'
-);
-assert.ok(
-  backgroundSource.includes('const cachedNavigationState = overlayNavigationStateByTabId.get(tab.id) || null;'),
-  'shortcut dispatch should merge the navigation event with the stale tabs.query snapshot'
-);
-assert.ok(
-  backgroundSource.includes("if (changeInfo.status === 'complete') {\n      clearOverlayNavigationState(tabId);"),
-  'the transient navigation state should be cleared when that tab finishes loading'
-);
+// How the worker uses these decisions on real tab events is covered by
+// tests/background/test-background-overlay-open.js.
 
 console.log('overlay loading lifecycle tests passed');

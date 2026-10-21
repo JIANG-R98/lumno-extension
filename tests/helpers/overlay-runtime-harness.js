@@ -4,6 +4,7 @@ const path = require('path');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { bundleScript } = require('./module-script');
 const { getInjectedFiles } = require('./runtime-scripts');
+const { trackListeners } = require('./trusted-events');
 
 // Loads the unmodified production overlay injection bundle (the same file
 // list background.js injects) into a JSDOM page with a fake chrome API, so
@@ -93,44 +94,65 @@ function createChromeEvent() {
   };
 }
 
-async function createOverlayPage() {
+// options:
+//   url, html       the host page
+//   userAgent       navigator.userAgent of the page
+//   settings        stored settings, merged over the harness defaults
+//   respond         (message) => response for chrome.runtime.sendMessage;
+//                   return undefined to fall back to the default answers
+//   darkSystem      whether prefers-color-scheme: dark matches
+//   setup           (window) => void, run before the overlay is injected
+async function createOverlayPage(options) {
+  const config = options || {};
   const errors = [];
   const virtualConsole = new VirtualConsole();
   virtualConsole.on('jsdomError', (error) => errors.push(error.message));
-  const dom = new JSDOM('<!doctype html><html><head></head><body><p>Host page</p></body></html>', {
-    url: 'https://page.example.test/',
+  const dom = new JSDOM(config.html || '<!doctype html><html><head></head><body><p>Host page</p></body></html>', {
+    url: config.url || 'https://page.example.test/',
     runScripts: 'outside-only',
     pretendToBeVisual: true,
     virtualConsole
   });
   const { window } = dom;
-  const settings = {
+  if (config.userAgent) {
+    Object.defineProperty(window.navigator, 'userAgent', { configurable: true, value: config.userAgent });
+  }
+  const settings = Object.assign({
     _x_extension_language_2024_unique_: 'en',
     _x_extension_motion_effects_enabled_2026_unique_: false,
     _x_extension_overlay_open_tabs_default_visible_2026_unique_: false
-  };
-  const storageArea = {
+  }, config.settings || {});
+  const messages = [];
+  const storageReads = [];
+  const createStorageArea = (name, values) => ({
     get(keys, callback) {
+      const read = typeof keys === 'string' ? [keys] : (Array.isArray(keys) ? keys.slice() : Object.keys(keys || {}));
+      read.area = name;
+      storageReads.push(read);
       const requestedKeys = typeof keys === 'string'
         ? [keys]
-        : (Array.isArray(keys) ? keys : Object.keys(keys || settings));
-      const values = {};
+        : (Array.isArray(keys) ? keys : Object.keys(keys || values));
+      const result = {};
       requestedKeys.forEach((key) => {
-        if (Object.hasOwn(settings, key)) {
-          values[key] = settings[key];
+        if (Object.hasOwn(values, key)) {
+          result[key] = values[key];
         } else if (keys && !Array.isArray(keys) && typeof keys === 'object') {
-          values[key] = keys[key];
+          result[key] = keys[key];
         }
       });
-      window.setTimeout(() => callback?.(values), 0);
-      return Promise.resolve(values);
+      window.setTimeout(() => callback?.(result), 0);
+      return Promise.resolve(result);
     },
-    set(values, callback) {
-      Object.assign(settings, values);
+    set(items, callback) {
+      Object.assign(values, items);
       callback?.();
       return Promise.resolve();
     }
-  };
+  });
+  const storageArea = createStorageArea('sync', settings);
+  // Without localSettings both areas hold the same values.
+  const localSettings = config.localSettings ? Object.assign({}, config.localSettings) : settings;
+  const localStorageArea = config.localSettings ? createStorageArea('local', localSettings) : storageArea;
   const storageChanged = createChromeEvent();
   const mediaListeners = new Set();
   window.chrome = {
@@ -139,7 +161,13 @@ async function createOverlayPage() {
       getURL: (resource) => `chrome-extension://kkcjcneagmlhpeaafngjdlpcfjakejgb/${resource}`,
       getManifest: () => ({ version: '0.9.56' }),
       sendMessage(message, callback) {
-        let response = {};
+        messages.push(message);
+        let response = typeof config.respond === 'function' ? config.respond(message) : undefined;
+        if (response !== undefined) {
+          Promise.resolve(response).then((value) => window.setTimeout(() => callback?.(value), 0));
+          return Promise.resolve(response);
+        }
+        response = {};
         if (message.action === 'getSearchSuggestions') {
           response = { suggestions: [] };
         } else if (message.action === 'getSearchEngineSuggestions') {
@@ -154,12 +182,12 @@ async function createOverlayPage() {
     i18n: { getUILanguage: () => 'en', getMessage: () => '' },
     storage: {
       sync: storageArea,
-      local: storageArea,
+      local: localStorageArea,
       onChanged: storageChanged
     }
   };
   window.matchMedia = (media) => ({
-    matches: false,
+    matches: Boolean(config.darkSystem) && /prefers-color-scheme:\s*dark/.test(media),
     media,
     addEventListener(type, listener) { mediaListeners.add(listener); },
     removeEventListener(type, listener) { mediaListeners.delete(listener); }
@@ -178,6 +206,11 @@ async function createOverlayPage() {
       : fs.readFileSync(path.join(repoRoot, file), 'utf8');
     window.eval(`${source}\n//# sourceURL=${file}`);
   };
+  if (typeof config.setup === 'function') {
+    config.setup(window);
+  }
+  const keys = trackListeners(window);
+  const documentKeys = trackListeners(window.document);
   injectionFiles.forEach(evalFile);
   // The settings storage runtime is memoized per chrome API object and keeps
   // one storage-mode listener for the page's lifetime; create it up front so
@@ -186,11 +219,26 @@ async function createOverlayPage() {
   await settle();
   const ledger = createListenerLedger(window);
   const baselineStorageListeners = new Set(storageChanged.listeners);
-  return {
+  const page = {
     window,
+    document: window.document,
     errors,
     ledger,
+    messages,
+    settings,
+    // The keys of each chrome.storage get the page made, in order; each
+    // list's `area` names the storage area.
+    storageReads,
+    keys,
+    documentKeys,
     storageChanged,
+    // Changes a stored setting the way another page or Settings would.
+    changeSetting(key, newValue, areaName) {
+      const values = areaName === 'local' ? localSettings : settings;
+      const oldValue = values[key];
+      values[key] = newValue;
+      Array.from(storageChanged.listeners).forEach((listener) => listener({ [key]: { oldValue, newValue } }, areaName || 'sync'));
+    },
     sessionStorageListenerCount() {
       return Array.from(storageChanged.listeners)
         .filter((listener) => !baselineStorageListeners.has(listener)).length;
@@ -212,8 +260,51 @@ async function createOverlayPage() {
     },
     hostCount() {
       return window.document.querySelectorAll(`#${HOST_ID}`).length;
+    },
+    // The overlay's shadow root (null while closed).
+    root() {
+      const panel = window.LumnoOverlayShell.findOverlayPanel(window.document);
+      return panel ? panel._lumnoOverlayRoot : null;
+    },
+    input() {
+      const root = page.root();
+      return root ? root.querySelector('#_x_extension_search_input_2024_unique_') : null;
+    },
+    // Opens the overlay and waits until its input has focus.
+    async open(context) {
+      page.toggle(context);
+      await waitFor(() => page.root() && page.root().activeElement === page.input(), 'the overlay should finish initialization', errors);
+      await settle();
+      return page.root();
+    },
+    async type(query) {
+      const input = page.input();
+      input.value = query;
+      input.dispatchEvent(new window.Event('input', { bubbles: true }));
+      await settle(60);
+    },
+    suggestions() {
+      const root = page.root();
+      return root ? Array.from(root.querySelectorAll('.x-ov-suggestion-item')) : [];
+    },
+    // A trusted key press, delivered to the page's window and document
+    // listeners (the overlay listens on both).
+    press(key, init) {
+      const event = keys.dispatch('keydown', Object.assign({ key, target: page.input() }, init || {}));
+      if (!event.immediatePropagationStopped) {
+        documentKeys.dispatch('keydown', Object.assign({ key, target: page.input() }, init || {}));
+      }
+      return event;
+    },
+    waitFor(condition, message) {
+      return waitFor(condition, message, errors);
+    },
+    settle,
+    close() {
+      window.close();
     }
   };
+  return page;
 }
 
 async function openAndSettle(page) {

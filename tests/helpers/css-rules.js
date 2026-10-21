@@ -6,12 +6,25 @@
 // mattering, and a later declaration in the same rule wins as it does in a
 // browser.
 
-const { JSDOM } = require('jsdom');
+const { JSDOM, VirtualConsole } = require('jsdom');
 
+// A selector list split at its top-level commas (not those inside :is()).
 function selectorsOf(rule) {
-  return String(rule.selectorText || '')
-    .split(',')
-    .map((part) => part.replace(/\s+/g, ' ').trim());
+  const text = String(rule.selectorText || '');
+  const parts = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    if (char === '(' || char === '[') depth += 1;
+    if (char === ')' || char === ']') depth -= 1;
+    if (char === ',' && depth === 0) {
+      parts.push(text.slice(start, index));
+      start = index + 1;
+    }
+  }
+  parts.push(text.slice(start));
+  return parts.map((part) => part.replace(/\s+/g, ' ').trim()).filter(Boolean);
 }
 
 function normalizeSelector(selector) {
@@ -37,7 +50,9 @@ function flatten(cssRules, conditions) {
 }
 
 function parseCss(cssText) {
-  const dom = new JSDOM('<!doctype html><html><head></head></html>');
+  // @import rules are kept as rules but never fetched; the console stays quiet
+  // about the URLs it cannot resolve.
+  const dom = new JSDOM('<!doctype html><html><head></head></html>', { virtualConsole: new VirtualConsole() });
   const style = dom.window.document.createElement('style');
   style.textContent = String(cssText || '');
   dom.window.document.head.appendChild(style);

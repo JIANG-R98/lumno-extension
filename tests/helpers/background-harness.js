@@ -365,12 +365,12 @@ function createChromeStub(config) {
       }
     }
   };
-  return { chromeApi, calls };
+  return { chromeApi, calls, tabs };
 }
 
 function loadBackground(options) {
   const config = options || {};
-  const { chromeApi, calls } = createChromeStub(config);
+  const { chromeApi, calls, tabs } = createChromeStub(config);
   if (typeof config.configureChrome === 'function') {
     config.configureChrome(chromeApi, calls);
   }
@@ -468,6 +468,8 @@ function loadBackground(options) {
     context,
     chrome: chromeApi,
     calls,
+    // The tab objects tabs.query and tabs.get answer from.
+    tabs,
     storage: chromeApi.storage,
     sendMessage,
     // A binding background.js exports, or one named in `exposeModules`.
