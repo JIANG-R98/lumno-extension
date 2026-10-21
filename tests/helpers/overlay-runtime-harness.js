@@ -103,6 +103,7 @@ function createChromeEvent() {
 //   darkSystem      whether prefers-color-scheme: dark matches
 //   setup           (window) => void, run before the overlay is injected
 //   storageDelayMs  how long chrome.storage reads take to answer
+//   storageGate     (keys) => promise or null; a read waits for the promise
 //   recordAnimations  provide and record element.animate()
 //   stylesheetsLoad whether the overlay's stylesheets fire load (JSDOM never
 //                   fetches them, so by default they stay pending)
@@ -149,10 +150,11 @@ async function createOverlayPage(options) {
         }
       });
       const delay = Number(config.storageDelayMs) || 0;
-      return new Promise((resolve) => window.setTimeout(() => {
+      const gate = typeof config.storageGate === 'function' ? config.storageGate(read) : null;
+      return Promise.resolve(gate).then(() => new Promise((resolve) => window.setTimeout(() => {
         callback?.(result);
         resolve(result);
-      }, delay));
+      }, delay)));
     },
     set(items, callback) {
       Object.assign(values, items);
@@ -299,11 +301,13 @@ async function createOverlayPage(options) {
       // runtime, which replaces the toggle helper while an overlay is open.
       evalFile('build/overlay.js');
     },
+    // context.tabs is the open-tab list the background passes along.
     toggle(context) {
-      window._x_extension_toggleSearchOverlay_2026_unique_([], Object.assign({
+      const { tabs, ...rest } = context || {};
+      window._x_extension_toggleSearchOverlay_2026_unique_(tabs || [], Object.assign({
         currentTabId: 1,
         currentTabUrl: window.location.href
-      }, context || {}));
+      }, rest));
     },
     host() {
       return window.document.getElementById(HOST_ID);

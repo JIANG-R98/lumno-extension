@@ -1,80 +1,14 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
 require('../../src/shared/search/search-han-variants.js');
 const search = require('../../src/shared/search/search-utils.js');
 const pinyinPro = require('../../assets/vendor/pinyin-pro.js');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 
-function readSource(relativePath) {
-  if (relativePath === 'src/newtab/newtab.js') {
-    return readNewtabRuntimeSource();
-  }
-  if (relativePath === 'src/overlay/search-panel.js') {
-    return readOverlayPanelSource();
-  }
-  return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
-}
-
-function assertDirectNavigationDelegatesToShared(relativePath) {
-  const source = readSource(relativePath);
-  assert.ok(
-    /function getDirectNavigationUrl\(input\)\s*\{[\s\S]*?(?:SEARCH_UTILS|searchUtils)\.getDirectNavigationUrl\(input\)/.test(source),
-    `${relativePath} should delegate direct URL parsing to shared search utils`
-  );
-  assert.doesNotMatch(
-    source,
-    /function isNumericHostLike\(hostname\)|function isDevHostLike\(hostname\)|DIRECT_NAVIGATION_FALLBACK_SINGLE_COLON_PROTOCOLS|getDirectNavigationFallbackProtocol|isExplicitDirectNavigationFallbackUrl/,
-    `${relativePath} should not keep a second direct URL parser`
-  );
-}
-
-function assertTabMatchUrlDelegatesToShared(relativePath, options = {}) {
-  const source = readSource(relativePath);
-  const includeSearch = options.includeSearch !== false;
-  const expectedCall = includeSearch
-    ? /SEARCH_UTILS\.buildTabMatchUrl\(url\)/
-    : /SEARCH_UTILS\.buildTabMatchUrl\(url,\s*\{\s*includeSearch:\s*false\s*\}\)/;
-  const normalizerName = includeSearch
-    ? 'normalizeTabMatchUrl'
-    : 'normalizeTabMatchUrlWithoutSearch';
-  const normalizerStart = new RegExp(`function ${normalizerName}\\(url\\)\\s*\\{`);
-  const startIndex = source.search(normalizerStart);
-  assert.ok(startIndex >= 0, `${relativePath} should define ${normalizerName}`);
-  const normalizerSource = source.slice(startIndex, startIndex + 900);
-  assert.match(
-    normalizerSource,
-    expectedCall,
-    `${relativePath} should delegate ${normalizerName} to the shared port-aware URL matcher`
-  );
-}
-
-function assertKeywordOnlySuggestionsKeepSearchActionFirst(relativePath) {
-  const source = readSource(relativePath);
-  assert.match(
-    source,
-    /function getKeywordSearchSuggestionState\(list\)\s*\{[\s\S]*?SEARCH_UTILS\.getKeywordSearchSuggestionState\(list\)/,
-    `${relativePath} should delegate keyword-search suggestion state to shared search utils`
-  );
-  assert.match(
-    source,
-    /const keywordSuggestionState = getKeywordSearchSuggestionState\(allSuggestions\);\s*const onlyKeywordSuggestions = keywordSuggestionState\.onlyKeywordSuggestions;/,
-    `${relativePath} should use the shared keyword-only suggestion state`
-  );
-  assert.match(
-    source,
-    /if \(onlyKeywordSuggestions\) \{\s*clearAutocomplete\(\);\s*\} else \{\s*applyAutocomplete\(allSuggestions,\s*primarySuggestion,\s*primaryHighlightReason\);\s*\}/,
-    `${relativePath} should disable autocomplete when the only available results are keyword search suggestions`
-  );
-  assert.match(
-    source,
-    /const autocompleteSuggestions = getKeywordSearchSuggestionState\(allSuggestions\)\.autocompleteSuggestions;[\s\S]*?getDomainPrefixCandidate\(autocompleteSuggestions,/,
-    `${relativePath} should use shared autocomplete filtering for inline autocomplete`
-  );
-}
+// How the search surfaces use these rules is covered against the real overlay
+// and New Tab page by test-search-surface-navigation.js.
 
 function score(item, query, sourceType = 'history') {
   const context = search.buildSearchQueryContext(query);
@@ -945,14 +879,6 @@ assert.strictEqual(
   '',
   'search operators should not be treated as direct custom protocol navigation'
 );
-assertDirectNavigationDelegatesToShared('src/newtab/newtab.js');
-assertDirectNavigationDelegatesToShared('src/overlay/search-panel.js');
-assertDirectNavigationDelegatesToShared('src/background/search-suggestions-service.js');
-assertTabMatchUrlDelegatesToShared('src/newtab/newtab.js');
-assertTabMatchUrlDelegatesToShared('src/overlay/search-panel.js');
-assertTabMatchUrlDelegatesToShared('src/overlay/search-panel.js', { includeSearch: false });
-assertKeywordOnlySuggestionsKeepSearchActionFirst('src/newtab/newtab.js');
-assertKeywordOnlySuggestionsKeepSearchActionFirst('src/overlay/search-panel.js');
 
 function testDirectNavigationUrl(input) {
   const raw = String(input || '').trim();
@@ -1127,7 +1053,7 @@ assert.strictEqual(
   'gh',
   'a page below a provider host should still inherit that site-search provider'
 );
-const bundledSiteSearchProviders = JSON.parse(readSource('assets/data/site-search.json')).items;
+const bundledSiteSearchProviders = JSON.parse(fs.readFileSync(path.join(repoRoot, 'assets/data/site-search.json'), 'utf8')).items;
 assert.deepStrictEqual(
   search.getDefaultSiteSearchProviders(),
   bundledSiteSearchProviders,

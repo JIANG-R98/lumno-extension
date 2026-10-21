@@ -1,107 +1,67 @@
 const assert = require('assert');
 const fs = require('fs');
-const { readSearchInputModeSource, readSearchInputModeRuntimeSource } = require('../helpers/search-input-mode-source');
-const { readOptionsRuntimeSource } = require('../helpers/options-source');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-const { readBackgroundSource } = require('../helpers/background-source');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
-const { getInjectedScripts, runsBefore } = require('../helpers/runtime-scripts');
+const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
 
-function readSource(path) {
-  return fs.readFileSync(path, 'utf8');
+// Backspace in an empty input removes the active search scope only when
+// pressed twice: the first press explains itself in a Toast. The timing of
+// the two presses is covered by react-src/shared/search-input-mode.test.ts.
+
+async function testTwoPressesRemoveTheScope(name) {
+  const surface = await openSearchSurface(name);
+  await surface.chooseScope('provider:yt');
+  assert.strictEqual(surface.scopeLabel(), 'YouTube', `${name}: the YouTube scope should be active`);
+
+  surface.press('Backspace');
+  await surface.settle(50);
+  assert.strictEqual(surface.scopeLabel(), 'YouTube', `${name}: one Backspace should keep the scope`);
+  assert.deepStrictEqual(surface.toast(), { shown: true, text: 'Press Backspace again to remove the scope.' },
+    `${name}: the first Backspace should ask for a second one`);
+
+  surface.press('Backspace', { repeat: true });
+  await surface.settle(50);
+  assert.strictEqual(surface.scopeLabel(), 'YouTube', `${name}: holding Backspace down should not count as a second press`);
+
+  surface.press('Backspace');
+  await surface.settle(50);
+  assert.strictEqual(surface.scopeLabel(), '', `${name}: the second Backspace should remove the scope`);
+  assert.strictEqual(surface.toast().shown, false, `${name}: removing the scope should dismiss the Toast`);
+  surface.close();
 }
 
-const sharedSource = readSearchInputModeSource();
-const newtabSource = readNewtabRuntimeSource();
-const overlaySource = readOverlayPanelSource();
-const overlayRuntimeSource = readSource('src/overlay/runtime.js');
-const backgroundSource = readBackgroundSource();
-const optionsSource = readOptionsRuntimeSource();
-const newtabStartupPrefetchSource = readSource('src/newtab/newtab-storage-prefetch.js');
-const toastSource = readSource('src/shared/ui/toast.js');
-
-assert.ok(
-  sharedSource.includes('function shouldRemoveModeTagOnBackspace(event)') &&
-    sharedSource.includes('if (event && event.repeat)') &&
-    sharedSource.includes('DEFAULT_MODE_TAG_REMOVAL_CONFIRMATION_DURATION'),
-  'shared input mode should own the timed two-press Backspace confirmation state'
-);
-
-for (const [surface, source, expectedRemovalBranches] of [
-  ['New Tab', newtabSource, 2],
-  ['overlay', overlaySource, 3]
-]) {
-  const guardedBranches = source.match(
-    /if \(!shouldRemoveSearchModeTagOnBackspace\([^)]*\)\) \{/g
-  ) || [];
-  assert.strictEqual(
-    guardedBranches.length,
-    expectedRemovalBranches,
-    `${surface} should guard every active search-scope Backspace removal branch`
-  );
-  assert.ok(
-    source.includes("'search_scope_remove_confirmation'") &&
-      source.includes('onModeTagRemovalConfirmationReset'),
-    `${surface} should show and reset the localized confirmation Toast`
-  );
+async function testTypedTextIsDeletedFirst(name) {
+  const surface = await openSearchSurface(name);
+  await surface.chooseScope('provider:yt');
+  await surface.type('c');
+  surface.input().setSelectionRange(1, 1);
+  surface.press('Backspace');
+  await surface.settle(50);
+  assert.strictEqual(surface.scopeLabel(), 'YouTube', `${name}: Backspace over typed text should not touch the scope`);
+  assert.strictEqual(surface.toast().shown, false, `${name}: nor ask about it`);
+  surface.close();
 }
 
-assert.ok(
-  toastSource.includes('function createToastController(toastElement, options)') &&
-    overlaySource.includes("import * as OVERLAY_TOAST from '../shared/ui/toast.js';"),
-  'overlay should use the shared lightweight Toast runtime'
-);
-assert.ok(
-  runsBefore(getInjectedScripts('overlay'), 'src/shared/ui/toast.js', 'src/overlay/search-panel.js'),
-  'overlay injection should load the shared Toast runtime before the panel'
-);
-
-const expectedMessages = {
-  en: 'Press Backspace again to remove the scope.',
-  ja: 'もう一度 Backspace を押すと検索範囲を解除します。',
-  zh_CN: '再按一次退格键，移除搜索范围。',
-  zh_TW: '再按一次退格鍵，移除搜尋範圍。'
-};
-
-for (const [locale, expectedMessage] of Object.entries(expectedMessages)) {
-  const messages = JSON.parse(readSource(`_locales/${locale}/messages.json`));
-  assert.strictEqual(
-    messages.search_scope_remove_confirmation &&
-      messages.search_scope_remove_confirmation.message,
-    expectedMessage,
-    `${locale} should localize the Backspace confirmation Toast`
-  );
+function testCopy() {
+  const expected = {
+    en: 'Press Backspace again to remove the scope.',
+    ja: 'もう一度 Backspace を押すと検索範囲を解除します。',
+    zh_CN: '再按一次退格键，移除搜索范围。',
+    zh_TW: '再按一次退格鍵，移除搜尋範圍。'
+  };
+  Object.entries(expected).forEach(([locale, message]) => {
+    const messages = JSON.parse(fs.readFileSync(`_locales/${locale}/messages.json`, 'utf8'));
+    assert.strictEqual(messages.search_scope_remove_confirmation.message, message, `${locale} should localize the confirmation`);
+  });
 }
 
-for (const [surface, source] of [
-  ['New Tab', newtabSource],
-  ['overlay', overlaySource]
-]) {
-  assert.ok(
-    source.includes("'Press Backspace again to remove the scope.'") &&
-      !source.includes("'Press Backspace again to remove the current search scope'"),
-    `${surface} should use the concise English fallback`
-  );
-}
-
-for (const [runtime, source] of [
-  ['New Tab', newtabSource],
-  ['New Tab startup prefetch', newtabStartupPrefetchSource],
-  ['overlay', overlayRuntimeSource],
-  ['background', backgroundSource],
-  ['options', optionsSource]
-]) {
-  assert.ok(
-    source.includes("fetch(localePath, { cache: 'no-store' })"),
-    `${runtime} locale loading should not reuse a stale language-file cache`
-  );
-}
-
-assert.ok(
-  overlaySource.includes('function loadPreferredLocaleMessages(locale, fallbackMessages)') &&
-    overlaySource.includes('currentMessages = await loadPreferredLocaleMessages(targetLocale, null);') &&
-    !overlaySource.includes('_x_extension_language_messages_2024_unique_'),
-  'overlay should load packaged locale messages without a synced cache payload'
-);
-
-console.log('search scope Backspace confirmation tests passed');
+(async () => {
+  for (const name of SURFACES) {
+    await testTwoPressesRemoveTheScope(name);
+    await testTypedTextIsDeletedFirst(name);
+  }
+  testCopy();
+  console.log('search scope Backspace confirmation tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

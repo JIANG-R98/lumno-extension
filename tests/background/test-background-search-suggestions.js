@@ -653,6 +653,20 @@ async function run() {
       edgeAllSources.every((item) => item && item.type !== 'topSite' && !item.isTopSite),
     'Edge should keep history suggestions without top-site boosts'
   );
+  const bookmarksOnlyBackground = loadBackgroundForTest({
+    initialSyncData: { _x_extension_search_result_source_types_2026_unique_: ['bookmark'] }
+  });
+  const disabledHistory = await bookmarksOnlyBackground.context.__testGetSearchSuggestions('github', {
+    sourceTypes: ['history'],
+    includeOpenTabs: false
+  });
+  assert.strictEqual(disabledHistory.filter((item) => item && item.type === 'history').length, 0,
+    'a History scope should not bring back history the user turned off as a result source');
+  const openTabUrl = 'https://app.testmu.com/enterprise-cloud';
+  const withOpenTabs = await context.__testGetSearchSuggestions('testmu', { sourceTypes: ['history'] });
+  const withoutOpenTabs = await context.__testGetSearchSuggestions('testmu', { sourceTypes: ['history'], includeOpenTabs: false });
+  assert.ok(withOpenTabs.some((item) => item && item.url === openTabUrl), 'a scoped search keeps open tabs unless told otherwise');
+  assert.ok(!withoutOpenTabs.some((item) => item && item.url === openTabUrl), 'a local scope can leave open tabs out');
   assert.strictEqual(
     typeof context.__testGetSearchSuggestions,
     'function',

@@ -329,4 +329,4 @@ async function createOptionsPage(options) {
   return page;
 }
 
-module.exports = { EXTENSION_ORIGIN, createOptionsPage, reactEntryScript };
+module.exports = { EXTENSION_ORIGIN, createArea, createEvent, createOptionsPage, reactEntryScript };
