@@ -1,170 +1,198 @@
 const assert = require('assert');
-const vm = require('vm');
-const historyApi = require('../../src/newtab/bookmarks/bookmark-move-history');
 const dragApi = require('../../src/newtab/cross-surface-drag');
-const store = require('../../src/newtab/shortcuts/shortcuts-store');
-const references = require('../../src/shared/bookmark-folder-reference');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-const { extractFunction: extractFunctionFrom } = require('../helpers/extract-function');
+const { createNewtabPage } = require('../helpers/newtab-page');
 
-const source = readNewtabRuntimeSource();
-function extractFunction(name) {
-  return extractFunctionFrom(source, name);
-}
-const json = (value) => JSON.parse(JSON.stringify(value));
-const settle = () => new Promise((resolve) => setImmediate(resolve));
+// Dropping one website shortcut onto the middle of another stacks them into a
+// new bookmarks-bar folder, shown as a folder shortcut, with undo (⌘Z) and
+// redo (⇧⌘Z). The drags run through New Tab's pointer handling on boxes
+// from fake-layout.js.
 
-const site = (id) => ({ id, title: id[0].toUpperCase() + id.slice(1), url: `https://${id}.example/` });
+const site = (id) => ({ url: `https://${id}.example/`, title: id[0].toUpperCase() + id.slice(1) });
+const planSite = (id) => ({ id, title: id[0].toUpperCase() + id.slice(1), url: `https://${id}.example/` });
+const TILE = { left: 300, top: 400, width: 64, height: 64, gap: 8 };
 
-function createRuntime() {
-  const nodes = new Map();
-  let created = 0;
-  const context = vm.createContext({
-    newtabShortcuts: store.normalizeShortcuts([site('one'), site('two'), site('three')], { now: 456 }),
-    newtabShortcutIcons: { two: 'data:image/png;base64,two' },
-    bookmarkMoveHistory: historyApi.createBookmarkMoveHistory(),
-    bookmarkMoveHistoryBusy: false,
-    NEWTAB_BOOKMARK_MOVE_HISTORY: historyApi,
-    NEWTAB_CROSS_SURFACE_DRAG: dragApi,
-    FOLDER_REFERENCES: references,
-    MAX_NEWTAB_SHORTCUTS: 10,
-    bookmarkCascadeRuntime: null,
-    bookmarkPendingLayoutAnimation: null,
-    calls: [], toasts: [], bindings: new Map(), settled: [], folderIcons: {},
-    getFolderItemIconForShortcut(shortcut, iconDataUrl) {
-      if (iconDataUrl) return { iconSource: 'custom', dataUrl: iconDataUrl };
-      return shortcut.id === 'three' ? { iconSource: 'builtin' } : null;
-    },
-    updateFolderItemIcons(changes) {
-      Object.entries(changes).forEach(([id, entry]) => {
-        if (entry) context.folderIcons[id] = entry; else delete context.folderIcons[id];
-      });
-      return Promise.resolve(context.folderIcons);
-    },
-    failSave: 0, failCreate: 0, failRemove: 0,
-    getShortcutById(id) { return context.newtabShortcuts.find((item) => item.id === id) || null; },
-    shortcutFolderRuntime: {
-      ready: Promise.resolve(),
-      bind(id, folderId) { context.bindings.set(id, folderId); },
-      flush: () => Promise.resolve(),
-      reconcile: (items) => items
-    },
-    isShortcutDragActive: () => false,
-    persistShortcuts(items, message, iconChange) {
-      context.calls.push({ kind: 'save', ids: items.map((item) => item.id) });
-      if (context.failSave > 0) {
-        context.failSave -= 1;
-        return Promise.resolve(false);
-      }
-      context.newtabShortcuts = store.normalizeShortcuts(items, { now: 456 });
-      const ids = new Set(items.map((item) => item.id));
-      context.newtabShortcutIcons = Object.fromEntries(Object.entries(context.newtabShortcutIcons)
-        .filter(([id]) => ids.has(id)));
-      [].concat(iconChange || []).forEach((change) => {
-        context.newtabShortcutIcons[change.shortcutId] = change.dataUrl;
-      });
-      return Promise.resolve(true);
-    },
-    showToast(message, isError) { context.toasts.push({ message, isError: Boolean(isError) }); },
-    t: (_key, fallback) => fallback,
-    formatMessage: (_key, fallback, values) => fallback.replace('{shortcut}', values.shortcut),
-    getBookmarkUndoShortcutLabel: () => 'Ctrl+Z',
-    getBookmarkRedoShortcutLabel: () => 'Ctrl+Shift+Z',
-    queueBookmarkLayoutAnimation() {}, markBookmarkTreeDirty() {}, loadBookmarks() {},
-    refreshOpenBookmarkCascadeMenu() {}, renderShortcuts() {}, scheduleWallpaperAdaptiveToneUpdate() {},
-    settleShortcutDragTile(tile) { context.settled.push(tile); },
-    persistShortcutOrder: () => Promise.resolve(true),
-    console: { warn() {} }
+async function openNewtab(options) {
+  const config = options || {};
+  const page = await createNewtabPage({
+    layout: true,
+    shortcuts: config.shortcuts || [site('one'), site('two'), site('three')],
+    bookmarks: [{ id: '50', title: 'Existing', url: 'https://existing.example/' }].concat(config.bookmarks || [])
   });
-  function reindex(parentId) {
-    nodes.get(parentId).children.forEach((node, index) => { node.index = index; node.parentId = parentId; });
-  }
-  function add(node) {
-    const item = { title: '', ...node, ...(!node.url ? { children: [] } : {}) };
-    nodes.set(item.id, item);
-    if (item.parentId) {
-      const children = nodes.get(item.parentId).children;
-      children.splice(Math.min(item.index ?? children.length, children.length), 0, item);
-      reindex(item.parentId);
-    }
-    return item;
-  }
-  function removeTree(node) {
-    (node.children || []).forEach(removeTree);
-    nodes.delete(node.id);
-  }
-  add({ id: '0' });
-  add({ id: '1', parentId: '0', title: 'Bookmarks bar' });
-  add({ id: '2', parentId: '0', title: 'Other bookmarks' });
-  add({ id: 'existing', parentId: '1', title: 'Existing', url: 'https://existing.example/' });
-  context.bookmarksRuntime = {
-    getNodeMap: () => nodes,
-    getNode: (id) => nodes.has(String(id)) ? json(nodes.get(String(id))) : null,
-    getRootFolderId: () => '1',
-    ensureReady: () => Promise.resolve(true),
-    runControlledMutation: (operation) => Promise.resolve().then(operation),
-    create(details) {
-      context.calls.push({ kind: 'create', ...details });
-      if (context.failCreate > 0) { context.failCreate -= 1; return Promise.reject(new Error('create failed')); }
-      return Promise.resolve(json(add({ ...details, id: `created-${++created}` })));
+  await page.settle(250);
+  const doc = page.document;
+  const tiles = () => Array.from(doc.querySelectorAll('.x-nt-shortcut-tile:not(.x-nt-shortcut-tile--add)'));
+  const grid = tiles()[0].parentElement;
+  page.layout.place(grid, { left: 300, top: 400, width: 400, height: 80 });
+  page.layout.flow(grid, '.x-nt-shortcut-tile', TILE);
+  const tile = (title) => tiles().find((item) => item.getAttribute('aria-label') === `Open ${title}`);
+  const toast = () => doc.getElementById('_x_extension_toast_2024_unique_').textContent;
+  const bar = () => page.bookmarks.find('1').children;
+  return {
+    page,
+    toast,
+    bar,
+    titles: () => tiles().map((item) => item.getAttribute('aria-label').replace(/^Open /, '')),
+    folder: () => bar().find((node) => !node.url) || null,
+    // Drags `source` to `x` (a fraction across `target`'s box) and releases.
+    async drop(source, target, fraction = 0.5) {
+      const box = tile(target).getBoundingClientRect();
+      const x = box.left + box.width * fraction;
+      await page.drag(tile(source), [[x, box.top + box.height / 2]]);
+      await page.settle(200);
     },
-    remove(id, options) {
-      context.calls.push({ kind: 'remove', id, recursive: Boolean(options && options.recursive) });
-      if (context.failRemove > 0) { context.failRemove -= 1; return Promise.reject(new Error('remove failed')); }
-      const node = nodes.get(String(id));
-      assert.ok(node, `Cannot remove missing ${id}`);
-      assert.ok(node.url || (options && options.recursive), 'folders are removed as a tree');
-      nodes.get(node.parentId).children.splice(node.index, 1);
-      reindex(node.parentId);
-      removeTree(node);
-      return Promise.resolve(true);
+    async key(init) {
+      page.trusted(doc.body, 'keydown', Object.assign({ key: 'z', code: 'KeyZ', metaKey: true, bubbles: true, cancelable: true }, init));
+      await page.settle(300);
+    },
+    // Makes the next `times` calls to chrome.bookmarks[name] fail ('remove'
+    // covers removeTree, which folders use).
+    failing(name, times = 1) {
+      const api = page.bookmarks;
+      let left = times;
+      (name === 'remove' ? ['remove', 'removeTree'] : [name]).forEach((method) => {
+        const original = api[method];
+        api[method] = (...args) => {
+          if (left > 0) {
+            left -= 1;
+            const callback = args.find((arg) => typeof arg === 'function');
+            page.window.chrome.runtime.lastError = { message: `${name} failed` };
+            if (callback) callback();
+            page.window.chrome.runtime.lastError = null;
+            return callback ? undefined : Promise.reject(new Error(`${name} failed`));
+          }
+          return original.apply(api, args);
+        };
+      });
     }
   };
-  context.getShortcutFolderId = (item) => item && (item.folderId || context.bindings.get(item.id)) || '';
-  vm.runInContext(['refreshShortcutFolderReferences', 'applyShortcutStack', 'stackShortcuts',
-    'performBookmarkMoveHistoryAction'].map(extractFunction).join('\n'), context);
-  context.nodes = nodes;
-  context.bar = () => nodes.get('1').children.map((node) => node.title);
-  context.folder = () => nodes.get('1').children.find((node) => !node.url) || null;
-  context.stack = (sourceId, targetId, state = {}) => context.stackShortcuts({
-    shortcutId: sourceId, tile: { id: sourceId }, originalShortcuts: context.newtabShortcuts.slice(), ...state
-  }, { kind: 'shortcut-stack', shortcutId: targetId });
-  context.action = async (direction) => {
-    assert.strictEqual(context.performBookmarkMoveHistoryAction(direction), true);
-    await settle();
-    assert.strictEqual(context.bookmarkMoveHistoryBusy, false);
-  };
-  return context;
 }
 
-function createTargetRuntime(sourceType) {
-  const tiles = [
-    { id: 'one', left: 0 },
-    { id: 'two', left: 60 },
-    { id: 'folder', left: 120, folder: true }
-  ].map((tile) => ({
-    ...tile,
-    hasAttribute: (name) => name === 'data-bookmark-drop-folder-id' && Boolean(tile.folder)
-  }));
-  const shortcuts = [
-    sourceType === 'folder' ? { id: 'one', type: 'folder', folderId: 'f1' } : site('one'),
-    site('two'),
-    { id: 'folder', type: 'folder', folderId: 'f2' }
-  ];
-  const context = vm.createContext({
-    getShortcutById: (id) => shortcuts.find((item) => item.id === id) || null,
-    getShortcutReorderTiles: () => tiles,
-    getShortcutTileId: (tile) => tile.id,
-    getShortcutTileLayoutRect: (tile) => ({ left: tile.left, right: tile.left + 48, top: 0, bottom: 48, width: 48, height: 48 }),
-    isPointOverShortcutDropSurface: () => true
+async function testStackTargets() {
+  const outer = await openNewtab();
+  await outer.drop('Three', 'Two', 0.1);
+  assert.strictEqual(outer.folder(), null, 'the outer quarter of a tile keeps reordering');
+  assert.strictEqual(outer.titles().length, 3);
+  outer.page.close();
+
+  const folders = await openNewtab({
+    shortcuts: [{ type: 'folder', folderId: '60', title: 'Docs' }, site('two'), site('three')],
+    bookmarks: [{ id: '60', title: 'Docs', children: [] }]
   });
-  vm.runInContext(extractFunction('getShortcutStackTargetAt'), context);
-  return { context, state: { shortcutId: 'one', tile: tiles[0] } };
+  await folders.drop('Docs', 'Two');
+  assert.strictEqual(folders.bar().filter((node) => !node.url).length, 1, 'a folder shortcut does not stack');
+  await folders.drop('Three', 'Docs');
+  assert.deepStrictEqual(folders.bar().filter((node) => !node.url).map((node) => node.title), ['Docs'], 'a folder tile takes the site in, it does not stack');
+  assert.ok(folders.page.bookmarks.find('60').children.some((node) => node.url === 'https://three.example/'));
+  folders.page.close();
 }
+
+async function testStackUndoRedo() {
+  const newtab = await openNewtab();
+  await newtab.drop('Three', 'Two');
+  const created = newtab.folder();
+  assert.ok(created, 'dropping onto the middle of a site should stack them');
+  assert.deepStrictEqual([created.title, created.parentId, created.index], ['New folder', '1', 1], 'into a new folder at the end of the bookmarks bar');
+  assert.deepStrictEqual(created.children.map((node) => node.url), ['https://two.example/', 'https://three.example/'],
+    'with the site dropped onto first');
+  assert.deepStrictEqual(newtab.titles(), ['One', 'New folder'], 'the folder takes the target\'s place among the shortcuts');
+  assert.match(newtab.toast(), /^Folder created · ⌘Z to undo$/);
+
+  for (let cycle = 0; cycle < 3; cycle += 1) {
+    await newtab.key({});
+    assert.deepStrictEqual(newtab.titles(), ['One', 'Two', 'Three'], 'undo should bring both sites back');
+    assert.deepStrictEqual(newtab.bar().map((node) => node.title), ['Existing'], 'and remove the folder');
+    await newtab.key({ shiftKey: true });
+    assert.deepStrictEqual(newtab.titles(), ['One', 'New folder'], 'redo should stack them again');
+    assert.deepStrictEqual(newtab.folder().children.map((node) => node.title), ['Two', 'Three']);
+  }
+
+  newtab.page.close();
+
+  // Redo restores the folder under the name and at the place it was left.
+  const renamed = await openNewtab();
+  await renamed.drop('One', 'Three');
+  const folder = renamed.folder();
+  await renamed.page.bookmarks.update(folder.id, { title: 'Reading' });
+  await renamed.page.bookmarks.move(folder.id, { parentId: '1', index: 0 });
+  await renamed.page.settle(150);
+  await renamed.key({});
+  await renamed.key({ shiftKey: true });
+  assert.deepStrictEqual([renamed.folder().title, renamed.folder().index], ['Reading', 0], 'redo should restore the folder as it was left');
+  renamed.page.close();
+
+  const changed = await openNewtab();
+  await changed.drop('Three', 'Two');
+  await changed.page.bookmarks.create({ parentId: changed.folder().id, title: 'Later', url: 'https://later.example/' });
+  await changed.page.settle(150);
+  await changed.key({});
+  assert.strictEqual(changed.folder().children.length, 3, 'undo should never delete bookmarks added to the folder later');
+  assert.deepStrictEqual(changed.titles(), ['One', 'New folder']);
+  changed.page.close();
+}
+
+async function testFailuresRollBack() {
+  for (const failure of ['create', 'create-child']) {
+    const newtab = await openNewtab();
+    if (failure === 'create') {
+      newtab.failing('create');
+    } else {
+      // The folder is made, then a site inside it fails.
+      const api = newtab.page.bookmarks;
+      const create = api.create;
+      let count = 0;
+      api.create = (...args) => {
+        count += 1;
+        if (count === 3) {
+          const callback = args.find((arg) => typeof arg === 'function');
+          newtab.page.window.chrome.runtime.lastError = { message: 'child failed' };
+          if (callback) callback();
+          newtab.page.window.chrome.runtime.lastError = null;
+          return callback ? undefined : Promise.reject(new Error('child failed'));
+        }
+        return create.apply(api, args);
+      };
+    }
+    await newtab.drop('Three', 'Two');
+    assert.deepStrictEqual(newtab.titles(), ['One', 'Two', 'Three'], `${failure}: a failed stack should leave the shortcuts as they were`);
+    assert.strictEqual(newtab.folder(), null, `${failure}: and leave no folder behind`);
+    await newtab.key({});
+    assert.deepStrictEqual(newtab.titles(), ['One', 'Two', 'Three'], `${failure}: with nothing to undo`);
+    newtab.page.close();
+  }
+
+  const undoFails = await openNewtab();
+  await undoFails.drop('Three', 'Two');
+  undoFails.failing('remove');
+  await undoFails.key({});
+  assert.deepStrictEqual(undoFails.titles(), ['One', 'New folder'], 'an undo that cannot remove the folder keeps the stack');
+  assert.ok(undoFails.folder());
+  await undoFails.key({});
+  assert.deepStrictEqual(undoFails.titles(), ['One', 'Two', 'Three'], 'and can be tried again');
+  undoFails.page.close();
+}
+
+async function testClickStillOpensFolders() {
+  // A plain click on a folder tile ends a pointer session without dragging;
+  // it must leave the folder menu for the click to toggle.
+  const newtab = await openNewtab({
+    shortcuts: [{ type: 'folder', folderId: '60', title: 'Docs' }, site('two')],
+    bookmarks: [{ id: '60', title: 'Docs', children: [{ id: '61', title: 'A', url: 'https://a.example/' }] }]
+  });
+  const box = newtab.page.document.querySelector('.x-nt-shortcut-tile--folder').getBoundingClientRect();
+  const [x, y] = [box.left + 20, box.top + 20];
+  newtab.page.pointer('pointerdown', x, y);
+  newtab.page.pointer('pointerup', x, y);
+  newtab.page.document.querySelector('.x-nt-shortcut-tile--folder')
+    .dispatchEvent(new newtab.page.window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0, clientX: x, clientY: y }));
+  await newtab.page.settle(200);
+  assert.ok(newtab.page.document.querySelector('.x-nt-bookmark-cascade-level[data-open="true"]'), 'clicking a folder tile should open its menu');
+  newtab.page.close();
+}
+
 
 (async () => {
   // Pure planning: stacking replaces the target, undo restores both sources.
-  const shortcuts = [site('one'), site('two'), site('three')];
+  const shortcuts = [planSite('one'), planSite('two'), planSite('three')];
   const sources = [{ snapshot: shortcuts[1], index: 1 }, { snapshot: shortcuts[2], index: 2 }];
   const folder = { snapshot: { id: 'stack', type: 'folder' }, index: 1 };
   const stacked = dragApi.planShortcutStack({ shortcuts, sources, folder, maxShortcuts: 10 });
@@ -175,141 +203,16 @@ function createTargetRuntime(sourceType) {
     'a folder entry that already exists cannot be stacked again');
   assert.strictEqual(dragApi.planShortcutStack({ shortcuts: shortcuts.slice(0, 2), sources, folder, maxShortcuts: 10 }), null,
     'a missing source blocks the stack');
-  assert.strictEqual(dragApi.planShortcutStack({ shortcuts: [...stacked, site('two')], sources, folder, undo: true, maxShortcuts: 10 }), null,
+  assert.strictEqual(dragApi.planShortcutStack({ shortcuts: [...stacked, planSite('two')], sources, folder, undo: true, maxShortcuts: 10 }), null,
     'undo never duplicates a website added again later');
 
-  // Stack targets: the middle half of another website tile only.
-  const websiteDrag = createTargetRuntime('website');
-  const target = websiteDrag.context.getShortcutStackTargetAt(websiteDrag.state, 84, 24);
-  assert.strictEqual(target.kind, 'shortcut-stack');
-  assert.strictEqual(target.shortcutId, 'two');
-  assert.strictEqual(websiteDrag.context.getShortcutStackTargetAt(websiteDrag.state, 64, 24), null,
-    'the outer quarter keeps reordering');
-  assert.strictEqual(websiteDrag.context.getShortcutStackTargetAt(websiteDrag.state, 24, 24), null,
-    'a tile never stacks onto itself');
-  assert.strictEqual(websiteDrag.context.getShortcutStackTargetAt(websiteDrag.state, 144, 24), null,
-    'folder tiles keep their move-into-folder target');
-  const folderDrag = createTargetRuntime('folder');
-  assert.strictEqual(folderDrag.context.getShortcutStackTargetAt(folderDrag.state, 84, 24), null,
-    'folder shortcuts do not stack');
-
-  // Stacking creates a bookmarks-bar folder holding both sites.
-  const runtime = createRuntime();
-  const before = json(runtime.newtabShortcuts);
-  const barBefore = runtime.bar();
-  assert.strictEqual(await runtime.stack('three', 'two'), true);
-  const created = runtime.folder();
-  assert.strictEqual(created.title, 'New folder');
-  assert.strictEqual(created.parentId, '1');
-  assert.strictEqual(created.index, 1, 'new folders go to the end of the bookmarks bar');
-  assert.deepStrictEqual(created.children.map((node) => node.url), ['https://two.example/', 'https://three.example/'],
-    'the stack target comes first in the new folder');
-  const entry = runtime.newtabShortcuts[1];
-  assert.deepStrictEqual(runtime.newtabShortcuts.map((item) => item.type || 'site'), ['site', 'folder']);
-  assert.strictEqual(runtime.newtabShortcuts[0].id, 'one');
-  assert.ok(entry.folderRef && !entry.folderId, 'the folder entry syncs a portable reference');
-  assert.strictEqual(runtime.bindings.get(entry.id), created.id, 'this device binds the new folder at once');
-  assert.deepStrictEqual(json(runtime.newtabShortcutIcons), {});
-  const [twoNode, threeNode] = created.children;
-  assert.deepStrictEqual(json(runtime.folderIcons), {
-    [twoNode.id]: { iconSource: 'custom', dataUrl: 'data:image/png;base64,two' },
-    [threeNode.id]: { iconSource: 'builtin' }
-  }, 'stacked sites keep their icons inside the folder');
-  assert.strictEqual(runtime.bookmarkMoveHistory.peekUndo().kind, 'shortcut-stack');
-  assert.deepStrictEqual(runtime.toasts.map((toast) => toast.message), ['Folder created · Ctrl+Z to undo']);
-
-  for (let cycle = 0; cycle < 3; cycle += 1) {
-    await runtime.action('undo');
-    assert.deepStrictEqual(json(runtime.newtabShortcuts), before);
-    assert.strictEqual(runtime.newtabShortcutIcons.two, 'data:image/png;base64,two', 'undo restores custom icons');
-    assert.deepStrictEqual(runtime.bar(), barBefore);
-    assert.ok(![...runtime.nodes.values()].some((node) => node.url === 'https://two.example/'));
-    assert.deepStrictEqual(json(runtime.folderIcons), {}, 'undo drops the removed items\' icons');
-    await runtime.action('redo');
-    assert.deepStrictEqual(runtime.newtabShortcuts.map((item) => item.id), ['one', entry.id],
-      'redo keeps the folder entry identity');
-    assert.strictEqual(runtime.bindings.get(entry.id), runtime.folder().id);
-    assert.deepStrictEqual(runtime.folder().children.map((node) => node.title), ['Two', 'Three']);
-    assert.deepStrictEqual(Object.keys(runtime.folderIcons).sort(), runtime.folder().children.map((node) => node.id).sort(),
-      'redo gives the recreated items their icons');
-  }
-  assert.ok(runtime.toasts.slice(1).every((toast) => !toast.isError));
-
-  // Redo restores the folder where and under the name it was left.
-  const renamed = createRuntime();
-  await renamed.stack('one', 'three');
-  const renamedFolder = renamed.nodes.get(renamed.folder().id);
-  renamedFolder.title = 'Reading';
-  renamed.nodes.get('1').children.unshift(renamed.nodes.get('1').children.pop());
-  renamed.nodes.get('1').children.forEach((node, index) => { node.index = index; });
-  await renamed.action('undo');
-  await renamed.action('redo');
-  assert.strictEqual(renamed.folder().title, 'Reading');
-  assert.strictEqual(renamed.folder().index, 0);
-
-  // Undo never deletes bookmarks that were added to the stacked folder later.
-  const changed = createRuntime();
-  await changed.stack('three', 'two');
-  const changedRecord = changed.bookmarkMoveHistory.peekUndo();
-  await changed.bookmarksRuntime.create({ parentId: changed.folder().id, title: 'Later', url: 'https://later.example/' });
-  await changed.action('undo');
-  assert.strictEqual(changed.bookmarkMoveHistory.peekUndo(), changedRecord);
-  assert.strictEqual(changed.folder().children.length, 3);
-  assert.deepStrictEqual(changed.newtabShortcuts.map((item) => item.type || 'site'), ['site', 'folder']);
-  assert.ok(changed.toasts.at(-1).isError);
-
-  // Undo reverts the drag's reordering along with the stack.
-  const reordered = createRuntime();
-  const beforeDrag = json(reordered.newtabShortcuts);
-  const originalShortcuts = reordered.newtabShortcuts.slice();
-  reordered.newtabShortcuts = [originalShortcuts[0], originalShortcuts[2], originalShortcuts[1]];
-  await reordered.stack('three', 'one', { originalShortcuts, hasReordered: true });
-  assert.deepStrictEqual(reordered.newtabShortcuts.map((item) => item.type || item.id), ['folder', 'two']);
-  await reordered.action('undo');
-  assert.deepStrictEqual(json(reordered.newtabShortcuts), beforeDrag);
-
-  // Failures roll back every completed write and keep history clean.
-  for (const failure of ['failSave', 'failCreate']) {
-    const failed = createRuntime();
-    const beforeFailure = json(failed.newtabShortcuts);
-    failed[failure] = 1;
-    assert.strictEqual(await failed.stack('three', 'two'), false);
-    assert.deepStrictEqual(json(failed.newtabShortcuts), beforeFailure);
-    assert.strictEqual(failed.folder(), null, `${failure} must not leave a stray folder`);
-    assert.strictEqual(failed.bookmarkMoveHistory.canUndo(), false);
-    assert.strictEqual(failed.bookmarkMoveHistoryBusy, false);
-    assert.deepStrictEqual(failed.settled.map((tile) => tile.id), ['three'], 'the dragged tile settles back');
-  }
-  const failedChild = createRuntime();
-  const originalCreate = failedChild.bookmarksRuntime.create;
-  let createCount = 0;
-  failedChild.bookmarksRuntime.create = (details) => (++createCount === 3
-    ? Promise.reject(new Error('child failed')) : originalCreate(details));
-  assert.strictEqual(await failedChild.stack('three', 'two'), false);
-  assert.strictEqual(failedChild.folder(), null, 'a partly filled folder is removed');
-
-  const undoFailure = createRuntime();
-  await undoFailure.stack('three', 'two');
-  const stackRecord = undoFailure.bookmarkMoveHistory.peekUndo();
-  const stackedShortcuts = json(undoFailure.newtabShortcuts);
-  undoFailure.failRemove = 1;
-  await undoFailure.action('undo');
-  assert.strictEqual(undoFailure.bookmarkMoveHistory.peekUndo(), stackRecord);
-  assert.deepStrictEqual(json(undoFailure.newtabShortcuts).map((item) => item.id), stackedShortcuts.map((item) => item.id),
-    'a failed folder removal restores the stacked shortcuts');
-  assert.ok(undoFailure.folder());
-
-  const full = createRuntime();
-  await full.stack('three', 'two');
-  full.newtabShortcuts.push(store.createShortcutRecord({ url: 'https://two.example/' }, { now: 789 }));
-  await full.action('undo');
-  assert.strictEqual(full.bookmarkMoveHistory.peekUndo().kind, 'shortcut-stack',
-    'undo never duplicates a website that was added again');
-  assert.ok(full.folder());
-
-  // A plain click on a folder tile ends a pointer session without dragging;
-  // it must leave the folder menu for the click to toggle.
-  assert.match(extractFunction('endShortcutDrag'), /if \(state\.isDragging\) \{\s*closeBookmarkCascadeMenu\(\);/);
-
-  console.log('Shortcut stacking passed: targets, folder creation, portable binding, undo/redo, rename and reorder, conflicts and rollback.');
-})().catch((error) => { console.error(error); process.exitCode = 1; });
+  await testStackTargets();
+  await testStackUndoRedo();
+  await testFailuresRollBack();
+  await testClickStillOpensFolders();
+  console.log('Shortcut stacking passed: targets, folder creation, undo/redo, rename and move, later bookmarks, failures and clicks.');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
