@@ -532,6 +532,7 @@
       stepSearchModeMenuHistory,
       openSearchModeMenuFromDoubleTab,
       selectSearchModeMenuItem,
+      restoreSearchModeQuery,
       getLocalSearchScopeTabHintProvider,
       setLocalSearchScopePrefix,
       activateLocalSearchScope,

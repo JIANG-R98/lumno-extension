@@ -70,8 +70,8 @@ function testNewtabRedirectFocusHintIsConsumedOnce() {
   );
   assert.match(
     recoverySource,
-    /if \(!newtabInputAutoFocusEnabled\) \{\s*return;/,
-    'New Tab focus recovery should respect the user-controlled auto-focus preference'
+    /if \(!newtabInputAutoFocusEnabled && !forceInitialFocusPending\) \{\s*return;/,
+    'New Tab focus recovery should respect the auto-focus preference, except for the search shortcut focus hint'
   );
   assert.match(
     newtabSource,

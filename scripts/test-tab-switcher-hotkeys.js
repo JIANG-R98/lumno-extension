@@ -230,8 +230,8 @@ const openOverlayBlock = getFunctionBlock(
 );
 assert.match(
   openOverlayBlock,
-  /if \(restricted\)[\s\S]*isSearchCommandSource\(source\) \|\| source === 'page-hotkey'[\s\S]*isLumnoNewtabUrl\(activeUrl\) \|\| isBrowserNewtabUrl\(activeUrl\)[\s\S]*requestVisibleNewtabSearch\(source,\s*activeTab\.id\)[\s\S]*return;/,
-  'show-search commands on restricted Lumno/browser newtab URLs should be routed to the New Tab page'
+  /if \(restricted\)[\s\S]*isSearchCommandSource\(source\) && \(isLumnoNewtabUrl\(activeUrl\) \|\| isBrowserNewtabUrl\(activeUrl\)\)[\s\S]*requestFocusVisibleNewtabInput\(source,\s*activeTab\.id\)[\s\S]*return;/,
+  'show-search commands on restricted Lumno/browser newtab URLs should keep focusing the visible newtab input'
 );
 assert.strictEqual(
   (manifest.permissions || []).includes('management'),

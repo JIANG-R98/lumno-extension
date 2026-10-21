@@ -28,7 +28,10 @@
 
     function getWallpaperLeadDelay() {
       const shownAt = Number(pageState.wallpaperShownAt) || 0;
-      if (!shownAt || !document.body || document.body.getAttribute('data-wallpaper-active') !== 'true') {
+      // The search shortcut's focus reload keeps the old page on screen until
+      // this one is ready, so nothing lands at once and the lead only delays it.
+      if (!shownAt || !document.body || document.body.getAttribute('data-wallpaper-active') !== 'true' ||
+          document.documentElement.getAttribute('data-nt-focus-resume') === 'true') {
         return 0;
       }
       return Math.max(0, shownAt + NEWTAB_WALLPAPER_LEAD_MS - performance.now());

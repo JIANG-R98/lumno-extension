@@ -299,10 +299,9 @@
   const NEWTAB_BOOKMARK_DRAG = globalThis.LumnoNewtabBookmarkDrag;
   const NEWTAB_CROSS_SURFACE_DRAG = globalThis.LumnoNewtabCrossSurfaceDrag;
   // Escape closes only the top open layer (menus, popovers, panels, drags).
-  // The folder color dialog and search overlay handle their own Escape.
+  // The folder color dialog handles its own Escape.
   const dismissStack = globalThis.LumnoNewtabDismissStack.getDismissStack();
-  dismissStack.setShouldIgnore(() => Boolean(window._x_extension_search_overlay_open_2026_unique_ ||
-    (pageState.folderColorPicker && pageState.folderColorPicker.isOpen())));
+  dismissStack.setShouldIgnore(() => Boolean(pageState.folderColorPicker && pageState.folderColorPicker.isOpen()));
   const NEWTAB_BOOKMARK_FOLDER_ICON = globalThis.LumnoNewtabBookmarkFolderIcon;
   const NEWTAB_PAGE_NOTICE = globalThis.LumnoNewtabPageNotice;
   const NEWTAB_TOAST = globalThis.LumnoNewtabToast;
@@ -5811,6 +5810,7 @@
     stepSearchModeMenuHistory,
     openSearchModeMenuFromDoubleTab,
     selectSearchModeMenuItem,
+    restoreSearchModeQuery,
     getLocalSearchScopeTabHintProvider,
     setLocalSearchScopePrefix,
     activateLocalSearchScope,
@@ -5921,6 +5921,7 @@
     restoreDismissedSearchSuggestions,
     renderSuggestions,
     renderPendingSuggestions,
+    showSuggestionSnapshot,
     directNavigationSettleController,
     requestSuggestions
   } = NEWTAB_SUGGESTIONS_CONTROLLER.createSuggestionsController({
@@ -6002,6 +6003,8 @@
   });
 
   const NEWTAB_INPUT_FOCUS = globalThis.LumnoNewtabInputFocus;
+  // Created once the search modes and providers below exist.
+  let focusResume = null;
   const {
     isEditableElement,
     refreshFallbackShortcut,
@@ -6009,8 +6012,7 @@
     handleGlobalTypingFocus
   } = NEWTAB_INPUT_FOCUS.createInputFocus({
     SHORTCUT_KEY_MATCHER,
-    getExtensionResourceUrl,
-    sendRuntimeMessage,
+    prepareFocusReload: () => Boolean(focusResume) && focusResume.prepareFocusReload(),
     refreshTabsIfIdle,
     initialNewtabInputAutoFocusReadyTask,
     isImeCompositionEvent,
@@ -7265,7 +7267,6 @@
   });
 
   document.addEventListener('keydown', function(event) {
-    if (window._x_extension_search_overlay_open_2026_unique_) return;
     if (pageState.folderColorPicker && pageState.folderColorPicker.isOpen()) return;
     if (!event || event.defaultPrevented || event.altKey || isEditableElement(event.target)) {
       return;
@@ -7287,7 +7288,6 @@
   }, true);
 
   document.addEventListener('keydown', function(event) {
-    if (window._x_extension_search_overlay_open_2026_unique_) return;
     if (pageState.folderColorPicker && pageState.folderColorPicker.isOpen()) return;
     syncSuggestionActionModifiersFromEvent(event);
     if (SUGGESTION_NAVIGATION.handleNumberShortcutKeyEvent(
@@ -7309,7 +7309,6 @@
     }
   }, true);
   document.addEventListener('keyup', function(event) {
-    if (window._x_extension_search_overlay_open_2026_unique_) return;
     syncSuggestionActionModifiersFromEvent(event);
     SUGGESTION_NAVIGATION.handleNumberShortcutKeyEvent(
       event,
@@ -7323,7 +7322,40 @@
     SUGGESTION_NAVIGATION.cancelNumberShortcuts(suggestionsContainer);
   });
 
-  getSiteSearchProviders();
+  const siteSearchProvidersReady = Promise.all([getSiteSearchProviders(), getAggregateSearches()]);
+
+  // Search modes are saved by id: a provider's, or its aggregate search's.
+  function getSiteSearchSnapshotId(provider) {
+    return isAggregateSearchProvider(provider)
+      ? `aggregate:${provider.aggregateId}`
+      : getSearchModeProviderId(provider);
+  }
+
+  function findSiteSearchBySnapshotId(id) {
+    const providers = getSearchModeProviders();
+    if (!String(id).startsWith('aggregate:')) {
+      return providers.find((provider) => getSearchModeProviderId(provider) === id) || null;
+    }
+    const definition = (pageState.aggregateSearchesCache || []).find(
+      (item) => `aggregate:${item && item.id ? item.id : ''}` === id
+    );
+    return isAggregateSearchDefinitionAvailable(definition, providers)
+      ? createAggregateSearchScopeProvider(definition)
+      : null;
+  }
+
+  focusResume = globalThis.LumnoNewtabFocusResume.createFocusResume({
+    getSiteSearchSnapshotId,
+    findSiteSearchBySnapshotId,
+    activateSiteSearch,
+    activateLocalSearchScope,
+    restoreSearchModeQuery,
+    showSuggestionSnapshot,
+    focusSearchInputPreservingScroll,
+    pageState
+  });
+  focusResume.resume(siteSearchProvidersReady);
+
   getAggregateSearches().then(() => {
     if (pageState.inputModeController && typeof pageState.inputModeController.refreshModeMenu === 'function') {
       pageState.inputModeController.refreshModeMenu();

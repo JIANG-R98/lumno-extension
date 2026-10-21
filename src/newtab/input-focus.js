@@ -1,10 +1,10 @@
 (function(root) {
-  // The search shortcut, typing anywhere on the page and auto-focus recovery.
+  // Focusing the search input: shortcut-triggered focus, typing anywhere on the
+  // page and auto-focus recovery.
   function createInputFocus(deps) {
     const {
       SHORTCUT_KEY_MATCHER,
-      getExtensionResourceUrl,
-      sendRuntimeMessage,
+      prepareFocusReload,
       refreshTabsIfIdle,
       initialNewtabInputAutoFocusReadyTask,
       isImeCompositionEvent
@@ -16,7 +16,6 @@
     let fallbackShortcutRaw = '';
     let fallbackShortcutSpec = null;
     let fallbackShortcutRefreshAt = 0;
-    let searchOverlayOpening = false;
 
     function isEditableElement(el) {
       if (!el) {
@@ -35,19 +34,23 @@
         return;
       }
       fallbackShortcutRefreshAt = now;
-      sendRuntimeMessage({ action: 'getShowSearchShortcut' }, (response) => {
-        if (chrome.runtime && chrome.runtime.lastError) {
-          return;
-        }
-        const nextShortcut = response && typeof response.shortcut === 'string'
-          ? response.shortcut
-          : '';
-        if (nextShortcut === fallbackShortcutRaw) {
-          return;
-        }
-        fallbackShortcutRaw = nextShortcut;
-        fallbackShortcutSpec = SHORTCUT_KEY_MATCHER.parseShortcut(nextShortcut);
-      });
+      try {
+        chrome.runtime.sendMessage({ action: 'getShowSearchShortcut' }, (response) => {
+          if (chrome.runtime && chrome.runtime.lastError) {
+            return;
+          }
+          const nextShortcut = response && typeof response.shortcut === 'string'
+            ? response.shortcut
+            : '';
+          if (nextShortcut === fallbackShortcutRaw) {
+            return;
+          }
+          fallbackShortcutRaw = nextShortcut;
+          fallbackShortcutSpec = SHORTCUT_KEY_MATCHER.parseShortcut(nextShortcut);
+        });
+      } catch (e) {
+        // Ignore runtime bridge failures.
+      }
     }
 
     function focusSearchInputPreservingScroll() {
@@ -63,9 +66,6 @@
     }
 
     function tryFocusSearchInput(force) {
-      if (window._x_extension_search_overlay_open_2026_unique_) {
-        return false;
-      }
       if (!pageState.inputParts || !pageState.inputParts.input) {
         return false;
       }
@@ -96,81 +96,63 @@
       return true;
     }
 
-    async function toggleSearchOverlay(tabId) {
-      if (searchOverlayOpening) {
-        return { ok: true, suppressed: true };
+    // A New Tab opens with keyboard focus in the address bar, and focus()
+    // inside the page cannot take it from there. Reopen the page on the focus
+    // route, which hands focus to the page the way input auto-focus does.
+    function reopenOnFocusRoute() {
+      // The reloaded page brings back the query and its results.
+      if (typeof prepareFocusReload === 'function') {
+        prepareFocusReload();
       }
-      searchOverlayOpening = true;
+      if (window.location.protocol === 'moz-extension:') {
+        try {
+          chrome.runtime.sendMessage({ action: 'swapNewtabForFocus' }, () => {
+            void chrome.runtime.lastError;
+          });
+        } catch (e) {
+          // Leave the page as it is when the background is unavailable.
+        }
+        return;
+      }
+      const url = new URL(window.location.href);
+      url.searchParams.set('focus', '1');
+      window.location.replace(url.href);
+    }
+
+    function isShortcutCommandSource(source) {
+      return source === 'commands' || source === 'commands-prefill';
+    }
+
+    function handleFocusInputMessage(message, sendResponse) {
+      if (document.hasFocus() || !isShortcutCommandSource(message.source)) {
+        sendResponse({ ok: activateNewtabShortcutFocus() });
+        return false;
+      }
+      // runtime messages reach every extension page, so only the addressed
+      // tab may reopen itself.
       try {
-        // Shared helpers are already loaded by newtab.html. As with the page
-        // bootstrap, import() caches these runtimes after their first use.
-        for (const path of [
-          'src/shared/browser-profile.js',
-          'src/overlay/runtime.js',
-          'src/overlay/favicon-view.js',
-          'src/overlay/lifecycle.js',
-          'src/overlay/site-fixes.js',
-          'src/overlay/page-theme.js',
-          'src/overlay/notices.js',
-          'src/overlay/keyboard.js',
-          'src/react/overlay-islands.js',
-          'src/overlay/search-panel.js'
-        ]) {
-          await import(getExtensionResourceUrl(path));
-        }
-        const tabZoomFactor = await new Promise((resolve) => {
-          chrome.tabs.getZoom(tabId, (zoom) => resolve(chrome.runtime.lastError ? 1 : zoom));
+        chrome.tabs.getCurrent((tab) => {
+          if (chrome.runtime.lastError || !tab || tab.id !== message.tabId) {
+            return;
+          }
+          sendResponse({ ok: true, reopened: true });
+          reopenOnFocusRoute();
         });
-        if (document.visibilityState !== 'visible') {
-          return { ok: false, reason: 'inactive-tab' };
-        }
-        const activeElement = document.activeElement;
-        // The overlay fetches its own tabs, just as on ordinary pages.
-        window._x_extension_toggleSearchOverlay_2026_unique_([], {
-          currentTabId: tabId,
-          currentTabUrl: window.location.href,
-          tabZoomFactor
-        });
-        // Release the previous input while the overlay waits to reveal.
-        if (window._x_extension_search_overlay_open_2026_unique_ &&
-            document.activeElement === activeElement && activeElement &&
-            typeof activeElement.blur === 'function') {
-          activeElement.blur();
-        }
-        return { ok: true };
-      } catch (error) {
-        console.warn('[Lumno] New Tab search overlay failed to open.', error);
-        return { ok: false, reason: 'overlay-unavailable' };
-      } finally {
-        searchOverlayOpening = false;
+      } catch (e) {
+        return false;
       }
+      return true;
     }
 
     if (chrome && chrome.runtime && chrome.runtime.onMessage && typeof chrome.runtime.onMessage.addListener === 'function') {
       chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-        if (!message || (message.action !== 'lumno:newtab-focus-input' &&
-            message.action !== 'lumno:newtab-toggle-search-overlay')) {
+        if (!message || message.action !== 'lumno:newtab-focus-input') {
           return;
         }
         if (document.visibilityState !== 'visible') {
           return;
         }
-        if (message.action === 'lumno:newtab-toggle-search-overlay') {
-          try {
-            // Runtime messages also reach New Tabs in other windows.
-            chrome.tabs.getCurrent((tab) => {
-              if (!chrome.runtime.lastError && tab && tab.active && tab.id === message.tabId) {
-                toggleSearchOverlay(tab.id).then(sendResponse);
-              }
-            });
-          } catch (error) {
-            // Ignore an extension context invalidated during reload.
-          }
-          return true;
-        }
-        const focused = activateNewtabShortcutFocus();
-        sendResponse({ ok: focused });
-        return;
+        return handleFocusInputMessage(message, sendResponse);
       });
     }
 
@@ -199,7 +181,9 @@
 
       const retryDelays = [0, 60, 140, 280, 520, 900, 1400];
       const attemptFocusIfVisible = () => {
-        if (!pageState.newtabInputAutoFocusEnabled) {
+        // The search shortcut reopens the page with the focus hint even when
+        // auto-focus is off; that load still focuses the input once.
+        if (!pageState.newtabInputAutoFocusEnabled && !forceInitialFocusPending) {
           return;
         }
         if (document.visibilityState !== 'visible') {
@@ -270,13 +254,7 @@
           SHORTCUT_KEY_MATCHER.eventMatchesShortcut(event, fallbackShortcutSpec)) {
         event.preventDefault();
         event.stopPropagation();
-        // Share the background's command routing and duplicate guard.
-        sendRuntimeMessage({ action: 'triggerShowSearchFromPageHotkey' }, () => {
-          void chrome.runtime.lastError;
-        });
-        return;
-      }
-      if (window._x_extension_search_overlay_open_2026_unique_) {
+        activateNewtabShortcutFocus();
         return;
       }
       if (event.metaKey || event.ctrlKey || event.altKey) {
