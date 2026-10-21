@@ -5085,7 +5085,7 @@
         glassStyle: {
           sectionTitle: t('newtab_style_section_title', 'Style'),
           title: t('settings_newtab_glass_style_title', 'Material'),
-          infoTooltip: t('settings_newtab_glass_style_desc', 'Give the search bar, cards, buttons, menus, and this panel a glass finish. Works best with a wallpaper.'),
+          infoTooltip: t('settings_newtab_glass_style_desc', 'Change the material of New Tab UI elements.'),
           ariaLabel: t('settings_newtab_glass_style_title', 'Material'),
           value: glassStyleValue,
           options: [

@@ -3426,7 +3426,7 @@
     "message": "マテリアル"
   },
   "settings_newtab_glass_style_desc": {
-    "message": "検索バー、カード、ボタン、メニュー、外観パネルをガラスの質感にします。壁紙との組み合わせがおすすめです。"
+    "message": "新しいタブの UI 要素の素材を変更します。"
   },
   "settings_newtab_glass_style_none": {
     "message": "デフォルト"

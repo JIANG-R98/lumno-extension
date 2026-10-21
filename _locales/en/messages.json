@@ -3426,7 +3426,7 @@
     "message": "Material"
   },
   "settings_newtab_glass_style_desc": {
-    "message": "Give the search bar, cards, buttons, menus, and the Appearance panel a glass finish. Looks best with a wallpaper."
+    "message": "Change the material of New Tab UI elements."
   },
   "settings_newtab_glass_style_none": {
     "message": "Default"
