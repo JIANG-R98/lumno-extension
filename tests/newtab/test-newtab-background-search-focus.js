@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { openSearchSurface } = require('../helpers/search-surfaces');
 
 const {
   createBackgroundFocusHandler,
@@ -125,42 +125,76 @@ const dismissingMouseDown = createMouseDownEvent(body);
 assert.strictEqual(handleBackgroundPointerFocus(dismissingMouseDown), false);
 assert.strictEqual(dismissingMouseDown.prevented, false, 'dismissing populated results should keep the default blur');
 
-const newtabSource = readNewtabRuntimeSource();
-assert.match(
-  newtabSource,
-  /createBackgroundFocusHandler\(\{[\s\S]*?getSearchValue:\s*\(\)\s*=>\s*inputParts\.input\.value,[\s\S]*?dismissSearchResults:\s*dismissSearchSuggestionsFromBackground,/,
-  'the New Tab background handler should branch on the live input value and dismiss populated results'
-);
-assert.match(
-  newtabSource,
-  /function restoreUserAuthoredSearchInput\(\)\s*\{[\s\S]*?autocompleteState\.rawQuery[\s\S]*?inputParts\.input\.value\s*=\s*rawQuery;[\s\S]*?latestRawQuery\s*=\s*rawQuery;[\s\S]*?clearAutocomplete\(\);/,
-  'closing autocomplete should restore the exact value authored by the user'
-);
-assert.match(
-  newtabSource,
-  /function dismissSearchSuggestionsFromBackground\(\)\s*\{\s*restoreUserAuthoredSearchInput\(\);[\s\S]*?searchSuggestionsDismissed\s*=\s*true;[\s\S]*?suggestionRequestSeq\s*\+=\s*1;[\s\S]*?clearSearchSuggestions\(\);/,
-  'background dismissal should restore authored input, hide results, and invalidate pending requests'
-);
-assert.match(
-  newtabSource,
-  /function restoreDismissedSearchSuggestions\(\)\s*\{[\s\S]*?searchSuggestionsDismissed\s*=\s*false;[\s\S]*?isSlashCommandInput\(query\)[\s\S]*?renderSuggestions\(\[\], query\);[\s\S]*?requestSuggestions\(query, \{ immediate: true \}\);/,
-  'refocusing populated search should restore both slash-command and regular results'
-);
-assert.match(
-  newtabSource,
-  /const searchInput = inputParts\.input;\s*searchInput\.addEventListener\('focus', restoreDismissedSearchSuggestions\);/,
-  'the search input should restore dismissed results when it regains focus'
-);
-assert.match(
-  newtabSource,
-  /onInput:\s*function\(event\)\s*\{\s*searchSuggestionsDismissed\s*=\s*false;/,
-  'editing the input should allow suggestions to render again'
-);
+// On New Tab itself: clicking the page background hides populated results
+// (restoring what the user typed over an autocomplete), focusing the box
+// again brings them back, and a late answer for the hidden query stays away.
+async function testOnNewTab() {
+  let answerLate = null;
+  const surface = await openSearchSurface('newtab', {
+    respond(message) {
+      if (message.action === 'getSearchSuggestions') {
+        const answer = { suggestions: [{ type: 'history', title: 'Lumno', url: 'https://lumno.example/' }] };
+        if (message.query === 'lumno docs') {
+          return new Promise((resolve) => { answerLate = () => resolve(answer); });
+        }
+        return answer;
+      }
+      return undefined;
+    }
+  });
+  const { page } = surface;
+  const input = surface.input();
+  const background = () => {
+    page.trusted(page.document.body, 'pointerdown', { bubbles: true, button: 0, clientX: 5, clientY: 700 });
+    return page.trusted(page.document.body, 'mousedown', { bubbles: true, cancelable: true, button: 0, clientX: 5, clientY: 700 });
+  };
 
-assert.match(
-  newtabSource,
-  /addEventListener\('pointerdown', handleBackgroundPointerFocus, true\);\s*window\.addEventListener\('mousedown', handleBackgroundPointerFocus, true\);/,
-  'the background handler should also see the following mousedown so it can keep focus'
-);
+  input.value = 'lum';
+  input.setSelectionRange(3, 3);
+  input.dispatchEvent(new page.window.InputEvent('input', { bubbles: true, inputType: 'insertText', data: 'm' }));
+  await surface.settle(200);
+  assert.strictEqual(input.value, 'lumno.example', 'the typed query should autocomplete');
+  assert.ok(surface.suggestions().length > 0);
+  const mousedown = background();
+  await surface.settle(60);
+  assert.strictEqual(surface.suggestions().length, 0, 'clicking the background should hide the results');
+  assert.strictEqual(input.value, 'lum', 'and give back exactly what the user typed');
+  assert.strictEqual(mousedown.defaultPrevented, false, 'dismissing results lets the click blur the box as usual');
 
-console.log('newtab background search focus tests passed');
+  input.dispatchEvent(new page.window.FocusEvent('focus'));
+  await surface.settle(200);
+  assert.ok(surface.suggestions().length > 0, 'focusing the box again should bring the results back');
+
+  await surface.type('lumno docs');
+  background();
+  await surface.settle(40);
+  answerLate();
+  await surface.settle(120);
+  assert.strictEqual(surface.suggestions().length, 0, 'an answer arriving after the dismissal should stay hidden');
+  await surface.type('lumno');
+  await surface.settle(150);
+  assert.ok(surface.suggestions().length > 0, 'typing again should show results again');
+
+  await surface.type('/');
+  background();
+  await surface.settle(60);
+  input.dispatchEvent(new page.window.FocusEvent('focus'));
+  await surface.settle(150);
+  assert.ok(surface.suggestions().length > 0, 'refocusing should bring back slash-command results too');
+
+  await surface.type('');
+  input.blur();
+  const refocus = background();
+  await surface.settle(60);
+  assert.strictEqual(page.document.activeElement, input, 'clicking the background of an empty New Tab should focus the box');
+  assert.strictEqual(refocus.defaultPrevented, true, 'and keep the click from taking that focus away');
+  surface.close();
+}
+
+testOnNewTab().then(() => {
+  console.log('newtab background search focus tests passed');
+  process.exit(0);
+}).catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

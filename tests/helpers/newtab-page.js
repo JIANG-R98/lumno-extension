@@ -252,13 +252,14 @@ async function createNewtabPage(options) {
     trusted(target, type, init) {
       return dispatchTrusted(target, type, init);
     },
-    // A pointer moving onto `element`: the pointer and mouse events a browser
-    // fires for it.
-    async hover(element) {
-      element.dispatchEvent(new window.MouseEvent('pointerover', { bubbles: true }));
-      element.dispatchEvent(new window.MouseEvent('pointerenter'));
-      element.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
-      element.dispatchEvent(new window.MouseEvent('mouseenter'));
+    // A pointer moving onto `element` (at `point`, { clientX, clientY }):
+    // the pointer and mouse events a browser fires for it.
+    async hover(element, point) {
+      const at = point || {};
+      element.dispatchEvent(new window.MouseEvent('pointerover', Object.assign({ bubbles: true }, at)));
+      element.dispatchEvent(new window.MouseEvent('pointerenter', at));
+      element.dispatchEvent(new window.MouseEvent('mouseover', Object.assign({ bubbles: true }, at)));
+      element.dispatchEvent(new window.MouseEvent('mouseenter', at));
       await settle();
     },
     async click(element) {

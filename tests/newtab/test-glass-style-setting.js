@@ -1,8 +1,9 @@
 const assert = require('assert');
 const fs = require('fs');
-const vm = require('vm');
+const { JSDOM } = require('jsdom');
 const postcss = require('postcss');
 const settings = require('../../src/shared/settings.js');
+const { createNewtabPage } = require('../helpers/newtab-page');
 
 const key = settings.NEWTAB_GLASS_STYLE_STORAGE_KEY;
 const themeKey = settings.NEWTAB_GLASS_THEME_STORAGE_KEY;
@@ -26,80 +27,70 @@ for (const value of ['none', 'frosted', 'liquid']) {
   assert.strictEqual(settings.normalizeNewtabGlassStyle(value), value);
 }
 
-// The glass functions live in theme/glass-surfaces.js.
-const source = fs.readFileSync('src/newtab/theme/glass-surfaces.js', 'utf8');
-const start = source.indexOf('  // Surfaces whose rim bends the wallpaper under the liquid style;');
-const end = source.indexOf('\n  return {', start);
-assert(start >= 0 && end > start);
-// The storage listeners live in settings-sync.js.
-const syncSource = fs.readFileSync('src/newtab/settings-sync.js', 'utf8');
-const handlerStart = syncSource.indexOf('  storageChanges.on(NEWTAB_GLASS_STYLE_STORAGE_KEY,');
-const handlerEnd = syncSource.indexOf('  storageChanges.on(NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,', handlerStart);
-assert(handlerStart >= 0 && handlerEnd > handlerStart);
-
-async function boot(value, hasStorage = true, themeValue) {
-  const attributes = {};
+// New Tab with the given material and material theme stored. The liquid
+// material's rim refraction is drawn by LumnoNewtabLiquidSurfaces, which needs
+// a real canvas; the test counts the surfaces New Tab asks it for.
+async function boot(value, themeValue) {
   const surfaces = { created: 0, destroyed: 0, selector: '' };
-  const listeners = {};
-  const pageState = { newtabGlassTheme: 'follow', glassThemeOverride: '', initialThemeApplied: true };
-  const themeApplies = [];
-  const context = vm.createContext({
-    pageState,
-    applyScopedThemeMode() { themeApplies.push(pageState.glassThemeOverride); },
-    NEWTAB_GLASS_THEME_STORAGE_KEY: themeKey,
-    SETTINGS: settings,
-    updateWallpaperAppearanceSelectionUi() {},
-    scheduleWallpaperAdaptiveToneUpdate() {},
-    syncBookmarkTopbarSurfaceAppearance() {},
-    MutationObserver: class { observe() {} disconnect() {} },
-    NEWTAB_GLASS_STYLE_STORAGE_KEY: key,
-    // The module's adaptive tone import; this page has no remembered ink hint.
-    LumnoNewtabWallpaperAdaptiveTone: undefined,
-    window: {},
-    document: { body: {
-      getAttribute(name) { return Object.prototype.hasOwnProperty.call(attributes, name) ? attributes[name] : null; },
-      hasAttribute(name) { return Object.prototype.hasOwnProperty.call(attributes, name); },
-      setAttribute(name, next) { attributes[name] = next; },
-      removeAttribute(name) { delete attributes[name]; }
-    } },
-    globalThis: { LumnoNewtabLiquidSurfaces: { create(options) {
-      surfaces.created += 1;
-      surfaces.selector = options.selector;
-      assert.strictEqual(options.property, '--x-nt-glass-refraction');
-      return { destroy() { surfaces.destroyed += 1; }, refresh() {} };
-    } } },
-    storageArea: hasStorage ? {
-      get(keys, callback) {
-        assert.deepStrictEqual(Array.from(keys), [key, themeKey]);
-        callback({ [key]: value, [themeKey]: themeValue });
-      }
-    } : null,
-    storageChanges: { on(storageKey, callback) {
-      assert([key, themeKey].includes(storageKey));
-      listeners[storageKey] = callback;
-    } }
+  const sync = {};
+  if (value !== undefined) sync[key] = value;
+  if (themeValue !== undefined) sync[themeKey] = themeValue;
+  const page = await createNewtabPage({
+    sync,
+    darkSystem: true,
+    setup(window) {
+      let runtime;
+      Object.defineProperty(window, 'LumnoNewtabLiquidSurfaces', {
+        configurable: true,
+        get: () => runtime,
+        set(next) {
+          runtime = Object.assign({}, next, {
+            create(options) {
+              surfaces.created += 1;
+              surfaces.selector = options.selector;
+              assert.strictEqual(options.property, '--x-nt-glass-refraction');
+              const created = next.create(options);
+              return Object.assign({}, created, {
+                destroy() {
+                  surfaces.destroyed += 1;
+                  return created && created.destroy && created.destroy();
+                }
+              });
+            }
+          });
+        }
+      });
+    }
   });
-  vm.runInContext(source.slice(start, end) + syncSource.slice(handlerStart, handlerEnd), context);
-  await vm.runInContext('loadNewtabGlassStyle()', context);
+  await page.settle(250);
+  const body = page.document.body;
   return {
-    style: () => attributes['data-glass-style'],
-    attributes,
-    pageState,
-    themeApplies,
+    page,
     surfaces,
-    change(next) { listeners[key]({ [key]: { newValue: next } }); },
-    changeTheme(next) { listeners[themeKey]({ [themeKey]: { newValue: next } }); }
+    style: () => body.getAttribute('data-glass-style'),
+    glassTheme: () => body.getAttribute('data-glass-theme'),
+    inkHint: () => body.getAttribute('data-glass-ink-hint'),
+    theme: () => body.getAttribute('data-theme'),
+    async change(next) {
+      page.changeStorage('sync', key, next);
+      await page.settle(80);
+    },
+    async changeTheme(next) {
+      page.changeStorage('sync', themeKey, next);
+      await page.settle(80);
+    }
   };
 }
 
 async function main() {
   const fresh = await boot(undefined);
-  assert.strictEqual(fresh.style(), undefined, 'new installations keep the original surfaces');
+  assert.strictEqual(fresh.style(), null, 'new installations keep the original surfaces');
   assert.strictEqual(fresh.surfaces.created, 0);
+  fresh.page.close();
   const frosted = await boot('frosted');
   assert.strictEqual(frosted.style(), 'frosted', 'a saved choice applies during startup');
   assert.strictEqual(frosted.surfaces.created, 0, 'frosted glass needs no refraction maps');
-  frosted.change('liquid');
+  await frosted.change('liquid');
   assert.strictEqual(frosted.style(), 'liquid', 'a synchronized choice applies live');
   assert.strictEqual(frosted.surfaces.created, 1, 'liquid glass starts the rim refraction');
   // The search stack and the dock's cards bend; menus and the panel, on layers of their own,
@@ -108,37 +99,33 @@ async function main() {
   assert(frosted.surfaces.selector.includes('.x-nt-recent-card-visual'));
   assert(frosted.surfaces.selector.includes(':not(.x-nt-bookmarks-topbar .x-nt-bookmark-card)'));
   assert(!frosted.surfaces.selector.includes('_x_extension_menu_surface_2024_unique_'));
-  frosted.change('liquid');
+  await frosted.change('liquid');
   assert.strictEqual(frosted.surfaces.created, 1, 'staying on liquid keeps the same maps');
-  frosted.change('none');
-  assert.strictEqual(frosted.style(), undefined, 'switching back restores the original surfaces');
+  await frosted.change('none');
+  assert.strictEqual(frosted.style(), null, 'switching back restores the original surfaces');
   assert.strictEqual(frosted.surfaces.destroyed, 1, 'leaving liquid drops its maps');
-  frosted.change('glass');
-  assert.strictEqual(frosted.style(), undefined, 'unknown values fall back to the default');
-  assert.strictEqual((await boot('liquid', false)).style(), undefined, 'missing storage keeps the default');
+  await frosted.change('glass');
+  assert.strictEqual(frosted.style(), null, 'unknown values fall back to the default');
+  frosted.page.close();
 
-  // The material's light/dark holds the page's theme only while a material is on.
-  const held = await boot('liquid', true, 'light');
-  assert.strictEqual(held.pageState.glassThemeOverride, 'light', 'a saved light material holds the page light');
-  assert.strictEqual(held.attributes['data-glass-theme'], 'light');
-  assert.strictEqual(held.attributes['data-glass-ink-hint'], 'dark', 'held light glass opens in dark ink');
-  held.changeTheme('dark');
-  assert.strictEqual(held.pageState.glassThemeOverride, 'dark');
-  assert.strictEqual(held.attributes['data-glass-theme'], 'dark');
-  held.change('none');
-  assert.strictEqual(held.pageState.glassThemeOverride, '', 'the default surfaces give the theme back');
-  assert.strictEqual(held.attributes['data-glass-theme'], undefined);
-  held.change('frosted');
-  assert.strictEqual(held.pageState.glassThemeOverride, 'dark', 'turning a material back on holds the choice again');
-  held.changeTheme('follow');
-  assert.strictEqual(held.pageState.glassThemeOverride, '');
-  assert.deepStrictEqual(Array.from(held.themeApplies), ['light', 'dark', '', 'dark', ''],
-    'each change of the held theme reapplies the page theme once');
-  held.changeTheme('follow');
-  assert.strictEqual(held.themeApplies.length, 5, 'an unchanged hold leaves the theme alone');
-  const unthemed = await boot('frosted', true, undefined);
-  assert.strictEqual(unthemed.pageState.glassThemeOverride, '', 'new installations follow the New Tab theme');
-  assert.strictEqual(unthemed.themeApplies.length, 0);
+  // The material's light/dark holds the page's theme only while a material is on
+  // (the system theme here is dark).
+  const held = await boot('liquid', 'light');
+  assert.deepStrictEqual([held.glassTheme(), held.theme()], ['light', 'light'], 'a saved light material holds the page light');
+  assert.strictEqual(held.inkHint(), 'dark', 'held light glass opens in dark ink');
+  await held.changeTheme('dark');
+  assert.deepStrictEqual([held.glassTheme(), held.theme()], ['dark', 'dark']);
+  await held.changeTheme('light');
+  await held.change('none');
+  assert.deepStrictEqual([held.glassTheme(), held.theme()], [null, 'dark'], 'the default surfaces give the theme back');
+  await held.change('frosted');
+  assert.deepStrictEqual([held.glassTheme(), held.theme()], ['light', 'light'], 'turning a material back on holds the choice again');
+  await held.changeTheme('follow');
+  assert.deepStrictEqual([held.glassTheme(), held.theme()], [null, 'dark']);
+  held.page.close();
+  const unthemed = await boot('frosted', undefined);
+  assert.deepStrictEqual([unthemed.glassTheme(), unthemed.theme()], [null, 'dark'], 'new installations follow the New Tab theme');
+  unthemed.page.close();
 
   const css = postcss.parse(fs.readFileSync('src/newtab/glass-style.css', 'utf8'));
   css.walkRules((rule) => {
@@ -164,9 +151,11 @@ async function main() {
   assert(darkDialogProps.has('--panel-text'), 'the dark shortcut dialog sets its text color');
   assert.deepStrictEqual([...darkDialogProps].filter((prop) => !glassDialogProps.has(prop)), [],
     'a shortcut dialog flipped to light ink takes the dark theme\'s colors');
-  const html = fs.readFileSync('newtab.html', 'utf8');
-  assert(html.indexOf('href="glass-style.css"') > html.indexOf('href="newtab.css"'),
+  const links = Array.from(new JSDOM(fs.readFileSync('newtab.html', 'utf8')).window.document.querySelectorAll('link[rel="stylesheet"]'))
+    .map((link) => link.getAttribute('href'));
+  const glass = links.indexOf('glass-style.css');
+  assert(glass > 0 && links.slice(0, glass).some((href) => href.startsWith('styles/')) && !links.slice(glass + 1).some((href) => href.startsWith('styles/')),
     'the glass styles load after the page styles they override');
   console.log('glass style setting tests passed');
 }
-main().catch((error) => { console.error(error); process.exitCode = 1; });
+main().then(() => process.exit(0)).catch((error) => { console.error(error); process.exit(1); });

@@ -1,60 +1,14 @@
 const assert = require('assert');
-const fs = require('fs');
 const shortcutFavicon = require('../../src/shared/favicon/shortcut-favicon.js');
-const { readPageSource } = require('../helpers/page-source');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { readStylesheet } = require('../helpers/css-tokens');
+const { parseCss, parsePageCss } = require('../helpers/css-rules');
+const { openSearchSurface } = require('../helpers/search-surfaces');
 
-const newtabSource = readNewtabRuntimeSource();
-const newtabHtml = readPageSource('newtab.html');
-const searchInputCss = fs.readFileSync('src/shared/search/search-input.css', 'utf8');
-const overlaySource = readOverlayPanelSource();
+// The search icon at the start of the New Tab search box opens the scope
+// panel, like the overlay's (test-overlay-search-scope-button.js), and shares
+// a cursor-following bubble with the settings icon at the other end.
 
-assert.match(
-  newtabSource,
-  /iconStyleOverrides:\s*\{[\s\S]*?'left': '7px'/,
-  'the search action hit box should stay optically aligned with the original icon'
-);
-assert.match(
-  newtabSource,
-  /searchScopeIcon\.dataset\.searchScopeAction = 'true'[\s\S]*?setAttribute\('role', 'button'\)[\s\S]*?setSearchScopeIconEnabled\(true\)/,
-  'the search icon should expose an accessible action contract'
-);
-assert.match(
-  newtabSource,
-  /function setSearchScopeIconEnabled\(enabled\)[\s\S]*?setAttribute\('aria-disabled', nextEnabled \? 'false' : 'true'\)[\s\S]*?setAttribute\('tabindex', nextEnabled \? '0' : '-1'\)[\s\S]*?removeAttribute\('data-tooltip'\)/,
-  'an active search tag should remove the New Tab icon from pointer, keyboard, and Tooltip interaction'
-);
-assert.match(
-  newtabSource,
-  /function activateSearchScopeIcon\(event\) \{[\s\S]*?getAttribute\('aria-disabled'\) === 'true'[\s\S]*?return;/,
-  'programmatic activation must also respect the disabled New Tab state'
-);
-assert.match(
-  newtabSource,
-  /onModeTagActiveChange: \(active\) => \{[\s\S]*?setSearchScopeIconEnabled\(!active\)/,
-  'the shared mode-tag lifecycle should control New Tab search-icon availability'
-);
-assert.match(
-  newtabSource,
-  /function activateSearchScopeIcon\(event\)[\s\S]*?resetModeMenuDoubleTab\(\)[\s\S]*?openSearchModeMenuFromDoubleTab\(\)/,
-  'clicking the search icon should reuse the double-Tab scope-panel result and animation'
-);
-assert.match(
-  newtabSource,
-  /function openSearchModeMenuFromDoubleTab\(\)[\s\S]*?activateSiteSearch\(provider\);[\s\S]*?function activateSiteSearch\(provider, activationOptions\)[\s\S]*?animate: options\.animatePrefix !== false/,
-  'icon, double-Tab, and keyword-Tab activation should share the normal tag entrance animation'
-);
-assert.match(
-  newtabSource,
-  /function openSearchModeMenuFromDoubleTab\(\) \{[\s\S]*?const expectedInputValue = String\(inputParts\.input\.value \|\| ''\);[\s\S]*?activateSiteSearch\(provider, \{[\s\S]*?preserveResults: shouldPreserveSearchModeResults\(expectedInputValue\)[\s\S]*?\}\);[\s\S]*?restoreSearchModeQuery\(expectedInputValue\);/,
-  'the search action should open the scope panel without discarding an existing query or result list'
-);
-assert.match(
-  newtabSource,
-  /const attachInputModeFaviconData =[\s\S]*?SHORTCUT_FAVICON\.createSiteSearchProviderIconHydrator\(attachFaviconData\)[\s\S]*?attachFaviconData: attachInputModeFaviconData/,
-  'New Tab provider icons should use the shared direct-versus-hydrated loading policy'
-);
+// Bundled provider tiles load directly; remote icons go through favicon data.
 assert.strictEqual(
   shortcutFavicon.shouldHydrateSiteSearchProviderIcon(
     'chrome-extension://lumno/assets/images/site-search/tile-gg.png'
@@ -69,80 +23,96 @@ assert.strictEqual(
   true,
   'remote custom provider icons should retain the shared favicon-data fallback behavior'
 );
-assert.match(
-  newtabSource,
-  /searchScopeIcon\.addEventListener\('click', activateSearchScopeIcon\)[\s\S]*?event\.key !== 'Enter' && event\.key !== ' '[\s\S]*?activateSearchScopeIcon\(event\)/,
-  'the search icon should support pointer and keyboard activation'
-);
-assert.match(
-  newtabSource,
-  /const activeElement = document\.activeElement;\s*if \(searchScopeIcon && activeElement === searchScopeIcon\) \{\s*return;/,
-  'global type-to-search should leave Enter and Space available to the focused search action'
-);
-assert.match(
-  newtabSource,
-  /const searchInputCursorTooltipController = LumnoCursorTooltip\.createController\([\s\S]*?id: '_x_extension_newtab_search_input_cursor_tooltip_2026_unique_'/,
-  'new Tab search actions should own a cursor-following bubble controller'
-);
-assert.match(
-  newtabSource,
-  /bindSearchInputCursorTooltip\(searchScopeIcon, searchScopeTooltipText\)/,
-  'the search icon should use the same cursor-following bubble as overlay'
-);
-assert.match(
-  newtabSource,
-  /const settingsTooltipText = \(\) => formatMessage\([\s\S]*?rightIcon\.setAttribute\('data-tooltip', settingsTooltipText\(\)\)[\s\S]*?bindSearchInputCursorTooltip\(rightIcon, settingsTooltipText\)/,
-  'the settings icon should restore the same cursor-following bubble as overlay'
-);
-assert.match(
-  newtabHtml,
-  /:root\s*\{[\s\S]*?--x-nt-settings-action-hover-bg:\s*rgba\(148, 163, 184, 0\.16\);[\s\S]*?--x-nt-settings-action-hover-color:\s*#4b5563;/,
-  'the New Tab settings action should preserve its light-theme hover colors'
-);
-assert.match(
-  newtabHtml,
-  /body\[data-theme="dark"\][^{]*\{[\s\S]*?--x-nt-settings-action-hover-bg:\s*rgba\(255, 255, 255, 0\.08\);[\s\S]*?--x-nt-settings-action-hover-color:\s*#e5e7eb;/,
-  'the New Tab settings action should use a restrained dark-theme hover surface with a light icon'
-);
-assert.match(
-  newtabSource,
-  /rightIconStyleOverrides:\s*\{[\s\S]*?'--x-ext-input-icon-hover-bg':\s*'var\(--x-nt-settings-action-hover-bg,[^']+\)'[\s\S]*?'--x-ext-input-icon-hover':\s*'var\(--x-nt-settings-action-hover-color,[^']+\)'/,
-  'only the New Tab settings action should bridge the New Tab theme colors into the shared hover tokens'
-);
-assert.doesNotMatch(
-  overlaySource,
-  /--x-nt-settings-action-hover-(?:bg|color)/,
-  'the New Tab settings-action hover tokens should not leak into Overlay'
-);
-assert.match(
-  overlaySource,
-  /target\.style\.setProperty\('--x-ext-input-icon-hover-bg', tokens\.hoverBg\);\s*target\.style\.setProperty\('--x-ext-input-icon-hover', tokens\.text\);/,
-  'Overlay should keep its own hover token mapping'
-);
-assert.match(
-  newtabSource,
-  /searchInputCursorTooltipController\.bind\(button, getText, \{[\s\S]*?deferHideVisibility: true,[\s\S]*?preserveVisibleOnTargetSwitch: true,[\s\S]*?handoffRoot: inputParts && inputParts\.container/,
-  'new Tab input bubbles should hand off between search and settings without disappearing'
-);
-assert.match(
-  searchInputCss,
-  /\.x-lumno-search-input__icon\[data-search-scope-action="true"\]\s*\{[\s\S]*?width:\s*30px;[\s\S]*?height:\s*30px;[\s\S]*?cursor:\s*pointer;/,
-  'the search action should match the settings action hit target'
-);
-assert.match(
-  searchInputCss,
-  /\.x-lumno-search-input__icon\[data-search-scope-action="true"\]\[aria-disabled="true"\]\s*\{[\s\S]*?pointer-events:\s*none;[\s\S]*?cursor:\s*default;/,
-  'the disabled search icon should return to a non-interactive visual slot'
-);
-assert.match(
-  searchInputCss,
-  /\.x-lumno-search-input__icon\[data-search-scope-action="true"\]\[data-hover-active="true"\]\s*\{[\s\S]*?var\(--x-ext-input-icon-hover-bg[\s\S]*?var\(--x-ext-input-icon-hover/,
-  'the search action should reuse the settings hover tokens'
-);
-assert.match(
-  searchInputCss,
-  /\.x-lumno-search-input__icon\[data-search-scope-action="true"\]\[data-hover-active="true"\] \.ri-icon\s*\{\s*transform:\s*scale\(1\.06\);/,
-  'the search action should match the settings icon hover scale'
-);
 
-console.log('New Tab search scope button tests passed');
+const ICON = '[data-search-scope-action="true"]';
+const TOOLTIP = '#_x_extension_newtab_search_input_cursor_tooltip_2026_unique_';
+
+async function testIcon() {
+  const surface = await openSearchSurface('newtab');
+  const { page } = surface;
+  const icon = surface.root.querySelector(ICON);
+  assert.deepStrictEqual([icon.getAttribute('role'), icon.getAttribute('tabindex'), icon.getAttribute('aria-disabled')], ['button', '0', 'false'],
+    'the icon should be a focusable button');
+  assert.ok(icon.getAttribute('data-tooltip'), 'it should explain itself');
+
+  await surface.type('cats');
+  icon.dispatchEvent(new page.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+  await surface.waitFor(() => surface.scopeMenuOpen(), 'clicking the icon should open the scope panel');
+  assert.strictEqual(surface.input().value, 'cats', 'and keep the typed query');
+  assert.ok(surface.scopeLabel(), 'the default scope should become the active tag');
+  assert.deepStrictEqual([icon.getAttribute('aria-disabled'), icon.getAttribute('tabindex'), icon.getAttribute('data-tooltip')], ['true', '-1', null],
+    'with a scope tag active the icon should step out of pointer, keyboard and tooltip use');
+  surface.press('Escape');
+  await surface.settle(60);
+  icon.dispatchEvent(new page.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+  await surface.settle(60);
+  assert.strictEqual(surface.scopeMenuOpen(), false, 'a disabled icon should not reopen the panel');
+  surface.close();
+
+  for (const key of ['Enter', ' ']) {
+    const keyboard = await openSearchSurface('newtab');
+    const button = keyboard.root.querySelector(ICON);
+    button.focus();
+    const event = keyboard.press(key, { target: button });
+    await keyboard.waitFor(() => keyboard.scopeMenuOpen(), `${JSON.stringify(key)} on the focused icon should open the scope panel`);
+    assert.strictEqual(keyboard.input().value, '', `${JSON.stringify(key)} should not be typed into the search box`);
+    assert.strictEqual(event.defaultPrevented, true);
+    assert.strictEqual(keyboard.navigation(), null, 'nor start a search');
+    keyboard.close();
+  }
+}
+
+async function testSharedBubble() {
+  const surface = await openSearchSurface('newtab');
+  const { page } = surface;
+  const icon = surface.root.querySelector(ICON);
+  const settings = surface.root.querySelector('.x-lumno-search-input__right-icon');
+  assert.ok(settings.getAttribute('data-tooltip'), 'the settings icon should explain itself');
+  await page.hover(icon, { clientX: 20, clientY: 40 });
+  await page.settle(200);
+  const bubble = () => page.document.querySelector(TOOLTIP);
+  assert.ok(bubble() && bubble().textContent.trim() === icon.getAttribute('data-tooltip'), 'hovering the search icon should show its bubble');
+  icon.dispatchEvent(new page.window.MouseEvent('pointerleave', { relatedTarget: settings, clientX: 600, clientY: 40 }));
+  icon.dispatchEvent(new page.window.MouseEvent('mouseleave', { relatedTarget: settings, clientX: 600, clientY: 40 }));
+  await page.hover(settings, { clientX: 600, clientY: 40 });
+  await page.settle(200);
+  assert.strictEqual(bubble().textContent.trim(), settings.getAttribute('data-tooltip'), 'moving to the settings icon should hand the same bubble over');
+  assert.match(settings.style.getPropertyValue('--x-ext-input-icon-hover-bg'), /var\(--x-nt-settings-action-hover-bg/,
+    'the settings icon should take New Tab\'s hover colours');
+  surface.close();
+
+  const overlay = await openSearchSurface('overlay');
+  const overlaySettings = overlay.root.querySelector('.x-lumno-search-input__right-icon');
+  assert.doesNotMatch(overlaySettings.getAttribute('style') || '', /--x-nt-settings-action-hover/, 'New Tab\'s hover colours should not reach the overlay');
+  overlay.close();
+}
+
+function testStyles() {
+  const page = parsePageCss('newtab.html');
+  [':root', 'body[data-theme="dark"]'].forEach((theme) => {
+    const declared = page.entries.filter((entry) => entry.selectors.includes(theme));
+    assert.ok(declared.some((entry) => entry.style.getPropertyValue('--x-nt-settings-action-hover-bg') && entry.style.getPropertyValue('--x-nt-settings-action-hover-color')),
+      `${theme} should define the settings action hover colours`);
+  });
+  const input = parseCss(readStylesheet('src/shared/search/search-input.css'));
+  const action = input.rule('.x-lumno-search-input__icon[data-search-scope-action="true"]');
+  assert.deepStrictEqual([action.get('width'), action.get('height'), action.get('cursor')], ['30px', '30px', 'pointer'],
+    'the search action should have the settings action\'s hit target');
+  const disabled = input.rule('.x-lumno-search-input__icon[data-search-scope-action="true"][aria-disabled="true"]');
+  assert.deepStrictEqual([disabled.get('pointer-events'), disabled.get('cursor')], ['none', 'default'], 'a disabled icon should not react');
+  const hover = input.rule('.x-lumno-search-input__icon[data-search-scope-action="true"][data-hover-active="true"]');
+  assert.match(hover.names().map((name) => hover.get(name)).join(' '), /--x-ext-input-icon-hover-bg[\s\S]*--x-ext-input-icon-hover|--x-ext-input-icon-hover[\s\S]*--x-ext-input-icon-hover-bg/,
+    'it should reuse the settings hover colours');
+  assert.strictEqual(input.rule('.x-lumno-search-input__icon[data-search-scope-action="true"][data-hover-active="true"] .ri-icon').get('transform'), 'scale(1.06)');
+}
+
+(async () => {
+  await testIcon();
+  await testSharedBubble();
+  testStyles();
+  console.log('New Tab search scope button tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

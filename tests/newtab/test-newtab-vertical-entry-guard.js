@@ -1,59 +1,23 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { readSearchInputModeSource, readSearchInputModeRuntimeSource } = require('../helpers/search-input-mode-source');
-const { readPageSource } = require('../helpers/page-source');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const settings = require('../../src/shared/settings.js');
+const { parseCss, parsePageCss } = require('../helpers/css-rules');
+const { openSearchSurface } = require('../helpers/search-surfaces');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const newtabHtml = readPageSource('newtab.html');
-const featureHintsCss = fs.readFileSync(
-  path.join(repoRoot, 'src/shared/ui/feature-hints.css'),
-  'utf8'
-);
-const shortcutDialogCss = fs.readFileSync(
-  path.join(repoRoot, 'src/newtab/shortcuts/shortcut-dialog.css'),
-  'utf8'
-);
-const newtabSource = readNewtabRuntimeSource();
-const searchInputModeSource = readSearchInputModeSource();
+const newtabCss = parsePageCss('newtab.html');
+const read = (file) => parseCss(fs.readFileSync(path.join(repoRoot, file), 'utf8'));
 
-function collectRuleBlocks(source) {
-  const blocks = [];
-  const rulePattern = /([^{}]+)\{([^{}]*)\}/g;
-  let match = rulePattern.exec(source);
-  while (match) {
-    blocks.push({
-      selector: match[1].trim().replace(/\s+/g, ' '),
-      declarations: match[2]
-    });
-    match = rulePattern.exec(source);
-  }
-  return blocks;
+// Each top-level rule as { selector, declarations } (the declarations as CSS
+// text), read through the CSSOM.
+function collectRuleBlocks(css) {
+  return css.entries.map((entry) => ({ selector: entry.selectors.join(', '), declarations: entry.style.cssText }));
 }
 
-function getBalancedCssBlock(source, marker) {
-  const markerIndex = source.indexOf(marker);
-  assert.ok(markerIndex >= 0, `missing CSS block: ${marker}`);
-  const openIndex = source.indexOf('{', markerIndex);
-  assert.ok(openIndex >= 0, `missing opening brace: ${marker}`);
-  let depth = 0;
-  for (let index = openIndex; index < source.length; index += 1) {
-    if (source[index] === '{') {
-      depth += 1;
-    } else if (source[index] === '}') {
-      depth -= 1;
-      if (depth === 0) {
-        return source.slice(markerIndex, index + 1);
-      }
-    }
-  }
-  assert.fail(`missing closing brace: ${marker}`);
-}
-
-const ruleBlocks = collectRuleBlocks(newtabHtml);
-const featureHintRuleBlocks = collectRuleBlocks(featureHintsCss);
-const shortcutDialogRuleBlocks = collectRuleBlocks(shortcutDialogCss);
+const ruleBlocks = collectRuleBlocks(newtabCss);
+const featureHintRuleBlocks = collectRuleBlocks(read('src/shared/ui/feature-hints.css'));
+const shortcutDialogRuleBlocks = collectRuleBlocks(read('src/newtab/shortcuts/shortcut-dialog.css'));
 const verticalTranslationPattern = /\btranslate(?:Y|3d)?\s*\(|\btranslate\s*:/;
 
 [
@@ -133,23 +97,11 @@ shortcutDialogBlocks.forEach(({ selector, declarations }) => {
   );
 });
 
-assert.doesNotMatch(
-  newtabSource,
-  /topContentContainer\.style\.setProperty\([\s\S]*?'transform'[\s\S]*?translate3d\(0,\s*-8px,\s*0\)/,
-  'top content visibility changes should not add a vertical hidden-state offset'
-);
-
-assert.match(
-  newtabHtml,
-  /body \._x_extension_tooltip_2026_unique_[\s\S]*?body \._x_extension_tooltip_2026_unique_\._x_extension_cursor_tooltip_tag_2026_unique_\[data-tooltip-kind\]\[data-visible="true"\][\s\S]*?\{\s*transform:\s*none;/,
-  'New Tab tooltips should override shared vertical reveal motion'
-);
-
-assert.match(
-  searchInputModeSource,
-  /const modeMenuClosedTransform = surface === 'newtab'\s*\? `\$\{modeMenuPositionTransform\} scale\(0\.96, 0\.86\)`/,
-  'the New Tab search mode menu should keep the same vertical coordinate while opening'
-);
+const tooltipRest = newtabCss.entries.find((entry) => entry.selectors.some((selector) => (
+  selector.startsWith('body ._x_extension_tooltip_2026_unique_._x_extension_cursor_tooltip_tag_2026_unique_[data-tooltip-kind][data-visible="true"]')
+)));
+assert.strictEqual(tooltipRest && tooltipRest.style.getPropertyValue('transform'), 'none',
+  'New Tab tooltips should override the shared vertical reveal motion');
 
 [
   '_x_nt_time_seconds_soft_swap_2026_unique_',
@@ -161,17 +113,42 @@ assert.match(
   '_x_nt_topbar_floating_entry_2026_unique_',
   '_x_nt_topbar_content_entry_2026_unique_'
 ].forEach((keyframesName) => {
+  const frames = newtabCss.keyframes(keyframesName);
+  assert.ok(frames, `missing @keyframes ${keyframesName}`);
   assert.doesNotMatch(
-    getBalancedCssBlock(newtabHtml, `@keyframes ${keyframesName}`),
+    Object.values(frames).map((frame) => frame.cssText).join(' '),
     verticalTranslationPattern,
     `${keyframesName} should keep every element at its final vertical coordinate`
   );
 });
 
-assert.match(
-  newtabHtml,
-  /\.x-nt-wallpaper-grid\[data-motion="enter-next"\][\s\S]*?translateX\(8px\)[\s\S]*?\.x-nt-wallpaper-grid\[data-motion="enter-prev"\][\s\S]*?translateX\(-8px\)/,
-  'wallpaper source tabs should retain their intentional horizontal direction cue'
-);
+const gridMotion = (motion) => newtabCss.rule(`.x-nt-wallpaper-grid[data-motion="${motion}"]`).get('transform');
+assert.strictEqual(gridMotion('enter-next'), 'translateX(8px)', 'wallpaper source tabs should keep their horizontal direction cue');
+assert.strictEqual(gridMotion('enter-prev'), 'translateX(-8px)');
 
+// On the page: the scope panel opens at the coordinate it closes at, and
+// hiding the top content does not slide it.
+async function testNewTab() {
+  const surface = await openSearchSurface('newtab');
+  const menu = surface.root.querySelector('.x-lumno-search-input-mode__menu');
+  const vertical = (name) => (menu.style.getPropertyValue(name).match(/^translateY\(.*\)(?= scale)/) || [''])[0];
+  const closed = vertical('--x-extension-menu-surface-closed-transform');
+  assert.ok(closed, 'the scope panel should have a closed transform');
+  assert.strictEqual(vertical('--x-extension-menu-surface-open-transform'), closed,
+    'the New Tab scope panel should open without moving vertically');
+  const topContent = surface.page.document.getElementById('_x_extension_newtab_wordmark_2026_unique_');
+  surface.page.changeStorage('sync', settings.NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY, settings.NEWTAB_TOP_CONTENT_OFF);
+  await surface.settle(200);
+  surface.page.changeStorage('sync', settings.NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY, settings.NEWTAB_TOP_CONTENT_TIME);
+  await surface.settle(200);
+  assert.doesNotMatch(topContent.getAttribute('style') || '', verticalTranslationPattern, 'top content should show and hide in place');
+  surface.close();
+}
+
+testNewTab().then(() => {
+    process.exit(0);
+}).catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
 console.log('newtab vertical entry guard tests passed');

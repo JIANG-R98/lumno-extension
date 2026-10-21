@@ -2,12 +2,11 @@
 const assert = require('assert');
 const vm = require('vm');
 const { readStylesheet } = require('../helpers/css-tokens');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { parseCss, parsePageCss } = require('../helpers/css-rules');
 const { moduleScript } = require('../helpers/module-script');
 
-const newtabSource = readNewtabRuntimeSource();
-const newtabCss = readStylesheet('src/newtab/newtab.css');
-const glassCss = readStylesheet('src/newtab/glass-style.css');
+const newtabCss = parsePageCss('newtab.html');
+const glassCss = parseCss(readStylesheet('src/newtab/glass-style.css'));
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -125,37 +124,29 @@ async function testEffectPreloadRecordsWhenTheWallpaperShowed() {
   assert.ok(shownAt >= before && shownAt <= performance.now(), 'the reveal time is what the entry measures its lead from');
 }
 
-function testRevealWaitsForTheWallpaperTones() {
-  assert.match(
-    newtabSource,
-    /return waitForInitialWallpaperTone\(\);\s*\}\)\.then\(\(\) => \{\s*maybeShowFileAccessNotice\(\);\s*markNewtabReady\(\);/,
-    'the content is revealed only after the first wallpaper sample has tinted its controls'
-  );
-  assert.match(
-    newtabSource,
-    /function markInitialWallpaperVisualReady\(\)[\s\S]*?wallpaperShownAt = performance\.now\(\);[\s\S]*?effectPreload\.wallpaperShownAt/,
-    'the runtime remembers when the wallpaper showed, taking the preload\'s time when it revealed it'
-  );
-}
+// That the reveal also waits for the first wallpaper tone sample needs a
+// decoded wallpaper image, which only a browser provides.
 
 function testSampledColorsSnapUntilTheEntryIsDone() {
-  assert.match(newtabCss, /body:not\(\[data-nt-enter="done"\]\) \.x-nt-shortcut-icon \{\s*transition: none;\s*\}/,
+  assert.strictEqual(newtabCss.rule('body:not([data-nt-enter="done"]) .x-nt-shortcut-icon').get('transition'), 'none',
     'the add tile takes its sampled color at once instead of fading through the wallpaper\'s gray');
-  assert.match(glassCss,
-    /body\[data-glass-style\]:not\(\[data-nt-enter="done"\]\) :is\(\.x-nt-shortcut-icon, \.x-nt-shortcut-group-header\) \{\s*transition: none;\s*\}/,
+  assert.strictEqual(glassCss.rule('body[data-glass-style]:not([data-nt-enter="done"]) :is(.x-nt-shortcut-icon, .x-nt-shortcut-group-header)').get('transition'), 'none',
     'glass shortcut plates take their sampled tint at once during the entry too');
 }
 
 function testNoBlurredStandInForTheWallpaper() {
+  const declared = newtabCss.entries.flatMap((entry) => Array.from(entry.style)).concat(newtabCss.selectors());
   ['--x-nt-wallpaper-placeholder', '--x-nt-wallpaper-backdrop', 'data-wallpaper-placeholder'].forEach((name) => {
-    assert.ok(!newtabCss.includes(name), `the New Tab never shows a blurred copy of its wallpaper (${name})`);
+    assert.ok(!declared.some((item) => item.includes(name)), `the New Tab never shows a blurred copy of its wallpaper (${name})`);
   });
 }
 
 function testNothingBlursTheWallpaperBeforeTheReveal() {
-  assert.match(newtabCss,
-    /body:not\(\[data-nt-ready="1"\]\) :is\(\*, #_x_extension_newtab_root_2024_unique_\),\s*body:not\(\[data-nt-ready="1"\]\) :is\(\*, #_x_extension_newtab_root_2024_unique_\)::before,\s*body:not\(\[data-nt-ready="1"\]\) :is\(\*, #_x_extension_newtab_root_2024_unique_\)::after \{\s*backdrop-filter: none !important;\s*-webkit-backdrop-filter: none !important;/,
-    'hidden cards must not show their blur over the wallpaper before the page is revealed');
+  ['', '::before', '::after'].forEach((pseudo) => {
+    const rule = newtabCss.rule(`body:not([data-nt-ready="1"]) :is(*, #_x_extension_newtab_root_2024_unique_)${pseudo}`);
+    assert.ok(rule && rule.get('backdrop-filter') === 'none' && rule.priority('backdrop-filter') === 'important',
+      `hidden cards must not show their blur over the wallpaper before the page is revealed (${pseudo || 'element'})`);
+  });
 }
 
 (async () => {
@@ -163,7 +154,6 @@ function testNothingBlursTheWallpaperBeforeTheReveal() {
   testNothingBlursTheWallpaperBeforeTheReveal();
   await testContentWaitsForTheWallpaperLead();
   await testEffectPreloadRecordsWhenTheWallpaperShowed();
-  testRevealWaitsForTheWallpaperTones();
   testSampledColorsSnapUntilTheEntryIsDone();
   console.log('newtab entry wallpaper lead tests passed');
 })().catch((error) => {
