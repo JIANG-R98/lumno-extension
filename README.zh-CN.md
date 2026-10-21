@@ -123,6 +123,8 @@
 | 复制当前页面链接 | `Cmd+Shift+C` | `Ctrl+Shift+C` |
 | 打开最近标签页切换器 | `Alt+Q` | `Alt+Q` |
 
+在 Lumno 新标签页按下聚焦搜索快捷键，会把焦点移到搜索框，即使焦点在地址栏、没有开启「输入框自动聚焦」也可以。已输入的内容和显示的结果都会保留。
+
 浏览器可能会占用或限制扩展快捷键。请在 `chrome://extensions/shortcuts`、`edge://extensions/shortcuts` 或对应浏览器的扩展快捷键页面中修改。
 
 Firefox 已占用 `Cmd+Shift+K` / `Ctrl+Shift+K` 等按键，因此 Firefox 版默认在 macOS 上使用 `Ctrl+Shift+K/L/C`，在 Windows 和 Linux 上使用 `Alt+K/L/C`，`Alt+Q` 不变。可在附加组件管理器的齿轮菜单 →「管理扩展快捷键」中修改。

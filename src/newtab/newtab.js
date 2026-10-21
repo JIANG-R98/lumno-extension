@@ -5810,6 +5810,7 @@
     stepSearchModeMenuHistory,
     openSearchModeMenuFromDoubleTab,
     selectSearchModeMenuItem,
+    restoreSearchModeQuery,
     getLocalSearchScopeTabHintProvider,
     setLocalSearchScopePrefix,
     activateLocalSearchScope,
@@ -5920,6 +5921,7 @@
     restoreDismissedSearchSuggestions,
     renderSuggestions,
     renderPendingSuggestions,
+    showSuggestionSnapshot,
     directNavigationSettleController,
     requestSuggestions
   } = NEWTAB_SUGGESTIONS_CONTROLLER.createSuggestionsController({
@@ -6001,6 +6003,8 @@
   });
 
   const NEWTAB_INPUT_FOCUS = globalThis.LumnoNewtabInputFocus;
+  // Created once the search modes and providers below exist.
+  let focusResume = null;
   const {
     isEditableElement,
     refreshFallbackShortcut,
@@ -6008,6 +6012,7 @@
     handleGlobalTypingFocus
   } = NEWTAB_INPUT_FOCUS.createInputFocus({
     SHORTCUT_KEY_MATCHER,
+    prepareFocusReload: () => Boolean(focusResume) && focusResume.prepareFocusReload(),
     refreshTabsIfIdle,
     initialNewtabInputAutoFocusReadyTask,
     isImeCompositionEvent,
@@ -7317,7 +7322,40 @@
     SUGGESTION_NAVIGATION.cancelNumberShortcuts(suggestionsContainer);
   });
 
-  getSiteSearchProviders();
+  const siteSearchProvidersReady = Promise.all([getSiteSearchProviders(), getAggregateSearches()]);
+
+  // Search modes are saved by id: a provider's, or its aggregate search's.
+  function getSiteSearchSnapshotId(provider) {
+    return isAggregateSearchProvider(provider)
+      ? `aggregate:${provider.aggregateId}`
+      : getSearchModeProviderId(provider);
+  }
+
+  function findSiteSearchBySnapshotId(id) {
+    const providers = getSearchModeProviders();
+    if (!String(id).startsWith('aggregate:')) {
+      return providers.find((provider) => getSearchModeProviderId(provider) === id) || null;
+    }
+    const definition = (pageState.aggregateSearchesCache || []).find(
+      (item) => `aggregate:${item && item.id ? item.id : ''}` === id
+    );
+    return isAggregateSearchDefinitionAvailable(definition, providers)
+      ? createAggregateSearchScopeProvider(definition)
+      : null;
+  }
+
+  focusResume = globalThis.LumnoNewtabFocusResume.createFocusResume({
+    getSiteSearchSnapshotId,
+    findSiteSearchBySnapshotId,
+    activateSiteSearch,
+    activateLocalSearchScope,
+    restoreSearchModeQuery,
+    showSuggestionSnapshot,
+    focusSearchInputPreservingScroll,
+    pageState
+  });
+  focusResume.resume(siteSearchProvidersReady);
+
   getAggregateSearches().then(() => {
     if (pageState.inputModeController && typeof pageState.inputModeController.refreshModeMenu === 'function') {
       pageState.inputModeController.refreshModeMenu();

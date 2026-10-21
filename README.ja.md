@@ -123,6 +123,8 @@
 | 現在ページの URL をコピー | `Cmd+Shift+C` | `Ctrl+Shift+C` |
 | 最近のタブスイッチャーを開く | `Alt+Q` | `Alt+Q` |
 
+Lumno の新しいタブでは、コマンドバーのショートカットで検索欄にフォーカスを移せます。アドレスバーにフォーカスがあり、入力欄の自動フォーカスがオフでも使えます。入力中の内容と表示中の結果はそのまま残ります。
+
 ブラウザによっては拡張機能のショートカットが予約または制限される場合があります。`chrome://extensions/shortcuts`、`edge://extensions/shortcuts`、または利用中ブラウザのショートカット設定ページで変更してください。
 
 Firefox は `Cmd+Shift+K` / `Ctrl+Shift+K` などをすでに使っているため、Firefox 版の既定は macOS で `Ctrl+Shift+K/L/C`、Windows と Linux で `Alt+K/L/C` です（`Alt+Q` は同じ）。アドオンマネージャーの歯車メニュー →「拡張機能のショートカットキーの管理」で変更できます。

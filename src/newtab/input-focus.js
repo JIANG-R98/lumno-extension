@@ -4,6 +4,7 @@
   function createInputFocus(deps) {
     const {
       SHORTCUT_KEY_MATCHER,
+      prepareFocusReload,
       refreshTabsIfIdle,
       initialNewtabInputAutoFocusReadyTask,
       isImeCompositionEvent
@@ -95,6 +96,54 @@
       return true;
     }
 
+    // A New Tab opens with keyboard focus in the address bar, and focus()
+    // inside the page cannot take it from there. Reopen the page on the focus
+    // route, which hands focus to the page the way input auto-focus does.
+    function reopenOnFocusRoute() {
+      // The reloaded page brings back the query and its results.
+      if (typeof prepareFocusReload === 'function') {
+        prepareFocusReload();
+      }
+      if (window.location.protocol === 'moz-extension:') {
+        try {
+          chrome.runtime.sendMessage({ action: 'swapNewtabForFocus' }, () => {
+            void chrome.runtime.lastError;
+          });
+        } catch (e) {
+          // Leave the page as it is when the background is unavailable.
+        }
+        return;
+      }
+      const url = new URL(window.location.href);
+      url.searchParams.set('focus', '1');
+      window.location.replace(url.href);
+    }
+
+    function isShortcutCommandSource(source) {
+      return source === 'commands' || source === 'commands-prefill';
+    }
+
+    function handleFocusInputMessage(message, sendResponse) {
+      if (document.hasFocus() || !isShortcutCommandSource(message.source)) {
+        sendResponse({ ok: activateNewtabShortcutFocus() });
+        return false;
+      }
+      // runtime messages reach every extension page, so only the addressed
+      // tab may reopen itself.
+      try {
+        chrome.tabs.getCurrent((tab) => {
+          if (chrome.runtime.lastError || !tab || tab.id !== message.tabId) {
+            return;
+          }
+          sendResponse({ ok: true, reopened: true });
+          reopenOnFocusRoute();
+        });
+      } catch (e) {
+        return false;
+      }
+      return true;
+    }
+
     if (chrome && chrome.runtime && chrome.runtime.onMessage && typeof chrome.runtime.onMessage.addListener === 'function') {
       chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         if (!message || message.action !== 'lumno:newtab-focus-input') {
@@ -103,9 +152,7 @@
         if (document.visibilityState !== 'visible') {
           return;
         }
-        const focused = activateNewtabShortcutFocus();
-        sendResponse({ ok: focused });
-        return;
+        return handleFocusInputMessage(message, sendResponse);
       });
     }
 
@@ -134,7 +181,9 @@
 
       const retryDelays = [0, 60, 140, 280, 520, 900, 1400];
       const attemptFocusIfVisible = () => {
-        if (!pageState.newtabInputAutoFocusEnabled) {
+        // The search shortcut reopens the page with the focus hint even when
+        // auto-focus is off; that load still focuses the input once.
+        if (!pageState.newtabInputAutoFocusEnabled && !forceInitialFocusPending) {
           return;
         }
         if (document.visibilityState !== 'visible') {

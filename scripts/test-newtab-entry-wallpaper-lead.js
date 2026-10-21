@@ -25,9 +25,13 @@ function createElement() {
   };
 }
 
-function createEntryMotion({ wallpaperActive, wallpaperShownAgoMs }) {
+function createEntryMotion({ wallpaperActive, wallpaperShownAgoMs, focusResume }) {
   const body = createElement();
   const root = createElement();
+  const documentElement = createElement();
+  if (focusResume) {
+    documentElement.setAttribute('data-nt-focus-resume', 'true');
+  }
   if (wallpaperActive) {
     body.setAttribute('data-wallpaper-active', 'true');
   }
@@ -39,7 +43,7 @@ function createEntryMotion({ wallpaperActive, wallpaperShownAgoMs }) {
     wallpaperShownAt: wallpaperShownAgoMs === null ? 0 : performance.now() - wallpaperShownAgoMs
   };
   const sandbox = {
-    document: { body },
+    document: { body, documentElement },
     window: { setTimeout, clearTimeout },
     requestAnimationFrame: (callback) => setTimeout(callback, 0),
     performance,
@@ -84,6 +88,12 @@ async function testContentWaitsForTheWallpaperLead() {
   plain.motion.markNewtabReady();
   await delay(5);
   assert.strictEqual(plain.body.getAttribute('data-nt-ready'), '1', 'without a wallpaper nothing has to lead');
+
+  const resumed = createEntryMotion({ wallpaperActive: true, wallpaperShownAgoMs: 0, focusResume: true });
+  resumed.motion.markNewtabReady();
+  await delay(5);
+  assert.strictEqual(resumed.body.getAttribute('data-nt-ready'), '1',
+    'the search shortcut reload holds the old page until this one is ready, so it skips the lead');
 
   const unknown = createEntryMotion({ wallpaperActive: true, wallpaperShownAgoMs: null });
   unknown.motion.markNewtabReady();

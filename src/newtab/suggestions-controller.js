@@ -338,7 +338,7 @@
       }
       pageState.lastSuggestionResponse = Array.isArray(suggestions) ? suggestions : [];
 
-      getShortcutRules().then((rules) => {
+      return getShortcutRules().then((rules) => {
         if (pageState.searchSuggestionsDismissed || query !== pageState.latestQuery) {
           return;
         }
@@ -696,6 +696,25 @@
       renderSuggestions(pageState.lastSuggestionResponse, query, options);
     }
 
+    // Shows results saved before a reload exactly as they were. Replies to
+    // requests made before this are dropped, so they cannot replace them.
+    // Resolves once the results are rendered.
+    function showSuggestionSnapshot(suggestions, query, selectedIndex) {
+      pageState.suggestionRequestSeq += 1;
+      if (pageState.remoteSuggestionDebounceTimer) {
+        clearTimeout(pageState.remoteSuggestionDebounceTimer);
+        pageState.remoteSuggestionDebounceTimer = null;
+      }
+      if (pageState.suggestionRequestWatchdogTimer) {
+        clearTimeout(pageState.suggestionRequestWatchdogTimer);
+        pageState.suggestionRequestWatchdogTimer = null;
+      }
+      directNavigationSettleController.cancel();
+      pageState.latestQuery = query;
+      pageState.selectedIndex = selectedIndex;
+      return Promise.resolve(renderSuggestions(suggestions, query));
+    }
+
     const DIRECT_NAVIGATION_SETTLE_DELAY_MS = 120;
     const directNavigationSettleController =
       NEWTAB_DIRECT_NAVIGATION_SETTLE.createDirectNavigationSettleController({
@@ -847,6 +866,7 @@
       restoreDismissedSearchSuggestions,
       renderSuggestions,
       renderPendingSuggestions,
+      showSuggestionSnapshot,
       directNavigationSettleController,
       requestSuggestions
     };

@@ -5,6 +5,12 @@
     const documentElement = document.documentElement;
     if (documentElement) {
       documentElement.setAttribute('data-nt-focus-route', 'true');
+      // When the search shortcut reloaded the page, keep the old frame up
+      // until the search it carries is back on screen.
+      const focusResume = globalThis.LumnoNewtabFocusResume;
+      if (focusResume) {
+        focusResume.prepareResumeLoad();
+      }
     }
     return;
   }

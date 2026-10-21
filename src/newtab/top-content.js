@@ -74,6 +74,11 @@
     }
 
     function shouldSkipNewtabEntryMotion() {
+      // The search shortcut's focus reload replaces a page already on screen.
+      if (document.documentElement &&
+          document.documentElement.getAttribute('data-nt-focus-resume') === 'true') {
+        return true;
+      }
       const motionEffectsEnabled = !document.documentElement ||
         document.documentElement.getAttribute('data-lumno-motion-effects') !== 'off';
       return SETTINGS.shouldSkipEntryMotion(window, motionEffectsEnabled);
