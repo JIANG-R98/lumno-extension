@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readSearchInputModeSource, readSearchInputModeRuntimeSource } = require('../helpers/search-input-mode-source');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
@@ -15,10 +16,7 @@ const shortcutDialogCss = fs.readFileSync(
   'utf8'
 );
 const newtabSource = readNewtabRuntimeSource();
-const searchInputModeSource = fs.readFileSync(
-  path.join(repoRoot, 'src/shared/search/search-input-mode.js'),
-  'utf8'
-);
+const searchInputModeSource = readSearchInputModeSource();
 
 function collectRuleBlocks(source) {
   const blocks = [];

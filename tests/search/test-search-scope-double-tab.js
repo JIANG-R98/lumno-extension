@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const vm = require('vm');
+const { readSearchInputModeSource, readSearchInputModeRuntimeSource } = require('../helpers/search-input-mode-source');
 const search = require('../../src/shared/search/search-utils.js');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
@@ -9,14 +10,19 @@ function readSource(path) {
   return fs.readFileSync(path, 'utf8');
 }
 
-const sharedSource = readSource('src/shared/search/search-input-mode.js');
+const sharedSource = readSearchInputModeSource();
 const sharedCss = readSource('src/shared/search/search-input.css');
 const newtabSource = readNewtabRuntimeSource();
 const overlaySource = readOverlayPanelSource();
 
 assert.match(
   sharedSource,
-  /DEFAULT_MODE_MENU_DOUBLE_TAB_DURATION = 700[\s\S]*?function shouldOpenModeMenuOnDoubleTab\(event\)[\s\S]*?event\.defaultPrevented[\s\S]*?event\.repeat/,
+  /DEFAULT_MODE_MENU_DOUBLE_TAB_DURATION = 700;/,
+  'shared input mode should time the double-Tab window'
+);
+assert.match(
+  sharedSource,
+  /function shouldOpenModeMenuOnDoubleTab\(event\)[\s\S]*?event\.defaultPrevented[\s\S]*?event\.repeat/,
   'shared input mode should own the timed, distinct-key double-Tab state'
 );
 assert.match(
@@ -406,7 +412,7 @@ async function runRuntimeStabilityTests() {
       })
     }
   });
-  vm.runInContext(sharedSource, sharedRuntimeContext, {
+  vm.runInContext(readSearchInputModeRuntimeSource(), sharedRuntimeContext, {
     filename: 'src/shared/search/search-input-mode.js'
   });
   const upgradedRuntime = sharedRuntimeContext.window.LumnoSearchInputMode;
@@ -419,7 +425,7 @@ async function runRuntimeStabilityTests() {
     upgradedRuntime.runtimeVersion,
     'the current input-mode runtime should expose a version marker'
   );
-  vm.runInContext(sharedSource, sharedRuntimeContext, {
+  vm.runInContext(readSearchInputModeRuntimeSource(), sharedRuntimeContext, {
     filename: 'src/shared/search/search-input-mode.js'
   });
   assert.strictEqual(

@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readSearchInputModeSource, readSearchInputModeRuntimeSource } = require('../helpers/search-input-mode-source');
 const { readPageSource } = require('../helpers/page-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
@@ -15,10 +16,7 @@ const customSelectCss = fs.readFileSync(
   'utf8'
 );
 const overlaySource = readOverlayPanelSource();
-const searchInputModeSource = fs.readFileSync(
-  path.join(repoRoot, 'src/shared/search/search-input-mode.js'),
-  'utf8'
-);
+const searchInputModeSource = readSearchInputModeSource();
 const overlayShellSource = fs.readFileSync(
   path.join(repoRoot, 'react-src/overlay/shell.tsx'),
   'utf8'

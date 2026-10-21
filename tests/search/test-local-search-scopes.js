@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readSearchInputModeSource, readSearchInputModeRuntimeSource } = require('../helpers/search-input-mode-source');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { readBackgroundSource } = require('../helpers/background-source');
@@ -11,7 +12,7 @@ const readSource = (relativePath) => fs.readFileSync(path.join(repoRoot, relativ
 const newtabSource = readNewtabRuntimeSource();
 const overlaySource = readOverlayPanelSource();
 const backgroundSource = readBackgroundSource();
-const inputModeSource = readSource('src/shared/search/search-input-mode.js');
+const inputModeSource = readSearchInputModeSource();
 const inputModeCss = readSource('src/shared/search/search-input.css');
 const newtabHtml = readPageSource('newtab.html');
 const manifestSource = readSource('manifest.json');
@@ -141,8 +142,13 @@ assert.match(
 );
 assert.match(
   inputModeSource,
-  /function handleModeInputFocus\(\)[\s\S]*?setModeMenuSearchActive\(false\)[\s\S]*?function handleModeMenuPointerDown\(event\)[\s\S]*?focusModeMenuSearch\(\)/,
-  'clicking the main input or the scope panel should transfer keyboard ownership explicitly'
+  /function handleModeInputFocus\(\)[\s\S]*?setModeMenuSearchActive\(false\)/,
+  'clicking the main input should take keyboard ownership back from the scope panel'
+);
+assert.match(
+  inputModeSource,
+  /function handleModeMenuPointerDown\(event\)[\s\S]*?focusModeMenuSearch\(\)/,
+  'clicking the scope panel should transfer keyboard ownership explicitly'
 );
 assert.match(
   inputModeSource,
@@ -307,8 +313,13 @@ assert.match(
 );
 assert.match(
   inputModeSource,
-  /function handleModeInput\(event\) \{\s*requestModeMenuPinyinRuntime\(\);[\s\S]*?const items = config\.getModeMenuItems\(\);\s*requestModeMenuPinyinRuntime\(\);/,
-  'the scope panel should load the pinyin runtime on the first typed character or panel open'
+  /function handleModeInput\(event\) \{\s*requestModeMenuPinyinRuntime\(\);/,
+  'the scope panel should load the pinyin runtime on the first typed character'
+);
+assert.match(
+  inputModeSource,
+  /const items = config\.getModeMenuItems\(\);\s*requestModeMenuPinyinRuntime\(\);/,
+  'the scope panel should load the pinyin runtime when it opens'
 );
 assert.match(
   inputModeSource,

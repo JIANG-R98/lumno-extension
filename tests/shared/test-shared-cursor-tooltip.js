@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readSearchInputModeSource, readSearchInputModeRuntimeSource } = require('../helpers/search-input-mode-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { readBackgroundSource } = require('../helpers/background-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
@@ -680,7 +681,7 @@ const newtabHtml = fs.readFileSync(newtabHtmlPath, 'utf8');
 const newtabPanel = readNewtabRuntimeSource();
 const background = readBackgroundSource();
 const overlayPanel = readOverlayPanelSource();
-const searchInputMode = fs.readFileSync(path.join(repoRoot, 'src/shared/search/search-input-mode.js'), 'utf8');
+const searchInputMode = readSearchInputModeSource();
 assert.ok(newtabHtml.includes('../shared/ui/cursor-tooltip.css'), 'newtab should load cursor tooltip stylesheet');
 assert.ok(newtabHtml.includes('../shared/ui/cursor-tooltip.js'), 'newtab should load cursor tooltip component');
 assert.ok(

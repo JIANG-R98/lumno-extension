@@ -1,5 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readSearchInputModeSource, readSearchInputModeRuntimeSource } = require('../helpers/search-input-mode-source');
 const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
@@ -17,7 +18,7 @@ const optionsSource = readOptionsRuntimeSource();
 const overlayRuntimeSource = read('src/overlay/runtime.js');
 const overlaySource = readOverlayPanelSource();
 const backgroundSource = readBackgroundSource();
-const inputModeSource = read('src/shared/search/search-input-mode.js');
+const inputModeSource = readSearchInputModeSource();
 
 assert.ok(
   manifest.permissions.includes('tabs') && manifest.permissions.includes('tabGroups'),

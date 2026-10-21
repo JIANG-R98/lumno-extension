@@ -1,5 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readSearchInputModeSource, readSearchInputModeRuntimeSource } = require('../helpers/search-input-mode-source');
 const shortcutFavicon = require('../../src/shared/favicon/shortcut-favicon.js');
 const searchUtils = require('../../src/shared/search/search-utils.js');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
@@ -10,7 +11,7 @@ const backgroundSource = readBackgroundSource();
 const newtabSource = readNewtabRuntimeSource();
 const overlaySource = readOverlayPanelSource();
 const overlayRuntimeSource = fs.readFileSync('src/overlay/runtime.js', 'utf8');
-const inputModeSource = fs.readFileSync('src/shared/search/search-input-mode.js', 'utf8');
+const inputModeSource = readSearchInputModeSource();
 const inputModeCss = fs.readFileSync('src/shared/search/search-input.css', 'utf8');
 const searchUtilsSource = fs.readFileSync('src/shared/search/search-utils.js', 'utf8');
 const siteSearchSource = fs.readFileSync('assets/data/site-search.json', 'utf8');

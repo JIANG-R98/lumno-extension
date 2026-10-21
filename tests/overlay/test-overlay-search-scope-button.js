@@ -1,13 +1,11 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readSearchInputModeSource, readSearchInputModeRuntimeSource } = require('../helpers/search-input-mode-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const overlaySource = readOverlayPanelSource();
 const searchInputCss = fs.readFileSync('src/shared/search/search-input.css', 'utf8');
-const searchInputModeSource = fs.readFileSync(
-  'src/shared/search/search-input-mode.js',
-  'utf8'
-);
+const searchInputModeSource = readSearchInputModeSource();
 
 assert.match(
   overlaySource,
@@ -66,7 +64,7 @@ assert.doesNotMatch(
 );
 assert.match(
   searchInputModeSource,
-  /surface === 'overlay'[\s\S]*?siteSearchPrefixCurrentText\.style\.setProperty\('display', 'inline-block'\)[\s\S]*?siteSearchPrefixCurrent\.style\.cssText = cssText\([\s\S]*?\['overflow', 'hidden'\]/,
+  /siteSearchPrefixCurrentText\.style\.setProperty\('display', 'inline-block'\)[\s\S]*?siteSearchPrefixCurrent\.style\.cssText = cssText\([\s\S]*?\['overflow', 'hidden'\]/,
   'the overlay current label should be clipped by its in-flow slot before the isolated stylesheet loads'
 );
 assert.match(

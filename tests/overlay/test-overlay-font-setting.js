@@ -1,5 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readSearchInputModeSource, readSearchInputModeRuntimeSource } = require('../helpers/search-input-mode-source');
 const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
 const { readPageSource } = require('../helpers/page-source');
@@ -10,7 +11,7 @@ const overlayRuntimeSource = fs.readFileSync('src/overlay/runtime.js', 'utf8');
 const overlaySource = readOverlayPanelSource();
 const suggestionsCss = fs.readFileSync('src/overlay/suggestions-view.css', 'utf8');
 const searchInputCss = fs.readFileSync('src/shared/search/search-input.css', 'utf8');
-const searchInputModeSource = fs.readFileSync('src/shared/search/search-input-mode.js', 'utf8');
+const searchInputModeSource = readSearchInputModeSource();
 const shellSource = fs.readFileSync('react-src/overlay/shell.tsx', 'utf8');
 const tokensCss = fs.readFileSync('src/shared/tokens.css', 'utf8');
 const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));

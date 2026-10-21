@@ -19,6 +19,19 @@ import '../../src/shared/search/utils/navigation-matching.js';
 import '../../src/shared/search/utils/site-search-providers.js';
 import '../../src/shared/search/utils/site-search-matching.js';
 import '../../src/shared/search/search-utils.js';
+import '../../src/shared/search/input-mode/controller-dom.js';
+import '../../src/shared/search/input-mode/mode-menu-language.js';
+import '../../src/shared/search/input-mode/prefix-visual.js';
+import '../../src/shared/search/input-mode/prefix-content.js';
+import '../../src/shared/search/input-mode/prefix-motion.js';
+import '../../src/shared/search/input-mode/mode-tab-keys.js';
+import '../../src/shared/search/input-mode/prefix-text.js';
+import '../../src/shared/search/input-mode/mode-menu-icons.js';
+import '../../src/shared/search/input-mode/mode-menu-search.js';
+import '../../src/shared/search/input-mode/mode-menu-navigation.js';
+import '../../src/shared/search/input-mode/mode-menu-render.js';
+import '../../src/shared/search/input-mode/mode-menu-layout.js';
+import '../../src/shared/search/input-mode/mode-menu-lifecycle.js';
 import '../../src/shared/search/search-input-mode.js';
 
 Object.assign(globalThis, {
