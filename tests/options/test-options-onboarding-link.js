@@ -1,13 +1,15 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { readOptionsRuntimeSource } = require('../helpers/options-source');
+const { JSDOM } = require('jsdom');
+const { parsePageCss } = require('../helpers/css-rules');
+const { createOptionsPage } = require('../helpers/options-page');
 const { readPageSource } = require('../helpers/page-source');
 
 const repoRoot = path.join(__dirname, '..', '..');
-const optionsHtml = readPageSource('src/options/options.html');
-const optionsJs = readOptionsRuntimeSource();
-const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
+const optionsDocument = new JSDOM(readPageSource('src/options/options.html')).window.document;
+const optionsCss = parsePageCss('src/options/options.html');
+const onboardingDocument = new JSDOM(readPageSource('src/onboarding/onboarding.html')).window.document;
 
 const buttonId = '_x_extension_open_onboarding_page_2026_unique_';
 const buttonClass = '_x_extension_onboarding_guide_button_2026_unique_';
@@ -16,121 +18,70 @@ const versionButtonId = '_x_extension_settings_version_2024_unique_';
 const versionButtonClass = '_x_extension_settings_version_badge_2024_unique_';
 const versionTooltipKey = 'settings_version_tooltip';
 
-function getRule(selector) {
-  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = optionsHtml.match(new RegExp(`(?:^|\\n)\\s*${escapedSelector}\\s*\\{([\\s\\S]*?)\\}`));
-  assert.ok(match, `${selector} should exist in options CSS`);
-  return match[1];
+function rule(selector) {
+  const found = optionsCss.rule(selector);
+  assert.ok(found, `${selector} should exist in options CSS`);
+  return found;
 }
 
-assert.match(
-  optionsHtml,
-  new RegExp(`<button[^>]+id="${buttonId}"[^>]+class="[^"]*${buttonClass}[^"]*"[^>]*>[\\s\\S]*?<span data-i18n="${labelKey}">新手引导<\\/span>[\\s\\S]*?<i class="ri-icon ri-size-14 ri-external-link-line"`),
-  'general settings header should expose a compact onboarding tutorial ghost action with the onboarding ghost icon'
-);
+const button = optionsDocument.getElementById(buttonId);
+assert.ok(button && button.tagName === 'BUTTON' && button.classList.contains(buttonClass),
+  'general settings header should expose a compact onboarding tutorial ghost action');
+assert.strictEqual(button.querySelector(`span[data-i18n="${labelKey}"]`).textContent, '新手引导');
+assert.ok(button.querySelector('i.ri-icon.ri-size-14.ri-external-link-line'), 'with the onboarding ghost icon');
+const onboardingGhost = onboardingDocument.querySelector('.onboarding-action-button--ghost');
+assert.ok(onboardingGhost && onboardingDocument.querySelector('.ri-external-link-line'),
+  'onboarding should keep the reference ghost action icon used by the options tutorial link');
 
-assert.match(
-  onboardingHtml,
-  /onboarding-action-button--ghost[\s\S]*?ri-external-link-line/,
-  'onboarding should keep the reference ghost action icon used by the options tutorial link'
+const ghost = rule(`._x_extension_shortcut_submit_2024_unique_.${buttonClass}`);
+assert.deepStrictEqual(
+  ['margin-left', '--settings-button-min-height', '--settings-button-padding', '--settings-button-bg', '--settings-button-shadow', 'white-space']
+    .map((name) => ghost.get(name)),
+  ['auto', '28px', '0 10px', 'transparent', 'none', 'nowrap'],
+  'tutorial action should stay compact and ghost-styled'
 );
+assert.strictEqual(ghost.get('--settings-button-hover-bg'), 'rgba(15, 23, 42, 0.045)', 'tutorial ghost action should only gain a background on hover');
+const dark = rule(`body[data-theme="dark"] .${buttonClass}`);
+assert.deepStrictEqual(
+  ['--settings-button-color', '--settings-button-bg', '--settings-button-shadow', '--settings-button-hover-bg', '--settings-button-hover-color']
+    .map((name) => dark.get(name)),
+  ['var(--panel-subtext)', 'transparent', 'none', 'color-mix(in srgb, var(--control-hover-bg) 72%, transparent)', 'var(--panel-text)'],
+  'dark tutorial ghost action should use dark tokens and expose its hover as variant tokens'
+);
+assert.strictEqual(optionsCss.rule(`body[data-theme="dark"] .${buttonClass}:hover`), null,
+  'dark tutorial ghost action should not need a separate hover selector');
 
-const rule = getRule(`._x_extension_shortcut_submit_2024_unique_.${buttonClass}`);
-const darkRule = getRule(`body[data-theme="dark"] .${buttonClass}`);
-[
-  /margin-left:\s*auto;/,
-  /--settings-button-min-height:\s*28px;/,
-  /--settings-button-padding:\s*0 10px;/,
-  /--settings-button-bg:\s*transparent;/,
-  /--settings-button-shadow:\s*none;/,
-  /white-space:\s*nowrap;/
-].forEach((pattern) => {
-  assert.match(rule, pattern, 'tutorial action should stay compact and ghost-styled');
-});
-assert.match(
-  rule,
-  /--settings-button-hover-bg:\s*rgba\(15,\s*23,\s*42,\s*0\.045\);/,
-  'tutorial ghost action should only gain a background on hover'
-);
-assert.match(
-  darkRule,
-  /--settings-button-color:\s*var\(--panel-subtext\);/,
-  'dark tutorial ghost action should use the dark-mode subtext token'
-);
-assert.match(
-  darkRule,
-  /--settings-button-bg:\s*transparent;/,
-  'dark tutorial ghost action should stay backgroundless by default'
-);
-assert.match(
-  darkRule,
-  /--settings-button-shadow:\s*none;/,
-  'dark tutorial ghost action should stay flat by default'
-);
-assert.doesNotMatch(
-  darkRule,
-  /rgba\(156,\s*163,\s*175,\s*0\.88\)|#f3f4f6|rgba\(255,\s*255,\s*255,/,
-  'dark tutorial ghost action should not hard-code the old pale dark-mode colors'
-);
-assert.match(
-  darkRule,
-  /--settings-button-hover-bg:\s*color-mix\(in srgb,\s*var\(--control-hover-bg\)\s*72%,\s*transparent\);/,
-  'dark tutorial ghost action should expose its quiet dark hover surface as a variant token'
-);
-assert.match(
-  darkRule,
-  /--settings-button-hover-color:\s*var\(--panel-text\);/,
-  'dark tutorial ghost action should expose its hover text lift as a variant token'
-);
-assert.ok(
-  !new RegExp(`(?:^|\\n)\\s*body\\[data-theme="dark"\\]\\s+\\.${buttonClass}:hover\\s*\\{`).test(optionsHtml),
-  'dark tutorial ghost action should not need a separate hover selector'
-);
-
-assert.match(
-  optionsJs,
-  new RegExp(`const openOnboardingPageButton = document\\.getElementById\\('${buttonId}'\\);`),
-  'options should cache the onboarding tutorial button'
-);
-assert.match(
-  optionsJs,
-  /openOnboardingPageButton\.addEventListener\('click'[\s\S]*?chrome\.runtime\.sendMessage\(\{\s*action:\s*'openOnboardingPage'\s*\}/,
-  'clicking the tutorial action should ask the background page to open onboarding in a new tab'
-);
-
-assert.match(
-  optionsHtml,
-  new RegExp(`<button[^>]+id="${versionButtonId}"[^>]+class="[^"]*${versionButtonClass}[^"]*"[^>]+type="button"[^>]+data-tooltip="查看更新日志"[^>]+data-i18n-tooltip="${versionTooltipKey}"[^>]*><\\/button>`),
-  'options version label should be a clickable button'
-);
-assert.match(
-  getRule(`.${versionButtonClass}`),
-  /cursor:\s*pointer;/,
-  'options version button should advertise clickability'
-);
-assert.match(
-  getRule(`.${versionButtonClass}:hover`),
-  /background:\s*rgba\(255,\s*255,\s*255,\s*0\.56\);/,
-  'options version button should show a visible light-mode background on hover'
-);
-assert.match(
-  getRule(`body[data-theme="dark"] .${versionButtonClass}:hover`),
-  /background:\s*rgba\(255,\s*255,\s*255,\s*0\.12\);/,
-  'options version button should show a visible dark-mode background on hover'
-);
-assert.match(
-  optionsJs,
-  /function openSettingsVersionRelease\(event\)[\s\S]*?chrome\.runtime\.sendMessage\(\{\s*action:\s*'openReleasePage',\s*reason:\s*'options-version',\s*disposition:[\s\S]*?settingsVersion\.addEventListener\('click', openSettingsVersionRelease\)/,
-  'clicking the version button should ask the background page to open the official release page'
-);
+const version = optionsDocument.getElementById(versionButtonId);
+assert.ok(version && version.tagName === 'BUTTON' && version.type === 'button' && version.classList.contains(versionButtonClass),
+  'options version label should be a clickable button');
+assert.deepStrictEqual([version.getAttribute('data-tooltip'), version.getAttribute('data-i18n-tooltip')], ['查看更新日志', versionTooltipKey]);
+assert.strictEqual(rule(`.${versionButtonClass}`).get('cursor'), 'pointer', 'options version button should advertise clickability');
+assert.strictEqual(rule(`.${versionButtonClass}:hover`).get('background'), 'rgba(255, 255, 255, 0.56)',
+  'options version button should show a visible light-mode background on hover');
+assert.strictEqual(rule(`body[data-theme="dark"] .${versionButtonClass}:hover`).get('background'), 'rgba(255, 255, 255, 0.12)',
+  'options version button should show a visible dark-mode background on hover');
 
 ['en', 'ja', 'zh_CN', 'zh_TW'].forEach((locale) => {
   const messages = JSON.parse(fs.readFileSync(path.join(repoRoot, '_locales', locale, 'messages.json'), 'utf8'));
   assert.ok(messages[labelKey] && messages[labelKey].message, `${locale} should localize the onboarding tutorial label`);
-  assert.ok(
-    messages[versionTooltipKey] && messages[versionTooltipKey].message,
-    `${locale} should localize the version changelog tooltip`
-  );
+  assert.ok(messages[versionTooltipKey] && messages[versionTooltipKey].message, `${locale} should localize the version changelog tooltip`);
 });
 
-console.log('options onboarding link tests passed');
+// Both buttons ask the background page to open their page.
+(async () => {
+  const page = await createOptionsPage({});
+  await page.settle(200);
+  await page.click(page.byId(buttonId));
+  assert.ok(page.messages.some((message) => message.action === 'openOnboardingPage'),
+    'clicking the tutorial action should ask the background page to open onboarding');
+  await page.click(page.byId(versionButtonId));
+  const release = page.messages.find((message) => message.action === 'openReleasePage');
+  assert.ok(release && release.reason === 'options-version' && release.disposition,
+    'clicking the version button should ask the background page to open the official release page');
+  page.close();
+  console.log('options onboarding link tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

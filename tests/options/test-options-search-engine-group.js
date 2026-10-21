@@ -1,93 +1,74 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { readOptionsRuntimeSource } = require('../helpers/options-source');
+const { JSDOM } = require('jsdom');
+const SHORTCUT_FAVICON = require('../../src/shared/favicon/shortcut-favicon.js');
+const { createOptionsPage } = require('../helpers/options-page');
 const { readPageSource } = require('../helpers/page-source');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
-const { getPageScripts } = require('../helpers/runtime-scripts');
+
+// Built-in search engines get their own group in Settings, after the custom
+// entry, site search and AI search. (New Tab and the overlay group them the
+// same way; see tests/search/test-local-search-scopes.js.)
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const readSource = (relativePath) => fs.readFileSync(
-  path.join(repoRoot, relativePath),
-  'utf8'
-);
+const ENGINE_LIST_ID = '_x_extension_search_engine_builtin_list_2026_unique_';
+const builtins = JSON.parse(fs.readFileSync(path.join(repoRoot, 'assets/data/site-search.json'), 'utf8')).items;
 
-const optionsHtml = readPageSource('src/options/options.html');
-const optionsJs = readOptionsRuntimeSource();
-const newtabJs = readNewtabRuntimeSource();
-const overlaySearchPanelJs = readOverlayPanelSource();
-const engineGroupIndex = optionsHtml.indexOf('id="_x_extension_search_engine_group_2026_unique_"');
-const customGroupIndex = optionsHtml.indexOf('data-i18n="shortcuts_group_custom"');
-const siteGroupIndex = optionsHtml.indexOf('data-i18n="search_scope_group_sites"', customGroupIndex);
-const aiGroupIndex = optionsHtml.indexOf('id="_x_extension_site_search_ai_group_2026_unique_"');
+function testMarkup() {
+  const doc = new JSDOM(readPageSource('src/options/options.html')).window.document;
+  const engineGroup = doc.getElementById('_x_extension_search_engine_group_2026_unique_');
+  const customGroup = doc.querySelector('[data-i18n="shortcuts_group_custom"]');
+  const siteGroup = Array.from(doc.querySelectorAll('[data-i18n="search_scope_group_sites"]'))
+    .find((node) => customGroup.compareDocumentPosition(node) & 4);
+  const aiGroup = doc.getElementById('_x_extension_site_search_ai_group_2026_unique_');
+  const before = (first, second) => Boolean(first && second && (first.compareDocumentPosition(second) & 4));
+  assert.ok(engineGroup, 'Options should render a dedicated search-engine group');
+  assert.ok(before(customGroup, siteGroup) && before(siteGroup, aiGroup) && before(aiGroup, engineGroup),
+    'Options should place the unified custom entry first and built-in search engines last');
+  assert.ok(doc.getElementById(ENGINE_LIST_ID).classList.contains('_x_extension_shortcut_list_2024_unique_'),
+    'Options should expose a dedicated list host for built-in search engines');
+  assert.deepStrictEqual(Array.from(doc.querySelectorAll('[data-site-search-category]')).map((node) => node.getAttribute('data-site-search-category')).slice(0, 1), ['site']);
+  assert.ok(doc.querySelector('[data-site-search-category="searchEngine"]'), 'the unified custom form should let users choose its search panel group');
+  const tabs = doc.querySelector('._x_extension_site_search_category_tabs_2026_unique_, [class*="_x_extension_site_search_category_tabs_2026_unique_"]');
+  assert.ok(tabs && tabs.getAttribute('role') === 'group', 'the custom provider group selector should be a button group');
+  assert.deepStrictEqual(Array.from(tabs.querySelectorAll('[aria-pressed]')).map((button) => button.getAttribute('aria-pressed')).slice(0, 2), ['true', 'false']);
+}
 
-assert.ok(engineGroupIndex >= 0, 'Options should render a dedicated search-engine group');
-assert.ok(
-  customGroupIndex < siteGroupIndex && siteGroupIndex < aiGroupIndex && aiGroupIndex < engineGroupIndex,
-  'Options should place the unified custom entry first and built-in search engines last'
-);
-assert.match(
-  optionsHtml,
-  /id="_x_extension_search_engine_builtin_list_2026_unique_"[^>]*_x_extension_shortcut_list_2024_unique_/,
-  'Options should expose a dedicated React list host for built-in search engines'
-);
-assert.match(
-  optionsJs,
-  /const displayEngineDefaults = displayDefaults\.filter\(isSearchEngineSiteSearchProvider\);/,
-  'Options should classify engines with the shared provider helper'
-);
-assert.match(
-  optionsJs,
-  /renderSiteSearchListController\(\s*siteSearchEngineBuiltinListController,\s*engineItems,/,
-  'Options should render engines independently from site-search and AI providers'
-);
-assert.match(
-  optionsJs,
-  /secondaryBadgeText:[\s\S]*?isSearchEngine[\s\S]*?getMessage\('shortcuts_badge_builtin', '内置'\)/,
-  'Built-in search-engine cards should include the built-in badge'
-);
-assert.ok(
-  getPageScripts('src/options/options.html').includes('src/shared/favicon/shortcut-favicon.js'),
-  'Options should load the shared provider icon catalog'
-);
-assert.match(
-  optionsJs,
-  /SHORTCUT_FAVICON\.getSiteSearchPinnedIconAssetPath\(item\)/,
-  'Options should reuse the exact same bundled provider tiles as the search-scope panel'
-);
-assert.match(
-  optionsHtml,
-  /data-site-search-category="site"[\s\S]*data-site-search-category="searchEngine"/,
-  'The unified custom form should let users choose its search panel group'
-);
-assert.match(
-  optionsHtml,
-  /_x_extension_site_search_category_tabs_2026_unique_" role="group"[\s\S]*aria-pressed="true"[\s\S]*aria-pressed="false"/,
-  'The custom provider group selector should expose button-group semantics'
-);
-[newtabJs, overlaySearchPanelJs].forEach((source, index) => {
-  assert.match(
-    source,
-    /providers\s*\.filter\(\(provider\) => isSearchEngineSiteSearchProvider\(provider\)\)/,
-    `${index === 0 ? 'New tab' : 'Overlay'} should group all search engines together`
-  );
-});
+async function testEnginesListOnTheirOwn() {
+  const page = await createOptionsPage({ sync: { _x_extension_language_2024_unique_: 'en' } });
+  await page.settle(500);
+  const cards = Array.from(page.byId(ENGINE_LIST_ID).querySelectorAll('[data-provider-id]'));
+  const engines = builtins.filter((item) => item.category === 'searchEngine');
+  assert.deepStrictEqual(cards.map((card) => card.getAttribute('data-key')).sort(), engines.map((item) => item.key).sort(),
+    'the engine group should list the built-in search engines and nothing else');
+  cards.forEach((card) => {
+    const key = card.getAttribute('data-key');
+    const badges = Array.from(card.querySelectorAll('._x_extension_shortcut_badge_2024_unique_')).map((badge) => badge.textContent);
+    assert.ok(badges.includes('Built-in'), `${key} should carry the built-in badge`);
+    const engine = engines.find((item) => item.key === key);
+    assert.strictEqual(card.querySelector('img').getAttribute('src'),
+      `chrome-extension://lumno-test/${SHORTCUT_FAVICON.getSiteSearchPinnedIconAssetPath(engine)}`,
+      `${key} should use the same bundled tile as the search-scope panel`);
+  });
+  const siteCards = Array.from(page.byId('_x_extension_site_search_builtin_list_2024_unique_').querySelectorAll('[data-provider-id]'));
+  assert.ok(siteCards.length > 0 && siteCards.every((card) => card.getAttribute('data-provider-category') !== 'searchEngine'),
+    'site search should not repeat the engines');
+  page.close();
+}
 
 ['en', 'ja', 'zh_CN', 'zh_TW'].forEach((locale) => {
-  const messages = JSON.parse(readSource(`_locales/${locale}/messages.json`));
-  assert.ok(
-    messages.search_scope_group_engines && messages.search_scope_group_engines.message,
-    `${locale} should localize the search-engine group`
-  );
-  assert.ok(
-    messages.shortcuts_empty_engines && messages.shortcuts_empty_engines.message,
-    `${locale} should localize the empty search-engine group`
-  );
-  assert.ok(
-    messages.shortcuts_label_display_group && messages.shortcuts_label_display_group.message,
-    `${locale} should localize the custom search group selector`
-  );
+  const messages = JSON.parse(fs.readFileSync(path.join(repoRoot, `_locales/${locale}/messages.json`), 'utf8'));
+  ['search_scope_group_engines', 'shortcuts_empty_engines', 'shortcuts_label_display_group'].forEach((key) => {
+    assert.ok(messages[key] && messages[key].message, `${locale} should localize ${key}`);
+  });
 });
 
-console.log('options search-engine group tests passed');
+(async () => {
+  testMarkup();
+  await testEnginesListOnTheirOwn();
+  console.log('options search-engine group tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

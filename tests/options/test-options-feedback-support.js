@@ -1,130 +1,121 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { readOptionsRuntimeSource } = require('../helpers/options-source');
+const { JSDOM } = require('jsdom');
+const settings = require('../../src/shared/settings.js');
+const { parsePageCss } = require('../helpers/css-rules');
+const { createOptionsPage } = require('../helpers/options-page');
 const { readPageSource } = require('../helpers/page-source');
 const { getPageScripts } = require('../helpers/runtime-scripts');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const optionsHtml = readPageSource('src/options/options.html');
-const optionsJs = readOptionsRuntimeSource();
-const communityLinksJs = fs.readFileSync(
-  path.join(repoRoot, 'src/shared/community-links.js'),
-  'utf8'
-);
-const feedbackReact = fs.readFileSync(
-  path.join(repoRoot, 'react-src/options/feedback-support.tsx'),
-  'utf8'
-);
+const HOST_ID = '_x_extension_feedback_support_2026_unique_';
 const locales = ['zh_CN', 'zh_TW', 'ja', 'en'];
+const ACTION_KEYS = [
+  'settings_feedback_support_wechat_action',
+  'settings_feedback_support_review_action',
+  'settings_feedback_support_github_issue_action',
+  'settings_feedback_support_contact_author_action'
+];
+const readMessages = (locale) => JSON.parse(fs.readFileSync(path.join(repoRoot, `_locales/${locale}/messages.json`), 'utf8'));
 
-const feedbackHostIndex = optionsHtml.indexOf(
-  'id="_x_extension_feedback_support_2026_unique_"'
-);
-const globalSettingsIndex = optionsHtml.indexOf(
-  'data-i18n="settings_global_section_title"'
-);
+function testMarkupAndStyles() {
+  const doc = new JSDOM(readPageSource('src/options/options.html')).window.document;
+  const host = doc.getElementById(HOST_ID);
+  const globalSettings = doc.querySelector('[data-i18n="settings_global_section_title"]');
+  assert.ok(host, 'general settings should include the feedback support React host');
+  assert.ok(host.compareDocumentPosition(globalSettings) & 4, 'feedback support should appear above global settings');
+  const css = parsePageCss('src/options/options.html');
+  const links = css.rule('._x_extension_feedback_support_links_2026_unique_');
+  assert.deepStrictEqual(links && ['display', 'grid-auto-flow', 'grid-auto-columns'].map((name) => links.get(name)), ['grid', 'column', 'minmax(0, 1fr)'],
+    'feedback channels should sit in one row of equal-width tiles');
+  const link = css.rule('._x_extension_feedback_support_link_2026_unique_');
+  assert.strictEqual(link && link.get('background'), 'var(--feedback-support-link-bg)', 'feedback channels should keep their filled tile surface');
+  assert.ok(getPageScripts('src/options/options.html').includes('src/shared/community-links.js'),
+    'Options should load the shared remote community links runtime');
+}
 
-assert.notStrictEqual(
-  feedbackHostIndex,
-  -1,
-  'general settings should include the feedback support React host'
-);
-assert.ok(
-  feedbackHostIndex < globalSettingsIndex,
-  'feedback support should appear above global settings'
-);
-assert.match(
-  optionsHtml,
-  /\._x_extension_feedback_support_links_2026_unique_ \{[\s\S]*?display: grid;[\s\S]*?grid-auto-flow: column;[\s\S]*?grid-auto-columns: minmax\(0, 1fr\)/,
-  'feedback channels should sit in one row of equal-width tiles'
-);
-assert.match(
-  optionsHtml,
-  /\._x_extension_feedback_support_link_2026_unique_ \{[\s\S]*?background: var\(--feedback-support-link-bg\)/,
-  'feedback channels should keep their filled tile surface'
-);
-assert.match(
-  feedbackReact,
-  /<a[\s\S]*?href=\{item\.href\}[\s\S]*?target="_blank"/,
-  'feedback entries should render as direct external links'
-);
-assert.match(
-  feedbackReact,
-  /item\.iconClass[\s\S]*?<span data-i18n=\{item\.labelKey\}>\{item\.label\}<\/span>[\s\S]*?ri-size-14 ri-external-link-line/,
-  'every feedback entry should keep its channel icon, label and external-link mark'
-);
-assert.ok(
-  getPageScripts('src/options/options.html').includes('src/shared/community-links.js'),
-  'Options should load the shared remote community links runtime'
-);
-assert.match(
-  communityLinksJs,
-  /'zh-CN': 'wechat',[\s\S]*?'zh-TW': 'wechat',[\s\S]*?ja: 'x',[\s\S]*?en: 'x'/,
-  'Options should use WeChat for both Chinese locales and X for other languages'
-);
-
-locales.forEach((locale) => {
-  const messages = JSON.parse(fs.readFileSync(
-    path.join(repoRoot, `_locales/${locale}/messages.json`),
-    'utf8'
-  ));
-  assert.ok(
-    messages.settings_feedback_support_section_title &&
-      messages.settings_feedback_support_section_title.message,
-    `${locale} should localize the feedback support heading`
-  );
-  [
-    'settings_feedback_support_wechat_action',
-    'settings_feedback_support_review_action',
-    'settings_feedback_support_github_issue_action',
-    'settings_feedback_support_contact_author_action'
-  ].forEach((key) => {
-    assert.ok(messages[key] && messages[key].message, `${locale} should provide ${key}`);
+function testCopy() {
+  locales.forEach((locale) => {
+    const messages = readMessages(locale);
+    assert.ok(messages.settings_feedback_support_section_title && messages.settings_feedback_support_section_title.message,
+      `${locale} should localize the feedback support heading`);
+    ACTION_KEYS.forEach((key) => {
+      assert.ok(messages[key] && messages[key].message, `${locale} should provide ${key}`);
+    });
   });
+  assert.deepStrictEqual(ACTION_KEYS.map((key) => readMessages('zh_CN')[key].message), ['加入反馈群', '为 Lumno 评分', '创建 Issue', '联系作者'],
+    'Simplified Chinese feedback links should use the requested copy');
+}
+
+async function openPage(language, disabledSiteSearch) {
+  const page = await createOptionsPage({
+    sync: { [settings.LANGUAGE_STORAGE_KEY]: language, [settings.SITE_SEARCH_DISABLED_STORAGE_KEY]: disabledSiteSearch || [] }
+  });
+  await page.settle(400);
+  page.channels = () => Array.from(page.byId(HOST_ID).querySelectorAll('._x_extension_feedback_support_link_2026_unique_'));
+  page.helpCenter = () => {
+    const host = page.byId(HOST_ID);
+    if (host.querySelector('[data-feedback-support="help-center-ask"]')) return 'ask';
+    if (host.querySelector('[data-feedback-support="help-center"]')) return 'link';
+    return null;
+  };
+  return page;
+}
+
+// Feedback channels are external links with an icon, a label and an
+// external-link mark. The community channel is the WeChat group (a QR
+// dialog) on Chinese pages and X elsewhere.
+async function testChannels() {
+  const zh = await openPage('zh-CN');
+  const en = await openPage('en');
+  [zh, en].forEach((page) => {
+    const external = page.channels().filter((link) => link.tagName === 'A');
+    assert.ok(external.length >= 3, 'the feedback channels should render');
+    external.forEach((link) => {
+      const icons = Array.from(link.querySelectorAll('i')).map((icon) => icon.className);
+      assert.ok(link.getAttribute('href') && link.target === '_blank', 'feedback entries should render as direct external links');
+      assert.ok(icons.length === 2 && icons[1].includes('ri-external-link-line') && link.querySelector('span[data-i18n]').textContent,
+        'every feedback entry should keep its channel icon, label and external-link mark');
+    });
+  });
+  const community = (page) => page.byId(HOST_ID).querySelector('[data-feedback-support="community"]');
+  const zhCommunity = community(zh);
+  assert.ok(zhCommunity && zhCommunity.getAttribute('aria-haspopup') === 'dialog' && zhCommunity.querySelector('.ri-wechat-line'),
+    'Chinese Options should offer the WeChat group');
+  assert.ok(!en.byId(HOST_ID).querySelector('.ri-wechat-line') &&
+    en.channels().some((link) => /^https:\/\/x\.com\//.test(link.getAttribute('href') || '')),
+  'English Options should offer X instead of WeChat');
+  zh.close();
+  en.close();
+}
+
+// "Ask in the search box" follows the Help Center site search (lm): with
+// lm off the row links to the Help Center instead, and it follows changes.
+async function testHelpCenterAskFollowsTheSiteSearch() {
+  const on = await openPage('en');
+  assert.strictEqual(on.helpCenter(), 'ask', 'with lm on, the Help Center row should offer asking in the search box');
+  on.changeStorage('sync', settings.SITE_SEARCH_DISABLED_STORAGE_KEY, ['lm']);
+  await on.settle(300);
+  assert.strictEqual(on.helpCenter(), 'link', 'turning lm off should re-render the feedback section');
+  on.close();
+
+  const off = await openPage('en', ['lm']);
+  assert.strictEqual(off.helpCenter(), 'link', 'with lm off, the row should link to the Help Center');
+  off.changeStorage('sync', settings.SITE_SEARCH_DISABLED_STORAGE_KEY, []);
+  await off.settle(300);
+  assert.strictEqual(off.helpCenter(), 'ask', 'turning lm back on should bring back the ask demo');
+  off.close();
+}
+
+(async () => {
+  testMarkupAndStyles();
+  testCopy();
+  await testChannels();
+  await testHelpCenterAskFollowsTheSiteSearch();
+  console.log('options feedback support tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
 });
-
-const zhCnMessages = JSON.parse(fs.readFileSync(
-  path.join(repoRoot, '_locales/zh_CN/messages.json'),
-  'utf8'
-));
-assert.deepStrictEqual(
-  [
-    'settings_feedback_support_wechat_action',
-    'settings_feedback_support_review_action',
-    'settings_feedback_support_github_issue_action',
-    'settings_feedback_support_contact_author_action'
-  ].map((key) => zhCnMessages[key].message),
-  [
-    '加入反馈群',
-    '为 Lumno 评分',
-    '创建 Issue',
-    '联系作者'
-  ],
-  'Simplified Chinese feedback links should use the requested copy'
-);
-
-// The "ask in the search box" demo follows the Help Center site search (lm): hidden until the
-// providers load, hidden while lm is off, and refreshed whenever the site search list changes.
-assert.match(
-  optionsJs,
-  /helpCenterSearchEnabled = null;/,
-  'the Help Center ask demo should stay hidden until the site search providers have loaded'
-);
-assert.match(
-  optionsJs,
-  /function syncHelpCenterSearchEnabled\(\)[\s\S]*?getActiveBuiltinSiteSearchProviders\([\s\S]*?disabledSiteSearchKeys[\s\S]*?isHelpCenterSiteSearchProvider[\s\S]*?renderFeedbackSupport\(\)/,
-  'turning lm off or on should re-render the feedback section'
-);
-assert.match(
-  optionsJs,
-  /function renderSiteSearchList\(\) \{\s*syncHelpCenterSearchEnabled\(\);/,
-  'every site search list update should re-check the Help Center site search'
-);
-assert.match(
-  optionsJs,
-  /function refreshSiteSearchProviders\(\) \{\s*syncHelpCenterSearchEnabled\(\);/,
-  'site search changes that skip the list render should still re-check the Help Center site search'
-);
-
-console.log('options feedback support tests passed');

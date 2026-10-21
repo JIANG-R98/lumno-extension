@@ -1,11 +1,6 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
-const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const settings = require('../../src/shared/settings.js');
-
-const repoRoot = path.resolve(__dirname, '..', '..');
-const optionsSource = readOptionsRuntimeSource();
+const { createOptionsPage } = require('../helpers/options-page');
 
 async function run() {
   const values = {
@@ -65,23 +60,23 @@ async function run() {
     'reads after the startup boundary should pass through normally'
   );
 
-  assert(
-    optionsSource.includes('SETTINGS.createStorageReadBatch(rawStorageArea)') &&
-      optionsSource.includes('startupStorageReadBatch.ready.then(finishOptionsStartupStorageBatch);'),
-    'Options should batch same-task startup reads and expose a ready boundary'
-  );
-  assert(
-    optionsSource.includes('(optionsStartupStorageBatchPending || optionsStartupRefreshCoalescing)') &&
-      optionsSource.includes("'data-lumno-options-control-refreshes'"),
-    'Options should coalesce repeated startup control refreshes'
-  );
-  assert(
-    optionsSource.includes("currentActiveSettingsTab = 'general';"),
-    'Options runtime should agree with the statically active General tab'
-  );
-
+  await testOptionsPageStartup();
   await testStartupReadPrefetch();
   console.log('Options startup performance tests passed');
+}
+
+// On the page: the startup reads go out as one batch, control refreshes
+// requested while it loads are coalesced, and the General tab is active.
+async function testOptionsPageStartup() {
+  const page = await createOptionsPage({});
+  await page.settle(500);
+  const largestRead = Math.max(...page.storage.sync.reads.map((keys) => (Array.isArray(keys) ? keys.length : 1)));
+  assert.ok(largestRead >= 30, `Options should batch same-task startup reads (largest read: ${largestRead} keys)`);
+  const refreshes = Number(page.document.documentElement.getAttribute('data-lumno-options-control-refreshes'));
+  assert.ok(refreshes >= 1 && refreshes <= 3, `Options should coalesce repeated startup control refreshes (${refreshes})`);
+  const activeTab = page.document.querySelector('._x_extension_settings_tab_button_2024_unique_[data-active="true"]');
+  assert.strictEqual(activeTab && activeTab.getAttribute('data-tab'), 'general', 'the General tab should be active after startup');
+  page.close();
 }
 
 function createPrefetchHarness(values) {
@@ -141,7 +136,7 @@ async function testStartupReadPrefetch() {
     'without change events a prefetch could serve stale values, so it should not start');
 }
 
-run().catch((error) => {
+run().then(() => process.exit(0)).catch((error) => {
   console.error(error);
   process.exit(1);
 });
