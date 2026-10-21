@@ -47,7 +47,18 @@ const NEWTAB_RUNTIME_MODULES = [
   'src/newtab/settings-sync.js',
   'src/newtab/startup-preferences.js',
   'src/newtab/search/search-settings-sync.js',
-  'src/newtab/theme/page-favicons.js'
+  'src/newtab/theme/page-favicons.js',
+  'src/newtab/tooltip-controllers.js',
+  'src/newtab/bookmarks/bookmark-section.js',
+  'src/newtab/recent/recent-section.js',
+  'src/newtab/search/search-box.js',
+  'src/newtab/page-notices.js',
+  'src/newtab/search/search-box-controls.js',
+  'src/newtab/theme/glass-surfaces.js',
+  'src/newtab/search/search-mode-controller.js',
+  'src/newtab/page-keyboard.js',
+  'src/newtab/search/site-search-runtime.js',
+  'src/newtab/section-reload.js'
 ];
 
 // Returns newtab.js followed by the modules split out of it, so source checks

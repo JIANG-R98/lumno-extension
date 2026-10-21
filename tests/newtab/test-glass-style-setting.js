@@ -26,9 +26,10 @@ for (const value of ['none', 'frosted', 'liquid']) {
   assert.strictEqual(settings.normalizeNewtabGlassStyle(value), value);
 }
 
-const source = fs.readFileSync('src/newtab/newtab.js', 'utf8');
+// The glass functions live in theme/glass-surfaces.js, one factory level deeper.
+const source = fs.readFileSync('src/newtab/theme/glass-surfaces.js', 'utf8').replace(/^  /gm, '');
 const start = source.indexOf('  // Surfaces whose rim bends the wallpaper under the liquid style;');
-const end = source.indexOf('  function loadNewtabActionButtonVisibility(', start);
+const end = source.indexOf('\n  return {', start);
 assert(start >= 0 && end > start);
 // The storage listeners live in settings-sync.js, one factory level deeper.
 const syncSource = fs.readFileSync('src/newtab/settings-sync.js', 'utf8').replace(/^  /gm, '');

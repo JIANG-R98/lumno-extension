@@ -62,7 +62,7 @@ assert.strictEqual(dialog.open({ imageUrl: '' }), null, 'nothing opens without a
 
 // Joining the WeChat group never opens the QR image in a new tab.
 const overlaySource = read('src/overlay/search-panel.js');
-const newtabSource = read('src/newtab/newtab.js');
+const newtabSource = require('../helpers/newtab-source').readNewtabRuntimeSource();
 const suggestionsControllerSource = read('src/newtab/search/suggestions-controller.js');
 assert.match(
   readBackgroundSource(),
