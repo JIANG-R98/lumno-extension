@@ -1,16 +1,7 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
 const suggestionModel = require('../../src/shared/search/suggestion-action-model.js');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { openSearchSurface } = require('../helpers/search-surfaces');
 const { getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
-
-const repoRoot = path.join(__dirname, '..', '..');
-
-function readSource(relativePath) {
-  return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
-}
 
 function verifyClassification() {
   const runtime = suggestionModel;
@@ -124,71 +115,77 @@ function verifyClassification() {
 }
 
 verifyClassification();
-const newtabSource = readNewtabRuntimeSource();
-const newtabLayoutSource = readSource('src/newtab/layout.js');
-const overlaySource = readOverlayPanelSource();
-
-[newtabSource, overlaySource].forEach((source, index) => {
-  assert.match(
-    source,
-    /SUGGESTION_ACTION_MODEL\.getSuggestionUpdateKind\(/,
-    `${index === 0 ? 'New Tab' : 'Overlay'} should delegate update classification to the shared model`
-  );
-});
-
-assert.match(
-  newtabSource,
-  /suggestionsView\.render\(\{[\s\S]*?if \(updateKind !== 'highlight'\) \{[\s\S]*?setSuggestionsVisible\(true\);/,
-  'New Tab should publish rendered result rows without a height-interpolation phase'
-);
-assert.match(
-  overlaySource,
-  /function commitSuggestionsNaturalHeightAfterRender\(\) \{[\s\S]*?SUGGESTIONS_HEIGHT_LAYOUT\.applyNaturalSuggestionsHeightLayout\([\s\S]*?suggestionsContainer[\s\S]*?syncSearchModeMenuResultOffset\(\);/,
-  'Overlay result commits should adopt natural height and publish the final menu offset synchronously'
-);
 assert.ok(
   runsBefore(getPageScripts('newtab.html'), 'src/newtab/search/direct-navigation-settle.js', 'src/newtab/newtab.js'),
   'New Tab should load the direct-navigation settle controller before its page runtime'
 );
-assert.match(
-  newtabSource,
-  /const directUrlSuggestion = getDirectUrlSuggestion\(query\);[\s\S]*?hasCachedOpenTabMatch[\s\S]*?renderPendingSuggestions\(query\);[\s\S]*?deferInitialDirectNavigationRender: Boolean\([\s\S]*?directUrlSuggestion && !hasCachedOpenTabMatch/,
-  'New Tab should render cached open-tab matches immediately and defer only unresolved direct-navigation placeholders'
-);
-assert.match(
-  newtabSource,
-  /createDirectNavigationSettleController\(\{[\s\S]*?delayMs: DIRECT_NAVIGATION_SETTLE_DELAY_MS,[\s\S]*?onSettle: \(\{ query, requestSeq \}\)[\s\S]*?renderPendingSuggestions\(query\);/,
-  'New Tab should delegate settle timer ownership to the tested controller'
-);
-assert.match(
-  newtabSource,
-  /function requestSuggestions\(query, options\)[\s\S]*?directNavigationSettleController\.schedule\(\{[\s\S]*?query: requestQuery,[\s\S]*?requestSeq[\s\S]*?directNavigationSettleController\.cancel\(\);[\s\S]*?if \(requestLocalSearchScope\) \{\s*renderSuggestions\(localSuggestions, requestQuery\);/,
-  'New Tab should cancel the provisional direct URL render when the local result arrives in time and preserve scoped local rendering'
-);
-assert.match(
-  newtabSource,
-  /function getDirectUrlSuggestion\(input\)[\s\S]*?getMatchedOpenTabForSuggestion\(suggestion\)[\s\S]*?_xMatchedTabId: matchedTab\.id/,
-  'New Tab should build a cached open-tab URL result with its final title and switch identity'
-);
-assert.match(
-  newtabSource,
-  /refreshTabsForSearchContext\(\(\) => \{\}\);[\s\S]*?function resolveQuickNavigation/,
-  'New Tab should warm its open-tab snapshot before the first URL input'
-);
-assert.match(
-  overlaySource,
-  /if \(isPaste \|\| getDirectUrlSuggestion\(query\)\) \{[\s\S]*?updatePendingSearchSuggestions\(query\);/,
-  'Overlay should update a direct URL preview without arming a height deferral'
-);
-assert.match(
-  newtabLayoutSource,
-  /function commitSuggestionsNaturalHeightAfterRender\(\) \{[\s\S]*?SUGGESTIONS_HEIGHT_LAYOUT\.applyNaturalSuggestionsHeightLayout\([\s\S]*?suggestionsContainer/,
-  'New Tab should delegate its final result height to the shared natural-height helper'
-);
-assert.match(
-  newtabSource,
-  /function requestSuggestions\(query, options\)[\s\S]*?if \(!showExactSearchPendingState\) \{\s*renderSuggestions\(localSuggestions, requestQuery\);\s*\}[\s\S]*?renderSuggestions\(remoteResponse\.suggestions, requestQuery\);/,
-  'New Tab should suppress the local-result flash only for the search-first pending state before committing the remote mix'
-);
 
-console.log('suggestion render stability tests passed');
+// What the New Tab result list shows over time while answers come in: each
+// distinct list of rows, as types (with #tabId for a row that switches).
+const PRIORITY_KEY = '_x_extension_search_result_priority_2026_unique_';
+const TABS = [{ id: 7, windowId: 1, title: 'Dev app', url: 'http://localhost:3000/app' }];
+const later = (value, ms) => new Promise((resolve) => setTimeout(() => resolve(value), ms));
+
+async function framesWhileTyping(query, { localMs, priority }) {
+  const surface = await openSearchSurface('newtab', {
+    sync: priority ? { [PRIORITY_KEY]: priority } : {},
+    respond(message) {
+      if (message.action === 'getTabsForOverlay') return { tabs: TABS };
+      if (message.action === 'getSearchSuggestions') {
+        return later({ suggestions: [{ type: 'history', title: `Local ${message.query}`, url: 'https://local.test/' }] }, localMs);
+      }
+      if (message.action === 'getSearchEngineSuggestions') {
+        return later({
+          suggestions: (message.localSuggestions || []).concat([{ type: 'googleSuggest', title: `${message.query} x`, url: 'https://www.google.com/search?q=x' }]),
+          hasRemoteSuggestions: true
+        }, 200);
+      }
+      return undefined;
+    }
+  });
+  await surface.settle(150);
+  const tabsAskedBeforeTyping = surface.page.messages.some((message) => message.action === 'getTabsForOverlay');
+  const frames = [];
+  const snapshot = () => {
+    const rows = surface.suggestions().map((row) => {
+      const suggestion = row._xSuggestion || {};
+      return `${suggestion.type}${suggestion._xMatchedTabId ? `#${suggestion._xMatchedTabId}` : ''}`;
+    }).join(',');
+    if (frames[frames.length - 1] !== rows) frames.push(rows);
+  };
+  const observer = new surface.window.MutationObserver(snapshot);
+  observer.observe(surface.root, { subtree: true, childList: true, attributes: true });
+  const input = surface.input();
+  input.value = query;
+  input.dispatchEvent(new surface.window.InputEvent('input', { bubbles: true, inputType: 'insertFromPaste' }));
+  await surface.settle(900);
+  observer.disconnect();
+  surface.close();
+  return { frames: frames.filter(Boolean), tabsAskedBeforeTyping };
+}
+
+(async () => {
+  const matched = await framesWhileTyping('localhost:3000/app', { localMs: 300 });
+  assert.ok(matched.tabsAskedBeforeTyping, 'New Tab should load its open tabs before the first input');
+  assert.strictEqual(matched.frames[0], 'directUrl#7,newtab',
+    'a typed URL that is already open should show its final switch row at once, before local results arrive');
+
+  const fast = await framesWhileTyping('example.com/docs', { localMs: 30 });
+  assert.strictEqual(fast.frames[0], 'directUrl,newtab,history',
+    'when local results arrive quickly, the URL row should not flash on its own first');
+
+  const slow = await framesWhileTyping('example.com/docs', { localMs: 600 });
+  assert.deepStrictEqual(slow.frames.slice(0, 2), ['directUrl,newtab', 'directUrl,newtab,history'],
+    'when local results are slow, the URL row should show first and keep its place');
+
+  const searchFirst = await framesWhileTyping('cats', { localMs: 50, priority: 'search' });
+  const firstLocal = searchFirst.frames.findIndex((frame) => frame.includes('history'));
+  assert.ok(firstLocal > 0 && searchFirst.frames[firstLocal].includes('googleSuggest'),
+    `search-first ordering should not flash local results before the search suggestions: ${searchFirst.frames.join(' | ')}`);
+
+  console.log('suggestion render stability tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

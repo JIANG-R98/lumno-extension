@@ -1,86 +1,88 @@
 const assert = require('assert');
 const fs = require('fs');
+const { JSDOM } = require('jsdom');
 
 const settings = require('../../src/shared/settings.js');
-const { readPageSource } = require('../helpers/page-source');
-const { readBackgroundSource } = require('../helpers/background-source');
-const optionsHtml = readPageSource('src/options/options.html');
-const backgroundSource = readBackgroundSource();
-const aggregateRuntimeSource = fs.readFileSync('src/background/aggregate-search.js', 'utf8');
-const aggregateEditorSource = fs.readFileSync(
-  'react-src/options/aggregate-search-list.tsx',
-  'utf8'
-);
+const store = require('../../src/shared/search/aggregate-search-store.js');
+const { loadBackground, wait } = require('../helpers/background-harness');
 
-const generalStart = optionsHtml.indexOf('data-content="general"');
-const accountStart = optionsHtml.indexOf('data-content="account"', generalStart);
-const generalPanel = optionsHtml.slice(generalStart, accountStart);
-const tabSwitcherIndex = generalPanel.indexOf('settings_tab_switcher_title');
-const aggregateGroupIndex = generalPanel.indexOf(
-  'settings_aggregate_search_auto_group_title'
-);
+// One General setting decides whether an aggregate search gathers the tabs
+// it opens into a tab group. The editor's default names and placeholders are
+// covered by react-src/options/aggregate-search-list.test.tsx.
 
-assert(generalStart >= 0 && accountStart > generalStart);
-assert(
-  aggregateGroupIndex > tabSwitcherIndex,
-  'the aggregate tab-group setting must live on the General page'
-);
-assert.match(
-  generalPanel,
-  /id="_x_extension_aggregate_search_auto_group_toggle_2026_unique_" type="checkbox" aria-label="聚合搜索自动创建标签页组" data-i18n-aria-label="settings_aggregate_search_auto_group_title" checked>/,
-  'the global aggregate tab-group setting should default to on'
-);
+const TOGGLE = '_x_extension_aggregate_search_auto_group_toggle_2026_unique_';
+const AUTO_GROUP = settings.AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY;
 
-assert.strictEqual(
-  settings.AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY,
-  '_x_extension_aggregate_search_auto_group_enabled_2026_unique_'
-);
-assert.match(aggregateEditorSource, /defaultNameBase/);
-assert.match(aggregateEditorSource, /let ordinal = Math\.max\(1, items\.length \+ 1\)/);
-assert.match(
-  aggregateEditorSource,
-  /data-aggregate-field="key"[\s\S]*?placeholder=\{model\.copy\.keyPlaceholder\}/,
-  'the aggregate trigger input should retain its localized placeholder'
-);
+function testMarkup() {
+  const doc = new JSDOM(fs.readFileSync('src/options/options.html', 'utf8')).window.document;
+  const toggle = doc.getElementById(TOGGLE);
+  assert.ok(toggle && toggle.closest('[data-content="general"]'), 'the aggregate tab-group setting should live on the General page');
+  const tabSwitcher = doc.querySelector('[data-content="general"] [data-i18n="settings_tab_switcher_title"]');
+  assert.ok(tabSwitcher && (tabSwitcher.compareDocumentPosition(toggle) & 4), 'it should follow the tab switcher setting');
+  assert.strictEqual(toggle.checked, true, 'grouping should default to on');
+  assert.strictEqual(toggle.getAttribute('data-i18n-aria-label'), 'settings_aggregate_search_auto_group_title');
+  assert.strictEqual(AUTO_GROUP, '_x_extension_aggregate_search_auto_group_enabled_2026_unique_');
+}
 
-assert.match(
-  backgroundSource,
-  /loadAggregateSearchAutoGroupEnabled\(\)[\s\S]*?SETTINGS\.readStorageValue\([\s\S]*?AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY/,
-  'the background must read the authoritative setting for each aggregate run'
-);
-assert.match(
-  aggregateRuntimeSource,
-  /resolveAggregateSearchAutoGroupEnabled\([\s\S]*?autoGroupSetting,[\s\S]*?definitions[\s\S]*?\)/,
-  'the runner must prefer the global value and retain the legacy migration fallback'
-);
+// The worker reads the setting for every run, so a change made in Settings
+// applies to the next aggregate search without a restart.
+async function testWorkerReadsTheSettingEachRun() {
+  const definition = { id: 'research', key: 'research', name: 'Research', sourceRefs: ['builtin:gg', 'builtin:bi'] };
+  const grouped = [];
+  const worker = loadBackground({
+    tabs: [{ id: 10, index: 0, windowId: 1, url: 'https://page.test/' }],
+    sync: {
+      [settings.AGGREGATE_SEARCH_STORAGE_KEY]: store.serializeAggregateSearches([definition]),
+      [AUTO_GROUP]: false
+    },
+    packagedFetch: true,
+    configureChrome(chrome) {
+      chrome.tabGroups = Object.assign({ TAB_GROUP_ID_NONE: -1, update(_id, _props, callback) { setTimeout(() => callback && callback(), 0); } }, chrome.tabGroups || {});
+      chrome.tabs.group = (properties, callback) => {
+        grouped.push(JSON.parse(JSON.stringify(properties)));
+        setTimeout(() => callback(77), 0);
+      };
+    }
+  });
+  await wait(50);
+  const run = (query) => worker.sendMessage({ action: 'runAggregateSearchQuery', aggregateId: 'research', query, disposition: 'newTab' },
+    { tab: { id: 10, index: 0, windowId: 1 }, url: 'https://page.test/' }, 1500);
+  const opened = () => worker.calls.filter((call) => call.name === 'tabs.create').length;
 
-const expectedCopy = {
-  en: {
-    defaultName: 'Aggregate search',
-    title: 'Automatically group aggregate search tabs'
-  },
-  ja: {
-    defaultName: '一括検索',
-    title: '一括検索のタブグループを自動作成'
-  },
-  zh_CN: {
-    defaultName: '聚合搜索',
-    title: '聚合搜索自动创建标签页组'
-  },
-  zh_TW: {
-    defaultName: '彙整搜尋',
-    title: '彙整搜尋自動建立分頁群組'
-  }
-};
-Object.entries(expectedCopy).forEach(([locale, expected]) => {
-  const messages = JSON.parse(fs.readFileSync(`_locales/${locale}/messages.json`, 'utf8'));
-  assert.strictEqual(messages.aggregate_search_default_name.message, expected.defaultName);
-  assert.strictEqual(
-    messages.settings_aggregate_search_auto_group_title.message,
-    expected.title
-  );
-  assert(messages.settings_aggregate_search_auto_group_desc.message.trim());
-  assert(messages.aggregate_search_source_summary.message.includes('{count}'));
+  await run('hello');
+  await wait(50);
+  assert.ok(opened() >= 2, 'the aggregate search should open a tab per source');
+  assert.strictEqual(grouped.length, 0, 'with grouping off, the tabs should stay ungrouped');
+
+  worker.storage.sync.data[AUTO_GROUP] = true;
+  await run('world');
+  await wait(50);
+  assert.strictEqual(grouped.length, 1, 'turning grouping on should apply to the next run');
+}
+
+function testCopy() {
+  const expectedCopy = {
+    en: { defaultName: 'Aggregate search', title: 'Automatically group aggregate search tabs' },
+    ja: { defaultName: '一括検索', title: '一括検索のタブグループを自動作成' },
+    zh_CN: { defaultName: '聚合搜索', title: '聚合搜索自动创建标签页组' },
+    zh_TW: { defaultName: '彙整搜尋', title: '彙整搜尋自動建立分頁群組' }
+  };
+  Object.entries(expectedCopy).forEach(([locale, expected]) => {
+    const messages = JSON.parse(fs.readFileSync(`_locales/${locale}/messages.json`, 'utf8'));
+    assert.strictEqual(messages.aggregate_search_default_name.message, expected.defaultName);
+    assert.strictEqual(messages.settings_aggregate_search_auto_group_title.message, expected.title);
+    assert(messages.settings_aggregate_search_auto_group_desc.message.trim());
+    assert(messages.aggregate_search_source_summary.message.includes('{count}'));
+  });
+}
+
+(async () => {
+  testMarkup();
+  await testWorkerReadsTheSettingEachRun();
+  testCopy();
+  console.log('aggregate search global setting tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
 });
-
-console.log('aggregate search global setting tests passed');

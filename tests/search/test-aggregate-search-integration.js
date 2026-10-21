@@ -1,216 +1,193 @@
 const assert = require('assert');
 const fs = require('fs');
-const { readSearchInputModeSource, readSearchInputModeRuntimeSource } = require('../helpers/search-input-mode-source');
-const { readOptionsRuntimeSource } = require('../helpers/options-source');
-const { readPageSource } = require('../helpers/page-source');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-
-const read = (file) => fs.readFileSync(file, 'utf8');
+const { JSDOM } = require('jsdom');
 const settings = require('../../src/shared/settings.js');
 const aggregateStore = require('../../src/shared/search/aggregate-search-store.js');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
 const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
-const manifest = JSON.parse(read('manifest.json'));
-const newtabSource = readNewtabRuntimeSource();
-const optionsHtml = readPageSource('src/options/options.html');
-const optionsSource = readOptionsRuntimeSource();
-const overlayRuntimeSource = read('src/overlay/runtime.js');
-const overlaySource = readOverlayPanelSource();
-const inputModeSource = readSearchInputModeSource();
+const { createOptionsPage } = require('../helpers/options-page');
+const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
 
-assert.ok(
-  manifest.permissions.includes('tabs') && manifest.permissions.includes('tabGroups'),
-  'aggregate searches require the existing tabs and tabGroups permissions'
-);
-assert.strictEqual(settings.AGGREGATE_SEARCH_STORAGE_KEY, aggregateStore.STORAGE_KEY);
+// Aggregate searches run one query on several sources at once. They are
+// defined in Settings and offered as scopes on both search surfaces; the
+// worker side is covered by test-background-aggregate-search.js.
 
-assert.ok(
-  runsBefore(getPageScripts('newtab.html'), 'src/shared/search/aggregate-search-store.js', 'src/shared/search/aggregate-search-surface.js') &&
-    runsBefore(getPageScripts('newtab.html'), 'src/shared/search/aggregate-search-surface.js', 'src/newtab/newtab.js'),
-  'newtab must load the aggregate store and request controller before its page entry'
-);
-assert.ok(
-  optionsHtml.includes('id="_x_extension_aggregate_search_list_2026_unique_"') &&
-    runsBefore(getPageScripts('src/options/options.html'), 'src/shared/search/aggregate-search-store.js', 'src/options/options.js'),
-  'options must mount the aggregate editor and load its store first'
-);
-const customListIndex = optionsHtml.indexOf(
-  'id="_x_extension_site_search_custom_list_2024_unique_"'
-);
-const customFormIndex = optionsHtml.indexOf(
-  'class="_x_extension_shortcut_form_2024_unique_"',
-  customListIndex
-);
-const aggregateGroupIndex = optionsHtml.indexOf(
-  'id="_x_extension_aggregate_search_group_2026_unique_"'
-);
-const builtinSiteListIndex = optionsHtml.indexOf(
-  'id="_x_extension_site_search_builtin_list_2024_unique_"'
-);
-assert.ok(
-  customListIndex >= 0 &&
-    customListIndex < customFormIndex &&
-    customFormIndex < aggregateGroupIndex &&
-    aggregateGroupIndex < builtinSiteListIndex,
-  'options must place custom search above aggregate search and built-in search scopes'
-);
-assert.match(
-  optionsHtml,
-  /id="_x_extension_aggregate_search_group_2026_unique_"[\s\S]*?id="_x_extension_aggregate_search_clear_2026_unique_"[^>]*_x_extension_shortcut_group_action_2024_unique_[\s\S]*?ri-delete-bin-4-line/,
-  'aggregate search must expose the same header clear action as custom search'
-);
-assert.match(
-  optionsSource,
-  /createAggregateSearchListController\(aggregateSearchList,[\s\S]*?onRemove: (?:\(\.\.\.args\) => )?handleAggregateSearchRemove\b[\s\S]*?onSave: (?:\(\.\.\.args\) => )?handleAggregateSearchSave\b/
-);
-assert.match(
-  optionsSource,
-  /apply\(prepared\) \{[\s\S]*?customSiteSearchProviders = prepared\.custom;[\s\S]*?customSiteSearchProviderIdsReady = true/,
-  'aggregate references must only become available after the confirmed provider snapshot is applied'
-);
-const customProviderLoaderStart = optionsSource.indexOf('function loadCustomSiteSearchProviders(');
-const customProviderLoaderEnd = optionsSource.indexOf(
-  '\n  function loadDisabledSiteSearchKeys(',
-  customProviderLoaderStart
-);
-const customProviderLoaderSource = optionsSource.slice(
-  customProviderLoaderStart,
-  customProviderLoaderEnd
-);
-assert.match(
-  customProviderLoaderSource,
-  /SETTINGS\.readStorageValue\([\s\S]*?\.then\(\(value\) => \{[\s\S]*?return items\.map\(/,
-  'custom provider loading must return the normalized provider list from the storage promise'
-);
-assert.match(
-  optionsSource,
-  /function writeSiteSearchProviderState\(items, keys\)[\s\S]*?SETTINGS\.writeStorageValues\(rawStorageArea, chrome, payload\)/,
-  'custom providers and their disabled built-in keys must be saved in one storage operation'
-);
-assert.match(
-  optionsSource,
-  /aggregate_search_source_summary_unavailable/,
-  'options must identify aggregate definitions that require unavailable sources'
-);
-assert.match(
-  optionsSource,
-  /function handleAggregateSearchSave[\s\S]*?if \(!aggregateSearchesReady\)[\s\S]*?aggregate_search_storage_unavailable_error/,
-  'options must block aggregate writes until the stored list has loaded successfully'
-);
-assert.match(
-  optionsSource,
-  /function handleAggregateSearchClear\(\)[\s\S]*?enqueueMutation\(\(\) => \(\{[\s\S]*?items: \[\][\s\S]*?toast_cleared/,
-  'clearing aggregate searches must persist an empty schema and refresh the list'
-);
-assert.match(
-  optionsSource,
-  /function saveAggregateSearches\(items\)[\s\S]*?getSerializedStorageByteLength\([\s\S]*?SYNC_ITEM_BYTE_BUDGET[\s\S]*?aggregate-search-sync-item-quota-exceeded/,
-  'aggregate definitions must be rejected before exceeding the Chrome Sync per-item budget'
-);
-assert.match(
-  optionsSource,
-  /attachPopconfirm\(\s*aggregateSearchClearButton,\s*'confirm_clear_aggregate_search',[\s\S]*?handleAggregateSearchClear/,
-  'the aggregate clear action must use the shared confirmation interaction'
-);
+const AGGREGATES = settings.AGGREGATE_SEARCH_STORAGE_KEY;
+const DISABLED = '_x_extension_site_search_disabled_2024_unique_';
+const DEFINITIONS = aggregateStore.serializeAggregateSearches([
+  { id: 'research', key: 'rs', name: 'Research', sourceRefs: ['builtin:gg', 'builtin:bi'] },
+  { id: 'broken', key: 'br2', name: 'Broken', sourceRefs: ['builtin:gg', 'custom:missing'] }
+]);
 
-assert.match(overlayRuntimeSource, /aggregateSearches:\s*'_x_extension_aggregate_searches_2026_unique_'/);
-assert.ok(
-  runsBefore(getInjectedScripts('overlay'), 'src/shared/search/aggregate-search-store.js', 'src/shared/search/aggregate-search-surface.js') &&
-    runsBefore(getInjectedScripts('overlay'), 'src/shared/search/aggregate-search-surface.js', 'src/overlay/search-panel.js'),
-  'overlay injection must load the aggregate store and request controller before the search panel'
-);
+function testPackaging() {
+  const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
+  assert.ok(manifest.permissions.includes('tabs') && manifest.permissions.includes('tabGroups'),
+    'aggregate searches require the existing tabs and tabGroups permissions');
+  assert.strictEqual(settings.AGGREGATE_SEARCH_STORAGE_KEY, aggregateStore.STORAGE_KEY);
+  assert.ok(runsBefore(getPageScripts('newtab.html'), 'src/shared/search/aggregate-search-store.js', 'src/newtab/newtab.js'));
+  assert.ok(runsBefore(getInjectedScripts('overlay'), 'src/shared/search/aggregate-search-store.js', 'src/overlay/search-panel.js'));
+  assert.ok(runsBefore(getPageScripts('src/options/options.html'), 'src/shared/search/aggregate-search-store.js', 'src/options/options.js'));
+  ['en', 'ja', 'zh_CN', 'zh_TW'].forEach((locale) => {
+    const messages = JSON.parse(fs.readFileSync(`_locales/${locale}/messages.json`, 'utf8'));
+    [
+      'aggregate_search_clear', 'confirm_clear_aggregate_search', 'aggregate_search_key_placeholder',
+      'aggregate_search_source_summary_unavailable', 'aggregate_search_sources_unavailable_error',
+      'aggregate_search_in_progress', 'aggregate_search_partial_failure', 'aggregate_search_degraded_success',
+      'aggregate_search_storage_unavailable_error', 'aggregate_search_source_selection_unavailable_error'
+    ].forEach((key) => assert.ok(messages[key] && messages[key].message, `${locale} should localize ${key}`));
+  });
+}
 
-[
-  ['newtab', newtabSource, 'runSiteSearchProviderQuery'],
-  ['overlay', overlaySource, 'openSiteSearchProviderQuery']
-].forEach(([surface, source, functionName]) => {
-  assert.match(
-    source,
-    /kind:\s*'aggregate'[\s\S]*?group:\s*aggregateGroup[\s\S]*?iconClass:\s*'ri-stack-line'/,
-    `${surface} must expose aggregate definitions in the search scope menu`
-  );
-  const start = source.indexOf(`function ${functionName}(`);
-  assert.ok(start >= 0, `${surface} aggregate execution function must exist`);
-  const lineStart = source.lastIndexOf('\n', start) + 1;
-  const indent = source.slice(lineStart, start);
-  const nextFunction = source.indexOf(`\n${indent}function `, start + 1);
-  const functionSource = source.slice(start, nextFunction >= 0 ? nextFunction : source.length);
-  assert.match(functionSource, /getAggregateSearchRequestController\(\)/);
-  assert.match(functionSource, /controller\.run\(\{/);
-  assert.match(functionSource, /aggregateId:\s*String\(provider\.aggregateId\)/);
-  assert.match(functionSource, /query:\s*trimmedQuery/);
-  if (surface === 'overlay') {
-    assert.match(
-      functionSource,
-      /getSuccessFeedbackDelayMs\(response\)[\s\S]*?setTimeout\(\(\) => \{[\s\S]*?finishOverlayResultActivation/
-    );
+function stored(name, values) {
+  return name === 'overlay' ? { settings: values } : { sync: values, local: values };
+}
+
+function changeStored(surface, key, value) {
+  if (surface.name === 'overlay') {
+    surface.page.changeSetting(key, value);
+  } else {
+    surface.page.storage.local.data[key] = value;
+    surface.page.changeStorage('sync', key, value);
   }
-  assert.match(
-    source,
-    /const aggregateSearch = isAggregateSearchProvider\(siteSearchState\);[\s\S]*?if \(!aggregateSearch && !siteUrl\)/,
-    `${surface} must keep an executable suggestion for aggregate scopes without a single URL`
-  );
-  assert.match(
-    source,
-    /isAggregateSearchDefinitionAvailable\(definition, providers\)/,
-    `${surface} must hide aggregate scopes whose sources no longer resolve`
-  );
-  assert.match(
-    source,
-    /if \(!isAggregateSearchDefinitionAvailable\(activeDefinition, siteSearchProvidersCache\)\)[\s\S]*?clearSiteSearch\(\)/,
-    `${surface} must clear an active aggregate scope when one of its sources is removed or disabled`
-  );
-  assert.match(
-    source,
-    /getSiteSearchProviders\(\),[\s\S]*?getAggregateSearches\(\)/,
-    `${surface} must load custom providers before filtering aggregate scopes`
-  );
-  assert.match(
-    source,
-    /function getSearchTriggerProviders\(providers, definitions\)[\s\S]*?mergeTriggerProviders/,
-    `${surface} must include valid aggregate triggers in the normal Tab trigger provider set`
-  );
-  assert.match(
-    source,
-    /if \(aggregateSearchesLoadPromise\) \{\s*return aggregateSearchesLoadPromise;/,
-    `${surface} must reuse an in-flight aggregate storage read`
-  );
-  assert.match(
-    source,
-    /changes\[AGGREGATE_SEARCH_STORAGE_KEY\][\s\S]*?aggregateSearchesLoadVersion \+= 1;[\s\S]*?aggregateSearchesLoadPromise = null;/,
-    `${surface} must invalidate an in-flight aggregate read when storage changes`
-  );
+}
+
+async function open(name, extra) {
+  const surface = await openSearchSurface(name, Object.assign({
+    respond: (message) => (message.action === 'runAggregateSearchQuery' ? { ok: true } : undefined)
+  }, stored(name, Object.assign({ [AGGREGATES]: DEFINITIONS }, extra || {}))));
+  await surface.settle(80);
+  return surface;
+}
+
+function menuIds(surface) {
+  return Array.from(surface.root.querySelectorAll('.x-lumno-search-input-mode__menu-item')).map((item) => item.getAttribute('data-mode-id'));
+}
+
+async function testScopeMenuOffersUsableAggregates(name) {
+  const surface = await open(name);
+  await surface.openScopeMenu();
+  const ids = menuIds(surface);
+  assert.ok(ids.includes('aggregate:research'), `${name}: an aggregate search should be offered as a scope`);
+  assert.ok(!ids.includes('aggregate:broken'), `${name}: one whose sources no longer resolve should be hidden`);
+  surface.close();
+}
+
+async function testTriggerRunsTheAggregate(name) {
+  const surface = await open(name);
+  await surface.type('rs');
+  assert.strictEqual(surface.root.querySelector('.x-lumno-search-input-mode__tab-hint').textContent.trim(), 'TabSearch Research',
+    `${name}: an aggregate's trigger should offer it like any site search`);
+  surface.press('Tab');
+  await surface.settle(80);
+  assert.strictEqual(surface.scopeLabel(), 'Research');
+  assert.ok(surface.root.querySelector('[data-search-input-mode-prefix] .ri-stack-line'), `${name}: the active aggregate tag should show the aggregate icon`);
+  await surface.type('hello');
+  const before = surface.page.messages.length;
+  surface.press('Enter');
+  await surface.settle(150);
+  const sent = surface.page.messages.slice(before);
+  const run = sent.find((message) => message.action === 'runAggregateSearchQuery');
+  assert.deepStrictEqual(run && [run.aggregateId, run.query], ['research', 'hello'], `${name}: Enter should run the aggregate search`);
+  assert.ok(!sent.some((message) => message.action === 'createTab' || message.action === 'searchOrNavigate'),
+    `${name}: and not fall back to a normal search`);
+  assert.strictEqual(surface.navigation(), null);
+  surface.close();
+}
+
+async function testEnterWhileARunIsPendingDoesNothingElse(name) {
+  const surface = await openSearchSurface(name, Object.assign({
+    respond: (message) => (message.action === 'runAggregateSearchQuery' ? new Promise(() => {}) : undefined)
+  }, stored(name, { [AGGREGATES]: DEFINITIONS })));
+  await surface.settle(80);
+  await surface.type('rs');
+  surface.press('Tab');
+  await surface.settle(80);
+  await surface.type('hello');
+  const before = surface.page.messages.length;
+  surface.press('Enter');
+  await surface.settle(60);
+  surface.press('Enter');
+  await surface.settle(100);
+  const sent = surface.page.messages.slice(before);
+  assert.strictEqual(sent.filter((message) => message.action === 'runAggregateSearchQuery').length, 1,
+    `${name}: a second Enter should not start the run again`);
+  assert.ok(!sent.some((message) => message.action === 'createTab' || message.action === 'searchOrNavigate'),
+    `${name}: nor fall back to a normal search while the run is pending`);
+  assert.strictEqual(surface.navigation(), null);
+  surface.close();
+}
+
+async function testDisablingASourceClearsTheActiveAggregate(name) {
+  const surface = await open(name);
+  await surface.type('rs');
+  surface.press('Tab');
+  await surface.settle(80);
+  assert.strictEqual(surface.scopeLabel(), 'Research');
+  changeStored(surface, DISABLED, ['bi']);
+  await surface.settle(150);
+  assert.strictEqual(surface.scopeLabel(), '', `${name}: disabling one of its sources should clear the active aggregate`);
+  surface.close();
+}
+
+async function testNewAggregatesAppearWithoutReload(name) {
+  const surface = await open(name);
+  changeStored(surface, AGGREGATES, aggregateStore.serializeAggregateSearches([
+    { id: 'research', key: 'rs', name: 'Research', sourceRefs: ['builtin:gg', 'builtin:bi'] },
+    { id: 'video', key: 'vd', name: 'Video', sourceRefs: ['builtin:yt', 'builtin:bb'] }
+  ]));
+  await surface.settle(120);
+  await surface.openScopeMenu();
+  assert.ok(menuIds(surface).includes('aggregate:video'), `${name}: an aggregate added in Settings should show up`);
+  surface.close();
+}
+
+async function testSettings() {
+  const doc = new JSDOM(fs.readFileSync('src/options/options.html', 'utf8')).window.document;
+  const order = [
+    '#_x_extension_site_search_custom_list_2024_unique_',
+    '._x_extension_shortcut_form_2024_unique_',
+    '#_x_extension_aggregate_search_group_2026_unique_',
+    '#_x_extension_site_search_builtin_list_2024_unique_'
+  ].map((selector) => doc.querySelector(selector));
+  assert.ok(order.every(Boolean), 'the search scope sections should exist');
+  order.slice(1).forEach((element, index) => {
+    assert.ok(order[index].compareDocumentPosition(element) & 4, 'custom search, then aggregate search, then built-in scopes');
+  });
+  const clear = doc.querySelector('#_x_extension_aggregate_search_group_2026_unique_ #_x_extension_aggregate_search_clear_2026_unique_');
+  assert.ok(clear && clear.classList.contains('_x_extension_shortcut_group_action_2024_unique_'),
+    'aggregate search should have the same header clear action as custom search');
+  assert.ok(doc.getElementById('_x_extension_aggregate_search_list_2026_unique_'), 'Settings should mount the aggregate editor');
+
+  const page = await createOptionsPage({ sync: { [AGGREGATES]: DEFINITIONS } });
+  await page.settle(150);
+  await page.click(page.byId('_x_extension_aggregate_search_clear_2026_unique_'));
+  await page.settle(60);
+  assert.ok(!page.storage.sync.writes.some((write) => Object.hasOwn(write, AGGREGATES)), 'clearing should ask for confirmation first');
+  const popconfirm = page.byId('_x_extension_aggregate_search_clear_2026_unique__popconfirm');
+  assert.strictEqual(popconfirm && popconfirm.getAttribute('data-open'), 'true', 'a confirmation should appear');
+  const buttons = Array.from(popconfirm.querySelectorAll('button'));
+  const confirmButton = buttons.find((button) => !/取消|Cancel/.test(button.textContent));
+  assert.ok(buttons.length === 2 && confirmButton, 'the confirmation should offer cancel and confirm');
+  await page.click(confirmButton);
+  await page.settle(100);
+  const cleared = page.storage.sync.writes.filter((write) => Object.hasOwn(write, AGGREGATES)).pop();
+  assert.ok(cleared, 'confirming should save the cleared list');
+  assert.deepStrictEqual(cleared[AGGREGATES], aggregateStore.serializeAggregateSearches([]), 'the saved list should be empty');
+  page.close();
+}
+
+(async () => {
+  testPackaging();
+  for (const name of SURFACES) {
+    await testScopeMenuOffersUsableAggregates(name);
+    await testTriggerRunsTheAggregate(name);
+    await testEnterWhileARunIsPendingDoesNothingElse(name);
+    await testDisablingASourceClearsTheActiveAggregate(name);
+    await testNewAggregatesAppearWithoutReload(name);
+  }
+  await testSettings();
+  console.log('aggregate search integration tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
 });
-
-assert.match(
-  overlaySource,
-  /const activeAggregateSearch = isAggregateSearchProvider\(siteSearchState\);[\s\S]*?if \(activeAggregateSearch\) \{\s*return;/,
-  'overlay Enter handling must not fall through to a normal search while an aggregate request is pending'
-);
-
-assert.match(
-  inputModeSource,
-  /isAggregate[\s\S]*?iconClass: isAggregate \? 'ri-stack-line'/,
-  'the active aggregate scope tag must use the aggregate icon'
-);
-
-['en', 'ja', 'zh_CN', 'zh_TW'].forEach((locale) => {
-  const messages = JSON.parse(read(`_locales/${locale}/messages.json`));
-  assert.ok(
-    messages.aggregate_search_clear && messages.confirm_clear_aggregate_search,
-    `${locale} must localize the aggregate clear action and confirmation`
-  );
-  assert.ok(
-    messages.aggregate_search_key_placeholder &&
-      messages.aggregate_search_source_summary_unavailable &&
-      messages.aggregate_search_sources_unavailable_error &&
-      messages.aggregate_search_in_progress &&
-      messages.aggregate_search_partial_failure &&
-      messages.aggregate_search_degraded_success &&
-      messages.aggregate_search_storage_unavailable_error &&
-      messages.aggregate_search_source_selection_unavailable_error,
-    `${locale} must localize unavailable, in-progress, and partial-failure feedback`
-  );
-});
-
-console.log('aggregate search integration tests passed');

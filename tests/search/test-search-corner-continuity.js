@@ -1,172 +1,156 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
+const { JSDOM } = require('jsdom');
 const { readPageSource } = require('../helpers/page-source');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { readStylesheet } = require('../helpers/css-tokens');
+const { parseCss } = require('../helpers/css-rules');
+const { openSearchSurface } = require('../helpers/search-surfaces');
 
-const repoRoot = path.join(__dirname, '..', '..');
-const read = (relativePath) => fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
+// The search shells are rounded rectangles with continuous (superellipse)
+// corners, and the radii nest: each inner surface's radius is the outer one
+// minus the space between them. Read from the stylesheets as the browser
+// parses them, and from the live overlay where its styles are inline.
 
-const newtabSource = readPageSource('newtab.html');
-const onboardingSource = readPageSource('src/onboarding/onboarding.html');
-const overlayShellSource = read('react-src/overlay/shell.tsx');
-const overlaySearchPanelSource = readOverlayPanelSource();
-const overlaySuggestionsSource = read('src/overlay/suggestions-view.css');
-const sharedSearchInputSource = read('src/shared/search/search-input.css');
-const sharedSearchInputReactSource = read('react-src/shared/search-input.tsx');
+function pageCss(relativePath) {
+  const doc = new JSDOM(readPageSource(relativePath)).window.document;
+  return parseCss(Array.from(doc.querySelectorAll('style')).map((style) => style.textContent).join('\n'));
+}
 
-// Maps each selector to the corner-shape its last rule declares.
-function readCornerShapes(source) {
+// Each selector's corner-shape, as its last declaring rule (in any @supports
+// block) leaves it, with " !important" when it has that priority.
+function cornerShapes(css) {
   const shapes = new Map();
-  const css = source.replace(/\/\*[\s\S]*?\*\//g, '');
-  for (const [, selectorText, body] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-    const shape = body.match(/corner-shape:\s*([^;]+);/);
-    if (!shape) {
-      continue;
-    }
-    selectorText.split(/,(?![^(]*\))/).forEach((selector) => {
-      shapes.set(selector.trim().replace(/\s+/g, ' '), shape[1].trim());
-    });
-  }
+  css.entries.forEach((entry) => {
+    const value = entry.style.getPropertyValue('corner-shape');
+    if (!value) return;
+    const priority = entry.style.getPropertyPriority('corner-shape');
+    entry.selectors.forEach((selector) => shapes.set(selector, priority ? `${value} !${priority}` : value));
+  });
   return shapes;
 }
 
-function readPxToken(source, token) {
-  const match = source.match(new RegExp(`${token}:\\s*(\\d+)px;`));
-  assert.ok(match, `missing ${token}`);
+// A custom property's value where it is first declared.
+function token(css, name) {
+  const entry = css.entries.find((item) => item.style.getPropertyValue(name));
+  assert.ok(entry, `missing ${name}`);
+  return entry.style.getPropertyValue(name).replace(/\s+/g, ' ').replace(/\(\s+/g, '(').replace(/\s+\)/g, ')').trim();
+}
+
+function px(css, name) {
+  const match = token(css, name).match(/^(\d+)px$/);
+  assert.ok(match, `${name} should be a pixel length`);
   return Number(match[1]);
 }
 
-const newtabOuterRadius = readPxToken(newtabSource, '--x-nt-search-shell-radius');
-const newtabRestingRadius = readPxToken(newtabSource, '--x-nt-search-resting-radius');
-const newtabBorderWidth = readPxToken(newtabSource, '--x-nt-search-shell-border-width');
-const newtabShellPadding = readPxToken(newtabSource, '--x-nt-search-shell-padding');
-const newtabResultInset = readPxToken(newtabSource, '--x-nt-search-results-padding-inline');
+const CONTINUOUS = 'superellipse(1.25)';
 
-// New Tab matches the overlay: a rounded rectangle, not a capsule, with the same outer and result radii.
-assert.equal(newtabOuterRadius, 26);
-assert.equal(newtabRestingRadius, newtabOuterRadius);
-assert.ok(newtabOuterRadius < 56 / 2);
-assert.equal(newtabOuterRadius - newtabBorderWidth - newtabShellPadding, 21);
-assert.equal(newtabRestingRadius - newtabBorderWidth - newtabShellPadding, 21);
-assert.equal(newtabOuterRadius - newtabBorderWidth - newtabShellPadding - newtabResultInset, 13);
-assert.match(
-  newtabSource,
-  /--x-nt-search-content-radius:\s*calc\(\s*var\(--x-nt-search-shell-radius\) - var\(--x-nt-search-content-inset\)\s*\);/
-);
-assert.match(
-  newtabSource,
-  /--x-nt-search-result-radius:\s*calc\(\s*var\(--x-nt-search-content-radius\) - var\(--x-nt-search-results-padding-inline\)\s*\);/
-);
-assert.match(
-  newtabSource,
-  /--x-nt-search-resting-content-radius:\s*calc\(\s*var\(--x-nt-search-resting-radius\) - var\(--x-nt-search-content-inset\)\s*\);/
-);
-assert.match(
-  newtabSource,
-  /body\[data-nt-suggestions-open="true"\]\s+#_x_extension_newtab_search_layer_2024_unique_\s*\{[\s\S]*?border-radius:\s*var\(--x-nt-search-resting-content-radius,\s*21px\)\s*var\(--x-nt-search-resting-content-radius,\s*21px\)\s*0\s*0;/
-);
-assert.match(
-  newtabSource,
-  /#_x_extension_newtab_suggestions_surface_2026_unique_\s*\{[\s\S]*?border-radius:\s*var\(--x-nt-search-resting-radius,\s*26px\)\s*var\(--x-nt-search-resting-radius,\s*26px\)\s*var\(--x-nt-search-shell-radius,\s*26px\)\s*var\(--x-nt-search-shell-radius,\s*26px\);/
-);
-assert.match(
-  newtabSource,
-  /#_x_extension_newtab_suggestions_outline_2026_unique_\s*\{[\s\S]*?border-radius:\s*var\(--x-nt-search-resting-radius,\s*26px\)\s*var\(--x-nt-search-resting-radius,\s*26px\)\s*var\(--x-nt-search-shell-radius,\s*26px\)\s*var\(--x-nt-search-shell-radius,\s*26px\);/
-);
-assert.match(
-  newtabSource,
-  /\.x-nt-suggestion-item\s*\{[\s\S]*?border-radius:\s*var\(--x-nt-search-result-radius,\s*13px\);/
-);
-// Like the overlay, the shell, its layer and the open panel are continuous all around.
-const newtabShapes = readCornerShapes(newtabSource);
-assert.equal(newtabShapes.get('#_x_extension_newtab_root_2024_unique_'), 'superellipse(1.25)');
-assert.equal(newtabShapes.get('#_x_extension_newtab_search_layer_2024_unique_'), 'superellipse(1.25)');
-assert.equal(newtabShapes.get('#_x_extension_newtab_suggestions_surface_2026_unique_'), 'superellipse(1.25)');
-assert.equal(newtabShapes.get('#_x_extension_newtab_suggestions_outline_2026_unique_'), 'superellipse(1.25)');
-assert.equal(newtabShapes.get('#_x_extension_newtab_suggestions_container_2024_unique_'), 'superellipse(1.25)');
-assert.equal(newtabShapes.get('.x-nt-suggestion-item'), 'superellipse(1.25)');
-assert.equal(newtabShapes.get('.x-nt-suggestion-visit-button'), 'round');
+function testNewTab() {
+  const css = pageCss('newtab.html');
+  const outer = px(css, '--x-nt-search-shell-radius');
+  const resting = px(css, '--x-nt-search-resting-radius');
+  const border = px(css, '--x-nt-search-shell-border-width');
+  const padding = px(css, '--x-nt-search-shell-padding');
+  const inset = px(css, '--x-nt-search-results-padding-inline');
+  // New Tab matches the overlay: a rounded rectangle, not a capsule.
+  assert.equal(outer, 26);
+  assert.equal(resting, outer);
+  assert.ok(outer < 56 / 2);
+  assert.equal(outer - border - padding, 21);
+  assert.equal(outer - border - padding - inset, 13);
+  assert.equal(token(css, '--x-nt-search-content-radius'), 'calc(var(--x-nt-search-shell-radius) - var(--x-nt-search-content-inset))');
+  assert.equal(token(css, '--x-nt-search-result-radius'), 'calc(var(--x-nt-search-content-radius) - var(--x-nt-search-results-padding-inline))');
+  assert.equal(token(css, '--x-nt-search-resting-content-radius'), 'calc(var(--x-nt-search-resting-radius) - var(--x-nt-search-content-inset))');
+  assert.equal(css.rule('body[data-nt-suggestions-open="true"] #_x_extension_newtab_search_layer_2024_unique_').get('border-radius'),
+    'var(--x-nt-search-resting-content-radius, 21px) var(--x-nt-search-resting-content-radius, 21px) 0 0',
+    'the open search layer keeps its top corners and joins the panel below');
+  ['#_x_extension_newtab_suggestions_surface_2026_unique_', '#_x_extension_newtab_suggestions_outline_2026_unique_'].forEach((selector) => {
+    assert.equal(css.rule(selector).get('border-radius'),
+      'var(--x-nt-search-resting-radius, 26px) var(--x-nt-search-resting-radius, 26px) var(--x-nt-search-shell-radius, 26px) var(--x-nt-search-shell-radius, 26px)',
+      `${selector} should follow the shell's corners`);
+  });
+  assert.equal(css.rule('.x-nt-suggestion-item').get('border-radius'), 'var(--x-nt-search-result-radius, 13px)');
+  const shapes = cornerShapes(css);
+  [
+    '#_x_extension_newtab_root_2024_unique_',
+    '#_x_extension_newtab_search_layer_2024_unique_',
+    '#_x_extension_newtab_suggestions_surface_2026_unique_',
+    '#_x_extension_newtab_suggestions_outline_2026_unique_',
+    '#_x_extension_newtab_suggestions_container_2024_unique_',
+    '.x-nt-suggestion-item'
+  ].forEach((selector) => assert.equal(shapes.get(selector), CONTINUOUS, `${selector} should have continuous corners`));
+  assert.equal(shapes.get('.x-nt-suggestion-visit-button'), 'round', 'capsule buttons stay round');
+}
 
-const overlayOuterRadius = readPxToken(overlayShellSource, '--x-ov-panel-radius');
-const overlayBorderWidth = readPxToken(overlaySuggestionsSource, '--x-ov-panel-border-width');
-const overlayResultInset = readPxToken(overlaySuggestionsSource, '--x-ov-results-inset');
+async function testOverlay() {
+  const css = parseCss(readStylesheet('src/overlay/suggestions-view.css'));
+  const border = px(css, '--x-ov-panel-border-width');
+  const inset = px(css, '--x-ov-results-inset');
+  assert.equal(token(css, '--x-ov-content-radius'), 'calc(var(--x-ov-panel-radius, 26px) - var(--x-ov-panel-border-width))');
+  assert.equal(token(css, '--x-ov-result-radius'), 'calc(var(--x-ov-content-radius) - var(--x-ov-results-inset))');
+  const scope = ':is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_)';
+  assert.equal(css.rule(`${scope} .x-ov-suggestion-item`).get('border-radius'), 'var(--x-ov-result-radius, 13px)');
+  const shapes = cornerShapes(css);
+  ['.x-ov-suggestions-container', '.x-ov-close-other-tabs', '.x-ov-suggestion-item', '.x-ov-action-tag'].forEach((part) => {
+    assert.equal(shapes.get(`${scope} ${part}`), CONTINUOUS, `${part} should have continuous corners`);
+  });
+  assert.equal(shapes.get(`${scope} .x-ov-suggestion-visit-button`), 'round');
 
-// The single-row overlay (56px input inside a 1px border) must read as a rounded rectangle,
-// not a capsule, so its continuous corners stay clearly below half its height.
-assert.ok(overlayOuterRadius < (56 + overlayBorderWidth * 2) / 2 - 2);
-assert.equal(overlayOuterRadius, newtabOuterRadius);
-assert.equal(overlayOuterRadius - overlayBorderWidth, 25);
-assert.equal(overlayOuterRadius - overlayBorderWidth - overlayResultInset, 13);
-assert.match(
-  overlaySuggestionsSource,
-  /--x-ov-content-radius:\s*calc\(var\(--x-ov-panel-radius, 26px\) - var\(--x-ov-panel-border-width\)\);/
-);
-assert.match(
-  overlaySuggestionsSource,
-  /--x-ov-result-radius:\s*calc\(var\(--x-ov-content-radius\) - var\(--x-ov-results-inset\)\);/
-);
-assert.match(
-  overlaySearchPanelSource,
-  /var\(--x-ov-content-radius, 25px\) var\(--x-ov-content-radius, 25px\) 0 0/
-);
-assert.match(
-  overlaySuggestionsSource,
-  /\.x-ov-suggestion-item\s*\{[\s\S]*?border-radius:\s*var\(--x-ov-result-radius,\s*13px\);/
-);
-// The panel, its input and its results container are continuous; circles and capsule buttons are not.
-const overlayScope = ':is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_)';
-const overlayShapes = readCornerShapes(overlaySuggestionsSource);
-assert.equal(overlayShapes.get(`${overlayScope} .x-ov-suggestions-container`), 'superellipse(1.25)');
-assert.equal(overlayShapes.get(`${overlayScope} .x-ov-close-other-tabs`), 'superellipse(1.25)');
-assert.equal(overlayShapes.get(`${overlayScope} .x-ov-suggestion-item`), 'superellipse(1.25)');
-assert.equal(overlayShapes.get(`${overlayScope} .x-ov-action-tag`), 'superellipse(1.25)');
-assert.equal(overlayShapes.get(`${overlayScope} .x-ov-suggestion-visit-button`), 'round');
-assert.match(
-  overlayShellSource,
-  /supports\('corner-shape', 'superellipse\(1\.25\)'\)[\s\S]*?'corner-shape',[\s\S]*?'superellipse\(1\.25\)'/
-);
-// Inline base styles reset the input with `all: unset`, so its shape travels with its overrides.
-assert.match(
-  overlaySearchPanelSource,
-  /containerStyleOverrides:\s*\{[\s\S]*?'border-radius':[^\n]*\n\s*'corner-shape':\s*'superellipse\(1\.25\)'/
-);
+  const surface = await openSearchSurface('overlay');
+  const panel = surface.root.getElementById('_x_extension_overlay_2024_unique_');
+  const radius = Number(panel.style.getPropertyValue('border-radius').match(/(\d+)px\)$/)[1]);
+  // The single-row overlay (a 56px input inside its border) must read as a
+  // rounded rectangle, not a capsule, with the same radius as New Tab.
+  assert.equal(radius, 26);
+  assert.ok(radius < (56 + border * 2) / 2 - 2);
+  assert.equal(radius - border, 25);
+  assert.equal(radius - border - inset, 13);
+  const input = surface.root.getElementById('_x_extension_input_container_2024_unique_');
+  assert.match(input.style.getPropertyValue('border-radius'), /^var\(--x-ov-content-radius, 25px\)/, 'the input follows the panel corners');
+  // Its base styles reset with `all: unset`, so the shape has to travel inline.
+  assert.equal(input.style.getPropertyValue('corner-shape'), CONTINUOUS, 'the overlay input should keep continuous corners');
+  surface.close();
+}
 
-assert.match(
-  sharedSearchInputSource,
-  /border-radius:\s*var\(--x-ext-search-input-corners, 28px 28px 0 0\);/
-);
-assert.match(
-  sharedSearchInputReactSource,
-  /'border-radius':\s*'var\(--x-ext-search-input-corners,28px 28px 0 0\)'/
-);
-// The input keeps its own shape; the icon buttons beside it and the mode menu panel are continuous.
-const searchInputShapes = readCornerShapes(sharedSearchInputSource);
-assert.equal(searchInputShapes.get('.x-lumno-search-input'), undefined);
-assert.equal(searchInputShapes.get('.x-lumno-search-input__container'), undefined);
-assert.equal(searchInputShapes.get('.x-lumno-search-input__right-icon'), 'superellipse(1.25) !important');
-assert.equal(searchInputShapes.get('.x-lumno-search-input__icon[data-search-scope-action="true"]'), 'superellipse(1.25) !important');
-assert.equal(searchInputShapes.get('.x-lumno-search-input-mode__menu'), 'superellipse(1.25)');
-assert.doesNotMatch(sharedSearchInputReactSource, /'corner-shape'/);
-// Mode menu parts reset with `all: unset !important`, so their shape must come last and match that priority.
-assert.match(
-  sharedSearchInputSource,
-  /@supports \(corner-shape: superellipse\(1\.25\)\)\s*\{\s*\.x-lumno-search-input-mode__menu-item,\s*\.x-lumno-search-input-mode__menu-footer-key\s*\{\s*corner-shape:\s*superellipse\(1\.25\) !important;\s*\}\s*\}\s*$/
-);
+function testSharedInput() {
+  const css = parseCss(readStylesheet('src/shared/search/search-input.css'));
+  assert.ok(css.entries.some((entry) => entry.style.getPropertyValue('border-radius').replace(/\s+/g, ' ') === 'var(--x-ext-search-input-corners, 28px 28px 0 0)'),
+    'the shared input takes its corners from the surface');
+  const shapes = cornerShapes(css);
+  assert.equal(shapes.get('.x-lumno-search-input'), undefined, 'the input keeps its own shape');
+  assert.equal(shapes.get('.x-lumno-search-input__container'), undefined);
+  assert.equal(shapes.get('.x-lumno-search-input__right-icon'), `${CONTINUOUS} !important`);
+  assert.equal(shapes.get('.x-lumno-search-input__icon[data-search-scope-action="true"]'), `${CONTINUOUS} !important`);
+  assert.equal(shapes.get('.x-lumno-search-input-mode__menu'), CONTINUOUS);
+  // Mode menu parts reset with `all: unset !important`, so their shape must
+  // come last and match that priority.
+  const last = css.entries[css.entries.length - 1];
+  assert.deepStrictEqual([last.selectors, last.style.getPropertyValue('corner-shape'), last.style.getPropertyPriority('corner-shape')],
+    [['.x-lumno-search-input-mode__menu-item', '.x-lumno-search-input-mode__menu-footer-key'], CONTINUOUS, 'important']);
+}
 
-assert.match(
-  onboardingSource,
-  /\.newtab-preview-viewport\s*\{[\s\S]*?--x-nt-search-shell-radius:\s*26px;[\s\S]*?--x-nt-search-content-radius:\s*calc\([\s\S]*?--x-nt-search-result-radius:\s*calc\(/
-);
-// The demos mirror the real surfaces: overlay panels and the New Tab search shell are continuous.
-const onboardingShapes = readCornerShapes(onboardingSource);
-assert.equal(onboardingShapes.get('.lumno-overlay-panel'), 'superellipse(1.25)');
-assert.equal(onboardingShapes.get('.site-search-demo-card'), 'superellipse(1.25)');
-assert.equal(onboardingShapes.get('.newtab-preview-viewport #_x_extension_newtab_root_2024_unique_'), 'superellipse(1.25)');
-assert.equal(onboardingShapes.get('.site-search-demo-result'), 'superellipse(1.25)');
-assert.equal(
-  onboardingShapes.get('.newtab-preview-viewport #_x_extension_newtab_suggestions_surface_2026_unique_'),
-  'superellipse(1.25)'
-);
+function testOnboardingMirrors() {
+  const css = pageCss('src/onboarding/onboarding.html');
+  const viewport = css.rule('.newtab-preview-viewport');
+  assert.equal(viewport.get('--x-nt-search-shell-radius'), '26px');
+  assert.match(viewport.get('--x-nt-search-content-radius'), /^calc\(/);
+  assert.match(viewport.get('--x-nt-search-result-radius'), /^calc\(/);
+  const shapes = cornerShapes(css);
+  [
+    '.lumno-overlay-panel',
+    '.site-search-demo-card',
+    '.newtab-preview-viewport #_x_extension_newtab_root_2024_unique_',
+    '.site-search-demo-result',
+    '.newtab-preview-viewport #_x_extension_newtab_suggestions_surface_2026_unique_'
+  ].forEach((selector) => assert.equal(shapes.get(selector), CONTINUOUS, `${selector} should mirror the real surfaces`));
+}
 
-console.log('Search corner continuity checks passed.');
+(async () => {
+  testNewTab();
+  await testOverlay();
+  testSharedInput();
+  testOnboardingMirrors();
+  console.log('Search corner continuity checks passed.');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

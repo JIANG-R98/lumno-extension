@@ -3,8 +3,8 @@ const fs = require('fs');
 const helpCenterSearch = require('../../src/shared/search/help-center-search.js');
 const communityLinks = require('../../src/shared/community-links.js');
 const searchUtils = require('../../src/shared/search/search-utils.js');
-const { readBackgroundSource } = require('../helpers/background-source');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { loadBackground, wait } = require('../helpers/background-harness');
+const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
 const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 const ORIGIN = 'https://lumno.kubai.design';
@@ -355,11 +355,6 @@ function testSuggestionSource() {
   assert.strictEqual(updates.length, 2, 'a late answer for an older query should be ignored');
 }
 
-const backgroundSource = readBackgroundSource();
-const backgroundJs = fs.readFileSync('src/background/background.js', 'utf8');
-assert.ok(backgroundJs.includes("from '../shared/community-links.js';") && backgroundJs.includes("from '../shared/search/help-center-search.js';"));
-assert.match(backgroundSource, /parse: HELP_CENTER_SEARCH\.normalizeSynonyms/, 'background should load the synonym list');
-assert.match(backgroundSource, /response\.status === 404 \? \{ ok: true, json: \(\) => \[\] \}/, 'a missing synonym list should be cached as empty');
 assert.ok(
   runsBefore(getInjectedScripts('overlay'), 'src/shared/search/help-center-search.js', 'src/overlay/search-panel.js'),
   'the overlay should load the help center module before the search panel'
@@ -368,19 +363,62 @@ assert.ok(
   runsBefore(getPageScripts('newtab.html'), 'src/shared/search/help-center-search.js', 'src/newtab/search/suggestions-controller.js'),
   'the new tab should load the help center module before its suggestions controller'
 );
-assert.match(
-  fs.readFileSync('src/newtab/search/suggestions-controller.js', 'utf8'),
-  /\[siteSearchSuggestion, \.\.\.helpCenterSuggestions\]/
-);
-assert.match(
-  readOverlayPanelSource(),
-  /\[siteSearchSuggestion, \.\.\.getHelpCenterSuggestions\(query\)\]/
-);
+
+// The worker searches the help center index with the language's synonym
+// list; a language without one (404) is remembered as having none.
+async function testWorkerSearchesTheIndex() {
+  const fetched = [];
+  const worker = loadBackground({
+    fetch: async (url) => {
+      fetched.push(String(url));
+      if (/search-index\.json$/.test(url)) {
+        return { ok: true, status: 200, json: async () => [{ title: 'Wallpapers', href: '/help/wallpaper/', sections: [], text: 'Change the New Tab wallpaper' }] };
+      }
+      if (/search-synonyms\.json$/.test(url)) {
+        return { ok: false, status: 404, json: async () => { throw new Error('not found'); } };
+      }
+      throw new Error(`network disabled: ${url}`);
+    }
+  });
+  await wait(30);
+  const first = await worker.sendMessage({ action: 'getHelpCenterSearchResults', query: 'wallpaper', locale: 'en' });
+  const second = await worker.sendMessage({ action: 'getHelpCenterSearchResults', query: 'wallpapers', locale: 'en' });
+  assert.ok(first && first.items.some((item) => /\/help\/wallpaper\//.test(item.url)), 'a matching help page should be found');
+  assert.ok(second && second.items.length > 0);
+  assert.strictEqual(fetched.filter((url) => /search-synonyms\.json$/.test(url)).length, 1,
+    'a missing synonym list should be asked for once, then remembered as empty');
+  assert.strictEqual(fetched.filter((url) => /search-index\.json$/.test(url)).length, 1, 'the index should be loaded once');
+}
+
+// With the Help Center scope active, both surfaces list matching help pages
+// under the scope's search row.
+async function testSurfacesListHelpPages(name) {
+  const surface = await openSearchSurface(name, {
+    respond(message) {
+      if (message.action === 'getHelpCenterSearchResults') {
+        return { items: [{ title: 'Change the wallpaper', url: `${ORIGIN}/help/wallpaper/` }] };
+      }
+      return undefined;
+    }
+  });
+  await surface.chooseScope('provider:lm');
+  await surface.type('wallpaper');
+  await surface.settle(200);
+  const rows = surface.suggestions().map((row) => row._xSuggestion || {});
+  assert.strictEqual(rows[0].type, 'siteSearch', `${name}: the scope's search row should come first`);
+  assert.ok(rows.slice(1).some((row) => row.url === `${ORIGIN}/help/wallpaper/`), `${name}: matching help pages should follow it`);
+  surface.close();
+}
 
 testSuggestionSource();
 testFeedbackSuggestions();
-testIndexLoader().then(() => {
+testIndexLoader().then(async () => {
+  await testWorkerSearchesTheIndex();
+  for (const name of SURFACES) {
+    await testSurfacesListHelpPages(name);
+  }
   console.log('help center search tests passed');
+  process.exit(0);
 }).catch((error) => {
   console.error(error);
   process.exit(1);
