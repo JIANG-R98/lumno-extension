@@ -11,6 +11,7 @@ const vm = require('vm');
 const { moduleScript } = require('./module-script');
 
 const BACKGROUND_EXPORTS = '__lumnoBackgroundExports';
+const EXTENSION_ORIGIN = 'chrome-extension://lumno-test';
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 
@@ -125,8 +126,12 @@ function createChromeStub(config) {
     runtime: {
       id: 'lumno-test',
       lastError: null,
+      // File paths by default; with extensionUrls, the chrome-extension://
+      // URLs a browser gives, which the worker compares tab URLs against.
       getURL(relativePath) {
-        return path.join(repoRoot, relativePath);
+        return config.extensionUrls === true
+          ? `${EXTENSION_ORIGIN}/${String(relativePath || '').replace(/^\//, '')}`
+          : path.join(repoRoot, relativePath);
       },
       getManifest() {
         return { version: config.version || '1.0.0' };
@@ -367,7 +372,10 @@ function loadBackground(options) {
   context.globalThis = context;
   context.self = context;
   const runFile = (file) => {
-    vm.runInContext(fs.readFileSync(String(file), 'utf8'), context, {
+    const filePath = String(file).startsWith(`${EXTENSION_ORIGIN}/`)
+      ? path.join(repoRoot, String(file).slice(EXTENSION_ORIGIN.length + 1))
+      : String(file);
+    vm.runInContext(fs.readFileSync(filePath, 'utf8'), context, {
       filename: String(file)
     });
   };

@@ -156,6 +156,45 @@ async function testOpeningTheSwitcherTakesAFreshShotFirst() {
   );
 }
 
+async function testCommandCaptureHidesTheSwitcherAndPublishesTheCover() {
+  const tabs = createTabs();
+  const order = [];
+  const harness = loadBackground({
+    tabs,
+    sync: { [TAB_SWITCHER_ENABLED_KEY]: true },
+    configureChrome(chromeApi) {
+      chromeApi.tabs.sendMessage = (tabId, message, optionsOrCallback, maybeCallback) => {
+        const callback = typeof optionsOrCallback === 'function' ? optionsOrCallback : maybeCallback;
+        order.push({ tabId, action: message.action, hidden: message.hidden, thumbnail: message.thumbnail });
+        const response = message.action === 'advanceOpenTabSwitcherFromCommand'
+          ? { ok: true, open: false, advanced: false }
+          : { ok: true };
+        setTimeout(() => callback && callback(response), 0);
+      };
+      chromeApi.tabs.captureVisibleTab = (_windowId, _options, callback) => {
+        order.push({ action: 'captureVisibleTab' });
+        setTimeout(() => callback(JPEG), 0);
+      };
+      chromeApi.windows.get = (windowId, callback) => setTimeout(() => callback({ id: windowId, focused: true }), 0);
+    }
+  });
+  await wait(30);
+  harness.chrome.commands.onCommand.dispatch('show-tab-switcher');
+  await wait(600);
+  const steps = order.map((step) => (step.action === 'setTabSwitcherCaptureVisibility'
+    ? `${step.action}:${step.hidden}`
+    : step.action));
+  const capture = steps.indexOf('captureVisibleTab');
+  assert.ok(capture > 0, 'opening the switcher should capture the current tab');
+  assert.strictEqual(steps[capture - 1], 'setTabSwitcherCaptureVisibility:true',
+    'a switcher still on screen should be hidden before the capture');
+  assert.strictEqual(steps[capture + 1], 'setTabSwitcherCaptureVisibility:false',
+    'the switcher should be shown again right after the capture');
+  const update = order.find((step) => step.action === 'updateTabSwitcherThumbnail');
+  assert.ok(update && update.tabId === 11 && /^data:image\//.test(update.thumbnail),
+    'the fresh capture should be handed to the switcher so its card can show it');
+}
+
 function writtenSessionKeys(harness, fromIndex) {
   return harness.storage.session.writes.slice(fromIndex || 0)
     .reduce((keys, write) => keys.concat(Object.keys(write)), []);
@@ -219,6 +258,7 @@ async function testInlineThumbnailStateFromAnEarlierVersionIsRead() {
   await testDisabledSwitcherNeverCaptures();
   await testTurningTheSwitcherOffClearsStoredThumbnails();
   await testOpeningTheSwitcherTakesAFreshShotFirst();
+  await testCommandCaptureHidesTheSwitcherAndPublishesTheCover();
   console.log('background switcher thumbnail capture tests passed');
 })().catch((error) => {
   console.error(error);
