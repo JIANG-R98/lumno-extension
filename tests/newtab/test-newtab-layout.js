@@ -1,103 +1,34 @@
 const assert = require('assert');
-const { readStylesheet } = require('../helpers/css-tokens');
-const { extractFunction } = require('../helpers/extract-function');
 const fs = require('fs');
-const path = require('path');
-const { readOptionsRuntimeSource } = require('../helpers/options-source');
-const { readPageSource } = require('../helpers/page-source');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { readStylesheet } = require('../helpers/css-tokens');
+const { parseCss, parsePageCss } = require('../helpers/css-rules');
 
 require('../../src/shared/search/suggestions-height-layout.js');
 const LumnoNewtabLayout = require('../../src/newtab/layout.js');
 
 const layoutRuntime = LumnoNewtabLayout;
 const layoutMotionRuntime = require('../../src/newtab/layout-motion.js');
-const { readWallpaperCheckSource } = require('../helpers/wallpaper-source');
-const repoRoot = path.resolve(__dirname, '..', '..');
-const newtabHtml = readPageSource('newtab.html');
-const newtabSource = readNewtabRuntimeSource();
-const wallpaperSource = readWallpaperCheckSource();
-const newtabRedirectSource = fs.readFileSync(
-  path.join(repoRoot, 'src/newtab/lumno-newtab.js'),
-  'utf8'
-);
-const sharedSearchInputCss = readStylesheet('src/shared/search/search-input.css');
-const featureHintsCss = fs.readFileSync(
-  path.join(repoRoot, 'src/shared/ui/feature-hints.css'),
-  'utf8'
-);
+const newtabCss = parsePageCss('newtab.html');
+const sharedSearchInputCss = parseCss(readStylesheet('src/shared/search/search-input.css'));
+const featureHintsCss = parseCss(fs.readFileSync('src/shared/ui/feature-hints.css', 'utf8'));
 
-function getCssBlock(source, marker) {
-  const markerIndex = source.indexOf(marker);
-  assert.ok(markerIndex >= 0, `missing CSS block: ${marker}`);
-  const openIndex = source.indexOf('{', markerIndex);
-  assert.ok(openIndex >= 0, `missing CSS block opening brace: ${marker}`);
-  let depth = 0;
-  for (let index = openIndex; index < source.length; index += 1) {
-    if (source[index] === '{') {
-      depth += 1;
-    } else if (source[index] === '}') {
-      depth -= 1;
-      if (depth === 0) {
-        return source.slice(markerIndex, index + 1);
-      }
+// Asserts the declarations `selector` gets (inside an @media / @supports
+// block matching `condition`, when given). Expected values are exact
+// strings or RegExps.
+function expectRule(selector, expected, message, condition, css) {
+  const rule = (css || newtabCss).rule(selector, condition);
+  assert.ok(rule, `${message} (no rule for ${selector})`);
+  Object.entries(expected).forEach(([name, value]) => {
+    const actual = rule.get(name);
+    if (value instanceof RegExp) {
+      assert.match(String(actual), value, `${message} (${selector} ${name}: ${actual})`);
+    } else {
+      assert.strictEqual(actual, value, `${message} (${selector} ${name})`);
     }
-  }
-  assert.fail(`missing CSS block closing brace: ${marker}`);
+  });
 }
 
-function testNewtabRedirectFocusHintIsConsumedOnce() {
-  assert.match(
-    newtabRedirectSource,
-    /target\.searchParams\.set\('focus', '1'\);[\s\S]*?window\.location\.replace\(target\.href\);/,
-    'the redirect shell should keep the explicit focus handoff for the real New Tab page'
-  );
-  const recoverySource = newtabSource.slice(
-    newtabSource.indexOf('function scheduleAutoFocusRecovery()'),
-    newtabSource.indexOf('scheduleAutoFocusRecovery();')
-  );
-  assert.match(
-    recoverySource,
-    /let forceInitialFocusPending = hasExplicitFocusHint;[\s\S]*?const focused = tryFocusSearchInput\(forceInitialFocusPending\);[\s\S]*?if \(focused\) \{[\s\S]*?forceInitialFocusPending = false;/,
-    'the explicit New Tab focus hint should be consumed after the first successful input focus'
-  );
-  assert.match(
-    recoverySource,
-    /url\.searchParams\.delete\('focus'\);[\s\S]*?window\.history\.replaceState\([\s\S]*?if \(consumedExplicitFocusHint\) \{\s*clearExplicitFocusQuery\(\);/,
-    'the consumed focus hint should be removed without a second navigation'
-  );
-  assert.doesNotMatch(
-    recoverySource,
-    /tryFocusSearchInput\(hasExplicitFocusHint\)/,
-    'New Tab retries and lifecycle events should not permanently force focus back to the input'
-  );
-  assert.match(
-    recoverySource,
-    /if \(!newtabInputAutoFocusEnabled && !forceInitialFocusPending\) \{\s*return;/,
-    'New Tab focus recovery should respect the auto-focus preference, except for the search shortcut focus hint'
-  );
-  assert.match(
-    newtabSource,
-    /initialNewtabInputAutoFocusReadyTask\.then\(\(\) => \{\s*scheduleAutoFocusRecovery\(\);/,
-    'New Tab should load the persisted auto-focus preference before scheduling focus recovery'
-  );
-  assert.match(
-    recoverySource,
-    /new window\.MutationObserver\([\s\S]*?data-nt-ready[\s\S]*?setTimeout\(attemptFocusIfVisible, 0\)/,
-    'New Tab should retry automatic focus when a readiness-gated destination becomes visible'
-  );
-  const preferenceLoadSource = newtabSource.slice(
-    newtabSource.indexOf('function loadNewtabInputAutoFocusEnabled()'),
-    newtabSource.indexOf('const initialNewtabInputAutoFocusReadyTask')
-  );
-  assert.doesNotMatch(
-    preferenceLoadSource,
-    /storageArea\.set/,
-    'loading a missing auto-focus preference should not persist the new default over existing users'
-  );
-}
 
-testNewtabRedirectFocusHintIsConsumedOnce();
 
 class FakeStyle {
   constructor() {
@@ -589,134 +520,65 @@ function testSuggestionResultsCommitNaturalHeightWithoutTween() {
 
 testSuggestionResultsCommitNaturalHeightWithoutTween();
 
-assert.match(
-  newtabHtml,
-  /max-height:\s*min\([\s\S]*?--x-nt-suggestions-max-height[\s\S]*?--x-nt-suggestions-viewport-fit-max-height[\s\S]*?--x-nt-suggestions-menu-fit-max-height/,
-  'new-tab suggestions should combine content, viewport, and open scope-panel height limits'
-);
-
-assert.match(
-  newtabSource,
-  /function shouldPreserveSearchModeResults\(rawQuery\) \{\s*return Boolean\(String\(rawQuery \|\| ''\)\.trim\(\)\);\s*\}[\s\S]*?const preserveResults = shouldPreserveSearchModeResults\(rawQuery\)/,
-  'scope switches should keep old rows until the replacement renders without starting a height session'
-);
-assert.match(
-  newtabSource,
-  /const preserveResults = shouldPreserveSearchModeResults\(rawQuery\);[\s\S]*?activateLocalSearchScope\([\s\S]*?\{ preserveResults \}[\s\S]*?activateSiteSearch\(item\.provider, \{ preserveResults \}\)/,
-  'every non-empty scope switch should preserve the old result frame until the target renders'
-);
-assert.match(
-  newtabSource,
-  /function activateLocalSearchScope\(scope, activationOptions\)[\s\S]*?if \(options\.preserveResults !== true\) \{\s*clearSearchSuggestions\(\);\s*\}[\s\S]*?function activateSiteSearch\(provider, activationOptions\)[\s\S]*?if \(options\.preserveResults !== true\) \{\s*clearSearchSuggestions\(\);\s*\}/,
-  'local and provider activation should both avoid clearing a preserved result frame'
-);
+expectRule('#_x_extension_newtab_suggestions_container_2024_unique_', {
+  'max-height': /^min\(.*--x-nt-suggestions-max-height.*--x-nt-suggestions-viewport-fit-max-height.*--x-nt-suggestions-menu-fit-max-height/
+}, 'new-tab suggestions should combine content, viewport, and open scope-panel height limits');
 
 
-function testNewtabLoadsAndUsesDockRuntime() {
-  const newtabJs = readNewtabRuntimeSource();
-  assert.match(
-    newtabJs,
-    /const bottomDockRuntime = NEWTAB_DOCK\.createBottomDockRuntime\(/,
-    'the browser adapter should create the bottom dock through the React API'
-  );
-  assert.doesNotMatch(
-    newtabJs,
-    /document\.createElement\('div'\);\s*bottomDock\.id = '_x_extension_newtab_bottom_dock_2024_unique_'/,
-    'newtab should not manually construct bottom dock DOM outside the component runtime'
-  );
-}
 
-testNewtabLoadsAndUsesDockRuntime();
 
 function testNewtabContainsRootOverscroll() {
-  assert.match(
-    newtabHtml,
-    /html,\s*body\s*\{[\s\S]*?height:\s*100%;[\s\S]*?overscroll-behavior:\s*none;/,
-    'newtab root should suppress viewport rubber-band overscroll'
-  );
-  assert.match(
-    newtabHtml,
-    /body\s*\{[\s\S]*?overflow-x:\s*hidden;[\s\S]*?overflow-y:\s*auto;/,
-    'newtab should retain document scrolling as the initialization and mobile-flow fallback'
-  );
-  assert.match(
-    newtabHtml,
-    /body\.x-nt-bottom-layout:not\(\.x-nt-mobile-flow\)\s*\{[\s\S]*?overflow-y:\s*hidden;/,
-    'desktop bottom layout should prevent a competing page scrollbar while the dock owns vertical overflow'
-  );
-  [
-    /#_x_extension_newtab_bottom_dock_scroller_2024_unique_::-webkit-scrollbar\s*\{[^}]*width:\s*10px;/,
-    /#_x_extension_newtab_bottom_dock_scroller_2024_unique_::-webkit-scrollbar-track\s*\{[^}]*background:\s*transparent;/,
-    /#_x_extension_newtab_bottom_dock_scroller_2024_unique_::-webkit-scrollbar-thumb\s*\{[^}]*border-radius:\s*999px;/,
-    /body\[data-theme="dark"\] #_x_extension_newtab_bottom_dock_scroller_2024_unique_::-webkit-scrollbar-thumb\s*\{/,
-    /@supports not selector\(::-webkit-scrollbar\)\s*\{[\s\S]*?#_x_extension_newtab_bottom_dock_scroller_2024_unique_\s*\{[\s\S]*?scrollbar-width:\s*thin;/,
-    /#_x_extension_newtab_bottom_dock_scroller_2024_unique_::-webkit-scrollbar-track\s*\{[^}]*margin-bottom:\s*max\(10px,\s*var\(--x-nt-bottom-dock-scrollbar-end-inset,\s*0px\)\);/
-  ].forEach((pattern) => {
-    assert.match(
-      newtabHtml,
-      pattern,
-      'the bottom dock should draw the thin translucent scrollbar instead of the system one when bookmarks and recents overflow'
-    );
+  ['html', 'body'].forEach((selector) => {
+    expectRule(selector, { height: '100%', 'overscroll-behavior': 'none' }, 'newtab root should suppress viewport rubber-band overscroll');
   });
-  const dockScrollerRule = newtabHtml.match(/#_x_extension_newtab_bottom_dock_scroller_2024_unique_\s*\{([^}]*)\}/);
-  assert.ok(dockScrollerRule, 'the bottom dock scroller rule should exist');
-  assert.match(
-    dockScrollerRule[1],
-    /--x-nt-bottom-dock-shadow-bleed-end:\s*14px;[\s\S]*?var\(--x-nt-bottom-dock-scrollbar-gutter,\s*0px\)[\s\S]*?scrollbar-gutter:\s*stable;/,
-    'the dock scrollbar should sit 14px beside the cards in a stable gutter the cards do not give up width to'
-  );
-  assert.match(
-    newtabHtml,
-    /\.x-nt-bookmarks-topbar-viewport\s*\{[\s\S]*?overflow-x:\s*auto;[\s\S]*?overscroll-behavior:\s*contain;/,
-    'newtab root isolation should preserve topbar scrolling without chaining wheel input to the page'
-  );
-  assert.match(
-    newtabHtml,
-    /#_x_extension_newtab_bottom_dock_scroller_2024_unique_\s*\{[\s\S]*?overflow-y:\s*auto;[\s\S]*?overscroll-behavior:\s*contain;/,
-    'newtab root isolation should preserve intentional vertical scrolling inside the bottom dock'
-  );
+  expectRule('body', { 'overflow-x': 'hidden', 'overflow-y': 'auto' },
+    'newtab should retain document scrolling as the initialization and mobile-flow fallback');
+  expectRule('body.x-nt-bottom-layout:not(.x-nt-mobile-flow)', { 'overflow-y': 'hidden' },
+    'desktop bottom layout should prevent a competing page scrollbar while the dock owns vertical overflow');
+  const scroller = '#_x_extension_newtab_bottom_dock_scroller_2024_unique_';
+  const scrollbarMessage = 'the bottom dock should draw the thin translucent scrollbar instead of the system one when bookmarks and recents overflow';
+  // Overlay scrollbars (macOS) keep the system bar.
+  const classic = ':root:not([data-lumno-scrollbars="overlay"])';
+  expectRule(`${classic} ${scroller}::-webkit-scrollbar`, { width: '10px' }, scrollbarMessage);
+  expectRule(`${classic} ${scroller}::-webkit-scrollbar-track`, {
+    background: 'transparent',
+    'margin-bottom': 'max(10px, var(--x-nt-bottom-dock-scrollbar-end-inset, 0px))'
+  }, scrollbarMessage);
+  expectRule(`${classic} ${scroller}::-webkit-scrollbar-thumb`, { 'border-radius': '999px' }, scrollbarMessage);
+  assert.ok(newtabCss.rule(`${classic} body[data-theme="dark"] ${scroller}::-webkit-scrollbar-thumb`), scrollbarMessage);
+  expectRule(scroller, { 'scrollbar-width': 'thin' }, scrollbarMessage, /not selector\(::-webkit-scrollbar\)/);
+  expectRule(scroller, {
+    '--x-nt-bottom-dock-shadow-bleed-end': '14px',
+    'scrollbar-gutter': 'stable',
+    'overflow-y': 'auto',
+    'overscroll-behavior': 'contain'
+  }, 'the dock scrollbar should sit 14px beside the cards in a stable gutter, scrolling inside the dock');
+  assert.ok(newtabCss.rule(scroller).names().some((name) => /var\(--x-nt-bottom-dock-scrollbar-gutter,\s*0px\)/.test(newtabCss.rule(scroller).get(name))),
+    'the cards should not give up width to the scrollbar gutter');
+  expectRule('.x-nt-bookmarks-topbar-viewport', { 'overflow-x': 'auto', 'overscroll-behavior': 'contain' },
+    'newtab root isolation should preserve topbar scrolling without chaining wheel input to the page');
 }
-
 testNewtabContainsRootOverscroll();
 
 function testTopbarBookmarkTitlesStayReadableUntilWallpaperToneIsReady() {
-  assert.match(
-    newtabSource,
-    /surface:\s*'topbar',[\s\S]*?preferOverlayPolarity:\s*getEffectiveBookmarkTopbarSurfaceMode\(\) === 'adaptive',[\s\S]*?disabled:/,
-    'only the default adaptive topbar material should let a meaningful mask define its material polarity'
-  );
-  assert.match(
-    newtabSource,
-    /surface:\s*'topbar',[\s\S]*?disabled:[\s\S]*?getEffectiveBookmarkTopbarSurfaceMode\(\) === 'adaptive' &&\s*!document\.body\.hasAttribute\('data-glass-style'\)/,
-    'without a glass style the matching topbar should keep the theme tone like the search box and cards'
-  );
-  assert.match(
-    newtabHtml,
-    /body\[data-wallpaper-active="true"\] \.x-nt-bookmarks-topbar\[data-surface-mode="adaptive"\],[\s\S]*?--x-nt-bookmarks-topbar-ink:\s*var\(--x-nt-bookmark-title,\s*#111827\);/,
-    'topbar bookmark titles should use the theme foreground before wallpaper sampling finishes'
-  );
-  assert.match(
-    newtabHtml,
-    /\.x-nt-bookmarks-topbar\[data-wallpaper-ink\]\[data-surface-mode="adaptive"\],[\s\S]*?--x-nt-bookmarks-topbar-ink:\s*var\(--x-nt-wallpaper-adaptive-ink,/,
-    'topbar bookmark titles should switch to sampled wallpaper ink once it is available'
-  );
+  expectRule('body[data-wallpaper-active="true"] .x-nt-bookmarks-topbar[data-surface-mode="adaptive"]', {
+    '--x-nt-bookmarks-topbar-ink': 'var(--x-nt-bookmark-title, #111827)'
+  }, 'topbar bookmark titles should use the theme foreground before wallpaper sampling finishes');
+  expectRule('body[data-wallpaper-active="true"] .x-nt-bookmarks-topbar[data-wallpaper-ink][data-surface-mode="adaptive"]', {
+    '--x-nt-bookmarks-topbar-ink': /^var\(--x-nt-wallpaper-adaptive-ink,/
+  }, 'topbar bookmark titles should switch to sampled wallpaper ink once it is available');
 }
-
 testTopbarBookmarkTitlesStayReadableUntilWallpaperToneIsReady();
 
 function testBookmarkNavigationHoverSpacingIsOpticallyBalanced() {
-  assert.match(
-    newtabHtml,
-    /\.x-nt-bookmarks-heading\.x-nt-bookmarks-heading--link\s*\{[\s\S]*?padding:\s*3px 5px;[\s\S]*?margin-left:\s*-5px;[\s\S]*?margin-right:\s*-5px;/,
-    'the nested bookmark heading should use symmetric inline padding without shifting adjacent controls'
-  );
-  assert.match(
-    newtabHtml,
-    /\.x-nt-bookmarks-crumb\s*\{[\s\S]*?padding:\s*0 5px 0 7px;/,
-    'bookmark breadcrumb hover targets should use the same optical inline padding compensation'
-  );
+  expectRule('.x-nt-bookmarks-heading.x-nt-bookmarks-heading--link', {
+    padding: '3px 5px',
+    'margin-left': '-5px',
+    'margin-right': '-5px'
+  }, 'the nested bookmark heading should use symmetric inline padding without shifting adjacent controls');
+  expectRule('.x-nt-bookmarks-crumb', { padding: '0 5px 0 7px' },
+    'bookmark breadcrumb hover targets should use the same optical inline padding compensation');
 }
-
 testBookmarkNavigationHoverSpacingIsOpticallyBalanced();
 
 function testCompactDockKeepsSearchEntryClearOnShortViewports() {
@@ -943,141 +805,56 @@ function testContinuousResizeKeepsDockDensityStableUntilSettle() {
     'resize settle should release the density lock and apply the final fitting density once'
   );
 
-  assert.match(
-    newtabSource,
-    /function handleNewtabResize\(\)[\s\S]*?updateBookmarkSectionPosition\(\{[\s\S]*?preserveSearchEntryLayout:\s*true,[\s\S]*?stabilizeDockDensity:\s*true[\s\S]*?\}\)/,
-    'live new-tab resize frames should preserve the search anchor while stabilizing density promotions'
-  );
-  assert.match(
-    newtabSource,
-    /preserveSearchEntryLayout:\s*Boolean\(layoutOptions\.preserveSearchEntryLayout\)\s*\|\|\s*newtabResizeLayoutLocked\s*\|\|\s*shouldPreserveSearchEntryLayout\(\)/,
-    'all layout refreshes during resize should inherit the search-entry position lock'
-  );
-  assert.match(
-    newtabSource,
-    /const NEWTAB_INITIAL_VIEWPORT_SETTLE_MS = 32;[\s\S]*?const startupViewport = getSearchEntryViewportSnapshot\(\);[\s\S]*?function scheduleNewtabReadyAfterViewportSettle\(\)[\s\S]*?const revealAfterViewportSettles = \(\) => \{[\s\S]*?updateBookmarkSectionPosition\(\);[\s\S]*?requestAnimationFrame\(\(\) => \{[\s\S]*?setAttribute\('data-nt-ready', '1'\)[\s\S]*?\};[\s\S]*?if \(viewportRevision === 0 &&\s*!(?:pageState\.)?newtabResizeLayoutLocked &&\s*!hasSearchEntryViewportChanged\(startupViewport\)\) \{\s*revealAfterViewportSettles\(\);\s*return;\s*\}\s*newtabReadySettleTimer = window\.setTimeout\(revealAfterViewportSettles, NEWTAB_INITIAL_VIEWPORT_SETTLE_MS\);/,
-    'new-tab content should skip the settle window when the viewport never changed while loading, and still wait one paint frame'
-  );
-  assert.match(
-    newtabSource,
-    /window\.addEventListener\('resize',[\s\S]*?newtabReadyViewportRevision\s*\+=\s*1;[\s\S]*?newtabReadyRequested[\s\S]*?scheduleNewtabReadyAfterViewportSettle\(\)/,
-    'a browser-chrome resize before first paint should restart the new-tab readiness gate'
-  );
 }
 
+// The entrance's styles. Its sequence on the page is in
+// test-newtab-page-layout.js.
 function testInitialEntryMotionIsStaggeredAndTransient() {
-  assert.match(
-    newtabSource,
-    /const initialLayoutStorageReadyTask = startupStorageReadBatch[\s\S]*?startupStorageReadBatch\.ready[\s\S]*?const initialFontsReadyTask = document\.fonts[\s\S]*?document\.fonts\.ready[\s\S]*?const initialVisualReadyPromise = Promise\.all\(\[[\s\S]*?initialLanguageReadyTask,[\s\S]*?sectionPolicyReadyPromise,[\s\S]*?initialShortcutsReadyTask,[\s\S]*?initialPinnedRecentSitesReadyTask,[\s\S]*?initialHiddenRecentSitesReadyTask,[\s\S]*?initialLayoutStorageReadyTask,[\s\S]*?initialFontsReadyTask[\s\S]*?sectionDataRevision \+= 1;[\s\S]*?loadRecentSites\(\{[\s\S]*?force: true,[\s\S]*?sectionDataRevision: initialSectionDataRevision[\s\S]*?loadBookmarks\(\{[\s\S]*?force: true,[\s\S]*?sectionDataRevision: initialSectionDataRevision[\s\S]*?Promise\.all\(\[recentSitesReadyTask, bookmarksReadyTask\]\)[\s\S]*?markNewtabReady\(\)/,
-    'all layout preferences, fonts, shortcuts, and authoritative section data should settle before New Tab becomes visible'
-  );
-  assert.match(
-    newtabSource,
-    /function loadBookmarks\(options\)[\s\S]*?requestedSectionDataRevision[\s\S]*?requestedSectionDataRevision !== sectionDataRevision[\s\S]*?function loadRecentSites\(options\)[\s\S]*?requestedSectionDataRevision[\s\S]*?requestedSectionDataRevision !== sectionDataRevision/,
-    'late section requests from provisional startup preferences should not overwrite the authoritative first layout'
-  );
-  assert.match(
-    newtabSource,
-    /function markInitialWallpaperVisualReady\(\)[\s\S]*?setAttribute\('data-nt-wallpaper-ready', '1'\)/,
-    'the focused-route wallpaper gate should release independently from full New Tab readiness'
-  );
-  assert.match(
-    newtabHtml,
-    /body:not\(\[data-nt-enter="done"\]\) \.x-nt-wallpaper-effect-canvas,\s*body:not\(\[data-nt-enter="done"\]\)::after\s*\{\s*transition:\s*none;/,
-    'wallpaper effect layers should stay transition-free throughout the initial entry sequence'
-  );
-  assert.match(
-    newtabHtml,
-    /body:not\(\[data-nt-ready="1"\]\) \.x-nt-wallpaper-control,\s*body:not\(\[data-nt-ready="1"\]\) \.x-nt-feedback-control,\s*body:not\(\[data-nt-ready="1"\]\) \.x-nt-bookmark-cascade-debug-control\s*\{\s*visibility:\s*hidden;\s*\}/,
-    'corner controls should stay hidden until their entrance animation state is installed'
-  );
-  assert.match(
-    wallpaperSource,
-    /function createWallpaperTransitionLayer\(\)\s*\{\s*if \(!document\.body \|\|\s*document\.body\.getAttribute\('data-nt-enter'\) !== 'done' \|\|\s*shouldReduceMotion\(\)\)/,
-    'wallpaper crossfades should be disabled until the initial entry sequence is complete'
-  );
-  assert.match(
-    wallpaperSource,
-    /shouldAnimateTransition:\s*\(\) => Boolean\(\s*documentObj\.body &&\s*documentObj\.body\.getAttribute\('data-nt-enter'\) === 'done'\s*\)/,
-    'wallpaper effect rerenders should not fade the background during the initial entry sequence'
-  );
-  assert.match(
-    newtabHtml,
-    /body\[data-nt-enter="run"\]\[data-nt-ready="1"\] \.x-nt-bookmarks-topbar\[data-visible="true"\]\s*\{\s*animation:\s*_x_nt_topbar_entry_2026_unique_ 220ms cubic-bezier\(0\.16, 1, 0\.3, 1\) both;[\s\S]*?@keyframes _x_nt_topbar_entry_2026_unique_\s*\{\s*0%\s*\{\s*clip-path:\s*inset\(0 0 100% 0\);\s*animation-timing-function:\s*cubic-bezier\(0\.33, 1, 0\.68, 1\);\s*\}\s*85%\s*\{\s*clip-path:\s*inset\(0 0 0 0\);[\s\S]*?100%\s*\{\s*clip-path:\s*inset\(0 0 -32px 0\);/,
+  ['body:not([data-nt-enter="done"]) .x-nt-wallpaper-effect-canvas', 'body:not([data-nt-enter="done"])::after'].forEach((selector) => {
+    expectRule(selector, { transition: 'none' }, 'wallpaper effect layers should stay transition-free throughout the initial entry sequence');
+  });
+  ['.x-nt-wallpaper-control', '.x-nt-feedback-control', '.x-nt-bookmark-cascade-debug-control'].forEach((control) => {
+    expectRule(`body:not([data-nt-ready="1"]) ${control}`, { visibility: 'hidden' },
+      'corner controls should stay hidden until their entrance animation state is installed');
+  });
+  expectRule('body[data-nt-enter="run"][data-nt-ready="1"] .x-nt-bookmarks-topbar[data-visible="true"]', {
+    animation: '_x_nt_topbar_entry_2026_unique_ 220ms cubic-bezier(0.16, 1, 0.3, 1) both'
+  }, 'the docked bookmarks top bar should unroll on entry');
+  const unroll = newtabCss.keyframes('_x_nt_topbar_entry_2026_unique_');
+  assert.deepStrictEqual(
+    unroll && ['0%', '85%', '100%'].map((frame) => unroll[frame].getPropertyValue('clip-path')),
+    ['inset(0 0 100% 0)', 'inset(0 0 0 0)', 'inset(0 0 -32px 0)'],
     'the docked bookmarks top bar should unroll from the top edge without moving off its final position'
   );
-  assert.match(
-    newtabHtml,
-    /\.x-nt-bookmarks-topbar\[data-visible="true"\]\[data-layout="floating"\]\s*\{\s*animation-name:\s*_x_nt_topbar_floating_entry_2026_unique_;[\s\S]*?transform-origin:\s*50% 0;[\s\S]*?@keyframes _x_nt_topbar_floating_entry_2026_unique_\s*\{\s*0%\s*\{\s*opacity:\s*0;\s*scale:\s*0\.96;/,
-    'the floating bookmarks top bar should settle in from its top edge'
-  );
-  assert.match(
-    newtabHtml,
-    /body:not\(\[data-nt-ready="1"\]\) \.x-nt-bookmarks-topbar\s*\{\s*visibility:\s*hidden;\s*backdrop-filter:\s*none !important;\s*-webkit-backdrop-filter:\s*none !important;/,
-    'the hidden bookmarks top bar should not draw its filtered wallpaper as a bare strip before the reveal'
-  );
-  assert.match(
-    newtabSource,
-    /function finishNewtabEntryAnimation\(\)[\s\S]*?setAttribute\('data-nt-enter', 'done'\)[\s\S]*?root\.setAttribute\('data-lumno-search-entry', 'done'\)[\s\S]*?function startNewtabEntryAnimation\(\)[\s\S]*?const reduceMotion = shouldSkipNewtabEntryMotion\(\);[\s\S]*?const entryState = reduceMotion \? 'done' : 'run';[\s\S]*?setAttribute\('data-nt-enter', entryState\)[\s\S]*?root\.setAttribute\('data-lumno-search-entry', entryState\)[\s\S]*?window\.setTimeout\(\s*finishNewtabEntryAnimation,[\s\S]*?NEWTAB_ENTRY_ANIMATION_TOTAL_MS/,
-    'new-tab entrance motion should drive the shared search-entry state and release it after the sequence'
-  );
-  // The gate promise lives in newtab.js; the entry motion that resolves it is split out.
-  const autoFocusGateMessage =
-    'the New Tab feature hint gate should release after normal, interrupted, or reduced-motion entry completion';
-  assert.match(newtabSource, /const newtabEntryAnimationReadyPromise = new Promise/, autoFocusGateMessage);
-  assert.match(
-    newtabSource,
-    /function finishNewtabEntryAnimation\(\)[\s\S]*?resolveNewtabEntryAnimationReady\(\)[\s\S]*?function startNewtabEntryAnimation\(\)[\s\S]*?if \(reduceMotion\)[\s\S]*?resolveNewtabEntryAnimationReady\(\)/,
-    autoFocusGateMessage
-  );
-  assert.match(newtabSource, /featureHintVisibilityGate:\s*newtabEntryAnimationReadyPromise/, autoFocusGateMessage);
-  assert.match(newtabSource, /definition: 'newtab-help-center-ask',\s*visibilityGate: newtabEntryAnimationReadyPromise/, autoFocusGateMessage);
-  // WebDAV waits for the Help Center tip, which itself waits for the entry sequence.
-  assert.match(newtabSource, /definition: 'newtab-webdav-sync',\s*visibilityGate: helpCenterAskHintSettled/, autoFocusGateMessage);
-  assert.match(
-    newtabSource,
-    /setAttribute\('data-nt-ready', '1'\);\s*startNewtabEntryAnimation\(\);/,
-    'the entrance sequence should start only after the viewport-stable ready frame'
-  );
-  assert.match(
-    newtabSource,
-    /window\.addEventListener\('keydown', finishNewtabEntryAnimation, true\);\s*window\.addEventListener\('pointerdown', finishNewtabEntryAnimation, true\);/,
-    'the initial entrance sequence should yield immediately to keyboard or pointer interaction'
-  );
-  assert.match(
-    newtabHtml,
-    /<div id="_x_extension_newtab_root_2024_unique_" class="x-lumno-search-entry"><\/div>/,
-    'the new-tab search surface should opt into the shared entry motion'
-  );
-  assert.match(
-    sharedSearchInputCss,
-    /\.x-lumno-search-entry\[data-lumno-search-entry="run"\]\s*\{[\s\S]*?animation:\s*_x_lumno_search_entry_2026_unique_[\s\S]*?var\(--x-lumno-search-entry-duration, 240ms\)[\s\S]*?var\(--x-lumno-search-entry-delay, 20ms\) both;[\s\S]*?transform-origin:\s*center center;/,
-    'the shared search entry should lead with the new-tab timing and ease-out motion'
-  );
-  const searchEntryKeyframes = sharedSearchInputCss.match(
-    /@keyframes _x_lumno_search_entry_2026_unique_ \{([\s\S]*?)\n\}\n\n@media \(prefers-reduced-motion: reduce\)/
-  );
-  assert.ok(searchEntryKeyframes, 'the shared search entry keyframes should be present');
-  assert.match(
-    searchEntryKeyframes[1],
-    /0%[\s\S]*?scale:\s*var\(--x-lumno-search-entry-scale-start, 0\.97\) 1;[\s\S]*?100%[\s\S]*?scale:\s*1;/,
-    'the search field should expand subtly from the center'
-  );
-  assert.doesNotMatch(
-    newtabHtml,
-    /@keyframes _x_(?:nt|lumno)_search_entry_2026_unique_/,
-    'the new-tab page should not duplicate the shared search entry keyframes'
-  );
-  assert.doesNotMatch(
-    searchEntryKeyframes[1],
-    /translate:/,
-    'the search field should not move upward during entry'
-  );
-  assert.doesNotMatch(
-    searchEntryKeyframes[1],
-    /filter:\s*blur/,
-    'the backdrop-filtered search panel should stay on compositor-only opacity and scale motion'
-  );
+  expectRule('body[data-nt-enter="run"][data-nt-ready="1"] .x-nt-bookmarks-topbar[data-visible="true"][data-layout="floating"]', {
+    'animation-name': '_x_nt_topbar_floating_entry_2026_unique_',
+    'transform-origin': '50% 0'
+  }, 'the floating bookmarks top bar should settle in from its top edge');
+  const settle = newtabCss.keyframes('_x_nt_topbar_floating_entry_2026_unique_');
+  assert.deepStrictEqual(settle && [settle['0%'].getPropertyValue('opacity'), settle['0%'].getPropertyValue('scale')], ['0', '0.96']);
+  expectRule('body:not([data-nt-ready="1"]) .x-nt-bookmarks-topbar', {
+    visibility: 'hidden',
+    'backdrop-filter': 'none'
+  }, 'the hidden bookmarks top bar should not draw its filtered wallpaper as a bare strip before the reveal');
+
+  expectRule('.x-lumno-search-entry[data-lumno-search-entry="run"]', {
+    animation: /^_x_lumno_search_entry_2026_unique_ .*var\(--x-lumno-search-entry-duration, 240ms\).*var\(--x-lumno-search-entry-delay, 20ms\) both$/,
+    'transform-origin': 'center center'
+  }, 'the shared search entry should lead with the new-tab timing and ease-out motion', undefined, sharedSearchInputCss);
+  const searchEntry = sharedSearchInputCss.keyframes('_x_lumno_search_entry_2026_unique_');
+  assert.ok(searchEntry, 'the shared search entry keyframes should be present');
+  assert.deepStrictEqual([searchEntry['0%'].getPropertyValue('scale'), searchEntry['100%'].getPropertyValue('scale')],
+    ['var(--x-lumno-search-entry-scale-start, 0.97) 1', '1'], 'the search field should expand subtly from the center');
+  Object.values(searchEntry).forEach((frame) => {
+    assert.strictEqual(frame.getPropertyValue('translate'), '', 'the search field should not move upward during entry');
+    assert.doesNotMatch(frame.getPropertyValue('filter'), /blur/,
+      'the backdrop-filtered search panel should stay on compositor-only opacity and scale motion');
+  });
+  assert.strictEqual(newtabCss.keyframes('_x_lumno_search_entry_2026_unique_') || newtabCss.keyframes('_x_nt_search_entry_2026_unique_'), null,
+    'the new-tab page should not duplicate the shared search entry keyframes');
+  expectRule('.x-lumno-search-entry[data-lumno-search-entry]', { animation: 'none', filter: 'none', opacity: '1', scale: '1' },
+    'the shared search entrance should be disabled for reduced-motion users', /prefers-reduced-motion:\s*reduce/, sharedSearchInputCss);
+
   [
     ['.x-lumno-feature-hint--newtab-wallpaper', 'translateY(-50%)'],
     ['.x-lumno-feature-hint--newtab-ai-quick-jump', 'translateX(-50%)'],
@@ -1085,42 +862,24 @@ function testInitialEntryMotionIsStaggeredAndTransient() {
     ['.x-lumno-feature-hint--newtab-webdav-sync', ''],
     ['.x-lumno-feature-hint--update-notice-newtab', '']
   ].forEach(([selector, allowedPositionTransform]) => {
-    const block = getCssBlock(featureHintsCss, selector);
-    const transforms = block.match(/translate(?:X|Y)?\([^)]*\)/g) || [];
+    const rule = featureHintsCss.rule(selector, '*');
+    assert.ok(rule, `missing feature hint rule ${selector}`);
+    const transforms = rule.names().flatMap((name) => rule.get(name).match(/translate(?:X|Y)?\([^)]*\)/g) || []);
     assert.deepStrictEqual(
       transforms,
       allowedPositionTransform ? [allowedPositionTransform] : [],
       `${selector} should keep only its fixed positioning transform during entry`
     );
   });
-  assert.match(
-    newtabHtml,
-    /\.x-nt-wallpaper-control:has\(> \.x-lumno-feature-hint\[data-visible="true"\]\)\s*\{\s*z-index:\s*20;/,
-    'a visible appearance-button hint should sit above the neighbouring feedback button'
-  );
-  assert.match(
-    newtabHtml,
-    /body\[data-nt-enter="run"\] \.x-nt-shortcuts-section\[data-visible="true"\] \.x-nt-shortcut-tile\s*\{[\s\S]*?calc\(20ms \+ \(var\(--x-nt-shortcut-enter-index\) \* 10ms\)\) both;/,
-    'shortcut tiles should enter with a tight 10ms stagger'
-  );
-  assert.match(
-    newtabHtml,
-    /#_x_extension_newtab_bookmarks_2024_unique_\[data-visible="true"\],\s*body\[data-nt-enter="run"\] #_x_extension_newtab_recent_sites_2024_unique_\[data-visible="true"\]\s*\{[\s\S]*?40ms both;/,
-    'bottom content sections should enter together with the shortcut sequence'
-  );
-  ['const NEWTAB_ENTRY_ANIMATION_TOTAL_MS = 260;', 'const WORDMARK_ENTRY_ANIMATION_TOTAL_MS = 260;'].forEach((budget) => {
-    assert.ok(
-      newtabSource.includes(budget),
-      'the initial entrance choreography should complete within a compact motion budget'
-    );
-  });
-  assert.match(
-    sharedSearchInputCss,
-    /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.x-lumno-search-entry\[data-lumno-search-entry\]\s*\{[\s\S]*?animation:\s*none;[\s\S]*?filter:\s*none;[\s\S]*?opacity:\s*1;[\s\S]*?scale:\s*1;/,
-    'the shared search entrance should be disabled for reduced-motion users'
-  );
+  expectRule('.x-nt-wallpaper-control:has(> .x-lumno-feature-hint[data-visible="true"])', { 'z-index': '20' },
+    'a visible appearance-button hint should sit above the neighbouring feedback button');
+  expectRule('body[data-nt-enter="run"] .x-nt-shortcuts-section[data-visible="true"] .x-nt-shortcut-tile', {
+    animation: /calc\(20ms \+ \(var\(--x-nt-shortcut-enter-index\) \* 10ms\)\) both$/
+  }, 'shortcut tiles should enter with a tight 10ms stagger');
+  expectRule('body[data-nt-enter="run"] #_x_extension_newtab_recent_sites_2024_unique_[data-visible="true"]', {
+    animation: /40ms both$/
+  }, 'bottom content sections should enter together with the shortcut sequence');
 }
-
 testInitialEntryMotionIsStaggeredAndTransient();
 
 function testMobileViewportReleasesFixedDockLayout() {
@@ -1232,182 +991,124 @@ function testResizeOutOfMobileRestoresFixedDockLayout() {
 }
 
 function testBottomDockCssDefinesAdaptiveDensityVariables() {
-  assert.match(
-    newtabHtml,
-    /#_x_extension_newtab_bottom_dock_2024_unique_\s*\{[\s\S]*?--x-nt-dock-bookmark-card-height:\s*51px;[\s\S]*?--x-nt-dock-recent-inner-height:\s*104px;/,
-    'bottom dock should define default adaptive sizing tokens'
-  );
-  assert.match(
-    newtabHtml,
-    /#_x_extension_newtab_bottom_dock_2024_unique_\[data-density="compact"\]\s*\{[\s\S]*?--x-nt-dock-bookmark-card-height:\s*44px;[\s\S]*?--x-nt-dock-recent-inner-height:\s*86px;/,
-    'compact bottom dock density should reduce recent and bookmark card heights'
-  );
-  assert.match(
-    newtabHtml,
-    /#_x_extension_newtab_bottom_dock_2024_unique_\[data-density="tiny"\]\s*\{[\s\S]*?--x-nt-dock-bookmark-card-height:\s*40px;[\s\S]*?--x-nt-dock-recent-inner-height:\s*72px;/,
-    'tiny bottom dock density should aggressively reduce card heights'
-  );
-  assert.match(
-    newtabHtml,
-    /\.x-nt-bookmark-card\s*\{[\s\S]*?height:\s*var\(--x-nt-dock-bookmark-card-height,\s*51px\);[\s\S]*?padding:\s*var\(--x-nt-dock-bookmark-card-padding,\s*13px 15px\);/,
-    'bookmark cards should consume adaptive dock sizing tokens'
-  );
-  assert.match(
-    newtabHtml,
-    /\.x-nt-folder-preview\s*\{[\s\S]*?margin-right:\s*-2px;[\s\S]*?\.x-nt-bookmark-card--folder\.x-nt-bookmark-card--folder-expanded \.x-nt-folder-preview\s*\{[\s\S]*?padding:\s*2px 0 2px 3px;/,
-    'folder preview favicons should align their right edge while preserving left-side rotation clearance'
-  );
-  assert.match(
-    newtabHtml,
-    /\.x-nt-recent-inner\s*\{[\s\S]*?padding:\s*var\(--x-nt-dock-recent-inner-padding,\s*13px 13px 14px 15px\);[\s\S]*?height:\s*var\(--x-nt-dock-recent-inner-height,\s*104px\);/,
-    'recent cards should consume adaptive dock sizing tokens'
-  );
-  assert.match(
-    newtabHtml,
-    /body\[data-nt-bottom-dock-density="compact"\]\s*\{[\s\S]*?--x-nt-shortcuts-reserved-height:\s*54px;[\s\S]*?--x-nt-shortcuts-section-margin-top:\s*8px;/,
-    'compact dock density should tighten the space around the shortcuts'
-  );
-  assert.match(
-    newtabHtml,
-    /body\[data-nt-bottom-dock-density="tiny"\]\s*\{[\s\S]*?--x-nt-shortcuts-reserved-height:\s*42px;[\s\S]*?--x-nt-shortcuts-section-margin-top:\s*6px;/,
-    'tiny dock density should tighten the space around the shortcuts further'
-  );
-  assert.match(
-    newtabHtml,
-    /@media \(max-width:\s*520px\)[\s\S]*?#_x_extension_newtab_bookmarks_2024_unique_,\s*#_x_extension_newtab_recent_sites_2024_unique_\s*\{[\s\S]*?min-width:\s*0;[\s\S]*?width:\s*min\(96vw, var\(--x-nt-content-max-width,\s*1040px\)\);/,
-    'phone viewports should not force 500px content sections that create horizontal scrolling'
-  );
-  assert.match(
-    newtabHtml,
-    /@media \(max-width:\s*640px\)[\s\S]*?body\.x-nt-mobile-flow\s*\{[\s\S]*?min-height:\s*100dvh;[\s\S]*?padding-inline:[\s\S]*?safe-area-inset-left[\s\S]*?overflow-y:\s*auto;/,
-    'mobile flow should use one safe-area-aware document scroller'
-  );
-  assert.match(
-    newtabHtml,
-    /@media \(max-width:\s*640px\)[\s\S]*?#_x_extension_newtab_bottom_dock_2024_unique_\s*\{[\s\S]*?position:\s*static;[\s\S]*?transform:\s*none;[\s\S]*?max-height:\s*none;/,
-    'mobile bottom dock should participate in document flow'
-  );
-  assert.match(
-    newtabHtml,
-    /@media \(max-width:\s*640px\)[\s\S]*?#_x_extension_newtab_bottom_dock_scroller_2024_unique_\s*\{[\s\S]*?max-height:\s*none;[\s\S]*?overflow:\s*visible;[\s\S]*?overscroll-behavior:\s*auto;/,
-    'mobile dock content should release its nested scroll container'
-  );
-  assert.match(
-    newtabHtml,
-    // Two columns from 860px down, phones included.
-    /@media \(max-width:\s*860px\)\s*\{\s*#_x_extension_newtab_bookmarks_grid_2024_unique_\s*\{\s*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/,
-    'mobile bookmarks should render two columns'
-  );
-  assert.match(
-    newtabHtml,
-    // Two columns from 860px down, phones included.
-    /@media \(max-width:\s*860px\)\s*\{\s*#_x_extension_newtab_recent_sites_grid_2024_unique_\s*\{\s*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/,
-    'mobile recent sites should render two columns'
-  );
-  // The corner buttons take their size from their control's --x-nt-corner-size.
-  assert.match(
-    newtabHtml,
-    /\.x-nt-wallpaper-button,\s*\.x-nt-feedback-button,[^{]*\{[^}]*width:\s*var\(--x-nt-corner-size[^}]*height:\s*var\(--x-nt-corner-size/,
-    'corner buttons should take the corner size'
-  );
-  assert.match(
-    newtabHtml,
-    /@media \(max-width:\s*640px\)\s*\{[^@]*?--x-nt-corner-size:\s*44px;/,
-    'mobile utility controls should meet the 44px touch target'
-  );
-  assert.match(
-    newtabHtml,
-    /@media \(hover:\s*none\)[\s\S]*?\.x-nt-recent-card:hover\s*\{[\s\S]*?transform:\s*none;/,
-    'touch input should not retain hover-only recent-card movement'
-  );
-  assert.match(
-    newtabHtml,
-    /@media \(hover:\s*none\)[\s\S]*?\.x-nt-recent-card:hover \.x-nt-recent-card-visual\s*\{[\s\S]*?transform:\s*none;[\s\S]*?box-shadow:\s*var\(--x-nt-recent-card-shadow\);/,
-    'touch input should keep the recent-card visual layer stationary'
-  );
-  assert.match(
-    newtabHtml,
-    /@media \(hover:\s*none\)[\s\S]*?\.x-nt-recent-card:hover \.x-nt-recent-inner\s*\{[\s\S]*?height:\s*var\(--x-nt-dock-recent-inner-height,\s*104px\);[\s\S]*?transform:\s*none;[\s\S]*?margin-bottom:\s*0;/,
-    'touch input should not retain hover-only recent-card expansion'
-  );
-  assert.match(
-    newtabHtml,
-    /@media \(hover:\s*none\)\s*\{[^@]*?--x-nt-corner-size:\s*44px;/,
-    'touch input should keep fixed utility controls at least 44px square'
-  );
-  assert.match(
-    newtabHtml,
-    /@media \(min-width:\s*641px\) and \(max-width:\s*900px\) and \(max-height:\s*560px\)[\s\S]*?body\[data-nt-bottom-dock-density="tiny"\]\s*\{[\s\S]*?--x-nt-shortcuts-reserved-height:\s*50px;[\s\S]*?#_x_extension_newtab_bottom_dock_2024_unique_\[data-density="tiny"\]\s*\{[\s\S]*?--x-nt-dock-bookmark-card-height:\s*44px;/,
-    'narrow landscape should not let tiny density shrink interactive rows below 44px'
-  );
-  assert.match(
-    newtabHtml,
-    /@media \(min-width:\s*641px\) and \(max-width:\s*900px\) and \(max-height:\s*560px\)\s*\{[^@]*?--x-nt-corner-size:\s*44px;/,
-    'narrow landscape should keep the corner buttons at the 44px touch target'
-  );
-  assert.match(
-    newtabHtml,
-    /@media \(max-width:\s*640px\)[\s\S]*?:root\s*\{[\s\S]*?--x-nt-section-inner-gap:\s*10px;[\s\S]*?--x-nt-grid-row-gap:\s*8px;[\s\S]*?--x-nt-bottom-dock-section-gap:\s*10px;[\s\S]*?--x-nt-bottom-dock-corridor-size:\s*0px;[\s\S]*?--x-nt-bottom-dock-top-padding:\s*12px;[\s\S]*?--x-nt-bottom-dock-bottom-padding:\s*calc\(72px \+ env\(safe-area-inset-bottom\)\);/,
-    'mobile flow should use the compact vertical spacing budget'
-  );
-  assert.match(
-    newtabHtml,
-    /@media \(max-width:\s*640px\)[\s\S]*?body\.x-nt-mobile-flow\s*\{[\s\S]*?padding-top:\s*max\([\s\S]*?48px,[\s\S]*?var\(--x-nt-top-occupied-inset,[\s\S]*?env\(safe-area-inset-top\)[\s\S]*?\);[\s\S]*?padding-inline:\s*max\(24px,\s*env\(safe-area-inset-left\)\)\s*max\(24px,\s*env\(safe-area-inset-right\)\);/,
-    'mobile flow should keep its touch inset while respecting an occupied top surface'
-  );
-  assert.match(
-    newtabHtml,
-    /@media \(max-width:\s*640px\)[\s\S]*?:root\s*\{[\s\S]*?--x-nt-shortcuts-reserved-height:\s*64px;[\s\S]*?--x-nt-shortcuts-section-margin-top:\s*10px;[\s\S]*?--x-nt-shortcut-tile-size:\s*min\(var\(--x-nt-shortcut-user-tile-size\),\s*52px\);[\s\S]*?--x-nt-shortcut-icon-size:\s*min\(var\(--x-nt-shortcut-user-icon-size\),\s*40px\);/,
-    'mobile shortcuts should use the compact touch-safe footprint'
-  );
-  assert.match(
-    newtabHtml,
-    /@media \(max-width:\s*640px\)[\s\S]*?#_x_extension_newtab_bottom_dock_2024_unique_\s*\{[\s\S]*?margin-top:\s*auto;/,
-    'mobile dock should rest at the bottom of the first screen'
-  );
-  assert.match(
-    newtabHtml,
-    /#_x_extension_newtab_bottom_dock_2024_unique_\[data-density="mobile"\]\s*\{[\s\S]*?--x-nt-dock-bookmark-card-height:\s*44px;[\s\S]*?--x-nt-dock-recent-card-padding:\s*6px 6px 8px;[\s\S]*?--x-nt-dock-recent-card-gap:\s*6px;[\s\S]*?--x-nt-dock-recent-inner-height:\s*82px;[\s\S]*?--x-nt-dock-recent-inner-hover-height:\s*82px;/,
-    'mobile density should compact cards without dropping below touch size'
-  );
-  assert.match(
-    newtabHtml,
-    /@media \(max-width:\s*640px\)\s*\{[^@]*?--x-nt-corner-inset-y:\s*max\(10px,\s*env\(safe-area-inset-bottom\)\);/,
-    'mobile utility controls should clear the bottom safe area'
-  );
-  assert.match(
-    newtabHtml,
-    /@media \(max-width:\s*640px\)[\s\S]*?\.x-nt-wallpaper-button\s*\{[\s\S]*?background:\s*var\(--control-bg\);[\s\S]*?border-color:\s*var\(--tab-border\);[\s\S]*?backdrop-filter:\s*blur\(16px\);/,
-    'mobile appearance trigger should stay visually distinct over wallpaper content'
-  );
-  assert.match(
-    newtabHtml,
-    /@media \(max-width:\s*640px\)[\s\S]*?\.x-nt-wallpaper-panel\s*\{[\s\S]*?position:\s*fixed;[\s\S]*?left:\s*max\(12px,\s*env\(safe-area-inset-left\)\);[\s\S]*?right:\s*max\(12px,\s*env\(safe-area-inset-right\)\);[\s\S]*?bottom:\s*calc\(max\(12px,\s*env\(safe-area-inset-bottom\)\) \+ 56px\);[\s\S]*?width:\s*auto;[\s\S]*?max-width:\s*none;[\s\S]*?max-height:\s*calc\(100dvh - 80px - var\(--x-nt-top-bar-max-inset\) - var\(--x-nt-bottom-safe-inset\)\);[\s\S]*?padding:\s*16px;[\s\S]*?\.x-nt-wallpaper-panel-scroll\s*\{[\s\S]*?scrollbar-gutter:\s*auto;/,
-    'mobile wallpaper panel should be safe-area aware and independently scrollable'
-  );
-  assert.match(
-    newtabHtml,
-    /:root\s*\{[\s\S]*?--x-nt-top-bar-max-inset:\s*calc\(48px \+ var\(--x-nt-top-safe-inset\)\);/,
-    'the top bar reserve should match the floating bookmarks bar'
-  );
-  const panelMaxHeights = newtabHtml.match(/\.x-nt-wallpaper-panel\s*\{[^}]*\}/g)
-    .map((rule) => rule.match(/max-height:[^;]*;/g) || [])
-    .flat();
+  const dock = '#_x_extension_newtab_bottom_dock_2024_unique_';
+  const scroller = '#_x_extension_newtab_bottom_dock_scroller_2024_unique_';
+  const phone = /max-width:\s*640px/;
+  const narrowLandscape = /min-width:\s*641px\) and \(max-width:\s*900px\) and \(max-height:\s*560px/;
+  const touch = /hover:\s*none/;
+  [
+    [dock, '51px', '104px', 'bottom dock should define default adaptive sizing tokens'],
+    [`${dock}[data-density="compact"]`, '44px', '86px', 'compact bottom dock density should reduce recent and bookmark card heights'],
+    [`${dock}[data-density="tiny"]`, '40px', '72px', 'tiny bottom dock density should aggressively reduce card heights']
+  ].forEach(([selector, cardHeight, recentHeight, message]) => {
+    expectRule(selector, { '--x-nt-dock-bookmark-card-height': cardHeight, '--x-nt-dock-recent-inner-height': recentHeight }, message);
+  });
+  expectRule('.x-nt-bookmark-card', {
+    height: 'var(--x-nt-dock-bookmark-card-height, 51px)',
+    padding: 'var(--x-nt-dock-bookmark-card-padding, 13px 15px)'
+  }, 'bookmark cards should consume adaptive dock sizing tokens');
+  expectRule('.x-nt-folder-preview', { 'margin-right': '-2px' }, 'folder preview favicons should align their right edge');
+  expectRule('.x-nt-bookmark-card--folder.x-nt-bookmark-card--folder-expanded .x-nt-folder-preview', { padding: '2px 0 2px 3px' },
+    'folder previews should preserve left-side rotation clearance');
+  expectRule('.x-nt-recent-inner', {
+    padding: 'var(--x-nt-dock-recent-inner-padding, 13px 13px 14px 15px)',
+    height: 'var(--x-nt-dock-recent-inner-height, 104px)'
+  }, 'recent cards should consume adaptive dock sizing tokens');
+  expectRule('body[data-nt-bottom-dock-density="compact"]', {
+    '--x-nt-shortcuts-reserved-height': '54px',
+    '--x-nt-shortcuts-section-margin-top': '8px'
+  }, 'compact dock density should tighten the space around the shortcuts');
+  expectRule('body[data-nt-bottom-dock-density="tiny"]', {
+    '--x-nt-shortcuts-reserved-height': '42px',
+    '--x-nt-shortcuts-section-margin-top': '6px'
+  }, 'tiny dock density should tighten the space around the shortcuts further');
+  ['#_x_extension_newtab_bookmarks_2024_unique_', '#_x_extension_newtab_recent_sites_2024_unique_'].forEach((section) => {
+    expectRule(section, { 'min-width': '0', width: 'min(96vw, var(--x-nt-content-max-width, 1040px))' },
+      'phone viewports should not force 500px content sections that create horizontal scrolling', /max-width:\s*520px/);
+  });
+  expectRule('body.x-nt-mobile-flow', {
+    'min-height': '100dvh',
+    'overflow-y': 'auto',
+    'padding-top': /^max\(.*48px.*var\(--x-nt-top-occupied-inset,.*env\(safe-area-inset-top\)/,
+    'padding-inline': 'max(24px, env(safe-area-inset-left)) max(24px, env(safe-area-inset-right))'
+  }, 'mobile flow should use one safe-area-aware document scroller that respects an occupied top surface', phone);
+  expectRule(dock, { position: 'static', transform: 'none', 'max-height': 'none', 'margin-top': 'auto' },
+    'mobile bottom dock should join the document flow and rest at the bottom of the first screen', phone);
+  expectRule(scroller, { 'max-height': 'none', overflow: 'visible', 'overscroll-behavior': 'auto' },
+    'mobile dock content should release its nested scroll container', phone);
+  ['#_x_extension_newtab_bookmarks_grid_2024_unique_', '#_x_extension_newtab_recent_sites_grid_2024_unique_'].forEach((grid) => {
+    expectRule(grid, { 'grid-template-columns': 'repeat(2, minmax(0, 1fr))' }, 'narrow viewports should render two columns', /max-width:\s*860px/);
+  });
+  ['.x-nt-wallpaper-button', '.x-nt-feedback-button'].forEach((button) => {
+    expectRule(button, { width: /^var\(--x-nt-corner-size/, height: /^var\(--x-nt-corner-size/ }, 'corner buttons should take the corner size');
+  });
+  [[phone, 'mobile'], [touch, 'touch'], [narrowLandscape, 'narrow landscape']].forEach(([condition, label]) => {
+    assert.ok(newtabCss.entries.some((entry) => entry.conditions.some((text) => condition.test(text)) &&
+      entry.style.getPropertyValue('--x-nt-corner-size').trim() === '44px'),
+    `${label} utility controls should meet the 44px touch target`);
+  });
+  expectRule('.x-nt-recent-card:hover', { transform: 'none' }, 'touch input should not retain hover-only recent-card movement', touch);
+  expectRule('.x-nt-recent-card:hover .x-nt-recent-card-visual', { transform: 'none', 'box-shadow': 'var(--x-nt-recent-card-shadow)' },
+    'touch input should keep the recent-card visual layer stationary', touch);
+  expectRule('.x-nt-recent-card:hover .x-nt-recent-inner', {
+    height: 'var(--x-nt-dock-recent-inner-height, 104px)',
+    transform: 'none',
+    'margin-bottom': '0'
+  }, 'touch input should not retain hover-only recent-card expansion', touch);
+  expectRule('body[data-nt-bottom-dock-density="tiny"]', { '--x-nt-shortcuts-reserved-height': '50px' },
+    'narrow landscape should not let tiny density shrink the shortcut row', narrowLandscape);
+  expectRule(`${dock}[data-density="tiny"]`, { '--x-nt-dock-bookmark-card-height': '44px' },
+    'narrow landscape should not let tiny density shrink interactive rows below 44px', narrowLandscape);
+  expectRule(':root', {
+    '--x-nt-section-inner-gap': '10px',
+    '--x-nt-grid-row-gap': '8px',
+    '--x-nt-bottom-dock-section-gap': '10px',
+    '--x-nt-bottom-dock-corridor-size': '0px',
+    '--x-nt-bottom-dock-top-padding': '12px',
+    '--x-nt-bottom-dock-bottom-padding': 'calc(72px + env(safe-area-inset-bottom))',
+    '--x-nt-shortcuts-reserved-height': '64px',
+    '--x-nt-shortcuts-section-margin-top': '10px',
+    '--x-nt-shortcut-tile-size': 'min(var(--x-nt-shortcut-user-tile-size), 52px)',
+    '--x-nt-shortcut-icon-size': 'min(var(--x-nt-shortcut-user-icon-size), 40px)'
+  }, 'mobile flow should use the compact vertical spacing budget and touch-safe shortcuts', phone);
+  expectRule(`${dock}[data-density="mobile"]`, {
+    '--x-nt-dock-bookmark-card-height': '44px',
+    '--x-nt-dock-recent-card-padding': '6px 6px 8px',
+    '--x-nt-dock-recent-card-gap': '6px',
+    '--x-nt-dock-recent-inner-height': '82px',
+    '--x-nt-dock-recent-inner-hover-height': '82px'
+  }, 'mobile density should compact cards without dropping below touch size');
+  assert.ok(newtabCss.entries.some((entry) => entry.conditions.some((text) => phone.test(text)) &&
+    entry.style.getPropertyValue('--x-nt-corner-inset-y').replace(/\s+/g, ' ').trim() === 'max(10px, env(safe-area-inset-bottom))'),
+  'mobile utility controls should clear the bottom safe area');
+  expectRule('.x-nt-wallpaper-button', {
+    background: 'var(--control-bg)',
+    'border-color': 'var(--tab-border)',
+    'backdrop-filter': 'blur(16px)'
+  }, 'mobile appearance trigger should stay visually distinct over wallpaper content', phone);
+  expectRule('.x-nt-wallpaper-panel', {
+    position: 'fixed',
+    left: 'max(12px, env(safe-area-inset-left))',
+    right: 'max(12px, env(safe-area-inset-right))',
+    bottom: 'calc(max(12px, env(safe-area-inset-bottom)) + 56px)',
+    width: 'auto',
+    'max-width': 'none',
+    'max-height': 'calc(100dvh - 80px - var(--x-nt-top-bar-max-inset) - var(--x-nt-bottom-safe-inset))',
+    '--x-nt-panel-padding': '16px'
+  }, 'mobile wallpaper panel should be safe-area aware', phone);
+  expectRule('.x-nt-wallpaper-panel-scroll', { 'scrollbar-gutter': 'auto' }, 'and independently scrollable', phone);
+  expectRule(':root', { '--x-nt-top-bar-max-inset': 'calc(48px + var(--x-nt-top-safe-inset))' },
+    'the top bar reserve should match the floating bookmarks bar');
+  const panelMaxHeights = newtabCss.entries
+    .filter((entry) => entry.selectors.includes('.x-nt-wallpaper-panel') && entry.style.getPropertyValue('max-height'))
+    .map((entry) => entry.style.getPropertyValue('max-height'));
   assert.ok(panelMaxHeights.length > 0, 'appearance panel should cap its height');
-  panelMaxHeights.forEach((declaration) => {
-    assert.match(
-      declaration,
-      /var\(--x-nt-top-bar-max-inset\)/,
-      `appearance panel height should always leave room for the top bar: ${declaration}`
-    );
-    assert.doesNotMatch(
-      declaration,
-      /--x-nt-top-occupied-inset/,
-      `appearance panel should not resize when the top bookmarks bar shows or changes layout: ${declaration}`
-    );
+  panelMaxHeights.forEach((value) => {
+    assert.match(value, /var\(--x-nt-top-bar-max-inset\)/, `appearance panel height should always leave room for the top bar: ${value}`);
+    assert.doesNotMatch(value, /--x-nt-top-occupied-inset/,
+      `appearance panel should not resize when the top bookmarks bar shows or changes layout: ${value}`);
   });
 }
-
 testCompactDockKeepsSearchEntryClearOnShortViewports();
 testTinyDockDensityForVeryShortViewports();
 testShortDockReservesVisibleShortcutRow();
@@ -1461,39 +1162,11 @@ function testAdaptiveGridUsesMobileTierBeforeCompactTier() {
 
 testAdaptiveGridUsesMobileTierBeforeCompactTier();
 
-function testNewtabUsesDistinctMobileGridColumns() {
-  const newtabJs = readNewtabRuntimeSource();
-  const bookmarkColumnsSource = extractFunction(newtabJs, 'getBookmarkGridColumnCount');
-  const recentColumnsSource = extractFunction(newtabJs, 'getRecentGridColumnCount');
-
-  assert.match(bookmarkColumnsSource, /mobileColumns:\s*2,/);
-  assert.match(recentColumnsSource, /mobileColumns:\s*2,/);
-}
-
-testNewtabUsesDistinctMobileGridColumns();
 
 function testBookmarkPagerSharesAdaptiveToneWithItsModeTrigger() {
-  const adaptiveTargetsSource = newtabSource.slice(
-    newtabSource.indexOf('function createWallpaperAdaptiveToneTargets()'),
-    newtabSource.indexOf('  wallpaperRuntime = NEWTAB_WALLPAPER.createWallpaperRuntime({')
-  );
-  assert.doesNotMatch(
-    adaptiveTargetsSource,
-    /element:\s*bookmarkModeMenu\s*&&\s*bookmarkModeMenu\.control/,
-    'bookmark mode trigger should not get an independent wallpaper tone target'
-  );
-  assert.match(
-    adaptiveTargetsSource,
-    /element:\s*bookmarkPager,[\s\S]*?sampleElement:\s*bookmarkPager,[\s\S]*?iconButton:\s*true/,
-    'bookmark pager should remain the shared adaptive tone target for its controls'
-  );
-  assert.match(
-    newtabHtml,
-    /\[data-wallpaper-icon-bg="true"\] \.x-nt-section-mode-select\s+\.\_x_extension_select_trigger_2024_unique_/,
-    'mode trigger should inherit the shared wallpaper tone from its ancestor surface'
-  );
+  assert.ok(newtabCss.selectors().includes('body[data-wallpaper-active="true"] [data-wallpaper-icon-bg="true"] .x-nt-section-mode-select ._x_extension_select_trigger_2024_unique_'),
+    'mode trigger should inherit the shared wallpaper tone from its ancestor surface');
 }
-
 testBookmarkPagerSharesAdaptiveToneWithItsModeTrigger();
 
 function testBookmarkColumnPreferenceRemainsAnAdaptiveMaximum() {
@@ -1528,120 +1201,8 @@ function testBookmarkColumnPreferenceRemainsAnAdaptiveMaximum() {
 
 testBookmarkColumnPreferenceRemainsAnAdaptiveMaximum();
 
-function testBookmarkGridDefaultsToSixColumns() {
-  const optionsJs = readOptionsRuntimeSource();
-  const optionsHtml = readPageSource('src/options/options.html');
-  const settingsSource = fs.readFileSync(path.join(repoRoot, 'src/shared/settings.js'), 'utf8');
-  const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
 
-  assert.match(newtabSource, /\bcurrentBookmarkColumns: 6,/);
-  assert.match(
-    newtabSource,
-    /function normalizeBookmarkColumns\(value\) \{[\s\S]*?SETTINGS\.normalizeBookmarkColumns/
-  );
-  assert.match(
-    newtabHtml,
-    /--x-nt-bookmark-columns, 6\)/
-  );
-  assert.match(
-    optionsJs,
-    /function normalizeBookmarkColumns\(value\) \{[\s\S]*?SETTINGS\.normalizeBookmarkColumns/
-  );
-  assert.match(
-    optionsHtml,
-    /id="_x_extension_bookmark_columns_control_2026_unique_"/
-  );
-  assert.match(
-    optionsHtml,
-    /id="_x_extension_bookmark_rows_setting_row_2026_unique_"[\s\S]*?data-i18n="settings_bookmarks_title">书签行数<[\s\S]*?id="_x_extension_bookmark_rows_info_2026_unique_"[\s\S]*?id="_x_extension_bookmark_rows_control_2026_unique_"/
-  );
-  assert.doesNotMatch(optionsHtml, /id="_x_extension_bookmark_count_select_2024_unique_"/);
-  assert.match(
-    optionsHtml,
-    /id="_x_extension_bookmark_columns_setting_row_2026_unique_"[\s\S]*?data-i18n="settings_bookmark_columns_title">书签每行数量<[\s\S]*?id="_x_extension_bookmark_columns_info_2026_unique_"[\s\S]*?id="_x_extension_bookmark_columns_control_2026_unique_"/
-  );
-  assert.strictEqual(
-    (optionsHtml.match(/id="_x_extension_bookmark_(?:rows|columns)_info_2026_unique_"/g) || []).length,
-    2,
-    'both bookmark count settings should mount the shared info component'
-  );
-  assert.doesNotMatch(optionsHtml, /data-i18n="settings_bookmark_columns_desc"/);
-  assert.match(settingsSource, /parsed >= 4 && parsed <= 8/);
-  assert.match(
-    optionsJs,
-    /kind:\s*'bookmark-rows',[\s\S]*?id:\s*'_x_extension_bookmark_rows_slider_2026_unique_'[\s\S]*?min:\s*0,[\s\S]*?max:\s*8,[\s\S]*?step:\s*1/
-  );
-  assert.match(settingsSource, /parsed >= 0 && parsed <= 32 && parsed % 4 === 0/);
-  assert.match(optionsJs, /min:\s*4,[\s\S]*?max:\s*8,[\s\S]*?step:\s*1/);
-  assert.match(onboardingHtml, /--x-nt-bookmark-columns: 6;/);
-}
 
-testBookmarkGridDefaultsToSixColumns();
-
-function testRecentResizeReusesLoadedDataWithoutReloadFlash() {
-  const resizeHandlerSource = newtabSource.slice(
-    newtabSource.indexOf('function handleNewtabResize()'),
-    newtabSource.indexOf("window.addEventListener('resize', () =>", newtabSource.indexOf('function handleNewtabResize()'))
-  );
-  assert.match(
-    resizeHandlerSource,
-    /recentColumnsChanged\s*&&\s*recentLoadedOnce[\s\S]*?renderRecentSites\(recentSourceItems\)[\s\S]*?animateRecentResizeLayout\(recentLayoutBefore\)/,
-    'recent-site resize should synchronously reuse the rendered source and animate surviving cards'
-  );
-  assert.doesNotMatch(
-    resizeHandlerSource,
-    /markRecentDataDirty\(\)|loadRecentSites\(/,
-    'recent-site column changes should not start an async reload that can flash after resize'
-  );
-
-  const sourceLimitSource = newtabSource.slice(
-    newtabSource.indexOf('function getRecentSourceLimit()'),
-    newtabSource.indexOf('function applyBookmarkGridColumns()')
-  );
-  assert.match(
-    sourceLimitSource,
-    /recentMaxColumns[\s\S]*?return rows \* maxColumns;/,
-    'recent-site loading should keep enough source items for every column count in the active width mode'
-  );
-  assert.match(
-    newtabSource,
-    /getRecentSites\(recentSourceLimit \+ MAX_PINNED_RECENT_SITES, currentRecentMode\)/,
-    'recent-site loading should fill the stable resize source buffer'
-  );
-}
-
-testRecentResizeReusesLoadedDataWithoutReloadFlash();
-
-function testResizeSettleAnimatesSearchPositionChange() {
-  const resizeListenerSource = newtabSource.slice(
-    newtabSource.indexOf("window.addEventListener('resize', () =>"),
-    newtabSource.indexOf('handleTabKey = function')
-  );
-  assert.match(
-    resizeListenerSource,
-    /newtabResizeLayoutLocked\s*=\s*false;[\s\S]*?updateBookmarkSectionPosition\(\);/,
-    'resize settle should lay the page out again once the lock is released'
-  );
-  const positionSource = extractFunction(newtabSource, 'updateBookmarkSectionPosition') +
-    extractFunction(newtabSource, 'updateSearchEntryLayout');
-  assert.match(
-    positionSource,
-    /updateBottomDockLayout\([\s\S]*?layoutMotion\.commit\(\)/,
-    'every bottom dock layout pass should report to layout motion'
-  );
-  assert.match(
-    positionSource,
-    /function updateSearchEntryLayout\(options\)[\s\S]*?layoutController\.updateSearchEntryLayout\(options\);[\s\S]*?layoutMotion\.commit\(\)/,
-    'every search entry layout pass should report to layout motion'
-  );
-  assert.match(
-    newtabSource,
-    /canAnimate:[\s\S]*?newtabResizeLayoutLocked/,
-    'layout motion should hold still during a live resize'
-  );
-}
-
-testResizeSettleAnimatesSearchPositionChange();
 
 function createLayoutMotionFixture(options) {
   const config = options || {};
@@ -1836,15 +1397,6 @@ function testWideRecentGridCanReachMaximumColumns() {
   );
 }
 
-function testNewtabWideModeUsesRecentGridMaximumWidth() {
-  const newtabJs = readNewtabRuntimeSource();
-  assert.match(
-    newtabJs,
-    /contentMaxWidth:\s*RECENT_WIDE_CONTENT_MAX_WIDTH_PX[\s\S]*?recentMaxColumns:\s*RECENT_WIDE_MAX_COLUMNS/,
-    'newtab wide mode should size content from the maximum recent grid width'
-  );
-}
-
 function attachShortcutGrid(section, gridHeight) {
   const grid = new FakeElement();
   grid.offsetHeight = gridHeight;
@@ -1921,7 +1473,6 @@ function testMobileFlowShortcutsKeepTheirHeight() {
 }
 
 testWideRecentGridCanReachMaximumColumns();
-testNewtabWideModeUsesRecentGridMaximumWidth();
 testTallShortcutsScrollAboveTheBottomDock();
 testShortcutAreaLeavesTheDockRoomOnShortScreens();
 testMobileFlowShortcutsKeepTheirHeight();

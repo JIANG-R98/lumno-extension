@@ -55,9 +55,51 @@ async function testNewTabFollowsTheSetting() {
   focusRoute.close();
 }
 
+// The search shortcut opens ?focus=1 even with auto-focus off. That load
+// focuses the box once, drops the hint from the address without navigating,
+// and later window focus does not pull the cursor back.
+async function testTheFocusHintIsUsedOnce() {
+  const foreground = (window) => {
+    window.document.hasFocus = () => true;
+  };
+  const refocus = async (page) => {
+    page.document.getElementById(INPUT_ID).blur();
+    page.window.dispatchEvent(new page.window.Event('focus'));
+    page.document.dispatchEvent(new page.window.Event('visibilitychange'));
+    await page.settle(80);
+    return page.document.activeElement && page.document.activeElement.id === INPUT_ID;
+  };
+
+  // JSDOM cannot rewrite a chrome-extension: address, so record it.
+  const addresses = [];
+  const off = await createNewtabPage({
+    search: '?focus=1&q=x',
+    setup(window) {
+      foreground(window);
+      window.history.replaceState = (_state, _title, url) => addresses.push(String(url));
+    }
+  });
+  await off.settle(250);
+  assert.strictEqual(off.document.activeElement && off.document.activeElement.id, INPUT_ID,
+    'the focus hint should focus the search box even with auto-focus off');
+  assert.deepStrictEqual(addresses.map((url) => new URL(url).search), ['?q=x'],
+    'the used hint should leave the address once, keeping the rest of the query');
+  assert.ok(!off.errors.some((message) => /navigation/i.test(message)), 'without a second navigation');
+  assert.strictEqual(await refocus(off), false, 'returning to the tab should not force focus back with auto-focus off');
+  assert.ok(!off.storage.sync.writes.some((write) => Object.hasOwn(write, KEY)),
+    'loading a missing auto-focus preference should not save the default over existing users');
+  off.close();
+
+  const on = await createNewtabPage({ sync: { [KEY]: true }, search: '?focus=1', setup: foreground });
+  await on.settle(250);
+  assert.strictEqual(await refocus(on), true, 'with auto-focus on, returning to the tab focuses the search box again');
+  on.close();
+}
+
 (async () => {
   testSettingsMarkup();
   await testNewTabFollowsTheSetting();
+  await testTheFocusHintIsUsedOnce();
   console.log('newtab input auto-focus setting tests passed');
   process.exit(0);
 })().catch((error) => {
