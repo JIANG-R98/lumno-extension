@@ -41,7 +41,12 @@ const SPLIT_STYLESHEETS = {
     'page', 'shortcuts', 'top-content', 'dock-and-entry', 'sections', 'bookmarks-topbar',
     'bookmark-cascade', 'recent-cards', 'notices-and-suggestions', 'corner-controls',
     'wallpaper-ink', 'appearance-panel', 'appearance-options', 'suggestions', 'page-overrides'
-  ].map((name) => `src/newtab/styles/${name}.css`)
+  ].map((name) => `src/newtab/styles/${name}.css`),
+  'src/onboarding/onboarding.css': [
+    'shell', 'page-copy', 'interactions', 'dark-theme', 'responsive', 'visual-stage',
+    'newtab-preview', 'newtab-preview-sections', 'site-search-demo', 'feature-cards',
+    'browser-window', 'overlay-demo', 'cursor-layer'
+  ].map((name) => `src/onboarding/styles/${name}.css`)
 };
 
 // A stylesheet's source as written, joining a split stylesheet's parts.
