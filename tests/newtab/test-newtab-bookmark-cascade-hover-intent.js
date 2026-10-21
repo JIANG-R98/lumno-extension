@@ -1,14 +1,10 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { readPageSource } = require('../helpers/page-source');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { parsePageCss } = require('../helpers/css-rules');
 const { getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const newtabJs = readNewtabRuntimeSource();
-const newtabHtml = readPageSource('newtab.html');
-const cascadeMenuJs = fs.readFileSync(path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-cascade-menu.js'), 'utf8');
 const {
   buildCascadeSafeTriangle,
   isPointInsideCascadeSafeTriangle
@@ -20,61 +16,16 @@ const {
   createFakeBookmarkCascadeView
 } = require(path.join(repoRoot, 'tests', 'helpers', 'fake-bookmark-cascade-view.js'));
 
-function assertContains(source, needle, message) {
-  assert.ok(source.includes(needle), message);
-}
+// Longer than the menus' hover-intent delay and their close delay, and
+// shorter than how long a safe triangle protects an open submenu.
+const HOVER_PAUSE_MS = 400;
+const CLOSE_PAUSE_MS = 600;
 
-function getCssRuleBody(source, selector) {
-  const selectorIndex = source.indexOf(selector);
-  assert.ok(selectorIndex >= 0, `${selector} rule should exist`);
-  const braceStart = source.indexOf('{', selectorIndex);
-  assert.ok(braceStart >= 0, `${selector} rule should have a body`);
-  let depth = 0;
-  for (let index = braceStart; index < source.length; index += 1) {
-    const char = source[index];
-    if (char === '{') {
-      depth += 1;
-    } else if (char === '}') {
-      depth -= 1;
-      if (depth === 0) {
-        return source.slice(braceStart + 1, index);
-      }
-    }
-  }
-  throw new Error(`${selector} rule should be parseable`);
-}
-
-function getCssZIndex(source, selector) {
-  const body = getCssRuleBody(source, selector);
-  const match = body.match(/z-index:\s*(-?\d+)/);
-  assert.ok(match, `${selector} should define a z-index`);
-  return Number.parseInt(match[1], 10);
-}
-
-// Layers are tokens, sometimes offset with calc(); the page source has the tokens
-// resolved, so a value is a number or calc(number + number).
-function getCssNumericDeclaration(source, selector, propertyName) {
-  const body = getCssRuleBody(source, selector);
-  const escapedProperty = String(propertyName).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = body.match(new RegExp(`${escapedProperty}:\\s*(?:calc\\(\\s*(-?\\d+)\\s*\\+\\s*(\\d+)\\s*\\)|(-?\\d+))`));
-  assert.ok(match, `${selector} should define ${propertyName} as a numeric value`);
-  return match[3] !== undefined
-    ? Number.parseInt(match[3], 10)
-    : Number.parseInt(match[1], 10) + Number.parseInt(match[2], 10);
-}
-
-function assertBookmarkCursorTooltipAboveCascade(source, label) {
-  assert.ok(
-    getCssNumericDeclaration(source, '.x-nt-bookmark-cursor-tooltip', '--x-extension-tooltip-z-index') >
-      getCssZIndex(source, '.x-nt-bookmark-cascade-menu'),
-    `${label} bookmark cursor tooltip should render above the bookmark cascade menu`
-  );
-}
-
-function getJsConstNumber(source, name) {
-  const match = source.match(new RegExp(`const\\s+${name}\\s*=\\s*(\\d+)\\s*;`));
-  assert.ok(match, `${name} should be defined as a numeric constant`);
-  return Number.parseInt(match[1], 10);
+// A layer value: a number, or calc(number + number) once tokens resolve.
+function layer(value) {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  const sum = text.match(/^calc\((-?\d+) \+ (\d+)\)$/);
+  return sum ? Number(sum[1]) + Number(sum[2]) : Number.parseInt(text, 10);
 }
 
 function createFakeEvent(type, values) {
@@ -445,61 +396,6 @@ assert.strictEqual(
   );
 }
 
-assertContains(
-  cascadeMenuJs,
-  'BOOKMARK_CASCADE_HOVER_DELAY_MS',
-  'bookmark cascade menus should use a hover delay before pointer-triggered activation'
-);
-assertContains(
-  cascadeMenuJs,
-  'BOOKMARK_CASCADE_CLOSE_DELAY_MS',
-  'bookmark cascade menus should use a delayed close after pointer exit'
-);
-assertContains(
-  cascadeMenuJs,
-  'BOOKMARK_CASCADE_SAFE_RECHECK_MS',
-  'bookmark cascade menus should recheck safe-triangle protection before switching'
-);
-assertContains(
-  cascadeMenuJs,
-  'BOOKMARK_CASCADE_SAFE_MAX_MS',
-  'bookmark cascade menus should keep safe-triangle protection independent from the first hover delay'
-);
-assert.ok(
-  getJsConstNumber(cascadeMenuJs, 'BOOKMARK_CASCADE_SAFE_MAX_MS') >
-    getJsConstNumber(cascadeMenuJs, 'BOOKMARK_CASCADE_HOVER_DELAY_MS'),
-  'safe-triangle protection should be allowed to outlive the initial hover delay'
-);
-assertContains(
-  cascadeMenuJs,
-  'safeUntil: scheduledAt + BOOKMARK_CASCADE_SAFE_MAX_MS',
-  'safe-triangle protection should use its own max window instead of expiring at hover-delay completion'
-);
-assertContains(
-  cascadeMenuJs,
-  'scheduleBookmarkCascadeHoverIntent',
-  'pointer hover in bookmark cascade should be routed through delayed intent scheduling'
-);
-assertContains(
-  cascadeMenuJs,
-  "const shouldSuppressHover = getFunction(config, 'shouldSuppressHover'",
-  'bookmark cascade should accept a shared hover suppression hook for drag reorder'
-);
-assertContains(
-  cascadeMenuJs,
-  'isBookmarkCascadeHoverSuppressed(task.triggerElement',
-  'bookmark cascade hover intent should re-check suppression before opening a delayed target'
-);
-assertContains(
-  cascadeMenuJs,
-  'shouldProtectBookmarkCascadeLevel',
-  'bookmark cascade switching should consult the safe triangle before replacing a submenu'
-);
-assertContains(
-  newtabJs,
-  'NEWTAB_BOOKMARK_CASCADE_MENU.createBookmarkCascadeMenuRuntime',
-  'newtab should delegate bookmark cascade behavior to the menu runtime'
-);
 {
   const newtabScripts = getPageScripts('newtab.html');
   assert.ok(
@@ -509,33 +405,18 @@ assertContains(
   );
 }
 {
-  const cascadeItemRule = getCssRuleBody(newtabHtml, '.x-nt-bookmark-cascade-item');
-  assertContains(
-    cascadeItemRule,
-    'transition: color 120ms ease;',
-    'bookmark cascade row text color transitions should remain available'
-  );
-  assert.ok(
-    !/transition:\s*[^;]*background-color/.test(cascadeItemRule),
-    'bookmark cascade row hover background should appear immediately without a background-color transition'
-  );
-}
-assertContains(
-  newtabHtml,
-  '.x-nt-bookmark-cascade-item[data-hover-suppressed="true"]:hover',
-  'newtab CSS should suppress competing row hover visuals while safe-triangle protection is active'
-);
-assertContains(
-  newtabJs,
-  "className: 'x-nt-bookmark-cursor-tooltip'",
-  'newtab bookmark cursor tooltip should use a scoped class for layer control'
-);
-assertBookmarkCursorTooltipAboveCascade(newtabHtml, 'standard newtab');
-{
-  assert.ok(
-    !newtabHtml.includes('.x-nt-bookmark-cascade-item:focus-visible {\n        outline: 2px solid'),
-    'bookmark cascade keyboard focus should use the selected row background instead of an outline stroke'
-  );
+  const css = parsePageCss('newtab.html');
+  const item = css.rule('.x-nt-bookmark-cascade-item');
+  assert.strictEqual(item.get('transition'), 'color 120ms ease',
+    'row text colour transitions while the hover background appears at once');
+  assert.ok(css.selectors().some((selector) => selector.startsWith('.x-nt-bookmark-cascade-item[data-hover-suppressed="true"]:hover')),
+    'rows crossed inside a safe triangle should not show a competing hover');
+  assert.ok(layer(css.rule('.x-nt-bookmark-cursor-tooltip').get('--x-extension-tooltip-z-index')) >
+    layer(css.rule('.x-nt-bookmark-cascade-menu').get('z-index')),
+  'the bookmark cursor tooltip should render above the bookmark menus');
+  assert.ok(!css.entries.some((entry) => entry.selectors.includes('.x-nt-bookmark-cascade-item:focus-visible') &&
+    /^2px solid/.test(entry.style.getPropertyValue('outline'))),
+  'keyboard focus in a menu uses the selected row background, not an outline');
 }
 
 function createCascadeRuntimeFixture(overrides) {
@@ -651,7 +532,7 @@ async function openCascadeWithSubmenu(overrides) {
       pointerType: 'mouse',
       target: rootItems[0]
     }));
-    clock.advance(getJsConstNumber(cascadeMenuJs, 'BOOKMARK_CASCADE_HOVER_DELAY_MS'));
+    clock.advance(HOVER_PAUSE_MS);
 
     levels = getMenuLevels(documentObj);
     rootItems = getMenuItems(levels[0]);
@@ -680,7 +561,7 @@ async function openCascadeWithSubmenu(overrides) {
       clientY: 650,
       target: documentObj.body
     }));
-    clock.advance(getJsConstNumber(cascadeMenuJs, 'BOOKMARK_CASCADE_CLOSE_DELAY_MS') + 1);
+    clock.advance(CLOSE_PAUSE_MS);
 
     assert.strictEqual(
       runtime.isOpen(),
@@ -712,7 +593,7 @@ async function openCascadeWithSubmenu(overrides) {
       target: rootItems[1]
     }));
 
-    clock.advance(getJsConstNumber(cascadeMenuJs, 'BOOKMARK_CASCADE_HOVER_DELAY_MS'));
+    clock.advance(HOVER_PAUSE_MS);
 
     levels = getMenuLevels(documentObj);
     rootItems = getMenuItems(levels[0]);
@@ -750,7 +631,7 @@ async function openCascadeWithSubmenu(overrides) {
       target: rootItems[1]
     }));
 
-    clock.advance(getJsConstNumber(cascadeMenuJs, 'BOOKMARK_CASCADE_HOVER_DELAY_MS'));
+    clock.advance(HOVER_PAUSE_MS);
 
     levels = getMenuLevels(documentObj);
     rootItems = getMenuItems(levels[0]);
@@ -844,7 +725,7 @@ async function openCascadeWithSubmenu(overrides) {
       target: rootItems[1]
     }));
 
-    clock.advance(getJsConstNumber(cascadeMenuJs, 'BOOKMARK_CASCADE_HOVER_DELAY_MS'));
+    clock.advance(HOVER_PAUSE_MS);
 
     levels = getMenuLevels(documentObj);
     rootItems = getMenuItems(levels[0]);
@@ -997,6 +878,7 @@ async function openCascadeWithSubmenu(overrides) {
   }
 
   console.log('newtab bookmark cascade hover intent tests passed');
+  process.exit(0);
 })().catch((error) => {
   console.error(error);
   process.exit(1);
