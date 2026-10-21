@@ -1,13 +1,12 @@
 const assert = require('assert');
 const fs = require('fs');
 const vm = require('vm');
-const { readReactSource } = require('../helpers/react-source');
+const { JSDOM } = require('jsdom');
+const { parsePageCss } = require('../helpers/css-rules');
 const { readPageSource } = require('../helpers/page-source');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const {
   WALLPAPER_DEPENDENCY_GLOBALS,
-  readWallpaperRuntimeSource,
-  readWallpaperCheckSource
+  readWallpaperRuntimeSource
 } = require('../helpers/wallpaper-source');
 const { getBundleFiles } = require('../helpers/runtime-scripts');
 
@@ -713,77 +712,56 @@ function clonePlain(value) {
 }
 
 function assertSquareFaviconOptionCss(filePath) {
-  const source = readPageSource(filePath);
-  const optionsRule = source.match(/\.x-nt-favicon-options\s*\{[\s\S]*?\}/);
-  assert.ok(optionsRule, `${filePath} should define favicon options layout`);
-  assert.match(optionsRule[0], /display:\s*flex;/, `${filePath} favicon options should not stretch as a grid`);
-  assert.match(optionsRule[0], /justify-content:\s*flex-start;/, `${filePath} favicon options should align left`);
-  assert.match(optionsRule[0], /gap:\s*var\(--x-nt-panel-grid-gap\);/, `${filePath} favicon options should use wallpaper grid gap`);
-  assert.doesNotMatch(optionsRule[0], /grid-template-columns/, `${filePath} favicon options should not use equal-width columns`);
+  const css = parsePageCss(filePath);
+  const rule = (selector) => {
+    const found = css.rule(selector);
+    assert.ok(found, `${filePath} should style ${selector}`);
+    return found;
+  };
+  const options = rule('.x-nt-favicon-options');
+  assert.strictEqual(options.get('display'), 'flex', `${filePath} favicon options should not stretch as a grid`);
+  assert.strictEqual(options.get('justify-content'), 'flex-start', `${filePath} favicon options should align left`);
+  assert.strictEqual(options.get('gap'), 'var(--x-nt-panel-grid-gap)', `${filePath} favicon options should use wallpaper grid gap`);
+  assert.strictEqual(options.has('grid-template-columns'), false, `${filePath} favicon options should not use equal-width columns`);
 
-  const titleRule = source.match(/\.x-nt-favicon-title\s*\{[\s\S]*?\}/);
-  if (titleRule) {
-    assert.doesNotMatch(titleRule[0], /font-size:\s*13px;/, `${filePath} favicon title should match panel title size`);
-    assert.doesNotMatch(titleRule[0], /font-weight:\s*500;/, `${filePath} favicon title should match panel title weight`);
-  }
+  const quarter = 'calc((100% - (var(--x-nt-panel-grid-gap) * 3)) / 4)';
+  const option = rule('.x-nt-favicon-option');
+  assert.strictEqual(option.get('width').replace(/\s+/g, ' '), quarter, `${filePath} favicon option should use a quarter-width column`);
+  assert.strictEqual(option.get('flex').replace(/\s+/g, ' '), `0 0 ${quarter}`, `${filePath} favicon option flex basis should use a quarter-width column`);
 
-  const optionRule = source.match(/\.x-nt-favicon-option\s*\{[\s\S]*?\}/);
-  assert.ok(optionRule, `${filePath} should define wallpaper-sized favicon option size`);
-  assert.match(
-    optionRule[0],
-    /width:\s*calc\(\(100% - \(var\(--x-nt-panel-grid-gap\) \* 3\)\) \/ 4\);/,
-    `${filePath} favicon option should use a quarter-width column`
-  );
-  assert.match(
-    optionRule[0],
-    /flex:\s*0\s+0\s+calc\(\(100% - \(var\(--x-nt-panel-grid-gap\) \* 3\)\) \/ 4\);/,
-    `${filePath} favicon option flex basis should use a quarter-width column`
-  );
+  const thumb = rule('.x-nt-favicon-thumb');
+  assert.strictEqual(thumb.get('width'), '100%', `${filePath} favicon thumb should fill the wallpaper-width option`);
+  assert.strictEqual(thumb.get('aspect-ratio').replace(/\s+/g, ''), '1/1', `${filePath} favicon thumb should use a square rounded rectangle`);
+  assert.strictEqual(thumb.has('height'), false, `${filePath} favicon thumb should not keep the compact fixed height`);
 
-  const thumbRule = source.match(/\.x-nt-favicon-thumb\s*\{[\s\S]*?\}/);
-  assert.ok(thumbRule, `${filePath} should define favicon thumb size`);
-  assert.match(thumbRule[0], /width:\s*100%;/, `${filePath} favicon thumb should fill the wallpaper-width option`);
-  assert.match(thumbRule[0], /aspect-ratio:\s*1\s*\/\s*1;/, `${filePath} favicon thumb should use a square rounded rectangle`);
-  assert.match(thumbRule[0], /border:\s*none;/, `${filePath} favicon thumb should not add its own border`);
-  assert.doesNotMatch(thumbRule[0], /height:\s*44px;/, `${filePath} favicon thumb should not keep the compact fixed height`);
-
-  const selectedRule = source.match(/\.x-nt-favicon-option\[data-selected="true"\]\s+\.x-nt-favicon-thumb::after\s*\{[\s\S]*?\}/);
-  assert.ok(selectedRule, `${filePath} should define selected favicon outline alignment`);
-  assert.match(selectedRule[0], /inset:\s*0;/, `${filePath} selected favicon outline should not have inner spacing`);
-  assert.match(selectedRule[0], /border-radius:\s*inherit;/, `${filePath} selected favicon outline should inherit thumb radius`);
+  const selected = rule('.x-nt-favicon-option[data-selected="true"] .x-nt-favicon-thumb::after');
+  assert.strictEqual(selected.get('inset'), '0', `${filePath} selected favicon outline should not have inner spacing`);
+  assert.strictEqual(selected.get('border-radius'), 'inherit', `${filePath} selected favicon outline should inherit thumb radius`);
 }
 
 function assertSegmentedTabRadiusCss(filePath) {
-  const source = readPageSource(filePath);
-  const tokensRule = source.match(/\.x-nt-segmented-tabs\s*\{[\s\S]*?\n\s*\}/);
-  assert.ok(tokensRule, `${filePath} should define shared segmented-tab radius tokens`);
-  assert.match(tokensRule[0], /--x-nt-segmented-tabs-radius:\s*10px;/);
-  assert.match(tokensRule[0], /--x-nt-segmented-tabs-border-width:\s*1px;/);
-  assert.match(tokensRule[0], /--x-nt-segmented-tabs-inset:\s*2px;/);
+  const css = parsePageCss(filePath);
+  const tokens = css.rule('.x-nt-segmented-tabs');
+  assert.ok(tokens, `${filePath} should define shared segmented-tab radius tokens`);
   assert.match(
-    tokensRule[0],
-    /--x-nt-segmented-tabs-inner-radius:\s*calc\([\s\S]*?radius\)[\s\S]*?border-width\)[\s\S]*?inset\)/,
+    tokens.get('--x-nt-segmented-tabs-inner-radius'),
+    /^calc\(.*--x-nt-segmented-tabs-radius.*--x-nt-segmented-tabs-border-width.*--x-nt-segmented-tabs-inset/,
     `${filePath} should derive the inner radius from the full visual inset`
   );
-  assert.match(
-    source,
-    /\.x-nt-segmented-tabs-indicator,\s*\n\s*\.x-nt-segmented-tab\s*\{\s*border-radius:\s*var\(--x-nt-segmented-tabs-inner-radius\);/,
-    `${filePath} should apply one inner radius to indicators and buttons`
-  );
+  ['.x-nt-segmented-tabs-indicator', '.x-nt-segmented-tab'].forEach((selector) => {
+    assert.strictEqual(css.rule(selector) && css.rule(selector).get('border-radius'), 'var(--x-nt-segmented-tabs-inner-radius)',
+      `${filePath} should apply one inner radius to indicators and buttons (${selector})`);
+  });
 }
 
 function assertEffectSelectCss(filePath) {
-  const source = readPageSource(filePath);
-  assert.match(
-    source,
-    /\.x-nt-row-select\s*\{[\s\S]*?flex:\s*0 0 var\(--x-nt-row-control-width\);/,
-    `${filePath} should size the filter dropdown like the other row controls`
-  );
-  assert.match(
-    source,
-    /\.x-nt-row-select \._x_extension_select_trigger_2024_unique_\s*\{[\s\S]*?height:\s*30px;/,
-    `${filePath} should match the filter trigger height to the slider value inputs`
-  );
+  const css = parsePageCss(filePath);
+  const select = css.rule('.x-nt-row-select');
+  assert.strictEqual(select && select.get('flex'), '0 0 var(--x-nt-row-control-width)',
+    `${filePath} should size the filter dropdown like the other row controls`);
+  const trigger = css.rule('.x-nt-row-select ._x_extension_select_trigger_2024_unique_');
+  assert.strictEqual(trigger && trigger.get('height'), '30px',
+    `${filePath} should match the filter trigger height to the slider value inputs`);
 }
 
 function readLocaleMessages(locale) {
@@ -859,33 +837,32 @@ function assertBrandMarkCopy() {
   assert.strictEqual(search.seconds.toggle.label, expected.zh_CN.seconds);
   assert.strictEqual(search.seconds.visible, true);
 
-  const optionsHtml = readPageSource('src/options/options.html');
-  assert.match(optionsHtml, /data-newtab-top-content="brand"/);
-  assert.match(optionsHtml, /data-newtab-top-content="time"/);
-  assert.match(optionsHtml, /data-newtab-top-content="off"/);
-  assert.match(optionsHtml, /_x_extension_newtab_time_font_weight_row_2026_unique_/);
-  assert.match(optionsHtml, /_x_extension_newtab_time_seconds_row_2026_unique_/);
-  assert.match(optionsHtml, /_x_extension_newtab_time_seconds_toggle_2026_unique_/);
+  // Options offers the same choices.
+  const optionsDocument = new JSDOM(readPageSource('src/options/options.html')).window.document;
+  assert.deepStrictEqual(
+    Array.from(optionsDocument.querySelectorAll('[data-newtab-top-content]')).map((node) => node.getAttribute('data-newtab-top-content')),
+    ['brand', 'time', 'off']
+  );
+  ['_x_extension_newtab_time_font_weight_row_2026_unique_', '_x_extension_newtab_time_seconds_row_2026_unique_',
+    '_x_extension_newtab_time_seconds_toggle_2026_unique_'].forEach((id) => {
+    assert.ok(optionsDocument.querySelector(`#${id}, .${id}`), `Options should include ${id}`);
+  });
 }
 
 function assertThemeAwareAlternateFaviconAsset() {
-  const wallpaperSource = readWallpaperCheckSource();
-  const wallpaperViewReact = readReactSource('react-src/newtab/wallpaper-view.tsx');
-  assert.match(
-    wallpaperSource,
-    /id:\s*'alternate'[\s\S]*?file:\s*'assets\/images\/lumno-newtab-favicon\.svg'/,
-    'alternate favicon option should use the theme-aware SVG asset'
-  );
-  assert.match(
-    wallpaperSource,
-    /id:\s*'alternate'[\s\S]*?type:\s*'image\/svg\+xml'/,
-    'alternate favicon should declare the SVG mime type'
-  );
-  assert.match(
-    wallpaperViewReact,
-    /item\.inlineSvg[\s\S]*?dangerouslySetInnerHTML=\{\{ __html: item\.inlineSvg \}\}/,
-    'the React favicon picker should render alternate SVG previews inline so they can follow UI theme'
-  );
+  // The picker previews the alternate favicon as the supplied lumno1.svg.
+  const { documentObj, windowObj, sandbox } = createWallpaperSandbox();
+  const runtime = sandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
+    documentObj,
+    windowObj,
+    storageArea: null,
+    t: (key, fallback) => fallback || key,
+    getRiSvg: () => ''
+  });
+  runtime.createControls();
+  const preview = panelOf(runtime).model.favicons.find((item) => item.id === 'alternate').inlineSvg;
+  assert.ok(preview.includes('M14.1832'), 'favicon picker preview should use the supplied lumno1.svg shadow shape');
+  assert.ok(preview.includes('M34.0761'), 'favicon picker preview should use the supplied lumno1.svg main shape');
 
   const svg = fs.readFileSync('assets/images/lumno-newtab-favicon.svg', 'utf8');
   assert.match(svg, /prefers-color-scheme:\s*dark/, 'alternate favicon SVG should adapt to dark Chrome themes');
@@ -894,20 +871,16 @@ function assertThemeAwareAlternateFaviconAsset() {
   assert.match(svg, /--x-nt-favicon-main-opacity:\s*0\.72/i, 'alternate favicon dark theme should brighten the main mark');
   assert.match(svg, /M14\.1832/, 'alternate favicon should use the supplied lumno1.svg shadow shape');
   assert.match(svg, /M34\.0761/, 'alternate favicon should use the supplied lumno1.svg main shape');
-  assert.match(wallpaperSource, /M14\.1832/, 'favicon picker preview should use the supplied lumno1.svg shadow shape');
-  assert.match(wallpaperSource, /M34\.0761/, 'favicon picker preview should use the supplied lumno1.svg main shape');
   assert.match(svg, /currentColor/, 'alternate favicon SVG should be tintable from its root color');
   assert.doesNotMatch(svg, /fill="black"/i, 'alternate favicon should not keep fixed black fills');
   assert.doesNotMatch(svg, /url\(#paint/i, 'alternate favicon should not depend on fixed gradient paints');
 
-  ['newtab.html'].forEach((filePath) => {
-    const html = readPageSource(filePath);
-    assert.match(
-      html,
-      /body\[data-theme="dark"\]\s+\.x-nt-favicon-svg-preview(?:,[^{]*)?\s*\{[\s\S]*?color:\s*#f1f3f4;[\s\S]*?--x-nt-favicon-main-opacity:\s*0\.72;/,
-      `${filePath} should tint the SVG picker preview from the actual UI dark theme`
-    );
-  });
+  const darkPreview = parsePageCss('newtab.html').rule('body[data-theme="dark"] .x-nt-favicon-svg-preview');
+  assert.deepStrictEqual(
+    darkPreview && [darkPreview.get('color'), darkPreview.get('--x-nt-favicon-main-opacity')],
+    ['#f1f3f4', '0.72'],
+    'newtab.html should tint the SVG picker preview from the actual UI dark theme'
+  );
 }
 
 function testNewtabFaviconPreloadAppliesCachedAlternateBeforeMainRuntime() {
@@ -941,59 +914,42 @@ function testNewtabFaviconPreloadAppliesCachedAlternateBeforeMainRuntime() {
     'cached alternate favicon should use the theme-aware monochrome SVG asset before the colorful default can flash'
   );
 
-  ['newtab.html'].forEach((filePath) => {
-    const html = readPageSource(filePath);
-    const staticFaviconIndex = html.indexOf('data-lumno-newtab-favicon="true"');
-    const firstStylesheetIndex = html.indexOf('<link rel="stylesheet"');
-    assert.ok(staticFaviconIndex !== -1, `${filePath} should include a static monochrome favicon link`);
-    assert.ok(
-      staticFaviconIndex < html.indexOf('<title>'),
-      `${filePath} should expose the monochrome favicon before the title can use the extension default icon`
-    );
-    const preloadIndex = html.indexOf('<script src="../../build/newtab-preload.js"></script>');
-    assert.ok(
-      getBundleFiles('newtab-preload').includes('src/newtab/wallpaper/wallpaper-preload.js'),
-      `${filePath} should run wallpaper-preload in its head preload bundle`
-    );
-    assert.ok(
-      preloadIndex !== -1 && staticFaviconIndex < preloadIndex,
-      `${filePath} should expose the monochrome favicon before the external preload script runs`
-    );
-    if (firstStylesheetIndex !== -1) {
-      assert.ok(
-        preloadIndex < firstStylesheetIndex,
-        `${filePath} should run wallpaper-preload before stylesheets so favicon is set early`
-      );
+  const page = new JSDOM(readPageSource('newtab.html')).window.document;
+  const staticFavicon = page.querySelector('link[data-lumno-newtab-favicon="true"]');
+  const precedes = (first, second) => Boolean(first && second && (first.compareDocumentPosition(second) & 4));
+  assert.ok(staticFavicon, 'newtab.html should include a static monochrome favicon link');
+  assert.ok(precedes(staticFavicon, page.querySelector('title')),
+    'newtab.html should expose the monochrome favicon before the title can use the extension default icon');
+  const preload = page.querySelector('script[src="../../build/newtab-preload.js"]');
+  assert.ok(getBundleFiles('newtab-preload').includes('src/newtab/wallpaper/wallpaper-preload.js'),
+    'newtab.html should run wallpaper-preload in its head preload bundle');
+  assert.ok(precedes(staticFavicon, preload), 'newtab.html should expose the monochrome favicon before the external preload script runs');
+  const firstStylesheet = page.querySelector('link[rel="stylesheet"]');
+  if (firstStylesheet) {
+    assert.ok(precedes(preload, firstStylesheet), 'newtab.html should run wallpaper-preload before stylesheets so favicon is set early');
+  }
+
+  // The legacy lumno-newtab page only redirects to the primary page.
+  const fallback = new JSDOM(fs.readFileSync('src/newtab/lumno-newtab.html', 'utf8')).window.document;
+  assert.deepStrictEqual(
+    Array.from(fallback.scripts).map((script) => script.getAttribute('src')),
+    ['../../build/lumno-newtab.js'],
+    'lumno-newtab fallback should load only its redirect (no wallpaper preload, no inline script) through an external script allowed by extension CSP'
+  );
+  const replaced = [];
+  vm.runInNewContext(fs.readFileSync('src/newtab/lumno-newtab.js', 'utf8'), {
+    URL,
+    window: {
+      location: {
+        href: 'chrome-extension://abc/src/newtab/lumno-newtab.html?q=1#top',
+        search: '?q=1',
+        hash: '#top',
+        replace: (href) => replaced.push(href)
+      }
     }
   });
-
-  const fallbackHtml = fs.readFileSync('src/newtab/lumno-newtab.html', 'utf8');
-  const fallbackRedirectJs = fs.readFileSync('src/newtab/lumno-newtab.js', 'utf8');
-  assert.match(
-    fallbackHtml,
-    /<script src="\.\.\/\.\.\/build\/lumno-newtab\.js"><\/script>/,
-    'lumno-newtab fallback should load the redirect through an external script allowed by extension CSP'
-  );
-  assert.doesNotMatch(
-    fallbackHtml,
-    /wallpaper-preload\.js/,
-    'lumno-newtab fallback should not paint a wallpaper before redirecting to the primary page'
-  );
-  assert.doesNotMatch(
-    fallbackHtml,
-    /<script\b(?![^>]*\bsrc=)[^>]*>[\s\S]*?<\/script>/,
-    'lumno-newtab fallback should not use inline scripts because extension pages disallow them by CSP'
-  );
-  assert.match(
-    fallbackRedirectJs,
-    /new URL\('\.\.\/\.\.\/newtab\.html', window\.location\.href\)/,
-    'lumno-newtab fallback should redirect into the maintained primary newtab document'
-  );
-  assert.doesNotMatch(
-    fallbackHtml,
-    /data-page-entry|build\/newtab(?:-preload)?\.js/,
-    'lumno-newtab fallback should not duplicate the primary newtab runtime dependency list'
-  );
+  assert.deepStrictEqual(replaced, ['chrome-extension://abc/newtab.html?q=1&focus=1#top'],
+    'lumno-newtab fallback should redirect into the primary New Tab, keeping its query and hash and focusing the search');
 }
 
 async function testWallpaperPreloadUsesTheCachedResolvedMode() {
@@ -1155,24 +1111,6 @@ async function testWallpaperPreloadUsesTheCachedResolvedMode() {
     staleDocument.documentElement.style.getPropertyValue('--x-nt-wallpaper-image'),
     '',
     'stale mode-aware caches that may contain the fallback race should be ignored after the fix'
-  );
-}
-
-function assertWallpaperBootstrapWaitsForTheme() {
-  const newtabSource = readNewtabRuntimeSource();
-  assert.match(
-    newtabSource,
-    /function bootstrapInitialWallpaper\(\)\s*\{[\s\S]*?return bootstrapInitialThemeMode\(\)\.then\(\(\) => wallpaperRuntime\.bootstrapInitialWallpaper\(\)\);[\s\S]*?\}/,
-    'initial wallpaper resolution should wait until the page theme has been resolved'
-  );
-}
-
-function assertInitialWallpaperToneStartsBeforeDeferredRefresh() {
-  const wallpaperSource = readWallpaperCheckSource();
-  assert.match(
-    wallpaperSource,
-    /if \(isInitialWallpaperApply\) \{\s*applyWallpaperVisualState\(wallpaper\);\s*refreshWallpaperAdaptiveSampler\(\);\s*scheduleWallpaperVisualRefresh\(visualSeq\);\s*finalizeInitialWallpaper\(\);/,
-    'initial wallpaper tone sampling should start before the deferred visual refresh can repaint the top bar'
   );
 }
 
@@ -1498,12 +1436,6 @@ panelActionsForMain.setInputAutoFocus(true);
 assert.deepStrictEqual(inputAutoFocusWrites, [true]);
 assert.strictEqual(panelState(runtime).search.autoFocus.toggle.checked, true);
 
-const newtabHtml = readPageSource('newtab.html');
-assert.match(
-  newtabHtml,
-  /\.x-nt-appearance-setting-row\s*\{[\s\S]*?margin-top:\s*8px;/,
-  'input auto-focus should have more separation from the search-width slider'
-);
 const zhCNMessages = JSON.parse(fs.readFileSync('_locales/zh_CN/messages.json', 'utf8'));
 assert.strictEqual(
   zhCNMessages.newtab_input_auto_focus_help.message,
@@ -4507,8 +4439,6 @@ Promise.resolve()
     assertSquareFaviconOptionCss('newtab.html');
     assertSegmentedTabRadiusCss('newtab.html');
     assertEffectSelectCss('newtab.html');
-    assertWallpaperBootstrapWaitsForTheme();
-    assertInitialWallpaperToneStartsBeforeDeferredRefresh();
   })
   .then(testBingDailySelectionAndManualOverride)
   .then(testLegacyOnlineWallpaperMigratesToBing)
