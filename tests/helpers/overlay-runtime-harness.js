@@ -4,6 +4,7 @@ const path = require('path');
 const vm = require('vm');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { readBackgroundSource } = require('./background-source');
+const { bundleScript } = require('./module-script');
 
 // Loads the unmodified production overlay injection bundle (the same file
 // list background.js injects) into a JSDOM page with a fake chrome API, so
@@ -177,7 +178,11 @@ async function createOverlayPage() {
   };
 
   const evalFile = (file) => {
-    window.eval(`${fs.readFileSync(path.join(repoRoot, file), 'utf8')}\n//# sourceURL=${file}`);
+    const bundle = file.match(/^build\/([\w-]+)\.js$/);
+    const source = bundle
+      ? bundleScript(bundle[1], bundle[1] === 'overlay' ? { 'src/overlay/runtime.js': 'LumnoOverlayRuntime' } : null)
+      : fs.readFileSync(path.join(repoRoot, file), 'utf8');
+    window.eval(`${source}\n//# sourceURL=${file}`);
   };
   injectionFiles.forEach(evalFile);
   // The settings storage runtime is memoized per chrome API object and keeps
@@ -200,9 +205,7 @@ async function createOverlayPage() {
     reinjectSearchPanel() {
       // Background re-runs the injection list when it cannot reuse the
       // runtime, which replaces the toggle helper while an overlay is open.
-      injectionFiles
-        .filter((file) => file.startsWith('src/overlay/') && !file.endsWith('favicon-view.js'))
-        .forEach(evalFile);
+      evalFile('build/overlay.js');
     },
     toggle(context) {
       window._x_extension_toggleSearchOverlay_2026_unique_([], Object.assign({

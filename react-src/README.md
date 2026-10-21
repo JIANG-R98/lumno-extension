@@ -1,7 +1,7 @@
 # React UI architecture
 
 React is the required renderer for Lumno's New Tab, Options, Onboarding, and
-in-page Overlay surfaces. The classic scripts under `src/` remain responsible
+in-page Overlay surfaces. The modules under `src/` remain responsible
 for browser APIs, persistence, navigation, ranking, drag orchestration, viewport
 placement, and other platform behavior. They do not provide a second page
 renderer.
@@ -36,8 +36,8 @@ This lets the Onboarding page coexist with the self-contained Overlay bundle
 without a later global API registration taking over or orphaning an existing
 React root.
 
-The page bootstrap imports the relevant React entry first and starts its classic
-adapter only after the React API is ready. A missing React entry is a startup
+The page bootstrap imports the relevant React entry first and starts the page
+bundle only after the React API is ready. A missing React entry is a startup
 error; there is no timed legacy-renderer fallback.
 
 ## Styling and shared components
@@ -60,7 +60,7 @@ error; there is no timed legacy-renderer fallback.
   stylesheet lists both with `:is(...)`.
 - Segmented controls position their sliding indicator only through
   `react-src/shared/segmented-indicator.ts`: React controls use
-  `useSegmentedIndicator`, classic scripts call
+  `useSegmentedIndicator`, modules in `src/` call
   `globalThis.LumnoSegmentedIndicator`.
 - Name new classes `x-lumno-<component>` with `__part` and `--variant` suffixes
   (see `x-lumno-link-button`). The `_x_extension_*_unique_`, `x-nt-*` and
@@ -73,16 +73,17 @@ error; there is no timed legacy-renderer fallback.
   remote code.
 - Preserve stable DOM IDs, CSS classes, localization keys, and controller
   contracts that browser adapters depend on.
-- Treat classic DOM writes as adapter work only: mount hosts, browser-managed
+- Treat DOM writes in `src/` as adapter work only: mount hosts, browser-managed
   resource elements, measurement probes, drag previews, and updates to elements
   owned by a React controller.
-- Add visible structure and state to React components, not to classic adapter
-  scripts.
+- Add visible structure and state to React components, not to the adapter
+  modules in `src/`.
 - Keep the React bundle budgets enforced by `tests/repo/test-react-bundle-budgets.js`:
   one change may grow a route by a few KiB over its base commit (a
   `Bundle-Growth: <why>` commit trailer accepts more), under loose absolute
   ceilings.
-- Run both Vitest component coverage and classic browser-adapter contract tests.
+- Run both Vitest component coverage and the browser-adapter contract tests in
+  `tests/`.
 
 ## Verification
 

@@ -5,6 +5,7 @@ const vm = require('vm');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const { readBackgroundSource } = require('../helpers/background-source');
+const { runModuleInContext } = require('../helpers/module-script');
 const backgroundSourceForAssertions = readBackgroundSource();
 
 assert.ok(
@@ -455,14 +456,20 @@ function loadBackgroundForTest(options) {
     });
   };
 
-  const backgroundSource = fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8') +
-    '\nglobalThis.__testGetSearchSuggestions = getSearchSuggestions;\n' +
-    'globalThis.__testIsSearchEngineResultUrl = isSearchEngineResultUrl;\n' +
-    'globalThis.__testSetDefaultSearchEngineState = setDefaultSearchEngineState;\n' +
-    'globalThis.__testGetSearchEngineSuggestions = typeof getSearchEngineSuggestions === "function" ? getSearchEngineSuggestions : null;\n';
-  vm.runInContext(backgroundSource, context, {
-    filename: 'src/background/background.js'
+  const service = runModuleInContext('src/background/background.js', context, '__testBackground', {
+    also: {
+      'src/background/search-suggestions-service.js': [
+        'getSearchSuggestions',
+        'isSearchEngineResultUrl',
+        'setDefaultSearchEngineState',
+        'getSearchEngineSuggestions'
+      ]
+    }
   });
+  context.__testGetSearchSuggestions = service.getSearchSuggestions;
+  context.__testIsSearchEngineResultUrl = service.isSearchEngineResultUrl;
+  context.__testSetDefaultSearchEngineState = service.setDefaultSearchEngineState;
+  context.__testGetSearchEngineSuggestions = service.getSearchEngineSuggestions;
   return { context, messageListeners, chromeApi };
 }
 

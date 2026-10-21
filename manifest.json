@@ -4,7 +4,7 @@
       "default_title": "__MSG_ext_name__"
    },
    "background": {
-      "service_worker": "src/background/background.js"
+      "service_worker": "build/background.js"
    },
    "commands": {
       "show-search": {

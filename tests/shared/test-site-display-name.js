@@ -61,7 +61,7 @@ assert.ok(
   'the shared resolver should load before the newtab runtime entry'
 );
 assert.ok(
-  newtabJs.includes('const SITE_DISPLAY_NAME = globalThis.LumnoSiteDisplayName;') &&
+  newtabJs.includes("import * as SITE_DISPLAY_NAME from '../shared/site-display-name.js';") &&
     newtabJs.includes('return SITE_DISPLAY_NAME.getSiteDisplayName('),
   'newtab should require and delegate to the shared resolver'
 );

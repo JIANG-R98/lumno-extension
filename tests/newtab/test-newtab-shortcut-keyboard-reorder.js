@@ -7,7 +7,7 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const NEWTAB_BOOKMARK_MOVE_HISTORY = require(path.join(repoRoot, 'src/newtab/bookmarks/bookmark-move-history.js'));
 const NEWTAB_CROSS_SURFACE_DRAG = require(path.join(repoRoot, 'src/newtab/cross-surface-drag.js'));
 require(path.join(repoRoot, 'src/newtab/dismiss-stack.js'));
-require(path.join(repoRoot, 'src/newtab/shortcuts/shortcut-drag.js'));
+const LumnoNewtabShortcutDrag = require(path.join(repoRoot, 'src/newtab/shortcuts/shortcut-drag.js'));
 
 global.window = global;
 global.document = { activeElement: null, body: { setAttribute() {}, removeAttribute() {} } };
@@ -33,7 +33,7 @@ function createFixture(shortcuts) {
   });
   const getTiles = () => pageState.newtabShortcuts.map(createTile);
   let tiles = getTiles();
-  const drag = globalThis.LumnoNewtabShortcutDrag.createShortcutDrag({
+  const drag = LumnoNewtabShortcutDrag.createShortcutDrag({
     NEWTAB_CROSS_SURFACE_DRAG,
     NEWTAB_BOOKMARK_MOVE_HISTORY,
     getShortcutReorderTiles: () => tiles,

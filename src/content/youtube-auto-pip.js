@@ -1,3 +1,6 @@
+import * as LumnoSettings from '../shared/settings.js';
+import * as CORE from './auto-pip-core.js';
+
 (function () {
   if (window._x_lumno_youtube_auto_pip_2026_unique_) {
     return;
@@ -44,7 +47,6 @@
   const VISIBLE_RECOVERY_UI_DEFER_MS = 160;
   const HARD_RECOVERY_ATTEMPT = 8;
 
-  const CORE = globalThis.LumnoAutoPipCore;
   const isVideoPlaying = CORE.isVideoPlaying;
   const core = CORE.createAutoPipCore({
     state,
@@ -52,7 +54,7 @@
     document,
     navigator,
     chrome,
-    providerStorage: globalThis.LumnoSettings.getProviderStorage(chrome),
+    providerStorage: LumnoSettings.getProviderStorage(chrome),
     config: {
       pageBridgeScriptId: PAGE_BRIDGE_SCRIPT_ID,
       mainWorldExitAction: "ytForceExitPiPInMainWorld",

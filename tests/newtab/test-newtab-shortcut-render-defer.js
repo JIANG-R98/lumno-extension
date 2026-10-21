@@ -6,7 +6,7 @@ const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const NEWTAB_SHORTCUTS_STORE = require(path.join(repoRoot, 'src/newtab/shortcuts/shortcuts-store.js'));
-require(path.join(repoRoot, 'src/newtab/shortcuts/shortcuts-controller.js'));
+const LumnoNewtabShortcutsController = require(path.join(repoRoot, 'src/newtab/shortcuts/shortcuts-controller.js'));
 
 global.document = { body: { getAttribute: () => '1' } };
 global.window = global;
@@ -24,7 +24,7 @@ const pageState = {
   addShortcutButton: null
 };
 const noop = () => {};
-const controller = globalThis.LumnoNewtabShortcutsController.createShortcutsController({
+const controller = LumnoNewtabShortcutsController.createShortcutsController({
   NEWTAB_SHORTCUTS_STORE,
   NEWTAB_SHORTCUT_ICON_PLATE: require(path.join(repoRoot, 'src/newtab/shortcuts/shortcut-icon-plate.js')),
   isShortcutDragActive: () => dragActive,

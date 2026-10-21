@@ -2,9 +2,7 @@
 // run against plain fakes with no DOM.
 const assert = require('assert');
 const settings = require('../../src/shared/settings');
-require('../../src/content/auto-pip-core');
-
-const CORE = globalThis.LumnoAutoPipCore;
+const CORE = require('../../src/content/auto-pip-core');
 const KEY = '_x_extension_auto_pip_enabled_2026_unique_';
 
 function wait(ms) {

@@ -1,5 +1,7 @@
 const fs = require('fs');
 const path = require('path');
+const { withoutExports } = require('./closure-source');
+const { moduleScript } = require('./module-script');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 // wallpaper.js followed by the parts of its runtime split out into
@@ -23,16 +25,35 @@ const WALLPAPER_RUNTIME_FILES = [
   'src/newtab/wallpaper/runtime/daily-wallpapers.js'
 ];
 
-// The runtime as the page loads it, for evaluating in a test context.
-function readWallpaperRuntimeSource() {
-  return WALLPAPER_RUNTIME_FILES.map((file) => fs.readFileSync(path.join(repoRoot, file), 'utf8')).join('\n;\n');
+// The modules the runtime imports that tests may hand in as context globals,
+// so test doubles can replace their functions.
+const WALLPAPER_DEPENDENCY_GLOBALS = Object.freeze({
+  'src/shared/settings.js': 'LumnoSettings',
+  'src/newtab/remote-content.js': 'LumnoNewtabRemoteContent',
+  'src/newtab/wallpaper/wallpaper-adaptive-tone.js': 'LumnoNewtabWallpaperAdaptiveTone',
+  'src/newtab/wallpaper/wallpaper-effects.js': 'LumnoNewtabWallpaperEffects',
+  'src/newtab/wallpaper/wallpaper-local-store.js': 'LumnoNewtabWallpaperLocalStore'
+});
+
+// The runtime as the page runs it, for evaluating in a test context: a
+// script that leaves the wallpaper module's exports on LumnoNewtabWallpaper.
+// With stubs (such as WALLPAPER_DEPENDENCY_GLOBALS), those imports read the
+// context's globals instead.
+function readWallpaperRuntimeSource(stubs) {
+  return moduleScript('src/newtab/wallpaper/wallpaper.js', 'LumnoNewtabWallpaper', null, stubs);
 }
 
-// The same files for source checks: the parts share runtime state as
-// properties of one `wallpaperState` object, which this drops so checks see
-// the code as it read inside the single runtime closure.
+// The files for source checks: the parts share runtime state as properties
+// of one `wallpaperState` object, which this drops so checks see the code as
+// it read inside the single runtime closure.
 function readWallpaperCheckSource() {
-  return readWallpaperRuntimeSource().replace(/\bwallpaperState\./g, '');
+  return withoutExports(WALLPAPER_RUNTIME_FILES.map((file) => fs.readFileSync(path.join(repoRoot, file), 'utf8')).join('\n'))
+    .replace(/\bwallpaperState\./g, '');
 }
 
-module.exports = { WALLPAPER_RUNTIME_FILES, readWallpaperRuntimeSource, readWallpaperCheckSource };
+module.exports = {
+  WALLPAPER_DEPENDENCY_GLOBALS,
+  WALLPAPER_RUNTIME_FILES,
+  readWallpaperCheckSource,
+  readWallpaperRuntimeSource
+};

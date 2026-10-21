@@ -107,8 +107,9 @@ function testBrowserProfileRuntimeWiring() {
   const overlaySource = readOverlayPanelSource();
 
   assert(
-    backgroundSource.indexOf("chrome.runtime.getURL('src/shared/browser-profile.js')") <
-      backgroundSource.indexOf("chrome.runtime.getURL('src/background/shortcut-rules.js')"),
+    backgroundSource.indexOf("from '../shared/browser-profile.js';") >= 0 &&
+      backgroundSource.indexOf("from '../shared/browser-profile.js';") <
+        backgroundSource.indexOf("from './shortcut-rules.js';"),
     'background should load browser-profile before shortcut-rules'
   );
   assert(

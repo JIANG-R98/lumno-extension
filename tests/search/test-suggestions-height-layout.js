@@ -3,10 +3,10 @@ const fs = require('fs');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
 const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
-delete globalThis.LumnoSuggestionsHeightLayout;
-require('../../src/shared/search/suggestions-height-layout.js');
+delete LumnoSuggestionsHeightLayout;
+const LumnoSuggestionsHeightLayout = require('../../src/shared/search/suggestions-height-layout.js');
 
-const runtime = globalThis.LumnoSuggestionsHeightLayout;
+const runtime = LumnoSuggestionsHeightLayout;
 const newtabLayoutSource = fs.readFileSync('src/newtab/layout.js', 'utf8');
 const overlaySource = readOverlayPanelSource();
 

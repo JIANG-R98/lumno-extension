@@ -3,8 +3,8 @@
 // flow each one produces when a playing tab is hidden, shown again, told to
 // surrender PiP, or has auto PiP turned off.
 const assert = require('assert');
-const fs = require('fs');
 const { JSDOM } = require('jsdom');
+const { bundleScript } = require('../helpers/module-script');
 
 const AUTO_PIP_KEY = '_x_extension_auto_pip_enabled_2026_unique_';
 
@@ -116,7 +116,7 @@ function loadAutoPip({ url, scripts, syncValues = {}, mainWorld = {} }) {
   };
 
   env.load = async () => {
-    scripts.forEach((file) => window.eval(fs.readFileSync(file, 'utf8')));
+    window.eval(bundleScript(scripts));
     await wait(10);
   };
   env.setVisibility = (value) => {
@@ -139,8 +139,9 @@ function loadAutoPip({ url, scripts, syncValues = {}, mainWorld = {} }) {
   return env;
 }
 
-const SITE_SCRIPTS = ['src/shared/settings.js', 'src/content/auto-pip-core.js', 'src/content/auto-pip-blacklist.js', 'src/content/site-auto-pip.js'];
-const YOUTUBE_SCRIPTS = ['src/shared/settings.js', 'src/content/auto-pip-core.js', 'src/content/youtube-auto-pip.js'];
+// The manifest's content script bundles.
+const SITE_SCRIPTS = 'site-auto-pip';
+const YOUTUBE_SCRIPTS = 'youtube-auto-pip';
 const clearPiP = (env) => {
   env.pipElement = null;
   return { ok: true };

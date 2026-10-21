@@ -6,7 +6,7 @@ const progressHistory = require('../../src/shared/progress-history.js');
 const { readBackgroundSource } = require('../helpers/background-source');
 const { getPageScripts } = require('../helpers/runtime-scripts');
 require('../../src/newtab/dismiss-stack.js');
-require('../../src/newtab/recent/recent-sites-controller.js');
+const LumnoNewtabRecentSitesController = require('../../src/newtab/recent/recent-sites-controller.js');
 
 const PINNED_KEY = store.DEFAULT_PINNED_KEY;
 const HISTORY_KEY = progressHistory.STORAGE_KEY;
@@ -73,7 +73,7 @@ function createController(pinned, history, options = {}) {
   const toasts = [];
   const opened = [];
   let renders = 0;
-  const controller = globalThis.LumnoNewtabRecentSitesController.createRecentSitesController({
+  const controller = LumnoNewtabRecentSitesController.createRecentSitesController({
     NEWTAB_CONTEXT_MENU_OPEN_VALUE: 'open',
     t: (_key, fallback) => fallback,
     showToast: (message, isError) => toasts.push({ message, isError }),
@@ -297,8 +297,8 @@ const menuValues = (controller, item) => controller.getRecentContextMenuOptions(
   // The background tracker is wired into the service worker and gated by Labs.
   {
     const background = readBackgroundSource();
-    ['src/shared/progress-match.js', 'src/shared/progress-history.js', 'src/background/progress-tracker.js']
-      .forEach((file) => assert(background.includes(`chrome.runtime.getURL('${file}')`), `${file} should be imported`));
+    ['../shared/progress-match.js', '../shared/progress-history.js', './progress-tracker.js']
+      .forEach((spec) => assert(background.includes(`'${spec}';`), `background.js should import ${spec}`));
     assert(background.includes('isEnabled: () => progressTrackingEnabled'));
     const newtabHtml = fs.readFileSync('newtab.html', 'utf8');
     const newtabScripts = getPageScripts('newtab.html');

@@ -146,6 +146,7 @@ global.LumnoFeatureHintView = {
 
 const featureHints = require('../../src/shared/ui/feature-hints.js');
 const updateNotice = require('../../src/shared/update-notice.js');
+const settings = require('../../src/shared/settings.js');
 
 function createOnChangedEmitter() {
   const listeners = [];
@@ -513,6 +514,10 @@ function flushMicrotasks() {
     [updateNotice.UPDATE_NOTICE_STORAGE_KEY]: normalized
   };
   const chromeApi = createStorageBackedChrome({}, syncStore, '0.9.10');
+  // The page's settings storage runtime keeps one storage-mode listener for
+  // the page's lifetime; only the notices' own listeners must go on destroy.
+  settings.createProviderStorageRuntime(chromeApi);
+  const pageStorageListenerCount = chromeApi.storage.onChanged.count;
   const detailsClicks = [];
   let sessionSlotClaims = 0;
   const firstController = updateNotice.createUpdateNotice({
@@ -811,7 +816,7 @@ function flushMicrotasks() {
   disabledController.destroy();
   oldController.destroy();
   hydratedController.destroy();
-  assert.strictEqual(chromeApi.storage.onChanged.count, 0, 'destroy should detach storage listeners');
+  assert.strictEqual(chromeApi.storage.onChanged.count, pageStorageListenerCount, 'destroy should detach storage listeners');
 
   console.log('update notice tests passed');
 })();

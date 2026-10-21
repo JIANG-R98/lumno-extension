@@ -939,7 +939,7 @@ function runWiringTests() {
   );
 
   const backgroundSource = readBackgroundSource();
-  assert(backgroundSource.includes("importScripts(chrome.runtime.getURL('src/background/codex-debug-bridge.js'))"));
+  assert(backgroundSource.includes("import * as CODEX_DEBUG_BRIDGE from './codex-debug-bridge.js';"));
   assert(
     (backgroundSource.match(/'build\/codex-debug-surface\.js'/g) || []).length >= 3,
     'search overlay, tab switcher, and document PiP injection paths should install the debug surface'

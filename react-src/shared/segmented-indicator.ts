@@ -1,7 +1,7 @@
 import { useLayoutEffect, type RefObject } from 'react';
 
 // The one implementation of the sliding indicator under a segmented control's active
-// button. React controls use the hook; classic scripts call the same functions through
+// button. React controls use the hook; the page modules call the same functions through
 // globalThis.LumnoSegmentedIndicator (registered by the page's React entry).
 
 export interface SegmentedIndicatorMeasurement {

@@ -3,22 +3,45 @@
 // command acts on (recovering from a New Tab the shortcut itself opened), drops
 // duplicate presses, and resolves the fallback and copy-URL shortcuts.
 //
-// Loaded by background.js through its first importScripts block (the Firefox
-// build lists that block as background.scripts). Like background.js this is a
-// classic script sharing the worker's global scope. Its functions use
-// background.js bindings (the command names, COMMAND_TARGET_POLICY, the New Tab
-// fallbacks, ...) only when they run, never while this file loads, because
-// background.js has not initialized its own top-level bindings yet at that
-// point.
+// A module of the service worker; background.js imports it before its own code
+// runs. Its functions use background.js bindings (the command names,
+// COMMAND_TARGET_POLICY, the New Tab fallbacks, ...) only when they run, never
+// while this file loads, because background.js has not initialized its own
+// top-level bindings yet at that point.
 
-function shouldTriggerOnboardingOverlayFromCommand(source, url) {
+import * as COMMAND_TARGET_POLICY from './command-target-policy.js';
+import * as OVERLAY_LOADING_LIFECYCLE from './overlay-loading-lifecycle.js';
+import {
+  SHOW_SEARCH_COMMAND_NAME,
+  SHOW_SEARCH_PREFILL_V_COMMAND_NAME,
+  logHotkeyDebug,
+  openNewtabFallback
+} from './background.js';
+import {
+  canOpenOverlayOnUrl,
+  getResolvedTabUrl,
+  isBrowserNewtabUrl,
+  isLumnoNewtabUrl,
+  isLumnoOnboardingUrl,
+  isOwnExtensionUrl
+} from './browser-urls-service.js';
+import {
+  OVERLAY_NAVIGATION_STATE_TTL_MS,
+  clearOverlayNavigationState,
+  getOverlayNavigationState,
+  overlayNavigationStateByTabId,
+  shouldDeferRestrictedOverlayNavigation
+} from './overlay-loading-service.js';
+import { openOverlayOnTab } from './overlay-open-service.js';
+
+export function shouldTriggerOnboardingOverlayFromCommand(source, url) {
   return COMMAND_TARGET_POLICY.shouldTriggerOnboardingOverlayFromCommand(source, url, {
     isOwnExtensionUrl,
     isOnboardingUrl: isLumnoOnboardingUrl
   });
 }
 
-function triggerOnboardingOverlayFromCommand(activeTab, source) {
+export function triggerOnboardingOverlayFromCommand(activeTab, source) {
   if (!activeTab || typeof activeTab.id !== 'number') {
     return;
   }
@@ -88,7 +111,7 @@ function pickRecoveryTargetTab(activeTab, tabs) {
   return candidates[0] || null;
 }
 
-function recoverOverlayTargetFromCommandNewtab(activeTab, tabs, source) {
+export function recoverOverlayTargetFromCommandNewtab(activeTab, tabs, source) {
   if (!shouldRecoverFromCommandNewtab(activeTab, source)) {
     return false;
   }
@@ -133,11 +156,11 @@ function recoverOverlayTargetFromCommandNewtab(activeTab, tabs, source) {
   return true;
 }
 
-function isSearchCommandSource(source) {
+export function isSearchCommandSource(source) {
   return source === 'commands' || source === 'commands-prefill';
 }
 
-function requestFocusVisibleNewtabInput(source, tabId) {
+export function requestFocusVisibleNewtabInput(source, tabId) {
   const payload = {
     action: 'lumno:newtab-focus-input',
     source: source || '',
@@ -174,7 +197,7 @@ const PAGE_HOTKEY_NEWTAB_RECOVER_MS = 1200;
 const hotkeyInvokeAtByTabId = new Map();
 let lastPageHotkeyContext = null;
 
-function shouldIgnoreDuplicateHotkey(tabId) {
+export function shouldIgnoreDuplicateHotkey(tabId) {
   if (typeof tabId !== 'number') {
     return false;
   }
@@ -184,7 +207,7 @@ function shouldIgnoreDuplicateHotkey(tabId) {
   return (now - lastAt) <= HOTKEY_DUP_GUARD_MS;
 }
 
-function rememberPageHotkeyContext(tab) {
+export function rememberPageHotkeyContext(tab) {
   if (!tab || typeof tab.id !== 'number' || typeof tab.windowId !== 'number') {
     lastPageHotkeyContext = null;
     return;
@@ -196,7 +219,7 @@ function rememberPageHotkeyContext(tab) {
   };
 }
 
-function getRecentPageHotkeyContext(windowId) {
+export function getRecentPageHotkeyContext(windowId) {
   if (!lastPageHotkeyContext) {
     return null;
   }
@@ -215,14 +238,14 @@ function clearRecentPageHotkeyContext() {
   lastPageHotkeyContext = null;
 }
 
-function getOverlayPrefillQueryForSource(tab, source) {
+export function getOverlayPrefillQueryForSource(tab, source) {
   if (source !== 'page-hotkey-prefill' && source !== 'commands-prefill') {
     return '';
   }
   return getResolvedTabUrl(tab);
 }
 
-function recoverFromPageHotkeyNewtab(newTabId, windowId) {
+export function recoverFromPageHotkeyNewtab(newTabId, windowId) {
   const recentContext = getRecentPageHotkeyContext(windowId);
   if (!recentContext || typeof newTabId !== 'number') {
     return;
@@ -293,7 +316,7 @@ function triggerShowSearchForResolvedTab(tab, source) {
   });
 }
 
-function triggerShowSearchForTab(tab, source) {
+export function triggerShowSearchForTab(tab, source) {
   if (!tab || typeof tab.id !== 'number') {
     triggerShowSearchForResolvedTab(tab, source);
     return;
@@ -358,7 +381,7 @@ function getDefaultFallbackShortcut(callback) {
   });
 }
 
-function getConfiguredFallbackShortcut(callback) {
+export function getConfiguredFallbackShortcut(callback) {
   getDefaultFallbackShortcut((defaultShortcut) => {
     if (!chrome || !chrome.commands || typeof chrome.commands.getAll !== 'function') {
       callback(defaultShortcut);
@@ -421,7 +444,7 @@ function normalizeShortcutFromCommandsValue(value) {
   return hasModifier ? text : '';
 }
 
-function getConfiguredCopyUrlCommandShortcut(callback) {
+export function getConfiguredCopyUrlCommandShortcut(callback) {
   if (!chrome || !chrome.commands || typeof chrome.commands.getAll !== 'function') {
     callback('');
     return;
@@ -454,7 +477,7 @@ function sendCopyCurrentUrlCommand(tabId, callback) {
   });
 }
 
-function triggerCopyCurrentUrlForTab(activeTab, source, callback) {
+export function triggerCopyCurrentUrlForTab(activeTab, source, callback) {
   const finish = typeof callback === 'function' ? callback : function() {};
   if (!activeTab || typeof activeTab.id !== 'number') {
     logHotkeyDebug('copy-url-no-active-tab', { source: source || '' });

@@ -8,9 +8,9 @@ const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
 require('../../src/shared/search/suggestions-height-layout.js');
-require('../../src/newtab/layout.js');
+const LumnoNewtabLayout = require('../../src/newtab/layout.js');
 
-const layoutRuntime = globalThis.LumnoNewtabLayout;
+const layoutRuntime = LumnoNewtabLayout;
 const layoutMotionRuntime = require('../../src/newtab/layout-motion.js');
 const { readWallpaperCheckSource } = require('../helpers/wallpaper-source');
 const repoRoot = path.resolve(__dirname, '..', '..');

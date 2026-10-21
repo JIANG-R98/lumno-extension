@@ -1,3 +1,5 @@
+import * as TOAST from '../shared/ui/toast.js';
+
 (function() {
   if (window.__lumnoDocumentPiPPicker2026) {
     return;
@@ -6,7 +8,6 @@
   const STATE_FLAG = '__lumno_document_pip_active_2026__';
   const ROOT_ID = '__lumno_document_pip_picker_root_2026__';
   const TOAST_HOST_ID = '__lumno_document_pip_toast_2026__';
-  const TOAST = globalThis.LumnoToast;
   const HIGHLIGHT_ID = '__lumno_document_pip_highlight_2026__';
   const PICKER_HIGHLIGHT_PADDING = 4;
   const PIP_DOCK_CLEARANCE = 56;

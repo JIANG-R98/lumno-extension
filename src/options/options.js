@@ -1,3 +1,44 @@
+import * as LumnoNewtabShortcutsStore from '../newtab/shortcuts/shortcuts-store.js';
+import * as LumnoBlacklistUtils from '../shared/blacklist-utils.js';
+import * as COMMUNITY_LINKS from '../shared/community-links.js';
+import * as NAVIGATION_DISPOSITION from '../shared/navigation-disposition.js';
+import * as AGGREGATE_SEARCH_STORE from '../shared/search/aggregate-search-store.js';
+import * as SEARCH_UTILS from '../shared/search/search-utils.js';
+import * as SETTINGS from '../shared/settings.js';
+import * as LumnoShortcutDisplay from '../shared/shortcut-display.js';
+import * as LumnoTooltip from '../shared/ui/tooltip.js';
+import * as OPTIONS_AGGREGATE_SEARCH_LIST from './options-aggregate-search-list.js';
+import * as AGGREGATE_SEARCH from './options-aggregate-search.js';
+import * as OPTIONS_BLACKLIST_LISTS from './options-blacklist-lists.js';
+import * as LumnoOptionsBlacklist from './options-blacklist.js';
+import * as OPTIONS_CONTROL_EVENTS from './options-control-events.js';
+import * as LumnoOptionsFallbackShortcut from './options-fallback-shortcut.js';
+import * as LumnoOptionsFeedbackSupportSection from './options-feedback-support.js';
+import * as OPTIONS_FORMS from './options-forms.js';
+import * as OPTIONS_LANGUAGE from './options-language.js';
+import * as OPTIONS_NAVIGATION from './options-navigation.js';
+import * as OPTIONS_NORMALIZERS from './options-normalizers.js';
+import * as PANEL_MOTION from './options-panel-motion.js';
+import * as OPTIONS_POPCONFIRM from './options-popconfirm.js';
+import * as LumnoOptionsSearchSourceOrder from './options-search-source-order.js';
+import * as OPTIONS_SEGMENTED_TABS from './options-segmented-tabs.js';
+import * as OPTIONS_SELECT_CONTROLS from './options-select-controls.js';
+import * as SETTING_BINDINGS from './options-setting-bindings.js';
+import * as OPTIONS_SETTING_BINDS from './options-setting-binds.js';
+import * as SHORTCUT_KEYS from './options-shortcut-keys.js';
+import * as OPTIONS_SHORTCUT_REFERENCE from './options-shortcut-reference.js';
+import * as OPTIONS_SITE_SEARCH_EVENTS from './options-site-search-events.js';
+import * as OPTIONS_SITE_SEARCH_FORM from './options-site-search-form.js';
+import * as OPTIONS_SITE_SEARCH_LIST from './options-site-search-list.js';
+import * as SITE_SEARCH from './options-site-search.js';
+import * as OPTIONS_SLIDER_CONTROLS from './options-slider-controls.js';
+import * as LumnoOptionsSyncSection from './options-sync-section.js';
+import * as LumnoOptionsSyncTransfer from './options-sync-transfer.js';
+import * as THEME from './options-theme.js';
+import * as OPTIONS_TOGGLE_CONTROLS from './options-toggle-controls.js';
+import * as OPTIONS_TOOLTIPS from './options-tooltips.js';
+import * as LumnoWebDavOptions from './webdav-options.js';
+
 (function() {
   // Page state shared with the parts of this page split out into
   // src/options/: each receives this one object as `optionsState` and reads
@@ -26,10 +67,6 @@
     document.documentElement.setAttribute('data-lumno-options-runtime-started', 'true');
   }
 
-  const NAVIGATION_DISPOSITION = globalThis.LumnoNavigationDisposition;
-  const COMMUNITY_LINKS = globalThis.LumnoCommunityLinks;
-  const SETTINGS = globalThis.LumnoSettings;
-  const AGGREGATE_SEARCH_STORE = globalThis.LumnoAggregateSearchStore;
   const panel = document.getElementById('_x_extension_settings_panel_2024_unique_');
   const optionsRoot = document.getElementById('_x_extension_options_root_2024_unique_');
   const tabsRow = document.querySelector('._x_extension_settings_tabs_row_2024_unique_');
@@ -173,9 +210,7 @@
   const optionsToastApi = globalThis.LumnoOptionsToast;
   const optionsSegmentedControlApi = globalThis.LumnoOptionsSegmentedControl;
 
-  const OPTIONS_SELECT_CONTROLS = globalThis.LumnoOptionsPageSelectControls;
 
-  const OPTIONS_FORMS = globalThis.LumnoOptionsPageForms;
 
   const {
     THEME_STORAGE_KEY,
@@ -235,9 +270,7 @@
   // after a language change so the label follows the chosen language.
   const popconfirmLanguageRefreshers = new Set();
 
-  const OPTIONS_LANGUAGE = globalThis.LumnoOptionsPageLanguage;
 
-  const OPTIONS_TOOLTIPS = globalThis.LumnoOptionsPageTooltips;
   const {
     showTooltipFor,
     initTooltips,
@@ -264,7 +297,6 @@
     optionsState
   });
 
-  const OPTIONS_POPCONFIRM = globalThis.LumnoOptionsPagePopconfirm;
   const SETTINGS_TAB_KEYS = Object.freeze([
     'general',
     'account',
@@ -274,11 +306,8 @@
     'labs'
   ]);
 
-  const OPTIONS_NAVIGATION = globalThis.LumnoOptionsPageNavigation;
 
-  const SEARCH_UTILS = globalThis.LumnoSearchUtils;
 
-  const OPTIONS_SITE_SEARCH_FORM = globalThis.LumnoOptionsPageSiteSearchForm;
   const {
     normalizeSiteSearchTemplate,
     isAiSiteSearchProvider,
@@ -310,9 +339,7 @@
   });
   // The keys each list shows right now, in order, for the move buttons.
   const renderedSearchSourceKeys = {};
-  const SITE_SEARCH = globalThis.LumnoOptionsSiteSearch;
 
-  const OPTIONS_SITE_SEARCH_LIST = globalThis.LumnoOptionsPageSiteSearchList;
   const {
     getLocalizedBuiltinProviderName,
     getSiteSearchItemIconUrl,
@@ -503,12 +530,12 @@
   const optionsShortcutHotkeyApi = globalThis.LumnoOptionsShortcutHotkey;
   const optionsSiteSearchListApi = globalThis.LumnoOptionsSiteSearchList;
   const optionsThemePickerApi = globalThis.LumnoOptionsThemePicker;
-  const shortcutDisplay = globalThis.LumnoShortcutDisplay;
+  const shortcutDisplay = LumnoShortcutDisplay;
   optionsState.toastController = optionsToastApi.createToastController(toastElement, {
     windowObj: window,
     duration: 2200
   });
-  const feedbackSupportSection = globalThis.LumnoOptionsFeedbackSupportSection.createFeedbackSupportSection({
+  const feedbackSupportSection = LumnoOptionsFeedbackSupportSection.createFeedbackSupportSection({
     communityLinks: COMMUNITY_LINKS,
     controller: optionsFeedbackSupportApi.createFeedbackSupportController(feedbackSupportHost),
     getLocale: () => (optionsState.currentLanguageMode === 'system' ? getSystemLocale() : normalizeLocale(optionsState.currentLanguageMode)),
@@ -548,7 +575,6 @@
     });
   }
 
-  const OPTIONS_SEGMENTED_TABS = globalThis.LumnoOptionsPageSegmentedTabs;
   const {
     setRecentModeTabState,
     setOverlaySizeTabState,
@@ -616,7 +642,6 @@
     handleRecentModeSelection
   );
 
-  const OPTIONS_NORMALIZERS = globalThis.LumnoOptionsPageNormalizers;
   const {
     normalizeBookmarkCount,
     normalizeRecentCount,
@@ -705,7 +730,6 @@
     handleNewtabGlassThemeSelection
   );
 
-  const OPTIONS_TOGGLE_CONTROLS = globalThis.LumnoOptionsPageToggleControls;
   const {
     registerOptionsToggleControl,
     setOptionsToggleState,
@@ -824,11 +848,10 @@
     normalizeAliases
   } = SITE_SEARCH;
   optionsState.enqueueSiteSearchProviderStorageOperation = SITE_SEARCH.createOperationQueue();
-  const AGGREGATE_SEARCH = globalThis.LumnoOptionsAggregateSearch;
   const aggregateSearchModel = AGGREGATE_SEARCH.createAggregateSearchModel({
     aggregateSearchStore: AGGREGATE_SEARCH_STORE
   });
-  const syncTransfer = globalThis.LumnoOptionsSyncTransfer.createSyncTransfer({
+  const syncTransfer = LumnoOptionsSyncTransfer.createSyncTransfer({
     deriveLegacyAutoGroupEnabled: aggregateSearchModel.deriveLegacyAutoGroupEnabled,
     settings: SETTINGS
   });
@@ -836,7 +859,6 @@
   const startupStorageReadBatch = SETTINGS.createStorageReadBatch(optionsState.rawStorageArea);
   optionsState.storageArea = startupStorageReadBatch.area;
   optionsState.optionsStartupStorageBatchPending = true;
-  const SETTING_BINDINGS = globalThis.LumnoOptionsSettingBindings;
   // Each section registers its storage change handlers here, next to the
   // code that renders it; one chrome.storage listener dispatches to them.
   const storageChanges = SETTING_BINDINGS.createStorageChangeRegistry({
@@ -944,7 +966,6 @@
     return SETTINGS.addStorageChangeListener(chrome, listener);
   }
 
-  const PANEL_MOTION = globalThis.LumnoOptionsPanelMotion;
   optionsState.panelHeightAnimator = PANEL_MOTION.createPanelHeightAnimator({
     documentObj: document,
     panel,
@@ -957,7 +978,7 @@
   }
   const SYNC_KEYS = SETTINGS.CHROME_SYNC_STORAGE_KEYS;
   const SEARCH_SOURCE_ORDER_STORAGE_KEY = SETTINGS.SEARCH_SOURCE_ORDER_STORAGE_KEY;
-  optionsState.searchSourceOrderController = globalThis.LumnoOptionsSearchSourceOrder.createSearchSourceOrderController({
+  optionsState.searchSourceOrderController = LumnoOptionsSearchSourceOrder.createSearchSourceOrderController({
       groupHost: document.getElementById('_x_extension_search_source_group_order_2026_unique_'),
       getMessage,
       showToast: (message, isError) => showToast(message, isError),
@@ -995,19 +1016,18 @@
     return String(row.getAttribute('data-key') || '').toLowerCase();
   }
   // Grouped shortcut state. Its three keys are one save and move together.
-  optionsState.blacklistModel = globalThis.LumnoOptionsBlacklist.createBlacklistModel({
-    blacklistUtils: globalThis.LumnoBlacklistUtils
+  optionsState.blacklistModel = LumnoOptionsBlacklist.createBlacklistModel({
+    blacklistUtils: LumnoBlacklistUtils
   });
   ({ buildItemKey: optionsState.buildBlacklistItemKey, formatPatternForDisplay: optionsState.formatBlacklistPatternForDisplay, getInputConfig: optionsState.getBlacklistInputConfig, getPatternInputValue: optionsState.getBlacklistPatternInputValue, normalizeItems: optionsState.normalizeBlacklistItems, normalizeMatchModes: optionsState.normalizeBlacklistMatchModes } = optionsState.blacklistModel);
   optionsState.currentLanguageMode = 'system';
-  optionsState.webDavSettingsController = globalThis.LumnoWebDavOptions.createController({ chromeApi: chrome, getMessage,
+  optionsState.webDavSettingsController = LumnoWebDavOptions.createController({ chromeApi: chrome, getMessage,
       animateLayout: animateOptionsPanelHeight });
   if (searchResultSourceTypeController) {
     renderSearchResultSourceTypeControl(
       searchResultSourceTypeItems.filter((item) => item.checked).map((item) => item.value)
     );
   }
-  const SHORTCUT_KEYS = globalThis.LumnoOptionsShortcutKeys;
   const shortcutPlatform = shortcutDisplay.getNavigatorPlatform(typeof navigator !== 'undefined' ? navigator : null);
   optionsState.isMacPlatform = shortcutPlatform === 'mac';
   optionsState.defaultSiteSearchProviders = [];
@@ -1020,7 +1040,6 @@
   optionsState.siteSearchProvidersLoaded = false;
   optionsState.aggregateSearches = [];
 
-  const OPTIONS_AGGREGATE_SEARCH_LIST = globalThis.LumnoOptionsPageAggregateSearchList;
   const {
     deriveLegacyAggregateSearchAutoGroupEnabled,
     renderAggregateSearchList,
@@ -1064,7 +1083,7 @@
   optionsState.pendingOptionsScrollTarget = '';
   optionsState.searchBlacklistItems = [];
   optionsState.faviconRequestBlacklistItems = [];
-  optionsState.tooltipController = globalThis.LumnoTooltip.createController({
+  optionsState.tooltipController = LumnoTooltip.createController({
     documentObj: document,
     windowObj: window,
     id: '_x_extension_options_tooltip_2026_unique_',
@@ -1209,7 +1228,6 @@
       }
     });
 
-  const OPTIONS_SLIDER_CONTROLS = globalThis.LumnoOptionsPageSliderControls;
   const {
     renderNewtabTimeFontWeightControl,
     renderNewtabTimeFontSizeControl,
@@ -1324,7 +1342,7 @@
     }
   }
 
-  const syncSection = globalThis.LumnoOptionsSyncSection.createSyncSection({
+  const syncSection = LumnoOptionsSyncSection.createSyncSection({
     beginToast,
     chromeApi: chrome,
     documentObj: document,
@@ -1352,7 +1370,7 @@
   }
   storageChanges.on(SETTINGS.WEBDAV_STATUS_STORAGE_KEY, refreshSyncStatus, { area: 'local' });
   storageChanges.on(
-    globalThis.LumnoNewtabShortcutsStore && globalThis.LumnoNewtabShortcutsStore.SHORTCUTS_LOCAL_OVERFLOW_KEY,
+    LumnoNewtabShortcutsStore && LumnoNewtabShortcutsStore.SHORTCUTS_LOCAL_OVERFLOW_KEY,
     () => syncSection.refreshShortcutSyncSummary(),
     { area: 'local' }
   );
@@ -1362,7 +1380,6 @@
     applyLanguageMode(changes[LANGUAGE_STORAGE_KEY].newValue || 'system');
   });
 
-  const OPTIONS_SHORTCUT_REFERENCE = globalThis.LumnoOptionsPageShortcutReference;
   const {
     formatShortcutForDisplay,
     renderShortcutReferenceList
@@ -1375,7 +1392,7 @@
     optionsState
   });
 
-  optionsState.fallbackShortcutSection = globalThis.LumnoOptionsFallbackShortcut.createFallbackShortcutSection({
+  optionsState.fallbackShortcutSection = LumnoOptionsFallbackShortcut.createFallbackShortcutSection({
     chromeApi: chrome,
     documentObj: document,
     elements: {
@@ -1454,7 +1471,6 @@
     THEME.playThemeOptionClickEffect(button, window);
   }
 
-  const THEME = globalThis.LumnoOptionsTheme;
   optionsState.themeSection = THEME.createThemeSection({
     documentObj: document,
     getMessage,
@@ -1520,7 +1536,6 @@
     refreshSyncStatus();
   });
 
-  const OPTIONS_CONTROL_EVENTS = globalThis.LumnoOptionsPageControlEvents;
   const {
     setNewtabOpenInNewTabState
   } = OPTIONS_CONTROL_EVENTS.createControlEvents({
@@ -1588,7 +1603,6 @@
 
   syncSection.bindControls();
 
-  const OPTIONS_SETTING_BINDS = globalThis.LumnoOptionsPageSettingBinds;
   OPTIONS_SETTING_BINDS.createSettingBinds({
     LANGUAGE_STORAGE_KEY,
     normalizeLanguageMode,
@@ -1733,7 +1747,6 @@
     );
   });
 
-  const OPTIONS_BLACKLIST_LISTS = globalThis.LumnoOptionsPageBlacklistLists;
   const {
     loadSearchBlacklistItems,
     saveSearchBlacklistItems,
@@ -1815,7 +1828,6 @@
     });
   }
 
-  const OPTIONS_SITE_SEARCH_EVENTS = globalThis.LumnoOptionsPageSiteSearchEvents;
   OPTIONS_SITE_SEARCH_EVENTS.createSiteSearchEvents({
     siteSearchCustomList,
     handleSiteSearchListClick,

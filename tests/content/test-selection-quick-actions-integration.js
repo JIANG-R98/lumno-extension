@@ -32,13 +32,13 @@ assert(
 );
 assert.deepStrictEqual(Array.from(selectionScriptRegistration.SCRIPT_FILES), ['build/selection-quick-actions.js']);
 assert.deepStrictEqual(
-  getBundleFiles('selection-quick-actions'),
-  ['src/shared/settings.js', 'src/shared/selection-action-icons.js', 'src/shared/selection-intent.js', 'src/shared/ui/toast.js', 'src/content/selection-quick-actions.js'],
-  'provider-aware settings, the selection classifier, and the shared Toast should load before the content interaction runtime'
+  getBundleFiles('selection-quick-actions').sort(),
+  ['src/content/selection-quick-actions.js', 'src/shared/selection-action-icons.js', 'src/shared/selection-intent.js', 'src/shared/settings.js', 'src/shared/ui/toast.js'],
+  'the toolbar bundle should carry provider-aware settings, the selection classifier and the shared Toast, and nothing else'
 );
 assert.strictEqual(selectionScriptRegistration.RUN_AT, 'document_idle');
 assert(
-  backgroundSource.includes("chrome.runtime.getURL('src/background/selection-script-registration.js')"),
+  backgroundSource.includes("from './selection-script-registration.js';"),
   'the background should load the selection script registration'
 );
 
@@ -78,7 +78,7 @@ assert.strictEqual(
   'the provider dropdown should pair each provider with a bundled icon'
 );
 assert(
-  backgroundSource.includes("src/background/selection-quick-action-provider.js") &&
+  backgroundSource.includes("from './selection-quick-action-provider.js';") &&
     backgroundSource.includes('loadSelectionQuickActionFallbackProviders()') &&
     providerResolverSource.includes('resolveSelectionQuickActionProvider'),
   'selection actions should resolve their preferred provider independently of general search-source visibility'
@@ -114,7 +114,7 @@ assert(contentSource.includes('element.selectionEnd'));
 assert(contentSource.includes('function getUnifiedSelectionSnapshot'));
 assert(contentSource.includes('function buildCandidateFromSnapshot(snapshot, classification)'));
 assert(
-  contentSource.includes('const TOAST = globalThis.LumnoToast;') &&
+  contentSource.includes("import * as TOAST from '../shared/ui/toast.js';") &&
     contentSource.includes('TOAST.createToastController') &&
     contentSource.includes("toastElement.className = 'x-lumno-toast'") &&
     toastSource.includes('function createToastController') &&
@@ -227,7 +227,7 @@ assert(
     contentSource.includes('surface.append(material, contentViewport)'),
   'all toolbar controls should share one right-aligned clipping layer with the butterfly last'
 );
-assert(iconSource.includes('remix: Object.freeze'),
+assert(iconSource.includes('export const remix = Object.freeze'),
   'the bundled action icon library should contain Remix only');
 assert(
   /ask:\s*icon\('<path fill="currentColor" d="M1 11C6\.52285/.test(iconSource),

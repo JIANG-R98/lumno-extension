@@ -45,11 +45,11 @@ const toastElement = {
   }
 };
 
-delete global.LumnoToast;
-require(path.resolve(__dirname, '../../src/shared/ui/toast.js'));
+delete LumnoToast;
+const LumnoToast = require(path.resolve(__dirname, '../../src/shared/ui/toast.js'));
 
-assert.strictEqual(global.LumnoToast.implementation, 'dom');
-assert.strictEqual(typeof global.LumnoToast.createToastStyleGate, 'function');
+assert.strictEqual(LumnoToast.implementation, 'dom');
+assert.strictEqual(typeof LumnoToast.createToastStyleGate, 'function');
 
 const stylesheetListeners = new Map();
 const stylesheetElement = {
@@ -63,7 +63,7 @@ const stylesheetElement = {
     }
   }
 };
-const styleGate = global.LumnoToast.createToastStyleGate(toastElement, {
+const styleGate = LumnoToast.createToastStyleGate(toastElement, {
   stylesheetElement,
   windowObj
 });
@@ -90,7 +90,7 @@ assert.strictEqual(styleValues.has('transform'), false);
 assert.strictEqual(styleValues.has('transition'), false);
 assert.strictEqual(stylesheetListeners.has('load'), false);
 
-const controller = global.LumnoToast.createToastController(toastElement, {
+const controller = LumnoToast.createToastController(toastElement, {
   windowObj
 });
 

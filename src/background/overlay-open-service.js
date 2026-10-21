@@ -2,27 +2,65 @@
 // overlay runtime and its stylesheets, handing it the tab list and settings,
 // and the fallbacks for pages the overlay cannot run on.
 //
-// Loaded by background.js through its first importScripts block (the Firefox
-// build lists that block as background.scripts). Like background.js this is a
-// classic script sharing the worker's global scope. Its functions use
-// background.js bindings (the settings caches, whenBackgroundSettingsReady, the
-// New Tab fallbacks, ...) only when they run, never while this file loads,
-// because background.js has not initialized its own top-level bindings yet at
-// that point.
+// A module of the service worker; background.js imports it before its own code
+// runs. Its functions use background.js bindings (the settings caches,
+// whenBackgroundSettingsReady, the New Tab fallbacks, ...) only when they run,
+// never while this file loads, because background.js has not initialized its
+// own top-level bindings yet at that point.
+
+import * as OVERLAY_LOADING_LIFECYCLE from './overlay-loading-lifecycle.js';
+import {
+  codexDebugBridge,
+  documentPipEnabledCache,
+  logHotkeyDebug,
+  openBrowserNewtabFallback,
+  openNewtabFallback,
+  openNewtabFallbackForUrl,
+  restrictedActionCache,
+  whenBackgroundSettingsReady
+} from './background.js';
+import { scheduleSiteSearchProviderIconWarmup } from './favicon-service.js';
+import { loadSiteSearchProviders, siteSearchCache } from './search-suggestions-service.js';
+import {
+  canOpenOverlayOnUrl,
+  getResolvedTabUrl,
+  isBrowserNewtabUrl,
+  isLumnoNewtabUrl
+} from './browser-urls-service.js';
+import {
+  finishOverlayLoadingOpenAttempt,
+  getPendingOverlayNavigationUrl,
+  overlayLoadingRecordsByTabId,
+  rememberOverlayLoadingRecord,
+  rememberOverlayPendingNavigationIntent,
+  scheduleOverlayLoadingPreCompleteRetry,
+  shouldDeferRestrictedOverlayNavigation,
+  updateOverlayLoadingRecordFromInvocation
+} from './overlay-loading-service.js';
+import {
+  getOverlayPrefillQueryForSource,
+  isSearchCommandSource,
+  recoverOverlayTargetFromCommandNewtab,
+  requestFocusVisibleNewtabInput,
+  shouldIgnoreDuplicateHotkey,
+  shouldTriggerOnboardingOverlayFromCommand,
+  triggerOnboardingOverlayFromCommand
+} from './command-service.js';
+import { DEVELOPMENT_BUILD } from '../shared/build-flags.js';
 
 const OVERLAY_OPENING_GUARD_MS = 5000;
-const OVERLAY_RUNTIME_VERSION = '2026-10-20-search-title-units-v17';
-const OVERLAY_HOST_ID = '_x_extension_overlay_host_2026_unique_';
-const overlayOpeningByTabId = new Map();
+export const OVERLAY_RUNTIME_VERSION = '2026-10-20-search-title-units-v17';
+export const OVERLAY_HOST_ID = '_x_extension_overlay_host_2026_unique_';
+export const overlayOpeningByTabId = new Map();
 let tabOverlayFetchSeq = 0;
 
 // Numbers each tab list handed to an overlay, so it can drop stale ones.
-function nextTabOverlayFetchSeq() {
+export function nextTabOverlayFetchSeq() {
   tabOverlayFetchSeq += 1;
   return tabOverlayFetchSeq;
 }
 
-function finishOverlayOpening(opening) {
+export function finishOverlayOpening(opening) {
   if (!opening || typeof opening.tabId !== 'number') {
     return;
   }
@@ -98,7 +136,7 @@ function openOverlayInjectionFallback(activeTab, activeUrl, source) {
   });
 }
 
-function openOverlayOnTab(activeTab, tabs, source, options) {
+export function openOverlayOnTab(activeTab, tabs, source, options) {
   const openOptions = options && typeof options === 'object' ? options : {};
   const overlayOpenStartedAt = Date.now();
   // The entry motion budget measures how long the user has waited on the
@@ -189,7 +227,7 @@ function openOverlayOnTab(activeTab, tabs, source, options) {
   }
   const overlayLoadingRecord = rememberOverlayLoadingRecord(activeTab, source, openOptions);
   shouldRetryPreCompleteFailure = Boolean(overlayLoadingRecord);
-  const shouldInjectOverlayCodexDebugSurface = codexDebugBridge.isEnabled();
+  const shouldInjectOverlayCodexDebugSurface = DEVELOPMENT_BUILD && codexDebugBridge.isEnabled();
   const overlayInjectionFiles = [
     'build/icon-font-preload.js',
     ...(shouldInjectOverlayCodexDebugSurface ? ['build/codex-debug-surface.js'] : []),

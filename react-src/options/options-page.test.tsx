@@ -1,81 +1,19 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import optionsHtml from '../../src/options/options.html?raw';
-import optionsSource from '../../src/options/options.js?raw';
-import panelMotionSource from '../../src/options/options-panel-motion.js?raw';
-import themeSource from '../../src/options/options-theme.js?raw';
-import settingBindingsSource from '../../src/options/options-setting-bindings.js?raw';
-import toggleSettingsSource from '../../src/options/options-toggle-settings.js?raw';
-import siteSearchSource from '../../src/options/options-site-search.js?raw';
-import aggregateSearchSource from '../../src/options/options-aggregate-search.js?raw';
-import searchSourceOrderOptionsSource from '../../src/options/options-search-source-order.js?raw';
-import customQuotesSource from '../../src/newtab/top-content/custom-quotes.js?raw';
-import dailyQuoteOptionsSource from '../../src/options/options-daily-quote.js?raw';
-import syncTransferSource from '../../src/options/options-sync-transfer.js?raw';
-import syncSectionSource from '../../src/options/options-sync-section.js?raw';
-import shortcutKeysSource from '../../src/options/options-shortcut-keys.js?raw';
-import fallbackShortcutSource from '../../src/options/options-fallback-shortcut.js?raw';
-import blacklistSource from '../../src/options/options-blacklist.js?raw';
-import feedbackSupportSource from '../../src/options/options-feedback-support.js?raw';
-import webdavOptionsSource from '../../src/options/webdav-options.js?raw';
-import toggleControlsPageSource from '../../src/options/options-toggle-controls.js?raw';
-import selectControlsPageSource from '../../src/options/options-select-controls.js?raw';
-import sliderControlsPageSource from '../../src/options/options-slider-controls.js?raw';
-import formsPageSource from '../../src/options/options-forms.js?raw';
-import normalizersPageSource from '../../src/options/options-normalizers.js?raw';
-import segmentedTabsPageSource from '../../src/options/options-segmented-tabs.js?raw';
-import languagePageSource from '../../src/options/options-language.js?raw';
-import tooltipsPageSource from '../../src/options/options-tooltips.js?raw';
-import popconfirmPageSource from '../../src/options/options-popconfirm.js?raw';
-import shortcutReferencePageSource from '../../src/options/options-shortcut-reference.js?raw';
-import navigationPageSource from '../../src/options/options-navigation.js?raw';
-import siteSearchFormPageSource from '../../src/options/options-site-search-form.js?raw';
-import siteSearchListPageSource from '../../src/options/options-site-search-list.js?raw';
-import aggregateSearchListPageSource from '../../src/options/options-aggregate-search-list.js?raw';
-import blacklistListsPageSource from '../../src/options/options-blacklist-lists.js?raw';
-import settingBindsPageSource from '../../src/options/options-setting-binds.js?raw';
-import controlEventsPageSource from '../../src/options/options-control-events.js?raw';
-import siteSearchEventsPageSource from '../../src/options/options-site-search-events.js?raw';
-import settingsSource from '../../src/shared/settings.js?raw';
-import blacklistUtilsSource from '../../src/shared/blacklist-utils.js?raw';
-import navigationDispositionSource from '../../src/shared/navigation-disposition.js?raw';
-import communityLinksSource from '../../src/shared/community-links.js?raw';
-import directNavigationSearchUtilsSource from '../../src/shared/search/utils/direct-navigation.js?raw';
-import textNormalizeSearchUtilsSource from '../../src/shared/search/utils/text-normalize.js?raw';
-import textIndexSearchUtilsSource from '../../src/shared/search/utils/text-index.js?raw';
-import keyboardLayoutsSearchUtilsSource from '../../src/shared/search/utils/keyboard-layouts.js?raw';
-import textMatchingSearchUtilsSource from '../../src/shared/search/utils/text-matching.js?raw';
-import selectionStatsSearchUtilsSource from '../../src/shared/search/utils/selection-stats.js?raw';
-import resultDedupSearchUtilsSource from '../../src/shared/search/utils/result-dedup.js?raw';
-import suggestionSlateSearchUtilsSource from '../../src/shared/search/utils/suggestion-slate.js?raw';
-import queryIntentSearchUtilsSource from '../../src/shared/search/utils/query-intent.js?raw';
-import relevanceScoreSearchUtilsSource from '../../src/shared/search/utils/relevance-score.js?raw';
-import brandSuggestionsSearchUtilsSource from '../../src/shared/search/utils/brand-suggestions.js?raw';
-import navigationMatchingSearchUtilsSource from '../../src/shared/search/utils/navigation-matching.js?raw';
-import siteSearchProvidersSearchUtilsSource from '../../src/shared/search/utils/site-search-providers.js?raw';
-import siteSearchMatchingSearchUtilsSource from '../../src/shared/search/utils/site-search-matching.js?raw';
-import searchUtilsSource from '../../src/shared/search/search-utils.js?raw';
-import searchSourceOrderSource from '../../src/shared/search/search-source-order.js?raw';
-import sortableDragSource from '../../src/shared/ui/sortable-drag.js?raw';
-import aggregateSearchStoreSource from '../../src/shared/search/aggregate-search-store.js?raw';
-import faviconUtilsSource from '../../src/shared/favicon/favicon-utils.js?raw';
-import shortcutFaviconSource from '../../src/shared/favicon/shortcut-favicon.js?raw';
-import bookmarkFolderReferenceSource from '../../src/shared/bookmark-folder-reference.js?raw';
-import shortcutsStoreSource from '../../src/newtab/shortcuts/shortcuts-store.js?raw';
-import tooltipSource from '../../src/shared/ui/tooltip.js?raw';
-import cursorTooltipSource from '../../src/shared/ui/cursor-tooltip.js?raw';
-import menuSurfaceSource from '../../src/shared/ui/menu-surface.js?raw';
-import shortcutDisplaySource from '../../src/shared/shortcut-display.js?raw';
-import browserProfileSource from '../../src/shared/browser-profile.js?raw';
-import shortcutReferenceSource from '../../src/shared/shortcut-reference.js?raw';
+// @ts-expect-error The extension sources are untyped JavaScript modules.
+import * as settingsModule from '../../src/shared/settings.js';
+// @ts-expect-error The extension sources are untyped JavaScript modules.
+import * as toggleSettingsModule from '../../src/options/options-toggle-settings.js';
+import { runPageBundle } from '../test/page-bundles';
 import siteSearchCatalog from '../../assets/data/site-search.json';
 import enMessages from '../../_locales/en/messages.json';
 import jaMessages from '../../_locales/ja/messages.json';
 import zhCnMessages from '../../_locales/zh_CN/messages.json';
 import zhTwMessages from '../../_locales/zh_TW/messages.json';
 
-// Boots the real Options page (markup, shared scripts, React islands and
-// options.js) against an in-memory chrome.storage, so the page's storage
+// Boots the real Options page (markup, its preload bundle, React islands and
+// page bundle) against an in-memory chrome.storage, so the page's storage
 // wiring can be checked by what it shows and writes.
 
 type StorageValues = Record<string, unknown>;
@@ -89,84 +27,10 @@ const LOCALE_MESSAGES: Record<string, Messages> = {
 type ChangeListener = (changes: Record<string, { newValue?: unknown; oldValue?: unknown }>, area: string) => void;
 
 
-const PAGE_SCRIPTS = [
-  settingsSource,
-  blacklistUtilsSource,
-  navigationDispositionSource,
-  communityLinksSource,
-  directNavigationSearchUtilsSource,
-  textNormalizeSearchUtilsSource,
-  textIndexSearchUtilsSource,
-  keyboardLayoutsSearchUtilsSource,
-  textMatchingSearchUtilsSource,
-  selectionStatsSearchUtilsSource,
-  resultDedupSearchUtilsSource,
-  suggestionSlateSearchUtilsSource,
-  queryIntentSearchUtilsSource,
-  relevanceScoreSearchUtilsSource,
-  brandSuggestionsSearchUtilsSource,
-  navigationMatchingSearchUtilsSource,
-  siteSearchProvidersSearchUtilsSource,
-  siteSearchMatchingSearchUtilsSource,
-  searchUtilsSource,
-  searchSourceOrderSource,
-  sortableDragSource,
-  aggregateSearchStoreSource,
-  faviconUtilsSource,
-  shortcutFaviconSource,
-  bookmarkFolderReferenceSource,
-  shortcutsStoreSource,
-  tooltipSource,
-  cursorTooltipSource,
-  menuSurfaceSource,
-  shortcutDisplaySource,
-  browserProfileSource,
-  shortcutReferenceSource,
-  webdavOptionsSource,
-  panelMotionSource,
-  themeSource,
-  settingBindingsSource,
-  toggleSettingsSource,
-  siteSearchSource,
-  aggregateSearchSource,
-  searchSourceOrderOptionsSource,
-  customQuotesSource,
-  dailyQuoteOptionsSource,
-  syncTransferSource,
-  syncSectionSource,
-  shortcutKeysSource,
-  fallbackShortcutSource,
-  blacklistSource,
-  feedbackSupportSource,
-  // Parts of options.js, created by it; options.html loads them after the sections above.
-  toggleControlsPageSource,
-  selectControlsPageSource,
-  sliderControlsPageSource,
-  formsPageSource,
-  normalizersPageSource,
-  segmentedTabsPageSource,
-  languagePageSource,
-  tooltipsPageSource,
-  popconfirmPageSource,
-  shortcutReferencePageSource,
-  navigationPageSource,
-  siteSearchFormPageSource,
-  siteSearchListPageSource,
-  aggregateSearchListPageSource,
-  blacklistListsPageSource,
-  settingBindsPageSource,
-  controlEventsPageSource,
-  siteSearchEventsPageSource
-];
 
 const addedListeners: Array<[EventTarget, string, EventListenerOrEventListenerObject, unknown]> = [];
 
-function runClassicScript(source: string): void {
-  new Function('module', source)(undefined);
-}
-
-runClassicScript(settingsSource);
-const SETTINGS = (globalThis as unknown as { LumnoSettings: Record<string, string> }).LumnoSettings;
+const SETTINGS: Record<string, string> = settingsModule;
 
 function trackListeners(target: Document | Window): void {
   const addEventListener = target.addEventListener.bind(target);
@@ -300,13 +164,13 @@ async function bootOptionsPage(
     const body = locale ? LOCALE_MESSAGES[locale[1]] || enMessages : siteSearchCatalog;
     return { ok: true, json: async () => body };
   }));
-  PAGE_SCRIPTS.forEach(runClassicScript);
   vi.resetModules();
+  await runPageBundle('options-preload');
   await import('./options-islands-entry');
   trackListeners(document);
   trackListeners(window);
   await act(async () => {
-    runClassicScript(optionsSource);
+    await runPageBundle('options');
   });
   await settle();
   return chrome;
@@ -484,17 +348,16 @@ describe('Options page storage wiring', () => {
 
   it('binds every switch in the shared table to its storage key', async () => {
     const chrome = await bootOptionsPage();
-    const entries = (globalThis as unknown as {
-      LumnoOptionsToggleSettings: {
-        getToggleSettings(settings: unknown): Array<{
-          control?: string;
-          inputId: string;
-          key: string;
-          normalize(value: unknown): unknown;
-          normalizeInput?(value: unknown): unknown;
-        }>;
-      };
-    }).LumnoOptionsToggleSettings.getToggleSettings(SETTINGS);
+    const toggleSettings: {
+      getToggleSettings(settings: unknown): Array<{
+        control?: string;
+        inputId: string;
+        key: string;
+        normalize(value: unknown): unknown;
+        normalizeInput?(value: unknown): unknown;
+      }>;
+    } = toggleSettingsModule;
+    const entries = toggleSettings.getToggleSettings(SETTINGS);
     // Sub-options stay disabled while their parent switch is off.
     const parents = [SETTINGS.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY, SETTINGS.NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY];
     for (const entry of entries) {
@@ -642,7 +505,7 @@ describe('Options page storage wiring', () => {
       // The auto-width wrapper must not pin longer localized options to the trigger width.
       expect(menu.dataset.menuSurfaceWidth).toBe('content');
       expect(menu.style.getPropertyValue('--x-extension-menu-surface-min-width')).toBe('100%');
-      // React owns the labels: no data-i18n hooks for the classic i18n pass to overwrite.
+      // React owns the labels: no data-i18n hooks for the page's i18n pass to overwrite.
       expect(menu.querySelector('[data-i18n]')).toBeNull();
       expect(Array.from(menu.querySelectorAll('._x_extension_select_option_label_2026_unique_'), (option) => option.textContent))
         .toEqual([

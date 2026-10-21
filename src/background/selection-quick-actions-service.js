@@ -2,15 +2,33 @@
 // a search or an AI prompt for the selected text in a new tab (in the toolbar's
 // tab group), and the messages the toolbar sends.
 //
-// Loaded by background.js through its first importScripts block (the Firefox
-// build lists that block as background.scripts). Like background.js this is a
-// classic script sharing the worker's global scope. Its functions use
-// background.js bindings (storageArea, the selection setting keys,
-// SELECTION_TARGET, waitForTabComplete, ...) only when they run, never while
-// this file loads, because background.js has not initialized its own top-level
-// bindings yet at that point.
+// A module of the service worker; background.js imports it before its own code
+// runs. Its functions use background.js bindings (storageArea, the selection
+// setting keys, SELECTION_TARGET, waitForTabComplete, ...) only when they run,
+// never while this file loads, because background.js has not initialized its
+// own top-level bindings yet at that point.
 
-function loadSelectionQuickActionsEnabled() {
+import * as AI_PROVIDER_SUBMIT from './ai-provider-submit.js';
+import * as SEARCH_UTILS from '../shared/search/search-utils.js';
+import * as SELECTION_INTENT from '../shared/selection-intent.js';
+import * as SELECTION_QUICK_ACTION_PROVIDER from './selection-quick-action-provider.js';
+import * as SELECTION_TARGET from './selection-target.js';
+import * as SETTINGS from '../shared/settings.js';
+import {
+  SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY,
+  SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY,
+  SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY,
+  storageArea,
+  waitForTabComplete
+} from './background.js';
+import {
+  getSiteSearchProviderEntryUrl,
+  isInteractiveSiteSearchProvider,
+  loadSiteSearchProviders,
+  sanitizeSiteSearchProviders
+} from './search-suggestions-service.js';
+
+export function loadSelectionQuickActionsEnabled() {
   return new Promise((resolve) => {
     if (!storageArea || typeof storageArea.get !== 'function') {
       resolve(false);
@@ -225,7 +243,7 @@ async function runSelectionQuickAction(request, sender) {
 }
 
 // Selection quick actions.
-const SELECTION_QUICK_ACTION_MESSAGE_HANDLERS = Object.freeze({
+export const SELECTION_QUICK_ACTION_MESSAGE_HANDLERS = Object.freeze({
   runSelectionQuickAction(request, sender, sendResponse) {
     runSelectionQuickAction(request, sender)
       .then((result) => {

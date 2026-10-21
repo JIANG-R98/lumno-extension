@@ -1,13 +1,16 @@
 'use strict';
 
-// Boots the real background service worker (background.js and everything it
-// importScripts) inside a vm context with a recording chrome stub, so tests can
-// fire browser events at it and observe the storage writes and API calls it
-// makes, instead of asserting on its source text.
+// Boots the real background service worker (the background bundle, built from
+// background.js and everything it imports) inside a vm context with a recording
+// chrome stub, so tests can fire browser events at it and observe the storage
+// writes and API calls it makes, instead of asserting on its source text.
 
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { moduleScript } = require('./module-script');
+
+const BACKGROUND_EXPORTS = '__lumnoBackgroundExports';
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 
@@ -368,33 +371,24 @@ function loadBackground(options) {
       filename: String(file)
     });
   };
-  const backgroundPath = path.join(repoRoot, 'src/background/background.js');
-  const backgroundSource = fs.readFileSync(backgroundPath, 'utf8');
+  const backgroundSource = fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8');
   if (config.firefoxOrder === true) {
     // Mirrors scripts/build/build-firefox.js: Firefox event pages have no
-    // importScripts, so the first import block (plus the development debug
-    // bridge and lazily imported vendor scripts) loads as separate scripts
-    // before background.js, which then runs with a no-op importScripts.
-    const importBlock = backgroundSource.match(/importScripts\(([\s\S]*?)\);/);
-    const deps = [...importBlock[1].matchAll(/getURL\('([^']+)'\)/g)].map((match) => match[1]);
-    const lazyDeps = [...backgroundSource.matchAll(/^const \w+_SCRIPT_PATH = '([^']+)';$/gm)]
-      .map((match) => match[1]);
-    deps.concat(['src/background/codex-debug-bridge.js'], lazyDeps)
-      .forEach((dep) => runFile(path.join(repoRoot, dep)));
+    // importScripts, so the scripts the worker imports on first use load as
+    // background scripts before the bundle, which runs with a no-op
+    // importScripts.
+    [...backgroundSource.matchAll(/^export const \w+_SCRIPT_PATH = '([^']+)';$/gm)]
+      .forEach((match) => runFile(path.join(repoRoot, match[1])));
     context.importScripts = () => {};
   } else {
     context.importScripts = (...urls) => {
       urls.forEach(runFile);
     };
   }
-  const exposed = Array.isArray(config.expose) ? config.expose : [];
-  const exposeSource = exposed.map((name) => (
-    `\nglobalThis.__test_${name} = typeof ${name} === 'undefined' ? undefined : ${name};`
-  )).join('');
   vm.runInContext(
-    backgroundSource + exposeSource,
+    moduleScript('src/background/background.js', BACKGROUND_EXPORTS),
     context,
-    { filename: 'src/background/background.js' }
+    { filename: 'build/background.js' }
   );
 
   // Without an explicit sender a message comes from an extension page, which
@@ -425,8 +419,9 @@ function loadBackground(options) {
     calls,
     storage: chromeApi.storage,
     sendMessage,
+    // A binding background.js exports.
     exposed(name) {
-      return context[`__test_${name}`];
+      return context[BACKGROUND_EXPORTS][name];
     }
   };
 }

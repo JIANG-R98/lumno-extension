@@ -1,11 +1,5 @@
 const assert = require('assert');
-const fs = require('fs');
-const vm = require('vm');
-
-const sandbox = {};
-vm.createContext(sandbox);
-vm.runInContext(fs.readFileSync('src/newtab/wallpaper/wallpaper-adaptive-tone.js', 'utf8'), sandbox);
-const { getGlassAdaptation } = sandbox.LumnoNewtabWallpaperAdaptiveTone;
+const { getGlassAdaptation } = require('../../src/newtab/wallpaper/wallpaper-adaptive-tone.js');
 
 const grey = (value) => ({ red: value, green: value, blue: value });
 

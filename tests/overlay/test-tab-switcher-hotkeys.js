@@ -187,7 +187,7 @@ assert.match(
 assert.match(
   switcherSource,
   /const tabSwitcherReactViewApi = globalThis\.LumnoOverlayTabSwitcherView;[\s\S]*typeof tabSwitcherReactViewApi\.createTabSwitcherView !== 'function'[\s\S]*reason: 'react-view-unavailable'/,
-  'the classic switcher runtime should resolve the page React API at invocation time'
+  'the switcher runtime should resolve the page React API at invocation time'
 );
 assert.match(
   switcherBridgeSource,
@@ -447,7 +447,7 @@ assert.match(
 const detectSwitcherPageThemeBlock = getFunctionBlock(
   pageColorSchemeSource,
   'function detectPageTheme(documentRef, windowRef)',
-  'return Object.freeze({'
+  'export { detectPageTheme };'
 );
 assert.match(
   detectSwitcherPageThemeBlock,
@@ -1277,13 +1277,8 @@ assert.match(
 );
 assert.match(
   backgroundSource,
-  /chrome\.runtime\.getURL\('src\/newtab\/theme\/favicon-theme\.js'\)/,
+  /import \* as NEWTAB_FAVICON_THEME from '\.\.\/newtab\/theme\/favicon-theme\.js';/,
   'Alt+Q should import the same favicon theme helpers used by newtab recent sites'
-);
-assert.match(
-  backgroundSource,
-  /const NEWTAB_FAVICON_THEME = globalThis\.LumnoNewtabFaviconTheme;/,
-  'Alt+Q should read the newtab favicon theme helper from the shared global'
 );
 assert.match(
   backgroundSource,

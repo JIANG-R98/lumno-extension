@@ -1,9 +1,9 @@
 const assert = require('assert');
 
-delete globalThis.LumnoOverlayLifecycle;
-require('../../src/overlay/lifecycle.js');
+delete LumnoOverlayLifecycle;
+const LumnoOverlayLifecycle = require('../../src/overlay/lifecycle.js');
 
-const lifecycle = globalThis.LumnoOverlayLifecycle;
+const lifecycle = LumnoOverlayLifecycle;
 
 function createHarness() {
   let nextTimerId = 1;

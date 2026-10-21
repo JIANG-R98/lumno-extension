@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
 const { JSDOM } = require('jsdom');
+const { moduleScript } = require('../helpers/module-script');
 
 // Pages switch at once (reduced motion) unless `animated` is set, so each
 // test counts page turns directly.
@@ -12,7 +12,9 @@ function fixture({ page = 3, pages = 8, animated = false } = {}) {
   window.setTimeout = (fn, ms) => env.timers.push({ fn, ms });
   window.clearTimeout = () => {};
   window.LumnoNewtabCrossSurfaceDrag = { prefersReducedMotion: () => !animated };
-  window.eval(fs.readFileSync(require.resolve('../../src/newtab/bookmarks/bookmark-pager.js'), 'utf8'));
+  window.eval(moduleScript('src/newtab/bookmarks/bookmark-pager.js', 'LumnoNewtabBookmarkPager', null, {
+    'src/newtab/cross-surface-drag.js': 'LumnoNewtabCrossSurfaceDrag'
+  }));
   const state = { bookmarkGrid: window.document.getElementById('grid'),
     bookmarkAllItems: Array.from({ length: pages }, (_, id) => ({ id })), bookmarkCurrentPage: page };
   const pager = window.LumnoNewtabBookmarkPager.createBookmarkPager({ pageState: state, now: () => env.clock,

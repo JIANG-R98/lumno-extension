@@ -1,6 +1,6 @@
 const assert = require('assert');
-const fs = require('fs');
 const vm = require('vm');
+const { moduleScript } = require('../helpers/module-script');
 
 const sandbox = {
   console,
@@ -8,7 +8,7 @@ const sandbox = {
 };
 sandbox.globalThis = sandbox;
 
-vm.runInNewContext(fs.readFileSync('src/shared/favicon/favicon-utils.js', 'utf8'), sandbox, {
+vm.runInNewContext(moduleScript('src/shared/favicon/favicon-utils.js', 'LumnoFaviconUtils'), sandbox, {
   filename: 'src/shared/favicon/favicon-utils.js'
 });
 
@@ -759,7 +759,7 @@ assert.strictEqual(
   'neutral'
 );
 
-vm.runInNewContext(fs.readFileSync('src/newtab/theme/favicon-theme.js', 'utf8'), sandbox, {
+vm.runInNewContext(moduleScript('src/newtab/theme/favicon-theme.js', 'LumnoNewtabFaviconTheme'), sandbox, {
   filename: 'src/newtab/theme/favicon-theme.js'
 });
 const faviconTheme = sandbox.LumnoNewtabFaviconTheme;
@@ -800,7 +800,7 @@ assert.strictEqual(
   'near-white fallback theme colors should render with the shared blue fallback accent'
 );
 
-vm.runInNewContext(fs.readFileSync('src/shared/favicon/favicon-cache.js', 'utf8'), sandbox, {
+vm.runInNewContext(moduleScript('src/shared/favicon/favicon-cache.js', 'LumnoFaviconCache'), sandbox, {
   filename: 'src/shared/favicon/favicon-cache.js'
 });
 

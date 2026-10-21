@@ -1,3 +1,7 @@
+import * as PAGE_COLOR_SCHEME from '../shared/page-color-scheme.js';
+import * as LumnoSettings from '../shared/settings.js';
+import * as TOAST from '../shared/ui/toast.js';
+
 (function() {
   'use strict';
 
@@ -6,12 +10,10 @@
   const TAB_SWITCHER_ADVANCE_EVENT = '_x_extension_tab_switcher_advance_command_2026_unique_';
   const THEME_STORAGE_KEY = '_x_extension_theme_mode_2024_unique_';
   const chromeApi = typeof chrome !== 'undefined' ? chrome : null;
-  const PAGE_COLOR_SCHEME = globalThis.LumnoPageColorScheme;
-  const TOAST = globalThis.LumnoToast;
   const switcherThemeMediaQuery = typeof window.matchMedia === 'function'
     ? window.matchMedia('(prefers-color-scheme: dark)')
     : null;
-  const providerRuntime = globalThis.LumnoSettings.createProviderStorageRuntime(chromeApi);
+  const providerRuntime = LumnoSettings.createProviderStorageRuntime(chromeApi);
   const switcherThemeStorageArea = providerRuntime ? providerRuntime.area : (chromeApi && chromeApi.storage && chromeApi.storage.sync)
     ? chromeApi.storage.sync
     : (chromeApi && chromeApi.storage ? chromeApi.storage.local : null);

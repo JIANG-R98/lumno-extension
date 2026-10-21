@@ -1,8 +1,10 @@
+import * as LumnoNewtabWallpaperEffects from './wallpaper-effects.js';
+
 (function() {
   const root = document.documentElement;
   const body = document.body;
   const preloadState = globalThis.LumnoNewtabWallpaperPreload;
-  const effects = globalThis.LumnoNewtabWallpaperEffects;
+  const effects = LumnoNewtabWallpaperEffects;
   if (!root ||
       !body ||
       !preloadState ||

@@ -200,7 +200,7 @@ assert.match(
 
 assertContains(
   communityLinksJs,
-  "url.searchParams.set(\n      '_lumno_refresh',",
+  "url.searchParams.set(\n    '_lumno_refresh',",
   'wechat refresh should cache-bust a QR URL even when the server reuses the same path'
 );
 

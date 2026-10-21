@@ -5,6 +5,7 @@ const path = require('path');
 const { extractFunction: extractFunctionSource } = require('../helpers/extract-function');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
 const { readReactSource } = require('../helpers/react-source');
+const { moduleScript } = require('../helpers/module-script');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 
@@ -206,10 +207,10 @@ function createRuntime(options) {
       };
     }
   };
-  vm.runInNewContext(fs.readFileSync(path.join(repoRoot, 'src/shared/favicon/favicon-utils.js'), 'utf8'), sandbox, {
+  vm.runInNewContext(moduleScript('src/shared/favicon/favicon-utils.js', 'LumnoFaviconUtils', null, { 'src/shared/favicon/favicon-view-core.js': 'LumnoFaviconViewCore' }), sandbox, {
     filename: 'src/shared/favicon/favicon-utils.js'
   });
-  vm.runInNewContext(fs.readFileSync(path.join(repoRoot, 'src/overlay/favicon-view.js'), 'utf8'), sandbox, {
+  vm.runInNewContext(moduleScript('src/overlay/favicon-view.js', 'LumnoOverlayFaviconView', null, { 'src/shared/favicon/favicon-view-core.js': 'LumnoFaviconViewCore' }), sandbox, {
     filename: 'src/overlay/favicon-view.js'
   });
 

@@ -1,13 +1,7 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
 const { JSDOM } = require('jsdom');
+const { moduleScript } = require('../helpers/module-script');
 
-const repoRoot = path.join(__dirname, '..', '..');
-const source = fs.readFileSync(
-  path.join(repoRoot, 'src', 'overlay', 'tab-switcher.js'),
-  'utf8'
-);
 const dom = new JSDOM('<!doctype html><html><body></body></html>', {
   runScripts: 'outside-only',
   url: 'chrome-extension://lumno/src/options/options.html'
@@ -82,10 +76,10 @@ window.chrome = {
 };
 
 // Extension pages load settings.js before the tab switcher runtime.
-window.eval(fs.readFileSync(path.join(__dirname, '..', '..', 'src/shared/settings.js'), 'utf8'));
-window.eval(fs.readFileSync(path.join(__dirname, '..', '..', 'src/shared/ui/toast.js'), 'utf8'));
-window.eval(fs.readFileSync(path.join(__dirname, '..', '..', 'src/shared/page-color-scheme.js'), 'utf8'));
-window.eval(source);
+window.eval(moduleScript('src/shared/settings.js', 'LumnoSettings'));
+window.eval(moduleScript('src/shared/ui/toast.js', 'LumnoToast'));
+window.eval(moduleScript('src/shared/page-color-scheme.js', 'LumnoPageColorScheme'));
+window.eval(moduleScript('src/overlay/tab-switcher.js'));
 
 const unavailableResult =
   window._x_extension_toggleTabSwitcher_2026_unique_({
@@ -94,7 +88,7 @@ const unavailableResult =
 assert.deepStrictEqual(
   { ...unavailableResult },
   { ok: false, reason: 'react-view-unavailable' },
-  'the classic runtime should fail cleanly while the page React API is unavailable'
+  'the switcher runtime should fail cleanly while the page React API is unavailable'
 );
 assert.strictEqual(
   window.document.getElementById('_x_extension_tab_switcher_host_2026_unique_'),
@@ -143,7 +137,7 @@ const readyResult =
 assert.deepStrictEqual(
   { ...readyResult },
   { ok: true },
-  'the runtime should resolve a React API installed after the classic script loaded'
+  'the runtime should resolve a React API installed after the switcher script loaded'
 );
 assert.strictEqual(createViewCalls, 1);
 const switcherHost = window.document.getElementById(

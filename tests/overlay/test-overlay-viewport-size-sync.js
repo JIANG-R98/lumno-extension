@@ -2,10 +2,10 @@ const assert = require('assert');
 const fs = require('fs');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
-delete globalThis.LumnoOverlayLifecycle;
-require('../../src/overlay/lifecycle.js');
+delete LumnoOverlayLifecycle;
+const LumnoOverlayLifecycle = require('../../src/overlay/lifecycle.js');
 
-const lifecycle = globalThis.LumnoOverlayLifecycle;
+const lifecycle = LumnoOverlayLifecycle;
 const lifecycleSource = fs.readFileSync('src/overlay/lifecycle.js', 'utf8');
 const shellSource = fs.readFileSync('react-src/overlay/shell.tsx', 'utf8');
 const searchPanelSource = readOverlayPanelSource();

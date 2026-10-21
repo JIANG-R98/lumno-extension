@@ -2,13 +2,50 @@
 // providers, aggregate search across several engines, the help center index,
 // and the search and site-search message handlers.
 //
-// Loaded by background.js through its first importScripts block (the Firefox
-// build lists that block as background.scripts). Like background.js this is a
-// classic script sharing the worker's global scope. Its functions use
-// background.js bindings (storageArea, AGGREGATE_SEARCH, AI_PROVIDER_SUBMIT,
-// waitForTabComplete, ...) only when they run, never while this file loads,
-// because background.js has not initialized its own top-level bindings yet at
-// that point.
+// A module of the service worker; background.js imports it before its own code
+// runs. Its functions use background.js bindings (storageArea,
+// AGGREGATE_SEARCH, AI_PROVIDER_SUBMIT, waitForTabComplete, ...) only when they
+// run, never while this file loads, because background.js has not initialized
+// its own top-level bindings yet at that point.
+
+import * as AGGREGATE_SEARCH from './aggregate-search.js';
+import * as AGGREGATE_SEARCH_STORE from '../shared/search/aggregate-search-store.js';
+import * as AI_PROVIDER_SUBMIT from './ai-provider-submit.js';
+import * as COMMUNITY_LINKS from '../shared/community-links.js';
+import * as HELP_CENTER_SEARCH from '../shared/search/help-center-search.js';
+import * as SEARCH_RESULT_TABS from './search-result-tabs.js';
+import * as SETTINGS from '../shared/settings.js';
+import {
+  AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY,
+  AGGREGATE_SEARCH_STORAGE_KEY,
+  getShortcutUrl,
+  loadShortcutRules,
+  storageArea,
+  waitForTabComplete
+} from './background.js';
+import {
+  abortSearchEngineSuggestionRequest,
+  buildDefaultSearchUrl,
+  clearPendingSearch,
+  consumeSearchEngineSuggestionRequest,
+  deleteHistoryUrlFromSearch,
+  getDirectNavigationUrl,
+  getSearchEngineSuggestionRequestKey,
+  getSearchEngineSuggestions,
+  getSearchSuggestions,
+  getSiteSearchProviderEntryUrl,
+  isInteractiveSiteSearchProvider,
+  loadSiteSearchProviders,
+  markPendingSearchTab,
+  pendingSearchTabId,
+  recordSearchSuggestionSelection,
+  releaseSearchEngineSuggestionRequest,
+  scheduleSearchEngineSuggestionPrefetch,
+  searchEngineSuggestionRequests,
+  shouldPrefetchSearchEngineSuggestions,
+  startSearchEngineSuggestionRequest
+} from './search-suggestions-service.js';
+import { createSearchResultTab, resolveSearchResultTabPlacement } from './browser-urls-service.js';
 
 function runInteractiveSiteSearchProvider(provider, query, sender, disposition) {
   const prompt = String(query || '').trim();
@@ -125,7 +162,7 @@ function runAggregateSearchQuery(aggregateId, query, sender, disposition) {
 }
 
 // Search, suggestions and history.
-const SEARCH_MESSAGE_HANDLERS = Object.freeze({
+export const SEARCH_MESSAGE_HANDLERS = Object.freeze({
   searchOrNavigate(request, sender, sendResponse) {
     const query = request.query ? String(request.query) : '';
     const forceSearch = Boolean(request.forceSearch);
@@ -312,7 +349,7 @@ function getHelpCenterSearchResults(query, locale) {
 }
 
 // Site search, help center and aggregate search.
-const SITE_SEARCH_MESSAGE_HANDLERS = Object.freeze({
+export const SITE_SEARCH_MESSAGE_HANDLERS = Object.freeze({
   getSiteSearchProviders(request, sender, sendResponse) {
     loadSiteSearchProviders().then((items) => {
       sendResponse({ items: items });

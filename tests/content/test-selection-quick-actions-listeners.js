@@ -2,9 +2,9 @@
 // enabled: turning it off detaches every page listener and the ownership
 // MutationObserver, while the storage listener stays so it can turn back on.
 const assert = require('assert');
-const fs = require('fs');
 const { JSDOM } = require('jsdom');
 const selectionIntent = require('../../src/shared/selection-intent.js');
+const { bundleScript } = require('../helpers/module-script');
 
 const ENABLED_KEY = '_x_extension_selection_quick_actions_enabled_2026_unique_';
 const LANGUAGE_KEY = '_x_extension_language_2024_unique_';
@@ -109,9 +109,6 @@ function trackListeners(target, label, registry) {
     }
   };
 
-  window.eval(fs.readFileSync('src/shared/settings.js', 'utf8'));
-  window.eval(fs.readFileSync('src/shared/selection-action-icons.js', 'utf8'));
-  window.eval(fs.readFileSync('src/shared/ui/toast.js', 'utf8'));
   // Let jsdom finish loading, then track only what the content script registers.
   if (document.readyState !== 'complete') {
     await new Promise((resolve) => window.addEventListener('load', resolve, { once: true }));
@@ -120,7 +117,7 @@ function trackListeners(target, label, registry) {
   trackListeners(document, 'document', pageListeners);
   trackListeners(window, 'window', pageListeners);
   trackListeners(visualViewport, 'visualViewport', pageListeners);
-  window.eval(fs.readFileSync('src/content/selection-quick-actions.js', 'utf8'));
+  window.eval(bundleScript('selection-quick-actions'));
   await wait(10);
 
   function setEnabled(value) {

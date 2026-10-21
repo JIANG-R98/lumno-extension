@@ -1,7 +1,7 @@
 const assert = require('assert');
-const fs = require('fs');
 const { JSDOM } = require('jsdom');
 const selectionIntent = require('../../src/shared/selection-intent.js');
+const { bundleScript } = require('../helpers/module-script');
 
 // The runtime only schedules work through window.setTimeout and
 // requestAnimationFrame, so the test drives a virtual clock instead of
@@ -278,15 +278,12 @@ let wait = null;
       width: 220
     });
   });
-  window.eval(fs.readFileSync('src/shared/settings.js', 'utf8'));
-  window.eval(fs.readFileSync('src/shared/selection-action-icons.js', 'utf8'));
-  window.eval(fs.readFileSync('src/shared/ui/toast.js', 'utf8'));
+  window.eval(bundleScript('selection-quick-actions'));
   assert.strictEqual(
     window.LumnoSelectionButterfly,
     undefined,
     'the DOM regression should cover a missing shared butterfly module'
   );
-  window.eval(fs.readFileSync('src/content/selection-quick-actions.js', 'utf8'));
   await wait(0);
 
   const legacyHost = window.document.createElement('div');

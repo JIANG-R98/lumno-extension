@@ -2,17 +2,24 @@
 // and loading records (in session storage, so a suspended worker can resume
 // them), and the retries that reopen the overlay once a navigating tab settles.
 //
-// Loaded by background.js through its first importScripts block (the Firefox
-// build lists that block as background.scripts). Like background.js this is a
-// classic script sharing the worker's global scope. Its functions use
-// background.js bindings (logHotkeyDebug, ignoreExpectedChromeError, ...) only
-// when they run, never while this file loads, because background.js has not
-// initialized its own top-level bindings yet at that point.
+// A module of the service worker; background.js imports it before its own code
+// runs. Its functions use background.js bindings (logHotkeyDebug,
+// ignoreExpectedChromeError, ...) only when they run, never while this file
+// loads, because background.js has not initialized its own top-level bindings
+// yet at that point.
 
-const OVERLAY_LOADING_LIFECYCLE = globalThis.LumnoOverlayLoadingLifecycle;
+import * as OVERLAY_LOADING_LIFECYCLE from './overlay-loading-lifecycle.js';
+import { ignoreExpectedChromeError, logHotkeyDebug } from './background.js';
+import { canOpenOverlayOnUrl, getResolvedTabUrl } from './browser-urls-service.js';
+import {
+  OVERLAY_HOST_ID,
+  OVERLAY_RUNTIME_VERSION,
+  openOverlayOnTab
+} from './overlay-open-service.js';
+
 const OVERLAY_NAVIGATION_STATE_STORAGE_PREFIX =
   '_x_extension_overlay_navigation_state_2026_unique_:';
-const OVERLAY_NAVIGATION_STATE_TTL_MS = Number(
+export const OVERLAY_NAVIGATION_STATE_TTL_MS = Number(
   OVERLAY_LOADING_LIFECYCLE.DEFAULT_NAVIGATION_STATE_TTL_MS
 ) || (5 * 60 * 1000);
 const OVERLAY_LOADING_RECORD_STORAGE_PREFIX =
@@ -28,8 +35,8 @@ const OVERLAY_LOADING_STABLE_COMPLETE_MS = 1500;
 const overlayLoadingRecoveryInFlightByTabId = new Set();
 const overlayLoadingPendingUpdateByTabId = new Map();
 // Write-through caches of chrome.storage.session records, re-read on a miss.
-const overlayNavigationStateByTabId = new Map();
-const overlayLoadingRecordsByTabId = new Map();
+export const overlayNavigationStateByTabId = new Map();
+export const overlayLoadingRecordsByTabId = new Map();
 
 function getOverlayLoadingRecordStorageArea() {
   return chrome && chrome.storage && chrome.storage.session &&
@@ -60,7 +67,7 @@ function setOverlayNavigationState(state) {
   }
 }
 
-function clearOverlayNavigationState(tabId) {
+export function clearOverlayNavigationState(tabId) {
   if (typeof tabId !== 'number') {
     return;
   }
@@ -76,7 +83,7 @@ function clearOverlayNavigationState(tabId) {
   }
 }
 
-function getOverlayNavigationState(tabId, callback) {
+export function getOverlayNavigationState(tabId, callback) {
   const done = typeof callback === 'function' ? callback : () => {};
   if (typeof tabId !== 'number') {
     done(null);
@@ -127,14 +134,14 @@ function getOverlayNavigationState(tabId, callback) {
   }
 }
 
-function rememberOverlayTopFrameNavigation(details) {
+export function rememberOverlayTopFrameNavigation(details) {
   const state = OVERLAY_LOADING_LIFECYCLE.createTopFrameNavigationState(details, Date.now());
   if (state) {
     setOverlayNavigationState(state);
   }
 }
 
-function updateOverlayTopFrameNavigation(details) {
+export function updateOverlayTopFrameNavigation(details) {
   if (!details || typeof details.tabId !== 'number' || details.frameId !== 0) {
     return;
   }
@@ -214,7 +221,7 @@ function setOverlayLoadingRecord(record) {
   }
 }
 
-function clearOverlayLoadingRecord(tabId) {
+export function clearOverlayLoadingRecord(tabId) {
   if (typeof tabId !== 'number') {
     return;
   }
@@ -287,7 +294,7 @@ function getOverlayLoadingRecord(tabId, callback) {
   }
 }
 
-function rememberOverlayLoadingRecord(activeTab, source, options) {
+export function rememberOverlayLoadingRecord(activeTab, source, options) {
   const settings = options && typeof options === 'object' ? options : {};
   if (settings.loadingRecovery === true) {
     return settings.loadingRecord || overlayLoadingRecordsByTabId.get(activeTab.id) || null;
@@ -302,21 +309,21 @@ function rememberOverlayLoadingRecord(activeTab, source, options) {
   return record;
 }
 
-function getPendingOverlayNavigationUrl(tab) {
+export function getPendingOverlayNavigationUrl(tab) {
   return OVERLAY_LOADING_LIFECYCLE.getPendingInjectableUrl(
     tab,
     canOpenOverlayOnUrl
   );
 }
 
-function shouldDeferRestrictedOverlayNavigation(tab) {
+export function shouldDeferRestrictedOverlayNavigation(tab) {
   return OVERLAY_LOADING_LIFECYCLE.shouldDeferRestrictedLoadingTab(
     tab,
     canOpenOverlayOnUrl
   );
 }
 
-function rememberOverlayPendingNavigationIntent(activeTab, source, pendingUrl) {
+export function rememberOverlayPendingNavigationIntent(activeTab, source, pendingUrl) {
   if (!activeTab || typeof activeTab.id !== 'number') {
     return null;
   }
@@ -361,7 +368,7 @@ function queueOverlayLoadingUpdate(tabId, changeInfo, tab) {
   });
 }
 
-function finishOverlayLoadingOpenAttempt(tabId) {
+export function finishOverlayLoadingOpenAttempt(tabId) {
   if (typeof tabId !== 'number' ||
       !overlayLoadingRecoveryInFlightByTabId.has(tabId)) {
     return;
@@ -381,7 +388,7 @@ function finishOverlayLoadingOpenAttempt(tabId) {
   }, 0);
 }
 
-function markOverlayLoadingRecordUnstable(tabId, callback) {
+export function markOverlayLoadingRecordUnstable(tabId, callback) {
   const done = typeof callback === 'function' ? callback : () => {};
   getOverlayLoadingRecord(tabId, (record) => {
     if (!record) {
@@ -454,7 +461,7 @@ function scheduleOverlayLoadingStableCompletion(tab, record) {
   }, OVERLAY_LOADING_STABLE_COMPLETE_MS);
 }
 
-function updateOverlayLoadingRecordFromInvocation(activeTab, results) {
+export function updateOverlayLoadingRecordFromInvocation(activeTab, results) {
   if (!activeTab || typeof activeTab.id !== 'number') {
     return;
   }
@@ -476,7 +483,7 @@ function updateOverlayLoadingRecordFromInvocation(activeTab, results) {
   }
 }
 
-function updateOverlayLoadingSessionFromMessage(request, sender, sendResponse) {
+export function updateOverlayLoadingSessionFromMessage(request, sender, sendResponse) {
   const senderTab = sender && sender.tab ? sender.tab : null;
   if (!senderTab || typeof senderTab.id !== 'number' ||
       (typeof sender.frameId === 'number' && sender.frameId !== 0)) {
@@ -551,7 +558,7 @@ function scheduleOverlayLoadingRecoveryRetry(tab, record) {
   }, OVERLAY_LOADING_RECOVERY_RETRY_MS * recoveryAttempts);
 }
 
-function scheduleOverlayLoadingPreCompleteRetry(tab, record) {
+export function scheduleOverlayLoadingPreCompleteRetry(tab, record) {
   if (!tab || typeof tab.id !== 'number' || !record) {
     return;
   }
@@ -649,7 +656,7 @@ function restoreOverlayAfterLoadingDocumentChange(tab, record, complete) {
   });
 }
 
-function recoverOverlayAfterLoadingUpdate(tabId, changeInfo, tab) {
+export function recoverOverlayAfterLoadingUpdate(tabId, changeInfo, tab) {
   const isComplete = Boolean(changeInfo && changeInfo.status === 'complete');
   const isStableComplete = Boolean(isComplete && changeInfo && changeInfo.stable === true);
   const isCommittedUrl = Boolean(changeInfo && typeof changeInfo.url === 'string');
@@ -751,7 +758,7 @@ function recoverOverlayAfterLoadingUpdate(tabId, changeInfo, tab) {
   });
 }
 
-function recoverOverlayAfterTopFrameDocumentStart(request, sender) {
+export function recoverOverlayAfterTopFrameDocumentStart(request, sender) {
   const senderTab = sender && sender.tab ? sender.tab : null;
   if (!senderTab || typeof senderTab.id !== 'number' ||
       (typeof sender.frameId === 'number' && sender.frameId !== 0)) {

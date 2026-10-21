@@ -1,3 +1,6 @@
+import * as PAGE_COLOR_SCHEME from '../shared/page-color-scheme.js';
+import * as SETTINGS from '../shared/settings.js';
+
 (function() {
   // The background injects this script on the first copy-URL command in a tab
   // and again after an extension reload or update, when the earlier copy
@@ -22,8 +25,6 @@
   ]);
   const LANGUAGE_STORAGE_KEY = '_x_extension_language_2024_unique_';
   const THEME_STORAGE_KEY = '_x_extension_theme_mode_2024_unique_';
-  const PAGE_COLOR_SCHEME = globalThis.LumnoPageColorScheme;
-  const SETTINGS = globalThis.LumnoSettings;
   const providerStorageRuntime = SETTINGS.createProviderStorageRuntime(chrome);
   const storageArea = providerStorageRuntime
     ? providerStorageRuntime.area

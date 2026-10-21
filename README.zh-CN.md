@@ -214,7 +214,7 @@ npm ci
 npm run build
 ```
 
-修改 `src/` 期间可以运行 `npm run watch:bundles`，每次改动都会重新打包。有哪些包、每个包运行哪些文件，见 `scripts/build/bundles.js`。
+`src/` 下的脚本都是 ES 模块，各自 import 所需的模块；每个包包含 `scripts/build/bundles.js` 为它列出的模块及其全部依赖。修改 `src/` 期间可以运行 `npm run watch:bundles`，每次改动都会重新打包。
 
 然后在 `chrome://extensions/` 中保持「开发者模式」开启，并将仓库根目录作为已解压扩展加载。生成新产物，或修改后台脚本、`manifest.json` 后，请在扩展管理页手动点击「重新加载」。开发版不会在 Chrome 用户配置启动时主动二次刷新，以免中断启动阶段的新标签页接管。
 

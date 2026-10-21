@@ -20,6 +20,7 @@ const http = require('http');
 const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
+const SETTINGS = require('../../src/shared/settings.js');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const extensionRoot = path.resolve(process.argv[2] || repoRoot);
@@ -39,7 +40,7 @@ const PAGES = [
   'src/popup/popup.html'
 ];
 const PAGE_SETTLE_MS = 3500;
-// Settings written while New Tab is open, by their LumnoSettings key names;
+// Settings written while New Tab is open, by their settings module key names;
 // the last round puts most of them back.
 const SETTINGS_ROUNDS = [
   {
@@ -79,6 +80,15 @@ const SETTINGS_ROUNDS = [
     NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY: true
   }
 ];
+
+// A round's values under their storage keys.
+function toStorageValues(round) {
+  const values = {};
+  Object.entries(round).forEach(([name, value]) => {
+    if (SETTINGS[name]) values[SETTINGS[name]] = value;
+  });
+  return values;
+}
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -241,14 +251,9 @@ async function main() {
         // Change settings under the open page so its storage listeners run;
         // the pages opened next start from the changed values.
         report['newtab settings changes'] = await evaluate(sessionId, `(async () => {
-          const settings = globalThis.LumnoSettings;
-          const rounds = [${JSON.stringify(SETTINGS_ROUNDS)}][0];
+          const rounds = ${JSON.stringify(SETTINGS_ROUNDS.map(toStorageValues))};
           let applied = 0;
-          for (const round of rounds) {
-            const values = {};
-            Object.entries(round).forEach(([name, value]) => {
-              if (settings[name]) values[settings[name]] = value;
-            });
+          for (const values of rounds) {
             applied += Object.keys(values).length;
             await chrome.storage.sync.set(values);
             await chrome.storage.local.set(values);
@@ -289,7 +294,7 @@ async function main() {
     await evaluate(workerSession, `(async () => {
       const [tab] = await chrome.tabs.query({ url: 'http://127.0.0.1/*' });
       await chrome.tabs.update(tab.id, { active: true });
-      triggerShowSearchForTab(tab, 'commands');
+      chrome.commands.onCommand.dispatch('show-search');
     })()`);
     await delay(2500);
     report.overlay = await evaluate(webSession,
@@ -319,10 +324,7 @@ async function main() {
     await press('Escape', 'Escape', 27);
     await press('Escape', 'Escape', 27);
     report['overlay typing'] = 'typed, navigated and closed';
-    await evaluate(workerSession, `(async () => {
-      const [tab] = await chrome.tabs.query({ url: 'http://127.0.0.1/*' });
-      triggerTabSwitcherForTab(tab, 'commands-tab-switcher', Date.now());
-    })()`);
+    await evaluate(workerSession, `chrome.commands.onCommand.dispatch('show-tab-switcher')`);
     await delay(2000);
     report['tab switcher'] = await evaluate(webSession,
       `document.querySelectorAll('[id*=_x_extension], [class*=x-lumno], [class*=x-ov]').length + ' overlay elements'`);

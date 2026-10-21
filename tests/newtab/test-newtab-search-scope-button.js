@@ -81,7 +81,7 @@ assert.match(
 );
 assert.match(
   newtabSource,
-  /const searchInputCursorTooltipController = globalThis\.LumnoCursorTooltip[\s\S]*?id: '_x_extension_newtab_search_input_cursor_tooltip_2026_unique_'/,
+  /const searchInputCursorTooltipController = LumnoCursorTooltip\.createController\([\s\S]*?id: '_x_extension_newtab_search_input_cursor_tooltip_2026_unique_'/,
   'new Tab search actions should own a cursor-following bubble controller'
 );
 assert.match(

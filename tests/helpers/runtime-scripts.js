@@ -2,11 +2,12 @@
 
 // The files each runtime runs, in run order. Pages, manifest content scripts
 // and the background's injection lists load bundles (scripts/build/bundles.js);
-// these helpers expand every bundle into the source files it is built from, so
-// checks can ask "does the overlay run X before Y" without parsing load lists.
+// these helpers expand every bundle into the modules it runs, so checks can
+// ask "does the overlay run X before Y" without parsing load lists.
 
 const fs = require('fs');
 const path = require('path');
+const esbuild = require('esbuild');
 const { BUNDLES, BUNDLE_DIRECTORY } = require('../../scripts/build/bundles');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
@@ -24,8 +25,38 @@ function getBundle(name) {
   return bundle;
 }
 
+// The modules a bundle runs, in the order they run: each of its files after
+// what it imports, in import order, as modules evaluate.
+const bundleModules = new Map();
 function getBundleFiles(name) {
-  return getBundle(name).files.slice();
+  if (!bundleModules.has(name)) {
+    const result = esbuild.buildSync({
+      absWorkingDir: repoRoot,
+      stdin: {
+        contents: getBundle(name).files.map((file) => `import './${file}';`).join('\n'),
+        resolveDir: repoRoot,
+        sourcefile: 'bundle-entry.js'
+      },
+      bundle: true,
+      format: 'iife',
+      metafile: true,
+      outfile: 'bundle.js',
+      write: false,
+      logLevel: 'silent'
+    });
+    const { inputs } = result.metafile;
+    const order = [];
+    const seen = new Set();
+    const visit = (file) => {
+      if (seen.has(file)) return;
+      seen.add(file);
+      inputs[file].imports.forEach((imported) => visit(imported.path));
+      order.push(file);
+    };
+    visit('bundle-entry.js');
+    bundleModules.set(name, order.filter((file) => file !== 'bundle-entry.js'));
+  }
+  return bundleModules.get(name).slice();
 }
 
 // A loaded path: a bundle expands into its files, anything else stays as is.
@@ -74,9 +105,9 @@ function getManifestContentScripts() {
 // holds them, expanded into source files.
 const INJECTION_LISTS = {
   overlay: ['src/background/overlay-open-service.js', /const overlayInjectionFiles = \[([\s\S]*?)\n {2}\];/],
-  tabSwitcher: ['src/background/tab-switcher-service.js', /const runDynamicSwitcherScript[\s\S]*?files: \[([\s\S]*?)\]/],
+  tabSwitcher: ['src/background/tab-switcher-service.js', /const runDynamicSwitcherScript[\s\S]*?files: \[([\s\S]*?)\n\s*\]/],
   shortcutObserver: ['src/background/tab-switcher-service.js', /files: \[('build\/shortcut-key-observer\.js')\]/],
-  documentPipPicker: ['src/background/pip-service.js', /const injectAndInvoke[\s\S]*?files: \[([\s\S]*?)\]/],
+  documentPipPicker: ['src/background/pip-service.js', /const injectAndInvoke[\s\S]*?files: \[([\s\S]*?)\n\s*\]/],
   copyUrlListener: ['src/background/command-service.js', /const COPY_URL_LISTENER_FILES = Object\.freeze\(\[([\s\S]*?)\]\)/],
   pageShortcutToast: ['src/background/page-shortcut-menu.js', /const TOAST_FILES = Object\.freeze\(\[([\s\S]*?)\]\)/],
   selectionQuickActions: ['src/background/selection-script-registration.js', /const SCRIPT_FILES = Object\.freeze\(\[([\s\S]*?)\]\)/]

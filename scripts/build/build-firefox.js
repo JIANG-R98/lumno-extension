@@ -8,7 +8,8 @@ const repoRoot = process.cwd();
 const manifest = JSON.parse(fs.readFileSync(path.join(repoRoot, 'manifest.json'), 'utf8'));
 const storeZip = path.join(repoRoot, 'dist', `lumno-store-v${manifest.version}.zip`);
 const outDir = path.join(repoRoot, 'dist', 'firefox');
-const IMPORT_SHIM = 'src/background/firefox-import-shim.js';
+// Next to the background bundle: the store package ships no background sources.
+const IMPORT_SHIM = 'build/firefox-import-shim.js';
 
 if (!fs.existsSync(storeZip)) {
   console.error(`Missing ${path.relative(repoRoot, storeZip)}; run npm run package:store first.`);
@@ -26,16 +27,11 @@ const outPath = (value) => path.join(outDir, value);
 const ffManifest = JSON.parse(fs.readFileSync(outPath('manifest.json'), 'utf8'));
 
 // Firefox MV3 has no service-worker background and no importScripts in event
-// pages, so the import list becomes the ordered background.scripts array.
+// pages: the background bundle runs as a background script, after the scripts
+// the service worker imports on first use (const *_SCRIPT_PATH).
 const backgroundEntry = ffManifest.background.service_worker;
-const backgroundSource = fs.readFileSync(outPath(backgroundEntry), 'utf8');
-const importBlock = backgroundSource.match(/importScripts\(([\s\S]*?)\);/);
-if (!importBlock) {
-  throw new Error('Could not find the importScripts block in background.js.');
-}
-const backgroundDeps = [...importBlock[1].matchAll(/getURL\('([^']+)'\)/g)].map((match) => match[1]);
-// Scripts the service worker imports on first use (const *_SCRIPT_PATH) load up front here.
-const lazyBackgroundDeps = [...backgroundSource.matchAll(/^const \w+_SCRIPT_PATH = '([^']+)';$/gm)].map((match) => match[1]);
+const backgroundSource = fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8');
+const lazyBackgroundDeps = [...backgroundSource.matchAll(/^(?:export )?const \w+_SCRIPT_PATH = '([^']+)';$/gm)].map((match) => match[1]);
 if (!lazyBackgroundDeps.includes('assets/vendor/pinyin-pro.js')) {
   throw new Error('Could not find the lazily imported pinyin-pro path in background.js.');
 }
@@ -44,7 +40,7 @@ fs.writeFileSync(
   '// Dependencies are listed in manifest background.scripts; Firefox event pages lack importScripts.\n' +
   'globalThis.importScripts = function importScripts() {};\n'
 );
-ffManifest.background = { scripts: [IMPORT_SHIM, ...backgroundDeps, ...lazyBackgroundDeps, backgroundEntry] };
+ffManifest.background = { scripts: [IMPORT_SHIM, ...lazyBackgroundDeps, backgroundEntry] };
 
 ffManifest.browser_specific_settings = {
   gecko: {
@@ -108,4 +104,4 @@ fs.readdirSync(outPath('_locales')).forEach((locale) => {
   });
   fs.writeFileSync(file, `${JSON.stringify(messages, null, 2)}\n`);
 });
-console.log(`Firefox build ready: ${path.relative(repoRoot, outDir)} (${backgroundDeps.length} background deps, ${variantCount} Firefox messages)`);
+console.log(`Firefox build ready: ${path.relative(repoRoot, outDir)} (${variantCount} Firefox messages)`);

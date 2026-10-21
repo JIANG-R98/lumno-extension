@@ -1,11 +1,8 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
 const vm = require('vm');
 
-const repoRoot = path.resolve(__dirname, '..', '..');
 const settings = require('../../src/shared/settings.js');
-const source = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab-storage-prefetch.js'), 'utf8');
+const { moduleScript } = require('../helpers/module-script');
 
 function run(cache) {
   const fetched = [];
@@ -25,7 +22,7 @@ function run(cache) {
     }
   };
   sandbox.globalThis = sandbox;
-  vm.runInNewContext(source, sandbox, { filename: 'newtab-storage-prefetch.js' });
+  vm.runInNewContext(moduleScript('src/newtab/newtab-storage-prefetch.js', undefined, null, { 'src/shared/settings.js': 'LumnoSettings' }), sandbox, { filename: 'newtab-storage-prefetch.js' });
   return { fetched, prefetch: sandbox.LumnoNewtabLocalePrefetch };
 }
 

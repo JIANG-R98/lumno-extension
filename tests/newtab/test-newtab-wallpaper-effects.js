@@ -4,6 +4,7 @@ const vm = require('vm');
 const { readPageSource } = require('../helpers/page-source');
 const { readWallpaperRuntimeSource, readWallpaperCheckSource } = require('../helpers/wallpaper-source');
 const { getBundleFiles, runsBefore } = require('../helpers/runtime-scripts');
+const { moduleScript } = require('../helpers/module-script');
 
 const sandbox = {
   clearTimeout,
@@ -12,10 +13,10 @@ const sandbox = {
 };
 sandbox.globalThis = sandbox;
 
-vm.runInNewContext(fs.readFileSync('src/shared/settings.js', 'utf8'), sandbox, {
+vm.runInNewContext(moduleScript('src/shared/settings.js', 'LumnoSettings', null, { 'src/newtab/wallpaper/wallpaper-effects.js': 'LumnoNewtabWallpaperEffects' }), sandbox, {
   filename: 'src/shared/settings.js'
 });
-vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper/wallpaper-effects.js', 'utf8'), sandbox, {
+vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-effects.js', 'LumnoNewtabWallpaperEffects'), sandbox, {
   filename: 'src/newtab/wallpaper/wallpaper-effects.js'
 });
 
@@ -443,7 +444,6 @@ assert.match(
   'wallpaper transitions should snapshot the blurred wallpaper source instead of flashing a sharp frame'
 );
 const wallpaperPreloadSource = fs.readFileSync('src/newtab/wallpaper/wallpaper-preload.js', 'utf8');
-const effectPreloadSource = fs.readFileSync('src/newtab/wallpaper/wallpaper-effect-preload.js', 'utf8');
 vm.runInNewContext(readWallpaperRuntimeSource(), sandbox, {
   filename: 'src/newtab/wallpaper/wallpaper.js'
 });
@@ -1393,7 +1393,7 @@ function runEffectPreload({ focusRoute, imageReady, imageUrl = '' }) {
     window: {}
   };
   preloadSandbox.globalThis = preloadSandbox;
-  vm.runInNewContext(effectPreloadSource, preloadSandbox, {
+  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-effect-preload.js', undefined, null, { 'src/newtab/wallpaper/wallpaper-effects.js': 'LumnoNewtabWallpaperEffects' }), preloadSandbox, {
     filename: 'src/newtab/wallpaper/wallpaper-effect-preload.js'
   });
   return {

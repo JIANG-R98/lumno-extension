@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { JSDOM } = require('jsdom');
 const settings = require('../../src/shared/settings.js');
-require('../../src/newtab/remote-content.js');
+const LumnoNewtabRemoteContent = require('../../src/newtab/remote-content.js');
 const quotes = require('../../src/newtab/top-content/quotes.js');
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
@@ -224,7 +224,7 @@ async function main() {
   localeRuntime.destroy();
 
   // Mounting waits for the cached quote so the page reveals with it in place, never for the network.
-  const remote = globalThis.LumnoNewtabRemoteContent;
+  const remote = LumnoNewtabRemoteContent;
   let cacheCallback = null;
   let storageListener = null;
   const cachedRuntime = quotes.createRuntime({ documentObj: document, windowObj: dom.window,

@@ -3,16 +3,80 @@
 // favicons, and the toolbar popup. background.js combines them with the feature
 // handlers into one router.
 //
-// Loaded by background.js through its first importScripts block (the Firefox
-// build lists that block as background.scripts). Like background.js this is a
-// classic script sharing the worker's global scope. Its functions use
-// background.js bindings (SETTINGS, SHORTCUT_KEY_MATCHER, loadShortcutRules,
-// the extension page helpers, ...) only when they run, never while this file
-// loads, because background.js has not initialized its own top-level bindings
-// yet at that point.
+// A module of the service worker; background.js imports it before its own code
+// runs. Its functions use background.js bindings (SETTINGS,
+// SHORTCUT_KEY_MATCHER, loadShortcutRules, the extension page helpers, ...)
+// only when they run, never while this file loads, because background.js has
+// not initialized its own top-level bindings yet at that point.
+
+import * as BOOKMARK_TAB_GROUPS from './bookmark-tab-groups.js';
+import * as SETTINGS from '../shared/settings.js';
+import * as SHORTCUT_KEY_MATCHER from '../shared/shortcut-key-matcher.js';
+import {
+  SHOW_SEARCH_COMMAND_NAME,
+  checkFileSchemeAccess,
+  getExtensionDetailsUrl,
+  loadShortcutRules,
+  logHotkeyDebug,
+  openBookmarkManagerPage,
+  openExtensionOptionsPage,
+  openExtensionShortcutsPage,
+  openOnboardingPage,
+  openReleasePage,
+  openSiteSearchOptionsPage,
+  pageShortcutMenuController,
+  popupRecentPin,
+  progressTracker,
+  progressTrackingEnabled,
+  swapNewtabForFocus
+} from './background.js';
+import {
+  focusWindowAndActivateTab,
+  handleTabSwitcherShortcutModifierReleased
+} from './tab-switcher-service.js';
+import {
+  fetchFaviconData,
+  fetchShortcutFaviconData,
+  isBlockedLocalFaviconUrl,
+  loadFaviconRequestBlacklistItems,
+  logBlockedLocalFavicon,
+  resolveFaviconCandidates,
+  resolveSiteThemeColor,
+  shouldBlockFaviconForHost
+} from './favicon-service.js';
+import { markPendingSearchTab } from './search-suggestions-service.js';
+import {
+  createSearchResultTab,
+  createTabWithSourceGroup,
+  getResolvedTabUrl,
+  isBrowserNewtabUrl,
+  isLumnoNewtabUrl
+} from './browser-urls-service.js';
+import {
+  createOverlayTabPayload,
+  ensureTabSwitchStatsLoaded,
+  recordTabSwitchEvent,
+  sortTabsForOverlay,
+  syncTabSwitchStatsFromTabList
+} from './tab-switch-stats-service.js';
+import {
+  clearOverlayLoadingRecord,
+  recoverOverlayAfterTopFrameDocumentStart,
+  updateOverlayLoadingSessionFromMessage
+} from './overlay-loading-service.js';
+import { nextTabOverlayFetchSeq } from './overlay-open-service.js';
+import {
+  getConfiguredCopyUrlCommandShortcut,
+  getConfiguredFallbackShortcut,
+  rememberPageHotkeyContext,
+  requestFocusVisibleNewtabInput,
+  triggerCopyCurrentUrlForTab,
+  triggerShowSearchForTab
+} from './command-service.js';
+import { openDocumentPipPickerOnTab } from './pip-service.js';
 
 // Tabs, overlay lifecycle and tab visibility.
-const TAB_MESSAGE_HANDLERS = Object.freeze({
+export const TAB_MESSAGE_HANDLERS = Object.freeze({
   swapNewtabForFocus(request, sender, sendResponse) {
     swapNewtabForFocus(sender && sender.tab ? sender.tab : null, sender && sender.url, (result) => {
       sendResponse(result);
@@ -164,7 +228,7 @@ const TAB_MESSAGE_HANDLERS = Object.freeze({
 });
 
 // Configured shortcuts and page hotkeys.
-const SHORTCUT_MESSAGE_HANDLERS = Object.freeze({
+export const SHORTCUT_MESSAGE_HANDLERS = Object.freeze({
   getShowSearchShortcut(request, sender, sendResponse) {
     getConfiguredFallbackShortcut((shortcut) => {
       sendResponse({ shortcut: shortcut || '' });
@@ -244,7 +308,7 @@ const SHORTCUT_MESSAGE_HANDLERS = Object.freeze({
 // restarts this worker, so each is read once per worker lifetime.
 const localeMessagesByLocale = new Map();
 
-function loadLocaleMessages(rawLocale) {
+export function loadLocaleMessages(rawLocale) {
   const locale = SETTINGS.normalizeLocale(rawLocale);
   if (localeMessagesByLocale.has(locale)) {
     return localeMessagesByLocale.get(locale);
@@ -275,7 +339,7 @@ function pickLocaleMessages(messages, keys) {
 }
 
 // Locale messages and permission probes.
-const LOCALE_AND_PERMISSION_MESSAGE_HANDLERS = Object.freeze({
+export const LOCALE_AND_PERMISSION_MESSAGE_HANDLERS = Object.freeze({
   getLocaleMessages(request, sender, sendResponse) {
     loadLocaleMessages(request && request.locale).then((messages) => {
       sendResponse({ messages: pickLocaleMessages(messages, request && request.keys) });
@@ -296,7 +360,7 @@ const LOCALE_AND_PERMISSION_MESSAGE_HANDLERS = Object.freeze({
 });
 
 // Extension pages, tab creation and progress probes.
-const EXTENSION_PAGE_MESSAGE_HANDLERS = Object.freeze({
+export const EXTENSION_PAGE_MESSAGE_HANDLERS = Object.freeze({
   probeProgressSeries(request, sender, sendResponse) {
     // Pinning from New Tab: does the open page read as an episode or chapter?
     if (!progressTrackingEnabled) {
@@ -424,7 +488,7 @@ const EXTENSION_PAGE_MESSAGE_HANDLERS = Object.freeze({
 });
 
 // Favicons and site theme colors.
-const FAVICON_MESSAGE_HANDLERS = Object.freeze({
+export const FAVICON_MESSAGE_HANDLERS = Object.freeze({
   resolveFaviconCandidates(request, sender, sendResponse) {
     const targetUrl = request.url || '';
     const hostOverride = request.host || '';
@@ -527,7 +591,7 @@ function getPopupPage(tab) {
 // The toolbar popup's page actions. The popup closes once the clip or the
 // search starts, so those answer first and then act on the tab. A finished
 // copy or add is announced by Lumno's top toast in the page.
-const POPUP_MESSAGE_HANDLERS = Object.freeze({
+export const POPUP_MESSAGE_HANDLERS = Object.freeze({
   popupOpenDocumentPipPicker(request, sender, sendResponse) {
     getPopupTargetTab(request.tabId, (tab) => {
       sendResponse({ ok: Boolean(tab) });

@@ -503,9 +503,9 @@ assertContains(
 {
   const newtabScripts = getPageScripts('newtab.html');
   assert.ok(
-    runsBefore(newtabScripts, 'src/newtab/bookmarks/bookmark-cascade-position.js', 'src/newtab/bookmarks/bookmark-cascade-menu.js') &&
+    runsBefore(newtabScripts, 'src/newtab/bookmarks/bookmark-cascade-position.js', 'src/newtab/newtab.js') &&
       runsBefore(newtabScripts, 'src/newtab/bookmarks/bookmark-cascade-menu.js', 'src/newtab/newtab.js'),
-    'newtab should load the cascade menu runtime after positioning helpers and before the page entry'
+    'newtab should load the cascade menu runtime and its positioning helpers before the page entry'
   );
 }
 {

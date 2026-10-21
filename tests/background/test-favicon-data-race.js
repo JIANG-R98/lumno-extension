@@ -1,6 +1,6 @@
 const assert = require('assert');
-const fs = require('fs');
 const vm = require('vm');
+const { runModuleInContext } = require('../helpers/module-script');
 
 function createFakeImage() {
   const attributes = new Map();
@@ -83,14 +83,9 @@ const sandbox = {
 };
 sandbox.globalThis = sandbox;
 
-vm.runInNewContext(fs.readFileSync('src/shared/favicon/favicon-utils.js', 'utf8'), sandbox, {
-  filename: 'src/shared/favicon/favicon-utils.js'
-});
-vm.runInNewContext(fs.readFileSync('src/shared/favicon/favicon-view-core.js', 'utf8'), sandbox, {
-  filename: 'src/shared/favicon/favicon-view-core.js'
-});
+const FAVICON_VIEW_CORE = runModuleInContext('src/shared/favicon/favicon-view-core.js', vm.createContext(sandbox));
 
-const core = sandbox.LumnoFaviconViewCore.createFaviconViewCore({
+const core = FAVICON_VIEW_CORE.createFaviconViewCore({
   windowObj: sandbox,
   chromeApi: {
     runtime: {

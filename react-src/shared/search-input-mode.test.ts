@@ -1,38 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import '../../src/shared/ui/menu-surface.js';
-import '../../src/shared/shortcut-display.js';
-import '../../src/shared/favicon/favicon-utils.js';
+// The Han variant table is a classic script that leaves a global.
 import '../../src/shared/search/search-han-variants.js';
-import '../../src/shared/search/utils/direct-navigation.js';
-import '../../src/shared/search/utils/text-normalize.js';
-import '../../src/shared/search/utils/text-index.js';
-import '../../src/shared/search/utils/keyboard-layouts.js';
-import '../../src/shared/search/utils/text-matching.js';
-import '../../src/shared/search/utils/selection-stats.js';
-import '../../src/shared/search/utils/result-dedup.js';
-import '../../src/shared/search/utils/suggestion-slate.js';
-import '../../src/shared/search/utils/query-intent.js';
-import '../../src/shared/search/utils/relevance-score.js';
-import '../../src/shared/search/utils/brand-suggestions.js';
-import '../../src/shared/search/utils/navigation-matching.js';
-import '../../src/shared/search/utils/site-search-providers.js';
-import '../../src/shared/search/utils/site-search-matching.js';
-import '../../src/shared/search/search-utils.js';
-import '../../src/shared/search/input-mode/controller-dom.js';
-import '../../src/shared/search/input-mode/mode-menu-language.js';
-import '../../src/shared/search/input-mode/prefix-visual.js';
-import '../../src/shared/search/input-mode/prefix-content.js';
-import '../../src/shared/search/input-mode/prefix-motion.js';
-import '../../src/shared/search/input-mode/mode-tab-keys.js';
-import '../../src/shared/search/input-mode/prefix-text.js';
-import '../../src/shared/search/input-mode/mode-menu-icons.js';
-import '../../src/shared/search/input-mode/mode-menu-search.js';
-import '../../src/shared/search/input-mode/mode-menu-navigation.js';
-import '../../src/shared/search/input-mode/mode-menu-render.js';
-import '../../src/shared/search/input-mode/mode-menu-layout.js';
-import '../../src/shared/search/input-mode/mode-menu-lifecycle.js';
-import '../../src/shared/search/search-input-mode.js';
+// @ts-expect-error The extension sources are untyped JavaScript modules.
+import * as searchInputModeModule from '../../src/shared/search/search-input-mode.js';
+// @ts-expect-error The extension sources are untyped JavaScript modules.
+import * as faviconUtilsModule from '../../src/shared/favicon/favicon-utils.js';
 
 Object.assign(globalThis, {
   pinyinPro: {
@@ -119,16 +92,12 @@ function getTestContrastRatio(firstRgb: number[], secondRgb: number[]) {
     (Math.min(firstLuminance, secondLuminance) + 0.05);
 }
 
-declare global {
-  interface Window {
-    LumnoSearchInputMode: {
-      createInputModeController(
-        parts: Record<string, HTMLElement>,
-        options?: Record<string, unknown>
-      ): ModeController;
-    };
-  }
-}
+const LumnoSearchInputMode: {
+  createInputModeController(
+    parts: Record<string, HTMLElement>,
+    options?: Record<string, unknown>
+  ): ModeController;
+} = searchInputModeModule;
 
 function createModeParts() {
   const container = document.createElement('div');
@@ -180,14 +149,12 @@ afterEach(() => {
 
 describe('Shared search scope menu', () => {
   it('checks current favicon policy before assigning prefix and menu images', () => {
-    const faviconUtils = (globalThis as unknown as {
-      LumnoFaviconUtils: {
-        createFaviconUrlResolver(options: object): {
-          getProviderFaviconUrl(pageUrl: string, iconUrl: string): string;
-          getExtensionFaviconUrl(pageUrl: string): string;
-        };
+    const faviconUtils: {
+      createFaviconUrlResolver(options: object): {
+        getProviderFaviconUrl(pageUrl: string, iconUrl: string): string;
+        getExtensionFaviconUrl(pageUrl: string): string;
       };
-    }).LumnoFaviconUtils;
+    } = faviconUtilsModule;
     let enhanced = true;
     const resolver = faviconUtils.createFaviconUrlResolver({
       getRuntimeUrl: (path: string) => `chrome-extension://abc${path}`,
@@ -197,7 +164,7 @@ describe('Shared search scope menu', () => {
     const iconUrl = 'https://custom.example.com/favicon.ico';
     const provider = { key: 'custom', name: 'Custom', iconUrl };
     const parts = createModeParts();
-    const controller = window.LumnoSearchInputMode.createInputModeController(parts, {
+    const controller = LumnoSearchInputMode.createInputModeController(parts, {
       // These callers deliberately retain a URL chosen before settings changed.
       getProviderIcon: () => iconUrl,
       preferDirectProviderIcons: true,
@@ -226,7 +193,7 @@ describe('Shared search scope menu', () => {
   it('reports mode-tag activation only when the visible tag state changes', () => {
     const parts = createModeParts();
     const onModeTagActiveChange = vi.fn();
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       { onModeTagActiveChange }
     );
@@ -251,7 +218,7 @@ describe('Shared search scope menu', () => {
   it('opens only after two distinct empty-input Tab presses within the shared window', () => {
     vi.useFakeTimers();
     const parts = createModeParts();
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         getModeMenuItems: () => [{
@@ -309,7 +276,7 @@ describe('Shared search scope menu', () => {
   it('preserves the first overlay Tab while its automatic open-tabs tag is applied', () => {
     vi.useFakeTimers();
     const parts = createModeParts();
-    const controller = window.LumnoSearchInputMode.createInputModeController(parts);
+    const controller = LumnoSearchInputMode.createInputModeController(parts);
     const createTabEvent = () => new KeyboardEvent('keydown', {
       bubbles: true,
       cancelable: true,
@@ -345,7 +312,7 @@ describe('Shared search scope menu', () => {
 
   it('opens on one Tab when a tag is already selected and preserves that tag', () => {
     const parts = createModeParts();
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         getModeMenuItems: () => [{
@@ -432,7 +399,7 @@ describe('Shared search scope menu', () => {
 
   it('returns to a clean double-Tab gesture after the active tag is removed', () => {
     const parts = createModeParts();
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         getModeMenuItems: () => [{
@@ -473,7 +440,7 @@ describe('Shared search scope menu', () => {
 
   it('toggles Tab focus between the input and the open scope panel', () => {
     const parts = createModeParts();
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         getModeMenuItems: () => [{
@@ -514,7 +481,7 @@ describe('Shared search scope menu', () => {
     let localizedFocusToggleHint = '切换聚焦';
     let localizedFilterHint = '点击面板，输入拼音或英文快速筛选';
     let localizedFilterQuery = '检索：{query}';
-    const macController = window.LumnoSearchInputMode.createInputModeController(
+    const macController = LumnoSearchInputMode.createInputModeController(
       macParts,
       {
         formatMessage: (
@@ -692,7 +659,7 @@ describe('Shared search scope menu', () => {
     macController.destroy();
 
     const windowsParts = createModeParts();
-    const windowsController = window.LumnoSearchInputMode.createInputModeController(
+    const windowsController = LumnoSearchInputMode.createInputModeController(
       windowsParts,
       { navigatorLike: { platform: 'Win32' } }
     );
@@ -709,7 +676,7 @@ describe('Shared search scope menu', () => {
     const parts = createModeParts();
     const onConfirmation = vi.fn();
     const onConfirmationReset = vi.fn();
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         getModeMenuItems: () => [{
@@ -780,7 +747,7 @@ describe('Shared search scope menu', () => {
 
   it('renders and clears the matched search provider Tab hint', () => {
     const parts = createModeParts();
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       { surface: 'overlay' }
     );
@@ -823,7 +790,7 @@ describe('Shared search scope menu', () => {
         item.active = item === selectedItem;
       });
     });
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         baseInputPaddingLeft: 44,
@@ -893,7 +860,7 @@ describe('Shared search scope menu', () => {
         item.active = item === selectedItem;
       });
     });
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         getModeMenuItems: () => items,
@@ -965,7 +932,7 @@ describe('Shared search scope menu', () => {
 
   it('keeps group-title and edge-padding context visible while keyboard scrolling', () => {
     const parts = createModeParts();
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         getModeMenuItems: () => Array.from({ length: 3 }, (_, index) => ({
@@ -1049,7 +1016,7 @@ describe('Shared search scope menu', () => {
 
   it('keeps panel typing separate from the main input and filters English or pinyin matches', () => {
     const parts = createModeParts();
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         getModeMenuItems: () => [
@@ -1207,7 +1174,7 @@ describe('Shared search scope menu', () => {
     const parts = createModeParts();
     parts.input.placeholder = 'Search or type a URL…';
     let language = 'zh-CN';
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         formatMessage: (key: string, fallback: string) => {
@@ -1265,7 +1232,7 @@ describe('Shared search scope menu', () => {
     const existingPinyinApi = pinyinGlobal.pinyinPro;
     delete pinyinGlobal.pinyinPro;
     const parts = createModeParts();
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         getModeMenuItems: () => [{
@@ -1297,7 +1264,7 @@ describe('Shared search scope menu', () => {
 
   it('filters scope cards by mixed pinyin and initials from the start of the name', () => {
     const parts = createModeParts();
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         getModeMenuItems: () => [{
@@ -1342,7 +1309,7 @@ describe('Shared search scope menu', () => {
 
   it('filters scope cards by letters typed on a Cyrillic keyboard layout', () => {
     const parts = createModeParts();
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         getModeMenuItems: () => [
@@ -1372,7 +1339,7 @@ describe('Shared search scope menu', () => {
 
   it('finds a scope card from traditional characters', () => {
     const parts = createModeParts();
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         getModeMenuItems: () => [{
@@ -1404,7 +1371,7 @@ describe('Shared search scope menu', () => {
   it('reuses lighter vector glyphs in browser-content cards and the active tag', () => {
     const parts = createModeParts();
     const iconNames = ['browser', 'star', 'bookmark', 'history'];
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         getModeMenuItems: () => iconNames.map((menuIconName) => ({
@@ -1483,7 +1450,7 @@ describe('Shared search scope menu', () => {
 
   it('reserves the stronger overlay theme surface for selected built-in cards', () => {
     const parts = createModeParts();
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         getModeMenuItems: () => [{
@@ -1531,7 +1498,7 @@ describe('Shared search scope menu', () => {
   it('keeps the built-in tag SVG when an earlier provider favicon fails late', () => {
     const parts = createModeParts();
     const unavailableCallbacks: Array<() => void> = [];
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         attachProviderIcon: (
@@ -1581,7 +1548,7 @@ describe('Shared search scope menu', () => {
       provider: { key: 'ddg', name: 'DuckDuckGo' }
     };
     const onModeMenuSelect = vi.fn();
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         getModeMenuItems: () => [duckduckgoItem],
@@ -1628,7 +1595,7 @@ describe('Shared search scope menu', () => {
 
   it('uses a contrast-safe themed label on a taller borderless chip', () => {
     const parts = createModeParts();
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         defaultAccentColor: [0, 174, 236]
@@ -1693,7 +1660,7 @@ describe('Shared search scope menu', () => {
       configurable: true,
       value: animatePrefix
     });
-    const controller = window.LumnoSearchInputMode.createInputModeController(parts, {
+    const controller = LumnoSearchInputMode.createInputModeController(parts, {
       getModeMenuItems: () => [{
         active: true,
         id: 'provider:youtube',
@@ -1758,7 +1725,7 @@ describe('Shared search scope menu', () => {
     const itemsPromise = new Promise<ModeMenuItem[]>((resolve) => {
       resolveItems = resolve;
     });
-    const controller = window.LumnoSearchInputMode.createInputModeController(parts, {
+    const controller = LumnoSearchInputMode.createInputModeController(parts, {
       getModeMenuItems: () => itemsPromise
     });
     controller.setPrefixText('YouTube');
@@ -1788,7 +1755,7 @@ describe('Shared search scope menu', () => {
 
   it('keeps the chip shadow unchanged when it receives focus', () => {
     const parts = createModeParts();
-    const controller = window.LumnoSearchInputMode.createInputModeController(parts);
+    const controller = LumnoSearchInputMode.createInputModeController(parts);
     controller.setPrefixText('YouTube', { accentRgb: [255, 0, 0] });
     const restingShadow = parts.modePrefix.style.boxShadow;
 
@@ -1823,7 +1790,7 @@ describe('Shared search scope menu', () => {
       (_keyframes: Keyframe[], _options?: KeyframeAnimationOptions) =>
         iconAnimation as unknown as Animation
     );
-    const controller = window.LumnoSearchInputMode.createInputModeController(parts);
+    const controller = LumnoSearchInputMode.createInputModeController(parts);
     const lineIcon = parts.modePrefix.querySelector<HTMLElement>(
       '[data-search-input-mode-line-icon]'
     );
@@ -1930,7 +1897,7 @@ describe('Shared search scope menu', () => {
         };
       }
     });
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         getModeMenuItems: () => [{
@@ -2050,7 +2017,7 @@ describe('Shared search scope menu', () => {
       }
       return originalGetComputedStyle(element);
     });
-    const controller = window.LumnoSearchInputMode.createInputModeController(parts, {
+    const controller = LumnoSearchInputMode.createInputModeController(parts, {
       getModeMenuItems: () => [{
         active: true,
         id: 'provider:google',
@@ -2090,7 +2057,7 @@ describe('Shared search scope menu', () => {
 
   it('keeps the overlay current label clipped by its own in-flow slot before CSS loads', () => {
     const parts = createModeParts();
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       { surface: 'overlay' }
     );
@@ -2114,7 +2081,7 @@ describe('Shared search scope menu', () => {
       configurable: true,
       value: animate
     });
-    const controller = window.LumnoSearchInputMode.createInputModeController(parts);
+    const controller = LumnoSearchInputMode.createInputModeController(parts);
     controller.setPrefixText('Brave Search', {}, {
       iconClass: 'ri-global-line',
       modeId: 'provider:brave'
@@ -2196,7 +2163,7 @@ describe('Shared search scope menu', () => {
         y: 0
       })
     });
-    const controller = window.LumnoSearchInputMode.createInputModeController(parts);
+    const controller = LumnoSearchInputMode.createInputModeController(parts);
     controller.setPrefixText('Open tabs', {}, {
       iconClass: 'ri-window-line',
       modeId: 'openTabs'
@@ -2304,7 +2271,7 @@ describe('Shared search scope menu', () => {
         y: 0
       })
     });
-    const controller = window.LumnoSearchInputMode.createInputModeController(parts);
+    const controller = LumnoSearchInputMode.createInputModeController(parts);
     controller.setPrefixText('Brave Search', {}, {
       iconClass: 'ri-global-line',
       modeId: 'provider:brave'
@@ -2361,7 +2328,7 @@ describe('Shared search scope menu', () => {
         label: 'Bilibili'
       }
     ];
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       { getModeMenuItems: () => items }
     );
@@ -2397,7 +2364,7 @@ describe('Shared search scope menu', () => {
 
   it('reserves viewport room for the full scope menu before sizing results', () => {
     const parts = createModeParts();
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         getModeMenuItems: () => [{
@@ -2489,7 +2456,7 @@ describe('Shared search scope menu', () => {
 
   it('lifts an open scope menu when the input contains a query', () => {
     const parts = createModeParts();
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         getModeMenuItems: () => [{
@@ -2541,7 +2508,7 @@ describe('Shared search scope menu', () => {
       bind: vi.fn(),
       hide: vi.fn()
     };
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         modeMenuCursorTooltipController: tooltipController,
@@ -2608,7 +2575,7 @@ describe('Shared search scope menu', () => {
 
   it('uses opaque menu materials with the same radius as each search input', () => {
     const newtabParts = createModeParts();
-    const newtabController = window.LumnoSearchInputMode.createInputModeController(
+    const newtabController = LumnoSearchInputMode.createInputModeController(
       newtabParts,
       { surface: 'newtab' }
     );
@@ -2626,7 +2593,7 @@ describe('Shared search scope menu', () => {
     newtabController.destroy();
 
     const overlayParts = createModeParts();
-    const overlayController = window.LumnoSearchInputMode.createInputModeController(
+    const overlayController = LumnoSearchInputMode.createInputModeController(
       overlayParts,
       { surface: 'overlay' }
     );
@@ -2665,7 +2632,7 @@ describe('Shared search scope menu', () => {
         return true;
       }
     );
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         attachProviderIcon,
@@ -2721,7 +2688,7 @@ describe('Shared search scope menu', () => {
     const canonicalIcon = 'data:image/png;base64,eW91dHViZQ==';
     const attachProviderIcon = vi.fn(() => true);
     const attachFaviconData = vi.fn();
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         attachFaviconData,
@@ -2753,7 +2720,7 @@ describe('Shared search scope menu', () => {
 
   it('renders a larger prefix favicon with a six-pixel corner mask that follows the tag', () => {
     const parts = createModeParts();
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {}
     );
@@ -2783,7 +2750,7 @@ describe('Shared search scope menu', () => {
       accent: 'rgb(0, 174, 236)',
       accentRgb: [0, 174, 236]
     });
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         getThemeForProvider,
@@ -2837,7 +2804,7 @@ describe('Shared search scope menu', () => {
 
   it('keeps one glyph and no nested fallback card when a provider favicon fails', () => {
     const parts = createModeParts();
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         attachProviderIcon: (
@@ -2878,7 +2845,7 @@ describe('Shared search scope menu', () => {
 
   it('returns focus to the chip when Escape closes the menu', () => {
     const parts = createModeParts();
-    const controller = window.LumnoSearchInputMode.createInputModeController(
+    const controller = LumnoSearchInputMode.createInputModeController(
       parts,
       {
         getModeMenuItems: () => [

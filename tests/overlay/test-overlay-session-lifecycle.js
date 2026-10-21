@@ -1,10 +1,10 @@
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
 
-delete globalThis.LumnoOverlayLifecycle;
-require('../../src/overlay/lifecycle.js');
+delete LumnoOverlayLifecycle;
+const LumnoOverlayLifecycle = require('../../src/overlay/lifecycle.js');
 
-const lifecycle = globalThis.LumnoOverlayLifecycle;
+const lifecycle = LumnoOverlayLifecycle;
 
 // Cleanup steps run newest first, once, and a failing step does not stop the rest.
 {

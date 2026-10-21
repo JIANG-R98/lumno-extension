@@ -4,6 +4,8 @@ const path = require('path');
 const vm = require('vm');
 const { readBackgroundSource } = require('../helpers/background-source');
 
+const { moduleScript } = require('../helpers/module-script');
+
 const lifecycle = require(path.join(
   __dirname,
   '..',
@@ -16,7 +18,7 @@ const lifecycle = require(path.join(
 const urlGuardSandbox = { URL };
 urlGuardSandbox.globalThis = urlGuardSandbox;
 vm.runInNewContext(
-  fs.readFileSync(path.join(__dirname, '..', '..', 'src', 'shared', 'url-guards.js'), 'utf8'),
+  moduleScript('src/shared/url-guards.js', 'LumnoUrlGuards'),
   urlGuardSandbox,
   { filename: 'src/shared/url-guards.js' }
 );

@@ -26,13 +26,13 @@ for (const value of ['none', 'frosted', 'liquid']) {
   assert.strictEqual(settings.normalizeNewtabGlassStyle(value), value);
 }
 
-// The glass functions live in theme/glass-surfaces.js, one factory level deeper.
-const source = fs.readFileSync('src/newtab/theme/glass-surfaces.js', 'utf8').replace(/^  /gm, '');
+// The glass functions live in theme/glass-surfaces.js.
+const source = fs.readFileSync('src/newtab/theme/glass-surfaces.js', 'utf8');
 const start = source.indexOf('  // Surfaces whose rim bends the wallpaper under the liquid style;');
 const end = source.indexOf('\n  return {', start);
 assert(start >= 0 && end > start);
-// The storage listeners live in settings-sync.js, one factory level deeper.
-const syncSource = fs.readFileSync('src/newtab/settings-sync.js', 'utf8').replace(/^  /gm, '');
+// The storage listeners live in settings-sync.js.
+const syncSource = fs.readFileSync('src/newtab/settings-sync.js', 'utf8');
 const handlerStart = syncSource.indexOf('  storageChanges.on(NEWTAB_GLASS_STYLE_STORAGE_KEY,');
 const handlerEnd = syncSource.indexOf('  storageChanges.on(NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,', handlerStart);
 assert(handlerStart >= 0 && handlerEnd > handlerStart);
@@ -53,6 +53,8 @@ async function boot(value, hasStorage = true, themeValue) {
     syncBookmarkTopbarSurfaceAppearance() {},
     MutationObserver: class { observe() {} disconnect() {} },
     NEWTAB_GLASS_STYLE_STORAGE_KEY: key,
+    // The module's adaptive tone import; this page has no remembered ink hint.
+    LumnoNewtabWallpaperAdaptiveTone: undefined,
     window: {},
     document: { body: {
       getAttribute(name) { return Object.prototype.hasOwnProperty.call(attributes, name) ? attributes[name] : null; },

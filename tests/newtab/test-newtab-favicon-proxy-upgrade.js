@@ -1,7 +1,7 @@
 const assert = require('assert');
-const fs = require('fs');
 const vm = require('vm');
 const { readReactSource } = require('../helpers/react-source');
+const { moduleScript } = require('../helpers/module-script');
 
 const suggestionsViewSource = readReactSource('react-src/search/suggestions.tsx');
 assert.match(
@@ -190,11 +190,11 @@ sandbox.LumnoFaviconViewCore = {
   }
 };
 
-vm.runInNewContext(fs.readFileSync('src/shared/favicon/favicon-utils.js', 'utf8'), sandbox, {
+vm.runInNewContext(moduleScript('src/shared/favicon/favicon-utils.js', 'LumnoFaviconUtils', null, { 'src/shared/favicon/favicon-view-core.js': 'LumnoFaviconViewCore' }), sandbox, {
   filename: 'src/shared/favicon/favicon-utils.js'
 });
 
-vm.runInNewContext(fs.readFileSync('src/newtab/theme/favicon-view.js', 'utf8'), sandbox, {
+vm.runInNewContext(moduleScript('src/newtab/theme/favicon-view.js', 'LumnoNewtabFaviconView', null, { 'src/shared/favicon/favicon-view-core.js': 'LumnoFaviconViewCore' }), sandbox, {
   filename: 'src/newtab/theme/favicon-view.js'
 });
 

@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { moduleScript } = require('../helpers/module-script');
 
 const repoRoot = path.join(__dirname, '..', '..');
 const read = (relativePath) => fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
@@ -12,7 +13,7 @@ const dom = new JSDOM(
   { url: 'https://lumno.test/', pretendToBeVisual: true, runScripts: 'outside-only' }
 );
 const { window } = dom;
-window.eval(read('src/shared/ui/community-qr-dialog.js'));
+window.eval(moduleScript('src/shared/ui/community-qr-dialog.js', 'LumnoCommunityQrDialog'));
 const dialog = window.LumnoCommunityQrDialog;
 const { document } = window;
 const trigger = document.getElementById('trigger');

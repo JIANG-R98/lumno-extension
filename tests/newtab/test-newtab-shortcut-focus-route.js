@@ -1,13 +1,11 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
 const vm = require('vm');
+const { moduleScript } = require('../helpers/module-script');
 
 // The search shortcut on New Tab focuses Lumno's input even with input
 // auto-focus off. When the address bar holds keyboard focus, the page reopens
 // on the focus route instead, because focus() cannot take it from there.
 
-const source = fs.readFileSync(path.join(__dirname, '../../src/newtab/input-focus.js'), 'utf8');
 const ACTION = 'lumno:newtab-focus-input';
 
 function bootPage(options = {}) {
@@ -71,7 +69,7 @@ function bootPage(options = {}) {
     globalThis: null
   });
   context.globalThis = context;
-  vm.runInContext(source, context);
+  vm.runInContext(moduleScript('src/newtab/input-focus.js', 'LumnoNewtabInputFocus'), context);
   const pageState = {
     inputParts: { input },
     newtabInputAutoFocusEnabled: options.autoFocusEnabled === true

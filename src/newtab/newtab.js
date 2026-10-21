@@ -1,8 +1,110 @@
+import * as BLACKLIST_UTILS from '../shared/blacklist-utils.js';
+import * as FOLDER_REFERENCES from '../shared/bookmark-folder-reference.js';
+import * as LumnoBrowserProfile from '../shared/browser-profile.js';
+import * as LumnoCommunityLinks from '../shared/community-links.js';
+import * as EXTENSION_ROUTES from '../shared/extension-routes.js';
+import * as FAVICON_UTILS from '../shared/favicon/favicon-utils.js';
+import * as SHORTCUT_FAVICON from '../shared/favicon/shortcut-favicon.js';
+import * as NAVIGATION_DISPOSITION from '../shared/navigation-disposition.js';
+import * as PROGRESS_HISTORY from '../shared/progress-history.js';
+import * as PROGRESS_MATCH from '../shared/progress-match.js';
+import * as AGGREGATE_SEARCH_STORE from '../shared/search/aggregate-search-store.js';
+import * as AGGREGATE_SEARCH_SURFACE from '../shared/search/aggregate-search-surface.js';
+import * as LumnoHelpCenterSearch from '../shared/search/help-center-search.js';
+import * as LumnoImeKeyGuard from '../shared/search/ime-key-guard.js';
+import * as SEARCH_INPUT_HISTORY from '../shared/search/search-input-history.js';
+import * as SEARCH_UTILS from '../shared/search/search-utils.js';
+import * as SITE_SEARCH_STORE from '../shared/search/site-search-store.js';
+import * as SUGGESTION_ACTION_MODEL from '../shared/search/suggestion-action-model.js';
+import * as SUGGESTION_NAVIGATION from '../shared/search/suggestion-navigation.js';
+import * as SHORTCUT_KEY_MATCHER from '../shared/shortcut-key-matcher.js';
+import * as SITE_DISPLAY_NAME from '../shared/site-display-name.js';
+import * as FEATURE_HINTS from '../shared/ui/feature-hints.js';
+import * as NEWTAB_APPEARANCE_MODES from './appearance-modes.js';
+import * as NEWTAB_BOOKMARK_ACTIONS from './bookmarks/bookmark-actions.js';
+import * as NEWTAB_BOOKMARK_CASCADE_ACTIONS from './bookmarks/bookmark-cascade-actions.js';
+import * as NEWTAB_BOOKMARK_CONTEXT_MENU from './bookmarks/bookmark-context-menu.js';
+import * as NEWTAB_BOOKMARK_DISPLAY_SETTINGS from './bookmarks/bookmark-display-settings.js';
+import * as NEWTAB_BOOKMARK_DRAG_CONTROLLER from './bookmarks/bookmark-drag-controller.js';
+import * as NEWTAB_BOOKMARK_DRAG from './bookmarks/bookmark-drag.js';
+import * as NEWTAB_BOOKMARK_FOLDER_ICON from './bookmarks/bookmark-folder-icon.js';
+import * as NEWTAB_BOOKMARK_MOVE_HISTORY from './bookmarks/bookmark-move-history.js';
+import * as NEWTAB_BOOKMARK_PAGER from './bookmarks/bookmark-pager.js';
+import * as NEWTAB_BOOKMARK_SECTION from './bookmarks/bookmark-section.js';
+import * as NEWTAB_BOOKMARKS_RUNTIME from './bookmarks/bookmarks-runtime.js';
+import * as NEWTAB_BOOKMARKS_STORE from './bookmarks/bookmarks-store.js';
+import * as NEWTAB_FOLDER_COLORS from './bookmarks/folder-colors.js';
+import * as LumnoNewtabFolderItemIcons from './bookmarks/folder-item-icons.js';
+import * as NEWTAB_CLIPBOARD_ACTIONS from './clipboard-actions.js';
+import * as NEWTAB_CROSS_SURFACE_DRAG from './cross-surface-drag.js';
+import * as LumnoNewtabDismissStack from './dismiss-stack.js';
+import * as NEWTAB_ENTRY_MOTION from './entry-motion.js';
+import * as NEWTAB_FEEDBACK_CONTROL_RUNTIME from './feedback-control.js';
+import * as NEWTAB_INPUT_FOCUS from './input-focus.js';
+import * as NEWTAB_LAYOUT from './layout.js';
+import * as NEWTAB_MODE_COMMANDS from './mode-commands.js';
+import * as NEWTAB_PAGE_KEYBOARD from './page-keyboard.js';
+import * as NEWTAB_PAGE_LANGUAGE from './page-language.js';
+import * as NEWTAB_PAGE_LAYOUT from './page-layout.js';
+import * as NEWTAB_PAGE_NAVIGATION from './page-navigation.js';
+import * as NEWTAB_PAGE_NOTICES from './page-notices.js';
+import * as NEWTAB_PAGE_PREFERENCES from './page-preferences.js';
+import * as NEWTAB_PAGE_RESIZE from './page-resize.js';
+import * as LumnoNewtabPageState from './page-state.js';
+import * as NEWTAB_RECENT_CARD_DRAG from './recent/recent-card-drag.js';
+import * as NEWTAB_RECENT_SECTION from './recent/recent-section.js';
+import * as NEWTAB_RECENT_SITES_CONTROLLER from './recent/recent-sites-controller.js';
+import * as NEWTAB_RECENT_STORE from './recent/recent-sites-store.js';
+import * as NEWTAB_RECENT_SOURCES from './recent/recent-sources.js';
+import * as NEWTAB_DEFAULT_SEARCH_ENGINE from './search/default-search-engine.js';
+import * as NEWTAB_DIRECT_NAVIGATION_SETTLE from './search/direct-navigation-settle.js';
+import * as NEWTAB_SEARCH_AUTOCOMPLETE from './search/search-autocomplete.js';
+import * as NEWTAB_SEARCH_BOX_CONTROLS from './search/search-box-controls.js';
+import * as NEWTAB_SEARCH_BOX from './search/search-box.js';
+import * as NEWTAB_SEARCH_INPUT_COMPOSITION from './search/search-input-composition.js';
+import * as NEWTAB_SEARCH_MODE_CONTROLLER from './search/search-mode-controller.js';
+import * as NEWTAB_SEARCH_MODES from './search/search-modes.js';
+import * as NEWTAB_SEARCH_NAVIGATION from './search/search-navigation.js';
+import * as NEWTAB_SEARCH_SETTINGS_SYNC from './search/search-settings-sync.js';
+import * as NEWTAB_SITE_SEARCH_PROVIDERS from './search/site-search-providers.js';
+import * as NEWTAB_SITE_SEARCH_RUNTIME from './search/site-search-runtime.js';
+import * as NEWTAB_SUGGESTIONS_CONTROLLER from './search/suggestions-controller.js';
+import * as NEWTAB_SUGGESTIONS_LAYOUT from './search/suggestions-layout.js';
+import * as NEWTAB_SECTION_HEADERS from './section-headers.js';
+import * as NEWTAB_SECTION_LOADERS from './section-loaders.js';
+import * as NEWTAB_SECTION_MODE_SELECT from './section-mode-select.js';
+import * as LumnoNewtabSectionPanelSettings from './section-panel-settings.js';
+import * as NEWTAB_SECTION_RELOAD from './section-reload.js';
+import * as NEWTAB_SETTINGS_SYNC from './settings-sync.js';
+import * as NEWTAB_BOTTOM_DOCK_RUNTIME from './shortcuts/bottom-dock-runtime.js';
+import * as NEWTAB_SHORTCUT_CONTEXT_MENU from './shortcuts/shortcut-context-menu.js';
+import * as NEWTAB_SHORTCUT_DOCK from './shortcuts/shortcut-dock.js';
+import * as NEWTAB_SHORTCUT_DRAG from './shortcuts/shortcut-drag.js';
+import * as NEWTAB_SHORTCUT_ICON_PLATE from './shortcuts/shortcut-icon-plate.js';
+import * as NEWTAB_SHORTCUT_ICON_STORE from './shortcuts/shortcut-icon-store.js';
+import * as NEWTAB_SHORTCUT_PAGE_ACTIONS from './shortcuts/shortcut-page-actions.js';
+import * as NEWTAB_SHORTCUTS_CONTROLLER from './shortcuts/shortcuts-controller.js';
+import * as NEWTAB_SHORTCUTS_STORE from './shortcuts/shortcuts-store.js';
+import * as NEWTAB_STARTUP_PREFERENCES from './startup-preferences.js';
+import * as NEWTAB_STARTUP_STORAGE from './startup-storage.js';
+import * as NEWTAB_CARD_THEMES from './theme/card-themes.js';
+import * as NEWTAB_FAVICON_THEME from './theme/favicon-theme.js';
+import * as NEWTAB_GLASS_SURFACES from './theme/glass-surfaces.js';
+import * as NEWTAB_PAGE_FAVICONS from './theme/page-favicons.js';
+import * as NEWTAB_SITE_THEME_RESOLVER from './theme/site-theme-resolver.js';
+import * as NEWTAB_TOOLTIP_BINDINGS from './tooltip-bindings.js';
+import * as NEWTAB_TOOLTIP_CONTROLLERS from './tooltip-controllers.js';
+import * as LumnoNewtabQuotes from './top-content/quotes.js';
+import * as NEWTAB_TOP_CONTENT_RUNTIME from './top-content/top-content.js';
+import * as NEWTAB_URL_POLICY from './url-policy.js';
+import * as NEWTAB_VIEWPORT_INSETS from './viewport-insets.js';
+import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
+
 (function() {
   // Page state shared with the modules split out of this file: each module
   // receives this one object as `pageState` and reads and writes the same
   // properties this file does. page-state.js lists its initial values.
-  const pageState = globalThis.LumnoNewtabPageState.createPageState();
+  const pageState = LumnoNewtabPageState.createPageState();
   const root = document.getElementById('_x_extension_newtab_root_2024_unique_');
   const createSearchInput = window._x_extension_createSearchInput_2024_unique_;
   if (!root || typeof createSearchInput !== 'function') {
@@ -27,7 +129,6 @@
   }
   markNewtabStartupMilestone('script-start');
 
-  const NEWTAB_STARTUP_STORAGE = globalThis.LumnoNewtabStartupStorage;
   const {
     settingsRuntimeApi,
     providerStorageRuntime,
@@ -41,13 +142,11 @@
   // Edge's topSites lists its own promoted sites instead of the user's, so Edge
   // ranks most-visited from history visit counts alone.
   const TOP_SITES_FOLLOW_HISTORY =
-    globalThis.LumnoBrowserProfile.getBrowserInternalScheme(navigator.userAgent) !== 'edge://';
+    LumnoBrowserProfile.getBrowserInternalScheme(navigator.userAgent) !== 'edge://';
   const startupRecentSourceReadsAt = Date.now();
-  const NEWTAB_RECENT_STORE = globalThis.LumnoNewtabRecentSitesStore;
 
   const NEWTAB_CONTEXT_MENU_OPEN_VALUE = 'open-in-new-tab';
 
-  const NEWTAB_RECENT_SOURCES = globalThis.LumnoNewtabRecentSources;
   const {
     updateRecentContextMenuLanguageStrings,
     openRecentHistoryDialog,
@@ -115,7 +214,6 @@
     }
   }
 
-  const NEWTAB_VIEWPORT_INSETS = globalThis.LumnoNewtabViewportInsets;
   const {
     getNewtabVisualViewportInsets
   } = NEWTAB_VIEWPORT_INSETS.createViewportInsets({
@@ -123,8 +221,7 @@
   });
 
   const SETTINGS = settingsRuntimeApi;
-  const BROWSER_PROFILE = globalThis.LumnoBrowserProfile;
-  const SHORTCUT_KEY_MATCHER = globalThis.LumnoShortcutKeyMatcher;
+  const BROWSER_PROFILE = LumnoBrowserProfile;
   const THEME_STORAGE_KEY = '_x_extension_theme_mode_2024_unique_';
   const LANGUAGE_STORAGE_KEY = '_x_extension_language_2024_unique_';
   const RECENT_MODE_STORAGE_KEY = '_x_extension_recent_mode_2024_unique_';
@@ -207,57 +304,26 @@
   const SEARCH_BLACKLIST_STORAGE_KEY = '_x_extension_search_blacklist_2026_unique_';
   const FAVICON_REQUEST_BLACKLIST_STORAGE_KEY = '_x_extension_favicon_request_blacklist_2026_unique_';
   const FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY = '_x_extension_favicon_enhanced_fetch_enabled_2026_unique_';
-  const BLACKLIST_UTILS = globalThis.LumnoBlacklistUtils;
-  const EXTENSION_ROUTES = globalThis.LumnoExtensionRoutes;
-  const NAVIGATION_DISPOSITION = globalThis.LumnoNavigationDisposition;
-  const SEARCH_UTILS = globalThis.LumnoSearchUtils;
-  const AGGREGATE_SEARCH_STORE = globalThis.LumnoAggregateSearchStore;
-  const AGGREGATE_SEARCH_SURFACE = globalThis.LumnoAggregateSearchSurface;
-  const SITE_DISPLAY_NAME = globalThis.LumnoSiteDisplayName;
-  const SITE_SEARCH_STORE = globalThis.LumnoSiteSearchStore;
-  const SUGGESTION_ACTION_MODEL = globalThis.LumnoSuggestionActionModel;
-  const SUGGESTION_NAVIGATION = globalThis.LumnoSuggestionNavigation;
-  const SEARCH_INPUT_HISTORY = globalThis.LumnoSearchInputHistory;
-  const FEATURE_HINTS = globalThis.LumnoFeatureHints;
-  const COMMUNITY_LINKS = globalThis.LumnoCommunityLinks;
+  const COMMUNITY_LINKS = LumnoCommunityLinks;
   const LUMNO_FEEDBACK_LINKS_FALLBACK = COMMUNITY_LINKS.FALLBACK_LINKS;
-  const FAVICON_UTILS = globalThis.LumnoFaviconUtils;
-  const SHORTCUT_FAVICON = globalThis.LumnoShortcutFavicon;
-  const NEWTAB_FAVICON_THEME = globalThis.LumnoNewtabFaviconTheme;
-  const NEWTAB_BOOKMARKS_STORE = globalThis.LumnoNewtabBookmarksStore;
-  const NEWTAB_BOOKMARKS_RUNTIME = globalThis.LumnoNewtabBookmarksRuntime;
   const NEWTAB_BOOKMARKS_TOPBAR = globalThis.LumnoNewtabBookmarksTopbar;
   const BOOKMARK_TOPBAR_HEIGHT_PX = Math.max(
     0,
     Number(NEWTAB_BOOKMARKS_TOPBAR.HEIGHT_PX) || 36
   );
-  const NEWTAB_BOOKMARK_MOVE_HISTORY = globalThis.LumnoNewtabBookmarkMoveHistory;
-  const NEWTAB_BOOKMARK_DRAG = globalThis.LumnoNewtabBookmarkDrag;
-  const NEWTAB_CROSS_SURFACE_DRAG = globalThis.LumnoNewtabCrossSurfaceDrag;
   // Escape closes only the top open layer (menus, popovers, panels, drags).
   // The folder color dialog handles its own Escape.
-  const dismissStack = globalThis.LumnoNewtabDismissStack.getDismissStack();
+  const dismissStack = LumnoNewtabDismissStack.getDismissStack();
   dismissStack.setShouldIgnore(() => Boolean(pageState.folderColorPicker && pageState.folderColorPicker.isOpen()));
-  const NEWTAB_BOOKMARK_FOLDER_ICON = globalThis.LumnoNewtabBookmarkFolderIcon;
   const NEWTAB_TOAST = globalThis.LumnoNewtabToast;
-  const NEWTAB_LAYOUT = globalThis.LumnoNewtabLayout;
-  const NEWTAB_DIRECT_NAVIGATION_SETTLE = globalThis.LumnoNewtabDirectNavigationSettle;
-  const NEWTAB_SHORTCUTS_STORE = globalThis.LumnoNewtabShortcutsStore;
-  const FOLDER_REFERENCES = globalThis.LumnoBookmarkFolderReference;
-  const NEWTAB_SHORTCUT_ICON_STORE = globalThis.LumnoNewtabShortcutIconStore;
-  const NEWTAB_SHORTCUT_ICON_PLATE = globalThis.LumnoNewtabShortcutIconPlate;
   const NEWTAB_SHORTCUT_DIALOG = globalThis.LumnoNewtabShortcutDialog;
-  const PROGRESS_MATCH = globalThis.LumnoProgressMatch;
-  const PROGRESS_HISTORY = globalThis.LumnoProgressHistory;
   const NEWTAB_SHORTCUTS_VIEW = globalThis.LumnoNewtabShortcutsView;
   const NEWTAB_FEEDBACK_CONTROL = globalThis.LumnoNewtabFeedbackControl;
 
-  const NEWTAB_FEEDBACK_CONTROL_RUNTIME = globalThis.LumnoNewtabFeedbackControlRuntime;
   // Text set once at startup may be read before the chosen language loads;
   // controls register here to re-read it whenever the language is applied.
   const languageChangeListeners = [];
 
-  const NEWTAB_PAGE_LANGUAGE = globalThis.LumnoNewtabPageLanguage;
   const {
     onLanguageChange,
     normalizeLocale,
@@ -339,9 +405,7 @@
   const BOOKMARK_CONTEXT_MENU_EDIT_VALUE = 'edit';
   const BOOKMARK_CONTEXT_MENU_OPEN_GROUP_VALUE = 'open-in-new-tab-group';
 
-  const NEWTAB_BOOKMARK_CONTEXT_MENU = globalThis.LumnoNewtabBookmarkContextMenu;
 
-  const NEWTAB_CLIPBOARD_ACTIONS = globalThis.LumnoNewtabClipboardActions;
   const {
     hideToast,
     showToast,
@@ -359,11 +423,9 @@
   const FOLDER_COLOR_PRESETS_STORAGE_KEY = SETTINGS.BOOKMARK_FOLDER_COLOR_PRESETS_STORAGE_KEY ||
     '_x_extension_bookmark_folder_color_presets_2026_unique_';
 
-  const NEWTAB_SHORTCUT_PAGE_ACTIONS = globalThis.LumnoNewtabShortcutPageActions;
   const SHORTCUT_DIALOG_ITEM_BOOKMARK = 'bookmark';
   const SHORTCUT_DIALOG_ITEM_FOLDER = 'folder';
 
-  const NEWTAB_BOOKMARK_ACTIONS = globalThis.LumnoNewtabBookmarkActions;
   const {
     updateBookmarkContextMenuLanguageStrings,
     openBookmarkFolderTabGroupConfirmation,
@@ -551,7 +613,6 @@
     pageState.resolveInitialThemeReady = resolve;
   });
 
-  const NEWTAB_BOOKMARK_DISPLAY_SETTINGS = globalThis.LumnoNewtabBookmarkDisplaySettings;
   const {
     bookmarkTopbarStorageKeys,
     normalizeBookmarkViewMode,
@@ -640,7 +701,6 @@
   pageState.newtabShortcutSize = NEWTAB_SHORTCUT_SIZE_DEFAULT;
   pageState.newtabShortcutGap = NEWTAB_SHORTCUT_GAP_DEFAULT;
 
-  const NEWTAB_SHORTCUT_CONTEXT_MENU = globalThis.LumnoNewtabShortcutContextMenu;
   const {
     isShortcutContextMenuOpen,
     isShortcutContextMenuNode,
@@ -684,7 +744,6 @@
     pageState
   });
 
-  const NEWTAB_SHORTCUT_DOCK = globalThis.LumnoNewtabShortcutDock;
   const {
     getShortcutDockIcon,
     applyNewtabShortcutDockMagnification,
@@ -716,7 +775,6 @@
   const SITE_SEARCH_STORAGE_KEY = '_x_extension_site_search_custom_2024_unique_';
   const SITE_SEARCH_DISABLED_STORAGE_KEY = '_x_extension_site_search_disabled_2024_unique_';
 
-  const NEWTAB_SITE_SEARCH_PROVIDERS = globalThis.LumnoNewtabSiteSearchProviders;
   const {
     buildSearchUrl,
     isAiSiteSearchProvider,
@@ -790,7 +848,6 @@
   const defaultTheme = NEWTAB_FAVICON_THEME.createDefaultTheme();
   const urlHighlightTheme = NEWTAB_FAVICON_THEME.createUrlHighlightTheme();
 
-  const NEWTAB_SITE_THEME_RESOLVER = globalThis.LumnoNewtabSiteThemeResolver;
   const {
     normalizeFaviconHost,
     isFaviconProxyUrl,
@@ -851,7 +908,6 @@
     pageState
   });
 
-  const NEWTAB_URL_POLICY = globalThis.LumnoNewtabUrlPolicy;
   // Firefox: index the browser's own cached icons, which stand in for the
   // missing _favicon endpoint (see createBrowserIconIndex).
   pageState.firefoxBrowserIcons = BROWSER_PROFILE.isFirefoxExtensionRuntime()
@@ -929,7 +985,6 @@
       Date.now() - lastPressAt < CONTEXT_MENU_PRESS_CLICK_MAX_MS;
   }
 
-  const NEWTAB_RECENT_SITES_CONTROLLER = globalThis.LumnoNewtabRecentSitesController;
   const {
     getRecentContextMenuOptions,
     closeRecentContextMenu,
@@ -982,9 +1037,7 @@
     pageState
   });
 
-  const NEWTAB_FOLDER_COLORS = globalThis.LumnoNewtabFolderColors;
 
-  const NEWTAB_BOOKMARK_CASCADE_ACTIONS = globalThis.LumnoNewtabBookmarkCascadeActions;
   const {
     openBookmarkCascadeMenu,
     closeBookmarkCascadeMenu,
@@ -1029,7 +1082,7 @@
     storageArea: localStorageArea,
     storageKey: NEWTAB_SHORTCUT_ICONS_STORAGE_KEY
   });
-  const folderItemIconStore = globalThis.LumnoNewtabFolderItemIcons.createStore({
+  const folderItemIconStore = LumnoNewtabFolderItemIcons.createStore({
     storageArea: localStorageArea
   });
   const shortcutFaviconStore = SHORTCUT_FAVICON.createShortcutFaviconStore({
@@ -1107,7 +1160,6 @@
       getViewportTopInset: (...args) => getNewtabViewportTopPaddingPx(...args)
     });
 
-  const NEWTAB_CARD_THEMES = globalThis.LumnoNewtabCardThemes;
   const {
     applyRecentCardTheme,
     applyBookmarkCardTheme,
@@ -1132,7 +1184,6 @@
     pageState
   });
 
-  const NEWTAB_APPEARANCE_MODES = globalThis.LumnoNewtabAppearanceModes;
   const {
     applyLanguageMode,
     refreshThemeAwareFavicons,
@@ -1226,11 +1277,8 @@
   pageState.toastController = NEWTAB_TOAST.createToastController(toastElement, { windowObj: window });
   markNewtabStartupMilestone('core-runtimes-created');
 
-  const NEWTAB_PAGE_PREFERENCES = globalThis.LumnoNewtabPagePreferences;
 
-  const NEWTAB_PAGE_LAYOUT = globalThis.LumnoNewtabPageLayout;
 
-  const NEWTAB_SUGGESTIONS_LAYOUT = globalThis.LumnoNewtabSuggestionsLayout;
   const {
     syncSearchModeMenuResultOffset,
     setSuggestionsVisible,
@@ -1364,7 +1412,6 @@
     pageState
   });
 
-  const NEWTAB_DEFAULT_SEARCH_ENGINE = globalThis.LumnoNewtabDefaultSearchEngine;
   const {
     buildDefaultSearchUrl,
     getDefaultSearchEngineThemeUrl,
@@ -1441,7 +1488,7 @@
     return `<i class="ri-icon ${size}${extra} ${id}" aria-hidden="true"></i>`;
   }
 
-  pageState.quoteRuntime = globalThis.LumnoNewtabQuotes.createRuntime({
+  pageState.quoteRuntime = LumnoNewtabQuotes.createRuntime({
     documentObj: document, windowObj: window, chromeObj: chrome,
     storageArea, localStorageArea, t, showToast,
     getLocale: () => pageState.currentResolvedLocale,
@@ -1455,7 +1502,7 @@
       scheduleWallpaperAdaptiveToneUpdate();
     })
   });
-  pageState.sectionPanelSettings = globalThis.LumnoNewtabSectionPanelSettings.createRuntime({
+  pageState.sectionPanelSettings = LumnoNewtabSectionPanelSettings.createRuntime({
     windowObj: window,
     chromeObj: chrome,
     t,
@@ -1510,7 +1557,6 @@
     )
   });
 
-  const NEWTAB_WALLPAPER_PAGE = globalThis.LumnoNewtabWallpaperPage;
   const {
     getFixedTimeInk,
     updateWallpaperLanguageStrings,
@@ -1645,7 +1691,6 @@
   observeNewtabStartupTask('appearance', initialAppearanceReadyTask);
   markNewtabStartupMilestone('appearance-bootstrap-scheduled');
 
-  const NEWTAB_SETTINGS_SYNC = globalThis.LumnoNewtabSettingsSync;
   const {
     applyBookmarkCountPreference,
     applyBookmarkColumnsPreference,
@@ -1792,7 +1837,6 @@
     pageState
   });
 
-  const NEWTAB_STARTUP_PREFERENCES = globalThis.LumnoNewtabStartupPreferences;
   const {
     initialTimeFontReadyTask
   } = NEWTAB_STARTUP_PREFERENCES.createStartupPreferences({
@@ -1882,7 +1926,6 @@
   pageState.faviconRequestBlacklistItems = [];
   pageState.faviconEnhancedFetchEnabled = false;
 
-  const NEWTAB_SEARCH_SETTINGS_SYNC = globalThis.LumnoNewtabSearchSettingsSync;
   NEWTAB_SEARCH_SETTINGS_SYNC.createSearchSettingsSync({
     loadDefaultSearchEngineState,
     storageChanges,
@@ -1982,7 +2025,6 @@
     NEWTAB_SHORTCUT_GAP_STORAGE_KEY
   ]);
 
-  const NEWTAB_PAGE_FAVICONS = globalThis.LumnoNewtabPageFavicons;
   const {
     areFaviconRenderCachesReady,
     waitForFaviconRenderCaches,
@@ -2037,7 +2079,6 @@
     pageState
   });
 
-  const NEWTAB_PAGE_NAVIGATION = globalThis.LumnoNewtabPageNavigation;
   const {
     navigateToUrl,
     isMiddleClick,
@@ -2080,7 +2121,6 @@
   const bookmarkSection = pageStructureRuntime.bookmark.section;
   pageState.recentSection = pageStructureRuntime.recent.section;
 
-  const NEWTAB_TOP_CONTENT_RUNTIME = globalThis.LumnoNewtabTopContentRuntime;
   const {
     captureRecentCardLayout,
     cancelRecentResizeLayoutAnimations,
@@ -2101,7 +2141,6 @@
     setNewtabTimeSecondsVisible,
     setNewtabTime12Hour
   } = NEWTAB_TOP_CONTENT_RUNTIME.createTopContentRuntime({
-    root,
     COMMUNITY_LINKS,
     recentCards,
     SETTINGS,
@@ -2116,7 +2155,6 @@
     pageState
   });
 
-  const NEWTAB_ENTRY_MOTION = globalThis.LumnoNewtabEntryMotion;
   const {
     finishNewtabEntryAnimation,
     scheduleNewtabReadyAfterViewportSettle,
@@ -2135,7 +2173,6 @@
 
   pageState.searchLayer = pageStructureRuntime.searchLayer;
 
-  const NEWTAB_TOOLTIP_CONTROLLERS = globalThis.LumnoNewtabTooltipControllers;
   const {
     topActionTooltipController,
     shortcutTooltipController,
@@ -2149,7 +2186,6 @@
 
   markNewtabStartupMilestone('page-structure-created');
 
-  const NEWTAB_TOOLTIP_BINDINGS = globalThis.LumnoNewtabTooltipBindings;
   const {
     showTopActionTooltip,
     hideTopActionTooltip,
@@ -2176,7 +2212,6 @@
     pageState
   });
 
-  const NEWTAB_SECTION_HEADERS = globalThis.LumnoNewtabSectionHeaders;
   const {
     updateRecentHeading,
     updateRecentModeMenu,
@@ -2221,7 +2256,6 @@
     pageState
   });
 
-  const NEWTAB_SECTION_MODE_SELECT = globalThis.LumnoNewtabSectionModeSelect;
   const {
     getBookmarkViewModeOptions,
     createSectionModeSelect
@@ -2239,7 +2273,6 @@
     pageState
   });
 
-  const NEWTAB_SHORTCUTS_CONTROLLER = globalThis.LumnoNewtabShortcutsController;
   const {
     getShortcutFolderId,
     getFolderItemIconUrl,
@@ -2381,7 +2414,6 @@
     pageState
   });
 
-  const NEWTAB_BOOKMARK_DRAG_CONTROLLER = globalThis.LumnoNewtabBookmarkDragController;
   const {
     queueBookmarkLayoutAnimation,
     playPendingBookmarkLayoutAnimation,
@@ -2474,7 +2506,6 @@
   createShortcutsSection();
   markNewtabStartupMilestone('shortcut-surface-created');
 
-  const NEWTAB_BOOKMARK_SECTION = globalThis.LumnoNewtabBookmarkSection;
   NEWTAB_BOOKMARK_SECTION.createBookmarkSection({
     setContentSectionVisible,
     bookmarkSection,
@@ -2539,7 +2570,6 @@
     pageState
   });
 
-  const NEWTAB_RECENT_SECTION = globalThis.LumnoNewtabRecentSection;
   NEWTAB_RECENT_SECTION.createRecentSection({
     setContentSectionVisible,
     hideTopActionTooltip,
@@ -2580,7 +2610,6 @@
     pageState
   });
 
-  const NEWTAB_BOTTOM_DOCK_RUNTIME = globalThis.LumnoNewtabBottomDockRuntime;
   const {
     bottomDockRuntime,
     bottomDock
@@ -2624,7 +2653,6 @@
     handleBookmarkWheel(event);
   }, { passive: false });
 
-  const NEWTAB_BOOKMARK_PAGER = globalThis.LumnoNewtabBookmarkPager;
   const {
     getBookmarkPageCount,
     updateBookmarkPagerState,
@@ -2644,7 +2672,6 @@
     pageState
   });
 
-  const NEWTAB_SHORTCUT_DRAG = globalThis.LumnoNewtabShortcutDrag;
   const {
     getShortcutTileLayoutRect,
     setShortcutDragTileTransform,
@@ -2711,7 +2738,6 @@
     pageState
   });
 
-  const NEWTAB_RECENT_CARD_DRAG = globalThis.LumnoNewtabRecentCardDrag;
   pageState.recentCardDragRuntime = NEWTAB_RECENT_CARD_DRAG.createRecentCardDrag({
     NEWTAB_SHORTCUTS_STORE,
     NEWTAB_CROSS_SURFACE_DRAG,
@@ -2755,7 +2781,6 @@
     pageState
   });
 
-  const NEWTAB_SECTION_LOADERS = globalThis.LumnoNewtabSectionLoaders;
   const {
     renderBookmarks,
     renderRecentSites,
@@ -2835,7 +2860,6 @@
     );
   }
 
-  const NEWTAB_SEARCH_AUTOCOMPLETE = globalThis.LumnoNewtabSearchAutocomplete;
   const {
     getAutocompleteCandidate,
     clearAutocomplete,
@@ -2852,7 +2876,6 @@
   const attachInputModeFaviconData =
     SHORTCUT_FAVICON.createSiteSearchProviderIconHydrator(attachFaviconData);
 
-  const NEWTAB_SEARCH_MODES = globalThis.LumnoNewtabSearchModes;
   const {
     getSearchModeProviders,
     isAggregateSearchDefinitionAvailable,
@@ -2913,7 +2936,6 @@
     pageState
   });
 
-  const NEWTAB_SEARCH_NAVIGATION = globalThis.LumnoNewtabSearchNavigation;
   const { getNextSuggestionIndex } = NEWTAB_SEARCH_NAVIGATION;
   const {
     getShortcutRules,
@@ -2958,7 +2980,6 @@
     pageState
   });
 
-  const NEWTAB_SUGGESTIONS_CONTROLLER = globalThis.LumnoNewtabSuggestionsController;
   const {
     setSuggestionActionModifiersActive,
     syncSuggestionActionModifiersFromEvent,
@@ -3048,14 +3069,13 @@
     setSuggestionsVisible,
     NEWTAB_DIRECT_NAVIGATION_SETTLE,
     sendRuntimeMessage,
-    HELP_CENTER_SEARCH: window.LumnoHelpCenterSearch || null,
-    COMMUNITY_LINKS: window.LumnoCommunityLinks || null,
+    HELP_CENTER_SEARCH: LumnoHelpCenterSearch || null,
+    COMMUNITY_LINKS: LumnoCommunityLinks || null,
     openCommunityQrDialog: (...args) => openCommunityQrDialog(...args),
     getHelpCenterLocale: (...args) => getHelpCenterLocale(...args),
     pageState
   });
 
-  const NEWTAB_INPUT_FOCUS = globalThis.LumnoNewtabInputFocus;
   const {
     isEditableElement,
     refreshFallbackShortcut,
@@ -3070,7 +3090,6 @@
     pageState
   });
 
-  const NEWTAB_MODE_COMMANDS = globalThis.LumnoNewtabModeCommands;
   const {
     getCommandMatches,
     getCommandMatch,
@@ -3145,7 +3164,6 @@
     }
   });
 
-  const NEWTAB_SEARCH_BOX = globalThis.LumnoNewtabSearchBox;
   const {
     searchInput,
     rightIcon,
@@ -3262,7 +3280,6 @@
   renderNewtabTopContent(shouldAnimateWordmarkEntry);
   applyNewtabTopContentVisibility();
 
-  const NEWTAB_PAGE_NOTICES = globalThis.LumnoNewtabPageNotices;
   const {
     maybeShowFileAccessNotice,
     createNewtabEngagementNoticeController,
@@ -3293,7 +3310,6 @@
     pageState
   });
 
-  const NEWTAB_SEARCH_BOX_CONTROLS = globalThis.LumnoNewtabSearchBoxControls;
   const {
     SEARCH_CLEAR_BUTTON_INSET,
     updateInputRightPadding,
@@ -3326,7 +3342,6 @@
     pageState
   });
 
-  const NEWTAB_GLASS_SURFACES = globalThis.LumnoNewtabGlassSurfaces;
   const {
     applyNewtabGlassStyle,
     applyNewtabGlassTheme,
@@ -3343,7 +3358,6 @@
     pageState
   });
 
-  const NEWTAB_SEARCH_MODE_CONTROLLER = globalThis.LumnoNewtabSearchModeController;
   const {
     setSiteSearchTabHint,
     clearSiteSearchTabHint,
@@ -3398,7 +3412,6 @@
     pageState
   });
 
-  const NEWTAB_PAGE_RESIZE = globalThis.LumnoNewtabPageResize;
   NEWTAB_PAGE_RESIZE.createPageResize({
     getBookmarkLimit,
     applyNewtabWidthMode,
@@ -3421,7 +3434,6 @@
     pageState
   });
 
-  const NEWTAB_PAGE_KEYBOARD = globalThis.LumnoNewtabPageKeyboard;
   NEWTAB_PAGE_KEYBOARD.createPageKeyboard({
     handleSearchTabKey,
     dismissStack,
@@ -3437,7 +3449,6 @@
     pageState
   });
 
-  const NEWTAB_SITE_SEARCH_RUNTIME = globalThis.LumnoNewtabSiteSearchRuntime;
   NEWTAB_SITE_SEARCH_RUNTIME.createSiteSearchRuntime({
     getSiteSearchProviders,
     getAggregateSearches,
@@ -3465,7 +3476,6 @@
     pageState
   });
 
-  const NEWTAB_SEARCH_INPUT_COMPOSITION = globalThis.LumnoNewtabSearchInputComposition;
   NEWTAB_SEARCH_INPUT_COMPOSITION.createSearchInputComposition({
     directNavigationSettleController,
     imeKeyGuard,
@@ -3568,7 +3578,6 @@
   }
   markNewtabStartupMilestone('dom-mounted');
 
-  const NEWTAB_SECTION_RELOAD = globalThis.LumnoNewtabSectionReload;
   const {
     scheduleRecentReloadIfVisible,
     scheduleBookmarkReloadIfVisible

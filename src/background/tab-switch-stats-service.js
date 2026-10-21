@@ -1,12 +1,13 @@
 // How often each tab is switched to, kept per tab in session storage, and the
 // ranking the search overlay's open-tabs list uses to sort and describe tabs.
 //
-// Loaded by background.js through its first importScripts block (the Firefox
-// build lists that block as background.scripts). Like background.js this is a
-// classic script sharing the worker's global scope. Its functions use
-// background.js bindings (storageArea, warnBackgroundFailure, ...) only when
-// they run, never while this file loads, because background.js has not
-// initialized its own top-level bindings yet at that point.
+// A module of the service worker; background.js imports it before its own code
+// runs. Its functions use background.js bindings (storageArea,
+// warnBackgroundFailure, ...) only when they run, never while this file loads,
+// because background.js has not initialized its own top-level bindings yet at
+// that point.
+
+import { warnBackgroundFailure } from './background.js';
 
 const TAB_SWITCH_WINDOW_SHORT_MS = 30 * 60 * 1000;
 const TAB_SWITCH_WINDOW_DAY_MS = 24 * 60 * 60 * 1000;
@@ -135,7 +136,7 @@ function persistTabSwitchStatsNow() {
   });
 }
 
-function ensureTabSwitchStatsLoaded() {
+export function ensureTabSwitchStatsLoaded() {
   if (tabSwitchStatsLoaded) {
     return Promise.resolve();
   }
@@ -187,7 +188,7 @@ function pruneTabSwitchStat(stat, now) {
   }
 }
 
-function recordTabSwitchEvent(tabId, at) {
+export function recordTabSwitchEvent(tabId, at) {
   const stat = getTabSwitchStat(tabId, true);
   if (!stat) {
     return;
@@ -204,7 +205,7 @@ function recordTabSwitchEvent(tabId, at) {
   persistTabSwitchStatsNow().catch(warnBackgroundFailure('Failed to save tab switch stats.'));
 }
 
-function clearTabSwitchStat(tabId) {
+export function clearTabSwitchStat(tabId) {
   if (typeof tabId !== 'number') {
     return;
   }
@@ -219,7 +220,7 @@ function clearTabSwitchStat(tabId) {
   }
 }
 
-function syncTabSwitchStatsFromTabList(tabs) {
+export function syncTabSwitchStatsFromTabList(tabs) {
   const list = Array.isArray(tabs) ? tabs : [];
   const aliveIds = new Set();
   let mostRecentTabId = null;
@@ -310,7 +311,7 @@ function getTabSwitchRank(tab, now) {
   };
 }
 
-function sortTabsForOverlay(tabs) {
+export function sortTabsForOverlay(tabs) {
   const list = Array.isArray(tabs) ? tabs.slice() : [];
   const now = Date.now();
   const sortAt = now;
@@ -349,7 +350,7 @@ function sortTabsForOverlay(tabs) {
     .map((item) => item.tab);
 }
 
-function createOverlayTabPayload(tab, fetchSeq) {
+export function createOverlayTabPayload(tab, fetchSeq) {
   return {
     id: tab.id,
     title: typeof tab.title === 'string' ? tab.title : '',

@@ -106,10 +106,9 @@ async function run() {
     });
   });
   const background = readBackgroundSource();
-  const firstImportBlock = fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8')
-    .match(/importScripts\(([\s\S]*?)\);/)[1];
-  ['src/shared/site-display-name.js', 'src/background/page-shortcut-menu.js'].forEach((file) => {
-    assert(firstImportBlock.includes(`'${file}'`), `${file} must load with the first import block`);
+  const backgroundEntry = fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8');
+  ['../shared/site-display-name.js', './page-shortcut-menu.js'].forEach((spec) => {
+    assert(backgroundEntry.includes(`'${spec}';`), `background.js should import ${spec}`);
   });
 
   // The menu item follows the language picked in Lumno, not only the browser's.

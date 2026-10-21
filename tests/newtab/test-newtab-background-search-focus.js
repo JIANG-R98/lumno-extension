@@ -3,12 +3,10 @@ const fs = require('fs');
 const path = require('path');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
-require(path.join('..', '..', 'src', 'newtab', 'search', 'background-search-focus.js'));
-
 const {
   createBackgroundFocusHandler,
   shouldFocusSearchFromPointer
-} = globalThis.LumnoNewtabBackgroundSearchFocus;
+} = require(path.join('..', '..', 'src', 'newtab', 'search', 'background-search-focus.js'));
 
 const body = { name: 'body' };
 const root = { name: 'search root' };

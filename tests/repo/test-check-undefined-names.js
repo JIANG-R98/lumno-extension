@@ -25,8 +25,18 @@ try {
   document.body.append(String(value));
 })();
 `);
-  const problems = checkUndefinedNames([publisher, consumer]);
-  assert.strictEqual(problems.length, 2, problems.join('\n'));
+  const exporter = write('exporter.js', `export function kept() { return 1; }
+`);
+  const importer = write('importer.js', `import { kept, removedExport } from './exporter.js';
+import { missing } from './deleted-module.js';
+export const values = [kept(), removedExport, missing];
+`);
+  const problems = checkUndefinedNames([publisher, consumer, exporter, importer]);
+  assert.strictEqual(problems.length, 4, problems.join('\n'));
+  assert.ok(problems.some((line) => /importer\.js:1:.*removedExport/.test(line)),
+    'an import of a deleted export is reported');
+  assert.ok(problems.some((line) => /importer\.js:2:.*deleted-module/.test(line)),
+    'an import of a deleted module is reported');
   assert.ok(problems.some((line) => /consumer\.js:4:.*removedHelper/.test(line)),
     'a shorthand property naming a deleted function is reported');
   assert.ok(problems.some((line) => /consumer\.js:5:.*deletedFunction/.test(line)),

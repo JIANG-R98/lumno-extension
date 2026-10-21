@@ -129,12 +129,14 @@ BUNDLES.forEach((bundle) => {
 });
 const { getBackgroundServiceFiles } = require('../helpers/background-source');
 ['src/background/background.js'].concat(getBackgroundServiceFiles()).forEach((file) => {
-  assert(entries.includes(file), `store package should include ${file}`);
-  assert(
-    !/codex-debug-(?:bridge|surface)\.js|LumnoCodexDebug|codexDebugBridge/.test(readPackagedText(file)),
-    `store ${file} should not retain development-only debug bridge references`
-  );
+  assert(!entries.includes(file), `store package should ship ${file} only inside the background bundle`);
 });
+assert.strictEqual(packagedManifest.background.service_worker, 'build/background.js');
+assert(
+  !/codex-debug-(?:bridge|surface)|LumnoCodexDebug|codexDebugBridge|lumno\.codex\.debug/.test(readPackagedText('build/background.js')),
+  'the store background bundle should not retain the development-only debug bridge'
+);
+assert(!entries.includes('src/package.json'), 'store package should not include the Node module marker');
 assert(
   /codex-debug-bridge\.js/.test(fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8')),
   'development background should retain the Codex debug bridge'

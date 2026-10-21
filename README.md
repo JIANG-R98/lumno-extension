@@ -214,7 +214,7 @@ npm ci
 npm run build
 ```
 
-While editing `src/`, `npm run watch:bundles` rebuilds the bundles on every change. `scripts/build/bundles.js` lists the bundles and what each one runs.
+The scripts under `src/` are ES modules: each one imports what it uses, and a bundle holds the modules `scripts/build/bundles.js` lists for it and everything they import. While editing `src/`, `npm run watch:bundles` rebuilds the bundles on every change.
 
 Then keep Developer mode enabled in `chrome://extensions/` and load the repository root as an unpacked extension. After generating new assets or changing background scripts or `manifest.json`, click Reload on the extensions page. Development installs do not force a second refresh when the Chrome profile starts, avoiding interruption of the startup New Tab override.
 

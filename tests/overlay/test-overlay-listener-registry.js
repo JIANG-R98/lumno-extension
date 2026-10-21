@@ -2,10 +2,10 @@ const assert = require('assert');
 const fs = require('fs');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
-delete globalThis.LumnoOverlayLifecycle;
-require('../../src/overlay/lifecycle.js');
+delete LumnoOverlayLifecycle;
+const LumnoOverlayLifecycle = require('../../src/overlay/lifecycle.js');
 
-const lifecycle = globalThis.LumnoOverlayLifecycle;
+const lifecycle = LumnoOverlayLifecycle;
 const activeListeners = new Set();
 const eventTarget = {
   addListener(listener) {

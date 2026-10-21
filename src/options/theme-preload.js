@@ -1,5 +1,6 @@
+import * as SETTINGS from '../shared/settings.js';
+
 (function() {
-  const SETTINGS = globalThis.LumnoSettings;
   const THEME_STORAGE_KEY = SETTINGS.THEME_STORAGE_KEY;
   const THEME_CACHE_KEY = SETTINGS.OPTIONS_THEME_PRELOAD_STORAGE_KEY;
   const PRELOAD_THEME_ATTRIBUTE = 'data-options-preload-theme';

@@ -701,16 +701,16 @@ assert.ok(
 );
 assert.match(
   overlayPanel,
-  /overlayCursorTooltipController = globalThis\.LumnoCursorTooltip[\s\S]*?id: '_x_extension_overlay_cursor_tooltip_2026_unique_'/,
+  /overlayCursorTooltipController = LumnoCursorTooltip\.createController\([\s\S]*?id: '_x_extension_overlay_cursor_tooltip_2026_unique_'/,
   'overlay input actions and suggestion text should share the overlay cursor tooltip controller'
 );
 assert.match(
   overlayPanel,
-  /const overlayModeMenuCursorTooltipController = globalThis\.LumnoCursorTooltip[\s\S]*?id: '_x_extension_overlay_mode_menu_cursor_tooltip_2026_unique_'[\s\S]*?appendTo: overlayStyleRoot \|\| document\.body[\s\S]*?positionMode: 'fixed'/,
+  /const overlayModeMenuCursorTooltipController = LumnoCursorTooltip[\s\S]*?id: '_x_extension_overlay_mode_menu_cursor_tooltip_2026_unique_'[\s\S]*?appendTo: overlayStyleRoot \|\| document\.body[\s\S]*?positionMode: 'fixed'/,
   'overlay search-scope labels should use a viewport-positioned cursor bubble inside the isolated style root'
 );
 const overlayModeMenuControllerSource = overlayPanel.match(
-  /const overlayModeMenuCursorTooltipController = globalThis\.LumnoCursorTooltip[\s\S]*?\n\s*\}\);/
+  /const overlayModeMenuCursorTooltipController = LumnoCursorTooltip[\s\S]*?\n\s*\}\);/
 );
 assert.ok(
   overlayModeMenuControllerSource,
@@ -733,7 +733,7 @@ assert.match(
 );
 assert.match(
   searchInputMode,
-  /const cursorTooltipApi = root\.LumnoCursorTooltip[\s\S]*?typeof cursorTooltipApi\.createController === 'function'/,
+  /const cursorTooltipApi = LumnoCursorTooltip;[\s\S]*?typeof cursorTooltipApi\.createController === 'function'/,
   'new-tab search-scope labels should prefer the cursor tooltip controller'
 );
 assert.match(

@@ -1,8 +1,13 @@
-(function() {
-  const MODEL = globalThis.LumnoOnboardingContent;
-  const NAVIGATION_DISPOSITION = globalThis.LumnoNavigationDisposition;
+import * as COMMUNITY_LINKS from '../shared/community-links.js';
+import * as LumnoExtensionRoutes from '../shared/extension-routes.js';
+import * as NAVIGATION_DISPOSITION from '../shared/navigation-disposition.js';
+import * as LumnoSettings from '../shared/settings.js';
+import * as LumnoTooltip from '../shared/ui/tooltip.js';
+import * as MODEL from './onboarding-content.js';
 
-  const LANGUAGE_STORAGE_KEY = globalThis.LumnoSettings.LANGUAGE_STORAGE_KEY;
+(function() {
+
+  const LANGUAGE_STORAGE_KEY = LumnoSettings.LANGUAGE_STORAGE_KEY;
   const SHOW_SEARCH_COMMAND_NAME = 'show-search';
   const ONBOARDING_SEARCH_OVERLAY_COMMAND_ACTION = 'triggerOnboardingSearchOverlayFromCommand';
   const SHORTCUT_PLACEHOLDER = '{shortcut}';
@@ -11,7 +16,6 @@
   const TEXT_SWAP_FALLBACK_DURATION_MS = 200;
   const SITE_SEARCH_OPTIONS_PAGE_PATH = 'src/options/options.html#shortcuts';
   const FOCUSED_NEWTAB_RELATIVE_PAGE_PATH = '../newtab/lumno-newtab.html?focus=1';
-  const COMMUNITY_LINKS = globalThis.LumnoCommunityLinks;
   // The demo recent-site card points at Lumno's own listing, so it follows the
   // store this copy was installed from.
   const STORE_ACCENT_RGB = Object.freeze({
@@ -218,12 +222,12 @@
   let visualScaleFrame = 0;
   let expandedInteractionAccordionId = '';
   let visualResizeObserver = null;
-  const onboardingInfoTooltipController = globalThis.LumnoTooltip.createController({
+  const onboardingInfoTooltipController = LumnoTooltip.createController({
     id: '_x_extension_onboarding_info_tooltip_2026_unique_',
     className: 'onboarding-info-tooltip',
     maxWidth: 360
   });
-  const actionTooltipController = globalThis.LumnoTooltip.createController({
+  const actionTooltipController = LumnoTooltip.createController({
     id: '_x_extension_onboarding_action_tooltip_2026_unique_',
     className: 'onboarding-info-tooltip',
     maxWidth: 360
@@ -271,7 +275,7 @@
 
   function navigateOnboardingToNewtab() {
     const chromeApi = getChromeApi();
-    const routes = globalThis.LumnoExtensionRoutes;
+    const routes = LumnoExtensionRoutes;
     let url = '';
     url = routes.buildLumnoNewtabUrl(chromeApi, { focus: true });
     if (!url && chromeApi && chromeApi.runtime && typeof chromeApi.runtime.getURL === 'function') {
@@ -593,7 +597,7 @@
       callback(MODEL.normalizeLocale(getBrowserLocale()));
       return;
     }
-    const settings = globalThis.LumnoSettings;
+    const settings = LumnoSettings;
     const storageArea = settings.createProviderStorageRuntime(chromeApi).area;
     if (!storageArea || typeof storageArea.get !== 'function') {
       callback(MODEL.normalizeLocale(getBrowserLocale()));
@@ -700,7 +704,7 @@
     if (infoTooltip && infoTooltip.type === 'browser-avatars') {
       positionBrowserAvatarTooltip(element, button);
     } else {
-      globalThis.LumnoTooltip.position(element, button, options);
+      LumnoTooltip.position(element, button, options);
     }
   }
 

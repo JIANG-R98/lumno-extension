@@ -1,5 +1,7 @@
 const fs = require('fs');
 const path = require('path');
+const { withoutExports } = require('./closure-source');
+const { moduleScript } = require('./module-script');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const INPUT_MODE_ENTRY = 'src/shared/search/search-input-mode.js';
@@ -22,16 +24,18 @@ const INPUT_MODE_FILES = [
   'src/shared/search/search-input-mode.js'
 ];
 
-// The controller as the pages load it, for evaluating in a test context.
+// The controller as the pages run it, for evaluating in a test context: a
+// script that leaves the module's exports on LumnoSearchInputMode.
 function readSearchInputModeRuntimeSource() {
-  return INPUT_MODE_FILES.map((file) => fs.readFileSync(path.join(repoRoot, file), 'utf8')).join('\n;\n');
+  return moduleScript('src/shared/search/search-input-mode.js', 'LumnoSearchInputMode');
 }
 
-// The same files for source checks: the parts share controller state as
+// The files for source checks: the parts share controller state as
 // properties of one `inputModeState` object, which this drops so checks see
 // the code as it read inside the single controller closure.
 function readSearchInputModeSource() {
-  return readSearchInputModeRuntimeSource().replace(/\binputModeState\./g, '');
+  return withoutExports(INPUT_MODE_FILES.map((file) => fs.readFileSync(path.join(repoRoot, file), 'utf8')).join('\n'))
+    .replace(/\binputModeState\./g, '');
 }
 
 module.exports = { INPUT_MODE_ENTRY, INPUT_MODE_FILES, readSearchInputModeRuntimeSource, readSearchInputModeSource };

@@ -198,7 +198,7 @@ assert.ok(
   'the folder icon component should load before the newtab runtime'
 );
 assert.ok(
-  newtabJs.includes('const NEWTAB_BOOKMARK_FOLDER_ICON =') &&
+  newtabJs.includes("import * as NEWTAB_BOOKMARK_FOLDER_ICON from './bookmarks/bookmark-folder-icon.js';") &&
     newtabJs.includes('NEWTAB_BOOKMARK_FOLDER_ICON.getFigmaFolderSvg'),
   'newtab should consume the component instead of retaining an embedded implementation'
 );

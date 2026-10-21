@@ -1,13 +1,11 @@
 const assert = require('assert');
-const fs = require('fs');
 const vm = require('vm');
-
-const source = fs.readFileSync('src/newtab/wallpaper/wallpaper-crt-webgl.js', 'utf8');
+const { moduleScript } = require('../helpers/module-script');
 
 function loadModule() {
   const sandbox = { console };
   sandbox.globalThis = sandbox;
-  vm.runInNewContext(source, sandbox, { filename: 'src/newtab/wallpaper/wallpaper-crt-webgl.js' });
+  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-crt-webgl.js', 'LumnoNewtabCrtWebGL'), sandbox, { filename: 'src/newtab/wallpaper/wallpaper-crt-webgl.js' });
   return sandbox.LumnoNewtabCrtWebGL;
 }
 

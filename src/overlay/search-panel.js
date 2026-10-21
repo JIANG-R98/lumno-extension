@@ -1,3 +1,51 @@
+import * as FAVICON_THEME from '../newtab/theme/favicon-theme.js';
+import * as COMMUNITY_LINKS from '../shared/community-links.js';
+import * as FAVICON_UTILS from '../shared/favicon/favicon-utils.js';
+import * as SHORTCUT_FAVICON from '../shared/favicon/shortcut-favicon.js';
+import * as AGGREGATE_SEARCH_STORE from '../shared/search/aggregate-search-store.js';
+import * as LumnoImeKeyGuard from '../shared/search/ime-key-guard.js';
+import * as SEARCH_INPUT_HISTORY from '../shared/search/search-input-history.js';
+import * as SEARCH_INPUT_MODE from '../shared/search/search-input-mode.js';
+import * as SEARCH_SOURCE_ORDER from '../shared/search/search-source-order.js';
+import * as SEARCH_UTILS from '../shared/search/search-utils.js';
+import * as SUGGESTION_ACTION_MODEL from '../shared/search/suggestion-action-model.js';
+import * as SUGGESTION_NAVIGATION from '../shared/search/suggestion-navigation.js';
+import * as SUGGESTIONS_HEIGHT_LAYOUT from '../shared/search/suggestions-height-layout.js';
+import * as SETTINGS from '../shared/settings.js';
+import * as LumnoCursorTooltip from '../shared/ui/cursor-tooltip.js';
+import * as OVERLAY_TOAST from '../shared/ui/toast.js';
+import * as LumnoTooltip from '../shared/ui/tooltip.js';
+import * as LumnoOverlayFaviconView from './favicon-view.js';
+import * as OVERLAY_KEYBOARD from './keyboard.js';
+import * as LumnoOverlayLifecycle from './lifecycle.js';
+import * as OVERLAY_NOTICES from './notices.js';
+import * as PANEL_AUTOCOMPLETE from './panel/autocomplete.js';
+import * as PANEL_COPY_ACTIONS from './panel/copy-actions.js';
+import * as PANEL_DEFAULT_SEARCH_ENGINE from './panel/default-search-engine.js';
+import * as PANEL_ENTRY_MOTION from './panel/entry-motion.js';
+import * as PANEL_FAVICON_POLICY from './panel/favicon-policy.js';
+import * as PANEL_PAGE_GUARDS from './panel/page-guards.js';
+import * as PANEL_PANEL_KEYS from './panel/panel-keys.js';
+import * as PANEL_PANEL_LANGUAGE from './panel/panel-language.js';
+import * as PANEL_PANEL_NOTICES from './panel/panel-notices.js';
+import * as PANEL_PANEL_SESSION from './panel/panel-session.js';
+import * as PANEL_PANEL_THEME from './panel/panel-theme.js';
+import * as PANEL_REMOTE_SUGGESTIONS from './panel/remote-suggestions.js';
+import * as PANEL_RESULT_ACTIVATION from './panel/result-activation.js';
+import * as PANEL_RESULTS_LAYOUT from './panel/results-layout.js';
+import * as PANEL_SEARCH_INPUT_EVENTS from './panel/search-input-events.js';
+import * as PANEL_SEARCH_MODE_MENU from './panel/search-mode-menu.js';
+import * as PANEL_SEARCH_MODES from './panel/search-modes.js';
+import * as PANEL_SETTINGS_SYNC from './panel/settings-sync.js';
+import * as PANEL_SITE_SEARCH_PROVIDERS from './panel/site-search-providers.js';
+import * as PANEL_SLASH_COMMANDS from './panel/slash-commands.js';
+import * as PANEL_SUGGESTION_SOURCES from './panel/suggestion-sources.js';
+import * as PANEL_SUGGESTION_THEMES from './panel/suggestion-themes.js';
+import * as PANEL_SUGGESTIONS_RENDER from './panel/suggestions-render.js';
+import * as PANEL_TAB_MATCHING from './panel/tab-matching.js';
+import * as LumnoOverlayRuntime from './runtime.js';
+import * as LumnoOverlaySiteFixes from './site-fixes.js';
+
 'use strict';
 
 window._x_extension_search_overlay_runtime_version_2026_unique_ =
@@ -37,11 +85,10 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   }
   const OVERLAY_HOST_ID = '_x_extension_overlay_host_2026_unique_';
   const OVERLAY_PANEL_ID = '_x_extension_overlay_2024_unique_';
-  const overlayLifecycle = globalThis.LumnoOverlayLifecycle;
+  const overlayLifecycle = LumnoOverlayLifecycle;
 
   const overlayShell = globalThis.LumnoOverlayShell;
 
-  const PANEL_PANEL_SESSION = globalThis.LumnoOverlayPanelPanelSession;
   const {
     getOrCreateOverlayContextToken,
     getOverlayMountHost,
@@ -65,19 +112,10 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   });
 
   overlayState.overlayContextToken = getOrCreateOverlayContextToken();
-  const SETTINGS = globalThis.LumnoSettings;
-  const SEARCH_SOURCE_ORDER = globalThis.LumnoSearchSourceOrder;
   const SEARCH_SOURCE_ORDER_STORAGE_KEY = (SEARCH_SOURCE_ORDER && SEARCH_SOURCE_ORDER.STORAGE_KEY) ||
     '_x_extension_search_source_order_2026_unique_';
-  const SEARCH_UTILS = globalThis.LumnoSearchUtils;
-  const COMMUNITY_LINKS = globalThis.LumnoCommunityLinks;
-  const AGGREGATE_SEARCH_STORE = globalThis.LumnoAggregateSearchStore;
-  const SHORTCUT_FAVICON = globalThis.LumnoShortcutFavicon;
-  const SUGGESTION_ACTION_MODEL = globalThis.LumnoSuggestionActionModel;
 
-  const PANEL_RESULT_ACTIVATION = globalThis.LumnoOverlayPanelResultActivation;
 
-  const PANEL_TAB_MATCHING = globalThis.LumnoOverlayPanelTabMatching;
   const {
     isEnglishQuery,
     getUrlDisplay,
@@ -89,14 +127,9 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     overlayState
   });
 
-  const PANEL_AUTOCOMPLETE = globalThis.LumnoOverlayPanelAutocomplete;
 
-  const PANEL_SEARCH_MODES = globalThis.LumnoOverlayPanelSearchModes;
 
-  const PANEL_SEARCH_INPUT_EVENTS = globalThis.LumnoOverlayPanelSearchInputEvents;
 
-  const SUGGESTION_NAVIGATION = globalThis.LumnoSuggestionNavigation;
-  const SEARCH_INPUT_HISTORY = globalThis.LumnoSearchInputHistory;
   const suggestionItems = [];
 
   const numberShortcutOptions = {
@@ -110,13 +143,9 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     instantActive: () => overlayState.numberShortcutInstantEnabled
   };
 
-  const PANEL_PANEL_KEYS = globalThis.LumnoOverlayPanelPanelKeys;
-  const SUGGESTIONS_HEIGHT_LAYOUT = globalThis.LumnoSuggestionsHeightLayout;
-  const FAVICON_THEME = globalThis.LumnoNewtabFaviconTheme;
   const buildTheme = FAVICON_THEME.buildTheme;
 
-  const PANEL_SUGGESTIONS_RENDER = globalThis.LumnoOverlayPanelSuggestionsRender;
-  const overlayRuntime = globalThis.LumnoOverlayRuntime;
+  const overlayRuntime = LumnoOverlayRuntime;
 
   const overlayStorageKeys = overlayRuntime.STORAGE_KEYS;
   const THEME_STORAGE_KEY = overlayStorageKeys.themeMode;
@@ -161,7 +190,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     }
   };
 
-  const PANEL_SUGGESTION_SOURCES = globalThis.LumnoOverlayPanelSuggestionSources;
   const {
     getShortcutRules,
     getDirectNavigationUrl,
@@ -229,7 +257,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     overlayState
   });
 
-  const PANEL_REMOTE_SUGGESTIONS = globalThis.LumnoOverlayPanelRemoteSuggestions;
   const {
     updatePendingSearchSuggestions,
     requestOverlaySearchSuggestions
@@ -453,7 +480,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     getKeywordSearchSuggestionState,
     overlayState
   });
-  const FAVICON_UTILS = globalThis.LumnoFaviconUtils;
   const SITE_SEARCH_STORAGE_KEY = overlayStorageKeys.siteSearchCustom;
   const SITE_SEARCH_DISABLED_STORAGE_KEY = overlayStorageKeys.siteSearchDisabled;
   const AGGREGATE_SEARCH_STORAGE_KEY = overlayStorageKeys.aggregateSearches ||
@@ -467,7 +493,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     maxDataUrlLength: 192 * 1024
   };
 
-  const PANEL_SITE_SEARCH_PROVIDERS = globalThis.LumnoOverlayPanelSiteSearchProviders;
   const {
     buildSearchUrl,
     isAiSiteSearchProvider,
@@ -503,7 +528,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     overlayState
   });
 
-  const PANEL_SEARCH_MODE_MENU = globalThis.LumnoOverlayPanelSearchModeMenu;
   const {
     getSearchModeProviderId,
     getSearchModeProviders,
@@ -555,12 +579,8 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     recordSearchSuggestionSelectionFromSuggestion,
     overlayState
   });
-  const OVERLAY_TOAST = globalThis.LumnoToast;
-  const SEARCH_INPUT_MODE = globalThis.LumnoSearchInputMode;
-  const OVERLAY_NOTICES = globalThis.LumnoOverlayNotices;
-  const OVERLAY_KEYBOARD = globalThis.LumnoOverlayKeyboard;
-  const overlayFaviconView = globalThis.LumnoOverlayFaviconView;
-  const overlaySiteFixes = globalThis.LumnoOverlaySiteFixes;
+  const overlayFaviconView = LumnoOverlayFaviconView;
+  const overlaySiteFixes = LumnoOverlaySiteFixes;
   if (!overlayRuntime.STORAGE_KEYS) {
     console.warn('Lumno: overlay runtime helper not available.');
     return;
@@ -670,7 +690,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     : 1;
   const overlayFrameTracker = overlayLifecycle.createFrameTracker(window);
 
-  const PANEL_ENTRY_MOTION = globalThis.LumnoOverlayPanelEntryMotion;
   const {
     shouldSkipOverlayEntryMotion,
     shouldSkipOverlayEntryMotionForSlowStartup,
@@ -699,7 +718,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     restoreProtectedAncestors: (...args) => restoreProtectedAncestors(...args)
   });
 
-  const PANEL_PAGE_GUARDS = globalThis.LumnoOverlayPanelPageGuards;
   const {
     applyOverlayInputExtensionIsolation,
     applyNoTranslate,
@@ -851,7 +869,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
 
   const logOverlayFaviconDecision = FAVICON_UTILS.createFaviconDecisionLogger({ surface: 'overlay' });
 
-  const PANEL_FAVICON_POLICY = globalThis.LumnoOverlayPanelFaviconPolicy;
   const {
     normalizeOverlaySearchBlacklistItems,
     normalizeOverlayFaviconRequestBlacklistItems,
@@ -889,9 +906,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   overlayState.overlayTabQuickSwitchEnabled = true;
   overlayState.overlayTabScoreDebugEnabled = false;
 
-  const PANEL_PANEL_LANGUAGE = globalThis.LumnoOverlayPanelPanelLanguage;
 
-  const PANEL_DEFAULT_SEARCH_ENGINE = globalThis.LumnoOverlayPanelDefaultSearchEngine;
   const {
     buildDefaultSearchUrlForOverlay,
     getDefaultSearchEngineFaviconUrlForOverlay,
@@ -913,12 +928,9 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     element.style.setProperty(property, value, overlayState.inputUsesIsolatedStyles ? '' : 'important');
   };
 
-  const PANEL_RESULTS_LAYOUT = globalThis.LumnoOverlayPanelResultsLayout;
 
-  const PANEL_SLASH_COMMANDS = globalThis.LumnoOverlayPanelSlashCommands;
   const parseCssColor = FAVICON_THEME.parseCssColor;
 
-  const PANEL_PANEL_THEME = globalThis.LumnoOverlayPanelPanelTheme;
   const {
     getHighlightColors,
     detectPageTheme,
@@ -942,7 +954,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   const themeColorCache = window._x_extension_theme_color_cache_2024_unique_ || new Map();
   const themeHostCache = window._x_extension_theme_host_cache_2024_unique_ || new Map();
 
-  const PANEL_SUGGESTION_THEMES = globalThis.LumnoOverlayPanelSuggestionThemes;
   const {
     getExtensionFaviconUrl,
     getGstaticFaviconUrl,
@@ -1250,7 +1261,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     overlayToastController.destroy();
   });
 
-  const PANEL_COPY_ACTIONS = globalThis.LumnoOverlayPanelCopyActions;
   const {
     hideOverlayToast,
     showOverlayToast,
@@ -1352,7 +1362,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
         : storageAreaName
     });
 
-  const PANEL_PANEL_NOTICES = globalThis.LumnoOverlayPanelPanelNotices;
   const {
     openOverlayCommunityQrDialog
   } = PANEL_PANEL_NOTICES.createPanelNotices({
@@ -1369,7 +1378,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   applyNoTranslate(overlayState.searchInput);
   applyNoTranslate(overlayState.inputContainer);
   applyNoTranslate(overlayState.rightIcon);
-  overlayState.topActionTooltipController = globalThis.LumnoTooltip.createController({
+  overlayState.topActionTooltipController = LumnoTooltip.createController({
     documentObj: document,
     windowObj: window,
     id: '_x_extension_top_action_tooltip_2026_unique_',
@@ -1379,7 +1388,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     maxWidth: 420,
     decorateElement: applyNoTranslate
   });
-  overlayState.overlayCursorTooltipController = globalThis.LumnoCursorTooltip.createController({
+  overlayState.overlayCursorTooltipController = LumnoCursorTooltip.createController({
     documentObj: document,
     windowObj: window,
     id: '_x_extension_overlay_cursor_tooltip_2026_unique_',
@@ -1391,7 +1400,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     offsetY: 16,
     decorateElement: applyNoTranslate
   });
-  const overlayModeMenuCursorTooltipController = globalThis.LumnoCursorTooltip.createController({
+  const overlayModeMenuCursorTooltipController = LumnoCursorTooltip.createController({
     documentObj: document,
     windowObj: window,
     id: '_x_extension_overlay_mode_menu_cursor_tooltip_2026_unique_',
@@ -1735,7 +1744,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     return initialThemeMode;
   });
 
-  const PANEL_SETTINGS_SYNC = globalThis.LumnoOverlayPanelSettingsSync;
   const {
     initialOverlaySizeReady,
     initialOverlayFontFamilyReady

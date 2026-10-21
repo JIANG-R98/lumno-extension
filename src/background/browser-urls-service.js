@@ -3,36 +3,52 @@
 // browser New Tab provider a fresh tab belongs to. Also opens search-result
 // tabs next to the tab they came from, in its tab group.
 //
-// Loaded by background.js through its first importScripts block (the Firefox
-// build lists that block as background.scripts). Like background.js this is a
-// classic script sharing the worker's global scope. Its functions use
-// background.js bindings (EXTENSION_ROUTES, SEARCH_RESULT_TABS, storageArea,
-// the restricted-action caches, ...) only when they run, never while this file
-// loads, because background.js has not initialized its own top-level bindings
-// yet at that point.
+// A module of the service worker; background.js imports it before its own code
+// runs. Its functions use background.js bindings (EXTENSION_ROUTES,
+// SEARCH_RESULT_TABS, storageArea, the restricted-action caches, ...) only when
+// they run, never while this file loads, because background.js has not
+// initialized its own top-level bindings yet at that point.
+
+import * as LumnoUrlGuards from '../shared/url-guards.js';
+import * as BACKGROUND_TAB_GROUPS from './tab-groups.js';
+import * as EXTENSION_ROUTES from '../shared/extension-routes.js';
+import * as SEARCH_RESULT_TABS from './search-result-tabs.js';
+import * as SETTINGS from '../shared/settings.js';
+import {
+  BROWSER_NEWTAB_PROVIDER_DETECTION_MS,
+  RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY,
+  RESTRICTED_ACTION_STORAGE_KEY,
+  backgroundSettingsLoaded,
+  browserNewtabProviderCandidateTabIds,
+  logHotkeyDebug,
+  markRestrictedActionAutoSelected,
+  restrictedActionAutoBrowserSettingDoneCache,
+  storageArea,
+  whenBackgroundSettingsReady
+} from './background.js';
 
 function isBrowserExtensionProtocol(protocol) {
-  const guards = globalThis.LumnoUrlGuards;
+  const guards = LumnoUrlGuards;
   return guards.isBrowserExtensionProtocol(protocol);
 }
 
-function isBrowserInternalUrl(url) {
-  const guards = globalThis.LumnoUrlGuards;
+export function isBrowserInternalUrl(url) {
+  const guards = LumnoUrlGuards;
   return guards.isBrowserInternalUrl(url);
 }
 
-function isRestrictedUrl(url) {
-  const guards = globalThis.LumnoUrlGuards;
+export function isRestrictedUrl(url) {
+  const guards = LumnoUrlGuards;
   return guards.isRestrictedUrl(url);
 }
 
-function canOpenOverlayOnUrl(url) {
-  const guards = globalThis.LumnoUrlGuards;
+export function canOpenOverlayOnUrl(url) {
+  const guards = LumnoUrlGuards;
   return guards.canOpenOverlayOnUrl(url);
 }
 
-function canFetchPageForFavicon(url) {
-  const guards = globalThis.LumnoUrlGuards;
+export function canFetchPageForFavicon(url) {
+  const guards = LumnoUrlGuards;
   return guards.canFetchPageForFavicon(url);
 }
 
@@ -51,7 +67,7 @@ function getOwnExtensionOrigin() {
   return getExtensionUrlKey(chrome.runtime.getURL(''));
 }
 
-function isOwnExtensionPageUrl(url) {
+export function isOwnExtensionPageUrl(url) {
   if (!url || !chrome || !chrome.runtime || !chrome.runtime.id) {
     return false;
   }
@@ -63,7 +79,7 @@ function isOwnExtensionPageUrl(url) {
   }
 }
 
-function getResolvedTabUrl(tab) {
+export function getResolvedTabUrl(tab) {
   if (!tab || typeof tab !== 'object') {
     return '';
   }
@@ -75,16 +91,16 @@ function getResolvedTabUrl(tab) {
   return pendingUrl;
 }
 
-function getSourceTabGroupContext(tab) {
+export function getSourceTabGroupContext(tab) {
   return BACKGROUND_TAB_GROUPS.getSourceTabGroupContext(tab, chrome);
 }
 
-function createTabWithSourceGroup(createProperties, sourceTab, callback) {
+export function createTabWithSourceGroup(createProperties, sourceTab, callback) {
   const done = typeof callback === 'function' ? callback : () => {};
   BACKGROUND_TAB_GROUPS.createTabInSourceGroup(chrome, createProperties, sourceTab, done);
 }
 
-function resolveSearchResultTabPlacement(sourceTab) {
+export function resolveSearchResultTabPlacement(sourceTab) {
   return SETTINGS.readStorageValue(storageArea, chrome, SETTINGS.SEARCH_RESULT_TAB_POSITION_STORAGE_KEY)
     .catch(() => undefined)
     .then((value) => SEARCH_RESULT_TABS.resolvePlacement(
@@ -94,7 +110,7 @@ function resolveSearchResultTabPlacement(sourceTab) {
     ));
 }
 
-function createSearchResultTab(createProperties, sourceTab, callback, resolvedPlacement) {
+export function createSearchResultTab(createProperties, sourceTab, callback, resolvedPlacement) {
   const placementTask = resolvedPlacement
     ? Promise.resolve(resolvedPlacement)
     : resolveSearchResultTabPlacement(sourceTab);
@@ -108,11 +124,11 @@ function createSearchResultTab(createProperties, sourceTab, callback, resolvedPl
   });
 }
 
-function moveTabToSourceGroupContext(tab, sourceContext, callback, createProperties) {
+export function moveTabToSourceGroupContext(tab, sourceContext, callback, createProperties) {
   BACKGROUND_TAB_GROUPS.moveTabToSourceGroupContext(chrome, tab, sourceContext, callback, createProperties);
 }
 
-function isLumnoNewtabUrl(url) {
+export function isLumnoNewtabUrl(url) {
   const value = String(url || '');
   if (!value || !chrome || !chrome.runtime || typeof chrome.runtime.getURL !== 'function') {
     return false;
@@ -134,7 +150,7 @@ function isLumnoNewtabUrl(url) {
   return prefixes.some((prefix) => value === prefix || value.startsWith(`${prefix}?`));
 }
 
-function isBrowserNewtabUrl(url) {
+export function isBrowserNewtabUrl(url) {
   const lower = String(url || '').toLowerCase();
   return lower === 'chrome://newtab/' ||
     lower === 'chrome://new-tab-page/' ||
@@ -145,7 +161,7 @@ function isBrowserNewtabUrl(url) {
     lower === 'about:home';
 }
 
-function isOwnExtensionUrl(url) {
+export function isOwnExtensionUrl(url) {
   if (!url || !chrome || !chrome.runtime || !chrome.runtime.id) {
     return false;
   }
@@ -203,7 +219,7 @@ function isPotentialBrowserNewtabProviderCandidate(tab) {
     (!directUrl && !pendingUrl && tab.status === 'loading');
 }
 
-function rememberBrowserNewtabProviderCandidate(tab) {
+export function rememberBrowserNewtabProviderCandidate(tab) {
   pruneBrowserNewtabProviderCandidates();
   if (!isPotentialBrowserNewtabProviderCandidate(tab)) {
     return;
@@ -267,7 +283,7 @@ function setRestrictedActionFromBrowserNewtabProvider(providerType, tab, stage) 
   });
 }
 
-function maybeAutoSelectRestrictedBrowserSetting(tab, stage) {
+export function maybeAutoSelectRestrictedBrowserSetting(tab, stage) {
   if (!tab || typeof tab.id !== 'number') {
     return;
   }
@@ -294,12 +310,12 @@ function maybeAutoSelectRestrictedBrowserSetting(tab, stage) {
   }
 }
 
-function isLumnoOnboardingUrl(url) {
+export function isLumnoOnboardingUrl(url) {
   return EXTENSION_ROUTES.isOnboardingUrl(url) &&
     isOwnExtensionUrl(url);
 }
 
-function getOwnExtensionFaviconUrl() {
+export function getOwnExtensionFaviconUrl() {
   if (!chrome || !chrome.runtime || typeof chrome.runtime.getURL !== 'function') {
     return '';
   }

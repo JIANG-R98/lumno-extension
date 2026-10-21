@@ -7,6 +7,7 @@ const repoRoot = path.join(__dirname, '..', '..');
 const modulePath = path.join(repoRoot, 'src/shared/cjk-font-faces.js');
 const CJK = require(modulePath);
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { moduleScript } = require('../helpers/module-script');
 
 // The CJK face only composes with Open Sans when its weight band matches one of
 // the Open Sans faces exactly, on pages and in the overlay alike.
@@ -57,7 +58,7 @@ assert.strictEqual(document.getElementById(styleId), null);
   const script = page.window.document.createElement('script');
   script.dataset.fontFamily = 'Open Sans';
   Object.defineProperty(page.window.document, 'currentScript', { value: script, configurable: true });
-  page.window.eval(fs.readFileSync(modulePath, 'utf8'));
+  page.window.eval(moduleScript('src/shared/cjk-font-faces.js', 'LumnoCjkFontFaces'));
   const readFace = () => {
     const style = page.window.document.getElementById('_x_extension_cjk_font_faces_2026_unique_');
     return style ? style.textContent : '';

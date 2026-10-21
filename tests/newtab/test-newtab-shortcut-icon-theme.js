@@ -1,6 +1,6 @@
 const assert = require('assert');
-const fs = require('fs');
 const vm = require('vm');
+const { runModuleInContext } = require('../helpers/module-script');
 
 // Shortcut tiles must tint from the artwork they show, and Chrome/Google's
 // generic globe must never become a host-wide theme.
@@ -36,9 +36,10 @@ sandbox.Image = class {
   }
 };
 
-['src/shared/favicon/favicon-utils.js', 'src/newtab/theme/favicon-theme.js', 'src/newtab/theme/site-theme-resolver.js'].forEach((file) => {
-  vm.runInNewContext(fs.readFileSync(file, 'utf8'), sandbox, { filename: file });
-});
+vm.createContext(sandbox);
+runModuleInContext('src/newtab/theme/site-theme-resolver.js', sandbox, 'LumnoNewtabSiteThemeResolver');
+runModuleInContext('src/newtab/theme/favicon-theme.js', sandbox, 'LumnoNewtabFaviconTheme');
+runModuleInContext('src/shared/favicon/favicon-utils.js', sandbox, 'LumnoFaviconUtils');
 
 const FAVICON_UTILS = sandbox.LumnoFaviconUtils;
 const NEWTAB_FAVICON_THEME = sandbox.LumnoNewtabFaviconTheme;

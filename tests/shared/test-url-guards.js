@@ -1,7 +1,7 @@
 const assert = require('assert');
-const fs = require('fs');
 const vm = require('vm');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { runModuleInContext } = require('../helpers/module-script');
 
 const sandbox = {
   console,
@@ -9,11 +9,8 @@ const sandbox = {
 };
 sandbox.globalThis = sandbox;
 
-for (const file of ['src/shared/browser-profile.js', 'src/shared/url-guards.js']) {
-  vm.runInNewContext(fs.readFileSync(file, 'utf8'), sandbox, { filename: file });
-}
-
-const guards = sandbox.LumnoUrlGuards;
+vm.createContext(sandbox);
+const guards = runModuleInContext('src/shared/url-guards.js', sandbox, 'LumnoUrlGuards');
 assert.ok(guards, 'LumnoUrlGuards should be exported');
 
 assert.strictEqual(guards.isBrowserExtensionProtocol('chrome-extension:'), true);

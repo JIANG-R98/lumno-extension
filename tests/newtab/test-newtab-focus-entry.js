@@ -5,17 +5,15 @@ const vm = require('vm');
 const { readPageSource } = require('../helpers/page-source');
 const { readBackgroundSource } = require('../helpers/background-source');
 const { getBundleFiles, runsBefore } = require('../helpers/runtime-scripts');
+const { moduleScript } = require('../helpers/module-script');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const html = readPageSource('newtab.html');
 const sourcePath = path.join(repoRoot, 'src/newtab/newtab-focus-entry.js');
-const source = fs.existsSync(sourcePath) ? fs.readFileSync(sourcePath, 'utf8') : '';
 const backgroundSource = readBackgroundSource();
 const legacyHtml = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.html'), 'utf8');
 const legacyRedirectSourcePath = path.join(repoRoot, 'src/newtab/newtab-route-redirect.js');
-const legacyRedirectSource = fs.readFileSync(legacyRedirectSourcePath, 'utf8');
 const storageKey = '_x_extension_newtab_input_auto_focus_enabled_2026_unique_';
-const settingsSource = fs.readFileSync(path.join(__dirname, '../../src/shared/settings.js'), 'utf8');
 
 assert.match(
   html,
@@ -48,7 +46,7 @@ assert.match(
 );
 assert.ok(
   /<style data-nt-focus-paint-gate="true">[\s\S]*?<\/style>\s*<script src="\.\.\/\.\.\/build\/newtab-preload\.js"><\/script>/.test(html) &&
-    preloadFiles[0] === 'src/shared/settings.js',
+    runsBefore(preloadFiles, 'src/shared/settings.js', 'src/newtab/newtab-focus-entry.js'),
   'the focused destination paint gate should be available before focus routing starts'
 );
 
@@ -147,8 +145,7 @@ async function runEntry({
     }
   };
   vm.createContext(sandbox);
-  vm.runInContext(settingsSource, sandbox, { filename: 'settings.js' });
-  vm.runInContext(source, sandbox, { filename: sourcePath });
+  vm.runInContext(moduleScript('src/newtab/newtab-focus-entry.js'), sandbox, { filename: sourcePath });
   // Provider storage reads settle after the active storage area resolves.
   await new Promise((resolve) => setImmediate(resolve));
   const show = () => {
@@ -284,7 +281,7 @@ async function runEntry({
   );
   {
     const replacedUrls = [];
-    vm.runInNewContext(legacyRedirectSource, {
+    vm.runInNewContext(moduleScript('src/newtab/newtab-route-redirect.js'), {
       URL,
       window: {
         location: {

@@ -2,6 +2,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const { BUNDLE_DIRECTORY, DEVELOPMENT_ONLY_MODULES } = require('./bundles');
 
 const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
 const storeManifest = { ...manifest };
@@ -17,22 +18,9 @@ const packageRoots = [
   'assets',
   'newtab.html'
 ];
-const BUNDLE_DIRECTORY = 'build';
-const developmentOnlyFiles = new Set([
-  'src/background/codex-debug-bridge.js',
-  'src/shared/codex-debug-surface.js'
-]);
-// Scripts that run from their source path: the service worker and the files
-// it imports, and the files pages and content scripts load by URL. Every other
-// script in src/ runs from a bundle.
-const backgroundEntry = manifest.background.service_worker;
-const backgroundImportBlock = fs.readFileSync(backgroundEntry, 'utf8').match(/importScripts\(([\s\S]*?)\);/);
-if (!backgroundImportBlock) {
-  throw new Error(`Could not find the importScripts block in ${backgroundEntry}.`);
-}
+// Scripts pages and content scripts load by URL; every other script in src/
+// runs from a bundle.
 const sourceRuntimeScripts = new Set([
-  backgroundEntry,
-  ...[...backgroundImportBlock[1].matchAll(/getURL\('(src\/[^']+\.js)'\)/g)].map((match) => match[1]),
   'src/shared/search/search-han-variants.js',
   'src/content/youtube-auto-pip-page.js'
 ]);
@@ -70,14 +58,12 @@ function packagePathForFile(file) {
 
 function shouldCopyPackagePath(sourcePath) {
   const packagePath = normalizePackagePath(path.relative(repoRoot, sourcePath));
-  if (developmentOnlyFiles.has(packagePath)) {
-    return false;
-  }
   if (packagePath.startsWith('src/') && packagePath.endsWith('.js') &&
       !packagePath.startsWith('src/react/') && !sourceRuntimeScripts.has(packagePath)) {
     return false;
   }
-  if (path.basename(sourcePath) === '.DS_Store') {
+  // src/package.json only tells Node that the sources are ES modules.
+  if (path.basename(sourcePath) === '.DS_Store' || packagePath === 'src/package.json') {
     return false;
   }
   return packagePath !== 'assets/images/readme' &&
@@ -115,18 +101,6 @@ function getHtmlReferenceBase(packageFile, source) {
     : path.dirname(packageFile);
 }
 
-function replaceRequired(source, pattern, replacement, expectedCount, label) {
-  let count = 0;
-  const nextSource = source.replace(pattern, () => {
-    count += 1;
-    return replacement;
-  });
-  if (count !== expectedCount) {
-    throw new Error(`Store package transform expected ${expectedCount} ${label} match(es), found ${count}.`);
-  }
-  return nextSource;
-}
-
 const stagedHtmlFiles = [];
 function collectHtmlFiles(dir) {
   fs.readdirSync(dir, { withFileTypes: true }).forEach((entry) => {
@@ -157,76 +131,7 @@ if (debugSurfaceScriptCount !== 3) {
   throw new Error(`Store package transform expected 3 debug surface script tags, found ${debugSurfaceScriptCount}.`);
 }
 
-const stagedBackgroundPath = stagedPath('src/background/background.js');
-let stagedBackground = fs.readFileSync(stagedBackgroundPath, 'utf8');
-stagedBackground = replaceRequired(
-  stagedBackground,
-  /\/\/ Development-only; the store package strips this import\.\r?\nimportScripts\(chrome\.runtime\.getURL\('src\/background\/codex-debug-bridge\.js'\)\);\r?\n/,
-  '',
-  1,
-  'background debug bridge import'
-);
-stagedBackground = replaceRequired(
-  stagedBackground,
-  /const CODEX_DEBUG_BRIDGE = globalThis\.LumnoCodexDebugBackground;\r?\nconst codexDebugBridge = CODEX_DEBUG_BRIDGE\.create\(\{ chromeApi: chrome \}\);\r?\n/,
-  '',
-  1,
-  'background debug bridge initialization'
-);
-stagedBackground = replaceRequired(
-  stagedBackground,
-  /codexDebugBridge\.attach\(\);\r?\n\r?\n/,
-  '',
-  1,
-  'background debug bridge attachment'
-);
-fs.writeFileSync(stagedBackgroundPath, stagedBackground);
-
-// openOverlayOnTab (overlay-open-service.js) adds the debug surface to the
-// overlay injection list while the bridge is enabled.
-const stagedOverlayOpenPath = stagedPath('src/background/overlay-open-service.js');
-let stagedOverlayOpen = fs.readFileSync(stagedOverlayOpenPath, 'utf8');
-stagedOverlayOpen = replaceRequired(
-  stagedOverlayOpen,
-  /  const shouldInjectOverlayCodexDebugSurface = codexDebugBridge\.isEnabled\(\);\r?\n/,
-  '',
-  1,
-  'conditional Overlay debug surface flag'
-);
-stagedOverlayOpen = replaceRequired(
-  stagedOverlayOpen,
-  /^[ \t]*\.\.\.\(shouldInjectOverlayCodexDebugSurface \? \['build\/codex-debug-surface\.js'\] : \[\]\),\r?\n/gm,
-  '',
-  1,
-  'conditional Overlay debug surface entry'
-);
-fs.writeFileSync(stagedOverlayOpenPath, stagedOverlayOpen);
-
-// background.js and the service scripts it imports share one global scope;
-// the injected Document PiP picker (pip-service.js) and the tab switcher
-// (tab-switcher-service.js) each list the debug surface once.
-const stagedBackgroundScriptPaths = [stagedBackgroundPath].concat(
-  fs.readdirSync(stagedPath('src/background'))
-    .filter((file) => /-service\.js$|^pinned-tab-recovery\.js$/.test(file))
-    .map((file) => stagedPath(`src/background/${file}`))
-);
-let injectedDebugSurfaceEntryCount = 0;
-stagedBackgroundScriptPaths.forEach((file) => {
-  const source = fs.readFileSync(file, 'utf8').replace(
-    /^[ \t]*'build\/codex-debug-surface\.js',\r?\n/gm,
-    () => {
-      injectedDebugSurfaceEntryCount += 1;
-      return '';
-    }
-  );
-  fs.writeFileSync(file, source);
-});
-if (injectedDebugSurfaceEntryCount !== 2) {
-  throw new Error(`Store package transform expected 2 injected debug surface entry match(es), found ${injectedDebugSurfaceEntryCount}.`);
-}
-stagedBackground = fs.readFileSync(stagedBackgroundPath, 'utf8');
-
-developmentOnlyFiles.forEach((file) => {
+DEVELOPMENT_ONLY_MODULES.forEach((file) => {
   if (fs.existsSync(stagedPath(file))) {
     throw new Error(`Development-only file remained in store package stage: ${file}`);
   }
@@ -237,9 +142,9 @@ stagedHtmlFiles.forEach((file) => {
     throw new Error(`Development-only surface reference remained in ${packagePathForFile(file)}.`);
   }
 });
-stagedBackgroundScriptPaths.forEach((file) => {
-  if (/codex-debug-(?:bridge|surface)\.js|LumnoCodexDebug|codexDebugBridge/.test(fs.readFileSync(file, 'utf8'))) {
-    throw new Error(`Development-only debug bridge reference remained in staged ${packagePathForFile(file)}.`);
+stagedBundles.forEach((file) => {
+  if (/codex-debug-(?:bridge|surface)\.js|LumnoCodexDebug|codexDebugBridge/.test(fs.readFileSync(stagedPath(`${BUNDLE_DIRECTORY}/${file}`), 'utf8'))) {
+    throw new Error(`Development-only debug bridge reference remained in ${BUNDLE_DIRECTORY}/${file}.`);
   }
 });
 

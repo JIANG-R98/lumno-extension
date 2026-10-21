@@ -259,7 +259,7 @@ async function main() {
   assert.equal(jaDaily.date, zhDaily.date);
   assert(jaDaily.dailyId.includes('JA-JP'), 'The same date in another market still switches to that market');
 
-  const catalog = require('../../src/newtab/wallpaper/wallpaper-catalog.js');
+  const catalog = require('../../src/newtab/wallpaper/wallpaper-catalog.js').WALLPAPER_CATALOG;
   const morning0 = () => new Date(2026, 9, 7, 9).getTime();
   assert.deepEqual(remote.CURATED_CATEGORIES, ['random', 'nature', 'water', 'city', 'minimal', 'art']);
   const curatedIds = Object.values(catalog).flat().map(([id]) => id);

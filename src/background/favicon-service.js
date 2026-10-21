@@ -3,16 +3,35 @@
 // shortcut and site-search provider icons (with their cache and warmup), site
 // theme colors, and the "favicon may have changed" marks recorded on visits.
 //
-// Loaded by background.js through its first importScripts block (the Firefox
-// build lists that block as background.scripts). Like background.js this is a
-// classic script sharing the worker's global scope. Its functions use
-// background.js bindings (FAVICON_UTILS, SHORTCUT_FAVICON, storageArea, the
-// site-search icon cache options, ...) only when they run, never while this
-// file loads, because background.js has not initialized its own top-level
-// bindings yet at that point.
+// A module of the service worker; background.js imports it before its own code
+// runs. Its functions use background.js bindings (FAVICON_UTILS,
+// SHORTCUT_FAVICON, storageArea, the site-search icon cache options, ...) only
+// when they run, never while this file loads, because background.js has not
+// initialized its own top-level bindings yet at that point.
 //
 // The caches below are rebuildable; the pending visit marks only delay a
 // favicon refresh if a suspension drops them.
+
+import * as BLACKLIST_UTILS from '../shared/blacklist-utils.js';
+import * as BROWSER_PROFILE from '../shared/browser-profile.js';
+import * as FAVICON_CACHE from '../shared/favicon/favicon-cache.js';
+import * as FAVICON_UTILS from '../shared/favicon/favicon-utils.js';
+import * as SETTINGS from '../shared/settings.js';
+import * as SHORTCUT_FAVICON from '../shared/favicon/shortcut-favicon.js';
+import {
+  FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY,
+  FAVICON_REQUEST_BLACKLIST_STORAGE_KEY,
+  FAVICON_VISIT_DIRTY_STORAGE_KEY,
+  SITE_SEARCH_ICON_CACHE_OPTIONS,
+  SITE_SEARCH_ICON_STORAGE_KEY,
+  SITE_SEARCH_PINNED_ICON_KEYS,
+  ignoreExpectedChromeError,
+  logBackgroundFaviconDecision,
+  normalizeHost,
+  storageArea,
+  warnBackgroundFailure
+} from './background.js';
+import { canFetchPageForFavicon } from './browser-urls-service.js';
 
 const FAVICON_VISIT_DIRTY_TTL_MS = 1000 * 60 * 60 * 24;
 
@@ -108,7 +127,7 @@ function schedulePersistFaviconVisitDirtyHost(hostname) {
   }, faviconVisitDirtyWriteDebounceMs);
 }
 
-function markFaviconDirtyForUrl(url) {
+export function markFaviconDirtyForUrl(url) {
   if (!url) {
     return;
   }
@@ -137,12 +156,12 @@ let faviconEnhancedFetchEnabledCache = null;
 let faviconEnhancedFetchEnabledPromise = null;
 
 // Storage listeners call these when the stored values change elsewhere.
-function invalidateFaviconRequestBlacklistCache() {
+export function invalidateFaviconRequestBlacklistCache() {
   faviconRequestBlacklistCache = null;
   faviconRequestBlacklistPromise = null;
 }
 
-function invalidateFaviconEnhancedFetchEnabledCache() {
+export function invalidateFaviconEnhancedFetchEnabledCache() {
   faviconEnhancedFetchEnabledCache = null;
   faviconEnhancedFetchEnabledPromise = null;
 }
@@ -161,9 +180,9 @@ const shortcutFaviconPending = new Map();
 
 let shortcutFaviconPolicyRevision = 0;
 
-const siteThemeColorCache = new Map();
+export const siteThemeColorCache = new Map();
 
-const siteThemeColorPending = new Map();
+export const siteThemeColorPending = new Map();
 
 const BACKGROUND_FAVICON_DATA_CACHE_MAX_ENTRIES = 256;
 
@@ -177,7 +196,7 @@ const SHORTCUT_FAVICON_MANIFEST_MAX_BYTES = 512 * 1024;
 
 const SHORTCUT_FAVICON_RESOURCE_MAX_BYTES = 256 * 1024;
 
-function invalidateShortcutFaviconPolicyCache() {
+export function invalidateShortcutFaviconPolicyCache() {
   shortcutFaviconPolicyRevision += 1;
   shortcutFaviconDataCache.clear();
   shortcutFaviconPending.clear();
@@ -185,7 +204,7 @@ function invalidateShortcutFaviconPolicyCache() {
 
 const SITE_SEARCH_ICON_WARM_CONCURRENCY = 2;
 
-const BACKGROUND_SITE_THEME_CACHE_MAX_ENTRIES = 512;
+export const BACKGROUND_SITE_THEME_CACHE_MAX_ENTRIES = 512;
 
 let backgroundFaviconCacheRuntime = null;
 
@@ -205,14 +224,14 @@ const siteSearchIconWarmQueue = [];
 
 const siteSearchIconWarmPending = new Set();
 
-function logBlockedLocalFavicon(url, candidateKind, reason, pageUrl) {
+export function logBlockedLocalFavicon(url, candidateKind, reason, pageUrl) {
   return logBackgroundFaviconDecision(url, reason || 'local-rule', {
     pageUrl: pageUrl || url,
     candidateKind: candidateKind || 'unknown'
   });
 }
 
-function getBackgroundFaviconCacheRuntime() {
+export function getBackgroundFaviconCacheRuntime() {
   if (!backgroundFaviconCacheRuntime) {
     backgroundFaviconCacheRuntime = FAVICON_CACHE.createFaviconCache({
       storageArea: (chrome && chrome.storage && chrome.storage.local) ? chrome.storage.local : null,
@@ -230,7 +249,7 @@ function getBackgroundFaviconCacheRuntime() {
   return backgroundFaviconCacheRuntime;
 }
 
-function getBackgroundFaviconUrlResolver() {
+export function getBackgroundFaviconUrlResolver() {
   if (!backgroundFaviconUrlResolver) {
     backgroundFaviconUrlResolver = FAVICON_UTILS.createFaviconUrlResolver({
       chromeApi: chrome,
@@ -256,7 +275,7 @@ function getBackgroundFaviconUrlResolver() {
   return backgroundFaviconUrlResolver;
 }
 
-function arrayBufferToBase64(buffer) {
+export function arrayBufferToBase64(buffer) {
   let binary = '';
   const bytes = new Uint8Array(buffer);
   const chunkSize = 0x8000;
@@ -271,7 +290,7 @@ function getExtensionFaviconUrl(pageUrl) {
   return resolver ? resolver.getExtensionFaviconUrl(pageUrl) : '';
 }
 
-function isBrowserInternalPageUrl(url) {
+export function isBrowserInternalPageUrl(url) {
   const resolver = getBackgroundFaviconUrlResolver();
   return resolver ? resolver.isBrowserInternalPageUrl(url) : false;
 }
@@ -281,12 +300,12 @@ function getGstaticFaviconUrl(pageUrl) {
   return resolver ? resolver.getGstaticFaviconUrl(pageUrl) : '';
 }
 
-function getPageFaviconCandidateUrl(pageUrl) {
+export function getPageFaviconCandidateUrl(pageUrl) {
   const resolver = getBackgroundFaviconUrlResolver();
   return resolver ? resolver.getPageFaviconCandidateUrl(pageUrl) : '';
 }
 
-function getHostFaviconUrl(hostname) {
+export function getHostFaviconUrl(hostname) {
   const normalized = normalizeFaviconHost(hostname);
   if (!normalized) {
     return '';
@@ -303,7 +322,7 @@ function isFaviconProxyUrl(url) {
   return FAVICON_UTILS.isFaviconProxyUrl(url);
 }
 
-function getFaviconFallbackHost(rawInput) {
+export function getFaviconFallbackHost(rawInput) {
   const withoutScheme = String(rawInput || '').replace(/^https?:\/\//i, '');
   const authority = withoutScheme.split(/[/?#]/)[0] || '';
   if (!authority) {
@@ -322,7 +341,7 @@ function getFaviconFallbackHost(rawInput) {
   return (authority.split(':')[0] || '').toLowerCase();
 }
 
-function shouldBlockFaviconForHost(hostname) {
+export function shouldBlockFaviconForHost(hostname) {
   return FAVICON_UTILS.shouldBlockFaviconForHost(hostname);
 }
 
@@ -338,7 +357,7 @@ function isFaviconRequestBlockedByBlacklist(url) {
   return !isAllowedFaviconProxyRequestUrl(url) && isUrlBlockedByFaviconRequestBlacklist(url);
 }
 
-function isBlockedLocalFaviconUrl(url) {
+export function isBlockedLocalFaviconUrl(url) {
   const blockedByLocalRules = FAVICON_UTILS.isBlockedLocalFaviconUrl(url);
   return blockedByLocalRules || isFaviconRequestBlockedByBlacklist(url);
 }
@@ -381,7 +400,7 @@ function getFaviconTargetPolicy(targetUrl, hostOverride) {
   };
 }
 
-function normalizeFaviconHost(hostname) {
+export function normalizeFaviconHost(hostname) {
   return FAVICON_UTILS.normalizeFaviconHost(hostname);
 }
 
@@ -393,7 +412,7 @@ function parseHtmlThemeColorCandidates(html, pageUrl, preferredTheme) {
   return FAVICON_UTILS.parseHtmlThemeColorCandidates(html, pageUrl, normalizeThemePreference(preferredTheme));
 }
 
-function normalizeThemeAccentRgb(value) {
+export function normalizeThemeAccentRgb(value) {
   if (!Array.isArray(value) || value.length !== 3) {
     return null;
   }
@@ -453,7 +472,7 @@ function resolveThemeColorCandidates(candidates) {
   return next();
 }
 
-function resolveSiteThemeColor(targetUrl, hostOverride, preferredTheme) {
+export function resolveSiteThemeColor(targetUrl, hostOverride, preferredTheme) {
   const inputUrl = String(targetUrl || '').trim();
   if (!inputUrl) {
     return Promise.resolve(null);
@@ -513,7 +532,7 @@ function dedupeAndSortFaviconCandidates(candidates) {
     .map((item) => item.url);
 }
 
-function resolveFaviconCandidates(targetUrl, hostOverride, fallbackUrl) {
+export function resolveFaviconCandidates(targetUrl, hostOverride, fallbackUrl) {
   const inputUrl = String(targetUrl || '').trim();
   if (!inputUrl) {
     return Promise.resolve([]);
@@ -769,7 +788,7 @@ async function resolveShortcutFaviconData(pageUrl, preferredTheme, signal, expli
   return null;
 }
 
-function fetchShortcutFaviconData(pageUrl, preferredTheme, explicitIconUrl, refresh, iconSource) {
+export function fetchShortcutFaviconData(pageUrl, preferredTheme, explicitIconUrl, refresh, iconSource) {
   const normalizedPageUrl = SHORTCUT_FAVICON.normalizePageUrl(pageUrl);
   const theme = getShortcutFaviconPreferredTheme(preferredTheme);
   if (!normalizedPageUrl) {
@@ -847,7 +866,7 @@ function getSiteSearchIconStore() {
   return siteSearchIconStore;
 }
 
-function removeLegacySiteSearchIconCaches() {
+export function removeLegacySiteSearchIconCaches() {
   const legacyKeys = Array.isArray(SHORTCUT_FAVICON.SITE_SEARCH_LEGACY_STORAGE_KEYS)
     ? SHORTCUT_FAVICON.SITE_SEARCH_LEGACY_STORAGE_KEYS
     : [];
@@ -989,7 +1008,7 @@ function drainSiteSearchIconWarmQueue() {
   }
 }
 
-function scheduleSiteSearchProviderIconWarmup(providers, preferredTheme) {
+export function scheduleSiteSearchProviderIconWarmup(providers, preferredTheme) {
   const items = Array.isArray(providers) ? providers : [];
   if (items.length === 0) {
     return;
@@ -1018,7 +1037,7 @@ function scheduleSiteSearchProviderIconWarmup(providers, preferredTheme) {
   }).catch(warnBackgroundFailure('Failed to warm site search icons.'));
 }
 
-function fetchFaviconData(url, pageUrl) {
+export function fetchFaviconData(url, pageUrl) {
   if (!url) {
     return Promise.resolve(null);
   }
@@ -1101,7 +1120,7 @@ function fetchFaviconData(url, pageUrl) {
 // Web pages cannot load _favicon URLs (they are not web accessible), so items
 // rendered inside a page get their browser-cache icons as data: URLs. An icon
 // not ready within the wait renders as the surface's fallback instead.
-function inlineExtensionFaviconsForWebPage(items, waitMs) {
+export function inlineExtensionFaviconsForWebPage(items, waitMs) {
   const list = Array.isArray(items) ? items : [];
   const timeoutMs = Number.isFinite(waitMs) ? Math.max(0, waitMs) : 400;
   return Promise.all(list.map((item) => {
@@ -1185,7 +1204,7 @@ function normalizeFaviconEnhancedFetchEnabled(value) {
   return SETTINGS.normalizeFaviconEnhancedFetchEnabled(value);
 }
 
-function loadFaviconRequestBlacklistItems() {
+export function loadFaviconRequestBlacklistItems() {
   if (faviconRequestBlacklistCache) {
     return Promise.resolve(faviconRequestBlacklistCache);
   }
@@ -1208,7 +1227,7 @@ function loadFaviconRequestBlacklistItems() {
   return faviconRequestBlacklistPromise;
 }
 
-function loadFaviconEnhancedFetchEnabled() {
+export function loadFaviconEnhancedFetchEnabled() {
   if (typeof faviconEnhancedFetchEnabledCache === 'boolean') {
     return Promise.resolve(faviconEnhancedFetchEnabledCache);
   }

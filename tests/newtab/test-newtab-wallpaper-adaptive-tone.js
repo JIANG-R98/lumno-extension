@@ -1,6 +1,6 @@
 const assert = require('assert');
-const fs = require('fs');
 const vm = require('vm');
+const { moduleScript } = require('../helpers/module-script');
 
 function createStyle() {
   const values = new Map();
@@ -180,7 +180,7 @@ function getCssRgbChannels(value) {
   };
   sandbox.globalThis = sandbox;
   vm.runInNewContext(
-    fs.readFileSync('src/newtab/wallpaper/wallpaper-adaptive-tone.js', 'utf8'),
+    moduleScript('src/newtab/wallpaper/wallpaper-adaptive-tone.js', 'LumnoNewtabWallpaperAdaptiveTone'),
     sandbox,
     { filename: 'src/newtab/wallpaper/wallpaper-adaptive-tone.js' }
   );

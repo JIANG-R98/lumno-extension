@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
+const { withoutExports } = require('./closure-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const OPTIONS_ENTRY = 'src/options/options.js';
 // The parts of the Options page runtime split out of options.js, then
 // options.js, in the order options.html loads them.
 const OPTIONS_RUNTIME_FILES = [
@@ -28,14 +28,14 @@ const OPTIONS_RUNTIME_FILES = [
 ];
 
 // The runtime for source checks and extracted functions. The parts share
-// page state as properties of one `optionsState` object; the factory's extra
-// indentation and that prefix are dropped so checks see the code as it read
-// inside the single options.js closure.
+// page state as properties of one `optionsState` object; that prefix is
+// dropped so checks see the code as it read inside the single options.js
+// closure.
 function readOptionsRuntimeSource() {
-  return OPTIONS_RUNTIME_FILES.map((file) => {
-    const source = fs.readFileSync(path.join(repoRoot, file), 'utf8');
-    return file === OPTIONS_ENTRY ? source : source.replace(/^  /gm, '');
-  }).join('\n').replace(/\boptionsState\./g, '');
+  return withoutExports(OPTIONS_RUNTIME_FILES
+    .map((file) => fs.readFileSync(path.join(repoRoot, file), 'utf8'))
+    .join('\n'))
+    .replace(/\boptionsState\./g, '');
 }
 
 module.exports = { OPTIONS_RUNTIME_FILES, readOptionsRuntimeSource };

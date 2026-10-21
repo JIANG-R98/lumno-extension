@@ -34,12 +34,12 @@ container.appendChild(modePrefix);
 container.appendChild(modeTabHint);
 shadowRoot.appendChild(container);
 
-delete global.LumnoSearchInputMode;
+delete LumnoSearchInputMode;
 delete require.cache[require.resolve('../../src/shared/search/search-input-mode.js')];
-require(path.resolve(__dirname, '../../src/shared/search/search-input-mode.js'));
+const LumnoSearchInputMode = require(path.resolve(__dirname, '../../src/shared/search/search-input-mode.js'));
 
 let selectedModeId = '';
-const controller = global.LumnoSearchInputMode.createInputModeController(
+const controller = LumnoSearchInputMode.createInputModeController(
   {
     container,
     input,

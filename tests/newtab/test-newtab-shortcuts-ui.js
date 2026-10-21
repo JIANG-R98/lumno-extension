@@ -6,6 +6,7 @@ const vm = require('vm');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
+const { moduleScript } = require('../helpers/module-script');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const newtabJs = readNewtabRuntimeSource();
@@ -311,7 +312,7 @@ async function assertDarkWallpaperKeepsShortcutThemeBackground() {
     clearTimeout
   };
   sandbox.globalThis = sandbox;
-  vm.runInNewContext(wallpaperAdaptiveToneJs, sandbox);
+  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-adaptive-tone.js', 'LumnoNewtabWallpaperAdaptiveTone'), sandbox);
   const runtime = sandbox.LumnoNewtabWallpaperAdaptiveTone.createWallpaperAdaptiveTone({
     documentObj,
     windowObj,
@@ -500,7 +501,7 @@ async function assertDarkThemeKeepsShortcutThemeBackground() {
     clearTimeout
   };
   sandbox.globalThis = sandbox;
-  vm.runInNewContext(wallpaperAdaptiveToneJs, sandbox);
+  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-adaptive-tone.js', 'LumnoNewtabWallpaperAdaptiveTone'), sandbox);
   const runtime = sandbox.LumnoNewtabWallpaperAdaptiveTone.createWallpaperAdaptiveTone({
     documentObj,
     windowObj,
@@ -1237,7 +1238,7 @@ assertContains(
 
 assertContains(
   newtabJs,
-  'const NEWTAB_SHORTCUTS_STORE = globalThis.LumnoNewtabShortcutsStore;',
+  "import * as NEWTAB_SHORTCUTS_STORE from './shortcuts/shortcuts-store.js';",
   'newtab runtime should read the shortcuts store'
 );
 

@@ -4,7 +4,7 @@ const path = require('path');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-require('../../src/newtab/search/search-autocomplete.js');
+const LumnoNewtabSearchAutocomplete = require('../../src/newtab/search/search-autocomplete.js');
 
 // Inline autocomplete appends to what was typed; it must not rewrite the
 // typed characters in the candidate's own case ("4A" stays "4A").
@@ -29,7 +29,7 @@ const pageState = {
   inputParts: { input },
   autocompleteState: null
 };
-const autocomplete = globalThis.LumnoNewtabSearchAutocomplete.createSearchAutocomplete({
+const autocomplete = LumnoNewtabSearchAutocomplete.createSearchAutocomplete({
   pageState,
   getUrlDisplay: (url) => String(url || '').replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, ''),
   isEnglishQuery: () => true,

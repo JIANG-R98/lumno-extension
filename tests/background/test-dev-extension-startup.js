@@ -1,20 +1,12 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
 const vm = require('vm');
 const { readBackgroundSource } = require('../helpers/background-source');
-
-const repoRoot = path.resolve(__dirname, '..', '..');
-const source = fs.readFileSync(
-  path.join(repoRoot, 'src/background/dev-extension-startup.js'),
-  'utf8'
-);
+const { runModuleInContext } = require('../helpers/module-script');
 
 function loadRuntime() {
   const sandbox = { Promise };
   sandbox.globalThis = sandbox;
-  vm.runInNewContext(source, sandbox, { filename: 'dev-extension-startup.js' });
-  return sandbox.LumnoDevExtensionStartup;
+  return runModuleInContext('src/background/dev-extension-startup.js', vm.createContext(sandbox));
 }
 
 async function run() {
@@ -24,7 +16,7 @@ async function run() {
   assert.strictEqual(runtime.isSameVersionReload({ reason: 'chrome_update', previousVersion: '0.9.22' }, '0.9.22'), false);
 
   const backgroundSource = readBackgroundSource();
-  assert.match(backgroundSource, /chrome\.runtime\.getURL\('src\/background\/dev-extension-startup\.js'\)/);
+  assert.match(backgroundSource, /import \* as DEV_EXTENSION_STARTUP from '\.\/dev-extension-startup\.js';/);
   assert.match(backgroundSource, /DEV_EXTENSION_STARTUP\.isSameVersionReload\(details, chrome\.runtime\.getManifest\(\)\.version\)/);
   assert.match(
     backgroundSource,

@@ -3,8 +3,7 @@
 const assert = require('assert');
 const path = require('path');
 
-require(path.join(__dirname, '..', '..', 'src', 'newtab', 'layout.js'));
-const { nextDockDensity } = globalThis.LumnoNewtabLayout;
+const { nextDockDensity } = require(path.join(__dirname, '..', '..', 'src', 'newtab', 'layout.js'));
 
 function probe(stable) {
   const calls = [];

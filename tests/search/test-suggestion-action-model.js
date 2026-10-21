@@ -1,8 +1,8 @@
 const assert = require('assert');
 
-require('../../src/shared/search/suggestion-action-model.js');
+const LumnoSuggestionActionModel = require('../../src/shared/search/suggestion-action-model.js');
 
-const actionModel = globalThis.LumnoSuggestionActionModel;
+const actionModel = LumnoSuggestionActionModel;
 
 assert.ok(actionModel, 'suggestion action model should be exported');
 [

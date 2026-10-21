@@ -1,7 +1,9 @@
+import * as LumnoSettings from '../shared/settings.js';
+
 (function() {
   // Starts the startup work the last New Tab's choices make known while the rest of the page is still
   // loading; newtab.js takes the results.
-  const settings = globalThis.LumnoSettings;
+  const settings = LumnoSettings;
   const chromeApi = window.chrome || null;
 
   function readCache(key) {

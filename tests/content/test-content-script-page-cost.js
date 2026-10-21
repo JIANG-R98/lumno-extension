@@ -1,14 +1,11 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
 const { JSDOM } = require('jsdom');
+const { bundleScript } = require('../helpers/module-script');
 
 // Loads the all-frames shortcut observer every ordinary page gets, and the
 // copy-URL listener the first copy command injects, into a JSDOM page and
 // counts what they send the background while the user works in the page.
 
-const repoRoot = path.join(__dirname, '..', '..');
-const read = (relativePath) => fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
 const LANGUAGE_KEY = '_x_extension_language_2024_unique_';
 
 function loadPage(options) {
@@ -71,11 +68,8 @@ function loadPage(options) {
     configurable: true,
     value: { writeText: () => Promise.resolve() }
   });
-  window.eval(read('src/shared/settings.js'));
-  window.eval(read('src/shared/page-color-scheme.js'));
-  window.eval(read('src/content/hotkey-listener.js'));
-  window.eval(read('src/shared/shortcut-key-matcher.js'));
-  window.eval(read('src/content/shortcut-key-observer.js'));
+  window.eval(bundleScript('hotkey-listener'));
+  window.eval(bundleScript('shortcut-key-observer'));
   const focusElements = (count) => {
     for (let index = 0; index < count; index += 1) {
       const input = window.document.createElement('input');
@@ -217,8 +211,7 @@ async function testSubframeAsksForTheShortcutOnlyWhenFocused() {
       onMessage: { addListener() {}, removeListener() {} }
     }
   };
-  frameWindow.eval(read('src/shared/shortcut-key-matcher.js'));
-  frameWindow.eval(read('src/content/shortcut-key-observer.js'));
+  frameWindow.eval(bundleScript('shortcut-key-observer'));
   await settle();
   assert.deepStrictEqual(sent, [], 'loading a subframe should not message the background');
   frameWindow.dispatchEvent(new frameWindow.FocusEvent('focus'));

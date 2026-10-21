@@ -1,20 +1,29 @@
 // Picture-in-Picture: which tab owns the active video PiP window, the Web Clip
 // (Document PiP) picker, and the messages the page-world PiP helpers send.
 //
-// Loaded by background.js through its first importScripts block (the Firefox
-// build lists that block as background.scripts). Like background.js this is a
-// classic script sharing the worker's global scope. Its functions use
-// background.js bindings (the Document PiP setting cache,
-// openExtensionOptionsPage, ...) only when they run, never while this file
-// loads, because background.js has not initialized its own top-level bindings
-// yet at that point.
+// A module of the service worker; background.js imports it before its own code
+// runs. Its functions use background.js bindings (the Document PiP setting
+// cache, openExtensionOptionsPage, ...) only when they run, never while this
+// file loads, because background.js has not initialized its own top-level
+// bindings yet at that point.
 
-const pipOwnership = globalThis.LumnoPipOwnership.create({
+import * as LumnoPipMainWorld from './pip-main-world.js';
+import * as LumnoPipOwnership from './pip-ownership.js';
+import {
+  documentPipEnabledCache,
+  documentPipEnabledReady,
+  logHotkeyDebug,
+  openExtensionOptionsPage
+} from './background.js';
+import { getResolvedTabUrl, isRestrictedUrl } from './browser-urls-service.js';
+import { DEVELOPMENT_BUILD } from '../shared/build-flags.js';
+
+export const pipOwnership = LumnoPipOwnership.create({
   chromeApi: chrome,
   getResolvedTabUrl: getResolvedTabUrl
 });
 
-const pipMainWorld = globalThis.LumnoPipMainWorld.create({
+const pipMainWorld = LumnoPipMainWorld.create({
   chromeApi: chrome
 });
 
@@ -93,7 +102,7 @@ function openDocumentPipSettings() {
   openExtensionOptionsPage({ hash: 'labs:document-pip' });
 }
 
-function openDocumentPipPickerOnTab(activeTab, source) {
+export function openDocumentPipPickerOnTab(activeTab, source) {
   return documentPipEnabledReady.then(() => {
     openDocumentPipPickerOnReadyTab(activeTab, source);
     return documentPipEnabledCache;
@@ -132,7 +141,7 @@ function openDocumentPipPickerOnReadyTab(activeTab, source) {
     chrome.scripting.executeScript({
       target: { tabId: activeTab.id },
       files: [
-        'build/codex-debug-surface.js',
+        ...(DEVELOPMENT_BUILD ? ['build/codex-debug-surface.js'] : []),
         'build/document-pip-picker.js'
       ]
     }, () => {
@@ -217,7 +226,7 @@ function sendPipMainWorldResponse(methodName, sender, sendResponse) {
 }
 
 // Picture-in-picture ownership and main-world helpers.
-const PIP_MESSAGE_HANDLERS = Object.freeze({
+export const PIP_MESSAGE_HANDLERS = Object.freeze({
   pipRequestOwnership(request, sender, sendResponse) {
     pipOwnership.requestGlobalPipOwnership(sender, request && request.kind ? String(request.kind) : '')
       .then((result) => {

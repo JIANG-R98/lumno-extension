@@ -2,25 +2,22 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { loadBackground } = require('../helpers/background-harness');
+const { getBackgroundServiceFiles } = require('../helpers/background-source');
 
-// background.js is split into classic scripts that share the worker's global
-// scope. Chrome loads them through importScripts while background.js starts;
-// the Firefox build (scripts/build/build-firefox.js) lists the first import block as
-// separate background.scripts that all run before background.js. Both orders
-// must boot without touching a top-level binding before it is initialized.
+// background.js imports its service modules; the bundle runs them before
+// background.js's own code. Chrome runs the bundle as the service worker; the
+// Firefox build (scripts/build/build-firefox.js) runs it as a background script
+// after the scripts the worker would import on first use. Both must boot
+// without touching a top-level binding before it is initialized.
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const backgroundSource = fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8');
-const firstImportBlock = backgroundSource.match(/importScripts\(([\s\S]*?)\);/)[1];
 const serviceModules = fs.readdirSync(path.join(repoRoot, 'src/background'))
   .filter((file) => /-service\.js$|^pinned-tab-recovery\.js$/.test(file))
   .map((file) => `src/background/${file}`);
+const importedServices = getBackgroundServiceFiles();
 
 serviceModules.forEach((file) => {
-  assert.ok(
-    firstImportBlock.includes(`'${file}'`),
-    `${file} must be in the first importScripts block so the Firefox build loads it`
-  );
+  assert.ok(importedServices.includes(file), `background.js should import ${file}`);
 });
 
 function bootAndCheck(firefoxOrder) {

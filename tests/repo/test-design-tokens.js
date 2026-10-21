@@ -70,7 +70,7 @@ const newtabCss = read('src/newtab/newtab.css');
 assert.doesNotMatch(optionsCss, /^\._x_extension_toast_2024_unique_ \{[^}]*background:/m,
   'the Options toast uses src/shared/ui/toast.css');
 
-// One indicator implementation: classic scripts call the shared module.
+// One indicator implementation: the page modules call the shared module.
 assert.doesNotMatch(readOptionsRuntimeSource(), /function measure\w*Indicator/,
   'options.js should not measure segmented indicators itself');
 assert.match(read('src/newtab/top-content/quotes.js'), /globalThis\.LumnoSegmentedIndicator/,
@@ -79,7 +79,7 @@ assert.match(read('src/newtab/top-content/quotes.js'), /globalThis\.LumnoSegment
 // hook; react-src/newtab/wallpaper-view.test.tsx checks their indicators move.
 ['react-src/newtab/react-islands-entry.ts', 'react-src/options/options-islands-entry.ts'].forEach((file) => {
   assert.match(read(file), /runtime\.LumnoSegmentedIndicator = createSegmentedIndicatorApi\(\)/,
-    `${file} should expose the shared segmented indicator to classic scripts`);
+    `${file} should expose the shared segmented indicator to the page modules`);
 });
 
 console.log('design token tests passed');

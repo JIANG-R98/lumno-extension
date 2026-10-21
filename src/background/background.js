@@ -1,145 +1,201 @@
-// Classic service-worker imports run in dependency order. A missing file is a
-// packaging error, so let it fail loudly instead of starting half-initialized.
-importScripts(
-  chrome.runtime.getURL('src/shared/blacklist-utils.js'),
-  chrome.runtime.getURL('src/shared/url-guards.js'),
-  chrome.runtime.getURL('src/shared/favicon/favicon-utils.js'),
-  chrome.runtime.getURL('src/shared/favicon/shortcut-favicon.js'),
-  chrome.runtime.getURL('src/shared/shortcut-key-matcher.js'),
-  chrome.runtime.getURL('src/shared/favicon/favicon-cache.js'),
-  chrome.runtime.getURL('src/newtab/theme/favicon-theme.js'),
-  chrome.runtime.getURL('src/shared/extension-routes.js'),
-  chrome.runtime.getURL('src/background/command-target-policy.js'),
-  chrome.runtime.getURL('src/shared/settings.js'),
-  chrome.runtime.getURL('src/shared/bookmark-folder-reference.js'),
-  chrome.runtime.getURL('src/newtab/shortcuts/shortcuts-store.js'),
-  chrome.runtime.getURL('src/shared/site-display-name.js'),
-  chrome.runtime.getURL('src/background/page-shortcut-menu.js'),
-  chrome.runtime.getURL('src/newtab/wallpaper/wallpaper-local-store.js'),
-  chrome.runtime.getURL('src/shared/webdav-contract.js'),
-  chrome.runtime.getURL('src/background/webdav-client.js'),
-  chrome.runtime.getURL('src/background/webdav-sync.js'),
-  chrome.runtime.getURL('src/shared/update-notice.js'),
-  // Folds traditional characters to simplified ones for local search matching.
-  chrome.runtime.getURL('src/shared/search/search-han-variants.js'),
-  chrome.runtime.getURL('src/shared/search/utils/direct-navigation.js'),
-  chrome.runtime.getURL('src/shared/search/utils/text-normalize.js'),
-  chrome.runtime.getURL('src/shared/search/utils/text-index.js'),
-  chrome.runtime.getURL('src/shared/search/utils/keyboard-layouts.js'),
-  chrome.runtime.getURL('src/shared/search/utils/text-matching.js'),
-  chrome.runtime.getURL('src/shared/search/utils/selection-stats.js'),
-  chrome.runtime.getURL('src/shared/search/utils/result-dedup.js'),
-  chrome.runtime.getURL('src/shared/search/utils/suggestion-slate.js'),
-  chrome.runtime.getURL('src/shared/search/utils/query-intent.js'),
-  chrome.runtime.getURL('src/shared/search/utils/relevance-score.js'),
-  chrome.runtime.getURL('src/shared/search/utils/brand-suggestions.js'),
-  chrome.runtime.getURL('src/shared/search/utils/navigation-matching.js'),
-  chrome.runtime.getURL('src/shared/search/utils/site-search-providers.js'),
-  chrome.runtime.getURL('src/shared/search/utils/site-search-matching.js'),
-  chrome.runtime.getURL('src/shared/search/search-utils.js'),
-  chrome.runtime.getURL('src/shared/selection-intent.js'),
-  chrome.runtime.getURL('src/shared/search/site-search-store.js'),
-  chrome.runtime.getURL('src/shared/community-links.js'),
-  chrome.runtime.getURL('src/shared/search/help-center-search.js'),
-  chrome.runtime.getURL('src/shared/search/aggregate-search-store.js'),
-  chrome.runtime.getURL('src/background/ai-provider-submit.js'),
-  chrome.runtime.getURL('src/background/aggregate-search.js'),
-  chrome.runtime.getURL('src/background/extension-pages.js'),
-  chrome.runtime.getURL('src/background/tab-groups.js'),
-  chrome.runtime.getURL('src/background/search-result-tabs.js'),
-  chrome.runtime.getURL('src/background/bookmark-tab-groups.js'),
-  chrome.runtime.getURL('src/background/selection-target.js'),
-  chrome.runtime.getURL('src/background/selection-quick-action-provider.js'),
-  chrome.runtime.getURL('src/background/selection-script-registration.js'),
-  chrome.runtime.getURL('src/background/message-router.js'),
-  chrome.runtime.getURL('src/background/newtab-fallback.js'),
-  chrome.runtime.getURL('src/shared/browser-profile.js'),
-  chrome.runtime.getURL('src/background/shortcut-rules.js'),
-  chrome.runtime.getURL('src/background/pip-ownership.js'),
-  chrome.runtime.getURL('src/background/pip-main-world.js'),
-  chrome.runtime.getURL('src/background/recent-tab-switcher.js'),
-  chrome.runtime.getURL('src/shared/progress-match.js'),
-  chrome.runtime.getURL('src/shared/progress-history.js'),
-  chrome.runtime.getURL('src/background/progress-tracker.js'),
-  chrome.runtime.getURL('src/newtab/recent/recent-sites-store.js'),
-  chrome.runtime.getURL('src/background/popup-recent-pin.js'),
-  chrome.runtime.getURL('src/background/overlay-loading-lifecycle.js'),
-  chrome.runtime.getURL('src/background/dev-extension-startup.js'),
-  // Background services split out of this file. They share its global scope
-  // and only define functions and their own state while loading.
-  chrome.runtime.getURL('src/background/tab-switcher-service.js'),
-  chrome.runtime.getURL('src/background/pinned-tab-recovery.js'),
-  chrome.runtime.getURL('src/background/favicon-service.js'),
-  chrome.runtime.getURL('src/background/search-suggestions-service.js'),
-  chrome.runtime.getURL('src/background/browser-urls-service.js'),
-  chrome.runtime.getURL('src/background/tab-switch-stats-service.js'),
-  chrome.runtime.getURL('src/background/overlay-loading-service.js'),
-  chrome.runtime.getURL('src/background/overlay-open-service.js'),
-  chrome.runtime.getURL('src/background/command-service.js'),
-  chrome.runtime.getURL('src/background/pip-service.js'),
-  chrome.runtime.getURL('src/background/selection-quick-actions-service.js'),
-  chrome.runtime.getURL('src/background/site-search-service.js'),
-  chrome.runtime.getURL('src/background/message-handlers-service.js')
-);
+// The worker runs these modules in this order before its own code: the
+// shared and background modules first, then the services split out of this
+// file.
+import * as BLACKLIST_UTILS from '../shared/blacklist-utils.js';
+import * as LumnoUrlGuards from '../shared/url-guards.js';
+import * as FAVICON_UTILS from '../shared/favicon/favicon-utils.js';
+import * as SHORTCUT_FAVICON from '../shared/favicon/shortcut-favicon.js';
+import * as SHORTCUT_KEY_MATCHER from '../shared/shortcut-key-matcher.js';
+import * as FAVICON_CACHE from '../shared/favicon/favicon-cache.js';
+import * as NEWTAB_FAVICON_THEME from '../newtab/theme/favicon-theme.js';
+import * as EXTENSION_ROUTES from '../shared/extension-routes.js';
+import * as COMMAND_TARGET_POLICY from './command-target-policy.js';
+import * as SETTINGS from '../shared/settings.js';
+import * as LumnoSettings from '../shared/settings.js';
+import * as LumnoBookmarkFolderReference from '../shared/bookmark-folder-reference.js';
+import '../newtab/shortcuts/shortcuts-store.js';
+import '../shared/site-display-name.js';
+import * as LumnoPageShortcutMenu from './page-shortcut-menu.js';
+import '../newtab/wallpaper/wallpaper-local-store.js';
+import '../shared/webdav-contract.js';
+import * as LumnoWebDavClient from './webdav-client.js';
+import * as LumnoWebDavSync from './webdav-sync.js';
+import * as UPDATE_NOTICE from '../shared/update-notice.js';
+// Folds traditional characters to simplified ones for local search matching.
+import '../shared/search/search-han-variants.js';
+import '../shared/search/utils/direct-navigation.js';
+import '../shared/search/utils/text-normalize.js';
+import '../shared/search/utils/text-index.js';
+import '../shared/search/utils/keyboard-layouts.js';
+import '../shared/search/utils/text-matching.js';
+import '../shared/search/utils/selection-stats.js';
+import '../shared/search/utils/result-dedup.js';
+import '../shared/search/utils/suggestion-slate.js';
+import '../shared/search/utils/query-intent.js';
+import '../shared/search/utils/relevance-score.js';
+import '../shared/search/utils/brand-suggestions.js';
+import '../shared/search/utils/navigation-matching.js';
+import '../shared/search/utils/site-search-providers.js';
+import '../shared/search/utils/site-search-matching.js';
+import * as SEARCH_UTILS from '../shared/search/search-utils.js';
+import * as SELECTION_INTENT from '../shared/selection-intent.js';
+import '../shared/search/site-search-store.js';
+import * as COMMUNITY_LINKS from '../shared/community-links.js';
+import * as HELP_CENTER_SEARCH from '../shared/search/help-center-search.js';
+import * as AGGREGATE_SEARCH_STORE from '../shared/search/aggregate-search-store.js';
+import * as AI_PROVIDER_SUBMIT from './ai-provider-submit.js';
+import * as AGGREGATE_SEARCH from './aggregate-search.js';
+import * as BACKGROUND_PAGES from './extension-pages.js';
+import * as BACKGROUND_TAB_GROUPS from './tab-groups.js';
+import * as SEARCH_RESULT_TABS from './search-result-tabs.js';
+import * as BOOKMARK_TAB_GROUPS from './bookmark-tab-groups.js';
+import * as SELECTION_TARGET from './selection-target.js';
+import * as SELECTION_QUICK_ACTION_PROVIDER from './selection-quick-action-provider.js';
+import * as LumnoSelectionScriptRegistration from './selection-script-registration.js';
+import * as BACKGROUND_MESSAGE_ROUTER from './message-router.js';
+import * as BACKGROUND_NEWTAB_FALLBACK from './newtab-fallback.js';
+import * as BROWSER_PROFILE from '../shared/browser-profile.js';
+import * as BACKGROUND_SHORTCUT_RULES from './shortcut-rules.js';
+import './pip-ownership.js';
+import './pip-main-world.js';
+import './recent-tab-switcher.js';
+import * as LumnoProgressMatch from '../shared/progress-match.js';
+import * as LumnoProgressHistory from '../shared/progress-history.js';
+import * as LumnoProgressTracker from './progress-tracker.js';
+import * as LumnoNewtabRecentSitesStore from '../newtab/recent/recent-sites-store.js';
+import * as LumnoPopupRecentPin from './popup-recent-pin.js';
+import './overlay-loading-lifecycle.js';
+import * as DEV_EXTENSION_STARTUP from './dev-extension-startup.js';
+import {
+  applyTabSwitcherEnabledSetting,
+  clearSwitcherThumbnailPriority,
+  ensureTabSwitcherStateLoaded,
+  flushPendingTabSwitcherState,
+  loadFirefoxBrandIcon,
+  prepareShortcutKeyObserversInOpenTabs,
+  recordRecentSwitcherTab,
+  registerTabSwitcherExtensionPagePortConnection,
+  removeRecentSwitcherTab,
+  scheduleSwitcherThumbnailCapture,
+  tabSwitcherHostTabIdByWindowId,
+  triggerTabSwitcherForTab,
+  updateRecentSwitcherTab
+} from './tab-switcher-service.js';
+import {
+  applyPinnedTabRecoverySetting,
+  flushPendingPinnedTabSnapshot,
+  restorePinnedTabsFromSnapshotOnStartup,
+  schedulePersistPinnedTabSnapshot
+} from './pinned-tab-recovery.js';
+import {
+  getBackgroundFaviconCacheRuntime,
+  invalidateFaviconEnhancedFetchEnabledCache,
+  invalidateFaviconRequestBlacklistCache,
+  invalidateShortcutFaviconPolicyCache,
+  markFaviconDirtyForUrl,
+  removeLegacySiteSearchIconCaches
+} from './favicon-service.js';
+import {
+  clearPendingSearch,
+  getSiteSearchProviderEntryUrl,
+  invalidateSearchBlacklistCache,
+  invalidateSearchResultSourceTypesCache,
+  invalidateSiteSearchProviderCache,
+  normalizeSearchSelectionStats,
+  pendingSearchAt,
+  pendingSearchGroupContext,
+  pendingSearchTabId,
+  refreshDefaultSearchEngineState,
+  replaceSearchSelectionStatsCache,
+  setPendingSearchTabId,
+  setSearchFuzzyPinyinEnabled,
+  updateDefaultSearchEngineFromUrl,
+  warmSiteSearchProviderIcons
+} from './search-suggestions-service.js';
+import {
+  maybeAutoSelectRestrictedBrowserSetting,
+  moveTabToSourceGroupContext,
+  rememberBrowserNewtabProviderCandidate
+} from './browser-urls-service.js';
+import {
+  clearTabSwitchStat,
+  ensureTabSwitchStatsLoaded,
+  recordTabSwitchEvent
+} from './tab-switch-stats-service.js';
+import {
+  clearOverlayLoadingRecord,
+  clearOverlayNavigationState,
+  markOverlayLoadingRecordUnstable,
+  recoverOverlayAfterLoadingUpdate,
+  rememberOverlayTopFrameNavigation,
+  updateOverlayTopFrameNavigation
+} from './overlay-loading-service.js';
+import { finishOverlayOpening, overlayOpeningByTabId } from './overlay-open-service.js';
+import {
+  getRecentPageHotkeyContext,
+  recoverFromPageHotkeyNewtab,
+  triggerCopyCurrentUrlForTab,
+  triggerShowSearchForTab
+} from './command-service.js';
+import { PIP_MESSAGE_HANDLERS, pipOwnership } from './pip-service.js';
+import {
+  SELECTION_QUICK_ACTION_MESSAGE_HANDLERS,
+  loadSelectionQuickActionsEnabled
+} from './selection-quick-actions-service.js';
+import { SEARCH_MESSAGE_HANDLERS, SITE_SEARCH_MESSAGE_HANDLERS } from './site-search-service.js';
+import {
+  EXTENSION_PAGE_MESSAGE_HANDLERS,
+  FAVICON_MESSAGE_HANDLERS,
+  LOCALE_AND_PERMISSION_MESSAGE_HANDLERS,
+  POPUP_MESSAGE_HANDLERS,
+  SHORTCUT_MESSAGE_HANDLERS,
+  TAB_MESSAGE_HANDLERS,
+  loadLocaleMessages
+} from './message-handlers-service.js';
+// Development-only: the store build replaces it with an empty module.
+import * as CODEX_DEBUG_BRIDGE from './codex-debug-bridge.js';
+import { DEVELOPMENT_BUILD } from '../shared/build-flags.js';
+
 // pinyin-pro (~320 KB) only matters when a Han-character title is matched
 // against a pinyin query, or a Han query against site addresses, so the
 // worker loads it on first use instead of on every wake (see getPinyinPro).
 // A service worker may only importScripts() a
 // file after installation if it imported that file while installing, hence
 // the install hook. Firefox's build lists this path in background.scripts.
-const PINYIN_PRO_SCRIPT_PATH = 'assets/vendor/pinyin-pro.js';
+export const PINYIN_PRO_SCRIPT_PATH = 'assets/vendor/pinyin-pro.js';
 if (typeof globalThis.addEventListener === 'function') {
   globalThis.addEventListener('install', () => {
     importScripts(chrome.runtime.getURL(PINYIN_PRO_SCRIPT_PATH));
   });
 }
-// Development-only; the store package strips this import.
-importScripts(chrome.runtime.getURL('src/background/codex-debug-bridge.js'));
-
-const BACKGROUND_PAGES = globalThis.LumnoBackgroundPages;
-const getExtensionDetailsUrl = BACKGROUND_PAGES.getExtensionDetailsUrl;
-const openExtensionOptionsPage = BACKGROUND_PAGES.openExtensionOptionsPage;
-const openOnboardingPage = BACKGROUND_PAGES.openOnboardingPage;
+export const getExtensionDetailsUrl = BACKGROUND_PAGES.getExtensionDetailsUrl;
+export const openExtensionOptionsPage = BACKGROUND_PAGES.openExtensionOptionsPage;
+export const openOnboardingPage = BACKGROUND_PAGES.openOnboardingPage;
 const shouldOpenOnboardingForUpdate = BACKGROUND_PAGES.shouldOpenOnboardingForUpdate;
-const openReleasePage = BACKGROUND_PAGES.openReleasePage;
-const openBookmarkManagerPage = BACKGROUND_PAGES.openBookmarkManagerPage;
-const openExtensionShortcutsPage = BACKGROUND_PAGES.openExtensionShortcutsPage;
-const openSiteSearchOptionsPage = BACKGROUND_PAGES.openSiteSearchOptionsPage;
-const BACKGROUND_MESSAGE_ROUTER = globalThis.LumnoBackgroundMessageRouter;
-const BOOKMARK_TAB_GROUPS = globalThis.LumnoBookmarkTabGroups;
-const EXTENSION_ROUTES = globalThis.LumnoExtensionRoutes;
-const UPDATE_NOTICE = globalThis.LumnoUpdateNotice;
-const SETTINGS = globalThis.LumnoSettings;
-const COMMAND_TARGET_POLICY = globalThis.LumnoCommandTargetPolicy;
-const FAVICON_UTILS = globalThis.LumnoFaviconUtils;
-const FAVICON_CACHE = globalThis.LumnoFaviconCache;
-const SHORTCUT_FAVICON = globalThis.LumnoShortcutFavicon;
-const SHORTCUT_KEY_MATCHER = globalThis.LumnoShortcutKeyMatcher;
-const NEWTAB_FAVICON_THEME = globalThis.LumnoNewtabFaviconTheme;
-const BACKGROUND_NEWTAB_FALLBACK = globalThis.LumnoBackgroundNewtabFallback;
-const BROWSER_PROFILE = globalThis.LumnoBrowserProfile;
-const BACKGROUND_TAB_GROUPS = globalThis.LumnoBackgroundTabGroups;
-const SEARCH_RESULT_TABS = globalThis.LumnoSearchResultTabs;
+export const openReleasePage = BACKGROUND_PAGES.openReleasePage;
+export const openBookmarkManagerPage = BACKGROUND_PAGES.openBookmarkManagerPage;
+export const openExtensionShortcutsPage = BACKGROUND_PAGES.openExtensionShortcutsPage;
+export const openSiteSearchOptionsPage = BACKGROUND_PAGES.openSiteSearchOptionsPage;
 const isLocalFileLikeTargetUrl = BACKGROUND_NEWTAB_FALLBACK.isLocalFileLikeTargetUrl;
-const checkFileSchemeAccess = BACKGROUND_NEWTAB_FALLBACK.checkFileSchemeAccess;
-const openBrowserNewtabFallback = BACKGROUND_NEWTAB_FALLBACK.openBrowserNewtabFallback;
-const openNewtabFallback = BACKGROUND_NEWTAB_FALLBACK.openNewtabFallback;
-const openNewtabFallbackForUrl = BACKGROUND_NEWTAB_FALLBACK.openNewtabFallbackForUrl;
-const swapNewtabForFocus = BACKGROUND_NEWTAB_FALLBACK.swapNewtabForFocus;
-const BACKGROUND_SHORTCUT_RULES = globalThis.LumnoShortcutRules;
-const DEV_EXTENSION_STARTUP = globalThis.LumnoDevExtensionStartup;
-const CODEX_DEBUG_BRIDGE = globalThis.LumnoCodexDebugBackground;
-const codexDebugBridge = CODEX_DEBUG_BRIDGE.create({ chromeApi: chrome });
+export const checkFileSchemeAccess = BACKGROUND_NEWTAB_FALLBACK.checkFileSchemeAccess;
+export const openBrowserNewtabFallback = BACKGROUND_NEWTAB_FALLBACK.openBrowserNewtabFallback;
+export const openNewtabFallback = BACKGROUND_NEWTAB_FALLBACK.openNewtabFallback;
+export const openNewtabFallbackForUrl = BACKGROUND_NEWTAB_FALLBACK.openNewtabFallbackForUrl;
+export const swapNewtabForFocus = BACKGROUND_NEWTAB_FALLBACK.swapNewtabForFocus;
+// The Codex debug bridge exists only in development builds.
+export const codexDebugBridge = DEVELOPMENT_BUILD
+  ? CODEX_DEBUG_BRIDGE.create({ chromeApi: chrome })
+  : null;
 const shortcutRules = BACKGROUND_SHORTCUT_RULES.create({
   chromeApi: chrome,
   fetchImpl: fetch,
   navigatorLike: navigator
 });
-const loadShortcutRules = shortcutRules.loadShortcutRules;
-const getShortcutUrl = shortcutRules.getShortcutUrl;
+export const loadShortcutRules = shortcutRules.loadShortcutRules;
+export const getShortcutUrl = shortcutRules.getShortcutUrl;
 
 const HOTKEY_DEBUG_ENABLED = false;
-function logHotkeyDebug(stage, payload) {
+export function logHotkeyDebug(stage, payload) {
   if (!HOTKEY_DEBUG_ENABLED) {
     return;
   }
@@ -155,25 +211,25 @@ function logHotkeyDebug(stage, payload) {
 // talks to arbitrary tabs and storage: a tab or frame that closed or navigated
 // ("No tab with id", "Frame was removed"), a restricted page, or a best-effort
 // cleanup. Reading lastError keeps Chrome from logging it as unchecked.
-function ignoreExpectedChromeError() {
+export function ignoreExpectedChromeError() {
   void (chrome && chrome.runtime && chrome.runtime.lastError);
 }
 
 // Rejection handler for work that is not expected to fail (storage writes,
 // startup restores). Failures stay non-fatal but leave a trace with context.
-function warnBackgroundFailure(context) {
+export function warnBackgroundFailure(context) {
   return (error) => {
     console.warn(`[Lumno] ${context}`, error);
   };
 }
 
-const providerStorageRuntime = globalThis.LumnoSettings.createProviderStorageRuntime(chrome);
-const storageArea = providerStorageRuntime
+const providerStorageRuntime = LumnoSettings.createProviderStorageRuntime(chrome);
+export const storageArea = providerStorageRuntime
   ? providerStorageRuntime.area
   : ((chrome && chrome.storage && chrome.storage.sync)
       ? chrome.storage.sync
       : (chrome && chrome.storage ? chrome.storage.local : null));
-const localStorageArea = (chrome && chrome.storage && chrome.storage.local)
+export const localStorageArea = (chrome && chrome.storage && chrome.storage.local)
   ? chrome.storage.local
   : storageArea;
 const storageAreaName = providerStorageRuntime ? providerStorageRuntime.name : (storageArea
@@ -192,7 +248,7 @@ const RECENT_COUNT_STORAGE_KEY = '_x_extension_recent_count_2024_unique_';
 const NEWTAB_WIDTH_MODE_STORAGE_KEY = '_x_extension_newtab_width_mode_2026_unique_';
 const NEWTAB_SEARCH_WIDTH_STORAGE_KEY = '_x_extension_newtab_search_width_2026_unique_';
 const NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY = (
-  globalThis.LumnoSettings.NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY
+  LumnoSettings.NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY
 ) || '_x_extension_newtab_wordmark_visible_2026_unique_';
 const NEWTAB_THEME_MODE_STORAGE_KEY = '_x_extension_newtab_theme_mode_2026_unique_';
 const NEWTAB_THEME_SCOPE_STORAGE_KEY = '_x_extension_newtab_theme_scope_2026_unique_';
@@ -207,17 +263,17 @@ const BOOKMARK_COUNT_STORAGE_KEY = '_x_extension_bookmark_count_2024_unique_';
 const BOOKMARK_COLUMNS_STORAGE_KEY = '_x_extension_bookmark_columns_2024_unique_';
 const BOOKMARK_VIEW_MODE_STORAGE_KEY = '_x_extension_bookmark_view_mode_2026_unique_';
 const BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY = '_x_extension_bookmark_folder_icons_visible_2026_unique_';
-const BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS = Array.isArray(globalThis.LumnoSettings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS)
-  ? globalThis.LumnoSettings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS
+const BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS = Array.isArray(LumnoSettings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS)
+  ? LumnoSettings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS
   : [];
 const PINNED_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_pinned_recent_sites_2026_unique_';
-const PROGRESS_TRACKING_ENABLED_STORAGE_KEY = globalThis.LumnoSettings.PROGRESS_TRACKING_ENABLED_STORAGE_KEY;
+const PROGRESS_TRACKING_ENABLED_STORAGE_KEY = LumnoSettings.PROGRESS_TRACKING_ENABLED_STORAGE_KEY;
 // Labs: tracked pinned cards follow the episode or chapter the person is on.
-let progressTrackingEnabled = false;
-const progressTracker = globalThis.LumnoProgressTracker.createProgressTracker({
+export let progressTrackingEnabled = false;
+export const progressTracker = LumnoProgressTracker.createProgressTracker({
   chromeApi: chrome,
-  progressMatch: globalThis.LumnoProgressMatch,
-  progressHistory: globalThis.LumnoProgressHistory,
+  progressMatch: LumnoProgressMatch,
+  progressHistory: LumnoProgressHistory,
   getPinnedArea: () => storageArea,
   historyArea: localStorageArea,
   pinnedKey: PINNED_RECENT_SITES_STORAGE_KEY,
@@ -226,36 +282,36 @@ const progressTracker = globalThis.LumnoProgressTracker.createProgressTracker({
 progressTracker.attach();
 if (storageArea) {
   storageArea.get([PROGRESS_TRACKING_ENABLED_STORAGE_KEY], (result) => {
-    progressTrackingEnabled = globalThis.LumnoSettings.normalizeProgressTrackingEnabled(
+    progressTrackingEnabled = LumnoSettings.normalizeProgressTrackingEnabled(
       result && result[PROGRESS_TRACKING_ENABLED_STORAGE_KEY]
     );
   });
 }
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (!isPrimaryStorageAreaName(areaName) || !changes[PROGRESS_TRACKING_ENABLED_STORAGE_KEY]) return;
-  progressTrackingEnabled = globalThis.LumnoSettings.normalizeProgressTrackingEnabled(
+  progressTrackingEnabled = LumnoSettings.normalizeProgressTrackingEnabled(
     changes[PROGRESS_TRACKING_ENABLED_STORAGE_KEY].newValue
   );
 });
 const HIDDEN_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_hidden_recent_sites_2026_unique_';
 const NEWTAB_SHORTCUTS_STORAGE_KEY = '_x_extension_newtab_shortcuts_2026_unique_';
-const RESTRICTED_ACTION_STORAGE_KEY = '_x_extension_restricted_action_2024_unique_';
-const RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY = '_x_extension_restricted_action_auto_browser_setting_done_2026_unique_';
+export const RESTRICTED_ACTION_STORAGE_KEY = '_x_extension_restricted_action_2024_unique_';
+export const RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY = '_x_extension_restricted_action_auto_browser_setting_done_2026_unique_';
 const OVERLAY_TAB_PRIORITY_STORAGE_KEY = '_x_extension_overlay_tab_priority_2024_unique_';
 const TAB_RANK_SCORE_DEBUG_STORAGE_KEY = '_x_extension_tab_rank_score_debug_2026_unique_';
 const AUTO_PIP_ENABLED_STORAGE_KEY = '_x_extension_auto_pip_enabled_2026_unique_';
 const TAB_SWITCHER_ENABLED_STORAGE_KEY = '_x_extension_tab_switcher_enabled_2026_unique_';
 const DOCUMENT_PIP_ENABLED_STORAGE_KEY = '_x_extension_document_pip_enabled_2026_unique_';
-const PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY = '_x_extension_pinned_tab_recovery_enabled_2026_unique_';
-const SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY = '_x_extension_selection_quick_actions_enabled_2026_unique_';
-const SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY = '_x_extension_selection_quick_actions_provider_2026_unique_';
-const SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY = '_x_extension_selection_quick_actions_group_enabled_2026_unique_';
+export const PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY = '_x_extension_pinned_tab_recovery_enabled_2026_unique_';
+export const SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY = '_x_extension_selection_quick_actions_enabled_2026_unique_';
+export const SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY = '_x_extension_selection_quick_actions_provider_2026_unique_';
+export const SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY = '_x_extension_selection_quick_actions_group_enabled_2026_unique_';
 const FALLBACK_SHORTCUT_STORAGE_KEY = '_x_extension_fallback_hotkey_2024_unique_';
 const SEARCH_RESULT_PRIORITY_STORAGE_KEY = '_x_extension_search_result_priority_2026_unique_';
-const SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY = '_x_extension_search_result_source_types_2026_unique_';
-const SEARCH_SELECTION_STATS_STORAGE_KEY = '_x_extension_search_selection_stats_2026_unique_';
-const FAVICON_VISIT_DIRTY_STORAGE_KEY = '_x_extension_favicon_visit_dirty_2026_unique_';
-const PINNED_TAB_SNAPSHOT_STORAGE_KEY = '_x_extension_pinned_tab_snapshot_2026_unique_';
+export const SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY = '_x_extension_search_result_source_types_2026_unique_';
+export const SEARCH_SELECTION_STATS_STORAGE_KEY = '_x_extension_search_selection_stats_2026_unique_';
+export const FAVICON_VISIT_DIRTY_STORAGE_KEY = '_x_extension_favicon_visit_dirty_2026_unique_';
+export const PINNED_TAB_SNAPSHOT_STORAGE_KEY = '_x_extension_pinned_tab_snapshot_2026_unique_';
 const REMOVED_AI_SYNC_STORAGE_KEYS = [
   '_x_extension_ai_search_mode_2026_unique_',
   '_x_extension_ai_provider_2026_unique_',
@@ -264,40 +320,40 @@ const REMOVED_AI_SYNC_STORAGE_KEYS = [
 const REMOVED_AI_LOCAL_STORAGE_KEYS = [
   '_x_extension_ai_api_key_2026_unique_'
 ];
-const SHOW_SEARCH_COMMAND_NAME = 'show-search';
+export const SHOW_SEARCH_COMMAND_NAME = 'show-search';
 const SHOW_SEARCH_PREFILL_COMMAND_NAME = 'show-search-prefill';
-const SHOW_SEARCH_PREFILL_V_COMMAND_NAME = 'show-search-prefill-v';
-const SHOW_TAB_SWITCHER_COMMAND_NAME = 'show-tab-switcher';
-const BROWSER_NEWTAB_PROVIDER_DETECTION_MS = 6000;
-const TAB_SWITCHER_THUMBNAIL_STORAGE_KEY = '_x_extension_tab_switcher_state_2026_unique_';
+export const SHOW_SEARCH_PREFILL_V_COMMAND_NAME = 'show-search-prefill-v';
+export const SHOW_TAB_SWITCHER_COMMAND_NAME = 'show-tab-switcher';
+export const BROWSER_NEWTAB_PROVIDER_DETECTION_MS = 6000;
+export const TAB_SWITCHER_THUMBNAIL_STORAGE_KEY = '_x_extension_tab_switcher_state_2026_unique_';
 // Service-worker lifetime: everything below is lost when the worker suspends
 // and is re-created on the next wake. Each group says how it survives that;
-// the service scripts in the first importScripts block document their own.
+// the service modules document their own.
 //
 // Settings mirrors, re-read from storage on every wake (see the storageArea.get
 // below; the tab switcher service keeps its own). Until that read lands they hold defaults, so event paths that act on
 // them wait for backgroundSettingsReady (see whenBackgroundSettingsReady).
-let restrictedActionCache = 'default';
-let restrictedActionAutoBrowserSettingDoneCache = false;
-let documentPipEnabledCache = false;
+export let restrictedActionCache = 'default';
+export let restrictedActionAutoBrowserSettingDoneCache = false;
+export let documentPipEnabledCache = false;
 let resolveDocumentPipEnabledReady = () => {};
 // A service worker woken by the toolbar button or a clip command handles that
 // event before its stored settings arrive, so web clip waits for the real value.
-const documentPipEnabledReady = new Promise((resolve) => {
+export const documentPipEnabledReady = new Promise((resolve) => {
   resolveDocumentPipEnabledReady = resolve;
 });
-let backgroundSettingsLoaded = false;
+export let backgroundSettingsLoaded = false;
 let resolveBackgroundSettingsReady = () => {};
 const backgroundSettingsReady = new Promise((resolve) => {
   resolveBackgroundSettingsReady = resolve;
 });
 // Records the restricted-action choice made for the user when the browser's
 // own New Tab provider is detected (browser-urls-service.js).
-function markRestrictedActionAutoSelected() {
+export function markRestrictedActionAutoSelected() {
   restrictedActionAutoBrowserSettingDoneCache = true;
   restrictedActionCache = 'none';
 }
-const browserNewtabProviderCandidateTabIds = new Map();
+export const browserNewtabProviderCandidateTabIds = new Map();
 function cleanupRemovedAiStorageKeys() {
   if (!chrome || !chrome.storage) {
     return;
@@ -312,8 +368,8 @@ function cleanupRemovedAiStorageKeys() {
   }
 }
 
-const OVERLAY_FONT_LOCAL_STORAGE_KEYS = Array.isArray(globalThis.LumnoSettings.OVERLAY_FONT_LOCAL_STORAGE_KEYS)
-  ? globalThis.LumnoSettings.OVERLAY_FONT_LOCAL_STORAGE_KEYS
+const OVERLAY_FONT_LOCAL_STORAGE_KEYS = Array.isArray(LumnoSettings.OVERLAY_FONT_LOCAL_STORAGE_KEYS)
+  ? LumnoSettings.OVERLAY_FONT_LOCAL_STORAGE_KEYS
   : [];
 
 // Development builds before the fonts became device-only kept them in
@@ -382,7 +438,7 @@ function markBackgroundSettingsLoaded() {
 // A worker woken by a command, a tab event or a page hotkey runs that handler
 // before its stored settings arrive. Run the callback now when they are known,
 // otherwise as soon as they are, so a disabled feature stays disabled.
-function whenBackgroundSettingsReady(callback) {
+export function whenBackgroundSettingsReady(callback) {
   if (backgroundSettingsLoaded) {
     callback();
     return;
@@ -446,7 +502,9 @@ if (chrome && chrome.runtime && chrome.runtime.onConnect) {
   chrome.runtime.onConnect.addListener(registerTabSwitcherExtensionPagePortConnection);
 }
 
-codexDebugBridge.attach();
+if (codexDebugBridge) {
+  codexDebugBridge.attach();
+}
 
 chrome.tabs.onCreated.addListener((tab) => {
   rememberBrowserNewtabProviderCandidate(tab);
@@ -710,7 +768,7 @@ if (chrome && chrome.windows && chrome.windows.onRemoved) {
   });
 }
 
-function waitForTabComplete(tabId, timeoutMs) {
+export function waitForTabComplete(tabId, timeoutMs) {
   return new Promise((resolve, reject) => {
     let settled = false;
     let timeoutId = null;
@@ -759,7 +817,7 @@ function waitForTabComplete(tabId, timeoutMs) {
   });
 }
 
-const selectionScriptRegistration = globalThis.LumnoSelectionScriptRegistration
+const selectionScriptRegistration = LumnoSelectionScriptRegistration
   .createSelectionScriptRegistration({ chromeApi: chrome });
 loadSelectionQuickActionsEnabled().then((enabled) => selectionScriptRegistration.sync(enabled));
 chrome.storage.onChanged.addListener((changes, areaName) => {
@@ -775,17 +833,17 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 
 const shortcutFolderSyncController = providerStorageRuntime &&
   chrome.bookmarks && typeof chrome.bookmarks.getTree === 'function'
-  ? globalThis.LumnoBookmarkFolderReference.createSyncController({ chrome, provider: providerStorageRuntime,
+  ? LumnoBookmarkFolderReference.createSyncController({ chrome, provider: providerStorageRuntime,
     onError: (error) => console.warn('[Lumno] Could not refresh folder shortcuts.', error) }) : null;
 if (shortcutFolderSyncController) shortcutFolderSyncController.start();
 const webDavSyncController = typeof indexedDB !== 'undefined'
-  ? globalThis.LumnoWebDavSync.createController({ chrome }) : null;
+  ? LumnoWebDavSync.createController({ chrome }) : null;
 if (webDavSyncController) webDavSyncController.start();
 
 function handleWebDavMessage(request, sender, sendResponse) {
   // Content scripts and externally connected extensions cannot use stored
   // credentials, configure endpoints, or request arbitrary remote resources.
-  if (!globalThis.LumnoWebDavSync.isTrustedSender(chrome, sender)) {
+  if (!LumnoWebDavSync.isTrustedSender(chrome, sender)) {
     sendResponse({ ok: false, error: 'forbidden' });
     return;
   }
@@ -795,20 +853,20 @@ function handleWebDavMessage(request, sender, sendResponse) {
   }
   webDavSyncController.handle(request).then((result) => sendResponse({ ok: true, ...result }))
     .catch((error) => sendResponse({ ok: false, error: error.code || 'sync-failed',
-      diagnostic: globalThis.LumnoWebDavClient.diagnostic(error.diagnostic) }));
+      diagnostic: LumnoWebDavClient.diagnostic(error.diagnostic) }));
   return true;
 }
 
 // The page context menu item that adds the page to the New Tab shortcuts.
-const pageShortcutMenuController = providerStorageRuntime && chrome.contextMenus
-  ? globalThis.LumnoPageShortcutMenu.createController({ chrome, provider: providerStorageRuntime,
+export const pageShortcutMenuController = providerStorageRuntime && chrome.contextMenus
+  ? LumnoPageShortcutMenu.createController({ chrome, provider: providerStorageRuntime,
     loadLocaleMessages, themeStorageKey: THEME_STORAGE_KEY }) : null;
 if (pageShortcutMenuController) pageShortcutMenuController.start();
 
 // The popup's pin among the New Tab's recent sites; episodes and chapters
 // start tracked while progress tracking (Labs) is on.
-const popupRecentPin = globalThis.LumnoPopupRecentPin.createController({
-  store: globalThis.LumnoNewtabRecentSitesStore,
+export const popupRecentPin = LumnoPopupRecentPin.createController({
+  store: LumnoNewtabRecentSitesStore,
   key: PINNED_RECENT_SITES_STORAGE_KEY,
   storeOptions: {
     normalizeHost,
@@ -818,13 +876,14 @@ const popupRecentPin = globalThis.LumnoPopupRecentPin.createController({
   getArea: () => storageArea,
   ready: () => (providerStorageRuntime ? providerStorageRuntime.ready : Promise.resolve()),
   probeSeries: (url) => (progressTrackingEnabled ? progressTracker.probeSeries(url) : Promise.resolve(false)),
-  createProgressId: globalThis.LumnoProgressHistory.createProgressId
+  createProgressId: LumnoProgressHistory.createProgressId
 });
 
 // One action -> handler registry for runtime messages. Each feature area
 // above owns its handlers; adding an action is one entry in its area's map,
-// and the router rejects an action registered twice.
-const backgroundMessageRouter = BACKGROUND_MESSAGE_ROUTER.createRouter(
+// and the router rejects an action registered twice. Exported for the
+// background tests that check which actions it accepts.
+export const backgroundMessageRouter = BACKGROUND_MESSAGE_ROUTER.createRouter(
   { webdav: handleWebDavMessage },
   TAB_MESSAGE_HANDLERS,
   SHORTCUT_MESSAGE_HANDLERS,
@@ -863,7 +922,7 @@ const backgroundMessageSenderPolicy = BACKGROUND_MESSAGE_ROUTER.createSenderPoli
   pageArgumentGuards: {
     // Typed, bookmarked and history targets stay openable; script, inline data
     // documents and other extensions' pages do not.
-    createTab: (request) => globalThis.LumnoUrlGuards.canOpenUrlFromWebPageContext(
+    createTab: (request) => LumnoUrlGuards.canOpenUrlFromWebPageContext(
       request.url,
       chrome.runtime.getURL('')
     ),
@@ -887,30 +946,20 @@ function dispatchBackgroundMessage(request, sender, sendResponse) {
 // Listen for extension runtime messages.
 chrome.runtime.onMessage.addListener(dispatchBackgroundMessage);
 
-const SITE_SEARCH_STORAGE_KEY = '_x_extension_site_search_custom_2024_unique_';
-const SITE_SEARCH_DISABLED_STORAGE_KEY = '_x_extension_site_search_disabled_2024_unique_';
-const AGGREGATE_SEARCH_STORE = globalThis.LumnoAggregateSearchStore;
-const AGGREGATE_SEARCH = globalThis.LumnoBackgroundAggregateSearch;
-const AGGREGATE_SEARCH_STORAGE_KEY = AGGREGATE_SEARCH_STORE.STORAGE_KEY ||
+export const SITE_SEARCH_STORAGE_KEY = '_x_extension_site_search_custom_2024_unique_';
+export const SITE_SEARCH_DISABLED_STORAGE_KEY = '_x_extension_site_search_disabled_2024_unique_';
+export const AGGREGATE_SEARCH_STORAGE_KEY = AGGREGATE_SEARCH_STORE.STORAGE_KEY ||
   '_x_extension_aggregate_searches_2026_unique_';
-const AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY =
+export const AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY =
   SETTINGS.AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY ||
   '_x_extension_aggregate_search_auto_group_enabled_2026_unique_';
-const SEARCH_BLACKLIST_STORAGE_KEY = '_x_extension_search_blacklist_2026_unique_';
-const FAVICON_REQUEST_BLACKLIST_STORAGE_KEY = '_x_extension_favicon_request_blacklist_2026_unique_';
-const FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY = '_x_extension_favicon_enhanced_fetch_enabled_2026_unique_';
+export const SEARCH_BLACKLIST_STORAGE_KEY = '_x_extension_search_blacklist_2026_unique_';
+export const FAVICON_REQUEST_BLACKLIST_STORAGE_KEY = '_x_extension_favicon_request_blacklist_2026_unique_';
+export const FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY = '_x_extension_favicon_enhanced_fetch_enabled_2026_unique_';
 const OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY = '_x_extension_overlay_open_tabs_default_visible_2026_unique_';
-const BLACKLIST_UTILS = globalThis.LumnoBlacklistUtils;
-const SEARCH_UTILS = globalThis.LumnoSearchUtils;
-const COMMUNITY_LINKS = globalThis.LumnoCommunityLinks;
-const HELP_CENTER_SEARCH = globalThis.LumnoHelpCenterSearch;
-const AI_PROVIDER_SUBMIT = globalThis.LumnoAiProviderSubmit;
-const SELECTION_INTENT = globalThis.LumnoSelectionIntent;
-const SELECTION_TARGET = globalThis.LumnoSelectionTarget;
-const SELECTION_QUICK_ACTION_PROVIDER = globalThis.LumnoSelectionQuickActionProvider;
-const DEFAULT_SEARCH_ENGINE_STORAGE_KEY = '_x_extension_default_search_engine_2024_unique_';
-const CHROME_SYNC_STORAGE_KEYS = Array.isArray(globalThis.LumnoSettings.CHROME_SYNC_STORAGE_KEYS)
-  ? globalThis.LumnoSettings.CHROME_SYNC_STORAGE_KEYS
+export const DEFAULT_SEARCH_ENGINE_STORAGE_KEY = '_x_extension_default_search_engine_2024_unique_';
+const CHROME_SYNC_STORAGE_KEYS = Array.isArray(LumnoSettings.CHROME_SYNC_STORAGE_KEYS)
+  ? LumnoSettings.CHROME_SYNC_STORAGE_KEYS
   : [];
 if (providerStorageRuntime) {
   providerStorageRuntime.ready.then(() => {
@@ -923,22 +972,22 @@ if (chrome && chrome.storage && chrome.storage.sync &&
     typeof chrome.storage.sync.remove === 'function') {
   chrome.storage.sync.remove(LANGUAGE_MESSAGES_STORAGE_KEY, ignoreExpectedChromeError);
 }
-const SITE_SEARCH_ICON_STORAGE_KEY = SHORTCUT_FAVICON.SITE_SEARCH_STORAGE_KEY ||
+export const SITE_SEARCH_ICON_STORAGE_KEY = SHORTCUT_FAVICON.SITE_SEARCH_STORAGE_KEY ||
   '_x_extension_site_search_icon_cache_canonical_2026_unique_';
 
-const SITE_SEARCH_ICON_CACHE_OPTIONS = SHORTCUT_FAVICON.SITE_SEARCH_CACHE_OPTIONS || Object.freeze({
+export const SITE_SEARCH_ICON_CACHE_OPTIONS = SHORTCUT_FAVICON.SITE_SEARCH_CACHE_OPTIONS || Object.freeze({
   cacheTtlMs: 1000 * 60 * 60 * 24 * 180,
   cacheMaxEntries: 40,
   maxDataUrlLength: 192 * 1024
 });
-const SITE_SEARCH_PINNED_ICON_KEYS = new Set(Object.keys(
+export const SITE_SEARCH_PINNED_ICON_KEYS = new Set(Object.keys(
   SHORTCUT_FAVICON.SITE_SEARCH_PINNED_ICON_ASSETS || {}
 ));
-const logBackgroundFaviconDecision = FAVICON_UTILS.createFaviconDecisionLogger({ surface: 'background' });
+export const logBackgroundFaviconDecision = FAVICON_UTILS.createFaviconDecisionLogger({ surface: 'background' });
 
 getBackgroundFaviconCacheRuntime();
 
-function normalizeHost(hostname) {
+export function normalizeHost(hostname) {
   if (!hostname) {
     return '';
   }

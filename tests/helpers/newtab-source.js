@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { withoutExports } = require('./closure-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 // Page runtime modules split out of newtab.js, in the order newtab.html loads them.
@@ -72,14 +73,13 @@ const NEWTAB_RUNTIME_MODULES = [
 // Returns newtab.js followed by the modules split out of it, so source checks
 // can locate a function regardless of which file now holds it. newtab.js and
 // the split modules share page state as properties of one `pageState`
-// object. The prefix and the factory's extra indentation are dropped so
-// checks and extracted functions see the same code they would in a single
-// closure, with page state as plain variables.
+// object. The prefix is dropped so checks and extracted functions see the
+// same code they would in a single closure, with page state as plain
+// variables.
 function readNewtabRuntimeSource() {
-  const modules = NEWTAB_RUNTIME_MODULES.map((file) => fs.readFileSync(path.join(repoRoot, file), 'utf8')
-    .replace(/^  /gm, ''));
-  return [fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8'), ...modules]
-    .join('\n')
+  const modules = NEWTAB_RUNTIME_MODULES.map((file) => fs.readFileSync(path.join(repoRoot, file), 'utf8'));
+  return withoutExports([fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8'), ...modules]
+    .join('\n'))
     .replace(/\bpageState\./g, '');
 }
 

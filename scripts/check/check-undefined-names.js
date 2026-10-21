@@ -3,11 +3,12 @@
 // object literal. node --check accepts both, and they only throw when the
 // line runs, which for page bootstrap code means a blank New Tab.
 //
-// The TypeScript checker resolves names across every classic script in src/
-// as one global scope, plus browser and worker globals. Pages publish their
-// modules as globals with `root.Name = api` (or globalThis/window/self), so
-// those names are declared for it too. Only unresolved-name diagnostics are
-// reported; type errors are not this script's concern.
+// The TypeScript checker resolves each module's imports, plus browser and
+// worker globals. The few values pages still hand over as globals (the
+// preload handoffs, the views React islands publish, the classic Han variant
+// table) are assigned with `globalThis.Name = value` (or root/window/self),
+// so those names are declared for it too. Only unresolved names and imports
+// are reported; type errors are not this script's concern.
 const fs = require('fs');
 const path = require('path');
 const ts = require('typescript');
@@ -19,7 +20,10 @@ const UNRESOLVED_NAME_CODES = new Set([
   2304, // Cannot find name 'x'.
   2552, // Cannot find name 'x'. Did you mean 'y'?
   2582, // Cannot find name 'x' (test runner globals).
-  18004 // No value exists in scope for the shorthand property 'x'.
+  18004, // No value exists in scope for the shorthand property 'x'.
+  2305, // Module 'x' has no exported member 'y'.
+  2307, // Cannot find module 'x'.
+  2724 // Module 'x' has no exported member 'y'. Did you mean 'z'?
 ]);
 
 function collectJavaScriptFiles(directory) {
@@ -68,6 +72,8 @@ function checkUndefinedNames(files) {
     noEmit: true,
     skipLibCheck: true,
     target: ts.ScriptTarget.ES2022,
+    module: ts.ModuleKind.ES2022,
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
     lib: ['lib.es2022.d.ts', 'lib.dom.d.ts', 'lib.dom.iterable.d.ts', 'lib.webworker.importscripts.d.ts'],
     types: []
   };

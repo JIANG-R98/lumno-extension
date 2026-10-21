@@ -1,32 +1,29 @@
 'use strict';
 
-// background.js is split into classic service scripts that share the worker's
-// global scope (see the first importScripts block in background.js). Tests that
-// slice functions out of the background by name read all of them together.
+// background.js is split into service modules it imports. Tests that slice
+// functions out of the background by name read all of them together.
 
 const fs = require('fs');
 const path = require('path');
+const { withoutExports } = require('./closure-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const BACKGROUND_ENTRY = 'src/background/background.js';
 
+// The services background.js imports, in its import order.
 function getBackgroundServiceFiles() {
   const source = fs.readFileSync(path.join(repoRoot, BACKGROUND_ENTRY), 'utf8');
-  const importBlock = source.match(/importScripts\(([\s\S]*?)\);/);
-  if (!importBlock) {
-    return [];
-  }
-  return [...importBlock[1].matchAll(/getURL\('(src\/background\/[^']+)'\)/g)]
-    .map((match) => match[1])
-    .filter((file) => /-service\.js$|^src\/background\/pinned-tab-recovery\.js$/.test(file));
+  const files = [...source.matchAll(/from '\.\/((?:[\w-]+-service|pinned-tab-recovery)\.js)';/g)]
+    .map((match) => `src/background/${match[1]}`);
+  return [...new Set(files)];
 }
 
-// Service scripts first: they hold the function definitions that
-// background.js wires to browser events, matching how the worker loads them.
+// Services first: they hold the function definitions that background.js
+// wires to browser events, matching the order the worker runs them in.
 function readBackgroundSource() {
-  return getBackgroundServiceFiles().concat([BACKGROUND_ENTRY])
+  return withoutExports(getBackgroundServiceFiles().concat([BACKGROUND_ENTRY])
     .map((file) => fs.readFileSync(path.join(repoRoot, file), 'utf8'))
-    .join('\n');
+    .join('\n'));
 }
 
 module.exports = {

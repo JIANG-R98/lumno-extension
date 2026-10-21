@@ -4,6 +4,7 @@ const path = require('path');
 const { readPageSource } = require('../helpers/page-source');
 const vm = require('vm');
 const { getBundleFiles } = require('../helpers/runtime-scripts');
+const { moduleScript } = require('../helpers/module-script');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const htmlPath = path.join(repoRoot, 'src/options/options.html');
@@ -158,10 +159,10 @@ sandbox.globalThis = sandbox;
 sandbox.window = sandbox;
 
 vm.createContext(sandbox);
-vm.runInContext(fs.readFileSync(path.join(repoRoot, 'src/shared/settings.js'), 'utf8'), sandbox, {
+vm.runInContext(moduleScript('src/shared/settings.js', 'LumnoSettings'), sandbox, {
   filename: 'settings.js'
 });
-vm.runInContext(fs.readFileSync(preloadPath, 'utf8'), sandbox, {
+vm.runInContext(moduleScript('src/options/theme-preload.js'), sandbox, {
   filename: 'theme-preload.js'
 });
 

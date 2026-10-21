@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const { JSDOM } = require('jsdom');
 const { readPageSource } = require('../helpers/page-source');
+const { moduleScript } = require('../helpers/module-script');
 
 async function run() {
   const dom = new JSDOM(readPageSource('src/options/options.html'), {
@@ -39,8 +40,8 @@ async function run() {
     actions = options;
     return { render(value) { renderModel = value; } };
   } };
-  window.eval(fs.readFileSync('src/shared/settings.js', 'utf8'));
-  window.eval(fs.readFileSync('src/options/webdav-options.js', 'utf8'));
+  window.eval(moduleScript('src/shared/settings.js', 'LumnoSettings'));
+  window.eval(moduleScript('src/options/webdav-options.js', 'LumnoWebDavOptions'));
   const messages = JSON.parse(fs.readFileSync('_locales/en/messages.json', 'utf8'));
   window.chrome = chrome;
   chrome.i18n = { getMessage: (key) => messages[key]?.message || '' };

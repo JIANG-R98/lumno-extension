@@ -95,7 +95,7 @@ assert.deepStrictEqual(
 );
 assert.match(
   contentJs,
-  /const TOAST = globalThis\.LumnoToast;[\s\S]*?TOAST\.createToastController\(/,
+  /import \* as TOAST from '\.\.\/shared\/ui\/toast\.js';[\s\S]*?TOAST\.createToastController\(/,
   'the web clip picker should show its messages through the shared Toast'
 );
 assert.match(

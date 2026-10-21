@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-require('../../src/newtab/wallpaper/wallpaper-adaptive-tone.js');
+const LumnoNewtabWallpaperAdaptiveTone = require('../../src/newtab/wallpaper/wallpaper-adaptive-tone.js');
 
 const {
   chooseReadableInk,
@@ -8,7 +8,7 @@ const {
   getWordmarkInkColor,
   getContrastRatio,
   getTranslucentToneContrast
-} = globalThis.LumnoNewtabWallpaperAdaptiveTone;
+} = LumnoNewtabWallpaperAdaptiveTone;
 
 function gray(level) {
   return { red: level, green: level, blue: level };

@@ -1,3 +1,8 @@
+import * as ACTION_ICON_LIBRARY from '../shared/selection-action-icons.js';
+import * as INTENT from '../shared/selection-intent.js';
+import * as SETTINGS from '../shared/settings.js';
+import * as TOAST from '../shared/ui/toast.js';
+
 (function() {
   'use strict';
 
@@ -6,10 +11,6 @@
   }
   window._x_extension_selection_quick_actions_2026_unique_ = true;
 
-  const INTENT = globalThis.LumnoSelectionIntent;
-  const ACTION_ICON_LIBRARY = globalThis.LumnoSelectionActionIcons;
-  const TOAST = globalThis.LumnoToast;
-  const SETTINGS = globalThis.LumnoSettings;
 
   const ENABLED_STORAGE_KEY = SETTINGS.SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY;
   const LANGUAGE_STORAGE_KEY = SETTINGS.LANGUAGE_STORAGE_KEY;

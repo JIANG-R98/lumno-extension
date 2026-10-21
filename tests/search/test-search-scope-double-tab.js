@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const vm = require('vm');
-const { readSearchInputModeSource, readSearchInputModeRuntimeSource } = require('../helpers/search-input-mode-source');
+const { readSearchInputModeSource } = require('../helpers/search-input-mode-source');
 const search = require('../../src/shared/search/search-utils.js');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
@@ -24,11 +24,6 @@ assert.match(
   sharedSource,
   /function shouldOpenModeMenuOnDoubleTab\(event\)[\s\S]*?event\.defaultPrevented[\s\S]*?event\.repeat/,
   'shared input mode should own the timed, distinct-key double-Tab state'
-);
-assert.match(
-  sharedSource,
-  /SEARCH_INPUT_MODE_RUNTIME_VERSION[\s\S]*?root\.LumnoSearchInputMode\.runtimeVersion === SEARCH_INPUT_MODE_RUNTIME_VERSION/,
-  'shared input mode should replace stale page-scoped runtimes after an extension update'
 );
 assert.match(
   sharedSource,
@@ -403,37 +398,6 @@ Object.entries(expectedShortcutTitles).forEach(([locale, expectedTitle]) => {
 });
 
 async function runRuntimeStabilityTests() {
-  const staleControllerFactory = function staleControllerFactory() {};
-  const sharedRuntimeContext = vm.createContext({
-    window: {
-      LumnoSearchInputMode: Object.freeze({
-        createInputModeController: staleControllerFactory,
-        runtimeVersion: 'stale-runtime'
-      })
-    }
-  });
-  vm.runInContext(readSearchInputModeRuntimeSource(), sharedRuntimeContext, {
-    filename: 'src/shared/search/search-input-mode.js'
-  });
-  const upgradedRuntime = sharedRuntimeContext.window.LumnoSearchInputMode;
-  assert.notStrictEqual(
-    upgradedRuntime.createInputModeController,
-    staleControllerFactory,
-    'a stale page-scoped input-mode runtime should be replaced on reinjection'
-  );
-  assert.ok(
-    upgradedRuntime.runtimeVersion,
-    'the current input-mode runtime should expose a version marker'
-  );
-  vm.runInContext(readSearchInputModeRuntimeSource(), sharedRuntimeContext, {
-    filename: 'src/shared/search/search-input-mode.js'
-  });
-  assert.strictEqual(
-    sharedRuntimeContext.window.LumnoSearchInputMode,
-    upgradedRuntime,
-    'reinjection should keep an already-current input-mode runtime stable'
-  );
-
   let resolveEngineState;
   let engineStateReady = false;
   const engineStateReadyPromise = new Promise((resolve) => {

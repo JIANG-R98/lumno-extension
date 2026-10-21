@@ -374,7 +374,7 @@ function testBootstrapDisablesRightButtonTransitions() {
   );
   assert.match(
     backgroundSource,
-    /const shouldInjectOverlayCodexDebugSurface = codexDebugBridge\.isEnabled\(\);[\s\S]*?\.\.\.\(shouldInjectOverlayCodexDebugSurface \? \['build\/codex-debug-surface\.js'\] : \[\]\)/,
+    /const shouldInjectOverlayCodexDebugSurface = DEVELOPMENT_BUILD && codexDebugBridge\.isEnabled\(\);[\s\S]*?\.\.\.\(shouldInjectOverlayCodexDebugSurface \? \['build\/codex-debug-surface\.js'\] : \[\]\)/,
     'the development-only debug surface must stay out of the production critical injection list'
   );
 }

@@ -1,10 +1,13 @@
+import * as LumnoSettings from '../../shared/settings.js';
+import * as LumnoNewtabWallpaperEffects from './wallpaper-effects.js';
+
 (function() {
   const PRELOAD_STORAGE_KEY = '_x_extension_newtab_wallpaper_preload_2026_unique_';
   const PRELOAD_STORAGE_VERSION = 4;
   const WALLPAPER_EFFECT_STORAGE_KEY = '_x_extension_newtab_wallpaper_effect_2026_unique_';
   const FAVICON_STORAGE_KEY = '_x_extension_newtab_favicon_2026_unique_';
   const FAVICON_PRELOAD_STORAGE_KEY = '_x_extension_newtab_favicon_preload_2026_unique_';
-  const providerStorageRuntime = globalThis.LumnoSettings.createProviderStorageRuntime(window.chrome);
+  const providerStorageRuntime = LumnoSettings.createProviderStorageRuntime(window.chrome);
   // Only bundled files paint on the first frame. Online photos and links paint from this device's
   // IndexedDB copy as soon as it is read, so a slow or failing network never holds the tab's spinner
   // or blanks the page; uploads paint from the local wallpaper library the same way.
@@ -56,12 +59,12 @@
   }
 
   function normalizeEffectPrefs(value, inheritedVersion) {
-    const effects = globalThis.LumnoNewtabWallpaperEffects;
+    const effects = LumnoNewtabWallpaperEffects;
     return effects.normalizePrefs(value, inheritedVersion);
   }
 
   function getEffectPrefsForMode(value, mode) {
-    const effects = globalThis.LumnoNewtabWallpaperEffects;
+    const effects = LumnoNewtabWallpaperEffects;
     return effects.normalizeStoragePrefs(value)[mode];
   }
 

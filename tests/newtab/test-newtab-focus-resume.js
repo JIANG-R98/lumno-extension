@@ -1,12 +1,10 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
 const vm = require('vm');
+const { moduleScript } = require('../helpers/module-script');
 
 // The search shortcut's focus reload carries the query, its search mode and
 // the results on screen, and holds the old frame until they are back.
 
-const source = fs.readFileSync(path.join(__dirname, '../../src/newtab/focus-resume.js'), 'utf8');
 const STORAGE_KEY = 'lumno:newtab-focus-resume';
 
 function createElement(tagName) {
@@ -68,7 +66,7 @@ function bootPage(options = {}) {
     }
   });
   context.globalThis = context;
-  vm.runInContext(source, context);
+  vm.runInContext(moduleScript('src/newtab/focus-resume.js', 'LumnoNewtabFocusResume'), context);
   return {
     api: context.LumnoNewtabFocusResume,
     documentElement,

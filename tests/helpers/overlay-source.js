@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
+const { withoutExports } = require('./closure-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const PANEL_ENTRY = 'src/overlay/search-panel.js';
 // The parts of the overlay panel split out into src/overlay/panel/, then
 // search-panel.js, in the order the overlay injection list loads them.
 const OVERLAY_PANEL_FILES = [
@@ -34,14 +34,14 @@ const OVERLAY_PANEL_FILES = [
 ];
 
 // The panel source for source checks and extracted functions. The parts
-// share panel state as properties of one `overlayState` object; the
-// factory's extra indentation and that prefix are dropped so checks see the
-// code as it read inside the single panel closure.
+// share panel state as properties of one `overlayState` object; that prefix
+// is dropped so checks see the code as it read inside the single panel
+// closure.
 function readOverlayPanelSource() {
-  return OVERLAY_PANEL_FILES.map((file) => {
-    const source = fs.readFileSync(path.join(repoRoot, file), 'utf8');
-    return file === PANEL_ENTRY ? source : source.replace(/^  /gm, '');
-  }).join('\n').replace(/\boverlayState\./g, '');
+  return withoutExports(OVERLAY_PANEL_FILES
+    .map((file) => fs.readFileSync(path.join(repoRoot, file), 'utf8'))
+    .join('\n'))
+    .replace(/\boverlayState\./g, '');
 }
 
 module.exports = { OVERLAY_PANEL_FILES, readOverlayPanelSource };

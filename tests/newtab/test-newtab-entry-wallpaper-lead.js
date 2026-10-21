@@ -1,14 +1,10 @@
 // The New Tab's visible order: the wallpaper first, then the content entering.
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
 const vm = require('vm');
 const { readStylesheet } = require('../helpers/css-tokens');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { moduleScript } = require('../helpers/module-script');
 
-const repoRoot = path.resolve(__dirname, '..', '..');
-const entryMotionSource = fs.readFileSync(path.join(repoRoot, 'src/newtab/entry-motion.js'), 'utf8');
-const effectPreloadSource = fs.readFileSync(path.join(repoRoot, 'src/newtab/wallpaper/wallpaper-effect-preload.js'), 'utf8');
 const newtabSource = readNewtabRuntimeSource();
 const newtabCss = readStylesheet('src/newtab/newtab.css');
 const glassCss = readStylesheet('src/newtab/glass-style.css');
@@ -50,7 +46,7 @@ function createEntryMotion({ wallpaperActive, wallpaperShownAgoMs, focusResume }
     globalThis: null
   };
   sandbox.globalThis = sandbox;
-  vm.runInNewContext(entryMotionSource, sandbox, { filename: 'src/newtab/entry-motion.js' });
+  vm.runInNewContext(moduleScript('src/newtab/entry-motion.js', 'LumnoNewtabEntryMotion'), sandbox, { filename: 'src/newtab/entry-motion.js' });
   const viewport = { width: 1280, height: 800 };
   const motion = sandbox.LumnoNewtabEntryMotion.createEntryMotion({
     root,
@@ -120,7 +116,9 @@ async function testEffectPreloadRecordsWhenTheWallpaperShowed() {
   };
   sandbox.globalThis = sandbox;
   const before = performance.now();
-  vm.runInNewContext(effectPreloadSource, sandbox, { filename: 'src/newtab/wallpaper/wallpaper-effect-preload.js' });
+  vm.runInNewContext(moduleScript('src/newtab/wallpaper/wallpaper-effect-preload.js', undefined, null, {
+    'src/newtab/wallpaper/wallpaper-effects.js': 'LumnoNewtabWallpaperEffects'
+  }), sandbox, { filename: 'src/newtab/wallpaper/wallpaper-effect-preload.js' });
   await Promise.resolve();
   await Promise.resolve();
   assert.strictEqual(body.getAttribute('data-nt-wallpaper-ready'), '1');
