@@ -41,7 +41,7 @@ assert.ok(
 );
 assert.ok(
   html.indexOf('<script src="newtab-focus-entry.js"></script>') <
-    html.indexOf('<script src="wallpaper-preload.js"></script>'),
+    html.indexOf('<script src="wallpaper/wallpaper-preload.js"></script>'),
   'the focus route should settle before the New Tab starts visual preloading'
 );
 assert.match(

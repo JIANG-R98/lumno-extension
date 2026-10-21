@@ -24,7 +24,7 @@ const tokens = readLightTokens();
 const stylesheets = [
   ...fs.readdirSync('src/shared').filter((f) => f.endsWith('.css')).map((f) => `src/shared/${f}`),
   'src/options/options.css', 'src/options/webdav-options.css', 'src/newtab/newtab.css',
-  'src/newtab/shortcut-dialog.css', 'src/newtab/folder-color-picker.css',
+  'src/newtab/shortcuts/shortcut-dialog.css', 'src/newtab/bookmarks/folder-color-picker.css',
   'src/newtab/remote-content.css', 'src/onboarding/onboarding.css', 'src/overlay/suggestions-view.css'
 ];
 stylesheets.forEach((file) => {
@@ -35,8 +35,8 @@ stylesheets.forEach((file) => {
 
 // Stylesheets injected into web pages have no tokens there, so each reference needs a fallback.
 [
-  'src/shared/tooltip.css', 'src/shared/menu-surface.css', 'src/shared/toast.css',
-  'src/shared/search-input.css', 'src/shared/feature-hints.css', 'src/shared/cursor-tooltip.css',
+  'src/shared/ui/tooltip.css', 'src/shared/ui/menu-surface.css', 'src/shared/ui/toast.css',
+  'src/shared/search/search-input.css', 'src/shared/ui/feature-hints.css', 'src/shared/ui/cursor-tooltip.css',
   'src/overlay/suggestions-view.css'
 ].forEach((file) => {
   const bare = read(file).match(/var\(--lumno-[\w-]+\)/g) || [];
@@ -61,17 +61,17 @@ const optionsCss = read('src/options/options.css');
 const newtabCss = read('src/newtab/newtab.css');
 [optionsCss, newtabCss].forEach((css) => {
   assert.doesNotMatch(css, /--switch-track-on-bg|--switch-knob-shadow|switch-slider[^{]*::before\s*\{/,
-    'switch colors and knob rules belong to src/shared/switch.css');
+    'switch colors and knob rules belong to src/shared/ui/switch.css');
   assert.doesNotMatch(css, /^(?:\._x_extension_theme_check_2026_unique_|\.x-nt-appearance-check)\s*\{[^}]*linear-gradient/m,
-    'theme card check badges belong to src/shared/choice-card.css');
+    'theme card check badges belong to src/shared/ui/choice-card.css');
 });
 assert.doesNotMatch(optionsCss, /^\._x_extension_toast_2024_unique_ \{[^}]*background:/m,
-  'the Options toast uses src/shared/toast.css');
+  'the Options toast uses src/shared/ui/toast.css');
 
 // One indicator implementation: classic scripts call the shared module.
 assert.doesNotMatch(read('src/options/options.js'), /function measure\w*Indicator/,
   'options.js should not measure segmented indicators itself');
-assert.match(read('src/newtab/quotes.js'), /globalThis\.LumnoSegmentedIndicator/,
+assert.match(read('src/newtab/top-content/quotes.js'), /globalThis\.LumnoSegmentedIndicator/,
   'quotes.js should position indicators through the shared segmented indicator');
 // The appearance panel's segmented controls are React components that use the shared
 // hook; react-src/newtab/wallpaper-view.test.tsx checks their indicators move.

@@ -44,21 +44,21 @@ const injectedScriptFiles = [
   'src/shared/browser-profile.js',
   'src/shared/settings.js',
   'src/shared/cjk-font-faces.js',
-  'src/shared/search-utils.js',
-  'src/shared/site-search-store.js',
-  'src/shared/suggestion-navigation.js',
+  'src/shared/search/search-utils.js',
+  'src/shared/search/site-search-store.js',
+  'src/shared/search/suggestion-navigation.js',
   'src/react/overlay-islands.js',
-  'src/shared/search-input-history.js',
-  'src/shared/search-input-mode.js',
-  'src/shared/toast.js',
+  'src/shared/search/search-input-history.js',
+  'src/shared/search/search-input-mode.js',
+  'src/shared/ui/toast.js',
   'src/shared/selection-action-icons.js',
   'src/content/selection-quick-actions.js',
-  'src/shared/shortcut-favicon.js',
-  'src/shared/search-input.css',
-  'src/shared/toast.css',
+  'src/shared/favicon/shortcut-favicon.js',
+  'src/shared/search/search-input.css',
+  'src/shared/ui/toast.css',
   'src/shared/url-guards.js',
-  'src/shared/favicon-utils.js',
-  'src/shared/favicon-cache.js',
+  'src/shared/favicon/favicon-utils.js',
+  'src/shared/favicon/favicon-cache.js',
   'src/overlay/runtime.js',
   'src/overlay/favicon-view.js',
   'src/overlay/suggestions-view.css',
@@ -519,7 +519,7 @@ function checkCssFiles() {
 }
 
 function checkNewtabWallpaperFiles() {
-  const file = 'src/newtab/wallpaper.js';
+  const file = 'src/newtab/wallpaper/wallpaper.js';
   const fullPath = stagedPath(file);
   if (!fs.existsSync(fullPath)) {
     return;

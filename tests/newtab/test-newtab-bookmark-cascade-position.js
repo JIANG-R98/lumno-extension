@@ -5,7 +5,7 @@ const {
   placeRootCascadeMenu,
   placeCascadeSubmenu,
   getTranslateNeutralRect
-} = require(path.join('..', '..', 'src', 'newtab', 'bookmark-cascade-position.js'));
+} = require(path.join('..', '..', 'src', 'newtab', 'bookmarks', 'bookmark-cascade-position.js'));
 
 const viewport = { width: 760, height: 520 };
 const spacing = 8;

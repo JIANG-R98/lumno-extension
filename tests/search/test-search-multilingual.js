@@ -3,8 +3,8 @@ const assert = require('assert');
 // How local search reads titles in other languages: letters a reader sees
 // as the same, marks that can or cannot be left out, words and initials in
 // every script that writes words apart, Japanese kana and Korean jamo.
-require('../../src/shared/search-han-variants.js');
-const search = require('../../src/shared/search-utils.js');
+require('../../src/shared/search/search-han-variants.js');
+const search = require('../../src/shared/search/search-utils.js');
 const pinyinPro = require('../../assets/vendor/pinyin-pro.js');
 
 const options = {

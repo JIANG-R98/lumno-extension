@@ -1,5 +1,5 @@
 const assert = require('assert');
-const store = require('../../src/newtab/recent-sites-store.js');
+const store = require('../../src/newtab/recent/recent-sites-store.js');
 const { createController } = require('../../src/background/popup-recent-pin.js');
 
 const KEY = '_x_extension_newtab_pinned_recent_sites_2026_unique_';

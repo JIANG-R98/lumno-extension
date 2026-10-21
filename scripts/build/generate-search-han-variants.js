@@ -1,6 +1,6 @@
 'use strict';
 
-// Writes src/shared/search-han-variants.js: each traditional character and
+// Writes src/shared/search/search-han-variants.js: each traditional character and
 // the simplified one search reads it as. The pairs come from ICU's Hant-Hans
 // transform through macOS Foundation (`osascript -l JavaScript`), applied one
 // character at a time, so run this on a Mac.
@@ -14,7 +14,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const outputPath = path.join(repoRoot, 'src/shared/search-han-variants.js');
+const outputPath = path.join(repoRoot, 'src/shared/search/search-han-variants.js');
 
 const transformScript = `
 ObjC.import('Foundation');

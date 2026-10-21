@@ -22,7 +22,7 @@ function setup() {
   env.runTimers = () => env.timers.splice(0).filter(timer => !timer.cancelled).forEach(timer => timer.fn());
   env.pendingTimers = () => env.timers.filter(timer => !timer.cancelled);
   window.LumnoNewtabCrossSurfaceDrag = { prefersReducedMotion: () => env.reducedMotion };
-  window.eval(fs.readFileSync(require.resolve('../../src/newtab/bookmark-pager.js'), 'utf8'));
+  window.eval(fs.readFileSync(require.resolve('../../src/newtab/bookmarks/bookmark-pager.js'), 'utf8'));
   env.state = { bookmarkGrid: grid, bookmarkAllItems: Array.from({ length: 8 }, (_, id) => ({ id })), bookmarkCurrentPage: 0 };
   env.pager = window.LumnoNewtabBookmarkPager.createBookmarkPager({ pageState: env.state, now: () => env.clock,
     isBookmarkTopbarMode: () => false, getBookmarkLimit: () => 2,

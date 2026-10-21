@@ -4,13 +4,13 @@ const fs = require('fs');
 const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const menuSurfaceJsPath = path.join(repoRoot, 'src/shared/menu-surface.js');
-const menuSurfaceCssPath = path.join(repoRoot, 'src/shared/menu-surface.css');
+const menuSurfaceJsPath = path.join(repoRoot, 'src/shared/ui/menu-surface.js');
+const menuSurfaceCssPath = path.join(repoRoot, 'src/shared/ui/menu-surface.css');
 
-assert.ok(fs.existsSync(menuSurfaceJsPath), 'shared menu surface behavior should live in src/shared/menu-surface.js');
-assert.ok(fs.existsSync(menuSurfaceCssPath), 'shared menu surface styling should live in src/shared/menu-surface.css');
+assert.ok(fs.existsSync(menuSurfaceJsPath), 'shared menu surface behavior should live in src/shared/ui/menu-surface.js');
+assert.ok(fs.existsSync(menuSurfaceCssPath), 'shared menu surface styling should live in src/shared/ui/menu-surface.css');
 
-const menuSurfaceCss = readStylesheet('src/shared/menu-surface.css');
+const menuSurfaceCss = readStylesheet('src/shared/ui/menu-surface.css');
 const menuSurface = require(menuSurfaceJsPath);
 
 function createFakeElement() {

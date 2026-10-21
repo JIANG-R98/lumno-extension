@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-require('../../src/newtab/search-autocomplete.js');
+require('../../src/newtab/search/search-autocomplete.js');
 
 // Inline autocomplete appends to what was typed; it must not rewrite the
 // typed characters in the candidate's own case ("4A" stays "4A").

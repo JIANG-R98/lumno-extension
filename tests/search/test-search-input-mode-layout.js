@@ -167,7 +167,7 @@ badge._layoutWidth = 48;
 badge.setAttribute('data-visible', 'true');
 
 delete global.LumnoSearchInputMode;
-require(path.resolve(__dirname, '../../src/shared/search-input-mode.js'));
+require(path.resolve(__dirname, '../../src/shared/search/search-input-mode.js'));
 
 const controller = global.LumnoSearchInputMode.createInputModeController(
   {

@@ -22,7 +22,7 @@ export const LINK_BUTTON_CLASS = 'x-lumno-link-button';
 export const LINK_BUTTON_ICON = 'ri-external-link-line';
 
 // Text link with a trailing ↗ icon and no surface. Markup mirrors
-// src/shared/link-button.css so static HTML can reuse the same classes.
+// src/shared/ui/link-button.css so static HTML can reuse the same classes.
 export function LinkButton({
   children,
   className,

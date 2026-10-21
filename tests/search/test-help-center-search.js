@@ -1,8 +1,8 @@
 const assert = require('assert');
 const fs = require('fs');
-const helpCenterSearch = require('../../src/shared/help-center-search.js');
+const helpCenterSearch = require('../../src/shared/search/help-center-search.js');
 const communityLinks = require('../../src/shared/community-links.js');
-const searchUtils = require('../../src/shared/search-utils.js');
+const searchUtils = require('../../src/shared/search/search-utils.js');
 
 const ORIGIN = 'https://lumno.kubai.design';
 const index = helpCenterSearch.normalizeIndex([
@@ -354,23 +354,23 @@ function testSuggestionSource() {
 
 const backgroundSource = fs.readFileSync('src/background/background.js', 'utf8');
 const importBlock = backgroundSource.match(/importScripts\(([\s\S]*?)\);/)[1];
-assert.ok(importBlock.includes("'src/shared/community-links.js'") && importBlock.includes("'src/shared/help-center-search.js'"));
+assert.ok(importBlock.includes("'src/shared/community-links.js'") && importBlock.includes("'src/shared/search/help-center-search.js'"));
 assert.match(backgroundSource, /parse: HELP_CENTER_SEARCH\.normalizeSynonyms/, 'background should load the synonym list');
 assert.match(backgroundSource, /response\.status === 404 \? \{ ok: true, json: \(\) => \[\] \}/, 'a missing synonym list should be cached as empty');
 const overlayFiles = backgroundSource.slice(backgroundSource.indexOf('const overlayInjectionFiles'));
 assert.ok(
-  overlayFiles.indexOf("'src/shared/help-center-search.js'") > 0 &&
-    overlayFiles.indexOf("'src/shared/help-center-search.js'") < overlayFiles.indexOf("'src/overlay/search-panel.js'"),
+  overlayFiles.indexOf("'src/shared/search/help-center-search.js'") > 0 &&
+    overlayFiles.indexOf("'src/shared/search/help-center-search.js'") < overlayFiles.indexOf("'src/overlay/search-panel.js'"),
   'the overlay should load the help center module before the search panel'
 );
 const newtabHtml = fs.readFileSync('newtab.html', 'utf8');
 assert.ok(
-  newtabHtml.indexOf('../shared/help-center-search.js') > 0 &&
-    newtabHtml.indexOf('../shared/help-center-search.js') < newtabHtml.indexOf('suggestions-controller.js'),
+  newtabHtml.indexOf('../shared/search/help-center-search.js') > 0 &&
+    newtabHtml.indexOf('../shared/search/help-center-search.js') < newtabHtml.indexOf('suggestions-controller.js'),
   'the new tab should load the help center module before its suggestions controller'
 );
 assert.match(
-  fs.readFileSync('src/newtab/suggestions-controller.js', 'utf8'),
+  fs.readFileSync('src/newtab/search/suggestions-controller.js', 'utf8'),
   /\[siteSearchSuggestion, \.\.\.helpCenterSuggestions\]/
 );
 assert.match(

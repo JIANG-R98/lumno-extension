@@ -1,7 +1,7 @@
 const assert = require('assert');
 const vm = require('vm');
 const aggregateSearch = require('../../src/background/aggregate-search.js');
-const aggregateStore = require('../../src/shared/aggregate-search-store.js');
+const aggregateStore = require('../../src/shared/search/aggregate-search-store.js');
 const { readBackgroundSource } = require('../helpers/background-source');
 
 const backgroundSource = readBackgroundSource();

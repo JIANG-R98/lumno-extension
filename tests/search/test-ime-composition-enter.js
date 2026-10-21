@@ -5,7 +5,7 @@ const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const guardPath = path.join(repoRoot, 'src/shared/ime-key-guard.js');
+const guardPath = path.join(repoRoot, 'src/shared/search/ime-key-guard.js');
 const guard = require(guardPath);
 
 function createClock(start) {
@@ -100,12 +100,12 @@ const newtabJs = readNewtabRuntimeSource();
 const overlayJs = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
 
 assert.ok(
-  newtabHtml.includes('<script src="../shared/ime-key-guard.js"></script>'),
+  newtabHtml.includes('<script src="../shared/search/ime-key-guard.js"></script>'),
   'New Tab should load the IME key guard before newtab.js'
 );
 
 assert.ok(
-  backgroundJs.includes("'src/shared/ime-key-guard.js'"),
+  backgroundJs.includes("'src/shared/search/ime-key-guard.js'"),
   'overlay injection should load the IME key guard before search-panel.js'
 );
 

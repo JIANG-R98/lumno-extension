@@ -1,11 +1,11 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const faviconUtils = require('../../src/shared/favicon-utils.js');
-const shortcutFavicon = require('../../src/shared/shortcut-favicon.js');
-const shortcutsStore = require('../../src/newtab/shortcuts-store.js');
-const searchUtils = require('../../src/shared/search-utils.js');
-const faviconCache = require('../../src/shared/favicon-cache.js');
+const faviconUtils = require('../../src/shared/favicon/favicon-utils.js');
+const shortcutFavicon = require('../../src/shared/favicon/shortcut-favicon.js');
+const shortcutsStore = require('../../src/newtab/shortcuts/shortcuts-store.js');
+const searchUtils = require('../../src/shared/search/search-utils.js');
+const faviconCache = require('../../src/shared/favicon/favicon-cache.js');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { readBackgroundSource } = require('../helpers/background-source');
 const { extractFunction } = require('../helpers/extract-function');

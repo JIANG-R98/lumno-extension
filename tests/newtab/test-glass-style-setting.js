@@ -145,7 +145,7 @@ async function main() {
   // A light-theme dialog flipped to dark glass must take every color the dark theme gives it, or its
   // text stays dark on the dark plate.
   const darkDialogProps = new Set();
-  postcss.parse(fs.readFileSync('src/newtab/shortcut-dialog.css', 'utf8')).walkRules((rule) => {
+  postcss.parse(fs.readFileSync('src/newtab/shortcuts/shortcut-dialog.css', 'utf8')).walkRules((rule) => {
     if (rule.selectors.includes('body[data-theme="dark"] .x-nt-shortcut-dialog')) {
       rule.walkDecls(/^--/, (decl) => darkDialogProps.add(decl.prop));
     }

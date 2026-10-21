@@ -276,7 +276,7 @@ function testBootstrapDisablesRightButtonTransitions() {
     'utf8'
   );
   const searchInputCss = fs.readFileSync(
-    path.join(repoRoot, 'src/shared/search-input.css'),
+    path.join(repoRoot, 'src/shared/search/search-input.css'),
     'utf8'
   );
   const suggestionsCss = fs.readFileSync(

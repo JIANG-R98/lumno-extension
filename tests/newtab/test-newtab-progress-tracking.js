@@ -1,10 +1,10 @@
 const assert = require('assert');
 const fs = require('fs');
-const store = require('../../src/newtab/recent-sites-store.js');
+const store = require('../../src/newtab/recent/recent-sites-store.js');
 const progressMatch = require('../../src/shared/progress-match.js');
 const progressHistory = require('../../src/shared/progress-history.js');
 require('../../src/newtab/dismiss-stack.js');
-require('../../src/newtab/recent-sites-controller.js');
+require('../../src/newtab/recent/recent-sites-controller.js');
 
 const PINNED_KEY = store.DEFAULT_PINNED_KEY;
 const HISTORY_KEY = progressHistory.STORAGE_KEY;

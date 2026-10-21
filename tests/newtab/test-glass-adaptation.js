@@ -4,7 +4,7 @@ const vm = require('vm');
 
 const sandbox = {};
 vm.createContext(sandbox);
-vm.runInContext(fs.readFileSync('src/newtab/wallpaper-adaptive-tone.js', 'utf8'), sandbox);
+vm.runInContext(fs.readFileSync('src/newtab/wallpaper/wallpaper-adaptive-tone.js', 'utf8'), sandbox);
 const { getGlassAdaptation } = sandbox.LumnoNewtabWallpaperAdaptiveTone;
 
 const grey = (value) => ({ red: value, green: value, blue: value });

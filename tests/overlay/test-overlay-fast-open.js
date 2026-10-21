@@ -83,9 +83,9 @@ assert.ok(
   'the versioned Overlay injection dependency list must remain discoverable'
 );
 [
-  'src/shared/site-search-store.js',
-  'src/shared/aggregate-search-store.js',
-  'src/shared/aggregate-search-surface.js',
+  'src/shared/search/site-search-store.js',
+  'src/shared/search/aggregate-search-store.js',
+  'src/shared/search/aggregate-search-surface.js',
   'src/overlay/search-panel.js'
 ].forEach((runtimeDependency) => {
   assert.ok(

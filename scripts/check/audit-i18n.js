@@ -17,11 +17,11 @@ const ALLOWLIST = [
   'localized selection prompt model in src/shared/selection-intent.js',
   'browser built-in bookmark folder aliases used only for folder detection',
   'debug-only score reason strings when the debug flag is disabled by default',
-  'Chinese search-intent tokens in src/shared/search-utils.js scoring dictionaries',
-  'generated traditional-to-simplified character table in src/shared/search-han-variants.js',
-  'question filler words dropped from help center queries in src/shared/help-center-search.js',
+  'Chinese search-intent tokens in src/shared/search/search-utils.js scoring dictionaries',
+  'generated traditional-to-simplified character table in src/shared/search/search-han-variants.js',
+  'question filler words dropped from help center queries in src/shared/search/help-center-search.js',
   'episode and chapter title patterns in src/shared/progress-match.js',
-  'photographer names credited in src/newtab/wallpaper-catalog.js'
+  'photographer names credited in src/newtab/wallpaper/wallpaper-catalog.js'
 ];
 const I18N_CALL_RE = /(?:^|[^\w])(?:t|baseT|getMessage|formatMessage|updateSyncStatusText|attachPopconfirm|createPopconfirmWrap|createModeOption)\s*\(/;
 
@@ -106,13 +106,13 @@ function isAllowlistedLine(file, line) {
   if (file === 'src/background/ai-provider-submit.js') {
     return true;
   }
-  if (file === 'src/shared/search-utils.js' || file === 'src/shared/search-han-variants.js') {
+  if (file === 'src/shared/search/search-utils.js' || file === 'src/shared/search/search-han-variants.js') {
     return true;
   }
   if (file === 'src/shared/selection-intent.js') {
     return true;
   }
-  if (file === 'src/shared/help-center-search.js') {
+  if (file === 'src/shared/search/help-center-search.js') {
     return true;
   }
   if (file === 'src/shared/progress-match.js') {
@@ -121,7 +121,7 @@ function isAllowlistedLine(file, line) {
   if (file === 'src/onboarding/onboarding-content.js') {
     return true;
   }
-  if (file === 'src/newtab/wallpaper-catalog.js') {
+  if (file === 'src/newtab/wallpaper/wallpaper-catalog.js') {
     return true;
   }
   if (file === 'src/shared/update-notice.js' &&

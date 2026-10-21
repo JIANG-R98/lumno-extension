@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-require('../../src/newtab/wallpaper-adaptive-tone.js');
+require('../../src/newtab/wallpaper/wallpaper-adaptive-tone.js');
 
 const {
   chooseReadableInk,

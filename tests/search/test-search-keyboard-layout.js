@@ -4,7 +4,7 @@ const path = require('path');
 const vm = require('vm');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const searchUtils = require('../../src/shared/search-utils.js');
+const searchUtils = require('../../src/shared/search/search-utils.js');
 
 function readings(query) {
   return searchUtils.getSearchKeyboardLayoutQueries(query);

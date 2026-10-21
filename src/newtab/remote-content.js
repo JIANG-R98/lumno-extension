@@ -12,7 +12,7 @@
   const BING_ID_PATTERN = /^bing-(\d{8})-(OHR\.[a-zA-Z0-9_-]{1,160})$/;
   const BING_ORIGIN = 'https://www.bing.com';
   const CATALOG = root.LumnoNewtabWallpaperCatalog ||
-    (typeof require === 'function' ? require('./wallpaper-catalog.js') : {});
+    (typeof require === 'function' ? require('./wallpaper/wallpaper-catalog.js') : {});
   // The random category mixes every bundled category, so it leads the list as the default view.
   const RANDOM_CATEGORY = 'random';
   const CURATED_CATEGORIES = Object.freeze([RANDOM_CATEGORY, ...Object.keys(CATALOG)]);

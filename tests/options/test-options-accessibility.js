@@ -20,10 +20,10 @@ assert.match(
   /function showToast\(message, isError\)[\s\S]*?setToastAnnouncement\(errorToast\)[\s\S]*?function beginToast\(message\)[\s\S]*?fail\(result\) \{\s*setToastAnnouncement\(true\)/,
   'Options result Toasts, including a loading task that fails, should announce through the same live region rules'
 );
-const switchCss = fs.readFileSync('src/shared/switch.css', 'utf8');
+const switchCss = fs.readFileSync('src/shared/ui/switch.css', 'utf8');
 assert.match(
   optionsHtml,
-  /href="\.\.\/shared\/switch\.css"/,
+  /href="\.\.\/shared\/ui\/switch\.css"/,
   'Options should load the shared switch'
 );
 assert.match(

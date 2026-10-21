@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import '../../src/shared/menu-surface.js';
+import '../../src/shared/ui/menu-surface.js';
 import '../../src/shared/shortcut-display.js';
-import '../../src/shared/favicon-utils.js';
-import '../../src/shared/search-han-variants.js';
-import '../../src/shared/search-utils.js';
-import '../../src/shared/search-input-mode.js';
+import '../../src/shared/favicon/favicon-utils.js';
+import '../../src/shared/search/search-han-variants.js';
+import '../../src/shared/search/search-utils.js';
+import '../../src/shared/search/search-input-mode.js';
 
 Object.assign(globalThis, {
   pinyinPro: {

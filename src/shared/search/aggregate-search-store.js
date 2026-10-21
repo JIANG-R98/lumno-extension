@@ -1,7 +1,7 @@
 (function(root, factory) {
   const settingsApi = root.LumnoSettings || (
     typeof module === 'object' && module.exports
-      ? require('./settings.js')
+      ? require('../settings.js')
       : {}
   );
   const api = factory(settingsApi);

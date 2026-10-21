@@ -2,7 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
-const folderIcon = require('../../src/newtab/bookmark-folder-icon.js');
+const folderIcon = require('../../src/newtab/bookmarks/bookmark-folder-icon.js');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
@@ -194,7 +194,7 @@ assert.strictEqual(iconElement.querySelector('svg').getAttribute('data-folder-co
   }
 }
 
-const scriptPath = 'bookmark-folder-icon.js';
+const scriptPath = 'bookmarks/bookmark-folder-icon.js';
 assert.ok(newtabHtml.includes(`<script src="${scriptPath}"></script>`));
 assert.ok(
   newtabHtml.indexOf(`<script src="${scriptPath}"></script>`) <

@@ -2,8 +2,8 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-require('../../src/shared/search-han-variants.js');
-const search = require('../../src/shared/search-utils.js');
+require('../../src/shared/search/search-han-variants.js');
+const search = require('../../src/shared/search/search-utils.js');
 const pinyinPro = require('../../assets/vendor/pinyin-pro.js');
 
 const repoRoot = path.resolve(__dirname, '..', '..');

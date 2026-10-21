@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-const shortcutsStore = require('../../src/newtab/shortcuts-store.js');
+const shortcutsStore = require('../../src/newtab/shortcuts/shortcuts-store.js');
 
 const SYNC_KEYS = shortcutsStore.SHORTCUTS_SYNC_KEYS;
 const LEGACY_KEYS = shortcutsStore.LEGACY_SHORTCUTS_CHUNK_KEYS;

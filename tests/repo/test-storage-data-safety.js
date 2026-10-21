@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const settings = require('../../src/shared/settings.js');
-const shortcutFavicon = require('../../src/shared/shortcut-favicon.js');
+const shortcutFavicon = require('../../src/shared/favicon/shortcut-favicon.js');
 const repoRoot = path.join(__dirname, '..', '..');
 const manifest = JSON.parse(fs.readFileSync(path.join(repoRoot, 'manifest.json'), 'utf8'));
 const expectedDevelopmentExtensionId = 'kkcjcneagmlhpeaafngjdlpcfjakejgb';
@@ -192,9 +192,9 @@ assert.deepStrictEqual(
     'src/background/background.js:localArea:REMOVED_AI_LOCAL_STORAGE_KEYS',
     'src/background/background.js:syncArea:REMOVED_AI_SYNC_STORAGE_KEYS',
     'src/background/favicon-service.js:localArea:legacyKeys',
-    'src/newtab/bookmark-display-settings.js:bookmarkTopbarSurfaceStorageArea:BOOKMARK_TOPBAR_SURFACE_COLOR_STORAGE_KEY',
-    'src/newtab/bookmark-display-settings.js:localArea:BOOKMARK_TOPBAR_SURFACE_COLOR_STORAGE_KEY',
-    'src/newtab/bookmark-display-settings.js:syncArea:cleanupKeys'
+    'src/newtab/bookmarks/bookmark-display-settings.js:bookmarkTopbarSurfaceStorageArea:BOOKMARK_TOPBAR_SURFACE_COLOR_STORAGE_KEY',
+    'src/newtab/bookmarks/bookmark-display-settings.js:localArea:BOOKMARK_TOPBAR_SURFACE_COLOR_STORAGE_KEY',
+    'src/newtab/bookmarks/bookmark-display-settings.js:syncArea:cleanupKeys'
   ],
   'persisted storage removals must remain limited to the reviewed legacy cleanup paths'
 );

@@ -12,13 +12,13 @@ const optionsHtml = readPageSource('src/options/options.html');
 const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
 const overlayShell = read('react-src/overlay/shell.tsx');
 const documentPipPicker = read('src/content/document-pip-picker.js');
-const tooltipCss = read('src/shared/tooltip.css');
-const cursorTooltipCss = read('src/shared/cursor-tooltip.css');
-const featureHintsCss = read('src/shared/feature-hints.css');
+const tooltipCss = read('src/shared/ui/tooltip.css');
+const cursorTooltipCss = read('src/shared/ui/cursor-tooltip.css');
+const featureHintsCss = read('src/shared/ui/feature-hints.css');
 const overlaySuggestionsCss = read('src/overlay/suggestions-view.css');
-const searchInputCss = read('src/shared/search-input.css');
-const shortcutDialogCss = read('src/newtab/shortcut-dialog.css');
-const infoButtonCss = read('src/shared/info-button.css');
+const searchInputCss = read('src/shared/search/search-input.css');
+const shortcutDialogCss = read('src/newtab/shortcuts/shortcut-dialog.css');
+const infoButtonCss = read('src/shared/ui/info-button.css');
 
 function getRule(source, selector) {
   const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

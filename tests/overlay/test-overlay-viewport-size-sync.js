@@ -9,7 +9,7 @@ const lifecycleSource = fs.readFileSync('src/overlay/lifecycle.js', 'utf8');
 const shellSource = fs.readFileSync('react-src/overlay/shell.tsx', 'utf8');
 const searchPanelSource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
 const sharedSearchInputSource = fs.readFileSync(
-  'src/shared/search-input.css',
+  'src/shared/search/search-input.css',
   'utf8'
 );
 const suggestionsViewSource = fs.readFileSync(

@@ -13,8 +13,8 @@ sandbox.globalThis = sandbox;
 vm.runInNewContext(fs.readFileSync('src/shared/settings.js', 'utf8'), sandbox, {
   filename: 'src/shared/settings.js'
 });
-vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper-effects.js', 'utf8'), sandbox, {
-  filename: 'src/newtab/wallpaper-effects.js'
+vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper/wallpaper-effects.js', 'utf8'), sandbox, {
+  filename: 'src/newtab/wallpaper/wallpaper-effects.js'
 });
 
 const effects = sandbox.LumnoNewtabWallpaperEffects;
@@ -433,17 +433,17 @@ assert.match(
   'the resized destination canvas should be hidden without animating before its crossfade'
 );
 
-const effectsSource = fs.readFileSync('src/newtab/wallpaper-effects.js', 'utf8');
-const wallpaperSource = fs.readFileSync('src/newtab/wallpaper.js', 'utf8');
+const effectsSource = fs.readFileSync('src/newtab/wallpaper/wallpaper-effects.js', 'utf8');
+const wallpaperSource = fs.readFileSync('src/newtab/wallpaper/wallpaper.js', 'utf8');
 assert.match(
   wallpaperSource,
   /function createWallpaperTransitionLayer\(\)[\s\S]*?data-wallpaper-effect[^\n]*blur[\s\S]*?--x-nt-wallpaper-image[\s\S]*?--x-nt-wallpaper-size[\s\S]*?--x-nt-wallpaper-position/,
   'wallpaper transitions should snapshot the blurred wallpaper source instead of flashing a sharp frame'
 );
-const wallpaperPreloadSource = fs.readFileSync('src/newtab/wallpaper-preload.js', 'utf8');
-const effectPreloadSource = fs.readFileSync('src/newtab/wallpaper-effect-preload.js', 'utf8');
+const wallpaperPreloadSource = fs.readFileSync('src/newtab/wallpaper/wallpaper-preload.js', 'utf8');
+const effectPreloadSource = fs.readFileSync('src/newtab/wallpaper/wallpaper-effect-preload.js', 'utf8');
 vm.runInNewContext(wallpaperSource, sandbox, {
-  filename: 'src/newtab/wallpaper.js'
+  filename: 'src/newtab/wallpaper/wallpaper.js'
 });
 const wallpaper = sandbox.LumnoNewtabWallpaper;
 assert.ok(wallpaper, 'wallpaper runtime module should initialize');
@@ -607,17 +607,17 @@ assert.match(
   'the New Tab should wait for the selected wallpaper effect to render before becoming ready'
 );
 assert.ok(
-  newtabHtml.indexOf('<script src="wallpaper-crt-webgl.js"></script>') <
-    newtabHtml.indexOf('<script src="wallpaper-effects.js"></script>'),
+  newtabHtml.indexOf('<script src="wallpaper/wallpaper-crt-webgl.js"></script>') <
+    newtabHtml.indexOf('<script src="wallpaper/wallpaper-effects.js"></script>'),
   'the standalone CRT shader should load before the shared wallpaper effect controller'
 );
 assert.ok(
-  newtabHtml.indexOf('<script src="wallpaper-effects.js"></script>') <
-    newtabHtml.indexOf('<script src="wallpaper-preload.js"></script>'),
+  newtabHtml.indexOf('<script src="wallpaper/wallpaper-effects.js"></script>') <
+    newtabHtml.indexOf('<script src="wallpaper/wallpaper-preload.js"></script>'),
   'the wallpaper effect renderer should load before the head preload fast path'
 );
 assert.ok(
-  newtabHtml.indexOf('<script src="wallpaper-effect-preload.js"></script>') <
+  newtabHtml.indexOf('<script src="wallpaper/wallpaper-effect-preload.js"></script>') <
     newtabHtml.indexOf('<div id="_x_extension_newtab_root_2024_unique_"'),
   'the focused-route wallpaper effect should start before New Tab content bootstraps'
 );
@@ -1394,7 +1394,7 @@ function runEffectPreload({ focusRoute, imageReady, imageUrl = '' }) {
   };
   preloadSandbox.globalThis = preloadSandbox;
   vm.runInNewContext(effectPreloadSource, preloadSandbox, {
-    filename: 'src/newtab/wallpaper-effect-preload.js'
+    filename: 'src/newtab/wallpaper/wallpaper-effect-preload.js'
   });
   return {
     attributes,

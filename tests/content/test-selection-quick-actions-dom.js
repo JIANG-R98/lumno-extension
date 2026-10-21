@@ -280,7 +280,7 @@ let wait = null;
   });
   window.eval(fs.readFileSync('src/shared/settings.js', 'utf8'));
   window.eval(fs.readFileSync('src/shared/selection-action-icons.js', 'utf8'));
-  window.eval(fs.readFileSync('src/shared/toast.js', 'utf8'));
+  window.eval(fs.readFileSync('src/shared/ui/toast.js', 'utf8'));
   assert.strictEqual(
     window.LumnoSelectionButterfly,
     undefined,

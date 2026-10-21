@@ -8,7 +8,7 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const optionsJs = fs.readFileSync(path.join(repoRoot, 'src/options/options.js'), 'utf8');
 const newtabJs = readNewtabRuntimeSource();
 const newtabWallpaperJs = fs.readFileSync(
-  path.join(repoRoot, 'src/newtab/wallpaper.js'),
+  path.join(repoRoot, 'src/newtab/wallpaper/wallpaper.js'),
   'utf8'
 );
 const newtabHtml = readPageSource('newtab.html');

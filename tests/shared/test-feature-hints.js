@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const featureHintsCss = fs.readFileSync(
-  path.join(__dirname, '..', '..', 'src/shared/feature-hints.css'),
+  path.join(__dirname, '..', '..', 'src/shared/ui/feature-hints.css'),
   'utf8'
 );
 
@@ -154,7 +154,7 @@ global.LumnoFeatureHintView = {
 };
 
 require('../../src/shared/shortcut-display.js');
-const featureHints = require('../../src/shared/feature-hints.js');
+const featureHints = require('../../src/shared/ui/feature-hints.js');
 
 function createStorageArea(store) {
   return {

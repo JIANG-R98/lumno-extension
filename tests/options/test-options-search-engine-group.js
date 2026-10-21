@@ -46,7 +46,7 @@ assert.match(
 );
 assert.match(
   optionsHtml,
-  /<script src="\.\.\/shared\/shortcut-favicon\.js"><\/script>/,
+  /<script src="\.\.\/shared\/favicon\/shortcut-favicon\.js"><\/script>/,
   'Options should load the shared provider icon catalog'
 );
 assert.match(

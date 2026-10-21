@@ -21,10 +21,10 @@ const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
 const optionsHtml = readPageSource('src/options/options.html');
 const backgroundSource = readBackgroundSource();
 const newtabSource = readNewtabRuntimeSource();
-const wallpaperSource = fs.readFileSync('src/newtab/wallpaper.js', 'utf8');
+const wallpaperSource = fs.readFileSync('src/newtab/wallpaper/wallpaper.js', 'utf8');
 const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
 const sharedSettingsSource = fs.readFileSync('src/shared/settings.js', 'utf8');
-const shortcutFaviconSource = fs.readFileSync('src/shared/shortcut-favicon.js', 'utf8');
+const shortcutFaviconSource = fs.readFileSync('src/shared/favicon/shortcut-favicon.js', 'utf8');
 const localeNames = ['en', 'ja', 'zh_CN', 'zh_TW'];
 const localeMessages = Object.fromEntries(localeNames.map((locale) => [
   locale,

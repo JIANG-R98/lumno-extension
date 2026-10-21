@@ -8,7 +8,7 @@ const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const entryMotionSource = fs.readFileSync(path.join(repoRoot, 'src/newtab/entry-motion.js'), 'utf8');
-const effectPreloadSource = fs.readFileSync(path.join(repoRoot, 'src/newtab/wallpaper-effect-preload.js'), 'utf8');
+const effectPreloadSource = fs.readFileSync(path.join(repoRoot, 'src/newtab/wallpaper/wallpaper-effect-preload.js'), 'utf8');
 const newtabSource = readNewtabRuntimeSource();
 const newtabCss = readStylesheet('src/newtab/newtab.css');
 const glassCss = readStylesheet('src/newtab/glass-style.css');
@@ -120,7 +120,7 @@ async function testEffectPreloadRecordsWhenTheWallpaperShowed() {
   };
   sandbox.globalThis = sandbox;
   const before = performance.now();
-  vm.runInNewContext(effectPreloadSource, sandbox, { filename: 'src/newtab/wallpaper-effect-preload.js' });
+  vm.runInNewContext(effectPreloadSource, sandbox, { filename: 'src/newtab/wallpaper/wallpaper-effect-preload.js' });
   await Promise.resolve();
   await Promise.resolve();
   assert.strictEqual(body.getAttribute('data-nt-wallpaper-ready'), '1');

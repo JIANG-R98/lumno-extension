@@ -10,8 +10,8 @@ const readSource = (relativePath) => fs.readFileSync(path.join(repoRoot, relativ
 const newtabSource = readNewtabRuntimeSource();
 const overlaySource = readSource('src/overlay/search-panel.js');
 const backgroundSource = readBackgroundSource();
-const inputModeSource = readSource('src/shared/search-input-mode.js');
-const inputModeCss = readSource('src/shared/search-input.css');
+const inputModeSource = readSource('src/shared/search/search-input-mode.js');
+const inputModeCss = readSource('src/shared/search/search-input.css');
 const newtabHtml = readPageSource('newtab.html');
 const manifestSource = readSource('manifest.json');
 const overlaySuggestionsCss = readSource('src/overlay/suggestions-view.css');

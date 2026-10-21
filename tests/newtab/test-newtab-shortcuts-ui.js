@@ -21,9 +21,9 @@ const shortcutDialogJs = fs.readFileSync(
   path.join(repoRoot, 'react-src/newtab/shortcut-dialog.tsx'),
   'utf8'
 );
-const shortcutDialogCss = readStylesheet('src/newtab/shortcut-dialog.css');
-const wallpaperAdaptiveToneJs = fs.readFileSync(path.join(repoRoot, 'src/newtab/wallpaper-adaptive-tone.js'), 'utf8');
-const tooltipJs = fs.readFileSync(path.join(repoRoot, 'src/shared/tooltip.js'), 'utf8');
+const shortcutDialogCss = readStylesheet('src/newtab/shortcuts/shortcut-dialog.css');
+const wallpaperAdaptiveToneJs = fs.readFileSync(path.join(repoRoot, 'src/newtab/wallpaper/wallpaper-adaptive-tone.js'), 'utf8');
+const tooltipJs = fs.readFileSync(path.join(repoRoot, 'src/shared/ui/tooltip.js'), 'utf8');
 const optionsHtml = readPageSource('src/options/options.html');
 const locales = ['zh_CN', 'zh_TW', 'en', 'ja'].map((locale) => ({
   locale,
@@ -588,31 +588,31 @@ async function assertDarkThemeKeepsShortcutThemeBackground() {
 
 assertContains(
   newtabHtml,
-  '<script src="shortcuts-store.js"></script>',
+  '<script src="shortcuts/shortcuts-store.js"></script>',
   'new tab page should load the shortcuts store before newtab.js'
 );
 
 assert.ok(
-  newtabHtml.indexOf('<script src="shortcuts-store.js"></script>') <
+  newtabHtml.indexOf('<script src="shortcuts/shortcuts-store.js"></script>') <
     newtabHtml.indexOf('src="../shared/react-page-bootstrap.js"'),
   'shortcuts store should load before the page bootstrap'
 );
 
 assertContains(
   newtabHtml,
-  '<script src="shortcut-icon-store.js"></script>',
+  '<script src="shortcuts/shortcut-icon-store.js"></script>',
   'new tab page should load the local shortcut icon store'
 );
 
 assert.ok(
-  newtabHtml.indexOf('<script src="shortcut-icon-store.js"></script>') <
+  newtabHtml.indexOf('<script src="shortcuts/shortcut-icon-store.js"></script>') <
     newtabHtml.indexOf('src="../shared/react-page-bootstrap.js"'),
   'shortcut icon processing should load before the bootstrap starts the React dialog'
 );
 
 assertContains(
   newtabHtml,
-  '<script src="../shared/shortcut-favicon.js"></script>',
+  '<script src="../shared/favicon/shortcut-favicon.js"></script>',
   'new tab page should load the dedicated high-resolution shortcut favicon cache'
 );
 

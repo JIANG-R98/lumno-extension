@@ -1,6 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
-const faviconUtils = require('../../src/shared/favicon-utils.js');
+const faviconUtils = require('../../src/shared/favicon/favicon-utils.js');
 const { readBackgroundSource } = require('../helpers/background-source');
 const { extractFunction: extractFunctionFrom } = require('../helpers/extract-function');
 

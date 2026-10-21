@@ -3,8 +3,8 @@ const fs = require('fs');
 const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const tooltipJsPath = path.join(repoRoot, 'src/shared/tooltip.js');
-const tooltipCssPath = path.join(repoRoot, 'src/shared/tooltip.css');
+const tooltipJsPath = path.join(repoRoot, 'src/shared/ui/tooltip.js');
+const tooltipCssPath = path.join(repoRoot, 'src/shared/ui/tooltip.css');
 const newtabHtmlPath = path.join(repoRoot, 'newtab.html');
 const optionsHtmlPath = path.join(repoRoot, 'src/options/options.html');
 const overlayPanelPath = path.join(repoRoot, 'src/overlay/search-panel.js');
@@ -46,8 +46,8 @@ global.LumnoTooltipView = {
   }
 };
 
-assert.ok(fs.existsSync(tooltipJsPath), 'shared tooltip behavior should live in src/shared/tooltip.js');
-assert.ok(fs.existsSync(tooltipCssPath), 'shared tooltip styling should live in src/shared/tooltip.css');
+assert.ok(fs.existsSync(tooltipJsPath), 'shared tooltip behavior should live in src/shared/ui/tooltip.js');
+assert.ok(fs.existsSync(tooltipCssPath), 'shared tooltip styling should live in src/shared/ui/tooltip.css');
 
 const tooltipCss = fs.readFileSync(tooltipCssPath, 'utf8');
 const tooltip = require(tooltipJsPath);
@@ -239,16 +239,16 @@ const optionsHtml = fs.readFileSync(optionsHtmlPath, 'utf8');
 const overlayPanel = fs.readFileSync(overlayPanelPath, 'utf8');
 const background = fs.readFileSync(backgroundPath, 'utf8');
 
-assert.ok(newtabHtml.includes('../shared/tooltip.css'), 'newtab should load the shared tooltip stylesheet');
-assert.ok(newtabHtml.includes('../shared/tooltip.js'), 'newtab should load the shared tooltip component');
-assert.ok(optionsHtml.includes('../shared/tooltip.css'), 'options should load the shared tooltip stylesheet');
-assert.ok(optionsHtml.includes('../shared/tooltip.js'), 'options should load the shared tooltip component');
+assert.ok(newtabHtml.includes('../shared/ui/tooltip.css'), 'newtab should load the shared tooltip stylesheet');
+assert.ok(newtabHtml.includes('../shared/ui/tooltip.js'), 'newtab should load the shared tooltip component');
+assert.ok(optionsHtml.includes('../shared/ui/tooltip.css'), 'options should load the shared tooltip stylesheet');
+assert.ok(optionsHtml.includes('../shared/ui/tooltip.js'), 'options should load the shared tooltip component');
 assert.ok(
-  background.includes("'src/shared/tooltip.js'"),
+  background.includes("'src/shared/ui/tooltip.js'"),
   'overlay injection should load the shared tooltip component before search-panel'
 );
 assert.ok(
-  overlayPanel.includes("overlayRuntime.getRuntimeUrl(chrome, 'src/shared/tooltip.css')"),
+  overlayPanel.includes("overlayRuntime.getRuntimeUrl(chrome, 'src/shared/ui/tooltip.css')"),
   'overlay should resolve the shared tooltip stylesheet URL'
 );
 assert.ok(

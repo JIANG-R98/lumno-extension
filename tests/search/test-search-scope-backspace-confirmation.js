@@ -6,14 +6,14 @@ function readSource(path) {
   return fs.readFileSync(path, 'utf8');
 }
 
-const sharedSource = readSource('src/shared/search-input-mode.js');
+const sharedSource = readSource('src/shared/search/search-input-mode.js');
 const newtabSource = readNewtabRuntimeSource();
 const overlaySource = readSource('src/overlay/search-panel.js');
 const overlayRuntimeSource = readSource('src/overlay/runtime.js');
 const backgroundSource = readSource('src/background/background.js');
 const optionsSource = readSource('src/options/options.js');
 const newtabStartupPrefetchSource = readSource('src/newtab/newtab-storage-prefetch.js');
-const toastSource = readSource('src/shared/toast.js');
+const toastSource = readSource('src/shared/ui/toast.js');
 
 assert.ok(
   sharedSource.includes('function shouldRemoveModeTagOnBackspace(event)') &&
@@ -47,8 +47,8 @@ assert.ok(
   'overlay should use the shared lightweight Toast runtime'
 );
 assert.ok(
-  backgroundSource.includes("'src/shared/toast.js'") &&
-    backgroundSource.indexOf("'src/shared/toast.js'") <
+  backgroundSource.includes("'src/shared/ui/toast.js'") &&
+    backgroundSource.indexOf("'src/shared/ui/toast.js'") <
       backgroundSource.indexOf("'src/overlay/search-panel.js'"),
   'overlay injection should load the shared Toast runtime before the panel'
 );

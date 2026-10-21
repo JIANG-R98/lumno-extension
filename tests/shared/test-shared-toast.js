@@ -46,7 +46,7 @@ const toastElement = {
 };
 
 delete global.LumnoToast;
-require(path.resolve(__dirname, '../../src/shared/toast.js'));
+require(path.resolve(__dirname, '../../src/shared/ui/toast.js'));
 
 assert.strictEqual(global.LumnoToast.implementation, 'dom');
 assert.strictEqual(typeof global.LumnoToast.createToastStyleGate, 'function');

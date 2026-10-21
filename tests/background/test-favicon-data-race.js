@@ -83,11 +83,11 @@ const sandbox = {
 };
 sandbox.globalThis = sandbox;
 
-vm.runInNewContext(fs.readFileSync('src/shared/favicon-utils.js', 'utf8'), sandbox, {
-  filename: 'src/shared/favicon-utils.js'
+vm.runInNewContext(fs.readFileSync('src/shared/favicon/favicon-utils.js', 'utf8'), sandbox, {
+  filename: 'src/shared/favicon/favicon-utils.js'
 });
-vm.runInNewContext(fs.readFileSync('src/shared/favicon-view-core.js', 'utf8'), sandbox, {
-  filename: 'src/shared/favicon-view-core.js'
+vm.runInNewContext(fs.readFileSync('src/shared/favicon/favicon-view-core.js', 'utf8'), sandbox, {
+  filename: 'src/shared/favicon/favicon-view-core.js'
 });
 
 const core = sandbox.LumnoFaviconViewCore.createFaviconViewCore({

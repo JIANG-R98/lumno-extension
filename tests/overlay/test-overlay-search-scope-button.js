@@ -2,9 +2,9 @@ const assert = require('assert');
 const fs = require('fs');
 
 const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
-const searchInputCss = fs.readFileSync('src/shared/search-input.css', 'utf8');
+const searchInputCss = fs.readFileSync('src/shared/search/search-input.css', 'utf8');
 const searchInputModeSource = fs.readFileSync(
-  'src/shared/search-input-mode.js',
+  'src/shared/search/search-input-mode.js',
   'utf8'
 );
 

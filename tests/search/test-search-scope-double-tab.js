@@ -1,15 +1,15 @@
 const assert = require('assert');
 const fs = require('fs');
 const vm = require('vm');
-const search = require('../../src/shared/search-utils.js');
+const search = require('../../src/shared/search/search-utils.js');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
 function readSource(path) {
   return fs.readFileSync(path, 'utf8');
 }
 
-const sharedSource = readSource('src/shared/search-input-mode.js');
-const sharedCss = readSource('src/shared/search-input.css');
+const sharedSource = readSource('src/shared/search/search-input-mode.js');
+const sharedCss = readSource('src/shared/search/search-input.css');
 const newtabSource = readNewtabRuntimeSource();
 const overlaySource = readSource('src/overlay/search-panel.js');
 
@@ -401,7 +401,7 @@ async function runRuntimeStabilityTests() {
     }
   });
   vm.runInContext(sharedSource, sharedRuntimeContext, {
-    filename: 'src/shared/search-input-mode.js'
+    filename: 'src/shared/search/search-input-mode.js'
   });
   const upgradedRuntime = sharedRuntimeContext.window.LumnoSearchInputMode;
   assert.notStrictEqual(
@@ -414,7 +414,7 @@ async function runRuntimeStabilityTests() {
     'the current input-mode runtime should expose a version marker'
   );
   vm.runInContext(sharedSource, sharedRuntimeContext, {
-    filename: 'src/shared/search-input-mode.js'
+    filename: 'src/shared/search/search-input-mode.js'
   });
   assert.strictEqual(
     sharedRuntimeContext.window.LumnoSearchInputMode,

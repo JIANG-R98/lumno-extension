@@ -2,9 +2,9 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
-const icons = require('../../src/newtab/folder-item-icons');
-const store = require('../../src/newtab/shortcuts-store');
-const favicon = require('../../src/shared/shortcut-favicon');
+const icons = require('../../src/newtab/bookmarks/folder-item-icons');
+const store = require('../../src/newtab/shortcuts/shortcuts-store');
+const favicon = require('../../src/shared/favicon/shortcut-favicon');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { extractFunction: extractFunctionFrom } = require('../helpers/extract-function');
 
@@ -93,7 +93,7 @@ const png = (text) => `data:image/png;base64,${Buffer.from(text).toString('base6
   assert.strictEqual(opened[1].shortcut.iconSource, undefined);
 
   // The cascade shows the chosen icon instead of resolving a favicon.
-  const cascade = fs.readFileSync(path.join(__dirname, '../../src/newtab/bookmark-cascade-menu.js'), 'utf8');
+  const cascade = fs.readFileSync(path.join(__dirname, '../../src/newtab/bookmarks/bookmark-cascade-menu.js'), 'utf8');
   const iconChoice = cascade.indexOf('getItemIconUrl(item, bookmarkCascadeAnchor)');
   assert.ok(iconChoice > 0 && iconChoice < cascade.indexOf('attachFaviconWithFallbacks(icon, item.url'));
 

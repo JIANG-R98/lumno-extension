@@ -27,7 +27,7 @@
   // keeps a stack of one for its document.
   function createOwnDismissStack(documentObj) {
     const dismissApi = (typeof globalThis !== 'undefined' && globalThis.LumnoNewtabDismissStack) ||
-      (typeof require === 'function' ? require('./dismiss-stack.js') : null);
+      (typeof require === 'function' ? require('../dismiss-stack.js') : null);
     return dismissApi && documentObj ? dismissApi.createDismissStack({ documentObj }) : null;
   }
 

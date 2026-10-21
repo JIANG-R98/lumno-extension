@@ -2,8 +2,8 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
-const shortcutFavicon = require('../../src/shared/shortcut-favicon.js');
-const searchUtils = require('../../src/shared/search-utils.js');
+const shortcutFavicon = require('../../src/shared/favicon/shortcut-favicon.js');
+const searchUtils = require('../../src/shared/search/search-utils.js');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
 function createPngHeader(width, height) {

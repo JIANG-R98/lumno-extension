@@ -1,6 +1,6 @@
 (function(root, factory) {
   const settings = root.LumnoSettings || (typeof require === 'function' ? require('./settings.js') : {});
-  const shortcuts = root.LumnoNewtabShortcutsStore || (typeof require === 'function' ? require('../newtab/shortcuts-store.js') : {});
+  const shortcuts = root.LumnoNewtabShortcutsStore || (typeof require === 'function' ? require('../newtab/shortcuts/shortcuts-store.js') : {});
   const api = factory(settings, shortcuts);
   root.LumnoWebDavContract = api;
   if (typeof module === 'object' && module.exports) module.exports = api;

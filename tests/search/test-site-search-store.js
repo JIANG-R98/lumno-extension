@@ -1,5 +1,5 @@
 const assert = require('assert');
-const store = require('../../src/shared/site-search-store.js');
+const store = require('../../src/shared/search/site-search-store.js');
 
 async function run() {
   const baseProviders = [

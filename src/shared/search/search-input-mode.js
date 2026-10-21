@@ -500,7 +500,7 @@
         return null;
       }
       try {
-        return import(chromeApi.runtime.getURL('src/shared/search-han-variants.js'))
+        return import(chromeApi.runtime.getURL('src/shared/search/search-han-variants.js'))
           .then(() => true)
           .catch(() => null);
       } catch (error) {

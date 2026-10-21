@@ -11,7 +11,7 @@ const onboardingSource = readPageSource('src/onboarding/onboarding.html');
 const overlayShellSource = read('react-src/overlay/shell.tsx');
 const overlaySearchPanelSource = read('src/overlay/search-panel.js');
 const overlaySuggestionsSource = read('src/overlay/suggestions-view.css');
-const sharedSearchInputSource = read('src/shared/search-input.css');
+const sharedSearchInputSource = read('src/shared/search/search-input.css');
 const sharedSearchInputReactSource = read('react-src/shared/search-input.tsx');
 
 // Maps each selector to the corner-shape its last rule declares.

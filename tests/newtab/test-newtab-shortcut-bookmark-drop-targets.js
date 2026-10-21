@@ -1,9 +1,9 @@
 const assert = require('assert');
 const fs = require('fs');
 const { JSDOM } = require('jsdom');
-const bookmarkDrag = require('../../src/newtab/bookmark-drag.js');
+const bookmarkDrag = require('../../src/newtab/bookmarks/bookmark-drag.js');
 const crossSurfaceDrag = require('../../src/newtab/cross-surface-drag.js');
-const bookmarkMoveHistory = require('../../src/newtab/bookmark-move-history.js');
+const bookmarkMoveHistory = require('../../src/newtab/bookmarks/bookmark-move-history.js');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { extractFunction: extractFunctionFrom } = require('../helpers/extract-function');
 
@@ -123,7 +123,7 @@ function createScenario(mode, sourceType, options = {}) {
 }
 
 function attachCascade(scene, depth, empty = false) {
-  const text = fs.readFileSync('src/newtab/bookmark-cascade-menu.js', 'utf8');
+  const text = fs.readFileSync('src/newtab/bookmarks/bookmark-cascade-menu.js', 'utf8');
   const menu = scene.document.createElement('div');
   menu.className = 'x-nt-bookmark-cascade-menu';
   scene.document.body.appendChild(menu);

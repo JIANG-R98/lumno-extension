@@ -142,7 +142,7 @@ function createRuntime(options) {
   };
   sandbox.globalThis = sandbox;
   sandbox.LumnoFaviconViewCore = {
-    createFallbackIconPresenter: require('../../src/shared/favicon-view-core.js').createFallbackIconPresenter,
+    createFallbackIconPresenter: require('../../src/shared/favicon/favicon-view-core.js').createFallbackIconPresenter,
     createFaviconViewCore(config) {
       return {
         setFallbackNodeVisible() {},
@@ -204,8 +204,8 @@ function createRuntime(options) {
       };
     }
   };
-  vm.runInNewContext(fs.readFileSync(path.join(repoRoot, 'src/shared/favicon-utils.js'), 'utf8'), sandbox, {
-    filename: 'src/shared/favicon-utils.js'
+  vm.runInNewContext(fs.readFileSync(path.join(repoRoot, 'src/shared/favicon/favicon-utils.js'), 'utf8'), sandbox, {
+    filename: 'src/shared/favicon/favicon-utils.js'
   });
   vm.runInNewContext(fs.readFileSync(path.join(repoRoot, 'src/overlay/favicon-view.js'), 'utf8'), sandbox, {
     filename: 'src/overlay/favicon-view.js'

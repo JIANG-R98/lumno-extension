@@ -1,12 +1,12 @@
 const assert = require('assert');
 const fs = require('fs');
-const shortcutFavicon = require('../../src/shared/shortcut-favicon.js');
+const shortcutFavicon = require('../../src/shared/favicon/shortcut-favicon.js');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
 const newtabSource = readNewtabRuntimeSource();
 const newtabHtml = readPageSource('newtab.html');
-const searchInputCss = fs.readFileSync('src/shared/search-input.css', 'utf8');
+const searchInputCss = fs.readFileSync('src/shared/search/search-input.css', 'utf8');
 const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
 
 assert.match(

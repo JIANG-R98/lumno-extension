@@ -15,7 +15,7 @@
     'src/shared/settings.js',
     'src/shared/selection-action-icons.js',
     'src/shared/selection-intent.js',
-    'src/shared/toast.js',
+    'src/shared/ui/toast.js',
     'src/content/selection-quick-actions.js'
   ]);
   const RUN_AT = 'document_idle';

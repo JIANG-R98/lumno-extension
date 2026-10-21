@@ -180,9 +180,9 @@ function getCssRgbChannels(value) {
   };
   sandbox.globalThis = sandbox;
   vm.runInNewContext(
-    fs.readFileSync('src/newtab/wallpaper-adaptive-tone.js', 'utf8'),
+    fs.readFileSync('src/newtab/wallpaper/wallpaper-adaptive-tone.js', 'utf8'),
     sandbox,
-    { filename: 'src/newtab/wallpaper-adaptive-tone.js' }
+    { filename: 'src/newtab/wallpaper/wallpaper-adaptive-tone.js' }
   );
 
   const readySamplers = [];

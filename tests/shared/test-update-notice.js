@@ -143,7 +143,7 @@ global.LumnoFeatureHintView = {
   }
 };
 
-const featureHints = require('../../src/shared/feature-hints.js');
+const featureHints = require('../../src/shared/ui/feature-hints.js');
 const updateNotice = require('../../src/shared/update-notice.js');
 
 function createOnChangedEmitter() {
@@ -395,7 +395,7 @@ function flushMicrotasks() {
     newtabSource.includes('updateNoticeController.recordExposure()'),
     'newtab should count an exposure only when the notice is mounted'
   );
-  const updateNoticeCss = readStylesheet('src/shared/feature-hints.css');
+  const updateNoticeCss = readStylesheet('src/shared/ui/feature-hints.css');
   assert(
     updateNoticeCss.includes('.x-lumno-feature-hint--update-notice-overlay') &&
       updateNoticeCss.includes('position: fixed;') &&
@@ -483,7 +483,7 @@ function flushMicrotasks() {
       updateNoticeCss.includes('justify-content: flex-end;'),
     'text badge icons should reserve visual space before wide emoji glyphs'
   );
-  const featureHintsSource = fs.readFileSync('src/shared/feature-hints.js', 'utf8');
+  const featureHintsSource = fs.readFileSync('src/shared/ui/feature-hints.js', 'utf8');
   const featureHintViewSource = fs.readFileSync('react-src/shared/feature-hint-view.tsx', 'utf8');
   const updateNoticeSource = fs.readFileSync('src/shared/update-notice.js', 'utf8');
   assert(

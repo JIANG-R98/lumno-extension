@@ -44,7 +44,7 @@ const suggestionItems = Array.from({ length: 3 }, (_, index) => ({
 const numberShortcutSignals = [];
 let imeKeyUpCount = 0;
 let macosCtrlNavigationEnabled = false;
-const SUGGESTION_NAVIGATION = require('../../src/shared/suggestion-navigation.js');
+const SUGGESTION_NAVIGATION = require('../../src/shared/search/suggestion-navigation.js');
 const numberShortcutOptions = {
   primaryModifier: 'meta',
   holdDurationMs: 5,

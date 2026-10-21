@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const refs = require('../../src/shared/bookmark-folder-reference.js');
-const shortcuts = require('../../src/newtab/shortcuts-store.js');
+const shortcuts = require('../../src/newtab/shortcuts/shortcuts-store.js');
 const settings = require('../../src/shared/settings.js');
 const drag = require('../../src/newtab/cross-surface-drag.js');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
@@ -200,7 +200,7 @@ async function run() {
     ${functionSource(pageSource, 'moveBookmarkToShortcuts')}
     ${functionSource(pageSource, 'transferBookmarkToShortcuts')}
     return { move: moveBookmarkToShortcuts, getItems: () => newtabShortcuts };
-  `)(dropRuntime, refs, drag, shortcuts, ambiguousMap, require('../../src/newtab/bookmark-move-history'));
+  `)(dropRuntime, refs, drag, shortcuts, ambiguousMap, require('../../src/newtab/bookmarks/bookmark-move-history'));
   const dropTarget = { record: shortcuts.createShortcutRecord({ type: 'folder', folderId: '118', title: '灵感' }), index: 0 };
   assert.strictEqual(await drop.move({ bookmarkId: '118' }, dropTarget), true);
   const selected = drop.getItems()[0];

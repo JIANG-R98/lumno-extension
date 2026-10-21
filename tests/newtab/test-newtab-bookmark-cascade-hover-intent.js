@@ -7,14 +7,14 @@ const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const repoRoot = path.resolve(__dirname, '..', '..');
 const newtabJs = readNewtabRuntimeSource();
 const newtabHtml = readPageSource('newtab.html');
-const cascadeMenuJs = fs.readFileSync(path.join(repoRoot, 'src', 'newtab', 'bookmark-cascade-menu.js'), 'utf8');
+const cascadeMenuJs = fs.readFileSync(path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-cascade-menu.js'), 'utf8');
 const {
   buildCascadeSafeTriangle,
   isPointInsideCascadeSafeTriangle
-} = require(path.join(repoRoot, 'src', 'newtab', 'bookmark-cascade-position.js'));
+} = require(path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-cascade-position.js'));
 const {
   createBookmarkCascadeMenuRuntime
-} = require(path.join(repoRoot, 'src', 'newtab', 'bookmark-cascade-menu.js'));
+} = require(path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-cascade-menu.js'));
 const {
   createFakeBookmarkCascadeView
 } = require(path.join(repoRoot, 'tests', 'helpers', 'fake-bookmark-cascade-view.js'));

@@ -4,7 +4,7 @@ const path = require('node:path');
 const { JSDOM } = require('jsdom');
 const settings = require('../../src/shared/settings.js');
 require('../../src/newtab/remote-content.js');
-const quotes = require('../../src/newtab/quotes.js');
+const quotes = require('../../src/newtab/top-content/quotes.js');
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
 async function main() {

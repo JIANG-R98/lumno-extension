@@ -1,6 +1,6 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import '../../src/shared/suggestion-action-model.js';
+import '../../src/shared/search/suggestion-action-model.js';
 import {
   createSuggestionsView,
   createSuggestionsViewApi,

@@ -9,6 +9,7 @@
 // wallpapers) are only listed.
 //
 //   npm run smoke
+//   npm run smoke -- dist/unpacked          (an unpacked store package)
 //   LUMNO_SMOKE_CHROME=/path/to/chrome npm run smoke
 //
 // Not part of `npm test`: it needs a local Chrome.
@@ -19,6 +20,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
+const extensionRoot = path.resolve(process.argv[2] || repoRoot);
 const CHROME_CANDIDATES = [
   process.env.LUMNO_SMOKE_CHROME,
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -161,7 +163,7 @@ async function main() {
   const report = {};
   try {
     await cdp.send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: false, flatten: true });
-    ({ id: extensionId } = await cdp.send('Extensions.loadUnpacked', { path: repoRoot }));
+    ({ id: extensionId } = await cdp.send('Extensions.loadUnpacked', { path: extensionRoot }));
     await delay(1500);
     const { targetInfos } = await cdp.send('Target.getTargets');
     const worker = targetInfos.find((target) => target.type === 'service_worker' && target.url.includes(extensionId));

@@ -7,7 +7,7 @@ import type {
 import type { SliderState, ToggleState } from './wallpaper-panel-controls';
 
 // A complete panel state with English labels, for tests to edit; the runtime builds
-// the real one (src/newtab/wallpaper.js).
+// the real one (src/newtab/wallpaper/wallpaper.js).
 
 const noop = () => {};
 

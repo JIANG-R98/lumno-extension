@@ -5,7 +5,7 @@ const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const historyApi = require(path.join(repoRoot, 'src/shared/search-input-history.js'));
+const historyApi = require(path.join(repoRoot, 'src/shared/search/search-input-history.js'));
 
 function createStorage(initialValue) {
   const state = {
@@ -122,11 +122,11 @@ function testSurfaceIntegrationContract() {
   );
 
   assert.ok(
-    newtabHtml.includes('<script src="../shared/search-input-history.js"></script>'),
+    newtabHtml.includes('<script src="../shared/search/search-input-history.js"></script>'),
     'New Tab should load the shared input history helper'
   );
   assert.ok(
-    backgroundSource.includes("'src/shared/search-input-history.js'"),
+    backgroundSource.includes("'src/shared/search/search-input-history.js'"),
     'overlay injection should load the shared input history helper'
   );
   assert.ok(

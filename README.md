@@ -246,12 +246,12 @@ npm run test:onboarding-content
 | --- | --- |
 | `manifest.json` | Manifest V3 configuration, permissions, commands, content scripts, and new tab override |
 | `src/background/` | Service worker, command routing, search data, site/AI search, tab switcher, PiP ownership, pinned-tab recovery, WebDAV sync |
-| `src/newtab/` | New tab UI, search, recent sites, bookmarks, wallpapers, feedback, and page notices |
+| `src/newtab/` | New tab page runtime; feature folders `bookmarks/`, `shortcuts/`, `recent/`, `wallpaper/`, `search/`, `top-content/`, `theme/` |
 | `src/overlay/` | In-page command bar overlay, suggestion list, theme/language sync, and site fixes |
 | `src/content/` | Page hotkey listener, selection quick actions, Web Clip PiP, and auto video PiP |
 | `src/options/` | Extension settings page |
 | `src/onboarding/` | Install and update onboarding |
-| `src/shared/` | Shared settings, search, favicon, menu, tooltip, and URL guard modules |
+| `src/shared/` | Shared settings, routes and URL guards; `search/` (ranking, input, suggestions), `ui/` (tooltip, toast, menu and control styles), `favicon/` |
 | `react-src/` | React sources built into `src/react/` |
 | `_locales/` | Extension UI copy |
 | `assets/data/` | Built-in site-search and browser shortcut data |

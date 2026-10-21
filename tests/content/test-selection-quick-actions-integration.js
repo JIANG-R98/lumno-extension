@@ -16,8 +16,8 @@ const contentSource = fs.readFileSync('src/content/selection-quick-actions.js', 
 const selectionMarkSource = fs.readFileSync('assets/images/lumno-selection-mark.svg', 'utf8');
 const intentSource = fs.readFileSync('src/shared/selection-intent.js', 'utf8');
 const iconSource = fs.readFileSync('src/shared/selection-action-icons.js', 'utf8');
-const toastSource = fs.readFileSync('src/shared/toast.js', 'utf8');
-const selectStyles = fs.readFileSync('src/shared/custom-select.css', 'utf8');
+const toastSource = fs.readFileSync('src/shared/ui/toast.js', 'utf8');
+const selectStyles = fs.readFileSync('src/shared/ui/custom-select.css', 'utf8');
 const localeNames = ['en', 'ja', 'zh_CN', 'zh_TW'];
 const storageKey = '_x_extension_selection_quick_actions_enabled_2026_unique_';
 const providerStorageKey = '_x_extension_selection_quick_actions_provider_2026_unique_';
@@ -32,7 +32,7 @@ assert(
 );
 assert.deepStrictEqual(
   Array.from(selectionScriptRegistration.SCRIPT_FILES),
-  ['src/shared/settings.js', 'src/shared/selection-action-icons.js', 'src/shared/selection-intent.js', 'src/shared/toast.js', 'src/content/selection-quick-actions.js'],
+  ['src/shared/settings.js', 'src/shared/selection-action-icons.js', 'src/shared/selection-intent.js', 'src/shared/ui/toast.js', 'src/content/selection-quick-actions.js'],
   'provider-aware settings, the selection classifier, and the shared Toast should load before the content interaction runtime'
 );
 assert.strictEqual(selectionScriptRegistration.RUN_AT, 'document_idle');

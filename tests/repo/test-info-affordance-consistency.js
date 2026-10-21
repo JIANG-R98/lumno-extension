@@ -4,7 +4,7 @@ const fs = require('fs');
 const { readPageSource } = require('../helpers/page-source');
 
 const optionsHtml = readPageSource('src/options/options.html');
-const infoButtonCss = readStylesheet('src/shared/info-button.css');
+const infoButtonCss = readStylesheet('src/shared/ui/info-button.css');
 const newtabHtml = readPageSource('newtab.html');
 const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
 const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
@@ -37,7 +37,7 @@ assertCircularInfoButton(
   'options shared info button'
 );
 for (const page of [optionsHtml, newtabHtml]) {
-  assert.match(page, /href="\.\.\/shared\/info-button\.css"/, 'Options and New Tab should load the same info styles');
+  assert.match(page, /href="\.\.\/shared\/ui\/info-button\.css"/, 'Options and New Tab should load the same info styles');
 }
 
 for (const [source, selector, label] of [

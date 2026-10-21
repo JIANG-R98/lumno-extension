@@ -1,6 +1,6 @@
 const assert = require('assert');
 const settings = require('../../src/shared/settings');
-const aggregateSearchStore = require('../../src/shared/aggregate-search-store');
+const aggregateSearchStore = require('../../src/shared/search/aggregate-search-store');
 const { createAggregateSearchModel } = require('../../src/options/options-aggregate-search');
 const { createSyncTransfer } = require('../../src/options/options-sync-transfer');
 

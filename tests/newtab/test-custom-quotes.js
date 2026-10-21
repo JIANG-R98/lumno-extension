@@ -1,9 +1,9 @@
 const assert = require('node:assert/strict');
 const { JSDOM } = require('jsdom');
-const custom = require('../../src/newtab/custom-quotes.js');
+const custom = require('../../src/newtab/top-content/custom-quotes.js');
 const settings = require('../../src/shared/settings.js');
 require('../../src/newtab/remote-content.js');
-const quotesApi = require('../../src/newtab/quotes.js');
+const quotesApi = require('../../src/newtab/top-content/quotes.js');
 const locale = require('../../_locales/en/messages.json');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 

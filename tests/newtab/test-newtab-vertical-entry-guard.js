@@ -7,16 +7,16 @@ const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const repoRoot = path.resolve(__dirname, '..', '..');
 const newtabHtml = readPageSource('newtab.html');
 const featureHintsCss = fs.readFileSync(
-  path.join(repoRoot, 'src/shared/feature-hints.css'),
+  path.join(repoRoot, 'src/shared/ui/feature-hints.css'),
   'utf8'
 );
 const shortcutDialogCss = fs.readFileSync(
-  path.join(repoRoot, 'src/newtab/shortcut-dialog.css'),
+  path.join(repoRoot, 'src/newtab/shortcuts/shortcut-dialog.css'),
   'utf8'
 );
 const newtabSource = readNewtabRuntimeSource();
 const searchInputModeSource = fs.readFileSync(
-  path.join(repoRoot, 'src/shared/search-input-mode.js'),
+  path.join(repoRoot, 'src/shared/search/search-input-mode.js'),
   'utf8'
 );
 

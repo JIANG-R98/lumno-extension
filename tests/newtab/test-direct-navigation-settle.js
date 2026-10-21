@@ -3,7 +3,7 @@ const path = require('path');
 
 const {
   createDirectNavigationSettleController
-} = require(path.join('..', '..', 'src', 'newtab', 'direct-navigation-settle.js'));
+} = require(path.join('..', '..', 'src', 'newtab', 'search', 'direct-navigation-settle.js'));
 
 let nextTimerId = 1;
 const timers = new Map();

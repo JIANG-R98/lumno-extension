@@ -46,12 +46,12 @@ assert.deepStrictEqual(
 );
 assert.deepStrictEqual(
   filesContaining(runtimeFiles, /function setBoundedCacheEntry\(/),
-  ['src/shared/favicon-utils.js'],
+  ['src/shared/favicon/favicon-utils.js'],
   'bounded favicon cache writes belong to favicon-utils'
 );
 assert.deepStrictEqual(
   filesContaining(runtimeFiles, /function getFigmaFolderSvg\(/),
-  ['src/newtab/bookmark-folder-icon.js'],
+  ['src/newtab/bookmarks/bookmark-folder-icon.js'],
   'bookmark folder SVG and morph logic must stay out of the newtab entry'
 );
 

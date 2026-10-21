@@ -14,16 +14,16 @@ const path = require('path');
 const repoRoot = path.resolve(__dirname, '..', '..');
 const stylesheets = [
   'src/newtab/newtab.css',
-  'src/newtab/recent-history-dialog.css',
-  'src/newtab/shortcut-dialog.css',
-  'src/newtab/folder-color-picker.css',
+  'src/newtab/recent/recent-history-dialog.css',
+  'src/newtab/shortcuts/shortcut-dialog.css',
+  'src/newtab/bookmarks/folder-color-picker.css',
   'src/newtab/remote-content.css',
   'src/options/options.css',
   'src/onboarding/onboarding.css',
   'src/overlay/suggestions-view.css',
-  'src/shared/search-input.css',
-  'src/shared/menu-surface.css',
-  'src/shared/custom-select.css'
+  'src/shared/search/search-input.css',
+  'src/shared/ui/menu-surface.css',
+  'src/shared/ui/custom-select.css'
 ].filter((file) => fs.existsSync(path.join(repoRoot, file)));
 
 const OVERLAY_SCOPE = ':root:not([data-lumno-scrollbars="overlay"])';
@@ -155,7 +155,7 @@ assert.match(
 // Select menus scroll through an inline overflow the audit above cannot see,
 // so their thin bar is checked by name.
 assert.ok(
-  allRules.some((rule) => rule.file === 'src/shared/custom-select.css' &&
+  allRules.some((rule) => rule.file === 'src/shared/ui/custom-select.css' &&
     splitSelectors(rule.selector).includes(`${OVERLAY_SCOPE} ._x_extension_select_menu_2024_unique_::-webkit-scrollbar-thumb`)),
   'long select menus (installed fonts) should draw the thin scrollbar'
 );

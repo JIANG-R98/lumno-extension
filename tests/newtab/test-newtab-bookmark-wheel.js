@@ -12,7 +12,7 @@ function fixture({ page = 3, pages = 8, animated = false } = {}) {
   window.setTimeout = (fn, ms) => env.timers.push({ fn, ms });
   window.clearTimeout = () => {};
   window.LumnoNewtabCrossSurfaceDrag = { prefersReducedMotion: () => !animated };
-  window.eval(fs.readFileSync(require.resolve('../../src/newtab/bookmark-pager.js'), 'utf8'));
+  window.eval(fs.readFileSync(require.resolve('../../src/newtab/bookmarks/bookmark-pager.js'), 'utf8'));
   const state = { bookmarkGrid: window.document.getElementById('grid'),
     bookmarkAllItems: Array.from({ length: pages }, (_, id) => ({ id })), bookmarkCurrentPage: page };
   const pager = window.LumnoNewtabBookmarkPager.createBookmarkPager({ pageState: state, now: () => env.clock,

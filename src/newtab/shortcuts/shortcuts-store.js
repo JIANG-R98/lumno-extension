@@ -1,6 +1,6 @@
 (function(root, factory) {
   const references = root.LumnoBookmarkFolderReference || (typeof require === 'function'
-    ? require('../shared/bookmark-folder-reference.js') : {});
+    ? require('../../shared/bookmark-folder-reference.js') : {});
   const api = factory(references);
   if (typeof module === 'object' && module.exports) {
     module.exports = api;

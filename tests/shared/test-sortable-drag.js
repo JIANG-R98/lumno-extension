@@ -5,7 +5,7 @@ const dom = new JSDOM('<!doctype html><body></body>', { pretendToBeVisual: true 
 const { window } = dom;
 global.window = window;
 global.document = window.document;
-const sortable = require('../../src/shared/sortable-drag.js');
+const sortable = require('../../src/shared/ui/sortable-drag.js');
 
 // jsdom has no layout, so each item reports a fixed box: a column of 40px
 // rows with 10px gaps, or a row of 80px tiles.

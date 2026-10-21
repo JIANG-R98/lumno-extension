@@ -12,7 +12,7 @@ const newtabSource = readNewtabRuntimeSource();
 const overlaySource = read('src/overlay/search-panel.js');
 const overlayRuntimeSource = read('src/overlay/runtime.js');
 const overlaySuggestionsStyles = readStylesheet('src/overlay/suggestions-view.css');
-const suggestionNavigation = require('../../src/shared/suggestion-navigation.js');
+const suggestionNavigation = require('../../src/shared/search/suggestion-navigation.js');
 
 const sourcesIndex = optionsHtml.indexOf('data-i18n="settings_search_result_sources_title"');
 const displayLimitIndex = optionsHtml.indexOf('data-i18n="settings_search_result_display_limit_title"');

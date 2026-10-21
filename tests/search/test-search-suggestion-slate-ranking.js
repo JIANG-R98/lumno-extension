@@ -1,5 +1,5 @@
 const assert = require('assert');
-const SEARCH_UTILS = require('../../src/shared/search-utils.js');
+const SEARCH_UTILS = require('../../src/shared/search/search-utils.js');
 
 // rankSearchSuggestionSlate is the highlight/ordering decision shared by the
 // Overlay and the New Tab search box. These cases pin each highlight reason

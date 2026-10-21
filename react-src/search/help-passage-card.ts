@@ -1,7 +1,7 @@
 // The card a help center result shows while it is hovered or picked with the arrow keys: the
-// passage around the match (src/shared/help-center-search.js builds it from the help center's
+// passage around the match (src/shared/search/help-center-search.js builds it from the help center's
 // index), laid out as the page has it, beside the result list. It wears the shared tooltip's
-// look and theme (src/shared/tooltip.css), so it matches every other tooltip on both surfaces.
+// look and theme (src/shared/ui/tooltip.css), so it matches every other tooltip on both surfaces.
 
 export interface HelpPassageBlock {
   kind: 'heading' | 'text' | 'bullet' | 'step' | 'row';

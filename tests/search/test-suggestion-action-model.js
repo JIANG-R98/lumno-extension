@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-require('../../src/shared/suggestion-action-model.js');
+require('../../src/shared/search/suggestion-action-model.js');
 
 const actionModel = globalThis.LumnoSuggestionActionModel;
 

@@ -1,8 +1,8 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const recentStore = require('../../src/newtab/recent-sites-store.js');
-const bookmarkStore = require('../../src/newtab/bookmarks-store.js');
+const recentStore = require('../../src/newtab/recent/recent-sites-store.js');
+const bookmarkStore = require('../../src/newtab/bookmarks/bookmarks-store.js');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 

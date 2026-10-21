@@ -5,7 +5,7 @@ const path = require('path');
 const { JSDOM } = require('jsdom');
 
 const pageTheme = require('../../src/overlay/page-theme.js');
-const faviconTheme = require('../../src/newtab/favicon-theme.js');
+const faviconTheme = require('../../src/newtab/theme/favicon-theme.js');
 
 function createElement(config) {
   const element = {

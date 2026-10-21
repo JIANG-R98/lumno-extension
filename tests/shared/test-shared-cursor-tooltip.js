@@ -4,9 +4,9 @@ const path = require('path');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const tooltipJsPath = path.join(repoRoot, 'src/shared/tooltip.js');
-const cursorTooltipJsPath = path.join(repoRoot, 'src/shared/cursor-tooltip.js');
-const cursorTooltipCssPath = path.join(repoRoot, 'src/shared/cursor-tooltip.css');
+const tooltipJsPath = path.join(repoRoot, 'src/shared/ui/tooltip.js');
+const cursorTooltipJsPath = path.join(repoRoot, 'src/shared/ui/cursor-tooltip.js');
+const cursorTooltipCssPath = path.join(repoRoot, 'src/shared/ui/cursor-tooltip.css');
 const newtabHtmlPath = path.join(repoRoot, 'newtab.html');
 
 global.LumnoTooltipView = {
@@ -63,8 +63,8 @@ global.LumnoTooltipView = {
   }
 };
 
-assert.ok(fs.existsSync(cursorTooltipJsPath), 'cursor-following tooltip should live in src/shared/cursor-tooltip.js');
-assert.ok(fs.existsSync(cursorTooltipCssPath), 'cursor-following tooltip styling should live in src/shared/cursor-tooltip.css');
+assert.ok(fs.existsSync(cursorTooltipJsPath), 'cursor-following tooltip should live in src/shared/ui/cursor-tooltip.js');
+assert.ok(fs.existsSync(cursorTooltipCssPath), 'cursor-following tooltip styling should live in src/shared/ui/cursor-tooltip.css');
 
 require(tooltipJsPath);
 const cursorTooltip = require(cursorTooltipJsPath);
@@ -678,19 +678,19 @@ const newtabHtml = fs.readFileSync(newtabHtmlPath, 'utf8');
 const newtabPanel = readNewtabRuntimeSource();
 const background = fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8');
 const overlayPanel = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
-const searchInputMode = fs.readFileSync(path.join(repoRoot, 'src/shared/search-input-mode.js'), 'utf8');
-assert.ok(newtabHtml.includes('../shared/cursor-tooltip.css'), 'newtab should load cursor tooltip stylesheet');
-assert.ok(newtabHtml.includes('../shared/cursor-tooltip.js'), 'newtab should load cursor tooltip component');
+const searchInputMode = fs.readFileSync(path.join(repoRoot, 'src/shared/search/search-input-mode.js'), 'utf8');
+assert.ok(newtabHtml.includes('../shared/ui/cursor-tooltip.css'), 'newtab should load cursor tooltip stylesheet');
+assert.ok(newtabHtml.includes('../shared/ui/cursor-tooltip.js'), 'newtab should load cursor tooltip component');
 assert.ok(
-  newtabHtml.indexOf('../shared/tooltip.js') < newtabHtml.indexOf('../shared/cursor-tooltip.js'),
+  newtabHtml.indexOf('../shared/ui/tooltip.js') < newtabHtml.indexOf('../shared/ui/cursor-tooltip.js'),
   'newtab should load shared tooltip before cursor tooltip'
 );
 assert.ok(
-  background.includes("'src/shared/cursor-tooltip.js'"),
+  background.includes("'src/shared/ui/cursor-tooltip.js'"),
   'overlay injection should load cursor tooltip behavior before search-panel'
 );
 assert.ok(
-  overlayPanel.includes("overlayRuntime.getRuntimeUrl(chrome, 'src/shared/cursor-tooltip.css')"),
+  overlayPanel.includes("overlayRuntime.getRuntimeUrl(chrome, 'src/shared/ui/cursor-tooltip.css')"),
   'overlay should resolve cursor tooltip stylesheet URL'
 );
 assert.ok(

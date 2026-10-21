@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
-const shortcutFavicon = require('../../src/shared/shortcut-favicon.js');
-const searchUtils = require('../../src/shared/search-utils.js');
+const shortcutFavicon = require('../../src/shared/favicon/shortcut-favicon.js');
+const searchUtils = require('../../src/shared/search/search-utils.js');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { readBackgroundSource } = require('../helpers/background-source');
 
@@ -9,15 +9,15 @@ const backgroundSource = readBackgroundSource();
 const newtabSource = readNewtabRuntimeSource();
 const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
 const overlayRuntimeSource = fs.readFileSync('src/overlay/runtime.js', 'utf8');
-const inputModeSource = fs.readFileSync('src/shared/search-input-mode.js', 'utf8');
-const inputModeCss = fs.readFileSync('src/shared/search-input.css', 'utf8');
-const searchUtilsSource = fs.readFileSync('src/shared/search-utils.js', 'utf8');
+const inputModeSource = fs.readFileSync('src/shared/search/search-input-mode.js', 'utf8');
+const inputModeCss = fs.readFileSync('src/shared/search/search-input.css', 'utf8');
+const searchUtilsSource = fs.readFileSync('src/shared/search/search-utils.js', 'utf8');
 const siteSearchSource = fs.readFileSync('assets/data/site-search.json', 'utf8');
 const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
 
 assert.match(
   backgroundSource,
-  /'src\/shared\/shortcut-favicon\.js',[\s\S]*?'src\/overlay\/search-panel\.js'/,
+  /'src\/shared\/favicon\/shortcut-favicon\.js',[\s\S]*?'src\/overlay\/search-panel\.js'/,
   'the injected overlay should load the shared high-resolution shortcut favicon runtime first'
 );
 

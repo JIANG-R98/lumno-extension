@@ -9,7 +9,7 @@ const optionsHtml = readPageSource('src/options/options.html');
 const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
 const newtabHtml = readPageSource('newtab.html');
 const newtabSource = readNewtabRuntimeSource();
-const shortcutDialogCss = readStylesheet('src/newtab/shortcut-dialog.css');
+const shortcutDialogCss = readStylesheet('src/newtab/shortcuts/shortcut-dialog.css');
 const rangeSliderSource = fs.readFileSync(
   'react-src/shared/range-slider.tsx',
   'utf8'
@@ -18,7 +18,7 @@ const settingsControlsSource = fs.readFileSync(
   'react-src/options/settings-controls.tsx',
   'utf8'
 );
-const rangeSliderCss = readStylesheet('src/shared/range-slider.css');
+const rangeSliderCss = readStylesheet('src/shared/ui/range-slider.css');
 const locales = ['en', 'ja', 'zh_CN', 'zh_TW'];
 
 // Keep the old width key readable and exportable so existing sync/import data

@@ -3,8 +3,8 @@ const fs = require('fs');
 const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const faviconUtils = require('../../src/shared/favicon-utils.js');
-const faviconViewCoreApi = require('../../src/shared/favicon-view-core.js');
+const faviconUtils = require('../../src/shared/favicon/favicon-utils.js');
+const faviconViewCoreApi = require('../../src/shared/favicon/favicon-view-core.js');
 const { readBackgroundSource } = require('../helpers/background-source');
 
 function testBoundedCacheUtility() {
@@ -70,7 +70,7 @@ function testRuntimeCachesUseBoundedWrites() {
   const background = readBackgroundSource();
   const overlay = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
   const overlayFavicon = fs.readFileSync(path.join(repoRoot, 'src/overlay/favicon-view.js'), 'utf8');
-  const faviconCore = fs.readFileSync(path.join(repoRoot, 'src/shared/favicon-view-core.js'), 'utf8');
+  const faviconCore = fs.readFileSync(path.join(repoRoot, 'src/shared/favicon/favicon-view-core.js'), 'utf8');
 
   assert.ok(
     background.includes('BACKGROUND_FAVICON_DATA_CACHE_MAX_ENTRIES = 256') &&

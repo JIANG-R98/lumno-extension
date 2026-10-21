@@ -8,21 +8,21 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const newtabJs = readNewtabRuntimeSource();
 const newtabHtml = readPageSource('newtab.html');
 const bookmarksRuntimeJs = fs.readFileSync(
-  path.join(repoRoot, 'src', 'newtab', 'bookmarks-runtime.js'),
+  path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmarks-runtime.js'),
   'utf8'
 );
 const bookmarkDragJs = fs.readFileSync(
-  path.join(repoRoot, 'src', 'newtab', 'bookmark-drag.js'),
+  path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-drag.js'),
   'utf8'
 );
 const bookmarksViewJs = fs.readFileSync(path.join(repoRoot, 'react-src', 'newtab', 'bookmarks.tsx'), 'utf8');
-const cascadeJs = fs.readFileSync(path.join(repoRoot, 'src', 'newtab', 'bookmark-cascade-menu.js'), 'utf8');
+const cascadeJs = fs.readFileSync(path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-cascade-menu.js'), 'utf8');
 const backgroundJs = fs.readFileSync(path.join(repoRoot, 'src', 'background', 'background.js'), 'utf8');
 const {
   cloneBookmarkSnapshot,
   createBookmarkMoveHistory,
   createDeleteRecord
-} = require(path.join(repoRoot, 'src', 'newtab', 'bookmark-move-history.js'));
+} = require(path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-move-history.js'));
 
 const sourceTree = {
   id: 'folder-a',

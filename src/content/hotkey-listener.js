@@ -184,7 +184,7 @@
       text-overflow: ellipsis;
       font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
-    /* The shared Toast's surfaces (src/shared/toast.css): solid, light or dark with the page. */
+    /* The shared Toast's surfaces (src/shared/ui/toast.css): solid, light or dark with the page. */
     .toast[data-theme="dark"] {
       background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
       color: #f8fafc;

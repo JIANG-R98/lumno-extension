@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const vm = require('vm');
-const historyApi = require('../../src/newtab/bookmark-move-history');
+const historyApi = require('../../src/newtab/bookmarks/bookmark-move-history');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { extractFunction: extractFunctionFrom } = require('../helpers/extract-function');
 

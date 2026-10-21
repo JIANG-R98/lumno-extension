@@ -11,7 +11,7 @@ const suggestionsReact = fs.readFileSync(
   path.join(repoRoot, 'react-src/search/suggestions.tsx'),
   'utf8'
 );
-const actionModelJs = fs.readFileSync(path.join(repoRoot, 'src/shared/suggestion-action-model.js'), 'utf8');
+const actionModelJs = fs.readFileSync(path.join(repoRoot, 'src/shared/search/suggestion-action-model.js'), 'utf8');
 
 assert.match(
   overlayRuntimeJs,
@@ -89,7 +89,7 @@ assert.match(
 
 assert.match(
   backgroundJs,
-  /'src\/shared\/toast\.js',\s*'src\/content\/document-pip-picker\.js'/,
+  /'src\/shared\/ui\/toast\.js',\s*'src\/content\/document-pip-picker\.js'/,
   'the web clip picker should be injected after the shared Toast it uses'
 );
 assert.match(
@@ -99,7 +99,7 @@ assert.match(
 );
 assert.match(
   contentJs,
-  /attachShadow\(\{ mode: 'closed' \}\)[\s\S]*?getURL\('src\/shared\/toast\.css'\)/,
+  /attachShadow\(\{ mode: 'closed' \}\)[\s\S]*?getURL\('src\/shared\/ui\/toast\.css'\)/,
   'the web clip Toast should load the shared Toast styles inside its own shadow root'
 );
 

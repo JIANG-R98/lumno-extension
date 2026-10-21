@@ -239,7 +239,7 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
   assert.strictEqual(manifest.action.default_popup, 'src/popup/popup.html');
   const html = read('src/popup/popup.html');
   ['../shared/settings.js', 'popup-theme-preload.js', '../shared/url-guards.js', '../shared/shortcut-display.js',
-    '../shared/tooltip.js', '../shared/cursor-tooltip.js', '../shared/toast.js', '../background/pip-main-world.js', '../shared/browser-profile.js']
+    '../shared/ui/tooltip.js', '../shared/ui/cursor-tooltip.js', '../shared/ui/toast.js', '../background/pip-main-world.js', '../shared/browser-profile.js']
     .forEach((script) => assert(html.includes(`src="${script}"`), `the popup loads ${script}`));
   assert(html.indexOf('popup-theme-preload.js') < html.indexOf('x-lumno-popup-root'),
     'the theme is painted before the popup renders');

@@ -36,7 +36,7 @@ sandbox.Image = class {
   }
 };
 
-['src/shared/favicon-utils.js', 'src/newtab/favicon-theme.js', 'src/newtab/site-theme-resolver.js'].forEach((file) => {
+['src/shared/favicon/favicon-utils.js', 'src/newtab/theme/favicon-theme.js', 'src/newtab/theme/site-theme-resolver.js'].forEach((file) => {
   vm.runInNewContext(fs.readFileSync(file, 'utf8'), sandbox, { filename: file });
 });
 

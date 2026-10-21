@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const suggestionModel = require('../../src/shared/suggestion-action-model.js');
+const suggestionModel = require('../../src/shared/search/suggestion-action-model.js');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
@@ -148,7 +148,7 @@ assert.match(
 );
 assert.match(
   newtabHtml,
-  /<script src="direct-navigation-settle\.js"><\/script>/,
+  /<script src="search\/direct-navigation-settle\.js"><\/script>/,
   'New Tab should load the direct-navigation settle controller before its page runtime'
 );
 assert.match(

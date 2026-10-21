@@ -1281,7 +1281,7 @@ assert.match(
 );
 assert.match(
   backgroundSource,
-  /chrome\.runtime\.getURL\('src\/newtab\/favicon-theme\.js'\)/,
+  /chrome\.runtime\.getURL\('src\/newtab\/theme\/favicon-theme\.js'\)/,
   'Alt+Q should import the same favicon theme helpers used by newtab recent sites'
 );
 assert.match(

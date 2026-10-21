@@ -162,7 +162,7 @@ describe('New Tab select menu React island', () => {
 
   it('visually closes after selection even inside an open modal', () => {
     const style = document.createElement('style');
-    style.textContent = readFileSync('src/shared/menu-surface.css', 'utf8');
+    style.textContent = readFileSync('src/shared/ui/menu-surface.css', 'utf8');
     document.head.appendChild(style);
     try {
       const modal = document.createElement('div');

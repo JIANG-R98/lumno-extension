@@ -5,12 +5,12 @@ const { readPageSource } = require('../helpers/page-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const sharedSearchInputCss = fs.readFileSync(
-  path.join(repoRoot, 'src/shared/search-input.css'),
+  path.join(repoRoot, 'src/shared/search/search-input.css'),
   'utf8'
 );
 const newtabHtml = readPageSource('newtab.html');
 const customSelectCss = fs.readFileSync(
-  path.join(repoRoot, 'src/shared/custom-select.css'),
+  path.join(repoRoot, 'src/shared/ui/custom-select.css'),
   'utf8'
 );
 const overlaySource = fs.readFileSync(
@@ -18,7 +18,7 @@ const overlaySource = fs.readFileSync(
   'utf8'
 );
 const searchInputModeSource = fs.readFileSync(
-  path.join(repoRoot, 'src/shared/search-input-mode.js'),
+  path.join(repoRoot, 'src/shared/search/search-input-mode.js'),
   'utf8'
 );
 const overlayShellSource = fs.readFileSync(

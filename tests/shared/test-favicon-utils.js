@@ -8,8 +8,8 @@ const sandbox = {
 };
 sandbox.globalThis = sandbox;
 
-vm.runInNewContext(fs.readFileSync('src/shared/favicon-utils.js', 'utf8'), sandbox, {
-  filename: 'src/shared/favicon-utils.js'
+vm.runInNewContext(fs.readFileSync('src/shared/favicon/favicon-utils.js', 'utf8'), sandbox, {
+  filename: 'src/shared/favicon/favicon-utils.js'
 });
 
 {
@@ -759,8 +759,8 @@ assert.strictEqual(
   'neutral'
 );
 
-vm.runInNewContext(fs.readFileSync('src/newtab/favicon-theme.js', 'utf8'), sandbox, {
-  filename: 'src/newtab/favicon-theme.js'
+vm.runInNewContext(fs.readFileSync('src/newtab/theme/favicon-theme.js', 'utf8'), sandbox, {
+  filename: 'src/newtab/theme/favicon-theme.js'
 });
 const faviconTheme = sandbox.LumnoNewtabFaviconTheme;
 assert.ok(faviconTheme, 'LumnoNewtabFaviconTheme should be exported');
@@ -800,8 +800,8 @@ assert.strictEqual(
   'near-white fallback theme colors should render with the shared blue fallback accent'
 );
 
-vm.runInNewContext(fs.readFileSync('src/shared/favicon-cache.js', 'utf8'), sandbox, {
-  filename: 'src/shared/favicon-cache.js'
+vm.runInNewContext(fs.readFileSync('src/shared/favicon/favicon-cache.js', 'utf8'), sandbox, {
+  filename: 'src/shared/favicon/favicon-cache.js'
 });
 
 async function testFaviconCacheThemeCompatibility() {

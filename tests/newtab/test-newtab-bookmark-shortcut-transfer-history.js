@@ -1,9 +1,9 @@
 const assert = require('assert');
 const fs = require('fs');
 const vm = require('vm');
-const historyApi = require('../../src/newtab/bookmark-move-history');
+const historyApi = require('../../src/newtab/bookmarks/bookmark-move-history');
 const dragApi = require('../../src/newtab/cross-surface-drag');
-const store = require('../../src/newtab/shortcuts-store');
+const store = require('../../src/newtab/shortcuts/shortcuts-store');
 const references = require('../../src/shared/bookmark-folder-reference');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { extractFunction: extractFunctionFrom } = require('../helpers/extract-function');

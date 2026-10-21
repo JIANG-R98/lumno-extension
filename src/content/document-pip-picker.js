@@ -670,7 +670,7 @@
     const toastShadow = toastHost.attachShadow({ mode: 'closed' });
     const stylesheet = document.createElement('link');
     stylesheet.rel = 'stylesheet';
-    stylesheet.href = chrome.runtime.getURL('src/shared/toast.css');
+    stylesheet.href = chrome.runtime.getURL('src/shared/ui/toast.css');
     const toastElement = document.createElement('div');
     toastElement.className = 'x-lumno-toast';
     toastElement.setAttribute('data-show', 'false');

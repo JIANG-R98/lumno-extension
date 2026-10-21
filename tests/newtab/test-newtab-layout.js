@@ -5,7 +5,7 @@ const path = require('path');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
-require('../../src/shared/suggestions-height-layout.js');
+require('../../src/shared/search/suggestions-height-layout.js');
 require('../../src/newtab/layout.js');
 
 const layoutRuntime = globalThis.LumnoNewtabLayout;
@@ -13,14 +13,14 @@ const layoutMotionRuntime = require('../../src/newtab/layout-motion.js');
 const repoRoot = path.resolve(__dirname, '..', '..');
 const newtabHtml = readPageSource('newtab.html');
 const newtabSource = readNewtabRuntimeSource();
-const wallpaperSource = fs.readFileSync(path.join(repoRoot, 'src/newtab/wallpaper.js'), 'utf8');
+const wallpaperSource = fs.readFileSync(path.join(repoRoot, 'src/newtab/wallpaper/wallpaper.js'), 'utf8');
 const newtabRedirectSource = fs.readFileSync(
   path.join(repoRoot, 'src/newtab/lumno-newtab.js'),
   'utf8'
 );
-const sharedSearchInputCss = readStylesheet('src/shared/search-input.css');
+const sharedSearchInputCss = readStylesheet('src/shared/search/search-input.css');
 const featureHintsCss = fs.readFileSync(
-  path.join(repoRoot, 'src/shared/feature-hints.css'),
+  path.join(repoRoot, 'src/shared/ui/feature-hints.css'),
   'utf8'
 );
 

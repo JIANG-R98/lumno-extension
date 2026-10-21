@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
-require(path.join('..', '..', 'src', 'newtab', 'background-search-focus.js'));
+require(path.join('..', '..', 'src', 'newtab', 'search', 'background-search-focus.js'));
 
 const {
   createBackgroundFocusHandler,

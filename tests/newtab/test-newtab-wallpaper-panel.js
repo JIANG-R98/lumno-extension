@@ -6,9 +6,9 @@ const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
 // Real page dependencies, loaded the way newtab.html loads them before wallpaper.js.
 require('../../src/shared/settings.js');
-require('../../src/newtab/wallpaper-adaptive-tone.js');
-require('../../src/newtab/wallpaper-effects.js');
-require('../../src/newtab/wallpaper-local-store.js');
+require('../../src/newtab/wallpaper/wallpaper-adaptive-tone.js');
+require('../../src/newtab/wallpaper/wallpaper-effects.js');
+require('../../src/newtab/wallpaper/wallpaper-local-store.js');
 require('../../src/newtab/remote-content.js');
 const REAL_WALLPAPER_DEPENDENCIES = {
   LumnoSettings: globalThis.LumnoSettings,
@@ -861,7 +861,7 @@ function assertBrandMarkCopy() {
 }
 
 function assertThemeAwareAlternateFaviconAsset() {
-  const wallpaperSource = fs.readFileSync('src/newtab/wallpaper.js', 'utf8');
+  const wallpaperSource = fs.readFileSync('src/newtab/wallpaper/wallpaper.js', 'utf8');
   const wallpaperViewReact = fs.readFileSync(
     'react-src/newtab/wallpaper-view.tsx',
     'utf8'
@@ -920,8 +920,8 @@ function testNewtabFaviconPreloadAppliesCachedAlternateBeforeMainRuntime() {
     }
   };
 
-  vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper-preload.js', 'utf8'), sandbox, {
-    filename: 'src/newtab/wallpaper-preload.js'
+  vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper/wallpaper-preload.js', 'utf8'), sandbox, {
+    filename: 'src/newtab/wallpaper/wallpaper-preload.js'
   });
 
   const faviconLink = documentObj.head.children.find((child) => child.tagName === 'LINK' &&
@@ -946,12 +946,12 @@ function testNewtabFaviconPreloadAppliesCachedAlternateBeforeMainRuntime() {
       `${filePath} should expose the monochrome favicon before the title can use the extension default icon`
     );
     assert.ok(
-      staticFaviconIndex < html.indexOf('<script src="wallpaper-preload.js"></script>'),
+      staticFaviconIndex < html.indexOf('<script src="wallpaper/wallpaper-preload.js"></script>'),
       `${filePath} should expose the monochrome favicon before the external preload script runs`
     );
     if (firstStylesheetIndex !== -1) {
       assert.ok(
-        html.indexOf('<script src="wallpaper-preload.js"></script>') < firstStylesheetIndex,
+        html.indexOf('<script src="wallpaper/wallpaper-preload.js"></script>') < firstStylesheetIndex,
         `${filePath} should run wallpaper-preload before stylesheets so favicon is set early`
       );
     }
@@ -998,8 +998,8 @@ async function testWallpaperPreloadUsesTheCachedResolvedMode() {
         }
       }
     };
-    vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper-preload.js', 'utf8'), preloadSandbox, {
-      filename: 'src/newtab/wallpaper-preload.js'
+    vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper/wallpaper-preload.js', 'utf8'), preloadSandbox, {
+      filename: 'src/newtab/wallpaper/wallpaper-preload.js'
     });
     return preloadSandbox;
   };
@@ -1158,7 +1158,7 @@ function assertWallpaperBootstrapWaitsForTheme() {
 }
 
 function assertInitialWallpaperToneStartsBeforeDeferredRefresh() {
-  const wallpaperSource = fs.readFileSync('src/newtab/wallpaper.js', 'utf8');
+  const wallpaperSource = fs.readFileSync('src/newtab/wallpaper/wallpaper.js', 'utf8');
   assert.match(
     wallpaperSource,
     /if \(isInitialWallpaperApply\) \{\s*applyWallpaperVisualState\(wallpaper\);\s*refreshWallpaperAdaptiveSampler\(\);\s*scheduleWallpaperVisualRefresh\(visualSeq\);\s*finalizeInitialWallpaper\(\);/,
@@ -1304,8 +1304,8 @@ function createWallpaperSandbox(options) {
     options.prepareWindow(testWindow, testDocument);
   }
   testSandbox.globalThis = testSandbox;
-  vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper.js', 'utf8'), testSandbox, {
-    filename: 'src/newtab/wallpaper.js'
+  vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper/wallpaper.js', 'utf8'), testSandbox, {
+    filename: 'src/newtab/wallpaper/wallpaper.js'
   });
   return { documentObj: testDocument, windowObj: testWindow, sandbox: testSandbox };
 }
@@ -1337,8 +1337,8 @@ const sandbox = {
 };
 sandbox.globalThis = sandbox;
 
-vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper.js', 'utf8'), sandbox, {
-  filename: 'src/newtab/wallpaper.js'
+vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper/wallpaper.js', 'utf8'), sandbox, {
+  filename: 'src/newtab/wallpaper/wallpaper.js'
 });
 
 let inputAutoFocusEnabled = false;
@@ -2284,8 +2284,8 @@ function runPreloadForWallpaper(entry, wallpaperEffects, prepareWindow) {
   windowObj.chrome = { runtime: { getURL: (path) => `chrome-extension://abc/${path}` } };
   if (prepareWindow) prepareWindow(windowObj);
   const sandbox = { ...REAL_WALLPAPER_DEPENDENCIES, document: documentObj, window: windowObj, chrome: windowObj.chrome };
-  vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper-preload.js', 'utf8'), sandbox, {
-    filename: 'src/newtab/wallpaper-preload.js'
+  vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper/wallpaper-preload.js', 'utf8'), sandbox, {
+    filename: 'src/newtab/wallpaper/wallpaper-preload.js'
   });
   return { root: documentObj.documentElement, preload: sandbox.LumnoNewtabWallpaperPreload };
 }
@@ -3804,8 +3804,8 @@ async function testPreloadPaintsTheCachedOnlineCopyBeforeTheRuntime() {
       wallpapers: { light: entry, dark: null }
     }));
     const sandbox = { ...REAL_WALLPAPER_DEPENDENCIES, document: documentObj, window: windowObj, chrome: {} };
-    vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper-preload.js', 'utf8'), sandbox, {
-      filename: 'src/newtab/wallpaper-preload.js'
+    vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper/wallpaper-preload.js', 'utf8'), sandbox, {
+      filename: 'src/newtab/wallpaper/wallpaper-preload.js'
     });
     if (beforeRead) beforeRead(sandbox.LumnoNewtabWallpaperPreload);
     return { documentObj, windowObj, preload: sandbox.LumnoNewtabWallpaperPreload };
@@ -3848,8 +3848,8 @@ function runWallpaperPreloadWithEntry(entry, prepareWindow) {
   }));
   if (prepareWindow) prepareWindow(windowObj);
   const sandbox = { ...REAL_WALLPAPER_DEPENDENCIES, document: documentObj, window: windowObj, chrome: {} };
-  vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper-preload.js', 'utf8'), sandbox, {
-    filename: 'src/newtab/wallpaper-preload.js'
+  vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper/wallpaper-preload.js', 'utf8'), sandbox, {
+    filename: 'src/newtab/wallpaper/wallpaper-preload.js'
   });
   return { documentObj, windowObj, preload: sandbox.LumnoNewtabWallpaperPreload };
 }
@@ -4121,8 +4121,8 @@ async function testCuratedDailyCachesTomorrowsPhotoAhead() {
   }
   const preloadSandbox = { ...REAL_WALLPAPER_DEPENDENCIES, document: preloadDocument, window: preloadWindow,
     chrome: {}, Date: TomorrowDate };
-  vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper-preload.js', 'utf8'), preloadSandbox, {
-    filename: 'src/newtab/wallpaper-preload.js'
+  vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper/wallpaper-preload.js', 'utf8'), preloadSandbox, {
+    filename: 'src/newtab/wallpaper/wallpaper-preload.js'
   });
   assert.strictEqual(await preloadSandbox.LumnoNewtabWallpaperPreload.imageReady, copyDataUrl(tomorrow.imageUrl),
     'The first tab after midnight paints the new photo from this device');

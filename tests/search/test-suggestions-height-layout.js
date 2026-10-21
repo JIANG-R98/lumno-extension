@@ -3,7 +3,7 @@ const fs = require('fs');
 const { readPageSource } = require('../helpers/page-source');
 
 delete globalThis.LumnoSuggestionsHeightLayout;
-require('../../src/shared/suggestions-height-layout.js');
+require('../../src/shared/search/suggestions-height-layout.js');
 
 const runtime = globalThis.LumnoSuggestionsHeightLayout;
 const newtabHtml = readPageSource('newtab.html');
@@ -62,7 +62,7 @@ assert.deepStrictEqual(
 assert.strictEqual(runtime.applyNaturalSuggestionsHeightLayout(null), false);
 
 const helperScriptIndex = newtabHtml.indexOf(
-  '<script src="../shared/suggestions-height-layout.js"></script>'
+  '<script src="../shared/search/suggestions-height-layout.js"></script>'
 );
 assert.ok(
   helperScriptIndex >= 0 &&
@@ -71,8 +71,8 @@ assert.ok(
   'New Tab should load the shared height policy before its layout and page runtimes'
 );
 assert.ok(
-  backgroundSource.indexOf("'src/shared/suggestions-height-layout.js'") >= 0 &&
-    backgroundSource.indexOf("'src/shared/suggestions-height-layout.js'") <
+  backgroundSource.indexOf("'src/shared/search/suggestions-height-layout.js'") >= 0 &&
+    backgroundSource.indexOf("'src/shared/search/suggestions-height-layout.js'") <
       backgroundSource.indexOf("'src/overlay/search-panel.js'"),
   'Overlay injection should load the shared height policy before the panel runtime'
 );

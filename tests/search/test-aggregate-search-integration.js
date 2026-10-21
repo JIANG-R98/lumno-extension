@@ -5,7 +5,7 @@ const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
 const read = (file) => fs.readFileSync(file, 'utf8');
 const settings = require('../../src/shared/settings.js');
-const aggregateStore = require('../../src/shared/aggregate-search-store.js');
+const aggregateStore = require('../../src/shared/search/aggregate-search-store.js');
 const manifest = JSON.parse(read('manifest.json'));
 const newtabHtml = readPageSource('newtab.html');
 const newtabSource = readNewtabRuntimeSource();
@@ -14,7 +14,7 @@ const optionsSource = read('src/options/options.js');
 const overlayRuntimeSource = read('src/overlay/runtime.js');
 const overlaySource = read('src/overlay/search-panel.js');
 const backgroundSource = read('src/background/background.js');
-const inputModeSource = read('src/shared/search-input-mode.js');
+const inputModeSource = read('src/shared/search/search-input-mode.js');
 
 assert.ok(
   manifest.permissions.includes('tabs') && manifest.permissions.includes('tabGroups'),
@@ -23,16 +23,16 @@ assert.ok(
 assert.strictEqual(settings.AGGREGATE_SEARCH_STORAGE_KEY, aggregateStore.STORAGE_KEY);
 
 assert.ok(
-  newtabHtml.indexOf('../shared/aggregate-search-store.js') > -1 &&
-    newtabHtml.indexOf('../shared/aggregate-search-store.js') <
-      newtabHtml.indexOf('../shared/aggregate-search-surface.js') &&
-    newtabHtml.indexOf('../shared/aggregate-search-surface.js') <
+  newtabHtml.indexOf('../shared/search/aggregate-search-store.js') > -1 &&
+    newtabHtml.indexOf('../shared/search/aggregate-search-store.js') <
+      newtabHtml.indexOf('../shared/search/aggregate-search-surface.js') &&
+    newtabHtml.indexOf('../shared/search/aggregate-search-surface.js') <
       newtabHtml.indexOf('data-page-entry="../newtab/newtab.js"'),
   'newtab must load the aggregate store and request controller before its page entry'
 );
 assert.ok(
   optionsHtml.includes('id="_x_extension_aggregate_search_list_2026_unique_"') &&
-    optionsHtml.indexOf('../shared/aggregate-search-store.js') <
+    optionsHtml.indexOf('../shared/search/aggregate-search-store.js') <
       optionsHtml.indexOf('data-page-entry="../options/options.js"'),
   'options must mount the aggregate editor and load its store first'
 );
@@ -117,10 +117,10 @@ assert.match(
 
 assert.match(overlayRuntimeSource, /aggregateSearches:\s*'_x_extension_aggregate_searches_2026_unique_'/);
 assert.ok(
-  backgroundSource.indexOf("'src/shared/aggregate-search-store.js'") > -1 &&
-    backgroundSource.indexOf("'src/shared/aggregate-search-store.js'") <
-      backgroundSource.indexOf("'src/shared/aggregate-search-surface.js'") &&
-    backgroundSource.indexOf("'src/shared/aggregate-search-surface.js'") <
+  backgroundSource.indexOf("'src/shared/search/aggregate-search-store.js'") > -1 &&
+    backgroundSource.indexOf("'src/shared/search/aggregate-search-store.js'") <
+      backgroundSource.indexOf("'src/shared/search/aggregate-search-surface.js'") &&
+    backgroundSource.indexOf("'src/shared/search/aggregate-search-surface.js'") <
       backgroundSource.indexOf("'src/overlay/search-panel.js'"),
   'overlay injection must load the aggregate store and request controller before the search panel'
 );

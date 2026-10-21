@@ -8,18 +8,18 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const newtabJs = readNewtabRuntimeSource();
 const newtabHtml = readPageSource('newtab.html');
 const bookmarksRuntimeJs = fs.readFileSync(
-  path.join(repoRoot, 'src', 'newtab', 'bookmarks-runtime.js'),
+  path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmarks-runtime.js'),
   'utf8'
 );
 const bookmarkDragJs = fs.readFileSync(
-  path.join(repoRoot, 'src', 'newtab', 'bookmark-drag.js'),
+  path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-drag.js'),
   'utf8'
 );
 const bookmarkFolderIconJs = fs.readFileSync(
-  path.join(repoRoot, 'src', 'newtab', 'bookmark-folder-icon.js'),
+  path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-folder-icon.js'),
   'utf8'
 );
-const cascadeJs = fs.readFileSync(path.join(repoRoot, 'src', 'newtab', 'bookmark-cascade-menu.js'), 'utf8');
+const cascadeJs = fs.readFileSync(path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-cascade-menu.js'), 'utf8');
 const bookmarksViewJs = fs.readFileSync(path.join(repoRoot, 'react-src', 'newtab', 'bookmarks.tsx'), 'utf8');
 const cascadeViewReact = fs.readFileSync(
   path.join(repoRoot, 'react-src', 'newtab', 'bookmark-cascade-view.tsx'),
@@ -33,7 +33,7 @@ const {
   getMoveApiDestinationIndex,
   isFolderInsideBookmark,
   normalizeMoveDestinationIndex
-} = require(path.join(repoRoot, 'src', 'newtab', 'bookmark-move-history.js'));
+} = require(path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-move-history.js'));
 
 const nodeMap = new Map([
   ['1', { id: '1', parentId: '0' }],
@@ -219,11 +219,11 @@ assert.deepStrictEqual(history.commitRedo(), firstMove);
 assert.deepStrictEqual(history.peekUndo(), firstMove);
 
 assert.ok(
-  newtabHtml.includes('<script src="bookmark-move-history.js"></script>'),
+  newtabHtml.includes('<script src="bookmarks/bookmark-move-history.js"></script>'),
   'new tab should load bookmark move history before the main runtime'
 );
 assert.ok(
-  newtabHtml.indexOf('<script src="bookmark-drag.js"></script>') <
+  newtabHtml.indexOf('<script src="bookmarks/bookmark-drag.js"></script>') <
     newtabHtml.indexOf('src="../shared/react-page-bootstrap.js"'),
   'new tab should load the bookmark drag runtime before the page bootstrap'
 );

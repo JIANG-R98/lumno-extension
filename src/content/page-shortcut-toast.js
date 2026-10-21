@@ -57,7 +57,7 @@
     const shadow = host.attachShadow({ mode: 'closed' });
     const stylesheet = document.createElement('link');
     stylesheet.rel = 'stylesheet';
-    stylesheet.href = chrome.runtime.getURL('src/shared/toast.css');
+    stylesheet.href = chrome.runtime.getURL('src/shared/ui/toast.css');
     const element = applyNoTranslate(document.createElement('div'));
     element.className = 'x-lumno-toast';
     element.setAttribute('data-show', 'false');

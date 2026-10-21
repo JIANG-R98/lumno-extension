@@ -11,7 +11,7 @@ const dom = new JSDOM(
   { url: 'https://lumno.test/', pretendToBeVisual: true, runScripts: 'outside-only' }
 );
 const { window } = dom;
-window.eval(read('src/shared/community-qr-dialog.js'));
+window.eval(read('src/shared/ui/community-qr-dialog.js'));
 const dialog = window.LumnoCommunityQrDialog;
 const { document } = window;
 const trigger = document.getElementById('trigger');
@@ -62,10 +62,10 @@ assert.strictEqual(dialog.open({ imageUrl: '' }), null, 'nothing opens without a
 // Joining the WeChat group never opens the QR image in a new tab.
 const overlaySource = read('src/overlay/search-panel.js');
 const newtabSource = read('src/newtab/newtab.js');
-const suggestionsControllerSource = read('src/newtab/suggestions-controller.js');
+const suggestionsControllerSource = read('src/newtab/search/suggestions-controller.js');
 assert.match(
   read('src/background/background.js'),
-  /'src\/shared\/community-links\.js',\s*'src\/shared\/community-qr-dialog\.js'/,
+  /'src\/shared\/community-links\.js',\s*'src\/shared\/ui\/community-qr-dialog\.js'/,
   'the overlay loads the dialog'
 );
 assert.match(read('newtab.html'), /community-qr-dialog\.js/, 'the new tab loads the dialog');

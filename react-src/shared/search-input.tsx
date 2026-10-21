@@ -560,7 +560,7 @@ function ensureStyles(config: SearchInputConfig) {
   ensureLink(
     root,
     '_x_extension_input_component_style_2026_unique_',
-    'src/shared/search-input.css'
+    'src/shared/search/search-input.css'
   );
 }
 

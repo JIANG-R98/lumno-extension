@@ -107,7 +107,7 @@ function rect(left, top, width = 60, height = 60) {
   const { resolveExternalBookmarkDropTarget: resolve, isValidExternalBookmarkDropTarget: valid } = factory(
     nodeMap, shortcut,
     require(path.join(repoRoot, 'src', 'newtab', 'cross-surface-drag.js')),
-    require(path.join(repoRoot, 'src', 'newtab', 'bookmark-move-history.js'))
+    require(path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-move-history.js'))
   );
   const state = { shortcutId: shortcut.id, bookmarkId: shortcut.folderId };
   const element = {};
@@ -452,7 +452,7 @@ assert.strictEqual(
 // Wiring contracts.
 assertOrder(
   newtabHtml,
-  '<script src="bookmark-drag.js"></script>',
+  '<script src="bookmarks/bookmark-drag.js"></script>',
   '<script src="cross-surface-drag.js"></script>',
   'the cross-surface helpers should load with the other drag helpers'
 );
@@ -673,7 +673,7 @@ assert.ok(
 // group of the site it was stacked onto.
 {
   const crossSurface = require(path.join(repoRoot, 'src', 'newtab', 'cross-surface-drag.js'));
-  const history = require(path.join(repoRoot, 'src', 'newtab', 'bookmark-move-history.js'));
+  const history = require(path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-move-history.js'));
   const shortcuts = [
     { id: 'a', url: 'https://a.example/', groupId: 'g0' },
     { id: 'b', url: 'https://b.example/', groupId: 'work' },

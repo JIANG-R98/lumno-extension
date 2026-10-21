@@ -9,7 +9,7 @@ const wallpaperViewReact = fs.readFileSync(
   'react-src/newtab/wallpaper-view.tsx',
   'utf8'
 );
-const shortcutDialogCss = fs.readFileSync('src/newtab/shortcut-dialog.css', 'utf8');
+const shortcutDialogCss = fs.readFileSync('src/newtab/shortcuts/shortcut-dialog.css', 'utf8');
 const optionsHtml = readPageSource('src/options/options.html');
 const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
 const contentHotkeySource = fs.readFileSync('src/content/hotkey-listener.js', 'utf8');

@@ -187,7 +187,7 @@ const debugSurfaceLinePattern = /^[ \t]*<script\s+src=["']\.\.\/shared\/codex-de
     `${page} bootstrap should keep the data attributes it reads through document.currentScript`);
 });
 assert(
-  /<body\b[^>]*>\s*<script src="wallpaper-effect-preload\.js"><\/script>/.test(readPackagedText('newtab.html')),
+  /<body\b[^>]*>\s*<script src="wallpaper\/wallpaper-effect-preload\.js"><\/script>/.test(readPackagedText('newtab.html')),
   'store newtab.html should keep the wallpaper effect preload as the first body script'
 );
 

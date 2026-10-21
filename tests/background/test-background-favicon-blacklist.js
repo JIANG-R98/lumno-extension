@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const blacklistUtils = require('../../src/shared/blacklist-utils.js');
-const faviconUtils = require('../../src/shared/favicon-utils.js');
+const faviconUtils = require('../../src/shared/favicon/favicon-utils.js');
 const settings = require('../../src/shared/settings.js');
 const { readBackgroundSource } = require('../helpers/background-source');
 const { extractFunction: extractFunctionSource } = require('../helpers/extract-function');
