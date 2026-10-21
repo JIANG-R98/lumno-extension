@@ -175,6 +175,16 @@ describe('Options select control React island', () => {
     const press = (key: string) => act(() => {
       search.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key }));
     });
+    // Enter and Escape that end an IME composition belong to the IME.
+    act(() => {
+      search.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, isComposing: true, key: 'Enter' }));
+      // jsdom drops keyCode from the init dictionary.
+      const imeEscape = new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' });
+      Object.defineProperty(imeEscape, 'keyCode', { value: 229 });
+      search.dispatchEvent(imeEscape);
+    });
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(host.dataset.open).toBe('true');
     press('ArrowDown');
     press('Enter');
     expect(onSelect).toHaveBeenCalledWith('PingFang TC');
@@ -184,6 +194,13 @@ describe('Options select control React island', () => {
       host.querySelector<HTMLButtonElement>('button')?.click();
     });
     expect(host.querySelectorAll('[role="option"]')).toHaveLength(4);
+
+    // Tabbing out of the filter closes the menu behind it.
+    act(() => {
+      host.querySelector<HTMLInputElement>('input[type="text"]')!
+        .dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Tab' }));
+    });
+    expect(host.dataset.open).toBe('false');
   });
 
   it('keeps a searchable menu in place while the filter shrinks the list', () => {

@@ -371,7 +371,9 @@ export function SelectMenu({
       }
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+      // Escape that drops an IME composition (in a searchable menu's filter)
+      // belongs to the IME, not the menu.
+      if (event.key === 'Escape' && !event.isComposing && event.keyCode !== 229) {
         event.preventDefault();
         setOpen(false);
         triggerRef.current?.focus();
@@ -593,6 +595,11 @@ export function SelectMenu({
               );
             }}
             onKeyDown={(event) => {
+              // While an IME composes, Enter commits the pinyin and the arrows
+              // move through its candidates; none of them belong to the menu.
+              if (event.nativeEvent.isComposing || event.keyCode === 229) {
+                return;
+              }
               if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
                 event.preventDefault();
                 setActiveIndex((current) =>
@@ -611,10 +618,9 @@ export function SelectMenu({
                 }
                 return;
               }
-              if (event.key === 'Escape') {
-                event.preventDefault();
+              // Focus leaves with Tab, so the menu should not stay open behind it.
+              if (event.key === 'Tab') {
                 setOpen(false);
-                triggerRef.current?.focus();
               }
             }}
             placeholder={config.searchPlaceholder}
