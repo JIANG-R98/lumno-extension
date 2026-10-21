@@ -4,6 +4,7 @@ const helpCenterSearch = require('../../src/shared/search/help-center-search.js'
 const communityLinks = require('../../src/shared/community-links.js');
 const searchUtils = require('../../src/shared/search/search-utils.js');
 const { readBackgroundSource } = require('../helpers/background-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const ORIGIN = 'https://lumno.kubai.design';
 const index = helpCenterSearch.normalizeIndex([
@@ -375,7 +376,7 @@ assert.match(
   /\[siteSearchSuggestion, \.\.\.helpCenterSuggestions\]/
 );
 assert.match(
-  fs.readFileSync('src/overlay/search-panel.js', 'utf8'),
+  readOverlayPanelSource(),
   /\[siteSearchSuggestion, \.\.\.getHelpCenterSuggestions\(query\)\]/
 );
 

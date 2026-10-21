@@ -4,6 +4,7 @@ const path = require('path');
 
 const overlaySiteFixes = require('../../src/overlay/site-fixes.js');
 const { readBackgroundSource } = require('../helpers/background-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 
@@ -284,10 +285,7 @@ function testBootstrapDisablesRightButtonTransitions() {
     path.join(repoRoot, 'src/overlay/suggestions-view.css'),
     'utf8'
   );
-  const searchPanelSource = fs.readFileSync(
-    path.join(repoRoot, 'src/overlay/search-panel.js'),
-    'utf8'
-  );
+  const searchPanelSource = readOverlayPanelSource();
   const backgroundSource = readBackgroundSource();
 
   assert.match(

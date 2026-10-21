@@ -3,13 +3,14 @@ const fs = require('fs');
 const settings = require('../../src/shared/settings.js');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const optionsHtml = readPageSource('src/options/options.html');
 const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
 const newtabHtml = readPageSource('newtab.html');
 const newtabSource = readNewtabRuntimeSource();
 const overlayRuntimeSource = fs.readFileSync('src/overlay/runtime.js', 'utf8');
-const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
+const overlaySource = readOverlayPanelSource();
 const overlayCss = fs.readFileSync('src/overlay/suggestions-view.css', 'utf8');
 const suggestionsSource = fs.readFileSync('react-src/search/suggestions.tsx', 'utf8');
 

@@ -2,12 +2,13 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { readBackgroundSource } = require('../helpers/background-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const repoRoot = path.join(__dirname, '..', '..');
 const backgroundJs = readBackgroundSource();
 const contentJs = fs.readFileSync(path.join(repoRoot, 'src/content/document-pip-picker.js'), 'utf8');
 const overlayRuntimeJs = fs.readFileSync(path.join(repoRoot, 'src/overlay/runtime.js'), 'utf8');
-const overlayJs = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
+const overlayJs = readOverlayPanelSource();
 const suggestionsReact = fs.readFileSync(
   path.join(repoRoot, 'react-src/search/suggestions.tsx'),
   'utf8'
@@ -41,7 +42,7 @@ assert.match(
 
 assert.match(
   overlayJs,
-  /let documentPipEnabled = documentPipSupported && Boolean\(normalizedOverlayContext\.documentPipEnabled\);/,
+  /documentPipEnabled = documentPipSupported && Boolean\(normalizedOverlayContext\.documentPipEnabled\);/,
   'overlay should initialize web clip command visibility from the injected context'
 );
 assert.match(

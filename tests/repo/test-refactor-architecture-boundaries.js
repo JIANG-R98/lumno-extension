@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const repoRoot = path.join(__dirname, '..', '..');
 
@@ -61,7 +62,7 @@ assert.match(
   /SITE_DISPLAY_NAME\.getSiteDisplayName\([\s\S]*?SITE_DISPLAY_NAME_OPTIONS/
 );
 
-const overlaySource = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
+const overlaySource = readOverlayPanelSource();
 assert.strictEqual((overlaySource.match(/storageChangeListeners\.add\(/g) || []).length, 19);
 assert.strictEqual((overlaySource.match(/storageChangeListeners\.clear\(\)/g) || []).length, 1);
 assert.doesNotMatch(overlaySource, /chrome\.storage\.onChanged\.(?:add|remove)Listener/);

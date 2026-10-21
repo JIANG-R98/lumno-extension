@@ -2,6 +2,7 @@ const assert = require('assert');
 const { readStylesheet } = require('../helpers/css-tokens');
 const fs = require('fs');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 class FakeElement {
   constructor(tagName) {
@@ -380,7 +381,7 @@ function flushMicrotasks() {
       newtabRootAppendIndex < newtabNoticeInsertIndex,
     'newtab update notice should be appended below the input search layer and outside it'
   );
-  const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
+  const overlaySource = readOverlayPanelSource();
   assert.match(
     overlaySource,
     /onDetailsClick\(_notice, event\)[\s\S]*action: 'openReleasePage',[\s\S]*disposition: getOpenDisposition\(event, 'newTab'\)/,

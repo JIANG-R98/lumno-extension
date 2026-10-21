@@ -1,9 +1,10 @@
 const assert = require('assert');
 const fs = require('fs');
 const { readBackgroundSource } = require('../helpers/background-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const backgroundSource = readBackgroundSource();
-const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
+const overlaySource = readOverlayPanelSource();
 
 const triggerStart = backgroundSource.indexOf('function triggerShowSearchForTab(tab, source)');
 const triggerEnd = backgroundSource.indexOf('\nfunction ', triggerStart + 1);
@@ -277,8 +278,13 @@ assert.match(
 );
 assert.match(
   overlaySource,
-  /let overlayTabsCacheReady = initialOverlayTabs\.length > 0;[\s\S]*?let overlayTabsRequestInFlight = false;[\s\S]*?let overlayTabsRequestSeq = 0;/,
-  'the overlay should track a reusable full-tab cache and its active request'
+  /overlayTabsCacheReady = initialOverlayTabs\.length > 0;/,
+  'the overlay should track a reusable full-tab cache'
+);
+assert.match(
+  overlaySource,
+  /let overlayTabsRequestInFlight = false;\s*let overlayTabsRequestSeq = 0;/,
+  'the overlay should track its active full-tab request'
 );
 assert.match(
   overlaySource,

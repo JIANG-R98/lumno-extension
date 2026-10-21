@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const readSource = (relativePath) => fs.readFileSync(
@@ -13,7 +14,7 @@ const readSource = (relativePath) => fs.readFileSync(
 const optionsHtml = readPageSource('src/options/options.html');
 const optionsJs = readSource('src/options/options.js');
 const newtabJs = readNewtabRuntimeSource();
-const overlaySearchPanelJs = readSource('src/overlay/search-panel.js');
+const overlaySearchPanelJs = readOverlayPanelSource();
 const engineGroupIndex = optionsHtml.indexOf('id="_x_extension_search_engine_group_2026_unique_"');
 const customGroupIndex = optionsHtml.indexOf('data-i18n="shortcuts_group_custom"');
 const siteGroupIndex = optionsHtml.indexOf('data-i18n="search_scope_group_sites"', customGroupIndex);

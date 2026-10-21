@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { readBackgroundSource } = require('../helpers/background-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 function readSource(path) {
   return fs.readFileSync(path, 'utf8');
@@ -9,7 +10,7 @@ function readSource(path) {
 
 const sharedSource = readSource('src/shared/search/search-input-mode.js');
 const newtabSource = readNewtabRuntimeSource();
-const overlaySource = readSource('src/overlay/search-panel.js');
+const overlaySource = readOverlayPanelSource();
 const overlayRuntimeSource = readSource('src/overlay/runtime.js');
 const backgroundSource = readBackgroundSource();
 const optionsSource = readSource('src/options/options.js');

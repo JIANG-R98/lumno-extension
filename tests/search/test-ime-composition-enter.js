@@ -8,6 +8,7 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const guardPath = path.join(repoRoot, 'src/shared/search/ime-key-guard.js');
 const guard = require(guardPath);
 const { readBackgroundSource } = require('../helpers/background-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 function createClock(start) {
   let current = start;
@@ -98,7 +99,7 @@ imeGuard.markCompositionEnd({ target: input });
 const newtabHtml = readPageSource('newtab.html');
 const backgroundJs = readBackgroundSource();
 const newtabJs = readNewtabRuntimeSource();
-const overlayJs = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
+const overlayJs = readOverlayPanelSource();
 
 assert.ok(
   newtabHtml.includes('<script src="../shared/search/ime-key-guard.js"></script>'),
@@ -118,7 +119,7 @@ assert.match(
 
 assert.match(
   overlayJs,
-  /const imeKeyGuard = LumnoImeKeyGuard\.createImeKeyGuard\(\);[\s\S]*?function isImeCompositionEvent\(event\)[\s\S]*?return imeKeyGuard\.shouldIgnoreKeydown\(event\);/,
+  /imeKeyGuard = LumnoImeKeyGuard\.createImeKeyGuard\(\);[\s\S]*?function isImeCompositionEvent\(event\)[\s\S]*?return imeKeyGuard\.shouldIgnoreKeydown\(event\);/,
   'overlay keydown handling should suppress IME commit Enter through the shared guard'
 );
 

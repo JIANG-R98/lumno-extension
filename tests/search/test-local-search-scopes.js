@@ -4,11 +4,12 @@ const path = require('path');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { readBackgroundSource } = require('../helpers/background-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const readSource = (relativePath) => fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
 const newtabSource = readNewtabRuntimeSource();
-const overlaySource = readSource('src/overlay/search-panel.js');
+const overlaySource = readOverlayPanelSource();
 const backgroundSource = readBackgroundSource();
 const inputModeSource = readSource('src/shared/search/search-input-mode.js');
 const inputModeCss = readSource('src/shared/search/search-input.css');

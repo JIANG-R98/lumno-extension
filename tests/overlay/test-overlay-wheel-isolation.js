@@ -1,14 +1,15 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const overlayJs = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
+const overlayJs = readOverlayPanelSource();
 const suggestionsCss = fs.readFileSync(path.join(repoRoot, 'src/overlay/suggestions-view.css'), 'utf8');
 
 assert.match(
   overlayJs,
-  /let overlayWheelIsolationHandler = null;/,
+  /overlayWheelIsolationHandler = null;/,
   'overlay should keep a removable wheel isolation handler reference'
 );
 

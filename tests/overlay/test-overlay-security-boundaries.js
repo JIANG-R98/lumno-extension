@@ -2,9 +2,10 @@ const assert = require('assert');
 const fs = require('fs');
 const { JSDOM } = require('jsdom');
 const { createOverlayKeyRouter } = require('../../src/overlay/keyboard.js');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const shellSource = fs.readFileSync('react-src/overlay/shell.tsx', 'utf8');
-const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
+const overlaySource = readOverlayPanelSource();
 const switcherSource = fs.readFileSync('src/overlay/tab-switcher.js', 'utf8');
 
 function getFunctionBlock(source, startNeedle, endNeedle) {

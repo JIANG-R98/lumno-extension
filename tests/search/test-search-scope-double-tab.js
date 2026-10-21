@@ -3,6 +3,7 @@ const fs = require('fs');
 const vm = require('vm');
 const search = require('../../src/shared/search/search-utils.js');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 function readSource(path) {
   return fs.readFileSync(path, 'utf8');
@@ -11,7 +12,7 @@ function readSource(path) {
 const sharedSource = readSource('src/shared/search/search-input-mode.js');
 const sharedCss = readSource('src/shared/search/search-input.css');
 const newtabSource = readNewtabRuntimeSource();
-const overlaySource = readSource('src/overlay/search-panel.js');
+const overlaySource = readOverlayPanelSource();
 
 assert.match(
   sharedSource,
@@ -265,7 +266,12 @@ assert.match(
 );
 assert.match(
   overlaySource,
-  /overlaySearchEngineStateReady = loadOverlaySearchEngineState[\s\S]*?Promise\.all\(\[[\s\S]*?overlaySearchEngineStateReady[\s\S]*?getSiteSearchProviders\(\)/,
+  /overlaySearchEngineStateReady = loadOverlaySearchEngineState/,
+  'overlay should keep the stored engine load as a promise'
+);
+assert.match(
+  overlaySource,
+  /Promise\.all\(\[[\s\S]*?overlaySearchEngineStateReady[\s\S]*?getSiteSearchProviders\(\)/,
   'overlay double-Tab activation should wait for both the stored engine and provider list'
 );
 

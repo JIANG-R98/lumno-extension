@@ -1,5 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 delete globalThis.LumnoOverlayLifecycle;
 require('../../src/overlay/lifecycle.js');
@@ -36,7 +37,7 @@ const unavailableRegistry = lifecycle.createChromeEventListenerRegistry(null);
 assert.strictEqual(unavailableRegistry.add(first), null);
 assert.strictEqual(unavailableRegistry.size, 0);
 
-const searchPanelSource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
+const searchPanelSource = readOverlayPanelSource();
 assert.strictEqual(
   (searchPanelSource.match(/storageChangeListeners\.add\(/g) || []).length,
   19,

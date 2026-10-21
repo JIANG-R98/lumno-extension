@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { readPageSource } = require('../helpers/page-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const repoRoot = path.join(__dirname, '..', '..');
 const read = (relativePath) => fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
@@ -9,7 +10,7 @@ const read = (relativePath) => fs.readFileSync(path.join(repoRoot, relativePath)
 const newtabSource = readPageSource('newtab.html');
 const onboardingSource = readPageSource('src/onboarding/onboarding.html');
 const overlayShellSource = read('react-src/overlay/shell.tsx');
-const overlaySearchPanelSource = read('src/overlay/search-panel.js');
+const overlaySearchPanelSource = readOverlayPanelSource();
 const overlaySuggestionsSource = read('src/overlay/suggestions-view.css');
 const sharedSearchInputSource = read('src/shared/search/search-input.css');
 const sharedSearchInputReactSource = read('react-src/shared/search-input.tsx');

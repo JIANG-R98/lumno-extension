@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 require('../../src/shared/search/search-han-variants.js');
 const search = require('../../src/shared/search/search-utils.js');
 const pinyinPro = require('../../assets/vendor/pinyin-pro.js');
@@ -11,6 +12,9 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 function readSource(relativePath) {
   if (relativePath === 'src/newtab/newtab.js') {
     return readNewtabRuntimeSource();
+  }
+  if (relativePath === 'src/overlay/search-panel.js') {
+    return readOverlayPanelSource();
   }
   return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
 }

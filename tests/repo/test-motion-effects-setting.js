@@ -3,6 +3,7 @@ const fs = require('fs');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { readBackgroundSource } = require('../helpers/background-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const optionsHtml = readPageSource('src/options/options.html');
 const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
@@ -11,7 +12,7 @@ const newtabSource = readNewtabRuntimeSource();
 const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
 const motionPreloadSource = fs.readFileSync('src/shared/motion-preload.js', 'utf8');
 const overlayRuntimeSource = fs.readFileSync('src/overlay/runtime.js', 'utf8');
-const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
+const overlaySource = readOverlayPanelSource();
 const tabSwitcherSource = fs.readFileSync('src/overlay/tab-switcher.js', 'utf8');
 const backgroundSource = readBackgroundSource();
 const selectionActionsSource = fs.readFileSync('src/content/selection-quick-actions.js', 'utf8');

@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { readPageSource } = require('../helpers/page-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const sharedSearchInputCss = fs.readFileSync(
@@ -13,10 +14,7 @@ const customSelectCss = fs.readFileSync(
   path.join(repoRoot, 'src/shared/ui/custom-select.css'),
   'utf8'
 );
-const overlaySource = fs.readFileSync(
-  path.join(repoRoot, 'src/overlay/search-panel.js'),
-  'utf8'
-);
+const overlaySource = readOverlayPanelSource();
 const searchInputModeSource = fs.readFileSync(
   path.join(repoRoot, 'src/shared/search/search-input-mode.js'),
   'utf8'

@@ -4,10 +4,11 @@ const shortcutFavicon = require('../../src/shared/favicon/shortcut-favicon.js');
 const searchUtils = require('../../src/shared/search/search-utils.js');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { readBackgroundSource } = require('../helpers/background-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const backgroundSource = readBackgroundSource();
 const newtabSource = readNewtabRuntimeSource();
-const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
+const overlaySource = readOverlayPanelSource();
 const overlayRuntimeSource = fs.readFileSync('src/overlay/runtime.js', 'utf8');
 const inputModeSource = fs.readFileSync('src/shared/search/search-input-mode.js', 'utf8');
 const inputModeCss = fs.readFileSync('src/shared/search/search-input.css', 'utf8');

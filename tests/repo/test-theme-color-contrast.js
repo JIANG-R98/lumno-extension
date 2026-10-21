@@ -4,6 +4,7 @@ const fs = require('fs');
 const faviconTheme = require('../../src/newtab/theme/favicon-theme.js');
 const { readPageSource } = require('../helpers/page-source');
 const { readBackgroundSource } = require('../helpers/background-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 function parseThemeColor(value) {
   const parsed = faviconTheme.parseCssColor(value);
@@ -159,7 +160,7 @@ assert.ok(
 );
 
 const backgroundSource = readBackgroundSource();
-const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
+const overlaySource = readOverlayPanelSource();
 const newtabHtml = readPageSource('newtab.html');
 const overlayCss = fs.readFileSync('src/overlay/suggestions-view.css', 'utf8');
 const overlayInjectionIndex = backgroundSource.indexOf('const overlayInjectionFiles = [');

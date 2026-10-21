@@ -6,6 +6,7 @@ const { JSDOM } = require('jsdom');
 
 const pageTheme = require('../../src/overlay/page-theme.js');
 const faviconTheme = require('../../src/newtab/theme/favicon-theme.js');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 function createElement(config) {
   const element = {
@@ -346,7 +347,7 @@ async function testPageThemeObserverReactsToThemeAttributes() {
 }
 
 function testSearchPanelAppliesInitialSystemThemeBeforeAppend() {
-  const searchPanelSource = fs.readFileSync(path.join(__dirname, '../../src/overlay/search-panel.js'), 'utf8');
+  const searchPanelSource = readOverlayPanelSource();
   const initialThemeIndex = searchPanelSource.indexOf('applyOverlayThemeVariables(overlay, overlayThemeMode);');
   const themeTokensIndex = searchPanelSource.indexOf('const overlayThemeTokens = {');
   const appendIndex = searchPanelSource.indexOf('overlayMountParent.appendChild(overlayHost);');
@@ -362,11 +363,11 @@ function testSearchPanelAppliesInitialSystemThemeBeforeAppend() {
 }
 
 function testSearchPanelExcludesInputExtensionsBeforeMountAndFocus() {
-  const searchPanelSource = fs.readFileSync(path.join(__dirname, '../../src/overlay/search-panel.js'), 'utf8');
+  const searchPanelSource = readOverlayPanelSource();
   const isolationFunctionIndex = searchPanelSource.indexOf(
     'function applyOverlayInputExtensionIsolation(input)'
   );
-  const inputCreatedIndex = searchPanelSource.indexOf('let searchInput = inputParts.input;');
+  const inputCreatedIndex = searchPanelSource.indexOf('searchInput = inputParts.input;');
   const isolationCallIndex = searchPanelSource.indexOf(
     'applyOverlayInputExtensionIsolation(searchInput);'
   );

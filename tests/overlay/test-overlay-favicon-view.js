@@ -3,11 +3,12 @@ const fs = require('fs');
 const vm = require('vm');
 const path = require('path');
 const { extractFunction: extractFunctionSource } = require('../helpers/extract-function');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 
 function createRealPolicyRerender(deps) {
-  const overlayJs = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
+  const overlayJs = readOverlayPanelSource();
   const factory = new Function('runtimeDeps', `
     const suggestionsContainer = runtimeDeps.suggestionsContainer;
     const CustomEvent = runtimeDeps.CustomEvent;
@@ -333,10 +334,10 @@ function createRuntime(options) {
 }
 
 function testOverlayRendererLoadsFaviconPolicyBeforeInitialTabs() {
-  const overlayJs = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
+  const overlayJs = readOverlayPanelSource();
   assert.match(
     overlayJs,
-    /let faviconEnhancedFetchEnabled = false;/,
+    /faviconEnhancedFetchEnabled = false;/,
     'overlay favicon policy should fail closed before storage returns'
   );
   assert.match(
@@ -368,7 +369,7 @@ function testOverlayRendererLoadsFaviconPolicyBeforeInitialTabs() {
 }
 
 function testOverlayRendererGuardsThemeSourcesInStrictMode() {
-  const overlayJs = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
+  const overlayJs = readOverlayPanelSource();
   const suggestionsReact = fs.readFileSync(
     path.join(repoRoot, 'react-src/search/suggestions.tsx'),
     'utf8'
@@ -403,7 +404,7 @@ function testOverlayRendererGuardsThemeSourcesInStrictMode() {
 }
 
 function testOverlayRendererLetsLocalFaviconsReachRuntime() {
-  const overlayJs = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
+  const overlayJs = readOverlayPanelSource();
   const suggestionsReact = fs.readFileSync(
     path.join(repoRoot, 'react-src/search/suggestions.tsx'),
     'utf8'
@@ -431,7 +432,7 @@ function testOverlayRendererLetsLocalFaviconsReachRuntime() {
 }
 
 function testOverlayRendererDelegatesFallbackStateToReact() {
-  const overlayJs = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
+  const overlayJs = readOverlayPanelSource();
   const suggestionsReact = fs.readFileSync(
     path.join(repoRoot, 'react-src/search/suggestions.tsx'),
     'utf8'
@@ -523,7 +524,7 @@ function testOverlayRendererBuildsBrowserPageFavicon2WhenMissingExplicitIcon() {
 }
 
 function testOverlayRendererUsesExtensionFaviconProxyForBrowserPages() {
-  const overlayJs = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
+  const overlayJs = readOverlayPanelSource();
   assert.match(
     overlayJs,
     /function getOverlayFaviconUrlResolver\(\)[\s\S]*?FAVICON_UTILS\.createFaviconUrlResolver[\s\S]*?shouldBlockFaviconForHost: shouldBlockOverlayFaviconForHost/,
@@ -542,7 +543,7 @@ function testOverlayRendererUsesExtensionFaviconProxyForBrowserPages() {
 }
 
 function testOverlayRendererDefinesChromeMonogramHelper() {
-  const overlayJs = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
+  const overlayJs = readOverlayPanelSource();
   assert.match(
     overlayJs,
     /function isChromeMonogramFaviconUrl\(url\)[\s\S]*?FAVICON_UTILS\.isChromeMonogramFaviconUrl/,

@@ -4,10 +4,11 @@ const fs = require('fs');
 const settings = require('../../src/shared/settings.js');
 const pageTheme = require('../../src/overlay/page-theme.js');
 const { readPageSource } = require('../helpers/page-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 const optionsHtml = readPageSource('src/options/options.html');
 const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
 const overlayRuntimeSource = fs.readFileSync('src/overlay/runtime.js', 'utf8');
-const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
+const overlaySource = readOverlayPanelSource();
 
 const overlaySectionStart = optionsHtml.indexOf(
   'data-i18n="settings_webpage_focus_overlay_section_title"'
@@ -130,9 +131,10 @@ assert.match(
   /const applyOverlayTheme = \(mode\) => \{[\s\S]*?syncOverlayPageThemeObservation\(\);/,
   'theme application should synchronize page-theme observation through the shared policy'
 );
+const applyOverlayThemeStart = overlaySource.indexOf('const applyOverlayTheme = (mode) => {');
 const applyOverlayThemeSource = overlaySource.slice(
-  overlaySource.indexOf('const applyOverlayTheme = (mode) => {'),
-  overlaySource.indexOf('// 使用系统字体')
+  applyOverlayThemeStart,
+  overlaySource.indexOf('\n  };', applyOverlayThemeStart)
 );
 assert.doesNotMatch(
   applyOverlayThemeSource,

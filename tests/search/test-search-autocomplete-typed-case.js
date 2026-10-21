@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 require('../../src/newtab/search/search-autocomplete.js');
@@ -48,7 +49,7 @@ assert.strictEqual(
   'accepting the completion should keep the typed case too'
 );
 
-const overlaySource = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
+const overlaySource = readOverlayPanelSource();
 assert.match(
   overlaySource,
   /const displayText = rawQuery \+ candidate\.completion\.slice\(rawQuery\.length\);\s*searchInput\.value = displayText;[\s\S]*?completion: displayText,/,

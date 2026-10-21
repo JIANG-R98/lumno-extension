@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { readPageSource } = require('../helpers/page-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const packageJson = JSON.parse(
@@ -22,10 +23,7 @@ const overlaySuggestionsCss = fs.readFileSync(
   path.join(repoRoot, 'src/overlay/suggestions-view.css'),
   'utf8'
 );
-const overlaySource = fs.readFileSync(
-  path.join(repoRoot, 'src/overlay/search-panel.js'),
-  'utf8'
-);
+const overlaySource = readOverlayPanelSource();
 const feedbackReactSource = fs.readFileSync(
   path.join(repoRoot, 'react-src/newtab/feedback.tsx'),
   'utf8'

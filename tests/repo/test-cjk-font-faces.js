@@ -6,6 +6,7 @@ const { JSDOM } = require('jsdom');
 const repoRoot = path.join(__dirname, '..', '..');
 const modulePath = path.join(repoRoot, 'src/shared/cjk-font-faces.js');
 const CJK = require(modulePath);
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 // The CJK face only composes with Open Sans when its weight band matches one of
 // the Open Sans faces exactly, on pages and in the overlay alike.
@@ -13,7 +14,7 @@ const openSansCss = fs.readFileSync(path.join(repoRoot, 'assets/fonts/open-sans/
 const pageBands = [...openSansCss.matchAll(/font-weight:\s*([\d ]+);/g)].map((match) => match[1].trim());
 assert.deepStrictEqual(pageBands, ['300 549', '550 649', '650 800']);
 assert.ok(pageBands.includes(CJK.FONT_WEIGHT_BAND));
-const overlaySource = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
+const overlaySource = readOverlayPanelSource();
 assert.ok(overlaySource.includes(`['${pageBands.join("', '")}']`),
   'the overlay must declare "Lumno Open Sans" in the same weight bands as open-sans.css');
 

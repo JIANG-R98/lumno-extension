@@ -1,11 +1,12 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 const { readPageSource } = require('../helpers/page-source');
 
 const optionsHtml = readPageSource('src/options/options.html');
 const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
 const overlayRuntimeSource = fs.readFileSync('src/overlay/runtime.js', 'utf8');
-const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
+const overlaySource = readOverlayPanelSource();
 const suggestionsCss = fs.readFileSync('src/overlay/suggestions-view.css', 'utf8');
 const searchInputCss = fs.readFileSync('src/shared/search/search-input.css', 'utf8');
 const searchInputModeSource = fs.readFileSync('src/shared/search/search-input-mode.js', 'utf8');

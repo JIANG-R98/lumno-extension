@@ -4,6 +4,7 @@ const path = require('path');
 const suggestionModel = require('../../src/shared/search/suggestion-action-model.js');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const repoRoot = path.join(__dirname, '..', '..');
 
@@ -126,7 +127,7 @@ verifyClassification();
 const newtabSource = readNewtabRuntimeSource();
 const newtabHtml = readPageSource('newtab.html');
 const newtabLayoutSource = readSource('src/newtab/layout.js');
-const overlaySource = readSource('src/overlay/search-panel.js');
+const overlaySource = readOverlayPanelSource();
 
 [newtabSource, overlaySource].forEach((source, index) => {
   assert.match(

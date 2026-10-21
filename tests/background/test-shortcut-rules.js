@@ -8,6 +8,7 @@ const bundledShortcutRules = require('../../assets/data/shortcut-rules.json');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { readBackgroundSource } = require('../helpers/background-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 function createResponse(data) {
   return {
@@ -106,7 +107,7 @@ function testBrowserProfileRuntimeWiring() {
   const newtabHtml = readPageSource('newtab.html');
   const newtabSource = readNewtabRuntimeSource();
   const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
-  const overlaySource = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
+  const overlaySource = readOverlayPanelSource();
 
   assert(
     backgroundSource.indexOf("chrome.runtime.getURL('src/shared/browser-profile.js')") <

@@ -1,8 +1,9 @@
 const assert = require('assert');
 const { readStylesheet } = require('../helpers/css-tokens');
 const fs = require('fs');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
-const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
+const overlaySource = readOverlayPanelSource();
 const suggestionsCss = readStylesheet('src/overlay/suggestions-view.css');
 
 assert.match(

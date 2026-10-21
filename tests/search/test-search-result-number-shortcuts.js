@@ -1,5 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
@@ -7,7 +8,7 @@ const read = (filePath) => fs.readFileSync(filePath, 'utf8');
 const newtabSource = readNewtabRuntimeSource();
 const newtabHtml = readPageSource('newtab.html');
 const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
-const overlaySource = read('src/overlay/search-panel.js');
+const overlaySource = readOverlayPanelSource();
 const overlayCss = read('src/overlay/suggestions-view.css');
 const suggestionsSource = read('react-src/search/suggestions.tsx');
 const suggestionNavigation = require('../../src/shared/search/suggestion-navigation.js');
@@ -448,7 +449,7 @@ assert.match(
 
 assert.match(
   overlaySource,
-  /const numberShortcutOptions = \{[\s\S]*?onHoldStart:[\s\S]*?showOverlayToast\([\s\S]*?search_number_jump_release_hint[\s\S]*?duration:\s*0[\s\S]*?onHoldEnd:\s*hideOverlayToast,[\s\S]*?instantActive:\s*\(\)\s*=>\s*numberShortcutInstantEnabled[\s\S]*?\};/,
+  /const numberShortcutOptions = \{[\s\S]*?onHoldStart:[\s\S]*?showOverlayToast\([\s\S]*?search_number_jump_release_hint[\s\S]*?duration:\s*0[\s\S]*?onHoldEnd:\s*(?:hideOverlayToast|\(\.\.\.args\) => hideOverlayToast\(\.\.\.args\)),[\s\S]*?instantActive:\s*\(\)\s*=>\s*numberShortcutInstantEnabled[\s\S]*?\};/,
   'Overlay should reuse its existing Toast while the number shortcut hold is armed'
 );
 assert.match(

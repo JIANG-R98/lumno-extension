@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { readBackgroundSource } = require('../helpers/background-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const tooltipJsPath = path.join(repoRoot, 'src/shared/ui/tooltip.js');
@@ -678,7 +679,7 @@ assert.strictEqual(
 const newtabHtml = fs.readFileSync(newtabHtmlPath, 'utf8');
 const newtabPanel = readNewtabRuntimeSource();
 const background = readBackgroundSource();
-const overlayPanel = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
+const overlayPanel = readOverlayPanelSource();
 const searchInputMode = fs.readFileSync(path.join(repoRoot, 'src/shared/search/search-input-mode.js'), 'utf8');
 assert.ok(newtabHtml.includes('../shared/ui/cursor-tooltip.css'), 'newtab should load cursor tooltip stylesheet');
 assert.ok(newtabHtml.includes('../shared/ui/cursor-tooltip.js'), 'newtab should load cursor tooltip component');
@@ -700,7 +701,7 @@ assert.ok(
 );
 assert.match(
   overlayPanel,
-  /const overlayCursorTooltipController = globalThis\.LumnoCursorTooltip[\s\S]*?id: '_x_extension_overlay_cursor_tooltip_2026_unique_'/,
+  /overlayCursorTooltipController = globalThis\.LumnoCursorTooltip[\s\S]*?id: '_x_extension_overlay_cursor_tooltip_2026_unique_'/,
   'overlay input actions and suggestion text should share the overlay cursor tooltip controller'
 );
 assert.match(

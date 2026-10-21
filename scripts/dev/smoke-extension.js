@@ -4,7 +4,8 @@
 // Chrome over a CDP pipe (Extensions.loadUnpacked, so branded Chrome works
 // too), then opens New Tab, Settings, Onboarding and the popup, types into the
 // New Tab search box, changes a set of settings under the open New Tab, walks
-// its appearance panel, and opens the search overlay and the tab switcher on a
+// its appearance panel, and opens the search overlay (typing and pressing
+// keys in it) and the tab switcher on a
 // local web page. Any uncaught exception, console error or failed extension
 // resource fails the run; failed loads from other origins (remote images,
 // wallpapers) are only listed.
@@ -289,6 +290,31 @@ async function main() {
     await delay(2500);
     report.overlay = await evaluate(webSession,
       `document.querySelectorAll('[id*=_x_extension], [class*=x-lumno]').length + ' overlay elements'`);
+    // The overlay lives in a closed shadow root and focuses its input, so
+    // type and press keys through CDP input events.
+    await cdp.send('Page.bringToFront', {}, webSession);
+    const press = async (key, code, keyCode) => {
+      await cdp.send('Input.dispatchKeyEvent', { type: 'keyDown', key, code, windowsVirtualKeyCode: keyCode }, webSession);
+      await cdp.send('Input.dispatchKeyEvent', { type: 'keyUp', key, code, windowsVirtualKeyCode: keyCode }, webSession);
+      await delay(300);
+    };
+    await cdp.send('Input.insertText', { text: 'git' }, webSession);
+    await delay(1500);
+    await press('ArrowDown', 'ArrowDown', 40);
+    await press('ArrowDown', 'ArrowDown', 40);
+    await press('ArrowUp', 'ArrowUp', 38);
+    await press('Backspace', 'Backspace', 8);
+    await press('Backspace', 'Backspace', 8);
+    await press('Backspace', 'Backspace', 8);
+    await cdp.send('Input.insertText', { text: '/' }, webSession);
+    await delay(800);
+    await press('Backspace', 'Backspace', 8);
+    await press('Tab', 'Tab', 9);
+    await press('Tab', 'Tab', 9);
+    await delay(600);
+    await press('Escape', 'Escape', 27);
+    await press('Escape', 'Escape', 27);
+    report['overlay typing'] = 'typed, navigated and closed';
     await evaluate(workerSession, `(async () => {
       const [tab] = await chrome.tabs.query({ url: 'http://127.0.0.1/*' });
       triggerTabSwitcherForTab(tab, 'commands-tab-switcher', Date.now());

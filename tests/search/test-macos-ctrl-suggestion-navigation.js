@@ -2,12 +2,13 @@ const assert = require('assert');
 const fs = require('fs');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const read = (filePath) => fs.readFileSync(filePath, 'utf8');
 const optionsHtml = readPageSource('src/options/options.html');
 const optionsSource = read('src/options/options.js');
 const newtabSource = readNewtabRuntimeSource();
-const overlaySource = read('src/overlay/search-panel.js');
+const overlaySource = readOverlayPanelSource();
 const readme = read('README.md');
 
 assert.match(
@@ -26,8 +27,13 @@ assert.match(
 );
 assert.match(
   overlaySource,
-  /MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY[\s\S]*?getSuggestionNavigationKey\(e\)/,
-  'Overlay should load and use the experiment preference'
+  /MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY/,
+  'Overlay should load the experiment preference'
+);
+assert.match(
+  overlaySource,
+  /getSuggestionNavigationKey\(e\)/,
+  'Overlay should use the experiment preference'
 );
 assert.match(
   readme,

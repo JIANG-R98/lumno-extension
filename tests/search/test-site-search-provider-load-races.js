@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { extractFunction } = require('../helpers/extract-function');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 function createDeferred() {
   let resolve;
@@ -92,7 +93,7 @@ async function verifyLoadGuard(surface, source) {
 async function main() {
   const surfaces = [
     ['newtab', readNewtabRuntimeSource()],
-    ['overlay', fs.readFileSync('src/overlay/search-panel.js', 'utf8')]
+    ['overlay', readOverlayPanelSource()]
   ];
   for (const [surface, source] of surfaces) {
     await verifyLoadGuard(surface, source);

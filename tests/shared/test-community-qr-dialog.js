@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 const { readBackgroundSource } = require('../helpers/background-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const repoRoot = path.join(__dirname, '..', '..');
 const read = (relativePath) => fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
@@ -61,7 +62,7 @@ dialog.close();
 assert.strictEqual(dialog.open({ imageUrl: '' }), null, 'nothing opens without a QR image');
 
 // Joining the WeChat group never opens the QR image in a new tab.
-const overlaySource = read('src/overlay/search-panel.js');
+const overlaySource = readOverlayPanelSource();
 const newtabSource = require('../helpers/newtab-source').readNewtabRuntimeSource();
 const suggestionsControllerSource = read('src/newtab/search/suggestions-controller.js');
 assert.match(

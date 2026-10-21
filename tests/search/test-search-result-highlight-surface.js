@@ -4,12 +4,13 @@ const fs = require('fs');
 const path = require('path');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const newtabHtml = readPageSource('newtab.html');
 const newtabJs = readNewtabRuntimeSource();
 const overlayCss = readStylesheet('src/overlay/suggestions-view.css');
-const overlayJs = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
+const overlayJs = readOverlayPanelSource();
 const suggestionsReact = fs.readFileSync(
   path.join(repoRoot, 'react-src/search/suggestions.tsx'),
   'utf8'

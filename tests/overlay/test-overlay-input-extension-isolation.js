@@ -3,11 +3,9 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 const { createOverlayKeyRouter } = require('../../src/overlay/keyboard.js');
+const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
-const searchPanelSource = fs.readFileSync(
-  path.join(__dirname, '../../src/overlay/search-panel.js'),
-  'utf8'
-);
+const searchPanelSource = readOverlayPanelSource();
 
 // The real overlay key router runs here. JSDOM cannot create trusted events,
 // so the router's trust predicate is swapped for one that accepts them; the
