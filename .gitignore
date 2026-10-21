@@ -1,0 +1,14 @@
+# Dependencies and build output
+node_modules/
+dist/
+coverage/
+
+# Local scratch data (scripts/dev/probe-webdav.js writes here)
+.tmp/
+
+# Logs and OS files
+*.log
+.DS_Store
+
+# Local agent notes
+.claude/
