@@ -4378,7 +4378,7 @@
       return {
         appearanceOptions: WALLPAPER_APPEARANCE_MODES.map((mode) => ({
           mode,
-          imageUrl: getRuntimeAssetUrl(`assets/images/${mode}.svg`)
+          imageUrl: getRuntimeAssetUrl(`assets/images/newtab-${mode}.svg`)
         })),
         favicons: NEWTAB_FAVICON_OPTIONS.map((item) => ({
           id: item.id,
