@@ -1,14 +1,9 @@
 const assert = require('assert');
 const vm = require('vm');
-const { readReactSource } = require('../helpers/react-source');
 const { moduleScript } = require('../helpers/module-script');
 
-const suggestionsViewSource = readReactSource('react-src/search/suggestions.tsx');
-assert.match(
-  suggestionsViewSource,
-  /options\.preloadIcon\(\s*String\(tab\.favIconUrl\),\s*String\(tab\.url \|\| ''\)\s*\)/,
-  'open-tab favicon preloads should include the page URL so path-specific exclusions are enforced'
-);
+// That open-tab favicon preloads carry the page URL is checked in
+// react-src/search/suggestions.test.tsx.
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));

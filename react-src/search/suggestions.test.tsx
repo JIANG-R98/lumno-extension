@@ -1075,6 +1075,8 @@ describe('Suggestions React island', () => {
     expect(items).toHaveLength(1);
     expect(items[0]._xIsSearchSuggestion).toBe(false);
     expect(preloadIcon).toHaveBeenCalledOnce();
+    // The page URL lets the favicon policy apply its path-specific exclusions.
+    expect(preloadIcon).toHaveBeenCalledWith('data:image/png;base64,dGVzdA==', 'https://example.com/');
     expect(onSwitchToTab).toHaveBeenCalledTimes(2);
     expect(onCopyUrl).toHaveBeenCalledWith('https://example.com/');
     expect(setSuggestionsVisible).toHaveBeenLastCalledWith(true);

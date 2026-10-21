@@ -1,317 +1,193 @@
 const assert = require('assert');
-const { readStylesheet } = require('../helpers/css-tokens');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
-const { readPageSource } = require('../helpers/page-source');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-const { extractFunction } = require('../helpers/extract-function');
-const { readBackgroundSource } = require('../helpers/background-source');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
-const { readReactSource } = require('../helpers/react-source');
+const { readStylesheet } = require('../helpers/css-tokens');
+const { runModuleInContext } = require('../helpers/module-script');
+const { parseCss, parsePageCss } = require('../helpers/css-rules');
+const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
+
+// Typing "/" in either search surface lists its commands, filtered as the
+// user types, as command rows only; anything else is ordinary search.
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const newtabSource = readNewtabRuntimeSource();
-const newtabSuggestionsSource = readReactSource('react-src/search/suggestions.tsx');
-const newtabHtmlSource = readPageSource('newtab.html');
-const overlaySource = readOverlayPanelSource();
-const overlayCssSource = readStylesheet('src/overlay/suggestions-view.css');
-const backgroundSource = readBackgroundSource();
 const localeNames = ['en', 'ja', 'zh_CN', 'zh_TW'];
+const COMMANDS = {
+  newtab: ['commandNewTab', 'commandSettings', 'modeSwitch', 'zenSwitch'],
+  overlay: ['commandNewTab', 'commandSettings', 'modeSwitch', 'commandOpenTabs', 'commandCopyUrl', 'commandDocumentPip']
+};
 
-function createCommandMatcher(source, documentPipEnabled) {
-  const definitionsMatch = source.match(
-    /const commandDefinitions = (\[[\s\S]*?\n\s*\]);\n\n\s*function getCommandMatches/
-  );
-  assert.ok(definitionsMatch, 'expected command definitions before getCommandMatches');
-  const functionSource = extractFunction(source, 'getCommandMatches');
-  return vm.runInNewContext(`(() => {
-    const documentPipEnabled = ${documentPipEnabled ? 'true' : 'false'};
-    const commandDefinitions = ${definitionsMatch[1]};
-    ${functionSource}
-    return getCommandMatches;
-  })()`);
+// The overlay offers web clipping only where the browser supports document
+// picture-in-picture and the setting is on.
+function open(name, webClip) {
+  return openSearchSurface(name, name === 'overlay'
+    ? {
+      openContext: { documentPipEnabled: webClip !== false },
+      settings: { _x_extension_document_pip_enabled_2026_unique_: webClip !== false },
+      setup(window) {
+        window.documentPictureInPicture = {};
+      }
+    }
+    : {});
 }
 
-function assertSlashCommandDiscovery(source, expectedTypes, surface) {
-  expectedTypes.forEach((type) => {
-    assert.match(
-      source,
-      new RegExp(`type:\\s*'${type}'[\\s\\S]*?primary:\\s*'\\/`),
-      `${surface} should include ${type} in its slash command definitions`
-    );
+async function rows(surface, query) {
+  await surface.type(query);
+  await surface.settle(80);
+  return surface.suggestions().map((row) => {
+    const suggestion = row._xSuggestion || {};
+    assert.strictEqual(row.getAttribute('data-command-row') === 'true', /^(command|modeSwitch|zenSwitch)/.test(suggestion.type),
+      `${surface.name}: only command results should be laid out as command rows`);
+    return suggestion.type;
   });
-  assert.match(
-    source,
-    /function getCommandMatches\(rawInput\) \{[\s\S]*?const matches = \[\];[\s\S]*?token\.startsWith\(input\)[\s\S]*?matches\.push\(command\)[\s\S]*?return matches;/,
-    `${surface} should return every slash command matching the live input`
-  );
-  assert.doesNotMatch(
-    source,
-    /input\.startsWith\(token\)/,
-    `${surface} should stop matching after the user types past a complete command or alias`
-  );
-  assert.match(
-    source,
-    /commandMatches\.forEach\(\(command\) => \{[\s\S]*?preSuggestions\.push\(buildCommandSuggestion\(command\)\);[\s\S]*?\}\);/,
-    `${surface} should render all matching commands instead of only the first match`
-  );
 }
 
-function assertPlainNavigationSuggestionsPreserved(source, surface, options) {
-  const preSuggestionsStart = source.indexOf('const preSuggestions = [];');
-  assert.ok(preSuggestionsStart >= 0, `${surface} should define pre-suggestions`);
-  const providersStart = source.indexOf('const providersForTags', preSuggestionsStart);
-  assert.ok(providersStart > preSuggestionsStart, `${surface} should compose pre-suggestions before provider matching`);
-  const block = source.slice(preSuggestionsStart, providersStart);
-  const slashBranchIndex = block.indexOf('else if (slashCommandModeActive && !siteSearchQueryModeActive)');
-  const plainBranchIndex = block.search(
-    /else if \(!siteSearchQueryModeActive(?: && !localSearchQueryModeActive)?\)/
-  );
-  assert.ok(slashBranchIndex >= 0, `${surface} should keep a slash-only command branch`);
-  assert.ok(
-    plainBranchIndex > slashBranchIndex,
-    `${surface} should restore ordinary navigation suggestions outside slash command mode`
-  );
-  const plainBranch = block.slice(plainBranchIndex);
-  assert.match(
-    plainBranch,
-    /const directUrlSuggestion = getDirectUrlSuggestion\(query\);/,
-    `${surface} should build a direct URL candidate for ordinary input`
-  );
-  if (options && options.excludeCurrentUrl) {
-    assert.match(
-      plainBranch,
-      /if \(directUrlSuggestion && !isCurrentOverlayTabUrl\(directUrlSuggestion\.url\)\)/,
-      `${surface} should avoid suggesting the current page as a direct URL`
-    );
-  } else {
-    assert.match(
-      plainBranch,
-      /if \(directUrlSuggestion\)/,
-      `${surface} should retain recognized direct URL candidates`
-    );
+function emptyText(surface) {
+  const empty = surface.root.querySelector(surface.name === 'overlay' ? '.x-ov-empty-state' : '.x-nt-empty-state');
+  return empty ? empty.textContent.trim() : '';
+}
+
+async function testDiscovery(name) {
+  const surface = await open(name);
+  assert.deepStrictEqual(await rows(surface, '/'), COMMANDS[name], `${name}: a bare slash should list every command, and nothing else`);
+  assert.deepStrictEqual(await rows(surface, '/m'), ['modeSwitch'], `${name}: the list should filter as the user types`);
+  assert.deepStrictEqual(await rows(surface, '/set'), ['commandSettings'], `${name}: aliases should match too`);
+  for (const input of ['/unknown', '/nothing', '/settings-extra', '/newtab-extra']) {
+    assert.deepStrictEqual(await rows(surface, input), [], `${name}: ${input} should match no command`);
+    assert.strictEqual(emptyText(surface), 'No matching commands', `${name}: and say so instead of offering a search`);
   }
-  assert.match(
-    plainBranch,
-    /const keywordSuggestions = buildKeywordSuggestions\(query, rules\);[\s\S]*?preSuggestions\.push\(\.\.\.keywordSuggestions\);/,
-    `${surface} should retain ordinary keyword navigation candidates`
-  );
+  const before = surface.page.messages.length;
+  surface.press('Enter');
+  await surface.settle(100);
+  assert.strictEqual(surface.navigation(), null, `${name}: Enter on an unmatched command should not search or navigate`);
+  assert.ok(!surface.page.messages.slice(before).some((message) => /createTab|searchOrNavigate/.test(message.action)));
+
+  await surface.type('/mode');
+  await surface.settle(80);
+  assert.match(surface.suggestions()[0].querySelector(`.x-${name === 'overlay' ? 'ov' : 'nt'}-suggestion-command`).textContent, /\/mode/,
+    `${name}: an exact command keeps its command label`);
+  assert.ok(surface.suggestions()[0].querySelector(`.x-${name === 'overlay' ? 'ov' : 'nt'}-suggestion-command-description`),
+    `${name}: with its description below`);
+
+  assert.ok((await rows(surface, 'example.com')).includes('directUrl'), `${name}: ordinary input should offer the typed address again`);
+  surface.close();
 }
 
-assertSlashCommandDiscovery(
-  newtabSource,
-  ['commandNewTab', 'commandSettings', 'modeSwitch', 'zenSwitch'],
-  'New Tab'
-);
-assertSlashCommandDiscovery(
-  overlaySource,
-  ['commandNewTab', 'commandSettings', 'modeSwitch', 'commandOpenTabs', 'commandCopyUrl', 'commandDocumentPip'],
-  'overlay'
-);
-assertPlainNavigationSuggestionsPreserved(newtabSource, 'New Tab');
-assertPlainNavigationSuggestionsPreserved(overlaySource, 'overlay', { excludeCurrentUrl: true });
+async function testNewTabCommands() {
+  const surface = await open('newtab');
+  assert.deepStrictEqual(await rows(surface, '/z'), ['zenSwitch'], 'New Tab should include /zen');
+  assert.deepStrictEqual(await rows(surface, '/c'), [], 'New Tab has no copy or clip command');
+  surface.close();
+}
 
-const getNewtabCommandMatches = createCommandMatcher(newtabSource, false);
-assert.deepStrictEqual(
-  Array.from(getNewtabCommandMatches('/'), (command) => command.type),
-  ['commandNewTab', 'commandSettings', 'modeSwitch', 'zenSwitch'],
-  'New Tab should show every available slash command for a bare slash'
-);
-assert.deepStrictEqual(
-  Array.from(getNewtabCommandMatches('/m'), (command) => command.type),
-  ['modeSwitch'],
-  'New Tab should filter the command list as the user types'
-);
-assert.deepStrictEqual(
-  Array.from(getNewtabCommandMatches('/z'), (command) => command.type),
-  ['zenSwitch'],
-  'New Tab should include the Zen command in live filtering'
-);
-assert.deepStrictEqual(
-  Array.from(getNewtabCommandMatches('/unknown'), (command) => command.type),
-  [],
-  'New Tab should remove commands that no longer match the input'
-);
-['/nothing', '/something', '/settings-extra', '/newtab-extra'].forEach((input) => {
-  assert.deepStrictEqual(
-    Array.from(getNewtabCommandMatches(input), (command) => command.type),
-    [],
-    `New Tab should not execute a command when ${input} only starts with an alias or command`
-  );
-});
+async function testOverlayCommands() {
+  const surface = await open('overlay');
+  assert.deepStrictEqual(await rows(surface, '/c'), ['commandCopyUrl', 'commandDocumentPip'], 'copy and clip stay listed until the input tells them apart');
+  assert.deepStrictEqual(await rows(surface, '/t'), ['commandOpenTabs']);
+  for (const input of ['/continue', '/test', '/copycat', '/tabs-extra']) {
+    assert.deepStrictEqual(await rows(surface, input), [], `${input} should match no command`);
+  }
 
-const getOverlayCommandMatches = createCommandMatcher(overlaySource, true);
-assert.deepStrictEqual(
-  Array.from(getOverlayCommandMatches('/'), (command) => command.type),
-  ['commandNewTab', 'commandSettings', 'modeSwitch', 'commandOpenTabs', 'commandCopyUrl', 'commandDocumentPip'],
-  'overlay should show every available slash command without mixing in plain commands'
-);
-assert.deepStrictEqual(
-  Array.from(getOverlayCommandMatches('/c'), (command) => command.type),
-  ['commandCopyUrl', 'commandDocumentPip'],
-  'overlay should filter copy and clip commands together until the input disambiguates them'
-);
-assert.deepStrictEqual(
-  Array.from(getOverlayCommandMatches('/t'), (command) => command.type),
-  ['commandOpenTabs'],
-  'overlay should expose its existing open-tabs-only mode as a slash command'
-);
-assert.deepStrictEqual(
-  Array.from(getOverlayCommandMatches('/set'), (command) => command.type),
-  ['commandSettings'],
-  'overlay should filter slash commands by aliases'
-);
-['/continue', '/test', '/copycat', '/tabs-extra'].forEach((input) => {
-  assert.deepStrictEqual(
-    Array.from(getOverlayCommandMatches(input), (command) => command.type),
-    [],
-    `overlay should not execute a command when ${input} only starts with an alias or command`
-  );
-});
-assert.deepStrictEqual(
-  Array.from(getOverlayCommandMatches('clip'), (command) => command.type),
-  ['commandDocumentPip'],
-  'overlay should preserve the enabled legacy plain clip command'
-);
-const getOverlayCommandsWithoutClip = createCommandMatcher(overlaySource, false);
-assert.deepStrictEqual(
-  Array.from(getOverlayCommandsWithoutClip('/'), (command) => command.type),
-  ['commandNewTab', 'commandSettings', 'modeSwitch', 'commandOpenTabs', 'commandCopyUrl'],
-  'overlay should hide only the clip command while webpage clipping is disabled'
-);
+  await rows(surface, '/copy');
+  surface.press('Enter');
+  await surface.settle(100);
+  assert.ok(surface.page.messages.some((message) => message.action === 'copyCurrentPageUrl'), '/copy should copy the page address');
+  surface.close();
 
-assert.match(
-  overlaySource,
-  /primary:\s*'\/clip'[\s\S]*?legacyExactAliases:\s*\['clip', 'webclip', 'web clip'\][\s\S]*?legacyExactAliases\.includes\(input\)[\s\S]*?matches\.push\(command\)/,
-  'overlay should discover /clip while retaining its legacy exact inputs'
-);
-assert.match(
-  overlaySource,
-  /if \(commandMatch\.command\.type === 'modeSwitch'\) \{[\s\S]*?applyThemeModeChange\(getNextThemeMode\(overlayThemeMode \|\| 'system'\)\);[\s\S]*?searchInput\.focus\(\);[\s\S]*?return;/,
-  'overlay should execute a filtered /mode suggestion without closing the command bar'
-);
-assert.match(
-  newtabSource,
-  /function buildModeSuggestion\(\)[\s\S]*?commandText:\s*'\/mode'[\s\S]*?function buildZenSuggestion\(\)[\s\S]*?commandText:\s*'\/zen'/,
-  'New Tab should keep command labels when exact /mode and /zen results use their direct builders'
-);
-assert.match(
-  overlaySource,
-  /function buildModeSuggestion\(\)[\s\S]*?commandText:\s*'\/mode'/,
-  'overlay should keep the command label when exact /mode uses its direct builder'
-);
-assert.match(
-  overlaySource,
-  /type:\s*'commandOpenTabs'[\s\S]*?primary:\s*'\/tabs'[\s\S]*?type:\s*'commandCopyUrl'[\s\S]*?primary:\s*'\/copy'[\s\S]*?type:\s*'commandDocumentPip'[\s\S]*?primary:\s*'\/clip'/,
-  'overlay should keep the recommended Lumno-only command order'
-);
+  const tabs = await open('overlay');
+  await rows(tabs, '/tabs');
+  tabs.press('Enter');
+  await tabs.settle(100);
+  assert.strictEqual(tabs.scopeLabel(), 'Search open tabs', '/tabs should switch to searching open tabs');
+  tabs.close();
 
-assert.match(
-  newtabSource,
-  /if \((?:!localSearchScopeState && )?isSlashCommandInput\(query\)\) \{[\s\S]*?renderSuggestions\(\[\], query\);[\s\S]*?return;/,
-  'New Tab should route slash-prefixed input directly to command rendering outside local search scopes'
-);
-assert.ok(
-  (overlaySource.match(/if \((?:!localSearchScopeState && )?isSlashCommandInput\(query\)\) \{/g) || []).length >= 2,
-  'overlay input and paste paths should route slash-prefixed input to command rendering outside local search scopes'
-);
-assert.match(
-  newtabSource,
-  /const slashCommandModeActive = [^;]*isSlashCommandInput\(rawTagInput\);[\s\S]*?const newTabSuggestion = \([\s\S]*?slashCommandModeActive[\s\S]*?let allSuggestions = [\s\S]*?slashCommandModeActive \? \[\.\.\.preSuggestions\]/,
-  'New Tab should compose only command rows while slash command mode is active'
-);
-assert.match(
-  overlaySource,
-  /const slashCommandModeActive = [^;]*isSlashCommandInput\(rawTagInput\);[\s\S]*?const newTabSuggestion = \([\s\S]*?slashCommandModeActive[\s\S]*?let allSuggestions = [\s\S]*?slashCommandModeActive \? \[\.\.\.preSuggestions\]/,
-  'overlay should compose only command rows while slash command mode is active'
-);
-assert.match(
-  newtabSource,
-  /const emptyMessage = slashCommandModeActive && allSuggestions\.length === 0[\s\S]*?slash_command_empty/,
-  'New Tab should show a command-specific empty state without falling back to search'
-);
-assert.match(
-  overlaySource,
-  /const emptyMessage = slashCommandModeActive && allSuggestions\.length === 0[\s\S]*?slash_command_empty[\s\S]*?reactView\.render\(\{[\s\S]*?emptyMessage/,
-  'overlay should show a command-specific empty state without falling back to search'
-);
+  const mode = await openSearchSurface('overlay', { settings: { _x_extension_theme_mode_2024_unique_: 'light' } });
+  await rows(mode, '/mode');
+  const root = mode.root.getElementById('_x_extension_overlay_2024_unique_');
+  const theme = root.getAttribute('data-theme');
+  mode.press('Enter');
+  await mode.settle(100);
+  assert.notStrictEqual(root.getAttribute('data-theme'), theme, '/mode should switch the theme');
+  assert.ok(mode.page.root(), 'and keep the command bar open');
+  assert.strictEqual(mode.root.activeElement, mode.input(), 'with focus in the input');
+  mode.close();
 
-assert.match(
-  overlaySource,
-  /type === 'commandOpenTabs'[\s\S]*?activateOpenTabsSearchMode\(\)[\s\S]*?type === 'commandCopyUrl'[\s\S]*?action:\s*'copyCurrentPageUrl'/,
-  'overlay should execute tabs and copy commands through existing capability paths'
-);
-assert.match(
-  overlaySource,
-  /else if \(query\) \{\s*if \((?:!localSearchScopeState && )?isSlashCommandInput\(query\)\) \{\s*updateSearchSuggestions\(\[\], query\);\s*return;[\s\S]*?resolveQuickNavigation\(query\)/,
-  'overlay Enter should preserve the slash empty state instead of falling through to navigation'
-);
-assert.match(
-  newtabSource,
-  /if \(selectedIndex >= 0 && currentSuggestions\[selectedIndex\]\) \{[\s\S]*?executeSuggestion\([\s\S]*?\}\s*if \((?:!localSearchScopeState && )?isSlashCommandInput\(query\)\) \{\s*renderSuggestions\(\[\], query\);\s*return;/,
-  'New Tab Enter should execute a selected command before suppressing an unresolved slash input'
-);
-assert.match(
-  newtabSource,
-  /const emptyMessage = slashCommandModeActive && allSuggestions\.length === 0[\s\S]*?getSuggestionActionContextKey\([\s\S]*?\bemptyMessage\b[\s\S]*?suggestionsView\.render\(\{[\s\S]*?\bemptyMessage\b/,
-  'New Tab should pass the same slash empty message to its action context and rendered view'
-);
-localeNames.forEach((localeName) => {
-  const messages = JSON.parse(fs.readFileSync(
-    path.join(repoRoot, '_locales', localeName, 'messages.json'),
-    'utf8'
-  ));
-  [
-    'slash_command_empty',
-    'command_tabs_title',
-    'command_tabs_action',
-    'command_copy_title',
-    'command_copy_action'
-  ].forEach((key) => {
-    assert.ok(messages[key] && messages[key].message, `${localeName} should localize ${key}`);
+  const noClip = await open('overlay', false);
+  assert.deepStrictEqual(await rows(noClip, '/'), COMMANDS.overlay.filter((type) => type !== 'commandDocumentPip'),
+    'with web clipping off, only /clip should be missing');
+  noClip.close();
+
+  // Opened prefilled with the page's own address, the overlay does not offer
+  // that page back as a typed address.
+  const url = 'https://page.example.test/';
+  const current = await openSearchSurface('overlay', {
+    url,
+    openContext: { currentTabId: 1, currentTabUrl: url, prioritizeCurrentPageMatch: true, tabs: [{ id: 1, windowId: 1, title: 'Page', url }] }
   });
+  assert.ok(!(await rows(current, 'page.example.test')).includes('directUrl'), 'the overlay should not offer the page it is open on');
+  assert.ok((await rows(current, 'other.example.test')).includes('directUrl'), 'other addresses are still offered');
+  current.close();
+}
+
+// The old plain inputs for web clip ("clip", "webclip", "web clip") still
+// match it; the overlay runs it for them when Enter has no row to act on.
+function testLegacyClipAliases() {
+  const context = vm.createContext({});
+  const { createSlashCommands } = runModuleInContext('src/overlay/panel/slash-commands.js', context);
+  const commands = createSlashCommands({
+    t: (_key, fallback) => fallback,
+    formatMessage: (_key, fallback) => fallback,
+    overlayState: { documentPipEnabled: true, searchInput: { value: '' } }
+  });
+  ['clip', 'webclip', 'web clip'].forEach((input) => {
+    assert.deepStrictEqual(Array.from(commands.getCommandMatches(input), (command) => command.type), ['commandDocumentPip'], `"${input}" should find web clip`);
+  });
+}
+
+function testStyles() {
+  const newtab = parsePageCss('newtab.html');
+  const overlay = parseCss(readStylesheet('src/overlay/suggestions-view.css'));
+  [['x-nt', newtab], ['x-ov', overlay]].forEach(([prefix, css]) => {
+    const find = (selector) => css.entries.filter((entry) => entry.selectors.some((item) => item.endsWith(selector)) && entry.conditions.length === 0)
+      .reduce((merged, entry) => Object.assign(merged, Object.fromEntries(Array.from(entry.style).map((name) => [name, entry.style.getPropertyValue(name).replace(/\s+/g, ' ').trim()]))), {});
+    const commandRow = find(`.${prefix}-suggestion-item[data-command-row="true"]`);
+    assert.deepStrictEqual([commandRow.height, commandRow['min-height'], commandRow['padding-top'], commandRow['padding-bottom']],
+      [`var(--${prefix}-suggestion-row-height, 52px)`, `var(--${prefix}-suggestion-row-height, 52px)`, '7px', '7px'],
+      `${prefix} command rows should keep the 52px row height`);
+    const command = find(`.${prefix}-suggestion-command`);
+    const description = find(`.${prefix}-suggestion-command-description`);
+    assert.deepStrictEqual([command['font-size'], command['line-height'], description['font-size'], description['line-height']], ['14px', '18px', '11px', '15px'],
+      `${prefix} command and description should fit two lines in the row`);
+  });
+  const row = newtab.rule('.x-nt-suggestion-item');
+  assert.deepStrictEqual([row.get('height'), row.get('min-height')], ['var(--x-nt-suggestion-row-height, 52px)', 'var(--x-nt-suggestion-row-height, 52px)']);
+  const empty = newtab.rule('.x-nt-empty-state');
+  assert.deepStrictEqual(['height', 'min-height', 'display', 'align-items', 'justify-content', 'gap'].map((name) => empty.get(name)),
+    ['var(--x-nt-suggestion-row-height, 52px)', 'var(--x-nt-suggestion-row-height, 52px)', 'flex', 'center', 'center', '8px'],
+    'the empty state should take one row and center its contents');
+}
+
+function testCopy() {
+  localeNames.forEach((localeName) => {
+    const messages = JSON.parse(fs.readFileSync(path.join(repoRoot, '_locales', localeName, 'messages.json'), 'utf8'));
+    ['slash_command_empty', 'command_tabs_title', 'command_tabs_action', 'command_copy_title', 'command_copy_action'].forEach((key) => {
+      assert.ok(messages[key] && messages[key].message, `${localeName} should localize ${key}`);
+    });
+  });
+}
+
+(async () => {
+  for (const name of SURFACES) {
+    await testDiscovery(name);
+  }
+  await testNewTabCommands();
+  await testOverlayCommands();
+  testLegacyClipAliases();
+  testStyles();
+  testCopy();
+  console.log('slash command discovery tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
 });
-
-assert.match(
-  newtabSuggestionsSource,
-  /data-command-row=\{command \? 'true'[\s\S]*?x-nt-suggestion-command[\s\S]*?x-nt-suggestion-command-description/,
-  'New Tab command rows should put the command above the smaller result description'
-);
-assert.match(
-  newtabSuggestionsSource,
-  /function surfaceClass\([\s\S]*?options\.surface !== 'overlay'[\s\S]*?replace\(\/\^x-nt-\/, 'x-ov-'\)/,
-  'Overlay command rows should reuse the React command layout with Overlay class names'
-);
-assert.match(
-  newtabHtmlSource,
-  /\.x-nt-suggestion-item\[data-command-row="true"\]\s*\{[\s\S]*?height:\s*var\(--x-nt-suggestion-row-height,\s*52px\);[\s\S]*?min-height:\s*var\(--x-nt-suggestion-row-height,\s*52px\);[\s\S]*?padding-top:\s*7px;[\s\S]*?padding-bottom:\s*7px;/,
-  'New Tab command rows should stay locked to the existing 52px row height'
-);
-assert.match(
-  newtabHtmlSource,
-  /\.x-nt-suggestion-command\s*\{[\s\S]*?font-size:\s*14px;[\s\S]*?line-height:\s*18px;[\s\S]*?\}[\s\S]*?\.x-nt-suggestion-command-description[\s\S]*?font-size:\s*11px;[\s\S]*?line-height:\s*15px;/,
-  'New Tab command typography should fit two lines inside the fixed row budget'
-);
-assert.match(
-  newtabHtmlSource,
-  /\.x-nt-suggestion-item\s*\{[^}]*height:\s*var\(--x-nt-suggestion-row-height,\s*52px\);[^}]*min-height:\s*var\(--x-nt-suggestion-row-height,\s*52px\);/,
-  'New Tab result rows should use the shared fixed row-height contract'
-);
-assert.match(
-  newtabHtmlSource,
-  /\.x-nt-empty-state\s*\{[^}]*height:\s*var\(--x-nt-suggestion-row-height,\s*52px\);[^}]*min-height:\s*var\(--x-nt-suggestion-row-height,\s*52px\);[^}]*display:\s*flex;[^}]*align-items:\s*center;[^}]*justify-content:\s*center;[^}]*gap:\s*8px;/,
-  'New Tab empty state should share the result-row height while centering its contents'
-);
-assert.match(
-  overlayCssSource,
-  /\.x-ov-suggestion-item\[data-command-row="true"\]\s*\{[\s\S]*?height:\s*var\(--x-ov-suggestion-row-height,\s*52px\);[\s\S]*?min-height:\s*var\(--x-ov-suggestion-row-height,\s*52px\);[\s\S]*?padding-top:\s*7px;[\s\S]*?padding-bottom:\s*7px;/,
-  'overlay command rows should stay locked to the existing 52px row height'
-);
-assert.match(
-  overlayCssSource,
-  /\.x-ov-suggestion-command\s*\{[\s\S]*?font-size:\s*14px;[\s\S]*?line-height:\s*18px;[\s\S]*?\}[\s\S]*?\.x-ov-suggestion-command-description[\s\S]*?font-size:\s*11px;[\s\S]*?line-height:\s*15px;/,
-  'overlay command typography should fit two lines inside the fixed row budget'
-);
-
-console.log('slash command discovery tests passed');
