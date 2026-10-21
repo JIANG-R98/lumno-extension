@@ -195,6 +195,37 @@ body[data-glass-style] ._x_extension_select_wrap_2024_unique_[data-open="true"][
   z-index: 10;
 }
 
+/* Filter field for long menus such as installed fonts. It sits in the padded
+   menu, above the options, and scrolls with them. */
+._x_extension_select_search_2026_unique_ {
+  padding: 2px 2px 6px;
+}
+
+._x_extension_select_search_input_2026_unique_ {
+  width: 100%;
+  box-sizing: border-box;
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--tab-border, rgba(15, 23, 42, 0.12));
+  border-radius: var(--x-extension-select-option-radius, 10px);
+  background: var(--panel-subtle-bg, rgba(15, 23, 42, 0.04));
+  color: var(--panel-text, #111827);
+  font: inherit;
+  font-size: var(--lumno-font-size-md);
+  outline: none;
+}
+
+._x_extension_select_search_input_2026_unique_:focus-visible {
+  border-color: var(--panel-accent, rgba(59, 130, 246, 0.55));
+}
+
+._x_extension_select_empty_2026_unique_ {
+  padding: 10px;
+  color: var(--panel-subtext, #6b7280);
+  font-size: var(--lumno-font-size-md);
+  text-align: center;
+}
+
 ._x_extension_select_option_2024_unique_ {
   padding: 7px 10px;
   border-radius: var(--x-extension-select-option-radius, 10px);

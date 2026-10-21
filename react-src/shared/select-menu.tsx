@@ -20,6 +20,8 @@ export interface SelectMenuOption {
   checked?: boolean;
   disabled?: boolean;
   dividerBefore?: boolean;
+  /** Renders the label with this family, so a font picker previews each face. */
+  fontFamily?: string;
   groupTitle?: string;
   iconClass?: string;
   /** Image icon (for example a site tile); takes precedence over `iconClass`. */
@@ -29,6 +31,20 @@ export interface SelectMenuOption {
   /** Icon after a radio choice's label (for example an eyedropper); checked or not. */
   trailingIconClass?: string;
   value: string;
+}
+
+function filterOptions(
+  options: SelectMenuOption[],
+  query: string
+): SelectMenuOption[] {
+  const needle = query.trim().toLowerCase();
+  if (!needle) {
+    return options;
+  }
+  return options.filter((option) =>
+    option.label.toLowerCase().includes(needle) ||
+    option.value.toLowerCase().includes(needle)
+  );
 }
 
 function findNextEnabledOptionIndex(
@@ -61,6 +77,8 @@ export interface SelectMenuConfig {
    */
   ariaLabelledBy?: string;
   disabled?: boolean;
+  /** Shown in place of the options when a search filters out every one. */
+  emptyLabel?: string;
   className?: string;
   iconOnly?: boolean;
   id?: string;
@@ -78,6 +96,12 @@ export interface SelectMenuConfig {
   onCheckedChange?(value: string, checked: boolean): void;
   onValueChange?(value: string): boolean | void;
   options?: SelectMenuOption[];
+  /**
+   * Long option lists (installed fonts) get a filter field at the top of the
+   * menu. Keyboard navigation then applies to the filtered options.
+   */
+  searchable?: boolean;
+  searchPlaceholder?: string;
   selectId?: string;
   tooltip?: string;
   triggerIconClass?: string;
@@ -118,13 +142,17 @@ export function SelectMenu({
   windowObj: Window;
 }) {
   const options = Array.isArray(config.options) ? config.options : [];
+  const searchable = config.searchable === true;
   const [open, setOpenState] = useState(false);
   const [selectedValue, setSelectedValue] = useState(String(config.value ?? ''));
   const [activeIndex, setActiveIndex] = useState(0);
+  const [filter, setFilter] = useState('');
   const triggerRef = useRef<HTMLButtonElement>(null);
   const selectRef = useRef<HTMLSelectElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const filterRef = useRef<HTMLInputElement>(null);
   const openRef = useRef(false);
+  const visibleOptions = searchable ? filterOptions(options, filter) : options;
 
   useEffect(() => {
     setSelectedValue(String(config.value ?? ''));
@@ -229,15 +257,20 @@ export function SelectMenu({
     openRef.current = open;
     host.dataset.open = open ? 'true' : 'false';
     if (!open) {
+      // A reopened menu starts from the whole list again.
+      setFilter('');
       return undefined;
     }
-    const selectedIndex = options.findIndex(
+    const selectedIndex = visibleOptions.findIndex(
       (option) => !option.action && !option.checkbox &&
         option.value === selectedValue &&
         !option.disabled
     );
     setActiveIndex(selectedIndex);
     positionMenu();
+    if (searchable) {
+      filterRef.current?.focus();
+    }
     const onViewportChange = () => positionMenu();
     windowObj.addEventListener('resize', onViewportChange);
     windowObj.addEventListener('scroll', onViewportChange, true);
@@ -255,7 +288,15 @@ export function SelectMenu({
       windowObj.visualViewport?.removeEventListener('resize', onViewportChange);
       windowObj.visualViewport?.removeEventListener('scroll', onViewportChange);
     };
-  }, [config.menuPortalContainer, host, open, options, positionMenu, selectedValue, windowObj]);
+  }, [config.menuPortalContainer, host, open, options, positionMenu, searchable, selectedValue, windowObj]);
+
+  // Filtering changes the menu's height, so its flipped/anchor position and
+  // available height have to be recomputed before paint.
+  useLayoutEffect(() => {
+    if (openRef.current) {
+      positionMenu();
+    }
+  }, [filter, positionMenu]);
 
   useEffect(() => {
     if (!open || activeIndex < 0) {
@@ -350,7 +391,7 @@ export function SelectMenu({
   );
   const getOptionId = (index: number) =>
     config.id ? `${config.id}_option_${index}` : undefined;
-  const activeOptionId = open && activeIndex >= 0 && options[activeIndex]
+  const activeOptionId = open && activeIndex >= 0 && visibleOptions[activeIndex]
     ? getOptionId(activeIndex)
     : undefined;
   const valueId = config.ariaLabelledBy && config.id ? `${config.id}_value` : undefined;
@@ -387,6 +428,57 @@ export function SelectMenu({
         } as CSSProperties
       }
     >
+      {searchable ? (
+        // The field shares the listbox container so the menu keeps one scroll
+        // surface; it is the first thing focused when the menu opens.
+        <div className="_x_extension_select_search_2026_unique_" role="presentation">
+          <input
+            aria-label={config.searchPlaceholder}
+            className="_x_extension_select_search_input_2026_unique_"
+            onChange={(event) => {
+              const nextFilter = event.currentTarget.value;
+              setFilter(nextFilter);
+              setActiveIndex(
+                findNextEnabledOptionIndex(filterOptions(options, nextFilter), -1, 1)
+              );
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                setActiveIndex((current) =>
+                  findNextEnabledOptionIndex(
+                    visibleOptions,
+                    current,
+                    event.key === 'ArrowDown' ? 1 : -1
+                  )
+                );
+                return;
+              }
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                if (visibleOptions[activeIndex]) {
+                  chooseOption(visibleOptions[activeIndex]);
+                }
+                return;
+              }
+              if (event.key === 'Escape') {
+                event.preventDefault();
+                setOpen(false);
+                triggerRef.current?.focus();
+              }
+            }}
+            placeholder={config.searchPlaceholder}
+            ref={filterRef}
+            type="text"
+            value={filter}
+          />
+        </div>
+      ) : null}
+      {searchable && !visibleOptions.length && config.emptyLabel ? (
+        <div className="_x_extension_select_empty_2026_unique_" role="presentation">
+          {config.emptyLabel}
+        </div>
+      ) : null}
       {config.menuTitle ? (
         <div
           className="_x_extension_select_menu_title_2024_unique_"
@@ -395,7 +487,7 @@ export function SelectMenu({
           {config.menuTitle}
         </div>
       ) : null}
-      {options.map((option, index) => {
+      {visibleOptions.map((option, index) => {
         const selected = isValueOption(option) && option.value === selectedValue;
         const radioItem = usesMenuSemantics && !option.checkbox && (!option.action || option.radio);
         const checked = option.radio || option.checkbox ? option.checked === true : selected;
@@ -463,7 +555,10 @@ export function SelectMenu({
                   className={`_x_extension_select_option_icon_2026_unique_ ri-icon ri-size-16 ${option.iconClass}`}
                 />
               ) : null}
-              <span className="_x_extension_select_option_label_2026_unique_">
+              <span
+                className="_x_extension_select_option_label_2026_unique_"
+                style={option.fontFamily ? { fontFamily: option.fontFamily } : undefined}
+              >
                 {option.label}
               </span>
               {option.badge ? (
@@ -533,8 +628,8 @@ export function SelectMenu({
             event.preventDefault();
             setActiveIndex(
               event.key === 'Home'
-                ? findNextEnabledOptionIndex(options, -1, 1)
-                : findNextEnabledOptionIndex(options, 0, -1)
+                ? findNextEnabledOptionIndex(visibleOptions, -1, 1)
+                : findNextEnabledOptionIndex(visibleOptions, 0, -1)
             );
             return;
           }
@@ -550,17 +645,17 @@ export function SelectMenu({
               return;
             }
             if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-              if (!options.length) {
+              if (!visibleOptions.length) {
                 return;
               }
               setActiveIndex((current) => {
                 const delta = event.key === 'ArrowDown' ? 1 : -1;
-                return findNextEnabledOptionIndex(options, current, delta);
+                return findNextEnabledOptionIndex(visibleOptions, current, delta);
               });
               return;
             }
-            if (options[activeIndex]) {
-              chooseOption(options[activeIndex]);
+            if (visibleOptions[activeIndex]) {
+              chooseOption(visibleOptions[activeIndex]);
             }
           }
         }}

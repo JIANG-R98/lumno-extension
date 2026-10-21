@@ -81,6 +81,55 @@ describe('Options select control React island', () => {
       .toBe('简体中文');
   });
 
+  it('filters a searchable menu and previews each option in its own family', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const controller = createSelectControlController(host, {
+      kind: 'overlay-font',
+      onSelect: vi.fn(),
+      searchable: true
+    });
+    controllers.push(controller);
+    act(() => controller.render({
+      emptyLabel: 'No matching fonts',
+      id: 'overlay-font',
+      items: [
+        { label: 'Default', labelKey: '', value: '' },
+        { fontFamily: 'Zapfino', label: 'Zapfino', labelKey: '', value: 'Zapfino' },
+        { fontFamily: 'PingFang SC', label: 'PingFang SC', labelKey: '', value: 'PingFang SC' }
+      ],
+      searchPlaceholder: 'Search fonts',
+      value: ''
+    }));
+
+    act(() => {
+      host.querySelector<HTMLButtonElement>('button')?.click();
+    });
+    const search = host.querySelector<HTMLInputElement>('input[type="text"]');
+    expect(search?.placeholder).toBe('Search fonts');
+    expect(host.querySelectorAll('[role="option"]')).toHaveLength(3);
+
+    const typeFilter = (text: string) => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+      act(() => {
+        setter?.call(search, text);
+        search?.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    };
+    typeFilter('ping');
+    const visible = host.querySelectorAll<HTMLElement>('[role="option"]');
+    expect(visible).toHaveLength(1);
+    expect(visible[0]?.textContent).toBe('PingFang SC');
+    expect(
+      visible[0]?.querySelector<HTMLElement>('._x_extension_select_option_label_2026_unique_')?.style.fontFamily
+    ).toContain('PingFang SC');
+
+    typeFilter('zzz');
+    expect(host.querySelectorAll('[role="option"]')).toHaveLength(0);
+    expect(host.querySelector('._x_extension_select_empty_2026_unique_')?.textContent)
+      .toBe('No matching fonts');
+  });
+
   it('accepts adapter-driven selection and copy updates', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);

@@ -302,6 +302,43 @@ assert.strictEqual(
   '_x_extension_overlay_enter_animation_2026_unique_'
 );
 
+assert.strictEqual(
+  settings.OVERLAY_FONT_FAMILY_STORAGE_KEY,
+  '_x_extension_overlay_font_family_2026_unique_'
+);
+assert.strictEqual(settings.normalizeOverlayFontFamily('Zapfino'), 'Zapfino');
+assert.strictEqual(settings.normalizeOverlayFontFamily('  PingFang SC  '), 'PingFang SC');
+assert.strictEqual(settings.normalizeOverlayFontFamily(''), '');
+assert.strictEqual(settings.normalizeOverlayFontFamily('   '), '');
+assert.strictEqual(settings.normalizeOverlayFontFamily(null), '');
+assert.strictEqual(settings.normalizeOverlayFontFamily(42), '');
+assert.strictEqual(settings.normalizeOverlayFontFamily('a"b'), '');
+assert.strictEqual(settings.normalizeOverlayFontFamily('a\\b'), '');
+assert.strictEqual(settings.normalizeOverlayFontFamily('a;b'), 'a;b');
+assert.strictEqual(settings.normalizeOverlayFontFamily('x'.repeat(121)), '');
+assert.strictEqual(settings.normalizeOverlayFontFamily('换行\n字体'), '');
+// An empty choice clears the custom property, so the CSS fallback stack wins.
+assert.strictEqual(settings.getOverlayFontFamilyCssValue(''), '');
+assert.strictEqual(settings.getOverlayFontFamilyCssValue(null), '');
+assert.strictEqual(
+  settings.getOverlayFontFamilyCssValue('Zapfino'),
+  `"Zapfino", ${settings.OVERLAY_FONT_DEFAULT_STACK}`
+);
+// The fallback family sits second in the stack, so an English face still
+// leaves Chinese text to the reader's chosen CJK face.
+assert.strictEqual(
+  settings.getOverlayFontFamilyCssValue('Zapfino', 'PingFang SC'),
+  `"Zapfino", "PingFang SC", ${settings.OVERLAY_FONT_DEFAULT_STACK}`
+);
+assert.strictEqual(
+  settings.getOverlayFontFamilyCssValue('', 'PingFang SC'),
+  `"PingFang SC", ${settings.OVERLAY_FONT_DEFAULT_STACK}`
+);
+assert.strictEqual(settings.getOverlayFontFamilyCssValue('', ''), '');
+assert.strictEqual(settings.getOverlayFontFamilyCssValue('Zapfino', 'bad"name'), `"Zapfino", ${settings.OVERLAY_FONT_DEFAULT_STACK}`);
+assert.ok(settings.OVERLAY_FONT_DEFAULT_STACK.includes("'Lumno Open Sans'"));
+assert.strictEqual(settings.OVERLAY_FONT_FAMILY_CSS_VAR, '--x-ov-font-family');
+
 assert.strictEqual(settings.normalizeOverlayTabPriorityMode('switchTabFirst'), true);
 assert.strictEqual(settings.normalizeOverlayTabPriorityMode('newtabFirst'), false);
 assert.strictEqual(settings.normalizeOverlayTabPriorityMode(false), false);

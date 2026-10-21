@@ -665,6 +665,30 @@
   "overlay_enter_animation_fade": {
     "message": "フェード"
   },
+  "settings_overlay_font_title": {
+    "message": "フォント"
+  },
+  "settings_overlay_font_default": {
+    "message": "デフォルト"
+  },
+  "settings_overlay_font_search_placeholder": {
+    "message": "フォントを検索"
+  },
+  "settings_overlay_font_no_results": {
+    "message": "一致するフォントがありません"
+  },
+  "settings_overlay_font_fallback_title": {
+    "message": "フォールバックフォント"
+  },
+  "settings_overlay_font_fallback_desc": {
+    "message": "最初のフォントにない文字に使用します。英字フォントでの中国語など。"
+  },
+  "settings_overlay_font_fallback_none": {
+    "message": "なし"
+  },
+  "settings_overlay_font_unsupported_tooltip": {
+    "message": "Firefox では拡張機能がインストール済みフォントを取得できないため、オーバーレイは既定のフォントを使用します"
+  },
   "settings_overlay_page_theme_adaptation_title": {
     "message": "Web ページの色に合わせてテーマを自動変更"
   },

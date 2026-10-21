@@ -157,6 +157,16 @@
   const NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY = '_x_extension_newtab_wallpaper_effect_2026_unique_';
   const NEWTAB_FAVICON_STORAGE_KEY = '_x_extension_newtab_favicon_2026_unique_';
   const OVERLAY_SIZE_MODE_STORAGE_KEY = '_x_extension_overlay_size_mode_2026_unique_';
+  // An installed family name, or the empty string for the bundled Lumno stack.
+  // Synced with the other overlay appearance settings; missing fonts use the fallback stack.
+  const OVERLAY_FONT_FAMILY_STORAGE_KEY = '_x_extension_overlay_font_family_2026_unique_';
+  // Second family in the stack, used for glyphs the first one lacks (an
+  // English face leaves the Chinese text to this one).
+  const OVERLAY_FONT_FALLBACK_STORAGE_KEY = '_x_extension_overlay_font_fallback_2026_unique_';
+  // The overlay runs in a closed shadow root whose styles are scoped to these
+  // two panels, so the family travels as this custom property instead of a
+  // rule the search-panel script would have to inject.
+  const OVERLAY_FONT_FAMILY_CSS_VAR = '--x-ov-font-family';
   const BOOKMARK_COUNT_STORAGE_KEY = '_x_extension_bookmark_count_2024_unique_';
   const BOOKMARK_COLUMNS_STORAGE_KEY = '_x_extension_bookmark_columns_2024_unique_';
   const BOOKMARK_VIEW_MODE_STORAGE_KEY = '_x_extension_bookmark_view_mode_2026_unique_';
@@ -330,6 +340,8 @@
     NEWTAB_FAVICON_STORAGE_KEY,
     OVERLAY_SIZE_MODE_STORAGE_KEY,
     OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
+    OVERLAY_FONT_FAMILY_STORAGE_KEY,
+    OVERLAY_FONT_FALLBACK_STORAGE_KEY,
     OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY,
     BOOKMARK_COUNT_STORAGE_KEY,
     BOOKMARK_COLUMNS_STORAGE_KEY,
@@ -854,6 +866,39 @@
 
   function normalizeOverlayEnterAnimation(value) {
     return value === 'fade' ? 'fade' : 'elastic';
+  }
+
+  // The bundled stack the overlay draws with when no family is chosen. Kept
+  // here so the CSS fallbacks and the picker's default option agree.
+  const OVERLAY_FONT_DEFAULT_STACK = "'Lumno Open Sans', 'Open Sans', -apple-system, " +
+    "BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
+
+  // A family name arrives from Chrome Sync, from a WebDAV state or from the
+  // picker, so anything that is not a plausible CSS family name is dropped.
+  // Quotes and backslashes would end the quoted family early; control
+  // characters and braces would break out of the declaration.
+  function normalizeOverlayFontFamily(value) {
+    if (typeof value !== 'string') {
+      return '';
+    }
+    const family = value.trim();
+    if (!family || family.length > 120 || /["\\{}\u0000-\u001f\u007f]/.test(family)) {
+      return '';
+    }
+    return family;
+  }
+
+  // What the overlay writes into OVERLAY_FONT_FAMILY_CSS_VAR: the chosen
+  // families in order, then the bundled stack so missing faces and glyphs
+  // still resolve. An empty value clears the property, which restores the CSS
+  // fallbacks exactly.
+  function getOverlayFontFamilyCssValue(value, fallbackValue) {
+    const families = [normalizeOverlayFontFamily(value), normalizeOverlayFontFamily(fallbackValue)]
+      .filter(Boolean);
+    if (families.length === 0) {
+      return '';
+    }
+    return `${families.map((family) => `"${family}"`).join(', ')}, ${OVERLAY_FONT_DEFAULT_STACK}`;
   }
 
   function normalizeOverlayTabPriorityMode(value) {
@@ -1505,6 +1550,10 @@
     NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY,
     NEWTAB_FAVICON_STORAGE_KEY,
     OVERLAY_SIZE_MODE_STORAGE_KEY,
+    OVERLAY_FONT_FAMILY_STORAGE_KEY,
+    OVERLAY_FONT_FALLBACK_STORAGE_KEY,
+    OVERLAY_FONT_FAMILY_CSS_VAR,
+    OVERLAY_FONT_DEFAULT_STACK,
     BOOKMARK_COUNT_STORAGE_KEY,
     BOOKMARK_COLUMNS_STORAGE_KEY,
     BOOKMARK_VIEW_MODE_STORAGE_KEY,
@@ -1674,6 +1723,8 @@
     normalizeOverlayPageThemeAdaptationEnabled,
     normalizeOverlaySizeMode,
     normalizeOverlayEnterAnimation,
+    normalizeOverlayFontFamily,
+    getOverlayFontFamilyCssValue,
     normalizeOverlayTabPriorityMode,
     normalizeSearchResultPriority,
     normalizeSearchResultTabPosition,

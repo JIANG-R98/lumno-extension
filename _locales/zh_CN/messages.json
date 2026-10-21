@@ -665,6 +665,30 @@
   "overlay_enter_animation_fade": {
     "message": "淡入"
   },
+  "settings_overlay_font_title": {
+    "message": "字体"
+  },
+  "settings_overlay_font_default": {
+    "message": "默认"
+  },
+  "settings_overlay_font_search_placeholder": {
+    "message": "搜索字体"
+  },
+  "settings_overlay_font_no_results": {
+    "message": "没有匹配的字体"
+  },
+  "settings_overlay_font_fallback_title": {
+    "message": "回退字体"
+  },
+  "settings_overlay_font_fallback_desc": {
+    "message": "主字体缺少字形时使用，例如英文字体下的中文"
+  },
+  "settings_overlay_font_fallback_none": {
+    "message": "无"
+  },
+  "settings_overlay_font_unsupported_tooltip": {
+    "message": "Firefox 不允许扩展读取本地字体，浮层将使用默认字体"
+  },
   "settings_overlay_page_theme_adaptation_title": {
     "message": "基于网页色彩自动变更主题色"
   },
