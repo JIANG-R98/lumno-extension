@@ -113,6 +113,8 @@ export interface SelectMenuConfig {
    * menu. Keyboard navigation then applies to the filtered options.
    */
   searchable?: boolean;
+  /** The page's own text field class, so the filter looks like its other inputs. */
+  searchInputClassName?: string;
   searchPlaceholder?: string;
   selectId?: string;
   tooltip?: string;
@@ -369,7 +371,9 @@ export function SelectMenu({
       }
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+      // Escape that drops an IME composition (in a searchable menu's filter)
+      // belongs to the IME, not the menu.
+      if (event.key === 'Escape' && !event.isComposing && event.keyCode !== 229) {
         event.preventDefault();
         setOpen(false);
         triggerRef.current?.focus();
@@ -580,7 +584,9 @@ export function SelectMenu({
             aria-controls={listboxId}
             aria-expanded={open}
             aria-label={config.searchPlaceholder}
-            className="_x_extension_select_search_input_2026_unique_"
+            className={`_x_extension_select_search_input_2026_unique_${
+              config.searchInputClassName ? ` ${config.searchInputClassName}` : ''
+            }`}
             onChange={(event) => {
               const nextFilter = event.currentTarget.value;
               setFilter(nextFilter);
@@ -589,6 +595,11 @@ export function SelectMenu({
               );
             }}
             onKeyDown={(event) => {
+              // While an IME composes, Enter commits the pinyin and the arrows
+              // move through its candidates; none of them belong to the menu.
+              if (event.nativeEvent.isComposing || event.keyCode === 229) {
+                return;
+              }
               if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
                 event.preventDefault();
                 setActiveIndex((current) =>
@@ -607,10 +618,9 @@ export function SelectMenu({
                 }
                 return;
               }
-              if (event.key === 'Escape') {
-                event.preventDefault();
+              // Focus leaves with Tab, so the menu should not stay open behind it.
+              if (event.key === 'Tab') {
                 setOpen(false);
-                triggerRef.current?.focus();
               }
             }}
             placeholder={config.searchPlaceholder}

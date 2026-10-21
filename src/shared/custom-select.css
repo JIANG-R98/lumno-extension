@@ -253,23 +253,12 @@ body[data-glass-style] ._x_extension_select_wrap_2024_unique_[data-open="true"][
   background: var(--menu-bg, #ffffff);
 }
 
+/* Only the layout: the page passes its own text field class
+   (searchInputClassName) for the border, fill and focus states. */
 ._x_extension_select_search_input_2026_unique_ {
   display: block;
   width: 100%;
   box-sizing: border-box;
-  height: 30px;
-  padding: 0 9px;
-  border: 1px solid var(--tab-border, rgba(15, 23, 42, 0.12));
-  border-radius: var(--x-extension-select-option-radius, 10px);
-  background: var(--panel-subtle-bg, rgba(15, 23, 42, 0.04));
-  color: var(--panel-text, #111827);
-  font: inherit;
-  font-size: var(--lumno-font-size-md);
-  outline: none;
-}
-
-._x_extension_select_search_input_2026_unique_:focus-visible {
-  border-color: var(--panel-accent, rgba(59, 130, 246, 0.55));
 }
 
 ._x_extension_select_empty_2026_unique_ {

@@ -161,15 +161,16 @@ const assertWithinBudget = (actualBytes, budgetKiB, label) => {
 // 126.2 KiB and 238.3 KiB and failed on main.
 // The overlay font picker adds a filter field, combobox semantics and per-face previews to
 // the shared select menu, which ships in every route: the New Tab route moves to 425 KiB and
-// the total to 821 KiB.
+// the total to 821 KiB. Its IME-safe keys and the page's own text field for the filter move
+// the New Tab route to 426 KiB, the Options route to 86 KiB gzip and the total to 822 KiB.
 const bundleBudgets = {
-  newtab: { uncompressed: 425, gzip: 127 },
-  options: { uncompressed: 290, gzip: 85 },
+  newtab: { uncompressed: 426, gzip: 127 },
+  options: { uncompressed: 290, gzip: 86 },
   overlay: { uncompressed: 275, gzip: 83 },
   // The toolbar popup opens on every click, so it loads only the runtime, the
   // shared chunk and its own small entry.
   popup: { uncompressed: 220, gzip: 70 },
-  total: { uncompressed: 821, gzip: 239 }
+  total: { uncompressed: 822, gzip: 239 }
 };
 
 const bootstrapScript = 'src="../shared/react-page-bootstrap.js"';

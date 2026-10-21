@@ -67,6 +67,8 @@ function SelectControl({
         menuPortal: false,
         menuWidth: 'content',
         emptyLabel: model.emptyLabel,
+        // The settings page's text field, as in site search and the blacklist.
+        searchInputClassName: '_x_extension_shortcut_input_2024_unique_',
         searchPlaceholder: model.searchPlaceholder,
         searchable: options.searchable,
         onValueChange(value) {
