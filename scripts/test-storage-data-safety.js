@@ -34,6 +34,7 @@ const expectedSyncKeys = [
   '_x_extension_overlay_enter_animation_2026_unique_',
   '_x_extension_overlay_font_family_2026_unique_',
   '_x_extension_overlay_font_fallback_2026_unique_',
+  '_x_extension_overlay_font_labels_2026_unique_',
   '_x_extension_overlay_page_theme_adaptation_enabled_2026_unique_',
   '_x_extension_bookmark_count_2024_unique_',
   '_x_extension_bookmark_columns_2024_unique_',

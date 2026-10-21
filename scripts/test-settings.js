@@ -337,7 +337,24 @@ assert.strictEqual(
 assert.strictEqual(settings.getOverlayFontFamilyCssValue('', ''), '');
 assert.strictEqual(settings.getOverlayFontFamilyCssValue('Zapfino', 'bad"name'), `"Zapfino", ${settings.OVERLAY_FONT_DEFAULT_STACK}`);
 assert.ok(settings.OVERLAY_FONT_DEFAULT_STACK.includes("'Lumno Open Sans'"));
-assert.strictEqual(settings.OVERLAY_FONT_FAMILY_CSS_VAR, '--x-ov-font-family');
+assert.strictEqual(settings.OVERLAY_FONT_FAMILY_CSS_VAR, '--lumno-font-sans');
+// Display names travel with the chosen families; on write the map keeps only theirs.
+assert.deepStrictEqual(
+  settings.normalizeOverlayFontLabels(
+    { 'PingFang SC': ' 苹方-简 ', Zapfino: 'Zapfino', Old: 'Old' },
+    ['PingFang SC', '']
+  ),
+  { 'PingFang SC': '苹方-简' }
+);
+// Read without the families (they may load later), at most two names survive.
+assert.deepStrictEqual(
+  settings.normalizeOverlayFontLabels({ A: 'a', B: 'b', C: 'c' }),
+  { A: 'a', B: 'b' }
+);
+assert.deepStrictEqual(settings.normalizeOverlayFontLabels({ 'bad"name': 'x', ok: 'bad\u0001' }), {});
+assert.deepStrictEqual(settings.normalizeOverlayFontLabels(['PingFang SC']), {});
+assert.deepStrictEqual(settings.normalizeOverlayFontLabels(null), {});
+assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.OVERLAY_FONT_LABELS_STORAGE_KEY));
 
 assert.strictEqual(settings.normalizeOverlayTabPriorityMode('switchTabFirst'), true);
 assert.strictEqual(settings.normalizeOverlayTabPriorityMode('newtabFirst'), false);

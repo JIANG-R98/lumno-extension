@@ -684,6 +684,7 @@
     OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
     OVERLAY_FONT_FAMILY_STORAGE_KEY,
     OVERLAY_FONT_FALLBACK_STORAGE_KEY,
+    OVERLAY_FONT_LABELS_STORAGE_KEY,
     BOOKMARK_COUNT_STORAGE_KEY,
     BOOKMARK_COLUMNS_STORAGE_KEY,
     NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY,
@@ -874,6 +875,9 @@
   // Empty means the bundled Lumno Open Sans stack.
   let currentOverlayFontFamily = '';
   let currentOverlayFontFallback = '';
+  // Display names of the chosen families, synced so another device can show
+  // them before it lists its own fonts.
+  let currentOverlayFontLabels = {};
   let currentRestrictedAction = 'default';
   let currentSearchResultPriority = 'autocomplete';
   let currentSearchResultDisplayLimit = 10;
@@ -1006,9 +1010,7 @@
     [searchResultTabPositionSelect, 'search-result-tab-position'],
     [newtabGlassStyleSelect, 'newtab-glass-style'],
     [newtabTimeFontSelect, 'newtab-time-font'],
-    [selectionQuickActionsProviderSelect, 'selection-quick-actions-provider'],
-    [overlayFontSelect, 'overlay-font'],
-    [overlayFontFallbackSelect, 'overlay-font']
+    [selectionQuickActionsProviderSelect, 'selection-quick-actions-provider']
   ].forEach(([select, kind]) => {
     const record = registerOptionsSelectControl(select, kind);
     if (record) {
@@ -1016,8 +1018,10 @@
     }
   });
   // Installed fonts are only listable from an extension page with the
-  // fontSettings permission, which Firefox does not offer. The row stays
-  // visible but dimmed there (data-browser-unsupported) with the reason.
+  // fontSettings permission, which Firefox does not offer. Chrome does not
+  // let fontSettings be optional, so it is granted at install (it carries no
+  // install warning). The row stays visible but dimmed on Firefox
+  // (data-browser-unsupported) with the reason.
   function getInstalledFontFamilies() {
     const fontSettings = chrome && chrome.fontSettings;
     if (!fontSettings || typeof fontSettings.getFontList !== 'function') {
@@ -1044,20 +1048,30 @@
       }
     });
   }
+  function getOverlayFontLabel(family) {
+    return (family && currentOverlayFontLabels[family]) || family;
+  }
   function ensureOverlayFontOption(select, family) {
     if (!select || !family) {
       return;
     }
-    const exists = Array.from(select.options).some((option) => option.value === family);
-    if (exists) {
+    const existing = Array.from(select.options).find((option) => option.value === family);
+    if (existing) {
+      // A family kept from storage before the list loads takes its synced name
+      // once that arrives.
+      if (existing.getAttribute('data-font-unlisted') === 'true') {
+        existing.textContent = getOverlayFontLabel(family);
+      }
       return;
     }
-    // A family synced from another device may not be installed here. Show it
-    // rather than silently switching the reader to the default face.
+    // A family synced from another device may not be installed here, and
+    // before the first menu open the list is not read at all. Show it rather
+    // than silently switching the reader to the default face.
     const option = document.createElement('option');
     option.value = family;
-    option.textContent = family;
+    option.textContent = getOverlayFontLabel(family);
     option.setAttribute('data-font-family', family);
+    option.setAttribute('data-font-unlisted', 'true');
     select.appendChild(option);
   }
   function populateOverlayFontOptions(select, currentFamily, defaultLabelKey, fonts) {
@@ -1094,6 +1108,11 @@
     select.value = currentFamily;
     refreshOptionsSelectItems(select);
   }
+  [overlayFontSelect, overlayFontFallbackSelect].forEach((select) => {
+    if (registerOptionsSelectControl(select, 'overlay-font')) {
+      renderOptionsSelectControl(select);
+    }
+  });
   getInstalledFontFamilies().then((fonts) => {
     populateOverlayFontOptions(overlayFontSelect, currentOverlayFontFamily, 'settings_overlay_font_default', fonts);
     populateOverlayFontOptions(
@@ -3571,7 +3590,8 @@
       refreshCustomSelects();
     });
   }
-  // Both font rows persist a family and rebuild their menu list afterwards.
+  // Both font rows persist a family, with its display name beside it, and
+  // rebuild their menu list afterwards.
   [
     [overlayFontSelect, OVERLAY_FONT_FAMILY_STORAGE_KEY, (family) => { currentOverlayFontFamily = family; }],
     [overlayFontFallbackSelect, OVERLAY_FONT_FALLBACK_STORAGE_KEY,
@@ -3582,10 +3602,17 @@
     }
     select.addEventListener('change', () => {
       const family = SETTINGS.normalizeOverlayFontFamily(select.value);
+      const chosenOption = select.selectedOptions && select.selectedOptions[0];
       select.value = family;
       remember(family);
+      currentOverlayFontLabels = SETTINGS.normalizeOverlayFontLabels(
+        family && chosenOption
+          ? { ...currentOverlayFontLabels, [family]: chosenOption.textContent || family }
+          : currentOverlayFontLabels,
+        [currentOverlayFontFamily, currentOverlayFontFallback]
+      );
       if (storageArea) {
-        storageArea.set({ [key]: family });
+        storageArea.set({ [key]: family, [OVERLAY_FONT_LABELS_STORAGE_KEY]: currentOverlayFontLabels });
       }
       refreshOptionsSelectItems(select);
     });
@@ -3899,6 +3926,24 @@
       overlayFontSelect.value = family;
       refreshOptionsSelectItems(overlayFontSelect);
     },
+    repairOnChange: false,
+    refreshSelects: true
+  });
+  settingBinder.bindSetting({
+    key: OVERLAY_FONT_LABELS_STORAGE_KEY,
+    // Families may load after the names, so nothing is pruned on read.
+    normalize: (value) => SETTINGS.normalizeOverlayFontLabels(value),
+    apply(labels) {
+      currentOverlayFontLabels = labels;
+      [[overlayFontSelect, currentOverlayFontFamily], [overlayFontFallbackSelect, currentOverlayFontFallback]]
+        .forEach(([select, family]) => {
+          if (select && family) {
+            ensureOverlayFontOption(select, family);
+            refreshOptionsSelectItems(select);
+          }
+        });
+    },
+    repairOnLoad: false,
     repairOnChange: false,
     refreshSelects: true
   });

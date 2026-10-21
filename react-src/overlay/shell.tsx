@@ -187,6 +187,14 @@ function appendOverlayStyleNodes(
   overlayThemeStyle.id = '_x_extension_overlay_theme_style_2024_unique_';
   overlayThemeStyle.textContent = `
     /*
+      tokens.css never reaches a web page, so the panel defines the shared
+      text stack itself (the same value as tokens.css). Focus search sets it
+      inline on the panel to put a chosen font in front.
+    */
+    :where(#_x_extension_overlay_2024_unique_) {
+      --lumno-font-sans: 'Lumno Open Sans', 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+    /*
       First-frame safety net for the dynamically loaded component stylesheets.
       These selectors deliberately have zero specificity, so the complete
       component styles take over as soon as their links are ready.
@@ -218,7 +226,7 @@ function appendOverlayStyleNodes(
       color: var(--x-ext-input-text, #1F2937);
       caret-color: var(--x-ext-input-caret, #7DB7FF);
       cursor: text;
-      font: 500 16px/1.3 var(--x-ov-font-family, 'Lumno Open Sans', 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif);
+      font: 500 16px/1.3 var(--lumno-font-sans, sans-serif);
       text-align: left;
     }
     :where(#_x_extension_overlay_2024_unique_) :where(.x-lumno-search-input__icon) {
@@ -459,7 +467,7 @@ function getPanelStyle(options: OverlayShellOptions): string {
     border-radius: var(--x-ov-panel-radius) !important;
     box-shadow: var(--x-ov-shadow, inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 2px 5px -2px rgba(15, 23, 42, 0.11), 0 16px 42px -12px rgba(15, 23, 42, 0.17), 0 48px 112px -30px rgba(15, 23, 42, 0.19)) !important;
     z-index: 2147483647 !important;
-    font-family: var(--x-ov-font-family, 'Lumno Open Sans', 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif) !important;
+    font-family: var(--lumno-font-sans, sans-serif) !important;
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;

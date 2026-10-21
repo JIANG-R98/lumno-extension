@@ -163,10 +163,14 @@
   // Second family in the stack, used for glyphs the first one lacks (an
   // English face leaves the Chinese text to this one).
   const OVERLAY_FONT_FALLBACK_STORAGE_KEY = '_x_extension_overlay_font_fallback_2026_unique_';
-  // The overlay runs in a closed shadow root whose styles are scoped to these
-  // two panels, so the family travels as this custom property instead of a
-  // rule the search-panel script would have to inject.
-  const OVERLAY_FONT_FAMILY_CSS_VAR = '--x-ov-font-family';
+  // Display names of the two chosen families ({ family: name }), so a device
+  // that has not listed its fonts yet, or lacks the face, still shows the
+  // localized name rather than the "PingFang SC" family name.
+  const OVERLAY_FONT_LABELS_STORAGE_KEY = '_x_extension_overlay_font_labels_2026_unique_';
+  // The shared text stack token (tokens.css). The overlay's closed shadow root
+  // defines it on the panel and re-points it at the chosen families, so every
+  // text rule follows without a rule the search-panel script would inject.
+  const OVERLAY_FONT_FAMILY_CSS_VAR = '--lumno-font-sans';
   const BOOKMARK_COUNT_STORAGE_KEY = '_x_extension_bookmark_count_2024_unique_';
   const BOOKMARK_COLUMNS_STORAGE_KEY = '_x_extension_bookmark_columns_2024_unique_';
   const BOOKMARK_VIEW_MODE_STORAGE_KEY = '_x_extension_bookmark_view_mode_2026_unique_';
@@ -342,6 +346,7 @@
     OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
     OVERLAY_FONT_FAMILY_STORAGE_KEY,
     OVERLAY_FONT_FALLBACK_STORAGE_KEY,
+    OVERLAY_FONT_LABELS_STORAGE_KEY,
     OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY,
     BOOKMARK_COUNT_STORAGE_KEY,
     BOOKMARK_COLUMNS_STORAGE_KEY,
@@ -868,8 +873,9 @@
     return value === 'fade' ? 'fade' : 'elastic';
   }
 
-  // The bundled stack the overlay draws with when no family is chosen. Kept
-  // here so the CSS fallbacks and the picker's default option agree.
+  // The bundled stack the overlay draws with when no family is chosen. The
+  // same value as --lumno-font-sans in tokens.css and on the overlay panel
+  // (react-src/overlay/shell.tsx); chosen families go in front of it.
   const OVERLAY_FONT_DEFAULT_STACK = "'Lumno Open Sans', 'Open Sans', -apple-system, " +
     "BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
 
@@ -892,6 +898,27 @@
   // families in order, then the bundled stack so missing faces and glyphs
   // still resolve. An empty value clears the property, which restores the CSS
   // fallbacks exactly.
+  // Only plausible names survive: the map reaches the options page from
+  // Chrome Sync and WebDAV. Given the chosen families, the map keeps just
+  // theirs; read without them, it keeps at most the two a writer stored.
+  function normalizeOverlayFontLabels(value, families) {
+    const labels = {};
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return labels;
+    }
+    (Array.isArray(families) ? families : Object.keys(value).slice(0, 2)).forEach((family) => {
+      const key = normalizeOverlayFontFamily(family);
+      const label = key && Object.prototype.hasOwnProperty.call(value, key) &&
+        typeof value[key] === 'string'
+        ? value[key].trim()
+        : '';
+      if (label && label.length <= 120 && !/[\u0000-\u001f\u007f]/.test(label)) {
+        labels[key] = label;
+      }
+    });
+    return labels;
+  }
+
   function getOverlayFontFamilyCssValue(value, fallbackValue) {
     const families = [normalizeOverlayFontFamily(value), normalizeOverlayFontFamily(fallbackValue)]
       .filter(Boolean);
@@ -1552,6 +1579,7 @@
     OVERLAY_SIZE_MODE_STORAGE_KEY,
     OVERLAY_FONT_FAMILY_STORAGE_KEY,
     OVERLAY_FONT_FALLBACK_STORAGE_KEY,
+    OVERLAY_FONT_LABELS_STORAGE_KEY,
     OVERLAY_FONT_FAMILY_CSS_VAR,
     OVERLAY_FONT_DEFAULT_STACK,
     BOOKMARK_COUNT_STORAGE_KEY,
@@ -1724,6 +1752,7 @@
     normalizeOverlaySizeMode,
     normalizeOverlayEnterAnimation,
     normalizeOverlayFontFamily,
+    normalizeOverlayFontLabels,
     getOverlayFontFamilyCssValue,
     normalizeOverlayTabPriorityMode,
     normalizeSearchResultPriority,

@@ -108,6 +108,13 @@ describe('Options select control React island', () => {
     const search = host.querySelector<HTMLInputElement>('input[type="text"]');
     expect(search?.placeholder).toBe('Search fonts');
     expect(host.querySelectorAll('[role="option"]')).toHaveLength(3);
+    // The field is a combobox that owns a listbox holding only the options.
+    const listbox = host.querySelector<HTMLElement>('[role="listbox"]');
+    expect(search?.getAttribute('role')).toBe('combobox');
+    expect(search?.getAttribute('aria-expanded')).toBe('true');
+    expect(search?.getAttribute('aria-controls')).toBe(listbox?.id);
+    expect(listbox?.contains(search)).toBe(false);
+    expect(listbox?.querySelectorAll('[role="option"]')).toHaveLength(3);
 
     const typeFilter = (text: string) => {
       const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
@@ -119,15 +126,62 @@ describe('Options select control React island', () => {
     typeFilter('ping');
     const visible = host.querySelectorAll<HTMLElement>('[role="option"]');
     expect(visible).toHaveLength(1);
-    expect(visible[0]?.textContent).toBe('PingFang SC');
-    expect(
-      visible[0]?.querySelector<HTMLElement>('._x_extension_select_option_label_2026_unique_')?.style.fontFamily
-    ).toContain('PingFang SC');
+    expect(visible[0]?.querySelector('._x_extension_select_option_label_2026_unique_')?.textContent)
+      .toBe('PingFang SC');
+    // The name stays in the interface font; a quoted sample shows the face.
+    const preview = visible[0]?.querySelector<HTMLElement>('._x_extension_select_option_preview_2026_unique_');
+    expect(preview?.getAttribute('aria-hidden')).toBe('true');
+    expect(preview?.style.fontFamily).toContain('"PingFang SC"');
+    expect(search?.getAttribute('aria-activedescendant')).toBe(visible[0]?.id);
 
     typeFilter('zzz');
     expect(host.querySelectorAll('[role="option"]')).toHaveLength(0);
     expect(host.querySelector('._x_extension_select_empty_2026_unique_')?.textContent)
       .toBe('No matching fonts');
+  });
+
+  it('chooses a filtered option from the keyboard', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const onSelect = vi.fn();
+    const controller = createSelectControlController(host, {
+      kind: 'overlay-font',
+      onSelect,
+      searchable: true
+    });
+    controllers.push(controller);
+    act(() => controller.render({
+      id: 'overlay-font-keys',
+      items: [
+        { label: 'Default', labelKey: '', value: '' },
+        { label: 'Zapfino', labelKey: '', value: 'Zapfino' },
+        { label: 'PingFang SC', labelKey: '', value: 'PingFang SC' },
+        { label: 'PingFang TC', labelKey: '', value: 'PingFang TC' }
+      ],
+      value: 'Zapfino'
+    }));
+
+    act(() => {
+      host.querySelector<HTMLButtonElement>('button')?.click();
+    });
+    const search = host.querySelector<HTMLInputElement>('input[type="text"]')!;
+    expect(document.activeElement).toBe(search);
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(search, 'ping');
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    const press = (key: string) => act(() => {
+      search.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key }));
+    });
+    press('ArrowDown');
+    press('Enter');
+    expect(onSelect).toHaveBeenCalledWith('PingFang TC');
+
+    // A reopened menu starts from the whole list again.
+    act(() => {
+      host.querySelector<HTMLButtonElement>('button')?.click();
+    });
+    expect(host.querySelectorAll('[role="option"]')).toHaveLength(4);
   });
 
   it('accepts adapter-driven selection and copy updates', () => {

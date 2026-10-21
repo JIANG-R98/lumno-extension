@@ -250,7 +250,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     '_x_extension_overlay_font_family_2026_unique_';
   const OVERLAY_FONT_FALLBACK_STORAGE_KEY = overlayStorageKeys.overlayFontFallback ||
     '_x_extension_overlay_font_fallback_2026_unique_';
-  const OVERLAY_FONT_FAMILY_CSS_VAR = SETTINGS.OVERLAY_FONT_FAMILY_CSS_VAR || '--x-ov-font-family';
+  const OVERLAY_FONT_FAMILY_CSS_VAR = SETTINGS.OVERLAY_FONT_FAMILY_CSS_VAR || '--lumno-font-sans';
   const OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY =
     overlayStorageKeys.overlayPageThemeAdaptationEnabled ||
     '_x_extension_overlay_page_theme_adaptation_enabled_2026_unique_';
@@ -2917,9 +2917,9 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       overlayPageThemeObserver.start();
     }
 
-    // The chosen family reaches every text rule through a custom property, so
-    // the shadow-root stylesheet keeps a literal fallback stack for pages
-    // where no family is chosen (and for the onboarding demo panel).
+    // The chosen families reach every text rule through the shared
+    // --lumno-font-sans token, set inline on the panel. Clearing it falls back
+    // to the bundled stack the shadow-root stylesheet defines on the panel.
     function applyOverlayFontFamily(target) {
       if (!target || !target.style) {
         return;

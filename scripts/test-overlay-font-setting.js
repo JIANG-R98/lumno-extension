@@ -10,6 +10,7 @@ const suggestionsCss = fs.readFileSync('src/overlay/suggestions-view.css', 'utf8
 const searchInputCss = fs.readFileSync('src/shared/search-input.css', 'utf8');
 const searchInputModeSource = fs.readFileSync('src/shared/search-input-mode.js', 'utf8');
 const shellSource = fs.readFileSync('react-src/overlay/shell.tsx', 'utf8');
+const tokensCss = fs.readFileSync('src/shared/tokens.css', 'utf8');
 const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
 const firefoxBuild = fs.readFileSync('scripts/build-firefox.js', 'utf8');
 const settings = require('../src/shared/settings.js');
@@ -63,13 +64,29 @@ assert.match(
 );
 assert.match(
   optionsSource,
-  /\[overlayFontSelect, OVERLAY_FONT_FAMILY_STORAGE_KEY[\s\S]*?storageArea\.set\(\{ \[key\]: family \}\)/,
-  'choosing a font should persist its family'
+  /\[overlayFontSelect, OVERLAY_FONT_FAMILY_STORAGE_KEY[\s\S]*?storageArea\.set\(\{ \[key\]: family, \[OVERLAY_FONT_LABELS_STORAGE_KEY\]: currentOverlayFontLabels \}\)/,
+  'choosing a font should persist its family with its display name'
 );
 assert.match(
   optionsSource,
-  /key: OVERLAY_FONT_FAMILY_STORAGE_KEY,[\s\S]*?normalize: SETTINGS\.normalizeOverlayFontFamily/,
-  'the font row should follow storage changes through the setting binder'
+  /SETTINGS\.normalizeOverlayFontLabels\([\s\S]*?\[family\]: chosenOption\.textContent[\s\S]*?\[currentOverlayFontFamily, currentOverlayFontFallback\]/,
+  'the stored names should cover just the two chosen families'
+);
+assert.match(
+  optionsSource,
+  /key: OVERLAY_FONT_LABELS_STORAGE_KEY,[\s\S]*?repairOnLoad: false/,
+  'synced display names should relabel a family kept before the list loads, without a write-back'
+);
+assert.match(
+  optionsSource,
+  /function ensureOverlayFontOption\(select, family\)[\s\S]*?data-font-unlisted[\s\S]*?getOverlayFontLabel\(family\)/,
+  'a family not in the list should show its synced display name'
+);
+
+assert.match(
+  optionsSource,
+  /getInstalledFontFamilies\(\)\.then\(\(fonts\) => \{\s*populateOverlayFontOptions\(overlayFontSelect/,
+  'the options page should list installed fonts on load'
 );
 
 // --- Fallback family -------------------------------------------------------
@@ -113,9 +130,16 @@ assert.match(
 );
 
 // --- Manifest / Firefox packaging -----------------------------------------
+// Chrome refuses fontSettings in optional_permissions ("Only permissions
+// specified in the manifest may be requested"), so it is a plain permission;
+// it carries no install warning, so updating does not disable the extension.
 assert(
   manifest.permissions.includes('fontSettings'),
   'reading the installed font list needs the fontSettings permission'
+);
+assert(
+  !(manifest.optional_permissions || []).includes('fontSettings'),
+  'Chrome cannot request fontSettings at runtime'
 );
 assert.match(
   firefoxBuild,
@@ -160,6 +184,16 @@ assert.match(
   /\['overlay_font_fallback', 'settings_overlay_font_fallback_title'\]/,
   'WebDAV conflicts should name the fallback setting'
 );
+assert.match(
+  contractSource,
+  /KEYS_UNKNOWN_TO_LEGACY_WRITERS[\s\S]*?settings\.OVERLAY_FONT_LABELS_STORAGE_KEY/,
+  'legacy WebDAV states must not clobber the display names'
+);
+assert.match(
+  webdavOptionsSource,
+  /\['overlay_font_labels', 'settings_overlay_font_title'\]/,
+  'WebDAV conflicts should name the display names after the font setting'
+);
 
 // --- Overlay runtime -------------------------------------------------------
 assert.match(
@@ -184,22 +218,30 @@ assert.match(
 );
 
 // --- Style surfaces --------------------------------------------------------
-// The overlay is a closed shadow root, so every text rule carries the variable
-// with the bundled stack as its literal fallback.
+// One --lumno-font-sans token carries the text stack: tokens.css defines it
+// for extension pages, and the overlay panel defines the same value in its
+// closed shadow root, where tokens.css never arrives. Rules keep only a
+// generic literal fallback.
+const tokenStack = (tokensCss.match(/--lumno-font-sans:\s*([^;]+);/) || [])[1];
+const shellStack = (shellSource.match(
+  /:where\(#_x_extension_overlay_2024_unique_\) \{\s*--lumno-font-sans:\s*([^;]+);/
+) || [])[1];
+assert.strictEqual(tokenStack, settings.OVERLAY_FONT_DEFAULT_STACK, 'tokens.css should hold the bundled stack');
+assert.strictEqual(shellStack, settings.OVERLAY_FONT_DEFAULT_STACK, 'the overlay panel should define the same stack');
 assert.strictEqual(
-  (suggestionsCss.match(/font-family:\s*var\(--x-ov-font-family,/g) || []).length,
-  12,
+  (suggestionsCss.match(/var\(--lumno-font-sans, sans-serif\)/g) || []).length,
+  13,
   'every suggestion text rule should follow the chosen font'
 );
 assert.match(
   suggestionsCss,
-  /font:\s*600 11px\/1 var\(--x-ov-font-family,/,
+  /font:\s*600 11px\/1 var\(--lumno-font-sans, sans-serif\)/,
   'the suggestion source tag shorthand should follow the chosen font'
 );
 assert.doesNotMatch(
-  suggestionsCss,
-  /font-family:\s*'Lumno Open Sans'/,
-  'no suggestion rule should hard-code the bundled family ahead of the variable'
+  suggestionsCss + searchInputCss,
+  /'Lumno Open Sans'|"Lumno Open Sans"/,
+  'no overlay text rule should repeat the bundled stack'
 );
 assert.match(
   suggestionsCss,
@@ -207,24 +249,29 @@ assert.match(
   'icon glyphs must keep their own font'
 );
 assert.strictEqual(
-  (searchInputCss.match(/var\(--x-ov-font-family,/g) || []).length,
+  (searchInputCss.match(/var\(--lumno-font-sans, sans-serif\)/g) || []).length,
   9,
   'the search input field, mode menu and hints should follow the chosen font'
 );
 assert.match(
   searchInputModeSource,
-  /const INPUT_FONT_STACK = "var\(--x-ov-font-family,/,
+  /const INPUT_FONT_STACK = 'var\(--lumno-font-sans, sans-serif\)'/,
   'inline-styled input parts should follow the chosen font too'
 );
 assert.match(
   shellSource,
-  /font-family: var\(--x-ov-font-family,[\s\S]*?!important;/,
-  'the panel\'s own !important declaration must resolve the variable'
+  /font-family: var\(--lumno-font-sans, sans-serif\) !important;/,
+  'the panel\'s own !important declaration must resolve the token'
 );
 assert.match(
   shellSource,
-  /font: 500 16px\/1\.3 var\(--x-ov-font-family,/,
-  'the first-frame input fallback should use the variable'
+  /font: 500 16px\/1\.3 var\(--lumno-font-sans, sans-serif\)/,
+  'the first-frame input fallback should use the token'
+);
+assert.match(
+  overlaySource,
+  /const OVERLAY_FONT_FAMILY_CSS_VAR = SETTINGS\.OVERLAY_FONT_FAMILY_CSS_VAR \|\| '--lumno-font-sans'/,
+  'the overlay should re-point the shared token at the chosen font'
 );
 
 // --- Locales ---------------------------------------------------------------

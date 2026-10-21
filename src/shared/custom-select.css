@@ -195,13 +195,26 @@ body[data-glass-style] ._x_extension_select_wrap_2024_unique_[data-open="true"][
   z-index: 10;
 }
 
-/* Filter field for long menus such as installed fonts. It sits in the padded
-   menu, above the options, and scrolls with them. */
+/* Searchable menus (installed fonts) run to hundreds of rows: a fixed width
+   instead of the widest name, the filter field pinned while the list scrolls,
+   and rows off screen left unrendered until scrolled to. */
+._x_extension_select_wrap_2024_unique_ ._x_extension_select_menu_2024_unique_[data-searchable="true"] {
+  width: min(300px, calc(100vw - 32px));
+}
+
 ._x_extension_select_search_2026_unique_ {
-  padding: 2px 2px 6px;
+  position: sticky;
+  top: calc(-1 * var(--x-extension-select-menu-padding, 5px));
+  z-index: 1;
+  margin: calc(-1 * var(--x-extension-select-menu-padding, 5px));
+  margin-bottom: 0;
+  padding: var(--x-extension-select-menu-padding, 5px);
+  padding-bottom: 6px;
+  background: var(--menu-bg, #ffffff);
 }
 
 ._x_extension_select_search_input_2026_unique_ {
+  display: block;
   width: 100%;
   box-sizing: border-box;
   height: 30px;
@@ -224,6 +237,26 @@ body[data-glass-style] ._x_extension_select_wrap_2024_unique_[data-open="true"][
   color: var(--panel-subtext, #6b7280);
   font-size: var(--lumno-font-size-md);
   text-align: center;
+}
+
+._x_extension_select_listbox_2026_unique_ > ._x_extension_select_option_2024_unique_ {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 32px;
+}
+
+/* Names stay in the interface font so every row reads, even for symbol
+   faces; the face itself shows in a fixed column on the right. */
+._x_extension_select_option_preview_2026_unique_ {
+  flex: 0 0 auto;
+  width: 52px;
+  margin-left: auto;
+  overflow: hidden;
+  color: var(--panel-subtext, #6b7280);
+  font-size: var(--lumno-font-size-lg);
+  line-height: 18px;
+  text-align: right;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 ._x_extension_select_option_2024_unique_ {

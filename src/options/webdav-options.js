@@ -97,6 +97,7 @@
     ['overlay_size_mode', 'settings_overlay_size_title'], ['overlay_enter_animation', 'settings_overlay_enter_animation_title'],
     ['overlay_font_family', 'settings_overlay_font_title'],
     ['overlay_font_fallback', 'settings_overlay_font_fallback_title'],
+    ['overlay_font_labels', 'settings_overlay_font_title'],
     ['overlay_page_theme_adaptation', 'settings_overlay_page_theme_adaptation_title'],
     ['bookmark_count', 'settings_bookmarks_title'], ['bookmark_columns', 'settings_bookmark_columns_title'],
     ['bookmark_folder_icons', 'settings_bookmark_folder_icons_visible_title'],
