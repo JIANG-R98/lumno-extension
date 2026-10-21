@@ -245,11 +245,11 @@ npm run test:onboarding-content
 | 路径 | 说明 |
 | --- | --- |
 | `manifest.json` | Manifest V3 配置、权限、命令、内容脚本和新标签页覆盖配置 |
-| `src/background/` | Service worker、命令分发、搜索数据、站内/AI 搜索、标签页切换器、PiP 所有权、置顶标签页恢复、WebDAV 同步 |
+| `src/background/` | Service worker 入口及其 `*-service.js` 部件：命令分发、打开浮层、搜索数据、站内/AI 搜索、标签页切换器、PiP 所有权、置顶标签页恢复、WebDAV 同步 |
 | `src/newtab/` | 新标签页运行时；按功能分为 `bookmarks/`、`shortcuts/`、`recent/`、`wallpaper/`、`search/`、`top-content/`、`theme/` |
-| `src/overlay/` | 网页内命令栏浮层、结果列表、主题/语言同步和站点修正 |
+| `src/overlay/` | 网页内命令栏浮层（`search-panel.js` 及其位于 `panel/` 的部件）、主题/语言同步和站点修正 |
 | `src/content/` | 页面快捷键监听、划词快捷操作、网页剪裁 PiP、视频自动 PiP |
-| `src/options/` | 扩展设置页 |
+| `src/options/` | 扩展设置页（`options.js` 及其 `options-*.js` 部件） |
 | `src/onboarding/` | 安装/更新引导页 |
 | `src/shared/` | 设置、路由、URL 守卫等共享模块；`search/`（排序、输入、建议）、`ui/`（提示、Toast、菜单与控件样式）、`favicon/` |
 | `react-src/` | React 源码，构建产物输出到 `src/react/` |

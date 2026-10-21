@@ -245,11 +245,11 @@ npm run test:onboarding-content
 | Path | Purpose |
 | --- | --- |
 | `manifest.json` | Manifest V3 configuration, permissions, commands, content scripts, and new tab override |
-| `src/background/` | Service worker, command routing, search data, site/AI search, tab switcher, PiP ownership, pinned-tab recovery, WebDAV sync |
+| `src/background/` | Service worker entry and its `*-service.js` parts: command routing, overlay opening, search data, site/AI search, tab switcher, PiP ownership, pinned-tab recovery, WebDAV sync |
 | `src/newtab/` | New tab page runtime; feature folders `bookmarks/`, `shortcuts/`, `recent/`, `wallpaper/`, `search/`, `top-content/`, `theme/` |
-| `src/overlay/` | In-page command bar overlay, suggestion list, theme/language sync, and site fixes |
+| `src/overlay/` | In-page command bar overlay (`search-panel.js` with its parts in `panel/`), theme/language sync, and site fixes |
 | `src/content/` | Page hotkey listener, selection quick actions, Web Clip PiP, and auto video PiP |
-| `src/options/` | Extension settings page |
+| `src/options/` | Extension settings page (`options.js` and its `options-*.js` parts) |
 | `src/onboarding/` | Install and update onboarding |
 | `src/shared/` | Shared settings, routes and URL guards; `search/` (ranking, input, suggestions), `ui/` (tooltip, toast, menu and control styles), `favicon/` |
 | `react-src/` | React sources built into `src/react/` |

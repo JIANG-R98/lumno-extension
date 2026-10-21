@@ -11,6 +11,8 @@ renderer.
 - `react-src/newtab/` owns the New Tab structure and visible controls, including
   bookmarks, recent sites, shortcuts, wallpaper controls, notices, menus,
   dialogs, feedback, dock, and wordmark.
+  The appearance panel is `wallpaper-view.tsx` with its sections, state hook
+  and controls in `newtab/wallpaper-panel/`.
 - `react-src/options/` owns Settings navigation, forms, lists, controls,
   confirmations, shortcut references, and status feedback.
 - `react-src/onboarding/` owns the complete onboarding presentation and
@@ -22,7 +24,8 @@ renderer.
   Onboarding all load, so keep it to small, widely used pieces (select menu,
   segmented indicator, range slider, tooltip, toast, search input).
 - `react-src/search/` holds the suggestion list rendered by both New Tab and the
-  Overlay. It sits outside `shared/` on purpose: it is large and Options never
+  Overlay (`suggestions.tsx`, with its rows, icons and styles in
+  `search/suggestion-list/`). It sits outside `shared/` on purpose: it is large and Options never
   needs it, so it stays in the New Tab bundle and the self-contained Overlay
   bundle.
 - Background and content scripts stay framework-free unless they host one of the

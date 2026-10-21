@@ -245,11 +245,11 @@ npm run test:onboarding-content
 | パス | 役割 |
 | --- | --- |
 | `manifest.json` | Manifest V3 設定、権限、コマンド、コンテンツスクリプト、新しいタブの上書き |
-| `src/background/` | Service worker、コマンドルーティング、検索データ、サイト/AI 検索、タブスイッチャー、PiP 所有権、固定タブ復元、WebDAV 同期 |
+| `src/background/` | Service worker の入口と `*-service.js` の各部：コマンドルーティング、オーバーレイの表示、検索データ、サイト/AI 検索、タブスイッチャー、PiP 所有権、固定タブ復元、WebDAV 同期 |
 | `src/newtab/` | 新しいタブのランタイム。機能別フォルダー `bookmarks/`、`shortcuts/`、`recent/`、`wallpaper/`、`search/`、`top-content/`、`theme/` |
-| `src/overlay/` | ページ内コマンドバー、候補リスト、テーマ/言語同期、サイト別補正 |
+| `src/overlay/` | ページ内コマンドバー（`search-panel.js` と `panel/` の各部）、テーマ/言語同期、サイト別補正 |
 | `src/content/` | ページショートカット監視、選択テキストのクイックアクション、Web Clip PiP、動画の自動 PiP |
-| `src/options/` | 拡張機能の設定ページ |
+| `src/options/` | 拡張機能の設定ページ（`options.js` と `options-*.js` の各部） |
 | `src/onboarding/` | インストール/アップデート時のオンボーディング |
 | `src/shared/` | 設定、ルート、URL ガードなどの共通モジュール。`search/`（ランキング、入力、候補）、`ui/`（ツールチップ、トースト、メニューとコントロールのスタイル）、`favicon/` |
 | `react-src/` | React ソース（`src/react/` にビルド） |
