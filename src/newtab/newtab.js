@@ -1,8 +1,8 @@
 (function() {
   // Page state shared with the modules split out of this file: each module
   // receives this one object as `pageState` and reads and writes the same
-  // properties this file does.
-  const pageState = {};
+  // properties this file does. page-state.js lists its initial values.
+  const pageState = globalThis.LumnoNewtabPageState.createPageState();
   const root = document.getElementById('_x_extension_newtab_root_2024_unique_');
   const createSearchInput = window._x_extension_createSearchInput_2024_unique_;
   if (!root || typeof createSearchInput !== 'function') {
@@ -547,14 +547,6 @@
   const NEWTAB_SHORTCUTS_STORAGE_KEYS = NEWTAB_SHORTCUTS_STORE.SHORTCUT_STORAGE_KEYS;
   const pageSearchParams = new URLSearchParams(window.location.search || '');
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-  pageState.globalThemeMode = 'system';
-  pageState.newtabThemeMode = 'global';
-  pageState.newtabThemeScope = 'global';
-  pageState.newtabGlassTheme = 'follow';
-  pageState.glassThemeOverride = '';
-  pageState.currentThemeMode = 'system';
-  pageState.initialThemeApplied = false;
-  pageState.resolveInitialThemeReady = null;
   const initialThemeReadyPromise = new Promise((resolve) => {
     pageState.resolveInitialThemeReady = resolve;
   });
@@ -593,8 +585,6 @@
     BOOKMARK_TOPBAR_LAYOUT_ACTION,
     pageState
   });
-
-  pageState.resolveInitialLanguageReady = null;
   const initialLanguageReadyPromise = new Promise((resolve) => {
     pageState.resolveInitialLanguageReady = resolve;
   });
@@ -605,120 +595,39 @@
       resolve();
     }
   });
-  pageState.modeBadge = null;
-  pageState.inputModeController = null;
-  pageState.inputParts = null;
   const recentCards = [];
   const bookmarkCards = [];
   const suggestionItems = [];
-  pageState.selectedIndex = -1;
-  pageState.currentSuggestions = [];
-  pageState.lastSuggestionResponse = [];
-  pageState.latestQuery = '';
-  pageState.latestRawQuery = '';
-  pageState.siteSearchTriggerState = null;
-  pageState.localSearchScopeTriggerState = null;
-  pageState.suggestionsView = null;
-  pageState.recentSourceItems = [];
-  pageState.pinnedRecentSites = [];
   // Progress tracking (Labs): the switch and the versions tracked cards left.
   pageState.progressTrackingEnabled = false;
-  pageState.progressHistoryMap = {};
-  pageState.hiddenRecentSites = [];
   pageState.initialPinnedRecentSitesReadyTask = Promise.resolve([]);
   pageState.initialHiddenRecentSitesReadyTask = Promise.resolve([]);
-  pageState.searchBlacklistItems = [];
   pageState.currentMessages = null;
   pageState.currentLanguageMode = 'system';
   pageState.currentResolvedLocale = null;
-  pageState.defaultPlaceholderText = 'Search or enter URL…';
   let toastElement = null;
   pageState.toastController = null;
-  pageState.layoutController = null;
-  pageState.layoutMotion = null;
-  pageState.bottomDockScroller = null;
-  pageState.faviconViewRuntime = null;
-  pageState.newtabResizeLayoutLocked = false;
-  pageState.newtabReadyRequested = false;
-  // When the wallpaper was revealed (performance.now()); entry-motion.js lets it lead the content.
-  pageState.wallpaperShownAt = 0;
-  pageState.newtabReadyViewportRevision = 0;
-  pageState.resolveNewtabEntryAnimationReady = null;
   const newtabEntryAnimationReadyPromise = new Promise((resolve) => {
     pageState.resolveNewtabEntryAnimationReady = resolve;
   });
-  pageState.currentRecentMode = 'most';
-  pageState.currentRecentCount = 4;
-  pageState.currentBookmarkCount = 8;
-  pageState.currentBookmarkColumns = 6;
-  pageState.currentBookmarkViewMode = 'folder';
   pageState.bookmarkViewModeRevision = 0;
-  pageState.bookmarkFolderIconsVisible = true;
-  pageState.tabRankScoreDebugEnabled = false;
-  pageState.searchLayer = null;
-  pageState.topContentContainer = null;
-  pageState.topContentController = null;
-  pageState.wordmarkImageEl = null;
-  pageState.wallpaperControl = null;
-  pageState.wallpaperRuntime = null;
-  pageState.quoteRuntime = null;
-  pageState.sectionPanelSettings = null;
   pageState.feedbackControl = null;
   pageState.feedbackReactController = null;
   pageState.feedbackButton = null;
   pageState.feedbackLinks = LUMNO_FEEDBACK_LINKS_FALLBACK;
-  pageState.updateNoticeController = null;
-  pageState.engagementNoticeController = null;
-  pageState.webdavFeatureHintController = null;
-  pageState.helpCenterAskHintController = null;
-  pageState.newtabTopContentMode = 'brand';
   pageState.newtabTimeFontWeight = NEWTAB_TIME_FONT_WEIGHT_DEFAULT;
   pageState.newtabTimeFontSize = Number(SETTINGS.NEWTAB_TIME_FONT_SIZE_DEFAULT) || 54;
   pageState.newtabTimeOpacity = Number(SETTINGS.NEWTAB_TIME_OPACITY_DEFAULT) || 100;
   pageState.newtabTimeInk = SETTINGS.NEWTAB_TIME_INK_DEFAULT || 'auto';
   pageState.newtabTimeFont = SETTINGS.NEWTAB_TIME_FONT_DEFAULT || 'open-sans';
-  pageState.newtabTimeSecondsVisible = false;
-  pageState.newtabTime12Hour = false;
-  pageState.newtabInputAutoFocusEnabled = false;
-  pageState.newtabFeedbackButtonVisible = true;
-  pageState.newtabAppearanceButtonVisible = true;
-  pageState.numberShortcutInstantEnabled = false;
-  pageState.macosCtrlSuggestionNavigationEnabled = false;
-  pageState.simpleModeEnabled = false;
-  pageState.zenModeEnabled = false;
-  pageState.bookmarkCurrentPage = 0;
-  pageState.bookmarkAllItems = [];
-  pageState.bookmarkCurrentFolderId = '1';
-  pageState.bookmarkRootFolderId = '1';
-  pageState.bookmarkFolderPath = [];
-  pageState.bookmarkRootTotalCount = 0;
-  pageState.bookmarkRootVisibleCount = 0;
-  pageState.bookmarkTitleWrap = null;
-  pageState.bookmarkHeading = null;
-  pageState.bookmarkModeMenu = null;
-  pageState.bookmarkGrid = null;
   pageState.bookmarkCascadeRuntime = null;
   pageState.bookmarkTopbarRuntime = null;
-  pageState.recentHeader = null;
-  pageState.recentHeading = null;
-  pageState.recentModeMenu = null;
-  pageState.recentGrid = null;
-  pageState.bookmarkBreadcrumbController = null;
-  pageState.bookmarkPagerPrevButton = null;
-  pageState.bookmarkPagerNextButton = null;
-  pageState.bookmarkOpenManagerButton = null;
-  pageState.bookmarkPageAnimating = false;
   pageState.bookmarkDragState = null;
   const bookmarkMoveHistory = NEWTAB_BOOKMARK_MOVE_HISTORY.createBookmarkMoveHistory({ maxEntries: 30 });
-  pageState.bookmarkMoveHistoryBusy = false;
   pageState.bookmarkContextMenu = null;
   pageState.bookmarkContextMenuTarget = null;
   pageState.recentContextMenu = null;
   pageState.recentContextMenuTarget = null;
-  pageState.recentMouseInsideSection = false;
-  pageState.recentMouseLeftAt = 0;
-  pageState.recentSitesView = null;
-  pageState.bookmarksView = null;
   pageState.shortcutSection = null;
   pageState.shortcutGrid = null;
   pageState.addShortcutButton = null;
@@ -727,15 +636,9 @@
   pageState.shortcutContextMenu = null;
   pageState.shortcutContextMenuTarget = null;
   pageState.newtabShortcuts = [];
-  pageState.newtabShortcutIcons = {};
-  pageState.newtabShortcutFavicons = {};
-  pageState.newtabShortcutsVisible = true;
-  pageState.newtabShortcutAddVisible = true;
-  pageState.newtabShortcutDockMagnificationEnabled = true;
   pageState.newtabShortcutColumns = NEWTAB_SHORTCUT_COLUMNS_DEFAULT;
   pageState.newtabShortcutSize = NEWTAB_SHORTCUT_SIZE_DEFAULT;
   pageState.newtabShortcutGap = NEWTAB_SHORTCUT_GAP_DEFAULT;
-  pageState.shortcutPersistenceInFlightCount = 0;
 
   const NEWTAB_SHORTCUT_CONTEXT_MENU = globalThis.LumnoNewtabShortcutContextMenu;
   const {
@@ -802,15 +705,11 @@
   });
 
   pageState.shortcutDockPendingPointerX = Number.NaN;
-  pageState.shortcutDragState = null;
   // Set once the recent-card drag runtime exists; earlier helpers ask it lazily.
   pageState.recentCardDragRuntime = null;
   const shortcutGroupHeaders = [];
   const LEGACY_FOLDER_COLORS_STORAGE_KEY = NEWTAB_BOOKMARK_FOLDER_ICON.FOLDER_COLORS_STORAGE_KEY;
   const FOLDER_COLOR_REFS_STORAGE_KEY = NEWTAB_BOOKMARK_FOLDER_ICON.FOLDER_COLOR_REFS_STORAGE_KEY;
-  // Synced colors keyed by folder path, and the colors they resolve to for
-  // this device's bookmark ids.
-  pageState.folderColorRefs = {};
 
   const defaultSiteSearchProviders = SEARCH_UTILS.getDefaultSiteSearchProviders();
 
@@ -1147,8 +1046,6 @@
   });
   pageState.siteSearchIconCache = {};
   pageState.siteSearchIconCacheLoaded = false;
-  pageState.siteSearchIconCacheLoadPromise = null;
-  pageState.siteSearchIconCacheRevision = 0;
 
   function loadSiteSearchIconCache() {
     if (pageState.siteSearchIconCacheLoaded) {
@@ -1175,8 +1072,6 @@
   }
 
   loadSiteSearchIconCache();
-  pageState.shortcutFaviconPolicyRevision = 0;
-  pageState.shortcutFaviconPendingCacheEntries = {};
   const sectionModeSelectController =
     NEWTAB_SELECT_MENU.createController({
       documentObj: document,
@@ -1327,8 +1222,6 @@
     }
   };
   const NEWTAB_SEARCH_WIDTH_CONFIG = NEWTAB_LAYOUT.SEARCH_WIDTH_CONFIG;
-  pageState.currentNewtabWidthMode = 'wide';
-  pageState.currentNewtabSearchWidth = null;
   toastElement = document.getElementById('_x_extension_toast_2024_unique_');
   pageState.toastController = NEWTAB_TOAST.createToastController(toastElement, { windowObj: window });
   markNewtabStartupMilestone('core-runtimes-created');
@@ -1470,14 +1363,6 @@
     getBookmarkGridColumnCount,
     pageState
   });
-
-  // 使用本地打包字体，避免外链字体依赖。
-  pageState.defaultSearchEngineState = {
-    id: '',
-    name: '',
-    host: '',
-    updatedAt: 0
-  };
 
   const NEWTAB_DEFAULT_SEARCH_ENGINE = globalThis.LumnoNewtabDefaultSearchEngine;
   const {
@@ -1974,10 +1859,6 @@
     normalizeTabRankScoreDebugMode,
     pageState
   });
-
-  pageState.lastDeletionAt = 0;
-  pageState.autocompleteState = null;
-  pageState.inlineSearchState = null;
   const imeKeyGuard = LumnoImeKeyGuard.createImeKeyGuard();
   const searchInputHistoryController =
     SEARCH_INPUT_HISTORY.createSearchInputHistoryController({
@@ -1990,21 +1871,13 @@
   }
   pageState.siteSearchState = null;
   pageState.localSearchScopeState = null;
-  pageState.remoteSuggestionDebounceTimer = null;
-  pageState.tabs = [];
-  pageState.currentNewtabTabId = null;
   pageState.siteSearchProvidersCache = null;
   pageState.siteSearchProvidersLoadVersion = 0;
   pageState.aggregateSearchesCache = null;
   pageState.aggregateSearchesLoadPromise = null;
   pageState.aggregateSearchesLoadVersion = 0;
-  pageState.suggestionRequestSeq = 0;
-  pageState.searchSuggestionsDismissed = false;
-  pageState.suggestionRequestWatchdogTimer = null;
-  pageState.searchResultPriorityMode = 'autocomplete';
   pageState.enabledSearchResultSourceTypes = ['topSite', 'bookmark', 'history'];
   pageState.searchResultDisplayLimit = 10;
-  pageState.openTabQuickSwitchEnabled = true;
   pageState.newtabOpenInNewTab = SETTINGS.normalizeNewtabOpenInNewTab(null);
   pageState.faviconRequestBlacklistItems = [];
   pageState.faviconEnhancedFetchEnabled = false;
@@ -2108,7 +1981,6 @@
     NEWTAB_SHORTCUT_SIZE_STORAGE_KEY,
     NEWTAB_SHORTCUT_GAP_STORAGE_KEY
   ]);
-  pageState.handleTabKey = null;
 
   const NEWTAB_PAGE_FAVICONS = globalThis.LumnoNewtabPageFavicons;
   const {
@@ -3184,8 +3056,6 @@
   });
 
   const NEWTAB_INPUT_FOCUS = globalThis.LumnoNewtabInputFocus;
-  // Created once the search modes and providers below exist.
-  pageState.focusResume = null;
   const {
     isEditableElement,
     refreshFallbackShortcut,

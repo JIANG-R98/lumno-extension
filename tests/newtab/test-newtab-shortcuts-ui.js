@@ -2612,19 +2612,24 @@ assert.ok(
   newtabJs.indexOf('bootstrapInitialThemeMode(),', themeBootstrapIndex) > themeBootstrapIndex,
   'the initial wallpaper visual task should resolve the theme before first paint'
 );
-[
-  'const suggestionItems = [];',
-  // Page state set at the top level of newtab.js (the helper drops `pageState.`).
-  '\n  selectedIndex = -1;',
-  '\n  suggestionsView = null;',
-  '\n  inputParts = null;'
-].forEach((marker) => {
-  const markerIndex = newtabJs.indexOf(marker);
+{
+  const markerIndex = newtabJs.indexOf('const suggestionItems = [];');
   assert.ok(
     markerIndex > -1 && markerIndex < themeBootstrapIndex,
-    `${marker} should be initialized before theme bootstrap reads suggestion state`
+    'suggestion items should be initialized before theme bootstrap reads suggestion state'
   );
+}
+// The suggestion state starts on the page state object, which newtab.js
+// creates before anything else.
+const pageStateSource = fs.readFileSync(path.join(repoRoot, 'src/newtab/page-state.js'), 'utf8');
+['selectedIndex: -1,', 'suggestionsView: null,', 'inputParts: null,'].forEach((marker) => {
+  assert.ok(pageStateSource.includes(marker), `page state should start with ${marker}`);
 });
+assert.ok(
+  newtabJs.indexOf('LumnoNewtabPageState.createPageState()') > -1 &&
+    newtabJs.indexOf('LumnoNewtabPageState.createPageState()') < themeBootstrapIndex,
+  'page state should exist before theme bootstrap reads suggestion state'
+);
 
 assertContains(
   newtabJs,

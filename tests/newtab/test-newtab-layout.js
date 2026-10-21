@@ -1532,7 +1532,7 @@ function testBookmarkGridDefaultsToSixColumns() {
   const settingsSource = fs.readFileSync(path.join(repoRoot, 'src/shared/settings.js'), 'utf8');
   const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
 
-  assert.match(newtabSource, /\bcurrentBookmarkColumns = 6;/);
+  assert.match(newtabSource, /\bcurrentBookmarkColumns: 6,/);
   assert.match(
     newtabSource,
     /function normalizeBookmarkColumns\(value\) \{[\s\S]*?SETTINGS\.normalizeBookmarkColumns/
