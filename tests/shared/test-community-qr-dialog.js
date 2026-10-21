@@ -2,7 +2,6 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
-const { readBackgroundSource } = require('../helpers/background-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const repoRoot = path.join(__dirname, '..', '..');
@@ -64,13 +63,13 @@ assert.strictEqual(dialog.open({ imageUrl: '' }), null, 'nothing opens without a
 // Joining the WeChat group never opens the QR image in a new tab.
 const overlaySource = readOverlayPanelSource();
 const newtabSource = require('../helpers/newtab-source').readNewtabRuntimeSource();
+const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 const suggestionsControllerSource = read('src/newtab/search/suggestions-controller.js');
-assert.match(
-  readBackgroundSource(),
-  /'src\/shared\/community-links\.js',\s*'src\/shared\/ui\/community-qr-dialog\.js'/,
+assert.ok(
+  runsBefore(getInjectedScripts('overlay'), 'src/shared/community-links.js', 'src/shared/ui/community-qr-dialog.js'),
   'the overlay loads the dialog'
 );
-assert.match(read('newtab.html'), /community-qr-dialog\.js/, 'the new tab loads the dialog');
+assert.ok(getPageScripts('newtab.html').includes('src/shared/ui/community-qr-dialog.js'), 'the new tab loads the dialog');
 assert.strictEqual(
   (overlaySource.match(/feedbackKey === 'community'\) \{\s*openOverlayCommunityQrDialog\(/g) || []).length,
   2,

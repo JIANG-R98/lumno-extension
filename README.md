@@ -141,7 +141,7 @@ Firefox already uses `Cmd+Shift+K` / `Ctrl+Shift+K` and similar keys, so the Fir
 To install from source:
 
 1. Clone or download this repository.
-2. Run `npm ci` and `npm run build:react` (see [Development](#development)).
+2. Run `npm ci` and `npm run build` (see [Development](#development)).
 3. Open `chrome://extensions/`, or the extension management page of your Chromium browser, and enable Developer mode.
 4. Choose "Load unpacked" and select the repository root.
 5. Optional: open Lumno settings to configure language, theme, new tab content, site search, blacklist rules, PiP and shortcut behavior.
@@ -207,12 +207,14 @@ Existing server data requires an explicit initial-version choice. Later conflict
 
 Development and CI use Node.js 22. If you use `nvm`, run `nvm use` to select the version declared in `.nvmrc`.
 
-The React pages must be built before Chrome can load their generated assets. Before loading the development extension for the first time, and after editing `react-src/`, run:
+Chrome loads built scripts: `npm run build` builds the React islands into `src/react/` (committed) and bundles every script the extension runs into `build/` (not committed) with esbuild. Before loading the development extension for the first time, and after editing `src/` or `react-src/`, run:
 
 ```bash
 npm ci
-npm run build:react
+npm run build
 ```
+
+While editing `src/`, `npm run watch:bundles` rebuilds the bundles on every change. `scripts/build/bundles.js` lists the bundles and what each one runs.
 
 Then keep Developer mode enabled in `chrome://extensions/` and load the repository root as an unpacked extension. After generating new assets or changing background scripts or `manifest.json`, click Reload on the extensions page. Development installs do not force a second refresh when the Chrome profile starts, avoiding interruption of the startup New Tab override.
 

@@ -141,7 +141,7 @@ Firefox 已占用 `Cmd+Shift+K` / `Ctrl+Shift+K` 等按键，因此 Firefox 版�
 从源码安装：
 
 1. 克隆或下载本仓库。
-2. 运行 `npm ci` 和 `npm run build:react`（见[开发](#开发)）。
+2. 运行 `npm ci` 和 `npm run build`（见[开发](#开发)）。
 3. 打开 `chrome://extensions/` 或对应 Chromium 浏览器的扩展管理页，开启「开发者模式」。
 4. 点击「加载已解压的扩展程序」，选择仓库根目录。
 5. 可选：进入扩展设置页，调整语言、主题、新标签页内容、站内搜索、黑名单、PiP 和快捷键策略。
@@ -207,12 +207,14 @@ WebDAV 为 Beta 功能，入口在「设置 → 账号与同步」。添加连�
 
 开发和 CI 使用 Node.js 22。如果使用 `nvm`，运行 `nvm use` 即可切换到 `.nvmrc` 中声明的版本。
 
-项目中的 React 页面需要先生成浏览器加载的产物。首次加载开发版，以及修改 `react-src/` 后，请运行：
+Chrome 加载的是构建后的脚本：`npm run build` 会把 React 岛构建到 `src/react/`（提交到仓库），并用 esbuild 把扩展运行的所有脚本打包到 `build/`（不提交）。首次加载开发版，以及修改 `src/` 或 `react-src/` 后，请运行：
 
 ```bash
 npm ci
-npm run build:react
+npm run build
 ```
+
+修改 `src/` 期间可以运行 `npm run watch:bundles`，每次改动都会重新打包。有哪些包、每个包运行哪些文件，见 `scripts/build/bundles.js`。
 
 然后在 `chrome://extensions/` 中保持「开发者模式」开启，并将仓库根目录作为已解压扩展加载。生成新产物，或修改后台脚本、`manifest.json` 后，请在扩展管理页手动点击「重新加载」。开发版不会在 Chrome 用户配置启动时主动二次刷新，以免中断启动阶段的新标签页接管。
 

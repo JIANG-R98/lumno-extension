@@ -71,7 +71,7 @@ Object.entries(FIREFOX_COMMAND_KEYS).forEach(([name, suggestedKey]) => {
 
 // Auto picture-in-picture needs requestPictureInPicture on web pages, which
 // Firefox does not offer; its per-site content scripts would only add work.
-const AUTO_PIP_SCRIPTS = ['src/content/site-auto-pip.js', 'src/content/youtube-auto-pip.js'];
+const AUTO_PIP_SCRIPTS = ['build/site-auto-pip.js', 'build/youtube-auto-pip.js'];
 const contentScriptCount = ffManifest.content_scripts.length;
 ffManifest.content_scripts = ffManifest.content_scripts.filter((entry) =>
   !entry.js.some((script) => AUTO_PIP_SCRIPTS.includes(script)));

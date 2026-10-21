@@ -4,6 +4,7 @@ const path = require('path');
 const { readBackgroundSource } = require('../helpers/background-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
 const { readReactSource } = require('../helpers/react-source');
+const { getInjectedScripts } = require('../helpers/runtime-scripts');
 
 const repoRoot = path.join(__dirname, '..', '..');
 const backgroundJs = readBackgroundSource();
@@ -87,9 +88,9 @@ assert.match(
   assert.ok(messages.document_pip_command_action && messages.document_pip_command_action.message, `${locale} should localize the web clip command action`);
 });
 
-assert.match(
-  backgroundJs,
-  /'src\/shared\/ui\/toast\.js',\s*'src\/content\/document-pip-picker\.js'/,
+assert.deepStrictEqual(
+  getInjectedScripts('documentPipPicker').filter((file) => !file.includes('codex-debug')),
+  ['src/shared/ui/toast.js', 'src/content/document-pip-picker.js'],
   'the web clip picker should be injected after the shared Toast it uses'
 );
 assert.match(

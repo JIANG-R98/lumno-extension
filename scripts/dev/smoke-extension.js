@@ -224,6 +224,10 @@ async function main() {
         elements: document.querySelectorAll('*').length,
         textLength: (document.body ? document.body.innerText : '').length
       })`);
+      // A page whose script failed to start renders no text, often with no error.
+      if (!report[page].textLength) {
+        failures.push(`${page} rendered no text`);
+      }
       if (page === 'newtab.html') {
         report['newtab search'] = await evaluate(sessionId, `(async () => {
           const input = document.querySelector('input');

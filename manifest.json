@@ -39,7 +39,7 @@
    "content_scripts": [
       {
          "matches": [ "\u003Call_urls>" ],
-         "js": [ "src/shared/shortcut-key-matcher.js", "src/content/shortcut-key-observer.js" ],
+         "js": [ "build/shortcut-key-observer.js" ],
          "run_at": "document_start",
          "all_frames": true,
          "match_about_blank": true,
@@ -74,12 +74,12 @@
             "*://*.bilibili.com/*",
             "*://*.bilibili.tv/*"
          ],
-         "js": [ "src/shared/settings.js", "src/content/auto-pip-core.js", "src/content/auto-pip-blacklist.js", "src/content/site-auto-pip.js" ],
+         "js": [ "build/site-auto-pip.js" ],
          "run_at": "document_idle"
       },
       {
          "matches": [ "*://*.youtube.com/*", "*://youtube.com/*" ],
-         "js": [ "src/shared/settings.js", "src/content/auto-pip-core.js", "src/content/youtube-auto-pip.js" ],
+         "js": [ "build/youtube-auto-pip.js" ],
          "run_at": "document_idle"
       }
    ],

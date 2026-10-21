@@ -132,14 +132,13 @@ function openDocumentPipPickerOnReadyTab(activeTab, source) {
     chrome.scripting.executeScript({
       target: { tabId: activeTab.id },
       files: [
-        'src/shared/codex-debug-surface.js',
-        'src/shared/ui/toast.js',
-        'src/content/document-pip-picker.js'
+        'build/codex-debug-surface.js',
+        'build/document-pip-picker.js'
       ]
     }, () => {
       if (chrome.runtime.lastError) {
         logHotkeyDebug('document-pip-inject-failed', {
-          step: 'src/content/document-pip-picker.js',
+          step: 'build/document-pip-picker.js',
           tabId: activeTab.id,
           error: chrome.runtime.lastError.message || 'unknown',
           source: source || ''

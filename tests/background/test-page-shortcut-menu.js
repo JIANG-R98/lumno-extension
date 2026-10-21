@@ -148,7 +148,7 @@ async function run() {
   assert.strictEqual(added.title, 'GitHub');
   assert.strictEqual(added.groupId, 'gwork', 'the page joins the last group');
   assert.deepStrictEqual(state.groups.map((group) => group.id), ['g0', 'gwork'], 'groups are kept');
-  assert.deepStrictEqual(sync.scripts[0].files, ['src/shared/ui/toast.js', 'src/content/page-shortcut-toast.js']);
+  assert.deepStrictEqual(sync.scripts[0].files, ['build/page-shortcut-toast.js']);
   assert.strictEqual(sync.scripts[0].target.tabId, 7);
   assert.deepStrictEqual(sync.toastArgs()[0], ['已添加到 Lumno 新标签页的快捷方式', { error: false, duration: undefined, themeMode: 'dark' }]);
 

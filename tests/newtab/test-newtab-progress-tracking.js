@@ -4,6 +4,7 @@ const store = require('../../src/newtab/recent/recent-sites-store.js');
 const progressMatch = require('../../src/shared/progress-match.js');
 const progressHistory = require('../../src/shared/progress-history.js');
 const { readBackgroundSource } = require('../helpers/background-source');
+const { getPageScripts } = require('../helpers/runtime-scripts');
 require('../../src/newtab/dismiss-stack.js');
 require('../../src/newtab/recent/recent-sites-controller.js');
 
@@ -300,7 +301,8 @@ const menuValues = (controller, item) => controller.getRecentContextMenuOptions(
       .forEach((file) => assert(background.includes(`chrome.runtime.getURL('${file}')`), `${file} should be imported`));
     assert(background.includes('isEnabled: () => progressTrackingEnabled'));
     const newtabHtml = fs.readFileSync('newtab.html', 'utf8');
-    assert(newtabHtml.includes('../shared/progress-match.js') && newtabHtml.includes('../shared/progress-history.js'));
+    const newtabScripts = getPageScripts('newtab.html');
+    assert(newtabScripts.includes('src/shared/progress-match.js') && newtabScripts.includes('src/shared/progress-history.js'));
     assert(newtabHtml.includes('recent-history-dialog.css'));
     const optionsHtml = fs.readFileSync('src/options/options.html', 'utf8');
     assert(/id="_x_extension_progress_tracking_toggle_2026_unique_" type="checkbox" checked>/.test(optionsHtml),

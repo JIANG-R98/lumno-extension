@@ -6,6 +6,7 @@ const searchUtils = require('../../src/shared/search/search-utils.js');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { readBackgroundSource } = require('../helpers/background-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { getInjectedScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 const backgroundSource = readBackgroundSource();
 const newtabSource = readNewtabRuntimeSource();
@@ -17,9 +18,8 @@ const searchUtilsSource = fs.readFileSync('src/shared/search/search-utils.js', '
 const siteSearchSource = fs.readFileSync('assets/data/site-search.json', 'utf8');
 const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
 
-assert.match(
-  backgroundSource,
-  /'src\/shared\/favicon\/shortcut-favicon\.js',[\s\S]*?'src\/overlay\/search-panel\.js'/,
+assert.ok(
+  runsBefore(getInjectedScripts('overlay'), 'src/shared/favicon/shortcut-favicon.js', 'src/overlay/search-panel.js'),
   'the injected overlay should load the shared high-resolution shortcut favicon runtime first'
 );
 

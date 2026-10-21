@@ -515,7 +515,7 @@ function prepareShortcutKeyObserver(tab) {
           tabId: tab.id,
           allFrames: true
         },
-        files: ['src/shared/shortcut-key-matcher.js', 'src/content/shortcut-key-observer.js']
+        files: ['build/shortcut-key-observer.js']
       }, () => {
         const error = chrome.runtime && chrome.runtime.lastError
           ? chrome.runtime.lastError.message || 'unknown'
@@ -2173,13 +2173,10 @@ function injectTabSwitcherOnTab(hostTab, items, context) {
     chrome.scripting.executeScript({
       target: { tabId: hostTab.id },
       files: [
-        'src/shared/icon-font-preload.js',
-        'src/shared/codex-debug-surface.js',
-        'src/shared/settings.js',
+        'build/icon-font-preload.js',
+        'build/codex-debug-surface.js',
         'src/react/overlay-islands.js',
-        'src/shared/ui/toast.js',
-        'src/shared/page-color-scheme.js',
-        'src/overlay/tab-switcher.js'
+        'build/tab-switcher.js'
       ]
     }, () => {
       if (chrome.runtime && chrome.runtime.lastError) {

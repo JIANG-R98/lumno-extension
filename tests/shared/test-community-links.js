@@ -3,10 +3,9 @@ const fs = require('fs');
 const { readOptionsRuntimeSource } = require('../helpers/options-source');
 
 const communityLinks = require('../../src/shared/community-links.js');
-const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-const { readBackgroundSource } = require('../helpers/background-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 (async () => {
   assert.strictEqual(
@@ -244,11 +243,8 @@ const { readOverlayPanelSource } = require('../helpers/overlay-source');
   );
 
   const newtabSource = readNewtabRuntimeSource();
-  const newtabHtml = readPageSource('newtab.html');
   const optionsSource = readOptionsRuntimeSource();
-  const optionsHtml = readPageSource('src/options/options.html');
   const overlaySource = readOverlayPanelSource();
-  const backgroundSource = readBackgroundSource();
   assert(
     !newtabSource.includes('qrcode-20260730.webp') &&
       !optionsSource.includes('qrcode-20260730.webp') &&
@@ -256,18 +252,15 @@ const { readOverlayPanelSource } = require('../helpers/overlay-source');
     'feature surfaces should not duplicate the fallback QR URL outside the shared module'
   );
   assert(
-    newtabHtml.indexOf('../shared/community-links.js') <
-      newtabHtml.indexOf('../shared/engagement-notice.js'),
+    runsBefore(getPageScripts('newtab.html'), 'src/shared/community-links.js', 'src/shared/engagement-notice.js'),
     'newtab should load community links before the engagement runtime'
   );
   assert(
-    optionsHtml.indexOf('../shared/community-links.js') <
-      optionsHtml.indexOf('../shared/react-page-bootstrap.js'),
-    'Options should load community links before its page entry bootstrap'
+    runsBefore(getPageScripts('src/options/options.html'), 'src/shared/community-links.js', 'src/options/options.js'),
+    'Options should load community links before its page entry'
   );
   assert(
-    backgroundSource.indexOf("'src/shared/community-links.js'") <
-      backgroundSource.indexOf("'src/shared/engagement-notice.js'"),
+    runsBefore(getInjectedScripts('overlay'), 'src/shared/community-links.js', 'src/shared/engagement-notice.js'),
     'overlay injection should load community links before engagement actions'
   );
 

@@ -4,6 +4,7 @@ const path = require('path');
 const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const { readPageSource } = require('../helpers/page-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const packageJson = JSON.parse(
@@ -84,40 +85,41 @@ const bundles = [
 ];
 const bundle = bundles.join('\n');
 
-const bootstrapScript = 'src="../shared/react-page-bootstrap.js"';
+const bootstrapScript = 'src="../../build/react-page-bootstrap.js"';
+const pageEntryRunsAfterBridge = (page, reactEntry, entry) => {
+  const scripts = getPageScripts(page);
+  return runsBefore(scripts, reactEntry, 'src/overlay/tab-switcher-page-bridge.js') &&
+    runsBefore(scripts, 'src/overlay/tab-switcher-page-bridge.js', entry);
+};
 
 assert(
   newtabHtml.includes(bootstrapScript),
   'New Tab should load its React entry through the shared bootstrap'
 );
 assert(
-  !newtabHtml.includes('<script src="newtab.js"></script>') &&
-    newtabHtml.includes('data-react-entry="../react/newtab-islands.js"') &&
-    newtabHtml.includes('data-page-entry="../newtab/newtab.js"') &&
+  newtabHtml.includes('data-react-entry="../src/react/newtab-islands.js"') &&
+    newtabHtml.includes('data-page-entry="newtab.js"') &&
     newtabHtml.includes('data-react-state="LumnoNewtabReactBootstrap"') &&
-    newtabHtml.includes('data-react-ready-script="../overlay/tab-switcher-page-bridge.js"') &&
+    pageEntryRunsAfterBridge('newtab.html', 'src/react/newtab-islands.js', 'src/newtab/newtab.js') &&
     bootstrap.includes('import(reactEntryUrl)') &&
     bootstrap.includes('if (!bootstrapState.reactReady)') &&
-    bootstrap.includes('loadReactReadyScript()') &&
     bootstrap.includes('startPage();'),
   'the bootstrap should require React readiness before connecting bridges and injecting the browser adapter'
 );
 assert(
-  !optionsHtml.includes('<script src="options.js"></script>') &&
-    optionsHtml.includes(bootstrapScript) &&
-    optionsHtml.includes('data-react-entry="../react/options-islands.js"') &&
-    optionsHtml.includes('data-react-ready-script="../overlay/tab-switcher-page-bridge.js"') &&
-    optionsHtml.includes('data-page-entry="../options/options.js"') &&
-    optionsHtml.includes('data-react-state="LumnoOptionsReactBootstrap"'),
+  optionsHtml.includes(bootstrapScript) &&
+    optionsHtml.includes('data-react-entry="../src/react/options-islands.js"') &&
+    optionsHtml.includes('data-page-entry="options.js"') &&
+    optionsHtml.includes('data-react-state="LumnoOptionsReactBootstrap"') &&
+    pageEntryRunsAfterBridge('src/options/options.html', 'src/react/options-islands.js', 'src/options/options.js'),
   'Options should use the shared React-aware bootstrap and retain classic page semantics'
 );
 assert(
-  !onboardingHtml.includes('<script src="onboarding.js"></script>') &&
-    onboardingHtml.includes(bootstrapScript) &&
-    onboardingHtml.includes('data-react-entry="../react/onboarding-islands.js"') &&
-    onboardingHtml.includes('data-react-ready-script="../overlay/tab-switcher-page-bridge.js"') &&
-    onboardingHtml.includes('data-page-entry="../onboarding/onboarding.js"') &&
-    onboardingHtml.includes('data-react-state="LumnoOnboardingReactBootstrap"'),
+  onboardingHtml.includes(bootstrapScript) &&
+    onboardingHtml.includes('data-react-entry="../src/react/onboarding-islands.js"') &&
+    onboardingHtml.includes('data-page-entry="onboarding.js"') &&
+    onboardingHtml.includes('data-react-state="LumnoOnboardingReactBootstrap"') &&
+    pageEntryRunsAfterBridge('src/onboarding/onboarding.html', 'src/react/onboarding-islands.js', 'src/onboarding/onboarding.js'),
   'Onboarding should use the shared React-aware bootstrap and retain classic page semantics'
 );
 assert(
@@ -143,7 +145,9 @@ assert(
   'the default test command should cover both runtimes'
 );
 assert(
-  packageJson.scripts.check.includes('build:react') &&
+  packageJson.scripts.build.includes('build:react') &&
+    packageJson.scripts.build.includes('build:bundles') &&
+    packageJson.scripts.check.includes('npm run build') &&
     packageJson.scripts.check.includes('check:static') &&
     packageJson.scripts.verify.includes('npm test') &&
     packageJson.scripts.verify.includes('check:static'),
@@ -155,8 +159,8 @@ assert(
 );
 assert(
   popupHtml.includes(bootstrapScript) &&
-    popupHtml.includes('data-react-entry="../react/popup-islands.js"') &&
-    popupHtml.includes('data-page-entry="../popup/popup.js"') &&
+    popupHtml.includes('data-react-entry="../src/react/popup-islands.js"') &&
+    popupHtml.includes('data-page-entry="popup.js"') &&
     popupHtml.includes('data-react-state="LumnoPopupReactBootstrap"') &&
     popupBundle.includes('from"./react-runtime.js"') &&
     !popupBundle.includes('from"./tab-switcher-shared.js"'),

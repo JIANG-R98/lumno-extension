@@ -18,26 +18,42 @@ assert.notStrictEqual(
   'test harness should intercept the bootstrap dynamic import'
 );
 
+// The data attributes each page sets on its bootstrap tag.
 const NEWTAB_CONFIG = Object.freeze({
-  reactEntry: '../react/newtab-islands.js',
-  reactReadyScript: '../overlay/tab-switcher-page-bridge.js',
-  pageEntry: '../newtab/newtab.js',
+  reactEntry: '../src/react/newtab-islands.js',
+  pageEntry: 'newtab.js',
   reactState: 'LumnoNewtabReactBootstrap',
   pageRuntime: 'newtab'
 });
 const OPTIONS_CONFIG = Object.freeze({
-  reactEntry: '../react/options-islands.js',
-  reactReadyScript: '../overlay/tab-switcher-page-bridge.js',
-  pageEntry: '../options/options.js',
+  reactEntry: '../src/react/options-islands.js',
+  pageEntry: 'options.js',
   reactState: 'LumnoOptionsReactBootstrap',
   pageRuntime: 'options'
 });
 const ONBOARDING_CONFIG = Object.freeze({
-  reactEntry: '../react/onboarding-islands.js',
-  reactReadyScript: '../overlay/tab-switcher-page-bridge.js',
-  pageEntry: '../onboarding/onboarding.js',
+  reactEntry: '../src/react/onboarding-islands.js',
+  pageEntry: 'onboarding.js',
   reactState: 'LumnoOnboardingReactBootstrap',
   pageRuntime: 'onboarding'
+});
+
+[
+  ['newtab.html', NEWTAB_CONFIG],
+  ['src/options/options.html', OPTIONS_CONFIG],
+  ['src/onboarding/onboarding.html', ONBOARDING_CONFIG]
+].forEach(([page, config]) => {
+  const html = fs.readFileSync(path.join(repoRoot, page), 'utf8');
+  const tag = html.match(/<script\s+src="\.\.\/\.\.\/build\/react-page-bootstrap\.js"[^>]*><\/script>/);
+  assert(tag, `${page} should start through the shared bootstrap bundle`);
+  [
+    ['data-react-entry', config.reactEntry],
+    ['data-page-entry', config.pageEntry],
+    ['data-react-state', config.reactState],
+    ['data-page-runtime', config.pageRuntime]
+  ].forEach(([name, value]) => {
+    assert(tag[0].includes(`${name}="${value}"`), `${page} should set ${name}="${value}"`);
+  });
 });
 
 async function runBootstrap({ config, importResult }) {
@@ -53,7 +69,7 @@ async function runBootstrap({ config, importResult }) {
     },
     document: {
       currentScript: {
-        src: 'chrome-extension://lumno/src/shared/react-page-bootstrap.js',
+        src: 'chrome-extension://lumno/build/react-page-bootstrap.js',
         dataset: { ...config }
       },
       documentElement: {
@@ -69,9 +85,6 @@ async function runBootstrap({ config, importResult }) {
       body: {
         appendChild(node) {
           appendedScripts.push(node);
-          if (node.src.endsWith('/overlay/tab-switcher-page-bridge.js')) {
-            node.onload?.();
-          }
         }
       }
     },
@@ -114,17 +127,14 @@ function assertInjectedPage(result, config) {
     result.context.document.documentElement.dataset.lumnoReactRuntime,
     'react'
   );
-  assert.strictEqual(result.appendedScripts.length, 2);
+  assert.strictEqual(result.appendedScripts.length, 1);
   assert.strictEqual(
     result.appendedScripts[0].src,
-    'chrome-extension://lumno/src/overlay/tab-switcher-page-bridge.js'
+    `chrome-extension://lumno/build/${config.pageRuntime}.js`,
+    'bootstrap should start the page bundle once the React islands are ready'
   );
   assert.strictEqual(
-    result.appendedScripts[1].src,
-    `chrome-extension://lumno/src/${config.pageRuntime}/${config.pageRuntime}.js`
-  );
-  assert.strictEqual(
-    result.appendedScripts[1].dataset.lumnoPageRuntime,
+    result.appendedScripts[0].dataset.lumnoPageRuntime,
     config.pageRuntime
   );
 }

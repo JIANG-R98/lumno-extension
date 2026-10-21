@@ -11,7 +11,7 @@
   const MENU_ITEM_ID = 'lumno-add-page-shortcut';
   // Shortcuts hold http and https pages; browser pages never show the menu.
   const DOCUMENT_URL_PATTERNS = Object.freeze(['http://*/*', 'https://*/*']);
-  const TOAST_FILES = Object.freeze(['src/shared/ui/toast.js', 'src/content/page-shortcut-toast.js']);
+  const TOAST_FILES = Object.freeze(['build/page-shortcut-toast.js']);
   const MENU_TITLE_FALLBACK = 'Add to Lumno New Tab shortcuts';
 
   function createController(options) {

@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const popup = require('../../src/popup/popup.js');
 const { readBackgroundSource } = require('../helpers/background-source');
+const { getBundleFiles, getPageScripts } = require('../helpers/runtime-scripts');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const read = (file) => fs.readFileSync(path.join(repoRoot, file), 'utf8');
@@ -239,10 +240,13 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
   const manifest = JSON.parse(read('manifest.json'));
   assert.strictEqual(manifest.action.default_popup, 'src/popup/popup.html');
   const html = read('src/popup/popup.html');
-  ['../shared/settings.js', 'popup-theme-preload.js', '../shared/url-guards.js', '../shared/shortcut-display.js',
-    '../shared/ui/tooltip.js', '../shared/ui/cursor-tooltip.js', '../shared/ui/toast.js', '../background/pip-main-world.js', '../shared/browser-profile.js']
-    .forEach((script) => assert(html.includes(`src="${script}"`), `the popup loads ${script}`));
-  assert(html.indexOf('popup-theme-preload.js') < html.indexOf('x-lumno-popup-root'),
+  const scripts = getPageScripts('src/popup/popup.html');
+  ['src/shared/settings.js', 'src/popup/popup-theme-preload.js', 'src/shared/url-guards.js', 'src/shared/shortcut-display.js',
+    'src/shared/ui/tooltip.js', 'src/shared/ui/cursor-tooltip.js', 'src/shared/ui/toast.js', 'src/background/pip-main-world.js',
+    'src/shared/browser-profile.js']
+    .forEach((script) => assert(scripts.includes(script), `the popup loads ${script}`));
+  assert(html.indexOf('build/popup-preload.js') < html.indexOf('x-lumno-popup-root') &&
+      getBundleFiles('popup-preload').includes('src/popup/popup-theme-preload.js'),
     'the theme is painted before the popup renders');
   const background = readBackgroundSource();
   assert(!background.includes('chrome.action.onClicked'), 'a popup replaces the toolbar click handler');

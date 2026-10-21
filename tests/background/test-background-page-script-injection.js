@@ -6,12 +6,8 @@ const { loadBackground, wait } = require('../helpers/background-harness');
 // into already-open tabs only after an install, reload or update, a few tabs
 // at a time.
 
-const COPY_URL_FILES = [
-  'src/shared/settings.js',
-  'src/shared/page-color-scheme.js',
-  'src/content/hotkey-listener.js'
-];
-const OBSERVER_FILES = ['src/shared/shortcut-key-matcher.js', 'src/content/shortcut-key-observer.js'];
+const COPY_URL_FILES = ['build/hotkey-listener.js'];
+const OBSERVER_FILES = ['build/shortcut-key-observer.js'];
 
 function executeScriptCalls(harness, files) {
   return harness.calls

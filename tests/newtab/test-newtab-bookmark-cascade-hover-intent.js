@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const newtabJs = readNewtabRuntimeSource();
@@ -499,12 +500,14 @@ assertContains(
   'NEWTAB_BOOKMARK_CASCADE_MENU.createBookmarkCascadeMenuRuntime',
   'newtab should delegate bookmark cascade behavior to the menu runtime'
 );
-assert.ok(
-  newtabHtml.indexOf('bookmark-cascade-position.js') >= 0 &&
-    newtabHtml.indexOf('bookmark-cascade-menu.js') > newtabHtml.indexOf('bookmark-cascade-position.js') &&
-    newtabHtml.indexOf('bookmark-cascade-menu.js') < newtabHtml.indexOf('react-page-bootstrap.js'),
-  'newtab should load the cascade menu runtime after positioning helpers and before the page bootstrap'
-);
+{
+  const newtabScripts = getPageScripts('newtab.html');
+  assert.ok(
+    runsBefore(newtabScripts, 'src/newtab/bookmarks/bookmark-cascade-position.js', 'src/newtab/bookmarks/bookmark-cascade-menu.js') &&
+      runsBefore(newtabScripts, 'src/newtab/bookmarks/bookmark-cascade-menu.js', 'src/newtab/newtab.js'),
+    'newtab should load the cascade menu runtime after positioning helpers and before the page entry'
+  );
+}
 {
   const cascadeItemRule = getCssRuleBody(newtabHtml, '.x-nt-bookmark-cascade-item');
   assertContains(

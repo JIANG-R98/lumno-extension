@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { getPageScripts } = require('../helpers/runtime-scripts');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const newtabJs = readNewtabRuntimeSource();
@@ -162,9 +163,8 @@ assertContains(
   'the React wechat detail close icon should close the popover and restore focus'
 );
 
-assertContains(
-  newtabHtml,
-  '<script src="../shared/community-links.js"></script>',
+assert.ok(
+  getPageScripts('newtab.html').includes('src/shared/community-links.js'),
   'newtab should load the shared dynamic community links runtime'
 );
 

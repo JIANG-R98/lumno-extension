@@ -4,7 +4,6 @@ const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const { readBackgroundSource } = require('../helpers/background-source');
 const { readPageSource } = require('../helpers/page-source');
 
-const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
 const optionsHtml = readPageSource('src/options/options.html');
 const optionsSource = readOptionsRuntimeSource();
 const settings = require('../../src/shared/settings.js');
@@ -26,14 +25,14 @@ const providerStorageKey = '_x_extension_selection_quick_actions_provider_2026_u
 const groupEnabledStorageKey = '_x_extension_selection_quick_actions_group_enabled_2026_unique_';
 
 const selectionScriptRegistration = require('../../src/background/selection-script-registration.js');
+const { getBundleFiles, getManifestContentScripts } = require('../helpers/runtime-scripts');
 assert(
-  !manifest.content_scripts.some((entry) => (
-    Array.isArray(entry.js) && entry.js.includes('src/content/selection-quick-actions.js')
-  )),
+  !getManifestContentScripts().some((files) => files.includes('src/content/selection-quick-actions.js')),
   'the default-off selection toolbar should not load into every page from the manifest'
 );
+assert.deepStrictEqual(Array.from(selectionScriptRegistration.SCRIPT_FILES), ['build/selection-quick-actions.js']);
 assert.deepStrictEqual(
-  Array.from(selectionScriptRegistration.SCRIPT_FILES),
+  getBundleFiles('selection-quick-actions'),
   ['src/shared/settings.js', 'src/shared/selection-action-icons.js', 'src/shared/selection-intent.js', 'src/shared/ui/toast.js', 'src/content/selection-quick-actions.js'],
   'provider-aware settings, the selection classifier, and the shared Toast should load before the content interaction runtime'
 );

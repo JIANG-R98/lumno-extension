@@ -162,7 +162,7 @@ async function testPopupWebClipIsNotBlockedByTabsThatNeverAnswer() {
     'frozen and discarded tabs are not asked');
   assert.ok(injected.some((options) => options.target.tabId === silentTab.id), 'other tabs are still checked');
   assert.ok(injected.some((options) => options.target.tabId === senderTab.id &&
-      Array.isArray(options.files) && options.files.includes('src/content/document-pip-picker.js')),
+      Array.isArray(options.files) && options.files.includes('build/document-pip-picker.js')),
     'the picker opens once the check gives up on a tab that never answers');
 }
 

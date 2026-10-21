@@ -11,13 +11,7 @@
   // which the manifest entry used to cover; turning it off leaves running
   // copies to hide themselves through their own storage listener.
   const SCRIPT_ID = 'lumno-selection-quick-actions';
-  const SCRIPT_FILES = Object.freeze([
-    'src/shared/settings.js',
-    'src/shared/selection-action-icons.js',
-    'src/shared/selection-intent.js',
-    'src/shared/ui/toast.js',
-    'src/content/selection-quick-actions.js'
-  ]);
+  const SCRIPT_FILES = Object.freeze(['build/selection-quick-actions.js']);
   const RUN_AT = 'document_idle';
   const INJECTABLE_URL_PATTERN = /^(https?|file):/i;
 

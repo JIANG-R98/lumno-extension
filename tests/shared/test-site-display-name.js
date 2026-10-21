@@ -2,11 +2,10 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const siteDisplayName = require('../../src/shared/site-display-name.js');
-const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const newtabHtml = readPageSource('newtab.html');
 const newtabJs = readNewtabRuntimeSource();
 const sharedSource = fs.readFileSync(
   path.join(repoRoot, 'src/shared/site-display-name.js'),
@@ -53,14 +52,12 @@ assert.strictEqual(
   'callers should be able to localize a known brand without rebuilding the brand map'
 );
 
-const sharedScriptPath = '../shared/site-display-name.js';
 assert.ok(
-  newtabHtml.includes(`<script src="${sharedScriptPath}"></script>`),
+  getPageScripts('newtab.html').includes('src/shared/site-display-name.js'),
   'newtab should load the shared site display-name resolver'
 );
 assert.ok(
-  newtabHtml.indexOf(`<script src="${sharedScriptPath}"></script>`) <
-    newtabHtml.indexOf('data-page-entry="../newtab/newtab.js"'),
+  runsBefore(getPageScripts('newtab.html'), 'src/shared/site-display-name.js', 'src/newtab/newtab.js'),
   'the shared resolver should load before the newtab runtime entry'
 );
 assert.ok(

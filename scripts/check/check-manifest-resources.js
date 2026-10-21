@@ -1,116 +1,10 @@
 const fs = require('fs');
 const path = require('path');
+const { BUNDLES, BUNDLE_DIRECTORY } = require('../build/bundles');
 
 const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
 const missing = [];
-const injectedScriptFiles = [
-  'src/background/aggregate-search.js',
-  'src/background/codex-debug-bridge.js',
-  'src/background/extension-pages.js',
-  'src/background/message-router.js',
-  'src/background/newtab-fallback.js',
-  'src/background/shortcut-rules.js',
-  'src/background/pip-ownership.js',
-  'src/background/pip-main-world.js',
-  'src/background/recent-tab-switcher.js',
-  'src/background/progress-tracker.js',
-  'src/shared/progress-match.js',
-  'src/shared/progress-history.js',
-  'src/shared/extension-routes.js',
-  'src/shared/codex-debug-surface.js',
-  'src/shared/navigation-disposition.js',
-  'src/shared/community-links.js',
-  'src/shared/browser-profile.js',
-  'src/shared/settings.js',
-  'src/shared/cjk-font-faces.js',
-  'src/shared/search/utils/direct-navigation.js',
-  'src/shared/search/utils/text-normalize.js',
-  'src/shared/search/utils/text-index.js',
-  'src/shared/search/utils/keyboard-layouts.js',
-  'src/shared/search/utils/text-matching.js',
-  'src/shared/search/utils/selection-stats.js',
-  'src/shared/search/utils/result-dedup.js',
-  'src/shared/search/utils/suggestion-slate.js',
-  'src/shared/search/utils/query-intent.js',
-  'src/shared/search/utils/relevance-score.js',
-  'src/shared/search/utils/brand-suggestions.js',
-  'src/shared/search/utils/navigation-matching.js',
-  'src/shared/search/utils/site-search-providers.js',
-  'src/shared/search/utils/site-search-matching.js',
-  'src/shared/search/search-utils.js',
-  'src/shared/search/aggregate-search-store.js',
-  'src/shared/search/aggregate-search-surface.js',
-  'src/shared/search/site-search-store.js',
-  'src/shared/search/suggestion-action-model.js',
-  'src/shared/search/suggestion-navigation.js',
-  'src/shared/search/ime-key-guard.js',
-  'src/react/overlay-islands.js',
-  'src/shared/search/search-input-history.js',
-  'assets/vendor/pinyin-pro.js',
-  'src/shared/search/search-han-variants.js',
-  'src/shared/search/input-mode/controller-dom.js',
-  'src/shared/search/input-mode/mode-menu-language.js',
-  'src/shared/search/input-mode/prefix-visual.js',
-  'src/shared/search/input-mode/prefix-content.js',
-  'src/shared/search/input-mode/prefix-motion.js',
-  'src/shared/search/input-mode/mode-tab-keys.js',
-  'src/shared/search/input-mode/prefix-text.js',
-  'src/shared/search/input-mode/mode-menu-icons.js',
-  'src/shared/search/input-mode/mode-menu-search.js',
-  'src/shared/search/input-mode/mode-menu-navigation.js',
-  'src/shared/search/input-mode/mode-menu-render.js',
-  'src/shared/search/input-mode/mode-menu-layout.js',
-  'src/shared/search/input-mode/mode-menu-lifecycle.js',
-  'src/shared/search/search-input-mode.js',
-  'src/shared/search/search-source-order.js',
-  'src/shared/ui/sortable-drag.js',
-  'src/shared/ui/toast.js',
-  'src/shared/page-color-scheme.js',
-  'src/shared/selection-action-icons.js',
-  'src/content/selection-quick-actions.js',
-  'src/shared/favicon/shortcut-favicon.js',
-  'src/shared/search/search-input.css',
-  'src/shared/ui/toast.css',
-  'src/shared/url-guards.js',
-  'src/shared/favicon/favicon-utils.js',
-  'src/shared/favicon/favicon-cache.js',
-  'src/shared/favicon/favicon-view-core.js',
-  'src/overlay/runtime.js',
-  'src/overlay/favicon-view.js',
-  'src/overlay/suggestions-view.css',
-  'src/overlay/lifecycle.js',
-  'src/overlay/site-fixes.js',
-  'src/overlay/page-theme.js',
-  'src/overlay/notices.js',
-  'src/overlay/keyboard.js',
-  'src/overlay/panel/entry-motion.js',
-  'src/overlay/panel/panel-language.js',
-  'src/overlay/panel/default-search-engine.js',
-  'src/overlay/panel/panel-session.js',
-  'src/overlay/panel/favicon-policy.js',
-  'src/overlay/panel/page-guards.js',
-  'src/overlay/panel/results-layout.js',
-  'src/overlay/panel/slash-commands.js',
-  'src/overlay/panel/panel-theme.js',
-  'src/overlay/panel/suggestion-themes.js',
-  'src/overlay/panel/result-activation.js',
-  'src/overlay/panel/tab-matching.js',
-  'src/overlay/panel/autocomplete.js',
-  'src/overlay/panel/site-search-providers.js',
-  'src/overlay/panel/search-mode-menu.js',
-  'src/overlay/panel/search-modes.js',
-  'src/overlay/panel/search-input-events.js',
-  'src/overlay/panel/panel-keys.js',
-  'src/overlay/panel/suggestions-render.js',
-  'src/overlay/panel/suggestion-sources.js',
-  'src/overlay/panel/remote-suggestions.js',
-  'src/overlay/panel/copy-actions.js',
-  'src/overlay/panel/panel-notices.js',
-  'src/overlay/panel/settings-sync.js',
-  'src/overlay/search-panel.js',
-  'src/overlay/tab-switcher.js',
-  'src/content/document-pip-picker.js'
-];
+const bundleNames = new Set(BUNDLES.map((bundle) => bundle.name));
 
 function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -157,6 +51,14 @@ function checkPath(value) {
   if (/^(https?:|chrome:|__MSG_)/.test(value)) {
     return;
   }
+  // Bundles are build output: a reference needs a bundle of that name.
+  const bundle = normalizeManifestResourcePath(value).match(new RegExp(`^${BUNDLE_DIRECTORY}/([\\w-]+)\\.js$`));
+  if (bundle) {
+    if (!bundleNames.has(bundle[1])) {
+      missing.push(value);
+    }
+    return;
+  }
   if (manifestResourcePatternHasMatch(value)) {
     return;
   }
@@ -197,7 +99,7 @@ function checkCssUrlReferences(file, source) {
 }
 
 function checkConcreteExtensionPathReferences(file, source) {
-  const extensionPathPattern = /(['"`])((?:assets|src|_locales|output)\/[^'"`?#)>\s]+)(?:[?#][^'"`]*)?\1/g;
+  const extensionPathPattern = /(['"`])((?:assets|build|src|_locales|output)\/[^'"`?#)>\s]+)(?:[?#][^'"`]*)?\1/g;
   let match = null;
   while ((match = extensionPathPattern.exec(source))) {
     if (!match[2].includes('${')) {
@@ -371,7 +273,7 @@ function run() {
     process.exitCode = 1;
     return false;
   }
-  injectedScriptFiles.forEach(checkPath);
+  BUNDLES.forEach((bundle) => bundle.files.forEach(checkPath));
   checkRuntimeGetUrlReferences();
   checkHtmlReferences();
   checkCssFiles();

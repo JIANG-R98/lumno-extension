@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { getPageScripts } = require('../helpers/runtime-scripts');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const newtabJs = readNewtabRuntimeSource();
@@ -451,15 +452,15 @@ assert.strictEqual(
 
 // Wiring contracts.
 assertOrder(
-  newtabHtml,
-  '<script src="bookmarks/bookmark-drag.js"></script>',
-  '<script src="cross-surface-drag.js"></script>',
+  getPageScripts('newtab.html'),
+  'src/newtab/bookmarks/bookmark-drag.js',
+  'src/newtab/cross-surface-drag.js',
   'the cross-surface helpers should load with the other drag helpers'
 );
 assertOrder(
-  newtabHtml,
-  '<script src="cross-surface-drag.js"></script>',
-  'data-page-entry="../newtab/newtab.js"',
+  getPageScripts('newtab.html'),
+  'src/newtab/cross-surface-drag.js',
+  'src/newtab/newtab.js',
   'the cross-surface helpers should load before the page runtime'
 );
 assert.ok(

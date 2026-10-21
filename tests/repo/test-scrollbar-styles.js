@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { SPLIT_STYLESHEETS, readStylesheetSource } = require('../helpers/css-tokens');
+const { getBundleFiles } = require('../helpers/runtime-scripts');
 
 // Windows (and macOS set to always show scrollbars) draws a wide system
 // scrollbar in any scroll box that does not style or hide its own. Inside a
@@ -186,10 +187,18 @@ assert.deepStrictEqual(unscoped, [], `thin-bar rules should keep macOS overlay b
 });
 
 // Every page marks the scrollbar kind in <head>, before its styles paint.
-['newtab.html', 'src/options/options.html', 'src/onboarding/onboarding.html'].forEach((file) => {
+[
+  ['newtab.html', 'newtab-preload'],
+  ['src/options/options.html', 'options-preload'],
+  ['src/onboarding/onboarding.html', 'onboarding-preload']
+].forEach(([file, bundle]) => {
   const html = fs.readFileSync(path.join(repoRoot, file), 'utf8');
   const head = html.slice(0, html.indexOf('</head>'));
-  assert.match(head, /<script src="\.\.\/shared\/scrollbar-mode\.js"><\/script>/, `${file} should load the scrollbar mode marker in <head>`);
+  assert.ok(
+    head.includes(`<script src="../../build/${bundle}.js"></script>`) &&
+      getBundleFiles(bundle).includes('src/shared/scrollbar-mode.js'),
+    `${file} should load the scrollbar mode marker in <head>`
+  );
 });
 
 // The marker measures an unstyled probe: no width means overlay bars.

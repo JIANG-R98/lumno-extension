@@ -3,11 +3,10 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 const folderIcon = require('../../src/newtab/bookmarks/bookmark-folder-icon.js');
-const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const newtabHtml = readPageSource('newtab.html');
 const newtabJs = readNewtabRuntimeSource();
 assert.deepStrictEqual(folderIcon.normalizeFolderColorMap(JSON.parse('{"1":"#aabbcc", "2":"#FF0000", "3":"bad-value", "__proto__":"#ffffff", "invalid id":"#ffffff"}')), { '1': '#AABBCC', '2': '#FF0000' });
 
@@ -194,11 +193,8 @@ assert.strictEqual(iconElement.querySelector('svg').getAttribute('data-folder-co
   }
 }
 
-const scriptPath = 'bookmarks/bookmark-folder-icon.js';
-assert.ok(newtabHtml.includes(`<script src="${scriptPath}"></script>`));
 assert.ok(
-  newtabHtml.indexOf(`<script src="${scriptPath}"></script>`) <
-    newtabHtml.indexOf('data-page-entry="../newtab/newtab.js"'),
+  runsBefore(getPageScripts('newtab.html'), 'src/newtab/bookmarks/bookmark-folder-icon.js', 'src/newtab/newtab.js'),
   'the folder icon component should load before the newtab runtime'
 );
 assert.ok(

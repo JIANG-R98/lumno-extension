@@ -2,8 +2,8 @@ const assert = require('assert');
 const fs = require('fs');
 
 const matcher = require('../../src/shared/shortcut-key-matcher.js');
-const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { getManifestContentScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 const macEvent = matcher.describeKeyboardEvent({
   code: 'KeyK',
@@ -83,30 +83,22 @@ assert.strictEqual(
   true
 );
 
-const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
-const shortcutObserverEntry = manifest.content_scripts.find((entry) =>
-  Array.isArray(entry.js) && entry.js.includes('src/content/shortcut-key-observer.js'));
+const contentScripts = getManifestContentScripts();
 assert(
-  shortcutObserverEntry &&
-    shortcutObserverEntry.js.indexOf('src/shared/shortcut-key-matcher.js') <
-      shortcutObserverEntry.js.indexOf('src/content/shortcut-key-observer.js'),
+  contentScripts.some((files) => runsBefore(files, 'src/shared/shortcut-key-matcher.js', 'src/content/shortcut-key-observer.js')),
   'the page shortcut observer should load the shared matcher first'
 );
 assert.strictEqual(
-  manifest.content_scripts.filter((entry) =>
-    Array.isArray(entry.js) && entry.js.includes('src/shared/shortcut-key-matcher.js')).length,
+  contentScripts.filter((files) => files.includes('src/shared/shortcut-key-matcher.js')).length,
   1,
   'the shared matcher should be injected once per frame, by the observer entry that uses it'
 );
 const onboardingSource = fs.readFileSync('src/onboarding/onboarding-content.js', 'utf8');
-const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
 const newtabSource = readNewtabRuntimeSource();
-const newtabHtml = readPageSource('newtab.html');
 assert.match(onboardingSource, /SHORTCUT_KEY_MATCHER\.parseShortcut\(normalizeShortcutValue\(shortcut\)\)/);
 assert.match(onboardingSource, /SHORTCUT_KEY_MATCHER\.eventMatchesShortcut\(event, parseShortcutHotkey\(shortcut\)\)/);
 assert(
-  onboardingHtml.indexOf('../shared/shortcut-key-matcher.js') <
-    onboardingHtml.indexOf('onboarding-content.js'),
+  runsBefore(getPageScripts('src/onboarding/onboarding.html'), 'src/shared/shortcut-key-matcher.js', 'src/onboarding/onboarding-content.js'),
   'onboarding should load the shared matcher before its content model'
 );
 assert.match(newtabSource, /SHORTCUT_KEY_MATCHER\.parseShortcut\(nextShortcut\)/);
@@ -115,8 +107,7 @@ assert.match(
   /SHORTCUT_KEY_MATCHER\.eventMatchesShortcut\(event, fallbackShortcutSpec\)/
 );
 assert(
-  newtabHtml.indexOf('../shared/shortcut-key-matcher.js') <
-    newtabHtml.indexOf('data-page-entry="../newtab/newtab.js"'),
+  runsBefore(getPageScripts('newtab.html'), 'src/shared/shortcut-key-matcher.js', 'src/newtab/newtab.js'),
   'newtab should load the shared matcher before its runtime entry'
 );
 

@@ -3,7 +3,6 @@ const fs = require('fs');
 const path = require('path');
 const { readSearchInputModeSource, readSearchInputModeRuntimeSource } = require('../helpers/search-input-mode-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-const { readBackgroundSource } = require('../helpers/background-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
@@ -71,6 +70,7 @@ assert.ok(fs.existsSync(cursorTooltipCssPath), 'cursor-following tooltip styling
 
 require(tooltipJsPath);
 const cursorTooltip = require(cursorTooltipJsPath);
+const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 const cursorTooltipCss = fs.readFileSync(cursorTooltipCssPath, 'utf8');
 
 assert.strictEqual(
@@ -679,17 +679,16 @@ assert.strictEqual(
 
 const newtabHtml = fs.readFileSync(newtabHtmlPath, 'utf8');
 const newtabPanel = readNewtabRuntimeSource();
-const background = readBackgroundSource();
 const overlayPanel = readOverlayPanelSource();
 const searchInputMode = readSearchInputModeSource();
 assert.ok(newtabHtml.includes('../shared/ui/cursor-tooltip.css'), 'newtab should load cursor tooltip stylesheet');
-assert.ok(newtabHtml.includes('../shared/ui/cursor-tooltip.js'), 'newtab should load cursor tooltip component');
+assert.ok(getPageScripts('newtab.html').includes('src/shared/ui/cursor-tooltip.js'), 'newtab should load cursor tooltip component');
 assert.ok(
-  newtabHtml.indexOf('../shared/ui/tooltip.js') < newtabHtml.indexOf('../shared/ui/cursor-tooltip.js'),
+  runsBefore(getPageScripts('newtab.html'), 'src/shared/ui/tooltip.js', 'src/shared/ui/cursor-tooltip.js'),
   'newtab should load shared tooltip before cursor tooltip'
 );
 assert.ok(
-  background.includes("'src/shared/ui/cursor-tooltip.js'"),
+  runsBefore(getInjectedScripts('overlay'), 'src/shared/ui/cursor-tooltip.js', 'src/overlay/search-panel.js'),
   'overlay injection should load cursor tooltip behavior before search-panel'
 );
 assert.ok(

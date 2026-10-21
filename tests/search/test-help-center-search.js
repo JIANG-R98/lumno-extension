@@ -5,6 +5,7 @@ const communityLinks = require('../../src/shared/community-links.js');
 const searchUtils = require('../../src/shared/search/search-utils.js');
 const { readBackgroundSource } = require('../helpers/background-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 const ORIGIN = 'https://lumno.kubai.design';
 const index = helpCenterSearch.normalizeIndex([
@@ -359,16 +360,12 @@ const importBlock = fs.readFileSync('src/background/background.js', 'utf8').matc
 assert.ok(importBlock.includes("'src/shared/community-links.js'") && importBlock.includes("'src/shared/search/help-center-search.js'"));
 assert.match(backgroundSource, /parse: HELP_CENTER_SEARCH\.normalizeSynonyms/, 'background should load the synonym list');
 assert.match(backgroundSource, /response\.status === 404 \? \{ ok: true, json: \(\) => \[\] \}/, 'a missing synonym list should be cached as empty');
-const overlayFiles = backgroundSource.slice(backgroundSource.indexOf('const overlayInjectionFiles'));
 assert.ok(
-  overlayFiles.indexOf("'src/shared/search/help-center-search.js'") > 0 &&
-    overlayFiles.indexOf("'src/shared/search/help-center-search.js'") < overlayFiles.indexOf("'src/overlay/search-panel.js'"),
+  runsBefore(getInjectedScripts('overlay'), 'src/shared/search/help-center-search.js', 'src/overlay/search-panel.js'),
   'the overlay should load the help center module before the search panel'
 );
-const newtabHtml = fs.readFileSync('newtab.html', 'utf8');
 assert.ok(
-  newtabHtml.indexOf('../shared/search/help-center-search.js') > 0 &&
-    newtabHtml.indexOf('../shared/search/help-center-search.js') < newtabHtml.indexOf('suggestions-controller.js'),
+  runsBefore(getPageScripts('newtab.html'), 'src/shared/search/help-center-search.js', 'src/newtab/search/suggestions-controller.js'),
   'the new tab should load the help center module before its suggestions controller'
 );
 assert.match(

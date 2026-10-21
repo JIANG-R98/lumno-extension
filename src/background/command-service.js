@@ -443,11 +443,7 @@ function getConfiguredCopyUrlCommandShortcut(callback) {
 // The copy-URL listener is injected into a tab the first time the command
 // runs there instead of being a content script of every page: it is the only
 // user of these files in a page, and most tabs never copy their URL.
-const COPY_URL_LISTENER_FILES = Object.freeze([
-  'src/shared/settings.js',
-  'src/shared/page-color-scheme.js',
-  'src/content/hotkey-listener.js'
-]);
+const COPY_URL_LISTENER_FILES = Object.freeze(['build/hotkey-listener.js']);
 
 function sendCopyCurrentUrlCommand(tabId, callback) {
   chrome.tabs.sendMessage(tabId, { action: 'copyCurrentPageUrlFromCommand' }, (response) => {

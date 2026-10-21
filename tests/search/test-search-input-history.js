@@ -1,13 +1,12 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const historyApi = require(path.join(repoRoot, 'src/shared/search/search-input-history.js'));
-const { readBackgroundSource } = require('../helpers/background-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { getInjectedScripts, getPageScripts } = require('../helpers/runtime-scripts');
 
 function createStorage(initialValue) {
   const state = {
@@ -108,8 +107,6 @@ function testShortcutDetection() {
 }
 
 function testSurfaceIntegrationContract() {
-  const newtabHtml = readPageSource('newtab.html');
-  const backgroundSource = readBackgroundSource();
   const newtabSource = readNewtabRuntimeSource();
   const overlaySource = readOverlayPanelSource();
   const shortcutReferenceSource = fs.readFileSync(
@@ -118,11 +115,11 @@ function testSurfaceIntegrationContract() {
   );
 
   assert.ok(
-    newtabHtml.includes('<script src="../shared/search/search-input-history.js"></script>'),
+    getPageScripts('newtab.html').includes('src/shared/search/search-input-history.js'),
     'New Tab should load the shared input history helper'
   );
   assert.ok(
-    backgroundSource.includes("'src/shared/search/search-input-history.js'"),
+    getInjectedScripts('overlay').includes('src/shared/search/search-input-history.js'),
     'overlay injection should load the shared input history helper'
   );
   assert.ok(

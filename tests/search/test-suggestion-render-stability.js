@@ -2,9 +2,9 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const suggestionModel = require('../../src/shared/search/suggestion-action-model.js');
-const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 const repoRoot = path.join(__dirname, '..', '..');
 
@@ -125,7 +125,6 @@ function verifyClassification() {
 
 verifyClassification();
 const newtabSource = readNewtabRuntimeSource();
-const newtabHtml = readPageSource('newtab.html');
 const newtabLayoutSource = readSource('src/newtab/layout.js');
 const overlaySource = readOverlayPanelSource();
 
@@ -147,9 +146,8 @@ assert.match(
   /function commitSuggestionsNaturalHeightAfterRender\(\) \{[\s\S]*?SUGGESTIONS_HEIGHT_LAYOUT\.applyNaturalSuggestionsHeightLayout\([\s\S]*?suggestionsContainer[\s\S]*?syncSearchModeMenuResultOffset\(\);/,
   'Overlay result commits should adopt natural height and publish the final menu offset synchronously'
 );
-assert.match(
-  newtabHtml,
-  /<script src="search\/direct-navigation-settle\.js"><\/script>/,
+assert.ok(
+  runsBefore(getPageScripts('newtab.html'), 'src/newtab/search/direct-navigation-settle.js', 'src/newtab/newtab.js'),
   'New Tab should load the direct-navigation settle controller before its page runtime'
 );
 assert.match(

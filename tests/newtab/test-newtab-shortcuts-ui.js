@@ -5,6 +5,7 @@ const path = require('path');
 const vm = require('vm');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const newtabJs = readNewtabRuntimeSource();
@@ -586,33 +587,19 @@ async function assertDarkThemeKeepsShortcutThemeBackground() {
   assert.strictEqual(shortcutTile.style.getPropertyValue('--x-nt-shortcut-fallback-icon-color'), '', 'clearing wallpaper should restore theme-aware fallback foregrounds');
 }
 
-assertContains(
-  newtabHtml,
-  '<script src="shortcuts/shortcuts-store.js"></script>',
+const newtabScripts = getPageScripts('newtab.html');
+assert.ok(
+  runsBefore(newtabScripts, 'src/newtab/shortcuts/shortcuts-store.js', 'src/newtab/newtab.js'),
   'new tab page should load the shortcuts store before newtab.js'
 );
 
 assert.ok(
-  newtabHtml.indexOf('<script src="shortcuts/shortcuts-store.js"></script>') <
-    newtabHtml.indexOf('src="../shared/react-page-bootstrap.js"'),
-  'shortcuts store should load before the page bootstrap'
-);
-
-assertContains(
-  newtabHtml,
-  '<script src="shortcuts/shortcut-icon-store.js"></script>',
-  'new tab page should load the local shortcut icon store'
+  runsBefore(newtabScripts, 'src/newtab/shortcuts/shortcut-icon-store.js', 'src/newtab/newtab.js'),
+  'shortcut icon processing should load before the page entry opens the React dialog'
 );
 
 assert.ok(
-  newtabHtml.indexOf('<script src="shortcuts/shortcut-icon-store.js"></script>') <
-    newtabHtml.indexOf('src="../shared/react-page-bootstrap.js"'),
-  'shortcut icon processing should load before the bootstrap starts the React dialog'
-);
-
-assertContains(
-  newtabHtml,
-  '<script src="../shared/favicon/shortcut-favicon.js"></script>',
+  newtabScripts.includes('src/shared/favicon/shortcut-favicon.js'),
   'new tab page should load the dedicated high-resolution shortcut favicon cache'
 );
 

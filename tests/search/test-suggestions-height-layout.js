@@ -1,17 +1,14 @@
 const assert = require('assert');
 const fs = require('fs');
-const { readPageSource } = require('../helpers/page-source');
-const { readBackgroundSource } = require('../helpers/background-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 delete globalThis.LumnoSuggestionsHeightLayout;
 require('../../src/shared/search/suggestions-height-layout.js');
 
 const runtime = globalThis.LumnoSuggestionsHeightLayout;
-const newtabHtml = readPageSource('newtab.html');
 const newtabLayoutSource = fs.readFileSync('src/newtab/layout.js', 'utf8');
 const overlaySource = readOverlayPanelSource();
-const backgroundSource = readBackgroundSource();
 
 assert.ok(
   runtime && typeof runtime.applyNaturalSuggestionsHeightLayout === 'function',
@@ -63,19 +60,13 @@ assert.deepStrictEqual(
 );
 assert.strictEqual(runtime.applyNaturalSuggestionsHeightLayout(null), false);
 
-const helperScriptIndex = newtabHtml.indexOf(
-  '<script src="../shared/search/suggestions-height-layout.js"></script>'
-);
 assert.ok(
-  helperScriptIndex >= 0 &&
-    helperScriptIndex < newtabHtml.indexOf('<script src="layout.js"></script>') &&
-    helperScriptIndex < newtabHtml.indexOf('data-page-entry="../newtab/newtab.js"'),
+  runsBefore(getPageScripts('newtab.html'), 'src/shared/search/suggestions-height-layout.js', 'src/newtab/layout.js') &&
+    runsBefore(getPageScripts('newtab.html'), 'src/shared/search/suggestions-height-layout.js', 'src/newtab/newtab.js'),
   'New Tab should load the shared height policy before its layout and page runtimes'
 );
 assert.ok(
-  backgroundSource.indexOf("'src/shared/search/suggestions-height-layout.js'") >= 0 &&
-    backgroundSource.indexOf("'src/shared/search/suggestions-height-layout.js'") <
-      backgroundSource.indexOf("'src/overlay/search-panel.js'"),
+  runsBefore(getInjectedScripts('overlay'), 'src/shared/search/suggestions-height-layout.js', 'src/overlay/search-panel.js'),
   'Overlay injection should load the shared height policy before the panel runtime'
 );
 [newtabLayoutSource, overlaySource].forEach((source, index) => {

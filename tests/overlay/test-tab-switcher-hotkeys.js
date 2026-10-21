@@ -3,6 +3,7 @@ const fs = require('fs');
 const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const { readPageSource } = require('../helpers/page-source');
 const { readBackgroundSource } = require('../helpers/background-source');
+const { getInjectedScripts, getManifestContentScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 const contentHotkeySource = fs.readFileSync('src/content/hotkey-listener.js', 'utf8');
 const shortcutReleaseRelaySource = fs.readFileSync(
@@ -21,10 +22,8 @@ const switcherBridgeSource = fs.existsSync(switcherBridgePath)
   ? fs.readFileSync(switcherBridgePath, 'utf8')
   : '';
 const manifestSource = fs.readFileSync('manifest.json', 'utf8');
-const newtabHtmlSource = readPageSource('newtab.html');
 const optionsHtmlSource = readPageSource('src/options/options.html');
 const optionsSource = readOptionsRuntimeSource();
-const onboardingHtmlSource = readPageSource('src/onboarding/onboarding.html');
 const manifest = JSON.parse(manifestSource);
 const localeNames = ['en', 'ja', 'zh_CN', 'zh_TW'];
 const localeMessages = Object.fromEntries(localeNames.map((locale) => [
@@ -53,12 +52,10 @@ assert.match(
   'shared tab switcher bridge should call the same in-page advance hook and report suppressed initial shortcuts'
 );
 assert.ok(
-  manifest.content_scripts &&
-    manifest.content_scripts.every((entry) => (
-      Array.isArray(entry.js) &&
-      !entry.js.includes('src/overlay/tab-switcher.js') &&
-      !entry.js.includes('src/overlay/tab-switcher-page-bridge.js')
-    )),
+  getManifestContentScripts().every((files) => (
+    !files.includes('src/overlay/tab-switcher.js') &&
+    !files.includes('src/overlay/tab-switcher-page-bridge.js')
+  )),
   'normal pages should not preload the tab switcher runtime or bridge as content scripts'
 );
 assert.match(
@@ -128,7 +125,7 @@ assert.match(
 );
 assert.match(
   backgroundSource,
-  /function prepareShortcutKeyObserver\(tab\)[\s\S]*allFrames:\s*true[\s\S]*files:\s*\['src\/shared\/shortcut-key-matcher\.js',\s*'src\/content\/shortcut-key-observer\.js'\]/,
+  /function prepareShortcutKeyObserver\(tab\)[\s\S]*allFrames:\s*true[\s\S]*files:\s*\['build\/shortcut-key-observer\.js'\]/,
   'the background should dynamically install the release observer in already-open tabs and focused frames'
 );
 assert.match(
@@ -136,14 +133,14 @@ assert.match(
   /function prepareShortcutKeyObserversInOpenTabs\(\)[\s\S]*chrome\.tabs\.query\(\{\},[\s\S]*prepareShortcutKeyObserver\(tab\)[\s\S]*chrome\.runtime\.onInstalled\.addListener\([\s\S]*prepareShortcutKeyObserversInOpenTabs\(\)/,
   'an extension reload or update should prepare already-open tabs before the user presses the shortcut'
 );
-const shortcutReleaseContentScript = manifest.content_scripts.find((entry) => (
-  entry &&
-  Array.isArray(entry.js) &&
-  entry.js.includes('src/content/shortcut-key-observer.js')
+const shortcutReleaseContentScript = manifest.content_scripts.find((entry, index) => (
+  getManifestContentScripts()[index].includes('src/content/shortcut-key-observer.js')
 ));
+assert.deepStrictEqual(getInjectedScripts('shortcutObserver'),
+  ['src/shared/shortcut-key-matcher.js', 'src/content/shortcut-key-observer.js']);
 assert.ok(
   shortcutReleaseContentScript &&
-    shortcutReleaseContentScript.js[0] === 'src/shared/shortcut-key-matcher.js' &&
+    shortcutReleaseContentScript.js[0] === 'build/shortcut-key-observer.js' &&
     shortcutReleaseContentScript.run_at === 'document_start' &&
     shortcutReleaseContentScript.all_frames === true &&
     shortcutReleaseContentScript.match_about_blank === true &&
@@ -176,16 +173,14 @@ assert.match(
   'shared tab switcher bridge should register the current extension page tab id'
 );
 [
-  ['newtab', newtabHtmlSource],
-  ['options', optionsHtmlSource],
-  ['onboarding', onboardingHtmlSource]
-].forEach(([pageName, html]) => {
+  ['newtab', 'newtab.html', 'src/react/newtab-islands.js'],
+  ['options', 'src/options/options.html', 'src/react/options-islands.js'],
+  ['onboarding', 'src/onboarding/onboarding.html', 'src/react/onboarding-islands.js']
+].forEach(([pageName, page, reactEntry]) => {
+  const scripts = getPageScripts(page);
   assert.ok(
-    html.includes('<script src="../overlay/tab-switcher.js"></script>') &&
-      html.includes('data-react-ready-script="../overlay/tab-switcher-page-bridge.js"') &&
-      !html.includes('<script src="../overlay/tab-switcher-page-bridge.js"></script>') &&
-      html.indexOf('<script src="../overlay/tab-switcher.js"></script>') <
-        html.indexOf('data-react-ready-script="../overlay/tab-switcher-page-bridge.js"'),
+    runsBefore(scripts, 'src/overlay/tab-switcher.js', 'src/overlay/tab-switcher-page-bridge.js') &&
+      runsBefore(scripts, reactEntry, 'src/overlay/tab-switcher-page-bridge.js'),
     `${pageName} should connect its tab switcher bridge only after the React entry is ready`
   );
 });
@@ -1157,7 +1152,7 @@ assert.match(
 );
 assert.match(
   injectSwitcherBlock,
-  /chrome\.scripting\.executeScript\(\{[\s\S]*files:\s*\[[\s\S]*'src\/react\/overlay-islands\.js',[\s\S]*'src\/overlay\/tab-switcher\.js'[\s\S]*\][\s\S]*runDynamicSwitcherScript\(switcherContext\)/,
+  /chrome\.scripting\.executeScript\(\{[\s\S]*files:\s*\[[\s\S]*'src\/react\/overlay-islands\.js',[\s\S]*'build\/tab-switcher\.js'[\s\S]*\][\s\S]*runDynamicSwitcherScript\(switcherContext\)/,
   'Alt+Q should install the React entry before direct tab switcher injection'
 );
 const runSwitcherScriptStart = injectSwitcherBlock.indexOf('const runSwitcherScript = (tabZoomFactor) => {');

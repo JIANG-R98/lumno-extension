@@ -85,7 +85,7 @@ assert.strictEqual(
 
 assert.match(
   lumnoNewtabHtml,
-  /<script src="lumno-newtab\.js"><\/script>/,
+  /<script src="\.\.\/\.\.\/build\/lumno-newtab\.js"><\/script>/,
   'standalone Lumno newtab fallback should load the redirect through an external script'
 );
 assert.doesNotMatch(
@@ -166,7 +166,7 @@ assert.match(
 }
 assert.doesNotMatch(
   lumnoNewtabHtml,
-  /<script src="newtab\.js"><\/script>/,
+  /data-page-entry|build\/newtab(?:-preload)?\.js/,
   'standalone Lumno newtab fallback should not duplicate the main newtab runtime dependency list'
 );
 

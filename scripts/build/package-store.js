@@ -2,7 +2,6 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { bundlePageScripts } = require('./page-script-bundles');
 
 const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
 const storeManifest = { ...manifest };
@@ -18,106 +17,25 @@ const packageRoots = [
   'assets',
   'newtab.html'
 ];
-const bundledScriptPages = [
-  'newtab.html',
-  'src/options/options.html',
-  'src/onboarding/onboarding.html'
-];
+const BUNDLE_DIRECTORY = 'build';
 const developmentOnlyFiles = new Set([
   'src/background/codex-debug-bridge.js',
   'src/shared/codex-debug-surface.js'
 ]);
-const injectedScriptFiles = [
-  'src/background/extension-pages.js',
-  'src/background/message-router.js',
-  'src/background/newtab-fallback.js',
-  'src/background/shortcut-rules.js',
-  'src/background/pip-ownership.js',
-  'src/background/pip-main-world.js',
-  'src/background/favicon-service.js',
-  'src/background/search-suggestions-service.js',
-  'src/background/pinned-tab-recovery.js',
-  'src/background/tab-switcher-service.js',
-  'src/shared/extension-routes.js',
-  'src/shared/navigation-disposition.js',
-  'src/shared/community-links.js',
-  'src/shared/browser-profile.js',
-  'src/shared/settings.js',
-  'src/shared/cjk-font-faces.js',
-  'src/shared/search/utils/direct-navigation.js',
-  'src/shared/search/utils/text-normalize.js',
-  'src/shared/search/utils/text-index.js',
-  'src/shared/search/utils/keyboard-layouts.js',
-  'src/shared/search/utils/text-matching.js',
-  'src/shared/search/utils/selection-stats.js',
-  'src/shared/search/utils/result-dedup.js',
-  'src/shared/search/utils/suggestion-slate.js',
-  'src/shared/search/utils/query-intent.js',
-  'src/shared/search/utils/relevance-score.js',
-  'src/shared/search/utils/brand-suggestions.js',
-  'src/shared/search/utils/navigation-matching.js',
-  'src/shared/search/utils/site-search-providers.js',
-  'src/shared/search/utils/site-search-matching.js',
-  'src/shared/search/search-utils.js',
-  'src/shared/search/site-search-store.js',
-  'src/shared/search/suggestion-navigation.js',
-  'src/react/overlay-islands.js',
-  'src/shared/search/search-input-history.js',
-  'src/shared/search/input-mode/controller-dom.js',
-  'src/shared/search/input-mode/mode-menu-language.js',
-  'src/shared/search/input-mode/prefix-visual.js',
-  'src/shared/search/input-mode/prefix-content.js',
-  'src/shared/search/input-mode/prefix-motion.js',
-  'src/shared/search/input-mode/mode-tab-keys.js',
-  'src/shared/search/input-mode/prefix-text.js',
-  'src/shared/search/input-mode/mode-menu-icons.js',
-  'src/shared/search/input-mode/mode-menu-search.js',
-  'src/shared/search/input-mode/mode-menu-navigation.js',
-  'src/shared/search/input-mode/mode-menu-render.js',
-  'src/shared/search/input-mode/mode-menu-layout.js',
-  'src/shared/search/input-mode/mode-menu-lifecycle.js',
-  'src/shared/search/search-input-mode.js',
-  'src/shared/ui/toast.js',
-  'src/shared/selection-action-icons.js',
-  'src/content/selection-quick-actions.js',
-  'src/shared/favicon/shortcut-favicon.js',
-  'src/shared/search/search-input.css',
-  'src/shared/ui/toast.css',
-  'src/shared/url-guards.js',
-  'src/shared/favicon/favicon-utils.js',
-  'src/shared/favicon/favicon-cache.js',
-  'src/overlay/runtime.js',
-  'src/overlay/favicon-view.js',
-  'src/overlay/suggestions-view.css',
-  'src/overlay/lifecycle.js',
-  'src/overlay/site-fixes.js',
-  'src/overlay/panel/entry-motion.js',
-  'src/overlay/panel/panel-language.js',
-  'src/overlay/panel/default-search-engine.js',
-  'src/overlay/panel/panel-session.js',
-  'src/overlay/panel/favicon-policy.js',
-  'src/overlay/panel/page-guards.js',
-  'src/overlay/panel/results-layout.js',
-  'src/overlay/panel/slash-commands.js',
-  'src/overlay/panel/panel-theme.js',
-  'src/overlay/panel/suggestion-themes.js',
-  'src/overlay/panel/result-activation.js',
-  'src/overlay/panel/tab-matching.js',
-  'src/overlay/panel/autocomplete.js',
-  'src/overlay/panel/site-search-providers.js',
-  'src/overlay/panel/search-mode-menu.js',
-  'src/overlay/panel/search-modes.js',
-  'src/overlay/panel/search-input-events.js',
-  'src/overlay/panel/panel-keys.js',
-  'src/overlay/panel/suggestions-render.js',
-  'src/overlay/panel/suggestion-sources.js',
-  'src/overlay/panel/remote-suggestions.js',
-  'src/overlay/panel/copy-actions.js',
-  'src/overlay/panel/panel-notices.js',
-  'src/overlay/panel/settings-sync.js',
-  'src/overlay/search-panel.js',
-  'src/content/document-pip-picker.js'
-];
+// Scripts that run from their source path: the service worker and the files
+// it imports, and the files pages and content scripts load by URL. Every other
+// script in src/ runs from a bundle.
+const backgroundEntry = manifest.background.service_worker;
+const backgroundImportBlock = fs.readFileSync(backgroundEntry, 'utf8').match(/importScripts\(([\s\S]*?)\);/);
+if (!backgroundImportBlock) {
+  throw new Error(`Could not find the importScripts block in ${backgroundEntry}.`);
+}
+const sourceRuntimeScripts = new Set([
+  backgroundEntry,
+  ...[...backgroundImportBlock[1].matchAll(/getURL\('(src\/[^']+\.js)'\)/g)].map((match) => match[1]),
+  'src/shared/search/search-han-variants.js',
+  'src/content/youtube-auto-pip-page.js'
+]);
 const forbiddenPattern = /(^|\/)(\.git|\.github|\.vscode|node_modules)(\/|$)|(^|\/)(README\.md|AGENTS\.md|\.DS_Store|package-lock\.json|package\.json)$|^assets\/images\/readme\//;
 
 fs.mkdirSync(distDir, { recursive: true });
@@ -155,6 +73,10 @@ function shouldCopyPackagePath(sourcePath) {
   if (developmentOnlyFiles.has(packagePath)) {
     return false;
   }
+  if (packagePath.startsWith('src/') && packagePath.endsWith('.js') &&
+      !packagePath.startsWith('src/react/') && !sourceRuntimeScripts.has(packagePath)) {
+    return false;
+  }
   if (path.basename(sourcePath) === '.DS_Store') {
     return false;
   }
@@ -169,6 +91,16 @@ packageRoots.forEach((packageRoot) => {
   });
 });
 fs.writeFileSync(stagedPath('manifest.json'), `${JSON.stringify(storeManifest, null, 3)}\n`);
+
+// The store builds its own bundles: minified, without the development-only
+// ones (the debug surface).
+const bundleBuild = spawnSync(process.execPath, [
+  path.join(__dirname, 'build-bundles.js'), '--store', '--outdir', stagedPath(BUNDLE_DIRECTORY)
+], { cwd: repoRoot, stdio: 'inherit' });
+if (bundleBuild.status !== 0) {
+  process.exit(bundleBuild.status || 1);
+}
+const stagedBundles = fs.readdirSync(stagedPath(BUNDLE_DIRECTORY)).filter((file) => file.endsWith('.js'));
 
 function getHtmlBaseHref(source) {
   const baseMatch = source.match(/<base\s+[^>]*href=["']([^"']+)["']/i);
@@ -213,7 +145,7 @@ let debugSurfaceScriptCount = 0;
 stagedHtmlFiles.forEach((file) => {
   let source = fs.readFileSync(file, 'utf8');
   source = source.replace(
-    /^[ \t]*<script\s+src=["']\.\.\/shared\/codex-debug-surface\.js["']\s*><\/script>\s*\r?\n/gm,
+    /^[ \t]*<script\s+src=["']\.\.\/\.\.\/build\/codex-debug-surface\.js["']\s*><\/script>\s*\r?\n/gm,
     () => {
       debugSurfaceScriptCount += 1;
       return '';
@@ -263,7 +195,7 @@ stagedOverlayOpen = replaceRequired(
 );
 stagedOverlayOpen = replaceRequired(
   stagedOverlayOpen,
-  /^[ \t]*\.\.\.\(shouldInjectOverlayCodexDebugSurface \? \['src\/shared\/codex-debug-surface\.js'\] : \[\]\),\r?\n/gm,
+  /^[ \t]*\.\.\.\(shouldInjectOverlayCodexDebugSurface \? \['build\/codex-debug-surface\.js'\] : \[\]\),\r?\n/gm,
   '',
   1,
   'conditional Overlay debug surface entry'
@@ -281,7 +213,7 @@ const stagedBackgroundScriptPaths = [stagedBackgroundPath].concat(
 let injectedDebugSurfaceEntryCount = 0;
 stagedBackgroundScriptPaths.forEach((file) => {
   const source = fs.readFileSync(file, 'utf8').replace(
-    /^[ \t]*'src\/shared\/codex-debug-surface\.js',\r?\n/gm,
+    /^[ \t]*'build\/codex-debug-surface\.js',\r?\n/gm,
     () => {
       injectedDebugSurfaceEntryCount += 1;
       return '';
@@ -311,45 +243,8 @@ stagedBackgroundScriptPaths.forEach((file) => {
   }
 });
 
-// Each script tag is a separate request, so join runs of plain tags (after the
-// debug surface is gone) into one file per run. The original files stay in
-// the package for content scripts, injection and getURL callers.
-let pageScriptBundleCount = 0;
-bundledScriptPages.forEach((page) => {
-  const htmlPath = stagedPath(page);
-  const html = fs.readFileSync(htmlPath, 'utf8');
-  const referenceBase = getHtmlReferenceBase(page, html);
-  const pageName = path.basename(page, '.html');
-  const result = bundlePageScripts({
-    html,
-    label: page,
-    resolveScript(src) {
-      const scriptPath = normalizePackagePath(path.normalize(path.join(referenceBase, src.split(/[?#]/)[0])));
-      if (!fs.existsSync(stagedPath(scriptPath))) {
-        throw new Error(`${page} loads ${src}, which is missing from the store package stage.`);
-      }
-      return { path: scriptPath, source: fs.readFileSync(stagedPath(scriptPath), 'utf8') };
-    },
-    bundleTarget(index) {
-      const src = `${pageName}-bundle-${index}.js`;
-      return { src, path: normalizePackagePath(path.join(referenceBase, src)) };
-    }
-  });
-  if (result.bundles.length === 0) {
-    throw new Error(`Store package expected script runs to bundle in ${page}, found none.`);
-  }
-  result.bundles.forEach((bundle) => {
-    if (fs.existsSync(stagedPath(bundle.path))) {
-      throw new Error(`Store package script bundle would overwrite ${bundle.path}.`);
-    }
-    fs.writeFileSync(stagedPath(bundle.path), bundle.source);
-  });
-  fs.writeFileSync(htmlPath, result.html);
-  pageScriptBundleCount += result.bundles.length;
-});
-
 let zipResult = null;
-const zipArgs = ['-r', '-D', zipPath, ...packageRoots, 'manifest.json'];
+const zipArgs = ['-r', '-D', zipPath, ...packageRoots, BUNDLE_DIRECTORY, 'manifest.json'];
 const psQuote = (value) => `'${String(value).replace(/'/g, "''")}'`;
 const powershell = (command, options = {}) => spawnSync('powershell.exe', [
   '-NoLogo', '-NoProfile', '-NonInteractive', '-Command',
@@ -454,7 +349,7 @@ function checkCssUrlReferences(file, source) {
 }
 
 function checkConcreteExtensionPathReferences(file, source) {
-  const extensionPathPattern = /(['"`])((?:assets|src|_locales|output)\/[^'"`?#)>\s]+)(?:[?#][^'"`]*)?\1/g;
+  const extensionPathPattern = /(['"`])((?:assets|build|src|_locales|output)\/[^'"`?#)>\s]+)(?:[?#][^'"`]*)?\1/g;
   let match = null;
   while ((match = extensionPathPattern.exec(source))) {
     if (!match[2].includes('${')) {
@@ -521,7 +416,7 @@ function listHtmlFiles(dir) {
 }
 
 function checkRuntimeGetUrlReferences() {
-  const files = listJsFiles(stagedPath('src'));
+  const files = listJsFiles(stagedPath('src')).concat(listJsFiles(stagedPath(BUNDLE_DIRECTORY)));
   const staticGetUrlPattern = /chrome\.runtime\.getURL\(\s*(['"`])([^'"`]+)\1\s*\)/g;
   files.forEach((file) => {
     const source = fs.readFileSync(file, 'utf8');
@@ -618,7 +513,7 @@ Object.values(storeManifest.icons || {}).forEach(checkManifestPath);
     checkManifestPath(resource);
   });
 });
-injectedScriptFiles.forEach(checkManifestPath);
+stagedBundles.forEach((file) => checkManifestPath(`${BUNDLE_DIRECTORY}/${file}`));
 checkRuntimeGetUrlReferences();
 checkHtmlReferences();
 checkCssFiles();
@@ -632,4 +527,4 @@ if (missing.length > 0) {
 cleanupPackageStage();
 console.log(`Created ${zipPath}`);
 console.log(`Entries: ${entries.length}`);
-console.log(`Page script bundles: ${pageScriptBundleCount}`);
+console.log(`Bundles: ${stagedBundles.length}`);

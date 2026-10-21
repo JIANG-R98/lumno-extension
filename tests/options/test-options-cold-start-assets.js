@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { readPageSource } = require('../helpers/page-source');
 const vm = require('vm');
+const { getBundleFiles } = require('../helpers/runtime-scripts');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const htmlPath = path.join(repoRoot, 'src/options/options.html');
@@ -20,9 +21,10 @@ assert(
 );
 
 const firstStylesheetIndex = html.indexOf('<link rel="stylesheet"');
-const themePreloadIndex = html.indexOf('<script src="theme-preload.js"></script>');
+const themePreloadIndex = html.indexOf('<script src="../../build/options-preload.js"></script>');
 assert(
-  themePreloadIndex >= 0 && themePreloadIndex < firstStylesheetIndex,
+  getBundleFiles('options-preload').includes('src/options/theme-preload.js') &&
+    themePreloadIndex >= 0 && themePreloadIndex < firstStylesheetIndex,
   'Options should run its theme preloader before render-blocking stylesheets'
 );
 assert(

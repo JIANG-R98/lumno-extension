@@ -5,6 +5,7 @@ const { readReactSource } = require('../helpers/react-source');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { readWallpaperRuntimeSource, readWallpaperCheckSource } = require('../helpers/wallpaper-source');
+const { getBundleFiles } = require('../helpers/runtime-scripts');
 
 // Real page dependencies, loaded the way newtab.html loads them before wallpaper.js.
 require('../../src/shared/settings.js');
@@ -944,13 +945,18 @@ function testNewtabFaviconPreloadAppliesCachedAlternateBeforeMainRuntime() {
       staticFaviconIndex < html.indexOf('<title>'),
       `${filePath} should expose the monochrome favicon before the title can use the extension default icon`
     );
+    const preloadIndex = html.indexOf('<script src="../../build/newtab-preload.js"></script>');
     assert.ok(
-      staticFaviconIndex < html.indexOf('<script src="wallpaper/wallpaper-preload.js"></script>'),
+      getBundleFiles('newtab-preload').includes('src/newtab/wallpaper/wallpaper-preload.js'),
+      `${filePath} should run wallpaper-preload in its head preload bundle`
+    );
+    assert.ok(
+      preloadIndex !== -1 && staticFaviconIndex < preloadIndex,
       `${filePath} should expose the monochrome favicon before the external preload script runs`
     );
     if (firstStylesheetIndex !== -1) {
       assert.ok(
-        html.indexOf('<script src="wallpaper/wallpaper-preload.js"></script>') < firstStylesheetIndex,
+        preloadIndex < firstStylesheetIndex,
         `${filePath} should run wallpaper-preload before stylesheets so favicon is set early`
       );
     }
@@ -960,7 +966,7 @@ function testNewtabFaviconPreloadAppliesCachedAlternateBeforeMainRuntime() {
   const fallbackRedirectJs = fs.readFileSync('src/newtab/lumno-newtab.js', 'utf8');
   assert.match(
     fallbackHtml,
-    /<script src="lumno-newtab\.js"><\/script>/,
+    /<script src="\.\.\/\.\.\/build\/lumno-newtab\.js"><\/script>/,
     'lumno-newtab fallback should load the redirect through an external script allowed by extension CSP'
   );
   assert.doesNotMatch(
@@ -980,7 +986,7 @@ function testNewtabFaviconPreloadAppliesCachedAlternateBeforeMainRuntime() {
   );
   assert.doesNotMatch(
     fallbackHtml,
-    /<script src="newtab\.js"><\/script>/,
+    /data-page-entry|build\/newtab(?:-preload)?\.js/,
     'lumno-newtab fallback should not duplicate the primary newtab runtime dependency list'
   );
 }

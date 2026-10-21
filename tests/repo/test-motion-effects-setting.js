@@ -5,12 +5,11 @@ const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { readBackgroundSource } = require('../helpers/background-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { getBundleFiles, getPageScripts } = require('../helpers/runtime-scripts');
 
 const optionsHtml = readPageSource('src/options/options.html');
 const optionsSource = readOptionsRuntimeSource();
-const newtabHtml = readPageSource('newtab.html');
 const newtabSource = readNewtabRuntimeSource();
-const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
 const motionPreloadSource = fs.readFileSync('src/shared/motion-preload.js', 'utf8');
 const overlayRuntimeSource = fs.readFileSync('src/overlay/runtime.js', 'utf8');
 const overlaySource = readOverlayPanelSource();
@@ -42,12 +41,12 @@ assert.match(
 );
 
 assert(
-  newtabHtml.includes('../shared/motion-preload.js'),
+  getBundleFiles('newtab-preload').includes('src/shared/motion-preload.js'),
   'New Tab should preload the synchronized entry-motion preference before it is revealed'
 );
-[optionsHtml, onboardingHtml].forEach((source) => {
+['src/options/options.html', 'src/onboarding/onboarding.html'].forEach((page) => {
   assert(
-    !source.includes('../shared/motion-preload.js'),
+    !getPageScripts(page).includes('src/shared/motion-preload.js'),
     'Options and Onboarding should not apply the New Tab entry-motion preference'
   );
 });

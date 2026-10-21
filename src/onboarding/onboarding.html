@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#f3f5f7" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark)" />
     <title>Lumno Onboarding</title>
-    <script src="../shared/scrollbar-mode.js"></script>
+    <script src="../../build/onboarding-preload.js"></script>
     <link rel="stylesheet" href="../../assets/fonts/open-sans/open-sans.css" />
-    <script src="../shared/cjk-font-faces.js" data-font-family="Open Sans"></script>
+    <script src="../../build/cjk-font-faces.js" data-font-family="Open Sans"></script>
     <link rel="stylesheet" href="../../assets/remixicon/fonts/remixicon.css" />
     <link rel="stylesheet" href="../shared/tokens.css" />
     <link rel="stylesheet" href="../shared/ui/tooltip.css" />
@@ -73,104 +73,12 @@
       </main>
     </div>
 
-    <script src="../shared/codex-debug-surface.js"></script>
-    <script src="../shared/settings.js"></script>
-    <script src="../shared/shortcut-key-matcher.js"></script>
-    <script src="onboarding-content.js"></script>
-    <script src="../shared/extension-routes.js"></script>
-    <script src="../shared/browser-profile.js"></script>
-    <script src="../shared/blacklist-utils.js"></script>
-    <script src="../shared/navigation-disposition.js"></script>
-    <script src="../shared/search/utils/direct-navigation.js"></script>
-    <script src="../shared/search/utils/text-normalize.js"></script>
-    <script src="../shared/search/utils/text-index.js"></script>
-    <script src="../shared/search/utils/keyboard-layouts.js"></script>
-    <script src="../shared/search/utils/text-matching.js"></script>
-    <script src="../shared/search/utils/selection-stats.js"></script>
-    <script src="../shared/search/utils/result-dedup.js"></script>
-    <script src="../shared/search/utils/suggestion-slate.js"></script>
-    <script src="../shared/search/utils/query-intent.js"></script>
-    <script src="../shared/search/utils/relevance-score.js"></script>
-    <script src="../shared/search/utils/brand-suggestions.js"></script>
-    <script src="../shared/search/utils/navigation-matching.js"></script>
-    <script src="../shared/search/utils/site-search-providers.js"></script>
-    <script src="../shared/search/utils/site-search-matching.js"></script>
-    <script src="../shared/search/search-utils.js"></script>
-    <script src="../shared/search/site-search-store.js"></script>
-    <script src="../shared/search/aggregate-search-store.js"></script>
-    <script src="../shared/search/aggregate-search-surface.js"></script>
-    <script src="../shared/search/suggestion-action-model.js"></script>
-    <script src="../shared/search/suggestion-navigation.js"></script>
-    <script src="../shared/search/suggestions-height-layout.js"></script>
-    <script src="../shared/search/ime-key-guard.js"></script>
-    <script src="../shared/search/search-input-history.js"></script>
-    <script src="../shared/ui/toast.js"></script>
-    <script src="../shared/ui/menu-surface.js"></script>
-    <script src="../shared/search/input-mode/controller-dom.js"></script>
-    <script src="../shared/search/input-mode/mode-menu-language.js"></script>
-    <script src="../shared/search/input-mode/prefix-visual.js"></script>
-    <script src="../shared/search/input-mode/prefix-content.js"></script>
-    <script src="../shared/search/input-mode/prefix-motion.js"></script>
-    <script src="../shared/search/input-mode/mode-tab-keys.js"></script>
-    <script src="../shared/search/input-mode/prefix-text.js"></script>
-    <script src="../shared/search/input-mode/mode-menu-icons.js"></script>
-    <script src="../shared/search/input-mode/mode-menu-search.js"></script>
-    <script src="../shared/search/input-mode/mode-menu-navigation.js"></script>
-    <script src="../shared/search/input-mode/mode-menu-render.js"></script>
-    <script src="../shared/search/input-mode/mode-menu-layout.js"></script>
-    <script src="../shared/search/input-mode/mode-menu-lifecycle.js"></script>
-    <script src="../shared/search/search-input-mode.js"></script>
-    <script src="../shared/shortcut-display.js"></script>
-    <script src="../shared/favicon/favicon-utils.js"></script>
-    <script src="../shared/favicon/shortcut-favicon.js"></script>
-    <script src="../shared/community-links.js"></script>
-    <script src="../shared/ui/feature-hints.js"></script>
-    <script src="../shared/update-notice.js"></script>
-    <script src="../shared/engagement-notice.js"></script>
-    <script src="../shared/ui/tooltip.js"></script>
-    <script src="../shared/ui/cursor-tooltip.js"></script>
-    <script src="../overlay/runtime.js"></script>
-    <script src="../newtab/theme/favicon-theme.js"></script>
-    <script src="../shared/favicon/favicon-cache.js"></script>
-    <script src="../shared/favicon/favicon-view-core.js"></script>
-    <script src="../overlay/favicon-view.js"></script>
-    <script src="../overlay/lifecycle.js"></script>
-    <script src="../overlay/site-fixes.js"></script>
-    <script src="../overlay/page-theme.js"></script>
-    <script src="../overlay/notices.js"></script>
-    <script src="../overlay/keyboard.js"></script>
+    <script src="../../build/codex-debug-surface.js"></script>
     <script src="../react/overlay-islands.js"></script>
-    <script src="../overlay/panel/entry-motion.js"></script>
-    <script src="../overlay/panel/panel-language.js"></script>
-    <script src="../overlay/panel/default-search-engine.js"></script>
-    <script src="../overlay/panel/panel-session.js"></script>
-    <script src="../overlay/panel/favicon-policy.js"></script>
-    <script src="../overlay/panel/page-guards.js"></script>
-    <script src="../overlay/panel/results-layout.js"></script>
-    <script src="../overlay/panel/slash-commands.js"></script>
-    <script src="../overlay/panel/panel-theme.js"></script>
-    <script src="../overlay/panel/suggestion-themes.js"></script>
-    <script src="../overlay/panel/result-activation.js"></script>
-    <script src="../overlay/panel/tab-matching.js"></script>
-    <script src="../overlay/panel/autocomplete.js"></script>
-    <script src="../overlay/panel/site-search-providers.js"></script>
-    <script src="../overlay/panel/search-mode-menu.js"></script>
-    <script src="../overlay/panel/search-modes.js"></script>
-    <script src="../overlay/panel/search-input-events.js"></script>
-    <script src="../overlay/panel/panel-keys.js"></script>
-    <script src="../overlay/panel/suggestions-render.js"></script>
-    <script src="../overlay/panel/suggestion-sources.js"></script>
-    <script src="../overlay/panel/remote-suggestions.js"></script>
-    <script src="../overlay/panel/copy-actions.js"></script>
-    <script src="../overlay/panel/panel-notices.js"></script>
-    <script src="../overlay/panel/settings-sync.js"></script>
-    <script src="../overlay/search-panel.js"></script>
-    <script src="../overlay/tab-switcher.js"></script>
     <script
-      src="../shared/react-page-bootstrap.js"
-      data-react-entry="../react/onboarding-islands.js"
-      data-react-ready-script="../overlay/tab-switcher-page-bridge.js"
-      data-page-entry="../onboarding/onboarding.js"
+      src="../../build/react-page-bootstrap.js"
+      data-react-entry="../src/react/onboarding-islands.js"
+      data-page-entry="onboarding.js"
       data-react-state="LumnoOnboardingReactBootstrap"
       data-page-runtime="onboarding"
     ></script>

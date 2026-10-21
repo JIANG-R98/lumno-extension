@@ -1,14 +1,12 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
 
 const shortcutRules = require('../../src/background/shortcut-rules.js');
 const browserProfile = require('../../src/shared/browser-profile.js');
 const bundledShortcutRules = require('../../assets/data/shortcut-rules.json');
-const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { readBackgroundSource } = require('../helpers/background-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 function createResponse(data) {
   return {
@@ -102,11 +100,10 @@ function testBrowserProfileUsesClientHintBrand() {
 }
 
 function testBrowserProfileRuntimeWiring() {
-  const repoRoot = path.join(__dirname, '..', '..');
   const backgroundSource = readBackgroundSource();
-  const newtabHtml = readPageSource('newtab.html');
+  const newtabScripts = getPageScripts('newtab.html');
   const newtabSource = readNewtabRuntimeSource();
-  const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
+  const onboardingScripts = getPageScripts('src/onboarding/onboarding.html');
   const overlaySource = readOverlayPanelSource();
 
   assert(
@@ -114,18 +111,16 @@ function testBrowserProfileRuntimeWiring() {
       backgroundSource.indexOf("chrome.runtime.getURL('src/background/shortcut-rules.js')"),
     'background should load browser-profile before shortcut-rules'
   );
-  const overlayOpenSource = fs.readFileSync(path.join(repoRoot, 'src/background/overlay-open-service.js'), 'utf8');
   assert(
-    overlayOpenSource.indexOf("'src/shared/browser-profile.js'") <
-      overlayOpenSource.indexOf("'src/overlay/search-panel.js'"),
+    runsBefore(getInjectedScripts('overlay'), 'src/shared/browser-profile.js', 'src/overlay/search-panel.js'),
     'overlay injection should load browser-profile before search-panel'
   );
   assert(
-    newtabHtml.indexOf('../shared/browser-profile.js') < newtabHtml.indexOf('../newtab/newtab.js'),
+    runsBefore(newtabScripts, 'src/shared/browser-profile.js', 'src/newtab/newtab.js'),
     'newtab should load browser-profile before its page entry'
   );
   assert(
-    onboardingHtml.indexOf('../shared/browser-profile.js') < onboardingHtml.indexOf('../overlay/search-panel.js'),
+    runsBefore(onboardingScripts, 'src/shared/browser-profile.js', 'src/overlay/search-panel.js'),
     'onboarding preview should load browser-profile before overlay search'
   );
   assert.match(newtabSource, /BROWSER_PROFILE\.getBrowserInternalProfile\(navigator\)/);

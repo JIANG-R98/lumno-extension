@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const newtabJs = readNewtabRuntimeSource();
@@ -219,13 +220,12 @@ assert.deepStrictEqual(history.commitRedo(), firstMove);
 assert.deepStrictEqual(history.peekUndo(), firstMove);
 
 assert.ok(
-  newtabHtml.includes('<script src="bookmarks/bookmark-move-history.js"></script>'),
+  runsBefore(getPageScripts('newtab.html'), 'src/newtab/bookmarks/bookmark-move-history.js', 'src/newtab/newtab.js'),
   'new tab should load bookmark move history before the main runtime'
 );
 assert.ok(
-  newtabHtml.indexOf('<script src="bookmarks/bookmark-drag.js"></script>') <
-    newtabHtml.indexOf('src="../shared/react-page-bootstrap.js"'),
-  'new tab should load the bookmark drag runtime before the page bootstrap'
+  runsBefore(getPageScripts('newtab.html'), 'src/newtab/bookmarks/bookmark-drag.js', 'src/newtab/newtab.js'),
+  'new tab should load the bookmark drag runtime before the page entry'
 );
 assert.ok(
   newtabHtml.includes('.x-nt-bookmarks-crumb[data-bookmark-drop-target="true"]'),

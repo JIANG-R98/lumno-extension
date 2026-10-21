@@ -3,12 +3,11 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const { readPageSource } = require('../helpers/page-source');
-const { readBackgroundSource } = require('../helpers/background-source');
+const { getBundleFiles, getInjectedScripts, getManifestContentScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const preloadPath = path.join(repoRoot, 'src/shared/icon-font-preload.js');
 const manifest = JSON.parse(fs.readFileSync(path.join(repoRoot, 'manifest.json'), 'utf8'));
-const backgroundSource = readBackgroundSource();
 const remixCss = fs.readFileSync(
   path.join(repoRoot, 'assets/remixicon/fonts/remixicon.css'),
   'utf8'
@@ -114,43 +113,34 @@ assert(
   'the Remix stylesheet should request the exact URL that was preloaded'
 );
 
-const startupContentScript = manifest.content_scripts.find((entry) => (
+const startupContentScriptIndex = manifest.content_scripts.findIndex((entry) => (
   Array.isArray(entry.matches) &&
   entry.matches.includes('<all_urls>') &&
-  entry.run_at === 'document_start' &&
-  Array.isArray(entry.js) &&
-  entry.js.includes('src/content/shortcut-key-observer.js')
+  entry.run_at === 'document_start'
 ));
-assert(startupContentScript, 'the ordinary-page startup content script should remain declared');
-const startupScripts = startupContentScript.js;
+const startupScripts = startupContentScriptIndex >= 0
+  ? getManifestContentScripts()[startupContentScriptIndex]
+  : [];
+assert(startupScripts.includes('src/content/shortcut-key-observer.js'),
+  'the ordinary-page startup content script should remain declared');
 assert.strictEqual(
   startupScripts.includes('src/shared/icon-font-preload.js'),
   false,
   'ordinary pages should not preload an extension font before Overlay UI is requested'
 );
 
-const overlayInjectionStart = backgroundSource.indexOf('const overlayInjectionFiles = [');
-const overlayInjectionEnd = backgroundSource.indexOf('];', overlayInjectionStart);
-const overlayInjectionBlock = backgroundSource.slice(overlayInjectionStart, overlayInjectionEnd);
 assert(
-  overlayInjectionBlock.indexOf("'src/shared/icon-font-preload.js'") >= 0 &&
-    overlayInjectionBlock.indexOf("'src/shared/icon-font-preload.js'") <
-      overlayInjectionBlock.indexOf("'src/react/overlay-islands.js'"),
+  runsBefore(getInjectedScripts('overlay'), 'src/shared/icon-font-preload.js', 'src/react/overlay-islands.js'),
   'existing tabs should start warming the icon font before Overlay React/runtime injection'
 );
-
-const switcherInjectionStart = backgroundSource.indexOf('const runDynamicSwitcherScript = (switcherContext) => {');
-const switcherInjectionEnd = backgroundSource.indexOf('runDynamicSwitcherScript(switcherContext);', switcherInjectionStart);
-const switcherInjectionBlock = backgroundSource.slice(switcherInjectionStart, switcherInjectionEnd);
 assert(
-  switcherInjectionBlock.indexOf("'src/shared/icon-font-preload.js'") >= 0 &&
-    switcherInjectionBlock.indexOf("'src/shared/icon-font-preload.js'") <
-      switcherInjectionBlock.indexOf("'src/react/overlay-islands.js'"),
+  runsBefore(getInjectedScripts('tabSwitcher'), 'src/shared/icon-font-preload.js', 'src/react/overlay-islands.js'),
   'the standalone tab switcher should also warm the icon font before rendering'
 );
 assert(
-  optionsHtml.indexOf('<script src="../shared/icon-font-preload.js"></script>') >= 0 &&
-    optionsHtml.indexOf('<script src="../shared/icon-font-preload.js"></script>') <
+  getBundleFiles('options-preload')[0] === 'src/shared/icon-font-preload.js' &&
+    optionsHtml.indexOf('<script src="../../build/options-preload.js"></script>') >= 0 &&
+    optionsHtml.indexOf('<script src="../../build/options-preload.js"></script>') <
       optionsHtml.indexOf('<link rel="stylesheet"'),
   'Options should warm the icon font before its stylesheets'
 );

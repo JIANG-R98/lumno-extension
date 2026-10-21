@@ -5,6 +5,7 @@ const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { readBackgroundSource } = require('../helpers/background-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { getInjectedScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 function readSource(path) {
   return fs.readFileSync(path, 'utf8');
@@ -51,9 +52,7 @@ assert.ok(
   'overlay should use the shared lightweight Toast runtime'
 );
 assert.ok(
-  backgroundSource.includes("'src/shared/ui/toast.js'") &&
-    backgroundSource.indexOf("'src/shared/ui/toast.js'") <
-      backgroundSource.indexOf("'src/overlay/search-panel.js'"),
+  runsBefore(getInjectedScripts('overlay'), 'src/shared/ui/toast.js', 'src/overlay/search-panel.js'),
   'overlay injection should load the shared Toast runtime before the panel'
 );
 

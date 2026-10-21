@@ -3,6 +3,7 @@ const fs = require('fs');
 const vm = require('vm');
 const { readPageSource } = require('../helpers/page-source');
 const { readWallpaperRuntimeSource, readWallpaperCheckSource } = require('../helpers/wallpaper-source');
+const { getBundleFiles, runsBefore } = require('../helpers/runtime-scripts');
 
 const sandbox = {
   clearTimeout,
@@ -608,17 +609,15 @@ assert.match(
   'the New Tab should wait for the selected wallpaper effect to render before becoming ready'
 );
 assert.ok(
-  newtabHtml.indexOf('<script src="wallpaper/wallpaper-crt-webgl.js"></script>') <
-    newtabHtml.indexOf('<script src="wallpaper/wallpaper-effects.js"></script>'),
+  runsBefore(getBundleFiles('newtab-preload'), 'src/newtab/wallpaper/wallpaper-crt-webgl.js', 'src/newtab/wallpaper/wallpaper-effects.js'),
   'the standalone CRT shader should load before the shared wallpaper effect controller'
 );
 assert.ok(
-  newtabHtml.indexOf('<script src="wallpaper/wallpaper-effects.js"></script>') <
-    newtabHtml.indexOf('<script src="wallpaper/wallpaper-preload.js"></script>'),
+  runsBefore(getBundleFiles('newtab-preload'), 'src/newtab/wallpaper/wallpaper-effects.js', 'src/newtab/wallpaper/wallpaper-preload.js'),
   'the wallpaper effect renderer should load before the head preload fast path'
 );
 assert.ok(
-  newtabHtml.indexOf('<script src="wallpaper/wallpaper-effect-preload.js"></script>') <
+  newtabHtml.indexOf('<script src="../../build/wallpaper-effect-preload.js"></script>') <
     newtabHtml.indexOf('<div id="_x_extension_newtab_root_2024_unique_"'),
   'the focused-route wallpaper effect should start before New Tab content bootstraps'
 );

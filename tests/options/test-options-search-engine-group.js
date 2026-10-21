@@ -5,6 +5,7 @@ const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { getPageScripts } = require('../helpers/runtime-scripts');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const readSource = (relativePath) => fs.readFileSync(
@@ -46,9 +47,8 @@ assert.match(
   /secondaryBadgeText:[\s\S]*?isSearchEngine[\s\S]*?getMessage\('shortcuts_badge_builtin', '内置'\)/,
   'Built-in search-engine cards should include the built-in badge'
 );
-assert.match(
-  optionsHtml,
-  /<script src="\.\.\/shared\/favicon\/shortcut-favicon\.js"><\/script>/,
+assert.ok(
+  getPageScripts('src/options/options.html').includes('src/shared/favicon/shortcut-favicon.js'),
   'Options should load the shared provider icon catalog'
 );
 assert.match(

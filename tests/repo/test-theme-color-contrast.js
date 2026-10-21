@@ -3,8 +3,8 @@ const fs = require('fs');
 
 const faviconTheme = require('../../src/newtab/theme/favicon-theme.js');
 const { readPageSource } = require('../helpers/page-source');
-const { readBackgroundSource } = require('../helpers/background-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { getInjectedScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 function parseThemeColor(value) {
   const parsed = faviconTheme.parseCssColor(value);
@@ -159,21 +159,11 @@ assert.ok(
   'surface palette generation should cap saturation consistently across brand hues'
 );
 
-const backgroundSource = readBackgroundSource();
 const overlaySource = readOverlayPanelSource();
 const newtabHtml = readPageSource('newtab.html');
 const overlayCss = fs.readFileSync('src/overlay/suggestions-view.css', 'utf8');
-const overlayInjectionIndex = backgroundSource.indexOf('const overlayInjectionFiles = [');
-const sharedThemeIndex = backgroundSource.indexOf(
-  "'src/newtab/theme/favicon-theme.js'",
-  overlayInjectionIndex
-);
-const overlayIndex = backgroundSource.indexOf(
-  "'src/overlay/search-panel.js'",
-  overlayInjectionIndex
-);
 assert.ok(
-  overlayInjectionIndex >= 0 && sharedThemeIndex >= 0 && sharedThemeIndex < overlayIndex,
+  runsBefore(getInjectedScripts('overlay'), 'src/newtab/theme/favicon-theme.js', 'src/overlay/search-panel.js'),
   'overlay injection should load the shared theme algorithm before the search panel'
 );
 assert.ok(

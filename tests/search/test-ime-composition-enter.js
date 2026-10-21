@@ -1,15 +1,14 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const guardPath = path.join(repoRoot, 'src/shared/search/ime-key-guard.js');
 const guard = require(guardPath);
-const { readBackgroundSource } = require('../helpers/background-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
 const { readStylesheetSource } = require('../helpers/css-tokens');
+const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 function createClock(start) {
   let current = start;
@@ -97,18 +96,16 @@ assert.strictEqual(
 );
 imeGuard.markCompositionEnd({ target: input });
 
-const newtabHtml = readPageSource('newtab.html');
-const backgroundJs = readBackgroundSource();
 const newtabJs = readNewtabRuntimeSource();
 const overlayJs = readOverlayPanelSource();
 
 assert.ok(
-  newtabHtml.includes('<script src="../shared/search/ime-key-guard.js"></script>'),
+  runsBefore(getPageScripts('newtab.html'), 'src/shared/search/ime-key-guard.js', 'src/newtab/newtab.js'),
   'New Tab should load the IME key guard before newtab.js'
 );
 
 assert.ok(
-  backgroundJs.includes("'src/shared/search/ime-key-guard.js'"),
+  runsBefore(getInjectedScripts('overlay'), 'src/shared/search/ime-key-guard.js', 'src/overlay/search-panel.js'),
   'overlay injection should load the IME key guard before search-panel.js'
 );
 

@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const { readBackgroundSource } = require('../helpers/background-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { getInjectedScripts } = require('../helpers/runtime-scripts');
 
 const backgroundSource = readBackgroundSource();
 const overlaySource = readOverlayPanelSource();
@@ -76,13 +77,7 @@ assert.ok(
   backgroundSource.includes(`const OVERLAY_RUNTIME_VERSION = '${runtimeVersionMatch[1]}'`),
   'background and injected overlay should agree on the reusable runtime version'
 );
-const overlayInjectionStart = backgroundSource.indexOf('const overlayInjectionFiles = [');
-const overlayInjectionEnd = backgroundSource.indexOf('\n  ];', overlayInjectionStart);
-const overlayInjectionSource = backgroundSource.slice(overlayInjectionStart, overlayInjectionEnd);
-assert.ok(
-  overlayInjectionStart >= 0 && overlayInjectionEnd > overlayInjectionStart,
-  'the versioned Overlay injection dependency list must remain discoverable'
-);
+const overlayInjectedScripts = getInjectedScripts('overlay');
 [
   'src/shared/search/site-search-store.js',
   'src/shared/search/aggregate-search-store.js',
@@ -90,7 +85,7 @@ assert.ok(
   'src/overlay/search-panel.js'
 ].forEach((runtimeDependency) => {
   assert.ok(
-    overlayInjectionSource.includes(`'${runtimeDependency}'`),
+    overlayInjectedScripts.includes(runtimeDependency),
     `${runtimeDependency} must stay coupled to ${expectedOverlayRuntimeVersion}`
   );
 });

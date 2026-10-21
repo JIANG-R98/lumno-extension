@@ -924,7 +924,7 @@ function runWiringTests() {
   pagePaths.forEach((relativePath) => {
     const source = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
     assert(
-      source.includes('../shared/codex-debug-surface.js'),
+      source.includes('../../build/codex-debug-surface.js'),
       `${relativePath} should load the shared Codex debug surface`
     );
   });
@@ -934,14 +934,14 @@ function runWiringTests() {
     'utf8'
   );
   assert(
-    !redirectShellSource.includes('../shared/codex-debug-surface.js'),
+    !redirectShellSource.includes('codex-debug-surface.js'),
     'the redirect-only newtab shell should not bootstrap a debug surface before navigation'
   );
 
   const backgroundSource = readBackgroundSource();
   assert(backgroundSource.includes("importScripts(chrome.runtime.getURL('src/background/codex-debug-bridge.js'))"));
   assert(
-    (backgroundSource.match(/'src\/shared\/codex-debug-surface\.js'/g) || []).length >= 3,
+    (backgroundSource.match(/'build\/codex-debug-surface\.js'/g) || []).length >= 3,
     'search overlay, tab switcher, and document PiP injection paths should install the debug surface'
   );
 

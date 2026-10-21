@@ -1,7 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { readBackgroundSource } = require('../helpers/background-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const tooltipJsPath = path.join(repoRoot, 'src/shared/ui/tooltip.js');
@@ -51,6 +50,7 @@ assert.ok(fs.existsSync(tooltipCssPath), 'shared tooltip styling should live in 
 
 const tooltipCss = fs.readFileSync(tooltipCssPath, 'utf8');
 const tooltip = require(tooltipJsPath);
+const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 assert.strictEqual(
   tooltip.className,
@@ -237,14 +237,13 @@ assert.strictEqual(
 const newtabHtml = fs.readFileSync(newtabHtmlPath, 'utf8');
 const optionsHtml = fs.readFileSync(optionsHtmlPath, 'utf8');
 const overlayPanel = fs.readFileSync(overlayPanelPath, 'utf8');
-const background = readBackgroundSource();
 
 assert.ok(newtabHtml.includes('../shared/ui/tooltip.css'), 'newtab should load the shared tooltip stylesheet');
-assert.ok(newtabHtml.includes('../shared/ui/tooltip.js'), 'newtab should load the shared tooltip component');
+assert.ok(getPageScripts('newtab.html').includes('src/shared/ui/tooltip.js'), 'newtab should load the shared tooltip component');
 assert.ok(optionsHtml.includes('../shared/ui/tooltip.css'), 'options should load the shared tooltip stylesheet');
-assert.ok(optionsHtml.includes('../shared/ui/tooltip.js'), 'options should load the shared tooltip component');
+assert.ok(getPageScripts('src/options/options.html').includes('src/shared/ui/tooltip.js'), 'options should load the shared tooltip component');
 assert.ok(
-  background.includes("'src/shared/ui/tooltip.js'"),
+  runsBefore(getInjectedScripts('overlay'), 'src/shared/ui/tooltip.js', 'src/overlay/search-panel.js'),
   'overlay injection should load the shared tooltip component before search-panel'
 );
 assert.ok(

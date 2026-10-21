@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const { readPageSource } = require('../helpers/page-source');
+const { getPageScripts } = require('../helpers/runtime-scripts');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const optionsHtml = readPageSource('src/options/options.html');
@@ -53,9 +54,8 @@ assert.match(
   /item\.iconClass[\s\S]*?<span data-i18n=\{item\.labelKey\}>\{item\.label\}<\/span>[\s\S]*?ri-size-14 ri-external-link-line/,
   'every feedback entry should keep its channel icon, label and external-link mark'
 );
-assert.match(
-  optionsHtml,
-  /<script src="\.\.\/shared\/community-links\.js"><\/script>/,
+assert.ok(
+  getPageScripts('src/options/options.html').includes('src/shared/community-links.js'),
   'Options should load the shared remote community links runtime'
 );
 assert.match(
