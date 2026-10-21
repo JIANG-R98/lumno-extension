@@ -123,6 +123,8 @@ Step-by-step guides for every feature, with screenshots, are in the [Lumno Help 
 | Copy the current page URL | `Cmd+Shift+C` | `Ctrl+Shift+C` |
 | Open the recent tab switcher | `Alt+Q` | `Alt+Q` |
 
+The command-bar shortcut also opens the floating search window on Lumno’s New Tab page and focuses its input. Press the shortcut again or `Esc` to close it; this works with input auto-focus turned off.
+
 Browsers may reserve or limit extension shortcuts. Change them at `chrome://extensions/shortcuts`, `edge://extensions/shortcuts`, or the equivalent shortcuts page in your browser.
 
 Firefox already uses `Cmd+Shift+K` / `Ctrl+Shift+K` and similar keys, so the Firefox build defaults to `Ctrl+Shift+K/L/C` on macOS and `Alt+K/L/C` on Windows and Linux; `Alt+Q` is unchanged. Change them in the Add-ons Manager under the gear menu → **Manage Extension Shortcuts**.

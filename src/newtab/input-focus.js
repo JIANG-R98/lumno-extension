@@ -1,9 +1,9 @@
 (function(root) {
-  // Focusing the search input: shortcut-triggered focus, typing anywhere on the
-  // page and auto-focus recovery.
+  // The search shortcut, typing anywhere on the page and auto-focus recovery.
   function createInputFocus(deps) {
     const {
       SHORTCUT_KEY_MATCHER,
+      toggleSearchOverlay,
       refreshTabsIfIdle,
       initialNewtabInputAutoFocusReadyTask,
       isImeCompositionEvent
@@ -65,6 +65,9 @@
     }
 
     function tryFocusSearchInput(force) {
+      if (window._x_extension_search_overlay_open_2026_unique_) {
+        return false;
+      }
       if (!pageState.inputParts || !pageState.inputParts.input) {
         return false;
       }
@@ -205,7 +208,10 @@
           SHORTCUT_KEY_MATCHER.eventMatchesShortcut(event, fallbackShortcutSpec)) {
         event.preventDefault();
         event.stopPropagation();
-        activateNewtabShortcutFocus();
+        toggleSearchOverlay();
+        return;
+      }
+      if (window._x_extension_search_overlay_open_2026_unique_) {
         return;
       }
       if (event.metaKey || event.ctrlKey || event.altKey) {

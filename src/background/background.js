@@ -547,30 +547,32 @@ function isSearchCommandSource(source) {
   return source === 'commands' || source === 'commands-prefill';
 }
 
-function requestFocusVisibleNewtabInput(source, tabId) {
+function requestVisibleNewtabSearch(source, tabId) {
   const payload = {
-    action: 'lumno:newtab-focus-input',
+    action: source === 'commands'
+      ? 'lumno:newtab-toggle-search-overlay'
+      : 'lumno:newtab-focus-input',
     source: source || '',
     tabId: typeof tabId === 'number' ? tabId : null
   };
   try {
     chrome.runtime.sendMessage(payload, (response) => {
       if (chrome.runtime && chrome.runtime.lastError) {
-        logHotkeyDebug('command-newtab-focus-send-failed', {
+        logHotkeyDebug('command-newtab-search-send-failed', {
           source: source || '',
           tabId: typeof tabId === 'number' ? tabId : null,
           error: chrome.runtime.lastError.message || 'unknown'
         });
         return;
       }
-      logHotkeyDebug('command-newtab-focus-send-done', {
+      logHotkeyDebug('command-newtab-search-send-done', {
         source: source || '',
         tabId: typeof tabId === 'number' ? tabId : null,
         ok: Boolean(response && response.ok)
       });
     });
   } catch (e) {
-    logHotkeyDebug('command-newtab-focus-send-error', {
+    logHotkeyDebug('command-newtab-search-send-error', {
       source: source || '',
       tabId: typeof tabId === 'number' ? tabId : null,
       error: e && e.message ? e.message : String(e || '')
@@ -2194,7 +2196,7 @@ function openOverlayOnTab(activeTab, tabs, source, options) {
   if (restricted) {
     finishOpenAttempt(false);
     if (isSearchCommandSource(source) && (isLumnoNewtabUrl(activeUrl) || isBrowserNewtabUrl(activeUrl))) {
-      requestFocusVisibleNewtabInput(source, activeTab.id);
+      requestVisibleNewtabSearch(source, activeTab.id);
       return;
     }
     if (shouldTriggerOnboardingOverlayFromCommand(source, activeUrl)) {
@@ -4455,10 +4457,10 @@ const POPUP_MESSAGE_HANDLERS = Object.freeze({
       if (!tab) {
         return;
       }
-      // A New Tab already has a search box; the shortcut focuses it as well.
+      // The toolbar action focuses the existing New Tab search box.
       const tabUrl = getResolvedTabUrl(tab);
       if (isLumnoNewtabUrl(tabUrl) || isBrowserNewtabUrl(tabUrl)) {
-        requestFocusVisibleNewtabInput('popup', tab.id);
+        requestVisibleNewtabSearch('popup', tab.id);
         return;
       }
       triggerShowSearchForTab(tab, 'popup');

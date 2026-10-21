@@ -299,9 +299,10 @@
   const NEWTAB_BOOKMARK_DRAG = globalThis.LumnoNewtabBookmarkDrag;
   const NEWTAB_CROSS_SURFACE_DRAG = globalThis.LumnoNewtabCrossSurfaceDrag;
   // Escape closes only the top open layer (menus, popovers, panels, drags).
-  // The folder color dialog handles its own Escape.
+  // The folder color dialog and search overlay handle their own Escape.
   const dismissStack = globalThis.LumnoNewtabDismissStack.getDismissStack();
-  dismissStack.setShouldIgnore(() => Boolean(pageState.folderColorPicker && pageState.folderColorPicker.isOpen()));
+  dismissStack.setShouldIgnore(() => Boolean(window._x_extension_search_overlay_open_2026_unique_ ||
+    (pageState.folderColorPicker && pageState.folderColorPicker.isOpen())));
   const NEWTAB_BOOKMARK_FOLDER_ICON = globalThis.LumnoNewtabBookmarkFolderIcon;
   const NEWTAB_PAGE_NOTICE = globalThis.LumnoNewtabPageNotice;
   const NEWTAB_TOAST = globalThis.LumnoNewtabToast;
@@ -6000,6 +6001,7 @@
   });
 
   const NEWTAB_INPUT_FOCUS = globalThis.LumnoNewtabInputFocus;
+  const NEWTAB_SEARCH_OVERLAY = globalThis.LumnoNewtabSearchOverlay;
   const {
     isEditableElement,
     refreshFallbackShortcut,
@@ -6007,6 +6009,7 @@
     handleGlobalTypingFocus
   } = NEWTAB_INPUT_FOCUS.createInputFocus({
     SHORTCUT_KEY_MATCHER,
+    toggleSearchOverlay: NEWTAB_SEARCH_OVERLAY.toggleSearchOverlay,
     refreshTabsIfIdle,
     initialNewtabInputAutoFocusReadyTask,
     isImeCompositionEvent,
@@ -7261,6 +7264,7 @@
   });
 
   document.addEventListener('keydown', function(event) {
+    if (window._x_extension_search_overlay_open_2026_unique_) return;
     if (pageState.folderColorPicker && pageState.folderColorPicker.isOpen()) return;
     if (!event || event.defaultPrevented || event.altKey || isEditableElement(event.target)) {
       return;
@@ -7282,6 +7286,7 @@
   }, true);
 
   document.addEventListener('keydown', function(event) {
+    if (window._x_extension_search_overlay_open_2026_unique_) return;
     if (pageState.folderColorPicker && pageState.folderColorPicker.isOpen()) return;
     syncSuggestionActionModifiersFromEvent(event);
     if (SUGGESTION_NAVIGATION.handleNumberShortcutKeyEvent(
@@ -7303,6 +7308,7 @@
     }
   }, true);
   document.addEventListener('keyup', function(event) {
+    if (window._x_extension_search_overlay_open_2026_unique_) return;
     syncSuggestionActionModifiersFromEvent(event);
     SUGGESTION_NAVIGATION.handleNumberShortcutKeyEvent(
       event,
