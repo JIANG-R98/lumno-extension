@@ -29,6 +29,8 @@ export interface PopupActionModel {
 /** The options a chevron opens, such as the auto picture-in-picture switch. */
 export interface PopupActionPanelModel {
   actionId: PopupActionId;
+  /** Mounted folded, so opening and closing it can animate. */
+  expanded: boolean;
   rows: PopupSettingRowModel[];
 }
 
@@ -183,11 +185,15 @@ function PageCard({
         <div
           className="x-lumno-popup__action-panel"
           data-action={actionPanel.actionId}
+          data-expanded={actionPanel.expanded ? 'true' : 'false'}
           id={`x-lumno-popup-action-panel-${actionPanel.actionId}`}
+          inert={!actionPanel.expanded}
         >
-          {actionPanel.rows.map((row) => (
-            <SettingRow handlers={handlers} key={row.id} row={row} />
-          ))}
+          <div className="x-lumno-popup__action-panel-body">
+            {actionPanel.rows.map((row) => (
+              <SettingRow handlers={handlers} key={row.id} row={row} />
+            ))}
+          </div>
         </div>
       ) : null}
     </section>

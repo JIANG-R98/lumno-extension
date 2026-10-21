@@ -294,10 +294,6 @@ body[data-theme="dark"] {
   transform: rotate(180deg);
 }
 
-.x-lumno-popup__action-panel {
-  margin-top: 8px;
-}
-
 /* Labels wrap rather than cut off; English and Japanese run longer. */
 .x-lumno-popup__action-label {
   max-width: 100%;
@@ -364,10 +360,12 @@ body[data-theme="dark"] {
   transform: rotate(180deg);
 }
 
-/* The accordion from the Settings page: opening, the box is there almost at
-   once and the rows fade in; closing, the rows fade first and the box follows.
-   Folded rows drop out of layout and paint. */
-.x-lumno-popup__settings-panel {
+/* The accordion from the Settings page, for the quick settings and an
+   action's options: opening, the box is there almost at once and the rows
+   fade in; closing, the rows fade first and the box follows. Folded rows drop
+   out of layout and paint. */
+.x-lumno-popup__settings-panel,
+.x-lumno-popup__action-panel {
   height: 0;
   interpolate-size: allow-keywords;
   content-visibility: hidden;
@@ -381,7 +379,8 @@ body[data-theme="dark"] {
     content-visibility 0s linear var(--lumno-duration-xl) allow-discrete;
 }
 
-.x-lumno-popup__settings[data-expanded="true"] .x-lumno-popup__settings-panel {
+.x-lumno-popup__settings[data-expanded="true"] .x-lumno-popup__settings-panel,
+.x-lumno-popup__action-panel[data-expanded="true"] {
   height: auto;
   content-visibility: visible;
   opacity: 1;
@@ -394,6 +393,10 @@ body[data-theme="dark"] {
 }
 
 /* Inside the folding box, so the gap folds with it. */
+.x-lumno-popup__action-panel-body {
+  padding-top: 8px;
+}
+
 .x-lumno-popup__section:last-child {
   padding-bottom: 10px;
 }

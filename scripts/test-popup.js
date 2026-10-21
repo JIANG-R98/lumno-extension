@@ -121,11 +121,12 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
   assert.strictEqual(withVideo.tooltip, '让网页视频悬浮播放');
   const floating = byId(popup.buildModel(state({ pip: { supported: true, hasVideo: true, active: true } }), t)).pip;
   assert.strictEqual(floating.label, '退出画中画', 'a floating video can be brought back');
-  assert.strictEqual(popup.buildModel(state(), t).actionPanel, null);
+  assert.strictEqual(popup.buildModel(state(), t).actionPanel.expanded, false, 'the options stay mounted, folded');
   const opened = popup.buildModel(state({ pip: { supported: true, hasVideo: true, active: false, menuExpanded: true } }), t);
   assert.strictEqual(byId(opened).pip.menu.expanded, true);
   assert.deepStrictEqual(opened.actionPanel, {
     actionId: 'pip',
+    expanded: true,
     rows: [{ kind: 'switch', id: 'autoPip', label: '自动画中画', hint: '切到其他标签页时，视频自动悬浮', checked: true }]
   });
   const firefox = popup.buildModel(state({ pip: { supported: false, hasVideo: true, active: false } }), t);

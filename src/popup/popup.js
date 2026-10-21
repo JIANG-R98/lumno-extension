@@ -236,9 +236,10 @@
       },
       actionsLabel: t('popup_actions_label', 'Page actions'),
       actions,
-      actionPanel: showPip && pip.menuExpanded === true
+      actionPanel: showPip
         ? {
           actionId: 'pip',
+          expanded: pip.menuExpanded === true,
           rows: [{
             kind: 'switch',
             id: 'autoPip',

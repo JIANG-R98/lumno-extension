@@ -140,6 +140,7 @@ describe('Toolbar popup', () => {
       actions: [...base.actions, { ...pip, menu: { ...pip.menu, expanded: true } }],
       actionPanel: {
         actionId: 'pip',
+        expanded: true,
         rows: [{ kind: 'switch', id: 'autoPip', label: 'Auto picture-in-picture', hint: 'A playing video floats when you switch tabs', checked: true }]
       }
     }));
@@ -150,6 +151,22 @@ describe('Toolbar popup', () => {
     expect(toggle?.checked).toBe(true);
     act(() => toggle?.click());
     expect(handlers.onSwitch).toHaveBeenCalledWith('autoPip', false);
+    expect(panel?.dataset.expanded).toBe('true');
+    expect(panel?.hasAttribute('inert')).toBe(false);
+
+    // Folding keeps the panel mounted so it can animate closed.
+    act(() => controller.render({
+      ...base,
+      actions: [...base.actions, pip],
+      actionPanel: {
+        actionId: 'pip',
+        expanded: false,
+        rows: [{ kind: 'switch', id: 'autoPip', label: 'Auto picture-in-picture', checked: true }]
+      }
+    }));
+    expect(host.querySelector('.x-lumno-popup__action-panel')).toBe(panel);
+    expect(panel?.dataset.expanded).toBe('false');
+    expect(panel?.hasAttribute('inert')).toBe(true);
   });
 
   it('falls back to an icon when the page has no image', () => {
