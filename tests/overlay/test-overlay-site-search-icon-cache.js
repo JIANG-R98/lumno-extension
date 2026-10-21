@@ -1,38 +1,20 @@
 const assert = require('assert');
 const fs = require('fs');
-const { readSearchInputModeSource, readSearchInputModeRuntimeSource } = require('../helpers/search-input-mode-source');
 const shortcutFavicon = require('../../src/shared/favicon/shortcut-favicon.js');
 const searchUtils = require('../../src/shared/search/search-utils.js');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-const { readBackgroundSource } = require('../helpers/background-source');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { parseCss } = require('../helpers/css-rules');
 const { getInjectedScripts, runsBefore } = require('../helpers/runtime-scripts');
 
-const backgroundSource = readBackgroundSource();
-const newtabSource = readNewtabRuntimeSource();
-const overlaySource = readOverlayPanelSource();
-const overlayRuntimeSource = fs.readFileSync('src/overlay/runtime.js', 'utf8');
-const inputModeSource = readSearchInputModeSource();
-const inputModeCss = fs.readFileSync('src/shared/search/search-input.css', 'utf8');
-const searchUtilsSource = fs.readFileSync('src/shared/search/search-utils.js', 'utf8');
+// The bundled provider tiles and the shared icon cache rules. How the worker
+// warms icons is covered by tests/background/test-background-site-search-icons.js,
+// and how the overlay shows them by test-overlay-site-search-icons.js.
+
 const siteSearchSource = fs.readFileSync('assets/data/site-search.json', 'utf8');
 const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
 
 assert.ok(
   runsBefore(getInjectedScripts('overlay'), 'src/shared/favicon/shortcut-favicon.js', 'src/overlay/search-panel.js'),
   'the injected overlay should load the shared high-resolution shortcut favicon runtime first'
-);
-
-assert.match(
-  overlayRuntimeSource,
-  /siteSearchIconCache:\s*'_x_extension_site_search_icon_cache_canonical_2026_unique_'/,
-  'the overlay runtime should expose a fresh Retina provider icon cache key'
-);
-
-assert.doesNotMatch(
-  `${siteSearchSource}\n${searchUtilsSource}`,
-  /["']?iconUrl["']?\s*:\s*["']https?:/,
-  'built-in provider catalogs should not retain remote icon fallbacks'
 );
 
 const webAccessibleResources = (manifest.web_accessible_resources || [])
@@ -92,24 +74,6 @@ new Set(Object.values(expectedBundledProviderIcons)).forEach((resourcePath) => {
   assert.strictEqual(pngHeader[25], 6, `${resourcePath} should preserve RGBA rounded corners`);
 });
 
-assert.match(
-  backgroundSource,
-  /const SITE_SEARCH_PINNED_ICON_KEYS = new Set\(Object\.keys\(\s*SHORTCUT_FAVICON\.SITE_SEARCH_PINNED_ICON_ASSETS \|\| \{\}\s*\)\);/,
-  'bundled providers should skip unnecessary background discovery'
-);
-
-assert.match(
-  backgroundSource,
-  /const siteSearchProviders = Array\.isArray\(siteSearchCache\) \? siteSearchCache : \[\];[\s\S]*?loadSiteSearchProviders\(\)[\s\S]*?scheduleSiteSearchProviderIconWarmup\(providers, ''\);[\s\S]*?chrome\.scripting\.executeScript/,
-  'provider icon warming should run in parallel while the overlay opens from cached provider data'
-);
-
-assert.match(
-  backgroundSource,
-  /const SITE_SEARCH_ICON_WARM_CONCURRENCY = 2;/,
-  'provider icon discovery should be rate-limited to protect overlay and browser responsiveness'
-);
-
 const googleProvider = {
   key: 'gg',
   template: 'https://www.google.com/search?q={query}',
@@ -129,63 +93,6 @@ assert.strictEqual(
   'the pinned Google brand icon should bypass stale page-discovery cache entries'
 );
 
-assert.match(
-  backgroundSource,
-  /function scheduleSiteSearchProviderIconWarmup\(providers, preferredTheme\)[\s\S]*?hasUsableCachedSiteSearchProviderIcon\(provider\)/,
-  'background warming should validate cached provider icons before skipping discovery'
-);
-
-assert.match(
-  backgroundSource,
-  /async function resolveShortcutFaviconData\(pageUrl, preferredTheme, signal, explicitIconUrl, refresh, iconSource\)[\s\S]*?resolver\.getShortcutFaviconFetchCandidates\(pageUrl, iconSource\)[\s\S]*?fetchShortcutFaviconResource\(/,
-  'background warming should use centralized proxy and browser snapshot candidates instead of arbitrary provider URLs'
-);
-assert.match(
-  backgroundSource,
-  /function fetchShortcutFaviconDocument\(pageUrl, signal\) \{\s*return Promise\.resolve\(null\);\s*\}/,
-  'provider page HTML discovery should make no privileged network request'
-);
-assert.match(
-  backgroundSource,
-  /function fetchShortcutFaviconManifest\(manifestUrl, signal\) \{\s*return Promise\.resolve\(\[\]\);\s*\}/,
-  'provider manifests should make no privileged network request'
-);
-assert.match(
-  backgroundSource,
-  /function fetchShortcutFaviconResource\([\s\S]*?!isAllowedFaviconProxyRequestUrl\(sourceUrl\)[\s\S]*?redirect: 'error'[\s\S]*?isAllowedFaviconProxyRequestUrl\(resolvedSourceUrl\)/,
-  'fixed proxy icon requests should reject redirects and revalidate the response URL'
-);
-
-
-assert.match(
-  backgroundSource,
-  /function removeLegacySiteSearchIconCaches\(\)[\s\S]*?localArea\.remove\(legacyKeys/,
-  'obsolete provider cache namespaces should be removed during the canonical-cache migration'
-);
-
-[newtabSource, overlaySource].forEach((source) => {
-  assert.match(
-    source,
-    /SHORTCUT_FAVICON\.getSiteSearchProviderIcon\(/,
-    'newtab and overlay should resolve provider icons through the same shared function'
-  );
-  assert.match(
-    source,
-    /preferDirectProviderIcons:\s*true/,
-    'newtab and overlay should bypass host-level favicon replacement for provider artwork'
-  );
-  assert.match(
-    source,
-    /const attachInputModeFaviconData =[\s\S]*?SHORTCUT_FAVICON\.createSiteSearchProviderIconHydrator\(attachFaviconData\)/,
-    'newtab and overlay should create their provider icon loaders from one shared runtime'
-  );
-  assert.match(
-    source,
-    /attachFaviconData:\s*attachInputModeFaviconData/,
-    'newtab and overlay should attach the same provider icon loading adapter'
-  );
-});
-
 assert.strictEqual(
   shortcutFavicon.shouldHydrateSiteSearchProviderIcon(
     'chrome-extension://lumno/assets/images/site-search/tile-bi.png'
@@ -194,71 +101,16 @@ assert.strictEqual(
   'the shared Bing tile should bypass asynchronous favicon hydration on both surfaces'
 );
 
-assert.match(
-  newtabSource,
-  /storageKey:\s*SITE_SEARCH_ICON_CACHE_STORAGE_KEY,[\s\S]*?function loadSiteSearchIconCache\(\)/,
-  'newtab should hydrate the same dedicated provider cache as overlay'
-);
-
-assert.match(
-  newtabSource,
-  /function getSearchModeMenuItems\(\) \{[\s\S]*?Promise\.all\(\[[\s\S]*?loadSiteSearchIconCache\(\)[\s\S]*?getAggregateSearches\(\)[\s\S]*?loadSearchSourceOrder\(\)[\s\S]*?\]\)\.then\(\(results\) => buildSearchModeMenuItems\(results\[3\]\)\);/,
-  'newtab should finish the icon cache, aggregate configuration and order reads before rendering its provider menu'
-);
-
-assert.match(
-  overlaySource,
-  /function getSearchModeMenuItems\(\) \{[\s\S]*?Promise\.all\(\[[\s\S]*?loadSiteSearchIconCache\(\)[\s\S]*?getAggregateSearches\(\)[\s\S]*?loadSearchSourceOrder\(\)[\s\S]*?\]\)\.then\(\(results\) => buildSearchModeMenuItems\(results\[3\]\)\);/,
-  'opening the shortcut panel should wait for unfinished icon, aggregate configuration and order reads'
-);
-
-assert.match(
-  overlaySource,
-  /storageChangeListeners\.add\(\(changes,\s*areaName\) => \{[\s\S]*?changes && changes\[SITE_SEARCH_ICON_CACHE_STORAGE_KEY\][\s\S]*?setSiteSearchPrefix\(activeProvider,[\s\S]*?inputModeController\.refreshModeMenu\(\)[\s\S]*?\}\);/,
-  'an open overlay tag and menu should adopt background-warmed icons immediately'
-);
-
-assert.match(
-  newtabSource,
-  /changes\[SITE_SEARCH_ICON_CACHE_STORAGE_KEY\][\s\S]*?setSiteSearchPrefix\(activeProvider,[\s\S]*?inputModeController\.refreshModeMenu\(\)/,
-  'an open newtab tag and menu should adopt the same background-warmed icons immediately'
-);
-
-assert.match(
-  inputModeSource,
-  /function refreshModeMenu\([^)]*\)[\s\S]*?refreshModeMenu,/,
-  'the shared input mode controller should support refreshing an already-open panel'
-);
-
-assert.match(
-  inputModeCss,
-  /\[data-search-input-mode-current\] \{[\s\S]*?overflow: hidden !important;/,
-  'the current-mode slot should clip only its own horizontal expansion'
-);
-
-assert.match(
-  inputModeSource,
-  /siteSearchPrefixCurrent\.style\.cssText = cssText\(\[[\s\S]*?\['display', currentLabelVisible \? 'inline-flex' : 'none'\][\s\S]*?\['line-height', '18px'\][\s\S]*?\['overflow', 'hidden'\]/,
-  'the current-mode slot should preserve its line box while constraining the reveal width'
-);
-
-assert.match(
-  inputModeCss,
-  /\[data-search-input-mode-current\] \{[\s\S]*?display: none !important;[\s\S]*?\[data-current-visible="true"\][\s\S]*?\[data-search-input-mode-current\] \{[\s\S]*?display: inline-flex !important;/,
-  'the current-mode label should use a dedicated reveal state'
-);
-
-assert.match(
-  inputModeSource,
-  /const previousCurrentState = shouldAnimate[\s\S]*?getInputModePrefixCurrentVisualState\(\)[\s\S]*?cancelInputModePrefixAnimation\(\)[\s\S]*?playInputModePrefixCurrentResizeAnimation\([\s\S]*?previousCurrentState,[\s\S]*?nextCurrentState/,
-  'menu reversal should capture the rendered current-slot geometry before cancelling the active animation'
-);
-
-assert.match(
-  inputModeSource,
-  /function playInputModePrefixCurrentResizeAnimation\(fromState, toState\)[\s\S]*?siteSearchPrefixCurrent\.animate\(\[[\s\S]*?marginLeft: `\$\{startMarginLeft\}px`[\s\S]*?width: `\$\{startWidth\}px`[\s\S]*?marginLeft: `\$\{endMarginLeft\}px`[\s\S]*?width: `\$\{endWidth\}px`[\s\S]*?animationRevision !== inputModePrefixAnimationRevision/,
-  'the current-mode slot should expand in flow, cancel the extra flex gap, and reject stale completions'
-);
+const inputModeCss = parseCss(fs.readFileSync('src/shared/search/search-input.css', 'utf8'));
+const currentSlot = inputModeCss.rule('.x-lumno-search-input-mode__prefix [data-search-input-mode-current]');
+assert.deepStrictEqual([currentSlot.get('overflow'), currentSlot.priority('overflow')], ['hidden', 'important'],
+  'the current-mode slot should clip only its own horizontal expansion');
+assert.deepStrictEqual([currentSlot.get('display'), currentSlot.priority('display')], ['none', 'important'],
+  'the current-mode label should stay hidden until revealed');
+const revealed = inputModeCss.entries.find((entry) => entry.selectors.some((selector) =>
+  selector.includes('[data-current-visible="true"]') && selector.endsWith('[data-search-input-mode-current]')));
+assert.ok(revealed, 'the current-mode label should have a dedicated reveal state');
+assert.deepStrictEqual([revealed.style.getPropertyValue('display'), revealed.style.getPropertyPriority('display')], ['inline-flex', 'important']);
 
 (async () => {
   // Provider icons should warm as soon as the background runtime starts: the

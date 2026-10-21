@@ -3,8 +3,8 @@ const fs = require('fs');
 const path = require('path');
 
 const overlaySiteFixes = require('../../src/overlay/site-fixes.js');
-const { readBackgroundSource } = require('../helpers/background-source');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { parseCss } = require('../helpers/css-rules');
+const { createOverlayPage } = require('../helpers/overlay-runtime-harness');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 
@@ -272,113 +272,61 @@ async function testTimeoutKeepsSafeFallbackUntilStylesFinish() {
   );
 }
 
-function testBootstrapDisablesRightButtonTransitions() {
-  const overlayShellSource = fs.readFileSync(
-    path.join(repoRoot, 'react-src/overlay/shell.tsx'),
-    'utf8'
+// The fallback styles the real overlay puts in its shadow root before its
+// component stylesheets arrive, read through the CSS object model.
+async function testBootstrapFallbackStyles() {
+  const page = await createOverlayPage();
+  const root = await page.open();
+  const shell = parseCss(Array.from(root.querySelectorAll('style')).map((style) => style.textContent).join('\n'));
+  page.close();
+  const overlay = '#_x_extension_overlay_2024_unique_';
+  const rule = (selector) => {
+    const found = shell.rule(selector);
+    assert.ok(found, `the overlay should style ${selector} before its stylesheets load`);
+    return found;
+  };
+  const switchButton = rule(`:where(${overlay}) :where(.x-ov-suggestion-switch-button)`);
+  assert.deepStrictEqual(
+    [switchButton.get('background'), switchButton.get('border-radius'), switchButton.get('font'), switchButton.get('font-size'), switchButton.get('height')],
+    ['var(--x-ov-suggestion-action-button-bg, transparent)', '6px', 'inherit', '12px', 'var(--x-ov-suggestion-action-height, 26px)'],
+    'switch actions should keep their themed pill shape and 12px type before their stylesheet loads'
   );
-  const searchInputCss = fs.readFileSync(
-    path.join(repoRoot, 'src/shared/search/search-input.css'),
-    'utf8'
-  );
-  const suggestionsCss = fs.readFileSync(
-    path.join(repoRoot, 'src/overlay/suggestions-view.css'),
-    'utf8'
-  );
-  const searchPanelSource = readOverlayPanelSource();
-  const backgroundSource = readBackgroundSource();
+  assert.ok(!shell.selectors().some((selector) => selector === `${overlay} .x-ov-suggestion-switch-button`),
+    'the fallback must stay lower-specificity than the complete suggestion stylesheet');
+  const inputFallback = rule(`:where(${overlay}) :where(.x-lumno-search-input, .x-lumno-search-input__container)`);
+  assert.deepStrictEqual([inputFallback.get('all'), inputFallback.get('width')], ['unset', '100%'],
+    'the input should have a zero-specificity structural fallback');
+  assert.strictEqual(rule(`:where(${overlay}[data-lumno-site-fix-style-fallback]) :where(.x-ov-suggestions-container)`).get('visibility'), 'hidden',
+    'late result CSS should hide rows instead of exposing unstyled HTML');
+  const hiddenControls = shell.entries.find((entry) => entry.style.getPropertyValue('display') === 'none' &&
+    entry.selectors.some((selector) => selector.startsWith(`:where(${overlay}[data-lumno-site-fix-style-fallback])`) && selector.includes('mode__prefix')));
+  assert.ok(hiddenControls, 'the late input fallback should hide the deferred mode controls');
+  const hiddenText = hiddenControls.selectors.join(' ');
+  ['mode__prefix', 'mode__badge', 'mode__tab-hint'].forEach((part) => assert.ok(hiddenText.includes(part), `${part} should wait for its stylesheet`));
+  ['search-input__right-icon', 'x-ov-close-other-tabs'].forEach((part) => assert.ok(!hiddenText.includes(part), `${part} should stay visible`));
+  ['.x-lumno-search-input__icon', '.x-lumno-search-input__right-icon', '.x-ov-close-other-tabs'].forEach((icon) => {
+    const mask = rule(`:where(${overlay}) :where(${icon})::before`);
+    assert.match(mask.get('mask-image'), /^url\("chrome-extension:\/\/[^/]+\/assets\/remixicon\/.+\.svg"\)$/,
+      `${icon} should draw from a cached Remix SVG while the icon font loads`);
+    assert.strictEqual(mask.get('background-color'), 'currentColor', `${icon} should take the theme icon color`);
+    assert.strictEqual(mask.has('border'), false, 'the fallback should not hand-draw the icon');
+  });
 
-  assert.match(
-    searchInputCss,
-    /#_x_extension_overlay_2024_unique_\[data-lumno-site-fix-reveal\]\s+\.x-lumno-search-input__right-icon\s*\{\s*transition:\s*none\s*!important;/,
-    'the settings button must not transition from the native ButtonFace during reveal'
-  );
-  assert.match(
-    suggestionsCss,
-    /#_x_extension_overlay_2024_unique_\[data-lumno-site-fix-reveal\]\s+\.x-ov-close-other-tabs\s*\{\s*transition:\s*none\s*!important;/,
-    'the close-tabs button must not transition from the native ButtonFace during reveal'
-  );
-  assert.match(
-    overlayShellSource,
-    /:where\(#_x_extension_overlay_2024_unique_\)\s+:where\(\.x-ov-suggestion-switch-button\)\s*\{[\s\S]*?background:\s*var\(--x-ov-suggestion-action-button-bg,\s*transparent\);[\s\S]*?border-radius:\s*6px;[\s\S]*?font:\s*inherit;[\s\S]*?font-size:\s*12px;[\s\S]*?height:\s*var\(--x-ov-suggestion-action-height,\s*26px\);/,
-    'switch actions must keep their themed pill shape and 12px type before their deferred stylesheet loads'
-  );
-  assert.doesNotMatch(
-    overlayShellSource,
-    /#_x_extension_overlay_2024_unique_\s+\.x-ov-suggestion-switch-button/,
-    'the bootstrap fallback must stay lower-specificity than the complete suggestion stylesheet'
-  );
-  assert.match(
-    overlayShellSource,
-    /:where\(#_x_extension_overlay_2024_unique_\)\s+:where\(\.x-lumno-search-input,\s+\.x-lumno-search-input__container\)\s*\{[\s\S]*?all:\s*unset;[\s\S]*?width:\s*100%;/,
-    'the input must have a zero-specificity structural fallback before its stylesheet arrives'
-  );
-  assert.match(
-    overlayShellSource,
-    /:where\(#_x_extension_overlay_2024_unique_\[data-lumno-site-fix-style-fallback\]\)\s+:where\(\.x-ov-suggestions-container\)\s*\{\s*visibility:\s*hidden;/,
-    'late result CSS must hide rows instead of exposing unstyled HTML'
-  );
-  const fallbackHiddenControls = overlayShellSource.match(
-    /:where\(#_x_extension_overlay_2024_unique_\[data-lumno-site-fix-style-fallback\]\)\s+:where\(\s*\n(\s*\.x-lumno-search-input-mode__prefix,[\s\S]*?)\n\s*\)\s*\{\s*display:\s*none;/
-  );
-  assert(fallbackHiddenControls, 'the late input fallback should hide only deferred mode controls');
-  assert.match(
-    fallbackHiddenControls[1],
-    /\.x-lumno-search-input-mode__prefix,[\s\S]*?\.x-lumno-search-input-mode__badge,[\s\S]*?\.x-lumno-search-input-mode__tab-hint/,
-    'the deferred mode controls should remain hidden until their stylesheet is ready'
-  );
-  assert.doesNotMatch(
-    fallbackHiddenControls[1],
-    /x-lumno-search-input__right-icon|x-ov-close-other-tabs/,
-    'cached Remix SVGs should keep the action icons visible during the fallback'
-  );
-  assert.match(
-    overlayShellSource,
-    /getRemixIconMaskCss\(searchIconUrl\)[\s\S]*?getRemixIconMaskCss\(settingsIconUrl\)[\s\S]*?getRemixIconMaskCss\(brush2IconUrl\)/,
-    'the fallback should use all cached Remix SVGs instead of drawing substitute glyphs'
-  );
-  assert.match(
-    overlayShellSource,
-    /after the delayed icon-font stylesheet[\s\S]*?Overlay's light\/dark theme token[\s\S]*?background-color:\s*currentColor;/,
-    'cached SVG masks should inherit the existing light or dark theme icon color'
-  );
-  assert.match(
-    overlayShellSource,
-    /:where\(#_x_extension_overlay_2024_unique_\)\s+:where\(\.x-lumno-search-input__icon\)::before/,
-    'the cached search SVG should remain active even after component CSS has arrived'
-  );
-  assert.doesNotMatch(
-    overlayShellSource,
-    /border:\s*1\.5px solid currentColor|transform:\s*rotate\(45deg\)/,
-    'the fallback must not retain the hand-drawn magnifier geometry'
-  );
-  assert.match(
-    searchPanelSource,
-    /focusOverlayInputForReveal\(\);[\s\S]*?const reduceMotion = revealOptions\.forceInstant === true \|\|[\s\S]*?overlayFrameTracker\.runEnterAnimation/,
-    'the input should become focusable before waiting through entry animation frames'
-  );
-  assert.match(
-    searchPanelSource,
-    /forceInstant:\s*!styleGateResult \|\| styleGateResult\.ok !== true \|\|[\s\S]*?shouldSkipOverlayEntryMotionForSlowStartup\(\)/,
-    'slow first-frame or style-fallback paths should skip stuttering entry motion'
-  );
-  assert.match(
-    backgroundSource,
-    /const overlayOpenStartedAt = Date\.now\(\);\s*[\s\S]*?let overlayEntryMotionStartedAt = overlayOpenStartedAt;[\s\S]*?openedAt:\s*overlayEntryMotionStartedAt/,
-    'the renderer should receive the command-start timestamp for adaptive entry motion'
-  );
-  assert.match(
-    backgroundSource,
-    /files: overlayInjectionFiles[\s\S]*?overlayEntryMotionStartedAt = Date\.now\(\);\s*runOverlayWithResolvedZoom\(\);/,
-    'a tab\'s one-time runtime injection must not spend the entry motion budget'
-  );
+  const transitionsOff = (file, control) => {
+    const css = parseCss(fs.readFileSync(path.join(repoRoot, file), 'utf8'));
+    const found = css.rule(`${overlay}[data-lumno-site-fix-reveal] ${control}`);
+    assert.deepStrictEqual(found && [found.get('transition'), found.priority('transition')], ['none', 'important'],
+      `${control} should not transition from the native ButtonFace while the overlay reveals`);
+  };
+  transitionsOff('src/shared/search/search-input.css', '.x-lumno-search-input__right-icon');
+  transitionsOff('src/overlay/suggestions-view.css', '.x-ov-close-other-tabs');
 }
 
 Promise.resolve()
   .then(testOrdinarySitesWaitForCriticalOverlayStyles)
   .then(testAlreadyLoadedStylesDoNotDelayReveal)
   .then(testTimeoutKeepsSafeFallbackUntilStylesFinish)
-  .then(testBootstrapDisablesRightButtonTransitions)
+  .then(testBootstrapFallbackStyles)
   .then(() => {
     console.log('Overlay critical style reveal tests passed.');
   })

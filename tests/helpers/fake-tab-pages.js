@@ -87,7 +87,7 @@ function createFakeTabPages(options) {
       return;
     }
     if (Array.isArray(details.files)) {
-      log.push({ tabId, documentId: page.id, kind: 'files', files: JSON.parse(JSON.stringify(details.files)), injectImmediately: details.injectImmediately === true });
+      log.push({ tabId, documentId: page.id, kind: 'files', files: JSON.parse(JSON.stringify(details.files)), injectImmediately: details.injectImmediately === true, at: Date.now() });
       if (details.files.includes('build/overlay.js')) {
         installOverlayRuntime(page);
       }

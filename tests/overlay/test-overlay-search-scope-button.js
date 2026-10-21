@@ -1,81 +1,77 @@
 const assert = require('assert');
 const fs = require('fs');
-const { readSearchInputModeSource, readSearchInputModeRuntimeSource } = require('../helpers/search-input-mode-source');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { parseCss } = require('../helpers/css-rules');
+const { createOverlayPage, bundledSiteSearchProviders } = require('../helpers/overlay-runtime-harness');
 
-const overlaySource = readOverlayPanelSource();
-const searchInputCss = fs.readFileSync('src/shared/search/search-input.css', 'utf8');
-const searchInputModeSource = readSearchInputModeSource();
+// The search icon at the start of the real overlay's input opens the search
+// scope menu, by pointer or keyboard, and steps aside while a scope tag is
+// active. The current-label slot itself is covered by
+// react-src/shared/search-input-mode.test.ts.
 
-assert.match(
-  overlaySource,
-  /iconStyleOverrides:\s*\{\s*left: '13px'/,
-  'the overlay search action should stay optically aligned with its settings action'
-);
-assert.match(
-  overlaySource,
-  /searchScopeIcon\.dataset\.searchScopeAction = 'true'[\s\S]*?setAttribute\('role', 'button'\)[\s\S]*?setSearchScopeIconEnabled\(true\)/,
-  'the overlay search icon should expose the same accessible action contract'
-);
-assert.match(
-  overlaySource,
-  /const setSearchScopeIconEnabled = \(enabled\) => \{[\s\S]*?setAttribute\('aria-disabled', nextEnabled \? 'false' : 'true'\)[\s\S]*?setAttribute\('tabindex', nextEnabled \? '0' : '-1'\)[\s\S]*?removeAttribute\('data-tooltip'\)/,
-  'an active search tag should remove the Overlay icon from pointer, keyboard, and Tooltip interaction'
-);
-assert.match(
-  overlaySource,
-  /const activateSearchScopeIcon = \(event\) => \{[\s\S]*?getAttribute\('aria-disabled'\) === 'true'[\s\S]*?return;/,
-  'programmatic activation must also respect the disabled Overlay state'
-);
-assert.match(
-  overlaySource,
-  /onModeTagActiveChange: \(active\) => \{[\s\S]*?setSearchScopeIconEnabled\(!active\)/,
-  'the shared mode-tag lifecycle should control Overlay search-icon availability'
-);
-assert.match(
-  overlaySource,
-  /const activateSearchScopeIcon = \(event\) => \{[\s\S]*?resetModeMenuDoubleTab\(\)[\s\S]*?openSearchModeMenuFromDoubleTab\(\)/,
-  'the overlay icon should reuse the scope-panel result and normal tag entrance animation'
-);
-assert.match(
-  overlaySource,
-  /searchScopeIcon\.addEventListener\('click', activateSearchScopeIcon\)[\s\S]*?event\.key !== 'Enter' && event\.key !== ' '[\s\S]*?activateSearchScopeIcon\(event\)/,
-  'the overlay icon should support pointer and keyboard activation'
-);
-assert.match(
-  overlaySource,
-  /bindInputActionCursorTooltip\(searchScopeIcon, searchScopeTooltipText\)/,
-  'the overlay search icon should use the same cursor Tooltip as settings'
-);
-assert.match(
-  overlaySource,
-  /function openSearchModeMenuFromDoubleTab\(\)[\s\S]*?activateSiteSearch\(provider, \{ animatePrefix: false \}\);[\s\S]*?function activateSiteSearch\(provider, activationOptions\)[\s\S]*?animate: options\.animatePrefix !== false/,
-  'double-Tab should use the shared provider path without starting an animation that its menu-open cancels'
-);
-assert.match(
-  overlaySource,
-  /function openSearchModeMenuFromDoubleTab\(\)[\s\S]*?if \(expectedInputValue\.trim\(\)\) \{[\s\S]*?preserveResults: true[\s\S]*?restoreSearchModeQuery\(expectedInputValue\);/,
-  'the overlay search action should preserve a typed query without starting a result-height transition'
-);
-assert.doesNotMatch(
-  overlaySource,
-  /function openSearchModeMenuFromDoubleTab\(\)[\s\S]*?expectedInputValue === ''[\s\S]*?const activateDefaultProvider/,
-  'a non-empty query should not disable the clickable scope action'
-);
-assert.match(
-  searchInputModeSource,
-  /siteSearchPrefixCurrentText\.style\.setProperty\('display', 'inline-block'\)[\s\S]*?siteSearchPrefixCurrent\.style\.cssText = cssText\([\s\S]*?\['overflow', 'hidden'\]/,
-  'the overlay current label should be clipped by its in-flow slot before the isolated stylesheet loads'
-);
-assert.match(
-  searchInputModeSource,
-  /function playInputModePrefixCurrentResizeAnimation\(fromState, toState\)[\s\S]*?siteSearchPrefixCurrent\.animate\(\[[\s\S]*?marginLeft:[\s\S]*?width:/,
-  'the overlay current label should expand in normal flow and continuously move the chevron'
-);
-assert.match(
-  searchInputCss,
-  /\.x-lumno-search-input__icon\[data-search-scope-action="true"\]\[data-hover-active="true"\][\s\S]*?var\(--x-ext-input-icon-hover-bg/,
-  'both surfaces should share the settings hover tokens'
-);
+async function openOverlay() {
+  const page = await createOverlayPage({ stylesheetsLoad: true });
+  const root = await page.open({ siteSearchProviders: bundledSiteSearchProviders() });
+  const icon = root.querySelector('[data-search-scope-action="true"]');
+  const menuOpen = () => root.querySelector('[data-search-input-mode-prefix]').getAttribute('data-menu-open') === 'true';
+  return { page, root, icon, menuOpen };
+}
 
-console.log('overlay search scope button tests passed');
+async function testIconOpensTheScopeMenu() {
+  const { page, icon, menuOpen } = await openOverlay();
+  assert.ok(icon, 'the overlay input should start with a search scope action');
+  assert.deepStrictEqual(
+    [icon.getAttribute('role'), icon.getAttribute('tabindex'), icon.getAttribute('aria-disabled'), icon.style.left],
+    ['button', '0', 'false', '13px'],
+    'the action should be a focusable button aligned with the settings action'
+  );
+  assert.ok(icon.getAttribute('data-tooltip'), 'the action should explain itself in a Tooltip');
+
+  await page.type('cats');
+  icon.dispatchEvent(new page.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+  await page.waitFor(menuOpen, 'clicking the icon should open the scope menu');
+  assert.strictEqual(page.input().value, 'cats', 'a typed query should be kept');
+  assert.deepStrictEqual([icon.getAttribute('aria-disabled'), icon.getAttribute('tabindex'), icon.getAttribute('data-tooltip')], ['true', '-1', null],
+    'with a scope tag active the icon should leave pointer, keyboard and Tooltip interaction');
+
+  page.press('Escape');
+  await page.settle(50);
+  icon.dispatchEvent(new page.window.MouseEvent('click', { bubbles: true, cancelable: true }));
+  await page.settle(50);
+  assert.strictEqual(menuOpen(), false, 'a disabled icon should not reopen the menu');
+  page.close();
+}
+
+async function testKeyboardActivation() {
+  const { page, icon, menuOpen } = await openOverlay();
+  icon.dispatchEvent(new page.window.KeyboardEvent('keydown', { key: 'a', bubbles: true, cancelable: true }));
+  await page.settle(50);
+  assert.strictEqual(menuOpen(), false, 'other keys should not activate the icon');
+  icon.dispatchEvent(new page.window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+  await page.waitFor(menuOpen, 'Enter on the icon should open the scope menu');
+  page.close();
+
+  const space = await openOverlay();
+  space.icon.dispatchEvent(new space.page.window.KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+  await space.page.waitFor(space.menuOpen, 'Space on the icon should open the scope menu');
+  space.page.close();
+}
+
+function testHoverUsesTheSharedTokens() {
+  const css = parseCss(fs.readFileSync('src/shared/search/search-input.css', 'utf8'));
+  const hover = css.entries.find((entry) => entry.selectors.some((selector) =>
+    selector.includes('.x-lumno-search-input__icon[data-search-scope-action="true"][data-hover-active="true"]')));
+  assert.ok(hover, 'the scope action should have a hover state');
+  assert.match(hover.style.getPropertyValue('background') || hover.style.getPropertyValue('background-color'), /var\(--x-ext-input-icon-hover-bg/,
+    'both search surfaces should share the settings action hover tokens');
+}
+
+(async () => {
+  await testIconOpensTheScopeMenu();
+  await testKeyboardActivation();
+  testHoverUsesTheSharedTokens();
+  console.log('overlay search scope button tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

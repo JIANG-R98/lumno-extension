@@ -38,6 +38,8 @@ async function testOpensAtOnceAndReusesTheRuntime() {
   assert.ok(session.pages.log.every((entry) => entry.injectImmediately),
     'probing, injecting and opening should all run without waiting for document_idle');
   assert.strictEqual(session.pages.page(7).overlayOpen, true);
+  assert.ok(session.pages.page(7).invocations[0].context.openedAt >= session.injections()[0].at,
+    'the one-time runtime injection should not count against the entry motion budget');
 
   session.press();
   await wait(300);

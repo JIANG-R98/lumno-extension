@@ -43,6 +43,9 @@ describe('Overlay React shell', () => {
     expect(mount.panel.style.transition).toBe('none');
     expect(mount.panel.style.filter).toBe('none');
     expect(mount.panel.style.willChange).toBe('auto');
+    expect(mount.panel.style.getPropertyValue('transform')).toBe(
+      'translateX(-50%) translateY(0) scale(var(--x-ov-visible-scale, 1))'
+    );
     expect(mount.host.getAttribute('popover')).toBe('manual');
     expect(mount.root?.querySelectorAll('#overlay-panel')).toHaveLength(1);
     expect(

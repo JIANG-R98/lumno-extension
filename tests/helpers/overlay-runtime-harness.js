@@ -102,11 +102,19 @@ function createChromeEvent() {
 //                   return undefined to fall back to the default answers
 //   darkSystem      whether prefers-color-scheme: dark matches
 //   setup           (window) => void, run before the overlay is injected
+//   storageDelayMs  how long chrome.storage reads take to answer
+//   recordAnimations  provide and record element.animate()
+//   stylesheetsLoad whether the overlay's stylesheets fire load (JSDOM never
+//                   fetches them, so by default they stay pending)
 async function createOverlayPage(options) {
   const config = options || {};
   const errors = [];
   const virtualConsole = new VirtualConsole();
   virtualConsole.on('jsdomError', (error) => errors.push(error.message));
+  // LUMNO_TEST_CONSOLE=1 shows the page's console while debugging a test.
+  if (process.env.LUMNO_TEST_CONSOLE) {
+    virtualConsole.forwardTo(console, { jsdomErrors: 'none' });
+  }
   const dom = new JSDOM(config.html || '<!doctype html><html><head></head><body><p>Host page</p></body></html>', {
     url: config.url || 'https://page.example.test/',
     runScripts: 'outside-only',
@@ -140,8 +148,11 @@ async function createOverlayPage(options) {
           result[key] = keys[key];
         }
       });
-      window.setTimeout(() => callback?.(result), 0);
-      return Promise.resolve(result);
+      const delay = Number(config.storageDelayMs) || 0;
+      return new Promise((resolve) => window.setTimeout(() => {
+        callback?.(result);
+        resolve(result);
+      }, delay));
     },
     set(items, callback) {
       Object.assign(values, items);
@@ -206,6 +217,43 @@ async function createOverlayPage(options) {
       : fs.readFileSync(path.join(repoRoot, file), 'utf8');
     window.eval(`${source}\n//# sourceURL=${file}`);
   };
+  if (config.stylesheetsLoad) {
+    const addLinkListener = window.HTMLLinkElement.prototype.addEventListener;
+    window.HTMLLinkElement.prototype.addEventListener = function(type, listener, options) {
+      addLinkListener.call(this, type, listener, options);
+      if (type === 'load' && this.rel === 'stylesheet' && !this.__lumnoLoadScheduled) {
+        this.__lumnoLoadScheduled = true;
+        window.setTimeout(() => this.dispatchEvent(new window.Event('load')), 5);
+      }
+    };
+  }
+  // With recordAnimations, Web Animations (which JSDOM lacks) are available
+  // and recorded: { target, keyframes, options, cancelled, finish() }.
+  const animations = [];
+  if (config.recordAnimations) {
+    window.Element.prototype.animate = function(keyframes, options) {
+      const animation = {
+        target: this,
+        keyframes: JSON.parse(JSON.stringify(keyframes)),
+        options: JSON.parse(JSON.stringify(options || {})),
+        cancelled: false,
+        onfinish: null,
+        oncancel: null,
+        finished: Promise.resolve(),
+        cancel() {
+          animation.cancelled = true;
+        },
+        finish() {
+          if (typeof animation.onfinish === 'function') animation.onfinish();
+        },
+        addEventListener(type, listener) {
+          if (type === 'finish') animation.onfinish = listener;
+        }
+      };
+      animations.push(animation);
+      return animation;
+    };
+  }
   if (typeof config.setup === 'function') {
     config.setup(window);
   }
@@ -229,6 +277,7 @@ async function createOverlayPage(options) {
     // The keys of each chrome.storage get the page made, in order; each
     // list's `area` names the storage area.
     storageReads,
+    animations,
     keys,
     documentKeys,
     storageChanged,
@@ -307,6 +356,12 @@ async function createOverlayPage(options) {
   return page;
 }
 
+// The provider list the background passes the overlay on open
+// (assets/data/site-search.json).
+function bundledSiteSearchProviders() {
+  return JSON.parse(fs.readFileSync(path.join(repoRoot, 'assets/data/site-search.json'), 'utf8')).items;
+}
+
 async function openAndSettle(page) {
   page.toggle();
   const host = page.host();
@@ -323,6 +378,7 @@ async function openAndSettle(page) {
 
 module.exports = {
   CONTEXT_TOKEN_KEY,
+  bundledSiteSearchProviders,
   HOST_ID,
   createOverlayPage,
   openAndSettle,
