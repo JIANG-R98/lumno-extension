@@ -53,6 +53,12 @@ function getFontPreviewFamily(family: string): string {
   return `"${family.replace(/["\\]/g, '\\$&')}", var(--lumno-font-sans, sans-serif)`;
 }
 
+// Below this, a searchable menu would show too few rows under the trigger, so
+// it is held against the bottom of the viewport instead. Its box never grows
+// past the cap, however many fonts are installed.
+const SEARCHABLE_MENU_MIN_HEIGHT = 280;
+const SEARCHABLE_MENU_MAX_HEIGHT = 480;
+
 function findNextEnabledOptionIndex(
   options: SelectMenuOption[],
   currentIndex: number,
@@ -158,6 +164,9 @@ export function SelectMenu({
   const menuRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLInputElement>(null);
   const openRef = useRef(false);
+  // A searchable menu measures its whole list once per open; filtering then
+  // changes only what it shows, never its box.
+  const searchableNaturalHeightRef = useRef<number | null>(null);
   const visibleOptions = searchable ? filterOptions(options, filter) : options;
 
   useEffect(() => {
@@ -214,8 +223,17 @@ export function SelectMenu({
       triggerRect.width || 0,
       (Number.parseFloat(windowObj.getComputedStyle(menu).minWidth) || 0) * scaleX
     );
+    if (searchable && searchableNaturalHeightRef.current === null) {
+      menu.style.height = '';
+      menu.style.maxHeight = '';
+    }
     // Layout dimensions stay stable while the shared opening animation scales the surface.
-    const naturalMenuHeight = Math.max((menu.scrollHeight + menu.offsetHeight - menu.clientHeight) * scaleY, 0);
+    const naturalMenuHeight = searchable && searchableNaturalHeightRef.current !== null
+      ? searchableNaturalHeightRef.current
+      : Math.max((menu.scrollHeight + menu.offsetHeight - menu.clientHeight) * scaleY, 0);
+    if (searchable) {
+      searchableNaturalHeightRef.current = naturalMenuHeight;
+    }
     const align = config.menuAlign || 'right';
     let left = triggerRect.left;
     if (align === 'right') {
@@ -228,6 +246,33 @@ export function SelectMenu({
       Math.min(left, Math.max(padding, viewportWidth - menuWidth - padding))
     );
     const visualOffset = offset * scaleY;
+    if (searchable) {
+      // Typing shrinks the list, so a menu anchored by its bottom edge (or one
+      // that flips once the rest fits below) would jump under the caret. The
+      // box is fixed instead: below the trigger when there is room, otherwise
+      // held against the bottom of the viewport. Its height never follows the
+      // filtered rows.
+      const below = triggerRect.bottom + visualOffset;
+      const roomBelow = Math.max(0, viewportHeight - padding - below);
+      const fullHeight = Math.min(
+        naturalMenuHeight,
+        SEARCHABLE_MENU_MAX_HEIGHT * scaleY,
+        Math.max(0, viewportHeight - padding - topInset)
+      );
+      const fitsBelow = roomBelow >= Math.min(fullHeight, SEARCHABLE_MENU_MIN_HEIGHT);
+      const boxHeight = fitsBelow ? Math.min(fullHeight, roomBelow) : fullHeight;
+      const boxTop = fitsBelow ? below : Math.max(topInset, viewportHeight - padding - boxHeight);
+      menu.style.height = `${boxHeight / scaleY}px`;
+      menu.style.maxHeight = `${boxHeight / scaleY}px`;
+      menu.style.overflowY = 'auto';
+      menu.style.overflowX = 'hidden';
+      menu.style.transformOrigin = `${boxTop >= below ? 'top' : 'bottom'} ${align === 'middle' ? 'center' : align}`;
+      menu.style.left = `${(left - originX) / scaleX}px`;
+      menu.style.right = 'auto';
+      menu.style.top = `${(boxTop - originY) / scaleY}px`;
+      menu.style.zIndex = String(config.menuPortalZIndex || 10000);
+      return;
+    }
     const spaceBelow = Math.max(0, viewportHeight - padding - triggerRect.bottom - visualOffset);
     const spaceAbove = Math.max(0, triggerRect.top - visualOffset - topInset);
     const opensAbove = naturalMenuHeight > spaceBelow && spaceAbove > spaceBelow;
@@ -256,6 +301,7 @@ export function SelectMenu({
     documentObj,
     getViewportTopInset,
     host,
+    searchable,
     windowObj
   ]);
 
@@ -267,6 +313,8 @@ export function SelectMenu({
       setFilter('');
       return undefined;
     }
+    // Measured afresh for this open, or for a list that changed while open.
+    searchableNaturalHeightRef.current = null;
     const selectedIndex = visibleOptions.findIndex(
       (option) => !option.action && !option.checkbox &&
         option.value === selectedValue &&
@@ -295,14 +343,6 @@ export function SelectMenu({
       windowObj.visualViewport?.removeEventListener('scroll', onViewportChange);
     };
   }, [config.menuPortalContainer, host, open, options, positionMenu, searchable, selectedValue, windowObj]);
-
-  // Filtering changes the menu's height, so its flipped/anchor position and
-  // available height have to be recomputed before paint.
-  useLayoutEffect(() => {
-    if (openRef.current) {
-      positionMenu();
-    }
-  }, [filter, positionMenu]);
 
   useEffect(() => {
     if (!open || activeIndex < 0) {

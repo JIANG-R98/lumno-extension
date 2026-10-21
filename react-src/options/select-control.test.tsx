@@ -184,6 +184,59 @@ describe('Options select control React island', () => {
     expect(host.querySelectorAll('[role="option"]')).toHaveLength(4);
   });
 
+  it('keeps a searchable menu in place while the filter shrinks the list', () => {
+    // jsdom has no layout: rows are 32px, the window 768px tall.
+    const scrollHeight = vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.querySelectorAll('[role="option"]').length * 32 + 46;
+      });
+    const items = [
+      { label: 'Default', labelKey: '', value: '' },
+      ...Array.from({ length: 40 }, (_, index) => ({
+        label: `Font ${index}`,
+        labelKey: '',
+        value: `Font ${index}`
+      }))
+    ];
+    const open = (triggerTop: number) => {
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const controller = createSelectControlController(host, {
+        kind: 'overlay-font',
+        onSelect: vi.fn(),
+        searchable: true
+      });
+      controllers.push(controller);
+      act(() => controller.render({ id: `font-${triggerTop}`, items, value: '' }));
+      const trigger = host.querySelector<HTMLButtonElement>('button')!;
+      trigger.getBoundingClientRect = () => new DOMRect(400, triggerTop, 280, 32);
+      act(() => trigger.click());
+      const menu = host.querySelector<HTMLElement>('._x_extension_select_menu_2024_unique_')!;
+      const search = host.querySelector<HTMLInputElement>('input[type="text"]')!;
+      const type = (text: string) => act(() => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(search, text);
+        search.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      return { menu, type };
+    };
+
+    // Too little room under a trigger near the bottom: the box is held
+    // against the bottom of the viewport, at the 480px cap.
+    const low = open(700);
+    expect([low.menu.style.top, low.menu.style.height]).toEqual(['280px', '480px']);
+    low.type('Font 3');
+    expect([low.menu.style.top, low.menu.style.height]).toEqual(['280px', '480px']);
+    low.type('zzz');
+    expect([low.menu.style.top, low.menu.style.height]).toEqual(['280px', '480px']);
+
+    // With room below, it opens under the trigger and stays there too.
+    const high = open(60);
+    expect([high.menu.style.top, high.menu.style.height]).toEqual(['98px', '480px']);
+    high.type('Font 1');
+    expect([high.menu.style.top, high.menu.style.height]).toEqual(['98px', '480px']);
+    scrollHeight.mockRestore();
+  });
+
   it('accepts adapter-driven selection and copy updates', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
