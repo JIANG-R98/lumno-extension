@@ -113,6 +113,8 @@ export interface SelectMenuConfig {
    * menu. Keyboard navigation then applies to the filtered options.
    */
   searchable?: boolean;
+  /** The page's own text field class, so the filter looks like its other inputs. */
+  searchInputClassName?: string;
   searchPlaceholder?: string;
   selectId?: string;
   tooltip?: string;
@@ -580,7 +582,9 @@ export function SelectMenu({
             aria-controls={listboxId}
             aria-expanded={open}
             aria-label={config.searchPlaceholder}
-            className="_x_extension_select_search_input_2026_unique_"
+            className={`_x_extension_select_search_input_2026_unique_${
+              config.searchInputClassName ? ` ${config.searchInputClassName}` : ''
+            }`}
             onChange={(event) => {
               const nextFilter = event.currentTarget.value;
               setFilter(nextFilter);

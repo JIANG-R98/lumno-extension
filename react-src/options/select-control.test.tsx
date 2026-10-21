@@ -107,6 +107,8 @@ describe('Options select control React island', () => {
     });
     const search = host.querySelector<HTMLInputElement>('input[type="text"]');
     expect(search?.placeholder).toBe('Search fonts');
+    // Styled as the settings page's own text field.
+    expect(search?.classList.contains('_x_extension_shortcut_input_2024_unique_')).toBe(true);
     expect(host.querySelectorAll('[role="option"]')).toHaveLength(3);
     // The field is a combobox that owns a listbox holding only the options.
     const listbox = host.querySelector<HTMLElement>('[role="listbox"]');
