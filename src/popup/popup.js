@@ -796,9 +796,10 @@
       applyTheme();
       render();
       root.addEventListener('resize', syncOverflow);
-      // Quick settings fold over a few frames; measure once they settle.
+      // A folding panel changes height in one step, after its rows fade on
+      // closing; measure once either settles.
       host.addEventListener('transitionend', (event) => {
-        if (event.propertyName === 'height') syncOverflow();
+        if (event.propertyName === 'height' || event.propertyName === 'opacity') syncOverflow();
       });
       darkQuery.addEventListener('change', () => {
         if (state.settings.theme === 'system') applyTheme();

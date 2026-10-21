@@ -360,10 +360,12 @@ body[data-theme="dark"] {
   transform: rotate(180deg);
 }
 
-/* The accordion from the Settings page, for the quick settings and an
-   action's options: opening, the box is there almost at once and the rows
-   fade in; closing, the rows fade first and the box follows. Folded rows drop
-   out of layout and paint. */
+/* The quick settings and an action's options fold like the Settings page's
+   accordion, except that the box changes height in one step: the browser
+   resizes the popup window to the page on every frame a height animates,
+   which shakes the whole popup. Opening, the box is there at once and the
+   rows fade in; closing, the rows fade first and then the box goes. Folded
+   rows drop out of layout and paint. */
 .x-lumno-popup__settings-panel,
 .x-lumno-popup__action-panel {
   height: 0;
@@ -373,10 +375,10 @@ body[data-theme="dark"] {
   transform: translateY(-6px);
   overflow: hidden;
   transition:
-    height var(--lumno-accordion-close),
+    height 0s linear var(--lumno-duration-md),
     opacity var(--lumno-duration-md) ease,
-    transform var(--lumno-duration-xl) ease,
-    content-visibility 0s linear var(--lumno-duration-xl) allow-discrete;
+    transform var(--lumno-duration-md) ease,
+    content-visibility 0s linear var(--lumno-duration-md) allow-discrete;
 }
 
 .x-lumno-popup__settings[data-expanded="true"] .x-lumno-popup__settings-panel,
@@ -387,7 +389,6 @@ body[data-theme="dark"] {
   transform: translateY(0);
   overflow: visible;
   transition:
-    height var(--lumno-accordion-open),
     opacity var(--lumno-duration-md) ease,
     transform var(--lumno-duration-xl) ease;
 }
