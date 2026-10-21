@@ -304,16 +304,39 @@ body[data-theme="dark"] {
 
 /* Quick settings: folded by default, since they are rarely changed. */
 .x-lumno-popup__settings {
+  position: relative;
+  isolation: isolate;
   margin-top: 10px;
   padding: 0 12px;
   border-radius: var(--lumno-radius-md);
+}
+
+/* The card's fill is a layer of its own, so it can grow from the 40px header
+   to the whole card and shrink back smoothly while the page's height changes
+   in one step (see the panels below). */
+.x-lumno-popup__settings::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 calc(100% - 40px);
+  z-index: -1;
+  border-radius: inherit;
   background: var(--popup-settings-bg);
-  transition: background-color var(--lumno-duration-md) ease;
+  /* Closing starts slowly, so the rows fade before the fill passes them. */
+  transition:
+    bottom var(--lumno-duration-lg) cubic-bezier(0.4, 0, 0.2, 1),
+    background-color var(--lumno-duration-md) ease;
+}
+
+.x-lumno-popup__settings[data-expanded="true"]::before {
+  bottom: 0;
+  transition:
+    bottom var(--lumno-duration-lg) var(--lumno-ease-emphasized),
+    background-color var(--lumno-duration-md) ease;
 }
 
 /* Folded, the whole card is the button; open, the header only brightens, so
    no hover band cuts across the first group. */
-.x-lumno-popup__settings[data-expanded="false"]:has(> .x-lumno-popup__settings-toggle:hover) {
+.x-lumno-popup__settings[data-expanded="false"]:has(> .x-lumno-popup__settings-toggle:hover)::before {
   background: var(--popup-settings-hover-bg);
 }
 
@@ -364,8 +387,8 @@ body[data-theme="dark"] {
    accordion, except that the box changes height in one step: the browser
    resizes the popup window to the page on every frame a height animates,
    which shakes the whole popup. Opening, the box is there at once and the
-   rows fade in; closing, the rows fade first and then the box goes. Folded
-   rows drop out of layout and paint. */
+   rows fade in; closing, the rows fade and the card's fill shrinks first,
+   and then the box goes. Folded rows drop out of layout and paint. */
 .x-lumno-popup__settings-panel,
 .x-lumno-popup__action-panel {
   height: 0;
@@ -375,10 +398,10 @@ body[data-theme="dark"] {
   transform: translateY(-6px);
   overflow: hidden;
   transition:
-    height 0s linear var(--lumno-duration-md),
-    opacity var(--lumno-duration-md) ease,
-    transform var(--lumno-duration-md) ease,
-    content-visibility 0s linear var(--lumno-duration-md) allow-discrete;
+    height 0s linear var(--lumno-duration-lg),
+    opacity var(--lumno-duration-sm) ease,
+    transform var(--lumno-duration-sm) ease,
+    content-visibility 0s linear var(--lumno-duration-lg) allow-discrete;
 }
 
 .x-lumno-popup__settings[data-expanded="true"] .x-lumno-popup__settings-panel,
