@@ -1,71 +1,76 @@
 const assert = require('assert');
 const fs = require('fs');
-const { readOptionsRuntimeSource } = require('../helpers/options-source');
-const { readBackgroundSource } = require('../helpers/background-source');
-const { readPageSource } = require('../helpers/page-source');
-
-const optionsHtml = readPageSource('src/options/options.html');
-const optionsSource = readOptionsRuntimeSource();
-const overlayRuntimeSource = fs.readFileSync('src/overlay/runtime.js', 'utf8');
-const backgroundSource = readBackgroundSource();
+const { JSDOM } = require('jsdom');
 const settings = require('../../src/shared/settings.js');
+const { createOptionsPage } = require('../helpers/options-page');
+const { loadBackground, wait } = require('../helpers/background-harness');
 
-const sizeRowIndex = optionsHtml.indexOf('data-i18n="settings_overlay_size_title"');
-const animationRowIndex = optionsHtml.indexOf('data-i18n="settings_overlay_enter_animation_title"');
-assert(sizeRowIndex >= 0, 'overlay size row should exist');
-assert(
-  animationRowIndex > sizeRowIndex,
-  'overlay entry animation row should appear directly after the overlay size setting'
-);
-assert.match(
-  optionsHtml,
-  /data-overlay-enter-animation="elastic" data-active="true" aria-pressed="true"[\s\S]*?data-overlay-enter-animation="fade" data-active="false" aria-pressed="false"/,
-  'spring should be the default selected option and fade should be available'
-);
-assert.match(
-  optionsHtml,
-  /_x_extension_overlay_enter_animation_tabs_wrap_2026_unique_"[^>]*role="group"/,
-  'the animation selector should expose button-group semantics'
-);
+// The overlay opening animation setting: its Settings control, its storage
+// and the copy. What each choice plays is covered by test-overlay-entry-motion.js.
 
-assert.match(
-  optionsSource,
-  /createOptionsSegmentedControlController\(\s*overlayEnterAnimationTabsWrap,\s*'overlay-enter-animation',\s*handleOverlayEnterAnimationSelection\s*\)/,
-  'the animation choice should reuse the options segmented control'
-);
-assert.deepStrictEqual(
-  [undefined, 'bogus', 'fade', 'elastic'].map(settings.normalizeOverlayEnterAnimation),
-  ['elastic', 'elastic', 'fade', 'elastic'],
-  'invalid and missing animation values should default to elastic'
-);
-assert.match(
-  overlayRuntimeSource,
-  /overlayEnterAnimation:\s*'_x_extension_overlay_enter_animation_2026_unique_'/,
-  'the overlay runtime should expose the animation storage key'
-);
-assert.match(
-  backgroundSource,
-  /migrateStorageIfNeeded\(CHROME_SYNC_STORAGE_KEYS\);/,
-  'the background migration should include the animation preference'
-);
-assert(
-  settings.CHROME_SYNC_STORAGE_KEYS.includes('_x_extension_overlay_enter_animation_2026_unique_'),
-  'the shared Chrome Sync contract should include the animation preference'
-);
+const KEY = '_x_extension_overlay_enter_animation_2026_unique_';
 
-const expectedLabels = {
-  en: ['Opening animation', 'Spring', 'Fade'],
-  ja: ['表示時のアニメーション', 'スプリング', 'フェード'],
-  zh_CN: ['进入动画', '弹性', '淡入'],
-  zh_TW: ['進入動畫', '彈性', '淡入']
-};
-Object.entries(expectedLabels).forEach(([locale, labels]) => {
-  const messages = JSON.parse(
-    fs.readFileSync(`_locales/${locale}/messages.json`, 'utf8')
-  );
-  assert.strictEqual(messages.settings_overlay_enter_animation_title.message, labels[0]);
-  assert.strictEqual(messages.overlay_enter_animation_elastic.message, labels[1]);
-  assert.strictEqual(messages.overlay_enter_animation_fade.message, labels[2]);
+function testMarkup() {
+  const doc = new JSDOM(fs.readFileSync('src/options/options.html', 'utf8')).window.document;
+  const size = doc.querySelector('[data-i18n="settings_overlay_size_title"]');
+  const animation = doc.querySelector('[data-i18n="settings_overlay_enter_animation_title"]');
+  assert.ok(size && animation && (size.compareDocumentPosition(animation) & 4),
+    'the opening animation row should follow the overlay size setting');
+  const options = Array.from(doc.querySelectorAll('[data-overlay-enter-animation]'));
+  assert.deepStrictEqual(options.map((button) => [button.getAttribute('data-overlay-enter-animation'), button.getAttribute('data-active')]),
+    [['elastic', 'true'], ['fade', 'false']], 'spring should be selected by default, with fade available');
+}
+
+async function testChoosingFadeIsSaved() {
+  const page = await createOptionsPage();
+  // The segmented control is a React island: read its buttons afresh.
+  const pressed = (value) => page.document.querySelector(`[data-overlay-enter-animation="${value}"]`).getAttribute('aria-checked');
+  assert.strictEqual(page.byId('_x_extension_overlay_enter_animation_tabs_wrap_2026_unique_').getAttribute('role'), 'radiogroup',
+    'the choice should be announced as one radio group');
+  await page.click(page.document.querySelector('[data-overlay-enter-animation="fade"]'));
+  await page.settle(100);
+  assert.ok(page.storage.sync.writes.some((write) => write[KEY] === 'fade'), 'choosing fade should save it to browser sync');
+  assert.deepStrictEqual([pressed('elastic'), pressed('fade')], ['false', 'true']);
+  page.changeStorage('sync', KEY, 'elastic');
+  await page.settle(100);
+  assert.deepStrictEqual([pressed('elastic'), pressed('fade')], ['true', 'false'], 'a choice made on another device should show here');
+  page.close();
+}
+
+async function testStorage() {
+  assert.deepStrictEqual([undefined, 'bogus', 'fade', 'elastic'].map(settings.normalizeOverlayEnterAnimation),
+    ['elastic', 'elastic', 'fade', 'elastic'], 'missing and invalid values should mean spring');
+  assert.ok(settings.CHROME_SYNC_STORAGE_KEYS.includes(KEY));
+  const worker = loadBackground({ local: { [KEY]: 'fade' } });
+  await wait(80);
+  assert.strictEqual(worker.storage.sync.data[KEY], 'fade', 'a choice an earlier version kept locally should move into browser sync');
+}
+
+function testCopy() {
+  const expected = {
+    en: ['Opening animation', 'Spring', 'Fade'],
+    ja: ['表示時のアニメーション', 'スプリング', 'フェード'],
+    zh_CN: ['进入动画', '弹性', '淡入'],
+    zh_TW: ['進入動畫', '彈性', '淡入']
+  };
+  Object.entries(expected).forEach(([locale, labels]) => {
+    const messages = JSON.parse(fs.readFileSync(`_locales/${locale}/messages.json`, 'utf8'));
+    assert.deepStrictEqual([
+      messages.settings_overlay_enter_animation_title.message,
+      messages.overlay_enter_animation_elastic.message,
+      messages.overlay_enter_animation_fade.message
+    ], labels);
+  });
+}
+
+(async () => {
+  testMarkup();
+  await testChoosingFadeIsSaved();
+  await testStorage();
+  testCopy();
+  console.log('overlay entry animation setting tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
 });
-
-console.log('overlay entry animation setting tests passed');

@@ -104,6 +104,26 @@ function parseCss(cssText) {
         }
       };
     },
+    // An @keyframes rule's frames as { '0%': CSSStyleDeclaration, ... }
+    // (from/to read as 0%/100%), or null.
+    keyframes(name) {
+      const find = (rules) => {
+        for (const rule of Array.from(rules)) {
+          if (rule.name === name && rule.cssRules) return rule;
+          if (rule.cssRules && !rule.name) {
+            const nested = find(rule.cssRules);
+            if (nested) return nested;
+          }
+        }
+        return null;
+      };
+      const found = find(style.sheet.cssRules);
+      if (!found) return null;
+      return Object.fromEntries(Array.from(found.cssRules).map((frame) => [
+        String(frame.keyText).replace(/^from$/, '0%').replace(/^to$/, '100%'),
+        frame.style
+      ]));
+    },
     // Every selector the stylesheet declares, top level or nested.
     selectors() {
       return entries.flatMap((entry) => entry.selectors);

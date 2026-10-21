@@ -3,19 +3,10 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 const { createOverlayKeyRouter } = require('../../src/overlay/keyboard.js');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
-
-const searchPanelSource = readOverlayPanelSource();
 
 // The real overlay key router runs here. JSDOM cannot create trusted events,
 // so the router's trust predicate is swapped for one that accepts them; the
 // security test covers the untrusted path with the default predicate.
-assert.match(
-  searchPanelSource,
-  /if \(e\.key === 'Tab'\) \{\s*handleTabKey\(e\);\s*return;\s*\}/,
-  'the double-Tab scope shortcut should run inside the isolated input key handler'
-);
-
 const dom = new JSDOM('<!doctype html><div id="overlay"></div><div id="lumno-host"></div>');
 const { window } = dom;
 const { document } = window;

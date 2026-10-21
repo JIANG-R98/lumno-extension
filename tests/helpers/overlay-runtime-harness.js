@@ -4,7 +4,7 @@ const path = require('path');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { bundleScript } = require('./module-script');
 const { getInjectedFiles } = require('./runtime-scripts');
-const { trackListeners } = require('./trusted-events');
+const { recordAllListeners, trackListeners } = require('./trusted-events');
 
 // Loads the unmodified production overlay injection bundle (the same file
 // list background.js injects) into a JSDOM page with a fake chrome API, so
@@ -257,6 +257,7 @@ async function createOverlayPage(options) {
   if (typeof config.setup === 'function') {
     config.setup(window);
   }
+  const dispatchTrusted = recordAllListeners(window);
   const keys = trackListeners(window);
   const documentKeys = trackListeners(window.document);
   injectionFiles.forEach(evalFile);
@@ -347,6 +348,10 @@ async function createOverlayPage(options) {
     },
     waitFor(condition, message) {
       return waitFor(condition, message, errors);
+    },
+    // A trusted event on any element, delivered along its composed path.
+    trusted(target, type, init) {
+      return dispatchTrusted(target, type, init);
     },
     settle,
     close() {

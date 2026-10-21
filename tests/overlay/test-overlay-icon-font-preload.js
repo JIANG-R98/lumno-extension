@@ -2,7 +2,8 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
-const { readPageSource } = require('../helpers/page-source');
+const { JSDOM } = require('jsdom');
+const { parseCss } = require('../helpers/css-rules');
 const { getBundleFiles, getInjectedScripts, getManifestContentScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
@@ -12,7 +13,9 @@ const remixCss = fs.readFileSync(
   path.join(repoRoot, 'assets/remixicon/fonts/remixicon.css'),
   'utf8'
 );
-const optionsHtml = readPageSource('src/options/options.html');
+const optionsDocument = new JSDOM(
+  fs.readFileSync(path.join(repoRoot, 'src/options/options.html'), 'utf8')
+).window.document;
 const fallbackSvgAssets = [
   'assets/remixicon/icons/search-line.svg',
   'assets/remixicon/icons/settings-line.svg',
@@ -108,8 +111,11 @@ assert(
   )),
   'the cached Remix SVGs must be available to the isolated Overlay Shadow DOM'
 );
+const remixFontFace = parseCss(remixCss).entries.find((entry) => (
+  entry.selectors.length === 0 && /remixicon/.test(entry.style.getPropertyValue('font-family'))
+));
 assert(
-  remixCss.includes('src: url("remixicon.woff2") format("woff2");'),
+  remixFontFace && /url\("?remixicon\.woff2"?\) format\("woff2"\)/.test(remixFontFace.style.getPropertyValue('src')),
   'the Remix stylesheet should request the exact URL that was preloaded'
 );
 
@@ -137,11 +143,12 @@ assert(
   runsBefore(getInjectedScripts('tabSwitcher'), 'src/shared/icon-font-preload.js', 'src/react/overlay-islands.js'),
   'the standalone tab switcher should also warm the icon font before rendering'
 );
+const optionsPreload = optionsDocument.querySelector('script[src="../../build/options-preload.js"]');
+const firstStylesheet = optionsDocument.querySelector('link[rel="stylesheet"]');
 assert(
   getBundleFiles('options-preload')[0] === 'src/shared/icon-font-preload.js' &&
-    optionsHtml.indexOf('<script src="../../build/options-preload.js"></script>') >= 0 &&
-    optionsHtml.indexOf('<script src="../../build/options-preload.js"></script>') <
-      optionsHtml.indexOf('<link rel="stylesheet"'),
+    optionsPreload && firstStylesheet &&
+    (optionsPreload.compareDocumentPosition(firstStylesheet) & 4),
   'Options should warm the icon font before its stylesheets'
 );
 

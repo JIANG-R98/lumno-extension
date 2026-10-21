@@ -1,6 +1,4 @@
 const assert = require('assert');
-const fs = require('fs');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 delete LumnoOverlayLifecycle;
 const LumnoOverlayLifecycle = require('../../src/overlay/lifecycle.js');
@@ -37,17 +35,7 @@ const unavailableRegistry = lifecycle.createChromeEventListenerRegistry(null);
 assert.strictEqual(unavailableRegistry.add(first), null);
 assert.strictEqual(unavailableRegistry.size, 0);
 
-const searchPanelSource = readOverlayPanelSource();
-assert.strictEqual(
-  (searchPanelSource.match(/storageChangeListeners\.add\(/g) || []).length,
-  19,
-  'all overlay storage listeners should be owned by the lifecycle registry'
-);
-assert.strictEqual(
-  (searchPanelSource.match(/storageChangeListeners\.clear\(\)/g) || []).length,
-  1,
-  'overlay teardown should clear its storage listeners in one place'
-);
-assert.doesNotMatch(searchPanelSource, /chrome\.storage\.onChanged\.(?:add|remove)Listener/);
+// That an overlay session's storage listeners all go away when it closes is
+// covered against the real overlay by test-overlay-session-teardown.js.
 
 console.log('overlay listener registry tests passed');

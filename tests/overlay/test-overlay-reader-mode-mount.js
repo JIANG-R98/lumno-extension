@@ -1,59 +1,44 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
-const { JSDOM } = require('jsdom');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { createOverlayPage } = require('../helpers/overlay-runtime-harness');
 
-const overlaySource = readOverlayPanelSource();
-const mountExpressionMatch = overlaySource.match(
-  /const overlayMountParent = ([\s\S]*?);\n\s*overlayMountParent\.appendChild\(overlayHost\);/
-);
+// Reader extensions such as SimpRead hide the page body and mount their
+// reading surface under <html>; the overlay must stay visible there, and
+// inside the fullscreen element when one is showing.
 
-assert.ok(
-  mountExpressionMatch,
-  'the overlay mount-parent expression should remain discoverable'
-);
+async function testReaderModeMountsOutsideTheHiddenBody() {
+  const page = await createOverlayPage({
+    html: '<!doctype html><html><head></head><body class="simpread-hidden" style="display: none"><p>Article</p></body></html>'
+  });
+  await page.open();
+  const host = page.host();
+  assert.strictEqual(host.parentNode, page.document.documentElement,
+    'reader mode should mount the overlay outside a hidden body');
+  assert.strictEqual(page.document.body.contains(host), false,
+    'the hidden reader-mode body must not contain the overlay host');
+  page.close();
+}
 
-const resolveMountParent = new Function(
-  'document',
-  `return ${mountExpressionMatch[1]};`
-);
-const dom = new JSDOM('<!doctype html><html><body></body></html>');
-const { document } = dom.window;
+async function testFullscreenKeepsTheOverlayInsideTheFullscreenElement() {
+  let fullscreen = null;
+  const page = await createOverlayPage({
+    setup(window) {
+      fullscreen = window.document.createElement('section');
+      window.document.body.appendChild(fullscreen);
+      Object.defineProperty(window.document, 'fullscreenElement', { configurable: true, get: () => fullscreen });
+    }
+  });
+  await page.open();
+  assert.strictEqual(page.host().parentNode, fullscreen,
+    'fullscreen mode should keep the overlay inside the fullscreen subtree');
+  page.close();
+}
 
-document.body.className = 'simpread-hidden';
-document.body.style.display = 'none';
-
-const readerModeParent = resolveMountParent(document);
-assert.strictEqual(
-  readerModeParent,
-  document.documentElement,
-  'reader mode should mount the overlay outside a hidden body'
-);
-
-const overlayHost = document.createElement('div');
-readerModeParent.appendChild(overlayHost);
-assert.strictEqual(
-  overlayHost.parentElement,
-  document.documentElement,
-  'the overlay host should be a direct child of the visible document root'
-);
-assert.strictEqual(
-  document.body.contains(overlayHost),
-  false,
-  'the hidden reader-mode body must not contain the overlay host'
-);
-
-const fullscreenElement = document.createElement('section');
-document.documentElement.appendChild(fullscreenElement);
-Object.defineProperty(document, 'fullscreenElement', {
-  configurable: true,
-  value: fullscreenElement
+(async () => {
+  await testReaderModeMountsOutsideTheHiddenBody();
+  await testFullscreenKeepsTheOverlayInsideTheFullscreenElement();
+  console.log('overlay reader-mode mount tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
 });
-assert.strictEqual(
-  resolveMountParent(document),
-  fullscreenElement,
-  'fullscreen mode should keep the overlay inside the fullscreen subtree'
-);
-
-console.log('overlay reader-mode mount tests passed');

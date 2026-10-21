@@ -6,7 +6,7 @@ const { JSDOM } = require('jsdom');
 
 const pageTheme = require('../../src/overlay/page-theme.js');
 const faviconTheme = require('../../src/newtab/theme/favicon-theme.js');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { createOverlayPage, HOST_ID } = require('../helpers/overlay-runtime-harness');
 
 function createElement(config) {
   const element = {
@@ -346,75 +346,55 @@ async function testPageThemeObserverReactsToThemeAttributes() {
   window.close();
 }
 
-function testSearchPanelAppliesInitialSystemThemeBeforeAppend() {
-  const searchPanelSource = readOverlayPanelSource();
-  const initialThemeIndex = searchPanelSource.indexOf('applyOverlayThemeVariables(overlay, overlayThemeMode);');
-  const themeTokensIndex = searchPanelSource.indexOf('const overlayThemeTokens = {');
-  const appendIndex = searchPanelSource.indexOf('overlayMountParent.appendChild(overlayHost);');
-  assert.ok(initialThemeIndex > 0, 'search-panel should apply a synchronous initial system theme');
-  assert.ok(
-    initialThemeIndex > themeTokensIndex,
-    'initial system theme should run after overlay theme tokens are initialized'
-  );
-  assert.ok(
-    initialThemeIndex < appendIndex,
-    'initial system theme should be applied before the overlay host is appended'
-  );
+// The real overlay is themed and its input shielded from page extensions
+// before its host joins the page, and focus only follows once it is shown.
+async function testOverlayIsReadyBeforeItJoinsThePage() {
+  const atMount = [];
+  const page = await createOverlayPage({
+    darkSystem: true,
+    setup(window) {
+      const attachShadow = window.Element.prototype.attachShadow;
+      window.Element.prototype.attachShadow = function(init) {
+        const root = attachShadow.call(this, init);
+        this.__testRoot = root;
+        return root;
+      };
+      const appendChild = window.Node.prototype.appendChild;
+      window.Node.prototype.appendChild = function(child) {
+        if (child && child.id === HOST_ID && child.__testRoot) {
+          const root = child.__testRoot;
+          const input = root.querySelector('#_x_extension_search_input_2024_unique_');
+          atMount.push({
+            theme: root.getElementById('_x_extension_overlay_2024_unique_').getAttribute('data-theme'),
+            input: input && Object.fromEntries(Object.keys(INPUT_ISOLATION).map((name) => [name, input.getAttribute(name)])),
+            focused: root.activeElement === input
+          });
+        }
+        return appendChild.call(this, child);
+      };
+    }
+  });
+  await page.open();
+  assert.strictEqual(atMount.length, 1, 'the overlay host should join the page once');
+  assert.strictEqual(atMount[0].theme, 'dark', 'the system theme should apply before the overlay is shown');
+  assert.deepStrictEqual(atMount[0].input, INPUT_ISOLATION,
+    'password managers, grammar checkers and writing suggestions should be told to skip the input before it mounts');
+  assert.strictEqual(atMount[0].focused, false, 'focus should wait for the reveal');
+  assert.strictEqual(page.root().activeElement, page.input(), 'the revealed overlay should focus its input');
+  page.close();
 }
 
-function testSearchPanelExcludesInputExtensionsBeforeMountAndFocus() {
-  const searchPanelSource = readOverlayPanelSource();
-  const isolationFunctionIndex = searchPanelSource.indexOf(
-    'function applyOverlayInputExtensionIsolation(input)'
-  );
-  const inputCreatedIndex = searchPanelSource.indexOf('searchInput = inputParts.input;');
-  const isolationCallIndex = searchPanelSource.indexOf(
-    'applyOverlayInputExtensionIsolation(searchInput);'
-  );
-  const inputMountIndex = searchPanelSource.indexOf('overlay.appendChild(inputContainer);');
-  const focusFunctionIndex = searchPanelSource.indexOf(
-    'function focusOverlayInputForReveal()'
-  );
-  const focusIndex = searchPanelSource.indexOf(
-    'focusOverlayInputForReveal();',
-    focusFunctionIndex
-  );
-  const requiredAttributes = {
-    'data-1p-ignore': 'true',
-    'data-op-ignore': 'true',
-    'data-lpignore': 'true',
-    'data-bwignore': 'true',
-    'data-form-type': 'other',
-    'data-gramm': 'false',
-    'data-lt-active': 'false',
-    spellcheck: 'false',
-    writingsuggestions: 'false'
-  };
-  assert.ok(isolationFunctionIndex > 0, 'search-panel should define input-extension isolation');
-  Object.entries(requiredAttributes).forEach(([name, value]) => {
-    assert.ok(
-      searchPanelSource.includes(`'${name}': '${value}'`),
-      `search-panel should isolate its input with ${name}=${value}`
-    );
-  });
-  assert.ok(inputCreatedIndex > 0, 'search-panel should create the search input');
-  assert.ok(
-    isolationCallIndex > inputCreatedIndex,
-    'search-panel should isolate its search input after creation'
-  );
-  assert.ok(
-    isolationCallIndex < inputMountIndex &&
-      inputMountIndex < focusFunctionIndex &&
-      focusFunctionIndex < focusIndex,
-    'input-extension exclusion should be applied before the input is mounted and reveal-owned focus runs'
-  );
-  assert.ok(
-    !searchPanelSource.includes(
-      'setTimeout(() => searchInput.focus({ preventScroll: true }), 100);'
-    ),
-    'overlay focus should follow the reveal transaction instead of an unrelated fixed timer'
-  );
-}
+const INPUT_ISOLATION = {
+  'data-1p-ignore': 'true',
+  'data-op-ignore': 'true',
+  'data-lpignore': 'true',
+  'data-bwignore': 'true',
+  'data-form-type': 'other',
+  'data-gramm': 'false',
+  'data-lt-active': 'false',
+  spellcheck: 'false',
+  writingsuggestions: 'false'
+};
 
 testVisualThemeUsesVisibleDarkSurfaces();
 testVisualThemeReturnsNullForAmbiguousSurfaces();
@@ -427,12 +407,13 @@ testPageThemeFusesThemeColorWithVisualSignals();
 testPageThemeDoesNotShortCircuitExplicitHints();
 testPageThemeIgnoresBusinessClassNames();
 testPageThemeObserverBatchesChangesPerFrame();
-testSearchPanelAppliesInitialSystemThemeBeforeAppend();
-testSearchPanelExcludesInputExtensionsBeforeMountAndFocus();
 
-testPageThemeObserverReactsToThemeAttributes().then(() => {
-  console.log('overlay page theme tests passed');
-}).catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+testPageThemeObserverReactsToThemeAttributes()
+  .then(testOverlayIsReadyBeforeItJoinsThePage)
+  .then(() => {
+    console.log('overlay page theme tests passed');
+    process.exit(0);
+  }).catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });

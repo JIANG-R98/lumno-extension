@@ -1,52 +1,69 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { readStylesheet } = require('../helpers/css-tokens');
+const { parseCss } = require('../helpers/css-rules');
+const { createOverlayPage } = require('../helpers/overlay-runtime-harness');
 
-const repoRoot = path.resolve(__dirname, '..', '..');
-const overlayJs = readOverlayPanelSource();
-const suggestionsCss = fs.readFileSync(path.join(repoRoot, 'src/overlay/suggestions-view.css'), 'utf8');
+// Scrolling over the real overlay must not scroll the page behind it, while
+// a result list that can scroll keeps scrolling.
 
-assert.match(
-  overlayJs,
-  /overlayWheelIsolationHandler = null;/,
-  'overlay should keep a removable wheel isolation handler reference'
-);
+function wheel(page, target) {
+  const event = new page.window.WheelEvent('wheel', { deltaY: 120, bubbles: true, cancelable: true, composed: true });
+  target.dispatchEvent(event);
+  return event;
+}
 
-assert.match(
-  overlayJs,
-  /function findOverlayWheelScrollableElement\(event,\s*overlayElement\)[\s\S]*?composedPath/,
-  'overlay should find scrollable descendants from the composed wheel event path'
-);
+async function run() {
+  const page = await createOverlayPage({
+    respond(message) {
+      if (message.action === 'getSearchSuggestions') {
+        return { suggestions: Array.from({ length: 8 }, (_value, index) => ({ type: 'history', title: `Result ${index}`, url: `https://r${index}.test/` })) };
+      }
+      return undefined;
+    }
+  });
+  const root = await page.open();
+  const pageWheels = [];
+  page.document.addEventListener('wheel', () => pageWheels.push('document'));
+  const overlay = root.getElementById('_x_extension_overlay_2024_unique_');
 
-assert.match(
-  overlayJs,
-  /function canScrollElementWithWheel\(element,\s*event\)[\s\S]*?scrollHeight[\s\S]*?clientHeight/,
-  'overlay should allow native scrolling only when an internal scroll target can consume the wheel delta'
-);
+  const overInput = wheel(page, page.input());
+  assert.strictEqual(overInput.defaultPrevented, true, 'a wheel over the overlay should not scroll the page');
+  assert.deepStrictEqual(pageWheels, [], 'the page should not hear a wheel over the overlay');
 
-assert.match(
-  overlayJs,
-  /function createOverlayWheelIsolationHandler\(overlayElement\)[\s\S]*?event\.stopPropagation\(\)[\s\S]*?event\.preventDefault\(\)/,
-  'overlay wheel handler should stop propagation and prevent default page scrolling at overlay boundaries'
-);
+  await page.type('result');
+  await page.waitFor(() => page.suggestions().length > 3, 'results should render');
+  const list = root.querySelector('.x-ov-suggestions-container');
+  // JSDOM neither loads the overlay's stylesheet nor lays out: give the list
+  // the overflow and sizes a real one has once its rows overflow.
+  list.style.overflowY = 'auto';
+  Object.defineProperty(list, 'scrollHeight', { configurable: true, value: 900 });
+  Object.defineProperty(list, 'clientHeight', { configurable: true, value: 300 });
+  list.scrollTop = 100;
+  const overList = wheel(page, page.suggestions()[2]);
+  assert.strictEqual(overList.defaultPrevented, false, 'a result list with room to scroll should scroll natively');
+  assert.deepStrictEqual(pageWheels, [], 'its wheel should still stay out of the page');
 
-assert.match(
-  overlayJs,
-  /overlay\.addEventListener\('wheel', overlayWheelIsolationHandler, \{ passive: false, capture: true \}\);/,
-  'overlay should attach the wheel isolation handler as a non-passive capture listener'
-);
+  list.scrollTop = 600;
+  assert.strictEqual(wheel(page, page.suggestions()[2]).defaultPrevented, true,
+    'at the end of the list the wheel should stop instead of chaining to the page');
+  assert.ok(overlay);
 
-assert.match(
-  overlayJs,
-  /overlayElement\.removeEventListener\('wheel', overlayWheelIsolationHandler, true\);/,
-  'overlay cleanup should remove the wheel isolation handler'
-);
+  page.press('Escape');
+  await page.settle(30);
+  const afterClose = wheel(page, page.document.body);
+  assert.strictEqual(afterClose.defaultPrevented, false, 'once closed, the overlay should leave page scrolling alone');
+  page.close();
 
-assert.match(
-  suggestionsCss,
-  /overscroll-behavior:\s*contain;/,
-  'overlay suggestions list should contain scroll chaining while preserving internal scrolling'
-);
+  const css = parseCss(readStylesheet('src/overlay/suggestions-view.css'));
+  assert.ok(css.entries.some((entry) => entry.selectors.some((selector) => selector.endsWith('.x-ov-suggestions-container')) &&
+    entry.style.getPropertyValue('overscroll-behavior') === 'contain'),
+  'the result list should contain scroll chaining');
+}
 
-console.log('overlay wheel isolation tests passed');
+run().then(() => {
+  console.log('overlay wheel isolation tests passed');
+  process.exit(0);
+}).catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
