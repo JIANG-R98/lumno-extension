@@ -201,7 +201,7 @@ Lumno searches tabs, bookmarks, history and top sites together, adds site and AI
 
 WebDAV is a Beta feature under **Settings → Account & sync**. Add a connection with the HTTPS endpoint, directory, username and app password, then choose **Save and turn on sync**. It runs alongside the existing Chrome sync and adds custom shortcut icons and uploaded wallpapers; images stay out of Chrome Sync. Connection details are saved only on each device.
 
-Existing server data requires an explicit initial-version choice. Later conflicts let you choose a version for conflicting content while merging other changes, with backups before replacement. The UI shows the last successful sync time. Turning WebDAV off keeps Chrome sync running. See [WebDAV sync details](docs/webdav-sync.md) for behavior and server requirements.
+Existing server data requires an explicit initial-version choice. Later conflicts let you choose a version for conflicting content while merging other changes, with backups before replacement. The UI shows the last successful sync time. Turning WebDAV off keeps Chrome sync running.
 
 ## Development
 
