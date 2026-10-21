@@ -1,12 +1,13 @@
 const assert = require('assert');
 const { readStylesheet } = require('../helpers/css-tokens');
 const fs = require('fs');
+const { readOptionsRuntimeSource } = require('../helpers/options-source');
 
 const settings = require('../../src/shared/settings.js');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const optionsHtml = readPageSource('src/options/options.html');
-const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
+const optionsSource = readOptionsRuntimeSource();
 const newtabHtml = readPageSource('newtab.html');
 const newtabSource = readNewtabRuntimeSource();
 const shortcutDialogCss = readStylesheet('src/newtab/shortcuts/shortcut-dialog.css');

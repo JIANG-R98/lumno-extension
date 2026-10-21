@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readOptionsRuntimeSource } = require('../helpers/options-source');
 
 const repoRoot = path.join(__dirname, '..', '..');
 const localeNames = ['en', 'ja', 'zh_CN', 'zh_TW'];
@@ -10,10 +11,7 @@ const nativeLanguageLabels = {
   language_ja: '日本語',
   language_en: 'English'
 };
-const optionsSource = fs.readFileSync(
-  path.join(repoRoot, 'src', 'options', 'options.js'),
-  'utf8'
-);
+const optionsSource = readOptionsRuntimeSource();
 
 localeNames.forEach((locale) => {
   const messagesPath = path.join(repoRoot, '_locales', locale, 'messages.json');

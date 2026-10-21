@@ -3,6 +3,7 @@ const { readStylesheet } = require('../helpers/css-tokens');
 const { extractFunction } = require('../helpers/extract-function');
 const fs = require('fs');
 const path = require('path');
+const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
@@ -1528,7 +1529,7 @@ function testBookmarkColumnPreferenceRemainsAnAdaptiveMaximum() {
 testBookmarkColumnPreferenceRemainsAnAdaptiveMaximum();
 
 function testBookmarkGridDefaultsToSixColumns() {
-  const optionsJs = fs.readFileSync(path.join(repoRoot, 'src/options/options.js'), 'utf8');
+  const optionsJs = readOptionsRuntimeSource();
   const optionsHtml = readPageSource('src/options/options.html');
   const settingsSource = fs.readFileSync(path.join(repoRoot, 'src/shared/settings.js'), 'utf8');
   const onboardingHtml = readPageSource('src/onboarding/onboarding.html');

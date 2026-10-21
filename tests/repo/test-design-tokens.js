@@ -1,5 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const { readLightTokens } = require('../helpers/css-tokens');
 
 const read = (file) => fs.readFileSync(file, 'utf8');
@@ -69,7 +70,7 @@ assert.doesNotMatch(optionsCss, /^\._x_extension_toast_2024_unique_ \{[^}]*backg
   'the Options toast uses src/shared/ui/toast.css');
 
 // One indicator implementation: classic scripts call the shared module.
-assert.doesNotMatch(read('src/options/options.js'), /function measure\w*Indicator/,
+assert.doesNotMatch(readOptionsRuntimeSource(), /function measure\w*Indicator/,
   'options.js should not measure segmented indicators itself');
 assert.match(read('src/newtab/top-content/quotes.js'), /globalThis\.LumnoSegmentedIndicator/,
   'quotes.js should position indicators through the shared segmented indicator');

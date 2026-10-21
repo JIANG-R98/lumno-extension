@@ -1,14 +1,12 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const { readPageSource } = require('../helpers/page-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const optionsHtml = readPageSource('src/options/options.html');
-const optionsJs = fs.readFileSync(
-  path.join(repoRoot, 'src', 'options', 'options.js'),
-  'utf8'
-);
+const optionsJs = readOptionsRuntimeSource();
 // The recent row runs from its title to the next settings row, wherever it sits on the page.
 const recentSettingsRowStart = optionsHtml.indexOf('data-i18n="settings_recent_sites_title"');
 assert(recentSettingsRowStart >= 0, 'the recent site cards row should exist');

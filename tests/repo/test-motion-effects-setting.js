@@ -1,12 +1,13 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { readBackgroundSource } = require('../helpers/background-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const optionsHtml = readPageSource('src/options/options.html');
-const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
+const optionsSource = readOptionsRuntimeSource();
 const newtabHtml = readPageSource('newtab.html');
 const newtabSource = readNewtabRuntimeSource();
 const onboardingHtml = readPageSource('src/onboarding/onboarding.html');

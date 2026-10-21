@@ -1,5 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
@@ -12,7 +13,7 @@ const manifest = JSON.parse(read('manifest.json'));
 const newtabHtml = readPageSource('newtab.html');
 const newtabSource = readNewtabRuntimeSource();
 const optionsHtml = readPageSource('src/options/options.html');
-const optionsSource = read('src/options/options.js');
+const optionsSource = readOptionsRuntimeSource();
 const overlayRuntimeSource = read('src/overlay/runtime.js');
 const overlaySource = readOverlayPanelSource();
 const backgroundSource = readBackgroundSource();
@@ -65,7 +66,7 @@ assert.match(
 );
 assert.match(
   optionsSource,
-  /createAggregateSearchListController\(aggregateSearchList,[\s\S]*?onRemove: handleAggregateSearchRemove,[\s\S]*?onSave: handleAggregateSearchSave/
+  /createAggregateSearchListController\(aggregateSearchList,[\s\S]*?onRemove: (?:\(\.\.\.args\) => )?handleAggregateSearchRemove\b[\s\S]*?onSave: (?:\(\.\.\.args\) => )?handleAggregateSearchSave\b/
 );
 assert.match(
   optionsSource,

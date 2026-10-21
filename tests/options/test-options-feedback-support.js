@@ -1,14 +1,12 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const { readPageSource } = require('../helpers/page-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const optionsHtml = readPageSource('src/options/options.html');
-const optionsJs = fs.readFileSync(
-  path.join(repoRoot, 'src/options/options.js'),
-  'utf8'
-);
+const optionsJs = readOptionsRuntimeSource();
 const communityLinksJs = fs.readFileSync(
   path.join(repoRoot, 'src/shared/community-links.js'),
   'utf8'
@@ -110,7 +108,7 @@ assert.deepStrictEqual(
 // providers load, hidden while lm is off, and refreshed whenever the site search list changes.
 assert.match(
   optionsJs,
-  /let helpCenterSearchEnabled = null;/,
+  /helpCenterSearchEnabled = null;/,
   'the Help Center ask demo should stay hidden until the site search providers have loaded'
 );
 assert.match(

@@ -1,12 +1,13 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readOptionsRuntimeSource } = require('../helpers/options-source');
 
 const settings = require('../../src/shared/settings.js');
 const pageTheme = require('../../src/overlay/page-theme.js');
 const { readPageSource } = require('../helpers/page-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
 const optionsHtml = readPageSource('src/options/options.html');
-const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
+const optionsSource = readOptionsRuntimeSource();
 const overlayRuntimeSource = fs.readFileSync('src/overlay/runtime.js', 'utf8');
 const overlaySource = readOverlayPanelSource();
 

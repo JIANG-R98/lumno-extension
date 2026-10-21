@@ -1,10 +1,11 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const settings = require('../../src/shared/settings.js');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const optionsSource = fs.readFileSync(path.join(repoRoot, 'src/options/options.js'), 'utf8');
+const optionsSource = readOptionsRuntimeSource();
 
 async function run() {
   const values = {
@@ -75,7 +76,7 @@ async function run() {
     'Options should coalesce repeated startup control refreshes'
   );
   assert(
-    optionsSource.includes("let currentActiveSettingsTab = 'general';"),
+    optionsSource.includes("currentActiveSettingsTab = 'general';"),
     'Options runtime should agree with the statically active General tab'
   );
 

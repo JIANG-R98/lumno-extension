@@ -1,6 +1,7 @@
 const assert = require('assert');
 const { readStylesheet } = require('../helpers/css-tokens');
 const fs = require('fs');
+const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
 const settings = require('../../src/shared/settings.js');
 const { readPageSource } = require('../helpers/page-source');
@@ -8,7 +9,7 @@ const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
 const read = (filePath) => fs.readFileSync(filePath, 'utf8');
 const optionsHtml = readPageSource('src/options/options.html');
-const optionsSource = read('src/options/options.js');
+const optionsSource = readOptionsRuntimeSource();
 const newtabSource = readNewtabRuntimeSource();
 const overlaySource = readOverlayPanelSource();
 const overlayRuntimeSource = read('src/overlay/runtime.js');

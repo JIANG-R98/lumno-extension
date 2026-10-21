@@ -1,5 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const { readPageSource } = require('../helpers/page-source');
 const { readBackgroundSource } = require('../helpers/background-source');
 
@@ -22,7 +23,7 @@ const switcherBridgeSource = fs.existsSync(switcherBridgePath)
 const manifestSource = fs.readFileSync('manifest.json', 'utf8');
 const newtabHtmlSource = readPageSource('newtab.html');
 const optionsHtmlSource = readPageSource('src/options/options.html');
-const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
+const optionsSource = readOptionsRuntimeSource();
 const onboardingHtmlSource = readPageSource('src/onboarding/onboarding.html');
 const manifest = JSON.parse(manifestSource);
 const localeNames = ['en', 'ja', 'zh_CN', 'zh_TW'];

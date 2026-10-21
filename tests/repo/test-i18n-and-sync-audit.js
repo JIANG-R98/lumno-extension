@@ -1,6 +1,7 @@
 const assert = require('assert');
 const { execFileSync } = require('child_process');
 const fs = require('fs');
+const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const settings = require('../../src/shared/settings.js');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
@@ -19,7 +20,7 @@ assert.strictEqual(
   `i18n audit should have no unreviewed candidates:\n${auditOutput}`
 );
 
-const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
+const optionsSource = readOptionsRuntimeSource();
 const optionsHtml = readPageSource('src/options/options.html');
 const backgroundSource = readBackgroundSource();
 const newtabSource = readNewtabRuntimeSource();

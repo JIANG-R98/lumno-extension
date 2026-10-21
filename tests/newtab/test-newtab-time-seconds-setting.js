@@ -1,11 +1,12 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const settings = require('../../src/shared/settings.js');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
 const optionsHtml = readPageSource('src/options/options.html');
-const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
+const optionsSource = readOptionsRuntimeSource();
 const newtabHtml = readPageSource('newtab.html');
 const newtabSource = readNewtabRuntimeSource();
 const wordmarkSource = fs.readFileSync('react-src/newtab/wordmark.tsx', 'utf8');

@@ -1,11 +1,12 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readOptionsRuntimeSource } = require('../helpers/options-source');
 // The service worker loads settings before extension pages.
 require('../../src/shared/settings.js');
 const pages = require('../../src/background/extension-pages.js');
 
-const optionsSource = fs.readFileSync(path.join(__dirname, '..', '..', 'src/options/options.js'), 'utf8');
+const optionsSource = readOptionsRuntimeSource();
 assert.match(
   optionsSource,
   /function openSettingsVersionRelease\(event\)[\s\S]*action: 'openReleasePage',[\s\S]*disposition: getOpenDisposition\(event, 'newTab'\)[\s\S]*settingsVersion\.addEventListener\('auxclick'/,

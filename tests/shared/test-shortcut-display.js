@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readOptionsRuntimeSource } = require('../helpers/options-source');
 
 const shortcutDisplay = require('../../src/shared/shortcut-display.js');
 const shortcutReference = require('../../src/shared/shortcut-reference.js');
@@ -179,10 +180,7 @@ shortcutDefinitions.forEach((definition) => {
   );
 });
 
-const optionsSource = fs.readFileSync(
-  path.join(__dirname, '..', '..', 'src/options/options.js'),
-  'utf8'
-);
+const optionsSource = readOptionsRuntimeSource();
 assert.match(
   optionsSource,
   /item\.shortcutLabelKey[\s\S]*?modifier:\s*isMacPlatform \? '⌘' : 'Ctrl'[\s\S]*?shortcutLabel:\s*customShortcutLabel/,

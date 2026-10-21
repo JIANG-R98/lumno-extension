@@ -1,12 +1,13 @@
 const assert = require('assert');
 const { readStylesheet } = require('../helpers/css-tokens');
 const fs = require('fs');
+const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const { readPageSource } = require('../helpers/page-source');
 
 const optionsHtml = readPageSource('src/options/options.html');
 const infoButtonCss = readStylesheet('src/shared/ui/info-button.css');
 const newtabHtml = readPageSource('newtab.html');
-const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
+const optionsSource = readOptionsRuntimeSource();
 const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
 const optionReactSources = [
   'react-src/options/blacklist-list.tsx',

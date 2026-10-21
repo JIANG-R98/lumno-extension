@@ -18,6 +18,24 @@ import fallbackShortcutSource from '../../src/options/options-fallback-shortcut.
 import blacklistSource from '../../src/options/options-blacklist.js?raw';
 import feedbackSupportSource from '../../src/options/options-feedback-support.js?raw';
 import webdavOptionsSource from '../../src/options/webdav-options.js?raw';
+import toggleControlsPageSource from '../../src/options/options-toggle-controls.js?raw';
+import selectControlsPageSource from '../../src/options/options-select-controls.js?raw';
+import sliderControlsPageSource from '../../src/options/options-slider-controls.js?raw';
+import formsPageSource from '../../src/options/options-forms.js?raw';
+import normalizersPageSource from '../../src/options/options-normalizers.js?raw';
+import segmentedTabsPageSource from '../../src/options/options-segmented-tabs.js?raw';
+import languagePageSource from '../../src/options/options-language.js?raw';
+import tooltipsPageSource from '../../src/options/options-tooltips.js?raw';
+import popconfirmPageSource from '../../src/options/options-popconfirm.js?raw';
+import shortcutReferencePageSource from '../../src/options/options-shortcut-reference.js?raw';
+import navigationPageSource from '../../src/options/options-navigation.js?raw';
+import siteSearchFormPageSource from '../../src/options/options-site-search-form.js?raw';
+import siteSearchListPageSource from '../../src/options/options-site-search-list.js?raw';
+import aggregateSearchListPageSource from '../../src/options/options-aggregate-search-list.js?raw';
+import blacklistListsPageSource from '../../src/options/options-blacklist-lists.js?raw';
+import settingBindsPageSource from '../../src/options/options-setting-binds.js?raw';
+import controlEventsPageSource from '../../src/options/options-control-events.js?raw';
+import siteSearchEventsPageSource from '../../src/options/options-site-search-events.js?raw';
 import settingsSource from '../../src/shared/settings.js?raw';
 import blacklistUtilsSource from '../../src/shared/blacklist-utils.js?raw';
 import navigationDispositionSource from '../../src/shared/navigation-disposition.js?raw';
@@ -91,7 +109,26 @@ const PAGE_SCRIPTS = [
   shortcutKeysSource,
   fallbackShortcutSource,
   blacklistSource,
-  feedbackSupportSource
+  feedbackSupportSource,
+  // Parts of options.js, created by it; options.html loads them after the sections above.
+  toggleControlsPageSource,
+  selectControlsPageSource,
+  sliderControlsPageSource,
+  formsPageSource,
+  normalizersPageSource,
+  segmentedTabsPageSource,
+  languagePageSource,
+  tooltipsPageSource,
+  popconfirmPageSource,
+  shortcutReferencePageSource,
+  navigationPageSource,
+  siteSearchFormPageSource,
+  siteSearchListPageSource,
+  aggregateSearchListPageSource,
+  blacklistListsPageSource,
+  settingBindsPageSource,
+  controlEventsPageSource,
+  siteSearchEventsPageSource
 ];
 
 const addedListeners: Array<[EventTarget, string, EventListenerOrEventListenerObject, unknown]> = [];

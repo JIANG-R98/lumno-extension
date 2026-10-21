@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { extractFunction } = require('../helpers/extract-function');
@@ -8,7 +9,7 @@ const { readWallpaperCheckSource } = require('../helpers/wallpaper-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const optionsJs = fs.readFileSync(path.join(repoRoot, 'src/options/options.js'), 'utf8');
+const optionsJs = readOptionsRuntimeSource();
 const newtabJs = readNewtabRuntimeSource();
 const newtabWallpaperJs = readWallpaperCheckSource();
 const newtabHtml = readPageSource('newtab.html');

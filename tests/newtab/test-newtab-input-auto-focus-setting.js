@@ -1,11 +1,12 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const settings = require('../../src/shared/settings.js');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
 const optionsHtml = readPageSource('src/options/options.html');
-const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
+const optionsSource = readOptionsRuntimeSource();
 const newtabSource = readNewtabRuntimeSource();
 
 const topContentIndex = optionsHtml.indexOf('data-i18n="settings_newtab_wordmark_title"');

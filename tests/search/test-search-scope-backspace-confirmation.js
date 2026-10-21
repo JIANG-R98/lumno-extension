@@ -1,5 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { readBackgroundSource } = require('../helpers/background-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
@@ -13,7 +14,7 @@ const newtabSource = readNewtabRuntimeSource();
 const overlaySource = readOverlayPanelSource();
 const overlayRuntimeSource = readSource('src/overlay/runtime.js');
 const backgroundSource = readBackgroundSource();
-const optionsSource = readSource('src/options/options.js');
+const optionsSource = readOptionsRuntimeSource();
 const newtabStartupPrefetchSource = readSource('src/newtab/newtab-storage-prefetch.js');
 const toastSource = readSource('src/shared/ui/toast.js');
 

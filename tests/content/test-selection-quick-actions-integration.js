@@ -1,11 +1,12 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const { readBackgroundSource } = require('../helpers/background-source');
 const { readPageSource } = require('../helpers/page-source');
 
 const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
 const optionsHtml = readPageSource('src/options/options.html');
-const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
+const optionsSource = readOptionsRuntimeSource();
 const settings = require('../../src/shared/settings.js');
 const optionsToggleKeys = require('../../src/options/options-toggle-settings.js')
   .getToggleSettings(settings)

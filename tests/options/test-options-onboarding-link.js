@@ -1,11 +1,12 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readOptionsRuntimeSource } = require('../helpers/options-source');
 const { readPageSource } = require('../helpers/page-source');
 
 const repoRoot = path.join(__dirname, '..', '..');
 const optionsHtml = readPageSource('src/options/options.html');
-const optionsJs = fs.readFileSync(path.join(repoRoot, 'src/options/options.js'), 'utf8');
+const optionsJs = readOptionsRuntimeSource();
 const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
 
 const buttonId = '_x_extension_open_onboarding_page_2026_unique_';
