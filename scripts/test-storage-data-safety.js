@@ -32,9 +32,6 @@ const expectedSyncKeys = [
   '_x_extension_newtab_favicon_2026_unique_',
   '_x_extension_overlay_size_mode_2026_unique_',
   '_x_extension_overlay_enter_animation_2026_unique_',
-  '_x_extension_overlay_font_family_2026_unique_',
-  '_x_extension_overlay_font_fallback_2026_unique_',
-  '_x_extension_overlay_font_labels_2026_unique_',
   '_x_extension_overlay_page_theme_adaptation_enabled_2026_unique_',
   '_x_extension_bookmark_count_2024_unique_',
   '_x_extension_bookmark_columns_2024_unique_',
@@ -191,6 +188,7 @@ assert.deepStrictEqual(
   [
     'src/background/background.js:chrome.storage.sync:BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS',
     'src/background/background.js:chrome.storage.sync:LANGUAGE_MESSAGES_STORAGE_KEY',
+    'src/background/background.js:chrome.storage.sync:OVERLAY_FONT_LOCAL_STORAGE_KEYS',
     'src/background/background.js:localArea:REMOVED_AI_LOCAL_STORAGE_KEYS',
     'src/background/background.js:syncArea:REMOVED_AI_SYNC_STORAGE_KEYS',
     'src/background/favicon-service.js:localArea:legacyKeys',
@@ -204,6 +202,13 @@ assert.strictEqual(
   settings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS.some((key) => expectedSyncKeys.includes(key)),
   false,
   'legacy bookmark topbar cleanup keys must never overlap active sync settings'
+);
+// The overlay font keys never shipped in Chrome Sync (only development builds
+// wrote them there), so clearing those copies removes no released setting.
+assert.strictEqual(
+  settings.OVERLAY_FONT_LOCAL_STORAGE_KEYS.some((key) => expectedSyncKeys.includes(key)),
+  false,
+  'device-local overlay font keys must never overlap active sync settings'
 );
 assert.strictEqual(
   shortcutFavicon.SITE_SEARCH_LEGACY_STORAGE_KEYS.some((key) => expectedSyncKeys.includes(key)),

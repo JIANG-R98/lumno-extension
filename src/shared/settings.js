@@ -158,15 +158,23 @@
   const NEWTAB_FAVICON_STORAGE_KEY = '_x_extension_newtab_favicon_2026_unique_';
   const OVERLAY_SIZE_MODE_STORAGE_KEY = '_x_extension_overlay_size_mode_2026_unique_';
   // An installed family name, or the empty string for the bundled Lumno stack.
-  // Synced with the other overlay appearance settings; missing fonts use the fallback stack.
+  // A missing face falls back to the bundled stack.
   const OVERLAY_FONT_FAMILY_STORAGE_KEY = '_x_extension_overlay_font_family_2026_unique_';
   // Second family in the stack, used for glyphs the first one lacks (an
   // English face leaves the Chinese text to this one).
   const OVERLAY_FONT_FALLBACK_STORAGE_KEY = '_x_extension_overlay_font_fallback_2026_unique_';
-  // Display names of the two chosen families ({ family: name }), so a device
-  // that has not listed its fonts yet, or lacks the face, still shows the
-  // localized name rather than the "PingFang SC" family name.
+  // Display names of the two chosen families ({ family: name }), so a face
+  // uninstalled later is still named by its localized name ("PingFang SC" is
+  // only the family name).
   const OVERLAY_FONT_LABELS_STORAGE_KEY = '_x_extension_overlay_font_labels_2026_unique_';
+  // The fonts are this computer's installed faces, so the choice stays on the
+  // device: always chrome.storage.local, never Chrome Sync, WebDAV or an
+  // export. Another device has its own fonts and its own choice.
+  const OVERLAY_FONT_LOCAL_STORAGE_KEYS = Object.freeze([
+    OVERLAY_FONT_FAMILY_STORAGE_KEY,
+    OVERLAY_FONT_FALLBACK_STORAGE_KEY,
+    OVERLAY_FONT_LABELS_STORAGE_KEY
+  ]);
   // The shared text stack token (tokens.css). The overlay's closed shadow root
   // defines it on the panel and re-points it at the chosen families, so every
   // text rule follows without a rule the search-panel script would inject.
@@ -344,9 +352,6 @@
     NEWTAB_FAVICON_STORAGE_KEY,
     OVERLAY_SIZE_MODE_STORAGE_KEY,
     OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
-    OVERLAY_FONT_FAMILY_STORAGE_KEY,
-    OVERLAY_FONT_FALLBACK_STORAGE_KEY,
-    OVERLAY_FONT_LABELS_STORAGE_KEY,
     OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY,
     BOOKMARK_COUNT_STORAGE_KEY,
     BOOKMARK_COLUMNS_STORAGE_KEY,
@@ -879,8 +884,8 @@
   const OVERLAY_FONT_DEFAULT_STACK = "'Lumno Open Sans', 'Open Sans', -apple-system, " +
     "BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
 
-  // A family name arrives from Chrome Sync, from a WebDAV state or from the
-  // picker, so anything that is not a plausible CSS family name is dropped.
+  // A family name arrives from storage or from the picker, so anything that
+  // is not a plausible CSS family name is dropped.
   // Quotes and backslashes would end the quoted family early; control
   // characters and braces would break out of the declaration.
   function normalizeOverlayFontFamily(value) {
@@ -894,13 +899,8 @@
     return family;
   }
 
-  // What the overlay writes into OVERLAY_FONT_FAMILY_CSS_VAR: the chosen
-  // families in order, then the bundled stack so missing faces and glyphs
-  // still resolve. An empty value clears the property, which restores the CSS
-  // fallbacks exactly.
-  // Only plausible names survive: the map reaches the options page from
-  // Chrome Sync and WebDAV. Given the chosen families, the map keeps just
-  // theirs; read without them, it keeps at most the two a writer stored.
+  // Only plausible names survive. Given the chosen families, the map keeps
+  // just theirs; read without them, it keeps at most the two a writer stored.
   function normalizeOverlayFontLabels(value, families) {
     const labels = {};
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -919,6 +919,10 @@
     return labels;
   }
 
+  // What the overlay writes into OVERLAY_FONT_FAMILY_CSS_VAR: the chosen
+  // families in order, then the bundled stack so missing faces and glyphs
+  // still resolve. An empty value clears the property, which restores the CSS
+  // fallbacks exactly.
   function getOverlayFontFamilyCssValue(value, fallbackValue) {
     const families = [normalizeOverlayFontFamily(value), normalizeOverlayFontFamily(fallbackValue)]
       .filter(Boolean);
@@ -1580,6 +1584,7 @@
     OVERLAY_FONT_FAMILY_STORAGE_KEY,
     OVERLAY_FONT_FALLBACK_STORAGE_KEY,
     OVERLAY_FONT_LABELS_STORAGE_KEY,
+    OVERLAY_FONT_LOCAL_STORAGE_KEYS,
     OVERLAY_FONT_FAMILY_CSS_VAR,
     OVERLAY_FONT_DEFAULT_STACK,
     BOOKMARK_COUNT_STORAGE_KEY,

@@ -354,7 +354,17 @@ assert.deepStrictEqual(
 assert.deepStrictEqual(settings.normalizeOverlayFontLabels({ 'bad"name': 'x', ok: 'bad\u0001' }), {});
 assert.deepStrictEqual(settings.normalizeOverlayFontLabels(['PingFang SC']), {});
 assert.deepStrictEqual(settings.normalizeOverlayFontLabels(null), {});
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.OVERLAY_FONT_LABELS_STORAGE_KEY));
+// The overlay's fonts are this computer's installed faces: device-local, so
+// neither Chrome Sync nor WebDAV (whose preferences follow the sync list) nor
+// an export carries them.
+assert.deepStrictEqual(settings.OVERLAY_FONT_LOCAL_STORAGE_KEYS, [
+  settings.OVERLAY_FONT_FAMILY_STORAGE_KEY,
+  settings.OVERLAY_FONT_FALLBACK_STORAGE_KEY,
+  settings.OVERLAY_FONT_LABELS_STORAGE_KEY
+]);
+settings.OVERLAY_FONT_LOCAL_STORAGE_KEYS.forEach((key) => {
+  assert(!settings.CHROME_SYNC_STORAGE_KEYS.includes(key), `${key} should stay on the device`);
+});
 
 assert.strictEqual(settings.normalizeOverlayTabPriorityMode('switchTabFirst'), true);
 assert.strictEqual(settings.normalizeOverlayTabPriorityMode('newtabFirst'), false);

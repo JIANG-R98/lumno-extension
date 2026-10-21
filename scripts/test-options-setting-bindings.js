@@ -194,4 +194,20 @@ function createPage(initial, options) {
   assert.deepStrictEqual(page.area.values[quickSwitch.key], true);
 }
 
+// A binder made with area 'local' reads and writes chrome.storage.local and
+// follows only its changes, whichever area is primary (device-only settings
+// such as the overlay's local fonts).
+{
+  const local = createArea({ fontKey: 'PingFang SC' });
+  const registry = bindings.createStorageChangeRegistry({ isPrimaryAreaName: (name) => name === 'sync' });
+  const binder = bindings.createSettingBinder({ area: 'local', storageArea: local, registry });
+  const applied = [];
+  binder.bindSetting({ key: 'fontKey', normalize: (value) => String(value || ''), apply: (value) => applied.push(value) });
+  assert.deepStrictEqual(applied, ['PingFang SC'], 'the startup read comes from the local area');
+  registry.dispatch({ fontKey: { newValue: 'Zapfino' } }, 'sync');
+  assert.deepStrictEqual(applied, ['PingFang SC'], 'a synced copy of the key is ignored');
+  registry.dispatch({ fontKey: { newValue: 'Zapfino' } }, 'local');
+  assert.deepStrictEqual(applied, ['PingFang SC', 'Zapfino'], 'local changes are followed');
+}
+
 console.log('Options setting binding tests passed.');

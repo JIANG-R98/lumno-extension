@@ -666,7 +666,22 @@
     "message": "淡入"
   },
   "settings_overlay_font_title": {
-    "message": "字体"
+    "message": "本地字体"
+  },
+  "settings_overlay_font_desc": {
+    "message": "读取这台电脑已安装的字体，只对这台设备生效，不会同步"
+  },
+  "settings_overlay_font_missing": {
+    "message": "这台设备没有安装「{font}」，浮层正在使用默认字体"
+  },
+  "settings_overlay_font_missing_reset": {
+    "message": "恢复默认"
+  },
+  "settings_overlay_font_fallback_missing": {
+    "message": "这台设备没有安装「{font}」，回退字体暂不生效"
+  },
+  "settings_overlay_font_fallback_missing_reset": {
+    "message": "清除"
   },
   "settings_overlay_font_default": {
     "message": "默认"
@@ -678,7 +693,7 @@
     "message": "没有匹配的字体"
   },
   "settings_overlay_font_fallback_title": {
-    "message": "回退字体"
+    "message": "本地回退字体"
   },
   "settings_overlay_font_fallback_desc": {
     "message": "主字体缺少字形时使用，例如英文字体下的中文"
