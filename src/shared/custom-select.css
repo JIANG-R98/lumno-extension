@@ -195,9 +195,49 @@ body[data-glass-style] ._x_extension_select_wrap_2024_unique_[data-open="true"][
   z-index: 10;
 }
 
+/* Long menus scroll inside the rounded surface, so they draw the thin bar
+   the other scroll boxes use instead of the system one (macOS overlay bars
+   stay as they are). The track stops short of the rounded corners. */
+@supports not selector(::-webkit-scrollbar) {
+  ._x_extension_select_menu_2024_unique_ {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.68) transparent;
+  }
+  body[data-theme="dark"] ._x_extension_select_menu_2024_unique_ {
+    scrollbar-color: rgba(148, 163, 184, 0.58) transparent;
+  }
+}
+:root:not([data-lumno-scrollbars="overlay"]) ._x_extension_select_menu_2024_unique_::-webkit-scrollbar {
+  width: 8px;
+}
+:root:not([data-lumno-scrollbars="overlay"]) ._x_extension_select_menu_2024_unique_::-webkit-scrollbar-track {
+  margin-block: 10px;
+  background: transparent;
+}
+:root:not([data-lumno-scrollbars="overlay"]) ._x_extension_select_menu_2024_unique_::-webkit-scrollbar-thumb {
+  min-height: 34px;
+  border: 2px solid transparent;
+  border-radius: var(--lumno-radius-pill);
+  background-color: rgba(148, 163, 184, 0.68);
+  background-clip: padding-box;
+}
+:root:not([data-lumno-scrollbars="overlay"]) ._x_extension_select_menu_2024_unique_::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 116, 139, 0.82);
+}
+:root:not([data-lumno-scrollbars="overlay"]) ._x_extension_select_menu_2024_unique_::-webkit-scrollbar-corner {
+  background: transparent;
+}
+:root:not([data-lumno-scrollbars="overlay"]) body[data-theme="dark"] ._x_extension_select_menu_2024_unique_::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.58);
+}
+:root:not([data-lumno-scrollbars="overlay"]) body[data-theme="dark"] ._x_extension_select_menu_2024_unique_::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(203, 213, 225, 0.7);
+}
+
 /* Searchable menus (installed fonts) run to hundreds of rows: a fixed width
    instead of the widest name, the filter field pinned while the list scrolls,
-   and rows off screen left unrendered until scrolled to. */
+   and rows off screen left unrendered until scrolled to, so their faces
+   load only when shown. */
 ._x_extension_select_wrap_2024_unique_ ._x_extension_select_menu_2024_unique_[data-searchable="true"] {
   width: min(300px, calc(100vw - 32px));
 }
@@ -242,21 +282,6 @@ body[data-glass-style] ._x_extension_select_wrap_2024_unique_[data-open="true"][
 ._x_extension_select_listbox_2026_unique_ > ._x_extension_select_option_2024_unique_ {
   content-visibility: auto;
   contain-intrinsic-size: auto 32px;
-}
-
-/* Names stay in the interface font so every row reads, even for symbol
-   faces; the face itself shows in a fixed column on the right. */
-._x_extension_select_option_preview_2026_unique_ {
-  flex: 0 0 auto;
-  width: 52px;
-  margin-left: auto;
-  overflow: hidden;
-  color: var(--panel-subtext, #6b7280);
-  font-size: var(--lumno-font-size-lg);
-  line-height: 18px;
-  text-align: right;
-  white-space: nowrap;
-  pointer-events: none;
 }
 
 ._x_extension_select_option_2024_unique_ {

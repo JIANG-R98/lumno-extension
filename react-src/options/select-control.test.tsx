@@ -128,10 +128,10 @@ describe('Options select control React island', () => {
     expect(visible).toHaveLength(1);
     expect(visible[0]?.querySelector('._x_extension_select_option_label_2026_unique_')?.textContent)
       .toBe('PingFang SC');
-    // The name stays in the interface font; a quoted sample shows the face.
-    const preview = visible[0]?.querySelector<HTMLElement>('._x_extension_select_option_preview_2026_unique_');
-    expect(preview?.getAttribute('aria-hidden')).toBe('true');
-    expect(preview?.style.fontFamily).toContain('"PingFang SC"');
+    // The name is drawn in its own face, quoted so any family name parses.
+    expect(
+      visible[0]?.querySelector<HTMLElement>('._x_extension_select_option_label_2026_unique_')?.style.fontFamily
+    ).toContain('"PingFang SC"');
     expect(search?.getAttribute('aria-activedescendant')).toBe(visible[0]?.id);
 
     typeFilter('zzz');

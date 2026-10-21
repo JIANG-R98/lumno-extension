@@ -7,7 +7,7 @@ import {
 
 export interface SelectControlItemModel {
   badge?: string;
-  /** Adds a sample in this family after the label (the font picker previews faces). */
+  /** Renders the label in this family (the font picker previews faces). */
   fontFamily?: string;
   iconUrl?: string;
   label: string;

@@ -20,7 +20,7 @@ export interface SelectMenuOption {
   checked?: boolean;
   disabled?: boolean;
   dividerBefore?: boolean;
-  /** Adds a sample in this family after the label, so a font picker previews each face. */
+  /** Renders the label in this family, so a font picker previews each face. */
   fontFamily?: string;
   groupTitle?: string;
   iconClass?: string;
@@ -478,18 +478,12 @@ export function SelectMenu({
               className={`_x_extension_select_option_icon_2026_unique_ ri-icon ri-size-16 ${option.iconClass}`}
             />
           ) : null}
-          <span className="_x_extension_select_option_label_2026_unique_">
+          <span
+            className="_x_extension_select_option_label_2026_unique_"
+            style={option.fontFamily ? { fontFamily: getFontPreviewFamily(option.fontFamily) } : undefined}
+          >
             {option.label}
           </span>
-          {option.fontFamily ? (
-            <span
-              aria-hidden="true"
-              className="_x_extension_select_option_preview_2026_unique_"
-              style={{ fontFamily: getFontPreviewFamily(option.fontFamily) }}
-            >
-              Aa 字
-            </span>
-          ) : null}
           {option.badge ? (
             <span className="_x_extension_select_option_badge_2026_unique_">
               {option.badge}
