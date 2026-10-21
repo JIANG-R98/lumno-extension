@@ -207,7 +207,7 @@ export interface WallpaperPanelState {
     infoTooltip: string;
     options: SelectMenuOption[];
     sectionTitle: string;
-    theme: { infoTooltip: string; tabs: SegmentState<GlassTheme>; title: string; visible: boolean };
+    theme: { tabs: SegmentState<GlassTheme>; title: string; visible: boolean };
     title: string;
     value: string;
   };
@@ -1158,17 +1158,8 @@ function WallpaperPanel({
                 {...collapsible(glassStyle.theme.visible)}
                 className="x-nt-appearance-setting-row x-nt-panel-collapsible"
               >
-                <span className="x-nt-appearance-setting-title-group">
-                  <span {...ref('glassThemeTitle')} className="x-nt-appearance-setting-title">
-                    {glassStyle.theme.title}
-                  </span>
-                  <InfoButton
-                    actions={actions}
-                    icon={infoIcon}
-                    label={glassStyle.theme.title}
-                    name="glassThemeInfoButton"
-                    tooltip={glassStyle.theme.infoTooltip}
-                  />
+                <span {...ref('glassThemeTitle')} className="x-nt-appearance-setting-title">
+                  {glassStyle.theme.title}
                 </span>
                 <SegmentedChoice
                   buttonClassName="x-nt-segmented-tab x-nt-wallpaper-tab"

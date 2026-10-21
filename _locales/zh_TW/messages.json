@@ -687,7 +687,7 @@
     "message": "跟隨系統或手動選擇主題"
   },
   "settings_theme_system": {
-    "message": "跟隨系統"
+    "message": "跟隨系統設定"
   },
   "settings_theme_light": {
     "message": "淺色"
@@ -3440,11 +3440,8 @@
   "settings_newtab_glass_theme_title": {
     "message": "材質深淺色"
   },
-  "settings_newtab_glass_theme_desc": {
-    "message": "選淺色或深色時，新分頁固定為該深淺色，桌布也換成對應模式的那張"
-  },
   "settings_newtab_glass_theme_follow": {
-    "message": "跟隨新分頁"
+    "message": "自動"
   },
   "settings_newtab_glass_theme_light": {
     "message": "淺色"

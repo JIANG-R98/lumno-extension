@@ -2013,7 +2013,7 @@
         activeValue: currentNewtabGlassTheme,
         dataAttribute: 'data-newtab-glass-theme',
         items: [
-          { value: 'follow', labelKey: 'settings_newtab_glass_theme_follow', label: getMessage('settings_newtab_glass_theme_follow', '跟随新标签页') },
+          { value: 'follow', labelKey: 'settings_newtab_glass_theme_follow', label: getMessage('settings_newtab_glass_theme_follow', '自动') },
           { value: 'light', labelKey: 'settings_newtab_glass_theme_light', label: getMessage('settings_newtab_glass_theme_light', '浅色') },
           { value: 'dark', labelKey: 'settings_newtab_glass_theme_dark', label: getMessage('settings_newtab_glass_theme_dark', '深色') }
         ]

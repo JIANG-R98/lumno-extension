@@ -5096,12 +5096,11 @@
           theme: {
             visible: glassStyleValue !== 'none',
             title: glassThemeTitle,
-            infoTooltip: t('settings_newtab_glass_theme_desc', 'Light or Dark holds the New Tab in that theme, with that mode\'s wallpaper.'),
             tabs: {
               active: SETTINGS.normalizeNewtabGlassTheme(getGlassTheme()),
               label: glassThemeTitle,
               options: [
-                { value: 'follow', label: t('settings_newtab_glass_theme_follow', 'Match New Tab') },
+                { value: 'follow', label: t('settings_newtab_glass_theme_follow', 'Auto') },
                 { value: 'light', label: t('settings_newtab_glass_theme_light', 'Light') },
                 { value: 'dark', label: t('settings_newtab_glass_theme_dark', 'Dark') }
               ].map((option) => Object.assign(option, { ariaLabel: option.label }))

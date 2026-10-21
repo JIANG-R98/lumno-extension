@@ -63,12 +63,11 @@ export function createDefaultPanelState(): WallpaperPanelState {
       ],
       sectionTitle: 'Style',
       theme: {
-        infoTooltip: '',
         tabs: {
           active: 'follow',
           label: 'Material theme',
           options: [
-            { value: 'follow', label: 'Match New Tab', ariaLabel: 'Match New Tab' },
+            { value: 'follow', label: 'Auto', ariaLabel: 'Auto' },
             { value: 'light', label: 'Light', ariaLabel: 'Light' },
             { value: 'dark', label: 'Dark', ariaLabel: 'Dark' }
           ]

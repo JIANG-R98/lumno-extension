@@ -55,7 +55,7 @@
           {
             mode: 'system',
             labelKey: 'settings_theme_system',
-            label: getMessage('settings_theme_system', '跟随系统'),
+            label: getMessage('settings_theme_system', '跟随系统设置'),
             previewSrc: THEME_PREVIEWS.system
           },
           {

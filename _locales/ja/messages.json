@@ -3440,11 +3440,8 @@
   "settings_newtab_glass_theme_title": {
     "message": "ガラスの明暗"
   },
-  "settings_newtab_glass_theme_desc": {
-    "message": "ライトまたはダークを選ぶと、新しいタブはそのテーマに固定され、壁紙もそのモードのものになります。"
-  },
   "settings_newtab_glass_theme_follow": {
-    "message": "新しいタブと同じ"
+    "message": "自動"
   },
   "settings_newtab_glass_theme_light": {
     "message": "ライト"

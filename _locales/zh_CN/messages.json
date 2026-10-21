@@ -687,7 +687,7 @@
     "message": "跟随系统或手动选择主题"
   },
   "settings_theme_system": {
-    "message": "跟随系统"
+    "message": "跟随系统设置"
   },
   "settings_theme_light": {
     "message": "浅色"
@@ -3440,11 +3440,8 @@
   "settings_newtab_glass_theme_title": {
     "message": "材质深浅色"
   },
-  "settings_newtab_glass_theme_desc": {
-    "message": "选浅色或深色时，新标签页固定为该深浅色，壁纸也换成对应模式的那张"
-  },
   "settings_newtab_glass_theme_follow": {
-    "message": "跟随新标签页"
+    "message": "自动"
   },
   "settings_newtab_glass_theme_light": {
     "message": "浅色"
