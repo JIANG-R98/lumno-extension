@@ -202,11 +202,7 @@ assert(
   'the Overlay query mark should retain its themed background and text colors'
 );
 assert(
-  overlaySource.includes(
-    'const overlayMountParent = document.fullscreenElement ||\n' +
-      '      document.documentElement ||\n' +
-      '      document.body;'
-  ) &&
+  /const overlayMountParent = document\.fullscreenElement \|\|\s+document\.documentElement \|\|\s+document\.body;/.test(overlaySource) &&
     overlaySource.includes('overlayMountParent.appendChild(overlayHost);') &&
     overlaySource.includes("typeof overlayHost.showPopover === 'function'") &&
     overlaySource.includes('overlayHost.showPopover();') &&

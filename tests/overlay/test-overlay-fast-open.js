@@ -224,7 +224,7 @@ assert.match(
   'non-critical initial content should still hydrate after its preferences are ready'
 );
 const initialContentStart = overlaySource.indexOf('const initialOverlayContentReady = Promise.all([');
-const revealStart = overlaySource.indexOf('\n    const revealOverlay =', initialContentStart);
+const revealStart = overlaySource.indexOf('\n  const revealOverlay =', initialContentStart);
 const initialContentSource = overlaySource.slice(initialContentStart, revealStart);
 assert.ok(
   initialContentStart >= 0 && revealStart > initialContentStart,
