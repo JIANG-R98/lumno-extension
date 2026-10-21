@@ -135,7 +135,7 @@ body[data-theme="dark"] .x-nt-recent-history-dialog {
   scrollbar-color: rgba(148, 163, 184, 0.62) transparent;
 }
 
-/* Same thin scrollbar as the bookmark cascade menu (newtab.css). */
+/* Same thin scrollbar as the bookmark cascade menu (styles/bookmark-cascade.css). */
 :root:not([data-lumno-scrollbars="overlay"]) .x-nt-recent-history-list::-webkit-scrollbar {
   width: 10px;
 }

@@ -1,0 +1,539 @@
+/* The page's corner controls: slider value bubbles, the wallpaper,
+   feedback and debug buttons with their layout per viewport, and the
+   feedback popover. */
+
+.x-nt-slider-value-bubble {
+  position: fixed;
+  z-index: 42;
+  min-width: 34px;
+  max-width: 96px;
+  padding: 7px 10px;
+  justify-content: center;
+  color: var(--x-lumno-feature-hint-strong, #3c4455);
+  font-size: var(--lumno-font-size-sm);
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* The page buttons share the bottom-right corner: the wallpaper button at the
+   corner, then feedback, then the bookmark menu debug button. Each control takes a
+   slot, so a breakpoint only changes the inset, the button size or the direction. */
+.x-nt-wallpaper-control,
+.x-nt-feedback-control,
+.x-nt-bookmark-cascade-debug-control {
+  --x-nt-corner-inset-x: 14px;
+  --x-nt-corner-inset-y: 14px;
+  --x-nt-corner-size: 38px;
+  --x-nt-corner-step: 46px;
+  /* 1 lines the buttons up in a row, 0 stacks them in a column. */
+  --x-nt-corner-row: 1;
+  position: fixed;
+  right: calc(var(--x-nt-corner-inset-x) + var(--x-nt-corner-slot, 0) * var(--x-nt-corner-step) * var(--x-nt-corner-row));
+  bottom: calc(var(--x-nt-corner-inset-y) + var(--x-nt-corner-slot, 0) * var(--x-nt-corner-step) * (1 - var(--x-nt-corner-row)));
+  z-index: 19;
+  width: var(--x-nt-corner-size);
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+.x-nt-wallpaper-control {
+  z-index: 18;
+}
+.x-nt-feedback-control {
+  --x-nt-corner-slot: 1;
+}
+.x-nt-bookmark-cascade-debug-control {
+  --x-nt-corner-slot: 2;
+}
+/* Corner layout by viewport; the ranges do not overlap:
+   wider than 860px and taller than 680px   row, 14px from the edges
+   641-860px wide, taller than 680px        row, 12px
+   wider than 640px, 561-680px tall         column, 10px
+   wider than 640px, up to 560px tall       column, 8px
+   up to 640px wide                         row of 44px buttons at the safe-area inset */
+@media (min-width: 641px) and (max-width: 860px) and (min-height: 681px) {
+  .x-nt-wallpaper-control,
+  .x-nt-feedback-control,
+  .x-nt-bookmark-cascade-debug-control {
+    --x-nt-corner-inset-x: 12px;
+    --x-nt-corner-inset-y: 12px;
+  }
+}
+@media (min-width: 641px) and (min-height: 561px) and (max-height: 680px) {
+  .x-nt-wallpaper-control,
+  .x-nt-feedback-control,
+  .x-nt-bookmark-cascade-debug-control {
+    --x-nt-corner-inset-x: 10px;
+    --x-nt-corner-inset-y: 10px;
+    --x-nt-corner-row: 0;
+  }
+}
+@media (min-width: 641px) and (max-height: 560px) {
+  .x-nt-wallpaper-control,
+  .x-nt-feedback-control,
+  .x-nt-bookmark-cascade-debug-control {
+    --x-nt-corner-inset-x: 8px;
+    --x-nt-corner-inset-y: 8px;
+    --x-nt-corner-row: 0;
+  }
+}
+@media (max-width: 640px) {
+  .x-nt-wallpaper-control,
+  .x-nt-feedback-control,
+  .x-nt-bookmark-cascade-debug-control {
+    --x-nt-corner-inset-x: max(10px, env(safe-area-inset-right));
+    --x-nt-corner-inset-y: max(10px, env(safe-area-inset-bottom));
+    --x-nt-corner-size: 44px;
+    --x-nt-corner-step: 52px;
+  }
+}
+/* Touch screens get a larger target, in place. */
+@media (hover: none) {
+  .x-nt-wallpaper-control,
+  .x-nt-feedback-control {
+    --x-nt-corner-size: 44px;
+  }
+}
+@media (min-width: 641px) and (max-width: 900px) and (max-height: 560px) {
+  .x-nt-wallpaper-control,
+  .x-nt-feedback-control {
+    --x-nt-corner-size: 44px;
+  }
+}
+/* A visible feature hint stretches left over the feedback button, so lift the control above it. */
+.x-nt-wallpaper-control:has(> .x-lumno-feature-hint[data-visible="true"]) {
+  z-index: 20;
+}
+.x-nt-wallpaper-control[data-panel-open="true"] {
+  z-index: 30;
+}
+/* State colors come from --x-nt-corner-* (page theme, see the theme blocks); the
+   debug button swaps in its own blue set below. */
+.x-nt-wallpaper-button,
+.x-nt-feedback-button,
+.x-nt-bookmark-cascade-debug-button {
+  all: unset;
+  width: var(--x-nt-corner-size, 38px);
+  min-width: var(--x-nt-corner-size, 38px);
+  height: var(--x-nt-corner-size, 38px);
+  border-radius: var(--lumno-radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: color-mix(
+    in srgb,
+    var(--x-ext-input-icon, #4b545f) 78%,
+    transparent
+  );
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
+  box-sizing: border-box;
+  cursor: pointer;
+  font-size: var(--lumno-font-size-xl);
+  gap: 0;
+  padding: 0;
+  pointer-events: auto;
+  -webkit-text-fill-color: currentColor;
+  transition:
+    border-color var(--lumno-duration-md) ease,
+    background var(--lumno-duration-md) ease,
+    box-shadow var(--lumno-duration-md) ease,
+    color var(--lumno-duration-md) ease;
+}
+.x-nt-bookmark-cascade-debug-button {
+  --x-nt-corner-hover-bg: rgb(var(--lumno-color-accent-rgb) / 0.08);
+  --x-nt-corner-hover-border: rgb(var(--lumno-color-accent-rgb) / 0.16);
+  --x-nt-corner-hover-ring: rgb(var(--lumno-color-accent-rgb) / 0.04);
+  --x-nt-corner-hover-ink: #1d4ed8;
+  --x-nt-corner-open-bg: rgb(var(--lumno-color-accent-rgb) / 0.12);
+  --x-nt-corner-open-border: rgb(var(--lumno-color-accent-rgb) / 0.24);
+  --x-nt-corner-open-ring: rgb(var(--lumno-color-accent-rgb) / 0.06);
+  --x-nt-corner-open-ink: #1d4ed8;
+  --x-nt-corner-press-bg: rgb(var(--lumno-color-accent-rgb) / 0.16);
+  --x-nt-corner-press-border: rgb(var(--lumno-color-accent-rgb) / 0.28);
+  --x-nt-corner-press-shadow:
+    inset 0 1px 2px rgba(30, 64, 175, 0.12),
+    inset 0 0 0 1px rgb(var(--lumno-color-accent-rgb) / 0.06);
+}
+body[data-theme="dark"] .x-nt-bookmark-cascade-debug-button,
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-bookmark-cascade-debug-button,
+body[data-glass-style] .x-nt-bookmark-cascade-debug-button[data-glass-ink-theme="dark"] {
+  --x-nt-corner-hover-bg: rgba(96, 165, 250, 0.16);
+  --x-nt-corner-hover-border: rgba(96, 165, 250, 0.24);
+  --x-nt-corner-hover-ring: rgba(96, 165, 250, 0.05);
+  --x-nt-corner-hover-ink: #bfdbfe;
+  --x-nt-corner-open-bg: rgba(96, 165, 250, 0.2);
+  --x-nt-corner-open-border: rgba(96, 165, 250, 0.32);
+  --x-nt-corner-open-ring: rgba(96, 165, 250, 0.08);
+  --x-nt-corner-open-ink: #bfdbfe;
+  --x-nt-corner-press-bg: rgba(96, 165, 250, 0.24);
+  --x-nt-corner-press-border: rgba(96, 165, 250, 0.36);
+  --x-nt-corner-press-shadow:
+    inset 0 1px 2px rgba(2, 6, 23, 0.2),
+    inset 0 0 0 1px rgba(96, 165, 250, 0.1);
+}
+.x-nt-wallpaper-button .ri-icon,
+.x-nt-feedback-button .ri-icon,
+.x-nt-bookmark-cascade-debug-button .ri-icon {
+  color: inherit;
+  -webkit-text-fill-color: currentColor;
+  --ri-size: 16px;
+  line-height: 1;
+}
+.x-nt-wallpaper-button:hover,
+.x-nt-feedback-button:hover,
+.x-nt-bookmark-cascade-debug-button:hover {
+  background: var(--x-nt-corner-hover-bg);
+  border-color: var(--x-nt-corner-hover-border);
+  box-shadow: inset 0 0 0 1px var(--x-nt-corner-hover-ring);
+  color: var(--x-nt-corner-hover-ink);
+}
+.x-nt-wallpaper-button[data-open="true"],
+.x-nt-feedback-button[data-open="true"],
+.x-nt-bookmark-cascade-debug-button[data-active="true"] {
+  background: var(--x-nt-corner-open-bg);
+  border-color: var(--x-nt-corner-open-border);
+  box-shadow: inset 0 0 0 1px var(--x-nt-corner-open-ring);
+  color: var(--x-nt-corner-open-ink);
+}
+.x-nt-wallpaper-button[data-open="true"]:hover,
+.x-nt-feedback-button[data-open="true"]:hover {
+  background: var(--x-nt-corner-open-hover-bg);
+  border-color: var(--x-nt-corner-open-hover-border);
+  box-shadow: inset 0 0 0 1px var(--x-nt-corner-open-hover-ring);
+}
+.x-nt-wallpaper-button:active,
+.x-nt-feedback-button:active,
+.x-nt-bookmark-cascade-debug-button:active {
+  background: var(--x-nt-corner-press-bg);
+  border-color: var(--x-nt-corner-press-border);
+  box-shadow: var(--x-nt-corner-press-shadow);
+}
+.x-nt-wallpaper-button[data-open="true"]:active,
+.x-nt-feedback-button[data-open="true"]:active {
+  background: var(--x-nt-corner-open-press-bg);
+  border-color: var(--x-nt-corner-open-press-border);
+  box-shadow: var(--x-nt-corner-open-press-shadow);
+}
+.x-nt-wallpaper-button:focus-visible,
+.x-nt-feedback-button:focus-visible,
+.x-nt-bookmark-cascade-debug-button:focus-visible {
+  outline: 2px solid var(--lumno-color-focus-ring);
+  outline-offset: 2px;
+}
+.x-nt-wallpaper-button[data-active="true"] {
+  color: var(--x-nt-corner-active-ink);
+}
+@media (max-width: 640px) {
+  /* Suggestions reach the bottom edge on phones; the page buttons would cover the last rows. */
+  .x-nt-wallpaper-control,
+  .x-nt-feedback-control {
+    transition: opacity var(--lumno-duration-xs) ease, visibility var(--lumno-duration-xs) ease;
+  }
+  body[data-nt-suggestions-open="true"] .x-nt-wallpaper-control,
+  body[data-nt-suggestions-open="true"] .x-nt-feedback-control {
+    opacity: 0;
+    visibility: hidden;
+  }
+  .x-nt-wallpaper-button {
+    background: var(--control-bg);
+    border-color: var(--tab-border);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.1);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+}
+.x-nt-feedback-control[data-menu-open="true"] {
+  z-index: 31;
+}
+.x-nt-feedback-popover {
+  position: absolute;
+  right: 0;
+  bottom: 46px;
+  width: 170px;
+  max-width: min(264px, calc(100vw - 28px));
+  height: 54px;
+  padding: 10px 8px;
+  border-radius: var(--lumno-radius-2xl);
+  background: var(--x-nt-feedback-surface);
+  border: 1px solid var(--x-nt-surface-border);
+  box-shadow: var(--x-nt-feedback-shadow);
+  backdrop-filter: blur(18px) saturate(135%);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+  box-sizing: border-box;
+  contain: layout;
+  color: var(--x-nt-feedback-ink);
+  opacity: 0;
+  overflow: visible;
+  pointer-events: none;
+  transform: scale(0.97);
+  transform-origin: right bottom;
+  will-change: transform, opacity, width, height;
+  transition: opacity 170ms ease, transform 360ms var(--lumno-ease-menu), width 260ms cubic-bezier(0.22, 1, 0.36, 1), height 260ms cubic-bezier(0.22, 1, 0.36, 1), padding var(--lumno-duration-md) ease;
+}
+.x-nt-feedback-popover[hidden] {
+  display: none;
+}
+.x-nt-feedback-control[data-menu-open="true"] .x-nt-feedback-popover {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+.x-nt-feedback-control[data-detail-open="true"] .x-nt-feedback-popover {
+  --x-nt-feedback-detail-inset: 10px;
+  --x-nt-feedback-detail-radius: 16px;
+  width: 264px;
+  height: min(
+    422px,
+    calc(100dvh - 84px - var(--x-nt-top-occupied-inset, 0px))
+  );
+  padding: var(--x-nt-feedback-detail-inset);
+  border-radius: var(--x-nt-feedback-detail-radius);
+  overflow: hidden;
+}
+.x-nt-feedback-menu {
+  display: grid;
+  grid-template-columns: repeat(4, 34px);
+  gap: 6px;
+  transition:
+    opacity var(--lumno-duration-xs) ease,
+    transform var(--lumno-duration-md) ease,
+    visibility var(--lumno-duration-xs) ease;
+}
+.x-nt-feedback-control[data-detail-open="true"] .x-nt-feedback-menu {
+  height: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transform: scale(0.98);
+  visibility: hidden;
+}
+.x-nt-feedback-action {
+  all: unset;
+  position: relative;
+  overflow: visible;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  border-radius: var(--lumno-radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--x-nt-feedback-action-ink);
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  box-sizing: border-box;
+  cursor: pointer;
+  text-decoration: none;
+  -webkit-text-fill-color: currentColor;
+  isolation: isolate;
+  transition:
+    transform var(--lumno-duration-md) ease,
+    color var(--lumno-duration-md) ease;
+}
+.x-nt-feedback-action::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: var(--x-nt-feedback-action-face);
+  border: 0;
+  box-shadow: var(--x-nt-feedback-action-edge);
+  box-sizing: border-box;
+  transition:
+    box-shadow var(--lumno-duration-md) ease,
+    background var(--lumno-duration-md) ease;
+}
+.x-nt-feedback-action .ri-icon {
+  position: relative;
+  z-index: 1;
+  color: inherit;
+  -webkit-text-fill-color: currentColor;
+  --ri-size: 16px;
+  line-height: 1;
+}
+.x-nt-feedback-action:focus-visible {
+  outline: 2px solid var(--lumno-color-focus-ring);
+  outline-offset: 2px;
+}
+.x-nt-feedback-action:hover {
+  transform: none;
+}
+.x-nt-feedback-action:hover::before {
+  background: var(--x-nt-feedback-action-hover-face);
+  box-shadow: var(--x-nt-feedback-action-hover-edge);
+}
+.x-nt-feedback-action:active {
+  transform: translateY(1px);
+}
+.x-nt-feedback-action:active::before {
+  background: var(--x-nt-feedback-action-face);
+  box-shadow: var(--x-nt-feedback-action-press-edge);
+}
+.x-nt-feedback-action-community {
+  color: var(--lumno-color-on-primary);
+}
+/* The ring is the first shadow so it sits outside the circle face instead of looking clipped. */
+.x-nt-feedback-action-community::before {
+  background: var(--lumno-color-primary);
+  box-shadow:
+    0 0 0 1px var(--lumno-color-primary-border),
+    var(--lumno-shadow-primary),
+    var(--lumno-shadow-primary-sheen);
+}
+.x-nt-feedback-action-community:hover,
+.x-nt-feedback-action-community[data-active="true"] {
+  color: var(--lumno-color-on-primary);
+}
+.x-nt-feedback-action-community:hover::before,
+.x-nt-feedback-action-community[data-active="true"]::before {
+  background: var(--lumno-color-primary-hover);
+  box-shadow:
+    0 0 0 1px var(--lumno-color-primary-border),
+    var(--lumno-shadow-primary-hover),
+    var(--lumno-shadow-primary-sheen);
+}
+.x-nt-feedback-action-community:active::before {
+  background: var(--lumno-color-primary);
+  box-shadow:
+    0 0 0 1px var(--lumno-color-primary-border),
+    var(--lumno-shadow-primary-pressed),
+    var(--lumno-shadow-primary-sheen-pressed);
+}
+.x-nt-feedback-detail {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  opacity: 0;
+  transform: scale(0.98);
+  transition:
+    opacity 170ms ease,
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  color: var(--x-nt-feedback-detail-ink);
+}
+.x-nt-feedback-detail[hidden] {
+  display: none;
+}
+.x-nt-feedback-control[data-detail-open="true"] .x-nt-feedback-detail {
+  opacity: 1;
+  transform: scale(1);
+}
+.x-nt-feedback-detail-header {
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.x-nt-feedback-detail-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  color: var(--x-nt-feedback-detail-ink);
+  font-size: var(--lumno-font-size-lg);
+  line-height: 1.25;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.x-nt-feedback-detail-actions {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.x-nt-feedback-detail-action {
+  all: unset;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  border-radius: var(--lumno-radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--x-nt-feedback-detail-action-ink);
+  background: transparent;
+  box-sizing: border-box;
+  cursor: pointer;
+  -webkit-text-fill-color: currentColor;
+  transition:
+    color var(--lumno-duration-sm) ease,
+    background var(--lumno-duration-sm) ease,
+    transform var(--lumno-duration-sm) ease,
+    opacity var(--lumno-duration-sm) ease;
+}
+.x-nt-feedback-detail-action .ri-icon {
+  color: inherit;
+  -webkit-text-fill-color: currentColor;
+  --ri-size: 16px;
+  line-height: 1;
+}
+.x-nt-feedback-detail-action:hover {
+  color: var(--x-nt-feedback-detail-action-hover-ink);
+  background: var(--x-nt-feedback-detail-action-hover-bg);
+}
+.x-nt-feedback-detail-action:active {
+  background: var(--x-nt-feedback-detail-action-press-bg);
+  transform: scale(0.94);
+}
+.x-nt-feedback-detail-action:focus-visible {
+  outline: 2px solid var(--lumno-color-focus-ring);
+  outline-offset: 1px;
+}
+.x-nt-feedback-detail-action:disabled {
+  cursor: progress;
+  opacity: 0.56;
+}
+.x-nt-feedback-qr-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: min(360px, calc(100vh - 142px));
+  max-height: min(360px, calc(100dvh - 142px));
+  /* Concentric with the popover: its radius minus the inset around the image. */
+  border-radius: calc(var(--x-nt-feedback-detail-radius, 16px) - var(--x-nt-feedback-detail-inset, 10px));
+  object-fit: contain;
+  background: var(--x-nt-feedback-qr-bg);
+}
+body[data-wallpaper-active="true"] {
+  --x-nt-wallpaper-adaptive-ink: rgb(248 250 252 / 88%);
+  --x-nt-wallpaper-adaptive-ink-muted: rgb(248 250 252 / 70%);
+  --x-nt-wallpaper-adaptive-hover-bg: rgb(248 250 252 / 14%);
+  --x-nt-wallpaper-adaptive-shadow: rgb(15 23 42 / 36%);
+  --x-nt-wallpaper-adaptive-halo: rgb(15 23 42 / 18%);
+  --x-nt-wallpaper-icon-solid-bg: rgb(20 28 45);
+  --x-nt-wallpaper-icon-solid-bg-hover: rgb(15 23 42);
+  --x-nt-wallpaper-icon-solid-bg-press: rgb(2 6 23);
+  --x-nt-wallpaper-icon-solid-ink: rgb(248 250 252);
+  --x-nt-wallpaper-icon-solid-ink-hover: rgb(248 250 252);
+  --x-nt-wallpaper-glass-bg: rgb(15 23 42 / 42%);
+  --x-nt-wallpaper-glass-border: rgb(255 255 255 / 12%);
+  --x-nt-wallpaper-glass-pill-bg: rgb(255 255 255 / 22%);
+  --x-nt-wallpaper-glass-pill-shadow: 0 1px 2px rgb(15 23 42 / 20%);
+  --x-nt-wallpaper-glass-ink: rgb(255 255 255);
+}
+body[data-wallpaper-active="true"] [data-wallpaper-ink="light"] {
+  --x-nt-wallpaper-adaptive-ink: rgb(248 250 252 / 88%);
+  --x-nt-wallpaper-adaptive-ink-muted: rgb(248 250 252 / 70%);
+  --x-nt-wallpaper-adaptive-hover-bg: rgb(248 250 252 / 14%);
+  --x-nt-wallpaper-adaptive-shadow: rgb(15 23 42 / 36%);
+  --x-nt-wallpaper-adaptive-halo: rgb(15 23 42 / 18%);
+  --x-nt-wallpaper-icon-solid-bg: rgb(20 28 45);
+  --x-nt-wallpaper-icon-solid-bg-hover: rgb(15 23 42);
+  --x-nt-wallpaper-icon-solid-bg-press: rgb(2 6 23);
+  --x-nt-wallpaper-icon-solid-ink: rgb(248 250 252);
+  --x-nt-wallpaper-icon-solid-ink-hover: rgb(248 250 252);
+  --x-nt-wallpaper-glass-bg: rgb(15 23 42 / 42%);
+  --x-nt-wallpaper-glass-border: rgb(255 255 255 / 12%);
+  --x-nt-wallpaper-glass-pill-bg: rgb(255 255 255 / 22%);
+  --x-nt-wallpaper-glass-pill-shadow: 0 1px 2px rgb(15 23 42 / 20%);
+  --x-nt-wallpaper-glass-ink: rgb(255 255 255);
+}

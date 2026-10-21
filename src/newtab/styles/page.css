@@ -1,0 +1,807 @@
+/* New Tab page base: the document, native scrollbars and controls, the
+   theme, the wallpaper backdrop and its effects, and the page root and
+   search layer. */
+
+html,
+body {
+  height: 100%;
+  overscroll-behavior: none;
+}
+html[data-wallpaper-preload-theme="dark"] {
+  background-color: #111111;
+}
+html[data-wallpaper-preload-theme="dark"] body:not([data-theme]) {
+  --x-nt-bg: #111111;
+  color-scheme: dark;
+}
+body {
+  margin: 0;
+  background-color: var(--x-nt-bg);
+  background-image: var(--x-nt-wallpaper-overlay, none), var(--x-nt-wallpaper-image, none);
+  background-repeat: no-repeat;
+  background-size: cover, var(--x-nt-wallpaper-size, cover);
+  background-position: center center, var(--x-nt-wallpaper-position, center center);
+  background-attachment: fixed;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding-top: 12vh;
+  padding-bottom: 48px;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: auto;
+  font-family: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  color: var(--x-nt-text);
+  position: relative;
+  isolation: isolate;
+}
+/* Chrome fills a window it shows again (after minimizing) with this color until the wallpaper is
+   redrawn; the wallpaper's mean color keeps that moment from flashing. Only once the wallpaper is in,
+   so a New Tab still opens on its plain page color. */
+body[data-wallpaper-active="true"][data-nt-wallpaper-ready="1"] {
+  background-color: var(--x-nt-wallpaper-base-color, var(--x-nt-bg));
+}
+/* Native scrollbars (macOS overlay bars) and form controls take their tone
+   from color-scheme, so the resolved dark theme declares it; without it a dark
+   thumb would scroll over dark panels. */
+:root:has(> body[data-theme="dark"]) {
+  color-scheme: dark;
+}
+/* When the page itself scrolls (narrow windows), its bar matches the
+   panels' thin one where the system draws classic bars. */
+:root:not([data-lumno-scrollbars="overlay"])::-webkit-scrollbar {
+  width: 12px;
+}
+:root:not([data-lumno-scrollbars="overlay"])::-webkit-scrollbar-track {
+  background: transparent;
+}
+:root:not([data-lumno-scrollbars="overlay"])::-webkit-scrollbar-thumb {
+  min-height: 48px;
+  border: 3px solid transparent;
+  border-radius: var(--lumno-radius-pill);
+  background-color: rgba(148, 163, 184, 0.68);
+  background-clip: padding-box;
+}
+:root:not([data-lumno-scrollbars="overlay"])::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 116, 139, 0.82);
+}
+:root:not([data-lumno-scrollbars="overlay"])::-webkit-scrollbar-corner {
+  background: transparent;
+}
+:root:not([data-lumno-scrollbars="overlay"]):has(> body[data-theme="dark"])::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.5);
+}
+:root:not([data-lumno-scrollbars="overlay"]):has(> body[data-theme="dark"])::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(203, 213, 225, 0.7);
+}
+body.x-nt-bottom-layout:not(.x-nt-mobile-flow) {
+  overflow-y: hidden;
+}
+:root {
+  --x-nt-visual-viewport-top-inset: 0px;
+  --x-nt-visual-viewport-bottom-inset: 0px;
+  --x-nt-top-safe-inset: max(
+    env(safe-area-inset-top),
+    var(--x-nt-visual-viewport-top-inset, 0px)
+  );
+  --x-nt-bottom-safe-inset: max(
+    env(safe-area-inset-bottom),
+    var(--x-nt-visual-viewport-bottom-inset, 0px)
+  );
+  --x-nt-top-occupied-inset: var(--x-nt-top-safe-inset);
+  /* The most the top bookmarks bar ever takes (its floating layout), shown or not. */
+  --x-nt-top-bar-max-inset: calc(48px + var(--x-nt-top-safe-inset));
+  --x-nt-top-floating-gap: 12px;
+  --x-nt-bg: #ffffff;
+  --x-nt-text: #111827;
+  --x-nt-subtext: #6b7280;
+  --x-nt-link: rgb(var(--lumno-color-accent-rgb));
+  --x-nt-placeholder: #9ca3af;
+  --x-nt-input-bg: transparent;
+  --x-nt-input-border: transparent;
+  --x-nt-input-shadow: none;
+  --x-nt-suggestions-bg: rgba(255, 255, 255, 0.96);
+  --x-nt-suggestions-border: rgba(15, 23, 42, 0.12);
+  --x-nt-suggestions-shadow: 0 18px 44px rgba(0, 0, 0, 0.1);
+  --x-nt-search-shell-radius: 26px;
+  --x-nt-search-resting-radius: 26px;
+  --x-nt-search-shell-border-width: 1px;
+  --x-nt-search-shell-border: var(
+    --x-lumno-search-shell-border-light,
+    rgba(0, 0, 0, 0.14)
+  );
+  --x-nt-search-shell-padding: 4px;
+  --x-nt-search-content-inset: calc(
+    var(--x-nt-search-shell-border-width) + var(--x-nt-search-shell-padding)
+  );
+  --x-nt-search-content-radius: calc(
+    var(--x-nt-search-shell-radius) - var(--x-nt-search-content-inset)
+  );
+  --x-nt-search-resting-content-radius: calc(
+    var(--x-nt-search-resting-radius) - var(--x-nt-search-content-inset)
+  );
+  --x-nt-search-layer-border-width: 1px;
+  --x-nt-search-input-radius: calc(
+    var(--x-nt-search-content-radius) - var(--x-nt-search-layer-border-width)
+  );
+  --x-nt-search-results-padding-inline: 8px;
+  --x-nt-search-results-padding-block-start: 8px;
+  --x-nt-search-results-padding-block-end: 12px;
+  --x-nt-search-result-radius: calc(
+    var(--x-nt-search-content-radius) - var(--x-nt-search-results-padding-inline)
+  );
+  --x-ext-search-input-corners:
+    var(--x-nt-search-input-radius) var(--x-nt-search-input-radius) 0 0;
+  --x-nt-panel-bg: rgba(255, 255, 255, 0.9);
+  --x-nt-mode-menu-bg: #ffffff;
+  --x-nt-panel-border: rgba(0, 0, 0, 0.08);
+  --x-nt-surface-border: var(
+    --x-lumno-search-shell-border-light,
+    rgba(0, 0, 0, 0.14)
+  );
+  --x-extension-select-menu-border: var(--x-nt-surface-border);
+  --x-nt-panel-shadow: 0 8px 20px rgba(0, 0, 0, 0.01);
+  --x-nt-panel-shadow-focus: 0 4px 24px 0 rgba(0, 0, 0, 0.01),
+    0 30px 40px 0 rgba(0, 0, 0, 0.05);
+  --x-nt-panel-blur: 24px;
+  --x-nt-panel-saturate: 165%;
+  --x-nt-hover-bg: rgba(200, 208, 218, 0.45);
+  --x-nt-neutral-mark-bg: #e5e7eb;
+  --x-nt-neutral-mark-text: #111827;
+  --x-nt-settings-action-hover-bg: rgba(148, 163, 184, 0.16);
+  --x-nt-settings-action-hover-color: #4b5563;
+  --x-nt-tag-bg: #f3f4f6;
+  --x-nt-tag-text: #667085;
+  --x-nt-bookmark-tag-bg: var(--x-nt-tag-bg);
+  --x-nt-bookmark-tag-text: var(--x-nt-tag-text);
+  --x-ext-input-underline: #e5e7eb;
+  --x-ext-input-divider-inset: 24px;
+  --x-ext-input-divider-opacity: 0.5;
+  --x-nt-recent-card-bg: #feecdc;
+  --x-nt-recent-card-bg-alt: #dcebfe;
+  --x-nt-recent-card-border: rgba(255, 255, 255, 0.1);
+  --x-nt-recent-inner-border: rgba(0, 0, 0, 0.1);
+  --x-nt-recent-inner-base-rgb: 255, 255, 255;
+  --x-nt-recent-inner-alpha: 1;
+  --x-nt-recent-inner-blur: 0px;
+  --x-nt-recent-heading-color: #000000;
+  --x-nt-recent-action-text: rgba(0, 0, 0, 0.5);
+  --x-nt-recent-card-shadow: 0 52px 15px 0 rgba(199, 199, 199, 0),
+    0 33px 13px 0 rgba(199, 199, 199, 0.01),
+    0 19px 11px 0 rgba(199, 199, 199, 0.05),
+    0 8px 8px 0 rgba(199, 199, 199, 0.09),
+    0 2px 5px 0 rgba(199, 199, 199, 0.1);
+  --x-nt-recent-card-shadow-hover: 0 70px 19px 0 rgba(199, 199, 199, 0),
+    0 44px 18px 0 rgba(199, 199, 199, 0.02),
+    0 25px 15px 0 rgba(199, 199, 199, 0.08),
+    0 11px 11px 0 rgba(199, 199, 199, 0.13),
+    0 3px 6px 0 rgba(199, 199, 199, 0.15);
+  --x-nt-recent-inner-shadow: 0 58px 16px 0 rgba(199, 199, 199, 0),
+    0 37px 15px 0 rgba(199, 199, 199, 0.01),
+    0 21px 12px 0 rgba(199, 199, 199, 0.05),
+    0 9px 9px 0 rgba(199, 199, 199, 0.09),
+    0 2px 5px 0 rgba(199, 199, 199, 0.1);
+  --x-nt-recent-title: #000000;
+  --x-nt-recent-url: rgba(0, 0, 0, 0.51);
+  --x-nt-bookmark-heading-color: #000000;
+  --x-nt-bookmark-card-bg: rgba(255, 255, 255, 0.82);
+  --x-nt-bookmark-card-border: rgba(0, 0, 0, 0.08);
+  --x-nt-bookmark-card-hover-color: rgba(255, 255, 255, 0.9);
+  --x-nt-bookmark-card-hover-underlay: rgba(0, 0, 0, 0);
+  --x-nt-bookmark-card-blur: 5px;
+  --x-nt-bookmark-card-blur-hover: 9px;
+  --x-nt-bookmark-card-shadow: 0 14px 4px 0 rgba(199, 199, 199, 0),
+    0 9px 4px 0 rgba(199, 199, 199, 0.01),
+    0 5px 3px 0 rgba(199, 199, 199, 0.05),
+    0 2px 2px 0 rgba(199, 199, 199, 0.09),
+    0 1px 1px 0 rgba(199, 199, 199, 0.1);
+  --x-nt-bookmark-title: #111827;
+  --x-nt-bookmark-icon-bg: rgba(241, 245, 249, 0.92);
+  --x-nt-bookmark-folder-hover-bg: rgba(83, 147, 255, 0.05);
+  --x-nt-bookmark-shadow-rgb: 199, 199, 199;
+  /* Hovered card lift: alphas of its four visible shadow layers (folders use half). */
+  --x-nt-bookmark-hover-shadow-alpha-1: 0.008;
+  --x-nt-bookmark-hover-shadow-alpha-2: 0.04;
+  --x-nt-bookmark-hover-shadow-alpha-3: 0.075;
+  --x-nt-bookmark-hover-shadow-alpha-4: 0.085;
+  --x-nt-bookmark-folder-hover-border: rgba(59, 130, 246, 0.22);
+  --x-nt-bookmark-folder-drop-border: rgb(var(--lumno-color-accent-rgb) / 0.78);
+  --x-nt-bookmark-pager-hover-bg: rgba(17, 24, 39, 0.08);
+  --x-nt-insert-indicator: #7a8491;
+  /* Wallpaper and feedback buttons without a wallpaper behind them. */
+  --x-nt-corner-hover-bg: rgba(15, 23, 42, 0.06);
+  --x-nt-corner-hover-border: rgba(15, 23, 42, 0.1);
+  --x-nt-corner-hover-ring: rgba(15, 23, 42, 0.02);
+  --x-nt-corner-hover-ink: #374151;
+  --x-nt-corner-open-bg: rgba(15, 23, 42, 0.07);
+  --x-nt-corner-open-border: rgba(15, 23, 42, 0.08);
+  --x-nt-corner-open-ring: rgba(15, 23, 42, 0.02);
+  --x-nt-corner-open-ink: #374151;
+  --x-nt-corner-open-hover-bg: rgba(15, 23, 42, 0.1);
+  --x-nt-corner-open-hover-border: rgba(15, 23, 42, 0.12);
+  --x-nt-corner-open-hover-ring: rgba(15, 23, 42, 0.03);
+  --x-nt-corner-press-bg: rgba(15, 23, 42, 0.13);
+  --x-nt-corner-press-border: rgba(15, 23, 42, 0.16);
+  --x-nt-corner-press-shadow:
+    inset 0 1px 2px rgba(15, 23, 42, 0.12),
+    inset 0 0 0 1px rgba(15, 23, 42, 0.04);
+  --x-nt-corner-open-press-bg: rgba(15, 23, 42, 0.14);
+  --x-nt-corner-open-press-border: rgba(15, 23, 42, 0.18);
+  --x-nt-corner-open-press-shadow:
+    inset 0 1px 2px rgba(15, 23, 42, 0.13),
+    inset 0 0 0 1px rgba(15, 23, 42, 0.05);
+  --x-nt-corner-active-ink: color-mix(in srgb, var(--x-nt-text, #111827) 62%, transparent);
+  --input-focus-color: var(--lumno-color-focus-ring);
+  --input-focus-shadow: rgba(59, 130, 246, 0.2);
+  --input-placeholder: rgba(100, 116, 139, 0.7);
+  --input-focus-bg: rgba(59, 130, 246, 0.08);
+  --tab-border: var(--lumno-color-border);
+  --control-bg: rgba(255, 255, 255, 0.72);
+  --control-hover-bg: rgba(255, 255, 255, 0.88);
+  --control-open-bg: rgba(255, 255, 255, 0.96);
+  --panel-text: var(--lumno-color-text);
+  --panel-subtext: var(--lumno-color-text-muted);
+  /* Solid like the context menu: text behind a menu should never show through. */
+  --menu-bg: rgb(255 255 255);
+  --select-hover-bg: var(--lumno-color-hover);
+  --select-selected-bg: var(--lumno-color-selected);
+  --select-selected-text: var(--lumno-color-selected-text);
+  /* Appearance panel. */
+  --x-nt-panel-surface: rgb(255 255 255);
+  --x-nt-panel-muted-ink: var(--x-nt-subtext, #6b7280);
+  --x-nt-panel-icon-hover-bg: rgba(17, 24, 39, 0.05);
+  --x-nt-segmented-bg: rgba(17, 24, 39, 0.04);
+  --x-nt-segmented-border: var(--x-nt-panel-border, rgba(0, 0, 0, 0.08));
+  --x-nt-segmented-indicator-bg: rgba(255, 255, 255, 0.82);
+  --x-nt-segmented-indicator-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+  --x-nt-segmented-hover-bg: rgba(255, 255, 255, 0.36);
+  --x-nt-segmented-active-ink: var(--x-nt-text, #111827);
+  --x-nt-thumb-hover-filter: brightness(0.92) saturate(1.04);
+  --x-nt-upload-border: rgba(107, 114, 128, 0.36);
+  --x-nt-upload-bg: rgba(107, 114, 128, 0.06);
+  --x-nt-upload-hover-bg: rgba(107, 114, 128, 0.12);
+  --x-nt-upload-ink: color-mix(in srgb, var(--x-nt-subtext, #6b7280) 74%, transparent);
+  --x-nt-upload-hover-ink: color-mix(in srgb, var(--x-nt-text, #111827) 72%, transparent);
+  --x-nt-favicon-thumb-bg: rgba(107, 114, 128, 0.07);
+  --x-nt-choice-hover-border: rgba(107, 114, 128, 0.36);
+  /* Bookmark folder menus. */
+  --x-nt-cascade-ink: #1f2937;
+  --x-nt-cascade-surface: rgba(255, 255, 255, 0.96);
+  --x-nt-cascade-shadow:
+    0 18px 34px rgba(15, 23, 42, 0.12),
+    0 2px 4px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.74);
+  --x-nt-cascade-quiet-ink: #7a8491;
+  --x-nt-cascade-item-ink: #263140;
+  --x-nt-cascade-item-hover-ink: #263140;
+  --x-nt-cascade-item-hover-bg: rgba(15, 23, 42, 0.07);
+  --x-nt-cascade-drop-ink: #1d4ed8;
+  --x-nt-cascade-drop-bg: rgb(var(--lumno-color-accent-rgb) / 0.11);
+  --x-nt-cascade-drop-ring: rgb(var(--lumno-color-accent-rgb) / 0.24);
+  --x-nt-cascade-icon-ink: #64748b;
+  --x-nt-cascade-copy-ink: #64748b;
+  --x-nt-cascade-copy-hover-ink: #334155;
+  /* Feedback menu. */
+  --x-nt-feedback-surface: rgba(255, 255, 255, 0.92);
+  --x-nt-feedback-shadow:
+    0 18px 34px rgba(15, 23, 42, 0.12),
+    0 2px 4px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.74);
+  --x-nt-feedback-ink: #212733;
+  --x-nt-feedback-action-ink: #4b545f;
+  --x-nt-feedback-detail-ink: #212733;
+  --x-nt-feedback-action-face: linear-gradient(180deg, #ffffff 0%, #ecedef 100%);
+  --x-nt-feedback-action-edge:
+    0 0 0 1px rgba(210, 216, 223, 0.92),
+    0 1px 2px rgba(0, 0, 0, 0.02),
+    inset 0 -4px 3px rgba(255, 255, 255, 0.58);
+  --x-nt-feedback-action-hover-face: linear-gradient(180deg, #ffffff 0%, #e8ebef 100%);
+  --x-nt-feedback-action-hover-edge:
+    0 0 0 1px #d2d8df,
+    0 10px 16px rgba(15, 23, 42, 0.07),
+    0 2px 3px rgba(15, 23, 42, 0.04),
+    inset 0 -4px 3px rgba(255, 255, 255, 0.64);
+  --x-nt-feedback-action-press-edge:
+    0 0 0 1px rgba(210, 216, 223, 0.92),
+    0 2px 5px rgba(0, 0, 0, 0.06),
+    inset 0 -4px 3px rgba(255, 255, 255, 0.58);
+  --x-nt-feedback-detail-action-ink: #606976;
+  --x-nt-feedback-detail-action-hover-ink: #212733;
+  --x-nt-feedback-detail-action-hover-bg: rgba(15, 23, 42, 0.07);
+  --x-nt-feedback-detail-action-press-bg: rgba(15, 23, 42, 0.12);
+  --x-nt-feedback-qr-bg: #f2f4f8;
+  --x-nt-wallpaper-image: none;
+  --x-nt-wallpaper-overlay: none;
+  --x-nt-wallpaper-effect-overlay: none;
+  --x-nt-wallpaper-blur-radius: 19px;
+  --x-nt-wallpaper-blur-overscan: calc(var(--x-nt-wallpaper-blur-radius) * 2);
+  --x-nt-wallpaper-blur-saturate: 118%;
+  --x-nt-wallpaper-blur-brightness: 100%;
+  --x-nt-wallpaper-blur-contrast: 100%;
+  --x-nt-wallpaper-size: cover;
+  --x-nt-wallpaper-position: center center;
+  --x-nt-wallpaper-overlay-light-top: 54%;
+  --x-nt-wallpaper-overlay-light-mid: 20%;
+  --x-nt-wallpaper-overlay-light-bottom: 38%;
+  --x-nt-wallpaper-overlay-dark-top: 44%;
+  --x-nt-wallpaper-overlay-dark-mid: 20%;
+  --x-nt-wallpaper-overlay-dark-bottom: 50%;
+  --x-nt-content-viewport-width: 96vw;
+  --x-nt-section-inner-gap: 20px;
+  --x-nt-grid-row-gap: 16px;
+  --x-nt-bottom-dock-section-gap: 32px;
+  --x-nt-bottom-dock-corridor-size: 16px;
+  --x-nt-bottom-dock-top-padding: 24px;
+  --x-nt-bottom-dock-bottom-padding: 60px;
+  --x-nt-shortcuts-reserved-height: 82px;
+  --x-nt-shortcut-columns: 10;
+  --x-nt-shortcuts-target-width: 692px;
+  --x-nt-shortcut-user-tile-size: 64px;
+  --x-nt-shortcut-user-icon-size: 48px;
+  --x-nt-shortcut-user-icon-radius: 16px;
+  --x-nt-shortcut-user-favicon-size: 28px;
+  --x-nt-shortcut-fallback-icon-bg: rgba(241, 245, 249, 0.9);
+  --x-nt-shortcut-folder-icon-bg: rgb(236 237 239);
+  --x-nt-shortcut-drop-target-bg: rgb(222 224 228);
+  --x-nt-shortcut-user-tile-padding: 8px;
+  --x-nt-shortcut-user-column-gap: 4px;
+  --x-nt-shortcut-user-row-gap: 10px;
+  --x-nt-shortcut-tile-size: var(--x-nt-shortcut-user-tile-size);
+  --x-nt-shortcut-icon-size: var(--x-nt-shortcut-user-icon-size);
+  --x-nt-shortcut-icon-radius: var(--x-nt-shortcut-user-icon-radius);
+  --x-nt-shortcut-favicon-size: var(--x-nt-shortcut-user-favicon-size);
+  --x-nt-shortcuts-section-margin-top: 18px;
+  --x-nt-shortcuts-grid-row-gap: var(--x-nt-shortcut-user-row-gap);
+  --x-nt-shortcuts-grid-column-gap: var(--x-nt-shortcut-user-column-gap);
+  --x-nt-shortcuts-grid-padding: 10px 8px 12px;
+  --x-nt-shortcut-tile-padding: var(--x-nt-shortcut-user-tile-padding);
+  --x-nt-shortcut-hover-scale-near: 1.28;
+  --x-nt-shortcut-hover-rise-near: -6px;
+  --x-nt-shortcut-hover-scale-drag: 1.2;
+  --x-nt-shortcut-hover-rise-drag: -4px;
+  --x-nt-shortcut-hover-scale-mid: 1.14;
+  --x-nt-shortcut-hover-rise-mid: -3px;
+  --x-nt-shortcut-hover-shift-mid: 4px;
+  --x-nt-shortcut-hover-scale-far: 1.05;
+  --x-nt-shortcut-hover-rise-far: -1px;
+  --x-nt-shortcut-hover-shift-far: 1px;
+  --x-nt-shortcut-dock-duration: 300ms;
+  --x-nt-shortcut-dock-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* While the pointer moves over the row the icons trail it by about a frame; the full duration
+     is only for growing in from rest and settling back. */
+  --x-nt-shortcut-dock-follow-duration: 90ms;
+  --x-nt-shortcut-favicon-radius: max(
+    6px,
+    calc(var(--x-nt-shortcut-icon-radius, 16px) - ((var(--x-nt-shortcut-icon-size, 48px) - var(--x-nt-shortcut-favicon-size, 28px)) / 2))
+  );
+  --x-nt-shortcut-smooth-mask-outer: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M32 0H68C97.12 0 100 2.88 100 32V68C100 97.12 97.12 100 68 100H32C2.88 100 0 97.12 0 68V32C0 2.88 2.88 0 32 0Z' fill='black'/%3E%3C/svg%3E");
+  --x-nt-shortcut-smooth-mask-inner: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M20 0H80C98.2 0 100 1.8 100 20V80C100 98.2 98.2 100 80 100H20C1.8 100 0 98.2 0 80V20C0 1.8 1.8 0 20 0Z' fill='black'/%3E%3C/svg%3E");
+}
+body[data-nt-top-occupied="true"] {
+  --x-nt-top-occupied-inset: calc(
+    36px + var(--x-nt-top-safe-inset)
+  );
+}
+body[data-nt-top-occupied="true"][data-nt-top-layout="floating"] {
+  --x-nt-top-occupied-inset: var(--x-nt-top-bar-max-inset);
+}
+body[data-wallpaper-active="true"] {
+  --x-nt-wallpaper-overlay: var(--x-nt-wallpaper-effect-overlay);
+  --x-nt-wallpaper-effect-overlay: linear-gradient(
+    180deg,
+    rgb(255 255 255 / var(--x-nt-wallpaper-overlay-light-top, 54%)) 0%,
+    rgb(255 255 255 / var(--x-nt-wallpaper-overlay-light-mid, 20%)) 42%,
+    rgb(255 255 255 / var(--x-nt-wallpaper-overlay-light-bottom, 38%)) 100%
+  );
+}
+html[data-wallpaper-active="true"] body {
+  --x-nt-wallpaper-overlay: var(--x-nt-wallpaper-effect-overlay);
+  --x-nt-wallpaper-effect-overlay: linear-gradient(
+    180deg,
+    rgb(255 255 255 / var(--x-nt-wallpaper-overlay-light-top, 54%)) 0%,
+    rgb(255 255 255 / var(--x-nt-wallpaper-overlay-light-mid, 20%)) 42%,
+    rgb(255 255 255 / var(--x-nt-wallpaper-overlay-light-bottom, 38%)) 100%
+  );
+}
+body[data-theme="dark"],
+body[data-glass-style] [data-glass-ink-theme="dark"] {
+  --x-nt-shortcut-fallback-icon-bg: rgba(255, 255, 255, 0.09);
+  --x-nt-shortcut-folder-icon-bg: rgb(58 59 61);
+  --x-nt-shortcut-drop-target-bg: rgb(78 79 83);
+  --x-nt-bg: #111111;
+  --x-nt-text: #e5e7eb;
+  --x-nt-subtext: #9ca3af;
+  --x-nt-link: #d1d5db;
+  --x-nt-placeholder: #9ca3af;
+  --x-nt-input-bg: transparent;
+  --x-nt-input-border: transparent;
+  --x-nt-input-shadow: none;
+  --x-nt-suggestions-bg: rgba(20, 20, 20, 0.92);
+  --x-nt-suggestions-border: rgba(255, 255, 255, 0.16);
+  --x-nt-suggestions-shadow: 0 24px 50px rgba(0, 0, 0, 0.55);
+  --x-nt-panel-bg: rgba(20, 20, 20, 0.82);
+  --x-nt-mode-menu-bg: #141414;
+  --x-nt-panel-border: rgba(255, 255, 255, 0.08);
+  --x-nt-surface-border: var(
+    --x-lumno-search-shell-border-dark,
+    rgba(255, 255, 255, 0.16)
+  );
+  --x-extension-select-menu-border: var(--x-nt-surface-border);
+  --x-nt-search-shell-border: var(
+    --x-lumno-search-shell-border-dark,
+    rgba(255, 255, 255, 0.16)
+  );
+  --x-nt-panel-shadow: 0 8px 20px rgba(0, 0, 0, 0.01);
+  --x-nt-panel-shadow-focus: 0 4px 24px 0 rgba(0, 0, 0, 0.08),
+    0 30px 40px 0 rgba(0, 0, 0, 0.28);
+  --x-nt-panel-blur: 32px;
+  --x-nt-panel-saturate: 145%;
+  --x-nt-hover-bg: rgba(255, 255, 255, 0.08);
+  --x-nt-neutral-mark-bg: rgba(148, 163, 184, 0.28);
+  --x-nt-neutral-mark-text: #f8fafc;
+  --x-nt-settings-action-hover-bg: rgba(255, 255, 255, 0.08);
+  --x-nt-settings-action-hover-color: #e5e7eb;
+  --x-nt-tag-bg: rgba(255, 255, 255, 0.12);
+  --x-nt-tag-text: #e5e7eb;
+  --x-nt-bookmark-tag-bg: var(--x-nt-tag-bg);
+  --x-nt-bookmark-tag-text: var(--x-nt-tag-text);
+  --x-ext-input-underline: rgba(255, 255, 255, 0.18);
+  --x-ext-input-divider-inset: 24px;
+  --x-ext-input-divider-opacity: 0.35;
+  --x-nt-recent-card-bg: #feecdc;
+  --x-nt-recent-card-bg-alt: #dcebfe;
+  --x-nt-recent-card-bg: #1f1f1f;
+  --x-nt-recent-card-bg-alt: #1c2228;
+  --x-nt-recent-card-border: rgba(255, 255, 255, 0.08);
+  --x-nt-recent-inner-border: rgba(255, 255, 255, 0.08);
+  --x-nt-recent-inner-base-rgb: 22, 22, 22;
+  --x-nt-recent-inner-alpha: 0.72;
+  --x-nt-recent-inner-blur: 14px;
+  --x-nt-recent-heading-color: rgba(226, 232, 240, 0.7);
+  --x-nt-recent-card-shadow: 0 18px 30px rgba(0, 0, 0, 0.38),
+    0 8px 16px rgba(0, 0, 0, 0.24);
+  --x-nt-recent-card-shadow-hover: 0 22px 36px rgba(0, 0, 0, 0.42),
+    0 10px 18px rgba(0, 0, 0, 0.28);
+  --x-nt-recent-inner-shadow: 0 3px 8px rgba(0, 0, 0, 0.22),
+    0 2px 4px rgba(0, 0, 0, 0.12);
+  --x-nt-recent-title: #e5e7eb;
+  --x-nt-recent-url: rgba(226, 232, 240, 0.75);
+  --x-nt-recent-action-text: rgba(226, 232, 240, 0.78);
+  --x-nt-bookmark-heading-color: rgba(226, 232, 240, 0.72);
+  --x-nt-bookmark-card-bg: rgba(25, 25, 25, 0.78);
+  --x-nt-bookmark-card-border: rgba(255, 255, 255, 0.1);
+  --x-nt-bookmark-card-hover-color: rgba(25, 25, 25, 0.88);
+  --x-nt-bookmark-card-hover-underlay: rgba(0, 0, 0, 0.32);
+  --x-nt-bookmark-card-blur: 7px;
+  --x-nt-bookmark-card-blur-hover: 12px;
+  --x-nt-bookmark-card-shadow: 0 14px 4px 0 rgba(0, 0, 0, 0),
+    0 9px 4px 0 rgba(0, 0, 0, 0.04),
+    0 5px 3px 0 rgba(0, 0, 0, 0.16),
+    0 2px 2px 0 rgba(0, 0, 0, 0.24),
+    0 1px 1px 0 rgba(0, 0, 0, 0.32);
+  --x-nt-bookmark-title: #e2e8f0;
+  --x-nt-bookmark-icon-bg: rgba(255, 255, 255, 0.08);
+  --x-nt-bookmark-folder-hover-bg: rgba(83, 147, 255, 0.08);
+  --x-nt-bookmark-shadow-rgb: 60, 74, 97;
+  --x-nt-bookmark-hover-shadow-alpha-1: 0.065;
+  --x-nt-bookmark-hover-shadow-alpha-2: 0.16;
+  --x-nt-bookmark-hover-shadow-alpha-3: 0.24;
+  --x-nt-bookmark-hover-shadow-alpha-4: 0.3;
+  --x-nt-bookmark-folder-hover-border: rgba(96, 165, 250, 0.34);
+  --x-nt-bookmark-folder-drop-border: rgba(96, 165, 250, 0.86);
+  --x-nt-bookmark-pager-hover-bg: rgba(226, 232, 240, 0.18);
+  --x-nt-insert-indicator: #a8b0bc;
+  --x-nt-corner-hover-bg: rgba(255, 255, 255, 0.1);
+  --x-nt-corner-hover-border: rgba(255, 255, 255, 0.14);
+  --x-nt-corner-hover-ring: rgba(255, 255, 255, 0.03);
+  --x-nt-corner-hover-ink: color-mix(in srgb, var(--x-nt-text, #e5e7eb) 68%, transparent);
+  --x-nt-corner-open-bg: rgba(255, 255, 255, 0.11);
+  --x-nt-corner-open-border: rgba(255, 255, 255, 0.13);
+  --x-nt-corner-open-ring: rgba(255, 255, 255, 0.03);
+  --x-nt-corner-open-ink: color-mix(in srgb, var(--x-nt-text, #e5e7eb) 68%, transparent);
+  --x-nt-corner-open-hover-bg: rgba(255, 255, 255, 0.15);
+  --x-nt-corner-open-hover-border: rgba(255, 255, 255, 0.18);
+  --x-nt-corner-open-hover-ring: rgba(255, 255, 255, 0.04);
+  --x-nt-corner-press-bg: rgba(255, 255, 255, 0.18);
+  --x-nt-corner-press-border: rgba(255, 255, 255, 0.22);
+  --x-nt-corner-press-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.08),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --x-nt-corner-open-press-bg: rgba(255, 255, 255, 0.21);
+  --x-nt-corner-open-press-border: rgba(255, 255, 255, 0.24);
+  --x-nt-corner-open-press-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.09),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --x-nt-corner-active-ink: color-mix(in srgb, var(--x-nt-text, #e5e7eb) 68%, transparent);
+  --input-focus-color: var(--lumno-color-focus-ring);
+  --input-focus-shadow: rgba(59, 130, 246, 0.3);
+  --input-placeholder: rgba(148, 163, 184, 0.7);
+  --input-focus-bg: #383838;
+  --tab-border: var(--lumno-color-border);
+  --control-bg: rgba(30, 30, 30, 0.78);
+  --control-hover-bg: rgba(45, 45, 45, 0.9);
+  --control-open-bg: rgba(55, 55, 55, 0.96);
+  --panel-text: #f8fafc;
+  --panel-subtext: #a8b0bc;
+  --menu-bg: rgb(31 31 31);
+  --select-hover-bg: var(--lumno-color-hover);
+  --select-selected-bg: var(--lumno-color-selected);
+  --select-selected-text: var(--lumno-color-selected-text);
+  --x-nt-panel-surface: rgb(20 20 20);
+  --x-nt-panel-muted-ink: #a3a3a3;
+  --x-nt-panel-icon-hover-bg: rgba(255, 255, 255, 0.06);
+  --x-nt-segmented-bg: rgba(255, 255, 255, 0.06);
+  --x-nt-segmented-border: rgba(255, 255, 255, 0.12);
+  --x-nt-segmented-indicator-bg: #3f3f46;
+  --x-nt-segmented-indicator-shadow: 0 1px 3px rgba(0, 0, 0, 0.24);
+  --x-nt-segmented-hover-bg: rgba(255, 255, 255, 0.1);
+  --x-nt-segmented-active-ink: #f8fafc;
+  --x-nt-thumb-hover-filter: brightness(1.12) saturate(1.04);
+  --x-nt-upload-border: rgba(156, 163, 175, 0.34);
+  --x-nt-upload-bg: rgba(255, 255, 255, 0.06);
+  --x-nt-upload-hover-bg: rgba(255, 255, 255, 0.12);
+  --x-nt-upload-ink: rgba(229, 231, 235, 0.62);
+  --x-nt-upload-hover-ink: rgba(229, 231, 235, 0.82);
+  --x-nt-favicon-thumb-bg: rgba(255, 255, 255, 0.06);
+  --x-nt-choice-hover-border: rgba(156, 163, 175, 0.42);
+  --x-nt-cascade-ink: #e5e7eb;
+  --x-nt-cascade-surface: rgba(17, 24, 39, 0.95);
+  --x-nt-cascade-shadow:
+    0 18px 34px rgba(0, 0, 0, 0.36),
+    0 2px 4px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --x-nt-cascade-quiet-ink: #94a3b8;
+  --x-nt-cascade-item-ink: #d6dbe3;
+  --x-nt-cascade-item-hover-ink: #f8fafc;
+  --x-nt-cascade-item-hover-bg: rgba(255, 255, 255, 0.09);
+  --x-nt-cascade-drop-ink: #bfdbfe;
+  --x-nt-cascade-drop-bg: rgba(59, 130, 246, 0.2);
+  --x-nt-cascade-drop-ring: rgba(96, 165, 250, 0.38);
+  --x-nt-cascade-icon-ink: #94a3b8;
+  --x-nt-cascade-copy-ink: #cbd5e1;
+  --x-nt-cascade-copy-hover-ink: #f8fafc;
+  --x-nt-feedback-surface: rgba(39, 39, 42, 0.92);
+  --x-nt-feedback-shadow:
+    0 18px 34px rgba(0, 0, 0, 0.28),
+    0 2px 4px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --x-nt-feedback-ink: #e5e7eb;
+  --x-nt-feedback-action-ink: #e5e7eb;
+  --x-nt-feedback-action-face: linear-gradient(180deg, #3f3f46 0%, #27272a 100%);
+  --x-nt-feedback-action-edge: 0 0 0 1px rgba(255, 255, 255, 0.12);
+  --x-nt-feedback-action-hover-face: linear-gradient(180deg, #52525b 0%, #3f3f46 100%);
+  --x-nt-feedback-action-hover-edge: 0 0 0 1px rgba(255, 255, 255, 0.18);
+  --x-nt-feedback-action-press-edge: 0 0 0 1px rgba(255, 255, 255, 0.12);
+  --x-nt-feedback-detail-ink: #f4f4f5;
+  --x-nt-feedback-detail-action-ink: #a1a1aa;
+  --x-nt-feedback-detail-action-hover-ink: #f4f4f5;
+  --x-nt-feedback-detail-action-hover-bg: rgba(255, 255, 255, 0.1);
+  --x-nt-feedback-detail-action-press-bg: rgba(255, 255, 255, 0.16);
+  --x-nt-feedback-qr-bg: #18181b;
+}
+body[data-theme="dark"][data-wallpaper-active="true"] {
+  --x-nt-wallpaper-overlay: var(--x-nt-wallpaper-effect-overlay);
+  --x-nt-wallpaper-effect-overlay: linear-gradient(
+    180deg,
+    rgb(0 0 0 / var(--x-nt-wallpaper-overlay-dark-top, 44%)) 0%,
+    rgb(0 0 0 / var(--x-nt-wallpaper-overlay-dark-mid, 20%)) 42%,
+    rgb(0 0 0 / var(--x-nt-wallpaper-overlay-dark-bottom, 50%)) 100%
+  );
+}
+html[data-wallpaper-active="true"] body[data-theme="dark"] {
+  --x-nt-wallpaper-overlay: var(--x-nt-wallpaper-effect-overlay);
+  --x-nt-wallpaper-effect-overlay: linear-gradient(
+    180deg,
+    rgb(0 0 0 / var(--x-nt-wallpaper-overlay-dark-top, 44%)) 0%,
+    rgb(0 0 0 / var(--x-nt-wallpaper-overlay-dark-mid, 20%)) 42%,
+    rgb(0 0 0 / var(--x-nt-wallpaper-overlay-dark-bottom, 50%)) 100%
+  );
+}
+/* Until newtab.js sets data-theme, the preload's cached theme picks the mask, so a dark New Tab never
+   reveals its wallpaper under the light mask first. Only the gradient is set here: effects that drop
+   the mask keep doing so. */
+html[data-wallpaper-preload-theme="dark"] body[data-wallpaper-active="true"]:not([data-theme]),
+html[data-wallpaper-preload-theme="dark"][data-wallpaper-active="true"] body:not([data-theme]) {
+  --x-nt-wallpaper-effect-overlay: linear-gradient(
+    180deg,
+    rgb(0 0 0 / var(--x-nt-wallpaper-overlay-dark-top, 44%)) 0%,
+    rgb(0 0 0 / var(--x-nt-wallpaper-overlay-dark-mid, 20%)) 42%,
+    rgb(0 0 0 / var(--x-nt-wallpaper-overlay-dark-bottom, 50%)) 100%
+  );
+}
+.x-nt-wallpaper-transition-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: var(--x-nt-bg);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center center;
+  opacity: 1;
+  transform: translateZ(0);
+  transition: opacity var(--lumno-duration-xl) ease;
+  will-change: opacity;
+  contain: strict;
+}
+.x-nt-wallpaper-transition-layer[data-exit="true"] {
+  opacity: 0;
+}
+.x-nt-wallpaper-transition-layer[data-wallpaper-filter-transition="true"] {
+  transition-duration: var(--lumno-duration-md);
+}
+.x-nt-wallpaper-effect-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  transform: translateZ(0);
+  transition: opacity var(--lumno-duration-md) ease;
+  contain: strict;
+}
+.x-nt-wallpaper-effect-canvas[data-resize-enter="true"],
+.x-nt-wallpaper-effect-canvas[data-resize-exit="true"] {
+  opacity: 0 !important;
+}
+.x-nt-wallpaper-effect-canvas[data-resize-jump="true"] {
+  transition: none !important;
+}
+body:not([data-wallpaper-active="true"]) .x-nt-wallpaper-effect-canvas,
+body[data-wallpaper-effect="none"] .x-nt-wallpaper-effect-canvas {
+  opacity: 0 !important;
+}
+body[data-wallpaper-active="true"][data-wallpaper-effect="ascii"] {
+  --x-nt-wallpaper-overlay: var(--x-nt-wallpaper-effect-overlay);
+}
+body[data-wallpaper-active="true"][data-wallpaper-effect="grain"] {
+  --x-nt-wallpaper-overlay: none;
+}
+body[data-wallpaper-active="true"][data-wallpaper-effect="blocks"] {
+  --x-nt-wallpaper-overlay: none;
+}
+body[data-wallpaper-active="true"][data-wallpaper-effect="blur"] {
+  --x-nt-wallpaper-overlay: none;
+  background-image: none;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: var(--x-nt-bg);
+  background-image: none;
+  background-repeat: no-repeat;
+  background-size: var(--x-nt-wallpaper-size, cover);
+  background-position: var(--x-nt-wallpaper-position, center center);
+  opacity: 0;
+  transform: translateZ(0);
+  transition: opacity var(--lumno-duration-md) ease;
+  contain: strict;
+}
+body[data-wallpaper-active="true"][data-wallpaper-effect="blur"]::before,
+.x-nt-wallpaper-transition-layer[data-wallpaper-effect="blur"] {
+  inset: calc(0px - var(--x-nt-wallpaper-blur-overscan));
+  filter: blur(var(--x-nt-wallpaper-blur-radius))
+    saturate(var(--x-nt-wallpaper-blur-saturate))
+    brightness(var(--x-nt-wallpaper-blur-brightness))
+    contrast(var(--x-nt-wallpaper-blur-contrast));
+}
+body[data-wallpaper-active="true"][data-wallpaper-effect="blur"]::before {
+  background-image: var(--x-nt-wallpaper-image, none);
+  opacity: 1;
+  will-change: opacity, filter;
+}
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: none;
+  opacity: 0;
+  transition: opacity var(--lumno-duration-md) ease;
+}
+body[data-wallpaper-active="true"]:not([data-wallpaper-effect="none"])::after {
+  background: var(--x-nt-wallpaper-effect-overlay, none);
+  opacity: 1;
+}
+body[data-wallpaper-active="true"][data-wallpaper-effect="halftone"]::after,
+body[data-wallpaper-active="true"][data-wallpaper-effect="ascii"]::after {
+  opacity: 0;
+}
+body:not([data-nt-enter="done"]) .x-nt-wallpaper-effect-canvas,
+body:not([data-nt-enter="done"])::after {
+  transition: none;
+}
+body:not([data-nt-enter="done"])::before {
+  transition: none;
+}
+/* New Tab tooltips appear in place, without the shared tooltip's entry offset; the
+   body prefix outranks each of tooltip.css's state rules by one element. */
+body ._x_extension_tooltip_2026_unique_,
+body ._x_extension_tooltip_2026_unique_[data-visible="true"],
+body ._x_extension_tooltip_2026_unique_[data-tooltip-kind],
+body ._x_extension_tooltip_2026_unique_[data-tooltip-kind][data-visible="true"],
+body ._x_extension_tooltip_2026_unique_._x_extension_cursor_tooltip_tag_2026_unique_[data-tooltip-kind],
+body ._x_extension_tooltip_2026_unique_._x_extension_cursor_tooltip_tag_2026_unique_[data-tooltip-kind][data-visible="true"] {
+  transform: none;
+}
+#_x_extension_newtab_root_2024_unique_ {
+  /* The search box leads the New Tab entry on the first frame after the reveal. */
+  --x-lumno-search-entry-duration: var(--lumno-duration-sm);
+  --x-lumno-search-entry-delay: 0ms;
+  width: 90vw;
+  max-width: var(--x-nt-search-max-width, 720px);
+  display: flex;
+  flex-direction: column;
+  background: var(--x-nt-panel-bg);
+  border: var(--x-nt-search-shell-border-width, 1px) solid var(--x-nt-search-shell-border);
+  border-radius: var(--x-nt-search-shell-radius, 26px);
+  box-shadow: var(--x-nt-panel-shadow);
+  transition: box-shadow var(--lumno-duration-3xl) cubic-bezier(0.22, 1, 0.36, 1);
+  backdrop-filter: blur(var(--x-nt-panel-blur, 24px)) saturate(var(--x-nt-panel-saturate, 165%));
+  -webkit-backdrop-filter: blur(var(--x-nt-panel-blur, 24px)) saturate(var(--x-nt-panel-saturate, 165%));
+  padding: var(--x-nt-search-shell-padding, 4px);
+  box-sizing: border-box;
+  position: relative;
+  z-index: 3;
+  /* Hide with opacity, not visibility, so keys typed before the page is ready
+     already reach the focused input through the IME. */
+  opacity: 0;
+  pointer-events: none;
+  min-height: 56px;
+}
+#_x_extension_newtab_root_2024_unique_:focus-within {
+  box-shadow: var(--x-nt-panel-shadow-focus, var(--x-nt-panel-shadow));
+}
+body[data-nt-ready="1"] #_x_extension_newtab_root_2024_unique_ {
+  opacity: 1;
+  pointer-events: auto;
+}
+body[data-wallpaper-panel-open="true"] #_x_extension_newtab_root_2024_unique_ {
+  background: var(--x-nt-panel-surface);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+#_x_extension_newtab_search_layer_2024_unique_ {
+  all: unset;
+  position: relative;
+  width: 100%;
+  min-width: 100%;
+  min-height: 45px;
+  display: block;
+  box-sizing: border-box;
+  overflow: visible;
+  border-radius: var(--x-nt-search-content-radius, 21px);
+  background: var(--x-nt-input-bg, rgba(255, 255, 255, 0.9));
+  border: var(--x-nt-search-layer-border-width, 1px) solid var(--x-nt-input-border, rgba(0, 0, 0, 0.06));
+  box-shadow: var(--x-nt-input-shadow, 0 20px 60px rgba(0, 0, 0, 0.08));
+  margin: 0;
+  padding: 0;
+  z-index: 12;
+}
+body[data-nt-suggestions-open="true"] #_x_extension_newtab_root_2024_unique_ {
+  z-index: 22;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+body[data-nt-suggestions-open="true"] #_x_extension_newtab_search_layer_2024_unique_ {
+  z-index: 20;
+  border-radius:
+    var(--x-nt-search-resting-content-radius, 21px)
+    var(--x-nt-search-resting-content-radius, 21px)
+    0
+    0;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}

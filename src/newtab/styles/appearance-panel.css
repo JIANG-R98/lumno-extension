@@ -1,0 +1,915 @@
+/* The appearance panel: its frame and scroll area, help footer, icon
+   buttons, tabs, setting rows, sections, sliders, selects and options. */
+
+.x-nt-wallpaper-panel {
+  all: unset;
+  --x-nt-panel-divider-gap: 20px;
+  --x-nt-panel-header-gap: 16px;
+  --x-nt-panel-inline-gap: 14px;
+  --x-nt-panel-item-gap: 18px;
+  --x-nt-panel-content-gap: var(--x-nt-panel-item-gap);
+  --x-nt-panel-control-gap: 14px;
+  --x-nt-panel-field-gap: 10px;
+  /* Right-hand control column shared by select rows and slider rows. */
+  --x-nt-row-control-width: min(208px, 60%);
+  /* Section content starts where the title text starts (chevron 16px + 2px gap). */
+  --x-nt-section-indent: 18px;
+  --x-nt-panel-option-gap: 12px;
+  --x-nt-panel-tab-gap: 6px;
+  --x-nt-panel-grid-gap: 14px;
+  --x-nt-panel-motion-duration: 240ms;
+  --x-nt-panel-motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  interpolate-size: allow-keywords;
+  --x-nt-panel-subsection-gap: var(--x-nt-panel-item-gap);
+  --x-nt-panel-scroll-edge: 14px;
+  --x-nt-panel-padding: 20px;
+  position: absolute;
+  right: 0;
+  bottom: 46px;
+  width: 424px;
+  max-width: calc(100vw - 32px);
+  /* Leave room for the top bookmarks bar whether or not it shows, so turning it on,
+     off or between docked and floating never resizes or moves the open panel. */
+  max-height: calc(100vh - 76px - var(--x-nt-top-bar-max-inset));
+  max-height: calc(100dvh - 76px - var(--x-nt-top-bar-max-inset));
+  /* No bottom inset: the scroll area and the pinned help footer bring their own. */
+  padding: var(--x-nt-panel-padding) var(--x-nt-panel-padding) 0;
+  border-radius: var(--lumno-radius-dialog);
+  background: var(--x-nt-panel-surface);
+  border: 1px solid var(
+    --x-nt-surface-border,
+    var(--x-lumno-search-shell-border-light, rgba(0, 0, 0, 0.14))
+  );
+  box-shadow: var(--x-nt-panel-shadow-focus, 0 18px 44px rgba(0, 0, 0, 0.1));
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.98);
+  transform-origin: right bottom;
+  transition: opacity var(--lumno-duration-sm) ease, visibility var(--lumno-duration-sm) ease,
+    transform var(--lumno-duration-lg) cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, opacity;
+}
+.x-nt-wallpaper-panel[data-open="true"] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: scale(1);
+}
+.x-nt-wallpaper-panel-scroll {
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  margin-right: calc(-1 * var(--x-nt-panel-scroll-edge));
+  padding-right: var(--x-nt-panel-scroll-edge);
+  padding-bottom: var(--x-nt-panel-padding);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden auto;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+/* Smaller screens tighten the panel; on phones it spans the screen above the corner
+   buttons (later blocks win where these ranges overlap). */
+@media (max-width: 520px) {
+  .x-nt-wallpaper-panel {
+    --x-nt-panel-divider-gap: 18px;
+    --x-nt-panel-header-gap: 15px;
+    --x-nt-panel-inline-gap: 13px;
+    --x-nt-panel-item-gap: 16px;
+    --x-nt-panel-control-gap: 13px;
+    --x-nt-panel-field-gap: 10px;
+    --x-nt-panel-option-gap: 12px;
+    --x-nt-panel-tab-gap: 5px;
+    --x-nt-panel-grid-gap: 14px;
+    max-width: calc(100vw - 28px);
+    max-height: calc(100vh - 70px - var(--x-nt-top-bar-max-inset));
+    max-height: calc(100dvh - 70px - var(--x-nt-top-bar-max-inset));
+    padding: 18px;
+  }
+}
+@media (max-height: 560px) {
+  .x-nt-wallpaper-panel {
+    --x-nt-panel-divider-gap: 16px;
+    --x-nt-panel-item-gap: 18px;
+    --x-nt-panel-option-gap: 12px;
+    max-height: calc(100vh - 70px - var(--x-nt-top-bar-max-inset));
+    max-height: calc(100dvh - 70px - var(--x-nt-top-bar-max-inset));
+  }
+}
+@media (max-width: 640px) {
+  .x-nt-wallpaper-panel {
+    --x-nt-panel-divider-gap: 16px;
+    --x-nt-panel-header-gap: 12px;
+    --x-nt-panel-inline-gap: 12px;
+    --x-nt-panel-item-gap: 14px;
+    --x-nt-panel-control-gap: 12px;
+    --x-nt-panel-field-gap: 8px;
+    --x-nt-panel-option-gap: 10px;
+    --x-nt-panel-tab-gap: 5px;
+    --x-nt-panel-grid-gap: 12px;
+    --x-nt-panel-scroll-edge: 10px;
+    position: fixed;
+    left: max(12px, env(safe-area-inset-left));
+    right: max(12px, env(safe-area-inset-right));
+    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 56px);
+    width: auto;
+    max-width: none;
+    max-height: calc(100dvh - 80px - var(--x-nt-top-bar-max-inset) - var(--x-nt-bottom-safe-inset));
+    --x-nt-panel-padding: 16px;
+  }
+  .x-nt-wallpaper-panel-scroll {
+    scrollbar-gutter: auto;
+  }
+}
+:root:not([data-lumno-scrollbars="overlay"]) .x-nt-wallpaper-panel-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+/* Overlay scrollbars (macOS showing them only while scrolling) take no gutter,
+   so the insets that make room for our thin bar collapse with them. */
+:root[data-lumno-scrollbars="overlay"] .x-nt-appearance-help-footer {
+  --x-nt-panel-scrollbar-gutter: 0px;
+}
+:root[data-lumno-scrollbars="overlay"] #_x_extension_newtab_suggestions_container_2024_unique_ {
+  --x-nt-suggestions-scrollbar-gutter: 0px;
+}
+:root:not([data-lumno-scrollbars="overlay"]) .x-nt-wallpaper-panel-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: var(--lumno-radius-pill);
+  background: rgba(107, 114, 128, 0.34);
+  background-clip: padding-box;
+}
+:root:not([data-lumno-scrollbars="overlay"]) .x-nt-wallpaper-panel-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.x-nt-wallpaper-panel-title {
+  color: var(--x-nt-text, #111827);
+  font-size: var(--lumno-font-size-lg);
+  font-weight: 600;
+  line-height: 1.25;
+  font-family: "Open Sans", "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif;
+  padding: 0 2px;
+}
+.x-nt-wallpaper-panel-header {
+  min-width: 0;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--x-nt-panel-header-gap);
+}
+.x-nt-wallpaper-panel-header .x-nt-wallpaper-panel-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/* Behavior and colors come from ../shared/switch.css; the panel's rows are dense, so every switch here stays compact. */
+.x-nt-wallpaper-switch {
+  --switch-width: 36px;
+  --switch-height: 20px;
+  --switch-knob-size: 16px;
+  --switch-knob-stretch: 3px;
+}
+.x-nt-appearance-header {
+  min-width: 0;
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--x-nt-panel-inline-gap);
+  margin: -2px -2px 14px;
+  padding: 2px;
+  background: var(--x-nt-panel-surface);
+}
+/* Quiet way out to the help center, pinned under the scrolling settings. */
+.x-nt-appearance-help-footer {
+  flex: 0 0 auto;
+  min-width: 0;
+  /* Ends where the section dividers do, beside the scroll area's scrollbar gutter. */
+  margin: 0 var(--x-nt-panel-scrollbar-gutter, 8px) 0 0;
+  padding: 12px 2px 14px;
+  border-top: 1px solid var(--x-nt-panel-border, rgba(0, 0, 0, 0.08));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 4px;
+  row-gap: 2px;
+  color: var(--x-nt-subtext, #6b7280);
+  font-size: var(--lumno-font-size-sm);
+  line-height: 1.2;
+}
+.x-nt-appearance-header .x-nt-wallpaper-panel-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 15px;
+}
+.x-nt-appearance-title-group {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.x-nt-appearance-title-group .x-nt-wallpaper-panel-title {
+  flex: 0 1 auto;
+}
+.x-nt-appearance-info-button {
+  all: unset;
+  flex: 0 0 auto;
+  min-width: 0;
+  padding: 2px 4px;
+  border-radius: var(--lumno-radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  color: var(--x-nt-panel-muted-ink);
+  background: transparent;
+  cursor: help;
+  transition: background-color var(--lumno-duration-xs) ease, color var(--lumno-duration-xs) ease;
+}
+.x-nt-appearance-info-button .ri-icon {
+  --ri-size: 14px;
+}
+.x-nt-appearance-info-button:hover {
+  background: var(--x-nt-panel-icon-hover-bg);
+  color: var(--x-nt-text, #111827);
+}
+.x-nt-appearance-info-button:focus-visible {
+  outline: 2px solid var(--lumno-color-focus-ring);
+  outline-offset: 2px;
+}
+/* Square icon actions such as refresh and restore; info buttons only explain and keep their help cursor. */
+.x-nt-panel-icon-button {
+  all: unset;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--lumno-radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  color: var(--x-nt-panel-muted-ink);
+  background: transparent;
+  cursor: pointer;
+  transition: background-color var(--lumno-duration-xs) ease, color var(--lumno-duration-xs) ease;
+}
+.x-nt-panel-icon-button[hidden] {
+  display: none;
+}
+.x-nt-panel-icon-button .ri-icon {
+  --ri-size: 14px;
+}
+.x-nt-panel-icon-button:hover {
+  background: var(--x-nt-panel-icon-hover-bg);
+  color: var(--x-nt-text, #111827);
+}
+.x-nt-panel-icon-button:focus-visible {
+  outline: 2px solid var(--lumno-color-focus-ring);
+  outline-offset: 2px;
+}
+.x-nt-appearance-section,
+.x-nt-wallpaper-section {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--x-nt-panel-content-gap);
+}
+.x-nt-appearance-section {
+  flex: 0 0 auto;
+}
+.x-nt-wallpaper-section {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+.x-nt-wallpaper-body {
+  --x-nt-wallpaper-transition-short: 160ms;
+  --x-nt-wallpaper-transition-medium: 220ms;
+  --x-nt-wallpaper-transition-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--x-nt-panel-content-gap);
+  opacity: 1;
+  transition: opacity var(--x-nt-wallpaper-transition-short) ease;
+}
+.x-nt-wallpaper-body[data-visible="false"] {
+  display: none;
+  opacity: 0;
+  pointer-events: none;
+}
+.x-nt-wallpaper-mode-sync {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--x-nt-panel-header-gap);
+  padding: 0 0 0 2px;
+  box-sizing: border-box;
+}
+.x-nt-wallpaper-mode-sync-title {
+  min-width: 0;
+  color: var(--x-nt-text, #111827);
+  font-size: var(--lumno-font-size-md);
+  font-weight: 400;
+  line-height: 1.25;
+  font-family: "Open Sans", "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif;
+}
+.x-nt-wallpaper-tab-group {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--x-nt-panel-content-gap);
+}
+.x-nt-segmented-tabs {
+  --x-nt-segmented-tabs-radius: 10px;
+  --x-nt-segmented-tabs-border-width: 1px;
+  --x-nt-segmented-tabs-inset: 2px;
+  --x-nt-segmented-tabs-inner-radius: calc(
+    var(--x-nt-segmented-tabs-radius) - var(--x-nt-segmented-tabs-border-width) -
+      var(--x-nt-segmented-tabs-inset)
+  );
+}
+.x-nt-wallpaper-tabs {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--x-nt-panel-tab-gap);
+  padding: var(--x-nt-segmented-tabs-inset);
+  border-radius: var(--x-nt-segmented-tabs-radius);
+  border: var(--x-nt-segmented-tabs-border-width) solid var(--x-nt-segmented-border);
+  background: var(--x-nt-segmented-bg);
+  min-height: 30px;
+  position: relative;
+  box-sizing: border-box;
+}
+.x-nt-wallpaper-tabs-indicator {
+  position: absolute;
+  top: var(--x-nt-segmented-tabs-inset);
+  left: var(--x-nt-segmented-tabs-inset);
+  z-index: 0;
+  width: 0;
+  height: calc(
+    100% - var(--x-nt-segmented-tabs-inset) - var(--x-nt-segmented-tabs-inset)
+  );
+  background: var(--x-nt-segmented-indicator-bg);
+  box-shadow: var(--x-nt-segmented-indicator-shadow);
+  transition: transform var(--lumno-slide),
+    width var(--lumno-slide);
+  pointer-events: none;
+}
+.x-nt-wallpaper-tab {
+  all: unset;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 28px;
+  padding: 0 10px;
+  color: var(--x-nt-panel-muted-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  cursor: pointer;
+  font-size: var(--lumno-font-size-sm);
+  line-height: 1;
+  font-weight: 400;
+  font-family: "Open Sans", "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background-color 150ms ease, color 150ms ease, transform var(--lumno-duration-2xs) ease;
+  position: relative;
+  z-index: 1;
+}
+.x-nt-wallpaper-tab:hover:not([data-active="true"]) {
+  background: var(--x-nt-segmented-hover-bg);
+  color: var(--x-nt-text, #111827);
+}
+.x-nt-wallpaper-tab:active {
+  transform: scale(0.97);
+}
+.x-nt-wallpaper-tab:focus-visible {
+  outline: 2px solid var(--lumno-color-focus-ring);
+  outline-offset: 2px;
+}
+.x-nt-wallpaper-tab[data-active="true"] {
+  color: var(--x-nt-segmented-active-ink);
+}
+.x-nt-top-content-header {
+  flex-wrap: nowrap;
+}
+/* Segmented controls on the right of a setting row hug their labels instead of splitting a fixed width. */
+.x-nt-top-content-tabs,
+.x-nt-appearance-scope-tabs,
+.x-nt-wallpaper-tabs.x-nt-row-tabs,
+.x-nt-effect-options.x-nt-row-tabs {
+  flex: 0 1 auto;
+  gap: 0;
+  min-height: 30px;
+}
+.x-nt-top-content-tab,
+.x-nt-appearance-scope-tab,
+.x-nt-row-tabs .x-nt-wallpaper-tab,
+.x-nt-row-tabs .x-nt-effect-option {
+  flex: 0 0 auto;
+  height: 28px;
+  padding: 0 8px;
+  font-size: var(--lumno-font-size-sm);
+}
+.x-nt-time-weight-control {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--x-nt-panel-field-gap);
+  padding: 0 0 0 2px;
+  box-sizing: border-box;
+}
+.x-nt-time-weight-control[hidden],
+.x-nt-time-weight-control[data-visible="false"] {
+  display: none;
+}
+.x-nt-top-content-seconds-row,
+.x-nt-top-content-font-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--x-nt-panel-header-gap);
+  padding: 0 0 0 2px;
+  box-sizing: border-box;
+}
+.x-nt-top-content-seconds-row[hidden],
+.x-nt-top-content-seconds-row[data-visible="false"],
+.x-nt-top-content-font-row[hidden],
+.x-nt-top-content-font-row[data-visible="false"] {
+  display: none;
+}
+.x-nt-top-content-seconds-title {
+  min-width: 0;
+  color: var(--x-nt-text, #111827);
+  font-size: var(--lumno-font-size-md);
+  font-weight: 400;
+  line-height: 1.25;
+  font-family: "Open Sans", "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif;
+}
+.x-nt-wallpaper-body[data-active-tab="built-in"] .x-nt-wallpaper-grid--local,
+.x-nt-wallpaper-body[data-active-tab="local"] .x-nt-wallpaper-grid--built-in {
+  display: none;
+  opacity: 0;
+  pointer-events: none;
+}
+.x-nt-wallpaper-body[data-active-tab="built-in"] .x-nt-wallpaper-grid--local {
+  transform: translateX(8px);
+}
+.x-nt-wallpaper-body[data-active-tab="local"] .x-nt-wallpaper-grid--built-in {
+  transform: translateX(-8px);
+}
+.x-nt-wallpaper-grid[data-motion="enter-next"] {
+  opacity: 0;
+  transform: translateX(8px);
+}
+.x-nt-wallpaper-grid[data-motion="enter-prev"] {
+  opacity: 0;
+  transform: translateX(-8px);
+}
+.x-nt-wallpaper-grid[data-motion="enter"] {
+  opacity: 0;
+}
+.x-nt-appearance-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--x-nt-panel-option-gap);
+}
+.x-nt-appearance-options[data-scope-animating="true"] .x-nt-appearance-option {
+  pointer-events: none;
+}
+.x-nt-overlay-control.x-nt-search-width-control {
+  /* Keep switches in this group flush with the section header switches. */
+  padding: 0 0 0 2px;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity var(--lumno-duration-sm) ease;
+  will-change: opacity;
+}
+.x-nt-search-width-control[data-visible="false"] {
+  display: none;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+.x-nt-search-width-control[data-motion="enter"] {
+  opacity: 0;
+}
+.x-nt-appearance-setting-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--x-nt-panel-header-gap);
+  min-height: 24px;
+  padding: 0 0 0 2px;
+  box-sizing: border-box;
+}
+.x-nt-appearance-setting-title-group {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.x-nt-appearance-setting-title {
+  min-width: 0;
+  color: var(--x-nt-text, #111827);
+  font-size: var(--lumno-font-size-md);
+  font-weight: 400;
+  line-height: 1.25;
+  font-family: "Open Sans", "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif;
+}
+.x-nt-shortcuts-accordion {
+  min-width: 0;
+}
+.x-nt-shortcuts-accordion-row {
+  margin-top: 0;
+}
+/* Every panel section header: leading chevron + title share one disclosure hot area. */
+.x-nt-section-trigger {
+  all: unset;
+  flex: 0 1 auto;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+}
+.x-nt-wallpaper-panel-header > .x-nt-section-trigger {
+  flex: 1 1 auto;
+}
+.x-nt-section-trigger:disabled {
+  cursor: default;
+  opacity: 0.58;
+}
+.x-nt-section-trigger:focus-visible {
+  outline: 2px solid var(--lumno-color-focus-ring);
+  outline-offset: 3px;
+  border-radius: var(--lumno-radius-sm);
+}
+.x-nt-section-chevron {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--x-nt-subtext, #6b7280);
+  transition: transform var(--x-nt-panel-motion-duration) var(--x-nt-panel-motion-ease),
+    color var(--lumno-duration-xs) ease;
+}
+.x-nt-section-chevron .ri-icon {
+  --ri-size: 16px;
+}
+.x-nt-section-trigger[aria-expanded="true"] .x-nt-section-chevron {
+  transform: rotate(90deg);
+}
+.x-nt-section-trigger[aria-expanded="true"] .x-nt-section-chevron,
+.x-nt-section-trigger:not(:disabled):hover .x-nt-section-chevron {
+  color: var(--x-nt-text, #111827);
+}
+.x-nt-section-trigger .x-nt-wallpaper-panel-title {
+  flex: 0 1 auto;
+}
+.x-nt-panel-section-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--x-nt-panel-content-gap);
+}
+.x-nt-panel-section-body,
+.x-nt-quote-body,
+.x-nt-wallpaper-body {
+  padding-left: var(--x-nt-section-indent);
+}
+/* Rows inside a section body that show or hide together. */
+.x-nt-panel-field-group {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--x-nt-panel-content-gap);
+}
+/* Rows keep their height while their body animates open or shut, so they slide in
+   with it instead of squeezing together and spreading apart. */
+.x-nt-panel-section-body > *,
+.x-nt-quote-body > *,
+.x-nt-panel-field-group > * {
+  flex-shrink: 0;
+}
+.x-nt-shortcuts-accordion-details {
+  min-width: 0;
+  display: block;
+}
+.x-nt-shortcuts-accordion-details[hidden],
+.x-nt-shortcuts-accordion-details[data-visible="false"] {
+  display: none;
+}
+.x-nt-shortcuts-accordion-details-inner {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--x-nt-panel-item-gap);
+  padding: var(--x-nt-panel-item-gap) 0 0 var(--x-nt-section-indent);
+  box-sizing: border-box;
+}
+.x-nt-shortcuts-accordion-details .x-nt-appearance-setting-row {
+  margin-top: 0;
+}
+.x-nt-range-slider-row {
+  --x-range-slider-controls-width: var(--x-nt-row-control-width);
+  min-width: 0;
+  min-height: 30px;
+}
+.x-nt-range-slider-row .x-range-slider {
+  --x-range-slider-fill: var(--x-nt-text, #111827);
+  --x-range-slider-rail: rgba(17, 24, 39, 0.1);
+  --x-range-slider-surface: var(--x-nt-panel-surface);
+  --x-range-slider-ring: rgba(17, 24, 39, 0.08);
+}
+body[data-theme="dark"] .x-nt-range-slider-row .x-range-slider,
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-range-slider-row .x-range-slider,
+body[data-glass-style] .x-nt-range-slider-row[data-glass-ink-theme="dark"] .x-range-slider {
+  --x-range-slider-fill: var(--x-nt-text, #e5e7eb);
+  --x-range-slider-rail: rgba(255, 255, 255, 0.16);
+  --x-range-slider-thumb-bg: #f5f5f5;
+  --x-range-slider-thumb-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.4),
+    0 1px 3px rgba(0, 0, 0, 0.5);
+  --x-range-slider-ring: rgba(255, 255, 255, 0.12);
+}
+.x-nt-range-slider-row[data-value-suffix="%"]
+  ._x_extension_range_slider_value_input_2026_unique_ {
+  appearance: textfield;
+  padding-right: 20px;
+  width: 64px !important;
+}
+.x-nt-range-slider-row[data-value-suffix="%"]
+  ._x_extension_range_slider_value_input_2026_unique_::-webkit-inner-spin-button,
+.x-nt-range-slider-row[data-value-suffix="%"]
+  ._x_extension_range_slider_value_input_2026_unique_::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+.x-nt-range-slider-row[data-value-suffix="%"] .x-range-slider-field-controls::after {
+  content: "%";
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  color: var(--x-nt-subtext, #6b7280);
+  font-size: var(--lumno-font-size-sm);
+  line-height: 1;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+.x-nt-overlay-control {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--x-nt-panel-field-gap);
+  padding: 0 0 0 2px;
+}
+.x-nt-overlay-control--effect {
+  padding: 0 0 2px;
+}
+.x-nt-effect-control {
+  --x-nt-effect-block-gap: var(--x-nt-panel-item-gap);
+  --x-nt-effect-control-gap: var(--x-nt-panel-control-gap);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0 0 2px 2px;
+}
+.x-nt-effect-control-header {
+  margin-top: var(--x-nt-effect-block-gap);
+  padding-left: 0;
+}
+/* Dropdowns on the right of a setting row (wallpaper filter, quote position).
+   The page-level control fills are translucent white for wallpapers; inside the
+   panel the trigger takes the filled field look the Options page uses. */
+.x-nt-row-select {
+  --control-bg: rgba(15, 23, 42, 0.04);
+  --control-hover-bg: rgba(0, 0, 0, 0.05);
+  --control-open-bg: rgba(0, 0, 0, 0.08);
+  flex: 0 0 var(--x-nt-row-control-width);
+  min-width: 0;
+}
+body[data-theme="dark"] .x-nt-row-select,
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-row-select,
+body[data-glass-style] .x-nt-row-select[data-glass-ink-theme="dark"] {
+  --control-bg: #2f2f2f;
+  --control-hover-bg: #363636;
+  --control-open-bg: #404040;
+}
+/* Sized like the slider value input so select rows line up with their neighbours. */
+.x-nt-row-select ._x_extension_select_trigger_2024_unique_ {
+  width: 100%;
+  min-width: 0;
+  height: 30px;
+  font-weight: 400;
+}
+.x-nt-overlay-control-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--x-nt-panel-muted-ink);
+  font-size: var(--lumno-font-size-sm);
+  line-height: 1.25;
+  font-weight: 400;
+  font-family: "Open Sans", "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif;
+}
+.x-nt-effect-options {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--x-nt-panel-tab-gap);
+  margin-top: var(--x-nt-effect-control-gap);
+  padding: var(--x-nt-segmented-tabs-inset);
+  border-radius: var(--x-nt-segmented-tabs-radius);
+  border: var(--x-nt-segmented-tabs-border-width) solid var(--x-nt-segmented-border);
+  background: var(--x-nt-segmented-bg);
+  min-height: 30px;
+  position: relative;
+  box-sizing: border-box;
+}
+.x-nt-effect-indicator {
+  position: absolute;
+  top: var(--x-nt-segmented-tabs-inset);
+  left: var(--x-nt-segmented-tabs-inset);
+  z-index: 0;
+  width: 0;
+  height: calc(
+    100% - var(--x-nt-segmented-tabs-inset) - var(--x-nt-segmented-tabs-inset)
+  );
+  background: var(--x-nt-segmented-indicator-bg);
+  box-shadow: var(--x-nt-segmented-indicator-shadow);
+  transition: transform var(--lumno-slide),
+    width var(--lumno-slide);
+  pointer-events: none;
+}
+.x-nt-effect-option {
+  all: unset;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 28px;
+  padding: 0 10px;
+  color: var(--x-nt-panel-muted-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  cursor: pointer;
+  font-size: var(--lumno-font-size-sm);
+  line-height: 1;
+  font-weight: 400;
+  font-family: "Open Sans", "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background-color 150ms ease, color 150ms ease, transform var(--lumno-duration-2xs) ease,
+    filter var(--lumno-duration-2xs) ease;
+  position: relative;
+  z-index: 1;
+}
+.x-nt-effect-option:hover:not([data-active="true"]) {
+  background: var(--x-nt-segmented-hover-bg);
+  color: var(--x-nt-text, #111827);
+}
+.x-nt-effect-option:active {
+  transform: scale(0.97);
+}
+.x-nt-effect-option:focus-visible {
+  outline: 2px solid var(--lumno-color-focus-ring);
+  outline-offset: 2px;
+}
+.x-nt-effect-option[data-active="true"] {
+  color: var(--x-nt-segmented-active-ink);
+}
+.x-nt-segmented-tabs-indicator,
+.x-nt-segmented-tab {
+  border-radius: var(--x-nt-segmented-tabs-inner-radius);
+}
+.x-nt-effect-slider-control {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--x-nt-panel-field-gap);
+  margin-top: var(--x-nt-effect-block-gap);
+}
+/* Spaced by its own margin, so a collapsed control just drops that margin. */
+.x-nt-effect-slider-control.x-nt-panel-collapsible {
+  --x-nt-collapsible-gap: 0px;
+}
+.x-nt-effect-ink-tone-control {
+  margin-top: var(--x-nt-effect-control-gap);
+}
+.x-nt-effect-ink-tone-control .x-nt-appearance-setting-row {
+  padding-left: 0;
+}
+.x-nt-effect-ink-tone-options {
+  margin-top: 0;
+}
+.x-nt-effect-slider-wrap[data-disabled="true"] {
+  opacity: 0.46;
+}
+.x-nt-appearance-option {
+  all: unset;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--x-nt-panel-field-gap);
+  color: var(--x-nt-panel-muted-ink);
+  cursor: pointer;
+  position: relative;
+  box-sizing: border-box;
+}
+.x-nt-appearance-option:focus-visible {
+  outline: 2px solid var(--lumno-color-focus-ring);
+  outline-offset: 2px;
+}
+.x-nt-appearance-option[data-selected="true"] {
+  color: var(--x-nt-text, #111827);
+}
+.x-nt-appearance-option-content {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--x-nt-panel-field-gap);
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+}
+/* Card frame, selection ring and check badge: ../shared/choice-card.css. */
+.x-nt-appearance-preview {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+.x-nt-appearance-option:hover:not([data-selected="true"]) .x-nt-appearance-preview::after {
+  border-color: var(--x-nt-choice-hover-border);
+}
+.x-nt-appearance-preview img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  border-radius: inherit;
+}
+.x-nt-appearance-preview .x-nt-appearance-badge {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  z-index: 1;
+  width: 16px;
+  height: 16px;
+  border-radius: 0;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.18));
+  pointer-events: none;
+}
+.x-nt-appearance-label {
+  min-width: 0;
+  width: 100%;
+  color: currentColor;
+  font-size: var(--lumno-font-size-md);
+  font-weight: 400;
+  line-height: 1.2;
+  text-align: left;
+  padding-left: 3px;
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: "Open Sans", "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif;
+}
+.x-nt-appearance-check .ri-icon {
+  font-size: var(--lumno-font-size-xs);
+}

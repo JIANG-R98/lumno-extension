@@ -34,8 +34,24 @@ function resolveLumnoTokens(css) {
   });
 }
 
-function readStylesheet(relativePath) {
-  return resolveLumnoTokens(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8'));
+// Page stylesheets that are split into parts the page links in order. Checks
+// written against the single file read the parts joined, in that order.
+const SPLIT_STYLESHEETS = {
+  'src/newtab/newtab.css': [
+    'page', 'shortcuts', 'top-content', 'dock-and-entry', 'sections', 'bookmarks-topbar',
+    'bookmark-cascade', 'recent-cards', 'notices-and-suggestions', 'corner-controls',
+    'wallpaper-ink', 'appearance-panel', 'appearance-options', 'suggestions', 'page-overrides'
+  ].map((name) => `src/newtab/styles/${name}.css`)
+};
+
+// A stylesheet's source as written, joining a split stylesheet's parts.
+function readStylesheetSource(relativePath) {
+  const parts = SPLIT_STYLESHEETS[relativePath] || [relativePath];
+  return parts.map((part) => fs.readFileSync(path.join(repoRoot, part), 'utf8')).join('\n');
 }
 
-module.exports = { readLightTokens, readStylesheet, resolveLumnoTokens };
+function readStylesheet(relativePath) {
+  return resolveLumnoTokens(readStylesheetSource(relativePath));
+}
+
+module.exports = { SPLIT_STYLESHEETS, readLightTokens, readStylesheet, readStylesheetSource, resolveLumnoTokens };

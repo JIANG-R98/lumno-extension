@@ -69,7 +69,7 @@
   // Chrome drops a hidden window's last frame (a minimized one, say) and, once the window is shown
   // again, fills it with the page's background color until the wallpaper is drawn anew. The wallpaper
   // covers that color at every other moment, so it takes the mean of what the wallpaper shows, mask
-  // and effect included, and the gap no longer flashes white or black (newtab.css reads it).
+  // and effect included, and the gap no longer flashes white or black (styles/page.css reads it).
   const PAGE_BASE_COLOR_PROP = '--x-nt-wallpaper-base-color';
   const PAGE_BASE_COLOR_COLUMNS = 8;
   const PAGE_BASE_COLOR_ROWS = 6;

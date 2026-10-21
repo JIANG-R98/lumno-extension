@@ -1,0 +1,220 @@
+/* Page notices, and the suggestion surface's outline and container. */
+
+.x-nt-page-notice-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.x-nt-page-notice-icon {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fbbf24;
+  opacity: 0.96;
+}
+.x-nt-page-notice-message {
+  min-width: 0;
+  font-size: var(--lumno-font-size-md);
+  font-weight: 400;
+  line-height: 1.45;
+  color: rgba(249, 250, 251, 0.96);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.x-nt-page-notice-primary {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border-radius: var(--lumno-radius-pill);
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-size: var(--lumno-font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.x-nt-page-notice-close {
+  all: unset;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--lumno-radius-pill);
+  color: rgba(249, 250, 251, 0.72);
+  cursor: pointer;
+}
+/*
+  Search stack contract: the surface paints the open backplate immediately,
+  the outline owns the only visible stroke, and the container fades content.
+*/
+#_x_extension_newtab_suggestions_surface_2026_unique_ {
+  all: unset;
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  display: block;
+  z-index: 19;
+  background: var(--x-nt-suggestions-bg, rgba(255, 255, 255, 0.96));
+  border: 1px solid transparent;
+  border-radius:
+    var(--x-nt-search-resting-radius, 26px)
+    var(--x-nt-search-resting-radius, 26px)
+    var(--x-nt-search-shell-radius, 26px)
+    var(--x-nt-search-shell-radius, 26px);
+  box-shadow: var(--x-nt-panel-shadow-focus, var(--x-nt-panel-shadow, 0 18px 44px rgba(0, 0, 0, 0.1)));
+  backdrop-filter: blur(var(--x-nt-panel-blur, 24px)) saturate(var(--x-nt-panel-saturate, 165%));
+  -webkit-backdrop-filter: blur(var(--x-nt-panel-blur, 24px)) saturate(var(--x-nt-panel-saturate, 165%));
+  box-sizing: border-box;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: none;
+}
+#_x_extension_newtab_suggestions_outline_2026_unique_ {
+  all: unset;
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  display: block;
+  z-index: 24;
+  background: transparent;
+  border: 1px solid var(--x-nt-search-shell-border);
+  border-radius:
+    var(--x-nt-search-resting-radius, 26px)
+    var(--x-nt-search-resting-radius, 26px)
+    var(--x-nt-search-shell-radius, 26px)
+    var(--x-nt-search-shell-radius, 26px);
+  box-sizing: border-box;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: none;
+}
+#_x_extension_newtab_suggestions_surface_2026_unique_[data-visible="true"] {
+  opacity: 1;
+  visibility: visible;
+}
+#_x_extension_newtab_suggestions_outline_2026_unique_[data-visible="true"] {
+  opacity: 1;
+  visibility: visible;
+}
+#_x_extension_newtab_suggestions_container_2024_unique_ {
+  all: unset;
+  --x-nt-suggestion-row-height: 52px;
+  --x-nt-suggestion-row-gap: 6px;
+  --x-nt-suggestions-max-height: 594px;
+  --x-nt-suggestion-action-column-width: 200px;
+  width: min(90vw, var(--x-nt-search-max-width, 720px));
+  margin-top: 0;
+  position: fixed;
+  left: 0;
+  right: auto;
+  top: 0;
+  z-index: 23;
+  background: transparent;
+  border: none;
+  border-top: none;
+  border-radius: 0 0 var(--x-nt-search-content-radius, 21px) var(--x-nt-search-content-radius, 21px);
+  box-shadow: none;
+  padding:
+    var(--x-nt-search-results-padding-block-start, 8px)
+    var(--x-nt-search-results-padding-inline, 8px)
+    var(--x-nt-search-results-padding-block-end, 12px);
+  box-sizing: border-box;
+  display: block;
+  max-height: min(
+    calc(100vh - 220px),
+    var(--x-nt-suggestions-max-height, 594px),
+    var(--x-nt-suggestions-viewport-fit-max-height, 100vh),
+    var(--x-nt-suggestions-menu-fit-max-height, 594px)
+  );
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  overflow-anchor: none;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--lumno-duration-2xs) ease;
+  line-height: 1;
+  text-decoration: none;
+  list-style: none;
+  outline: none;
+  color: inherit;
+  font-size: 100%;
+  font: inherit;
+  vertical-align: baseline;
+}
+#_x_extension_newtab_suggestions_container_2024_unique_[data-visible="true"] {
+  margin-top: 0;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+#_x_extension_newtab_suggestions_container_2024_unique_[data-number-shortcuts-scroll-locked="true"] {
+  overflow-y: hidden;
+}
+/* As in the command bar's open tabs list: a thin bar in a stable gutter that
+   the right inset gives up, so rows keep their width and an even inset
+   whether or not a long result list scrolls, instead of Windows' wide bar. */
+#_x_extension_newtab_suggestions_container_2024_unique_ {
+  --x-nt-suggestions-scrollbar-gutter: 8px;
+  scrollbar-gutter: stable;
+  padding-inline-end: max(
+    0px,
+    calc(
+      var(--x-nt-search-results-padding-inline, 8px) -
+      var(--x-nt-suggestions-scrollbar-gutter, 8px)
+    )
+  );
+}
+@supports not selector(::-webkit-scrollbar) {
+  #_x_extension_newtab_suggestions_container_2024_unique_ {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.68) transparent;
+  }
+  body[data-theme="dark"] #_x_extension_newtab_suggestions_container_2024_unique_,
+body[data-glass-style] [data-glass-ink-theme="dark"] #_x_extension_newtab_suggestions_container_2024_unique_,
+body[data-glass-style] #_x_extension_newtab_suggestions_container_2024_unique_[data-glass-ink-theme="dark"] {
+    scrollbar-color: rgba(148, 163, 184, 0.58) transparent;
+  }
+}
+:root:not([data-lumno-scrollbars="overlay"]) #_x_extension_newtab_suggestions_container_2024_unique_::-webkit-scrollbar {
+  width: var(--x-nt-suggestions-scrollbar-gutter, 8px);
+}
+:root:not([data-lumno-scrollbars="overlay"]) #_x_extension_newtab_suggestions_container_2024_unique_::-webkit-scrollbar-track {
+  margin-block: 12px var(--x-nt-search-content-radius, 21px);
+  background: transparent;
+}
+:root:not([data-lumno-scrollbars="overlay"]) #_x_extension_newtab_suggestions_container_2024_unique_::-webkit-scrollbar-thumb {
+  min-height: 40px;
+  border: 2px solid transparent;
+  border-radius: var(--lumno-radius-pill);
+  background-color: rgba(148, 163, 184, 0.68);
+  background-clip: padding-box;
+}
+:root:not([data-lumno-scrollbars="overlay"]) #_x_extension_newtab_suggestions_container_2024_unique_::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 116, 139, 0.82);
+}
+:root:not([data-lumno-scrollbars="overlay"]) #_x_extension_newtab_suggestions_container_2024_unique_::-webkit-scrollbar-corner {
+  background: transparent;
+}
+:root:not([data-lumno-scrollbars="overlay"]) body[data-theme="dark"] #_x_extension_newtab_suggestions_container_2024_unique_::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.58);
+}
+:root:not([data-lumno-scrollbars="overlay"]) body[data-theme="dark"] #_x_extension_newtab_suggestions_container_2024_unique_::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(203, 213, 225, 0.7);
+}

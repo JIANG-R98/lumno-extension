@@ -1,9 +1,10 @@
 const assert = require('assert');
 const fs = require('fs');
 const { readOptionsRuntimeSource } = require('../helpers/options-source');
-const { readLightTokens } = require('../helpers/css-tokens');
+const { readLightTokens, readStylesheetSource } = require('../helpers/css-tokens');
 
-const read = (file) => fs.readFileSync(file, 'utf8');
+// Stylesheets split into parts read as the joined parts.
+const read = (file) => (file.endsWith('.css') ? readStylesheetSource(file) : fs.readFileSync(file, 'utf8'));
 const pages = {
   'newtab.html': read('newtab.html'),
   'src/options/options.html': read('src/options/options.html'),

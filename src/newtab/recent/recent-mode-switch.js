@@ -4,7 +4,7 @@
   // with the other modes to its right, so the current name never moves under the pointer.
   const HOVER_EXPAND_DELAY_MS = 100;
   const HOVER_COLLAPSE_DELAY_MS = 200;
-  // Matches the option width transition in newtab.css; the options are reordered once a
+  // Matches the option width transition in styles/sections.css; the options are reordered once a
   // collapse has finished so the next expansion again starts from the current mode.
   const COLLAPSE_SETTLE_MS = 240;
 

@@ -1,0 +1,587 @@
+/* The bookmark top bar: docked and floating layouts, its surface modes and
+   glass, entry motion, overflow fades and the items inside it. */
+
+.x-nt-bookmarks-topbar {
+  /* The theme sets the default surface and line; surface modes and wallpapers
+     replace the surface, terminal and border variables below. */
+  --x-nt-bookmarks-topbar-default-surface:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(248, 250, 252, 0.62));
+  --x-nt-bookmarks-topbar-default-terminal-surface: rgba(248, 250, 252, 0.78);
+  --x-nt-bookmarks-topbar-default-border: rgba(15, 23, 42, 0.065);
+  --x-nt-bookmarks-topbar-surface: var(--x-nt-bookmarks-topbar-default-surface);
+  --x-nt-bookmarks-topbar-terminal-surface: var(--x-nt-bookmarks-topbar-default-terminal-surface);
+  --x-nt-bookmarks-topbar-border: var(--x-nt-bookmarks-topbar-default-border);
+  --x-nt-bookmarks-topbar-blur: 22px;
+  --x-nt-bookmarks-topbar-saturate: 160%;
+  /* Only the floating bar shows this hairline along its top; the docked bar meets the browser there. */
+  --x-nt-bookmarks-topbar-highlight: rgba(255, 255, 255, 0.36);
+  --x-nt-bookmarks-topbar-shadow: 0 10px 24px -20px rgba(15, 23, 42, 0.42);
+  /* A faint contact shadow, a soft ambient layer and a wide, light lift: large and airy rather than
+     dark, and even enough that the bottom edge does not read heavier than the top. */
+  --x-nt-bookmarks-topbar-floating-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 4px 12px -2px rgba(15, 23, 42, 0.04),
+    0 18px 44px -10px rgba(15, 23, 42, 0.09);
+  --x-nt-bookmarks-topbar-mist-fallback: rgba(248, 250, 252, 0.66);
+  --x-nt-bookmarks-topbar-mist-terminal-fallback: rgba(248, 250, 252, 0.8);
+  --x-nt-bookmarks-topbar-clear-fallback: rgba(248, 250, 252, 0.2);
+  --x-nt-bookmarks-topbar-clear-terminal-fallback: rgba(248, 250, 252, 0.42);
+  --x-nt-bookmarks-topbar-wallpaper-border-fallback: rgba(15, 23, 42, 0.08);
+  --x-nt-bookmarks-topbar-wallpaper-hover-fallback: rgba(15, 23, 42, 0.08);
+  --x-nt-bookmarks-topbar-ink: var(--x-nt-bookmark-title, #111827);
+  --x-nt-bookmarks-topbar-action-bg: transparent;
+  --x-nt-bookmarks-topbar-action-hover: rgba(15, 23, 42, 0.065);
+  --x-nt-bookmarks-topbar-item-hover: rgba(15, 23, 42, 0.065);
+  --x-nt-bookmarks-topbar-folder-hover: rgb(var(--lumno-color-accent-rgb) / 0.075);
+  --x-nt-bookmarks-topbar-drop-border: rgb(var(--lumno-color-accent-rgb) / 0.58);
+  all: unset;
+  /* Keep the bar in page coordinates so zooming and panning move it
+     together with the rest of the new-tab content. */
+  position: absolute;
+  top: env(safe-area-inset-top);
+  left: 0;
+  right: 0;
+  z-index: var(--lumno-z-topbar);
+  height: 36px;
+  padding: 4px;
+  display: none;
+  align-items: center;
+  gap: 0;
+  box-sizing: border-box;
+  color: var(--x-nt-bookmarks-topbar-ink);
+  background: var(--x-nt-bookmarks-topbar-surface);
+  border: none;
+  border-bottom: 1px solid var(--x-nt-bookmarks-topbar-border);
+  box-shadow: var(--x-nt-bookmarks-topbar-shadow);
+  backdrop-filter:
+    blur(var(--x-nt-bookmarks-topbar-blur))
+    saturate(var(--x-nt-bookmarks-topbar-saturate));
+  -webkit-backdrop-filter:
+    blur(var(--x-nt-bookmarks-topbar-blur))
+    saturate(var(--x-nt-bookmarks-topbar-saturate));
+  font-family: "Open Sans", "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif;
+}
+/* Floating: a roomier rounded panel inset from the top edge. 6px around the 28px items keeps the
+   hover chips concentric with its 14px corners; the outline is an outer ring, not a border. */
+.x-nt-bookmarks-topbar[data-layout="floating"] {
+  top: calc(env(safe-area-inset-top) + 8px);
+  left: 12px;
+  right: 12px;
+  height: 40px;
+  padding: 6px;
+  border-bottom: none;
+  border-radius: 14px;
+  overflow: clip;
+  box-shadow:
+    inset 0 0.5px 0 var(--x-nt-bookmarks-topbar-highlight),
+    0 0 0 1px var(--x-nt-bookmarks-topbar-border),
+    var(--x-nt-bookmarks-topbar-floating-shadow);
+}
+.x-nt-bookmarks-topbar[data-layout="floating"] .x-nt-bookmarks-topbar-edge-fade {
+  height: 40px;
+}
+.x-nt-bookmarks-topbar[data-layout="floating"] .x-nt-bookmarks-topbar-actions {
+  height: 40px;
+  margin-right: -6px;
+  padding: 6px;
+}
+.x-nt-bookmarks-topbar[data-surface-mode="clear"] {
+  --x-nt-bookmarks-topbar-surface: var(--x-nt-bookmarks-topbar-clear-fallback);
+  --x-nt-bookmarks-topbar-terminal-surface:
+    var(--x-nt-bookmarks-topbar-clear-terminal-fallback);
+  /* Liquid glass: barely frosted, vivid and lit along its rim, unlike the heavy mist. Where the rim
+     refraction runs (data-liquid-glass), the blur drops further so the bend stays visible. */
+  --x-nt-bookmarks-topbar-blur: 6px;
+  --x-nt-bookmarks-topbar-saturate: 185%;
+  --x-nt-bookmarks-topbar-sheen: rgba(255, 255, 255, 0.08);
+  --x-nt-bookmarks-topbar-rim-top: rgba(255, 255, 255, 0.4);
+  --x-nt-bookmarks-topbar-rim-bottom: rgba(15, 23, 42, 0.1);
+  --x-nt-bookmarks-topbar-liquid-tone: brightness(1.01);
+}
+body[data-theme="dark"] .x-nt-bookmarks-topbar[data-surface-mode="clear"],
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-bookmarks-topbar[data-surface-mode="clear"],
+body[data-glass-style] .x-nt-bookmarks-topbar[data-surface-mode="clear"][data-glass-ink-theme="dark"] {
+  --x-nt-bookmarks-topbar-sheen: rgba(255, 255, 255, 0.035);
+  --x-nt-bookmarks-topbar-rim-top: rgba(255, 255, 255, 0.14);
+  --x-nt-bookmarks-topbar-rim-bottom: rgba(255, 255, 255, 0.06);
+  --x-nt-bookmarks-topbar-liquid-tone: brightness(0.96);
+}
+.x-nt-bookmarks-topbar[data-surface-mode="clear"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, var(--x-nt-bookmarks-topbar-sheen), transparent);
+}
+/* One line per edge, never stacked: floating glass drops the outline ring and top highlight for a
+   single rim that is bright along the top and fades toward the bottom, like light caught in a glass
+   edge. */
+.x-nt-bookmarks-topbar[data-surface-mode="clear"][data-layout="floating"] {
+  box-shadow: var(--x-nt-bookmarks-topbar-floating-shadow);
+}
+.x-nt-bookmarks-topbar[data-surface-mode="clear"][data-layout="floating"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 0.5px solid transparent;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, var(--x-nt-bookmarks-topbar-rim-top), var(--x-nt-bookmarks-topbar-rim-bottom))
+    border-box;
+  -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) padding-box exclude, linear-gradient(#000 0 0);
+}
+.x-nt-bookmarks-topbar[data-surface-mode="clear"][data-liquid-glass="true"] {
+  backdrop-filter:
+    blur(2px)
+    var(--x-nt-bookmarks-topbar-liquid-filter)
+    saturate(var(--x-nt-bookmarks-topbar-saturate))
+    var(--x-nt-bookmarks-topbar-liquid-tone);
+  -webkit-backdrop-filter:
+    blur(2px)
+    var(--x-nt-bookmarks-topbar-liquid-filter)
+    saturate(var(--x-nt-bookmarks-topbar-saturate))
+    var(--x-nt-bookmarks-topbar-liquid-tone);
+}
+.x-nt-bookmarks-topbar[data-surface-mode="transparent"] {
+  --x-nt-bookmarks-topbar-surface: transparent;
+  --x-nt-bookmarks-topbar-terminal-surface: transparent;
+  --x-nt-bookmarks-topbar-border: transparent;
+  --x-nt-bookmarks-topbar-blur: 0px;
+  --x-nt-bookmarks-topbar-saturate: 100%;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.x-nt-bookmarks-topbar[data-surface-mode="custom"] {
+  --x-nt-bookmarks-topbar-blur: 0px;
+  --x-nt-bookmarks-topbar-saturate: 100%;
+}
+.x-nt-bookmarks-topbar[data-visible="true"] {
+  display: flex;
+}
+/* The docked bar unrolls downward from the browser's top edge; the floating bar settles in from a
+   slightly smaller size anchored at its top. Neither moves off its final position, and its bookmarks
+   fade in a beat later. Everything finishes inside the page's 260ms entry window. */
+body[data-nt-enter="run"][data-nt-ready="1"] .x-nt-bookmarks-topbar[data-visible="true"] {
+  animation: _x_nt_topbar_entry_2026_unique_ var(--lumno-duration-xl) cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+body[data-nt-enter="run"][data-nt-ready="1"]
+  .x-nt-bookmarks-topbar[data-visible="true"][data-layout="floating"] {
+  animation-name: _x_nt_topbar_floating_entry_2026_unique_;
+  animation-duration: 240ms;
+  transform-origin: 50% 0;
+}
+body[data-nt-enter="run"][data-nt-ready="1"]
+  .x-nt-bookmarks-topbar[data-visible="true"] > .x-nt-bookmarks-topbar-viewport,
+body[data-nt-enter="run"][data-nt-ready="1"]
+  .x-nt-bookmarks-topbar[data-visible="true"] > .x-nt-bookmarks-topbar-actions {
+  animation: _x_nt_topbar_content_entry_2026_unique_ var(--lumno-duration-sm) cubic-bezier(0.16, 1, 0.3, 1) 60ms both;
+}
+/* The bar's own 36px gets most of the time on a gentle ease-out so the edge is seen travelling;
+   only then does the clip open past the bottom for the drop shadow. Sweeping straight to -32px
+   uncovered the whole bar in about two frames, under a fade, and read as a plain fade. */
+@keyframes _x_nt_topbar_entry_2026_unique_ {
+  0% {
+    clip-path: inset(0 0 100% 0);
+    animation-timing-function: cubic-bezier(0.33, 1, 0.68, 1);
+  }
+  85% {
+    clip-path: inset(0 0 0 0);
+    animation-timing-function: linear;
+  }
+  100% {
+    clip-path: inset(0 0 -32px 0);
+  }
+}
+@keyframes _x_nt_topbar_floating_entry_2026_unique_ {
+  0% {
+    opacity: 0;
+    scale: 0.96;
+  }
+  100% {
+    opacity: 1;
+    scale: 1;
+  }
+}
+@keyframes _x_nt_topbar_content_entry_2026_unique_ {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+/* Chrome still draws a hidden element's backdrop-filter, which would show the bar's filtered
+   wallpaper as a bare strip before the page reveals it. */
+body:not([data-nt-ready="1"]) .x-nt-bookmarks-topbar {
+  visibility: hidden;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+@property --x-nt-bookmarks-topbar-fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --x-nt-bookmarks-topbar-fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+/* Items running past either end fade into the bar instead of being cut at its edge; a mask, not
+   a painted gradient, so it works over any surface, glass included. */
+.x-nt-bookmarks-topbar-viewport {
+  position: relative;
+  min-width: 0;
+  height: 28px;
+  flex: 1 1 auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  scroll-behavior: auto;
+  contain: paint;
+  --x-nt-bookmarks-topbar-fade-start: 0px;
+  --x-nt-bookmarks-topbar-fade-end: 0px;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 var(--x-nt-bookmarks-topbar-fade-start),
+    #000 calc(100% - var(--x-nt-bookmarks-topbar-fade-end)),
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 var(--x-nt-bookmarks-topbar-fade-start),
+    #000 calc(100% - var(--x-nt-bookmarks-topbar-fade-end)),
+    transparent
+  );
+  transition:
+    --x-nt-bookmarks-topbar-fade-start 160ms ease,
+    --x-nt-bookmarks-topbar-fade-end 160ms ease;
+}
+.x-nt-bookmarks-topbar-viewport[data-overflow-start="true"] {
+  --x-nt-bookmarks-topbar-fade-start: 28px;
+}
+.x-nt-bookmarks-topbar-viewport[data-overflow-end="true"] {
+  --x-nt-bookmarks-topbar-fade-end: 36px;
+}
+.x-nt-bookmarks-topbar-viewport::-webkit-scrollbar {
+  display: none;
+}
+.x-nt-bookmarks-topbar-items {
+  width: max-content;
+  min-width: 100%;
+  height: 28px;
+}
+.x-nt-bookmarks-topbar-edge-fade {
+  position: relative;
+  z-index: 1;
+  width: 0;
+  height: 36px;
+  flex: 0 0 0;
+  align-self: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 110ms ease;
+}
+/* The viewport's mask fades overflowing items now; this marker only reports the state. */
+.x-nt-bookmarks-topbar-actions {
+  position: relative;
+  z-index: 2;
+  height: 36px;
+  margin-right: -4px;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  border: none;
+  background: transparent;
+  transition: background-color 110ms ease;
+}
+.x-nt-bookmarks-topbar
+  #_x_extension_newtab_bookmarks_grid_2024_unique_ {
+  width: max-content;
+  min-width: 100%;
+  height: 28px;
+  display: flex;
+  flex-flow: row nowrap;
+  align-items: center;
+  align-content: center;
+  gap: 2px;
+}
+.x-nt-bookmarks-topbar .x-nt-bookmark-card {
+  flex: 0 0 auto;
+  width: auto;
+  max-width: 204px;
+  height: 28px;
+  padding: 4px 8px;
+  gap: 7px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  overflow: hidden;
+  isolation: auto;
+  contain: layout paint style;
+  transition: background-color 110ms ease;
+}
+.x-nt-bookmarks-topbar .x-nt-bookmark-card::before {
+  display: none;
+}
+.x-nt-bookmarks-topbar .x-nt-bookmark-card.x-nt-bookmark-card--hover,
+.x-nt-bookmarks-topbar .x-nt-bookmark-card[data-bookmark-context-menu-open="true"],
+.x-nt-bookmarks-topbar .x-nt-bookmark-card:focus-visible {
+  transform: translate3d(0, 0, 0);
+  border-color: transparent;
+  background: var(--x-nt-bookmarks-topbar-item-hover);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+/* The bar clips anything outside its row, so the focus ring sits inside the item. */
+.x-nt-bookmarks-topbar .x-nt-bookmark-card:focus-visible {
+  outline-offset: -2px;
+}
+.x-nt-bookmarks-topbar .x-nt-bookmark-card--folder.x-nt-bookmark-card--hover {
+  border-color: transparent;
+  background: var(--x-nt-bookmarks-topbar-folder-hover);
+  box-shadow: none;
+}
+.x-nt-bookmarks-topbar
+  .x-nt-bookmark-card--folder[data-bookmark-drop-target="true"] {
+  border-color: var(--x-nt-bookmarks-topbar-drop-border);
+  background: var(--x-nt-bookmarks-topbar-folder-hover);
+  box-shadow: none;
+}
+.x-nt-bookmarks-topbar .x-nt-bookmark-icon {
+  width: 17px;
+  height: 17px;
+  border-radius: var(--lumno-radius-xs);
+}
+.x-nt-bookmarks-topbar .x-nt-bookmark-icon--figma {
+  width: 21px;
+  height: 21px;
+  border-radius: 0;
+  transform: translateY(1px);
+}
+.x-nt-bookmarks-topbar .x-nt-bookmark-title {
+  flex: 0 1 auto;
+  max-width: 166px;
+  font-size: var(--lumno-font-size-sm);
+  font-weight: 500;
+  line-height: 18px;
+  color: var(--x-nt-bookmarks-topbar-ink);
+}
+.x-nt-bookmarks-topbar .x-nt-folder-preview,
+.x-nt-bookmarks-topbar .x-nt-bookmark-copy-action {
+  display: none;
+}
+.x-nt-bookmarks-topbar .x-nt-section-mode-select {
+  z-index: 3;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+}
+.x-nt-bookmarks-topbar .x-nt-section-mode-select ._x_extension_select_trigger_2024_unique_,
+.x-nt-bookmarks-topbar .x-nt-bookmarks-pager-btn {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  box-sizing: border-box;
+  border-radius: 7px;
+}
+.x-nt-bookmarks-topbar
+  .x-nt-section-mode-select
+  ._x_extension_select_trigger_2024_unique_
+  ._x_extension_select_icon_2024_unique_ {
+  color: inherit;
+}
+body[data-bookmark-view-mode="top"] .x-nt-bookmarks-topbar
+  .x-nt-bookmarks-topbar-actions
+  .x-nt-section-mode-select ._x_extension_select_trigger_2024_unique_,
+body[data-bookmark-view-mode="top"] .x-nt-bookmarks-topbar
+  .x-nt-bookmarks-topbar-actions
+  .x-nt-bookmarks-pager-btn {
+  color: var(--x-nt-bookmarks-topbar-ink);
+  background: var(--x-nt-bookmarks-topbar-action-bg);
+  border-color: transparent;
+  box-shadow: none;
+  filter: none;
+  text-shadow: none;
+}
+body[data-bookmark-view-mode="top"] .x-nt-bookmarks-topbar
+  .x-nt-bookmarks-topbar-actions
+  .x-nt-section-mode-select:hover ._x_extension_select_trigger_2024_unique_,
+body[data-bookmark-view-mode="top"] .x-nt-bookmarks-topbar
+  .x-nt-bookmarks-topbar-actions
+  .x-nt-section-mode-select ._x_extension_select_trigger_2024_unique_:hover,
+body[data-bookmark-view-mode="top"] .x-nt-bookmarks-topbar
+  .x-nt-bookmarks-topbar-actions
+  .x-nt-section-mode-select[data-open="true"] ._x_extension_select_trigger_2024_unique_,
+body[data-bookmark-view-mode="top"] .x-nt-bookmarks-topbar
+  .x-nt-bookmarks-topbar-actions
+  .x-nt-bookmarks-pager-btn:hover:not([aria-disabled="true"]) {
+  color: var(--x-nt-bookmarks-topbar-ink);
+  background: var(--x-nt-bookmarks-topbar-action-hover) !important;
+  border-color: transparent;
+  box-shadow: none;
+  filter: none;
+  text-shadow: none;
+}
+.x-nt-bookmarks-topbar
+  #_x_extension_newtab_bookmarks_grid_2024_unique_[data-insert-line-position]::after {
+  top: var(--x-nt-insert-line-top, 2px);
+  height: var(--x-nt-insert-line-height, 24px);
+}
+body[data-theme="dark"] .x-nt-bookmarks-topbar,
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-bookmarks-topbar,
+body[data-glass-style] .x-nt-bookmarks-topbar[data-glass-ink-theme="dark"] {
+  --x-nt-bookmarks-topbar-default-surface:
+    linear-gradient(180deg, rgba(28, 30, 34, 0.78), rgba(18, 20, 24, 0.68));
+  --x-nt-bookmarks-topbar-default-terminal-surface: rgba(18, 20, 24, 0.8);
+  --x-nt-bookmarks-topbar-default-border: rgba(248, 250, 252, 0.1);
+  --x-nt-bookmarks-topbar-highlight: rgba(255, 255, 255, 0.08);
+  --x-nt-bookmarks-topbar-shadow: 0 10px 24px -18px rgba(0, 0, 0, 0.7);
+  --x-nt-bookmarks-topbar-floating-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.22),
+    0 4px 14px -2px rgba(0, 0, 0, 0.22),
+    0 20px 48px -10px rgba(0, 0, 0, 0.4);
+  --x-nt-bookmarks-topbar-mist-fallback: rgba(18, 20, 24, 0.7);
+  --x-nt-bookmarks-topbar-mist-terminal-fallback: rgba(18, 20, 24, 0.82);
+  --x-nt-bookmarks-topbar-clear-fallback: rgba(18, 20, 24, 0.26);
+  --x-nt-bookmarks-topbar-clear-terminal-fallback: rgba(18, 20, 24, 0.48);
+  --x-nt-bookmarks-topbar-wallpaper-border-fallback: rgba(248, 250, 252, 0.1);
+  --x-nt-bookmarks-topbar-wallpaper-hover-fallback: rgba(255, 255, 255, 0.09);
+  --x-nt-bookmarks-topbar-ink: var(--x-nt-bookmark-title, #e2e8f0);
+  --x-nt-bookmarks-topbar-action-hover: rgba(255, 255, 255, 0.09);
+  --x-nt-bookmarks-topbar-item-hover: rgba(255, 255, 255, 0.09);
+  --x-nt-bookmarks-topbar-folder-hover: rgba(96, 165, 250, 0.11);
+  --x-nt-bookmarks-topbar-drop-border: rgba(96, 165, 250, 0.68);
+}
+body[data-wallpaper-active="true"] .x-nt-bookmarks-topbar[data-surface-mode="adaptive"] {
+  --x-nt-bookmarks-topbar-surface:
+    var(--x-nt-wallpaper-surface-mist, var(--x-nt-bookmarks-topbar-mist-fallback));
+  --x-nt-bookmarks-topbar-terminal-surface:
+    var(
+      --x-nt-wallpaper-surface-mist-terminal,
+      var(--x-nt-bookmarks-topbar-mist-terminal-fallback)
+    );
+}
+body[data-wallpaper-active="true"] .x-nt-bookmarks-topbar[data-surface-mode="clear"] {
+  --x-nt-bookmarks-topbar-surface:
+    var(--x-nt-wallpaper-surface-clear, var(--x-nt-bookmarks-topbar-clear-fallback));
+  --x-nt-bookmarks-topbar-terminal-surface:
+    var(
+      --x-nt-wallpaper-surface-clear-terminal,
+      var(--x-nt-bookmarks-topbar-clear-terminal-fallback)
+    );
+}
+body[data-wallpaper-active="true"] .x-nt-bookmarks-topbar[data-surface-mode="adaptive"],
+body[data-wallpaper-active="true"] .x-nt-bookmarks-topbar[data-surface-mode="clear"],
+body[data-wallpaper-active="true"] .x-nt-bookmarks-topbar[data-surface-mode="transparent"] {
+  --x-nt-bookmarks-topbar-border:
+    var(
+      --x-nt-wallpaper-surface-border,
+      var(--x-nt-bookmarks-topbar-wallpaper-border-fallback)
+    );
+  /* The wallpaper sampler applies its local ink after image decode. Until
+     then, keep the theme-matched foreground readable on the initial
+     surface instead of inheriting the wallpaper's light-ink fallback. */
+  --x-nt-bookmarks-topbar-ink: var(--x-nt-bookmark-title, #111827);
+  --x-nt-bookmarks-topbar-action-hover:
+    var(
+      --x-nt-wallpaper-adaptive-hover-bg,
+      var(--x-nt-bookmarks-topbar-wallpaper-hover-fallback)
+    );
+  --x-nt-bookmarks-topbar-item-hover:
+    var(
+      --x-nt-wallpaper-adaptive-hover-bg,
+      var(--x-nt-bookmarks-topbar-wallpaper-hover-fallback)
+    );
+}
+body[data-wallpaper-active="true"]
+  .x-nt-bookmarks-topbar[data-wallpaper-ink][data-surface-mode="adaptive"],
+body[data-wallpaper-active="true"]
+  .x-nt-bookmarks-topbar[data-wallpaper-ink][data-surface-mode="clear"],
+body[data-wallpaper-active="true"]
+  .x-nt-bookmarks-topbar[data-wallpaper-ink][data-surface-mode="transparent"] {
+  --x-nt-bookmarks-topbar-ink:
+    var(--x-nt-wallpaper-adaptive-ink, var(--x-nt-bookmark-title, #111827));
+}
+body[data-wallpaper-active="true"]
+  .x-nt-bookmarks-topbar[data-surface-mode="transparent"] {
+  --x-nt-bookmarks-topbar-border: transparent;
+}
+body[data-wallpaper-active="true"]
+  .x-nt-bookmarks-topbar[data-wallpaper-ink="light"]:not([data-surface-mode="custom"]) {
+  --x-nt-bookmarks-topbar-folder-hover: rgba(96, 165, 250, 0.13);
+}
+body[data-wallpaper-active="true"]
+  .x-nt-bookmarks-topbar[data-wallpaper-ink="dark"]:not([data-surface-mode="custom"]) {
+  --x-nt-bookmarks-topbar-folder-hover: rgb(var(--lumno-color-accent-rgb) / 0.09);
+}
+body[data-wallpaper-active="true"][data-bookmark-view-mode="top"] .x-nt-bookmarks-topbar
+  .x-nt-bookmarks-topbar-actions
+  .x-nt-section-mode-select ._x_extension_select_trigger_2024_unique_,
+body[data-wallpaper-active="true"][data-bookmark-view-mode="top"] .x-nt-bookmarks-topbar
+  .x-nt-bookmarks-topbar-actions
+  .x-nt-bookmarks-pager-btn {
+  color: var(--x-nt-bookmarks-topbar-ink);
+  background: var(--x-nt-bookmarks-topbar-action-bg);
+  border-color: transparent;
+  box-shadow: none;
+  filter: none;
+  text-shadow: none;
+}
+@media (forced-colors: active) {
+  .x-nt-bookmarks-topbar {
+    --x-nt-bookmarks-topbar-ink: CanvasText;
+    --x-nt-bookmarks-topbar-action-hover: Highlight;
+    --x-nt-bookmarks-topbar-item-hover: Highlight;
+    --x-nt-bookmarks-topbar-folder-hover: Highlight;
+    background: Canvas;
+    border-bottom-color: CanvasText;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+@media (max-width: 640px) {
+  .x-nt-bookmarks-topbar .x-nt-bookmark-card {
+    max-width: 156px;
+    padding-inline: 7px;
+  }
+  .x-nt-bookmarks-topbar .x-nt-bookmark-title {
+    max-width: 122px;
+  }
+}
+.x-nt-bookmark-cascade-menu {
+  all: unset;
+  position: fixed;
+  inset: 0;
+  z-index: var(--lumno-z-menu);
+  width: 100vw;
+  height: 100vh;
+  overflow: visible;
+  pointer-events: none;
+  font-family: "Open Sans", "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif;
+  line-height: 1;
+  color: var(--x-nt-cascade-ink);
+}
+/* Tooltips over the bookmark menus. */
+.x-nt-bookmark-cursor-tooltip {
+  --x-extension-tooltip-z-index: calc(var(--lumno-z-menu) + 1);
+}

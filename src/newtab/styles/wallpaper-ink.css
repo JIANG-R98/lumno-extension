@@ -1,0 +1,221 @@
+/* Text and controls over a wallpaper: the ink sampled under them, frosted
+   surfaces, and the buttons' fills while pointed at or open. */
+
+body[data-wallpaper-active="true"] [data-wallpaper-ink="dark"] {
+  --x-nt-wallpaper-adaptive-ink: rgb(15 23 42 / 78%);
+  --x-nt-wallpaper-adaptive-ink-muted: rgb(15 23 42 / 58%);
+  --x-nt-wallpaper-adaptive-hover-bg: rgb(15 23 42 / 9%);
+  --x-nt-wallpaper-adaptive-shadow: transparent;
+  --x-nt-wallpaper-adaptive-halo: transparent;
+  --x-nt-wallpaper-icon-solid-bg: rgb(248 250 252);
+  --x-nt-wallpaper-icon-solid-bg-hover: rgb(226 232 240);
+  --x-nt-wallpaper-icon-solid-bg-press: rgb(203 213 225);
+  --x-nt-wallpaper-icon-solid-ink: rgb(30 41 59);
+  --x-nt-wallpaper-icon-solid-ink-hover: rgb(30 41 59);
+  --x-nt-wallpaper-glass-bg: rgb(255 255 255 / 58%);
+  --x-nt-wallpaper-glass-border: rgb(15 23 42 / 6%);
+  --x-nt-wallpaper-glass-pill-bg: rgb(255 255 255);
+  --x-nt-wallpaper-glass-pill-shadow: 0 1px 2px rgb(15 23 42 / 8%), 0 2px 8px rgb(15 23 42 / 10%);
+  --x-nt-wallpaper-glass-ink: rgb(15 23 42);
+}
+body[data-wallpaper-active="true"]
+  .x-nt-section-mode-select
+  ._x_extension_select_trigger_2024_unique_
+  ._x_extension_select_icon_2024_unique_ {
+  color: inherit;
+}
+/* Must outrank the entry animation's settled `filter: none`, or the halo
+   only exists before the wordmark finishes entering. */
+body[data-nt-ready="1"][data-wallpaper-active="true"]
+  #_x_extension_newtab_wordmark_2026_unique_[data-enter="done"]:not([data-wallpaper-overlay-cover="true"])
+  > .x-nt-wordmark-content {
+  filter: drop-shadow(0 1px 3px var(--x-nt-wallpaper-wordmark-shadow, transparent))
+    drop-shadow(0 0 16px var(--x-nt-wallpaper-wordmark-halo, transparent));
+}
+body[data-wallpaper-active="true"] .x-nt-bookmarks-title-wrap,
+body[data-wallpaper-active="true"] .x-nt-bookmarks-pager,
+body[data-wallpaper-active="true"] .x-nt-recent-header-bar,
+body[data-wallpaper-active="true"] .x-nt-feedback-button:not([data-wallpaper-overlay-cover="true"]),
+body[data-wallpaper-active="true"] .x-nt-bookmark-cascade-debug-button:not([data-wallpaper-overlay-cover="true"]),
+body[data-wallpaper-active="true"] .x-nt-wallpaper-button:not([data-wallpaper-overlay-cover="true"]) {
+  filter: drop-shadow(0 1px 1px var(--x-nt-wallpaper-adaptive-shadow))
+    drop-shadow(0 0 12px var(--x-nt-wallpaper-adaptive-halo));
+}
+body[data-wallpaper-active="true"] .x-nt-bookmarks-title-wrap .x-nt-bookmarks-heading,
+body[data-wallpaper-active="true"] .x-nt-bookmarks-title-wrap .x-nt-section-mode-select ._x_extension_select_trigger_2024_unique_,
+body[data-wallpaper-active="true"] .x-nt-bookmarks-title-wrap .x-nt-bookmarks-crumb[aria-current="page"],
+body[data-wallpaper-active="true"] .x-nt-bookmarks-pager .x-nt-bookmarks-pager-btn,
+body[data-wallpaper-active="true"] .x-nt-recent-heading,
+body[data-wallpaper-active="true"] .x-nt-recent-mode-switch,
+body[data-wallpaper-active="true"] .x-nt-feedback-button:not([data-wallpaper-overlay-cover="true"]),
+body[data-wallpaper-active="true"] .x-nt-bookmark-cascade-debug-button:not([data-wallpaper-overlay-cover="true"]),
+body[data-wallpaper-active="true"] .x-nt-wallpaper-button:not([data-wallpaper-overlay-cover="true"]) {
+  color: var(--x-nt-wallpaper-adaptive-ink);
+  text-shadow: 0 1px 1px var(--x-nt-wallpaper-adaptive-shadow),
+    0 0 12px var(--x-nt-wallpaper-adaptive-halo);
+}
+body[data-wallpaper-active="true"] .x-nt-shortcut-group-header {
+  color: var(--x-nt-wallpaper-adaptive-ink);
+  text-shadow: 0 1px 1px var(--x-nt-wallpaper-adaptive-shadow),
+    0 0 12px var(--x-nt-wallpaper-adaptive-halo);
+}
+body[data-wallpaper-active="true"] .x-nt-shortcut-group-more:hover,
+body[data-wallpaper-active="true"] .x-nt-shortcut-group-more[data-shortcut-context-menu-open="true"],
+body[data-wallpaper-active="true"] .x-nt-shortcut-group-title--placeholder:hover {
+  background: var(--x-nt-wallpaper-adaptive-hover-bg);
+}
+body[data-wallpaper-active="true"] .x-nt-bookmarks-title-wrap .x-nt-bookmarks-crumb,
+body[data-wallpaper-active="true"] .x-nt-bookmarks-title-wrap .x-nt-bookmarks-crumb-sep {
+  color: var(--x-nt-wallpaper-adaptive-ink-muted);
+  text-shadow: 0 1px 1px var(--x-nt-wallpaper-adaptive-shadow),
+    0 0 10px var(--x-nt-wallpaper-adaptive-halo);
+}
+body[data-wallpaper-active="true"] [data-wallpaper-ink="dark"],
+body[data-wallpaper-active="true"] [data-wallpaper-ink="dark"] .x-nt-bookmarks-heading,
+body[data-wallpaper-active="true"] [data-wallpaper-ink="dark"] .x-nt-bookmarks-crumb,
+body[data-wallpaper-active="true"] [data-wallpaper-ink="dark"] .x-nt-bookmarks-crumb-sep,
+body[data-wallpaper-active="true"] [data-wallpaper-ink="dark"] .x-nt-bookmarks-pager-btn,
+body[data-wallpaper-active="true"] .x-nt-section-mode-select[data-wallpaper-ink="dark"] ._x_extension_select_trigger_2024_unique_,
+body[data-wallpaper-active="true"] [data-wallpaper-ink="dark"] .x-nt-section-mode-select ._x_extension_select_trigger_2024_unique_ {
+  filter: none;
+  text-shadow: none;
+}
+body[data-wallpaper-active="true"] .x-nt-bookmarks-heading.x-nt-bookmarks-heading--link:hover,
+body[data-wallpaper-active="true"] .x-nt-bookmarks-crumb:hover:not([aria-current="page"]),
+body[data-wallpaper-active="true"] .x-nt-bookmarks-pager-btn:hover:not([aria-disabled="true"]),
+body[data-wallpaper-active="true"] .x-nt-section-mode-select:hover ._x_extension_select_trigger_2024_unique_,
+body[data-wallpaper-active="true"] .x-nt-section-mode-select[data-open="true"] ._x_extension_select_trigger_2024_unique_ {
+  background: var(--x-nt-wallpaper-adaptive-hover-bg);
+}
+body[data-wallpaper-active="true"] [data-wallpaper-icon-bg="true"] .x-nt-bookmarks-pager-btn,
+body[data-wallpaper-active="true"] .x-nt-section-mode-select[data-wallpaper-icon-bg="true"] ._x_extension_select_trigger_2024_unique_,
+body[data-wallpaper-active="true"] [data-wallpaper-icon-bg="true"] .x-nt-section-mode-select ._x_extension_select_trigger_2024_unique_,
+body[data-wallpaper-active="true"] .x-nt-feedback-button[data-wallpaper-icon-bg="true"]:not([data-wallpaper-overlay-cover="true"]),
+body[data-wallpaper-active="true"] .x-nt-bookmark-cascade-debug-button[data-wallpaper-icon-bg="true"]:not([data-wallpaper-overlay-cover="true"]),
+body[data-wallpaper-active="true"] .x-nt-wallpaper-button[data-wallpaper-icon-bg="true"]:not([data-wallpaper-overlay-cover="true"]) {
+  background: var(--x-nt-wallpaper-icon-solid-bg);
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--x-nt-wallpaper-icon-solid-ink);
+  filter: none;
+  text-shadow: none;
+}
+body[data-wallpaper-active="true"] [data-wallpaper-icon-bg="true"] .x-nt-bookmarks-pager-btn:hover:not([aria-disabled="true"]),
+body[data-wallpaper-active="true"] .x-nt-section-mode-select[data-wallpaper-icon-bg="true"]:hover ._x_extension_select_trigger_2024_unique_,
+body[data-wallpaper-active="true"] .x-nt-section-mode-select[data-wallpaper-icon-bg="true"][data-open="true"] ._x_extension_select_trigger_2024_unique_,
+body[data-wallpaper-active="true"] [data-wallpaper-icon-bg="true"] .x-nt-section-mode-select:hover ._x_extension_select_trigger_2024_unique_,
+body[data-wallpaper-active="true"] [data-wallpaper-icon-bg="true"] .x-nt-section-mode-select[data-open="true"] ._x_extension_select_trigger_2024_unique_,
+body[data-wallpaper-active="true"] .x-nt-feedback-button[data-wallpaper-icon-bg="true"]:not([data-wallpaper-overlay-cover="true"]):hover,
+body[data-wallpaper-active="true"] .x-nt-bookmark-cascade-debug-button[data-wallpaper-icon-bg="true"]:not([data-wallpaper-overlay-cover="true"]):hover,
+body[data-wallpaper-active="true"] .x-nt-wallpaper-button[data-wallpaper-icon-bg="true"]:not([data-wallpaper-overlay-cover="true"]):hover {
+  background: var(--x-nt-wallpaper-icon-solid-bg-hover);
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--x-nt-wallpaper-icon-solid-ink-hover);
+  filter: none;
+  text-shadow: none;
+}
+/* On the wallpaper the expanded recent mode switch is frosted glass rather than a sampled
+   solid: a dark veil with a light pill over dark wallpapers, a white veil with a white pill
+   over light ones. The header's drop-shadow filter would hide the glass's backdrop, and the
+   track already keeps the text legible, so both shadows go while it is open. */
+body[data-wallpaper-active="true"] .x-nt-recent-mode-switch {
+  --x-nt-recent-mode-track-bg: var(--x-nt-wallpaper-glass-bg);
+  --x-nt-recent-mode-track-border: var(--x-nt-wallpaper-glass-border);
+  --x-nt-recent-mode-track-blur: blur(14px) saturate(1.4);
+  --x-nt-recent-mode-pill-bg: var(--x-nt-wallpaper-glass-pill-bg);
+  --x-nt-recent-mode-pill-shadow: var(--x-nt-wallpaper-glass-pill-shadow);
+  --x-nt-recent-mode-expanded-ink: var(--x-nt-wallpaper-glass-ink);
+  --x-nt-recent-mode-muted-opacity: 0.6;
+}
+body[data-wallpaper-active="true"] .x-nt-recent-header-bar:has(.x-nt-recent-mode-switch[data-expanded="true"]) {
+  filter: none;
+}
+body[data-wallpaper-active="true"] .x-nt-recent-mode-switch[data-expanded="true"] {
+  color: var(--x-nt-recent-mode-expanded-ink);
+  text-shadow: none;
+}
+/* Text controls on the wallpaper fill like the wallpaper and feedback buttons while pointed
+   at or open: with the wallpaper's own tone where it is busy, else with the ink's plain fill. */
+body[data-wallpaper-active="true"] [data-wallpaper-icon-bg]:not([data-wallpaper-overlay-cover="true"])
+  .x-nt-shortcut-group-more:hover,
+body[data-wallpaper-active="true"] [data-wallpaper-icon-bg]:not([data-wallpaper-overlay-cover="true"])
+  .x-nt-shortcut-group-more[data-shortcut-context-menu-open="true"],
+body[data-wallpaper-active="true"] [data-wallpaper-icon-bg]:not([data-wallpaper-overlay-cover="true"])
+  .x-nt-bookmarks-heading--link:hover:not([data-bookmark-drop-target="true"]),
+body[data-wallpaper-active="true"] [data-wallpaper-icon-bg]:not([data-wallpaper-overlay-cover="true"])
+  .x-nt-bookmarks-crumb:hover:not([aria-current="page"]):not([data-bookmark-drop-target="true"]) {
+  background: var(--x-nt-wallpaper-icon-solid-bg-hover);
+  color: var(--x-nt-wallpaper-icon-solid-ink-hover);
+  filter: none;
+  text-shadow: none;
+}
+/* A group's title placeholder fades its text, not its fill, so the fill stays solid. */
+body[data-wallpaper-active="true"]:not([data-drag-source="shortcut"])
+  [data-wallpaper-icon-bg]:not([data-wallpaper-overlay-cover="true"])
+  .x-nt-shortcut-group-title--placeholder:hover {
+  opacity: 1;
+  background: var(--x-nt-wallpaper-icon-solid-bg-hover);
+  color: color-mix(
+    in srgb,
+    var(--x-nt-wallpaper-icon-solid-ink-hover) 50%,
+    var(--x-nt-wallpaper-icon-solid-bg-hover)
+  );
+  text-shadow: none;
+}
+body[data-wallpaper-active="true"] .x-nt-feedback-button[data-wallpaper-icon-bg="true"]:not([data-wallpaper-overlay-cover="true"]):hover,
+body[data-wallpaper-active="true"] .x-nt-bookmark-cascade-debug-button[data-wallpaper-icon-bg="true"]:not([data-wallpaper-overlay-cover="true"]):hover,
+body[data-wallpaper-active="true"] .x-nt-wallpaper-button[data-wallpaper-icon-bg="true"]:not([data-wallpaper-overlay-cover="true"]):hover {
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.04);
+}
+body[data-wallpaper-active="true"] .x-nt-feedback-button:not([data-wallpaper-overlay-cover="true"]):hover,
+body[data-wallpaper-active="true"] .x-nt-bookmark-cascade-debug-button:not([data-wallpaper-overlay-cover="true"]):hover,
+body[data-wallpaper-active="true"] .x-nt-wallpaper-button:not([data-wallpaper-overlay-cover="true"]):hover {
+  background: var(--x-nt-wallpaper-icon-solid-bg-hover, var(--x-nt-wallpaper-icon-solid-bg, rgb(15 23 42)));
+  border-color: transparent;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.04);
+  color: var(--x-nt-wallpaper-icon-solid-ink-hover, var(--x-nt-wallpaper-adaptive-ink));
+  filter: none;
+  text-shadow: none;
+}
+body[data-wallpaper-active="true"] .x-nt-feedback-button[data-open="true"]:not([data-wallpaper-overlay-cover="true"]),
+body[data-wallpaper-active="true"] .x-nt-bookmark-cascade-debug-button[data-active="true"]:not([data-wallpaper-overlay-cover="true"]),
+body[data-wallpaper-active="true"] .x-nt-wallpaper-button[data-open="true"]:not([data-wallpaper-overlay-cover="true"]) {
+  color: var(--x-nt-wallpaper-icon-solid-ink, var(--x-nt-wallpaper-adaptive-ink));
+  background: var(--x-nt-wallpaper-icon-solid-bg, rgb(20 28 45));
+  border-color: transparent;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.03);
+  mix-blend-mode: normal;
+  filter: none;
+  text-shadow: none;
+}
+body[data-wallpaper-active="true"] .x-nt-feedback-button[data-open="true"]:not([data-wallpaper-overlay-cover="true"]):hover,
+body[data-wallpaper-active="true"] .x-nt-bookmark-cascade-debug-button[data-active="true"]:not([data-wallpaper-overlay-cover="true"]):hover,
+body[data-wallpaper-active="true"] .x-nt-wallpaper-button[data-open="true"]:not([data-wallpaper-overlay-cover="true"]):hover {
+  background: var(--x-nt-wallpaper-icon-solid-bg-hover, var(--x-nt-wallpaper-icon-solid-bg, rgb(15 23 42)));
+  border-color: transparent;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.04);
+  color: var(--x-nt-wallpaper-icon-solid-ink-hover, var(--x-nt-wallpaper-adaptive-ink));
+}
+body[data-wallpaper-active="true"] .x-nt-feedback-button:not([data-wallpaper-overlay-cover="true"]):active,
+body[data-wallpaper-active="true"] .x-nt-bookmark-cascade-debug-button:not([data-wallpaper-overlay-cover="true"]):active,
+body[data-wallpaper-active="true"] .x-nt-wallpaper-button:not([data-wallpaper-overlay-cover="true"]):active {
+  background: var(--x-nt-wallpaper-icon-solid-bg-press, var(--x-nt-wallpaper-icon-solid-bg, rgb(20 28 45)));
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.18),
+    inset 0 0 0 1px rgba(15, 23, 42, 0.06);
+  color: var(--x-nt-wallpaper-icon-solid-ink, var(--x-nt-wallpaper-adaptive-ink));
+  filter: none;
+  text-shadow: none;
+}
+body[data-wallpaper-active="true"] .x-nt-feedback-button[data-open="true"]:not([data-wallpaper-overlay-cover="true"]):active,
+body[data-wallpaper-active="true"] .x-nt-bookmark-cascade-debug-button[data-active="true"]:not([data-wallpaper-overlay-cover="true"]):active,
+body[data-wallpaper-active="true"] .x-nt-wallpaper-button[data-open="true"]:not([data-wallpaper-overlay-cover="true"]):active {
+  background: var(--x-nt-wallpaper-icon-solid-bg-press, var(--x-nt-wallpaper-icon-solid-bg, rgb(20 28 45)));
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.18),
+    inset 0 0 0 1px rgba(15, 23, 42, 0.06);
+  color: var(--x-nt-wallpaper-icon-solid-ink, var(--x-nt-wallpaper-adaptive-ink));
+  filter: none;
+  text-shadow: none;
+}

@@ -1,0 +1,248 @@
+/* New Tab overrides of shared components, and the narrow and short
+   viewport layouts. */
+
+body[data-lumno-page="newtab"] [aria-busy="true"] :disabled,
+body[data-lumno-page="newtab"] button[aria-busy="true"],
+body[data-lumno-page="newtab"] [role="button"][aria-busy="true"],
+body[data-lumno-page="newtab"] [role="button"][data-loading="true"] {
+  cursor: progress;
+}
+body[data-lumno-page="newtab"] .x-nt-bookmarks-crumb[aria-current="page"] {
+  cursor: default;
+}
+body[data-lumno-page="newtab"] .x-nt-appearance-info-button:not(:disabled),
+body[data-lumno-page="newtab"] ._x_extension_info_button_2026_unique_:not(:disabled) {
+  cursor: help;
+}
+body[data-lumno-page="newtab"] button *,
+body[data-lumno-page="newtab"] a[href] *,
+body[data-lumno-page="newtab"] [role="button"] *,
+body[data-lumno-page="newtab"] [role="menuitem"] *,
+body[data-lumno-page="newtab"] [role="option"] * {
+  cursor: inherit;
+}
+body[data-lumno-page="newtab"] button .ri-icon,
+body[data-lumno-page="newtab"] a[href] .ri-icon,
+body[data-lumno-page="newtab"] [role="button"] .ri-icon {
+  pointer-events: none;
+}
+#_x_extension_newtab_search_input_2024_unique_::placeholder {
+  color: var(--x-nt-placeholder, #9ca3af);
+}
+#_x_extension_newtab_search_input_2024_unique_::selection {
+  background: #cfe8ff;
+  color: #1e3a8a;
+}
+/* Close-other-tabs sits between the clear button and the settings icon. */
+.x-nt-close-other-tabs {
+  all: unset;
+  position: absolute;
+  right: calc(var(--x-ext-input-right-icon-inset, 7px) + 36px);
+  top: var(--x-ext-input-right-icon-inset, 7px);
+  width: 30px;
+  height: 30px;
+  border-radius: var(--x-ext-input-right-icon-radius, 10px);
+  z-index: 2;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--x-ext-input-icon, #9ca3af);
+  cursor: pointer;
+  transition: background-color var(--lumno-duration-xs, 140ms) ease, color var(--lumno-duration-xs, 140ms) ease;
+}
+.x-nt-close-other-tabs[data-hover-active="true"] {
+  background: var(--x-nt-settings-action-hover-bg, rgba(148, 163, 184, 0.16));
+  color: var(--x-nt-settings-action-hover-color, #4b5563);
+}
+.x-nt-close-other-tabs .ri-icon {
+  transition: transform var(--lumno-duration-sm, 160ms) ease;
+}
+.x-nt-close-other-tabs[data-hover-active="true"] .ri-icon {
+  transform: scale(1.06);
+}
+/* Layout variables by viewport. Width and height ranges overlap; later blocks win,
+   so short screens tighten the dock even when narrow, and phones (<=640px) come last. */
+@media (min-width: 521px) and (max-width: 1440px) {
+  :root {
+    --x-nt-content-viewport-width: calc(100vw - clamp(56px, 7.5vw, 88px));
+  }
+}
+@media (max-width: 520px) {
+  :root {
+    --x-nt-content-viewport-width: 96vw;
+  }
+}
+@media (max-height: 800px) {
+  :root {
+    --x-nt-section-inner-gap: 14px;
+    --x-nt-grid-row-gap: 12px;
+    --x-nt-bottom-dock-section-gap: 18px;
+    --x-nt-bottom-dock-corridor-size: 8px;
+    --x-nt-bottom-dock-top-padding: 20px;
+    --x-nt-bottom-dock-bottom-padding: 52px;
+  }
+}
+@media (max-height: 680px) {
+  :root {
+    --x-nt-content-viewport-width: calc(100vw - clamp(96px, 10vw, 116px));
+    --x-nt-section-inner-gap: 10px;
+    --x-nt-grid-row-gap: 8px;
+    --x-nt-bottom-dock-section-gap: 10px;
+    --x-nt-bottom-dock-corridor-size: 6px;
+    --x-nt-bottom-dock-top-padding: 16px;
+    --x-nt-bottom-dock-bottom-padding: 36px;
+    --x-nt-shortcuts-reserved-height: 72px;
+    --x-nt-shortcuts-section-margin-top: 12px;
+  }
+}
+@media (max-height: 560px) {
+  :root {
+    --x-nt-content-viewport-width: calc(100vw - clamp(104px, 12vw, 132px));
+    --x-nt-section-inner-gap: 8px;
+    --x-nt-grid-row-gap: 6px;
+    --x-nt-bottom-dock-section-gap: 8px;
+    --x-nt-bottom-dock-corridor-size: 4px;
+    --x-nt-bottom-dock-top-padding: 14px;
+    --x-nt-bottom-dock-bottom-padding: 32px;
+    --x-nt-shortcuts-section-margin-top: 8px;
+  }
+}
+@media (max-height: 430px) {
+  :root {
+    --x-nt-shortcuts-section-margin-top: 6px;
+  }
+}
+@media (max-width: 640px) {
+  :root {
+    --x-nt-content-viewport-width: 100%;
+    --x-nt-section-inner-gap: 10px;
+    --x-nt-grid-row-gap: 8px;
+    --x-nt-bottom-dock-section-gap: 10px;
+    --x-nt-bottom-dock-corridor-size: 0px;
+    --x-nt-bottom-dock-top-padding: 12px;
+    --x-nt-bottom-dock-bottom-padding: calc(72px + env(safe-area-inset-bottom));
+    --x-nt-shortcuts-reserved-height: 64px;
+    --x-nt-shortcuts-section-margin-top: 10px;
+    --x-nt-shortcut-tile-size: min(var(--x-nt-shortcut-user-tile-size), 52px);
+    --x-nt-shortcut-icon-size: min(var(--x-nt-shortcut-user-icon-size), 40px);
+  }
+  body.x-nt-mobile-flow {
+    width: 100%;
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    align-items: stretch;
+    padding-top: max(
+      48px,
+      calc(var(--x-nt-top-occupied-inset, 0px) + var(--x-nt-top-floating-gap, 12px)),
+      env(safe-area-inset-top)
+    );
+    padding-right: max(24px, env(safe-area-inset-right));
+    padding-bottom: 0;
+    padding-left: max(24px, env(safe-area-inset-left));
+    padding-inline: max(24px, env(safe-area-inset-left)) max(24px, env(safe-area-inset-right));
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  body.x-nt-mobile-flow #_x_extension_newtab_wordmark_2026_unique_,
+  body.x-nt-mobile-flow #_x_extension_newtab_root_2024_unique_,
+  body.x-nt-mobile-flow .x-nt-shortcuts-section,
+  body.x-nt-mobile-flow #_x_extension_newtab_bottom_dock_2024_unique_ {
+    width: 100%;
+    max-width: none;
+  }
+  /* Flow stretches full-width children; the quote keeps its narrower width, so center it. */
+  body.x-nt-mobile-flow .x-nt-quote:not([data-position="bottom"]) {
+    align-self: center;
+  }
+  #_x_extension_newtab_bottom_dock_2024_unique_ {
+    position: static;
+    left: auto;
+    bottom: auto;
+    transform: none;
+    margin-top: auto;
+    max-height: none;
+    overflow: visible;
+  }
+  #_x_extension_newtab_bottom_dock_scroller_2024_unique_ {
+    width: 100%;
+    max-height: none;
+    margin: 0;
+    padding: var(--x-nt-bottom-dock-top-padding) 0 var(--x-nt-bottom-dock-bottom-padding);
+    overflow: visible;
+    overscroll-behavior: auto;
+  }
+}
+@media (min-width: 641px) and (max-width: 900px) and (max-height: 560px) {
+  body[data-nt-bottom-dock-density="tiny"] {
+    --x-nt-shortcuts-reserved-height: 50px;
+  }
+  #_x_extension_newtab_bottom_dock_2024_unique_[data-density="tiny"] {
+    --x-nt-dock-bookmark-card-height: 44px;
+  }
+}
+/* Keep this after component resets: `all: unset` also resets corner-shape. */
+/* Circles keep round ends: the visit button. */
+@supports (corner-shape: superellipse(1.25)) {
+  #_x_extension_newtab_root_2024_unique_,
+  #_x_extension_newtab_search_layer_2024_unique_,
+  #_x_extension_newtab_suggestions_surface_2026_unique_,
+  #_x_extension_newtab_suggestions_outline_2026_unique_,
+  #_x_extension_newtab_suggestions_container_2024_unique_,
+  .x-nt-wallpaper-panel,
+  .x-nt-feedback-popover,
+  .x-nt-bookmark-cascade-level,
+  .x-nt-bookmark-cascade-content,
+  .x-nt-bookmark-cascade-item,
+  .x-nt-bookmark-cascade-copy-trigger,
+  .x-nt-shortcut-tile,
+  .x-nt-bookmarks-heading.x-nt-bookmarks-heading--link,
+  .x-nt-section-mode-select ._x_extension_select_trigger_2024_unique_,
+  .x-nt-section-trigger,
+  .x-nt-bookmarks-crumb,
+  .x-nt-bookmarks-pager-btn,
+  .x-nt-bookmark-card,
+  .x-nt-bookmark-card::before,
+  .x-nt-bookmark-card-drag-preview--topbar,
+  .x-nt-bookmark-icon,
+  .x-nt-bookmark-copy-action,
+  .x-nt-favicon-fallback,
+  .x-nt-folder-preview-favicon,
+  .x-nt-recent-card,
+  .x-nt-recent-card-visual,
+  .x-nt-recent-inner,
+  .x-nt-recent-inner::before,
+  .x-nt-recent-favicon,
+  .x-nt-feedback-detail-action,
+  .x-nt-feedback-qr-image,
+  .x-nt-appearance-info-button,
+  .x-nt-panel-icon-button,
+  .x-nt-wallpaper-tabs,
+  .x-nt-effect-options,
+  .x-nt-segmented-tabs-indicator,
+  .x-nt-segmented-tab,
+  .x-nt-appearance-preview,
+  .x-nt-appearance-preview::after,
+  .x-nt-appearance-preview img,
+  .x-nt-wallpaper-thumb,
+  .x-nt-wallpaper-thumb::after,
+  .x-nt-wallpaper-thumb img,
+  .x-nt-favicon-thumb .x-nt-favicon-image,
+  .x-nt-suggestion-item,
+  .x-nt-suggestion-icon-slot,
+  .x-nt-suggestion-tag,
+  .x-nt-suggestion-action-tag,
+  .x-nt-suggestion-action-button,
+  .x-nt-suggestion-number-shortcut,
+  .x-nt-suggestion-utility-button,
+  .x-nt-tab-switch-button,
+  .x-nt-close-other-tabs {
+    corner-shape: superellipse(1.25);
+  }
+
+  .x-nt-suggestion-visit-button {
+    corner-shape: round;
+  }
+}

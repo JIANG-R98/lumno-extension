@@ -9,6 +9,7 @@ const guardPath = path.join(repoRoot, 'src/shared/search/ime-key-guard.js');
 const guard = require(guardPath);
 const { readBackgroundSource } = require('../helpers/background-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { readStylesheetSource } = require('../helpers/css-tokens');
 
 function createClock(start) {
   let current = start;
@@ -130,7 +131,7 @@ assert.match(
 );
 
 
-const newtabCss = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.css'), 'utf8');
+const newtabCss = readStylesheetSource('src/newtab/newtab.css');
 const newtabRootRule = newtabCss.match(/\n#_x_extension_newtab_root_2024_unique_ \{[^}]*\}/);
 assert.ok(newtabRootRule, 'New Tab search root rule should exist');
 assert.doesNotMatch(

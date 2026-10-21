@@ -1,0 +1,653 @@
+/* The shortcut grid: tiles, groups and their headers, dragging, the dock's
+   magnification, icon plates, and the shortcut context menu. */
+
+.x-nt-shortcuts-section {
+  width: min(90vw, var(--x-nt-shortcuts-target-width, 692px));
+  max-width: 100%;
+  min-height: var(--x-nt-shortcuts-reserved-height, 82px);
+  margin: var(--x-nt-shortcuts-section-margin-top, 18px) auto 0;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  box-sizing: border-box;
+}
+body:not([data-nt-ready="1"]) .x-nt-shortcuts-section {
+  visibility: hidden;
+}
+body:not([data-nt-ready="1"]) .x-nt-wallpaper-control,
+body:not([data-nt-ready="1"]) .x-nt-feedback-control,
+body:not([data-nt-ready="1"]) .x-nt-bookmark-cascade-debug-control {
+  visibility: hidden;
+}
+.x-nt-shortcuts-section[data-visible="false"] {
+  display: none;
+}
+/* Shortcuts taller than the room above the bottom dock scroll inside their
+   section; the layout controller sets the limit only when it is needed. The
+   stable gutters keep the columns centered and as wide as without them. */
+.x-nt-shortcuts-section[data-shortcuts-scrollable="true"] {
+  width: calc(min(90vw, var(--x-nt-shortcuts-target-width, 692px)) + var(--x-nt-shortcuts-scrollbar-gutter, 0px));
+  max-height: var(--x-nt-shortcuts-max-height);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable both-edges;
+  --x-nt-shortcuts-fade-top: 0px;
+  --x-nt-shortcuts-fade-bottom: 0px;
+  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--x-nt-shortcuts-fade-top),
+    #000 calc(100% - var(--x-nt-shortcuts-fade-bottom)), transparent 100%);
+}
+/* Rows continue past a faded edge. A drag drops the fade: the lifted tile
+   is drawn outside the section and must not be masked with it. */
+.x-nt-shortcuts-section[data-shortcuts-scrollable="true"][data-shortcuts-more-above="true"] {
+  --x-nt-shortcuts-fade-top: 16px;
+}
+.x-nt-shortcuts-section[data-shortcuts-scrollable="true"][data-shortcuts-more-below="true"] {
+  --x-nt-shortcuts-fade-bottom: 16px;
+}
+body[data-drag-source] .x-nt-shortcuts-section[data-shortcuts-scrollable="true"] {
+  mask-image: none;
+}
+body[data-zen-mode="true"] .x-nt-wallpaper-control,
+body[data-zen-mode="true"] .x-nt-feedback-control,
+body[data-zen-mode="true"] .x-lumno-feature-hint--update-notice-newtab {
+  display: none !important;
+}
+.x-nt-shortcuts-grid {
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-end;
+  gap: var(--x-nt-shortcuts-grid-row-gap, 10px) var(--x-nt-shortcuts-grid-column-gap, 4px);
+  padding: var(--x-nt-shortcuts-grid-padding, 10px 8px 12px);
+  box-sizing: border-box;
+  position: relative;
+}
+.x-nt-shortcut-tile {
+  all: unset;
+  width: var(--x-nt-shortcut-tile-size, 64px);
+  min-height: var(--x-nt-shortcut-tile-size, 64px);
+  padding: var(--x-nt-shortcut-tile-padding, 8px);
+  border-radius: var(--lumno-radius-lg);
+  display: inline-grid;
+  place-items: center;
+  color: var(--x-nt-text, #111827);
+  box-sizing: border-box;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  z-index: 1;
+}
+.x-nt-shortcut-tile[data-shortcut-draggable="true"] {
+  cursor: pointer;
+  touch-action: none;
+}
+.x-nt-shortcuts-grid[data-shortcut-dragging="true"],
+.x-nt-shortcuts-grid[data-shortcut-dragging="true"] .x-nt-shortcut-tile {
+  cursor: grabbing;
+}
+.x-nt-shortcut-tile[data-shortcut-dragging="true"],
+.x-nt-shortcut-tile[data-shortcut-dropping="true"] {
+  z-index: 8;
+}
+/* The dragged tile moves by transform inside this section, so lift the
+   section above the bottom dock and bookmarks bar while it can leave the
+   grid; pointer capture keeps delivering events to the tile. */
+body[data-drag-source="shortcut"] .x-nt-shortcuts-section {
+  z-index: var(--lumno-z-drag-lift);
+  pointer-events: none;
+}
+.x-nt-shortcut-tile:focus-visible {
+  outline: 2px solid var(--lumno-color-focus-ring);
+  outline-offset: 2px;
+}
+.x-nt-shortcut-icon--folder svg {
+  width: calc(var(--x-nt-shortcut-favicon-size, 28px) * 1.14);
+  height: calc(var(--x-nt-shortcut-favicon-size, 28px) * 1.14);
+  display: block;
+  flex: 0 0 auto;
+}
+.x-nt-shortcut-icon--folder .x-nt-folder-shape--hover {
+  opacity: 0;
+  pointer-events: none;
+}
+.x-nt-shortcut-tile--add {
+  color: var(--x-nt-text, #111827);
+}
+.x-nt-shortcut-tile--add[hidden] {
+  display: none;
+}
+/* Grouped shortcuts share one grid. A title row spans every column, so each
+   group starts on its own row and its rows line up under the title, while
+   the columns as a whole stay centered like the ungrouped rows. */
+.x-nt-shortcuts-grid[data-shortcut-grouped="true"] {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, var(--x-nt-shortcut-tile-size, 64px));
+  justify-content: center;
+  align-items: end;
+  /* No wider than the longest group row (plus the 8px side paddings and a
+     pixel against rounding off a column), so groups that fill fewer columns
+     than the setting allows stay centered instead of hugging the left. */
+  max-width: calc(
+    var(--x-nt-shortcut-grouped-columns, 999) * var(--x-nt-shortcut-tile-size, 64px) +
+    (var(--x-nt-shortcut-grouped-columns, 999) - 1) * var(--x-nt-shortcuts-grid-column-gap, 4px) +
+    16px + 1px
+  );
+  margin-inline: auto;
+}
+.x-nt-shortcut-group-header {
+  grid-column: 1 / -1;
+  min-width: 0;
+  height: 24px;
+  margin-top: 8px;
+  /* The title's own 4px padding carries its hover background; together they
+     put the text on the icons' left edge. */
+  padding: 0 max(0px, calc(var(--x-nt-shortcut-tile-padding, 8px) - 4px));
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  box-sizing: border-box;
+  color: var(--x-nt-bookmark-heading-color, #000000);
+  font-family: "Open Sans", "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 18px;
+}
+.x-nt-shortcut-group-header:first-child {
+  margin-top: 0;
+}
+/* An untitled group only breaks the rows; its title row stays thin, and its
+   placeholder and menu button show over it, reaching into the row gaps. */
+.x-nt-shortcut-group-header[data-shortcut-group-untitled="true"] {
+  height: 12px;
+  margin-top: 4px;
+}
+.x-nt-shortcut-group-header[data-shortcut-group-untitled="true"]:first-child {
+  margin-top: 0;
+}
+.x-nt-shortcut-group-title {
+  all: unset;
+  min-width: 0;
+  padding: 3px 4px;
+  border-radius: var(--lumno-radius-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: default;
+}
+/* An untitled group shows where its title would go only while pointed at. */
+.x-nt-shortcut-group-title--placeholder {
+  cursor: text;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.x-nt-shortcut-group-header:hover .x-nt-shortcut-group-title--placeholder,
+.x-nt-shortcut-group-title--placeholder:focus-visible {
+  opacity: 0.5;
+}
+.x-nt-shortcut-group-more {
+  all: unset;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--lumno-radius-sm);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+/* Keyboard focus anywhere in the header reveals the button; a mouse press
+   focuses it too, and that focus must not keep it shown after its menu closes. */
+.x-nt-shortcut-group-header:hover .x-nt-shortcut-group-more,
+.x-nt-shortcut-group-header:has(:focus-visible) .x-nt-shortcut-group-more,
+.x-nt-shortcut-group-more[data-shortcut-context-menu-open="true"] {
+  opacity: 1;
+}
+/* Without a pointer that hovers, the menu button would never appear. */
+@media (hover: none) {
+  .x-nt-shortcut-group-more {
+    opacity: 1;
+  }
+}
+.x-nt-shortcut-group-more:hover,
+.x-nt-shortcut-group-more[data-shortcut-context-menu-open="true"],
+.x-nt-shortcut-group-title--placeholder:hover {
+  background: var(--x-nt-bookmark-pager-hover-bg, rgba(17, 24, 39, 0.08));
+}
+.x-nt-shortcut-group-title--placeholder:focus-visible,
+.x-nt-shortcut-group-more:focus-visible {
+  outline: 2px solid var(--lumno-color-focus-ring);
+  outline-offset: 1px;
+}
+body[data-drag-source="shortcut"] .x-nt-shortcut-group-more,
+body[data-drag-source="shortcut"] .x-nt-shortcut-group-title--placeholder {
+  opacity: 0;
+}
+/* An empty group keeps a slot, drawn like the add tile, that adds a site
+   to it and takes drops. It hides while a dragged tile sits right before it. */
+.x-nt-shortcut-group-empty {
+  all: unset;
+  width: var(--x-nt-shortcut-tile-size, 64px);
+  min-height: var(--x-nt-shortcut-tile-size, 64px);
+  padding: var(--x-nt-shortcut-tile-padding, 8px);
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+.x-nt-shortcut-group-empty[hidden],
+.x-nt-shortcut-tile + .x-nt-shortcut-group-empty {
+  display: none;
+}
+.x-nt-shortcut-group-empty:hover .x-nt-shortcut-icon {
+  filter: brightness(0.96);
+}
+body[data-theme="dark"] .x-nt-shortcut-group-empty:hover .x-nt-shortcut-icon,
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-shortcut-group-empty:hover .x-nt-shortcut-icon,
+body[data-glass-style] .x-nt-shortcut-group-empty[data-glass-ink-theme="dark"]:hover .x-nt-shortcut-icon {
+  filter: brightness(1.06);
+}
+.x-nt-shortcut-group-empty:focus-visible {
+  outline: 2px solid var(--lumno-color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--lumno-radius-lg);
+}
+/* A scrolling section would clip the dragged tile, so it is lifted out as a
+   fixed element while this placeholder keeps its slot. It still stacks inside
+   the lifted section, so it stays under menus with the rest of the drag. */
+.x-nt-shortcut-tile[data-shortcut-lifted="true"] {
+  position: fixed;
+  margin: 0;
+  z-index: var(--lumno-z-drag-lift);
+}
+.x-nt-shortcut-drag-placeholder {
+  width: var(--x-nt-shortcut-tile-size, 64px);
+  min-height: var(--x-nt-shortcut-tile-size, 64px);
+  display: inline-block;
+  flex: 0 0 auto;
+}
+/* Dragging a group title: the title follows the pointer and a line marks
+   where the group will land. */
+body[data-drag-source="shortcut-group"] {
+  cursor: grabbing;
+  user-select: none;
+}
+.x-nt-shortcut-group-header[data-shortcut-group-dragging="true"] {
+  opacity: 0.35;
+}
+.x-nt-shortcut-group-ghost {
+  position: fixed;
+  z-index: var(--lumno-z-drag-ghost);
+  width: max-content;
+  margin: 0;
+  padding: 0 6px;
+  border-radius: var(--lumno-radius-sm);
+  background: rgb(255 255 255 / 0.82);
+  box-shadow: 0 6px 18px rgb(15 23 42 / 0.14);
+  pointer-events: none;
+}
+body[data-theme="dark"] .x-nt-shortcut-group-ghost,
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-shortcut-group-ghost,
+body[data-glass-style] .x-nt-shortcut-group-ghost[data-glass-ink-theme="dark"] {
+  background: rgb(30 41 59 / 0.86);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.32);
+}
+.x-nt-shortcut-group-drop-line {
+  position: fixed;
+  z-index: var(--lumno-z-drag-ghost);
+  height: 2px;
+  border-radius: 1px;
+  background: var(--x-nt-bookmark-heading-color, #000000);
+  opacity: 0.55;
+  pointer-events: none;
+}
+.x-nt-shortcut-icon {
+  --x-nt-shortcut-dock-scale: 1;
+  --x-nt-shortcut-dock-shift-x: 0px;
+  --x-nt-shortcut-dock-rise: 0px;
+  /* Breakpoints shrink the icon; keep its corners at a third of its size
+     rather than inheriting a radius resolved for the larger root icon. */
+  --x-nt-shortcut-icon-radius: calc(var(--x-nt-shortcut-icon-size, 48px) / 3);
+  --x-nt-shortcut-favicon-radius: max(
+    6px,
+    calc(var(--x-nt-shortcut-icon-radius) - ((var(--x-nt-shortcut-icon-size, 48px) - var(--x-nt-shortcut-favicon-size, 28px)) / 2))
+  );
+  width: var(--x-nt-shortcut-icon-size, 48px);
+  height: var(--x-nt-shortcut-icon-size, 48px);
+  border-radius: var(--x-nt-shortcut-icon-radius, 16px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--x-nt-shortcut-wallpaper-icon-bg, var(--x-nt-shortcut-icon-bg, rgba(241, 245, 249, 0.9)));
+  color: var(--x-nt-shortcut-wallpaper-icon-color, var(--x-nt-shortcut-icon-color, var(--x-nt-text, #111827)));
+  border: 0;
+  box-shadow: none;
+  box-sizing: border-box;
+  overflow: hidden;
+  flex: 0 0 auto;
+  transform: translate3d(
+    var(--x-nt-shortcut-dock-shift-x, 0px),
+    var(--x-nt-shortcut-dock-rise, 0px),
+    0
+  ) scale(var(--x-nt-shortcut-dock-scale, 1));
+  transform-origin: 50% 100%;
+  transition:
+    transform var(--x-nt-shortcut-dock-duration, 300ms) var(--x-nt-shortcut-dock-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    background-color var(--lumno-duration-sm) ease,
+    color var(--lumno-duration-sm) ease,
+    filter var(--lumno-duration-sm) ease;
+  will-change: auto;
+  -webkit-mask-image: var(--x-nt-shortcut-smooth-mask-outer);
+  mask-image: var(--x-nt-shortcut-smooth-mask-outer);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  cursor: inherit;
+  pointer-events: none;
+}
+body[data-theme="dark"] .x-nt-shortcut-icon,
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-shortcut-icon,
+body[data-glass-style] .x-nt-shortcut-icon[data-glass-ink-theme="dark"] {
+  background: var(--x-nt-shortcut-wallpaper-icon-bg, var(--x-nt-shortcut-icon-bg, rgba(255, 255, 255, 0.09)));
+}
+.x-nt-shortcut-icon--add {
+  color: var(--x-nt-shortcut-add-color, var(--x-nt-text, #111827));
+  background: var(--x-nt-shortcut-add-bg, rgba(248, 250, 252, 0.92));
+  border: none;
+  box-shadow: none;
+}
+.x-nt-shortcut-tile[data-bookmark-drop-target="true"] .x-nt-shortcut-icon {
+  cursor: inherit;
+  pointer-events: none;
+}
+/* A drop target (a folder, or a website to stack into a new folder) grows an
+   opaque folder backdrop behind its icon, wide enough to show around the
+   lifted icon covering it. The icon's mask would clip an outline. */
+.x-nt-shortcut-tile::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: -1;
+  width: calc(var(--x-nt-shortcut-icon-size, 48px) * 1.42);
+  height: calc(var(--x-nt-shortcut-icon-size, 48px) * 1.42);
+  /* Concentric with the lifted icon above it, which is drawn at 1.2x. */
+  border-radius: calc(var(--x-nt-shortcut-icon-size, 48px) * 0.51);
+  background: var(--x-nt-shortcut-drop-target-bg);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.7);
+  transition:
+    opacity var(--lumno-duration-sm) ease,
+    transform var(--lumno-duration-3xl) var(--lumno-ease-spring);
+  pointer-events: none;
+}
+.x-nt-shortcut-tile[data-bookmark-drop-target="true"]::before {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+/* The content shows just after the first wallpaper sample tints it, so until the entry finishes those
+   colors apply at once; a fade from the theme's default would play in view (the add tile, light on
+   a dark wallpaper, passed through the wallpaper's own gray and seemed to vanish). */
+body:not([data-nt-enter="done"]) .x-nt-shortcut-icon {
+  transition: none;
+}
+body[data-theme="dark"] .x-nt-shortcut-icon--add,
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-shortcut-icon--add,
+body[data-glass-style] .x-nt-shortcut-icon--add[data-glass-ink-theme="dark"] {
+  color: var(--x-nt-shortcut-add-color, #e5e7eb);
+  background: var(--x-nt-shortcut-add-bg, rgba(255, 255, 255, 0.13));
+}
+body[data-nt-bottom-dock-density="compact"] {
+  --x-nt-shortcuts-reserved-height: 54px;
+  --x-nt-shortcuts-section-margin-top: 8px;
+  --x-nt-shortcuts-grid-padding: 5px 8px 7px;
+  --x-nt-shortcut-hover-scale-near: 1.16;
+  --x-nt-shortcut-hover-rise-near: -4px;
+  --x-nt-shortcut-hover-scale-drag: 1.12;
+  --x-nt-shortcut-hover-rise-drag: -3px;
+  --x-nt-shortcut-hover-scale-mid: 1.08;
+  --x-nt-shortcut-hover-rise-mid: -2px;
+  --x-nt-shortcut-hover-shift-mid: 2px;
+  --x-nt-shortcut-hover-scale-far: 1.02;
+  --x-nt-shortcut-hover-rise-far: 0px;
+  --x-nt-shortcut-hover-shift-far: 0px;
+}
+body[data-nt-bottom-dock-density="tiny"] {
+  --x-nt-shortcuts-reserved-height: 42px;
+  --x-nt-shortcuts-section-margin-top: 6px;
+  --x-nt-shortcuts-grid-padding: 3px 8px 5px;
+  --x-nt-shortcut-hover-scale-near: 1.08;
+  --x-nt-shortcut-hover-rise-near: -2px;
+  --x-nt-shortcut-hover-scale-drag: 1.06;
+  --x-nt-shortcut-hover-rise-drag: -2px;
+  --x-nt-shortcut-hover-scale-mid: 1.03;
+  --x-nt-shortcut-hover-rise-mid: 0px;
+  --x-nt-shortcut-hover-shift-mid: 0px;
+  --x-nt-shortcut-hover-scale-far: 1;
+  --x-nt-shortcut-hover-rise-far: 0px;
+  --x-nt-shortcut-hover-shift-far: 0px;
+}
+.x-nt-shortcuts-grid[data-dock-following="true"] {
+  --x-nt-shortcut-dock-duration: var(--x-nt-shortcut-dock-follow-duration, 90ms);
+}
+.x-nt-shortcut-tile[data-dock-distance="0"] {
+  z-index: 6;
+}
+.x-nt-shortcut-tile[data-dock-distance="1"] {
+  z-index: 5;
+}
+.x-nt-shortcut-tile[data-dock-distance="2"] {
+  z-index: 4;
+}
+.x-nt-shortcut-tile[data-dock-distance="0"] .x-nt-shortcut-icon {
+  --x-nt-shortcut-dock-scale: var(--x-nt-shortcut-hover-scale-near, 1.28);
+  --x-nt-shortcut-dock-rise: var(--x-nt-shortcut-hover-rise-near, -6px);
+}
+/* The magnified icon grows up out of its tile, across the row gap and over
+   a group title above, but takes no pointer itself. The tile reaches up
+   under it (to its largest size: 1.28x, 6px higher), so pointing at what
+   looks like the icon stays on the icon instead of waking the title. */
+.x-nt-shortcut-tile[data-dock-distance="0"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: max(0px, calc(
+    var(--x-nt-shortcut-icon-size, 48px) * 0.28 + 6px -
+    (var(--x-nt-shortcut-tile-size, 64px) - var(--x-nt-shortcut-icon-size, 48px)) / 2
+  ));
+}
+.x-nt-shortcut-tile[data-shortcut-context-menu-open="true"] .x-nt-shortcut-icon {
+  filter: brightness(0.92);
+}
+.x-nt-shortcut-tile[data-shortcut-dragging="true"] .x-nt-shortcut-icon,
+.x-nt-shortcut-tile[data-shortcut-dropping="true"] .x-nt-shortcut-icon {
+  --x-nt-shortcut-dock-scale: var(--x-nt-shortcut-hover-scale-drag, 1.2);
+  --x-nt-shortcut-dock-rise: var(--x-nt-shortcut-hover-rise-drag, -4px);
+}
+.x-nt-shortcut-tile[data-dock-distance] .x-nt-shortcut-icon,
+.x-nt-shortcut-tile[data-shortcut-context-menu-open="true"] .x-nt-shortcut-icon,
+.x-nt-shortcut-tile[data-shortcut-dragging="true"] .x-nt-shortcut-icon,
+.x-nt-shortcut-tile[data-shortcut-dropping="true"] .x-nt-shortcut-icon {
+  will-change: transform;
+}
+.x-nt-shortcut-tile[data-dock-distance="1"] .x-nt-shortcut-icon {
+  --x-nt-shortcut-dock-scale: var(--x-nt-shortcut-hover-scale-mid, 1.14);
+  --x-nt-shortcut-dock-rise: var(--x-nt-shortcut-hover-rise-mid, -3px);
+}
+.x-nt-shortcut-tile[data-dock-distance="2"] .x-nt-shortcut-icon {
+  --x-nt-shortcut-dock-scale: var(--x-nt-shortcut-hover-scale-far, 1.05);
+  --x-nt-shortcut-dock-rise: var(--x-nt-shortcut-hover-rise-far, -1px);
+}
+.x-nt-shortcut-tile[data-dock-side="before"][data-dock-distance="1"] .x-nt-shortcut-icon {
+  --x-nt-shortcut-dock-shift-x: calc(var(--x-nt-shortcut-hover-shift-mid, 4px) * -1);
+}
+.x-nt-shortcut-tile[data-dock-side="after"][data-dock-distance="1"] .x-nt-shortcut-icon {
+  --x-nt-shortcut-dock-shift-x: var(--x-nt-shortcut-hover-shift-mid, 4px);
+}
+.x-nt-shortcut-tile[data-dock-side="before"][data-dock-distance="2"] .x-nt-shortcut-icon {
+  --x-nt-shortcut-dock-shift-x: calc(var(--x-nt-shortcut-hover-shift-far, 1px) * -1);
+}
+.x-nt-shortcut-tile[data-dock-side="after"][data-dock-distance="2"] .x-nt-shortcut-icon {
+  --x-nt-shortcut-dock-shift-x: var(--x-nt-shortcut-hover-shift-far, 1px);
+}
+.x-nt-shortcuts-grid[data-dock-magnification="false"] .x-nt-shortcut-tile:not([data-shortcut-dragging="true"]):not([data-shortcut-dropping="true"]):not([data-shortcut-context-menu-open="true"]):hover .x-nt-shortcut-icon,
+.x-nt-shortcuts-grid[data-dock-magnification="false"] .x-nt-shortcut-tile[aria-expanded="true"]:not([data-shortcut-dragging="true"]):not([data-shortcut-dropping="true"]):not([data-shortcut-context-menu-open="true"]) .x-nt-shortcut-icon {
+  filter: brightness(0.96);
+}
+body[data-theme="dark"] .x-nt-shortcuts-grid[data-dock-magnification="false"] .x-nt-shortcut-tile:not([data-shortcut-dragging="true"]):not([data-shortcut-dropping="true"]):not([data-shortcut-context-menu-open="true"]):hover .x-nt-shortcut-icon,
+body[data-theme="dark"] .x-nt-shortcuts-grid[data-dock-magnification="false"] .x-nt-shortcut-tile[aria-expanded="true"]:not([data-shortcut-dragging="true"]):not([data-shortcut-dropping="true"]):not([data-shortcut-context-menu-open="true"]) .x-nt-shortcut-icon,
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-shortcuts-grid[data-dock-magnification="false"] .x-nt-shortcut-tile:not([data-shortcut-dragging="true"]):not([data-shortcut-dropping="true"]):not([data-shortcut-context-menu-open="true"]):hover .x-nt-shortcut-icon,
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-shortcuts-grid[data-dock-magnification="false"] .x-nt-shortcut-tile[aria-expanded="true"]:not([data-shortcut-dragging="true"]):not([data-shortcut-dropping="true"]):not([data-shortcut-context-menu-open="true"]) .x-nt-shortcut-icon,
+body[data-glass-style] .x-nt-shortcuts-grid[data-dock-magnification="false"][data-glass-ink-theme="dark"] .x-nt-shortcut-tile:not([data-shortcut-dragging="true"]):not([data-shortcut-dropping="true"]):not([data-shortcut-context-menu-open="true"]):hover .x-nt-shortcut-icon,
+body[data-glass-style] .x-nt-shortcuts-grid[data-dock-magnification="false"][data-glass-ink-theme="dark"] .x-nt-shortcut-tile[aria-expanded="true"]:not([data-shortcut-dragging="true"]):not([data-shortcut-dropping="true"]):not([data-shortcut-context-menu-open="true"]) .x-nt-shortcut-icon {
+  filter: brightness(1.06);
+}
+.x-nt-shortcuts-grid[data-dock-magnification="false"] .x-nt-shortcut-tile .x-nt-shortcut-icon {
+  --x-nt-shortcut-dock-scale: 1;
+  --x-nt-shortcut-dock-shift-x: 0px;
+  --x-nt-shortcut-dock-rise: 0px;
+}
+.x-nt-shortcut-favicon-mask {
+  width: var(--x-nt-shortcut-favicon-size, 28px);
+  height: var(--x-nt-shortcut-favicon-size, 28px);
+  border-radius: var(--x-nt-shortcut-favicon-radius, 8px);
+  display: inline-grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--x-nt-shortcut-favicon-mask-color, var(--x-nt-shortcut-icon-color, currentColor));
+  box-sizing: border-box;
+  -webkit-mask-image: var(--x-nt-shortcut-smooth-mask-inner);
+  mask-image: var(--x-nt-shortcut-smooth-mask-inner);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+.x-nt-shortcut-favicon-mask[data-builtin-icon="true"] {
+  border-radius: 0;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+body[data-theme="dark"] .x-nt-shortcut-favicon-mask[data-builtin-monochrome="true"] .x-nt-shortcut-favicon,
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-shortcut-favicon-mask[data-builtin-monochrome="true"] .x-nt-shortcut-favicon,
+body[data-glass-style] .x-nt-shortcut-favicon-mask[data-builtin-monochrome="true"][data-glass-ink-theme="dark"] .x-nt-shortcut-favicon {
+  filter: invert(1);
+}
+.x-nt-shortcut-favicon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  border-radius: inherit;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+/* See-through artwork sits on a plate tinted from its own color, the size of
+   the icons that bring their own square. */
+.x-nt-shortcut-favicon-mask[data-icon-plate="true"] {
+  border-radius: var(--x-nt-shortcut-favicon-radius, 8px);
+  -webkit-mask-image: var(--x-nt-shortcut-smooth-mask-inner);
+  mask-image: var(--x-nt-shortcut-smooth-mask-inner);
+  background: var(--x-nt-shortcut-icon-plate-light, rgb(255 255 255));
+  transition: background-color var(--lumno-duration-sm) ease;
+}
+body[data-theme="dark"] .x-nt-shortcut-favicon-mask[data-icon-plate="true"],
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-shortcut-favicon-mask[data-icon-plate="true"],
+body[data-glass-style] .x-nt-shortcut-favicon-mask[data-icon-plate="true"][data-glass-ink-theme="dark"] {
+  background: var(--x-nt-shortcut-icon-plate-dark, rgb(58 58 60));
+}
+.x-nt-shortcut-favicon-mask[data-icon-plate="true"] .x-nt-shortcut-favicon {
+  width: 70%;
+  height: 70%;
+  border-radius: 0;
+}
+.x-nt-shortcut-favicon-mask .x-nt-favicon-fallback {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+/* Folders sit on the same opaque neutral that monochrome favicons (X, GitHub)
+   resolve to, so they read as a site tile without competing with the folder
+   artwork's own color or following the wallpaper. */
+.x-nt-shortcut-icon--folder {
+  --x-nt-shortcut-icon-bg: var(--x-nt-shortcut-folder-icon-bg);
+}
+.x-nt-shortcut-icon:has(.x-nt-shortcut-favicon[data-fallback-icon="true"]),
+.x-nt-shortcut-icon:has(.x-nt-shortcut-favicon[data-favicon-placeholder="true"]),
+.x-nt-shortcut-icon:has(.x-nt-favicon-fallback[data-visible="true"]) {
+  --x-nt-shortcut-icon-bg: var(--x-nt-shortcut-fallback-icon-bg);
+  --x-nt-shortcut-icon-color: var(--x-nt-shortcut-fallback-icon-color, var(--x-nt-text, #111827));
+}
+.x-nt-shortcut-context-menu {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+  z-index: var(--lumno-z-context-menu);
+}
+.x-nt-shortcut-context-menu ._x_extension_select_trigger_2024_unique_ {
+  width: 1px;
+  min-width: 1px;
+  height: 1px;
+  min-height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.x-nt-shortcut-context-menu-portal {
+  --x-nt-context-menu-radius: var(--lumno-radius-menu);
+  --x-nt-context-menu-border-width: 1px;
+  --x-nt-context-menu-padding: 5px;
+  --x-extension-menu-surface-closed-transform: translateX(-50%) scale(0.96, 0.86);
+  --x-extension-menu-surface-open-transform: translateX(-50%) scale(1, 1);
+  --x-nt-context-menu-option-radius: calc(
+    var(--x-nt-context-menu-radius) -
+    var(--x-nt-context-menu-border-width) -
+    var(--x-nt-context-menu-padding)
+  );
+  background: rgb(255 255 255);
+  border-radius: var(--x-nt-context-menu-radius, 16px);
+  padding: var(--x-nt-context-menu-padding, 5px);
+  pointer-events: auto;
+}
+.x-nt-shortcut-context-menu-portal ._x_extension_select_option_2024_unique_ {
+  border-radius: var(--x-nt-context-menu-option-radius, 10px);
+}
+body[data-theme="dark"] .x-nt-shortcut-context-menu-portal,
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-shortcut-context-menu-portal,
+body[data-glass-style] .x-nt-shortcut-context-menu-portal[data-glass-ink-theme="dark"] {
+  background: rgb(31 31 31);
+}
+@supports (corner-shape: superellipse(1.25)) {
+  .x-nt-shortcut-context-menu-portal,
+  .x-nt-shortcut-context-menu-portal ._x_extension_select_option_2024_unique_ {
+    corner-shape: superellipse(1.25);
+  }
+}
+/* Reduced motion: icons stay their size instead of magnifying, and the drop backdrop
+   appears without growing. */
+@media (prefers-reduced-motion: reduce) {
+  .x-nt-shortcut-icon {
+    transform: translate3d(0, 0, 0) scale(1);
+    will-change: auto;
+  }
+  .x-nt-shortcut-tile::before {
+    transform: translate(-50%, -50%);
+  }
+}

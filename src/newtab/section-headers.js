@@ -29,7 +29,7 @@
 
     const NEWTAB_FLOATING_TOP_GAP_PX = 12;
     const BOOKMARK_CASCADE_TOPBAR_GAP_PX = 4;
-    // Matches the floating bar's 8px top offset and 40px height in newtab.css.
+    // Matches the floating bar's 8px top offset and 40px height in styles/bookmarks-topbar.css.
     const BOOKMARK_TOPBAR_FLOATING_OCCUPIED_PX = 48;
 
     function updateRecentHeading() {

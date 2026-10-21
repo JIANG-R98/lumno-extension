@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { JSDOM } = require('jsdom');
 const sectionPanelSettings = require('../../src/newtab/section-panel-settings.js');
+const { readStylesheetSource } = require('../helpers/css-tokens');
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -250,7 +251,7 @@ async function main() {
 
   // Collapsible bodies animate their height; their rows must not shrink with it, or they
   // squeeze together and spread apart while a section opens.
-  const css = fs.readFileSync(path.join(__dirname, '../../src/newtab/newtab.css'), 'utf8');
+  const css = readStylesheetSource('src/newtab/newtab.css');
   const noShrinkRule = css.match(/((?:\.[\w-]+ > \*,\s*)*\.[\w-]+ > \*)\s*\{\s*flex-shrink:\s*0;\s*\}/);
   assert(noShrinkRule, 'Panel section rows keep their height while the body animates');
   ['.x-nt-panel-section-body', '.x-nt-quote-body', '.x-nt-panel-field-group'].forEach((body) => {

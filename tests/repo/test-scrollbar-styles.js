@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { SPLIT_STYLESHEETS, readStylesheetSource } = require('../helpers/css-tokens');
 
 // Windows (and macOS set to always show scrollbars) draws a wide system
 // scrollbar in any scroll box that does not style or hide its own. Inside a
@@ -25,7 +26,7 @@ const stylesheets = [
   'src/shared/search/search-input.css',
   'src/shared/ui/menu-surface.css',
   'src/shared/ui/custom-select.css'
-].filter((file) => fs.existsSync(path.join(repoRoot, file)));
+].filter((file) => SPLIT_STYLESHEETS[file] || fs.existsSync(path.join(repoRoot, file)));
 
 const OVERLAY_SCOPE = ':root:not([data-lumno-scrollbars="overlay"])';
 // Body overflow scrolls the viewport, whose bar is styled on :root below.
@@ -62,7 +63,7 @@ function collectRules(css) {
 }
 
 const allRules = stylesheets.flatMap((file) => (
-  collectRules(stripComments(fs.readFileSync(path.join(repoRoot, file), 'utf8')))
+  collectRules(stripComments(readStylesheetSource(file)))
     .map(([selector, body]) => ({ file, selector, body }))
 ));
 
@@ -134,7 +135,7 @@ assert.match(
   /function createWallpaperAdaptiveToneTargets\(\)[\s\S]*?element:\s*bottomDockScroller,\s*sampleElement:\s*bottomDockScrollbarTrackArea,[\s\S]*?disabled:\s*!isBottomDockScrollbarShown\(\)/,
   'the dock scroller should be a wallpaper tone target sampled along its scrollbar track'
 );
-const newtabCss = stripComments(fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.css'), 'utf8'));
+const newtabCss = stripComments(readStylesheetSource('src/newtab/newtab.css'));
 assert.match(
   newtabCss,
   /body #_x_extension_newtab_bottom_dock_scroller_2024_unique_\[data-wallpaper-ink\]::-webkit-scrollbar-thumb\s*\{[^}]*background-color:\s*var\(--x-nt-wallpaper-adaptive-ink-muted\);[^}]*box-shadow:\s*inset 0 0 0 1px var\(--x-nt-bottom-dock-scrollbar-hairline\);/,
@@ -181,7 +182,7 @@ assert.deepStrictEqual(unscoped, [], `thin-bar rules should keep macOS overlay b
   ['src/newtab/newtab.css', /:root\[data-lumno-scrollbars="overlay"\] \.x-nt-appearance-help-footer\s*\{\s*--x-nt-panel-scrollbar-gutter:\s*0px;/],
   ['src/options/options.css', /:root\[data-lumno-scrollbars="overlay"\] \._x_extension_aggregate_search_sources_2026_unique_\s*\{\s*--x-aggregate-sources-scrollbar-gutter:\s*0px;/]
 ].forEach(([file, pattern]) => {
-  assert.match(fs.readFileSync(path.join(repoRoot, file), 'utf8'), pattern, `${file} should drop the gutter inset for overlay bars`);
+  assert.match(readStylesheetSource(file), pattern, `${file} should drop the gutter inset for overlay bars`);
 });
 
 // Every page marks the scrollbar kind in <head>, before its styles paint.
@@ -225,7 +226,7 @@ assert.strictEqual(marker.attributes.get('data-lumno-scrollbars'), 'classic', 'p
 // dark themes declare it and the dock follows the wallpaper under its track.
 ['src/newtab/newtab.css', 'src/options/options.css'].forEach((file) => {
   assert.match(
-    stripComments(fs.readFileSync(path.join(repoRoot, file), 'utf8')),
+    stripComments(readStylesheetSource(file)),
     /:root:has\(> body\[data-theme="dark"\]\)\s*\{\s*color-scheme:\s*dark;/,
     `${file} should declare the dark theme's color-scheme so overlay bars turn light`
   );
