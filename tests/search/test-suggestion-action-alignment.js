@@ -4,15 +4,13 @@ const fs = require('fs');
 const path = require('path');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { readReactSource } = require('../helpers/react-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const newtabHtml = readPageSource('newtab.html');
 const overlayCss = readStylesheet('src/overlay/suggestions-view.css');
 const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
-const suggestionsReact = fs.readFileSync(
-  path.join(repoRoot, 'react-src/search/suggestions.tsx'),
-  'utf8'
-);
+const suggestionsReact = readReactSource('react-src/search/suggestions.tsx');
 const newtabSource = readNewtabRuntimeSource();
 
 function getCssRuleBlock(source, selector) {

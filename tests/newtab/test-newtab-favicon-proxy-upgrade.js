@@ -1,8 +1,9 @@
 const assert = require('assert');
 const fs = require('fs');
 const vm = require('vm');
+const { readReactSource } = require('../helpers/react-source');
 
-const suggestionsViewSource = fs.readFileSync('react-src/search/suggestions.tsx', 'utf8');
+const suggestionsViewSource = readReactSource('react-src/search/suggestions.tsx');
 assert.match(
   suggestionsViewSource,
   /options\.preloadIcon\(\s*String\(tab\.favIconUrl\),\s*String\(tab\.url \|\| ''\)\s*\)/,

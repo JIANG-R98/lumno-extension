@@ -1,5 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readReactSource } = require('../helpers/react-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
@@ -10,7 +11,7 @@ const newtabHtml = readPageSource('newtab.html');
 const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
 const overlaySource = readOverlayPanelSource();
 const overlayCss = read('src/overlay/suggestions-view.css');
-const suggestionsSource = read('react-src/search/suggestions.tsx');
+const suggestionsSource = readReactSource('react-src/search/suggestions.tsx');
 const suggestionNavigation = require('../../src/shared/search/suggestion-navigation.js');
 
 const macNavigator = { platform: 'MacIntel' };

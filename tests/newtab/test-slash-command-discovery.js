@@ -8,10 +8,11 @@ const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { extractFunction } = require('../helpers/extract-function');
 const { readBackgroundSource } = require('../helpers/background-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { readReactSource } = require('../helpers/react-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const newtabSource = readNewtabRuntimeSource();
-const newtabSuggestionsSource = fs.readFileSync(path.join(repoRoot, 'react-src/search/suggestions.tsx'), 'utf8');
+const newtabSuggestionsSource = readReactSource('react-src/search/suggestions.tsx');
 const newtabHtmlSource = readPageSource('newtab.html');
 const overlaySource = readOverlayPanelSource();
 const overlayCssSource = readStylesheet('src/overlay/suggestions-view.css');

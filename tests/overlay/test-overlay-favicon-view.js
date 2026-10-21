@@ -4,6 +4,7 @@ const vm = require('vm');
 const path = require('path');
 const { extractFunction: extractFunctionSource } = require('../helpers/extract-function');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { readReactSource } = require('../helpers/react-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 
@@ -370,10 +371,7 @@ function testOverlayRendererLoadsFaviconPolicyBeforeInitialTabs() {
 
 function testOverlayRendererGuardsThemeSourcesInStrictMode() {
   const overlayJs = readOverlayPanelSource();
-  const suggestionsReact = fs.readFileSync(
-    path.join(repoRoot, 'react-src/search/suggestions.tsx'),
-    'utf8'
-  );
+  const suggestionsReact = readReactSource('react-src/search/suggestions.tsx');
   assert.match(
     overlayJs,
     /function getOverlayFaviconUrlResolver\(\)[\s\S]*?isEnhancedFaviconFetchEnabled: isOverlayEnhancedFaviconFetchEnabled/,
@@ -405,10 +403,7 @@ function testOverlayRendererGuardsThemeSourcesInStrictMode() {
 
 function testOverlayRendererLetsLocalFaviconsReachRuntime() {
   const overlayJs = readOverlayPanelSource();
-  const suggestionsReact = fs.readFileSync(
-    path.join(repoRoot, 'react-src/search/suggestions.tsx'),
-    'utf8'
-  );
+  const suggestionsReact = readReactSource('react-src/search/suggestions.tsx');
   assert.doesNotMatch(
     overlayJs,
     /const useFallback = shouldBlockOverlayFaviconForHost\(hostForTab\);/,
@@ -433,10 +428,7 @@ function testOverlayRendererLetsLocalFaviconsReachRuntime() {
 
 function testOverlayRendererDelegatesFallbackStateToReact() {
   const overlayJs = readOverlayPanelSource();
-  const suggestionsReact = fs.readFileSync(
-    path.join(repoRoot, 'react-src/search/suggestions.tsx'),
-    'utf8'
-  );
+  const suggestionsReact = readReactSource('react-src/search/suggestions.tsx');
   assert.doesNotMatch(
     overlayJs,
     /replaceChild\([^)]*favicon|createSuggestionInlineIcon|createLinkIcon/,
@@ -507,10 +499,7 @@ function testOverlayPolicyRecoverySignalsFailedReactRows() {
 }
 
 function testOverlayRendererBuildsBrowserPageFavicon2WhenMissingExplicitIcon() {
-  const suggestionsReact = fs.readFileSync(
-    path.join(repoRoot, 'react-src/search/suggestions.tsx'),
-    'utf8'
-  );
+  const suggestionsReact = readReactSource('react-src/search/suggestions.tsx');
   assert.match(
     suggestionsReact,
     /const useBrowserFavicon =\s*type === 'browserPage'[\s\S]*?options\.isBrowserInternalUrl\(url\)[\s\S]*?if \(favicon \|\| useBrowserFavicon\)/,

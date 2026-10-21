@@ -1,0 +1,302 @@
+// Surface options: the class and CSS variable names that differ between New
+// Tab and the overlay, and normalizing the options a surface passes in.
+import type {
+  QueryStore,
+  NormalizedOptions,
+  SuggestionsViewOptions,
+  ModeTheme,
+  ThemeValue
+} from './types';
+
+export function createQueryStore(): QueryStore {
+  let query = '';
+  const listeners = new Set<() => void>();
+  return {
+    getSnapshot: () => query,
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    set(nextQuery) {
+      if (nextQuery === query) {
+        return;
+      }
+      query = nextQuery;
+      listeners.forEach((listener) => listener());
+    }
+  };
+}
+
+function noop(): void {}
+
+const OVERLAY_CLASS_OVERRIDES: Record<string, string> = {
+  'x-nt-suggestion-tag': 'x-ov-suggestion-source-tag',
+  'x-nt-suggestion-action-tag': 'x-ov-action-tag',
+  'x-nt-suggestion-action-tag__label': 'x-ov-action-tag__label',
+  'x-nt-suggestion-action-button__label': 'x-ov-inline-label',
+  'x-nt-suggestion-action-button__icon': 'x-ov-inline-icon',
+  'x-nt-tab-switch-button':
+    'x-ov-suggestion-action-button x-ov-suggestion-switch-button'
+};
+
+const OVERLAY_VARIABLE_OVERRIDES: Record<string, string> = {
+  '--x-nt-suggestion-active-bg': '--x-ov-suggestion-row-bg',
+  '--x-nt-suggestion-hover-bg': '--x-ov-suggestion-row-bg',
+  '--x-nt-suggestion-tag-bg': '--x-ov-suggestion-source-tag-bg',
+  '--x-nt-suggestion-tag-text': '--x-ov-suggestion-source-tag-text',
+  '--x-nt-suggestion-tag-border': '--x-ov-suggestion-source-tag-border',
+  '--x-nt-suggestion-icon-color': 'color'
+};
+
+export function surfaceClass(
+  options: NormalizedOptions,
+  value: string
+): string {
+  if (options.surface !== 'overlay') {
+    return value;
+  }
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((token) =>
+      OVERLAY_CLASS_OVERRIDES[token] ||
+      token.replace(/^x-nt-/, 'x-ov-')
+    )
+    .join(' ');
+}
+
+function surfaceVariable(
+  options: NormalizedOptions,
+  value: string
+): string {
+  if (options.surface !== 'overlay') {
+    return value;
+  }
+  return (
+    OVERLAY_VARIABLE_OVERRIDES[value] ||
+    value.replace(/^--x-nt-/, '--x-ov-')
+  );
+}
+
+export function surfaceCssValue(
+  options: NormalizedOptions,
+  value: unknown
+): string {
+  const text = String(value || '');
+  if (options.surface !== 'overlay') {
+    return text;
+  }
+  return Object.entries(OVERLAY_VARIABLE_OVERRIDES).reduce(
+    (next, [newtabName, overlayName]) =>
+      next.replaceAll(newtabName, overlayName),
+    text.replaceAll('--x-nt-', '--x-ov-')
+  );
+}
+
+export function setSurfaceStyle(
+  options: NormalizedOptions,
+  target: HTMLElement,
+  property: string,
+  value: unknown
+): void {
+  target.style.setProperty(
+    surfaceVariable(options, property),
+    surfaceCssValue(options, value)
+  );
+}
+
+function fallbackFormatMessage(
+  key: string,
+  fallback: string,
+  values: Record<string, string> = {}
+): string {
+  let text = fallback || key || '';
+  Object.entries(values).forEach(([name, value]) => {
+    text = text.replace(new RegExp(`\\{${name}\\}`, 'g'), value);
+  });
+  return text;
+}
+
+export function normalizeOptions(
+  raw: SuggestionsViewOptions
+): NormalizedOptions | null {
+  const documentRef = raw.document || globalThis.document;
+  if (!documentRef || !raw.container) {
+    return null;
+  }
+  const defaultTheme = raw.defaultTheme || {};
+  const isBrowserNewtabUrl = raw.isBrowserNewtabUrl || ((url) => {
+    const normalized = String(url || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[?#].*$/, '')
+      .replace(/\/+$/, '');
+    return [
+      'chrome://newtab',
+      'chrome://new-tab-page',
+      'edge://newtab',
+      'brave://newtab',
+      'vivaldi://newtab',
+      'opera://startpage',
+      'about:newtab',
+      'about:home'
+    ].includes(normalized);
+  });
+  const isBrowserInternalUrl = raw.isBrowserInternalUrl || ((url) =>
+    /^(chrome|edge|brave|vivaldi|opera):\/\/|^about:/i.test(
+      String(url || '').trim()
+    ));
+  const shouldBlockFaviconForHost =
+    raw.shouldBlockFaviconForHost || (() => false);
+  const getChromeFaviconUrl = raw.getChromeFaviconUrl || (() => '');
+  const getBrowserPageFaviconUrl =
+    raw.getBrowserPageFaviconUrl || (() => '');
+  const getHoverColors =
+    raw.getHoverColors ||
+    (() => ({
+      bg: raw.surface === 'overlay'
+        ? 'var(--x-ov-hover-bg, #F3F4F6)'
+        : 'var(--x-nt-hover-bg, #F3F4F6)',
+      border: 'transparent'
+    }));
+  const openTabSuggestionLimit =
+    Number(raw.openTabSuggestionLimit) > 0
+      ? Number(raw.openTabSuggestionLimit)
+      : 3;
+  const openTabInitialRenderLimit =
+    Number(raw.openTabInitialRenderLimit) > 0
+      ? Number(raw.openTabInitialRenderLimit)
+      : openTabSuggestionLimit;
+  const getOpenTabInitialRenderLimit = (): number => {
+    if (typeof raw.getOpenTabInitialRenderLimit !== 'function') {
+      return openTabInitialRenderLimit;
+    }
+    try {
+      const currentLimit = Number(raw.getOpenTabInitialRenderLimit());
+      return Number.isFinite(currentLimit) && currentLimit > 0
+        ? Math.max(1, Math.trunc(currentLimit))
+        : openTabInitialRenderLimit;
+    } catch {
+      return openTabInitialRenderLimit;
+    }
+  };
+  const openTabRenderBatchSize =
+    Number(raw.openTabRenderBatchSize) > 0
+      ? Number(raw.openTabRenderBatchSize)
+      : openTabSuggestionLimit;
+  const getOpenTabRenderBatchSize = (): number => {
+    if (typeof raw.getOpenTabRenderBatchSize !== 'function') {
+      return openTabRenderBatchSize;
+    }
+    try {
+      const currentBatchSize = Number(raw.getOpenTabRenderBatchSize());
+      return Number.isFinite(currentBatchSize) && currentBatchSize > 0
+        ? Math.max(1, Math.trunc(currentBatchSize))
+        : openTabRenderBatchSize;
+    } catch {
+      return openTabRenderBatchSize;
+    }
+  };
+  return {
+    surface: raw.surface === 'overlay' ? 'overlay' : 'newtab',
+    document: documentRef,
+    container: raw.container,
+    items: Array.isArray(raw.items) ? raw.items : [],
+    t: raw.t || ((_key, fallback) => fallback || _key || ''),
+    formatMessage: raw.formatMessage || fallbackFormatMessage,
+    actionModel: raw.actionModel || {},
+    getRiSvg: raw.getRiSvg || (() => ''),
+    sanitizeDisplayText:
+      raw.sanitizeDisplayText || ((value) => String(value || '')),
+    formatTabRankDebugText: raw.formatTabRankDebugText || (() => ''),
+    isTabRankScoreDebugEnabled:
+      raw.isTabRankScoreDebugEnabled || (() => false),
+    shouldBlockFaviconForHost,
+    isLocalNetworkHost:
+      raw.isLocalNetworkHost || shouldBlockFaviconForHost,
+    getChromeFaviconUrl,
+    getHostFromUrl: raw.getHostFromUrl || (() => ''),
+    getUrlDisplay: raw.getUrlDisplay || ((url) => String(url || '')),
+    isSimpleModeEnabled: raw.isSimpleModeEnabled || (() => false),
+    getThemeHostForSuggestion:
+      raw.getThemeHostForSuggestion || (() => ''),
+    getImmediateThemeForSuggestion:
+      raw.getImmediateThemeForSuggestion || (() => defaultTheme),
+    getThemeForSuggestion:
+      raw.getThemeForSuggestion ||
+      (() => Promise.resolve(defaultTheme)),
+    shouldUseUrlFallbackThemeForSuggestion:
+      raw.shouldUseUrlFallbackThemeForSuggestion || (() => false),
+    getThemeForMode:
+      raw.getThemeForMode || ((theme) => (theme || defaultTheme) as ModeTheme),
+    getHoverColors,
+    getHighlightColors: raw.getHighlightColors || getHoverColors,
+    getNeutralHoverActionColors:
+      raw.getNeutralHoverActionColors ||
+      (() => ({
+        bg: 'rgba(200, 208, 218, 0.45)',
+        border: 'rgba(148, 163, 184, 0.28)',
+        text: '#4B5563'
+      })),
+    applyThemeVariables: raw.applyThemeVariables || noop,
+    applyMarkVariables: raw.applyMarkVariables || noop,
+    applyFaviconOpticalAlignment:
+      raw.applyFaviconOpticalAlignment || noop,
+    attachFaviconWithFallbacks:
+      raw.attachFaviconWithFallbacks || noop,
+    getPageFaviconRenderCandidates:
+      raw.getPageFaviconRenderCandidates ||
+      ((url, explicitUrl, options) => {
+        const browserPageUrl = getBrowserPageFaviconUrl(url);
+        const chromeUrl = getChromeFaviconUrl(url);
+        const internal = isBrowserInternalUrl(url);
+        const primaryUrl = internal
+          ? browserPageUrl || explicitUrl || chromeUrl
+          : browserPageUrl || explicitUrl;
+        return {
+          primaryUrl,
+          browserUrl:
+            (internal || options?.includeChromeFallback) &&
+            chromeUrl !== primaryUrl
+              ? chromeUrl
+              : ''
+        };
+      }),
+    preloadIcon: raw.preloadIcon || noop,
+    setSuggestionsVisible: raw.setSuggestionsVisible || noop,
+    onSetSelectedIndex: raw.onSetSelectedIndex || noop,
+    getSelectedIndex: raw.getSelectedIndex || (() => -1),
+    onSwitchToTab: raw.onSwitchToTab || noop,
+    onActivateSuggestion: raw.onActivateSuggestion || noop,
+    onDeleteHistory: raw.onDeleteHistory || noop,
+    onCopyUrl: raw.onCopyUrl || noop,
+    shouldSwitchMatchedTabSuggestion:
+      raw.shouldSwitchMatchedTabSuggestion || (() => false),
+    showTopActionTooltip: raw.showTopActionTooltip || noop,
+    hideTopActionTooltip: raw.hideTopActionTooltip || noop,
+    bindCursorTooltip: raw.bindCursorTooltip,
+    getSearchActionLabel: raw.getSearchActionLabel || (() => 'Search'),
+    getSiteSearchDisplayName:
+      raw.getSiteSearchDisplayName ||
+      ((provider) => String(provider.name || provider.key || '')),
+    isAiSiteSearchProvider:
+      raw.isAiSiteSearchProvider ||
+      ((provider) => String(provider.action || '').trim() === 'openAndSubmit'),
+    getDefaultSearchEngineThemeUrl:
+      raw.getDefaultSearchEngineThemeUrl || (() => ''),
+    getBrandAccentForUrl: raw.getBrandAccentForUrl || (() => null),
+    buildThemeFromAccent:
+      raw.buildThemeFromAccent || ((theme) => (theme || defaultTheme) as ThemeValue),
+    isBrowserNewtabUrl,
+    isBrowserInternalUrl,
+    defaultTheme,
+    urlHighlightTheme: raw.urlHighlightTheme || defaultTheme,
+    openTabSuggestionLimit,
+    openTabInitialRenderLimit,
+    getOpenTabInitialRenderLimit,
+    openTabRenderBatchSize,
+    getOpenTabRenderBatchSize,
+    enterAction: String(raw.enterAction || 'go'),
+    autoHighlightFirstTab: Boolean(raw.autoHighlightFirstTab)
+  };
+}

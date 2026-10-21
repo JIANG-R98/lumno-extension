@@ -3,11 +3,12 @@ const fs = require('fs');
 const path = require('path');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { readReactSource } = require('../helpers/react-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const newtabJs = readNewtabRuntimeSource();
 const newtabHtml = readPageSource('newtab.html');
-const suggestionsViewJs = fs.readFileSync(path.join(repoRoot, 'react-src/search/suggestions.tsx'), 'utf8');
+const suggestionsViewJs = readReactSource('react-src/search/suggestions.tsx');
 
 function assertMatches(source, pattern, message) {
   assert.ok(pattern.test(source), message);

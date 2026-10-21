@@ -3,16 +3,14 @@ const fs = require('fs');
 const path = require('path');
 const { readBackgroundSource } = require('../helpers/background-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { readReactSource } = require('../helpers/react-source');
 
 const repoRoot = path.join(__dirname, '..', '..');
 const backgroundJs = readBackgroundSource();
 const contentJs = fs.readFileSync(path.join(repoRoot, 'src/content/document-pip-picker.js'), 'utf8');
 const overlayRuntimeJs = fs.readFileSync(path.join(repoRoot, 'src/overlay/runtime.js'), 'utf8');
 const overlayJs = readOverlayPanelSource();
-const suggestionsReact = fs.readFileSync(
-  path.join(repoRoot, 'react-src/search/suggestions.tsx'),
-  'utf8'
-);
+const suggestionsReact = readReactSource('react-src/search/suggestions.tsx');
 const actionModelJs = fs.readFileSync(path.join(repoRoot, 'src/shared/search/suggestion-action-model.js'), 'utf8');
 
 assert.match(

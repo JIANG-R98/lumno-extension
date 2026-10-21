@@ -1,0 +1,496 @@
+// Types the suggestion list shares between its rows, its runtime and the
+// New Tab and overlay adapters that create it.
+
+export type ThemeValue = Record<string, unknown> | null;
+type Translate = (key: string, fallback: string) => string;
+export type SuggestionsSurface = 'newtab' | 'overlay';
+export type SuggestionUpdateKind =
+  | 'highlight'
+  | 'content'
+  | 'append'
+  | 'structure';
+
+export interface Suggestion {
+  type?: string;
+  title?: string;
+  url?: string;
+  favicon?: string;
+  path?: string;
+  commandText?: string;
+  reasons?: unknown[];
+  titleHighlight?: {
+    text: string;
+    query: string;
+    ranges: Array<[number, number]>;
+  };
+  isTopSite?: boolean;
+  provider?: Record<string, unknown> | null;
+  searchQuery?: string;
+  [key: string]: unknown;
+}
+
+export interface OpenTabSuggestion {
+  id?: number;
+  title?: string;
+  url?: string;
+  favIconUrl?: string;
+  [key: string]: unknown;
+}
+
+export interface SuggestionActionTagModel {
+  action: string;
+  keyLabel?: string;
+}
+
+export interface SuggestionActionModelResult {
+  actionTags: SuggestionActionTagModel[];
+  visitButtonAction: string;
+  alwaysHideVisitButton: boolean;
+  hasActionTags: boolean;
+  hasSwitchAction: boolean;
+}
+
+interface SuggestionActionModel {
+  createSearchActionModel?: (
+    options: Record<string, unknown>
+  ) => Partial<SuggestionActionModelResult> | null;
+  getModifierAdjustedAction?: (
+    action: string,
+    modifiers: {
+      openInCurrentTab: boolean;
+      openSwitchInNewTab: boolean;
+      openInBackgroundTab: boolean;
+    }
+  ) => string;
+  shouldShowVisitButton?: (
+    model: SuggestionActionModelResult,
+    active: boolean
+  ) => boolean;
+  getSuggestionPresentationFingerprint?: (
+    suggestion: Suggestion,
+    options?: { includeDebugReasons?: boolean }
+  ) => string;
+  getSuggestionStructureIdentity?: (suggestion: Suggestion) => string;
+}
+
+interface CursorTooltipOptions {
+  maxWidth: number;
+  shouldShow: (target: HTMLElement) => boolean;
+  deferHideVisibility: boolean;
+  preserveVisibleOnTargetSwitch: boolean;
+  renderContent?: (
+    element: HTMLElement,
+    text: string
+  ) => HTMLElement;
+}
+
+export interface FaviconCandidates {
+  primaryUrl?: string;
+  browserUrl?: string;
+  allowRemoteImage?: boolean;
+}
+
+export interface ModeTheme {
+  accent?: string;
+  buttonText?: string;
+  buttonBg?: string;
+  buttonBorder?: string;
+  tagBg?: string;
+  tagText?: string;
+  tagBorder?: string;
+  [key: string]: unknown;
+}
+
+export interface SuggestionActionTagElement extends HTMLSpanElement {
+  _xActionLabel?: HTMLSpanElement | null;
+  _xAction?: string;
+  _xSuggestion?: Suggestion;
+  _xDefaultBg?: string;
+  _xDefaultText?: string;
+  _xDefaultBorder?: string;
+}
+
+export interface SuggestionUtilityActionElements {
+  slot: HTMLDivElement;
+  button: HTMLButtonElement;
+}
+
+export interface SuggestionIconSlotElement extends HTMLSpanElement {
+  _xIsFavicon?: boolean;
+}
+
+export interface SuggestionElement extends HTMLDivElement {
+  _xIsSearchSuggestion?: boolean;
+  _xIsAutocompleteTop?: boolean;
+  _xTheme?: ThemeValue;
+  _xThemeHost?: string;
+  _xIconWrap?: HTMLSpanElement | null;
+  _xIconIsFavicon?: boolean;
+  _xDirectIconWrap?: HTMLSpanElement | null;
+  _xTitle?: HTMLSpanElement | null;
+  _xCommandLabel?: HTMLSpanElement | null;
+  _xSwitchButton?: HTMLButtonElement | null;
+  _xHistoryTag?: SuggestionActionTagElement | null;
+  _xBookmarkTag?: SuggestionActionTagElement | null;
+  _xTopSiteTag?: SuggestionActionTagElement | null;
+  _xOpenTabTag?: SuggestionActionTagElement | null;
+  _xTagContainer?: HTMLDivElement | null;
+  _xActionModel?: SuggestionActionModelResult;
+  _xHasActionTags?: boolean;
+  _xVisitButton?: HTMLButtonElement | null;
+  _xVisitButtonLabel?: HTMLSpanElement | null;
+  _xVisitButtonAction?: string;
+  _xActionTags?: SuggestionActionTagElement[];
+  _xSuggestion?: Suggestion;
+  _xAlwaysHideVisitButton?: boolean;
+  _xHasSwitchAction?: boolean;
+  _xHistoryDeleteButton?: HTMLButtonElement | null;
+  _xUtilityActions?: SuggestionUtilityActionElements[];
+  _xIsHovering?: boolean;
+  _xTabId?: number | null;
+  _xSimpleMode?: boolean;
+}
+
+export interface SuggestionsRenderPayload {
+  suggestions?: Suggestion[];
+  query?: string;
+  updateKind?: SuggestionUpdateKind;
+  canAppend?: boolean;
+  startIndex?: number;
+  primaryHighlightIndex?: number;
+  primarySuggestion?: Suggestion | null;
+  primaryHighlightReason?: string;
+  onlyKeywordSuggestions?: boolean;
+  mergedProvider?: Record<string, unknown> | null;
+  emptyMessage?: string;
+}
+
+export interface SuggestionsViewOptions {
+  surface?: SuggestionsSurface;
+  document?: Document;
+  container?: HTMLElement | null;
+  items?: SuggestionElement[];
+  t?: Translate;
+  formatMessage?: (
+    key: string,
+    fallback: string,
+    values?: Record<string, string>
+  ) => string;
+  actionModel?: SuggestionActionModel;
+  getRiSvg?: (name: string, sizeClass?: string) => string;
+  sanitizeDisplayText?: (value: unknown) => string;
+  formatTabRankDebugText?: (tab: OpenTabSuggestion) => string;
+  isTabRankScoreDebugEnabled?: () => boolean;
+  shouldBlockFaviconForHost?: (host: string) => boolean;
+  isLocalNetworkHost?: (host: string) => boolean;
+  getChromeFaviconUrl?: (url: string) => string;
+  getHostFromUrl?: (url: string) => string;
+  getUrlDisplay?: (url: string) => string;
+  isSimpleModeEnabled?: () => boolean;
+  getThemeHostForSuggestion?: (suggestion: Suggestion) => string;
+  getImmediateThemeForSuggestion?: (
+    suggestion: Suggestion
+  ) => ThemeValue;
+  getThemeForSuggestion?: (
+    suggestion: Suggestion
+  ) => Promise<ThemeValue>;
+  shouldUseUrlFallbackThemeForSuggestion?: (
+    suggestion: Suggestion,
+    theme: ThemeValue
+  ) => boolean;
+  getThemeForMode?: (theme: ThemeValue) => ModeTheme;
+  getHoverColors?: (
+    theme: ThemeValue
+  ) => { bg?: string; border?: string; text?: string };
+  getHighlightColors?: (
+    theme: ThemeValue
+  ) => { bg?: string; border?: string };
+  getNeutralHoverActionColors?: () => {
+    bg?: string;
+    border?: string;
+    text?: string;
+  };
+  applyThemeVariables?: (
+    target: SuggestionElement,
+    theme: ThemeValue
+  ) => void;
+  applyMarkVariables?: (
+    target: SuggestionElement,
+    theme: ThemeValue,
+    active: boolean
+  ) => void;
+  applyFaviconOpticalAlignment?: (image: HTMLImageElement) => void;
+  applyFaviconOpticalShift?: (image: HTMLImageElement) => void;
+  setFaviconSrcWithAnimation?: (
+    image: HTMLImageElement,
+    source: string
+  ) => boolean;
+  applyFallbackIcon?: (image: HTMLImageElement) => void;
+  attachFaviconWithFallbacks?: (
+    image: HTMLImageElement,
+    url: string,
+    host: string,
+    candidates: FaviconCandidates
+  ) => void;
+  getBrowserPageFaviconUrl?: (url: string) => string;
+  getPageFaviconRenderCandidates?: (
+    url: string,
+    explicitUrl: string,
+    options?: { includeChromeFallback?: boolean; allowRemoteImage?: boolean }
+  ) => FaviconCandidates;
+  reportMissingIcon?: (...args: unknown[]) => void;
+  preloadIcon?: (favicon: string, url: string) => void;
+  setSuggestionsVisible?: (visible: boolean) => void;
+  onSetSelectedIndex?: (index: number) => void;
+  getSelectedIndex?: () => number;
+  onSwitchToTab?: (
+    tab: OpenTabSuggestion,
+    event: MouseEvent
+  ) => void;
+  onActivateSuggestion?: (
+    suggestion: Suggestion,
+    query: string,
+    event: MouseEvent,
+    index: number,
+    item: SuggestionElement
+  ) => void;
+  onDeleteHistory?: (
+    suggestion: Suggestion,
+    query: string
+  ) => void;
+  onCopyUrl?: (url: string) => boolean | Promise<boolean> | void;
+  shouldSwitchMatchedTabSuggestion?: (
+    suggestion: Suggestion,
+    index: number
+  ) => boolean;
+  showTopActionTooltip?: (
+    target: HTMLElement,
+    text: string
+  ) => void;
+  hideTopActionTooltip?: () => void;
+  bindCursorTooltip?: (
+    target: HTMLElement,
+    getText: () => string,
+    options: CursorTooltipOptions
+  ) => unknown;
+  // Where a help center result's passage card goes; the document body when left out.
+  getHelpPassageHost?: () => Node | null;
+  getSearchActionLabel?: () => string;
+  getSiteSearchDisplayName?: (
+    provider: Record<string, unknown>
+  ) => string;
+  isAiSiteSearchProvider?: (
+    provider: Record<string, unknown>
+  ) => boolean;
+  getDefaultSearchEngineThemeUrl?: () => string;
+  getBrandAccentForUrl?: (url: string) => unknown;
+  buildThemeFromAccent?: (
+    accent: unknown,
+    kind: string
+  ) => ThemeValue;
+  isBrowserNewtabUrl?: (url: string) => boolean;
+  isBrowserInternalUrl?: (url: string) => boolean;
+  defaultTheme?: ThemeValue;
+  urlHighlightTheme?: ThemeValue;
+  openTabSuggestionLimit?: number;
+  openTabInitialRenderLimit?: number;
+  getOpenTabInitialRenderLimit?: () => number;
+  openTabRenderBatchSize?: number;
+  getOpenTabRenderBatchSize?: () => number;
+  enterAction?: string;
+  autoHighlightFirstTab?: boolean;
+}
+
+export interface SuggestionsViewController {
+  render(payload?: SuggestionsRenderPayload): void;
+  renderTabs(tabList?: OpenTabSuggestion[]): void;
+  updateSelection(selectedIndex?: number): void;
+  setOpenInCurrentTabModifierActive(active: boolean): void;
+  setOpenSwitchInNewTabModifierActive(active: boolean): void;
+  setOpenInBackgroundTabModifierActive(active: boolean): void;
+  clear(): void;
+  destroy(): void;
+  getAutoHighlightIndex(): number;
+  markAutocompleteTop(primaryHighlightIndex: number): void;
+  getItems(): SuggestionElement[];
+}
+
+export interface NormalizedOptions {
+  surface: SuggestionsSurface;
+  document: Document;
+  container: HTMLElement;
+  items: SuggestionElement[];
+  t: Translate;
+  formatMessage: NonNullable<SuggestionsViewOptions['formatMessage']>;
+  actionModel: SuggestionActionModel;
+  getRiSvg: NonNullable<SuggestionsViewOptions['getRiSvg']>;
+  sanitizeDisplayText: NonNullable<
+    SuggestionsViewOptions['sanitizeDisplayText']
+  >;
+  formatTabRankDebugText: NonNullable<
+    SuggestionsViewOptions['formatTabRankDebugText']
+  >;
+  isTabRankScoreDebugEnabled: NonNullable<
+    SuggestionsViewOptions['isTabRankScoreDebugEnabled']
+  >;
+  shouldBlockFaviconForHost: NonNullable<
+    SuggestionsViewOptions['shouldBlockFaviconForHost']
+  >;
+  isLocalNetworkHost: NonNullable<
+    SuggestionsViewOptions['isLocalNetworkHost']
+  >;
+  getChromeFaviconUrl: NonNullable<
+    SuggestionsViewOptions['getChromeFaviconUrl']
+  >;
+  getHostFromUrl: NonNullable<SuggestionsViewOptions['getHostFromUrl']>;
+  getUrlDisplay: NonNullable<SuggestionsViewOptions['getUrlDisplay']>;
+  isSimpleModeEnabled: NonNullable<
+    SuggestionsViewOptions['isSimpleModeEnabled']
+  >;
+  getThemeHostForSuggestion: NonNullable<
+    SuggestionsViewOptions['getThemeHostForSuggestion']
+  >;
+  getImmediateThemeForSuggestion: NonNullable<
+    SuggestionsViewOptions['getImmediateThemeForSuggestion']
+  >;
+  getThemeForSuggestion: NonNullable<
+    SuggestionsViewOptions['getThemeForSuggestion']
+  >;
+  shouldUseUrlFallbackThemeForSuggestion: NonNullable<
+    SuggestionsViewOptions['shouldUseUrlFallbackThemeForSuggestion']
+  >;
+  getThemeForMode: NonNullable<SuggestionsViewOptions['getThemeForMode']>;
+  getHoverColors: NonNullable<SuggestionsViewOptions['getHoverColors']>;
+  getHighlightColors: NonNullable<
+    SuggestionsViewOptions['getHighlightColors']
+  >;
+  getNeutralHoverActionColors: NonNullable<
+    SuggestionsViewOptions['getNeutralHoverActionColors']
+  >;
+  applyThemeVariables: NonNullable<
+    SuggestionsViewOptions['applyThemeVariables']
+  >;
+  applyMarkVariables: NonNullable<
+    SuggestionsViewOptions['applyMarkVariables']
+  >;
+  applyFaviconOpticalAlignment: NonNullable<
+    SuggestionsViewOptions['applyFaviconOpticalAlignment']
+  >;
+  attachFaviconWithFallbacks: NonNullable<
+    SuggestionsViewOptions['attachFaviconWithFallbacks']
+  >;
+  getPageFaviconRenderCandidates: NonNullable<
+    SuggestionsViewOptions['getPageFaviconRenderCandidates']
+  >;
+  preloadIcon: NonNullable<SuggestionsViewOptions['preloadIcon']>;
+  setSuggestionsVisible: NonNullable<
+    SuggestionsViewOptions['setSuggestionsVisible']
+  >;
+  onSetSelectedIndex: NonNullable<
+    SuggestionsViewOptions['onSetSelectedIndex']
+  >;
+  getSelectedIndex: NonNullable<
+    SuggestionsViewOptions['getSelectedIndex']
+  >;
+  onSwitchToTab: NonNullable<SuggestionsViewOptions['onSwitchToTab']>;
+  onActivateSuggestion: NonNullable<
+    SuggestionsViewOptions['onActivateSuggestion']
+  >;
+  onDeleteHistory: NonNullable<
+    SuggestionsViewOptions['onDeleteHistory']
+  >;
+  onCopyUrl: NonNullable<SuggestionsViewOptions['onCopyUrl']>;
+  shouldSwitchMatchedTabSuggestion: NonNullable<
+    SuggestionsViewOptions['shouldSwitchMatchedTabSuggestion']
+  >;
+  showTopActionTooltip: NonNullable<
+    SuggestionsViewOptions['showTopActionTooltip']
+  >;
+  hideTopActionTooltip: NonNullable<
+    SuggestionsViewOptions['hideTopActionTooltip']
+  >;
+  bindCursorTooltip: SuggestionsViewOptions['bindCursorTooltip'];
+  getSearchActionLabel: NonNullable<
+    SuggestionsViewOptions['getSearchActionLabel']
+  >;
+  getSiteSearchDisplayName: NonNullable<
+    SuggestionsViewOptions['getSiteSearchDisplayName']
+  >;
+  isAiSiteSearchProvider: NonNullable<
+    SuggestionsViewOptions['isAiSiteSearchProvider']
+  >;
+  getDefaultSearchEngineThemeUrl: NonNullable<
+    SuggestionsViewOptions['getDefaultSearchEngineThemeUrl']
+  >;
+  getBrandAccentForUrl: NonNullable<
+    SuggestionsViewOptions['getBrandAccentForUrl']
+  >;
+  buildThemeFromAccent: NonNullable<
+    SuggestionsViewOptions['buildThemeFromAccent']
+  >;
+  isBrowserNewtabUrl: NonNullable<
+    SuggestionsViewOptions['isBrowserNewtabUrl']
+  >;
+  isBrowserInternalUrl: NonNullable<
+    SuggestionsViewOptions['isBrowserInternalUrl']
+  >;
+  defaultTheme: ThemeValue;
+  urlHighlightTheme: ThemeValue;
+  openTabSuggestionLimit: number;
+  openTabInitialRenderLimit: number;
+  getOpenTabInitialRenderLimit: () => number;
+  openTabRenderBatchSize: number;
+  getOpenTabRenderBatchSize: () => number;
+  enterAction: string;
+  autoHighlightFirstTab: boolean;
+}
+
+export interface ModifierState {
+  openInCurrentTab: boolean;
+  openSwitchInNewTab: boolean;
+  openInBackgroundTab: boolean;
+}
+
+export interface SuggestionsRuntime {
+  options: NormalizedOptions;
+  modifiers: ModifierState;
+  queryStore: QueryStore;
+  updateSelection: (selectedIndex?: number) => void;
+}
+
+export interface QueryStore {
+  getSnapshot: () => string;
+  subscribe: (listener: () => void) => () => void;
+  set: (query: string) => void;
+}
+
+export interface SuggestionValueRef {
+  current: Suggestion;
+}
+
+export interface IconSpec {
+  kind: 'favicon' | 'inline';
+  iconName?: string;
+  tone?: string;
+  src?: string;
+  attach?: boolean;
+  url?: string;
+  host?: string;
+  favicon?: string;
+  objectFitContain?: boolean;
+  fallbackIconName?: string;
+  allowRemoteImage?: boolean;
+}
+
+export interface SearchSuggestionRowProps {
+  runtime: SuggestionsRuntime;
+  suggestionRef: SuggestionValueRef;
+  suggestionFingerprint: string;
+  index: number;
+  isPrimary: boolean;
+  primaryHighlightReason: string;
+  isMergedHighlight: boolean;
+  onlyKeywordSuggestions: boolean;
+  last: boolean;
+  simpleMode: boolean;
+}

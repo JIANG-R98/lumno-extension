@@ -5,16 +5,14 @@ const path = require('path');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { readReactSource } = require('../helpers/react-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const newtabHtml = readPageSource('newtab.html');
 const newtabJs = readNewtabRuntimeSource();
 const overlayCss = readStylesheet('src/overlay/suggestions-view.css');
 const overlayJs = readOverlayPanelSource();
-const suggestionsReact = fs.readFileSync(
-  path.join(repoRoot, 'react-src/search/suggestions.tsx'),
-  'utf8'
-);
+const suggestionsReact = readReactSource('react-src/search/suggestions.tsx');
 
 function getCssRuleBlock(source, selector) {
   // The selector may share its rule with siblings (the glass style's dark-palette variants).
