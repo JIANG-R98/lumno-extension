@@ -13,7 +13,6 @@ function createBottomDockRuntime(deps) {
     NEWTAB_MOBILE_FLOW_BREAKPOINT_PX,
     shouldAnimateNewtabLayoutShift,
     applyNewtabWidthMode,
-    markNewtabStartupMilestone
   } = deps;
 
   // The page state object shared with newtab.js and the other modules.
@@ -96,7 +95,6 @@ function createBottomDockRuntime(deps) {
       document.documentElement.getAttribute('data-lumno-motion-effects') !== 'off'
   });
   applyNewtabWidthMode();
-  markNewtabStartupMilestone('dock-runtime-created');
 
   return {
     bottomDockRuntime,

@@ -113,21 +113,6 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
   if (document.body) {
     document.body.removeAttribute('data-nt-ready');
   }
-  const newtabStartupProfiler = globalThis.__lumnoCodexDebugStartupProfilerV1 || null;
-  function markNewtabStartupMilestone(name) {
-    if (newtabStartupProfiler &&
-        typeof newtabStartupProfiler.markMilestone === 'function') {
-      newtabStartupProfiler.markMilestone(name);
-    }
-  }
-  function observeNewtabStartupTask(name, task) {
-    if (newtabStartupProfiler &&
-        typeof newtabStartupProfiler.observeTask === 'function') {
-      newtabStartupProfiler.observeTask(name, task);
-    }
-    return task;
-  }
-  markNewtabStartupMilestone('script-start');
 
   const {
     settingsRuntimeApi,
@@ -1275,7 +1260,6 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
   const NEWTAB_SEARCH_WIDTH_CONFIG = NEWTAB_LAYOUT.SEARCH_WIDTH_CONFIG;
   toastElement = document.getElementById('_x_extension_toast_2024_unique_');
   pageState.toastController = NEWTAB_TOAST.createToastController(toastElement, { windowObj: window });
-  markNewtabStartupMilestone('core-runtimes-created');
 
 
 
@@ -1670,7 +1654,6 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
   window.addEventListener('pagehide', hideToast);
 
   const initialWallpaperOverlayReadyTask = bootstrapInitialWallpaperOverlay();
-  observeNewtabStartupTask('wallpaper-overlay', initialWallpaperOverlayReadyTask);
   const initialWallpaperVisualReadyTask = Promise.all([
     bootstrapInitialThemeMode(),
     initialWallpaperOverlayReadyTask.then(() => bootstrapInitialWallpaper()),
@@ -1681,15 +1664,12 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
   }).then(() => {
     markInitialWallpaperVisualReady();
   });
-  observeNewtabStartupTask('wallpaper-visual', initialWallpaperVisualReadyTask);
   const initialAppearanceReadyTask = Promise.all([
     initialWallpaperVisualReadyTask,
     bootstrapInitialNewtabFavicon()
   ]).catch((error) => {
     console.warn('[Lumno] Initial new tab appearance setup failed.', error);
   });
-  observeNewtabStartupTask('appearance', initialAppearanceReadyTask);
-  markNewtabStartupMilestone('appearance-bootstrap-scheduled');
 
   const {
     applyBookmarkCountPreference,
@@ -2164,7 +2144,6 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
     shouldSkipNewtabEntryMotion,
     updateBookmarkSectionPosition,
     finishWordmarkEntryAnimation,
-    markNewtabStartupMilestone,
     rememberSearchEntryViewport,
     getSearchEntryViewportSnapshot,
     hasSearchEntryViewportChanged,
@@ -2184,7 +2163,6 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
 
   });
 
-  markNewtabStartupMilestone('page-structure-created');
 
   const {
     showTopActionTooltip,
@@ -2504,7 +2482,6 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
   });
 
   createShortcutsSection();
-  markNewtabStartupMilestone('shortcut-surface-created');
 
   NEWTAB_BOOKMARK_SECTION.createBookmarkSection({
     setContentSectionVisible,
@@ -2623,7 +2600,6 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
     NEWTAB_MOBILE_FLOW_BREAKPOINT_PX,
     shouldAnimateNewtabLayoutShift,
     applyNewtabWidthMode,
-    markNewtabStartupMilestone,
     pageState
   });
 
@@ -3238,7 +3214,6 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
     updateSelection,
     scrollSelectedSuggestionIntoView,
     submitSearchQuery,
-    markNewtabStartupMilestone,
     root,
     dismissSearchSuggestionsFromBackground,
     focusSearchInputPreservingScroll,
@@ -3408,7 +3383,6 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
     setSearchScopeIconEnabled,
     syncSearchModeMenuResultOffset,
     loadSiteSearchIconCache,
-    markNewtabStartupMilestone,
     pageState
   });
 
@@ -3489,7 +3463,6 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
 
   createWallpaperControls();
   createFeedbackControls();
-  markNewtabStartupMilestone('auxiliary-controls-created');
   document.addEventListener('pointerdown', function(event) {
     if (!isFeedbackPopoverOpen()) {
       return;
@@ -3576,7 +3549,6 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
   if (pageState.shortcutDialogController) {
     pageState.shortcutDialogController.mount(document.body);
   }
-  markNewtabStartupMilestone('dom-mounted');
 
   const {
     scheduleRecentReloadIfVisible,
@@ -3618,11 +3590,8 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
   bottomDockRuntime.onScroll(scheduleWallpaperAdaptiveToneUpdate, { passive: true });
   const actionButtonVisibilityReadyPromise = loadNewtabActionButtonVisibility();
   const glassStyleReadyPromise = loadNewtabGlassStyle();
-  observeNewtabStartupTask('action-button-visibility', actionButtonVisibilityReadyPromise);
   const shortcutPreferencesReadyPromise = loadNewtabShortcutPreferences();
-  observeNewtabStartupTask('shortcut-preferences', shortcutPreferencesReadyPromise);
   const shortcutsReadyPromise = shortcutPreferencesReadyPromise.then(loadVisibleShortcuts);
-  observeNewtabStartupTask('visible-shortcuts', shortcutsReadyPromise);
   const initialShortcutsReadyTask = shortcutsReadyPromise.catch((error) => {
     console.warn('[Lumno] Deferred shortcut loading failed.', error);
     return [];
@@ -3632,9 +3601,7 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
     loadFaviconRequestBlacklistItems(),
     loadFaviconEnhancedFetchEnabled()
   ]);
-  observeNewtabStartupTask('section-policy', sectionPolicyReadyPromise);
   const initialLanguageReadyTask = bootstrapInitialLanguageMode();
-  observeNewtabStartupTask('language', initialLanguageReadyTask);
   const initialMotionPreferenceReadyTask = globalThis.LumnoMotionPreferenceReady;
   const initialLayoutStorageReadyTask = startupStorageReadBatch
     ? startupStorageReadBatch.ready
@@ -3643,9 +3610,6 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
     typeof document.fonts.ready.then === 'function'
       ? document.fonts.ready.catch(() => true)
       : Promise.resolve(true);
-  observeNewtabStartupTask('fonts', initialFontsReadyTask);
-  observeNewtabStartupTask('time-font', initialTimeFontReadyTask);
-  observeNewtabStartupTask('quote', initialQuoteReadyTask);
   const initialVisualReadyPromise = Promise.all([
     initialAppearanceReadyTask,
     initialBookmarkViewModeReadyPromise,
@@ -3678,21 +3642,17 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
       force: true,
       sectionDataRevision: initialSectionDataRevision
     });
-    observeNewtabStartupTask('recent-sites', recentSitesReadyTask);
-    observeNewtabStartupTask('bookmarks', bookmarksReadyTask);
     recentSitesReadyTask.then(releaseStartupRecentSourceReads, releaseStartupRecentSourceReads);
     return Promise.all([recentSitesReadyTask, bookmarksReadyTask]);
   }).catch((error) => {
     console.warn('[Lumno] Initial new tab content setup failed.', error);
   }).then(() => {
     // The wallpaper leads: content enters once its tones are on the controls.
-    return observeNewtabStartupTask('wallpaper-tone', waitForInitialWallpaperTone());
+    return waitForInitialWallpaperTone();
   }).then(() => {
     maybeShowFileAccessNotice();
     markNewtabReady();
   });
-  observeNewtabStartupTask('visual-ready', initialVisualReadyPromise);
   updateBookmarkSectionPosition();
-  markNewtabStartupMilestone('script-end');
 
 })();

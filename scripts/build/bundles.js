@@ -73,7 +73,6 @@ const BUNDLES = [
   // Shared by the pages
   { name: 'cjk-font-faces', files: ['src/shared/cjk-font-faces.js'] },
   { name: 'react-page-bootstrap', files: ['src/shared/react-page-bootstrap.js'] },
-  { name: 'codex-debug-surface', files: ['src/shared/codex-debug-surface-start.js'], developmentOnly: true },
 
   // Injected into web pages
   { name: 'icon-font-preload', files: ['src/shared/icon-font-preload.js'] },
@@ -90,17 +89,7 @@ const BUNDLES = [
   { name: 'youtube-auto-pip', files: ['src/content/youtube-auto-pip.js'] }
 ];
 
-// Modules the store package's bundles leave out (stand-ins export only names),
-// and the module whose DEVELOPMENT_BUILD flag the store build turns off.
-const DEVELOPMENT_ONLY_MODULES = [
-  'src/background/codex-debug-bridge.js',
-  'src/shared/codex-debug-surface.js'
-];
-const BUILD_FLAGS_MODULE = 'src/shared/build-flags.js';
-
 module.exports = {
   BUNDLES,
-  BUNDLE_DIRECTORY: 'build',
-  BUILD_FLAGS_MODULE,
-  DEVELOPMENT_ONLY_MODULES
+  BUNDLE_DIRECTORY: 'build'
 };

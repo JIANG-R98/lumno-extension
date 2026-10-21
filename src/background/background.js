@@ -153,8 +153,6 @@ import {
   loadLocaleMessages
 } from './message-handlers-service.js';
 // Development-only: the store build replaces it with an empty module.
-import * as CODEX_DEBUG_BRIDGE from './codex-debug-bridge.js';
-import { DEVELOPMENT_BUILD } from '../shared/build-flags.js';
 
 // pinyin-pro (~320 KB) only matters when a Han-character title is matched
 // against a pinyin query, or a Han query against site addresses, so the
@@ -182,10 +180,6 @@ export const openBrowserNewtabFallback = BACKGROUND_NEWTAB_FALLBACK.openBrowserN
 export const openNewtabFallback = BACKGROUND_NEWTAB_FALLBACK.openNewtabFallback;
 export const openNewtabFallbackForUrl = BACKGROUND_NEWTAB_FALLBACK.openNewtabFallbackForUrl;
 export const swapNewtabForFocus = BACKGROUND_NEWTAB_FALLBACK.swapNewtabForFocus;
-// The Codex debug bridge exists only in development builds.
-export const codexDebugBridge = DEVELOPMENT_BUILD
-  ? CODEX_DEBUG_BRIDGE.create({ chromeApi: chrome })
-  : null;
 const shortcutRules = BACKGROUND_SHORTCUT_RULES.create({
   chromeApi: chrome,
   fetchImpl: fetch,
@@ -500,10 +494,6 @@ chrome.commands.onCommand.addListener(function(command) {
 
 if (chrome && chrome.runtime && chrome.runtime.onConnect) {
   chrome.runtime.onConnect.addListener(registerTabSwitcherExtensionPagePortConnection);
-}
-
-if (codexDebugBridge) {
-  codexDebugBridge.attach();
 }
 
 chrome.tabs.onCreated.addListener((tab) => {

@@ -5,7 +5,6 @@ function createEntryMotion(deps) {
     shouldSkipNewtabEntryMotion,
     updateBookmarkSectionPosition,
     finishWordmarkEntryAnimation,
-    markNewtabStartupMilestone,
     rememberSearchEntryViewport,
     getSearchEntryViewportSnapshot,
     hasSearchEntryViewportChanged
@@ -88,7 +87,6 @@ function createEntryMotion(deps) {
     document.body.setAttribute('data-nt-enter', 'done');
     root.setAttribute('data-lumno-search-entry', 'done');
     finishWordmarkEntryAnimation();
-    markNewtabStartupMilestone('ready-visible');
     document.body.setAttribute('data-nt-ready', '1');
     if (pageState.resolveNewtabEntryAnimationReady) {
       pageState.resolveNewtabEntryAnimationReady();
@@ -128,7 +126,6 @@ function createEntryMotion(deps) {
           scheduleNewtabReadyAfterViewportSettle();
           return;
         }
-        markNewtabStartupMilestone('ready-visible');
         document.body.setAttribute('data-nt-ready', '1');
         startNewtabEntryAnimation();
         rememberSearchEntryViewport();
@@ -149,7 +146,6 @@ function createEntryMotion(deps) {
     if (!document.body || newtabWallpaperLeadTimer) {
       return;
     }
-    markNewtabStartupMilestone('ready-requested');
     const leadDelay = getWallpaperLeadDelay();
     if (leadDelay > 0) {
       newtabWallpaperLeadTimer = window.setTimeout(() => {

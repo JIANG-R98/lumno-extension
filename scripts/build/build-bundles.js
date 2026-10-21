@@ -3,13 +3,11 @@
 // Builds the bundles listed in scripts/build/bundles.js into build/.
 //   node scripts/build/build-bundles.js [--watch]
 //   node scripts/build/build-bundles.js --store --outdir <dir>
-// --store builds the store package's copies: minified, without the
-// development-only bundles.
+// --store builds the store package's copies, minified.
 
-const fs = require('fs');
 const path = require('path');
 const esbuild = require('esbuild');
-const { BUNDLES, BUNDLE_DIRECTORY, BUILD_FLAGS_MODULE, DEVELOPMENT_ONLY_MODULES } = require('./bundles');
+const { BUNDLES, BUNDLE_DIRECTORY } = require('./bundles');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const ENTRY_NAMESPACE = 'lumno-bundle';
@@ -70,46 +68,9 @@ function sharedModulesPlugin(external) {
   };
 }
 
-// The store build: DEVELOPMENT_BUILD is false and the development-only
-// modules are empty, so minification drops what depends on them.
-// A development-only module's export names, for the store build's stand-in:
-// it keeps the names (as undefined) so code that only reaches them behind
-// DEVELOPMENT_BUILD still bundles cleanly.
-function developmentOnlyStub(file) {
-  const source = fs.readFileSync(file, 'utf8');
-  const names = new Set();
-  for (const match of source.matchAll(/^export\s+(?:async\s+)?(?:function\*?|const|let|class)\s+(\w+)/gm)) {
-    names.add(match[1]);
-  }
-  for (const match of source.matchAll(/^export\s*\{([^}]*)\}/gm)) {
-    match[1].split(',').map((entry) => entry.trim().split(/\s+as\s+/).pop()).filter(Boolean).forEach((name) => names.add(name));
-  }
-  return [...names].map((name) => `export const ${name} = undefined;`).join('\n');
-}
-
-function storeBuildPlugin() {
-  const developmentOnly = new Set(DEVELOPMENT_ONLY_MODULES.map((file) => path.join(repoRoot, file)));
-  const flags = path.join(repoRoot, BUILD_FLAGS_MODULE);
-  return {
-    name: 'lumno-store-build',
-    setup(build) {
-      build.onLoad({ filter: /\.js$/ }, (args) => {
-        if (args.path === flags) {
-          return { contents: 'export const DEVELOPMENT_BUILD = false;\n', loader: 'js' };
-        }
-        if (developmentOnly.has(args.path)) {
-          return { contents: developmentOnlyStub(args.path), loader: 'js' };
-        }
-        return undefined;
-      });
-    }
-  };
-}
-
-function bundleOptions({ bundle, outdir, minify, write, store, sharedModules, external }) {
+function bundleOptions({ bundle, outdir, minify, write, sharedModules, external }) {
   const plugins = [bundleEntryPlugin(bundle, sharedModules)];
   if (external && external.size) plugins.push(sharedModulesPlugin(external));
-  if (store) plugins.push(storeBuildPlugin());
   return {
     absWorkingDir: repoRoot,
     entryPoints: { [bundle.name]: `lumno-bundle:${bundle.name}` },
@@ -147,16 +108,13 @@ function optionsFor(bundle, shared, options) {
 }
 
 async function buildBundles(options = {}) {
-  const store = options.store === true;
-  const bundles = BUNDLES.filter((bundle) => !(store && bundle.developmentOnly));
   const common = {
     outdir: options.outdir || path.join(repoRoot, BUNDLE_DIRECTORY),
-    minify: store,
-    write: options.write !== false,
-    store
+    minify: options.store === true,
+    write: options.write !== false
   };
-  const shared = await collectSharedModules(bundles, common);
-  const results = await Promise.all(bundles.map((bundle) => esbuild.build(optionsFor(bundle, shared, common))));
+  const shared = await collectSharedModules(BUNDLES, common);
+  const results = await Promise.all(BUNDLES.map((bundle) => esbuild.build(optionsFor(bundle, shared, common))));
   // One metafile for all of them, as a single build would give.
   const metafile = { inputs: {}, outputs: {} };
   const outputFiles = [];
@@ -169,7 +127,7 @@ async function buildBundles(options = {}) {
 }
 
 async function watchBundles() {
-  const common = { outdir: path.join(repoRoot, BUNDLE_DIRECTORY), minify: false, write: true, store: false };
+  const common = { outdir: path.join(repoRoot, BUNDLE_DIRECTORY), minify: false, write: true };
   const shared = await collectSharedModules(BUNDLES, common);
   const contexts = await Promise.all(BUNDLES.map((bundle) => esbuild.context(optionsFor(bundle, shared, common))));
   await Promise.all(contexts.map((context) => context.watch()));

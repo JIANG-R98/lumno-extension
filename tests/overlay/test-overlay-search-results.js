@@ -9,9 +9,7 @@ const repoRoot = path.resolve(__dirname, '..', '..');
 const backgroundSource = readBackgroundSource();
 const injectionList = backgroundSource.match(/const overlayInjectionFiles = (\[[\s\S]*?\n  \]);/);
 assert.ok(injectionList, 'the production overlay injection list must be available');
-const injectionFiles = vm.runInNewContext(injectionList[1], {
-  shouldInjectOverlayCodexDebugSurface: false
-});
+const injectionFiles = vm.runInNewContext(injectionList[1], {});
 
 async function waitFor(condition, message, errors) {
   const deadline = Date.now() + 2000;

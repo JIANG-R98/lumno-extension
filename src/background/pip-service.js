@@ -16,7 +16,6 @@ import {
   openExtensionOptionsPage
 } from './background.js';
 import { getResolvedTabUrl, isRestrictedUrl } from './browser-urls-service.js';
-import { DEVELOPMENT_BUILD } from '../shared/build-flags.js';
 
 export const pipOwnership = LumnoPipOwnership.create({
   chromeApi: chrome,
@@ -141,7 +140,6 @@ function openDocumentPipPickerOnReadyTab(activeTab, source) {
     chrome.scripting.executeScript({
       target: { tabId: activeTab.id },
       files: [
-        ...(DEVELOPMENT_BUILD ? ['build/codex-debug-surface.js'] : []),
         'build/document-pip-picker.js'
       ]
     }, () => {

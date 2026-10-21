@@ -372,11 +372,6 @@ function testBootstrapDisablesRightButtonTransitions() {
     /files: overlayInjectionFiles[\s\S]*?overlayEntryMotionStartedAt = Date\.now\(\);\s*runOverlayWithResolvedZoom\(\);/,
     'a tab\'s one-time runtime injection must not spend the entry motion budget'
   );
-  assert.match(
-    backgroundSource,
-    /const shouldInjectOverlayCodexDebugSurface = DEVELOPMENT_BUILD && codexDebugBridge\.isEnabled\(\);[\s\S]*?\.\.\.\(shouldInjectOverlayCodexDebugSurface \? \['build\/codex-debug-surface\.js'\] : \[\]\)/,
-    'the development-only debug surface must stay out of the production critical injection list'
-  );
 }
 
 Promise.resolve()

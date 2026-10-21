@@ -2,12 +2,11 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { BUNDLE_DIRECTORY, DEVELOPMENT_ONLY_MODULES } = require('./bundles');
+const { BUNDLE_DIRECTORY } = require('./bundles');
 
 const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
 const storeManifest = { ...manifest };
 delete storeManifest.key;
-delete storeManifest.externally_connectable;
 const version = manifest.version;
 const repoRoot = process.cwd();
 const distDir = path.join(process.cwd(), 'dist');
@@ -78,8 +77,7 @@ packageRoots.forEach((packageRoot) => {
 });
 fs.writeFileSync(stagedPath('manifest.json'), `${JSON.stringify(storeManifest, null, 3)}\n`);
 
-// The store builds its own bundles: minified, without the development-only
-// ones (the debug surface).
+// The store builds its own bundles, minified.
 const bundleBuild = spawnSync(process.execPath, [
   path.join(__dirname, 'build-bundles.js'), '--store', '--outdir', stagedPath(BUNDLE_DIRECTORY)
 ], { cwd: repoRoot, stdio: 'inherit' });
@@ -114,39 +112,6 @@ function collectHtmlFiles(dir) {
 }
 collectHtmlFiles(stagedPath('src'));
 stagedHtmlFiles.push(stagedPath('newtab.html'));
-
-let debugSurfaceScriptCount = 0;
-stagedHtmlFiles.forEach((file) => {
-  let source = fs.readFileSync(file, 'utf8');
-  source = source.replace(
-    /^[ \t]*<script\s+src=["']\.\.\/\.\.\/build\/codex-debug-surface\.js["']\s*><\/script>\s*\r?\n/gm,
-    () => {
-      debugSurfaceScriptCount += 1;
-      return '';
-    }
-  );
-  fs.writeFileSync(file, source);
-});
-if (debugSurfaceScriptCount !== 3) {
-  throw new Error(`Store package transform expected 3 debug surface script tags, found ${debugSurfaceScriptCount}.`);
-}
-
-DEVELOPMENT_ONLY_MODULES.forEach((file) => {
-  if (fs.existsSync(stagedPath(file))) {
-    throw new Error(`Development-only file remained in store package stage: ${file}`);
-  }
-});
-stagedHtmlFiles.forEach((file) => {
-  const source = fs.readFileSync(file, 'utf8');
-  if (source.includes('codex-debug-surface.js')) {
-    throw new Error(`Development-only surface reference remained in ${packagePathForFile(file)}.`);
-  }
-});
-stagedBundles.forEach((file) => {
-  if (/codex-debug-(?:bridge|surface)\.js|LumnoCodexDebug|codexDebugBridge/.test(fs.readFileSync(stagedPath(`${BUNDLE_DIRECTORY}/${file}`), 'utf8'))) {
-    throw new Error(`Development-only debug bridge reference remained in ${BUNDLE_DIRECTORY}/${file}.`);
-  }
-});
 
 let zipResult = null;
 const zipArgs = ['-r', '-D', zipPath, ...packageRoots, BUNDLE_DIRECTORY, 'manifest.json'];

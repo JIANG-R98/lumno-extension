@@ -80,45 +80,6 @@ assertMatches(
 );
 assertMatches(
   newtabJs,
-  /markNewtabStartupMilestone\('script-start'\)[\s\S]*?markNewtabStartupMilestone\('script-end'\)/,
-  'development New Tab startup diagnostics should bracket synchronous page initialization'
-);
-[
-  'core-runtimes-created',
-  'appearance-bootstrap-scheduled',
-  'page-structure-created',
-  'shortcut-surface-created',
-  'dock-runtime-created',
-  'search-input-created',
-  'search-controller-created',
-  'auxiliary-controls-created',
-  'dom-mounted',
-  'ready-requested',
-  'ready-visible'
-].forEach((milestone) => {
-  assert(
-    newtabJs.includes(`markNewtabStartupMilestone('${milestone}')`),
-    `development startup diagnostics should retain the ${milestone} milestone`
-  );
-});
-[
-  'appearance',
-  'language',
-  'section-policy',
-  'shortcut-preferences',
-  'visible-shortcuts',
-  'recent-sites',
-  'bookmarks',
-  'fonts',
-  'visual-ready'
-].forEach((task) => {
-  assert(
-    newtabJs.includes(`observeNewtabStartupTask('${task}'`),
-    `development startup diagnostics should measure the ${task} task`
-  );
-});
-assertMatches(
-  newtabJs,
   /function migrateStorageIfNeeded\(keys(?:, providerReady)?\) \{[\s\S]*?isPrimaryStorageAreaName\('local'\)/,
   'new tab storage migration should identify the wrapped primary area by name'
 );

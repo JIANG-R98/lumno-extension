@@ -71,39 +71,10 @@ assert(
   entries.every((entry) => !/^(?:supabase|docs|scripts|tests)\//.test(entry)),
   'store package should contain no backend, deployment, or repository tooling files'
 );
-const developmentOnlyFiles = [
-  'src/background/codex-debug-bridge.js',
-  'src/shared/codex-debug-surface.js',
-  'build/codex-debug-surface.js'
-];
-assert(
-  developmentOnlyFiles.every((file) => !entries.includes(file)),
-  'store package should exclude development-only Codex debug scripts'
-);
-[
-  'newtab.html',
-  'src/options/options.html',
-  'src/onboarding/onboarding.html'
-].forEach((file) => {
-  assert(
-    !readPackagedText(file).includes('codex-debug-surface.js'),
-    `${file} should not load the development-only debug surface in the store package`
-  );
-  assert(
-    fs.readFileSync(path.join(repoRoot, file), 'utf8').includes('codex-debug-surface.js'),
-    `${file} should retain the debug surface in development source`
-  );
-});
-
-// Every bundle but the development-only ones ships, minified, in place of the
-// files it is built from.
+// Every bundle ships, minified, in place of the files it is built from.
 const { BUNDLES } = require('../../scripts/build/bundles');
 BUNDLES.forEach((bundle) => {
   const bundlePath = `build/${bundle.name}.js`;
-  if (bundle.developmentOnly) {
-    assert(!entries.includes(bundlePath), `${bundlePath} is development-only`);
-    return;
-  }
   assert(entries.includes(bundlePath), `store package should include ${bundlePath}`);
   assert(!entries.includes(`${bundlePath}.map`), `store package should not include the ${bundlePath} source map`);
   const packaged = readPackagedText(bundlePath);
@@ -132,22 +103,10 @@ const { getBackgroundServiceFiles } = require('../helpers/background-source');
   assert(!entries.includes(file), `store package should ship ${file} only inside the background bundle`);
 });
 assert.strictEqual(packagedManifest.background.service_worker, 'build/background.js');
-assert(
-  !/codex-debug-(?:bridge|surface)|LumnoCodexDebug|codexDebugBridge|lumno\.codex\.debug/.test(readPackagedText('build/background.js')),
-  'the store background bundle should not retain the development-only debug bridge'
-);
 assert(!entries.includes('src/package.json'), 'store package should not include the Node module marker');
-assert(
-  /codex-debug-bridge\.js/.test(fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8')),
-  'development background should retain the Codex debug bridge'
-);
 assert(
   !Object.prototype.hasOwnProperty.call(packagedManifest, 'key'),
   'store package should not include the dedicated development key'
-);
-assert(
-  !Object.prototype.hasOwnProperty.call(packagedManifest, 'externally_connectable'),
-  'store package should not expose the development-only Codex debug connection'
 );
 assert.strictEqual(
   packagedManifest.version,
@@ -156,17 +115,16 @@ assert.strictEqual(
 );
 
 const bootstrapTagPattern = /<script\s+src="\.\.\/\.\.\/build\/react-page-bootstrap\.js"[^>]*><\/script>/;
-const debugSurfaceLinePattern = /^[ \t]*<script\s+src=["']\.\.\/\.\.\/build\/codex-debug-surface\.js["']\s*><\/script>\s*\r?\n/gm;
 [
   'newtab.html',
   'src/options/options.html',
   'src/onboarding/onboarding.html'
 ].forEach((page) => {
-  const sourceHtml = fs.readFileSync(path.join(repoRoot, page), 'utf8').replace(debugSurfaceLinePattern, '');
+  const sourceHtml = fs.readFileSync(path.join(repoRoot, page), 'utf8');
   assert.strictEqual(
     readPackagedText(page),
     sourceHtml,
-    `${page} should load the same bundles in the store package, less the debug surface`
+    `${page} should load the same bundles in the store package`
   );
   assert(bootstrapTagPattern.test(sourceHtml), `${page} should load the React page bootstrap`);
 });

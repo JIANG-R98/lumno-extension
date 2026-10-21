@@ -54,7 +54,6 @@ function createEntryMotion({ wallpaperActive, wallpaperShownAgoMs, focusResume }
     shouldSkipNewtabEntryMotion: () => false,
     updateBookmarkSectionPosition() {},
     finishWordmarkEntryAnimation() {},
-    markNewtabStartupMilestone() {},
     rememberSearchEntryViewport() {},
     getSearchEntryViewportSnapshot: () => viewport,
     hasSearchEntryViewportChanged: () => false
@@ -129,7 +128,7 @@ async function testEffectPreloadRecordsWhenTheWallpaperShowed() {
 function testRevealWaitsForTheWallpaperTones() {
   assert.match(
     newtabSource,
-    /observeNewtabStartupTask\('wallpaper-tone', waitForInitialWallpaperTone\(\)\);\s*\}\)\.then\(\(\) => \{\s*maybeShowFileAccessNotice\(\);\s*markNewtabReady\(\);/,
+    /return waitForInitialWallpaperTone\(\);\s*\}\)\.then\(\(\) => \{\s*maybeShowFileAccessNotice\(\);\s*markNewtabReady\(\);/,
     'the content is revealed only after the first wallpaper sample has tinted its controls'
   );
   assert.match(

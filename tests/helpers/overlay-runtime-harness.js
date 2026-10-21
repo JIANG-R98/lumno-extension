@@ -14,9 +14,7 @@ const repoRoot = path.resolve(__dirname, '../..');
 const backgroundSource = readBackgroundSource();
 const injectionList = backgroundSource.match(/const overlayInjectionFiles = (\[[\s\S]*?\n  \]);/);
 assert.ok(injectionList, 'the production overlay injection list must be available');
-const injectionFiles = vm.runInNewContext(injectionList[1], {
-  shouldInjectOverlayCodexDebugSurface: false
-});
+const injectionFiles = vm.runInNewContext(injectionList[1], {});
 const HOST_ID = '_x_extension_overlay_host_2026_unique_';
 const CONTEXT_TOKEN_KEY = '__lumnoOverlayContextToken2026';
 

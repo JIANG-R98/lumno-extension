@@ -10,7 +10,6 @@
 
 import * as OVERLAY_LOADING_LIFECYCLE from './overlay-loading-lifecycle.js';
 import {
-  codexDebugBridge,
   documentPipEnabledCache,
   logHotkeyDebug,
   openBrowserNewtabFallback,
@@ -46,7 +45,6 @@ import {
   shouldTriggerOnboardingOverlayFromCommand,
   triggerOnboardingOverlayFromCommand
 } from './command-service.js';
-import { DEVELOPMENT_BUILD } from '../shared/build-flags.js';
 
 const OVERLAY_OPENING_GUARD_MS = 5000;
 export const OVERLAY_RUNTIME_VERSION = '2026-10-20-search-title-units-v17';
@@ -227,10 +225,8 @@ export function openOverlayOnTab(activeTab, tabs, source, options) {
   }
   const overlayLoadingRecord = rememberOverlayLoadingRecord(activeTab, source, openOptions);
   shouldRetryPreCompleteFailure = Boolean(overlayLoadingRecord);
-  const shouldInjectOverlayCodexDebugSurface = DEVELOPMENT_BUILD && codexDebugBridge.isEnabled();
   const overlayInjectionFiles = [
     'build/icon-font-preload.js',
-    ...(shouldInjectOverlayCodexDebugSurface ? ['build/codex-debug-surface.js'] : []),
     'src/react/overlay-islands.js',
     'build/overlay.js'
   ];

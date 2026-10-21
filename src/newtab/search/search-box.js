@@ -74,7 +74,6 @@ function createSearchBox(deps) {
     updateSelection,
     scrollSelectedSuggestionIntoView,
     submitSearchQuery,
-    markNewtabStartupMilestone,
     root,
     dismissSearchSuggestionsFromBackground,
     focusSearchInputPreservingScroll,
@@ -425,7 +424,6 @@ function createSearchBox(deps) {
       submitSearchQuery(query, event);
     }
   });
-  markNewtabStartupMilestone('search-input-created');
 
   const handleBackgroundPointerFocus = NEWTAB_BACKGROUND_SEARCH_FOCUS.createBackgroundFocusHandler({
     getBackgroundTargets: () => [document.body, root, pageState.searchLayer],

@@ -89,7 +89,7 @@ assert.match(
 });
 
 assert.deepStrictEqual(
-  getInjectedScripts('documentPipPicker').filter((file) => !file.includes('codex-debug')),
+  getInjectedScripts('documentPipPicker'),
   ['src/shared/ui/toast.js', 'src/content/document-pip-picker.js'],
   'the web clip picker should be injected after the shared Toast it uses'
 );

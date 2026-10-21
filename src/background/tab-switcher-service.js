@@ -48,7 +48,6 @@ import {
   isOwnExtensionPageUrl
 } from './browser-urls-service.js';
 import { recordTabSwitchEvent } from './tab-switch-stats-service.js';
-import { DEVELOPMENT_BUILD } from '../shared/build-flags.js';
 
 function hasTabSwitcherExtensionPagePort(tab) {
   if (!tab || typeof tab.id !== 'number') {
@@ -2213,7 +2212,6 @@ function injectTabSwitcherOnTab(hostTab, items, context) {
       target: { tabId: hostTab.id },
       files: [
         'build/icon-font-preload.js',
-        ...(DEVELOPMENT_BUILD ? ['build/codex-debug-surface.js'] : []),
         'src/react/overlay-islands.js',
         'build/tab-switcher.js'
       ]

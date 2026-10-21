@@ -48,7 +48,6 @@ function createSearchModeController(deps) {
     setSearchScopeIconEnabled,
     syncSearchModeMenuResultOffset,
     loadSiteSearchIconCache,
-    markNewtabStartupMilestone
   } = deps;
 
   // The page state object shared with newtab.js and the other modules.
@@ -173,7 +172,6 @@ function createSearchModeController(deps) {
       }
     }).catch(() => {});
   });
-  markNewtabStartupMilestone('search-controller-created');
 
   function updateSiteSearchPrefixLayout() {
     if (pageState.inputModeController) {

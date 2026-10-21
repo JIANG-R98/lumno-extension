@@ -47,7 +47,6 @@
     "test:newtab-shortcut-icon-store": "node tests/newtab/test-newtab-shortcut-icon-store.js",
     "test:newtab-layout": "node tests/newtab/test-newtab-layout.js",
     "test:message-router": "node tests/background/test-message-router.js",
-    "test:codex-debug": "node tests/background/test-codex-debug-bridge.js",
     "test:tab-groups": "node tests/background/test-background-tab-groups.js",
     "test:bookmark-tab-groups": "node tests/background/test-background-bookmark-tab-groups.js",
     "test:selection-target": "node tests/background/test-background-selection-target.js",

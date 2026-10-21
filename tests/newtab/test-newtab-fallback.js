@@ -90,7 +90,7 @@ assert.match(
 );
 assert.doesNotMatch(
   lumnoNewtabHtml,
-  /wallpaper-preload\.js|codex-debug-surface\.js/,
+  /wallpaper-preload\.js/,
   'standalone Lumno newtab fallback should redirect without painting or bootstrapping an intermediate page'
 );
 assert.ok(
