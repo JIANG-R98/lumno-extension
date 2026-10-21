@@ -6418,6 +6418,7 @@
     }
   }, true);
   window.addEventListener('pointerdown', handleBackgroundPointerFocus, true);
+  window.addEventListener('mousedown', handleBackgroundPointerFocus, true);
   pageState.modeBadge = pageState.inputParts.modeBadge;
   const searchInput = pageState.inputParts.input;
   searchInput.addEventListener('focus', restoreDismissedSearchSuggestions);

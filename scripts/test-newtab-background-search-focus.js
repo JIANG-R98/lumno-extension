@@ -101,6 +101,32 @@ assert.strictEqual(handleBackgroundPointerFocus(createPointerEvent({ name: 'book
 assert.strictEqual(focusCount, 1, 'component pointer events should leave search focus unchanged');
 assert.strictEqual(dismissCount, 2, 'component pointer events should not dismiss search results');
 
+function createMouseDownEvent(target) {
+  return {
+    type: 'mousedown',
+    target,
+    prevented: false,
+    preventDefault() {
+      this.prevented = true;
+    }
+  };
+}
+
+searchValue = '';
+handleBackgroundPointerFocus(createPointerEvent(body));
+const followingMouseDown = createMouseDownEvent(body);
+assert.strictEqual(handleBackgroundPointerFocus(followingMouseDown), true);
+assert.strictEqual(followingMouseDown.prevented, true, 'the mousedown after a focusing click should not blur search again');
+const laterMouseDown = createMouseDownEvent(body);
+assert.strictEqual(handleBackgroundPointerFocus(laterMouseDown), false);
+assert.strictEqual(laterMouseDown.prevented, false, 'only the mousedown right after a focusing click is cancelled');
+
+searchValue = 'lumno';
+handleBackgroundPointerFocus(createPointerEvent(body));
+const dismissingMouseDown = createMouseDownEvent(body);
+assert.strictEqual(handleBackgroundPointerFocus(dismissingMouseDown), false);
+assert.strictEqual(dismissingMouseDown.prevented, false, 'dismissing populated results should keep the default blur');
+
 const newtabSource = readNewtabRuntimeSource();
 assert.match(
   newtabSource,
@@ -131,6 +157,12 @@ assert.match(
   newtabSource,
   /onInput:\s*function\(event\)\s*\{\s*searchSuggestionsDismissed\s*=\s*false;/,
   'editing the input should allow suggestions to render again'
+);
+
+assert.match(
+  newtabSource,
+  /addEventListener\('pointerdown', handleBackgroundPointerFocus, true\);\s*window\.addEventListener\('mousedown', handleBackgroundPointerFocus, true\);/,
+  'the background handler should also see the following mousedown so it can keep focus'
 );
 
 console.log('newtab background search focus tests passed');

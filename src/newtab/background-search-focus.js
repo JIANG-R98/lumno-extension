@@ -17,7 +17,19 @@
     if (typeof config.getBackgroundTargets !== 'function' || typeof config.focusSearch !== 'function') {
       throw new Error('Background search focus requires target and focus callbacks.');
     }
+    let focusedFromTarget = null;
     return function handleBackgroundPointerFocus(event) {
+      // The mousedown that follows a focusing pointerdown would blur the input
+      // again (its default action on a non-focusable background), leaving no caret.
+      if (event && event.type === 'mousedown') {
+        const keepFocus = Boolean(focusedFromTarget) && event.target === focusedFromTarget;
+        focusedFromTarget = null;
+        if (keepFocus) {
+          event.preventDefault();
+        }
+        return keepFocus;
+      }
+      focusedFromTarget = null;
       if (!shouldFocusSearchFromPointer(event, config.getBackgroundTargets())) {
         return false;
       }
@@ -30,7 +42,9 @@
         }
         return true;
       }
-      config.focusSearch();
+      if (config.focusSearch() !== false) {
+        focusedFromTarget = event.target;
+      }
       return true;
     };
   }
