@@ -266,7 +266,8 @@ export function SelectMenu({
       const boxTop = fitsBelow ? below : Math.max(topInset, viewportHeight - padding - boxHeight);
       menu.style.height = `${boxHeight / scaleY}px`;
       menu.style.maxHeight = `${boxHeight / scaleY}px`;
-      menu.style.overflowY = 'auto';
+      // Only the listbox under the field scrolls; the surface itself never does.
+      menu.style.overflowY = 'hidden';
       menu.style.overflowX = 'hidden';
       menu.style.transformOrigin = `${boxTop >= below ? 'top' : 'bottom'} ${align === 'middle' ? 'center' : align}`;
       menu.style.left = `${(left - originX) / scaleX}px`;
@@ -575,8 +576,8 @@ export function SelectMenu({
       }
     >
       {searchable ? (
-        // The field shares the menu's scroll surface and stays pinned at its
-        // top; it is the first thing focused when the menu opens.
+        // The field sits above the scrolling listbox, so the list's scrollbar
+        // never runs past it; it is the first thing focused when the menu opens.
         <div className="_x_extension_select_search_2026_unique_">
           <input
             aria-activedescendant={activeOptionId}
@@ -629,6 +630,10 @@ export function SelectMenu({
             spellCheck={false}
             type="text"
             value={filter}
+          />
+          <i
+            aria-hidden="true"
+            className="_x_extension_select_search_icon_2026_unique_ ri-icon ri-size-16 ri-search-line"
           />
         </div>
       ) : null}
