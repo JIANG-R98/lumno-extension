@@ -3,42 +3,103 @@ const { readStylesheet } = require('../helpers/css-tokens');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
-const { readPageSource } = require('../helpers/page-source');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 const { moduleScript } = require('../helpers/module-script');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const newtabJs = readNewtabRuntimeSource();
-const newtabHtml = readPageSource('newtab.html');
-const pageStructureReact = fs.readFileSync(
-  path.join(repoRoot, 'react-src/newtab/page-structure.tsx'),
-  'utf8'
-);
-const shortcutsReact = fs.readFileSync(
-  path.join(repoRoot, 'react-src/newtab/shortcuts.tsx'),
-  'utf8'
-);
-const shortcutDialogJs = fs.readFileSync(
-  path.join(repoRoot, 'react-src/newtab/shortcut-dialog.tsx'),
-  'utf8'
-);
-const shortcutDialogCss = readStylesheet('src/newtab/shortcuts/shortcut-dialog.css');
-const wallpaperAdaptiveToneJs = fs.readFileSync(path.join(repoRoot, 'src/newtab/wallpaper/wallpaper-adaptive-tone.js'), 'utf8');
-const tooltipJs = fs.readFileSync(path.join(repoRoot, 'src/shared/ui/tooltip.js'), 'utf8');
-const optionsHtml = readPageSource('src/options/options.html');
+
+const { parseCss, parsePageCss } = require('../helpers/css-rules');
+
+// The page styles, read through the CSSOM (see css-rules.js).
+const newtabHtml = parsePageCss('newtab.html');
+const shortcutDialogCss = parseCss(readStylesheet('src/newtab/shortcuts/shortcut-dialog.css'));
+const optionsHtml = parsePageCss('src/options/options.html');
+const optionsDocument = new (require('jsdom').JSDOM)(fs.readFileSync(path.join(repoRoot, 'src/options/options.html'), 'utf8')).window.document;
+
+const normalize = (value) => String(value || '').replace(/\s+/g, ' ').replace(/\(\s+/g, '(').replace(/\s+\)/g, ')').trim();
+
+// One rule's declarations, as getCssRuleBlock used to return its text:
+// { selector, declarations: Map(property -> { value, priority }) }.
+function getCssRuleBlock(css, selector) {
+  const wanted = selector.split(/,\s*/).map((part) => normalize(part));
+  const declarations = new Map();
+  css.entries.filter((entry) => entry.conditions.length === 0 && wanted.every((part) => entry.selectors.includes(part)))
+    .forEach((entry) => {
+      Array.from(entry.style).forEach((name) => declarations.set(name, {
+        value: normalize(entry.style.getPropertyValue(name)),
+        priority: entry.style.getPropertyPriority(name)
+      }));
+    });
+  assert.ok(declarations.size > 0, `${selector} rule should exist`);
+  return { selector, declarations };
+}
+
+// "property: value;" as the stylesheet would write it, or '' when unset.
+function getCssDeclaration(rule, property) {
+  const declaration = rule.declarations.get(property);
+  return declaration ? `${property}: ${declaration.value}${declaration.priority ? ' !important' : ''};` : '';
+}
+
+// Whether a stylesheet (or one rule) declares `needle`: "property: value;"
+// exactly, "property: value-prefix" as a prefix, or otherwise a selector.
+function cssDeclares(target, needle) {
+  // A rule fragment, "selector, selector { property: value; ...".
+  const fragment = String(needle).match(/^([^{]+)\{([\s\S]*)$/);
+  if (fragment && !target.declarations) {
+    const rule = getCssRuleBlock(target, fragment[1].trim());
+    return fragment[2].split(';').map((part) => part.trim()).filter(Boolean)
+      .every((declaration) => cssDeclares(rule, `${declaration};`));
+  }
+  // A declaration has whitespace (or nothing) after its colon; a selector's
+  // pseudo-class does not.
+  const match = String(needle).match(/^\s*(--?[\w-]+|[a-z-]+):(?:\s+([\s\S]*?)|())\s*(;?)\s*$/);
+  const lists = target.declarations
+    ? [target.declarations]
+    : target.entries.map((entry) => new Map(Array.from(entry.style).map((name) => [name, {
+      value: normalize(entry.style.getPropertyValue(name)),
+      priority: entry.style.getPropertyPriority(name)
+    }])));
+  if (match && !/^[.#\[:@]/.test(needle)) {
+    const [, property, givenValue, , exact] = match;
+    const rawValue = givenValue || '';
+    const important = /\s*!important$/.test(rawValue);
+    const value = normalize(rawValue.replace(/\s*!important$/, ''));
+    return lists.some((declarations) => {
+      const declaration = declarations.get(property);
+      if (!declaration || (important && declaration.priority !== 'important')) return false;
+      return exact ? declaration.value === value : declaration.value.startsWith(value);
+    });
+  }
+  if (target.declarations) return false;
+  const atRule = String(needle).match(/^@(?:media|supports)\s+([\s\S]+)$/);
+  if (atRule) {
+    return target.entries.some((entry) => entry.conditions.some((condition) => normalize(condition) === normalize(atRule[1])));
+  }
+  const selector = normalize(needle);
+  return target.selectors().some((item) => item.includes(selector)) ||
+    target.entries.some((entry) => entry.conditions.some((condition) => condition.includes(selector)));
+}
+
+// Every selector is given continuous corners inside an
+// @supports (corner-shape: superellipse(1.25)) block.
+function assertContinuousCorners(css, selectors, message) {
+  selectors.forEach((selector) => {
+    assert.ok(css.entries.some((entry) => entry.conditions.some((condition) => /corner-shape:\s*superellipse\(1\.25\)/.test(condition)) &&
+      entry.selectors.includes(selector) && entry.style.getPropertyValue('corner-shape') === 'superellipse(1.25)'), `${message} (${selector})`);
+  });
+}
+
+function assertContains(target, needle, message) {
+  assert.ok(cssDeclares(target, needle), message);
+}
+
+function assertNotContains(target, needle, message) {
+  assert.ok(!cssDeclares(target, needle), message);
+}
 const locales = ['zh_CN', 'zh_TW', 'en', 'ja'].map((locale) => ({
   locale,
   messages: JSON.parse(fs.readFileSync(path.join(repoRoot, `_locales/${locale}/messages.json`), 'utf8'))
 }));
-
-function assertContains(source, needle, message) {
-  assert.ok(source.includes(needle), message);
-}
-
-function assertNotContains(source, needle, message) {
-  assert.ok(!source.includes(needle), message);
-}
 
 function assertMessage(locale, messages, key) {
   assert.ok(
@@ -46,106 +107,6 @@ function assertMessage(locale, messages, key) {
     `${locale} should localize ${key}`
   );
 }
-
-function getCssRuleBlock(source, selector) {
-  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  // The selector may share its rule with siblings (the glass style's dark-palette variants).
-  const match = new RegExp(`^\\s*${escapedSelector}(?:,\\n[^{]*)? \\{`, 'm').exec(source);
-  const selectorIndex = match ? match.index : -1;
-  assert.ok(selectorIndex >= 0, `${selector} rule should exist`);
-  const blockStart = source.indexOf('{', selectorIndex);
-  const blockEnd = source.indexOf('\n      }', blockStart);
-  assert.ok(blockStart >= 0 && blockEnd > blockStart, `${selector} rule should be readable`);
-  return source.slice(blockStart + 1, blockEnd);
-}
-
-function getCssDeclaration(block, property) {
-  const match = block.match(new RegExp(`^\\s*${property}: ([^;]+);`, 'm'));
-  assert.ok(match, `${property} declaration should exist`);
-  return `${property}: ${match[1]};`;
-}
-
-function getFunctionSource(source, name) {
-  const marker = `function ${name}(`;
-  const start = source.indexOf(marker);
-  assert.ok(start >= 0, `${name} function should exist`);
-  const bodyStart = source.indexOf('{', start);
-  assert.ok(bodyStart >= 0, `${name} function body should start`);
-  let depth = 0;
-  for (let index = bodyStart; index < source.length; index += 1) {
-    const char = source[index];
-    if (char === '{') {
-      depth += 1;
-    } else if (char === '}') {
-      depth -= 1;
-      if (depth === 0) {
-        return source.slice(start, index + 1);
-      }
-    }
-  }
-  assert.fail(`${name} function body should end`);
-  return '';
-}
-
-function assertBrowserInternalShortcutNavigation() {
-  const navigations = [];
-  const messages = [];
-  const location = { href: 'chrome-extension://lumno/newtab.html' };
-  const sandbox = {
-    chrome: {
-      runtime: {
-        lastError: null,
-        sendMessage: (message) => messages.push(message)
-      },
-      tabs: {
-        getCurrent: (callback) => callback({ id: 42 }),
-        update: (tabId, options) => navigations.push({ tabId, url: options.url })
-      }
-    },
-    window: { location },
-    NAVIGATION_DISPOSITION: require('../../src/shared/navigation-disposition.js'),
-    numberShortcutInstantEnabled: false,
-    newtabOpenInNewTab: { search: false, shortcuts: false, bookmarks: false, recentSites: false }
-  };
-  vm.runInNewContext([
-    'navigateToUrl',
-    'isMiddleClick',
-    'isBackgroundOpenEvent',
-    'getSurfaceOpenDisposition',
-    'openUrlFromNewtabCard',
-    'openShortcutUrl'
-  ].map((name) => getFunctionSource(newtabJs, name)).join('\n'), sandbox);
-
-  const shortcut = { url: 'chrome://inspect/#devices' };
-  sandbox.openShortcutUrl(shortcut, { button: 0 });
-  assert.deepStrictEqual(navigations, [{ tabId: 42, url: shortcut.url }]);
-  assert.strictEqual(location.href, 'chrome-extension://lumno/newtab.html');
-
-  [{ ctrlKey: true }, { metaKey: true }, { button: 1 }].forEach((event) => {
-    sandbox.openShortcutUrl(shortcut, event);
-  });
-  assert.strictEqual(messages.length, 3);
-  messages.forEach((message) => {
-    assert.strictEqual(message.action, 'createTab');
-    assert.strictEqual(message.url, shortcut.url);
-    assert.strictEqual(message.disposition, 'backgroundTab');
-  });
-  assert.strictEqual(navigations.length, 1);
-
-  // Shortcuts set to open in a new tab: a plain click opens a foreground tab,
-  // a Command/Ctrl click still opens in the background.
-  sandbox.newtabOpenInNewTab = { search: false, shortcuts: true, bookmarks: false, recentSites: false };
-  messages.length = 0;
-  sandbox.openShortcutUrl(shortcut, { button: 0 });
-  sandbox.openShortcutUrl(shortcut, { metaKey: true });
-  assert.deepStrictEqual(messages.map((message) => message.disposition), ['newTab', 'backgroundTab']);
-  assert.strictEqual(navigations.length, 1);
-  assert.strictEqual(sandbox.openUrlFromNewtabCard(shortcut.url, { surface: 'bookmarks' }), 'currentTab');
-  assert.strictEqual(sandbox.openUrlFromNewtabCard(shortcut.url, { surface: 'shortcuts' }), 'newTab');
-  assert.strictEqual(navigations.length, 2);
-}
-
-assertBrowserInternalShortcutNavigation();
 
 function createFakeStyle() {
   const values = new Map();
@@ -630,23 +591,11 @@ assertContains(
   'shortcut dialog should use a more solid floating panel surface color'
 );
 
-assert.match(
-  shortcutDialogCss,
-  /@supports \(corner-shape: superellipse\(1\.25\)\)\s*\{\s*\.x-nt-shortcut-dialog,[\s\S]*?\._x_extension_shortcut_input_2024_unique_\s*\{\s*corner-shape:\s*superellipse\(1\.25\);/,
-  'shortcut dialogs and their fields should use continuous superellipse corners when supported'
-);
+assertContinuousCorners(shortcutDialogCss, ['.x-nt-shortcut-dialog', '._x_extension_shortcut_input_2024_unique_'], 'shortcut dialogs and their fields should use continuous superellipse corners when supported');
 
-assert.match(
-  newtabHtml,
-  /@supports \(corner-shape: superellipse\(1\.25\)\)[\s\S]*?\.x-nt-wallpaper-panel,[\s\S]*?\.x-nt-feedback-popover,[\s\S]*?\.x-nt-bookmark-cascade-level,[\s\S]*?corner-shape:\s*superellipse\(1\.25\);/,
-  'New Tab floating panels and bookmark menus should use continuous superellipse corners when supported'
-);
+assertContinuousCorners(newtabHtml, ['.x-nt-wallpaper-panel', '.x-nt-feedback-popover', '.x-nt-bookmark-cascade-level'], 'New Tab floating panels and bookmark menus should use continuous superellipse corners when supported');
 
-assert.match(
-  optionsHtml,
-  /@supports \(corner-shape: superellipse\(1\.25\)\)[\s\S]*?\._x_extension_popconfirm_2024_unique_,[\s\S]*?\._x_extension_confirm_dialog_2024_unique_[\s\S]*?corner-shape:\s*superellipse\(1\.25\);/,
-  'Options popups should use continuous superellipse corners when supported'
-);
+assertContinuousCorners(optionsHtml, ['._x_extension_popconfirm_2024_unique_', '._x_extension_confirm_dialog_2024_unique_'], 'Options popups should use continuous superellipse corners when supported');
 
 const wallpaperPanelRule = getCssRuleBlock(newtabHtml, '.x-nt-wallpaper-panel');
 const newtabRootRule = getCssRuleBlock(newtabHtml, ':root');
@@ -800,23 +749,11 @@ assertContains(
 // tested by behavior in react-src/newtab/wallpaper-view.test.tsx and
 // tests/newtab/test-newtab-wallpaper-panel.js rather than by matching source text here.
 
-assertContains(
-  optionsHtml,
-  '_x_extension_newtab_shortcuts_toggle_2026_unique_',
-  'Options should keep the New Tab shortcuts visibility control'
-);
+assert.ok(optionsDocument.getElementById('_x_extension_newtab_shortcuts_toggle_2026_unique_'), 'Options should keep the New Tab shortcuts visibility control');
 
-assertContains(
-  optionsHtml,
-  '_x_extension_newtab_shortcut_add_toggle_2026_unique_',
-  'Options should keep the add shortcut visibility control'
-);
+assert.ok(optionsDocument.getElementById('_x_extension_newtab_shortcut_add_toggle_2026_unique_'), 'Options should keep the add shortcut visibility control');
 
-assertContains(
-  optionsHtml,
-  '_x_extension_newtab_shortcut_dock_magnification_toggle_2026_unique_',
-  'Options should keep the shortcut Dock magnification control'
-);
+assert.ok(optionsDocument.getElementById('_x_extension_newtab_shortcut_dock_magnification_toggle_2026_unique_'), 'Options should keep the shortcut Dock magnification control');
 
 assertContains(
   newtabHtml,
@@ -828,36 +765,6 @@ assertContains(
   newtabHtml,
   'gap: var(--x-nt-panel-item-gap);',
   'shortcut details should inherit the appearance panel global item gap'
-);
-
-assertContains(
-  newtabJs,
-  "const NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY = '_x_extension_newtab_shortcuts_visible_2026_unique_';",
-  'newtab runtime should read a dedicated shortcuts visibility setting'
-);
-
-assertContains(
-  newtabJs,
-  "const NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY = '_x_extension_newtab_shortcut_add_visible_2026_unique_';",
-  'newtab runtime should read a dedicated add shortcut visibility setting'
-);
-
-assertContains(
-  newtabJs,
-  "const NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY = '_x_extension_newtab_shortcut_dock_magnification_enabled_2026_unique_';",
-  'newtab runtime should read a dedicated shortcut Dock magnification setting'
-);
-
-assertContains(
-  newtabJs,
-  'function applyNewtabShortcutsVisibility()',
-  'newtab runtime should centralize shortcut section visibility updates'
-);
-
-assertContains(
-  newtabJs,
-  'Boolean(newtabShortcutsVisible && hasVisibleContent)',
-  'newtab runtime should hide the shortcut rail when its setting is off or it has no visible content'
 );
 
 assertContains(
@@ -894,23 +801,6 @@ assertContains(
   newtabHtml,
   '--x-nt-shortcut-dock-follow-duration: 90ms;',
   'shortcut dock icons should trail a moving pointer by about a frame, not the full settle duration'
-);
-
-assertContains(
-  newtabJs,
-  "shortcutGrid.setAttribute('data-dock-following', 'true')",
-  'shortcut dock should switch to the short follow duration while the pointer drives it'
-);
-assertContains(
-  newtabJs,
-  "Number.isFinite(pointerX) && wasActive && !(options && options.settle)",
-  'shortcut dock should keep the slower swell for growing in from rest and settling on a menu tile'
-);
-
-assertContains(
-  newtabJs,
-  "icon.closest('.x-nt-shortcut-tile')",
-  'shortcut dock influence should measure the untransformed tile, not the magnified icon'
 );
 
 assertContains(
@@ -1226,821 +1116,14 @@ assertContains(
   'unavailable shortcut artwork should keep the shared fallback background'
 );
 assert.ok(
-  !shortcutFallbackSurfaceRule.includes('.x-nt-shortcut-icon--folder') &&
-    !newtabHtml.includes('.x-nt-shortcut-icon--folder,\n      .x-nt-shortcut-icon:has('),
+  !newtabHtml.entries.some((entry) => entry.selectors.some((selector) => selector.includes('.x-nt-shortcut-icon--folder')) &&
+    entry.selectors.some((selector) => selector.startsWith('.x-nt-shortcut-icon:has('))),
   'folder shortcuts should not follow the wallpaper-sampled fallback surface'
 );
 assertContains(
   getCssRuleBlock(newtabHtml, '.x-nt-shortcut-icon--folder'),
   '--x-nt-shortcut-icon-bg: var(--x-nt-shortcut-folder-icon-bg);',
   'folder shortcuts should use the neutral site-tile background'
-);
-
-assertContains(
-  newtabJs,
-  "import * as NEWTAB_SHORTCUTS_STORE from './shortcuts/shortcuts-store.js';",
-  'newtab runtime should read the shortcuts store'
-);
-
-assertContains(
-  newtabJs,
-  'onUnavailable: context && context.onIconUnavailable',
-  'search-scope provider favicons should hand terminal failures back to the menu glyph'
-);
-
-assertContains(
-  newtabJs,
-  'const primaryUrl = isFaviconProxyUrl(iconUrl)',
-  'explicit provider favicons should be tried before generic browser proxy placeholders'
-);
-
-assertContains(
-  newtabJs,
-  'const NEWTAB_SHORTCUTS_STORAGE_KEYS = NEWTAB_SHORTCUTS_STORE.SHORTCUT_STORAGE_KEYS;',
-  'newtab runtime should watch the grouped and legacy shortcut storage keys'
-);
-
-assertContains(
-  newtabJs,
-  'const NEWTAB_SHORTCUTS_LOCAL_OVERFLOW_STORAGE_KEY = NEWTAB_SHORTCUTS_STORE.SHORTCUTS_LOCAL_OVERFLOW_KEY;',
-  'shortcut items outside the protected sync budget should have a device-local overflow store'
-);
-
-assert.match(
-  getFunctionSource(newtabJs, 'getShortcutSyncBudget'),
-  /getStorageBytesInUse\(syncArea, null\)[\s\S]*?getStorageBytesInUse\(syncArea, NEWTAB_SHORTCUTS_STORE\.SHORTCUTS_SYNC_KEYS\)[\s\S]*?getStorageBytesInUse\(syncArea, NEWTAB_SHORTCUTS_STORE\.LEGACY_SHORTCUTS_CHUNK_KEYS\)[\s\S]*?NEWTAB_SHORTCUTS_CRITICAL_SYNC_RESERVE_BYTES/,
-  'shortcut sync planning should reserve total quota for critical settings'
-);
-
-assertContains(
-  newtabJs,
-  'NEWTAB_SHORTCUTS_STORAGE_KEYS',
-  'newtab runtime should include shortcuts in storage handling'
-);
-
-assert.strictEqual(
-  (newtabJs.match(/changes\[NEWTAB_SHORTCUT_ICONS_STORAGE_KEY\]\.newValue/g) || []).length,
-  1,
-  'one shortcut icon storage change should trigger exactly one normalization and render path'
-);
-
-assertContains(
-  pageStructureReact,
-  "_x_extension_newtab_shortcuts_2026_unique_",
-  'React should create a shortcuts section under the search box'
-);
-
-assertContains(
-  newtabJs,
-  'shortcutSection = pageStructureRuntime.shortcut.section;',
-  'newtab adapter should use the React-owned shortcuts section'
-);
-
-assertContains(
-  newtabJs,
-  'const MAX_NEWTAB_SHORTCUTS = NEWTAB_SHORTCUTS_STORE.DEFAULT_MAX_SHORTCUTS;',
-  'newtab should allow as many shortcuts as the shortcut store keeps'
-);
-
-assertContains(
-  newtabJs,
-  'maxShortcuts: MAX_NEWTAB_SHORTCUTS,',
-  'the React shortcuts view should receive the same capacity as shortcut persistence'
-);
-
-assertContains(
-  newtabJs,
-  'onAdd: openShortcutAddContextMenu,',
-  'a click on the add tile should ask whether to add a site or a group, or to hide the tile'
-);
-
-assertContains(
-  newtabJs,
-  'onAddContextMenu: () => {},',
-  'the add tile should have no right-click menu'
-);
-
-assertContains(
-  getFunctionSource(newtabJs, 'openShortcutAddContextMenu'),
-  "kind: 'add'",
-  'the add tile should be represented as an add-menu target instead of hiding immediately'
-);
-
-assertContains(
-  getFunctionSource(newtabJs, 'handleShortcutContextMenuAction'),
-  'hideShortcutAddFromContextMenu(sourceElement);',
-  'the add tile should hide only after the menu action is selected'
-);
-
-assertContains(
-  newtabJs,
-  "'newtab_shortcuts_add_hidden'",
-  'right-click hiding the add tile should explain where it can be restored'
-);
-
-assert.match(
-  getFunctionSource(newtabJs, 'renderShortcuts'),
-  /shortcutsView\.render\(items, \{[\s\S]*?\}\);[\s\S]*?updateBookmarkSectionPosition\(\{[\s\S]*?preserveSearchEntryLayout:\s*Boolean\([\s\S]*?data-nt-ready/,
-  'settled shortcut rendering should refresh the dock without moving the logo/search entry'
-);
-
-assert.match(
-  getFunctionSource(newtabJs, 'hideShortcutAddFromContextMenu'),
-  /updateBookmarkSectionPosition\(\{\s*preserveSearchEntryLayout:\s*true\s*\}\);[\s\S]*?showToast\(/,
-  'hiding the add tile should preserve the logo/search position while its toast appears'
-);
-
-assert.match(
-  getFunctionSource(newtabJs, 'updateBookmarkSectionPosition'),
-  /preserveSearchEntryLayout:\s*Boolean\(layoutOptions\.preserveSearchEntryLayout\)\s*\|\|[\s\S]*?shouldPreserveSearchEntryLayout\(\)/,
-  'callers should be able to preserve the settled search entry during a dock refresh'
-);
-
-assertNotContains(
-  getFunctionSource(newtabJs, 'saveNewShortcutFromDialog'),
-  '.slice(-MAX_NEWTAB_SHORTCUTS)',
-  'adding a shortcut must not silently evict the leftmost shortcut'
-);
-
-assertContains(
-  newtabJs,
-  'function setShortcutDockHover(activeTile, pointerX, options) {',
-  'newtab runtime should calculate shortcut dock hover states'
-);
-
-const setShortcutDockHoverSource = getFunctionSource(newtabJs, 'setShortcutDockHover');
-assertContains(
-  setShortcutDockHoverSource,
-  'if (!newtabShortcutDockMagnificationEnabled)',
-  'shortcut hover should skip Dock magnification when the preference is disabled'
-);
-assertContains(
-  setShortcutDockHoverSource,
-  'clearShortcutDockMagnificationState();',
-  'disabled shortcut hover should clear stale Dock attributes and inline transforms directly'
-);
-
-const applyShortcutDockMagnificationSource = getFunctionSource(
-  newtabJs,
-  'applyNewtabShortcutDockMagnification'
-);
-assertContains(
-  applyShortcutDockMagnificationSource,
-  "'data-dock-magnification'",
-  'shortcut Dock preference should be reflected as a grid state attribute'
-);
-
-assertContains(
-  shortcutsReact,
-  'data-tooltip={title}',
-  'React shortcut tiles should expose full titles through the anchored tooltip attribute'
-);
-
-assertContains(
-  shortcutsReact,
-  'onDragStart={options.onNativeDragStart}',
-  'React shortcut tiles should delegate native drag suppression to the behavior adapter'
-);
-
-assertContains(
-  newtabJs,
-  'function handleShortcutNativeDragStart(event) {',
-  'shortcut drag reordering should prevent browser-native drag previews'
-);
-
-assertContains(
-  shortcutsReact,
-  'draggable={false}',
-  'React shortcut favicon images should not be individually draggable'
-);
-
-assertContains(
-  shortcutsReact,
-  'customIconDataUrl: localIconDataUrl',
-  'React shortcut tiles should pass uploaded image data into their theme suggestion'
-);
-
-assertContains(
-  getFunctionSource(newtabJs, 'getThemeForSuggestion'),
-  'loadThemeFromImageSource(',
-  'custom shortcut images should resolve a theme directly from their image data'
-);
-
-assertContains(
-  getFunctionSource(newtabJs, 'getThemeForSuggestion'),
-  "customShortcutIcon,\n        '',\n        false",
-  'custom shortcut image themes should not overwrite the website host theme cache'
-);
-
-assertContains(
-  getFunctionSource(newtabJs, 'isShortcutThemeDefaultForWallpaper'),
-  'theme._xIsCustomShortcutIcon',
-  'neutral custom-image themes should remain authoritative over wallpaper adaptive colors'
-);
-
-assertContains(
-  newtabJs,
-  "tile.setAttribute('data-dock-distance', String(distance));",
-  'shortcut dock should mark each visible neighbor by distance from the hovered tile'
-);
-
-assertContains(
-  newtabJs,
-  "tile.setAttribute('data-dock-side', offset < 0 ? 'before' : offset > 0 ? 'after' : 'active');",
-  'shortcut dock should mark which side of the hovered tile each neighbor occupies'
-);
-
-assertContains(
-  newtabJs,
-  'function applyShortcutDockPointerStyles(tile, pointerX, offset, measurement) {',
-  'shortcut dock should continuously update icon transforms from the pointer position'
-);
-
-assertContains(
-  newtabJs,
-  'const sideMultiplier = numericOffset < 0 ? -1 : numericOffset > 0 ? 1 : 0;',
-  'shortcut dock should keep the active icon horizontally anchored while neighbors move aside'
-);
-
-assertContains(
-  newtabJs,
-  'const landingTaper = Math.max(0, 1 - eased);',
-  'shortcut dock neighbor shift should taper out as the pointer lands on that icon'
-);
-
-assertContains(
-  newtabJs,
-  'const shiftPx = sideMultiplier * 16 * eased * landingTaper * distanceFalloff;',
-  'shortcut dock horizontal movement should stay continuous when switching active icons'
-);
-
-assertContains(
-  newtabJs,
-  "icon.style.setProperty('--x-nt-shortcut-dock-scale', (1 + (0.28 * eased)).toFixed(3));",
-  'shortcut dock pointer tracking should write a continuous scale value'
-);
-
-assertContains(
-  newtabJs,
-  "icon.style.setProperty('--x-nt-shortcut-dock-rise', `${Math.round(-6 * eased)}px`);",
-  'shortcut dock pointer tracking should keep vertical lift restrained'
-);
-
-assertContains(
-  newtabJs,
-  'function handleShortcutDragPointerDown(event) {',
-  'shortcut grid should track pointer drag gestures for reordering'
-);
-
-assertContains(
-  newtabJs,
-  'Math.hypot(dx, dy) < SHORTCUT_DRAG_START_THRESHOLD_PX',
-  'shortcut drag reordering should wait for a movement threshold so clicks still open shortcuts'
-);
-
-assertContains(
-  newtabJs,
-  'function getShortcutDragInsertionSlot(pointerX, pointerY) {',
-  'shortcut drag reordering should use a logical insertion slot instead of animated hit areas'
-);
-
-assertContains(
-  newtabJs,
-  'getShortcutTileLayoutRect(tile)',
-  'shortcut drag reordering should measure untransformed tile slots while neighbors animate'
-);
-
-assertContains(
-  newtabJs,
-  'function moveShortcutItem(shortcutId, targetIndex, targetGroupId) {',
-  'shortcut drag reordering should move the in-memory shortcut into the insertion slot'
-);
-
-assertContains(
-  newtabJs,
-  'function moveShortcutTileElement(tile, targetIndex, slot) {',
-  'shortcut drag reordering should move DOM tiles without rerendering mid-gesture'
-);
-
-assertContains(
-  getFunctionSource(newtabJs, 'moveShortcutTileElement'),
-  'remainingTiles[boundedIndex] || addShortcutButton || null',
-  'shortcut drag reordering should keep the add tile after every URL when moving to the final slot'
-);
-
-assertContains(
-  newtabJs,
-  'function setShortcutDragTileTransform(state, pointerX, pointerY) {',
-  'dragged shortcut tiles should follow the pointer while reordering'
-);
-
-assertContains(
-  getFunctionSource(newtabJs, 'handleShortcutDragPointerMove'),
-  'scheduleShortcutDragMove(shortcutDragState, pointerX, pointerY);',
-  'shortcut drag pointer work should be coalesced to one layout update per frame'
-);
-
-assertContains(
-  getFunctionSource(newtabJs, 'endShortcutDrag'),
-  'flushShortcutDragMove(state);',
-  'shortcut drag release should apply the latest queued pointer position before persistence'
-);
-
-{
-  const queuedFrames = new Map();
-  let nextFrameId = 1;
-  const transformCalls = [];
-  const schedulerFactory = new Function(
-    'window',
-    'setShortcutDragTileTransform',
-    'updateShortcutDragBookmarkTarget',
-    'isPointOverShortcutDropSurface',
-    'getShortcutDragInsertionSlot',
-    'getShortcutTileInsertionIndex',
-    'getShortcutTileRectMap',
-    'moveShortcutItem',
-    'moveShortcutTileElement',
-    'animateShortcutLayoutShift',
-    'getShortcutTileGroupId',
-    'getShortcutById',
-    'autoScrollShortcutArea',
-    `let shortcutDragState = null;
-    const document = { body: { removeAttribute() {} } };
-    const isBookmarkTopbarMode = () => false;
-    ${getFunctionSource(newtabJs, 'cancelShortcutDragMoveFrame')}
-    ${getFunctionSource(newtabJs, 'applyShortcutDragMove')}
-    ${getFunctionSource(newtabJs, 'flushShortcutDragMove')}
-    ${getFunctionSource(newtabJs, 'scheduleShortcutDragMove')}
-    return {
-      flushShortcutDragMove,
-      scheduleShortcutDragMove,
-      setState(state) { shortcutDragState = state; }
-    };`
-  );
-  const scheduler = schedulerFactory(
-    {
-      requestAnimationFrame(callback) {
-        const frameId = nextFrameId++;
-        queuedFrames.set(frameId, callback);
-        return frameId;
-      },
-      cancelAnimationFrame(frameId) {
-        queuedFrames.delete(frameId);
-      }
-    },
-    (_state, pointerX, pointerY) => transformCalls.push([pointerX, pointerY]),
-    () => false,
-    () => true,
-    () => ({ index: 0, anchorTile: null, markerPosition: 'before' }),
-    () => 0,
-    () => new Map(),
-    () => false,
-    () => false,
-    () => {},
-    () => '',
-    () => null,
-    () => false
-  );
-  const state = {
-    hasReordered: false,
-    isDragging: true,
-    moveFrameId: 0,
-    pendingPointerX: 0,
-    pendingPointerY: 0,
-    shortcutId: 'shortcut-1',
-    tile: {}
-  };
-  scheduler.setState(state);
-  for (let index = 0; index < 240; index += 1) {
-    scheduler.scheduleShortcutDragMove(state, index, index + 1000);
-  }
-  assert.strictEqual(queuedFrames.size, 1, 'rapid shortcut pointer moves should share one frame');
-  assert.deepStrictEqual(transformCalls, [], 'layout work should wait for the scheduled frame');
-  const frameCallback = Array.from(queuedFrames.values())[0];
-  queuedFrames.clear();
-  frameCallback();
-  assert.deepStrictEqual(
-    transformCalls,
-    [[239, 1239]],
-    'the frame should apply only the latest shortcut pointer coordinates'
-  );
-  scheduler.scheduleShortcutDragMove(state, 70, 80);
-  scheduler.scheduleShortcutDragMove(state, 90, 100);
-  scheduler.flushShortcutDragMove(state);
-  assert.strictEqual(queuedFrames.size, 0, 'release should cancel the queued shortcut frame');
-  assert.deepStrictEqual(
-    transformCalls[transformCalls.length - 1],
-    [90, 100],
-    'release should synchronously apply the latest queued shortcut position'
-  );
-}
-
-assertContains(
-  newtabJs,
-  "state.tile.style.transform = `translate3d(${nextX}px, ${nextY}px, 0)`;",
-  'dragged shortcut tiles should use direct transform updates for cursor tracking'
-);
-
-assertContains(
-  newtabJs,
-  'function animateShortcutLayoutShift(beforeRects, draggedTile) {',
-  'shortcut drag reordering should animate neighboring tiles into their new slots'
-);
-
-assertContains(
-  newtabJs,
-  'const beforeRects = getShortcutTileRectMap();',
-  'shortcut drag reordering should measure old tile positions before moving'
-);
-
-assertContains(
-  newtabJs,
-  'animateShortcutLayoutShift(beforeRects, state.tile);',
-  'shortcut drag reordering should use FLIP animation after each insertion move'
-);
-
-assertContains(
-  newtabJs,
-  'function settleShortcutDragTile(tile) {',
-  'dragged shortcut tiles should smoothly settle into their final slot on release'
-);
-
-assertContains(
-  newtabJs,
-  "tile.style.pointerEvents = 'none';",
-  'dragged shortcut tiles should not block hit testing for the destination slot'
-);
-
-assertContains(
-  newtabJs,
-  "persistShortcuts(newtabShortcuts, '', undefined, { render: false })",
-  'shortcut drag reordering should use the shared quota and local overflow persistence'
-);
-
-assertContains(
-  newtabJs,
-  'applyShortcutDockPointerStyles(tile, pointerX, offset, pointerMeasurements[index]);',
-  'shortcut dock pointer tracking should pass each tile position so the active icon does not jump sideways'
-);
-
-const shortcutDockReadIndex = setShortcutDockHoverSource.indexOf(
-  'getShortcutDockInfluence(pointerX, icon)'
-);
-const shortcutDockWriteIndex = setShortcutDockHoverSource.indexOf(
-  "shortcutGrid.setAttribute('data-dock-active', 'true')"
-);
-assert.ok(
-  shortcutDockReadIndex >= 0 && shortcutDockWriteIndex > shortcutDockReadIndex,
-  'shortcut dock pointer tracking should batch geometry reads before DOM and style writes'
-);
-
-assert.match(
-  newtabJs,
-  /function handleShortcutDockPointerOver\(event\) \{[\s\S]*?scheduleShortcutDockPointerStyles\(tile, getShortcutDockPointerX\(event\)\)/,
-  'shortcut dock pointer-over work should share the frame-coalesced update path'
-);
-
-assertContains(
-  newtabJs,
-  'function applyShortcutTileTheme(tile, theme, host) {',
-  'shortcut tiles should apply favicon theme colors to the icon surface'
-);
-
-assertContains(
-  newtabJs,
-  "tile.style.setProperty('--x-nt-shortcut-icon-bg', colors.iconBg);",
-  'shortcut tile theme should set the outer icon background color'
-);
-
-assertContains(
-  newtabJs,
-  "tile.setAttribute('data-shortcut-theme-default', isDefaultTheme ? 'true' : 'false');",
-  'shortcut tiles should retain default-theme classification for diagnostics'
-);
-
-const applyThemeModeSource = getFunctionSource(newtabJs, 'applyThemeMode');
-assertContains(
-  newtabJs,
-  'function refreshShortcutTileThemes() {',
-  'shortcut theme refresh should live in a named helper instead of patching applyThemeMode inline'
-);
-
-assertContains(
-  getFunctionSource(newtabJs, 'refreshShortcutTileThemes'),
-  'shortcutTiles.forEach((tile) => {',
-  'shortcut theme refresh helper should revisit existing shortcut tiles'
-);
-
-assertContains(
-  getFunctionSource(newtabJs, 'refreshShortcutTileThemes'),
-  "applyShortcutTileTheme(tile, tile._xTheme, tile._xHost || '');",
-  'shortcut theme refresh helper should recompute icon colors from cached theme and host'
-);
-
-assertContains(
-  applyThemeModeSource,
-  'refreshShortcutTileThemes();',
-  'theme changes should refresh shortcut colors through the named helper'
-);
-
-assertContains(
-  newtabJs,
-  "if (source === 'favicon') {",
-  'shortcut fallback detection should handle async favicon themes separately'
-);
-
-assertContains(
-  newtabJs,
-  "return theme._xThemeNeutral === true ||",
-  'neutral favicon themes should remain identifiable without changing their stable theme background'
-);
-
-assertNotContains(
-  newtabJs,
-  "forcedIconBackground: 'default-theme'",
-  'favicon tiles should not receive wallpaper-forced backgrounds'
-);
-
-assertContains(
-  getFunctionSource(newtabJs, 'applyShortcutTileTheme'),
-  "tile.style.removeProperty('--x-nt-shortcut-wallpaper-icon-bg');",
-  'favicon theme application should clear stale wallpaper background overrides'
-);
-
-assertContains(
-  newtabJs,
-  "forcedIconBackground: 'shortcut-add'",
-  'add shortcut tile should receive a softer wallpaper-adaptive background'
-);
-
-assertContains(
-  getFunctionSource(newtabJs, 'createWallpaperAdaptiveToneTargets'),
-  "sampleElement: shortcutIconSample,\n      toneGroup: 'shortcut-icons',",
-  'dock icons should read one sample over the whole row and share one ink'
-);
-
-assertContains(
-  wallpaperAdaptiveToneJs,
-  "setStyleProperty(element, '--x-nt-shortcut-add-bg'",
-  'wallpaper adaptive tone should write the add shortcut background variable'
-);
-
-assertContains(
-  wallpaperAdaptiveToneJs,
-  'function getForcedShortcutSurfaceInk(ink, themeMode) {',
-  'forced shortcut backgrounds should resolve theme-aware surface ink through a named helper'
-);
-
-assertContains(
-  wallpaperAdaptiveToneJs,
-  "return themeMode === 'dark' ? 'light' : ink;",
-  'dark theme shortcut backgrounds should stay in the dark surface branch even on light wallpapers'
-);
-
-assertContains(
-  wallpaperAdaptiveToneJs,
-  'const urlSurfaceColor = getShortcutUrlSurfaceColor(color, luminance, forcedSurfaceInk);',
-  'forced shortcut backgrounds should resolve URL fallback surface through the theme-aware ink'
-);
-
-assertContains(
-  wallpaperAdaptiveToneJs,
-  "documentObj.body.getAttribute('data-theme') === 'dark'",
-  'wallpaper adaptive shortcut backgrounds should read the current resolved theme'
-);
-
-assertContains(
-  wallpaperAdaptiveToneJs,
-  'function getShortcutAddSurfaceColor(urlSurfaceColor, ink) {',
-  'add shortcut backgrounds should be named as a surface derived from the URL fallback'
-);
-
-assertContains(
-  wallpaperAdaptiveToneJs,
-  'function getShortcutUrlBaseSurfaceColor(color, localLuminance, ink) {',
-  'wallpaper adaptive tone should isolate the URL-specific ink-aware base surface algorithm'
-);
-
-assertContains(
-  wallpaperAdaptiveToneJs,
-  'function getShortcutUrlSurfaceColor(color, localLuminance, ink) {',
-  'URL fallback backgrounds should expose a final surface helper instead of add-button wording'
-);
-
-assertContains(
-  wallpaperAdaptiveToneJs,
-  "if (ink === 'light') {",
-  'wallpaper adaptive shortcut backgrounds should switch to dark-mode surfaces when light icon ink is required'
-);
-
-assertContains(
-  wallpaperAdaptiveToneJs,
-  'const paleBase = surfaceLuminance >= 0.58',
-  'URL fallback backgrounds should start from a pale white-gray base'
-);
-
-assertContains(
-  wallpaperAdaptiveToneJs,
-  'const tintAmount = mixNumber(0.055, 0.2, hueStrength);',
-  'URL fallback backgrounds should only carry a restrained amount of local hue'
-);
-
-assertContains(
-  newtabJs,
-  'const baseTarget = isDark ? [22, 22, 22] : [255, 255, 255];',
-  'shortcut icon backgrounds should tint toward the same base target as recent cards'
-);
-
-assertContains(
-  newtabJs,
-  'const iconBgRgb = mixColor(accentRgb, baseTarget, isDark ? 0.72 : 0.82);',
-  'shortcut icon backgrounds should use the recent-card tint ratio instead of raw accent color'
-);
-
-assertContains(
-  newtabJs,
-  'iconBg: rgbToCss(iconBgRgb),',
-  'shortcut icon theme should expose the softened tint as the outer background'
-);
-
-assertNotContains(
-  newtabJs,
-  "--x-nt-shortcut-favicon-mask-bg",
-  'shortcut tile theme should not set an inner favicon mask background'
-);
-
-assertContains(
-  shortcutsReact,
-  'url,\n    title,\n    customIconDataUrl: localIconDataUrl',
-  'React shortcut tiles should resolve themes from their destination URL or uploaded icon'
-);
-
-assertContains(
-  shortcutsReact,
-  'options.queueThemeForTarget(',
-  'React shortcut tiles should refresh when async favicon or meta theme resolution completes'
-);
-
-assertContains(
-  shortcutsReact,
-  'className="x-nt-shortcut-favicon-mask"',
-  'React shortcut favicons should be wrapped in the rounded-rectangle mask'
-);
-
-assertContains(
-  shortcutsReact,
-  "() => tile.getAttribute('data-shortcut-title') || title",
-  'React shortcut title tooltips should be bound even without visible labels'
-);
-
-assertContains(
-  newtabJs,
-  "id: '_x_extension_newtab_shortcut_tooltip_2026_unique_',",
-  'shortcut title tooltips should use a dedicated anchored tooltip controller'
-);
-
-assertContains(
-  newtabJs,
-  "className: 'x-nt-shortcut-tooltip',",
-  'shortcut title tooltips should be styleable independently from other tooltips'
-);
-
-assertContains(
-  newtabJs,
-  "placement: 'bottom',",
-  'shortcut title tooltips should open below the icon'
-);
-
-assertContains(
-  newtabJs,
-  'spacing: () => (newtabShortcutDockMagnificationEnabled ? -6 : -2)',
-  'shortcut title tooltips should move slightly farther from the icon when Dock magnification is disabled'
-);
-
-assertContains(
-  newtabJs,
-  'showOnFocus: false',
-  'shortcut title tooltips should not remain visible after the pointer leaves a focused shortcut'
-);
-
-assertContains(
-  newtabJs,
-  'function isShortcutTooltipSuppressed() {',
-  'shortcut title tooltips should expose a suppression guard for drag gestures'
-);
-
-assertContains(
-  newtabJs,
-  'if (isShortcutTooltipSuppressed()) {\n        return \'\';\n      }',
-  'shortcut title tooltips should not open while a shortcut is being dragged'
-);
-
-assertNotContains(
-  newtabJs,
-  "shortcutGrid.addEventListener('focusin', handleShortcutDockFocusIn);",
-  'shortcut dock magnification should not stick from keyboard or restored focus'
-);
-
-assertNotContains(
-  newtabJs,
-  "shortcutGrid.addEventListener('focusout', handleShortcutDockFocusOut);",
-  'shortcut dock hover reset should be driven by pointer leave rather than focus retention'
-);
-
-assertNotContains(
-  newtabJs,
-  "bindCursorTooltip(tile, () => tile.getAttribute('data-shortcut-title') || title,",
-  'shortcut tiles should no longer use cursor-following title tooltips'
-);
-
-assertNotContains(
-  newtabJs,
-  'label.title = title;',
-  'shortcut labels should avoid native title bubbles when cursor tooltips are bound'
-);
-
-assertNotContains(
-  newtabJs,
-  "label.className = 'x-nt-shortcut-label';",
-  'shortcut tiles should no longer render visible title labels'
-);
-
-assertNotContains(
-  newtabJs,
-  'function isShortcutTitleTruncated',
-  'shortcut tooltip visibility should not depend on a removed visible label'
-);
-
-assertContains(
-  newtabJs,
-  "addShortcutButton.setAttribute('data-tooltip', addLabel);",
-  'add shortcut tile should expose its label through the anchored tooltip'
-);
-
-assertContains(
-  shortcutsReact,
-  'options.bindTooltip(\n        addButton,',
-  'the React add shortcut tile should bind the anchored shortcut tooltip'
-);
-
-assertContains(
-  tooltipJs,
-  "config.placement === 'bottom'",
-  'shared tooltip positioning should accept bottom placement'
-);
-
-assertContains(
-  tooltipJs,
-  "placement === 'bottom'",
-  'shared tooltip positioning should branch for bottom placement'
-);
-
-assertContains(
-  tooltipJs,
-  'top = targetBottom + spacing;',
-  'bottom tooltip placement should start below the target'
-);
-
-assertContains(
-  newtabJs,
-  "shortcutGrid.addEventListener('pointerover', handleShortcutDockPointerOver);",
-  'shortcut grid should update dock state on pointer hover'
-);
-
-assertContains(
-  newtabJs,
-  "shortcutGrid.addEventListener('pointermove', handleShortcutDockPointerMove);",
-  'shortcut grid should keep dock magnification following the pointer'
-);
-
-assertContains(
-  newtabJs,
-  "shortcutGrid.addEventListener('pointerleave', resetShortcutDockHover);",
-  'shortcut grid should reset dock state when the pointer leaves'
-);
-
-assertContains(
-  newtabJs,
-  "shortcutGrid.addEventListener('pointerdown', handleShortcutDragPointerDown);",
-  'shortcut grid should start drag tracking from pointer down'
-);
-
-assertContains(
-  getFunctionSource(newtabJs, 'handleShortcutDragPointerDown'),
-  'attachShortcutDragDocumentListeners();',
-  'shortcut drags should track the pointer on the document, since reordering drops pointer capture'
-);
-
-assertContains(
-  getFunctionSource(newtabJs, 'attachShortcutDragDocumentListeners'),
-  "document.addEventListener('pointerup', handleShortcutDragPointerUp, true);",
-  'shortcut drags should finish on a document-level pointer up'
-);
-
-assertContains(
-  getFunctionSource(newtabJs, 'endShortcutDrag'),
-  'detachShortcutDragDocumentListeners();',
-  'shortcut drags should release their document listeners when they finish'
 );
 
 assertContains(
@@ -2084,7 +1167,7 @@ assertContains(
 
 const shortcutContextMenuPortalRule = getCssRuleBlock(newtabHtml, '.x-nt-shortcut-context-menu-portal');
 const readContextMenuPxToken = (token) => {
-  const match = shortcutContextMenuPortalRule.match(new RegExp(`${token}: (\\d+)px;`));
+  const match = getCssDeclaration(shortcutContextMenuPortalRule, token).match(/: (\d+)px;$/);
   assert.ok(match, `shortcut context menu should define ${token}`);
   return Number(match[1]);
 };
@@ -2182,23 +1265,7 @@ assertContains(
   'context menu option radius should use the concentric inner radius token'
 );
 
-assert.match(
-  newtabHtml,
-  /@supports \(corner-shape: superellipse\(1\.25\)\)[\s\S]*?\.x-nt-shortcut-context-menu-portal,[\s\S]*?\.x-nt-shortcut-context-menu-portal \._x_extension_select_option_2024_unique_[\s\S]*?corner-shape:\s*superellipse\(1\.25\);/,
-  'New Tab context menu shells and options should use continuous superellipse corners when supported'
-);
-
-[
-  "menuClassName: 'x-nt-shortcut-context-menu-portal',",
-  "menuClassName: 'x-nt-shortcut-context-menu-portal x-nt-bookmark-context-menu-portal',",
-  "menuClassName: 'x-nt-shortcut-context-menu-portal x-nt-recent-context-menu-portal',"
-].forEach((menuClassName) => {
-  assertContains(
-    newtabJs,
-    menuClassName,
-    'every New Tab context menu should inherit the shared concentric corner surface'
-  );
-});
+assertContinuousCorners(newtabHtml, ['.x-nt-shortcut-context-menu-portal', '.x-nt-shortcut-context-menu-portal ._x_extension_select_option_2024_unique_'], 'New Tab context menu shells and options should use continuous superellipse corners when supported');
 
 assertContains(
   newtabHtml,
@@ -2226,403 +1293,6 @@ assertContains(
   newtabHtml,
   '.x-nt-shortcut-tile[data-shortcut-dropping="true"] .x-nt-shortcut-icon',
   'shortcut drop settling should keep the dragged tile visually above the row'
-);
-
-
-assertContains(
-  newtabJs,
-  'const NEWTAB_SELECT_MENU = globalThis.LumnoNewtabSelectMenu;',
-  'shortcut context menu should prefer the React select-menu controller'
-);
-
-assertContains(
-  newtabJs,
-  'function createShortcutContextMenu() {',
-  'shortcut runtime should create a shared context menu instead of per-tile menu DOM'
-);
-
-assertContains(
-  newtabJs,
-  'shortcutContextMenuSelectController.createSelect({',
-  'shortcut context menu should be built with the shared custom select component'
-);
-
-assertContains(
-  newtabJs,
-  "menuClassName: 'x-nt-shortcut-context-menu-portal',",
-  'shortcut context menu should render through a styleable custom select portal'
-);
-
-assertContains(
-  newtabJs,
-  "menuAlign: 'middle',",
-  'shortcut context menu should center align like the shortcut tooltip instead of left-aligning at the pointer'
-);
-
-assertContains(
-  newtabJs,
-  'const SHORTCUT_CONTEXT_MENU_PORTAL_OFFSET_PX = -6;',
-  'shortcut context menu should use the same vertical spacing as the shortcut tooltip'
-);
-
-assertContains(
-  newtabJs,
-  'trigger.tabIndex = -1;',
-  'shortcut context menu hidden trigger should not add an invisible tab stop'
-);
-
-assertContains(
-  newtabJs,
-  "label: t('shortcuts_edit', 'Edit')",
-  'shortcut context menu should include an Edit action'
-);
-
-assertContains(
-  getFunctionSource(newtabJs, 'getShortcutContextMenuOptions'),
-  "label: t('newtab_open_in_new_tab', 'Open in new tab')",
-  'shortcut context menu should put Open in new tab first'
-);
-
-assertContains(
-  getFunctionSource(newtabJs, 'getShortcutContextMenuOptions'),
-  'dividerBefore: true',
-  'shortcut context menu should separate opening from Edit and Remove'
-);
-
-assertContains(
-  getFunctionSource(newtabJs, 'getShortcutContextMenuOptions'),
-  "label: t('bookmarks_open_in_new_tab_group', 'Open in new tab group')",
-  'shortcut folder context menu should offer opening the folder in a new tab group'
-);
-
-assertContains(
-  getFunctionSource(newtabJs, 'handleShortcutContextMenuAction'),
-  'openBookmarkFolderTabGroupConfirmation({',
-  'shortcut folder tab group action should reuse the bookmark folder confirmation'
-);
-
-assertContains(
-  newtabJs,
-  "label: t('shortcuts_remove', 'Remove')",
-  'shortcut context menu should include a Remove action'
-);
-
-assertContains(
-  newtabJs,
-  "label: t('newtab_shortcuts_hide_add', 'Hide')",
-  'the add tile context menu should include a localized Hide action'
-);
-
-assertContains(
-  newtabJs,
-  'function openShortcutContextMenu(target) {',
-  'shortcut runtime should open the shared context menu for its current target'
-);
-
-assertContains(
-  newtabJs,
-  'function getShortcutContextMenuAnchorElement(tile) {',
-  'shortcut context menu should position from the shortcut icon anchor'
-);
-
-assertContains(
-  newtabJs,
-  'const anchor = getShortcutContextMenuAnchorElement(tile);',
-  'shortcut context menu should calculate its anchor from the icon instead of the pointer'
-);
-
-assertContains(
-  newtabJs,
-  'shortcutContextMenu.select.value = defaultValue;',
-  'shortcut context menu should select the default action for the current target'
-);
-
-assertContains(
-  newtabJs,
-  'function handleShortcutContextMenuActionClick(event) {',
-  'shortcut context menu should handle option clicks directly so re-clicking selected Edit still works'
-);
-
-assertContains(
-  newtabJs,
-  'shortcutContextMenuSelectController.setOpen(shortcutContextMenu.control, true);',
-  'shortcut context menu should open through the custom select controller API'
-);
-
-assertContains(
-  newtabJs,
-  'function handleShortcutContextMenu(event) {',
-  'shortcut tiles should handle native contextmenu events'
-);
-
-assertContains(
-  getFunctionSource(newtabJs, 'handleShortcutContextMenu'),
-  'event.preventDefault();\n    event.stopPropagation();',
-  'shortcut context menu should suppress the browser menu and keep the event away from drag handling'
-);
-
-assertContains(
-  getFunctionSource(newtabJs, 'handleShortcutContextMenu'),
-  'openShortcutContextMenu({',
-  'shortcut context menu should open from the shortcut icon anchor instead of the right-click pointer coordinates'
-);
-
-assertNotContains(
-  getFunctionSource(newtabJs, 'handleShortcutContextMenu'),
-  'event.clientX, event.clientY',
-  'shortcut context menu should not follow the right-click pointer coordinates'
-);
-
-assertContains(
-  shortcutsReact,
-  'onContextMenu={options.onContextMenu}',
-  'each React shortcut tile should bind the adapter-owned right-click context menu'
-);
-
-assertContains(
-  newtabJs,
-  'function isShortcutContextMenuNode(node) {',
-  'shortcut runtime should recognize custom select menu nodes before drag handling'
-);
-
-assertContains(
-  getFunctionSource(newtabJs, 'handleShortcutDragPointerDown'),
-  'isShortcutContextMenuNode(event.target)',
-  'shortcut drag pointerdown should ignore the context menu control and portal'
-);
-
-assertContains(
-  getFunctionSource(newtabJs, 'handleShortcutDragPointerDown'),
-  'closeShortcutContextMenu();',
-  'shortcut drag pointerdown should close any open context menu before starting a drag gesture'
-);
-
-assertContains(
-  newtabJs,
-  'function setShortcutContextMenuTileActive(target) {',
-  'shortcut context menu should mark its target tile while the menu is open'
-);
-
-assertContains(
-  newtabJs,
-  'function clearShortcutContextMenuTileActive() {',
-  'shortcut context menu should clear the persistent hover marker when it closes'
-);
-
-assertContains(
-  newtabJs,
-  'function syncShortcutDockHoverFromPoint(clientX, clientY) {',
-  'shortcut context menu close should restore normal dock hover behavior from the pointer location'
-);
-
-assertContains(
-  newtabJs,
-  "document.addEventListener('pointerdown', handleShortcutContextMenuDocumentPointerDown, true);",
-  'blank clicks should close the shortcut context menu through the same cleanup path'
-);
-
-assertContains(
-  newtabJs,
-  'function openShortcutEditor(shortcut, sourceElement) {',
-  'shortcut context menu edit action should open the existing shortcut dialog in edit mode'
-);
-
-assertContains(
-  newtabJs,
-  'function saveEditedShortcutFromDialog(title, url, shortcutId, iconState) {',
-  'shortcut dialog should have a dedicated edit save path'
-);
-
-assertContains(
-  getFunctionSource(newtabJs, 'saveShortcutFromDialog'),
-  'return saveEditedShortcutFromDialog(title, url, dialogState.shortcutId, iconState);',
-  'shortcut dialog submit should branch cleanly between add and edit modes'
-);
-
-assertContains(
-  newtabJs,
-  'function removeShortcutById(shortcutId) {',
-  'shortcut context menu remove action should persistently remove the target shortcut'
-);
-
-assertContains(
-  newtabJs,
-  'function persistShortcuts(nextShortcuts, toastMessage, iconChange, persistOptions) {',
-  'shortcut edit/remove should share one normalized persistence helper'
-);
-
-assert.match(
-  getFunctionSource(newtabJs, 'persistShortcuts'),
-  /normalizeShortcutState\(\{[\s\S]*?groups: settings\.groups \|\| shortcutGroups[\s\S]*?persistShortcutState\(storageArea, nextState, \{[\s\S]*?overflowArea: getShortcutOverflowStorageArea\(\)[\s\S]*?maxTotalBytes: budget\.maxTotalBytes[\s\S]*?newtab_shortcuts_sync_limit_reached/,
-  'shortcut persistence should keep overflow local, surface sync failures, and show the approved warning'
-);
-
-assertContains(
-  newtabJs,
-  'NEWTAB_SHORTCUT_DIALOG.createShortcutDialog({',
-  'newtab runtime should instantiate the shortcut dialog component'
-);
-
-assertContains(
-  shortcutDialogJs,
-  'function setEnterDirection(',
-  'shortcut dialog component should calculate its enter direction from the trigger position'
-);
-
-assertContains(
-  shortcutDialogJs,
-  "'--x-nt-shortcut-dialog-enter-x'",
-  'shortcut dialog should write a trigger-aware x enter offset'
-);
-
-assertContains(
-  shortcutDialogJs,
-  "host.setAttribute('data-open', 'false');\n    host.hidden = false;",
-  'shortcut dialog should start closed before animating open'
-);
-
-assertContains(
-  shortcutDialogJs,
-  "host.setAttribute('data-preparing', 'true');",
-  'shortcut dialog should prepare its start position before transitions are enabled'
-);
-
-assertContains(
-  shortcutDialogJs,
-  'setEnterDirection(openOptions.sourceElement, dialog, options);',
-  'shortcut dialog should set its enter direction before animating open'
-);
-
-assertContains(
-  shortcutDialogJs,
-  "host.removeAttribute('data-preparing');",
-  'shortcut dialog should re-enable transitions before opening'
-);
-
-assertContains(
-  shortcutDialogJs,
-  "host.setAttribute('data-open', 'true');",
-  'shortcut dialog should move into its animated open state'
-);
-
-assertContains(
-  shortcutDialogJs,
-  'onSubmit={handleSubmit}',
-  'the React shortcut dialog should own form submission behavior'
-);
-
-assertContains(
-  newtabJs,
-  'shortcutIconStore.writeAll(nextIcons)',
-  'newtab runtime should persist custom icons in the local-only icon store'
-);
-
-assertContains(
-  newtabJs,
-  'return Promise.all([loadShortcuts(), loadShortcutIcons(), loadShortcutFavicons(), loadFolderColors()]).then(() => {',
-  'newtab runtime should load shortcut metadata, local icons, and cached high-resolution favicons together'
-);
-
-assertContains(
-  newtabJs,
-  "action: 'getShortcutFaviconData'",
-  'shortcut tiles should request their dedicated high-resolution favicon upgrade'
-);
-
-assertContains(
-  newtabJs,
-  'SHORTCUT_FAVICON.setCachedIcon(',
-  'resolved high-resolution shortcut favicons should be cached locally'
-);
-
-assert.match(
-  newtabJs,
-  /function loadNewtabShortcutPreferences\(\)\s*\{[\s\S]*?storageArea\.get\(\[[\s\S]*?NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY,[\s\S]*?NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY,[\s\S]*?NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY[\s\S]*?\],/,
-  'newtab runtime should batch shortcut preference reads into one storage request'
-);
-
-assert.match(
-  newtabJs,
-  /const shortcutsReadyPromise = shortcutPreferencesReadyPromise\.then\(loadVisibleShortcuts\);/,
-  'newtab runtime should start shortcut payload loading after its display preferences resolve'
-);
-
-assert.match(
-  newtabJs,
-  /const initialVisualReadyPromise = Promise\.all\(\[[\s\S]*?initialShortcutsReadyTask[\s\S]*?\]\)\.catch[\s\S]*?loadRecentSites\(\{[\s\S]*?force: true[\s\S]*?loadBookmarks\(\{[\s\S]*?force: true[\s\S]*?markNewtabReady\(\);/,
-  'newtab ready transition should wait for shortcut and authoritative section geometry'
-);
-
-const initialVisualDependencyBlock = newtabJs.slice(
-  newtabJs.indexOf('const initialVisualReadyPromise = Promise.all(['),
-  newtabJs.indexOf(']).catch((error) => {',
-    newtabJs.indexOf('const initialVisualReadyPromise = Promise.all(['))
-);
-assert.match(
-  initialVisualDependencyBlock,
-  /initialShortcutsReadyTask/,
-  'newtab ready transition should reserve final shortcut geometry before first paint'
-);
-
-assertContains(
-  shortcutDialogJs,
-  'className="x-lumno-action-button x-lumno-action-button--secondary x-nt-shortcut-dialog-button x-nt-shortcut-dialog-button--secondary"',
-  'the React shortcut cancel button should use the Lumno secondary button component'
-);
-
-assertContains(
-  shortcutDialogJs,
-  'className="x-lumno-action-button x-lumno-action-button--primary x-nt-shortcut-dialog-button x-nt-shortcut-dialog-button--primary"',
-  'the React shortcut done button should use the Lumno primary button component'
-);
-
-assertContains(
-  shortcutDialogJs,
-  'className="_x_extension_shortcut_input_2024_unique_"',
-  'React shortcut inputs should reuse the settings text input component'
-);
-
-assertContains(
-  shortcutDialogJs,
-  'className="_x_extension_shortcut_input_affix_2026_unique_"',
-  'React shortcut inputs should use the options input affix wrapper'
-);
-
-assertContains(
-  shortcutDialogJs,
-  'data-has-prefix="false"',
-  'React shortcut input affixes should use the no-prefix options mode'
-);
-
-const themeBootstrapIndex = newtabJs.indexOf('const initialWallpaperVisualReadyTask = Promise.all([');
-assert.ok(themeBootstrapIndex > -1, 'newtab runtime should bootstrap the initial appearance');
-assert.ok(
-  newtabJs.indexOf('bootstrapInitialThemeMode(),', themeBootstrapIndex) > themeBootstrapIndex,
-  'the initial wallpaper visual task should resolve the theme before first paint'
-);
-{
-  const markerIndex = newtabJs.indexOf('const suggestionItems = [];');
-  assert.ok(
-    markerIndex > -1 && markerIndex < themeBootstrapIndex,
-    'suggestion items should be initialized before theme bootstrap reads suggestion state'
-  );
-}
-// The suggestion state starts on the page state object, which newtab.js
-// creates before anything else.
-const pageStateSource = fs.readFileSync(path.join(repoRoot, 'src/newtab/page-state.js'), 'utf8');
-['selectedIndex: -1,', 'suggestionsView: null,', 'inputParts: null,'].forEach((marker) => {
-  assert.ok(pageStateSource.includes(marker), `page state should start with ${marker}`);
-});
-assert.ok(
-  newtabJs.indexOf('LumnoNewtabPageState.createPageState()') > -1 &&
-    newtabJs.indexOf('LumnoNewtabPageState.createPageState()') < themeBootstrapIndex,
-  'page state should exist before theme bootstrap reads suggestion state'
-);
-
-assertContains(
-  newtabJs,
-  'if (!suggestionsView) {\n      return;\n    }\n    suggestionsView.updateSelection(selectedIndex);',
-  'theme bootstrap should not call the suggestions view before it exists'
 );
 
 [
@@ -2668,10 +1338,211 @@ assert.strictEqual(
   'the sync-limit toast should say where new shortcuts stay and how WebDAV syncs them'
 );
 
+
+// On New Tab itself.
+const settings = require('../../src/shared/settings.js');
+const { createNewtabPage } = require('../helpers/newtab-page');
+
+const SITES = [
+  { url: 'chrome://inspect/#devices', title: 'Inspect' },
+  { url: 'https://one.example/', title: 'One' },
+  { url: 'https://two.example/', title: 'Two' }
+];
+
+async function openShortcuts(options) {
+  const page = await createNewtabPage(Object.assign({ layout: true, shortcuts: SITES }, options || {}));
+  await page.settle(300);
+  const doc = page.document;
+  const grid = doc.querySelector('.x-nt-shortcuts-grid');
+  if (grid) {
+    page.layout.place(grid, { left: 300, top: 400, width: 400, height: 80 });
+    page.layout.flow(grid, '.x-nt-shortcut-tile', { left: 300, top: 400, width: 64, height: 64, gap: 8 });
+  }
+  return {
+    page,
+    doc,
+    grid,
+    tile: (title) => doc.querySelector(`.x-nt-shortcut-tile[aria-label="Open ${title}"]`),
+    tiles: () => Array.from(doc.querySelectorAll('.x-nt-shortcut-tile:not(.x-nt-shortcut-tile--add)')),
+    click(element, init) {
+      element.dispatchEvent(new page.window.MouseEvent('click', Object.assign({ bubbles: true, cancelable: true, button: 0 }, init || {})));
+    }
+  };
+}
+
+// Browser pages (chrome://…) open in this tab from a plain click, and in the
+// background from Ctrl/⌘ or a middle click; with shortcuts set to open in a
+// new tab, a plain click opens a foreground one instead.
+async function testOpeningShortcuts() {
+  const shortcuts = await openShortcuts();
+  const { page } = shortcuts;
+  const created = () => page.messages.filter((message) => message.action === 'createTab');
+  shortcuts.click(shortcuts.tile('Inspect'));
+  await page.settle(60);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(page.updated)), [{ id: 42, properties: { url: 'chrome://inspect/#devices' } }],
+    'a browser page shortcut should open in this tab');
+  shortcuts.click(shortcuts.tile('Inspect'), { metaKey: true });
+  shortcuts.click(shortcuts.tile('Inspect'), { ctrlKey: true });
+  shortcuts.tile('Inspect').dispatchEvent(new page.window.MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 1 }));
+  await page.settle(60);
+  assert.deepStrictEqual(created().map((message) => [message.url, message.disposition]),
+    Array(3).fill(['chrome://inspect/#devices', 'backgroundTab']), 'modified and middle clicks open it in the background');
+  assert.strictEqual(page.updated.length, 1);
+  page.close();
+
+  const newTab = await openShortcuts({ sync: { [settings.NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY]: { shortcuts: true } } });
+  newTab.click(newTab.tile('One'));
+  newTab.click(newTab.tile('One'), { metaKey: true });
+  await newTab.page.settle(60);
+  assert.deepStrictEqual(newTab.page.messages.filter((message) => message.action === 'createTab').map((message) => message.disposition),
+    ['newTab', 'backgroundTab'], 'with "open in a new tab", a plain click opens a foreground tab');
+  assert.strictEqual(newTab.page.updated.length, 0);
+  newTab.page.close();
+}
+
+async function testVisibilitySettings() {
+  const hidden = await openShortcuts({ sync: { [settings.NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY]: false } });
+  const section = () => hidden.doc.getElementById('_x_extension_newtab_shortcuts_2026_unique_');
+  assert.notStrictEqual(section().getAttribute('data-visible'), 'true', 'turning shortcuts off should hide the rail');
+  hidden.page.changeStorage('sync', settings.NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY, true);
+  await hidden.page.settle(100);
+  assert.strictEqual(section().getAttribute('data-visible'), 'true', 'and turning them on should bring it back at once');
+  hidden.page.close();
+
+  const empty = await openShortcuts({ shortcuts: [], sync: { [settings.NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY]: false } });
+  assert.notStrictEqual(empty.doc.getElementById('_x_extension_newtab_shortcuts_2026_unique_').getAttribute('data-visible'), 'true',
+    'a rail with nothing to show stays hidden');
+  assert.strictEqual(empty.doc.querySelector('.x-nt-shortcut-tile--add').hidden, true, 'and the add tile hidden');
+  empty.page.close();
+}
+
+async function testDockMagnification() {
+  for (const enabled of [true, false]) {
+    const shortcuts = await openShortcuts({ sync: { [settings.NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY]: enabled } });
+    const { page, grid } = shortcuts;
+    const box = shortcuts.tile('One').getBoundingClientRect();
+    page.pointer('pointerover', box.left + 30, box.top + 30);
+    page.pointer('pointermove', box.left + 30, box.top + 30);
+    await page.settle(60);
+    const distances = () => shortcuts.tiles().concat(page.document.querySelector('.x-nt-shortcut-tile--add')).map((tile) => tile.getAttribute('data-dock-distance'));
+    if (enabled) {
+      assert.deepStrictEqual(distances(), ['1', '0', '1', '2'], 'hovering a tile should mark each neighbour by its distance');
+      const icon = shortcuts.tile('One').querySelector('.x-nt-shortcut-icon');
+      assert.ok(Number.parseFloat(icon.style.getPropertyValue('--x-nt-shortcut-dock-scale')) > 1, 'and magnify the hovered icon');
+      grid.dispatchEvent(new page.window.MouseEvent('pointerleave', { clientX: 10, clientY: 10 }));
+      await page.settle(60);
+      assert.deepStrictEqual(distances(), [null, null, null, null], 'leaving the rail should let the icons settle back');
+    } else {
+      assert.strictEqual(grid.getAttribute('data-dock-magnification'), 'false');
+      assert.deepStrictEqual(distances(), [null, null, null, null], 'with magnification off, hovering changes nothing');
+    }
+    page.close();
+  }
+}
+
+async function testTilesAndTooltips() {
+  const shortcuts = await openShortcuts();
+  const { page, doc } = shortcuts;
+  assert.strictEqual(doc.querySelectorAll('.x-nt-shortcut-title, .x-nt-shortcut-label').length, 0, 'tiles show no visible labels');
+  const two = shortcuts.tile('Two');
+  assert.deepStrictEqual([two.getAttribute('data-tooltip'), two.getAttribute('title')], ['Two', null],
+    'their full title is in an anchored tooltip, not a native title');
+  const box = two.getBoundingClientRect();
+  await page.hover(two, { clientX: box.left + 30, clientY: box.top + 30 });
+  await page.settle(300);
+  const tooltip = doc.getElementById('_x_extension_newtab_shortcut_tooltip_2026_unique_');
+  assert.deepStrictEqual([tooltip.getAttribute('data-visible'), tooltip.textContent], ['true', 'Two'], 'hovering a tile shows its title');
+  // The 48px icon sits at the top of its tile.
+  assert.ok(Number.parseFloat(tooltip.style.top) >= box.top + 48, 'below the icon');
+  assert.strictEqual(doc.querySelector('.x-nt-shortcut-tile--add').getAttribute('data-tooltip'), 'Add shortcut', 'the add tile is labelled the same way');
+  assert.ok(shortcuts.tiles().every((tile) => Array.from(tile.querySelectorAll('img')).every((image) => image.getAttribute('draggable') !== 'true')),
+    'favicon images are not dragged on their own');
+
+  const add = doc.querySelector('.x-nt-shortcut-tile--add');
+  add.dispatchEvent(new page.window.MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2, clientX: 600, clientY: 430 }));
+  await page.settle(100);
+  assert.strictEqual(doc.querySelectorAll('[role="menu"][data-open="true"]').length, 0, 'the add tile has no right-click menu');
+  shortcuts.click(add);
+  await page.settle(150);
+  const menu = doc.querySelector('#_x_extension_newtab_shortcut_context_menu_2026_unique__menu');
+  assert.deepStrictEqual(Array.from(menu.querySelectorAll('[role="menuitem"]')).map((option) => option.getAttribute('data-value')),
+    ['shortcut-add', 'group-create'], 'clicking it asks whether to add a site or a group');
+  assert.ok(menu.classList.contains('_x_extension_select_menu_2024_unique_'), 'in the shared menu component');
+  page.close();
+}
+
+async function testCapacityAndSync() {
+  const many = Array.from({ length: 60 }, (_, index) => ({ url: `https://site${index}.example/`, title: `Site ${index}` }));
+  const shortcuts = await openShortcuts({ shortcuts: many });
+  assert.strictEqual(shortcuts.tiles().length, 60, 'New Tab shows as many shortcuts as the store keeps');
+  shortcuts.page.close();
+
+  const synced = await openShortcuts();
+  const { shortcutsStorage } = require('../helpers/newtab-fixtures');
+  const values = await shortcutsStorage([{ url: 'https://elsewhere.example/', title: 'Elsewhere' }]);
+  Object.entries(values).forEach(([key, value]) => synced.page.changeStorage('sync', key, value));
+  await synced.page.settle(200);
+  assert.deepStrictEqual(synced.tiles().map((tile) => tile.getAttribute('aria-label')), ['Open Elsewhere'],
+    'shortcuts changed on another device should show here');
+  synced.page.close();
+}
+
+async function testAddingAShortcut() {
+  const shortcuts = await openShortcuts();
+  const { page, doc } = shortcuts;
+  const add = doc.querySelector('.x-nt-shortcut-tile--add');
+  shortcuts.click(add);
+  await page.settle(150);
+  const option = doc.querySelector('#_x_extension_newtab_shortcut_context_menu_2026_unique__menu [data-value="shortcut-add"]');
+  option.dispatchEvent(new page.window.MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
+  shortcuts.click(option);
+  await page.settle(400);
+  const backdrop = doc.querySelector('.x-nt-shortcut-dialog-backdrop');
+  const dialog = backdrop.querySelector('.x-nt-shortcut-dialog');
+  assert.strictEqual(backdrop.getAttribute('data-open'), 'true', 'the add dialog should open');
+  assert.ok(dialog.style.getPropertyValue('--x-nt-shortcut-dialog-enter-x'), 'from the side of the tile that opened it');
+  const [name, url] = Array.from(dialog.querySelectorAll('input._x_extension_shortcut_input_2024_unique_'));
+  assert.ok(url.closest('._x_extension_shortcut_input_affix_2026_unique_[data-has-prefix="false"]'), 'fields use the Settings input with no prefix');
+  const buttons = Array.from(dialog.querySelectorAll('button.x-lumno-action-button'));
+  assert.ok(buttons.some((button) => button.classList.contains('x-lumno-action-button--primary')) &&
+    buttons.some((button) => button.classList.contains('x-lumno-action-button--secondary')), 'with the Lumno primary and secondary buttons');
+  const type = (input, value) => {
+    Object.getOwnPropertyDescriptor(page.window.HTMLInputElement.prototype, 'value').set.call(input, value);
+    input.dispatchEvent(new page.window.Event('input', { bubbles: true }));
+  };
+  type(name, 'Docs');
+  type(url, 'docs.example');
+  dialog.querySelector('form').dispatchEvent(new page.window.Event('submit', { bubbles: true, cancelable: true }));
+  await page.settle(400);
+  assert.ok(shortcuts.tile('Docs'), 'submitting should add the shortcut');
+  assert.match(doc.getElementById('_x_extension_toast_2024_unique_').textContent, /Shortcut added/);
+  page.close();
+}
+
+async function testPageStarts() {
+  const shortcuts = await openShortcuts({ darkSystem: true });
+  assert.deepStrictEqual(shortcuts.page.errors, [], 'New Tab should start without errors');
+  assert.ok(shortcuts.tiles().every((tile) => tile.querySelector('.x-nt-shortcut-icon')), 'each shortcut has its icon');
+  shortcuts.page.close();
+}
+
+async function runPageTests() {
+  await testOpeningShortcuts();
+  await testVisibilitySettings();
+  await testDockMagnification();
+  await testTilesAndTooltips();
+  await testCapacityAndSync();
+  await testAddingAShortcut();
+  await testPageStarts();
+}
+
 Promise.all([
   assertDarkWallpaperKeepsShortcutThemeBackground(),
   assertDarkThemeKeepsShortcutThemeBackground()
-]).catch((error) => {
+]).then(runPageTests).then(() => {
+  console.log('newtab shortcuts UI tests passed');
+  process.exit(0);
+}).catch((error) => {
   console.error(error);
-  process.exitCode = 1;
+  process.exit(1);
 });
