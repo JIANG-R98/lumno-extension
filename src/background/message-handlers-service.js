@@ -100,8 +100,8 @@ const TAB_MESSAGE_HANDLERS = Object.freeze({
             });
           syncTabSwitchStatsFromTabList(normalizedTabs);
           const sortedTabs = sortTabsForOverlay(normalizedTabs);
-          tabOverlayFetchSeq += 1;
-          const withSeq = sortedTabs.map((tab) => createOverlayTabPayload(tab, tabOverlayFetchSeq));
+          const fetchSeq = nextTabOverlayFetchSeq();
+          const withSeq = sortedTabs.map((tab) => createOverlayTabPayload(tab, fetchSeq));
           sendResponse({ tabs: withSeq, currentTabId: currentTabId });
         });
       });

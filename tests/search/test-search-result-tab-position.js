@@ -84,6 +84,11 @@ function createHarness(options = {}) {
     getDirectNavigationUrl: (query) => query.startsWith('https://') ? query : '',
     buildDefaultSearchUrl: (query) => `https://fallback.test/?q=${encodeURIComponent(query)}`,
     markPendingSearchTab(id) { context.pendingSearchTabId = id; },
+    clearPendingSearch() {
+      context.pendingSearchAt = 0;
+      context.pendingSearchTabId = null;
+      context.pendingSearchGroupContext = null;
+    },
     pendingSearchAt: 0,
     pendingSearchTabId: null,
     pendingSearchGroupContext: null

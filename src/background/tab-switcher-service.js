@@ -1935,6 +1935,9 @@ function clearSwitcherThumbnailsForDisabledSwitcher() {
   }).catch(warnBackgroundFailure('Failed to clear the recent-tab switcher thumbnails.'));
 }
 
+// Mirrors the stored setting, re-read on every wake; background.js applies it.
+let tabSwitcherEnabledCache = true;
+
 function applyTabSwitcherEnabledSetting(enabled) {
   tabSwitcherEnabledCache = enabled === true;
   if (!tabSwitcherEnabledCache) {

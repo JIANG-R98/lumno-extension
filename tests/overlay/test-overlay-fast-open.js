@@ -268,7 +268,7 @@ assert.match(
 );
 assert.match(
   backgroundSource,
-  /const withSeq = sortedTabs\.map\(\(tab\) => createOverlayTabPayload\(tab, tabOverlayFetchSeq\)\);/,
+  /const fetchSeq = nextTabOverlayFetchSeq\(\);\s*const withSeq = sortedTabs\.map\(\(tab\) => createOverlayTabPayload\(tab, fetchSeq\)\);/,
   'open-tab responses should avoid serializing full browser Tab objects into the page'
 );
 assert.match(

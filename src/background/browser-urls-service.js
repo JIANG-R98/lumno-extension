@@ -252,8 +252,7 @@ function setRestrictedActionFromBrowserNewtabProvider(providerType, tab, stage) 
     return;
   }
   const url = getResolvedTabUrl(tab);
-  restrictedActionAutoBrowserSettingDoneCache = true;
-  restrictedActionCache = 'none';
+  markRestrictedActionAutoSelected();
   const payload = {
     [RESTRICTED_ACTION_STORAGE_KEY]: 'none',
     [RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY]: true

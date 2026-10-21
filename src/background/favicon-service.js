@@ -136,6 +136,17 @@ let faviconEnhancedFetchEnabledCache = null;
 
 let faviconEnhancedFetchEnabledPromise = null;
 
+// Storage listeners call these when the stored values change elsewhere.
+function invalidateFaviconRequestBlacklistCache() {
+  faviconRequestBlacklistCache = null;
+  faviconRequestBlacklistPromise = null;
+}
+
+function invalidateFaviconEnhancedFetchEnabledCache() {
+  faviconEnhancedFetchEnabledCache = null;
+  faviconEnhancedFetchEnabledPromise = null;
+}
+
 const FAVICON_PROXY_SIZE = 128;
 
 let backgroundFaviconUrlResolver = null;

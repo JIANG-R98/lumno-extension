@@ -166,9 +166,7 @@ const SEARCH_MESSAGE_HANDLERS = Object.freeze({
             try {
               chrome.search.query({ text: query, disposition: 'NEW_TAB' }, () => {
                 if (chrome.runtime && chrome.runtime.lastError) {
-                  pendingSearchAt = 0;
-                  pendingSearchTabId = null;
-                  pendingSearchGroupContext = null;
+                  clearPendingSearch();
                   createResolvedTab(fallbackUrl, () => {
                     sendResponse({ ok: true, url: fallbackUrl });
                   });
@@ -178,9 +176,7 @@ const SEARCH_MESSAGE_HANDLERS = Object.freeze({
               });
               return;
             } catch (error) {
-              pendingSearchAt = 0;
-              pendingSearchTabId = null;
-              pendingSearchGroupContext = null;
+              clearPendingSearch();
             }
           }
           createResolvedTab(fallbackUrl, () => {
@@ -201,9 +197,7 @@ const SEARCH_MESSAGE_HANDLERS = Object.freeze({
               fallbackUrl,
               onFallback() {
                 if (pendingSearchTabId === tab.id) {
-                  pendingSearchAt = 0;
-                  pendingSearchTabId = null;
-                  pendingSearchGroupContext = null;
+                  clearPendingSearch();
                 }
               }
             }, (result) => {

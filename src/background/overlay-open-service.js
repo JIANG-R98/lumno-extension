@@ -16,6 +16,12 @@ const OVERLAY_HOST_ID = '_x_extension_overlay_host_2026_unique_';
 const overlayOpeningByTabId = new Map();
 let tabOverlayFetchSeq = 0;
 
+// Numbers each tab list handed to an overlay, so it can drop stale ones.
+function nextTabOverlayFetchSeq() {
+  tabOverlayFetchSeq += 1;
+  return tabOverlayFetchSeq;
+}
+
 function finishOverlayOpening(opening) {
   if (!opening || typeof opening.tabId !== 'number') {
     return;

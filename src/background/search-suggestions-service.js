@@ -60,6 +60,22 @@ let searchSelectionStatsCache = null;
 
 let searchSelectionStatsPromise = null;
 
+// Storage listeners call these when the stored values change elsewhere.
+function invalidateSearchBlacklistCache() {
+  searchBlacklistCache = null;
+  searchBlacklistPromise = null;
+}
+
+function invalidateSearchResultSourceTypesCache() {
+  searchResultSourceTypesCache = null;
+  searchResultSourceTypesPromise = null;
+}
+
+function replaceSearchSelectionStatsCache(stats) {
+  searchSelectionStatsCache = stats;
+  searchSelectionStatsPromise = null;
+}
+
 const SEARCH_ENGINE_SUGGEST_TIMEOUT_MS = 900;
 
 const SEARCH_ENGINE_SUGGEST_PREFETCH_DELAY_MS = 120;
@@ -245,6 +261,11 @@ function setDefaultSearchEngineState(nextState, shouldPersist) {
   if (shouldPersist && storageArea) {
     storageArea.set({ [DEFAULT_SEARCH_ENGINE_STORAGE_KEY]: updated });
   }
+}
+
+// Re-reads the stored default engine; callers wait on defaultSearchEngineStateReady.
+function refreshDefaultSearchEngineState() {
+  defaultSearchEngineStateReady = loadDefaultSearchEngineState();
 }
 
 function loadDefaultSearchEngineState() {
@@ -536,6 +557,17 @@ function markPendingSearchTab(tabId, sourceTab) {
   pendingSearchAt = Date.now();
   pendingSearchTabId = typeof tabId === 'number' ? tabId : null;
   pendingSearchGroupContext = getSourceTabGroupContext(sourceTab);
+}
+
+// The pending search's results tab once it is known.
+function setPendingSearchTabId(tabId) {
+  pendingSearchTabId = tabId;
+}
+
+function clearPendingSearch() {
+  pendingSearchAt = 0;
+  pendingSearchTabId = null;
+  pendingSearchGroupContext = null;
 }
 
 function isInteractiveSiteSearchProvider(provider) {

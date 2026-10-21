@@ -275,7 +275,7 @@ const TAB_SWITCHER_THUMBNAIL_STORAGE_KEY = '_x_extension_tab_switcher_state_2026
 // the service scripts in the first importScripts block document their own.
 //
 // Settings mirrors, re-read from storage on every wake (see the storageArea.get
-// below). Until that read lands they hold defaults, so event paths that act on
+// below; the tab switcher service keeps its own). Until that read lands they hold defaults, so event paths that act on
 // them wait for backgroundSettingsReady (see whenBackgroundSettingsReady).
 let restrictedActionCache = 'default';
 let restrictedActionAutoBrowserSettingDoneCache = false;
@@ -286,12 +286,17 @@ let resolveDocumentPipEnabledReady = () => {};
 const documentPipEnabledReady = new Promise((resolve) => {
   resolveDocumentPipEnabledReady = resolve;
 });
-let tabSwitcherEnabledCache = true;
 let backgroundSettingsLoaded = false;
 let resolveBackgroundSettingsReady = () => {};
 const backgroundSettingsReady = new Promise((resolve) => {
   resolveBackgroundSettingsReady = resolve;
 });
+// Records the restricted-action choice made for the user when the browser's
+// own New Tab provider is detected (browser-urls-service.js).
+function markRestrictedActionAutoSelected() {
+  restrictedActionAutoBrowserSettingDoneCache = true;
+  restrictedActionCache = 'none';
+}
 const browserNewtabProviderCandidateTabIds = new Map();
 function cleanupRemovedAiStorageKeys() {
   if (!chrome || !chrome.storage) {
@@ -945,7 +950,7 @@ function normalizeHost(hostname) {
   return stripped;
 }
 
-defaultSearchEngineStateReady = loadDefaultSearchEngineState();
+refreshDefaultSearchEngineState();
 
 if (chrome && chrome.tabs) {
   chrome.tabs.onCreated.addListener((tab) => {
@@ -956,12 +961,10 @@ if (chrome && chrome.tabs) {
       return;
     }
     if (Date.now() - pendingSearchAt > 5000) {
-      pendingSearchAt = 0;
-      pendingSearchTabId = null;
-      pendingSearchGroupContext = null;
+      clearPendingSearch();
       return;
     }
-    pendingSearchTabId = tab.id;
+    setPendingSearchTabId(tab.id);
     moveTabToSourceGroupContext(tab, pendingSearchGroupContext, () => {});
   });
 
@@ -970,9 +973,7 @@ if (chrome && chrome.tabs) {
       return;
     }
     if (!pendingSearchAt || (Date.now() - pendingSearchAt > 10000)) {
-      pendingSearchAt = 0;
-      pendingSearchTabId = null;
-      pendingSearchGroupContext = null;
+      clearPendingSearch();
       return;
     }
     if (pendingSearchTabId !== null && tabId !== pendingSearchTabId) {
@@ -980,9 +981,7 @@ if (chrome && chrome.tabs) {
     }
     const updated = updateDefaultSearchEngineFromUrl(changeInfo.url);
     if (updated) {
-      pendingSearchTabId = null;
-      pendingSearchAt = 0;
-      pendingSearchGroupContext = null;
+      clearPendingSearch();
     }
   });
 }
@@ -1034,22 +1033,18 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     warmSiteSearchProviderIcons();
   }
   if (changes[SEARCH_BLACKLIST_STORAGE_KEY]) {
-    searchBlacklistCache = null;
-    searchBlacklistPromise = null;
+    invalidateSearchBlacklistCache();
   }
   if (changes[FAVICON_REQUEST_BLACKLIST_STORAGE_KEY]) {
-    faviconRequestBlacklistCache = null;
-    faviconRequestBlacklistPromise = null;
+    invalidateFaviconRequestBlacklistCache();
     invalidateShortcutFaviconPolicyCache();
   }
   if (changes[FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY]) {
-    faviconEnhancedFetchEnabledCache = null;
-    faviconEnhancedFetchEnabledPromise = null;
+    invalidateFaviconEnhancedFetchEnabledCache();
     invalidateShortcutFaviconPolicyCache();
   }
   if (changes[SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY]) {
-    searchResultSourceTypesCache = null;
-    searchResultSourceTypesPromise = null;
+    invalidateSearchResultSourceTypesCache();
   }
   if (changes[SETTINGS.SEARCH_FUZZY_PINYIN_ENABLED_STORAGE_KEY]) {
     setSearchFuzzyPinyinEnabled(SETTINGS.normalizeSearchFuzzyPinyinEnabled(
@@ -1062,8 +1057,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName !== 'local' || !changes[SEARCH_SELECTION_STATS_STORAGE_KEY]) {
     return;
   }
-  searchSelectionStatsCache = normalizeSearchSelectionStats(
+  replaceSearchSelectionStatsCache(normalizeSearchSelectionStats(
     changes[SEARCH_SELECTION_STATS_STORAGE_KEY].newValue
-  );
-  searchSelectionStatsPromise = null;
+  ));
 });
