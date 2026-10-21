@@ -23,7 +23,10 @@ function getReachingEntries(id, getModuleInfo, seen = new Set()) {
   return entries;
 }
 
+const repoRoot = resolve(import.meta.dirname, '..');
+
 export default defineConfig({
+  root: repoRoot,
   plugins: [react()],
   publicDir: false,
   define: {
@@ -31,7 +34,7 @@ export default defineConfig({
   },
   build: {
     target: 'chrome110',
-    outDir: resolve(import.meta.dirname, 'src/react'),
+    outDir: resolve(repoRoot, 'src/react'),
     emptyOutDir: true,
     copyPublicDir: false,
     sourcemap: false,
@@ -39,19 +42,19 @@ export default defineConfig({
     rollupOptions: {
       input: {
         'newtab-islands': resolve(
-          import.meta.dirname,
+          repoRoot,
           'react-src/newtab/react-islands-entry.ts'
         ),
         'options-islands': resolve(
-          import.meta.dirname,
+          repoRoot,
           'react-src/options/options-islands-entry.ts'
         ),
         'onboarding-islands': resolve(
-          import.meta.dirname,
+          repoRoot,
           'react-src/onboarding/onboarding-islands-entry.ts'
         ),
         'popup-islands': resolve(
-          import.meta.dirname,
+          repoRoot,
           'react-src/popup/popup-islands-entry.ts'
         )
       },

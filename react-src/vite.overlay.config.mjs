@@ -2,7 +2,10 @@ import { resolve } from 'node:path';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
+const repoRoot = resolve(import.meta.dirname, '..');
+
 export default defineConfig({
+  root: repoRoot,
   plugins: [react()],
   publicDir: false,
   define: {
@@ -10,14 +13,14 @@ export default defineConfig({
   },
   build: {
     target: 'chrome110',
-    outDir: resolve(import.meta.dirname, 'src/react'),
+    outDir: resolve(repoRoot, 'src/react'),
     emptyOutDir: false,
     copyPublicDir: false,
     sourcemap: false,
     minify: 'esbuild',
     lib: {
       entry: resolve(
-        import.meta.dirname,
+        repoRoot,
         'react-src/overlay/react-islands-entry.ts'
       ),
       formats: ['iife'],

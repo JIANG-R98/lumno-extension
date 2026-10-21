@@ -22,9 +22,8 @@
     ]
   },
   "include": [
-    "react-src/**/*.ts",
-    "react-src/**/*.tsx",
-    "vite.react.config.mjs",
-    "vitest.react.config.ts"
+    "**/*.ts",
+    "**/*.tsx",
+    "vite.config.mjs"
   ]
 }
