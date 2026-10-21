@@ -58,7 +58,14 @@ const NEWTAB_RUNTIME_MODULES = [
   'src/newtab/search/search-mode-controller.js',
   'src/newtab/page-keyboard.js',
   'src/newtab/search/site-search-runtime.js',
-  'src/newtab/section-reload.js'
+  'src/newtab/section-reload.js',
+  'src/newtab/startup-storage.js',
+  'src/newtab/viewport-insets.js',
+  'src/newtab/shortcuts/bottom-dock-runtime.js',
+  'src/newtab/search/suggestions-layout.js',
+  'src/newtab/bookmarks/bookmark-cascade-actions.js',
+  'src/newtab/page-resize.js',
+  'src/newtab/search/search-input-composition.js'
 ];
 
 // Returns newtab.js followed by the modules split out of it, so source checks

@@ -372,8 +372,13 @@ assert.match(
 );
 assert.match(
   newtabSource,
-  /function getSearchModeMenuResultOffset\(\)[\s\S]*?data-visible[\s\S]*?suggestionsContainer\.offsetHeight[\s\S]*?function syncSearchModeMenuResultOffset\(\)[\s\S]*?--x-nt-suggestions-menu-fit-max-height[\s\S]*?fitModeMenuWithinViewport[\s\S]*?setModeMenuResultOffset[\s\S]*?ResizeObserver[\s\S]*?observe\(suggestionsContainer\)/,
+  /function getSearchModeMenuResultOffset\(\)[\s\S]*?data-visible[\s\S]*?suggestionsContainer\.offsetHeight[\s\S]*?function syncSearchModeMenuResultOffset\(\)[\s\S]*?--x-nt-suggestions-menu-fit-max-height[\s\S]*?fitModeMenuWithinViewport[\s\S]*?setModeMenuResultOffset/,
   'newtab should use stable layout height and shrink visible results enough to keep the scope menu inside the viewport'
+);
+assert.match(
+  newtabSource,
+  /syncSearchModeMenuResultOffset\(\);[\s\S]{0,120}ResizeObserver[\s\S]*?observe\(suggestionsContainer\)/,
+  'newtab should refit the scope menu whenever the suggestion list resizes'
 );
 assert.match(
   overlaySource,

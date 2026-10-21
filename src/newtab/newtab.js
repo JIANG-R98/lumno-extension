@@ -27,56 +27,17 @@
   }
   markNewtabStartupMilestone('script-start');
 
-  const settingsRuntimeApi = globalThis.LumnoSettings;
-  const providerStorageRuntime = settingsRuntimeApi.createProviderStorageRuntime(chrome);
-  const rawStorageArea = providerStorageRuntime
-    ? providerStorageRuntime.area
-    : ((chrome && chrome.storage && chrome.storage.sync)
-        ? chrome.storage.sync
-        : (chrome && chrome.storage ? chrome.storage.local : null));
-  // The next New Tab prefetches these keys before its scripts load (newtab-storage-prefetch.js).
-  function rememberStartupStorageKeys(keys) {
-    if (!Array.isArray(keys) || !keys.length) {
-      return;
-    }
-    try {
-      const value = JSON.stringify(keys.slice().sort());
-      const cacheKey = settingsRuntimeApi.NEWTAB_STARTUP_STORAGE_KEYS_CACHE_KEY;
-      if (window.localStorage.getItem(cacheKey) !== value) {
-        window.localStorage.setItem(cacheKey, value);
-      }
-    } catch (_error) {
-      // localStorage is only a fast path; the next load reads storage as before.
-    }
-  }
-  const startupStorageReadBatch = rawStorageArea
-    ? settingsRuntimeApi.createStorageReadBatch(rawStorageArea)
-    : null;
-  const storageArea = startupStorageReadBatch
-    ? startupStorageReadBatch.area
-    : rawStorageArea;
-  if (startupStorageReadBatch) {
-    startupStorageReadBatch.ready.then((metrics) => {
-      rememberStartupStorageKeys(metrics && metrics.keys);
-      if (!document.documentElement) {
-        return;
-      }
-      document.documentElement.setAttribute(
-        'data-lumno-newtab-bootstrap-storage-reads',
-        String(Number(metrics && metrics.underlyingReadCount) || 0)
-      );
-      document.documentElement.setAttribute(
-        'data-lumno-newtab-bootstrap-storage-requests',
-        String(Number(metrics && metrics.requestCount) || 0)
-      );
-      document.documentElement.setAttribute(
-        'data-lumno-newtab-bootstrap-storage-keys',
-        metrics && metrics.keyCount === null
-          ? 'all'
-          : String(Number(metrics && metrics.keyCount) || 0)
-      );
-    });
-  }
+  const NEWTAB_STARTUP_STORAGE = globalThis.LumnoNewtabStartupStorage;
+  const {
+    settingsRuntimeApi,
+    providerStorageRuntime,
+    rawStorageArea,
+    startupStorageReadBatch,
+    storageArea
+  } = NEWTAB_STARTUP_STORAGE.createStartupStorage({
+
+  });
+
   // Edge's topSites lists its own promoted sites instead of the user's, so Edge
   // ranks most-visited from history visit counts alone.
   const TOP_SITES_FOLLOW_HISTORY =
@@ -153,50 +114,13 @@
       return false;
     }
   }
-  function getNewtabVisualViewportInsets() {
-    const visualViewport = window.visualViewport;
-    if (!visualViewport) {
-      return { top: 0, bottom: 0 };
-    }
-    const top = Number.isFinite(Number(visualViewport.offsetTop))
-      ? Math.max(0, Number(visualViewport.offsetTop))
-      : 0;
-    const viewportHeight = Number.isFinite(Number(visualViewport.height))
-      ? Math.max(0, Number(visualViewport.height))
-      : Math.max(0, Number(window.innerHeight) || 0);
-    const layoutHeight = Math.max(0, Number(window.innerHeight) || viewportHeight);
-    const bottom = Math.max(0, layoutHeight - top - viewportHeight);
-    return { top, bottom };
-  }
-  function syncNewtabVisualViewportInsets() {
-    if (!document.documentElement || !document.documentElement.style) {
-      return;
-    }
-    const insets = getNewtabVisualViewportInsets();
-    document.documentElement.style.setProperty(
-      '--x-nt-visual-viewport-top-inset',
-      `${Math.round(insets.top)}px`
-    );
-    document.documentElement.style.setProperty(
-      '--x-nt-visual-viewport-bottom-inset',
-      `${Math.round(insets.bottom)}px`
-    );
-  }
-  syncNewtabVisualViewportInsets();
-  window.addEventListener('resize', syncNewtabVisualViewportInsets, { passive: true });
-  if (window.visualViewport &&
-      typeof window.visualViewport.addEventListener === 'function') {
-    window.visualViewport.addEventListener(
-      'resize',
-      syncNewtabVisualViewportInsets,
-      { passive: true }
-    );
-    window.visualViewport.addEventListener(
-      'scroll',
-      syncNewtabVisualViewportInsets,
-      { passive: true }
-    );
-  }
+
+  const NEWTAB_VIEWPORT_INSETS = globalThis.LumnoNewtabViewportInsets;
+  const {
+    getNewtabVisualViewportInsets
+  } = NEWTAB_VIEWPORT_INSETS.createViewportInsets({
+
+  });
 
   const SETTINGS = settingsRuntimeApi;
   const BROWSER_PROFILE = globalThis.LumnoBrowserProfile;
@@ -317,7 +241,6 @@
   const NEWTAB_BOOKMARK_FOLDER_ICON = globalThis.LumnoNewtabBookmarkFolderIcon;
   const NEWTAB_TOAST = globalThis.LumnoNewtabToast;
   const NEWTAB_LAYOUT = globalThis.LumnoNewtabLayout;
-  const NEWTAB_DOCK = globalThis.LumnoNewtabDock;
   const NEWTAB_DIRECT_NAVIGATION_SETTLE = globalThis.LumnoNewtabDirectNavigationSettle;
   const NEWTAB_SHORTCUTS_STORE = globalThis.LumnoNewtabShortcutsStore;
   const FOLDER_REFERENCES = globalThis.LumnoBookmarkFolderReference;
@@ -622,7 +545,6 @@
   const MAX_PINNED_RECENT_SITES = 3;
   const NEWTAB_SHORTCUTS_CRITICAL_SYNC_RESERVE_BYTES = NEWTAB_SHORTCUTS_STORE.DEFAULT_SHORTCUTS_SYNC_RESERVE_BYTES;
   const NEWTAB_SHORTCUTS_STORAGE_KEYS = NEWTAB_SHORTCUTS_STORE.SHORTCUT_STORAGE_KEYS;
-  const NEWTAB_RESIZE_DENSITY_SETTLE_MS = 140;
   const pageSearchParams = new URLSearchParams(window.location.search || '');
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
   pageState.globalThemeMode = 'system';
@@ -1162,6 +1084,19 @@
   });
 
   const NEWTAB_FOLDER_COLORS = globalThis.LumnoNewtabFolderColors;
+
+  const NEWTAB_BOOKMARK_CASCADE_ACTIONS = globalThis.LumnoNewtabBookmarkCascadeActions;
+  const {
+    openBookmarkCascadeMenu,
+    closeBookmarkCascadeMenu,
+    positionBookmarkCascadeLevels,
+    getTopBookmarks
+  } = NEWTAB_BOOKMARK_CASCADE_ACTIONS.createBookmarkCascadeActions({
+    bookmarksRuntime,
+    t,
+    pageState
+  });
+
   const {
     applySavedFolderColor,
     folderColorStorage,
@@ -1369,22 +1304,6 @@
     LANGUAGE_STORAGE_KEY,
     pageState
   });
-  // A heading mode menu opens once the mouse rests on the heading, so a pointer passing over
-  // it does not flash the menu, and waits a moment before closing so the pointer can cross
-  // the gap into the menu.
-  const SEARCH_LAYOUT_MIN_TOP_PX = 28;
-  const SEARCH_LAYOUT_MIN_BOTTOM_PX = 20;
-  const SEARCH_LAYOUT_UPSHIFT_RATIO = 0.06;
-  const SEARCH_LAYOUT_UPSHIFT_MIN_PX = 24;
-  const SEARCH_LAYOUT_UPSHIFT_MAX_PX = 80;
-  const SEARCH_LAYOUT_CONTENT_SECTIONS_EXTRA_UPSHIFT_PX = 20;
-  const SEARCH_LAYOUT_EMPTY_SECTIONS_EXTRA_UPSHIFT_PX = 96;
-  const SEARCH_LAYOUT_NARROW_VIEWPORT_MIN_WIDTH_PX = 520;
-  const SEARCH_LAYOUT_NARROW_VIEWPORT_MAX_WIDTH_PX = 1440;
-  const SEARCH_LAYOUT_NARROW_TOP_INSET_PX = 16;
-  const SEARCH_LAYOUT_NARROW_TOP_INSET_TRANSITION_PX = 64;
-  const SEARCH_LAYOUT_SHORT_VIEWPORT_MAX_HEIGHT_PX = 680;
-  const SEARCH_LAYOUT_SHORT_MIN_TOP_PX = 44;
   const WORDMARK_ENTRY_ANIMATION_NAME = '_x_nt_wordmark_enter_2026_unique_';
   const RECENT_CARD_TARGET_WIDTH_PX = 248;
   const RECENT_GRID_GAP_PX = 12;
@@ -1417,6 +1336,16 @@
   const NEWTAB_PAGE_PREFERENCES = globalThis.LumnoNewtabPagePreferences;
 
   const NEWTAB_PAGE_LAYOUT = globalThis.LumnoNewtabPageLayout;
+
+  const NEWTAB_SUGGESTIONS_LAYOUT = globalThis.LumnoNewtabSuggestionsLayout;
+  const {
+    syncSearchModeMenuResultOffset,
+    setSuggestionsVisible,
+    updateSuggestionsFloatingLayout
+  } = NEWTAB_SUGGESTIONS_LAYOUT.createSuggestionsLayout({
+    pageState
+  });
+
   const {
     normalizeRecentCount,
     normalizeRecentMode,
@@ -2779,66 +2708,23 @@
     pageState
   });
 
-  const bottomDockRuntime = NEWTAB_DOCK.createBottomDockRuntime({
-    documentObj: document,
-    windowObj: window,
-    layoutRuntime: NEWTAB_LAYOUT,
+  const NEWTAB_BOTTOM_DOCK_RUNTIME = globalThis.LumnoNewtabBottomDockRuntime;
+  const {
+    bottomDockRuntime,
+    bottomDock
+  } = NEWTAB_BOTTOM_DOCK_RUNTIME.createBottomDockRuntime({
+    NEWTAB_LAYOUT,
     root,
-    searchLayer: () => pageState.searchLayer,
-    inputParts: () => pageState.inputParts,
-    topContentContainer: () => pageState.topContentContainer,
-    shortcutSection: () => pageState.shortcutSection,
-    quoteSection: () => pageState.quoteRuntime && pageState.quoteRuntime.element,
     bookmarkSection,
-    recentSection: pageState.recentSection,
-    suggestionsContainer: pageState.suggestionsContainer,
     suggestionsSurface,
     suggestionsOutline,
-    getTopInsetPx: getNewtabTopOccupiedInsetPx,
-    constants: {
-      minTopPx: SEARCH_LAYOUT_MIN_TOP_PX,
-      minBottomPx: SEARCH_LAYOUT_MIN_BOTTOM_PX,
-      upshiftRatio: SEARCH_LAYOUT_UPSHIFT_RATIO,
-      upshiftMinPx: SEARCH_LAYOUT_UPSHIFT_MIN_PX,
-      upshiftMaxPx: SEARCH_LAYOUT_UPSHIFT_MAX_PX,
-      contentSectionsExtraUpshiftPx: SEARCH_LAYOUT_CONTENT_SECTIONS_EXTRA_UPSHIFT_PX,
-      emptySectionsExtraUpshiftPx: SEARCH_LAYOUT_EMPTY_SECTIONS_EXTRA_UPSHIFT_PX,
-      narrowViewportMinWidthPx: SEARCH_LAYOUT_NARROW_VIEWPORT_MIN_WIDTH_PX,
-      narrowViewportMaxWidthPx: SEARCH_LAYOUT_NARROW_VIEWPORT_MAX_WIDTH_PX,
-      narrowTopInsetPx: SEARCH_LAYOUT_NARROW_TOP_INSET_PX,
-      narrowTopInsetTransitionPx: SEARCH_LAYOUT_NARROW_TOP_INSET_TRANSITION_PX,
-      shortViewportMaxHeightPx: SEARCH_LAYOUT_SHORT_VIEWPORT_MAX_HEIGHT_PX,
-      shortMinTopPx: SEARCH_LAYOUT_SHORT_MIN_TOP_PX,
-      mobileFlowBreakpointPx: NEWTAB_MOBILE_FLOW_BREAKPOINT_PX
-    }
+    getNewtabTopOccupiedInsetPx,
+    NEWTAB_MOBILE_FLOW_BREAKPOINT_PX,
+    shouldAnimateNewtabLayoutShift,
+    applyNewtabWidthMode,
+    markNewtabStartupMilestone,
+    pageState
   });
-  const bottomDock = bottomDockRuntime.element;
-  pageState.bottomDockScroller = bottomDockRuntime.scroller;
-  pageState.layoutController = bottomDockRuntime.layoutController;
-  // The dock moves as a whole when its sections slide together.
-  pageState.layoutMotion = globalThis.LumnoNewtabLayoutMotion.createLayoutMotion({
-    documentObj: document,
-    windowObj: window,
-    getTargets: () => [
-      { key: 'topContent', element: pageState.topContentContainer },
-      { key: 'search', element: root },
-      { key: 'shortcuts', element: pageState.shortcutSection },
-      { key: 'quote', element: pageState.quoteRuntime && pageState.quoteRuntime.element },
-      { key: 'updateNotice', element: pageState.updateNoticeController && pageState.updateNoticeController.element },
-      {
-        key: 'engagementNotice',
-        element: pageState.engagementNoticeController && pageState.engagementNoticeController.element
-      },
-      { key: 'bookmarks', element: bookmarkSection, mover: bottomDock },
-      { key: 'recent', element: pageState.recentSection, mover: bottomDock }
-    ],
-    canAnimate: () => shouldAnimateNewtabLayoutShift() &&
-      !pageState.newtabResizeLayoutLocked &&
-      document.visibilityState === 'visible' &&
-      document.documentElement.getAttribute('data-lumno-motion-effects') !== 'off'
-  });
-  applyNewtabWidthMode();
-  markNewtabStartupMilestone('dock-runtime-created');
 
   pageState.bookmarkPagerPrevButton.addEventListener('click', () => {
     if (pageState.bookmarkCurrentPage <= 0) {
@@ -3062,110 +2948,12 @@
     instantActive: () => pageState.numberShortcutInstantEnabled
   };
 
-  function getSearchModeMenuResultOffset() {
-    if (!pageState.suggestionsContainer ||
-        pageState.suggestionsContainer.getAttribute('data-visible') !== 'true') {
-      return 0;
-    }
-    const layoutHeight = Math.max(
-      0,
-      Number(pageState.suggestionsContainer.offsetHeight) || 0
-    );
-    if (layoutHeight > 0) {
-      return layoutHeight;
-    }
-    const rect = pageState.suggestionsContainer.getBoundingClientRect();
-    return Math.max(0, Number(rect && rect.height) || 0);
-  }
-
-  function syncSearchModeMenuResultOffset() {
-    if (!pageState.inputModeController ||
-        typeof pageState.inputModeController.setModeMenuResultOffset !== 'function') {
-      return;
-    }
-    const fitMaxHeightProperty =
-      '--x-nt-suggestions-menu-fit-max-height';
-    const resultHeightLimit =
-      typeof pageState.inputModeController.fitModeMenuWithinViewport === 'function'
-        ? pageState.inputModeController.fitModeMenuWithinViewport({ bottomInset: 24 })
-        : null;
-    if (Number.isFinite(resultHeightLimit)) {
-      pageState.suggestionsContainer.style.setProperty(
-        fitMaxHeightProperty,
-        `${resultHeightLimit}px`
-      );
-    } else {
-      pageState.suggestionsContainer.style.removeProperty(fitMaxHeightProperty);
-    }
-    pageState.inputModeController.setModeMenuResultOffset(
-      getSearchModeMenuResultOffset()
-    );
-  }
-
-  function setSuggestionsVisible(visible) {
-    // The open list is placed from the search box's drawn position, so the
-    // box lands first.
-    if (visible && pageState.layoutMotion) {
-      pageState.layoutMotion.cancelAll();
-    }
-    if (pageState.layoutController && typeof pageState.layoutController.setSuggestionsVisible === 'function') {
-      pageState.layoutController.setSuggestionsVisible(visible);
-    }
-    syncSearchModeMenuResultOffset();
-  }
-
-  function updateSuggestionsFloatingLayout() {
-    if (pageState.layoutController && typeof pageState.layoutController.updateSuggestionsFloatingLayout === 'function') {
-      pageState.layoutController.updateSuggestionsFloatingLayout();
-    }
-  }
-
   // Kick off favicon cache warmup early; theme tint work flushes when storage is ready.
   pageState.faviconCacheRuntime.ensureCachesReady().then(() => {
     scheduleThemeResolutionFlush(0);
     refreshThemeAwareFavicons();
     scheduleThemeAwareFaviconRescue();
   });
-
-  function openBookmarkCascadeMenu(item, anchorElement, options) {
-    if (pageState.bookmarkCascadeRuntime) {
-      pageState.bookmarkCascadeRuntime.open(item, anchorElement, {
-        ...options,
-        toggle: !options || options.dragMode !== true
-      });
-    }
-  }
-
-  function closeBookmarkCascadeMenu() {
-    if (pageState.bookmarkCascadeRuntime) {
-      pageState.bookmarkCascadeRuntime.close();
-    }
-  }
-
-  function positionBookmarkCascadeLevels() {
-    if (pageState.bookmarkCascadeRuntime) {
-      pageState.bookmarkCascadeRuntime.positionLevels();
-    }
-  }
-
-  function getTopBookmarks(limit, folderId) {
-    const parsedLimit = Number.parseInt(limit, 10);
-    const safeLimit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 0;
-    return bookmarksRuntime.readFolder(
-      folderId || pageState.bookmarkCurrentFolderId || pageState.bookmarkRootFolderId,
-      {
-        limit: safeLimit,
-        rootTitle: t('bookmarks_heading', '书签')
-      }
-    ).then((result) => {
-      pageState.bookmarkRootFolderId = String(result.rootFolderId || '1');
-      pageState.bookmarkCurrentFolderId = String(result.folderId || pageState.bookmarkRootFolderId);
-      pageState.bookmarkFolderPath = Array.isArray(result.path)
-        ? result.path
-        : [{ id: pageState.bookmarkRootFolderId, title: t('bookmarks_heading', '书签') }];
-      return Array.isArray(result.items) ? result.items : [];
-    });
-  }
 
   function getSiteDisplayName(hostname, title) {
     return SITE_DISPLAY_NAME.getSiteDisplayName(
@@ -3740,60 +3528,28 @@
     pageState
   });
 
-  let newtabResizeFrame = 0;
-  let newtabResizeSettleTimer = 0;
-  function handleNewtabResize() {
-    newtabResizeFrame = 0;
-    const previousBookmarkLimit = getBookmarkLimit();
-    applyNewtabWidthMode();
-    applyNewtabShortcutColumns();
-    const recentLayoutBefore = pageState.recentLoadedOnce && shouldAnimateNewtabLayoutShift()
-      ? captureRecentCardLayout()
-      : null;
-    const recentColumnsChanged = applyRecentGridColumns();
-    const bookmarkColumnsChanged = applyBookmarkGridColumns();
-    updateSiteSearchPrefixLayout();
-    if (bookmarkColumnsChanged && pageState.bookmarkLoadedOnce) {
-      keepBookmarkPageAnchorAfterLimitChange(previousBookmarkLimit);
-      renderCurrentBookmarkPage();
-    }
-    updateBookmarkGridHeightLock();
-    updateBookmarkSectionPosition({
-      preserveSearchEntryLayout: true,
-      stabilizeDockDensity: true
-    });
-    positionBookmarkCascadeLevels();
-    updateSuggestionsFloatingLayout();
-    if (recentColumnsChanged && pageState.recentLoadedOnce) {
-      cancelRecentResizeLayoutAnimations();
-      renderRecentSites(pageState.recentSourceItems);
-      animateRecentResizeLayout(recentLayoutBefore);
-    }
-  }
-
-  window.addEventListener('resize', () => {
-    pageState.newtabReadyViewportRevision += 1;
-    pageState.newtabResizeLayoutLocked = true;
-    if (newtabResizeSettleTimer) {
-      window.clearTimeout(newtabResizeSettleTimer);
-    }
-    // Releasing the lock re-centers the search box; layout motion eases it
-    // there from where the resize held it.
-    newtabResizeSettleTimer = window.setTimeout(() => {
-      newtabResizeSettleTimer = 0;
-      pageState.newtabResizeLayoutLocked = false;
-      updateBookmarkSectionPosition();
-    }, NEWTAB_RESIZE_DENSITY_SETTLE_MS);
-    if (pageState.newtabReadyRequested &&
-        document.body &&
-        document.body.getAttribute('data-nt-ready') !== '1') {
-      scheduleNewtabReadyAfterViewportSettle();
-    }
-    if (newtabResizeFrame) {
-      return;
-    }
-    newtabResizeFrame = window.requestAnimationFrame(handleNewtabResize);
-  }, { passive: true });
+  const NEWTAB_PAGE_RESIZE = globalThis.LumnoNewtabPageResize;
+  NEWTAB_PAGE_RESIZE.createPageResize({
+    getBookmarkLimit,
+    applyNewtabWidthMode,
+    applyNewtabShortcutColumns,
+    shouldAnimateNewtabLayoutShift,
+    captureRecentCardLayout,
+    applyRecentGridColumns,
+    applyBookmarkGridColumns,
+    updateSiteSearchPrefixLayout,
+    keepBookmarkPageAnchorAfterLimitChange,
+    renderCurrentBookmarkPage,
+    updateBookmarkGridHeightLock,
+    updateBookmarkSectionPosition,
+    positionBookmarkCascadeLevels,
+    updateSuggestionsFloatingLayout,
+    cancelRecentResizeLayoutAnimations,
+    renderRecentSites,
+    animateRecentResizeLayout,
+    scheduleNewtabReadyAfterViewportSettle,
+    pageState
+  });
 
   const NEWTAB_PAGE_KEYBOARD = globalThis.LumnoNewtabPageKeyboard;
   NEWTAB_PAGE_KEYBOARD.createPageKeyboard({
@@ -3839,52 +3595,16 @@
     pageState
   });
 
-  pageState.inputParts.input.addEventListener('compositionstart', function(event) {
-    pageState.suggestionRequestSeq += 1;
-    directNavigationSettleController.cancel();
-    if (pageState.remoteSuggestionDebounceTimer) {
-      clearTimeout(pageState.remoteSuggestionDebounceTimer);
-      pageState.remoteSuggestionDebounceTimer = null;
-    }
-    if (pageState.suggestionRequestWatchdogTimer) {
-      clearTimeout(pageState.suggestionRequestWatchdogTimer);
-      pageState.suggestionRequestWatchdogTimer = null;
-    }
-    imeKeyGuard.markCompositionStart(event);
-    clearAutocomplete();
-  });
-
-  pageState.inputParts.input.addEventListener('keyup', imeKeyGuard.markKeyUp, true);
-
-  pageState.inputParts.input.addEventListener('compositionend', function(event) {
-    imeKeyGuard.markCompositionEnd(event);
-    const rawValue = event.target.value;
-    const query = rawValue.trim();
-    pageState.latestQuery = query;
-    pageState.latestRawQuery = rawValue;
-    clearAutocomplete();
-    if (!query) {
-      if (pageState.remoteSuggestionDebounceTimer) {
-        clearTimeout(pageState.remoteSuggestionDebounceTimer);
-        pageState.remoteSuggestionDebounceTimer = null;
-      }
-      clearSearchSuggestions();
-      return;
-    }
-    const directUrlSuggestion = getDirectUrlSuggestion(query);
-    if (directUrlSuggestion) {
-      const hasCachedOpenTabMatch =
-        typeof directUrlSuggestion._xMatchedTabId === 'number';
-      if (hasCachedOpenTabMatch) {
-        renderPendingSuggestions(query);
-      }
-      requestSuggestions(query, {
-        immediate: true,
-        deferInitialDirectNavigationRender: !hasCachedOpenTabMatch
-      });
-      return;
-    }
-    requestSuggestions(query);
+  const NEWTAB_SEARCH_INPUT_COMPOSITION = globalThis.LumnoNewtabSearchInputComposition;
+  NEWTAB_SEARCH_INPUT_COMPOSITION.createSearchInputComposition({
+    directNavigationSettleController,
+    imeKeyGuard,
+    clearAutocomplete,
+    clearSearchSuggestions,
+    getDirectUrlSuggestion,
+    renderPendingSuggestions,
+    requestSuggestions,
+    pageState
   });
 
   createWallpaperControls();
