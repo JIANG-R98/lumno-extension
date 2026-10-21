@@ -62,7 +62,7 @@ assert.match(
 );
 
 const overlaySource = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
-assert.strictEqual((overlaySource.match(/storageChangeListeners\.add\(/g) || []).length, 18);
+assert.strictEqual((overlaySource.match(/storageChangeListeners\.add\(/g) || []).length, 19);
 assert.strictEqual((overlaySource.match(/storageChangeListeners\.clear\(\)/g) || []).length, 1);
 assert.doesNotMatch(overlaySource, /chrome\.storage\.onChanged\.(?:add|remove)Listener/);
 
