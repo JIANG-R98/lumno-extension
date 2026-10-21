@@ -26,9 +26,9 @@
   <a href="#faq">FAQ</a> ·
   <a href="https://github.com/kubai087/lumno-extension/releases">Changelog</a>
   <br />
-  <a href="README.zh-CN.md">简体中文</a> |
+  <a href="docs/README.zh-CN.md">简体中文</a> |
   <a href="README.md">English</a> |
-  <a href="README.ja.md">日本語</a>
+  <a href="docs/README.ja.md">日本語</a>
 </p>
 
 **Lumno** is a Manifest V3 browser extension that brings a keyboard-first **command palette** (like macOS Spotlight, Raycast or the Arc browser command bar) to every web page, and replaces the default new tab with a fast, minimal **new tab page**. Press `Cmd+Shift+K` / `Ctrl+Shift+K` to search open tabs, bookmarks, browsing history and top sites, open a URL, switch tabs, or send a query to Google, YouTube, GitHub, ChatGPT, Gemini, DeepSeek and more. No account required, and your browsing data stays in your browser.
@@ -180,7 +180,7 @@ Lumno is local-first. Bookmarks, history and tabs are read on your device to pow
 The [Lumno Help Center](https://lumno.kubai.design/en/help/) covers setup, the command bar, the new tab, sync, compatibility and privacy, in ten languages.
 
 **Is Lumno free?**
-Yes. Lumno is free and open source under the GPL-3.0 license. If you would like to support development, see [Sponsoring](SPONSORING.md).
+Yes. Lumno is free and open source under the GPL-3.0 license.
 
 **Which browsers does Lumno support?**
 Any Chromium-based browser that supports Manifest V3 extensions (Google Chrome, Microsoft Edge, Brave, Arc, Vivaldi, Opera and others), plus Firefox 140 or later and Firefox-based browsers such as Zen and LibreWolf. A few features are unavailable in Firefox; see [Browser compatibility](#browser-compatibility). Safari is not supported.
@@ -263,7 +263,7 @@ npm run test:onboarding-content
 
 ## Contributing
 
-Bug reports, feature ideas and pull requests are welcome in [Issues](https://github.com/kubai087/lumno-extension/issues). See [GOVERNANCE.md](GOVERNANCE.md) for how the project is maintained. If Lumno saves you time, a ⭐ on GitHub or a review on the Chrome Web Store or Firefox Add-ons helps other people find it.
+Bug reports, feature ideas and pull requests are welcome in [Issues](https://github.com/kubai087/lumno-extension/issues). If Lumno saves you time, a ⭐ on GitHub or a review on the Chrome Web Store or Firefox Add-ons helps other people find it.
 
 ## Credits
 

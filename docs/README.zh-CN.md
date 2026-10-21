@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/images/lumno.png" alt="Lumno logo" width="96" height="96" />
+  <img src="../assets/images/lumno.png" alt="Lumno logo" width="96" height="96" />
 </p>
 
 <h1 align="center">Lumno：Chrome 聚焦搜索命令栏 & 新标签页插件</h1>
@@ -15,7 +15,7 @@
   <a href="https://chromewebstore.google.com/detail/nggfkkbmogmadfoikakkfegkoilfcfao"><img src="https://img.shields.io/chrome-web-store/rating/nggfkkbmogmadfoikakkfegkoilfcfao?style=flat-square&label=rating&color=f59e0b" alt="Chrome Web Store 评分" /></a>
   <a href="https://github.com/kubai087/lumno-extension/stargazers"><img src="https://img.shields.io/github/stars/kubai087/lumno-extension?style=flat-square&color=111827" alt="GitHub stars" /></a>
   <img src="https://img.shields.io/badge/Manifest-V3-111827?style=flat-square" alt="Manifest V3" />
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-16a34a?style=flat-square" alt="GPL-3.0 许可证" /></a>
+  <a href="../LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-16a34a?style=flat-square" alt="GPL-3.0 许可证" /></a>
 </p>
 
 <p align="center">
@@ -27,7 +27,7 @@
   <a href="https://github.com/kubai087/lumno-extension/releases">更新日志</a>
   <br />
   <a href="README.zh-CN.md">简体中文</a> |
-  <a href="README.md">English</a> |
+  <a href="../README.md">English</a> |
   <a href="README.ja.md">日本語</a>
 </p>
 
@@ -35,19 +35,19 @@
 
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/nggfkkbmogmadfoikakkfegkoilfcfao">
-    <img src="./assets/images/readme/chrome-web-store-large-bordered.png" alt="在 Chrome 应用商店获取 Lumno" width="200" />
+    <img src="../assets/images/readme/chrome-web-store-large-bordered.png" alt="在 Chrome 应用商店获取 Lumno" width="200" />
   </a><br />
   <a href="https://microsoftedge.microsoft.com/addons/detail/pfbklkaefmfamjpibfiapaiihlddhchc">
-    <img src="./assets/images/readme/microsoft-edge-addons-badge.png" alt="在 Microsoft Edge 加载项获取 Lumno" width="200" />
+    <img src="../assets/images/readme/microsoft-edge-addons-badge.png" alt="在 Microsoft Edge 加载项获取 Lumno" width="200" />
   </a><br />
   <a href="https://addons.mozilla.org/firefox/addon/lumno-command-bar-new-tab/">
-    <img src="./assets/images/readme/firefox-get-the-addon-badge.png" alt="在 Firefox 附加组件获取 Lumno" width="200" />
+    <img src="../assets/images/readme/firefox-get-the-addon-badge.png" alt="在 Firefox 附加组件获取 Lumno" width="200" />
   </a>
 </p>
 
 <p align="center">当前版本：<code>1.1.4</code></p>
 
-<img width="1200" height="480" alt="Lumno Chrome 命令栏插件：在任意网页搜索标签页、书签和历史记录" src="./assets/images/readme/banner.webp" decoding="async" />
+<img width="1200" height="480" alt="Lumno Chrome 命令栏插件：在任意网页搜索标签页、书签和历史记录" src="../assets/images/readme/banner.webp" decoding="async" />
 
 ## 功能
 
@@ -109,9 +109,9 @@
 ## 实机截图
 
 <p align="center">
-  <img src="./assets/images/readme/preview-newtab.webp" alt="Lumno 自定义新标签页：壁纸、快捷方式和书签" width="100%" loading="lazy" decoding="async" />
+  <img src="../assets/images/readme/preview-newtab.webp" alt="Lumno 自定义新标签页：壁纸、快捷方式和书签" width="100%" loading="lazy" decoding="async" />
   <br />
-  <img src="./assets/images/readme/preview-command-bar.webp" alt="Lumno 命令栏：搜索已打开标签页、书签和历史记录" width="100%" loading="lazy" decoding="async" />
+  <img src="../assets/images/readme/preview-command-bar.webp" alt="Lumno 命令栏：搜索已打开标签页、书签和历史记录" width="100%" loading="lazy" decoding="async" />
 </p>
 
 ## 快捷键
@@ -180,7 +180,7 @@ Lumno 本地优先。书签、历史和标签页仅在本机读取用于搜索�
 [Lumno 帮助中心](https://lumno.kubai.design/help/)介绍了安装设置、命令栏、新标签页、同步、兼容性和隐私等内容，提供十种语言。
 
 **Lumno 免费吗？**
-免费。Lumno 以 GPL-3.0 许可证开源。如果想支持开发，可以查看[赞助说明](SPONSORING.zh-CN.md)。
+免费。Lumno 以 GPL-3.0 许可证开源。
 
 **支持哪些浏览器？**
 支持 Manifest V3 扩展的 Chromium 浏览器（Google Chrome、Microsoft Edge、Brave、Arc、Vivaldi、Opera 等），以及 Firefox 140 及以上版本和 Zen、LibreWolf 等 Firefox 系浏览器。Firefox 中有少数功能不可用，见[浏览器兼容性](#浏览器兼容性)。暂不支持 Safari。
@@ -263,7 +263,7 @@ npm run test:onboarding-content
 
 ## 参与贡献
 
-欢迎在 [Issues](https://github.com/kubai087/lumno-extension/issues) 反馈问题、提出建议或提交 Pull Request。项目维护方式见 [GOVERNANCE.md](GOVERNANCE.md)。如果 Lumno 帮你节省了时间，欢迎在 GitHub 点个 ⭐，或在 Chrome 应用商店、Firefox 附加组件留下评价，让更多人发现它。
+欢迎在 [Issues](https://github.com/kubai087/lumno-extension/issues) 反馈问题、提出建议或提交 Pull Request。如果 Lumno 帮你节省了时间，欢迎在 GitHub 点个 ⭐，或在 Chrome 应用商店、Firefox 附加组件留下评价，让更多人发现它。
 
 ## 鸣谢
 
@@ -274,4 +274,4 @@ npm run test:onboarding-content
 
 ## 许可证
 
-本项目使用 [GPL-3.0](LICENSE) 许可证。
+本项目使用 [GPL-3.0](../LICENSE) 许可证。

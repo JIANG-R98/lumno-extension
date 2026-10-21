@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/images/lumno.png" alt="Lumno logo" width="96" height="96" />
+  <img src="../assets/images/lumno.png" alt="Lumno logo" width="96" height="96" />
 </p>
 
 <h1 align="center">Lumno：Chrome 向けコマンドバー & 新しいタブ拡張機能</h1>
@@ -15,7 +15,7 @@
   <a href="https://chromewebstore.google.com/detail/nggfkkbmogmadfoikakkfegkoilfcfao"><img src="https://img.shields.io/chrome-web-store/rating/nggfkkbmogmadfoikakkfegkoilfcfao?style=flat-square&label=rating&color=f59e0b" alt="Chrome ウェブストアの評価" /></a>
   <a href="https://github.com/kubai087/lumno-extension/stargazers"><img src="https://img.shields.io/github/stars/kubai087/lumno-extension?style=flat-square&color=111827" alt="GitHub stars" /></a>
   <img src="https://img.shields.io/badge/Manifest-V3-111827?style=flat-square" alt="Manifest V3" />
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-16a34a?style=flat-square" alt="GPL-3.0 ライセンス" /></a>
+  <a href="../LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-16a34a?style=flat-square" alt="GPL-3.0 ライセンス" /></a>
 </p>
 
 <p align="center">
@@ -27,7 +27,7 @@
   <a href="https://github.com/kubai087/lumno-extension/releases">更新履歴</a>
   <br />
   <a href="README.zh-CN.md">简体中文</a> |
-  <a href="README.md">English</a> |
+  <a href="../README.md">English</a> |
   <a href="README.ja.md">日本語</a>
 </p>
 
@@ -35,19 +35,19 @@
 
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/nggfkkbmogmadfoikakkfegkoilfcfao">
-    <img src="./assets/images/readme/chrome-web-store-large-bordered.png" alt="Chrome ウェブストアで Lumno を入手" width="200" />
+    <img src="../assets/images/readme/chrome-web-store-large-bordered.png" alt="Chrome ウェブストアで Lumno を入手" width="200" />
   </a><br />
   <a href="https://microsoftedge.microsoft.com/addons/detail/pfbklkaefmfamjpibfiapaiihlddhchc">
-    <img src="./assets/images/readme/microsoft-edge-addons-badge.png" alt="Microsoft Edge アドオンで Lumno を入手" width="200" />
+    <img src="../assets/images/readme/microsoft-edge-addons-badge.png" alt="Microsoft Edge アドオンで Lumno を入手" width="200" />
   </a><br />
   <a href="https://addons.mozilla.org/firefox/addon/lumno-command-bar-new-tab/">
-    <img src="./assets/images/readme/firefox-get-the-addon-badge.png" alt="Firefox アドオンで Lumno を入手" width="200" />
+    <img src="../assets/images/readme/firefox-get-the-addon-badge.png" alt="Firefox アドオンで Lumno を入手" width="200" />
   </a>
 </p>
 
 <p align="center">現在のバージョン：<code>1.1.4</code></p>
 
-<img width="1200" height="480" alt="Lumno Chrome コマンドバー拡張機能：どのページからでもタブ、ブックマーク、履歴を検索" src="./assets/images/readme/banner.webp" decoding="async" />
+<img width="1200" height="480" alt="Lumno Chrome コマンドバー拡張機能：どのページからでもタブ、ブックマーク、履歴を検索" src="../assets/images/readme/banner.webp" decoding="async" />
 
 ## 機能
 
@@ -109,9 +109,9 @@
 ## スクリーンショット
 
 <p align="center">
-  <img src="./assets/images/readme/preview-newtab.webp" alt="Lumno のカスタム新しいタブ：壁紙、ショートカット、ブックマーク" width="100%" loading="lazy" decoding="async" />
+  <img src="../assets/images/readme/preview-newtab.webp" alt="Lumno のカスタム新しいタブ：壁紙、ショートカット、ブックマーク" width="100%" loading="lazy" decoding="async" />
   <br />
-  <img src="./assets/images/readme/preview-command-bar.webp" alt="Lumno のコマンドパレット：開いているタブ、ブックマーク、履歴を検索" width="100%" loading="lazy" decoding="async" />
+  <img src="../assets/images/readme/preview-command-bar.webp" alt="Lumno のコマンドパレット：開いているタブ、ブックマーク、履歴を検索" width="100%" loading="lazy" decoding="async" />
 </p>
 
 ## ショートカット
@@ -180,7 +180,7 @@ Lumno はローカルファーストです。ブックマーク、履歴、タ�
 [Lumno ヘルプセンター](https://lumno.kubai.design/ja/help/)で、セットアップ、コマンドバー、新しいタブ、同期、互換性、プライバシーについて 10 言語で説明しています。
 
 **Lumno は無料ですか？**
-はい。Lumno は GPL-3.0 ライセンスの無料オープンソースソフトウェアです。開発を支援したい場合は [Sponsoring](SPONSORING.md) をご覧ください。
+はい。Lumno は GPL-3.0 ライセンスの無料オープンソースソフトウェアです。
 
 **どのブラウザに対応していますか？**
 Manifest V3 拡張機能に対応した Chromium ブラウザ（Google Chrome、Microsoft Edge、Brave、Arc、Vivaldi、Opera など）に加え、Firefox 140 以降と Zen、LibreWolf などの Firefox 系ブラウザで使えます。Firefox では一部の機能が使えません。[ブラウザ互換性](#ブラウザ互換性)をご覧ください。Safari には対応していません。
@@ -263,7 +263,7 @@ npm run test:onboarding-content
 
 ## コントリビュート
 
-不具合の報告、機能の提案、プルリクエストは [Issues](https://github.com/kubai087/lumno-extension/issues) で受け付けています。プロジェクトの運営方針は [GOVERNANCE.md](GOVERNANCE.md) をご覧ください。Lumno が役に立ったら、GitHub の ⭐ や Chrome ウェブストアや Firefox アドオンでのレビューで応援していただけると、より多くの人に届きます。
+不具合の報告、機能の提案、プルリクエストは [Issues](https://github.com/kubai087/lumno-extension/issues) で受け付けています。Lumno が役に立ったら、GitHub の ⭐ や Chrome ウェブストアや Firefox アドオンでのレビューで応援していただけると、より多くの人に届きます。
 
 ## クレジット
 
@@ -274,4 +274,4 @@ npm run test:onboarding-content
 
 ## ライセンス
 
-このプロジェクトは [GPL-3.0](LICENSE) ライセンスで公開されています。
+このプロジェクトは [GPL-3.0](../LICENSE) ライセンスで公開されています。
