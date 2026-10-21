@@ -1,25 +1,15 @@
 const assert = require('assert');
-const { readStylesheet } = require('../helpers/css-tokens');
 const fs = require('fs');
-const { readOptionsRuntimeSource } = require('../helpers/options-source');
-
+const { JSDOM } = require('jsdom');
 const settings = require('../../src/shared/settings.js');
-const { readPageSource } = require('../helpers/page-source');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-const optionsHtml = readPageSource('src/options/options.html');
-const optionsSource = readOptionsRuntimeSource();
-const newtabHtml = readPageSource('newtab.html');
-const newtabSource = readNewtabRuntimeSource();
-const shortcutDialogCss = readStylesheet('src/newtab/shortcuts/shortcut-dialog.css');
-const rangeSliderSource = fs.readFileSync(
-  'react-src/shared/range-slider.tsx',
-  'utf8'
-);
-const settingsControlsSource = fs.readFileSync(
-  'react-src/options/settings-controls.tsx',
-  'utf8'
-);
-const rangeSliderCss = readStylesheet('src/shared/ui/range-slider.css');
+const { readStylesheet } = require('../helpers/css-tokens');
+const { parseCss, parsePageCss } = require('../helpers/css-rules');
+const { createOptionsPage } = require('../helpers/options-page');
+const { createNewtabPage } = require('../helpers/newtab-page');
+
+// How many shortcuts a New Tab row holds, and their size and spacing: the
+// settings, their Settings sliders, and the layout New Tab derives from them.
+
 const locales = ['en', 'ja', 'zh_CN', 'zh_TW'];
 
 // Keep the old width key readable and exportable so existing sync/import data
@@ -53,168 +43,129 @@ assert.strictEqual(settings.NEWTAB_SHORTCUT_GAP_MIN, 0);
 assert.strictEqual(settings.NEWTAB_SHORTCUT_GAP_MAX, 24);
 assert.strictEqual(settings.NEWTAB_SHORTCUT_GAP_DEFAULT, 4);
 
-// The appearance panel is a React view driven by the wallpaper runtime; its controls are
-// tested by behavior in react-src/newtab/wallpaper-view.test.tsx and
-// tests/newtab/test-newtab-wallpaper-panel.js rather than by matching source text here.
-assert.match(
-  newtabSource,
-  /shortcutColumnsConfig:\s*\{[\s\S]*?min:\s*NEWTAB_SHORTCUT_COLUMNS_MIN,[\s\S]*?max:\s*NEWTAB_SHORTCUT_COLUMNS_MAX,[\s\S]*?fallback:\s*NEWTAB_SHORTCUT_COLUMNS_DEFAULT/
-);
-assert.match(newtabSource, /setShortcutColumns:\s*setNewtabShortcutColumns/);
-assert.match(
-  newtabSource,
-  /rawColumns === undefined[\s\S]*?inferNewtabShortcutColumnsFromWidth\(rawWidth\)[\s\S]*?normalizeNewtabShortcutColumns\(rawColumns\)/,
-  'New Tab should migrate legacy pixel width only when the new column setting is absent'
-);
 
-assert.match(
-  optionsHtml,
-  /id="_x_extension_newtab_shortcut_columns_setting_row_2026_unique_"[\s\S]*?data-i18n="settings_newtab_shortcut_columns_title"[\s\S]*?id="_x_extension_newtab_shortcut_columns_control_2026_unique_"/,
-  'Options should expose the same per-row shortcut slider host'
-);
-assert.match(
-  optionsHtml,
-  /settings_newtab_shortcut_columns_title[\s\S]*?settings_newtab_shortcut_size_title[\s\S]*?settings_newtab_shortcut_gap_title/,
-  'Options should place size and spacing directly below shortcuts-per-row'
-);
-assert.match(
-  optionsSource,
-  /kind:\s*'newtab-shortcut-columns'[\s\S]*?label:\s*'4',[\s\S]*?label:\s*'8',[\s\S]*?label:\s*'12',[\s\S]*?label:\s*'16'/,
-  'Options should render an editable slider with 4-step ticks'
-);
-assert.match(
-  rangeSliderSource,
-  /RANGE_SLIDER_VALUE_INPUT_CLASS_NAMES[\s\S]*?_x_extension_shortcut_input_2024_unique_[\s\S]*?_x_extension_range_slider_value_input_2026_unique_/,
-  'The shared slider component should reuse the existing input component appearance'
-);
-assert.match(
-  rangeSliderSource,
-  /RangeSliderResetButton[\s\S]*?ri-reset-left-line[\s\S]*?resetButtonProps/,
-  'The shared slider field should own the reset IconButton contract'
-);
-assert.match(
-  rangeSliderSource,
-  /RangeSliderResetButton[\s\S]*?_x_extension_shortcut_group_action_2024_unique_[\s\S]*?'ri-size-14'[\s\S]*?'ri-reset-left-line'/,
-  'The reset control should reuse the existing compact shortcut IconButton appearance'
-);
-assert.match(
-  rangeSliderSource,
-  /\{label === undefined \? resetButton : null\}[\s\S]*?\{label\}\s*\{resetButton\}/,
-  'The shared reset IconButton should trail a field label, or hang beside the track when unlabelled'
-);
-assert.match(
-  rangeSliderCss,
-  /\.x-range-slider-reset:disabled\s*\{[\s\S]*?visibility:\s*hidden;/,
-  'A reset with nothing to reset should disappear instead of showing a disabled control'
-);
-assert.match(
-  rangeSliderCss,
-  /_x_extension_range_slider_reset_button_2026_unique_[\s\S]*?padding:\s*4px;[\s\S]*?border-radius:\s*8px;/,
-  'New Tab should provide the compact IconButton fallback appearance'
-);
-assert.doesNotMatch(
-  optionsHtml,
-  /_x_extension_range_slider_value_input_2026_unique_:(?:hover|focus|focus-visible|disabled)/,
-  'The slider value input should not define a second Options interaction appearance'
-);
-assert.match(
-  shortcutDialogCss,
-  /\._x_extension_shortcut_input_2024_unique_\s*\{[\s\S]*?border:\s*1px solid var\(--tab-border\);[\s\S]*?background:\s*var\(--control-bg\);/,
-  'New Tab slider values should use the existing input component appearance'
-);
-assert.match(
-  rangeSliderSource,
-  /RANGE_SLIDER_VALUE_INPUT_STYLE[\s\S]*?height:\s*'var\(--x-range-slider-value-height, 30px\)',[\s\S]*?width:\s*'var\(--x-range-slider-value-width, 52px\)'/,
-  'The shared slider value-input component should own a fixed, page-themeable size'
-);
-assert.match(
-  rangeSliderSource,
-  /RangeSliderFieldProps[\s\S]*?max:[\s\S]*?<RangeSlider[\s\S]*?max=\{max\}[\s\S]*?<RangeSliderValueInput[\s\S]*?sliderMax=\{max\}/,
-  'The shared slider value-input component should own the slider maximum contract'
-);
-assert.match(
-  settingsControlsSource,
-  /<RangeSliderField[\s\S]*?max=\{model\.max\}[\s\S]*?valueInputProps=/,
-  'Every Options slider should render its value input from the shared field component'
-);
-assert.match(
-  optionsSource,
-  /onInput\(value\)[\s\S]*?normalizeNewtabShortcutColumns\(value\)[\s\S]*?NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY/,
-  'Options should persist slider and typed column changes'
-);
+const COLUMNS = settings.NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY;
+const WIDTH = settings.NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY;
+const SIZE = settings.NEWTAB_SHORTCUT_SIZE_STORAGE_KEY;
 
-const shortcutSectionStart = newtabHtml.indexOf('.x-nt-shortcuts-section {');
-const shortcutSectionEnd = newtabHtml.indexOf('\n      }', shortcutSectionStart);
-const shortcutSectionCss = newtabHtml.slice(shortcutSectionStart, shortcutSectionEnd);
-assert.match(newtabHtml, /--x-nt-shortcut-columns:\s*10;/);
-assert.match(
-  shortcutSectionCss,
-  /width:\s*min\(90vw,\s*var\(--x-nt-shortcuts-target-width,\s*692px\)\);/
-);
-assert.match(
-  newtabHtml,
-  /\.x-nt-shortcuts-grid\s*\{[\s\S]*?display:\s*flex;[\s\S]*?flex-wrap:\s*wrap;[\s\S]*?justify-content:\s*center;/,
-  'Shortcut rows should center partial rows inside the configured per-row width'
-);
-assert.match(
-  rangeSliderCss,
-  /\.x-range-slider-field\s*\{[\s\S]*?align-items:\s*center;/,
-  'Slider labels, tracks and value inputs should share one centered row'
-);
-assert.match(
-  rangeSliderCss,
-  /\.x-range-slider-input::-webkit-slider-thumb\s*\{[\s\S]*?margin-top:\s*calc\(\(var\(--x-range-slider-track-height\) - var\(--x-range-slider-thumb-size\)\) \/ 2\);/,
-  'The shared slider thumb should stay centered on the track'
-);
-assert.doesNotMatch(
-  newtabHtml,
-  /\.x-nt-overlay-slider::-webkit-slider-(?:thumb|runnable-track)|\.x-nt-overlay-tick/,
-  'New Tab should theme the shared slider instead of redrawing its track, thumb or ticks'
-);
-assert.match(
-  newtabSource,
-  /function applyNewtabShortcutColumns\(\)[\s\S]*?--x-nt-shortcut-columns[\s\S]*?String\(newtabShortcutColumns\)[\s\S]*?--x-nt-shortcuts-target-width/
-);
-assert.match(
-  newtabSource,
-  /function applyNewtabShortcutLayoutPreferences\(\)[\s\S]*?--x-nt-shortcut-user-tile-size[\s\S]*?--x-nt-shortcut-user-column-gap[\s\S]*?--x-nt-shortcut-user-row-gap[\s\S]*?applyNewtabShortcutColumns\(\)/,
-  'Size and spacing should update the shared responsive shortcut tokens'
-);
-assert.match(
-  newtabHtml,
-  /--x-nt-shortcut-tile-size:\s*var\(--x-nt-shortcut-user-tile-size\);[\s\S]*?--x-nt-shortcuts-grid-row-gap:\s*var\(--x-nt-shortcut-user-row-gap\);/,
-  'Default shortcut geometry should flow through user-controlled variables'
-);
-for (const density of ['compact', 'tiny']) {
-  const densityRule = newtabHtml.match(
-    new RegExp(`body\\[data-nt-bottom-dock-density="${density}"\\]\\s*\\{([^}]*)\\}`)
-  );
-  assert.ok(densityRule, `${density} dock density rule should exist`);
-  assert.doesNotMatch(
-    densityRule[1],
-    /--x-nt-shortcut-(tile|icon|favicon)-size|--x-nt-shortcut-tile-padding|--x-nt-shortcuts-grid-(row|column)-gap/,
-    `${density} dock density should keep the size and spacing chosen in Settings on short windows`
-  );
-  assert.match(
-    densityRule[1],
-    /--x-nt-shortcuts-grid-padding:\s*\d+px 8px \d+px;/,
-    `${density} dock density should keep the horizontal padding the per-row width is computed from`
-  );
+function layout(page) {
+  const style = page.document.documentElement.style;
+  const px = (name) => Number.parseFloat(style.getPropertyValue(name));
+  return {
+    columns: style.getPropertyValue('--x-nt-shortcut-columns'),
+    tile: px('--x-nt-shortcut-user-tile-size'),
+    icon: px('--x-nt-shortcut-user-icon-size'),
+    favicon: px('--x-nt-shortcut-user-favicon-size')
+  };
 }
-assert.doesNotMatch(
-  newtabHtml,
-  /@media \(max-height:[^{]*\)\s*\{[^@]*?--x-nt-shortcut-tile-size:\s*min\(/,
-  'Short viewports should not cap the shortcut size chosen in Settings'
-);
-assert.match(
-  newtabSource,
-  /function handleNewtabResize\(\)[\s\S]*?applyNewtabShortcutColumns\(\)/,
-  'Responsive tile tokens should recompute the selected shortcut width after viewport changes'
-);
-assert.match(
-  newtabSource,
-  /NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY\][\s\S]*?normalizeNewtabShortcutColumns\(raw\)/
-);
+
+async function testColumnsOnNewTab() {
+  for (const [sync, columns, why] of [
+    [{}, '10', 'a fresh install shows ten per row'],
+    [{ [WIDTH]: 1440 }, '16', 'an old pixel width should seed the column count once'],
+    [{ [WIDTH]: 1440, [COLUMNS]: 6 }, '6', 'a stored column count wins over the old width']
+  ]) {
+    const page = await createNewtabPage({ sync });
+    await page.settle(300);
+    assert.strictEqual(layout(page).columns, columns, why);
+    if (columns === '6') {
+      page.changeStorage('sync', COLUMNS, 12);
+      await page.settle(80);
+      assert.strictEqual(layout(page).columns, '12', 'a column change in Settings should apply at once');
+    }
+    page.close();
+  }
+}
+
+// Fractional or odd-margin icon sizes snap unevenly on 1x screens and push the
+// favicon off center inside its rounded square while the size slider moves.
+async function testIconSizesStayCentered() {
+  const page = await createNewtabPage();
+  await page.settle(300);
+  assert.deepStrictEqual(layout(page), { columns: '10', tile: 64, icon: 48, favicon: 28 }, 'the default tile keeps its 48px icon and 28px favicon');
+  for (let size = settings.NEWTAB_SHORTCUT_SIZE_MIN; size <= settings.NEWTAB_SHORTCUT_SIZE_MAX; size++) {
+    page.changeStorage('sync', SIZE, size);
+    await page.settle(5);
+    const { tile, icon, favicon } = layout(page);
+    assert.strictEqual(tile, size);
+    assert.ok(Number.isInteger(icon) && Number.isInteger(favicon), `size ${size} should use whole pixels`);
+    assert.strictEqual((size - icon) % 2, 0, `size ${size} should leave an even margin around the icon`);
+    assert.strictEqual((icon - favicon) % 2, 0, `size ${size} should leave an even margin around the favicon`);
+    assert.ok(Math.abs(icon - size * 0.75) <= 1, `size ${size} icon should stay within 1px of its ratio`);
+    assert.ok(Math.abs(favicon - size * 0.4375) <= 1, `size ${size} favicon should stay within 1px of its ratio`);
+  }
+  page.close();
+}
+
+async function testSettings() {
+  const doc = new JSDOM(fs.readFileSync('src/options/options.html', 'utf8')).window.document;
+  const row = doc.getElementById('_x_extension_newtab_shortcut_columns_setting_row_2026_unique_');
+  assert.ok(row && row.querySelector('[data-i18n="settings_newtab_shortcut_columns_title"]') &&
+    row.querySelector('#_x_extension_newtab_shortcut_columns_control_2026_unique_'), 'Settings should host the per-row slider');
+  const [columns, size, gap] = ['columns', 'size', 'gap'].map((name) => doc.querySelector(`[data-i18n="settings_newtab_shortcut_${name}_title"]`));
+  assert.ok((columns.compareDocumentPosition(size) & 4) && (size.compareDocumentPosition(gap) & 4), 'size and spacing should follow shortcuts-per-row');
+
+  const page = await createOptionsPage({ sync: { [COLUMNS]: 8 } });
+  await page.settle(80);
+  const slider = page.byId('_x_extension_newtab_shortcut_columns_slider_2026_unique_');
+  assert.deepStrictEqual([slider.min, slider.max, slider.step, slider.value], ['4', '16', '1', '8'], 'the slider should offer 4 to 16 per row');
+  const valueInput = page.byId('_x_extension_newtab_shortcut_columns_control_2026_unique_').querySelector('input:not([type="range"])');
+  assert.ok(valueInput && valueInput.classList.contains('_x_extension_shortcut_input_2024_unique_'), 'the typed value should use the shared input');
+  Object.getOwnPropertyDescriptor(page.window.HTMLInputElement.prototype, 'value').set.call(valueInput, '13');
+  valueInput.dispatchEvent(new page.window.Event('input', { bubbles: true }));
+  valueInput.dispatchEvent(new page.window.Event('change', { bubbles: true }));
+  valueInput.dispatchEvent(new page.window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  valueInput.dispatchEvent(new page.window.FocusEvent('blur'));
+  await page.settle(120);
+  slider.value = '12';
+  slider.dispatchEvent(new page.window.Event('input', { bubbles: true }));
+  slider.dispatchEvent(new page.window.Event('change', { bubbles: true }));
+  await page.settle(120);
+  const saved = page.storage.sync.writes.filter((write) => Object.hasOwn(write, COLUMNS)).map((write) => write[COLUMNS]);
+  assert.ok(saved.includes(13) && saved.includes(12), `typed and slid column counts should be saved: ${saved}`);
+  page.close();
+}
+
+function testStyles() {
+  const newtab = parsePageCss('newtab.html');
+  assert.ok(newtab.entries.some((entry) => entry.style.getPropertyValue('--x-nt-shortcut-columns') === '10'), 'ten per row by default');
+  assert.strictEqual(newtab.rule('.x-nt-shortcuts-section').get('width'), 'min(90vw, var(--x-nt-shortcuts-target-width, 692px))');
+  const grid = newtab.rule('.x-nt-shortcuts-grid');
+  assert.deepStrictEqual([grid.get('display'), grid.get('flex-wrap'), grid.get('justify-content')], ['flex', 'wrap', 'center'],
+    'partial rows should center inside the per-row width');
+  const tokens = newtab.entries.find((entry) => entry.style.getPropertyValue('--x-nt-shortcut-tile-size'));
+  assert.deepStrictEqual([tokens.style.getPropertyValue('--x-nt-shortcut-tile-size'), tokens.style.getPropertyValue('--x-nt-shortcuts-grid-row-gap')]
+    .map((value) => value.trim()), ['var(--x-nt-shortcut-user-tile-size)', 'var(--x-nt-shortcut-user-row-gap)'],
+  'the default geometry should flow through the user-controlled variables');
+  for (const density of ['compact', 'tiny']) {
+    const rule = newtab.rule(`body[data-nt-bottom-dock-density="${density}"]`);
+    assert.ok(rule, `${density} dock density rule should exist`);
+    rule.names().forEach((name) => assert.doesNotMatch(name, /--x-nt-shortcut-(tile|icon|favicon)-size|--x-nt-shortcut-tile-padding|--x-nt-shortcuts-grid-(row|column)-gap/,
+      `${density} dock density should keep the size and spacing chosen in Settings`));
+    assert.match(rule.get('--x-nt-shortcuts-grid-padding'), /^\d+px 8px \d+px$/, `${density} dock density should keep the horizontal padding`);
+  }
+  newtab.entries.filter((entry) => entry.conditions.some((condition) => /max-height/.test(condition))).forEach((entry) => {
+    assert.doesNotMatch(entry.style.getPropertyValue('--x-nt-shortcut-tile-size'), /^min\(/, 'short windows should not cap the chosen size');
+  });
+  assert.ok(!newtab.selectors().some((selector) => /\.x-nt-overlay-slider::-webkit-slider-(thumb|runnable-track)|\.x-nt-overlay-tick/.test(selector)),
+    'New Tab should theme the shared slider rather than redraw it');
+
+  const slider = parseCss(readStylesheet('src/shared/ui/range-slider.css'));
+  assert.strictEqual(slider.rule('.x-range-slider-reset:disabled').get('visibility'), 'hidden', 'a reset with nothing to reset should disappear');
+  assert.strictEqual(slider.rule('.x-range-slider-field').get('align-items'), 'center', 'label, track and value share one row');
+  assert.strictEqual(slider.rule('.x-range-slider-input::-webkit-slider-thumb').get('margin-top'),
+    'calc((var(--x-range-slider-track-height) - var(--x-range-slider-thumb-size)) / 2)', 'the thumb should stay centered on the track');
+  const reset = slider.entries.find((entry) => entry.selectors.some((selector) => selector.includes('_x_extension_range_slider_reset_button_2026_unique_')) &&
+    entry.style.getPropertyValue('padding'));
+  assert.deepStrictEqual(reset && [reset.style.getPropertyValue('padding'), reset.style.getPropertyValue('border-radius')], ['4px', '8px'],
+    'New Tab should have the compact icon button fallback');
+  const options = parsePageCss('src/options/options.html');
+  assert.ok(!options.selectors().some((selector) => /_x_extension_range_slider_value_input_2026_unique_:(hover|focus|focus-visible|disabled)/.test(selector)),
+    'the slider value input should not get a second Settings appearance');
+  const input = parseCss(readStylesheet('src/newtab/shortcuts/shortcut-dialog.css')).rule('._x_extension_shortcut_input_2024_unique_');
+  assert.deepStrictEqual([input.get('border'), input.get('background')], ['1px solid var(--tab-border)', 'var(--control-bg)'],
+    'New Tab slider values should use the existing input appearance');
+}
 
 locales.forEach((locale) => {
   const messages = JSON.parse(fs.readFileSync(`_locales/${locale}/messages.json`, 'utf8'));
@@ -236,26 +187,15 @@ locales.forEach((locale) => {
   });
 });
 
-// Fractional or odd-margin icon sizes snap unevenly on 1x screens and push the
-// favicon off center inside its rounded square while the size slider moves.
-const roundToParityMatch = newtabSource.match(/function roundToParityOf\(value, reference\) \{[\s\S]*?\n  \}/);
-assert.ok(roundToParityMatch, 'New Tab should round shortcut icon sizes to a matching parity');
-const roundToParityOf = new Function(`${roundToParityMatch[0]}; return roundToParityOf;`)();
-for (let size = settings.NEWTAB_SHORTCUT_SIZE_MIN; size <= settings.NEWTAB_SHORTCUT_SIZE_MAX; size++) {
-  const iconSize = roundToParityOf(size * 0.75, size);
-  const faviconSize = roundToParityOf(size * 0.4375, iconSize);
-  assert.ok(Number.isInteger(iconSize) && Number.isInteger(faviconSize), `size ${size} should use whole pixels`);
-  assert.strictEqual((size - iconSize) % 2, 0, `size ${size} should leave an even margin around the icon`);
-  assert.strictEqual((iconSize - faviconSize) % 2, 0, `size ${size} should leave an even margin around the favicon`);
-  assert.ok(Math.abs(iconSize - size * 0.75) <= 1, `size ${size} icon should stay within 1px of its ratio`);
-  assert.ok(Math.abs(faviconSize - size * 0.4375) <= 1, `size ${size} favicon should stay within 1px of its ratio`);
-}
-assert.strictEqual(roundToParityOf(48, 64), 48, 'The default 64px tile should keep its 48px icon');
-assert.strictEqual(roundToParityOf(28, 48), 28, 'The default 48px icon should keep its 28px favicon');
-assert.match(
-  newtabSource,
-  /--x-nt-shortcut-user-icon-size', `\$\{iconSize\}px`[\s\S]*?--x-nt-shortcut-user-favicon-size', `\$\{faviconSize\}px`/,
-  'Size changes should apply the rounded icon and favicon sizes'
-);
 
-console.log('New Tab shortcut column setting tests passed.');
+(async () => {
+  await testColumnsOnNewTab();
+  await testIconSizesStayCentered();
+  await testSettings();
+  testStyles();
+  console.log('New Tab shortcut column setting tests passed.');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
