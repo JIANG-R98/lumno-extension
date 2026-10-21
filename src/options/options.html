@@ -542,7 +542,13 @@
           <!-- chrome.fontSettings lists installed fonts; Firefox has no equivalent. -->
           <div id="_x_extension_overlay_font_row_2026_unique_" class="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_" data-browser-unsupported="firefox" data-unsupported-reason-key="settings_overlay_font_unsupported_tooltip">
             <div>
-              <p class="_x_extension_setting_title_2024_unique_" data-i18n="settings_overlay_font_title">字体</p>
+              <p class="_x_extension_setting_title_2024_unique_" data-i18n="settings_overlay_font_title">本地字体</p>
+              <p class="_x_extension_setting_desc_2024_unique_" data-i18n="settings_overlay_font_desc">读取这台电脑已安装的字体，只对这台设备生效，不会同步</p>
+              <!-- Shown when the chosen face is not installed here (uninstalled since). -->
+              <div id="_x_extension_overlay_font_missing_2026_unique_" class="_x_extension_overlay_font_missing_2026_unique_" role="status" hidden>
+                <span class="_x_extension_overlay_font_missing_text_2026_unique_"></span>
+                <button class="_x_extension_shortcut_submit_2024_unique_ _x_extension_shortcut_secondary_2024_unique_ _x_extension_overlay_font_reset_2026_unique_" type="button" data-i18n="settings_overlay_font_missing_reset">恢复默认</button>
+              </div>
             </div>
             <div class="_x_extension_select_wrap_2024_unique_ _x_extension_custom_select_2024_unique_ _x_extension_select_wrap_auto_2024_unique_ _x_extension_select_align_right_2024_unique_" data-select="_x_extension_overlay_font_select_2026_unique_" data-select-searchable="true" data-select-search-placeholder-key="settings_overlay_font_search_placeholder" data-select-empty-key="settings_overlay_font_no_results">
               <select id="_x_extension_overlay_font_select_2026_unique_" class="_x_extension_select_2024_unique_" tabindex="-1" aria-hidden="true">
@@ -557,8 +563,12 @@
           <!-- Second family in the stack: an English face rarely carries CJK glyphs. -->
           <div id="_x_extension_overlay_font_fallback_row_2026_unique_" class="_x_extension_setting_row_2024_unique_ _x_extension_setting_row_compact_2024_unique_" data-browser-unsupported="firefox" data-unsupported-reason-key="settings_overlay_font_unsupported_tooltip">
             <div>
-              <p class="_x_extension_setting_title_2024_unique_" data-i18n="settings_overlay_font_fallback_title">回退字体</p>
+              <p class="_x_extension_setting_title_2024_unique_" data-i18n="settings_overlay_font_fallback_title">本地回退字体</p>
               <p class="_x_extension_setting_desc_2024_unique_" data-i18n="settings_overlay_font_fallback_desc">主字体缺少字形时使用，例如英文字体下的中文</p>
+              <div id="_x_extension_overlay_font_fallback_missing_2026_unique_" class="_x_extension_overlay_font_missing_2026_unique_" role="status" hidden>
+                <span class="_x_extension_overlay_font_missing_text_2026_unique_"></span>
+                <button class="_x_extension_shortcut_submit_2024_unique_ _x_extension_shortcut_secondary_2024_unique_ _x_extension_overlay_font_reset_2026_unique_" type="button" data-i18n="settings_overlay_font_fallback_missing_reset">清除</button>
+              </div>
             </div>
             <div class="_x_extension_select_wrap_2024_unique_ _x_extension_custom_select_2024_unique_ _x_extension_select_wrap_auto_2024_unique_ _x_extension_select_align_right_2024_unique_" data-select="_x_extension_overlay_font_fallback_select_2026_unique_" data-select-searchable="true" data-select-search-placeholder-key="settings_overlay_font_search_placeholder" data-select-empty-key="settings_overlay_font_no_results">
               <select id="_x_extension_overlay_font_fallback_select_2026_unique_" class="_x_extension_select_2024_unique_" tabindex="-1" aria-hidden="true">

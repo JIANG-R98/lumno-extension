@@ -58,6 +58,10 @@
   const overlayFontFallbackSelect = document.getElementById(
     '_x_extension_overlay_font_fallback_select_2026_unique_'
   );
+  const overlayFontMissing = document.getElementById('_x_extension_overlay_font_missing_2026_unique_');
+  const overlayFontFallbackMissing = document.getElementById(
+    '_x_extension_overlay_font_fallback_missing_2026_unique_'
+  );
   const bookmarkRowsControlHost = document.getElementById('_x_extension_bookmark_rows_control_2026_unique_');
   const bookmarkColumnsSettingRow = document.getElementById('_x_extension_bookmark_columns_setting_row_2026_unique_');
   const bookmarkColumnsControlHost = document.getElementById('_x_extension_bookmark_columns_control_2026_unique_');
@@ -577,6 +581,16 @@
     setToggleState: setOptionsToggleState,
     setSelectState: setOptionsSelectState
   });
+  // Device-only settings (the overlay's local fonts) stay in
+  // chrome.storage.local whichever area holds the synced ones.
+  const localSettingBinder = SETTING_BINDINGS.createSettingBinder({
+    area: 'local',
+    storageArea: localStorageArea,
+    registry: storageChanges,
+    refreshCustomSelects,
+    setToggleState: setOptionsToggleState,
+    setSelectState: setOptionsSelectState
+  });
 
   function finishOptionsStartupStorageBatch(metrics) {
     optionsStartupStorageBatchPending = false;
@@ -875,9 +889,12 @@
   // Empty means the bundled Lumno Open Sans stack.
   let currentOverlayFontFamily = '';
   let currentOverlayFontFallback = '';
-  // Display names of the chosen families, synced so another device can show
-  // them before it lists its own fonts.
+  // Display names of the chosen families, so a face uninstalled since is
+  // still named in the missing-font notice.
   let currentOverlayFontLabels = {};
+  // The installed families once the list is read. Null until then (and on
+  // Firefox), so nothing is reported missing before it can be checked.
+  let installedOverlayFontFamilies = null;
   let currentRestrictedAction = 'default';
   let currentSearchResultPriority = 'autocomplete';
   let currentSearchResultDisplayLimit = 10;
@@ -1051,6 +1068,38 @@
   function getOverlayFontLabel(family) {
     return (family && currentOverlayFontLabels[family]) || family;
   }
+  // A chosen face this device does not have (uninstalled since, or never
+  // here): the overlay already falls back, and the row says which font is
+  // missing with one button to put the default back.
+  function renderOverlayFontMissingNotices() {
+    [
+      [overlayFontMissing, currentOverlayFontFamily, 'settings_overlay_font_missing'],
+      [overlayFontFallbackMissing, currentOverlayFontFallback, 'settings_overlay_font_fallback_missing']
+    ].forEach(([notice, family, messageKey]) => {
+      if (!notice) {
+        return;
+      }
+      const missing = Boolean(
+        installedOverlayFontFamilies && family && !installedOverlayFontFamilies.has(family)
+      );
+      notice.hidden = !missing;
+      const text = notice.querySelector('._x_extension_overlay_font_missing_text_2026_unique_');
+      if (missing && text) {
+        text.textContent = formatTemplate(getMessage(messageKey, ''), { font: getOverlayFontLabel(family) });
+      }
+    });
+  }
+  [[overlayFontMissing, overlayFontSelect], [overlayFontFallbackMissing, overlayFontFallbackSelect]]
+    .forEach(([notice, select]) => {
+      const button = notice && notice.querySelector('._x_extension_overlay_font_reset_2026_unique_');
+      if (!button || !select) {
+        return;
+      }
+      button.addEventListener('click', () => {
+        select.value = '';
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    });
   function ensureOverlayFontOption(select, family) {
     if (!select || !family) {
       return;
@@ -1114,6 +1163,11 @@
     }
   });
   getInstalledFontFamilies().then((fonts) => {
+    const families = fonts
+      .map((font) => (font && typeof font.fontId === 'string' ? font.fontId.trim() : ''))
+      .filter(Boolean);
+    // An empty list means the read failed, not that no font is installed.
+    installedOverlayFontFamilies = families.length ? new Set(families) : null;
     populateOverlayFontOptions(overlayFontSelect, currentOverlayFontFamily, 'settings_overlay_font_default', fonts);
     populateOverlayFontOptions(
       overlayFontFallbackSelect,
@@ -1121,6 +1175,7 @@
       'settings_overlay_font_fallback_none',
       fonts
     );
+    renderOverlayFontMissingNotices();
   });
   // Firefox cannot list fonts; keep the rows visible but inert.
   [[overlayFontRow, overlayFontSelect], [overlayFontFallbackRow, overlayFontFallbackSelect]]
@@ -2411,6 +2466,7 @@
 
   function applyI18n() {
     if (webDavSettingsController) webDavSettingsController.render();
+    renderOverlayFontMissingNotices();
     popconfirmLanguageRefreshers.forEach((refresh) => refresh());
     const browserName = globalThis.LumnoBrowserProfile?.getBrowserInternalProfile(navigator).name || 'Chrome';
     document.querySelectorAll('[data-i18n]').forEach((node) => {
@@ -3611,10 +3667,11 @@
           : currentOverlayFontLabels,
         [currentOverlayFontFamily, currentOverlayFontFallback]
       );
-      if (storageArea) {
-        storageArea.set({ [key]: family, [OVERLAY_FONT_LABELS_STORAGE_KEY]: currentOverlayFontLabels });
+      if (localStorageArea) {
+        localStorageArea.set({ [key]: family, [OVERLAY_FONT_LABELS_STORAGE_KEY]: currentOverlayFontLabels });
       }
       refreshOptionsSelectItems(select);
+      renderOverlayFontMissingNotices();
     });
   });
   if (newtabGlassStyleSelect) {
@@ -3914,7 +3971,7 @@
     apply: setOverlayEnterAnimationTabState,
     repairOnChange: false
   });
-  settingBinder.bindSetting({
+  localSettingBinder.bindSetting({
     key: OVERLAY_FONT_FAMILY_STORAGE_KEY,
     normalize: SETTINGS.normalizeOverlayFontFamily,
     apply(family) {
@@ -3925,11 +3982,12 @@
       ensureOverlayFontOption(overlayFontSelect, family);
       overlayFontSelect.value = family;
       refreshOptionsSelectItems(overlayFontSelect);
+      renderOverlayFontMissingNotices();
     },
     repairOnChange: false,
     refreshSelects: true
   });
-  settingBinder.bindSetting({
+  localSettingBinder.bindSetting({
     key: OVERLAY_FONT_LABELS_STORAGE_KEY,
     // Families may load after the names, so nothing is pruned on read.
     normalize: (value) => SETTINGS.normalizeOverlayFontLabels(value),
@@ -3942,12 +4000,13 @@
             refreshOptionsSelectItems(select);
           }
         });
+      renderOverlayFontMissingNotices();
     },
     repairOnLoad: false,
     repairOnChange: false,
     refreshSelects: true
   });
-  settingBinder.bindSetting({
+  localSettingBinder.bindSetting({
     key: OVERLAY_FONT_FALLBACK_STORAGE_KEY,
     normalize: SETTINGS.normalizeOverlayFontFamily,
     apply(family) {
@@ -3958,6 +4017,7 @@
       ensureOverlayFontOption(overlayFontFallbackSelect, family);
       overlayFontFallbackSelect.value = family;
       refreshOptionsSelectItems(overlayFontFallbackSelect);
+      renderOverlayFontMissingNotices();
     },
     repairOnChange: false,
     refreshSelects: true

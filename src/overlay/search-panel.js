@@ -334,8 +334,6 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY,
       OVERLAY_SIZE_MODE_STORAGE_KEY,
       OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
-      OVERLAY_FONT_FAMILY_STORAGE_KEY,
-      OVERLAY_FONT_FALLBACK_STORAGE_KEY,
       MOTION_EFFECTS_ENABLED_STORAGE_KEY,
       SIMPLE_MODE_ENABLED_STORAGE_KEY,
       FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY,
@@ -3404,14 +3402,19 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       applyOverlaySizeForPageZoom(overlay);
       return overlaySizeMode;
     });
-    const initialOverlayFontFamilyReady = initialOverlaySettingsReady.then((result) => {
+    // The fonts are this device's own choice (installed faces), so they are
+    // read from chrome.storage.local whichever area holds synced settings.
+    const initialOverlayFontFamilyReady = overlayRuntime.getStorageValues(
+      localStorageArea,
+      [OVERLAY_FONT_FAMILY_STORAGE_KEY, OVERLAY_FONT_FALLBACK_STORAGE_KEY]
+    ).then((result) => {
       overlayFontFamily = SETTINGS.normalizeOverlayFontFamily(result[OVERLAY_FONT_FAMILY_STORAGE_KEY]);
       overlayFontFallback = SETTINGS.normalizeOverlayFontFamily(result[OVERLAY_FONT_FALLBACK_STORAGE_KEY]);
       applyOverlayFontFamily(overlay);
       return overlayFontFamily;
     });
     storageChangeListeners.add((changes, areaName) => {
-      if (!isPrimaryStorageAreaName(areaName)) {
+      if (areaName !== 'local') {
         return;
       }
       let changed = false;

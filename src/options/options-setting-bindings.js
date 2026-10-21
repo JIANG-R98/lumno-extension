@@ -58,10 +58,13 @@
   // bindToggle/bindSelect add the control: they apply through setToggleState
   // or setSelectState (then spec.afterApply), and persist the control's own
   // changes. `normalizeInput` overrides how the control's value is read.
+  // A binder made with `area: 'local'` reads, writes and follows
+  // chrome.storage.local (device-only settings) instead of the primary area.
   function createSettingBinder(options) {
     const config = options || {};
     const storageArea = config.storageArea || null;
     const registry = config.registry;
+    const registryOptions = config.area ? { area: config.area } : undefined;
     const refreshCustomSelects = typeof config.refreshCustomSelects === 'function'
       ? config.refreshCustomSelects
       : () => {};
@@ -92,7 +95,7 @@
       }
       registry.on(key, (changes) => {
         sync(changes[key].newValue, normalizeChange, spec.repairOnChange !== false);
-      });
+      }, registryOptions);
     }
 
     function bindControl(spec, readControl, setControlState) {

@@ -666,7 +666,22 @@
     "message": "フェード"
   },
   "settings_overlay_font_title": {
-    "message": "フォント"
+    "message": "ローカルフォント"
+  },
+  "settings_overlay_font_desc": {
+    "message": "このコンピュータにインストールされたフォントを使います。このデバイスにのみ適用され、同期されません。"
+  },
+  "settings_overlay_font_missing": {
+    "message": "このデバイスには「{font}」がインストールされていないため、オーバーレイは既定のフォントを使用しています"
+  },
+  "settings_overlay_font_missing_reset": {
+    "message": "既定に戻す"
+  },
+  "settings_overlay_font_fallback_missing": {
+    "message": "このデバイスには「{font}」がインストールされていないため、フォールバックは使われていません"
+  },
+  "settings_overlay_font_fallback_missing_reset": {
+    "message": "クリア"
   },
   "settings_overlay_font_default": {
     "message": "デフォルト"
@@ -678,7 +693,7 @@
     "message": "一致するフォントがありません"
   },
   "settings_overlay_font_fallback_title": {
-    "message": "フォールバックフォント"
+    "message": "ローカルフォールバックフォント"
   },
   "settings_overlay_font_fallback_desc": {
     "message": "最初のフォントにない文字に使用します。英字フォントでの中国語など。"

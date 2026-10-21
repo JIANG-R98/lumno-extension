@@ -666,7 +666,22 @@
     "message": "Fade"
   },
   "settings_overlay_font_title": {
-    "message": "Font"
+    "message": "Local font"
+  },
+  "settings_overlay_font_desc": {
+    "message": "Reads the fonts installed on this computer. Applies to this device only and is not synced."
+  },
+  "settings_overlay_font_missing": {
+    "message": "“{font}” is not installed on this device, so the overlay uses the default font"
+  },
+  "settings_overlay_font_missing_reset": {
+    "message": "Use default"
+  },
+  "settings_overlay_font_fallback_missing": {
+    "message": "“{font}” is not installed on this device, so the fallback is skipped"
+  },
+  "settings_overlay_font_fallback_missing_reset": {
+    "message": "Clear"
   },
   "settings_overlay_font_default": {
     "message": "Default"
@@ -678,7 +693,7 @@
     "message": "No matching fonts"
   },
   "settings_overlay_font_fallback_title": {
-    "message": "Fallback font"
+    "message": "Local fallback font"
   },
   "settings_overlay_font_fallback_desc": {
     "message": "Used for characters the first font lacks, such as Chinese under an English face"

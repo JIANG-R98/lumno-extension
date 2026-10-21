@@ -64,8 +64,8 @@ assert.match(
 );
 assert.match(
   optionsSource,
-  /\[overlayFontSelect, OVERLAY_FONT_FAMILY_STORAGE_KEY[\s\S]*?storageArea\.set\(\{ \[key\]: family, \[OVERLAY_FONT_LABELS_STORAGE_KEY\]: currentOverlayFontLabels \}\)/,
-  'choosing a font should persist its family with its display name'
+  /\[overlayFontSelect, OVERLAY_FONT_FAMILY_STORAGE_KEY[\s\S]*?localStorageArea\.set\(\{ \[key\]: family, \[OVERLAY_FONT_LABELS_STORAGE_KEY\]: currentOverlayFontLabels \}\)/,
+  'choosing a font should keep its family and display name on this device'
 );
 assert.match(
   optionsSource,
@@ -75,18 +75,72 @@ assert.match(
 assert.match(
   optionsSource,
   /key: OVERLAY_FONT_LABELS_STORAGE_KEY,[\s\S]*?repairOnLoad: false/,
-  'synced display names should relabel a family kept before the list loads, without a write-back'
+  'stored display names should relabel a family kept before the list loads, without a write-back'
 );
 assert.match(
   optionsSource,
   /function ensureOverlayFontOption\(select, family\)[\s\S]*?data-font-unlisted[\s\S]*?getOverlayFontLabel\(family\)/,
-  'a family not in the list should show its synced display name'
+  'a family not in the list should show its stored display name'
+);
+['OVERLAY_FONT_FAMILY_STORAGE_KEY', 'OVERLAY_FONT_FALLBACK_STORAGE_KEY', 'OVERLAY_FONT_LABELS_STORAGE_KEY'].forEach((key) => {
+  assert.match(
+    optionsSource,
+    new RegExp(`localSettingBinder\\.bindSetting\\(\\{\\s*key: ${key},`),
+    `${key} should be read and followed in chrome.storage.local`
+  );
+});
+assert.match(
+  optionsSource,
+  /const localSettingBinder = SETTING_BINDINGS\.createSettingBinder\(\{\s*area: 'local',\s*storageArea: localStorageArea,/,
+  'device-only settings need a binder on chrome.storage.local'
+);
+
+// --- Missing font ------------------------------------------------------------
+// A chosen face this device does not have: the row names it in the error color
+// with one button that puts the default back.
+['_x_extension_overlay_font_missing_2026_unique_', '_x_extension_overlay_font_fallback_missing_2026_unique_']
+  .forEach((id) => {
+    assert.match(
+      optionsHtml,
+      new RegExp(`id="${id}" class="_x_extension_overlay_font_missing_2026_unique_" role="status" hidden>[\\s\\S]*?_x_extension_overlay_font_reset_2026_unique_`),
+      `${id} should start hidden with its reset button`
+    );
+  });
+assert.match(
+  fs.readFileSync('src/options/options.css', 'utf8'),
+  /\._x_extension_overlay_font_missing_2026_unique_ \{[^}]*color: var\(--duplicate-badge-text\);/,
+  'the missing-font notice should use the error color'
+);
+assert.match(
+  optionsSource,
+  /installedOverlayFontFamilies && family && !installedOverlayFontFamilies\.has\(family\)/,
+  'only a chosen family absent from a list actually read counts as missing'
+);
+assert.match(
+  optionsSource,
+  /installedOverlayFontFamilies = families\.length \? new Set\(families\) : null;/,
+  'a failed or empty font list must not flag every font as missing'
+);
+assert.match(
+  optionsSource,
+  /formatTemplate\(getMessage\(messageKey, ''\), \{ font: getOverlayFontLabel\(family\) \}\)/,
+  'the notice should name the missing font by its display name'
+);
+assert.match(
+  optionsSource,
+  /button\.addEventListener\('click', \(\) => \{\s*select\.value = '';\s*select\.dispatchEvent\(new Event\('change', \{ bubbles: true \}\)\);/,
+  'one click should clear the choice through the same path as the menu'
+);
+assert.match(
+  optionsSource,
+  /function applyI18n\(\) \{[\s\S]{0,200}renderOverlayFontMissingNotices\(\);/,
+  'a language change should re-render the notice text'
 );
 
 assert.match(
   optionsSource,
-  /getInstalledFontFamilies\(\)\.then\(\(fonts\) => \{\s*populateOverlayFontOptions\(overlayFontSelect/,
-  'the options page should list installed fonts on load'
+  /getInstalledFontFamilies\(\)\.then\(\(fonts\) => \{[\s\S]*?populateOverlayFontOptions\(overlayFontSelect[\s\S]*?renderOverlayFontMissingNotices\(\);/,
+  'the options page should list installed fonts on load, then check the chosen ones'
 );
 
 // --- Fallback family -------------------------------------------------------
@@ -119,10 +173,6 @@ assert.strictEqual(
   settings.OVERLAY_FONT_FALLBACK_STORAGE_KEY,
   '_x_extension_overlay_font_fallback_2026_unique_'
 );
-assert(
-  settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.OVERLAY_FONT_FALLBACK_STORAGE_KEY),
-  'the fallback should follow the reader through Chrome Sync and WebDAV'
-);
 assert.match(
   overlayRuntimeSource,
   /overlayFontFallback:\s*'_x_extension_overlay_font_fallback_2026_unique_'/,
@@ -152,54 +202,59 @@ assert.strictEqual(
   settings.OVERLAY_FONT_FAMILY_STORAGE_KEY,
   '_x_extension_overlay_font_family_2026_unique_'
 );
-assert(
-  settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.OVERLAY_FONT_FAMILY_STORAGE_KEY),
-  'the font choice should follow the reader through Chrome Sync and WebDAV'
-);
+// The fonts are this computer's installed faces, so they stay on the device:
+// out of Chrome Sync, and so out of WebDAV and exports, which follow its list.
+settings.OVERLAY_FONT_LOCAL_STORAGE_KEYS.forEach((key) => {
+  assert(!settings.CHROME_SYNC_STORAGE_KEYS.includes(key), `${key} must not reach Chrome Sync`);
+});
 assert.match(
   overlayRuntimeSource,
   /overlayFontFamily:\s*'_x_extension_overlay_font_family_2026_unique_'/,
   'the overlay runtime should expose the font storage key'
 );
-require('../src/shared/webdav-contract.js');
+const webdavContract = require('../src/shared/webdav-contract.js');
+settings.OVERLAY_FONT_LOCAL_STORAGE_KEYS.forEach((key) => {
+  assert(!webdavContract.KNOWN_KEYS.includes(key), `${key} must not reach WebDAV`);
+});
+assert.deepStrictEqual(
+  webdavContract.selectPreferences({
+    [settings.OVERLAY_FONT_FAMILY_STORAGE_KEY]: 'PingFang SC',
+    [settings.OVERLAY_SIZE_MODE_STORAGE_KEY]: 'large'
+  }),
+  { [settings.OVERLAY_SIZE_MODE_STORAGE_KEY]: 'large' },
+  'a WebDAV state that still carries a font (an earlier build wrote one) must not apply it'
+);
 const contractSource = fs.readFileSync('src/shared/webdav-contract.js', 'utf8');
-assert.match(
-  contractSource,
-  /KEYS_UNKNOWN_TO_LEGACY_WRITERS[\s\S]*?settings\.OVERLAY_FONT_FAMILY_STORAGE_KEY/,
-  'legacy WebDAV states must not clobber the font choice'
-);
-const webdavOptionsSource = fs.readFileSync('src/options/webdav-options.js', 'utf8');
-assert.match(
-  webdavOptionsSource,
-  /\['overlay_font_family', 'settings_overlay_font_title'\]/,
-  'WebDAV conflicts should name the font setting'
+assert.doesNotMatch(contractSource, /OVERLAY_FONT/, 'the WebDAV contract should not list the device-local fonts');
+assert.doesNotMatch(
+  fs.readFileSync('src/options/webdav-options.js', 'utf8'),
+  /overlay_font/,
+  'WebDAV conflicts never involve the device-local fonts'
 );
 assert.match(
-  contractSource,
-  /KEYS_UNKNOWN_TO_LEGACY_WRITERS[\s\S]*?settings\.OVERLAY_FONT_FALLBACK_STORAGE_KEY/,
-  'legacy WebDAV states must not clobber the fallback'
-);
-assert.match(
-  webdavOptionsSource,
-  /\['overlay_font_fallback', 'settings_overlay_font_fallback_title'\]/,
-  'WebDAV conflicts should name the fallback setting'
-);
-assert.match(
-  contractSource,
-  /KEYS_UNKNOWN_TO_LEGACY_WRITERS[\s\S]*?settings\.OVERLAY_FONT_LABELS_STORAGE_KEY/,
-  'legacy WebDAV states must not clobber the display names'
-);
-assert.match(
-  webdavOptionsSource,
-  /\['overlay_font_labels', 'settings_overlay_font_title'\]/,
-  'WebDAV conflicts should name the display names after the font setting'
+  fs.readFileSync('src/background/background.js', 'utf8'),
+  /function cleanupLocalOnlyOverlayFontSyncStorage\(\)[\s\S]*?chrome\.storage\.sync\.remove\(OVERLAY_FONT_LOCAL_STORAGE_KEYS[\s\S]*?\ncleanupLocalOnlyOverlayFontSyncStorage\(\);/,
+  'copies development builds left in Chrome Sync should be cleared'
 );
 
 // --- Overlay runtime -------------------------------------------------------
 assert.match(
   overlaySource,
-  /const initialOverlaySettingsReady = overlayRuntime\.getStorageValues\([\s\S]*?OVERLAY_FONT_FAMILY_STORAGE_KEY[\s\S]*?\)\.catch/,
-  'the first open should read the font with the other overlay preferences'
+  /const initialOverlayFontFamilyReady = overlayRuntime\.getStorageValues\(\s*localStorageArea,\s*\[OVERLAY_FONT_FAMILY_STORAGE_KEY, OVERLAY_FONT_FALLBACK_STORAGE_KEY\]/,
+  'the first open should read the fonts from chrome.storage.local'
+);
+assert.doesNotMatch(
+  overlaySource.slice(
+    overlaySource.indexOf('const initialOverlaySettingsReady'),
+    overlaySource.indexOf('const initialOverlaySettingsReady') + 800
+  ),
+  /OVERLAY_FONT/,
+  'the synced preference read should not include the device-local fonts'
+);
+assert.match(
+  overlaySource,
+  /storageChangeListeners\.add\(\(changes, areaName\) => \{\s*if \(areaName !== 'local'\) \{\s*return;\s*\}\s*let changed = false;\s*if \(changes\[OVERLAY_FONT_FAMILY_STORAGE_KEY\]\)/,
+  'the overlay should follow font changes in chrome.storage.local only'
 );
 assert.match(
   overlaySource,
@@ -275,12 +330,15 @@ assert.match(
 );
 
 // --- Locales ---------------------------------------------------------------
+// The titles say the fonts are this computer's own; the description says
+// they are not synced.
 const expected = {
-  en: ['Font', 'Default', 'Search fonts', 'No matching fonts', 'Fallback font', 'None'],
-  ja: ['フォント', 'デフォルト', 'フォントを検索', '一致するフォントがありません', 'フォールバックフォント', 'なし'],
-  zh_CN: ['字体', '默认', '搜索字体', '没有匹配的字体', '回退字体', '无'],
-  zh_TW: ['字型', '預設', '搜尋字型', '沒有符合的字型', '後備字型', '無']
+  en: ['Local font', 'Default', 'Search fonts', 'No matching fonts', 'Local fallback font', 'None'],
+  ja: ['ローカルフォント', 'デフォルト', 'フォントを検索', '一致するフォントがありません', 'ローカルフォールバックフォント', 'なし'],
+  zh_CN: ['本地字体', '默认', '搜索字体', '没有匹配的字体', '本地回退字体', '无'],
+  zh_TW: ['本機字型', '預設', '搜尋字型', '沒有符合的字型', '本機後備字型', '無']
 };
+const notSynced = { en: /not synced/, ja: /同期されません/, zh_CN: /不会同步/, zh_TW: /不會同步/ };
 Object.entries(expected).forEach(([locale, messages]) => {
   const data = JSON.parse(fs.readFileSync(`_locales/${locale}/messages.json`, 'utf8'));
   assert.strictEqual(data.settings_overlay_font_title.message, messages[0]);
@@ -291,6 +349,12 @@ Object.entries(expected).forEach(([locale, messages]) => {
   assert.strictEqual(data.settings_overlay_font_fallback_none.message, messages[5]);
   assert.ok(data.settings_overlay_font_fallback_desc.message);
   assert.ok(data.settings_overlay_font_unsupported_tooltip.message);
+  assert.match(data.settings_overlay_font_desc.message, notSynced[locale]);
+  ['settings_overlay_font_missing', 'settings_overlay_font_fallback_missing'].forEach((key) => {
+    assert.match(data[key].message, /\{font\}/, `${locale}.${key} should name the missing font`);
+  });
+  assert.ok(data.settings_overlay_font_missing_reset.message);
+  assert.ok(data.settings_overlay_font_fallback_missing_reset.message);
 });
 
 console.log('overlay font setting tests passed');

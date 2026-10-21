@@ -2571,6 +2571,26 @@ body[data-theme="dark"] ._x_extension_shortcut_secondary_2024_unique_ {
   font-size: var(--lumno-font-size-sm);
   color: #ef4444;
 }
+/* A local font the device no longer has: the reason in the error color, then
+   a compact button that puts the default back. */
+._x_extension_overlay_font_missing_2026_unique_ {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin-top: 6px;
+  color: var(--duplicate-badge-text);
+  font-size: var(--lumno-font-size-sm);
+  line-height: 1.4;
+}
+._x_extension_overlay_font_missing_2026_unique_[hidden] {
+  display: none;
+}
+._x_extension_shortcut_submit_2024_unique_._x_extension_overlay_font_reset_2026_unique_ {
+  --settings-button-min-height: 26px;
+  --settings-button-padding: 0 10px;
+  align-self: center;
+}
 ._x_extension_theme_picker_2024_unique_ {
   display: flex;
   gap: 0;

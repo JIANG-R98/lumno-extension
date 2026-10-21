@@ -796,6 +796,21 @@ function cleanupRemovedAiStorageKeys() {
   }
 }
 
+const OVERLAY_FONT_LOCAL_STORAGE_KEYS = Array.isArray(globalThis.LumnoSettings.OVERLAY_FONT_LOCAL_STORAGE_KEYS)
+  ? globalThis.LumnoSettings.OVERLAY_FONT_LOCAL_STORAGE_KEYS
+  : [];
+
+// Development builds before the fonts became device-only kept them in
+// Chrome Sync; those copies would otherwise reach every signed-in device.
+function cleanupLocalOnlyOverlayFontSyncStorage() {
+  if (!chrome || !chrome.storage || !chrome.storage.sync ||
+      typeof chrome.storage.sync.remove !== 'function' ||
+      OVERLAY_FONT_LOCAL_STORAGE_KEYS.length === 0) {
+    return;
+  }
+  chrome.storage.sync.remove(OVERLAY_FONT_LOCAL_STORAGE_KEYS, ignoreExpectedChromeError);
+}
+
 function cleanupLocalOnlyBookmarkTopbarSyncStorage() {
   if (!chrome || !chrome.storage || !chrome.storage.sync ||
       typeof chrome.storage.sync.remove !== 'function' ||
@@ -2974,6 +2989,7 @@ if (chrome && chrome.runtime && chrome.runtime.onSuspend) {
 }
 cleanupRemovedAiStorageKeys();
 cleanupLocalOnlyBookmarkTopbarSyncStorage();
+cleanupLocalOnlyOverlayFontSyncStorage();
 
 if (chrome && chrome.tabs && chrome.tabs.onActivated) {
   chrome.tabs.onActivated.addListener((activeInfo) => {

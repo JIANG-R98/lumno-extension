@@ -666,7 +666,22 @@
     "message": "淡入"
   },
   "settings_overlay_font_title": {
-    "message": "字型"
+    "message": "本機字型"
+  },
+  "settings_overlay_font_desc": {
+    "message": "讀取這台電腦已安裝的字型，只對這台裝置生效，不會同步"
+  },
+  "settings_overlay_font_missing": {
+    "message": "這台裝置沒有安裝「{font}」，浮層正在使用預設字型"
+  },
+  "settings_overlay_font_missing_reset": {
+    "message": "恢復預設"
+  },
+  "settings_overlay_font_fallback_missing": {
+    "message": "這台裝置沒有安裝「{font}」，後備字型暫不生效"
+  },
+  "settings_overlay_font_fallback_missing_reset": {
+    "message": "清除"
   },
   "settings_overlay_font_default": {
     "message": "預設"
@@ -678,7 +693,7 @@
     "message": "沒有符合的字型"
   },
   "settings_overlay_font_fallback_title": {
-    "message": "後備字型"
+    "message": "本機後備字型"
   },
   "settings_overlay_font_fallback_desc": {
     "message": "主字型缺少字形時使用，例如英文字型下的中文"
