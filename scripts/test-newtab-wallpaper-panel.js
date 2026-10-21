@@ -1654,6 +1654,31 @@ assert.strictEqual(
 assert.strictEqual(panelState(scopedRuntime).search.width.value, 920,
   'the search width slider stays available in the New Tab scope');
 
+let previewGlobalMode = 'dark';
+const previewRuntime = sandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
+  documentObj,
+  windowObj,
+  storageArea: null,
+  t: (_key, fallback) => fallback || '',
+  getRiSvg: () => '',
+  getThemeScope: () => 'home',
+  getGlobalThemeMode: () => previewGlobalMode
+});
+previewRuntime.createControls();
+openPanel(previewRuntime);
+const previewUrl = (mode) => panelState(previewRuntime).theme.modes.find((item) => item.mode === mode).imageUrl;
+assert.ok(previewUrl('system').endsWith('assets/images/newtab-dark.svg'),
+  'following a dark Global should preview the dark New Tab, not a half-light one');
+assert.ok(previewUrl('light').endsWith('assets/images/newtab-light.svg'));
+const previewBadge = (mode) => panelState(previewRuntime).theme.modes.find((item) => item.mode === mode).badgeUrl;
+assert.ok(previewBadge('system').endsWith('assets/images/lumno.png'),
+  'Follow "Global" should carry the Lumno icon');
+assert.strictEqual(previewBadge('light'), '', 'fixed modes should not carry the Lumno icon');
+previewGlobalMode = 'system';
+previewRuntime.updateAppearanceSelectionUi();
+assert.ok(previewUrl('system').endsWith('assets/images/newtab-system.svg'),
+  'following a Global that follows the system should keep the split preview');
+
 let switchingScope = 'global';
 const switchingRuntime = sandbox.LumnoNewtabWallpaper.createWallpaperRuntime({
   documentObj,
@@ -1672,6 +1697,13 @@ const switchingTheme = () => panelState(switchingRuntime).theme;
 assert.strictEqual(switchingTheme().scope.active, 'global');
 assert.strictEqual(switchingTheme().modes.find((mode) => mode.mode === 'system').label, 'Follow system');
 assert.deepStrictEqual(
+  switchingTheme().modes.map((mode) => mode.imageUrl.split('/').pop()),
+  ['system.svg', 'light.svg', 'dark.svg'],
+  'the Global scope keeps the shared theme previews used across Lumno'
+);
+assert.strictEqual(switchingTheme().modes.find((mode) => mode.mode === 'system').badgeUrl, '',
+  'Follow system is not a Lumno setting, so it carries no Lumno icon');
+assert.deepStrictEqual(
   switchingTheme().scope.options.map((option) => [option.value, option.label]),
   [['global', 'Global'], ['home', 'New Tab']]
 );
@@ -1679,6 +1711,11 @@ panelActions(switchingRuntime).selectThemeScope('home');
 assert.strictEqual(switchingScope, 'home', 'choosing New Tab should switch theme scope');
 assert.strictEqual(switchingTheme().scope.active, 'home');
 assert.strictEqual(switchingTheme().modes.find((mode) => mode.mode === 'system').label, 'Follow "Global"');
+assert.deepStrictEqual(
+  switchingTheme().modes.map((mode) => mode.imageUrl.split('/').pop()),
+  ['newtab-system.svg', 'newtab-light.svg', 'newtab-dark.svg'],
+  'the New Tab scope previews miniature New Tabs'
+);
 panelActions(switchingRuntime).selectThemeScope('global');
 assert.strictEqual(switchingScope, 'global', 'choosing Global should switch theme scope back');
 assert.strictEqual(switchingTheme().scope.active, 'global');

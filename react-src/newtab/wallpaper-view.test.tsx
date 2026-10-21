@@ -33,11 +33,7 @@ function createActions(): MockActions {
 }
 
 const MODEL: WallpaperPanelModel = {
-  appearanceOptions: [
-    { mode: 'system', imageUrl: '/system.svg' },
-    { mode: 'light', imageUrl: '/light.svg' },
-    { mode: 'dark', imageUrl: '/dark.svg' }
-  ],
+  appearanceOptions: [{ mode: 'system' }, { mode: 'light' }, { mode: 'dark' }],
   favicons: [{ id: 'default', previewUrl: '/favicon.png' }, { id: 'alternate', inlineSvg: '<svg></svg>' }],
   icons: {
     arrow: '<i class="ri-arrow-right-s-line"></i>',
@@ -59,6 +55,7 @@ function createState(edit?: (state: WallpaperPanelState, actions: MockActions) =
   ];
   state.theme.modes = ['system', 'light', 'dark'].map((mode) => ({
     ariaLabel: `Switch to ${mode}`,
+    imageUrl: `/newtab-${mode}.svg`,
     label: mode,
     mode,
     selected: mode === 'system'
@@ -146,6 +143,16 @@ describe('New Tab React wallpaper view', () => {
     expect(refs().glassThemeTabs.querySelector('[data-newtab-glass-theme="follow"]')?.getAttribute('aria-pressed')).toBe('true');
     act(() => refs().glassThemeTabs.querySelector<HTMLElement>('[data-newtab-glass-theme="dark"]')!.click());
     expect(actions.selectGlassTheme).toHaveBeenCalledWith('dark');
+  });
+
+  it('marks only the theme option that carries a badge', () => {
+    const { state } = createState();
+    state.theme.modes[0].badgeUrl = '/lumno.png';
+    mount(state);
+    const badges = refs().appearanceOptions.querySelectorAll<HTMLImageElement>('.x-nt-appearance-badge');
+    expect(badges).toHaveLength(1);
+    expect(badges[0].closest('[data-theme-mode]')?.getAttribute('data-theme-mode')).toBe('system');
+    expect(badges[0].getAttribute('src')).toBe('/lumno.png');
   });
 
   it('renders the complete appearance panel contract', () => {
