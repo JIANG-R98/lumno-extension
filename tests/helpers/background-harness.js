@@ -277,6 +277,36 @@ function createChromeStub(config) {
         callLater(callback);
       }
     },
+    contextMenus: (() => {
+      const items = new Map();
+      return {
+        items,
+        create(properties, callback) {
+          record('contextMenus.create', [properties]);
+          items.set(properties.id, Object.assign({}, properties));
+          callLater(callback);
+        },
+        update(id, properties, callback) {
+          if (!items.has(id)) {
+            chromeApi.runtime.lastError = { message: `Cannot find menu item with id ${id}` };
+            if (typeof callback === 'function') callback();
+            chromeApi.runtime.lastError = null;
+            return;
+          }
+          Object.assign(items.get(id), properties);
+          callLater(callback);
+        },
+        remove(id, callback) {
+          items.delete(id);
+          callLater(callback);
+        },
+        removeAll(callback) {
+          items.clear();
+          callLater(callback);
+        },
+        onClicked: createEvent()
+      };
+    })(),
     alarms: {
       create() {},
       clear(_name, callback) {
@@ -362,10 +392,20 @@ function loadBackground(options) {
     URLSearchParams,
     TextEncoder,
     TextDecoder,
+    btoa,
+    atob,
     Blob,
     AbortController,
     navigator: { userAgent: 'Fake Chrome', platform: 'MacIntel' },
-    fetch: config.fetch || (async () => {
+    // With packagedFetch (and extensionUrls), the worker can read its own
+    // packaged files (site-search.json, locale messages); everything else
+    // is offline.
+    fetch: config.fetch || (async (url) => {
+      const resource = String(url);
+      if (config.packagedFetch === true && resource.startsWith(`${EXTENSION_ORIGIN}/`)) {
+        const text = fs.readFileSync(path.join(repoRoot, new URL(resource).pathname), 'utf8');
+        return { ok: true, status: 200, json: async () => JSON.parse(text), text: async () => text };
+      }
       throw new Error('network disabled in background harness');
     })
   });
@@ -393,8 +433,11 @@ function loadBackground(options) {
       urls.forEach(runFile);
     };
   }
+  // `exposeModules` adds exports of the worker's own modules to exposed(), by file:
+  // { 'src/background/x.js': ['name'] }. They are the instances the worker
+  // runs, not copies.
   vm.runInContext(
-    moduleScript('src/background/background.js', BACKGROUND_EXPORTS),
+    moduleScript('src/background/background.js', BACKGROUND_EXPORTS, config.exposeModules),
     context,
     { filename: 'build/background.js' }
   );
@@ -427,7 +470,7 @@ function loadBackground(options) {
     calls,
     storage: chromeApi.storage,
     sendMessage,
-    // A binding background.js exports.
+    // A binding background.js exports, or one named in `exposeModules`.
     exposed(name) {
       return context[BACKGROUND_EXPORTS][name];
     }

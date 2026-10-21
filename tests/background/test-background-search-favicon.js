@@ -1,54 +1,41 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
-const { readBackgroundSource } = require('../helpers/background-source');
+const { loadBackground } = require('../helpers/background-harness');
 
-const repoRoot = path.resolve(__dirname, '..', '..');
-const backgroundJs = readBackgroundSource();
+// The favicons the worker gives search suggestions: browser pages, excluded
+// sites and Lumno's own pages, read from real getSearchSuggestions answers.
 
-function getFunctionBlock(source, startNeedle, endNeedle) {
-  const start = source.indexOf(startNeedle);
-  assert.notStrictEqual(start, -1, `${startNeedle} should exist`);
-  const end = source.indexOf(endNeedle, start);
-  assert.notStrictEqual(end, -1, `${endNeedle} should exist after ${startNeedle}`);
-  return source.slice(start, end);
+async function run() {
+  const harness = loadBackground({
+    extensionUrls: true,
+    sync: {
+      _x_extension_favicon_request_blacklist_2026_unique_: ['secret.example.test'],
+      _x_extension_favicon_enhanced_fetch_enabled_2026_unique_: true
+    },
+    configureChrome(chromeApi) {
+      chromeApi.history.search = (_query, callback) => setTimeout(() => callback([
+        { url: 'chrome://settings/alpha', title: 'alpha settings', visitCount: 5, lastVisitTime: Date.now() },
+        { url: 'https://secret.example.test/page', title: 'alpha secret', visitCount: 5, lastVisitTime: Date.now() },
+        { url: 'https://open.example.test/page', title: 'alpha open', visitCount: 5, lastVisitTime: Date.now() },
+        { url: 'chrome-extension://lumno-test/src/options/options.html', title: 'alpha settings page', visitCount: 5, lastVisitTime: Date.now() }
+      ]), 0);
+    }
+  });
+  const response = await harness.sendMessage({ action: 'getSearchSuggestions', query: 'alpha' }, undefined, 2000);
+  const favicons = Object.fromEntries(response.suggestions.map((item) => [item.url, item.favicon]));
+  const browserCache = (pageUrl) => `chrome-extension://lumno-test/_favicon/?pageUrl=${encodeURIComponent(pageUrl)}&size=128`;
+
+  assert.strictEqual(favicons['chrome://settings/alpha'], browserCache('chrome://settings/alpha'),
+    'browser pages should take their icon from the browser, by page');
+  assert.strictEqual(favicons['https://secret.example.test/page'], `${browserCache('https://secret.example.test/page')}&fallbackToHost=0`,
+    'an excluded site should keep the browser-cache icon, which never contacts the site');
+  assert.strictEqual(favicons['https://open.example.test/page'], `${browserCache('https://open.example.test/page')}&fallbackToHost=0`);
+  assert.strictEqual(favicons['chrome-extension://lumno-test/src/options/options.html'], 'chrome-extension://lumno-test/assets/images/lumno.png',
+    'Lumno\'s own pages should show the Lumno icon');
+
+  console.log('background search favicon tests passed');
 }
 
-assert.match(
-  backgroundJs,
-  /function getBackgroundFaviconUrlResolver\(\)[\s\S]*?FAVICON_UTILS\.createFaviconUrlResolver[\s\S]*?shouldBlockFaviconForHost/,
-  'background search suggestions should use the shared favicon URL resolver'
-);
-
-assert.match(
-  backgroundJs,
-  /function isBrowserInternalPageUrl\(url\)[\s\S]*?resolver\.isBrowserInternalPageUrl\(url\)/,
-  'background search suggestions should share browser-internal URL detection'
-);
-
-const suggestionFaviconBlock = getFunctionBlock(
-  backgroundJs,
-  'function buildSearchSuggestionFavicon(url)',
-  'function createSearchSuggestion'
-);
-
-assert.match(
-  suggestionFaviconBlock,
-  /if \(isBrowserInternalPageUrl\(url\)\) \{\s*return getPageFaviconCandidateUrl\(url\);\s*\}/,
-  'bookmark/history/top-site search results for browser pages should use browser-page favicon candidates'
-);
-
-assert.doesNotMatch(
-  suggestionFaviconBlock,
-  /isUrlBlockedByFaviconRequestBlacklist\(url\)[\s\S]*?return '';/,
-  'favicon request exclusions should not hide safe virtual favicon candidates in search suggestions'
-);
-
-const browserPageBranch = suggestionFaviconBlock.indexOf('isBrowserInternalPageUrl(url)');
-const genericUrlParsing = suggestionFaviconBlock.indexOf('new URL(url)');
-assert.ok(
-  browserPageBranch !== -1 && genericUrlParsing !== -1 && browserPageBranch < genericUrlParsing,
-  'browser-page favicon handling should run before generic URL host parsing'
-);
-
-console.log('background search favicon tests passed');
+run().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

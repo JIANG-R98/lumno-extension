@@ -5,7 +5,7 @@ const settings = require('../../src/shared/settings.js');
 const shortcuts = require('../../src/newtab/shortcuts/shortcuts-store.js');
 const siteDisplayName = require('../../src/shared/site-display-name.js');
 const menu = require('../../src/background/page-shortcut-menu.js');
-const { readBackgroundSource } = require('../helpers/background-source');
+const { loadBackground, wait } = require('../helpers/background-harness');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const LANGUAGE_KEY = settings.LANGUAGE_STORAGE_KEY;
@@ -105,11 +105,12 @@ async function run() {
       assert(messages[key] && messages[key].message, `${locale} needs ${key}`);
     });
   });
-  const background = readBackgroundSource();
-  const backgroundEntry = fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8');
-  ['../shared/site-display-name.js', './page-shortcut-menu.js'].forEach((spec) => {
-    assert(backgroundEntry.includes(`'${spec}';`), `background.js should import ${spec}`);
-  });
+  // The real worker puts the item in the page menu as it starts.
+  const worker = loadBackground();
+  await wait(50);
+  const created = worker.calls.filter((call) => call.name === 'contextMenus.create').map((call) => call.args[0].id);
+  assert.deepStrictEqual(created, [menu.MENU_ITEM_ID], 'the worker should create the page menu item once');
+  assert.strictEqual(worker.chrome.contextMenus.onClicked.listeners.length, 1, 'the worker should listen for menu clicks');
 
   // The menu item follows the language picked in Lumno, not only the browser's.
   const sync = device({ sync: { [LANGUAGE_KEY]: 'zh_CN', [THEME_KEY]: 'dark' } });

@@ -1015,6 +1015,20 @@ describe('Suggestions React island', () => {
     });
   });
 
+  it('marks the web clip command with a scissors icon and no visit button', () => {
+    (['newtab', 'overlay'] as const).forEach((surface) => {
+      const { view, items } = createView(surface === 'overlay' ? { surface } : {});
+      render(view, [{
+        type: 'commandDocumentPip',
+        title: 'Clip part of this page',
+        commandText: '/clip'
+      }]);
+      const iconSlot = items[0].querySelector('.x-nt-suggestion-icon-slot');
+      expect(iconSlot?.querySelector('.ri-scissors-cut-line'), surface).not.toBeNull();
+      expect(items[0].querySelector('.ri-arrow-right-line'), surface).toBeNull();
+    });
+  });
+
   it('renders open tabs and preserves click and middle-click activation', () => {
     const onSwitchToTab = vi.fn();
     const onCopyUrl = vi.fn();

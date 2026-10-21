@@ -61,6 +61,7 @@ function parseCss(cssText) {
       const found = matching(selector, condition);
       if (!found.length) return null;
       const merged = {};
+      const priorities = {};
       found.forEach((entry) => {
         for (let index = 0; index < entry.style.length; index += 1) {
           const name = entry.style[index];
@@ -69,14 +70,19 @@ function parseCss(cssText) {
             .replace(/\(\s+/g, '(')
             .replace(/\s+\)/g, ')')
             .trim();
+          priorities[name] = entry.style.getPropertyPriority(name);
         }
       });
       return {
         has(name) {
           return Object.hasOwn(merged, name);
         },
+        // The declared value, without !important (see priority()).
         get(name) {
           return Object.hasOwn(merged, name) ? merged[name] : null;
+        },
+        priority(name) {
+          return Object.hasOwn(priorities, name) ? priorities[name] : null;
         },
         names() {
           return Object.keys(merged);

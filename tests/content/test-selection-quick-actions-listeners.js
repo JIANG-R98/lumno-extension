@@ -148,6 +148,8 @@ function trackListeners(target, label, registry) {
     'a disabled feature should not listen to the page at all');
   assert.strictEqual(activeObservers, 0, 'a disabled feature should not observe the page DOM');
   assert(storageListeners.length > 0, 'the storage listener should exist so the feature can be enabled');
+  setEnabled('true');
+  assert.deepStrictEqual(activeListenerKeys(), [], 'only an explicit true should turn the feature on');
 
   setEnabled(true);
   assert.deepStrictEqual(activeListenerKeys(), expectedListeners,

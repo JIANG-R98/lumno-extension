@@ -8,6 +8,7 @@
 const fs = require('fs');
 const path = require('path');
 const esbuild = require('esbuild');
+const { execFileSync } = require('child_process');
 const { BUNDLES, BUNDLE_DIRECTORY } = require('../../scripts/build/bundles');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
@@ -101,29 +102,29 @@ function getManifestContentScripts() {
   return manifest.content_scripts.map((entry) => entry.js.flatMap(expandScriptPath));
 }
 
-// The background's script lists, by the name of the constant or call that
-// holds them, expanded into source files.
-const INJECTION_LISTS = {
-  overlay: ['src/background/overlay-open-service.js', /const overlayInjectionFiles = \[([\s\S]*?)\n {2}\];/],
-  tabSwitcher: ['src/background/tab-switcher-service.js', /const runDynamicSwitcherScript[\s\S]*?files: \[([\s\S]*?)\n\s*\]/],
-  shortcutObserver: ['src/background/tab-switcher-service.js', /files: \[('build\/shortcut-key-observer\.js')\]/],
-  documentPipPicker: ['src/background/pip-service.js', /const injectAndInvoke[\s\S]*?files: \[([\s\S]*?)\n\s*\]/],
-  copyUrlListener: ['src/background/command-service.js', /const COPY_URL_LISTENER_FILES = Object\.freeze\(\[([\s\S]*?)\]\)/],
-  pageShortcutToast: ['src/background/page-shortcut-menu.js', /const TOAST_FILES = Object\.freeze\(\[([\s\S]*?)\]\)/],
-  selectionQuickActions: ['src/background/selection-script-registration.js', /const SCRIPT_FILES = Object\.freeze\(\[([\s\S]*?)\]\)/]
-};
+// The scripts the background injects into a web page, by list: overlay,
+// tabSwitcher, shortcutObserver, copyUrlListener, documentPipPicker. They
+// are recorded from the real worker (injection-lists-record.js boots it in a
+// child process and runs each command against a fresh tab), then expanded
+// into source files.
+let injectionLists = null;
+// The files as the background passes them (bundles not expanded).
+function getInjectedFiles(listName) {
+  if (!injectionLists) {
+    injectionLists = JSON.parse(execFileSync(process.execPath, [path.join(__dirname, 'injection-lists-record.js')], {
+      cwd: repoRoot,
+      encoding: 'utf8'
+    }));
+  }
+  const files = injectionLists[listName];
+  if (!Array.isArray(files)) {
+    throw new Error(`The background injected no ${listName} scripts`);
+  }
+  return files.slice();
+}
 
 function getInjectedScripts(listName) {
-  const [file, pattern] = INJECTION_LISTS[listName] || [];
-  if (!file) {
-    throw new Error(`Unknown injection list ${listName}`);
-  }
-  const match = fs.readFileSync(path.join(repoRoot, file), 'utf8').match(pattern);
-  if (!match) {
-    throw new Error(`Could not find the ${listName} injection list in ${file}`);
-  }
-  return [...match[1].matchAll(/'((?:build|src|assets)\/[^']+\.js)'/g)]
-    .flatMap((entry) => expandScriptPath(entry[1]));
+  return getInjectedFiles(listName).flatMap(expandScriptPath);
 }
 
 // Asserts that `list` runs `first` before `second` (both must be present).
@@ -135,6 +136,7 @@ function runsBefore(list, first, second) {
 
 module.exports = {
   getBundleFiles,
+  getInjectedFiles,
   getInjectedScripts,
   getManifestContentScripts,
   getPageScripts,

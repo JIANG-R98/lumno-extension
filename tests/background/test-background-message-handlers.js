@@ -131,6 +131,46 @@ async function testWebClipCommandOpensPickerOnSenderTab() {
   assert.deepStrictEqual(plain(noTab), { ok: false, reason: 'no-sender-tab' });
 }
 
+// With web clip off its entry points open Settings at the web clip switch; a
+// worker woken by the clip command waits for the stored setting before it
+// decides; and the overlay learns the setting to show or hide its clip command.
+async function testWebClipFollowsItsSetting() {
+  const disabled = boot({ extensionUrls: true, sync: { [DOCUMENT_PIP_ENABLED_KEY]: false } });
+  await wait(30);
+  disabled.calls.length = 0;
+  await disabled.sendMessage({ action: 'openDocumentPipPicker' }, { tab: senderTab });
+  await wait(50);
+  assert.deepStrictEqual(
+    disabled.calls.filter((call) => call.name === 'tabs.create').map((call) => plain(call.args[0])),
+    [{ url: 'chrome-extension://lumno-test/src/options/options.html#labs:document-pip', active: true }],
+    'with web clip off, the command should open Settings at the web clip switch'
+  );
+
+  const cold = boot({ sync: { [DOCUMENT_PIP_ENABLED_KEY]: true }, storageOptions: { sync: { hold: true } } });
+  const pickerInjected = () => cold.calls.some((call) => call.name === 'scripting.executeScript' &&
+    Array.isArray(call.args[0].files) && call.args[0].files.includes('build/document-pip-picker.js'));
+  const response = cold.sendMessage({ action: 'openDocumentPipPicker' }, { tab: senderTab }, 2000);
+  await wait(100);
+  assert.strictEqual(pickerInjected(), false, 'nothing should happen before the stored setting is read');
+  cold.storage.sync.release();
+  assert.deepStrictEqual(plain(await response), { ok: true, enabled: true },
+    'a worker woken by the clip command should answer from the stored setting, not its default');
+  await wait(600);
+  assert.strictEqual(pickerInjected(), true);
+
+  for (const enabled of [true, false]) {
+    const harness = boot({ sync: { [DOCUMENT_PIP_ENABLED_KEY]: enabled } });
+    await wait(30);
+    harness.chrome.commands.onCommand.dispatch('show-search');
+    await wait(400);
+    const open = harness.calls.find((call) => call.name === 'scripting.executeScript' &&
+      Array.isArray(call.args[0].args) && call.args[0].args[1] && typeof call.args[0].args[1] === 'object');
+    assert.ok(open, 'the search command should open the overlay with a context');
+    assert.strictEqual(open.args[0].args[1].documentPipEnabled, enabled,
+      'the overlay should be told whether web clip is on');
+  }
+}
+
 // The toolbar popup's web clip must open even when another tab cannot answer
 // the "is a video already in picture-in-picture?" check: a frozen tab (tab
 // freezing, Memory Saver) never runs the injected script.
@@ -226,6 +266,7 @@ async function testLocaleMessagesAreCachedAndCanBeNarrowed() {
   await testTopFrameDocumentStartIsAnswered();
   await testColdStartPageHotkeyIsVerifiedAgainstLiveShortcut();
   await testWebClipCommandOpensPickerOnSenderTab();
+  await testWebClipFollowsItsSetting();
   await testPopupWebClipIsNotBlockedByTabsThatNeverAnswer();
   await testAggregateSearchIgnoresPageSuppliedTargets();
   console.log('background message handler tests passed');

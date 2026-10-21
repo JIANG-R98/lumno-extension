@@ -4,14 +4,8 @@ const path = require('path');
 const vm = require('vm');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const { readBackgroundSource } = require('../helpers/background-source');
 const { runModuleInContext } = require('../helpers/module-script');
-const backgroundSourceForAssertions = readBackgroundSource();
-
-assert.ok(
-  /searchBlacklistItems,\s*faviconRequestBlacklistItems,\s*_faviconEnhancedFetchEnabled,\s*searchSelectionStats\s*\]\s*=\s*await Promise\.all\([\s\S]*?loadSearchBlacklistItems\(\),\s*loadFaviconRequestBlacklistItems\(\),\s*loadFaviconEnhancedFetchEnabled\(\),\s*loadSearchSelectionStats\(\)/.test(backgroundSourceForAssertions),
-  'background search suggestions should load favicon policy state before resolving suggestion favicons and keep Promise.all results aligned'
-);
+const { loadBackground } = require('../helpers/background-harness');
 
 function createEvent() {
   const listeners = [];
@@ -1487,7 +1481,32 @@ async function run() {
   );
 }
 
+// A worker woken by a search has not read the favicon settings yet. Its
+// first suggestions must already leave excluded sites out of third-party
+// favicon fetches. The harness's file-path extension URLs give no browser
+// favicon cache, so the favicon service is the first candidate here.
+async function testColdWorkerAppliesTheFaviconExclusionToItsFirstSuggestions() {
+  const harness = loadBackground({
+    sync: {
+      _x_extension_favicon_request_blacklist_2026_unique_: ['secret.example.test'],
+      _x_extension_favicon_enhanced_fetch_enabled_2026_unique_: true
+    },
+    configureChrome(chromeApi) {
+      chromeApi.history.search = (_query, callback) => setTimeout(() => callback([
+        { url: 'https://secret.example.test/page', title: 'alpha secret', visitCount: 5, lastVisitTime: Date.now() },
+        { url: 'https://open.example.test/page', title: 'alpha open', visitCount: 5, lastVisitTime: Date.now() }
+      ]), 0);
+    }
+  });
+  const response = await harness.sendMessage({ action: 'getSearchSuggestions', query: 'alpha' }, undefined, 2000);
+  const favicons = Object.fromEntries(response.suggestions.map((item) => [new URL(item.url).hostname, item.favicon]));
+  assert.ok(!favicons['secret.example.test'] || !/gstatic/.test(favicons['secret.example.test']),
+    'an excluded site should not get a third-party favicon, even on the first search after a wake');
+  assert.match(favicons['open.example.test'], /gstatic/, 'other sites should still use the enhanced favicon fetch');
+}
+
 run()
+  .then(testColdWorkerAppliesTheFaviconExclusionToItsFirstSuggestions)
   .then(() => {
     console.log('background search suggestion tests passed');
   })

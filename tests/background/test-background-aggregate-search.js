@@ -1,10 +1,9 @@
 const assert = require('assert');
-const vm = require('vm');
 const aggregateSearch = require('../../src/background/aggregate-search.js');
 const aggregateStore = require('../../src/shared/search/aggregate-search-store.js');
-const { readBackgroundSource } = require('../helpers/background-source');
+const { loadBackground, wait } = require('../helpers/background-harness');
 
-const backgroundSource = readBackgroundSource();
+const SITE_SEARCH_STORAGE_KEY = '_x_extension_site_search_custom_2024_unique_';
 assert.strictEqual(
   aggregateSearch.resolveAggregateSearchAutoGroupEnabled(undefined, []),
   true,
@@ -38,28 +37,6 @@ assert.strictEqual(
   ]),
   false,
   'an explicit global false value must override legacy definitions'
-);
-assert.ok(
-  backgroundSource.includes('AGGREGATE_SEARCH.createAggregateSearchQueryRunner({') &&
-    backgroundSource.includes('loadSiteSearchProviders,') &&
-    backgroundSource.includes('loadAggregateSearchAutoGroupEnabled()') &&
-    backgroundSource.includes('aggregateSearchStore: AGGREGATE_SEARCH_STORE'),
-  'the background must use the behavior-tested stored-definition request runner'
-);
-assert.ok(
-  backgroundSource.includes("import * as SETTINGS from '../shared/settings.js';") &&
-  backgroundSource.includes('SETTINGS.readStorageValue('),
-  'provider storage reads must use the loaded settings runtime and reject on failure'
-);
-assert.match(
-  backgroundSource,
-  /loadGeneration === siteSearchLoadGeneration &&\s*siteSearchPromise === loadTask/,
-  'provider publication and cleanup must be gated by load generation and promise identity'
-);
-assert.doesNotMatch(
-  backgroundSource,
-  /loadCustomSiteSearchProviders\(\)\.then\(\(customItems\) => \{\s*siteSearchCache = customItems;/,
-  'provider storage failures must not cache a custom-only source list'
 );
 // The runAggregateSearchQuery message itself is covered by
 // tests/background/test-background-message-handlers.js.
@@ -150,75 +127,71 @@ async function waitForDeferredCount(deferreds, expectedCount) {
   assert.strictEqual(deferreds.length, expectedCount);
 }
 
-function createSiteSearchProviderCacheHarness() {
-  const stateSourceMatch = backgroundSource.match(
-    /let siteSearchCache = null;\s*let siteSearchPromise = null;\s*let siteSearchLoadGeneration = 0;/
-  );
-  assert.ok(stateSourceMatch, 'site-search provider cache generation state must remain discoverable');
-  const invalidationStart = backgroundSource.indexOf('function invalidateSiteSearchProviderCache()');
-  const implementationEnd = backgroundSource.indexOf(
-    '\nfunction warmSiteSearchProviderIcons()',
-    invalidationStart
-  );
-  assert.ok(
-    invalidationStart >= 0 && implementationEnd > invalidationStart,
-    'site-search provider cache loader and invalidation helper must remain discoverable'
-  );
-
+// The worker's provider loader, with the bundled provider list
+// (assets/data/site-search.json) and the stored custom providers answered
+// one request at a time.
+async function createSiteSearchProviderCacheHarness() {
   const requests = [];
   const customProviderRequests = [];
-  const context = {
-    chrome: {
-      runtime: {
-        getURL(resourcePath) {
-          return resourcePath;
-        }
+  let holdReads = false;
+  const background = loadBackground({
+    extensionUrls: true,
+    fetch(url) {
+      if (!String(url).endsWith('/assets/data/site-search.json')) {
+        return Promise.reject(new Error('network disabled'));
       }
-    },
-    SEARCH_UTILS: {
-      getDefaultSiteSearchProviders() {
-        return [];
+      if (!holdReads) {
+        return Promise.resolve({ json: () => Promise.resolve({ items: [] }) });
       }
-    },
-    fetch() {
       const request = createDeferred();
       requests.push(request);
       return request.promise;
     },
-    sanitizeSiteSearchProviders(items) {
-      return Array.isArray(items) ? items : [];
+    configureChrome(chromeApi) {
+      const get = chromeApi.storage.sync.get;
+      chromeApi.storage.sync.get = (keys, callback) => {
+        const keyList = Array.isArray(keys) ? keys : [keys];
+        if (!holdReads || !keyList.includes(SITE_SEARCH_STORAGE_KEY)) {
+          return get(keys, callback);
+        }
+        const request = createDeferred();
+        customProviderRequests.push(request);
+        request.promise.then((items) => {
+          callback({ [SITE_SEARCH_STORAGE_KEY]: items });
+        }, (error) => {
+          chromeApi.runtime.lastError = { message: error.message };
+          callback(undefined);
+          chromeApi.runtime.lastError = null;
+        });
+        return undefined;
+      };
     },
-    loadCustomSiteSearchProviders() {
-      const request = createDeferred();
-      customProviderRequests.push(request);
-      return request.promise;
-    },
-    loadDisabledSiteSearchKeys() {
-      return Promise.resolve([]);
-    },
-    mergeCustomProviders(items) {
-      return items;
+    exposeModules: {
+      'src/background/search-suggestions-service.js': ['loadSiteSearchProviders', 'invalidateSiteSearchProviderCache']
     }
-  };
-  vm.runInNewContext(`
-    ${stateSourceMatch[0]}
-    ${backgroundSource.slice(invalidationStart, implementationEnd)}
-    globalThis.siteSearchProviderCacheHarness = {
-      load: loadSiteSearchProviders,
-      invalidate: invalidateSiteSearchProviderCache,
-      getCache: () => siteSearchCache,
-      getPromise: () => siteSearchPromise
-    };
-  `, context);
+  });
+  // Let the worker's own start-up load finish before the test takes over.
+  await wait(50);
+  holdReads = true;
+  background.exposed('invalidateSiteSearchProviderCache')();
   return {
-    harness: context.siteSearchProviderCacheHarness,
+    harness: {
+      load: background.exposed('loadSiteSearchProviders'),
+      invalidate: background.exposed('invalidateSiteSearchProviderCache')
+    },
     requests,
     customProviderRequests
   };
 }
 
+function providerList(key) {
+  return {
+    json: () => Promise.resolve({ items: [{ key, name: key, template: `https://${key}.test/?q={query}` }] })
+  };
+}
+
 async function testSiteSearchProviderCacheInvalidationRace() {
-  const { harness, requests, customProviderRequests } = createSiteSearchProviderCacheHarness();
+  const { harness, requests, customProviderRequests } = await createSiteSearchProviderCacheHarness();
   const firstLoad = harness.load();
   assert.strictEqual(harness.load(), firstLoad, 'concurrent reads should share the current load');
 
@@ -227,17 +200,12 @@ async function testSiteSearchProviderCacheInvalidationRace() {
   assert.notStrictEqual(secondLoad, firstLoad, 'invalidation should start a new provider load');
   assert.strictEqual(requests.length, 2);
 
-  requests[1].resolve({
-    json: () => Promise.resolve({ items: [{ key: 'new-provider' }] })
-  });
+  requests[1].resolve(providerList('new-provider'));
   await waitForDeferredCount(customProviderRequests, 1);
   customProviderRequests[0].resolve([]);
-  await secondLoad;
-  assert.strictEqual(harness.getCache()[0].key, 'new-provider');
+  assert.strictEqual((await secondLoad)[0].key, 'new-provider');
 
-  requests[0].resolve({
-    json: () => Promise.resolve({ items: [{ key: 'obsolete-provider' }] })
-  });
+  requests[0].resolve(providerList('obsolete-provider'));
   await waitForDeferredCount(customProviderRequests, 2);
   customProviderRequests[1].resolve([]);
   const staleResult = await firstLoad;
@@ -247,34 +215,30 @@ async function testSiteSearchProviderCacheInvalidationRace() {
     'an obsolete caller should receive the latest published providers instead of its stale result'
   );
   assert.strictEqual(
-    harness.getCache()[0].key,
+    (await harness.load())[0].key,
     'new-provider',
     'an obsolete load that finishes last must not republish removed providers'
   );
-  assert.strictEqual(harness.getPromise(), secondLoad);
+  assert.strictEqual(requests.length, 2, 'the published providers should be served without loading again');
 
   harness.invalidate();
   const staleFailure = harness.load();
   harness.invalidate();
   const latestLoad = harness.load();
-  requests[3].resolve({
-    json: () => Promise.resolve({ items: [{ key: 'latest-provider' }] })
-  });
+  requests[3].resolve(providerList('latest-provider'));
   await waitForDeferredCount(customProviderRequests, 3);
   customProviderRequests[2].resolve([]);
   await latestLoad;
-  requests[2].resolve({
-    json: () => Promise.resolve({ items: [{ key: 'stale-provider' }] })
-  });
+  requests[2].resolve(providerList('stale-provider'));
   await waitForDeferredCount(customProviderRequests, 4);
   customProviderRequests[3].reject(new Error('stale provider load failed'));
   await assert.rejects(staleFailure, /stale provider load failed/);
-  assert.strictEqual(harness.getCache()[0].key, 'latest-provider');
   assert.strictEqual(
-    harness.getPromise(),
-    latestLoad,
-    'an obsolete rejection must not clear the latest provider load identity'
+    (await harness.load())[0].key,
+    'latest-provider',
+    'an obsolete rejection must not clear the latest providers'
   );
+  assert.strictEqual(requests.length, 4, 'an obsolete rejection must not force the next read to load again');
 }
 
 async function run() {

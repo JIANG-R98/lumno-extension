@@ -2,6 +2,7 @@ const assert = require('assert');
 const { JSDOM } = require('jsdom');
 const selectionIntent = require('../../src/shared/selection-intent.js');
 const { bundleScript } = require('../helpers/module-script');
+const { parseCss } = require('../helpers/css-rules');
 
 // The runtime only schedules work through window.setTimeout and
 // requestAnimationFrame, so the test drives a virtual clock instead of
@@ -905,95 +906,106 @@ let wait = null;
   assert.strictEqual(host.dataset.selectionMark, 'lumno', 'the fixed Lumno mark should render in the compact entry');
   assert.strictEqual(host.style.left, '72px', 'the entry should sit tightly at the end of the selected text');
   assert.strictEqual(host.style.top, '66px', 'the entry should sit compactly at the upper-right of the selected text');
-  const selectionStyles = selectionShadow.querySelector('style').textContent;
-  assert(
-    /:host::before,\s*:host::after\s*\{[\s\S]*?content:\s*none !important[\s\S]*?display:\s*none !important/.test(selectionStyles),
-    'page pseudo-elements should not be able to inject content into the isolated toolbar host'
-  );
-  assert(selectionStyles.includes('width: 18px'), 'the compact trigger should use the half-size 18px button');
-  assert(selectionStyles.includes('width: 12px'), 'the compact trigger should use the 12px Lumno mark');
-  assert(selectionStyles.includes('inset: -5px'), 'the smaller visual should retain an expanded pointer target');
-  assert(
-    /\.lumno-selection-surface\s*\{[\s\S]*?--lumno-selection-surface-radius:\s*13px[\s\S]*?height:\s*38px[\s\S]*?padding:\s*3px[\s\S]*?border-radius:\s*var\(--lumno-selection-surface-radius\)/.test(selectionStyles) &&
-      /\.lumno-selection-material\s*\{[\s\S]*?background:\s*light-dark\(rgba\(244, 245, 247, 0\.94\), rgba\(26, 27, 31, 0\.92\)\)/.test(selectionStyles),
-    'the expanded toolbar should use the approved compact 38px surface geometry'
-  );
-  assert(
-    /\.lumno-selection-material\s*\{[\s\S]*?border:\s*1px solid light-dark\(rgba\(15, 23, 42, 0\.12\), rgba\(255, 255, 255, 0\.13\)\)/.test(selectionStyles) &&
-      /\.lumno-selection-surface\s*\{[\s\S]*?color:\s*light-dark\(#18181b, #e7e8eb\)/.test(selectionStyles),
-    'light and dark toolbar materials should use independently tuned borders and foregrounds'
-  );
-  assert(
-    /\.lumno-selection-material\s*\{[\s\S]*?inset 0 0 0 1px light-dark\(rgba\(255, 255, 255, 0\.3\), transparent\)/.test(selectionStyles),
-    'the dark toolbar material should remove the inner highlight while preserving it in light mode'
-  );
-  assert(
-    /\.lumno-selection-material::before\s*\{[\s\S]*?border-radius:\s*calc\(var\(--lumno-selection-surface-radius\) - 1px\)/.test(selectionStyles),
-    'the inner material radius should follow the one-pixel inset inside the outer border'
-  );
-  assert(
-    /@supports\s*\(corner-shape:\s*superellipse\(1\.25\)\)\s*\{[\s\S]*?\.lumno-selection-material,[\s\S]*?\.lumno-selection-material::before\s*\{[\s\S]*?corner-shape:\s*superellipse\(1\.25\)/.test(selectionStyles),
-    'the inner material and its border should share the same continuous corner curve'
-  );
-  assert(
-    /\.lumno-selection-material::before\s*\{[\s\S]*?radial-gradient\([\s\S]*?transparent 72%[\s\S]*?radial-gradient\([\s\S]*?transparent 78%/.test(selectionStyles),
-    'the toolbar should use broad static gradient diffusion instead of an animated large blur layer'
-  );
-  assert(
-    /\.lumno-selection-material\s*\{[\s\S]*?-webkit-backdrop-filter:\s*blur\(14px\) saturate\(130%\)[\s\S]*?backdrop-filter:\s*blur\(14px\) saturate\(130%\)/.test(selectionStyles),
-    'the translucent toolbar material should softly blend with the page underneath'
-  );
-  assert(
-    /button\s*\{[\s\S]*?padding:\s*0 8px[\s\S]*?min-height:\s*30px[\s\S]*?border-radius:\s*9px[\s\S]*?gap:\s*5px[\s\S]*?font:\s*400 12px/.test(selectionStyles),
-    '30px actions should use the lighter text weight and retain the same 3px shell inset'
-  );
-  assert(
-    /\.lumno-selection-surface\[data-icon-only="false"\]\s*\{[\s\S]*?padding-inline-end:\s*1px/.test(selectionStyles) &&
-      !/\.lumno-selection-main\[data-icon-only="false"\] \.lumno-selection-logo\s*\{/.test(selectionStyles),
-    'the expanded toolbar should shorten only the trailing shell inset while keeping the butterfly centered in its hit area'
-  );
-  assert(
-    /\.lumno-selection-content\s*\{[\s\S]*?justify-content:\s*flex-end[\s\S]*?overflow:\s*hidden/.test(selectionStyles) &&
-      /\.lumno-selection-toolbar\s*\{[\s\S]*?justify-content:\s*flex-end[\s\S]*?transform-origin:\s*left center/.test(selectionStyles),
-    'all toolbar contents should stay right-aligned while the shared viewport grows to the right'
-  );
-  assert(
-    /\.lumno-selection-actions-viewport\s*\{[\s\S]*?flex:\s*0 1 auto[\s\S]*?min-width:\s*0[\s\S]*?justify-content:\s*flex-end[\s\S]*?overflow:\s*hidden/.test(selectionStyles),
-    'the actions viewport should shrink safely while remaining aligned to the moving right edge'
-  );
-  assert(
-    /button:focus-visible\s*\{[\s\S]*?box-shadow:\s*inset 0 0 0 1px/.test(selectionStyles),
-    'keyboard focus should stay visible without creating a heavy nested pill'
-  );
-  assert(
-    /\.lumno-selection-toolbar:hover button:focus-visible:not\(:hover\)[\s\S]*?background:\s*transparent[\s\S]*?box-shadow:\s*none/.test(selectionStyles),
-    'pointer hover should suppress a competing programmatic focus highlight'
-  );
-  assert(
-    /\.lumno-selection-toolbar:focus\s*\{[\s\S]*?outline:\s*none/.test(selectionStyles),
-    'the neutral toolbar focus target should not add a second outline around the surface'
-  );
-  assert(
-    /\.lumno-selection-primary-divider\s*\{[\s\S]*?margin-inline:\s*3px[\s\S]*?width:\s*1px[\s\S]*?height:\s*18px/.test(selectionStyles) &&
-      /\.lumno-selection-actions-viewport\s*\{[\s\S]*?overflow:\s*hidden/.test(selectionStyles) &&
-      !/\.lumno-selection-toolbar::before/.test(selectionStyles) &&
-      /\.lumno-selection-toolbar button \+ button\s*\{[\s\S]*?margin-inline-start:\s*7px/.test(selectionStyles) &&
-      /\.lumno-selection-toolbar button \+ button::before[\s\S]*?inset-inline-start:\s*-4px[\s\S]*?width:\s*1px[\s\S]*?height:\s*18px/.test(selectionStyles),
-    'the trailing primary divider and in-toolbar dividers should retain the same 3px clearance'
-  );
-  assert(
-    /@supports \(corner-shape:\s*superellipse\(1\.25\)\)[\s\S]*?corner-shape:\s*superellipse\(1\.25\)/.test(selectionStyles),
-    'the toolbar shell and controls should share the Overlay superellipse corner treatment'
-  );
-  assert(
-    /button\s*\{[\s\S]*?border-radius:\s*9px[\s\S]*?corner-shape:\s*superellipse\(1\.25\)/.test(selectionStyles) &&
-      /button:hover, button:focus-visible\s*\{[\s\S]*?background:/.test(selectionStyles),
-    'toolbar action and butterfly hover backgrounds should draw directly with continuous corners'
-  );
-  assert(
-    /\.lumno-selection-action-icon\s*\{[\s\S]*?width:\s*16px[\s\S]*?height:\s*16px/.test(selectionStyles),
-    'toolbar action icons should use the compact 16px scale'
-  );
+  const selectionStyles = parseCss(selectionShadow.querySelector('style').textContent);
+  const rule = (selector, condition) => {
+    const found = selectionStyles.rule(selector, condition);
+    assert(found, `the selection stylesheet should style ${selector}`);
+    return found;
+  };
+  const pseudo = rule(':host::before');
+  assert.deepStrictEqual([pseudo.get('content'), pseudo.priority('content'), pseudo.get('display'), pseudo.priority('display')],
+    ['none', 'important', 'none', 'important'],
+    'page pseudo-elements should not be able to inject content into the isolated toolbar host');
+
+  const compactEntry = rule('.lumno-selection-main[data-icon-only="true"]');
+  assert.strictEqual(compactEntry.get('width'), '18px', 'the compact trigger should use the half-size 18px button');
+  assert.strictEqual(compactEntry.get('min-height'), '18px');
+  assert.strictEqual(rule('.lumno-selection-main[data-icon-only="true"] .lumno-selection-logo').get('width'), '12px',
+    'the compact trigger should use the 12px Lumno mark');
+  assert.strictEqual(rule('.lumno-selection-main[data-icon-only="true"]::before').get('inset'), '-5px',
+    'the smaller visual should retain an expanded pointer target');
+  assert.match(compactEntry.get('backdrop-filter'), /blur\(/, 'the floating mark should sit on a stable acrylic backing');
+  assert.strictEqual(compactEntry.get('opacity'), '0', 'the floating mark should start hidden');
+  assert.strictEqual(compactEntry.get('filter'), null, 'the mark should not blur in from a loading effect');
+  const shownEntry = rule(':host([data-visible="true"]) .lumno-selection-main[data-icon-only="true"]');
+  assert.deepStrictEqual([shownEntry.get('opacity'), shownEntry.get('transform')], ['1', 'translateY(0) scale(1)'],
+    'the mark should rise into place when shown');
+  assert.ok(!selectionStyles.entries.some((entry) => entry.style.getPropertyValue('mix-blend-mode') === 'difference'),
+    'the floating mark should not blur into page text through difference blending');
+
+  const compactSurface = rule('.lumno-selection-surface[data-icon-only="true"]');
+  assert.strictEqual(compactSurface.get('border'), '0', 'the floating entry should not have a border');
+  assert.strictEqual(compactSurface.get('box-shadow'), 'none', 'the floating entry should not have a shadow');
+  assert.ok(rule('.lumno-selection-surface[data-icon-only="true"] .lumno-selection-main:hover').get('background'),
+    'the floating entry should reveal its background on hover');
+
+  const surface = rule('.lumno-selection-surface');
+  assert.strictEqual(surface.get('height'), '38px', 'the expanded toolbar should use the compact 38px surface');
+  assert.strictEqual(surface.get('padding'), '3px');
+  assert.strictEqual(surface.get('border-radius'), 'var(--lumno-selection-surface-radius)');
+  assert.strictEqual(surface.get('overflow'), 'visible', 'the layout shell should not clip the material glow');
+  assert.strictEqual(surface.get('contain'), 'layout style');
+  assert.strictEqual(surface.get('justify-content'), 'flex-start');
+  assert.match(surface.get('color'), /^light-dark\(/, 'the toolbar text should be tuned for each theme');
+  assert.strictEqual(rule('.lumno-selection-surface[data-icon-only="false"]').get('padding-inline-end'), '1px',
+    'the expanded toolbar should shorten only the trailing shell inset');
+  assert.strictEqual(selectionStyles.rule('.lumno-selection-main[data-icon-only="false"] .lumno-selection-logo'), null,
+    'the expanded mark should stay centered in its hit area');
+
+  const material = rule('.lumno-selection-material');
+  assert.match(material.get('background'), /^light-dark\(/, 'the material should have separate light and dark fills');
+  assert.match(material.get('border'), /^1px solid light-dark\(/);
+  assert.match(material.get('box-shadow'), /inset 0 0 0 1px light-dark\([^)]*\), transparent\)/,
+    'the inner highlight should be dropped in dark mode');
+  assert.match(material.get('backdrop-filter'), /^blur\(14px\)/, 'the material should blend softly with the page');
+  assert.strictEqual(material.get('overflow'), 'hidden');
+  assert.strictEqual(rule('.lumno-selection-material::before').get('border-radius'), 'calc(var(--lumno-selection-surface-radius) - 1px)',
+    'the inner material curve should stay one pixel inside the outer border');
+  assert.match(rule('.lumno-selection-material::before').get('background'), /radial-gradient/,
+    'the inner glow should be a static gradient, not an animated blur layer');
+  ['.lumno-selection-surface', '.lumno-selection-material', '.lumno-selection-material::before'].forEach((selector) => {
+    assert.strictEqual(rule(selector, /corner-shape/).get('corner-shape'), 'superellipse(1.25)',
+      `${selector} should use the Overlay corner curve when supported`);
+  });
+
+  const button = rule('button');
+  assert.strictEqual(button.get('min-height'), '30px');
+  assert.strictEqual(button.get('border-radius'), '9px');
+  assert.strictEqual(button.get('corner-shape'), 'superellipse(1.25)', 'action hover backgrounds should draw with continuous corners');
+  assert.ok(rule('button:hover').get('background'));
+  assert.match(rule('button:focus-visible').get('box-shadow'), /^inset 0 0 0 1px/, 'keyboard focus should stay visible');
+  const competingFocus = rule('.lumno-selection-toolbar:hover button:focus-visible:not(:hover)');
+  assert.deepStrictEqual([competingFocus.get('background'), competingFocus.get('box-shadow')], ['transparent', 'none'],
+    'pointer hover should suppress a competing programmatic focus highlight');
+  assert.strictEqual(rule('.lumno-selection-toolbar:focus').get('outline'), 'none',
+    'the neutral toolbar focus target should not add a second outline');
+
+  const content = rule('.lumno-selection-content');
+  assert.deepStrictEqual([content.get('justify-content'), content.get('overflow'), content.get('min-width')], ['flex-end', 'hidden', '0'],
+    'all toolbar contents should stay right-aligned while the shared viewport grows to the right');
+  assert.strictEqual(content.get('border-radius'), '2px',
+    'the content viewport should clip hovered actions with the inset material corner radius');
+  const toolbarRule = rule('.lumno-selection-toolbar');
+  assert.deepStrictEqual([toolbarRule.get('justify-content'), toolbarRule.get('transform-origin')], ['flex-end', 'left center']);
+  const actionsRule = rule('.lumno-selection-actions-viewport');
+  assert.deepStrictEqual([actionsRule.get('flex'), actionsRule.get('min-width'), actionsRule.get('justify-content'), actionsRule.get('overflow')],
+    ['0 1 auto', '0', 'flex-end', 'hidden'], 'the actions viewport should shrink safely while aligned to the moving right edge');
+  assert.strictEqual(rule('.lumno-selection-primary-divider').get('flex'), '0 0 auto');
+  assert.strictEqual(rule('.lumno-selection-primary-divider').get('height'), '18px');
+  assert.strictEqual(selectionStyles.rule('.lumno-selection-toolbar::before'), null);
+  assert.strictEqual(rule('.lumno-selection-toolbar button + button').get('margin-inline-start'), '7px');
+  assert.strictEqual(rule('.lumno-selection-toolbar button + button::before').get('inset-inline-start'), '-4px',
+    'in-toolbar dividers should keep the same clearance as the primary divider');
+  const actionIcon = rule('.lumno-selection-action-icon');
+  assert.deepStrictEqual([actionIcon.get('width'), actionIcon.get('height')], ['16px', '16px'],
+    'toolbar action icons should use the compact 16px scale');
+
+  const fallback = (state, part) => rule(`.lumno-selection-surface[data-toolbar-entrance-mode="fallback"][data-toolbar-entrance-state="${state}"] .lumno-selection-${part}`);
+  assert.strictEqual(fallback('from', 'material').get('width'), '0');
+  assert.strictEqual(fallback('to', 'material').get('width'), 'var(--lumno-toolbar-expanded-width)',
+    'without Web Animations the material should still grow to the toolbar width');
+  assert.strictEqual(fallback('from', 'content').get('width'), '0');
+  assert.strictEqual(fallback('to', 'content').get('width'), 'var(--lumno-toolbar-content-width)');
   await selectDomText(darkCopy);
   assert.strictEqual(host.dataset.entryContrast, 'dark',
     'a butterfly placed over a dark page surface should adapt without a conspicuous global inversion effect');

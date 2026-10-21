@@ -1,62 +1,41 @@
 const assert = require('assert');
-const fs = require('fs');
-const faviconUtils = require('../../src/shared/favicon/favicon-utils.js');
-const { readBackgroundSource } = require('../helpers/background-source');
-const { extractFunction: extractFunctionFrom } = require('../helpers/extract-function');
+const { loadBackground, wait } = require('../helpers/background-harness');
 
-const source = readBackgroundSource();
-
-function extractFunction(name) {
-  return extractFunctionFrom(source, name);
-}
-
-const fetchShortcutFaviconResourceSource = extractFunction('fetchShortcutFaviconResource');
-const calls = [];
-let internalTargetGets = 0;
-const factory = new Function('deps', `
-  const SHORTCUT_FAVICON_RESOURCE_MAX_BYTES = 256 * 1024;
-  const SHORTCUT_FAVICON = { inspectIconResource() { return null; } };
-  const arrayBufferToBase64 = () => '';
-  const isAllowedFaviconProxyRequestUrl = deps.isAllowed;
-  const getBackgroundFaviconUrlResolver = () => deps.resolver;
-  const fetch = deps.fetch;
-  ${fetchShortcutFaviconResourceSource}
-  return fetchShortcutFaviconResource;
-`);
-
-const fetchResource = factory({
-  resolver: faviconUtils.createFaviconUrlResolver(),
-  isAllowed(url) {
-    return /^https:\/\/t2\.gstatic\.cn\/faviconV2/i.test(String(url || ''));
-  },
-  fetch(url, options) {
-    calls.push({ url, options });
-    if (!options || options.redirect !== 'error') {
-      internalTargetGets += 1;
-      return Promise.resolve({ ok: true, url: 'http://127.0.0.1/internal' });
-    }
-    return Promise.reject(new TypeError('redirect blocked'));
-  }
-});
+// A shortcut icon snapshot fetches only approved favicon sources, and a
+// redirect from one of them fails instead of following it to whatever host
+// it points at (a private address, for instance).
 
 async function run() {
-  const direct = await fetchResource({
-    url: 'http://127.0.0.1/internal',
-    source: 'explicit'
-  }, 'https://public.example/', undefined);
-  assert.strictEqual(direct, null);
-  assert.strictEqual(calls.length, 0,
-    'a user-controlled direct URL must be rejected before fetch');
+  const calls = [];
+  let followedRedirects = 0;
+  const harness = loadBackground({
+    extensionUrls: true,
+    sync: { _x_extension_favicon_enhanced_fetch_enabled_2026_unique_: true },
+    fetch(url, options) {
+      calls.push({ url: String(url), redirect: options && options.redirect });
+      if (!options || options.redirect !== 'error') {
+        followedRedirects += 1;
+        return Promise.resolve({ ok: true, url: 'http://127.0.0.1/internal' });
+      }
+      return Promise.reject(new TypeError('redirect blocked'));
+    },
+    exposeModules: { 'src/background/favicon-service.js': ['fetchShortcutFaviconData'] }
+  });
+  const fetchShortcutFaviconData = harness.exposed('fetchShortcutFaviconData');
+  await wait(50);
+  calls.length = 0;
+  followedRedirects = 0;
 
-  const redirected = await fetchResource({
-    url: 'https://t2.gstatic.cn/faviconV2?url=https%3A%2F%2Fpublic.example%2F',
-    source: 'proxy'
-  }, 'https://public.example/', undefined);
-  assert.strictEqual(redirected, null);
-  assert.strictEqual(calls.length, 1);
-  assert.strictEqual(calls[0].options.redirect, 'error');
-  assert.strictEqual(internalTargetGets, 0,
-    'redirect handling must fail before a redirected private target GET');
+  const result = await fetchShortcutFaviconData('https://public.example/', '', 'http://127.0.0.1/internal', true, 'service');
+  assert.strictEqual(result, null, 'a source that redirects should give no icon');
+  assert.ok(calls.length > 0, 'the approved favicon service should be tried');
+  calls.forEach((call) => {
+    assert.strictEqual(call.redirect, 'error', `${call.url} should be fetched without following redirects`);
+    assert.ok(!call.url.startsWith('http://127.0.0.1'), 'an icon URL the page supplied should never be fetched');
+    assert.ok(/^(chrome-extension:\/\/lumno-test\/_favicon\/|https:\/\/t2\.gstatic\.cn\/faviconV2|https:\/\/favicon\.is\/)/.test(call.url),
+      `${call.url} should be an approved favicon source`);
+  });
+  assert.strictEqual(followedRedirects, 0, 'no redirect should be followed to a private target');
 
   console.log('background favicon redirect isolation tests passed');
 }
