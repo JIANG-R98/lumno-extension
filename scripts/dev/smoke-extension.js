@@ -3,8 +3,8 @@
 // Loads this checkout as an unpacked extension into a throwaway headless
 // Chrome over a CDP pipe (Extensions.loadUnpacked, so branded Chrome works
 // too), then opens New Tab, Settings, Onboarding and the popup, types into the
-// New Tab search box, changes a set of settings under the open New Tab, and
-// opens the search overlay and the tab switcher on a
+// New Tab search box, changes a set of settings under the open New Tab, walks
+// its appearance panel, and opens the search overlay and the tab switcher on a
 // local web page. Any uncaught exception, console error or failed extension
 // resource fails the run; failed loads from other origins (remote images,
 // wallpapers) are only listed.
@@ -250,6 +250,31 @@ async function main() {
             await new Promise((resolve) => setTimeout(resolve, 1200));
           }
           return applied + ' values written';
+        })()`);
+        // Open the appearance panel and walk its source tabs, theme modes,
+        // a wallpaper and a favicon, then close it.
+        report['newtab appearance panel'] = await evaluate(sessionId, `(async () => {
+          const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+          const button = document.querySelector('.x-nt-wallpaper-button');
+          if (!button) return 'no appearance button';
+          button.click();
+          await wait(900);
+          let clicks = 0;
+          const clickAll = async (selector, limit) => {
+            for (const element of Array.from(document.querySelectorAll(selector)).slice(0, limit)) {
+              element.click();
+              clicks += 1;
+              await wait(250);
+            }
+          };
+          await clickAll('[data-wallpaper-tab]', 8);
+          await clickAll('[data-wallpaper-mode]', 3);
+          await clickAll('[data-wallpaper-id]', 2);
+          await clickAll('[data-newtab-favicon-id]', 2);
+          await clickAll('[data-wallpaper-effect-ink-tone]', 2);
+          button.click();
+          await wait(600);
+          return clicks + ' panel controls clicked';
         })()`);
       }
     }

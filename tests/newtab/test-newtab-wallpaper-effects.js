@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const vm = require('vm');
 const { readPageSource } = require('../helpers/page-source');
+const { readWallpaperRuntimeSource, readWallpaperCheckSource } = require('../helpers/wallpaper-source');
 
 const sandbox = {
   clearTimeout,
@@ -434,7 +435,7 @@ assert.match(
 );
 
 const effectsSource = fs.readFileSync('src/newtab/wallpaper/wallpaper-effects.js', 'utf8');
-const wallpaperSource = fs.readFileSync('src/newtab/wallpaper/wallpaper.js', 'utf8');
+const wallpaperSource = readWallpaperCheckSource();
 assert.match(
   wallpaperSource,
   /function createWallpaperTransitionLayer\(\)[\s\S]*?data-wallpaper-effect[^\n]*blur[\s\S]*?--x-nt-wallpaper-image[\s\S]*?--x-nt-wallpaper-size[\s\S]*?--x-nt-wallpaper-position/,
@@ -442,7 +443,7 @@ assert.match(
 );
 const wallpaperPreloadSource = fs.readFileSync('src/newtab/wallpaper/wallpaper-preload.js', 'utf8');
 const effectPreloadSource = fs.readFileSync('src/newtab/wallpaper/wallpaper-effect-preload.js', 'utf8');
-vm.runInNewContext(wallpaperSource, sandbox, {
+vm.runInNewContext(readWallpaperRuntimeSource(), sandbox, {
   filename: 'src/newtab/wallpaper/wallpaper.js'
 });
 const wallpaper = sandbox.LumnoNewtabWallpaper;

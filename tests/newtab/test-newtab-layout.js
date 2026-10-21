@@ -11,10 +11,11 @@ require('../../src/newtab/layout.js');
 
 const layoutRuntime = globalThis.LumnoNewtabLayout;
 const layoutMotionRuntime = require('../../src/newtab/layout-motion.js');
+const { readWallpaperCheckSource } = require('../helpers/wallpaper-source');
 const repoRoot = path.resolve(__dirname, '..', '..');
 const newtabHtml = readPageSource('newtab.html');
 const newtabSource = readNewtabRuntimeSource();
-const wallpaperSource = fs.readFileSync(path.join(repoRoot, 'src/newtab/wallpaper/wallpaper.js'), 'utf8');
+const wallpaperSource = readWallpaperCheckSource();
 const newtabRedirectSource = fs.readFileSync(
   path.join(repoRoot, 'src/newtab/lumno-newtab.js'),
   'utf8'

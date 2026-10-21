@@ -3,6 +3,7 @@ const fs = require('fs');
 const vm = require('vm');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { readWallpaperRuntimeSource, readWallpaperCheckSource } = require('../helpers/wallpaper-source');
 
 // Real page dependencies, loaded the way newtab.html loads them before wallpaper.js.
 require('../../src/shared/settings.js');
@@ -861,7 +862,7 @@ function assertBrandMarkCopy() {
 }
 
 function assertThemeAwareAlternateFaviconAsset() {
-  const wallpaperSource = fs.readFileSync('src/newtab/wallpaper/wallpaper.js', 'utf8');
+  const wallpaperSource = readWallpaperCheckSource();
   const wallpaperViewReact = fs.readFileSync(
     'react-src/newtab/wallpaper-view.tsx',
     'utf8'
@@ -1158,7 +1159,7 @@ function assertWallpaperBootstrapWaitsForTheme() {
 }
 
 function assertInitialWallpaperToneStartsBeforeDeferredRefresh() {
-  const wallpaperSource = fs.readFileSync('src/newtab/wallpaper/wallpaper.js', 'utf8');
+  const wallpaperSource = readWallpaperCheckSource();
   assert.match(
     wallpaperSource,
     /if \(isInitialWallpaperApply\) \{\s*applyWallpaperVisualState\(wallpaper\);\s*refreshWallpaperAdaptiveSampler\(\);\s*scheduleWallpaperVisualRefresh\(visualSeq\);\s*finalizeInitialWallpaper\(\);/,
@@ -1304,7 +1305,7 @@ function createWallpaperSandbox(options) {
     options.prepareWindow(testWindow, testDocument);
   }
   testSandbox.globalThis = testSandbox;
-  vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper/wallpaper.js', 'utf8'), testSandbox, {
+  vm.runInNewContext(readWallpaperRuntimeSource(), testSandbox, {
     filename: 'src/newtab/wallpaper/wallpaper.js'
   });
   return { documentObj: testDocument, windowObj: testWindow, sandbox: testSandbox };
@@ -1337,7 +1338,7 @@ const sandbox = {
 };
 sandbox.globalThis = sandbox;
 
-vm.runInNewContext(fs.readFileSync('src/newtab/wallpaper/wallpaper.js', 'utf8'), sandbox, {
+vm.runInNewContext(readWallpaperRuntimeSource(), sandbox, {
   filename: 'src/newtab/wallpaper/wallpaper.js'
 });
 

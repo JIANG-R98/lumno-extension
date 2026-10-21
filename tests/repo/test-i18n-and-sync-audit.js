@@ -5,6 +5,7 @@ const settings = require('../../src/shared/settings.js');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { readBackgroundSource } = require('../helpers/background-source');
+const { readWallpaperCheckSource } = require('../helpers/wallpaper-source');
 
 const auditOutput = execFileSync(process.execPath, ['scripts/check/audit-i18n.js'], {
   encoding: 'utf8'
@@ -21,7 +22,7 @@ const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
 const optionsHtml = readPageSource('src/options/options.html');
 const backgroundSource = readBackgroundSource();
 const newtabSource = readNewtabRuntimeSource();
-const wallpaperSource = fs.readFileSync('src/newtab/wallpaper/wallpaper.js', 'utf8');
+const wallpaperSource = readWallpaperCheckSource();
 const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
 const sharedSettingsSource = fs.readFileSync('src/shared/settings.js', 'utf8');
 const shortcutFaviconSource = fs.readFileSync('src/shared/favicon/shortcut-favicon.js', 'utf8');
