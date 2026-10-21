@@ -1,11 +1,11 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const historyApi = require(path.join(repoRoot, 'src/shared/search/search-input-history.js'));
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const shortcutReference = require(path.join(repoRoot, 'src/shared/shortcut-reference.js'));
+const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
 const { getInjectedScripts, getPageScripts } = require('../helpers/runtime-scripts');
 
 function createStorage(initialValue) {
@@ -106,42 +106,43 @@ function testShortcutDetection() {
   );
 }
 
-function testSurfaceIntegrationContract() {
-  const newtabSource = readNewtabRuntimeSource();
-  const overlaySource = readOverlayPanelSource();
-  const shortcutReferenceSource = fs.readFileSync(
-    path.join(repoRoot, 'src/shared/shortcut-reference.js'),
-    'utf8'
-  );
+// Alt+Up / Alt+Down walk through what was submitted before, on both search
+// surfaces, and come back to the unfinished draft.
+async function testSurfacesWalkTheHistory(name) {
+  const history = { [historyApi.STORAGE_KEY]: ['first query', 'second query'] };
+  const surface = await openSearchSurface(name, name === 'overlay' ? { localSettings: history } : { local: history });
+  await surface.settle(80);
+  await surface.type('unfinished draft');
+  const step = async (key) => {
+    surface.press(key, { altKey: true });
+    await surface.settle(40);
+    return surface.input().value;
+  };
+  assert.deepStrictEqual([await step('ArrowUp'), await step('ArrowUp'), await step('ArrowDown'), await step('ArrowDown')],
+    ['second query', 'first query', 'second query', 'unfinished draft'], `${name}: Alt+arrows should walk the submitted input`);
+  surface.close();
+}
 
-  assert.ok(
-    getPageScripts('newtab.html').includes('src/shared/search/search-input-history.js'),
-    'New Tab should load the shared input history helper'
-  );
-  assert.ok(
-    getInjectedScripts('overlay').includes('src/shared/search/search-input-history.js'),
-    'overlay injection should load the shared input history helper'
-  );
-  assert.ok(
-    newtabSource.includes('SEARCH_INPUT_HISTORY.getShortcutDirection(event)'),
-    'New Tab should handle the input history shortcut'
-  );
-  assert.ok(
-    overlaySource.includes('SEARCH_INPUT_HISTORY.getShortcutDirection(e)'),
-    'overlay should handle the input history shortcut'
-  );
-  assert.ok(
-    shortcutReferenceSource.includes("shortcut: 'Alt+ArrowUp / Alt+ArrowDown'"),
-    'General settings should list the input history shortcut'
-  );
+function testShortcutIsListed() {
+  const listed = shortcutReference.getShortcutReferenceGroups()
+    .flatMap((group) => group.items || group.shortcuts || [])
+    .concat(shortcutReference.getFixedShortcutDefinitions());
+  assert.ok(listed.some((item) => item.shortcut === 'Alt+ArrowUp / Alt+ArrowDown'),
+    'the shortcut reference in Settings should list the input history shortcut');
+  assert.ok(getPageScripts('newtab.html').includes('src/shared/search/search-input-history.js'));
+  assert.ok(getInjectedScripts('overlay').includes('src/shared/search/search-input-history.js'));
 }
 
 (async () => {
   await testHistoryNavigationRestoresDraft();
   await testRecordDeduplicatesAndPersists();
   testShortcutDetection();
-  testSurfaceIntegrationContract();
+  for (const name of SURFACES) {
+    await testSurfacesWalkTheHistory(name);
+  }
+  testShortcutIsListed();
   console.log('search input history tests passed');
+  process.exit(0);
 })().catch((error) => {
   console.error(error);
   process.exit(1);

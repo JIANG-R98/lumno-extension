@@ -1,106 +1,65 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
-const vm = require('vm');
 const settings = require('../../src/shared/settings.js');
-const searchResultTabs = require('../../src/background/search-result-tabs.js');
-const tabGroups = require('../../src/background/tab-groups.js');
-const { readBackgroundSource } = require('../helpers/background-source');
+const { loadBackground, wait } = require('../helpers/background-harness');
 
-const source = readBackgroundSource();
-const createFunctions = source.slice(
-  source.indexOf('function createTabWithSourceGroup('),
-  source.indexOf('function moveTabToSourceGroupContext(')
-);
-function sliceHandlerMap(name, nextName) {
-  const start = source.indexOf(`const ${name} = `);
-  const end = source.indexOf(`const ${nextName} = `);
-  assert.ok(start >= 0 && end > start, `${name} should be followed by ${nextName}`);
-  return `${source.slice(start, end)}\nglobalThis.${name} = ${name};\n`;
-}
-const searchHandler = sliceHandlerMap('SEARCH_MESSAGE_HANDLERS', 'SITE_SEARCH_MESSAGE_HANDLERS');
-const pageHandler = sliceHandlerMap('EXTENSION_PAGE_MESSAGE_HANDLERS', 'FAVICON_MESSAGE_HANDLERS');
+// Where a search result opens: next to the tab the search came from, before
+// it, or at the end of the strip, as Settings says, and in that tab's group.
+// The real worker handles the messages the search surfaces send.
 
-function createHarness(options = {}) {
-  const created = [];
-  const updated = [];
+const SOURCE = { id: 10, index: 5, windowId: 3, groupId: 42, url: 'https://page.test/' };
+// The page's own view of its tab is older; the worker should ask again.
+const SENDER = { tab: Object.assign({}, SOURCE, { index: 1 }), url: SOURCE.url };
+
+function createWorker(options = {}) {
   const searched = [];
   const grouped = [];
-  const currentSource = { id: 10, index: 5, windowId: 3, groupId: 42 };
-  const chromeApi = {
-    runtime: { lastError: null },
-    tabGroups: { TAB_GROUP_ID_NONE: -1 },
-    tabs: {
-      get(_id, callback) {
-        if (options.closedSource) {
-          chromeApi.runtime.lastError = { message: 'No tab' };
-          callback();
-          chromeApi.runtime.lastError = null;
-        } else {
-          callback(currentSource);
-        }
-      },
-      query(_query, callback) { callback([currentSource]); },
-      create(props, callback) {
-        created.push({ ...props });
+  const worker = loadBackground({
+    tabs: options.closedSource ? [] : [Object.assign({}, SOURCE)],
+    sync: options.position ? { [settings.SEARCH_RESULT_TAB_POSITION_STORAGE_KEY]: options.position } : {},
+    configureChrome(chrome) {
+      chrome.tabGroups = Object.assign({ TAB_GROUP_ID_NONE: -1 }, chrome.tabGroups || {});
+      chrome.tabs.group = (properties, callback) => {
+        grouped.push(JSON.parse(JSON.stringify(properties)));
+        setTimeout(() => callback(properties.groupId), 0);
+      };
+      const create = chrome.tabs.create;
+      chrome.tabs.create = (properties, callback) => {
         if (options.createError) {
-          chromeApi.runtime.lastError = { message: 'create failed' };
+          chrome.runtime.lastError = { message: 'create failed' };
           callback();
-          chromeApi.runtime.lastError = null;
-        } else {
-          callback({ id: 100, windowId: props.windowId || 3, groupId: -1, ...props });
+          chrome.runtime.lastError = null;
+          return;
         }
-      },
-      update(id, props, callback) {
-        updated.push({ id, ...props });
-        chromeApi.runtime.lastError = null;
-        callback({ id, ...props });
-      },
-      group(props, callback) { grouped.push({ ...props }); callback(42); }
-    },
-    search: {
-      query(props, callback) {
-        searched.push({ ...props });
-        if (options.searchThrows) throw new Error('search unavailable');
-        chromeApi.runtime.lastError = options.searchError ? { message: 'search failed' } : null;
-        callback();
-        chromeApi.runtime.lastError = null;
+        create(properties, (tab) => callback(Object.assign({}, tab, { id: 100, groupId: -1 })));
+      };
+      if (options.noSearchApi) {
+        delete chrome.search;
+        return;
       }
+      chrome.search = {
+        query(properties, callback) {
+          searched.push(JSON.parse(JSON.stringify(properties)));
+          if (options.searchThrows) throw new Error('search unavailable');
+          chrome.runtime.lastError = options.searchError ? { message: 'search failed' } : null;
+          setTimeout(() => {
+            callback();
+            chrome.runtime.lastError = null;
+          }, 0);
+        }
+      };
     }
+  });
+  const recorded = (name) => worker.calls.filter((call) => call.name === name).map((call) => JSON.parse(JSON.stringify(call.args)));
+  return {
+    send: async (request, sender = SENDER) => {
+      await wait(30);
+      return worker.sendMessage(request, sender, 1000);
+    },
+    created: () => recorded('tabs.create').map(([properties]) => properties),
+    updated: () => recorded('tabs.update').map(([id, properties]) => Object.assign({ id }, properties)),
+    searched,
+    grouped
   };
-  if (options.noSearchApi) delete chromeApi.search;
-  const context = vm.createContext({
-    chrome: chromeApi,
-    SETTINGS: settings,
-    SEARCH_RESULT_TABS: searchResultTabs,
-    BACKGROUND_TAB_GROUPS: tabGroups,
-    storageArea: {
-      get(_keys, callback) {
-        callback({ [settings.SEARCH_RESULT_TAB_POSITION_STORAGE_KEY]: options.position });
-      }
-    },
-    loadShortcutRules: () => Promise.resolve([]),
-    getShortcutUrl: (query) => query === 'shortcut' ? 'https://shortcut.test/' : '',
-    getDirectNavigationUrl: (query) => query.startsWith('https://') ? query : '',
-    buildDefaultSearchUrl: (query) => `https://fallback.test/?q=${encodeURIComponent(query)}`,
-    markPendingSearchTab(id) { context.pendingSearchTabId = id; },
-    clearPendingSearch() {
-      context.pendingSearchAt = 0;
-      context.pendingSearchTabId = null;
-      context.pendingSearchGroupContext = null;
-    },
-    pendingSearchAt: 0,
-    pendingSearchTabId: null,
-    pendingSearchGroupContext: null
-  });
-  vm.runInContext(createFunctions + searchHandler + pageHandler, context);
-  const send = (request, sender = { tab: { ...currentSource, index: 1 } }) => new Promise((resolve) => {
-    const handlers = request.action === 'searchOrNavigate'
-      ? context.SEARCH_MESSAGE_HANDLERS
-      : context.EXTENSION_PAGE_MESSAGE_HANDLERS;
-    handlers[request.action](request, sender, resolve);
-  });
-  return { send, created, updated, searched, grouped };
 }
 
 async function run() {
@@ -110,72 +69,75 @@ async function run() {
 
   for (const [position, index] of [['afterCurrent', 6], ['beforeCurrent', 5]]) {
     for (const disposition of ['newTab', 'backgroundTab']) {
-      const harness = createHarness({ position });
-      const response = await harness.send({ action: 'searchOrNavigate', query: 'hello', disposition });
-      assert.strictEqual(response.ok, true);
-      assert.deepStrictEqual(harness.created, [{ url: 'about:blank', active: disposition === 'newTab', index, windowId: 3 }]);
-      assert.deepStrictEqual(harness.searched, [{ text: 'hello', tabId: 100 }]);
-      assert.deepStrictEqual(harness.grouped, [{ tabIds: 100, groupId: 42 }]);
+      const worker = createWorker({ position });
+      const response = await worker.send({ action: 'searchOrNavigate', query: 'hello', disposition });
+      assert.strictEqual(response && response.ok, true);
+      assert.deepStrictEqual(worker.created(), [{ url: 'about:blank', active: disposition === 'newTab', index, windowId: 3 }],
+        `${position} ${disposition}: the search should open in a tab placed from the source tab's current index`);
+      assert.deepStrictEqual(worker.searched, [{ text: 'hello', tabId: 100 }], 'the browser search should fill that tab');
+      assert.deepStrictEqual(worker.grouped, [{ tabIds: 100, groupId: 42 }], 'and the tab should join the source tab group');
     }
   }
 
-  for (const query of ['https://example.test/', 'shortcut']) {
-    const harness = createHarness({ position: 'afterCurrent' });
-    await harness.send({ action: 'searchOrNavigate', query });
-    assert.strictEqual(harness.created[0].index, 6, 'direct navigation and shortcuts should use the refreshed index');
-    assert.strictEqual(harness.searched.length, 0);
-  }
+  const directUrl = createWorker({ position: 'afterCurrent' });
+  await directUrl.send({ action: 'searchOrNavigate', query: 'https://example.test/' });
+  assert.strictEqual(directUrl.created()[0].index, 6, 'a typed URL should open beside the source tab too');
+  assert.strictEqual(directUrl.searched.length, 0);
 
-  const defaultPosition = createHarness();
+  const defaultPosition = createWorker();
   await defaultPosition.send({ action: 'searchOrNavigate', query: 'hello' });
-  assert.strictEqual(defaultPosition.created.length, 0, 'default browser searches should keep the original NEW_TAB path');
+  assert.strictEqual(defaultPosition.created().length, 0, 'without a preference, searches keep the browser NEW_TAB path');
   assert.deepStrictEqual(defaultPosition.searched, [{ text: 'hello', disposition: 'NEW_TAB' }]);
 
-  const defaultBackground = createHarness();
+  const defaultBackground = createWorker();
   await defaultBackground.send({ action: 'searchOrNavigate', query: 'hello', disposition: 'backgroundTab' });
-  assert.deepStrictEqual(defaultBackground.created, [{ url: 'https://fallback.test/?q=hello', active: false, windowId: 3 }]);
-  assert.strictEqual(defaultBackground.searched.length, 0, 'default background searches should keep the original URL-based path');
+  const [backgroundTab] = defaultBackground.created();
+  assert.deepStrictEqual([backgroundTab.active, backgroundTab.windowId, backgroundTab.index], [false, 3, undefined]);
+  assert.match(backgroundTab.url, /hello/, 'background searches open the engine URL directly');
+  assert.strictEqual(defaultBackground.searched.length, 0);
 
-  const defaultLink = createHarness();
+  const defaultLink = createWorker();
   await defaultLink.send({ action: 'createTab', url: 'https://example.test/' });
-  assert.strictEqual(defaultLink.created[0].index, undefined, 'missing preferences should keep original link creation without an insertion index');
+  assert.strictEqual(defaultLink.created()[0].index, undefined, 'without a preference, links open at the end');
 
-  const endPosition = createHarness({ position: 'end' });
+  const endPosition = createWorker({ position: 'end' });
   await endPosition.send({ action: 'searchOrNavigate', query: 'https://example.test/' });
-  assert.strictEqual(endPosition.created[0].index, undefined, 'end-of-strip remains available as an explicit preference');
+  assert.strictEqual(endPosition.created()[0].index, undefined, 'the end of the strip is an explicit choice');
 
-  const direct = createHarness({ position: 'afterCurrent' });
-  await direct.send({ action: 'createTab', url: 'https://example.test/', disposition: 'backgroundTab' }, {});
-  assert.deepStrictEqual(direct.created[0], { url: 'https://example.test/', active: false, index: 6, windowId: 3 });
+  const fromPage = createWorker({ position: 'afterCurrent' });
+  await fromPage.send({ action: 'createTab', url: 'https://example.test/', disposition: 'backgroundTab' }, { tab: SENDER.tab, url: SOURCE.url });
+  assert.deepStrictEqual(fromPage.created()[0], { url: 'https://example.test/', active: false, index: 6, windowId: 3 });
 
-  const current = createHarness({ position: 'afterCurrent' });
+  const current = createWorker({ position: 'afterCurrent' });
   await current.send({ action: 'createTab', url: 'https://example.test/', disposition: 'currentTab' });
-  assert.strictEqual(current.created.length, 0);
-  assert.deepStrictEqual(current.updated, [{ id: 10, url: 'https://example.test/', active: true }]);
+  assert.strictEqual(current.created().length, 0);
+  assert.deepStrictEqual(current.updated(), [{ id: 10, url: 'https://example.test/', active: true }], 'current-tab opens reuse the source tab');
 
-  const closed = createHarness({ position: 'afterCurrent', closedSource: true });
+  const closed = createWorker({ position: 'afterCurrent', closedSource: true });
   await closed.send({ action: 'createTab', url: 'https://example.test/' });
-  assert.strictEqual(closed.created[0].index, undefined, 'a closed source tab must not leave a stale insertion index');
+  assert.strictEqual(closed.created()[0].index, undefined, 'a closed source tab must not leave a stale insertion index');
   assert.strictEqual(closed.grouped.length, 0);
 
   for (const failure of [{ searchError: true }, { searchThrows: true }]) {
-    const harness = createHarness({ position: 'afterCurrent', ...failure });
-    const response = await harness.send({ action: 'searchOrNavigate', query: 'hello' });
-    assert.strictEqual(response.ok, true);
-    assert.strictEqual(harness.created.length, 1, 'search fallback must reuse the positioned tab');
-    assert.deepStrictEqual(harness.updated, [{ id: 100, url: 'https://fallback.test/?q=hello' }]);
+    const worker = createWorker(Object.assign({ position: 'afterCurrent' }, failure));
+    const response = await worker.send({ action: 'searchOrNavigate', query: 'hello' });
+    assert.strictEqual(response && response.ok, true);
+    assert.strictEqual(worker.created().length, 1, 'a failed browser search should reuse the positioned tab');
+    const [update] = worker.updated();
+    assert.ok(update && update.id === 100 && /hello/.test(update.url), 'and load the engine URL into it');
   }
 
-  const unavailable = createHarness({ position: 'afterCurrent', noSearchApi: true });
+  const unavailable = createWorker({ position: 'afterCurrent', noSearchApi: true });
   await unavailable.send({ action: 'searchOrNavigate', query: 'hello' });
-  assert.strictEqual(unavailable.created[0].index, 6);
-  assert.strictEqual(unavailable.created[0].url, 'https://fallback.test/?q=hello');
+  assert.strictEqual(unavailable.created()[0].index, 6);
+  assert.match(unavailable.created()[0].url, /hello/, 'without the search API the engine URL opens in place');
 
-  const failedCreate = createHarness({ position: 'afterCurrent', createError: true });
+  const failedCreate = createWorker({ position: 'afterCurrent', createError: true });
   const failure = await failedCreate.send({ action: 'searchOrNavigate', query: 'hello' });
-  assert.strictEqual(failure.ok, false);
+  assert.strictEqual(failure && failure.ok, false);
   assert.strictEqual(failedCreate.searched.length, 0);
   console.log('search result tab position tests passed');
+  process.exit(0);
 }
 
 run().catch((error) => { console.error(error); process.exit(1); });

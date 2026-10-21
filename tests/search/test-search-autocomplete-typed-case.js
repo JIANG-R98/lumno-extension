@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { createOverlayPage } = require('../helpers/overlay-runtime-harness');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const LumnoNewtabSearchAutocomplete = require('../../src/newtab/search/search-autocomplete.js');
@@ -49,11 +49,25 @@ assert.strictEqual(
   'accepting the completion should keep the typed case too'
 );
 
-const overlaySource = readOverlayPanelSource();
-assert.match(
-  overlaySource,
-  /const displayText = rawQuery \+ candidate\.completion\.slice\(rawQuery\.length\);\s*searchInput\.value = displayText;[\s\S]*?completion: displayText,/,
-  'the Overlay inline autocomplete should keep the typed case as well'
-);
-
-console.log('Search autocomplete typed case tests passed');
+// The overlay completes the same way.
+(async () => {
+  const page = await createOverlayPage({
+    respond: (message) => (message.action === 'getSearchSuggestions'
+      ? { suggestions: [{ type: 'history', title: '4A广告网', url: 'https://www.4anet.com/' }] }
+      : undefined)
+  });
+  await page.open();
+  const overlayInput = page.input();
+  overlayInput.value = '4A';
+  overlayInput.setSelectionRange(2, 2);
+  overlayInput.dispatchEvent(new page.window.InputEvent('input', { bubbles: true, inputType: 'insertText', data: 'A' }));
+  await page.settle(250);
+  assert.deepStrictEqual([overlayInput.value, overlayInput.selectionStart, overlayInput.selectionEnd], ['4Anet.com', 2, 9],
+    'the overlay completion should keep the typed case too');
+  page.close();
+  console.log('Search autocomplete typed case tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

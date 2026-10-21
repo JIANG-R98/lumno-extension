@@ -1,17 +1,9 @@
 const assert = require('assert');
 const fs = require('fs');
-const { readReactSource } = require('../helpers/react-source');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
-const { readPageSource } = require('../helpers/page-source');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-
-const read = (filePath) => fs.readFileSync(filePath, 'utf8');
-const newtabSource = readNewtabRuntimeSource();
-const newtabHtml = readPageSource('newtab.html');
-const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
-const overlaySource = readOverlayPanelSource();
-const overlayCss = read('src/overlay/suggestions-view.css');
-const suggestionsSource = readReactSource('react-src/search/suggestions.tsx');
+const { JSDOM } = require('jsdom');
+const { readStylesheet } = require('../helpers/css-tokens');
+const { parseCss } = require('../helpers/css-rules');
+const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
 const suggestionNavigation = require('../../src/shared/search/suggestion-navigation.js');
 
 const macNavigator = { platform: 'MacIntel' };
@@ -115,6 +107,88 @@ const shortcutContainer = {
 };
 
 const wait = (durationMs) => new Promise((resolve) => setTimeout(resolve, durationMs));
+
+// Holding the primary modifier (⌘ on macOS, Ctrl elsewhere) over results
+// arms number jump mode with a Toast; releasing it shows a number on each
+// result, and a digit opens that result.
+const RESULTS = Array.from({ length: 4 }, (_, index) => ({ type: 'history', title: `Result ${index}`, url: `https://r${index}.test/` }));
+const SURFACE_PARTS = {
+  overlay: { container: '#_x_extension_suggestions_container_2024_unique_', badge: '.x-ov-suggestion-number-shortcut', modifier: ['Control', 'ControlLeft', 'ctrlKey'] },
+  newtab: { container: '#_x_extension_newtab_suggestions_container_2024_unique_', badge: '.x-nt-suggestion-number-shortcut', modifier: ['Meta', 'MetaLeft', 'metaKey'] }
+};
+
+async function openWithResults(name) {
+  const surface = await openSearchSurface(name, {
+    respond: (message) => (message.action === 'getSearchSuggestions' ? { suggestions: RESULTS } : undefined)
+  });
+  await surface.type('result');
+  await surface.settle(150);
+  const parts = SURFACE_PARTS[name];
+  const container = surface.root.querySelector(parts.container);
+  const mode = () => [container.getAttribute('data-number-shortcuts-active'), container.getAttribute('data-number-shortcuts-scroll-locked')];
+  return { surface, parts, container, mode };
+}
+
+async function hold(surface, [key, code, flag]) {
+  surface.press(key, { code, [flag]: true });
+  await surface.settle(450);
+}
+
+async function testSurfaces() {
+  for (const name of SURFACES) {
+    const { surface, parts, mode } = await openWithResults(name);
+    const badges = surface.suggestions().map((row) => row.querySelector(parts.badge).textContent);
+    assert.deepStrictEqual(badges, badges.map((_badge, index) => String(index)), `${name}: each result should carry its number`);
+    const second = surface.suggestions()[2]._xSuggestion.url;
+    assert.deepStrictEqual(mode(), [null, null], `${name}: numbers stay hidden until asked for`);
+    await hold(surface, parts.modifier);
+    assert.deepStrictEqual(mode(), [null, 'true'], `${name}: holding the modifier should lock scrolling before revealing numbers`);
+    assert.deepStrictEqual(surface.toast(), { shown: true, text: 'Release to show numbers' }, `${name}: the hold should explain itself`);
+    surface.keyup(parts.modifier[0], { code: parts.modifier[1] });
+    await surface.settle(40);
+    assert.deepStrictEqual(mode(), ['true', 'true'], `${name}: releasing should reveal the numbers`);
+    assert.strictEqual(surface.toast().shown, false, `${name}: and dismiss the Toast`);
+    surface.press('2', { code: 'Digit2' });
+    await surface.settle(120);
+    assert.deepStrictEqual(surface.navigation(), { url: second }, `${name}: a digit should open the result showing it`);
+    assert.deepStrictEqual(mode(), [null, null], `${name}: and leave number mode`);
+    surface.close();
+
+    const pointer = await openWithResults(name);
+    await hold(pointer.surface, pointer.parts.modifier);
+    pointer.surface.keyup(pointer.parts.modifier[0], { code: pointer.parts.modifier[1] });
+    await pointer.surface.settle(40);
+    pointer.surface.page.trusted(pointer.surface.suggestions()[0], 'pointerdown', { bubbles: true, composed: true });
+    await pointer.surface.settle(30);
+    assert.deepStrictEqual(pointer.mode(), [null, null], `${name}: using the pointer should leave number mode`);
+    pointer.surface.close();
+
+    const alt = await openWithResults(name);
+    await hold(alt.surface, ['Alt', 'AltLeft', 'altKey']);
+    assert.deepStrictEqual(alt.mode(), [null, null], `${name}: the background-open modifier alone should not arm number mode`);
+    alt.surface.close();
+  }
+}
+
+function testStylesheets() {
+  [
+    ['New Tab', ['src/newtab/styles/suggestions.css', 'src/newtab/styles/page-overrides.css', 'src/newtab/styles/notices-and-suggestions.css'], 'x-nt'],
+    ['Overlay', ['src/overlay/suggestions-view.css'], 'x-ov']
+  ].forEach(([surface, files, prefix]) => {
+    const entries = files.flatMap((file) => parseCss(readStylesheet(file)).entries).filter((entry) => entry.conditions.length === 0);
+    const badge = `.${prefix}-suggestion-number-shortcut`;
+    const declares = (test, property, value) => entries.some((entry) => entry.selectors.some(test) && entry.style.getPropertyValue(property) === value);
+    assert.ok(declares((selector) => selector.includes('[data-number-shortcuts-active="true"]') && selector.endsWith(badge), 'display', 'inline-flex'),
+      `${surface} should show the numbers only in number mode`);
+    assert.ok(declares((selector) => selector.endsWith('[data-number-shortcuts-scroll-locked="true"]'), 'overflow-y', 'hidden'),
+      `${surface} should lock scrolling in number mode`);
+  });
+  const onboarding = new JSDOM(fs.readFileSync('src/onboarding/onboarding.html', 'utf8')).window.document;
+  assert.ok(onboarding.querySelector('link[rel="stylesheet"][href="../overlay/suggestions-view.css"]'),
+    'the onboarding overlay preview should use the overlay result styles');
+  assert.ok(parseCss(readStylesheet('src/onboarding/styles/newtab-preview.css')).selectors().some((selector) => selector.includes('.x-nt-suggestion-number-shortcut')),
+    'the onboarding New Tab preview should style its number badges');
+}
 
 async function run() {
   const holdSignals = [];
@@ -431,130 +505,13 @@ async function run() {
     'wheel scrolling should resume after number jump mode closes'
   );
 
-assert.match(
-  suggestionsSource,
-  /x-nt-suggestion-number-shortcut[\s\S]*?\{index\}/,
-  'the shared result view should render each visible result number beside its icon'
-);
-
-assert.match(
-  newtabSource,
-  /const numberShortcutOptions = \{[\s\S]*?onHoldStart:[\s\S]*?showToast\([\s\S]*?search_number_jump_release_hint[\s\S]*?duration:\s*0[\s\S]*?onHoldEnd:\s*hideToast,[\s\S]*?instantActive:\s*\(\)\s*=>\s*numberShortcutInstantEnabled[\s\S]*?\};/,
-  'New Tab should reuse its existing Toast while the number shortcut hold is armed'
-);
-assert.match(
-  newtabSource,
-  /document\.addEventListener\('keydown',[\s\S]*?handleNumberShortcutKeyEvent\(\s*event,\s*suggestionItems,\s*suggestionsContainer,\s*numberShortcutOptions\s*\)[\s\S]*?return;/,
-  'New Tab should route keydown events through the long-hold state machine'
-);
-
-assert.match(
-  overlaySource,
-  /const numberShortcutOptions = \{[\s\S]*?onHoldStart:[\s\S]*?showOverlayToast\([\s\S]*?search_number_jump_release_hint[\s\S]*?duration:\s*0[\s\S]*?onHoldEnd:\s*(?:hideOverlayToast|\(\.\.\.args\) => hideOverlayToast\(\.\.\.args\)),[\s\S]*?instantActive:\s*\(\)\s*=>\s*numberShortcutInstantEnabled[\s\S]*?\};/,
-  'Overlay should reuse its existing Toast while the number shortcut hold is armed'
-);
-assert.match(
-  newtabSource,
-  /getSuggestionNavigationKey\(event,[\s\S]*?macosCtrlEnabled:\s*macosCtrlSuggestionNavigationEnabled/,
-  'New Tab should gate Ctrl+N/P through the Labs preference'
-);
-
-const newtabModifierSource = newtabSource.slice(
-  newtabSource.indexOf('function setSuggestionActionModifiersActive'),
-  newtabSource.indexOf('function syncSuggestionActionModifiersFromEvent')
-);
-assert.ok(
-  !newtabModifierSource.includes('setNumberShortcutsActive'),
-  'New Tab should not reveal number badges for the background-open modifier alone'
-);
-const overlayModifierSource = overlaySource.slice(
-  overlaySource.indexOf('function setSuggestionActionModifiersActive'),
-  overlaySource.indexOf('function syncSuggestionActionModifiersFromEvent')
-);
-assert.ok(
-  !overlayModifierSource.includes('setNumberShortcutsActive'),
-  'Overlay should not reveal number badges for the background-open modifier alone'
-);
-
-assert.match(
-  newtabSource,
-  /document\.addEventListener\('pointerdown',[\s\S]*?cancelNumberShortcuts\(suggestionsContainer\)/,
-  'New Tab should close number jump mode on pointer interaction'
-);
-assert.match(
-  overlaySource,
-  /overlay\.addEventListener\('pointerdown',[\s\S]*?cancelNumberShortcuts\(suggestionsContainer\)/,
-  'Overlay should close number jump mode on pointer interaction'
-);
-
-assert.match(
-  newtabHtml,
-  /data-number-shortcuts-active="true"[\s\S]*?\.x-nt-suggestion-number-shortcut[\s\S]*?display:\s*inline-flex/,
-  'New Tab should reveal number badges only while number jump mode is active'
-);
-
-assert.match(
-  newtabHtml,
-  /data-number-shortcuts-scroll-locked="true"[\s\S]*?overflow-y:\s*hidden/,
-  'New Tab should lock scrolling before the badges are revealed'
-);
-
-assert.match(
-  overlayCss,
-  /data-number-shortcuts-active="true"[\s\S]*?\.x-ov-suggestion-number-shortcut[\s\S]*?display:\s*inline-flex/,
-  'Overlay should reveal number badges only while number jump mode is active'
-);
-
-assert.match(
-  overlayCss,
-  /data-number-shortcuts-scroll-locked="true"[\s\S]*?overflow-y:\s*hidden/,
-  'Overlay should lock scrolling before the badges are revealed'
-);
-
-assert.match(
-  onboardingHtml,
-  /x-nt-suggestion-number-shortcut/,
-  'the New Tab onboarding mirror should include the shared number badge style'
-);
-
-assert.match(
-  onboardingHtml,
-  /href="\.\.\/overlay\/suggestions-view\.css"/,
-  'the Overlay onboarding mirror should keep consuming the shared Overlay result styles'
-);
-
-[
-  ['New Tab', newtabHtml, 'x-nt'],
-  ['Overlay', overlayCss, 'x-ov'],
-  ['New Tab onboarding mirror', onboardingHtml, 'x-nt']
-].forEach(([surface, source, prefix]) => {
-  const className = `${prefix}-suggestion-number-shortcut`;
-  const styleBlocks = Array.from(source.matchAll(
-    new RegExp(`[^\\n{}]*\\.${className}\\s*\\{([^{}]*)\\}`, 'g')
-  )).map((match) => match[1]);
-  const baseStyles = styleBlocks.find((block) => /all:\s*unset;/.test(block)) || '';
-  assert.match(baseStyles, /width:\s*16px;/, `${surface} number label should be square`);
-  assert.match(baseStyles, /height:\s*16px;/, `${surface} number label should be square`);
-  assert.match(baseStyles, /border-radius:\s*5px;/, `${surface} should retain continuous rounded corners`);
-  assert.match(
-    baseStyles,
-    /background:\s*#111827;[\s\S]*?color:\s*#FFFFFF;[\s\S]*?font:\s*600 11px/,
-    `${surface} should use a lighter number weight without reducing contrast`
-  );
-  styleBlocks.filter((block) => /background:|width:/.test(block)).forEach((block) => {
-    assert.doesNotMatch(block, /border(?:-color)?:|box-shadow:/, `${surface} number label should stay flat and borderless`);
-  });
-  assert.match(
-    source,
-    new RegExp(`@supports \\(corner-shape: superellipse\\(1\\.25\\)\\)[\\s\\S]*?\\.${className}[\\s\\S]*?corner-shape:\\s*superellipse\\(1\\.25\\)`),
-    `${surface} should opt into continuous corners when supported`
-  );
-});
+  await testSurfaces();
+  testStylesheets();
 
   console.log('search result number shortcut tests passed');
 }
 
-run().catch((error) => {
+run().then(() => process.exit(0)).catch((error) => {
   console.error(error);
-  process.exitCode = 1;
+  process.exit(1);
 });

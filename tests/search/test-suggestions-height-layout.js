@@ -1,14 +1,11 @@
 const assert = require('assert');
-const fs = require('fs');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
 const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
+const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
 
 delete LumnoSuggestionsHeightLayout;
 const LumnoSuggestionsHeightLayout = require('../../src/shared/search/suggestions-height-layout.js');
 
 const runtime = LumnoSuggestionsHeightLayout;
-const newtabLayoutSource = fs.readFileSync('src/newtab/layout.js', 'utf8');
-const overlaySource = readOverlayPanelSource();
 
 assert.ok(
   runtime && typeof runtime.applyNaturalSuggestionsHeightLayout === 'function',
@@ -69,12 +66,30 @@ assert.ok(
   runsBefore(getInjectedScripts('overlay'), 'src/shared/search/suggestions-height-layout.js', 'src/overlay/search-panel.js'),
   'Overlay injection should load the shared height policy before the panel runtime'
 );
-[newtabLayoutSource, overlaySource].forEach((source, index) => {
-  assert.match(
-    source,
-    /SUGGESTIONS_HEIGHT_LAYOUT\.applyNaturalSuggestionsHeightLayout\(/,
-    `${index === 0 ? 'New Tab' : 'Overlay'} should use the shared height policy`
-  );
-});
+// Both surfaces leave their result list at its natural height.
+const CONTAINERS = {
+  overlay: '#_x_extension_suggestions_container_2024_unique_',
+  newtab: '#_x_extension_newtab_suggestions_container_2024_unique_'
+};
+const RESULTS = Array.from({ length: 6 }, (_, index) => ({ type: 'history', title: `Result ${index}`, url: `https://r${index}.test/` }));
 
-console.log('shared suggestions natural-height layout tests passed');
+(async () => {
+  for (const name of SURFACES) {
+    const surface = await openSearchSurface(name, {
+      respond: (message) => (message.action === 'getSearchSuggestions' ? { suggestions: RESULTS } : undefined)
+    });
+    await surface.type('result');
+    await surface.settle(150);
+    const style = surface.root.querySelector(CONTAINERS[name]).style;
+    assert.deepStrictEqual(['height', 'flex', 'overflow-y', 'will-change'].map((property) => style.getPropertyValue(property)), ['', '', '', ''],
+      `${name}: the result list should not be held at a fixed height`);
+    assert.strictEqual(style.getPropertyValue('transition'), 'none',
+      `${name}: result height changes should not animate`);
+    surface.close();
+  }
+  console.log('shared suggestions natural-height layout tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

@@ -1,107 +1,83 @@
 const assert = require('assert');
-const fs = require('fs');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-const { extractFunction } = require('../helpers/extract-function');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { bundledSiteSearchProviders } = require('../helpers/overlay-runtime-harness');
+const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
 
-function createDeferred() {
+// The provider list a search surface asks for at startup can arrive after a
+// newer one: Settings may disable a provider meanwhile, and the page reloads
+// its list from storage. The late startup answer must not bring the old list
+// back.
+
+const DISABLED_KEY = '_x_extension_site_search_disabled_2024_unique_';
+
+function deferred() {
   let resolve;
-  let reject;
-  const promise = new Promise((resolvePromise, rejectPromise) => {
-    resolve = resolvePromise;
-    reject = rejectPromise;
+  const promise = new Promise((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
+function menuHas(surface, key) {
+  return Boolean(surface.root.querySelector(`.x-lumno-search-input-mode__menu-item[data-mode-id="provider:${key}"]`));
+}
+
+async function openWithHeldProviders(name) {
+  const startup = deferred();
+  let asked = 0;
+  const surface = await openSearchSurface(name, {
+    // The overlay is opened without providers so it loads them itself.
+    openContext: { siteSearchProviders: undefined },
+    respond(message) {
+      if (message.action === 'getSiteSearchProviders') {
+        asked += 1;
+        return startup.promise;
+      }
+      return undefined;
+    }
   });
-  return { promise, reject, resolve };
+  await surface.settle(60);
+  return { surface, startup, asked: () => asked };
 }
 
-function createLoadHarness(source) {
-  const beginLoadSource = extractFunction(source, 'beginSiteSearchProviderLoad');
-  return new Function(`
-    let siteSearchProvidersCache = null;
-    let siteSearchProvidersLoadPromise = null;
-    let siteSearchProvidersLoadVersion = 0;
-    ${beginLoadSource}
-    return {
-      begin: beginSiteSearchProviderLoad,
-      getCache() { return siteSearchProvidersCache; },
-      getPromise() { return siteSearchProvidersLoadPromise; },
-      getVersion() { return siteSearchProvidersLoadVersion; }
-    };
-  `)();
+function disableInSettings(surface, keys) {
+  if (surface.name === 'overlay') {
+    surface.page.changeSetting(DISABLED_KEY, keys);
+  } else {
+    surface.page.changeStorage('sync', DISABLED_KEY, keys);
+    surface.page.storage.local.data[DISABLED_KEY] = keys;
+  }
 }
 
-async function verifyLoadGuard(surface, source) {
-  assert.match(
-    source,
-    /function getSiteSearchProviders\(\) \{\s*if \(siteSearchProvidersLoadPromise\) \{\s*return siteSearchProvidersLoadPromise;/,
-    `${surface} should reuse the current provider load`
-  );
-  assert.match(
-    source,
-    /function reloadSiteSearchProvidersFromStorage\(\)[\s\S]*?beginSiteSearchProviderLoad\([\s\S]*?\{ invalidate: true \}\)/,
-    `${surface} storage reloads should invalidate older provider loads`
-  );
-  assert.match(
-    source,
-    /const providerReload = reloadSiteSearchProvidersFromStorage\(\);[\s\S]*?providerReload\.version !== siteSearchProvidersLoadVersion[\s\S]*?return;/,
-    `${surface} should ignore UI work from superseded storage reloads`
-  );
-
-  const firstHarness = createLoadHarness(source);
-  const staleAfter = createDeferred();
-  const freshFirst = createDeferred();
-  const staleAfterTask = firstHarness.begin(() => staleAfter.promise);
-  const freshFirstTask = firstHarness.begin(() => freshFirst.promise, { invalidate: true });
-  freshFirst.resolve([{ id: 'fresh' }]);
-  assert.deepStrictEqual(await freshFirstTask.promise, [{ id: 'fresh' }]);
-  staleAfter.resolve([{ id: 'stale' }]);
-  assert.deepStrictEqual(await staleAfterTask.promise, [{ id: 'fresh' }]);
-  assert.deepStrictEqual(
-    firstHarness.getCache(),
-    [{ id: 'fresh' }],
-    `${surface} must not let a stale startup load overwrite a newer storage reload`
-  );
-
-  const secondHarness = createLoadHarness(source);
-  const staleFirst = createDeferred();
-  const freshAfter = createDeferred();
-  const staleFirstTask = secondHarness.begin(() => staleFirst.promise);
-  const freshAfterTask = secondHarness.begin(() => freshAfter.promise, { invalidate: true });
-  staleFirst.resolve([{ id: 'stale' }]);
-  assert.deepStrictEqual(await staleFirstTask.promise, []);
-  assert.strictEqual(secondHarness.getCache(), null);
-  freshAfter.resolve([{ id: 'fresh' }]);
-  assert.deepStrictEqual(await freshAfterTask.promise, [{ id: 'fresh' }]);
-  assert.deepStrictEqual(secondHarness.getCache(), [{ id: 'fresh' }]);
-
-  const identityHarness = createLoadHarness(source);
-  const olderSameGeneration = createDeferred();
-  const currentSameGeneration = createDeferred();
-  const olderTask = identityHarness.begin(() => olderSameGeneration.promise);
-  const currentTask = identityHarness.begin(() => currentSameGeneration.promise);
-  currentSameGeneration.resolve([{ id: 'current' }]);
-  await currentTask.promise;
-  olderSameGeneration.resolve([{ id: 'older' }]);
-  await olderTask.promise;
-  assert.deepStrictEqual(
-    identityHarness.getCache(),
-    [{ id: 'current' }],
-    `${surface} must require in-flight promise identity before publishing providers`
-  );
+async function testLateStartupAnswerLosesToANewerReload(name) {
+  const { surface, startup, asked } = await openWithHeldProviders(name);
+  assert.ok(asked() > 0, `${name}: the page should ask for its providers`);
+  disableInSettings(surface, ['yt']);
+  await surface.settle(80);
+  startup.resolve({ items: bundledSiteSearchProviders() });
+  await surface.settle(80);
+  await surface.openScopeMenu();
+  assert.strictEqual(menuHas(surface, 'yt'), false, `${name}: a provider disabled meanwhile should stay disabled`);
+  assert.strictEqual(menuHas(surface, 'gh'), true, `${name}: the newer list should be shown`);
+  surface.close();
 }
 
-async function main() {
-  const surfaces = [
-    ['newtab', readNewtabRuntimeSource()],
-    ['overlay', readOverlayPanelSource()]
-  ];
-  for (const [surface, source] of surfaces) {
-    await verifyLoadGuard(surface, source);
+async function testEarlyStartupAnswerIsReplaced(name) {
+  const { surface, startup } = await openWithHeldProviders(name);
+  startup.resolve({ items: bundledSiteSearchProviders() });
+  await surface.settle(60);
+  disableInSettings(surface, ['yt']);
+  await surface.settle(80);
+  await surface.openScopeMenu();
+  assert.strictEqual(menuHas(surface, 'yt'), false, `${name}: a later Settings change should replace the startup list`);
+  surface.close();
+}
+
+(async () => {
+  for (const name of SURFACES) {
+    await testLateStartupAnswerLosesToANewerReload(name);
+    await testEarlyStartupAnswerIsReplaced(name);
   }
   console.log('site search provider load race tests passed');
-}
-
-main().catch((error) => {
+  process.exit(0);
+})().catch((error) => {
   console.error(error);
-  process.exitCode = 1;
+  process.exit(1);
 });

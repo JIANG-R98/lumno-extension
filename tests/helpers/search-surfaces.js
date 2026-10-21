@@ -47,11 +47,24 @@ async function openSearchSurface(name, options) {
     window,
     input: () => page.input(),
     type: (query) => page.type(query),
-    press: (key, init) => page.press(key, init),
+    // A trusted key event on the focused element (or init.target), heard by
+    // every listener along its path, page window included.
+    press: (key, init) => surface.key('keydown', key, init),
+    keyup: (key, init) => surface.key('keyup', key, init),
+    key(type, key, init) {
+      const options = Object.assign({ key, bubbles: true, cancelable: true, composed: true }, init || {});
+      const target = options.target || (name === 'overlay' ? root.activeElement : page.document.activeElement) || page.input();
+      delete options.target;
+      return page.trusted(target, type, options);
+    },
     settle: (ms) => page.settle(ms),
     waitFor: (condition, message) => page.waitFor(condition, message),
     suggestions() {
       return Array.from(root.querySelectorAll(name === 'overlay' ? '.x-ov-suggestion-item' : '.x-nt-suggestion-item'));
+    },
+    // The index of the highlighted result, or -1.
+    selectedIndex() {
+      return surface.suggestions().findIndex((row) => row.getAttribute('data-row-state') === 'active');
     },
     scopeMenuOpen() {
       const element = prefix();

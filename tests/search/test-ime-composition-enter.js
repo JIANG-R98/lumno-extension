@@ -1,13 +1,13 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const guardPath = path.join(repoRoot, 'src/shared/search/ime-key-guard.js');
 const guard = require(guardPath);
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
-const { readStylesheetSource } = require('../helpers/css-tokens');
+const { parseCss } = require('../helpers/css-rules');
+const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
+const { readStylesheet } = require('../helpers/css-tokens');
 const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 function createClock(start) {
@@ -96,45 +96,50 @@ assert.strictEqual(
 );
 imeGuard.markCompositionEnd({ target: input });
 
-const newtabJs = readNewtabRuntimeSource();
-const overlayJs = readOverlayPanelSource();
-
 assert.ok(
   runsBefore(getPageScripts('newtab.html'), 'src/shared/search/ime-key-guard.js', 'src/newtab/newtab.js'),
   'New Tab should load the IME key guard before newtab.js'
 );
-
 assert.ok(
   runsBefore(getInjectedScripts('overlay'), 'src/shared/search/ime-key-guard.js', 'src/overlay/search-panel.js'),
   'overlay injection should load the IME key guard before search-panel.js'
 );
 
-assert.match(
-  newtabJs,
-  /const imeKeyGuard = LumnoImeKeyGuard\.createImeKeyGuard\(\);[\s\S]*?function isImeCompositionEvent\(event\)[\s\S]*?return imeKeyGuard\.shouldIgnoreKeydown\(event\);/,
-  'New Tab keydown handling should suppress IME commit Enter through the shared guard'
-);
+const newtabRoot = parseCss(readStylesheet('src/newtab/styles/page.css')).rule('#_x_extension_newtab_root_2024_unique_');
+assert.notStrictEqual(newtabRoot.get('visibility'), 'hidden',
+  'the New Tab search box should stay focusable before the page is ready so early keys reach the IME');
 
-assert.match(
-  overlayJs,
-  /imeKeyGuard = LumnoImeKeyGuard\.createImeKeyGuard\(\);[\s\S]*?function isImeCompositionEvent\(event\)[\s\S]*?return imeKeyGuard\.shouldIgnoreKeydown\(event\);/,
-  'overlay keydown handling should suppress IME commit Enter through the shared guard'
-);
+// On both surfaces, the Enter that commits an IME candidate does not search.
+async function testSurfaceIgnoresTheCommitEnter(name) {
+  const surface = await openSearchSurface(name);
+  const input = surface.input();
+  const composition = (type) => surface.page.trusted(input, type, { bubbles: true, composed: true, data: '你' });
+  composition('compositionstart');
+  input.value = 'ni';
+  input.dispatchEvent(new surface.window.Event('input', { bubbles: true }));
+  await surface.settle(60);
+  surface.press('Enter', { isComposing: true, keyCode: 229 });
+  await surface.settle(60);
+  assert.strictEqual(surface.navigation(), null, `${name}: Enter while composing should pick the candidate, not search`);
+  input.value = '你';
+  composition('compositionend');
+  surface.press('Enter', { keyCode: 13 });
+  await surface.settle(60);
+  assert.strictEqual(surface.navigation(), null, `${name}: the Enter that ends the composition should not search either`);
+  surface.keyup('Enter', { keyCode: 13 });
+  surface.press('Enter', { keyCode: 13 });
+  await surface.settle(120);
+  assert.deepStrictEqual(surface.navigation(), { search: '你' }, `${name}: the next Enter should search`);
+  surface.close();
+}
 
-assert.match(
-  newtabJs,
-  /inputParts\.input\.addEventListener\('keyup', imeKeyGuard\.markKeyUp, true\);/,
-  'New Tab should end the IME commit window when the commit key is released'
-);
-
-
-const newtabCss = readStylesheetSource('src/newtab/newtab.css');
-const newtabRootRule = newtabCss.match(/\n#_x_extension_newtab_root_2024_unique_ \{[^}]*\}/);
-assert.ok(newtabRootRule, 'New Tab search root rule should exist');
-assert.doesNotMatch(
-  newtabRootRule[0],
-  /visibility:\s*hidden/,
-  'New Tab search root should stay focusable before the page is ready so early keys reach the IME'
-);
-
-console.log('IME composition Enter tests passed');
+(async () => {
+  for (const name of SURFACES) {
+    await testSurfaceIgnoresTheCommitEnter(name);
+  }
+  console.log('IME composition Enter tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
