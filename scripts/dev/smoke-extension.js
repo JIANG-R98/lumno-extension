@@ -3,7 +3,8 @@
 // Loads this checkout as an unpacked extension into a throwaway headless
 // Chrome over a CDP pipe (Extensions.loadUnpacked, so branded Chrome works
 // too), then opens New Tab, Settings, Onboarding and the popup, types into the
-// New Tab search box, and opens the search overlay and the tab switcher on a
+// New Tab search box, changes a set of settings under the open New Tab, and
+// opens the search overlay and the tab switcher on a
 // local web page. Any uncaught exception, console error or failed extension
 // resource fails the run; failed loads from other origins (remote images,
 // wallpapers) are only listed.
@@ -37,6 +38,46 @@ const PAGES = [
   'src/popup/popup.html'
 ];
 const PAGE_SETTLE_MS = 3500;
+// Settings written while New Tab is open, by their LumnoSettings key names;
+// the last round puts most of them back.
+const SETTINGS_ROUNDS = [
+  {
+    THEME_STORAGE_KEY: 'dark',
+    LANGUAGE_STORAGE_KEY: 'en',
+    NEWTAB_THEME_MODE_STORAGE_KEY: 'dark',
+    NEWTAB_GLASS_STYLE_STORAGE_KEY: 'liquid',
+    NEWTAB_GLASS_THEME_STORAGE_KEY: 'dark',
+    NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY: 'time',
+    NEWTAB_TIME_FONT_SIZE_STORAGE_KEY: 72,
+    NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY: true,
+    NEWTAB_WIDTH_MODE_STORAGE_KEY: 'wide',
+    NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY: 6,
+    NEWTAB_SHORTCUT_SIZE_STORAGE_KEY: 64,
+    NEWTAB_SHORTCUT_GAP_STORAGE_KEY: 20,
+    NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY: false,
+    BOOKMARK_COUNT_STORAGE_KEY: 12,
+    BOOKMARK_COLUMNS_STORAGE_KEY: 3,
+    BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY: false,
+    RECENT_COUNT_STORAGE_KEY: 12,
+    NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY: false,
+    NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY: false,
+    NEWTAB_ZEN_MODE_STORAGE_KEY: true,
+    SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY: 6,
+    NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY: true,
+    NUMBER_SHORTCUT_INSTANT_ENABLED_STORAGE_KEY: true,
+    SEARCH_BLACKLIST_STORAGE_KEY: ['example.com'],
+    FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY: true
+  },
+  {
+    THEME_STORAGE_KEY: 'light',
+    LANGUAGE_STORAGE_KEY: 'zh_CN',
+    NEWTAB_GLASS_STYLE_STORAGE_KEY: 'frosted',
+    NEWTAB_ZEN_MODE_STORAGE_KEY: false,
+    NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY: true,
+    NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY: true,
+    NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY: true
+  }
+];
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -191,6 +232,24 @@ async function main() {
           input.dispatchEvent(new Event('input', { bubbles: true }));
           await new Promise((resolve) => setTimeout(resolve, 1500));
           return document.querySelectorAll('[class*=suggestion]').length + ' suggestion elements';
+        })()`);
+        // Change settings under the open page so its storage listeners run;
+        // the pages opened next start from the changed values.
+        report['newtab settings changes'] = await evaluate(sessionId, `(async () => {
+          const settings = globalThis.LumnoSettings;
+          const rounds = [${JSON.stringify(SETTINGS_ROUNDS)}][0];
+          let applied = 0;
+          for (const round of rounds) {
+            const values = {};
+            Object.entries(round).forEach(([name, value]) => {
+              if (settings[name]) values[settings[name]] = value;
+            });
+            applied += Object.keys(values).length;
+            await chrome.storage.sync.set(values);
+            await chrome.storage.local.set(values);
+            await new Promise((resolve) => setTimeout(resolve, 1200));
+          }
+          return applied + ' values written';
         })()`);
       }
     }

@@ -41,7 +41,13 @@ const NEWTAB_RUNTIME_MODULES = [
   'src/newtab/section-mode-select.js',
   'src/newtab/shortcuts/shortcut-page-actions.js',
   'src/newtab/bookmarks/bookmark-actions.js',
-  'src/newtab/recent/recent-sources.js'
+  'src/newtab/recent/recent-sources.js',
+  'src/newtab/wallpaper/wallpaper-page.js',
+  'src/newtab/search/default-search-engine.js',
+  'src/newtab/settings-sync.js',
+  'src/newtab/startup-preferences.js',
+  'src/newtab/search/search-settings-sync.js',
+  'src/newtab/theme/page-favicons.js'
 ];
 
 // Returns newtab.js followed by the modules split out of it, so source checks

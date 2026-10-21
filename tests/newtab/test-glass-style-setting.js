@@ -30,8 +30,10 @@ const source = fs.readFileSync('src/newtab/newtab.js', 'utf8');
 const start = source.indexOf('  // Surfaces whose rim bends the wallpaper under the liquid style;');
 const end = source.indexOf('  function loadNewtabActionButtonVisibility(', start);
 assert(start >= 0 && end > start);
-const handlerStart = source.indexOf('  storageChanges.on(NEWTAB_GLASS_STYLE_STORAGE_KEY,');
-const handlerEnd = source.indexOf('  storageChanges.on(NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,', handlerStart);
+// The storage listeners live in settings-sync.js, one factory level deeper.
+const syncSource = fs.readFileSync('src/newtab/settings-sync.js', 'utf8').replace(/^  /gm, '');
+const handlerStart = syncSource.indexOf('  storageChanges.on(NEWTAB_GLASS_STYLE_STORAGE_KEY,');
+const handlerEnd = syncSource.indexOf('  storageChanges.on(NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,', handlerStart);
 assert(handlerStart >= 0 && handlerEnd > handlerStart);
 
 async function boot(value, hasStorage = true, themeValue) {
@@ -74,7 +76,7 @@ async function boot(value, hasStorage = true, themeValue) {
       listeners[storageKey] = callback;
     } }
   });
-  vm.runInContext(source.slice(start, end) + source.slice(handlerStart, handlerEnd), context);
+  vm.runInContext(source.slice(start, end) + syncSource.slice(handlerStart, handlerEnd), context);
   await vm.runInContext('loadNewtabGlassStyle()', context);
   return {
     style: () => attributes['data-glass-style'],

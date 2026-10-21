@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
 // Windows (and macOS set to always show scrollbars) draws a wide system
 // scrollbar in any scroll box that does not style or hide its own. Inside a
@@ -127,7 +128,7 @@ assert.deepStrictEqual(
 
 // The dock's scrollbar sits on the wallpaper, so its thumb follows the ink
 // sampled under its track like the headings and pager beside it.
-const newtabSource = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.js'), 'utf8');
+const newtabSource = readNewtabRuntimeSource();
 assert.match(
   newtabSource,
   /function createWallpaperAdaptiveToneTargets\(\)[\s\S]*?element:\s*bottomDockScroller,\s*sampleElement:\s*bottomDockScrollbarTrackArea,[\s\S]*?disabled:\s*!isBottomDockScrollbarShown\(\)/,
