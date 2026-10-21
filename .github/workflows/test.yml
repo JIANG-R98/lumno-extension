@@ -20,8 +20,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      # Two commits deep, so a pull request's merge commit has its base
+      # (HEAD^1) for the bundle growth check.
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -31,6 +35,27 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # The React bundle growth check compares against the commit this change
+      # builds on: the base of a pull request, or main before a push.
+      - name: Resolve bundle growth base
+        shell: bash
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "LUMNO_BUNDLE_BASE=$(git rev-parse HEAD^1)" >> "$GITHUB_ENV"
+          elif [[ "${{ github.event_name }}" == "push" && -n "$BEFORE_SHA" && ! "$BEFORE_SHA" =~ ^0+$ ]]; then
+            # Deepen until the pushed commits reach the old main, so every
+            # pushed commit message is there for a Bundle-Growth trailer.
+            for _ in 1 2 3 4 5; do
+              git merge-base --is-ancestor "$BEFORE_SHA" HEAD 2>/dev/null && break
+              git fetch --no-tags --deepen=20 origin "$GITHUB_REF"
+            done
+            git cat-file -e "$BEFORE_SHA^{commit}" 2>/dev/null ||
+              git fetch --no-tags --depth=1 origin "$BEFORE_SHA"
+            echo "LUMNO_BUNDLE_BASE=$BEFORE_SHA" >> "$GITHUB_ENV"
+          fi
 
       # Builds the React bundles once, runs both test suites, then the static
       # checks (the same ones npm run check runs after its own build).

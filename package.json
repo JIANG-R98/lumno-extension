@@ -28,6 +28,7 @@
     "package:firefox": "npm run package:store && node scripts/build-firefox.js",
     "lint:firefox": "npx --yes web-ext@latest lint -s dist/firefox",
     "test:package-store": "node scripts/test-package-store.js",
+    "test:bundle-budgets": "node scripts/test-react-bundle-budgets.js",
     "test:blacklist": "node scripts/test-blacklist.js",
     "test:url-guards": "node scripts/test-url-guards.js",
     "test:navigation-disposition": "node scripts/test-navigation-disposition.js",

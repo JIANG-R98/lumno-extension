@@ -1,7 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const zlib = require('zlib');
 const { readPageSource } = require('./helpers/page-source');
 
 const repoRoot = path.resolve(__dirname, '..');
@@ -88,90 +87,6 @@ const bundles = [
   overlayBundle
 ];
 const bundle = bundles.join('\n');
-const bundlePaths = [
-  runtimeBundlePath,
-  sharedBundlePath,
-  tabSwitcherSharedBundlePath,
-  newtabBundlePath,
-  optionsBundlePath,
-  onboardingBundlePath,
-  overlayBundlePath
-];
-
-const kibibytes = (bytes) => `${(bytes / 1024).toFixed(2)} KiB`;
-const gzipSize = (source) =>
-  zlib.gzipSync(source, {
-    level: zlib.constants.Z_BEST_COMPRESSION
-  }).length;
-const assertWithinBudget = (actualBytes, budgetKiB, label) => {
-  const budgetBytes = budgetKiB * 1024;
-  assert(
-    actualBytes <= budgetBytes,
-    `${label} is ${kibibytes(actualBytes)}; budget is ${budgetKiB} KiB`
-  );
-};
-
-// Keep these as durable regression ceilings rather than exact snapshots. The
-// rounded limits leave about 5% headroom over the 0.9.44 production bundles,
-// while the explicit gzip level avoids relying on Node's default compression.
-// Options was rebased at 0.9.56 (277 KiB / 81.4 KiB gzip) after the settings
-// growth since 0.9.44 and the WebDAV connection cards; the total rises by the
-// same amount so it stays consistent with the per-page ceilings.
-// New Tab moved to 386 KiB at 0.9.61 for the shared search input clear button.
-// The total moved to 776 KiB at 1.0.0 for the Help Center ask demo in Options.
-// New Tab moved to 390 KiB / 116 KiB gzip (the total to 780 KiB / 226 KiB gzip) at 1.0.0 for the help result passage card.
-// New Tab moved to 394 KiB / 117 KiB gzip (the total to 784 KiB / 227 KiB gzip) at 1.1.0 for the bookmarks bar's floating layout and liquid glass.
-// New Tab moved to 395 KiB / 118 KiB gzip, the Overlay to 274 KiB and the total to 788 KiB / 228 KiB gzip at 1.1.0 for the search input's close-other-tabs popconfirm.
-// New Tab moved to 399 KiB / 119 KiB gzip (the total to 792 KiB / 229 KiB gzip) at 1.1.0 for shortcut group titles.
-// The Overlay moved to 83 KiB gzip (the total to 230 KiB gzip) at 1.1.0: the close-other-tabs popconfirm and shortcut group titles fit only under Node 22's zlib, and CI measures with Node 20 (.nvmrc), which compresses slightly worse.
-// New Tab moved to 402 KiB / 120 KiB gzip (the total to 794 KiB / 231 KiB gzip) at 1.1.0 for the bookmark and site card sections in the appearance panel.
-// New Tab moved to 409 KiB / 123 KiB gzip (the total to 801 KiB / 234 KiB gzip) at 1.1.0: the appearance panel's controls moved
-// from the classic wallpaper.js (about 84 KiB smaller) into its React view.
-// The total moved to 802 KiB at 1.1.0 for the tab switcher's close button, which ships twice: in the injected
-// Overlay bundle and in the shared tab switcher bundle.
-// The opt-in glass style moved the New Tab route to 413 KiB and the total to 807 KiB: its Style
-// section and select, and the liquid rim refraction shared by many surfaces.
-// New Tab moved to 414 KiB / 125 KiB gzip (the total to 808 KiB / 236 KiB gzip) for the nine-slice lens
-// that replaced per-size displacement maps: band-limited filters and lenses that resize in place.
-// Search sources ordering then moved the total to 809 KiB / 237 KiB gzip: move buttons on the
-// Options lists and a sortable result type group (gzip keeps headroom for Node 20's zlib, as above).
-// The daily quote's source tabs and TXT / MD import controls moved the New Tab route to 415 KiB
-// and the total to 810 KiB.
-// Saving a Bing or curated photo to the local wallpapers from its right-click menu, with the local
-// wallpaper limit, moved the New Tab route to 416 KiB and the total to 811 KiB.
-// The time font picker in the appearance panel moved the New Tab route to 417 KiB and the total
-// to 812 KiB. The time size and opacity sliders moved the New Tab route to 418 KiB and the
-// total to 813 KiB. The time color choice moved the New Tab route to 419 KiB and the total to
-// 814 KiB. The 12-hour clock and its AM/PM mark moved the New Tab route to 420 KiB and the
-// total to 815 KiB. Plates behind see-through shortcut icons, and their choice in the shortcut
-// dialog, moved the New Tab route to 421 KiB / 126 KiB gzip and the total to 816 KiB.
-// Reading shortcut icons again once the favicon runtime clears its placeholder mark moved the
-// total to 817 KiB.
-// Checkbox rows in the shared select menu, and the random mix's category menu in the curated
-// wallpaper list, moved the New Tab route to 422 KiB.
-// The material's own light/dark choice in the Style section moved the New Tab route to 423 KiB
-// and the total to 818 KiB.
-// The total moved to 238 KiB gzip at 1.1.1: it measures 236.9 KiB locally, but CI's Node 22 build
-// compresses the same bundles to 237.4 KiB and failed the 1.1.1 release.
-// Marking the title characters a pinyin or initials match spelled, which ships in both the New
-// Tab and the Overlay results, moved the total to 819 KiB at 1.1.4. Marking a short typed term
-// only where a word starts, as it matches, then moved the Overlay to 275 KiB.
-// The New Tab route moved to 127 KiB gzip and the total to 239 KiB gzip at 1.1.4: under Node 26
-// they measure 125.9 KiB and 237.9 KiB, but CI's Node 22 build compresses the same bundles to
-// 126.2 KiB and 238.3 KiB and failed on main.
-// The overlay font picker adds a filter field, combobox semantics and per-face previews to
-// the shared select menu, which ships in every route: the New Tab route moves to 425 KiB and
-// the total to 821 KiB. Its IME-safe keys and the page's own text field for the filter move
-// the New Tab route to 426 KiB, the Options route to 86 KiB gzip and the total to 822 KiB.
-const bundleBudgets = {
-  newtab: { uncompressed: 426, gzip: 127 },
-  options: { uncompressed: 290, gzip: 86 },
-  overlay: { uncompressed: 275, gzip: 83 },
-  // The toolbar popup opens on every click, so it loads only the runtime, the
-  // shared chunk and its own small entry.
-  popup: { uncompressed: 220, gzip: 70 },
-  total: { uncompressed: 822, gzip: 239 }
-};
 
 const bootstrapScript = 'src="../shared/react-page-bootstrap.js"';
 
@@ -242,60 +157,6 @@ assert(
   packageJson.dependencies.react && packageJson.dependencies['react-dom'],
   'React runtime dependencies should be explicit'
 );
-assertWithinBudget(
-  fs.statSync(runtimeBundlePath).size +
-    fs.statSync(sharedBundlePath).size +
-    fs.statSync(tabSwitcherSharedBundlePath).size +
-    fs.statSync(newtabBundlePath).size,
-  bundleBudgets.newtab.uncompressed,
-  'the New Tab React route (uncompressed)'
-);
-assertWithinBudget(
-  gzipSize(runtimeBundle) +
-    gzipSize(sharedBundle) +
-    gzipSize(tabSwitcherSharedBundle) +
-    gzipSize(newtabBundle),
-  bundleBudgets.newtab.gzip,
-  'the New Tab React route (gzip)'
-);
-assertWithinBudget(
-  fs.statSync(runtimeBundlePath).size +
-    fs.statSync(sharedBundlePath).size +
-    fs.statSync(tabSwitcherSharedBundlePath).size +
-    fs.statSync(optionsBundlePath).size,
-  bundleBudgets.options.uncompressed,
-  'the Options React route (uncompressed)'
-);
-assertWithinBudget(
-  gzipSize(runtimeBundle) +
-    gzipSize(sharedBundle) +
-    gzipSize(tabSwitcherSharedBundle) +
-    gzipSize(optionsBundle),
-  bundleBudgets.options.gzip,
-  'the Options React route (gzip)'
-);
-assertWithinBudget(
-  fs.statSync(overlayBundlePath).size,
-  bundleBudgets.overlay.uncompressed,
-  'the injected Overlay React route (uncompressed)'
-);
-assertWithinBudget(
-  gzipSize(overlayBundle),
-  bundleBudgets.overlay.gzip,
-  'the injected Overlay React route (gzip)'
-);
-assertWithinBudget(
-  fs.statSync(runtimeBundlePath).size +
-    fs.statSync(sharedBundlePath).size +
-    fs.statSync(popupBundlePath).size,
-  bundleBudgets.popup.uncompressed,
-  'the toolbar popup React route (uncompressed)'
-);
-assertWithinBudget(
-  gzipSize(runtimeBundle) + gzipSize(sharedBundle) + gzipSize(popupBundle),
-  bundleBudgets.popup.gzip,
-  'the toolbar popup React route (gzip)'
-);
 assert(
   popupHtml.includes(bootstrapScript) &&
     popupHtml.includes('data-react-entry="../react/popup-islands.js"') &&
@@ -304,16 +165,6 @@ assert(
     popupBundle.includes('from"./react-runtime.js"') &&
     !popupBundle.includes('from"./tab-switcher-shared.js"'),
   'the toolbar popup should start through the shared bootstrap without the tab-switcher chunk'
-);
-assertWithinBudget(
-  bundlePaths.reduce((total, file) => total + fs.statSync(file).size, 0),
-  bundleBudgets.total.uncompressed,
-  'all shared React artifacts and four page entries (uncompressed)'
-);
-assertWithinBudget(
-  bundles.reduce((total, source) => total + gzipSize(source), 0),
-  bundleBudgets.total.gzip,
-  'all shared React artifacts and four page entries (gzip)'
 );
 assert(
   newtabBundle.includes('from"./react-runtime.js"') &&
