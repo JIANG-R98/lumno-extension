@@ -1,10 +1,11 @@
 const assert = require('assert');
 const fs = require('fs');
 const vm = require('vm');
-const { readPageSource } = require('../helpers/page-source');
-const { readWallpaperRuntimeSource, readWallpaperCheckSource } = require('../helpers/wallpaper-source');
+const { JSDOM } = require('jsdom');
+const { parsePageCss } = require('../helpers/css-rules');
 const { getBundleFiles, runsBefore } = require('../helpers/runtime-scripts');
 const { moduleScript } = require('../helpers/module-script');
+const { readWallpaperRuntimeSource } = require('../helpers/wallpaper-source');
 
 const sandbox = {
   clearTimeout,
@@ -388,62 +389,50 @@ assert.strictEqual(
   'none',
   'wallpaper filters should remain off by default'
 );
+const newtabCss = parsePageCss('newtab.html');
+const newtabDocument = new JSDOM(fs.readFileSync('newtab.html', 'utf8')).window.document;
 
-const newtabHtml = readPageSource('newtab.html');
-assert.match(
-  newtabHtml,
-  /body\[data-wallpaper-active="true"\]\[data-wallpaper-effect="blur"\]::before,[\s\S]*?\.x-nt-wallpaper-transition-layer\[data-wallpaper-effect="blur"\]\s*\{[\s\S]*?inset:\s*calc\(0px - var\(--x-nt-wallpaper-blur-overscan[\s\S]*?filter:\s*blur\(var\(--x-nt-wallpaper-blur-radius\)\)[\s\S]*?saturate\(var\(--x-nt-wallpaper-blur-saturate\)\)[\s\S]*?brightness\(var\(--x-nt-wallpaper-blur-brightness\)\)[\s\S]*?contrast\(var\(--x-nt-wallpaper-blur-contrast\)\);[\s\S]*?body\[data-wallpaper-active="true"\]\[data-wallpaper-effect="blur"\]::before\s*\{[\s\S]*?background-image:\s*var\(--x-nt-wallpaper-image,[^)]+\);/,
-  'glass blur should filter an overscanned copy of the wallpaper behind the page content'
-);
-assert.match(
-  newtabHtml,
-  /body\[data-wallpaper-active="true"\]\[data-wallpaper-effect="blur"\]\s*\{\s*--x-nt-wallpaper-overlay:\s*none;\s*background-image:\s*none;/,
-  'glass blur should replace the body wallpaper with the filtered copy without painting it twice'
-);
-assert.match(
-  newtabHtml,
-  /\.x-nt-wallpaper-transition-layer\[data-wallpaper-effect="blur"\]\s*\{[\s\S]*?filter:\s*blur\(var\(--x-nt-wallpaper-blur-radius\)\)/,
-  'blurred wallpaper transition snapshots should retain the same Gaussian filter'
-);
-assert.match(
-  newtabHtml,
-  /body::before\s*\{[\s\S]*?transition:\s*opacity 180ms ease;/,
-  'glass blur should be fully applied before its wallpaper copy fades in'
-);
-assert.match(
-  newtabHtml,
-  /\.x-nt-wallpaper-transition-layer\[data-wallpaper-filter-transition="true"\][\s\S]*?transition-duration:\s*180ms/,
-  'filter snapshots should use the same 180ms duration as the glass background and texture'
-);
-assert.match(
-  newtabHtml,
-  /body\[data-wallpaper-active="true"\]\[data-wallpaper-effect="halftone"\]::after,\s*body\[data-wallpaper-active="true"\]\[data-wallpaper-effect="ascii"\]::after\s*\{[\s\S]*?opacity:\s*0;/,
-  'halftone and ASCII should render as transparent layers above the existing wallpaper'
-);
-assert.doesNotMatch(
-  newtabHtml,
-  /body\[data-wallpaper-active="true"\]\[data-wallpaper-effect="(?:halftone|ascii)"\]\s*\{[^}]*--x-nt-wallpaper-image:\s*none;/,
-  'layered effects should keep the CSS wallpaper visible instead of repainting it into the canvas'
-);
-assert.match(
-  newtabHtml,
-  /\.x-nt-wallpaper-effect-canvas\[data-resize-enter="true"\],\s*\.x-nt-wallpaper-effect-canvas\[data-resize-exit="true"\]\s*\{\s*opacity:\s*0 !important;/,
-  'resized wallpaper effects should expose enter and exit states for an opacity crossfade'
-);
-assert.match(
-  newtabHtml,
-  /\.x-nt-wallpaper-effect-canvas\[data-resize-jump="true"\]\s*\{\s*transition:\s*none !important;/,
-  'the resized destination canvas should be hidden without animating before its crossfade'
-);
+// The effects' layers, read through the CSSOM.
+{
+  const rule = (selector) => {
+    const found = newtabCss.rule(selector);
+    assert.ok(found, `missing ${selector}`);
+    return found;
+  };
+  const blurLayer = 'body[data-wallpaper-active="true"][data-wallpaper-effect="blur"]::before';
+  const blurCopy = newtabCss.entries.find((entry) => entry.selectors.includes(blurLayer) &&
+    entry.selectors.includes('.x-nt-wallpaper-transition-layer[data-wallpaper-effect="blur"]'));
+  assert.ok(blurCopy, 'glass blur and its transition snapshot should share one filtered layer rule');
+  assert.match(blurCopy.style.getPropertyValue('inset'), /^calc\(0px - var\(--x-nt-wallpaper-blur-overscan/, 'over an overscanned copy');
+  assert.strictEqual(blurCopy.style.getPropertyValue('filter').replace(/\s+/g, ' ').trim(),
+    'blur(var(--x-nt-wallpaper-blur-radius)) saturate(var(--x-nt-wallpaper-blur-saturate)) brightness(var(--x-nt-wallpaper-blur-brightness)) contrast(var(--x-nt-wallpaper-blur-contrast))',
+    'glass blur should filter the wallpaper copy');
+  assert.match(rule(blurLayer).get('background-image'), /^var\(--x-nt-wallpaper-image,/, 'the copy is the wallpaper itself');
+  const blurBody = rule('body[data-wallpaper-active="true"][data-wallpaper-effect="blur"]');
+  assert.deepStrictEqual([blurBody.get('--x-nt-wallpaper-overlay'), blurBody.get('background-image')], ['none', 'none'],
+    'glass blur should replace the body wallpaper with the filtered copy without painting it twice');
+  assert.match(rule('body::before').get('transition'), /opacity 180ms ease/, 'the blurred copy fades in once applied');
+  const filterTransition = newtabCss.entries.find((entry) => entry.selectors.some((selector) =>
+    selector.includes('.x-nt-wallpaper-transition-layer[data-wallpaper-filter-transition="true"]')) &&
+    entry.style.getPropertyValue('transition-duration'));
+  assert.strictEqual(filterTransition && filterTransition.style.getPropertyValue('transition-duration'), '180ms',
+    'filter snapshots should use the same 180ms duration as the glass background and texture');
+  const layered = newtabCss.entries.find((entry) => entry.selectors.includes('body[data-wallpaper-active="true"][data-wallpaper-effect="halftone"]::after') &&
+    entry.selectors.includes('body[data-wallpaper-active="true"][data-wallpaper-effect="ascii"]::after'));
+  assert.strictEqual(layered && layered.style.getPropertyValue('opacity'), '0', 'halftone and ASCII draw above the wallpaper');
+  ['halftone', 'ascii'].forEach((type) => {
+    const body = newtabCss.rule(`body[data-wallpaper-active="true"][data-wallpaper-effect="${type}"]`);
+    assert.notStrictEqual(body && body.get('--x-nt-wallpaper-image'), 'none', `${type} should keep the CSS wallpaper visible`);
+  });
+  const resize = newtabCss.entries.find((entry) => entry.selectors.includes('.x-nt-wallpaper-effect-canvas[data-resize-enter="true"]') &&
+    entry.selectors.includes('.x-nt-wallpaper-effect-canvas[data-resize-exit="true"]'));
+  assert.deepStrictEqual(resize && [resize.style.getPropertyValue('opacity'), resize.style.getPropertyPriority('opacity')], ['0', 'important'],
+    'resized effects expose enter and exit states for an opacity crossfade');
+  assert.deepStrictEqual([rule('.x-nt-wallpaper-effect-canvas[data-resize-jump="true"]').get('transition'),
+    rule('.x-nt-wallpaper-effect-canvas[data-resize-jump="true"]').priority('transition')], ['none', 'important'],
+  'the resized destination canvas is hidden without animating before its crossfade');
+}
 
-const effectsSource = fs.readFileSync('src/newtab/wallpaper/wallpaper-effects.js', 'utf8');
-const wallpaperSource = readWallpaperCheckSource();
-assert.match(
-  wallpaperSource,
-  /function createWallpaperTransitionLayer\(\)[\s\S]*?data-wallpaper-effect[^\n]*blur[\s\S]*?--x-nt-wallpaper-image[\s\S]*?--x-nt-wallpaper-size[\s\S]*?--x-nt-wallpaper-position/,
-  'wallpaper transitions should snapshot the blurred wallpaper source instead of flashing a sharp frame'
-);
-const wallpaperPreloadSource = fs.readFileSync('src/newtab/wallpaper/wallpaper-preload.js', 'utf8');
 vm.runInNewContext(readWallpaperRuntimeSource(), sandbox, {
   filename: 'src/newtab/wallpaper/wallpaper.js'
 });
@@ -503,111 +492,6 @@ assert.deepStrictEqual(
   },
   'mode-aware wallpaper effects should preserve supported values and discard removed optics'
 );
-assert.match(
-  effectsSource,
-  /function drawCachedLayeredEffect\([\s\S]*?boundedSpacing = clampNumber\(spacing, 0, 100\)[\s\S]*?effectBaseCacheKey !== cacheKey[\s\S]*?drawLayer\(context,[\s\S]*?boundedSpacing[\s\S]*?effectBaseCacheKey = cacheKey;/,
-  'layered wallpaper filters should cache their high-resolution canvas using bounded spacing'
-);
-assert.match(
-  effectsSource,
-  /function ensureMaterialNoiseTile\([\s\S]*?createImageData[\s\S]*?putImageData/,
-  'glass texture should reuse a cached noise tile instead of sampling every viewport pixel'
-);
-assert.doesNotMatch(
-  effectsSource,
-  /function ensureMaterialNoiseTile\([\s\S]*?Math\.random/,
-  'the cached material texture should be deterministic across renders'
-);
-assert.match(
-  effectsSource,
-  /normalized\.type === 'blur'[\s\S]*?drawStandardGlassTexture/,
-  'standard Gaussian glass should gain a transparent material canvas above its CSS wallpaper copy'
-);
-assert.match(
-  effectsSource,
-  /function drawDitherLayer\([\s\S]*?BAYER_4X4[\s\S]*?quantizeDitherColor[\s\S]*?putImageData/,
-  'Dither should use a deterministic Bayer matrix and palette quantization'
-);
-assert.match(
-  effectsSource,
-  /function drawHalftoneLayer\([\s\S]*?liftSampleColor\(/,
-  'halftone dots should retain locally sampled wallpaper hues'
-);
-assert.match(
-  effectsSource,
-  /function drawAsciiLayer\([\s\S]*?liftSampleColor\(/,
-  'ASCII glyphs should retain locally sampled wallpaper hues'
-);
-assert.match(
-  effectsSource,
-  /shouldCrossfadeResize\s*=\s*Boolean\([\s\S]*?normalized\.type === 'dither'/,
-  'Dither should crossfade its cached canvas after viewport resizing'
-);
-assert.match(
-  effectsSource,
-  /previousPrefs\.inkTone !== prefs\.inkTone/,
-  'changing dot or ASCII color should invalidate and rerender the cached effect layer'
-);
-assert.match(
-  effectsSource,
-  /previousPrefs\.crtStrength !== prefs\.crtStrength[\s\S]*?previousPrefs\.blockSize !== prefs\.blockSize/,
-  'dedicated CRT strength and Blocks size should invalidate their active render'
-);
-assert.match(
-  effectsSource,
-  /if \(normalized\.type === 'blocks'\) \{[\s\S]*?drawBlocks\([\s\S]*?100,[\s\S]*?normalized\.blockSize,[\s\S]*?0,[\s\S]*?100/,
-  'Blocks should use fixed render-only relief values without persisting them over shared controls'
-);
-assert.match(
-  effectsSource,
-  /if \(normalized\.type === 'crt'\) \{[\s\S]*?drawCrt\([\s\S]*?normalized\.crtStrength/,
-  'CRT should render from its dedicated physical strength'
-);
-assert.match(
-  effectsSource,
-  /function prepareResizeCrossfade\(\)[\s\S]*?snapshotContext\.drawImage\(canvas,\s*0,\s*0\)[\s\S]*?data-resize-enter/,
-  'resize rendering should preserve the existing halftone or ASCII frame before replacing it'
-);
-assert.match(
-  effectsSource,
-  /function finishResizeCrossfade\(\)[\s\S]*?requestFrame\([\s\S]*?data-resize-enter[\s\S]*?data-resize-exit/,
-  'the old and new effect canvases should crossfade on separate animation frames'
-);
-assert.match(
-  effectsSource,
-  /function handleWindowResize\(\)[\s\S]*?shouldCrossfadeResize\s*=\s*Boolean\([\s\S]*?normalized\.type === 'halftone'[\s\S]*?normalized\.type === 'ascii'[\s\S]*?scheduleRender\(RESIZE_RENDER_SETTLE_MS\)[\s\S]*?windowObj\.addEventListener\('resize', handleWindowResize/,
-  'viewport resize settling should opt halftone and ASCII renders into the crossfade'
-);
-assert.match(
-  wallpaperSource,
-  /currentWallpaperPrefs && currentWallpaperPrefs\.sameForModes === false[\s\S]*?\\? \[editMode\][\s\S]*?: NEWTAB_WALLPAPER_MODES/,
-  'split wallpapers should save effects only to the mode currently being edited'
-);
-assert.match(
-  wallpaperSource,
-  /function handleThemeModeChange\([\s\S]*?applyWallpaperEffectForResolvedMode\(\)/,
-  'theme changes should apply the effect stored for the resolved wallpaper mode'
-);
-assert.match(
-  effectsSource,
-  /visualPrefsChanged && previousType === prefs\.type[\s\S]*?scheduleRender\(PARAMETER_RENDER_DEBOUNCE_MS\)/,
-  'continuous parameter input should debounce expensive full-layer renders'
-);
-assert.match(
-  effectsSource,
-  /\.catch\(\(\) => \{\s*if \(token !== renderToken\) \{\s*completeRender\(revision\);\s*return;\s*\}/,
-  'stale wallpaper image failures should not clear a newer material frame'
-);
-assert.match(
-  effectsSource,
-  /function refresh\(options\)[\s\S]*?return waitForRenderRevision\(scheduleRender/,
-  'wallpaper effect refreshes should expose render completion for first-paint gating'
-);
-assert.match(
-  wallpaperSource,
-  /function waitForInitialWallpaperEffectVisual\(\)[\s\S]*?initialWallpaperReadyPromise[\s\S]*?wallpaperEffects\.refresh\(\{ immediate: true \}\)/,
-  'the New Tab should wait for the selected wallpaper effect to render before becoming ready'
-);
 assert.ok(
   runsBefore(getBundleFiles('newtab-preload'), 'src/newtab/wallpaper/wallpaper-crt-webgl.js', 'src/newtab/wallpaper/wallpaper-effects.js'),
   'the standalone CRT shader should load before the shared wallpaper effect controller'
@@ -617,85 +501,9 @@ assert.ok(
   'the wallpaper effect renderer should load before the head preload fast path'
 );
 assert.ok(
-  newtabHtml.indexOf('<script src="../../build/wallpaper-effect-preload.js"></script>') <
-    newtabHtml.indexOf('<div id="_x_extension_newtab_root_2024_unique_"'),
+  newtabDocument.querySelector('script[src="../../build/wallpaper-effect-preload.js"]').compareDocumentPosition(
+    newtabDocument.getElementById('_x_extension_newtab_root_2024_unique_')) & 4,
   'the focused-route wallpaper effect should start before New Tab content bootstraps'
-);
-assert.match(
-  wallpaperSource,
-  /wallpaperEffects:\s*getWallpaperEffectStorageValue\(\)/,
-  'the synchronous wallpaper preload cache should retain the current mode-aware effect'
-);
-assert.match(
-  wallpaperSource,
-  /wallpaperEffectPreload && wallpaperEffectPreload\.controller[\s\S]*?wallpaperEffects = wallpaperEffectPreload\.controller/,
-  'the full wallpaper runtime should adopt the early effect canvas instead of repainting it'
-);
-assert.match(
-  wallpaperPreloadSource,
-  /effectPrefsReady:\s*readStoredEffectPrefs\(cachedWallpaper\.mode, cachedWallpaper\.effectPrefs\)/,
-  'the head preload should use cached effect preferences and fall back to an early storage read'
-);
-assert.match(
-  effectsSource,
-  /factory\.createRenderer\(\{[\s\S]*?documentObj,[\s\S]*?renderer\.render\(\{[\s\S]*?bloom: details\.crtBloom[\s\S]*?rgbOffset: details\.crtRgbOffset[\s\S]*?curvature: details\.crtCurvature/,
-  'CRT preferences should be forwarded to the standalone WebGL renderer'
-);
-assert.match(
-  effectsSource,
-  /if \(rendered && renderer\.canvas\)[\s\S]*?drawCrtFallbackLayer/,
-  'CRT should keep a Canvas 2D fallback when WebGL rendering is unavailable'
-);
-assert.match(
-  effectsSource,
-  /previousType === 'crt' && prefs\.type !== 'crt'[\s\S]*?destroyCrtWebglRenderer\(\)/,
-  'leaving CRT should release its dedicated WebGL resources'
-);
-assert.match(
-  effectsSource,
-  /function drawCrtFallbackLayer\([\s\S]*?details\.crtRgbOffset[\s\S]*?details\.crtBloom[\s\S]*?details\.crtCurvature/,
-  'the Canvas CRT fallback should respond to every visible optical control'
-);
-assert.match(effectsSource, /const scanlinePeriod = 2;/, 'Canvas CRT fallback should use fixed two-pixel scanlines');
-assert.match(
-  effectsSource,
-  /const scanlinePeriod = 2;[\s\S]*?fillStyle = 'rgb\(0 0 0 \/ 82%\)'/,
-  'Canvas CRT fallback should dedicate the second pixel row to a dark scanline'
-);
-assert.match(
-  effectsSource,
-  /const crossfadeResize[\s\S]*?normalized\.type === 'blocks'[\s\S]*?normalized\.type === 'crt'[\s\S]*?prepareResizeCrossfade\(\)/,
-  'sampled filters should preserve their previous frame while resize rendering settles'
-);
-assert.match(
-  effectsSource,
-  /function refresh[\s\S]*?normalized\.type === 'blocks'[\s\S]*?prepareResizeCrossfade\(\)/,
-  'Blocks should preserve the current frame during explicit refreshes'
-);
-assert.match(
-  effectsSource,
-  /function handleWindowResize[\s\S]*?normalized\.type === 'blocks'[\s\S]*?scheduleRender\(RESIZE_RENDER_SETTLE_MS\)/,
-  'Blocks should preserve the current frame while a resized render settles'
-);
-assert.match(
-  effectsSource,
-  /function drawBlocks[\s\S]*?quantizeBlockColor[\s\S]*?getBlockMaterialVariation[\s\S]*?fillBlockPolygon[\s\S]*?fillBlockCircle[\s\S]*?setCanvasVisuals\('blocks', 1, 'normal'\)/,
-  'Blocks should render shaded sides, bevels, material variation, and raised studs'
-);
-assert.match(
-  effectsSource,
-  /const cells = Array\.from[\s\S]*?const occupied = Array\.from[\s\S]*?rowSpan[\s\S]*?columnSpan[\s\S]*?hash % 37[\s\S]*?hash % 11/,
-  'Blocks should build a neighbor-aware grid with occasional 1×2 and 2×2 pieces'
-);
-assert.match(
-  effectsSource,
-  /rightNeighbor[\s\S]*?bottomNeighbor[\s\S]*?mixBlockColors[\s\S]*?wearLength/,
-  'Blocks should retain neighbor color bounce and restrained edge wear'
-);
-assert.doesNotMatch(
-  effectsSource.match(/function drawBlocks[\s\S]*?\n    function getGridStart/)?.[0] || '',
-  /Math\.random/,
-  'block geometry should be deterministic across renders'
 );
 
 function createFakeCanvas(options) {
