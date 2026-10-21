@@ -152,6 +152,14 @@ assert.match(
   );
 });
 
+// Select menus scroll through an inline overflow the audit above cannot see,
+// so their thin bar is checked by name.
+assert.ok(
+  allRules.some((rule) => rule.file === 'src/shared/custom-select.css' &&
+    splitSelectors(rule.selector).includes(`${OVERLAY_SCOPE} ._x_extension_select_menu_2024_unique_::-webkit-scrollbar-thumb`)),
+  'long select menus (installed fonts) should draw the thin scrollbar'
+);
+
 // Any ::-webkit-scrollbar style makes macOS overlay bars permanent, so every
 // thin-bar rule on our own pages stays off where the system overlays them.
 // Hiding rules and the command bar (which runs on other sites' pages) are exempt.

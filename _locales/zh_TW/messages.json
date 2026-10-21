@@ -665,6 +665,30 @@
   "overlay_enter_animation_fade": {
     "message": "淡入"
   },
+  "settings_overlay_font_title": {
+    "message": "字型"
+  },
+  "settings_overlay_font_default": {
+    "message": "預設"
+  },
+  "settings_overlay_font_search_placeholder": {
+    "message": "搜尋字型"
+  },
+  "settings_overlay_font_no_results": {
+    "message": "沒有符合的字型"
+  },
+  "settings_overlay_font_fallback_title": {
+    "message": "後備字型"
+  },
+  "settings_overlay_font_fallback_desc": {
+    "message": "主字型缺少字形時使用，例如英文字型下的中文"
+  },
+  "settings_overlay_font_fallback_none": {
+    "message": "無"
+  },
+  "settings_overlay_font_unsupported_tooltip": {
+    "message": "Firefox 不允許擴充功能讀取本機字型，浮層將使用預設字型"
+  },
   "settings_overlay_page_theme_adaptation_title": {
     "message": "依網頁色彩自動變更主題色"
   },

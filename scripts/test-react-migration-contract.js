@@ -159,14 +159,17 @@ const assertWithinBudget = (actualBytes, budgetKiB, label) => {
 // The New Tab route moved to 127 KiB gzip and the total to 239 KiB gzip at 1.1.4: under Node 26
 // they measure 125.9 KiB and 237.9 KiB, but CI's Node 22 build compresses the same bundles to
 // 126.2 KiB and 238.3 KiB and failed on main.
+// The overlay font picker adds a filter field, combobox semantics and per-face previews to
+// the shared select menu, which ships in every route: the New Tab route moves to 425 KiB and
+// the total to 821 KiB.
 const bundleBudgets = {
-  newtab: { uncompressed: 423, gzip: 127 },
+  newtab: { uncompressed: 425, gzip: 127 },
   options: { uncompressed: 290, gzip: 85 },
   overlay: { uncompressed: 275, gzip: 83 },
   // The toolbar popup opens on every click, so it loads only the runtime, the
   // shared chunk and its own small entry.
   popup: { uncompressed: 220, gzip: 70 },
-  total: { uncompressed: 819, gzip: 239 }
+  total: { uncompressed: 821, gzip: 239 }
 };
 
 const bootstrapScript = 'src="../shared/react-page-bootstrap.js"';

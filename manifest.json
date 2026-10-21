@@ -114,6 +114,6 @@
   "default_locale": "zh_CN",
    "name": "__MSG_ext_name__",
    "author": "Kubai087",
-   "permissions": [ "scripting", "tabs", "tabGroups", "history", "topSites", "bookmarks", "storage", "search", "favicon", "alarms", "unlimitedStorage", "contextMenus" ],
+   "permissions": [ "scripting", "tabs", "tabGroups", "history", "topSites", "bookmarks", "storage", "search", "favicon", "alarms", "unlimitedStorage", "contextMenus", "fontSettings" ],
    "version": "1.1.4"
 }

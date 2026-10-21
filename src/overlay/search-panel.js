@@ -246,6 +246,11 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
   const OVERLAY_SIZE_MODE_STORAGE_KEY = overlayStorageKeys.overlaySizeMode;
   const OVERLAY_ENTER_ANIMATION_STORAGE_KEY = overlayStorageKeys.overlayEnterAnimation ||
     '_x_extension_overlay_enter_animation_2026_unique_';
+  const OVERLAY_FONT_FAMILY_STORAGE_KEY = overlayStorageKeys.overlayFontFamily ||
+    '_x_extension_overlay_font_family_2026_unique_';
+  const OVERLAY_FONT_FALLBACK_STORAGE_KEY = overlayStorageKeys.overlayFontFallback ||
+    '_x_extension_overlay_font_fallback_2026_unique_';
+  const OVERLAY_FONT_FAMILY_CSS_VAR = SETTINGS.OVERLAY_FONT_FAMILY_CSS_VAR || '--lumno-font-sans';
   const OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY =
     overlayStorageKeys.overlayPageThemeAdaptationEnabled ||
     '_x_extension_overlay_page_theme_adaptation_enabled_2026_unique_';
@@ -284,6 +289,10 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
   let overlaySearchResultDisplayLimit = 10;
   let overlaySizeMode = 'standard';
   let overlayEnterAnimation = 'elastic';
+  // Empty keeps the bundled Lumno Open Sans stack the CSS declares. The
+  // fallback covers glyphs (Chinese) the chosen family does not carry.
+  let overlayFontFamily = '';
+  let overlayFontFallback = '';
   let motionEffectsEnabled = true;
   let simpleModeEnabled = false;
   let overlayPageThemeAdaptationEnabled = true;
@@ -325,6 +334,8 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY,
       OVERLAY_SIZE_MODE_STORAGE_KEY,
       OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
+      OVERLAY_FONT_FAMILY_STORAGE_KEY,
+      OVERLAY_FONT_FALLBACK_STORAGE_KEY,
       MOTION_EFFECTS_ENABLED_STORAGE_KEY,
       SIMPLE_MODE_ENABLED_STORAGE_KEY,
       FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY,
@@ -2906,6 +2917,21 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       overlayPageThemeObserver.start();
     }
 
+    // The chosen families reach every text rule through the shared
+    // --lumno-font-sans token, set inline on the panel. Clearing it falls back
+    // to the bundled stack the shadow-root stylesheet defines on the panel.
+    function applyOverlayFontFamily(target) {
+      if (!target || !target.style) {
+        return;
+      }
+      const cssValue = SETTINGS.getOverlayFontFamilyCssValue(overlayFontFamily, overlayFontFallback);
+      if (cssValue) {
+        target.style.setProperty(OVERLAY_FONT_FAMILY_CSS_VAR, cssValue);
+      } else {
+        target.style.removeProperty(OVERLAY_FONT_FAMILY_CSS_VAR);
+      }
+    }
+
     function applyOverlayThemeVariables(target, mode) {
       if (!target) {
         return;
@@ -2946,6 +2972,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       target.style.setProperty('--x-ext-input-underline', tokens.underline);
       target.style.setProperty('--x-ext-input-divider-inset', tokens.dividerInset);
       target.style.setProperty('--x-ext-input-divider-opacity', tokens.dividerOpacity);
+      applyOverlayFontFamily(target);
     }
 
     function refreshOverlaySuggestionsFromLastResponse() {
@@ -3376,6 +3403,33 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       overlaySizeMode = SETTINGS.normalizeOverlaySizeMode(result[OVERLAY_SIZE_MODE_STORAGE_KEY]);
       applyOverlaySizeForPageZoom(overlay);
       return overlaySizeMode;
+    });
+    const initialOverlayFontFamilyReady = initialOverlaySettingsReady.then((result) => {
+      overlayFontFamily = SETTINGS.normalizeOverlayFontFamily(result[OVERLAY_FONT_FAMILY_STORAGE_KEY]);
+      overlayFontFallback = SETTINGS.normalizeOverlayFontFamily(result[OVERLAY_FONT_FALLBACK_STORAGE_KEY]);
+      applyOverlayFontFamily(overlay);
+      return overlayFontFamily;
+    });
+    storageChangeListeners.add((changes, areaName) => {
+      if (!isPrimaryStorageAreaName(areaName)) {
+        return;
+      }
+      let changed = false;
+      if (changes[OVERLAY_FONT_FAMILY_STORAGE_KEY]) {
+        overlayFontFamily = SETTINGS.normalizeOverlayFontFamily(
+          changes[OVERLAY_FONT_FAMILY_STORAGE_KEY].newValue
+        );
+        changed = true;
+      }
+      if (changes[OVERLAY_FONT_FALLBACK_STORAGE_KEY]) {
+        overlayFontFallback = SETTINGS.normalizeOverlayFontFamily(
+          changes[OVERLAY_FONT_FALLBACK_STORAGE_KEY].newValue
+        );
+        changed = true;
+      }
+      if (changed) {
+        applyOverlayFontFamily(overlay);
+      }
     });
     storageChangeListeners.add((changes, areaName) => {
       if (!isPrimaryStorageAreaName(areaName) || !changes[OVERLAY_SIZE_MODE_STORAGE_KEY]) {
@@ -7643,6 +7697,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       initialOverlayEnterAnimationReady.catch(() => {
         overlayEnterAnimation = 'elastic';
       }),
+      initialOverlayFontFamilyReady.catch(() => {}),
       initialMotionEffectsReady.catch(() => {
         motionEffectsEnabled = true;
       }),

@@ -72,7 +72,7 @@ type FaviconItem = {
 };
 
 export interface WallpaperPanelModel {
-  appearanceOptions?: Array<{ imageUrl: string; mode: string }>;
+  appearanceOptions?: Array<{ mode: string }>;
   favicons?: FaviconItem[];
   icons?: Partial<Record<
     'add' | 'arrow' | 'check' | 'delete' | 'info' | 'link' | 'refresh' | 'restore' | 'wallpaper',
@@ -241,7 +241,14 @@ export interface WallpaperPanelState {
   theme: {
     infoLabel: string;
     infoTooltip: string;
-    modes: Array<{ ariaLabel: string; label: string; mode: string; selected: boolean }>;
+    modes: Array<{
+      ariaLabel: string;
+      badgeUrl?: string;
+      imageUrl: string;
+      label: string;
+      mode: string;
+      selected: boolean;
+    }>;
     scope: SegmentState<ThemeScope>;
     title: string;
   };
@@ -1094,7 +1101,15 @@ function WallpaperPanel({
                     >
                       <span className="x-nt-appearance-option-content">
                         <span className="x-nt-appearance-preview">
-                          <img alt="" draggable={false} src={item.imageUrl} />
+                          <img alt="" draggable={false} src={option?.imageUrl} />
+                          {option?.badgeUrl ? (
+                            <img
+                              alt=""
+                              className="x-nt-appearance-badge"
+                              draggable={false}
+                              src={option.badgeUrl}
+                            />
+                          ) : null}
                           <span
                             className="x-nt-appearance-check"
                             dangerouslySetInnerHTML={{ __html: checkIcon }}

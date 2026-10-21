@@ -39,7 +39,7 @@ assert.strictEqual(unavailableRegistry.size, 0);
 const searchPanelSource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
 assert.strictEqual(
   (searchPanelSource.match(/storageChangeListeners\.add\(/g) || []).length,
-  18,
+  19,
   'all overlay storage listeners should be owned by the lifecycle registry'
 );
 assert.strictEqual(

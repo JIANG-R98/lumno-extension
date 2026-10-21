@@ -5877,6 +5877,18 @@ body[data-glass-style] .x-nt-row-select[data-glass-ink-theme="dark"] {
   object-fit: cover;
   border-radius: inherit;
 }
+.x-nt-appearance-preview .x-nt-appearance-badge {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  z-index: 1;
+  width: 16px;
+  height: 16px;
+  border-radius: 0;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.18));
+  pointer-events: none;
+}
 .x-nt-appearance-label {
   min-width: 0;
   width: 100%;

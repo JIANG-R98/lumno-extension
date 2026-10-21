@@ -665,6 +665,30 @@
   "overlay_enter_animation_fade": {
     "message": "Fade"
   },
+  "settings_overlay_font_title": {
+    "message": "Font"
+  },
+  "settings_overlay_font_default": {
+    "message": "Default"
+  },
+  "settings_overlay_font_search_placeholder": {
+    "message": "Search fonts"
+  },
+  "settings_overlay_font_no_results": {
+    "message": "No matching fonts"
+  },
+  "settings_overlay_font_fallback_title": {
+    "message": "Fallback font"
+  },
+  "settings_overlay_font_fallback_desc": {
+    "message": "Used for characters the first font lacks, such as Chinese under an English face"
+  },
+  "settings_overlay_font_fallback_none": {
+    "message": "None"
+  },
+  "settings_overlay_font_unsupported_tooltip": {
+    "message": "Firefox does not let extensions list installed fonts, so the overlay uses its default font here"
+  },
   "settings_overlay_page_theme_adaptation_title": {
     "message": "Adapt theme colors to each webpage"
   },

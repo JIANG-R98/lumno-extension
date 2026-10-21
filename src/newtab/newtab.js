@@ -2359,6 +2359,7 @@
     getThemeMode: getSelectedThemeMode,
     getEffectiveThemeMode: getScopedThemeMode,
     getThemeScope: (...args) => getThemeScope(...args),
+    getGlobalThemeMode: () => pageState.globalThemeMode,
     setThemeMode: (...args) => setThemeMode(...args),
     setThemeScope: (...args) => setThemeScope(...args),
     getRiSvg,

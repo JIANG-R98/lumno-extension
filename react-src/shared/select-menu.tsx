@@ -20,6 +20,8 @@ export interface SelectMenuOption {
   checked?: boolean;
   disabled?: boolean;
   dividerBefore?: boolean;
+  /** Renders the label in this family, so a font picker previews each face. */
+  fontFamily?: string;
   groupTitle?: string;
   iconClass?: string;
   /** Image icon (for example a site tile); takes precedence over `iconClass`. */
@@ -30,6 +32,32 @@ export interface SelectMenuOption {
   trailingIconClass?: string;
   value: string;
 }
+
+function filterOptions(
+  options: SelectMenuOption[],
+  query: string
+): SelectMenuOption[] {
+  const needle = query.trim().toLowerCase();
+  if (!needle) {
+    return options;
+  }
+  return options.filter((option) =>
+    option.label.toLowerCase().includes(needle) ||
+    option.value.toLowerCase().includes(needle)
+  );
+}
+
+// Quoted so families such as "3270 Nerd Font" parse; a face the device lacks
+// falls back to the menu's own stack rather than the browser default.
+function getFontPreviewFamily(family: string): string {
+  return `"${family.replace(/["\\]/g, '\\$&')}", var(--lumno-font-sans, sans-serif)`;
+}
+
+// Below this, a searchable menu would show too few rows under the trigger, so
+// it is held against the bottom of the viewport instead. Its box never grows
+// past the cap, however many fonts are installed.
+const SEARCHABLE_MENU_MIN_HEIGHT = 280;
+const SEARCHABLE_MENU_MAX_HEIGHT = 480;
 
 function findNextEnabledOptionIndex(
   options: SelectMenuOption[],
@@ -61,6 +89,8 @@ export interface SelectMenuConfig {
    */
   ariaLabelledBy?: string;
   disabled?: boolean;
+  /** Shown in place of the options when a search filters out every one. */
+  emptyLabel?: string;
   className?: string;
   iconOnly?: boolean;
   id?: string;
@@ -78,6 +108,12 @@ export interface SelectMenuConfig {
   onCheckedChange?(value: string, checked: boolean): void;
   onValueChange?(value: string): boolean | void;
   options?: SelectMenuOption[];
+  /**
+   * Long option lists (installed fonts) get a filter field at the top of the
+   * menu. Keyboard navigation then applies to the filtered options.
+   */
+  searchable?: boolean;
+  searchPlaceholder?: string;
   selectId?: string;
   tooltip?: string;
   triggerIconClass?: string;
@@ -118,13 +154,20 @@ export function SelectMenu({
   windowObj: Window;
 }) {
   const options = Array.isArray(config.options) ? config.options : [];
+  const searchable = config.searchable === true;
   const [open, setOpenState] = useState(false);
   const [selectedValue, setSelectedValue] = useState(String(config.value ?? ''));
   const [activeIndex, setActiveIndex] = useState(0);
+  const [filter, setFilter] = useState('');
   const triggerRef = useRef<HTMLButtonElement>(null);
   const selectRef = useRef<HTMLSelectElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const filterRef = useRef<HTMLInputElement>(null);
   const openRef = useRef(false);
+  // A searchable menu measures its whole list once per open; filtering then
+  // changes only what it shows, never its box.
+  const searchableNaturalHeightRef = useRef<number | null>(null);
+  const visibleOptions = searchable ? filterOptions(options, filter) : options;
 
   useEffect(() => {
     setSelectedValue(String(config.value ?? ''));
@@ -180,8 +223,17 @@ export function SelectMenu({
       triggerRect.width || 0,
       (Number.parseFloat(windowObj.getComputedStyle(menu).minWidth) || 0) * scaleX
     );
+    if (searchable && searchableNaturalHeightRef.current === null) {
+      menu.style.height = '';
+      menu.style.maxHeight = '';
+    }
     // Layout dimensions stay stable while the shared opening animation scales the surface.
-    const naturalMenuHeight = Math.max((menu.scrollHeight + menu.offsetHeight - menu.clientHeight) * scaleY, 0);
+    const naturalMenuHeight = searchable && searchableNaturalHeightRef.current !== null
+      ? searchableNaturalHeightRef.current
+      : Math.max((menu.scrollHeight + menu.offsetHeight - menu.clientHeight) * scaleY, 0);
+    if (searchable) {
+      searchableNaturalHeightRef.current = naturalMenuHeight;
+    }
     const align = config.menuAlign || 'right';
     let left = triggerRect.left;
     if (align === 'right') {
@@ -194,6 +246,33 @@ export function SelectMenu({
       Math.min(left, Math.max(padding, viewportWidth - menuWidth - padding))
     );
     const visualOffset = offset * scaleY;
+    if (searchable) {
+      // Typing shrinks the list, so a menu anchored by its bottom edge (or one
+      // that flips once the rest fits below) would jump under the caret. The
+      // box is fixed instead: below the trigger when there is room, otherwise
+      // held against the bottom of the viewport. Its height never follows the
+      // filtered rows.
+      const below = triggerRect.bottom + visualOffset;
+      const roomBelow = Math.max(0, viewportHeight - padding - below);
+      const fullHeight = Math.min(
+        naturalMenuHeight,
+        SEARCHABLE_MENU_MAX_HEIGHT * scaleY,
+        Math.max(0, viewportHeight - padding - topInset)
+      );
+      const fitsBelow = roomBelow >= Math.min(fullHeight, SEARCHABLE_MENU_MIN_HEIGHT);
+      const boxHeight = fitsBelow ? Math.min(fullHeight, roomBelow) : fullHeight;
+      const boxTop = fitsBelow ? below : Math.max(topInset, viewportHeight - padding - boxHeight);
+      menu.style.height = `${boxHeight / scaleY}px`;
+      menu.style.maxHeight = `${boxHeight / scaleY}px`;
+      menu.style.overflowY = 'auto';
+      menu.style.overflowX = 'hidden';
+      menu.style.transformOrigin = `${boxTop >= below ? 'top' : 'bottom'} ${align === 'middle' ? 'center' : align}`;
+      menu.style.left = `${(left - originX) / scaleX}px`;
+      menu.style.right = 'auto';
+      menu.style.top = `${(boxTop - originY) / scaleY}px`;
+      menu.style.zIndex = String(config.menuPortalZIndex || 10000);
+      return;
+    }
     const spaceBelow = Math.max(0, viewportHeight - padding - triggerRect.bottom - visualOffset);
     const spaceAbove = Math.max(0, triggerRect.top - visualOffset - topInset);
     const opensAbove = naturalMenuHeight > spaceBelow && spaceAbove > spaceBelow;
@@ -222,6 +301,7 @@ export function SelectMenu({
     documentObj,
     getViewportTopInset,
     host,
+    searchable,
     windowObj
   ]);
 
@@ -229,15 +309,22 @@ export function SelectMenu({
     openRef.current = open;
     host.dataset.open = open ? 'true' : 'false';
     if (!open) {
+      // A reopened menu starts from the whole list again.
+      setFilter('');
       return undefined;
     }
-    const selectedIndex = options.findIndex(
+    // Measured afresh for this open, or for a list that changed while open.
+    searchableNaturalHeightRef.current = null;
+    const selectedIndex = visibleOptions.findIndex(
       (option) => !option.action && !option.checkbox &&
         option.value === selectedValue &&
         !option.disabled
     );
     setActiveIndex(selectedIndex);
     positionMenu();
+    if (searchable) {
+      filterRef.current?.focus();
+    }
     const onViewportChange = () => positionMenu();
     windowObj.addEventListener('resize', onViewportChange);
     windowObj.addEventListener('scroll', onViewportChange, true);
@@ -255,7 +342,7 @@ export function SelectMenu({
       windowObj.visualViewport?.removeEventListener('resize', onViewportChange);
       windowObj.visualViewport?.removeEventListener('scroll', onViewportChange);
     };
-  }, [config.menuPortalContainer, host, open, options, positionMenu, selectedValue, windowObj]);
+  }, [config.menuPortalContainer, host, open, options, positionMenu, searchable, selectedValue, windowObj]);
 
   useEffect(() => {
     if (!open || activeIndex < 0) {
@@ -350,19 +437,114 @@ export function SelectMenu({
   );
   const getOptionId = (index: number) =>
     config.id ? `${config.id}_option_${index}` : undefined;
-  const activeOptionId = open && activeIndex >= 0 && options[activeIndex]
+  const activeOptionId = open && activeIndex >= 0 && visibleOptions[activeIndex]
     ? getOptionId(activeIndex)
     : undefined;
   const valueId = config.ariaLabelledBy && config.id ? `${config.id}_value` : undefined;
+  const menuId = config.id ? `${config.id}_menu` : undefined;
+  // A searchable menu is a combobox: the filter field keeps focus and points
+  // at the active option, and only the options sit in the listbox.
+  const listboxId = searchable && config.id ? `${config.id}_listbox` : menuId;
   const menuMinWidth = toCssLength(config.menuMinWidth, '0');
   const menuMaxWidth = toCssLength(
     config.menuMaxWidth,
     'calc(100vw - 32px)'
   );
+  const optionNodes = visibleOptions.map((option, index) => {
+    const selected = isValueOption(option) && option.value === selectedValue;
+    const radioItem = usesMenuSemantics && !option.checkbox && (!option.action || option.radio);
+    const checked = option.radio || option.checkbox ? option.checked === true : selected;
+    const trailingIconClass = String(option.trailingIconClass || '').trim();
+    return (
+      <Fragment key={`${option.action || option.value}:${index}`}>
+        {option.dividerBefore && index > 0 ? (
+          <div
+            aria-orientation={usesMenuSemantics ? 'horizontal' : undefined}
+            className="_x_extension_select_divider_2026_unique_"
+            role={usesMenuSemantics ? 'separator' : 'presentation'}
+          />
+        ) : null}
+        {option.groupTitle ? (
+          <div
+            className="_x_extension_select_menu_title_2024_unique_"
+            role="presentation"
+          >
+            {option.groupTitle}
+          </div>
+        ) : null}
+        <div
+          aria-checked={radioItem || option.checkbox ? checked : undefined}
+          aria-disabled={option.disabled ? 'true' : undefined}
+          aria-selected={!usesMenuSemantics ? selected : undefined}
+          className={`_x_extension_select_option_2024_unique_${
+            option.radio ? ' _x_extension_select_option_radio_2026_unique_' : ''
+          }`}
+          data-active={open && activeIndex === index ? 'true' : undefined}
+          id={getOptionId(index)}
+          data-radio-checked={
+            option.radio ? (checked ? 'true' : 'false') : undefined
+          }
+          data-selected={selected ? 'true' : 'false'}
+          data-value={option.value}
+          onClick={() => chooseOption(option)}
+          onMouseEnter={() => setActiveIndex(index)}
+          onMouseLeave={() => setActiveIndex(-1)}
+          role={
+            usesMenuSemantics
+              ? option.checkbox
+                ? 'menuitemcheckbox'
+                : radioItem
+                  ? 'menuitemradio'
+                  : 'menuitem'
+              : 'option'
+          }
+        >
+          {option.checkbox ? (
+            <span
+              aria-hidden="true"
+              className="_x_extension_select_option_checkbox_2026_unique_"
+            />
+          ) : null}
+          {option.iconUrl ? (
+            <img
+              alt=""
+              aria-hidden="true"
+              className="_x_extension_select_option_icon_2026_unique_"
+              src={option.iconUrl}
+            />
+          ) : option.iconClass ? (
+            <i
+              aria-hidden="true"
+              className={`_x_extension_select_option_icon_2026_unique_ ri-icon ri-size-16 ${option.iconClass}`}
+            />
+          ) : null}
+          <span
+            className="_x_extension_select_option_label_2026_unique_"
+            style={option.fontFamily ? { fontFamily: getFontPreviewFamily(option.fontFamily) } : undefined}
+          >
+            {option.label}
+          </span>
+          {option.badge ? (
+            <span className="_x_extension_select_option_badge_2026_unique_">
+              {option.badge}
+            </span>
+          ) : null}
+          {option.radio && trailingIconClass ? (
+            <span
+              aria-hidden="true"
+              className="_x_extension_select_option_check_2026_unique_"
+            >
+              <i className={`ri-icon ri-size-16 ${trailingIconClass}`} />
+            </span>
+          ) : null}
+        </div>
+      </Fragment>
+    );
+  });
   const menu = (
     <div
       aria-hidden={!open}
-      id={config.id ? `${config.id}_menu` : undefined}
+      id={menuId}
       className={`_x_extension_select_menu_2024_unique_ _x_extension_menu_surface_2024_unique_${
         config.menuClassName ? ` ${config.menuClassName}` : ''
       }`}
@@ -372,8 +554,9 @@ export function SelectMenu({
         config.menuWidth === 'content' ? 'content' : undefined
       }
       data-open={open ? 'true' : 'false'}
+      data-searchable={searchable ? 'true' : undefined}
       ref={menuRef}
-      role={usesMenuSemantics ? 'menu' : 'listbox'}
+      role={searchable ? undefined : usesMenuSemantics ? 'menu' : 'listbox'}
       style={
         {
           '--x-extension-menu-surface-max-width': menuMaxWidth,
@@ -387,6 +570,63 @@ export function SelectMenu({
         } as CSSProperties
       }
     >
+      {searchable ? (
+        // The field shares the menu's scroll surface and stays pinned at its
+        // top; it is the first thing focused when the menu opens.
+        <div className="_x_extension_select_search_2026_unique_">
+          <input
+            aria-activedescendant={activeOptionId}
+            aria-autocomplete="list"
+            aria-controls={listboxId}
+            aria-expanded={open}
+            aria-label={config.searchPlaceholder}
+            className="_x_extension_select_search_input_2026_unique_"
+            onChange={(event) => {
+              const nextFilter = event.currentTarget.value;
+              setFilter(nextFilter);
+              setActiveIndex(
+                findNextEnabledOptionIndex(filterOptions(options, nextFilter), -1, 1)
+              );
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                setActiveIndex((current) =>
+                  findNextEnabledOptionIndex(
+                    visibleOptions,
+                    current,
+                    event.key === 'ArrowDown' ? 1 : -1
+                  )
+                );
+                return;
+              }
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                if (visibleOptions[activeIndex]) {
+                  chooseOption(visibleOptions[activeIndex]);
+                }
+                return;
+              }
+              if (event.key === 'Escape') {
+                event.preventDefault();
+                setOpen(false);
+                triggerRef.current?.focus();
+              }
+            }}
+            placeholder={config.searchPlaceholder}
+            ref={filterRef}
+            role="combobox"
+            spellCheck={false}
+            type="text"
+            value={filter}
+          />
+        </div>
+      ) : null}
+      {searchable && !visibleOptions.length && config.emptyLabel ? (
+        <div className="_x_extension_select_empty_2026_unique_" role="presentation">
+          {config.emptyLabel}
+        </div>
+      ) : null}
       {config.menuTitle ? (
         <div
           className="_x_extension_select_menu_title_2024_unique_"
@@ -395,94 +635,11 @@ export function SelectMenu({
           {config.menuTitle}
         </div>
       ) : null}
-      {options.map((option, index) => {
-        const selected = isValueOption(option) && option.value === selectedValue;
-        const radioItem = usesMenuSemantics && !option.checkbox && (!option.action || option.radio);
-        const checked = option.radio || option.checkbox ? option.checked === true : selected;
-        const trailingIconClass = String(option.trailingIconClass || '').trim();
-        return (
-          <Fragment key={`${option.action || option.value}:${index}`}>
-            {option.dividerBefore && index > 0 ? (
-              <div
-                aria-orientation={usesMenuSemantics ? 'horizontal' : undefined}
-                className="_x_extension_select_divider_2026_unique_"
-                role={usesMenuSemantics ? 'separator' : 'presentation'}
-              />
-            ) : null}
-            {option.groupTitle ? (
-              <div
-                className="_x_extension_select_menu_title_2024_unique_"
-                role="presentation"
-              >
-                {option.groupTitle}
-              </div>
-            ) : null}
-            <div
-              aria-checked={radioItem || option.checkbox ? checked : undefined}
-              aria-disabled={option.disabled ? 'true' : undefined}
-              aria-selected={!usesMenuSemantics ? selected : undefined}
-              className={`_x_extension_select_option_2024_unique_${
-                option.radio ? ' _x_extension_select_option_radio_2026_unique_' : ''
-              }`}
-              data-active={open && activeIndex === index ? 'true' : undefined}
-              id={getOptionId(index)}
-              data-radio-checked={
-                option.radio ? (checked ? 'true' : 'false') : undefined
-              }
-              data-selected={selected ? 'true' : 'false'}
-              data-value={option.value}
-              onClick={() => chooseOption(option)}
-              onMouseEnter={() => setActiveIndex(index)}
-              onMouseLeave={() => setActiveIndex(-1)}
-              role={
-                usesMenuSemantics
-                  ? option.checkbox
-                    ? 'menuitemcheckbox'
-                    : radioItem
-                      ? 'menuitemradio'
-                      : 'menuitem'
-                  : 'option'
-              }
-            >
-              {option.checkbox ? (
-                <span
-                  aria-hidden="true"
-                  className="_x_extension_select_option_checkbox_2026_unique_"
-                />
-              ) : null}
-              {option.iconUrl ? (
-                <img
-                  alt=""
-                  aria-hidden="true"
-                  className="_x_extension_select_option_icon_2026_unique_"
-                  src={option.iconUrl}
-                />
-              ) : option.iconClass ? (
-                <i
-                  aria-hidden="true"
-                  className={`_x_extension_select_option_icon_2026_unique_ ri-icon ri-size-16 ${option.iconClass}`}
-                />
-              ) : null}
-              <span className="_x_extension_select_option_label_2026_unique_">
-                {option.label}
-              </span>
-              {option.badge ? (
-                <span className="_x_extension_select_option_badge_2026_unique_">
-                  {option.badge}
-                </span>
-              ) : null}
-              {option.radio && trailingIconClass ? (
-                <span
-                  aria-hidden="true"
-                  className="_x_extension_select_option_check_2026_unique_"
-                >
-                  <i className={`ri-icon ri-size-16 ${trailingIconClass}`} />
-                </span>
-              ) : null}
-            </div>
-          </Fragment>
-        );
-      })}
+      {searchable ? (
+        <div className="_x_extension_select_listbox_2026_unique_" id={listboxId} role="listbox">
+          {optionNodes}
+        </div>
+      ) : optionNodes}
     </div>
   );
 
@@ -512,7 +669,7 @@ export function SelectMenu({
       </select>
       <button
         aria-activedescendant={activeOptionId}
-        aria-controls={config.id ? `${config.id}_menu` : undefined}
+        aria-controls={listboxId}
         aria-expanded={open}
         aria-haspopup={usesMenuSemantics ? 'menu' : 'listbox'}
         aria-label={valueId ? undefined : config.ariaLabel}
@@ -533,8 +690,8 @@ export function SelectMenu({
             event.preventDefault();
             setActiveIndex(
               event.key === 'Home'
-                ? findNextEnabledOptionIndex(options, -1, 1)
-                : findNextEnabledOptionIndex(options, 0, -1)
+                ? findNextEnabledOptionIndex(visibleOptions, -1, 1)
+                : findNextEnabledOptionIndex(visibleOptions, 0, -1)
             );
             return;
           }
@@ -550,17 +707,17 @@ export function SelectMenu({
               return;
             }
             if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-              if (!options.length) {
+              if (!visibleOptions.length) {
                 return;
               }
               setActiveIndex((current) => {
                 const delta = event.key === 'ArrowDown' ? 1 : -1;
-                return findNextEnabledOptionIndex(options, current, delta);
+                return findNextEnabledOptionIndex(visibleOptions, current, delta);
               });
               return;
             }
-            if (options[activeIndex]) {
-              chooseOption(options[activeIndex]);
+            if (visibleOptions[activeIndex]) {
+              chooseOption(visibleOptions[activeIndex]);
             }
           }
         }}

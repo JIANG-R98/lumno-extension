@@ -1,12 +1,14 @@
 (function(root) {
-  const SEARCH_INPUT_MODE_RUNTIME_VERSION = '2026-10-20-scope-title-units-v36';
+  const SEARCH_INPUT_MODE_RUNTIME_VERSION = '2026-10-21-overlay-font-family-v37';
   if (root.LumnoSearchInputMode &&
       root.LumnoSearchInputMode.runtimeVersion === SEARCH_INPUT_MODE_RUNTIME_VERSION &&
       typeof root.LumnoSearchInputMode.createInputModeController === 'function') {
     return;
   }
 
-  const INPUT_FONT_STACK = "'Lumno Open Sans', 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
+  // The shared text stack: tokens.css defines it for New Tab and onboarding,
+  // and focus search's overlay panel defines it and swaps in the chosen font.
+  const INPUT_FONT_STACK = 'var(--lumno-font-sans, sans-serif)';
   const DEFAULT_ACCENT_RGB = [59, 130, 246];
   const DEFAULT_PREFIX_GAP = 8;
   const DEFAULT_MODE_MENU_DOUBLE_TAB_DURATION = 700;

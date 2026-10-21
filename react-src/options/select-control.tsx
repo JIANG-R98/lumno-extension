@@ -7,6 +7,8 @@ import {
 
 export interface SelectControlItemModel {
   badge?: string;
+  /** Renders the label in this family (the font picker previews faces). */
+  fontFamily?: string;
   iconUrl?: string;
   label: string;
   labelKey: string;
@@ -15,10 +17,13 @@ export interface SelectControlItemModel {
 
 export interface SelectControlRenderModel {
   disabled?: boolean;
+  /** Shown when a searchable menu's filter matches nothing. */
+  emptyLabel?: string;
   id: string;
   items: SelectControlItemModel[];
   /** Id of the setting title; names the trigger together with the current value. */
   labelledBy?: string;
+  searchPlaceholder?: string;
   value: string;
 }
 
@@ -27,6 +32,8 @@ export interface SelectControlControllerOptions {
   getViewportTopInset?(): number;
   kind: string;
   onSelect(value: string): void;
+  /** Adds a filter field for long lists such as installed fonts. */
+  searchable?: boolean;
 }
 
 export type SelectControlController =
@@ -59,6 +66,9 @@ function SelectControl({
         menuMinWidth: '100%',
         menuPortal: false,
         menuWidth: 'content',
+        emptyLabel: model.emptyLabel,
+        searchPlaceholder: model.searchPlaceholder,
+        searchable: options.searchable,
         onValueChange(value) {
           if (value !== model.value) {
             options.onSelect(value);
@@ -66,6 +76,7 @@ function SelectControl({
         },
         options: model.items.map((item) => ({
           badge: item.badge || undefined,
+          fontFamily: item.fontFamily || undefined,
           iconUrl: item.iconUrl || undefined,
           label: item.label,
           value: item.value

@@ -172,12 +172,12 @@ const expectedCopy = {
   zh_CN: {
     title: '基于网页色彩自动变更主题色',
     tooltip: '仅在“深浅色模式”=“跟随系统”时显示，关闭后将不再基于网页主题色变更深浅模式。',
-    systemLabel: '跟随系统'
+    systemLabel: '跟随系统设置'
   },
   zh_TW: {
     title: '依網頁色彩自動變更主題色',
     tooltip: '僅在「深淺色模式」=「跟隨系統」時顯示，關閉後將不再依網頁主題色變更深淺模式。',
-    systemLabel: '跟隨系統'
+    systemLabel: '跟隨系統設定'
   }
 };
 Object.entries(expectedCopy).forEach(([locale, expected]) => {

@@ -155,6 +155,9 @@
     const getThemeScope = typeof options.getThemeScope === 'function'
       ? options.getThemeScope
       : function() { return 'global'; };
+    const getGlobalThemeMode = typeof options.getGlobalThemeMode === 'function'
+      ? options.getGlobalThemeMode
+      : function() { return 'system'; };
     const setThemeMode = typeof options.setThemeMode === 'function'
       ? options.setThemeMode
       : function() {};
@@ -4376,10 +4379,7 @@
         .filter((value, index, array) => array.indexOf(value) === index)
         .sort((a, b) => a - b);
       return {
-        appearanceOptions: WALLPAPER_APPEARANCE_MODES.map((mode) => ({
-          mode,
-          imageUrl: getRuntimeAssetUrl(`assets/images/${mode}.svg`)
-        })),
+        appearanceOptions: WALLPAPER_APPEARANCE_MODES.map((mode) => ({ mode })),
         favicons: NEWTAB_FAVICON_OPTIONS.map((item) => ({
           id: item.id,
           inlineSvg: item.preview === 'inlineSvg' ? faviconInlineSvg : '',
@@ -4439,6 +4439,16 @@
       };
     }
 
+    function getWallpaperAppearancePreviewUrl(mode) {
+      // Global covers every page, so it keeps the shared previews; New Tab gets miniature New Tabs.
+      if (getThemeScope() !== 'home') {
+        return getRuntimeAssetUrl(`assets/images/${mode}.svg`);
+      }
+      // Following "Global" looks like whatever Global is set to, not like following the system.
+      const previewMode = mode === 'system' ? getGlobalThemeMode() : mode;
+      return getRuntimeAssetUrl(`assets/images/newtab-${previewMode}.svg`);
+    }
+
     function getWallpaperAppearanceModeLabels() {
       const labels = {};
       WALLPAPER_APPEARANCE_MODES.forEach((mode) => {
@@ -4481,6 +4491,11 @@
           mode,
           selected: mode === themeMode,
           label: modeLabels[mode],
+          imageUrl: getWallpaperAppearancePreviewUrl(mode),
+          // Marks the card that hands the choice back to Lumno's global setting.
+          badgeUrl: mode === 'system' && getThemeScope() === 'home'
+            ? getRuntimeAssetUrl('assets/images/lumno.png')
+            : '',
           ariaLabel: formatMessage('mode_switch_title', '{name}: switch to {mode} mode', {
             name: 'Lumno',
             mode: modeLabels[mode]
