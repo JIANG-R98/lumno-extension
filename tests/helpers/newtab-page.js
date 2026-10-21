@@ -12,6 +12,7 @@ const { bundleScript } = require('./module-script');
 const { recordAllListeners } = require('./trusted-events');
 const { EXTENSION_ORIGIN, createArea, createEvent, reactEntryScript } = require('./options-page');
 const { createFakeBookmarks, shortcutsStorage } = require('./newtab-fixtures');
+const { createFakeLayout } = require('./fake-layout');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const INPUT_ID = '_x_extension_newtab_search_input_2024_unique_';
@@ -26,6 +27,7 @@ const DEFAULT_SYNC = {
 //   shortcuts      the user's shortcuts (inputs for the shortcuts store:
 //                  { url, title } or { type: 'folder', folderId, title })
 //   bookmarks      the bookmark bar's children (see newtab-fixtures.js)
+//   otherBookmarks the Other bookmarks folder's children
 //   topSites       chrome.topSites.get answer
 //   history        chrome.history.search answer
 //   respond        (message) => response for chrome.runtime.sendMessage;
@@ -36,6 +38,8 @@ const DEFAULT_SYNC = {
 //   search         the page URL's query, e.g. '?focus=1'
 //   fetch          (url, init) => response for requests outside the extension
 //                  (by default they fail, as offline)
+//   layout         true to give elements boxes with page.layout.place()
+//                  (see fake-layout.js) for tests that drag or hit-test
 //   setup          (window) => void, run before the page scripts
 async function createNewtabPage(options) {
   const config = options || {};
@@ -143,7 +147,7 @@ async function createNewtabPage(options) {
         return answer(callback, undefined);
       }
     },
-    bookmarks: createFakeBookmarks(window, config.bookmarks || []),
+    bookmarks: createFakeBookmarks(window, config.bookmarks || [], config.otherBookmarks || []),
     permissions: {
       contains(_permissions, callback) {
         return answer(callback, true);
@@ -193,6 +197,7 @@ async function createNewtabPage(options) {
       return { finished: Promise.resolve(), cancel() {}, finish() {}, onfinish: null, addEventListener() {} };
     };
   }
+  const layout = config.layout ? createFakeLayout(window) : null;
   if (typeof config.setup === 'function') {
     config.setup(window);
   }
@@ -270,6 +275,36 @@ async function createNewtabPage(options) {
     async click(element) {
       element.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
       await settle();
+    },
+    layout,
+    // A trusted pointer event at { x, y }, on whatever is there (or `target`).
+    pointer(type, x, y, target) {
+      return dispatchTrusted(target || window.document.elementFromPoint(x, y), type, {
+        bubbles: true, cancelable: true, composed: true, pointerId: 1, pointerType: 'mouse', isPrimary: true,
+        button: 0, buttons: type === 'pointerup' ? 0 : 1, clientX: x, clientY: y
+      });
+    },
+    // Presses on `source` and moves through `points` ([x, y] pairs), letting
+    // each move settle, then releases on the last point unless
+    // options.release is false. Needs the layout option.
+    async drag(source, points, options) {
+      const box = source.getBoundingClientRect();
+      const start = [box.left + box.width / 2, box.top + box.height / 2];
+      page.pointer('pointerdown', start[0], start[1], source);
+      // Past the drag threshold first, then along the path.
+      page.pointer('pointermove', start[0] + 12, start[1] + 12);
+      await settle(20);
+      for (const [x, y] of points) {
+        page.pointer('pointermove', x, y);
+        await settle(20);
+      }
+      const last = points[points.length - 1];
+      page.pointer('pointermove', last[0], last[1]);
+      await settle(20);
+      if (!options || options.release !== false) {
+        page.pointer('pointerup', last[0], last[1]);
+        await settle(120);
+      }
     },
     // A storage change made elsewhere (another device, another page).
     changeStorage(areaName, key, newValue) {

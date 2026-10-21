@@ -1,280 +1,200 @@
 const assert = require('assert');
-const fs = require('fs');
-const { JSDOM } = require('jsdom');
-const bookmarkDrag = require('../../src/newtab/bookmarks/bookmark-drag.js');
-const crossSurfaceDrag = require('../../src/newtab/cross-surface-drag.js');
-const bookmarkMoveHistory = require('../../src/newtab/bookmarks/bookmark-move-history.js');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-const { extractFunction: extractFunctionFrom } = require('../helpers/extract-function');
+const { createNewtabPage } = require('../helpers/newtab-page');
 
-const source = readNewtabRuntimeSource();
-function extractFunction(name, text = source) {
-  return extractFunctionFrom(text, name);
+// Dragging a New Tab shortcut onto the bookmarks (the grid, the list or the
+// bookmarks bar) places it where it lands: between two bookmarks inserts it
+// there, the middle of a folder files it inside, and its own folder just
+// removes the shortcut. JSDOM does no layout, so the test gives the shortcut
+// and the bookmarks their boxes (fake-layout.js); the drag itself runs
+// through New Tab's real pointer handling.
+
+const MODE_KEY = '_x_extension_bookmark_view_mode_2026_unique_';
+const SOURCES = {
+  website: { url: 'https://source.example/', title: 'Source website' },
+  folder: { type: 'folder', folderId: '30', title: 'Source folder' }
+};
+const GEOMETRY = {
+  folder: { left: 100, top: 100, width: 188, height: 51, gap: 12 },
+  list: { left: 100, top: 100, width: 188, height: 51, gap: 12 },
+  top: { left: 100, top: 4, width: 100, height: 28, gap: 2 }
+};
+
+function bar(options) {
+  const websites = options && options.websites;
+  const items = (options && options.empty ? [] : ['first', 'second', 'third']).map((title, index) => (websites
+    ? { id: String(21 + index), title, url: `https://${title}.example/` }
+    : { id: String(21 + index), title, children: [] }));
+  return items;
 }
 
-function rect(left, top, width, height) {
-  return { left, top, width, height, right: left + width, bottom: top + height };
-}
-function setRect(element, bounds) {
-  element.getBoundingClientRect = () => bounds;
-}
-
-function createScenario(mode, sourceType, options = {}) {
-  const dom = new JSDOM('<body><section><div id="grid"></div></section></body>');
-  const document = dom.window.document;
-  const grid = document.querySelector('#grid');
-  const surface = grid.parentElement;
-  const isTop = mode === 'top';
-  const gap = isTop ? 2 : 12;
-  const top = isTop ? 4 : 100;
-  const height = isTop ? 28 : 51;
-  const width = isTop ? 100 : 188;
-  const left = options.scrolled ? -52 : 100;
-  const pageStart = options.pageStart || 0;
-  const currentFolderId = options.nested ? 'nested' : '1';
-  const shortcut = sourceType === 'folder'
-    ? { id: 'shortcut', type: 'folder', folderId: 'source-folder', title: 'Source folder' }
-    : { id: 'shortcut', title: 'Source website', url: 'https://source.example/' };
-  const nodeMap = new Map([
-    ['0', { id: '0' }],
-    ['1', { id: '1', parentId: '0' }],
-    ['nested', { id: 'nested', parentId: '1' }],
-    ['source-folder', { id: 'source-folder', parentId: '1', index: 3 }],
-    ['descendant', { id: 'descendant', parentId: 'source-folder' }]
-  ]);
-  const cards = (options.empty ? [] : ['first', 'second', 'third']).map((id, index) => {
-    const folder = options.websites !== true;
-    const node = { id, parentId: currentFolderId, index: pageStart + index, title: id,
-      ...(folder ? {} : { url: `https://${id}.example/` }) };
-    nodeMap.set(id, node);
-    const card = document.createElement('button');
-    card.className = `x-nt-bookmark-card${folder ? ' x-nt-bookmark-card--folder' : ''}`;
-    card.setAttribute('data-bookmark-id', id);
-    card.setAttribute('data-bookmark-draggable', 'true');
-    card.setAttribute('data-bookmark-index', String(node.index));
-    card._xBookmarkItem = node;
-    setRect(card, rect(left + index * (width + gap), top, width, height));
-    grid.appendChild(card);
-    return card;
+async function openNewtab(mode, sourceType, options) {
+  const config = options || {};
+  const barItems = bar(config);
+  if (config.firstFolderChildren) {
+    barItems[0].children = config.firstFolderChildren;
+  }
+  if (config.sourceAsCard) {
+    barItems[0] = { id: '30', title: 'Source folder', children: [{ id: '31', title: 'Inner', children: [] }] };
+  }
+  const page = await createNewtabPage({
+    layout: true,
+    sync: { [MODE_KEY]: mode },
+    shortcuts: [SOURCES[sourceType]],
+    bookmarks: barItems,
+    // A folder shortcut's own folder lives elsewhere unless the case puts it on the bar.
+    otherBookmarks: config.sourceAsCard ? [] : [{ id: '30', title: 'Source folder', children: [] }]
   });
-  const gridBounds = rect(left, top, (width * 3) + (gap * 2), height);
-  setRect(grid, gridBounds);
-  setRect(surface, isTop ? rect(0, 0, 900, 36) : rect(80, 80, 700, 100));
-  const viewport = document.createElement('div');
-  setRect(viewport, rect(options.scrolled ? 4 : 100, 4, 700, 28));
-  document.elementFromPoint = (x, y) => cards.find((card) => {
-    const bounds = card.getBoundingClientRect();
-    return x >= bounds.left && x < bounds.right && y >= bounds.top && y <= bounds.bottom;
-  }) || grid;
-  const mutations = [];
-  let savedShortcuts = null;
-  const factory = new Function('deps', `
-    const { document, grid: bookmarkGrid, surface, viewport, mode, pageStart,
-      currentFolderId: bookmarkCurrentFolderId, shortcut, nodeMap,
-      bookmarkDrag: NEWTAB_BOOKMARK_DRAG, crossSurfaceDrag: NEWTAB_CROSS_SURFACE_DRAG,
-      bookmarkMoveHistory: NEWTAB_BOOKMARK_MOVE_HISTORY } = deps;
-    const window = { getComputedStyle: () => ({ columnGap: mode === 'top' ? '2px' : '12px' }) };
-    const bookmarkTopbarRuntime = { viewport };
-    let bookmarkCascadeRuntime = null;
-    const isBookmarkTopbarMode = () => mode === 'top';
-    const getBookmarkDropSurfaceElement = () => surface;
-    const getBookmarkPageStartIndex = () => pageStart;
-    const getShortcutById = () => shortcut;
-    const getShortcutFolderId = (item) => item && item.type === 'folder' ? item.folderId : '';
-    const newtabShortcuts = [shortcut];
-    const newtabShortcutIcons = {};
-    const bookmarkMoveHistory = NEWTAB_BOOKMARK_MOVE_HISTORY.createBookmarkMoveHistory();
-    let bookmarkMoveHistoryBusy = false;
-    let bookmarkPendingLayoutAnimation;
-    const MAX_NEWTAB_SHORTCUTS = 60;
-    const shortcutFolderRuntime = { bind() {}, flush: () => Promise.resolve() };
-    const bookmarksRuntime = {
-      getNodeMap: () => nodeMap,
-      getNode: (id) => nodeMap.get(id),
-      ensureReady: () => Promise.resolve(true),
-      getFolderItems: (id) => [...nodeMap.values()].filter((node) => node.parentId === id),
-      runControlledMutation: (run) => Promise.resolve().then(run),
-      create: (details) => { deps.mutations.push({ kind: 'create', ...details }); return Promise.resolve({ id: 'created', ...details }); },
-      move: (id, details) => { deps.mutations.push({ kind: 'move', id, ...details }); return Promise.resolve({ id, ...details }); }
-    };
-    const persistShortcuts = (items) => { deps.onSave(items); return Promise.resolve(true); };
-    const queueBookmarkLayoutAnimation = () => {};
-    const markBookmarkTreeDirty = () => {};
-    const loadBookmarks = () => {};
-    const refreshOpenBookmarkCascadeMenu = () => Promise.resolve();
-    const refreshShortcutFolderReferences = () => Promise.resolve();
-    const settleShortcutDragTile = () => {};
-    const t = (_, fallback) => fallback;
-    const showToast = () => {};
-    ${['getBookmarkCardId', 'getBookmarkCardLayoutRect', 'getBookmarkReorderCards',
-      'getExternalBookmarkSurfacePoint', 'getBookmarkElementDropTarget',
-      'isBookmarkCascadeSurfaceAtPoint', 'isValidExternalBookmarkDropTarget',
-      'resolveExternalBookmarkDropTarget', 'getExternalBookmarkDropTarget',
-      'applyBookmarkShortcutTransfer', 'moveShortcutToBookmarks'].map((name) => extractFunction(name)).join('\n')}
-    return { getExternalBookmarkDropTarget, moveShortcutToBookmarks,
-      setCascadeRuntime(value) { bookmarkCascadeRuntime = value; } };
-  `);
-  const api = factory({ document, grid, surface, viewport, mode, pageStart, currentFolderId,
-    shortcut, nodeMap, bookmarkDrag, crossSurfaceDrag, bookmarkMoveHistory, mutations,
-    onSave(items) { savedShortcuts = items; } });
-  const state = { shortcutId: shortcut.id, bookmarkId: shortcut.folderId || '', tile: {}, hasReordered: false };
-  return { ...api, document, grid, cards, state, mutations, pageStart, currentFolderId, nodeMap,
-    getSavedShortcuts: () => savedShortcuts };
-}
-
-function attachCascade(scene, depth, empty = false) {
-  const text = fs.readFileSync('src/newtab/bookmarks/bookmark-cascade-menu.js', 'utf8');
-  const menu = scene.document.createElement('div');
-  menu.className = 'x-nt-bookmark-cascade-menu';
-  scene.document.body.appendChild(menu);
-  const levels = Array.from({ length: depth }, (_, index) => {
-    const folderId = `cascade-${index}`;
-    scene.nodeMap.set(folderId, { id: folderId, parentId: index ? `cascade-${index - 1}` : '1' });
-    const levelElement = scene.document.createElement('div');
-    menu.appendChild(levelElement);
-    setRect(levelElement, rect(100 + (index * 250), 200, 230, 120));
-    for (let rowIndex = 0; !empty && rowIndex < 3; rowIndex += 1) {
-      const id = `${folderId}-row-${rowIndex}`;
-      scene.nodeMap.set(id, { id, parentId: folderId, index: rowIndex });
-      const row = scene.document.createElement('div');
-      row.className = 'x-nt-bookmark-cascade-row';
-      const button = scene.document.createElement('button');
-      button.setAttribute('data-bookmark-index', String(rowIndex));
-      button.setAttribute('data-type', 'folder');
-      button.setAttribute('data-bookmark-drop-folder-id', id);
-      row.appendChild(button);
-      levelElement.appendChild(row);
-      setRect(row, rect(108 + (index * 250), 208 + (rowIndex * 36), 214, 32));
+  await page.settle(250);
+  const doc = page.document;
+  const geometry = GEOMETRY[mode];
+  const layoutPage = () => {
+    const grid = doc.getElementById('_x_extension_newtab_bookmarks_grid_2024_unique_');
+    const cards = Array.from(grid.querySelectorAll('.x-nt-bookmark-card'));
+    const width = Math.max(1, cards.length) * (geometry.width + geometry.gap) - geometry.gap;
+    if (mode === 'top') {
+      page.layout.place(doc.getElementById('_x_extension_newtab_bookmarks_topbar_2026_unique_'), { left: 0, top: 0, width: 900, height: 36 });
+      page.layout.place(doc.getElementById('_x_extension_newtab_bookmarks_topbar_viewport_2026_unique_'), { left: 100, top: 4, width: 700, height: 28 });
+      page.layout.place(doc.getElementById('_x_extension_newtab_bookmarks_topbar_items_2026_unique_'), { left: 100, top: 4, width: 700, height: 28 });
+    } else {
+      page.layout.place(doc.getElementById('_x_extension_newtab_bookmarks_2024_unique_'), { left: 80, top: 80, width: 700, height: 100 });
     }
-    return { folderId, levelElement };
-  });
-  const getTarget = new Function('bookmarkCascadeMenu', 'bookmarkCascadeLevels', `
-    const BOOKMARK_CASCADE_FOLDER_DROP_MIN_RATIO = 0.38;
-    const BOOKMARK_CASCADE_FOLDER_DROP_MAX_RATIO = 0.62;
-    const getBookmarkCascadeLevelItems = (element) => Array.from(element.querySelectorAll('button'));
-    const getBookmarkCascadeElementRect = (element) => element.getBoundingClientRect();
-    ${extractFunction('isPointInsideRect', text)}
-    ${extractFunction('getBookmarkCascadeDragDropTargetAtPoint', text)}
-    return getBookmarkCascadeDragDropTargetAtPoint;
-  `)(menu, levels);
-  scene.setCascadeRuntime({ isOpen: () => true, updateDragPointer(point) {
-    const target = getTarget({ x: point.clientX, y: point.clientY });
-    return target ? { ...target, surface: 'cascade' } : null;
-  } });
-  return levels[depth - 1];
+    page.layout.place(grid, { left: geometry.left, top: geometry.top, width, height: geometry.height });
+    const boxes = page.layout.row(cards, geometry);
+    const tile = doc.querySelector('.x-nt-shortcut-tile:not(.x-nt-shortcut-tile--add)');
+    if (tile) {
+      page.layout.place(tile.parentElement, { left: 300, top: 400, width: 400, height: 80 });
+      page.layout.place(tile, { left: 300, top: 400, width: 64, height: 64 });
+    }
+    return { boxes, tile, y: geometry.top + geometry.height / 2 };
+  };
+  return {
+    page,
+    layoutPage,
+    // Drags the shortcut to (x, y) and reports what changed, then undoes it.
+    async dropAt(x, y) {
+      const { tile } = layoutPage();
+      assert.ok(tile, `${mode}/${sourceType} ${JSON.stringify(config)}: the shortcut should be back before dropping at ${x},${y}`);
+      const before = page.bookmarks.calls.length;
+      await page.drag(tile, [[320, 300], [x, y]]);
+      const changes = page.bookmarks.calls.slice(before).filter((call) => ['create', 'move'].includes(call.name));
+      const shortcutsLeft = doc.querySelectorAll('.x-nt-shortcut-tile:not(.x-nt-shortcut-tile--add)').length;
+      page.trusted(doc.body, 'keydown', { key: 'z', code: 'KeyZ', metaKey: true, bubbles: true, cancelable: true });
+      await page.settle(150);
+      page.bookmarks.calls.length = 0;
+      return { changes: changes.map((call) => call.args[call.name === 'move' ? 1 : 0]), moved: changes.map((call) => call.name), shortcutsLeft };
+    }
+  };
 }
 
-async function run() {
+function expectedPlacement(sourceType, parentId, index) {
+  return sourceType === 'folder'
+    ? { moved: ['move'], changes: [{ parentId, index }] }
+    : { moved: ['create'], changes: [{ parentId, index, title: 'Source website', url: 'https://source.example/' }] };
+}
+
+async function testInsertions(mode, sourceType, options) {
+  const newtab = await openNewtab(mode, sourceType, options);
+  const { boxes, y } = newtab.layoutPage();
+  const [first, second, last] = [boxes[0], boxes[1], boxes[2]];
+  const name = `${mode}/${sourceType}${options && options.websites ? '/websites' : ''}`;
+  for (const x of [first.right - 2, (first.right + second.left) / 2, second.left + 2]) {
+    const result = await newtab.dropAt(x, y);
+    const expected = expectedPlacement(sourceType, '1', 1);
+    assert.deepStrictEqual([result.moved, result.changes.map((change) => ({ ...change, title: change.title, url: change.url }))],
+      [expected.moved, expected.changes.map((change) => ({ ...change, title: change.title, url: change.url }))],
+      `${name}: x=${x} between two bookmarks should insert the shortcut there`);
+    assert.strictEqual(result.shortcutsLeft, 0, `${name}: the shortcut moves out of the shortcuts`);
+  }
+  for (const [x, index] of [[first.left + 2, 0], [last.right - 2, 3]]) {
+    const result = await newtab.dropAt(x, y);
+    assert.deepStrictEqual(result.changes.map((change) => change.index), [index], `${name}: the outer edges insert at the ends`);
+  }
+  if (!(options && options.websites)) {
+    const result = await newtab.dropAt(first.left + first.width / 2, y);
+    assert.deepStrictEqual(result.changes.map((change) => change.parentId), ['21'],
+      `${name}: the middle of a folder files the shortcut inside it`);
+  }
+  if (mode === 'top') {
+    const result = await newtab.dropAt(850, y);
+    assert.deepStrictEqual(result.changes, [], 'the bar\'s own controls are not a drop target');
+    const below = await newtab.dropAt((first.right + second.left) / 2, 40);
+    assert.deepStrictEqual(below.changes.map((change) => change.index), [1], 'just below the bar still drops into the gap');
+  }
+  newtab.page.close();
+}
+
+async function testEmptyBar(mode, sourceType) {
+  const newtab = await openNewtab(mode, sourceType, { empty: true });
+  const result = await newtab.dropAt(150, mode === 'top' ? 18 : 125);
+  assert.deepStrictEqual(result.changes.map((change) => [change.parentId, change.index]), [['1', 0]], `${mode}: an empty bar takes the shortcut first`);
+  newtab.page.close();
+}
+
+async function testOwnFolder(mode) {
+  const newtab = await openNewtab(mode, 'folder', { sourceAsCard: true });
+  const { boxes, y } = newtab.layoutPage();
+  const result = await newtab.dropAt(boxes[0].left + boxes[0].width / 2, y);
+  assert.deepStrictEqual(result.changes, [], `${mode}: dropping a folder shortcut on its own folder does not move the folder`);
+  assert.strictEqual(result.shortcutsLeft, 0, 'it just removes the shortcut');
+  newtab.page.close();
+}
+
+async function testCascade(sourceType) {
+  // Holding a dragged shortcut over a folder on the bookmarks bar opens the
+  // folder's menu, whose rows take the shortcut too.
+  const newtab = await openNewtab('top', sourceType, {
+    firstFolderChildren: [0, 1, 2].map((index) => ({ id: String(41 + index), title: `row-${index}`, children: [] }))
+  });
+  const { page } = newtab;
+  const { boxes, tile } = newtab.layoutPage();
+  const folder = [boxes[0].left + boxes[0].width / 2, boxes[0].top + boxes[0].height / 2];
+  await page.drag(tile, [[320, 300], folder], { release: false });
+  await page.waitFor(() => page.document.querySelector('.x-nt-bookmark-cascade-level'), 'holding over a folder should open its menu', 3000);
+  const level = page.document.querySelector('.x-nt-bookmark-cascade-level');
+  const rows = Array.from(level.querySelectorAll('.x-nt-bookmark-cascade-item'));
+  assert.strictEqual(rows.length, 3, 'the menu should list the folder\'s three subfolders');
+  page.layout.place(page.document.querySelector('.x-nt-bookmark-cascade-menu'), { left: 100, top: 40, width: 230, height: 120 });
+  page.layout.place(level, { left: 100, top: 40, width: 230, height: 120 });
+  // Rows stack 36px apart; each item measures by its row.
+  const rowBoxes = rows.map((item, index) => {
+    const box = { left: 108, top: 48 + index * 36, width: 214, height: 32 };
+    page.layout.place(item.closest('.x-nt-bookmark-cascade-row') || item, box);
+    page.layout.place(item, box);
+    return item.getBoundingClientRect();
+  });
+  const gap = [215, (rowBoxes[0].bottom + rowBoxes[1].top) / 2];
+  const before = page.bookmarks.calls.length;
+  page.pointer('pointermove', gap[0], gap[1]);
+  await page.settle(60);
+  page.pointer('pointermove', gap[0], gap[1]);
+  await page.settle(60);
+  page.pointer('pointerup', gap[0], gap[1]);
+  await page.settle(250);
+  const changes = page.bookmarks.calls.slice(before).filter((call) => ['create', 'move'].includes(call.name))
+    .map((call) => call.args[call.name === 'move' ? 1 : 0]);
+  assert.deepStrictEqual(changes.map((change) => [change.parentId, change.index]), [['21', 1]], `${sourceType}: the gap between two menu rows inserts there`);
+  newtab.page.close();
+}
+
+(async () => {
   let checked = 0;
   for (const mode of ['folder', 'list', 'top']) {
     for (const sourceType of ['website', 'folder']) {
-      for (const options of [{}, { websites: true }, { nested: true },
-        ...(mode === 'top' ? [{ scrolled: true }] : [{ pageStart: 8 }])]) {
-        const scene = createScenario(mode, sourceType, options);
-        const first = scene.cards[0].getBoundingClientRect();
-        const second = scene.cards[1].getBoundingClientRect();
-        const y = first.top + first.height / 2;
-        const name = `${mode}/${sourceType}/${JSON.stringify(options)}`;
-        for (const x of [first.right - 2, (first.right + second.left) / 2, second.left + 2]) {
-          const target = scene.getExternalBookmarkDropTarget(x, y, scene.state);
-          assert.ok(target, `${name}: the space between existing items must accept the shortcut`);
-          assert.strictEqual(target.kind, 'insertion', `${name}: folder edges must not swallow the insertion position`);
-          assert.strictEqual(target.folderId, scene.currentFolderId);
-          assert.strictEqual(target.index, scene.pageStart + 1);
-          checked += 1;
-        }
-        const gapTarget = scene.getExternalBookmarkDropTarget((first.right + second.left) / 2, y, scene.state);
-        assert.strictEqual(await scene.moveShortcutToBookmarks(scene.state, gapTarget), true);
-        assert.deepStrictEqual(scene.mutations[0], sourceType === 'folder'
-          ? { kind: 'move', id: 'source-folder', parentId: scene.currentFolderId, index: scene.pageStart + 1 }
-          : { kind: 'create', parentId: scene.currentFolderId, title: 'Source website',
-            url: 'https://source.example/', index: scene.pageStart + 1 });
-        assert.deepStrictEqual(scene.getSavedShortcuts(), []);
-        checked += 1;
-        if (!options.websites) {
-          const center = scene.getExternalBookmarkDropTarget(first.left + first.width / 2, y, scene.state);
-          assert.strictEqual(center.kind, 'card', `${name}: the center still means placing inside the folder`);
-          assert.strictEqual(center.folderId, 'first');
-          checked += 1;
-        }
-        if (mode === 'top') {
-          assert.strictEqual(scene.getExternalBookmarkDropTarget(850, y, scene.state), null,
-            'top-bar controls must remain outside the drop surface');
-          const projected = scene.getExternalBookmarkDropTarget((first.right + second.left) / 2, 40, scene.state);
-          assert.strictEqual(projected.kind, 'insertion', 'the approach area below the bar accepts the same gap');
-          assert.strictEqual(projected.index, 1);
-          checked += 2;
-        }
-        if (!options.scrolled) {
-          const last = scene.cards[2].getBoundingClientRect();
-          for (const [x, index] of [[first.left + 2, scene.pageStart], [last.right - 2, scene.pageStart + 3]]) {
-            const target = scene.getExternalBookmarkDropTarget(x, y, scene.state);
-            assert.strictEqual(target.kind, 'insertion', `${name}: first and last edges remain insertion targets`);
-            assert.strictEqual(target.index, index);
-            if (mode === 'top') {
-              assert.ok(target.markerOffsetPx >= 1 &&
-                target.markerOffsetPx <= scene.grid.getBoundingClientRect().width - 1,
-              'top-bar endpoint insertion lines must stay inside the clipped scrolling grid');
-            }
-            checked += 1;
-          }
-        }
-      }
-      const empty = createScenario(mode, sourceType, { empty: true });
-      const emptyTarget = empty.getExternalBookmarkDropTarget(150, mode === 'top' ? 18 : 125, empty.state);
-      assert.strictEqual(emptyTarget.kind, 'insertion');
-      assert.strictEqual(emptyTarget.index, 0);
-      checked += 1;
-
-      const alias = createScenario(mode, 'folder');
-      const original = alias.cards[0];
-      original.setAttribute('data-bookmark-id', 'source-folder');
-      const originalBounds = original.getBoundingClientRect();
-      const returnTarget = alias.getExternalBookmarkDropTarget(
-        originalBounds.left + originalBounds.width / 2, originalBounds.top + originalBounds.height / 2, alias.state
-      );
-      assert.strictEqual(returnTarget.kind, 'return', 'dropping on the original folder only removes its shortcut');
-      original.setAttribute('data-bookmark-id', 'descendant');
-      const blocked = alias.getExternalBookmarkDropTarget(
-        originalBounds.left + originalBounds.width / 2, originalBounds.top + originalBounds.height / 2, alias.state
-      );
-      assert.strictEqual(blocked.kind, 'blocked', 'a folder cannot be moved into its descendant');
-      checked += 2;
-
-      for (const depth of [1, 2]) {
-        const scene = createScenario(mode, sourceType);
-        const level = attachCascade(scene, depth);
-        const rows = Array.from(level.levelElement.children);
-        const first = rows[0].getBoundingClientRect();
-        const second = rows[1].getBoundingClientRect();
-        const x = first.left + first.width / 2;
-        for (const y of [first.bottom - 2, (first.bottom + second.top) / 2, second.top + 2]) {
-          const target = scene.getExternalBookmarkDropTarget(x, y, scene.state);
-          assert.strictEqual(target.kind, 'insertion', `${mode}/${sourceType}: cascade row edges and gaps insert`);
-          assert.strictEqual(target.folderId, level.folderId);
-          assert.strictEqual(target.index, 1);
-          checked += 1;
-        }
-        const center = scene.getExternalBookmarkDropTarget(x, first.top + first.height / 2, scene.state);
-        assert.strictEqual(center.kind, 'cascade');
-        assert.strictEqual(center.folderId, `${level.folderId}-row-0`);
-        const gapTarget = scene.getExternalBookmarkDropTarget(x, (first.bottom + second.top) / 2, scene.state);
-        assert.strictEqual(await scene.moveShortcutToBookmarks(scene.state, gapTarget), true);
-        assert.strictEqual(scene.mutations[0].parentId, level.folderId);
-        assert.strictEqual(scene.mutations[0].index, 1);
-        checked += 2;
-      }
-      const emptyScene = createScenario(mode, sourceType);
-      const emptyLevel = attachCascade(emptyScene, 2, true);
-      const bounds = emptyLevel.levelElement.getBoundingClientRect();
-      const emptyCascade = emptyScene.getExternalBookmarkDropTarget(bounds.left + 10, bounds.top + 10, emptyScene.state);
-      assert.strictEqual(emptyCascade.kind, 'insertion');
-      assert.strictEqual(emptyCascade.folderId, emptyLevel.folderId);
-      assert.strictEqual(emptyCascade.index, 0);
-      checked += 1;
+      await testInsertions(mode, sourceType);
+      await testInsertions(mode, sourceType, { websites: true });
+      await testEmptyBar(mode, sourceType);
+      checked += 3;
     }
+    await testOwnFolder(mode);
+    checked += 1;
   }
-  console.log(`shortcut-to-bookmark drop targets passed: ${checked} checks across folder, list, top and nested cascade views`);
-}
-
-run().catch((error) => { console.error(error); process.exitCode = 1; });
+  for (const sourceType of ['website', 'folder']) {
+    await testCascade(sourceType);
+    checked += 1;
+  }
+  console.log(`shortcut-to-bookmark drop targets passed: ${checked} scenarios across folder, list, top and cascade views`);
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

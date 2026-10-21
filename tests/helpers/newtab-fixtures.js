@@ -33,9 +33,10 @@ async function shortcutsStorage(items) {
 }
 
 // A fake chrome.bookmarks over a tree whose bookmark bar holds `barChildren`
-// (nodes as { id, title, url } or { id, title, children }). Every call is
-// recorded in `calls` as { name, args }; changes fire the matching events.
-function createFakeBookmarks(window, barChildren) {
+// and whose Other bookmarks hold `otherChildren` (nodes as { id, title, url }
+// or { id, title, children }). Every call is recorded in `calls` as
+// { name, args }; changes fire the matching events.
+function createFakeBookmarks(window, barChildren, otherChildren) {
   const calls = [];
   let nextId = 1000;
   const event = () => {
@@ -63,7 +64,7 @@ function createFakeBookmarks(window, barChildren) {
     id: '0',
     children: [
       { id: '1', title: 'Bookmarks bar', children: barChildren || [] },
-      { id: '2', title: 'Other bookmarks', children: [] }
+      { id: '2', title: 'Other bookmarks', children: otherChildren || [] }
     ]
   }, undefined, 0);
   const find = (id, node = root) => {
