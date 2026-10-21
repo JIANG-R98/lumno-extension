@@ -1,45 +1,66 @@
 const assert = require('assert');
 const fs = require('fs');
-const { readOptionsRuntimeSource } = require('../helpers/options-source');
+const { JSDOM } = require('jsdom');
 const settings = require('../../src/shared/settings.js');
-const { readPageSource } = require('../helpers/page-source');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { createNewtabPage, INPUT_ID } = require('../helpers/newtab-page');
 
-const optionsHtml = readPageSource('src/options/options.html');
-const optionsSource = readOptionsRuntimeSource();
-const newtabSource = readNewtabRuntimeSource();
+// Whether New Tab puts the cursor in its search box when it opens. Off by
+// default, so the browser's address bar keeps focus.
 
-const topContentIndex = optionsHtml.indexOf('data-i18n="settings_newtab_wordmark_title"');
-const inputAutoFocusIndex = optionsHtml.indexOf('data-i18n="newtab_input_auto_focus_title"', topContentIndex);
+const KEY = settings.NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY;
 
-assert(topContentIndex >= 0, 'options should keep the New Tab top-content setting');
-assert(
-  inputAutoFocusIndex > topContentIndex,
-  'options should keep input auto-focus below the New Tab top-content setting'
-);
-assert.match(
-  optionsHtml,
-  /id="_x_extension_newtab_input_auto_focus_toggle_2026_unique_" type="checkbox" aria-label="输入框自动聚焦" data-i18n-aria-label="newtab_input_auto_focus_title"/,
-  'options should expose an accessible input auto-focus switch that defaults to off'
-);
+function testSettingsMarkup() {
+  const doc = new JSDOM(fs.readFileSync('src/options/options.html', 'utf8')).window.document;
+  const topContent = doc.querySelector('[data-i18n="settings_newtab_wordmark_title"]');
+  const autoFocus = doc.querySelector('[data-i18n="newtab_input_auto_focus_title"]');
+  assert.ok(topContent && autoFocus && (topContent.compareDocumentPosition(autoFocus) & 4),
+    'input auto-focus should sit below the New Tab top-content setting');
+  const toggle = doc.getElementById('_x_extension_newtab_input_auto_focus_toggle_2026_unique_');
+  assert.deepStrictEqual([toggle.type, toggle.checked, toggle.getAttribute('data-i18n-aria-label')], ['checkbox', false, 'newtab_input_auto_focus_title'],
+    'the switch should be labelled and start off');
+  assert.ok(doc.getElementById('_x_extension_newtab_shortcuts_toggle_2026_unique_'),
+    'Settings should keep a second entry for the shared New Tab shortcuts switch');
+  assert.strictEqual(KEY, '_x_extension_newtab_input_auto_focus_enabled_2026_unique_');
+  assert.ok(settings.CHROME_SYNC_STORAGE_KEYS.includes(KEY), 'the preference should sync');
+}
 
-assert.strictEqual(
-  settings.NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY,
-  '_x_extension_newtab_input_auto_focus_enabled_2026_unique_'
-);
-assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(settings.NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY));
-assert.match(
-  newtabSource,
-  /NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY = SETTINGS\.NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY/,
-  'New Tab should continue to read the same shared preference key'
-);
-// The appearance panel is a React view driven by the wallpaper runtime; its controls are
-// tested by behavior in react-src/newtab/wallpaper-view.test.tsx and
-// tests/newtab/test-newtab-wallpaper-panel.js rather than by matching source text here.
-assert.match(
-  optionsHtml,
-  /_x_extension_newtab_shortcuts_toggle_2026_unique_/,
-  'Options should keep a second entry for the shared New Tab shortcuts switch'
-);
+// Chrome keeps the address bar focused on a fresh New Tab, so with auto-focus
+// on the page reloads itself at ?focus=1, which may take focus.
+async function testNewTabFollowsTheSetting() {
+  // The tab is in the foreground (JSDOM reports no focus by default).
+  const foreground = (window) => {
+    window.document.hasFocus = () => true;
+  };
+  const off = await createNewtabPage({ sync: { [KEY]: false }, setup: foreground });
+  await off.settle(250);
+  assert.notStrictEqual(off.document.activeElement && off.document.activeElement.id, INPUT_ID, 'with auto-focus off, the search box should not take focus');
+  assert.strictEqual(off.document.documentElement.getAttribute('data-nt-focus-route-pending'), null, 'and the page should show itself in place');
+  off.close();
 
-console.log('newtab input auto-focus setting tests passed');
+  const on = await createNewtabPage({ sync: { [KEY]: true } });
+  await on.settle(250);
+  assert.strictEqual(on.document.documentElement.getAttribute('data-nt-focus-route-pending'), 'true',
+    'with auto-focus on, the page should stay hidden while it moves to its focus route');
+  assert.ok(on.errors.some((message) => /navigation/i.test(message)), 'it should navigate to the focus route');
+  on.close();
+
+  const focusRoute = await createNewtabPage({
+    sync: { [KEY]: true },
+    search: '?focus=1',
+    setup: foreground
+  });
+  await focusRoute.settle(250);
+  assert.strictEqual(focusRoute.document.activeElement && focusRoute.document.activeElement.id, INPUT_ID,
+    'on the focus route, the search box should take focus');
+  focusRoute.close();
+}
+
+(async () => {
+  testSettingsMarkup();
+  await testNewTabFollowsTheSetting();
+  console.log('newtab input auto-focus setting tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

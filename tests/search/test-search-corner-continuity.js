@@ -1,8 +1,6 @@
 const assert = require('assert');
-const { JSDOM } = require('jsdom');
-const { readPageSource } = require('../helpers/page-source');
 const { readStylesheet } = require('../helpers/css-tokens');
-const { parseCss } = require('../helpers/css-rules');
+const { parseCss, parsePageCss } = require('../helpers/css-rules');
 const { openSearchSurface } = require('../helpers/search-surfaces');
 
 // The search shells are rounded rectangles with continuous (superellipse)
@@ -10,10 +8,6 @@ const { openSearchSurface } = require('../helpers/search-surfaces');
 // minus the space between them. Read from the stylesheets as the browser
 // parses them, and from the live overlay where its styles are inline.
 
-function pageCss(relativePath) {
-  const doc = new JSDOM(readPageSource(relativePath)).window.document;
-  return parseCss(Array.from(doc.querySelectorAll('style')).map((style) => style.textContent).join('\n'));
-}
 
 // Each selector's corner-shape, as its last declaring rule (in any @supports
 // block) leaves it, with " !important" when it has that priority.
@@ -44,7 +38,7 @@ function px(css, name) {
 const CONTINUOUS = 'superellipse(1.25)';
 
 function testNewTab() {
-  const css = pageCss('newtab.html');
+  const css = parsePageCss('newtab.html');
   const outer = px(css, '--x-nt-search-shell-radius');
   const resting = px(css, '--x-nt-search-resting-radius');
   const border = px(css, '--x-nt-search-shell-border-width');
@@ -128,7 +122,7 @@ function testSharedInput() {
 }
 
 function testOnboardingMirrors() {
-  const css = pageCss('src/onboarding/onboarding.html');
+  const css = parsePageCss('src/onboarding/onboarding.html');
   const viewport = css.rule('.newtab-preview-viewport');
   assert.equal(viewport.get('--x-nt-search-shell-radius'), '26px');
   assert.match(viewport.get('--x-nt-search-content-radius'), /^calc\(/);

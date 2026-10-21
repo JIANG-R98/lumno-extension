@@ -2,20 +2,13 @@ const assert = require('assert');
 const { readStylesheet } = require('../helpers/css-tokens');
 const fs = require('fs');
 const path = require('path');
-const { JSDOM } = require('jsdom');
-const { readPageSource } = require('../helpers/page-source');
-const { parseCss } = require('../helpers/css-rules');
+const { parseCss, parsePageCss } = require('../helpers/css-rules');
 const { openSearchSurface } = require('../helpers/search-surfaces');
 
-// The page styles, read as the page loads them (its own stylesheets inline).
-function pageCss(relativePath) {
-  const doc = new JSDOM(readPageSource(relativePath)).window.document;
-  return parseCss(Array.from(doc.querySelectorAll('style')).map((style) => style.textContent).join('\n'));
-}
 
-const newtabCss = pageCss('newtab.html');
+const newtabCss = parsePageCss('newtab.html');
 const overlayCss = parseCss(readStylesheet('src/overlay/suggestions-view.css'));
-const onboardingCss = pageCss('src/onboarding/onboarding.html');
+const onboardingCss = parsePageCss('src/onboarding/onboarding.html');
 
 // A rule's declarations, checked the way the old text checks read them.
 function getCssRuleBlock(css, selector) {

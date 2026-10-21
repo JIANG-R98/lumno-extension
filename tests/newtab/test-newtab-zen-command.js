@@ -1,81 +1,89 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { readPageSource } = require('../helpers/page-source');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-const { readReactSource } = require('../helpers/react-source');
+const settings = require('../../src/shared/settings.js');
+const { parsePageCss } = require('../helpers/css-rules');
+const { openSearchSurface } = require('../helpers/search-surfaces');
+
+// /zen hides everything on New Tab but the search box, without changing what
+// each section is set to show, and is remembered for the next New Tab.
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const newtabJs = readNewtabRuntimeSource();
-const newtabHtml = readPageSource('newtab.html');
-const suggestionsViewJs = readReactSource('react-src/search/suggestions.tsx');
+const ZEN = settings.NEWTAB_ZEN_MODE_STORAGE_KEY;
+const SECTIONS = '[data-content-visible]';
 
-function assertMatches(source, pattern, message) {
-  assert.ok(pattern.test(source), message);
+function sections(page) {
+  return Array.from(page.document.querySelectorAll(SECTIONS)).map((section) => ({
+    configured: section.getAttribute('data-content-visible'),
+    visible: section.getAttribute('data-visible')
+  }));
 }
 
-assertMatches(
-  newtabJs,
-  /function isZenCommand\(input\) \{[\s\S]*?raw === '\/zen'[\s\S]*?raw\.startsWith\('\/zen '\);[\s\S]*?\}/,
-  'New Tab should recognize the /zen command'
-);
+async function testToggle(how, activate) {
+  const surface = await openSearchSurface('newtab');
+  const before = sections(surface.page);
+  assert.ok(before.some((section) => section.visible === 'true'), 'New Tab should start with a visible section');
+  await surface.type('/zen');
+  await surface.settle(100);
+  const [row] = surface.suggestions();
+  assert.deepStrictEqual(row && [row._xSuggestion.type, row._xSuggestion.nextEnabled], ['zenSwitch', true], '/zen should offer to turn Zen on');
+  await activate(surface, row);
+  await surface.settle(100);
+  const page = surface.page;
+  assert.strictEqual(page.document.body.getAttribute('data-zen-mode'), 'true', `${how} on /zen should turn Zen on`);
+  assert.deepStrictEqual(sections(page), before.map((section) => ({ configured: section.configured, visible: 'false' })),
+    'Zen should hide every section while keeping its configuration');
+  assert.ok(page.storage.sync.writes.some((write) => write[ZEN] === true), 'Zen should be remembered');
 
-assertMatches(
-  newtabJs,
-  /function buildZenSuggestion\(\) \{[\s\S]*?type: 'zenSwitch'[\s\S]*?nextEnabled: !zenModeEnabled/,
-  '/zen should render an action that reflects the next Zen state'
-);
+  await surface.type('/zen');
+  await surface.settle(100);
+  assert.strictEqual(surface.suggestions()[0]._xSuggestion.nextEnabled, false, '/zen should now offer to turn Zen off');
+  surface.press('Enter');
+  await surface.settle(100);
+  assert.strictEqual(page.document.body.getAttribute('data-zen-mode'), 'false');
+  assert.deepStrictEqual(sections(page), before, 'turning Zen off should bring the sections back as they were');
+  surface.close();
+}
 
-assertMatches(
-  newtabJs,
-  /function setContentSectionVisible\(section, visible\) \{[\s\S]*?data-content-visible[\s\S]*?visible && !zenModeEnabled/,
-  'Zen mode should preserve each content section configuration while hiding it'
-);
-
-assertMatches(
-  newtabJs,
-  /function applyNewtabTopContentVisibility\(options\) \{[\s\S]*?newtabTopContentMode !== 'off' && !zenModeEnabled/,
-  'Zen mode should hide the configured New Tab top content without changing its preference'
-);
-
-assertMatches(
-  newtabJs,
-  /if \((?:!localSearchScopeState && )?isZenCommand\(query\)\) \{[\s\S]*?setZenModeEnabled\(!zenModeEnabled\);/,
-  'pressing Enter on /zen should toggle Zen mode'
-);
-
-assertMatches(
-  newtabJs,
-  /if \(suggestion\.type === 'zenSwitch'\) \{[\s\S]*?setZenModeEnabled\(suggestion\.nextEnabled\);/,
-  'clicking the rendered Zen suggestion should toggle Zen mode'
-);
-
-assertMatches(
-  newtabJs,
-  /const initialVisualReadyPromise = Promise\.all\(\[[\s\S]*?loadZenMode\(\),[\s\S]*?\]\)\.catch[\s\S]*?markNewtabReady\(\);/,
-  'New Tab should restore Zen mode before marking the page ready'
-);
-
-assertMatches(
-  suggestionsViewJs,
-  /type === 'modeSwitch' \|\| type === 'zenSwitch'/,
-  'Zen suggestions should use the same branded command icon treatment as mode suggestions'
-);
-
-assertMatches(
-  newtabHtml,
-  /body\[data-zen-mode="true"\] \.x-nt-wallpaper-control,[\s\S]*?\.x-nt-feedback-control/,
-  'Zen mode should hide New Tab chrome outside the search experience'
-);
-
-['en', 'zh_CN', 'zh_TW', 'ja'].forEach((locale) => {
-  const messages = JSON.parse(fs.readFileSync(
-    path.join(repoRoot, '_locales', locale, 'messages.json'),
-    'utf8'
-  ));
-  ['zen_badge_on', 'zen_badge_off', 'zen_enable_title', 'zen_disable_title'].forEach((key) => {
-    assert.ok(messages[key] && messages[key].message, `${locale} should define ${key}`);
+async function testRestoredBeforeTheFirstFrame() {
+  let zenWhenReady = null;
+  const surface = await openSearchSurface('newtab', {
+    sync: { [ZEN]: true },
+    setup(window) {
+      new window.MutationObserver(() => {
+        if (zenWhenReady === null && window.document.body.getAttribute('data-nt-ready') === '1') {
+          zenWhenReady = window.document.body.getAttribute('data-zen-mode');
+        }
+      }).observe(window.document.documentElement, { subtree: true, attributes: true, attributeFilter: ['data-nt-ready'] });
+    }
   });
-});
+  await surface.settle(200);
+  assert.strictEqual(zenWhenReady, 'true', 'a remembered Zen mode should apply before New Tab first shows');
+  surface.close();
+}
 
-console.log('newtab zen command tests passed');
+function testStylesAndCopy() {
+  const css = parsePageCss('newtab.html');
+  ['.x-nt-wallpaper-control', '.x-nt-feedback-control'].forEach((control) => {
+    assert.ok(css.entries.some((entry) => entry.selectors.includes(`body[data-zen-mode="true"] ${control}`)),
+      `Zen mode should hide ${control}`);
+  });
+  ['en', 'zh_CN', 'zh_TW', 'ja'].forEach((locale) => {
+    const messages = JSON.parse(fs.readFileSync(path.join(repoRoot, '_locales', locale, 'messages.json'), 'utf8'));
+    ['zen_badge_on', 'zen_badge_off', 'zen_enable_title', 'zen_disable_title'].forEach((key) => {
+      assert.ok(messages[key] && messages[key].message, `${locale} should define ${key}`);
+    });
+  });
+}
+
+(async () => {
+  await testToggle('Enter', (surface) => surface.press('Enter'));
+  await testToggle('a click', (surface, row) => row.dispatchEvent(new surface.window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0 })));
+  await testRestoredBeforeTheFirstFrame();
+  testStylesAndCopy();
+  console.log('newtab zen command tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

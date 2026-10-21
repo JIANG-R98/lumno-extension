@@ -1,12 +1,11 @@
 const assert = require('assert');
 const fs = require('fs');
 const settings = require('../../src/shared/settings.js');
-const { readPageSource } = require('../helpers/page-source');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { JSDOM } = require('jsdom');
+const { createNewtabPage } = require('../helpers/newtab-page');
 
-const optionsHtml = readPageSource('src/options/options.html');
+const optionsDocument = new JSDOM(fs.readFileSync('src/options/options.html', 'utf8')).window.document;
 const toggleSettings = require('../../src/options/options-toggle-settings.js').getToggleSettings(settings);
-const newtabSource = readNewtabRuntimeSource();
 const localeNames = ['en', 'ja', 'zh_CN', 'zh_TW'];
 
 const settingsContract = [
@@ -28,9 +27,8 @@ const settingsContract = [
 
 settingsContract.forEach((entry) => {
   assert.strictEqual(settings[entry.constant], entry.storageKey);
-  assert.match(optionsHtml, new RegExp(`id="${entry.htmlId}"[^>]*checked`));
-  assert.match(optionsHtml, new RegExp(`data-i18n="${entry.i18nKey}"`));
-  assert(newtabSource.includes(entry.constant));
+  assert.strictEqual(optionsDocument.getElementById(entry.htmlId).checked, true, `${entry.htmlId} should default to shown`);
+  assert.ok(optionsDocument.querySelector(`[data-i18n="${entry.i18nKey}"]`));
   const toggleEntry = toggleSettings.find((item) => item.key === entry.storageKey);
   assert(
     toggleEntry && toggleEntry.inputId === entry.htmlId && toggleEntry.kind === entry.toggleKind,
@@ -45,29 +43,49 @@ settingsContract.forEach((entry) => {
   });
 });
 
-assert.match(
-  newtabSource,
-  /function applyNewtabActionButtonVisibility\(\)[\s\S]*?closeFeedbackPopover\(\)[\s\S]*?closeWallpaperPanel\(\)[\s\S]*?setNewtabActionControlVisibility\(feedbackControl, newtabFeedbackButtonVisible\)[\s\S]*?setNewtabActionControlVisibility\(wallpaperControl, newtabAppearanceButtonVisible\)/,
-  'New Tab should close open panels and apply both optional controls independently'
-);
+// On the New Tab page: each button follows its own setting, from the first
+// visible frame and live when Settings changes it.
+const CONTROLS = {
+  NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY: '.x-nt-feedback-control',
+  NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY: '.x-nt-wallpaper-control'
+};
 
-assert.match(
-  newtabSource,
-  /const actionButtonVisibilityReadyPromise = loadNewtabActionButtonVisibility\(\);[\s\S]*?const initialVisualReadyPromise = Promise\.all\(\[[\s\S]*?actionButtonVisibilityReadyPromise/,
-  'visibility preferences should resolve before New Tab becomes visually ready'
-);
+function shown(page, selector) {
+  const control = page.document.querySelector(selector);
+  return !control.hidden && control.getAttribute('aria-hidden') === 'false' && !control.inert;
+}
 
-settingsContract.forEach((entry) => {
-  assert.match(
-    newtabSource,
-    new RegExp(`changes\\[${entry.constant}\\][\\s\\S]*?applyNewtabActionButtonVisibility\\(\\)`),
-    `${entry.constant} should apply live storage changes`
-  );
-  assert.match(
-    newtabSource,
-    new RegExp(`migrateStorageIfNeeded\\(\\[[\\s\\S]*?${entry.constant}[\\s\\S]*?\\]\\);`),
-    `${entry.constant} should migrate from legacy local storage`
-  );
+(async () => {
+  for (const entry of settingsContract) {
+    const others = settingsContract.filter((other) => other !== entry);
+    let hiddenWhenReady = null;
+    const page = await createNewtabPage({
+      sync: { [entry.storageKey]: false },
+      setup(window) {
+        // Capture the button's state on the frame the page reveals itself.
+        new window.MutationObserver(() => {
+          if (hiddenWhenReady === null && window.document.body && window.document.body.getAttribute('data-nt-ready') === '1') {
+            const control = window.document.querySelector(CONTROLS[entry.constant]);
+            hiddenWhenReady = Boolean(control && control.hidden);
+          }
+        }).observe(window.document.documentElement, { subtree: true, attributes: true, attributeFilter: ['data-nt-ready'] });
+      }
+    });
+    await page.settle(200);
+    assert.strictEqual(hiddenWhenReady, true, `${entry.constant}: the button should already be hidden when New Tab first shows`);
+    assert.strictEqual(shown(page, CONTROLS[entry.constant]), false, `${entry.constant}: a hidden button should also leave the tab order`);
+    others.forEach((other) => assert.strictEqual(shown(page, CONTROLS[other.constant]), true, `${other.constant} should not be affected`));
+    page.changeStorage('sync', entry.storageKey, true);
+    await page.settle(60);
+    assert.strictEqual(shown(page, CONTROLS[entry.constant]), true, `${entry.constant}: turning it back on should show it at once`);
+    page.changeStorage('sync', entry.storageKey, false);
+    await page.settle(60);
+    assert.strictEqual(shown(page, CONTROLS[entry.constant]), false, `${entry.constant}: and turning it off should hide it again`);
+    page.close();
+  }
+  console.log('newtab action-button visibility setting tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
 });
-
-console.log('newtab action-button visibility setting tests passed');

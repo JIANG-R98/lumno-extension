@@ -1,65 +1,48 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const settings = require('../../src/shared/settings.js');
+const { openSearchSurface } = require('../helpers/search-surfaces');
 
-const repoRoot = path.resolve(__dirname, '..', '..');
-const newtabJs = readNewtabRuntimeSource();
+// /mode on New Tab switches the theme the page is showing: the global theme
+// while New Tab follows it, or New Tab's own override when it has one. The
+// appearance panel's Global / New Tab scope picker is covered by
+// react-src/newtab/wallpaper-view.test.tsx and test-newtab-wallpaper-panel.js.
 
-function assertContains(source, needle, message) {
-  assert.ok(source.includes(needle), message);
+const THEME = settings.THEME_STORAGE_KEY;
+const NEWTAB_THEME = settings.NEWTAB_THEME_MODE_STORAGE_KEY;
+
+async function run(sync, activate) {
+  const surface = await openSearchSurface('newtab', { sync });
+  await surface.type('/mode');
+  await surface.settle(100);
+  const [row] = surface.suggestions();
+  assert.deepStrictEqual(row && [row._xSuggestion.type, row._xSuggestion.nextMode], ['modeSwitch', 'dark'], '/mode should offer the next theme');
+  const before = surface.page.storage.sync.writes.length;
+  await activate(surface, row);
+  await surface.settle(100);
+  const result = {
+    theme: surface.page.document.body.getAttribute('data-theme'),
+    writes: surface.page.storage.sync.writes.slice(before).filter((write) => Object.hasOwn(write, THEME) || Object.hasOwn(write, NEWTAB_THEME))
+  };
+  surface.close();
+  return result;
 }
 
-function assertMatches(source, pattern, message) {
-  assert.ok(pattern.test(source), message);
-}
+const pressEnter = (surface) => surface.press('Enter');
+const clickRow = (surface, row) => row.dispatchEvent(new surface.window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
 
-assertContains(
-  newtabJs,
-  'function setVisibleThemeMode(mode) {',
-  'newtab mode command should use a dedicated visible-theme setter'
-);
+(async () => {
+  for (const [how, activate] of [['Enter', pressEnter], ['a click', clickRow]]) {
+    const following = await run({ [THEME]: 'light' }, activate);
+    assert.strictEqual(following.theme, 'dark', `${how} on /mode should switch the visible theme`);
+    assert.deepStrictEqual(following.writes, [{ [THEME]: 'dark' }], `${how}: while New Tab follows the global theme, it should change the global theme`);
 
-assertMatches(
-  newtabJs,
-  /function getScopedThemeMode\(\) \{[\s\S]*?return isNewtabThemeFollowingGlobal\(\) \? globalThemeMode : newtabThemeMode;[\s\S]*?\}/,
-  'New Tab should keep its local override as the effective appearance mode when configured'
-);
-
-assertMatches(
-  newtabJs,
-  /function getSelectedThemeMode\(\) \{[\s\S]*?if \(newtabThemeScope !== 'home'\) \{[\s\S]*?return globalThemeMode;[\s\S]*?\}[\s\S]*?return isNewtabThemeFollowingGlobal\(\) \? 'system' : newtabThemeMode;[\s\S]*?\}/,
-  'New Tab appearance controls should display global and New Tab-specific theme selections separately'
-);
-
-assertMatches(
-  newtabJs,
-  /function setThemeMode\(mode\) \{[\s\S]*?const isEditingNewtabTheme = newtabThemeScope === 'home';[\s\S]*?const targetKey = isEditingNewtabTheme[\s\S]*?\? NEWTAB_THEME_MODE_STORAGE_KEY[\s\S]*?: THEME_STORAGE_KEY;/,
-  'New Tab appearance picker should write the selected Global or New Tab-specific theme scope'
-);
-
-assertMatches(
-  newtabJs,
-  /function setVisibleThemeMode\(mode\) \{[\s\S]*?if \(isNewtabThemeFollowingGlobal\(\)\) \{[\s\S]*?setGlobalThemeMode\(nextMode\);[\s\S]*?return;[\s\S]*?storageArea\.set\(\{ \[NEWTAB_THEME_MODE_STORAGE_KEY\]: nextStoredMode \}/,
-  'newtab /mode should update the New Tab-specific override when it controls the visible theme'
-);
-
-assertMatches(
-  newtabJs,
-  /if \(suggestion\.type === 'modeSwitch'\) \{[\s\S]*?setVisibleThemeMode\(suggestion\.nextMode\);/,
-  'rendered mode suggestions should switch the visible New Tab theme'
-);
-
-assertMatches(
-  newtabJs,
-  /if \((?:!localSearchScopeState && )?isModeCommand\(query\)\) \{[\s\S]*?setVisibleThemeMode\(getNextThemeMode\(currentThemeMode\)\);/,
-  'pressing Enter on /mode should switch the visible New Tab theme'
-);
-
-assertMatches(
-  newtabJs,
-  /if \(selectedSuggestion\.type === 'modeSwitch'\) \{[\s\S]*?setVisibleThemeMode\(selectedSuggestion\.nextMode\);/,
-  'selected modeSwitch suggestions should switch the visible New Tab theme'
-);
-
-console.log('newtab mode command tests passed');
+    const overridden = await run({ [THEME]: 'light', [NEWTAB_THEME]: 'light' }, activate);
+    assert.strictEqual(overridden.theme, 'dark');
+    assert.deepStrictEqual(overridden.writes, [{ [NEWTAB_THEME]: 'dark' }], `${how}: with its own theme, New Tab should change only that`);
+  }
+  console.log('newtab mode command tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

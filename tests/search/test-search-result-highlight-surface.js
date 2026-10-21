@@ -1,18 +1,12 @@
 const assert = require('assert');
-const { JSDOM } = require('jsdom');
 const { readStylesheet } = require('../helpers/css-tokens');
-const { readPageSource } = require('../helpers/page-source');
-const { parseCss } = require('../helpers/css-rules');
+const { parseCss, parsePageCss } = require('../helpers/css-rules');
 const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
 
 // How the highlighted search result looks: a background, not an outline or
 // shadow, with a white tile behind a dark-theme favicon; and on the live
 // surfaces, the row state the styles key off.
 
-function pageCss(relativePath) {
-  const doc = new JSDOM(readPageSource(relativePath)).window.document;
-  return parseCss(Array.from(doc.querySelectorAll('style')).map((style) => style.textContent).join('\n'));
-}
 
 // The merged declarations for a selector, wherever it is listed.
 function rule(css, selector) {
@@ -22,7 +16,7 @@ function rule(css, selector) {
 }
 
 function testStylesheets() {
-  const newtab = pageCss('newtab.html');
+  const newtab = parsePageCss('newtab.html');
   const overlay = parseCss(readStylesheet('src/overlay/suggestions-view.css'));
   const overlayScope = ':is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_)';
   const overlayDark = ':is(#_x_extension_overlay_2024_unique_[data-theme="dark"], #_x_extension_onboarding_overlay_demo_2026_unique_[data-theme="dark"])';

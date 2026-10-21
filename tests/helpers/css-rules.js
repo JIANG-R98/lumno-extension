@@ -136,4 +136,12 @@ function parseCss(cssText) {
   };
 }
 
-module.exports = { parseCss };
+// A page's styles as the page loads them: its <style> blocks and its own
+// stylesheets, inlined at their links by readPageSource.
+function parsePageCss(relativePath) {
+  const { readPageSource } = require('./page-source');
+  const dom = new JSDOM(readPageSource(relativePath), { virtualConsole: new VirtualConsole() });
+  return parseCss(Array.from(dom.window.document.querySelectorAll('style')).map((style) => style.textContent).join('\n'));
+}
+
+module.exports = { parseCss, parsePageCss };

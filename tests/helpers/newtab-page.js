@@ -11,6 +11,7 @@ const { JSDOM, VirtualConsole } = require('jsdom');
 const { bundleScript } = require('./module-script');
 const { recordAllListeners } = require('./trusted-events');
 const { EXTENSION_ORIGIN, createArea, createEvent, reactEntryScript } = require('./options-page');
+const { createFakeBookmarks, shortcutsStorage } = require('./newtab-fixtures');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const INPUT_ID = '_x_extension_newtab_search_input_2024_unique_';
@@ -22,6 +23,9 @@ const DEFAULT_SYNC = {
 
 // options:
 //   sync, local, session  initial storage (sync is merged over DEFAULT_SYNC)
+//   shortcuts      the user's shortcuts (inputs for the shortcuts store:
+//                  { url, title } or { type: 'folder', folderId, title })
+//   bookmarks      the bookmark bar's children (see newtab-fixtures.js)
 //   topSites       chrome.topSites.get answer
 //   history        chrome.history.search answer
 //   respond        (message) => response for chrome.runtime.sendMessage;
@@ -29,6 +33,7 @@ const DEFAULT_SYNC = {
 //   platform       navigator.platform ('MacIntel' by default)
 //   userAgent      navigator.userAgent
 //   darkSystem     whether prefers-color-scheme: dark matches
+//   search         the page URL's query, e.g. '?focus=1'
 //   setup          (window) => void, run before the page scripts
 async function createNewtabPage(options) {
   const config = options || {};
@@ -42,7 +47,7 @@ async function createNewtabPage(options) {
   }
   const html = fs.readFileSync(path.join(repoRoot, 'newtab.html'), 'utf8');
   const dom = new JSDOM(html, {
-    url: `${EXTENSION_ORIGIN}/newtab.html`,
+    url: `${EXTENSION_ORIGIN}/newtab.html${config.search || ''}`,
     runScripts: 'outside-only',
     pretendToBeVisual: true,
     virtualConsole
@@ -53,7 +58,8 @@ async function createNewtabPage(options) {
     Object.defineProperty(window.navigator, 'userAgent', { configurable: true, value: config.userAgent });
   }
   const storageChanged = createEvent();
-  const sync = createArea(window, 'sync', Object.assign({}, DEFAULT_SYNC, config.sync || {}), storageChanged);
+  const shortcutValues = Array.isArray(config.shortcuts) ? await shortcutsStorage(config.shortcuts) : {};
+  const sync = createArea(window, 'sync', Object.assign({}, DEFAULT_SYNC, shortcutValues, config.sync || {}), storageChanged);
   const local = createArea(window, 'local', config.local, storageChanged);
   const session = createArea(window, 'session', config.session, storageChanged);
   const messages = [];
@@ -135,11 +141,7 @@ async function createNewtabPage(options) {
         return answer(callback, undefined);
       }
     },
-    bookmarks: {
-      getTree(callback) {
-        return answer(callback, [{ id: '0', title: '', children: [] }]);
-      }
-    },
+    bookmarks: createFakeBookmarks(window, config.bookmarks || []),
     permissions: {
       contains(_permissions, callback) {
         return answer(callback, true);
@@ -221,6 +223,7 @@ async function createNewtabPage(options) {
     updated,
     searches,
     storage: { sync, local, session },
+    bookmarks: window.chrome.bookmarks,
     storageChanged,
     runtimeMessages,
     historyVisited,
