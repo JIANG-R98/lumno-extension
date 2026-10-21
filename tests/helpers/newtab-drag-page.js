@@ -33,8 +33,8 @@ async function openDragPage(options) {
   await page.settle(300);
   const doc = page.document;
   const grid = doc.getElementById('_x_extension_newtab_bookmarks_grid_2024_unique_');
-  page.layout.place(doc.getElementById('_x_extension_newtab_bookmarks_2024_unique_'), { left: 80, top: 80, width: 700, height: 100 });
-  page.layout.place(grid, { left: 100, top: 100, width: 588, height: 51 });
+  page.layout.place(doc.getElementById('_x_extension_newtab_bookmarks_2024_unique_'), { left: 80, top: 80, width: 1100, height: 100 });
+  page.layout.place(grid, { left: 100, top: 100, width: 1000, height: 51 });
   page.layout.flow(grid, '.x-nt-bookmark-card', BOOKMARK_ROW);
   const shortcutGrid = doc.querySelector('.x-nt-shortcut-tile') && doc.querySelector('.x-nt-shortcut-tile').parentElement;
   if (shortcutGrid) {
