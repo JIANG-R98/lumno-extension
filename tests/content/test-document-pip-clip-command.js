@@ -1,9 +1,10 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readBackgroundSource } = require('../helpers/background-source');
 
 const repoRoot = path.join(__dirname, '..', '..');
-const backgroundJs = fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8');
+const backgroundJs = readBackgroundSource();
 const contentJs = fs.readFileSync(path.join(repoRoot, 'src/content/document-pip-picker.js'), 'utf8');
 const overlayRuntimeJs = fs.readFileSync(path.join(repoRoot, 'src/overlay/runtime.js'), 'utf8');
 const overlayJs = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');

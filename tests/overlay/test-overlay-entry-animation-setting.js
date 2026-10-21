@@ -1,11 +1,12 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readBackgroundSource } = require('../helpers/background-source');
 const { readPageSource } = require('../helpers/page-source');
 
 const optionsHtml = readPageSource('src/options/options.html');
 const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
 const overlayRuntimeSource = fs.readFileSync('src/overlay/runtime.js', 'utf8');
-const backgroundSource = fs.readFileSync('src/background/background.js', 'utf8');
+const backgroundSource = readBackgroundSource();
 const settings = require('../../src/shared/settings.js');
 
 const sizeRowIndex = optionsHtml.indexOf('data-i18n="settings_overlay_size_title"');

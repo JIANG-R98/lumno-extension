@@ -6,6 +6,7 @@ const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const historyApi = require(path.join(repoRoot, 'src/shared/search/search-input-history.js'));
+const { readBackgroundSource } = require('../helpers/background-source');
 
 function createStorage(initialValue) {
   const state = {
@@ -107,10 +108,7 @@ function testShortcutDetection() {
 
 function testSurfaceIntegrationContract() {
   const newtabHtml = readPageSource('newtab.html');
-  const backgroundSource = fs.readFileSync(
-    path.join(repoRoot, 'src/background/background.js'),
-    'utf8'
-  );
+  const backgroundSource = readBackgroundSource();
   const newtabSource = readNewtabRuntimeSource();
   const overlaySource = fs.readFileSync(
     path.join(repoRoot, 'src/overlay/search-panel.js'),

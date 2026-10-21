@@ -197,24 +197,30 @@ stagedBackground = replaceRequired(
   1,
   'background debug bridge attachment'
 );
-stagedBackground = replaceRequired(
-  stagedBackground,
+fs.writeFileSync(stagedBackgroundPath, stagedBackground);
+
+// openOverlayOnTab (overlay-open-service.js) adds the debug surface to the
+// overlay injection list while the bridge is enabled.
+const stagedOverlayOpenPath = stagedPath('src/background/overlay-open-service.js');
+let stagedOverlayOpen = fs.readFileSync(stagedOverlayOpenPath, 'utf8');
+stagedOverlayOpen = replaceRequired(
+  stagedOverlayOpen,
   /  const shouldInjectOverlayCodexDebugSurface = codexDebugBridge\.isEnabled\(\);\r?\n/,
   '',
   1,
   'conditional Overlay debug surface flag'
 );
-stagedBackground = replaceRequired(
-  stagedBackground,
+stagedOverlayOpen = replaceRequired(
+  stagedOverlayOpen,
   /^[ \t]*\.\.\.\(shouldInjectOverlayCodexDebugSurface \? \['src\/shared\/codex-debug-surface\.js'\] : \[\]\),\r?\n/gm,
   '',
   1,
   'conditional Overlay debug surface entry'
 );
-fs.writeFileSync(stagedBackgroundPath, stagedBackground);
+fs.writeFileSync(stagedOverlayOpenPath, stagedOverlayOpen);
 
 // background.js and the service scripts it imports share one global scope;
-// the injected Document PiP picker (background.js) and the tab switcher
+// the injected Document PiP picker (pip-service.js) and the tab switcher
 // (tab-switcher-service.js) each list the debug surface once.
 const stagedBackgroundScriptPaths = [stagedBackgroundPath].concat(
   fs.readdirSync(stagedPath('src/background'))

@@ -7,6 +7,7 @@ const browserProfile = require('../../src/shared/browser-profile.js');
 const bundledShortcutRules = require('../../assets/data/shortcut-rules.json');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { readBackgroundSource } = require('../helpers/background-source');
 
 function createResponse(data) {
   return {
@@ -101,7 +102,7 @@ function testBrowserProfileUsesClientHintBrand() {
 
 function testBrowserProfileRuntimeWiring() {
   const repoRoot = path.join(__dirname, '..', '..');
-  const backgroundSource = fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8');
+  const backgroundSource = readBackgroundSource();
   const newtabHtml = readPageSource('newtab.html');
   const newtabSource = readNewtabRuntimeSource();
   const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
@@ -112,9 +113,10 @@ function testBrowserProfileRuntimeWiring() {
       backgroundSource.indexOf("chrome.runtime.getURL('src/background/shortcut-rules.js')"),
     'background should load browser-profile before shortcut-rules'
   );
+  const overlayOpenSource = fs.readFileSync(path.join(repoRoot, 'src/background/overlay-open-service.js'), 'utf8');
   assert(
-    backgroundSource.indexOf("'src/shared/browser-profile.js'") <
-      backgroundSource.indexOf("'src/overlay/search-panel.js'"),
+    overlayOpenSource.indexOf("'src/shared/browser-profile.js'") <
+      overlayOpenSource.indexOf("'src/overlay/search-panel.js'"),
     'overlay injection should load browser-profile before search-panel'
   );
   assert(

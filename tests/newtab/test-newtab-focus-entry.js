@@ -3,15 +3,13 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const { readPageSource } = require('../helpers/page-source');
+const { readBackgroundSource } = require('../helpers/background-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const html = readPageSource('newtab.html');
 const sourcePath = path.join(repoRoot, 'src/newtab/newtab-focus-entry.js');
 const source = fs.existsSync(sourcePath) ? fs.readFileSync(sourcePath, 'utf8') : '';
-const backgroundSource = fs.readFileSync(
-  path.join(repoRoot, 'src/background/background.js'),
-  'utf8'
-);
+const backgroundSource = readBackgroundSource();
 const legacyHtml = fs.readFileSync(path.join(repoRoot, 'src/newtab/newtab.html'), 'utf8');
 const legacyRedirectSourcePath = path.join(repoRoot, 'src/newtab/newtab-route-redirect.js');
 const legacyRedirectSource = fs.readFileSync(legacyRedirectSourcePath, 'utf8');

@@ -3,6 +3,7 @@ const fs = require('fs');
 
 const faviconTheme = require('../../src/newtab/theme/favicon-theme.js');
 const { readPageSource } = require('../helpers/page-source');
+const { readBackgroundSource } = require('../helpers/background-source');
 
 function parseThemeColor(value) {
   const parsed = faviconTheme.parseCssColor(value);
@@ -157,7 +158,7 @@ assert.ok(
   'surface palette generation should cap saturation consistently across brand hues'
 );
 
-const backgroundSource = fs.readFileSync('src/background/background.js', 'utf8');
+const backgroundSource = readBackgroundSource();
 const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
 const newtabHtml = readPageSource('newtab.html');
 const overlayCss = fs.readFileSync('src/overlay/suggestions-view.css', 'utf8');

@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
+const { readBackgroundSource } = require('../helpers/background-source');
 
 const repoRoot = path.join(__dirname, '..', '..');
 const read = (relativePath) => fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
@@ -64,7 +65,7 @@ const overlaySource = read('src/overlay/search-panel.js');
 const newtabSource = read('src/newtab/newtab.js');
 const suggestionsControllerSource = read('src/newtab/search/suggestions-controller.js');
 assert.match(
-  read('src/background/background.js'),
+  readBackgroundSource(),
   /'src\/shared\/community-links\.js',\s*'src\/shared\/ui\/community-qr-dialog\.js'/,
   'the overlay loads the dialog'
 );

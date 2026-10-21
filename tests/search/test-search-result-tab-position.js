@@ -5,8 +5,9 @@ const vm = require('vm');
 const settings = require('../../src/shared/settings.js');
 const searchResultTabs = require('../../src/background/search-result-tabs.js');
 const tabGroups = require('../../src/background/tab-groups.js');
+const { readBackgroundSource } = require('../helpers/background-source');
 
-const source = fs.readFileSync(path.join(__dirname, '../../src/background/background.js'), 'utf8');
+const source = readBackgroundSource();
 const createFunctions = source.slice(
   source.indexOf('function createTabWithSourceGroup('),
   source.indexOf('function moveTabToSourceGroupContext(')

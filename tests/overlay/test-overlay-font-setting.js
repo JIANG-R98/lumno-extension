@@ -14,6 +14,7 @@ const tokensCss = fs.readFileSync('src/shared/tokens.css', 'utf8');
 const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
 const firefoxBuild = fs.readFileSync('scripts/build/build-firefox.js', 'utf8');
 const settings = require('../../src/shared/settings.js');
+const { readBackgroundSource } = require('../helpers/background-source');
 
 // --- Options row -----------------------------------------------------------
 const animationRowIndex = optionsHtml.indexOf('data-i18n="settings_overlay_enter_animation_title"');
@@ -232,7 +233,7 @@ assert.doesNotMatch(
   'WebDAV conflicts never involve the device-local fonts'
 );
 assert.match(
-  fs.readFileSync('src/background/background.js', 'utf8'),
+  readBackgroundSource(),
   /function cleanupLocalOnlyOverlayFontSyncStorage\(\)[\s\S]*?chrome\.storage\.sync\.remove\(OVERLAY_FONT_LOCAL_STORAGE_KEYS[\s\S]*?\ncleanupLocalOnlyOverlayFontSyncStorage\(\);/,
   'copies development builds left in Chrome Sync should be cleared'
 );

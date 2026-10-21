@@ -3,9 +3,10 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const { JSDOM, VirtualConsole } = require('jsdom');
+const { readBackgroundSource } = require('../helpers/background-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const backgroundSource = fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8');
+const backgroundSource = readBackgroundSource();
 const injectionList = backgroundSource.match(/const overlayInjectionFiles = (\[[\s\S]*?\n  \]);/);
 assert.ok(injectionList, 'the production overlay injection list must be available');
 const injectionFiles = vm.runInNewContext(injectionList[1], {

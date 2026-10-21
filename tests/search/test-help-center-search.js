@@ -3,6 +3,7 @@ const fs = require('fs');
 const helpCenterSearch = require('../../src/shared/search/help-center-search.js');
 const communityLinks = require('../../src/shared/community-links.js');
 const searchUtils = require('../../src/shared/search/search-utils.js');
+const { readBackgroundSource } = require('../helpers/background-source');
 
 const ORIGIN = 'https://lumno.kubai.design';
 const index = helpCenterSearch.normalizeIndex([
@@ -352,8 +353,8 @@ function testSuggestionSource() {
   assert.strictEqual(updates.length, 2, 'a late answer for an older query should be ignored');
 }
 
-const backgroundSource = fs.readFileSync('src/background/background.js', 'utf8');
-const importBlock = backgroundSource.match(/importScripts\(([\s\S]*?)\);/)[1];
+const backgroundSource = readBackgroundSource();
+const importBlock = fs.readFileSync('src/background/background.js', 'utf8').match(/importScripts\(([\s\S]*?)\);/)[1];
 assert.ok(importBlock.includes("'src/shared/community-links.js'") && importBlock.includes("'src/shared/search/help-center-search.js'"));
 assert.match(backgroundSource, /parse: HELP_CENTER_SEARCH\.normalizeSynonyms/, 'background should load the synonym list');
 assert.match(backgroundSource, /response\.status === 404 \? \{ ok: true, json: \(\) => \[\] \}/, 'a missing synonym list should be cached as empty');

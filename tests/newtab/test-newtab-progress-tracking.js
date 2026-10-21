@@ -3,6 +3,7 @@ const fs = require('fs');
 const store = require('../../src/newtab/recent/recent-sites-store.js');
 const progressMatch = require('../../src/shared/progress-match.js');
 const progressHistory = require('../../src/shared/progress-history.js');
+const { readBackgroundSource } = require('../helpers/background-source');
 require('../../src/newtab/dismiss-stack.js');
 require('../../src/newtab/recent/recent-sites-controller.js');
 
@@ -294,7 +295,7 @@ const menuValues = (controller, item) => controller.getRecentContextMenuOptions(
 
   // The background tracker is wired into the service worker and gated by Labs.
   {
-    const background = fs.readFileSync('src/background/background.js', 'utf8');
+    const background = readBackgroundSource();
     ['src/shared/progress-match.js', 'src/shared/progress-history.js', 'src/background/progress-tracker.js']
       .forEach((file) => assert(background.includes(`chrome.runtime.getURL('${file}')`), `${file} should be imported`));
     assert(background.includes('isEnabled: () => progressTrackingEnabled'));

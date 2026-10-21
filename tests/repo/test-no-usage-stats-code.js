@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { readPageSource } = require('../helpers/page-source');
+const { readBackgroundSource } = require('../helpers/background-source');
 
 const repoRoot = path.join(__dirname, '..', '..');
 
@@ -29,7 +30,7 @@ function assertPathMissing(relativePath) {
 ].forEach(assertPathMissing);
 
 const accountUi = readPageSource('src/options/options.html');
-const background = read('src/background/background.js');
+const background = readBackgroundSource();
 
 [
   'src/background/usage-analytics-runtime.js',

@@ -4,6 +4,7 @@ const fs = require('fs');
 const communityLinks = require('../../src/shared/community-links.js');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { readBackgroundSource } = require('../helpers/background-source');
 
 (async () => {
   assert.strictEqual(
@@ -245,7 +246,7 @@ const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
   const optionsSource = fs.readFileSync('src/options/options.js', 'utf8');
   const optionsHtml = readPageSource('src/options/options.html');
   const overlaySource = fs.readFileSync('src/overlay/search-panel.js', 'utf8');
-  const backgroundSource = fs.readFileSync('src/background/background.js', 'utf8');
+  const backgroundSource = readBackgroundSource();
   assert(
     !newtabSource.includes('qrcode-20260730.webp') &&
       !optionsSource.includes('qrcode-20260730.webp') &&

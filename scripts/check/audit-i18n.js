@@ -144,7 +144,7 @@ function isAllowlistedLine(file, line) {
   if (file === 'src/newtab/newtab.js' && /'weibo\.com':\s*['"`]微博['"`]/.test(line)) {
     return true;
   }
-  if (file === 'src/background/background.js' && /近(?:30分钟|24小时)切换/.test(line)) {
+  if (file === 'src/background/tab-switch-stats-service.js' && /近(?:30分钟|24小时)切换/.test(line)) {
     return true;
   }
   if (/debug|score|reason/i.test(line) && !/textContent|placeholder|aria-label|title/.test(line)) {

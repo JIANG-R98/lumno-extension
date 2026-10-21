@@ -1,6 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { readBackgroundSource } = require('../helpers/background-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const tooltipJsPath = path.join(repoRoot, 'src/shared/ui/tooltip.js');
@@ -8,7 +9,6 @@ const tooltipCssPath = path.join(repoRoot, 'src/shared/ui/tooltip.css');
 const newtabHtmlPath = path.join(repoRoot, 'newtab.html');
 const optionsHtmlPath = path.join(repoRoot, 'src/options/options.html');
 const overlayPanelPath = path.join(repoRoot, 'src/overlay/search-panel.js');
-const backgroundPath = path.join(repoRoot, 'src/background/background.js');
 
 global.LumnoTooltipView = {
   implementation: 'react-test-double',
@@ -237,7 +237,7 @@ assert.strictEqual(
 const newtabHtml = fs.readFileSync(newtabHtmlPath, 'utf8');
 const optionsHtml = fs.readFileSync(optionsHtmlPath, 'utf8');
 const overlayPanel = fs.readFileSync(overlayPanelPath, 'utf8');
-const background = fs.readFileSync(backgroundPath, 'utf8');
+const background = readBackgroundSource();
 
 assert.ok(newtabHtml.includes('../shared/ui/tooltip.css'), 'newtab should load the shared tooltip stylesheet');
 assert.ok(newtabHtml.includes('../shared/ui/tooltip.js'), 'newtab should load the shared tooltip component');

@@ -3,13 +3,14 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const { JSDOM, VirtualConsole } = require('jsdom');
+const { readBackgroundSource } = require('./background-source');
 
 // Loads the unmodified production overlay injection bundle (the same file
 // list background.js injects) into a JSDOM page with a fake chrome API, so
 // tests can drive the real toggle helper end to end.
 
 const repoRoot = path.resolve(__dirname, '../..');
-const backgroundSource = fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8');
+const backgroundSource = readBackgroundSource();
 const injectionList = backgroundSource.match(/const overlayInjectionFiles = (\[[\s\S]*?\n  \]);/);
 assert.ok(injectionList, 'the production overlay injection list must be available');
 const injectionFiles = vm.runInNewContext(injectionList[1], {

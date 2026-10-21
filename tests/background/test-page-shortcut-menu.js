@@ -5,6 +5,7 @@ const settings = require('../../src/shared/settings.js');
 const shortcuts = require('../../src/newtab/shortcuts/shortcuts-store.js');
 const siteDisplayName = require('../../src/shared/site-display-name.js');
 const menu = require('../../src/background/page-shortcut-menu.js');
+const { readBackgroundSource } = require('../helpers/background-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const LANGUAGE_KEY = settings.LANGUAGE_STORAGE_KEY;
@@ -104,8 +105,9 @@ async function run() {
       assert(messages[key] && messages[key].message, `${locale} needs ${key}`);
     });
   });
-  const background = fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8');
-  const firstImportBlock = background.match(/importScripts\(([\s\S]*?)\);/)[1];
+  const background = readBackgroundSource();
+  const firstImportBlock = fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8')
+    .match(/importScripts\(([\s\S]*?)\);/)[1];
   ['src/shared/site-display-name.js', 'src/background/page-shortcut-menu.js'].forEach((file) => {
     assert(firstImportBlock.includes(`'${file}'`), `${file} must load with the first import block`);
   });

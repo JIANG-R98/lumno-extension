@@ -3,8 +3,9 @@ const fs = require('fs');
 
 const settings = require('../../src/shared/settings.js');
 const { readPageSource } = require('../helpers/page-source');
+const { readBackgroundSource } = require('../helpers/background-source');
 const optionsHtml = readPageSource('src/options/options.html');
-const backgroundSource = fs.readFileSync('src/background/background.js', 'utf8');
+const backgroundSource = readBackgroundSource();
 const aggregateRuntimeSource = fs.readFileSync('src/background/aggregate-search.js', 'utf8');
 const aggregateEditorSource = fs.readFileSync(
   'react-src/options/aggregate-search-list.tsx',

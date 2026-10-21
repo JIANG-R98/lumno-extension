@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { readPageSource } = require('../helpers/page-source');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { readBackgroundSource } = require('../helpers/background-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const newtabJs = readNewtabRuntimeSource();
@@ -17,7 +18,7 @@ const bookmarkDragJs = fs.readFileSync(
 );
 const bookmarksViewJs = fs.readFileSync(path.join(repoRoot, 'react-src', 'newtab', 'bookmarks.tsx'), 'utf8');
 const cascadeJs = fs.readFileSync(path.join(repoRoot, 'src', 'newtab', 'bookmarks', 'bookmark-cascade-menu.js'), 'utf8');
-const backgroundJs = fs.readFileSync(path.join(repoRoot, 'src', 'background', 'background.js'), 'utf8');
+const backgroundJs = readBackgroundSource();
 const {
   cloneBookmarkSnapshot,
   createBookmarkMoveHistory,

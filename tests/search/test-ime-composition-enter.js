@@ -7,6 +7,7 @@ const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const repoRoot = path.resolve(__dirname, '..', '..');
 const guardPath = path.join(repoRoot, 'src/shared/search/ime-key-guard.js');
 const guard = require(guardPath);
+const { readBackgroundSource } = require('../helpers/background-source');
 
 function createClock(start) {
   let current = start;
@@ -95,7 +96,7 @@ assert.strictEqual(
 imeGuard.markCompositionEnd({ target: input });
 
 const newtabHtml = readPageSource('newtab.html');
-const backgroundJs = fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8');
+const backgroundJs = readBackgroundSource();
 const newtabJs = readNewtabRuntimeSource();
 const overlayJs = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
 

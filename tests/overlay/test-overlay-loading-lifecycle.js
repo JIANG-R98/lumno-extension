@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { readBackgroundSource } = require('../helpers/background-source');
 
 const lifecycle = require(path.join(
   __dirname,
@@ -501,10 +502,7 @@ assert.ok(
   Array.isArray(manifest.permissions) && !manifest.permissions.includes('webNavigation'),
   'loading intent tracking should reuse the existing tabs permission'
 );
-const backgroundSource = fs.readFileSync(
-  path.join(__dirname, '..', '..', 'src', 'background', 'background.js'),
-  'utf8'
-);
+const backgroundSource = readBackgroundSource();
 assert.ok(
   backgroundSource.includes("if (changeInfo.status === 'loading') {\n      rememberOverlayTopFrameNavigation({"),
   'the tabs loading event should be recorded independently of the stale tabs.query snapshot'

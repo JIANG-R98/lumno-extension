@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { readBackgroundSource } = require('../helpers/background-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const tooltipJsPath = path.join(repoRoot, 'src/shared/ui/tooltip.js');
@@ -676,7 +677,7 @@ assert.strictEqual(
 
 const newtabHtml = fs.readFileSync(newtabHtmlPath, 'utf8');
 const newtabPanel = readNewtabRuntimeSource();
-const background = fs.readFileSync(path.join(repoRoot, 'src/background/background.js'), 'utf8');
+const background = readBackgroundSource();
 const overlayPanel = fs.readFileSync(path.join(repoRoot, 'src/overlay/search-panel.js'), 'utf8');
 const searchInputMode = fs.readFileSync(path.join(repoRoot, 'src/shared/search/search-input-mode.js'), 'utf8');
 assert.ok(newtabHtml.includes('../shared/ui/cursor-tooltip.css'), 'newtab should load cursor tooltip stylesheet');

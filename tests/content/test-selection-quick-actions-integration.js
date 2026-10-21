@@ -1,5 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
+const { readBackgroundSource } = require('../helpers/background-source');
 const { readPageSource } = require('../helpers/page-source');
 
 const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
@@ -9,7 +10,7 @@ const settings = require('../../src/shared/settings.js');
 const optionsToggleKeys = require('../../src/options/options-toggle-settings.js')
   .getToggleSettings(settings)
   .map((entry) => entry.key);
-const backgroundSource = fs.readFileSync('src/background/background.js', 'utf8');
+const backgroundSource = readBackgroundSource();
 const selectionTargetSource = fs.readFileSync('src/background/selection-target.js', 'utf8');
 const providerResolverSource = fs.readFileSync('src/background/selection-quick-action-provider.js', 'utf8');
 const contentSource = fs.readFileSync('src/content/selection-quick-actions.js', 'utf8');

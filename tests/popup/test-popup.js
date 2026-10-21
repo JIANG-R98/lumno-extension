@@ -2,6 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const popup = require('../../src/popup/popup.js');
+const { readBackgroundSource } = require('../helpers/background-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const read = (file) => fs.readFileSync(path.join(repoRoot, file), 'utf8');
@@ -243,7 +244,7 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
     .forEach((script) => assert(html.includes(`src="${script}"`), `the popup loads ${script}`));
   assert(html.indexOf('popup-theme-preload.js') < html.indexOf('x-lumno-popup-root'),
     'the theme is painted before the popup renders');
-  const background = read('src/background/background.js');
+  const background = readBackgroundSource();
   assert(!background.includes('chrome.action.onClicked'), 'a popup replaces the toolbar click handler');
   const pageActions = background.match(/const WEB_PAGE_MESSAGE_ACTIONS = Object\.freeze\(\[([\s\S]*?)\]\);/)[1];
   ['popupOpenDocumentPipPicker', 'popupShowSearch', 'popupAddPageShortcut', 'popupShowPageToast',

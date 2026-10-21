@@ -5,6 +5,7 @@ const vm = require('vm');
 require('../../src/shared/extension-routes.js');
 require('../../src/background/tab-groups.js');
 const fallback = require('../../src/background/newtab-fallback.js');
+const { readBackgroundSource } = require('../helpers/background-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const lumnoNewtabHtml = fs.readFileSync(path.join(repoRoot, 'src', 'newtab', 'lumno-newtab.html'), 'utf8');
@@ -306,7 +307,7 @@ assert.deepStrictEqual(
 globalThis.chrome = originalChrome;
 
 {
-  const backgroundSource = fs.readFileSync(path.join(repoRoot, 'src', 'background', 'background.js'), 'utf8');
+  const backgroundSource = readBackgroundSource();
   const overlayOnTabStart = backgroundSource.indexOf('function openOverlayOnTab(');
   const overlayOnTabEnd = backgroundSource.indexOf('\nfunction ', overlayOnTabStart + 1);
   const overlayOnTabSource = backgroundSource.slice(overlayOnTabStart, overlayOnTabEnd);
