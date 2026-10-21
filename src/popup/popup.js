@@ -129,6 +129,8 @@
   //   documentPipSupported the browser has Document Picture-in-Picture
   //   documentPipEnabled   web clip is turned on in Labs
   //   shortcuts            { search, copy } formatted key chords
+  //   recentPin            { pinned, full } for the page among the New Tab's
+  //                        pinned recent sites
   //   settings             { selectionQuickActions, overlaySize, overlayPageTheme,
   //                          overlayOpenTabs, theme } as stored, normalized
   //   settingsExpanded     the settings disclosure is open
@@ -141,7 +143,11 @@
     const tab = state.tab;
     const url = tab ? String(tab.url || '') : '';
     const restricted = !tab || state.restricted === true;
-    const canAddShortcut = Boolean(tab) && isWebUrl(url) && !restricted;
+    // Shortcuts and pinned recent sites hold web pages only.
+    const canSaveToNewTab = Boolean(tab) && isWebUrl(url) && !restricted;
+    const recentPin = state.recentPin || {};
+    const pinned = recentPin.pinned === true;
+    const pinFull = !pinned && recentPin.full === true;
     const pip = state.pip || {};
     // Video picture-in-picture runs in the page, so browser pages never get it.
     const showPip = pip.supported === true && Boolean(tab) && !restricted;
@@ -171,12 +177,27 @@
         label: t('popup_action_shortcut', 'Add shortcut'),
         tooltip: t('popup_action_shortcut_tooltip', 'Add to your New Tab shortcuts'),
         iconClass: 'ri-apps-2-add-line',
-        disabled: !canAddShortcut
+        disabled: !canSaveToNewTab
+      }),
+      action('pin', {
+        label: pinned
+          ? t('popup_action_unpin_recent', 'Unpin from Recent')
+          : t('popup_action_pin_recent', 'Pin to Recent'),
+        tooltip: pinned
+          ? t('popup_action_unpin_recent_tooltip', 'Unpin from Recent on New Tab')
+          : (pinFull
+            ? t('recent_pin_limit', 'You can pin up to 3 cards')
+            : t('popup_action_pin_recent_tooltip', 'Pin to Recent on New Tab')),
+        iconClass: pinned ? 'ri-unpin-line' : 'ri-pushpin-line',
+        disabled: !canSaveToNewTab || pinFull
       })
     ];
     // A disabled action says why in its tooltip.
     const unavailable = t('popup_action_unavailable', 'Not available on this page');
-    if (!canAddShortcut) actions[2].tooltip = unavailable;
+    if (!canSaveToNewTab) {
+      actions.filter((item) => item.id === 'shortcut' || item.id === 'pin')
+        .forEach((item) => { item.tooltip = unavailable; });
+    }
     if (showClip) {
       actions.push(action('clip', {
         label: t('settings_document_pip_title', 'Web clip'),
@@ -366,6 +387,7 @@
       documentPipSupported: 'documentPictureInPicture' in root,
       documentPipEnabled: false,
       shortcuts: { search: '', copy: '' },
+      recentPin: null,
       settings: Object.fromEntries(settingIds.map((id) => [id, SETTING_SPECS[id].normalize(undefined)])),
       syncStatus: null,
       version: '',
@@ -652,6 +674,26 @@
         announceSuccess(message, Boolean(shown && shown.ok));
         return;
       }
+      if (id === 'pin') {
+        const result = await sendMessage({ action: 'popupToggleRecentPin', tabId: tab.id });
+        const status = result && result.status;
+        if (status === 'pinned' || status === 'unpinned') {
+          state.recentPin = { ...state.recentPin, pinned: status === 'pinned' };
+          let message = t('popup_recent_unpinned', 'Unpinned from Recent');
+          if (status === 'pinned') {
+            message = result.tracking === true
+              ? t('recent_progress_auto_toast', 'Pinned and tracking progress. Click the radar icon on the card to stop.')
+              : t('popup_recent_pinned', 'Pinned to Recent on your New Tab');
+          }
+          const shown = await sendMessage({ action: 'popupShowPageToast', tabId: tab.id, message });
+          announceSuccess(message, Boolean(shown && shown.ok));
+          return;
+        }
+        showError(status === 'limit'
+          ? t('recent_pin_limit_toast', 'You can pin up to 3 cards.')
+          : t('toast_error', 'Action failed. Try again.'));
+        return;
+      }
       if (id === 'shortcut') {
         const result = await sendMessage({ action: 'popupAddPageShortcut', tabId: tab.id });
         const status = result && result.status;
@@ -729,11 +771,15 @@
         state.restricted = urlGuards.isRestrictedUrl(url);
       }
       const canProbeVideo = Boolean(state.tab) && !state.restricted && state.pip.supported;
-      const [loadedMessages, video] = await Promise.all([
+      const [loadedMessages, video, recentPin] = await Promise.all([
         loadMessages(locale),
-        canProbeVideo ? probeVideo(state.tab.id) : Promise.resolve(null)
+        canProbeVideo ? probeVideo(state.tab.id) : Promise.resolve(null),
+        state.tab ? sendMessage({ action: 'popupGetRecentPin', tabId: state.tab.id }) : Promise.resolve(null)
       ]);
       messages = loadedMessages;
+      if (recentPin) {
+        state.recentPin = { pinned: recentPin.pinned === true, full: recentPin.full === true };
+      }
       if (video) {
         state.pip.hasVideo = video.hasVideo === true;
         state.pip.active = video.active === true;

@@ -226,14 +226,14 @@ body[data-theme="dark"] {
 }
 
 
-/* Four or five actions make rows of two, with the icon beside the label so
+/* Four to six actions make rows of two, with the icon beside the label so
    the popup stays inside the browser's 600px height limit; a fifth takes the
    whole last row. */
 .x-lumno-popup__actions[data-count="5"] > :last-child {
   grid-column: 1 / -1;
 }
 
-.x-lumno-popup__actions:is([data-count="4"], [data-count="5"]) .x-lumno-popup__action {
+.x-lumno-popup__actions:is([data-count="4"], [data-count="5"], [data-count="6"]) .x-lumno-popup__action {
   flex-direction: row;
   justify-content: flex-start;
   gap: 8px;
@@ -242,7 +242,7 @@ body[data-theme="dark"] {
   text-align: left;
 }
 
-.x-lumno-popup__actions:is([data-count="4"], [data-count="5"]) .x-lumno-popup__action > .ri-icon {
+.x-lumno-popup__actions:is([data-count="4"], [data-count="5"], [data-count="6"]) .x-lumno-popup__action > .ri-icon {
   flex: 0 0 auto;
   font-size: 16px;
 }

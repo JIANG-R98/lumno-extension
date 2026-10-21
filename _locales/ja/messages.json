@@ -3601,5 +3601,23 @@
   },
   "popup_action_unavailable": {
     "message": "このページでは使えません"
+  },
+  "popup_action_pin_recent": {
+    "message": "最近のアクセスに\u200b固定"
+  },
+  "popup_action_unpin_recent": {
+    "message": "固定を\u200b解除"
+  },
+  "popup_action_pin_recent_tooltip": {
+    "message": "新しいタブの最近のアクセスに固定"
+  },
+  "popup_action_unpin_recent_tooltip": {
+    "message": "最近のアクセスの固定を解除"
+  },
+  "popup_recent_pinned": {
+    "message": "新しいタブの最近のアクセスに固定しました"
+  },
+  "popup_recent_unpinned": {
+    "message": "固定を解除しました"
   }
 }

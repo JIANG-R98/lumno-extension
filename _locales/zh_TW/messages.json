@@ -3601,5 +3601,23 @@
   },
   "popup_action_unavailable": {
     "message": "這個網頁不支援"
+  },
+  "popup_action_pin_recent": {
+    "message": "釘選到最近瀏覽"
+  },
+  "popup_action_unpin_recent": {
+    "message": "取消釘選"
+  },
+  "popup_action_pin_recent_tooltip": {
+    "message": "在新分頁的最近瀏覽裡釘選"
+  },
+  "popup_action_unpin_recent_tooltip": {
+    "message": "從新分頁的最近瀏覽取消釘選"
+  },
+  "popup_recent_pinned": {
+    "message": "已釘選到新分頁的最近瀏覽"
+  },
+  "popup_recent_unpinned": {
+    "message": "已取消釘選"
   }
 }

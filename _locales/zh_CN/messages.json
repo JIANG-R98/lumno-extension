@@ -3601,5 +3601,23 @@
   },
   "popup_action_unavailable": {
     "message": "这个网页不支持"
+  },
+  "popup_action_pin_recent": {
+    "message": "置顶到最近访问"
+  },
+  "popup_action_unpin_recent": {
+    "message": "取消置顶"
+  },
+  "popup_action_pin_recent_tooltip": {
+    "message": "在新标签页的最近访问里置顶"
+  },
+  "popup_action_unpin_recent_tooltip": {
+    "message": "从新标签页的最近访问取消置顶"
+  },
+  "popup_recent_pinned": {
+    "message": "已置顶到新标签页的最近访问"
+  },
+  "popup_recent_unpinned": {
+    "message": "已取消置顶"
   }
 }

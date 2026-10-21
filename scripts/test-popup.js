@@ -44,7 +44,7 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
   assert.deepStrictEqual(model.page, {
     title: 'Kyoto walk', host: 'www.bilibili.com', iconUrl: 'icon.png', iconClass: 'ri-global-line'
   });
-  assert.deepStrictEqual(model.actions.map((action) => action.id), ['search', 'copy', 'shortcut', 'pip']);
+  assert.deepStrictEqual(model.actions.map((action) => action.id), ['search', 'copy', 'shortcut', 'pin', 'pip']);
   const actions = byId(model);
   assert(model.actions.filter((action) => action.id !== 'pip').every((action) => !action.disabled),
     'nothing but a video action without a video is disabled on a web page');
@@ -53,6 +53,9 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
   assert.strictEqual(actions.copy.tooltip, '⇧⌘C', 'the copy shortcut is the tooltip');
   assert.strictEqual(actions.shortcut.label, '添加快捷方式');
   assert.strictEqual(actions.shortcut.tooltip, '添加到新标签页的快捷方式', 'the tooltip says where the shortcut goes');
+  assert.strictEqual(actions.pin.label, '置顶到最近访问');
+  assert.strictEqual(actions.pin.tooltip, '在新标签页的最近访问里置顶', 'the tooltip says where the pin goes');
+  assert.strictEqual(actions.pin.iconClass, 'ri-pushpin-line');
   assert.strictEqual(model.notice, null);
   assert.strictEqual(model.settings.label, '快速设置');
   assert.strictEqual(model.settings.expanded, false, 'the settings start folded');
@@ -77,7 +80,7 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
 // Web clip turned on in Labs joins as the third button.
 {
   const model = popup.buildModel(state({ documentPipEnabled: true }), t);
-  assert.deepStrictEqual(model.actions.map((action) => action.id), ['search', 'copy', 'shortcut', 'clip', 'pip']);
+  assert.deepStrictEqual(model.actions.map((action) => action.id), ['search', 'copy', 'shortcut', 'pin', 'clip', 'pip']);
   assert.strictEqual(byId(model).clip.label, '网页剪裁');
   assert.strictEqual(byId(model).clip.tooltip, '剪下网页局部，放进置顶小窗', 'the tooltip says what makes web clip useful');
 }
@@ -90,6 +93,19 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
     'browser pages have no picture-in-picture');
   const noShortcut = popup.buildModel(state({ shortcuts: { search: '', copy: '' } }), t);
   assert.strictEqual(byId(noShortcut).copy.tooltip, '', 'no copy shortcut, no tooltip');
+}
+
+// Pinning among the New Tab's recent sites: a pinned page offers to unpin; a
+// full list turns the pin off and says why.
+{
+  const pinned = byId(popup.buildModel(state({ recentPin: { pinned: true, full: true } }), t)).pin;
+  assert.strictEqual(pinned.label, '取消置顶');
+  assert.strictEqual(pinned.tooltip, '从新标签页的最近访问取消置顶');
+  assert.strictEqual(pinned.iconClass, 'ri-unpin-line');
+  assert.strictEqual(pinned.disabled, false, 'a full list still lets this page go');
+  const full = byId(popup.buildModel(state({ recentPin: { pinned: false, full: true } }), t)).pin;
+  assert.strictEqual(full.disabled, true);
+  assert.strictEqual(full.tooltip, '最多置顶 3 个');
 }
 
 // Picture-in-picture: off without a video, but its options stay reachable;
@@ -131,6 +147,8 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
   assert.strictEqual(actions.clip.disabled, true);
   assert.strictEqual(actions.shortcut.disabled, true);
   assert.strictEqual(actions.shortcut.tooltip, '这个网页不支持');
+  assert.strictEqual(actions.pin.disabled, true);
+  assert.strictEqual(actions.pin.tooltip, '这个网页不支持');
   assert.strictEqual(actions.clip.tooltip, '这个网页不支持');
   assert.strictEqual(actions.copy.disabled, false);
   assert.strictEqual(actions.search.disabled, false, 'the command bar falls back to a New Tab there');
@@ -227,7 +245,8 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
   const background = read('src/background/background.js');
   assert(!background.includes('chrome.action.onClicked'), 'a popup replaces the toolbar click handler');
   const pageActions = background.match(/const WEB_PAGE_MESSAGE_ACTIONS = Object\.freeze\(\[([\s\S]*?)\]\);/)[1];
-  ['popupOpenDocumentPipPicker', 'popupShowSearch', 'popupAddPageShortcut', 'popupShowPageToast'].forEach((action) => {
+  ['popupOpenDocumentPipPicker', 'popupShowSearch', 'popupAddPageShortcut', 'popupShowPageToast',
+    'popupGetRecentPin', 'popupToggleRecentPin'].forEach((action) => {
     assert(background.includes(`  ${action}(request, sender, sendResponse) {`), `background handles ${action}`);
     assert(!pageActions.includes(`'${action}'`), `${action} is not accepted from web pages`);
   });

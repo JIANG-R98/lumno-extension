@@ -138,6 +138,7 @@ const EXPECTED_BACKGROUND_ACTIONS = [
   'openReleasePage', 'openBookmarkManager', 'openBookmarkFolderInNewTabGroup', 'createTab', 'openNewTab',
   'openExtensionDetailsPage', 'probeProgressSeries',
   'popupOpenDocumentPipPicker', 'popupShowSearch', 'popupAddPageShortcut', 'popupShowPageToast',
+  'popupGetRecentPin', 'popupToggleRecentPin',
   'resolveFaviconCandidates', 'getFaviconData', 'getShortcutFaviconData', 'resolveSiteThemeColor'
 ];
 
@@ -187,7 +188,8 @@ async function testBackgroundRegistry() {
   const webPageSender = { tab: senderTab, url: senderTab.url };
   for (const action of ['webdav', 'openBookmarkManager', 'getShortcutFaviconData', 'resolveFaviconCandidates',
     'openExtensionDetailsPage', 'swapNewtabForFocus', 'trackSearchTab', 'getFileSchemeAccessStatus',
-    'popupOpenDocumentPipPicker', 'popupShowSearch', 'popupAddPageShortcut', 'popupShowPageToast']) {
+    'popupOpenDocumentPipPicker', 'popupShowSearch', 'popupAddPageShortcut', 'popupShowPageToast',
+    'popupGetRecentPin', 'popupToggleRecentPin']) {
     const rejected = await harness.sendMessage({ action, op: 'status' }, webPageSender);
     assert.deepStrictEqual(JSON.parse(JSON.stringify(rejected)), { ok: false, reason: 'sender-not-allowed' },
       `${action} should be refused when a web page context sends it`);

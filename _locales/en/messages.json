@@ -3601,5 +3601,23 @@
   },
   "popup_action_unavailable": {
     "message": "Not available on this page"
+  },
+  "popup_action_pin_recent": {
+    "message": "Pin to Recent"
+  },
+  "popup_action_unpin_recent": {
+    "message": "Unpin from Recent"
+  },
+  "popup_action_pin_recent_tooltip": {
+    "message": "Pin to Recent on New Tab"
+  },
+  "popup_action_unpin_recent_tooltip": {
+    "message": "Unpin from Recent on New Tab"
+  },
+  "popup_recent_pinned": {
+    "message": "Pinned to Recent on your New Tab"
+  },
+  "popup_recent_unpinned": {
+    "message": "Unpinned from Recent"
   }
 }

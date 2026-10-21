@@ -47,6 +47,8 @@ importScripts(
   chrome.runtime.getURL('src/shared/progress-match.js'),
   chrome.runtime.getURL('src/shared/progress-history.js'),
   chrome.runtime.getURL('src/background/progress-tracker.js'),
+  chrome.runtime.getURL('src/newtab/recent-sites-store.js'),
+  chrome.runtime.getURL('src/background/popup-recent-pin.js'),
   chrome.runtime.getURL('src/background/overlay-loading-lifecycle.js'),
   chrome.runtime.getURL('src/background/dev-extension-startup.js'),
   // Background services split out of this file. They share its global scope
@@ -4414,6 +4416,26 @@ function getPopupTargetTab(tabId, callback) {
   });
 }
 
+// The popup's pin among the New Tab's recent sites; episodes and chapters
+// start tracked while progress tracking (Labs) is on.
+const popupRecentPin = globalThis.LumnoPopupRecentPin.createController({
+  store: globalThis.LumnoNewtabRecentSitesStore,
+  key: PINNED_RECENT_SITES_STORAGE_KEY,
+  storeOptions: {
+    normalizeHost,
+    getCanonicalPageUrlForFavicon: FAVICON_UTILS.getCanonicalPageUrlForFavicon,
+    maxPinned: 3
+  },
+  getArea: () => storageArea,
+  ready: () => (providerStorageRuntime ? providerStorageRuntime.ready : Promise.resolve()),
+  probeSeries: (url) => (progressTrackingEnabled ? progressTracker.probeSeries(url) : Promise.resolve(false)),
+  createProgressId: globalThis.LumnoProgressHistory.createProgressId
+});
+
+function getPopupPage(tab) {
+  return tab ? { url: String(tab.url || tab.pendingUrl || ''), title: String(tab.title || '') } : null;
+}
+
 // The toolbar popup's page actions. The popup closes once the clip or the
 // search starts, so those answer first and then act on the tab. A finished
 // copy or add is announced by Lumno's top toast in the page.
@@ -4463,6 +4485,20 @@ const POPUP_MESSAGE_HANDLERS = Object.freeze({
       pageShortcutMenuController.addTabPage(tab).then(sendResponse, () => {
         sendResponse({ status: 'failed', message: '', error: true });
       });
+    });
+    return true;
+  },
+  popupGetRecentPin(request, sender, sendResponse) {
+    getPopupTargetTab(request.tabId, (tab) => {
+      popupRecentPin.getStatus(getPopupPage(tab)).then(sendResponse, () => {
+        sendResponse({ available: false, pinned: false, full: false });
+      });
+    });
+    return true;
+  },
+  popupToggleRecentPin(request, sender, sendResponse) {
+    getPopupTargetTab(request.tabId, (tab) => {
+      popupRecentPin.toggle(getPopupPage(tab)).then(sendResponse);
     });
     return true;
   }
