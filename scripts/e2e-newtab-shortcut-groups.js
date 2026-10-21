@@ -404,6 +404,54 @@ check('many shortcuts stay clickable above the dock', { width: 1440, height: 900
   return problems;
 });
 
+// A row of shortcuts under the clock, over a dock full of bookmarks: the
+// shortcut area is already below its minimum height, so the dock stops above
+// it instead of letting its scroller's top padding take the tiles' clicks.
+for (const viewport of [{ width: 1330, height: 934 }, { width: 1280, height: 720 }]) {
+  check(`a row of shortcuts stays clickable above a dock of bookmarks (${viewport.width}x${viewport.height})`, viewport,
+    async (page) => {
+      await page.load();
+      const bookmarkIds = await page.evaluate(`(async () => {
+        const ids = [];
+        for (let index = 0; index < 32; index += 1) {
+          const node = await chrome.bookmarks.create({ parentId: '1', title: 'Bookmark ' + index,
+            url: 'https://bookmark' + index + '.example.com/' });
+          ids.push(node.id);
+        }
+        return ids;
+      })()`);
+      try {
+        await page.seed([{ id: 'g0', title: '' }], ['s1', 's2'].map((id) => link(id, 'g0')), {
+          _x_extension_bookmark_count_2024_unique_: 32,
+          _x_extension_newtab_wordmark_visible_2026_unique_: 'time'
+        });
+        const problems = [];
+        for (let pass = 0; pass < 3; pass += 1) {
+          // Later layout passes must not walk the shortcuts back under the dock.
+          if (pass) {
+            await page.evaluate(`window.dispatchEvent(new Event('resize'))`);
+            await page.settle(500);
+          }
+          const covered = await page.evaluate(`Array.from(document.querySelectorAll(
+            '.x-nt-shortcut-tile[data-shortcut-id], .x-nt-shortcut-tile--add:not([hidden])')).flatMap((tile) => {
+            const r = tile.getBoundingClientRect();
+            return [r.top + r.height / 2, r.bottom - 2].map((y) => {
+              const hit = document.elementFromPoint(r.left + r.width / 2, y);
+              return tile.contains(hit) ? null : (tile.getAttribute('data-shortcut-id') || 'add') +
+                ' at ' + Math.round(y) + ' under ' + (hit ? hit.id || hit.className : 'nothing');
+            });
+          }).filter(Boolean)`);
+          problems.push(...covered.map((key) => ({ key: `pass ${pass}: ${key}`, dx: 0, dy: 0 })));
+        }
+        return problems;
+      } finally {
+        await page.evaluate(`Promise.all(${JSON.stringify(bookmarkIds)}.map((id) => chrome.bookmarks.remove(id)))
+          .then(() => chrome.storage.sync.remove(['_x_extension_bookmark_count_2024_unique_',
+            '_x_extension_newtab_wordmark_visible_2026_unique_']))`);
+      }
+    });
+}
+
 // On a 13-inch screen two full rows push the add tile onto a row of its own.
 // A dock holding only the recent cards needs less than its usual floor, so
 // that row fits whole instead of scrolling out under the area's edge.

@@ -376,15 +376,62 @@
       return 'default';
     }
 
+    function isCompactDockViewport(viewportHeight) {
+      return compactDockViewportMaxHeightPx > 0 && viewportHeight <= compactDockViewportMaxHeightPx;
+    }
+
+    // A block's box without the translate layout motion may be playing on
+    // it, so a pass during a move measures where the block settles.
+    function getSettledRect(element) {
+      const rect = element.getBoundingClientRect();
+      let shiftY = 0;
+      if (typeof windowObj.getComputedStyle === 'function') {
+        const translate = windowObj.getComputedStyle(element).translate;
+        const parts = translate && translate !== 'none' ? String(translate).trim().split(/\s+/) : [];
+        shiftY = Number.parseFloat(parts[1]) || 0;
+      }
+      return {
+        top: (Number(rect && rect.top) || 0) - shiftY,
+        bottom: (Number(rect && rect.bottom) || 0) - shiftY,
+        height: Number(rect && rect.height) || 0
+      };
+    }
+
+    // How far the dock's scroller, which takes the clicks, reaches above the
+    // dock (its top padding is room for hovered cards).
+    function getBottomDockScrollerBleed(bottomDock) {
+      const scroller = bottomDock && bottomDock.firstElementChild;
+      if (!scroller || typeof scroller.getBoundingClientRect !== 'function') {
+        return 0;
+      }
+      return Math.max(0,
+        (Number(bottomDock.getBoundingClientRect().top) || 0) -
+        (Number(scroller.getBoundingClientRect().top) || 0));
+    }
+
     function getBottomDockTopReserve(viewportHeight) {
       let topReserve = bottomDockTopReservePx;
-      if (compactDockViewportMaxHeightPx <= 0 ||
-          viewportHeight > compactDockViewportMaxHeightPx) {
+      const shortcutSection = getShortcutSection();
+      if (!isCompactDockViewport(viewportHeight)) {
+        // A tall shortcut area scrolls to make room for the dock, down to
+        // its minimum height; past that (a row or two of shortcuts under a
+        // clock and a quote, over many bookmarks) the dock stops instead, or
+        // its scroller would cover the shortcuts and take their clicks.
+        if (isSectionVisible(shortcutSection)) {
+          const shortcutRect = getSettledRect(shortcutSection);
+          if (shortcutRect.bottom > 0) {
+            topReserve = Math.max(topReserve, Math.ceil(
+              shortcutRect.top + Math.min(shortcutRect.height, shortcutAreaMinHeightPx) +
+              shortcutAreaDockGapPx + getBottomDockScrollerBleed(getBottomDock())
+            ));
+          }
+        }
         return topReserve;
       }
+      // A short screen keeps everything above the dock whole: the search
+      // box, an inline quote and every shortcut.
       const root = getRoot();
-      const rootRect = root ? root.getBoundingClientRect() : null;
-      const rootBottom = rootRect ? Number(rootRect.bottom) || 0 : 0;
+      const rootBottom = root ? getSettledRect(root).bottom : 0;
       let compactTopReserve = compactDockMinTopReservePx;
       if (rootBottom > 0) {
         compactTopReserve = Math.max(
@@ -392,19 +439,18 @@
           Math.ceil(rootBottom + compactDockSearchGapPx)
         );
       }
-      const shortcutSection = getShortcutSection();
+      const shortcutGap = Math.max(compactDockShortcutGapPx, getBottomDockScrollerBleed(getBottomDock()));
       const quoteSection = getInlineQuoteSection();
       if (quoteSection) {
         compactTopReserve = Math.max(compactTopReserve,
-          Math.ceil(quoteSection.getBoundingClientRect().bottom + compactDockShortcutGapPx));
+          Math.ceil(getSettledRect(quoteSection).bottom + shortcutGap));
       }
       if (isSectionVisible(shortcutSection)) {
-        const shortcutRect = shortcutSection.getBoundingClientRect();
-        const shortcutBottom = shortcutRect ? Number(shortcutRect.bottom) || 0 : 0;
+        const shortcutBottom = getSettledRect(shortcutSection).bottom;
         if (shortcutBottom > 0) {
           compactTopReserve = Math.max(
             compactTopReserve,
-            Math.ceil(shortcutBottom + compactDockShortcutGapPx)
+            Math.ceil(shortcutBottom + shortcutGap)
           );
         }
       }
@@ -679,6 +725,22 @@
       if (bottomDockVisible && bottomDock) {
         const dockRect = bottomDock.getBoundingClientRect();
         occupiedBottomHeight = Math.max(0, Number(dockRect && dockRect.height) || 0);
+        // A dock stopped above the content counts as the height it takes
+        // without that stop; centering against the shorter dock would move
+        // the content down, and the dock with it, a little more each pass.
+        const dockSurface = bottomDock.firstElementChild || null;
+        const dockMaxHeight = Number.parseFloat(bottomDock.style.getPropertyValue('max-height'));
+        if (dockSurface && Number.isFinite(dockMaxHeight) && occupiedBottomHeight >= dockMaxHeight - 1) {
+          const dockOverflow = Math.max(0,
+            (Number(dockSurface.scrollHeight) || 0) - (Number(dockSurface.clientHeight) || 0));
+          const floorReserve = isCompactDockViewport(viewportHeight)
+            ? compactDockMinTopReservePx
+            : bottomDockTopReservePx;
+          occupiedBottomHeight = Math.max(occupiedBottomHeight, Math.min(
+            occupiedBottomHeight + dockOverflow,
+            viewportHeight - floorReserve
+          ));
+        }
       }
       const occupiedTopHeight = Math.max(0, Number(getTopInsetPx()) || 0);
       const centeringHeight = Math.max(
