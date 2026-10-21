@@ -1,135 +1,113 @@
 const assert = require('assert');
-const fs = require('fs');
-const vm = require('vm');
-const historyApi = require('../../src/newtab/bookmarks/bookmark-move-history');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-const { extractFunction: extractFunctionFrom } = require('../helpers/extract-function');
+const { createNewtabPage } = require('../helpers/newtab-page');
 
-const source = readNewtabRuntimeSource();
-function extractFunction(name) {
-  return extractFunctionFrom(source, name);
-}
-function createRuntime() {
-  const history = historyApi.createBookmarkMoveHistory();
-  const context = vm.createContext({
-    newtabShortcuts: [
-      { id: 'one', url: 'https://one.example/', title: 'One', createdAt: 123, iconSource: 'custom' },
-      { id: 'folder', type: 'folder', folderId: '42', title: 'Folder', createdAt: 456 },
-      { id: 'two', url: 'https://two.example/', title: 'Two', createdAt: 789 }
-    ],
-    newtabShortcutIcons: { one: 'data:image/png;base64,original' },
-    bookmarkMoveHistory: history,
-    bookmarkMoveHistoryBusy: false,
-    NEWTAB_BOOKMARK_MOVE_HISTORY: historyApi,
-    MAX_NEWTAB_SHORTCUTS: 10,
-    bookmarkCascadeRuntime: null,
-    shortcutFolderRuntime: { getNode: () => ({ id: '42' }) },
-    bookmarkCalls: [], toasts: [], failPersistence: false,
-    persistShortcuts(items, _message, iconChange) {
-      if (context.failPersistence) return Promise.resolve(false);
-      context.newtabShortcuts = Array.from(items);
-      const ids = new Set(items.map((item) => item.id));
-      context.newtabShortcutIcons = Object.fromEntries(Object.entries(context.newtabShortcutIcons).filter(([id]) => ids.has(id)));
-      if (iconChange) context.newtabShortcutIcons[iconChange.shortcutId] = iconChange.dataUrl;
-      return Promise.resolve(true);
+// Removing a New Tab shortcut can be undone (⌘Z) and redone (⇧⌘Z), in the
+// same history as bookmark moves (see test-newtab-bookmark-move-matrix.js).
+
+const SHORTCUTS = [
+  { url: 'https://one.example/', title: 'One' },
+  { type: 'folder', folderId: '42', title: 'Folder' },
+  { url: 'https://two.example/', title: 'Two' }
+];
+const BOOKMARKS = [{ id: '42', title: 'Folder', children: [{ id: '43', title: 'X', url: 'https://x.example/' }] }];
+
+async function openNewtab() {
+  const page = await createNewtabPage({ shortcuts: SHORTCUTS, bookmarks: BOOKMARKS });
+  await page.settle(400);
+  const tiles = () => Array.from(page.document.querySelectorAll('.x-nt-shortcut-tile:not(.x-nt-shortcut-tile--add)'));
+  const toast = () => page.document.getElementById('_x_extension_toast_2024_unique_').textContent;
+  return {
+    page,
+    toast,
+    titles: () => tiles().map((tile) => tile.getAttribute('aria-label').replace(/^Open /, '')),
+    async remove(title) {
+      const tile = tiles().find((item) => item.getAttribute('aria-label') === `Open ${title}`);
+      tile.dispatchEvent(new page.window.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 20, clientY: 20, button: 2 }));
+      await page.settle(150);
+      const option = page.document.querySelector('#_x_extension_newtab_shortcut_context_menu_2026_unique__menu [role="menuitem"][data-value="remove"]');
+      option.dispatchEvent(new page.window.MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
+      option.dispatchEvent(new page.window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+      await page.settle(200);
     },
-    bookmarksRuntime: {
-      getNodeMap: () => new Map(),
-      runControlledMutation: (operation) => Promise.resolve().then(operation),
-      move: (id, destination) => { context.bookmarkCalls.push({ id, destination }); return Promise.resolve(); }
+    async undo() {
+      page.trusted(page.document.body, 'keydown', { key: 'z', code: 'KeyZ', metaKey: true, bubbles: true, cancelable: true });
+      await page.settle(200);
     },
-    showToast(message) { context.toasts.push(message); },
-    t: (_key, fallback) => fallback,
-    formatMessage: (_key, fallback, values) => fallback.replace('{shortcut}', values.shortcut),
-    getBookmarkUndoShortcutLabel: () => 'Ctrl+Z',
-    getBookmarkRedoShortcutLabel: () => 'Ctrl+Shift+Z',
-    markBookmarkTreeDirty() {}, loadBookmarks() {},
-    console
-  });
-  vm.runInContext(`${extractFunction('removeShortcutById')}\n${extractFunction('performBookmarkMoveHistoryAction')}`, context);
-  return context;
+    async redo() {
+      page.trusted(page.document.body, 'keydown', { key: 'z', code: 'KeyZ', metaKey: true, shiftKey: true, bubbles: true, cancelable: true });
+      await page.settle(200);
+    },
+    // Makes saving fail in both storage areas (sync falls back to local), or
+    // work again.
+    failWrites(fail) {
+      [page.storage.sync, page.storage.local].forEach((area) => {
+        if (fail) {
+          area.__set = area.__set || area.set;
+          area.set = () => { throw new Error('QUOTA_BYTES quota exceeded'); };
+        } else if (area.__set) {
+          area.set = area.__set;
+        }
+      });
+    }
+  };
 }
-const json = (value) => JSON.parse(JSON.stringify(value));
-const settle = () => new Promise((resolve) => setImmediate(resolve));
+
+async function testUndoAndRedo() {
+  const newtab = await openNewtab();
+  await newtab.remove('One');
+  assert.deepStrictEqual(newtab.titles(), ['Folder', 'Two']);
+  assert.match(newtab.toast(), /⌘Z/, 'the removal Toast should say how to undo');
+  await newtab.undo();
+  assert.deepStrictEqual(newtab.titles(), ['One', 'Folder', 'Two'], 'undo should put the shortcut back where it was');
+  assert.match(newtab.toast(), /⇧⌘Z/, 'the restore Toast should say how to redo');
+  await newtab.redo();
+  assert.deepStrictEqual(newtab.titles(), ['Folder', 'Two']);
+  await newtab.undo();
+  assert.deepStrictEqual(newtab.titles(), ['One', 'Folder', 'Two']);
+
+  await newtab.remove('Folder');
+  await newtab.undo();
+  assert.deepStrictEqual(newtab.titles(), ['One', 'Folder', 'Two']);
+  const bookmarkChanges = newtab.page.bookmarks.calls.filter((call) => ['create', 'move', 'update', 'remove'].includes(call.name));
+  assert.deepStrictEqual(bookmarkChanges, [], 'removing and restoring a folder shortcut must not touch its bookmarks');
+
+  await newtab.remove('One');
+  await newtab.remove('Two');
+  await newtab.undo();
+  assert.deepStrictEqual(newtab.titles(), ['Folder', 'Two'], 'undo should go back one removal at a time');
+  await newtab.undo();
+  assert.deepStrictEqual(newtab.titles(), ['One', 'Folder', 'Two']);
+  await newtab.remove('Folder');
+  await newtab.redo();
+  assert.deepStrictEqual(newtab.titles(), ['One', 'Two'], 'a new removal should clear what could be redone');
+  newtab.page.close();
+}
+
+async function testFailedSaves() {
+  const newtab = await openNewtab();
+  newtab.failWrites(true);
+  await newtab.remove('One');
+  assert.deepStrictEqual(newtab.titles(), ['One', 'Folder', 'Two'], 'a removal that cannot be saved should not happen');
+  await newtab.undo();
+  assert.deepStrictEqual(newtab.titles(), ['One', 'Folder', 'Two'], 'and should leave nothing to undo');
+
+  newtab.failWrites(false);
+  await newtab.remove('One');
+  newtab.failWrites(true);
+  await newtab.undo();
+  assert.deepStrictEqual(newtab.titles(), ['Folder', 'Two'], 'an undo that cannot be saved should not happen');
+  newtab.failWrites(false);
+  await newtab.undo();
+  assert.deepStrictEqual(newtab.titles(), ['One', 'Folder', 'Two'], 'but stay available to try again');
+  newtab.page.close();
+}
 
 (async () => {
-  const runtime = createRuntime();
-  const original = json(runtime.newtabShortcuts);
-  assert.strictEqual(await runtime.removeShortcutById('one'), true);
-  assert.deepStrictEqual(runtime.newtabShortcuts.map((item) => item.id), ['folder', 'two']);
-  assert.strictEqual(runtime.newtabShortcutIcons.one, undefined);
-  const record = runtime.bookmarkMoveHistory.peekUndo();
-  assert.strictEqual(record.kind, 'shortcut-delete');
-  assert.ok(Object.isFrozen(record.snapshot));
-  assert.match(runtime.toasts.at(-1), /Ctrl\+Z/);
-  assert.strictEqual(runtime.performBookmarkMoveHistoryAction('undo'), true);
-  await settle();
-  assert.deepStrictEqual(json(runtime.newtabShortcuts), original);
-  assert.strictEqual(runtime.newtabShortcutIcons.one, 'data:image/png;base64,original');
-  assert.match(runtime.toasts.at(-1), /Ctrl\+Shift\+Z/);
-  runtime.performBookmarkMoveHistoryAction('redo');
-  await settle();
-  assert.deepStrictEqual(runtime.newtabShortcuts.map((item) => item.id), ['folder', 'two']);
-  runtime.performBookmarkMoveHistoryAction('undo');
-  await settle();
-  assert.deepStrictEqual(json(runtime.newtabShortcuts), original);
-
-  await runtime.removeShortcutById('folder');
-  runtime.performBookmarkMoveHistoryAction('undo');
-  await settle();
-  assert.deepStrictEqual(json(runtime.newtabShortcuts), original);
-  assert.deepStrictEqual(runtime.bookmarkCalls, [], 'folder shortcut restoration must not recreate or mutate its bookmark tree');
-
-  const portable = createRuntime();
-  const reference = { version: 1, root: 'bookmarks-bar', scope: 'unknown', path: ['Folder'], fingerprint: '0123456789abcdef' };
-  portable.newtabShortcuts[1] = { id: 'folder', type: 'folder', folderRef: reference, title: 'Folder' };
-  await portable.removeShortcutById('folder');
-  portable.newtabShortcuts.push({ id: 'another-folder-alias', type: 'folder', folderRef: reference, title: 'Another alias' });
-  reference.path.push('changed externally');
-  assert.deepStrictEqual(json(portable.bookmarkMoveHistory.peekUndo().snapshot.folderRef.path), ['Folder']);
-  portable.performBookmarkMoveHistoryAction('undo'); await settle();
-  assert.deepStrictEqual(json(portable.newtabShortcuts[1].folderRef.path), ['Folder']);
-  assert.strictEqual(portable.newtabShortcuts.at(-1).id, 'another-folder-alias');
-
-  const mixed = createRuntime();
-  mixed.bookmarkMoveHistory.push(historyApi.createMoveRecord({ bookmarkId: 'bookmark', from: { parentId: '1', index: 0 }, to: { parentId: '2', index: 1 } }));
-  await mixed.removeShortcutById('one');
-  await mixed.removeShortcutById('two');
-  mixed.performBookmarkMoveHistoryAction('undo'); await settle();
-  assert.deepStrictEqual(mixed.newtabShortcuts.map((item) => item.id), ['folder', 'two']);
-  mixed.performBookmarkMoveHistoryAction('undo'); await settle();
-  assert.deepStrictEqual(json(mixed.newtabShortcuts), original);
-  mixed.performBookmarkMoveHistoryAction('undo'); await settle();
-  assert.strictEqual(mixed.bookmarkCalls.at(-1).id, 'bookmark');
-  assert.strictEqual(mixed.bookmarkCalls.at(-1).destination.parentId, '1');
-  await mixed.removeShortcutById('folder');
-  assert.strictEqual(mixed.bookmarkMoveHistory.canRedo(), false, 'a new deletion clears redo history');
-
-  const failed = createRuntime();
-  failed.failPersistence = true;
-  assert.strictEqual(await failed.removeShortcutById('one'), false);
-  assert.strictEqual(failed.bookmarkMoveHistory.canUndo(), false);
-  assert.strictEqual(failed.bookmarkMoveHistoryBusy, false);
-  failed.failPersistence = false;
-  await failed.removeShortcutById('one');
-  failed.failPersistence = true;
-  failed.performBookmarkMoveHistoryAction('undo'); await settle();
-  assert.strictEqual(failed.bookmarkMoveHistory.peekUndo().snapshot.id, 'one');
-  assert.strictEqual(failed.bookmarkMoveHistoryBusy, false);
-  failed.failPersistence = false;
-  failed.performBookmarkMoveHistoryAction('undo'); await settle();
-  assert.deepStrictEqual(json(failed.newtabShortcuts), original);
-
-  const full = createRuntime();
-  await full.removeShortcutById('one');
-  full.MAX_NEWTAB_SHORTCUTS = 2;
-  full.performBookmarkMoveHistoryAction('undo'); await settle();
-  assert.deepStrictEqual(full.newtabShortcuts.map((item) => item.id), ['folder', 'two']);
-  assert.strictEqual(full.bookmarkMoveHistory.peekUndo().snapshot.id, 'one');
-  full.MAX_NEWTAB_SHORTCUTS = 10;
-  full.newtabShortcuts.push({ id: 'newer', url: original[0].url, title: 'Newer shortcut' });
-  full.performBookmarkMoveHistoryAction('undo'); await settle();
-  assert.strictEqual(full.newtabShortcuts.at(-1).title, 'Newer shortcut', 'undo must not replace a newer shortcut with the same URL');
-
-  console.log('Shortcut deletion undo/redo, original order and icons, mixed history, failures and conflicts passed.');
-})().catch((error) => { console.error(error); process.exitCode = 1; });
+  await testUndoAndRedo();
+  await testFailedSaves();
+  console.log('Shortcut deletion undo/redo, original order, folders, failures and history order passed.');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

@@ -1,70 +1,54 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-const { extractFunction: extractFunctionFrom } = require('../helpers/extract-function');
+const { createNewtabPage } = require('../helpers/newtab-page');
 
-const source = readNewtabRuntimeSource();
-function extractFunction(name) {
-  return extractFunctionFrom(source, name);
-}
+// The shortcut editor is only built when first needed, then reused; two
+// quick opens show the one asked for last.
 
-function createHarness() {
-  let resolveLoad;
-  let rejectLoad;
-  const state = { loads: 0, mounts: 0, opens: [], closes: 0, errors: 0 };
-  const controller = {
-    mount() { state.mounts += 1; },
-    open(options) { state.opens.push(options); },
-    close() { state.closes += 1; }
-  };
-  const create = new Function('deps', `
-    let shortcutDialogController = null;
-    let shortcutDialogLoadPromise = null;
-    let shortcutDialogOpenRevision = 0;
-    const document = { body: {} };
-    const console = { warn() {} };
-    const createShortcutDialogComponent = deps.load;
-    const showToast = deps.showError;
-    const t = (_key, fallback) => fallback;
-    ${extractFunction('openShortcutDialog')}
-    ${extractFunction('closeShortcutDialog')}
-    return { open: openShortcutDialog, close: closeShortcutDialog };
-  `);
-  const runtime = create({
-    load() {
-      state.loads += 1;
-      return new Promise((resolve, reject) => { resolveLoad = resolve; rejectLoad = reject; });
-    },
-    showError() { state.errors += 1; }
-  });
-  return { runtime, state, finish: () => resolveLoad(controller), fail: () => rejectLoad(new Error('Failed')) };
-}
+const BACKDROP = '.x-nt-shortcut-dialog-backdrop';
 
 async function run() {
-  const harness = createHarness();
-  assert.strictEqual(harness.state.loads, 0, 'opening a new tab must not load the editor');
-  const first = harness.runtime.open({ title: 'First' });
-  const second = harness.runtime.open({ title: 'Second' });
-  assert.strictEqual(harness.state.loads, 1, 'concurrent opens must share one load');
-  harness.finish();
-  await Promise.all([first, second]);
-  assert.deepStrictEqual(harness.state.opens, [{ title: 'Second' }]);
-  assert.strictEqual(harness.state.mounts, 1);
-  await harness.runtime.open({ title: 'Third' });
-  assert.strictEqual(harness.state.loads, 1, 'reopening must reuse the loaded modal');
-  const canceled = createHarness();
-  const pending = canceled.runtime.open({ title: 'Canceled' });
-  canceled.runtime.close(); canceled.finish(); await pending;
-  assert.deepStrictEqual(canceled.state.opens, [], 'closing during loading must not open a stale editor');
-  const retry = createHarness();
-  const failed = retry.runtime.open({ title: 'Failed' });
-  retry.fail(); await failed;
-  assert.strictEqual(retry.state.errors, 1);
-  const again = retry.runtime.open({ title: 'Retry' });
-  retry.finish(); await again;
-  assert.strictEqual(retry.state.loads, 2);
-  assert.deepStrictEqual(retry.state.opens, [{ title: 'Retry' }]);
-  console.log('Shortcut dialog lazy loading, cancellation, and retry tests passed.');
+  const page = await createNewtabPage({
+    shortcuts: [{ url: 'https://one.example/', title: 'One' }, { url: 'https://two.example/', title: 'Two' }]
+  });
+  await page.settle(400);
+  assert.strictEqual(page.document.querySelectorAll(BACKDROP).length, 0, 'opening New Tab should not build the editor');
+
+  const click = (element) => element.dispatchEvent(new page.window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+  const edit = (title) => {
+    const tile = page.document.querySelector(`.x-nt-shortcut-tile[aria-label="Open ${title}"]`);
+    tile.dispatchEvent(new page.window.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 20, clientY: 20, button: 2 }));
+  };
+  const chooseEdit = () => {
+    const option = page.document.querySelector('#_x_extension_newtab_shortcut_context_menu_2026_unique__menu [role="menuitem"][data-value="edit"]');
+    option.dispatchEvent(new page.window.MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
+    click(option);
+  };
+  const titleField = () => page.document.querySelector(`${BACKDROP} input._x_extension_shortcut_input_2024_unique_`);
+
+  // Ask for the editor, then straight away for another shortcut.
+  click(page.document.querySelector('.x-nt-shortcut-tile--add'));
+  edit('Two');
+  await page.settle(150);
+  chooseEdit();
+  await page.settle(400);
+  assert.strictEqual(page.document.querySelectorAll(BACKDROP).length, 1, 'quick opens should share one editor');
+  assert.strictEqual(titleField().value, 'Two', 'the editor should show what was asked for last');
+
+  page.trusted(titleField(), 'keydown', { key: 'Escape', bubbles: true, cancelable: true });
+  await page.settle(200);
+  edit('One');
+  await page.settle(150);
+  chooseEdit();
+  await page.settle(300);
+  assert.strictEqual(page.document.querySelectorAll(BACKDROP).length, 1, 'reopening should reuse the editor');
+  assert.strictEqual(titleField().value, 'One');
+  page.close();
 }
-run().catch((error) => { console.error(error); process.exitCode = 1; });
+
+run().then(() => {
+  console.log('Shortcut dialog lazy loading and reuse tests passed.');
+  process.exit(0);
+}).catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

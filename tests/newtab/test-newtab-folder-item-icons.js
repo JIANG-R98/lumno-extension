@@ -1,18 +1,106 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const vm = require('vm');
 const icons = require('../../src/newtab/bookmarks/folder-item-icons');
 const store = require('../../src/newtab/shortcuts/shortcuts-store');
 const favicon = require('../../src/shared/favicon/shortcut-favicon');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-const { extractFunction: extractFunctionFrom } = require('../helpers/extract-function');
-
-const source = readNewtabRuntimeSource();
-function extractFunction(name) {
-  return extractFunctionFrom(source, name);
-}
+const { createNewtabPage } = require('../helpers/newtab-page');
 const png = (text) => `data:image/png;base64,${Buffer.from(text).toString('base64')}`;
+
+// On New Tab: a website inside a bookmark folder opened from a shortcut can
+// be given its own icon in the edit dialog, which the folder's menu then
+// shows instead of the site's favicon.
+async function openFolderPage(savedIcons) {
+  const page = await createNewtabPage({
+    shortcuts: [{ type: 'folder', folderId: '10', title: 'Docs' }],
+    bookmarks: [{ id: '10', title: 'Docs', children: [
+      { id: '11', title: 'MDN', url: 'https://developer.mozilla.org/' },
+      { id: '12', title: 'Sub', children: [] }
+    ] }],
+    local: { [icons.DEFAULT_STORAGE_KEY]: savedIcons }
+  });
+  await page.settle(400);
+  const click = (element) => element.dispatchEvent(new page.window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+  const press = (element) => {
+    element.dispatchEvent(new page.window.MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
+    click(element);
+  };
+  const openFolder = async () => {
+    if (!page.document.querySelector('.x-nt-bookmark-cascade-item')) {
+      click(page.document.querySelector('.x-nt-shortcut-tile--folder'));
+      await page.settle(200);
+    }
+    return Array.from(page.document.querySelectorAll('.x-nt-bookmark-cascade-item'));
+  };
+  const dialog = () => page.document.querySelector('.x-nt-shortcut-dialog-backdrop');
+  return {
+    page,
+    openFolder,
+    dialog,
+    saved: () => page.storage.local.data[icons.DEFAULT_STORAGE_KEY] || {},
+    async edit(index) {
+      const [item] = (await openFolder()).slice(index, index + 1);
+      item.dispatchEvent(new page.window.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 20, clientY: 20, button: 2 }));
+      await page.settle(150);
+      press(page.document.querySelector('#_x_extension_newtab_bookmark_context_menu_2026_unique__menu [data-value="edit"]'));
+      await page.settle(400);
+      return dialog();
+    },
+    async pickIconSource(value) {
+      const trigger = dialog().querySelector('.x-nt-shortcut-icon-source-select ._x_extension_select_trigger_2024_unique_');
+      click(trigger);
+      await page.settle(60);
+      const menu = page.document.getElementById(trigger.getAttribute('aria-controls').replace(/_listbox$/, '_menu')) ||
+        page.document.querySelector('[role="listbox"][data-open="true"], [data-open="true"][role="menu"]');
+      press(menu.querySelector(`[role="option"][data-value="${value}"]`));
+      await page.settle(60);
+    },
+    async setUrl(url) {
+      const input = dialog().querySelector('#_x_extension_newtab_shortcut_dialog_2026_unique__url');
+      // React tracks its inputs' values; set it the way typing does.
+      Object.getOwnPropertyDescriptor(page.window.HTMLInputElement.prototype, 'value').set.call(input, url);
+      input.dispatchEvent(new page.window.Event('input', { bubbles: true }));
+      input.dispatchEvent(new page.window.Event('change', { bubbles: true }));
+      await page.settle(30);
+    },
+    async save() {
+      click(Array.from(dialog().querySelectorAll('button[type="submit"]')).pop());
+      await page.settle(300);
+    }
+  };
+}
+
+async function testOnNewTab() {
+  const mine = png('mine');
+  const folder = await openFolderPage({ 11: { iconSource: 'custom', dataUrl: mine } });
+  const [site] = await folder.openFolder();
+  assert.strictEqual(site.querySelector('img').src, mine, 'the folder menu should show the chosen icon');
+
+  let dialog = await folder.edit(0);
+  assert.ok(dialog.querySelector('.x-nt-shortcut-icon-field'), 'a website in a shortcut folder should get the icon editor');
+  assert.strictEqual(dialog.querySelector('.x-nt-shortcut-icon-source-select select').value, 'custom');
+  await folder.save();
+  assert.deepStrictEqual(folder.saved()[11], { iconSource: 'custom', dataUrl: mine }, 'saving an unchanged choice should keep its image');
+
+  dialog = await folder.edit(0);
+  await folder.pickIconSource('builtin');
+  await folder.save();
+  assert.deepStrictEqual(folder.saved()[11], { iconSource: 'builtin' }, 'choosing the built-in icon should save that choice');
+
+  dialog = await folder.edit(1);
+  assert.ok(dialog, 'a subfolder can be edited');
+  assert.strictEqual(dialog.querySelector('.x-nt-shortcut-icon-field'), null, 'but has no icon editor');
+  folder.page.close();
+
+  const moved = await openFolderPage({ 11: { iconSource: 'service', dataUrl: png('old') } });
+  await moved.edit(0);
+  await moved.setUrl('https://moved.example/');
+  await moved.save();
+  assert.ok(moved.page.bookmarks.calls.some((call) => call.name === 'update' && call.args[1].url === 'https://moved.example/'),
+    'saving should update the bookmark');
+  assert.strictEqual(moved.saved()[11], undefined, 'a new address should drop an image fetched for the old one');
+  moved.page.close();
+}
 
 (async () => {
   // Entries: built-in resolves from the URL; other sources keep their image.
@@ -40,62 +128,8 @@ const png = (text) => `data:image/png;base64,${Buffer.from(text).toString('base6
   await runtime.update({ c: { iconSource: 'favicon-is', dataUrl: png('c') } });
   assert.strictEqual(area.writes, writes, 'unchanged icons are not rewritten');
 
-  // Saving the dialog's choice.
-  const saved = new Map([['1', { iconSource: 'service', dataUrl: png('old') }]]);
-  const nodes = new Map([['1', { id: '1', url: 'https://docs.example/' }], ['2', { id: '2', url: 'https://two.example/' }]]);
-  const context = vm.createContext({
-    SHORTCUT_FAVICON: favicon,
-    NEWTAB_SHORTCUTS_STORE: store,
-    folderItemIconStore: { get: (id) => saved.get(String(id)) || null },
-    bookmarksRuntime: { getNode: (id) => nodes.get(String(id)) || null },
-    getShortcutDialogBuiltinIconUrl: (url) => url.includes('github') ? 'chrome-extension://lumno/glyph-gh.svg' : ''
-  });
-  vm.runInContext(['getNextFolderItemIcon', 'getFolderItemIconUrl'].map(extractFunction).join('\n'), context);
-  const next = (id, url, state) => JSON.parse(JSON.stringify(context.getNextFolderItemIcon(id, url, state)));
-  assert.deepStrictEqual(next('1', 'https://docs.example/', { source: 'service' }), { iconSource: 'service', dataUrl: png('old') },
-    'an unchanged choice keeps its image');
-  assert.strictEqual(next('1', 'https://moved.example/', { source: 'service' }), null, 'a new URL drops a stale image');
-  assert.strictEqual(next('1', 'https://docs.example/', { source: 'cache' }), null, 'browser cache without a fetch is automatic');
-  assert.deepStrictEqual(next('2', 'https://two.example/', {
-    source: 'favicon-is', onlineIcon: { dataUrl: png('fresh'), pageUrl: 'https://two.example/' }
-  }), { iconSource: 'favicon-is', dataUrl: png('fresh') });
-  assert.deepStrictEqual(next('2', 'https://two.example/', { source: 'custom', action: 'replace', dataUrl: png('mine') }),
-    { iconSource: 'custom', dataUrl: png('mine') });
-  assert.strictEqual(next('2', 'https://two.example/', { source: 'custom', action: 'keep' }), null);
-  assert.deepStrictEqual(next('2', 'https://two.example/', { source: 'builtin' }), { iconSource: 'builtin' });
-  saved.set('3', { iconSource: 'builtin' });
-  assert.strictEqual(context.getFolderItemIconUrl('3', 'https://github.com/'), 'chrome-extension://lumno/glyph-gh.svg');
-  assert.strictEqual(context.getFolderItemIconUrl('1', 'https://docs.example/'), png('old'));
-  assert.strictEqual(context.getFolderItemIconUrl('2', 'https://two.example/'), '');
-
-  // Only websites in a folder opened from a shortcut get the icon editor.
-  const opened = [];
-  const editor = vm.createContext({
-    opened,
-    bookmarksRuntime: { getNode: () => ({ title: 'Docs', url: 'https://docs.example/' }) },
-    bookmarkCascadeRuntime: { getAnchor: () => editor.anchor },
-    getFolderItemIcon: () => ({ iconSource: 'custom', dataUrl: png('mine') }),
-    getFolderItemIconUrl: () => png('mine'),
-    getBrowserPageFaviconUrl: () => 'chrome-extension://lumno/_favicon/',
-    openShortcutDialog: (options) => opened.push(options),
-    SHORTCUT_DIALOG_MODE_EDIT: 'edit', SHORTCUT_DIALOG_ITEM_FOLDER: 'folder', SHORTCUT_DIALOG_ITEM_BOOKMARK: 'bookmark'
-  });
-  vm.runInContext(['isShortcutFolderAnchor', 'openBookmarkEditor'].map(extractFunction).join('\n'), editor);
-  editor.anchor = { classList: { contains: (name) => name === 'x-nt-shortcut-tile' } };
-  editor.openBookmarkEditor({ bookmarkId: '1', sourceKind: 'cascade' });
-  editor.openBookmarkEditor({ bookmarkId: '1', sourceKind: 'card' });
-  editor.openBookmarkEditor({ bookmarkId: '1', sourceKind: 'cascade', isFolder: true });
-  editor.anchor = { classList: { contains: () => false } };
-  editor.openBookmarkEditor({ bookmarkId: '1', sourceKind: 'cascade' });
-  assert.deepStrictEqual(opened.map((options) => options.iconEditable), [true, false, false, false]);
-  assert.strictEqual(opened[0].shortcut.iconDataUrl, png('mine'));
-  assert.strictEqual(opened[0].iconPreviewUrl, png('mine'));
-  assert.strictEqual(opened[1].shortcut.iconSource, undefined);
-
-  // The cascade shows the chosen icon instead of resolving a favicon.
-  const cascade = fs.readFileSync(path.join(__dirname, '../../src/newtab/bookmarks/bookmark-cascade-menu.js'), 'utf8');
-  const iconChoice = cascade.indexOf('getItemIconUrl(item, bookmarkCascadeAnchor)');
-  assert.ok(iconChoice > 0 && iconChoice < cascade.indexOf('attachFaviconWithFallbacks(icon, item.url'));
+  await testOnNewTab();
 
   console.log('Shortcut folder item icons passed: storage, pruning, saving choices, editor scope and cascade display.');
-})().catch((error) => { console.error(error); process.exitCode = 1; });
+  process.exit(0);
+})().catch((error) => { console.error(error); process.exit(1); });
