@@ -1,6 +1,7 @@
 const assert = require('assert');
 const vm = require('vm');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const settings = require('../../src/shared/settings.js');
+const { createNewtabPage } = require('../helpers/newtab-page');
 const { runModuleInContext } = require('../helpers/module-script');
 
 const sandbox = {
@@ -29,16 +30,6 @@ assert.strictEqual(guards.isBrowserNewtabUrl('chrome://extensions/'), false);
 assert.strictEqual(guards.isBrowserInternalUrl('chrome://extensions/'), true);
 assert.strictEqual(guards.isBrowserInternalUrl('about:blank'), true);
 assert.strictEqual(guards.isBrowserInternalUrl('https://example.com/'), false);
-
-const newtabJs = readNewtabRuntimeSource();
-assert.ok(
-  newtabJs.includes('isBrowserNewtabUrl(url)'),
-  'newtab recent-site filtering should use the precise browser newtab guard'
-);
-assert.ok(
-  newtabJs.includes('shouldPrioritizeTabUrl: isBrowserPageRecentUrl'),
-  'newtab recent-site merging should prioritize non-newtab browser pages from open tabs'
-);
 
 assert.strictEqual(guards.isRestrictedUrl('chrome://extensions/'), true);
 assert.strictEqual(guards.isRestrictedUrl('chrome-extension://abc/newtab.html'), true);
@@ -85,4 +76,25 @@ const ownBase = 'chrome-extension://lumno-id/';
 assert.strictEqual(guards.canOpenUrlFromWebPageContext(`${ownBase}newtab.html`, ''), false,
   'without a known own base, no extension page is treated as ours');
 
-console.log('url guards ok');
+// New Tab's recent sites leave out browser new tab pages but keep other
+// browser pages.
+(async () => {
+  const now = Date.now();
+  const page = await createNewtabPage({
+    sync: { [settings.RECENT_COUNT_STORAGE_KEY]: 8, [settings.RECENT_MODE_STORAGE_KEY]: 'latest' },
+    history: [
+      { url: 'chrome://newtab/', title: 'New Tab', lastVisitTime: now, visitCount: 9 },
+      { url: 'chrome://settings/', title: 'Settings', lastVisitTime: now - 500, visitCount: 2 },
+      { url: 'https://a.example/', title: 'A', lastVisitTime: now - 1000, visitCount: 3 }
+    ]
+  });
+  await page.settle(500);
+  assert.deepStrictEqual(Array.from(page.document.querySelectorAll('.x-nt-recent-card')).map((card) => card.getAttribute('aria-label')),
+    ['Open Settings', 'Open A'], 'recent sites should skip the browser new tab page and keep other browser pages');
+  page.close();
+  console.log('url guards ok');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

@@ -1,164 +1,120 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
-const { readBackgroundSource } = require('../helpers/background-source');
-const { extractFunction: extractFunctionSource } = require('../helpers/extract-function');
+const settings = require('../../src/shared/settings.js');
+const { loadBackground } = require('../helpers/background-harness');
 
-const backgroundSource = readBackgroundSource();
+// The background worker caches shortcut icons by page. A miss is not
+// cached, a hit is, and changing the favicon policy (the request exclusion
+// list or enhanced fetching) drops what it has, including answers still in
+// flight. An explicit refresh never joins an older request.
 
-const extractedFunctions = [
-  'invalidateShortcutFaviconPolicyCache',
-  'fetchShortcutFaviconData'
-].map((name) => extractFunctionSource(backgroundSource, name)).join('\n\n');
-
-const createPolicyCache = new Function('deps', `
-  const SHORTCUT_FAVICON = {
-    normalizePageUrl(value) {
-      return new URL(String(value || '')).href;
-    }
-  };
-  const shortcutFaviconDataCache = new Map();
-  const shortcutFaviconPending = new Map();
-  let shortcutFaviconPolicyRevision = 0;
-  const BACKGROUND_SHORTCUT_FAVICON_CACHE_MAX_ENTRIES = 64;
-  const SHORTCUT_FAVICON_FETCH_TIMEOUT_MS = 1000;
-  let enhancedFetchEnabled = deps.enhancedFetchEnabled;
-  const FAVICON_UTILS = {
-    setBoundedCacheEntry(cache, key, value, maxEntries) {
-      if (cache.has(key)) {
-        cache.delete(key);
-      }
-      cache.set(key, value);
-      while (cache.size > maxEntries) {
-        cache.delete(cache.keys().next().value);
-      }
-      return value;
-    }
-  };
-
-  function getShortcutFaviconPreferredTheme(value) {
-    return String(value || 'light');
-  }
-  function loadFaviconRequestBlacklistItems() {
-    return Promise.resolve([]);
-  }
-  function loadFaviconEnhancedFetchEnabled() {
-    return Promise.resolve(enhancedFetchEnabled);
-  }
-  function getFaviconTargetPolicy() {
-    return { ok: true, directFetchBlocked: false };
-  }
-  function canFetchPageForFavicon() {
-    return true;
-  }
-  function resolveShortcutFaviconData(...args) {
-    return deps.resolve(...args);
-  }
-  ${extractedFunctions}
-
-  return {
-    fetchShortcutFaviconData,
-    invalidateShortcutFaviconPolicyCache,
-    setEnhancedFetchEnabled(value) {
-      enhancedFetchEnabled = value;
-    }
-  };
-`);
-
-async function run() {
-  let resolveCalls = 0;
-  const fetchedResult = {
-    data: 'data:image/png;base64,aWNvbg==',
-    sourceUrl: 'https://example.com/icon.png'
-  };
-  const deps = {
-    enhancedFetchEnabled: false,
-    resolve() {
-      resolveCalls += 1;
-      return Promise.resolve(null);
-    }
-  };
-  const cache = createPolicyCache(deps);
-  const pageUrl = 'https://example.com/';
-
-  assert.strictEqual(await cache.fetchShortcutFaviconData(pageUrl), null);
-  assert.strictEqual(resolveCalls, 1, 'strict mode should still attempt safe cache snapshot resolution');
-  deps.resolve = () => {
-    resolveCalls += 1;
-    return Promise.resolve(fetchedResult);
-  };
-  cache.setEnhancedFetchEnabled(true);
-  cache.invalidateShortcutFaviconPolicyCache();
-  assert.deepStrictEqual(await cache.fetchShortcutFaviconData(pageUrl), fetchedResult);
-  assert.strictEqual(resolveCalls, 2, 'enabling enhanced fetching should retry a previously cached miss');
-
-  deps.resolve = () => Promise.resolve(null);
-  assert.strictEqual(await cache.fetchShortcutFaviconData('https://temporary-miss.example/'), null);
-  deps.resolve = () => Promise.resolve(fetchedResult);
-  assert.deepStrictEqual(await cache.fetchShortcutFaviconData('https://temporary-miss.example/'), fetchedResult,
-    'a temporary cache/network miss must be retried without waiting for policy invalidation');
-
-  let resolveOldRequest = null;
-  deps.resolve = () => new Promise((resolve) => {
-    resolveOldRequest = resolve;
-  });
-  cache.invalidateShortcutFaviconPolicyCache();
-  const staleRequest = cache.fetchShortcutFaviconData('https://stale.example/');
-  await new Promise((resolve) => setImmediate(resolve));
-  assert(resolveOldRequest, 'the stale request should reach the resolver');
-
-  cache.invalidateShortcutFaviconPolicyCache();
-  const freshResult = {
-    data: 'data:image/png;base64,ZmFzdA==',
-    sourceUrl: 'https://stale.example/fresh.png'
-  };
-  deps.resolve = () => Promise.resolve(freshResult);
-  assert.deepStrictEqual(
-    await cache.fetchShortcutFaviconData('https://stale.example/'),
-    freshResult
-  );
-  resolveOldRequest({
-    data: 'data:image/png;base64,c3RhbGU=',
-    sourceUrl: 'https://stale.example/old.png'
-  });
-  await staleRequest;
-  assert.deepStrictEqual(
-    await cache.fetchShortcutFaviconData('https://stale.example/'),
-    freshResult,
-    'an old in-flight request should not repopulate the cache after policy invalidation'
-  );
-
-  let resolveBeforeRefresh;
-  deps.resolve = () => new Promise((resolve) => { resolveBeforeRefresh = resolve; });
-  const refreshPage = 'https://refresh.example/';
-  const beforeRefresh = cache.fetchShortcutFaviconData(refreshPage);
-  await new Promise((resolve) => setImmediate(resolve));
-  deps.resolve = (...args) => {
-    assert.strictEqual(args[4], true, 'refresh must reach the actual acquisition resolver');
-    return Promise.resolve(freshResult);
-  };
-  assert.deepStrictEqual(await cache.fetchShortcutFaviconData(refreshPage, '', '', true), freshResult,
-    'an explicit refresh must not join an older automatic request');
-  resolveBeforeRefresh(fetchedResult);
-  await beforeRefresh;
-  assert.deepStrictEqual(await cache.fetchShortcutFaviconData(refreshPage), freshResult,
-    'a late automatic response must not overwrite the refreshed result');
-
-  assert(
-    /if \(changes\[FAVICON_REQUEST_BLACKLIST_STORAGE_KEY\]\)[\s\S]{0,300}invalidateShortcutFaviconPolicyCache\(\)/
-      .test(backgroundSource),
-    'favicon blacklist changes should invalidate shortcut favicon results'
-  );
-  assert(
-    /if \(changes\[FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY\]\)[\s\S]{0,300}invalidateShortcutFaviconPolicyCache\(\)/
-      .test(backgroundSource),
-    'enhanced-fetch setting changes should invalidate shortcut favicon results'
-  );
-
-  console.log('shortcut favicon policy cache tests passed');
+function png(width, marker) {
+  const buffer = Buffer.alloc(25);
+  buffer.set([137, 80, 78, 71, 13, 10, 26, 10]);
+  buffer.writeUInt32BE(13, 8);
+  buffer.write('IHDR', 12);
+  buffer.writeUInt32BE(width, 16);
+  buffer.writeUInt32BE(width, 20);
+  buffer[24] = marker;
+  return buffer;
 }
 
-run().catch((error) => {
+// A worker whose network answers with `answer(url)`: an image, null for a
+// failed request, or a promise of either.
+function openWorker() {
+  const requests = [];
+  const worker = { answer: () => png(64, 1) };
+  const background = loadBackground({
+    extensionUrls: true,
+    sync: { [settings.FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY]: true },
+    fetch: async (url) => {
+      const resource = String(url);
+      requests.push(resource);
+      // The placeholder probe answers with distinct bytes, so page icons are
+      // never mistaken for it.
+      const image = await (resource.includes('lumno.invalid') ? png(16, 0) : worker.answer(resource));
+      return { ok: Boolean(image), url: resource, headers: { get: () => '' }, blob: async () => new Blob([image || ''], { type: 'image/png' }) };
+    }
+  });
+  worker.requests = requests;
+  worker.icon = async (pageUrl, refresh) => {
+    const response = await background.sendMessage({ action: 'getShortcutFaviconData', pageUrl, refresh: refresh === true }, undefined, 5000);
+    return response && response.data ? Buffer.from(response.data.split(',')[1], 'base64')[24] : null;
+  };
+  worker.change = (key, newValue) => {
+    background.storage.sync.data[key] = newValue;
+    background.storage.onChanged.dispatch({ [key]: { newValue } }, 'sync');
+  };
+  return worker;
+}
+
+function deferred() {
+  let resolve;
+  const promise = new Promise((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
+async function testMissesHitsAndPolicyChanges() {
+  const worker = openWorker();
+  worker.answer = () => null;
+  assert.strictEqual(await worker.icon('https://temporary-miss.example/'), null);
+  worker.answer = () => png(64, 2);
+  assert.strictEqual(await worker.icon('https://temporary-miss.example/'), 2,
+    'a temporary cache/network miss must be retried without waiting for policy invalidation');
+  const afterHit = worker.requests.length;
+  assert.strictEqual(await worker.icon('https://temporary-miss.example/'), 2);
+  assert.strictEqual(worker.requests.length, afterHit, 'a found icon should be answered from the cache');
+
+  worker.answer = () => png(64, 3);
+  worker.change(settings.FAVICON_REQUEST_BLACKLIST_STORAGE_KEY, []);
+  assert.strictEqual(await worker.icon('https://temporary-miss.example/'), 3, 'favicon blacklist changes should invalidate shortcut favicon results');
+  worker.answer = () => png(64, 4);
+  worker.change(settings.FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY, false);
+  assert.strictEqual(await worker.icon('https://temporary-miss.example/'), 4, 'enhanced-fetch setting changes should invalidate shortcut favicon results');
+}
+
+async function testOldAnswersDoNotReturn() {
+  const worker = openWorker();
+  const old = deferred();
+  worker.answer = () => old.promise;
+  const staleRequest = worker.icon('https://stale.example/');
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  worker.change(settings.FAVICON_REQUEST_BLACKLIST_STORAGE_KEY, []);
+  worker.answer = () => png(64, 5);
+  assert.strictEqual(await worker.icon('https://stale.example/'), 5);
+  old.resolve(png(64, 6));
+  await staleRequest;
+  assert.strictEqual(await worker.icon('https://stale.example/'), 5,
+    'an old in-flight request should not repopulate the cache after policy invalidation');
+
+  // Nothing newer asked: the old answer still is not kept.
+  const lone = deferred();
+  worker.answer = () => lone.promise;
+  const loneRequest = worker.icon('https://lone.example/');
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  worker.change(settings.FAVICON_REQUEST_BLACKLIST_STORAGE_KEY, []);
+  lone.resolve(png(64, 9));
+  await loneRequest;
+  worker.answer = () => png(64, 10);
+  assert.strictEqual(await worker.icon('https://lone.example/'), 10,
+    'an answer from before a policy change should not be cached');
+
+  const automatic = deferred();
+  worker.answer = () => automatic.promise;
+  const beforeRefresh = worker.icon('https://refresh.example/');
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  worker.answer = () => png(64, 7);
+  assert.strictEqual(await worker.icon('https://refresh.example/', true), 7, 'an explicit refresh must not join an older automatic request');
+  automatic.resolve(png(64, 8));
+  await beforeRefresh;
+  assert.strictEqual(await worker.icon('https://refresh.example/'), 7, 'a late automatic response must not overwrite the refreshed result');
+}
+
+(async () => {
+  await testMissesHitsAndPolicyChanges();
+  await testOldAnswersDoNotReturn();
+  console.log('shortcut favicon policy cache tests passed');
+  process.exit(0);
+})().catch((error) => {
   console.error(error);
   process.exit(1);
 });
