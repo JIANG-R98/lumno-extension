@@ -2,7 +2,8 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const popup = require('../../src/popup/popup.js');
-const { readBackgroundSource } = require('../helpers/background-source');
+const { JSDOM } = require('jsdom');
+const { loadBackground, wait } = require('../helpers/background-harness');
 const { getBundleFiles, getPageScripts } = require('../helpers/runtime-scripts');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
@@ -245,18 +246,34 @@ const rows = (model) => Object.fromEntries(model.settings.sections.flatMap((sect
     'src/shared/ui/tooltip.js', 'src/shared/ui/cursor-tooltip.js', 'src/shared/ui/toast.js', 'src/background/pip-main-world.js',
     'src/shared/browser-profile.js']
     .forEach((script) => assert(scripts.includes(script), `the popup loads ${script}`));
-  assert(html.indexOf('build/popup-preload.js') < html.indexOf('x-lumno-popup-root') &&
+  const popupDocument = new JSDOM(html).window.document;
+  assert((popupDocument.querySelector('script[src*="build/popup-preload.js"]').compareDocumentPosition(popupDocument.getElementById('x-lumno-popup-root')) & 4) &&
       getBundleFiles('popup-preload').includes('src/popup/popup-theme-preload.js'),
     'the theme is painted before the popup renders');
-  const background = readBackgroundSource();
-  assert(!background.includes('chrome.action.onClicked'), 'a popup replaces the toolbar click handler');
-  const pageActions = background.match(/const WEB_PAGE_MESSAGE_ACTIONS = Object\.freeze\(\[([\s\S]*?)\]\);/)[1];
-  ['popupOpenDocumentPipPicker', 'popupShowSearch', 'popupAddPageShortcut', 'popupShowPageToast',
-    'popupGetRecentPin', 'popupToggleRecentPin'].forEach((action) => {
-    assert(background.includes(`  ${action}(request, sender, sendResponse) {`), `background handles ${action}`);
-    assert(!pageActions.includes(`'${action}'`), `${action} is not accepted from web pages`);
-  });
-  assert(/createRouter\([\s\S]*POPUP_MESSAGE_HANDLERS[\s\S]*?\);/.test(background), 'the popup handlers are registered');
 }
 
-console.log('Popup tests passed: page actions, restricted pages, web clip states, sync status, strings and wiring.');
+// The worker answers the popup's actions from the popup only, and the
+// toolbar button opens the popup instead of a click handler.
+async function testPopupActionsInTheWorker() {
+  const worker = loadBackground({ tabs: [{ id: 1, windowId: 1, url: 'https://x.example/', active: true }] });
+  await wait(50);
+  assert.strictEqual(worker.chrome.action.onClicked.listeners.length, 0, 'a popup replaces the toolbar click handler');
+  const popup = { url: worker.chrome.runtime.getURL('src/popup/popup.html') };
+  const webPage = { tab: { id: 1 }, url: 'https://x.example/' };
+  for (const action of ['popupOpenDocumentPipPicker', 'popupShowSearch', 'popupAddPageShortcut', 'popupShowPageToast',
+    'popupGetRecentPin', 'popupToggleRecentPin']) {
+    const answer = await worker.sendMessage({ action, tabId: 1 }, popup, 300);
+    assert.ok(answer && answer.reason !== 'sender-not-allowed', `background handles ${action}`);
+    const fromWeb = await worker.sendMessage({ action, tabId: 1 }, webPage, 300);
+    assert.ok(fromWeb && fromWeb.ok === false && fromWeb.reason === 'sender-not-allowed',
+      `${action} is not accepted from web pages: ${JSON.stringify(fromWeb)}`);
+  }
+}
+
+testPopupActionsInTheWorker().then(() => {
+  console.log('Popup tests passed: page actions, restricted pages, web clip states, sync status, strings and wiring.');
+  process.exit(0);
+}).catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
