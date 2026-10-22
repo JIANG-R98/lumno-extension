@@ -71,7 +71,7 @@ function shown(page, selector) {
         }).observe(window.document.documentElement, { subtree: true, attributes: true, attributeFilter: ['data-nt-ready'] });
       }
     });
-    await page.settle(200);
+    await page.waitFor(() => hiddenWhenReady !== null, `${entry.constant}: New Tab should reveal itself`, 5000);
     assert.strictEqual(hiddenWhenReady, true, `${entry.constant}: the button should already be hidden when New Tab first shows`);
     assert.strictEqual(shown(page, CONTROLS[entry.constant]), false, `${entry.constant}: a hidden button should also leave the tab order`);
     others.forEach((other) => assert.strictEqual(shown(page, CONTROLS[other.constant]), true, `${other.constant} should not be affected`));
