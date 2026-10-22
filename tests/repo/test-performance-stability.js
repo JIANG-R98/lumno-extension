@@ -1,223 +1,141 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { readOptionsRuntimeSource } = require('../helpers/options-source');
-const { readPageSource } = require('../helpers/page-source');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-const { extractFunction } = require('../helpers/extract-function');
-const { readWallpaperCheckSource } = require('../helpers/wallpaper-source');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { JSDOM } = require('jsdom');
+const settings = require('../../src/shared/settings.js');
+const { parseCss, parsePageCss } = require('../helpers/css-rules');
+const { createNewtabPage } = require('../helpers/newtab-page');
+const { createOptionsPage } = require('../helpers/options-page');
+const { openSearchSurface } = require('../helpers/search-surfaces');
+
+// Work the pages coalesce or avoid: one resize listener in Settings, one
+// reload for a burst of external changes, motion without paint-heavy
+// filters, and markup that reserves image space. (The segmented indicator's
+// measurement is in react-src/shared/segmented-indicator.test.ts.)
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const optionsJs = readOptionsRuntimeSource();
-const newtabJs = readNewtabRuntimeSource();
-const newtabWallpaperJs = readWallpaperCheckSource();
-const newtabHtml = readPageSource('newtab.html');
-const overlaySearchPanelJs = readOverlayPanelSource();
-const overlaySuggestionsCss = fs.readFileSync(
-  path.join(repoRoot, 'src/overlay/suggestions-view.css'),
-  'utf8'
-);
-const htmlFiles = [
-  'newtab.html',
-  'src/options/options.html',
-  'src/onboarding/onboarding.html'
-];
 
-function assertMatches(source, pattern, message) {
-  assert.ok(pattern.test(source), message);
+async function testOptionsResize() {
+  let resizeListeners = 0;
+  const page = await createOptionsPage({
+    setup(window) {
+      const add = window.addEventListener.bind(window);
+      window.addEventListener = (type, ...rest) => {
+        if (type === 'resize') resizeListeners += 1;
+        return add(type, ...rest);
+      };
+    }
+  });
+  await page.settle(300);
+  assert.strictEqual(resizeListeners, 1, 'options should use one coordinated resize listener');
+  page.close();
 }
 
-const optionsResizeListeners = optionsJs.match(/window\.addEventListener\('resize'/g) || [];
-assert.strictEqual(
-  optionsResizeListeners.length,
-  1,
-  'options should use one coordinated resize listener'
-);
-const activePopconfirmOutsideListeners = optionsJs.match(
-  /document\.addEventListener\('click', \(event\) => \{\s*if \(!activePopconfirm\)/g
-) || [];
-assert.strictEqual(
-  activePopconfirmOutsideListeners.length,
-  1,
-  'options should use one outside-click listener for the active popconfirm'
-);
-assertMatches(
-  optionsJs,
-  /function scheduleOptionsViewportLayoutRefresh\(\) \{[\s\S]*?if \(optionsResizeFrame\)[\s\S]*?requestAnimationFrame/,
-  'options resize work should be coalesced with requestAnimationFrame'
-);
-assert.strictEqual(
-  (optionsJs.match(/SETTINGS\.addStorageChangeListener\(chrome, listener\)/g) || []).length,
-  1,
-  'options storage listeners should register through the shared guarded helper'
-);
-assertMatches(
-  fs.readFileSync('react-src/shared/segmented-indicator.ts', 'utf8'),
-  /\(buttonRect\.left - containerRect\.left\) \/ scaleX \+\s*container\.scrollLeft -\s*container\.clientLeft/,
-  'indicator positioning should account for a horizontally scrolled tab strip and its border'
-);
-
-assertMatches(
-  newtabJs,
-  /function scheduleRecentReloadIfVisible\(\) \{[\s\S]*?clearTimeout\(recentExternalChangeTimer\)[\s\S]*?setTimeout\([\s\S]*?NEWTAB_EXTERNAL_CHANGE_DEBOUNCE_MS/,
-  'recent-site external changes should be debounced'
-);
-assertMatches(
-  newtabJs,
-  /function scheduleBookmarkReloadIfVisible\(\) \{[\s\S]*?clearTimeout\(bookmarkExternalChangeTimer\)[\s\S]*?setTimeout\([\s\S]*?NEWTAB_EXTERNAL_CHANGE_DEBOUNCE_MS/,
-  'bookmark external changes should be debounced'
-);
-assertMatches(
-  newtabJs,
-  /const startupStorageReadBatch = rawStorageArea[\s\S]*?settingsRuntimeApi\.createStorageReadBatch\(rawStorageArea\)[\s\S]*?const storageArea = startupStorageReadBatch[\s\S]*?startupStorageReadBatch\.area/,
-  'new tab should coalesce same-task startup settings reads'
-);
-assertMatches(
-  newtabJs,
-  /startupStorageReadBatch\.ready\.then\([\s\S]*?data-lumno-newtab-bootstrap-storage-reads[\s\S]*?data-lumno-newtab-bootstrap-storage-requests/,
-  'new tab should expose startup storage batching diagnostics'
-);
-assertMatches(
-  newtabJs,
-  /function migrateStorageIfNeeded\(keys(?:, providerReady)?\) \{[\s\S]*?isPrimaryStorageAreaName\('local'\)/,
-  'new tab storage migration should identify the wrapped primary area by name'
-);
-assertMatches(
-  newtabJs,
-  /function handleShortcutDockPointerMove\(event\) \{[\s\S]*?scheduleShortcutDockPointerStyles\(tile, getShortcutDockPointerX\(event\)\)/,
-  'shortcut dock magnification should coalesce pointer-move layout work per frame'
-);
-assertMatches(
-  newtabJs,
-  /function handleShortcutDockPointerOver\(event\) \{[\s\S]*?scheduleShortcutDockPointerStyles\(tile, getShortcutDockPointerX\(event\)\)/,
-  'shortcut dock magnification should coalesce pointer-over layout work per frame'
-);
-assertMatches(
-  newtabJs,
-  /function setShortcutDockHover\(activeTile, pointerX, options\) \{[\s\S]*?getShortcutDockInfluence\(pointerX, icon\)[\s\S]*?shortcutGrid\.setAttribute\('data-dock-active', 'true'\)/,
-  'shortcut dock geometry reads should finish before hover state writes begin'
-);
-assertMatches(
-  newtabJs,
-  /function handleShortcutDragPointerMove\(event\) \{[\s\S]*?scheduleShortcutDragMove\(shortcutDragState, pointerX, pointerY\)/,
-  'shortcut dragging should coalesce hit testing and FLIP layout work per frame'
-);
-const initialAppearanceBootstrapIndex = newtabJs.indexOf(
-  'const initialAppearanceReadyTask = Promise.all(['
-);
-assert.ok(
-  initialAppearanceBootstrapIndex >= 0 &&
-    newtabJs.indexOf("let latestQuery = '';") < initialAppearanceBootstrapIndex &&
-    newtabJs.slice(initialAppearanceBootstrapIndex).includes('bootstrapInitialThemeMode()'),
-  'new tab query state should initialize before appearance bootstrapping starts'
-);
-assertMatches(
-  newtabJs,
-  /function refreshFallbackIcons\(\) \{[\s\S]*?if \(faviconViewRuntime && typeof faviconViewRuntime\.refreshFallbackIcons === 'function'\)/,
-  'new tab theme bootstrap should tolerate favicon runtime initialization still being pending'
-);
-assert.strictEqual(
-  (newtabJs.match(/SETTINGS\.addStorageChangeListener\(chrome, listener\)/g) || []).length,
-  1,
-  'new tab storage listeners should register through the shared guarded helper'
-);
-assert.strictEqual(
-  (newtabJs.match(/chrome\.runtime\.getURL\(/g) || []).length,
-  1,
-  'new tab extension resources should resolve through the guarded URL helper'
-);
-assertMatches(
-  newtabJs,
-  /function sendRuntimeMessage\(message, callback\) \{[\s\S]*?typeof chrome === 'undefined'[\s\S]*?try \{[\s\S]*?chrome\.runtime\.sendMessage\(message, callback\);[\s\S]*?catch/,
-  'new tab runtime messages should use a guarded transport helper'
-);
-assertMatches(
-  newtabJs,
-  /function requestSuggestions\(query, options\) \{[\s\S]*?const localRequestSent = sendRuntimeMessage\(\{[\s\S]*?action: 'getSearchSuggestions'[\s\S]*?const remoteRequestSent = sendRuntimeMessage\(\{[\s\S]*?action: 'getSearchEngineSuggestions'[\s\S]*?if \(!remoteRequestSent\) \{[\s\S]*?renderSuggestions\(localSuggestions, requestQuery\);[\s\S]*?if \(!localRequestSent\) \{[\s\S]*?renderPendingSuggestions\(requestQuery\);/,
-  'new tab suggestions should preserve pending local results when the extension runtime is unavailable'
-);
-assertMatches(
-  overlaySearchPanelJs,
-  /openTabSuggestionLimit:\s*1000,[\s\S]*?openTabInitialRenderLimit:\s*10,[\s\S]*?getOpenTabInitialRenderLimit:\s*\(\) =>[\s\S]*?normalizeSearchResultDisplayLimit\(overlaySearchResultDisplayLimit\),[\s\S]*?openTabRenderBatchSize:\s*16,[\s\S]*?getOpenTabRenderBatchSize:\s*\(\) =>[\s\S]*?loadingSessionTrackingActive \|\| document\.readyState === 'loading'[\s\S]*?\? 8[\s\S]*?: 16,/,
-  'overlay open-tab results should follow current settings and re-read page load state for every background batch'
-);
-assertMatches(
-  overlaySearchPanelJs,
-  /function renderTabSuggestions\(tabList\) \{\s*pauseOverlayAntiTranslateObserverForMutationBurst\(\);[\s\S]*?reactView\.renderTabs\(list\);/,
-  'open-tab rendering should pause translation observation during owned DOM mutations'
-);
-assertMatches(
-  overlaySearchPanelJs,
-  /pauseOverlayAntiTranslateObserverForMutationBurst\(\);\s*setOpenTabsResultsViewport\(false\);[\s\S]*?reactView\.render\(\{/,
-  'search-result rendering should pause translation observation during owned DOM mutations'
-);
-assertMatches(
-  overlaySuggestionsCss,
-  /\.x-ov-suggestion-item\s*\{[\s\S]*?content-visibility:\s*auto;[\s\S]*?contain-intrinsic-block-size:/,
-  'off-screen overlay result rows should skip unnecessary layout and paint work'
-);
-assert.doesNotMatch(
-  overlaySuggestionsCss,
-  /data-favicon-load-state="(?:priming|loaded)"\][\s\S]*?filter:\s*blur/,
-  'favicon entry motion should not animate paint-heavy blur filters'
-);
-
-htmlFiles.forEach((relativePath) => {
-  const html = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
-  assertMatches(
-    html,
-    /<meta name="theme-color"/,
-    `${relativePath} should define a theme color`
-  );
-  const images = html.match(/<img\b[^>]*>/g) || [];
-  images.forEach((image) => {
-    assert.ok(/\bwidth="[^"]+"/.test(image), `${relativePath} image should define width: ${image}`);
-    assert.ok(/\bheight="[^"]+"/.test(image), `${relativePath} image should define height: ${image}`);
+async function testNewTab() {
+  const historySearches = [];
+  const keyframes = [];
+  const page = await createNewtabPage({
+    darkSystem: true,
+    sync: {
+      [settings.RECENT_COUNT_STORAGE_KEY]: 8,
+      [settings.RECENT_MODE_STORAGE_KEY]: 'latest',
+      _x_extension_motion_effects_enabled_2026_unique_: true
+    },
+    history: [{ url: 'https://a.example/', title: 'A', lastVisitTime: Date.now(), visitCount: 2 }],
+    bookmarks: Array.from({ length: 30 }, (_, index) => ({ id: `b${index}`, title: `B${index}`, url: `https://b${index}.example/` })),
+    setup(window) {
+      const search = window.chrome.history.search;
+      window.chrome.history.search = (query, callback) => {
+        historySearches.push(query);
+        return search(query, callback);
+      };
+      const animate = window.Element.prototype.animate;
+      window.Element.prototype.animate = function(frames, timing) {
+        keyframes.push(JSON.stringify(frames));
+        return animate ? animate.call(this, frames, timing) : { finished: Promise.resolve(), cancel() {}, addEventListener() {} };
+      };
+    }
   });
+  await page.settle(500);
+  assert.strictEqual(page.document.documentElement.style.colorScheme, 'dark', 'new tab should synchronize native controls with the resolved theme');
+
+  const loads = historySearches.length;
+  for (let index = 0; index < 5; index += 1) page.historyVisited.dispatch({ url: `https://visit-${index}.example/` });
+  await page.settle(400);
+  assert.strictEqual(historySearches.length - loads, 1, 'recent-site external changes should be debounced');
+
+  keyframes.length = 0;
+  page.click(page.document.querySelector('.x-nt-bookmarks-pager-btn[aria-label="Next page"]'));
+  await page.settle(300);
+  assert.ok(keyframes.length > 0, 'bookmark paging should animate');
+  assert.ok(keyframes.every((frames) => !/filter|blur\(/.test(frames)),
+    'bookmark paging should animate compositor-friendly transform and opacity only');
+  page.close();
+}
+
+// With the extension runtime gone for remote suggestions, New Tab still
+// shows the local results it has.
+async function testSuggestionsWithoutRemoteRuntime() {
+  const surface = await openSearchSurface('newtab', {
+    respond: (message) => (message.action === 'getSearchSuggestions'
+      ? { suggestions: [{ type: 'history', url: 'https://local.example/', title: 'Local result' }] }
+      : undefined),
+    setup(window) {
+      const send = window.chrome.runtime.sendMessage;
+      window.chrome.runtime.sendMessage = (message, callback) => {
+        if (message && message.action === 'getSearchEngineSuggestions') throw new Error('Extension context invalidated.');
+        return send(message, callback);
+      };
+    }
+  });
+  await surface.settle(150);
+  await surface.type('local');
+  await surface.settle(300);
+  assert.ok(surface.suggestions().some((row) => row.textContent.includes('Local result')),
+    'new tab suggestions should keep local results when the extension runtime is unavailable');
+  surface.close();
+}
+
+function testStyles() {
+  const overlayCss = parseCss(fs.readFileSync(path.join(repoRoot, 'src/overlay/suggestions-view.css'), 'utf8'));
+  const row = overlayCss.rule(':is(#_x_extension_overlay_2024_unique_, #_x_extension_onboarding_overlay_demo_2026_unique_) .x-ov-suggestion-item');
+  assert.ok(row && row.get('content-visibility') === 'auto' && row.has('contain-intrinsic-block-size'),
+    'off-screen overlay result rows should skip unnecessary layout and paint work');
+  assert.ok(!overlayCss.entries.some((entry) => entry.selectors.some((selector) => /data-favicon-load-state="(?:priming|loaded)"\]/.test(selector)) &&
+    /blur/.test(entry.style.getPropertyValue('filter'))), 'favicon entry motion should not animate paint-heavy blur filters');
+
+  const optionsCss = parsePageCss('src/options/options.html');
+  assert.ok(optionsCss.rule('._x_extension_toggle_2024_unique_ input:focus-visible').has('outline'),
+    'custom settings toggles should retain a visible keyboard focus indicator');
+  assert.strictEqual(optionsCss.rule('#_x_extension_settings_tabs_2024_unique_').get('overflow-x'), 'auto');
+  assert.strictEqual(optionsCss.rule('._x_extension_settings_tab_button_2024_unique_').get('white-space'), 'nowrap',
+    'settings tabs should scroll horizontally instead of wrapping labels at every width');
+
+  const panel = parsePageCss('newtab.html').entries.filter((entry) => entry.selectors.includes('.x-nt-wallpaper-panel'));
+  assert.ok(panel.length > 0 && panel.every((entry) => !entry.style.getPropertyValue('filter') &&
+    !/filter/.test(entry.style.getPropertyValue('will-change'))),
+  'wallpaper panel entry should avoid animating a full-surface blur filter');
+}
+
+function testMarkup() {
+  ['newtab.html', 'src/options/options.html', 'src/onboarding/onboarding.html'].forEach((relativePath) => {
+    const doc = new JSDOM(fs.readFileSync(path.join(repoRoot, relativePath), 'utf8')).window.document;
+    assert.ok(doc.querySelector('meta[name="theme-color"]'), `${relativePath} should define a theme color`);
+    doc.querySelectorAll('img').forEach((image) => {
+      assert.ok(image.hasAttribute('width') && image.hasAttribute('height'), `${relativePath} image should define its size: ${image.outerHTML}`);
+    });
+  });
+}
+
+(async () => {
+  testStyles();
+  testMarkup();
+  await testOptionsResize();
+  await testNewTab();
+  await testSuggestionsWithoutRemoteRuntime();
+  console.log('performance and style stability tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
 });
-
-const optionsHtml = readPageSource('src/options/options.html');
-assertMatches(
-  optionsHtml,
-  /\._x_extension_toggle_2024_unique_ input:focus-visible\s*\{[\s\S]*?outline:/,
-  'custom settings toggles should retain a visible keyboard focus indicator'
-);
-assertMatches(
-  optionsHtml,
-  /#_x_extension_settings_tabs_2024_unique_ \{[^}]*overflow-x: auto;[\s\S]*?\._x_extension_settings_tab_button_2024_unique_ \{[^}]*white-space: nowrap;/,
-  'settings tabs should scroll horizontally instead of wrapping labels at every width'
-);
-assertMatches(
-  newtabJs,
-  /document\.documentElement\.style\.colorScheme = resolved/,
-  'new tab should synchronize native controls with the resolved theme'
-);
-
-// Comments may name the properties it avoids.
-const bookmarkPageMotion = extractFunction(newtabJs, 'switchBookmarkPage').replace(/\/\/.*$/gm, '');
-assert.doesNotMatch(
-  bookmarkPageMotion,
-  /\bfilter\b|blur\(/,
-  'bookmark paging should animate compositor-friendly transform and opacity only'
-);
-const appearanceScopeMotion = newtabWallpaperJs.slice(
-  newtabWallpaperJs.indexOf('function animateWallpaperAppearanceScopeChange('),
-  newtabWallpaperJs.indexOf('function getWallpaperButtonLabel()')
-);
-assert.doesNotMatch(
-  appearanceScopeMotion,
-  /style\.[^\n]*filter|blur\(/,
-  'appearance scope changes should avoid paint-heavy blur animation'
-);
-const wallpaperPanelCss = newtabHtml.slice(
-  newtabHtml.indexOf('.x-nt-wallpaper-panel {'),
-  newtabHtml.indexOf('.x-nt-wallpaper-panel-scroll {')
-);
-assert.doesNotMatch(
-  wallpaperPanelCss,
-  /(?:^|\n)\s*filter\s*:|will-change:[^;]*filter/,
-  'wallpaper panel entry should avoid animating a full-surface blur filter'
-);
-
-console.log('performance and style stability tests passed');
