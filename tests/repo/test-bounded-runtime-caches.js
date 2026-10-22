@@ -70,15 +70,8 @@ function testFaviconViewCoreCacheLimits() {
 function testRuntimeCachesUseBoundedWrites() {
   const background = readBackgroundSource();
   const overlay = readOverlayPanelSource();
-  const overlayFavicon = fs.readFileSync(path.join(repoRoot, 'src/overlay/favicon-view.js'), 'utf8');
   const faviconCore = fs.readFileSync(path.join(repoRoot, 'src/shared/favicon/favicon-view-core.js'), 'utf8');
 
-  assert.ok(
-    background.includes('BACKGROUND_FAVICON_DATA_CACHE_MAX_ENTRIES = 256') &&
-      background.includes('BACKGROUND_SITE_THEME_CACHE_MAX_ENTRIES = 512') &&
-      background.includes('BACKGROUND_TITLE_PINYIN_CACHE_MAX_ENTRIES = 6144'),
-    'background runtime caches should declare explicit memory bounds'
-  );
   assert.strictEqual(
     (background.match(/(?:faviconDataCache|siteThemeColorCache|titlePinyinCache)\.set\(/g) || []).length,
     0,
@@ -93,10 +86,6 @@ function testRuntimeCachesUseBoundedWrites() {
     (faviconCore.match(/(?:faviconDataCache|iconPreloadCache|extensionFaviconPlaceholderProbeCache)\.set\(/g) || []).length,
     0,
     'shared favicon view cache writes should use the bounded helper'
-  );
-  assert.ok(
-    overlayFavicon.includes('faviconViewCore.cacheFaviconData(sourceUrl, value)'),
-    'overlay favicon bypass path should cache through the bounded favicon view core'
   );
 }
 

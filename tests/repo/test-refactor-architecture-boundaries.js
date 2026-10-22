@@ -1,8 +1,6 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
 
 const repoRoot = path.join(__dirname, '..', '..');
 
@@ -56,31 +54,13 @@ assert.deepStrictEqual(
   'bookmark folder SVG and morph logic must stay out of the newtab entry'
 );
 
-const newtabSource = readNewtabRuntimeSource();
-assert.match(
-  newtabSource,
-  /SITE_DISPLAY_NAME\.getSiteDisplayName\([\s\S]*?SITE_DISPLAY_NAME_OPTIONS/
-);
-
-const overlaySource = readOverlayPanelSource();
-assert.strictEqual((overlaySource.match(/storageChangeListeners\.add\(/g) || []).length, 19);
-assert.strictEqual((overlaySource.match(/storageChangeListeners\.clear\(\)/g) || []).length, 1);
-assert.doesNotMatch(overlaySource, /chrome\.storage\.onChanged\.(?:add|remove)Listener/);
-
+// New Tab's site names and the overlay's storage listeners are checked at
+// runtime: tests/shared/test-site-display-name.js and
+// tests/overlay/test-overlay-session-teardown.js.
 const onboardingReactFiles = collectFiles('react-src/onboarding', /\.tsx$/);
 assert.deepStrictEqual(
   filesContaining(onboardingReactFiles, /function Icon\(/),
   [],
   'onboarding React surfaces should use the shared RemixIcon component'
 );
-[
-  'bookmark-focus-demo.tsx',
-  'interactions.tsx',
-  'newtab-preview.tsx',
-  'site-search-demo.tsx'
-].forEach((file) => {
-  const source = fs.readFileSync(path.join(repoRoot, 'react-src/onboarding', file), 'utf8');
-  assert.match(source, /RemixIcon as Icon/);
-});
-
 console.log('refactor architecture boundary tests passed');
