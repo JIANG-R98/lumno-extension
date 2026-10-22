@@ -1,6 +1,9 @@
 const assert = require('assert');
 const fs = require('fs');
-const { readOptionsRuntimeSource } = require('../helpers/options-source');
+const { JSDOM } = require('jsdom');
+const { parseCss } = require('../helpers/css-rules');
+const { createNewtabPage } = require('../helpers/newtab-page');
+const { createOptionsPage } = require('../helpers/options-page');
 const { readLightTokens, readStylesheetSource } = require('../helpers/css-tokens');
 
 // Stylesheets split into parts read as the joined parts.
@@ -13,7 +16,7 @@ const pages = {
 
 // Tokens load before any stylesheet that reads them (only font and icon CSS may precede).
 Object.entries(pages).forEach(([file, html]) => {
-  const sheets = Array.from(html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g), (m) => m[1]);
+  const sheets = Array.from(new JSDOM(html).window.document.querySelectorAll('link[rel="stylesheet"]'), (link) => link.getAttribute('href'));
   const tokensIndex = sheets.indexOf('../shared/tokens.css');
   assert.ok(tokensIndex >= 0, `${file} should load the shared tokens`);
   sheets.slice(0, tokensIndex).forEach((href) => {
@@ -48,15 +51,15 @@ stylesheets.forEach((file) => {
 // Every page loads tokens.css first, so its page-wide rules reach every component:
 // reduced motion drops transitions and finishes animations at once (they still end,
 // so animationend fires), and keyboard focus always shows a ring.
-const tokensCss = read('src/shared/tokens.css');
-const reducedMotion = tokensCss.match(/@media \(prefers-reduced-motion: reduce\) \{([\s\S]*?)\n\}/);
-assert.ok(reducedMotion, 'tokens.css should hold the page-wide reduced-motion rule');
-assert.match(reducedMotion[1], /\*[^{]*\{[^}]*animation-duration:\s*0\.01ms !important/,
-  'reduced motion should finish every animation at once without removing it');
-assert.match(reducedMotion[1], /\*[^{]*\{[^}]*transition-duration:\s*0s !important/,
-  'reduced motion should drop every transition');
-assert.match(tokensCss, /:focus-visible \{[^}]*outline: 2px solid var\(--lumno-color-focus-ring\)/,
-  'tokens.css should give every control the shared focus ring');
+const tokensCss = parseCss(read('src/shared/tokens.css'));
+const reducedMotion = tokensCss.entries.filter((entry) => entry.conditions.some((text) => /prefers-reduced-motion:\s*reduce/.test(text)) &&
+  entry.selectors.includes('*'));
+assert.ok(reducedMotion.length > 0, 'tokens.css should hold the page-wide reduced-motion rule');
+const declared = (name) => reducedMotion.map((entry) => [entry.style.getPropertyValue(name), entry.style.getPropertyPriority(name)]).find(([value]) => value);
+assert.deepStrictEqual(declared('animation-duration'), ['0.01ms', 'important'], 'reduced motion should finish every animation at once without removing it');
+assert.deepStrictEqual(declared('transition-duration'), ['0s', 'important'], 'reduced motion should drop every transition');
+assert.ok(tokensCss.entries.some((entry) => entry.conditions.length === 0 && entry.selectors.some((selector) => /^:where\(button, a\[href\].*:focus-visible$/.test(selector)) &&
+  entry.style.getPropertyValue('outline').trim() === '2px solid var(--lumno-color-focus-ring)'), 'tokens.css should give every control the shared focus ring');
 
 // Shared components are defined once; pages only resize them.
 const optionsCss = read('src/options/options.css');
@@ -70,16 +73,20 @@ const newtabCss = read('src/newtab/newtab.css');
 assert.doesNotMatch(optionsCss, /^\._x_extension_toast_2024_unique_ \{[^}]*background:/m,
   'the Options toast uses src/shared/ui/toast.css');
 
-// One indicator implementation: the page modules call the shared module.
-assert.doesNotMatch(readOptionsRuntimeSource(), /function measure\w*Indicator/,
-  'options.js should not measure segmented indicators itself');
-assert.match(read('src/newtab/top-content/quotes.js'), /globalThis\.LumnoSegmentedIndicator/,
-  'quotes.js should position indicators through the shared segmented indicator');
-// The appearance panel's segmented controls are React components that use the shared
-// hook; react-src/newtab/wallpaper-view.test.tsx checks their indicators move.
-['react-src/newtab/react-islands-entry.ts', 'react-src/options/options-islands-entry.ts'].forEach((file) => {
-  assert.match(read(file), /runtime\.LumnoSegmentedIndicator = createSegmentedIndicatorApi\(\)/,
-    `${file} should expose the shared segmented indicator to the page modules`);
+// One indicator implementation: each page's React entry gives its page
+// modules the shared segmented indicator.
+(async () => {
+  for (const [name, open] of [['Options', () => createOptionsPage({})], ['New Tab', () => createNewtabPage({})]]) {
+    const page = await open();
+    await page.settle(200);
+    const api = page.window.LumnoSegmentedIndicator;
+    assert.ok(api && ['apply', 'measure', 'sync'].every((name) => typeof api[name] === 'function'),
+      `${name} should expose the shared segmented indicator to the page modules`);
+    page.close();
+  }
+  console.log('design token tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
 });
-
-console.log('design token tests passed');

@@ -6,7 +6,7 @@ const { JSDOM } = require('jsdom');
 const repoRoot = path.join(__dirname, '..', '..');
 const modulePath = path.join(repoRoot, 'src/shared/cjk-font-faces.js');
 const CJK = require(modulePath);
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { openSearchSurface } = require('../helpers/search-surfaces');
 const { moduleScript } = require('../helpers/module-script');
 
 // The CJK face only composes with Open Sans when its weight band matches one of
@@ -15,9 +15,6 @@ const openSansCss = fs.readFileSync(path.join(repoRoot, 'assets/fonts/open-sans/
 const pageBands = [...openSansCss.matchAll(/font-weight:\s*([\d ]+);/g)].map((match) => match[1].trim());
 assert.deepStrictEqual(pageBands, ['300 549', '550 649', '650 800']);
 assert.ok(pageBands.includes(CJK.FONT_WEIGHT_BAND));
-const overlaySource = readOverlayPanelSource();
-assert.ok(overlaySource.includes(`['${pageBands.join("', '")}']`),
-  'the overlay must declare "Lumno Open Sans" in the same weight bands as open-sans.css');
 
 const cases = [
   ['zh-CN', 'PingFangSC-Medium'],
@@ -70,7 +67,17 @@ assert.strictEqual(document.getElementById(styleId), null);
   page.window.document.documentElement.lang = 'en';
   await new Promise((resolve) => setTimeout(resolve, 0));
   assert.strictEqual(readFace(), '');
+
+  // The overlay declares "Lumno Open Sans" in the same weight bands, so its
+  // CJK face composes the same way.
+  const surface = await openSearchSurface('overlay');
+  await surface.settle(100);
+  const overlayFaces = surface.page.window.document.getElementById('_x_extension_overlay_font_faces_2026_unique_').textContent;
+  const overlayBands = [...overlayFaces.matchAll(/@font-face \{[^}]*font-family: "Lumno Open Sans";[^}]*font-weight: ([\d ]+);/g)].map((match) => match[1].trim());
+  assert.deepStrictEqual(overlayBands, pageBands, 'the overlay must declare "Lumno Open Sans" in the same weight bands as open-sans.css');
+  surface.close();
   console.log('cjk font face tests passed');
+  process.exit(0);
 })().catch((error) => {
   console.error(error);
   process.exit(1);
