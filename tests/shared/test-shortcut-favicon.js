@@ -4,7 +4,8 @@ const path = require('path');
 
 const shortcutFavicon = require('../../src/shared/favicon/shortcut-favicon.js');
 const searchUtils = require('../../src/shared/search/search-utils.js');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { shortcutsStorage } = require('../helpers/newtab-fixtures');
+const { createNewtabPage } = require('../helpers/newtab-page');
 
 function createPngHeader(width, height) {
   const bytes = new Uint8Array(24);
@@ -280,24 +281,45 @@ async function testConcurrentCacheUpdates() {
   );
 }
 
-function testNewtabCacheWriteIntegration() {
-  const source = readNewtabRuntimeSource();
-  assert(
-    source.includes('lockManager: window.navigator && window.navigator.locks'),
-    'newtab favicon stores should share a cross-tab Web Lock'
-  );
-  assert(
-    source.includes('shortcutFaviconStore.mergeAll(pendingEntries)'),
-    'newtab favicon fetches should merge pending entries instead of overwriting the whole cache'
-  );
-  assert(
-    source.includes('shortcutFaviconStore.retainAll(shortcutUrls)'),
-    'newtab favicon pruning should run inside the same serialized store update path'
-  );
-  assert(
-    !source.includes('shortcutFaviconStore.writeAll(newtabShortcutFavicons)'),
-    'newtab should not overwrite the whole favicon cache from a tab-local snapshot'
-  );
+// New Tab writes its icon cache under a cross-tab Web Lock, merging what it
+// fetched into what other tabs saved meanwhile, and drops icons of removed
+// shortcuts in the same serialized path.
+async function testNewtabCacheWrites() {
+  const KEY = shortcutFavicon.DEFAULT_STORAGE_KEY;
+  const locks = [];
+  const entry = (url, data) => ({ dataUrl: `data:image/png;base64,${data}`, sourceUrl: `${url}icon.png`, updatedAt: Date.now() });
+  let local = null;
+  const page = await createNewtabPage({
+    shortcuts: [{ url: 'https://one.example/', title: 'One' }, { url: 'https://two.example/', title: 'Two' }],
+    local: { [KEY]: { 'https://two.example/': entry('https://two.example/', 'b2xk') } },
+    respond(message) {
+      if (message.action !== 'getShortcutFaviconData') return undefined;
+      // Another New Tab saves a newer icon for Two while this one fetches One.
+      local.data[KEY] = Object.assign({}, local.data[KEY], {
+        'https://two.example/': entry('https://two.example/', 'bmV3')
+      });
+      return { data: 'data:image/png;base64,b25l', sourceUrl: `${message.pageUrl}icon.png`, width: 64, height: 64, vector: false };
+    },
+    setup(window) {
+      local = window.chrome.storage.local;
+      Object.defineProperty(window.navigator, 'locks', {
+        configurable: true,
+        value: { request: (name, task) => { locks.push(name); return Promise.resolve().then(task); } }
+      });
+    }
+  });
+  await page.settle(800);
+  assert.ok(locks.includes(`lumno-shortcut-favicon-store:${KEY}`), 'newtab favicon stores should share a cross-tab Web Lock');
+  const cache = () => page.storage.local.data[KEY];
+  assert.strictEqual(cache()['https://one.example/'].dataUrl, 'data:image/png;base64,b25l', 'the fetched icon should be saved');
+  assert.strictEqual(cache()['https://two.example/'].dataUrl, 'data:image/png;base64,bmV3',
+    'newtab should merge its fetched icons instead of overwriting the cache from a tab-local snapshot');
+
+  const remaining = await shortcutsStorage([{ url: 'https://one.example/', title: 'One' }]);
+  Object.entries(remaining).forEach(([key, value]) => page.changeStorage('sync', key, value));
+  await page.settle(600);
+  assert.deepStrictEqual(Object.keys(cache()), ['https://one.example/'], 'removing a shortcut should prune its icon');
+  page.close();
 }
 
 async function testDedicatedSiteSearchCachePolicy() {
@@ -539,13 +561,13 @@ async function run() {
   await testLocalCache();
   testStableShortcutArtwork();
   await testConcurrentCacheUpdates();
-  testNewtabCacheWriteIntegration();
+  await testNewtabCacheWrites();
   await testDedicatedSiteSearchCachePolicy();
   testCanonicalProviderResolution();
   console.log('shortcut high-resolution favicon tests passed');
 }
 
-run().catch((error) => {
+run().then(() => process.exit(0)).catch((error) => {
   console.error(error);
   process.exit(1);
 });
