@@ -1,10 +1,10 @@
 const assert = require('assert');
-const fs = require('fs');
-const { readOptionsRuntimeSource } = require('../helpers/options-source');
+const settings = require('../../src/shared/settings.js');
+const { createNewtabPage } = require('../helpers/newtab-page');
+const { createOnboardingPage } = require('../helpers/onboarding-page');
+const { createOptionsPage } = require('../helpers/options-page');
 
 const communityLinks = require('../../src/shared/community-links.js');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
 const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 (async () => {
@@ -157,13 +157,28 @@ const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/r
     },
     'Edge Add-ons installs should open the Edge Add-ons listing'
   );
-  for (const [file, pattern] of [
-    ['src/newtab/newtab.js', /openExternalNewTabUrl\(COMMUNITY_LINKS\.getStoreListing\(\)\.url, event\)/],
-    ['src/onboarding/onboarding.js', /openExternalTab\(COMMUNITY_LINKS\.getStoreListing\(\)\.url, disposition\)/]
-  ]) {
-    const source = fs.readFileSync(file, 'utf8');
-    assert.match(source, pattern, `${file} should open the listing for the install channel`);
-    assert(!source.includes('nggfkkbmogmadfoikakkfegkoilfcfao'), `${file} should not hardcode the Chrome listing`);
+  // New Tab's wordmark and onboarding's rating button open the listing of
+  // the store the extension was installed from.
+  {
+    const edgeListing = communityLinks.getStoreListing(edgeStoreId).url;
+    const newtab = await createNewtabPage({ setup(window) { window.chrome.runtime.id = edgeStoreId; } });
+    await newtab.settle(300);
+    const wordmark = newtab.document.querySelector('[aria-label="Lumno Microsoft Edge Add-ons"]');
+    assert.ok(wordmark, 'the New Tab wordmark should name the install channel');
+    newtab.click(wordmark);
+    await newtab.settle(80);
+    assert.ok(newtab.messages.some((message) => message.action === 'createTab' && message.url === edgeListing),
+      'the New Tab wordmark should open the listing for the install channel');
+    newtab.close();
+
+    const onboarding = await createOnboardingPage({ runtimeId: edgeStoreId });
+    onboarding.document.dispatchEvent(new onboarding.window.KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
+    await onboarding.settle(400);
+    await onboarding.click(onboarding.document.querySelector('[data-action="openChromeWebStore"]'));
+    await onboarding.settle(50);
+    assert.ok(onboarding.messages.some((message) => message.action === 'createTab' && message.url === edgeListing),
+      'onboarding should open the listing for the install channel');
+    onboarding.close();
   }
 
   const previousChrome = globalThis.chrome;
@@ -242,15 +257,34 @@ const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/r
     'a forced refresh should still retry after a cached failure'
   );
 
-  const newtabSource = readNewtabRuntimeSource();
-  const optionsSource = readOptionsRuntimeSource();
-  const overlaySource = readOverlayPanelSource();
-  assert(
-    !newtabSource.includes('qrcode-20260730.webp') &&
-      !optionsSource.includes('qrcode-20260730.webp') &&
-      !overlaySource.includes('qrcode-20260730.webp'),
-    'feature surfaces should not duplicate the fallback QR URL outside the shared module'
-  );
+  // Surfaces take the QR code from the shared links, so a remote update
+  // reaches them (here Settings' WeChat group dialog).
+  {
+    const remoteQr = 'https://lumno.kubai.design/qr-remote.webp';
+    const page = await createOptionsPage({
+      sync: { [settings.LANGUAGE_STORAGE_KEY]: 'zh-CN' },
+      setup(window) {
+        const packaged = window.fetch;
+        window.fetch = async (url, init) => {
+          if (String(url) !== communityLinks.COMMUNITY_LINKS_URL) return packaged(url, init);
+          const body = { links: { wechatQr: remoteQr } };
+          return { ok: true, status: 200, json: async () => body, text: async () => JSON.stringify(body) };
+        };
+      }
+    });
+    await page.settle(400);
+    await page.click(page.byId('_x_extension_feedback_support_2026_unique_').querySelector('[data-feedback-support="community"]'));
+    await page.settle(200);
+    const images = [];
+    const collect = (root) => {
+      root.querySelectorAll('img').forEach((image) => images.push(image.getAttribute('src')));
+      root.querySelectorAll('*').forEach((element) => element.shadowRoot && collect(element.shadowRoot));
+    };
+    collect(page.document);
+    assert.ok(images.includes(remoteQr), 'the WeChat dialog should show the QR code from the shared links');
+    assert.ok(!images.includes(communityLinks.FALLBACK_LINKS.wechatQr), 'instead of the bundled fallback');
+    page.close();
+  }
   assert(
     runsBefore(getPageScripts('newtab.html'), 'src/shared/community-links.js', 'src/shared/engagement-notice.js'),
     'newtab should load community links before the engagement runtime'
@@ -326,4 +360,8 @@ const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/r
   }
 
   console.log('community links tests passed');
-})();
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

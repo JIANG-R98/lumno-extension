@@ -3,11 +3,71 @@ const fs = require('fs');
 
 const communityLinks = require('../../src/shared/community-links.js');
 const engagementNotice = require('../../src/shared/engagement-notice.js');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const updateNotice = require('../../src/shared/update-notice.js');
+const { HOST_ID: QR_DIALOG_ID } = require('../../src/shared/ui/community-qr-dialog.js');
+const { createNewtabPage, INPUT_ID } = require('../helpers/newtab-page');
+const { ENGAGEMENT_DELAY_MS, engagementStorage } = require('../helpers/newtab-notices');
 
 function flushMicrotasks() {
   return new Promise((resolve) => setImmediate(resolve));
+}
+
+// The prompt on New Tab: it speaks the page's language, typing a search
+// counts as meaningful use and keeps it away, its community action opens X
+// in a new tab or (in Chinese) the WeChat QR dialog, and a pending update
+// notice takes the session's slot.
+async function testOnNewTab() {
+  const zhMessages = JSON.parse(fs.readFileSync('_locales/zh_CN/messages.json', 'utf8'));
+  const open = async (options) => {
+    const page = await createNewtabPage(engagementStorage(options));
+    await page.settle(ENGAGEMENT_DELAY_MS + 600);
+    page.prompt = () => page.document.querySelector('.x-lumno-feature-hint[data-engagement-surface="newtab"]');
+    page.promptVisible = () => Boolean(page.prompt() && page.prompt().getAttribute('data-visible') === 'true');
+    page.action = (label) => Array.from(page.prompt().querySelectorAll('.x-lumno-feature-hint__action')).find((button) => button.textContent.trim() === label);
+    return page;
+  };
+
+  const en = await open({ language: 'en' });
+  assert.strictEqual(en.promptVisible(), true, 'an eligible New Tab user should see the prompt');
+  en.click(en.action('find us on X'));
+  await en.settle(100);
+  assert.ok(en.messages.some((message) => message.action === 'createTab' && message.url === communityLinks.FALLBACK_LINKS.x &&
+    message.disposition === 'newTab'), 'the community action should open X in a new tab');
+  en.close();
+
+  const zh = await open({ language: 'zh-CN' });
+  assert.strictEqual(zh.promptVisible(), true);
+  assert.ok(zh.prompt().textContent.includes(zhMessages.engagement_notice_text.message),
+    'the prompt should wait for the page language before it is created');
+  zh.click(zh.action('进群'));
+  await zh.settle(200);
+  assert.ok(zh.document.getElementById(QR_DIALOG_ID), 'Chinese users should get the WeChat QR dialog');
+  assert.ok(!zh.messages.some((message) => message.action === 'createTab'), 'without opening the QR image in a tab');
+  zh.close();
+
+  // Four meaningful searches so far: this one makes five, but typing it
+  // suppresses the prompt on this page.
+  const typing = await open({ language: 'en', newtab: { meaningfulUses: 4 } });
+  typing.type('lumno');
+  await typing.settle(ENGAGEMENT_DELAY_MS + 400);
+  assert.strictEqual(typing.promptVisible(), false, 'searching should keep the prompt away');
+  assert.strictEqual(typing.storage.local.data[engagementNotice.ENGAGEMENT_NOTICE_STORAGE_KEY].newtab.meaningfulUses, 5,
+    'and count as meaningful use');
+  typing.close();
+
+  const version = JSON.parse(fs.readFileSync('manifest.json', 'utf8')).version;
+  const update = await open({
+    language: 'en',
+    updateNotice: true,
+    sync: { [updateNotice.UPDATE_NOTICE_STORAGE_KEY]: { version, previousVersion: '0.0.1', reason: 'update', updatedAt: 1 } }
+  });
+  const updateVisible = Array.from(update.document.querySelectorAll('.x-lumno-feature-hint--update-notice'))
+    .some((hint) => hint.getAttribute('data-visible') === 'true' && !hint.hasAttribute('data-engagement-surface'));
+  if (updateVisible) {
+    assert.strictEqual(update.promptVisible(), false, 'the update notice should keep the session slot');
+  }
+  update.close();
+  return updateVisible;
 }
 
 function createEligibleState(surface, now) {
@@ -394,63 +454,8 @@ function createEligibleState(surface, now) {
     }
   }
 
-  const newtabSource = readNewtabRuntimeSource();
-  const overlaySource = readOverlayPanelSource();
-  const newtabReactEntrySource = fs.readFileSync(
-    'react-src/newtab/react-islands-entry.ts',
-    'utf8'
-  );
-  const overlayReactEntrySource = fs.readFileSync(
-    'react-src/overlay/react-islands-entry.ts',
-    'utf8'
-  );
-  assert(
-    newtabSource.includes('engagementNoticeController.recordMeaningfulUse()'),
-    'newtab input should suppress the prompt and count meaningful use'
-  );
-  assert(
-    newtabSource.includes('function createNewtabEngagementNoticeController()') &&
-      newtabSource.includes('initialLanguageReadyPromise,') &&
-      newtabSource.includes('updateNoticeController && updateNoticeController.ready') &&
-      newtabSource.includes('engagementNoticeController = createNewtabEngagementNoticeController();'),
-    'newtab should not create the prompt until language and update arbitration are ready'
-  );
-  assert(
-    newtabSource.includes('loadLocaleMessages(targetLocale).then(applyResolvedMessages);'),
-    'newtab should load packaged locale messages without a synced cache payload'
-  );
-  assert(
-    overlaySource.includes('overlayEngagementNoticeController.recordMeaningfulUse()'),
-    'overlay input should suppress the prompt for the active invocation'
-  );
-  assert(
-      overlaySource.includes('ENGAGEMENT_NOTICE.loadCommunityUrl({') &&
-      overlaySource.includes("locale: overlayLanguageMode === 'system'") &&
-      overlaySource.includes("const disposition = getOpenDisposition(event, 'newTab');") &&
-      /chrome\.runtime\.sendMessage\(\{\s*action: 'createTab',\s*url,\s*disposition\s*\}\);/.test(
-        overlaySource
-      ) &&
-      newtabSource.includes('ENGAGEMENT_NOTICE.loadCommunityUrl({') &&
-      newtabSource.includes('locale: getFeedbackWebLocale()') &&
-      newtabSource.includes('openFeedbackExternalUrl(url, disposition);'),
-    'both surfaces should preserve click disposition while resolving the shared community URL'
-  );
-  assert(
-    newtabReactEntrySource.includes(
-      "import { createFeatureHintViewApi } from '../shared/feature-hint-view';"
-    ) &&
-      overlayReactEntrySource.includes(
-        "import { createFeatureHintViewApi } from '../shared/feature-hint-view';"
-      ),
-    'newtab and overlay should render engagement hints through the same shared React component'
-  );
-  assert(
-    newtabSource.includes('exposureGate: updateNoticeController && updateNoticeController.ready') &&
-      newtabSource.includes('!updateNoticeClaimsSessionSlot()') &&
-      overlaySource.includes('exposureGate: overlayUpdateNoticeController && overlayUpdateNoticeController.ready') &&
-      overlaySource.includes('!overlayUpdateNoticeClaimsSessionSlot()'),
-    'both surfaces should wait for update arbitration and keep the update slot sticky for the session'
-  );
+  const updateNoticeArbitrated = await testOnNewTab();
+  assert.ok(updateNoticeArbitrated, 'the update notice case should have shown the update notice');
   const zhCnMessages = JSON.parse(
     fs.readFileSync('_locales/zh_CN/messages.json', 'utf8')
   );

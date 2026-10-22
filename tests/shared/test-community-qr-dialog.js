@@ -1,12 +1,9 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
 const { JSDOM } = require('jsdom');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { HOST_ID } = require('../../src/shared/ui/community-qr-dialog.js');
+const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
 const { moduleScript } = require('../helpers/module-script');
 
-const repoRoot = path.join(__dirname, '..', '..');
-const read = (relativePath) => fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
 
 const dom = new JSDOM(
   '<html style="overflow-y: scroll"><body><button id="trigger">Join</button></body></html>',
@@ -62,28 +59,59 @@ dialog.close();
 assert.strictEqual(dialog.open({ imageUrl: '' }), null, 'nothing opens without a QR image');
 
 // Joining the WeChat group never opens the QR image in a new tab.
-const overlaySource = readOverlayPanelSource();
-const newtabSource = require('../helpers/newtab-source').readNewtabRuntimeSource();
 const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
-const suggestionsControllerSource = read('src/newtab/search/suggestions-controller.js');
 assert.ok(
   runsBefore(getInjectedScripts('overlay'), 'src/shared/community-links.js', 'src/shared/ui/community-qr-dialog.js'),
   'the overlay loads the dialog'
 );
 assert.ok(getPageScripts('newtab.html').includes('src/shared/ui/community-qr-dialog.js'), 'the new tab loads the dialog');
-assert.strictEqual(
-  (overlaySource.match(/feedbackKey === 'community'\) \{\s*openOverlayCommunityQrDialog\(/g) || []).length,
-  2,
-  'the overlay opens the dialog from the help search row by click and by Enter'
-);
-assert.match(
-  require('../helpers/newtab-source').readNewtabRuntimeSource(),
-  /feedbackKey === 'community'\) \{\s*openCommunityQrDialog\(/,
-  'Enter on the new tab opens the dialog'
-);
-assert.match(suggestionsControllerSource, /feedbackKey === 'community' &&[\s\S]{0,80}openCommunityQrDialog\(suggestion\.url\)/, 'a click on the new tab opens the dialog');
-assert.match(overlaySource, /if \(isWechat\) \{\s*openOverlayCommunityQrDialog\(url\);/, 'the overlay engagement notice opens the dialog');
-assert.match(newtabSource, /if \(isWechat\) \{\s*openCommunityQrDialog\(url\);/, 'the new tab engagement notice opens the dialog');
+
+// The Help Center search offers the WeChat group when nothing matched; by
+// click or by Enter it opens the dialog on both surfaces. (The New Tab
+// engagement prompt's group action is in test-engagement-notice.js.)
+async function testHelpSearchOpensTheDialog(name, how) {
+  const stored = { _x_extension_language_2024_unique_: 'zh-CN' };
+  const surface = await openSearchSurface(name, Object.assign(
+    name === 'overlay' ? { settings: stored } : { sync: stored, local: stored },
+    { respond: (message) => (message.action === 'getHelpCenterSearchResults' ? { items: [] } : undefined) }
+  ));
+  await surface.settle(150);
+  await surface.type('lm');
+  surface.press('Tab');
+  await surface.settle(200);
+  await surface.type('zzz');
+  await surface.settle(400);
+  const rows = surface.suggestions();
+  const community = rows.findIndex((row) => row.textContent.includes('加入反馈群'));
+  assert.ok(community > 0, `${name}: an unmatched help search should offer the WeChat group`);
+  if (how === 'click') {
+    rows[community].dispatchEvent(new surface.page.window.MouseEvent('click', { bubbles: true, cancelable: true, composed: true, button: 0 }));
+  } else {
+    for (let index = surface.selectedIndex(); index < community; index += 1) {
+      surface.press('ArrowDown');
+      await surface.settle(20);
+    }
+    assert.strictEqual(surface.selectedIndex(), community);
+    surface.press('Enter');
+  }
+  await surface.settle(200);
+  const pageDocument = surface.page.document || surface.page.window.document;
+  const sent = surface.page.messages || surface.page.sentMessages || [];
+  assert.ok(pageDocument.getElementById(HOST_ID), `${name}: ${how} should open the QR dialog`);
+  assert.ok(!sent.some((message) => message.action === 'createTab'), `${name}: without opening the QR image in a tab`);
+  surface.close();
+}
 
 window.close();
-console.log('Community QR dialog tests passed.');
+
+(async () => {
+  for (const name of SURFACES) {
+    await testHelpSearchOpensTheDialog(name, 'click');
+    await testHelpSearchOpensTheDialog(name, 'Enter');
+  }
+  console.log('Community QR dialog tests passed.');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
