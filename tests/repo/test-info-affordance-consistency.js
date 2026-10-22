@@ -1,76 +1,62 @@
 const assert = require('assert');
-const { readStylesheet } = require('../helpers/css-tokens');
 const fs = require('fs');
-const { readOptionsRuntimeSource } = require('../helpers/options-source');
-const { readPageSource } = require('../helpers/page-source');
+const { JSDOM } = require('jsdom');
+const { readStylesheet } = require('../helpers/css-tokens');
+const { parseCss, parsePageCss } = require('../helpers/css-rules');
+const { createOptionsPage } = require('../helpers/options-page');
 
-const optionsHtml = readPageSource('src/options/options.html');
-const infoButtonCss = readStylesheet('src/shared/ui/info-button.css');
-const newtabHtml = readPageSource('newtab.html');
-const optionsSource = readOptionsRuntimeSource();
-const onboardingHtml = readPageSource('src/onboarding/onboarding.html');
-const optionReactSources = [
-  'react-src/options/blacklist-list.tsx',
-  'react-src/options/settings-forms.tsx',
-  'react-src/options/site-search-list.tsx'
-].map((file) => fs.readFileSync(file, 'utf8'));
+// Info buttons look the same on every page, and every info affordance in
+// Settings is the shared InfoButton.
 
-function cssRule(source, selector) {
-  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = source.match(new RegExp(`(?:^|\\n)\\s*${escaped}\\s*\\{([\\s\\S]*?)\\}`));
-  assert.ok(match, `missing CSS rule for ${selector}`);
-  return match[1];
+const onboardingCss = parsePageCss('src/onboarding/onboarding.html');
+const infoButtonCss = parseCss(readStylesheet('src/shared/ui/info-button.css'));
+const INFO = '._x_extension_info_button_2026_unique_';
+
+function rule(css, selector) {
+  const found = css.rule(selector);
+  assert.ok(found, `missing CSS rule for ${selector}`);
+  return found;
 }
 
-function assertCircularInfoButton(rule, label) {
-  assert.match(rule, /width:\s*20px;/, `${label} should be 20px wide`);
-  assert.match(rule, /height:\s*20px;/, `${label} should be 20px tall`);
-  assert.match(rule, /border-radius:\s*999px;/, `${label} should use a circular hit area`);
-  assert.match(rule, /color:\s*rgba\(107,\s*114,\s*128,\s*0\.74\);/, `${label} should use the shared info color`);
-}
-
-assertCircularInfoButton(
-  cssRule(onboardingHtml, '.interaction-info-button'),
-  'onboarding info button'
-);
-assertCircularInfoButton(
-  cssRule(infoButtonCss, '._x_extension_info_button_2026_unique_'),
-  'options shared info button'
-);
-for (const page of [optionsHtml, newtabHtml]) {
-  assert.match(page, /href="\.\.\/shared\/ui\/info-button\.css"/, 'Options and New Tab should load the same info styles');
-}
-
-for (const [source, selector, label] of [
-  [onboardingHtml, '.interaction-info-button:hover', 'onboarding info hover'],
-  [infoButtonCss, '._x_extension_info_button_2026_unique_:hover', 'options info hover']
-]) {
-  assert.match(
-    cssRule(source, selector),
-    /background:\s*rgba\(37,\s*99,\s*235,\s*0\.1\);/,
-    `${label} should use the shared blue background`
-  );
-}
-
-const staticHosts = [
-  '_x_extension_restricted_action_info_2026_unique_',
-  '_x_extension_bookmark_rows_info_2026_unique_',
-  '_x_extension_bookmark_columns_info_2026_unique_',
-  '_x_extension_overlay_page_theme_adaptation_info_2026_unique_'
-];
-staticHosts.forEach((id) => {
-  assert.match(optionsHtml, new RegExp(`id="${id}"`), `${id} should exist as a component host`);
-  assert.match(optionsSource, new RegExp(`getElementById\\('${id}'\\)`), `${id} should be mounted by the Options runtime`);
+const onboardingButton = rule(onboardingCss, '.interaction-info-button');
+const sharedButton = rule(infoButtonCss, INFO);
+[[onboardingButton, 'onboarding info button'], [sharedButton, 'options shared info button']].forEach(([button, label]) => {
+  assert.deepStrictEqual([button.get('width'), button.get('height'), button.get('border-radius')], ['20px', '20px', '999px'],
+    `${label} should be a 20px circular hit area`);
 });
-assert.match(
-  optionsSource,
-  /createInfoButtonController/,
-  'static Options info affordances should share the InfoButton controller'
-);
+assert.strictEqual(onboardingButton.get('color'), sharedButton.get('color'), 'onboarding and Settings info buttons should share one color');
+assert.strictEqual(rule(onboardingCss, '.interaction-info-button:hover').get('background'), rule(infoButtonCss, `${INFO}:hover`).get('background'),
+  'and one hover background');
+['src/options/options.html', 'newtab.html'].forEach((file) => {
+  assert.ok(new JSDOM(fs.readFileSync(file, 'utf8')).window.document.querySelector('link[href="../shared/ui/info-button.css"]'),
+    `${file} should load the same info styles`);
+});
 
-for (const source of optionReactSources) {
-  assert.match(source, /import \{ InfoButton \} from '\.\/info-button';/);
-  assert.match(source, /<InfoButton[\s\S]*?tooltip=/, 'dynamic Options info affordances should reuse InfoButton');
-}
-
-console.log('info affordance consistency tests passed');
+// On the page: the static hosts are mounted with the shared button, and
+// the React lists and forms use it for their own hints.
+(async () => {
+  const page = await createOptionsPage({});
+  await page.settle(400);
+  [
+    '_x_extension_restricted_action_info_2026_unique_',
+    '_x_extension_bookmark_rows_info_2026_unique_',
+    '_x_extension_bookmark_columns_info_2026_unique_',
+    '_x_extension_overlay_page_theme_adaptation_info_2026_unique_'
+  ].forEach((id) => {
+    const host = page.byId(id);
+    assert.ok(host && host.querySelector(INFO), `${id} should be mounted with the shared info button`);
+  });
+  [
+    ['_x_extension_blacklist_form_2026_unique_', 'the search exclusion form'],
+    ['_x_extension_favicon_blacklist_form_2026_unique_', 'the icon exclusion form'],
+    ['_x_extension_site_search_builtin_list_2024_unique_', 'the site search list']
+  ].forEach(([id, label]) => {
+    assert.ok(page.byId(id).querySelector(INFO), `${label} should reuse the shared InfoButton`);
+  });
+  page.close();
+  console.log('info affordance consistency tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
