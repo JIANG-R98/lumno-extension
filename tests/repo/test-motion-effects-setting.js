@@ -1,122 +1,66 @@
 const assert = require('assert');
 const fs = require('fs');
-const { readOptionsRuntimeSource } = require('../helpers/options-source');
+const { JSDOM } = require('jsdom');
 const { readPageSource } = require('../helpers/page-source');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
 const { readBackgroundSource } = require('../helpers/background-source');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { createNewtabPage } = require('../helpers/newtab-page');
 const { getBundleFiles, getPageScripts } = require('../helpers/runtime-scripts');
 
-const optionsHtml = readPageSource('src/options/options.html');
-const optionsSource = readOptionsRuntimeSource();
-const newtabSource = readNewtabRuntimeSource();
-const motionPreloadSource = fs.readFileSync('src/shared/motion-preload.js', 'utf8');
-const overlayRuntimeSource = fs.readFileSync('src/overlay/runtime.js', 'utf8');
-const overlaySource = readOverlayPanelSource();
+// The motion effects setting turns off the New Tab and overlay entrances.
+// (The overlay's is covered by tests/overlay/test-overlay-entry-motion.js;
+// New Tab's sequence by tests/newtab/test-newtab-page-layout.js.)
+
+const MOTION_KEY = '_x_extension_motion_effects_enabled_2026_unique_';
 const tabSwitcherSource = fs.readFileSync('src/overlay/tab-switcher.js', 'utf8');
 const backgroundSource = readBackgroundSource();
 const selectionActionsSource = fs.readFileSync('src/content/selection-quick-actions.js', 'utf8');
 
-const appearanceStart = optionsHtml.indexOf('data-content="appearance"');
-const labsStart = optionsHtml.indexOf('data-content="labs"', appearanceStart);
-const appearanceContent = optionsHtml.slice(appearanceStart, labsStart);
-const themeIndex = appearanceContent.indexOf('id="_x_extension_theme_mode_row_2026_unique_"');
-const motionIndex = appearanceContent.indexOf('data-i18n="settings_motion_effects_title"');
-const newtabSectionIndex = appearanceContent.indexOf('data-i18n="settings_newtab_section_title"');
+const optionsDocument = new JSDOM(readPageSource('src/options/options.html')).window.document;
+const appearance = optionsDocument.querySelector('[data-content="appearance"]');
+const themeRow = appearance.querySelector('#_x_extension_theme_mode_row_2026_unique_');
+const motionTitle = appearance.querySelector('[data-i18n="settings_motion_effects_title"]');
+const newtabSection = appearance.querySelector('[data-i18n="settings_newtab_section_title"]');
+assert.ok(themeRow, 'appearance should keep the global theme setting');
+assert.ok((themeRow.compareDocumentPosition(motionTitle) & 4) && (motionTitle.compareDocumentPosition(newtabSection) & 4),
+  'motion effects should appear in Appearance between theme and New Tab settings');
+const tooltip = appearance.querySelector('[data-i18n-tooltip="settings_motion_effects_desc"]');
+assert.strictEqual(tooltip && tooltip.getAttribute('data-tooltip'), '如遇卡顿，或倾向于更利落的唤起方式，可关闭',
+  'the simplified Chinese fallback should keep the requested guidance in the title tooltip');
+assert.strictEqual(optionsDocument.getElementById('_x_extension_motion_effects_toggle_2026_unique_').checked, true,
+  'motion effects should default to enabled in markup');
 
-assert(themeIndex >= 0, 'appearance should keep the global theme setting');
-assert(
-  motionIndex > themeIndex && motionIndex < newtabSectionIndex,
-  'motion effects should appear in Appearance between theme and New Tab settings'
-);
-assert.match(
-  appearanceContent,
-  /data-i18n-tooltip="settings_motion_effects_desc" data-tooltip="如遇卡顿，或倾向于更利落的唤起方式，可关闭"/,
-  'the simplified Chinese fallback should keep the requested guidance in the title tooltip'
-);
-assert.match(
-  appearanceContent,
-  /id="_x_extension_motion_effects_toggle_2026_unique_" type="checkbox" checked/,
-  'motion effects should default to enabled in markup'
-);
-
-assert(
-  getBundleFiles('newtab-preload').includes('src/shared/motion-preload.js'),
-  'New Tab should preload the synchronized entry-motion preference before it is revealed'
-);
+assert(getBundleFiles('newtab-preload').includes('src/shared/motion-preload.js'),
+  'New Tab should preload the synchronized entry-motion preference before it is revealed');
 ['src/options/options.html', 'src/onboarding/onboarding.html'].forEach((page) => {
-  assert(
-    !getPageScripts(page).includes('src/shared/motion-preload.js'),
-    'Options and Onboarding should not apply the New Tab entry-motion preference'
-  );
+  assert(!getPageScripts(page).includes('src/shared/motion-preload.js'),
+    'Options and Onboarding should not apply the New Tab entry-motion preference');
 });
-assert.match(
-  motionPreloadSource,
-  /_x_extension_motion_effects_enabled_2026_unique_[\s\S]*LumnoMotionPreferenceReady[\s\S]*data-lumno-motion-effects[\s\S]*resolveInitialPreference\(enabled\)[\s\S]*storage\.onChanged\.addListener/,
-  'the New Tab preload should resolve the saved entry preference and react to synchronized changes'
-);
 
-assert.match(
-  newtabSource,
-  /function shouldSkipNewtabEntryMotion\(\)[\s\S]*data-lumno-motion-effects'\) !== 'off'[\s\S]*SETTINGS\.shouldSkipEntryMotion\(window, motionEffectsEnabled\)/,
-  'New Tab should combine the synchronized setting with the OS preference only for entry motion'
-);
-assert.strictEqual(
-  (newtabSource.match(/shouldSkipNewtabEntryMotion\(\)/g) || []).length,
-  4,
-  'the user preference should be read only by the three New Tab entry decisions and its helper'
-);
-assert.match(
-  newtabSource,
-  /function shouldAnimateNewtabLayoutShift\(\)[\s\S]*!prefersSystemReducedMotion\(\)/,
-  'post-load New Tab layout animation should continue to follow only the OS preference'
-);
-assert.match(
-  newtabSource,
-  /function applyNewtabTopContentVisibility\([\s\S]*!prefersSystemReducedMotion\(\)/,
-  'post-load New Tab top-content transitions should remain enabled when only the user setting is off'
-);
-assert.match(
-  newtabSource,
-  /function restartWordmarkEntryAnimation\(\)[\s\S]*if \(prefersSystemReducedMotion\(\)\)/,
-  'later New Tab wordmark changes should continue to follow only the OS preference'
-);
-assert.match(
-  newtabSource,
-  /function revealNewtabWithoutEntryMotion\(\)[\s\S]*setAttribute\('data-nt-enter', 'done'\)[\s\S]*root\.setAttribute\('data-lumno-search-entry', 'done'\)[\s\S]*finishWordmarkEntryAnimation\(\);[\s\S]*setAttribute\('data-nt-ready', '1'\)/,
-  'motion-free New Tabs should install every final entry state before revealing the page'
-);
-assert.match(
-  newtabSource,
-  /function scheduleNewtabReadyAfterViewportSettle\(\)[\s\S]*if \(shouldSkipNewtabEntryMotion\(\)\) \{\s*revealNewtabWithoutEntryMotion\(\);\s*return;\s*\}[\s\S]*requestAnimationFrame[\s\S]*window\.setTimeout\(/,
-  'motion-free New Tabs should bypass the animated viewport delay and paint-frame gate'
-);
-assert.match(
-  newtabSource,
-  /initialMotionPreferenceReadyTask[\s\S]*initialVisualReadyPromise = Promise\.all\([\s\S]*initialMotionPreferenceReadyTask[\s\S]*initialLanguageReadyTask[\s\S]*sectionPolicyReadyPromise[\s\S]*initialShortcutsReadyTask[\s\S]*initialFontsReadyTask[\s\S]*const recentSitesReadyTask = loadRecentSites\(\{[\s\S]*?force: true[\s\S]*?const bookmarksReadyTask = loadBookmarks\(\{[\s\S]*?force: true[\s\S]*?return Promise\.all\(\[recentSitesReadyTask, bookmarksReadyTask\]\);[\s\S]*markNewtabReady\(\)/,
-  'animated and motion-free New Tabs should wait for stable text and visible sections before one atomic reveal'
-);
-
-assert.match(
-  overlayRuntimeSource,
-  /motionEffectsEnabled: '_x_extension_motion_effects_enabled_2026_unique_'/,
-  'Overlay runtime should expose the synchronized entry-motion key'
-);
-assert.match(
-  overlaySource,
-  /function shouldSkipOverlayEntryMotion\(\)[\s\S]*SETTINGS\.shouldSkipEntryMotion\(window, motionEffectsEnabled\)/,
-  'Overlay should combine the OS and synchronized preferences in its entry-only helper'
-);
-assert.strictEqual(
-  (overlaySource.match(/shouldSkipOverlayEntryMotion\(\)/g) || []).length,
-  2,
-  'the Overlay user preference should be consulted only by its reveal path and helper'
-);
-assert.match(
-  overlaySource,
-  /const reduceMotion = revealOptions\.forceInstant === true \|\|[\s\S]*?shouldSkipOverlayEntryMotion\(\);[\s\S]*?if \(reduceMotion\) \{[\s\S]*?finishOverlayPanelEnterAnimation\(overlay\);[\s\S]*?\} else \{[\s\S]*?overlayFrameTracker\.runEnterAnimation/,
-  'turning motion effects off or detecting a slow first frame should skip only the Overlay entrance path'
-);
+// New Tab's preload marks the saved preference before the page shows and
+// follows synchronized changes; without motion the page installs every
+// final entry state before it reveals itself.
+async function testNewTab() {
+  const order = [];
+  const page = await createNewtabPage({
+    sync: { [MOTION_KEY]: false },
+    setup(window) {
+      new window.MutationObserver((records) => records.forEach((record) => {
+        const value = record.target.getAttribute(record.attributeName);
+        order.push(`${record.attributeName}=${value}`);
+      })).observe(window.document.body, { attributes: true, attributeFilter: ['data-nt-enter', 'data-nt-ready'] });
+    }
+  });
+  await page.settle(400);
+  const root = page.document.documentElement;
+  assert.strictEqual(root.getAttribute('data-lumno-motion-effects'), 'off', 'the New Tab preload should resolve the saved entry preference');
+  assert.ok(order.indexOf('data-nt-enter=done') >= 0 && order.indexOf('data-nt-enter=done') < order.indexOf('data-nt-ready=1') &&
+    !order.includes('data-nt-enter=run'), `motion-free New Tabs should install the final entry state before revealing the page: ${order}`);
+  assert.strictEqual(page.document.getElementById('_x_extension_newtab_root_2024_unique_').getAttribute('data-lumno-search-entry'), 'done');
+  page.changeStorage('sync', MOTION_KEY, true);
+  await page.settle(100);
+  assert.strictEqual(root.getAttribute('data-lumno-motion-effects'), 'on', 'and react to synchronized changes');
+  page.close();
+}
 
 [
   ['background', backgroundSource],
@@ -141,4 +85,10 @@ Object.entries(expectedCopy).forEach(([locale, [title, description]]) => {
   assert.strictEqual(messages.settings_motion_effects_desc.message, description);
 });
 
-console.log('motion effects setting tests passed');
+testNewTab().then(() => {
+  console.log('motion effects setting tests passed');
+  process.exit(0);
+}).catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

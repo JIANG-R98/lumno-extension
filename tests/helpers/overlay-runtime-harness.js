@@ -133,6 +133,7 @@ async function createOverlayPage(options) {
   }, config.settings || {});
   const messages = [];
   const storageReads = [];
+  const storageWrites = [];
   const createStorageArea = (name, values) => ({
     get(keys, callback) {
       const read = typeof keys === 'string' ? [keys] : (Array.isArray(keys) ? keys.slice() : Object.keys(keys || {}));
@@ -157,6 +158,7 @@ async function createOverlayPage(options) {
       }, delay)));
     },
     set(items, callback) {
+      storageWrites.push(Object.assign(JSON.parse(JSON.stringify(items)), {}));
       Object.assign(values, items);
       callback?.();
       return Promise.resolve();
@@ -280,6 +282,8 @@ async function createOverlayPage(options) {
     // The keys of each chrome.storage get the page made, in order; each
     // list's `area` names the storage area.
     storageReads,
+    // The values each chrome.storage set wrote, in order.
+    storageWrites,
     animations,
     keys,
     documentKeys,
