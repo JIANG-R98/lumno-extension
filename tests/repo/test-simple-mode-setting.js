@@ -1,100 +1,67 @@
 const assert = require('assert');
 const fs = require('fs');
-const { readOptionsRuntimeSource } = require('../helpers/options-source');
+const { JSDOM } = require('jsdom');
 const settings = require('../../src/shared/settings.js');
+const { parseCss, parsePageCss } = require('../helpers/css-rules');
 const { readPageSource } = require('../helpers/page-source');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
-const { readReactSource } = require('../helpers/react-source');
+const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
 
-const optionsHtml = readPageSource('src/options/options.html');
-const optionsSource = readOptionsRuntimeSource();
-const newtabHtml = readPageSource('newtab.html');
-const newtabSource = readNewtabRuntimeSource();
-const overlayRuntimeSource = fs.readFileSync('src/overlay/runtime.js', 'utf8');
-const overlaySource = readOverlayPanelSource();
-const overlayCss = fs.readFileSync('src/overlay/suggestions-view.css', 'utf8');
-const suggestionsSource = readReactSource('react-src/search/suggestions.tsx');
+const optionsDocument = new JSDOM(readPageSource('src/options/options.html')).window.document;
+const appearance = optionsDocument.querySelector('[data-content="appearance"]');
+const motionTitle = appearance.querySelector('[data-i18n="settings_motion_effects_title"]');
+const simpleTitle = appearance.querySelector('[data-i18n="settings_simple_mode_title"]');
+const newtabSection = appearance.querySelector('[data-i18n="settings_newtab_section_title"]');
+assert.ok((motionTitle.compareDocumentPosition(simpleTitle) & 4) && (simpleTitle.compareDocumentPosition(newtabSection) & 4),
+  'simple mode should appear directly in the global Appearance group below motion effects');
+assert.strictEqual(appearance.querySelector('[data-i18n="settings_simple_mode_desc"]').textContent, '移除更多提示元素，使搜索框更简洁',
+  'the Simplified Chinese fallback should use the requested description');
+assert.strictEqual(optionsDocument.getElementById('_x_extension_simple_mode_toggle_2026_unique_').checked, false,
+  'simple mode should default to off in markup');
 
-const appearanceStart = optionsHtml.indexOf('data-content="appearance"');
-const labsStart = optionsHtml.indexOf('data-content="labs"', appearanceStart);
-const appearanceContent = optionsHtml.slice(appearanceStart, labsStart);
-const motionIndex = appearanceContent.indexOf('data-i18n="settings_motion_effects_title"');
-const simpleModeIndex = appearanceContent.indexOf('data-i18n="settings_simple_mode_title"');
-const newtabSectionIndex = appearanceContent.indexOf('data-i18n="settings_newtab_section_title"');
-
-assert(
-  simpleModeIndex > motionIndex && simpleModeIndex < newtabSectionIndex,
-  'simple mode should appear directly in the global Appearance group below motion effects'
-);
-assert.match(
-  appearanceContent,
-  /data-i18n="settings_simple_mode_desc">移除更多提示元素，使搜索框更简洁</,
-  'the Simplified Chinese fallback should use the requested description'
-);
-assert.match(
-  appearanceContent,
-  /id="_x_extension_simple_mode_toggle_2026_unique_" type="checkbox">/,
-  'simple mode should default to off in markup'
-);
-
-assert.strictEqual(
-  settings.SIMPLE_MODE_ENABLED_STORAGE_KEY,
-  '_x_extension_simple_mode_enabled_2026_unique_'
-);
+assert.strictEqual(settings.SIMPLE_MODE_ENABLED_STORAGE_KEY, '_x_extension_simple_mode_enabled_2026_unique_');
 assert.strictEqual(settings.normalizeSimpleModeEnabled(undefined), false);
 assert.strictEqual(settings.normalizeSimpleModeEnabled(false), false);
 assert.strictEqual(settings.normalizeSimpleModeEnabled(true), true);
 
+// The URL line takes the room the title leaves on both surfaces.
+[
+  [parsePageCss('newtab.html'), '.x-nt-suggestion-url-line'],
+  [parseCss(fs.readFileSync('src/overlay/suggestions-view.css', 'utf8')), '.x-ov-suggestion-url-line']
+].forEach(([css, selector]) => {
+  const rule = css.entries.find((entry) => entry.selectors.some((text) => text.endsWith(selector)) && entry.style.getPropertyValue('flex'));
+  assert.ok(rule, `missing ${selector}`);
+  assert.deepStrictEqual([rule.style.getPropertyValue('flex'), parseFloat(rule.style.getPropertyValue('min-width')), rule.style.getPropertyValue('max-width')],
+    ['0 1000 auto', 0, ''], `${selector} should use the room the title leaves`);
+});
 
-assert.match(
-  newtabSource,
-  /createSuggestionsView\(\{[\s\S]*?getHostFromUrl,[\s\S]*?getUrlDisplay,[\s\S]*?isSimpleModeEnabled: \(\) => simpleModeEnabled/,
-  'New Tab should pass the live preference to the shared suggestions renderer'
-);
-assert.match(
-  newtabSource,
-  /title: simpleModeEnabled[\s\S]*?\? query[\s\S]*?: formatMessage\('search_query'/,
-  'New Tab should remove the decorated Search label only in simple mode'
-);
-assert.match(
-  overlayRuntimeSource,
-  /simpleModeEnabled: '_x_extension_simple_mode_enabled_2026_unique_'/,
-  'Overlay runtime should expose the synchronized preference key'
-);
-assert.match(
-  overlaySource,
-  /initialSimpleModeReady[\s\S]*?normalizeSimpleModeEnabled/,
-  'Overlay should resolve simple mode before reveal'
-);
-assert.match(
-  overlaySource,
-  /createSuggestionsView\(\{[\s\S]*?getHostFromUrl,[\s\S]*?getUrlDisplay,[\s\S]*?isSimpleModeEnabled: \(\) => simpleModeEnabled/,
-  'Overlay should pass the live preference to the shared suggestions renderer'
-);
-
-assert.match(suggestionsSource, /data-simple-mode=\{simpleMode \? 'true' : 'false'\}/);
-assert.match(suggestionsSource, /if \(simpleMode\) \{\s*return options\.sanitizeDisplayText\(text\);/);
-assert.match(suggestionsSource, /showSourceTags = !item\._xSimpleMode && !item\._xHasSwitchAction/);
-assert.match(
-  suggestionsSource,
-  /function getSuggestionUrlLineText[\s\S]*?parsed\.hostname[\s\S]*?parsed\.pathname[\s\S]*?text=\{urlLineText\}/,
-  'all search modes should share the compact host-and-path URL presentation'
-);
-assert.match(newtabHtml, /\.x-nt-suggestion-url-line \{[^}]*flex: 0 1000 auto;[^}]*min-width: 0;/);
-assert.match(overlayCss, /\.x-ov-suggestion-url-line \{[^}]*flex: 0 1000 auto;[^}]*min-width: 0;/);
-assert.doesNotMatch(newtabHtml, /\.x-nt-suggestion-url-line \{[^}]*max-width: 60%/, 'the URL line should use the room the title leaves');
-assert.doesNotMatch(overlayCss, /\.x-ov-suggestion-url-line \{[^}]*max-width: 60%/, 'the URL line should use the room the title leaves');
-assert.match(
-  suggestionsSource,
-  /const useTheme = visible && themed && !simpleMode;/,
-  'simple mode utility actions should not inherit the site theme'
-);
-assert.match(
-  suggestionsSource,
-  /const useTheme =\s*!item\._xSimpleMode && \(/,
-  'simple mode utility action hover should stay neutral'
-);
+// Both surfaces render results with the live preference: resolved before the
+// first results show, and followed when it changes. (What simple mode
+// removes from a row is covered by react-src/search/suggestions.test.tsx.)
+async function testSurface(name) {
+  const stored = { [settings.SIMPLE_MODE_ENABLED_STORAGE_KEY]: true };
+  const surface = await openSearchSurface(name, name === 'overlay' ? { settings: stored } : { sync: stored });
+  await surface.settle(150);
+  await surface.type('cats');
+  await surface.settle(200);
+  const rows = () => surface.suggestions();
+  assert.ok(rows().length > 0 && rows().every((row) => row.getAttribute('data-simple-mode') === 'true'),
+    `${name}: simple mode should apply from the first results`);
+  if (name === 'newtab') {
+    assert.strictEqual(rows()[0].querySelector('.x-nt-suggestion-title, [class*="suggestion-title"]').textContent.trim(), 'cats',
+      'New Tab should show the plain query as the search row in simple mode');
+  }
+  if (name === 'overlay') {
+    surface.page.changeSetting(settings.SIMPLE_MODE_ENABLED_STORAGE_KEY, false);
+  } else {
+    surface.page.changeStorage('sync', settings.SIMPLE_MODE_ENABLED_STORAGE_KEY, false);
+  }
+  await surface.settle(100);
+  await surface.type('cats!');
+  await surface.settle(200);
+  assert.ok(rows().length > 0 && rows().every((row) => row.getAttribute('data-simple-mode') === 'false'),
+    `${name}: turning simple mode off should show the decorated rows again`);
+  surface.close();
+}
 
 const expectedCopy = {
   en: ['Minimal mode', 'Remove more decorative elements for a cleaner search box'],
@@ -108,4 +75,11 @@ Object.entries(expectedCopy).forEach(([locale, [title, description]]) => {
   assert.strictEqual(messages.settings_simple_mode_desc.message, description);
 });
 
-console.log('simple mode setting tests passed');
+(async () => {
+  for (const name of SURFACES) await testSurface(name);
+  console.log('simple mode setting tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
