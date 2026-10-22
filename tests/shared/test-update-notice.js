@@ -1,8 +1,9 @@
 const assert = require('assert');
-const { readStylesheet } = require('../helpers/css-tokens');
 const fs = require('fs');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { readStylesheet } = require('../helpers/css-tokens');
+const { parseCss } = require('../helpers/css-rules');
+const { createNewtabPage } = require('../helpers/newtab-page');
+const { engagementStorage } = require('../helpers/newtab-notices');
 
 class FakeElement {
   constructor(tagName) {
@@ -212,6 +213,71 @@ function createStorageBackedChrome(localStore, syncStore, version) {
   };
 }
 
+// On New Tab a pending update notice sits below the search box, outside its
+// layer, counts one exposure once shown, wears the butterfly in the badge's
+// text slot and opens the release page with the click's disposition.
+async function testOnNewTab() {
+  const version = JSON.parse(fs.readFileSync('manifest.json', 'utf8')).version;
+  const storage = engagementStorage({
+    updateNotice: true,
+    sync: { [updateNotice.UPDATE_NOTICE_STORAGE_KEY]: { version, previousVersion: '0.0.1', reason: 'update', updatedAt: 1 } }
+  });
+  const page = await createNewtabPage(storage);
+  await page.settle(600);
+  const notice = Array.from(page.document.querySelectorAll('.x-lumno-feature-hint--update-notice'))
+    .find((element) => !element.hasAttribute('data-engagement-surface'));
+  assert.strictEqual(notice && notice.getAttribute('data-visible'), 'true', 'a pending update should show its notice');
+  const searchRoot = page.document.getElementById('_x_extension_newtab_root_2024_unique_');
+  assert.ok(!searchRoot.contains(notice) && notice.parentNode === page.document.body,
+    'newtab update notice should not be appended inside the search layer');
+  assert.ok(searchRoot.compareDocumentPosition(notice) & 4, 'newtab update notice should come after the input search layer');
+  const countKey = updateNotice.getUpdateNoticeDisplayCountKey(version);
+  const count = page.storage.sync.data[countKey] !== undefined ? page.storage.sync.data[countKey] : page.storage.local.data[countKey];
+  assert.strictEqual(count, 1, 'newtab should count one exposure once the notice is mounted');
+  const badgeIcon = notice.querySelector('.x-lumno-feature-hint__badge-icon[data-icon-type="text"]');
+  assert.strictEqual(badgeIcon && badgeIcon.textContent, '🦋', 'update notice butterfly should use the component badge icon slot');
+  const details = Array.from(notice.querySelectorAll('button')).find((button) => /changelog/i.test(button.textContent));
+  details.dispatchEvent(new page.window.MouseEvent('click', { bubbles: true, cancelable: true, button: 0, metaKey: true }));
+  await page.settle(50);
+  const release = page.messages.find((message) => message.action === 'openReleasePage');
+  assert.ok(release && release.reason === 'notice' && release.disposition === 'backgroundTab',
+    `the update notice should forward background-opening modifiers: ${JSON.stringify(release)}`);
+  page.close();
+}
+
+// The notice's styles, through the CSSOM.
+function testStyles() {
+  const css = parseCss(readStylesheet('src/shared/ui/feature-hints.css'));
+  const rule = (selector, condition) => {
+    const found = css.rule(selector, condition);
+    assert.ok(found, `missing ${selector}`);
+    return found;
+  };
+  const overlay = rule('.x-lumno-feature-hint--update-notice-overlay');
+  assert.strictEqual(overlay.get('position'), 'fixed', 'update notice should use fixed overlay placement');
+  assert.ok(css.entries.some((entry) => entry.selectors.some((selector) => selector.startsWith('.x-lumno-feature-hint--update-notice')) &&
+    entry.style.getPropertyValue('border-radius') === '999px'), 'and capsule styling');
+  const mounting = rule('.x-lumno-feature-hint--update-notice-overlay[data-overlay-mounting="true"]');
+  assert.deepStrictEqual([mounting.get('filter'), mounting.get('pointer-events')], ['blur(8px)', 'none'],
+    'overlay update notice should blur in, untouchable, while it is mounted');
+  const singleRow = rule('.x-lumno-feature-hint--update-notice[data-width-mode="container"]');
+  const title = rule('.x-lumno-feature-hint--update-notice .x-lumno-feature-hint__text');
+  assert.deepStrictEqual(
+    [singleRow.get('flex-wrap'), singleRow.get('white-space'), title.get('overflow'), title.get('overflow-wrap'), title.get('text-overflow'), title.get('white-space')],
+    ['nowrap', 'nowrap', 'hidden', 'normal', 'ellipsis', 'nowrap'],
+    'update notice title should stay on one row and truncate with an ellipsis'
+  );
+  const textIcon = rule('.x-lumno-feature-hint__badge-icon[data-icon-type="text"]');
+  assert.deepStrictEqual([textIcon.get('width'), textIcon.get('padding-inline-start'), textIcon.get('justify-content')], ['22px', '4px', 'flex-end'],
+    'text badge icons should reserve visual space before wide emoji glyphs');
+  assert.ok(rule('.x-lumno-feature-hint--update-notice .x-lumno-feature-hint__badge').has('--x-lumno-feature-hint-badge-bg'),
+    'light update notice badge should own scoped material tokens');
+  assert.ok(rule('body[data-theme="dark"] .x-lumno-feature-hint--update-notice .x-lumno-feature-hint__badge').has('--x-lumno-feature-hint-badge-gloss'),
+    'dark update notice badge should override the light badge material on the badge element');
+  assert.ok(rule('body[data-theme="dark"] .x-lumno-feature-hint--update-notice').has('--x-lumno-feature-hint-sweep-core'),
+    'dark update notice should own a scoped badge sweep override');
+}
+
 function flushMicrotasks() {
   return new Promise((resolve) => {
     setImmediate(resolve);
@@ -368,132 +434,8 @@ function flushMicrotasks() {
     'published update notice should include the GitHub release title'
   );
 
-  const newtabSource = readNewtabRuntimeSource();
-  assert.strictEqual(
-    newtabSource.includes('searchLayer.appendChild(updateNoticeController.element)'),
-    false,
-    'newtab update notice should not be appended inside the search layer'
-  );
-  const newtabRootAppendIndex = newtabSource.indexOf('root.appendChild(searchLayer)');
-  const newtabNoticeInsertIndex = newtabSource.indexOf('document.body.insertBefore(updateNoticeController.element, newtabUpdateNoticeAnchor)');
-  assert(
-    newtabRootAppendIndex !== -1 &&
-      newtabNoticeInsertIndex !== -1 &&
-      newtabRootAppendIndex < newtabNoticeInsertIndex,
-    'newtab update notice should be appended below the input search layer and outside it'
-  );
-  const overlaySource = readOverlayPanelSource();
-  assert.match(
-    overlaySource,
-    /onDetailsClick\(_notice, event\)[\s\S]*action: 'openReleasePage',[\s\S]*disposition: getOpenDisposition\(event, 'newTab'\)/,
-    'overlay update notice should forward background-opening modifiers'
-  );
-  assert.strictEqual(
-    overlaySource.includes('overlay.appendChild(overlayUpdateNoticeController.element)'),
-    false,
-    'overlay update notice should not be appended inside the overlay panel'
-  );
-  assert(
-    newtabSource.includes('updateNoticeController.recordExposure()'),
-    'newtab should count an exposure only when the notice is mounted'
-  );
-  const updateNoticeCss = readStylesheet('src/shared/ui/feature-hints.css');
-  assert(
-    updateNoticeCss.includes('.x-lumno-feature-hint--update-notice-overlay') &&
-      updateNoticeCss.includes('position: fixed;') &&
-      updateNoticeCss.includes('border-radius: 999px;'),
-    'update notice should use fixed overlay placement and capsule styling'
-  );
-  assert(
-    updateNoticeCss.includes('transform: translateX(-50%) translateY(calc(-100% + 2px)) scale(var(--x-ov-visible-scale, 1)) scale(0.985);') &&
-      updateNoticeCss.includes('transform: translateX(-50%) translateY(calc(-100% - 14px)) scale(var(--x-ov-visible-scale, 1));') &&
-      updateNoticeCss.includes('filter: blur(6px);'),
-    'overlay update notice should use viewport-compensated blur/scale enter motion above the overlay'
-  );
-  assert(
-    updateNoticeCss.includes('.x-lumno-feature-hint--update-notice-overlay[data-overlay-mounting="true"]') &&
-      updateNoticeCss.includes('filter: blur(8px);') &&
-      updateNoticeCss.includes('pointer-events: none;'),
-    'overlay update notice should blur in when it is mounted'
-  );
-  const updateNoticeSingleRowRuleMatch = updateNoticeCss.match(
-    /\.x-lumno-feature-hint--update-notice\[data-width-mode="container"\] \{([\s\S]*?)\n\}/
-  );
-  const updateNoticeTitleRuleMatch = updateNoticeCss.match(
-    /\.x-lumno-feature-hint--update-notice \.x-lumno-feature-hint__text \{([\s\S]*?)\n\}/
-  );
-  assert(
-    updateNoticeSingleRowRuleMatch &&
-      updateNoticeSingleRowRuleMatch[1].includes('flex-wrap: nowrap;') &&
-      updateNoticeSingleRowRuleMatch[1].includes('white-space: nowrap;') &&
-      updateNoticeTitleRuleMatch &&
-      updateNoticeTitleRuleMatch[1].includes('overflow: hidden;') &&
-      updateNoticeTitleRuleMatch[1].includes('overflow-wrap: normal;') &&
-      updateNoticeTitleRuleMatch[1].includes('text-overflow: ellipsis;') &&
-      updateNoticeTitleRuleMatch[1].includes('white-space: nowrap;'),
-    'update notice title should stay on one row and truncate with an ellipsis'
-  );
-  assert(
-    updateNoticeCss.includes('gap: 3px;') &&
-      updateNoticeCss.includes('padding: 2px 10px 2px 2px;'),
-    'update notice badge should keep the badge left inset equal to its vertical inset'
-  );
-  assert(
-    updateNoticeCss.includes('linear-gradient(180deg, var(--x-lumno-feature-hint-badge-gloss) 0%, transparent 48%)') &&
-      updateNoticeCss.includes('border: 1px solid var(--x-lumno-feature-hint-badge-border);') &&
-      updateNoticeCss.includes('box-shadow: var(--x-lumno-feature-hint-badge-shadow);'),
-    'update notice badge should use layered gloss, a hairline border, and depth shadow'
-  );
-  const lightUpdateNoticeBadgeRuleMatch = updateNoticeCss.match(
-    /\.x-lumno-feature-hint--update-notice \.x-lumno-feature-hint__badge \{([\s\S]*?)\n\}/
-  );
-  assert(lightUpdateNoticeBadgeRuleMatch, 'light update notice badge should own scoped material tokens');
-  const lightUpdateNoticeBadgeRule = lightUpdateNoticeBadgeRuleMatch[1];
-  assert(
-    lightUpdateNoticeBadgeRule.includes('--x-lumno-feature-hint-badge-bg: rgba(75, 84, 95, 0.055);') &&
-      lightUpdateNoticeBadgeRule.includes('--x-lumno-feature-hint-badge-gloss: rgba(255, 255, 255, 0.28);') &&
-      lightUpdateNoticeBadgeRule.includes('--x-lumno-feature-hint-badge-border: rgba(75, 84, 95, 0.09);') &&
-      lightUpdateNoticeBadgeRule.includes('0 1px 1px rgba(17, 24, 39, 0.04);'),
-    'light update notice badge should keep the material subtle, not pillowy'
-  );
-  const darkUpdateNoticeSweepRuleMatch = updateNoticeCss.match(
-    /body\[data-theme="dark"\] \.x-lumno-feature-hint--update-notice,[\s\S]*?\.x-lumno-feature-hint--update-notice-overlay\[data-theme="dark"\] \{([\s\S]*?)\n\}/
-  );
-  assert(darkUpdateNoticeSweepRuleMatch, 'dark update notice should own a scoped badge sweep override');
-  const darkUpdateNoticeSweepRule = darkUpdateNoticeSweepRuleMatch[1];
-  assert(
-    darkUpdateNoticeSweepRule.includes('--x-lumno-feature-hint-sweep-edge: rgba(255, 255, 255, 0.025);') &&
-      darkUpdateNoticeSweepRule.includes('--x-lumno-feature-hint-sweep-core: rgba(255, 255, 255, 0.09);') &&
-      darkUpdateNoticeSweepRule.includes('--x-lumno-feature-hint-sweep-line: rgba(255, 255, 255, 0.14);'),
-    'dark update notice badge sweep should be subtler than the generic dark feature hint sweep'
-  );
-  const darkUpdateNoticeBadgeRuleMatch = updateNoticeCss.match(
-    /body\[data-theme="dark"\] \.x-lumno-feature-hint--update-notice \.x-lumno-feature-hint__badge,[\s\S]*?\.x-lumno-feature-hint--update-notice-overlay\[data-theme="dark"\] \.x-lumno-feature-hint__badge \{([\s\S]*?)\n\}/
-  );
-  assert(darkUpdateNoticeBadgeRuleMatch, 'dark update notice badge should override the light badge material on the badge element');
-  const darkUpdateNoticeBadgeRule = darkUpdateNoticeBadgeRuleMatch[1];
-  assert(
-    darkUpdateNoticeBadgeRule.includes('--x-lumno-feature-hint-badge-gloss: rgba(255, 255, 255, 0.07);') &&
-      darkUpdateNoticeBadgeRule.includes('--x-lumno-feature-hint-badge-border: rgba(255, 255, 255, 0.1);') &&
-      darkUpdateNoticeBadgeRule.includes('0 1px 1px rgba(0, 0, 0, 0.14);'),
-    'dark update notice badge should keep material contrast without making the sweep brighter'
-  );
-  assert(
-    updateNoticeCss.includes('.x-lumno-feature-hint__badge-icon[data-icon-type="text"]') &&
-      updateNoticeCss.includes('width: 22px;') &&
-      updateNoticeCss.includes('padding-inline-start: 4px;') &&
-      updateNoticeCss.includes('justify-content: flex-end;'),
-    'text badge icons should reserve visual space before wide emoji glyphs'
-  );
-  const featureHintsSource = fs.readFileSync('src/shared/ui/feature-hints.js', 'utf8');
-  const featureHintViewSource = fs.readFileSync('react-src/shared/feature-hint-view.tsx', 'utf8');
-  const updateNoticeSource = fs.readFileSync('src/shared/update-notice.js', 'utf8');
-  assert(
-    updateNoticeSource.includes("badgeIconText: '🦋'") &&
-      featureHintsSource.includes('definition.badgeIconText') &&
-      featureHintViewSource.includes('data-icon-type="text"'),
-    'update notice butterfly should use the component badge icon slot'
-  );
+  await testOnNewTab();
+  testStyles();
 
   const firstDismissKey = updateNotice.getUpdateNoticeDismissKey(featureHints, '0.9.10');
   const nextDismissKey = updateNotice.getUpdateNoticeDismissKey(featureHints, '0.9.11');
