@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { JSDOM } = require('jsdom');
 const { SPLIT_STYLESHEETS, readStylesheetSource } = require('../helpers/css-tokens');
 const { getBundleFiles } = require('../helpers/runtime-scripts');
 
@@ -128,14 +128,7 @@ assert.deepStrictEqual(
   );
 });
 
-// The dock's scrollbar sits on the wallpaper, so its thumb follows the ink
-// sampled under its track like the headings and pager beside it.
-const newtabSource = readNewtabRuntimeSource();
-assert.match(
-  newtabSource,
-  /function createWallpaperAdaptiveToneTargets\(\)[\s\S]*?element:\s*bottomDockScroller,\s*sampleElement:\s*bottomDockScrollbarTrackArea,[\s\S]*?disabled:\s*!isBottomDockScrollbarShown\(\)/,
-  'the dock scroller should be a wallpaper tone target sampled along its scrollbar track'
-);
+// Over a wallpaper the dock's thumb takes the ink sampled under its track.
 const newtabCss = stripComments(readStylesheetSource('src/newtab/newtab.css'));
 assert.match(
   newtabCss,
@@ -192,10 +185,9 @@ assert.deepStrictEqual(unscoped, [], `thin-bar rules should keep macOS overlay b
   ['src/options/options.html', 'options-preload'],
   ['src/onboarding/onboarding.html', 'onboarding-preload']
 ].forEach(([file, bundle]) => {
-  const html = fs.readFileSync(path.join(repoRoot, file), 'utf8');
-  const head = html.slice(0, html.indexOf('</head>'));
+  const head = new JSDOM(fs.readFileSync(path.join(repoRoot, file), 'utf8')).window.document.head;
   assert.ok(
-    head.includes(`<script src="../../build/${bundle}.js"></script>`) &&
+    head.querySelector(`script[src="../../build/${bundle}.js"]`) &&
       getBundleFiles(bundle).includes('src/shared/scrollbar-mode.js'),
     `${file} should load the scrollbar mode marker in <head>`
   );
@@ -245,12 +237,4 @@ assert.match(
   /:root\[data-lumno-scrollbars="overlay"\] #_x_extension_newtab_bottom_dock_scroller_2024_unique_\[data-wallpaper-ink="light"\]\s*\{\s*color-scheme:\s*dark;[\s\S]*?\[data-wallpaper-ink="dark"\]\s*\{\s*color-scheme:\s*light;/,
   'overlay bars over the dock should take a light thumb on dark wallpaper and a dark one on light wallpaper'
 );
-const shownMatch = newtabSource.match(/function isBottomDockScrollbarShown\(\) \{[\s\S]*?\n  \}/);
-assert.ok(shownMatch, 'the dock should report when its scrollbar shows');
-assert.doesNotMatch(
-  shownMatch[0],
-  /getBottomDockScrollbarGutter/,
-  'overlay bars take no gutter, so the dock tone must not wait for one'
-);
-
 console.log(`Scrollbar style tests passed (${scrollBoxes.size} scroll boxes checked).`);

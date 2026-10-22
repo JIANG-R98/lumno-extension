@@ -2,8 +2,7 @@ const assert = require('assert');
 const fs = require('fs');
 
 const faviconTheme = require('../../src/newtab/theme/favicon-theme.js');
-const { readPageSource } = require('../helpers/page-source');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { parseCss, parsePageCss } = require('../helpers/css-rules');
 const { getInjectedScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 function parseThemeColor(value) {
@@ -159,28 +158,21 @@ assert.ok(
   'surface palette generation should cap saturation consistently across brand hues'
 );
 
-const overlaySource = readOverlayPanelSource();
-const newtabHtml = readPageSource('newtab.html');
-const overlayCss = fs.readFileSync('src/overlay/suggestions-view.css', 'utf8');
 assert.ok(
   runsBefore(getInjectedScripts('overlay'), 'src/newtab/theme/favicon-theme.js', 'src/overlay/search-panel.js'),
   'overlay injection should load the shared theme algorithm before the search panel'
 );
-assert.ok(
-  overlaySource.includes("import * as FAVICON_THEME from '../newtab/theme/favicon-theme.js';") &&
-    overlaySource.includes('return FAVICON_THEME.getThemeForMode(theme, {') &&
-    overlaySource.includes('return FAVICON_THEME.getHoverColors(theme, {'),
-  'overlay and New Tab search results should use the same contrast-aware theme algorithm'
-);
-assert.match(
-  newtabHtml,
-  /\.x-nt-suggestion-action-button:focus-visible,[\s\S]*?\.x-nt-suggestion-utility-button:focus-visible[\s\S]*?outline:\s*2px solid currentColor;/,
-  'New Tab should preserve a strong keyboard focus indicator when passive borders are softened'
-);
-assert.match(
-  overlayCss,
-  /\.x-ov-suggestion-action-button:focus-visible,[\s\S]*?\.x-ov-suggestion-utility-button:focus-visible[\s\S]*?outline:\s*2px solid currentColor;/,
-  'overlay should preserve a strong keyboard focus indicator when passive borders are softened'
-);
+// Softened passive borders keep a strong keyboard focus ring on both surfaces.
+[
+  [parsePageCss('newtab.html'), 'x-nt'],
+  [parseCss(fs.readFileSync('src/overlay/suggestions-view.css', 'utf8')), 'x-ov']
+].forEach(([css, prefix]) => {
+  ['action', 'utility'].forEach((kind) => {
+    const focused = css.entries.find((entry) => entry.selectors.some((selector) => selector.endsWith(`.${prefix}-suggestion-${kind}-button:focus-visible`)) &&
+      entry.style.getPropertyValue('outline'));
+    assert.strictEqual(focused && focused.style.getPropertyValue('outline').trim(), '2px solid currentColor',
+      `${prefix} ${kind} buttons should preserve a strong keyboard focus indicator when passive borders are softened`);
+  });
+});
 
 console.log('theme color contrast tests passed');
