@@ -57,6 +57,9 @@ function createStorageChangeRegistry(options) {
 // changes. `normalizeInput` overrides how the control's value is read.
 // A binder made with `area: 'local'` reads, writes and follows
 // chrome.storage.local (device-only settings) instead of the primary area.
+// `writeRepairs(values, stored)` replaces the write-back after the startup
+// read (Options passes SETTINGS.writeSettingRepairs, which leaves a missing
+// value alone while this device's local copy migrates in).
 function createSettingBinder(options) {
   const config = options || {};
   const storageArea = config.storageArea || null;
@@ -71,15 +74,22 @@ function createSettingBinder(options) {
       storageArea.set(values);
     }
   }
+  const writeRepairs = typeof config.writeRepairs === 'function'
+    ? config.writeRepairs
+    : (values) => write(values);
 
   function bindSetting(spec) {
     const key = spec.key;
     const normalizeChange = spec.normalizeChange || spec.normalize;
-    const sync = (raw, normalize, repair) => {
+    const sync = (raw, normalize, repair, startup) => {
       const value = normalize(raw);
       spec.apply(value, raw);
       if (repair && raw !== value) {
-        write({ [key]: value });
+        if (startup) {
+          writeRepairs({ [key]: value }, { [key]: raw });
+        } else {
+          write({ [key]: value });
+        }
       }
       if (spec.refreshSelects) {
         refreshCustomSelects();
@@ -87,7 +97,7 @@ function createSettingBinder(options) {
     };
     if (spec.load !== false && storageArea) {
       storageArea.get([key], (result) => {
-        sync(result ? result[key] : undefined, spec.normalize, spec.repairOnLoad !== false);
+        sync(result ? result[key] : undefined, spec.normalize, spec.repairOnLoad !== false, true);
       });
     }
     registry.on(key, (changes) => {

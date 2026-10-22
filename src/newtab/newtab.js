@@ -3310,6 +3310,7 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
     closeFeedbackPopover,
     closeWallpaperPanel,
     storageArea,
+    settingsApi: SETTINGS,
     NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,
     NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY,
     normalizeNewtabFeedbackButtonVisible,

@@ -22,6 +22,7 @@ function createSearchBoxControls(deps) {
     closeFeedbackPopover,
     closeWallpaperPanel,
     storageArea,
+    settingsApi,
     NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,
     NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY,
     normalizeNewtabFeedbackButtonVisible,
@@ -209,9 +210,9 @@ function createSearchBoxControls(deps) {
           repairs[NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY] = pageState.newtabAppearanceButtonVisible;
         }
         applyNewtabActionButtonVisibility();
-        if (Object.keys(repairs).length > 0) {
-          storageArea.set(repairs);
-        }
+        // A missing value stays missing while this device's local copy
+        // migrates in.
+        settingsApi.writeSettingRepairs(chrome, storageArea, repairs, stored);
         resolve();
       });
     });

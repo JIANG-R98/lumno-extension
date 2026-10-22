@@ -866,6 +866,7 @@ import * as LumnoWebDavOptions from './webdav-options.js';
   });
   const settingBinder = SETTING_BINDINGS.createSettingBinder({
     storageArea: optionsState.storageArea,
+    writeRepairs: (values, stored) => SETTINGS.writeSettingRepairs(chrome, optionsState.storageArea, values, stored),
     registry: storageChanges,
     refreshCustomSelects,
     setToggleState: setOptionsToggleState,

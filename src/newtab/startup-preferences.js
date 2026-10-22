@@ -65,6 +65,13 @@ function createStartupPreferences(deps) {
     TAB_RANK_SCORE_DEBUG_STORAGE_KEY,
     normalizeTabRankScoreDebugMode
   } = deps;
+  // Writes the normalized value back for a missing or invalid stored one,
+  // leaving a missing one alone while this device's local copy migrates in.
+  const repairStoredSetting = (key, stored, value) => {
+    if (stored !== value) {
+      settingsRuntimeApi.writeSettingRepairs(chrome, storageArea, { [key]: value }, { [key]: stored });
+    }
+  };
 
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
@@ -123,9 +130,7 @@ function createStartupPreferences(deps) {
       const count = normalizeRecentCount(stored);
       const changed = pageState.currentRecentCount !== count;
       pageState.currentRecentCount = count;
-      if (stored !== count) {
-        storageArea.set({ [RECENT_COUNT_STORAGE_KEY]: count });
-      }
+      repairStoredSetting(RECENT_COUNT_STORAGE_KEY, stored, count);
       if (changed || !pageState.recentLoadedOnce) {
         markRecentDataDirty();
         loadRecentSites();
@@ -140,9 +145,7 @@ function createStartupPreferences(deps) {
       pageState.currentNewtabSearchWidth = normalizeNewtabSearchWidth(result[NEWTAB_SEARCH_WIDTH_STORAGE_KEY], {
         allowNull: true
       });
-      if (stored !== mode) {
-        storageArea.set({ [NEWTAB_WIDTH_MODE_STORAGE_KEY]: mode });
-      }
+      repairStoredSetting(NEWTAB_WIDTH_MODE_STORAGE_KEY, stored, mode);
       applyNewtabWidthMode();
       if (pageState.wallpaperRuntime && typeof pageState.wallpaperRuntime.updateSearchWidthUi === 'function') {
         pageState.wallpaperRuntime.updateSearchWidthUi();
@@ -178,18 +181,12 @@ function createStartupPreferences(deps) {
       const nextFont = normalizeNewtabTimeFont(rawFont);
       const rawSecondsVisible = result[NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY];
       const nextSecondsVisible = normalizeNewtabTimeSecondsVisible(rawSecondsVisible);
-      if (raw !== nextValue) {
-        storageArea.set({ [NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY]: nextValue });
-      }
-      if (rawFontWeight !== nextFontWeight) {
-        storageArea.set({ [NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY]: nextFontWeight });
-      }
+      repairStoredSetting(NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY, raw, nextValue);
+      repairStoredSetting(NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY, rawFontWeight, nextFontWeight);
       if (rawFont !== undefined && rawFont !== nextFont) {
         storageArea.set({ [NEWTAB_TIME_FONT_STORAGE_KEY]: nextFont });
       }
-      if (rawSecondsVisible !== nextSecondsVisible) {
-        storageArea.set({ [NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY]: nextSecondsVisible });
-      }
+      repairStoredSetting(NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY, rawSecondsVisible, nextSecondsVisible);
       // The face is set before the mode so the first clock render already
       // uses it, and the startup reveal waits for it to load.
       pageState.newtabTimeFont = nextFont;
@@ -216,7 +213,7 @@ function createStartupPreferences(deps) {
       updateRecentHeading();
       updateRecentModeMenu();
       if (!hasStored) {
-        storageArea.set({ [RECENT_MODE_STORAGE_KEY]: mode });
+        repairStoredSetting(RECENT_MODE_STORAGE_KEY, stored, mode);
       }
       if (changed || !pageState.recentLoadedOnce) {
         markRecentDataDirty();
@@ -230,9 +227,7 @@ function createStartupPreferences(deps) {
       const raw = result[BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY];
       const nextValue = normalizeBookmarkFolderIconsVisible(raw);
       pageState.bookmarkFolderIconsVisible = nextValue;
-      if (raw !== nextValue) {
-        storageArea.set({ [BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY]: nextValue });
-      }
+      repairStoredSetting(BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY, raw, nextValue);
       if (pageState.bookmarksView && typeof pageState.bookmarksView.setFolderIconsVisible === 'function') {
         pageState.bookmarksView.setFolderIconsVisible(nextValue);
       }
@@ -242,9 +237,7 @@ function createStartupPreferences(deps) {
       const count = normalizeBookmarkCount(stored);
       const changed = pageState.currentBookmarkCount !== count;
       pageState.currentBookmarkCount = count;
-      if (stored !== count) {
-        storageArea.set({ [BOOKMARK_COUNT_STORAGE_KEY]: count });
-      }
+      repairStoredSetting(BOOKMARK_COUNT_STORAGE_KEY, stored, count);
       if (changed || !pageState.bookmarkLoadedOnce) {
         markBookmarkDataDirty();
         loadBookmarks();
@@ -254,9 +247,7 @@ function createStartupPreferences(deps) {
       const stored = result[BOOKMARK_COLUMNS_STORAGE_KEY];
       const columns = normalizeBookmarkColumns(stored);
       pageState.currentBookmarkColumns = columns;
-      if (stored !== columns) {
-        storageArea.set({ [BOOKMARK_COLUMNS_STORAGE_KEY]: columns });
-      }
+      repairStoredSetting(BOOKMARK_COLUMNS_STORAGE_KEY, stored, columns);
       applyBookmarkGridColumns();
       updateBookmarkGridHeightLock();
       updateBookmarkSectionPosition();
@@ -265,9 +256,7 @@ function createStartupPreferences(deps) {
       const raw = result[TAB_RANK_SCORE_DEBUG_STORAGE_KEY];
       const next = normalizeTabRankScoreDebugMode(raw);
       pageState.tabRankScoreDebugEnabled = next;
-      if (raw !== next) {
-        storageArea.set({ [TAB_RANK_SCORE_DEBUG_STORAGE_KEY]: next });
-      }
+      repairStoredSetting(TAB_RANK_SCORE_DEBUG_STORAGE_KEY, raw, next);
     });
   }
 

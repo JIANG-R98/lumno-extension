@@ -460,6 +460,42 @@ function migrateLocalSettingsToSync(localArea, syncArea, keys) {
   });
 }
 
+// Writes back the normalized values a page settled on after reading
+// `stored` from `area`. An invalid value is replaced at once. A missing one
+// is only filled with its default when this device has no local copy: that
+// copy is on its way in through migrateLocalSettingsToSync, and a default
+// written first would make the migration keep the default instead.
+function writeSettingRepairs(chromeApi, area, repairs, stored) {
+  if (!area || typeof area.set !== 'function') {
+    return;
+  }
+  const keys = Object.keys(repairs || {});
+  const isMissing = (key) => !stored || typeof stored[key] === 'undefined';
+  const write = (list) => {
+    if (list.length > 0) {
+      area.set(Object.fromEntries(list.map((key) => [key, repairs[key]])));
+    }
+  };
+  write(keys.filter((key) => !isMissing(key)));
+  const missing = keys.filter(isMissing);
+  const localArea = chromeApi && chromeApi.storage ? chromeApi.storage.local : null;
+  if (missing.length === 0) {
+    return;
+  }
+  if (!localArea || localArea === area || typeof localArea.get !== 'function') {
+    write(missing);
+    return;
+  }
+  try {
+    localArea.get(missing, (localResult) => {
+      const failed = Boolean(chromeApi.runtime && chromeApi.runtime.lastError) || !localResult;
+      write(missing.filter((key) => failed || typeof localResult[key] === 'undefined'));
+    });
+  } catch (error) {
+    write(missing);
+  }
+}
+
 function normalizeLocale(locale) {
   const raw = String(locale || '').trim();
   if (!raw) {
@@ -1614,6 +1650,7 @@ export {
   NEWTAB_SHORTCUTS_CHUNK_3_STORAGE_KEY,
   NEWTAB_SHORTCUTS_V2_STORAGE_KEYS,
   migrateLocalSettingsToSync,
+  writeSettingRepairs,
   NEWTAB_SHORTCUT_ADD_VISIBLE_STORAGE_KEY,
   NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY,
   NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY,
