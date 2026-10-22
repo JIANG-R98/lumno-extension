@@ -1,9 +1,9 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { readSearchInputModeSource, readSearchInputModeRuntimeSource } = require('../helpers/search-input-mode-source');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
-const { readOverlayPanelSource } = require('../helpers/overlay-source');
+const { JSDOM } = require('jsdom');
+const { readSearchInputModeRuntimeSource } = require('../helpers/search-input-mode-source');
+const { openSearchSurface } = require('../helpers/search-surfaces');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const tooltipJsPath = path.join(repoRoot, 'src/shared/ui/tooltip.js');
@@ -677,11 +677,8 @@ assert.strictEqual(
   'cursor tooltip Windows logo should have four panes'
 );
 
-const newtabHtml = fs.readFileSync(newtabHtmlPath, 'utf8');
-const newtabPanel = readNewtabRuntimeSource();
-const overlayPanel = readOverlayPanelSource();
-const searchInputMode = readSearchInputModeSource();
-assert.ok(newtabHtml.includes('../shared/ui/cursor-tooltip.css'), 'newtab should load cursor tooltip stylesheet');
+const newtabDocument = new JSDOM(fs.readFileSync(newtabHtmlPath, 'utf8')).window.document;
+assert.ok(newtabDocument.querySelector('link[href="../shared/ui/cursor-tooltip.css"]'), 'newtab should load cursor tooltip stylesheet');
 assert.ok(getPageScripts('newtab.html').includes('src/shared/ui/cursor-tooltip.js'), 'newtab should load cursor tooltip component');
 assert.ok(
   runsBefore(getPageScripts('newtab.html'), 'src/shared/ui/tooltip.js', 'src/shared/ui/cursor-tooltip.js'),
@@ -691,60 +688,42 @@ assert.ok(
   runsBefore(getInjectedScripts('overlay'), 'src/shared/ui/cursor-tooltip.js', 'src/overlay/search-panel.js'),
   'overlay injection should load cursor tooltip behavior before search-panel'
 );
-assert.ok(
-  overlayPanel.includes("overlayRuntime.getRuntimeUrl(chrome, 'src/shared/ui/cursor-tooltip.css')"),
-  'overlay should resolve cursor tooltip stylesheet URL'
-);
-assert.ok(
-  overlayPanel.includes('LumnoCursorTooltip.createController'),
-  'overlay should use the cursor tooltip controller'
-);
-assert.match(
-  overlayPanel,
-  /overlayCursorTooltipController = LumnoCursorTooltip\.createController\([\s\S]*?id: '_x_extension_overlay_cursor_tooltip_2026_unique_'/,
-  'overlay input actions and suggestion text should share the overlay cursor tooltip controller'
-);
-assert.match(
-  overlayPanel,
-  /const overlayModeMenuCursorTooltipController = LumnoCursorTooltip[\s\S]*?id: '_x_extension_overlay_mode_menu_cursor_tooltip_2026_unique_'[\s\S]*?appendTo: overlayStyleRoot \|\| document\.body[\s\S]*?positionMode: 'fixed'/,
-  'overlay search-scope labels should use a viewport-positioned cursor bubble inside the isolated style root'
-);
-const overlayModeMenuControllerSource = overlayPanel.match(
-  /const overlayModeMenuCursorTooltipController = LumnoCursorTooltip[\s\S]*?\n\s*\}\);/
-);
-assert.ok(
-  overlayModeMenuControllerSource,
-  'overlay should create a dedicated search-scope cursor bubble controller'
-);
-assert.doesNotMatch(
-  overlayModeMenuControllerSource[0],
-  /boundaryElement:\s*overlay/,
-  'overlay search-scope cursor bubbles should not be clamped to the input panel boundary'
-);
-assert.match(
-  overlayPanel,
-  /modeMenuCursorTooltipController: overlayModeMenuCursorTooltipController/,
-  'overlay search-scope labels should use the dedicated fixed cursor bubble controller'
-);
-assert.match(
-  newtabPanel,
-  /modeMenuCursorTooltipController: bookmarkCursorTooltipController/,
-  'new-tab search-scope labels should use the shared cursor tooltip controller'
-);
-assert.match(
-  searchInputMode,
-  /const cursorTooltipApi = LumnoCursorTooltip;[\s\S]*?typeof cursorTooltipApi\.createController === 'function'/,
-  'new-tab search-scope labels should prefer the cursor tooltip controller'
-);
-assert.match(
-  overlayPanel,
-  /bindInputActionCursorTooltip\(rightIcon, settingsTooltipText\)/,
-  'overlay settings icon should bind its tooltip to the cursor'
-);
-assert.match(
-  overlayPanel,
-  /bindInputActionCursorTooltip\(closeOtherTabsButton, closeOtherTooltipText\)/,
-  'overlay close-other-tabs icon should bind its tooltip to the cursor'
-);
 
-console.log('shared cursor tooltip tests passed');
+// In the overlay the input's action icons share one cursor tooltip, styled
+// from the extension's stylesheet inside the overlay's shadow root. (JSDOM
+// has no :hover, so the bubble's text shows which control it belongs to.
+// Search-scope labels are covered by react-src/shared/search-input-mode.test.ts.)
+async function testOverlayInputActions() {
+  const surface = await openSearchSurface('overlay');
+  await surface.settle(200);
+  const root = surface.root;
+  const win = surface.page.window;
+  assert.ok(Array.from(root.querySelectorAll('link')).some((link) =>
+    /^chrome-extension:\/\/[^/]+\/src\/shared\/ui\/cursor-tooltip\.css$/.test(link.getAttribute('href') || '')),
+  'overlay should load the cursor tooltip stylesheet from the extension');
+  let x = 200;
+  const hover = async (element) => {
+    x += 11;
+    ['pointerover', 'pointerenter', 'mouseover', 'mouseenter', 'pointermove', 'mousemove'].forEach((type) => {
+      const Event = type.startsWith('pointer') && win.PointerEvent ? win.PointerEvent : win.MouseEvent;
+      element.dispatchEvent(new Event(type, { bubbles: !/enter/.test(type), composed: true, clientX: x, clientY: 40 }));
+    });
+    await surface.settle(200);
+    const tooltip = root.getElementById('_x_extension_overlay_cursor_tooltip_2026_unique_');
+    return tooltip ? tooltip.textContent : '';
+  };
+  assert.strictEqual(await hover(root.getElementById('_x_extension_search_right_icon_2024_unique_')), 'Open settings',
+    'overlay settings icon should bind its tooltip to the cursor');
+  assert.strictEqual(await hover(root.getElementById('_x_extension_search_close_other_tabs_2026_unique_')), 'Close other tabs',
+    'overlay close-other-tabs icon should bind its tooltip to the cursor');
+  surface.close();
+}
+
+(async () => {
+  await testOverlayInputActions();
+  console.log('shared cursor tooltip tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

@@ -1,16 +1,9 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
 const siteDisplayName = require('../../src/shared/site-display-name.js');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const settings = require('../../src/shared/settings.js');
+const { createNewtabPage } = require('../helpers/newtab-page');
 const { getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
-const repoRoot = path.resolve(__dirname, '..', '..');
-const newtabJs = readNewtabRuntimeSource();
-const sharedSource = fs.readFileSync(
-  path.join(repoRoot, 'src/shared/site-display-name.js'),
-  'utf8'
-);
 
 assert.strictEqual(
   siteDisplayName.getSiteDisplayName('www.github.com', 'Repository'),
@@ -60,17 +53,26 @@ assert.ok(
   runsBefore(getPageScripts('newtab.html'), 'src/shared/site-display-name.js', 'src/newtab/newtab.js'),
   'the shared resolver should load before the newtab runtime entry'
 );
-assert.ok(
-  newtabJs.includes("import * as SITE_DISPLAY_NAME from '../shared/site-display-name.js';") &&
-    newtabJs.includes('return SITE_DISPLAY_NAME.getSiteDisplayName('),
-  'newtab should require and delegate to the shared resolver'
-);
-assert.ok(
-  !newtabJs.includes('const brandMap = {') &&
-    !newtabJs.includes('const noisySubdomains = new Set([') &&
-    sharedSource.indexOf('const DEFAULT_BRAND_NAMES') <
-      sharedSource.indexOf('function getSiteDisplayName'),
-  'static resolver data should be initialized once in the shared module'
-);
+// New Tab names recent sites with the shared resolver.
+async function testRecentSitesUseTheResolver() {
+  const page = await createNewtabPage({
+    sync: { [settings.RECENT_COUNT_STORAGE_KEY]: 4, [settings.RECENT_MODE_STORAGE_KEY]: 'latest' },
+    history: [
+      { url: 'https://docs.github.com/en/get-started', title: 'Documentation', lastVisitTime: Date.now(), visitCount: 3 },
+      { url: 'https://weibo.com/home', title: 'Home', lastVisitTime: Date.now() - 1000, visitCount: 3 }
+    ]
+  });
+  await page.settle(400);
+  // A recent card's icon is named after the site.
+  const names = Array.from(page.document.querySelectorAll('.x-nt-recent-card img[alt]')).map((image) => image.getAttribute('alt'));
+  assert.ok(names.includes('GitHub') && names.includes('Weibo'), `recent sites should use the shared brand names: ${names}`);
+  page.close();
+}
 
-console.log('site display name tests passed');
+testRecentSitesUseTheResolver().then(() => {
+  console.log('site display name tests passed');
+  process.exit(0);
+}).catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

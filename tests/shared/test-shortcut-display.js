@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { readOptionsRuntimeSource } = require('../helpers/options-source');
+const { createOptionsPage } = require('../helpers/options-page');
 
 const shortcutDisplay = require('../../src/shared/shortcut-display.js');
 const shortcutReference = require('../../src/shared/shortcut-reference.js');
@@ -180,11 +180,21 @@ shortcutDefinitions.forEach((definition) => {
   );
 });
 
-const optionsSource = readOptionsRuntimeSource();
-assert.match(
-  optionsSource,
-  /item\.shortcutLabelKey[\s\S]*?modifier:\s*isMacPlatform \? '⌘' : 'Ctrl'[\s\S]*?shortcutLabel:\s*customShortcutLabel/,
-  'Options should render the localized long-hold instruction with the platform modifier'
-);
+// Settings shows the long-hold instruction with the platform's modifier.
+async function testOptionsLongHoldLabel() {
+  for (const [platform, modifier] of [['MacIntel', '⌘'], ['Win32', 'Ctrl']]) {
+    const page = await createOptionsPage({ platform, sync: { _x_extension_language_2024_unique_: 'en' } });
+    await page.settle(300);
+    assert.ok(page.document.body.textContent.includes(`Hold ${modifier} for 0.4s, release, then press 0–9`),
+      `Options should render the localized long-hold instruction with ${modifier} on ${platform}`);
+    page.close();
+  }
+}
 
-console.log('shortcut display tests passed');
+testOptionsLongHoldLabel().then(() => {
+  console.log('shortcut display tests passed');
+  process.exit(0);
+}).catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

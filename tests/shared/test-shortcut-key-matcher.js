@@ -1,8 +1,7 @@
 const assert = require('assert');
-const fs = require('fs');
 
 const matcher = require('../../src/shared/shortcut-key-matcher.js');
-const { readNewtabRuntimeSource } = require('../helpers/newtab-source');
+const { createOnboardingPage } = require('../helpers/onboarding-page');
 const { getManifestContentScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 const macEvent = matcher.describeKeyboardEvent({
@@ -93,22 +92,37 @@ assert.strictEqual(
   1,
   'the shared matcher should be injected once per frame, by the observer entry that uses it'
 );
-const onboardingSource = fs.readFileSync('src/onboarding/onboarding-content.js', 'utf8');
-const newtabSource = readNewtabRuntimeSource();
-assert.match(onboardingSource, /SHORTCUT_KEY_MATCHER\.parseShortcut\(normalizeShortcutValue\(shortcut\)\)/);
-assert.match(onboardingSource, /SHORTCUT_KEY_MATCHER\.eventMatchesShortcut\(event, parseShortcutHotkey\(shortcut\)\)/);
 assert(
   runsBefore(getPageScripts('src/onboarding/onboarding.html'), 'src/shared/shortcut-key-matcher.js', 'src/onboarding/onboarding-content.js'),
   'onboarding should load the shared matcher before its content model'
-);
-assert.match(newtabSource, /SHORTCUT_KEY_MATCHER\.parseShortcut\(nextShortcut\)/);
-assert.match(
-  newtabSource,
-  /SHORTCUT_KEY_MATCHER\.eventMatchesShortcut\(event, fallbackShortcutSpec\)/
 );
 assert(
   runsBefore(getPageScripts('newtab.html'), 'src/shared/shortcut-key-matcher.js', 'src/newtab/newtab.js'),
   'newtab should load the shared matcher before its runtime entry'
 );
 
-console.log('shortcut key matcher tests passed');
+// Onboarding matches the browser's search shortcut (here ⌘K) to open the
+// overlay it demonstrates, and ignores other combinations. (New Tab's
+// fallback shortcut is in tests/newtab/test-newtab-shortcut-focus-route.js.)
+async function testOnboardingMatchesTheShortcut() {
+  const page = await createOnboardingPage({});
+  await page.settle(300);
+  let opened = 0;
+  page.window._x_extension_toggleSearchOverlay_2026_unique_ = () => { opened += 1; };
+  const press = (init) => page.document.body.dispatchEvent(new page.window.KeyboardEvent('keydown', Object.assign({ bubbles: true, cancelable: true }, init)));
+  press({ key: 'J', code: 'KeyJ', metaKey: true, shiftKey: true });
+  await page.settle(100);
+  assert.strictEqual(opened, 0, 'another combination should not open the overlay');
+  press({ key: 'k', code: 'KeyK', metaKey: true });
+  await page.settle(100);
+  assert.strictEqual(opened, 1, 'the search shortcut should open the overlay');
+  page.close();
+}
+
+testOnboardingMatchesTheShortcut().then(() => {
+  console.log('shortcut key matcher tests passed');
+  process.exit(0);
+}).catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
