@@ -40,10 +40,9 @@ are testing.
 
 ## Where things live
 
-The [README](../README.md#project-structure) maps the folders, and
-[react-src/README.md](../react-src/README.md) explains how the React views and the
-browser-facing modules in `src/` split the work. In short: `src/` owns browser
-APIs, storage, navigation and ranking; `react-src/` owns what the pages show.
+The [README](../README.md#project-structure) maps the folders. `src/` owns
+browser APIs, storage, navigation and ranking; `react-src/` owns what the pages
+show.
 
 ## Making a change
 
@@ -63,7 +62,8 @@ APIs, storage, navigation and ranking; `react-src/` owns what the pages show.
   and put their license texts next to them.
 - The React bundles have size budgets. A change that grows a route by more than
   a few KiB fails CI unless one of its commit messages carries a
-  `Bundle-Growth: <why>` trailer; see [react-src/README.md](../react-src/README.md).
+  `Bundle-Growth: <why>` trailer; see
+  [`tests/repo/test-react-bundle-budgets.js`](../tests/repo/test-react-bundle-budgets.js).
 
 ## Checks
 
