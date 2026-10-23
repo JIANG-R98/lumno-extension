@@ -1,0 +1,3659 @@
+{
+  "ext_name": {
+    "message": "Lumno ｜ કમાન્ડ બાર અને નવું ટૅબ"
+  },
+  "ext_description": {
+    "message": "હળવું બ્રાઉઝર કમાન્ડ બાર અને નવા ટૅબમાં શોધ."
+  },
+  "settings_tab_general": {
+    "message": "સામાન્ય"
+  },
+  "settings_tab_appearance": {
+    "message": "દેખાવ"
+  },
+  "settings_appearance_global_section_title": {
+    "message": "વૈશ્વિક"
+  },
+  "settings_webpage_focus_overlay_section_title": {
+    "message": "કમાન્ડ બાર"
+  },
+  "newtab_theme_scope_label": {
+    "message": "થીમનો વ્યાપ"
+  },
+  "newtab_theme_scope_global": {
+    "message": "વૈશ્વિક"
+  },
+  "newtab_theme_scope_home": {
+    "message": "નવું ટૅબ"
+  },
+  "newtab_theme_scope_select_label": {
+    "message": "થીમના ફેરફારો {scope} પર લાગુ કરો"
+  },
+  "newtab_theme_scope_help_label": {
+    "message": "થીમના વ્યાપ વિશે માહિતી"
+  },
+  "newtab_theme_scope_help": {
+    "message": "વૈશ્વિક: બધા પેજ માટે ડિફૉલ્ટ થીમ.\nનવું ટૅબ: ફક્ત નવા ટૅબ પેજ પર લાગુ થાય છે. તેને સુમેળમાં રાખવા “વૈશ્વિકને અનુસરો” પસંદ કરો."
+  },
+  "newtab_theme_follow_global": {
+    "message": "“વૈશ્વિક”ને અનુસરો"
+  },
+  "newtab_search_section_title": {
+    "message": "શોધ બૉક્સ"
+  },
+  "newtab_search_width_title": {
+    "message": "શોધ બૉક્સની પહોળાઈ"
+  },
+  "newtab_search_width_aria": {
+    "message": "નવા ટૅબના શોધ બૉક્સની પહોળાઈ ગોઠવો"
+  },
+  "newtab_search_width_standard": {
+    "message": "માનક"
+  },
+  "newtab_search_width_wide": {
+    "message": "પહોળું"
+  },
+  "newtab_search_width_max": {
+    "message": "મહત્તમ"
+  },
+  "newtab_appearance_settings_title": {
+    "message": "દેખાવ સેટિંગ"
+  },
+  "newtab_help_footer_prompt": {
+    "message": "કોઈ વિકલ્પ શું કરે છે તેની ખાતરી નથી?"
+  },
+  "newtab_help_footer_action": {
+    "message": "સહાય કેન્દ્રની મુલાકાત લો"
+  },
+  "newtab_more_settings": {
+    "message": "વધુ સેટિંગ"
+  },
+  "settings_tab_shortcuts": {
+    "message": "શોધ સ્રોતો"
+  },
+  "settings_tab_blacklist": {
+    "message": "બ્લૉકલિસ્ટ"
+  },
+  "settings_tab_labs": {
+    "message": "લૅબ"
+  },
+  "settings_selection_quick_actions_title": {
+    "message": "પસંદગી પર ઝડપી ક્રિયાઓ"
+  },
+  "settings_selection_quick_actions_desc": {
+    "message": "તમે ટેક્સ્ટ પસંદ કરો ત્યારે AI ક્રિયાઓ બતાવો"
+  },
+  "settings_selection_quick_actions_provider_title": {
+    "message": "પસંદગીનો પ્રદાતા"
+  },
+  "settings_selection_quick_actions_group_title": {
+    "message": "બૅકગ્રાઉન્ડમાં શોધો"
+  },
+  "settings_selection_quick_actions_group_desc": {
+    "message": "બધા AI પેજને “AI શોધ” ટૅબ ગ્રૂપમાં એકત્ર કરો"
+  },
+  "selection_quick_actions_group_name": {
+    "message": "AI શોધ"
+  },
+  "selection_quick_action_ask": {
+    "message": "જવાબ આપો"
+  },
+  "selection_quick_action_translate": {
+    "message": "અનુવાદ કરો"
+  },
+  "selection_quick_action_explain": {
+    "message": "સમજાવો"
+  },
+  "selection_quick_action_summarize": {
+    "message": "સારાંશ"
+  },
+  "selection_quick_action_search": {
+    "message": "સંશોધન"
+  },
+  "selection_quick_action_calculate": {
+    "message": "ગણતરી"
+  },
+  "selection_quick_action_open_menu": {
+    "message": "પસંદ કરેલા ટેક્સ્ટ સાથે Lumno વાપરો"
+  },
+  "selection_quick_action_more": {
+    "message": "વધુ ક્રિયાઓ"
+  },
+  "selection_quick_action_sending": {
+    "message": "બૅકગ્રાઉન્ડમાં ખોલી રહ્યાં છીએ…"
+  },
+  "selection_quick_action_failed": {
+    "message": "મોકલી શકાયું નહીં. ફરી પ્રયાસ કરો."
+  },
+  "selection_debug_decision_title": {
+    "message": "પસંદગીનો નિર્ણય"
+  },
+  "selection_debug_status_show": {
+    "message": "બતાવો"
+  },
+  "selection_debug_status_hide": {
+    "message": "બતાવશો નહીં"
+  },
+  "selection_debug_sort_title": {
+    "message": "મેનૂનો ક્રમ"
+  },
+  "selection_debug_item_count": {
+    "message": "{count} આઇટમ"
+  },
+  "selection_debug_reason_calculate": {
+    "message": "સમીકરણ, ચલણ અથવા એકમ રૂપાંતરણ મળ્યું"
+  },
+  "selection_debug_reason_question": {
+    "message": "સ્પષ્ટ પ્રશ્ન મળ્યો"
+  },
+  "selection_debug_reason_prose": {
+    "message": "પૂરતું સમૃદ્ધ સતત ગદ્ય મળ્યું"
+  },
+  "selection_debug_reason_search": {
+    "message": "સમાચાર, કિંમત, અધિકૃત સાઇટ અથવા વર્ઝન શોધવાનો હેતુ મળ્યો"
+  },
+  "selection_debug_reason_translate": {
+    "message": "પસંદ કરેલો ટેક્સ્ટ Lumnoની UI ભાષાથી અલગ છે"
+  },
+  "selection_debug_reason_error": {
+    "message": "ભૂલ અથવા અપવાદ મળ્યો"
+  },
+  "selection_debug_reason_code": {
+    "message": "કોડ સિન્ટૅક્સ અથવા કોડનો સંદર્ભ મળ્યો"
+  },
+  "selection_debug_reason_term": {
+    "message": "અર્થપૂર્ણ શબ્દ અથવા ટૂંકું વાક્યાંશ મળ્યું"
+  },
+  "selection_debug_reason_explain_score": {
+    "message": "“સમજાવો”ને સૌથી વધુ સ્કોર મળ્યો"
+  },
+  "selection_debug_reason_top_score": {
+    "message": "આ ક્રિયાને સૌથી વધુ મેળ ખાતો સ્કોર મળ્યો"
+  },
+  "selection_debug_rejection_disabled": {
+    "message": "પસંદગી પર ઝડપી ક્રિયાઓ બંધ છે"
+  },
+  "selection_debug_rejection_sensitive": {
+    "message": "સંવેદનશીલ પાસવર્ડ અથવા ચુકવણી ફીલ્ડ; સામગ્રી વાંચવામાં આવી નથી"
+  },
+  "selection_debug_rejection_no_selection": {
+    "message": "કોઈ માન્ય ટેક્સ્ટ પસંદગી મળી નથી"
+  },
+  "selection_debug_rejection_too_short": {
+    "message": "2 કરતાં ઓછા અક્ષરો"
+  },
+  "selection_debug_rejection_too_long": {
+    "message": "2400 કરતાં વધુ અક્ષરો"
+  },
+  "selection_debug_rejection_url": {
+    "message": "પૂર્ણ URL"
+  },
+  "selection_debug_rejection_email": {
+    "message": "ઇમેઇલ સરનામું"
+  },
+  "selection_debug_rejection_generic_ui": {
+    "message": "“વધુ જાણો / સાચવો / આગળ” જેવી સામાન્ય UI કૉપિ"
+  },
+  "selection_debug_rejection_plain_number": {
+    "message": "ગણતરી અથવા રૂપાંતરણ વિનાની સાદી સંખ્યા"
+  },
+  "selection_debug_rejection_symbols": {
+    "message": "ચિહ્નોનું પ્રમાણ ખૂબ વધારે છે"
+  },
+  "selection_debug_rejection_no_intent": {
+    "message": "કોઈ સ્પષ્ટ કાર્ય, અર્થપૂર્ણ શબ્દ અથવા પર્યાપ્ત ગદ્ય સાથે મેળ ખાતું નથી"
+  },
+  "selection_debug_primary_meta": {
+    "message": "મુખ્ય: {action} · સ્કોર {score} · {confidence} વિશ્વાસ"
+  },
+  "selection_debug_confidence_high": {
+    "message": "ઊંચો"
+  },
+  "selection_debug_confidence_medium": {
+    "message": "મધ્યમ"
+  },
+  "selection_debug_confidence_low": {
+    "message": "નીચો"
+  },
+  "selection_debug_sort_primary_cause": {
+    "message": "{reason}, સ્કોર {score}"
+  },
+  "selection_debug_sort_fallback_cause": {
+    "message": "સામાન્ય ફૉલબૅક, નિશ્ચિત ક્રમમાં ભરેલું અને ડુપ્લિકેટ દૂર કરેલું"
+  },
+  "selection_debug_sort_footer": {
+    "message": "પહેલી આઇટમ સૌથી વધુ હેતુ સ્કોર વાપરે છે; બાકીની આઇટમ “સમજાવો → સંશોધન → અનુવાદ કરો” ક્રમને અનુસરે છે."
+  },
+  "settings_global_section_title": {
+    "message": "વૈશ્વિક સેટિંગ"
+  },
+  "settings_feedback_support_section_title": {
+    "message": "પ્રતિસાદ અને સપોર્ટ"
+  },
+  "settings_feedback_support_wechat_action": {
+    "message": "WeChat ગ્રૂપમાં જોડાઓ"
+  },
+  "settings_help_center_title": {
+    "message": "સહાય કેન્દ્ર"
+  },
+  "settings_help_center_desc": {
+    "message": "કોઈ સુવિધા કેવી રીતે કામ કરે છે તેની ખાતરી નથી? દરેક સુવિધા અહીં સમજાવી છે."
+  },
+  "settings_help_center_action": {
+    "message": "ખોલો"
+  },
+  "settings_help_center_ask_action": {
+    "message": "શોધ બૉક્સમાંથી પૂછો"
+  },
+  "settings_help_center_ask_caption": {
+    "message": "નવા ટૅબમાં અથવા કમાન્ડ બારમાં lm ટાઇપ કરો, Tab દબાવો, પછી તમારો પ્રશ્ન લખો."
+  },
+  "settings_help_center_ask_demo_query": {
+    "message": "શૉર્ટકટ કેવી રીતે બદલવો"
+  },
+  "settings_help_center_ask_demo_result_1_title": {
+    "message": "કીબોર્ડ શૉર્ટકટ"
+  },
+  "settings_help_center_ask_demo_result_1_detail": {
+    "message": "શૉર્ટકટ બદલો"
+  },
+  "settings_help_center_ask_demo_result_2_title": {
+    "message": "શૉર્ટકટ અને બુકમાર્ક"
+  },
+  "settings_help_center_ask_demo_result_2_detail": {
+    "message": "શૉર્ટકટનું આઇકન બદલો"
+  },
+  "settings_feedback_support_review_action": {
+    "message": "Lumnoને રેટિંગ આપો"
+  },
+  "settings_feedback_support_github_issue_action": {
+    "message": "Issue બનાવો"
+  },
+  "settings_feedback_support_contact_author_action": {
+    "message": "લેખકનો સંપર્ક કરો"
+  },
+  "settings_onboarding_tutorial_action": {
+    "message": "સ્વાગત ટૂર"
+  },
+  "settings_language_title": {
+    "message": "ભાષા"
+  },
+  "settings_language_desc": {
+    "message": "UI ભાષા પસંદ કરો"
+  },
+  "settings_language_machine_note": {
+    "message": "AI દ્વારા અનુવાદિત. જો કંઈક ખોટું લાગે, તો કૃપા કરીને પ્રતિસાદ મોકલો."
+  },
+  "settings_language_search_placeholder": {
+    "message": "ભાષાઓ શોધો"
+  },
+  "settings_language_no_results": {
+    "message": "કોઈ મેળ ખાતી ભાષા નથી"
+  },
+  "settings_version_label": {
+    "message": "વર્ઝન"
+  },
+  "settings_version_tooltip": {
+    "message": "ફેરફારોની સૂચિ જુઓ"
+  },
+  "language_system": {
+    "message": "બ્રાઉઝરની ભાષાને અનુસરો"
+  },
+  "settings_recent_title": {
+    "message": "નવા ટૅબની નીચેની સામગ્રી"
+  },
+  "settings_newtab_section_title": {
+    "message": "નવું ટૅબ"
+  },
+  "settings_search_results_section_title": {
+    "message": "શોધ પરિણામ સેટિંગ"
+  },
+  "settings_search_result_priority_title": {
+    "message": "પહેલા શોધ પરિણામની પ્રાથમિકતા"
+  },
+  "settings_search_result_tab_position_title": {
+    "message": "શોધ પરિણામ ટૅબનું સ્થાન"
+  },
+  "search_result_tab_position_end": {
+    "message": "ટૅબ સ્ટ્રિપના અંતે (નીચે)"
+  },
+  "search_result_tab_position_after_current": {
+    "message": "વર્તમાન ટૅબની જમણે (નીચે)"
+  },
+  "search_result_tab_position_before_current": {
+    "message": "વર્તમાન ટૅબની ડાબે (ઉપર)"
+  },
+  "settings_search_fuzzy_pinyin_title": {
+    "message": "ફઝી પિનયિન"
+  },
+  "settings_search_fuzzy_pinyin_desc": {
+    "message": "ચાલુ હોય ત્યારે, પિનયિન અને પ્રારંભિક અક્ષરોથી શોધમાં z અને zh, c અને ch, s અને sh, n અને l, an અને ang, en અને eng, તેમજ in અને ing ને સમાન ગણવામાં આવે છે"
+  },
+  "settings_search_result_sources_title": {
+    "message": "દેખાતા પરિણામના પ્રકારો"
+  },
+  "settings_search_result_display_limit_title": {
+    "message": "મહત્તમ દેખાતા પરિણામો"
+  },
+  "settings_overlay_open_tabs_default_visible_title": {
+    "message": "વેબપેજ પર Lumno ખૂલે ત્યારે ડિફૉલ્ટ રૂપે બધા ખુલ્લા ટૅબ બતાવો"
+  },
+  "settings_favicon_enhanced_fetch_title": {
+    "message": "સુધારેલું આઇકન અને થીમ રંગ મેળવવું"
+  },
+  "settings_favicon_enhanced_fetch_desc": {
+    "message": "જો તમને સ્થાનિક નેટવર્ક ઍક્સેસનો પ્રૉમ્પ્ટ દેખાય, તો આ બંધ કરો. Lumno વેબસાઇટની છબીઓ સીધી લોડ કરવાનું બંધ કરશે, પણ બ્રાઉઝરમાં કૅશ થયેલા આઇકન અને તૃતીય-પક્ષ આઇકન સેવાઓ ઉપલબ્ધ રહેશે."
+  },
+  "favicon_blacklist_section_desc": {
+    "message": "વેબસાઇટ મુજબ બાકાત રાખો"
+  },
+  "favicon_blacklist_add": {
+    "message": "બાકાત નિયમ ઉમેરો"
+  },
+  "favicon_blacklist_removed_toast": {
+    "message": "આઇકન અને થીમના બાકાતમાંથી કાઢી નાખ્યું"
+  },
+  "favicon_blacklist_clear": {
+    "message": "બાકાત નિયમો સાફ કરો"
+  },
+  "search_result_priority_autocomplete": {
+    "message": "પહેલા સ્વતઃપૂર્ણ"
+  },
+  "search_result_priority_search": {
+    "message": "પહેલા શોધ"
+  },
+  "settings_recent_desc": {
+    "message": "તાજેતરની / સૌથી વધુ મુલાકાત લીધેલી સાઇટ બતાવો"
+  },
+  "settings_recent_sites_title": {
+    "message": "સાઇટ કાર્ડ"
+  },
+  "newtab_recent_rows_title": {
+    "message": "સાઇટ કાર્ડની પંક્તિઓ"
+  },
+  "settings_newtab_width_title": {
+    "message": "નવા ટૅબ પેજની સામગ્રીની પહોળાઈ"
+  },
+  "settings_bookmarks_title": {
+    "message": "બુકમાર્કની પંક્તિઓ"
+  },
+  "settings_bookmark_folder_icons_visible_title": {
+    "message": "બુકમાર્ક ફોલ્ડરની અંદર આઇકન બતાવો"
+  },
+  "settings_document_pip_title": {
+    "message": "વેબ ક્લિપ"
+  },
+  "settings_document_pip_desc": {
+    "message": "સંદર્ભ અને બાજુ-બાજુ સરખામણી માટે પેજનો ભાગ તરતા વ્યૂમાં ક્લિપ કરો"
+  },
+  "settings_document_pip_unsupported_tooltip": {
+    "message": "વેબ ક્લિપ Document Picture-in-Picture પર આધાર રાખે છે, જેને Firefox હજી સપોર્ટ કરતું નથી."
+  },
+  "document_pip_command_title": {
+    "message": "વેબ ક્લિપ શરૂ કરો"
+  },
+  "document_pip_command_action": {
+    "message": "ક્લિપ શરૂ કરો"
+  },
+  "settings_update_notice_title": {
+    "message": "અપડેટ સૂચનાઓ"
+  },
+  "settings_update_notice_desc": {
+    "message": "Lumno નવા વર્ઝનમાં અપડેટ થાય પછી નવું શું છે તે બતાવો"
+  },
+  "settings_motion_effects_title": {
+    "message": "ગતિ ઇફેક્ટ"
+  },
+  "settings_motion_effects_desc": {
+    "message": "જો પર્ફોર્મન્સ અટકે અથવા તમને ઝડપી ખૂલવાનો અનુભવ ગમે, તો આ બંધ કરો"
+  },
+  "settings_simple_mode_title": {
+    "message": "ન્યૂનતમ મોડ"
+  },
+  "settings_simple_mode_desc": {
+    "message": "વધુ સ્વચ્છ શોધ બૉક્સ માટે વધુ સુશોભન ઘટકો દૂર કરો"
+  },
+  "settings_auto_pip_title": {
+    "message": "ઑટો ચિત્રમાં ચિત્ર"
+  },
+  "settings_auto_pip_desc": {
+    "message": "વીડિયો ચાલતો હોય ત્યારે તમે ટૅબ બદલો, તો તે તરતી વિંડોમાં ચાલુ રહે છે"
+  },
+  "settings_auto_pip_unsupported_tooltip": {
+    "message": "Firefox એક્સ્ટેન્શનને વેબ વીડિયો આપમેળે ચિત્રમાં ચિત્રમાં મૂકવા દેતું નથી, તેથી આ સુવિધા ઉપલબ્ધ નથી."
+  },
+  "settings_pinned_tab_recovery_title": {
+    "message": "રીસ્ટાર્ટ પછી પિન કરેલા ટૅબ પુનઃસ્થાપિત કરો"
+  },
+  "settings_pinned_tab_recovery_desc": {
+    "message": "પુનઃસ્થાપિત કરી શકાય તેવા પિન કરેલા વેબ ટૅબ સાચવો અને બ્રાઉઝર રીસ્ટાર્ટ થયા પછી ખૂટતા ટૅબ પુનઃસ્થાપિત કરો"
+  },
+  "settings_number_shortcut_instant_title": {
+    "message": "નંબર જમ્પ બતાવવા Command એકવાર દબાવો"
+  },
+  "settings_number_shortcut_instant_desc": {
+    "message": "ચાલુ હોય ત્યારે, કમાન્ડ બાર અથવા શોધ સૂચનોમાં Command/Ctrl એકવાર દબાવવાથી તરત જ નંબર જમ્પ બૅજ દેખાય છે; “બૅકગ્રાઉન્ડ ટૅબમાં ખોલો” હવે Command વાપરતું નથી (મિડલ-ક્લિક હજી પણ બૅકગ્રાઉન્ડમાં ખોલે છે)"
+  },
+  "settings_macos_ctrl_suggestion_navigation_title": {
+    "message": "Mac કીબોર્ડ નેવિગેશન"
+  },
+  "settings_macos_ctrl_suggestion_navigation_tooltip": {
+    "message": "macOS પર નવા ટૅબ અને કમાન્ડ બારમાં કામ કરે છે. યોગદાન બદલ @wanghanzhen નો આભાર."
+  },
+  "settings_macos_ctrl_suggestion_navigation_desc": {
+    "message": "આગલું / પાછલું પરિણામ પસંદ કરવા Ctrl+N / Ctrl+P વાપરો"
+  },
+  "document_pip_picker_hint": {
+    "message": "ઘટક પસંદ કરવા પેજ પર ખસેડો. PiP ખોલવા ક્લિક કરો, પેરન્ટ બદલવા સ્ક્રોલ કરો, રદ કરવા Esc દબાવો."
+  },
+  "document_pip_picker_started": {
+    "message": "તરતી કરવા માટે સામગ્રી પર ક્લિક કરો, વ્યાપ બદલવા સ્ક્રોલ કરો અથવા રદ કરવા Esc દબાવો."
+  },
+  "document_pip_picker_cancelled": {
+    "message": "સામગ્રીની પસંદગી બંધ થઈ"
+  },
+  "document_pip_picker_closed": {
+    "message": "તરતી સામગ્રીની વિંડો બંધ થઈ"
+  },
+  "document_pip_picker_unsupported": {
+    "message": "આ પેજ Document Picture-in-Picture ને સપોર્ટ કરતું નથી."
+  },
+  "document_pip_picker_conflict_video_pip": {
+    "message": "વીડિયો PiP પહેલેથી સક્રિય છે. સામગ્રી ક્લિપ કરવાનું શરૂ કરતાં પહેલાં તેને બંધ કરો."
+  },
+  "document_pip_picker_invalid": {
+    "message": "આ વિસ્તારને હજી તરતો કરી શકાતો નથી. મોટો સામગ્રી વિસ્તાર અજમાવો."
+  },
+  "document_pip_picker_open_failed": {
+    "message": "તરતી સામગ્રીની વિંડો ખોલી શકાઈ નહીં. બીજો વિસ્તાર અજમાવો."
+  },
+  "document_pip_picker_button_reselect": {
+    "message": "ફરી પસંદ કરો"
+  },
+  "document_pip_picker_button_return": {
+    "message": "પાછા જાઓ"
+  },
+  "document_pip_picker_button_close": {
+    "message": "બંધ કરો"
+  },
+  "settings_newtab_scope_desc": {
+    "message": "નવું ટૅબ"
+  },
+  "settings_overlay_tab_priority_title": {
+    "message": "ખુલ્લા ટૅબ પર ઝડપથી સ્વિચ કરો"
+  },
+  "settings_overlay_tab_priority_desc": {
+    "message": "ઇનપુટ કોઈ ખુલ્લા ટૅબ સાથે મેળ ખાય ત્યારે, Enter પહેલા સૂચનની ટૅબ ક્રિયાને અનુસરે છે"
+  },
+  "overlay_tab_priority_switch_first": {
+    "message": "ખુલ્લા ટૅબ પર સ્વિચ કરવા Enter દબાવો"
+  },
+  "overlay_tab_priority_newtab_first": {
+    "message": "નવા ટૅબમાં ખોલવા Enter દબાવો"
+  },
+  "settings_shortcuts_title": {
+    "message": "કમાન્ડ બાર ખોલો"
+  },
+  "settings_shortcuts_browser_desc_prefix": {
+    "message": "શૉર્ટકટ બદલવા માટે "
+  },
+  "settings_shortcuts_browser_desc_path_extensions": {
+    "message": "એક્સ્ટેન્શન"
+  },
+  "settings_shortcuts_browser_desc_path_extensions__firefox": {
+    "message": "ઍડ-ઑન અને થીમ"
+  },
+  "settings_shortcuts_browser_desc_path_shortcuts": {
+    "message": "કીબોર્ડ શૉર્ટકટ"
+  },
+  "settings_shortcuts_browser_desc_path_shortcuts__firefox": {
+    "message": "એક્સ્ટેન્શન શૉર્ટકટ મેનેજ કરો"
+  },
+  "settings_shortcuts_browser_desc_suffix": {
+    "message": " ખોલો"
+  },
+  "settings_shortcuts_dia_tag": {
+    "message": "Dia માં વાપરો"
+  },
+  "settings_shortcuts_dia_tooltip": {
+    "message": "Dia માં, બ્રાઉઝરની મર્યાદાઓને કારણે Lumnoની નવા ટૅબની સુવિધાઓ હાલ ઉપલબ્ધ નથી, પણ કમાન્ડ બાર સામાન્ય રીતે કામ કરે છે.\n\nજો Dia માં શૉર્ટકટ કામ ન કરે, તો બ્રાઉઝરનું શૉર્ટકટ સેટિંગ પેજ ખોલવા નીચે જમણી બાજુના બટન પર ક્લિક કરો, પછી “કમાન્ડ બાર ખોલો”ને In Dia થી Global માં બદલો."
+  },
+  "settings_shortcuts_section_title": {
+    "message": "શૉર્ટકટ સેટિંગ"
+  },
+  "settings_shortcuts_desc": {
+    "message": "Lumno કમાન્ડ બાર ખોલવા માટે વાપરો"
+  },
+  "overlay_close_other_tabs_tooltip": {
+    "message": "અન્ય ટૅબ બંધ કરો"
+  },
+  "overlay_close_other_tabs_confirm": {
+    "message": "આ વિંડોના અન્ય ટૅબ બંધ કરીએ? પિન કરેલા અને ગ્રૂપ કરેલા ટૅબ ખુલ્લા રહેશે."
+  },
+  "overlay_close_other_tabs_confirm_button": {
+    "message": "બંધ કરો"
+  },
+  "settings_shortcuts_status": {
+    "message": "વર્તમાન: {shortcut}"
+  },
+  "settings_shortcuts_unset": {
+    "message": "સેટ નથી"
+  },
+  "settings_shortcuts_action": {
+    "message": "શૉર્ટકટ સેટિંગ ખોલો"
+  },
+  "settings_shortcuts_browser_tooltip": {
+    "message": "Chromium બ્રાઉઝરમાં, કમાન્ડ બારનો શૉર્ટકટ સેટ કરવા અથવા બદલવા તમારે એક્સ્ટેન્શન શૉર્ટકટ પેજ ખોલવું પડશે."
+  },
+  "settings_shortcuts_browser_tooltip__firefox": {
+    "message": "Firefox માં, ઍડ-ઑન મેનેજરમાં “એક્સ્ટેન્શન શૉર્ટકટ મેનેજ કરો” હેઠળ કમાન્ડ બારનો શૉર્ટકટ સેટ કરો અથવા બદલો."
+  },
+  "settings_shortcuts_save": {
+    "message": "શૉર્ટકટ સાચવો"
+  },
+  "settings_shortcuts_reset": {
+    "message": "ડિફૉલ્ટ રીસેટ કરો"
+  },
+  "settings_shortcuts_record_placeholder": {
+    "message": "શૉર્ટકટ દબાવો"
+  },
+  "settings_shortcuts_empty_state": {
+    "message": "કોઈ નહીં"
+  },
+  "settings_shortcuts_invalid": {
+    "message": "અમાન્ય શૉર્ટકટ. Ctrl+K જેવું કી કૉમ્બિનેશન વાપરો."
+  },
+  "settings_restricted_title": {
+    "message": "પ્રતિબંધિત પેજ પર વર્તન"
+  },
+  "settings_restricted_tooltip": {
+    "message": "પ્રતિબંધિત પેજ (ઉદાહરણ તરીકે, chrome://) કમાન્ડ બાર ખોલી શકતા નથી. શૉર્ટકટ દબાવવાથી અહીં સેટ કરેલો નિયમ અનુસરાય છે."
+  },
+  "settings_restricted_tooltip__firefox": {
+    "message": "પ્રતિબંધિત પેજ (ઉદાહરણ તરીકે, about: પેજ અને Firefox ઍડ-ઑન સાઇટ) કમાન્ડ બાર ખોલી શકતા નથી. શૉર્ટકટ દબાવવાથી અહીં સેટ કરેલો નિયમ અનુસરાય છે."
+  },
+  "restricted_action_default": {
+    "message": "Lumno નવા ટૅબ પર જાઓ"
+  },
+  "restricted_action_none": {
+    "message": "બ્રાઉઝર સેટિંગને અનુસરો"
+  },
+  "newtab_file_access_notice_title": {
+    "message": "સ્થાનિક PDF અથવા HTML પેજ પર Lumno વાપરવા, ફાઇલ URL ઍક્સેસ ચાલુ કરો"
+  },
+  "newtab_file_access_notice_body": {
+    "message": "Lumno પાસે હજી ફાઇલ URL ઍક્સેસ નથી. એક્સ્ટેન્શન વિગતોનું પેજ ખોલો, “ફાઇલ URL ને ઍક્સેસ કરવાની મંજૂરી આપો” ચાલુ કરો, પછી તે પેજ પર પાછા જઈને ફરી શૉર્ટકટ દબાવો."
+  },
+  "newtab_file_access_notice_open_cta": {
+    "message": "ઍક્સેસ ચાલુ કરો"
+  },
+  "newtab_file_access_notice_dismiss": {
+    "message": "કદાચ પછી"
+  },
+  "newtab_file_access_notice_close": {
+    "message": "સૂચના બંધ કરો"
+  },
+  "recent_count_4": {
+    "message": "1 પંક્તિ બતાવો"
+  },
+  "recent_count_8": {
+    "message": "2 પંક્તિ બતાવો"
+  },
+  "recent_count_off": {
+    "message": "છુપાવો"
+  },
+  "bookmark_count_off": {
+    "message": "છુપાવો"
+  },
+  "bookmark_count_4": {
+    "message": "1 પંક્તિ બતાવો"
+  },
+  "bookmark_count_8": {
+    "message": "8 બતાવો"
+  },
+  "bookmark_count_16": {
+    "message": "16 બતાવો"
+  },
+  "bookmark_count_32": {
+    "message": "32 બતાવો"
+  },
+  "settings_bookmark_columns_title": {
+    "message": "પંક્તિ દીઠ બુકમાર્ક"
+  },
+  "settings_bookmark_columns_desc": {
+    "message": "પંક્તિ દીઠ મહત્તમ સંખ્યા સેટ કરે છે; સાંકડી સ્ક્રીન પર આપમેળે ગોઠવાય છે"
+  },
+  "settings_bookmark_adaptive_count_tooltip": {
+    "message": "પૂરતી પહોળાઈ હોય ત્યારે આ મહત્તમ સંખ્યા છે. ખરેખર બતાવાતી સંખ્યા ઉપલબ્ધ જગ્યા મુજબ ગોઠવાય છે."
+  },
+  "bookmark_columns_4": {
+    "message": "પંક્તિ દીઠ 4"
+  },
+  "bookmark_columns_6": {
+    "message": "પંક્તિ દીઠ 6"
+  },
+  "bookmark_columns_8": {
+    "message": "પંક્તિ દીઠ 8"
+  },
+  "newtab_width_standard": {
+    "message": "માનક"
+  },
+  "newtab_width_wide": {
+    "message": "પહોળું (ભલામણ કરેલ)"
+  },
+  "settings_overlay_size_title": {
+    "message": "કદ"
+  },
+  "overlay_size_compact": {
+    "message": "કૉમ્પેક્ટ"
+  },
+  "overlay_size_standard": {
+    "message": "માનક"
+  },
+  "overlay_size_large": {
+    "message": "મોટું"
+  },
+  "settings_overlay_enter_animation_title": {
+    "message": "ખૂલવાનું ઍનિમેશન"
+  },
+  "overlay_enter_animation_elastic": {
+    "message": "સ્પ્રિંગ"
+  },
+  "overlay_enter_animation_fade": {
+    "message": "ફેડ"
+  },
+  "settings_overlay_font_title": {
+    "message": "સ્થાનિક ફૉન્ટ"
+  },
+  "settings_overlay_font_desc": {
+    "message": "આ કમ્પ્યુટર પર ઇન્સ્ટૉલ કરેલા ફૉન્ટ વાંચે છે. ફક્ત આ ડિવાઇસ પર લાગુ થાય છે અને સિંક થતું નથી."
+  },
+  "settings_overlay_font_missing": {
+    "message": "“{font}” આ ડિવાઇસ પર ઇન્સ્ટૉલ કરેલું નથી, તેથી ઓવરલે ડિફૉલ્ટ ફૉન્ટ વાપરે છે"
+  },
+  "settings_overlay_font_missing_reset": {
+    "message": "ડિફૉલ્ટ વાપરો"
+  },
+  "settings_overlay_font_fallback_missing": {
+    "message": "“{font}” આ ડિવાઇસ પર ઇન્સ્ટૉલ કરેલું નથી, તેથી ફૉલબૅક છોડી દેવામાં આવ્યું છે"
+  },
+  "settings_overlay_font_fallback_missing_reset": {
+    "message": "સાફ કરો"
+  },
+  "settings_overlay_font_default": {
+    "message": "ડિફૉલ્ટ"
+  },
+  "settings_overlay_font_search_placeholder": {
+    "message": "ફૉન્ટ શોધો"
+  },
+  "settings_overlay_font_no_results": {
+    "message": "કોઈ મેળ ખાતા ફૉન્ટ નથી"
+  },
+  "settings_overlay_font_fallback_title": {
+    "message": "સ્થાનિક ફૉલબૅક ફૉન્ટ"
+  },
+  "settings_overlay_font_fallback_desc": {
+    "message": "પહેલા ફૉન્ટમાં ન હોય તેવા અક્ષરો માટે વપરાય છે, જેમ કે અંગ્રેજી ફૉન્ટ હેઠળ ચાઇનીઝ"
+  },
+  "settings_overlay_font_fallback_none": {
+    "message": "કોઈ નહીં"
+  },
+  "settings_overlay_font_unsupported_tooltip": {
+    "message": "Firefox એક્સ્ટેન્શનને ઇન્સ્ટૉલ કરેલા ફૉન્ટની સૂચિ જોવા દેતું નથી, તેથી અહીં ઓવરલે તેનો ડિફૉલ્ટ ફૉન્ટ વાપરે છે"
+  },
+  "settings_overlay_page_theme_adaptation_title": {
+    "message": "થીમના રંગો દરેક વેબપેજ મુજબ ગોઠવો"
+  },
+  "settings_overlay_page_theme_adaptation_tooltip": {
+    "message": "થીમ મોડ “સિસ્ટમને અનુસરો” પર સેટ હોય ત્યારે જ બતાવાય છે. બંધ કરવાથી, લાઇટ/ડાર્ક મોડ વેબપેજના થીમ રંગ મુજબ ગોઠવાશે નહીં."
+  },
+  "recent_mode_latest": {
+    "message": "તાજેતરની બતાવો"
+  },
+  "recent_mode_most": {
+    "message": "સૌથી વધુ મુલાકાત લીધેલી બતાવો"
+  },
+  "settings_toggle_on": {
+    "message": "ચાલુ"
+  },
+  "settings_theme_title": {
+    "message": "થીમ મોડ"
+  },
+  "settings_theme_desc": {
+    "message": "સિસ્ટમને અનુસરો અથવા જાતે પસંદ કરો"
+  },
+  "settings_theme_system": {
+    "message": "સિસ્ટમને અનુસરો"
+  },
+  "settings_theme_light": {
+    "message": "લાઇટ"
+  },
+  "settings_theme_dark": {
+    "message": "ડાર્ક"
+  },
+  "settings_newtab_wordmark_title": {
+    "message": "શોધ બારની ઉપરની સામગ્રી"
+  },
+  "newtab_top_content_brand": {
+    "message": "બ્રાન્ડ"
+  },
+  "newtab_top_content_time": {
+    "message": "સમય"
+  },
+  "newtab_top_content_off": {
+    "message": "છુપાવો"
+  },
+  "newtab_time_font_title": {
+    "message": "સમયનો ફૉન્ટ"
+  },
+  "newtab_time_font_weight_title": {
+    "message": "સમયના ફૉન્ટનું વજન"
+  },
+  "newtab_time_font_weight_reset": {
+    "message": "સમયના ફૉન્ટનું વજન રીસેટ કરો"
+  },
+  "newtab_time_font_size_title": {
+    "message": "સમયનું કદ"
+  },
+  "newtab_time_font_size_reset": {
+    "message": "સમયનું કદ રીસેટ કરો"
+  },
+  "newtab_time_opacity_title": {
+    "message": "સમયની અપારદર્શકતા"
+  },
+  "newtab_time_opacity_reset": {
+    "message": "સમયની અપારદર્શકતા રીસેટ કરો"
+  },
+  "newtab_time_ink_title": {
+    "message": "સમયનો રંગ"
+  },
+  "newtab_time_ink_auto": {
+    "message": "ઑટો"
+  },
+  "newtab_time_ink_light": {
+    "message": "લાઇટ"
+  },
+  "newtab_time_ink_dark": {
+    "message": "ડાર્ક"
+  },
+  "newtab_time_show_seconds_title": {
+    "message": "સેકન્ડ બતાવો"
+  },
+  "newtab_time_12_hour_title": {
+    "message": "12-કલાકની ઘડિયાળ"
+  },
+  "settings_newtab_page_buttons_title": {
+    "message": "પેજ બટન"
+  },
+  "settings_newtab_feedback_button_visible_title": {
+    "message": "પ્રતિસાદ બટન બતાવો"
+  },
+  "settings_newtab_appearance_button_visible_title": {
+    "message": "દેખાવ બટન બતાવો"
+  },
+  "settings_newtab_shortcuts_title": {
+    "message": "શૉર્ટકટ"
+  },
+  "settings_newtab_shortcut_add_title": {
+    "message": "“+” બતાવો"
+  },
+  "settings_newtab_shortcut_dock_magnification_title": {
+    "message": "macOS Dock જેવું મોટું કરવું"
+  },
+  "settings_newtab_shortcut_width_title": {
+    "message": "શૉર્ટકટની પહોળાઈ"
+  },
+  "settings_newtab_shortcut_columns_title": {
+    "message": "પંક્તિ દીઠ શૉર્ટકટ"
+  },
+  "settings_newtab_shortcut_size_title": {
+    "message": "શૉર્ટકટનું કદ"
+  },
+  "settings_newtab_shortcut_gap_title": {
+    "message": "શૉર્ટકટ વચ્ચે અંતર"
+  },
+  "settings_newtab_shortcut_size_reset": {
+    "message": "શૉર્ટકટનું કદ રીસેટ કરો"
+  },
+  "settings_newtab_shortcut_gap_reset": {
+    "message": "શૉર્ટકટ વચ્ચેનું અંતર રીસેટ કરો"
+  },
+  "settings_wallpaper_title": {
+    "message": "નવા ટૅબનું વૉલપેપર"
+  },
+  "settings_wallpaper_desc": {
+    "message": "નવા ટૅબના બૅકગ્રાઉન્ડ તરીકે સ્થાનિક છબી અપલોડ કરો"
+  },
+  "settings_wallpaper_upload": {
+    "message": "છબી અપલોડ કરો"
+  },
+  "settings_wallpaper_remove": {
+    "message": "કાઢી નાખો"
+  },
+  "settings_wallpaper_fit_cover": {
+    "message": "ભરો"
+  },
+  "settings_wallpaper_fit_contain": {
+    "message": "સમાવો"
+  },
+  "settings_wallpaper_status_none": {
+    "message": "કોઈ વૉલપેપર અપલોડ કર્યું નથી"
+  },
+  "settings_wallpaper_status_ready": {
+    "message": "વૉલપેપર અપલોડ થયું"
+  },
+  "settings_wallpaper_status_local_only": {
+    "message": "વૉલપેપર અપલોડ થયું (ફક્ત આ ડિવાઇસ)"
+  },
+  "settings_wallpaper_status_missing": {
+    "message": "વૉલપેપર ફાઇલ ખૂટે છે. કૃપા કરીને તેને ફરી અપલોડ કરો."
+  },
+  "settings_wallpaper_status_processing": {
+    "message": "પ્રક્રિયા ચાલુ છે…"
+  },
+  "settings_wallpaper_upload_done": {
+    "message": "વૉલપેપર અપડેટ થયું"
+  },
+  "settings_wallpaper_remove_done": {
+    "message": "વૉલપેપર કાઢી નાખ્યું"
+  },
+  "settings_wallpaper_error_type": {
+    "message": "કૃપા કરીને છબી ફાઇલ (JPG / PNG / WEBP) અપલોડ કરો."
+  },
+  "settings_wallpaper_error_oversize": {
+    "message": "છબી ખૂબ મોટી છે. કૃપા કરીને 8MB કરતાં નાની ફાઇલ અપલોડ કરો."
+  },
+  "settings_wallpaper_error_oversize_after_compress": {
+    "message": "કમ્પ્રેસ કર્યા પછી પણ છબી ખૂબ મોટી છે. નાની છબી અજમાવો."
+  },
+  "settings_wallpaper_error_save": {
+    "message": "વૉલપેપર સાચવી શકાયું નહીં. કૃપા કરીને ફરી પ્રયાસ કરો."
+  },
+  "newtab_wallpaper_title": {
+    "message": "વૉલપેપર"
+  },
+  "newtab_logo_title": {
+    "message": "બ્રાન્ડ ચિહ્ન"
+  },
+  "newtab_favicon_title": {
+    "message": "નવા ટૅબનું ફેવિકોન"
+  },
+  "newtab_favicon_name_default": {
+    "message": "ડિફૉલ્ટ"
+  },
+  "newtab_favicon_name_alternate": {
+    "message": "વૈકલ્પિક"
+  },
+  "newtab_favicon_select_label": {
+    "message": "{name} ફેવિકોન પસંદ કરો"
+  },
+  "newtab_favicon_save_error": {
+    "message": "ફેવિકોન સાચવવામાં નિષ્ફળ"
+  },
+  "newtab_wallpaper_source_title": {
+    "message": "સ્રોત"
+  },
+  "newtab_wallpaper_builtin_section": {
+    "message": "બિલ્ટ-ઇન"
+  },
+  "newtab_wallpaper_local_section": {
+    "message": "સ્થાનિક"
+  },
+  "newtab_wallpaper_toggle_label": {
+    "message": "વૉલપેપર ચાલુ અથવા બંધ કરો"
+  },
+  "newtab_wallpaper_select_label": {
+    "message": "{name} પસંદ કરો"
+  },
+  "newtab_wallpaper_add_local": {
+    "message": "સ્થાનિક વૉલપેપર ઉમેરો"
+  },
+  "newtab_wallpaper_mode_sync_title": {
+    "message": "લાઇટ અને ડાર્ક મોડ સરખા રાખો"
+  },
+  "newtab_wallpaper_mode_sync_toggle_label": {
+    "message": "લાઇટ અને ડાર્ક મોડ માટે એક જ વૉલપેપર વાપરો"
+  },
+  "newtab_wallpaper_mode_row_title": {
+    "message": "મોડ"
+  },
+  "newtab_wallpaper_mode_tabs_label": {
+    "message": "વૉલપેપરનો રંગ મોડ"
+  },
+  "newtab_wallpaper_light_mode_tab": {
+    "message": "લાઇટ"
+  },
+  "newtab_wallpaper_dark_mode_tab": {
+    "message": "ડાર્ક"
+  },
+  "newtab_wallpaper_mode_select_label": {
+    "message": "{mode} વૉલપેપરમાં ફેરફાર કરો"
+  },
+  "newtab_wallpaper_sources_feature_hint_badge": {
+    "message": "નવું"
+  },
+  "newtab_wallpaper_sources_feature_hint_text": {
+    "message": "નવા વૉલપેપર: પ્રકૃતિ, શહેર અને કળાના પસંદગીના સંગ્રહો જે દરરોજ અપડેટ થઈ શકે છે, અથવા છબીની લિંકથી ઉમેરો."
+  },
+  "newtab_wallpaper_sources_feature_hint_close": {
+    "message": "નવા વૉલપેપરની ટિપ છુપાવો"
+  },
+  "newtab_webdav_feature_hint_badge": {
+    "message": "બીટા"
+  },
+  "newtab_webdav_feature_hint_text": {
+    "message": "WebDAV સિંક અજમાવો: WebDAV ડ્રાઇવ અથવા NAS દ્વારા સેટિંગ, આઇકન અને વૉલપેપર સિંકમાં રાખો, અલગ-અલગ બ્રાઉઝરમાં પણ."
+  },
+  "newtab_webdav_feature_hint_link": {
+    "message": "સેટ કરો"
+  },
+  "newtab_webdav_feature_hint_close": {
+    "message": "WebDAV ટિપ છુપાવો"
+  },
+  "newtab_help_center_ask_feature_hint_badge": {
+    "message": "નવું"
+  },
+  "newtab_help_center_ask_feature_hint_text": {
+    "message": "lm ટાઇપ કરો, Tab દબાવો અને સહાય કેન્દ્રને પૂછો."
+  },
+  "newtab_help_center_ask_feature_hint_link": {
+    "message": "અજમાવો"
+  },
+  "newtab_help_center_ask_feature_hint_close": {
+    "message": "સહાય કેન્દ્રની ટિપ છુપાવો"
+  },
+  "newtab_ai_quick_jump_feature_hint_badge": {
+    "message": "નવું"
+  },
+  "newtab_ai_quick_jump_feature_hint_text": {
+    "message": "એક ક્લિકમાં તમારા પ્રૉમ્પ્ટ સાથે લોકપ્રિય AI સાઇટ પર જાઓ. “gemini” ટાઇપ કરીને Tab દબાવી જુઓ."
+  },
+  "newtab_ai_quick_jump_feature_hint_link": {
+    "message": "સપોર્ટેડ સૂચિ"
+  },
+  "newtab_ai_quick_jump_feature_hint_close": {
+    "message": "AI ઝડપી જમ્પની ટિપ છુપાવો"
+  },
+  "newtab_tab_switcher_feature_hint_badge": {
+    "message": "નવું"
+  },
+  "newtab_tab_switcher_feature_hint_text": {
+    "message": "ટૅબ સ્વિચર ખોલવા અને માઉસ વાપર્યા વિના તાજેતરના ટૅબ વચ્ચે જવા {shortcut} દબાવો."
+  },
+  "newtab_tab_switcher_feature_hint_close": {
+    "message": "ટૅબ સ્વિચરની ટિપ છુપાવો"
+  },
+  "newtab_input_auto_focus_title": {
+    "message": "ઇનપુટ પર આપમેળે ફોકસ કરો"
+  },
+  "newtab_input_auto_focus_help_label": {
+    "message": "ઇનપુટ ઑટો-ફોકસ વિશે માહિતી"
+  },
+  "newtab_input_auto_focus_help": {
+    "message": "જો તમે બ્રાઉઝરનું મૂળ ઍડ્રેસ બાર વાપરવાનું પસંદ કરો, તો આ વિકલ્પ બંધ કરો. એક્સ્ટેન્શનનું URL હવે ઍડ્રેસ બારમાં દેખાશે નહીં."
+  },
+  "update_notice_badge": {
+    "message": "{version} પર અપડેટ થયું"
+  },
+  "update_notice_text_fallback": {
+    "message": "આ અપડેટમાં શું બદલાયું તે જુઓ"
+  },
+  "update_notice_link": {
+    "message": "ફેરફારોની સૂચિ"
+  },
+  "update_notice_close": {
+    "message": "અપડેટ સૂચના છુપાવો"
+  },
+  "engagement_notice_badge": {
+    "message": "Lumno"
+  },
+  "engagement_notice_text": {
+    "message": "Lumno ગમ્યું? તો"
+  },
+  "engagement_notice_connector": {
+    "message": "અથવા"
+  },
+  "engagement_notice_trailing": {
+    "message": "અને હાય કહો."
+  },
+  "engagement_notice_review": {
+    "message": "5 સ્ટાર આપો"
+  },
+  "engagement_notice_community": {
+    "message": "X પર અમને શોધો"
+  },
+  "engagement_notice_close": {
+    "message": "રેટિંગ અને કમ્યુનિટી પ્રૉમ્પ્ટ છુપાવો"
+  },
+  "newtab_bookmark_cascade_debug_enable": {
+    "message": "બુકમાર્ક મેનૂનો સેફ ત્રિકોણ બતાવો"
+  },
+  "newtab_bookmark_cascade_debug_disable": {
+    "message": "બુકમાર્ક મેનૂનો સેફ ત્રિકોણ છુપાવો"
+  },
+  "newtab_bookmark_cascade_debug_open_label": {
+    "message": "ખોલો"
+  },
+  "newtab_bookmark_cascade_debug_switch_label": {
+    "message": "સ્વિચ"
+  },
+  "newtab_bookmark_cascade_debug_safe_label": {
+    "message": "સેફ"
+  },
+  "newtab_bookmark_cascade_debug_close_label": {
+    "message": "બંધ"
+  },
+  "newtab_feedback_button_aria": {
+    "message": "પ્રતિસાદ મોકલો"
+  },
+  "newtab_feedback_menu_aria": {
+    "message": "પ્રતિસાદ માધ્યમો"
+  },
+  "newtab_feedback_x_label": {
+    "message": "X"
+  },
+  "newtab_feedback_x_tooltip": {
+    "message": "X પર અમારો સંપર્ક કરો"
+  },
+  "newtab_feedback_github_issue_label": {
+    "message": "GitHub Issue"
+  },
+  "newtab_feedback_github_issue_tooltip": {
+    "message": "GitHub issue ખોલો"
+  },
+  "newtab_feedback_chrome_review_label": {
+    "message": "સ્ટોર રેટિંગ"
+  },
+  "newtab_feedback_chrome_review_tooltip": {
+    "message": "એક્સ્ટેન્શન સ્ટોરમાં Lumnoને રેટિંગ આપો"
+  },
+  "newtab_feedback_mail_label": {
+    "message": "ઇમેઇલ"
+  },
+  "newtab_feedback_mail_tooltip": {
+    "message": "ઇમેઇલ મોકલો"
+  },
+  "newtab_feedback_wechat_label": {
+    "message": "WeChat"
+  },
+  "newtab_feedback_wechat_tooltip": {
+    "message": "WeChat ગ્રૂપમાં જોડાઓ"
+  },
+  "newtab_feedback_wechat_panel_title": {
+    "message": "બગ રિપોર્ટ અને સુવિધાની વિનંતીઓ"
+  },
+  "newtab_feedback_wechat_refresh_tooltip": {
+    "message": "QR કોડ રિફ્રેશ કરો"
+  },
+  "newtab_feedback_wechat_refresh_success": {
+    "message": "નવીનતમ QR કોડ લોડ થયો"
+  },
+  "newtab_feedback_wechat_refresh_error": {
+    "message": "રિફ્રેશ કરી શકાયું નહીં. ફરી પ્રયાસ કરો."
+  },
+  "newtab_feedback_wechat_close_tooltip": {
+    "message": "બંધ કરો"
+  },
+  "newtab_feedback_wechat_qr_title": {
+    "message": "WeChat ગ્રૂપનો QR કોડ"
+  },
+  "newtab_feedback_wechat_qr_alt": {
+    "message": "Lumno WeChat ગ્રૂપનો QR કોડ"
+  },
+  "newtab_feedback_mail_subject": {
+    "message": "Lumno પ્રતિસાદ"
+  },
+  "newtab_feedback_mail_source_label": {
+    "message": "સ્રોત"
+  },
+  "newtab_feedback_mail_version_label": {
+    "message": "Lumno વર્ઝન"
+  },
+  "newtab_feedback_mail_language_label": {
+    "message": "ભાષા"
+  },
+  "newtab_feedback_mail_os_label": {
+    "message": "OS"
+  },
+  "newtab_feedback_mail_browser_label": {
+    "message": "બ્રાઉઝર"
+  },
+  "newtab_wallpaper_delete_local": {
+    "message": "આયાત કરેલું વૉલપેપર ડિલીટ કરો"
+  },
+  "newtab_wallpaper_custom_name": {
+    "message": "સ્થાનિક વૉલપેપર"
+  },
+  "newtab_wallpaper_overlay_opacity": {
+    "message": "માસ્ક ઇફેક્ટ"
+  },
+  "newtab_wallpaper_overlay_transparent_tick": {
+    "message": "પારદર્શક"
+  },
+  "newtab_wallpaper_overlay_default_tick": {
+    "message": "ડિફૉલ્ટ"
+  },
+  "newtab_wallpaper_overlay_cover_tick": {
+    "message": "ઢાંકો"
+  },
+  "newtab_wallpaper_effect_title": {
+    "message": "વૉલપેપર ફિલ્ટર"
+  },
+  "newtab_wallpaper_effect_strength": {
+    "message": "સેમ્પલિંગની તીવ્રતા"
+  },
+  "newtab_wallpaper_effect_blur_strength": {
+    "message": "બ્લરની તીવ્રતા"
+  },
+  "newtab_wallpaper_effect_size": {
+    "message": "કદ"
+  },
+  "newtab_wallpaper_effect_spacing": {
+    "message": "અંતર"
+  },
+  "newtab_wallpaper_effect_texture": {
+    "message": "ટેક્સચર"
+  },
+  "newtab_wallpaper_effect_blocks_size": {
+    "message": "બ્લૉકનું કદ"
+  },
+  "newtab_wallpaper_effect_crt_strength": {
+    "message": "ડિસ્પ્લેની તીવ્રતા"
+  },
+  "newtab_wallpaper_effect_crt_bloom": {
+    "message": "બ્લૂમ"
+  },
+  "newtab_wallpaper_effect_crt_rgb_offset": {
+    "message": "RGB ઑફસેટ"
+  },
+  "newtab_wallpaper_effect_crt_curvature": {
+    "message": "સ્ક્રીનની વક્રતા"
+  },
+  "newtab_wallpaper_effect_none": {
+    "message": "બંધ"
+  },
+  "newtab_wallpaper_effect_blur": {
+    "message": "ગ્લાસ બ્લર"
+  },
+  "newtab_wallpaper_effect_grain": {
+    "message": "ગ્રેન"
+  },
+  "newtab_wallpaper_effect_blocks": {
+    "message": "બ્લૉક"
+  },
+  "newtab_wallpaper_effect_halftone": {
+    "message": "હાફટોન"
+  },
+  "newtab_wallpaper_effect_dither": {
+    "message": "ડિધર"
+  },
+  "newtab_wallpaper_effect_ascii": {
+    "message": "ASCII"
+  },
+  "newtab_wallpaper_effect_crt": {
+    "message": "CRT"
+  },
+  "newtab_wallpaper_effect_ink_title": {
+    "message": "સેમ્પલ ટોન"
+  },
+  "newtab_wallpaper_effect_ink_dark": {
+    "message": "છાયા"
+  },
+  "newtab_wallpaper_effect_ink_light": {
+    "message": "હાઇલાઇટ"
+  },
+  "newtab_wallpaper_effect_ink_select_label": {
+    "message": "ટપકાં અથવા અક્ષરો માટે {tone} સેમ્પલ કરો"
+  },
+  "newtab_wallpaper_save_error": {
+    "message": "વૉલપેપર સાચવવામાં નિષ્ફળ"
+  },
+  "newtab_wallpaper_importing": {
+    "message": "વૉલપેપર આયાત કરી રહ્યાં છીએ…"
+  },
+  "newtab_wallpaper_import_done": {
+    "message": "વૉલપેપર આયાત થયું"
+  },
+  "newtab_wallpaper_import_error": {
+    "message": "વૉલપેપર આયાત કરવામાં નિષ્ફળ"
+  },
+  "newtab_wallpaper_delete_done": {
+    "message": "ડિલીટ કર્યું"
+  },
+  "newtab_wallpaper_delete_error": {
+    "message": "વૉલપેપર ડિલીટ કરવામાં નિષ્ફળ"
+  },
+  "newtab_wallpaper_name_dark_linocut_topographic": {
+    "message": "રાત્રિ ટોપોગ્રાફી"
+  },
+  "newtab_wallpaper_name_dark_monet_lily_nocturne": {
+    "message": "લિલી નૉક્ટર્ન"
+  },
+  "newtab_wallpaper_name_dark_shanshui_moonlit": {
+    "message": "ચાંદની શાનશુઇ"
+  },
+  "newtab_wallpaper_name_monet_coastal_white": {
+    "message": "મોને દરિયાકિનારો"
+  },
+  "newtab_wallpaper_name_monet_field_white": {
+    "message": "મોને ખેતર"
+  },
+  "newtab_wallpaper_name_monet_lily_pond_white": {
+    "message": "લિલી તળાવ"
+  },
+  "newtab_wallpaper_name_impressionist_orchard_white": {
+    "message": "બાગમાં સવાર"
+  },
+  "newtab_wallpaper_name_seurat_coast_white": {
+    "message": "સ્યૂરા દરિયાકિનારો"
+  },
+  "newtab_wallpaper_name_seurat_park_white": {
+    "message": "સ્યૂરા બગીચો"
+  },
+  "newtab_wallpaper_name_seurat_riverside_white": {
+    "message": "સ્યૂરા નદીકિનારો"
+  },
+  "newtab_wallpaper_name_pointillist_lakeside_white": {
+    "message": "તળાવકિનારે પૉઇન્ટિલિઝમ"
+  },
+  "newtab_wallpaper_name_white_3d_architecture": {
+    "message": "દિવસનું સ્થાપત્ય"
+  },
+  "newtab_wallpaper_name_white_3d_observatory": {
+    "message": "ધુમ્મસભરી વેધશાળા"
+  },
+  "newtab_wallpaper_name_white_linocut_topographic": {
+    "message": "દિવસની ટોપોગ્રાફી"
+  },
+  "newtab_wallpaper_name_white_risograph_collage": {
+    "message": "દિવસનું કૉલાજ"
+  },
+  "newtab_wallpaper_name_white_shanshui": {
+    "message": "સ્વચ્છ શાનશુઇ"
+  },
+  "newtab_wallpaper_name_white_shanshui_bamboo_bridge": {
+    "message": "વાંસનો પુલ"
+  },
+  "newtab_wallpaper_name_settings_bg_light_monet_newtab": {
+    "message": "મોને લાઇટ"
+  },
+  "shortcuts_duplicate_tag": {
+    "message": "બિલ્ટ-ઇન સાથે ડુપ્લિકેટ"
+  },
+  "shortcuts_duplicate_action": {
+    "message": "બિલ્ટ-ઇન આઇટમ શોધો"
+  },
+  "shortcuts_template_help": {
+    "message": "1. તમે ઉમેરવા માંગો છો તે સાઇટ ખોલો\n2. કોઈપણ કીવર્ડથી શોધ કરો\n3. પરિણામ પેજનું URL કૉપિ કરીને અહીં પેસ્ટ કરો\n4. કીવર્ડને {query} થી બદલો"
+  },
+  "shortcuts_title": {
+    "message": "સાઇટ શોધ"
+  },
+  "shortcuts_desc": {
+    "message": "સાઇટ શોધ વાપરવા કીવર્ડ પછી Tab દબાવો"
+  },
+  "shortcuts_group_custom": {
+    "message": "કસ્ટમ"
+  },
+  "blacklist_section_title": {
+    "message": "શોધ અને તાજેતરની બ્લૉકલિસ્ટ"
+  },
+  "blacklist_section_desc": {
+    "message": "શોધ પરિણામો અને નવા ટૅબ પેજ પરથી છુપાવવા માટે વેબસાઇટ ઉમેરો."
+  },
+  "blacklist_group_custom": {
+    "message": "બધે બ્લૉક કરો"
+  },
+  "blacklist_label_url": {
+    "message": "URL નિયમ"
+  },
+  "blacklist_label_domain": {
+    "message": "સાઇટ ડોમેન"
+  },
+  "blacklist_label_prefix": {
+    "message": "સાઇટ અથવા પાથ"
+  },
+  "blacklist_label_exact": {
+    "message": "પૂર્ણ URL"
+  },
+  "blacklist_label_suffix": {
+    "message": "સાઇટ ડોમેન"
+  },
+  "blacklist_match_label": {
+    "message": "મેળનો પ્રકાર"
+  },
+  "blacklist_match_exact": {
+    "message": "આ પેજ"
+  },
+  "blacklist_match_prefix": {
+    "message": "આ સાઇટ પાથ"
+  },
+  "blacklist_match_suffix": {
+    "message": "આખી સાઇટ"
+  },
+  "blacklist_match_exact_tooltip": {
+    "message": "ફક્ત આ પેજને બ્લૉક કરે છે\n────────\nઉદાહરણ તરીકે, જો તમે x.com/home દાખલ કરો, તો ફક્ત તે પેજ છુપાશે અને અન્ય પેજ દેખાતા રહેશે."
+  },
+  "blacklist_match_prefix_tooltip": {
+    "message": "ફક્ત આ સાઇટ અને પાથ હેઠળના પેજને બ્લૉક કરે છે\n────────\nઉદાહરણ તરીકે, જો તમે baidu.com/search દાખલ કરો, તો baidu.com/search અને baidu.com/search/1 છુપાશે, પણ baidu.com/news દેખાતું રહેશે."
+  },
+  "blacklist_match_suffix_tooltip": {
+    "message": "આ સાઇટના સબડોમેન સહિત દરેક પેજને બ્લૉક કરે છે\n────────\nઉદાહરણ તરીકે, જો તમે baidu.com દાખલ કરો, તો baidu.com/search અને tieba.baidu.com બંને છુપાશે."
+  },
+  "blacklist_preview_title": {
+    "message": "વાસ્તવિક મેળનું પૂર્વાવલોકન"
+  },
+  "blacklist_preview_match": {
+    "message": "મેળ ખાય છે"
+  },
+  "blacklist_preview_miss": {
+    "message": "મેળ નહીં ખાય"
+  },
+  "blacklist_preview_www_note": {
+    "message": "www. વર્ઝન પણ આવરી લેવાય છે, તેથી baidu.com એ www.baidu.com સાથે પણ મેળ ખાશે."
+  },
+  "blacklist_placeholder_url": {
+    "message": "“આ પેજ” માટે પૂર્ણ સરનામું, અથવા “આખી સાઇટ” માટે સાઇટ ડોમેન વાપરો"
+  },
+  "blacklist_placeholder_domain": {
+    "message": "baidu.com"
+  },
+  "blacklist_placeholder_prefix": {
+    "message": "baidu.com અથવા baidu.com/search"
+  },
+  "blacklist_placeholder_exact": {
+    "message": "x.com/home"
+  },
+  "blacklist_placeholder_suffix": {
+    "message": "દા.ત. baidu.com"
+  },
+  "blacklist_add": {
+    "message": "ઉમેરો"
+  },
+  "blacklist_empty": {
+    "message": "હજી કોઈ બ્લૉક કરેલા URL નથી"
+  },
+  "blacklist_error_url": {
+    "message": "સાઇટ ડોમેન અથવા પૂર્ણ URL દાખલ કરો."
+  },
+  "blacklist_error_match_mode": {
+    "message": "ઓછામાં ઓછો એક મેળનો પ્રકાર પસંદ કરો."
+  },
+  "blacklist_error_suffix": {
+    "message": "સાઇટ ડોમેન દાખલ કરો."
+  },
+  "blacklist_error_domain": {
+    "message": "સાઇટ ડોમેન દાખલ કરો."
+  },
+  "blacklist_match_mode_prefix": {
+    "message": "આ URL થી શરૂ થતા પેજ સાથે મેળ ખાય છે"
+  },
+  "blacklist_match_unset": {
+    "message": "કોઈ મેળનો પ્રકાર પસંદ કર્યો નથી"
+  },
+  "blacklist_removed_toast": {
+    "message": "બ્લૉકલિસ્ટમાંથી કાઢી નાખ્યું"
+  },
+  "shortcuts_group_builtin": {
+    "message": "બિલ્ટ-ઇન"
+  },
+  "shortcuts_group_ai": {
+    "message": "AI શોધ"
+  },
+  "shortcuts_group_ai_desc": {
+    "message": "કીવર્ડ દાખલ કરો, Tab દબાવો, પછી તમારો પ્રૉમ્પ્ટ ટાઇપ કરો જેથી આમાંની કોઈ AI સાઇટ ખૂલે અને તે આપમેળે ભરાય (પહેલાં સાઇટમાં સાઇન ઇન કરો)"
+  },
+  "shortcuts_badge_custom": {
+    "message": "કસ્ટમ"
+  },
+  "shortcuts_badge_builtin": {
+    "message": "બિલ્ટ-ઇન"
+  },
+  "shortcuts_badge_ai": {
+    "message": "AI શોધ"
+  },
+  "shortcuts_label_key": {
+    "message": "કીવર્ડ"
+  },
+  "shortcuts_label_name": {
+    "message": "નામ"
+  },
+  "shortcuts_label_template": {
+    "message": "શોધ URL"
+  },
+  "shortcuts_label_alias": {
+    "message": "ઉપનામો"
+  },
+  "shortcuts_label_display_group": {
+    "message": "આમાં બતાવો"
+  },
+  "shortcuts_placeholder_required": {
+    "message": "આવશ્યક — એકથી વધુ માટે અલ્પવિરામ વાપરો, દા.ત. jd,bili"
+  },
+  "shortcuts_placeholder_optional_default": {
+    "message": "વૈકલ્પિક — ડિફૉલ્ટ રૂપે કીવર્ડ"
+  },
+  "shortcuts_placeholder_template": {
+    "message": "https://example.com/search?q={query}"
+  },
+  "shortcuts_placeholder_alias": {
+    "message": "વૈકલ્પિક — દા.ત. Bilibili, YouTube"
+  },
+  "shortcuts_insert_query": {
+    "message": "ક્વેરી વેરિએબલ દાખલ કરો"
+  },
+  "shortcuts_add": {
+    "message": "કસ્ટમ શોધ ઉમેરો"
+  },
+  "shortcuts_save": {
+    "message": "ફેરફારો સાચવો"
+  },
+  "shortcuts_cancel": {
+    "message": "રદ કરો"
+  },
+  "shortcuts_edit": {
+    "message": "ફેરફાર કરો"
+  },
+  "shortcuts_remove": {
+    "message": "કાઢી નાખો"
+  },
+  "shortcuts_empty_custom": {
+    "message": "હજી કોઈ કસ્ટમ શોધ નથી"
+  },
+  "shortcuts_empty_builtin": {
+    "message": "કોઈ બિલ્ટ-ઇન સાઇટ શોધ નથી"
+  },
+  "shortcuts_empty_engines": {
+    "message": "કોઈ બિલ્ટ-ઇન શોધ એન્જિન નથી"
+  },
+  "shortcuts_empty_ai": {
+    "message": "કોઈ બિલ્ટ-ઇન AI શોધ પ્રદાતા નથી"
+  },
+  "toast_saved": {
+    "message": "સાચવ્યું"
+  },
+  "toast_removed": {
+    "message": "કાઢી નાખ્યું"
+  },
+  "toast_error": {
+    "message": "ક્રિયા નિષ્ફળ. ફરી પ્રયાસ કરો."
+  },
+  "toast_error_template": {
+    "message": "શોધ ટેમ્પ્લેટમાં {query} હોવું આવશ્યક છે."
+  },
+  "toast_reset": {
+    "message": "રીસેટ થયું"
+  },
+  "shortcuts_reset_builtin": {
+    "message": "ડિફૉલ્ટ સૂચિ પર રીસેટ કરો"
+  },
+  "shortcuts_clear_custom": {
+    "message": "કસ્ટમ સાફ કરો"
+  },
+  "blacklist_clear": {
+    "message": "છુપાવવાના નિયમો સાફ કરો"
+  },
+  "toast_cleared": {
+    "message": "સાફ કર્યું"
+  },
+  "confirm_clear_custom": {
+    "message": "બધી કસ્ટમ શોધ સાફ કરીએ?"
+  },
+  "confirm_clear_blacklist": {
+    "message": "છુપાવવાના નિયમો સાફ કરીએ?"
+  },
+  "confirm_clear_favicon_blacklist": {
+    "message": "બાકાત નિયમો સાફ કરીએ?"
+  },
+  "confirm_reset_builtin": {
+    "message": "બિલ્ટ-ઇન સૂચિ રીસેટ કરીએ?"
+  },
+  "confirm_ok": {
+    "message": "પુષ્ટિ કરો"
+  },
+  "confirm_cancel": {
+    "message": "રદ કરો"
+  },
+  "confirm_remove_item": {
+    "message": "આ આઇટમ કાઢી નાખીએ?"
+  },
+  "shortcuts_error_key": {
+    "message": "કૃપા કરીને ટ્રિગર દાખલ કરો."
+  },
+  "shortcuts_error_key_space": {
+    "message": "ટ્રિગરમાં સ્પેસ ન હોઈ શકે."
+  },
+  "shortcuts_error_key_duplicate": {
+    "message": "આ ટ્રિગર પહેલેથી ઉપયોગમાં છે. બીજું પસંદ કરો."
+  },
+  "search_placeholder": {
+    "message": "શોધો અથવા URL ટાઇપ કરો…"
+  },
+  "overlay_search_placeholder": {
+    "message": "શોધો અથવા URL ટાઇપ કરો, ખુલ્લા ટૅબ શોધવા Tab દબાવો"
+  },
+  "options_page_title": {
+    "message": "Lumno સેટિંગ"
+  },
+  "newtab_page_title": {
+    "message": "નવું ટૅબ"
+  },
+  "recent_heading": {
+    "message": "તાજેતરના"
+  },
+  "recent_heading_latest": {
+    "message": "તાજેતરના"
+  },
+  "recent_heading_most": {
+    "message": "સૌથી વધુ મુલાકાત લીધેલી"
+  },
+  "bookmarks_heading": {
+    "message": "બુકમાર્ક"
+  },
+  "display_mode_title": {
+    "message": "પ્રદર્શન મોડ"
+  },
+  "bookmark_view_mode_folder": {
+    "message": "બહુસ્તરીય ફોલ્ડર વ્યૂ"
+  },
+  "bookmark_view_mode_list": {
+    "message": "બહુસ્તરીય સૂચિ વ્યૂ"
+  },
+  "bookmark_view_mode_top": {
+    "message": "ઉપરનો બુકમાર્ક બાર"
+  },
+  "bookmark_topbar_layout_title": {
+    "message": "બારની શૈલી"
+  },
+  "bookmark_topbar_layout_docked": {
+    "message": "ઉપર ડૉક કરેલું"
+  },
+  "bookmark_topbar_layout_floating": {
+    "message": "તરતું"
+  },
+  "bookmark_topbar_surface_title": {
+    "message": "બારનું બૅકગ્રાઉન્ડ"
+  },
+  "bookmark_topbar_surface_follow": {
+    "message": "શૈલી મુજબ"
+  },
+  "bookmark_topbar_surface_adaptive": {
+    "message": "અનુકૂલિત ધુમ્મસ"
+  },
+  "bookmark_topbar_surface_clear": {
+    "message": "લિક્વિડ ગ્લાસ"
+  },
+  "bookmark_topbar_surface_transparent": {
+    "message": "પારદર્શક"
+  },
+  "bookmark_topbar_surface_custom": {
+    "message": "કસ્ટમ રંગ"
+  },
+  "bookmark_topbar_color_pick": {
+    "message": "બૅકગ્રાઉન્ડ રંગ પસંદ કરો"
+  },
+  "bookmark_topbar_color_reset": {
+    "message": "આપમેળે રંગો પુનઃસ્થાપિત કરો"
+  },
+  "bookmark_topbar_color_picked": {
+    "message": "રંગ પસંદ કર્યો"
+  },
+  "bookmark_topbar_color_reset_done": {
+    "message": "આપમેળે રંગો પુનઃસ્થાપિત થયા"
+  },
+  "bookmark_topbar_color_unsupported": {
+    "message": "આ બ્રાઉઝરમાં સ્ક્રીન પરથી રંગ પસંદ કરવાનું સપોર્ટેડ નથી."
+  },
+  "bookmark_topbar_color_failed": {
+    "message": "રંગ પસંદ કરી શકાયો નહીં. ફરી પ્રયાસ કરો."
+  },
+  "bookmarks_empty_folder": {
+    "message": "કોઈ સામગ્રી નથી"
+  },
+  "bookmarks_page_prev": {
+    "message": "પાછલું પેજ"
+  },
+  "bookmarks_page_next": {
+    "message": "આગલું પેજ"
+  },
+  "bookmarks_open_manager": {
+    "message": "બુકમાર્ક મેનેજર ખોલો"
+  },
+  "bookmarks_open_in_new_tab_group": {
+    "message": "નવા ટૅબ ગ્રૂપમાં ખોલો"
+  },
+  "newtab_open_in_new_tab": {
+    "message": "નવા ટૅબમાં ખોલો"
+  },
+  "bookmarks_open_group_confirm_title": {
+    "message": "{count} ટૅબ ખોલીએ?"
+  },
+  "bookmarks_open_group_confirm_description": {
+    "message": "“{folder}” અને તેના સબફોલ્ડરના બધા બુકમાર્ક એક ટૅબ ગ્રૂપમાં ખૂલશે."
+  },
+  "bookmarks_open_group_confirm_button": {
+    "message": "ખોલો"
+  },
+  "bookmarks_untitled_folder": {
+    "message": "શીર્ષક વિનાનું ફોલ્ડર"
+  },
+  "bookmarks_open_group_partial_failed": {
+    "message": "{openedCount} ટૅબ ખોલ્યા; {failedCount} ખોલી શકાયા નહીં."
+  },
+  "bookmarks_open_group_failed": {
+    "message": "આ બુકમાર્ક ફોલ્ડર ખોલી શકાયું નહીં"
+  },
+  "bookmarks_copy_url": {
+    "message": "લિંક કૉપિ કરો"
+  },
+  "bookmarks_copy_url_success": {
+    "message": "બુકમાર્ક લિંક કૉપિ કરી"
+  },
+  "bookmarks_copy_url_failed": {
+    "message": "લિંક કૉપિ કરી શકાઈ નહીં. ફરી પ્રયાસ કરો."
+  },
+  "bookmarks_edit": {
+    "message": "ફેરફાર કરો"
+  },
+  "bookmarks_edit_dialog_title": {
+    "message": "બુકમાર્કમાં ફેરફાર કરો"
+  },
+  "bookmarks_edit_folder_dialog_title": {
+    "message": "ફોલ્ડરનું નામ બદલો"
+  },
+  "bookmarks_name_placeholder": {
+    "message": "નામ"
+  },
+  "bookmarks_invalid_url": {
+    "message": "માન્ય URL દાખલ કરો."
+  },
+  "bookmarks_updated": {
+    "message": "બુકમાર્ક અપડેટ થયો"
+  },
+  "bookmarks_folder_updated": {
+    "message": "ફોલ્ડર અપડેટ થયું"
+  },
+  "bookmarks_update_failed": {
+    "message": "બુકમાર્ક અપડેટ કરી શકાયો નહીં"
+  },
+  "bookmarks_delete": {
+    "message": "ડિલીટ કરો"
+  },
+  "bookmarks_context_menu_label": {
+    "message": "બુકમાર્ક ક્રિયાઓ"
+  },
+  "bookmarks_delete_undone": {
+    "message": "ડિલીટ કરવાનું પૂર્વવત્ કર્યું · ફરી ડિલીટ કરવા {shortcut}"
+  },
+  "bookmarks_delete_redone": {
+    "message": "ડિલીટ ફરી લાગુ કર્યું · પૂર્વવત્ કરવા {shortcut}"
+  },
+  "bookmarks_delete_failed": {
+    "message": "બુકમાર્ક ડિલીટ કરી શકાયો નહીં"
+  },
+  "bookmarks_move_success": {
+    "message": "“{title}” ખસેડ્યું · પૂર્વવત્ કરવા {shortcut}"
+  },
+  "bookmarks_move_undone": {
+    "message": "ખસેડવાનું પૂર્વવત્ કર્યું · ફરી કરવા {shortcut}"
+  },
+  "bookmarks_move_redone": {
+    "message": "ખસેડવાનું ફરી લાગુ કર્યું · પૂર્વવત્ કરવા {shortcut}"
+  },
+  "bookmarks_move_failed": {
+    "message": "બુકમાર્ક ખસેડી શકાયો નહીં"
+  },
+  "bookmarks_moved_to_shortcuts": {
+    "message": "શૉર્ટકટમાં ખસેડ્યું"
+  },
+  "search_tag_history": {
+    "message": "ઇતિહાસ"
+  },
+  "search_remove_history": {
+    "message": "ઇતિહાસમાંથી કાઢી નાખો"
+  },
+  "search_remove_history_tooltip": {
+    "message": "આ ઇતિહાસ એન્ટ્રી કાઢી નાખો"
+  },
+  "search_remove_top_site_tooltip": {
+    "message": "આ વારંવારનું પરિણામ કાઢી નાખો"
+  },
+  "search_copy_url_tooltip": {
+    "message": "લિંક કૉપિ કરો"
+  },
+  "search_copy_url_success": {
+    "message": "પરિણામની લિંક કૉપિ કરી"
+  },
+  "search_copy_url_failed": {
+    "message": "પરિણામની લિંક કૉપિ કરી શકાઈ નહીં. ફરી પ્રયાસ કરો."
+  },
+  "search_tag_top_site": {
+    "message": "વારંવાર"
+  },
+  "search_tag_bookmark": {
+    "message": "બુકમાર્ક"
+  },
+  "search_tag_open_tab": {
+    "message": "ખુલ્લું"
+  },
+  "visit_label": {
+    "message": "મુલાકાત લો"
+  },
+  "action_open_new_tab": {
+    "message": "નવું ટૅબ"
+  },
+  "action_open_background_new_tab": {
+    "message": "બૅકગ્રાઉન્ડમાં ખોલો"
+  },
+  "action_open_background_tab": {
+    "message": "બૅકગ્રાઉન્ડમાં ખોલો"
+  },
+  "action_go_current_tab": {
+    "message": "જાઓ"
+  },
+  "open_prefix": {
+    "message": "{title} ખોલો"
+  },
+  "open_url": {
+    "message": "{url} ખોલો"
+  },
+  "open_browser_url": {
+    "message": "{browser} ખોલો: {url}"
+  },
+  "mode_badge": {
+    "message": "મોડ: {mode}"
+  },
+  "mode_badge_follow_system": {
+    "message": "મોડ: {mode} (સિસ્ટમ)"
+  },
+  "mode_badge_follow_site": {
+    "message": "મોડ: {mode} (સાઇટ)"
+  },
+  "theme_label_dark": {
+    "message": "ડાર્ક"
+  },
+  "theme_label_light": {
+    "message": "લાઇટ"
+  },
+  "theme_label_system": {
+    "message": "સિસ્ટમ"
+  },
+  "command_newtab": {
+    "message": "નવું ટૅબ"
+  },
+  "search_input_clear": {
+    "message": "સાફ કરો"
+  },
+  "command_settings": {
+    "message": "સેટિંગ ખોલો"
+  },
+  "command_show_search": {
+    "message": "કમાન્ડ બાર ખોલો"
+  },
+  "command_show_search_prefill": {
+    "message": "વર્તમાન પેજના URL સાથે કમાન્ડ બાર ખોલો"
+  },
+  "command_show_search_prefill_v": {
+    "message": "વર્તમાન પેજનું URL કૉપિ કરો"
+  },
+  "mode_switch_title": {
+    "message": "{name}: {mode} મોડ પર સ્વિચ કરો"
+  },
+  "zen_badge_on": {
+    "message": "Zen: ચાલુ"
+  },
+  "zen_badge_off": {
+    "message": "Zen: બંધ"
+  },
+  "zen_enable_title": {
+    "message": "{name}: Zen મોડમાં જાઓ"
+  },
+  "zen_disable_title": {
+    "message": "{name}: Zen મોડમાંથી બહાર નીકળો"
+  },
+  "switch_to_tab": {
+    "message": "સ્વિચ કરો"
+  },
+  "untitled": {
+    "message": "શીર્ષક વિનાનું"
+  },
+  "site_search_default": {
+    "message": "સાઇટ"
+  },
+  "site_search_name_baidu": {
+    "message": "Baidu"
+  },
+  "site_search_name_metaso": {
+    "message": "Metaso AI Search"
+  },
+  "site_search_name_sogou": {
+    "message": "Sogou"
+  },
+  "site_search_name_shenma": {
+    "message": "Shenma"
+  },
+  "site_search_name_weibo": {
+    "message": "Weibo"
+  },
+  "site_search_name_xiaohongshu": {
+    "message": "Xiaohongshu"
+  },
+  "site_search_name_douyin": {
+    "message": "Douyin"
+  },
+  "site_search_name_jd": {
+    "message": "JD.com"
+  },
+  "site_search_name_chatgpt": {
+    "message": "ChatGPT"
+  },
+  "site_search_name_gemini": {
+    "message": "Gemini"
+  },
+  "site_search_name_doubao": {
+    "message": "Doubao"
+  },
+  "site_search_name_qianwen": {
+    "message": "Qwen"
+  },
+  "site_search_name_yuanbao": {
+    "message": "Yuanbao"
+  },
+  "site_search_name_minimax": {
+    "message": "MiniMax"
+  },
+  "site_search_name_deepseek": {
+    "message": "DeepSeek"
+  },
+  "site_search_name_kimi": {
+    "message": "Kimi"
+  },
+  "site_search_name_zhihu": {
+    "message": "Zhihu"
+  },
+  "site_search_name_douban": {
+    "message": "Douban"
+  },
+  "site_search_name_juejin": {
+    "message": "Juejin"
+  },
+  "site_search_name_taobao": {
+    "message": "Taobao"
+  },
+  "site_search_name_tmall": {
+    "message": "Tmall"
+  },
+  "site_search_name_wechat": {
+    "message": "WeChat ઑફિશિયલ એકાઉન્ટ"
+  },
+  "site_search_name_wikipedia": {
+    "message": "Wikipedia"
+  },
+  "site_search_name_lumno_help": {
+    "message": "Lumno સહાય કેન્દ્ર"
+  },
+  "help_center_recommended": {
+    "message": "સૂચવેલું વાંચન"
+  },
+  "help_center_no_results": {
+    "message": "કંઈ મળ્યું નહીં. ડેવલપરનો નિઃસંકોચ સંપર્ક કરો."
+  },
+  "search_in_site": {
+    "message": "{site} માં શોધો"
+  },
+  "search_in_site_query": {
+    "message": "{site} માં “{query}” શોધો"
+  },
+  "ask_ai_provider": {
+    "message": "{site} ને પૂછો"
+  },
+  "ask_ai_provider_query": {
+    "message": "{site} ને પૂછો “{query}”"
+  },
+  "site_search_tab_hint": {
+    "message": "{site} શોધો"
+  },
+  "search_query": {
+    "message": "“{query}” શોધો"
+  },
+  "search_in_site_ellipsis": {
+    "message": "{site} માં શોધો…"
+  },
+  "search_in_site_prefix": {
+    "message": "{site} માં શોધો |"
+  },
+  "search_open_tabs_only_prefix": {
+    "message": "ખુલ્લા ટૅબ શોધો |"
+  },
+  "search_open_tabs_only_entry": {
+    "message": "ખુલ્લા ટૅબ શોધો"
+  },
+  "action_search": {
+    "message": "શોધો"
+  },
+  "action_search_engine": {
+    "message": "{engine} માં શોધો"
+  },
+  "action_open_ai_web": {
+    "message": "{site} વેબ ઍપ ખોલો"
+  },
+  "action_search_google": {
+    "message": "Google માં શોધો"
+  },
+  "action_switch": {
+    "message": "સ્વિચ કરો"
+  },
+  "action_open": {
+    "message": "ખોલો"
+  },
+  "overlay_empty_result": {
+    "message": "કોઈ મેળ ખાતાં પરિણામો નથી"
+  },
+  "local_search_tab_hint": {
+    "message": "ફક્ત {source} શોધો"
+  },
+  "search_scope_switcher_label": {
+    "message": "શોધનો વ્યાપ: {scope}. બદલવા સક્રિય કરો."
+  },
+  "search_scope_current": {
+    "message": "વર્તમાન"
+  },
+  "search_scope_remove_confirmation": {
+    "message": "વ્યાપ દૂર કરવા ફરી Backspace દબાવો."
+  },
+  "search_number_jump_release_hint": {
+    "message": "નંબર બતાવવા છોડો"
+  },
+  "search_scope_menu_shortcut_hint": {
+    "message": "પૅનલ ખોલો"
+  },
+  "search_scope_menu_navigation_hint": {
+    "message": "ખસેડો"
+  },
+  "search_scope_menu_select_hint": {
+    "message": "સ્વિચ કરો"
+  },
+  "search_scope_menu_focus_toggle_hint": {
+    "message": "ફોકસ બદલો"
+  },
+  "search_scope_menu_filter_hint": {
+    "message": "ફિલ્ટર કરવા ટાઇપ કરો"
+  },
+  "search_scope_menu_filter_query": {
+    "message": "શોધ: {query}"
+  },
+  "search_scope_panel_placeholder": {
+    "message": "ચોક્કસ સાઇટની સામગ્રી શોધો…"
+  },
+  "search_scope_active_placeholder": {
+    "message": "આ વ્યાપમાં શોધો; વ્યાપ પૅનલ ખોલવા ફરી Tab દબાવો…"
+  },
+  "search_scope_group_engines": {
+    "message": "શોધ એન્જિન"
+  },
+  "search_scope_group_local": {
+    "message": "બ્રાઉઝરની સામગ્રી"
+  },
+  "search_scope_group_ai": {
+    "message": "AI શોધ"
+  },
+  "search_scope_group_sites": {
+    "message": "સાઇટ શોધ"
+  },
+  "search_scope_group_aggregates": {
+    "message": "સંયુક્ત શોધ"
+  },
+  "aggregate_search_action": {
+    "message": "{name} વડે શોધો"
+  },
+  "aggregate_search_action_query": {
+    "message": "{name} વડે “{query}” શોધો"
+  },
+  "aggregate_search_group_title": {
+    "message": "સંયુક્ત શોધ"
+  },
+  "aggregate_search_add": {
+    "message": "સંયુક્ત શોધ ઉમેરો"
+  },
+  "aggregate_search_clear": {
+    "message": "સંયુક્ત શોધ સાફ કરો"
+  },
+  "confirm_clear_aggregate_search": {
+    "message": "બધી સંયુક્ત શોધ સાફ કરીએ?"
+  },
+  "aggregate_search_name_label": {
+    "message": "નામ"
+  },
+  "aggregate_search_name_required_error": {
+    "message": "આ સંયુક્ત શોધ માટે નામ દાખલ કરો."
+  },
+  "aggregate_search_key_placeholder": {
+    "message": "ઉદાહરણ તરીકે, tech"
+  },
+  "aggregate_search_default_name": {
+    "message": "સંયુક્ત શોધ"
+  },
+  "aggregate_search_sources_label": {
+    "message": "શોધ સ્રોતો"
+  },
+  "aggregate_search_selected_count": {
+    "message": "{count}/{max} પસંદ કર્યા"
+  },
+  "aggregate_search_min_sources_error": {
+    "message": "ઓછામાં ઓછા 2 શોધ સ્રોત પસંદ કરો."
+  },
+  "aggregate_search_max_sources_error": {
+    "message": "તમે વધુમાં વધુ 10 શોધ સ્રોત પસંદ કરી શકો છો."
+  },
+  "settings_aggregate_search_auto_group_title": {
+    "message": "સંયુક્ત શોધના ટૅબ આપમેળે ગ્રૂપ કરો"
+  },
+  "settings_aggregate_search_auto_group_desc": {
+    "message": "ચાલુ હોય ત્યારે, સંયુક્ત શોધથી ખૂલેલા બધા ટૅબ “સંયુક્ત શોધનું નામ: શોધ ક્વેરી” નામના એક ગ્રૂપમાં મૂકવામાં આવે છે"
+  },
+  "aggregate_search_badge": {
+    "message": "સંયુક્ત"
+  },
+  "aggregate_search_source_summary": {
+    "message": "{count} સ્રોત"
+  },
+  "aggregate_search_source_summary_unavailable": {
+    "message": "{count} સ્રોત · {unavailable} અનુપલબ્ધ · અપડેટ આવશ્યક"
+  },
+  "aggregate_search_sources_unavailable_error": {
+    "message": "આ સંયુક્ત શોધમાં કાઢી નાખેલા અથવા બંધ કરેલા સ્રોત છે. તેને સેટિંગમાં અપડેટ કરો."
+  },
+  "aggregate_search_in_progress": {
+    "message": "આ સંયુક્ત શોધ પહેલેથી ચાલી રહી છે."
+  },
+  "aggregate_search_partial_failure": {
+    "message": "સંયુક્ત શોધનાં કેટલાંક પરિણામો ખોલી શકાયાં નહીં."
+  },
+  "aggregate_search_degraded_success": {
+    "message": "શોધ પરિણામો ખૂલ્યાં, પણ ટૅબ ગ્રૂપ કરવા, નામ આપવા અથવા ફોકસ કરવાનું પૂર્ણ થઈ શક્યું નહીં."
+  },
+  "aggregate_search_storage_unavailable_error": {
+    "message": "સંયુક્ત શોધ લોડ થઈ શકી નહીં. સેટિંગ ફરી લોડ કરીને ફરી પ્રયાસ કરો."
+  },
+  "aggregate_search_source_selection_unavailable_error": {
+    "message": "અનુપલબ્ધ સ્રોત દૂર કરો અને ઓછામાં ઓછા બે ઉપલબ્ધ સ્રોત પસંદ કરો."
+  },
+  "aggregate_search_unavailable_group": {
+    "message": "અનુપલબ્ધ સ્રોત"
+  },
+  "aggregate_search_unavailable_name": {
+    "message": "અનુપલબ્ધ સ્રોત ({source})"
+  },
+  "aggregate_search_name_duplicate_error": {
+    "message": "આ નામની સંયુક્ત શોધ પહેલેથી અસ્તિત્વમાં છે."
+  },
+  "aggregate_search_max_items_error": {
+    "message": "તમે વધુમાં વધુ 8 સંયુક્ત શોધ બનાવી શકો છો."
+  },
+  "overlay_empty_open_tabs": {
+    "message": "કોઈ ટૅબ નથી"
+  },
+  "site_icon_alt": {
+    "message": "સાઇટ"
+  },
+  "site_brand_wechat_official": {
+    "message": "WeChat ઑફિશિયલ એકાઉન્ટ"
+  },
+  "settings_sync_title": {
+    "message": "{browser} બિલ્ટ-ઇન સિંક"
+  },
+  "settings_sync_section_title": {
+    "message": "બ્રાઉઝરનું બિલ્ટ-ઇન સિંક"
+  },
+  "settings_sync_desc": {
+    "message": "સેટિંગ તમારા વર્તમાન બ્રાઉઝરની બિલ્ટ-ઇન સિંક સેવા દ્વારા આપમેળે સિંક થાય છે"
+  },
+  "sync_status_unavailable": {
+    "message": "સિંક અનુપલબ્ધ"
+  },
+  "sync_status_unavailable_hint": {
+    "message": "સિંક અનુપલબ્ધ: તમારું વર્તમાન બ્રાઉઝર બિલ્ટ-ઇન સિંકને સપોર્ટ કરે છે અને તે ચાલુ છે કે નહીં તે તપાસો."
+  },
+  "sync_status_ready": {
+    "message": "ઑટો સિંક ચાલુ છે"
+  },
+  "sync_status_done": {
+    "message": "સિંક પૂર્ણ"
+  },
+  "sync_status_failed": {
+    "message": "સિંક નિષ્ફળ"
+  },
+  "sync_status_failed_reason": {
+    "message": "સિંક નિષ્ફળ: {reason}"
+  },
+  "sync_action_now": {
+    "message": "હમણાં સિંક કરો"
+  },
+  "sync_action_export": {
+    "message": "સેટિંગ નિકાસ કરો"
+  },
+  "sync_action_import": {
+    "message": "સેટિંગ આયાત કરો"
+  },
+  "sync_tooltip_export": {
+    "message": "સેટિંગ નિકાસ કરો"
+  },
+  "sync_tooltip_import": {
+    "message": "સેટિંગ આયાત કરો"
+  },
+  "sync_tooltip_last_manual": {
+    "message": "છેલ્લું આયાત/મેન્યુઅલ સિંક {time}"
+  },
+  "sync_tooltip_default": {
+    "message": "મેન્યુઅલ સિંક"
+  },
+  "sync_status_hint": {
+    "message": "Lumno સેટિંગ તમારા વર્તમાન બ્રાઉઝરની બિલ્ટ-ઇન સિંક સેવા દ્વારા આપમેળે સિંક થાય છે. સિંક એક જ બ્રાઉઝર એકાઉન્ટમાં સાઇન ઇન કરેલા ડિવાઇસ વચ્ચે કામ કરે છે, પણ અલગ-અલગ બ્રાઉઝર વચ્ચે નહીં."
+  },
+  "sync_export_done": {
+    "message": "સેટિંગ નિકાસ થયા"
+  },
+  "sync_importing": {
+    "message": "સેટિંગ આયાત કરી રહ્યાં છીએ…"
+  },
+  "sync_import_done": {
+    "message": "આયાત પૂર્ણ"
+  },
+  "sync_import_invalid": {
+    "message": "અમાન્ય સેટિંગ ફાઇલ"
+  },
+  "document_pip_picker_unsupported_policy": {
+    "message": "આ વેબસાઇટે સાઇટ નીતિ દ્વારા ચિત્રમાં ચિત્ર બંધ કર્યું છે."
+  },
+  "document_pip_picker_unsupported_iframe": {
+    "message": "Document Picture-in-Picture ફક્ત ટોચના સ્તરના પેજમાં કામ કરે છે."
+  },
+  "document_pip_picker_unsupported_insecure": {
+    "message": "Document Picture-in-Picture માટે HTTPS આવશ્યક છે."
+  },
+  "document_pip_picker_open_failed_not_allowed": {
+    "message": "વેબસાઇટ અથવા બ્રાઉઝરે Document Picture-in-Picture ખોલવાનું બ્લૉક કર્યું."
+  },
+  "document_pip_picker_open_failed_not_supported": {
+    "message": "આ પેજ પર આ પસંદગી Document Picture-in-Picture માં ખોલી શકાતી નથી."
+  },
+  "document_pip_picker_open_failed_invalid_state": {
+    "message": "તરતી વિંડો પહેલેથી ખુલ્લી છે અથવા પેજની સ્થિતિ બદલાઈ ગઈ છે. ફરી પ્રયાસ કરો."
+  },
+  "document_pip_picker_open_failed_security": {
+    "message": "બ્રાઉઝરે આ પેજ પર સુરક્ષા કારણોસર આ ક્રિયા બ્લૉક કરી."
+  },
+  "newtab_page_label": {
+    "message": "નવું ટૅબ"
+  },
+  "settings_title": {
+    "message": "સેટિંગ"
+  },
+  "extension_page_label": {
+    "message": "એક્સ્ટેન્શન પેજ"
+  },
+  "settings_button_aria": {
+    "message": "સેટિંગ"
+  },
+  "copy_page_url_failed_retry": {
+    "message": "કૉપિ નિષ્ફળ. કૃપા કરીને ફરી પ્રયાસ કરો."
+  },
+  "copy_page_url_success": {
+    "message": "વર્તમાન પેજનું URL કૉપિ કર્યું"
+  },
+  "copy_page_url_failed_permission": {
+    "message": "કૉપિ નિષ્ફળ. ક્લિપબોર્ડની પરવાનગી તપાસો."
+  },
+  "recent_pin_add": {
+    "message": "પિન કરો"
+  },
+  "recent_pin_remove": {
+    "message": "અનપિન કરો"
+  },
+  "recent_pin_limit": {
+    "message": "તમે વધુમાં વધુ 3 કાર્ડ પિન કરી શકો છો"
+  },
+  "recent_pin_limit_toast": {
+    "message": "તમે વધુમાં વધુ 3 કાર્ડ પિન કરી શકો છો."
+  },
+  "recent_dismiss_tooltip": {
+    "message": "કાઢી નાખો"
+  },
+  "recent_add_to_shortcuts": {
+    "message": "શૉર્ટકટમાં ઉમેરો"
+  },
+  "recent_dismiss_pinned_tooltip": {
+    "message": "અનપિન કરીને કાઢી નાખો"
+  },
+  "recent_dismiss_toast": {
+    "message": "કાઢી નાખ્યું"
+  },
+  "recent_dismiss_pinned_toast": {
+    "message": "અનપિન કરીને કાઢી નાખ્યું"
+  },
+  "recent_context_menu_label": {
+    "message": "તાજેતરની સાઇટની ક્રિયાઓ"
+  },
+  "tab_switcher_title": {
+    "message": "તાજેતરના ટૅબ"
+  },
+  "tab_switcher_untitled": {
+    "message": "શીર્ષક વિનાનું"
+  },
+  "tab_switcher_favicon_alt": {
+    "message": "સાઇટ આઇકન"
+  },
+  "tab_switcher_close_tab": {
+    "message": "ટૅબ બંધ કરો"
+  },
+  "tab_switcher_tab_closed": {
+    "message": "ટૅબ બંધ થયું"
+  },
+  "tab_switcher_close_failed": {
+    "message": "આ ટૅબ બંધ કરી શકાયું નહીં"
+  },
+  "command_show_tab_switcher": {
+    "message": "તાજેતરના ટૅબ સ્વિચર ખોલો"
+  },
+  "shortcut_reference_title": {
+    "message": "શૉર્ટકટ સૂચિ"
+  },
+  "shortcut_reference_group_search": {
+    "message": "કમાન્ડ બાર"
+  },
+  "shortcut_reference_group_page_link": {
+    "message": "પેજ લિંક"
+  },
+  "shortcut_reference_group_tab_switcher": {
+    "message": "ટૅબ સ્વિચર"
+  },
+  "shortcut_reference_group_web_clip": {
+    "message": "વેબ ક્લિપ"
+  },
+  "shortcut_reference_unset": {
+    "message": "સેટ નથી"
+  },
+  "shortcut_reference_show_search_title": {
+    "message": "કમાન્ડ બાર ખોલો"
+  },
+  "shortcut_reference_show_search_desc": {
+    "message": "વર્તમાન પેજ પર Lumno ખોલો"
+  },
+  "shortcut_reference_show_search_prefill_title": {
+    "message": "વર્તમાન પેજના URL સાથે ખોલો"
+  },
+  "shortcut_reference_show_search_prefill_desc": {
+    "message": "Lumno ખોલો અને વર્તમાન પેજનું URL પહેલેથી ભરો"
+  },
+  "shortcut_reference_copy_url_title": {
+    "message": "વર્તમાન પેજનું URL કૉપિ કરો"
+  },
+  "shortcut_reference_copy_url_desc": {
+    "message": "Lumno ખોલ્યા વિના વર્તમાન પેજનું URL કૉપિ કરો"
+  },
+  "shortcut_reference_tab_switcher_title": {
+    "message": "તાજેતરના ટૅબ સ્વિચર ખોલો"
+  },
+  "shortcut_reference_tab_switcher_desc": {
+    "message": "તાજેતરના ટૅબનું સ્વિચર ખોલો"
+  },
+  "shortcut_reference_search_input_history_title": {
+    "message": "પાછલું અથવા આગલું ઇનપુટ"
+  },
+  "shortcut_reference_search_input_history_desc": {
+    "message": "સબમિટ કરેલા ઇનપુટના ઇતિહાસમાં પાછળ અથવા આગળ જાઓ"
+  },
+  "shortcut_reference_search_navigate_title": {
+    "message": "સૂચનો વચ્ચે ખસો"
+  },
+  "shortcut_reference_search_navigate_desc": {
+    "message": "Lumno શોધ અને નવા ટૅબમાં સક્રિય પરિણામ ખસેડો"
+  },
+  "shortcut_reference_search_number_jump_title": {
+    "message": "નંબરવાળા પરિણામ પર જાઓ"
+  },
+  "shortcut_reference_search_number_jump_desc": {
+    "message": "મુખ્ય મૉડિફાયર દબાવી રાખો, છોડો, પછી મેળ ખાતું પરિણામ સક્રિય કરવા 0–9 દબાવો"
+  },
+  "shortcut_reference_search_number_jump_shortcut": {
+    "message": "{modifier} 0.4s દબાવી રાખો, છોડો, પછી 0–9 દબાવો"
+  },
+  "shortcut_reference_search_confirm_title": {
+    "message": "પસંદ કરેલી ક્રિયા ચલાવો"
+  },
+  "shortcut_reference_search_confirm_desc": {
+    "message": "ખોલો, શોધો, ટૅબ બદલો અથવા પસંદ કરેલો કમાન્ડ ચલાવો"
+  },
+  "shortcut_reference_search_tab_mode_title": {
+    "message": "પૂર્ણ કરો અથવા શોધ મોડમાં જાઓ"
+  },
+  "shortcut_reference_search_tab_mode_desc": {
+    "message": "સૂચન પૂર્ણ કરો અથવા સાઇટ/ખુલ્લા ટૅબ શોધ મોડમાં જાઓ"
+  },
+  "shortcut_reference_search_open_scope_menu_title": {
+    "message": "શોધ વ્યાપ પૅનલ ખોલો"
+  },
+  "shortcut_reference_search_open_scope_menu_desc": {
+    "message": "ઇનપુટ ખાલી હોય ત્યારે Tab બે વાર દબાવો; શોધ વ્યાપ પસંદ કરેલો હોય ત્યારે Tab એક વાર દબાવો"
+  },
+  "shortcut_reference_search_close_title": {
+    "message": "બંધ કરો અથવા મોડ છોડો"
+  },
+  "shortcut_reference_search_close_desc": {
+    "message": "Lumno શોધ બંધ કરો અથવા સાઇટ/ખુલ્લા ટૅબ શોધ મોડ છોડો"
+  },
+  "shortcut_reference_search_current_tab_title": {
+    "message": "વર્તમાન ટૅબમાં ખોલો"
+  },
+  "shortcut_reference_search_current_tab_desc": {
+    "message": "સામાન્ય રીતે નવું ટૅબ ખોલતી ક્રિયાઓ માટે વર્તમાન ટૅબ વાપરો"
+  },
+  "shortcut_reference_search_switch_new_tab_title": {
+    "message": "મેળ ખાતું ટૅબ પરિણામ નવા ટૅબમાં ખોલો"
+  },
+  "shortcut_reference_search_switch_new_tab_desc": {
+    "message": "કોઈ પરિણામ ખુલ્લા ટૅબ સાથે મેળ ખાય ત્યારે, તેનું URL નવા ટૅબમાં ખોલો"
+  },
+  "shortcut_reference_tab_switcher_cycle_title": {
+    "message": "ટૅબ સ્વિચરમાં પસંદગી ખસેડો"
+  },
+  "shortcut_reference_tab_switcher_cycle_desc": {
+    "message": "ટૅબ સ્વિચરમાં પાછલા અથવા આગલા ટૅબ પર જાઓ"
+  },
+  "shortcut_reference_tab_switcher_confirm_title": {
+    "message": "પસંદ કરેલા ટૅબ પર સ્વિચ કરો"
+  },
+  "shortcut_reference_tab_switcher_confirm_desc": {
+    "message": "ટૅબ સ્વિચરમાં પસંદ કરેલા ટૅબની પુષ્ટિ કરો"
+  },
+  "shortcut_reference_document_pip_parent_title": {
+    "message": "બહારનો ઘટક પસંદ કરો"
+  },
+  "shortcut_reference_document_pip_parent_desc": {
+    "message": "વેબ ક્લિપ પસંદ કરતી વખતે મોટા પેરન્ટ ઘટક પર જાઓ"
+  },
+  "shortcut_reference_document_pip_child_title": {
+    "message": "અંદરનો ઘટક પસંદ કરો"
+  },
+  "shortcut_reference_document_pip_child_desc": {
+    "message": "વેબ ક્લિપ પસંદ કરતી વખતે નાના ચાઇલ્ડ ઘટક પર જાઓ"
+  },
+  "newtab_shortcuts_section_label": {
+    "message": "શૉર્ટકટ"
+  },
+  "newtab_shortcuts_add": {
+    "message": "શૉર્ટકટ ઉમેરો"
+  },
+  "newtab_shortcuts_hide_add": {
+    "message": "છુપાવો"
+  },
+  "newtab_shortcuts_add_hidden": {
+    "message": "“+” છુપાવ્યું. તેને સેટિંગ → દેખાવ → શૉર્ટકટ → “+” બતાવો માં ફરી ચાલુ કરો."
+  },
+  "newtab_shortcuts_dialog_title": {
+    "message": "શૉર્ટકટ ઉમેરો"
+  },
+  "newtab_shortcuts_name_label": {
+    "message": "નામ"
+  },
+  "newtab_shortcuts_name_placeholder": {
+    "message": "Lumno"
+  },
+  "newtab_shortcuts_url_label": {
+    "message": "URL"
+  },
+  "newtab_shortcuts_url_info_label": {
+    "message": "સપોર્ટેડ URL વિશે"
+  },
+  "newtab_shortcuts_url_info": {
+    "message": "બ્રાઉઝરના આંતરિક પેજ પણ સપોર્ટેડ છે, ઉદાહરણ તરીકે:\nchrome://inspect/#devices"
+  },
+  "newtab_shortcuts_url_info__firefox": {
+    "message": "Firefox એક્સ્ટેન્શનને about:config જેવા બિલ્ટ-ઇન પેજ ખોલવા દેતું નથી, તેથી વેબ સરનામું વાપરો."
+  },
+  "newtab_shortcuts_url_placeholder": {
+    "message": "https://example.com"
+  },
+  "newtab_shortcuts_icon_label": {
+    "message": "આઇકન (વૈકલ્પિક)"
+  },
+  "newtab_shortcuts_icon_mode_label": {
+    "message": "આઇકનનો સ્રોત"
+  },
+  "newtab_shortcuts_icon_builtin": {
+    "message": "બિલ્ટ-ઇન આઇકન"
+  },
+  "newtab_shortcuts_icon_builtin_hint": {
+    "message": "Lumnoના બિલ્ટ-ઇન ઉચ્ચ ગુણવત્તાવાળા આઇકન વાપરો."
+  },
+  "newtab_shortcuts_icon_builtin_network_hint": {
+    "message": "કોઈ નેટવર્ક વિનંતીની જરૂર નથી."
+  },
+  "newtab_shortcuts_icon_builtin_info_label": {
+    "message": "બિલ્ટ-ઇન આઇકન વિશે"
+  },
+  "newtab_shortcuts_icon_service": {
+    "message": "Gstatic (તૃતીય-પક્ષ આઇકન)"
+  },
+  "newtab_shortcuts_icon_favicon_is": {
+    "message": "Favicon.is (તૃતીય-પક્ષ આઇકન)"
+  },
+  "newtab_shortcuts_icon_favicon_is_hint": {
+    "message": "મોટા આઇકન માટે ડોમેન Favicon.is ને મોકલો."
+  },
+  "newtab_shortcuts_icon_favicon_is_caution": {
+    "message": "ડોમેનના આઇકન વર્તમાન પેજના આઇકનથી અલગ હોઈ શકે છે."
+  },
+  "newtab_shortcuts_icon_cache": {
+    "message": "બ્રાઉઝર કૅશ"
+  },
+  "newtab_shortcuts_icon_service_hint": {
+    "message": "સાઇટ ડોમેન Gstatic ને મોકલો. સ્થિર, ઉચ્ચ ગુણવત્તા."
+  },
+  "newtab_shortcuts_icon_cache_hint": {
+    "message": "બ્રાઉઝર કૅશમાંથી ઝડપી, સચોટ વેબસાઇટ આઇકન."
+  },
+  "newtab_shortcuts_icon_custom_hint": {
+    "message": "ડિફૉલ્ટ રૂપે આ ડિવાઇસ પર સાચવવામાં આવે છે, બ્રાઉઝર સિંકની બહાર."
+  },
+  "newtab_shortcuts_icon_service_caution": {
+    "message": "કેટલીક વેબસાઇટ ઓળખાઈ ન શકે."
+  },
+  "newtab_shortcuts_icon_cache_caution": {
+    "message": "સાઇટ સેટિંગને કારણે નોટિફિકેશન ડૉટ ઉમેરાઈ શકે અથવા સ્પષ્ટતા ઘટી શકે."
+  },
+  "newtab_shortcuts_icon_plate_label": {
+    "message": "અનિયમિત આઇકનમાં બૅકગ્રાઉન્ડ ઉમેરો"
+  },
+  "newtab_shortcuts_icon_plate_color_label": {
+    "message": "બૅકગ્રાઉન્ડ રંગ"
+  },
+  "newtab_shortcuts_icon_plate_color_auto": {
+    "message": "આઇકનમાંથી"
+  },
+  "newtab_shortcuts_icon_plate_color_custom": {
+    "message": "કસ્ટમ રંગ"
+  },
+  "newtab_shortcuts_icon_custom_sync_hint": {
+    "message": "WebDAV વડે ડિવાઇસ વચ્ચે સિંક કરો."
+  },
+  "newtab_shortcuts_icon_refresh_success": {
+    "message": "આઇકન મળ્યું"
+  },
+  "newtab_shortcuts_icon_cache_failed": {
+    "message": "કોઈ કૅશ કરેલું આઇકન મળ્યું નથી. આ વેબસાઇટની મુલાકાત લો, પછી ફરી રિફ્રેશ કરો."
+  },
+  "newtab_shortcuts_icon_source_unavailable": {
+    "message": "આ સ્રોત અનુપલબ્ધ છે. બ્રાઉઝર કૅશ અથવા કસ્ટમ આઇકન પસંદ કરો."
+  },
+  "newtab_shortcuts_icon_online": {
+    "message": "ઑનલાઇન આઇકન"
+  },
+  "newtab_shortcuts_icon_custom": {
+    "message": "કસ્ટમ આઇકન"
+  },
+  "newtab_shortcuts_icon_current": {
+    "message": "વર્તમાન આઇકન"
+  },
+  "newtab_shortcuts_icon_refresh": {
+    "message": "રિફ્રેશ કરો"
+  },
+  "newtab_shortcuts_icon_refreshing": {
+    "message": "રિફ્રેશ કરી રહ્યાં છીએ…"
+  },
+  "newtab_shortcuts_icon_refresh_failed": {
+    "message": "આઇકન રિફ્રેશ કરી શકાયું નહીં. પછીથી ફરી પ્રયાસ કરો."
+  },
+  "newtab_shortcuts_icon_custom_required": {
+    "message": "કસ્ટમ આઇકન માટે છબી પસંદ કરો."
+  },
+  "newtab_shortcuts_icon_online_info_label": {
+    "message": "ઑનલાઇન આઇકન વિશે"
+  },
+  "newtab_shortcuts_icon_online_info": {
+    "message": "તમે રિફ્રેશ કરીને સાચવો નહીં ત્યાં સુધી ઑનલાઇન આઇકન બદલાતા નથી. રિફ્રેશ આઇકન સેવા અથવા બ્રાઉઝર કૅશ વાપરે છે."
+  },
+  "newtab_shortcuts_icon_info_label": {
+    "message": "સ્થાનિક શૉર્ટકટ આઇકન વિશે"
+  },
+  "newtab_shortcuts_icon_info": {
+    "message": "PNG, JPG અને WebP સપોર્ટેડ છે. 128×128 px અથવા વધુ મોટું પારદર્શક ચોરસ આઇકન ભલામણ કરેલ છે. ડિફૉલ્ટ રૂપે આ ડિવાઇસ પર સાચવવામાં આવે છે; WebDAV સિંક ઉપલબ્ધ છે."
+  },
+  "newtab_shortcuts_folder_item_icon_info": {
+    "message": "PNG, JPG અને WebP સપોર્ટેડ છે. 128×128 px અથવા વધુ મોટું પારદર્શક ચોરસ આઇકન ભલામણ કરેલ છે. ફક્ત આ ડિવાઇસ પર સાચવવામાં આવે છે."
+  },
+  "newtab_shortcuts_icon_choose": {
+    "message": "છબી પસંદ કરો"
+  },
+  "newtab_shortcuts_icon_replace": {
+    "message": "છબી બદલો"
+  },
+  "newtab_shortcuts_icon_remove": {
+    "message": "કાઢી નાખો"
+  },
+  "newtab_shortcuts_icon_unsupported": {
+    "message": "PNG, JPG અથવા WebP છબી પસંદ કરો."
+  },
+  "newtab_shortcuts_icon_dimensions_too_large": {
+    "message": "છબી 4096×4096 px કરતાં મોટી ન હોવી જોઈએ"
+  },
+  "newtab_shortcuts_icon_invalid": {
+    "message": "આ છબી વાપરી શકાઈ નહીં. બીજી છબી પસંદ કરો."
+  },
+  "newtab_shortcuts_icon_storage_error": {
+    "message": "સ્થાનિક આઇકન સાચવી શકાયું નહીં. બીજી છબી અજમાવો."
+  },
+  "folder_rename": {
+    "message": "નામ બદલો"
+  },
+  "folder_color_change": {
+    "message": "રંગ બદલો"
+  },
+  "folder_color_format": {
+    "message": "રંગ ફૉર્મેટ"
+  },
+  "folder_color_title": {
+    "message": "ફોલ્ડરનો રંગ"
+  },
+  "folder_color_description": {
+    "message": "શૉર્ટકટ અને મેનૂમાં પણ આ ફોલ્ડર પર લાગુ થાય છે. આ ડિવાઇસ પર સાચવવામાં આવે છે."
+  },
+  "folder_color_presets": {
+    "message": "પ્રીસેટ રંગો"
+  },
+  "folder_color_default": {
+    "message": "ડિફૉલ્ટ રંગ"
+  },
+  "folder_color_reset": {
+    "message": "રીસેટ કરો"
+  },
+  "folder_color_saved": {
+    "message": "સાચવેલા રંગો"
+  },
+  "folder_color_save_current": {
+    "message": "વર્તમાન રંગ સાચવો"
+  },
+  "folder_color_remove_saved": {
+    "message": "સાચવેલો રંગ ડિલીટ કરો"
+  },
+  "folder_color_saved_delete_failed": {
+    "message": "આ રંગ ડિલીટ કરી શકાયો નહીં. ફરી પ્રયાસ કરો."
+  },
+  "folder_color_saved_load_failed": {
+    "message": "સાચવેલા રંગો લોડ થઈ શક્યા નહીં. ફરી પ્રયાસ કરવા કલર પિકર ફરી ખોલો."
+  },
+  "folder_color_saved_save_failed": {
+    "message": "આ રંગ સાચવી શકાયો નહીં. ફરી પ્રયાસ કરો."
+  },
+  "folder_color_invalid": {
+    "message": "માન્ય HEX રંગ અથવા 0 થી 255 વચ્ચેના RGB મૂલ્યો દાખલ કરો."
+  },
+  "folder_color_save_failed": {
+    "message": "ફોલ્ડરનો રંગ સાચવી શકાયો નહીં. ફરી પ્રયાસ કરો."
+  },
+  "newtab_shortcuts_cancel": {
+    "message": "રદ કરો"
+  },
+  "newtab_shortcuts_done": {
+    "message": "થઈ ગયું"
+  },
+  "newtab_shortcuts_save": {
+    "message": "સાચવો"
+  },
+  "newtab_shortcuts_invalid_url": {
+    "message": "માન્ય http, https અથવા બ્રાઉઝરનું આંતરિક URL દાખલ કરો."
+  },
+  "newtab_shortcuts_limit_reached": {
+    "message": "તમે વધુમાં વધુ {count} શૉર્ટકટ ઉમેરી શકો છો."
+  },
+  "newtab_shortcuts_added": {
+    "message": "શૉર્ટકટ ઉમેર્યો"
+  },
+  "context_menu_add_page_shortcut": {
+    "message": "Lumno નવા ટૅબના શૉર્ટકટમાં ઉમેરો"
+  },
+  "page_shortcut_added": {
+    "message": "Lumno નવા ટૅબના શૉર્ટકટમાં ઉમેર્યું"
+  },
+  "newtab_shortcuts_already_added": {
+    "message": "પહેલેથી શૉર્ટકટમાં છે"
+  },
+  "newtab_shortcuts_sync_limit_reached": {
+    "message": "શૉર્ટકટ બ્રાઉઝરની સિંક જગ્યા કરતાં વધી ગયા છે, તેથી નવા શૉર્ટકટ આ ડિવાઇસ પર જ રહેશે. તેમને પણ સિંક કરવા સેટિંગમાં WebDAV ચાલુ કરો."
+  },
+  "newtab_shortcuts_edited": {
+    "message": "શૉર્ટકટ અપડેટ થયો"
+  },
+  "newtab_shortcuts_removed": {
+    "message": "શૉર્ટકટ કાઢી નાખ્યો"
+  },
+  "newtab_shortcuts_removed_undo": {
+    "message": "શૉર્ટકટ કાઢી નાખ્યો · પૂર્વવત્ કરવા {shortcut}"
+  },
+  "newtab_shortcuts_remove_undone": {
+    "message": "શૉર્ટકટ પુનઃસ્થાપિત થયો · ફરી કરવા {shortcut}"
+  },
+  "newtab_shortcuts_remove_redone": {
+    "message": "શૉર્ટકટ કાઢી નાખ્યો · પૂર્વવત્ કરવા {shortcut}"
+  },
+  "newtab_shortcuts_add_undone": {
+    "message": "શૉર્ટકટ ઉમેરવાનું પૂર્વવત્ કર્યું · ફરી કરવા {shortcut}"
+  },
+  "newtab_shortcuts_add_redone": {
+    "message": "શૉર્ટકટ ફરી ઉમેર્યો · પૂર્વવત્ કરવા {shortcut}"
+  },
+  "newtab_recent_added_to_folder": {
+    "message": "“{folder}” માં ઉમેર્યું"
+  },
+  "newtab_shortcuts_open_folder": {
+    "message": "ફોલ્ડર ખોલો"
+  },
+  "newtab_shortcuts_from_bookmarks": {
+    "message": "(બુકમાર્કમાંથી)"
+  },
+  "newtab_shortcuts_folder_added": {
+    "message": "ફોલ્ડર શૉર્ટકટમાં ઉમેર્યું"
+  },
+  "newtab_shortcuts_folder_missing": {
+    "message": "આ બુકમાર્ક ફોલ્ડર હવે ઉપલબ્ધ નથી."
+  },
+  "newtab_shortcuts_moved_to_bookmarks": {
+    "message": "બુકમાર્કમાં ખસેડ્યું"
+  },
+  "newtab_shortcuts_new_folder_title": {
+    "message": "નવું ફોલ્ડર"
+  },
+  "newtab_shortcuts_stack_hint": {
+    "message": "બુકમાર્ક બારમાં ફોલ્ડર બનાવવા છોડો"
+  },
+  "newtab_shortcuts_stacked_undo": {
+    "message": "ફોલ્ડર બનાવ્યું · પૂર્વવત્ કરવા {shortcut}"
+  },
+  "newtab_shortcuts_stack_undone": {
+    "message": "ફોલ્ડર બનાવવાનું પૂર્વવત્ કર્યું · ફરી કરવા {shortcut}"
+  },
+  "newtab_shortcuts_stack_redone": {
+    "message": "ફોલ્ડર ફરી બનાવ્યું · પૂર્વવત્ કરવા {shortcut}"
+  },
+  "newtab_shortcuts_stack_failed": {
+    "message": "ફોલ્ડર બનાવી શકાયું નહીં"
+  },
+  "newtab_shortcuts_move_to_bookmarks_failed": {
+    "message": "બુકમાર્કમાં ખસેડી શકાયું નહીં"
+  },
+  "newtab_shortcuts_edit_dialog_title": {
+    "message": "શૉર્ટકટમાં ફેરફાર કરો"
+  },
+  "newtab_shortcuts_context_menu_label": {
+    "message": "શૉર્ટકટ ક્રિયાઓ"
+  },
+  "settings_tab_switcher_title": {
+    "message": "ટૅબ સ્વિચર"
+  },
+  "settings_tab_switcher_desc": {
+    "message": "તાજેતરના ટૅબ વચ્ચે ઝડપથી સ્વિચ કરો; ડિફૉલ્ટ રૂપે {shortcut}, કસ્ટમાઇઝ કરી શકાય છે"
+  },
+  "slash_command_empty": {
+    "message": "કોઈ મેળ ખાતા કમાન્ડ નથી"
+  },
+  "command_tabs_title": {
+    "message": "ફક્ત ખુલ્લા ટૅબ શોધો"
+  },
+  "command_tabs_action": {
+    "message": "ટૅબ શોધો"
+  },
+  "command_copy_title": {
+    "message": "વર્તમાન પેજની લિંક કૉપિ કરો"
+  },
+  "command_copy_action": {
+    "message": "લિંક કૉપિ કરો"
+  },
+  "settings_tab_account": {
+    "message": "એકાઉન્ટ અને સિંક"
+  },
+  "webdav_endpoint": {
+    "message": "સર્વરનું સરનામું (HTTPS)"
+  },
+  "webdav_directory": {
+    "message": "સિંક ફોલ્ડર"
+  },
+  "webdav_username": {
+    "message": "વપરાશકર્તાનામ"
+  },
+  "webdav_password": {
+    "message": "ઍપ પાસવર્ડ"
+  },
+  "webdav_credentials_hint": {
+    "message": "ઍપ પાસવર્ડ આ ડિવાઇસ પર જ રહે છે. સર્વરનું સરનામું, ફોલ્ડર અને વપરાશકર્તાનામ તમારા બ્રાઉઝર દ્વારા તમારા અન્ય ડિવાઇસ પર સિંક થાય છે."
+  },
+  "webdav_password_hint": {
+    "message": "સર્વરનું સરનામું, ફોલ્ડર અને વપરાશકર્તાનામ તમારા બ્રાઉઝર દ્વારા તમારા અન્ય ડિવાઇસ પર સિંક થાય છે, પણ ઍપ પાસવર્ડ નહીં. નવા ડિવાઇસ પર દાખલ કરવા માટે તેને સુરક્ષિત જગ્યાએ રાખો."
+  },
+  "webdav_password_hint_synced": {
+    "message": "સર્વરનું સરનામું, ફોલ્ડર અને વપરાશકર્તાનામ તમારા અન્ય ડિવાઇસમાંથી આવ્યા છે. ઍપ પાસવર્ડ સિંક થતો નથી, તેથી તેને અહીં દાખલ કરો."
+  },
+  "webdav_suggestion_label": {
+    "message": "અન્ય ડિવાઇસમાંથી"
+  },
+  "webdav_suggestion_add": {
+    "message": "કનેક્ટ કરવા પાસવર્ડ દાખલ કરો"
+  },
+  "webdav_suggestion_dismiss": {
+    "message": "છોડી દો"
+  },
+  "webdav_password_saved": {
+    "message": "સાચવેલો"
+  },
+  "webdav_password_change": {
+    "message": "બદલો"
+  },
+  "webdav_password_keep": {
+    "message": "સાચવેલો પાસવર્ડ રાખો"
+  },
+  "webdav_password_show": {
+    "message": "પાસવર્ડ બતાવો"
+  },
+  "webdav_password_hide": {
+    "message": "પાસવર્ડ છુપાવો"
+  },
+  "webdav_last_sync": {
+    "message": "છેલ્લે સિંક થયું"
+  },
+  "webdav_choice_hint": {
+    "message": "સર્વર પર પહેલેથી Lumno સેટિંગ છે. એક બાજુ રાખો, અથવા બંનેના વૉલપેપર મર્જ કરો અને સર્વરના અન્ય સેટિંગ રાખો. આ ડિવાઇસના ડેટાનો પહેલાં બૅકઅપ લેવાય છે."
+  },
+  "webdav_conflict_hint": {
+    "message": "આ ડિવાઇસ અને સર્વરે એક જ વસ્તુ બદલી છે. રાખવા માટે એક વર્ઝન પસંદ કરો; અન્ય ફેરફારો આપમેળે મર્જ થાય છે."
+  },
+  "webdav_error_endpoint": {
+    "message": "માન્ય HTTPS WebDAV સરનામું દાખલ કરો."
+  },
+  "webdav_error_directory": {
+    "message": "માન્ય સિંક ફોલ્ડરનું નામ દાખલ કરો."
+  },
+  "webdav_error_credentials": {
+    "message": "વપરાશકર્તાનામ અને ઍપ પાસવર્ડ દાખલ કરો."
+  },
+  "webdav_error_auth": {
+    "message": "પ્રમાણીકરણ નિષ્ફળ. વપરાશકર્તાનામ અને ઍપ પાસવર્ડ તપાસો."
+  },
+  "webdav_error_permission": {
+    "message": "ઍક્સેસ નકારવામાં આવી. ફોલ્ડરની વાંચવા અને લખવાની પરવાનગીઓ તપાસો."
+  },
+  "webdav_error_rate": {
+    "message": "સર્વરની રેટ મર્યાદા પહોંચી ગઈ. પછીથી ફરી પ્રયાસ કરો."
+  },
+  "webdav_error_unavailable": {
+    "message": "સર્વર અસ્થાયી રૂપે અનુપલબ્ધ છે (HTTP 503). ટૂંકા સમયમાં ઘણી બધી વિનંતીઓ પછી Nutstore પણ આ રીતે જવાબ આપે છે, તેથી થોડી મિનિટોમાં ફરી પ્રયાસ કરો. આ ડિવાઇસ પરનો ડેટા જળવાઈ રહે છે."
+  },
+  "webdav_warning_throttled": {
+    "message": "સર્વર હાલ વિનંતીઓ નકારી રહ્યું છે (HTTP {status}), સામાન્ય રીતે ટૂંકા સમયમાં ઘણી બધી વિનંતીઓ મોકલાઈ હોવાથી; Nutstore અને સમાન સેવાઓ આ રીતે મર્યાદા મૂકે છે. Lumno {time} પછી આપમેળે ફરી પ્રયાસ કરશે. આ ડિવાઇસ પરનો ડેટા જળવાઈ રહે છે."
+  },
+  "webdav_error_capacity": {
+    "message": "WebDAV સ્ટોરેજ ભરાઈ ગયું છે. જગ્યા ખાલી કરીને ફરી પ્રયાસ કરો."
+  },
+  "webdav_error_conditional": {
+    "message": "આ સર્વર એકસાથે થતા ઓવરરાઇટને વિશ્વસનીય રીતે રોકી શકતું નથી અને ઑટોમેટિક સિંક માટે સપોર્ટેડ નથી."
+  },
+  "webdav_error_changed": {
+    "message": "સિંક દરમિયાન સેટિંગ બદલાયા. સ્થાનિક ડેટા જળવાઈ રહે છે અને સિંક ફરી પ્રયાસ કરશે."
+  },
+  "webdav_error_missing": {
+    "message": "રિમોટ સેટિંગ ડિલીટ થઈ ગયા છે. તેને ફરી બનાવવા સ્થાનિક સેટિંગ અપલોડ કરવાનું પસંદ કરો, અથવા સર્વરનું સરનામું તપાસો."
+  },
+  "webdav_error_chrome_capacity": {
+    "message": "આ સેટિંગ Chrome સિંકની ક્ષમતા કરતાં વધુ છે અને લાગુ કરવામાં આવ્યા નથી. હાલનું Chrome સિંક અને સ્થાનિક ડેટા જળવાઈ રહે છે. સેટિંગ ઘટાડીને ફરી પ્રયાસ કરો."
+  },
+  "webdav_error_chrome_capacity__firefox": {
+    "message": "આ સેટિંગ Firefox Sync ની ક્ષમતા કરતાં વધુ છે અને લાગુ કરવામાં આવ્યા નથી. હાલનું Firefox Sync અને સ્થાનિક ડેટા જળવાઈ રહે છે. સેટિંગ ઘટાડીને ફરી પ્રયાસ કરો."
+  },
+  "webdav_warning_chrome_backup": {
+    "message": "આ ડિવાઇસ પરના સેટિંગ Chrome સિંકની ક્ષમતા કરતાં વધુ છે, તેથી હજી Chrome સિંકમાં તેનો બૅકઅપ લેવાયો નથી. WebDAV સિંક ચાલુ રહે છે અને સ્થાનિક ડેટા જળવાઈ રહે છે. બૅકઅપ પૂર્ણ કરવા સેટિંગ ઘટાડો."
+  },
+  "webdav_warning_chrome_backup__firefox": {
+    "message": "આ ડિવાઇસ પરના સેટિંગ Firefox Sync ની ક્ષમતા કરતાં વધુ છે, તેથી હજી Firefox Sync માં તેનો બૅકઅપ લેવાયો નથી. WebDAV સિંક ચાલુ રહે છે અને સ્થાનિક ડેટા જળવાઈ રહે છે. બૅકઅપ પૂર્ણ કરવા સેટિંગ ઘટાડો."
+  },
+  "webdav_error_network": {
+    "message": "કનેક્શન નિષ્ફળ થયું અથવા સમય સમાપ્ત થયો. નેટવર્ક, સર્વરનું સરનામું અને પ્રમાણપત્ર તપાસો. સ્થાનિક ડેટા જળવાઈ રહે છે."
+  },
+  "webdav_error_storage": {
+    "message": "સિંક ડેટા સાચવી શકાયો નહીં. બ્રાઉઝરનું સ્થાનિક સ્ટોરેજ તપાસો."
+  },
+  "webdav_error_shortcuts": {
+    "message": "પુનઃસ્થાપિત કરવાથી શૉર્ટકટની મર્યાદા ઓળંગાશે. પહેલાં કેટલાક સ્થાનિક ફોલ્ડર શૉર્ટકટ કાઢી નાખો."
+  },
+  "webdav_error_remote_unreadable": {
+    "message": "સર્વરે રિમોટ સેટિંગ સામાન્ય રીતે પરત કર્યા નહીં. સર્વર તપાસો અથવા પછીથી ફરી પ્રયાસ કરો. સ્થાનિક ડેટા બદલવામાં આવ્યો નથી."
+  },
+  "webdav_error_remote_corrupt": {
+    "message": "રિમોટ સેટિંગ ફાઇલ ખરાબ છે (માન્ય JSON નથી), કદાચ અધૂરા અપલોડ અથવા અન્ય ઍપને કારણે. સ્થાનિક ડેટા બદલવામાં આવ્યો નથી."
+  },
+  "webdav_error_invalid_state": {
+    "message": "રિમોટ સેટિંગ એવું માળખું અથવા વર્ઝન વાપરે છે જેને આ Lumno ઓળખતું નથી, કદાચ નવી રિલીઝમાંથી. દરેક ડિવાઇસ પર Lumno અપડેટ કરો. સ્થાનિક ડેટા બદલવામાં આવ્યો નથી."
+  },
+  "webdav_error_state_too_large": {
+    "message": "રિમોટ સેટિંગ સિંકની મર્યાદા (200 શૉર્ટકટ, 256 વૉલપેપર, 2 MB સેટિંગ) કરતાં વધુ છે. સ્થાનિક ડેટા બદલવામાં આવ્યો નથી."
+  },
+  "webdav_error_response_too_large": {
+    "message": "સર્વરે પરત કરેલી ફાઇલ 2 MB ની મર્યાદા કરતાં વધુ છે. સ્થાનિક ડેટા બદલવામાં આવ્યો નથી."
+  },
+  "webdav_error_invalid_shortcuts": {
+    "message": "રિમોટ શૉર્ટકટ ડેટા અમાન્ય છે (ખોટા ફૉર્મેટવાળા અથવા ડુપ્લિકેટ ID). સ્થાનિક ડેટા બદલવામાં આવ્યો નથી."
+  },
+  "webdav_error_invalid_icon": {
+    "message": "રિમોટ શૉર્ટકટ આઇકનના રેકોર્ડ અમાન્ય છે. સ્થાનિક ડેટા બદલવામાં આવ્યો નથી."
+  },
+  "webdav_error_invalid_wallpaper": {
+    "message": "રિમોટ વૉલપેપરના રેકોર્ડ અમાન્ય છે (ખોટું ID અથવા પરિમાણ). સ્થાનિક ડેટા બદલવામાં આવ્યો નથી."
+  },
+  "webdav_error_invalid_asset": {
+    "message": "એક રિમોટ છબી અમાન્ય છે (ખોટો પ્રકાર, કદ અથવા સામગ્રી). સ્થાનિક ડેટા બદલવામાં આવ્યો નથી."
+  },
+  "webdav_error_asset_missing": {
+    "message": "સર્વર પર એક છબી ફાઇલ ખૂટે છે, કદાચ અધૂરા અપલોડ અથવા ડિલીટ થયેલી ફાઇલને કારણે. સ્થાનિક ડેટા જળવાઈ રહે છે."
+  },
+  "webdav_error_asset_integrity": {
+    "message": "સર્વર પરની એક છબી ફાઇલ ખરાબ છે (તેની સામગ્રી રેકોર્ડ સાથે મેળ ખાતી નથી). સ્થાનિક ડેટા જળવાઈ રહે છે."
+  },
+  "webdav_error_local_invalid_state": {
+    "message": "આ ડિવાઇસના સેટિંગનું માળખું અમાન્ય છે અને તે સિંક થઈ શકતા નથી. બંનેમાંથી કોઈ બાજુ કંઈ બદલાયું નથી."
+  },
+  "webdav_error_local_state_too_large": {
+    "message": "આ ડિવાઇસના સેટિંગ સિંકની મર્યાદા (256 વૉલપેપર, 2 MB સેટિંગ) કરતાં વધુ છે. કેટલાક વૉલપેપર કાઢી નાખીને ફરી પ્રયાસ કરો. બંનેમાંથી કોઈ બાજુ કંઈ બદલાયું નથી."
+  },
+  "webdav_error_local_invalid_shortcuts": {
+    "message": "આ ડિવાઇસનો શૉર્ટકટ ડેટા અમાન્ય છે (ખોટા ફૉર્મેટવાળા અથવા ડુપ્લિકેટ ID) અને સિંક થઈ શકતો નથી. બંનેમાંથી કોઈ બાજુ કંઈ બદલાયું નથી."
+  },
+  "webdav_error_local_invalid_icon": {
+    "message": "આ ડિવાઇસના શૉર્ટકટ આઇકનના રેકોર્ડ અમાન્ય છે અને સિંક થઈ શકતા નથી. બંનેમાંથી કોઈ બાજુ કંઈ બદલાયું નથી."
+  },
+  "webdav_error_local_invalid_wallpaper": {
+    "message": "આ ડિવાઇસના વૉલપેપરના રેકોર્ડ અમાન્ય છે (ખોટું ID અથવા પરિમાણ) અને સિંક થઈ શકતા નથી. બંનેમાંથી કોઈ બાજુ કંઈ બદલાયું નથી."
+  },
+  "webdav_error_local_invalid_asset": {
+    "message": "આ ડિવાઇસ પરની એક છબી ખરાબ અથવા અસમર્થિત છે અને સિંક થઈ શકતી નથી. તેને કાઢી નાખીને ફરી ઉમેરો. બંનેમાંથી કોઈ બાજુ કંઈ બદલાયું નથી."
+  },
+  "webdav_error_local_asset_too_large": {
+    "message": "આ ડિવાઇસ પરની એક છબી સિંકની મર્યાદા (આઇકન દીઠ 96 KB, વૉલપેપર દીઠ 2 MB) કરતાં વધુ છે. બંનેમાંથી કોઈ બાજુ કંઈ બદલાયું નથી."
+  },
+  "webdav_error_shortcut_id_conflict": {
+    "message": "એક રિમોટ શૉર્ટકટનું ID આ ડિવાઇસ પરના બુકમાર્ક ફોલ્ડર શૉર્ટકટ જેવું જ છે, તેથી તેમને મર્જ કરી શકાતા નથી. સ્થાનિક ડેટા જળવાઈ રહે છે."
+  },
+  "webdav_error_write_failed": {
+    "message": "સર્વરે સિંક ફાઇલો લખવાનો ઇનકાર કર્યો. ફોલ્ડરની લખવાની પરવાનગી અને ખાલી જગ્યા તપાસો. સ્થાનિક ડેટા જળવાઈ રહે છે."
+  },
+  "webdav_error_directory_unavailable": {
+    "message": "સર્વર પર સિંક ફોલ્ડર બનાવી શકાયું નહીં. સર્વરનું સરનામું અને ફોલ્ડરની પરવાનગીઓ તપાસો."
+  },
+  "webdav_error_folder_create_refused": {
+    "message": "સર્વરે નવું ફોલ્ડર બનાવવાનો ઇનકાર કર્યો (MKCOL 405), તેથી સિંક લૉક સેટ કરી શકાતું નથી. તપાસો કે એકાઉન્ટ ફોલ્ડર બનાવી શકે છે, માઉન્ટ ફક્ત-વાંચી શકાય તેવું નથી અને કોઈ પ્રૉક્સી MKCOL ને બ્લૉક કરતી નથી."
+  },
+  "webdav_error_http": {
+    "message": "સર્વરે ભૂલ પરત કરી (HTTP {status}). પછીથી ફરી પ્રયાસ કરો. સ્થાનિક ડેટા જળવાઈ રહે છે."
+  },
+  "webdav_error_generic": {
+    "message": "સિંક નિષ્ફળ. પછીથી ફરી પ્રયાસ કરો. સ્થાનિક ડેટા જળવાઈ રહે છે."
+  },
+  "webdav_test": {
+    "message": "કનેક્શન તપાસો"
+  },
+  "webdav_enable": {
+    "message": "સાચવો અને સિંક ચાલુ કરો"
+  },
+  "webdav_sync": {
+    "message": "હમણાં સિંક કરો"
+  },
+  "webdav_restore_backup": {
+    "message": "બદલતાં પહેલાંના સેટિંગ પુનઃસ્થાપિત કરો"
+  },
+  "webdav_merge_wallpapers": {
+    "message": "વૉલપેપર મર્જ કરો"
+  },
+  "webdav_error_merge_too_large": {
+    "message": "બંને મળીને વૉલપેપર સિંકની મર્યાદા (256 વૉલપેપર, 2 MB સેટિંગ, 8 KB છબી લિંક) કરતાં વધુ છે. કેટલાક કાઢી નાખો, અથવા એક બાજુ રાખો. કંઈ બદલાયું નથી."
+  },
+  "webdav_use_remote": {
+    "message": "સર્વરનું વર્ઝન વાપરો"
+  },
+  "webdav_use_local": {
+    "message": "આ ડિવાઇસનું વર્ઝન રાખો"
+  },
+  "webdav_test_success": {
+    "message": "કનેક્શન, વાંચવા/લખવાની ક્ષમતા અને એકસાથે અપડેટ સામે સુરક્ષાની ચકાસણી થઈ"
+  },
+  "webdav_state_browser": {
+    "message": "બંધ"
+  },
+  "webdav_state_ready": {
+    "message": "સિંક થયું"
+  },
+  "webdav_state_syncing": {
+    "message": "સિંક થઈ રહ્યું છે…"
+  },
+  "webdav_state_paused": {
+    "message": "થોભાવ્યું"
+  },
+  "webdav_state_pending": {
+    "message": "સિંક બાકી"
+  },
+  "webdav_state_choice": {
+    "message": "કૉપિ પસંદ કરો"
+  },
+  "webdav_state_conflict": {
+    "message": "સેટિંગમાં વિરોધાભાસ"
+  },
+  "webdav_state_error": {
+    "message": "સિંક નિષ્ફળ"
+  },
+  "webdav_error_interrupted": {
+    "message": "પાછલું બદલવાનું કાર્ય અટકી ગયું હતું. અપલોડ થોભાવ્યા છે. પાછલા સ્થાનિક સેટિંગ પુનઃસ્થાપિત કરો, અથવા ફરી કનેક્ટ કરીને રિમોટ સેટિંગ વાપરો."
+  },
+  "webdav_missing_hint": {
+    "message": "સર્વર પરના સેટિંગ ગાયબ છે. આ ડિવાઇસના સેટિંગ ફરી અપલોડ કરો, અથવા પહેલાં સર્વરનું સરનામું તપાસો."
+  },
+  "webdav_error_locked": {
+    "message": "અન્ય ડિવાઇસ સર્વર પર લખી રહ્યું છે. પછીથી ફરી પ્રયાસ કરો. જો તે બ્લૉક જ રહે, તો બાકી રહી ગયેલું લૉક દૂર કરવા WebDAV માર્ગદર્શિકા અનુસરો."
+  },
+  "webdav_error_lock_recovery": {
+    "message": "રિમોટ લખાણ સુરક્ષિત રીતે પૂર્ણ થઈ શક્યું નહીં, તેથી તેની સુરક્ષા જાળવી રાખવામાં આવી. રિમોટ સિંક ડિરેક્ટરીમાંથી v1/write-lock દૂર કરતાં પહેલાં દરેક ડિવાઇસ પર સિંક થોભાવો અને ખાતરી કરો કે અટકેલી વિનંતી સમાપ્ત થઈ ગઈ છે."
+  },
+  "webdav_error_outdated": {
+    "message": "એકથી વધુ WebDAV કનેક્શન વાપરવા Lumno એક્સ્ટેન્શન ફરી લોડ કરો, પછી સેટિંગ રિફ્રેશ કરો."
+  },
+  "webdav_title": {
+    "message": "WebDAV સિંક"
+  },
+  "webdav_beta_hint": {
+    "message": "બીટામાં: WebDAV ડ્રાઇવ અથવા NAS દ્વારા સેટિંગ, કસ્ટમ આઇકન અને વૉલપેપર સિંક કરો. બ્રાઉઝરના બિલ્ટ-ઇન સિંકથી વિપરીત, તે અલગ-અલગ બ્રાઉઝરમાં કામ કરે છે અને આઇકન તથા વૉલપેપરને પણ આવરી લે છે."
+  },
+  "webdav_setup_hint": {
+    "message": "બ્રાઉઝર સિંકની સાથે, Nutstore અથવા અન્ય WebDAV સેવા દ્વારા સેટિંગ, કસ્ટમ આઇકન અને વૉલપેપર સિંક કરો."
+  },
+  "webdav_edit_config": {
+    "message": "કનેક્શનમાં ફેરફાર કરો"
+  },
+  "webdav_save": {
+    "message": "સાચવો"
+  },
+  "webdav_never_synced": {
+    "message": "હજી સિંક થયું નથી"
+  },
+  "webdav_choice_title": {
+    "message": "પ્રારંભિક વર્ઝન પસંદ કરો"
+  },
+  "webdav_conflict_title": {
+    "message": "સિંકમાં વિરોધાભાસ"
+  },
+  "webdav_conflict_items": {
+    "message": "વિરોધાભાસી સામગ્રી"
+  },
+  "webdav_conflict_shortcuts": {
+    "message": "શૉર્ટકટ અને આઇકન"
+  },
+  "webdav_conflict_wallpapers": {
+    "message": "વૉલપેપર અને પસંદગી"
+  },
+  "webdav_conflict_preferences": {
+    "message": "સેટિંગ"
+  },
+  "webdav_resolve_later": {
+    "message": "થોભાવો અને પછી ઉકેલો"
+  },
+  "webdav_add": {
+    "message": "WebDAV ઉમેરો"
+  },
+  "webdav_state_recovery": {
+    "message": "પુનઃસ્થાપન જરૂરી"
+  },
+  "webdav_retry": {
+    "message": "ફરી પ્રયાસ કરો"
+  },
+  "webdav_copy_diagnostic": {
+    "message": "નિદાન કૉપિ કરો"
+  },
+  "webdav_diagnostic_copied": {
+    "message": "કૉપિ કર્યું"
+  },
+  "webdav_provider_jianguoyun": {
+    "message": "Nutstore"
+  },
+  "webdav_upload_local": {
+    "message": "આ ડિવાઇસના સેટિંગ અપલોડ કરો"
+  },
+  "webdav_error_duplicate": {
+    "message": "સમાન સર્વર, ફોલ્ડર અને વપરાશકર્તાનામ સાથેનું કનેક્શન પહેલેથી અસ્તિત્વમાં છે."
+  },
+  "webdav_error_interrupted_other": {
+    "message": "અન્ય WebDAV કનેક્શન ({name}) એ પહેલાં સ્થાનિક સેટિંગ પુનઃસ્થાપિત કરવાના છે. આ કનેક્શન ત્યાર પછી ફરી શરૂ થશે."
+  },
+  "webdav_just_now": {
+    "message": "હમણાં જ"
+  },
+  "webdav_view_diff": {
+    "message": "તફાવતો બતાવો"
+  },
+  "webdav_hide_diff": {
+    "message": "તફાવતો છુપાવો"
+  },
+  "webdav_diff_local": {
+    "message": "આ ડિવાઇસ"
+  },
+  "webdav_diff_remote": {
+    "message": "સર્વર"
+  },
+  "webdav_diff_added": {
+    "message": "ઉમેર્યું: {items}"
+  },
+  "webdav_diff_removed": {
+    "message": "કાઢી નાખ્યું: {items}"
+  },
+  "webdav_diff_changed": {
+    "message": "ફેરફાર કર્યો: {items}"
+  },
+  "webdav_diff_more": {
+    "message": "કુલ {count}"
+  },
+  "webdav_diff_reordered": {
+    "message": "ક્રમ બદલ્યો"
+  },
+  "webdav_diff_selection": {
+    "message": "વર્તમાન વૉલપેપર બદલ્યું"
+  },
+  "webdav_diff_unchanged": {
+    "message": "કોઈ ફેરફાર નથી"
+  },
+  "webdav_diff_shortcut_total": {
+    "message": "{count} શૉર્ટકટ"
+  },
+  "webdav_diff_wallpaper_total": {
+    "message": "{count} વૉલપેપર"
+  },
+  "webdav_diff_loading": {
+    "message": "લોડ થઈ રહ્યું છે…"
+  },
+  "webdav_value_on": {
+    "message": "ચાલુ"
+  },
+  "webdav_value_off": {
+    "message": "બંધ"
+  },
+  "webdav_value_default": {
+    "message": "ડિફૉલ્ટ"
+  },
+  "webdav_value_changed": {
+    "message": "બદલાયેલું"
+  },
+  "webdav_value_list": {
+    "message": "{count} આઇટમ"
+  },
+  "webdav_preference_other": {
+    "message": "અન્ય સેટિંગ"
+  },
+  "webdav_preference_zen_mode": {
+    "message": "Zen મોડ"
+  },
+  "webdav_remove": {
+    "message": "WebDAV કનેક્શન ડિલીટ કરો"
+  },
+  "webdav_remove_confirm": {
+    "message": "આ સ્થાનિક કનેક્શન ડિલીટ કરીએ? સર્વર પરની ફાઇલો રાખવામાં આવશે."
+  },
+  "newtab_quote_title": {
+    "message": "દૈનિક સુવિચાર"
+  },
+  "newtab_quote_position": {
+    "message": "સુવિચારનું સ્થાન"
+  },
+  "newtab_quote_category": {
+    "message": "સુવિચારની શ્રેણી"
+  },
+  "newtab_quote_off": {
+    "message": "બંધ"
+  },
+  "newtab_quote_top": {
+    "message": "શોધ બૉક્સની ઉપર"
+  },
+  "newtab_quote_input": {
+    "message": "શોધ બૉક્સની નીચે"
+  },
+  "newtab_quote_search": {
+    "message": "શૉર્ટકટની નીચે"
+  },
+  "newtab_quote_bottom": {
+    "message": "પેજના તળિયે"
+  },
+  "newtab_quote_literature": {
+    "message": "સાહિત્ય"
+  },
+  "newtab_quote_poetry": {
+    "message": "કવિતા"
+  },
+  "newtab_quote_shuffle": {
+    "message": "બીજો સુવિચાર બતાવો"
+  },
+  "newtab_quote_shuffle_error": {
+    "message": "બીજો સુવિચાર લોડ થઈ શક્યો નહીં"
+  },
+  "newtab_quote_save_error": {
+    "message": "સુવિચાર સેટિંગ સાચવવામાં નિષ્ફળ"
+  },
+  "newtab_quote_fallback_text": {
+    "message": "હજાર માઈલની યાત્રા એક ડગલાથી શરૂ થાય છે."
+  },
+  "newtab_quote_fallback_author": {
+    "message": "લાઓત્ઝુ"
+  },
+  "newtab_quote_fallback_source": {
+    "message": "તાઓ તે ચિંગ"
+  },
+  "newtab_bing_daily": {
+    "message": "દરરોજ આપમેળે અપડેટ કરો"
+  },
+  "newtab_bing_daily_hint": {
+    "message": "દરરોજ એક નવો Bing ફોટો. આ ચાલુ હોય ત્યારે તમે પસંદ કરેલો ફોટો આખો દિવસ રહે છે."
+  },
+  "newtab_daily_restore": {
+    "message": "આજના વૉલપેપર પર પાછા જાઓ"
+  },
+  "newtab_bing_recent": {
+    "message": "તાજેતરના વૉલપેપર"
+  },
+  "newtab_bing_refresh": {
+    "message": "રિફ્રેશ કરો"
+  },
+  "newtab_bing_loading": {
+    "message": "વૉલપેપર લોડ થઈ રહ્યાં છે…"
+  },
+  "newtab_bing_saving": {
+    "message": "વૉલપેપર સાચવી રહ્યાં છીએ…"
+  },
+  "newtab_bing_error": {
+    "message": "વૉલપેપર લોડ થઈ શક્યાં નહીં. કૃપા કરીને ફરી પ્રયાસ કરો."
+  },
+  "newtab_bing_save_error": {
+    "message": "વૉલપેપર સાચવી શકાયું નહીં. કૃપા કરીને ફરી પ્રયાસ કરો."
+  },
+  "newtab_bing_source": {
+    "message": "વૉલપેપરનો સ્રોત જુઓ"
+  },
+  "newtab_wallpaper_curated_section": {
+    "message": "પસંદગીના"
+  },
+  "newtab_curated_daily_hint": {
+    "message": "તમે આ ચાલુ કરો ત્યારે બતાવેલી શ્રેણીમાંથી દરરોજ એક નવો ફોટો, દરેક સિંક થયેલા ડિવાઇસ પર સમાન. તમે પસંદ કરેલો ફોટો આખો દિવસ રહે છે."
+  },
+  "newtab_curated_category": {
+    "message": "શ્રેણી"
+  },
+  "newtab_curated_category_random": {
+    "message": "મિશ્ર"
+  },
+  "newtab_curated_category_nature": {
+    "message": "પ્રકૃતિ"
+  },
+  "newtab_curated_category_water": {
+    "message": "પાણી"
+  },
+  "newtab_curated_category_city": {
+    "message": "શહેર"
+  },
+  "newtab_curated_category_minimal": {
+    "message": "ન્યૂનતમ"
+  },
+  "newtab_curated_category_art": {
+    "message": "કળા"
+  },
+  "newtab_curated_art_meta": {
+    "message": "The Cleveland Museum of Art"
+  },
+  "newtab_curated_list": {
+    "message": "ફોટા"
+  },
+  "newtab_curated_mix_all": {
+    "message": "બધી શ્રેણીઓ"
+  },
+  "newtab_curated_mix_count": {
+    "message": "{count} શ્રેણીઓ"
+  },
+  "newtab_curated_mix_separator": {
+    "message": ", "
+  },
+  "newtab_curated_mix_aria": {
+    "message": "મિશ્રણમાંની શ્રેણીઓ"
+  },
+  "newtab_curated_more": {
+    "message": "અન્ય બતાવો"
+  },
+  "newtab_curated_photo_by": {
+    "message": "ફોટો: {name}"
+  },
+  "newtab_curated_source_meta": {
+    "message": "Unsplash · Lorem Picsum દ્વારા"
+  },
+  "newtab_wallpaper_add_url": {
+    "message": "છબીની લિંક ઉમેરો"
+  },
+  "newtab_wallpaper_url_placeholder": {
+    "message": "છબીની લિંક પેસ્ટ કરો (https://…)"
+  },
+  "newtab_wallpaper_url_submit": {
+    "message": "ઉમેરો"
+  },
+  "newtab_wallpaper_url_invalid": {
+    "message": "http:// અથવા https:// થી શરૂ થતી લિંક દાખલ કરો"
+  },
+  "newtab_wallpaper_url_limit": {
+    "message": "આ લિંક ખૂબ લાંબી છે, અથવા ઘણી બધી લિંક સાચવેલી છે. કેટલીક કાઢી નાખીને ફરી પ્રયાસ કરો."
+  },
+  "newtab_wallpaper_url_import_error": {
+    "message": "આ લિંકમાંથી છબી ઉમેરી શકાઈ નહીં"
+  },
+  "newtab_wallpaper_save_to_local": {
+    "message": "સ્થાનિક વૉલપેપરમાં સાચવો"
+  },
+  "newtab_wallpaper_in_local": {
+    "message": "પહેલેથી સ્થાનિક વૉલપેપરમાં છે"
+  },
+  "newtab_wallpaper_saving_local": {
+    "message": "સ્થાનિક વૉલપેપરમાં સાચવી રહ્યાં છીએ…"
+  },
+  "newtab_wallpaper_saved_local": {
+    "message": "સ્થાનિક વૉલપેપરમાં સાચવ્યું"
+  },
+  "newtab_wallpaper_local_limit": {
+    "message": "તમે વધુમાં વધુ {count} સ્થાનિક વૉલપેપર રાખી શકો છો. કેટલાક ડિલીટ કરીને ફરી પ્રયાસ કરો."
+  },
+  "newtab_wallpaper_context_menu_label": {
+    "message": "વૉલપેપર ક્રિયાઓ"
+  },
+  "newtab_quote_font": {
+    "message": "ફૉન્ટ"
+  },
+  "newtab_quote_font_label": {
+    "message": "સુવિચારનો ફૉન્ટ"
+  },
+  "newtab_quote_font_wenkai": {
+    "message": "LXGW WenKai"
+  },
+  "newtab_quote_font_xiaowei": {
+    "message": "ZCOOL XiaoWei"
+  },
+  "newtab_quote_font_sans": {
+    "message": "સિસ્ટમ sans-serif"
+  },
+  "newtab_quote_font_size": {
+    "message": "ફૉન્ટનું કદ"
+  },
+  "newtab_quote_font_size_label": {
+    "message": "સુવિચારના ફૉન્ટનું કદ (px)"
+  },
+  "newtab_quote_provider": {
+    "message": "Hitokoto દ્વારા સંચાલિત"
+  },
+  "recent_history_menu": {
+    "message": "તાજેતરના ફેરફારોનો ઇતિહાસ જુઓ"
+  },
+  "recent_history_title": {
+    "message": "ફેરફારોનો ઇતિહાસ"
+  },
+  "recent_history_description": {
+    "message": "ઇતિહાસ દૂર કર્યા વિના કોઈપણ જાળવેલા વર્ઝનને વર્તમાન તરીકે સેટ કરો."
+  },
+  "recent_history_current": {
+    "message": "વર્તમાન વર્ઝન"
+  },
+  "recent_history_earlier": {
+    "message": "પહેલાંનું વર્ઝન"
+  },
+  "recent_history_restore": {
+    "message": "વર્તમાન તરીકે સેટ કરો"
+  },
+  "recent_history_restoring": {
+    "message": "પુનઃસ્થાપિત કરી રહ્યાં છીએ…"
+  },
+  "recent_history_restore_success": {
+    "message": "પસંદ કરેલું વર્ઝન પુનઃસ્થાપિત થયું"
+  },
+  "recent_history_restore_failed": {
+    "message": "આ વર્ઝન પુનઃસ્થાપિત કરી શકાતું નથી"
+  },
+  "recent_update_close": {
+    "message": "બંધ કરો"
+  },
+  "settings_progress_tracking_title": {
+    "message": "પિન કરેલા શો અને નવલકથાઓ અપ ટુ ડેટ રાખો"
+  },
+  "settings_progress_tracking_desc": {
+    "message": "કોઈ શો અથવા નવલકથા પિન કરો અને તેનું કાર્ડ તમારી સાથે આગલા એપિસોડ અથવા પ્રકરણ પર જાય છે, જેથી તે જ્યાં તમે છોડ્યું હતું ત્યાંથી ખૂલે"
+  },
+  "settings_newtab_open_in_new_tab_title": {
+    "message": "નવા ટૅબમાં ખોલો"
+  },
+  "settings_newtab_open_in_new_tab_desc": {
+    "message": "ચાલુ કરેલી આઇટમ નવા ટૅબમાં ખૂલે છે અને તેના પર સ્વિચ કરે છે; બંધ કરેલી આઇટમ વર્તમાન ટૅબમાં ખૂલે છે. Command/Ctrl-ક્લિક અથવા મિડલ-ક્લિક હંમેશાં બૅકગ્રાઉન્ડમાં ખોલે છે."
+  },
+  "settings_newtab_open_in_new_tab_search": {
+    "message": "શોધ પરિણામો"
+  },
+  "settings_newtab_open_in_new_tab_shortcuts": {
+    "message": "શૉર્ટકટ"
+  },
+  "settings_newtab_open_in_new_tab_bookmarks": {
+    "message": "બુકમાર્ક"
+  },
+  "settings_newtab_open_in_new_tab_recent_sites": {
+    "message": "સાઇટ કાર્ડ"
+  },
+  "recent_progress_track": {
+    "message": "પ્રગતિ ટ્રૅક કરો"
+  },
+  "recent_progress_stop": {
+    "message": "પ્રગતિ ટ્રૅક કરવાનું બંધ કરો"
+  },
+  "recent_progress_track_toast": {
+    "message": "ટ્રૅકિંગ ચાલુ. તમે આગલા એપિસોડ અથવા પ્રકરણ પર જાઓ તેમ કાર્ડ અપડેટ થાય છે."
+  },
+  "recent_progress_stop_toast": {
+    "message": "પ્રગતિ ટ્રૅક કરવાનું બંધ કર્યું"
+  },
+  "recent_progress_tracking": {
+    "message": "પ્રગતિ ટ્રૅક થઈ રહી છે"
+  },
+  "recent_progress_auto_toast": {
+    "message": "પિન કર્યું અને પ્રગતિ ટ્રૅક થઈ રહી છે. બંધ કરવા કાર્ડ પરના રડાર આઇકન પર ક્લિક કરો."
+  },
+  "settings_general_newtab_section_title": {
+    "message": "નવા ટૅબ સેટિંગ"
+  },
+  "recent_progress_track_tooltip": {
+    "message": "પ્રગતિ ટ્રૅક કરો\n────────\nશો અને ધારાવાહિક નવલકથાઓ માટે ઉપયોગી.\nચાલુ હોય ત્યારે, આ કૃતિના આગલા એપિસોડ અથવા પ્રકરણ પર પહોંચવાથી કાર્ડ ત્યાં ખસે છે."
+  },
+  "recent_progress_stop_tooltip": {
+    "message": "પ્રગતિ ટ્રૅક થઈ રહી છે\n────────\nઆ કૃતિના આગલા એપિસોડ અથવા પ્રકરણ પર પહોંચવાથી કાર્ડ ત્યાં ખસે છે.\nટ્રૅક કરવાનું બંધ કરવા ક્લિક કરો."
+  },
+  "newtab_shortcuts_group_new": {
+    "message": "નવું ગ્રૂપ"
+  },
+  "newtab_shortcuts_group_default_title": {
+    "message": "શૉર્ટકટ"
+  },
+  "newtab_shortcuts_group_title_placeholder": {
+    "message": "શીર્ષક ઉમેરો"
+  },
+  "newtab_shortcuts_group_actions": {
+    "message": "{group} ક્રિયાઓ"
+  },
+  "newtab_shortcuts_group_untitled_name": {
+    "message": "શીર્ષક વિનાનું ગ્રૂપ"
+  },
+  "newtab_shortcuts_group_rename": {
+    "message": "નામ બદલો"
+  },
+  "newtab_shortcuts_group_add_site": {
+    "message": "સાઇટ ઉમેરો"
+  },
+  "newtab_shortcuts_group_move_up": {
+    "message": "ઉપર ખસેડો"
+  },
+  "newtab_shortcuts_group_move_down": {
+    "message": "નીચે ખસેડો"
+  },
+  "newtab_shortcuts_group_delete": {
+    "message": "ગ્રૂપ ડિલીટ કરો"
+  },
+  "newtab_shortcuts_group_delete_with_sites": {
+    "message": "ગ્રૂપ અને સાઇટ ડિલીટ કરો"
+  },
+  "newtab_shortcuts_group_delete_confirm_title": {
+    "message": "“{group}” અને તેની સાઇટ ડિલીટ કરીએ?"
+  },
+  "newtab_shortcuts_group_delete_confirm_description": {
+    "message": "ગ્રૂપ અને તેની {count} સાઇટ ડિલીટ થશે."
+  },
+  "newtab_shortcuts_group_delete_confirm_button": {
+    "message": "ડિલીટ કરો"
+  },
+  "newtab_shortcuts_group_deleted_undo": {
+    "message": "ગ્રૂપ ડિલીટ કર્યું · પૂર્વવત્ કરવા {shortcut}"
+  },
+  "newtab_shortcuts_group_delete_undone": {
+    "message": "ગ્રૂપ પુનઃસ્થાપિત થયું · ફરી કરવા {shortcut}"
+  },
+  "newtab_shortcuts_group_delete_redone": {
+    "message": "ગ્રૂપ ડિલીટ કર્યું · પૂર્વવત્ કરવા {shortcut}"
+  },
+  "newtab_shortcuts_group_limit_reached": {
+    "message": "તમે વધુમાં વધુ {count} ગ્રૂપ બનાવી શકો છો."
+  },
+  "options_shortcut_sync_all": {
+    "message": "શૉર્ટકટ: બધા {count} બ્રાઉઝર સાથે સિંક થાય છે."
+  },
+  "options_shortcut_sync_split_webdav": {
+    "message": "શૉર્ટકટ: {synced} બ્રાઉઝર સાથે સિંક થાય છે; બાકીના {local} WebDAV દ્વારા સિંક થાય છે."
+  },
+  "options_shortcut_sync_split_local": {
+    "message": "શૉર્ટકટ: {synced} બ્રાઉઝર સાથે સિંક થાય છે; {local} તેની સિંક જગ્યા કરતાં વધુ છે અને આ ડિવાઇસ પર રહે છે. તેમને પણ સિંક કરવા WebDAV ચાલુ કરો."
+  },
+  "options_shortcut_sync_failed_local": {
+    "message": "શૉર્ટકટ બ્રાઉઝર સિંકમાં સાચવી શકાયા નહીં; હાલ બધા {count} આ ડિવાઇસ પર રહે છે."
+  },
+  "options_shortcut_sync_failed_webdav": {
+    "message": "શૉર્ટકટ બ્રાઉઝર સિંકમાં સાચવી શકાયા નહીં; હાલ બધા {count} WebDAV દ્વારા સિંક થાય છે."
+  },
+  "options_shortcut_sync_none_local": {
+    "message": "શૉર્ટકટ: બ્રાઉઝર સિંક ભરાઈ ગયું છે, તેથી બધા {count} આ ડિવાઇસ પર રહે છે. તેમને સિંક કરવા WebDAV ચાલુ કરો."
+  },
+  "options_shortcut_sync_none_webdav": {
+    "message": "શૉર્ટકટ: બ્રાઉઝર સિંક ભરાઈ ગયું છે, તેથી બધા {count} WebDAV દ્વારા સિંક થાય છે."
+  },
+  "newtab_shortcuts_add_site": {
+    "message": "સાઇટ ઉમેરો"
+  },
+  "newtab_shortcuts_group_dialog_rename_title": {
+    "message": "ગ્રૂપનું નામ બદલો"
+  },
+  "newtab_shortcuts_group_name_placeholder": {
+    "message": "વૈકલ્પિક; શીર્ષક વિનાનું ગ્રૂપ ફક્ત નવી પંક્તિ શરૂ કરે છે"
+  },
+  "newtab_style_section_title": {
+    "message": "શૈલી"
+  },
+  "settings_newtab_glass_style_title": {
+    "message": "મટિરિયલ"
+  },
+  "settings_newtab_glass_style_desc": {
+    "message": "નવા ટૅબના UI ઘટકોનું મટિરિયલ બદલો."
+  },
+  "settings_newtab_glass_style_none": {
+    "message": "ડિફૉલ્ટ"
+  },
+  "settings_newtab_glass_style_frosted": {
+    "message": "ઍક્રેલિક"
+  },
+  "settings_newtab_glass_style_liquid": {
+    "message": "લિક્વિડ ગ્લાસ"
+  },
+  "settings_newtab_glass_theme_title": {
+    "message": "મટિરિયલ થીમ"
+  },
+  "settings_newtab_glass_theme_follow": {
+    "message": "ઑટો"
+  },
+  "settings_newtab_glass_theme_light": {
+    "message": "લાઇટ"
+  },
+  "settings_newtab_glass_theme_dark": {
+    "message": "ડાર્ક"
+  },
+  "settings_search_source_group_order_title": {
+    "message": "શોધ પૅનલનો ક્રમ"
+  },
+  "settings_search_source_group_order_desc": {
+    "message": "શોધ બૉક્સ પૅનલમાં ગ્રૂપનો ક્રમ સેટ કરવા ટૅગને ખેંચો. દરેક ગ્રૂપનો ક્રમ ગોઠવવા નીચેની સૂચિઓમાં પંક્તિઓ ખેંચો. પૂર્વવત્ કરવા Ctrl/⌘ + Z અને ફરી કરવા Shift + Ctrl/⌘ + Z દબાવો."
+  },
+  "settings_search_source_order_keyboard_hint": {
+    "message": "ખસેડવા Alt સાથે ડાબી કે જમણી ઍરો કી દબાવો"
+  },
+  "settings_search_source_order_failed": {
+    "message": "નવો ક્રમ સાચવી શકાયો નહીં. ફરી પ્રયાસ કરો."
+  },
+  "settings_search_source_move_up": {
+    "message": "ઉપર ખસેડો"
+  },
+  "settings_search_source_move_down": {
+    "message": "નીચે ખસેડો"
+  },
+  "settings_search_result_sources_order_desc": {
+    "message": "શોધ બૉક્સ પૅનલના “બ્રાઉઝરની સામગ્રી” ગ્રૂપમાં તેમનો ક્રમ સેટ કરવા ખેંચો. પૂર્વવત્ કરવા Ctrl/⌘ + Z અને ફરી કરવા Shift + Ctrl/⌘ + Z દબાવો."
+  },
+  "settings_search_source_order_undone": {
+    "message": "ક્રમનો ફેરફાર પૂર્વવત્ કર્યો"
+  },
+  "settings_search_source_order_redone": {
+    "message": "ક્રમનો ફેરફાર ફરી લાગુ કર્યો"
+  },
+  "newtab_quote_source": {
+    "message": "સ્રોત"
+  },
+  "newtab_quote_custom": {
+    "message": "કસ્ટમ"
+  },
+  "newtab_quote_collection_save_error": {
+    "message": "આ ડિવાઇસ પર સાચવી શકાયું નહીં. તમારો પાછલો સંગ્રહ જળવાઈ રહે છે."
+  },
+  "newtab_quote_hitokoto": {
+    "message": "Hitokoto"
+  },
+  "newtab_quote_provider_custom": {
+    "message": "કસ્ટમ સંગ્રહ · આ ડિવાઇસ પર, WebDAV સાથે સિંક થાય છે"
+  },
+  "newtab_quote_importing": {
+    "message": "આયાત કરી રહ્યાં છીએ…"
+  },
+  "newtab_quote_import_hint": {
+    "message": "દરરોજ નવો સુવિચાર દેખાય છે; “શફલ” તેને ગમે ત્યારે બદલે છે. TXT / MD: દરેક સુવિચાર માટે એક ખાલી ન હોય તેવી પંક્તિ. વધુમાં વધુ 1 MB, 1,000 સુવિચાર, દરેક 500 અક્ષર; આ ડિવાઇસ પર રખાય છે, બ્રાઉઝર સિંકમાં નહીં; WebDAV ચાલુ હોય ત્યારે તેને સિંક કરે છે."
+  },
+  "newtab_quote_count": {
+    "message": "{count} સુવિચાર"
+  },
+  "newtab_quote_import_error": {
+    "message": "આયાત નિષ્ફળ: ફાઇલ ફૉર્મેટ અથવા કદની મર્યાદાઓને અનુરૂપ નથી. તમારો પાછલો સંગ્રહ જળવાઈ રહે છે."
+  },
+  "newtab_quote_library": {
+    "message": "સુવિચાર"
+  },
+  "newtab_quote_import": {
+    "message": "ફાઇલ આયાત કરો"
+  },
+  "newtab_quote_replace": {
+    "message": "ફાઇલ બદલો"
+  },
+  "newtab_quote_shuffle_button": {
+    "message": "શફલ"
+  },
+  "newtab_quote_font_size_reset": {
+    "message": "સુવિચારના ફૉન્ટનું કદ રીસેટ કરો"
+  },
+  "popup_actions_label": {
+    "message": "પેજ ક્રિયાઓ"
+  },
+  "popup_action_shortcut": {
+    "message": "શૉર્ટકટ ઉમેરો"
+  },
+  "popup_action_copy": {
+    "message": "લિંક કૉપિ કરો"
+  },
+  "popup_copy_failed": {
+    "message": "લિંક કૉપિ કરી શકાઈ નહીં. ફરી પ્રયાસ કરો."
+  },
+  "popup_theme_label": {
+    "message": "થીમ"
+  },
+  "popup_link_settings": {
+    "message": "સેટિંગ"
+  },
+  "popup_link_shortcuts": {
+    "message": "શૉર્ટકટ સેટ કરો"
+  },
+  "popup_link_feedback": {
+    "message": "પ્રતિસાદ"
+  },
+  "popup_sync_error": {
+    "message": "WebDAV સિંક નિષ્ફળ"
+  },
+  "popup_sync_attention": {
+    "message": "WebDAV સિંકને તમારી જરૂર છે"
+  },
+  "popup_sync_busy": {
+    "message": "WebDAV સિંક થઈ રહ્યું છે"
+  },
+  "popup_sync_waiting": {
+    "message": "WebDAV ફરી પ્રયાસની રાહ જુએ છે"
+  },
+  "popup_release_notes": {
+    "message": "નવું શું છે"
+  },
+  "popup_section_command_bar": {
+    "message": "કમાન્ડ બાર"
+  },
+  "popup_overlay_page_theme": {
+    "message": "પેજના રંગો સાથે મેળવો"
+  },
+  "popup_overlay_open_tabs": {
+    "message": "ડિફૉલ્ટ રૂપે ખુલ્લા ટૅબ બતાવો"
+  },
+  "popup_action_shortcut_tooltip": {
+    "message": "તમારા નવા ટૅબના શૉર્ટકટમાં ઉમેરો"
+  },
+  "popup_action_clip_tooltip": {
+    "message": "પેજનો ભાગ તરતી વિંડોમાં ક્લિપ કરો"
+  },
+  "popup_settings_label": {
+    "message": "ઝડપી સેટિંગ"
+  },
+  "popup_sync_ready": {
+    "message": "WebDAV સિંક થયું"
+  },
+  "popup_open_command_bar": {
+    "message": "કમાન્ડ બાર ખોલો"
+  },
+  "popup_action_pip": {
+    "message": "ચિત્રમાં ચિત્ર"
+  },
+  "popup_action_pip_exit": {
+    "message": "ચિત્રમાં ચિત્રમાંથી બહાર નીકળો"
+  },
+  "popup_action_pip_tooltip": {
+    "message": "આ પેજનો વીડિયો નાની વિંડોમાં તરતો કરો"
+  },
+  "popup_action_pip_menu": {
+    "message": "ઑટો ચિત્રમાં ચિત્ર"
+  },
+  "popup_pip_failed": {
+    "message": "આ વીડિયો ચિત્રમાં ચિત્રમાં ચાલી શકતો નથી."
+  },
+  "popup_auto_pip_hint": {
+    "message": "તમે ટૅબ બદલો ત્યારે વીડિયો તરતા થાય છે"
+  },
+  "popup_action_unavailable": {
+    "message": "આ પેજ પર ઉપલબ્ધ નથી"
+  },
+  "popup_action_pin_recent": {
+    "message": "તાજેતરનામાં પિન કરો"
+  },
+  "popup_action_unpin_recent": {
+    "message": "તાજેતરનામાંથી અનપિન કરો"
+  },
+  "popup_action_pin_recent_tooltip": {
+    "message": "નવા ટૅબ પર તાજેતરનામાં પિન કરો"
+  },
+  "popup_action_unpin_recent_tooltip": {
+    "message": "નવા ટૅબ પર તાજેતરનામાંથી અનપિન કરો"
+  },
+  "popup_recent_pinned": {
+    "message": "તમારા નવા ટૅબ પર તાજેતરનામાં પિન કર્યું"
+  },
+  "popup_recent_unpinned": {
+    "message": "તાજેતરનામાંથી અનપિન કર્યું"
+  }
+}

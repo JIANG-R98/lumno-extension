@@ -14,6 +14,7 @@ function createLanguage(deps) {
     LANGUAGE_STORAGE_KEY,
     localStorageArea,
     languageSelect,
+    languageMachineNote,
     setOptionsSelectState,
     renderOptionsInfoButtons,
     renderFeedbackSupport,
@@ -159,31 +160,18 @@ function createLanguage(deps) {
     return normalizeLocale(navigator.language || 'en');
   }
 
+  // A stored language is the picker value: the language's html lang, or
+  // 'system' for anything Lumno has no copy in.
   function normalizeLanguageMode(mode) {
-    const raw = String(mode || '').trim();
-    if (!raw) {
-      return 'system';
+    const locale = SETTINGS.resolveSupportedLocale(mode);
+    return locale ? SETTINGS.localeToHtmlLang(locale) : 'system';
+  }
+
+  // AI-translated languages say so under the picker and ask for corrections.
+  function renderMachineTranslationNote(locale) {
+    if (languageMachineNote) {
+      languageMachineNote.hidden = !SETTINGS.isMachineTranslatedLocale(locale);
     }
-    const lower = raw.toLowerCase();
-    if (lower === 'system') {
-      return 'system';
-    }
-    if (lower === 'en' || lower.startsWith('en-') || lower.startsWith('en_')) {
-      return 'en';
-    }
-    if (lower === 'ja' || lower.startsWith('ja-') || lower.startsWith('ja_')) {
-      return 'ja';
-    }
-    if (lower === 'zh-hk' || lower === 'zh_hk') {
-      return 'zh-TW';
-    }
-    if (lower === 'zh-tw' || lower === 'zh_tw' || lower === 'zh-mo' || lower === 'zh_mo' || lower.includes('hant')) {
-      return 'zh-TW';
-    }
-    if (lower === 'zh-cn' || lower === 'zh_cn' || lower === 'zh-hans' || lower === 'zh_hans' || lower.startsWith('zh')) {
-      return 'zh-CN';
-    }
-    return 'system';
   }
 
   function loadLocaleMessages(locale) {
@@ -244,6 +232,7 @@ function createLanguage(deps) {
         }
       }
       applyI18n();
+      renderMachineTranslationNote(targetLocale);
       renderOptionsInfoButtons();
       renderFeedbackSupport();
       refreshCustomSelects();

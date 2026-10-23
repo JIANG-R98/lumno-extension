@@ -281,23 +281,20 @@
   "settings_language_desc": {
     "message": "Choose UI language"
   },
+  "settings_language_machine_note": {
+    "message": "Translated by AI. If something reads wrong, please send feedback."
+  },
+  "settings_language_search_placeholder": {
+    "message": "Search languages"
+  },
+  "settings_language_no_results": {
+    "message": "No matching languages"
+  },
   "settings_version_label": {
     "message": "Version"
   },
   "settings_version_tooltip": {
     "message": "View changelog"
-  },
-  "language_zh_cn": {
-    "message": "简体中文"
-  },
-  "language_zh_tw": {
-    "message": "繁體中文"
-  },
-  "language_en": {
-    "message": "English"
-  },
-  "language_ja": {
-    "message": "日本語"
   },
   "language_system": {
     "message": "Follow browser language"
@@ -3536,8 +3533,8 @@
   "newtab_quote_import_hint": {
     "message": "A new quote shows every day; Shuffle changes it any time. TXT / MD: one non-empty content line per quote. Up to 1 MB, 1,000 quotes, 500 characters each; kept on this device, not in browser sync; WebDAV syncs it when turned on."
   },
-  "newtab_quote_entries": {
-    "message": "quotes"
+  "newtab_quote_count": {
+    "message": "{count} quotes"
   },
   "newtab_quote_import_error": {
     "message": "Import failed: the file doesn’t meet the format or size limits. Your previous collection is kept."

@@ -445,8 +445,28 @@ function buildPrompt(action, value, locale) {
       calculate: 'Calculate or convert the following and briefly explain the result:'
     }
   };
-  const prefix = (templates[targetLocale] || templates.en)[action] || templates[targetLocale].explain;
+  // Other UI languages share the English prompt and ask for a reply in theirs.
+  const languageName = targetLocale === 'en' ? getEnglishLanguageName(rawLocale) : '';
+  let prefix = (templates[targetLocale] || templates.en)[action] || templates[targetLocale].explain;
+  if (languageName) {
+    prefix = action === 'translate'
+      ? `Translate the following into natural, accurate ${languageName}. Output only the translation:`
+      : `${prefix.replace(/:$/, '')}. Reply in ${languageName}:`;
+  }
   return `${prefix}\n\n${text}`;
+}
+
+// "German" for "de", "Brazilian Portuguese" for "pt-br"; '' for English or
+// a tag Intl does not know.
+function getEnglishLanguageName(locale) {
+  if (!locale || locale === 'en' || locale.startsWith('en-')) {
+    return '';
+  }
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'language', fallback: 'none' }).of(locale) || '';
+  } catch (_error) {
+    return '';
+  }
 }
 
 export {

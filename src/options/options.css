@@ -297,6 +297,17 @@ body[data-theme="light"] {
 #_x_extension_settings_tabs_2024_unique_::-webkit-scrollbar {
   display: none;
 }
+/* Tabs too long for one row (some translations, narrow windows) drop their icons and
+   sit closer together before the strip has to scroll (data-compact, set by the React navigation). */
+#_x_extension_settings_tabs_2024_unique_[data-compact="true"] {
+  gap: 2px;
+}
+#_x_extension_settings_tabs_2024_unique_[data-compact="true"] ._x_extension_settings_tab_button_2024_unique_ {
+  padding-inline: 7px;
+}
+#_x_extension_settings_tabs_2024_unique_[data-compact="true"] ._x_extension_tab_icon_2024_unique_ {
+  display: none;
+}
 /* Fade whichever edge hides tabs (set by the React navigation) so the strip reads as scrollable. */
 #_x_extension_settings_tabs_2024_unique_[data-overflow-end="true"] {
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);

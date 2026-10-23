@@ -198,7 +198,7 @@ function createRuntime(options) {
     }
     // Beside the actions: how many quotes; hovering it names the file.
     if (refs.quoteLibraryCount) {
-      const count = library ? `${library.quotes.length} ${t('newtab_quote_entries', 'quotes')}` : '';
+      const count = library ? t('newtab_quote_count', '{count} quotes').replace('{count}', String(library.quotes.length)) : '';
       refs.quoteLibraryCount.hidden = !library;
       if (refs.quoteLibraryCountText) refs.quoteLibraryCountText.textContent = count;
       refs.quoteLibraryCount.setAttribute('aria-label', library ? `${library.filename} · ${count}` : '');

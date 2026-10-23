@@ -66,6 +66,20 @@ assert.strictEqual(settings.localeToHtmlLang('en-US'), 'en');
 assert.strictEqual(settings.localeToHtmlLang('ja-JP'), 'ja');
 assert.strictEqual(settings.localeToHtmlLang('zh-CN'), 'zh-CN');
 assert.strictEqual(settings.localeToHtmlLang('zh-HK'), 'zh-TW');
+// Browser tags map onto the _locales folders, aliases included.
+assert.strictEqual(settings.normalizeLocale('de-AT'), 'de');
+assert.strictEqual(settings.normalizeLocale('pt'), 'pt_BR');
+assert.strictEqual(settings.normalizeLocale('pt-PT'), 'pt_PT');
+assert.strictEqual(settings.normalizeLocale('es-419'), 'es');
+assert.strictEqual(settings.normalizeLocale('nb'), 'no');
+assert.strictEqual(settings.normalizeLocale('tl'), 'fil');
+assert.strictEqual(settings.localeToHtmlLang('pt_BR'), 'pt-BR');
+// Right-to-left and unlisted languages fall back to English.
+assert.strictEqual(settings.normalizeLocale('ar'), 'en');
+assert.strictEqual(settings.resolveSupportedLocale('he-IL'), '');
+assert.strictEqual(settings.resolveSupportedLocale('system'), '');
+assert.strictEqual(settings.isMachineTranslatedLocale('de'), true);
+assert.strictEqual(settings.isMachineTranslatedLocale('zh-TW'), false);
 
 assert.strictEqual(settings.normalizeNewtabWidthMode('standard'), 'standard');
 assert.strictEqual(settings.normalizeNewtabWidthMode('wide'), 'wide');

@@ -1,0 +1,3659 @@
+{
+  "ext_name": {
+    "message": "Lumno ｜ 커맨드 바 & 새 탭"
+  },
+  "ext_description": {
+    "message": "가볍게 쓰는 브라우저 커맨드 바이자 새 탭 검색 도구입니다."
+  },
+  "settings_tab_general": {
+    "message": "일반"
+  },
+  "settings_tab_appearance": {
+    "message": "모양"
+  },
+  "settings_appearance_global_section_title": {
+    "message": "전체"
+  },
+  "settings_webpage_focus_overlay_section_title": {
+    "message": "커맨드 바"
+  },
+  "newtab_theme_scope_label": {
+    "message": "테마 적용 범위"
+  },
+  "newtab_theme_scope_global": {
+    "message": "전체"
+  },
+  "newtab_theme_scope_home": {
+    "message": "새 탭"
+  },
+  "newtab_theme_scope_select_label": {
+    "message": "{scope}에 테마 변경 적용"
+  },
+  "newtab_theme_scope_help_label": {
+    "message": "테마 적용 범위 안내"
+  },
+  "newtab_theme_scope_help": {
+    "message": "전체: 모든 페이지의 기본 테마입니다.\n새 탭: 새 탭 페이지에만 적용됩니다. '전체' 따르기를 선택하면 동일하게 유지됩니다."
+  },
+  "newtab_theme_follow_global": {
+    "message": "'전체' 따르기"
+  },
+  "newtab_search_section_title": {
+    "message": "검색창"
+  },
+  "newtab_search_width_title": {
+    "message": "검색창 너비"
+  },
+  "newtab_search_width_aria": {
+    "message": "새 탭 검색창 너비 조정"
+  },
+  "newtab_search_width_standard": {
+    "message": "표준"
+  },
+  "newtab_search_width_wide": {
+    "message": "넓게"
+  },
+  "newtab_search_width_max": {
+    "message": "최대"
+  },
+  "newtab_appearance_settings_title": {
+    "message": "모양 설정"
+  },
+  "newtab_help_footer_prompt": {
+    "message": "옵션의 기능이 궁금하신가요?"
+  },
+  "newtab_help_footer_action": {
+    "message": "고객센터 방문하기"
+  },
+  "newtab_more_settings": {
+    "message": "설정 더보기"
+  },
+  "settings_tab_shortcuts": {
+    "message": "검색 소스"
+  },
+  "settings_tab_blacklist": {
+    "message": "차단 목록"
+  },
+  "settings_tab_labs": {
+    "message": "실험실"
+  },
+  "settings_selection_quick_actions_title": {
+    "message": "선택 텍스트 빠른 작업"
+  },
+  "settings_selection_quick_actions_desc": {
+    "message": "텍스트를 선택하면 AI 작업 표시"
+  },
+  "settings_selection_quick_actions_provider_title": {
+    "message": "기본 제공업체"
+  },
+  "settings_selection_quick_actions_group_title": {
+    "message": "백그라운드에서 검색"
+  },
+  "settings_selection_quick_actions_group_desc": {
+    "message": "모든 AI 페이지를 'AI 검색' 탭 그룹에 모읍니다"
+  },
+  "selection_quick_actions_group_name": {
+    "message": "AI 검색"
+  },
+  "selection_quick_action_ask": {
+    "message": "답변"
+  },
+  "selection_quick_action_translate": {
+    "message": "번역"
+  },
+  "selection_quick_action_explain": {
+    "message": "설명"
+  },
+  "selection_quick_action_summarize": {
+    "message": "요약"
+  },
+  "selection_quick_action_search": {
+    "message": "조사"
+  },
+  "selection_quick_action_calculate": {
+    "message": "계산"
+  },
+  "selection_quick_action_open_menu": {
+    "message": "선택한 텍스트로 Lumno 사용"
+  },
+  "selection_quick_action_more": {
+    "message": "작업 더보기"
+  },
+  "selection_quick_action_sending": {
+    "message": "백그라운드에서 여는 중…"
+  },
+  "selection_quick_action_failed": {
+    "message": "보내지 못했습니다. 다시 시도해 주세요."
+  },
+  "selection_debug_decision_title": {
+    "message": "선택 판정"
+  },
+  "selection_debug_status_show": {
+    "message": "표시"
+  },
+  "selection_debug_status_hide": {
+    "message": "표시 안 함"
+  },
+  "selection_debug_sort_title": {
+    "message": "메뉴 순서"
+  },
+  "selection_debug_item_count": {
+    "message": "{count}개 항목"
+  },
+  "selection_debug_reason_calculate": {
+    "message": "수식, 통화 또는 단위 변환이 감지됨"
+  },
+  "selection_debug_reason_question": {
+    "message": "명확한 질문이 감지됨"
+  },
+  "selection_debug_reason_prose": {
+    "message": "충분히 풍부한 연속 문장이 감지됨"
+  },
+  "selection_debug_reason_search": {
+    "message": "뉴스, 가격, 공식 사이트 또는 버전 조회 의도가 감지됨"
+  },
+  "selection_debug_reason_translate": {
+    "message": "선택한 텍스트가 Lumno의 UI 언어와 다름"
+  },
+  "selection_debug_reason_error": {
+    "message": "오류 또는 예외가 감지됨"
+  },
+  "selection_debug_reason_code": {
+    "message": "코드 구문 또는 코드 영역이 감지됨"
+  },
+  "selection_debug_reason_term": {
+    "message": "의미 있는 용어나 짧은 구문이 감지됨"
+  },
+  "selection_debug_reason_explain_score": {
+    "message": "설명의 점수가 가장 높음"
+  },
+  "selection_debug_reason_top_score": {
+    "message": "이 작업의 일치 점수가 가장 높음"
+  },
+  "selection_debug_rejection_disabled": {
+    "message": "선택 텍스트 빠른 작업이 꺼져 있음"
+  },
+  "selection_debug_rejection_sensitive": {
+    "message": "비밀번호 또는 결제 등 민감한 필드이므로 내용을 읽지 않음"
+  },
+  "selection_debug_rejection_no_selection": {
+    "message": "유효한 텍스트 선택이 감지되지 않음"
+  },
+  "selection_debug_rejection_too_short": {
+    "message": "2자 미만"
+  },
+  "selection_debug_rejection_too_long": {
+    "message": "2400자 초과"
+  },
+  "selection_debug_rejection_url": {
+    "message": "전체 URL"
+  },
+  "selection_debug_rejection_email": {
+    "message": "이메일 주소"
+  },
+  "selection_debug_rejection_generic_ui": {
+    "message": "'자세히 알아보기 / 저장 / 다음' 같은 일반 UI 문구"
+  },
+  "selection_debug_rejection_plain_number": {
+    "message": "계산이나 변환이 없는 단순 숫자"
+  },
+  "selection_debug_rejection_symbols": {
+    "message": "기호 비율이 너무 높음"
+  },
+  "selection_debug_rejection_no_intent": {
+    "message": "명확한 작업, 의미 있는 용어 또는 충분한 문장과 일치하지 않음"
+  },
+  "selection_debug_primary_meta": {
+    "message": "우선: {action} · 점수 {score} · 신뢰도 {confidence}"
+  },
+  "selection_debug_confidence_high": {
+    "message": "높음"
+  },
+  "selection_debug_confidence_medium": {
+    "message": "보통"
+  },
+  "selection_debug_confidence_low": {
+    "message": "낮음"
+  },
+  "selection_debug_sort_primary_cause": {
+    "message": "{reason}, 점수 {score}"
+  },
+  "selection_debug_sort_fallback_cause": {
+    "message": "일반 대체 항목, 고정 순서로 채우고 중복 제거"
+  },
+  "selection_debug_sort_footer": {
+    "message": "첫 항목은 의도 점수가 가장 높은 작업이며, 나머지는 '설명 → 조사 → 번역' 순서를 따릅니다."
+  },
+  "settings_global_section_title": {
+    "message": "전체 설정"
+  },
+  "settings_feedback_support_section_title": {
+    "message": "의견 및 지원"
+  },
+  "settings_feedback_support_wechat_action": {
+    "message": "WeChat 그룹 참여"
+  },
+  "settings_help_center_title": {
+    "message": "고객센터"
+  },
+  "settings_help_center_desc": {
+    "message": "기능 사용법이 궁금하신가요? 모든 기능이 여기에 설명되어 있습니다."
+  },
+  "settings_help_center_action": {
+    "message": "열기"
+  },
+  "settings_help_center_ask_action": {
+    "message": "검색창에서 질문하기"
+  },
+  "settings_help_center_ask_caption": {
+    "message": "새 탭이나 커맨드 바에서 lm을 입력하고 Tab을 누른 다음 질문을 입력하세요."
+  },
+  "settings_help_center_ask_demo_query": {
+    "message": "단축키 변경 방법"
+  },
+  "settings_help_center_ask_demo_result_1_title": {
+    "message": "단축키"
+  },
+  "settings_help_center_ask_demo_result_1_detail": {
+    "message": "단축키 변경하기"
+  },
+  "settings_help_center_ask_demo_result_2_title": {
+    "message": "바로가기 및 북마크"
+  },
+  "settings_help_center_ask_demo_result_2_detail": {
+    "message": "바로가기 아이콘 변경하기"
+  },
+  "settings_feedback_support_review_action": {
+    "message": "Lumno 평가하기"
+  },
+  "settings_feedback_support_github_issue_action": {
+    "message": "Issue 만들기"
+  },
+  "settings_feedback_support_contact_author_action": {
+    "message": "개발자에게 문의"
+  },
+  "settings_onboarding_tutorial_action": {
+    "message": "시작 가이드"
+  },
+  "settings_language_title": {
+    "message": "언어"
+  },
+  "settings_language_desc": {
+    "message": "UI 언어 선택"
+  },
+  "settings_language_machine_note": {
+    "message": "AI가 번역했습니다. 어색한 부분이 있으면 의견을 보내 주세요."
+  },
+  "settings_language_search_placeholder": {
+    "message": "언어 검색"
+  },
+  "settings_language_no_results": {
+    "message": "일치하는 언어가 없습니다"
+  },
+  "settings_version_label": {
+    "message": "버전"
+  },
+  "settings_version_tooltip": {
+    "message": "변경 로그 보기"
+  },
+  "language_system": {
+    "message": "브라우저 언어 따르기"
+  },
+  "settings_recent_title": {
+    "message": "새 탭 하단 콘텐츠"
+  },
+  "settings_newtab_section_title": {
+    "message": "새 탭"
+  },
+  "settings_search_results_section_title": {
+    "message": "검색 결과 설정"
+  },
+  "settings_search_result_priority_title": {
+    "message": "첫 번째 검색 결과 우선순위"
+  },
+  "settings_search_result_tab_position_title": {
+    "message": "검색 결과 탭 위치"
+  },
+  "search_result_tab_position_end": {
+    "message": "탭 표시줄 끝(맨 아래)"
+  },
+  "search_result_tab_position_after_current": {
+    "message": "현재 탭 오른쪽(아래)"
+  },
+  "search_result_tab_position_before_current": {
+    "message": "현재 탭 왼쪽(위)"
+  },
+  "settings_search_fuzzy_pinyin_title": {
+    "message": "병음 퍼지 검색"
+  },
+  "settings_search_fuzzy_pinyin_desc": {
+    "message": "사용 설정하면 병음 및 이니셜 검색 시 z와 zh, c와 ch, s와 sh, n과 l, an과 ang, en과 eng, in과 ing를 같은 것으로 간주합니다"
+  },
+  "settings_search_result_sources_title": {
+    "message": "표시할 결과 유형"
+  },
+  "settings_search_result_display_limit_title": {
+    "message": "최대 표시 결과 수"
+  },
+  "settings_overlay_open_tabs_default_visible_title": {
+    "message": "웹페이지에서 Lumno를 열 때 열린 탭을 기본으로 모두 표시"
+  },
+  "settings_favicon_enhanced_fetch_title": {
+    "message": "아이콘 및 테마 색상 가져오기 강화"
+  },
+  "settings_favicon_enhanced_fetch_desc": {
+    "message": "로컬 네트워크 액세스 메시지가 표시되면 이 기능을 끄세요. Lumno가 웹사이트 이미지를 직접 불러오지 않으며, 브라우저에 캐시된 아이콘과 서드파티 아이콘 서비스는 계속 사용할 수 있습니다."
+  },
+  "favicon_blacklist_section_desc": {
+    "message": "웹사이트별 제외"
+  },
+  "favicon_blacklist_add": {
+    "message": "제외 규칙 추가"
+  },
+  "favicon_blacklist_removed_toast": {
+    "message": "아이콘 및 테마 제외 목록에서 삭제됨"
+  },
+  "favicon_blacklist_clear": {
+    "message": "제외 규칙 지우기"
+  },
+  "search_result_priority_autocomplete": {
+    "message": "자동 완성 우선"
+  },
+  "search_result_priority_search": {
+    "message": "검색 우선"
+  },
+  "settings_recent_desc": {
+    "message": "최근 / 자주 방문한 사이트 표시"
+  },
+  "settings_recent_sites_title": {
+    "message": "사이트 카드"
+  },
+  "newtab_recent_rows_title": {
+    "message": "사이트 카드 행 수"
+  },
+  "settings_newtab_width_title": {
+    "message": "새 탭 페이지 콘텐츠 너비"
+  },
+  "settings_bookmarks_title": {
+    "message": "북마크 행 수"
+  },
+  "settings_bookmark_folder_icons_visible_title": {
+    "message": "북마크 폴더 안의 아이콘 표시"
+  },
+  "settings_document_pip_title": {
+    "message": "웹 클립"
+  },
+  "settings_document_pip_desc": {
+    "message": "페이지 일부를 플로팅 창으로 잘라 내어 참고하거나 나란히 비교할 수 있습니다"
+  },
+  "settings_document_pip_unsupported_tooltip": {
+    "message": "웹 클립은 문서 PIP(Document Picture-in-Picture)를 사용하며, Firefox는 아직 이를 지원하지 않습니다."
+  },
+  "document_pip_command_title": {
+    "message": "웹 클립 시작"
+  },
+  "document_pip_command_action": {
+    "message": "클립 시작"
+  },
+  "settings_update_notice_title": {
+    "message": "업데이트 알림"
+  },
+  "settings_update_notice_desc": {
+    "message": "Lumno가 새 버전으로 업데이트되면 새로운 기능 표시"
+  },
+  "settings_motion_effects_title": {
+    "message": "모션 효과"
+  },
+  "settings_motion_effects_desc": {
+    "message": "끊김이 있거나 더 빠르게 열리는 편을 원하면 끄세요"
+  },
+  "settings_simple_mode_title": {
+    "message": "미니멀 모드"
+  },
+  "settings_simple_mode_desc": {
+    "message": "장식 요소를 더 줄여 검색창을 깔끔하게 표시"
+  },
+  "settings_auto_pip_title": {
+    "message": "자동 PIP 모드"
+  },
+  "settings_auto_pip_desc": {
+    "message": "동영상 재생 중 탭을 전환하면 플로팅 창에서 계속 재생됩니다"
+  },
+  "settings_auto_pip_unsupported_tooltip": {
+    "message": "Firefox에서는 확장 프로그램이 웹 동영상을 자동으로 PIP 모드로 전환할 수 없으므로 이 기능을 사용할 수 없습니다."
+  },
+  "settings_pinned_tab_recovery_title": {
+    "message": "다시 시작 후 고정된 탭 복원"
+  },
+  "settings_pinned_tab_recovery_desc": {
+    "message": "복원 가능한 고정된 웹 탭을 저장하고, 브라우저를 다시 시작한 후 누락된 탭을 복원합니다"
+  },
+  "settings_number_shortcut_instant_title": {
+    "message": "Command 한 번 눌러 숫자 이동 표시"
+  },
+  "settings_number_shortcut_instant_desc": {
+    "message": "사용 설정하면 커맨드 바나 검색 추천에서 Command/Ctrl을 한 번 누를 때 바로 숫자 이동 배지가 표시됩니다. '백그라운드 탭에서 열기'에는 더 이상 Command를 사용하지 않습니다(가운데 클릭으로는 여전히 백그라운드에서 열 수 있음)"
+  },
+  "settings_macos_ctrl_suggestion_navigation_title": {
+    "message": "Mac 키보드 탐색"
+  },
+  "settings_macos_ctrl_suggestion_navigation_tooltip": {
+    "message": "macOS의 새 탭과 커맨드 바에서 작동합니다. 기여해 주신 @wanghanzhen 님께 감사드립니다."
+  },
+  "settings_macos_ctrl_suggestion_navigation_desc": {
+    "message": "Ctrl+N / Ctrl+P로 다음 / 이전 결과 선택"
+  },
+  "document_pip_picker_hint": {
+    "message": "페이지 위로 마우스를 움직여 요소를 선택하세요. 클릭하면 PIP가 열리고, 스크롤하면 상위 요소로 전환되며, Esc를 누르면 취소됩니다."
+  },
+  "document_pip_picker_started": {
+    "message": "띄울 콘텐츠를 클릭하세요. 스크롤로 범위를 바꾸고 Esc로 취소할 수 있습니다."
+  },
+  "document_pip_picker_cancelled": {
+    "message": "콘텐츠 선택을 종료했습니다"
+  },
+  "document_pip_picker_closed": {
+    "message": "플로팅 콘텐츠 창을 닫았습니다"
+  },
+  "document_pip_picker_unsupported": {
+    "message": "이 페이지는 문서 PIP(Document Picture-in-Picture)를 지원하지 않습니다."
+  },
+  "document_pip_picker_conflict_video_pip": {
+    "message": "동영상 PIP가 이미 실행 중입니다. 닫은 후 웹 클립을 시작하세요."
+  },
+  "document_pip_picker_invalid": {
+    "message": "이 영역은 아직 띄울 수 없습니다. 더 큰 콘텐츠 영역을 선택해 보세요."
+  },
+  "document_pip_picker_open_failed": {
+    "message": "플로팅 콘텐츠 창을 열지 못했습니다. 다른 영역을 선택해 보세요."
+  },
+  "document_pip_picker_button_reselect": {
+    "message": "다시 선택"
+  },
+  "document_pip_picker_button_return": {
+    "message": "돌아가기"
+  },
+  "document_pip_picker_button_close": {
+    "message": "닫기"
+  },
+  "settings_newtab_scope_desc": {
+    "message": "새 탭"
+  },
+  "settings_overlay_tab_priority_title": {
+    "message": "열린 탭 빠른 전환"
+  },
+  "settings_overlay_tab_priority_desc": {
+    "message": "입력한 내용이 열린 탭과 일치하면 Enter 키는 첫 번째 추천 항목의 탭 동작을 따릅니다"
+  },
+  "overlay_tab_priority_switch_first": {
+    "message": "Enter를 눌러 열린 탭으로 전환"
+  },
+  "overlay_tab_priority_newtab_first": {
+    "message": "Enter를 눌러 새 탭에서 열기"
+  },
+  "settings_shortcuts_title": {
+    "message": "커맨드 바 열기"
+  },
+  "settings_shortcuts_browser_desc_prefix": {
+    "message": "단축키는 "
+  },
+  "settings_shortcuts_browser_desc_path_extensions": {
+    "message": "확장 프로그램"
+  },
+  "settings_shortcuts_browser_desc_path_extensions__firefox": {
+    "message": "부가 기능 및 테마"
+  },
+  "settings_shortcuts_browser_desc_path_shortcuts": {
+    "message": "키보드 단축키"
+  },
+  "settings_shortcuts_browser_desc_path_shortcuts__firefox": {
+    "message": "확장 기능 단축키 관리"
+  },
+  "settings_shortcuts_browser_desc_suffix": {
+    "message": " 메뉴에서 변경할 수 있습니다"
+  },
+  "settings_shortcuts_dia_tag": {
+    "message": "Dia에서 사용"
+  },
+  "settings_shortcuts_dia_tooltip": {
+    "message": "Dia에서는 브라우저 제한으로 인해 Lumno의 새 탭 기능을 일시적으로 사용할 수 없지만, 커맨드 바는 정상적으로 작동합니다.\n\nDia에서 단축키가 작동하지 않으면 오른쪽 아래 버튼을 클릭해 브라우저 단축키 설정 페이지를 열고, \"Open command bar\"를 In Dia에서 Global로 변경하세요."
+  },
+  "settings_shortcuts_section_title": {
+    "message": "단축키 설정"
+  },
+  "settings_shortcuts_desc": {
+    "message": "Lumno 커맨드 바를 여는 데 사용"
+  },
+  "overlay_close_other_tabs_tooltip": {
+    "message": "다른 탭 닫기"
+  },
+  "overlay_close_other_tabs_confirm": {
+    "message": "이 창의 다른 탭을 닫으시겠습니까? 고정된 탭과 그룹에 속한 탭은 유지됩니다."
+  },
+  "overlay_close_other_tabs_confirm_button": {
+    "message": "닫기"
+  },
+  "settings_shortcuts_status": {
+    "message": "현재: {shortcut}"
+  },
+  "settings_shortcuts_unset": {
+    "message": "설정 안 됨"
+  },
+  "settings_shortcuts_action": {
+    "message": "단축키 설정 열기"
+  },
+  "settings_shortcuts_browser_tooltip": {
+    "message": "Chromium 브라우저에서는 확장 프로그램 단축키 페이지에서 커맨드 바 단축키를 설정하거나 변경해야 합니다."
+  },
+  "settings_shortcuts_browser_tooltip__firefox": {
+    "message": "Firefox에서는 부가 기능 관리자의 확장 기능 단축키 관리에서 커맨드 바 단축키를 설정하거나 변경하세요."
+  },
+  "settings_shortcuts_save": {
+    "message": "단축키 저장"
+  },
+  "settings_shortcuts_reset": {
+    "message": "기본값으로 재설정"
+  },
+  "settings_shortcuts_record_placeholder": {
+    "message": "단축키 입력"
+  },
+  "settings_shortcuts_empty_state": {
+    "message": "없음"
+  },
+  "settings_shortcuts_invalid": {
+    "message": "잘못된 단축키입니다. Ctrl+K 같은 키 조합을 사용하세요."
+  },
+  "settings_restricted_title": {
+    "message": "제한된 페이지에서의 동작"
+  },
+  "settings_restricted_tooltip": {
+    "message": "제한된 페이지(예: chrome://)에서는 커맨드 바를 열 수 없습니다. 단축키를 누르면 여기서 설정한 규칙을 따릅니다."
+  },
+  "settings_restricted_tooltip__firefox": {
+    "message": "제한된 페이지(예: about: 페이지, Firefox 부가 기능 사이트)에서는 커맨드 바를 열 수 없습니다. 단축키를 누르면 여기서 설정한 규칙을 따릅니다."
+  },
+  "restricted_action_default": {
+    "message": "Lumno 새 탭으로 이동"
+  },
+  "restricted_action_none": {
+    "message": "브라우저 설정 따르기"
+  },
+  "newtab_file_access_notice_title": {
+    "message": "로컬 PDF 또는 HTML 페이지에서 Lumno를 사용하려면 파일 URL 액세스를 허용하세요"
+  },
+  "newtab_file_access_notice_body": {
+    "message": "Lumno에 아직 파일 URL 액세스 권한이 없습니다. 확장 프로그램 세부정보 페이지를 열어 '파일 URL에 대한 액세스 허용'을 사용 설정한 후 해당 페이지로 돌아가 단축키를 다시 누르세요."
+  },
+  "newtab_file_access_notice_open_cta": {
+    "message": "액세스 허용"
+  },
+  "newtab_file_access_notice_dismiss": {
+    "message": "나중에"
+  },
+  "newtab_file_access_notice_close": {
+    "message": "알림 닫기"
+  },
+  "recent_count_4": {
+    "message": "1행 표시"
+  },
+  "recent_count_8": {
+    "message": "2행 표시"
+  },
+  "recent_count_off": {
+    "message": "숨기기"
+  },
+  "bookmark_count_off": {
+    "message": "숨기기"
+  },
+  "bookmark_count_4": {
+    "message": "1행 표시"
+  },
+  "bookmark_count_8": {
+    "message": "8개 표시"
+  },
+  "bookmark_count_16": {
+    "message": "16개 표시"
+  },
+  "bookmark_count_32": {
+    "message": "32개 표시"
+  },
+  "settings_bookmark_columns_title": {
+    "message": "행당 북마크 수"
+  },
+  "settings_bookmark_columns_desc": {
+    "message": "행당 최대 개수를 설정하며, 좁은 화면에서는 자동으로 조정됩니다"
+  },
+  "settings_bookmark_adaptive_count_tooltip": {
+    "message": "너비가 충분할 때의 최대 개수입니다. 실제 표시되는 개수는 사용 가능한 공간에 맞게 조정됩니다."
+  },
+  "bookmark_columns_4": {
+    "message": "행당 4개"
+  },
+  "bookmark_columns_6": {
+    "message": "행당 6개"
+  },
+  "bookmark_columns_8": {
+    "message": "행당 8개"
+  },
+  "newtab_width_standard": {
+    "message": "표준"
+  },
+  "newtab_width_wide": {
+    "message": "넓게(권장)"
+  },
+  "settings_overlay_size_title": {
+    "message": "크기"
+  },
+  "overlay_size_compact": {
+    "message": "작게"
+  },
+  "overlay_size_standard": {
+    "message": "표준"
+  },
+  "overlay_size_large": {
+    "message": "크게"
+  },
+  "settings_overlay_enter_animation_title": {
+    "message": "열기 애니메이션"
+  },
+  "overlay_enter_animation_elastic": {
+    "message": "스프링"
+  },
+  "overlay_enter_animation_fade": {
+    "message": "페이드"
+  },
+  "settings_overlay_font_title": {
+    "message": "로컬 글꼴"
+  },
+  "settings_overlay_font_desc": {
+    "message": "이 컴퓨터에 설치된 글꼴을 읽어옵니다. 이 기기에만 적용되며 동기화되지 않습니다."
+  },
+  "settings_overlay_font_missing": {
+    "message": "이 기기에 '{font}' 글꼴이 설치되어 있지 않아 오버레이에 기본 글꼴을 사용합니다"
+  },
+  "settings_overlay_font_missing_reset": {
+    "message": "기본값 사용"
+  },
+  "settings_overlay_font_fallback_missing": {
+    "message": "이 기기에 '{font}' 글꼴이 설치되어 있지 않아 대체 글꼴을 건너뜁니다"
+  },
+  "settings_overlay_font_fallback_missing_reset": {
+    "message": "지우기"
+  },
+  "settings_overlay_font_default": {
+    "message": "기본값"
+  },
+  "settings_overlay_font_search_placeholder": {
+    "message": "글꼴 검색"
+  },
+  "settings_overlay_font_no_results": {
+    "message": "일치하는 글꼴이 없습니다"
+  },
+  "settings_overlay_font_fallback_title": {
+    "message": "로컬 대체 글꼴"
+  },
+  "settings_overlay_font_fallback_desc": {
+    "message": "기본 글꼴에 없는 문자에 사용됩니다(예: 영문 글꼴의 한글)"
+  },
+  "settings_overlay_font_fallback_none": {
+    "message": "없음"
+  },
+  "settings_overlay_font_unsupported_tooltip": {
+    "message": "Firefox에서는 확장 프로그램이 설치된 글꼴 목록을 읽을 수 없으므로 오버레이에 기본 글꼴을 사용합니다"
+  },
+  "settings_overlay_page_theme_adaptation_title": {
+    "message": "웹페이지에 맞춰 테마 색상 조정"
+  },
+  "settings_overlay_page_theme_adaptation_tooltip": {
+    "message": "테마 모드가 '시스템 설정 따르기'일 때만 표시됩니다. 끄면 라이트/다크 모드가 더 이상 웹페이지 테마 색상에 맞춰 바뀌지 않습니다."
+  },
+  "recent_mode_latest": {
+    "message": "최근 방문 표시"
+  },
+  "recent_mode_most": {
+    "message": "자주 방문 표시"
+  },
+  "settings_toggle_on": {
+    "message": "사용"
+  },
+  "settings_theme_title": {
+    "message": "테마 모드"
+  },
+  "settings_theme_desc": {
+    "message": "시스템 설정을 따르거나 직접 선택"
+  },
+  "settings_theme_system": {
+    "message": "시스템 설정 따르기"
+  },
+  "settings_theme_light": {
+    "message": "라이트"
+  },
+  "settings_theme_dark": {
+    "message": "다크"
+  },
+  "settings_newtab_wordmark_title": {
+    "message": "검색창 위 콘텐츠"
+  },
+  "newtab_top_content_brand": {
+    "message": "브랜드"
+  },
+  "newtab_top_content_time": {
+    "message": "시간"
+  },
+  "newtab_top_content_off": {
+    "message": "숨기기"
+  },
+  "newtab_time_font_title": {
+    "message": "시간 글꼴"
+  },
+  "newtab_time_font_weight_title": {
+    "message": "시간 글꼴 두께"
+  },
+  "newtab_time_font_weight_reset": {
+    "message": "시간 글꼴 두께 재설정"
+  },
+  "newtab_time_font_size_title": {
+    "message": "시간 크기"
+  },
+  "newtab_time_font_size_reset": {
+    "message": "시간 크기 재설정"
+  },
+  "newtab_time_opacity_title": {
+    "message": "시간 불투명도"
+  },
+  "newtab_time_opacity_reset": {
+    "message": "시간 불투명도 재설정"
+  },
+  "newtab_time_ink_title": {
+    "message": "시간 색상"
+  },
+  "newtab_time_ink_auto": {
+    "message": "자동"
+  },
+  "newtab_time_ink_light": {
+    "message": "밝게"
+  },
+  "newtab_time_ink_dark": {
+    "message": "어둡게"
+  },
+  "newtab_time_show_seconds_title": {
+    "message": "초 표시"
+  },
+  "newtab_time_12_hour_title": {
+    "message": "12시간제"
+  },
+  "settings_newtab_page_buttons_title": {
+    "message": "페이지 버튼"
+  },
+  "settings_newtab_feedback_button_visible_title": {
+    "message": "의견 보내기 버튼 표시"
+  },
+  "settings_newtab_appearance_button_visible_title": {
+    "message": "모양 버튼 표시"
+  },
+  "settings_newtab_shortcuts_title": {
+    "message": "바로가기"
+  },
+  "settings_newtab_shortcut_add_title": {
+    "message": "'+' 표시"
+  },
+  "settings_newtab_shortcut_dock_magnification_title": {
+    "message": "macOS Dock 스타일 확대"
+  },
+  "settings_newtab_shortcut_width_title": {
+    "message": "바로가기 너비"
+  },
+  "settings_newtab_shortcut_columns_title": {
+    "message": "행당 바로가기 수"
+  },
+  "settings_newtab_shortcut_size_title": {
+    "message": "바로가기 크기"
+  },
+  "settings_newtab_shortcut_gap_title": {
+    "message": "바로가기 간격"
+  },
+  "settings_newtab_shortcut_size_reset": {
+    "message": "바로가기 크기 재설정"
+  },
+  "settings_newtab_shortcut_gap_reset": {
+    "message": "바로가기 간격 재설정"
+  },
+  "settings_wallpaper_title": {
+    "message": "새 탭 배경화면"
+  },
+  "settings_wallpaper_desc": {
+    "message": "로컬 이미지를 업로드해 새 탭 배경으로 사용"
+  },
+  "settings_wallpaper_upload": {
+    "message": "이미지 업로드"
+  },
+  "settings_wallpaper_remove": {
+    "message": "삭제"
+  },
+  "settings_wallpaper_fit_cover": {
+    "message": "채우기"
+  },
+  "settings_wallpaper_fit_contain": {
+    "message": "맞추기"
+  },
+  "settings_wallpaper_status_none": {
+    "message": "업로드한 배경화면 없음"
+  },
+  "settings_wallpaper_status_ready": {
+    "message": "배경화면 업로드됨"
+  },
+  "settings_wallpaper_status_local_only": {
+    "message": "배경화면 업로드됨(이 기기만)"
+  },
+  "settings_wallpaper_status_missing": {
+    "message": "배경화면 파일이 없습니다. 다시 업로드해 주세요."
+  },
+  "settings_wallpaper_status_processing": {
+    "message": "처리 중…"
+  },
+  "settings_wallpaper_upload_done": {
+    "message": "배경화면이 업데이트되었습니다"
+  },
+  "settings_wallpaper_remove_done": {
+    "message": "배경화면이 삭제되었습니다"
+  },
+  "settings_wallpaper_error_type": {
+    "message": "이미지 파일(JPG / PNG / WEBP)을 업로드해 주세요."
+  },
+  "settings_wallpaper_error_oversize": {
+    "message": "이미지가 너무 큽니다. 8MB 미만의 파일을 업로드해 주세요."
+  },
+  "settings_wallpaper_error_oversize_after_compress": {
+    "message": "압축 후에도 이미지가 너무 큽니다. 더 작은 이미지를 사용해 보세요."
+  },
+  "settings_wallpaper_error_save": {
+    "message": "배경화면을 저장하지 못했습니다. 다시 시도해 주세요."
+  },
+  "newtab_wallpaper_title": {
+    "message": "배경화면"
+  },
+  "newtab_logo_title": {
+    "message": "브랜드 마크"
+  },
+  "newtab_favicon_title": {
+    "message": "새 탭 파비콘"
+  },
+  "newtab_favicon_name_default": {
+    "message": "기본"
+  },
+  "newtab_favicon_name_alternate": {
+    "message": "대체"
+  },
+  "newtab_favicon_select_label": {
+    "message": "{name} 파비콘 선택"
+  },
+  "newtab_favicon_save_error": {
+    "message": "파비콘을 저장하지 못했습니다"
+  },
+  "newtab_wallpaper_source_title": {
+    "message": "소스"
+  },
+  "newtab_wallpaper_builtin_section": {
+    "message": "기본 제공"
+  },
+  "newtab_wallpaper_local_section": {
+    "message": "로컬"
+  },
+  "newtab_wallpaper_toggle_label": {
+    "message": "배경화면 사용 또는 사용 중지"
+  },
+  "newtab_wallpaper_select_label": {
+    "message": "{name} 선택"
+  },
+  "newtab_wallpaper_add_local": {
+    "message": "로컬 배경화면 추가"
+  },
+  "newtab_wallpaper_mode_sync_title": {
+    "message": "라이트 및 다크 모드 일치"
+  },
+  "newtab_wallpaper_mode_sync_toggle_label": {
+    "message": "라이트 모드와 다크 모드에 같은 배경화면 사용"
+  },
+  "newtab_wallpaper_mode_row_title": {
+    "message": "모드"
+  },
+  "newtab_wallpaper_mode_tabs_label": {
+    "message": "배경화면 색상 모드"
+  },
+  "newtab_wallpaper_light_mode_tab": {
+    "message": "라이트"
+  },
+  "newtab_wallpaper_dark_mode_tab": {
+    "message": "다크"
+  },
+  "newtab_wallpaper_mode_select_label": {
+    "message": "{mode} 모드 배경화면 편집"
+  },
+  "newtab_wallpaper_sources_feature_hint_badge": {
+    "message": "신규"
+  },
+  "newtab_wallpaper_sources_feature_hint_text": {
+    "message": "새 배경화면: 매일 업데이트되는 자연, 도시, 예술 큐레이션 컬렉션을 사용하거나 이미지 링크로 추가할 수 있습니다."
+  },
+  "newtab_wallpaper_sources_feature_hint_close": {
+    "message": "새 배경화면 안내 닫기"
+  },
+  "newtab_webdav_feature_hint_badge": {
+    "message": "베타"
+  },
+  "newtab_webdav_feature_hint_text": {
+    "message": "WebDAV 동기화 체험: WebDAV 드라이브나 NAS를 통해 설정, 아이콘, 배경화면을 동기화할 수 있으며 브라우저 간에도 사용할 수 있습니다."
+  },
+  "newtab_webdav_feature_hint_link": {
+    "message": "설정하기"
+  },
+  "newtab_webdav_feature_hint_close": {
+    "message": "WebDAV 안내 닫기"
+  },
+  "newtab_help_center_ask_feature_hint_badge": {
+    "message": "신규"
+  },
+  "newtab_help_center_ask_feature_hint_text": {
+    "message": "사용법이 궁금하신가요? lm을 입력하고 Tab을 눌러 고객센터에 질문해 보세요."
+  },
+  "newtab_help_center_ask_feature_hint_link": {
+    "message": "사용해 보기"
+  },
+  "newtab_help_center_ask_feature_hint_close": {
+    "message": "고객센터 안내 닫기"
+  },
+  "newtab_ai_quick_jump_feature_hint_badge": {
+    "message": "신규"
+  },
+  "newtab_ai_quick_jump_feature_hint_text": {
+    "message": "프롬프트와 함께 인기 AI 사이트로 한 번에 이동하세요. \"gemini\"를 입력하고 Tab을 눌러 보세요."
+  },
+  "newtab_ai_quick_jump_feature_hint_link": {
+    "message": "지원 목록"
+  },
+  "newtab_ai_quick_jump_feature_hint_close": {
+    "message": "AI 빠른 이동 안내 닫기"
+  },
+  "newtab_tab_switcher_feature_hint_badge": {
+    "message": "신규"
+  },
+  "newtab_tab_switcher_feature_hint_text": {
+    "message": "{shortcut} 키를 눌러 탭 전환기를 열고 마우스 없이 최근 탭 사이를 이동하세요."
+  },
+  "newtab_tab_switcher_feature_hint_close": {
+    "message": "탭 전환기 안내 닫기"
+  },
+  "newtab_input_auto_focus_title": {
+    "message": "입력란 자동 포커스"
+  },
+  "newtab_input_auto_focus_help_label": {
+    "message": "입력란 자동 포커스 안내"
+  },
+  "newtab_input_auto_focus_help": {
+    "message": "브라우저 기본 주소 표시줄을 사용하려면 이 옵션을 끄세요. 주소 표시줄에 더 이상 확장 프로그램 URL이 표시되지 않습니다."
+  },
+  "update_notice_badge": {
+    "message": "{version}(으)로 업데이트됨"
+  },
+  "update_notice_text_fallback": {
+    "message": "이번 업데이트의 변경사항 보기"
+  },
+  "update_notice_link": {
+    "message": "변경 로그"
+  },
+  "update_notice_close": {
+    "message": "업데이트 알림 닫기"
+  },
+  "engagement_notice_badge": {
+    "message": "Lumno"
+  },
+  "engagement_notice_text": {
+    "message": "Lumno가 마음에 드셨다면"
+  },
+  "engagement_notice_connector": {
+    "message": "주시거나"
+  },
+  "engagement_notice_trailing": {
+    "message": "인사해 주세요."
+  },
+  "engagement_notice_review": {
+    "message": "별점 5점을 남겨"
+  },
+  "engagement_notice_community": {
+    "message": "X에서 찾아"
+  },
+  "engagement_notice_close": {
+    "message": "평가 및 커뮤니티 안내 닫기"
+  },
+  "newtab_bookmark_cascade_debug_enable": {
+    "message": "북마크 메뉴 안전 삼각형 표시"
+  },
+  "newtab_bookmark_cascade_debug_disable": {
+    "message": "북마크 메뉴 안전 삼각형 숨기기"
+  },
+  "newtab_bookmark_cascade_debug_open_label": {
+    "message": "열기"
+  },
+  "newtab_bookmark_cascade_debug_switch_label": {
+    "message": "전환"
+  },
+  "newtab_bookmark_cascade_debug_safe_label": {
+    "message": "안전"
+  },
+  "newtab_bookmark_cascade_debug_close_label": {
+    "message": "닫기"
+  },
+  "newtab_feedback_button_aria": {
+    "message": "의견 보내기"
+  },
+  "newtab_feedback_menu_aria": {
+    "message": "의견 채널"
+  },
+  "newtab_feedback_x_label": {
+    "message": "X"
+  },
+  "newtab_feedback_x_tooltip": {
+    "message": "X에서 문의하기"
+  },
+  "newtab_feedback_github_issue_label": {
+    "message": "GitHub Issue"
+  },
+  "newtab_feedback_github_issue_tooltip": {
+    "message": "GitHub Issue 열기"
+  },
+  "newtab_feedback_chrome_review_label": {
+    "message": "스토어 평가"
+  },
+  "newtab_feedback_chrome_review_tooltip": {
+    "message": "확장 프로그램 스토어에서 Lumno 평가하기"
+  },
+  "newtab_feedback_mail_label": {
+    "message": "이메일"
+  },
+  "newtab_feedback_mail_tooltip": {
+    "message": "이메일 보내기"
+  },
+  "newtab_feedback_wechat_label": {
+    "message": "WeChat"
+  },
+  "newtab_feedback_wechat_tooltip": {
+    "message": "WeChat 그룹 참여"
+  },
+  "newtab_feedback_wechat_panel_title": {
+    "message": "버그 신고 및 기능 요청"
+  },
+  "newtab_feedback_wechat_refresh_tooltip": {
+    "message": "QR 코드 새로고침"
+  },
+  "newtab_feedback_wechat_refresh_success": {
+    "message": "최신 QR 코드를 불러왔습니다"
+  },
+  "newtab_feedback_wechat_refresh_error": {
+    "message": "새로고침하지 못했습니다. 다시 시도해 주세요."
+  },
+  "newtab_feedback_wechat_close_tooltip": {
+    "message": "닫기"
+  },
+  "newtab_feedback_wechat_qr_title": {
+    "message": "WeChat 그룹 QR 코드"
+  },
+  "newtab_feedback_wechat_qr_alt": {
+    "message": "Lumno WeChat 그룹 QR 코드"
+  },
+  "newtab_feedback_mail_subject": {
+    "message": "Lumno 의견"
+  },
+  "newtab_feedback_mail_source_label": {
+    "message": "출처"
+  },
+  "newtab_feedback_mail_version_label": {
+    "message": "Lumno 버전"
+  },
+  "newtab_feedback_mail_language_label": {
+    "message": "언어"
+  },
+  "newtab_feedback_mail_os_label": {
+    "message": "운영체제"
+  },
+  "newtab_feedback_mail_browser_label": {
+    "message": "브라우저"
+  },
+  "newtab_wallpaper_delete_local": {
+    "message": "가져온 배경화면 삭제"
+  },
+  "newtab_wallpaper_custom_name": {
+    "message": "로컬 배경화면"
+  },
+  "newtab_wallpaper_overlay_opacity": {
+    "message": "마스크 효과"
+  },
+  "newtab_wallpaper_overlay_transparent_tick": {
+    "message": "투명"
+  },
+  "newtab_wallpaper_overlay_default_tick": {
+    "message": "기본"
+  },
+  "newtab_wallpaper_overlay_cover_tick": {
+    "message": "덮기"
+  },
+  "newtab_wallpaper_effect_title": {
+    "message": "배경화면 필터"
+  },
+  "newtab_wallpaper_effect_strength": {
+    "message": "샘플링 강도"
+  },
+  "newtab_wallpaper_effect_blur_strength": {
+    "message": "흐림 강도"
+  },
+  "newtab_wallpaper_effect_size": {
+    "message": "크기"
+  },
+  "newtab_wallpaper_effect_spacing": {
+    "message": "간격"
+  },
+  "newtab_wallpaper_effect_texture": {
+    "message": "질감"
+  },
+  "newtab_wallpaper_effect_blocks_size": {
+    "message": "블록 크기"
+  },
+  "newtab_wallpaper_effect_crt_strength": {
+    "message": "디스플레이 강도"
+  },
+  "newtab_wallpaper_effect_crt_bloom": {
+    "message": "블룸"
+  },
+  "newtab_wallpaper_effect_crt_rgb_offset": {
+    "message": "RGB 오프셋"
+  },
+  "newtab_wallpaper_effect_crt_curvature": {
+    "message": "화면 곡률"
+  },
+  "newtab_wallpaper_effect_none": {
+    "message": "사용 안함"
+  },
+  "newtab_wallpaper_effect_blur": {
+    "message": "유리 흐림"
+  },
+  "newtab_wallpaper_effect_grain": {
+    "message": "그레인"
+  },
+  "newtab_wallpaper_effect_blocks": {
+    "message": "블록"
+  },
+  "newtab_wallpaper_effect_halftone": {
+    "message": "하프톤"
+  },
+  "newtab_wallpaper_effect_dither": {
+    "message": "디더"
+  },
+  "newtab_wallpaper_effect_ascii": {
+    "message": "ASCII"
+  },
+  "newtab_wallpaper_effect_crt": {
+    "message": "CRT"
+  },
+  "newtab_wallpaper_effect_ink_title": {
+    "message": "샘플 톤"
+  },
+  "newtab_wallpaper_effect_ink_dark": {
+    "message": "어두운 영역"
+  },
+  "newtab_wallpaper_effect_ink_light": {
+    "message": "밝은 영역"
+  },
+  "newtab_wallpaper_effect_ink_select_label": {
+    "message": "{tone}에서 점 또는 문자 샘플링"
+  },
+  "newtab_wallpaper_save_error": {
+    "message": "배경화면을 저장하지 못했습니다"
+  },
+  "newtab_wallpaper_importing": {
+    "message": "배경화면 가져오는 중…"
+  },
+  "newtab_wallpaper_import_done": {
+    "message": "배경화면을 가져왔습니다"
+  },
+  "newtab_wallpaper_import_error": {
+    "message": "배경화면을 가져오지 못했습니다"
+  },
+  "newtab_wallpaper_delete_done": {
+    "message": "삭제됨"
+  },
+  "newtab_wallpaper_delete_error": {
+    "message": "배경화면을 삭제하지 못했습니다"
+  },
+  "newtab_wallpaper_name_dark_linocut_topographic": {
+    "message": "밤의 등고선"
+  },
+  "newtab_wallpaper_name_dark_monet_lily_nocturne": {
+    "message": "밤의 수련"
+  },
+  "newtab_wallpaper_name_dark_shanshui_moonlit": {
+    "message": "달밤 산수"
+  },
+  "newtab_wallpaper_name_monet_coastal_white": {
+    "message": "모네의 해안"
+  },
+  "newtab_wallpaper_name_monet_field_white": {
+    "message": "모네의 들판"
+  },
+  "newtab_wallpaper_name_monet_lily_pond_white": {
+    "message": "수련 연못"
+  },
+  "newtab_wallpaper_name_impressionist_orchard_white": {
+    "message": "아침 과수원"
+  },
+  "newtab_wallpaper_name_seurat_coast_white": {
+    "message": "쇠라의 해안"
+  },
+  "newtab_wallpaper_name_seurat_park_white": {
+    "message": "쇠라의 공원"
+  },
+  "newtab_wallpaper_name_seurat_riverside_white": {
+    "message": "쇠라의 강변"
+  },
+  "newtab_wallpaper_name_pointillist_lakeside_white": {
+    "message": "점묘 호숫가"
+  },
+  "newtab_wallpaper_name_white_3d_architecture": {
+    "message": "한낮의 건축"
+  },
+  "newtab_wallpaper_name_white_3d_observatory": {
+    "message": "안개 속 관측소"
+  },
+  "newtab_wallpaper_name_white_linocut_topographic": {
+    "message": "한낮의 등고선"
+  },
+  "newtab_wallpaper_name_white_risograph_collage": {
+    "message": "한낮의 콜라주"
+  },
+  "newtab_wallpaper_name_white_shanshui": {
+    "message": "맑은 산수"
+  },
+  "newtab_wallpaper_name_white_shanshui_bamboo_bridge": {
+    "message": "대나무 다리"
+  },
+  "newtab_wallpaper_name_settings_bg_light_monet_newtab": {
+    "message": "모네 라이트"
+  },
+  "shortcuts_duplicate_tag": {
+    "message": "기본 제공 항목과 중복"
+  },
+  "shortcuts_duplicate_action": {
+    "message": "기본 제공 항목 찾기"
+  },
+  "shortcuts_template_help": {
+    "message": "1. 추가할 사이트를 엽니다\n2. 아무 키워드로 검색합니다\n3. 검색 결과 페이지 URL을 복사해 여기에 붙여넣습니다\n4. 키워드를 {query}(으)로 바꿉니다"
+  },
+  "shortcuts_title": {
+    "message": "사이트 검색"
+  },
+  "shortcuts_desc": {
+    "message": "키워드 입력 후 Tab을 눌러 사이트 검색 사용"
+  },
+  "shortcuts_group_custom": {
+    "message": "사용자 지정"
+  },
+  "blacklist_section_title": {
+    "message": "검색 및 최근 방문 차단 목록"
+  },
+  "blacklist_section_desc": {
+    "message": "검색 결과와 새 탭 페이지에서 숨길 웹사이트를 추가하세요."
+  },
+  "blacklist_group_custom": {
+    "message": "전체 차단"
+  },
+  "blacklist_label_url": {
+    "message": "URL 규칙"
+  },
+  "blacklist_label_domain": {
+    "message": "사이트 도메인"
+  },
+  "blacklist_label_prefix": {
+    "message": "사이트 또는 경로"
+  },
+  "blacklist_label_exact": {
+    "message": "전체 URL"
+  },
+  "blacklist_label_suffix": {
+    "message": "사이트 도메인"
+  },
+  "blacklist_match_label": {
+    "message": "일치 유형"
+  },
+  "blacklist_match_exact": {
+    "message": "이 페이지"
+  },
+  "blacklist_match_prefix": {
+    "message": "이 사이트 경로"
+  },
+  "blacklist_match_suffix": {
+    "message": "사이트 전체"
+  },
+  "blacklist_match_exact_tooltip": {
+    "message": "이 페이지만 차단\n────────\n예를 들어 x.com/home을 입력하면 해당 페이지만 숨겨지고 다른 페이지는 계속 표시됩니다."
+  },
+  "blacklist_match_prefix_tooltip": {
+    "message": "이 사이트의 해당 경로 아래 페이지만 차단\n────────\n예를 들어 baidu.com/search를 입력하면 baidu.com/search와 baidu.com/search/1은 숨겨지지만 baidu.com/news는 계속 표시됩니다."
+  },
+  "blacklist_match_suffix_tooltip": {
+    "message": "하위 도메인을 포함해 이 사이트의 모든 페이지 차단\n────────\n예를 들어 baidu.com을 입력하면 baidu.com/search와 tieba.baidu.com이 모두 숨겨집니다."
+  },
+  "blacklist_preview_title": {
+    "message": "실제 일치 미리보기"
+  },
+  "blacklist_preview_match": {
+    "message": "일치함"
+  },
+  "blacklist_preview_miss": {
+    "message": "일치하지 않음"
+  },
+  "blacklist_preview_www_note": {
+    "message": "www. 버전도 포함되므로 baidu.com은 www.baidu.com과도 일치합니다."
+  },
+  "blacklist_placeholder_url": {
+    "message": "이 페이지는 전체 주소를, 사이트 전체는 사이트 도메인을 입력하세요"
+  },
+  "blacklist_placeholder_domain": {
+    "message": "baidu.com"
+  },
+  "blacklist_placeholder_prefix": {
+    "message": "baidu.com 또는 baidu.com/search"
+  },
+  "blacklist_placeholder_exact": {
+    "message": "x.com/home"
+  },
+  "blacklist_placeholder_suffix": {
+    "message": "예: baidu.com"
+  },
+  "blacklist_add": {
+    "message": "추가"
+  },
+  "blacklist_empty": {
+    "message": "차단된 URL이 아직 없습니다"
+  },
+  "blacklist_error_url": {
+    "message": "사이트 도메인 또는 전체 URL을 입력하세요."
+  },
+  "blacklist_error_match_mode": {
+    "message": "일치 유형을 하나 이상 선택하세요."
+  },
+  "blacklist_error_suffix": {
+    "message": "사이트 도메인을 입력하세요."
+  },
+  "blacklist_error_domain": {
+    "message": "사이트 도메인을 입력하세요."
+  },
+  "blacklist_match_mode_prefix": {
+    "message": "이 URL로 시작하는 페이지와 일치"
+  },
+  "blacklist_match_unset": {
+    "message": "선택된 일치 유형 없음"
+  },
+  "blacklist_removed_toast": {
+    "message": "차단 목록에서 삭제됨"
+  },
+  "shortcuts_group_builtin": {
+    "message": "기본 제공"
+  },
+  "shortcuts_group_ai": {
+    "message": "AI 검색"
+  },
+  "shortcuts_group_ai_desc": {
+    "message": "키워드를 입력하고 Tab을 누른 다음 프롬프트를 입력하면 아래 AI 사이트가 열리고 자동으로 입력됩니다(먼저 해당 사이트에 로그인해야 함)"
+  },
+  "shortcuts_badge_custom": {
+    "message": "사용자 지정"
+  },
+  "shortcuts_badge_builtin": {
+    "message": "기본 제공"
+  },
+  "shortcuts_badge_ai": {
+    "message": "AI 검색"
+  },
+  "shortcuts_label_key": {
+    "message": "키워드"
+  },
+  "shortcuts_label_name": {
+    "message": "이름"
+  },
+  "shortcuts_label_template": {
+    "message": "검색 URL"
+  },
+  "shortcuts_label_alias": {
+    "message": "별칭"
+  },
+  "shortcuts_label_display_group": {
+    "message": "표시 위치"
+  },
+  "shortcuts_placeholder_required": {
+    "message": "필수 — 여러 개는 쉼표로 구분(예: jd,bili)"
+  },
+  "shortcuts_placeholder_optional_default": {
+    "message": "선택사항 — 기본값은 키워드"
+  },
+  "shortcuts_placeholder_template": {
+    "message": "https://example.com/search?q={query}"
+  },
+  "shortcuts_placeholder_alias": {
+    "message": "선택사항 — 예: Bilibili, YouTube"
+  },
+  "shortcuts_insert_query": {
+    "message": "검색어 변수 삽입"
+  },
+  "shortcuts_add": {
+    "message": "맞춤 검색 추가"
+  },
+  "shortcuts_save": {
+    "message": "변경사항 저장"
+  },
+  "shortcuts_cancel": {
+    "message": "취소"
+  },
+  "shortcuts_edit": {
+    "message": "수정"
+  },
+  "shortcuts_remove": {
+    "message": "삭제"
+  },
+  "shortcuts_empty_custom": {
+    "message": "맞춤 검색이 아직 없습니다"
+  },
+  "shortcuts_empty_builtin": {
+    "message": "기본 제공 사이트 검색 없음"
+  },
+  "shortcuts_empty_engines": {
+    "message": "기본 제공 검색엔진 없음"
+  },
+  "shortcuts_empty_ai": {
+    "message": "기본 제공 AI 검색 제공업체 없음"
+  },
+  "toast_saved": {
+    "message": "저장됨"
+  },
+  "toast_removed": {
+    "message": "삭제됨"
+  },
+  "toast_error": {
+    "message": "작업을 완료하지 못했습니다. 다시 시도해 주세요."
+  },
+  "toast_error_template": {
+    "message": "검색 템플릿에 {query}가 포함되어야 합니다."
+  },
+  "toast_reset": {
+    "message": "재설정됨"
+  },
+  "shortcuts_reset_builtin": {
+    "message": "기본 목록으로 재설정"
+  },
+  "shortcuts_clear_custom": {
+    "message": "맞춤 검색 지우기"
+  },
+  "blacklist_clear": {
+    "message": "숨기기 규칙 지우기"
+  },
+  "toast_cleared": {
+    "message": "지워짐"
+  },
+  "confirm_clear_custom": {
+    "message": "맞춤 검색을 모두 지우시겠습니까?"
+  },
+  "confirm_clear_blacklist": {
+    "message": "숨기기 규칙을 지우시겠습니까?"
+  },
+  "confirm_clear_favicon_blacklist": {
+    "message": "제외 규칙을 지우시겠습니까?"
+  },
+  "confirm_reset_builtin": {
+    "message": "기본 제공 목록을 재설정하시겠습니까?"
+  },
+  "confirm_ok": {
+    "message": "확인"
+  },
+  "confirm_cancel": {
+    "message": "취소"
+  },
+  "confirm_remove_item": {
+    "message": "이 항목을 삭제하시겠습니까?"
+  },
+  "shortcuts_error_key": {
+    "message": "키워드를 입력하세요."
+  },
+  "shortcuts_error_key_space": {
+    "message": "키워드에는 공백을 넣을 수 없습니다."
+  },
+  "shortcuts_error_key_duplicate": {
+    "message": "이미 사용 중인 키워드입니다. 다른 키워드를 선택하세요."
+  },
+  "search_placeholder": {
+    "message": "검색하거나 URL 입력…"
+  },
+  "overlay_search_placeholder": {
+    "message": "검색하거나 URL 입력, Tab을 눌러 열린 탭 검색"
+  },
+  "options_page_title": {
+    "message": "Lumno 설정"
+  },
+  "newtab_page_title": {
+    "message": "새 탭"
+  },
+  "recent_heading": {
+    "message": "최근 방문"
+  },
+  "recent_heading_latest": {
+    "message": "최근 방문"
+  },
+  "recent_heading_most": {
+    "message": "자주 방문"
+  },
+  "bookmarks_heading": {
+    "message": "북마크"
+  },
+  "display_mode_title": {
+    "message": "표시 모드"
+  },
+  "bookmark_view_mode_folder": {
+    "message": "다중 폴더 보기"
+  },
+  "bookmark_view_mode_list": {
+    "message": "다단계 목록 보기"
+  },
+  "bookmark_view_mode_top": {
+    "message": "상단 북마크바"
+  },
+  "bookmark_topbar_layout_title": {
+    "message": "바 스타일"
+  },
+  "bookmark_topbar_layout_docked": {
+    "message": "상단 고정"
+  },
+  "bookmark_topbar_layout_floating": {
+    "message": "플로팅"
+  },
+  "bookmark_topbar_surface_title": {
+    "message": "바 배경"
+  },
+  "bookmark_topbar_surface_follow": {
+    "message": "스타일 따르기"
+  },
+  "bookmark_topbar_surface_adaptive": {
+    "message": "적응형 안개"
+  },
+  "bookmark_topbar_surface_clear": {
+    "message": "리퀴드 글라스"
+  },
+  "bookmark_topbar_surface_transparent": {
+    "message": "투명"
+  },
+  "bookmark_topbar_surface_custom": {
+    "message": "맞춤 색상"
+  },
+  "bookmark_topbar_color_pick": {
+    "message": "배경 색상 선택"
+  },
+  "bookmark_topbar_color_reset": {
+    "message": "자동 색상 복원"
+  },
+  "bookmark_topbar_color_picked": {
+    "message": "색상 선택됨"
+  },
+  "bookmark_topbar_color_reset_done": {
+    "message": "자동 색상이 복원되었습니다"
+  },
+  "bookmark_topbar_color_unsupported": {
+    "message": "이 브라우저는 화면 색상 선택을 지원하지 않습니다."
+  },
+  "bookmark_topbar_color_failed": {
+    "message": "색상을 선택하지 못했습니다. 다시 시도해 주세요."
+  },
+  "bookmarks_empty_folder": {
+    "message": "콘텐츠 없음"
+  },
+  "bookmarks_page_prev": {
+    "message": "이전 페이지"
+  },
+  "bookmarks_page_next": {
+    "message": "다음 페이지"
+  },
+  "bookmarks_open_manager": {
+    "message": "북마크 관리자 열기"
+  },
+  "bookmarks_open_in_new_tab_group": {
+    "message": "새 탭 그룹에서 열기"
+  },
+  "newtab_open_in_new_tab": {
+    "message": "새 탭에서 열기"
+  },
+  "bookmarks_open_group_confirm_title": {
+    "message": "탭 {count}개를 여시겠습니까?"
+  },
+  "bookmarks_open_group_confirm_description": {
+    "message": "'{folder}' 및 하위 폴더의 모든 북마크가 하나의 탭 그룹에서 열립니다."
+  },
+  "bookmarks_open_group_confirm_button": {
+    "message": "열기"
+  },
+  "bookmarks_untitled_folder": {
+    "message": "제목 없는 폴더"
+  },
+  "bookmarks_open_group_partial_failed": {
+    "message": "탭 {openedCount}개를 열었고, {failedCount}개는 열지 못했습니다."
+  },
+  "bookmarks_open_group_failed": {
+    "message": "이 북마크 폴더를 열 수 없습니다"
+  },
+  "bookmarks_copy_url": {
+    "message": "링크 복사"
+  },
+  "bookmarks_copy_url_success": {
+    "message": "북마크 링크가 복사되었습니다"
+  },
+  "bookmarks_copy_url_failed": {
+    "message": "링크를 복사하지 못했습니다. 다시 시도해 주세요."
+  },
+  "bookmarks_edit": {
+    "message": "수정"
+  },
+  "bookmarks_edit_dialog_title": {
+    "message": "북마크 수정"
+  },
+  "bookmarks_edit_folder_dialog_title": {
+    "message": "폴더 이름 바꾸기"
+  },
+  "bookmarks_name_placeholder": {
+    "message": "이름"
+  },
+  "bookmarks_invalid_url": {
+    "message": "올바른 URL을 입력하세요."
+  },
+  "bookmarks_updated": {
+    "message": "북마크가 업데이트되었습니다"
+  },
+  "bookmarks_folder_updated": {
+    "message": "폴더가 업데이트되었습니다"
+  },
+  "bookmarks_update_failed": {
+    "message": "북마크를 업데이트할 수 없습니다"
+  },
+  "bookmarks_delete": {
+    "message": "삭제"
+  },
+  "bookmarks_context_menu_label": {
+    "message": "북마크 작업"
+  },
+  "bookmarks_delete_undone": {
+    "message": "삭제 실행 취소됨 · {shortcut} 키로 다시 삭제"
+  },
+  "bookmarks_delete_redone": {
+    "message": "다시 삭제됨 · {shortcut} 키로 실행 취소"
+  },
+  "bookmarks_delete_failed": {
+    "message": "북마크를 삭제할 수 없습니다"
+  },
+  "bookmarks_move_success": {
+    "message": "'{title}' 이동됨 · {shortcut} 키로 실행 취소"
+  },
+  "bookmarks_move_undone": {
+    "message": "이동 실행 취소됨 · {shortcut} 키로 다시 실행"
+  },
+  "bookmarks_move_redone": {
+    "message": "다시 이동됨 · {shortcut} 키로 실행 취소"
+  },
+  "bookmarks_move_failed": {
+    "message": "북마크를 이동할 수 없습니다"
+  },
+  "bookmarks_moved_to_shortcuts": {
+    "message": "바로가기로 이동됨"
+  },
+  "search_tag_history": {
+    "message": "방문 기록"
+  },
+  "search_remove_history": {
+    "message": "방문 기록에서 삭제"
+  },
+  "search_remove_history_tooltip": {
+    "message": "이 방문 기록 항목 삭제"
+  },
+  "search_remove_top_site_tooltip": {
+    "message": "이 자주 방문 결과 삭제"
+  },
+  "search_copy_url_tooltip": {
+    "message": "링크 복사"
+  },
+  "search_copy_url_success": {
+    "message": "결과 링크가 복사되었습니다"
+  },
+  "search_copy_url_failed": {
+    "message": "결과 링크를 복사하지 못했습니다. 다시 시도해 주세요."
+  },
+  "search_tag_top_site": {
+    "message": "자주 방문"
+  },
+  "search_tag_bookmark": {
+    "message": "북마크"
+  },
+  "search_tag_open_tab": {
+    "message": "열린 탭"
+  },
+  "visit_label": {
+    "message": "방문"
+  },
+  "action_open_new_tab": {
+    "message": "새 탭"
+  },
+  "action_open_background_new_tab": {
+    "message": "백그라운드에서 열기"
+  },
+  "action_open_background_tab": {
+    "message": "백그라운드에서 열기"
+  },
+  "action_go_current_tab": {
+    "message": "이동"
+  },
+  "open_prefix": {
+    "message": "{title} 열기"
+  },
+  "open_url": {
+    "message": "{url} 열기"
+  },
+  "open_browser_url": {
+    "message": "{browser} 열기: {url}"
+  },
+  "mode_badge": {
+    "message": "모드: {mode}"
+  },
+  "mode_badge_follow_system": {
+    "message": "모드: {mode}(시스템)"
+  },
+  "mode_badge_follow_site": {
+    "message": "모드: {mode}(사이트)"
+  },
+  "theme_label_dark": {
+    "message": "다크"
+  },
+  "theme_label_light": {
+    "message": "라이트"
+  },
+  "theme_label_system": {
+    "message": "시스템"
+  },
+  "command_newtab": {
+    "message": "새 탭"
+  },
+  "search_input_clear": {
+    "message": "지우기"
+  },
+  "command_settings": {
+    "message": "설정 열기"
+  },
+  "command_show_search": {
+    "message": "커맨드 바 열기"
+  },
+  "command_show_search_prefill": {
+    "message": "현재 페이지 URL로 커맨드 바 열기"
+  },
+  "command_show_search_prefill_v": {
+    "message": "현재 페이지 URL 복사"
+  },
+  "mode_switch_title": {
+    "message": "{name}: {mode} 모드로 전환"
+  },
+  "zen_badge_on": {
+    "message": "Zen: 켜짐"
+  },
+  "zen_badge_off": {
+    "message": "Zen: 꺼짐"
+  },
+  "zen_enable_title": {
+    "message": "{name}: Zen 모드 시작"
+  },
+  "zen_disable_title": {
+    "message": "{name}: Zen 모드 종료"
+  },
+  "switch_to_tab": {
+    "message": "전환"
+  },
+  "untitled": {
+    "message": "제목 없음"
+  },
+  "site_search_default": {
+    "message": "사이트"
+  },
+  "site_search_name_baidu": {
+    "message": "바이두"
+  },
+  "site_search_name_metaso": {
+    "message": "Metaso AI 검색"
+  },
+  "site_search_name_sogou": {
+    "message": "Sogou"
+  },
+  "site_search_name_shenma": {
+    "message": "Shenma"
+  },
+  "site_search_name_weibo": {
+    "message": "웨이보"
+  },
+  "site_search_name_xiaohongshu": {
+    "message": "Xiaohongshu"
+  },
+  "site_search_name_douyin": {
+    "message": "Douyin"
+  },
+  "site_search_name_jd": {
+    "message": "JD.com"
+  },
+  "site_search_name_chatgpt": {
+    "message": "ChatGPT"
+  },
+  "site_search_name_gemini": {
+    "message": "Gemini"
+  },
+  "site_search_name_doubao": {
+    "message": "Doubao"
+  },
+  "site_search_name_qianwen": {
+    "message": "Qwen"
+  },
+  "site_search_name_yuanbao": {
+    "message": "Yuanbao"
+  },
+  "site_search_name_minimax": {
+    "message": "MiniMax"
+  },
+  "site_search_name_deepseek": {
+    "message": "DeepSeek"
+  },
+  "site_search_name_kimi": {
+    "message": "Kimi"
+  },
+  "site_search_name_zhihu": {
+    "message": "Zhihu"
+  },
+  "site_search_name_douban": {
+    "message": "Douban"
+  },
+  "site_search_name_juejin": {
+    "message": "Juejin"
+  },
+  "site_search_name_taobao": {
+    "message": "타오바오"
+  },
+  "site_search_name_tmall": {
+    "message": "Tmall"
+  },
+  "site_search_name_wechat": {
+    "message": "WeChat 공식 계정"
+  },
+  "site_search_name_wikipedia": {
+    "message": "위키백과"
+  },
+  "site_search_name_lumno_help": {
+    "message": "Lumno 고객센터"
+  },
+  "help_center_recommended": {
+    "message": "추천 문서"
+  },
+  "help_center_no_results": {
+    "message": "찾은 내용이 없습니다. 개발자에게 편하게 문의해 주세요."
+  },
+  "search_in_site": {
+    "message": "{site}에서 검색"
+  },
+  "search_in_site_query": {
+    "message": "{site}에서 \"{query}\" 검색"
+  },
+  "ask_ai_provider": {
+    "message": "{site}에 질문하기"
+  },
+  "ask_ai_provider_query": {
+    "message": "{site}에 \"{query}\" 질문하기"
+  },
+  "site_search_tab_hint": {
+    "message": "{site} 검색"
+  },
+  "search_query": {
+    "message": "\"{query}\" 검색"
+  },
+  "search_in_site_ellipsis": {
+    "message": "{site}에서 검색…"
+  },
+  "search_in_site_prefix": {
+    "message": "{site}에서 검색 |"
+  },
+  "search_open_tabs_only_prefix": {
+    "message": "열린 탭 검색 |"
+  },
+  "search_open_tabs_only_entry": {
+    "message": "열린 탭 검색"
+  },
+  "action_search": {
+    "message": "검색"
+  },
+  "action_search_engine": {
+    "message": "{engine}에서 검색"
+  },
+  "action_open_ai_web": {
+    "message": "{site} 웹 앱 열기"
+  },
+  "action_search_google": {
+    "message": "Google에서 검색"
+  },
+  "action_switch": {
+    "message": "전환"
+  },
+  "action_open": {
+    "message": "열기"
+  },
+  "overlay_empty_result": {
+    "message": "일치하는 결과 없음"
+  },
+  "local_search_tab_hint": {
+    "message": "{source}만 검색"
+  },
+  "search_scope_switcher_label": {
+    "message": "검색 범위: {scope}. 선택하여 전환합니다."
+  },
+  "search_scope_current": {
+    "message": "현재"
+  },
+  "search_scope_remove_confirmation": {
+    "message": "범위를 삭제하려면 Backspace를 한 번 더 누르세요."
+  },
+  "search_number_jump_release_hint": {
+    "message": "놓으면 숫자 표시"
+  },
+  "search_scope_menu_shortcut_hint": {
+    "message": "패널 열기"
+  },
+  "search_scope_menu_navigation_hint": {
+    "message": "이동"
+  },
+  "search_scope_menu_select_hint": {
+    "message": "전환"
+  },
+  "search_scope_menu_focus_toggle_hint": {
+    "message": "포커스 전환"
+  },
+  "search_scope_menu_filter_hint": {
+    "message": "입력하여 필터링"
+  },
+  "search_scope_menu_filter_query": {
+    "message": "검색: {query}"
+  },
+  "search_scope_panel_placeholder": {
+    "message": "특정 사이트 콘텐츠 검색…"
+  },
+  "search_scope_active_placeholder": {
+    "message": "이 범위에서 검색하거나 Tab을 다시 눌러 범위 패널 열기…"
+  },
+  "search_scope_group_engines": {
+    "message": "검색엔진"
+  },
+  "search_scope_group_local": {
+    "message": "브라우저 콘텐츠"
+  },
+  "search_scope_group_ai": {
+    "message": "AI 검색"
+  },
+  "search_scope_group_sites": {
+    "message": "사이트 검색"
+  },
+  "search_scope_group_aggregates": {
+    "message": "통합 검색"
+  },
+  "aggregate_search_action": {
+    "message": "{name}(으)로 검색"
+  },
+  "aggregate_search_action_query": {
+    "message": "{name}(으)로 \"{query}\" 검색"
+  },
+  "aggregate_search_group_title": {
+    "message": "통합 검색"
+  },
+  "aggregate_search_add": {
+    "message": "통합 검색 추가"
+  },
+  "aggregate_search_clear": {
+    "message": "통합 검색 지우기"
+  },
+  "confirm_clear_aggregate_search": {
+    "message": "통합 검색을 모두 지우시겠습니까?"
+  },
+  "aggregate_search_name_label": {
+    "message": "이름"
+  },
+  "aggregate_search_name_required_error": {
+    "message": "통합 검색의 이름을 입력하세요."
+  },
+  "aggregate_search_key_placeholder": {
+    "message": "예: tech"
+  },
+  "aggregate_search_default_name": {
+    "message": "통합 검색"
+  },
+  "aggregate_search_sources_label": {
+    "message": "검색 소스"
+  },
+  "aggregate_search_selected_count": {
+    "message": "{count}/{max}개 선택됨"
+  },
+  "aggregate_search_min_sources_error": {
+    "message": "검색 소스를 2개 이상 선택하세요."
+  },
+  "aggregate_search_max_sources_error": {
+    "message": "검색 소스는 최대 10개까지 선택할 수 있습니다."
+  },
+  "settings_aggregate_search_auto_group_title": {
+    "message": "통합 검색 탭 자동 그룹화"
+  },
+  "settings_aggregate_search_auto_group_desc": {
+    "message": "사용 설정하면 통합 검색으로 열린 모든 탭이 '통합 검색 이름: 검색어'라는 이름의 그룹 하나에 모입니다"
+  },
+  "aggregate_search_badge": {
+    "message": "통합"
+  },
+  "aggregate_search_source_summary": {
+    "message": "소스 {count}개"
+  },
+  "aggregate_search_source_summary_unavailable": {
+    "message": "소스 {count}개 · {unavailable}개 사용 불가 · 업데이트 필요"
+  },
+  "aggregate_search_sources_unavailable_error": {
+    "message": "이 통합 검색에 삭제되었거나 사용 중지된 소스가 있습니다. 설정에서 업데이트하세요."
+  },
+  "aggregate_search_in_progress": {
+    "message": "이 통합 검색이 이미 실행 중입니다."
+  },
+  "aggregate_search_partial_failure": {
+    "message": "일부 통합 검색 결과를 열지 못했습니다."
+  },
+  "aggregate_search_degraded_success": {
+    "message": "검색 결과가 열렸지만 탭 그룹화, 이름 지정 또는 포커스 전환을 완료하지 못했습니다."
+  },
+  "aggregate_search_storage_unavailable_error": {
+    "message": "통합 검색을 불러오지 못했습니다. 설정을 새로고침한 후 다시 시도하세요."
+  },
+  "aggregate_search_source_selection_unavailable_error": {
+    "message": "사용할 수 없는 소스를 삭제하고 사용 가능한 소스를 2개 이상 선택하세요."
+  },
+  "aggregate_search_unavailable_group": {
+    "message": "사용할 수 없는 소스"
+  },
+  "aggregate_search_unavailable_name": {
+    "message": "사용할 수 없는 소스({source})"
+  },
+  "aggregate_search_name_duplicate_error": {
+    "message": "같은 이름의 통합 검색이 이미 있습니다."
+  },
+  "aggregate_search_max_items_error": {
+    "message": "통합 검색은 최대 8개까지 만들 수 있습니다."
+  },
+  "overlay_empty_open_tabs": {
+    "message": "탭 없음"
+  },
+  "site_icon_alt": {
+    "message": "사이트"
+  },
+  "site_brand_wechat_official": {
+    "message": "WeChat 공식 계정"
+  },
+  "settings_sync_title": {
+    "message": "{browser} 기본 동기화"
+  },
+  "settings_sync_section_title": {
+    "message": "브라우저 기본 동기화"
+  },
+  "settings_sync_desc": {
+    "message": "현재 브라우저의 기본 동기화 서비스를 통해 설정이 자동으로 동기화됩니다"
+  },
+  "sync_status_unavailable": {
+    "message": "동기화 사용 불가"
+  },
+  "sync_status_unavailable_hint": {
+    "message": "동기화 사용 불가: 현재 브라우저가 기본 동기화를 지원하며 사용 설정되어 있는지 확인하세요."
+  },
+  "sync_status_ready": {
+    "message": "자동 동기화 사용 중"
+  },
+  "sync_status_done": {
+    "message": "동기화 완료"
+  },
+  "sync_status_failed": {
+    "message": "동기화 실패"
+  },
+  "sync_status_failed_reason": {
+    "message": "동기화 실패: {reason}"
+  },
+  "sync_action_now": {
+    "message": "지금 동기화"
+  },
+  "sync_action_export": {
+    "message": "설정 내보내기"
+  },
+  "sync_action_import": {
+    "message": "설정 가져오기"
+  },
+  "sync_tooltip_export": {
+    "message": "설정 내보내기"
+  },
+  "sync_tooltip_import": {
+    "message": "설정 가져오기"
+  },
+  "sync_tooltip_last_manual": {
+    "message": "마지막 가져오기/수동 동기화 {time}"
+  },
+  "sync_tooltip_default": {
+    "message": "수동 동기화"
+  },
+  "sync_status_hint": {
+    "message": "Lumno 설정은 현재 브라우저의 기본 동기화 서비스를 통해 자동으로 동기화됩니다. 같은 브라우저 계정에 로그인한 기기 간에는 동기화되지만, 다른 브라우저 간에는 동기화되지 않습니다."
+  },
+  "sync_export_done": {
+    "message": "설정을 내보냈습니다"
+  },
+  "sync_importing": {
+    "message": "설정 가져오는 중…"
+  },
+  "sync_import_done": {
+    "message": "가져오기 완료"
+  },
+  "sync_import_invalid": {
+    "message": "잘못된 설정 파일"
+  },
+  "document_pip_picker_unsupported_policy": {
+    "message": "이 웹사이트는 사이트 정책으로 PIP 모드를 사용 중지했습니다."
+  },
+  "document_pip_picker_unsupported_iframe": {
+    "message": "문서 PIP는 최상위 페이지에서만 작동합니다."
+  },
+  "document_pip_picker_unsupported_insecure": {
+    "message": "문서 PIP를 사용하려면 HTTPS가 필요합니다."
+  },
+  "document_pip_picker_open_failed_not_allowed": {
+    "message": "웹사이트 또는 브라우저가 문서 PIP 열기를 차단했습니다."
+  },
+  "document_pip_picker_open_failed_not_supported": {
+    "message": "이 페이지에서는 선택한 영역을 문서 PIP로 열 수 없습니다."
+  },
+  "document_pip_picker_open_failed_invalid_state": {
+    "message": "플로팅 창이 이미 열려 있거나 페이지 상태가 변경되었습니다. 다시 시도해 주세요."
+  },
+  "document_pip_picker_open_failed_security": {
+    "message": "브라우저가 보안상의 이유로 이 페이지에서 해당 작업을 차단했습니다."
+  },
+  "newtab_page_label": {
+    "message": "새 탭"
+  },
+  "settings_title": {
+    "message": "설정"
+  },
+  "extension_page_label": {
+    "message": "확장 프로그램 페이지"
+  },
+  "settings_button_aria": {
+    "message": "설정"
+  },
+  "copy_page_url_failed_retry": {
+    "message": "복사하지 못했습니다. 다시 시도해 주세요."
+  },
+  "copy_page_url_success": {
+    "message": "현재 페이지 URL이 복사되었습니다"
+  },
+  "copy_page_url_failed_permission": {
+    "message": "복사하지 못했습니다. 클립보드 권한을 확인하세요."
+  },
+  "recent_pin_add": {
+    "message": "고정"
+  },
+  "recent_pin_remove": {
+    "message": "고정 해제"
+  },
+  "recent_pin_limit": {
+    "message": "카드는 최대 3개까지 고정할 수 있습니다"
+  },
+  "recent_pin_limit_toast": {
+    "message": "카드는 최대 3개까지 고정할 수 있습니다."
+  },
+  "recent_dismiss_tooltip": {
+    "message": "삭제"
+  },
+  "recent_add_to_shortcuts": {
+    "message": "바로가기에 추가"
+  },
+  "recent_dismiss_pinned_tooltip": {
+    "message": "고정 해제 후 삭제"
+  },
+  "recent_dismiss_toast": {
+    "message": "삭제됨"
+  },
+  "recent_dismiss_pinned_toast": {
+    "message": "고정 해제 후 삭제됨"
+  },
+  "recent_context_menu_label": {
+    "message": "최근 방문 사이트 작업"
+  },
+  "tab_switcher_title": {
+    "message": "최근 탭"
+  },
+  "tab_switcher_untitled": {
+    "message": "제목 없음"
+  },
+  "tab_switcher_favicon_alt": {
+    "message": "사이트 아이콘"
+  },
+  "tab_switcher_close_tab": {
+    "message": "탭 닫기"
+  },
+  "tab_switcher_tab_closed": {
+    "message": "탭을 닫았습니다"
+  },
+  "tab_switcher_close_failed": {
+    "message": "이 탭을 닫을 수 없습니다"
+  },
+  "command_show_tab_switcher": {
+    "message": "최근 탭 전환기 열기"
+  },
+  "shortcut_reference_title": {
+    "message": "단축키 목록"
+  },
+  "shortcut_reference_group_search": {
+    "message": "커맨드 바"
+  },
+  "shortcut_reference_group_page_link": {
+    "message": "페이지 링크"
+  },
+  "shortcut_reference_group_tab_switcher": {
+    "message": "탭 전환기"
+  },
+  "shortcut_reference_group_web_clip": {
+    "message": "웹 클립"
+  },
+  "shortcut_reference_unset": {
+    "message": "설정 안 됨"
+  },
+  "shortcut_reference_show_search_title": {
+    "message": "커맨드 바 열기"
+  },
+  "shortcut_reference_show_search_desc": {
+    "message": "현재 페이지에서 Lumno 열기"
+  },
+  "shortcut_reference_show_search_prefill_title": {
+    "message": "현재 페이지 URL로 열기"
+  },
+  "shortcut_reference_show_search_prefill_desc": {
+    "message": "Lumno를 열고 현재 페이지 URL을 미리 입력"
+  },
+  "shortcut_reference_copy_url_title": {
+    "message": "현재 페이지 URL 복사"
+  },
+  "shortcut_reference_copy_url_desc": {
+    "message": "Lumno를 열지 않고 현재 페이지 URL 복사"
+  },
+  "shortcut_reference_tab_switcher_title": {
+    "message": "최근 탭 전환기 열기"
+  },
+  "shortcut_reference_tab_switcher_desc": {
+    "message": "최근 탭 전환기를 엽니다"
+  },
+  "shortcut_reference_search_input_history_title": {
+    "message": "이전 또는 다음 입력"
+  },
+  "shortcut_reference_search_input_history_desc": {
+    "message": "제출한 입력 기록에서 뒤로 또는 앞으로 이동"
+  },
+  "shortcut_reference_search_navigate_title": {
+    "message": "추천 항목 간 이동"
+  },
+  "shortcut_reference_search_navigate_desc": {
+    "message": "Lumno 검색과 새 탭에서 선택된 결과 이동"
+  },
+  "shortcut_reference_search_number_jump_title": {
+    "message": "번호가 매겨진 결과로 이동"
+  },
+  "shortcut_reference_search_number_jump_desc": {
+    "message": "기본 보조 키를 길게 눌렀다 놓은 후 0–9를 눌러 해당 결과 실행"
+  },
+  "shortcut_reference_search_number_jump_shortcut": {
+    "message": "{modifier} 키를 0.4초간 누른 후 놓고 0–9 누르기"
+  },
+  "shortcut_reference_search_confirm_title": {
+    "message": "선택한 작업 실행"
+  },
+  "shortcut_reference_search_confirm_desc": {
+    "message": "열기, 검색, 탭 전환 또는 선택한 명령 실행"
+  },
+  "shortcut_reference_search_tab_mode_title": {
+    "message": "자동 완성 또는 검색 모드 진입"
+  },
+  "shortcut_reference_search_tab_mode_desc": {
+    "message": "추천 항목을 자동 완성하거나 사이트/열린 탭 검색 모드로 진입"
+  },
+  "shortcut_reference_search_open_scope_menu_title": {
+    "message": "검색 범위 패널 열기"
+  },
+  "shortcut_reference_search_open_scope_menu_desc": {
+    "message": "입력란이 비어 있으면 Tab을 두 번, 검색 범위가 선택되어 있으면 Tab을 한 번 누르세요"
+  },
+  "shortcut_reference_search_close_title": {
+    "message": "닫기 또는 모드 종료"
+  },
+  "shortcut_reference_search_close_desc": {
+    "message": "Lumno 검색을 닫거나 사이트/열린 탭 검색 모드 종료"
+  },
+  "shortcut_reference_search_current_tab_title": {
+    "message": "현재 탭에서 열기"
+  },
+  "shortcut_reference_search_current_tab_desc": {
+    "message": "보통 새 탭에서 여는 작업을 현재 탭에서 실행"
+  },
+  "shortcut_reference_search_switch_new_tab_title": {
+    "message": "일치하는 열린 탭 결과를 새 탭에서 열기"
+  },
+  "shortcut_reference_search_switch_new_tab_desc": {
+    "message": "결과가 열린 탭과 일치하면 해당 URL을 새 탭에서 열기"
+  },
+  "shortcut_reference_tab_switcher_cycle_title": {
+    "message": "탭 전환기에서 선택 이동"
+  },
+  "shortcut_reference_tab_switcher_cycle_desc": {
+    "message": "탭 전환기에서 이전 또는 다음 탭으로 이동"
+  },
+  "shortcut_reference_tab_switcher_confirm_title": {
+    "message": "선택한 탭으로 전환"
+  },
+  "shortcut_reference_tab_switcher_confirm_desc": {
+    "message": "탭 전환기에서 선택한 탭 확정"
+  },
+  "shortcut_reference_document_pip_parent_title": {
+    "message": "바깥쪽 요소 선택"
+  },
+  "shortcut_reference_document_pip_parent_desc": {
+    "message": "웹 클립 대상을 고를 때 더 큰 상위 요소로 이동"
+  },
+  "shortcut_reference_document_pip_child_title": {
+    "message": "안쪽 요소 선택"
+  },
+  "shortcut_reference_document_pip_child_desc": {
+    "message": "웹 클립 대상을 고를 때 더 작은 하위 요소로 이동"
+  },
+  "newtab_shortcuts_section_label": {
+    "message": "바로가기"
+  },
+  "newtab_shortcuts_add": {
+    "message": "바로가기 추가"
+  },
+  "newtab_shortcuts_hide_add": {
+    "message": "숨기기"
+  },
+  "newtab_shortcuts_add_hidden": {
+    "message": "'+'를 숨겼습니다. 설정 → 모양 → 바로가기 → '+' 표시에서 다시 사용 설정할 수 있습니다."
+  },
+  "newtab_shortcuts_dialog_title": {
+    "message": "바로가기 추가"
+  },
+  "newtab_shortcuts_name_label": {
+    "message": "이름"
+  },
+  "newtab_shortcuts_name_placeholder": {
+    "message": "Lumno"
+  },
+  "newtab_shortcuts_url_label": {
+    "message": "URL"
+  },
+  "newtab_shortcuts_url_info_label": {
+    "message": "지원되는 URL 안내"
+  },
+  "newtab_shortcuts_url_info": {
+    "message": "브라우저 내부 페이지도 지원됩니다. 예:\nchrome://inspect/#devices"
+  },
+  "newtab_shortcuts_url_info__firefox": {
+    "message": "Firefox에서는 확장 프로그램이 about:config 같은 내장 페이지를 열 수 없으므로 웹 주소를 사용하세요."
+  },
+  "newtab_shortcuts_url_placeholder": {
+    "message": "https://example.com"
+  },
+  "newtab_shortcuts_icon_label": {
+    "message": "아이콘(선택사항)"
+  },
+  "newtab_shortcuts_icon_mode_label": {
+    "message": "아이콘 소스"
+  },
+  "newtab_shortcuts_icon_builtin": {
+    "message": "기본 제공 아이콘"
+  },
+  "newtab_shortcuts_icon_builtin_hint": {
+    "message": "Lumno에 기본 제공되는 고품질 아이콘을 사용합니다."
+  },
+  "newtab_shortcuts_icon_builtin_network_hint": {
+    "message": "네트워크 요청이 필요하지 않습니다."
+  },
+  "newtab_shortcuts_icon_builtin_info_label": {
+    "message": "기본 제공 아이콘 안내"
+  },
+  "newtab_shortcuts_icon_service": {
+    "message": "Gstatic(서드파티 아이콘)"
+  },
+  "newtab_shortcuts_icon_favicon_is": {
+    "message": "Favicon.is(서드파티 아이콘)"
+  },
+  "newtab_shortcuts_icon_favicon_is_hint": {
+    "message": "도메인을 Favicon.is로 보내 더 큰 아이콘을 가져옵니다."
+  },
+  "newtab_shortcuts_icon_favicon_is_caution": {
+    "message": "도메인 아이콘이 현재 페이지의 아이콘과 다를 수 있습니다."
+  },
+  "newtab_shortcuts_icon_cache": {
+    "message": "브라우저 캐시"
+  },
+  "newtab_shortcuts_icon_service_hint": {
+    "message": "사이트 도메인을 Gstatic으로 보냅니다. 안정적이고 고품질입니다."
+  },
+  "newtab_shortcuts_icon_cache_hint": {
+    "message": "브라우저 캐시에서 빠르고 정확하게 웹사이트 아이콘을 가져옵니다."
+  },
+  "newtab_shortcuts_icon_custom_hint": {
+    "message": "기본적으로 이 기기에 저장되며 브라우저 동기화에 포함되지 않습니다."
+  },
+  "newtab_shortcuts_icon_service_caution": {
+    "message": "일부 웹사이트는 인식되지 않을 수 있습니다."
+  },
+  "newtab_shortcuts_icon_cache_caution": {
+    "message": "사이트 설정에 따라 알림 점이 표시되거나 선명도가 떨어질 수 있습니다."
+  },
+  "newtab_shortcuts_icon_plate_label": {
+    "message": "불규칙한 아이콘에 배경 추가"
+  },
+  "newtab_shortcuts_icon_plate_color_label": {
+    "message": "배경 색상"
+  },
+  "newtab_shortcuts_icon_plate_color_auto": {
+    "message": "아이콘에서 추출"
+  },
+  "newtab_shortcuts_icon_plate_color_custom": {
+    "message": "맞춤 색상"
+  },
+  "newtab_shortcuts_icon_custom_sync_hint": {
+    "message": "WebDAV로 여러 기기에서 동기화할 수 있습니다."
+  },
+  "newtab_shortcuts_icon_refresh_success": {
+    "message": "아이콘을 가져왔습니다"
+  },
+  "newtab_shortcuts_icon_cache_failed": {
+    "message": "캐시된 아이콘이 없습니다. 이 웹사이트를 방문한 후 다시 새로고침하세요."
+  },
+  "newtab_shortcuts_icon_source_unavailable": {
+    "message": "이 소스를 사용할 수 없습니다. 브라우저 캐시 또는 맞춤 아이콘을 선택하세요."
+  },
+  "newtab_shortcuts_icon_online": {
+    "message": "온라인 아이콘"
+  },
+  "newtab_shortcuts_icon_custom": {
+    "message": "맞춤 아이콘"
+  },
+  "newtab_shortcuts_icon_current": {
+    "message": "현재 아이콘"
+  },
+  "newtab_shortcuts_icon_refresh": {
+    "message": "새로고침"
+  },
+  "newtab_shortcuts_icon_refreshing": {
+    "message": "새로고침 중…"
+  },
+  "newtab_shortcuts_icon_refresh_failed": {
+    "message": "아이콘을 새로고침하지 못했습니다. 나중에 다시 시도해 주세요."
+  },
+  "newtab_shortcuts_icon_custom_required": {
+    "message": "맞춤 아이콘으로 사용할 이미지를 선택하세요."
+  },
+  "newtab_shortcuts_icon_online_info_label": {
+    "message": "온라인 아이콘 안내"
+  },
+  "newtab_shortcuts_icon_online_info": {
+    "message": "온라인 아이콘은 새로고침 후 저장할 때까지 그대로 유지됩니다. 새로고침 시 아이콘 서비스 또는 브라우저 캐시를 사용합니다."
+  },
+  "newtab_shortcuts_icon_info_label": {
+    "message": "로컬 바로가기 아이콘 안내"
+  },
+  "newtab_shortcuts_icon_info": {
+    "message": "PNG, JPG, WebP를 지원합니다. 128×128 px 이상의 투명한 정사각형 아이콘을 권장합니다. 기본적으로 이 기기에 저장되며 WebDAV 동기화를 사용할 수 있습니다."
+  },
+  "newtab_shortcuts_folder_item_icon_info": {
+    "message": "PNG, JPG, WebP를 지원합니다. 128×128 px 이상의 투명한 정사각형 아이콘을 권장합니다. 이 기기에만 저장됩니다."
+  },
+  "newtab_shortcuts_icon_choose": {
+    "message": "이미지 선택"
+  },
+  "newtab_shortcuts_icon_replace": {
+    "message": "이미지 바꾸기"
+  },
+  "newtab_shortcuts_icon_remove": {
+    "message": "삭제"
+  },
+  "newtab_shortcuts_icon_unsupported": {
+    "message": "PNG, JPG 또는 WebP 이미지를 선택하세요."
+  },
+  "newtab_shortcuts_icon_dimensions_too_large": {
+    "message": "이미지는 4096×4096 px 이하여야 합니다"
+  },
+  "newtab_shortcuts_icon_invalid": {
+    "message": "이 이미지는 사용할 수 없습니다. 다른 이미지를 선택하세요."
+  },
+  "newtab_shortcuts_icon_storage_error": {
+    "message": "로컬 아이콘을 저장하지 못했습니다. 다른 이미지를 사용해 보세요."
+  },
+  "folder_rename": {
+    "message": "이름 바꾸기"
+  },
+  "folder_color_change": {
+    "message": "색상 변경"
+  },
+  "folder_color_format": {
+    "message": "색상 형식"
+  },
+  "folder_color_title": {
+    "message": "폴더 색상"
+  },
+  "folder_color_description": {
+    "message": "바로가기와 메뉴에 있는 이 폴더에도 적용됩니다. 이 기기에 저장됩니다."
+  },
+  "folder_color_presets": {
+    "message": "기본 색상"
+  },
+  "folder_color_default": {
+    "message": "기본 색상"
+  },
+  "folder_color_reset": {
+    "message": "재설정"
+  },
+  "folder_color_saved": {
+    "message": "저장된 색상"
+  },
+  "folder_color_save_current": {
+    "message": "현재 색상 저장"
+  },
+  "folder_color_remove_saved": {
+    "message": "저장된 색상 삭제"
+  },
+  "folder_color_saved_delete_failed": {
+    "message": "이 색상을 삭제할 수 없습니다. 다시 시도해 주세요."
+  },
+  "folder_color_saved_load_failed": {
+    "message": "저장된 색상을 불러올 수 없습니다. 색상 선택기를 다시 열어 시도해 주세요."
+  },
+  "folder_color_saved_save_failed": {
+    "message": "이 색상을 저장할 수 없습니다. 다시 시도해 주세요."
+  },
+  "folder_color_invalid": {
+    "message": "올바른 HEX 색상 또는 0~255 사이의 RGB 값을 입력하세요."
+  },
+  "folder_color_save_failed": {
+    "message": "폴더 색상을 저장할 수 없습니다. 다시 시도해 주세요."
+  },
+  "newtab_shortcuts_cancel": {
+    "message": "취소"
+  },
+  "newtab_shortcuts_done": {
+    "message": "완료"
+  },
+  "newtab_shortcuts_save": {
+    "message": "저장"
+  },
+  "newtab_shortcuts_invalid_url": {
+    "message": "올바른 http, https 또는 브라우저 내부 URL을 입력하세요."
+  },
+  "newtab_shortcuts_limit_reached": {
+    "message": "바로가기는 최대 {count}개까지 추가할 수 있습니다."
+  },
+  "newtab_shortcuts_added": {
+    "message": "바로가기가 추가되었습니다"
+  },
+  "context_menu_add_page_shortcut": {
+    "message": "Lumno 새 탭 바로가기에 추가"
+  },
+  "page_shortcut_added": {
+    "message": "Lumno 새 탭 바로가기에 추가되었습니다"
+  },
+  "newtab_shortcuts_already_added": {
+    "message": "이미 바로가기에 있음"
+  },
+  "newtab_shortcuts_sync_limit_reached": {
+    "message": "바로가기가 브라우저 동기화 공간을 초과하여 새 바로가기는 이 기기에만 저장됩니다. 설정에서 WebDAV를 사용 설정하면 함께 동기화할 수 있습니다."
+  },
+  "newtab_shortcuts_edited": {
+    "message": "바로가기가 업데이트되었습니다"
+  },
+  "newtab_shortcuts_removed": {
+    "message": "바로가기가 삭제되었습니다"
+  },
+  "newtab_shortcuts_removed_undo": {
+    "message": "바로가기 삭제됨 · {shortcut} 키로 실행 취소"
+  },
+  "newtab_shortcuts_remove_undone": {
+    "message": "바로가기 복원됨 · {shortcut} 키로 다시 실행"
+  },
+  "newtab_shortcuts_remove_redone": {
+    "message": "바로가기 삭제됨 · {shortcut} 키로 실행 취소"
+  },
+  "newtab_shortcuts_add_undone": {
+    "message": "바로가기 추가 취소됨 · {shortcut} 키로 다시 실행"
+  },
+  "newtab_shortcuts_add_redone": {
+    "message": "바로가기 다시 추가됨 · {shortcut} 키로 실행 취소"
+  },
+  "newtab_recent_added_to_folder": {
+    "message": "'{folder}'에 추가됨"
+  },
+  "newtab_shortcuts_open_folder": {
+    "message": "폴더 열기"
+  },
+  "newtab_shortcuts_from_bookmarks": {
+    "message": "(북마크에서)"
+  },
+  "newtab_shortcuts_folder_added": {
+    "message": "폴더가 바로가기에 추가되었습니다"
+  },
+  "newtab_shortcuts_folder_missing": {
+    "message": "이 북마크 폴더는 더 이상 존재하지 않습니다."
+  },
+  "newtab_shortcuts_moved_to_bookmarks": {
+    "message": "북마크로 이동됨"
+  },
+  "newtab_shortcuts_new_folder_title": {
+    "message": "새 폴더"
+  },
+  "newtab_shortcuts_stack_hint": {
+    "message": "놓으면 북마크바에 폴더가 만들어집니다"
+  },
+  "newtab_shortcuts_stacked_undo": {
+    "message": "폴더 생성됨 · {shortcut} 키로 실행 취소"
+  },
+  "newtab_shortcuts_stack_undone": {
+    "message": "폴더 생성 취소됨 · {shortcut} 키로 다시 실행"
+  },
+  "newtab_shortcuts_stack_redone": {
+    "message": "폴더 다시 생성됨 · {shortcut} 키로 실행 취소"
+  },
+  "newtab_shortcuts_stack_failed": {
+    "message": "폴더를 만들 수 없습니다"
+  },
+  "newtab_shortcuts_move_to_bookmarks_failed": {
+    "message": "북마크로 이동할 수 없습니다"
+  },
+  "newtab_shortcuts_edit_dialog_title": {
+    "message": "바로가기 수정"
+  },
+  "newtab_shortcuts_context_menu_label": {
+    "message": "바로가기 작업"
+  },
+  "settings_tab_switcher_title": {
+    "message": "탭 전환기"
+  },
+  "settings_tab_switcher_desc": {
+    "message": "최근 탭 간에 빠르게 전환합니다. 기본값은 {shortcut}이며 변경할 수 있습니다"
+  },
+  "slash_command_empty": {
+    "message": "일치하는 명령 없음"
+  },
+  "command_tabs_title": {
+    "message": "열린 탭만 검색"
+  },
+  "command_tabs_action": {
+    "message": "탭 검색"
+  },
+  "command_copy_title": {
+    "message": "현재 페이지 링크 복사"
+  },
+  "command_copy_action": {
+    "message": "링크 복사"
+  },
+  "settings_tab_account": {
+    "message": "계정 및 동기화"
+  },
+  "webdav_endpoint": {
+    "message": "서버 주소(HTTPS)"
+  },
+  "webdav_directory": {
+    "message": "동기화 폴더"
+  },
+  "webdav_username": {
+    "message": "사용자 이름"
+  },
+  "webdav_password": {
+    "message": "앱 비밀번호"
+  },
+  "webdav_credentials_hint": {
+    "message": "앱 비밀번호는 이 기기에만 저장됩니다. 서버 주소, 폴더, 사용자 이름은 브라우저를 통해 다른 기기로 동기화됩니다."
+  },
+  "webdav_password_hint": {
+    "message": "서버 주소, 폴더, 사용자 이름은 브라우저를 통해 다른 기기로 동기화되지만 앱 비밀번호는 동기화되지 않습니다. 새 기기에서 입력할 수 있도록 안전한 곳에 보관하세요."
+  },
+  "webdav_password_hint_synced": {
+    "message": "서버 주소, 폴더, 사용자 이름은 다른 기기에서 가져왔습니다. 앱 비밀번호는 동기화되지 않으므로 여기에 입력하세요."
+  },
+  "webdav_suggestion_label": {
+    "message": "다른 기기에서 가져옴"
+  },
+  "webdav_suggestion_add": {
+    "message": "비밀번호 입력 후 연결"
+  },
+  "webdav_suggestion_dismiss": {
+    "message": "닫기"
+  },
+  "webdav_password_saved": {
+    "message": "저장됨"
+  },
+  "webdav_password_change": {
+    "message": "변경"
+  },
+  "webdav_password_keep": {
+    "message": "저장된 비밀번호 유지"
+  },
+  "webdav_password_show": {
+    "message": "비밀번호 표시"
+  },
+  "webdav_password_hide": {
+    "message": "비밀번호 숨기기"
+  },
+  "webdav_last_sync": {
+    "message": "마지막 동기화"
+  },
+  "webdav_choice_hint": {
+    "message": "서버에 이미 Lumno 설정이 있습니다. 한쪽을 유지하거나, 양쪽 배경화면을 병합하고 나머지 설정은 서버 것을 유지할 수 있습니다. 이 기기의 데이터는 먼저 백업됩니다."
+  },
+  "webdav_conflict_hint": {
+    "message": "이 기기와 서버에서 같은 항목이 변경되었습니다. 유지할 버전을 선택하세요. 다른 변경사항은 자동으로 병합됩니다."
+  },
+  "webdav_error_endpoint": {
+    "message": "올바른 HTTPS WebDAV 주소를 입력하세요."
+  },
+  "webdav_error_directory": {
+    "message": "올바른 동기화 폴더 이름을 입력하세요."
+  },
+  "webdav_error_credentials": {
+    "message": "사용자 이름과 앱 비밀번호를 입력하세요."
+  },
+  "webdav_error_auth": {
+    "message": "인증에 실패했습니다. 사용자 이름과 앱 비밀번호를 확인하세요."
+  },
+  "webdav_error_permission": {
+    "message": "액세스가 거부되었습니다. 폴더의 읽기 및 쓰기 권한을 확인하세요."
+  },
+  "webdav_error_rate": {
+    "message": "서버 요청 한도에 도달했습니다. 나중에 다시 시도하세요."
+  },
+  "webdav_error_unavailable": {
+    "message": "서버를 일시적으로 사용할 수 없습니다(HTTP 503). Nutstore는 짧은 시간에 요청이 너무 많을 때도 이렇게 응답하므로 몇 분 후에 다시 시도하세요. 이 기기의 데이터는 유지됩니다."
+  },
+  "webdav_warning_throttled": {
+    "message": "서버가 지금 요청을 거부하고 있습니다(HTTP {status}). 보통 짧은 시간에 요청이 너무 많이 전송된 경우이며, Nutstore 등의 서비스가 이런 방식으로 제한합니다. Lumno가 {time} 후에 자동으로 다시 시도합니다. 이 기기의 데이터는 유지됩니다."
+  },
+  "webdav_error_capacity": {
+    "message": "WebDAV 저장공간이 가득 찼습니다. 공간을 확보한 후 다시 시도하세요."
+  },
+  "webdav_error_conditional": {
+    "message": "이 서버는 동시 덮어쓰기를 확실하게 방지할 수 없어 자동 동기화를 지원하지 않습니다."
+  },
+  "webdav_error_changed": {
+    "message": "동기화 중에 설정이 변경되었습니다. 로컬 데이터는 유지되며 동기화를 다시 시도합니다."
+  },
+  "webdav_error_missing": {
+    "message": "원격 설정이 삭제되었습니다. 로컬 설정을 업로드해 다시 만들거나 서버 주소를 확인하세요."
+  },
+  "webdav_error_chrome_capacity": {
+    "message": "이 설정은 Chrome 동기화 용량을 초과하여 적용되지 않았습니다. 기존 Chrome 동기화 및 로컬 데이터는 유지됩니다. 설정을 줄인 후 다시 시도하세요."
+  },
+  "webdav_error_chrome_capacity__firefox": {
+    "message": "이 설정은 Firefox Sync 용량을 초과하여 적용되지 않았습니다. 기존 Firefox Sync 및 로컬 데이터는 유지됩니다. 설정을 줄인 후 다시 시도하세요."
+  },
+  "webdav_warning_chrome_backup": {
+    "message": "이 기기의 설정이 Chrome 동기화 용량을 초과하여 아직 Chrome 동기화에 백업되지 않았습니다. WebDAV 동기화는 계속되며 로컬 데이터는 유지됩니다. 설정을 줄이면 백업이 완료됩니다."
+  },
+  "webdav_warning_chrome_backup__firefox": {
+    "message": "이 기기의 설정이 Firefox Sync 용량을 초과하여 아직 Firefox Sync에 백업되지 않았습니다. WebDAV 동기화는 계속되며 로컬 데이터는 유지됩니다. 설정을 줄이면 백업이 완료됩니다."
+  },
+  "webdav_error_network": {
+    "message": "연결에 실패했거나 시간이 초과되었습니다. 네트워크, 서버 주소, 인증서를 확인하세요. 로컬 데이터는 유지됩니다."
+  },
+  "webdav_error_storage": {
+    "message": "동기화 데이터를 저장할 수 없습니다. 브라우저의 로컬 저장소를 확인하세요."
+  },
+  "webdav_error_shortcuts": {
+    "message": "복원하면 바로가기 한도를 초과합니다. 먼저 로컬 폴더 바로가기를 일부 삭제하세요."
+  },
+  "webdav_error_remote_unreadable": {
+    "message": "서버가 원격 설정을 정상적으로 반환하지 않았습니다. 서버를 확인하거나 나중에 다시 시도하세요. 로컬 데이터는 대체되지 않았습니다."
+  },
+  "webdav_error_remote_corrupt": {
+    "message": "원격 설정 파일이 손상되었습니다(올바른 JSON이 아님). 업로드가 중단되었거나 다른 앱이 수정했을 수 있습니다. 로컬 데이터는 대체되지 않았습니다."
+  },
+  "webdav_error_invalid_state": {
+    "message": "원격 설정의 구조나 버전을 이 Lumno에서 인식할 수 없습니다. 최신 버전에서 만들어졌을 수 있습니다. 모든 기기에서 Lumno를 업데이트하세요. 로컬 데이터는 대체되지 않았습니다."
+  },
+  "webdav_error_state_too_large": {
+    "message": "원격 설정이 동기화 한도(바로가기 200개, 배경화면 256개, 설정 2 MB)를 초과합니다. 로컬 데이터는 대체되지 않았습니다."
+  },
+  "webdav_error_response_too_large": {
+    "message": "서버가 반환한 파일이 2 MB 한도를 초과합니다. 로컬 데이터는 대체되지 않았습니다."
+  },
+  "webdav_error_invalid_shortcuts": {
+    "message": "원격 바로가기 데이터가 올바르지 않습니다(형식 오류 또는 ID 중복). 로컬 데이터는 대체되지 않았습니다."
+  },
+  "webdav_error_invalid_icon": {
+    "message": "원격 바로가기 아이콘 기록이 올바르지 않습니다. 로컬 데이터는 대체되지 않았습니다."
+  },
+  "webdav_error_invalid_wallpaper": {
+    "message": "원격 배경화면 기록이 올바르지 않습니다(잘못된 ID 또는 크기). 로컬 데이터는 대체되지 않았습니다."
+  },
+  "webdav_error_invalid_asset": {
+    "message": "원격 이미지가 올바르지 않습니다(유형, 크기 또는 내용 오류). 로컬 데이터는 대체되지 않았습니다."
+  },
+  "webdav_error_asset_missing": {
+    "message": "서버에 이미지 파일이 없습니다. 업로드가 완료되지 않았거나 파일이 삭제되었을 수 있습니다. 로컬 데이터는 유지됩니다."
+  },
+  "webdav_error_asset_integrity": {
+    "message": "서버의 이미지 파일이 손상되었습니다(내용이 기록과 일치하지 않음). 로컬 데이터는 유지됩니다."
+  },
+  "webdav_error_local_invalid_state": {
+    "message": "이 기기의 설정 구조가 올바르지 않아 동기화할 수 없습니다. 양쪽 모두 변경된 내용은 없습니다."
+  },
+  "webdav_error_local_state_too_large": {
+    "message": "이 기기의 설정이 동기화 한도(배경화면 256개, 설정 2 MB)를 초과합니다. 배경화면을 일부 삭제한 후 다시 시도하세요. 양쪽 모두 변경된 내용은 없습니다."
+  },
+  "webdav_error_local_invalid_shortcuts": {
+    "message": "이 기기의 바로가기 데이터가 올바르지 않아(형식 오류 또는 ID 중복) 동기화할 수 없습니다. 양쪽 모두 변경된 내용은 없습니다."
+  },
+  "webdav_error_local_invalid_icon": {
+    "message": "이 기기의 바로가기 아이콘 기록이 올바르지 않아 동기화할 수 없습니다. 양쪽 모두 변경된 내용은 없습니다."
+  },
+  "webdav_error_local_invalid_wallpaper": {
+    "message": "이 기기의 배경화면 기록이 올바르지 않아(잘못된 ID 또는 크기) 동기화할 수 없습니다. 양쪽 모두 변경된 내용은 없습니다."
+  },
+  "webdav_error_local_invalid_asset": {
+    "message": "이 기기의 이미지가 손상되었거나 지원되지 않아 동기화할 수 없습니다. 삭제한 후 다시 추가하세요. 양쪽 모두 변경된 내용은 없습니다."
+  },
+  "webdav_error_local_asset_too_large": {
+    "message": "이 기기의 이미지가 동기화 한도(아이콘당 96 KB, 배경화면당 2 MB)를 초과합니다. 양쪽 모두 변경된 내용은 없습니다."
+  },
+  "webdav_error_shortcut_id_conflict": {
+    "message": "원격 바로가기의 ID가 이 기기의 북마크 폴더 바로가기와 같아 병합할 수 없습니다. 로컬 데이터는 유지됩니다."
+  },
+  "webdav_error_write_failed": {
+    "message": "서버가 동기화 파일 쓰기를 거부했습니다. 폴더의 쓰기 권한과 여유 공간을 확인하세요. 로컬 데이터는 유지됩니다."
+  },
+  "webdav_error_directory_unavailable": {
+    "message": "서버에 동기화 폴더를 만들 수 없습니다. 서버 주소와 폴더 권한을 확인하세요."
+  },
+  "webdav_error_folder_create_refused": {
+    "message": "서버가 새 폴더 생성을 거부하여(MKCOL 405) 동기화 잠금을 설정할 수 없습니다. 계정에 폴더 생성 권한이 있는지, 마운트가 읽기 전용이 아닌지, 프록시가 MKCOL을 차단하지 않는지 확인하세요."
+  },
+  "webdav_error_http": {
+    "message": "서버에서 오류를 반환했습니다(HTTP {status}). 나중에 다시 시도하세요. 로컬 데이터는 유지됩니다."
+  },
+  "webdav_error_generic": {
+    "message": "동기화에 실패했습니다. 나중에 다시 시도하세요. 로컬 데이터는 유지됩니다."
+  },
+  "webdav_test": {
+    "message": "연결 테스트"
+  },
+  "webdav_enable": {
+    "message": "저장 후 동기화 사용"
+  },
+  "webdav_sync": {
+    "message": "지금 동기화"
+  },
+  "webdav_restore_backup": {
+    "message": "대체 이전 설정 복원"
+  },
+  "webdav_merge_wallpapers": {
+    "message": "배경화면 병합"
+  },
+  "webdav_error_merge_too_large": {
+    "message": "배경화면을 합치면 동기화 한도(배경화면 256개, 설정 2 MB, 이미지 링크 8 KB)를 초과합니다. 일부를 삭제하거나 한쪽을 유지하세요. 변경된 내용은 없습니다."
+  },
+  "webdav_use_remote": {
+    "message": "서버 버전 사용"
+  },
+  "webdav_use_local": {
+    "message": "이 기기 버전 유지"
+  },
+  "webdav_test_success": {
+    "message": "연결, 읽기/쓰기 및 동시 업데이트 보호가 확인되었습니다"
+  },
+  "webdav_state_browser": {
+    "message": "사용 안함"
+  },
+  "webdav_state_ready": {
+    "message": "동기화됨"
+  },
+  "webdav_state_syncing": {
+    "message": "동기화 중…"
+  },
+  "webdav_state_paused": {
+    "message": "일시중지됨"
+  },
+  "webdav_state_pending": {
+    "message": "동기화 대기 중"
+  },
+  "webdav_state_choice": {
+    "message": "버전 선택 필요"
+  },
+  "webdav_state_conflict": {
+    "message": "설정 충돌"
+  },
+  "webdav_state_error": {
+    "message": "동기화 실패"
+  },
+  "webdav_error_interrupted": {
+    "message": "이전 대체 작업이 중단되어 업로드가 일시중지되었습니다. 이전 로컬 설정을 복원하거나, 다시 연결해 원격 설정을 사용하세요."
+  },
+  "webdav_missing_hint": {
+    "message": "서버에 있던 설정이 사라졌습니다. 이 기기의 설정을 다시 업로드하거나 먼저 서버 주소를 확인하세요."
+  },
+  "webdav_error_locked": {
+    "message": "다른 기기가 서버에 쓰는 중입니다. 나중에 다시 시도하세요. 계속 차단되면 WebDAV 가이드에 따라 남은 잠금을 해제하세요."
+  },
+  "webdav_error_lock_recovery": {
+    "message": "원격 쓰기를 안전하게 마치지 못해 보호 잠금을 유지했습니다. 모든 기기에서 동기화를 일시중지하고 중단된 요청이 끝났는지 확인한 후 원격 동기화 폴더에서 v1/write-lock을 삭제하세요."
+  },
+  "webdav_error_outdated": {
+    "message": "여러 WebDAV 연결을 사용하려면 Lumno 확장 프로그램을 새로고침한 후 설정을 새로고침하세요."
+  },
+  "webdav_title": {
+    "message": "WebDAV 동기화"
+  },
+  "webdav_beta_hint": {
+    "message": "베타: WebDAV 드라이브나 NAS를 통해 설정, 맞춤 아이콘, 배경화면을 동기화합니다. 브라우저 기본 동기화와 달리 여러 브라우저에서 작동하며 아이콘과 배경화면도 동기화합니다."
+  },
+  "webdav_setup_hint": {
+    "message": "브라우저 동기화와 함께 Nutstore 또는 다른 WebDAV 서비스를 통해 설정, 맞춤 아이콘, 배경화면을 동기화합니다."
+  },
+  "webdav_edit_config": {
+    "message": "연결 수정"
+  },
+  "webdav_save": {
+    "message": "저장"
+  },
+  "webdav_never_synced": {
+    "message": "아직 동기화되지 않음"
+  },
+  "webdav_choice_title": {
+    "message": "초기 버전 선택"
+  },
+  "webdav_conflict_title": {
+    "message": "동기화 충돌"
+  },
+  "webdav_conflict_items": {
+    "message": "충돌하는 내용"
+  },
+  "webdav_conflict_shortcuts": {
+    "message": "바로가기 및 아이콘"
+  },
+  "webdav_conflict_wallpapers": {
+    "message": "배경화면 및 선택"
+  },
+  "webdav_conflict_preferences": {
+    "message": "설정"
+  },
+  "webdav_resolve_later": {
+    "message": "일시중지 후 나중에 해결"
+  },
+  "webdav_add": {
+    "message": "WebDAV 추가"
+  },
+  "webdav_state_recovery": {
+    "message": "복원 필요"
+  },
+  "webdav_retry": {
+    "message": "다시 시도"
+  },
+  "webdav_copy_diagnostic": {
+    "message": "진단 정보 복사"
+  },
+  "webdav_diagnostic_copied": {
+    "message": "복사됨"
+  },
+  "webdav_provider_jianguoyun": {
+    "message": "Nutstore"
+  },
+  "webdav_upload_local": {
+    "message": "이 기기의 설정 업로드"
+  },
+  "webdav_error_duplicate": {
+    "message": "같은 서버, 폴더, 사용자 이름으로 된 연결이 이미 있습니다."
+  },
+  "webdav_error_interrupted_other": {
+    "message": "다른 WebDAV 연결({name})이 먼저 로컬 설정을 복원해야 합니다. 이 연결은 그 후에 다시 시작됩니다."
+  },
+  "webdav_just_now": {
+    "message": "방금"
+  },
+  "webdav_view_diff": {
+    "message": "차이점 보기"
+  },
+  "webdav_hide_diff": {
+    "message": "차이점 숨기기"
+  },
+  "webdav_diff_local": {
+    "message": "이 기기"
+  },
+  "webdav_diff_remote": {
+    "message": "서버"
+  },
+  "webdav_diff_added": {
+    "message": "추가됨: {items}"
+  },
+  "webdav_diff_removed": {
+    "message": "삭제됨: {items}"
+  },
+  "webdav_diff_changed": {
+    "message": "수정됨: {items}"
+  },
+  "webdav_diff_more": {
+    "message": "총 {count}개"
+  },
+  "webdav_diff_reordered": {
+    "message": "순서 변경됨"
+  },
+  "webdav_diff_selection": {
+    "message": "현재 배경화면 변경됨"
+  },
+  "webdav_diff_unchanged": {
+    "message": "변경사항 없음"
+  },
+  "webdav_diff_shortcut_total": {
+    "message": "바로가기 {count}개"
+  },
+  "webdav_diff_wallpaper_total": {
+    "message": "배경화면 {count}개"
+  },
+  "webdav_diff_loading": {
+    "message": "로드 중…"
+  },
+  "webdav_value_on": {
+    "message": "사용"
+  },
+  "webdav_value_off": {
+    "message": "사용 안함"
+  },
+  "webdav_value_default": {
+    "message": "기본값"
+  },
+  "webdav_value_changed": {
+    "message": "변경됨"
+  },
+  "webdav_value_list": {
+    "message": "{count}개 항목"
+  },
+  "webdav_preference_other": {
+    "message": "기타 설정"
+  },
+  "webdav_preference_zen_mode": {
+    "message": "Zen 모드"
+  },
+  "webdav_remove": {
+    "message": "WebDAV 연결 삭제"
+  },
+  "webdav_remove_confirm": {
+    "message": "이 로컬 연결을 삭제하시겠습니까? 서버의 파일은 유지됩니다."
+  },
+  "newtab_quote_title": {
+    "message": "오늘의 명언"
+  },
+  "newtab_quote_position": {
+    "message": "명언 위치"
+  },
+  "newtab_quote_category": {
+    "message": "명언 카테고리"
+  },
+  "newtab_quote_off": {
+    "message": "사용 안함"
+  },
+  "newtab_quote_top": {
+    "message": "검색창 위"
+  },
+  "newtab_quote_input": {
+    "message": "검색창 아래"
+  },
+  "newtab_quote_search": {
+    "message": "바로가기 아래"
+  },
+  "newtab_quote_bottom": {
+    "message": "페이지 하단"
+  },
+  "newtab_quote_literature": {
+    "message": "문학"
+  },
+  "newtab_quote_poetry": {
+    "message": "시"
+  },
+  "newtab_quote_shuffle": {
+    "message": "다른 명언 보기"
+  },
+  "newtab_quote_shuffle_error": {
+    "message": "다른 명언을 불러올 수 없습니다"
+  },
+  "newtab_quote_save_error": {
+    "message": "명언 설정을 저장하지 못했습니다"
+  },
+  "newtab_quote_fallback_text": {
+    "message": "천 리 길도 한 걸음부터."
+  },
+  "newtab_quote_fallback_author": {
+    "message": "노자"
+  },
+  "newtab_quote_fallback_source": {
+    "message": "도덕경"
+  },
+  "newtab_bing_daily": {
+    "message": "매일 자동 업데이트"
+  },
+  "newtab_bing_daily_hint": {
+    "message": "매일 새로운 Bing 사진이 표시됩니다. 이 기능이 켜져 있을 때 직접 고른 사진은 당일에만 유지됩니다."
+  },
+  "newtab_daily_restore": {
+    "message": "오늘의 배경화면으로 돌아가기"
+  },
+  "newtab_bing_recent": {
+    "message": "최근 배경화면"
+  },
+  "newtab_bing_refresh": {
+    "message": "새로고침"
+  },
+  "newtab_bing_loading": {
+    "message": "배경화면 로드 중…"
+  },
+  "newtab_bing_saving": {
+    "message": "배경화면 저장 중…"
+  },
+  "newtab_bing_error": {
+    "message": "배경화면을 불러올 수 없습니다. 다시 시도해 주세요."
+  },
+  "newtab_bing_save_error": {
+    "message": "배경화면을 저장할 수 없습니다. 다시 시도해 주세요."
+  },
+  "newtab_bing_source": {
+    "message": "배경화면 출처 보기"
+  },
+  "newtab_wallpaper_curated_section": {
+    "message": "추천"
+  },
+  "newtab_curated_daily_hint": {
+    "message": "이 기능을 켤 때 표시된 카테고리에서 매일 새 사진이 표시되며, 동기화된 모든 기기에서 같은 사진이 보입니다. 직접 고른 사진은 당일에만 유지됩니다."
+  },
+  "newtab_curated_category": {
+    "message": "카테고리"
+  },
+  "newtab_curated_category_random": {
+    "message": "믹스"
+  },
+  "newtab_curated_category_nature": {
+    "message": "자연"
+  },
+  "newtab_curated_category_water": {
+    "message": "물"
+  },
+  "newtab_curated_category_city": {
+    "message": "도시"
+  },
+  "newtab_curated_category_minimal": {
+    "message": "미니멀"
+  },
+  "newtab_curated_category_art": {
+    "message": "예술"
+  },
+  "newtab_curated_art_meta": {
+    "message": "클리블랜드 미술관"
+  },
+  "newtab_curated_list": {
+    "message": "사진"
+  },
+  "newtab_curated_mix_all": {
+    "message": "모든 카테고리"
+  },
+  "newtab_curated_mix_count": {
+    "message": "카테고리 {count}개"
+  },
+  "newtab_curated_mix_separator": {
+    "message": ", "
+  },
+  "newtab_curated_mix_aria": {
+    "message": "믹스에 포함된 카테고리"
+  },
+  "newtab_curated_more": {
+    "message": "다른 사진 보기"
+  },
+  "newtab_curated_photo_by": {
+    "message": "사진: {name}"
+  },
+  "newtab_curated_source_meta": {
+    "message": "Unsplash · Lorem Picsum 경유"
+  },
+  "newtab_wallpaper_add_url": {
+    "message": "이미지 링크 추가"
+  },
+  "newtab_wallpaper_url_placeholder": {
+    "message": "이미지 링크 붙여넣기(https://…)"
+  },
+  "newtab_wallpaper_url_submit": {
+    "message": "추가"
+  },
+  "newtab_wallpaper_url_invalid": {
+    "message": "http:// 또는 https://로 시작하는 링크를 입력하세요"
+  },
+  "newtab_wallpaper_url_limit": {
+    "message": "링크가 너무 길거나 저장된 링크가 너무 많습니다. 일부를 삭제한 후 다시 시도하세요."
+  },
+  "newtab_wallpaper_url_import_error": {
+    "message": "이 링크에서 이미지를 추가할 수 없습니다"
+  },
+  "newtab_wallpaper_save_to_local": {
+    "message": "로컬 배경화면에 저장"
+  },
+  "newtab_wallpaper_in_local": {
+    "message": "이미 로컬 배경화면에 있음"
+  },
+  "newtab_wallpaper_saving_local": {
+    "message": "로컬 배경화면에 저장 중…"
+  },
+  "newtab_wallpaper_saved_local": {
+    "message": "로컬 배경화면에 저장됨"
+  },
+  "newtab_wallpaper_local_limit": {
+    "message": "로컬 배경화면은 최대 {count}개까지 보관할 수 있습니다. 일부를 삭제한 후 다시 시도하세요."
+  },
+  "newtab_wallpaper_context_menu_label": {
+    "message": "배경화면 작업"
+  },
+  "newtab_quote_font": {
+    "message": "글꼴"
+  },
+  "newtab_quote_font_label": {
+    "message": "명언 글꼴"
+  },
+  "newtab_quote_font_wenkai": {
+    "message": "LXGW WenKai"
+  },
+  "newtab_quote_font_xiaowei": {
+    "message": "ZCOOL XiaoWei"
+  },
+  "newtab_quote_font_sans": {
+    "message": "시스템 고딕체"
+  },
+  "newtab_quote_font_size": {
+    "message": "글꼴 크기"
+  },
+  "newtab_quote_font_size_label": {
+    "message": "명언 글꼴 크기(px)"
+  },
+  "newtab_quote_provider": {
+    "message": "Hitokoto 제공"
+  },
+  "recent_history_menu": {
+    "message": "최근 변경 기록 보기"
+  },
+  "recent_history_title": {
+    "message": "변경 기록"
+  },
+  "recent_history_description": {
+    "message": "보관된 버전 중 하나를 현재 버전으로 설정할 수 있으며, 기록은 삭제되지 않습니다."
+  },
+  "recent_history_current": {
+    "message": "현재 버전"
+  },
+  "recent_history_earlier": {
+    "message": "이전 버전"
+  },
+  "recent_history_restore": {
+    "message": "현재 버전으로 설정"
+  },
+  "recent_history_restoring": {
+    "message": "복원 중…"
+  },
+  "recent_history_restore_success": {
+    "message": "선택한 버전이 복원되었습니다"
+  },
+  "recent_history_restore_failed": {
+    "message": "이 버전을 복원할 수 없습니다"
+  },
+  "recent_update_close": {
+    "message": "닫기"
+  },
+  "settings_progress_tracking_title": {
+    "message": "고정한 드라마와 소설의 진행 상황 자동 업데이트"
+  },
+  "settings_progress_tracking_desc": {
+    "message": "드라마나 소설을 고정하면 다음 화나 다음 장으로 넘어갈 때 카드도 따라와, 보던 곳에서 바로 이어서 열립니다"
+  },
+  "settings_newtab_open_in_new_tab_title": {
+    "message": "새 탭에서 열기"
+  },
+  "settings_newtab_open_in_new_tab_desc": {
+    "message": "켜진 항목은 새 탭에서 열리고 해당 탭으로 전환되며, 꺼진 항목은 현재 탭에서 열립니다. Command/Ctrl+클릭 또는 가운데 클릭은 항상 백그라운드에서 엽니다."
+  },
+  "settings_newtab_open_in_new_tab_search": {
+    "message": "검색 결과"
+  },
+  "settings_newtab_open_in_new_tab_shortcuts": {
+    "message": "바로가기"
+  },
+  "settings_newtab_open_in_new_tab_bookmarks": {
+    "message": "북마크"
+  },
+  "settings_newtab_open_in_new_tab_recent_sites": {
+    "message": "사이트 카드"
+  },
+  "recent_progress_track": {
+    "message": "진행 상황 추적"
+  },
+  "recent_progress_stop": {
+    "message": "진행 상황 추적 중지"
+  },
+  "recent_progress_track_toast": {
+    "message": "추적을 시작했습니다. 다음 화나 다음 장으로 넘어가면 카드가 업데이트됩니다."
+  },
+  "recent_progress_stop_toast": {
+    "message": "진행 상황 추적을 중지했습니다"
+  },
+  "recent_progress_tracking": {
+    "message": "진행 상황 추적 중"
+  },
+  "recent_progress_auto_toast": {
+    "message": "고정하고 진행 상황을 추적합니다. 중지하려면 카드의 레이더 아이콘을 클릭하세요."
+  },
+  "settings_general_newtab_section_title": {
+    "message": "새 탭 설정"
+  },
+  "recent_progress_track_tooltip": {
+    "message": "진행 상황 추적\n────────\n드라마나 연재 소설에 유용합니다.\n사용 설정하면 이 작품의 다음 화나 다음 장으로 넘어갈 때 카드도 그곳으로 이동합니다."
+  },
+  "recent_progress_stop_tooltip": {
+    "message": "진행 상황 추적 중\n────────\n이 작품의 다음 화나 다음 장으로 넘어가면 카드도 그곳으로 이동합니다.\n클릭하여 추적을 중지합니다."
+  },
+  "newtab_shortcuts_group_new": {
+    "message": "새 그룹"
+  },
+  "newtab_shortcuts_group_default_title": {
+    "message": "바로가기"
+  },
+  "newtab_shortcuts_group_title_placeholder": {
+    "message": "제목 추가"
+  },
+  "newtab_shortcuts_group_actions": {
+    "message": "{group} 작업"
+  },
+  "newtab_shortcuts_group_untitled_name": {
+    "message": "제목 없는 그룹"
+  },
+  "newtab_shortcuts_group_rename": {
+    "message": "이름 바꾸기"
+  },
+  "newtab_shortcuts_group_add_site": {
+    "message": "사이트 추가"
+  },
+  "newtab_shortcuts_group_move_up": {
+    "message": "위로 이동"
+  },
+  "newtab_shortcuts_group_move_down": {
+    "message": "아래로 이동"
+  },
+  "newtab_shortcuts_group_delete": {
+    "message": "그룹 삭제"
+  },
+  "newtab_shortcuts_group_delete_with_sites": {
+    "message": "그룹 및 사이트 삭제"
+  },
+  "newtab_shortcuts_group_delete_confirm_title": {
+    "message": "'{group}' 및 포함된 사이트를 삭제하시겠습니까?"
+  },
+  "newtab_shortcuts_group_delete_confirm_description": {
+    "message": "그룹과 포함된 사이트 {count}개가 삭제됩니다."
+  },
+  "newtab_shortcuts_group_delete_confirm_button": {
+    "message": "삭제"
+  },
+  "newtab_shortcuts_group_deleted_undo": {
+    "message": "그룹 삭제됨 · {shortcut} 키로 실행 취소"
+  },
+  "newtab_shortcuts_group_delete_undone": {
+    "message": "그룹 복원됨 · {shortcut} 키로 다시 실행"
+  },
+  "newtab_shortcuts_group_delete_redone": {
+    "message": "그룹 삭제됨 · {shortcut} 키로 실행 취소"
+  },
+  "newtab_shortcuts_group_limit_reached": {
+    "message": "그룹은 최대 {count}개까지 만들 수 있습니다."
+  },
+  "options_shortcut_sync_all": {
+    "message": "바로가기: {count}개 모두 브라우저와 동기화됩니다."
+  },
+  "options_shortcut_sync_split_webdav": {
+    "message": "바로가기: {synced}개는 브라우저와 동기화되고 나머지 {local}개는 WebDAV로 동기화됩니다."
+  },
+  "options_shortcut_sync_split_local": {
+    "message": "바로가기: {synced}개는 브라우저와 동기화되고, {local}개는 동기화 공간을 초과하여 이 기기에만 저장됩니다. WebDAV를 사용 설정하면 함께 동기화할 수 있습니다."
+  },
+  "options_shortcut_sync_failed_local": {
+    "message": "바로가기를 브라우저 동기화에 저장하지 못해 현재 {count}개 모두 이 기기에만 저장되어 있습니다."
+  },
+  "options_shortcut_sync_failed_webdav": {
+    "message": "바로가기를 브라우저 동기화에 저장하지 못해 현재 {count}개 모두 WebDAV로 동기화됩니다."
+  },
+  "options_shortcut_sync_none_local": {
+    "message": "바로가기: 브라우저 동기화 공간이 가득 차서 {count}개 모두 이 기기에만 저장됩니다. WebDAV를 사용 설정하면 동기화할 수 있습니다."
+  },
+  "options_shortcut_sync_none_webdav": {
+    "message": "바로가기: 브라우저 동기화 공간이 가득 차서 {count}개 모두 WebDAV로 동기화됩니다."
+  },
+  "newtab_shortcuts_add_site": {
+    "message": "사이트 추가"
+  },
+  "newtab_shortcuts_group_dialog_rename_title": {
+    "message": "그룹 이름 바꾸기"
+  },
+  "newtab_shortcuts_group_name_placeholder": {
+    "message": "선택사항. 제목 없는 그룹은 새 행만 시작합니다"
+  },
+  "newtab_style_section_title": {
+    "message": "스타일"
+  },
+  "settings_newtab_glass_style_title": {
+    "message": "소재"
+  },
+  "settings_newtab_glass_style_desc": {
+    "message": "새 탭 UI 요소의 소재를 변경합니다."
+  },
+  "settings_newtab_glass_style_none": {
+    "message": "기본"
+  },
+  "settings_newtab_glass_style_frosted": {
+    "message": "아크릴"
+  },
+  "settings_newtab_glass_style_liquid": {
+    "message": "리퀴드 글라스"
+  },
+  "settings_newtab_glass_theme_title": {
+    "message": "소재 테마"
+  },
+  "settings_newtab_glass_theme_follow": {
+    "message": "자동"
+  },
+  "settings_newtab_glass_theme_light": {
+    "message": "라이트"
+  },
+  "settings_newtab_glass_theme_dark": {
+    "message": "다크"
+  },
+  "settings_search_source_group_order_title": {
+    "message": "검색 패널 순서"
+  },
+  "settings_search_source_group_order_desc": {
+    "message": "태그를 드래그해 검색창 패널의 그룹 순서를 정하고, 아래 목록의 행을 드래그해 각 그룹 내 순서를 정하세요. Ctrl/⌘ + Z로 실행 취소, Shift + Ctrl/⌘ + Z로 다시 실행합니다."
+  },
+  "settings_search_source_order_keyboard_hint": {
+    "message": "Alt와 왼쪽 또는 오른쪽 화살표 키를 눌러 이동"
+  },
+  "settings_search_source_order_failed": {
+    "message": "새 순서를 저장하지 못했습니다. 다시 시도해 주세요."
+  },
+  "settings_search_source_move_up": {
+    "message": "위로 이동"
+  },
+  "settings_search_source_move_down": {
+    "message": "아래로 이동"
+  },
+  "settings_search_result_sources_order_desc": {
+    "message": "드래그하여 검색창 패널의 '브라우저 콘텐츠' 그룹 내 순서를 정하세요. Ctrl/⌘ + Z로 실행 취소, Shift + Ctrl/⌘ + Z로 다시 실행합니다."
+  },
+  "settings_search_source_order_undone": {
+    "message": "순서 변경이 실행 취소되었습니다"
+  },
+  "settings_search_source_order_redone": {
+    "message": "순서 변경이 다시 실행되었습니다"
+  },
+  "newtab_quote_source": {
+    "message": "출처"
+  },
+  "newtab_quote_custom": {
+    "message": "사용자 지정"
+  },
+  "newtab_quote_collection_save_error": {
+    "message": "이 기기에 저장할 수 없습니다. 이전 모음은 유지됩니다."
+  },
+  "newtab_quote_hitokoto": {
+    "message": "Hitokoto"
+  },
+  "newtab_quote_provider_custom": {
+    "message": "사용자 지정 모음 · 이 기기에 저장, WebDAV로 동기화"
+  },
+  "newtab_quote_importing": {
+    "message": "가져오는 중…"
+  },
+  "newtab_quote_import_hint": {
+    "message": "매일 새 명언이 표시되며, 다른 명언을 눌러 언제든 바꿀 수 있습니다. TXT / MD: 비어 있지 않은 내용 한 줄이 명언 하나입니다. 최대 1 MB, 1,000개, 개당 500자까지 가능하며, 이 기기에 저장되고 브라우저 동기화에는 포함되지 않습니다. WebDAV를 켜면 함께 동기화됩니다."
+  },
+  "newtab_quote_count": {
+    "message": "문장 {count}개"
+  },
+  "newtab_quote_import_error": {
+    "message": "가져오기 실패: 파일이 형식 또는 크기 제한에 맞지 않습니다. 이전 모음은 유지됩니다."
+  },
+  "newtab_quote_library": {
+    "message": "명언 모음"
+  },
+  "newtab_quote_import": {
+    "message": "파일 가져오기"
+  },
+  "newtab_quote_replace": {
+    "message": "파일 바꾸기"
+  },
+  "newtab_quote_shuffle_button": {
+    "message": "다른 명언"
+  },
+  "newtab_quote_font_size_reset": {
+    "message": "명언 글꼴 크기 재설정"
+  },
+  "popup_actions_label": {
+    "message": "페이지 작업"
+  },
+  "popup_action_shortcut": {
+    "message": "바로가기 추가"
+  },
+  "popup_action_copy": {
+    "message": "링크 복사"
+  },
+  "popup_copy_failed": {
+    "message": "링크를 복사하지 못했습니다. 다시 시도해 주세요."
+  },
+  "popup_theme_label": {
+    "message": "테마"
+  },
+  "popup_link_settings": {
+    "message": "설정"
+  },
+  "popup_link_shortcuts": {
+    "message": "단축키 설정"
+  },
+  "popup_link_feedback": {
+    "message": "의견 보내기"
+  },
+  "popup_sync_error": {
+    "message": "WebDAV 동기화 실패"
+  },
+  "popup_sync_attention": {
+    "message": "WebDAV 동기화 확인 필요"
+  },
+  "popup_sync_busy": {
+    "message": "WebDAV 동기화 중"
+  },
+  "popup_sync_waiting": {
+    "message": "WebDAV 재시도 대기 중"
+  },
+  "popup_release_notes": {
+    "message": "새로운 기능"
+  },
+  "popup_section_command_bar": {
+    "message": "커맨드 바"
+  },
+  "popup_overlay_page_theme": {
+    "message": "페이지 색상에 맞추기"
+  },
+  "popup_overlay_open_tabs": {
+    "message": "기본으로 열린 탭 표시"
+  },
+  "popup_action_shortcut_tooltip": {
+    "message": "새 탭 바로가기에 추가"
+  },
+  "popup_action_clip_tooltip": {
+    "message": "페이지 일부를 잘라 플로팅 창에 띄우기"
+  },
+  "popup_settings_label": {
+    "message": "빠른 설정"
+  },
+  "popup_sync_ready": {
+    "message": "WebDAV 동기화됨"
+  },
+  "popup_open_command_bar": {
+    "message": "커맨드 바 열기"
+  },
+  "popup_action_pip": {
+    "message": "PIP 모드"
+  },
+  "popup_action_pip_exit": {
+    "message": "PIP 모드 종료"
+  },
+  "popup_action_pip_tooltip": {
+    "message": "이 페이지의 동영상을 작은 창에 띄우기"
+  },
+  "popup_action_pip_menu": {
+    "message": "자동 PIP 모드"
+  },
+  "popup_pip_failed": {
+    "message": "이 동영상은 PIP 모드로 재생할 수 없습니다."
+  },
+  "popup_auto_pip_hint": {
+    "message": "탭을 전환하면 동영상이 작은 창으로 재생됩니다"
+  },
+  "popup_action_unavailable": {
+    "message": "이 페이지에서는 사용할 수 없음"
+  },
+  "popup_action_pin_recent": {
+    "message": "최근 방문에 고정"
+  },
+  "popup_action_unpin_recent": {
+    "message": "최근 방문에서 고정 해제"
+  },
+  "popup_action_pin_recent_tooltip": {
+    "message": "새 탭의 최근 방문에 고정"
+  },
+  "popup_action_unpin_recent_tooltip": {
+    "message": "새 탭의 최근 방문에서 고정 해제"
+  },
+  "popup_recent_pinned": {
+    "message": "새 탭의 최근 방문에 고정됨"
+  },
+  "popup_recent_unpinned": {
+    "message": "최근 방문에서 고정 해제됨"
+  }
+}

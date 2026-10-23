@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type RefObject } from 'react';
+import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { useSegmentedIndicator } from '../shared/segmented-indicator';
 import {
   createReactRootController,
@@ -25,32 +25,50 @@ export type SettingsNavigationController =
   ReactRootController<SettingsNavigationRenderModel>;
 
 /**
- * Labels never wrap, so a long translation makes the strip scroll sideways. Mark which
- * edges hide tabs (the stylesheet fades them) and keep the active tab in view.
+ * Labels never wrap. When they do not fit on one row (long translations, narrow windows)
+ * the strip goes compact first: no icons, tighter spacing. If it still overflows it
+ * scrolls sideways; mark which edges hide tabs (the stylesheet fades them) and keep the
+ * active tab in view. Returns whether the strip is compact.
  */
 function useTabStripOverflow(
   indicatorRef: RefObject<HTMLSpanElement | null>,
-  activeKey: string
+  activeKey: string,
+  labelsSignature: string
 ) {
+  const [compact, setCompact] = useState(false);
   useLayoutEffect(() => {
     const strip = indicatorRef.current?.parentElement;
     if (!strip) {
       return undefined;
     }
-    const update = () => {
+    let disposed = false;
+    const updateEdges = () => {
       const maxScroll = strip.scrollWidth - strip.clientWidth;
       strip.dataset.overflowStart = strip.scrollLeft > 1 ? 'true' : 'false';
       strip.dataset.overflowEnd = strip.scrollLeft < maxScroll - 1 ? 'true' : 'false';
     };
-    update();
-    const resizeObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(update) : null;
-    resizeObserver?.observe(strip);
-    strip.addEventListener('scroll', update, { passive: true });
-    return () => {
-      resizeObserver?.disconnect();
-      strip.removeEventListener('scroll', update);
+    // Measured with the icons shown, so the strip only goes compact when the full tabs overflow.
+    const fit = () => {
+      if (disposed) {
+        return;
+      }
+      strip.dataset.compact = 'false';
+      const overflows = strip.scrollWidth > strip.clientWidth + 1;
+      strip.dataset.compact = overflows ? 'true' : 'false';
+      setCompact(overflows);
+      updateEdges();
     };
-  }, [indicatorRef]);
+    fit();
+    const resizeObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(fit) : null;
+    resizeObserver?.observe(strip);
+    strip.addEventListener('scroll', updateEdges, { passive: true });
+    document.fonts?.ready.then(fit).catch(() => {});
+    return () => {
+      disposed = true;
+      resizeObserver?.disconnect();
+      strip.removeEventListener('scroll', updateEdges);
+    };
+  }, [indicatorRef, labelsSignature]);
 
   useLayoutEffect(() => {
     const strip = indicatorRef.current?.parentElement;
@@ -66,7 +84,8 @@ function useTabStripOverflow(
     } else if (right + edge > strip.scrollLeft + strip.clientWidth) {
       strip.scrollLeft = right + edge - strip.clientWidth;
     }
-  }, [activeKey, indicatorRef]);
+  }, [activeKey, compact, indicatorRef]);
+  return compact;
 }
 
 function SettingsNavigation({
@@ -77,11 +96,12 @@ function SettingsNavigation({
   onSelect(key: string): void;
 }) {
   const indicatorRef = useRef<HTMLSpanElement>(null);
+  const labelsSignature = model.items.map((item) => item.label).join('\u0001');
+  const compact = useTabStripOverflow(indicatorRef, model.activeKey, labelsSignature);
   useSegmentedIndicator(
     indicatorRef,
-    `${model.activeKey}\u0002${model.items.map((item) => item.label).join('\u0001')}`
+    `${model.activeKey}\u0002${labelsSignature}\u0002${compact ? 'compact' : 'full'}`
   );
-  useTabStripOverflow(indicatorRef, model.activeKey);
   return (
     <>
       <span
