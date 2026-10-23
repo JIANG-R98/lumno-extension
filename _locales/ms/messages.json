@@ -237,13 +237,16 @@
     "message": "Pusat Bantuan"
   },
   "settings_help_center_desc": {
-    "message": "Tidak pasti cara sesuatu ciri berfungsi? Setiap ciri diterangkan di sini."
+    "message": "Cara menggunakan setiap ciri dan jawapan kepada soalan lazim."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Cara menggunakan setiap ciri dan jawapan kepada soalan lazim. Anda juga boleh {ask}."
   },
   "settings_help_center_action": {
-    "message": "Buka"
+    "message": "Lawati Pusat Bantuan"
   },
   "settings_help_center_ask_action": {
-    "message": "Tanya dari kotak carian"
+    "message": "bertanya terus dari kotak carian"
   },
   "settings_help_center_ask_caption": {
     "message": "Dalam Tab Baharu atau bar perintah, taip lm, tekan Tab, kemudian tulis soalan anda."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Tukar ikon pintasan"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Hubungi"
   },
   "settings_feedback_support_review_action": {
     "message": "Nilai Lumno"

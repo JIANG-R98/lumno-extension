@@ -237,13 +237,16 @@
     "message": "Yardım Merkezi"
   },
   "settings_help_center_desc": {
-    "message": "Bir özelliğin nasıl çalıştığından emin değil misiniz? Tüm özellikler burada açıklanıyor."
+    "message": "Her özelliğin nasıl kullanılacağı ve sık sorulan soruların yanıtları."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Her özelliğin nasıl kullanılacağı ve sık sorulan soruların yanıtları. Dilerseniz {ask}."
   },
   "settings_help_center_action": {
-    "message": "Aç"
+    "message": "Yardım Merkezi’ni ziyaret et"
   },
   "settings_help_center_ask_action": {
-    "message": "Arama kutusundan sorun"
+    "message": "doğrudan arama kutusundan sorun"
   },
   "settings_help_center_ask_caption": {
     "message": "Yeni Sekme'de veya komut çubuğunda lm yazın, Tab tuşuna basın, ardından sorunuzu yazın."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Kısayolun simgesini değiştirme"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "İletişim"
   },
   "settings_feedback_support_review_action": {
     "message": "Lumno'yu puanla"

@@ -237,13 +237,16 @@
     "message": "Center za pomoč"
   },
   "settings_help_center_desc": {
-    "message": "Ne veste, kako deluje funkcija? Tukaj so pojasnjene vse funkcije."
+    "message": "Kako uporabljati vsako funkcijo in odgovori na pogosta vprašanja."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Kako uporabljati vsako funkcijo in odgovori na pogosta vprašanja. Lahko tudi {ask}."
   },
   "settings_help_center_action": {
-    "message": "Odpri"
+    "message": "Obiščite Center za pomoč"
   },
   "settings_help_center_ask_action": {
-    "message": "Vprašajte v iskalnem polju"
+    "message": "vprašate neposredno v iskalnem polju"
   },
   "settings_help_center_ask_caption": {
     "message": "Na novem zavihku ali v ukazni vrstici vnesite lm, pritisnite Tab in napišite vprašanje."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Spreminjanje ikone bližnjice"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Stik"
   },
   "settings_feedback_support_review_action": {
     "message": "Ocenite Lumno"

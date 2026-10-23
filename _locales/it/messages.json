@@ -237,13 +237,16 @@
     "message": "Centro assistenza"
   },
   "settings_help_center_desc": {
-    "message": "Non sai come funziona una funzionalità? Qui trovi la spiegazione di ognuna."
+    "message": "Come usare ogni funzione e risposte alle domande frequenti."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Come usare ogni funzione e risposte alle domande frequenti. Puoi anche {ask}."
   },
   "settings_help_center_action": {
-    "message": "Apri"
+    "message": "Vai al Centro assistenza"
   },
   "settings_help_center_ask_action": {
-    "message": "Chiedi dalla casella di ricerca"
+    "message": "chiedere direttamente dalla casella di ricerca"
   },
   "settings_help_center_ask_caption": {
     "message": "Nella Nuova scheda o nella barra dei comandi, digita lm, premi Tab e scrivi la tua domanda."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Cambiare l'icona di una scorciatoia"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Contatti"
   },
   "settings_feedback_support_review_action": {
     "message": "Valuta Lumno"

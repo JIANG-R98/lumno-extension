@@ -237,13 +237,16 @@
     "message": "Hjælpecenter"
   },
   "settings_help_center_desc": {
-    "message": "Usikker på, hvordan en funktion virker? Alle funktioner er forklaret her."
+    "message": "Sådan bruger du hver funktion, plus svar på ofte stillede spørgsmål."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Sådan bruger du hver funktion, plus svar på ofte stillede spørgsmål. Du kan også {ask}."
   },
   "settings_help_center_action": {
-    "message": "Åbn"
+    "message": "Gå til Hjælpecenter"
   },
   "settings_help_center_ask_action": {
-    "message": "Spørg fra søgefeltet"
+    "message": "spørge direkte fra søgefeltet"
   },
   "settings_help_center_ask_caption": {
     "message": "Skriv lm på Ny fane eller i kommandolinjen, tryk på Tab, og skriv dit spørgsmål."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Skift ikonet for en genvej"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Kontakt"
   },
   "settings_feedback_support_review_action": {
     "message": "Bedøm Lumno"

@@ -237,13 +237,16 @@
     "message": "Довідковий центр"
   },
   "settings_help_center_desc": {
-    "message": "Не знаєте, як працює функція? Тут пояснено кожну з них."
+    "message": "Як користуватися кожною функцією та відповіді на часті запитання."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Як користуватися кожною функцією та відповіді на часті запитання. Також можна {ask}."
   },
   "settings_help_center_action": {
-    "message": "Відкрити"
+    "message": "Перейти до Довідкового центру"
   },
   "settings_help_center_ask_action": {
-    "message": "Запитати в полі пошуку"
+    "message": "поставити запитання просто в полі пошуку"
   },
   "settings_help_center_ask_caption": {
     "message": "На новій вкладці або в панелі команд введіть lm, натисніть Tab і напишіть запитання."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Змінити значок ярлика"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Зв’язок"
   },
   "settings_feedback_support_review_action": {
     "message": "Оцінити Lumno"

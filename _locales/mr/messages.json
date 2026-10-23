@@ -237,13 +237,16 @@
     "message": "मदत केंद्र"
   },
   "settings_help_center_desc": {
-    "message": "एखादे वैशिष्ट्य कसे काम करते हे माहीत नाही? प्रत्येक वैशिष्ट्याचे स्पष्टीकरण येथे आहे."
+    "message": "प्रत्येक फीचर कसे वापरायचे आणि नेहमीच्या प्रश्नांची उत्तरे येथे आहेत."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "प्रत्येक फीचर कसे वापरायचे आणि नेहमीच्या प्रश्नांची उत्तरे येथे आहेत. तुम्ही {ask} शकता."
   },
   "settings_help_center_action": {
-    "message": "उघडा"
+    "message": "मदत केंद्राला भेट द्या"
   },
   "settings_help_center_ask_action": {
-    "message": "शोध बॉक्समधून विचारा"
+    "message": "थेट शोध बॉक्समधून विचारू"
   },
   "settings_help_center_ask_caption": {
     "message": "नवीन टॅबमध्ये किंवा कमांड बारमध्ये lm टाइप करा, Tab दाबा, मग तुमचा प्रश्न लिहा."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "शॉर्टकटचा आयकन बदला"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "संपर्क"
   },
   "settings_feedback_support_review_action": {
     "message": "Lumno ला रेटिंग द्या"

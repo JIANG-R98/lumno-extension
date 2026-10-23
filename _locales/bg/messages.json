@@ -237,13 +237,16 @@
     "message": "Помощен център"
   },
   "settings_help_center_desc": {
-    "message": "Не сте сигурни как работи дадена функция? Тук е обяснена всяка от тях."
+    "message": "Как се използва всяка функция и отговори на честите въпроси."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Как се използва всяка функция и отговори на честите въпроси. Можете също {ask}."
   },
   "settings_help_center_action": {
-    "message": "Отваряне"
+    "message": "Към Помощния център"
   },
   "settings_help_center_ask_action": {
-    "message": "Питайте от полето за търсене"
+    "message": "да питате директно от полето за търсене"
   },
   "settings_help_center_ask_caption": {
     "message": "В новия раздел или командната лента въведете lm, натиснете Tab и напишете въпроса си."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Промяна на иконата на пряк път"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Връзка"
   },
   "settings_feedback_support_review_action": {
     "message": "Оценете Lumno"

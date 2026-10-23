@@ -237,13 +237,16 @@
     "message": "Abikeskus"
   },
   "settings_help_center_desc": {
-    "message": "Pole kindel, kuidas mõni funktsioon töötab? Siin on kõik funktsioonid selgitatud."
+    "message": "Iga funktsiooni kasutamine ja vastused korduma kippuvatele küsimustele."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Iga funktsiooni kasutamine ja vastused korduma kippuvatele küsimustele. Võite ka {ask}."
   },
   "settings_help_center_action": {
-    "message": "Ava"
+    "message": "Ava abikeskus"
   },
   "settings_help_center_ask_action": {
-    "message": "Küsige otsingukastist"
+    "message": "küsida otse otsingukastist"
   },
   "settings_help_center_ask_caption": {
     "message": "Sisestage uuel vahelehel või käsuribal lm, vajutage Tab ja kirjutage oma küsimus."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Otsetee ikooni muutmine"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Kontakt"
   },
   "settings_feedback_support_review_action": {
     "message": "Hinda Lumnot"

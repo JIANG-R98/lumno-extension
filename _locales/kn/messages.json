@@ -237,13 +237,16 @@
     "message": "ಸಹಾಯ ಕೇಂದ್ರ"
   },
   "settings_help_center_desc": {
-    "message": "ವೈಶಿಷ್ಟ್ಯವೊಂದು ಹೇಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ ಎಂದು ಖಚಿತವಿಲ್ಲವೇ? ಪ್ರತಿಯೊಂದು ವೈಶಿಷ್ಟ್ಯವನ್ನು ಇಲ್ಲಿ ವಿವರಿಸಲಾಗಿದೆ."
+    "message": "ಪ್ರತಿಯೊಂದು ವೈಶಿಷ್ಟ್ಯವನ್ನು ಹೇಗೆ ಬಳಸುವುದು ಮತ್ತು ಸಾಮಾನ್ಯ ಪ್ರಶ್ನೆಗಳಿಗೆ ಉತ್ತರಗಳು ಇಲ್ಲಿವೆ."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "ಪ್ರತಿಯೊಂದು ವೈಶಿಷ್ಟ್ಯವನ್ನು ಹೇಗೆ ಬಳಸುವುದು ಮತ್ತು ಸಾಮಾನ್ಯ ಪ್ರಶ್ನೆಗಳಿಗೆ ಉತ್ತರಗಳು ಇಲ್ಲಿವೆ. {ask}."
   },
   "settings_help_center_action": {
-    "message": "ತೆರೆಯಿರಿ"
+    "message": "ಸಹಾಯ ಕೇಂದ್ರಕ್ಕೆ ಭೇಟಿ ನೀಡಿ"
   },
   "settings_help_center_ask_action": {
-    "message": "ಹುಡುಕಾಟ ಬಾಕ್ಸ್\u200cನಿಂದ ಕೇಳಿ"
+    "message": "ಹುಡುಕಾಟ ಬಾಕ್ಸ್\u200cನಿಂದಲೇ ನೇರವಾಗಿ ಕೇಳಬಹುದು"
   },
   "settings_help_center_ask_caption": {
     "message": "ಹೊಸ ಟ್ಯಾಬ್ ಅಥವಾ ಕಮಾಂಡ್ ಬಾರ್\u200cನಲ್ಲಿ lm ಎಂದು ಟೈಪ್ ಮಾಡಿ, Tab ಒತ್ತಿ, ನಂತರ ನಿಮ್ಮ ಪ್ರಶ್ನೆಯನ್ನು ಬರೆಯಿರಿ."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "ಶಾರ್ಟ್\u200cಕಟ್\u200cನ ಐಕಾನ್ ಬದಲಾಯಿಸಿ"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "ಸಂಪರ್ಕಿಸಿ"
   },
   "settings_feedback_support_review_action": {
     "message": "Lumno ಗೆ ರೇಟ್ ಮಾಡಿ"

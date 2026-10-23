@@ -237,13 +237,16 @@
     "message": "고객센터"
   },
   "settings_help_center_desc": {
-    "message": "기능 사용법이 궁금하신가요? 모든 기능이 여기에 설명되어 있습니다."
+    "message": "기능별 사용법과 자주 묻는 질문을 확인할 수 있습니다."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "기능별 사용법과 자주 묻는 질문을 확인할 수 있습니다. {ask}할 수도 있습니다."
   },
   "settings_help_center_action": {
-    "message": "열기"
+    "message": "고객센터 방문"
   },
   "settings_help_center_ask_action": {
-    "message": "검색창에서 질문하기"
+    "message": "검색창에서 바로 질문"
   },
   "settings_help_center_ask_caption": {
     "message": "새 탭이나 커맨드 바에서 lm을 입력하고 Tab을 누른 다음 질문을 입력하세요."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "바로가기 아이콘 변경하기"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "문의 및 피드백"
   },
   "settings_feedback_support_review_action": {
     "message": "Lumno 평가하기"

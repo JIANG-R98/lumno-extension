@@ -237,13 +237,16 @@
     "message": "Ohjekeskus"
   },
   "settings_help_center_desc": {
-    "message": "Etkö tiedä, miten jokin ominaisuus toimii? Kaikki ominaisuudet selitetään täällä."
+    "message": "Jokaisen ominaisuuden käyttöohjeet ja vastaukset usein kysyttyihin kysymyksiin."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Jokaisen ominaisuuden käyttöohjeet ja vastaukset usein kysyttyihin kysymyksiin. Voit myös {ask}."
   },
   "settings_help_center_action": {
-    "message": "Avaa"
+    "message": "Siirry ohjekeskukseen"
   },
   "settings_help_center_ask_action": {
-    "message": "Kysy hakukentässä"
+    "message": "kysyä suoraan hakukentässä"
   },
   "settings_help_center_ask_caption": {
     "message": "Kirjoita uudella välilehdellä tai komentopalkissa lm, paina Tab ja kirjoita kysymyksesi."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Muuta pikakuvakkeen kuvaketta"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Ota yhteyttä"
   },
   "settings_feedback_support_review_action": {
     "message": "Arvioi Lumno"

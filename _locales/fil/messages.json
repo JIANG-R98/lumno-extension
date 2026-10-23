@@ -237,13 +237,16 @@
     "message": "Help Center"
   },
   "settings_help_center_desc": {
-    "message": "Hindi sigurado kung paano gumagana ang isang feature? Ipinaliliwanag dito ang bawat feature."
+    "message": "Paano gamitin ang bawat feature, at mga sagot sa mga karaniwang tanong."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Paano gamitin ang bawat feature, at mga sagot sa mga karaniwang tanong. Puwede ka ring {ask}."
   },
   "settings_help_center_action": {
-    "message": "Buksan"
+    "message": "Pumunta sa Help Center"
   },
   "settings_help_center_ask_action": {
-    "message": "Magtanong mula sa search box"
+    "message": "magtanong nang direkta mula sa search box"
   },
   "settings_help_center_ask_caption": {
     "message": "Sa Bagong Tab o sa command bar, i-type ang lm, pindutin ang Tab, at isulat ang iyong tanong."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Palitan ang icon ng shortcut"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Makipag-ugnayan"
   },
   "settings_feedback_support_review_action": {
     "message": "I-rate ang Lumno"

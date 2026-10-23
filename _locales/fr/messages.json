@@ -237,13 +237,16 @@
     "message": "Centre d’aide"
   },
   "settings_help_center_desc": {
-    "message": "Vous ne savez pas comment fonctionne une fonctionnalité\u00a0? Tout est expliqué ici."
+    "message": "Le mode d’emploi de chaque fonctionnalité et les réponses aux questions fréquentes."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Le mode d’emploi de chaque fonctionnalité et les réponses aux questions fréquentes. Vous pouvez aussi {ask}."
   },
   "settings_help_center_action": {
-    "message": "Ouvrir"
+    "message": "Accéder au Centre d’aide"
   },
   "settings_help_center_ask_action": {
-    "message": "Poser une question depuis le champ de recherche"
+    "message": "poser vos questions directement dans le champ de recherche"
   },
   "settings_help_center_ask_caption": {
     "message": "Dans le Nouvel onglet ou la barre de commandes, saisissez lm, appuyez sur Tab, puis écrivez votre question."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Modifier l’icône d’un raccourci"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Contact"
   },
   "settings_feedback_support_review_action": {
     "message": "Noter Lumno"

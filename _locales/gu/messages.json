@@ -237,13 +237,16 @@
     "message": "સહાય કેન્દ્ર"
   },
   "settings_help_center_desc": {
-    "message": "કોઈ સુવિધા કેવી રીતે કામ કરે છે તેની ખાતરી નથી? દરેક સુવિધા અહીં સમજાવી છે."
+    "message": "દરેક સુવિધાનો ઉપયોગ કેવી રીતે કરવો અને સામાન્ય પ્રશ્નોના જવાબો અહીં છે."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "દરેક સુવિધાનો ઉપયોગ કેવી રીતે કરવો અને સામાન્ય પ્રશ્નોના જવાબો અહીં છે. તમે {ask} પણ શકો છો."
   },
   "settings_help_center_action": {
-    "message": "ખોલો"
+    "message": "સહાય કેન્દ્ર પર જાઓ"
   },
   "settings_help_center_ask_action": {
-    "message": "શોધ બૉક્સમાંથી પૂછો"
+    "message": "સીધા શોધ બૉક્સમાંથી પૂછી"
   },
   "settings_help_center_ask_caption": {
     "message": "નવા ટૅબમાં અથવા કમાન્ડ બારમાં lm ટાઇપ કરો, Tab દબાવો, પછી તમારો પ્રશ્ન લખો."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "શૉર્ટકટનું આઇકન બદલો"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "સંપર્ક"
   },
   "settings_feedback_support_review_action": {
     "message": "Lumnoને રેટિંગ આપો"

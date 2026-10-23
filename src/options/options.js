@@ -546,6 +546,7 @@ import * as LumnoWebDavOptions from './webdav-options.js';
   const feedbackSupportSection = LumnoOptionsFeedbackSupportSection.createFeedbackSupportSection({
     communityLinks: COMMUNITY_LINKS,
     controller: optionsFeedbackSupportApi.createFeedbackSupportController(feedbackSupportHost),
+    licensesLink: document.getElementById('_x_extension_open_licenses_2026_unique_'),
     getLocale: () => (optionsState.currentLanguageMode === 'system' ? getSystemLocale() : normalizeLocale(optionsState.currentLanguageMode)),
     getMessage,
     helpIconUrl: chrome && chrome.runtime && typeof chrome.runtime.getURL === 'function'

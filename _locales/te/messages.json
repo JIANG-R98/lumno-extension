@@ -237,13 +237,16 @@
     "message": "సహాయ కేంద్రం"
   },
   "settings_help_center_desc": {
-    "message": "ఏదైనా ఫీచర్ ఎలా పనిచేస్తుందో తెలియదా? ప్రతి ఫీచర్ ఇక్కడ వివరించబడింది."
+    "message": "ప్రతి ఫీచర్\u200cను ఎలా ఉపయోగించాలో, సాధారణ ప్రశ్నలకు సమాధానాలు ఇక్కడ ఉన్నాయి."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "ప్రతి ఫీచర్\u200cను ఎలా ఉపయోగించాలో, సాధారణ ప్రశ్నలకు సమాధానాలు ఇక్కడ ఉన్నాయి. {ask}."
   },
   "settings_help_center_action": {
-    "message": "తెరవండి"
+    "message": "సహాయ కేంద్రాన్ని సందర్శించండి"
   },
   "settings_help_center_ask_action": {
-    "message": "సెర్చ్ బాక్స్ నుండి అడగండి"
+    "message": "సెర్చ్ బాక్స్ నుండే నేరుగా అడగవచ్చు"
   },
   "settings_help_center_ask_caption": {
     "message": "కొత్త ట్యాబ్\u200cలో లేదా కమాండ్ బార్\u200cలో lm అని టైప్ చేసి, Tab నొక్కి, ఆపై మీ ప్రశ్నను రాయండి."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "షార్ట్\u200cకట్ ఐకాన్\u200cను మార్చండి"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "సంప్రదించండి"
   },
   "settings_feedback_support_review_action": {
     "message": "Lumnoకు రేటింగ్ ఇవ్వండి"

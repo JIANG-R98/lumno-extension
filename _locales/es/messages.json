@@ -237,13 +237,16 @@
     "message": "Centro de ayuda"
   },
   "settings_help_center_desc": {
-    "message": "¿No sabes cómo funciona algo? Aquí se explican todas las funciones."
+    "message": "Cómo usar cada función y respuestas a las preguntas frecuentes."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Cómo usar cada función y respuestas a las preguntas frecuentes. También puedes {ask}."
   },
   "settings_help_center_action": {
-    "message": "Abrir"
+    "message": "Ir al Centro de ayuda"
   },
   "settings_help_center_ask_action": {
-    "message": "Pregunta desde el cuadro de búsqueda"
+    "message": "preguntar directamente desde el cuadro de búsqueda"
   },
   "settings_help_center_ask_caption": {
     "message": "En la Nueva pestaña o en la barra de comandos, escribe lm, pulsa Tab y escribe tu pregunta."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Cambiar el icono de un acceso directo"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Contacto"
   },
   "settings_feedback_support_review_action": {
     "message": "Valorar Lumno"

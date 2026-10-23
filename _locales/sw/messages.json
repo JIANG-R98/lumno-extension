@@ -237,13 +237,16 @@
     "message": "Kituo cha Usaidizi"
   },
   "settings_help_center_desc": {
-    "message": "Huna uhakika jinsi kipengele kinavyofanya kazi? Kila kipengele kimeelezwa hapa."
+    "message": "Jinsi ya kutumia kila kipengele na majibu ya maswali ya kawaida."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Jinsi ya kutumia kila kipengele na majibu ya maswali ya kawaida. Unaweza pia {ask}."
   },
   "settings_help_center_action": {
-    "message": "Fungua"
+    "message": "Tembelea Kituo cha Usaidizi"
   },
   "settings_help_center_ask_action": {
-    "message": "Uliza kwenye kisanduku cha kutafutia"
+    "message": "kuuliza moja kwa moja kwenye kisanduku cha kutafutia"
   },
   "settings_help_center_ask_caption": {
     "message": "Kwenye Kichupo Kipya au upau wa amri, andika lm, bonyeza Tab, kisha uandike swali lako."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Badilisha aikoni ya njia ya mkato"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Wasiliana"
   },
   "settings_feedback_support_review_action": {
     "message": "Kadiria Lumno"

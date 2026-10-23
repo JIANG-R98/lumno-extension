@@ -237,13 +237,16 @@
     "message": "Pusat Bantuan"
   },
   "settings_help_center_desc": {
-    "message": "Tidak yakin cara kerja suatu fitur? Semua fitur dijelaskan di sini."
+    "message": "Cara memakai setiap fitur dan jawaban atas pertanyaan umum."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Cara memakai setiap fitur dan jawaban atas pertanyaan umum. Anda juga bisa {ask}."
   },
   "settings_help_center_action": {
-    "message": "Buka"
+    "message": "Kunjungi Pusat Bantuan"
   },
   "settings_help_center_ask_action": {
-    "message": "Tanya dari kotak penelusuran"
+    "message": "bertanya langsung dari kotak penelusuran"
   },
   "settings_help_center_ask_caption": {
     "message": "Di Tab Baru atau bilah perintah, ketik lm, tekan Tab, lalu tulis pertanyaan Anda."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Ubah ikon pintasan"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Kontak"
   },
   "settings_feedback_support_review_action": {
     "message": "Beri rating Lumno"

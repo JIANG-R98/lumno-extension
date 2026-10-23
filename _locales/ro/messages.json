@@ -237,13 +237,16 @@
     "message": "Centrul de ajutor"
   },
   "settings_help_center_desc": {
-    "message": "Nu știți cum funcționează o funcție? Toate funcțiile sunt explicate aici."
+    "message": "Cum se folosește fiecare funcție și răspunsuri la întrebările frecvente."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Cum se folosește fiecare funcție și răspunsuri la întrebările frecvente. Puteți și să {ask}."
   },
   "settings_help_center_action": {
-    "message": "Deschideți"
+    "message": "Accesați Centrul de ajutor"
   },
   "settings_help_center_ask_action": {
-    "message": "Întrebați din caseta de căutare"
+    "message": "puneți întrebări direct din caseta de căutare"
   },
   "settings_help_center_ask_caption": {
     "message": "În Filă nouă sau în bara de comenzi, tastați lm, apăsați Tab, apoi scrieți întrebarea."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Schimbați pictograma unei comenzi rapide"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Contact"
   },
   "settings_feedback_support_review_action": {
     "message": "Evaluați Lumno"

@@ -237,13 +237,16 @@
     "message": "ヘルプセンター"
   },
   "settings_help_center_desc": {
-    "message": "機能の使い方がわからないときは、こちらにすべてまとめています"
+    "message": "各機能の使い方と、よくある質問への回答をまとめています"
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "各機能の使い方と、よくある質問への回答をまとめています。{ask}こともできます。"
   },
   "settings_help_center_action": {
-    "message": "開く"
+    "message": "ヘルプセンターへ"
   },
   "settings_help_center_ask_action": {
-    "message": "検索ボックスで質問"
+    "message": "検索ボックスから直接質問する"
   },
   "settings_help_center_ask_caption": {
     "message": "新しいタブまたはコマンドバーで lm または「ヘルプセンター」と入力して Tab を押し、質問を入力します。"
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "設定ページでショートカットが効かない"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "お問い合わせ"
   },
   "settings_feedback_support_review_action": {
     "message": "Lumno を評価"

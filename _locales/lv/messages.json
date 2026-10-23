@@ -237,13 +237,16 @@
     "message": "Palīdzības centrs"
   },
   "settings_help_center_desc": {
-    "message": "Nezināt, kā darbojas kāda funkcija? Šeit ir izskaidrota katra funkcija."
+    "message": "Kā lietot katru funkciju un atbildes uz biežāk uzdotajiem jautājumiem."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Kā lietot katru funkciju un atbildes uz biežāk uzdotajiem jautājumiem. Varat arī {ask}."
   },
   "settings_help_center_action": {
-    "message": "Atvērt"
+    "message": "Atvērt Palīdzības centru"
   },
   "settings_help_center_ask_action": {
-    "message": "Jautāt meklēšanas lodziņā"
+    "message": "jautāt tieši meklēšanas lodziņā"
   },
   "settings_help_center_ask_caption": {
     "message": "Jaunajā cilnē vai komandu joslā ierakstiet lm, nospiediet Tab un tad uzrakstiet savu jautājumu."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Mainīt saīsnes ikonu"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Saziņa"
   },
   "settings_feedback_support_review_action": {
     "message": "Novērtēt Lumno"

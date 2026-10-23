@@ -237,13 +237,16 @@
     "message": "帮助中心"
   },
   "settings_help_center_desc": {
-    "message": "不清楚某个功能怎么用？每个功能的用法都写在这里。"
+    "message": "每个功能的用法和常见问题都在这里。"
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "每个功能的用法和常见问题都在这里，也可以{ask}。"
   },
   "settings_help_center_action": {
-    "message": "查看"
+    "message": "访问帮助中心"
   },
   "settings_help_center_ask_action": {
-    "message": "在搜索框中提问"
+    "message": "在搜索框里直接提问"
   },
   "settings_help_center_ask_caption": {
     "message": "在新标签页或命令栏输入 lm 或「帮助中心」，按 Tab，再写下你的问题。"
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "快捷键没反应怎么办？"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "交流与反馈"
   },
   "settings_feedback_support_review_action": {
     "message": "为 Lumno 评分"

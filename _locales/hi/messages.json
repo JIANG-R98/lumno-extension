@@ -237,13 +237,16 @@
     "message": "सहायता केंद्र"
   },
   "settings_help_center_desc": {
-    "message": "पता नहीं कि कोई सुविधा कैसे काम करती है? हर सुविधा के बारे में यहां बताया गया है।"
+    "message": "हर फ़ीचर का इस्तेमाल कैसे करें और आम सवालों के जवाब यहाँ हैं।"
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "हर फ़ीचर का इस्तेमाल कैसे करें और आम सवालों के जवाब यहाँ हैं। आप {ask} भी सकते हैं।"
   },
   "settings_help_center_action": {
-    "message": "खोलें"
+    "message": "सहायता केंद्र पर जाएँ"
   },
   "settings_help_center_ask_action": {
-    "message": "खोज बॉक्स से पूछें"
+    "message": "सीधे खोज बॉक्स से पूछ"
   },
   "settings_help_center_ask_caption": {
     "message": "नए टैब या कमांड बार में lm टाइप करें, Tab दबाएं और फिर अपना सवाल लिखें।"
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "शॉर्टकट का आइकॉन बदलें"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "संपर्क करें"
   },
   "settings_feedback_support_review_action": {
     "message": "Lumno को रेटिंग दें"

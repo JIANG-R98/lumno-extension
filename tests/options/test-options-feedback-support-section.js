@@ -6,7 +6,8 @@ const getMessage = (key, fallback) => `${key}|${fallback}`;
 const links = Object.assign({}, communityLinks.FALLBACK_LINKS, {
   wechatQr: 'https://example.com/qr.png',
   githubIssue: 'https://github.com/example/issues/new',
-  x: 'https://x.com/example'
+  x: 'https://x.com/example',
+  licenses: 'https://example.com/notices'
 });
 
 assert.strictEqual(feedback.getFeedbackSupportWebLocale('zh_CN'), 'zh-CN');
@@ -36,11 +37,6 @@ function model(webLocale, helpCenterSearchEnabled) {
   const en = model('en', false);
   assert.deepStrictEqual(en.items.map((item) => item.key), ['chrome-review', 'github-issue', 'contact-author']);
   assert.strictEqual(en.help.ask, null, 'the ask demo hides while the lm site search is off');
-  assert.deepStrictEqual(en.licenses, {
-    href: 'https://github.com/kubai087/lumno-extension/blob/main/THIRD_PARTY_NOTICES.md',
-    label: 'settings_feedback_support_licenses_action|开源许可',
-    labelKey: 'settings_feedback_support_licenses_action'
-  }, 'the licenses link should open the third-party notices on GitHub');
   assert.strictEqual(model('ja', null).help.ask, null, 'and until the providers have loaded');
 }
 
@@ -58,9 +54,11 @@ function model(webLocale, helpCenterSearchEnabled) {
   }
 }
 
-// The section renders the bundled links at once and the remote ones once loaded.
+// The section renders the bundled links at once and the remote ones once loaded,
+// and keeps the licenses link in the Global settings header on the same URL.
 (async () => {
   const rendered = [];
+  const licensesLink = { href: '' };
   let resolveLoad;
   const section = feedback.createFeedbackSupportSection({
     communityLinks: Object.assign({}, communityLinks, {
@@ -70,14 +68,18 @@ function model(webLocale, helpCenterSearchEnabled) {
     getLocale: () => 'zh_CN',
     getMessage,
     helpIconUrl: 'icon.png',
-    isHelpCenterSearchEnabled: () => true
+    isHelpCenterSearchEnabled: () => true,
+    licensesLink
   });
   section.render();
   assert.strictEqual(rendered[0].items[0].href, communityLinks.FALLBACK_LINKS.wechatQr);
+  assert.strictEqual(licensesLink.href, 'https://github.com/kubai087/lumno-extension/blob/main/THIRD_PARTY_NOTICES.md',
+    'the licenses link should open the third-party notices on GitHub');
   const loading = section.loadLinks();
   resolveLoad(links);
   await loading;
   assert.strictEqual(rendered[1].items[0].href, links.wechatQr);
+  assert.strictEqual(licensesLink.href, links.licenses);
   feedback.createFeedbackSupportSection({
     communityLinks, controller: null, getLocale: () => 'en', getMessage, isHelpCenterSearchEnabled: () => false
   }).render();

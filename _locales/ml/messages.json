@@ -237,13 +237,16 @@
     "message": "സഹായ കേന്ദ്രം"
   },
   "settings_help_center_desc": {
-    "message": "ഒരു ഫീച്ചർ എങ്ങനെ പ്രവർത്തിക്കുന്നുവെന്ന് ഉറപ്പില്ലേ? എല്ലാ ഫീച്ചറുകളും ഇവിടെ വിശദീകരിച്ചിട്ടുണ്ട്."
+    "message": "ഓരോ ഫീച്ചറും എങ്ങനെ ഉപയോഗിക്കാമെന്നും പൊതുവായ ചോദ്യങ്ങൾക്കുള്ള ഉത്തരങ്ങളും ഇവിടെയുണ്ട്."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "ഓരോ ഫീച്ചറും എങ്ങനെ ഉപയോഗിക്കാമെന്നും പൊതുവായ ചോദ്യങ്ങൾക്കുള്ള ഉത്തരങ്ങളും ഇവിടെയുണ്ട്. {ask}."
   },
   "settings_help_center_action": {
-    "message": "തുറക്കുക"
+    "message": "സഹായ കേന്ദ്രം സന്ദർശിക്കുക"
   },
   "settings_help_center_ask_action": {
-    "message": "തിരയൽ ബോക്സിൽ നിന്ന് ചോദിക്കുക"
+    "message": "തിരയൽ ബോക്സിൽ നിന്ന് നേരിട്ട് ചോദിക്കാം"
   },
   "settings_help_center_ask_caption": {
     "message": "പുതിയ ടാബിലോ കമാൻഡ് ബാറിലോ lm എന്ന് ടൈപ്പ് ചെയ്ത് Tab അമർത്തി, നിങ്ങളുടെ ചോദ്യം എഴുതുക."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "കുറുക്കുവഴിയുടെ ഐക്കൺ മാറ്റുക"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "ബന്ധപ്പെടുക"
   },
   "settings_feedback_support_review_action": {
     "message": "Lumno റേറ്റ് ചെയ്യുക"

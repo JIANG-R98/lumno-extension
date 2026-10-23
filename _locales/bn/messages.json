@@ -237,13 +237,16 @@
     "message": "সহায়তা কেন্দ্র"
   },
   "settings_help_center_desc": {
-    "message": "কোনো ফিচার কীভাবে কাজ করে তা নিশ্চিত নন? প্রতিটি ফিচারের ব্যাখ্যা এখানে আছে।"
+    "message": "প্রতিটি ফিচার কীভাবে ব্যবহার করবেন এবং সাধারণ প্রশ্নের উত্তর এখানে পাবেন।"
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "প্রতিটি ফিচার কীভাবে ব্যবহার করবেন এবং সাধারণ প্রশ্নের উত্তর এখানে পাবেন। চাইলে {ask}ও করতে পারেন।"
   },
   "settings_help_center_action": {
-    "message": "খুলুন"
+    "message": "সহায়তা কেন্দ্রে যান"
   },
   "settings_help_center_ask_action": {
-    "message": "সার্চ বক্স থেকে জিজ্ঞাসা করুন"
+    "message": "সরাসরি সার্চ বক্স থেকে জিজ্ঞাসা"
   },
   "settings_help_center_ask_caption": {
     "message": "নতুন ট্যাব বা কমান্ড বারে lm লিখুন, Tab টিপুন, তারপর আপনার প্রশ্ন লিখুন।"
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "শর্টকাটের আইকন পরিবর্তন করুন"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "যোগাযোগ"
   },
   "settings_feedback_support_review_action": {
     "message": "Lumno-কে রেটিং দিন"

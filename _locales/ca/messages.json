@@ -237,13 +237,16 @@
     "message": "Centre d'ajuda"
   },
   "settings_help_center_desc": {
-    "message": "No saps com funciona una funció? Aquí s'expliquen totes."
+    "message": "Com fer servir cada funció i respostes a les preguntes freqüents."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Com fer servir cada funció i respostes a les preguntes freqüents. També pots {ask}."
   },
   "settings_help_center_action": {
-    "message": "Obre"
+    "message": "Visita el Centre d'ajuda"
   },
   "settings_help_center_ask_action": {
-    "message": "Pregunta des del quadre de cerca"
+    "message": "preguntar directament des del quadre de cerca"
   },
   "settings_help_center_ask_caption": {
     "message": "A la pestanya nova o a la barra d'ordres, escriu lm, prem Tab i escriu la teva pregunta."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Canvia la icona d'una drecera"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Contacte"
   },
   "settings_feedback_support_review_action": {
     "message": "Valora Lumno"

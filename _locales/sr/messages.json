@@ -237,13 +237,16 @@
     "message": "Центар за помоћ"
   },
   "settings_help_center_desc": {
-    "message": "Нисте сигурни како нека функција ради? Овде је објашњена свака функција."
+    "message": "Како се користи свака функција и одговори на честа питања."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Како се користи свака функција и одговори на честа питања. Можете и да {ask}."
   },
   "settings_help_center_action": {
-    "message": "Отвори"
+    "message": "Посетите Центар за помоћ"
   },
   "settings_help_center_ask_action": {
-    "message": "Питајте из оквира за претрагу"
+    "message": "питате директно из оквира за претрагу"
   },
   "settings_help_center_ask_caption": {
     "message": "На новој картици или у командној траци унесите lm, притисните Tab, па напишите питање."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Промена иконе пречице"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Контакт"
   },
   "settings_feedback_support_review_action": {
     "message": "Оцените Lumno"

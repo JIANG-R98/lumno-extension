@@ -237,13 +237,16 @@
     "message": "說明中心"
   },
   "settings_help_center_desc": {
-    "message": "不清楚某個功能怎麼用？每個功能的用法都寫在這裡。"
+    "message": "每個功能的用法和常見問題都在這裡。"
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "每個功能的用法和常見問題都在這裡，也可以{ask}。"
   },
   "settings_help_center_action": {
-    "message": "查看"
+    "message": "前往說明中心"
   },
   "settings_help_center_ask_action": {
-    "message": "在搜尋框中提問"
+    "message": "在搜尋框裡直接提問"
   },
   "settings_help_center_ask_caption": {
     "message": "在新分頁或指令列輸入 lm 或「說明中心」，按 Tab，再寫下你的問題。"
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "快捷鍵沒反應怎麼辦？"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "交流與回饋"
   },
   "settings_feedback_support_review_action": {
     "message": "為 Lumno 評分"

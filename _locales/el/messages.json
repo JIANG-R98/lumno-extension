@@ -237,13 +237,16 @@
     "message": "Κέντρο βοήθειας"
   },
   "settings_help_center_desc": {
-    "message": "Δεν είστε σίγουροι πώς λειτουργεί μια δυνατότητα; Όλες εξηγούνται εδώ."
+    "message": "Πώς χρησιμοποιείται κάθε λειτουργία και απαντήσεις σε συχνές ερωτήσεις."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Πώς χρησιμοποιείται κάθε λειτουργία και απαντήσεις σε συχνές ερωτήσεις. Μπορείτε επίσης {ask}."
   },
   "settings_help_center_action": {
-    "message": "Άνοιγμα"
+    "message": "Μετάβαση στο Κέντρο βοήθειας"
   },
   "settings_help_center_ask_action": {
-    "message": "Ρωτήστε από το πλαίσιο αναζήτησης"
+    "message": "να ρωτήσετε απευθείας από το πλαίσιο αναζήτησης"
   },
   "settings_help_center_ask_caption": {
     "message": "Στη Νέα καρτέλα ή στη γραμμή εντολών, πληκτρολογήστε lm, πατήστε Tab και γράψτε την ερώτησή σας."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Αλλαγή εικονιδίου συντόμευσης"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Επικοινωνία"
   },
   "settings_feedback_support_review_action": {
     "message": "Βαθμολογήστε το Lumno"

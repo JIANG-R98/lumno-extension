@@ -237,13 +237,16 @@
     "message": "Pagalbos centras"
   },
   "settings_help_center_desc": {
-    "message": "Nežinote, kaip veikia funkcija? Čia paaiškinta kiekviena funkcija."
+    "message": "Kaip naudotis kiekviena funkcija ir atsakymai į dažnus klausimus."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Kaip naudotis kiekviena funkcija ir atsakymai į dažnus klausimus. Taip pat galite {ask}."
   },
   "settings_help_center_action": {
-    "message": "Atidaryti"
+    "message": "Eiti į Pagalbos centrą"
   },
   "settings_help_center_ask_action": {
-    "message": "Klauskite paieškos laukelyje"
+    "message": "klausti tiesiai paieškos laukelyje"
   },
   "settings_help_center_ask_caption": {
     "message": "Naujame skirtuke ar komandų juostoje įveskite lm, paspauskite Tab ir parašykite klausimą."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Nuorodos piktogramos keitimas"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Susisiekite"
   },
   "settings_feedback_support_review_action": {
     "message": "Įvertinti Lumno"

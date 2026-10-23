@@ -237,13 +237,16 @@
     "message": "Centar za pomoć"
   },
   "settings_help_center_desc": {
-    "message": "Niste sigurni kako neka značajka radi? Ovdje je objašnjena svaka značajka."
+    "message": "Kako koristiti svaku značajku i odgovori na česta pitanja."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Kako koristiti svaku značajku i odgovori na česta pitanja. Možete i {ask}."
   },
   "settings_help_center_action": {
-    "message": "Otvori"
+    "message": "Posjetite Centar za pomoć"
   },
   "settings_help_center_ask_action": {
-    "message": "Pitajte iz okvira za pretraživanje"
+    "message": "pitati izravno iz okvira za pretraživanje"
   },
   "settings_help_center_ask_caption": {
     "message": "Na novoj kartici ili u naredbenoj traci upišite lm, pritisnite Tab, a zatim napišite pitanje."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Promjena ikone prečaca"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Kontakt"
   },
   "settings_feedback_support_review_action": {
     "message": "Ocijenite Lumno"

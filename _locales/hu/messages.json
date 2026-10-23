@@ -237,13 +237,16 @@
     "message": "Súgó"
   },
   "settings_help_center_desc": {
-    "message": "Nem biztos benne, hogyan működik egy funkció? Itt minden funkció magyarázata megtalálható."
+    "message": "Az egyes funkciók használata és válaszok a gyakori kérdésekre."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Az egyes funkciók használata és válaszok a gyakori kérdésekre. Vagy {ask}."
   },
   "settings_help_center_action": {
-    "message": "Megnyitás"
+    "message": "Ugrás a Súgóhoz"
   },
   "settings_help_center_ask_action": {
-    "message": "Kérdezzen a keresőmezőből"
+    "message": "kérdezzen közvetlenül a keresőmezőből"
   },
   "settings_help_center_ask_caption": {
     "message": "Az Új lap oldalon vagy a parancssávban írja be, hogy lm, nyomja meg a Tab billentyűt, majd írja be a kérdését."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Parancsikon ikonjának módosítása"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Kapcsolat"
   },
   "settings_feedback_support_review_action": {
     "message": "Lumno értékelése"

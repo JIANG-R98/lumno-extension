@@ -79,33 +79,6 @@ describe('Options feedback support React island', () => {
     });
   });
 
-  it('puts the licenses link under the tiles as a quiet text link', () => {
-    const { controller, host } = createFixture();
-    act(() => controller.render({
-      ...model,
-      licenses: {
-        href: 'https://github.com/example/blob/main/THIRD_PARTY_NOTICES.md',
-        label: '开源许可',
-        labelKey: 'settings_feedback_support_licenses_action'
-      }
-    }));
-
-    expect(host.querySelectorAll('nav a._x_extension_feedback_support_link_2026_unique_')).toHaveLength(4);
-    const footer = host.querySelector('nav + ._x_extension_feedback_support_footer_2026_unique_');
-    const link = footer?.querySelector<HTMLAnchorElement>('a._x_extension_feedback_support_action_2026_unique_');
-    expect(link?.dataset.feedbackSupport).toBe('licenses');
-    expect(link?.href).toBe('https://github.com/example/blob/main/THIRD_PARTY_NOTICES.md');
-    expect(link?.target).toBe('_blank');
-    expect(link?.textContent).toBe('开源许可');
-    expect(link?.querySelector('.ri-external-link-line')).not.toBeNull();
-  });
-
-  it('leaves out the licenses footer without a link', () => {
-    const { controller, host } = createFixture();
-    act(() => controller.render(model));
-    expect(host.querySelector('._x_extension_feedback_support_footer_2026_unique_')).toBeNull();
-  });
-
   it('uses secure external anchors and preserves the provided destinations', () => {
     const { controller, host } = createFixture();
     act(() => controller.render(model));
@@ -118,7 +91,7 @@ describe('Options feedback support React island', () => {
     expect(community?.rel).toContain('noopener');
   });
 
-  it('puts the help center first as its own row with an Open link', () => {
+  it('puts the help center first as its own row with a Visit Help Center link', () => {
     const { controller, host } = createFixture();
     act(() => controller.render({
       ...model,
@@ -126,7 +99,7 @@ describe('Options feedback support React island', () => {
         description: '不清楚某个功能怎么用？每个功能的用法都写在这里',
         descriptionKey: 'settings_help_center_desc',
         href: 'https://lumno.kubai.design/help/what-is-lumno/',
-        label: '查看',
+        label: '访问帮助中心',
         labelKey: 'settings_help_center_action',
         title: '帮助中心',
         titleKey: 'settings_help_center_title'
@@ -140,10 +113,40 @@ describe('Options feedback support React island', () => {
     const link = rows[0].querySelector<HTMLAnchorElement>('[data-feedback-support="help-center"]');
     expect(link?.href).toBe('https://lumno.kubai.design/help/what-is-lumno/');
     expect(link?.target).toBe('_blank');
-    expect(link?.textContent).toBe('查看');
+    expect(link?.textContent).toBe('访问帮助中心');
     expect(link?.querySelector('.ri-external-link-line')).not.toBeNull();
     // Without the Help Center site search there is nothing to demo.
     expect(rows[0].querySelector('[data-feedback-support="help-center-ask"]')).toBeNull();
+  });
+
+  it('titles the channel tiles as their own row under the help center', () => {
+    const { controller, host } = createFixture();
+    act(() => controller.render({
+      ...model,
+      channels: {
+        title: '交流与反馈',
+        titleKey: 'settings_feedback_support_channels_title'
+      },
+      help: {
+        description: '每个功能的用法和常见问题都在这里。',
+        descriptionKey: 'settings_help_center_desc',
+        href: 'https://lumno.kubai.design/help/what-is-lumno/',
+        label: '访问帮助中心',
+        labelKey: 'settings_help_center_action',
+        title: '帮助中心',
+        titleKey: 'settings_help_center_title'
+      }
+    }));
+
+    const rows = host.querySelectorAll('._x_extension_feedback_support_row_2026_unique_');
+    expect(rows).toHaveLength(2);
+    expect(rows[1].querySelector('._x_extension_setting_title_2024_unique_')?.textContent).toBe('交流与反馈');
+    expect(rows[1].querySelector('._x_extension_setting_desc_2024_unique_')).toBeNull();
+    expect(rows[1].querySelector('a, button')).toBeNull();
+    expect(rows[1].nextElementSibling?.tagName).toBe('NAV');
+
+    act(() => controller.render({ ...model, items: [], channels: { title: 'x', titleKey: '' } }));
+    expect(host.querySelector('._x_extension_feedback_support_row_2026_unique_')).toBeNull();
   });
 
   it('plays a demo of asking the help center from the search box on hover or focus', () => {
@@ -155,8 +158,9 @@ describe('Options feedback support React island', () => {
         ask: {
           caption: '输入 lm，按 Tab，再写下你的问题。',
           captionKey: 'settings_help_center_ask_caption',
+          descriptionTemplate: '用法都在这里，也可以{ask}。',
           iconUrl: 'chrome-extension://id/assets/images/site-search/glyph-lm.png',
-          label: '在搜索框中提问',
+          label: '在搜索框里直接提问',
           labelKey: 'settings_help_center_ask_action',
           prefix: 'lm',
           providerName: 'Lumno 帮助中心',
@@ -166,7 +170,7 @@ describe('Options feedback support React island', () => {
         description: '不清楚某个功能怎么用？',
         descriptionKey: 'settings_help_center_desc',
         href: 'https://lumno.kubai.design/help/what-is-lumno/',
-        label: '查看',
+        label: '访问帮助中心',
         labelKey: 'settings_help_center_action',
         title: '帮助中心',
         titleKey: 'settings_help_center_title'
@@ -174,10 +178,16 @@ describe('Options feedback support React island', () => {
     }));
 
     const row = host.querySelector('._x_extension_feedback_support_row_2026_unique_');
-    const trigger = row?.querySelector<HTMLButtonElement>('button[data-feedback-support="help-center-ask"]');
-    expect(trigger?.nextElementSibling).not.toBeNull();
-    expect(trigger?.closest('._x_extension_help_ask_anchor_2026_unique_')?.nextElementSibling
-      ?.getAttribute('data-feedback-support')).toBe('help-center');
+    // The demo hangs off words in the description, not a button beside the title or the link.
+    expect(row?.querySelector('._x_extension_setting_title_2024_unique_ button')).toBeNull();
+    const description = row?.querySelector('._x_extension_setting_desc_2024_unique_');
+    // The description mixes copy and markup, so the page-wide i18n pass must leave it alone.
+    expect(description?.hasAttribute('data-i18n')).toBe(false);
+    const trigger = description?.querySelector<HTMLButtonElement>('button[data-feedback-support="help-center-ask"]');
+    expect(trigger?.classList.contains('_x_extension_help_ask_trigger_2026_unique_')).toBe(true);
+    expect(trigger?.querySelector('[data-i18n="settings_help_center_ask_action"]')?.textContent).toBe('在搜索框里直接提问');
+    expect(description?.firstChild?.textContent).toBe('用法都在这里，也可以');
+    expect(description?.lastChild?.textContent).toBe('。');
     const popover = host.querySelector<HTMLElement>('[role="tooltip"]');
     expect(popover?.dataset.open).toBe('false');
     expect(trigger?.getAttribute('aria-describedby')).toBe(popover?.id);
@@ -226,6 +236,39 @@ describe('Options feedback support React island', () => {
       'idle', 'prefix', 'prefix', 'tab', 'question', 'question', 'question', 'question', 'results'
     ]);
     expect(frames.every((frame) => frame.duration > 0)).toBe(true);
+  });
+
+  it('appends the ask trigger when a translation leaves out the {ask} slot', () => {
+    const { controller, host } = createFixture();
+    act(() => controller.render({
+      ...model,
+      help: {
+        ask: {
+          caption: '',
+          captionKey: 'settings_help_center_ask_caption',
+          descriptionTemplate: 'Feature guides.',
+          iconUrl: '',
+          label: 'ask from the search box',
+          labelKey: 'settings_help_center_ask_action',
+          prefix: 'lm',
+          providerName: 'Lumno Help Center',
+          query: 'shortcut',
+          results: []
+        },
+        description: 'Feature guides.',
+        descriptionKey: 'settings_help_center_desc',
+        href: 'https://lumno.kubai.design/help/what-is-lumno/',
+        label: 'Visit Help Center',
+        labelKey: 'settings_help_center_action',
+        title: 'Help Center',
+        titleKey: 'settings_help_center_title'
+      }
+    }));
+
+    const description = host.querySelector('._x_extension_setting_desc_2024_unique_');
+    expect(description?.firstChild?.textContent).toBe('Feature guides.');
+    expect(description?.querySelector('[data-feedback-support="help-center-ask"]')?.textContent)
+      .toBe('ask from the search box');
   });
 
   it('opens the WeChat group QR code in a popover instead of a new tab', () => {

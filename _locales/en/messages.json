@@ -237,13 +237,16 @@
     "message": "Help Center"
   },
   "settings_help_center_desc": {
-    "message": "Not sure how a feature works? Every feature is explained here."
+    "message": "Feature guides and answers to common questions."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Feature guides and answers to common questions. You can also {ask}."
   },
   "settings_help_center_action": {
-    "message": "Open"
+    "message": "Visit Help Center"
   },
   "settings_help_center_ask_action": {
-    "message": "Ask from the search box"
+    "message": "ask right from the search box"
   },
   "settings_help_center_ask_caption": {
     "message": "In the New Tab or the command bar, type lm, press Tab, then write your question."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Change a shortcut's icon"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Get in Touch"
   },
   "settings_feedback_support_review_action": {
     "message": "Rate Lumno"

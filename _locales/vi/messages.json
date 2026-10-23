@@ -237,13 +237,16 @@
     "message": "Trung tâm trợ giúp"
   },
   "settings_help_center_desc": {
-    "message": "Chưa rõ một tính năng hoạt động thế nào? Mọi tính năng đều được giải thích tại đây."
+    "message": "Cách dùng từng tính năng và giải đáp các câu hỏi thường gặp."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Cách dùng từng tính năng và giải đáp các câu hỏi thường gặp. Bạn cũng có thể {ask}."
   },
   "settings_help_center_action": {
-    "message": "Mở"
+    "message": "Truy cập Trung tâm trợ giúp"
   },
   "settings_help_center_ask_action": {
-    "message": "Hỏi từ hộp tìm kiếm"
+    "message": "hỏi ngay trong hộp tìm kiếm"
   },
   "settings_help_center_ask_caption": {
     "message": "Trên Thẻ mới hoặc thanh lệnh, nhập lm, nhấn Tab rồi viết câu hỏi của bạn."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Đổi biểu tượng của lối tắt"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Liên hệ"
   },
   "settings_feedback_support_review_action": {
     "message": "Đánh giá Lumno"

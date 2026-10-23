@@ -237,13 +237,16 @@
     "message": "Helpcentrum"
   },
   "settings_help_center_desc": {
-    "message": "Weet je niet hoe een functie werkt? Hier wordt elke functie uitgelegd."
+    "message": "Hoe je elke functie gebruikt, plus antwoorden op veelgestelde vragen."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Hoe je elke functie gebruikt, plus antwoorden op veelgestelde vragen. Je kunt ook {ask}."
   },
   "settings_help_center_action": {
-    "message": "Bekijken"
+    "message": "Naar het Helpcentrum"
   },
   "settings_help_center_ask_action": {
-    "message": "Vragen vanuit het zoekvak"
+    "message": "direct vanuit het zoekvak vragen stellen"
   },
   "settings_help_center_ask_caption": {
     "message": "Typ op het nieuwe tabblad of in de opdrachtbalk lm, druk op Tab en stel je vraag."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Pictogram van een snelkoppeling wijzigen"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Contact"
   },
   "settings_feedback_support_review_action": {
     "message": "Lumno beoordelen"

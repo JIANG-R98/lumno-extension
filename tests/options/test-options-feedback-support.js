@@ -44,6 +44,8 @@ function testCopy() {
     ACTION_KEYS.forEach((key) => {
       assert.ok(messages[key] && messages[key].message, `${locale} should provide ${key}`);
     });
+    assert.ok(messages.settings_help_center_desc_with_ask.message.includes('{ask}'),
+      `${locale} should place the ask-in-the-search-box words inside the Help Center description`);
   });
   assert.deepStrictEqual(ACTION_KEYS.map((key) => readMessages('zh_CN')[key].message), ['加入反馈群', '为 Lumno 评分', '创建 Issue', '开源许可', '联系作者'],
     'Simplified Chinese feedback links should use the requested copy');
@@ -88,11 +90,13 @@ async function testChannels() {
     en.channels().some((link) => /^https:\/\/x\.com\//.test(link.getAttribute('href') || '')),
   'English Options should offer X instead of WeChat');
   [zh, en].forEach((page) => {
-    const licenses = page.byId(HOST_ID).querySelector('[data-feedback-support="licenses"]');
+    const licenses = page.byId('_x_extension_open_licenses_2026_unique_');
     assert.ok(licenses && licenses.getAttribute('href') === 'https://github.com/kubai087/lumno-extension/blob/main/THIRD_PARTY_NOTICES.md',
       'the open-source licenses link should open the third-party notices on GitHub');
-    assert.ok(!page.channels().includes(licenses) && licenses.closest('._x_extension_feedback_support_footer_2026_unique_'),
-      'the licenses link should sit under the channel tiles, not among them');
+    assert.ok(!page.byId(HOST_ID).contains(licenses) &&
+      licenses.nextElementSibling === page.byId('_x_extension_open_onboarding_page_2026_unique_') &&
+      licenses.target === '_blank' && licenses.rel.includes('noopener'),
+    'the licenses link should sit just left of the onboarding guide in the Global settings header');
   });
   zh.close();
   en.close();

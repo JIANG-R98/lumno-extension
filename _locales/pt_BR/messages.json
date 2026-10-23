@@ -237,13 +237,16 @@
     "message": "Central de Ajuda"
   },
   "settings_help_center_desc": {
-    "message": "Não sabe como um recurso funciona? Todos estão explicados aqui."
+    "message": "Como usar cada recurso e respostas para as dúvidas mais comuns."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Como usar cada recurso e respostas para as dúvidas mais comuns. Você também pode {ask}."
   },
   "settings_help_center_action": {
-    "message": "Abrir"
+    "message": "Acessar a Central de Ajuda"
   },
   "settings_help_center_ask_action": {
-    "message": "Pergunte na caixa de pesquisa"
+    "message": "perguntar direto na caixa de pesquisa"
   },
   "settings_help_center_ask_caption": {
     "message": "Na Nova guia ou na barra de comandos, digite lm, pressione Tab e escreva sua pergunta."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Mudar o ícone de um atalho"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Contato"
   },
   "settings_feedback_support_review_action": {
     "message": "Avaliar o Lumno"

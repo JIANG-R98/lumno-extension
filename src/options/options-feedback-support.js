@@ -1,7 +1,9 @@
 // The "Feedback & support" section on the General tab: the Help Center
-// card (with the "ask in the search box" demo while the lm site search is
-// on) and the community, review, GitHub and contact links. Links come from
-// the shared remote community-links file, with its bundled fallback first.
+// row (whose description offers the "ask in the search box" demo while the
+// lm site search is on) and the community, review, GitHub and contact links.
+// It also points the open-source licenses link in the Global settings header
+// at the current URL. Links come from the shared remote community-links
+// file, with its bundled fallback first.
 
 // Options locale (zh_CN, zh_TW, ja, other) -> the website's locale.
 function getFeedbackSupportWebLocale(locale) {
@@ -20,14 +22,19 @@ function buildFeedbackSupportModel(input) {
   const { communityLinks, getMessage, links, webLocale } = input;
   const communityIsWechat = communityLinks.getCommunityChannel(links, webLocale) === 'wechat';
   return {
+    channels: {
+      title: getMessage('settings_feedback_support_channels_title', '交流与反馈'),
+      titleKey: 'settings_feedback_support_channels_title'
+    },
     heading: getMessage('settings_feedback_support_section_title', '反馈与支持'),
     headingKey: 'settings_feedback_support_section_title',
     help: {
       ask: input.helpCenterSearchEnabled !== true ? null : {
         caption: getMessage('settings_help_center_ask_caption', '在新标签页或命令栏输入 lm 或「帮助中心」，按 Tab，再写下你的问题。'),
         captionKey: 'settings_help_center_ask_caption',
+        descriptionTemplate: getMessage('settings_help_center_desc_with_ask', '每个功能的用法和常见问题都在这里，也可以{ask}。'),
         iconUrl: input.helpIconUrl,
-        label: getMessage('settings_help_center_ask_action', '在搜索框中提问'),
+        label: getMessage('settings_help_center_ask_action', '在搜索框里直接提问'),
         labelKey: 'settings_help_center_ask_action',
         prefix: 'lm',
         providerName: getMessage('site_search_name_lumno_help', 'Lumno 帮助中心'),
@@ -43,10 +50,10 @@ function buildFeedbackSupportModel(input) {
           }
         ]
       },
-      description: getMessage('settings_help_center_desc', '不清楚某个功能怎么用？每个功能的用法都写在这里。'),
+      description: getMessage('settings_help_center_desc', '每个功能的用法和常见问题都在这里。'),
       descriptionKey: 'settings_help_center_desc',
       href: communityLinks.getHelpUrl(webLocale),
-      label: getMessage('settings_help_center_action', '查看'),
+      label: getMessage('settings_help_center_action', '访问帮助中心'),
       labelKey: 'settings_help_center_action',
       title: getMessage('settings_help_center_title', '帮助中心'),
       titleKey: 'settings_help_center_title'
@@ -89,17 +96,12 @@ function buildFeedbackSupportModel(input) {
         label: getMessage('settings_feedback_support_contact_author_action', '联系作者'),
         labelKey: 'settings_feedback_support_contact_author_action'
       }
-    ].filter((item) => Boolean(item.href)),
-    // A quiet text link under the tiles, so the channel row keeps its width.
-    licenses: links.licenses ? {
-      href: links.licenses,
-      label: getMessage('settings_feedback_support_licenses_action', '开源许可'),
-      labelKey: 'settings_feedback_support_licenses_action'
-    } : null
+    ].filter((item) => Boolean(item.href))
   };
 }
 
 //   controller            the section's React controller (may be null)
+//   licensesLink          the open-source licenses <a> beside the onboarding guide (may be null)
 //   communityLinks        LumnoCommunityLinks
 //   getMessage, getLocale(), isHelpCenterSearchEnabled(), helpIconUrl
 function createFeedbackSupportSection(options) {
@@ -107,6 +109,9 @@ function createFeedbackSupportSection(options) {
   let links = communityLinks.FALLBACK_LINKS;
 
   function render() {
+    if (options.licensesLink && links.licenses) {
+      options.licensesLink.href = links.licenses;
+    }
     if (!options.controller) {
       return;
     }

@@ -237,13 +237,16 @@
     "message": "Brukerstøtte"
   },
   "settings_help_center_desc": {
-    "message": "Usikker på hvordan en funksjon virker? Alle funksjonene er forklart her."
+    "message": "Slik bruker du hver funksjon, pluss svar på vanlige spørsmål."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Slik bruker du hver funksjon, pluss svar på vanlige spørsmål. Du kan også {ask}."
   },
   "settings_help_center_action": {
-    "message": "Åpne"
+    "message": "Gå til Brukerstøtte"
   },
   "settings_help_center_ask_action": {
-    "message": "Spør fra søkefeltet"
+    "message": "spørre direkte fra søkefeltet"
   },
   "settings_help_center_ask_caption": {
     "message": "I Ny fane eller kommandofeltet skriver du lm, trykker på Tab og skriver spørsmålet ditt."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Endre ikonet til en snarvei"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Kontakt"
   },
   "settings_feedback_support_review_action": {
     "message": "Vurder Lumno"

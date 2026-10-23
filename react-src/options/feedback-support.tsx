@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { createReactRootController, type ReactRootController } from './root-controller';
 
 export interface FeedbackSupportQr {
@@ -19,8 +19,8 @@ export interface FeedbackSupportItem {
 }
 
 export interface FeedbackSupportRowCopy {
-  description: string;
-  descriptionKey: string;
+  description?: string;
+  descriptionKey?: string;
   title: string;
   titleKey: string;
 }
@@ -34,6 +34,8 @@ export interface FeedbackSupportAskDemoResult {
 export interface FeedbackSupportAskDemo {
   caption: string;
   captionKey: string;
+  /** The Help Center description with an {ask} slot, where the demo's trigger sits. */
+  descriptionTemplate: string;
   iconUrl: string;
   label: string;
   labelKey: string;
@@ -50,19 +52,13 @@ export interface FeedbackSupportHelp extends FeedbackSupportRowCopy {
   labelKey: string;
 }
 
-export interface FeedbackSupportTextLink {
-  href: string;
-  label: string;
-  labelKey: string;
-}
-
 export interface FeedbackSupportRenderModel {
+  /** The title above the channel tiles, apart from the Help Center. */
+  channels?: FeedbackSupportRowCopy | null;
   heading: string;
   headingKey: string;
   help?: FeedbackSupportHelp | null;
   items: FeedbackSupportItem[];
-  /** The third-party licenses, as a quiet link under the channel tiles. */
-  licenses?: FeedbackSupportTextLink | null;
 }
 
 export type FeedbackSupportController =
@@ -72,16 +68,26 @@ const ACTION_CLASS = '_x_extension_shortcut_submit_2024_unique_ _x_extension_fee
 const TILE_CLASS = '_x_extension_feedback_support_link_2026_unique_';
 
 // Laid out like every other setting: title and description on the left, quiet actions on the right.
-function FeedbackSupportRow({ children, copy }: { children: ReactNode; copy: FeedbackSupportRowCopy }) {
+function FeedbackSupportRow({ children, copy, description }: {
+  children?: ReactNode;
+  copy: FeedbackSupportRowCopy;
+  /** Replaces the plain description, e.g. one with an inline popover trigger. */
+  description?: ReactNode;
+}) {
   return (
     <div className="_x_extension_setting_row_2024_unique_ _x_extension_feedback_support_row_2026_unique_">
       <div className="_x_extension_feedback_support_copy_2026_unique_">
         <p className="_x_extension_setting_title_2024_unique_" data-i18n={copy.titleKey}>
           {copy.title}
         </p>
-        <p className="_x_extension_setting_desc_2024_unique_" data-i18n={copy.descriptionKey}>
-          {copy.description}
-        </p>
+        {description ? (
+          // A div, since the description may hold a popover; no data-i18n, as it mixes copy and markup.
+          <div className="_x_extension_setting_desc_2024_unique_">{description}</div>
+        ) : copy.description ? (
+          <p className="_x_extension_setting_desc_2024_unique_" data-i18n={copy.descriptionKey}>
+            {copy.description}
+          </p>
+        ) : null}
       </div>
       {children}
     </div>
@@ -273,11 +279,13 @@ function FeedbackSupportAskDemoView({ demo, playing }: { demo: FeedbackSupportAs
   );
 }
 
-// Hover or focus shows how to ask the Help Center from the search box, playing while open.
+// Inline words in the Help Center description: hover or focus shows how to ask from the search box, playing while open.
 function FeedbackSupportAskHint({ demo }: { demo: FeedbackSupportAskDemo }) {
   const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLSpanElement>(null);
+  const popoverRef = useRef<HTMLSpanElement>(null);
   const timerRef = useRef(0);
+  const [shift, setShift] = useState(0);
   const popoverId = '_x_extension_help_ask_popover_2026_unique_';
 
   const schedule = (next: boolean, delay: number) => {
@@ -286,6 +294,16 @@ function FeedbackSupportAskHint({ demo }: { demo: FeedbackSupportAskDemo }) {
   };
 
   useEffect(() => () => window.clearTimeout(timerRef.current), []);
+
+  // The popover opens under the words; near the window's right edge it slides left to stay in view.
+  useLayoutEffect(() => {
+    if (!open || !rootRef.current || !popoverRef.current) {
+      return;
+    }
+    const start = rootRef.current.getBoundingClientRect().left;
+    const room = document.documentElement.clientWidth - 16 - (start + popoverRef.current.offsetWidth);
+    setShift(Math.max(0, Math.min(start - 16, -room)));
+  }, [open]);
 
   useEffect(() => {
     if (!open) {
@@ -312,7 +330,7 @@ function FeedbackSupportAskHint({ demo }: { demo: FeedbackSupportAskDemo }) {
   }, [open]);
 
   return (
-    <div
+    <span
       className="_x_extension_help_ask_anchor_2026_unique_"
       onBlur={(event) => {
         if (!rootRef.current?.contains(event.relatedTarget as Node | null)) {
@@ -328,7 +346,7 @@ function FeedbackSupportAskHint({ demo }: { demo: FeedbackSupportAskDemo }) {
         aria-controls={popoverId}
         aria-describedby={popoverId}
         aria-expanded={open ? 'true' : 'false'}
-        className={ACTION_CLASS}
+        className="_x_extension_help_ask_trigger_2026_unique_"
         data-feedback-support="help-center-ask"
         data-open={open ? 'true' : 'false'}
         onClick={() => {
@@ -337,25 +355,34 @@ function FeedbackSupportAskHint({ demo }: { demo: FeedbackSupportAskDemo }) {
         }}
         type="button"
       >
-        <i className="ri-icon ri-size-14 ri-chat-search-line" aria-hidden="true" />
         <span data-i18n={demo.labelKey}>{demo.label}</span>
       </button>
-      <div
+      <span
         className="_x_extension_menu_surface_2024_unique_ _x_extension_help_ask_popover_2026_unique_"
         data-open={open ? 'true' : 'false'}
         id={popoverId}
+        ref={popoverRef}
         role="tooltip"
+        style={shift ? { left: -shift } : undefined}
       >
         <FeedbackSupportAskDemoView demo={demo} playing={open} />
-        <p className="_x_extension_help_ask_caption_2026_unique_" data-i18n={demo.captionKey}>
+        <span className="_x_extension_help_ask_caption_2026_unique_" data-i18n={demo.captionKey}>
           {demo.caption}
-        </p>
-      </div>
-    </div>
+        </span>
+      </span>
+    </span>
   );
 }
 
-function FeedbackSupportView({ heading, headingKey, help, items, licenses }: FeedbackSupportRenderModel) {
+// The description with the trigger in its {ask} slot; a translation without the slot gets it at the end.
+function FeedbackSupportAskDescription({ demo }: { demo: FeedbackSupportAskDemo }) {
+  const [before, ...rest] = demo.descriptionTemplate.split('{ask}');
+  const after = rest.join('{ask}');
+  const trigger = <FeedbackSupportAskHint demo={demo} />;
+  return rest.length ? <>{before}{trigger}{after}</> : <>{before} {trigger}</>;
+}
+
+function FeedbackSupportView({ channels, heading, headingKey, help, items }: FeedbackSupportRenderModel) {
   return (
     <section
       className="_x_extension_feedback_support_section_2026_unique_"
@@ -371,8 +398,7 @@ function FeedbackSupportView({ heading, headingKey, help, items, licenses }: Fee
         </h2>
       </div>
       {help?.href ? (
-        <FeedbackSupportRow copy={help}>
-          {help.ask ? <FeedbackSupportAskHint demo={help.ask} /> : null}
+        <FeedbackSupportRow copy={help} description={help.ask ? <FeedbackSupportAskDescription demo={help.ask} /> : null}>
           <a
             className={ACTION_CLASS}
             data-feedback-support="help-center"
@@ -385,6 +411,7 @@ function FeedbackSupportView({ heading, headingKey, help, items, licenses }: Fee
           </a>
         </FeedbackSupportRow>
       ) : null}
+      {channels && items.length ? <FeedbackSupportRow copy={channels} /> : null}
       <nav
         className="_x_extension_feedback_support_links_2026_unique_"
         aria-labelledby="_x_extension_feedback_support_heading_2026_unique_"
@@ -406,20 +433,6 @@ function FeedbackSupportView({ heading, headingKey, help, items, licenses }: Fee
           </a>
         ))}
       </nav>
-      {licenses?.href ? (
-        <div className="_x_extension_feedback_support_footer_2026_unique_">
-          <a
-            className={ACTION_CLASS}
-            data-feedback-support="licenses"
-            href={licenses.href}
-            rel="noreferrer noopener"
-            target="_blank"
-          >
-            <span data-i18n={licenses.labelKey}>{licenses.label}</span>
-            <i className="ri-icon ri-size-14 ri-external-link-line" aria-hidden="true" />
-          </a>
-        </div>
-      ) : null}
     </section>
   );
 }

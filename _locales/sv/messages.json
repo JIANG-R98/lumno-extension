@@ -237,13 +237,16 @@
     "message": "Hjälpcenter"
   },
   "settings_help_center_desc": {
-    "message": "Osäker på hur en funktion fungerar? Alla funktioner förklaras här."
+    "message": "Hur du använder varje funktion, plus svar på vanliga frågor."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "Hur du använder varje funktion, plus svar på vanliga frågor. Du kan också {ask}."
   },
   "settings_help_center_action": {
-    "message": "Öppna"
+    "message": "Gå till Hjälpcenter"
   },
   "settings_help_center_ask_action": {
-    "message": "Fråga från sökrutan"
+    "message": "fråga direkt i sökrutan"
   },
   "settings_help_center_ask_caption": {
     "message": "På Ny flik eller i kommandofältet skriver du lm, trycker på Tab och skriver sedan din fråga."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "Ändra en genvägs ikon"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "Kontakt"
   },
   "settings_feedback_support_review_action": {
     "message": "Betygsätt Lumno"

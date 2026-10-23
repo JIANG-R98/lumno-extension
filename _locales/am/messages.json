@@ -237,13 +237,16 @@
     "message": "የእገዛ ማዕከል"
   },
   "settings_help_center_desc": {
-    "message": "አንድ ባህሪ እንዴት እንደሚሠራ እርግጠኛ አይደሉም? እያንዳንዱ ባህሪ እዚህ ተብራርቷል።"
+    "message": "የእያንዳንዱ ባህሪ አጠቃቀም እና የተለመዱ ጥያቄዎች መልሶች እዚህ አሉ።"
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "የእያንዳንዱ ባህሪ አጠቃቀም እና የተለመዱ ጥያቄዎች መልሶች እዚህ አሉ። እንዲሁም {ask} ይችላሉ።"
   },
   "settings_help_center_action": {
-    "message": "ክፈት"
+    "message": "የእገዛ ማዕከሉን ይጎብኙ"
   },
   "settings_help_center_ask_action": {
-    "message": "ከፍለጋ ሳጥኑ ይጠይቁ"
+    "message": "በቀጥታ ከፍለጋ ሳጥኑ መጠየቅ"
   },
   "settings_help_center_ask_caption": {
     "message": "በአዲስ ትር ወይም በትዕዛዝ አሞሌው ውስጥ lm ብለው ይተይቡ፣ Tabን ይጫኑ፣ ከዚያ ጥያቄዎን ይጻፉ።"
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "የአቋራጭ አዶን ይቀይሩ"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "ያግኙን"
   },
   "settings_feedback_support_review_action": {
     "message": "Lumnoን ደረጃ ይስጡ"

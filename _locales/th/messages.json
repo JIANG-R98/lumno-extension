@@ -237,13 +237,16 @@
     "message": "ศูนย์ช่วยเหลือ"
   },
   "settings_help_center_desc": {
-    "message": "ไม่แน่ใจว่าฟีเจอร์ใดทำงานอย่างไร ทุกฟีเจอร์มีคำอธิบายอยู่ที่นี่"
+    "message": "วิธีใช้แต่ละฟีเจอร์และคำตอบสำหรับคำถามที่พบบ่อย"
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "วิธีใช้แต่ละฟีเจอร์และคำตอบสำหรับคำถามที่พบบ่อย หรือจะ{ask}ก็ได้"
   },
   "settings_help_center_action": {
-    "message": "เปิด"
+    "message": "ไปที่ศูนย์ช่วยเหลือ"
   },
   "settings_help_center_ask_action": {
-    "message": "ถามจากช่องค้นหา"
+    "message": "ถามจากช่องค้นหาโดยตรง"
   },
   "settings_help_center_ask_caption": {
     "message": "ในแท็บใหม่หรือแถบคำสั่ง ให้พิมพ์ lm กด Tab แล้วพิมพ์คำถามของคุณ"
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "เปลี่ยนไอคอนของทางลัด"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "ติดต่อ"
   },
   "settings_feedback_support_review_action": {
     "message": "ให้คะแนน Lumno"

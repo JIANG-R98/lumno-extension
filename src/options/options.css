@@ -662,15 +662,6 @@ html[data-options-theme-mode="dark"] #_x_extension_overlay_page_theme_adaptation
   min-width: 0;
   padding: 4px var(--settings-content-edge-space) var(--settings-row-block-space);
 }
-._x_extension_feedback_support_links_2026_unique_:has(+ ._x_extension_feedback_support_footer_2026_unique_) {
-  padding-bottom: 0;
-}
-/* Quiet links under the tiles, right-aligned with the tiles' outer edge. */
-._x_extension_feedback_support_footer_2026_unique_ {
-  display: flex;
-  justify-content: flex-end;
-  padding: 6px var(--settings-content-edge-space) var(--settings-row-block-space);
-}
 ._x_extension_feedback_support_link_2026_unique_ {
   --feedback-support-link-bg: var(--control-bg);
   --feedback-support-link-hover-bg: rgba(15, 23, 42, 0.07);
@@ -896,23 +887,43 @@ body[data-theme="dark"] ._x_extension_feedback_support_qr_image_2026_unique_ {
   cursor: progress;
   opacity: 0.6;
 }
-/* "Ask in the search box": hover or focus plays a small demo of lm → Tab → question → pages. */
+/* Words in the Help Center description: hover or focus plays a small demo of lm → Tab → question → pages.
+   Unbroken, so the popover can hang from where the words start. */
 ._x_extension_help_ask_anchor_2026_unique_ {
   position: relative;
-  flex-shrink: 0;
-  display: flex;
-  align-self: center;
+  display: inline-block;
 }
-._x_extension_feedback_support_action_2026_unique_[data-open="true"] {
-  --settings-button-bg: var(--settings-button-hover-bg);
-  --settings-button-color: var(--settings-button-hover-color);
+._x_extension_help_ask_trigger_2026_unique_ {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  text-decoration: underline dotted;
+  text-decoration-color: color-mix(in srgb, currentColor 55%, transparent);
+  text-underline-offset: 3px;
+  cursor: help;
+  transition: color var(--lumno-duration-sm) ease;
+}
+._x_extension_help_ask_trigger_2026_unique_:hover,
+._x_extension_help_ask_trigger_2026_unique_[data-open="true"] {
+  color: var(--panel-text);
+  text-decoration-color: currentColor;
+}
+._x_extension_help_ask_trigger_2026_unique_:focus-visible {
+  outline: 2px solid var(--input-focus-color);
+  outline-offset: 2px;
 }
 ._x_extension_help_ask_popover_2026_unique_ {
-  --x-extension-menu-surface-transform-origin: top right;
+  --x-extension-menu-surface-transform-origin: top left;
   position: absolute;
   top: calc(100% + 6px);
-  right: 0;
+  left: 0;
   z-index: 30;
+  display: block;
   width: 320px;
   max-width: calc(100vw - 32px);
   padding: 10px;
@@ -1129,6 +1140,7 @@ body[data-theme="dark"] ._x_extension_feedback_support_qr_image_2026_unique_ {
   line-height: 15px;
 }
 ._x_extension_help_ask_caption_2026_unique_ {
+  display: block;
   margin: 8px 2px 0;
   color: var(--panel-subtext);
   font-size: var(--lumno-font-size-sm);
@@ -1176,6 +1188,15 @@ body[data-theme="dark"] ._x_extension_feedback_support_action_2026_unique_ {
   line-height: 1;
   white-space: nowrap;
   flex-shrink: 0;
+}
+/* The licenses link takes the free space instead, so it and the guide sit together at the right. */
+._x_extension_section_header_2026_unique_ > ._x_extension_licenses_link_2026_unique_ {
+  /* An <a>, so it would miss the 400 weight Options gives every button, the guide included. */
+  --settings-button-font-weight: 400;
+  margin-left: auto;
+}
+._x_extension_section_header_2026_unique_ > ._x_extension_licenses_link_2026_unique_ + ._x_extension_onboarding_guide_button_2026_unique_ {
+  margin-left: 0;
 }
 body[data-theme="dark"] ._x_extension_onboarding_guide_button_2026_unique_ {
   --settings-button-bg: transparent;
@@ -2872,14 +2893,6 @@ body[data-theme="dark"] ._x_extension_shortcut_secondary_2024_unique_ {
   }
   ._x_extension_feedback_support_row_2026_unique_ > ._x_extension_feedback_support_copy_2026_unique_ {
     flex-basis: 100%;
-  }
-  ._x_extension_help_ask_anchor_2026_unique_ {
-    margin-left: -10px;
-  }
-  ._x_extension_help_ask_popover_2026_unique_ {
-    --x-extension-menu-surface-transform-origin: top left;
-    right: auto;
-    left: 0;
   }
   ._x_extension_settings_tabs_frame_2026_unique_ {
     width: 100%;

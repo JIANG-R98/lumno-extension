@@ -237,13 +237,16 @@
     "message": "உதவி மையம்"
   },
   "settings_help_center_desc": {
-    "message": "ஒரு அம்சம் எப்படிச் செயல்படும் எனத் தெரியவில்லையா? ஒவ்வொரு அம்சமும் இங்கே விளக்கப்பட்டுள்ளது."
+    "message": "ஒவ்வொரு அம்சத்தையும் எப்படிப் பயன்படுத்துவது, பொதுவான கேள்விகளுக்கான பதில்கள் இங்கே."
+  },
+  "settings_help_center_desc_with_ask": {
+    "message": "ஒவ்வொரு அம்சத்தையும் எப்படிப் பயன்படுத்துவது, பொதுவான கேள்விகளுக்கான பதில்கள் இங்கே. {ask}."
   },
   "settings_help_center_action": {
-    "message": "திற"
+    "message": "உதவி மையத்துக்குச் செல்"
   },
   "settings_help_center_ask_action": {
-    "message": "தேடல் பெட்டியிலிருந்து கேள்"
+    "message": "தேடல் பெட்டியிலிருந்தே நேரடியாகக் கேட்கலாம்"
   },
   "settings_help_center_ask_caption": {
     "message": "புதிய தாவலிலோ கட்டளைப் பட்டியிலோ lm என டைப் செய்து, Tab அழுத்தி, உங்கள் கேள்வியை எழுதவும்."
@@ -262,6 +265,9 @@
   },
   "settings_help_center_ask_demo_result_2_detail": {
     "message": "ஷார்ட்கட்டின் ஐகானை மாற்றுதல்"
+  },
+  "settings_feedback_support_channels_title": {
+    "message": "தொடர்புகொள்ள"
   },
   "settings_feedback_support_review_action": {
     "message": "Lumno-வை மதிப்பிடு"
