@@ -1,4 +1,5 @@
 import * as LumnoNewtabCrtWebGL from './wallpaper-crt-webgl.js';
+import { getSamplerSize } from './wallpaper-sampler-size.js';
 
 const EFFECT_TYPES = ['none', 'blur', 'grain', 'blocks', 'halftone', 'dither', 'ascii', 'crt'];
 const EFFECT_INK_TONES = ['auto', 'dark', 'light'];
@@ -359,6 +360,13 @@ function createWallpaperEffects(options) {
   const getWallpaperImageUrl = getFunction(options, 'getWallpaperImageUrl', function() {
     return '';
   });
+  // A small copy of the same image, cropped the same way, as { url, width, height } with the full
+  // image's width and height (0 when unknown), or null. Every effect but CRT reads the wallpaper
+  // through a sampler a few hundred pixels across, so it samples this copy instead of waiting for
+  // the full image to load and decode.
+  const getWallpaperSample = getFunction(options, 'getWallpaperSample', function() {
+    return null;
+  });
   const shouldAnimateTransition = getFunction(options, 'shouldAnimateTransition', function() {
     return true;
   });
@@ -705,16 +713,21 @@ function createWallpaperEffects(options) {
     });
   }
 
-  function createSampler(image) {
+  // sourceSize is the full image's size when image is its small copy: the samples then land where
+  // they would on the full image, so the effects look the same either way.
+  function createSampler(image, sourceSize) {
     if (!image) {
       return null;
     }
-    const naturalWidth = Math.max(1, image.naturalWidth || image.width || 1);
-    const naturalHeight = Math.max(1, image.naturalHeight || image.height || 1);
-    const sampleScale = Math.min(1, 520 / naturalWidth, 320 / naturalHeight);
+    const imageWidth = Math.max(1, image.naturalWidth || image.width || 1);
+    const imageHeight = Math.max(1, image.naturalHeight || image.height || 1);
+    const hasSourceSize = Boolean(sourceSize && sourceSize.width > 0 && sourceSize.height > 0);
+    const naturalWidth = hasSourceSize ? sourceSize.width : imageWidth;
+    const naturalHeight = hasSourceSize ? sourceSize.height : imageHeight;
+    const samplerSize = getSamplerSize(imageWidth, imageHeight);
     const sourceCanvas = documentObj.createElement('canvas');
-    sourceCanvas.width = Math.max(1, Math.round(naturalWidth * sampleScale));
-    sourceCanvas.height = Math.max(1, Math.round(naturalHeight * sampleScale));
+    sourceCanvas.width = samplerSize.width;
+    sourceCanvas.height = samplerSize.height;
     const sourceContext = sourceCanvas.getContext('2d', { willReadFrequently: true });
     if (!sourceContext) {
       return null;
@@ -742,12 +755,36 @@ function createWallpaperEffects(options) {
     };
   }
 
-  function getSampler(image, imageUrl) {
+  // The small copy an effect samples, or null to sample the full image. CRT draws the wallpaper
+  // itself, so it needs the full image.
+  function getEffectSample(type, wallpaper, imageUrl) {
+    if (type === 'crt' || !wallpaper || !imageUrl) {
+      return null;
+    }
+    const sample = getWallpaperSample(wallpaper);
+    return sample && sample.url && sample.url !== imageUrl ? sample : null;
+  }
+
+  // The full image's size when the image just loaded is the sample's copy.
+  function getLoadedSourceSize(sample) {
+    return sample && loadedImageUrl === sample.url ? sample : null;
+  }
+
+  // Loads the image an effect samples; a small copy that fails to load falls back to the full one.
+  // The image loaded is then loadedImage, under loadedImageUrl.
+  function loadEffectSource(sourceUrl, imageUrl, token) {
+    const loading = loadImage(sourceUrl, token);
+    return sourceUrl === imageUrl
+      ? loading
+      : loading.catch(() => (token === renderToken ? loadImage(imageUrl, token) : null));
+  }
+
+  function getSampler(image, imageUrl, sourceSize) {
     if (loadedSampler && loadedSamplerUrl === imageUrl) {
       return loadedSampler;
     }
     clearEffectBaseCache();
-    loadedSampler = createSampler(image);
+    loadedSampler = createSampler(image, sourceSize);
     loadedSamplerUrl = loadedSampler ? imageUrl : '';
     return loadedSampler;
   }
@@ -1869,7 +1906,9 @@ function createWallpaperEffects(options) {
       shouldCrossfadeResize = false;
       const wallpaper = getCurrentWallpaper();
       const imageUrl = wallpaper ? getWallpaperImageUrl(wallpaper) : '';
-      if (loadedSampler && loadedSamplerUrl === imageUrl) {
+      const sample = getEffectSample(normalized.type, wallpaper, imageUrl);
+      const sourceUrl = sample ? sample.url : imageUrl;
+      if (loadedSampler && loadedSamplerUrl === sourceUrl) {
         drawStandardGlassTexture(normalized.texture, loadedSampler.averageLuminance);
         renderedSourceUrl = imageUrl;
         completeRender(revision);
@@ -1888,11 +1927,11 @@ function createWallpaperEffects(options) {
           return;
         }
       }
-      loadImage(imageUrl, token).then((image) => {
+      loadEffectSource(sourceUrl, imageUrl, token).then((image) => {
         if (token !== renderToken) {
           return;
         }
-        const sampler = image ? getSampler(image, imageUrl) : null;
+        const sampler = image ? getSampler(image, loadedImageUrl, getLoadedSourceSize(sample)) : null;
         if (sampler && (!hasHint ||
             resolveMaterialBlendMode(sampler.averageLuminance) !== resolveMaterialBlendMode(hint))) {
           drawStandardGlassTexture(normalized.texture, sampler.averageLuminance);
@@ -1930,7 +1969,8 @@ function createWallpaperEffects(options) {
     }
     const wallpaper = getCurrentWallpaper();
     const imageUrl = wallpaper ? getWallpaperImageUrl(wallpaper) : '';
-    loadImage(imageUrl, token).then((image) => {
+    const sample = getEffectSample(normalized.type, wallpaper, imageUrl);
+    loadEffectSource(sample ? sample.url : imageUrl, imageUrl, token).then((image) => {
       if (token !== renderToken) {
         return;
       }
@@ -1944,7 +1984,7 @@ function createWallpaperEffects(options) {
         completeRender(revision);
         return;
       }
-      const sampler = getSampler(image, imageUrl);
+      const sampler = getSampler(image, loadedImageUrl, getLoadedSourceSize(sample));
       if (!sampler) {
         clearCanvas();
         completeRender(revision);
@@ -2210,6 +2250,7 @@ export {
   EFFECT_TYPES,
   createWallpaperEffects,
   getEffectCanvasScale,
+  getSamplerSize,
   getBlurRadius,
   liftSampleColor,
   migratePrefsToLatest,

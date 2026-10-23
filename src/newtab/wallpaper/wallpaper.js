@@ -393,6 +393,10 @@ function createWallpaperRuntime(options) {
   });
   const NEWTAB_WALLPAPER_EXTENSION_DIRECTORY = 'assets/wallpapers';
   const NEWTAB_WALLPAPER_THUMBNAIL_SUFFIX = '-thumb.webp';
+  // The small copy effects and adaptive tone sample (scripts/build/generate-wallpaper-samples.js).
+  const NEWTAB_WALLPAPER_SAMPLE_SUFFIX = '-sample.avif';
+  // Every built-in wallpaper's full size; a small copy is sampled where these pixels would be.
+  const NEWTAB_WALLPAPER_SOURCE_SIZE = Object.freeze({ width: 2048, height: 1152 });
   const NEWTAB_WALLPAPER_DEFAULT_ID = 'monet-coastal-white';
   const NEWTAB_CUSTOM_WALLPAPER_ID = WALLPAPER_LOCAL_STORE.CUSTOM_WALLPAPER_ID || 'custom-upload';
   const NEWTAB_LOCAL_WALLPAPER_DISABLED_VALUE = '__lumno_local_wallpaper_disabled__';
@@ -836,6 +840,7 @@ function createWallpaperRuntime(options) {
     getWallpaperImageUrl,
     isNetworkWallpaperImageUrl,
     getDisplayedWallpaperImageUrl,
+    getWallpaperSample,
     getWallpaperThumbnailUrl,
     getWallpaperDisplayName
   } = WALLPAPER_WALLPAPER_SOURCES.createWallpaperSources({
@@ -852,6 +857,8 @@ function createWallpaperRuntime(options) {
     NEWTAB_WALLPAPER_OPTIONS,
     NEWTAB_CUSTOM_WALLPAPER_ID,
     NEWTAB_WALLPAPER_THUMBNAIL_SUFFIX,
+    NEWTAB_WALLPAPER_SAMPLE_SUFFIX,
+    NEWTAB_WALLPAPER_SOURCE_SIZE,
     NEWTAB_WALLPAPER_EXTENSION_DIRECTORY,
     cachedWallpaperImages,
     dailyWallpaperStandIns,
@@ -1159,6 +1166,7 @@ function createWallpaperRuntime(options) {
     wallpaperNetworkImageStates,
     shouldReduceMotion,
     getDisplayedWallpaperImageUrl,
+    getWallpaperSample,
     wallpaperEffectPreload,
     refreshWallpaperAdaptiveSampler,
     afterNextPaint,
@@ -1244,6 +1252,7 @@ function createWallpaperRuntime(options) {
     PRELOAD_STORAGE_KEY,
     getDisplayedWallpaperImageUrl,
     getWallpaperImageUrl,
+    getWallpaperSample,
     WALLPAPER_EFFECTS,
     NEWTAB_WALLPAPER_OVERLAY_STOPS,
     getWallpaperOverlayStopPercent,
@@ -1465,6 +1474,7 @@ function createWallpaperRuntime(options) {
     getTargets: getWallpaperAdaptiveToneTargets,
     getCurrentWallpaper: () => getWallpaperById(wallpaperState.currentWallpaperId),
     getWallpaperImageUrl: getDisplayedWallpaperImageUrl,
+    getWallpaperSample,
     getOverlayAlphaAtViewportY: getWallpaperOverlayAlphaAtViewportY,
     getOverlayLuminance: () => getResolvedWallpaperOverlayMode() === 'dark' ? 0 : 1,
     getEffectLuminanceAtViewport: (viewportX, viewportY, baseLuminance) => {
@@ -1481,6 +1491,7 @@ function createWallpaperRuntime(options) {
       windowObj,
       getCurrentWallpaper: () => getWallpaperById(wallpaperState.currentWallpaperId),
       getWallpaperImageUrl: getDisplayedWallpaperImageUrl,
+      getWallpaperSample,
       shouldAnimateTransition: () => Boolean(
         documentObj.body &&
         documentObj.body.getAttribute('data-nt-enter') === 'done'

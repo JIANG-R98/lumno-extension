@@ -121,6 +121,7 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects.js';
         mode,
         id: entry && typeof entry.id === 'string' ? entry.id : '',
         path: WALLPAPER_PATH_PATTERN.test(path) ? path : '',
+        sourceSize: normalizeSourceSize(entry),
         cachedImage: nextImage || normalizeCachedImage(entry && entry.cachedImage),
         customImage: normalizeCustomImage(entry && entry.customImage),
         luminance: nextImage ? null : normalizeLuminance(entry && entry.luminance),
@@ -130,6 +131,13 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects.js';
     } catch (e) {
       return null;
     }
+  }
+
+  // A full image's size as an entry or record names it, or 0 by 0 when it does not.
+  function normalizeSourceSize(value) {
+    const width = Math.round(Number(value && value.width));
+    const height = Math.round(Number(value && value.height));
+    return width > 0 && height > 0 ? { width, height } : { width: 0, height: 0 };
   }
 
   // Matches localDay in remote-content.js, which loads after this script.
@@ -418,8 +426,27 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects.js';
       mode: cachedWallpaper.mode
     }, fields);
   }
-  // Decodes the wallpaper while the page loads; wallpaper.js samples its tones from this image
-  // (decodedImage) instead of loading and decoding the same file again.
+  // A bundled wallpaper's small copy, which wallpaper.js and the effects sample instead of the full
+  // file (getWallpaperSample in wallpaper-sources.js).
+  function getBundledSamplePath(path) {
+    return /^assets\/wallpapers\/[-.\w]+\.webp$/.test(path) && !/-thumb\.webp$/.test(path)
+      ? path.replace(/\.webp$/, '-sample.avif')
+      : '';
+  }
+
+  // The small copy saved with an upload or a cached photo for sampling (an older one's thumbnail),
+  // when it differs from the full image, as getWallpaperSample in wallpaper-sources.js names it.
+  function getRecordSample(record) {
+    const url = [record && record.sampleDataUrl, record && record.thumbnailDataUrl]
+      .find((value) => typeof value === 'string' && value.startsWith('data:image/')) || '';
+    return url && url !== record.imageDataUrl
+      ? Object.assign({ url }, normalizeSourceSize(record))
+      : null;
+  }
+
+  // Decodes the wallpaper's small copy while the page loads; wallpaper.js samples its tones from
+  // this image (decodedImage) instead of loading and decoding it again. sourceUrl is the full image
+  // it stands for.
   function decodeWallpaperImage(url, sourceUrl) {
     if (typeof window.Image !== 'function') {
       return null;
@@ -449,10 +476,15 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects.js';
 
   if (cachedWallpaper.path) {
     const url = getRuntimeUrl(cachedWallpaper.path);
+    const samplePath = getBundledSamplePath(cachedWallpaper.path);
+    const sample = samplePath
+      ? Object.assign({ url: getRuntimeUrl(samplePath) }, cachedWallpaper.sourceSize)
+      : null;
     globalThis.LumnoNewtabWallpaperPreload = createPreloadState({
       imageUrl: url,
       initialImageUrl: url,
-      decodedImage: decodeWallpaperImage(url),
+      sample,
+      decodedImage: decodeWallpaperImage(sample ? sample.url : url, url),
       wallpaper: {
         id: cachedWallpaper.path,
         path: cachedWallpaper.path
@@ -477,6 +509,7 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects.js';
   // the same copy or upload again.
   const preloadState = createPreloadState({
     imageUrl: '',
+    sample: null,
     imageReady: null,
     cachedImageRecord: null,
     customImageId: customImage ? customImage.id : '',
@@ -501,8 +534,12 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects.js';
     }
     preloadState.imageUrl = record.imageDataUrl;
     preloadState.initialImageUrl = record.imageDataUrl;
+    preloadState.sample = getRecordSample(record);
     preloadState.cssObjectUrl = cssImage.objectUrl;
-    preloadState.decodedImage = decodeWallpaperImage(cssImage.url, record.imageDataUrl);
+    preloadState.decodedImage = decodeWallpaperImage(
+      preloadState.sample ? preloadState.sample.url : cssImage.url,
+      record.imageDataUrl
+    );
     applyWallpaperImage(cssImage.url);
     return record.imageDataUrl;
   });

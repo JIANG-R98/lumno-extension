@@ -16,6 +16,7 @@ function createWallpaperVisual(deps) {
     wallpaperNetworkImageStates,
     shouldReduceMotion,
     getDisplayedWallpaperImageUrl,
+    getWallpaperSample,
     wallpaperEffectPreload,
     refreshWallpaperAdaptiveSampler,
     afterNextPaint
@@ -177,8 +178,8 @@ function createWallpaperVisual(deps) {
     return objectUrl;
   }
 
-  // The preload decoded the wallpaper it painted; the first sample uses that image. Taken once, so
-  // the page does not keep a full-size image alive after the wallpaper changes.
+  // The preload decoded the small copy of the wallpaper it painted; the first sample uses that
+  // image. Taken once, so the page does not keep it alive after the wallpaper changes.
   function takePreloadedDecodedImage(url) {
     const wallpaperPreload = globalThis.LumnoNewtabWallpaperPreload;
     const decoded = wallpaperPreload && wallpaperPreload.decodedImage;
@@ -350,7 +351,7 @@ function createWallpaperVisual(deps) {
       document.body.setAttribute('data-wallpaper-active', wallpaper ? 'true' : 'false');
     }
     if (wallpaperEffectPreload && typeof wallpaperEffectPreload.updateSource === 'function') {
-      wallpaperEffectPreload.updateSource(wallpaper, imageUrl);
+      wallpaperEffectPreload.updateSource(wallpaper, imageUrl, wallpaper ? getWallpaperSample(wallpaper) : null);
     }
     return imageUrl;
   }

@@ -1,3 +1,5 @@
+import { getSamplerSize } from './wallpaper-sampler-size.js';
+
 const CUSTOM_WALLPAPER_ID = 'custom-upload';
 const CUSTOM_WALLPAPER_ID_PREFIX = 'custom-wallpaper-';
 const DB_NAME = 'lumno-newtab-wallpaper';
@@ -73,6 +75,10 @@ function createWallpaperLocalStore(options) {
     if (!imageDataUrl || !thumbnailDataUrl) {
       return null;
     }
+    // Uploads saved before small copies existed have none; their effects sample the thumbnail.
+    const sampleDataUrl = typeof record.sampleDataUrl === 'string' && record.sampleDataUrl.startsWith('data:image/')
+      ? record.sampleDataUrl
+      : '';
     const rawId = String(record.id || record.key || '').trim();
     const isLegacyRecord = rawId === CUSTOM_WALLPAPER_ID ||
       String(record.key || '') === LEGACY_RECORD_KEY;
@@ -86,6 +92,7 @@ function createWallpaperLocalStore(options) {
       name: isLegacyRecord && isGenericCustomWallpaperName(storedName) ? '' : storedName,
       imageDataUrl,
       thumbnailDataUrl,
+      sampleDataUrl,
       width: Math.max(0, Number(record.width) || 0),
       height: Math.max(0, Number(record.height) || 0),
       updatedAt: Number(record.updatedAt) || Date.now()
@@ -387,6 +394,31 @@ function createWallpaperLocalStore(options) {
     throw new Error('Compressed wallpaper exceeds the upload limit.');
   }
 
+  // The small copy the effects sample (getWallpaperSample in wallpaper-sources.js): the stored
+  // wallpaper decoded and drawn at the sampler's size the way the sampler draws it, then saved
+  // losslessly, so sampling it reads the pixels sampling the full wallpaper would. Lossy WebP keeps
+  // colour at half resolution and loses the fine colour specks of painted or dotted images. '' when
+  // the wallpaper is no larger than the sampler or the browser cannot make the copy.
+  function renderSampleDataUrl(dataUrl, width, height) {
+    const size = getSamplerSize(width, height);
+    if (size.width >= width && size.height >= height) {
+      return Promise.resolve('');
+    }
+    return loadImageFromDataUrl(dataUrl).then((image) => {
+      const canvas = documentObj.createElement('canvas');
+      canvas.width = size.width;
+      canvas.height = size.height;
+      // Read-optimised like the sampler's canvas, so Chrome filters the downscale the same way.
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      if (!context) {
+        return '';
+      }
+      context.drawImage(image, 0, 0, size.width, size.height);
+      const sampleDataUrl = canvas.toDataURL('image/webp', 1);
+      return sampleDataUrl.startsWith(WEBP_DATA_URL_PREFIX) ? sampleDataUrl : '';
+    }).catch(() => '');
+  }
+
   function buildRecordFromFile(file) {
     if (!file || !ACCEPTED_SOURCE_MIME_TYPES.includes(String(file.type || '').toLowerCase())) {
       return Promise.reject(new Error('Invalid image file.'));
@@ -408,17 +440,18 @@ function createWallpaperLocalStore(options) {
       const outputWidth = Math.min(MAX_OUTPUT_WIDTH, Math.max(1, crop.width));
       const wallpaper = renderCroppedDataUrl(image, crop, outputWidth, MAX_WALLPAPER_BYTES);
       const thumbnail = renderCroppedDataUrl(image, crop, THUMBNAIL_WIDTH, MAX_THUMBNAIL_BYTES);
-      return {
+      return renderSampleDataUrl(wallpaper.dataUrl, wallpaper.width, wallpaper.height).then((sampleDataUrl) => ({
         id: `${CUSTOM_WALLPAPER_ID_PREFIX}${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         name: file.name
           ? String(file.name).replace(/\.[^.]+$/, '')
           : '',
         imageDataUrl: wallpaper.dataUrl,
         thumbnailDataUrl: thumbnail.dataUrl,
+        sampleDataUrl,
         width: wallpaper.width,
         height: wallpaper.height,
         updatedAt: Date.now()
-      };
+      }));
     });
   }
 

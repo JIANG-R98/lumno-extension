@@ -41,6 +41,7 @@ function createWallpaperStorage(deps) {
     PRELOAD_STORAGE_KEY,
     getDisplayedWallpaperImageUrl,
     getWallpaperImageUrl,
+    getWallpaperSample,
     WALLPAPER_EFFECTS,
     NEWTAB_WALLPAPER_OVERLAY_STOPS,
     getWallpaperOverlayStopPercent,
@@ -570,7 +571,14 @@ function createWallpaperStorage(deps) {
       return { id: wallpaper.id, customImage: key === wallpaper.id ? { id: wallpaper.id } : { id: wallpaper.id, key } };
     }
     const path = wallpaper ? getWallpaperRuntimePath(wallpaper) : '';
-    return path ? { id: wallpaper.id, path } : null;
+    if (!path) {
+      return null;
+    }
+    // The full image's size, by which the preload places samples taken from its small copy.
+    const sample = getWallpaperSample(wallpaper);
+    return sample && sample.width
+      ? { id: wallpaper.id, path, width: sample.width, height: sample.height }
+      : { id: wallpaper.id, path };
   }
 
   // A daily photo keeps its catalog id while the image changes, so its luminance follows the photo

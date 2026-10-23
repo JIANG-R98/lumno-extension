@@ -632,6 +632,7 @@ function getCssRgbChannels(value) {
     getTargets: () => [{ element: settledTarget, sampleElement: settledTarget, minWidth: 42, minHeight: 42, iconButton: true }],
     getCurrentWallpaper: () => settledWallpaper,
     getWallpaperImageUrl: (wallpaper) => wallpaper.url,
+    getWallpaperSample: (wallpaper) => (wallpaper.sampleUrl ? { url: wallpaper.sampleUrl, width: 2048, height: 1152 } : null),
     getPreloadedImage(url) {
       preloadedRequests.push(url);
       return preloadedImages.get(url) || null;
@@ -668,6 +669,30 @@ function getCssRgbChannels(value) {
   getPendingImage('test://broken-wallpaper').reject();
   await flushAsyncWork();
   assert.strictEqual(settled, true, 'a wallpaper that fails to load never holds the page');
+
+  // A wallpaper with a small copy samples that copy, and the full image only if the copy fails.
+  settledWallpaper = { id: 'thumbed', url: 'test://thumbed-full', sampleUrl: 'test://thumbed-small' };
+  settledRuntime.refresh();
+  settled = false;
+  settledRuntime.whenSettled().then(() => { settled = true; });
+  await flushAsyncWork();
+  getPendingImage('test://thumbed-small').resolve({ red: 16, green: 24, blue: 32 });
+  await flushAsyncWork();
+  assert.strictEqual(settled, true, 'the small copy settles the wait');
+  assert.strictEqual(pendingImages.some((image) => image.src === 'test://thumbed-full'), false,
+    'the full image is never decoded for a sample when a small copy exists');
+
+  settledWallpaper = { id: 'thumb-broken', url: 'test://thumb-broken-full', sampleUrl: 'test://thumb-broken-small' };
+  settledRuntime.refresh();
+  settled = false;
+  settledRuntime.whenSettled().then(() => { settled = true; });
+  await flushAsyncWork();
+  getPendingImage('test://thumb-broken-small').reject();
+  await flushAsyncWork();
+  assert.strictEqual(settled, false, 'a small copy that fails falls back to the full image');
+  getPendingImage('test://thumb-broken-full').resolve({ red: 236, green: 238, blue: 240 });
+  await flushAsyncWork();
+  assert.strictEqual(settled, true);
 
   settledWallpaper = null;
   settledRuntime.refresh();

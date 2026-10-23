@@ -11,7 +11,10 @@ function createStore(options) {
   const canvas = {
     width: 0,
     height: 0,
-    getContext() {
+    getContext(_type, attributes) {
+      if (settings.calls) {
+        settings.calls.push({ op: 'getContext', attributes: attributes || null });
+      }
       return {
         drawImage() {},
         imageSmoothingEnabled: false,
@@ -20,6 +23,9 @@ function createStore(options) {
     },
     toDataURL(type, quality) {
       assert.strictEqual(type, 'image/webp');
+      if (settings.calls) {
+        settings.calls.push({ op: 'toDataURL', quality, width: this.width, height: this.height });
+      }
       const byteLength = quality > 0.7
         ? wallpaperStoreApi.MAX_WALLPAPER_BYTES + 1
         : (settings.outputBytes || 100);
@@ -120,13 +126,20 @@ async function run() {
     ['image/jpeg', 'image/png', 'image/webp']
   );
 
-  const record = await createStore().buildRecordFromFile({
+  const canvasCalls = [];
+  const record = await createStore({ calls: canvasCalls }).buildRecordFromFile({
     type: 'image/png',
     size: 5 * 1024 * 1024,
     name: 'wallpaper.png'
   });
   assert.strictEqual(record.width, 2560);
   assert.strictEqual(record.height, 1440);
+  // The small copy the effects sample: the stored wallpaper at the sampler's size, drawn on a
+  // read-optimised canvas like the sampler's and saved losslessly.
+  assert.match(record.sampleDataUrl, /^data:image\/webp;base64,/);
+  const sampleCall = canvasCalls.findIndex((call) => call.op === 'toDataURL' && call.quality === 1);
+  assert.deepStrictEqual(canvasCalls[sampleCall], { op: 'toDataURL', quality: 1, width: 520, height: 293 });
+  assert.deepStrictEqual(canvasCalls[sampleCall - 1], { op: 'getContext', attributes: { willReadFrequently: true } });
   assert(dataUrlBytes(record.imageDataUrl) <= wallpaperStoreApi.MAX_WALLPAPER_BYTES);
   assert(dataUrlBytes(record.thumbnailDataUrl) <= wallpaperStoreApi.MAX_THUMBNAIL_BYTES);
   assert.match(record.imageDataUrl, /^data:image\/webp;base64,/);
@@ -161,6 +174,7 @@ async function run() {
       key: selectedId,
       imageDataUrl: 'data:image/webp;base64,selected',
       thumbnailDataUrl: 'data:image/webp;base64,selected-thumb',
+      sampleDataUrl: 'data:image/webp;base64,selected-sample',
       updatedAt: 2
     }, {
       id: 'custom-upload',
@@ -192,6 +206,11 @@ async function run() {
     'targeted reads should use object-store get calls for the requested ids'
   );
   assert.strictEqual(indexedDbCalls.getAll, 0, 'targeted reads should never scan the full object store');
+  assert.deepStrictEqual(
+    targetedRecords.map((item) => item.sampleDataUrl),
+    ['', 'data:image/webp;base64,selected-sample'],
+    'records keep their small copy, and older records read without one'
+  );
 
   await testTileThumbnailIsASmallCroppedWebp();
   await testThumbnailCacheKeepsTheMostRecentlySeenTiles();

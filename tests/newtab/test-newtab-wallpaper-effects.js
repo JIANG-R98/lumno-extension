@@ -558,6 +558,9 @@ function createFakeCanvas(options) {
       return { data: new Uint8ClampedArray(width * height * 4) };
     },
     getImageData(_x, _y, width, height) {
+      if (typeof config.getSampleData === 'function') {
+        return { data: config.getSampleData(width, height) };
+      }
       const data = new Uint8ClampedArray(width * height * 4);
       const rgba = typeof config.getSampleRgba === 'function'
         ? config.getSampleRgba()
@@ -572,7 +575,9 @@ function createFakeCanvas(options) {
       }
       return { data };
     },
-    putImageData() {},
+    putImageData(imageData) {
+      operations.push({ op: 'putImageData', data: Array.from(imageData.data) });
+    },
     createPattern(source) {
       return { source };
     },
@@ -1376,9 +1381,178 @@ async function testEffectReportsAStaleSourceUntilRedrawn() {
   }
 }
 
+async function testEffectsSampleTheSmallCopyAndCrtTheFullImage() {
+  const previousImage = sandbox.Image;
+  const loads = [];
+  sandbox.Image = class FakeImage {
+    constructor() {
+      this.naturalHeight = 288;
+      this.naturalWidth = 512;
+    }
+
+    decode() {
+      return Promise.resolve();
+    }
+
+    set src(value) {
+      this.currentSrc = value;
+      loads.push(value);
+      setTimeout(() => (value === 'test://broken' ? this.onerror() : this.onload()), 0);
+    }
+  };
+  const imageUrl = 'test://full';
+  let sampleUrl = 'test://small';
+  const getSample = () => ({ url: sampleUrl, width: 2048, height: 1152 });
+  const createdCanvases = [];
+  const body = {
+    firstChild: null,
+    style: { setProperty() {} },
+    getAttribute: (name) => (name === 'data-wallpaper-active' ? 'true' : null),
+    insertBefore(element) {
+      element.parentNode = this;
+      this.firstChild = element;
+    }
+  };
+  const controller = effects.createWallpaperEffects({
+    documentObj: {
+      body,
+      documentElement: { clientHeight: 800, clientWidth: 1200 },
+      createElement() {
+        const canvas = createFakeCanvas({ getSampleRgba: () => [120, 120, 120, 255] });
+        createdCanvases.push(canvas);
+        return canvas;
+      }
+    },
+    windowObj: {
+      devicePixelRatio: 1,
+      innerHeight: 800,
+      innerWidth: 1200,
+      addEventListener() {},
+      cancelAnimationFrame: clearTimeout,
+      requestAnimationFrame: (callback) => setTimeout(callback, 0)
+    },
+    getCurrentWallpaper: () => ({ id: 'monet-coastal-white' }),
+    getWallpaperImageUrl: () => imageUrl,
+    getWallpaperSample: getSample,
+    shouldAnimateTransition: () => false
+  });
+  try {
+    for (const type of ['dither', 'halftone', 'ascii', 'blocks']) {
+      await controller.apply({ type, strength: 50, size: 50, spacing: 50 });
+      // The fake canvas cannot measure glyphs, so ASCII stops before it draws.
+      if (type !== 'ascii') {
+        assert.strictEqual(createdCanvases[0].getAttribute('data-effect'), type);
+      }
+    }
+    assert.deepStrictEqual(loads, ['test://small'],
+      'dither, halftone, ASCII and blocks sample the small copy, loaded once');
+    assert.strictEqual(controller.isSourceStale(), false,
+      'an effect drawn from the small copy shows the full image it stands for');
+
+    await controller.apply({ type: 'crt', strength: 50, crtStrength: 14 });
+    assert.deepStrictEqual(loads.slice(1), ['test://full'], 'CRT draws the full image');
+    assert.strictEqual(createdCanvases[0].getAttribute('data-effect'), 'crt');
+
+    loads.length = 0;
+    await controller.apply({ type: 'dither', strength: 50, size: 50, spacing: 50 });
+    assert.deepStrictEqual(loads, ['test://small'], 'leaving CRT samples the small copy again');
+
+    loads.length = 0;
+    sampleUrl = 'test://broken';
+    await controller.apply({ type: 'halftone', strength: 50, size: 50, spacing: 50 });
+    assert.deepStrictEqual(loads, ['test://broken', 'test://full'],
+      'a small copy that fails to load falls back to the full image');
+    assert.strictEqual(createdCanvases[0].getAttribute('data-effect'), 'halftone');
+    assert.strictEqual(controller.isSourceStale(), false);
+  } finally {
+    sandbox.Image = previousImage;
+  }
+}
+
+// The bundled small copy is the sampler's own image (520x293 for a 2048x1152 wallpaper), so read
+// with the full image's size it must draw exactly what the full image draws.
+async function testSmallCopyDrawsWhatTheFullImageDraws() {
+  const previousImage = sandbox.Image;
+  const sizes = { 'test://full': [2048, 1152], 'test://small': [520, 293] };
+  sandbox.Image = class FakeImage {
+    decode() {
+      return Promise.resolve();
+    }
+
+    set src(value) {
+      this.currentSrc = value;
+      [this.naturalWidth, this.naturalHeight] = sizes[value];
+      setTimeout(() => this.onload(), 0);
+    }
+  };
+  // Every sampler pixel has its own color, so a sample taken one pixel off draws differently.
+  const getSampleData = (width, height) => {
+    const data = new Uint8ClampedArray(width * height * 4);
+    for (let index = 0; index < width * height; index += 1) {
+      data[index * 4] = (index * 37) % 256;
+      data[(index * 4) + 1] = (index * 101) % 256;
+      data[(index * 4) + 2] = (index * 13) % 256;
+      data[(index * 4) + 3] = 255;
+    }
+    return data;
+  };
+  async function drawDither(sample) {
+    const canvases = [];
+    const controller = effects.createWallpaperEffects({
+      documentObj: {
+        body: {
+          firstChild: null,
+          style: { setProperty() {} },
+          getAttribute: (name) => (name === 'data-wallpaper-active' ? 'true' : null),
+          insertBefore(element) {
+            element.parentNode = this;
+            this.firstChild = element;
+          }
+        },
+        documentElement: { clientHeight: 900, clientWidth: 1440 },
+        createElement() {
+          const canvas = createFakeCanvas({ getSampleData });
+          canvases.push(canvas);
+          return canvas;
+        }
+      },
+      windowObj: {
+        devicePixelRatio: 1,
+        innerHeight: 900,
+        innerWidth: 1440,
+        addEventListener() {},
+        cancelAnimationFrame: clearTimeout,
+        requestAnimationFrame: (callback) => setTimeout(callback, 0)
+      },
+      getCurrentWallpaper: () => ({ id: 'monet-coastal-white' }),
+      getWallpaperImageUrl: () => 'test://full',
+      getWallpaperSample: () => sample,
+      shouldAnimateTransition: () => false
+    });
+    await controller.apply({ type: 'dither', strength: 50, size: 0, spacing: 50 });
+    const drawn = canvases.flatMap((canvas) => canvas._operations.filter((operation) => operation.op === 'putImageData'));
+    assert.strictEqual(drawn.length, 1, 'dither draws one image');
+    return drawn[0].data;
+  }
+  try {
+    const fromFull = await drawDither(null);
+    const fromCopy = await drawDither({ url: 'test://small', width: 2048, height: 1152 });
+    assert.ok(fromFull.length > 0);
+    assert.ok(fromFull.every((value, index) => value === fromCopy[index]),
+      'the small copy, placed by the full image size, draws the same dither');
+    const fromUnsizedCopy = await drawDither({ url: 'test://small', width: 0, height: 0 });
+    assert.ok(fromFull.some((value, index) => value !== fromUnsizedCopy[index]),
+      'without the full image size the samples shift (the check above can fail)');
+  } finally {
+    sandbox.Image = previousImage;
+  }
+}
+
 Promise.resolve()
   .then(testEffectRefreshWaitsForPaint)
   .then(testEffectReportsAStaleSourceUntilRedrawn)
+  .then(testEffectsSampleTheSmallCopyAndCrtTheFullImage)
+  .then(testSmallCopyDrawsWhatTheFullImageDraws)
   .then(testStandardGlassRendersCachedMaterialTexture)
   .then(testGlassBackgroundAndTextureEnterTogether)
   .then(testStandardGlassAdaptsToWallpaperLuminance)

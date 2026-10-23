@@ -205,6 +205,9 @@ function createCustomWallpapers(deps) {
       name: getCustomWallpaperUrlName(entry.url),
       imageDataUrl: cached ? cached.imageDataUrl : '',
       thumbnailDataUrl: cached ? cached.thumbnailDataUrl : '',
+      sampleDataUrl: cached && cached.sampleDataUrl || '',
+      width: cached ? cached.width : 0,
+      height: cached ? cached.height : 0,
       updatedAt: entry.addedAt
     };
   }
@@ -256,8 +259,10 @@ function createCustomWallpapers(deps) {
   }
 
   function rememberCachedWallpaperImage(id, url, record) {
+    // The effects sample sampleDataUrl (or, for copies cached before it existed, the thumbnail), placed
+    // by the copy's width and height.
     const image = { id, url, imageDataUrl: record.imageDataUrl, thumbnailDataUrl: record.thumbnailDataUrl,
-      cachedAt: Date.now() };
+      sampleDataUrl: record.sampleDataUrl || '', width: record.width, height: record.height, cachedAt: Date.now() };
     cachedWallpaperImages.set(id, image);
     if (wallpaperImageCache) {
       wallpaperImageCache.write(image).catch(warnWallpaperStoreFailure('Could not cache a wallpaper image.'));

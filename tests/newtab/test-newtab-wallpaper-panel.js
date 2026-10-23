@@ -2236,6 +2236,8 @@ async function testPreloadHandsOverLuminanceAndTheDecodedImage() {
   const bundled = {
     id: 'dark-shanshui-moonlit',
     path: 'assets/wallpapers/lumno-newtab-dark-shanshui-moonlit.webp',
+    width: 2048,
+    height: 1152,
     luminance: 0.31,
     luminanceKey: 'dark-shanshui-moonlit',
     placeholder: 'data:image/webp;base64,cGxhY2Vob2xkZXI=',
@@ -2248,8 +2250,15 @@ async function testPreloadHandsOverLuminanceAndTheDecodedImage() {
   assert.strictEqual(shown.preload.luminance, 0.31, 'the blur frost blends by the remembered luminance');
   assert.strictEqual(shown.preload.initialImageUrl,
     'chrome-extension://abc/assets/wallpapers/lumno-newtab-dark-shanshui-moonlit.webp');
-  assert.strictEqual((await shown.preload.decodedImage.ready).src, shown.preload.initialImageUrl,
-    'the first tone sample reuses the image the preload decoded');
+  assert.deepStrictEqual(Object.assign({}, shown.preload.sample), {
+    url: 'chrome-extension://abc/assets/wallpapers/lumno-newtab-dark-shanshui-moonlit-sample.avif',
+    width: 2048,
+    height: 1152
+  }, 'effects and tones sample the bundled small copy, placed by the full size the cache names');
+  assert.strictEqual(shown.preload.decodedImage.url, shown.preload.initialImageUrl,
+    'the decoded small copy stands for the shown wallpaper');
+  assert.strictEqual((await shown.preload.decodedImage.ready).src, shown.preload.sample.url,
+    'the first tone sample reuses the small copy the preload decoded');
   assert.strictEqual(shown.root.style.getPropertyValue('--x-nt-wallpaper-backdrop'), '',
     'no blurred copy lies under the wallpaper');
   assert.strictEqual(shown.root.style.getPropertyValue('--x-nt-wallpaper-placeholder'), '');
@@ -2266,7 +2275,33 @@ async function testPreloadHandsOverLuminanceAndTheDecodedImage() {
   assert.strictEqual(upload.preload.decodedImage, null, 'nothing to decode before the upload is read');
   assert.strictEqual(await upload.preload.imageReady, dataUrl);
   assert.strictEqual(upload.preload.initialImageUrl, dataUrl);
+  assert.strictEqual(upload.preload.sample, null, 'an upload without a small copy samples itself');
   assert.strictEqual((await upload.preload.decodedImage.ready).src, dataUrl);
+
+  const thumbnailDataUrl = 'data:image/webp;base64,dGh1bWI=';
+  const thumbed = runPreloadForWallpaper({ id, customImage: { id } }, effects, (windowObj) => {
+    windowObj.indexedDB = createFakeImageCacheDatabase([
+      { key: id, id, imageDataUrl: dataUrl, thumbnailDataUrl, width: 2560, height: 1440 }
+    ], 'key');
+    withImage(windowObj);
+  });
+  assert.strictEqual(await thumbed.preload.imageReady, dataUrl);
+  assert.deepStrictEqual(Object.assign({}, thumbed.preload.sample), { url: thumbnailDataUrl, width: 2560, height: 1440 });
+  assert.strictEqual(thumbed.preload.decodedImage.url, dataUrl);
+  assert.strictEqual((await thumbed.preload.decodedImage.ready).src, thumbnailDataUrl,
+    'an upload saved before sampling copies existed samples its thumbnail');
+
+  const sampleDataUrl = 'data:image/webp;base64,c2FtcGxl';
+  const sampled = runPreloadForWallpaper({ id, customImage: { id } }, effects, (windowObj) => {
+    windowObj.indexedDB = createFakeImageCacheDatabase([
+      { key: id, id, imageDataUrl: dataUrl, thumbnailDataUrl, sampleDataUrl, width: 2560, height: 1440 }
+    ], 'key');
+    withImage(windowObj);
+  });
+  assert.strictEqual(await sampled.preload.imageReady, dataUrl);
+  assert.deepStrictEqual(Object.assign({}, sampled.preload.sample), { url: sampleDataUrl, width: 2560, height: 1440 });
+  assert.strictEqual((await sampled.preload.decodedImage.ready).src, sampleDataUrl,
+    'an upload samples the small copy saved for sampling');
 }
 
 async function testSplitBuiltInWallpaperSelectionFollowsResolvedTheme() {
@@ -2302,6 +2337,11 @@ async function testSplitBuiltInWallpaperSelectionFollowsResolvedTheme() {
   assert.ok(
     preloadCache.wallpapers.light.path.includes('lumno-newtab-monet-coastal-white.webp'),
     'wallpaper preload cache should retain the light selection'
+  );
+  assert.deepStrictEqual(
+    [preloadCache.wallpapers.light.width, preloadCache.wallpapers.light.height],
+    [2048, 1152],
+    'the preload places samples from a built-in small copy by the full wallpaper size'
   );
   assert.ok(
     preloadCache.wallpapers.dark.path.includes('lumno-newtab-dark-shanshui-moonlit.webp'),

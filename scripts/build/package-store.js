@@ -332,9 +332,11 @@ function checkNewtabWallpaperFiles() {
   }
   const source = fs.readFileSync(fullPath, 'utf8');
   const directoryMatch = source.match(/NEWTAB_WALLPAPER_EXTENSION_DIRECTORY\s*=\s*['"]([^'"]+)['"]/);
-  const suffixMatch = source.match(/NEWTAB_WALLPAPER_THUMBNAIL_SUFFIX\s*=\s*['"]([^'"]+)['"]/);
+  // Each built-in wallpaper ships a panel thumbnail and the small copy its effects sample.
+  const suffixes = ['NEWTAB_WALLPAPER_THUMBNAIL_SUFFIX', 'NEWTAB_WALLPAPER_SAMPLE_SUFFIX']
+    .map((name) => (source.match(new RegExp(`${name}\\s*=\\s*['"]([^'"]+)['"]`)) || [])[1])
+    .filter(Boolean);
   const directory = directoryMatch ? directoryMatch[1] : '';
-  const thumbnailSuffix = suffixMatch ? suffixMatch[1] : '';
   if (!directory) {
     return;
   }
@@ -343,10 +345,9 @@ function checkNewtabWallpaperFiles() {
   while ((match = filePattern.exec(source))) {
     const wallpaperFile = match[1];
     checkManifestPath(`${directory}/${wallpaperFile}`);
-    if (thumbnailSuffix) {
-      const thumbnailFile = wallpaperFile.replace(/\.[^.]+$/, thumbnailSuffix);
-      checkManifestPath(`${directory}/${thumbnailFile}`);
-    }
+    suffixes.forEach((suffix) => {
+      checkManifestPath(`${directory}/${wallpaperFile.replace(/\.[^.]+$/, suffix)}`);
+    });
   }
 }
 

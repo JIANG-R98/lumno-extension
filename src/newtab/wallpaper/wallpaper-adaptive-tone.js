@@ -792,6 +792,12 @@ function createWallpaperAdaptiveTone(options) {
   const getWallpaperImageUrl = getFunction(options, 'getWallpaperImageUrl', function() {
     return '';
   });
+  // A small copy of the same image, cropped the same way, as { url, width, height } with the full
+  // image's width and height (0 when unknown), or null. The sampler is only a few hundred pixels
+  // across, so it reads this copy instead of decoding the full wallpaper.
+  const getWallpaperSample = getFunction(options, 'getWallpaperSample', function() {
+    return null;
+  });
   const getOverlayAlphaAtViewportY = getFunction(options, 'getOverlayAlphaAtViewportY', function() {
     return 0;
   });
@@ -804,7 +810,8 @@ function createWallpaperAdaptiveTone(options) {
   const applyWordmarkThemeAppearance = getFunction(options, 'applyWordmarkThemeAppearance');
   // Hears each new sampler, whose canvas holds the shown image scaled down.
   const onSamplerReady = getFunction(options, 'onSamplerReady');
-  // An image another script already loaded and decoded for this URL (the wallpaper preload), or null.
+  // An image another script already loaded and decoded to sample this URL's wallpaper (the wallpaper
+  // preload's small copy), or null.
   const getPreloadedImage = getFunction(options, 'getPreloadedImage', function() {
     return null;
   });
@@ -956,12 +963,17 @@ function createWallpaperAdaptiveTone(options) {
     };
   }
 
-  function loadImage(url) {
+  // Loads the image that samples url's wallpaper: its small copy at sampleUrl when there is one,
+  // falling back to the full image.
+  function loadImage(url, sampleUrl) {
+    const loadFromUrls = () => (sampleUrl && sampleUrl !== url
+      ? loadImageFromUrl(sampleUrl).catch(() => loadImageFromUrl(url))
+      : loadImageFromUrl(url));
     const preloaded = getPreloadedImage(url);
     if (preloaded && typeof preloaded.then === 'function') {
-      return preloaded.then((image) => image || loadImageFromUrl(url), () => loadImageFromUrl(url));
+      return preloaded.then((image) => image || loadFromUrls(), loadFromUrls);
     }
-    return loadImageFromUrl(url);
+    return loadFromUrls();
   }
 
   function loadImageFromUrl(url) {
@@ -1001,9 +1013,15 @@ function createWallpaperAdaptiveTone(options) {
     }).catch(() => image);
   }
 
-  function createSampler(image, url) {
-    const naturalWidth = Math.max(1, image.naturalWidth || image.width || 1);
-    const naturalHeight = Math.max(1, image.naturalHeight || image.height || 1);
+  // When image is the wallpaper's small copy, sample's width and height are the full image's: the
+  // samples then land where they would on the full image.
+  function createSampler(image, url, sample) {
+    const imageWidth = Math.max(1, image.naturalWidth || image.width || 1);
+    const imageHeight = Math.max(1, image.naturalHeight || image.height || 1);
+    const isSampleCopy = Boolean(sample && sample.width > 0 && sample.height > 0 &&
+      (image.currentSrc || image.src) === sample.url);
+    const naturalWidth = isSampleCopy ? sample.width : imageWidth;
+    const naturalHeight = isSampleCopy ? sample.height : imageHeight;
     const sampleScale = Math.min(1, 420 / naturalWidth, 260 / naturalHeight);
     const width = Math.max(1, Math.round(naturalWidth * sampleScale));
     const height = Math.max(1, Math.round(naturalHeight * sampleScale));
@@ -1480,8 +1498,9 @@ function createWallpaperAdaptiveTone(options) {
     const token = ++loadToken;
     pendingImageUrl = imageUrl;
     cancelScheduledApply();
-    loadImage(imageUrl).then((image) => (
-      token === loadToken ? createSampler(image, imageUrl) : null
+    const sample = getWallpaperSample(wallpaper);
+    loadImage(imageUrl, sample && sample.url ? sample.url : '').then((image) => (
+      token === loadToken ? createSampler(image, imageUrl, sample) : null
     )).then((nextSampler) => {
       if (token !== loadToken) {
         return;

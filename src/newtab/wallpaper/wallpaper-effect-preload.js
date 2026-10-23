@@ -32,9 +32,10 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects.js';
         liveState.shouldAnimateTransition = config.shouldAnimateTransition;
       }
     },
-    updateSource(wallpaper, imageUrl) {
+    updateSource(wallpaper, imageUrl, sample) {
       preloadState.wallpaper = wallpaper || null;
       preloadState.imageUrl = String(imageUrl || '');
+      preloadState.sample = sample || null;
     }
   };
   globalThis.LumnoNewtabWallpaperEffectPreload = preloadRuntime;
@@ -46,6 +47,7 @@ import * as LumnoNewtabWallpaperEffects from './wallpaper-effects.js';
     windowObj: window,
     getCurrentWallpaper: () => preloadState.wallpaper,
     getWallpaperImageUrl: () => preloadState.imageUrl,
+    getWallpaperSample: () => preloadState.sample || null,
     shouldAnimateTransition: () => liveState.shouldAnimateTransition(),
     onRender: () => liveState.onRender(),
     // The luminance an earlier page measured belongs to the image this page preloaded.
