@@ -109,6 +109,33 @@ async function testColdStartPageHotkeyIsVerifiedAgainstLiveShortcut() {
   assert.strictEqual(typeof match.shortcut, 'string');
 }
 
+// Zen's empty state is a tab hidden from extensions, so the page hotkey arrives
+// without sender.tab; it should open New Tab like the command's no-tab path.
+async function testPageHotkeyWithoutSenderTabOpensNewtab() {
+  const harness = boot();
+  await wait(30);
+  harness.calls.length = 0;
+  const mismatch = await harness.sendMessage({
+    action: 'triggerShowSearchFromPageHotkey',
+    requiresShortcutVerification: true,
+    observedShortcut: { ctrlKey: false, altKey: false, shiftKey: true, metaKey: true, key: 'j' }
+  }, {});
+  assert.strictEqual(mismatch.ok, false, 'a tab-less key that is not the live shortcut must not open Lumno');
+  await wait(30);
+  assert.ok(!harness.calls.some((call) => call.name === 'tabs.create'));
+
+  const match = await harness.sendMessage({
+    action: 'triggerShowSearchFromPageHotkey',
+    requiresShortcutVerification: true,
+    observedShortcut: { ctrlKey: false, altKey: false, shiftKey: true, metaKey: true, key: 'k' }
+  }, {});
+  assert.strictEqual(match.ok, true, 'the live shortcut from a tab-less page should be accepted');
+  await wait(30);
+  const created = harness.calls.filter((call) => call.name === 'tabs.create').map((call) => plain(call.args[0]));
+  assert.strictEqual(created.length, 1, 'a tab-less page hotkey should open exactly one New Tab');
+  assert.match(String(created[0].url || ''), /newtab\.html/, 'the fallback should open Lumno New Tab with its search');
+}
+
 async function testWebClipCommandOpensPickerOnSenderTab() {
   const enabled = boot({ sync: { [DOCUMENT_PIP_ENABLED_KEY]: true } });
   const response = await enabled.sendMessage({ action: 'openDocumentPipPicker' }, { tab: senderTab });
@@ -265,6 +292,7 @@ async function testLocaleMessagesAreCachedAndCanBeNarrowed() {
   await testLoadingSessionUpdatesAreAsyncAndAnswered();
   await testTopFrameDocumentStartIsAnswered();
   await testColdStartPageHotkeyIsVerifiedAgainstLiveShortcut();
+  await testPageHotkeyWithoutSenderTabOpensNewtab();
   await testWebClipCommandOpensPickerOnSenderTab();
   await testWebClipFollowsItsSetting();
   await testPopupWebClipIsNotBlockedByTabsThatNeverAnswer();

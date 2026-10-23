@@ -248,29 +248,26 @@ export const SHORTCUT_MESSAGE_HANDLERS = Object.freeze({
     });
     return true;
   },
+  // Zen's empty state is a hidden about:blank tab that extensions cannot see, so
+  // its messages arrive without sender.tab. The page has already taken the key
+  // from the browser command, so it gets the command's no-tab fallback here.
   triggerShowSearchFromPageHotkey(request, sender, sendResponse) {
-    const senderTab = sender && sender.tab ? sender.tab : null;
-    if (!senderTab || typeof senderTab.id !== 'number') {
-      logHotkeyDebug('page-hotkey-invalid-sender', {
-        hasSender: Boolean(sender),
-        hasTab: Boolean(sender && sender.tab)
-      });
-      sendResponse({ ok: false });
-      return;
-    }
+    const senderTab = sender && sender.tab && typeof sender.tab.id === 'number' ? sender.tab : null;
     const triggerVerifiedPageHotkey = (shortcut) => {
       const shouldPrefillCurrentUrl = Boolean(request && request.prefillCurrentUrl);
       const triggerSource = shouldPrefillCurrentUrl ? 'page-hotkey-prefill' : 'page-hotkey';
       logHotkeyDebug('received', {
         command: SHOW_SEARCH_COMMAND_NAME,
         source: triggerSource,
-        tabId: senderTab.id,
-        url: senderTab.url || '',
-        pendingUrl: senderTab.pendingUrl || '',
+        tabId: senderTab ? senderTab.id : null,
+        url: senderTab ? senderTab.url || '' : '',
+        pendingUrl: senderTab ? senderTab.pendingUrl || '' : '',
         prefillCurrentUrl: shouldPrefillCurrentUrl,
         verifiedAfterColdStart: Boolean(request && request.requiresShortcutVerification)
       });
-      rememberPageHotkeyContext(senderTab);
+      if (senderTab) {
+        rememberPageHotkeyContext(senderTab);
+      }
       triggerShowSearchForTab(senderTab, triggerSource);
       sendResponse({ ok: true, shortcut: shortcut || '' });
     };
