@@ -38,11 +38,16 @@ export default defineConfig({
     emptyOutDir: true,
     copyPublicDir: false,
     sourcemap: false,
-    minify: 'esbuild',
+    minify: 'oxc',
+    // A lazy chunk's imports are chunks its page has already loaded, and
+    // Vite's preload helper looks for them at the extension root instead of
+    // src/react/; since Vite 8 it also needs import.meta.url, which the tests'
+    // classic-script copies of these bundles don't have.
+    modulePreload: false,
     // Minifying drops the dependencies' license comments, so their license
     // texts ship in this file instead (THIRD_PARTY_NOTICES.md points to it).
     license: { fileName: 'third-party-licenses.md' },
-    rollupOptions: {
+    rolldownOptions: {
       input: {
         'newtab-islands': resolve(
           repoRoot,
@@ -65,26 +70,33 @@ export default defineConfig({
         format: 'es',
         entryFileNames: '[name].js',
         chunkFileNames: '[name].js',
-        manualChunks(id, { getModuleInfo }) {
-          if (
-            id.includes('/node_modules/react/') ||
-            id.includes('/node_modules/react-dom/') ||
-            id.includes('/node_modules/scheduler/')
-          ) {
-            return 'react-runtime';
-          }
-          // Only components more than one page uses belong in the shared
-          // chunk; every page that loads it pays for all of it.
-          if (
-            id.includes('/react-src/shared/') &&
-            getReachingEntries(id, getModuleInfo).size > 1
-          ) {
-            return 'react-shared';
-          }
-          if (id.includes('/react-src/overlay/tab-switcher.tsx')) {
-            return 'tab-switcher-shared';
-          }
-          return undefined;
+        codeSplitting: {
+          groups: [
+            {
+              debugName: 'lumno-chunks',
+              name(id, context) {
+                if (
+                  id.includes('/node_modules/react/') ||
+                  id.includes('/node_modules/react-dom/') ||
+                  id.includes('/node_modules/scheduler/')
+                ) {
+                  return 'react-runtime';
+                }
+                // Only components more than one page uses belong in the shared
+                // chunk; every page that loads it pays for all of it.
+                if (
+                  id.includes('/react-src/shared/') &&
+                  getReachingEntries(id, (moduleId) => context.getModuleInfo(moduleId)).size > 1
+                ) {
+                  return 'react-shared';
+                }
+                if (id.includes('/react-src/overlay/tab-switcher.tsx')) {
+                  return 'tab-switcher-shared';
+                }
+                return null;
+              }
+            }
+          ]
         }
       }
     }

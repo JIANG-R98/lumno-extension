@@ -33,6 +33,11 @@ const addedListeners: Array<[EventTarget, string, EventListenerOrEventListenerOb
 const SETTINGS: Record<string, string> = settingsModule;
 
 function trackListeners(target: Document | Window): void {
+  // A test that boots the page twice finds the spy in place, and spying again
+  // would hand back that spy as the method to forward to.
+  if (vi.isMockFunction(target.addEventListener)) {
+    return;
+  }
   const addEventListener = target.addEventListener.bind(target);
   vi.spyOn(target as EventTarget, 'addEventListener').mockImplementation((type, listener, options) => {
     if (listener) {

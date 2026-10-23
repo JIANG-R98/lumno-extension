@@ -25,14 +25,20 @@ const { execFileSync } = require('child_process');
 const repoRoot = path.resolve(__dirname, '..', '..');
 const reactDir = 'src/react';
 
+// Rolldown (Vite 8) puts its CommonJS interop helpers, which every page chunk
+// imports, in a chunk of their own. Builds from before Vite 8 have none, so a
+// base without it counts it as empty.
+const runtimeHelpers = 'rolldown-runtime.js';
+
 const routes = {
-  'the New Tab route': ['react-runtime.js', 'react-shared.js', 'tab-switcher-shared.js', 'newtab-islands.js'],
-  'the Options route': ['react-runtime.js', 'react-shared.js', 'tab-switcher-shared.js', 'options-islands.js'],
+  'the New Tab route': [runtimeHelpers, 'react-runtime.js', 'react-shared.js', 'tab-switcher-shared.js', 'newtab-islands.js'],
+  'the Options route': [runtimeHelpers, 'react-runtime.js', 'react-shared.js', 'tab-switcher-shared.js', 'options-islands.js'],
   'the injected Overlay route': ['overlay-islands.js'],
   // The toolbar popup opens on every click, so it loads only the runtime, the
   // shared chunk and its own small entry.
-  'the toolbar popup route': ['react-runtime.js', 'react-shared.js', 'popup-islands.js'],
+  'the toolbar popup route': [runtimeHelpers, 'react-runtime.js', 'react-shared.js', 'popup-islands.js'],
   'all React artifacts together': [
+    runtimeHelpers,
     'react-runtime.js',
     'react-shared.js',
     'tab-switcher-shared.js',
@@ -73,11 +79,14 @@ function git(args) {
   }
 }
 
-function measure(readFile) {
+function measure(readFile, { requireRuntimeHelpers = true } = {}) {
   const files = {};
   for (const file of new Set(Object.values(routes).flat())) {
     const source = readFile(file);
     files[file] = source && { uncompressed: source.length, gzip: gzipSize(source) };
+  }
+  if (!files[runtimeHelpers] && !requireRuntimeHelpers) {
+    files[runtimeHelpers] = { uncompressed: 0, gzip: 0 };
   }
   const sizes = {};
   for (const [route, routeFiles] of Object.entries(routes)) {
@@ -133,7 +142,7 @@ for (const [route, size] of Object.entries(head)) {
 const baseDir = process.env.LUMNO_BUNDLE_BASE_DIR;
 const base = baseDir ? resolveBase() : null;
 if (base) {
-  const baseSizes = measure(readBuiltBundle(baseDir));
+  const baseSizes = measure(readBuiltBundle(baseDir), { requireRuntimeHelpers: false });
   const messages = (git(['log', '--format=%B', `${base}..HEAD`]) || '').toString();
   const growthAccepted = GROWTH_TRAILER.test(messages);
   const report = [];

@@ -17,7 +17,7 @@ export default defineConfig({
     emptyOutDir: false,
     copyPublicDir: false,
     sourcemap: false,
-    minify: 'esbuild',
+    minify: 'oxc',
     // The overlay bundle carries its own copy of React, so it lists the
     // licenses of what it bundles separately from the page chunks.
     license: { fileName: 'overlay-third-party-licenses.md' },
@@ -29,11 +29,6 @@ export default defineConfig({
       formats: ['iife'],
       name: 'LumnoOverlayReactBundle',
       fileName: () => 'overlay-islands.js'
-    },
-    rollupOptions: {
-      output: {
-        inlineDynamicImports: true
-      }
     }
   }
 });
