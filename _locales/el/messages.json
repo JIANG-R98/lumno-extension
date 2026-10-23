@@ -269,6 +269,9 @@
   "settings_feedback_support_github_issue_action": {
     "message": "Δημιουργία Issue"
   },
+  "settings_feedback_support_licenses_action": {
+    "message": "Άδειες ανοιχτού κώδικα"
+  },
   "settings_feedback_support_contact_author_action": {
     "message": "Επικοινωνία"
   },

@@ -269,6 +269,9 @@
   "settings_feedback_support_github_issue_action": {
     "message": "Issue സൃഷ്\u200cടിക്കുക"
   },
+  "settings_feedback_support_licenses_action": {
+    "message": "ഓപ്പൺ സോഴ്\u200cസ് ലൈസൻസുകൾ"
+  },
   "settings_feedback_support_contact_author_action": {
     "message": "രചയിതാവിനെ ബന്ധപ്പെടുക"
   },

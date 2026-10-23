@@ -269,6 +269,9 @@
   "settings_feedback_support_github_issue_action": {
     "message": "Створити issue"
   },
+  "settings_feedback_support_licenses_action": {
+    "message": "Ліцензії відкритого коду"
+  },
   "settings_feedback_support_contact_author_action": {
     "message": "Зв’язатися з автором"
   },

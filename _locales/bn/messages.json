@@ -269,6 +269,9 @@
   "settings_feedback_support_github_issue_action": {
     "message": "Issue তৈরি করুন"
   },
+  "settings_feedback_support_licenses_action": {
+    "message": "ওপেন সোর্স লাইসেন্স"
+  },
   "settings_feedback_support_contact_author_action": {
     "message": "নির্মাতার সাথে যোগাযোগ করুন"
   },

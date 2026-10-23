@@ -269,6 +269,9 @@
   "settings_feedback_support_github_issue_action": {
     "message": "Issue ರಚಿಸಿ"
   },
+  "settings_feedback_support_licenses_action": {
+    "message": "ಓಪನ್ ಸೋರ್ಸ್ ಪರವಾನಗಿಗಳು"
+  },
   "settings_feedback_support_contact_author_action": {
     "message": "ಲೇಖಕರನ್ನು ಸಂಪರ್ಕಿಸಿ"
   },

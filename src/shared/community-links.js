@@ -38,6 +38,7 @@ const STORE_LISTINGS = Object.freeze({
 const FALLBACK_LINKS = Object.freeze({
   x: 'https://x.com/kubai087',
   githubIssue: 'https://github.com/kubai087/lumno-extension/issues/new',
+  licenses: 'https://github.com/kubai087/lumno-extension/blob/main/THIRD_PARTY_NOTICES.md',
   chromeReview: 'https://chromewebstore.google.com/detail/lumno-%E8%81%9A%E7%84%A6%E6%90%9C%E7%B4%A2%E6%96%B0%E6%A0%87%E7%AD%BE%E9%A1%B5/nggfkkbmogmadfoikakkfegkoilfcfao/reviews?utm_source=item-share-cb',
   edgeReview: STORE_LISTINGS.edge.url,
   firefoxReview: `${FIREFOX_ADDONS_URL}reviews/`,
@@ -97,6 +98,7 @@ function normalizeLinksPayload(payload) {
     githubIssue: normalizeHttpsUrl(
       links.githubIssue || links.github_issue || links.issue
     ) || FALLBACK_LINKS.githubIssue,
+    licenses: normalizeHttpsUrl(links.licenses) || FALLBACK_LINKS.licenses,
     chromeReview: normalizeHttpsUrl(
       links.chromeReview ||
       links.chrome_review ||

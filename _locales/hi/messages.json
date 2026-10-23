@@ -269,6 +269,9 @@
   "settings_feedback_support_github_issue_action": {
     "message": "Issue बनाएं"
   },
+  "settings_feedback_support_licenses_action": {
+    "message": "ओपन सोर्स लाइसेंस"
+  },
   "settings_feedback_support_contact_author_action": {
     "message": "डेवलपर से संपर्क करें"
   },

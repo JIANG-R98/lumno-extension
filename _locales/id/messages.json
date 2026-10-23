@@ -269,6 +269,9 @@
   "settings_feedback_support_github_issue_action": {
     "message": "Buat Issue"
   },
+  "settings_feedback_support_licenses_action": {
+    "message": "Lisensi open source"
+  },
   "settings_feedback_support_contact_author_action": {
     "message": "Hubungi pembuat"
   },

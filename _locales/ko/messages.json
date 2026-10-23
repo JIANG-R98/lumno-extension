@@ -269,6 +269,9 @@
   "settings_feedback_support_github_issue_action": {
     "message": "Issue 만들기"
   },
+  "settings_feedback_support_licenses_action": {
+    "message": "오픈소스 라이선스"
+  },
   "settings_feedback_support_contact_author_action": {
     "message": "개발자에게 문의"
   },

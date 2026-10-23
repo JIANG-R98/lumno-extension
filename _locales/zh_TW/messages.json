@@ -269,6 +269,9 @@
   "settings_feedback_support_github_issue_action": {
     "message": "建立 Issue"
   },
+  "settings_feedback_support_licenses_action": {
+    "message": "開源授權"
+  },
   "settings_feedback_support_contact_author_action": {
     "message": "聯絡作者"
   },

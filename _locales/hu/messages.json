@@ -269,6 +269,9 @@
   "settings_feedback_support_github_issue_action": {
     "message": "Issue létrehozása"
   },
+  "settings_feedback_support_licenses_action": {
+    "message": "Nyílt forráskódú licencek"
+  },
   "settings_feedback_support_contact_author_action": {
     "message": "Kapcsolat a szerzővel"
   },

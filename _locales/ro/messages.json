@@ -269,6 +269,9 @@
   "settings_feedback_support_github_issue_action": {
     "message": "Creați un issue"
   },
+  "settings_feedback_support_licenses_action": {
+    "message": "Licențe open source"
+  },
   "settings_feedback_support_contact_author_action": {
     "message": "Contactați autorul"
   },

@@ -50,11 +50,19 @@ export interface FeedbackSupportHelp extends FeedbackSupportRowCopy {
   labelKey: string;
 }
 
+export interface FeedbackSupportTextLink {
+  href: string;
+  label: string;
+  labelKey: string;
+}
+
 export interface FeedbackSupportRenderModel {
   heading: string;
   headingKey: string;
   help?: FeedbackSupportHelp | null;
   items: FeedbackSupportItem[];
+  /** The third-party licenses, as a quiet link under the channel tiles. */
+  licenses?: FeedbackSupportTextLink | null;
 }
 
 export type FeedbackSupportController =
@@ -347,7 +355,7 @@ function FeedbackSupportAskHint({ demo }: { demo: FeedbackSupportAskDemo }) {
   );
 }
 
-function FeedbackSupportView({ heading, headingKey, help, items }: FeedbackSupportRenderModel) {
+function FeedbackSupportView({ heading, headingKey, help, items, licenses }: FeedbackSupportRenderModel) {
   return (
     <section
       className="_x_extension_feedback_support_section_2026_unique_"
@@ -398,6 +406,20 @@ function FeedbackSupportView({ heading, headingKey, help, items }: FeedbackSuppo
           </a>
         ))}
       </nav>
+      {licenses?.href ? (
+        <div className="_x_extension_feedback_support_footer_2026_unique_">
+          <a
+            className={ACTION_CLASS}
+            data-feedback-support="licenses"
+            href={licenses.href}
+            rel="noreferrer noopener"
+            target="_blank"
+          >
+            <span data-i18n={licenses.labelKey}>{licenses.label}</span>
+            <i className="ri-icon ri-size-14 ri-external-link-line" aria-hidden="true" />
+          </a>
+        </div>
+      ) : null}
     </section>
   );
 }

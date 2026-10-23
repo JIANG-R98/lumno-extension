@@ -269,6 +269,9 @@
   "settings_feedback_support_github_issue_action": {
     "message": "สร้าง Issue"
   },
+  "settings_feedback_support_licenses_action": {
+    "message": "สัญญาอนุญาตโอเพนซอร์ส"
+  },
   "settings_feedback_support_contact_author_action": {
     "message": "ติดต่อผู้พัฒนา"
   },

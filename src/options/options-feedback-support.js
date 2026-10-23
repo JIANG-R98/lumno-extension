@@ -89,7 +89,13 @@ function buildFeedbackSupportModel(input) {
         label: getMessage('settings_feedback_support_contact_author_action', '联系作者'),
         labelKey: 'settings_feedback_support_contact_author_action'
       }
-    ].filter((item) => Boolean(item.href))
+    ].filter((item) => Boolean(item.href)),
+    // A quiet text link under the tiles, so the channel row keeps its width.
+    licenses: links.licenses ? {
+      href: links.licenses,
+      label: getMessage('settings_feedback_support_licenses_action', '开源许可'),
+      labelKey: 'settings_feedback_support_licenses_action'
+    } : null
   };
 }
 

@@ -36,6 +36,11 @@ function model(webLocale, helpCenterSearchEnabled) {
   const en = model('en', false);
   assert.deepStrictEqual(en.items.map((item) => item.key), ['chrome-review', 'github-issue', 'contact-author']);
   assert.strictEqual(en.help.ask, null, 'the ask demo hides while the lm site search is off');
+  assert.deepStrictEqual(en.licenses, {
+    href: 'https://github.com/kubai087/lumno-extension/blob/main/THIRD_PARTY_NOTICES.md',
+    label: 'settings_feedback_support_licenses_action|开源许可',
+    labelKey: 'settings_feedback_support_licenses_action'
+  }, 'the licenses link should open the third-party notices on GitHub');
   assert.strictEqual(model('ja', null).help.ask, null, 'and until the providers have loaded');
 }
 

@@ -79,6 +79,33 @@ describe('Options feedback support React island', () => {
     });
   });
 
+  it('puts the licenses link under the tiles as a quiet text link', () => {
+    const { controller, host } = createFixture();
+    act(() => controller.render({
+      ...model,
+      licenses: {
+        href: 'https://github.com/example/blob/main/THIRD_PARTY_NOTICES.md',
+        label: '开源许可',
+        labelKey: 'settings_feedback_support_licenses_action'
+      }
+    }));
+
+    expect(host.querySelectorAll('nav a._x_extension_feedback_support_link_2026_unique_')).toHaveLength(4);
+    const footer = host.querySelector('nav + ._x_extension_feedback_support_footer_2026_unique_');
+    const link = footer?.querySelector<HTMLAnchorElement>('a._x_extension_feedback_support_action_2026_unique_');
+    expect(link?.dataset.feedbackSupport).toBe('licenses');
+    expect(link?.href).toBe('https://github.com/example/blob/main/THIRD_PARTY_NOTICES.md');
+    expect(link?.target).toBe('_blank');
+    expect(link?.textContent).toBe('开源许可');
+    expect(link?.querySelector('.ri-external-link-line')).not.toBeNull();
+  });
+
+  it('leaves out the licenses footer without a link', () => {
+    const { controller, host } = createFixture();
+    act(() => controller.render(model));
+    expect(host.querySelector('._x_extension_feedback_support_footer_2026_unique_')).toBeNull();
+  });
+
   it('uses secure external anchors and preserves the provided destinations', () => {
     const { controller, host } = createFixture();
     act(() => controller.render(model));

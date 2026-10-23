@@ -269,6 +269,9 @@
   "settings_feedback_support_github_issue_action": {
     "message": "Sukurti problemą"
   },
+  "settings_feedback_support_licenses_action": {
+    "message": "Atvirojo kodo licencijos"
+  },
   "settings_feedback_support_contact_author_action": {
     "message": "Susisiekti su autoriumi"
   },

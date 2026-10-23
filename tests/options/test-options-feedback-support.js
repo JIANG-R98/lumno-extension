@@ -15,6 +15,7 @@ const ACTION_KEYS = [
   'settings_feedback_support_wechat_action',
   'settings_feedback_support_review_action',
   'settings_feedback_support_github_issue_action',
+  'settings_feedback_support_licenses_action',
   'settings_feedback_support_contact_author_action'
 ];
 const readMessages = (locale) => JSON.parse(fs.readFileSync(path.join(repoRoot, `_locales/${locale}/messages.json`), 'utf8'));
@@ -44,7 +45,7 @@ function testCopy() {
       assert.ok(messages[key] && messages[key].message, `${locale} should provide ${key}`);
     });
   });
-  assert.deepStrictEqual(ACTION_KEYS.map((key) => readMessages('zh_CN')[key].message), ['加入反馈群', '为 Lumno 评分', '创建 Issue', '联系作者'],
+  assert.deepStrictEqual(ACTION_KEYS.map((key) => readMessages('zh_CN')[key].message), ['加入反馈群', '为 Lumno 评分', '创建 Issue', '开源许可', '联系作者'],
     'Simplified Chinese feedback links should use the requested copy');
 }
 
@@ -86,6 +87,13 @@ async function testChannels() {
   assert.ok(!en.byId(HOST_ID).querySelector('.ri-wechat-line') &&
     en.channels().some((link) => /^https:\/\/x\.com\//.test(link.getAttribute('href') || '')),
   'English Options should offer X instead of WeChat');
+  [zh, en].forEach((page) => {
+    const licenses = page.byId(HOST_ID).querySelector('[data-feedback-support="licenses"]');
+    assert.ok(licenses && licenses.getAttribute('href') === 'https://github.com/kubai087/lumno-extension/blob/main/THIRD_PARTY_NOTICES.md',
+      'the open-source licenses link should open the third-party notices on GitHub');
+    assert.ok(!page.channels().includes(licenses) && licenses.closest('._x_extension_feedback_support_footer_2026_unique_'),
+      'the licenses link should sit under the channel tiles, not among them');
+  });
   zh.close();
   en.close();
 }

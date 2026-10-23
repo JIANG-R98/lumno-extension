@@ -269,6 +269,9 @@
   "settings_feedback_support_github_issue_action": {
     "message": "Gumawa ng Issue"
   },
+  "settings_feedback_support_licenses_action": {
+    "message": "Mga open-source na lisensya"
+  },
   "settings_feedback_support_contact_author_action": {
     "message": "Kontakin ang author"
   },

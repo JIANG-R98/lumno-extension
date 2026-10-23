@@ -269,6 +269,9 @@
   "settings_feedback_support_github_issue_action": {
     "message": "Luo issue"
   },
+  "settings_feedback_support_licenses_action": {
+    "message": "Avoimen lähdekoodin lisenssit"
+  },
   "settings_feedback_support_contact_author_action": {
     "message": "Ota yhteyttä tekijään"
   },

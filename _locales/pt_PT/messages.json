@@ -269,6 +269,9 @@
   "settings_feedback_support_github_issue_action": {
     "message": "Criar issue"
   },
+  "settings_feedback_support_licenses_action": {
+    "message": "Licenças de código aberto"
+  },
   "settings_feedback_support_contact_author_action": {
     "message": "Contactar o autor"
   },
