@@ -267,10 +267,51 @@ function createPanelSession(deps) {
     }
   }
 
+  let overlayExitTimer = null;
+  let closingOverlayElement = null;
+
+  function closeOverlayWithMotion(overlayElement) {
+    const reduceMotion = typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!overlayElement || !overlayElement.isConnected ||
+        reduceMotion ||
+        overlayElement.getAttribute('data-lumno-overlay-entry') !== 'done') {
+      removeOverlay(overlayElement);
+      return;
+    }
+    if (closingOverlayElement === overlayElement) return;
+    closingOverlayElement = overlayElement;
+    overlayElement.setAttribute('data-lumno-overlay-exit', 'running');
+    overlayElement.style.setProperty('pointer-events', 'none', 'important');
+    overlayElement.style.setProperty('will-change', 'transform, opacity', 'important');
+    overlayElement.style.setProperty(
+      'transition',
+      'transform 220ms cubic-bezier(0.4, 0, 1, 1), opacity 160ms ease-in',
+      'important'
+    );
+    // Commit the visible state before changing the protected inline transform.
+    void overlayElement.offsetWidth;
+    overlayElement.style.setProperty(
+      'transform',
+      'translateX(-50%) translateY(8px) scale(var(--x-ov-visible-scale, 1)) scale(0.985)',
+      'important'
+    );
+    overlayElement.style.setProperty('opacity', '0', 'important');
+    overlayExitTimer = window.setTimeout(() => {
+      overlayExitTimer = null;
+      removeOverlay(overlayElement);
+    }, 230);
+  }
+
   // Tears down this invocation's overlay session: DOM, page listeners,
   // storage listeners and every controller registered for the session.
   function removeOverlay(overlayElement, options) {
     const removalOptions = options && typeof options === 'object' ? options : {};
+    if (overlayExitTimer !== null) {
+      window.clearTimeout(overlayExitTimer);
+      overlayExitTimer = null;
+    }
+    closingOverlayElement = null;
     window._x_extension_search_overlay_open_2026_unique_ = false;
     if (removalOptions.preserveLoadingIntent !== true) {
       notifyOverlayClosed();
@@ -351,11 +392,15 @@ function createPanelSession(deps) {
   }
 
   function destroyExistingOverlaySession(overlayElement, options) {
+    if (overlayElement && overlayElement.getAttribute('data-lumno-overlay-exit') === 'running') {
+      return;
+    }
     const mountHost = getOverlayMountHost(overlayElement);
     const destroyed = mountHost
       ? overlayLifecycle.requestSessionDestroy(mountHost, options)
       : !(overlayElement && overlayElement.isConnected);
-    if (destroyed) {
+    if (destroyed || (overlayElement &&
+        overlayElement.getAttribute('data-lumno-overlay-exit') === 'running')) {
       window._x_extension_search_overlay_open_2026_unique_ = false;
       return;
     }
@@ -373,6 +418,7 @@ function createPanelSession(deps) {
     createOverlayWheelIsolationHandler,
     notifyOverlayLoadingSession,
     removeOverlay,
+    closeOverlayWithMotion,
     destroyExistingOverlaySession
   };
 }

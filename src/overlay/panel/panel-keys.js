@@ -27,6 +27,7 @@ function createPanelKeys(deps) {
     SUGGESTION_NAVIGATION,
     numberShortcutOptions,
     removeOverlay,
+    closeOverlayWithMotion,
     updateSelection,
     scrollSelectedSuggestionIntoView,
     getCommandMatch,
@@ -340,7 +341,7 @@ function createPanelKeys(deps) {
     const suggestionNavigationKey = getSuggestionNavigationKey(e);
     dismissAutocompletePreviewOnNonTabKey(e);
     if (e.key === 'Escape' && overlayState.overlay) {
-      removeOverlay(overlayState.overlay);
+      closeOverlayWithMotion(overlayState.overlay);
     } else if (suggestionNavigationKey === 'ArrowDown') {
       e.preventDefault();
       if (suggestionItems.length === 0) {

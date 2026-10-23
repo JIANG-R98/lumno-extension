@@ -709,6 +709,7 @@ function createSessionCleanupRegistry() {
 // same reason.
 const SESSION_DESTROY_EVENT = '_x_extension_overlay_session_destroy_2026_unique_';
 const SESSION_PRESERVE_LOADING_INTENT = 'preserve-loading-intent';
+const SESSION_ANIMATE_EXIT = 'animate-exit';
 
 function onSessionDestroyRequest(host, destroy) {
   if (!host || typeof host.addEventListener !== 'function' || typeof destroy !== 'function') {
@@ -718,7 +719,8 @@ function onSessionDestroyRequest(host, destroy) {
     host.removeEventListener(SESSION_DESTROY_EVENT, handleDestroyRequest);
     destroy({
       preserveLoadingIntent: Boolean(event) &&
-        event.detail === SESSION_PRESERVE_LOADING_INTENT
+        event.detail === SESSION_PRESERVE_LOADING_INTENT,
+      animateExit: Boolean(event) && event.detail === SESSION_ANIMATE_EXIT
     });
   };
   host.addEventListener(SESSION_DESTROY_EVENT, handleDestroyRequest);
@@ -741,7 +743,7 @@ function requestSessionDestroy(host, options) {
     host.dispatchEvent(new CustomEventCtor(SESSION_DESTROY_EVENT, {
       detail: options && options.preserveLoadingIntent === true
         ? SESSION_PRESERVE_LOADING_INTENT
-        : ''
+        : (options && options.animateExit === true ? SESSION_ANIMATE_EXIT : '')
     }));
   }
   return host.isConnected !== true;

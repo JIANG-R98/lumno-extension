@@ -3,7 +3,6 @@ const {
   CONTEXT_TOKEN_KEY,
   createOverlayPage,
   openAndSettle,
-  settle,
   waitFor
 } = require('../helpers/overlay-runtime-harness');
 
@@ -23,6 +22,10 @@ function assertReleased(page, baselineDocumentListeners, message) {
     `${message}: the overlay should report itself closed`);
 }
 
+async function waitForClosed(page, message) {
+  await waitFor(() => page.hostCount() === 0, message, page.errors);
+}
+
 async function testToggleCloseFromNewInvocation() {
   const page = await createOverlayPage();
   try {
@@ -31,7 +34,10 @@ async function testToggleCloseFromNewInvocation() {
     // A second hotkey press runs the toggle helper again; that invocation
     // has its own closure and must still release the first one's listeners.
     page.toggle();
-    await settle();
+    const closingPanel = page.window.LumnoOverlayShell.findOverlayPanel(page.window.document);
+    assert.strictEqual(closingPanel.getAttribute('data-lumno-overlay-exit'), 'running',
+      'the second press should start the exit animation');
+    await waitForClosed(page, 'the second press should close the overlay after its exit animation');
     assert.strictEqual(page.hostCount(), 0, 'the second press should close the overlay');
     assertReleased(page, baseline, 'closing from a new invocation');
   } finally {
@@ -46,7 +52,7 @@ async function testToggleCloseAfterReinjection() {
     await openAndSettle(page);
     page.reinjectSearchPanel();
     page.toggle();
-    await settle();
+    await waitForClosed(page, 'the reinjected helper should close the open overlay');
     assert.strictEqual(page.hostCount(), 0, 'the reinjected helper should close the open overlay');
     assertReleased(page, baseline, 'closing after reinjection');
   } finally {
@@ -73,7 +79,7 @@ async function testStaleReplacementThenClose() {
     assert.strictEqual(page.sessionStorageListenerCount(), storageListenersWhileOpen,
       'replacing a stale overlay should not stack a second set of storage listeners');
     page.toggle();
-    await settle();
+    await waitForClosed(page, 'the replacement overlay should close');
     assert.strictEqual(page.hostCount(), 0, 'the replacement overlay should close');
     assertReleased(page, baseline, 'closing after a stale replacement');
   } finally {
@@ -87,10 +93,10 @@ async function testEscapeCloseReleasesListeners() {
     const baseline = page.ledger.snapshot();
     await openAndSettle(page);
     page.toggle();
-    await settle();
+    await waitForClosed(page, 'the first cycle should close');
     await openAndSettle(page);
     page.toggle();
-    await settle();
+    await waitForClosed(page, 'the second cycle should close');
     assertReleased(page, baseline, 'repeated open/close cycles');
   } finally {
     page.window.close();
@@ -106,7 +112,7 @@ async function testMountGuardRestoresHostUntilClose() {
     host.remove();
     await waitFor(() => host.isConnected, 'the open overlay host should be restored', page.errors);
     page.toggle();
-    await settle(60);
+    await waitForClosed(page, 'the restored overlay should close');
     assert.strictEqual(host.isConnected, false, 'a closed overlay must stay detached');
     assert.strictEqual(page.hostCount(), 0);
   } finally {
