@@ -1799,6 +1799,15 @@
   "mode_switch_title": {
     "message": "{name}: lumipat sa {mode} mode"
   },
+  "web_appearance_switch_title": {
+    "message": "Hitsura ng website: lumipat sa {mode}"
+  },
+  "web_appearance_badge": {
+    "message": "Hitsura ng website: {mode}"
+  },
+  "web_appearance_label_auto": {
+    "message": "Awtomatiko"
+  },
   "zen_badge_on": {
     "message": "Zen: Naka-on"
   },

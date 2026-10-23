@@ -1799,6 +1799,15 @@
   "mode_switch_title": {
     "message": "{name}: {mode} பயன்முறைக்கு மாறு"
   },
+  "web_appearance_switch_title": {
+    "message": "இணையதளத் தோற்றம்: {mode}க்கு மாறு"
+  },
+  "web_appearance_badge": {
+    "message": "இணையதளத் தோற்றம்: {mode}"
+  },
+  "web_appearance_label_auto": {
+    "message": "தானியங்கு"
+  },
   "zen_badge_on": {
     "message": "Zen: இயக்கத்தில்"
   },

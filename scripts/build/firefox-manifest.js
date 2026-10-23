@@ -56,6 +56,8 @@ function toFirefoxManifest(chromeManifest, options) {
     (permission) => permission !== 'favicon' && permission !== 'fontSettings');
   // Lets the New Tab focus swap drop the replaced tab from recently closed.
   ffManifest.permissions.push('sessions');
+  // Lets the /appearance command switch Firefox's website appearance setting.
+  ffManifest.permissions.push('browserSettings');
 
   return ffManifest;
 }

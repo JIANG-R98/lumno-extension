@@ -1799,6 +1799,15 @@
   "mode_switch_title": {
     "message": "{name}: lülitu režiimile {mode}"
   },
+  "web_appearance_switch_title": {
+    "message": "Veebisaitide välimus: lülitu valikule {mode}"
+  },
+  "web_appearance_badge": {
+    "message": "Veebisaitide välimus: {mode}"
+  },
+  "web_appearance_label_auto": {
+    "message": "Automaatne"
+  },
   "zen_badge_on": {
     "message": "Zen: sees"
   },

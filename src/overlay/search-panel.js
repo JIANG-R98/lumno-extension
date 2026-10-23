@@ -293,6 +293,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     activateSiteSearch: (...args) => activateSiteSearch(...args),
     openOverlayCommunityQrDialog: (...args) => openOverlayCommunityQrDialog(...args),
     applyThemeModeChange: (...args) => applyThemeModeChange(...args),
+    applyWebAppearanceMode: (...args) => applyWebAppearanceMode(...args),
     shouldSwitchMatchedTabSuggestion: (...args) => shouldSwitchMatchedTabSuggestion(...args),
     openMatchedTabSuggestion: (...args) => openMatchedTabSuggestion(...args),
     finishOverlayResultActivation: (...args) => finishOverlayResultActivation(...args),
@@ -379,6 +380,8 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     getCommandMatch: (...args) => getCommandMatch(...args),
     applyThemeModeChange: (...args) => applyThemeModeChange(...args),
     getNextThemeMode: (...args) => getNextThemeMode(...args),
+    applyWebAppearanceMode: (...args) => applyWebAppearanceMode(...args),
+    applyNextWebAppearanceMode: (...args) => applyNextWebAppearanceMode(...args),
     openDocumentPipPickerFromOverlay: (...args) => openDocumentPipPickerFromOverlay(...args),
     isModeCommand: (...args) => isModeCommand(...args),
     openOverlayCommunityQrDialog: (...args) => openOverlayCommunityQrDialog(...args),
@@ -998,7 +1001,9 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     getNextThemeMode,
     isModeCommand,
     buildModeSuggestion,
-    applyThemeModeChange
+    applyThemeModeChange,
+    applyWebAppearanceMode,
+    applyNextWebAppearanceMode
   } = PANEL_SLASH_COMMANDS.createSlashCommands({
     t: (...args) => t(...args),
     formatMessage: (...args) => formatMessage(...args),

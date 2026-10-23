@@ -82,7 +82,8 @@ export function getSuggestionIconSpec(
   const commandIcons: Record<string, string> = {
     commandNewTab: 'ri-add-line',
     commandSettings: 'ri-settings-3-line',
-    commandDocumentPip: 'ri-scissors-cut-line'
+    commandDocumentPip: 'ri-scissors-cut-line',
+    webAppearanceSwitch: 'ri-contrast-2-line'
   };
   if (commandIcons[type]) {
     return {

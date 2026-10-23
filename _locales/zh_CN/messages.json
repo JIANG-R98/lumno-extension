@@ -1799,6 +1799,15 @@
   "mode_switch_title": {
     "message": "{name}：切换到{mode}模式"
   },
+  "web_appearance_switch_title": {
+    "message": "网站外观：切换到{mode}"
+  },
+  "web_appearance_badge": {
+    "message": "网站外观：{mode}"
+  },
+  "web_appearance_label_auto": {
+    "message": "自动"
+  },
   "zen_badge_on": {
     "message": "Zen：已开启"
   },

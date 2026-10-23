@@ -133,6 +133,7 @@ const EXPECTED_BACKGROUND_ACTIONS = [
   'getSiteSearchProviders', 'getHelpCenterSearchResults', 'runSiteSearchProviderQuery',
   'runAggregateSearchQuery',
   'runSelectionQuickAction',
+  'getWebAppearance', 'setWebAppearance',
   'linkPreviewPrepare', 'linkPreviewOpen', 'linkPreviewClose', 'linkPreviewOpenInTab',
   'getLocaleMessages', 'getFileSchemeAccessStatus',
   'openOptionsPage', 'openOnboardingPage', 'openExtensionShortcutsPage', 'openSiteSearchOptionsPage',
@@ -184,6 +185,15 @@ async function testBackgroundRegistry() {
   const selection = await harness.sendMessage({ action: 'runSelectionQuickAction' }, { tab: senderTab });
   assert.strictEqual(selection && selection.ok, false);
   assert.ok(selection.reason, 'the selection quick action handler, not the unknown-action reply, should answer');
+
+  // Chromium has no website appearance setting, so /appearance stays hidden;
+  // the overlay may only ask for one of Firefox's three values.
+  assert.deepStrictEqual(
+    JSON.parse(JSON.stringify(await harness.sendMessage({ action: 'getWebAppearance' }, { tab: senderTab, url: senderTab.url }))),
+    { supported: false, mode: 'auto', controllable: false });
+  assert.deepStrictEqual(
+    JSON.parse(JSON.stringify(await harness.sendMessage({ action: 'setWebAppearance', mode: 'sepia' }, { tab: senderTab, url: senderTab.url }))),
+    { ok: false, reason: 'argument-not-allowed' });
 
   // Content scripts and the in-page overlay run inside web pages.
   const webPageSender = { tab: senderTab, url: senderTab.url };

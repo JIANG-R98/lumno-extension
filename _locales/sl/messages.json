@@ -1799,6 +1799,15 @@
   "mode_switch_title": {
     "message": "{name}: preklop na način {mode}"
   },
+  "web_appearance_switch_title": {
+    "message": "Videz spletnih mest: preklop na {mode}"
+  },
+  "web_appearance_badge": {
+    "message": "Videz spletnih mest: {mode}"
+  },
+  "web_appearance_label_auto": {
+    "message": "Samodejno"
+  },
   "zen_badge_on": {
     "message": "Zen: vklopljeno"
   },

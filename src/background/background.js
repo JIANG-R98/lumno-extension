@@ -57,6 +57,7 @@ import * as BACKGROUND_MESSAGE_ROUTER from './message-router.js';
 import * as BACKGROUND_NEWTAB_FALLBACK from './newtab-fallback.js';
 import '../shared/browser-profile.js';
 import * as BACKGROUND_SHORTCUT_RULES from './shortcut-rules.js';
+import * as LumnoWebAppearance from './web-appearance.js';
 import './pip-ownership.js';
 import './pip-main-world.js';
 import './recent-tab-switcher.js';
@@ -845,6 +846,9 @@ export const popupRecentPin = LumnoPopupRecentPin.createController({
 const linkPreviewService = LumnoLinkPreview.createLinkPreviewService({ chromeApi: chrome });
 linkPreviewService.attach();
 
+// Firefox's website appearance setting, behind the /appearance command.
+const webAppearance = LumnoWebAppearance.create();
+
 // One action -> handler registry for runtime messages. Each feature area
 // above owns its handlers; adding an action is one entry in its area's map,
 // and the router rejects an action registered twice. Exported for the
@@ -858,6 +862,7 @@ export const backgroundMessageRouter = BACKGROUND_MESSAGE_ROUTER.createRouter(
   SITE_SEARCH_MESSAGE_HANDLERS,
   SELECTION_QUICK_ACTION_MESSAGE_HANDLERS,
   linkPreviewService.messageHandlers,
+  webAppearance.messageHandlers,
   LOCALE_AND_PERMISSION_MESSAGE_HANDLERS,
   EXTENSION_PAGE_MESSAGE_HANDLERS,
   POPUP_MESSAGE_HANDLERS,
@@ -871,6 +876,7 @@ const WEB_PAGE_MESSAGE_ACTIONS = Object.freeze([
   'switchToTab', 'closeTabFromTabSwitcher', 'notifyOverlayClosed', 'notifyTopFrameDocumentStarted',
   'updateOverlayLoadingSession', 'getTabsForOverlay', 'closeOtherTabsForOverlay',
   'getShowSearchShortcut', 'copyCurrentPageUrl', 'triggerShowSearchFromPageHotkey',
+  'getWebAppearance', 'setWebAppearance',
   'notifyTabSwitcherShortcutModifierReleased', 'getShortcutRules',
   'pipRequestOwnership', 'pipReleaseOwnership', 'openDocumentPipPicker', 'siteTryEnterPiPInMainWorld',
   'iqiyiTryEnterPiPInMainWorld', 'iqiyiSetupAutoPiPInMainWorld', 'forceExitPiPInMainWorld',
@@ -897,6 +903,7 @@ const backgroundMessageSenderPolicy = BACKGROUND_MESSAGE_ROUTER.createSenderPoli
     linkPreviewPrepare: (request) => LumnoLinkPreview.isPreviewableUrl(request.url),
     linkPreviewOpen: (request) => LumnoLinkPreview.isPreviewableUrl(request.url),
     linkPreviewOpenInTab: (request) => LumnoLinkPreview.isPreviewableUrl(request.url),
+    setWebAppearance: (request) => Boolean(LumnoWebAppearance.normalizeMode(request.mode)),
     runSiteSearchProviderQuery: (request) => {
       const entryUrl = getSiteSearchProviderEntryUrl(request.provider, request.query);
       return /^https?:\/\//i.test(entryUrl);

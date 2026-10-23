@@ -1799,6 +1799,15 @@
   "mode_switch_title": {
     "message": "{name}: {mode} મોડ પર સ્વિચ કરો"
   },
+  "web_appearance_switch_title": {
+    "message": "વેબસાઇટનો દેખાવ: {mode} પર સ્વિચ કરો"
+  },
+  "web_appearance_badge": {
+    "message": "વેબસાઇટનો દેખાવ: {mode}"
+  },
+  "web_appearance_label_auto": {
+    "message": "સ્વચાલિત"
+  },
   "zen_badge_on": {
     "message": "Zen: ચાલુ"
   },

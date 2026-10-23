@@ -36,7 +36,7 @@ async function rows(surface, query) {
   await surface.settle(80);
   return surface.suggestions().map((row) => {
     const suggestion = row._xSuggestion || {};
-    assert.strictEqual(row.getAttribute('data-command-row') === 'true', /^(command|modeSwitch|zenSwitch)/.test(suggestion.type),
+    assert.strictEqual(row.getAttribute('data-command-row') === 'true', /^(command|modeSwitch|zenSwitch|webAppearanceSwitch)/.test(suggestion.type),
       `${surface.name}: only command results should be laid out as command rows`);
     return suggestion.type;
   });
@@ -129,6 +129,53 @@ async function testOverlayCommands() {
   current.close();
 }
 
+// In Firefox, /appearance cycles the website appearance setting (the color
+// scheme pages see) through automatic, light and dark, and the badge shows
+// the current one. Chromium has no such setting, so the command is absent
+// there (the lists above).
+async function testWebAppearanceCommand(name) {
+  let mode = 'light';
+  const surface = await openSearchSurface(name, {
+    respond(message) {
+      if (message.action === 'getWebAppearance') {
+        return { supported: true, mode, controllable: true };
+      }
+      if (message.action === 'setWebAppearance') {
+        mode = message.mode;
+        return { ok: true, mode, controllable: true };
+      }
+      return undefined;
+    }
+  });
+  await surface.settle(50);
+  assert.ok((await rows(surface, '/')).includes('webAppearanceSwitch'), `${name}: Firefox lists /appearance`);
+  assert.deepStrictEqual(await rows(surface, '/a'), ['webAppearanceSwitch'], `${name}: /a finds it`);
+  const badge = () => surface.root.getElementById(name === 'overlay'
+    ? '_x_extension_mode_badge_2024_unique_'
+    : '_x_extension_newtab_mode_badge_2024_unique_');
+  const title = () => surface.suggestions()[0].textContent;
+
+  await rows(surface, '/appearance');
+  assert.match(title(), /Website appearance: switch to Dark/, `${name}: the row names the next appearance`);
+  assert.strictEqual(badge().getAttribute('data-visible'), 'true');
+  assert.strictEqual(badge().textContent, 'Website appearance: Light', `${name}: the badge shows the current one`);
+
+  surface.press('Enter');
+  await surface.settle(100);
+  const sent = surface.page.messages.filter((message) => message.action === 'setWebAppearance');
+  assert.deepStrictEqual(sent.map((message) => message.mode), ['dark'], `${name}: Enter switches to the next appearance`);
+  assert.strictEqual(badge().textContent, 'Website appearance: Dark');
+  assert.match(title(), /Website appearance: switch to Automatic/, `${name}: and offers the one after it`);
+  assert.ok(name !== 'overlay' || surface.page.root(), 'the command bar stays open');
+  assert.strictEqual(surface.navigation(), null, `${name}: switching neither searches nor navigates`);
+
+  surface.press('Enter');
+  await surface.settle(100);
+  assert.strictEqual(mode, 'auto', `${name}: and from dark back to automatic`);
+  assert.strictEqual(badge().textContent, 'Website appearance: Automatic');
+  surface.close();
+}
+
 // The old plain inputs for web clip ("clip", "webclip", "web clip") still
 // match it; the overlay runs it for them when Enter has no row to act on.
 function testLegacyClipAliases() {
@@ -170,7 +217,8 @@ function testStyles() {
 function testCopy() {
   localeNames.forEach((localeName) => {
     const messages = JSON.parse(fs.readFileSync(path.join(repoRoot, '_locales', localeName, 'messages.json'), 'utf8'));
-    ['slash_command_empty', 'command_tabs_title', 'command_tabs_action', 'command_copy_title', 'command_copy_action'].forEach((key) => {
+    ['slash_command_empty', 'command_tabs_title', 'command_tabs_action', 'command_copy_title', 'command_copy_action',
+      'web_appearance_switch_title', 'web_appearance_badge', 'web_appearance_label_auto'].forEach((key) => {
       assert.ok(messages[key] && messages[key].message, `${localeName} should localize ${key}`);
     });
   });
@@ -182,6 +230,9 @@ function testCopy() {
   }
   await testNewTabCommands();
   await testOverlayCommands();
+  for (const name of SURFACES) {
+    await testWebAppearanceCommand(name);
+  }
   testLegacyClipAliases();
   testStyles();
   testCopy();

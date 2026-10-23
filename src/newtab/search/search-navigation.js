@@ -21,6 +21,7 @@ function createSearchNavigation(deps) {
     getNextThemeMode,
     setVisibleThemeMode,
     setZenModeEnabled,
+    setWebAppearanceMode,
     activateSiteSearch,
     focusSearchInputPreservingScroll,
     openCommunityQrDialog,
@@ -337,6 +338,10 @@ function createSearchNavigation(deps) {
       }
       if (selectedSuggestion.type === 'zenSwitch') {
         setZenModeEnabled(selectedSuggestion.nextEnabled);
+        return true;
+      }
+      if (selectedSuggestion.type === 'webAppearanceSwitch') {
+        setWebAppearanceMode(selectedSuggestion.nextMode);
         return true;
       }
       if (selectedSuggestion.type === 'commandNewTab') {

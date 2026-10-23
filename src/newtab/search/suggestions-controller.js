@@ -6,6 +6,7 @@ function createSuggestionsController(deps) {
     focusSearchInputPreservingScroll,
     setVisibleThemeMode,
     setZenModeEnabled,
+    setWebAppearanceMode,
     shouldSwitchMatchedTabSuggestion,
     openMatchedTabSuggestion,
     runSiteSearchProviderQuery,
@@ -201,6 +202,11 @@ function createSuggestionsController(deps) {
     }
     if (suggestion.type === 'zenSwitch') {
       setZenModeEnabled(suggestion.nextEnabled);
+      focusSearchInputPreservingScroll();
+      return;
+    }
+    if (suggestion.type === 'webAppearanceSwitch') {
+      setWebAppearanceMode(suggestion.nextMode);
       focusSearchInputPreservingScroll();
       return;
     }

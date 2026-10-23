@@ -1799,6 +1799,15 @@
   "mode_switch_title": {
     "message": "{name}: switch to {mode} mode"
   },
+  "web_appearance_switch_title": {
+    "message": "Website appearance: switch to {mode}"
+  },
+  "web_appearance_badge": {
+    "message": "Website appearance: {mode}"
+  },
+  "web_appearance_label_auto": {
+    "message": "Automatic"
+  },
   "zen_badge_on": {
     "message": "Zen: On"
   },

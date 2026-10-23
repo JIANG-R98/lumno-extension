@@ -657,7 +657,7 @@ function createSiteThemeResolver(deps) {
     if (!suggestion) {
       return false;
     }
-    const neutralTypes = ['googleSuggest', 'newtab', 'modeSwitch', 'zenSwitch', 'chatgpt', 'perplexity', 'commandNewTab', 'commandSettings', 'commandDocumentPip'];
+    const neutralTypes = ['googleSuggest', 'newtab', 'modeSwitch', 'zenSwitch', 'webAppearanceSwitch', 'chatgpt', 'perplexity', 'commandNewTab', 'commandSettings', 'commandDocumentPip'];
     if (neutralTypes.includes(suggestion.type)) {
       return false;
     }

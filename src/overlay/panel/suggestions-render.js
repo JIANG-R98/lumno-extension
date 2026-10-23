@@ -15,6 +15,7 @@ function createSuggestionsRender(deps) {
     activateSiteSearch,
     openOverlayCommunityQrDialog,
     applyThemeModeChange,
+    applyWebAppearanceMode,
     shouldSwitchMatchedTabSuggestion,
     openMatchedTabSuggestion,
     finishOverlayResultActivation,
@@ -216,6 +217,11 @@ function createSuggestionsRender(deps) {
     }
     if (suggestion.type === 'modeSwitch') {
       applyThemeModeChange(suggestion.nextMode);
+      overlayState.searchInput.focus();
+      return;
+    }
+    if (suggestion.type === 'webAppearanceSwitch') {
+      applyWebAppearanceMode(suggestion.nextMode);
       overlayState.searchInput.focus();
       return;
     }

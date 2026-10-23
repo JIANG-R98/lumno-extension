@@ -1799,6 +1799,15 @@
   "mode_switch_title": {
     "message": "{name}: {mode} മോഡിലേക്ക് മാറുക"
   },
+  "web_appearance_switch_title": {
+    "message": "വെബ്‌സൈറ്റ് രൂപം: {mode} എന്നതിലേക്ക് മാറുക"
+  },
+  "web_appearance_badge": {
+    "message": "വെബ്‌സൈറ്റ് രൂപം: {mode}"
+  },
+  "web_appearance_label_auto": {
+    "message": "സ്വയമേവ"
+  },
   "zen_badge_on": {
     "message": "Zen: ഓൺ"
   },

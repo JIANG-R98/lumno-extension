@@ -2942,6 +2942,7 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
     getNextThemeMode: (...args) => getNextThemeMode(...args),
     setVisibleThemeMode: (...args) => setVisibleThemeMode(...args),
     setZenModeEnabled: (...args) => setZenModeEnabled(...args),
+    setWebAppearanceMode: (...args) => setWebAppearanceMode(...args),
     activateSiteSearch,
     focusSearchInputPreservingScroll: (...args) => focusSearchInputPreservingScroll(...args),
     openCommunityQrDialog: (...args) => openCommunityQrDialog(...args),
@@ -2974,6 +2975,7 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
     focusSearchInputPreservingScroll: (...args) => focusSearchInputPreservingScroll(...args),
     setVisibleThemeMode: (...args) => setVisibleThemeMode(...args),
     setZenModeEnabled: (...args) => setZenModeEnabled(...args),
+    setWebAppearanceMode: (...args) => setWebAppearanceMode(...args),
     shouldSwitchMatchedTabSuggestion,
     openMatchedTabSuggestion,
     runSiteSearchProviderQuery,
@@ -3071,6 +3073,8 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
     isSlashCommandInput,
     buildModeSuggestion,
     buildZenSuggestion,
+    loadWebAppearance,
+    setWebAppearanceMode,
     updateModeCommandSuggestions,
     updateZenCommandSuggestions,
     applyZenMode,
@@ -3605,6 +3609,7 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
     typeof document.fonts.ready.then === 'function'
       ? document.fonts.ready.catch(() => true)
       : Promise.resolve(true);
+  loadWebAppearance();
   Promise.all([
     initialAppearanceReadyTask,
     initialBookmarkViewModeReadyPromise,

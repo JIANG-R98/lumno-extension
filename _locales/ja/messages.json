@@ -1799,6 +1799,15 @@
   "mode_switch_title": {
     "message": "{name}：テーマを{mode}に切り替え"
   },
+  "web_appearance_switch_title": {
+    "message": "ウェブサイトの外観：{mode}に切り替え"
+  },
+  "web_appearance_badge": {
+    "message": "ウェブサイトの外観：{mode}"
+  },
+  "web_appearance_label_auto": {
+    "message": "自動"
+  },
   "zen_badge_on": {
     "message": "Zen：オン"
   },

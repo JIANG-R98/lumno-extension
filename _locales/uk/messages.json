@@ -1799,6 +1799,15 @@
   "mode_switch_title": {
     "message": "{name}: перейти в режим «{mode}»"
   },
+  "web_appearance_switch_title": {
+    "message": "Вигляд вебсайтів: перейти на «{mode}»"
+  },
+  "web_appearance_badge": {
+    "message": "Вигляд вебсайтів: {mode}"
+  },
+  "web_appearance_label_auto": {
+    "message": "Автоматично"
+  },
   "zen_badge_on": {
     "message": "Zen: увімк."
   },

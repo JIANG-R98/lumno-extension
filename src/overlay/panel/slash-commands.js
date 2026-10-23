@@ -1,5 +1,6 @@
 // Slash commands in the overlay: their definitions, matching what is
-// typed, the suggestion each builds and the theme mode command.
+// typed, the suggestion each builds, the theme mode command and the website
+// appearance command.
 function createSlashCommands(deps) {
   const {
     t,
@@ -15,6 +16,9 @@ function createSlashCommands(deps) {
 
   // The panel state object shared with search-panel.js and the other modules.
   const overlayState = deps.overlayState;
+  // Firefox's website appearance setting (the color scheme pages see), read
+  // and switched through the background for the /appearance command.
+  let webAppearanceState = { supported: false, mode: 'auto' };
 
   function getThemeModeLabel(mode) {
     if (mode === 'dark') {
@@ -43,6 +47,12 @@ function createSlashCommands(deps) {
       aliases: []
     },
     {
+      type: 'webAppearanceSwitch',
+      primary: '/appearance',
+      aliases: [],
+      requiresWebAppearance: true
+    },
+    {
       type: 'commandOpenTabs',
       primary: '/tabs',
       aliases: ['/tab', '/t']
@@ -69,6 +79,10 @@ function createSlashCommands(deps) {
       const command = commandDefinitions[i];
       // The setting may sync from a browser that has Document PiP (Firefox has none).
       if (command.requiresDocumentPipEnabled && !overlayState.documentPipEnabled) {
+        continue;
+      }
+      // Only Firefox has a website appearance setting to switch.
+      if (command.requiresWebAppearance && !webAppearanceState.supported) {
         continue;
       }
       const tokens = [command.primary].concat(command.aliases || []);
@@ -116,6 +130,13 @@ function createSlashCommands(deps) {
         commandAliases: command.aliases || []
       };
     }
+    if (command.type === 'webAppearanceSwitch') {
+      return {
+        ...buildWebAppearanceSuggestion(),
+        commandText: command.primary,
+        commandAliases: command.aliases || []
+      };
+    }
     let titleText = '';
     if (command.type === 'commandSettings') {
       titleText = formatMessage('command_settings', '打开设置', {
@@ -143,13 +164,18 @@ function createSlashCommands(deps) {
     if (!overlayState.modeBadge) {
       return;
     }
-    const shouldShow = isModeCommand(rawValue || '');
+    const webAppearanceCommandActive = isWebAppearanceCommand(rawValue || '');
+    const shouldShow = isModeCommand(rawValue || '') || webAppearanceCommandActive;
     if (!shouldShow) {
       overlayState.modeBadge.setAttribute('data-visible', 'false');
       updateInputRightPadding();
       return;
     }
-    if (overlayState.overlayThemeMode === 'system') {
+    if (webAppearanceCommandActive) {
+      overlayState.modeBadge.textContent = formatMessage('web_appearance_badge', '网站外观：{mode}', {
+        mode: getWebAppearanceModeLabel(webAppearanceState.mode)
+      });
+    } else if (overlayState.overlayThemeMode === 'system') {
       const pageTheme = detectPageTheme();
       if (pageTheme) {
         overlayState.modeBadge.textContent = formatMessage('mode_badge_follow_site', '模式：{mode}（跟随网站）', {
@@ -215,6 +241,84 @@ function createSlashCommands(deps) {
     }
   }
 
+  function getWebAppearanceModeLabel(mode) {
+    return mode === 'auto'
+      ? t('web_appearance_label_auto', '自动')
+      : getThemeModeLabel(mode);
+  }
+
+  function getNextWebAppearanceMode(mode) {
+    const order = ['auto', 'light', 'dark'];
+    return order[(order.indexOf(mode) + 1) % order.length];
+  }
+
+  function isWebAppearanceCommand(input) {
+    const raw = String(input || '').trim().toLowerCase();
+    return webAppearanceState.supported &&
+      (raw === '/appearance' || raw.startsWith('/appearance '));
+  }
+
+  function buildWebAppearanceSuggestion() {
+    const nextMode = getNextWebAppearanceMode(webAppearanceState.mode);
+    return {
+      type: 'webAppearanceSwitch',
+      title: formatMessage('web_appearance_switch_title', '网站外观：切换到{mode}', {
+        mode: getWebAppearanceModeLabel(nextMode)
+      }),
+      url: '',
+      commandText: '/appearance',
+      commandAliases: [],
+      nextMode: nextMode
+    };
+  }
+
+  function refreshWebAppearanceCommand() {
+    const rawValue = overlayState.searchInput ? (overlayState.searchInput.value || '') : '';
+    updateModeBadge(rawValue);
+    if (isSlashCommandInput(rawValue)) {
+      updateSearchSuggestions([], rawValue.trim());
+    }
+  }
+
+  function applyWebAppearanceState(response) {
+    if (!response || response.supported === false || typeof response.mode !== 'string') {
+      return;
+    }
+    webAppearanceState = { supported: true, mode: response.mode };
+    refreshWebAppearanceCommand();
+  }
+
+  function loadWebAppearanceState() {
+    if (typeof chrome === 'undefined' || !chrome.runtime || typeof chrome.runtime.sendMessage !== 'function') {
+      return;
+    }
+    chrome.runtime.sendMessage({ action: 'getWebAppearance' }, (response) => {
+      if (chrome.runtime.lastError) {
+        return;
+      }
+      applyWebAppearanceState(response);
+    });
+  }
+
+  function applyWebAppearanceMode(mode) {
+    // Show the choice at once; the reply carries what Firefox kept.
+    webAppearanceState = { ...webAppearanceState, mode };
+    refreshWebAppearanceCommand();
+    chrome.runtime.sendMessage({ action: 'setWebAppearance', mode }, (response) => {
+      if (!chrome.runtime.lastError && response && typeof response.mode === 'string') {
+        applyWebAppearanceState(response);
+        return;
+      }
+      loadWebAppearanceState();
+    });
+  }
+
+  function applyNextWebAppearanceMode() {
+    applyWebAppearanceMode(getNextWebAppearanceMode(webAppearanceState.mode));
+  }
+
+  loadWebAppearanceState();
+
   return {
     getCommandMatches,
     isSlashCommandInput,
@@ -224,7 +328,9 @@ function createSlashCommands(deps) {
     getNextThemeMode,
     isModeCommand,
     buildModeSuggestion,
-    applyThemeModeChange
+    applyThemeModeChange,
+    applyWebAppearanceMode,
+    applyNextWebAppearanceMode
   };
 }
 

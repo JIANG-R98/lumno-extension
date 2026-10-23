@@ -1799,6 +1799,15 @@
   "mode_switch_title": {
     "message": "{name}: przełącz na tryb {mode}"
   },
+  "web_appearance_switch_title": {
+    "message": "Wygląd stron internetowych: przełącz na {mode}"
+  },
+  "web_appearance_badge": {
+    "message": "Wygląd stron internetowych: {mode}"
+  },
+  "web_appearance_label_auto": {
+    "message": "Automatyczny"
+  },
   "zen_badge_on": {
     "message": "Zen: wł."
   },

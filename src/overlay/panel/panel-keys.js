@@ -33,6 +33,8 @@ function createPanelKeys(deps) {
     getCommandMatch,
     applyThemeModeChange,
     getNextThemeMode,
+    applyWebAppearanceMode,
+    applyNextWebAppearanceMode,
     openDocumentPipPickerFromOverlay,
     isModeCommand,
     openOverlayCommunityQrDialog,
@@ -405,6 +407,10 @@ function createPanelKeys(deps) {
           applyThemeModeChange(getNextThemeMode(overlayState.overlayThemeMode || 'system'));
           overlayState.searchInput.focus();
           return;
+        } else if (commandMatch.command.type === 'webAppearanceSwitch') {
+          applyNextWebAppearanceMode();
+          overlayState.searchInput.focus();
+          return;
         } else if (commandMatch.command.type === 'commandNewTab') {
           chrome.runtime.sendMessage({ action: 'openNewTab' });
         } else if (commandMatch.command.type === 'commandSettings') {
@@ -442,6 +448,11 @@ function createPanelKeys(deps) {
           const selectedSuggestion = overlayState.currentSuggestions[activeSuggestionIndex];
           if (selectedSuggestion.type === 'modeSwitch') {
             applyThemeModeChange(selectedSuggestion.nextMode);
+            overlayState.searchInput.focus();
+            return;
+          }
+          if (selectedSuggestion.type === 'webAppearanceSwitch') {
+            applyWebAppearanceMode(selectedSuggestion.nextMode);
             overlayState.searchInput.focus();
             return;
           }

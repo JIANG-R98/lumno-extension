@@ -1799,6 +1799,15 @@
   "mode_switch_title": {
     "message": "{name}: canvia al mode {mode}"
   },
+  "web_appearance_switch_title": {
+    "message": "Aparença dels llocs web: canvia a {mode}"
+  },
+  "web_appearance_badge": {
+    "message": "Aparença dels llocs web: {mode}"
+  },
+  "web_appearance_label_auto": {
+    "message": "Automàtica"
+  },
   "zen_badge_on": {
     "message": "Zen: activat"
   },

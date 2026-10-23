@@ -358,7 +358,7 @@ function createSuggestionThemes(deps) {
     if (!suggestion) {
       return false;
     }
-    const neutralTypes = ['googleSuggest', 'newtab', 'modeSwitch', 'zenSwitch', 'chatgpt', 'perplexity', 'commandNewTab', 'commandSettings', 'commandOpenTabs', 'commandCopyUrl', 'commandDocumentPip'];
+    const neutralTypes = ['googleSuggest', 'newtab', 'modeSwitch', 'zenSwitch', 'webAppearanceSwitch', 'chatgpt', 'perplexity', 'commandNewTab', 'commandSettings', 'commandOpenTabs', 'commandCopyUrl', 'commandDocumentPip'];
     if (neutralTypes.includes(suggestion.type)) {
       return false;
     }

@@ -1799,6 +1799,15 @@
   "mode_switch_title": {
     "message": "{name}: เปลี่ยนเป็นโหมด{mode}"
   },
+  "web_appearance_switch_title": {
+    "message": "ลักษณะเว็บไซต์: เปลี่ยนเป็น{mode}"
+  },
+  "web_appearance_badge": {
+    "message": "ลักษณะเว็บไซต์: {mode}"
+  },
+  "web_appearance_label_auto": {
+    "message": "อัตโนมัติ"
+  },
   "zen_badge_on": {
     "message": "Zen: เปิด"
   },

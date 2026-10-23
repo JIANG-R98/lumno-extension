@@ -9,6 +9,7 @@ const COMMAND_SUGGESTION_TYPES = new Set([
   'commandSettings',
   'modeSwitch',
   'zenSwitch',
+  'webAppearanceSwitch',
   'commandOpenTabs',
   'commandCopyUrl',
   'commandDocumentPip'
