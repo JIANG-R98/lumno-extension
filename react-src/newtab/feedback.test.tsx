@@ -160,4 +160,22 @@ describe('New Tab feedback React island', () => {
       wechat.host.querySelector<HTMLElement>('.x-nt-feedback-detail')?.hidden
     ).toBe(false);
   });
+
+  it('opens the community of the latest model after a language change', () => {
+    const { controller, host, options } = createController();
+    act(() => controller.render({
+      ...baseModel,
+      channel: 'wechat',
+      communityLabel: 'WeChat',
+      communityTooltip: 'Join WeChat'
+    }));
+    act(() => controller.openCommunity());
+    expect(options.onOpenExternal).not.toHaveBeenCalled();
+    expect(host.dataset.detailOpen).toBe('true');
+
+    act(() => controller.close());
+    act(() => controller.render({ ...baseModel, xUrl: 'https://x.com/renamed' }));
+    act(() => controller.openCommunity('backgroundTab'));
+    expect(options.onOpenExternal).toHaveBeenCalledWith('https://x.com/renamed', 'backgroundTab');
+  });
 });
