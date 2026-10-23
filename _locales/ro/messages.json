@@ -3519,7 +3519,7 @@
     "message": "Ordinea panoului de căutare"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Trageți etichetele pentru a seta ordinea grupurilor din panoul casetei de căutare. Trageți rândurile din listele de mai jos pentru a ordona fiecare grup. Apăsați Ctrl/⌘ + Z pentru anulare și Shift + Ctrl/⌘ + Z pentru refacere."
+    "message": "Trageți etichetele pentru a reordona grupurile și rândurile de mai jos pentru a ordona în cadrul unui grup. Apăsați Ctrl/⌘ + Z pentru anulare și Shift + Ctrl/⌘ + Z pentru refacere."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Apăsați Alt cu tasta săgeată stânga sau dreapta pentru a muta"

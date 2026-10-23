@@ -3519,7 +3519,7 @@
     "message": "Ordning i sökpanelen"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Dra etiketterna för att ange gruppernas ordning i sökrutans panel. Dra rader i listorna nedan för att ordna varje grupp. Tryck på Ctrl/⌘ + Z för att ångra och Shift + Ctrl/⌘ + Z för att göra om."
+    "message": "Dra etiketterna för att ordna om grupperna och raderna nedan för att ordna inom en grupp. Tryck på Ctrl/⌘ + Z för att ångra och Shift + Ctrl/⌘ + Z för att göra om."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Tryck på Alt med vänster- eller högerpil för att flytta"

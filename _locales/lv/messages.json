@@ -3519,7 +3519,7 @@
     "message": "Meklēšanas paneļa secība"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Velciet birkas, lai iestatītu grupu secību meklēšanas lodziņa panelī. Velciet rindas tālāk esošajos sarakstos, lai sakārtotu katru grupu. Nospiediet Ctrl/⌘ + Z, lai atsauktu, un Shift + Ctrl/⌘ + Z, lai atkārtotu."
+    "message": "Velciet birkas, lai mainītu grupu secību, un rindas zemāk, lai kārtotu grupas ietvaros. Nospiediet Ctrl/⌘ + Z, lai atsauktu, un Shift + Ctrl/⌘ + Z, lai atkārtotu."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Lai pārvietotu, nospiediet Alt kopā ar kreiso vai labo bultiņas taustiņu"

@@ -3519,7 +3519,7 @@
     "message": "Rekkefølge i søkepanelet"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Dra etikettene for å angi rekkefølgen på gruppene i søkepanelet. Dra radene i listene nedenfor for å ordne hver gruppe. Trykk på Ctrl/⌘ + Z for å angre og Shift + Ctrl/⌘ + Z for å gjøre om."
+    "message": "Dra etikettene for å endre rekkefølgen på gruppene, og radene nedenfor for å ordne innenfor en gruppe. Trykk på Ctrl/⌘ + Z for å angre og Shift + Ctrl/⌘ + Z for å gjøre om."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Trykk på Alt sammen med venstre- eller høyrepil for å flytte"

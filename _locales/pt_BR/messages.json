@@ -3519,7 +3519,7 @@
     "message": "Ordem do painel de pesquisa"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Arraste as etiquetas para definir a ordem dos grupos no painel da caixa de pesquisa. Arraste as linhas das listas abaixo para ordenar cada grupo. Pressione Ctrl/⌘ + Z para desfazer e Shift + Ctrl/⌘ + Z para refazer."
+    "message": "Arraste as etiquetas para reordenar os grupos e as linhas abaixo para ordenar dentro de cada grupo. Pressione Ctrl/⌘ + Z para desfazer e Shift + Ctrl/⌘ + Z para refazer."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Pressione Alt com a seta para a esquerda ou para a direita para mover"

@@ -3519,7 +3519,7 @@
     "message": "Search Panel Order"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Drag the tags to set the order of the groups in the search box panel. Drag rows in the lists below to order each group. Press Ctrl/⌘ + Z to undo and Shift + Ctrl/⌘ + Z to redo."
+    "message": "Drag the tags to reorder groups, and the rows below to reorder within a group. Press Ctrl/⌘ + Z to undo and Shift + Ctrl/⌘ + Z to redo."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Press Alt with the Left or Right arrow key to move"

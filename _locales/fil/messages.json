@@ -3519,7 +3519,7 @@
     "message": "Ayos ng panel ng paghahanap"
   },
   "settings_search_source_group_order_desc": {
-    "message": "I-drag ang mga tag para itakda ang ayos ng mga grupo sa panel ng search box. I-drag ang mga hilera sa mga listahan sa ibaba para ayusin ang bawat grupo. Pindutin ang Ctrl/⌘ + Z para i-undo at Shift + Ctrl/⌘ + Z para i-redo."
+    "message": "I-drag ang mga tag para ayusin ang mga grupo, at ang mga hilera sa ibaba para ayusin sa loob ng grupo. Pindutin ang Ctrl/⌘ + Z para i-undo at Shift + Ctrl/⌘ + Z para i-redo."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Pindutin ang Alt kasama ang Left o Right arrow key para ilipat"

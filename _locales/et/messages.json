@@ -3519,7 +3519,7 @@
     "message": "Otsingupaneeli järjestus"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Lohistage silte, et määrata rühmade järjestus otsingukasti paneelis. Iga rühma järjestamiseks lohistage allolevate loendite ridu. Tagasivõtmiseks vajutage Ctrl/⌘ + Z ja uuesti tegemiseks Shift + Ctrl/⌘ + Z."
+    "message": "Lohistage silte rühmade ümberjärjestamiseks ja allolevaid ridu rühmasiseseks järjestamiseks. Tagasivõtmiseks vajutage Ctrl/⌘ + Z ja uuesti tegemiseks Shift + Ctrl/⌘ + Z."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Teisaldamiseks vajutage Alt koos vasaku või parema nooleklahviga"

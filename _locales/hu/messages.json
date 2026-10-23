@@ -3519,7 +3519,7 @@
     "message": "Keresőpanel sorrendje"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Húzza a címkéket a keresőmező paneljén lévő csoportok sorrendjének beállításához. Az egyes csoportokon belüli sorrendhez húzza az alábbi listák sorait. Visszavonás: Ctrl/⌘ + Z, ismét: Shift + Ctrl/⌘ + Z."
+    "message": "Húzza a címkéket a csoportok átrendezéséhez, az alábbi sorokat pedig a csoporton belüli sorrendhez. Visszavonás: Ctrl/⌘ + Z, ismét: Shift + Ctrl/⌘ + Z."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Mozgatás: Alt + bal vagy jobb nyílbillentyű"

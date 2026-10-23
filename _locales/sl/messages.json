@@ -3519,7 +3519,7 @@
     "message": "Vrstni red iskalne plošče"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Povlecite oznake, da nastavite vrstni red skupin na plošči iskalnega polja. Povlecite vrstice na spodnjih seznamih, da razvrstite posamezno skupino. Pritisnite Ctrl/⌘ + Z za razveljavitev in Shift + Ctrl/⌘ + Z za uveljavitev."
+    "message": "Povlecite oznake, da spremenite vrstni red skupin, in vrstice spodaj, da razvrstite posamezno skupino. Pritisnite Ctrl/⌘ + Z za razveljavitev in Shift + Ctrl/⌘ + Z za uveljavitev."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Za premik pritisnite Alt s puščično tipko levo ali desno"

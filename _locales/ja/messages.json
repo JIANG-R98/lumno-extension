@@ -3519,7 +3519,7 @@
     "message": "検索パネルの並び順"
   },
   "settings_search_source_group_order_desc": {
-    "message": "タグをドラッグして、検索ボックスのパネルに並ぶグループの順序を変更します。各グループ内の順序は下のリストでドラッグして変更します。 Ctrl/⌘ + Z で取り消し、Shift + Ctrl/⌘ + Z でやり直します。"
+    "message": "タグをドラッグしてグループの順序を、下の行をドラッグしてグループ内の順序を変更します。Ctrl/⌘ + Z で取り消し、Shift + Ctrl/⌘ + Z でやり直します。"
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Alt キーと左右の矢印キーで移動します"

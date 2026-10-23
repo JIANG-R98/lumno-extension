@@ -3519,7 +3519,7 @@
     "message": "Mpangilio wa Paneli ya Utafutaji"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Buruta lebo ili kuweka mpangilio wa vikundi kwenye paneli ya kisanduku cha kutafutia. Buruta safu kwenye orodha zilizo hapa chini ili kupanga kila kikundi. Bonyeza Ctrl/⌘ + Z ili kutendua na Shift + Ctrl/⌘ + Z ili kurudia."
+    "message": "Buruta lebo ili kupanga upya vikundi, na safu zilizo hapa chini ili kupanga ndani ya kikundi. Bonyeza Ctrl/⌘ + Z ili kutendua na Shift + Ctrl/⌘ + Z ili kurudia."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Bonyeza Alt pamoja na kishale cha Kushoto au Kulia ili kusogeza"

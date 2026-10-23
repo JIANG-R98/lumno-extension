@@ -3519,7 +3519,7 @@
     "message": "Arama paneli sırası"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Arama kutusu panelindeki grupların sırasını belirlemek için etiketleri sürükleyin. Her grubu sıralamak için aşağıdaki listelerde satırları sürükleyin. Geri almak için Ctrl/⌘ + Z, yinelemek için Shift + Ctrl/⌘ + Z tuşlarına basın."
+    "message": "Grupları yeniden sıralamak için etiketleri, grup içinde sıralamak için aşağıdaki satırları sürükleyin. Geri almak için Ctrl/⌘ + Z, yinelemek için Shift + Ctrl/⌘ + Z tuşlarına basın."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Taşımak için Alt ile Sol veya Sağ ok tuşuna basın"

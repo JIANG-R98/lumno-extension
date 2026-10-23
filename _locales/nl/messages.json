@@ -3519,7 +3519,7 @@
     "message": "Volgorde van zoekpaneel"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Sleep de labels om de volgorde van de groepen in het paneel van het zoekvak te bepalen. Sleep rijen in de lijsten hieronder om elke groep te ordenen. Druk op Ctrl/⌘ + Z om ongedaan te maken en op Shift + Ctrl/⌘ + Z om opnieuw te doen."
+    "message": "Sleep de labels om de groepen te herschikken en de rijen hieronder om binnen een groep te ordenen. Druk op Ctrl/⌘ + Z om ongedaan te maken en op Shift + Ctrl/⌘ + Z om opnieuw te doen."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Druk op Alt met de pijl-links of pijl-rechts om te verplaatsen"

@@ -3519,7 +3519,7 @@
     "message": "搜索面板顺序"
   },
   "settings_search_source_group_order_desc": {
-    "message": "拖动标签，调整搜索框面板中各分组的先后顺序；各分组内的顺序在下方列表中拖动调整。按 Ctrl/⌘ + Z 撤销，Shift + Ctrl/⌘ + Z 恢复。"
+    "message": "拖动标签调整分组顺序，组内顺序在下方列表中调整。按 Ctrl/⌘ + Z 撤销，Shift + Ctrl/⌘ + Z 恢复。"
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "按 Alt + 左右方向键调整位置"

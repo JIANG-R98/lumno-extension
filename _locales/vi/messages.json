@@ -3519,7 +3519,7 @@
     "message": "Thứ tự bảng tìm kiếm"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Kéo các nhãn để sắp xếp thứ tự các nhóm trong bảng của hộp tìm kiếm. Kéo các hàng trong danh sách bên dưới để sắp xếp từng nhóm. Nhấn Ctrl/⌘ + Z để hoàn tác và Shift + Ctrl/⌘ + Z để làm lại."
+    "message": "Kéo các nhãn để sắp xếp lại các nhóm, kéo các hàng bên dưới để sắp xếp trong từng nhóm. Nhấn Ctrl/⌘ + Z để hoàn tác và Shift + Ctrl/⌘ + Z để làm lại."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Nhấn Alt cùng phím mũi tên trái hoặc phải để di chuyển"

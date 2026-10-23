@@ -3519,7 +3519,7 @@
     "message": "Kolejność w panelu wyszukiwania"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Przeciągnij etykiety, aby ustawić kolejność grup w panelu pola wyszukiwania. Przeciągnij wiersze na listach poniżej, aby uporządkować każdą grupę. Naciśnij Ctrl/⌘ + Z, aby cofnąć, i Shift + Ctrl/⌘ + Z, aby ponowić."
+    "message": "Przeciągnij etykiety, aby zmienić kolejność grup, a wiersze poniżej – aby uporządkować grupę. Naciśnij Ctrl/⌘ + Z, aby cofnąć, i Shift + Ctrl/⌘ + Z, aby ponowić."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Naciśnij Alt ze strzałką w lewo lub w prawo, aby przesunąć"

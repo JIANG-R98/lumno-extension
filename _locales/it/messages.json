@@ -3519,7 +3519,7 @@
     "message": "Ordine del pannello di ricerca"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Trascina le etichette per impostare l'ordine dei gruppi nel pannello della casella di ricerca. Trascina le righe negli elenchi sotto per ordinare ogni gruppo. Premi Ctrl/⌘ + Z per annullare e Shift + Ctrl/⌘ + Z per ripetere."
+    "message": "Trascina le etichette per riordinare i gruppi e le righe sotto per riordinare all'interno di un gruppo. Premi Ctrl/⌘ + Z per annullare e Shift + Ctrl/⌘ + Z per ripetere."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Premi Alt con il tasto freccia sinistra o destra per spostare"

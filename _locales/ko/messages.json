@@ -3519,7 +3519,7 @@
     "message": "검색 패널 순서"
   },
   "settings_search_source_group_order_desc": {
-    "message": "태그를 드래그해 검색창 패널의 그룹 순서를 정하고, 아래 목록의 행을 드래그해 각 그룹 내 순서를 정하세요. Ctrl/⌘ + Z로 실행 취소, Shift + Ctrl/⌘ + Z로 다시 실행합니다."
+    "message": "태그를 드래그해 그룹 순서를, 아래 행을 드래그해 그룹 내 순서를 바꾸세요. Ctrl/⌘ + Z로 실행 취소, Shift + Ctrl/⌘ + Z로 다시 실행합니다."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Alt와 왼쪽 또는 오른쪽 화살표 키를 눌러 이동"

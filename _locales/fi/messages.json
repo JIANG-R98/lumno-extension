@@ -3519,7 +3519,7 @@
     "message": "Hakupaneelin järjestys"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Määritä ryhmien järjestys hakukentän paneelissa vetämällä tunnisteita. Järjestä kunkin ryhmän sisältö vetämällä alla olevien luetteloiden rivejä. Kumoa painamalla Ctrl/⌘ + Z ja tee uudelleen painamalla Shift + Ctrl/⌘ + Z."
+    "message": "Järjestä ryhmät vetämällä tunnisteita ja ryhmän sisältö vetämällä alla olevia rivejä. Kumoa painamalla Ctrl/⌘ + Z ja tee uudelleen painamalla Shift + Ctrl/⌘ + Z."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Siirrä painamalla Alt ja vasenta tai oikeaa nuolinäppäintä"

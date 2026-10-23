@@ -3519,7 +3519,7 @@
     "message": "Rækkefølge i søgepanelet"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Træk mærkerne for at bestemme gruppernes rækkefølge i søgefeltets panel. Træk rækkerne i listerne nedenfor for at sortere hver gruppe. Tryk på Ctrl/⌘ + Z for at fortryde og Shift + Ctrl/⌘ + Z for at gentage."
+    "message": "Træk mærkerne for at ændre gruppernes rækkefølge og rækkerne nedenfor for at sortere inden for en gruppe. Tryk på Ctrl/⌘ + Z for at fortryde og Shift + Ctrl/⌘ + Z for at gentage."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Tryk på Alt med venstre eller højre piletast for at flytte"

@@ -3519,7 +3519,7 @@
     "message": "Susunan Panel Carian"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Seret teg untuk menetapkan susunan kumpulan dalam panel kotak carian. Seret baris dalam senarai di bawah untuk menyusun setiap kumpulan. Tekan Ctrl/⌘ + Z untuk buat asal dan Shift + Ctrl/⌘ + Z untuk buat semula."
+    "message": "Seret teg untuk menyusun semula kumpulan, dan baris di bawah untuk menyusun dalam kumpulan. Tekan Ctrl/⌘ + Z untuk buat asal dan Shift + Ctrl/⌘ + Z untuk buat semula."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Tekan Alt bersama kekunci anak panah Kiri atau Kanan untuk mengalihkan"

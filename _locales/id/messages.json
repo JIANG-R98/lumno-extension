@@ -3519,7 +3519,7 @@
     "message": "Urutan Panel Penelusuran"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Tarik tag untuk mengatur urutan grup di panel kotak penelusuran. Tarik baris di daftar di bawah untuk mengurutkan setiap grup. Tekan Ctrl/⌘ + Z untuk mengurungkan dan Shift + Ctrl/⌘ + Z untuk mengulang."
+    "message": "Tarik tag untuk mengurutkan ulang grup, dan baris di bawah untuk mengurutkan dalam grup. Tekan Ctrl/⌘ + Z untuk mengurungkan dan Shift + Ctrl/⌘ + Z untuk mengulang."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Tekan Alt dengan tombol panah Kiri atau Kanan untuk memindahkan"

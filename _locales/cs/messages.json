@@ -3519,7 +3519,7 @@
     "message": "Pořadí v panelu hledání"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Přetažením štítků nastavíte pořadí skupin v panelu vyhledávacího pole. Přetažením řádků v seznamech níže seřadíte jednotlivé skupiny. Ctrl/⌘ + Z vrátí zpět, Shift + Ctrl/⌘ + Z akci zopakuje."
+    "message": "Přetažením štítků změníte pořadí skupin, přetažením řádků níže pořadí uvnitř skupiny. Ctrl/⌘ + Z vrátí zpět, Shift + Ctrl/⌘ + Z akci zopakuje."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Přesunete stisknutím Alt a šipky vlevo nebo vpravo"

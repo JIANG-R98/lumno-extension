@@ -3519,7 +3519,7 @@
     "message": "Poradie panela vyhľadávania"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Presúvaním štítkov nastavte poradie skupín v paneli vyhľadávacieho poľa. Presúvaním riadkov v zoznamoch nižšie nastavte poradie v každej skupine. Stlačením Ctrl/⌘ + Z vrátite zmenu a Shift + Ctrl/⌘ + Z ju zopakujete."
+    "message": "Presúvaním štítkov zmeníte poradie skupín a presúvaním riadkov nižšie poradie v skupine. Stlačením Ctrl/⌘ + Z vrátite zmenu a Shift + Ctrl/⌘ + Z ju zopakujete."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Presúvajte klávesom Alt so šípkou doľava alebo doprava"

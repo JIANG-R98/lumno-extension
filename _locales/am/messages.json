@@ -3519,7 +3519,7 @@
     "message": "የፍለጋ ፓነል ቅደም ተከተል"
   },
   "settings_search_source_group_order_desc": {
-    "message": "በፍለጋ ሳጥኑ ፓነል ውስጥ የቡድኖቹን ቅደም ተከተል ለማዘጋጀት መለያዎቹን ይጎትቱ። እያንዳንዱን ቡድን ለማስተካከል ከታች ባሉት ዝርዝሮች ውስጥ ረድፎችን ይጎትቱ። ለመቀልበስ Ctrl/⌘ + Z፣ እንደገና ለማድረግ Shift + Ctrl/⌘ + Z ይጫኑ።"
+    "message": "ቡድኖቹን እንደገና ለመደርደር መለያዎቹን፣ በቡድን ውስጥ ለመደርደር ደግሞ ከታች ያሉትን ረድፎች ይጎትቱ። ለመቀልበስ Ctrl/⌘ + Z፣ እንደገና ለማድረግ Shift + Ctrl/⌘ + Z ይጫኑ።"
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "ለማንቀሳቀስ Altን ከግራ ወይም ከቀኝ ቀስት ቁልፍ ጋር ይጫኑ"

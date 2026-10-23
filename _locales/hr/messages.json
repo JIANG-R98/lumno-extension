@@ -3519,7 +3519,7 @@
     "message": "Redoslijed ploče pretraživanja"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Povucite oznake da biste postavili redoslijed grupa na ploči okvira za pretraživanje. Povucite retke u popisima ispod da biste posložili svaku grupu. Pritisnite Ctrl/⌘ + Z za poništavanje i Shift + Ctrl/⌘ + Z za ponavljanje."
+    "message": "Povucite oznake da biste promijenili redoslijed grupa, a retke ispod da biste posložili grupu. Pritisnite Ctrl/⌘ + Z za poništavanje i Shift + Ctrl/⌘ + Z za ponavljanje."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Pritisnite Alt s tipkom strelice lijevo ili desno za pomicanje"

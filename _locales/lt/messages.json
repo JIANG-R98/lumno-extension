@@ -3519,7 +3519,7 @@
     "message": "Paieškos skydelio tvarka"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Vilkite žymas, kad nustatytumėte grupių tvarką paieškos laukelio skydelyje. Vilkite eilutes toliau esančiuose sąrašuose, kad surikiuotumėte kiekvieną grupę. Paspauskite Ctrl/⌘ + Z, kad anuliuotumėte, ir Shift + Ctrl/⌘ + Z, kad pakartotumėte."
+    "message": "Vilkite žymas, kad pakeistumėte grupių tvarką, o eilutes žemiau – kad surikiuotumėte grupės viduje. Paspauskite Ctrl/⌘ + Z, kad anuliuotumėte, ir Shift + Ctrl/⌘ + Z, kad pakartotumėte."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Paspauskite Alt su rodyklės kairėn ar dešinėn klavišu, kad perkeltumėte"

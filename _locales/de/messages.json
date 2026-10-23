@@ -3519,7 +3519,7 @@
     "message": "Reihenfolge im Suchbereich"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Ziehen Sie die Tags, um die Reihenfolge der Gruppen im Bereich des Suchfelds festzulegen. Ziehen Sie Zeilen in den Listen unten, um jede Gruppe zu sortieren. Ctrl/⌘ + Z macht rückgängig, Shift + Ctrl/⌘ + Z wiederholt."
+    "message": "Ziehen Sie die Tags, um die Gruppen neu anzuordnen, und die Zeilen unten, um innerhalb einer Gruppe zu sortieren. Ctrl/⌘ + Z macht rückgängig, Shift + Ctrl/⌘ + Z wiederholt."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Zum Verschieben Alt mit der linken oder rechten Pfeiltaste drücken"

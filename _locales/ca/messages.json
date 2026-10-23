@@ -3519,7 +3519,7 @@
     "message": "Ordre del tauler de cerca"
   },
   "settings_search_source_group_order_desc": {
-    "message": "Arrossega les etiquetes per definir l'ordre dels grups al tauler del quadre de cerca. Arrossega les files de les llistes de sota per ordenar cada grup. Prem Ctrl/⌘ + Z per desfer i Shift + Ctrl/⌘ + Z per refer."
+    "message": "Arrossega les etiquetes per reordenar els grups i les files de sota per ordenar dins de cada grup. Prem Ctrl/⌘ + Z per desfer i Shift + Ctrl/⌘ + Z per refer."
   },
   "settings_search_source_order_keyboard_hint": {
     "message": "Prem Alt amb la fletxa esquerra o dreta per moure"
