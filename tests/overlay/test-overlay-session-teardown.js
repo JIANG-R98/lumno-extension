@@ -52,6 +52,72 @@ async function testToggleCloseFromNewInvocation() {
   }
 }
 
+async function openWithMotion() {
+  const page = await createOverlayPage({ settings: { [MOTION_KEY]: true } });
+  const baseline = page.ledger.snapshot();
+  await openAndSettle(page);
+  await waitFor(() => findPanel(page).getAttribute('data-lumno-overlay-entry') === 'done',
+    'the entry should finish before closing', page.errors);
+  return { page, baseline };
+}
+
+// Once the exit starts the overlay is closed for everyone but the animation:
+// the worker reads it as closed, and keys, focus and clicks no longer reach it.
+async function testExitReleasesInputAtOnce() {
+  const { page } = await openWithMotion();
+  try {
+    await page.type('hello');
+    page.press('Escape');
+    const panel = findPanel(page);
+    assert.strictEqual(panel.getAttribute('data-lumno-overlay-exit'), 'running');
+    assert.strictEqual(page.window._x_extension_search_overlay_open_2026_unique_, false,
+      'the open flag should clear when the exit starts, not when it ends');
+    assert.strictEqual(panel.inert, true, 'a closing overlay should not take focus or clicks');
+    assert.notStrictEqual(page.root().activeElement, page.input(), 'the input should lose focus when the exit starts');
+    const messagesBeforeEnter = page.messages.length;
+    page.press('Enter');
+    await page.settle(30);
+    assert.deepStrictEqual(page.messages.slice(messagesBeforeEnter).map((message) => message.action)
+      .filter((action) => action !== 'notifyOverlayClosed'), [],
+      'Enter pressed during the exit should not run the search');
+    await waitForClosed(page, 'the overlay should close after its exit');
+  } finally {
+    page.window.close();
+  }
+}
+
+// Pressing the hotkey again during the exit reopens the overlay instead of
+// being dropped, whichever way the close started.
+async function testPressDuringExitReopens() {
+  for (const startClose of ['hotkey', 'Escape']) {
+    const { page, baseline } = await openWithMotion();
+    try {
+      const closingHost = page.host();
+      if (startClose === 'hotkey') {
+        page.toggle();
+      } else {
+        page.press('Escape');
+      }
+      assert.strictEqual(findPanel(page).getAttribute('data-lumno-overlay-exit'), 'running',
+        `${startClose} should start the exit`);
+      await openAndSettle(page);
+      assert.strictEqual(page.hostCount(), 1, `a press during the ${startClose} exit should leave one overlay`);
+      assert.notStrictEqual(page.host(), closingHost, `the ${startClose} exit should give way to a fresh overlay`);
+      assert.strictEqual(findPanel(page).hasAttribute('data-lumno-overlay-exit'), false);
+      assert.strictEqual(page.window._x_extension_search_overlay_open_2026_unique_, true);
+      await page.settle(300);
+      assert.strictEqual(page.hostCount(), 1, `the dropped ${startClose} exit must not close the new overlay`);
+      page.toggle({ ensureOpen: true });
+      assert.strictEqual(page.hostCount(), 1, 'ensureOpen should keep the reopened overlay');
+      page.toggle();
+      await waitForClosed(page, `the reopened overlay should close after the ${startClose} case`);
+      assertReleased(page, baseline, `reopening during the ${startClose} exit`);
+    } finally {
+      page.window.close();
+    }
+  }
+}
+
 // With Motion effects off (the harness default) the exit is skipped too.
 async function testCloseWithoutMotionIsImmediate() {
   const page = await createOverlayPage();
@@ -148,6 +214,8 @@ async function testMountGuardRestoresHostUntilClose() {
 (async () => {
   await testToggleCloseFromNewInvocation();
   await testCloseWithoutMotionIsImmediate();
+  await testExitReleasesInputAtOnce();
+  await testPressDuringExitReopens();
   await testMountGuardRestoresHostUntilClose();
   await testToggleCloseAfterReinjection();
   await testStaleReplacementThenClose();

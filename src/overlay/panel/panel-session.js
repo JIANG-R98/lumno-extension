@@ -282,6 +282,19 @@ function createPanelSession(deps) {
     }
     if (closingOverlayElement === overlayElement) return;
     closingOverlayElement = overlayElement;
+    // The overlay is closed as far as the worker and the user are concerned;
+    // it only stays mounted to animate out. It stops taking keys, focus and
+    // clicks, so Enter pressed during the exit cannot still run a search.
+    window._x_extension_search_overlay_open_2026_unique_ = false;
+    if (overlayState.overlayKeyRouter) {
+      overlayState.overlayKeyRouter.stop();
+    }
+    overlayElement.inert = true;
+    const overlayRoot = overlayElement._lumnoOverlayRoot;
+    const focusedElement = overlayRoot && overlayRoot.activeElement;
+    if (focusedElement && typeof focusedElement.blur === 'function') {
+      focusedElement.blur();
+    }
     overlayElement.setAttribute('data-lumno-overlay-exit', 'running');
     overlayElement.style.setProperty('pointer-events', 'none', 'important');
     overlayElement.style.setProperty('will-change', 'transform, opacity', 'important');
@@ -330,6 +343,7 @@ function createPanelSession(deps) {
     // Session cleanups stop the mount connection guard, so they must run
     // before the host leaves the document or the guard would re-attach it.
     overlayState.overlaySessionCleanups.run();
+    overlayState.overlayKeyRouter = null;
     if (overlayElement) {
       if (overlayState.overlayWheelIsolationHandler) {
         overlayElement.removeEventListener('wheel', overlayState.overlayWheelIsolationHandler, true);
@@ -393,9 +407,6 @@ function createPanelSession(deps) {
   }
 
   function destroyExistingOverlaySession(overlayElement, options) {
-    if (overlayElement && overlayElement.getAttribute('data-lumno-overlay-exit') === 'running') {
-      return;
-    }
     const mountHost = getOverlayMountHost(overlayElement);
     const destroyed = mountHost
       ? overlayLifecycle.requestSessionDestroy(mountHost, options)

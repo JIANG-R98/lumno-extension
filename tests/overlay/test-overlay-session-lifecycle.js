@@ -56,6 +56,12 @@ const lifecycle = LumnoOverlayLifecycle;
   assert.strictEqual(lifecycle.requestSessionDestroy(host, { animateExit: true }), false,
     'the host remains mounted while its exit animation runs');
   assert.deepStrictEqual(requests, [{ preserveLoadingIntent: false, animateExit: true }]);
+  // The session keeps listening while it animates out, so a press that
+  // reopens the overlay can still finish it at once.
+  lifecycle.requestSessionDestroy(host, { preserveLoadingIntent: true });
+  assert.deepStrictEqual(requests[1], { preserveLoadingIntent: true, animateExit: false });
+  lifecycle.requestSessionDestroy(host);
+  assert.strictEqual(requests.length, 2, 'a plain request ends the session for good');
   dom.window.close();
 }
 

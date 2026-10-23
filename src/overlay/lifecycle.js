@@ -716,11 +716,16 @@ function onSessionDestroyRequest(host, destroy) {
     return () => {};
   }
   const handleDestroyRequest = (event) => {
-    host.removeEventListener(SESSION_DESTROY_EVENT, handleDestroyRequest);
+    const animateExit = Boolean(event) && event.detail === SESSION_ANIMATE_EXIT;
+    // An animated exit keeps listening, so a later request (a press that
+    // reopens the overlay) can still finish the session at once.
+    if (!animateExit) {
+      host.removeEventListener(SESSION_DESTROY_EVENT, handleDestroyRequest);
+    }
     destroy({
       preserveLoadingIntent: Boolean(event) &&
         event.detail === SESSION_PRESERVE_LOADING_INTENT,
-      animateExit: Boolean(event) && event.detail === SESSION_ANIMATE_EXIT
+      animateExit
     });
   };
   host.addEventListener(SESSION_DESTROY_EVENT, handleDestroyRequest);
