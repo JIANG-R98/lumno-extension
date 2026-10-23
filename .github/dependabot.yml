@@ -31,6 +31,10 @@ updates:
       # bookkeeping that 22 test files rely on; it moves as its own change.
       - dependency-name: jsdom
         update-types: ["version-update:semver-major"]
+      # typescript-eslint 8 accepts TypeScript below 6.1, so npm ci fails on
+      # TypeScript 7 (#97); revisit when typescript-eslint widens its range.
+      - dependency-name: typescript
+        versions: [">=6.1.0"]
     groups:
       # React ships in every page's bundle, so its updates can fail the
       # bundle budgets; they come on their own so the rest still lands.
