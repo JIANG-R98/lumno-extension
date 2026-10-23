@@ -45,7 +45,9 @@
   </a>
 </p>
 
-<p align="center">Current version: <code>1.1.4</code></p>
+<p align="center">
+  <a href="https://github.com/kubai087/lumno-extension/releases/latest"><img src="https://img.shields.io/github/v/release/kubai087/lumno-extension?style=flat-square&label=latest%20release&color=111827" alt="Latest release" /></a>
+</p>
 
 <img width="1200" height="480" alt="Lumno command bar for Chrome: search tabs, bookmarks and history from any page" src="./assets/images/readme/banner.webp" decoding="async" />
 

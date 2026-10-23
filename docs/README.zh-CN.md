@@ -45,7 +45,9 @@
   </a>
 </p>
 
-<p align="center">当前版本：<code>1.1.4</code></p>
+<p align="center">
+  <a href="https://github.com/kubai087/lumno-extension/releases/latest"><img src="https://img.shields.io/github/v/release/kubai087/lumno-extension?style=flat-square&label=%E6%9C%80%E6%96%B0%E7%89%88%E6%9C%AC&color=111827" alt="最新版本" /></a>
+</p>
 
 <img width="1200" height="480" alt="Lumno Chrome 命令栏插件：在任意网页搜索标签页、书签和历史记录" src="../assets/images/readme/banner.webp" decoding="async" />
 

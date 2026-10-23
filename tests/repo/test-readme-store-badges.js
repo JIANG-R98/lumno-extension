@@ -3,8 +3,6 @@ const fs = require('fs');
 const path = require('path');
 
 const readme = fs.readFileSync(path.join(__dirname, '..', '..', 'README.md'), 'utf8');
-const packageJson = require(path.join('..', '..', 'package.json'));
-const escapedVersion = String(packageJson.version || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const badgeAssets = [
   'chrome-web-store-large-bordered.png',
   'microsoft-edge-addons-badge.png',
@@ -26,11 +24,11 @@ assert.ok(
   'store badges must be stacked vertically: Chrome, Edge, then Firefox'
 );
 
+// A release badge rather than a version number written into the README, so
+// the README never falls behind a release.
 assert.ok(
-  new RegExp(
-    `firefox-get-the-addon-badge\\.png[\\s\\S]*?<p align="center">Current version: <code>${escapedVersion}<\\/code><\\/p>`
-  ).test(readme),
-  'the current version must be centered below the store badges'
+  /firefox-get-the-addon-badge\.png[\s\S]*?<p align="center">\s*<a href="https:\/\/github\.com\/kubai087\/lumno-extension\/releases\/latest"><img src="https:\/\/img\.shields\.io\/github\/v\/release\/kubai087\/lumno-extension\?/.test(readme),
+  'the latest release badge must be centered below the store badges'
 );
 
 console.log('README store badge layout test passed');

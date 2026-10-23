@@ -45,7 +45,9 @@
   </a>
 </p>
 
-<p align="center">現在のバージョン：<code>1.1.4</code></p>
+<p align="center">
+  <a href="https://github.com/kubai087/lumno-extension/releases/latest"><img src="https://img.shields.io/github/v/release/kubai087/lumno-extension?style=flat-square&label=%E6%9C%80%E6%96%B0%E3%83%90%E3%83%BC%E3%82%B8%E3%83%A7%E3%83%B3&color=111827" alt="最新バージョン" /></a>
+</p>
 
 <img width="1200" height="480" alt="Lumno Chrome コマンドバー拡張機能：どのページからでもタブ、ブックマーク、履歴を検索" src="../assets/images/readme/banner.webp" decoding="async" />
 
