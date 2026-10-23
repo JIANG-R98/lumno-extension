@@ -3561,7 +3561,10 @@
     "message": "Flyt ned"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Træk for at bestemme rækkefølgen i gruppen Browserindhold i søgefeltets panel. Tryk på Ctrl/⌘ + Z for at fortryde og Shift + Ctrl/⌘ + Z for at gentage."
+    "message": "Træk for at ændre rækkefølgen i Browserindhold. Ctrl/⌘ + Z fortryder."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Nulstil"
   },
   "settings_search_source_order_undone": {
     "message": "Ændring af rækkefølge fortrudt"

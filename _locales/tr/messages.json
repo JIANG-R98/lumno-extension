@@ -3561,7 +3561,10 @@
     "message": "Aşağı taşı"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Arama kutusu panelinin Tarayıcı içeriği grubundaki sıralarını belirlemek için sürükleyin. Geri almak için Ctrl/⌘ + Z, yinelemek için Shift + Ctrl/⌘ + Z tuşlarına basın."
+    "message": "Tarayıcı içeriğindeki sıralarını değiştirmek için sürükleyin. Geri almak için Ctrl/⌘ + Z."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Varsayılana sıfırla"
   },
   "settings_search_source_order_undone": {
     "message": "Sıra değişikliği geri alındı"

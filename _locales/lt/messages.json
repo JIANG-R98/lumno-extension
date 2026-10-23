@@ -3561,7 +3561,10 @@
     "message": "Perkelti žemyn"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Vilkite, kad nustatytumėte jų tvarką paieškos laukelio skydelio grupėje „Naršyklės turinys“. Paspauskite Ctrl/⌘ + Z, kad anuliuotumėte, ir Shift + Ctrl/⌘ + Z, kad pakartotumėte."
+    "message": "Vilkite, kad pakeistumėte jų tvarką grupėje „Naršyklės turinys“. Ctrl/⌘ + Z – anuliuoti."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Atkurti numatytąjį"
   },
   "settings_search_source_order_undone": {
     "message": "Tvarkos pakeitimas anuliuotas"

@@ -3561,7 +3561,10 @@
     "message": "Nach unten"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Ziehen Sie, um ihre Reihenfolge in der Gruppe „Browserinhalte“ im Bereich des Suchfelds festzulegen. Ctrl/⌘ + Z macht rückgängig, Shift + Ctrl/⌘ + Z wiederholt."
+    "message": "Ziehen, um die Reihenfolge in „Browserinhalte“ zu ändern. Ctrl/⌘ + Z macht rückgängig."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Standard wiederherstellen"
   },
   "settings_search_source_order_undone": {
     "message": "Reihenfolge rückgängig gemacht"

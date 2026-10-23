@@ -3561,7 +3561,10 @@
     "message": "Bajar"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Arrastra para definir su orden en el grupo Contenido del navegador del panel de búsqueda. Pulsa Ctrl/⌘ + Z para deshacer y Shift + Ctrl/⌘ + Z para rehacer."
+    "message": "Arrastra para cambiar su orden en Contenido del navegador. Ctrl/⌘ + Z para deshacer."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Restablecer"
   },
   "settings_search_source_order_undone": {
     "message": "Cambio de orden deshecho"

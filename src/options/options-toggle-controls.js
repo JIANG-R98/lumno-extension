@@ -20,8 +20,10 @@ function createToggleControls(deps) {
     getMessage,
     searchResultSourceTypeInputs,
     searchResultSourceTypeGroupHost,
+    searchResultSourceTypeResetButton,
     renderedSearchSourceKeys,
-    normalizeSearchResultSourceTypes
+    normalizeSearchResultSourceTypes,
+    persistSearchResultSourceTypes
   } = deps;
 
   // The page state object shared with options.js and the other modules.
@@ -208,6 +210,28 @@ function createToggleControls(deps) {
           label: getMessage(item.labelKey, item.labelFallback)
         })),
       sortable: true
+    });
+    if (searchResultSourceTypeResetButton) {
+      searchResultSourceTypeResetButton.hidden = selected.size >= searchResultSourceTypeItems.length &&
+        optionsState.searchSourceOrderController.isLocalDefault();
+    }
+  }
+
+  // Reset beside the title shows while the types differ from their defaults:
+  // every type back on and in its usual order (the order step can be undone).
+  if (searchResultSourceTypeResetButton) {
+    searchResultSourceTypeResetButton.addEventListener('click', () => {
+      optionsState.searchSourceOrderController.resetLocal();
+      persistSearchResultSourceTypes(searchResultSourceTypeItems.map((item) => item.value));
+      // The button hides itself, so its tooltip and focus move on.
+      if (optionsState.tooltipController) {
+        optionsState.tooltipController.hide();
+      }
+      const firstInput = searchResultSourceTypeGroupHost &&
+        searchResultSourceTypeGroupHost.querySelector('input[type="checkbox"]');
+      if (firstInput) {
+        firstInput.focus({ preventScroll: true });
+      }
     });
   }
 

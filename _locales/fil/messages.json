@@ -3561,7 +3561,10 @@
     "message": "Ilipat pababa"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "I-drag para itakda ang ayos ng mga ito sa grupong Nilalaman ng browser sa panel ng search box. Pindutin ang Ctrl/⌘ + Z para i-undo at Shift + Ctrl/⌘ + Z para i-redo."
+    "message": "I-drag para baguhin ang ayos sa Nilalaman ng browser. Ctrl/⌘ + Z para i-undo."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "I-reset sa default"
   },
   "settings_search_source_order_undone": {
     "message": "Na-undo ang pagbabago sa ayos"

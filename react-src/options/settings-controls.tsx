@@ -145,11 +145,16 @@ function RequiredCheckboxGroup({
     <>
       {model.items.map((item, index) => (
         <label
-          className="_x_extension_checkbox_2026_unique_"
+          className={sortable
+            ? '_x_extension_checkbox_2026_unique_ _x_extension_order_chip_2026_unique_'
+            : '_x_extension_checkbox_2026_unique_'}
           data-sortable={sortable ? 'true' : undefined}
           data-value={item.value}
           key={item.value}
         >
+          {sortable ? (
+            <i aria-hidden="true" className="ri-icon ri-size-14 ri-draggable" />
+          ) : null}
           <input
             checked={selected.has(item.value)}
             data-search-result-source-type={item.value}

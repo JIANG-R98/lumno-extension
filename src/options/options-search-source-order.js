@@ -120,6 +120,17 @@ function createSearchSourceOrderController(config) {
     return persist(ORDER.applyMove(order, 'local', renderedTypes, moved));
   }
 
+  function isLocalDefault() {
+    return ORDER.LOCAL_SOURCE_TYPES.every((type, index) => order.local[index] === type);
+  }
+
+  function resetLocal() {
+    if (isLocalDefault()) {
+      return Promise.resolve();
+    }
+    return persist(ORDER.withLocal(order, ORDER.LOCAL_SOURCE_TYPES.slice()));
+  }
+
   function moveGroup(fromIndex, toIndex) {
     return persist(ORDER.withGroups(order, ORDER.moveIndex(order.groups, fromIndex, toIndex)));
   }
@@ -225,10 +236,12 @@ function createSearchSourceOrderController(config) {
     attachListDrag,
     attachLocalDrag,
     getOrder: () => order,
+    isLocalDefault,
     load,
     moveListItem,
     moveLocal,
     redo: () => stepHistory('redo'),
+    resetLocal,
     sortList,
     sortLocalSourceTypes,
     undo: () => stepHistory('undo'),

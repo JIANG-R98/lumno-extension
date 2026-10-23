@@ -3561,7 +3561,10 @@
     "message": "కిందికి జరపండి"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "సెర్చ్ బాక్స్ ప్యానెల్\u200cలోని బ్రౌజర్ కంటెంట్ గ్రూప్\u200cలో వాటి క్రమాన్ని సెట్ చేయడానికి లాగండి. రద్దు చేయడానికి Ctrl/⌘ + Z, మళ్లీ చేయడానికి Shift + Ctrl/⌘ + Z నొక్కండి."
+    "message": "బ్రౌజర్ కంటెంట్‌లో వాటి క్రమాన్ని మార్చడానికి లాగండి. రద్దు చేయడానికి Ctrl/⌘ + Z."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "డిఫాల్ట్‌కు రీసెట్"
   },
   "settings_search_source_order_undone": {
     "message": "క్రమం మార్పు రద్దు చేయబడింది"

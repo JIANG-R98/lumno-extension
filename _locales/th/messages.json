@@ -3561,7 +3561,10 @@
     "message": "ย้ายลง"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "ลากเพื่อกำหนดลำดับในกลุ่มเนื้อหาในเบราว์เซอร์ของแผงช่องค้นหา กด Ctrl/⌘ + Z เพื่อเลิกทำ และ Shift + Ctrl/⌘ + Z เพื่อทำซ้ำ"
+    "message": "ลากเพื่อเปลี่ยนลำดับในเนื้อหาในเบราว์เซอร์ กด Ctrl/⌘ + Z เพื่อเลิกทำ"
+  },
+  "settings_search_result_sources_reset": {
+    "message": "รีเซ็ตเป็นค่าเริ่มต้น"
   },
   "settings_search_source_order_undone": {
     "message": "เลิกทำการเปลี่ยนลำดับแล้ว"

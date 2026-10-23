@@ -3561,7 +3561,10 @@
     "message": "Помери надоле"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Превуците да бисте подесили њихов редослед у групи Садржај прегледача на панелу оквира за претрагу. Притисните Ctrl/⌘ + Z за опозив и Shift + Ctrl/⌘ + Z за понављање."
+    "message": "Превуците да промените редослед у Садржају прегледача. Ctrl/⌘ + Z опозива."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Врати подразумевано"
   },
   "settings_search_source_order_undone": {
     "message": "Промена редоследа је опозвана"

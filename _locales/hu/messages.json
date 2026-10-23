@@ -3561,7 +3561,10 @@
     "message": "Lejjebb"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Húzással állíthatja be a sorrendjüket a keresőmező paneljének Böngészőtartalom csoportjában. Visszavonás: Ctrl/⌘ + Z, ismét: Shift + Ctrl/⌘ + Z."
+    "message": "Húzással módosíthatja a sorrendet a Böngészőtartalom csoportban. Visszavonás: Ctrl/⌘ + Z."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Alapértelmezett"
   },
   "settings_search_source_order_undone": {
     "message": "Sorrendmódosítás visszavonva"

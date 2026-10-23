@@ -147,6 +147,7 @@ import * as LumnoWebDavOptions from './webdav-options.js';
   const newtabGlassThemeRow = document.getElementById('_x_extension_newtab_glass_theme_row_2026_unique_');
   const newtabGlassThemeTabsWrap = document.getElementById('_x_extension_newtab_glass_theme_tabs_wrap_2026_unique_');
   const searchResultSourceTypeGroupHost = document.getElementById('_x_extension_search_result_source_types_2026_unique_');
+  const searchResultSourceTypeResetButton = document.getElementById('_x_extension_search_result_source_types_reset_2026_unique_');
   const searchResultSourceTypeInputs = Array.from(document.querySelectorAll('input[data-search-result-source-type]'));
   const overlayPageThemeAdaptationRow = document.getElementById('_x_extension_overlay_page_theme_adaptation_row_2026_unique_');
   const overlayPageThemeAdaptationInfoHost = document.getElementById('_x_extension_overlay_page_theme_adaptation_info_2026_unique_');
@@ -772,8 +773,10 @@ import * as LumnoWebDavOptions from './webdav-options.js';
     getMessage,
     searchResultSourceTypeInputs,
     searchResultSourceTypeGroupHost,
+    searchResultSourceTypeResetButton,
     renderedSearchSourceKeys,
     normalizeSearchResultSourceTypes,
+    persistSearchResultSourceTypes,
     optionsState
   });
 

@@ -3561,7 +3561,10 @@
     "message": "Flytta ned"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Dra för att ange ordningen i gruppen Webbläsarinnehåll i sökrutans panel. Tryck på Ctrl/⌘ + Z för att ångra och Shift + Ctrl/⌘ + Z för att göra om."
+    "message": "Dra för att ändra ordningen i Webbläsarinnehåll. Ctrl/⌘ + Z ångrar."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Återställ standard"
   },
   "settings_search_source_order_undone": {
     "message": "Ordningsändringen ångrades"

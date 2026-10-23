@@ -3561,7 +3561,10 @@
     "message": "Posunout dolů"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Přetažením nastavíte jejich pořadí ve skupině Obsah prohlížeče v panelu vyhledávacího pole. Ctrl/⌘ + Z vrátí zpět, Shift + Ctrl/⌘ + Z akci zopakuje."
+    "message": "Přetažením změníte jejich pořadí v Obsahu prohlížeče. Ctrl/⌘ + Z vrátí zpět."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Obnovit výchozí"
   },
   "settings_search_source_order_undone": {
     "message": "Změna pořadí vrácena"

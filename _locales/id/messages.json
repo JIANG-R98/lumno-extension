@@ -3561,7 +3561,10 @@
     "message": "Pindahkan ke bawah"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Tarik untuk mengatur urutannya di grup Konten browser pada panel kotak penelusuran. Tekan Ctrl/⌘ + Z untuk mengurungkan dan Shift + Ctrl/⌘ + Z untuk mengulang."
+    "message": "Tarik untuk mengubah urutannya di Konten browser. Ctrl/⌘ + Z untuk mengurungkan."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Setel ulang default"
   },
   "settings_search_source_order_undone": {
     "message": "Perubahan urutan diurungkan"

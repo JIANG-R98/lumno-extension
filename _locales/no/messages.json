@@ -3561,7 +3561,10 @@
     "message": "Flytt ned"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Dra for å angi rekkefølgen i gruppen Nettleserinnhold i søkepanelet. Trykk på Ctrl/⌘ + Z for å angre og Shift + Ctrl/⌘ + Z for å gjøre om."
+    "message": "Dra for å endre rekkefølgen i Nettleserinnhold. Ctrl/⌘ + Z angrer."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Tilbakestill"
   },
   "settings_search_source_order_undone": {
     "message": "Endringen av rekkefølgen er angret"

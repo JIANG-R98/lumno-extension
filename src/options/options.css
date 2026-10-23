@@ -569,6 +569,10 @@ html[data-options-theme-mode="dark"] #_x_extension_overlay_page_theme_adaptation
   align-items: center;
   gap: 4px;
 }
+/* `all: unset` on the button would otherwise undo [hidden]. */
+._x_extension_setting_title_with_icon_2024_unique_ > button[hidden] {
+  display: none;
+}
 /* Group headers whose explanation lives in an info tooltip next to the title. */
 ._x_extension_section_title_with_icon_2026_unique_ {
   display: inline-flex;
@@ -3192,8 +3196,7 @@ button[aria-busy="true"]:disabled,
   cursor: grab;
 }
 ._x_extension_shortcut_item_2024_unique_[data-sort-dragging="true"],
-._x_extension_order_chip_2026_unique_[data-sort-dragging="true"],
-._x_extension_checkbox_2026_unique_[data-sort-dragging="true"] {
+._x_extension_order_chip_2026_unique_[data-sort-dragging="true"] {
   cursor: grabbing;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
 }
@@ -3266,7 +3269,7 @@ button[aria-busy="true"]:disabled,
   min-height: 34px;
   padding: 0 14px 0 10px;
   box-sizing: border-box;
-  border-radius: var(--lumno-radius-pill);
+  border-radius: var(--lumno-radius-lg);
   border: 1px solid rgba(15, 23, 42, 0.1);
   background: rgba(255, 255, 255, 0.65);
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
@@ -3281,8 +3284,10 @@ button[aria-busy="true"]:disabled,
 ._x_extension_order_chip_2026_unique_ .ri-icon {
   opacity: 0.4;
 }
-._x_extension_order_chip_2026_unique_:hover {
+/* The background is restated so a checkbox chip keeps it on hover. */
+._x_extension_order_chip_2026_unique_:hover:not([data-sort-dragging="true"]) {
   border-color: rgba(15, 23, 42, 0.18);
+  background: rgba(255, 255, 255, 0.65);
 }
 ._x_extension_order_chip_2026_unique_:focus-visible {
   outline: 2px solid var(--input-focus-color);
@@ -3299,12 +3304,6 @@ button[aria-busy="true"]:disabled,
 #_x_extension_settings_panel_2024_unique_[data-theme="dark"] ._x_extension_shortcut_item_2024_unique_[data-sort-dragging="true"],
 #_x_extension_settings_panel_2024_unique_[data-theme="dark"] ._x_extension_order_chip_2026_unique_[data-sort-dragging="true"] {
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
-}
-._x_extension_checkbox_2026_unique_[data-sortable="true"] {
-  cursor: grab;
-}
-._x_extension_checkbox_2026_unique_[data-sort-dragging="true"] {
-  background: var(--control-hover-bg, rgba(15, 23, 42, 0.04));
 }
 
 /* Daily quote collection: count, Shuffle and Import on the right, an import
@@ -3361,6 +3360,7 @@ button[aria-busy="true"]:disabled,
   ._x_extension_settings_placeholder_2024_unique_,
   ._x_extension_aggregate_search_sources_2026_unique_,
   ._x_extension_shortcuts_status_chip_2026_unique_,
+  ._x_extension_order_chip_2026_unique_,
   ._x_extension_shortcut_reference_key_field_2026_unique_,
   ._x_extension_shortcuts_hotkey_wrap_2024_unique_,
   ._x_extension_shortcuts_hotkey_action_2024_unique_,

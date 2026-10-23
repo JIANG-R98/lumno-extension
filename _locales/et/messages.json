@@ -3561,7 +3561,10 @@
     "message": "Teisalda alla"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Lohistage, et määrata nende järjestus otsingukasti paneeli rühmas „Brauseri sisu“. Tagasivõtmiseks vajutage Ctrl/⌘ + Z ja uuesti tegemiseks Shift + Ctrl/⌘ + Z."
+    "message": "Lohistage, et muuta nende järjestust rühmas „Brauseri sisu“. Ctrl/⌘ + Z võtab tagasi."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Lähtesta"
   },
   "settings_search_source_order_undone": {
     "message": "Järjestuse muudatus on tagasi võetud"

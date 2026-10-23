@@ -3561,7 +3561,10 @@
     "message": "নিচে সরান"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "সার্চ বক্সের প্যানেলের ব্রাউজারের কন্টেন্ট গ্রুপে এগুলোর ক্রম সেট করতে টেনে আনুন। পূর্বাবস্থায় ফেরাতে Ctrl/⌘ + Z এবং আবার করতে Shift + Ctrl/⌘ + Z টিপুন।"
+    "message": "ব্রাউজারের কন্টেন্টে এগুলোর ক্রম বদলাতে টেনে আনুন। পূর্বাবস্থায় ফেরাতে Ctrl/⌘ + Z।"
+  },
+  "settings_search_result_sources_reset": {
+    "message": "ডিফল্টে ফেরান"
   },
   "settings_search_source_order_undone": {
     "message": "ক্রমের পরিবর্তন পূর্বাবস্থায় ফেরানো হয়েছে"

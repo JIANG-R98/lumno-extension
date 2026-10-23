@@ -3561,7 +3561,10 @@
     "message": "Sogeza chini"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Buruta ili kuweka mpangilio wake kwenye kikundi cha Maudhui ya kivinjari katika paneli ya kisanduku cha kutafutia. Bonyeza Ctrl/⌘ + Z ili kutendua na Shift + Ctrl/⌘ + Z ili kurudia."
+    "message": "Buruta ili kubadilisha mpangilio katika Maudhui ya kivinjari. Ctrl/⌘ + Z ili kutendua."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Rejesha chaguomsingi"
   },
   "settings_search_source_order_undone": {
     "message": "Mabadiliko ya mpangilio yametenduliwa"

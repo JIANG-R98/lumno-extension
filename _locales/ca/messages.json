@@ -3561,7 +3561,10 @@
     "message": "Mou avall"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Arrossega per definir-ne l'ordre al grup Contingut del navegador del tauler del quadre de cerca. Prem Ctrl/⌘ + Z per desfer i Shift + Ctrl/⌘ + Z per refer."
+    "message": "Arrossega per canviar-ne l'ordre a Contingut del navegador. Ctrl/⌘ + Z per desfer."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Restableix"
   },
   "settings_search_source_order_undone": {
     "message": "S'ha desfet el canvi d'ordre"

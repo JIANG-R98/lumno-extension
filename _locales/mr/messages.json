@@ -3561,7 +3561,10 @@
     "message": "खाली हलवा"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "शोध बॉक्स पॅनलच्या ब्राउझरमधील मजकूर गटातील त्यांचा क्रम ठरवण्यासाठी ड्रॅग करा. पूर्ववत करण्यासाठी Ctrl/⌘ + Z आणि पुन्हा करण्यासाठी Shift + Ctrl/⌘ + Z दाबा."
+    "message": "ब्राउझरमधील मजकुरातील त्यांचा क्रम बदलण्यासाठी ड्रॅग करा. पूर्ववत करण्यासाठी Ctrl/⌘ + Z."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "डीफॉल्टवर रीसेट करा"
   },
   "settings_search_source_order_undone": {
     "message": "क्रमातील बदल पूर्ववत केला"

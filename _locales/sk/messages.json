@@ -3561,7 +3561,10 @@
     "message": "Posunúť nadol"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Presúvaním nastavte ich poradie v skupine Obsah prehliadača v paneli vyhľadávacieho poľa. Stlačením Ctrl/⌘ + Z vrátite zmenu a Shift + Ctrl/⌘ + Z ju zopakujete."
+    "message": "Presúvaním zmeníte ich poradie v Obsahu prehliadača. Ctrl/⌘ + Z vráti zmenu."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Obnoviť predvolené"
   },
   "settings_search_source_order_undone": {
     "message": "Zmena poradia bola vrátená"

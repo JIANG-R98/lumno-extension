@@ -3561,7 +3561,10 @@
     "message": "下へ移動"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "ドラッグして、検索ボックスのパネルの「ブラウザ内検索」での順序を変更します Ctrl/⌘ + Z で取り消し、Shift + Ctrl/⌘ + Z でやり直します。"
+    "message": "ドラッグで「ブラウザ内検索」での順序を変更。Ctrl/⌘ + Z で取り消し。"
+  },
+  "settings_search_result_sources_reset": {
+    "message": "既定に戻す"
   },
   "settings_search_source_order_undone": {
     "message": "並び替えを取り消しました"

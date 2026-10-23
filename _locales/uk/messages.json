@@ -3561,7 +3561,10 @@
     "message": "Перемістити вниз"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Перетягуйте, щоб задати їх порядок у групі «Вміст браузера» на панелі поля пошуку. Ctrl/⌘ + Z – скасувати, Shift + Ctrl/⌘ + Z – повторити."
+    "message": "Перетягуйте, щоб змінити порядок у «Вмісті браузера». Ctrl/⌘ + Z – скасувати."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Скинути"
   },
   "settings_search_source_order_undone": {
     "message": "Зміну порядку скасовано"

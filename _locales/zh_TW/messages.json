@@ -3561,7 +3561,10 @@
     "message": "下移"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "拖曳可調整它們在搜尋框面板「瀏覽器內容」中的順序。按 Ctrl/⌘ + Z 復原，Shift + Ctrl/⌘ + Z 重做。"
+    "message": "拖曳可調整在「瀏覽器內容」中的順序，Ctrl/⌘ + Z 復原。"
+  },
+  "settings_search_result_sources_reset": {
+    "message": "還原預設"
   },
   "settings_search_source_order_undone": {
     "message": "已復原排序"

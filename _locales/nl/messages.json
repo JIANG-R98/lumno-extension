@@ -3561,7 +3561,10 @@
     "message": "Omlaag"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Sleep om de volgorde in de groep Browserinhoud van het zoekpaneel te bepalen. Druk op Ctrl/⌘ + Z om ongedaan te maken en op Shift + Ctrl/⌘ + Z om opnieuw te doen."
+    "message": "Sleep om de volgorde in Browserinhoud te wijzigen. Ctrl/⌘ + Z maakt ongedaan."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Standaard herstellen"
   },
   "settings_search_source_order_undone": {
     "message": "Volgorde ongedaan gemaakt"

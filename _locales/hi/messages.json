@@ -3561,7 +3561,10 @@
     "message": "नीचे ले जाएं"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "खोज बॉक्स पैनल के \"ब्राउज़र की सामग्री\" ग्रुप में इनका क्रम तय करने के लिए खींचें। पहले जैसा करने के लिए Ctrl/⌘ + Z और फिर से करने के लिए Shift + Ctrl/⌘ + Z दबाएं।"
+    "message": "\"ब्राउज़र की सामग्री\" में इनका क्रम बदलने के लिए खींचें। पहले जैसा करने के लिए Ctrl/⌘ + Z।"
+  },
+  "settings_search_result_sources_reset": {
+    "message": "डिफ़ॉल्ट पर रीसेट करें"
   },
   "settings_search_source_order_undone": {
     "message": "क्रम का बदलाव पहले जैसा किया गया"

@@ -3561,7 +3561,10 @@
     "message": "Pārvietot lejup"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Velciet, lai iestatītu to secību meklēšanas lodziņa paneļa grupā “Pārlūka saturs”. Nospiediet Ctrl/⌘ + Z, lai atsauktu, un Shift + Ctrl/⌘ + Z, lai atkārtotu."
+    "message": "Velciet, lai mainītu to secību grupā “Pārlūka saturs”. Ctrl/⌘ + Z – atsaukt."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Atiestatīt"
   },
   "settings_search_source_order_undone": {
     "message": "Secības maiņa atsaukta"

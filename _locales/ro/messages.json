@@ -3561,7 +3561,10 @@
     "message": "Mutați în jos"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Trageți pentru a seta ordinea lor în grupul Conținutul browserului din panoul casetei de căutare. Apăsați Ctrl/⌘ + Z pentru anulare și Shift + Ctrl/⌘ + Z pentru refacere."
+    "message": "Trageți pentru a le reordona în Conținutul browserului. Ctrl/⌘ + Z pentru anulare."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Resetați"
   },
   "settings_search_source_order_undone": {
     "message": "Schimbarea ordinii a fost anulată"

@@ -3561,7 +3561,10 @@
     "message": "Alih ke bawah"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Seret untuk menetapkan susunannya dalam kumpulan Kandungan pelayar pada panel kotak carian. Tekan Ctrl/⌘ + Z untuk buat asal dan Shift + Ctrl/⌘ + Z untuk buat semula."
+    "message": "Seret untuk mengubah susunannya dalam Kandungan pelayar. Ctrl/⌘ + Z untuk buat asal."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Tetapkan semula lalai"
   },
   "settings_search_source_order_undone": {
     "message": "Perubahan susunan dibuat asal"

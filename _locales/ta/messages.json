@@ -3561,7 +3561,10 @@
     "message": "கீழே நகர்த்து"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "தேடல் பெட்டிப் பேனலின் “உலாவி உள்ளடக்கம்” குழுவில் அவற்றின் வரிசையை அமைக்க இழுக்கவும். செயல்தவிர்க்க Ctrl/⌘ + Z, மீண்டும் செய்ய Shift + Ctrl/⌘ + Z அழுத்தவும்."
+    "message": "“உலாவி உள்ளடக்கம்” வரிசையை மாற்ற இழுக்கவும். செயல்தவிர்க்க Ctrl/⌘ + Z."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "இயல்புநிலைக்கு மீட்டமை"
   },
   "settings_search_source_order_undone": {
     "message": "வரிசை மாற்றம் செயல்தவிர்க்கப்பட்டது"

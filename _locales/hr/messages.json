@@ -3561,7 +3561,10 @@
     "message": "Pomakni dolje"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Povucite da biste postavili njihov redoslijed u grupi Sadržaj preglednika na ploči okvira za pretraživanje. Pritisnite Ctrl/⌘ + Z za poništavanje i Shift + Ctrl/⌘ + Z za ponavljanje."
+    "message": "Povucite da promijenite redoslijed u Sadržaju preglednika. Ctrl/⌘ + Z poništava."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Vrati zadano"
   },
   "settings_search_source_order_undone": {
     "message": "Promjena redoslijeda poništena"

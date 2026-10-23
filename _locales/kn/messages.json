@@ -3561,7 +3561,10 @@
     "message": "ಕೆಳಗೆ ಸರಿಸಿ"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "ಹುಡುಕಾಟ ಬಾಕ್ಸ್ ಪ್ಯಾನಲ್\u200cನ ಬ್ರೌಸರ್ ವಿಷಯ ಗುಂಪಿನಲ್ಲಿ ಅವುಗಳ ಕ್ರಮವನ್ನು ಹೊಂದಿಸಲು ಎಳೆಯಿರಿ. ರದ್ದುಗೊಳಿಸಲು Ctrl/⌘ + Z ಮತ್ತು ಮತ್ತೆ ಮಾಡಲು Shift + Ctrl/⌘ + Z ಒತ್ತಿ."
+    "message": "ಬ್ರೌಸರ್ ವಿಷಯದಲ್ಲಿ ಅವುಗಳ ಕ್ರಮ ಬದಲಿಸಲು ಎಳೆಯಿರಿ. ರದ್ದುಗೊಳಿಸಲು Ctrl/⌘ + Z."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "ಡೀಫಾಲ್ಟ್‌ಗೆ ಮರುಹೊಂದಿಸಿ"
   },
   "settings_search_source_order_undone": {
     "message": "ಕ್ರಮ ಬದಲಾವಣೆ ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ"

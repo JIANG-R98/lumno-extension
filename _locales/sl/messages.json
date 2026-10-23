@@ -3561,7 +3561,10 @@
     "message": "Premakni dol"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Povlecite, da nastavite njihov vrstni red v skupini Vsebina brskalnika na plošči iskalnega polja. Pritisnite Ctrl/⌘ + Z za razveljavitev in Shift + Ctrl/⌘ + Z za uveljavitev."
+    "message": "Povlecite, da spremenite vrstni red v Vsebini brskalnika. Ctrl/⌘ + Z razveljavi."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Ponastavi"
   },
   "settings_search_source_order_undone": {
     "message": "Sprememba vrstnega reda je razveljavljena"

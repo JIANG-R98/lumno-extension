@@ -3561,7 +3561,10 @@
     "message": "Sposta giù"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Trascina per impostarne l'ordine nel gruppo Contenuti del browser del pannello della casella di ricerca. Premi Ctrl/⌘ + Z per annullare e Shift + Ctrl/⌘ + Z per ripetere."
+    "message": "Trascina per riordinarli in Contenuti del browser. Ctrl/⌘ + Z per annullare."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Ripristina"
   },
   "settings_search_source_order_undone": {
     "message": "Modifica dell'ordine annullata"

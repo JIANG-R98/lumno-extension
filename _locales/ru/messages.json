@@ -3561,7 +3561,10 @@
     "message": "Переместить вниз"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Перетаскивайте, чтобы задать их порядок в группе «Данные браузера» панели поиска. Ctrl/⌘ + Z — отменить, Shift + Ctrl/⌘ + Z — повторить."
+    "message": "Перетаскивайте, чтобы изменить порядок в «Данных браузера». Ctrl/⌘ + Z — отменить."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "По умолчанию"
   },
   "settings_search_source_order_undone": {
     "message": "Изменение порядка отменено"

@@ -3561,7 +3561,10 @@
     "message": "Siirrä alas"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Määritä niiden järjestys hakukentän paneelin Selaimen sisältö -ryhmässä vetämällä. Kumoa painamalla Ctrl/⌘ + Z ja tee uudelleen painamalla Shift + Ctrl/⌘ + Z."
+    "message": "Muuta järjestystä Selaimen sisältö -ryhmässä vetämällä. Ctrl/⌘ + Z kumoaa."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Palauta oletus"
   },
   "settings_search_source_order_undone": {
     "message": "Järjestyksen muutos kumottu"

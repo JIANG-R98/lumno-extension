@@ -3561,7 +3561,10 @@
     "message": "ወደ ታች ውሰድ"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "በፍለጋ ሳጥኑ ፓነል «የአሳሽ ይዘት» ቡድን ውስጥ ቅደም ተከተላቸውን ለማዘጋጀት ይጎትቱ። ለመቀልበስ Ctrl/⌘ + Z፣ እንደገና ለማድረግ Shift + Ctrl/⌘ + Z ይጫኑ።"
+    "message": "በ«የአሳሽ ይዘት» ውስጥ ቅደም ተከተላቸውን ለመቀየር ይጎትቱ። ለመቀልበስ Ctrl/⌘ + Z።"
+  },
+  "settings_search_result_sources_reset": {
+    "message": "ነባሪውን መልስ"
   },
   "settings_search_source_order_undone": {
     "message": "የቅደም ተከተል ለውጥ ተቀልብሷል"

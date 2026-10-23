@@ -3561,7 +3561,10 @@
     "message": "Di chuyển xuống"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Kéo để sắp xếp thứ tự của chúng trong nhóm Nội dung trình duyệt của bảng hộp tìm kiếm. Nhấn Ctrl/⌘ + Z để hoàn tác và Shift + Ctrl/⌘ + Z để làm lại."
+    "message": "Kéo để đổi thứ tự trong Nội dung trình duyệt. Ctrl/⌘ + Z để hoàn tác."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Khôi phục mặc định"
   },
   "settings_search_source_order_undone": {
     "message": "Đã hoàn tác thay đổi thứ tự"

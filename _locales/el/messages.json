@@ -3561,7 +3561,10 @@
     "message": "Μετακίνηση κάτω"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Σύρετε για να ορίσετε τη σειρά τους στην ομάδα «Περιεχόμενο προγράμματος περιήγησης» του πίνακα αναζήτησης. Πατήστε Ctrl/⌘ + Z για αναίρεση και Shift + Ctrl/⌘ + Z για επανάληψη."
+    "message": "Σύρετε για να αλλάξετε τη σειρά τους στο «Περιεχόμενο προγράμματος περιήγησης». Ctrl/⌘ + Z για αναίρεση."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Επαναφορά"
   },
   "settings_search_source_order_undone": {
     "message": "Η αλλαγή σειράς αναιρέθηκε"

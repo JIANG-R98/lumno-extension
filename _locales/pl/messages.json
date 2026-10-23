@@ -3561,7 +3561,10 @@
     "message": "Przesuń w dół"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Przeciągnij, aby ustawić ich kolejność w grupie Zawartość przeglądarki w panelu pola wyszukiwania. Naciśnij Ctrl/⌘ + Z, aby cofnąć, i Shift + Ctrl/⌘ + Z, aby ponowić."
+    "message": "Przeciągnij, aby zmienić ich kolejność w Zawartości przeglądarki. Ctrl/⌘ + Z cofa."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Przywróć domyślny"
   },
   "settings_search_source_order_undone": {
     "message": "Cofnięto zmianę kolejności"

@@ -3561,7 +3561,10 @@
     "message": "Преместване надолу"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Плъзнете, за да зададете реда им в групата „Съдържание на браузъра“ в панела на полето за търсене. Натиснете Ctrl/⌘ + Z за отмяна и Shift + Ctrl/⌘ + Z за повторение."
+    "message": "Плъзнете, за да промените реда им в „Съдържание на браузъра“. Ctrl/⌘ + Z отменя."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "По подразбиране"
   },
   "settings_search_source_order_undone": {
     "message": "Промяната на реда е отменена"

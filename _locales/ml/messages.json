@@ -3561,7 +3561,10 @@
     "message": "താഴേക്ക് നീക്കുക"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "തിരയൽ ബോക്സ് പാനലിലെ ബ്രൗസർ ഉള്ളടക്കം ഗ്രൂപ്പിൽ അവയുടെ ക്രമം സജ്ജമാക്കാൻ വലിച്ചിടുക. പഴയപടിയാക്കാൻ Ctrl/⌘ + Z, വീണ്ടും ചെയ്യാൻ Shift + Ctrl/⌘ + Z അമർത്തുക."
+    "message": "ബ്രൗസർ ഉള്ളടക്കത്തിൽ അവയുടെ ക്രമം മാറ്റാൻ വലിച്ചിടുക. പഴയപടിയാക്കാൻ Ctrl/⌘ + Z."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "ഡിഫോൾട്ട് പുനഃസജ്ജമാക്കുക"
   },
   "settings_search_source_order_undone": {
     "message": "ക്രമമാറ്റം പഴയപടിയാക്കി"

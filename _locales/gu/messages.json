@@ -3561,7 +3561,10 @@
     "message": "નીચે ખસેડો"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "શોધ બૉક્સ પૅનલના “બ્રાઉઝરની સામગ્રી” ગ્રૂપમાં તેમનો ક્રમ સેટ કરવા ખેંચો. પૂર્વવત્ કરવા Ctrl/⌘ + Z અને ફરી કરવા Shift + Ctrl/⌘ + Z દબાવો."
+    "message": "“બ્રાઉઝરની સામગ્રી”માં ક્રમ બદલવા ખેંચો. પૂર્વવત્ કરવા Ctrl/⌘ + Z."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "ડિફૉલ્ટ રીસેટ કરો"
   },
   "settings_search_source_order_undone": {
     "message": "ક્રમનો ફેરફાર પૂર્વવત્ કર્યો"

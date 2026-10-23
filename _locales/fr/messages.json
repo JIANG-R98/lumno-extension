@@ -3561,7 +3561,10 @@
     "message": "Descendre"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Faites glisser pour définir leur ordre dans le groupe «\u00a0Contenu du navigateur\u00a0» du panneau du champ de recherche. Ctrl/⌘ + Z pour annuler, Shift + Ctrl/⌘ + Z pour rétablir."
+    "message": "Faites glisser pour les réordonner dans « Contenu du navigateur ». Ctrl/⌘ + Z pour annuler."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Rétablir par défaut"
   },
   "settings_search_source_order_undone": {
     "message": "Changement d’ordre annulé"

@@ -3561,7 +3561,10 @@
     "message": "Move down"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Drag to set their order in the Browser content group of the search box panel. Press Ctrl/⌘ + Z to undo and Shift + Ctrl/⌘ + Z to redo."
+    "message": "Drag to reorder them in Browser content. Ctrl/⌘ + Z to undo."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Restore defaults"
   },
   "settings_search_source_order_undone": {
     "message": "Order change undone"

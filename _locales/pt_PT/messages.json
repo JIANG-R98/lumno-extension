@@ -3561,7 +3561,10 @@
     "message": "Mover para baixo"
   },
   "settings_search_result_sources_order_desc": {
-    "message": "Arraste para definir a ordem no grupo Conteúdo do navegador do painel da caixa de pesquisa. Prima Ctrl/⌘ + Z para anular e Shift + Ctrl/⌘ + Z para refazer."
+    "message": "Arraste para reordenar em Conteúdo do navegador. Ctrl/⌘ + Z para anular."
+  },
+  "settings_search_result_sources_reset": {
+    "message": "Repor predefinição"
   },
   "settings_search_source_order_undone": {
     "message": "Alteração da ordem anulada"
