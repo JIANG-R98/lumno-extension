@@ -19,7 +19,7 @@
     "check": "npm run build && npm run check:static",
     "check:static": "npm run check:js && npm run check:names && npm run check:bookmarks && npm run typecheck:react && npm run check:react-bundle && npm run check:manifest && npm run lint",
     "check:bookmarks": "node --check src/newtab/bookmarks/bookmarks-runtime.js && node --check src/newtab/bookmarks/bookmark-cascade-menu.js",
-    "check:react-bundle": "node --check src/react/newtab-islands.js && node --check src/react/options-islands.js && node --check src/react/onboarding-islands.js && node --check src/react/overlay-islands.js && node --check src/react/popup-islands.js && node --check src/react/react-shared.js && node --check src/react/tab-switcher-shared.js && node --check src/react/react-runtime.js",
+    "check:react-bundle": "node --check src/react/newtab-islands.js && node --check src/react/options-islands.js && node --check src/react/onboarding-islands.js && node --check src/react/overlay-islands.js && node --check src/react/popup-islands.js && node --check src/react/react-shared.js && node --check src/react/tab-switcher-shared.js && node --check src/react/react-runtime.js && node --check src/react/rolldown-runtime.js",
     "check:js": "node scripts/check/check-js-syntax.js",
     "check:names": "node scripts/check/check-undefined-names.js",
     "check:manifest": "node scripts/check/check-manifest-resources.js",
@@ -45,7 +45,7 @@
     "@types/node": "^22.20.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
-    "@vitejs/plugin-react": "^5.0.0",
+    "@vitejs/plugin-react": "^6.1.2",
     "esbuild": "^0.28.2",
     "eslint": "^10.13.0",
     "eslint-plugin-react-hooks": "^7.1.1",
@@ -53,8 +53,8 @@
     "jsdom": "^27.0.0",
     "typescript": "^5.9.0",
     "typescript-eslint": "^8.72.0",
-    "vite": "^7.0.0",
-    "vitest": "^3.2.0",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5",
     "ws": "^8.22.0"
   }
 }

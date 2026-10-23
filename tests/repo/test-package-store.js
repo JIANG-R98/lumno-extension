@@ -60,6 +60,7 @@ assert(
     entries.includes('src/react/react-shared.js') &&
     entries.includes('src/react/tab-switcher-shared.js') &&
     entries.includes('src/react/react-runtime.js') &&
+    entries.includes('src/react/rolldown-runtime.js') &&
     entries.includes('build/react-page-bootstrap.js'),
   'store package should include both page entries, shared React chunks, and bootstrap'
 );

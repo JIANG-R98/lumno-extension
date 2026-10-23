@@ -7,7 +7,10 @@ const INCLUDED_EXTENSIONS = new Set(['.js', '.html']);
 const IGNORED_DIRS = new Set(['node_modules', 'dist', '.git']);
 const MAX_HITS_PER_FILE = 30;
 const HAN_RE = /\p{Script=Han}/u;
-const STRING_RE = /(['"`])((?:\\.|(?!\1)[\s\S])*?)\1/g;
+// A backslash only ever starts an escape. Letting the second branch match it
+// too makes long minified lines with an unclosed quote backtrack
+// exponentially (src/react/overlay-islands.js hung the audit).
+const STRING_RE = /(['"`])((?:\\.|(?!\1|\\)[\s\S])*?)\1/g;
 
 const ALLOWLIST = [
   'brand/provider names in assets/data/site-search.json and provider defaults',
