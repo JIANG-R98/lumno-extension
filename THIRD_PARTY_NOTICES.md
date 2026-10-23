@@ -1,0 +1,63 @@
+# Third-party notices
+
+Lumno's own code is licensed under the GNU General Public License v3.0 only
+(see [LICENSE](LICENSE)). The source code, including the React sources in
+`react-src/` that the minified bundles in `src/react/` are built from, is at
+https://github.com/kubai087/lumno-extension.
+
+Lumno also ships the third-party components below. Each one stays under its
+own license, and the GPL does not cover the ones whose license is not
+GPL-compatible. Their license texts ship alongside them, in the files listed.
+
+## npm packages in the React bundles
+
+Vite bundles these into `src/react/` and writes their license texts to
+[`src/react/third-party-licenses.md`](src/react/third-party-licenses.md) (the
+page chunks) and
+[`src/react/overlay-third-party-licenses.md`](src/react/overlay-third-party-licenses.md)
+(the in-page overlay bundle) on every `npm run build:react`.
+
+| Package | License |
+| --- | --- |
+| react, react-dom, scheduler | MIT |
+| @number-flow/react, number-flow | MIT |
+| react-colorful | MIT |
+
+## Vendored code
+
+| Component | Files | License | License text |
+| --- | --- | --- | --- |
+| [pinyin-pro](https://github.com/zh-lx/pinyin-pro) 3.28.0, unmodified `dist/index.js` | `assets/vendor/pinyin-pro.js` | MIT | [`assets/vendor/LICENSE-pinyin-pro.txt`](assets/vendor/LICENSE-pinyin-pro.txt) |
+
+## Icons
+
+| Component | Files | License | License text |
+| --- | --- | --- | --- |
+| [Remix Icon](https://github.com/Remix-Design/RemixIcon) 4.9.1 | `assets/remixicon/` | Remix Icon License v1.0 (not GPL-compatible; not covered by the GPL) | [`assets/remixicon/LICENSE.txt`](assets/remixicon/LICENSE.txt) |
+| [Lobe Icons](https://github.com/lobehub/lobe-icons) (`@lobehub/icons-static-svg` 1.94.0) | `assets/images/site-search/{tile,glyph}-{gpt,gm,yb,ds,kimi}.*` | MIT | [`assets/images/site-search/LICENSE-lobe-icons.txt`](assets/images/site-search/LICENSE-lobe-icons.txt) |
+| [Material Design Icons](https://github.com/Templarian/MaterialDesign) (`mdi:yahoo`) | `assets/images/site-search/{tile,glyph}-yh.*` | Apache-2.0 | [`assets/images/site-search/LICENSE-material-design-icons.txt`](assets/images/site-search/LICENSE-material-design-icons.txt) |
+| [Tabler Icons](https://github.com/tabler/tabler-icons) (`tabler:brand-yandex`) | `assets/images/site-search/{tile,glyph}-yx.*` | MIT | [`assets/images/site-search/LICENSE-tabler-icons.txt`](assets/images/site-search/LICENSE-tabler-icons.txt) |
+| [Simple Icons](https://github.com/simple-icons/simple-icons), [Iconify `logos`](https://github.com/gilbarbara/logos) | site-search icons listed in [`SOURCES.md`](assets/images/site-search/SOURCES.md) | CC0-1.0 | None required |
+
+The remaining site-search icons and the browser logos in
+`assets/images/browser-logos/` are the artwork of the brands they show, used
+only to identify those brands. They are not licensed under the GPL, and the
+names and marks in every brand icon, including those from the icon sets above,
+remain the property of their owners. [`SOURCES.md`](assets/images/site-search/SOURCES.md)
+records where each site-search icon came from.
+
+## Fonts
+
+All fonts are licensed under the SIL Open Font License 1.1. The clock faces and
+the two quote fonts ship as subsets.
+
+| Font | Files | License text |
+| --- | --- | --- |
+| [Open Sans](https://github.com/googlefonts/opensans) | `assets/fonts/open-sans/` | [`OFL.txt`](assets/fonts/open-sans/OFL.txt) |
+| [LXGW WenKai](https://github.com/lxgw/LxgwWenKai) | `assets/fonts/lxgw-wenkai/` | [`OFL.txt`](assets/fonts/lxgw-wenkai/OFL.txt) |
+| [ZCOOL XiaoWei](https://github.com/googlefonts/zcool-xiaowei) | `assets/fonts/zcool-xiaowei/` | [`OFL.txt`](assets/fonts/zcool-xiaowei/OFL.txt) |
+| [Geist](https://github.com/vercel/geist-font) | `assets/fonts/clock/geist.woff2` | [`OFL-geist.txt`](assets/fonts/clock/OFL-geist.txt) |
+| [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) | `assets/fonts/clock/jetbrains-mono.woff2` | [`OFL-jetbrains-mono.txt`](assets/fonts/clock/OFL-jetbrains-mono.txt) |
+| [Bricolage Grotesque](https://github.com/ateliertriay/bricolage) | `assets/fonts/clock/bricolage-grotesque.woff2` | [`OFL-bricolage-grotesque.txt`](assets/fonts/clock/OFL-bricolage-grotesque.txt) |
+| [Unbounded](https://github.com/googlefonts/unbounded) | `assets/fonts/clock/unbounded.woff2` | [`OFL-unbounded.txt`](assets/fonts/clock/OFL-unbounded.txt) |
+| [Bitcount](https://github.com/petrvanblokland/TYPETR-Bitcount) | `assets/fonts/clock/bitcount.woff2` | [`OFL-bitcount.txt`](assets/fonts/clock/OFL-bitcount.txt) |

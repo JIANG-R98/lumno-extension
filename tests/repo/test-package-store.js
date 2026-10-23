@@ -63,6 +63,14 @@ assert(
     entries.includes('build/react-page-bootstrap.js'),
   'store package should include both page entries, shared React chunks, and bootstrap'
 );
+[
+  'LICENSE',
+  'THIRD_PARTY_NOTICES.md',
+  'src/react/third-party-licenses.md',
+  'src/react/overlay-third-party-licenses.md'
+].forEach((file) => {
+  assert(entries.includes(file), `store package should include the license file ${file}`);
+});
 assert(
   entries.every((entry) => !entry.startsWith('react-src/')),
   'store package should not include React source or test files'

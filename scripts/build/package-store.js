@@ -15,7 +15,10 @@ const packageRoots = [
   'src',
   '_locales',
   'assets',
-  'newtab.html'
+  'newtab.html',
+  // The GPL and the third-party licenses travel with every copy.
+  'LICENSE',
+  'THIRD_PARTY_NOTICES.md'
 ];
 // Scripts pages and content scripts load by URL; every other script in src/
 // runs from a bundle.

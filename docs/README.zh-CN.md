@@ -269,9 +269,9 @@ npm run test:onboarding-content
 
 - 日文本地化：感谢 [Humi](https://github.com/Hum1Tab) 参与日文翻译与校对。
 - macOS `Ctrl+N` / `Ctrl+P` 结果导航实验功能：基于 [wanghanzhen](https://github.com/wanghanzhen) 在 [PR #38](https://github.com/kubai087/lumno-extension/pull/38) 中的贡献。
-- 内置图标集：[Remix Icon](https://remixicon.com/)
+- 内置图标集：[Remix Icon](https://remixicon.com/) 4.9.1，适用 [Remix Icon License v1.0](../assets/remixicon/LICENSE.txt)，不适用 GPL
 - 内置字体：Open Sans；[霞鹜文楷](https://github.com/lxgw/LxgwWenKai)（SIL OFL 1.1，子集化后用于每日一言）
 
 ## 许可证
 
-本项目使用 [GPL-3.0](../LICENSE) 许可证。
+本项目使用 [GPL-3.0](../LICENSE) 许可证。内置的第三方代码、图标和字体沿用各自的许可证，详见 [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md)。

@@ -39,6 +39,9 @@ export default defineConfig({
     copyPublicDir: false,
     sourcemap: false,
     minify: 'esbuild',
+    // Minifying drops the dependencies' license comments, so their license
+    // texts ship in this file instead (THIRD_PARTY_NOTICES.md points to it).
+    license: { fileName: 'third-party-licenses.md' },
     rollupOptions: {
       input: {
         'newtab-islands': resolve(

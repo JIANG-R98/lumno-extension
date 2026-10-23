@@ -18,6 +18,9 @@ export default defineConfig({
     copyPublicDir: false,
     sourcemap: false,
     minify: 'esbuild',
+    // The overlay bundle carries its own copy of React, so it lists the
+    // licenses of what it bundles separately from the page chunks.
+    license: { fileName: 'overlay-third-party-licenses.md' },
     lib: {
       entry: resolve(
         repoRoot,

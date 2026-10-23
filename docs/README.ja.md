@@ -269,9 +269,9 @@ npm run test:onboarding-content
 
 - 日本語ローカライズ：[Humi](https://github.com/Hum1Tab) さんに日本語翻訳と校正へご協力いただきました。
 - macOS `Ctrl+N` / `Ctrl+P` による候補移動の実験機能：[wanghanzhen](https://github.com/wanghanzhen) さんの [PR #38](https://github.com/kubai087/lumno-extension/pull/38) での貢献に基づいています。
-- 同梱アイコンセット：[Remix Icon](https://remixicon.com/)
+- 同梱アイコンセット：[Remix Icon](https://remixicon.com/) 4.9.1（GPL ではなく [Remix Icon License v1.0](../assets/remixicon/LICENSE.txt) が適用されます）
 - 同梱書体：Open Sans、[LXGW WenKai](https://github.com/lxgw/LxgwWenKai)（SIL OFL 1.1、一言表示用にサブセット化）
 
 ## ライセンス
 
-このプロジェクトは [GPL-3.0](../LICENSE) ライセンスで公開されています。
+このプロジェクトは [GPL-3.0](../LICENSE) ライセンスで公開されています。同梱しているサードパーティのコード、アイコン、フォントはそれぞれのライセンスに従います。詳しくは [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) をご覧ください。
