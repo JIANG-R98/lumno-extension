@@ -79,7 +79,7 @@ Select text on any page to answer, translate, explain, summarize, research or ca
 
 ### Customizable new tab page
 
-A clean new tab replacement with a search box, up to 200 shortcuts organized into named groups, recent and most-visited site cards, bookmark grids with cascading folder menus, bookmark paging and custom folder colors. Drag items between shortcuts and bookmarks, pin or hide recent sites, track the latest episode or chapter of a show or novel with progress cards, adjust content width, or type `/zen` for a distraction-free Zen mode. Add any page to your shortcuts from its right-click menu or the toolbar popup; icons without a background of their own sit on a plate tinted from their main color.
+A clean new tab replacement with a search box, up to 200 shortcuts organized into named groups, recent and most-visited site cards, bookmark grids with cascading folder menus, bookmark paging and custom folder colors. Drag items between shortcuts and bookmarks, pin or hide recent sites, track the latest episode or chapter of a show or novel with progress cards, adjust content width, or type `/zen` for a distraction-free Zen mode. In Firefox, `/appearance` in the command bar or the new tab search box switches the website appearance pages see between automatic, light and dark. Add any page to your shortcuts from its right-click menu or the toolbar popup; icons without a background of their own sit on a plate tinted from their main color.
 
 Show a clock in one of six fonts, with its own size, opacity, color and an optional 12-hour format, or a daily quote from your own TXT or Markdown collection in the font you choose.
 
@@ -104,7 +104,9 @@ Settings sync through Chrome's built-in sync by default. Optional [WebDAV sync](
 
 ### Browser helpers and languages
 
-Restore pinned tabs after a restart, fall back from restricted pages to the new tab page, copy the current page URL with one shortcut, and open extension shortcut or details pages. The interface is available in English, Simplified Chinese, Traditional Chinese and Japanese, or follows your browser language.
+Shift+click a link to preview it in a small window over the page, then close it or move it to a tab. Restore pinned tabs after a restart, fall back from restricted pages to the new tab page, copy the current page URL with one shortcut, and open extension shortcut or details pages.
+
+The interface comes in 48 languages, or follows your browser language. English, Simplified Chinese, Traditional Chinese and Japanese are written and reviewed by people; the rest are AI-translated, and native speakers can fix them from Settings → General → Language → **Improve translation**.
 
 Step-by-step guides for every feature, with screenshots, are in the [Lumno Help Center](https://lumno.kubai.design/en/help/).
 
@@ -228,7 +230,7 @@ npm run test:react
 npm run lint
 ```
 
-`npm run test:legacy -- <filter>` runs the Node tests whose path contains any of the filters. `npm run audit:i18n` and `npm run audit:style` report copy missing from a locale and leftover style debt.
+`npm run test:legacy -- <filter>` runs the Node tests whose path contains any of the filters. `npm run check:locales` checks the copy in every language; strings the AI-translated languages still wait for are warnings, which `npm run package:store` turns into errors. `npm run audit:i18n` and `npm run audit:style` report Chinese text written straight into the code and leftover style debt.
 
 `npm run package:store` reads the version from `manifest.json` and creates `dist/lumno-store-v<version>.zip`. It requires `zip` and `zipinfo` to be available on the system.
 
@@ -255,9 +257,9 @@ npm run lint
 
 ## Contributing
 
-Bug reports, feature ideas and pull requests are welcome in [Issues](https://github.com/kubai087/lumno-extension/issues). If Lumno saves you time, a ⭐ on GitHub or a review on the Chrome Web Store or Firefox Add-ons helps other people find it.
+Bug reports, feature ideas and pull requests are welcome in [Issues](https://github.com/kubai087/lumno-extension/issues). If you speak one of the AI-translated languages, Settings → General → Language → **Improve translation** lets you report a wrong string or send a whole spreadsheet of fixes. If Lumno saves you time, a ⭐ on GitHub or a review on the Chrome Web Store or Firefox Add-ons helps other people find it.
 
-Before you send a pull request, read [CONTRIBUTING.md](.github/CONTRIBUTING.md) for the setup and the checks to run. Everyone taking part follows the [Code of Conduct](.github/CODE_OF_CONDUCT.md), and security problems go through [SECURITY.md](.github/SECURITY.md).
+Before you send a pull request, read [CONTRIBUTING.md](.github/CONTRIBUTING.md) for the setup, the checks to run and how translations work. New UI text goes into English, Simplified Chinese, Traditional Chinese and Japanese; maintainers fill in the other languages. Everyone taking part follows the [Code of Conduct](.github/CODE_OF_CONDUCT.md), and security problems go through [SECURITY.md](.github/SECURITY.md).
 
 ## Credits
 

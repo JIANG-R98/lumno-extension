@@ -79,7 +79,7 @@
 
 ### 可自定义的新标签页
 
-简洁的新标签页替代方案：搜索框、可分组命名的快捷方式（最多 200 个）、最近/最常访问站点卡片、书签网格与文件夹级联菜单、书签分页和自定义文件夹颜色。支持快捷方式与书签互相拖动转换、固定或隐藏最近站点、用动态进度卡片追踪剧集和小说的最新集数/章节、调整内容宽度，输入 `/zen` 进入专注的禅模式。任意网页都可以通过右键菜单或工具栏弹窗加入快捷方式；没有自带背景的图标会放在按图标主色着色的底板上。
+简洁的新标签页替代方案：搜索框、可分组命名的快捷方式（最多 200 个）、最近/最常访问站点卡片、书签网格与文件夹级联菜单、书签分页和自定义文件夹颜色。支持快捷方式与书签互相拖动转换、固定或隐藏最近站点、用动态进度卡片追踪剧集和小说的最新集数/章节、调整内容宽度，输入 `/zen` 进入专注的禅模式。在 Firefox 中，在命令栏或新标签页搜索框输入 `/appearance`，可在自动、浅色、深色之间切换网页看到的网站外观。任意网页都可以通过右键菜单或工具栏弹窗加入快捷方式；没有自带背景的图标会放在按图标主色着色的底板上。
 
 时钟提供六款字体，可调整字号、不透明度、颜色和 12 小时制；每日名句可以来自一言，也可以导入自己的 TXT / Markdown 句库，并选择名句字体。
 
@@ -104,7 +104,9 @@
 
 ### 浏览器增强与多语言
 
-重启后恢复置顶标签页、受限页面回退到新标签页、一键复制当前页面链接、打开扩展快捷键页和详情页。界面支持简体中文、繁体中文、英文、日文，或跟随浏览器语言。
+按住 Shift 点击链接，会在页面上方的小窗里预览，看完可以关闭或移到新标签页。重启后恢复置顶标签页、受限页面回退到新标签页、一键复制当前页面链接、打开扩展快捷键页和详情页。
+
+界面支持 48 种语言，也可以跟随浏览器语言。简体中文、繁体中文、英文、日文由人工撰写和校对，其余语言为 AI 翻译；母语用户可以在设置 → 常规 → 语言 → **改进翻译** 中帮忙修正。
 
 每项功能的图文教程见 [Lumno 帮助中心](https://lumno.kubai.design/help/)。
 
@@ -228,7 +230,7 @@ npm run test:react
 npm run lint
 ```
 
-`npm run test:legacy -- <filter>` 只运行路径中包含任一过滤词的 Node 测试。`npm run audit:i18n` 和 `npm run audit:style` 会列出各语言缺失的文案和遗留的样式问题。
+`npm run test:legacy -- <filter>` 只运行路径中包含任一过滤词的 Node 测试。`npm run check:locales` 检查所有语言的文案；AI 翻译语言里还没翻译的文案只给出警告，`npm run package:store` 打包时会把它们当作错误。`npm run audit:i18n` 和 `npm run audit:style` 会列出直接写在代码里的中文和遗留的样式问题。
 
 `npm run package:store` 会读取 `manifest.json` 的版本号，并生成 `dist/lumno-store-v<version>.zip`。本命令依赖系统可用的 `zip` 和 `zipinfo`。
 
@@ -255,9 +257,9 @@ npm run lint
 
 ## 参与贡献
 
-欢迎在 [Issues](https://github.com/kubai087/lumno-extension/issues) 反馈问题、提出建议或提交 Pull Request。如果 Lumno 帮你节省了时间，欢迎在 GitHub 点个 ⭐，或在 Chrome 应用商店、Firefox 附加组件留下评价，让更多人发现它。
+欢迎在 [Issues](https://github.com/kubai087/lumno-extension/issues) 反馈问题、提出建议或提交 Pull Request。如果你的母语是某种 AI 翻译的语言，可以在设置 → 常规 → 语言 → **改进翻译** 中报告某一句译文，或提交填好的整份翻译表格。如果 Lumno 帮你节省了时间，欢迎在 GitHub 点个 ⭐，或在 Chrome 应用商店、Firefox 附加组件留下评价，让更多人发现它。
 
-提交 Pull Request 前，请先阅读 [CONTRIBUTING.md](../.github/CONTRIBUTING.md)，了解开发环境和需要运行的检查。所有参与者都须遵守[行为准则](../.github/CODE_OF_CONDUCT.md)，安全问题请按 [SECURITY.md](../.github/SECURITY.md) 报告。
+提交 Pull Request 前，请先阅读 [CONTRIBUTING.md](../.github/CONTRIBUTING.md)，了解开发环境、需要运行的检查以及翻译流程。新增的界面文案只需写英文、简体中文、繁体中文和日文，其余语言由维护者补齐。所有参与者都须遵守[行为准则](../.github/CODE_OF_CONDUCT.md)，安全问题请按 [SECURITY.md](../.github/SECURITY.md) 报告。
 
 ## 鸣谢
 
