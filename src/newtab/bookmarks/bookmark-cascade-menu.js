@@ -477,6 +477,39 @@ function createBookmarkCascadeMenuRuntime(options) {
     }
   }
 
+  function prefersReducedMotion() {
+    return Boolean(windowObj && typeof windowObj.matchMedia === 'function' &&
+      windowObj.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+
+  // After a drop the menu folds back the way it opened instead of vanishing,
+  // while the shortcuts settle around the site that left or joined it. It
+  // takes no pointer and is no longer the open menu while it fades.
+  const BOOKMARK_CASCADE_CLOSE_MS = 220;
+  function foldBookmarkCascadeMenuAway(menu) {
+    menu.setAttribute('data-closing', 'true');
+    menu.setAttribute('aria-hidden', 'true');
+    // A drag-mode or refreshing menu holds its levels still; this one moves.
+    menu.removeAttribute('data-drag-mode');
+    menu.removeAttribute('data-refreshing');
+    menu.style.pointerEvents = 'none';
+    Array.from(menu.querySelectorAll('[data-open="true"]')).forEach((level) => {
+      if (menuSurface && typeof menuSurface.close === 'function') {
+        menuSurface.close(level);
+      } else {
+        level.setAttribute('data-open', 'false');
+      }
+    });
+    const remove = () => {
+      if (menu.parentNode) menu.parentNode.removeChild(menu);
+    };
+    if (windowObj && typeof windowObj.setTimeout === 'function') {
+      windowObj.setTimeout(remove, BOOKMARK_CASCADE_CLOSE_MS);
+    } else {
+      remove();
+    }
+  }
+
   function close(closeOptions) {
     const optionsForClose = closeOptions || {};
     cancelBookmarkCascadeOpenRequest();
@@ -499,10 +532,15 @@ function createBookmarkCascadeMenuRuntime(options) {
     }
     bookmarkCascadeAnchor = null;
     bookmarkCascadeLevels = [];
-    if (bookmarkCascadeMenu && bookmarkCascadeMenu.parentNode) {
-      bookmarkCascadeMenu.parentNode.removeChild(bookmarkCascadeMenu);
-    }
+    const menuToRemove = bookmarkCascadeMenu;
     bookmarkCascadeMenu = null;
+    if (menuToRemove && menuToRemove.parentNode) {
+      if (optionsForClose.animate && !prefersReducedMotion()) {
+        foldBookmarkCascadeMenuAway(menuToRemove);
+      } else {
+        menuToRemove.parentNode.removeChild(menuToRemove);
+      }
+    }
     setDocumentListenersAttached(false);
     bookmarkCascadePointer = null;
     bookmarkCascadePreviousPointer = null;

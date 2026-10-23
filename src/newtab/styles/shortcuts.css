@@ -67,7 +67,12 @@ body[data-zen-mode="true"] .x-lumno-feature-hint--update-notice-newtab {
   box-sizing: border-box;
   position: relative;
 }
+/* The dock values live on the tile, not the icon: the drop backdrop
+   behind the icon reads them too, so it stays under a magnified icon. */
 .x-nt-shortcut-tile {
+  --x-nt-shortcut-dock-scale: 1;
+  --x-nt-shortcut-dock-shift-x: 0px;
+  --x-nt-shortcut-dock-rise: 0px;
   all: unset;
   width: var(--x-nt-shortcut-tile-size, 64px);
   min-height: var(--x-nt-shortcut-tile-size, 64px);
@@ -308,9 +313,6 @@ body[data-glass-style] .x-nt-shortcut-group-ghost[data-glass-ink-theme="dark"] {
   pointer-events: none;
 }
 .x-nt-shortcut-icon {
-  --x-nt-shortcut-dock-scale: 1;
-  --x-nt-shortcut-dock-shift-x: 0px;
-  --x-nt-shortcut-dock-rise: 0px;
   /* Breakpoints shrink the icon; keep its corners at a third of its size
      rather than inheriting a radius resolved for the larger root icon. */
   --x-nt-shortcut-icon-radius: calc(var(--x-nt-shortcut-icon-size, 48px) / 3);
@@ -389,9 +391,18 @@ body[data-glass-style] .x-nt-shortcut-icon[data-glass-ink-theme="dark"] {
     transform var(--lumno-duration-3xl) var(--lumno-ease-spring);
   pointer-events: none;
 }
+/* The icon grows from its bottom edge, so its middle rises by half its
+   growth on top of the dock's lift. The backdrop sits on that middle and
+   grows past its 1.2x fit only when the icon is drawn larger than that. */
 .x-nt-shortcut-tile[data-bookmark-drop-target="true"]::before {
   opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
+  transform:
+    translate(
+      calc(-50% + var(--x-nt-shortcut-dock-shift-x, 0px)),
+      calc(-50% + var(--x-nt-shortcut-dock-rise, 0px) -
+        (var(--x-nt-shortcut-dock-scale, 1) - 1) * var(--x-nt-shortcut-icon-size, 48px) / 2)
+    )
+    scale(max(1, var(--x-nt-shortcut-dock-scale, 1) / 1.2));
 }
 /* The content shows just after the first wallpaper sample tints it, so until the entry finishes those
    colors apply at once; a fade from the theme's default would play in view (the add tile, light on
@@ -436,18 +447,10 @@ body[data-nt-bottom-dock-density="tiny"] {
   --x-nt-shortcut-hover-shift-far: 0px;
 }
 .x-nt-shortcuts-grid[data-dock-following="true"] {
-  --x-nt-shortcut-dock-duration: var(--x-nt-shortcut-dock-follow-duration, 90ms);
+  --x-nt-shortcut-dock-duration: var(--x-nt-shortcut-dock-follow-duration, 0ms);
 }
 .x-nt-shortcut-tile[data-dock-distance="0"] {
   z-index: 6;
-}
-.x-nt-shortcut-tile[data-dock-distance="1"] {
-  z-index: 5;
-}
-.x-nt-shortcut-tile[data-dock-distance="2"] {
-  z-index: 4;
-}
-.x-nt-shortcut-tile[data-dock-distance="0"] .x-nt-shortcut-icon {
   --x-nt-shortcut-dock-scale: var(--x-nt-shortcut-hover-scale-near, 1.28);
   --x-nt-shortcut-dock-rise: var(--x-nt-shortcut-hover-rise-near, -6px);
 }
@@ -469,8 +472,8 @@ body[data-nt-bottom-dock-density="tiny"] {
 .x-nt-shortcut-tile[data-shortcut-context-menu-open="true"] .x-nt-shortcut-icon {
   filter: brightness(0.92);
 }
-.x-nt-shortcut-tile[data-shortcut-dragging="true"] .x-nt-shortcut-icon,
-.x-nt-shortcut-tile[data-shortcut-dropping="true"] .x-nt-shortcut-icon {
+.x-nt-shortcut-tile[data-shortcut-dragging="true"],
+.x-nt-shortcut-tile[data-shortcut-dropping="true"] {
   --x-nt-shortcut-dock-scale: var(--x-nt-shortcut-hover-scale-drag, 1.2);
   --x-nt-shortcut-dock-rise: var(--x-nt-shortcut-hover-rise-drag, -4px);
 }
@@ -480,24 +483,26 @@ body[data-nt-bottom-dock-density="tiny"] {
 .x-nt-shortcut-tile[data-shortcut-dropping="true"] .x-nt-shortcut-icon {
   will-change: transform;
 }
-.x-nt-shortcut-tile[data-dock-distance="1"] .x-nt-shortcut-icon {
+.x-nt-shortcut-tile[data-dock-distance="1"] {
+  z-index: 5;
   --x-nt-shortcut-dock-scale: var(--x-nt-shortcut-hover-scale-mid, 1.14);
   --x-nt-shortcut-dock-rise: var(--x-nt-shortcut-hover-rise-mid, -3px);
 }
-.x-nt-shortcut-tile[data-dock-distance="2"] .x-nt-shortcut-icon {
+.x-nt-shortcut-tile[data-dock-distance="2"] {
+  z-index: 4;
   --x-nt-shortcut-dock-scale: var(--x-nt-shortcut-hover-scale-far, 1.05);
   --x-nt-shortcut-dock-rise: var(--x-nt-shortcut-hover-rise-far, -1px);
 }
-.x-nt-shortcut-tile[data-dock-side="before"][data-dock-distance="1"] .x-nt-shortcut-icon {
+.x-nt-shortcut-tile[data-dock-side="before"][data-dock-distance="1"] {
   --x-nt-shortcut-dock-shift-x: calc(var(--x-nt-shortcut-hover-shift-mid, 4px) * -1);
 }
-.x-nt-shortcut-tile[data-dock-side="after"][data-dock-distance="1"] .x-nt-shortcut-icon {
+.x-nt-shortcut-tile[data-dock-side="after"][data-dock-distance="1"] {
   --x-nt-shortcut-dock-shift-x: var(--x-nt-shortcut-hover-shift-mid, 4px);
 }
-.x-nt-shortcut-tile[data-dock-side="before"][data-dock-distance="2"] .x-nt-shortcut-icon {
+.x-nt-shortcut-tile[data-dock-side="before"][data-dock-distance="2"] {
   --x-nt-shortcut-dock-shift-x: calc(var(--x-nt-shortcut-hover-shift-far, 1px) * -1);
 }
-.x-nt-shortcut-tile[data-dock-side="after"][data-dock-distance="2"] .x-nt-shortcut-icon {
+.x-nt-shortcut-tile[data-dock-side="after"][data-dock-distance="2"] {
   --x-nt-shortcut-dock-shift-x: var(--x-nt-shortcut-hover-shift-far, 1px);
 }
 .x-nt-shortcuts-grid[data-dock-magnification="false"] .x-nt-shortcut-tile:not([data-shortcut-dragging="true"]):not([data-shortcut-dropping="true"]):not([data-shortcut-context-menu-open="true"]):hover .x-nt-shortcut-icon,
@@ -512,7 +517,7 @@ body[data-glass-style] .x-nt-shortcuts-grid[data-dock-magnification="false"][dat
 body[data-glass-style] .x-nt-shortcuts-grid[data-dock-magnification="false"][data-glass-ink-theme="dark"] .x-nt-shortcut-tile[aria-expanded="true"]:not([data-shortcut-dragging="true"]):not([data-shortcut-dropping="true"]):not([data-shortcut-context-menu-open="true"]) .x-nt-shortcut-icon {
   filter: brightness(1.06);
 }
-.x-nt-shortcuts-grid[data-dock-magnification="false"] .x-nt-shortcut-tile .x-nt-shortcut-icon {
+.x-nt-shortcuts-grid[data-dock-magnification="false"] .x-nt-shortcut-tile {
   --x-nt-shortcut-dock-scale: 1;
   --x-nt-shortcut-dock-shift-x: 0px;
   --x-nt-shortcut-dock-rise: 0px;

@@ -369,9 +369,9 @@ body.x-nt-bottom-layout:not(.x-nt-mobile-flow) {
   --x-nt-shortcut-hover-shift-far: 1px;
   --x-nt-shortcut-dock-duration: 300ms;
   --x-nt-shortcut-dock-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  /* While the pointer moves over the row the icons trail it by about a frame; the full duration
-     is only for growing in from rest and settling back. */
-  --x-nt-shortcut-dock-follow-duration: 90ms;
+  /* While the pointer moves over the row a frame loop eases the icons itself (see
+     shortcuts/shortcut-dock.js); the transition is only for settling back. */
+  --x-nt-shortcut-dock-follow-duration: 0ms;
   --x-nt-shortcut-favicon-radius: max(
     6px,
     calc(var(--x-nt-shortcut-icon-radius, 16px) - ((var(--x-nt-shortcut-icon-size, 48px) - var(--x-nt-shortcut-favicon-size, 28px)) / 2))

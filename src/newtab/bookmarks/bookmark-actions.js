@@ -136,7 +136,7 @@ function createBookmarkActions(deps) {
         id: String(target.bookmarkId),
         title: String((node && node.title) || target.title || ''),
         url,
-        ...(icon ? { iconSource: icon.iconSource } : {}),
+        ...(icon && icon.iconSource ? { iconSource: icon.iconSource } : {}),
         ...(icon && icon.iconSource === 'custom' ? { iconDataUrl: icon.dataUrl } : {})
       },
       sourceElement: target.element

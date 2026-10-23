@@ -134,8 +134,31 @@ function createShortcutsController(deps) {
     return node ? String(node.id) : '';
   }
 
+  // Folder shortcut id -> the bookmark folder its tile last showed.
+  let lastVisibleFolderIds = new Map();
+
+  // A bookmark change empties the bookmark map until it reloads. A render in
+  // that moment (the one that shows a site moved in or out of a folder)
+  // keeps each folder tile on the folder it last showed, rather than
+  // dropping the tile for a render and drawing it again.
   function getVisibleShortcuts() {
-    return shortcutFolderRuntime.visibleItems(pageState.newtabShortcuts, bookmarksRuntime.getNodeMap());
+    const snapshot = typeof bookmarksRuntime.getSnapshot === 'function'
+      ? bookmarksRuntime.getSnapshot()
+      : { ready: true, nodeMap: bookmarksRuntime.getNodeMap() };
+    if (!snapshot.ready && lastVisibleFolderIds.size) {
+      return pageState.newtabShortcuts.flatMap((item) => {
+        if (!item || item.type !== 'folder') return [item];
+        const folderId = lastVisibleFolderIds.get(item.id);
+        return folderId ? [{ ...item, folderId }] : [];
+      });
+    }
+    const visible = shortcutFolderRuntime.visibleItems(pageState.newtabShortcuts, snapshot.nodeMap);
+    if (snapshot.ready) {
+      lastVisibleFolderIds = new Map(visible
+        .filter((item) => item && item.type === 'folder')
+        .map((item) => [item.id, String(item.folderId)]));
+    }
+    return visible;
   }
 
   function refreshShortcutFolderReferences() {
@@ -361,20 +384,33 @@ function createShortcutsController(deps) {
   function getFolderItemIconUrl(bookmarkId, url) {
     const entry = folderItemIconStore.get(bookmarkId);
     if (!entry) return '';
-    return entry.iconSource === 'builtin' ? getShortcutDialogBuiltinIconUrl(url) : entry.dataUrl;
+    return entry.iconSource === 'builtin' ? getShortcutDialogBuiltinIconUrl(url) : entry.dataUrl || '';
   }
 
   function getFolderItemIcon(bookmarkId) {
     return folderItemIconStore.get(bookmarkId);
   }
 
-  // The icon a website shortcut keeps once stacked into a folder.
+  // The icon a website shortcut keeps once moved into a folder, with the
+  // plate and source the folder cannot show kept for its way back out.
   function getFolderItemIconForShortcut(shortcut, iconDataUrl) {
-    if (iconDataUrl) return { iconSource: 'custom', dataUrl: iconDataUrl };
     const source = getShortcutIconSource(shortcut);
-    if (source === 'builtin') return { iconSource: 'builtin' };
-    const dataUrl = shortcut && shortcut.url ? getShortcutFaviconDataUrl(shortcut.url) : '';
-    return dataUrl ? { iconSource: source || 'cache', dataUrl } : null;
+    let icon = null;
+    if (iconDataUrl) {
+      icon = { iconSource: 'custom', dataUrl: iconDataUrl };
+    } else if (source === 'builtin') {
+      icon = { iconSource: 'builtin' };
+    } else {
+      const dataUrl = shortcut && shortcut.url ? getShortcutFaviconDataUrl(shortcut.url) : '';
+      icon = dataUrl ? { iconSource: source || 'cache', dataUrl } : null;
+    }
+    const settings = {
+      ...(!icon && source && source !== 'custom' ? { iconSource: source } : {}),
+      ...(shortcut && shortcut.iconPlate ? { iconPlate: shortcut.iconPlate } : {}),
+      ...(shortcut && shortcut.iconPlateColor ? { iconPlateColor: shortcut.iconPlateColor } : {})
+    };
+    const hasSettings = Object.keys(settings).length > 0;
+    return icon || hasSettings ? { ...(icon || {}), ...(hasSettings ? { shortcut: settings } : {}) } : null;
   }
 
   function updateFolderItemIcons(changes) {
@@ -382,7 +418,22 @@ function createShortcutsController(deps) {
     return folderItemIconStore.update(changes, snapshot.ready ? (id) => snapshot.nodeMap.has(id) : undefined);
   }
 
+  // The icon chosen in the edit dialog; the plate the site had as a
+  // shortcut stays for when it becomes one again.
   function getNextFolderItemIcon(bookmarkId, url, iconState) {
+    const current = folderItemIconStore.get(bookmarkId);
+    const image = getNextFolderItemImage(bookmarkId, url, iconState);
+    const next = image && { iconSource: image.iconSource, ...(image.dataUrl ? { dataUrl: image.dataUrl } : {}) };
+    const kept = current && current.shortcut ? current.shortcut : null;
+    const settings = {
+      ...(kept && kept.iconPlate ? { iconPlate: kept.iconPlate } : {}),
+      ...(kept && kept.iconPlateColor ? { iconPlateColor: kept.iconPlateColor } : {})
+    };
+    const hasSettings = Object.keys(settings).length > 0;
+    return next || hasSettings ? { ...(next || {}), ...(hasSettings ? { shortcut: settings } : {}) } : null;
+  }
+
+  function getNextFolderItemImage(bookmarkId, url, iconState) {
     const current = folderItemIconStore.get(bookmarkId);
     const source = iconState.source;
     if (source === 'custom') {

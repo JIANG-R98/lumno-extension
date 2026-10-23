@@ -1,6 +1,10 @@
 const assert = require('assert');
 const historyApi = require('../../src/newtab/bookmarks/bookmark-move-history');
+const shortcutsStore = require('../../src/newtab/shortcuts/shortcuts-store.js');
 const { openDragPage } = require('../helpers/newtab-drag-page');
+
+const FOLDER_ITEM_ICONS_KEY = '_x_extension_shortcut_folder_item_icons_2026_unique_';
+const SHORTCUT_ICONS_KEY = '_x_extension_newtab_shortcut_icons_2026_unique_';
 
 // Dragging between New Tab's bookmarks, shortcuts and recent sites, and the
 // undo (⌘Z) / redo (⇧⌘Z) history those drags share. With a WebDAV backup
@@ -84,6 +88,59 @@ async function testFoldersMoveWhole() {
   assert.deepStrictEqual(newtab.changes(), ['move'], 'without recreating anything');
   await newtab.undo();
   assert.deepStrictEqual([newtab.bar(), newtab.shortcuts()], [['Start', 'Link', 'Folder'], ['One', 'Two', 'Folder']]);
+  newtab.close();
+}
+
+// A site inside a shortcut folder is already one of the shortcuts: dragged
+// to the shortcut row it moves out of the folder even without a backup, and
+// keeps the icon it showed there, as a shortcut and again after undo. The
+// folder shortcut here holds the bookmarks bar, whose sites the grid shows;
+// a shortcut for the bar itself draws no tile.
+async function testShortcutFolderSiteMovesWithItsIcon() {
+  const icon = 'data:image/png;base64,iVBORw0KGgo=';
+  const newtab = await open({
+    shortcuts: [...SHORTCUTS, { type: 'folder', folderId: '1', title: 'Bar' }],
+    local: { [FOLDER_ITEM_ICONS_KEY]: { link: { iconSource: 'custom', dataUrl: icon } } }
+  });
+  await newtab.dragTo(newtab.card('link'), newtab.shortcutSlot(1));
+  assert.deepStrictEqual([newtab.shortcuts(), newtab.bar()], [['One', 'Link', 'Two'], ['Start', 'Folder']],
+    'the site leaves the shortcut folder for the row');
+  const shortcut = (await shortcutsStore.loadShortcuts(newtab.page.storage.sync)).find((item) => item.title === 'Link');
+  assert.strictEqual(shortcut.iconSource, 'custom', 'the shortcut keeps the icon source it had in the folder');
+  const shortcutIcons = () => newtab.page.storage.local.data[SHORTCUT_ICONS_KEY] || {};
+  const folderIcon = (title) => {
+    const node = newtab.bar().includes(title) && newtab.page.bookmarks.find('1').children.find((item) => item.title === title);
+    return node ? (newtab.page.storage.local.data[FOLDER_ITEM_ICONS_KEY] || {})[node.id] : undefined;
+  };
+  assert.strictEqual(shortcutIcons()[shortcut.id], icon, 'and its custom image');
+  await newtab.undo();
+  assert.deepStrictEqual([newtab.shortcuts(), newtab.bar()], [['One', 'Two'], ['Start', 'Link', 'Folder']]);
+  assert.deepStrictEqual(folderIcon('Link'), { iconSource: 'custom', dataUrl: icon },
+    'undo puts the site back in the folder with its icon');
+  await newtab.redo();
+  assert.strictEqual(shortcutIcons()[shortcut.id], icon, 'redo gives the shortcut the image again');
+  await newtab.dragTo(newtab.tile('Link'), newtab.bookmarkSlot(1));
+  assert.deepStrictEqual([newtab.shortcuts(), newtab.bar()], [['One', 'Two'], ['Start', 'Link', 'Folder']]);
+  assert.deepStrictEqual(folderIcon('Link'), { iconSource: 'custom', dataUrl: icon },
+    'a shortcut dragged into the bookmarks keeps its icon for the folder view');
+  newtab.close();
+}
+
+// A shortcut's icon settings survive a trip into a shortcut folder and back:
+// its plate and an online source whose image was never saved, which the
+// folder's menu cannot show, ride along with the site.
+async function testShortcutSettingsRoundTripThroughAFolder() {
+  const newtab = await open({
+    shortcuts: [{ url: 'https://one.example/', title: 'One', iconSource: 'service', iconPlate: 'on', iconPlateColor: '#FFE4A0' },
+      { url: 'https://two.example/', title: 'Two' }, { type: 'folder', folderId: '1', title: 'Bar' }]
+  });
+  await newtab.dragTo(newtab.tile('One'), newtab.bookmarkSlot(1));
+  assert.deepStrictEqual([newtab.shortcuts(), newtab.bar()], [['Two'], ['Start', 'One', 'Link', 'Folder']]);
+  await newtab.dragTo(newtab.card(newtab.page.bookmarks.find('1').children[1].id), newtab.shortcutSlot(0));
+  assert.deepStrictEqual([newtab.shortcuts(), newtab.bar()], [['One', 'Two'], ['Start', 'Link', 'Folder']]);
+  const one = (await shortcutsStore.loadShortcuts(newtab.page.storage.sync)).find((item) => item.title === 'One');
+  assert.deepStrictEqual([one.iconSource, one.iconPlate, one.iconPlateColor], ['service', 'on', '#FFE4A0'],
+    'the shortcut comes back with the icon source and plate it had');
   newtab.close();
 }
 
@@ -192,6 +249,8 @@ function testBoundedIdHistory() {
   await testBookmarkCopiesWithoutABackup();
   await testShortcutMovesToBookmarks();
   await testFoldersMoveWhole();
+  await testShortcutFolderSiteMovesWithItsIcon();
+  await testShortcutSettingsRoundTripThroughAFolder();
   await testDuplicateWebsiteMovesTheExistingShortcut();
   await testFailuresChangeNothing();
   await testSorting();

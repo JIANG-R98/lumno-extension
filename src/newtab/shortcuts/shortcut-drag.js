@@ -238,11 +238,16 @@ function createShortcutDrag(deps) {
     if (!beforeRects || !pageState.shortcutGrid || NEWTAB_CROSS_SURFACE_DRAG.prefersReducedMotion(window)) {
       return;
     }
+    const beforeById = new Map();
+    beforeRects.forEach((rect, element) => {
+      const id = getShortcutLayoutId(element);
+      if (id) beforeById.set(id, rect);
+    });
     getShortcutLayoutElements().forEach((tile) => {
       if (!tile || tile === draggedTile || !tile.style || typeof tile.getBoundingClientRect !== 'function') {
         return;
       }
-      const before = beforeRects.get(tile);
+      const before = beforeRects.get(tile) || beforeById.get(getShortcutLayoutId(tile));
       if (!before || !before.width || !before.height) {
         const shown = tile.getBoundingClientRect();
         if (shown.width && shown.height) {
@@ -277,11 +282,94 @@ function createShortcutDrag(deps) {
     });
   }
 
+  // A tile the change took away (moved into a folder or the bookmarks, or
+  // undone) shrinks out where it was instead of vanishing. It plays in a
+  // layer beside the grid, which carries the grid's classes and state so the
+  // tile keeps its look, while the grid's own render never meets it.
+  const SHORTCUT_GHOST_ATTRIBUTES = ['data-shortcut-lifted', 'data-shortcut-dragging', 'data-shortcut-dropping',
+    'data-drag-gap', 'data-bookmark-drop-target', 'data-shortcut-context-menu-open'];
+  // A shortcut's tile can be drawn anew by a render (a folder whose contents
+  // changed), so the before and after boxes are also paired by shortcut id.
+  function getShortcutLayoutId(element) {
+    return element && typeof element.getAttribute === 'function'
+      ? String(element.getAttribute('data-shortcut-id') || '')
+      : '';
+  }
+
+  function exitShortcutLayoutElements(beforeRects) {
+    const grid = pageState.shortcutGrid;
+    const host = grid && grid.parentNode;
+    if (!host || typeof document.createElement !== 'function' ||
+        NEWTAB_CROSS_SURFACE_DRAG.prefersReducedMotion(window)) {
+      return;
+    }
+    const shownIds = new Set(getShortcutLayoutElements().map(getShortcutLayoutId).filter(Boolean));
+    const removed = [];
+    beforeRects.forEach((rect, element) => {
+      if (element && !element.isConnected && rect && rect.width && rect.height &&
+          !shownIds.has(getShortcutLayoutId(element)) &&
+          element.classList && element.classList.contains('x-nt-shortcut-tile') &&
+          typeof element.animate === 'function') {
+        removed.push([element, rect]);
+      }
+    });
+    if (!removed.length) {
+      return;
+    }
+    const layer = document.createElement('div');
+    Array.from(grid.attributes).forEach((attribute) => {
+      if (attribute.name === 'class' || attribute.name.startsWith('data-')) {
+        layer.setAttribute(attribute.name, attribute.value);
+      }
+    });
+    layer.setAttribute('aria-hidden', 'true');
+    layer.style.cssText = 'position:absolute;left:0;top:0;width:0;height:0;min-height:0;max-width:none;' +
+      'margin:0;padding:0;display:block;overflow:visible;pointer-events:none;';
+    host.appendChild(layer);
+    const origin = layer.getBoundingClientRect();
+    removed.forEach(([tile, rect]) => {
+      clearShortcutTileLayoutAnimation(tile);
+      SHORTCUT_GHOST_ATTRIBUTES.forEach((name) => tile.removeAttribute(name));
+      tile.removeAttribute('id');
+      // No longer a tile to anything that looks for tiles; it keeps the
+      // tile's box by hand.
+      tile.classList.replace('x-nt-shortcut-tile', 'x-nt-shortcut-tile-ghost');
+      Object.assign(tile.style, {
+        display: 'grid',
+        placeItems: 'center',
+        boxSizing: 'border-box',
+        padding: 'var(--x-nt-shortcut-tile-padding, 8px)',
+        position: 'absolute',
+        left: `${rect.left - origin.left}px`,
+        top: `${rect.top - origin.top}px`,
+        width: `${rect.width}px`,
+        height: `${rect.height}px`,
+        margin: '0',
+        transform: 'none',
+        transition: 'none'
+      });
+      layer.appendChild(tile);
+      tile.animate([
+        { opacity: 1, scale: '1' },
+        { opacity: 0, scale: '0.6' }
+      ], {
+        duration: SHORTCUT_REORDER_ANIMATION_MS,
+        easing: SHORTCUT_REORDER_EASING,
+        fill: 'forwards'
+      });
+    });
+    window.setTimeout(() => {
+      if (layer.parentNode) layer.parentNode.removeChild(layer);
+    }, SHORTCUT_REORDER_ANIMATION_MS + 60);
+  }
+
   // Runs a change that re-renders the shortcuts and slides whatever it moved
-  // from where it was, so a re-centered grid glides instead of jumping.
+  // from where it was, so a re-centered grid glides instead of jumping; what
+  // it added fades in and what it removed shrinks out.
   function animateShortcutLayoutChange(change) {
     const beforeRects = getShortcutTileRectMap();
     const result = change();
+    exitShortcutLayoutElements(beforeRects);
     animateShortcutLayoutShift(beforeRects, null);
     return result;
   }
@@ -722,7 +810,7 @@ function createShortcutDrag(deps) {
     // Only a drag can leave a drag-mode folder menu open. A plain click must
     // keep an open folder menu, so the click itself can toggle it closed.
     if (state.isDragging) {
-      closeBookmarkCascadeMenu();
+      closeBookmarkCascadeMenu({ animate: true });
     }
     if (document.body) {
       document.body.removeAttribute('data-drag-source');
@@ -1006,7 +1094,9 @@ function createShortcutDrag(deps) {
         snapshot: shortcut,
         index: originalShortcuts.findIndex((item) => item.id === shortcut.id),
         iconDataUrl: pageState.newtabShortcutIcons[shortcut.id]
-      }
+      },
+      // The site keeps its icon choice as a bookmark in a shortcut folder.
+      itemIcon: isFolder ? null : getFolderItemIconForShortcut(shortcut, pageState.newtabShortcutIcons[shortcut.id])
     });
     if (!record) return Promise.resolve(restoreShortcut());
     pageState.bookmarkMoveHistoryBusy = true;

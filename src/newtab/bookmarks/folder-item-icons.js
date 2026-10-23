@@ -6,9 +6,13 @@ const MAX_DATA_URL_LENGTH = 192 * 1024;
 const IMAGE_SOURCES = new Set(['service', 'favicon-is', 'cache', 'custom']);
 const DATA_URL_PATTERN = /^data:image\/(?:png|webp|avif|svg\+xml|x-icon|vnd\.microsoft\.icon|jpeg|jpg|gif);base64,[a-z0-9+/=]+$/i;
 
+const SHORTCUT_ONLY_SOURCES = new Set(['service', 'favicon-is', 'cache', 'builtin']);
+const PLATE_MODES = new Set(['on', 'off']);
+const PLATE_COLOR_PATTERN = /^#[\dA-F]{6}$/;
+
 // 'builtin' is resolved from the bookmark's URL when shown; every other
-// source keeps the image it produced. The automatic default has no entry.
-function normalizeEntry(value) {
+// source keeps the image it produced. The automatic default has no icon.
+function normalizeIcon(value) {
   const iconSource = value && typeof value === 'object' ? String(value.iconSource || '') : '';
   if (iconSource === 'builtin') {
     return { iconSource };
@@ -18,6 +22,31 @@ function normalizeEntry(value) {
     return null;
   }
   return { iconSource, dataUrl };
+}
+
+// What the site had as a shortcut that the folder's icon does not hold: its
+// plate, and an online source whose image was not saved. The menu ignores
+// it; the site gets it back when it is dragged out to the shortcuts again.
+function normalizeShortcutSettings(value) {
+  if (!value || typeof value !== 'object') return null;
+  const iconSource = SHORTCUT_ONLY_SOURCES.has(value.iconSource) ? value.iconSource : '';
+  const iconPlate = PLATE_MODES.has(value.iconPlate) ? value.iconPlate : '';
+  const color = typeof value.iconPlateColor === 'string' ? value.iconPlateColor.trim().toUpperCase() : '';
+  const settings = {
+    ...(iconSource ? { iconSource } : {}),
+    ...(iconPlate ? { iconPlate } : {}),
+    ...(iconPlate !== 'off' && PLATE_COLOR_PATTERN.test(color) ? { iconPlateColor: color } : {})
+  };
+  return Object.keys(settings).length ? settings : null;
+}
+
+function normalizeEntry(value) {
+  const icon = normalizeIcon(value);
+  const shortcut = normalizeShortcutSettings(value && value.shortcut);
+  if (!icon && !shortcut) {
+    return null;
+  }
+  return { ...(icon || {}), ...(shortcut ? { shortcut } : {}) };
 }
 
 function normalizeMap(value) {

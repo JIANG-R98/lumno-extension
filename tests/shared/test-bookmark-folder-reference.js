@@ -155,6 +155,31 @@ async function run() {
   await controller.refresh();
   assert.deepStrictEqual((await shortcuts.loadShortcuts(sourceDevice.chrome.storage.sync))[0].folderRef.path, ['Design', 'Moved']);
   assert.strictEqual(sourceDevice.chrome.storage.sync.values[refs.BINDINGS_KEY], undefined);
+
+  // New Tab saves a site dragged out of a shortcut folder, then removes its
+  // bookmark. When that save lands while the background is still updating
+  // the folder's reference, the background must not write its older list
+  // over it, or the site is gone from both places.
+  const raceDevice = device({ local: { [refs.BINDINGS_KEY]: { 'entry-a': { folderId: '42' } } } });
+  const site = shortcuts.createShortcutRecord({ url: 'https://example.com/site', title: 'Site' }, { now: 2 });
+  await shortcuts.saveShortcuts(raceDevice.chrome.storage.sync, [entry(aMap)]);
+  const raceTree = tree();
+  raceTree[0].children[0].children[0].children = [];
+  raceDevice.setTree(raceTree);
+  const readTree = raceDevice.chrome.bookmarks.getTree;
+  let newTabSaved = false;
+  raceDevice.chrome.bookmarks.getTree = (fn) => readTree((nodes) => {
+    if (newTabSaved) { fn(nodes); return; }
+    newTabSaved = true;
+    shortcuts.saveShortcuts(raceDevice.chrome.storage.sync, [entry(aMap), site]).then(() => fn(nodes));
+  });
+  await refs.createSyncController({ chrome: raceDevice.chrome, settings, shortcuts }).refresh();
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  const afterRace = await shortcuts.loadShortcuts(raceDevice.chrome.storage.sync);
+  assert.deepStrictEqual(afterRace.map((row) => row.title), ['灵感', 'Site'],
+    'a save made while the background reconciles is kept');
+  assert.strictEqual(afterRace[0].folderRef.fingerprint, refs.describe('42', refs.buildNodeMap(raceTree)).fingerprint,
+    'and the folder reference is still brought up to date');
   console.log('Folder reference tests passed: per-device IDs, direct binding, hidden/recovered order, ambiguity, legacy migration, background edits and isolated storage.');
 }
 

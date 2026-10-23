@@ -18,9 +18,10 @@ function createBookmarkCascadeActions(deps) {
     }
   }
 
-  function closeBookmarkCascadeMenu() {
+  // `{ animate: true }` folds the menu away rather than removing it at once.
+  function closeBookmarkCascadeMenu(options) {
     if (pageState.bookmarkCascadeRuntime) {
-      pageState.bookmarkCascadeRuntime.close();
+      pageState.bookmarkCascadeRuntime.close(options);
     }
   }
 

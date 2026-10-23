@@ -238,12 +238,25 @@ function createSyncController(options) {
     await runtime.flush();
     if (generation !== revision || JSON.stringify(next) === JSON.stringify(state.items)) return;
     const nextState = { groups: state.groups, items: next, migratedAt: state.migratedAt };
+    // A New Tab page may have saved the shortcuts since they were read (a
+    // site dragged out of a folder, whose bookmark it then removes). Writing
+    // this older list over that save would lose the site, so a changed list
+    // is read again instead.
+    const unchanged = async () => {
+      const latest = await storage(provider.area, 'get', store.SHORTCUT_STORAGE_KEYS.slice());
+      const latestLocal = sync ? await storage(chromeApi.storage.local, 'get', [overflowKey]) : {};
+      return JSON.stringify(latest) === JSON.stringify(values) &&
+        JSON.stringify(latestLocal[overflowKey]) === JSON.stringify(local[overflowKey]);
+    };
     if (!sync) {
+      if (generation !== revision) return;
+      if (!await unchanged()) { schedule(); return; }
       await store.persistShortcutState(provider.area, nextState);
       return;
     }
     const allSync = await storage(chromeApi.storage.sync, 'get', null);
     if (generation !== revision) return;
+    if (!await unchanged()) { schedule(); return; }
     const usage = store.measureShortcutSyncUsage(allSync);
     await store.persistShortcutState(chromeApi.storage.sync, nextState, {
       overflowArea: chromeApi.storage.local,

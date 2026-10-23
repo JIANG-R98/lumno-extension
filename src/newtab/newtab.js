@@ -2449,6 +2449,7 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
     t,
     refreshShortcutFolderReferences,
     shortcutFolderRuntime,
+    getFolderItemIcon,
     updateFolderItemIcons,
     persistShortcuts,
     markBookmarkTreeDirty: (...args) => markBookmarkTreeDirty(...args),

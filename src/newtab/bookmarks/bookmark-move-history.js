@@ -207,6 +207,12 @@ function createTransferRecord(options) {
     to: to && Object.freeze(to),
     beforeShortcut: beforeShortcut || null,
     afterShortcut: afterShortcut || null,
+    // The icon the site shows as a bookmark inside a shortcut folder, put
+    // back whenever the transfer creates that bookmark.
+    itemIcon: config.itemIcon && typeof config.itemIcon === 'object' &&
+      (config.itemIcon.iconSource || config.itemIcon.shortcut)
+      ? Object.freeze({ ...config.itemIcon })
+      : null,
     runtime: {
       currentBookmarkId: String(config.runtime && config.runtime.currentBookmarkId || config.bookmarkId || '')
     }

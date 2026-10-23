@@ -335,7 +335,8 @@ body[data-glass-style] .x-nt-section-mode-select[data-open="true"][data-glass-in
   z-index: var(--lumno-z-drag-ghost) !important;
   margin: 0;
   background: rgba(255, 255, 255, 0.96);
-  border-color: rgb(var(--lumno-color-accent-rgb) / 0.38);
+  /* A lifted card, not a selected one: a neutral hairline, no accent ring. */
+  border-color: rgba(15, 23, 42, 0.06);
   box-shadow: 0 12px 26px rgba(15, 23, 42, 0.2);
   pointer-events: none;
   opacity: 0.94;

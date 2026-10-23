@@ -799,8 +799,8 @@ assertContains(
 
 assertContains(
   newtabHtml,
-  '--x-nt-shortcut-dock-follow-duration: 90ms;',
-  'shortcut dock icons should trail a moving pointer by about a frame, not the full settle duration'
+  '--x-nt-shortcut-dock-follow-duration: 0ms;',
+  'shortcut dock icons should follow a moving pointer through the frame loop, not a restarted transition'
 );
 
 assertContains(
@@ -959,13 +959,13 @@ assertContains(
 
 assertContains(
   newtabHtml,
-  '.x-nt-shortcut-tile[data-dock-distance="0"] .x-nt-shortcut-icon',
+  '.x-nt-shortcut-tile[data-dock-distance="0"]',
   'shortcut dock should define a hovered icon scale'
 );
 
 const shortcutNearHoverRule = getCssRuleBlock(
   newtabHtml,
-  '.x-nt-shortcut-tile[data-dock-distance="0"] .x-nt-shortcut-icon'
+  '.x-nt-shortcut-tile[data-dock-distance="0"]'
 );
 assertContains(
   shortcutNearHoverRule,
@@ -993,19 +993,19 @@ assertContains(
 
 assertContains(
   newtabHtml,
-  '.x-nt-shortcut-tile[data-dock-side="before"][data-dock-distance="1"] .x-nt-shortcut-icon',
+  '.x-nt-shortcut-tile[data-dock-side="before"][data-dock-distance="1"]',
   'shortcut dock should move previous neighbors away from the hover target'
 );
 
 assertContains(
   newtabHtml,
-  '.x-nt-shortcut-tile[data-dock-side="after"][data-dock-distance="1"] .x-nt-shortcut-icon',
+  '.x-nt-shortcut-tile[data-dock-side="after"][data-dock-distance="1"]',
   'shortcut dock should move next neighbors away from the hover target'
 );
 
 const shortcutDockDisabledIconRule = getCssRuleBlock(
   newtabHtml,
-  '.x-nt-shortcuts-grid[data-dock-magnification="false"] .x-nt-shortcut-tile .x-nt-shortcut-icon'
+  '.x-nt-shortcuts-grid[data-dock-magnification="false"] .x-nt-shortcut-tile'
 );
 assertContains(
   shortcutDockDisabledIconRule,
@@ -1427,8 +1427,7 @@ async function testDockMagnification() {
     const distances = () => shortcuts.tiles().concat(page.document.querySelector('.x-nt-shortcut-tile--add')).map((tile) => tile.getAttribute('data-dock-distance'));
     if (enabled) {
       assert.deepStrictEqual(distances(), ['1', '0', '1', '2'], 'hovering a tile should mark each neighbour by its distance');
-      const icon = shortcuts.tile('One').querySelector('.x-nt-shortcut-icon');
-      assert.ok(Number.parseFloat(icon.style.getPropertyValue('--x-nt-shortcut-dock-scale')) > 1, 'and magnify the hovered icon');
+      assert.ok(Number.parseFloat(shortcuts.tile('One').style.getPropertyValue('--x-nt-shortcut-dock-scale')) > 1, 'and magnify the hovered icon');
       grid.dispatchEvent(new page.window.MouseEvent('pointerleave', { clientX: 10, clientY: 10 }));
       await page.settle(60);
       assert.deepStrictEqual(distances(), [null, null, null, null], 'leaving the rail should let the icons settle back');
