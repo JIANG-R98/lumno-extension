@@ -4,7 +4,8 @@ const path = require('path');
 const zlib = require('zlib');
 const { execFileSync } = require('child_process');
 
-// Two checks guard the committed React bundles:
+// Two checks guard the React bundles that npm run build:react writes to
+// src/react/ (build output, not committed; build before running this test):
 //
 // 1. Growth: one change (a PR, or a push to main) may not grow a route by more
 //    than GROWTH_LIMIT_KIB over its base commit. Both sides are measured on the
@@ -15,8 +16,11 @@ const { execFileSync } = require('child_process');
 //    KiB above the 1.1.4 sizes, so ordinary features never meet them; when a
 //    route does, raise its ceiling by a round step in a commit of its own.
 //
-// The base commit comes from LUMNO_BUNDLE_BASE (CI sets it), else the merge
-// base with origin/main. Without one, only the ceilings are checked.
+// The growth check measures a checkout of the base commit with its bundles
+// built, named by LUMNO_BUNDLE_BASE_DIR. The base commit itself, whose later
+// commit messages may carry the trailer, comes from LUMNO_BUNDLE_BASE, else
+// the merge base with origin/main. CI sets both; without a built base, only
+// the ceilings are checked.
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const reactDir = 'src/react';
@@ -99,7 +103,19 @@ function resolveBase() {
   return mergeBase ? mergeBase.toString().trim() : null;
 }
 
-const head = measure((file) => fs.readFileSync(path.join(repoRoot, reactDir, file)));
+function readBuiltBundle(checkoutDir) {
+  return (file) => {
+    const bundlePath = path.join(checkoutDir, reactDir, file);
+    return fs.existsSync(bundlePath) ? fs.readFileSync(bundlePath) : null;
+  };
+}
+
+const head = measure(readBuiltBundle(repoRoot));
+assert.deepStrictEqual(
+  Object.keys(head),
+  Object.keys(routes),
+  'Run npm run build:react before checking the React bundle budgets'
+);
 
 const failures = [];
 
@@ -114,9 +130,10 @@ for (const [route, size] of Object.entries(head)) {
   }
 }
 
-const base = resolveBase();
+const baseDir = process.env.LUMNO_BUNDLE_BASE_DIR;
+const base = baseDir ? resolveBase() : null;
 if (base) {
-  const baseSizes = measure((file) => git(['show', `${base}:${reactDir}/${file}`]));
+  const baseSizes = measure(readBuiltBundle(baseDir));
   const messages = (git(['log', '--format=%B', `${base}..HEAD`]) || '').toString();
   const growthAccepted = GROWTH_TRAILER.test(messages);
   const report = [];
@@ -139,7 +156,7 @@ if (base) {
   console.log(`React bundle growth over ${base.slice(0, 8)}${growthAccepted ? ' (accepted by a Bundle-Growth trailer)' : ''}:`);
   console.log(report.join('\n'));
 } else {
-  console.log('No base commit for the React bundle growth check; checked the ceilings only.');
+  console.log('No built base for the React bundle growth check; checked the ceilings only.');
 }
 
 assert.deepStrictEqual(failures, [], `React bundle budgets:\n${failures.join('\n')}`);

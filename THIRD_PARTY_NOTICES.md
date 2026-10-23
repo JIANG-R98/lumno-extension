@@ -2,8 +2,8 @@
 
 Lumno's own code is licensed under the GNU General Public License v3.0 only
 (see [LICENSE](LICENSE)). The source code, including the React sources in
-`react-src/` that the minified bundles in `src/react/` are built from, is at
-https://github.com/kubai087/lumno-extension.
+`react-src/` that the minified bundles in the package's `src/react/` are built
+from, is at https://github.com/kubai087/lumno-extension.
 
 Lumno also ships the third-party components below. Each one stays under its
 own license, and the GPL does not cover the ones whose license is not
@@ -11,11 +11,11 @@ GPL-compatible. Their license texts ship alongside them, in the files listed.
 
 ## npm packages in the React bundles
 
-Vite bundles these into `src/react/` and writes their license texts to
-[`src/react/third-party-licenses.md`](src/react/third-party-licenses.md) (the
-page chunks) and
-[`src/react/overlay-third-party-licenses.md`](src/react/overlay-third-party-licenses.md)
-(the in-page overlay bundle) on every `npm run build:react`.
+`npm run build:react` bundles these into `src/react/` with Vite and writes
+their license texts next to the bundles, to `src/react/third-party-licenses.md`
+(the page chunks) and `src/react/overlay-third-party-licenses.md` (the in-page
+overlay bundle). Both files ship in the package; like the bundles, they are
+build output and not in the repository.
 
 | Package | License |
 | --- | --- |

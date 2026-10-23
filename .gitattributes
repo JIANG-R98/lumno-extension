@@ -1,6 +1,2 @@
 # Auto detect text files and perform LF normalization
 * text=auto
-
-# Vite output from react-src/ (npm run build:react). CI checks it matches the
-# sources; GitHub collapses it in diffs and leaves it out of language stats.
-src/react/** linguist-generated=true

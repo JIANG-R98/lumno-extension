@@ -81,7 +81,8 @@ error; there is no timed legacy-renderer fallback.
 - Keep the React bundle budgets enforced by `tests/repo/test-react-bundle-budgets.js`:
   one change may grow a route by a few KiB over its base commit (a
   `Bundle-Growth: <why>` commit trailer accepts more), under loose absolute
-  ceilings.
+  ceilings. The bundles in `src/react/` are build output, not committed, so CI
+  builds the base commit to measure the growth.
 - Run both Vitest component coverage and the browser-adapter contract tests in
   `tests/`.
 
