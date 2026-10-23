@@ -1336,10 +1336,49 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     }
   }
 
+  let overlayExitTimer = null;
+  let closingOverlayElement = null;
+
+  function closeOverlayWithMotion(overlayElement) {
+    if (!overlayElement || !overlayElement.isConnected ||
+        shouldSkipOverlayEntryMotion() ||
+        overlayElement.getAttribute('data-lumno-overlay-entry') !== 'done') {
+      removeOverlay(overlayElement);
+      return;
+    }
+    if (closingOverlayElement === overlayElement) return;
+    closingOverlayElement = overlayElement;
+    overlayElement.setAttribute('data-lumno-overlay-exit', 'running');
+    overlayElement.style.setProperty('pointer-events', 'none', 'important');
+    overlayElement.style.setProperty('will-change', 'transform, opacity', 'important');
+    overlayElement.style.setProperty(
+      'transition',
+      'transform 220ms cubic-bezier(0.4, 0, 1, 1), opacity 160ms ease-in',
+      'important'
+    );
+    // Commit the visible state before changing the protected inline transform.
+    void overlayElement.offsetWidth;
+    overlayElement.style.setProperty(
+      'transform',
+      'translateX(-50%) translateY(8px) scale(var(--x-ov-visible-scale, 1)) scale(0.985)',
+      'important'
+    );
+    overlayElement.style.setProperty('opacity', '0', 'important');
+    overlayExitTimer = window.setTimeout(() => {
+      overlayExitTimer = null;
+      removeOverlay(overlayElement);
+    }, 230);
+  }
+
   // Tears down this invocation's overlay session: DOM, page listeners,
   // storage listeners and every controller registered for the session.
   function removeOverlay(overlayElement, options) {
     const removalOptions = options && typeof options === 'object' ? options : {};
+    if (overlayExitTimer !== null) {
+      window.clearTimeout(overlayExitTimer);
+      overlayExitTimer = null;
+    }
+    closingOverlayElement = null;
     window._x_extension_search_overlay_open_2026_unique_ = false;
     if (removalOptions.preserveLoadingIntent !== true) {
       notifyOverlayClosed();
@@ -1420,11 +1459,15 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
   }
 
   function destroyExistingOverlaySession(overlayElement, options) {
+    if (overlayElement && overlayElement.getAttribute('data-lumno-overlay-exit') === 'running') {
+      return;
+    }
     const mountHost = getOverlayMountHost(overlayElement);
     const destroyed = mountHost
       ? overlayLifecycle.requestSessionDestroy(mountHost, options)
       : !(overlayElement && overlayElement.isConnected);
-    if (destroyed) {
+    if (destroyed || (overlayElement &&
+        overlayElement.getAttribute('data-lumno-overlay-exit') === 'running')) {
       window._x_extension_search_overlay_open_2026_unique_ = false;
       return;
     }
@@ -1443,6 +1486,10 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
 
   let shouldReplaceExistingOverlay = false;
   if (overlay) {
+    if (overlay.getAttribute('data-lumno-overlay-exit') === 'running') {
+      window._x_extension_search_overlay_open_2026_unique_ = false;
+      return;
+    }
     const shouldReplaceStaleOverlay = isStaleOverlay(overlay);
     shouldReplaceExistingOverlay = shouldReplaceStaleOverlay;
     if (ensureOverlayOpen && !shouldReplaceStaleOverlay) {
@@ -1450,7 +1497,8 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       return;
     }
     destroyExistingOverlaySession(overlay, {
-      preserveLoadingIntent: shouldReplaceStaleOverlay
+      preserveLoadingIntent: shouldReplaceStaleOverlay,
+      animateExit: !shouldReplaceStaleOverlay
     });
     if (!shouldReplaceStaleOverlay) {
       return;
@@ -1482,7 +1530,8 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
     }
     setOverlayStoredContextToken(overlay);
     addOverlaySessionCleanup(overlayLifecycle.onSessionDestroyRequest(overlayHost, (options) => {
-      removeOverlay(overlay, options);
+      if (options.animateExit === true) closeOverlayWithMotion(overlay);
+      else removeOverlay(overlay, options);
     }));
     overlay.classList.add('x-lumno-search-entry');
     setOverlayMountVisibility(overlayHost, true);
@@ -5901,7 +5950,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
         eventPath.includes(overlay) ||
         eventPath.includes(overlay._lumnoOverlayHost);
       if (!clickedInsideOverlay) {
-        removeOverlay(overlay);
+        closeOverlayWithMotion(overlay);
       }
     };
     document.addEventListener('click', clickOutsideHandler);
@@ -6208,7 +6257,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       const suggestionNavigationKey = getSuggestionNavigationKey(e);
       dismissAutocompletePreviewOnNonTabKey(e);
       if (e.key === 'Escape' && overlay) {
-        removeOverlay(overlay);
+        closeOverlayWithMotion(overlay);
       } else if (suggestionNavigationKey === 'ArrowDown') {
         e.preventDefault();
         if (suggestionItems.length === 0) {
@@ -6534,7 +6583,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
       handleOverlayKeyup,
       onEscapeOutside: () => {
         if (overlay) {
-          removeOverlay(overlay);
+          closeOverlayWithMotion(overlay);
         }
       },
       onBlur: () => {
