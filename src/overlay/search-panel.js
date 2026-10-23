@@ -98,6 +98,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     createOverlayWheelIsolationHandler,
     notifyOverlayLoadingSession,
     removeOverlay,
+    closeOverlayWithMotion,
     destroyExistingOverlaySession
   } = PANEL_PANEL_SESSION.createPanelSession({
     pauseOverlayAntiTranslateObserverForScroll: (...args) => pauseOverlayAntiTranslateObserverForScroll(...args),
@@ -108,6 +109,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     overlayShell,
     stopOverlayPageThemeObserver,
     overlayLifecycle,
+    SETTINGS,
     overlayState
   });
 
@@ -371,6 +373,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     SUGGESTION_NAVIGATION,
     numberShortcutOptions,
     removeOverlay,
+    closeOverlayWithMotion,
     updateSelection,
     scrollSelectedSuggestionIntoView,
     getCommandMatch: (...args) => getCommandMatch(...args),
@@ -1142,15 +1145,21 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   });
 
   if (overlayState.overlay) {
-    const shouldReplaceStaleOverlay = isStaleOverlay(overlayState.overlay);
-    if (ensureOverlayOpen && !shouldReplaceStaleOverlay) {
+    // A press while the overlay is still playing its exit reopens it: the
+    // closing session is dropped at once and a fresh one mounts below.
+    const shouldReplaceClosingOverlay =
+      overlayState.overlay.getAttribute('data-lumno-overlay-exit') === 'running';
+    const shouldReplaceExistingOverlay = shouldReplaceClosingOverlay ||
+      isStaleOverlay(overlayState.overlay);
+    if (ensureOverlayOpen && !shouldReplaceExistingOverlay) {
       window._x_extension_search_overlay_open_2026_unique_ = true;
       return;
     }
     destroyExistingOverlaySession(overlayState.overlay, {
-      preserveLoadingIntent: shouldReplaceStaleOverlay
+      preserveLoadingIntent: shouldReplaceExistingOverlay,
+      animateExit: !shouldReplaceExistingOverlay
     });
-    if (!shouldReplaceStaleOverlay) {
+    if (!shouldReplaceExistingOverlay) {
       return;
     }
   }
@@ -1180,7 +1189,8 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   }
   setOverlayStoredContextToken(overlayState.overlay);
   addOverlaySessionCleanup(overlayLifecycle.onSessionDestroyRequest(overlayHost, (options) => {
-    removeOverlay(overlayState.overlay, options);
+    if (options.animateExit === true) closeOverlayWithMotion(overlayState.overlay);
+    else removeOverlay(overlayState.overlay, options);
   }));
   overlayState.overlay.classList.add('x-lumno-search-entry');
   setOverlayMountVisibility(overlayHost, true);
@@ -2032,7 +2042,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
       eventPath.includes(overlayState.overlay) ||
       eventPath.includes(overlayState.overlay._lumnoOverlayHost);
     if (!clickedInsideOverlay) {
-      removeOverlay(overlayState.overlay);
+      closeOverlayWithMotion(overlayState.overlay);
     }
   };
   document.addEventListener('click', overlayState.clickOutsideHandler);
@@ -2086,7 +2096,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     handleOverlayKeyup,
     onEscapeOutside: () => {
       if (overlayState.overlay) {
-        removeOverlay(overlayState.overlay);
+        closeOverlayWithMotion(overlayState.overlay);
       }
     },
     onBlur: () => {
@@ -2095,6 +2105,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     }
   });
   overlayKeyRouter.start();
+  overlayState.overlayKeyRouter = overlayKeyRouter;
   addOverlaySessionCleanup(() => overlayKeyRouter.stop());
 
   overlayState.overlay.appendChild(overlayState.inputContainer);

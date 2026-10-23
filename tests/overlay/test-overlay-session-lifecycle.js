@@ -37,12 +37,31 @@ const lifecycle = LumnoOverlayLifecycle;
   });
   assert.strictEqual(lifecycle.requestSessionDestroy(host, { preserveLoadingIntent: true }), true,
     'a session that removes its host reports itself destroyed');
-  assert.deepStrictEqual(destroyCalls, [{ preserveLoadingIntent: true }]);
+  assert.deepStrictEqual(destroyCalls, [{ preserveLoadingIntent: true, animateExit: false }]);
 
   document.documentElement.appendChild(host);
   assert.strictEqual(lifecycle.requestSessionDestroy(host), false,
     'a session answers one destroy request only');
   assert.strictEqual(destroyCalls.length, 1);
+  dom.window.close();
+}
+
+// A hotkey toggle requests an animated close from the existing session.
+{
+  const dom = new JSDOM('<!doctype html><html><body></body></html>');
+  const host = dom.window.document.createElement('div');
+  dom.window.document.body.appendChild(host);
+  const requests = [];
+  lifecycle.onSessionDestroyRequest(host, (options) => requests.push(options));
+  assert.strictEqual(lifecycle.requestSessionDestroy(host, { animateExit: true }), false,
+    'the host remains mounted while its exit animation runs');
+  assert.deepStrictEqual(requests, [{ preserveLoadingIntent: false, animateExit: true }]);
+  // The session keeps listening while it animates out, so a press that
+  // reopens the overlay can still finish it at once.
+  lifecycle.requestSessionDestroy(host, { preserveLoadingIntent: true });
+  assert.deepStrictEqual(requests[1], { preserveLoadingIntent: true, animateExit: false });
+  lifecycle.requestSessionDestroy(host);
+  assert.strictEqual(requests.length, 2, 'a plain request ends the session for good');
   dom.window.close();
 }
 
@@ -74,8 +93,9 @@ const lifecycle = LumnoOverlayLifecycle;
     details.push(event.detail);
   });
   lifecycle.requestSessionDestroy(host, { preserveLoadingIntent: true });
+  lifecycle.requestSessionDestroy(host, { animateExit: true });
   lifecycle.requestSessionDestroy(host);
-  assert.deepStrictEqual(details, ['preserve-loading-intent', '']);
+  assert.deepStrictEqual(details, ['preserve-loading-intent', 'animate-exit', '']);
   dom.window.close();
 }
 

@@ -11,7 +11,8 @@ function createPanelSession(deps) {
     stopOverlayAntiTranslateObserver,
     overlayShell,
     stopOverlayPageThemeObserver,
-    overlayLifecycle
+    overlayLifecycle,
+    SETTINGS
   } = deps;
 
   // The panel state object shared with search-panel.js and the other modules.
@@ -267,10 +268,64 @@ function createPanelSession(deps) {
     }
   }
 
+  let overlayExitTimer = null;
+  let closingOverlayElement = null;
+
+  // The exit follows the same switches as the entry: the Motion effects
+  // setting and the system's reduced-motion preference.
+  function closeOverlayWithMotion(overlayElement) {
+    if (!overlayElement || !overlayElement.isConnected ||
+        SETTINGS.shouldSkipEntryMotion(window, overlayState.motionEffectsEnabled) ||
+        overlayElement.getAttribute('data-lumno-overlay-entry') !== 'done') {
+      removeOverlay(overlayElement);
+      return;
+    }
+    if (closingOverlayElement === overlayElement) return;
+    closingOverlayElement = overlayElement;
+    // The overlay is closed as far as the worker and the user are concerned;
+    // it only stays mounted to animate out. It stops taking keys, focus and
+    // clicks, so Enter pressed during the exit cannot still run a search.
+    window._x_extension_search_overlay_open_2026_unique_ = false;
+    if (overlayState.overlayKeyRouter) {
+      overlayState.overlayKeyRouter.stop();
+    }
+    overlayElement.inert = true;
+    const overlayRoot = overlayElement._lumnoOverlayRoot;
+    const focusedElement = overlayRoot && overlayRoot.activeElement;
+    if (focusedElement && typeof focusedElement.blur === 'function') {
+      focusedElement.blur();
+    }
+    overlayElement.setAttribute('data-lumno-overlay-exit', 'running');
+    overlayElement.style.setProperty('pointer-events', 'none', 'important');
+    overlayElement.style.setProperty('will-change', 'transform, opacity', 'important');
+    overlayElement.style.setProperty(
+      'transition',
+      'transform 220ms cubic-bezier(0.4, 0, 1, 1), opacity 160ms ease-in',
+      'important'
+    );
+    // Commit the visible state before changing the protected inline transform.
+    void overlayElement.offsetWidth;
+    overlayElement.style.setProperty(
+      'transform',
+      'translateX(-50%) translateY(8px) scale(var(--x-ov-visible-scale, 1)) scale(0.985)',
+      'important'
+    );
+    overlayElement.style.setProperty('opacity', '0', 'important');
+    overlayExitTimer = window.setTimeout(() => {
+      overlayExitTimer = null;
+      removeOverlay(overlayElement);
+    }, 230);
+  }
+
   // Tears down this invocation's overlay session: DOM, page listeners,
   // storage listeners and every controller registered for the session.
   function removeOverlay(overlayElement, options) {
     const removalOptions = options && typeof options === 'object' ? options : {};
+    if (overlayExitTimer !== null) {
+      window.clearTimeout(overlayExitTimer);
+      overlayExitTimer = null;
+    }
+    closingOverlayElement = null;
     window._x_extension_search_overlay_open_2026_unique_ = false;
     if (removalOptions.preserveLoadingIntent !== true) {
       notifyOverlayClosed();
@@ -288,6 +343,7 @@ function createPanelSession(deps) {
     // Session cleanups stop the mount connection guard, so they must run
     // before the host leaves the document or the guard would re-attach it.
     overlayState.overlaySessionCleanups.run();
+    overlayState.overlayKeyRouter = null;
     if (overlayElement) {
       if (overlayState.overlayWheelIsolationHandler) {
         overlayElement.removeEventListener('wheel', overlayState.overlayWheelIsolationHandler, true);
@@ -355,7 +411,8 @@ function createPanelSession(deps) {
     const destroyed = mountHost
       ? overlayLifecycle.requestSessionDestroy(mountHost, options)
       : !(overlayElement && overlayElement.isConnected);
-    if (destroyed) {
+    if (destroyed || (overlayElement &&
+        overlayElement.getAttribute('data-lumno-overlay-exit') === 'running')) {
       window._x_extension_search_overlay_open_2026_unique_ = false;
       return;
     }
@@ -373,6 +430,7 @@ function createPanelSession(deps) {
     createOverlayWheelIsolationHandler,
     notifyOverlayLoadingSession,
     removeOverlay,
+    closeOverlayWithMotion,
     destroyExistingOverlaySession
   };
 }
