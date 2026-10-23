@@ -85,6 +85,29 @@ html[data-theme-ready="true"] body {
   background: var(--page-bg);
   opacity: 1;
 }
+/* The page paints before the stored settings are read. Until options.js
+   marks them painted (data-lumno-options-ready), the settings panel stays
+   hidden and nothing else on the page animates, so switches, selects, rows
+   and the tab indicator appear in their stored state instead of sliding there
+   from the HTML defaults. The panel then fades in; should ready never come,
+   it shows anyway after a second. */
+html:not([data-lumno-options-ready="true"]) body :not(#_x_extension_settings_panel_2024_unique_),
+html:not([data-lumno-options-ready="true"]) body *::before,
+html:not([data-lumno-options-ready="true"]) body *::after {
+  transition: none !important;
+  animation: none !important;
+}
+#_x_extension_settings_panel_2024_unique_ {
+  transition: opacity var(--lumno-duration-lg) ease;
+}
+html:not([data-lumno-options-ready="true"]) #_x_extension_settings_panel_2024_unique_ {
+  opacity: 0;
+  transition: none;
+  animation: _xOptionsPanelStartupFallback_2026_unique_ 0s linear 1s forwards;
+}
+@keyframes _xOptionsPanelStartupFallback_2026_unique_ {
+  to { opacity: 1; }
+}
 /* Light mode subtle noise overlay (adjust opacity/URL for strength & tone) */
 body[data-theme="light"]::before {
   content: "";

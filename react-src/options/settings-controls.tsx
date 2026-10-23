@@ -1,6 +1,6 @@
 import {
   type CSSProperties,
-  useEffect,
+  useLayoutEffect,
   useRef,
   useState
 } from 'react';
@@ -87,10 +87,14 @@ function ToggleControl({
   onChange(checked: boolean): void;
 }) {
   const [checked, setChecked] = useState(model.checked);
-
-  useEffect(() => {
+  // Follow the page's value in the same render. An effect would land a frame
+  // or more later, so a stored value applied at startup would first paint the
+  // HTML default and then slide the switch over.
+  const [modelChecked, setModelChecked] = useState(model.checked);
+  if (modelChecked !== model.checked) {
+    setModelChecked(model.checked);
     setChecked(model.checked);
-  }, [model.checked]);
+  }
 
   const ariaProps = model.ariaLabelKey
     ? { 'data-i18n-aria-label': model.ariaLabelKey }
@@ -137,9 +141,12 @@ function RequiredCheckboxGroup({
     () => new Set(serializedValues ? serializedValues.split('\u0000') : [])
   );
 
-  useEffect(() => {
+  // Same-render sync, as in ToggleControl.
+  const [modelValues, setModelValues] = useState(serializedValues);
+  if (modelValues !== serializedValues) {
+    setModelValues(serializedValues);
     setSelected(new Set(serializedValues ? serializedValues.split('\u0000') : []));
-  }, [serializedValues]);
+  }
 
   return (
     <>
@@ -203,11 +210,16 @@ function RangeSliderControl({
   const [value, setValue] = useState(model.value);
   const [draftValue, setDraftValue] = useState(String(model.value));
   const valueRef = useRef(model.value);
-
-  useEffect(() => {
-    valueRef.current = model.value;
+  // Same-render sync, as in ToggleControl.
+  const [modelValue, setModelValue] = useState(model.value);
+  if (!Object.is(modelValue, model.value)) {
+    setModelValue(model.value);
     setValue(model.value);
     setDraftValue(String(model.value));
+  }
+
+  useLayoutEffect(() => {
+    valueRef.current = model.value;
   }, [model.value]);
 
   const normalizeValue = (next: number) => {

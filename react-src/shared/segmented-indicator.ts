@@ -49,15 +49,28 @@ export function measureSegmentedIndicator(
   };
 }
 
+/**
+ * The first placement after mounting (or after being hidden) snaps into place; only
+ * moves between options slide. Measuring has already styled the indicator at width 0,
+ * so without this it would grow in from the left edge every time a control appears.
+ */
 export function applySegmentedIndicator(
   indicator: HTMLElement,
   measurement: SegmentedIndicatorMeasurement
 ) {
+  const snap = measurement.ready && indicator.dataset.ready !== 'true';
+  if (snap) {
+    indicator.style.transition = 'none';
+  }
   indicator.style.width = measurement.width;
   if (measurement.transform !== null) {
     indicator.style.transform = measurement.transform;
   }
   indicator.dataset.ready = measurement.ready ? 'true' : 'false';
+  if (snap) {
+    void indicator.offsetWidth;
+    indicator.style.transition = '';
+  }
 }
 
 /** Measures and applies in one step; the indicator's parent is the segmented container. */
