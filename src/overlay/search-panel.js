@@ -1340,8 +1340,10 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(tabs, overlayCon
   let closingOverlayElement = null;
 
   function closeOverlayWithMotion(overlayElement) {
+    const reduceMotion = typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (!overlayElement || !overlayElement.isConnected ||
-        shouldSkipOverlayEntryMotion() ||
+        reduceMotion ||
         overlayElement.getAttribute('data-lumno-overlay-entry') !== 'done') {
       removeOverlay(overlayElement);
       return;
