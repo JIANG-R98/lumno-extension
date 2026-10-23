@@ -1868,6 +1868,18 @@
   "site_search_name_kimi": {
     "message": "Kimi"
   },
+  "site_search_name_copilot": {
+    "message": "Copilot"
+  },
+  "site_search_name_grok": {
+    "message": "Grok"
+  },
+  "site_search_name_qwen_chat": {
+    "message": "Qwen Chat"
+  },
+  "site_search_name_ai_studio": {
+    "message": "Google AI Studio"
+  },
   "site_search_name_zhihu": {
     "message": "知乎"
   },

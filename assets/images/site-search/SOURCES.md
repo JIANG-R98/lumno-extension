@@ -4,7 +4,7 @@ Options and the search-scope panel use the bundled `tile-<key>.png` set. Each 14
 
 The notes below record the provenance of those frozen tiles. Brand names and marks remain the property of their respective owners.
 
-- AI providers: version-pinned `@lobehub/icons-static-svg@1.94.0` assets from [Lobe Icons](https://github.com/lobehub/lobe-icons) (`openai`, `gemini-color`, `yuanbao-color`, `deepseek-color`, and `kimi-color`). Kimi uses the black-field treatment from its current light-theme favicon so the white mark remains legible.
+- AI providers: version-pinned `@lobehub/icons-static-svg@1.94.0` assets from [Lobe Icons](https://github.com/lobehub/lobe-icons) (`openai`, `gemini-color`, `yuanbao-color`, `deepseek-color`, `kimi-color`, `copilot-color`, `grok`, `qwen-color`, and `aistudio`). Kimi uses the black-field treatment from its current light-theme favicon so the white mark remains legible; Grok's tile reverses its mark to white on black the same way.
 - Doubao's tile uses the anthropomorphic mascot from the official Doubao CDN (`https://lf-flow-web-cdn.doubao.com/obj/flow-doubao/favicon/new-doubao/180x180.png`).
 - Qianwen, MiniMax Agent, and Metaso use their current official website product artwork: Qianwen's `80x80` AliCDN mark (`https://img.alicdn.com/imgextra/i2/O1CN01taBbMS1CfyJoOt0lB_!!6000000000109-2-tps-80-80.png`), MiniMax Agent's `favicon_v2.png` (`https://agent.minimax.io/assets/logo/favicon_v2.png?v=4`), and Metaso's Apple touch icon (`https://metaso.cn/apple-touch-icon.png`). Their artwork is normalized inside the corresponding 144px runtime tiles.
 - DuckDuckGo, Brave, and GitHub: matching color vectors from the Iconify `logos` collection. DuckDuckGo and Brave were cross-checked against their official brand/press resources.

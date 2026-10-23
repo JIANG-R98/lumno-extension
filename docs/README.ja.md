@@ -63,7 +63,7 @@
 
 ### サイト内検索と AI 検索
 
-プレフィックスを入力するだけで、YouTube、Bilibili、GitHub、Google、Bing、Baidu、Zhihu、Douban、Juejin、Taobao、X、Reddit、Wikipedia などをサイト内検索できます。ChatGPT、Gemini、DeepSeek、Kimi、豆包、千問、元宝、MiniMax にも直接質問できます。カスタムテンプレートと別名も追加できます。
+プレフィックスを入力するだけで、YouTube、Bilibili、GitHub、Google、Bing、Baidu、Zhihu、Douban、Juejin、Taobao、X、Reddit、Wikipedia などをサイト内検索できます。ChatGPT、Gemini、Google AI Studio、Copilot、Grok、DeepSeek、Kimi、豆包、千問、Qwen Chat、元宝、MiniMax にも直接質問できます。カスタムテンプレートと別名も追加できます。
 
 ### 集約検索：複数の検索エンジンを一度に
 

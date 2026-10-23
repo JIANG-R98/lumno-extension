@@ -40,7 +40,7 @@ build output and not in the repository.
 | Component | Files | License | License text |
 | --- | --- | --- | --- |
 | [Remix Icon](https://github.com/Remix-Design/RemixIcon) 4.9.1 | `assets/remixicon/` | Remix Icon License v1.0 (not GPL-compatible; not covered by the GPL) | [`assets/remixicon/LICENSE.txt`](assets/remixicon/LICENSE.txt) |
-| [Lobe Icons](https://github.com/lobehub/lobe-icons) (`@lobehub/icons-static-svg` 1.94.0) | `assets/images/site-search/{tile,glyph}-{gpt,gm,yb,ds,kimi}.*` | MIT | [`assets/images/site-search/LICENSE-lobe-icons.txt`](assets/images/site-search/LICENSE-lobe-icons.txt) |
+| [Lobe Icons](https://github.com/lobehub/lobe-icons) (`@lobehub/icons-static-svg` 1.94.0) | `assets/images/site-search/{tile,glyph}-{gpt,gm,yb,ds,kimi,cp,grok,qwen,ais}.*` | MIT | [`assets/images/site-search/LICENSE-lobe-icons.txt`](assets/images/site-search/LICENSE-lobe-icons.txt) |
 | [Material Design Icons](https://github.com/Templarian/MaterialDesign) (`mdi:yahoo`) | `assets/images/site-search/{tile,glyph}-yh.*` | Apache-2.0 | [`assets/images/site-search/LICENSE-material-design-icons.txt`](assets/images/site-search/LICENSE-material-design-icons.txt) |
 | [Tabler Icons](https://github.com/tabler/tabler-icons) (`tabler:brand-yandex`) | `assets/images/site-search/{tile,glyph}-yx.*` | MIT | [`assets/images/site-search/LICENSE-tabler-icons.txt`](assets/images/site-search/LICENSE-tabler-icons.txt) |
 | [Simple Icons](https://github.com/simple-icons/simple-icons), [Iconify `logos`](https://github.com/gilbarbara/logos) | site-search icons listed in [`SOURCES.md`](assets/images/site-search/SOURCES.md) | CC0-1.0 | None required |

@@ -284,13 +284,23 @@ async function run() {
     yuanbaoPrompt: 'https://yuanbao.tencent.com',
     minimaxPrompt: 'https://chat.minimax.io',
     deepseekPrompt: 'https://chat.deepseek.com',
-    kimiPrompt: 'https://www.kimi.com'
+    kimiPrompt: 'https://www.kimi.com',
+    copilotPrompt: 'https://copilot.microsoft.com',
+    grokPrompt: 'https://grok.com',
+    qwenChatPrompt: 'https://chat.qwen.ai',
+    aiStudioPrompt: 'https://aistudio.google.com'
   };
   Object.entries(expectedStrategyOrigins).forEach(([strategy, origin]) => {
     assert.deepStrictEqual(submitRuntime.getAllowedStrategyOrigins(strategy), [origin]);
     assert.strictEqual(submitRuntime.isAllowedStrategyOrigin(strategy, origin), true);
     assert.strictEqual(origin.startsWith('https://'), true);
   });
+  // Enter-first strategies still fall back to the provider's own send button
+  // (Qwen Chat labels it only in the interface language).
+  assert.strictEqual(
+    submitRuntime.getStrategyConfig('qwenChatPrompt').sendButtonSelectors[0],
+    'button.send-button'
+  );
 
   const maliciousOriginObservations = {};
   const maliciousOrigin = await submitWithFakeChrome('chatgptPrompt', 'Private prompt', {

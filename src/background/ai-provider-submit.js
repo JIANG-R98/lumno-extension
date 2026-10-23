@@ -76,6 +76,7 @@ function createEnterPromptStrategy(editorSelectors, options) {
   const settings = options && typeof options === 'object' ? options : {};
   return createPromptStrategy({
     editorSelectors,
+    sendButtonSelectors: settings.sendButtonSelectors,
     buttonWaitAttempts: 0,
     editorWaitAttempts: settings.editorWaitAttempts || 24,
     enterDelayMs: 180,
@@ -213,6 +214,67 @@ const STRATEGIES = Object.freeze({
     editorWaitAttempts: 48,
     inputEventDataMode: 'none'
   }),
+  copilotPrompt: createPromptStrategy({
+    editorSelectors: [
+      'textarea#userInput',
+      'textarea[placeholder*="Copilot"]',
+      'textarea[aria-label*="Copilot"]',
+      '[contenteditable="true"][aria-label*="Copilot"]',
+      '[contenteditable="true"][data-placeholder*="Copilot"]'
+    ],
+    sendButtonSelectors: [
+      'button[data-testid="submit-button"]',
+      'button[aria-label="Submit message"]',
+      'button[aria-label="提交消息"]',
+      'button[title="Submit message"]'
+    ],
+    buttonWaitAttempts: 24,
+    editorWaitAttempts: 36
+  }),
+  // grok.com/?q= only prefills behind a "Send this message?" confirmation, so
+  // type into the composer instead.
+  grokPrompt: createEnterPromptStrategy([
+    '.query-bar-editor[contenteditable="true"]',
+    '.tiptap.ProseMirror[contenteditable="true"]',
+    '[contenteditable="true"][aria-label*="Grok"]',
+    'textarea[aria-label*="Grok"]',
+    'textarea[placeholder*="Grok"]'
+  ], {
+    editorWaitAttempts: 36
+  }),
+  qwenChatPrompt: createEnterPromptStrategy([
+    'textarea.message-input-textarea',
+    '.message-input-container-area textarea',
+    'textarea[placeholder*="Qwen"]',
+    'textarea[aria-label*="Qwen"]'
+  ], {
+    sendButtonSelectors: [
+      'button.send-button',
+      '.chat-prompt-send-button button'
+    ],
+    editorWaitAttempts: 36
+  }),
+  aiStudioPrompt: createPromptStrategy({
+    editorSelectors: [
+      'ms-prompt-input-wrapper textarea',
+      'ms-chunk-input textarea',
+      'ms-autosize-textarea textarea',
+      'textarea[aria-label*="prompt" i]',
+      'textarea[placeholder*="prompt" i]',
+      'textarea[aria-label*="提示"]',
+      'textarea[placeholder*="提示"]'
+    ],
+    sendButtonSelectors: [
+      'ms-run-button button',
+      'button.run-button',
+      'button[aria-label="Run"]',
+      'button[aria-label*="Run" i]',
+      'button[aria-label="运行"]',
+      'button[aria-label*="运行"]'
+    ],
+    buttonWaitAttempts: 24,
+    editorWaitAttempts: 48
+  }),
   qianwenQuery: {
     urlOnly: true
   }
@@ -226,7 +288,11 @@ const STRATEGY_ALLOWED_ORIGINS = Object.freeze({
   yuanbaoPrompt: Object.freeze(['https://yuanbao.tencent.com']),
   minimaxPrompt: Object.freeze(['https://chat.minimax.io']),
   deepseekPrompt: Object.freeze(['https://chat.deepseek.com']),
-  kimiPrompt: Object.freeze(['https://www.kimi.com'])
+  kimiPrompt: Object.freeze(['https://www.kimi.com']),
+  copilotPrompt: Object.freeze(['https://copilot.microsoft.com']),
+  grokPrompt: Object.freeze(['https://grok.com']),
+  qwenChatPrompt: Object.freeze(['https://chat.qwen.ai']),
+  aiStudioPrompt: Object.freeze(['https://aistudio.google.com'])
 });
 
 function getStrategyConfig(strategyName) {

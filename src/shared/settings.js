@@ -205,7 +205,11 @@ const SELECTION_QUICK_ACTIONS_PROVIDER_KEYS = Object.freeze([
   'yb',
   'mx',
   'ds',
-  'kimi'
+  'kimi',
+  'cp',
+  'grok',
+  'qwen',
+  'ais'
 ]);
 // Keep the original key value so existing installations migrate from boolean to mode in place.
 const NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY = '_x_extension_newtab_wordmark_visible_2026_unique_';

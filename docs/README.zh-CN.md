@@ -63,7 +63,7 @@
 
 ### 站内搜索与 AI 搜索
 
-输入前缀即可在站内搜索：YouTube、Bilibili、GitHub、Google、Bing、百度、知乎、豆瓣、掘金、淘宝、X、Reddit、Wikipedia 等。也可直接向 AI 提问：ChatGPT、Gemini、DeepSeek、Kimi、豆包、千问、元宝、MiniMax。支持自定义搜索模板和别名。
+输入前缀即可在站内搜索：YouTube、Bilibili、GitHub、Google、Bing、百度、知乎、豆瓣、掘金、淘宝、X、Reddit、Wikipedia 等。也可直接向 AI 提问：ChatGPT、Gemini、Google AI Studio、Copilot、Grok、DeepSeek、Kimi、豆包、千问、Qwen Chat、元宝、MiniMax。支持自定义搜索模板和别名。
 
 ### 聚合搜索：一次搜索多个引擎
 

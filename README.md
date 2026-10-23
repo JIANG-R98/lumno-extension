@@ -63,7 +63,7 @@ Results combine bookmarks, browsing history, top sites, browser suggestions and 
 
 ### Site search and AI search shortcuts
 
-Type a prefix to search inside a site: YouTube, Bilibili, GitHub, Google, Bing, Baidu, Zhihu, Douban, Juejin, Taobao, X, Reddit, Wikipedia and more. Ask AI assistants directly, including ChatGPT, Gemini, DeepSeek, Kimi, Doubao, Qianwen, Yuanbao and MiniMax. Add your own search templates and aliases.
+Type a prefix to search inside a site: YouTube, Bilibili, GitHub, Google, Bing, Baidu, Zhihu, Douban, Juejin, Taobao, X, Reddit, Wikipedia and more. Ask AI assistants directly, including ChatGPT, Gemini, Google AI Studio, Copilot, Grok, DeepSeek, Kimi, Doubao, Qianwen, Qwen Chat, Yuanbao and MiniMax. Add your own search templates and aliases.
 
 ### Aggregate search across multiple engines
 

@@ -87,7 +87,7 @@
     },
     {
       "key": "qw",
-      "aliases": ["qianwen", "qwen", "千问"],
+      "aliases": ["qianwen", "千问"],
       "name": "千问",
       "template": "https://www.qianwen.com/?q={query}",
       "action": "openAndSubmit",
@@ -124,6 +124,38 @@
       "template": "https://www.kimi.com/",
       "action": "openAndSubmit",
       "submitStrategy": "kimiPrompt"
+    },
+    {
+      "key": "cp",
+      "aliases": ["copilot", "microsoft copilot"],
+      "name": "Copilot",
+      "template": "https://copilot.microsoft.com/",
+      "action": "openAndSubmit",
+      "submitStrategy": "copilotPrompt"
+    },
+    {
+      "key": "grok",
+      "aliases": ["xai"],
+      "name": "Grok",
+      "template": "https://grok.com/",
+      "action": "openAndSubmit",
+      "submitStrategy": "grokPrompt"
+    },
+    {
+      "key": "qwen",
+      "aliases": ["qwen chat", "qwenchat"],
+      "name": "Qwen Chat",
+      "template": "https://chat.qwen.ai/",
+      "action": "openAndSubmit",
+      "submitStrategy": "qwenChatPrompt"
+    },
+    {
+      "key": "ais",
+      "aliases": ["aistudio", "ai studio", "google ai studio"],
+      "name": "Google AI Studio",
+      "template": "https://aistudio.google.com/prompts/new_chat",
+      "action": "openAndSubmit",
+      "submitStrategy": "aiStudioPrompt"
     },
     {
       "key": "pplx",

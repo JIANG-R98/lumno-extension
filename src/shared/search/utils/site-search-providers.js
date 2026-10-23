@@ -60,7 +60,11 @@ function createSiteSearchProviders(deps) {
     'yuanbaoPrompt',
     'minimaxPrompt',
     'deepseekPrompt',
-    'kimiPrompt'
+    'kimiPrompt',
+    'copilotPrompt',
+    'grokPrompt',
+    'qwenChatPrompt',
+    'aiStudioPrompt'
   ]);
 
   const SITE_SEARCH_PROVIDER_DISPLAY_NAME_MESSAGES = Object.freeze({
@@ -72,6 +76,10 @@ function createSiteSearchProviders(deps) {
     mx: ['site_search_name_minimax', 'MiniMax'],
     ds: ['site_search_name_deepseek', 'DeepSeek'],
     kimi: ['site_search_name_kimi', 'Kimi'],
+    cp: ['site_search_name_copilot', 'Copilot'],
+    grok: ['site_search_name_grok', 'Grok'],
+    qwen: ['site_search_name_qwen_chat', 'Qwen Chat'],
+    ais: ['site_search_name_ai_studio', 'Google AI Studio'],
     metaso: ['site_search_name_metaso', 'Metaso AI Search'],
     bd: ['site_search_name_baidu', 'Baidu'],
     sg: ['site_search_name_sogou', 'Sogou'],
