@@ -7,7 +7,7 @@ function createFaviconViewCore(options) {
   const doc = config.document || (globalThis && globalThis.document) || null;
   const win = config.windowObj || (globalThis && globalThis.window) || globalThis || {};
   const chromeApi = config.chromeApi || (globalThis && globalThis.chrome) || {};
-  const ImageCtor = win.Image || (globalThis && globalThis.Image) || null;
+  const ImageCtor = win.Image || globalThis.Image || null;
   const customRequestFaviconData = typeof config.requestFaviconData === 'function'
     ? config.requestFaviconData
     : null;

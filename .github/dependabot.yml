@@ -11,7 +11,18 @@ updates:
     commit-message:
       prefix: build
       include: scope
+    ignore:
+      # The toolchain runs on Node 22 (engines in package.json), so its
+      # types stay on 22.x.
+      - dependency-name: "@types/node"
+        versions: [">=23"]
     groups:
+      # React ships in every page's bundle, so its updates can fail the
+      # bundle budgets; they come on their own so the rest still lands.
+      # A dependency joins the first group it matches.
+      react:
+        patterns: [react, react-dom, "@types/react", "@types/react-dom"]
+        update-types: [minor, patch]
       npm-minor-and-patch:
         update-types: [minor, patch]
 
