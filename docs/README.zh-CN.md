@@ -218,25 +218,15 @@ npm run build
 
 然后在 `chrome://extensions/` 中保持「开发者模式」开启，并将仓库根目录作为已解压扩展加载。生成新产物，或修改后台脚本、`manifest.json` 后，请在扩展管理页手动点击「重新加载」。开发版不会在 Chrome 用户配置启动时主动二次刷新，以免中断启动阶段的新标签页接管。
 
-提交前建议运行：
+提交 Pull Request 前请运行 `npm run verify`。它会构建扩展，并运行 Node 和 React 两套测试、静态检查和 ESLint，与 CI 一致。开发过程中可以只运行其中一部分：
 
 ```bash
-npm run verify
-npm run audit:i18n
-npm run audit:style
-npm run package:store
+npm run test:legacy -- settings search/
+npm run test:react
+npm run lint
 ```
 
-常用专项测试示例：
-
-```bash
-npm run test:settings
-npm run test:search
-npm run test:site-search-store
-npm run test:message-router
-npm run test:newtab-layout
-npm run test:onboarding-content
-```
+`npm run test:legacy -- <filter>` 只运行路径中包含任一过滤词的 Node 测试。`npm run audit:i18n` 和 `npm run audit:style` 会列出各语言缺失的文案和遗留的样式问题。
 
 `npm run package:store` 会读取 `manifest.json` 的版本号，并生成 `dist/lumno-store-v<version>.zip`。本命令依赖系统可用的 `zip` 和 `zipinfo`。
 

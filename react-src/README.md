@@ -94,7 +94,7 @@ The release gate is:
 npm test
 npm run check
 npm run audit:i18n
-npm run test:package-store
+npm run test:legacy -- package-store
 git diff --check
 ```
 

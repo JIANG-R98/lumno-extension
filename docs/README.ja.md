@@ -218,25 +218,15 @@ npm run build
 
 その後、`chrome://extensions/` でデベロッパーモードを有効のままにし、リポジトリのルートをパッケージ化されていない拡張機能として読み込みます。新しいアセットを生成した後、またはバックグラウンドスクリプトや `manifest.json` を変更した後は、拡張機能ページで手動で再読み込みしてください。起動時の新しいタブの置き換えを中断しないよう、開発版は Chrome プロファイルの起動時に二度目の更新を強制しません。
 
-コミット前に次を実行してください。
+プルリクエストを送る前に `npm run verify` を実行してください。拡張機能をビルドし、Node と React の 2 つのテスト、静的チェック、ESLint を CI と同じように実行します。作業中は一部だけを実行できます。
 
 ```bash
-npm run verify
-npm run audit:i18n
-npm run audit:style
-npm run package:store
+npm run test:legacy -- settings search/
+npm run test:react
+npm run lint
 ```
 
-よく使う個別テスト：
-
-```bash
-npm run test:settings
-npm run test:search
-npm run test:site-search-store
-npm run test:message-router
-npm run test:newtab-layout
-npm run test:onboarding-content
-```
+`npm run test:legacy -- <filter>` は、パスにいずれかのフィルターを含む Node テストだけを実行します。`npm run audit:i18n` と `npm run audit:style` は、ロケールに足りない文言と残っているスタイルの課題を一覧にします。
 
 `npm run package:store` は `manifest.json` のバージョンを読み取り、`dist/lumno-store-v<version>.zip` を生成します。このコマンドにはシステム上の `zip` と `zipinfo` が必要です。
 

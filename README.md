@@ -218,25 +218,15 @@ The scripts under `src/` are ES modules: each one imports what it uses, and a bu
 
 Then keep Developer mode enabled in `chrome://extensions/` and load the repository root as an unpacked extension. After generating new assets or changing background scripts or `manifest.json`, click Reload on the extensions page. Development installs do not force a second refresh when the Chrome profile starts, avoiding interruption of the startup New Tab override.
 
-Before committing, run:
+Before opening a pull request, run `npm run verify`. It builds the extension and runs the Node and React test suites, the static checks and ESLint, the same as CI. While you work, run only part of it:
 
 ```bash
-npm run verify
-npm run audit:i18n
-npm run audit:style
-npm run package:store
+npm run test:legacy -- settings search/
+npm run test:react
+npm run lint
 ```
 
-Common targeted tests:
-
-```bash
-npm run test:settings
-npm run test:search
-npm run test:site-search-store
-npm run test:message-router
-npm run test:newtab-layout
-npm run test:onboarding-content
-```
+`npm run test:legacy -- <filter>` runs the Node tests whose path contains any of the filters. `npm run audit:i18n` and `npm run audit:style` report copy missing from a locale and leftover style debt.
 
 `npm run package:store` reads the version from `manifest.json` and creates `dist/lumno-store-v<version>.zip`. It requires `zip` and `zipinfo` to be available on the system.
 
