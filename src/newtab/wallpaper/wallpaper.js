@@ -1,0 +1,1734 @@
+import * as LumnoExtensionRoutes from '../../shared/extension-routes.js';
+import * as SETTINGS from '../../shared/settings.js';
+import * as LumnoFeatureHints from '../../shared/ui/feature-hints.js';
+import * as REMOTE_CONTENT from '../remote-content.js';
+import * as WALLPAPER_CUSTOM_WALLPAPERS from './runtime/custom-wallpapers.js';
+import * as WALLPAPER_DAILY_WALLPAPERS from './runtime/daily-wallpapers.js';
+import * as WALLPAPER_FAVICON_CHOOSER from './runtime/favicon-chooser.js';
+import * as WALLPAPER_PANEL_ACTIONS from './runtime/panel-actions.js';
+import * as WALLPAPER_PANEL_MOTION from './runtime/panel-motion.js';
+import * as WALLPAPER_PANEL_SETTINGS from './runtime/panel-settings.js';
+import * as WALLPAPER_PANEL_STATE from './runtime/panel-state.js';
+import * as WALLPAPER_WALLPAPER_EFFECT_PREFS from './runtime/wallpaper-effect-prefs.js';
+import * as WALLPAPER_WALLPAPER_OVERLAY from './runtime/wallpaper-overlay.js';
+import * as WALLPAPER_WALLPAPER_SELECTION from './runtime/wallpaper-selection.js';
+import * as WALLPAPER_WALLPAPER_SOURCES from './runtime/wallpaper-sources.js';
+import * as WALLPAPER_WALLPAPER_STORAGE from './runtime/wallpaper-storage.js';
+import * as WALLPAPER_WALLPAPER_VISUAL from './runtime/wallpaper-visual.js';
+import * as WALLPAPER_ADAPTIVE_TONE from './wallpaper-adaptive-tone.js';
+import * as WALLPAPER_EFFECTS from './wallpaper-effects.js';
+import * as WALLPAPER_LOCAL_STORE from './wallpaper-local-store.js';
+
+const DEFAULT_STORAGE_KEYS = {
+  wallpaper: '_x_extension_newtab_wallpaper_2026_unique_',
+  localWallpaper: '_x_extension_newtab_local_wallpaper_2026_unique_',
+  onlineWallpaper: SETTINGS.NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY,
+  linkWallpapers: SETTINGS.NEWTAB_LINK_WALLPAPERS_STORAGE_KEY,
+  dailyWallpaperPicks: SETTINGS.NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY,
+  curatedMixExcluded: SETTINGS.NEWTAB_CURATED_MIX_EXCLUDED_STORAGE_KEY,
+  overlay: '_x_extension_newtab_wallpaper_overlay_2026_unique_',
+  effect: '_x_extension_newtab_wallpaper_effect_2026_unique_',
+  topContentMode: SETTINGS.NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY ||
+    '_x_extension_newtab_wordmark_visible_2026_unique_',
+  timeFontWeight: SETTINGS.NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY ||
+    '_x_extension_newtab_time_font_weight_2026_unique_',
+  timeFontSize: SETTINGS.NEWTAB_TIME_FONT_SIZE_STORAGE_KEY ||
+    '_x_extension_newtab_time_font_size_2026_unique_',
+  timeOpacity: SETTINGS.NEWTAB_TIME_OPACITY_STORAGE_KEY ||
+    '_x_extension_newtab_time_opacity_2026_unique_',
+  timeInk: SETTINGS.NEWTAB_TIME_INK_STORAGE_KEY ||
+    '_x_extension_newtab_time_ink_2026_unique_',
+  timeFont: SETTINGS.NEWTAB_TIME_FONT_STORAGE_KEY ||
+    '_x_extension_newtab_time_font_2026_unique_',
+  timeSecondsVisible: SETTINGS.NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY ||
+    '_x_extension_newtab_time_seconds_visible_2026_unique_',
+  time12Hour: SETTINGS.NEWTAB_TIME_12_HOUR_STORAGE_KEY ||
+    '_x_extension_newtab_time_12_hour_2026_unique_',
+  favicon: '_x_extension_newtab_favicon_2026_unique_'
+};
+const PRELOAD_STORAGE_KEY = '_x_extension_newtab_wallpaper_preload_2026_unique_';
+const PRELOAD_STORAGE_VERSION = 4;
+const WALLPAPER_EFFECT_MODE_STORAGE_VERSION = 11;
+const NEWTAB_TIME_FONT_WEIGHT_DEFAULT = Number(SETTINGS.NEWTAB_TIME_FONT_WEIGHT_DEFAULT) || 320;
+const CRT_PARAMETER_PHYSICAL_MAX = Object.freeze({
+  crtStrength: 20,
+  crtBloom: 20,
+  crtRgbOffset: 100,
+  crtCurvature: 35
+});
+const BLOCK_PARAMETER_MAX = 5;
+function getCrtParameterPercent(key, value) {
+  const physicalMax = CRT_PARAMETER_PHYSICAL_MAX[key];
+  const number = Number(value);
+  if (!Number.isFinite(physicalMax) || !Number.isFinite(number) || physicalMax <= 0) {
+    return 0;
+  }
+  return Math.round(Math.max(0, Math.min(100, (number / physicalMax) * 100)));
+}
+
+function getCrtParameterPhysicalValue(key, percent) {
+  const physicalMax = CRT_PARAMETER_PHYSICAL_MAX[key];
+  const number = Number(percent);
+  if (!Number.isFinite(physicalMax) || !Number.isFinite(number) || physicalMax <= 0) {
+    return 0;
+  }
+  return Math.round((Math.max(0, Math.min(100, number)) / 100) * physicalMax * 1000) / 1000;
+}
+
+// For failures nothing on the page can recover from but that should not happen,
+// such as IndexedDB refusing a read; expected ones (offline photo requests) are
+// caught where they occur, with the reason.
+function warnWallpaperFailure(message) {
+  return (error) => {
+    console.warn(`[Lumno] ${message}`, error);
+  };
+}
+
+// Runs once the next frame has painted: the first frame's callback still runs
+// before that frame paints, so it takes two.
+function afterNextPaint(windowObj, callback) {
+  windowObj.requestAnimationFrame(() => {
+    windowObj.requestAnimationFrame(callback);
+  });
+}
+
+// One pending save per setting while a slider moves: each change restarts the
+// wait, and a final change (the end of a drag, a typed value) saves at once.
+function createDebouncedSaver(windowObj, delayMs) {
+  const timers = new Map();
+  return function save(key, write, options) {
+    if (timers.has(key)) {
+      windowObj.clearTimeout(timers.get(key));
+      timers.delete(key);
+    }
+    if (options && options.final) {
+      write();
+      return;
+    }
+    timers.set(key, windowObj.setTimeout(() => {
+      timers.delete(key);
+      write();
+    }, delayMs));
+  };
+}
+
+function normalizeSingleWallpaperEffectPrefs(value, inheritedVersion) {
+  return WALLPAPER_EFFECTS.normalizePrefs(value, inheritedVersion);
+}
+
+function normalizeWallpaperEffectStoragePrefs(value) {
+  return WALLPAPER_EFFECTS.normalizeStoragePrefs(value);
+}
+
+function createWallpaperRuntime(options) {
+  options = options || {};
+  // Runtime state shared with the parts of this runtime in wallpaper/runtime/:
+  // each receives this one object as `wallpaperState` and reads and writes
+  // the same properties this function does.
+  const wallpaperState = {};
+  const documentObj = options.documentObj || document;
+  const windowObj = options.windowObj || window;
+  const document = documentObj;
+  const window = windowObj;
+  const chrome = options.chromeObj || globalThis.chrome || {};
+  const extensionRoutes = options.extensionRoutes || LumnoExtensionRoutes || {};
+  const storageArea = options.storageArea || null;
+  const localWallpaperStorageArea = options.localWallpaperStorageArea || null;
+  const wallpaperView = options.view || globalThis.LumnoNewtabWallpaperView || null;
+  const storageKeys = Object.assign({}, DEFAULT_STORAGE_KEYS, options.storageKeys || {});
+  const NEWTAB_WALLPAPER_STORAGE_KEY = storageKeys.wallpaper;
+  const NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY = storageKeys.localWallpaper;
+  const NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY = storageKeys.onlineWallpaper;
+  const NEWTAB_LINK_WALLPAPERS_STORAGE_KEY = storageKeys.linkWallpapers;
+  const NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY = storageKeys.dailyWallpaperPicks;
+  const NEWTAB_CURATED_MIX_EXCLUDED_STORAGE_KEY = storageKeys.curatedMixExcluded;
+  const NEWTAB_WALLPAPER_OVERLAY_STORAGE_KEY = storageKeys.overlay;
+  const NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY = storageKeys.effect;
+  const NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY = storageKeys.topContentMode;
+  const NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY = storageKeys.timeFontWeight;
+  const NEWTAB_TIME_FONT_SIZE_STORAGE_KEY = storageKeys.timeFontSize;
+  const NEWTAB_TIME_OPACITY_STORAGE_KEY = storageKeys.timeOpacity;
+  const NEWTAB_TIME_INK_STORAGE_KEY = storageKeys.timeInk;
+  const NEWTAB_TIME_FONT_STORAGE_KEY = storageKeys.timeFont;
+  const NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY = storageKeys.timeSecondsVisible;
+  const NEWTAB_TIME_12_HOUR_STORAGE_KEY = storageKeys.time12Hour;
+  const NEWTAB_FAVICON_STORAGE_KEY = storageKeys.favicon;
+  const t = typeof options.t === 'function'
+    ? options.t
+    : function(_key, fallback) { return fallback || ''; };
+  const formatMessage = typeof options.formatMessage === 'function'
+    ? options.formatMessage
+    : function(_key, fallback, params) {
+      let text = fallback || '';
+      Object.keys(params || {}).forEach((token) => {
+        text = text.replace(new RegExp('\\{' + token + '\\}', 'g'), params[token]);
+      });
+      return text;
+    };
+  const getThemeMode = typeof options.getThemeMode === 'function'
+    ? options.getThemeMode
+    : function() { return 'system'; };
+  const getEffectiveThemeMode = typeof options.getEffectiveThemeMode === 'function'
+    ? options.getEffectiveThemeMode
+    : getThemeMode;
+  const getThemeScope = typeof options.getThemeScope === 'function'
+    ? options.getThemeScope
+    : function() { return 'global'; };
+  const getGlobalThemeMode = typeof options.getGlobalThemeMode === 'function'
+    ? options.getGlobalThemeMode
+    : function() { return 'system'; };
+  const setThemeMode = typeof options.setThemeMode === 'function'
+    ? options.setThemeMode
+    : function() {};
+  const setThemeScope = typeof options.setThemeScope === 'function'
+    ? options.setThemeScope
+    : function() {};
+  const BroadcastChannelCtor = typeof options.BroadcastChannel === 'function'
+    ? options.BroadcastChannel
+    : (window && typeof window.BroadcastChannel === 'function'
+      ? window.BroadcastChannel
+      : (typeof globalThis.BroadcastChannel === 'function' ? globalThis.BroadcastChannel : null));
+  // New Tab passes LumnoNewtabLayout.SEARCH_WIDTH_CONFIG; these defaults mirror it.
+  const searchWidthConfig = Object.assign({
+    min: 640,
+    max: 1040,
+    fallback: 920,
+    snapPoints: [640, 720, 920, 1040],
+    snapThreshold: 14
+  }, options.searchWidthConfig || {});
+  const getSearchWidth = typeof options.getSearchWidth === 'function'
+    ? options.getSearchWidth
+    : function() { return searchWidthConfig.fallback; };
+  const setSearchWidth = typeof options.setSearchWidth === 'function'
+    ? options.setSearchWidth
+    : function() {};
+  const shortcutColumnsConfig = Object.assign({
+    min: 4,
+    max: 16,
+    fallback: 10
+  }, options.shortcutColumnsConfig || {});
+  const shortcutSizeConfig = Object.assign({
+    min: 48,
+    max: 112,
+    fallback: 64
+  }, options.shortcutSizeConfig || {});
+  const shortcutGapConfig = Object.assign({
+    min: 0,
+    max: 24,
+    fallback: 4
+  }, options.shortcutGapConfig || {});
+  const getShortcutsVisible = typeof options.getShortcutsVisible === 'function'
+    ? options.getShortcutsVisible
+    : function() { return true; };
+  const setShortcutsVisible = typeof options.setShortcutsVisible === 'function'
+    ? options.setShortcutsVisible
+    : function() {};
+  const getShortcutAddVisible = typeof options.getShortcutAddVisible === 'function'
+    ? options.getShortcutAddVisible
+    : function() { return true; };
+  const setShortcutAddVisible = typeof options.setShortcutAddVisible === 'function'
+    ? options.setShortcutAddVisible
+    : function() {};
+  const getShortcutDockMagnificationEnabled =
+    typeof options.getShortcutDockMagnificationEnabled === 'function'
+      ? options.getShortcutDockMagnificationEnabled
+      : function() { return true; };
+  const setShortcutDockMagnificationEnabled =
+    typeof options.setShortcutDockMagnificationEnabled === 'function'
+      ? options.setShortcutDockMagnificationEnabled
+      : function() {};
+  const getShortcutColumns = typeof options.getShortcutColumns === 'function'
+    ? options.getShortcutColumns
+    : function() { return shortcutColumnsConfig.fallback; };
+  const setShortcutColumns = typeof options.setShortcutColumns === 'function'
+    ? options.setShortcutColumns
+    : function() {};
+  const getShortcutSize = typeof options.getShortcutSize === 'function'
+    ? options.getShortcutSize
+    : function() { return shortcutSizeConfig.fallback; };
+  const setShortcutSize = typeof options.setShortcutSize === 'function'
+    ? options.setShortcutSize
+    : function() {};
+  const getShortcutGap = typeof options.getShortcutGap === 'function'
+    ? options.getShortcutGap
+    : function() { return shortcutGapConfig.fallback; };
+  const setShortcutGap = typeof options.setShortcutGap === 'function'
+    ? options.setShortcutGap
+    : function() {};
+  const featureHints = options.featureHints || LumnoFeatureHints || {};
+  const getInputAutoFocusEnabled = typeof options.getInputAutoFocusEnabled === 'function'
+    ? options.getInputAutoFocusEnabled
+    : function() { return false; };
+  const setInputAutoFocusEnabled = typeof options.setInputAutoFocusEnabled === 'function'
+    ? options.setInputAutoFocusEnabled
+    : function() {};
+  const inputAutoFocusReady = options.inputAutoFocusReady &&
+    typeof options.inputAutoFocusReady.then === 'function'
+    ? options.inputAutoFocusReady
+    : Promise.resolve();
+  const getGlassStyle = typeof options.getGlassStyle === 'function'
+    ? options.getGlassStyle
+    : function() { return 'none'; };
+  const setGlassStyle = typeof options.setGlassStyle === 'function'
+    ? options.setGlassStyle
+    : function() {};
+  const getGlassTheme = typeof options.getGlassTheme === 'function'
+    ? options.getGlassTheme
+    : function() { return 'follow'; };
+  const setGlassTheme = typeof options.setGlassTheme === 'function'
+    ? options.setGlassTheme
+    : function() {};
+  const featureHintVisibilityGate = options.featureHintVisibilityGate &&
+    typeof options.featureHintVisibilityGate.then === 'function'
+    ? options.featureHintVisibilityGate
+    : null;
+  const getRiSvg = typeof options.getRiSvg === 'function'
+    ? options.getRiSvg
+    : function(id, sizeClass) {
+      const size = sizeClass || 'ri-size-16';
+      return '<i class="ri-icon ' + size + ' ' + id + '" aria-hidden="true"></i>';
+    };
+  const showToast = typeof options.showToast === 'function' ? options.showToast : function() {};
+  const beginToast = typeof options.beginToast === 'function'
+    ? options.beginToast
+    : function() {
+      return {
+        update() {},
+        done(result) { if (result) showToast(result, false); },
+        fail(result) { if (result) showToast(result, true); },
+        cancel() {}
+      };
+    };
+  const showTopActionTooltip = typeof options.showTopActionTooltip === 'function'
+    ? options.showTopActionTooltip
+    : function() {};
+  const hideTopActionTooltip = typeof options.hideTopActionTooltip === 'function'
+    ? options.hideTopActionTooltip
+    : function() {};
+  const applyWordmarkThemeAppearance = typeof options.applyWordmarkThemeAppearance === 'function'
+    ? options.applyWordmarkThemeAppearance
+    : function() {};
+  const hasTopContentModeGetter = typeof options.getTopContentMode === 'function';
+  const getTopContentMode = hasTopContentModeGetter
+    ? options.getTopContentMode
+    : function() { return 'brand'; };
+  const setTopContentMode = typeof options.setTopContentMode === 'function'
+    ? options.setTopContentMode
+    : function() {};
+  const hasTimeFontWeightGetter = typeof options.getTimeFontWeight === 'function';
+  const getTimeFontWeight = hasTimeFontWeightGetter
+    ? options.getTimeFontWeight
+    : function() { return NEWTAB_TIME_FONT_WEIGHT_DEFAULT; };
+  const setTimeFontWeight = typeof options.setTimeFontWeight === 'function'
+    ? options.setTimeFontWeight
+    : function() {};
+  const getTimeFontSize = typeof options.getTimeFontSize === 'function'
+    ? options.getTimeFontSize
+    : function() { return SETTINGS.NEWTAB_TIME_FONT_SIZE_DEFAULT; };
+  const setTimeFontSize = typeof options.setTimeFontSize === 'function'
+    ? options.setTimeFontSize
+    : function() {};
+  const getTimeOpacity = typeof options.getTimeOpacity === 'function'
+    ? options.getTimeOpacity
+    : function() { return SETTINGS.NEWTAB_TIME_OPACITY_DEFAULT; };
+  const setTimeOpacity = typeof options.setTimeOpacity === 'function'
+    ? options.setTimeOpacity
+    : function() {};
+  const getTimeInk = typeof options.getTimeInk === 'function'
+    ? options.getTimeInk
+    : function() { return SETTINGS.NEWTAB_TIME_INK_DEFAULT; };
+  const setTimeInk = typeof options.setTimeInk === 'function'
+    ? options.setTimeInk
+    : function() {};
+  const hasTimeFontGetter = typeof options.getTimeFont === 'function';
+  const getTimeFont = hasTimeFontGetter
+    ? options.getTimeFont
+    : function() { return SETTINGS.NEWTAB_TIME_FONT_DEFAULT; };
+  const setTimeFont = typeof options.setTimeFont === 'function'
+    ? options.setTimeFont
+    : function() {};
+  const hasTimeSecondsVisibleGetter = typeof options.getTimeSecondsVisible === 'function';
+  const getTimeSecondsVisible = hasTimeSecondsVisibleGetter
+    ? options.getTimeSecondsVisible
+    : function() { return false; };
+  const setTimeSecondsVisible = typeof options.setTimeSecondsVisible === 'function'
+    ? options.setTimeSecondsVisible
+    : function() {};
+  const getTime12Hour = typeof options.getTime12Hour === 'function'
+    ? options.getTime12Hour
+    : function() { return false; };
+  const setTime12Hour = typeof options.setTime12Hour === 'function'
+    ? options.setTime12Hour
+    : function() {};
+  const getAdaptiveToneTargets = typeof options.getAdaptiveToneTargets === 'function'
+    ? options.getAdaptiveToneTargets
+    : function() { return []; };
+  const localWallpaperStore = WALLPAPER_LOCAL_STORE.createWallpaperLocalStore({
+    documentObj,
+    windowObj
+  });
+  const wallpaperImageCache = typeof WALLPAPER_LOCAL_STORE.createWallpaperImageCache === 'function'
+    ? WALLPAPER_LOCAL_STORE.createWallpaperImageCache({ windowObj })
+    : null;
+  // Without IndexedDB the tiles load from Picsum as before.
+  const wallpaperThumbnailCache = typeof WALLPAPER_LOCAL_STORE.createWallpaperThumbnailCache === 'function' &&
+    typeof localWallpaperStore.buildTileThumbnail === 'function' && windowObj && windowObj.indexedDB
+    ? WALLPAPER_LOCAL_STORE.createWallpaperThumbnailCache({ windowObj })
+    : null;
+  // Pages without IndexedDB (some private windows) simply have no local copies;
+  // any other failure of the stores is unexpected and worth a warning.
+  function warnWallpaperStoreFailure(message) {
+    const warn = warnWallpaperFailure(message);
+    return (error) => {
+      if (windowObj && windowObj.indexedDB) {
+        warn(error);
+      }
+    };
+  }
+  const remoteClient = REMOTE_CONTENT.createClient({
+    storageArea: localWallpaperStorageArea,
+    fetch: options.fetchRemoteContent,
+    getLanguage: () => document.documentElement && document.documentElement.lang ||
+      (chrome.i18n && chrome.i18n.getUILanguage ? chrome.i18n.getUILanguage() : 'en')
+  });
+  const NEWTAB_WALLPAPER_EXTENSION_DIRECTORY = 'assets/wallpapers';
+  const NEWTAB_WALLPAPER_THUMBNAIL_SUFFIX = '-thumb.webp';
+  const NEWTAB_WALLPAPER_DEFAULT_ID = 'monet-coastal-white';
+  const NEWTAB_CUSTOM_WALLPAPER_ID = WALLPAPER_LOCAL_STORE.CUSTOM_WALLPAPER_ID || 'custom-upload';
+  const NEWTAB_LOCAL_WALLPAPER_DISABLED_VALUE = '__lumno_local_wallpaper_disabled__';
+  const NEWTAB_WALLPAPER_PREFS_STORAGE_VERSION = 2;
+  const NEWTAB_WALLPAPER_MODE_LIGHT = 'light';
+  const NEWTAB_WALLPAPER_MODE_DARK = 'dark';
+  const NEWTAB_WALLPAPER_MODES = [NEWTAB_WALLPAPER_MODE_LIGHT, NEWTAB_WALLPAPER_MODE_DARK];
+  const NEWTAB_WALLPAPER_OPTIONS = [
+    {
+      id: 'dark-linocut-topographic',
+      nameKey: 'newtab_wallpaper_name_dark_linocut_topographic',
+      fallbackName: 'Night topography',
+      file: 'lumno-newtab-dark-linocut-topographic.webp'
+    },
+    {
+      id: 'dark-monet-lily-nocturne',
+      nameKey: 'newtab_wallpaper_name_dark_monet_lily_nocturne',
+      fallbackName: 'Lily nocturne',
+      file: 'lumno-newtab-dark-monet-lily-nocturne.webp'
+    },
+    {
+      id: 'dark-shanshui-moonlit',
+      nameKey: 'newtab_wallpaper_name_dark_shanshui_moonlit',
+      fallbackName: 'Moonlit shanshui',
+      file: 'lumno-newtab-dark-shanshui-moonlit.webp'
+    },
+    {
+      id: 'monet-coastal-white',
+      nameKey: 'newtab_wallpaper_name_monet_coastal_white',
+      fallbackName: 'Monet coast',
+      file: 'lumno-newtab-monet-coastal-white.webp'
+    },
+    {
+      id: 'monet-field-white',
+      nameKey: 'newtab_wallpaper_name_monet_field_white',
+      fallbackName: 'Monet field',
+      file: 'lumno-newtab-monet-field-white.webp'
+    },
+    {
+      id: 'monet-lily-pond-white',
+      nameKey: 'newtab_wallpaper_name_monet_lily_pond_white',
+      fallbackName: 'Lily pond',
+      file: 'lumno-newtab-monet-lily-pond-white.webp'
+    },
+    {
+      id: 'impressionist-orchard-white',
+      nameKey: 'newtab_wallpaper_name_impressionist_orchard_white',
+      fallbackName: 'Orchard morning',
+      file: 'lumno-newtab-impressionist-orchard-white.webp'
+    },
+    {
+      id: 'seurat-coast-white',
+      nameKey: 'newtab_wallpaper_name_seurat_coast_white',
+      fallbackName: 'Seurat coast',
+      file: 'lumno-newtab-seurat-coast-white.webp'
+    },
+    {
+      id: 'seurat-park-white',
+      nameKey: 'newtab_wallpaper_name_seurat_park_white',
+      fallbackName: 'Seurat park',
+      file: 'lumno-newtab-seurat-park-white.webp'
+    },
+    {
+      id: 'seurat-riverside-white',
+      nameKey: 'newtab_wallpaper_name_seurat_riverside_white',
+      fallbackName: 'Seurat riverside',
+      file: 'lumno-newtab-seurat-riverside-white.webp'
+    },
+    {
+      id: 'pointillist-lakeside-white',
+      nameKey: 'newtab_wallpaper_name_pointillist_lakeside_white',
+      fallbackName: 'Lakeside pointillism',
+      file: 'lumno-newtab-pointillist-lakeside-white.webp'
+    },
+    {
+      id: 'white-3d-architecture',
+      nameKey: 'newtab_wallpaper_name_white_3d_architecture',
+      fallbackName: 'Daylight architecture',
+      file: 'lumno-newtab-white-3d-architecture.webp'
+    },
+    {
+      id: 'white-3d-observatory',
+      nameKey: 'newtab_wallpaper_name_white_3d_observatory',
+      fallbackName: 'Misty observatory',
+      file: 'lumno-newtab-white-3d-observatory.webp'
+    },
+    {
+      id: 'white-linocut-topographic',
+      nameKey: 'newtab_wallpaper_name_white_linocut_topographic',
+      fallbackName: 'Daylight topography',
+      file: 'lumno-newtab-white-linocut-topographic.webp'
+    },
+    {
+      id: 'white-risograph-collage',
+      nameKey: 'newtab_wallpaper_name_white_risograph_collage',
+      fallbackName: 'Daylight collage',
+      file: 'lumno-newtab-white-risograph-collage.webp'
+    },
+    {
+      id: 'white-shanshui',
+      nameKey: 'newtab_wallpaper_name_white_shanshui',
+      fallbackName: 'Clear shanshui',
+      file: 'lumno-newtab-white-shanshui.webp'
+    },
+    {
+      id: 'white-shanshui-bamboo-bridge',
+      nameKey: 'newtab_wallpaper_name_white_shanshui_bamboo_bridge',
+      fallbackName: 'Bamboo bridge',
+      file: 'lumno-newtab-white-shanshui-bamboo-bridge.webp'
+    },
+    {
+      id: 'settings-bg-light-monet-newtab',
+      nameKey: 'newtab_wallpaper_name_settings_bg_light_monet_newtab',
+      fallbackName: 'Monet light',
+      file: 'settings-bg-light-monet-newtab.webp'
+    }
+  ];
+  const NEWTAB_WALLPAPER_OVERLAY_DEFAULTS = { light: 50, dark: 50 };
+  const NEWTAB_WALLPAPER_OVERLAY_STOPS = {
+    light: { top: 54, mid: 20, bottom: 38 },
+    dark: { top: 44, mid: 20, bottom: 50 }
+  };
+  const NEWTAB_WALLPAPER_EFFECT_DEFAULTS = WALLPAPER_EFFECTS.DEFAULT_PREFS || {
+    version: 11,
+    type: 'none',
+    inkTone: 'auto',
+    strength: 50,
+    size: 50,
+    spacing: 50,
+    texture: 20,
+    blockSize: 1,
+    crtStrength: 20,
+    crtBloom: 15,
+    crtRgbOffset: 35,
+    crtCurvature: 18
+  };
+  const NEWTAB_WALLPAPER_EFFECT_TYPES = [
+    { type: 'none', labelKey: 'newtab_wallpaper_effect_none', fallback: 'Off' },
+    { type: 'blur', labelKey: 'newtab_wallpaper_effect_blur', fallback: 'Glass blur' },
+    { type: 'grain', labelKey: 'newtab_wallpaper_effect_grain', fallback: 'Grain' },
+    { type: 'blocks', labelKey: 'newtab_wallpaper_effect_blocks', fallback: 'Blocks' },
+    { type: 'halftone', labelKey: 'newtab_wallpaper_effect_halftone', fallback: 'Halftone' },
+    { type: 'dither', labelKey: 'newtab_wallpaper_effect_dither', fallback: 'Dither' },
+    { type: 'ascii', labelKey: 'newtab_wallpaper_effect_ascii', fallback: 'ASCII' },
+    { type: 'crt', labelKey: 'newtab_wallpaper_effect_crt', fallback: 'CRT' }
+  ];
+  const NEWTAB_WALLPAPER_EFFECT_INK_TONES = [
+    { tone: 'dark', labelKey: 'newtab_wallpaper_effect_ink_dark', fallback: 'Shadows' },
+    { tone: 'light', labelKey: 'newtab_wallpaper_effect_ink_light', fallback: 'Highlights' }
+  ];
+  const NEWTAB_FAVICON_DEFAULT_ID = 'default';
+  const NEWTAB_FAVICON_OPTIONS = [
+    {
+      id: 'default',
+      nameKey: 'newtab_favicon_name_default',
+      fallbackName: 'Default',
+      file: 'assets/images/lumno.png',
+      type: 'image/png'
+    },
+    {
+      id: 'alternate',
+      nameKey: 'newtab_favicon_name_alternate',
+      fallbackName: 'Alternate',
+      file: 'assets/images/lumno-newtab-favicon.svg',
+      preview: 'inlineSvg',
+      themeAwareSvg: true,
+      type: 'image/svg+xml',
+      sizes: 'any'
+    }
+  ];
+  const NEWTAB_FAVICON_SVG_SHADOW_PATH = 'M14.1832 28.5107C14.7736 26.0503 17.4872 24.8712 19.8045 25.8872L29.0688 29.9483C23.1024 42.5571 20.9583 59.1892 34.0764 74.4517C35.5367 76.1508 37.0158 77.6786 38.5039 79.0511C15.0742 61.6944 10.3754 44.3784 14.1832 28.5107ZM50.1563 62.6667C55.3534 57.1072 64.2555 57.3891 69.0898 63.2669L69.4706 63.7295C65.5069 61.937 61.0203 61.3468 56.5866 62.1747L49.3526 63.5259L50.1563 62.6667Z';
+  const NEWTAB_FAVICON_SVG_MAIN_PATH = 'M34.0761 74.4516C15.8955 53.2991 27.0297 29.5157 37.0262 17.4579C38.6314 15.5217 41.5522 15.6368 43.1924 17.5435L54.2217 30.3654C58.8053 35.6938 59.7099 43.2656 56.5107 49.524L49.3531 63.5257L56.8412 62.1274C64.6007 60.6784 72.5332 63.5719 77.5374 69.6765L83.762 77.2699C85.0646 78.859 85.0813 81.1684 83.4746 82.4491C74.4334 89.6554 52.1633 95.4955 34.0761 74.4516Z';
+
+  const cachedWallpaperImages = new Map();
+  // Per daily slot (bing-daily, curated-daily-*): the cached copy it last showed. When the day's new
+  // photo has no copy yet (after a weekend away, or Bing publishing overnight), the slot keeps
+  // showing this one until the new copy is cached, instead of a network thumbnail the page waits on.
+  const dailyWallpaperStandIns = new Map();
+  // Whether each network image loaded on this page: 'loaded' or 'failed'. A new tab tries again.
+  const wallpaperNetworkImageStates = new Map();
+
+
+
+
+  const {
+    formatBingCopyright,
+    getBingWallpaperLabel,
+    loadBingCatalog,
+    bindWallpaperPageShownListeners,
+    normalizeDailyWallpaperPicks,
+    getDailyWallpaperPick,
+    getActiveDailyWallpaperId,
+    setDailyWallpaperPick,
+    clearDailyWallpaperPick,
+    getCuratedTileItems,
+    showCuratedPageOfSelection,
+    getCuratedPhotoLabel,
+    getCuratedPhotoMeta,
+    getCuratedCategoryLabel,
+    isCuratedDailyWallpaperActive,
+    selectCuratedCategory,
+    setCuratedMixCategory,
+    showMoreCuratedWallpapers,
+    setCuratedDailyWallpaper,
+    selectBingWallpaper
+  } = WALLPAPER_DAILY_WALLPAPERS.createDailyWallpapers({
+    renderWallpaperPanelState: (...args) => renderWallpaperPanelState(...args),
+    remoteClient,
+    NEWTAB_WALLPAPER_MODES,
+    getEffectiveWallpaperIdForMode: (...args) => getEffectiveWallpaperIdForMode(...args),
+    REMOTE_CONTENT,
+    getResolvedWallpaperMode: (...args) => getResolvedWallpaperMode(...args),
+    applyResolvedNewtabWallpaper: (...args) => applyResolvedNewtabWallpaper(...args),
+    document,
+    window,
+    getWallpaperSelectionIdForUi: (...args) => getWallpaperSelectionIdForUi(...args),
+    writeStorageValue: (...args) => writeStorageValue(...args),
+    storageArea,
+    NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY,
+    showToast,
+    t,
+    getWallpaperTileSelectionId: (...args) => getWallpaperTileSelectionId(...args),
+    formatMessage,
+    playWallpaperEnterMotion: (...args) => playWallpaperEnterMotion(...args),
+    getWallpaperPanelRefs: (...args) => getWallpaperPanelRefs(...args),
+    NEWTAB_CURATED_MIX_EXCLUDED_STORAGE_KEY,
+    persistNewtabWallpaper: (...args) => persistNewtabWallpaper(...args),
+    getWallpaperById: (...args) => getWallpaperById(...args),
+    NEWTAB_WALLPAPER_DEFAULT_ID,
+    getWallpaperEditMode: (...args) => getWallpaperEditMode(...args),
+    beginToast,
+    wallpaperState
+  });
+
+  const {
+    getWallpaperButtonLabel,
+    createWallpaperPanelModel,
+    getWallpaperAppearanceModeLabels,
+    buildWallpaperPanelState,
+    getWallpaperPanelLayoutKey,
+    renderWallpaperPanelState,
+    drawWallpaperPanelState,
+    getWallpaperPanelRefs,
+    isWallpaperTileSelected,
+    getWallpaperStyleSliderValue
+  } = WALLPAPER_PANEL_STATE.createPanelState({
+    t,
+    NEWTAB_FAVICON_SVG_SHADOW_PATH,
+    NEWTAB_FAVICON_SVG_MAIN_PATH,
+    NEWTAB_FAVICON_OPTIONS,
+    getNewtabFaviconUrl: (...args) => getNewtabFaviconUrl(...args),
+    getRiSvg,
+    SETTINGS,
+    getSearchWidthSnapPoints: (...args) => getSearchWidthSnapPoints(...args),
+    getSearchWidthPercent: (...args) => getSearchWidthPercent(...args),
+    getShortcutColumnsTickValues: (...args) => getShortcutColumnsTickValues(...args),
+    getShortcutColumnsPercent: (...args) => getShortcutColumnsPercent(...args),
+    normalizeShortcutSizeValue: (...args) => normalizeShortcutSizeValue(...args),
+    getShortcutLayoutPercent: (...args) => getShortcutLayoutPercent(...args),
+    shortcutSizeConfig,
+    normalizeShortcutGapValue: (...args) => normalizeShortcutGapValue(...args),
+    shortcutGapConfig,
+    getThemeScope,
+    getRuntimeAssetUrl: (...args) => getRuntimeAssetUrl(...args),
+    getGlobalThemeMode,
+    getWallpaperAppearanceModeLabel: (...args) => getWallpaperAppearanceModeLabel(...args),
+    getThemeMode,
+    formatMessage,
+    hasTopContentModeGetter,
+    normalizeNewtabTopContentMode,
+    getTopContentMode,
+    hasTimeFontWeightGetter,
+    normalizeNewtabTimeFontWeight,
+    getTimeFontWeight,
+    hasTimeFontGetter,
+    getTimeFont,
+    hasTimeSecondsVisibleGetter,
+    normalizeNewtabTimeSecondsVisible,
+    getTimeSecondsVisible,
+    getTimeFontSize,
+    getTimeOpacity,
+    normalizeSearchWidthValue: (...args) => normalizeSearchWidthValue(...args),
+    getSearchWidth,
+    getSearchWidthMin: (...args) => getSearchWidthMin(...args),
+    getSearchWidthMax: (...args) => getSearchWidthMax(...args),
+    formatSearchWidthValue: (...args) => formatSearchWidthValue(...args),
+    getInputAutoFocusEnabled,
+    getTimeInk,
+    getTime12Hour,
+    getShortcutsVisible,
+    getShortcutSize,
+    getShortcutGap,
+    getShortcutAddVisible,
+    getShortcutDockMagnificationEnabled,
+    normalizeShortcutColumnsValue: (...args) => normalizeShortcutColumnsValue(...args),
+    getShortcutColumns,
+    getShortcutColumnsMin: (...args) => getShortcutColumnsMin(...args),
+    getShortcutColumnsMax: (...args) => getShortcutColumnsMax(...args),
+    getShortcutLayoutMin: (...args) => getShortcutLayoutMin(...args),
+    getShortcutLayoutMax: (...args) => getShortcutLayoutMax(...args),
+    getShortcutLayoutDefault: (...args) => getShortcutLayoutDefault(...args),
+    getWallpaperThumbnailUrl: (...args) => getWallpaperThumbnailUrl(...args),
+    getWallpaperDisplayName: (...args) => getWallpaperDisplayName(...args),
+    getLinkWallpaperById: (...args) => getLinkWallpaperById(...args),
+    isLocalWallpaperLibraryFull: (...args) => isLocalWallpaperLibraryFull(...args),
+    REMOTE_CONTENT,
+    getWallpaperById: (...args) => getWallpaperById(...args),
+    formatBingCopyright,
+    getBingWallpaperLabel,
+    remoteClient,
+    wallpaperThumbnailCache,
+    fetchCustomWallpaperFile: (...args) => fetchCustomWallpaperFile(...args),
+    localWallpaperStore,
+    warnWallpaperStoreFailure,
+    getCuratedPhotoLabel,
+    isCuratedDailyWallpaperActive,
+    getCuratedCategoryLabel,
+    getCuratedPhotoMeta,
+    getCuratedTileItems,
+    getWallpaperEffectPrefsForEditMode: (...args) => getWallpaperEffectPrefsForEditMode(...args),
+    getWallpaperEffectControlVisibility: (...args) => getWallpaperEffectControlVisibility(...args),
+    BLOCK_PARAMETER_MAX,
+    getCrtParameterPercent,
+    NEWTAB_WALLPAPER_EFFECT_TYPES,
+    getWallpaperEffectLabel: (...args) => getWallpaperEffectLabel(...args),
+    getWallpaperEffectInkToneForUi: (...args) => getWallpaperEffectInkToneForUi(...args),
+    NEWTAB_WALLPAPER_EFFECT_INK_TONES,
+    getWallpaperEffectInkToneLabel: (...args) => getWallpaperEffectInkToneLabel(...args),
+    getWallpaperEffectStrengthLabel: (...args) => getWallpaperEffectStrengthLabel(...args),
+    getWallpaperEffectSizeLabel: (...args) => getWallpaperEffectSizeLabel(...args),
+    getWallpaperEffectSpacingLabel: (...args) => getWallpaperEffectSpacingLabel(...args),
+    clampNumber: (...args) => clampNumber(...args),
+    getWallpaperEffectTextureLabel: (...args) => getWallpaperEffectTextureLabel(...args),
+    hasAnyWallpaperEnabled: (...args) => hasAnyWallpaperEnabled(...args),
+    getWallpaperSelectionIdForUi: (...args) => getWallpaperSelectionIdForUi(...args),
+    getWallpaperTileSelectionId: (...args) => getWallpaperTileSelectionId(...args),
+    normalizeWallpaperMode: (...args) => normalizeWallpaperMode(...args),
+    NEWTAB_WALLPAPER_MODES,
+    NEWTAB_WALLPAPER_MODE_DARK,
+    getWallpaperModeLabel: (...args) => getWallpaperModeLabel(...args),
+    NEWTAB_WALLPAPER_OPTIONS,
+    getWallpaperLocalPath: (...args) => getWallpaperLocalPath(...args),
+    getWallpaperOverlayOpacityForCurrentMode: (...args) => getWallpaperOverlayOpacityForCurrentMode(...args),
+    getGlassStyle,
+    getGlassTheme,
+    buildNewtabFaviconState: (...args) => buildNewtabFaviconState(...args),
+    options,
+    animateWallpaperPanelResize: (...args) => animateWallpaperPanelResize(...args),
+    snapWallpaperOverlaySliderValue: (...args) => snapWallpaperOverlaySliderValue(...args),
+    normalizeWallpaperOverlayOpacity: (...args) => normalizeWallpaperOverlayOpacity(...args),
+    document,
+    extensionRoutes,
+    chrome,
+    window,
+    wallpaperState
+  });
+
+  const {
+    isLocalWallpaperLibraryFull,
+    showLocalWallpaperLimitToast,
+    importCustomWallpaperFile,
+    fetchCustomWallpaperFile,
+    setCustomWallpaperUrlFormOpen,
+    isLinkWallpaperId,
+    setLinkWallpapers,
+    getLinkWallpaperById,
+    takePreloadedCustomWallpaper,
+    readCachedWallpaperImages,
+    cacheShownWallpaperImages,
+    getNextLocalDayTimestamp,
+    getUpcomingDailyWallpaper,
+    cacheListedLinkWallpapers,
+    isOnlineWallpaperMenuNode,
+    closeOnlineWallpaperMenu,
+    openOnlineWallpaperMenu,
+    submitCustomWallpaperUrl,
+    closeCustomWallpaperUrlForm,
+    deleteCustomWallpaper
+  } = WALLPAPER_CUSTOM_WALLPAPERS.createCustomWallpapers({
+    showToast,
+    formatMessage,
+    renderWallpaperPanelState,
+    beginToast,
+    t,
+    buildCustomWallpaperRecordFromFile: (...args) => buildCustomWallpaperRecordFromFile(...args),
+    writeCustomWallpaperRecord: (...args) => writeCustomWallpaperRecord(...args),
+    normalizeCustomWallpaperRecord: (...args) => normalizeCustomWallpaperRecord(...args),
+    persistNewtabWallpaper: (...args) => persistNewtabWallpaper(...args),
+    options,
+    windowObj,
+    getCachedWallpaperImage: (...args) => getCachedWallpaperImage(...args),
+    cachedWallpaperImages,
+    mergeCustomWallpaperRecords: (...args) => mergeCustomWallpaperRecords(...args),
+    wallpaperImageCache,
+    warnWallpaperStoreFailure,
+    NEWTAB_WALLPAPER_MODES,
+    applyResolvedNewtabWallpaper: (...args) => applyResolvedNewtabWallpaper(...args),
+    getEffectiveWallpaperIdForMode: (...args) => getEffectiveWallpaperIdForMode(...args),
+    REMOTE_CONTENT,
+    getWallpaperById: (...args) => getWallpaperById(...args),
+    window,
+    writeWallpaperPreloadCache: (...args) => writeWallpaperPreloadCache(...args),
+    waitForDocumentLoad: (...args) => waitForDocumentLoad(...args),
+    getShownWallpaperCopy: (...args) => getShownWallpaperCopy(...args),
+    dailyWallpaperStandIns,
+    writeStorageValue: (...args) => writeStorageValue(...args),
+    storageArea,
+    NEWTAB_LINK_WALLPAPERS_STORAGE_KEY,
+    hideTopActionTooltip,
+    getWritableWallpaperPrefs: (...args) => getWritableWallpaperPrefs(...args),
+    NEWTAB_WALLPAPER_DEFAULT_ID,
+    setWallpaperPrefs: (...args) => setWallpaperPrefs(...args),
+    getWritableLocalWallpaperOverrides: (...args) => getWritableLocalWallpaperOverrides(...args),
+    writeCurrentWallpaperPrefs: (...args) => writeCurrentWallpaperPrefs(...args),
+    remoteClient,
+    loadCustomWallpapers: (...args) => loadCustomWallpapers(...args),
+    document,
+    getWallpaperPanelRefs,
+    getCustomWallpaperById: (...args) => getCustomWallpaperById(...args),
+    deleteCustomWallpaperRecord: (...args) => deleteCustomWallpaperRecord(...args),
+    NEWTAB_LOCAL_WALLPAPER_DISABLED_VALUE,
+    writeLocalWallpaperValue: (...args) => writeLocalWallpaperValue(...args),
+    buildLocalWallpaperStorageValue: (...args) => buildLocalWallpaperStorageValue(...args),
+    wallpaperState
+  });
+
+  const {
+    normalizeWallpaperMode,
+    getDefaultWallpaperPrefs,
+    getDefaultLocalWallpaperOverrides,
+    cloneWallpaperPrefs,
+    cloneLocalWallpaperOverrides,
+    isCustomWallpaperId,
+    getCustomWallpaperById,
+    getWallpaperById,
+    normalizeNewtabWallpaperId,
+    getWallpaperLocalPath,
+    getWallpaperRuntimePath,
+    getCachedWallpaperImage,
+    getShownWallpaperCopy,
+    getWallpaperImageUrl,
+    isNetworkWallpaperImageUrl,
+    getDisplayedWallpaperImageUrl,
+    getWallpaperThumbnailUrl,
+    getWallpaperDisplayName
+  } = WALLPAPER_WALLPAPER_SOURCES.createWallpaperSources({
+    NEWTAB_WALLPAPER_MODE_DARK,
+    NEWTAB_WALLPAPER_MODE_LIGHT,
+    NEWTAB_WALLPAPER_PREFS_STORAGE_VERSION,
+    NEWTAB_WALLPAPER_DEFAULT_ID,
+    localWallpaperStore,
+    isLinkWallpaperId,
+    getLinkWallpaperById,
+    REMOTE_CONTENT,
+    getDailyWallpaperPick,
+    remoteClient,
+    NEWTAB_WALLPAPER_OPTIONS,
+    NEWTAB_CUSTOM_WALLPAPER_ID,
+    NEWTAB_WALLPAPER_THUMBNAIL_SUFFIX,
+    NEWTAB_WALLPAPER_EXTENSION_DIRECTORY,
+    cachedWallpaperImages,
+    dailyWallpaperStandIns,
+    chrome,
+    wallpaperNetworkImageStates,
+    t,
+    wallpaperState
+  });
+  const wallpaperEffectPreload = globalThis.LumnoNewtabWallpaperEffectPreload || null;
+
+
+
+  const WALLPAPER_SOURCE_TABS = ['built-in', 'local', 'bing', 'curated'];
+
+
+  const {
+    finalizeInitialWallpaper,
+    applyTopContentMode,
+    persistTopContentMode,
+    applyTimeFontWeight,
+    persistTimeFontWeight,
+    persistTimeFontSizeFromSlider,
+    persistTimeOpacityFromSlider,
+    persistTimeInk,
+    applyTimeFont,
+    persistTimeFont,
+    applyTimeSecondsVisible,
+    persistTimeSecondsVisible,
+    persistTime12Hour,
+    getWallpaperAppearanceOptionButtons,
+    getWallpaperAppearanceOptionMotionElement,
+    getSearchWidthMin,
+    getSearchWidthMax,
+    normalizeSearchWidthValue,
+    getSearchWidthSnapPoints,
+    getSearchWidthPercent,
+    formatSearchWidthValue,
+    persistSearchWidthFromSlider,
+    getShortcutColumnsMin,
+    getShortcutColumnsMax,
+    normalizeShortcutColumnsValue,
+    getShortcutColumnsTickValues,
+    getShortcutColumnsPercent,
+    persistShortcutColumnsFromSlider,
+    getShortcutLayoutMin,
+    getShortcutLayoutMax,
+    getShortcutLayoutDefault,
+    getShortcutLayoutPercent,
+    normalizeShortcutSizeValue,
+    normalizeShortcutGapValue,
+    persistShortcutSizeFromSlider,
+    persistShortcutGapFromSlider
+  } = WALLPAPER_PANEL_SETTINGS.createPanelSettings({
+    normalizeNewtabTopContentMode,
+    setTopContentMode,
+    renderWallpaperPanelState,
+    storageArea,
+    NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY,
+    normalizeNewtabTimeFontWeight,
+    setTimeFontWeight,
+    NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY,
+    SETTINGS,
+    setTimeFontSize,
+    NEWTAB_TIME_FONT_SIZE_STORAGE_KEY,
+    setTimeOpacity,
+    NEWTAB_TIME_OPACITY_STORAGE_KEY,
+    setTimeInk,
+    NEWTAB_TIME_INK_STORAGE_KEY,
+    setTimeFont,
+    NEWTAB_TIME_FONT_STORAGE_KEY,
+    normalizeNewtabTimeSecondsVisible,
+    setTimeSecondsVisible,
+    NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY,
+    setTime12Hour,
+    NEWTAB_TIME_12_HOUR_STORAGE_KEY,
+    getWallpaperPanelRefs,
+    searchWidthConfig,
+    setSearchWidth,
+    shortcutColumnsConfig,
+    setShortcutColumns,
+    shortcutSizeConfig,
+    shortcutGapConfig,
+    setShortcutSize,
+    setShortcutGap,
+    wallpaperState
+  });
+
+  const {
+    primeWallpaperImage,
+    loadCustomWallpapers,
+    refreshCustomWallpapers,
+    mergeCustomWallpaperRecords,
+    applyResolvedNewtabWallpaper,
+    loadStoredWallpaperState,
+    bootstrapInitialWallpaper,
+    persistWallpaperEnabled,
+    persistWallpaperModeConsistency,
+    persistNewtabWallpaper
+  } = WALLPAPER_WALLPAPER_SELECTION.createWallpaperSelection({
+    getWallpaperById,
+    waitForWallpaperImageReady: (...args) => waitForWallpaperImageReady(...args),
+    getWallpaperImageUrl,
+    readCachedWallpaperImages,
+    readCustomWallpaperRecords: (...args) => readCustomWallpaperRecords(...args),
+    renderWallpaperPanelState,
+    cacheListedLinkWallpapers,
+    normalizeCustomWallpaperRecord: (...args) => normalizeCustomWallpaperRecord(...args),
+    normalizeNewtabWallpaperId,
+    normalizeWallpaperMode,
+    NEWTAB_WALLPAPER_MODES,
+    getResolvedWallpaperMode: (...args) => getResolvedWallpaperMode(...args),
+    writeWallpaperPreloadCache: (...args) => writeWallpaperPreloadCache(...args),
+    applyWallpaperVisualState: (...args) => applyWallpaperVisualState(...args),
+    refreshWallpaperAdaptiveSampler,
+    scheduleWallpaperVisualRefresh: (...args) => scheduleWallpaperVisualRefresh(...args),
+    finalizeInitialWallpaper,
+    getDisplayedWallpaperImageUrl,
+    createWallpaperTransitionLayer: (...args) => createWallpaperTransitionLayer(...args),
+    releaseWallpaperTransitionLayer: (...args) => releaseWallpaperTransitionLayer(...args),
+    getEffectiveWallpaperIdForMode: (...args) => getEffectiveWallpaperIdForMode(...args),
+    cacheShownWallpaperImages,
+    resolveSyncedWallpaperValue: (...args) => resolveSyncedWallpaperValue(...args),
+    resolveLocalWallpaperOverride: (...args) => resolveLocalWallpaperOverride(...args),
+    applyLocalWallpaperMigrations: (...args) => applyLocalWallpaperMigrations(...args),
+    setWallpaperPrefs: (...args) => setWallpaperPrefs(...args),
+    bindWallpaperPageShownListeners,
+    synchronizeWallpaperEffectPrefsWithWallpaperModes: (...args) => synchronizeWallpaperEffectPrefsWithWallpaperModes(...args),
+    applyWallpaperEffectForResolvedMode: (...args) => applyWallpaperEffectForResolvedMode(...args),
+    syncWallpaperSourceTabToEditMode: (...args) => syncWallpaperSourceTabToEditMode(...args),
+    writeSyncedWallpaperValue: (...args) => writeSyncedWallpaperValue(...args),
+    getWallpaperStorageRawIds: (...args) => getWallpaperStorageRawIds(...args),
+    isOnlineWallpaperId: (...args) => isOnlineWallpaperId(...args),
+    writeLocalWallpaperValue: (...args) => writeLocalWallpaperValue(...args),
+    buildLocalWallpaperStorageValue: (...args) => buildLocalWallpaperStorageValue(...args),
+    storageArea,
+    NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY,
+    getWallpaperEffectStorageValue: (...args) => getWallpaperEffectStorageValue(...args),
+    readStorageValue: (...args) => readStorageValue(...args),
+    NEWTAB_WALLPAPER_STORAGE_KEY,
+    localWallpaperStorageArea,
+    NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY,
+    NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY,
+    NEWTAB_LINK_WALLPAPERS_STORAGE_KEY,
+    NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY,
+    NEWTAB_CURATED_MIX_EXCLUDED_STORAGE_KEY,
+    normalizeDailyWallpaperPicks,
+    REMOTE_CONTENT,
+    mergeOnlineWallpaperValue: (...args) => mergeOnlineWallpaperValue(...args),
+    setLinkWallpapers,
+    isLinkWallpaperId,
+    takePreloadedCustomWallpaper,
+    getStoredCustomWallpaperIds: (...args) => getStoredCustomWallpaperIds(...args),
+    hasLoadedStoredCustomWallpaper: (...args) => hasLoadedStoredCustomWallpaper(...args),
+    readCustomWallpaperRecordsByIds: (...args) => readCustomWallpaperRecordsByIds(...args),
+    warnWallpaperStoreFailure,
+    getDailyWallpaperPick,
+    remoteClient,
+    getCachedWallpaperImage,
+    dailyWallpaperStandIns,
+    window,
+    PRELOAD_STORAGE_KEY,
+    NEWTAB_WALLPAPER_DEFAULT_ID,
+    getWritableWallpaperPrefs: (...args) => getWritableWallpaperPrefs(...args),
+    getWritableLocalWallpaperOverrides: (...args) => getWritableLocalWallpaperOverrides(...args),
+    writeCurrentWallpaperPrefs: (...args) => writeCurrentWallpaperPrefs(...args),
+    isCustomWallpaperId,
+    NEWTAB_LOCAL_WALLPAPER_DISABLED_VALUE,
+    getWallpaperEffectPrefsForEditMode: (...args) => getWallpaperEffectPrefsForEditMode(...args),
+    getWallpaperModePreferenceOrder: (...args) => getWallpaperModePreferenceOrder(...args),
+    hasAnyWallpaperEnabled: (...args) => hasAnyWallpaperEnabled(...args),
+    getFirstEnabledWallpaperIdForModes: (...args) => getFirstEnabledWallpaperIdForModes(...args),
+    getCopyableWallpaperLocalOverrideForId: (...args) => getCopyableWallpaperLocalOverrideForId(...args),
+    setSharedWallpaperEffectPrefs: (...args) => setSharedWallpaperEffectPrefs(...args),
+    getWallpaperEditMode: (...args) => getWallpaperEditMode(...args),
+    getWallpaperEffectPrefsForMode: (...args) => getWallpaperEffectPrefsForMode(...args),
+    getWallpaperLocalOverrideForMode: (...args) => getWallpaperLocalOverrideForMode(...args),
+    wallpaperState
+  });
+
+  const {
+    animateWallpaperPanelResize,
+    setWallpaperActiveTab,
+    syncWallpaperSourceTabToEditMode,
+    setWallpaperActiveMode,
+    isWallpaperPanelOpen,
+    setWallpaperPanelOpenState,
+    getWallpaperAppearanceModeLabel,
+    shouldReduceMotion,
+    playWallpaperEnterMotion,
+    animateWallpaperAppearanceScopeChange
+  } = WALLPAPER_PANEL_MOTION.createPanelMotion({
+    window,
+    normalizeWallpaperSourceTab: (...args) => normalizeWallpaperSourceTab(...args),
+    renderWallpaperPanelState,
+    WALLPAPER_SOURCE_TABS,
+    loadCustomWallpapers,
+    loadBingCatalog,
+    getWallpaperSelectionIdForUi: (...args) => getWallpaperSelectionIdForUi(...args),
+    getWallpaperById,
+    REMOTE_CONTENT,
+    showCuratedPageOfSelection,
+    getWallpaperSourceTabForId: (...args) => getWallpaperSourceTabForId(...args),
+    normalizeWallpaperMode,
+    document,
+    t,
+    getThemeScope,
+    getWallpaperAppearanceOptionButtons,
+    getWallpaperAppearanceOptionMotionElement,
+    getWallpaperPanelRefs,
+    afterNextPaint,
+    setThemeScope,
+    getWallpaperAppearanceModeLabels,
+    wallpaperState
+  });
+
+  const {
+    getWallpaperEffectPrefsForMode,
+    getWallpaperEffectPrefsForEditMode,
+    getWallpaperEffectStorageValue,
+    setSharedWallpaperEffectPrefs,
+    synchronizeWallpaperEffectPrefsWithWallpaperModes,
+    getWallpaperEffectInkToneForUi,
+    getWallpaperEffectInkToneLabel,
+    getWallpaperEffectLabel,
+    applyWallpaperEffectForResolvedMode,
+    applyWallpaperEffectPrefs,
+    getWallpaperEffectControlVisibility,
+    getWallpaperEffectStrengthLabel,
+    getWallpaperEffectSizeLabel,
+    getWallpaperEffectSpacingLabel,
+    getWallpaperEffectTextureLabel,
+    persistWallpaperEffectPrefs,
+    bootstrapInitialWallpaperEffect,
+    waitForInitialWallpaperEffectVisual,
+    waitForInitialWallpaperTone
+  } = WALLPAPER_WALLPAPER_EFFECT_PREFS.createWallpaperEffectPrefs({
+    normalizeSingleWallpaperEffectPrefs,
+    normalizeWallpaperMode,
+    getWallpaperEditMode: (...args) => getWallpaperEditMode(...args),
+    getResolvedWallpaperMode: (...args) => getResolvedWallpaperMode(...args),
+    normalizeWallpaperEffectStoragePrefs,
+    WALLPAPER_EFFECT_MODE_STORAGE_VERSION,
+    WALLPAPER_EFFECTS,
+    NEWTAB_WALLPAPER_EFFECT_INK_TONES,
+    t,
+    NEWTAB_WALLPAPER_EFFECT_TYPES,
+    createWallpaperTransitionLayer: (...args) => createWallpaperTransitionLayer(...args),
+    document,
+    releaseWallpaperTransitionLayer: (...args) => releaseWallpaperTransitionLayer(...args),
+    renderWallpaperPanelState,
+    NEWTAB_WALLPAPER_MODES,
+    writeWallpaperPreloadCache: (...args) => writeWallpaperPreloadCache(...args),
+    storageArea,
+    NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY,
+    NEWTAB_WALLPAPER_EFFECT_DEFAULTS,
+    window,
+    wallpaperState
+  });
+
+  const {
+    normalizeWallpaperOverlayOpacity,
+    snapWallpaperOverlaySliderValue,
+    getResolvedWallpaperOverlayMode,
+    getWallpaperOverlayOpacityForCurrentMode,
+    getWallpaperOverlayStopPercent,
+    applyWallpaperOverlayOpacity,
+    persistWallpaperOverlayOpacity,
+    bootstrapInitialWallpaperOverlay
+  } = WALLPAPER_WALLPAPER_OVERLAY.createWallpaperOverlay({
+    NEWTAB_WALLPAPER_OVERLAY_DEFAULTS,
+    document,
+    clampNumber: (...args) => clampNumber(...args),
+    NEWTAB_WALLPAPER_OVERLAY_STOPS,
+    renderWallpaperPanelState,
+    scheduleWallpaperAdaptiveToneUpdate,
+    writeWallpaperPreloadCache: (...args) => writeWallpaperPreloadCache(...args),
+    storageArea,
+    NEWTAB_WALLPAPER_OVERLAY_STORAGE_KEY,
+    wallpaperState
+  });
+
+  const {
+    clampNumber,
+    getWallpaperOverlayAlphaAtViewportY,
+    getWallpaperAdaptiveToneTargets,
+    getRuntimeAssetUrl,
+    takePreloadedDecodedImage,
+    waitForWallpaperImageReady,
+    waitForDocumentLoad,
+    createWallpaperTransitionLayer,
+    releaseWallpaperTransitionLayer,
+    applyWallpaperVisualState,
+    scheduleWallpaperVisualRefresh
+  } = WALLPAPER_WALLPAPER_VISUAL.createWallpaperVisual({
+    document,
+    window,
+    getResolvedWallpaperOverlayMode,
+    NEWTAB_WALLPAPER_OVERLAY_STOPS,
+    getWallpaperOverlayOpacityForCurrentMode,
+    getWallpaperOverlayStopPercent,
+    getAdaptiveToneTargets,
+    chrome,
+    windowObj,
+    isNetworkWallpaperImageUrl,
+    wallpaperNetworkImageStates,
+    shouldReduceMotion,
+    getDisplayedWallpaperImageUrl,
+    wallpaperEffectPreload,
+    refreshWallpaperAdaptiveSampler,
+    afterNextPaint,
+    wallpaperState
+  });
+
+  const {
+    readStorageValue,
+    writeStorageValue,
+    isOnlineWallpaperId,
+    mergeOnlineWallpaperValue,
+    writeSyncedWallpaperValue,
+    writeLocalWallpaperValue,
+    getWallpaperStorageRawIds,
+    getStoredCustomWallpaperIds,
+    hasLoadedStoredCustomWallpaper,
+    buildLocalWallpaperStorageValue,
+    resolveSyncedWallpaperValue,
+    resolveLocalWallpaperOverride,
+    getWallpaperLocalOverrideForMode,
+    getEffectiveWallpaperIdForMode,
+    getResolvedWallpaperMode,
+    getWallpaperEditMode,
+    getWallpaperTileSelectionId,
+    getWallpaperSelectionIdForUi,
+    hasAnyWallpaperEnabled,
+    normalizeWallpaperSourceTab,
+    getWallpaperSourceTabForId,
+    getWallpaperModeLabel,
+    getWallpaperModePreferenceOrder,
+    getFirstEnabledWallpaperIdForModes,
+    getCopyableWallpaperLocalOverrideForId,
+    setWallpaperPrefs,
+    getWritableWallpaperPrefs,
+    getWritableLocalWallpaperOverrides,
+    applyLocalWallpaperMigrations,
+    writeCurrentWallpaperPrefs,
+    readWallpaperPreloadLuminances,
+    rememberWallpaperLuminance,
+    writeWallpaperPreloadCache,
+    normalizeCustomWallpaperRecord,
+    readCustomWallpaperRecords,
+    readCustomWallpaperRecordsByIds,
+    writeCustomWallpaperRecord,
+    deleteCustomWallpaperRecord,
+    buildCustomWallpaperRecordFromFile
+  } = WALLPAPER_WALLPAPER_STORAGE.createWallpaperStorage({
+    chrome,
+    REMOTE_CONTENT,
+    isLinkWallpaperId,
+    NEWTAB_WALLPAPER_DEFAULT_ID,
+    NEWTAB_WALLPAPER_MODES,
+    storageArea,
+    NEWTAB_WALLPAPER_STORAGE_KEY,
+    NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY,
+    showToast,
+    t,
+    localWallpaperStorageArea,
+    NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY,
+    normalizeWallpaperMode,
+    NEWTAB_WALLPAPER_MODE_DARK,
+    NEWTAB_WALLPAPER_MODE_LIGHT,
+    NEWTAB_CUSTOM_WALLPAPER_ID,
+    isCustomWallpaperId,
+    getCustomWallpaperById,
+    cloneWallpaperPrefs,
+    NEWTAB_WALLPAPER_PREFS_STORAGE_VERSION,
+    cloneLocalWallpaperOverrides,
+    normalizeNewtabWallpaperId,
+    getDefaultLocalWallpaperOverrides,
+    NEWTAB_LOCAL_WALLPAPER_DISABLED_VALUE,
+    getDefaultWallpaperPrefs,
+    document,
+    getWallpaperById,
+    WALLPAPER_SOURCE_TABS,
+    getCachedWallpaperImage,
+    getShownWallpaperCopy,
+    getUpcomingDailyWallpaper,
+    getNextLocalDayTimestamp,
+    getWallpaperRuntimePath,
+    remoteClient,
+    window,
+    PRELOAD_STORAGE_KEY,
+    getDisplayedWallpaperImageUrl,
+    getWallpaperImageUrl,
+    WALLPAPER_EFFECTS,
+    NEWTAB_WALLPAPER_OVERLAY_STOPS,
+    getWallpaperOverlayStopPercent,
+    PRELOAD_STORAGE_VERSION,
+    getEffectiveThemeMode,
+    getWallpaperEffectStorageValue,
+    localWallpaperStore,
+    wallpaperState
+  });
+
+  const {
+    normalizeNewtabFaviconId,
+    getNewtabFaviconUrl,
+    applyNewtabFavicon,
+    persistNewtabFavicon,
+    bootstrapInitialNewtabFavicon,
+    buildNewtabFaviconState
+  } = WALLPAPER_FAVICON_CHOOSER.createFaviconChooser({
+    NEWTAB_FAVICON_OPTIONS,
+    NEWTAB_FAVICON_DEFAULT_ID,
+    t,
+    getRuntimeAssetUrl,
+    window,
+    NEWTAB_FAVICON_SVG_SHADOW_PATH,
+    NEWTAB_FAVICON_SVG_MAIN_PATH,
+    BroadcastChannelCtor,
+    document,
+    renderWallpaperPanelState,
+    writeStorageValue,
+    storageArea,
+    NEWTAB_FAVICON_STORAGE_KEY,
+    showToast,
+    readStorageValue,
+    formatMessage,
+    wallpaperState
+  });
+
+  wallpaperState.initialWallpaperApplied = false;
+  wallpaperState.hasStoredWallpaperStateLoaded = false;
+  wallpaperState.resolveInitialWallpaperReady = null;
+  wallpaperState.initialWallpaperReadyPromise = new Promise((resolve) => {
+    wallpaperState.resolveInitialWallpaperReady = resolve;
+  });
+  // The view owns the panel's elements; these three are the ones this runtime measures,
+  // focuses and samples.
+  wallpaperState.wallpaperControl = null;
+  wallpaperState.wallpaperButton = null;
+  wallpaperState.wallpaperPanel = null;
+  wallpaperState.wallpaperViewController = null;
+  wallpaperState.wallpaperPanelActions = null;
+  wallpaperState.wallpaperPanelState = null;
+  wallpaperState.wallpaperPanelLayoutKey = '';
+  wallpaperState.wallpaperPanelOpen = false;
+
+  const {
+    createWallpaperPanelActions,
+    createWallpaperSourcesFeatureHint
+  } = WALLPAPER_PANEL_ACTIONS.createPanelActions({
+    getWallpaperEffectPrefsForEditMode,
+    CRT_PARAMETER_PHYSICAL_MAX,
+    getCrtParameterPercent,
+    getWallpaperStyleSliderValue,
+    persistWallpaperEffectPrefs,
+    getCrtParameterPhysicalValue,
+    getWallpaperById,
+    REMOTE_CONTENT,
+    clearDailyWallpaperPick,
+    selectBingWallpaper,
+    persistNewtabWallpaper,
+    NEWTAB_WALLPAPER_DEFAULT_ID,
+    showTopActionTooltip,
+    hideTopActionTooltip,
+    isWallpaperPanelOpen,
+    getWallpaperButtonLabel,
+    animateWallpaperAppearanceScopeChange,
+    getThemeScope,
+    setThemeMode,
+    persistSearchWidthFromSlider,
+    setInputAutoFocusEnabled,
+    renderWallpaperPanelState,
+    setGlassStyle,
+    setGlassTheme,
+    persistTopContentMode,
+    persistTimeFontWeight,
+    SETTINGS,
+    persistTimeFontSizeFromSlider,
+    persistTimeOpacityFromSlider,
+    persistTimeInk,
+    persistTimeFont,
+    persistTimeSecondsVisible,
+    persistTime12Hour,
+    setShortcutsVisible,
+    setShortcutAddVisible,
+    setShortcutDockMagnificationEnabled,
+    persistShortcutColumnsFromSlider,
+    persistShortcutSizeFromSlider,
+    persistShortcutGapFromSlider,
+    getShortcutLayoutDefault,
+    shortcutSizeConfig,
+    shortcutGapConfig,
+    persistWallpaperEnabled,
+    persistWallpaperModeConsistency,
+    setWallpaperActiveMode,
+    setWallpaperActiveTab,
+    primeWallpaperImage,
+    deleteCustomWallpaper,
+    importCustomWallpaperFile,
+    isLocalWallpaperLibraryFull,
+    showLocalWallpaperLimitToast,
+    setCustomWallpaperUrlFormOpen,
+    openOnlineWallpaperMenu,
+    submitCustomWallpaperUrl,
+    getWallpaperSelectionIdForUi,
+    loadBingCatalog,
+    isWallpaperTileSelected,
+    setCuratedDailyWallpaper,
+    selectCuratedCategory,
+    setCuratedMixCategory,
+    showMoreCuratedWallpapers,
+    getActiveDailyWallpaperId,
+    setDailyWallpaperPick,
+    getResolvedWallpaperOverlayMode,
+    persistWallpaperOverlayOpacity,
+    getWallpaperOverlayOpacityForCurrentMode,
+    persistNewtabFavicon,
+    getWallpaperPanelRefs,
+    options,
+    document,
+    featureHints,
+    window,
+    chrome,
+    featureHintVisibilityGate,
+    t,
+    getRiSvg,
+    syncWallpaperSourceTabToEditMode,
+    setWallpaperPanelOpenState,
+    loadCustomWallpapers,
+    closeWallpaperPanel,
+    wallpaperState
+  });
+
+  wallpaperState.wallpaperSourcesHintController = null;
+  // While the theme options slide to another scope: the scope the tabs already show,
+  // and the labels the options keep until they swap.
+  wallpaperState.pendingThemeScope = null;
+  wallpaperState.heldAppearanceModeLabels = null;
+  wallpaperState.saveSliderSetting = createDebouncedSaver(windowObj, 140);
+  wallpaperState.saveWallpaperStyleSetting = createDebouncedSaver(windowObj, 120);
+  wallpaperState.customWallpapers = [];
+  wallpaperState.customWallpaperCatalogLoaded = false;
+  wallpaperState.customWallpaperImporting = false;
+  wallpaperState.customWallpaperUrlFormOpen = false;
+  wallpaperState.customWallpaperUrlInvalid = false;
+  // Bumped when a link is saved, so the view clears the field for the next one.
+  wallpaperState.customWallpaperUrlClearToken = 0;
+  // Link wallpapers sync as { id, url, addedAt } entries. Their images, and museum prints, are
+  // downscaled once per device and cached by photo ID.
+  wallpaperState.linkWallpapers = [];
+  wallpaperState.wallpaperStorageChangeSeq = 0;
+  wallpaperState.wallpaperVisualSeq = 0;
+  wallpaperState.appliedWallpaperVisualUrl = '';
+  wallpaperState.appliedWallpaperVisualActive = false;
+
+  function cancelWallpaperPanelActiveControls() {
+    const activeElement = document.activeElement;
+    if (!activeElement || !wallpaperState.wallpaperPanel || !wallpaperState.wallpaperPanel.contains(activeElement)) {
+      return;
+    }
+    if (typeof activeElement.blur === 'function') {
+      activeElement.blur();
+    }
+  }
+  wallpaperState.currentWallpaperOverlayOpacity = {
+    light: NEWTAB_WALLPAPER_OVERLAY_DEFAULTS.light,
+    dark: NEWTAB_WALLPAPER_OVERLAY_DEFAULTS.dark
+  };
+  wallpaperState.currentWallpaperEffectPrefsByMode = normalizeWallpaperEffectStoragePrefs(
+    NEWTAB_WALLPAPER_EFFECT_DEFAULTS
+  );
+  wallpaperState.currentAppliedWallpaperEffectPrefs = Object.assign({}, NEWTAB_WALLPAPER_EFFECT_DEFAULTS);
+  wallpaperState.bingItems = [];
+  wallpaperState.bingSelectionSeq = 0;
+  wallpaperState.bingStatus = '';
+  wallpaperState.bingLoading = false;
+  wallpaperState.bingSelecting = false;
+  wallpaperState.curatedCategory = REMOTE_CONTENT.CURATED_CATEGORIES[0] || '';
+  // { day, picks: { [daily ID]: photo ID } }; picks from another date no longer count.
+  wallpaperState.dailyWallpaperPicks = { day: '', picks: {} };
+  wallpaperState.activeWallpaperTab = 'built-in';
+  wallpaperState.activeWallpaperMode = NEWTAB_WALLPAPER_MODE_LIGHT;
+  wallpaperState.currentWallpaperPrefs = null;
+  wallpaperState.currentLocalWallpaperOverrides = null;
+  wallpaperState.currentWallpaperId = '';
+  wallpaperState.currentTopContentMode = normalizeNewtabTopContentMode(getTopContentMode());
+  wallpaperState.currentTimeFontWeight = normalizeNewtabTimeFontWeight(getTimeFontWeight());
+  wallpaperState.currentTimeFont = SETTINGS.normalizeNewtabTimeFont(getTimeFont());
+  wallpaperState.currentTimeSecondsVisible = normalizeNewtabTimeSecondsVisible(getTimeSecondsVisible());
+  wallpaperState.currentNewtabFaviconId = NEWTAB_FAVICON_DEFAULT_ID;
+
+  wallpaperState.currentWallpaperPrefs = getDefaultWallpaperPrefs();
+  wallpaperState.currentLocalWallpaperOverrides = getDefaultLocalWallpaperOverrides();
+
+  function normalizeNewtabTopContentMode(value) {
+    return SETTINGS.normalizeNewtabTopContentMode(value);
+  }
+
+  function normalizeNewtabTimeSecondsVisible(value) {
+    return SETTINGS.normalizeNewtabTimeSecondsVisible(value);
+  }
+
+  function normalizeNewtabTimeFontWeight(value) {
+    return SETTINGS.normalizeNewtabTimeFontWeight(value);
+  }
+
+  wallpaperState.wallpaperEffects = null;
+  wallpaperState.wallpaperAdaptiveTone = WALLPAPER_ADAPTIVE_TONE.createWallpaperAdaptiveTone({
+    documentObj,
+    windowObj,
+    getTargets: getWallpaperAdaptiveToneTargets,
+    getCurrentWallpaper: () => getWallpaperById(wallpaperState.currentWallpaperId),
+    getWallpaperImageUrl: getDisplayedWallpaperImageUrl,
+    getOverlayAlphaAtViewportY: getWallpaperOverlayAlphaAtViewportY,
+    getOverlayLuminance: () => getResolvedWallpaperOverlayMode() === 'dark' ? 0 : 1,
+    getEffectLuminanceAtViewport: (viewportX, viewportY, baseLuminance) => {
+      return wallpaperState.wallpaperEffects && typeof wallpaperState.wallpaperEffects.getLuminanceAtViewport === 'function'
+        ? wallpaperState.wallpaperEffects.getLuminanceAtViewport(viewportX, viewportY, baseLuminance)
+        : null;
+    },
+    applyWordmarkThemeAppearance,
+    onSamplerReady: rememberWallpaperLuminance,
+    getPreloadedImage: takePreloadedDecodedImage
+  });
+  const wallpaperEffectRuntimeOptions = {
+      documentObj,
+      windowObj,
+      getCurrentWallpaper: () => getWallpaperById(wallpaperState.currentWallpaperId),
+      getWallpaperImageUrl: getDisplayedWallpaperImageUrl,
+      shouldAnimateTransition: () => Boolean(
+        documentObj.body &&
+        documentObj.body.getAttribute('data-nt-enter') === 'done'
+      ),
+      onRender: scheduleWallpaperAdaptiveToneUpdate
+    };
+  if (wallpaperEffectPreload && wallpaperEffectPreload.controller) {
+    wallpaperEffectPreload.attach({
+      onRender: scheduleWallpaperAdaptiveToneUpdate,
+      shouldAnimateTransition: wallpaperEffectRuntimeOptions.shouldAnimateTransition
+    });
+    wallpaperState.wallpaperEffects = wallpaperEffectPreload.controller;
+  } else {
+    if (wallpaperEffectPreload) {
+      wallpaperEffectPreload.claimed = true;
+    }
+    wallpaperState.wallpaperEffects = WALLPAPER_EFFECTS.createWallpaperEffects(wallpaperEffectRuntimeOptions);
+  }
+
+  function scheduleWallpaperAdaptiveToneUpdate() {
+    wallpaperState.wallpaperAdaptiveTone.schedule();
+  }
+
+  function refreshWallpaperAdaptiveSampler() {
+    wallpaperState.wallpaperAdaptiveTone.refresh();
+  }
+  // Per wallpaper (getWallpaperLuminanceKey): its average luminance (0–1), kept in the preload cache
+  // so the next page's blur frost blends by it without decoding the full image first.
+  wallpaperState.wallpaperLuminances = readWallpaperPreloadLuminances();
+
+  function updateWallpaperLanguageStrings() {
+    renderWallpaperPanelState();
+    if (wallpaperState.wallpaperSourcesHintController &&
+        typeof wallpaperState.wallpaperSourcesHintController.updateLanguage === 'function') {
+      wallpaperState.wallpaperSourcesHintController.updateLanguage();
+    }
+    const quoteRuntime = options.getQuoteRuntime && options.getQuoteRuntime();
+    if (quoteRuntime) quoteRuntime.updateLanguage();
+    const sectionSettings = options.getSectionPanelSettings && options.getSectionPanelSettings();
+    if (sectionSettings) sectionSettings.updateLanguage();
+  }
+  function closeWallpaperPanel(options) {
+    if (!wallpaperState.wallpaperPanel || !wallpaperState.wallpaperButton) {
+      return;
+    }
+    cancelWallpaperPanelActiveControls();
+    wallpaperState.wallpaperViewController.closeOpenSelect();
+    closeOnlineWallpaperMenu();
+    const wasOpen = wallpaperState.wallpaperPanelOpen;
+    wallpaperState.wallpaperPanelOpen = false;
+    // The close itself is drawn, so the panel animates out.
+    if (wasOpen) {
+      drawWallpaperPanelState();
+    } else {
+      renderWallpaperPanelState();
+    }
+    setWallpaperPanelOpenState(false);
+    if (options && options.restoreFocus) {
+      try {
+        wallpaperState.wallpaperButton.focus({ preventScroll: true });
+      } catch (e) {
+        wallpaperState.wallpaperButton.focus();
+      }
+    }
+  }
+
+  function createWallpaperControls() {
+    wallpaperState.wallpaperPanelActions = createWallpaperPanelActions();
+    wallpaperState.wallpaperPanelState = buildWallpaperPanelState();
+    wallpaperState.wallpaperPanelLayoutKey = getWallpaperPanelLayoutKey(wallpaperState.wallpaperPanelState);
+    wallpaperState.wallpaperViewController = wallpaperView.createController({
+      documentObj,
+      model: createWallpaperPanelModel(),
+      state: wallpaperState.wallpaperPanelState
+    });
+    wallpaperState.wallpaperControl = wallpaperState.wallpaperViewController.control;
+    wallpaperState.wallpaperButton = wallpaperState.wallpaperViewController.button;
+    wallpaperState.wallpaperPanel = wallpaperState.wallpaperViewController.panel;
+    inputAutoFocusReady.then(renderWallpaperPanelState);
+    updateWallpaperLanguageStrings();
+    createWallpaperSourcesFeatureHint();
+  }
+  function handleThemeModeChange() {
+    if (!wallpaperState.hasStoredWallpaperStateLoaded) {
+      return;
+    }
+    if (wallpaperState.currentWallpaperPrefs && (wallpaperState.currentWallpaperPrefs.sameForModes || !isWallpaperPanelOpen())) {
+      wallpaperState.activeWallpaperMode = getResolvedWallpaperMode();
+    }
+    applyResolvedNewtabWallpaper();
+    renderWallpaperPanelState();
+    applyWallpaperEffectForResolvedMode();
+    renderWallpaperPanelState();
+    syncWallpaperSourceTabToEditMode();
+    renderWallpaperPanelState();
+  }
+
+  function handleStorageChange(changes) {
+    if (!changes) {
+      return false;
+    }
+    let handled = false;
+    if (changes[REMOTE_CONTENT.BING_DAILY_CACHE_KEY] && wallpaperState.hasStoredWallpaperStateLoaded) {
+      remoteClient.restoreWallpaper(REMOTE_CONTENT.BING_DAILY_ID).then(() => {
+        if (getEffectiveWallpaperIdForMode(getResolvedWallpaperMode()) === REMOTE_CONTENT.BING_DAILY_ID) {
+          applyResolvedNewtabWallpaper();
+        }
+        renderWallpaperPanelState();
+      }).catch(warnWallpaperFailure('Could not restore the daily Bing wallpaper another tab saved.'));
+      handled = true;
+    }
+    if (changes[SETTINGS.ASSET_REVISION_STORAGE_KEY]) {
+      refreshCustomWallpapers().then(() => loadStoredWallpaperState());
+      handled = true;
+    }
+    if (changes[NEWTAB_WALLPAPER_OVERLAY_STORAGE_KEY]) {
+      applyWallpaperOverlayOpacity(changes[NEWTAB_WALLPAPER_OVERLAY_STORAGE_KEY].newValue);
+      handled = true;
+    }
+    const wallpaperStorageChanged = Boolean(
+      (NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY && changes[NEWTAB_LOCAL_WALLPAPER_STORAGE_KEY]) ||
+      changes[NEWTAB_WALLPAPER_STORAGE_KEY] ||
+      (NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY && changes[NEWTAB_ONLINE_WALLPAPER_STORAGE_KEY]) ||
+      (NEWTAB_LINK_WALLPAPERS_STORAGE_KEY && changes[NEWTAB_LINK_WALLPAPERS_STORAGE_KEY]) ||
+      (NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY && changes[NEWTAB_DAILY_WALLPAPER_PICKS_STORAGE_KEY]) ||
+      (NEWTAB_CURATED_MIX_EXCLUDED_STORAGE_KEY && changes[NEWTAB_CURATED_MIX_EXCLUDED_STORAGE_KEY])
+    );
+    if (wallpaperStorageChanged) {
+      wallpaperState.bingSelectionSeq += 1;
+      const changeSeq = ++wallpaperState.wallpaperStorageChangeSeq;
+      loadStoredWallpaperState({
+        shouldApply: () => changeSeq === wallpaperState.wallpaperStorageChangeSeq
+      });
+      handled = true;
+    }
+    if (changes[NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY]) {
+      const raw = changes[NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY].newValue;
+      applyWallpaperEffectPrefs(raw);
+      if (wallpaperState.hasStoredWallpaperStateLoaded) {
+        writeWallpaperPreloadCache();
+      }
+      const storedPrefs = getWallpaperEffectStorageValue();
+      if (storageArea && raw && JSON.stringify(raw) !== JSON.stringify(storedPrefs)) {
+        storageArea.set({ [NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY]: storedPrefs });
+      }
+      handled = true;
+    }
+    if (NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY && changes[NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY]) {
+      const raw = changes[NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY].newValue;
+      const nextValue = normalizeNewtabTopContentMode(raw);
+      applyTopContentMode(nextValue);
+      if (storageArea && raw !== nextValue) {
+        storageArea.set({ [NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY]: nextValue });
+      }
+      handled = true;
+    }
+    if (NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY &&
+        changes[NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY]) {
+      const raw = changes[NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY].newValue;
+      const nextValue = normalizeNewtabTimeFontWeight(raw);
+      applyTimeFontWeight(nextValue);
+      if (storageArea && raw !== nextValue) {
+        storageArea.set({ [NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY]: nextValue });
+      }
+      handled = true;
+    }
+    if (NEWTAB_TIME_FONT_STORAGE_KEY && changes[NEWTAB_TIME_FONT_STORAGE_KEY]) {
+      const raw = changes[NEWTAB_TIME_FONT_STORAGE_KEY].newValue;
+      const nextValue = SETTINGS.normalizeNewtabTimeFont(raw);
+      applyTimeFont(nextValue);
+      if (storageArea && raw !== nextValue) {
+        storageArea.set({ [NEWTAB_TIME_FONT_STORAGE_KEY]: nextValue });
+      }
+      handled = true;
+    }
+    if (NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY &&
+        changes[NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY]) {
+      const raw = changes[NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY].newValue;
+      const nextValue = normalizeNewtabTimeSecondsVisible(raw);
+      applyTimeSecondsVisible(nextValue);
+      if (storageArea && raw !== nextValue) {
+        storageArea.set({ [NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY]: nextValue });
+      }
+      handled = true;
+    }
+    if (NEWTAB_FAVICON_STORAGE_KEY && changes[NEWTAB_FAVICON_STORAGE_KEY]) {
+      const raw = changes[NEWTAB_FAVICON_STORAGE_KEY].newValue;
+      const nextId = normalizeNewtabFaviconId(raw);
+      applyNewtabFavicon(nextId);
+      if (storageArea && raw !== nextId) {
+        writeStorageValue(storageArea, NEWTAB_FAVICON_STORAGE_KEY, nextId);
+      }
+      handled = true;
+    }
+    return handled;
+  }
+
+  function getControlElement() {
+    return wallpaperState.wallpaperControl;
+  }
+
+  function containsTarget(target) {
+    if (!target) {
+      return false;
+    }
+    if (wallpaperState.wallpaperControl && (target === wallpaperState.wallpaperControl || wallpaperState.wallpaperControl.contains(target))) {
+      return true;
+    }
+    if (isOnlineWallpaperMenuNode(target)) {
+      return true;
+    }
+    return Boolean(wallpaperState.wallpaperViewController && wallpaperState.wallpaperViewController.containsSelectMenuTarget(target));
+  }
+
+  return {
+    storageKeys,
+    createControls: createWallpaperControls,
+    getControlElement,
+    containsTarget,
+    closeOpenMenu: () => Boolean(wallpaperState.wallpaperViewController &&
+      wallpaperState.wallpaperViewController.closeOpenSelect({ restoreFocus: true })) || closeCustomWallpaperUrlForm(),
+    isPanelOpen: isWallpaperPanelOpen,
+    closePanel: closeWallpaperPanel,
+    updateLanguageStrings: updateWallpaperLanguageStrings,
+    // The page calls these after changing a setting the panel shows.
+    updateAppearanceSelectionUi: renderWallpaperPanelState,
+    updateSearchWidthUi: renderWallpaperPanelState,
+    updateShortcutsUi: renderWallpaperPanelState,
+    updateInputAutoFocusUi: renderWallpaperPanelState,
+    updateTopContentModeUi: renderWallpaperPanelState,
+    updateTimeFontWeightUi: renderWallpaperPanelState,
+    updateTimeSecondsVisibleUi: renderWallpaperPanelState,
+    refreshCustomWallpapers,
+    bootstrapInitialWallpaper,
+    bootstrapInitialWallpaperOverlay,
+    bootstrapInitialWallpaperEffect,
+    waitForInitialWallpaperEffectVisual,
+    waitForInitialWallpaperTone,
+    bootstrapInitialNewtabFavicon,
+    handleStorageChange,
+    handleThemeModeChange,
+    scheduleAdaptiveToneUpdate: scheduleWallpaperAdaptiveToneUpdate
+  };
+}
+
+export {
+  DEFAULT_STORAGE_KEYS as STORAGE_KEYS,
+  WALLPAPER_EFFECT_MODE_STORAGE_VERSION,
+  normalizeWallpaperEffectStoragePrefs,
+  createWallpaperRuntime
+};

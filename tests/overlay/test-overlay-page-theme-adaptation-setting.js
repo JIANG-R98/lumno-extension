@@ -1,0 +1,176 @@
+const assert = require('assert');
+const fs = require('fs');
+const { JSDOM } = require('jsdom');
+const settings = require('../../src/shared/settings.js');
+const pageTheme = require('../../src/overlay/page-theme.js');
+const { parseCss } = require('../helpers/css-rules');
+const { readStylesheet } = require('../helpers/css-tokens');
+const { createOptionsPage } = require('../helpers/options-page');
+const { createOverlayPage } = require('../helpers/overlay-runtime-harness');
+
+// The "adapt theme colors to each webpage" setting: its Settings row, the
+// overlay following it live, and the shared theme policy.
+
+const ADAPTATION_KEY = settings.OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY;
+const THEME_KEY = '_x_extension_theme_mode_2024_unique_';
+const ROW_ID = '_x_extension_overlay_page_theme_adaptation_row_2026_unique_';
+
+function testSettingsMarkup() {
+  const doc = new JSDOM(fs.readFileSync('src/options/options.html', 'utf8')).window.document;
+  const key = (name) => doc.querySelector(`[data-i18n="${name}"]`);
+  const follows = (later, earlier) => Boolean(earlier.compareDocumentPosition(later) & 4);
+  assert.ok(follows(key('settings_newtab_section_title'), key('settings_webpage_focus_overlay_section_title')),
+    'webpage overlay settings should appear above New Tab settings');
+  assert.ok(follows(key('settings_overlay_enter_animation_title'), key('settings_overlay_size_title')));
+  assert.ok(follows(key('settings_overlay_page_theme_adaptation_title'), key('settings_overlay_enter_animation_title')),
+    'webpage theme adaptation should be the last overlay appearance setting');
+  assert.strictEqual(doc.getElementById('_x_extension_overlay_page_theme_adaptation_toggle_2026_unique_').hasAttribute('checked'), true,
+    'webpage theme adaptation should default to on');
+  const row = doc.getElementById(ROW_ID);
+  assert.ok(row && doc.getElementById('_x_extension_overlay_page_theme_adaptation_info_2026_unique_'));
+  assert.strictEqual(row.querySelector('[title]'), null, 'the row should not fall back to a native title tooltip');
+
+  const css = parseCss(readStylesheet('src/options/options.css'));
+  ['light', 'dark'].forEach((mode) => {
+    const hidden = css.rule(`html[data-options-theme-mode="${mode}"] #${ROW_ID}`);
+    assert.deepStrictEqual(hidden && [hidden.get('display'), hidden.priority('display')], ['none', 'important'],
+      `an explicit ${mode} mode should hide the row before the page script runs`);
+  });
+}
+
+async function testSettingsRowFollowsTheThemeMode() {
+  const page = await createOptionsPage();
+  const row = page.byId(ROW_ID);
+  assert.strictEqual(row.hidden, false, 'the row should show while the theme follows the system');
+  const info = page.byId('_x_extension_overlay_page_theme_adaptation_info_2026_unique_').querySelector('button');
+  assert.strictEqual(info.getAttribute('data-tooltip'), '仅在“深浅色模式”=“跟随系统”时显示，关闭后将不再基于网页主题色变更深浅模式。',
+    'the InfoButton should explain when the setting applies');
+  await page.click(page.document.querySelector('[data-mode="light"]._x_extension_theme_option_2024_unique_'));
+  await page.settle(400);
+  assert.strictEqual(row.hidden, true, 'an explicit theme should hide the row');
+  await page.click(page.document.querySelector('[data-mode="system"]._x_extension_theme_option_2024_unique_'));
+  await page.settle(400);
+  assert.strictEqual(row.hidden, false);
+  page.close();
+}
+
+async function testOverlayFollowsTheSettingLive() {
+  const lightPage = '<!doctype html><html><head><meta name="color-scheme" content="light"></head><body>Page</body></html>';
+  const themeOf = (root) => root.getElementById('_x_extension_overlay_2024_unique_').getAttribute('data-theme');
+  const bgOf = (root) => root.getElementById('_x_extension_overlay_2024_unique_').style.getPropertyValue('--x-ov-bg');
+
+  const page = await createOverlayPage({ html: lightPage, darkSystem: true });
+  const root = await page.open();
+  assert.strictEqual(themeOf(root), 'light', 'following the system, the overlay should match a light page');
+  page.changeSetting(ADAPTATION_KEY, false);
+  await page.settle();
+  assert.strictEqual(themeOf(root), 'dark', 'turning adaptation off should follow the dark system at once');
+  page.changeSetting(ADAPTATION_KEY, true);
+  await page.settle();
+  assert.strictEqual(themeOf(root), 'light');
+  page.close();
+
+  const forced = await createOverlayPage({ html: lightPage, settings: { [THEME_KEY]: 'dark' } });
+  const forcedRoot = await forced.open();
+  assert.strictEqual(themeOf(forcedRoot), 'dark', 'an explicit dark theme should stay dark on a light page');
+  const strongBg = bgOf(forcedRoot);
+  forced.close();
+  const darkPage = await createOverlayPage({
+    html: '<!doctype html><html><head><meta name="color-scheme" content="dark"></head><body>Page</body></html>',
+    settings: { [THEME_KEY]: 'dark' }
+  });
+  const darkRoot = await darkPage.open();
+  assert.notStrictEqual(bgOf(darkRoot), strongBg, 'the dark panel should use a stronger background only over light pages');
+  darkPage.close();
+}
+
+assert.strictEqual(
+  settings.OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY,
+  '_x_extension_overlay_page_theme_adaptation_enabled_2026_unique_'
+);
+assert(settings.CHROME_SYNC_STORAGE_KEYS.includes(
+  settings.OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY
+));
+assert.strictEqual(settings.normalizeOverlayPageThemeAdaptationEnabled(undefined), true);
+assert.strictEqual(settings.normalizeOverlayPageThemeAdaptationEnabled(false), false);
+
+const cases = [
+  [{ mode: 'system', pageTheme: 'light', systemTheme: 'dark' }, 'light'],
+  [{ mode: 'system', pageTheme: 'light', systemTheme: 'dark', pageThemeAdaptationEnabled: false }, 'dark'],
+  [{ mode: 'system', pageTheme: 'dark', systemTheme: 'light', pageThemeAdaptationEnabled: false }, 'light'],
+  [{ mode: 'light', pageTheme: 'dark', systemTheme: 'dark', pageThemeAdaptationEnabled: false }, 'light'],
+  [{ mode: 'dark', pageTheme: 'light', systemTheme: 'light', pageThemeAdaptationEnabled: false }, 'dark']
+];
+cases.forEach(([input, expected]) => {
+  assert.strictEqual(pageTheme.resolveOverlayTheme(input), expected);
+});
+
+const backgroundCases = [
+  [{ resolvedTheme: 'dark', pageTheme: 'light' }, true],
+  [{ resolvedTheme: 'dark', pageTheme: 'dark' }, false],
+  [{ resolvedTheme: 'dark', pageTheme: null }, false],
+  [{ resolvedTheme: 'light', pageTheme: 'dark' }, false]
+];
+backgroundCases.forEach(([input, expected]) => {
+  assert.strictEqual(pageTheme.shouldStrengthenDarkOverlayBackground(input), expected);
+});
+const observationCases = [
+  [{ mode: 'dark', pageThemeAdaptationEnabled: false, systemTheme: 'light' }, true],
+  [{ mode: 'light', pageThemeAdaptationEnabled: true, systemTheme: 'dark' }, false],
+  [{ mode: 'system', pageThemeAdaptationEnabled: true, systemTheme: 'light' }, true],
+  [{ mode: 'system', pageThemeAdaptationEnabled: false, systemTheme: 'dark' }, true],
+  [{ mode: 'system', pageThemeAdaptationEnabled: false, systemTheme: 'light' }, false]
+];
+observationCases.forEach(([input, expected]) => {
+  const events = [];
+  const actual = pageTheme.syncPageThemeObservation({
+    ...input,
+    start: () => events.push('start'),
+    stop: () => events.push('stop')
+  });
+  assert.strictEqual(actual, expected);
+  assert.deepStrictEqual(events, [expected ? 'start' : 'stop']);
+});
+
+const expectedCopy = {
+  en: {
+    title: 'Adapt theme colors to each webpage',
+    tooltip: 'Shown only when Theme mode is set to Follow system. When turned off, light/dark mode will no longer adapt to the webpage theme color.',
+    systemLabel: 'Follow system'
+  },
+  ja: {
+    title: 'Web ページの色に合わせてテーマを自動変更',
+    tooltip: '「テーマ」が「システムに従う」の場合にのみ表示されます。オフにすると、Web ページのテーマカラーに応じたライト／ダークモードの切り替えを行いません。',
+    systemLabel: 'システムに従う'
+  },
+  zh_CN: {
+    title: '基于网页色彩自动变更主题色',
+    tooltip: '仅在“深浅色模式”=“跟随系统”时显示，关闭后将不再基于网页主题色变更深浅模式。',
+    systemLabel: '跟随系统设置'
+  },
+  zh_TW: {
+    title: '依網頁色彩自動變更主題色',
+    tooltip: '僅在「深淺色模式」=「跟隨系統」時顯示，關閉後將不再依網頁主題色變更深淺模式。',
+    systemLabel: '跟隨系統設定'
+  }
+};
+Object.entries(expectedCopy).forEach(([locale, expected]) => {
+  const messages = JSON.parse(fs.readFileSync(`_locales/${locale}/messages.json`, 'utf8'));
+  const title = messages.settings_overlay_page_theme_adaptation_title.message;
+  const tooltip = messages.settings_overlay_page_theme_adaptation_tooltip.message;
+  const systemLabel = messages.settings_theme_system.message;
+  assert.strictEqual(title, expected.title);
+  assert.strictEqual(tooltip, expected.tooltip);
+  assert.strictEqual(systemLabel, expected.systemLabel);
+});
+
+(async () => {
+  testSettingsMarkup();
+  await testSettingsRowFollowsTheThemeMode();
+  await testOverlayFollowsTheSettingLive();
+  console.log('overlay page theme adaptation setting tests passed');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

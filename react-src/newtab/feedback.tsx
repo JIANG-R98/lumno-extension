@@ -124,6 +124,13 @@ function FeedbackControl({
     host.dataset.detailOpen = detailOpen ? 'true' : 'false';
   }, [detailOpen, host]);
 
+  // The controls are registered once, so they read the latest model and
+  // handler from here: the community channel follows the page language.
+  const latestRef = useRef({ model, onOpenExternal });
+  useEffect(() => {
+    latestRef.current = { model, onOpenExternal };
+  });
+
   useEffect(() => {
     registerControls({
       close(options) {
@@ -136,13 +143,14 @@ function FeedbackControl({
         return openRef.current;
       },
       openCommunity(disposition = 'newTab') {
-        if (model.channel === 'wechat') {
+        const latest = latestRef.current;
+        if (latest.model.channel === 'wechat') {
           setOpen(true);
           setDetailOpen(true);
           return;
         }
         setOpen(false);
-        onOpenExternal(model.xUrl, disposition);
+        latest.onOpenExternal(latest.model.xUrl, disposition);
       },
       setOpen(nextOpen) {
         setOpen(nextOpen);

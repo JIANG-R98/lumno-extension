@@ -1,3 +1,12 @@
+# Asks lumno-web to rebuild the website when a release is published, edited
+# or deleted; run it by hand to recover a missed update. A successful run only
+# means the build was requested: check lumno-web's deploy-pages.yml run.
+#
+# Needs the LUMNO_WEB_ACTIONS_TOKEN Actions secret: a fine-grained token owned
+# by kubai087 with access to only lumno-web and Actions: Read and write. The
+# default GITHUB_TOKEN cannot dispatch another repository's workflow. Give the
+# token an expiry and rotate it before then.
+
 name: Update Website Release
 
 on:

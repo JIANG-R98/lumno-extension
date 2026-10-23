@@ -1,29 +1,25 @@
-.DS_Store
-.vscode/
-.worktrees/
+# Dependencies and build output
 node_modules/
+/build/
+/src/react/
 dist/
-.codex-artifacts/
+coverage/
+
+# Local scratch data (scripts/dev/probe-webdav.js writes here)
 .tmp/
-.tmp_fav/
-tmp/
-output/
-AGENTS.md
-docs/*
-!docs/
-!docs/telemetry-plan.md
-!docs/codex-debug-bridge.md
-!docs/account-sync-architecture.md
-!docs/supabase-deployment.md
-!docs/cloud-sync-compatibility-playbook.md
-!docs/webdav-sync.md
-!docs/privacy-policy-draft.md
-!docs/chrome-web-store-data-disclosure.md
-!docs/website-release-deployment.md
-supabase/.temp/
-supabase/.branches/
-supabase/.env
-supabase/.env.local
-supabase/.env.*.local
-search-rule-changes-*.md
+
+# Logs and OS files
+*.log
+.DS_Store
+
+# Local secrets (release scripts read their tokens from the environment)
+.env
+.env.*
+
+# Editor settings
+.vscode/
+.idea/
+
+# Local AI agent files
 .claude/
+CLAUDE.local.md

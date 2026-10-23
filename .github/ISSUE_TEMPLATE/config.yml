@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Help Center / 帮助中心
+    url: https://lumno.kubai.design/en/help/
+    about: Step-by-step guides for setup, the command bar, the new tab, sync and compatibility. / 安装、命令栏、新标签页、同步和兼容性的分步指南。
+  - name: Report a security vulnerability / 报告安全漏洞
+    url: https://github.com/kubai087/lumno-extension/security/advisories/new
+    about: Report security problems privately, not in a public issue. / 请私下报告安全问题，不要发在公开的 Issue 里。

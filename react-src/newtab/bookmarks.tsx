@@ -557,16 +557,19 @@ function BookmarkCard({
       : options.t('bookmarks_heading', '书签'))
   );
   const safeTitleText = options.sanitizeDisplayText(titleText);
-  const themeSuggestion: ThemeSuggestion = {
+  // Built once per value, so the card effect below reruns when the bookmark
+  // changes rather than on every render.
+  const themeSuggestion = useMemo<ThemeSuggestion>(() => ({
     type: 'bookmark',
     url: themeUrl,
     title: titleText
-  };
+  }), [themeUrl, titleText]);
   const immediateTheme = isTopbarMode
     ? null
     : options.getImmediateThemeForSuggestion(themeSuggestion);
-  const previewItems = isFolder && !isTopbarMode
-    ? (Array.isArray(item.previewUrls) ? item.previewUrls : [])
+  const previewUrls = item.previewUrls;
+  const previewItems = useMemo(() => (isFolder && !isTopbarMode
+    ? (Array.isArray(previewUrls) ? previewUrls : [])
         .slice(0, 4)
         .map((url, previewIndex) => {
           let previewHost = '';
@@ -588,7 +591,7 @@ function BookmarkCard({
           };
         })
         .filter((entry) => entry.url)
-    : [];
+    : []), [isFolder, isTopbarMode, item.id, options, previewUrls]);
 
   function clearHoverIntentTimer(): void {
     if (!hoverIntentTimerRef.current) {
@@ -787,6 +790,26 @@ function BookmarkCard({
     openBookmarkUrl(event);
   }
 
+  // The card hands these helpers to the adapter modules in src/. Each render
+  // makes new ones, so the card gets forwarders that call the latest render's
+  // helpers, and the effect below need not rerun whenever they change.
+  const cardHelpersRef = useRef({
+    deactivateBookmarkHoverVisual,
+    syncFolderExpandedState,
+    resetInteractionState,
+    setMenuVisualLocked,
+    dispose
+  });
+  useLayoutEffect(() => {
+    cardHelpersRef.current = {
+      deactivateBookmarkHoverVisual,
+      syncFolderExpandedState,
+      resetInteractionState,
+      setMenuVisualLocked,
+      dispose
+    };
+  });
+
   useLayoutEffect(() => {
     const card = cardRef.current;
     const icon = iconRef.current;
@@ -794,19 +817,23 @@ function BookmarkCard({
     if (!card) {
       return;
     }
+    const disposeCard = () => cardHelpersRef.current.dispose();
     applyBookmarkCardMetadata(card, item, index);
     card._xTitleText = titleText;
     card._xNoThemeTint = isFolder;
     card._xTheme = immediateTheme;
     card._xHost = host;
-    card._xDeactivateBookmarkHoverVisual =
-      deactivateBookmarkHoverVisual;
-    card._xSyncBookmarkFolderExpandedState =
-      syncFolderExpandedState;
-    card._xResetBookmarkInteractionState = resetInteractionState;
-    card._xSetBookmarkMenuVisualActive =
-      isFolder && menuMode ? setMenuVisualLocked : undefined;
-    card._xDisposeBookmarkCard = dispose;
+    card._xDeactivateBookmarkHoverVisual = () =>
+      cardHelpersRef.current.deactivateBookmarkHoverVisual();
+    card._xSyncBookmarkFolderExpandedState = (visualOptions) =>
+      cardHelpersRef.current.syncFolderExpandedState(visualOptions);
+    card._xResetBookmarkInteractionState = () =>
+      cardHelpersRef.current.resetInteractionState();
+    card._xSetBookmarkMenuVisualActive = isFolder && menuMode
+      ? (active, visualOptions) =>
+        cardHelpersRef.current.setMenuVisualLocked(active, visualOptions)
+      : undefined;
+    card._xDisposeBookmarkCard = disposeCard;
 
     if (!isTopbarMode) {
       options.applyCardTheme(card, immediateTheme, host);
@@ -875,7 +902,7 @@ function BookmarkCard({
         { priority: index < 4 ? 0 : 2 }
       );
     }
-    return dispose;
+    return disposeCard;
   }, [
     host,
     immediateTheme,

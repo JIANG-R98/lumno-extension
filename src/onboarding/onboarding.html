@@ -6,16 +6,28 @@
     <meta name="theme-color" content="#f3f5f7" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark)" />
     <title>Lumno Onboarding</title>
-    <script src="../shared/scrollbar-mode.js"></script>
+    <script src="../../build/onboarding-preload.js"></script>
     <link rel="stylesheet" href="../../assets/fonts/open-sans/open-sans.css" />
-    <script src="../shared/cjk-font-faces.js" data-font-family="Open Sans"></script>
+    <script src="../../build/cjk-font-faces.js" data-font-family="Open Sans"></script>
     <link rel="stylesheet" href="../../assets/remixicon/fonts/remixicon.css" />
     <link rel="stylesheet" href="../shared/tokens.css" />
-    <link rel="stylesheet" href="../shared/tooltip.css" />
-    <link rel="stylesheet" href="../shared/search-input.css" />
-    <link rel="stylesheet" href="../shared/busy.css" />
+    <link rel="stylesheet" href="../shared/ui/tooltip.css" />
+    <link rel="stylesheet" href="../shared/search/search-input.css" />
+    <link rel="stylesheet" href="../shared/ui/busy.css" />
     <link rel="stylesheet" href="../overlay/suggestions-view.css" />
-    <link rel="stylesheet" href="onboarding.css" />
+    <link rel="stylesheet" href="styles/shell.css" />
+    <link rel="stylesheet" href="styles/page-copy.css" />
+    <link rel="stylesheet" href="styles/interactions.css" />
+    <link rel="stylesheet" href="styles/dark-theme.css" />
+    <link rel="stylesheet" href="styles/responsive.css" />
+    <link rel="stylesheet" href="styles/visual-stage.css" />
+    <link rel="stylesheet" href="styles/newtab-preview.css" />
+    <link rel="stylesheet" href="styles/newtab-preview-sections.css" />
+    <link rel="stylesheet" href="styles/site-search-demo.css" />
+    <link rel="stylesheet" href="styles/feature-cards.css" />
+    <link rel="stylesheet" href="styles/browser-window.css" />
+    <link rel="stylesheet" href="styles/overlay-demo.css" />
+    <link rel="stylesheet" href="styles/cursor-layer.css" />
   </head>
   <body>
     <div id="onboarding-root" class="onboarding-shell" data-onboarding-shell data-active-slide="intro" data-active-index="0" data-visual-visible="true">
@@ -61,53 +73,11 @@
       </main>
     </div>
 
-    <script src="../shared/codex-debug-surface.js"></script>
-    <script src="../shared/settings.js"></script>
-    <script src="../shared/shortcut-key-matcher.js"></script>
-    <script src="onboarding-content.js"></script>
-    <script src="../shared/extension-routes.js"></script>
-    <script src="../shared/browser-profile.js"></script>
-    <script src="../shared/blacklist-utils.js"></script>
-    <script src="../shared/navigation-disposition.js"></script>
-    <script src="../shared/search-utils.js"></script>
-    <script src="../shared/site-search-store.js"></script>
-    <script src="../shared/aggregate-search-store.js"></script>
-    <script src="../shared/aggregate-search-surface.js"></script>
-    <script src="../shared/suggestion-action-model.js"></script>
-    <script src="../shared/suggestion-navigation.js"></script>
-    <script src="../shared/suggestions-height-layout.js"></script>
-    <script src="../shared/ime-key-guard.js"></script>
-    <script src="../shared/search-input-history.js"></script>
-    <script src="../shared/toast.js"></script>
-    <script src="../shared/menu-surface.js"></script>
-    <script src="../shared/search-input-mode.js"></script>
-    <script src="../shared/shortcut-display.js"></script>
-    <script src="../shared/favicon-utils.js"></script>
-    <script src="../shared/shortcut-favicon.js"></script>
-    <script src="../shared/community-links.js"></script>
-    <script src="../shared/feature-hints.js"></script>
-    <script src="../shared/update-notice.js"></script>
-    <script src="../shared/engagement-notice.js"></script>
-    <script src="../shared/tooltip.js"></script>
-    <script src="../shared/cursor-tooltip.js"></script>
-    <script src="../overlay/runtime.js"></script>
-    <script src="../newtab/favicon-theme.js"></script>
-    <script src="../shared/favicon-cache.js"></script>
-    <script src="../shared/favicon-view-core.js"></script>
-    <script src="../overlay/favicon-view.js"></script>
-    <script src="../overlay/lifecycle.js"></script>
-    <script src="../overlay/site-fixes.js"></script>
-    <script src="../overlay/page-theme.js"></script>
-    <script src="../overlay/notices.js"></script>
-    <script src="../overlay/keyboard.js"></script>
     <script src="../react/overlay-islands.js"></script>
-    <script src="../overlay/search-panel.js"></script>
-    <script src="../overlay/tab-switcher.js"></script>
     <script
-      src="../shared/react-page-bootstrap.js"
-      data-react-entry="../react/onboarding-islands.js"
-      data-react-ready-script="../overlay/tab-switcher-page-bridge.js"
-      data-page-entry="../onboarding/onboarding.js"
+      src="../../build/react-page-bootstrap.js"
+      data-react-entry="../src/react/onboarding-islands.js"
+      data-page-entry="onboarding.js"
       data-react-state="LumnoOnboardingReactBootstrap"
       data-page-runtime="onboarding"
     ></script>

@@ -1,6 +1,7 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import '../../src/shared/suggestion-action-model.js';
+// @ts-expect-error The extension sources are untyped JavaScript modules.
+import * as suggestionActionModel from '../../src/shared/search/suggestion-action-model.js';
 import {
   createSuggestionsView,
   createSuggestionsViewApi,
@@ -11,11 +12,8 @@ import {
 } from './suggestions';
 
 let views: SuggestionsViewController[] = [];
-const sharedSuggestionActionModel = (
-  globalThis as typeof globalThis & {
-    LumnoSuggestionActionModel: NonNullable<SuggestionsViewOptions['actionModel']>;
-  }
-).LumnoSuggestionActionModel;
+const sharedSuggestionActionModel: NonNullable<SuggestionsViewOptions['actionModel']> =
+  suggestionActionModel;
 
 function createOptions(
   overrides: Partial<SuggestionsViewOptions> = {}
@@ -1017,6 +1015,20 @@ describe('Suggestions React island', () => {
     });
   });
 
+  it('marks the web clip command with a scissors icon and no visit button', () => {
+    (['newtab', 'overlay'] as const).forEach((surface) => {
+      const { view, items } = createView(surface === 'overlay' ? { surface } : {});
+      render(view, [{
+        type: 'commandDocumentPip',
+        title: 'Clip part of this page',
+        commandText: '/clip'
+      }]);
+      const iconSlot = items[0].querySelector('.x-nt-suggestion-icon-slot');
+      expect(iconSlot?.querySelector('.ri-scissors-cut-line'), surface).not.toBeNull();
+      expect(items[0].querySelector('.ri-arrow-right-line'), surface).toBeNull();
+    });
+  });
+
   it('renders open tabs and preserves click and middle-click activation', () => {
     const onSwitchToTab = vi.fn();
     const onCopyUrl = vi.fn();
@@ -1063,6 +1075,8 @@ describe('Suggestions React island', () => {
     expect(items).toHaveLength(1);
     expect(items[0]._xIsSearchSuggestion).toBe(false);
     expect(preloadIcon).toHaveBeenCalledOnce();
+    // The page URL lets the favicon policy apply its path-specific exclusions.
+    expect(preloadIcon).toHaveBeenCalledWith('data:image/png;base64,dGVzdA==', 'https://example.com/');
     expect(onSwitchToTab).toHaveBeenCalledTimes(2);
     expect(onCopyUrl).toHaveBeenCalledWith('https://example.com/');
     expect(setSuggestionsVisible).toHaveBeenLastCalledWith(true);
@@ -1402,7 +1416,7 @@ describe('Suggestions React island', () => {
   });
 
   it('renders copy only for result rows with a URL', () => {
-    const { view, container, items } = createView();
+    const { view, container } = createView();
 
     render(view, [{
       type: 'commandSettings',
@@ -1506,6 +1520,41 @@ describe('Suggestions React island', () => {
     expect(items[0]._xTagContainer?.dataset.visible).toBe('true');
     expect(items[0]._xSwitchButton?.dataset.visible).toBe('false');
     expect(items[0].querySelector('.x-ov-action-tag__key')).toBeNull();
+  });
+
+  it('leaves an open-tab row alone when the same tabs render again', () => {
+    const applyThemeVariables = vi.fn();
+    // The page hands out cached theme objects, the same one for the same site.
+    const theme = { highlightBg: '#eef' };
+    const { view } = createView({
+      surface: 'overlay',
+      applyThemeVariables,
+      getImmediateThemeForSuggestion: () => theme
+    });
+    const tabs = [{ id: 1, title: 'First tab', url: 'https://example.com/first' }];
+
+    act(() => view.renderTabs(tabs));
+    const applied = applyThemeVariables.mock.calls.length;
+    // The page passes a fresh list of tab objects on every update.
+    act(() => view.renderTabs(tabs.map((tab) => ({ ...tab }))));
+    expect(applyThemeVariables.mock.calls.length).toBe(applied);
+  });
+
+  it('moves the autocomplete mark with the first open tab when the tabs reorder', () => {
+    const { view, items } = createView({
+      surface: 'overlay',
+      autoHighlightFirstTab: true
+    });
+    const first = { id: 1, title: 'First tab', url: 'https://example.com/first' };
+    const second = { id: 2, title: 'Second tab', url: 'https://example.com/second' };
+
+    act(() => view.renderTabs([first, second]));
+    const [firstRow, secondRow] = items;
+    expect([firstRow._xIsAutocompleteTop, secondRow._xIsAutocompleteTop]).toEqual([true, false]);
+
+    act(() => view.renderTabs([second, first]));
+    expect(items[0]).toBe(secondRow);
+    expect([secondRow._xIsAutocompleteTop, firstRow._xIsAutocompleteTop]).toEqual([true, false]);
   });
 
   it('applies contrast-aware brand text without a tag surface', () => {

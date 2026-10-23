@@ -133,6 +133,29 @@ describe('Bookmarks React island', () => {
     expect(createBookmarksViewApi().implementation).toBe('react');
   });
 
+  it('leaves a card alone when the grid renders again with the same bookmark', () => {
+    const applyTheme = vi.fn();
+    const attachFavicon = vi.fn();
+    // The page hands out cached theme objects, the same one for the same site.
+    const theme = { accent: 'blue' };
+    const { view } = createView({
+      applyCardTheme: applyTheme,
+      attachFaviconWithFallbacks: attachFavicon,
+      getImmediateThemeForSuggestion: () => theme
+    });
+    const items: BookmarkItem[] = [
+      { id: 'site', parentId: '1', index: 0, type: 'bookmark', title: 'Site', url: 'https://example.com/' },
+      { id: 'folder', parentId: '1', index: 1, type: 'folder', title: 'Folder', previewUrls: ['https://a.example/'] }
+    ];
+    renderItems(view, items, { signature: 'first' });
+    const themed = applyTheme.mock.calls.length;
+    const attached = attachFavicon.mock.calls.length;
+
+    renderItems(view, items, { signature: 'second' });
+    expect(applyTheme.mock.calls.length).toBe(themed);
+    expect(attachFavicon.mock.calls.length).toBe(attached);
+  });
+
   it('renders synchronously with external metadata and stable keyed cards', () => {
     const attachFavicon = vi.fn();
     const bindTooltip = vi.fn();

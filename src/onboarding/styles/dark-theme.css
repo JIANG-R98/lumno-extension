@@ -1,0 +1,160 @@
+/* Dark theme colors for the shell, copy and controls. */
+
+@media (prefers-color-scheme: dark) {
+  .onboarding-action-button--secondary {
+    --onboarding-action-border-color: rgba(148, 163, 184, 0.18);
+    --onboarding-action-bg: color-mix(in srgb, var(--surface-soft) 86%, #475569 14%);
+    --onboarding-action-color: var(--page-ink);
+    --onboarding-action-shadow: 0 1px 1px rgba(0, 0, 0, 0.18);
+    --onboarding-action-hover-bg: color-mix(in srgb, var(--surface-soft) 78%, #5b6b84 22%);
+    --onboarding-action-hover-border-color: rgba(164, 180, 207, 0.32);
+    --onboarding-action-hover-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+  }
+
+  .onboarding-action-button--ghost {
+    --onboarding-action-color: rgba(156, 163, 175, 0.88);
+    --onboarding-action-hover-bg: rgba(255, 255, 255, 0.075);
+    --onboarding-action-hover-color: #f3f4f6;
+  }
+}
+
+.browser-avatar-group {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 2px;
+  vertical-align: middle;
+}
+
+.browser-avatar {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  border-radius: var(--lumno-radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: var(--page-ink);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+}
+
+.browser-avatar + .browser-avatar {
+  margin-left: -6px;
+}
+
+.browser-avatar-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.browser-avatar-ellipsis {
+  min-width: 10px;
+  height: 22px;
+  margin-left: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--page-muted);
+  font-size: var(--lumno-font-size-xl);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.onboarding-browser-tooltip {
+  padding: 8px 10px;
+}
+
+.onboarding-browser-tooltip .browser-avatar-group {
+  margin: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .browser-avatar {
+    border-color: rgba(255, 255, 255, 0.22);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+  }
+}
+
+.skeleton-line {
+  display: block;
+  border-radius: var(--lumno-radius-pill);
+  background: var(--page-soft);
+}
+
+.skeleton-line--label {
+  width: min(70%, 220px);
+  height: 11px;
+}
+
+.skeleton-line--meta {
+  width: min(46%, 160px);
+  height: 9px;
+}
+
+.visual-panel-slot {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  align-self: stretch;
+  justify-self: stretch;
+  display: grid;
+  align-items: start;
+  justify-items: start;
+  background: transparent;
+  overflow: visible;
+}
+
+.visual-panel {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  width: var(--onboarding-visual-canvas-width);
+  height: var(--onboarding-visual-canvas-height);
+  max-width: none;
+  aspect-ratio: var(--onboarding-visual-ratio);
+  padding: 0;
+  display: block;
+  background: url("../../../assets/wallpapers/settings-bg-light-monet-newtab.webp") center / cover no-repeat;
+  overflow: visible;
+  transform: scale(var(--onboarding-visual-scale, 1));
+  transform-origin: top left;
+  transition: transform var(--lumno-duration-xl) var(--resize-ease);
+  will-change: transform;
+}
+
+.visual-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  isolation: isolate;
+}
+
+@media (max-height: 559px) and (min-width: 860px) {
+  .copy-panel {
+    --onboarding-copy-padding-x: 44px;
+    --onboarding-copy-padding-y: 36px;
+    gap: 22px;
+  }
+
+  .copy-block {
+    gap: 22px;
+  }
+
+  .title {
+    --title-base-size: 32px;
+  }
+
+  .body-copy {
+    font-size: 15px;
+    line-height: 1.52;
+  }
+}

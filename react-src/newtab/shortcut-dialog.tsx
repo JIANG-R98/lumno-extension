@@ -513,6 +513,7 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
       }
     }));
 
+    const hasConfirmation = Boolean(formState.confirmation);
     useLayoutEffect(() => {
       const urlInfoButton = urlInfoButtonRef.current;
       if (urlInfoButton) {
@@ -525,7 +526,7 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
           }
         );
       }
-    }, [options, formState.itemType, Boolean(formState.confirmation)]);
+    }, [options, formState.itemType, hasConfirmation]);
 
     useLayoutEffect(() => {
       const iconInfoButton = iconInfoButtonRef.current;
@@ -550,12 +551,17 @@ const ShortcutDialogView = forwardRef<ShortcutDialogViewHandle, ShortcutDialogVi
           }
         );
       }
-    }, [options, formState.iconMode, formState.itemType, Boolean(formState.confirmation)]);
+    }, [options, formState.iconMode, formState.itemType, hasConfirmation]);
 
+    // Unmounting clears the timer through the latest render's helper.
+    const clearIconSuccessTimerRef = useRef(clearIconSuccessTimer);
+    useLayoutEffect(() => {
+      clearIconSuccessTimerRef.current = clearIconSuccessTimer;
+    });
     useLayoutEffect(() => () => {
       destroyedRef.current = true;
       iconRequestIdRef.current += 1;
-      clearIconSuccessTimer();
+      clearIconSuccessTimerRef.current();
     }, []);
 
     function handleSubmit(event: FormEvent<HTMLFormElement>): void {

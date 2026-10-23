@@ -26,9 +26,9 @@
   <a href="#faq">FAQ</a> ·
   <a href="https://github.com/kubai087/lumno-extension/releases">Changelog</a>
   <br />
-  <a href="README.zh-CN.md">简体中文</a> |
+  <a href="docs/README.zh-CN.md">简体中文</a> |
   <a href="README.md">English</a> |
-  <a href="README.ja.md">日本語</a>
+  <a href="docs/README.ja.md">日本語</a>
 </p>
 
 **Lumno** is a Manifest V3 browser extension that brings a keyboard-first **command palette** (like macOS Spotlight, Raycast or the Arc browser command bar) to every web page, and replaces the default new tab with a fast, minimal **new tab page**. Press `Cmd+Shift+K` / `Ctrl+Shift+K` to search open tabs, bookmarks, browsing history and top sites, open a URL, switch tabs, or send a query to Google, YouTube, GitHub, ChatGPT, Gemini, DeepSeek and more. No account required, and your browsing data stays in your browser.
@@ -45,7 +45,9 @@
   </a>
 </p>
 
-<p align="center">Current version: <code>1.1.4</code></p>
+<p align="center">
+  <a href="https://github.com/kubai087/lumno-extension/releases/latest"><img src="https://img.shields.io/github/v/release/kubai087/lumno-extension?style=flat-square&label=latest%20release&color=111827" alt="Latest release" /></a>
+</p>
 
 <img width="1200" height="480" alt="Lumno command bar for Chrome: search tabs, bookmarks and history from any page" src="./assets/images/readme/banner.webp" decoding="async" />
 
@@ -141,7 +143,7 @@ Firefox already uses `Cmd+Shift+K` / `Ctrl+Shift+K` and similar keys, so the Fir
 To install from source:
 
 1. Clone or download this repository.
-2. Run `npm ci` and `npm run build:react` (see [Development](#development)).
+2. Run `npm ci` and `npm run build` (see [Development](#development)).
 3. Open `chrome://extensions/`, or the extension management page of your Chromium browser, and enable Developer mode.
 4. Choose "Load unpacked" and select the repository root.
 5. Optional: open Lumno settings to configure language, theme, new tab content, site search, blacklist rules, PiP and shortcut behavior.
@@ -180,7 +182,7 @@ Lumno is local-first. Bookmarks, history and tabs are read on your device to pow
 The [Lumno Help Center](https://lumno.kubai.design/en/help/) covers setup, the command bar, the new tab, sync, compatibility and privacy, in ten languages.
 
 **Is Lumno free?**
-Yes. Lumno is free and open source under the GPL-3.0 license. If you would like to support development, see [Sponsoring](SPONSORING.md).
+Yes. Lumno is free and open source under the GPL-3.0 license.
 
 **Which browsers does Lumno support?**
 Any Chromium-based browser that supports Manifest V3 extensions (Google Chrome, Microsoft Edge, Brave, Arc, Vivaldi, Opera and others), plus Firefox 140 or later and Firefox-based browsers such as Zen and LibreWolf. A few features are unavailable in Firefox; see [Browser compatibility](#browser-compatibility). Safari is not supported.
@@ -201,74 +203,69 @@ Lumno searches tabs, bookmarks, history and top sites together, adds site and AI
 
 WebDAV is a Beta feature under **Settings → Account & sync**. Add a connection with the HTTPS endpoint, directory, username and app password, then choose **Save and turn on sync**. It runs alongside the existing Chrome sync and adds custom shortcut icons and uploaded wallpapers; images stay out of Chrome Sync. Connection details are saved only on each device.
 
-Existing server data requires an explicit initial-version choice. Later conflicts let you choose a version for conflicting content while merging other changes, with backups before replacement. The UI shows the last successful sync time. Turning WebDAV off keeps Chrome sync running. See [WebDAV sync details](docs/webdav-sync.md) for behavior and server requirements.
+Existing server data requires an explicit initial-version choice. Later conflicts let you choose a version for conflicting content while merging other changes, with backups before replacement. The UI shows the last successful sync time. Turning WebDAV off keeps Chrome sync running.
 
 ## Development
 
 Development and CI use Node.js 22. If you use `nvm`, run `nvm use` to select the version declared in `.nvmrc`.
 
-The React pages must be built before Chrome can load their generated assets. Before loading the development extension for the first time, and after editing `react-src/`, run:
+Chrome loads built scripts: `npm run build` builds the React islands into `src/react/` with Vite and bundles every script the extension runs into `build/` with esbuild. Neither folder is committed. Before loading the development extension for the first time, and after editing `src/` or `react-src/`, run:
 
 ```bash
 npm ci
-npm run build:react
+npm run build
 ```
+
+The scripts under `src/` are ES modules: each one imports what it uses, and a bundle holds the modules `scripts/build/bundles.js` lists for it and everything they import. While editing `src/`, `npm run watch:bundles` rebuilds the bundles on every change.
 
 Then keep Developer mode enabled in `chrome://extensions/` and load the repository root as an unpacked extension. After generating new assets or changing background scripts or `manifest.json`, click Reload on the extensions page. Development installs do not force a second refresh when the Chrome profile starts, avoiding interruption of the startup New Tab override.
 
-Before committing, run:
+Before opening a pull request, run `npm run verify`. It builds the extension and runs the Node and React test suites, the static checks and ESLint, the same as CI. While you work, run only part of it:
 
 ```bash
-npm run verify
-npm run audit:i18n
-npm run audit:style
-npm run package:store
+npm run test:legacy -- settings search/
+npm run test:react
+npm run lint
 ```
 
-Common targeted tests:
-
-```bash
-npm run test:settings
-npm run test:search
-npm run test:site-search-store
-npm run test:message-router
-npm run test:newtab-layout
-npm run test:onboarding-content
-```
+`npm run test:legacy -- <filter>` runs the Node tests whose path contains any of the filters. `npm run audit:i18n` and `npm run audit:style` report copy missing from a locale and leftover style debt.
 
 `npm run package:store` reads the version from `manifest.json` and creates `dist/lumno-store-v<version>.zip`. It requires `zip` and `zipinfo` to be available on the system.
 
-`npm run package:firefox` builds the store package and turns it into the Firefox build in `dist/firefox`. `scripts/build-firefox.js` lists every Firefox-specific change: background scripts instead of a service worker, the Gecko add-on ID, Firefox shortcuts, no auto Picture-in-Picture scripts, and locale messages with a `__firefox` suffix that replace their base message. To try it, open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on**, and select `dist/firefox/manifest.json`; run `npm run lint:firefox` to check it with `web-ext`. In shared code, ask `LumnoBrowserProfile.isFirefoxExtensionRuntime()` instead of checking the URL scheme, and mark UI for one browser family with `data-browser-only="chromium"` (hidden elsewhere) or, for settings, `data-browser-unsupported="firefox"` (shown disabled with a reason).
+`npm run package:firefox` builds the store package and turns it into the Firefox build in `dist/firefox`. `scripts/build/build-firefox.js` lists every Firefox-specific change: background scripts instead of a service worker, the Gecko add-on ID, Firefox shortcuts, no auto Picture-in-Picture scripts, and locale messages with a `__firefox` suffix that replace their base message. To try it, open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on**, and select `dist/firefox/manifest.json`; run `npm run lint:firefox` to check it with `web-ext`. In shared code, ask `LumnoBrowserProfile.isFirefoxExtensionRuntime()` instead of checking the URL scheme, and mark UI for one browser family with `data-browser-only="chromium"` (hidden elsewhere) or, for settings, `data-browser-unsupported="firefox"` (shown disabled with a reason).
 
 ### Project structure
 
 | Path | Purpose |
 | --- | --- |
 | `manifest.json` | Manifest V3 configuration, permissions, commands, content scripts, and new tab override |
-| `src/background/` | Service worker, command routing, search data, site/AI search, tab switcher, PiP ownership, pinned-tab recovery, WebDAV sync |
-| `src/newtab/` | New tab UI, search, recent sites, bookmarks, wallpapers, feedback, and page notices |
-| `src/overlay/` | In-page command bar overlay, suggestion list, theme/language sync, and site fixes |
+| `src/background/` | Service worker entry and its `*-service.js` parts: command routing, overlay opening, search data, site/AI search, tab switcher, PiP ownership, pinned-tab recovery, WebDAV sync |
+| `src/newtab/` | New tab page runtime; feature folders `bookmarks/`, `shortcuts/`, `recent/`, `wallpaper/`, `search/`, `top-content/`, `theme/` |
+| `src/overlay/` | In-page command bar overlay (`search-panel.js` with its parts in `panel/`), theme/language sync, and site fixes |
 | `src/content/` | Page hotkey listener, selection quick actions, Web Clip PiP, and auto video PiP |
-| `src/options/` | Extension settings page |
+| `src/options/` | Extension settings page (`options.js` and its `options-*.js` parts) |
 | `src/onboarding/` | Install and update onboarding |
-| `src/shared/` | Shared settings, search, favicon, menu, tooltip, and URL guard modules |
+| `src/shared/` | Shared settings, routes and URL guards; `search/` (ranking, input, suggestions), `ui/` (tooltip, toast, menu and control styles), `favicon/` |
 | `react-src/` | React sources built into `src/react/` |
 | `_locales/` | Extension UI copy |
 | `assets/data/` | Built-in site-search and browser shortcut data |
 | `assets/wallpapers/` | Built-in new tab wallpapers and thumbnails |
-| `scripts/` | Checks, audits, packaging, and regression tests |
+| `tests/` | Node regression tests by area (`tests/<area>/test-*.js`, shared `tests/helpers/`); `npm run test:legacy -- <filter>` runs a subset |
+| `scripts/` | Tooling by purpose: `build/` (packaging), `check/` (static checks and audits), `dev/` (smoke, e2e, profiling), `release/` (store submissions) |
 
 ## Contributing
 
-Bug reports, feature ideas and pull requests are welcome in [Issues](https://github.com/kubai087/lumno-extension/issues). See [GOVERNANCE.md](GOVERNANCE.md) for how the project is maintained. If Lumno saves you time, a ⭐ on GitHub or a review on the Chrome Web Store or Firefox Add-ons helps other people find it.
+Bug reports, feature ideas and pull requests are welcome in [Issues](https://github.com/kubai087/lumno-extension/issues). If Lumno saves you time, a ⭐ on GitHub or a review on the Chrome Web Store or Firefox Add-ons helps other people find it.
+
+Before you send a pull request, read [CONTRIBUTING.md](.github/CONTRIBUTING.md) for the setup and the checks to run. Everyone taking part follows the [Code of Conduct](.github/CODE_OF_CONDUCT.md), and security problems go through [SECURITY.md](.github/SECURITY.md).
 
 ## Credits
 
 - Japanese localization: thanks to [Humi](https://github.com/Hum1Tab) for Japanese translation and review.
 - macOS `Ctrl+N` / `Ctrl+P` suggestion navigation experiment: based on a contribution by [wanghanzhen](https://github.com/wanghanzhen) in [PR #38](https://github.com/kubai087/lumno-extension/pull/38).
-- Bundled icon set: [Remix Icon](https://remixicon.com/)
+- Bundled icon set: [Remix Icon](https://remixicon.com/) 4.9.1, under the [Remix Icon License v1.0](assets/remixicon/LICENSE.txt), not the GPL
 - Bundled typefaces: Open Sans; [LXGW WenKai](https://github.com/lxgw/LxgwWenKai) (SIL OFL 1.1, subset for the daily quote)
 
 ## License
 
-This project is licensed under [GPL-3.0](LICENSE).
+This project is licensed under [GPL-3.0](LICENSE). Bundled third-party code, icons and fonts keep their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

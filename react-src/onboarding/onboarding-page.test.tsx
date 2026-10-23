@@ -1,12 +1,9 @@
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import onboardingHtml from '../../src/onboarding/onboarding.html?raw';
-import onboardingSource from '../../src/onboarding/onboarding.js?raw';
-import onboardingContentSource from '../../src/onboarding/onboarding-content.js?raw';
-import settingsSource from '../../src/shared/settings.js?raw';
-import shortcutKeyMatcherSource from '../../src/shared/shortcut-key-matcher.js?raw';
-import navigationDispositionSource from '../../src/shared/navigation-disposition.js?raw';
-import communityLinksSource from '../../src/shared/community-links.js?raw';
+// @ts-expect-error The extension sources are untyped JavaScript modules.
+import * as onboardingContentModule from '../../src/onboarding/onboarding-content.js';
+import { runPageBundle } from '../test/page-bundles';
 import { createActionButtonsApi } from './action-buttons';
 import { createBodyCopyApi } from './body-copy';
 import { createCopyHeadingApi } from './copy-heading';
@@ -21,14 +18,14 @@ interface OnboardingSlide {
   visual: { kind: string; visible: boolean };
 }
 
-type Runtime = typeof globalThis & Record<string, unknown> & {
-  LumnoOnboardingContent: {
-    getOnboardingBlueprint(locale: string): {
-      htmlLang: string;
-      slides: OnboardingSlide[];
-    };
+type Runtime = typeof globalThis & Record<string, unknown>;
+
+const onboardingContent: {
+  getOnboardingBlueprint(locale: string): {
+    htmlLang: string;
+    slides: OnboardingSlide[];
   };
-};
+} = onboardingContentModule;
 
 const runtime = globalThis as Runtime;
 const LANGUAGE_STORAGE_KEY = '_x_extension_language_2024_unique_';
@@ -45,10 +42,6 @@ const addedListeners: Array<[
   EventListenerOrEventListenerObject,
   boolean | AddEventListenerOptions | undefined
 ]> = [];
-
-function runClassicScript(source: string): void {
-  new Function('module', source)(undefined);
-}
 
 function trackListeners(target: Document | Window): void {
   const addEventListener = target.addEventListener.bind(target);
@@ -94,7 +87,7 @@ function createChromeStub(stored: Record<string, unknown>) {
   };
 }
 
-function bootOnboardingPage(stored: Record<string, unknown> = {}) {
+async function bootOnboardingPage(stored: Record<string, unknown> = {}) {
   const parsed = new DOMParser().parseFromString(onboardingHtml, 'text/html');
   const shell = parsed.getElementById('onboarding-root');
   document.body.appendChild(document.importNode(shell!, true));
@@ -106,13 +99,6 @@ function bootOnboardingPage(stored: Record<string, unknown> = {}) {
     addEventListener() {},
     removeEventListener() {}
   }));
-  runtime.LumnoTooltip = {
-    createController: () => ({
-      hide() {},
-      show: () => document.createElement('div')
-    }),
-    position() {}
-  };
   runtime.LumnoOnboardingActions = createActionButtonsApi();
   runtime.LumnoOnboardingBodyCopy = createBodyCopyApi();
   runtime.LumnoOnboardingCopyHeading = createCopyHeadingApi();
@@ -121,18 +107,12 @@ function bootOnboardingPage(stored: Record<string, unknown> = {}) {
   runtime.LumnoOnboardingPageStrip = createPageStripApi();
   runtime.LumnoOnboardingVisualSurface = createVisualSurfaceApi();
   runtime.LumnoTooltipView = createTooltipViewApi();
-  [
-    settingsSource,
-    shortcutKeyMatcherSource,
-    navigationDispositionSource,
-    communityLinksSource,
-    onboardingContentSource
-  ].forEach(runClassicScript);
-
+  vi.resetModules();
+  await runPageBundle('onboarding-preload');
   trackListeners(document);
   trackListeners(window);
-  act(() => {
-    runClassicScript(onboardingSource);
+  await act(async () => {
+    await runPageBundle('onboarding');
   });
   return {
     chrome,
@@ -160,12 +140,12 @@ afterEach(() => {
 
 describe('Onboarding page runtime', () => {
   it('reads the stored language and renders every slide visual through the React surface', async () => {
-    const { chrome, root, stage } = bootOnboardingPage({
+    const { chrome, root, stage } = await bootOnboardingPage({
       [LANGUAGE_STORAGE_KEY]: 'ja'
     });
     await waitForFirstRender(root);
 
-    const blueprint = runtime.LumnoOnboardingContent.getOnboardingBlueprint('ja');
+    const blueprint = onboardingContent.getOnboardingBlueprint('ja');
     expect(chrome.storage.sync.get).toHaveBeenCalledWith(
       [LANGUAGE_STORAGE_KEY],
       expect.any(Function)
@@ -205,7 +185,7 @@ describe('Onboarding page runtime', () => {
   });
 
   it('opens accordion link actions on click and in the background on middle-click', async () => {
-    const { chrome, root } = bootOnboardingPage();
+    const { chrome, root } = await bootOnboardingPage();
     await waitForFirstRender(root);
     act(() => {
       document.dispatchEvent(

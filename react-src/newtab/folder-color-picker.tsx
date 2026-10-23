@@ -39,6 +39,9 @@ type ColorSource = 'preset' | 'saved' | 'custom';
 const CHANNEL_LABELS = ['R', 'G', 'B'];
 const FORMAT_OPTIONS = [{ value: 'hex', label: 'HEX' }, { value: 'rgb', label: 'RGB' }];
 const ignoreSelectControls = () => {};
+// Without a translator the copy falls back to its English text. One shared
+// function, so `t` stays the same across renders.
+const untranslated = (_key: string, fallback: string) => fallback;
 
 const PRESETS = [DEFAULT_FOLDER_COLOR, '#8B5CF6', '#EC4899', '#EF4444', '#F59E0B', '#22C55E', '#14B8A6', '#64748B'];
 
@@ -46,7 +49,7 @@ function FolderColorForm({ initial, options, initialSavedColors, updateSavedColo
   initial: OpenOptions; options: PickerOptions; initialSavedColors: string[];
   updateSavedColors: (colors: string[]) => void; close: () => void;
 }) {
-  const t = options.t || ((_key, fallback) => fallback);
+  const t = options.t || untranslated;
   const presets = initial.presets?.length ? initial.presets : PRESETS;
   const defaultColor = presets[0];
   const previewImageUrl = initial.previewImageUrl || '';
@@ -110,7 +113,7 @@ function FolderColorForm({ initial, options, initialSavedColors, updateSavedColo
       });
     }
     return () => { active = false; options.hideTooltip?.(); };
-  }, [options, updateSavedColors]);
+  }, [options, t, updateSavedColors]);
   useLayoutEffect(() => {
     if (previewRef.current && !previewImageUrl) {
       options.initFolderIcon?.(previewRef.current);

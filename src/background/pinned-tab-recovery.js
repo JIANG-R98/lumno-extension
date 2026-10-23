@@ -3,16 +3,21 @@
 // the missing ones after a browser or extension update, startup, or a new
 // normal window.
 //
-// Loaded by background.js through its first importScripts block (the Firefox
-// build lists that block as background.scripts). Like background.js this is a
-// classic script sharing the worker's global scope. Its functions use
-// background.js bindings (storageArea, the storage keys, getResolvedTabUrl,
-// isRestrictedUrl, ...) only when they run, never while this file loads.
-// background.js decides when to snapshot (tab and window events) and when to
-// restore (install/startup/window events).
+// A module of the service worker; background.js imports it before its own code
+// runs. Its functions use background.js bindings (storageArea, the storage
+// keys, getResolvedTabUrl, isRestrictedUrl, ...) only when they run, never
+// while this file loads. background.js decides when to snapshot (tab and window
+// events) and when to restore (install/startup/window events).
 //
 // Suspension: the setting is re-read on wake before an event is acted on, and
 // a pending debounced snapshot is flushed on runtime.onSuspend.
+
+import {
+  PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY,
+  PINNED_TAB_SNAPSHOT_STORAGE_KEY,
+  storageArea
+} from './background.js';
+import { getResolvedTabUrl, isRestrictedUrl } from './browser-urls-service.js';
 
 const PINNED_TAB_SNAPSHOT_DEBOUNCE_MS = 600;
 
@@ -35,7 +40,7 @@ function normalizePinnedTabRecoveryEnabled(value) {
   return value === true;
 }
 
-function applyPinnedTabRecoverySetting(rawValue) {
+export function applyPinnedTabRecoverySetting(rawValue) {
   const normalized = normalizePinnedTabRecoveryEnabled(rawValue);
   pinnedTabRecoveryEnabledCache = normalized;
   pinnedTabRecoverySettingLoaded = true;
@@ -477,7 +482,7 @@ function mergePinnedTabSnapshotPersistOptions(options) {
   };
 }
 
-function schedulePersistPinnedTabSnapshot(options) {
+export function schedulePersistPinnedTabSnapshot(options) {
   if (!pinnedTabRecoverySettingLoaded) {
     // A worker woken by a pin, move or close sees that event before the
     // recovery setting is read; dropping it would leave the snapshot stale.
@@ -503,7 +508,7 @@ function schedulePersistPinnedTabSnapshot(options) {
   pinnedTabSnapshotTimer = setTimeout(flushPendingPinnedTabSnapshot, PINNED_TAB_SNAPSHOT_DEBOUNCE_MS);
 }
 
-function flushPendingPinnedTabSnapshot() {
+export function flushPendingPinnedTabSnapshot() {
   if (pinnedTabSnapshotTimer === null) {
     return Promise.resolve();
   }
@@ -555,7 +560,7 @@ async function restorePinnedTabsFromSnapshotNow() {
   }, 800);
 }
 
-function restorePinnedTabsFromSnapshotOnStartup() {
+export function restorePinnedTabsFromSnapshotOnStartup() {
   if (pinnedTabRestorePromise) {
     return pinnedTabRestorePromise;
   }

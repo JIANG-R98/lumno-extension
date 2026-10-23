@@ -1,0 +1,285 @@
+/* Narrow, short and phone layouts. */
+
+/* The shell itself for these widths is set by the narrow-or-short block below. */
+@media (max-width: 859px) {
+  .onboarding-frame {
+    width: min(720px, 100%);
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+  }
+
+  .copy-panel {
+    --onboarding-copy-padding-x: 42px;
+    --onboarding-copy-padding-y: 42px;
+    min-height: var(--onboarding-stacked-copy-min-height);
+    gap: 26px;
+    border-right: 0;
+    border-bottom: 1px solid var(--surface-border);
+  }
+
+  .copy-block {
+    gap: 24px;
+  }
+
+  .title {
+    --title-base-size: 32px;
+    max-width: 100%;
+  }
+
+  .visual-panel-slot {
+    height: var(--onboarding-visual-rendered-height);
+  }
+
+  .visual-panel {
+    height: var(--onboarding-visual-canvas-height);
+  }
+}
+
+@media (max-width: 560px) {
+  .copy-panel {
+    --onboarding-copy-padding-x: 28px;
+    --onboarding-copy-padding-y: 32px;
+  }
+
+  .title {
+    --title-base-size: 29px;
+  }
+
+  .body-copy {
+    font-size: 15px;
+    line-height: 1.54;
+  }
+}
+
+@media (max-width: 1240px) and (min-width: 860px), (max-height: 760px) and (min-height: 560px) and (min-width: 860px) {
+  .onboarding-shell {
+    --onboarding-shell-padding-x: 0px;
+    --onboarding-shell-padding-y: 0px;
+    --onboarding-shell-lift-y: 0px;
+    padding: 0;
+    grid-template-columns: var(--onboarding-frame-rendered-width);
+    grid-template-rows: var(--onboarding-frame-rendered-height);
+    place-content: center;
+    place-items: start;
+    overflow: hidden;
+  }
+
+  .onboarding-frame {
+    width: var(--onboarding-frame-width);
+    height: var(--onboarding-frame-height);
+    min-height: 0;
+    max-height: none;
+    transform: scale(var(--onboarding-frame-scale, 1));
+    transform-origin: top left;
+  }
+}
+
+@media (max-width: 859px), (max-height: 559px) {
+  .onboarding-shell {
+    --onboarding-shell-padding-x: 0px;
+    --onboarding-shell-padding-y: 0px;
+    --onboarding-shell-lift-y: 0px;
+    --onboarding-frame-scale: 1;
+    --onboarding-stacked-copy-min-height: 0px;
+    min-width: 760px;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    padding: 0;
+    place-items: stretch;
+    overflow: hidden;
+  }
+
+  .onboarding-frame {
+    width: 100%;
+    height: 100dvh;
+    min-height: 0;
+    max-height: none;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: hidden;
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) var(--onboarding-visual-rendered-height);
+  }
+
+  .copy-panel {
+    --onboarding-copy-padding-x: 48px;
+    --onboarding-copy-padding-y: clamp(18px, 4vh, 24px);
+    --onboarding-copy-row-gap: clamp(10px, 2.1vh, 14px);
+    min-height: 0;
+    gap: var(--onboarding-copy-row-gap);
+    border-right: 0;
+    border-bottom: 1px solid var(--surface-border);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    align-content: stretch;
+  }
+
+  .onboarding-newtab-watermark {
+    top: max(
+      clamp(32px, 4.6vh, 44px),
+      calc(env(safe-area-inset-top) + 12px)
+    );
+    width: 104px;
+    height: 24px;
+    opacity: 0.54;
+    transform: none;
+  }
+
+  .onboarding-newtab-watermark__image {
+    width: 104px;
+  }
+
+  .copy-block {
+    --onboarding-copy-block-gap: clamp(8px, 1.8vh, 10px);
+    grid-column: 1;
+    grid-row: auto;
+    align-content: start;
+    gap: var(--onboarding-copy-block-gap);
+  }
+
+  .onboarding-shell[data-active-slide="intro"] .copy-block {
+    padding-top: clamp(18px, 3.2vh, 34px);
+  }
+
+  .page-strip {
+    margin-bottom: clamp(8px, 1.8vh, 10px);
+  }
+
+  .title {
+    --title-base-size: clamp(27px, 5vh, 30px);
+    line-height: 1.18;
+    max-width: 100%;
+  }
+
+  .title-line--with-logo {
+    gap: 0.32em;
+  }
+
+  .title-logo-mark {
+    width: 0.96em;
+    height: 0.96em;
+    filter: drop-shadow(0 5px 7px rgba(56, 172, 248, 0.34));
+  }
+
+  .body-copy {
+    max-width: 100%;
+    font-size: clamp(13px, 2.35vh, 14px);
+    line-height: 1.42;
+  }
+
+  .body-note {
+    margin-top: 6px;
+    font-size: var(--lumno-font-size-sm);
+    line-height: 1.42;
+  }
+
+  .interaction-slots {
+    grid-column: 1;
+    grid-row: auto;
+    align-self: end;
+    justify-self: start;
+    width: min(460px, 100%);
+    gap: 8px;
+  }
+
+  .interaction-slots[data-accordion="true"] {
+    width: min(460px, 100%);
+    min-height: 0;
+  }
+
+  .interaction-slot {
+    grid-template-columns: 16px minmax(0, 1fr);
+    gap: 7px;
+  }
+
+  .interaction-slot--with-info {
+    grid-template-columns: 16px minmax(0, 1fr) 20px;
+  }
+
+  .interaction-row-icon {
+    width: 16px;
+    height: 16px;
+    font-size: 15px;
+  }
+
+  .interaction-copy {
+    gap: 4px;
+  }
+
+  .interaction-label {
+    font-size: var(--lumno-font-size-md);
+    line-height: 1.42;
+  }
+
+  .interaction-description {
+    max-width: calc(
+      100vw - var(--onboarding-copy-padding-x) -
+      var(--onboarding-copy-padding-x) - 23px
+    );
+    font-size: var(--lumno-font-size-sm);
+    line-height: 1.42;
+  }
+
+  .interaction-accordion-text {
+    max-height: 64px;
+    font-size: var(--lumno-font-size-sm);
+    line-height: 1.42;
+  }
+
+  .onboarding-copy-actions {
+    grid-column: 1;
+    grid-row: auto;
+    align-self: end;
+    justify-self: start;
+    gap: 8px;
+  }
+
+  .onboarding-action-button {
+    min-height: 36px;
+    padding: 0 14px;
+    font-size: var(--lumno-font-size-sm);
+  }
+
+  .onboarding-action-button--ghost {
+    margin-left: 0;
+  }
+
+  .visual-panel-slot {
+    width: 100vw;
+    height: var(--onboarding-visual-rendered-height);
+    max-height: none;
+    align-self: stretch;
+    justify-self: start;
+    align-items: end;
+    justify-items: center;
+    background: url("../../../assets/wallpapers/settings-bg-light-monet-newtab.webp") center / cover no-repeat;
+    overflow: hidden;
+  }
+
+  .visual-panel {
+    position: absolute;
+    left: 50%;
+    top: auto;
+    bottom: 0;
+    margin-left: calc(var(--onboarding-visual-canvas-width) * -0.5);
+    margin-top: 0;
+    height: var(--onboarding-visual-canvas-height);
+    transform-origin: center bottom;
+  }
+}
+
+/* Phones: drop the narrow-desktop 760px floor and let the copy fit the screen. */
+@media (max-width: 759px) {
+  .onboarding-shell {
+    min-width: 0;
+  }
+
+  .copy-panel {
+    --onboarding-copy-padding-x: 24px;
+  }
+}

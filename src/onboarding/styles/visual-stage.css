@@ -1,0 +1,138 @@
+/* The visual stage each slide shows, its kinds, and the Lumno wordmark
+   surface. */
+
+.visual-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.visual-stage[data-visual-kind="bookmark-focus-surface"] {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.visual-stage.is-visual-exit > *,
+.cursor-layer.is-visual-exit .demo-cursor {
+  animation: onboarding-visual-blur-exit 190ms ease-in both;
+}
+
+.visual-stage[data-visual-kind="lumno-web-wordmark-surface"] {
+  display: grid;
+  place-items: center;
+}
+
+.visual-stage[data-visual-kind="newtab-preview-surface"] {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.visual-stage[data-visual-kind="site-search-demo-surface"] {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.visual-stage[data-visual-kind="feature-cards-surface"] {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  display: grid;
+  place-items: center;
+  overflow: visible;
+}
+
+.lumno-web-wordmark-surface {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.lumno-web-wordmark-surface .logo-wordmark-wrap {
+  --wordmark-width: clamp(188px, 28vw, 260px);
+  position: relative;
+  width: var(--wordmark-width);
+  height: calc(var(--wordmark-width) * 47 / 165);
+  flex: none;
+  overflow: visible;
+  transform: translateZ(0);
+}
+
+.lumno-web-wordmark-surface .logo-wordmark {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.lumno-web-wordmark-surface .logo-butterfly-stage {
+  position: absolute;
+  left: calc(var(--wordmark-width) * 152 / 165);
+  top: 6px;
+  width: calc(var(--wordmark-width) * 20 / 165);
+  height: calc(var(--wordmark-width) * 22 / 165);
+  overflow: visible;
+  transform: rotate(-4deg);
+  transform-origin: 24% 77%;
+}
+
+.lumno-web-wordmark-surface .logo-butterfly {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.lumno-web-wordmark-surface .logo-butterfly-wing {
+  transform-origin: 24% 77%;
+}
+
+.lumno-web-wordmark-surface .logo-butterfly-wing-back {
+  opacity: 0.22;
+  transform: translate(0.6px, 0.2px) rotate(12deg) scale(0.97);
+  filter: blur(0.1px);
+}
+
+.lumno-web-wordmark-surface .logo-butterfly-wing-front {
+  opacity: 0.34;
+  transform: translate(-0.2px, 0.1px) rotate(-8deg) scale(1.01);
+}
+
+.lumno-web-wordmark-surface .logo-butterfly-path {
+  opacity: 1;
+}
+
+.mark-svg {
+  -webkit-user-drag: none;
+  user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none;
+}
+
+.seo-wordmark-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

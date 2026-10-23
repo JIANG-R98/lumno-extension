@@ -105,7 +105,7 @@ function useAccordionForm(
       triggerRef.current?.focus();
     }
     wasExpanded.current = expanded;
-  }, [expanded, host]);
+  }, [expanded, fieldRef, host, triggerRef]);
 }
 
 function SiteSearchForm({

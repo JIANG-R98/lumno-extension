@@ -425,7 +425,7 @@ body[data-glass-style] .x-nt-shortcut-group-header {
     filter var(--lumno-duration-sm) ease,
     opacity var(--lumno-duration-sm) ease;
 }
-/* The first wallpaper sample's tints apply at once until the entry finishes (see newtab.css). */
+/* The first wallpaper sample's tints apply at once until the entry finishes (see styles/shortcuts.css). */
 body[data-glass-style]:not([data-nt-enter="done"]) :is(.x-nt-shortcut-icon, .x-nt-shortcut-group-header) {
   transition: none;
 }

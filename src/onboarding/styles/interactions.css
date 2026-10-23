@@ -1,0 +1,361 @@
+/* Interaction slots and accordions beside the copy, their info buttons,
+   and the action buttons. */
+
+.interaction-slots {
+  width: max-content;
+  max-width: 100%;
+  align-self: end;
+  justify-self: start;
+  display: grid;
+  gap: 12px;
+}
+
+.interaction-slots[data-accordion="true"] {
+  width: min(420px, 100%);
+  min-height: clamp(150px, 32vh, 220px);
+  align-content: end;
+}
+
+.interaction-slot {
+  all: unset;
+  box-sizing: border-box;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  background: transparent;
+  color: var(--page-muted);
+}
+
+.interaction-slot--with-info {
+  grid-template-columns: 18px minmax(0, 1fr) 20px;
+}
+
+.interaction-slot[data-action]:not([data-action=""]):hover {
+  color: var(--page-ink);
+}
+
+.interaction-slot--static {
+  cursor: default;
+}
+
+.interaction-slot:focus-visible,
+.interaction-accordion-trigger:focus-visible,
+.onboarding-action-button:focus-visible {
+  outline: 2px solid var(--lumno-color-focus-ring);
+  outline-offset: 3px;
+}
+
+.interaction-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--accent-blue);
+}
+
+.interaction-row-icon {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--page-muted);
+  font-size: var(--lumno-font-size-xl);
+  line-height: 1;
+}
+
+.interaction-copy {
+  min-width: 0;
+  grid-column: 2;
+  display: grid;
+  gap: 6px;
+}
+
+.interaction-copy--with-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.interaction-label {
+  color: var(--page-muted);
+  font-size: var(--lumno-font-size-lg);
+  font-weight: 400;
+  line-height: 1.58;
+}
+
+.interaction-description {
+  max-width: 360px;
+  color: color-mix(in srgb, var(--page-muted) 86%, var(--page-ink));
+  font-size: var(--lumno-font-size-md);
+  line-height: 1.58;
+  white-space: pre-line;
+}
+
+.interaction-accordion-trigger {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+  color: inherit;
+  cursor: pointer;
+}
+
+.interaction-accordion-trigger:hover {
+  color: var(--page-ink);
+}
+
+.interaction-accordion-trigger .interaction-label {
+  min-width: 0;
+}
+
+.interaction-accordion-chevron {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: currentColor;
+  font-size: var(--lumno-font-size-xl);
+  line-height: 1;
+  transform: rotate(0deg);
+  transform-origin: center;
+  transition: transform var(--lumno-duration-md) ease;
+}
+
+.interaction-accordion-chevron .ri-icon {
+  font-size: var(--lumno-font-size-xl);
+  line-height: 1;
+}
+
+.interaction-slot--accordion[data-expanded="true"] .interaction-accordion-chevron {
+  transform: rotate(-90deg);
+}
+
+.interaction-accordion-panel {
+  grid-column: 2;
+  display: grid;
+  grid-template-rows: 0fr;
+  overflow: hidden;
+  cursor: default;
+  transition: grid-template-rows var(--lumno-duration-xl) ease;
+}
+
+.interaction-slot--accordion[data-expanded="true"] .interaction-accordion-panel {
+  grid-template-rows: 1fr;
+}
+
+.interaction-accordion-text {
+  --panel-translate-y: -4px;
+  min-height: 0;
+  max-width: 360px;
+  overflow: hidden;
+  color: color-mix(in srgb, var(--page-muted) 86%, var(--page-ink));
+  font-size: var(--lumno-font-size-md);
+  line-height: 1.58;
+  white-space: pre-line;
+}
+
+.interaction-accordion-link {
+  color: var(--page-ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.interaction-info-button {
+  all: unset;
+  box-sizing: border-box;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  border-radius: var(--lumno-radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(107, 114, 128, 0.74);
+  cursor: help;
+  font-size: var(--lumno-font-size-lg);
+  line-height: 1;
+  transition:
+    background var(--lumno-duration-xs) ease,
+    color var(--lumno-duration-xs) ease;
+}
+
+.interaction-info-button:hover {
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--page-ink);
+}
+
+.interaction-info-button:focus-visible {
+  outline: 2px solid var(--lumno-color-focus-ring);
+  outline-offset: 3px;
+}
+
+.interaction-info-button .ri-icon {
+  font-size: var(--lumno-font-size-lg);
+  line-height: 1;
+}
+
+.interaction-link-button {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+/* A whole row that opens something: the label and its trailing icon darken together. */
+.interaction-slot[data-action]:not([data-action=""]) {
+  cursor: pointer;
+}
+
+.interaction-slot[data-action]:not([data-action=""]) .interaction-label,
+.interaction-slot[data-action]:not([data-action=""]) .interaction-row-icon {
+  color: inherit;
+  transition: color var(--lumno-duration-xs) ease;
+}
+
+.interaction-trailing-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  color: inherit;
+  font-size: var(--lumno-font-size-md);
+  line-height: 1;
+}
+
+@media (prefers-color-scheme: dark) {
+  .interaction-info-button {
+    color: rgba(156, 163, 175, 0.82);
+  }
+
+  .interaction-info-button:hover {
+    background: rgba(147, 197, 253, 0.14);
+  }
+}
+
+.onboarding-copy-actions {
+  width: 100%;
+  align-self: end;
+  justify-self: start;
+  display: none;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.onboarding-copy-actions[data-visible="true"] {
+  display: inline-flex;
+}
+
+.onboarding-action-button {
+  all: unset;
+  box-sizing: border-box;
+  position: relative;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: var(--lumno-radius-pill);
+  border: 1px solid var(--onboarding-action-border-color, transparent);
+  background: var(--onboarding-action-bg, transparent);
+  background-clip: padding-box;
+  color: var(--onboarding-action-color, var(--page-ink));
+  box-shadow: var(--onboarding-action-shadow, none);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: var(--lumno-font-size-md);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  transition:
+    transform var(--lumno-duration-2xs) ease,
+    filter var(--lumno-duration-2xs) ease,
+    background var(--lumno-duration-sm) ease,
+    border-color var(--lumno-duration-sm) ease,
+    color var(--lumno-duration-sm) ease,
+    box-shadow var(--lumno-duration-sm) ease;
+}
+
+.onboarding-action-button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: var(--onboarding-action-before-shadow, none);
+}
+
+.onboarding-action-button:hover {
+  background: var(--onboarding-action-hover-bg, var(--onboarding-action-bg, transparent));
+  border-color: var(--onboarding-action-hover-border-color, var(--onboarding-action-border-color, transparent));
+  color: var(--onboarding-action-hover-color, var(--onboarding-action-color, var(--page-ink)));
+  box-shadow: var(--onboarding-action-hover-shadow, var(--onboarding-action-shadow, none));
+}
+
+.onboarding-action-button[hidden] {
+  display: none;
+}
+
+.onboarding-action-button:active {
+  transform: translateY(1px) scale(0.98);
+  filter: brightness(0.95);
+}
+
+.onboarding-action-button--primary {
+  --onboarding-action-border-color: var(--lumno-color-primary-border);
+  --onboarding-action-bg: var(--lumno-color-primary);
+  --onboarding-action-color: var(--lumno-color-on-primary);
+  --onboarding-action-shadow: var(--lumno-shadow-primary);
+  --onboarding-action-before-shadow: var(--lumno-shadow-primary-sheen);
+  --onboarding-action-hover-bg: var(--lumno-color-primary-hover);
+  --onboarding-action-hover-shadow: var(--lumno-shadow-primary-hover);
+}
+
+/* Pressed: the face sinks, so the drop flattens and the sheen turns into an inner shadow. */
+.onboarding-action-button--primary:active {
+  --onboarding-action-hover-bg: var(--lumno-color-primary);
+  --onboarding-action-hover-shadow: var(--lumno-shadow-primary-pressed);
+  --onboarding-action-before-shadow: var(--lumno-shadow-primary-sheen-pressed);
+}
+
+.onboarding-action-button--secondary {
+  --onboarding-action-border-color: rgba(15, 23, 42, 0.06);
+  --onboarding-action-bg: #ffffff;
+  --onboarding-action-color: #1f2937;
+  --onboarding-action-shadow:
+    0 2px 2px rgba(15, 23, 42, 0.025),
+    0 1px 1px rgba(15, 23, 42, 0.035),
+    0 0 1px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  --onboarding-action-hover-bg: #f8fafc;
+  --onboarding-action-hover-border-color: rgba(15, 23, 42, 0.08);
+  --onboarding-action-hover-shadow:
+    0 2px 3px rgba(15, 23, 42, 0.032),
+    0 1px 1px rgba(15, 23, 42, 0.045),
+    0 0 1px rgba(15, 23, 42, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.onboarding-action-button--ghost {
+  margin-left: auto;
+  --onboarding-action-border-color: transparent;
+  --onboarding-action-bg: transparent;
+  --onboarding-action-color: rgba(107, 114, 128, 0.86);
+  --onboarding-action-shadow: none;
+  --onboarding-action-hover-bg: rgba(15, 23, 42, 0.045);
+  --onboarding-action-hover-color: var(--page-ink);
+}

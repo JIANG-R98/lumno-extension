@@ -117,6 +117,11 @@ describe('Options select control React island', () => {
     expect(search?.getAttribute('aria-controls')).toBe(listbox?.id);
     expect(listbox?.contains(search)).toBe(false);
     expect(listbox?.querySelectorAll('[role="option"]')).toHaveLength(3);
+    // The magnifier sits in the field's box, above the listbox that scrolls.
+    const icon = host.querySelector('._x_extension_select_search_icon_2026_unique_');
+    expect(icon?.getAttribute('aria-hidden')).toBe('true');
+    expect(search?.parentElement?.contains(icon)).toBe(true);
+    expect(listbox?.contains(icon)).toBe(false);
 
     const typeFilter = (text: string) => {
       const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
@@ -243,6 +248,8 @@ describe('Options select control React island', () => {
     // against the bottom of the viewport, at the 480px cap.
     const low = open(700);
     expect([low.menu.style.top, low.menu.style.height]).toEqual(['280px', '480px']);
+    // Only the listbox under the field scrolls, so the surface itself never does.
+    expect(low.menu.style.overflowY).toBe('hidden');
     low.type('Font 3');
     expect([low.menu.style.top, low.menu.style.height]).toEqual(['280px', '480px']);
     low.type('zzz');

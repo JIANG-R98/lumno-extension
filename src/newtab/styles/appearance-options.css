@@ -1,0 +1,342 @@
+/* Inside the appearance panel: dividers, collapsible regions, wallpaper and
+   favicon tiles, uploads and deletion. */
+
+.x-nt-panel-divider {
+  height: 1px;
+  background: var(--x-nt-panel-border, rgba(0, 0, 0, 0.08));
+  margin: var(--x-nt-panel-divider-gap) 0;
+  flex: 0 0 auto;
+}
+/* Separates groups inside one section; spacing comes from the section gap. */
+.x-nt-panel-divider.x-nt-panel-divider--inset {
+  margin: 0;
+  opacity: 0.6;
+}
+/* Disclosure regions animate their own height so they stay smooth while the panel scrolls. */
+.x-nt-panel-collapsible {
+  --x-nt-collapsible-gap: var(--x-nt-panel-content-gap);
+  /* Flex items otherwise keep their content height as a minimum and cannot animate to 0. */
+  min-height: 0;
+  overflow: clip;
+  overflow-clip-margin: 6px;
+  transition: height var(--x-nt-panel-motion-duration) var(--x-nt-panel-motion-ease),
+    margin-top var(--x-nt-panel-motion-duration) var(--x-nt-panel-motion-ease),
+    opacity var(--lumno-duration-md) ease,
+    display var(--x-nt-panel-motion-duration) allow-discrete;
+}
+.x-nt-panel-collapsible:is([hidden], [data-visible="false"]) {
+  /* Out of the tab order once collapsed; `display` stays animatable via allow-discrete. */
+  display: none;
+  height: 0;
+  margin-top: calc(-1 * var(--x-nt-collapsible-gap));
+  opacity: 0;
+}
+@starting-style {
+  .x-nt-panel-collapsible:not([hidden]):not([data-visible="false"]) {
+    height: 0;
+    margin-top: calc(-1 * var(--x-nt-collapsible-gap));
+    opacity: 0;
+  }
+}
+.x-nt-shortcuts-accordion-details.x-nt-panel-collapsible {
+  --x-nt-collapsible-gap: 0px;
+}
+.x-nt-wallpaper-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--x-nt-panel-grid-gap);
+  flex: 0 0 auto;
+  min-height: auto;
+  overflow: visible;
+  padding: 2px 2px 4px;
+  box-sizing: border-box;
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 170ms ease,
+    transform var(--lumno-duration-xl) cubic-bezier(0.22, 1, 0.36, 1);
+}
+.x-nt-wallpaper-file-input {
+  display: none;
+}
+.x-nt-wallpaper-tile {
+  all: unset;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--x-nt-panel-muted-ink);
+  box-sizing: border-box;
+  cursor: pointer;
+  position: relative;
+  transition: color var(--lumno-duration-sm) ease, opacity var(--lumno-duration-sm) ease;
+}
+.x-nt-wallpaper-tile > :not(button) {
+  cursor: inherit;
+  pointer-events: none;
+}
+.x-nt-wallpaper-tile[data-loading="true"] {
+  cursor: progress;
+  opacity: 0.72;
+}
+.x-nt-wallpaper-tile:active .x-nt-wallpaper-thumb {
+  transform: scale(0.97);
+}
+.x-nt-wallpaper-tile:focus-visible {
+  outline: 2px solid var(--lumno-color-focus-ring);
+  outline-offset: 2px;
+}
+.x-nt-wallpaper-tile[data-selected="true"] {
+  color: var(--x-nt-text, #111827);
+}
+.x-nt-wallpaper-thumb {
+  --x-nt-wallpaper-preview-radius: 9px;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  display: block;
+  border-radius: var(--x-nt-wallpaper-preview-radius);
+  overflow: hidden;
+  background: transparent;
+  border: none;
+  box-sizing: border-box;
+  position: relative;
+  transition: background-color var(--lumno-duration-xs) ease, transform var(--lumno-duration-xs) ease;
+}
+.x-nt-wallpaper-thumb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px solid transparent;
+  border-radius: var(--x-nt-wallpaper-preview-radius);
+  pointer-events: none;
+  box-sizing: border-box;
+  transition: border-color 170ms ease;
+}
+.x-nt-wallpaper-tile[data-selected="true"] .x-nt-wallpaper-thumb::after {
+  border-color: var(--lumno-color-selection-outline);
+}
+.x-nt-wallpaper-thumb img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  border-radius: inherit;
+  transition: filter var(--lumno-duration-xs) ease;
+}
+.x-nt-favicon-group {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.x-nt-favicon-group > .x-nt-panel-collapsible {
+  --x-nt-collapsible-gap: 12px;
+}
+.x-nt-favicon-title {
+  color: var(--x-nt-text, #111827);
+}
+.x-nt-favicon-options {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: var(--x-nt-panel-grid-gap);
+  padding: 2px 2px 0;
+  box-sizing: border-box;
+}
+.x-nt-favicon-option {
+  width: calc((100% - (var(--x-nt-panel-grid-gap) * 3)) / 4);
+  flex: 0 0 calc((100% - (var(--x-nt-panel-grid-gap) * 3)) / 4);
+}
+.x-nt-favicon-thumb {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--x-nt-favicon-thumb-bg);
+  border: none;
+}
+.x-nt-favicon-thumb .x-nt-favicon-image {
+  width: 40px;
+  height: 40px;
+  max-width: 62%;
+  max-height: 62%;
+  object-fit: contain;
+  border-radius: var(--lumno-radius-lg);
+}
+.x-nt-favicon-svg-preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #000000;
+  --x-nt-favicon-shadow-opacity: 0.2;
+  --x-nt-favicon-main-opacity: 0.5;
+}
+.x-nt-favicon-svg-preview svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.x-nt-favicon-option[data-selected="true"] .x-nt-favicon-thumb::after {
+  inset: 0;
+  border-radius: inherit;
+}
+.x-nt-wallpaper-tile:hover .x-nt-wallpaper-thumb img,
+.x-nt-wallpaper-tile:focus-visible .x-nt-wallpaper-thumb img,
+.x-nt-wallpaper-tile[data-context-menu-open="true"] .x-nt-wallpaper-thumb img {
+  filter: var(--x-nt-thumb-hover-filter);
+}
+.x-nt-wallpaper-custom-image[hidden],
+.x-nt-wallpaper-upload-placeholder[hidden] {
+  display: none;
+}
+.x-nt-wallpaper-upload-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--x-nt-upload-border);
+  background: var(--x-nt-upload-bg);
+}
+.x-nt-wallpaper-upload-tile:hover .x-nt-wallpaper-upload-thumb,
+.x-nt-wallpaper-upload-tile:focus-visible .x-nt-wallpaper-upload-thumb {
+  background: var(--x-nt-upload-hover-bg);
+}
+.x-nt-wallpaper-upload-placeholder {
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--x-nt-upload-ink);
+  background: transparent;
+  transition: color var(--lumno-duration-xs) ease;
+}
+.x-nt-wallpaper-upload-tile:hover .x-nt-wallpaper-upload-placeholder,
+.x-nt-wallpaper-upload-tile:focus-visible .x-nt-wallpaper-upload-placeholder {
+  color: var(--x-nt-upload-hover-ink);
+  background: transparent;
+}
+.x-nt-wallpaper-check {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--lumno-radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  background: linear-gradient(180deg, #404859 0%, #273042 100%);
+  border: 1px solid #040404;
+  box-shadow: 0 3px 2px rgba(0, 0, 0, 0.05),
+    0 2px 2px rgba(0, 0, 0, 0.09),
+    0 0 1px rgba(0, 0, 0, 0.1);
+  opacity: 0;
+  transform: scale(0.82);
+  transition: opacity var(--lumno-duration-sm) ease, transform var(--lumno-duration-lg) cubic-bezier(0.2, 0.85, 0.2, 1.2);
+  pointer-events: none;
+}
+.x-nt-wallpaper-check::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow: inset 0 1px 1.6px rgba(255, 255, 255, 0.34);
+  pointer-events: none;
+}
+.x-nt-wallpaper-check .ri-icon {
+  width: 11px;
+  height: 11px;
+  font-size: var(--lumno-font-size-xs);
+  line-height: 11px;
+}
+.x-nt-wallpaper-tile[data-selected="true"] .x-nt-wallpaper-check {
+  opacity: 1;
+  transform: scale(1);
+}
+.x-nt-wallpaper-delete-button {
+  all: unset;
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  z-index: 4;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--lumno-radius-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  background: rgba(17, 24, 39, 0.76);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.24),
+    inset 0 1px 1px rgba(255, 255, 255, 0.22);
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.86);
+  pointer-events: none;
+  transition: opacity var(--lumno-duration-xs) ease, transform var(--lumno-duration-xs) ease, background-color var(--lumno-duration-xs) ease;
+}
+.x-nt-wallpaper-delete-button[hidden] {
+  display: none;
+}
+.x-nt-wallpaper-delete-button:hover,
+.x-nt-wallpaper-delete-button:focus-visible {
+  background: rgba(17, 24, 39, 0.9);
+}
+.x-nt-wallpaper-delete-button:focus-visible {
+  outline: 2px solid var(--lumno-color-focus-ring);
+  outline-offset: 2px;
+}
+.x-nt-wallpaper-custom-tile:hover .x-nt-wallpaper-delete-button,
+.x-nt-wallpaper-custom-tile:has(:focus-visible) .x-nt-wallpaper-delete-button {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+body[data-theme="dark"] .x-nt-favicon-svg-preview,
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-favicon-svg-preview,
+body[data-glass-style] .x-nt-favicon-svg-preview[data-glass-ink-theme="dark"] {
+  color: #f1f3f4;
+  --x-nt-favicon-shadow-opacity: 0.34;
+  --x-nt-favicon-main-opacity: 0.72;
+}
+body[data-theme="dark"] .x-nt-wallpaper-check,
+body[data-theme="dark"] .x-nt-appearance-check,
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-wallpaper-check,
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-appearance-check,
+body[data-glass-style] .x-nt-wallpaper-check[data-glass-ink-theme="dark"],
+body[data-glass-style] .x-nt-appearance-check[data-glass-ink-theme="dark"] {
+  color: #111111;
+  background: linear-gradient(180deg, #f3f4f6 0%, #e5e7eb 100%);
+  border-color: #d1d5db;
+}
+body[data-theme="dark"] .x-nt-wallpaper-delete-button,
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-wallpaper-delete-button,
+body[data-glass-style] .x-nt-wallpaper-delete-button[data-glass-ink-theme="dark"] {
+  color: #111111;
+  background: rgba(243, 244, 246, 0.88);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.34),
+    inset 0 1px 1px rgba(255, 255, 255, 0.55);
+}
+body[data-theme="dark"] .x-nt-wallpaper-delete-button:hover,
+body[data-theme="dark"] .x-nt-wallpaper-delete-button:focus-visible,
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-wallpaper-delete-button:hover,
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-wallpaper-delete-button:focus-visible,
+body[data-glass-style] .x-nt-wallpaper-delete-button[data-glass-ink-theme="dark"]:hover,
+body[data-glass-style] .x-nt-wallpaper-delete-button[data-glass-ink-theme="dark"]:focus-visible {
+  background: rgba(255, 255, 255, 0.96);
+}
+body[data-theme="dark"] .x-nt-wallpaper-check::after,
+body[data-theme="dark"] .x-nt-appearance-check::after,
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-wallpaper-check::after,
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-appearance-check::after,
+body[data-glass-style] .x-nt-wallpaper-check[data-glass-ink-theme="dark"]::after,
+body[data-glass-style] .x-nt-appearance-check[data-glass-ink-theme="dark"]::after {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+}

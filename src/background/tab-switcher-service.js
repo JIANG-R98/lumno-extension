@@ -4,15 +4,50 @@
 // (capture scheduling, persistence in session storage) and per-tab accent
 // colors.
 //
-// Loaded by background.js through its first importScripts block (the Firefox
-// build lists that block as background.scripts). Like background.js this is a
-// classic script sharing the worker's global scope. Its functions use
-// background.js bindings (storageArea, the settings mirrors, favicon helpers,
-// getResolvedTabUrl, ...) only when they run, never while this file loads.
-// background.js wires the browser events and the show-tab-switcher command to
-// the functions here.
+// A module of the service worker; background.js imports it before its own code
+// runs. Its functions use background.js bindings (the settings mirrors,
+// whenBackgroundSettingsReady, ...) only when they run, never while this file
+// loads. background.js wires the browser events and the show-tab-switcher
+// command to the functions here.
 
-const RECENT_TAB_SWITCHER = globalThis.LumnoRecentTabSwitcher;
+import * as RECENT_TAB_SWITCHER from './recent-tab-switcher.js';
+import * as BROWSER_PROFILE from '../shared/browser-profile.js';
+import * as FAVICON_UTILS from '../shared/favicon/favicon-utils.js';
+import * as NEWTAB_FAVICON_THEME from '../newtab/theme/favicon-theme.js';
+import {
+  SHOW_TAB_SWITCHER_COMMAND_NAME,
+  TAB_SWITCHER_THUMBNAIL_STORAGE_KEY,
+  backgroundSettingsLoaded,
+  ignoreExpectedChromeError,
+  logHotkeyDebug,
+  openNewtabFallback,
+  openNewtabFallbackForUrl,
+  warnBackgroundFailure,
+  whenBackgroundSettingsReady
+} from './background.js';
+import {
+  BACKGROUND_SITE_THEME_CACHE_MAX_ENTRIES,
+  arrayBufferToBase64,
+  getBackgroundFaviconCacheRuntime,
+  getBackgroundFaviconUrlResolver,
+  inlineExtensionFaviconsForWebPage,
+  loadFaviconEnhancedFetchEnabled,
+  loadFaviconRequestBlacklistItems,
+  normalizeFaviconHost,
+  normalizeThemeAccentRgb,
+  resolveSiteThemeColor,
+  shouldBlockFaviconForHost,
+  siteThemeColorCache,
+  siteThemeColorPending
+} from './favicon-service.js';
+import {
+  canOpenOverlayOnUrl,
+  getResolvedTabUrl,
+  isBrowserInternalUrl,
+  isBrowserNewtabUrl,
+  isOwnExtensionPageUrl
+} from './browser-urls-service.js';
+import { recordTabSwitchEvent } from './tab-switch-stats-service.js';
 
 function hasTabSwitcherExtensionPagePort(tab) {
   if (!tab || typeof tab.id !== 'number') {
@@ -159,7 +194,7 @@ function handleTabSwitcherExtensionPagePortMessage(port, message) {
   }
 }
 
-function registerTabSwitcherExtensionPagePortConnection(port) {
+export function registerTabSwitcherExtensionPagePortConnection(port) {
   if (!port || port.name !== TAB_SWITCHER_EXTENSION_PAGE_PORT_NAME) {
     return;
   }
@@ -515,7 +550,7 @@ function prepareShortcutKeyObserver(tab) {
           tabId: tab.id,
           allFrames: true
         },
-        files: ['src/shared/shortcut-key-matcher.js', 'src/content/shortcut-key-observer.js']
+        files: ['build/shortcut-key-observer.js']
       }, () => {
         const error = chrome.runtime && chrome.runtime.lastError
           ? chrome.runtime.lastError.message || 'unknown'
@@ -559,7 +594,7 @@ function canSweepShortcutKeyObserverIntoTab(tab) {
   );
 }
 
-function prepareShortcutKeyObserversInOpenTabs() {
+export function prepareShortcutKeyObserversInOpenTabs() {
   if (!chrome || !chrome.tabs || typeof chrome.tabs.query !== 'function') {
     return Promise.resolve();
   }
@@ -689,7 +724,7 @@ function commitOpenTabSwitcherInWindow(windowId, source) {
     .catch(() => findAndCommit().catch(() => false));
 }
 
-function handleTabSwitcherShortcutModifierReleased(senderTab, releasedKey, callback) {
+export function handleTabSwitcherShortcutModifierReleased(senderTab, releasedKey, callback) {
   const finish = typeof callback === 'function' ? callback : () => {};
   if (!senderTab || typeof senderTab.windowId !== 'number') {
     finish(false);
@@ -813,7 +848,7 @@ const tabSwitcherOpeningByWindowKey = new Map();
 const TAB_SWITCHER_HOST_STATE_TIMEOUT_MS = 400;
 
 // Hint only: findOpenTabSwitcherHostInWindow scans the window when it is missing.
-const tabSwitcherHostTabIdByWindowId = new Map();
+export const tabSwitcherHostTabIdByWindowId = new Map();
 
 const TAB_SWITCHER_LIMIT = 5;
 
@@ -1008,7 +1043,7 @@ function setTabSwitcherStateToStorage(state) {
   });
 }
 
-function ensureTabSwitcherStateLoaded() {
+export function ensureTabSwitcherStateLoaded() {
   if (tabSwitcherStateLoaded) {
     return Promise.resolve(true);
   }
@@ -1061,7 +1096,7 @@ function schedulePersistTabSwitcherState() {
   }, TAB_SWITCHER_THUMBNAIL_PERSIST_DEBOUNCE_MS);
 }
 
-function flushPendingTabSwitcherState() {
+export function flushPendingTabSwitcherState() {
   if (tabSwitcherStatePersistTimer === null || !tabSwitcherStateLoaded) {
     return Promise.resolve(false);
   }
@@ -1073,7 +1108,7 @@ function flushPendingTabSwitcherState() {
   });
 }
 
-function recordRecentSwitcherTab(tab, at) {
+export function recordRecentSwitcherTab(tab, at) {
   const snapshot = recentTabTracker.recordTab(tab, at);
   if (snapshot) {
     schedulePersistTabSwitcherState();
@@ -1081,7 +1116,7 @@ function recordRecentSwitcherTab(tab, at) {
   return snapshot;
 }
 
-function updateRecentSwitcherTab(tab, at) {
+export function updateRecentSwitcherTab(tab, at) {
   const snapshot = recentTabTracker.updateTab(tab, at);
   if (snapshot) {
     schedulePersistTabSwitcherState();
@@ -1089,7 +1124,7 @@ function updateRecentSwitcherTab(tab, at) {
   return snapshot;
 }
 
-function removeRecentSwitcherTab(tabId) {
+export function removeRecentSwitcherTab(tabId) {
   clearSwitcherThumbnailPriority(tabId);
   if (recentTabTracker.removeTab(tabId)) {
     schedulePersistTabSwitcherState();
@@ -1189,7 +1224,7 @@ function markSwitcherThumbnailPriorityForItems(items, tabList, reason) {
   });
 }
 
-function clearSwitcherThumbnailPriority(tabId) {
+export function clearSwitcherThumbnailPriority(tabId) {
   if (typeof tabId !== 'number') {
     return;
   }
@@ -1246,7 +1281,7 @@ function markSwitcherThumbnailStatus(tab, status, requestReason, failureReason) 
 // rasterized once into a data URL that any page can render.
 let firefoxBrandIconDataUrl = '';
 
-function loadFirefoxBrandIcon() {
+export function loadFirefoxBrandIcon() {
   if (!BROWSER_PROFILE.isFirefoxExtensionRuntime() || typeof Image !== 'function' || typeof document === 'undefined') {
     return;
   }
@@ -1804,19 +1839,6 @@ function captureSwitcherThumbnailForTab(tab, reason) {
   });
 }
 
-function captureSwitcherThumbnailNow(request) {
-  const tabId = request && typeof request.tabId === 'number' ? request.tabId : null;
-  const windowId = request && typeof request.windowId === 'number' ? request.windowId : null;
-  if (typeof tabId !== 'number' || typeof windowId !== 'number') {
-    return;
-  }
-  // Capture failures are already logged by captureSwitcherThumbnailForTab.
-  captureSwitcherThumbnailForTab({
-    id: tabId,
-    windowId
-  }, request && request.reason).catch(() => {});
-}
-
 function hasFreshSwitcherThumbnail(tab, now) {
   const state = recentTabTracker.getThumbnailState(tab.id, getResolvedTabUrl(tab));
   const capturedAt = Number(state && state.capturedAt) || 0;
@@ -1874,7 +1896,7 @@ function getSettledSwitcherCaptureTab(request) {
   });
 }
 
-function scheduleSwitcherThumbnailCapture(tab, reason) {
+export function scheduleSwitcherThumbnailCapture(tab, reason) {
   if (!backgroundSettingsLoaded) {
     whenBackgroundSettingsReady(() => {
       scheduleSwitcherThumbnailCapture(tab, reason);
@@ -1935,7 +1957,10 @@ function clearSwitcherThumbnailsForDisabledSwitcher() {
   }).catch(warnBackgroundFailure('Failed to clear the recent-tab switcher thumbnails.'));
 }
 
-function applyTabSwitcherEnabledSetting(enabled) {
+// Mirrors the stored setting, re-read on every wake; background.js applies it.
+let tabSwitcherEnabledCache = true;
+
+export function applyTabSwitcherEnabledSetting(enabled) {
   tabSwitcherEnabledCache = enabled === true;
   if (!tabSwitcherEnabledCache) {
     clearSwitcherThumbnailsForDisabledSwitcher();
@@ -2001,7 +2026,7 @@ function getDefaultSwitcherSelectedIndex(items, currentTabId) {
   return 0;
 }
 
-function focusWindowAndActivateTab(tabId, windowId, callback) {
+export function focusWindowAndActivateTab(tabId, windowId, callback) {
   const run = (resolvedWindowId) => {
     RECENT_TAB_SWITCHER.focusWindowAndActivateTab(chrome, {
       tabId,
@@ -2173,13 +2198,9 @@ function injectTabSwitcherOnTab(hostTab, items, context) {
     chrome.scripting.executeScript({
       target: { tabId: hostTab.id },
       files: [
-        'src/shared/icon-font-preload.js',
-        'src/shared/codex-debug-surface.js',
-        'src/shared/settings.js',
+        'build/icon-font-preload.js',
         'src/react/overlay-islands.js',
-        'src/shared/toast.js',
-        'src/shared/page-color-scheme.js',
-        'src/overlay/tab-switcher.js'
+        'build/tab-switcher.js'
       ]
     }, () => {
       if (chrome.runtime && chrome.runtime.lastError) {
@@ -2350,7 +2371,7 @@ function advanceExistingTabSwitcherOnTab(tab, source, callback) {
   runRuntimeMessageFastPath();
 }
 
-function triggerTabSwitcherForTab(tab, source, commandObservedAt) {
+export function triggerTabSwitcherForTab(tab, source, commandObservedAt) {
   if (!backgroundSettingsLoaded) {
     whenBackgroundSettingsReady(() => {
       triggerTabSwitcherForTab(tab, source, commandObservedAt);

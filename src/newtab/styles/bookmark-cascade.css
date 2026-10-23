@@ -1,0 +1,450 @@
+/* Tooltips over bookmarks and shortcuts, the bookmark cascade menu with
+   its levels, rows, drag states and copy button, and the dock scroller's
+   overlay scrollbar. */
+
+.x-nt-shortcut-tooltip {
+  --x-extension-tooltip-z-index: calc(var(--lumno-z-menu) + 2);
+}
+.x-nt-shortcut-tooltip[data-shortcut-origin-label] ._x_extension_tooltip_line_2026_unique_:last-child {
+  display: inline;
+}
+.x-nt-shortcut-tooltip[data-shortcut-origin-label]::after {
+  content: attr(data-shortcut-origin-label);
+  margin-inline-start: 4px;
+  opacity: 0.62;
+  white-space: nowrap;
+}
+.x-nt-bookmark-cascade-copy-tooltip {
+  --x-extension-tooltip-z-index: calc(var(--lumno-z-menu) + 3);
+}
+.x-nt-bookmark-cascade-debug-svg {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  overflow: visible;
+}
+.x-nt-bookmark-cascade-safe-triangle {
+  fill: rgba(59, 130, 246, 0.16);
+  stroke: rgb(var(--lumno-color-accent-rgb) / 0.78);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+  vector-effect: non-scaling-stroke;
+  opacity: 0;
+  transition: opacity 90ms ease;
+}
+.x-nt-bookmark-cascade-safe-triangle[data-visible="true"] {
+  opacity: 1;
+}
+.x-nt-bookmark-cascade-debug-label {
+  position: fixed;
+  z-index: 4;
+  min-width: 58px;
+  padding: 5px 7px;
+  border-radius: var(--lumno-radius-pill);
+  box-sizing: border-box;
+  color: #1d4ed8;
+  background: rgba(239, 246, 255, 0.94);
+  border: 1px solid rgb(var(--lumno-color-accent-rgb) / 0.32);
+  box-shadow: 0 8px 18px rgba(30, 64, 175, 0.14);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  font-size: var(--lumno-font-size-2xs);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 90ms ease;
+}
+.x-nt-bookmark-cascade-debug-label[data-visible="true"] {
+  opacity: 1;
+}
+.x-nt-bookmark-cascade-level {
+  position: fixed;
+  z-index: 2;
+  left: 8px;
+  top: 8px;
+  --x-nt-bookmark-cascade-max-height: min(420px, calc(100vh - 24px));
+  max-height: var(--x-nt-bookmark-cascade-max-height);
+  border-radius: var(--lumno-radius-xl);
+  background: var(--x-nt-cascade-surface);
+  border: 1px solid var(--x-nt-surface-border);
+  box-shadow: var(--x-nt-cascade-shadow);
+  backdrop-filter: blur(18px) saturate(135%);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+  box-sizing: border-box;
+  overflow: hidden;
+  pointer-events: auto;
+  --x-nt-bookmark-cascade-closed-x: 0px;
+  --x-nt-bookmark-cascade-closed-scale-x: 0.96;
+  --x-nt-bookmark-cascade-closed-scale-y: 0.86;
+  --x-extension-menu-surface-closed-transform: translateX(var(--x-nt-bookmark-cascade-closed-x)) scale(var(--x-nt-bookmark-cascade-closed-scale-x), var(--x-nt-bookmark-cascade-closed-scale-y));
+}
+.x-nt-bookmark-cascade-menu[data-drag-mode="true"] .x-nt-bookmark-cascade-level {
+  transition: none !important;
+  animation: none !important;
+}
+.x-nt-bookmark-cascade-menu[data-refreshing="true"] .x-nt-bookmark-cascade-level {
+  transition: none !important;
+  animation: none !important;
+}
+.x-nt-bookmark-cascade-content {
+  max-height: calc(var(--x-nt-bookmark-cascade-max-height) - 2px);
+  padding: 6px;
+  border-radius: inherit;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  row-gap: 4px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: auto;
+}
+/* Chrome ignores ::-webkit-scrollbar rules once scrollbar-width/color are set,
+   which drops the track inset and lets the bar collide with the rounded corners.
+   The bottom dock shares the thin bar so Windows and always-on macOS scrollbars
+   don't draw the system's wide one beside the bookmarks and recent cards. */
+@supports not selector(::-webkit-scrollbar) {
+  .x-nt-bookmark-cascade-content,
+  #_x_extension_newtab_bottom_dock_scroller_2024_unique_ {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.62) transparent;
+  }
+  body[data-theme="dark"] .x-nt-bookmark-cascade-content,
+  body[data-theme="dark"] #_x_extension_newtab_bottom_dock_scroller_2024_unique_,
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-bookmark-cascade-content,
+body[data-glass-style] [data-glass-ink-theme="dark"] #_x_extension_newtab_bottom_dock_scroller_2024_unique_,
+body[data-glass-style] .x-nt-bookmark-cascade-content[data-glass-ink-theme="dark"],
+body[data-glass-style] #_x_extension_newtab_bottom_dock_scroller_2024_unique_[data-glass-ink-theme="dark"] {
+    scrollbar-color: rgba(148, 163, 184, 0.56) transparent;
+  }
+  body #_x_extension_newtab_bottom_dock_scroller_2024_unique_[data-wallpaper-ink] {
+    scrollbar-color: var(--x-nt-wallpaper-adaptive-ink-muted) transparent;
+  }
+}
+:root:not([data-lumno-scrollbars="overlay"]) .x-nt-bookmark-cascade-content::-webkit-scrollbar,
+:root:not([data-lumno-scrollbars="overlay"]) .x-nt-shortcuts-section[data-shortcuts-scrollable="true"]::-webkit-scrollbar,
+:root:not([data-lumno-scrollbars="overlay"]) #_x_extension_newtab_bottom_dock_scroller_2024_unique_::-webkit-scrollbar {
+  width: 10px;
+}
+:root:not([data-lumno-scrollbars="overlay"]) .x-nt-bookmark-cascade-content::-webkit-scrollbar-track,
+:root:not([data-lumno-scrollbars="overlay"]) .x-nt-shortcuts-section[data-shortcuts-scrollable="true"]::-webkit-scrollbar-track,
+:root:not([data-lumno-scrollbars="overlay"]) #_x_extension_newtab_bottom_dock_scroller_2024_unique_::-webkit-scrollbar-track {
+  margin-block: 10px;
+  background: transparent;
+}
+/* The layout controller measures how far the corner controls rise over the
+   scrollbar and ends the track above them. */
+:root:not([data-lumno-scrollbars="overlay"]) #_x_extension_newtab_bottom_dock_scroller_2024_unique_::-webkit-scrollbar-track {
+  margin-bottom: max(10px, var(--x-nt-bottom-dock-scrollbar-end-inset, 0px));
+}
+:root:not([data-lumno-scrollbars="overlay"]) .x-nt-bookmark-cascade-content::-webkit-scrollbar-thumb,
+:root:not([data-lumno-scrollbars="overlay"]) .x-nt-shortcuts-section[data-shortcuts-scrollable="true"]::-webkit-scrollbar-thumb,
+:root:not([data-lumno-scrollbars="overlay"]) #_x_extension_newtab_bottom_dock_scroller_2024_unique_::-webkit-scrollbar-thumb {
+  min-height: 34px;
+  border: 3px solid transparent;
+  border-radius: var(--lumno-radius-pill);
+  background-color: rgba(148, 163, 184, 0.68);
+  background-clip: padding-box;
+}
+:root:not([data-lumno-scrollbars="overlay"]) .x-nt-bookmark-cascade-content::-webkit-scrollbar-thumb:hover,
+:root:not([data-lumno-scrollbars="overlay"]) .x-nt-shortcuts-section[data-shortcuts-scrollable="true"]::-webkit-scrollbar-thumb:hover,
+:root:not([data-lumno-scrollbars="overlay"]) #_x_extension_newtab_bottom_dock_scroller_2024_unique_::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 116, 139, 0.82);
+}
+:root:not([data-lumno-scrollbars="overlay"]) .x-nt-bookmark-cascade-content::-webkit-scrollbar-corner,
+:root:not([data-lumno-scrollbars="overlay"]) .x-nt-shortcuts-section[data-shortcuts-scrollable="true"]::-webkit-scrollbar-corner,
+:root:not([data-lumno-scrollbars="overlay"]) #_x_extension_newtab_bottom_dock_scroller_2024_unique_::-webkit-scrollbar-corner {
+  background: transparent;
+}
+.x-nt-bookmark-cascade-level[data-vertical="below"][data-horizontal="left"],
+.x-nt-bookmark-cascade-level[data-side="right"] {
+  --x-extension-menu-surface-transform-origin: top left;
+}
+.x-nt-bookmark-cascade-level[data-vertical="below"][data-horizontal="right"],
+.x-nt-bookmark-cascade-level[data-side="left"] {
+  --x-extension-menu-surface-transform-origin: top right;
+}
+.x-nt-bookmark-cascade-level[data-vertical="above"][data-horizontal="left"] {
+  --x-extension-menu-surface-transform-origin: bottom left;
+}
+.x-nt-bookmark-cascade-level[data-vertical="above"][data-horizontal="right"] {
+  --x-extension-menu-surface-transform-origin: bottom right;
+}
+.x-nt-bookmark-cascade-level[data-side="right"] {
+  --x-nt-bookmark-cascade-closed-x: -8px;
+  --x-nt-bookmark-cascade-closed-scale-x: 0.88;
+  --x-nt-bookmark-cascade-closed-scale-y: 0.98;
+  --x-extension-menu-surface-transform-origin: left center;
+}
+.x-nt-bookmark-cascade-level[data-side="left"] {
+  --x-nt-bookmark-cascade-closed-x: 8px;
+  --x-nt-bookmark-cascade-closed-scale-x: 0.88;
+  --x-nt-bookmark-cascade-closed-scale-y: 0.98;
+  --x-extension-menu-surface-transform-origin: right center;
+}
+.x-nt-bookmark-cascade-submenu {
+  margin-top: 0;
+}
+.x-nt-bookmark-cascade-title {
+  flex: 0 0 auto;
+  max-width: 100%;
+  padding: 4px 8px 2px;
+  overflow: hidden;
+  box-sizing: border-box;
+  color: var(--x-nt-cascade-quiet-ink);
+  font-size: var(--lumno-font-size-xs);
+  font-weight: 600;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: default;
+  user-select: none;
+}
+.x-nt-bookmark-cascade-row {
+  position: relative;
+  flex: 0 0 auto;
+  width: 100%;
+  min-height: 32px;
+}
+.x-nt-bookmark-cascade-row[data-bookmark-insert-position="before"]::after,
+.x-nt-bookmark-cascade-row[data-bookmark-insert-position="after"]::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  height: 2px;
+  border-radius: var(--lumno-radius-pill);
+  background: var(--x-nt-insert-indicator, #7a8491);
+  pointer-events: none;
+  z-index: 5;
+}
+.x-nt-bookmark-cascade-row[data-bookmark-insert-position="before"]::after {
+  top: -3px;
+}
+.x-nt-bookmark-cascade-row[data-bookmark-insert-position="after"]::after {
+  bottom: -3px;
+}
+/* The marked row leans away from the gap; keep its line in the gap's middle. */
+.x-nt-bookmark-cascade-row[data-bookmark-insert-position="before"][data-drag-gap="after"]::after {
+  top: calc(-3px - var(--x-nt-drag-gap-shift-y, 3px));
+}
+.x-nt-bookmark-cascade-row[data-bookmark-insert-position="after"][data-drag-gap="before"]::after {
+  bottom: calc(-3px - var(--x-nt-drag-gap-shift-y, 3px));
+}
+.x-nt-bookmark-cascade-item {
+  all: unset;
+  flex: 0 0 auto;
+  width: 100%;
+  min-height: 32px;
+  padding: 0 8px;
+  border-radius: var(--lumno-radius-md);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  color: var(--x-nt-cascade-item-ink);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--lumno-duration-2xs) ease;
+}
+.x-nt-bookmark-cascade-item[data-bookmark-draggable="true"] {
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.x-nt-bookmark-cascade-menu[data-drag-mode="true"] .x-nt-bookmark-cascade-item,
+.x-nt-bookmark-cascade-item[data-bookmark-dragging="true"] {
+  cursor: grabbing;
+}
+.x-nt-bookmark-cascade-item[data-bookmark-dragging="true"]:not(.x-nt-bookmark-cascade-drag-preview) {
+  opacity: 0.38;
+}
+.x-nt-bookmark-cascade-drag-preview {
+  position: fixed;
+  z-index: var(--lumno-z-drag-ghost);
+  margin: 0;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgb(var(--lumno-color-accent-rgb) / 0.34);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.18);
+  pointer-events: none;
+  opacity: 0.98;
+  transition: none !important;
+}
+.x-nt-bookmark-cascade-copy-trigger {
+  all: unset;
+  position: absolute;
+  right: 3px;
+  top: 50%;
+  margin-top: -14px;
+  z-index: 3;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--lumno-radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  color: var(--x-nt-cascade-copy-ink);
+  opacity: 0;
+  pointer-events: none;
+  cursor: pointer;
+  transition:
+    opacity var(--lumno-duration-xs) ease,
+    color var(--lumno-duration-xs) ease;
+}
+.x-nt-bookmark-cascade-row:not(.x-nt-bookmark-cascade-row--folder):hover .x-nt-bookmark-cascade-copy-trigger,
+.x-nt-bookmark-cascade-copy-trigger:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.x-nt-bookmark-cascade-copy-trigger:hover,
+.x-nt-bookmark-cascade-copy-trigger:focus-visible {
+  color: var(--x-nt-cascade-copy-hover-ink);
+}
+.x-nt-bookmark-cascade-row:has(> .x-nt-bookmark-cascade-item[data-bookmark-dragging="true"])
+  > .x-nt-bookmark-cascade-copy-trigger {
+  opacity: 0;
+  pointer-events: none;
+}
+.x-nt-bookmark-cascade-row:not(.x-nt-bookmark-cascade-row--folder):hover .x-nt-bookmark-cascade-label,
+.x-nt-bookmark-cascade-row:has(> .x-nt-bookmark-cascade-copy-trigger:focus-visible) .x-nt-bookmark-cascade-label {
+  box-sizing: border-box;
+  padding-right: 32px;
+}
+.x-nt-bookmark-cascade-item:hover,
+.x-nt-bookmark-cascade-item:focus-visible,
+.x-nt-bookmark-cascade-item[data-active="true"],
+.x-nt-bookmark-cascade-item[data-bookmark-context-menu-open="true"] {
+  background: var(--x-nt-cascade-item-hover-bg);
+  color: var(--x-nt-cascade-item-hover-ink);
+}
+.x-nt-bookmark-cascade-item[data-hover-suppressed="true"]:hover:not([data-active="true"]) {
+  background: transparent;
+  color: var(--x-nt-cascade-item-ink);
+}
+.x-nt-bookmark-cascade-item--folder[data-bookmark-drop-target="true"] {
+  color: var(--x-nt-cascade-drop-ink);
+  background: var(--x-nt-cascade-drop-bg);
+  box-shadow: inset 0 0 0 1px var(--x-nt-cascade-drop-ring);
+}
+.x-nt-bookmark-cascade-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--lumno-radius-xs);
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+body[data-theme="dark"] .x-nt-bookmark-cascade-icon[data-builtin-monochrome="true"],
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-bookmark-cascade-icon[data-builtin-monochrome="true"],
+body[data-glass-style] .x-nt-bookmark-cascade-icon[data-builtin-monochrome="true"][data-glass-ink-theme="dark"] {
+  filter: invert(1);
+}
+.x-nt-bookmark-cascade-icon--folder {
+  width: 22px;
+  height: 22px;
+  border-radius: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  color: var(--x-nt-cascade-icon-ink);
+}
+.x-nt-bookmark-cascade-icon--folder svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.x-nt-bookmark-cascade-icon--folder .x-nt-folder-shape--hover {
+  opacity: 0;
+  pointer-events: none;
+}
+.x-nt-bookmark-cascade-label {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--lumno-font-size-lg);
+  font-weight: 500;
+  line-height: 1.25;
+}
+.x-nt-bookmark-cascade-arrow {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: #94a3b8;
+}
+.x-nt-bookmark-cascade-empty {
+  min-height: 32px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  color: var(--x-nt-cascade-quiet-ink);
+  font-size: var(--lumno-font-size-sm);
+  font-weight: 500;
+  box-sizing: border-box;
+}
+:root:not([data-lumno-scrollbars="overlay"]) body[data-theme="dark"] .x-nt-bookmark-cascade-content::-webkit-scrollbar-thumb,
+:root:not([data-lumno-scrollbars="overlay"]) body[data-theme="dark"] .x-nt-shortcuts-section[data-shortcuts-scrollable="true"]::-webkit-scrollbar-thumb,
+:root:not([data-lumno-scrollbars="overlay"]) body[data-theme="dark"] #_x_extension_newtab_bottom_dock_scroller_2024_unique_::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.58);
+}
+:root:not([data-lumno-scrollbars="overlay"]) body[data-theme="dark"] .x-nt-bookmark-cascade-content::-webkit-scrollbar-thumb:hover,
+:root:not([data-lumno-scrollbars="overlay"]) body[data-theme="dark"] .x-nt-shortcuts-section[data-shortcuts-scrollable="true"]::-webkit-scrollbar-thumb:hover,
+:root:not([data-lumno-scrollbars="overlay"]) body[data-theme="dark"] #_x_extension_newtab_bottom_dock_scroller_2024_unique_::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(203, 213, 225, 0.7);
+}
+/* macOS overlay bars can't be colored, but they follow color-scheme: light
+   ink means a dark wallpaper under the track, so ask for a light thumb. */
+:root[data-lumno-scrollbars="overlay"] #_x_extension_newtab_bottom_dock_scroller_2024_unique_[data-wallpaper-ink="light"] {
+  color-scheme: dark;
+}
+:root[data-lumno-scrollbars="overlay"] #_x_extension_newtab_bottom_dock_scroller_2024_unique_[data-wallpaper-ink="dark"] {
+  color-scheme: light;
+}
+/* Over a wallpaper the thumb takes the ink sampled under its track, as the
+   section headings and pager beside it do. A hairline in the opposite tone
+   disappears on even ground and only separates the thumb from busy texture. */
+#_x_extension_newtab_bottom_dock_scroller_2024_unique_[data-wallpaper-ink="dark"] {
+  --x-nt-bottom-dock-scrollbar-hairline: rgb(255 255 255 / 42%);
+}
+#_x_extension_newtab_bottom_dock_scroller_2024_unique_[data-wallpaper-ink="light"] {
+  --x-nt-bottom-dock-scrollbar-hairline: rgb(15 23 42 / 26%);
+}
+:root:not([data-lumno-scrollbars="overlay"]) body #_x_extension_newtab_bottom_dock_scroller_2024_unique_[data-wallpaper-ink]::-webkit-scrollbar-thumb {
+  background-color: var(--x-nt-wallpaper-adaptive-ink-muted);
+  box-shadow: inset 0 0 0 1px var(--x-nt-bottom-dock-scrollbar-hairline);
+}
+:root:not([data-lumno-scrollbars="overlay"]) body #_x_extension_newtab_bottom_dock_scroller_2024_unique_[data-wallpaper-ink]::-webkit-scrollbar-thumb:hover {
+  background-color: var(--x-nt-wallpaper-adaptive-ink);
+}
+body[data-theme="dark"] .x-nt-bookmark-cascade-debug-label,
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-bookmark-cascade-debug-label,
+body[data-glass-style] .x-nt-bookmark-cascade-debug-label[data-glass-ink-theme="dark"] {
+  color: #bfdbfe;
+  background: rgba(15, 23, 42, 0.92);
+  border-color: rgba(96, 165, 250, 0.44);
+  box-shadow: 0 8px 18px rgba(2, 6, 23, 0.32);
+}
+body[data-theme="dark"] .x-nt-bookmark-cascade-drag-preview,
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-bookmark-cascade-drag-preview,
+body[data-glass-style] .x-nt-bookmark-cascade-drag-preview[data-glass-ink-theme="dark"] {
+  background: rgba(17, 24, 39, 0.98);
+  border-color: rgba(96, 165, 250, 0.44);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.4);
+}
+body[data-theme="dark"] .x-nt-bookmark-card-drag-preview,
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-bookmark-card-drag-preview,
+body[data-glass-style] .x-nt-bookmark-card-drag-preview[data-glass-ink-theme="dark"] {
+  background: rgba(17, 24, 39, 0.96);
+  border-color: rgba(96, 165, 250, 0.48);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.42);
+}

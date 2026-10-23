@@ -1,0 +1,738 @@
+/* The suggestion list: icon sizes, rows, titles and URLs, help center
+   groups, action tags and buttons, and the tab rank debug view. */
+
+.ri-icon {
+  width: var(--ri-size, 16px);
+  height: var(--ri-size, 16px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-size: var(--ri-size, 16px);
+  flex-shrink: 0;
+}
+.ri-size-8 { --ri-size: 8px; }
+.ri-size-12 { --ri-size: 12px; }
+.ri-size-16 { --ri-size: 16px; }
+.ri-size-20 { --ri-size: 20px; }
+.ri-size-24 { --ri-size: 24px; }
+.x-nt-suggestion-item {
+  all: unset;
+  --x-nt-suggestion-action-height: 26px;
+  --x-nt-suggestion-key-height: 18px;
+  --x-nt-suggestion-action-button-start: 10px;
+  --x-nt-suggestion-action-icon-end: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  height: var(--x-nt-suggestion-row-height, 52px);
+  min-height: var(--x-nt-suggestion-row-height, 52px);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--x-nt-search-result-radius, 13px);
+  cursor: pointer;
+  transition: background-color var(--lumno-duration-lg) ease;
+  box-sizing: border-box;
+  margin: 0 0 var(--x-nt-suggestion-row-gap, 6px) 0;
+  line-height: 1.5;
+  text-decoration: none;
+  list-style: none;
+  outline: none;
+  color: inherit;
+  font-size: 100%;
+  font: inherit;
+  vertical-align: baseline;
+}
+.x-nt-suggestion-item[data-last="true"] {
+  margin-bottom: 0;
+}
+.x-nt-suggestion-item[data-row-state="active"] {
+  background: var(--x-nt-suggestion-active-bg, var(--x-nt-hover-bg, #F3F4F6));
+}
+.x-nt-suggestion-item[data-row-state="hover"] {
+  background: var(--x-nt-suggestion-hover-bg, var(--x-nt-hover-bg, #F3F4F6));
+}
+.x-nt-suggestion-left {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  text-decoration: none;
+  list-style: none;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font-size: 100%;
+  font: inherit;
+  vertical-align: baseline;
+  transition: gap var(--lumno-duration-sm) ease, transform var(--lumno-duration-sm) ease;
+}
+.x-nt-suggestion-icon-slot {
+  all: unset;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  flex-shrink: 0;
+  border-radius: var(--lumno-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  text-decoration: none;
+  list-style: none;
+  outline: none;
+  background: transparent;
+  transition: background-color var(--lumno-duration-lg) ease;
+  color: var(--x-nt-subtext, #6B7280);
+  font-size: 100%;
+  font: inherit;
+  vertical-align: baseline;
+  position: relative;
+  overflow: visible;
+}
+.x-nt-suggestion-number-shortcut {
+  all: unset;
+  position: absolute;
+  inset-block-start: -6px;
+  inset-inline-end: -7px;
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  box-sizing: border-box;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: #111827;
+  color: #FFFFFF;
+  font: 600 11px/1 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  pointer-events: none;
+  z-index: 2;
+}
+body[data-theme="dark"] .x-nt-suggestion-number-shortcut,
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-suggestion-number-shortcut,
+body[data-glass-style] .x-nt-suggestion-number-shortcut[data-glass-ink-theme="dark"] {
+  background: #FFFFFF;
+  color: #0F172A;
+}
+#_x_extension_newtab_suggestions_container_2024_unique_[data-number-shortcuts-active="true"] .x-nt-suggestion-number-shortcut {
+  display: inline-flex;
+}
+.x-nt-suggestion-text {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  overflow: visible;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0 8px 0 0;
+  line-height: 1;
+  text-decoration: none;
+  list-style: none;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font-size: 100%;
+  font: inherit;
+  vertical-align: baseline;
+  transition: gap var(--lumno-duration-sm) ease, transform var(--lumno-duration-sm) ease;
+}
+.x-nt-suggestion-title {
+  all: unset;
+  color: var(--x-nt-text, #111827);
+  font-size: var(--lumno-font-size-lg);
+  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  line-height: 1.5;
+  text-decoration: none;
+  list-style: none;
+  outline: none;
+  background: transparent;
+  display: inline-block;
+  vertical-align: baseline;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.x-nt-suggestion-item[data-row-state="active"] .x-nt-suggestion-title {
+  font-weight: 500;
+}
+.x-nt-suggestion-item[data-command-row="true"] {
+  height: var(--x-nt-suggestion-row-height, 52px);
+  min-height: var(--x-nt-suggestion-row-height, 52px);
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+.x-nt-suggestion-item[data-command-row="true"] .x-nt-suggestion-text {
+  align-items: flex-start;
+  justify-content: center;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+}
+.x-nt-suggestion-command {
+  all: unset;
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--x-nt-text, #111827);
+  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: var(--lumno-font-size-lg);
+  font-weight: 500;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+.x-nt-suggestion-item[data-row-state="active"] .x-nt-suggestion-command {
+  font-weight: 600;
+}
+.x-nt-suggestion-command-description,
+.x-nt-suggestion-item[data-row-state="active"] .x-nt-suggestion-command-description {
+  color: var(--x-nt-subtext, #6B7280);
+  font-size: var(--lumno-font-size-xs);
+  font-weight: 400;
+  line-height: 15px;
+}
+.x-nt-empty-state {
+  height: var(--x-nt-suggestion-row-height, 52px);
+  min-height: var(--x-nt-suggestion-row-height, 52px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  box-sizing: border-box;
+  color: var(--x-nt-subtext, #6B7280);
+  font-size: var(--lumno-font-size-md);
+  text-align: center;
+}
+.x-nt-suggestion-mark {
+  background: var(--x-ext-mark-bg, #CFE8FF);
+  color: var(--x-ext-mark-text, #1E3A8A);
+  padding: 0 1px;
+  border-radius: 2px;
+  line-height: inherit;
+  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+.x-nt-suggestion-reason {
+  all: unset;
+  color: var(--x-nt-subtext, #6B7280);
+  font-size: var(--lumno-font-size-xs);
+  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  display: inline-block;
+  vertical-align: middle;
+}
+/* Help center groups: "recommended reading", or ways to ask when nothing matched. */
+.x-nt-suggestion-caption {
+  all: unset;
+  display: block;
+  padding: 6px 16px 4px;
+  color: var(--x-nt-subtext, #6B7280);
+  font-size: var(--lumno-font-size-xs);
+  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.4;
+}
+.x-nt-suggestion-bookmark-path {
+  all: unset;
+  color: var(--x-nt-link, rgb(var(--lumno-color-accent-rgb)));
+  font-size: var(--lumno-font-size-sm);
+  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  line-height: 1.2;
+  display: inline-block;
+  vertical-align: middle;
+}
+/* A title long enough to fill the row still leaves some of the address or passage beside it.
+   It does not shrink otherwise: its share of the line's shrinking is a fraction of a pixel,
+   enough to draw an ellipsis but too little to count as truncated for its tooltip. */
+.x-nt-suggestion-title:has(~ .x-nt-suggestion-url-line) {
+  flex-shrink: 0;
+  max-width: 70%;
+}
+.x-nt-suggestion-url-line {
+  all: unset;
+  color: var(--x-nt-link, rgb(var(--lumno-color-accent-rgb)));
+  font-size: var(--lumno-font-size-sm);
+  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  text-decoration: none;
+  display: inline-block;
+  /* Takes the room the title and tags leave, and gives up its own first when the row is tight. */
+  flex: 0 1000 auto;
+  min-width: 0;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+.x-nt-suggestion-right {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0;
+  flex-shrink: 0;
+  min-height: var(--x-nt-suggestion-action-height, 26px);
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  text-decoration: none;
+  list-style: none;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font-size: 100%;
+  font: inherit;
+  vertical-align: baseline;
+}
+.x-nt-suggestion-right[data-action-column="true"] {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: min(56%, var(--x-nt-suggestion-action-column-width, 200px));
+  justify-content: flex-end;
+}
+.x-nt-suggestion-inline-icon {
+  all: unset;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  text-decoration: none;
+  list-style: none;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font-size: 100%;
+  font: inherit;
+  vertical-align: baseline;
+}
+.x-nt-suggestion-inline-icon[data-tone="subtext"] {
+  color: var(--x-nt-subtext, #6B7280);
+}
+.x-nt-suggestion-favicon {
+  all: unset;
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  text-decoration: none;
+  list-style: none;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font-size: 100%;
+  font: inherit;
+  vertical-align: baseline;
+  display: block;
+}
+.x-nt-suggestion-favicon[data-object-fit="contain"] {
+  object-fit: contain;
+}
+.x-nt-suggestion-icon-slot[data-emphasis="true"][data-favicon="false"] {
+  background-color: #FFFFFF;
+}
+body[data-theme="dark"] .x-nt-suggestion-item[data-row-state="active"] .x-nt-suggestion-icon-slot[data-favicon="true"],
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-suggestion-item[data-row-state="active"] .x-nt-suggestion-icon-slot[data-favicon="true"],
+body[data-glass-style] .x-nt-suggestion-item[data-row-state="active"][data-glass-ink-theme="dark"] .x-nt-suggestion-icon-slot[data-favicon="true"] {
+  background-color: #FFFFFF;
+}
+body[data-theme="dark"] .x-nt-suggestion-icon-slot[data-emphasis="true"][data-favicon="false"],
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-suggestion-icon-slot[data-emphasis="true"][data-favicon="false"],
+body[data-glass-style] .x-nt-suggestion-icon-slot[data-emphasis="true"][data-favicon="false"][data-glass-ink-theme="dark"] {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+/* A favicon slot showing the fallback glyph is an icon, not a favicon: the selected row lifts it
+   onto the icon tile instead of the white favicon backing, which the light glyph vanishes into. */
+.x-nt-suggestion-item[data-row-state="active"] .x-nt-suggestion-icon-slot[data-favicon="true"]:has(> .x-nt-favicon-fallback[data-visible="true"]) {
+  background-color: #FFFFFF;
+}
+body[data-theme="dark"] .x-nt-suggestion-item[data-row-state="active"] .x-nt-suggestion-icon-slot[data-favicon="true"]:has(> .x-nt-favicon-fallback[data-visible="true"]),
+body[data-glass-style] [data-glass-ink-theme="dark"] .x-nt-suggestion-item[data-row-state="active"] .x-nt-suggestion-icon-slot[data-favicon="true"]:has(> .x-nt-favicon-fallback[data-visible="true"]),
+body[data-glass-style] .x-nt-suggestion-item[data-row-state="active"][data-glass-ink-theme="dark"] .x-nt-suggestion-icon-slot[data-favicon="true"]:has(> .x-nt-favicon-fallback[data-visible="true"]) {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+.x-nt-suggestion-action-tags {
+  all: unset;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--x-nt-suggestion-action-height, 26px);
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  text-decoration: none;
+  list-style: none;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font-size: 100%;
+  font: inherit;
+  vertical-align: baseline;
+  flex-shrink: 0;
+}
+.x-nt-suggestion-action-tags[data-visible="true"] {
+  display: inline-flex;
+}
+.x-nt-suggestion-action-tag {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  background: var(--x-ext-tag-bg, #EEF6FF);
+  color: var(--x-ext-tag-text, #1E3A8A);
+  border: 0;
+  height: auto;
+  padding: 4px 8px;
+  border-radius: var(--lumno-radius-md);
+  font-size: var(--lumno-font-size-xs);
+  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1;
+  text-decoration: none;
+  list-style: none;
+  outline: none;
+  box-sizing: border-box;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.x-nt-suggestion-action-tag[data-action="search"] {
+  justify-content: center;
+  gap: 0;
+  padding: 4px 8px;
+}
+.x-nt-suggestion-item[data-simple-mode="true"] .x-nt-suggestion-action-tag {
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--x-nt-subtext, #6B7280);
+}
+.x-nt-suggestion-action-tag__label {
+  all: unset;
+  font-weight: 500;
+  line-height: 1.35;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.x-nt-suggestion-right[data-action-column="true"] .x-nt-suggestion-action-tags[data-visible="true"],
+.x-nt-suggestion-right[data-action-column="true"] .x-nt-suggestion-action-button[data-visible="true"] {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+.x-nt-suggestion-right[data-action-column="true"] .x-nt-suggestion-action-tags[data-visible="true"] .x-nt-suggestion-action-tag {
+  max-width: 100%;
+}
+.x-nt-suggestion-right[data-action-column="true"] .x-nt-suggestion-action-button,
+.x-nt-suggestion-right[data-action-column="true"] .x-nt-tab-switch-button {
+  justify-content: flex-end;
+}
+.x-nt-suggestion-action-button {
+  all: unset;
+  background: var(--x-nt-suggestion-action-button-bg, transparent);
+  color: var(--x-nt-suggestion-action-button-text, var(--x-nt-subtext, #9CA3AF));
+  font-size: var(--lumno-font-size-sm);
+  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  cursor: pointer;
+  transition: background-color var(--lumno-duration-lg) ease, border-color var(--lumno-duration-lg) ease, color var(--lumno-duration-lg) ease, transform var(--lumno-duration-sm) ease;
+  box-sizing: border-box;
+  margin: 0;
+  line-height: 1;
+  text-decoration: none;
+  list-style: none;
+  outline: none;
+  display: none;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  vertical-align: baseline;
+  max-width: 100%;
+  min-width: 0;
+  white-space: nowrap;
+}
+.x-nt-suggestion-action-button[data-visible="true"] {
+  display: inline-flex;
+}
+.x-nt-suggestion-visit-button {
+  border: 1px solid var(--x-nt-suggestion-action-button-border, transparent);
+  border-radius: 16px;
+  height: var(--x-nt-suggestion-action-height, 26px);
+  padding: 0 var(--x-nt-suggestion-action-icon-end, 7px) 0 var(--x-nt-suggestion-action-button-start, 10px);
+}
+.x-nt-suggestion-item[data-simple-mode="false"] .x-nt-suggestion-visit-button {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  justify-content: flex-end;
+  text-align: right;
+}
+.x-nt-suggestion-action-button[data-visible="true"]:hover {
+  transform: none;
+}
+.x-nt-suggestion-action-button__label,
+.x-nt-suggestion-action-button__icon {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+.x-nt-suggestion-action-button__label {
+  line-height: 1.35;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.x-nt-suggestion-action-button__icon {
+  flex: 0 0 auto;
+}
+.x-nt-suggestion-action-button .ri-icon {
+  flex-shrink: 0;
+  pointer-events: none;
+}
+.x-nt-suggestion-tag {
+  all: unset;
+  background: var(--x-nt-suggestion-tag-bg, var(--x-nt-tag-bg, #F3F4F6));
+  color: var(--x-nt-suggestion-tag-text, var(--x-nt-tag-text, #667085));
+  font-size: var(--lumno-font-size-2xs);
+  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  padding: 4px 6px;
+  border-radius: var(--lumno-radius-md);
+  box-sizing: border-box;
+  line-height: 1.2;
+  text-decoration: none;
+  list-style: none;
+  outline: none;
+  border: 1px solid var(--x-nt-suggestion-tag-border, transparent);
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.x-nt-suggestion-utility-slot {
+  all: unset;
+  width: 0;
+  height: var(--x-nt-suggestion-action-height, 26px);
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  line-height: 1;
+  text-decoration: none;
+  list-style: none;
+  outline: none;
+  background: transparent;
+  vertical-align: baseline;
+  opacity: 0;
+  pointer-events: none;
+  transition: width var(--lumno-duration-md) ease, margin-left var(--lumno-duration-md) ease, opacity var(--lumno-duration-sm) ease;
+}
+.x-nt-suggestion-utility-slot[data-visible="true"] {
+  width: 22px;
+  margin-left: 3px;
+  opacity: 1;
+  pointer-events: auto;
+}
+.x-nt-suggestion-utility-slot[data-visible="true"][data-leading="true"] {
+  margin-left: 10px;
+}
+.x-nt-suggestion-utility-button {
+  all: unset;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  border-radius: 7px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  text-decoration: none;
+  list-style: none;
+  outline: none;
+  background: transparent;
+  color: var(--x-nt-subtext, #6B7280);
+  display: inline-flex;
+  visibility: hidden;
+  pointer-events: none;
+  opacity: 0;
+  align-items: center;
+  justify-content: center;
+  font-size: 0;
+  cursor: pointer;
+  transform: translateX(4px);
+  transition: background-color var(--lumno-duration-xs) ease, border-color var(--lumno-duration-xs) ease, color var(--lumno-duration-xs) ease, transform var(--lumno-duration-sm) ease, opacity var(--lumno-duration-sm) ease, visibility var(--lumno-duration-sm) ease;
+  vertical-align: baseline;
+  border: 1px solid transparent;
+}
+.x-nt-suggestion-utility-button[data-visible="true"] {
+  visibility: visible;
+  pointer-events: auto;
+  opacity: 1;
+  transform: translateX(0);
+  color: var(--x-nt-suggestion-utility-color, var(--x-nt-subtext, #6B7280));
+  background: var(--x-nt-suggestion-utility-bg, transparent);
+  border-color: var(--x-nt-suggestion-utility-border, transparent);
+}
+.x-nt-suggestion-utility-button[data-hover="true"] {
+  color: var(--x-nt-suggestion-utility-hover-color, var(--x-nt-subtext, #6B7280));
+  background: var(--x-nt-suggestion-utility-hover-bg, transparent);
+  border-color: var(--x-nt-suggestion-utility-hover-border, transparent);
+  transform: none;
+}
+.x-nt-suggestion-utility-button .ri-icon {
+  pointer-events: none;
+  cursor: inherit;
+  transform: none;
+  transition: transform var(--lumno-duration-sm) ease;
+}
+.x-nt-suggestion-utility-button[data-hover="true"] .ri-icon {
+  transform: scale(1.06);
+}
+/* Matches the command bar's result rows: full-strength text color, since their passive
+   borders are soft. */
+.x-nt-suggestion-action-button:focus-visible,
+.x-nt-suggestion-utility-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+.x-nt-tab-switch-button {
+  all: unset;
+  background: transparent;
+  color: var(--x-nt-subtext, #9CA3AF);
+  border: none;
+  border-radius: var(--lumno-radius-sm);
+  font-size: var(--lumno-font-size-sm);
+  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  cursor: pointer;
+  transition: background-color var(--lumno-duration-lg) ease, color var(--lumno-duration-lg) ease;
+  height: var(--x-nt-suggestion-action-height, 26px);
+  padding: 0 var(--x-nt-suggestion-action-icon-end, 7px) 0 var(--x-nt-suggestion-action-button-start, 10px);
+  box-sizing: border-box;
+  margin: 0;
+  line-height: 1;
+  text-decoration: none;
+  list-style: none;
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+  vertical-align: baseline;
+  max-width: 100%;
+  min-width: 0;
+  white-space: nowrap;
+}
+.x-nt-suggestion-item[data-row-state="active"] .x-nt-tab-switch-button {
+  color: var(--x-nt-text, #111827);
+}
+.x-nt-tab-rank-debug {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 1px 6px;
+  border-radius: var(--lumno-radius-pill);
+  color: var(--x-nt-subtext, #6B7280);
+  background: color-mix(in srgb, var(--x-nt-suggestions-bg, rgba(255, 255, 255, 0.96)) 70%, #94A3B8 30%);
+  border: 1px solid color-mix(in srgb, var(--x-nt-border, rgba(0, 0, 0, 0.08)) 75%, #94A3B8 25%);
+  font-size: var(--lumno-font-size-2xs);
+  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.2;
+  white-space: nowrap;
+  vertical-align: baseline;
+  flex-shrink: 0;
+}
+.x-nt-recent-card:hover .x-nt-recent-action,
+.x-nt-recent-card:has(:focus-visible) .x-nt-recent-action,
+.x-nt-recent-card[data-recent-context-menu-open="true"] .x-nt-recent-action {
+  max-width: 64px;
+  padding-left: 6px;
+  opacity: 1;
+}
+.x-nt-recent-card.x-nt-recent-card--rollback .x-nt-recent-action,
+.x-nt-recent-card.x-nt-recent-card--rollback:hover .x-nt-recent-action {
+  max-width: 0;
+  padding-left: 0;
+  opacity: 0;
+}
+.x-nt-bookmark-empty {
+  grid-column: 1 / -1;
+  min-height: inherit;
+  color: var(--x-nt-subtext, #6b7280);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: var(--lumno-font-size-md);
+  font-weight: 500;
+  box-sizing: border-box;
+  user-select: none;
+}
+#_x_extension_newtab_root_2024_unique_ {
+  color: var(--x-nt-text, #111827);
+}
+body[data-lumno-page="newtab"] button:not(:disabled),
+body[data-lumno-page="newtab"] a[href],
+body[data-lumno-page="newtab"] [role="button"]:not([aria-disabled="true"]),
+body[data-lumno-page="newtab"] [role="menuitem"]:not([aria-disabled="true"]),
+body[data-lumno-page="newtab"] [role="option"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+body[data-lumno-page="newtab"] button:disabled,
+body[data-lumno-page="newtab"] [role="button"][aria-disabled="true"],
+body[data-lumno-page="newtab"] [role="menuitem"][aria-disabled="true"],
+body[data-lumno-page="newtab"] [role="option"][aria-disabled="true"] {
+  cursor: not-allowed;
+}

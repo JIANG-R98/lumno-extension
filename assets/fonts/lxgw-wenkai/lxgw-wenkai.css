@@ -1,5 +1,5 @@
 /* LXGW WenKai v1.522 Regular, subset to woff2 for the New Tab quote (SIL OFL 1.1, see OFL.txt).
-   Rebuild with scripts/subset-quote-font.py wenkai. */
+   Rebuild with scripts/build/subset-quote-font.py wenkai. */
 @font-face {
   font-family: "LXGW WenKai";
   src: url("./LXGWWenKai-Regular-primary.woff2") format("woff2");

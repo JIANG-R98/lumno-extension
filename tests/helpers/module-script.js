@@ -1,0 +1,113 @@
+'use strict';
+
+// Runs source modules the way the extension does: bundled into one classic
+// script. Tests that evaluate code in a vm context or a JSDOM window use these
+// instead of reading a module's text, which `import` and `export` keep from
+// running as a script.
+
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const vm = require('vm');
+const { execFileSync } = require('child_process');
+const esbuild = require('esbuild');
+const { BUNDLES } = require('../../scripts/build/bundles');
+
+const repoRoot = path.resolve(__dirname, '..', '..');
+const cache = new Map();
+
+function build(entry, globalName) {
+  const key = `${entry}\0${globalName || ''}`;
+  if (!cache.has(key)) {
+    const result = esbuild.buildSync({
+      absWorkingDir: repoRoot,
+      entryPoints: [entry],
+      bundle: true,
+      format: 'iife',
+      globalName,
+      target: ['chrome110', 'firefox140'],
+      charset: 'utf8',
+      write: false,
+      logLevel: 'silent'
+    });
+    cache.set(key, result.outputFiles[0].text);
+  }
+  return cache.get(key);
+}
+
+function withEntry(name, contents, run) {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'lumno-module-'));
+  const entry = path.join(directory, name);
+  fs.writeFileSync(entry, contents);
+  try {
+    return run(entry);
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+}
+
+// A module with some of the modules it imports replaced by globals of the
+// context it runs in, so a test can hand it fakes: { 'src/x.js': 'GlobalName' }.
+function buildWithStubs(entry, globalName, stubs) {
+  const key = `${entry}\0${globalName || ''}\0${JSON.stringify(stubs)}`;
+  if (!cache.has(key)) {
+    cache.set(key, execFileSync(process.execPath, [
+      path.join(__dirname, 'module-script-build.js'),
+      JSON.stringify({ entry, globalName, stubs })
+    ], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }));
+  }
+  return cache.get(key);
+}
+
+// One module and everything it imports, as a script. With globalName, the
+// script assigns the module's exports to that global; `also` adds exports of
+// the modules it imports, by file: { 'src/x.js': ['name'] }; `stubs` replaces
+// imported modules with context globals: { 'src/x.js': 'GlobalName' }.
+function moduleScript(file, globalName, also, stubs) {
+  if (stubs) {
+    if (also) throw new Error('moduleScript takes also or stubs, not both');
+    return buildWithStubs(path.join(repoRoot, file), globalName, stubs);
+  }
+  if (!also) {
+    return build(path.join(repoRoot, file), globalName);
+  }
+  const key = `${file}\0${globalName}\0${JSON.stringify(also)}`;
+  if (!cache.has(key)) {
+    const lines = [`export * from ${JSON.stringify(path.join(repoRoot, file))};`].concat(
+      Object.entries(also).map(([from, names]) => `export { ${names.join(', ')} } from ${JSON.stringify(path.join(repoRoot, from))};`)
+    );
+    cache.set(key, withEntry('entry.js', lines.join('\n'), (entry) => build(entry, globalName)));
+  }
+  return cache.get(key);
+}
+
+// Runs a module in a vm context and returns its exports. Pass globalName to
+// also leave them on the context under that name; options take also or
+// stubs, as for moduleScript.
+function runModuleInContext(file, context, globalName = '__lumnoTestModule', options = {}) {
+  vm.runInContext(moduleScript(file, globalName, options.also, options.stubs), context, { filename: file });
+  return context[globalName];
+}
+
+// A bundle from scripts/build/bundles.js, as the page or injection list runs
+// it (development build). `expose` leaves the exports of some of its modules
+// on globals, so a test can reach the instances the bundle uses:
+// { 'src/x.js': 'GlobalName' }.
+function bundleScript(name, expose) {
+  const bundle = BUNDLES.find((candidate) => candidate.name === name);
+  if (!bundle) {
+    throw new Error(`No bundle named ${name} in scripts/build/bundles.js`);
+  }
+  const key = `bundle:${name}\0${JSON.stringify(expose || {})}`;
+  if (!cache.has(key)) {
+    const imports = bundle.files.map((file) => `import ${JSON.stringify(path.join(repoRoot, file))};`);
+    Object.entries(expose || {}).forEach(([file, globalName], index) => {
+      imports.push(`import * as exposed${index} from ${JSON.stringify(path.join(repoRoot, file))};`);
+      imports.push(`globalThis.${globalName} = exposed${index};`);
+    });
+    cache.set(key, withEntry(`${name}.js`, imports.join('\n'), (entry) => build(entry)));
+  }
+  return cache.get(key);
+}
+
+module.exports = { bundleScript, moduleScript, runModuleInContext };

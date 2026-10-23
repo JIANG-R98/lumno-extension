@@ -1,3 +1,5 @@
+import * as TOAST from '../shared/ui/toast.js';
+
 (function() {
   if (window.__lumnoPageShortcutToast2026) {
     return;
@@ -7,7 +9,6 @@
   // Toast lives in its own shadow root so page styles cannot reach it.
   const TOAST_HOST_ID = '__lumno_page_shortcut_toast_2026__';
   const TOAST_Z_INDEX = '2147483646';
-  const TOAST = globalThis.LumnoToast;
   const state = {
     host: null,
     element: null,
@@ -57,7 +58,7 @@
     const shadow = host.attachShadow({ mode: 'closed' });
     const stylesheet = document.createElement('link');
     stylesheet.rel = 'stylesheet';
-    stylesheet.href = chrome.runtime.getURL('src/shared/toast.css');
+    stylesheet.href = chrome.runtime.getURL('src/shared/ui/toast.css');
     const element = applyNoTranslate(document.createElement('div'));
     element.className = 'x-lumno-toast';
     element.setAttribute('data-show', 'false');

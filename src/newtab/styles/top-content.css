@@ -1,0 +1,88 @@
+/* The wordmark and clock above the search box, and their entry motion. */
+
+#_x_extension_newtab_wordmark_2026_unique_ > .x-nt-wordmark-content {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  opacity: 0;
+  filter: blur(4px);
+  transform: scale(0.99);
+  transform-origin: 50% 60%;
+  backface-visibility: hidden;
+}
+#_x_extension_newtab_wordmark_2026_unique_ > .x-nt-wordmark-brand {
+  cursor: pointer;
+}
+#_x_extension_newtab_wordmark_2026_unique_ > .x-nt-wordmark-brand:focus-visible {
+  outline: 2px solid var(--lumno-color-focus-ring);
+  outline-offset: 4px;
+  border-radius: var(--lumno-radius-md);
+}
+#_x_extension_newtab_wordmark_2026_unique_ > .x-nt-time-mark {
+  color: var(--x-nt-wordmark-solid-fill, rgb(31 41 55));
+  cursor: default;
+  font-family: "Open Sans", sans-serif;
+  pointer-events: none;
+}
+.x-nt-time-seconds-value {
+  display: inline-block;
+}
+.x-nt-time-seconds-digit {
+  display: inline-block;
+  opacity: 1;
+  transform: none;
+  transform-origin: 50% 55%;
+}
+#_x_extension_newtab_wordmark_2026_unique_[data-enter="done"] .x-nt-time-seconds-digit {
+  animation: _x_nt_time_seconds_soft_swap_2026_unique_ var(--lumno-duration-2xs) cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* Only the size settles: an opacity dip blinks the new seconds each tick, plainly so with light ink
+   on a dark wallpaper. */
+@keyframes _x_nt_time_seconds_soft_swap_2026_unique_ {
+  0% {
+    transform: scale(0.985);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+body[data-nt-ready="1"] #_x_extension_newtab_wordmark_2026_unique_[data-enter="run"] > .x-nt-wordmark-content {
+  animation: _x_nt_wordmark_enter_2026_unique_ 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity, filter;
+}
+body[data-nt-ready="1"] #_x_extension_newtab_wordmark_2026_unique_[data-enter="done"] > .x-nt-wordmark-content {
+  opacity: 1;
+  filter: none;
+  transform: scale(1);
+}
+@keyframes _x_nt_wordmark_enter_2026_unique_ {
+  0% {
+    opacity: 0;
+    filter: blur(4px);
+    transform: scale(0.99);
+  }
+  34% {
+    filter: blur(2px);
+  }
+  58% {
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    filter: none;
+    transform: scale(1);
+  }
+}
+/* Reduced motion: the wordmark is simply there once the page is ready. */
+@media (prefers-reduced-motion: reduce) {
+  body[data-nt-ready="1"] #_x_extension_newtab_wordmark_2026_unique_ > .x-nt-wordmark-content,
+  body[data-nt-ready="1"] #_x_extension_newtab_wordmark_2026_unique_[data-enter="run"] > .x-nt-wordmark-content {
+    animation: none;
+    opacity: 1;
+    filter: none;
+    transform: scale(1);
+    will-change: auto;
+  }
+}

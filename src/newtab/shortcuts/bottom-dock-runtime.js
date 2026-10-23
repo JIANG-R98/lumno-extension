@@ -1,0 +1,105 @@
+// Creates the bottom shortcut dock and the layout motion that moves the
+// page's blocks when the dock, sections or search entry change size.
+import * as LumnoNewtabLayoutMotion from '../layout-motion.js';
+
+function createBottomDockRuntime(deps) {
+  const {
+    NEWTAB_LAYOUT,
+    root,
+    bookmarkSection,
+    suggestionsSurface,
+    suggestionsOutline,
+    getNewtabTopOccupiedInsetPx,
+    NEWTAB_MOBILE_FLOW_BREAKPOINT_PX,
+    shouldAnimateNewtabLayoutShift,
+    applyNewtabWidthMode,
+  } = deps;
+
+  // The page state object shared with newtab.js and the other modules.
+  const pageState = deps.pageState;
+
+  const NEWTAB_DOCK = globalThis.LumnoNewtabDock;
+  // A heading mode menu opens once the mouse rests on the heading, so a pointer passing over
+  // it does not flash the menu, and waits a moment before closing so the pointer can cross
+  // the gap into the menu.
+  const SEARCH_LAYOUT_MIN_TOP_PX = 28;
+  const SEARCH_LAYOUT_MIN_BOTTOM_PX = 20;
+  const SEARCH_LAYOUT_UPSHIFT_RATIO = 0.06;
+  const SEARCH_LAYOUT_UPSHIFT_MIN_PX = 24;
+  const SEARCH_LAYOUT_UPSHIFT_MAX_PX = 80;
+  const SEARCH_LAYOUT_CONTENT_SECTIONS_EXTRA_UPSHIFT_PX = 20;
+  const SEARCH_LAYOUT_EMPTY_SECTIONS_EXTRA_UPSHIFT_PX = 96;
+  const SEARCH_LAYOUT_NARROW_VIEWPORT_MIN_WIDTH_PX = 520;
+  const SEARCH_LAYOUT_NARROW_VIEWPORT_MAX_WIDTH_PX = 1440;
+  const SEARCH_LAYOUT_NARROW_TOP_INSET_PX = 16;
+  const SEARCH_LAYOUT_NARROW_TOP_INSET_TRANSITION_PX = 64;
+  const SEARCH_LAYOUT_SHORT_VIEWPORT_MAX_HEIGHT_PX = 680;
+  const SEARCH_LAYOUT_SHORT_MIN_TOP_PX = 44;
+
+  const bottomDockRuntime = NEWTAB_DOCK.createBottomDockRuntime({
+    documentObj: document,
+    windowObj: window,
+    layoutRuntime: NEWTAB_LAYOUT,
+    root,
+    searchLayer: () => pageState.searchLayer,
+    inputParts: () => pageState.inputParts,
+    topContentContainer: () => pageState.topContentContainer,
+    shortcutSection: () => pageState.shortcutSection,
+    quoteSection: () => pageState.quoteRuntime && pageState.quoteRuntime.element,
+    bookmarkSection,
+    recentSection: pageState.recentSection,
+    suggestionsContainer: pageState.suggestionsContainer,
+    suggestionsSurface,
+    suggestionsOutline,
+    getTopInsetPx: getNewtabTopOccupiedInsetPx,
+    constants: {
+      minTopPx: SEARCH_LAYOUT_MIN_TOP_PX,
+      minBottomPx: SEARCH_LAYOUT_MIN_BOTTOM_PX,
+      upshiftRatio: SEARCH_LAYOUT_UPSHIFT_RATIO,
+      upshiftMinPx: SEARCH_LAYOUT_UPSHIFT_MIN_PX,
+      upshiftMaxPx: SEARCH_LAYOUT_UPSHIFT_MAX_PX,
+      contentSectionsExtraUpshiftPx: SEARCH_LAYOUT_CONTENT_SECTIONS_EXTRA_UPSHIFT_PX,
+      emptySectionsExtraUpshiftPx: SEARCH_LAYOUT_EMPTY_SECTIONS_EXTRA_UPSHIFT_PX,
+      narrowViewportMinWidthPx: SEARCH_LAYOUT_NARROW_VIEWPORT_MIN_WIDTH_PX,
+      narrowViewportMaxWidthPx: SEARCH_LAYOUT_NARROW_VIEWPORT_MAX_WIDTH_PX,
+      narrowTopInsetPx: SEARCH_LAYOUT_NARROW_TOP_INSET_PX,
+      narrowTopInsetTransitionPx: SEARCH_LAYOUT_NARROW_TOP_INSET_TRANSITION_PX,
+      shortViewportMaxHeightPx: SEARCH_LAYOUT_SHORT_VIEWPORT_MAX_HEIGHT_PX,
+      shortMinTopPx: SEARCH_LAYOUT_SHORT_MIN_TOP_PX,
+      mobileFlowBreakpointPx: NEWTAB_MOBILE_FLOW_BREAKPOINT_PX
+    }
+  });
+  const bottomDock = bottomDockRuntime.element;
+  pageState.bottomDockScroller = bottomDockRuntime.scroller;
+  pageState.layoutController = bottomDockRuntime.layoutController;
+  // The dock moves as a whole when its sections slide together.
+  pageState.layoutMotion = LumnoNewtabLayoutMotion.createLayoutMotion({
+    documentObj: document,
+    windowObj: window,
+    getTargets: () => [
+      { key: 'topContent', element: pageState.topContentContainer },
+      { key: 'search', element: root },
+      { key: 'shortcuts', element: pageState.shortcutSection },
+      { key: 'quote', element: pageState.quoteRuntime && pageState.quoteRuntime.element },
+      { key: 'updateNotice', element: pageState.updateNoticeController && pageState.updateNoticeController.element },
+      {
+        key: 'engagementNotice',
+        element: pageState.engagementNoticeController && pageState.engagementNoticeController.element
+      },
+      { key: 'bookmarks', element: bookmarkSection, mover: bottomDock },
+      { key: 'recent', element: pageState.recentSection, mover: bottomDock }
+    ],
+    canAnimate: () => shouldAnimateNewtabLayoutShift() &&
+      !pageState.newtabResizeLayoutLocked &&
+      document.visibilityState === 'visible' &&
+      document.documentElement.getAttribute('data-lumno-motion-effects') !== 'off'
+  });
+  applyNewtabWidthMode();
+
+  return {
+    bottomDockRuntime,
+    bottomDock
+  };
+}
+
+export { createBottomDockRuntime };

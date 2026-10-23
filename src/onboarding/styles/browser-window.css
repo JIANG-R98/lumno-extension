@@ -1,0 +1,224 @@
+/* The browser window mock: surface panels, the rail, the page hero and its
+   lines, and the command palette input. */
+
+.surface-panel {
+  min-width: 0;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius);
+  padding: 14px;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.surface-row {
+  height: 14px;
+  border-radius: var(--lumno-radius-pill);
+  background: var(--page-soft);
+}
+
+.surface-row--1 {
+  width: 88%;
+}
+
+.surface-row--2 {
+  width: 66%;
+}
+
+.surface-row--3 {
+  width: 78%;
+}
+
+.surface-row--4 {
+  width: 48%;
+}
+
+.bookmark-focus-ui {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.browser-window {
+  --onboarding-browser-window-inset: 5%;
+  --onboarding-browser-final-filter: blur(0);
+  position: absolute;
+  left: var(--onboarding-browser-window-inset);
+  top: var(--onboarding-browser-window-inset);
+  width: 176%;
+  height: 162%;
+  border: 1px solid transparent;
+  border-top-color: rgba(255, 255, 255, 0.62);
+  border-left-color: transparent;
+  border-right-color: transparent;
+  border-radius: var(--lumno-radius-md);
+  background: rgba(255, 255, 255, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 30px 90px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  overflow: hidden;
+  opacity: 0;
+  filter: blur(8px);
+  transform: translate3d(0, 18px, 0) scale(0.985);
+  transform-origin: top left;
+  animation: onboarding-browser-enter 680ms cubic-bezier(0.22, 1, 0.36, 1) 80ms both;
+}
+
+.browser-bar {
+  height: 50px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.52);
+  display: grid;
+  grid-template-columns: auto minmax(88px, 0.34fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 0 20px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.browser-window .surface-rail {
+  gap: 10px;
+}
+
+.browser-window .surface-rail-dot {
+  width: 14px;
+  height: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  background: rgba(15, 23, 42, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.64);
+}
+
+.browser-tabs {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.browser-tab {
+  width: 78px;
+  height: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.52);
+  border-radius: var(--lumno-radius-pill);
+  background: rgba(15, 23, 42, 0.07);
+}
+
+.browser-tab--muted {
+  width: 52px;
+  opacity: 0.58;
+}
+
+.browser-address {
+  height: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.56);
+  border-radius: var(--lumno-radius-pill);
+  background: rgba(15, 23, 42, 0.08);
+}
+
+.browser-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.browser-action-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--lumno-radius-pill);
+  background: rgba(15, 23, 42, 0.08);
+}
+
+.browser-page-skeleton {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 0.34fr);
+  align-items: start;
+  gap: 18px;
+  padding: 28px 30px 32px;
+}
+
+.browser-page-main,
+.browser-page-sidebar,
+.browser-page-section {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.browser-page-section {
+  border: 1px solid rgba(255, 255, 255, 0.44);
+  border-radius: var(--lumno-radius-md);
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.browser-page-hero {
+  min-height: 136px;
+  align-content: start;
+}
+
+.browser-page-title {
+  width: 58%;
+  height: 17px;
+  background: rgba(15, 23, 42, 0.08);
+}
+
+.browser-page-line {
+  height: 11px;
+  border-radius: var(--lumno-radius-pill);
+  background: rgba(15, 23, 42, 0.055);
+}
+
+.browser-page-line--wide {
+  width: 88%;
+}
+
+.browser-page-line--mid {
+  width: 66%;
+}
+
+.browser-page-line--short {
+  width: 42%;
+}
+
+.browser-page-row {
+  min-height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: var(--lumno-radius-md);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.browser-page-sidebar .browser-page-section {
+  min-height: 92px;
+}
+
+.command-palette {
+  position: absolute;
+  left: 11%;
+  right: 11%;
+  top: 28%;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: var(--lumno-radius-md);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.16);
+  backdrop-filter: blur(18px) saturate(145%);
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+  overflow: hidden;
+}
+
+.command-input {
+  height: 58px;
+  border-bottom: 1px solid rgba(17, 24, 39, 0.07);
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+}
+
+.command-input-line {
+  height: 13px;
+  border-radius: var(--lumno-radius-pill);
+  background: rgba(17, 24, 39, 0.09);
+}

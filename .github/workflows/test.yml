@@ -23,12 +23,12 @@ jobs:
       # Two commits deep, so a pull request's merge commit has its base
       # (HEAD^1) for the bundle growth check.
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 2
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -57,19 +57,21 @@ jobs:
             echo "LUMNO_BUNDLE_BASE=$BEFORE_SHA" >> "$GITHUB_ENV"
           fi
 
+      # The React bundles are build output, not committed, so the base's are
+      # measured by building it in a worktree of its own.
+      - name: Build the base's React bundles
+        if: ${{ env.LUMNO_BUNDLE_BASE != '' }}
+        shell: bash
+        run: |
+          base_dir="$RUNNER_TEMP/bundle-base"
+          git worktree add --detach "$base_dir" "$LUMNO_BUNDLE_BASE"
+          if (cd "$base_dir" && npm ci --ignore-scripts --no-audit --no-fund && npm run build:react); then
+            echo "LUMNO_BUNDLE_BASE_DIR=$base_dir" >> "$GITHUB_ENV"
+          else
+            echo "::warning::Could not build the React bundles of $LUMNO_BUNDLE_BASE; only the bundle ceilings are checked."
+          fi
+
       # Builds the React bundles once, runs both test suites, then the static
       # checks (the same ones npm run check runs after its own build).
       - name: Run tests and checks
         run: npm run verify
-
-      - name: Verify generated React bundles are committed
-        shell: bash
-        run: |
-          generated_changes="$(git status --short --untracked-files=all -- src/react)"
-          if [[ -n "$generated_changes" ]]; then
-            echo "::error title=React bundles are stale::Run npm run build:react and commit every generated change under src/react."
-            echo "Generated React bundle changes:"
-            echo "$generated_changes"
-            git diff --stat -- src/react
-            exit 1
-          fi

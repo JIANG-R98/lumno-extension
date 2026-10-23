@@ -1,0 +1,88 @@
+// The style section: the glass material and its theme.
+import { SectionTrigger, InfoButton, PanelSelect } from './panel-controls';
+import { ref, SegmentedChoice } from './panel-primitives';
+import { collapsible, GLASS_STYLE_SELECT_ID } from './panel-model';
+import type { WallpaperPanelContext } from './use-wallpaper-panel';
+
+export function StyleSection({ panel }: { panel: WallpaperPanelContext }) {
+  const {
+    arrowIcon,
+    styleExpanded,
+    setStyleExpanded,
+    glassStyle,
+    actions,
+    infoIcon,
+    documentObj,
+    registerSelect,
+    state
+  } = panel;
+  return (
+    <div className="x-nt-wallpaper-section">
+      <div className="x-nt-wallpaper-panel-header">
+        <SectionTrigger
+          arrowIcon={arrowIcon}
+          bodyId="_x_extension_newtab_style_section_body_2026_unique_"
+          expanded={styleExpanded}
+          onToggle={() => setStyleExpanded(!styleExpanded)}
+          title={glassStyle.sectionTitle}
+          titleRef="styleSectionTitle"
+          triggerRef="styleSectionTrigger"
+        />
+      </div>
+      <div
+        {...ref('styleSectionBody')}
+        {...collapsible(styleExpanded)}
+        className="x-nt-panel-section-body x-nt-panel-collapsible"
+        id="_x_extension_newtab_style_section_body_2026_unique_"
+      >
+        <div className="x-nt-appearance-setting-row">
+          <span className="x-nt-appearance-setting-title-group">
+            <span {...ref('glassStyleTitle')} className="x-nt-appearance-setting-title">
+              {glassStyle.title}
+            </span>
+            <InfoButton
+              actions={actions}
+              icon={infoIcon}
+              label={glassStyle.title}
+              name="glassStyleInfoButton"
+              tooltip={glassStyle.infoTooltip}
+            />
+          </span>
+          <PanelSelect
+            documentObj={documentObj}
+            hostRef="glassStyleSelectHost"
+            id={GLASS_STYLE_SELECT_ID}
+            registerControls={registerSelect}
+            select={{
+              ariaLabel: glassStyle.ariaLabel,
+              onChange: actions.setGlassStyle,
+              options: glassStyle.options,
+              value: glassStyle.value
+            }}
+          />
+        </div>
+        <div
+          {...ref('glassThemeRow')}
+          {...collapsible(glassStyle.theme.visible)}
+          className="x-nt-appearance-setting-row x-nt-panel-collapsible"
+        >
+          <span {...ref('glassThemeTitle')} className="x-nt-appearance-setting-title">
+            {glassStyle.theme.title}
+          </span>
+          <SegmentedChoice
+            buttonClassName="x-nt-segmented-tab x-nt-wallpaper-tab"
+            className="x-nt-wallpaper-tabs x-nt-row-tabs"
+            indicatorClassName="x-nt-wallpaper-tabs-indicator"
+            indicatorRef="glassThemeIndicator"
+            name="glassThemeTabs"
+            onSelect={actions.selectGlassTheme}
+            role="group"
+            segment={glassStyle.theme.tabs}
+            valueAttribute="data-newtab-glass-theme"
+            visible={state.open && styleExpanded && glassStyle.theme.visible}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}

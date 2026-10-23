@@ -1,3 +1,5 @@
+import * as SHORTCUT_KEY_MATCHER from '../shared/shortcut-key-matcher.js';
+
 (function() {
   const RUNTIME_KEY = '_x_extension_shortcut_key_observer_2026_unique_';
   const previousRuntime = window[RUNTIME_KEY];
@@ -33,7 +35,6 @@
   // visibilitychange that arrive together on a tab switch into one request.
   const SHOW_SEARCH_SHORTCUT_REFRESH_MIN_INTERVAL_MS = 2000;
   const RELEASE_REPLAY_WINDOW_MS = 5000;
-  const SHORTCUT_KEY_MATCHER = globalThis.LumnoShortcutKeyMatcher;
   let showSearchShortcutRaw = '';
   let showSearchShortcutSpec = null;
   let showSearchShortcutRefreshedAt = 0;

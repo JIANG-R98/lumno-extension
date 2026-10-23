@@ -1,3 +1,6 @@
+import * as LumnoSettings from '../shared/settings.js';
+import * as LumnoNewtabFocusResume from './focus-resume.js';
+
 (function() {
   const locationUrl = new URL(window.location.href);
   // Firefox marks its swapped-in tab with #focus (see swapNewtabForFocus).
@@ -7,7 +10,7 @@
       documentElement.setAttribute('data-nt-focus-route', 'true');
       // When the search shortcut reloaded the page, keep the old frame up
       // until the search it carries is back on screen.
-      const focusResume = globalThis.LumnoNewtabFocusResume;
+      const focusResume = LumnoNewtabFocusResume;
       if (focusResume) {
         focusResume.prepareResumeLoad();
       }
@@ -20,7 +23,7 @@
     documentElement.setAttribute('data-nt-focus-route-pending', 'true');
   }
 
-  const settings = globalThis.LumnoSettings;
+  const settings = LumnoSettings;
   const storageKey = settings.NEWTAB_INPUT_AUTO_FOCUS_ENABLED_STORAGE_KEY ||
     '_x_extension_newtab_input_auto_focus_enabled_2026_unique_';
   const normalizeEnabled = settings.normalizeNewtabInputAutoFocusEnabled;
