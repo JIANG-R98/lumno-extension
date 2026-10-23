@@ -1,12 +1,11 @@
 const assert = require('assert');
-const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 const folderIcon = require('../../src/newtab/bookmarks/bookmark-folder-icon.js');
 const { createNewtabPage } = require('../helpers/newtab-page');
 const { getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
-const repoRoot = path.resolve(__dirname, '..', '..');
+path.resolve(__dirname, '..', '..');
 assert.deepStrictEqual(folderIcon.normalizeFolderColorMap(JSON.parse('{"1":"#aabbcc", "2":"#FF0000", "3":"bad-value", "__proto__":"#ffffff", "invalid id":"#ffffff"}')), { '1': '#AABBCC', '2': '#FF0000' });
 
 {

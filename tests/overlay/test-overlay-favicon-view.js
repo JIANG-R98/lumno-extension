@@ -1,10 +1,9 @@
 const assert = require('assert');
-const fs = require('fs');
 const vm = require('vm');
 const path = require('path');
 const { moduleScript } = require('../helpers/module-script');
 
-const repoRoot = path.resolve(__dirname, '..', '..');
+path.resolve(__dirname, '..', '..');
 
 // Stands in for the overlay's rerenderReplacedFaviconRows: asks every row
 // whose favicon failed to try again (the overlay's own is exercised in
@@ -213,7 +212,7 @@ function createRuntime(options) {
 
   const localPageUrl = 'http://127.0.0.1:4321/';
   const extensionUrl = `chrome-extension://abc/_favicon/?pageUrl=${encodeURIComponent(localPageUrl)}&size=128&fallbackToHost=0`;
-  const gstaticUrl = `https://t2.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE%2CSIZE%2CURL&url=${encodeURIComponent(localPageUrl)}&size=128`;
+  `https://t2.gstatic.cn/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE%2CSIZE%2CURL&url=${encodeURIComponent(localPageUrl)}&size=128`;
   const browserPageUrl = 'chrome://extensions/';
   const browserPageExtensionUrl = `chrome-extension://abc/_favicon/?pageUrl=${encodeURIComponent(browserPageUrl)}&size=128`;
   const browserPageFavicon2Url = `chrome://favicon2/?pageUrl=${encodeURIComponent(browserPageUrl)}&size=128`;

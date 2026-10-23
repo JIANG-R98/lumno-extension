@@ -27,8 +27,7 @@ import {
   SITE_SEARCH_STORAGE_KEY,
   localStorageArea,
   normalizeHost,
-  storageArea,
-  warnBackgroundFailure
+  storageArea
 } from './background.js';
 import {
   getFaviconFallbackHost,
@@ -395,14 +394,6 @@ export function getDirectNavigationUrl(input) {
   return SEARCH_UTILS.getDirectNavigationUrl(input);
 }
 
-function getDefaultSearchEngineThemeUrl() {
-  const engine = getSearchEngineById(defaultSearchEngineState.id);
-  if (engine && typeof engine.searchUrl === 'function') {
-    return engine.searchUrl('test');
-  }
-  return 'https://www.google.com';
-}
-
 function getDefaultSearchEngineFaviconUrl() {
   if (defaultSearchEngineState.id === 'google') {
     return 'https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png';
@@ -631,13 +622,6 @@ function loadDisabledSiteSearchKeys() {
   });
 }
 
-function normalizeSearchBlacklistMatchModes(value) {
-  if (BLACKLIST_UTILS.normalizeMatchModes) {
-    return BLACKLIST_UTILS.normalizeMatchModes(value, 'prefix');
-  }
-  return ['prefix'];
-}
-
 function normalizeSearchBlacklistItems(items) {
   if (BLACKLIST_UTILS.normalizeItems) {
     return BLACKLIST_UTILS.normalizeItems(items, 'prefix');
@@ -821,19 +805,6 @@ export function recordSearchSuggestionSelection(selection) {
       return saveSearchSelectionStats(updatedStats);
     })
     .then((ok) => ({ ok: ok === true }));
-}
-
-function recordSearchSuggestionSelectionFromSuggestion(suggestion, query, source) {
-  if (!suggestion || suggestion.forceSearch || suggestion.provider || !suggestion.url) {
-    return;
-  }
-  recordSearchSuggestionSelection({
-    query,
-    url: suggestion.url,
-    title: suggestion.title || '',
-    type: suggestion.type || 'history',
-    source: source || 'overlay'
-  }).catch(warnBackgroundFailure('Failed to record a search suggestion selection.'));
 }
 
 function getSearchSelectionBoost(item, context, stats, options) {
@@ -1748,7 +1719,7 @@ export async function getSearchSuggestions(query, options) {
       allBookmarks,
       hanTitleHistoryItems,
       searchBlacklistItems,
-      faviconRequestBlacklistItems,
+      _faviconRequestBlacklistItems,
       _faviconEnhancedFetchEnabled,
       searchSelectionStats
     ] = await Promise.all([

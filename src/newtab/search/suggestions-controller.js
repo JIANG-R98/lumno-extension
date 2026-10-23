@@ -259,13 +259,6 @@ function createSuggestionsController(deps) {
     });
   }
 
-  function renderTabSuggestions(tabList) {
-    pageState.currentSuggestions = [];
-    lastRenderedQuery = '';
-    lastRenderedActionContextKey = '';
-    pageState.suggestionsView.renderTabs(tabList);
-  }
-
   function requestTabsAndRender() {
     pageState.tabs = [];
     clearSearchSuggestions();

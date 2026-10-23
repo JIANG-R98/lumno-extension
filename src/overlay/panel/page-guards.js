@@ -5,9 +5,6 @@ function createPageGuards(deps) {
     overlayAntiTranslateGuard
   } = deps;
 
-  // The panel state object shared with search-panel.js and the other modules.
-  const overlayState = deps.overlayState;
-
   function applyOverlayInputExtensionIsolation(input) {
     if (!input || typeof input.setAttribute !== 'function') {
       return;

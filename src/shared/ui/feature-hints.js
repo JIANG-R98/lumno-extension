@@ -1,4 +1,4 @@
-import * as NAVIGATION_DISPOSITION from '../navigation-disposition.js';
+import '../navigation-disposition.js';
 import * as LumnoShortcutDisplay from '../shortcut-display.js';
 
 const FEATURE_HINTS = Object.freeze({
@@ -488,14 +488,12 @@ function createFeatureHint(options) {
     return null;
   }
   const element = viewController.element;
-  const arrowTip = viewController.arrowTip;
   const text = viewController.text;
   const badge = viewController.badge;
   const linkButton = viewController.linkButton;
   const actionButtons = Array.isArray(viewController.actionButtons)
     ? viewController.actionButtons
     : [];
-  const closeButton = viewController.closeButton;
   element.setAttribute('data-dismissed', dismissed ? 'true' : 'false');
 
   let alignUpdateFrame = 0;

@@ -5,7 +5,6 @@ const TAG_CLASS = '_x_extension_cursor_tooltip_tag_2026_unique_';
 const TAG_KEY_CLASS = '_x_extension_cursor_tooltip_tag_key_2026_unique_';
 const TAG_LABEL_CLASS = '_x_extension_cursor_tooltip_tag_label_2026_unique_';
 const WINDOWS_LOGO_CLASS = '_x_extension_cursor_tooltip_windows_logo_2026_unique_';
-const WINDOWS_LOGO_PANE_CLASS = '_x_extension_cursor_tooltip_windows_logo_pane_2026_unique_';
 const DEFAULT_VISIBLE_ATTRIBUTE = 'data-visible';
 const DEFAULT_BOUND_ATTRIBUTE = 'data-cursor-tooltip-bound';
 const DEFAULT_TEXT_ATTRIBUTE = 'data-cursor-tooltip';
@@ -265,10 +264,6 @@ function renderText(element, text) {
 
 function renderContent(element, text, options) {
   return renderText(element, text);
-}
-
-function clearElement(element) {
-  renderText(element, '');
 }
 
 function isWindowsLogoKeyText(text) {

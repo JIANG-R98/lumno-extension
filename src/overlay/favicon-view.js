@@ -112,7 +112,6 @@ function createOverlayFaviconViewRuntime(options) {
     detectDefaultExtensionFavicon: config.detectDefaultExtensionFavicon
   });
   const {
-    setFaviconLoadState,
     setFallbackNodeVisible,
     applyFaviconOpticalShift,
     applyFaviconOpticalAlignment,
@@ -141,7 +140,6 @@ function createOverlayFaviconViewRuntime(options) {
   }
 
   const {
-    ensureFallbackIconNode,
     removeFallbackIconNode,
     showResolvedFavicon,
     showPendingFallbackIcon,
@@ -161,10 +159,6 @@ function createOverlayFaviconViewRuntime(options) {
 
   function isBrowserInternalPageUrl(url) {
     return faviconUrlResolver.isBrowserInternalPageUrl(url);
-  }
-
-  function isBlockedOverlayFaviconPageUrl(url) {
-    return faviconUrlResolver.isBlockedFaviconPageUrl(url);
   }
 
   function isBlockedOverlayFaviconUrl(url) {

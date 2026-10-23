@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from 'react';
-import { createPortal, flushSync } from 'react-dom';
+import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 
 export interface CascadeItemView {

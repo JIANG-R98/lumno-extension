@@ -2,7 +2,6 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
-const { readSearchInputModeRuntimeSource } = require('../helpers/search-input-mode-source');
 const { openSearchSurface } = require('../helpers/search-surfaces');
 
 const repoRoot = path.resolve(__dirname, '..', '..');

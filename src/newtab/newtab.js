@@ -171,7 +171,6 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
   const storageAreaName = providerStorageRuntime ? providerStorageRuntime.name : (rawStorageArea
     ? (rawStorageArea === (chrome && chrome.storage ? chrome.storage.sync : null) ? 'sync' : 'local')
     : null);
-  const recentSitesStorageAreaName = storageAreaName || (recentSitesStorageArea ? 'local' : null);
   function isPrimaryStorageAreaName(areaName) {
     return providerStorageRuntime
       ? providerStorageRuntime.isActiveAreaName(areaName)
@@ -533,9 +532,6 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
   const NEWTAB_SHORTCUT_WIDTH_MAX = Number.isFinite(Number(SETTINGS.NEWTAB_SHORTCUT_WIDTH_MAX))
     ? Number(SETTINGS.NEWTAB_SHORTCUT_WIDTH_MAX)
     : 1440;
-  const NEWTAB_SHORTCUT_WIDTH_DEFAULT = Number.isFinite(Number(SETTINGS.NEWTAB_SHORTCUT_WIDTH_DEFAULT))
-    ? Number(SETTINGS.NEWTAB_SHORTCUT_WIDTH_DEFAULT)
-    : 920;
   const NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY = SETTINGS.NEWTAB_SHORTCUT_COLUMNS_STORAGE_KEY ||
     '_x_extension_newtab_shortcut_columns_2026_unique_';
   const NEWTAB_SHORTCUT_COLUMNS_MIN = Number.isFinite(Number(SETTINGS.NEWTAB_SHORTCUT_COLUMNS_MIN))
@@ -2279,7 +2275,6 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
     createShortcutDialogComponent,
     getShortcutGroups,
     isWebDavBackingUpShortcuts,
-    isShortcutGroupLayoutActive,
     fitShortcutGroupColumns,
     openShortcutAddDialog,
     openShortcutGroupDialog,
@@ -2925,7 +2920,6 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
     openSearchResultUrl,
     openMatchedTabSuggestion,
     refreshTabsForSearchContext,
-    resolveQuickNavigation,
     submitSearchQuery
   } = NEWTAB_SEARCH_NAVIGATION.createSearchNavigation({
     formatMessage,
@@ -3611,7 +3605,7 @@ import * as NEWTAB_WALLPAPER_PAGE from './wallpaper/wallpaper-page.js';
     typeof document.fonts.ready.then === 'function'
       ? document.fonts.ready.catch(() => true)
       : Promise.resolve(true);
-  const initialVisualReadyPromise = Promise.all([
+  Promise.all([
     initialAppearanceReadyTask,
     initialBookmarkViewModeReadyPromise,
     loadZenMode(),

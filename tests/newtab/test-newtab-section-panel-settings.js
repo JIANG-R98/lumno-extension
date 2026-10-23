@@ -1,6 +1,4 @@
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
 const { JSDOM } = require('jsdom');
 const sectionPanelSettings = require('../../src/newtab/section-panel-settings.js');
 const { readStylesheetSource } = require('../helpers/css-tokens');

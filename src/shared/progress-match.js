@@ -254,12 +254,12 @@ function readTitle(title) {
   let head = markerIndex >= 0
     ? text.slice(0, markerIndex)
     : text.split(TITLE_SEPARATOR_PATTERN)[0];
-  if (markerIndex >= 0 && !head.replace(/[\s|｜_–—·:：\-【\[（(]+/g, '')) {
+  if (markerIndex >= 0 && !head.replace(/[\s|｜_–—·:：\-【[（(]+/g, '')) {
     const parts = text.split(TITLE_SEPARATOR_PATTERN).filter(Boolean);
     const rest = parts.slice(1, parts.length >= 3 ? -1 : undefined);
     head = rest[0] || '';
   }
-  const workName = head.replace(/[\s|｜_–—·:：\-【\[（(]+$/, '').trim().toLowerCase();
+  const workName = head.replace(/[\s|｜_–—·:：\-【[（(]+$/, '').trim().toLowerCase();
   return { workName, episode, hasMarker: markerIndex >= 0 };
 }
 
@@ -488,7 +488,7 @@ const SERIES_TITLE_PATTERNS = [
   /\bs\d{1,2}\s*e\d{1,3}\b/i,
   // Chapter 12 / Ch. 12 / Chap 12 / Vol. 3 / Volume 3 / Part 2 / Lesson 4 / P2
   /\b(?:chapter|chap|ch|vol|volume|part|lesson)\.?\s*\d+\b/i,
-  /(?:^|[\s【\[(（|｜_-])p\s?\d+\b/i,
+  /(?:^|[\s【[(（|｜_-])p\s?\d+\b/i,
   // 最终话 / 最終回 / 大结局 / 完结篇 / 番外 / 上集 / 下篇
   /最终话|最終話|最終回|大结局|完结篇|番外|[上中下]集|[上中下]篇/
 ];

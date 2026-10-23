@@ -160,7 +160,6 @@ function createPageFavicons(deps) {
   const preloadIcon = pageState.faviconViewRuntime.preloadIcon;
   const warmIconCache = pageState.faviconViewRuntime.warmIconCache;
   const attachFaviconWithFallbacks = pageState.faviconViewRuntime.attachFaviconWithFallbacks;
-  const rescueThemeAwareFallbackFavicons = pageState.faviconViewRuntime.rescueThemeAwareFallbackFavicons;
 
   function isAllowedFaviconProxyRequestUrl(url) {
     return FAVICON_UTILS.isAllowedFaviconProxyRequestUrl(url);

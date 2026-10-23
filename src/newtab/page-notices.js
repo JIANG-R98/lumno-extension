@@ -31,7 +31,6 @@ function createPageNotices(deps) {
   const pageState = deps.pageState;
 
   const NEWTAB_PAGE_NOTICE = globalThis.LumnoNewtabPageNotice;
-  let pageNoticeController = null;
 
   function clearPageNoticeQueryParam() {
     try {
@@ -44,14 +43,6 @@ function createPageNotices(deps) {
     } catch (e) {
       // Ignore URL rewrite failures.
     }
-  }
-
-  function dismissPageNoticeBanner() {
-    if (pageNoticeController && typeof pageNoticeController.dismiss === 'function') {
-      pageNoticeController.dismiss();
-      return;
-    }
-    clearPageNoticeQueryParam();
   }
 
   function openExtensionDetailsPage(detailsUrl) {
@@ -78,7 +69,7 @@ function createPageNotices(deps) {
   }
 
   function showFileAccessNotice(detailsUrl) {
-    pageNoticeController = NEWTAB_PAGE_NOTICE.renderPageNotice({
+    NEWTAB_PAGE_NOTICE.renderPageNotice({
       params: pageSearchParams,
       chromeApi: chrome,
       document,
@@ -90,7 +81,6 @@ function createPageNotices(deps) {
         detailsUrl
       },
       onClose: () => {
-        pageNoticeController = null;
         clearPageNoticeQueryParam();
       },
       openExtensionDetailsPage

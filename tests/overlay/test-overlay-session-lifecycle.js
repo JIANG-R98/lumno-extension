@@ -1,7 +1,6 @@
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
 
-delete LumnoOverlayLifecycle;
 const LumnoOverlayLifecycle = require('../../src/overlay/lifecycle.js');
 
 const lifecycle = LumnoOverlayLifecycle;

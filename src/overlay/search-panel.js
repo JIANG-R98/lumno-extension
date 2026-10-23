@@ -1141,10 +1141,8 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     id: OVERLAY_PANEL_ID
   });
 
-  let shouldReplaceExistingOverlay = false;
   if (overlayState.overlay) {
     const shouldReplaceStaleOverlay = isStaleOverlay(overlayState.overlay);
-    shouldReplaceExistingOverlay = shouldReplaceStaleOverlay;
     if (ensureOverlayOpen && !shouldReplaceStaleOverlay) {
       window._x_extension_search_overlay_open_2026_unique_ = true;
       return;
@@ -2168,7 +2166,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     overlayState.searchInput.focus({ preventScroll: true });
   }
 
-  const initialOverlayContentReady = Promise.all([
+  Promise.all([
     overlayState.initialOverlayOpenTabsDefaultVisibleReady,
     overlayState.initialFaviconEnhancedFetchReady,
     initialSimpleModeReady

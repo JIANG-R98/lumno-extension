@@ -5,7 +5,7 @@ const communityLinks = require('../../src/shared/community-links.js');
 const engagementNotice = require('../../src/shared/engagement-notice.js');
 const updateNotice = require('../../src/shared/update-notice.js');
 const { HOST_ID: QR_DIALOG_ID } = require('../../src/shared/ui/community-qr-dialog.js');
-const { createNewtabPage, INPUT_ID } = require('../helpers/newtab-page');
+const { createNewtabPage } = require('../helpers/newtab-page');
 const { ENGAGEMENT_DELAY_MS, engagementStorage } = require('../helpers/newtab-notices');
 
 function flushMicrotasks() {

@@ -59,7 +59,7 @@ function cssDeclares(target, needle) {
       value: normalize(entry.style.getPropertyValue(name)),
       priority: entry.style.getPropertyPriority(name)
     }])));
-  if (match && !/^[.#\[:@]/.test(needle)) {
+  if (match && !/^[.#[:@]/.test(needle)) {
     const [, property, givenValue, , exact] = match;
     const rawValue = givenValue || '';
     const important = /\s*!important$/.test(rawValue);

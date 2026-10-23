@@ -269,25 +269,6 @@ function listFilesWithExtension(dir, extension) {
   return files;
 }
 
-function listHtmlFiles(dir) {
-  if (!fs.existsSync(dir)) {
-    return [];
-  }
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  const files = [];
-  entries.forEach((entry) => {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...listHtmlFiles(fullPath));
-      return;
-    }
-    if (entry.isFile() && fullPath.endsWith('.html')) {
-      files.push(fullPath);
-    }
-  });
-  return files;
-}
-
 function checkRuntimeGetUrlReferences() {
   const files = listJsFiles(stagedPath('src')).concat(listJsFiles(stagedPath(BUNDLE_DIRECTORY)));
   const staticGetUrlPattern = /chrome\.runtime\.getURL\(\s*(['"`])([^'"`]+)\1\s*\)/g;

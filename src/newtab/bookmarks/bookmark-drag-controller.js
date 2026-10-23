@@ -152,63 +152,6 @@ function createBookmarkDragController(deps) {
     }
   }
 
-  function getBookmarkCachedRectMap(state) {
-    const rects = new Map();
-    const layoutItems = Array.isArray(state && state.layoutItems) ? state.layoutItems : [];
-    layoutItems.forEach((item) => {
-      if (item && item.card && item.rect) {
-        rects.set(item.card, item.rect);
-      }
-    });
-    return rects;
-  }
-
-  function animateBookmarkLayoutShift(beforeRects, draggedCard) {
-    if (!beforeRects || !pageState.bookmarkGrid || NEWTAB_CROSS_SURFACE_DRAG.prefersReducedMotion(window)) {
-      return;
-    }
-    const cardsToAnimate = getBookmarkReorderCards().filter((card) =>
-      card && card !== draggedCard && card.style && beforeRects.has(card)
-    );
-    cardsToAnimate.forEach(clearBookmarkCardLayoutAnimation);
-    const shifts = [];
-    cardsToAnimate.forEach((card) => {
-      const before = beforeRects.get(card);
-      const after = getBookmarkCardLayoutRect(card);
-      if (!before || !after) {
-        return;
-      }
-      const delta = NEWTAB_BOOKMARK_DRAG.getLayoutShiftDelta(before, after, {
-        horizontalOnly: isBookmarkTopbarMode()
-      });
-      if (!delta) {
-        return;
-      }
-      const { dx, dy } = delta;
-      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) {
-        return;
-      }
-      shifts.push({ card, dx, dy });
-    });
-    shifts.forEach(({ card, dx, dy }) => {
-      card.style.transition = 'none';
-      card.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
-    });
-    window.requestAnimationFrame(() => {
-      shifts.forEach(({ card }) => {
-        if (!card.isConnected) {
-          return;
-        }
-        card.style.transition = `transform ${BOOKMARK_REORDER_ANIMATION_MS}ms ${BOOKMARK_REORDER_EASING}`;
-        card.style.transform = 'translate3d(0, 0, 0)';
-        card._xBookmarkLayoutAnimationTimer = window.setTimeout(() => {
-          card._xBookmarkLayoutAnimationTimer = 0;
-          clearBookmarkCardLayoutAnimation(card);
-        }, BOOKMARK_REORDER_ANIMATION_MS + 80);
-      });
-    });
-  }
-
   function getBookmarkLayoutRectMapById() {
     const rects = new Map();
     getBookmarkReorderCards().forEach((card) => {
@@ -1520,37 +1463,6 @@ function createBookmarkDragController(deps) {
     state.moveFrameId = window.requestAnimationFrame(() => {
       processBookmarkDragMove(state);
     });
-  }
-
-  function moveBookmarkCardElement(card, targetIndex) {
-    if (!pageState.bookmarkGrid || !card || card.parentNode !== pageState.bookmarkGrid ||
-        !Number.isFinite(targetIndex)) {
-      return false;
-    }
-    const currentIndex = getBookmarkCardInsertionIndex(card);
-    const remainingCards = getBookmarkReorderCards().filter((item) => item !== card);
-    const boundedIndex = Math.max(0, Math.min(remainingCards.length, targetIndex));
-    if (currentIndex === boundedIndex) {
-      return false;
-    }
-    pageState.bookmarkGrid.insertBefore(card, remainingCards[boundedIndex] || null);
-    return true;
-  }
-
-  function moveBookmarkItemInMemory(bookmarkId, targetAllIndex) {
-    const currentIndex = getBookmarkCardAllIndex(bookmarkId);
-    if (currentIndex < 0 || !Number.isFinite(targetAllIndex)) {
-      return false;
-    }
-    const nextItems = pageState.bookmarkAllItems.slice();
-    const movedItem = nextItems.splice(currentIndex, 1)[0];
-    const boundedIndex = Math.max(0, Math.min(nextItems.length, targetAllIndex));
-    if (currentIndex === boundedIndex) {
-      return false;
-    }
-    nextItems.splice(boundedIndex, 0, movedItem);
-    pageState.bookmarkAllItems = nextItems;
-    return true;
   }
 
   function getBookmarkMoveDestination(bookmarkId) {

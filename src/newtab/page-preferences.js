@@ -267,7 +267,7 @@ function createPagePreferences(deps) {
     });
   }
 
-  const initialNumberShortcutInstantReadyTask = loadNumberShortcutInstantEnabled();
+  loadNumberShortcutInstantEnabled();
 
   function normalizeSimpleModeEnabled(value) {
     return SETTINGS.normalizeSimpleModeEnabled(value);

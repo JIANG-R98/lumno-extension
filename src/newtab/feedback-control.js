@@ -156,10 +156,6 @@ function createFeedbackControlRuntime(deps) {
     return true;
   }
 
-  function updateFeedbackContactUi() {
-    renderFeedbackControlWithReact();
-  }
-
   function openFeedbackExternalUrl(url, disposition) {
     const safeUrl = normalizeFeedbackHttpsUrl(url);
     if (!safeUrl) {

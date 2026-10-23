@@ -63,7 +63,6 @@ const bundles = [
 ];
 const bundle = bundles.join('\n');
 
-const bootstrapScript = 'src="../../build/react-page-bootstrap.js"';
 const pageEntryRunsAfterBridge = (page, reactEntry, entry) => {
   const scripts = getPageScripts(page);
   return runsBefore(scripts, reactEntry, 'src/overlay/tab-switcher-page-bridge.js') &&

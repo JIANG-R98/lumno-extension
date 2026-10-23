@@ -406,10 +406,6 @@ function createRecentSitesController(deps) {
     );
   }
 
-  function getRecentSiteHostKey(item) {
-    return NEWTAB_RECENT_STORE.getRecentSiteHostKey(item, getRecentStoreOptions());
-  }
-
   function normalizeRecentSiteRecord(item, options) {
     return NEWTAB_RECENT_STORE.normalizeRecentSiteItem(item, getRecentStoreOptions(options));
   }

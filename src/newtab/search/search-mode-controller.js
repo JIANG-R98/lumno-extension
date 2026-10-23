@@ -53,8 +53,6 @@ function createSearchModeController(deps) {
   // The page state object shared with newtab.js and the other modules.
   const pageState = deps.pageState;
 
-  let siteSearchTabHint = null;
-
   function setSiteSearchTabHint(provider) {
     if (pageState.inputModeController) {
       pageState.inputModeController.setTabHintVisible(true, provider);
@@ -159,7 +157,6 @@ function createSearchModeController(deps) {
     );
     searchModeMenuResultResizeObserver.observe(pageState.suggestionsContainer);
   }
-  siteSearchTabHint = pageState.inputModeController.tabHintElement;
   loadSiteSearchIconCache().then(() => {
     if (!pageState.siteSearchState || !pageState.inputModeController) {
       return;

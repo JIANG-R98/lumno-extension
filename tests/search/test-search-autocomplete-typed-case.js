@@ -1,9 +1,8 @@
 const assert = require('assert');
-const fs = require('fs');
 const path = require('path');
 const { createOverlayPage } = require('../helpers/overlay-runtime-harness');
 
-const repoRoot = path.resolve(__dirname, '..', '..');
+path.resolve(__dirname, '..', '..');
 const LumnoNewtabSearchAutocomplete = require('../../src/newtab/search/search-autocomplete.js');
 
 // Inline autocomplete appends to what was typed; it must not rewrite the

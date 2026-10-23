@@ -7,8 +7,6 @@ function createUrlPolicy(deps) {
     EXTENSION_ROUTES,
     t,
     getPageFaviconUrlResolver,
-    normalizeFaviconHost,
-    getExtensionResourceUrl,
     FAVICON_UTILS,
     BLACKLIST_UTILS,
     SETTINGS,
@@ -124,11 +122,6 @@ function createUrlPolicy(deps) {
     };
   }
 
-  function isRestrictedUrl(url) {
-    const guards = LumnoUrlGuards;
-    return guards.isRestrictedUrl(url);
-  }
-
   function getExtensionFaviconUrl(pageUrl) {
     const resolver = getPageFaviconUrlResolver();
     const extensionUrl = resolver ? resolver.getExtensionFaviconUrl(pageUrl) : '';
@@ -163,19 +156,6 @@ function createUrlPolicy(deps) {
       : { primaryUrl: '', browserUrl: '' };
   }
 
-  function getHostFaviconUrl(hostname) {
-    const normalized = normalizeFaviconHost(hostname);
-    if (!normalized) {
-      return '';
-    }
-    if (normalized === 'lumno.kubai.design') {
-      return (chrome && chrome.runtime && typeof chrome.runtime.getURL === 'function')
-        ? getExtensionResourceUrl('assets/images/lumno.png')
-        : 'https://lumno.kubai.design/favicon.png';
-    }
-    return getGstaticFaviconUrl(`https://${normalized}/`);
-  }
-
   function isLocalNetworkHost(hostname) {
     return FAVICON_UTILS.isLocalNetworkHost(hostname);
   }
@@ -186,13 +166,6 @@ function createUrlPolicy(deps) {
 
   function shouldAvoidDirectFaviconForHost(hostname) {
     return FAVICON_UTILS.shouldAvoidDirectFaviconForHost(hostname);
-  }
-
-  function normalizeSearchBlacklistMatchModes(value) {
-    if (BLACKLIST_UTILS.normalizeMatchModes) {
-      return BLACKLIST_UTILS.normalizeMatchModes(value, 'prefix');
-    }
-    return ['prefix'];
   }
 
   function normalizeSearchBlacklistItems(items) {

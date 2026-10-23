@@ -91,7 +91,6 @@ function createFaviconViewRuntime(options) {
 
   const {
     setFallbackNodeVisible,
-    setFaviconLoadState,
     applyFaviconOpticalShift,
     applyFaviconOpticalAlignment,
     requestFaviconData,

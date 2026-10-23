@@ -1416,7 +1416,7 @@ describe('Suggestions React island', () => {
   });
 
   it('renders copy only for result rows with a URL', () => {
-    const { view, container, items } = createView();
+    const { view, container } = createView();
 
     render(view, [{
       type: 'commandSettings',

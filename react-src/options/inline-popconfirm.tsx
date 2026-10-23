@@ -5,7 +5,7 @@ import {
   type PopconfirmCopy
 } from '../shared/popconfirm-content';
 
-export interface InlinePopconfirmCopy extends PopconfirmCopy {}
+export type InlinePopconfirmCopy = PopconfirmCopy;
 
 export function InlinePopconfirm({
   copy,

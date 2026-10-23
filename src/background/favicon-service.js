@@ -31,7 +31,7 @@ import {
   storageArea,
   warnBackgroundFailure
 } from './background.js';
-import { canFetchPageForFavicon } from './browser-urls-service.js';
+import './browser-urls-service.js';
 
 const FAVICON_VISIT_DIRTY_TTL_MS = 1000 * 60 * 60 * 24;
 
@@ -189,10 +189,6 @@ const BACKGROUND_FAVICON_DATA_CACHE_MAX_ENTRIES = 256;
 const BACKGROUND_SHORTCUT_FAVICON_CACHE_MAX_ENTRIES = 64;
 
 const SHORTCUT_FAVICON_FETCH_TIMEOUT_MS = 6500;
-
-const SHORTCUT_FAVICON_PAGE_MAX_LENGTH = 768 * 1024;
-
-const SHORTCUT_FAVICON_MANIFEST_MAX_BYTES = 512 * 1024;
 
 const SHORTCUT_FAVICON_RESOURCE_MAX_BYTES = 256 * 1024;
 
@@ -404,14 +400,6 @@ export function normalizeFaviconHost(hostname) {
   return FAVICON_UTILS.normalizeFaviconHost(hostname);
 }
 
-function normalizeThemePreference(theme) {
-  return SETTINGS.normalizeThemePreference(theme);
-}
-
-function parseHtmlThemeColorCandidates(html, pageUrl, preferredTheme) {
-  return FAVICON_UTILS.parseHtmlThemeColorCandidates(html, pageUrl, normalizeThemePreference(preferredTheme));
-}
-
 export function normalizeThemeAccentRgb(value) {
   if (!Array.isArray(value) || value.length !== 3) {
     return null;
@@ -420,56 +408,6 @@ export function normalizeThemeAccentRgb(value) {
   return rgb.every((channel) => Number.isFinite(channel) && channel >= 0 && channel <= 255)
     ? rgb
     : null;
-}
-
-function buildSiteThemeColorResult(accentRgb, source, options) {
-  const rgb = normalizeThemeAccentRgb(accentRgb);
-  if (!rgb) {
-    return null;
-  }
-  const confidence = options && options.confidence
-    ? String(options.confidence)
-    : FAVICON_UTILS.getThemeColorConfidence(rgb);
-  const neutral = options && typeof options.neutral === 'boolean'
-    ? options.neutral
-    : confidence === 'neutral';
-  return {
-    accentRgb: rgb,
-    source: source || 'meta',
-    neutral,
-    confidence
-  };
-}
-
-function fetchManifestThemeColor(manifestUrl) {
-  // Arbitrary manifest URLs are untrusted network targets. Theme extraction
-  // intentionally stays browser-cache-only instead of making a privileged GET.
-  return Promise.resolve(null);
-}
-
-function resolveThemeColorCandidates(candidates) {
-  const sorted = (Array.isArray(candidates) ? candidates : [])
-    .filter((item) => item && (item.accentRgb || item.manifestUrl))
-    .sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
-  let index = 0;
-  const next = () => {
-    const candidate = sorted[index];
-    index += 1;
-    if (!candidate) {
-      return Promise.resolve(null);
-    }
-    if (candidate.accentRgb) {
-      return Promise.resolve(buildSiteThemeColorResult(candidate.accentRgb, candidate.source || 'meta', {
-        neutral: candidate.neutral,
-        confidence: candidate.confidence
-      }));
-    }
-    if (candidate.manifestUrl) {
-      return fetchManifestThemeColor(candidate.manifestUrl).then((result) => result || next());
-    }
-    return next();
-  };
-  return next();
 }
 
 export function resolveSiteThemeColor(targetUrl, hostOverride, preferredTheme) {
@@ -500,7 +438,6 @@ export function resolveSiteThemeColor(targetUrl, hostOverride, preferredTheme) {
 function buildFaviconFallbackCandidates(pageUrl, hostOverride, fallbackUrl, options) {
   const candidates = [];
   const inputUrl = String(pageUrl || '').trim();
-  const fallback = String(fallbackUrl || '').trim();
   const settings = options && typeof options === 'object' ? options : {};
   const targetPolicy = settings.targetPolicy || getFaviconTargetPolicy(inputUrl, hostOverride);
   if (targetPolicy.hardBlocked) {
@@ -571,47 +508,6 @@ export function resolveFaviconCandidates(targetUrl, hostOverride, fallbackUrl) {
 function getShortcutFaviconPreferredTheme(value) {
   const theme = String(value || '').trim().toLowerCase();
   return theme === 'dark' || theme === 'light' ? theme : '';
-}
-
-function readShortcutFaviconResponsePrefix(response, maxLength) {
-  const limit = Math.max(1, Number(maxLength) || SHORTCUT_FAVICON_PAGE_MAX_LENGTH);
-  if (!response || !response.body || typeof response.body.getReader !== 'function' ||
-      typeof TextDecoder !== 'function') {
-    return response.text().then((text) => String(text || '').slice(0, limit));
-  }
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let text = '';
-  const readNext = () => reader.read().then((result) => {
-    if (!result || result.done) {
-      text += decoder.decode();
-      return text.slice(0, limit);
-    }
-    text += decoder.decode(result.value, { stream: true });
-    if (text.length >= limit) {
-      // A failed cancel only means the stream already ended or errored.
-      return Promise.resolve(reader.cancel()).catch(() => {}).then(() => text.slice(0, limit));
-    }
-    return readNext();
-  });
-  return readNext().catch(() => text.slice(0, limit));
-}
-
-function canFetchShortcutFaviconUrl(url) {
-  const policy = getFaviconTargetPolicy(url, '');
-  return Boolean(
-    policy.ok &&
-    !policy.directFetchBlocked &&
-    canFetchPageForFavicon(url)
-  );
-}
-
-function fetchShortcutFaviconDocument(pageUrl, signal) {
-  return Promise.resolve(null);
-}
-
-function fetchShortcutFaviconManifest(manifestUrl, signal) {
-  return Promise.resolve([]);
 }
 
 function fetchShortcutFaviconResource(candidate, pageUrl, signal) {

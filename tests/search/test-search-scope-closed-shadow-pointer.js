@@ -34,7 +34,6 @@ container.appendChild(modePrefix);
 container.appendChild(modeTabHint);
 shadowRoot.appendChild(container);
 
-delete LumnoSearchInputMode;
 delete require.cache[require.resolve('../../src/shared/search/search-input-mode.js')];
 const LumnoSearchInputMode = require(path.resolve(__dirname, '../../src/shared/search/search-input-mode.js'));
 

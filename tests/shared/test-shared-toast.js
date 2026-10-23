@@ -45,7 +45,6 @@ const toastElement = {
   }
 };
 
-delete LumnoToast;
 const LumnoToast = require(path.resolve(__dirname, '../../src/shared/ui/toast.js'));
 
 assert.strictEqual(LumnoToast.implementation, 'dom');

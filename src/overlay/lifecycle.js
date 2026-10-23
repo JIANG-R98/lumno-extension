@@ -413,9 +413,6 @@ function createMountConnectionGuard(win, config) {
 function createAntiTranslateGuard(win, deps) {
   const targetWindow = win || window;
   const helpers = deps && typeof deps === 'object' ? deps : {};
-  const applyNoTranslate = typeof helpers.applyNoTranslate === 'function'
-    ? helpers.applyNoTranslate
-    : (node) => node;
   const applyNoTranslateDeep = typeof helpers.applyNoTranslateDeep === 'function'
     ? helpers.applyNoTranslateDeep
     : (node) => node;

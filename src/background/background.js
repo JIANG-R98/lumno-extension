@@ -1,15 +1,15 @@
 // The worker runs these modules in this order before its own code: the
 // shared and background modules first, then the services split out of this
 // file.
-import * as BLACKLIST_UTILS from '../shared/blacklist-utils.js';
+import '../shared/blacklist-utils.js';
 import * as LumnoUrlGuards from '../shared/url-guards.js';
 import * as FAVICON_UTILS from '../shared/favicon/favicon-utils.js';
 import * as SHORTCUT_FAVICON from '../shared/favicon/shortcut-favicon.js';
-import * as SHORTCUT_KEY_MATCHER from '../shared/shortcut-key-matcher.js';
-import * as FAVICON_CACHE from '../shared/favicon/favicon-cache.js';
-import * as NEWTAB_FAVICON_THEME from '../newtab/theme/favicon-theme.js';
-import * as EXTENSION_ROUTES from '../shared/extension-routes.js';
-import * as COMMAND_TARGET_POLICY from './command-target-policy.js';
+import '../shared/shortcut-key-matcher.js';
+import '../shared/favicon/favicon-cache.js';
+import '../newtab/theme/favicon-theme.js';
+import '../shared/extension-routes.js';
+import './command-target-policy.js';
 import * as SETTINGS from '../shared/settings.js';
 import * as LumnoSettings from '../shared/settings.js';
 import * as LumnoBookmarkFolderReference from '../shared/bookmark-folder-reference.js';
@@ -37,24 +37,24 @@ import '../shared/search/utils/brand-suggestions.js';
 import '../shared/search/utils/navigation-matching.js';
 import '../shared/search/utils/site-search-providers.js';
 import '../shared/search/utils/site-search-matching.js';
-import * as SEARCH_UTILS from '../shared/search/search-utils.js';
-import * as SELECTION_INTENT from '../shared/selection-intent.js';
+import '../shared/search/search-utils.js';
+import '../shared/selection-intent.js';
 import '../shared/search/site-search-store.js';
-import * as COMMUNITY_LINKS from '../shared/community-links.js';
-import * as HELP_CENTER_SEARCH from '../shared/search/help-center-search.js';
+import '../shared/community-links.js';
+import '../shared/search/help-center-search.js';
 import * as AGGREGATE_SEARCH_STORE from '../shared/search/aggregate-search-store.js';
-import * as AI_PROVIDER_SUBMIT from './ai-provider-submit.js';
-import * as AGGREGATE_SEARCH from './aggregate-search.js';
+import './ai-provider-submit.js';
+import './aggregate-search.js';
 import * as BACKGROUND_PAGES from './extension-pages.js';
-import * as BACKGROUND_TAB_GROUPS from './tab-groups.js';
-import * as SEARCH_RESULT_TABS from './search-result-tabs.js';
-import * as BOOKMARK_TAB_GROUPS from './bookmark-tab-groups.js';
-import * as SELECTION_TARGET from './selection-target.js';
-import * as SELECTION_QUICK_ACTION_PROVIDER from './selection-quick-action-provider.js';
+import './tab-groups.js';
+import './search-result-tabs.js';
+import './bookmark-tab-groups.js';
+import './selection-target.js';
+import './selection-quick-action-provider.js';
 import * as LumnoSelectionScriptRegistration from './selection-script-registration.js';
 import * as BACKGROUND_MESSAGE_ROUTER from './message-router.js';
 import * as BACKGROUND_NEWTAB_FALLBACK from './newtab-fallback.js';
-import * as BROWSER_PROFILE from '../shared/browser-profile.js';
+import '../shared/browser-profile.js';
 import * as BACKGROUND_SHORTCUT_RULES from './shortcut-rules.js';
 import './pip-ownership.js';
 import './pip-main-world.js';
@@ -174,7 +174,6 @@ export const openReleasePage = BACKGROUND_PAGES.openReleasePage;
 export const openBookmarkManagerPage = BACKGROUND_PAGES.openBookmarkManagerPage;
 export const openExtensionShortcutsPage = BACKGROUND_PAGES.openExtensionShortcutsPage;
 export const openSiteSearchOptionsPage = BACKGROUND_PAGES.openSiteSearchOptionsPage;
-const isLocalFileLikeTargetUrl = BACKGROUND_NEWTAB_FALLBACK.isLocalFileLikeTargetUrl;
 export const checkFileSchemeAccess = BACKGROUND_NEWTAB_FALLBACK.checkFileSchemeAccess;
 export const openBrowserNewtabFallback = BACKGROUND_NEWTAB_FALLBACK.openBrowserNewtabFallback;
 export const openNewtabFallback = BACKGROUND_NEWTAB_FALLBACK.openNewtabFallback;
@@ -235,28 +234,7 @@ function isPrimaryStorageAreaName(areaName) {
     : Boolean(storageAreaName) && areaName === storageAreaName;
 }
 const THEME_STORAGE_KEY = '_x_extension_theme_mode_2024_unique_';
-const LANGUAGE_STORAGE_KEY = '_x_extension_language_2024_unique_';
 const LANGUAGE_MESSAGES_STORAGE_KEY = '_x_extension_language_messages_2024_unique_';
-const RECENT_MODE_STORAGE_KEY = '_x_extension_recent_mode_2024_unique_';
-const RECENT_COUNT_STORAGE_KEY = '_x_extension_recent_count_2024_unique_';
-const NEWTAB_WIDTH_MODE_STORAGE_KEY = '_x_extension_newtab_width_mode_2026_unique_';
-const NEWTAB_SEARCH_WIDTH_STORAGE_KEY = '_x_extension_newtab_search_width_2026_unique_';
-const NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY = (
-  LumnoSettings.NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY
-) || '_x_extension_newtab_wordmark_visible_2026_unique_';
-const NEWTAB_THEME_MODE_STORAGE_KEY = '_x_extension_newtab_theme_mode_2026_unique_';
-const NEWTAB_THEME_SCOPE_STORAGE_KEY = '_x_extension_newtab_theme_scope_2026_unique_';
-const NEWTAB_ZEN_MODE_STORAGE_KEY = '_x_extension_newtab_zen_mode_2026_unique_';
-const NEWTAB_WALLPAPER_STORAGE_KEY = '_x_extension_newtab_wallpaper_2026_unique_';
-const NEWTAB_WALLPAPER_OVERLAY_STORAGE_KEY = '_x_extension_newtab_wallpaper_overlay_2026_unique_';
-const NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY = '_x_extension_newtab_wallpaper_effect_2026_unique_';
-const NEWTAB_FAVICON_STORAGE_KEY = '_x_extension_newtab_favicon_2026_unique_';
-const OVERLAY_SIZE_MODE_STORAGE_KEY = '_x_extension_overlay_size_mode_2026_unique_';
-const OVERLAY_ENTER_ANIMATION_STORAGE_KEY = '_x_extension_overlay_enter_animation_2026_unique_';
-const BOOKMARK_COUNT_STORAGE_KEY = '_x_extension_bookmark_count_2024_unique_';
-const BOOKMARK_COLUMNS_STORAGE_KEY = '_x_extension_bookmark_columns_2024_unique_';
-const BOOKMARK_VIEW_MODE_STORAGE_KEY = '_x_extension_bookmark_view_mode_2026_unique_';
-const BOOKMARK_FOLDER_ICONS_VISIBLE_STORAGE_KEY = '_x_extension_bookmark_folder_icons_visible_2026_unique_';
 const BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS = Array.isArray(LumnoSettings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS)
   ? LumnoSettings.BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS
   : [];
@@ -287,21 +265,14 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     changes[PROGRESS_TRACKING_ENABLED_STORAGE_KEY].newValue
   );
 });
-const HIDDEN_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_hidden_recent_sites_2026_unique_';
-const NEWTAB_SHORTCUTS_STORAGE_KEY = '_x_extension_newtab_shortcuts_2026_unique_';
 export const RESTRICTED_ACTION_STORAGE_KEY = '_x_extension_restricted_action_2024_unique_';
 export const RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY = '_x_extension_restricted_action_auto_browser_setting_done_2026_unique_';
-const OVERLAY_TAB_PRIORITY_STORAGE_KEY = '_x_extension_overlay_tab_priority_2024_unique_';
-const TAB_RANK_SCORE_DEBUG_STORAGE_KEY = '_x_extension_tab_rank_score_debug_2026_unique_';
-const AUTO_PIP_ENABLED_STORAGE_KEY = '_x_extension_auto_pip_enabled_2026_unique_';
 const TAB_SWITCHER_ENABLED_STORAGE_KEY = '_x_extension_tab_switcher_enabled_2026_unique_';
 const DOCUMENT_PIP_ENABLED_STORAGE_KEY = '_x_extension_document_pip_enabled_2026_unique_';
 export const PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY = '_x_extension_pinned_tab_recovery_enabled_2026_unique_';
 export const SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY = '_x_extension_selection_quick_actions_enabled_2026_unique_';
 export const SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY = '_x_extension_selection_quick_actions_provider_2026_unique_';
 export const SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY = '_x_extension_selection_quick_actions_group_enabled_2026_unique_';
-const FALLBACK_SHORTCUT_STORAGE_KEY = '_x_extension_fallback_hotkey_2024_unique_';
-const SEARCH_RESULT_PRIORITY_STORAGE_KEY = '_x_extension_search_result_priority_2026_unique_';
 export const SEARCH_RESULT_SOURCE_TYPES_STORAGE_KEY = '_x_extension_search_result_source_types_2026_unique_';
 export const SEARCH_SELECTION_STATS_STORAGE_KEY = '_x_extension_search_selection_stats_2026_unique_';
 export const FAVICON_VISIT_DIRTY_STORAGE_KEY = '_x_extension_favicon_visit_dirty_2026_unique_';
@@ -946,7 +917,6 @@ export const AGGREGATE_SEARCH_AUTO_GROUP_ENABLED_STORAGE_KEY =
 export const SEARCH_BLACKLIST_STORAGE_KEY = '_x_extension_search_blacklist_2026_unique_';
 export const FAVICON_REQUEST_BLACKLIST_STORAGE_KEY = '_x_extension_favicon_request_blacklist_2026_unique_';
 export const FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY = '_x_extension_favicon_enhanced_fetch_enabled_2026_unique_';
-const OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY = '_x_extension_overlay_open_tabs_default_visible_2026_unique_';
 export const DEFAULT_SEARCH_ENGINE_STORAGE_KEY = '_x_extension_default_search_engine_2024_unique_';
 const CHROME_SYNC_STORAGE_KEYS = Array.isArray(LumnoSettings.CHROME_SYNC_STORAGE_KEYS)
   ? LumnoSettings.CHROME_SYNC_STORAGE_KEYS

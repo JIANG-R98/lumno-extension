@@ -123,15 +123,14 @@ describe('Options segmented control React island', () => {
     }
     vi.stubGlobal('ResizeObserver', ResizeObserverMock);
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function(this: HTMLElement) {
-      const element = this;
-      const left = element === host
+      const left = this === host
         ? 100
-        : element.dataset.recentMode === 'latest'
+        : this.dataset.recentMode === 'latest'
           ? 112
           : 190;
       const width = !visible
         ? 0
-        : element === host
+        : this === host
           ? 180
           : 70;
       return {

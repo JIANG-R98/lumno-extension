@@ -120,7 +120,7 @@ function pickCasedLabelFromTitle(rawTitle, candidates, hostLabel) {
     }
   }
   const words = rawTitle
-    .split(/[\s|—–\-·•:：()（）\[\]【】]+/)
+    .split(/[\s|—–\-·•:：()（）[\]【】]+/)
     .map((part) => String(part || '').trim())
     .filter(Boolean);
   for (let index = 0; index < words.length; index += 1) {

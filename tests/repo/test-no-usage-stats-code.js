@@ -10,10 +10,6 @@ function repoPath(relativePath) {
   return path.join(repoRoot, relativePath);
 }
 
-function read(relativePath) {
-  return fs.readFileSync(repoPath(relativePath), 'utf8');
-}
-
 function assertPathMissing(relativePath) {
   assert.ok(!fs.existsSync(repoPath(relativePath)), `${relativePath} should be removed`);
 }

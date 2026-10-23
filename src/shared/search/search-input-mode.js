@@ -120,19 +120,6 @@ function setStyle(element, property, value, useImportantStyles) {
   element.style.setProperty(property, value, priorityFor(useImportantStyles));
 }
 
-function removeStyle(element, property) {
-  if (!element || !element.style) {
-    return;
-  }
-  if (typeof element.style.removeProperty === 'function') {
-    element.style.removeProperty(property);
-    return;
-  }
-  if (typeof element.style.setProperty === 'function') {
-    element.style.setProperty(property, '');
-  }
-}
-
 function isElementVisible(element) {
   if (!element) {
     return false;
@@ -211,14 +198,6 @@ function getContrastRatio(firstRgb, secondRgb) {
   const secondLuminance = getRelativeLuminance(secondRgb);
   return (Math.max(firstLuminance, secondLuminance) + 0.05) /
     (Math.min(firstLuminance, secondLuminance) + 0.05);
-}
-
-function getReadableTextColor(backgroundRgb) {
-  const darkText = [17, 24, 39];
-  const lightText = [248, 250, 252];
-  const darkContrast = getContrastRatio(darkText, backgroundRgb);
-  const lightContrast = getContrastRatio(lightText, backgroundRgb);
-  return darkContrast >= lightContrast ? '#111827' : '#F8FAFC';
 }
 
 function getAccessibleThemeColorRgb(accentRgb, backgroundRgb, minimumContrast) {

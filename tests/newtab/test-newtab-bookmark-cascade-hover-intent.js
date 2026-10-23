@@ -1,5 +1,4 @@
 const assert = require('assert');
-const fs = require('fs');
 const path = require('path');
 const { parsePageCss } = require('../helpers/css-rules');
 const { getPageScripts, runsBefore } = require('../helpers/runtime-scripts');

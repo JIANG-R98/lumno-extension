@@ -1839,19 +1839,6 @@ function captureSwitcherThumbnailForTab(tab, reason) {
   });
 }
 
-function captureSwitcherThumbnailNow(request) {
-  const tabId = request && typeof request.tabId === 'number' ? request.tabId : null;
-  const windowId = request && typeof request.windowId === 'number' ? request.windowId : null;
-  if (typeof tabId !== 'number' || typeof windowId !== 'number') {
-    return;
-  }
-  // Capture failures are already logged by captureSwitcherThumbnailForTab.
-  captureSwitcherThumbnailForTab({
-    id: tabId,
-    windowId
-  }, request && request.reason).catch(() => {});
-}
-
 function hasFreshSwitcherThumbnail(tab, now) {
   const state = recentTabTracker.getThumbnailState(tab.id, getResolvedTabUrl(tab));
   const capturedAt = Number(state && state.capturedAt) || 0;

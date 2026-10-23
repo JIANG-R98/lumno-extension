@@ -6,7 +6,6 @@ const DIVIDER_CLASS = '_x_extension_tooltip_divider_2026_unique_';
 const DEFAULT_VISIBLE_ATTRIBUTE = 'data-visible';
 const DEFAULT_BOUND_ATTRIBUTE = 'data-tooltip-bound';
 const DEFAULT_TEXT_ATTRIBUTE = 'data-tooltip';
-const DIVIDER_MARKER = '────────';
 
 function getDocument(options) {
   return (options && options.documentObj) || (globalThis && globalThis.document) || null;

@@ -14,9 +14,6 @@ function createSectionModeSelect(deps) {
     hideTopActionTooltip
   } = deps;
 
-  // The page state object shared with newtab.js and the other modules.
-  const pageState = deps.pageState;
-
   const SECTION_MODE_MENU_MIN_WIDTH_PX = 168;
   const SECTION_MODE_MENU_MAX_WIDTH_PX = 240;
   const SECTION_MODE_MENU_PORTAL_Z_INDEX = 10020;

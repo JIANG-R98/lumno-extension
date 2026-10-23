@@ -1,5 +1,4 @@
 const assert = require('assert');
-const fs = require('fs');
 const refs = require('../../src/shared/bookmark-folder-reference.js');
 const shortcuts = require('../../src/newtab/shortcuts/shortcuts-store.js');
 const settings = require('../../src/shared/settings.js');

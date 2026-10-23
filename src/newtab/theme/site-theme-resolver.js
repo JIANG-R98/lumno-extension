@@ -4,7 +4,6 @@ function createSiteThemeResolver(deps) {
   const {
     NEWTAB_FAVICON_THEME,
     FAVICON_UTILS,
-    getExtensionResourceUrl,
     normalizeHost,
     parseCssColor,
     defaultAccentColor,
@@ -41,14 +40,7 @@ function createSiteThemeResolver(deps) {
   const getBrandAccentForHost = NEWTAB_FAVICON_THEME.getBrandAccentForHost;
   const getThemeFingerprint = NEWTAB_FAVICON_THEME.getThemeFingerprint;
   const normalizeFaviconHost = FAVICON_UTILS.normalizeFaviconHost || NEWTAB_FAVICON_THEME.normalizeFaviconHost;
-  const hasThemeTokenInUrl = FAVICON_UTILS.hasThemeTokenInUrl || NEWTAB_FAVICON_THEME.hasThemeTokenInUrl;
-  const shouldSkipThemeUpgradeCandidate = FAVICON_UTILS.shouldSkipThemeUpgradeCandidate || NEWTAB_FAVICON_THEME.shouldSkipThemeUpgradeCandidate;
-  const getKnownThemedFaviconCandidates = (hostname, preferredTheme) => FAVICON_UTILS.getKnownThemedFaviconCandidateUrls(hostname, preferredTheme, {
-    getRuntimeUrl: getExtensionResourceUrl
-  });
 
-  const getRootFaviconCandidates = FAVICON_UTILS.getRootFaviconCandidateUrls;
-  const hostHasExplicitDarkFavicon = FAVICON_UTILS.hostHasExplicitDarkFavicon || NEWTAB_FAVICON_THEME.hostHasExplicitDarkFavicon;
   const isFaviconProxyUrl = FAVICON_UTILS.isFaviconProxyUrl || NEWTAB_FAVICON_THEME.isFaviconProxyUrl;
   const themeColorCache = window._x_extension_theme_color_cache_2024_unique_ || new Map();
 

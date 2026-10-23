@@ -2,7 +2,6 @@ const assert = require('assert');
 const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 const { SURFACES, openSearchSurface } = require('../helpers/search-surfaces');
 
-delete LumnoSuggestionsHeightLayout;
 const LumnoSuggestionsHeightLayout = require('../../src/shared/search/suggestions-height-layout.js');
 
 const runtime = LumnoSuggestionsHeightLayout;

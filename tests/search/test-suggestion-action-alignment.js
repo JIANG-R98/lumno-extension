@@ -1,7 +1,5 @@
 const assert = require('assert');
 const { readStylesheet } = require('../helpers/css-tokens');
-const fs = require('fs');
-const path = require('path');
 const { parseCss, parsePageCss } = require('../helpers/css-rules');
 const { openSearchSurface } = require('../helpers/search-surfaces');
 

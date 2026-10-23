@@ -52,27 +52,6 @@ function getUtf8ByteLength(value) {
   return bytes;
 }
 
-function truncateUtf8(value, maxBytes) {
-  const source = toWellFormedText(value);
-  const limit = Math.max(0, Number(maxBytes) || 0);
-  let bytes = 0;
-  let result = '';
-  for (let index = 0; index < source.length; index += 1) {
-    const codePoint = source.codePointAt(index);
-    const character = String.fromCodePoint(codePoint);
-    const characterBytes = getUtf8ByteLength(character);
-    if (bytes + characterBytes > limit) {
-      break;
-    }
-    result += character;
-    bytes += characterBytes;
-    if (codePoint > 0xFFFF) {
-      index += 1;
-    }
-  }
-  return result;
-}
-
 function getJsonStringContentByteLength(value) {
   const serialized = JSON.stringify(toWellFormedText(value));
   return serialized ? getUtf8ByteLength(serialized.slice(1, -1)) : 0;

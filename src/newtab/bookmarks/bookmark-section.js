@@ -82,7 +82,6 @@ function createBookmarkSection(deps) {
   const BOOKMARK_HOVER_DELAY_FROM_RECENT_MS = 56;
 
   setContentSectionVisible(bookmarkSection, false);
-  const bookmarkHeader = pageStructureRuntime.bookmark.header;
   pageState.bookmarkTitleWrap = pageStructureRuntime.bookmark.titleWrap;
   pageState.bookmarkHeading = pageStructureRuntime.bookmark.heading;
   updateBookmarkHeading();

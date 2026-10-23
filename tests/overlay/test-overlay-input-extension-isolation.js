@@ -1,6 +1,4 @@
 const assert = require('assert');
-const fs = require('fs');
-const path = require('path');
 const { JSDOM } = require('jsdom');
 const { createOverlayKeyRouter } = require('../../src/overlay/keyboard.js');
 

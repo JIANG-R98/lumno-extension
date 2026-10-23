@@ -111,7 +111,6 @@ function createSearchBox(deps) {
     return `score ${score} · 30m ${count30m} · 24h ${count24h} · ev ${debugTotal} · la ${lastAccessedSec} · s ${sortAtSec} · fs ${fetchSeq} · build 20260308-1`;
   }
   let isApplyingSearchInputHistory = false;
-  let searchInputRef = null;
   pageState.suggestionsView = NEWTAB_SUGGESTIONS_VIEW.createSuggestionsView({
     document,
     container: pageState.suggestionsContainer,
@@ -446,7 +445,6 @@ function createSearchBox(deps) {
   pageState.modeBadge = pageState.inputParts.modeBadge;
   const searchInput = pageState.inputParts.input;
   searchInput.addEventListener('focus', restoreDismissedSearchSuggestions);
-  searchInputRef = searchInput;
   pageState.searchScopeIcon = pageState.inputParts.icon;
   const rightIcon = pageState.inputParts.rightIcon;
   const searchScopeTooltipText = () => t(
