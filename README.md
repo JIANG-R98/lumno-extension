@@ -255,6 +255,8 @@ npm run lint
 
 Bug reports, feature ideas and pull requests are welcome in [Issues](https://github.com/kubai087/lumno-extension/issues). If Lumno saves you time, a ⭐ on GitHub or a review on the Chrome Web Store or Firefox Add-ons helps other people find it.
 
+Before you send a pull request, read [CONTRIBUTING.md](.github/CONTRIBUTING.md) for the setup and the checks to run. Everyone taking part follows the [Code of Conduct](.github/CODE_OF_CONDUCT.md), and security problems go through [SECURITY.md](.github/SECURITY.md).
+
 ## Credits
 
 - Japanese localization: thanks to [Humi](https://github.com/Hum1Tab) for Japanese translation and review.

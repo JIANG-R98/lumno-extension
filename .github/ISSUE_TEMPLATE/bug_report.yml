@@ -1,0 +1,65 @@
+name: Bug report / 问题反馈
+description: Something in Lumno does not work as it should. / Lumno 的某个功能没有按预期工作。
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. / 感谢你花时间反馈问题。
+        You can write in English, Chinese or Japanese. / 可以用英文、中文或日文填写。
+        Please report security problems privately instead; see [SECURITY.md](https://github.com/kubai087/lumno-extension/blob/main/.github/SECURITY.md). / 安全问题请私下报告，详见 [SECURITY.md](https://github.com/kubai087/lumno-extension/blob/main/.github/SECURITY.md)。
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened / 发生了什么
+      description: What did you see, and what did you expect to see instead? / 你看到了什么，原本期望看到什么？
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce / 复现步骤
+      description: The shortest steps that make it happen, starting from a fresh tab. / 从打开一个新标签页开始，能让问题出现的最短步骤。
+      placeholder: |
+        1. Open a new tab / 打开新标签页
+        2. Press Cmd+Shift+K / 按下 Cmd+Shift+K
+        3. ...
+    validations:
+      required: true
+
+  - type: input
+    id: lumno-version
+    attributes:
+      label: Lumno version / Lumno 版本
+      description: Shown on the extension details page, for example 1.1.4. / 在扩展详情页可以看到，例如 1.1.4。
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version / 浏览器及版本
+      description: For example Chrome 141, Edge 141, Firefox 144 or Arc. / 例如 Chrome 141、Edge 141、Firefox 144 或 Arc。
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system / 操作系统
+      options:
+        - macOS
+        - Windows
+        - Linux
+        - ChromeOS
+        - Other / 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or other details / 截图或其他信息
+      description: Screenshots, screen recordings, errors from the extension's console, or the page where it happens. / 截图、录屏、扩展控制台里的报错，或问题出现的页面。

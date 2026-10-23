@@ -1,0 +1,29 @@
+name: Feature request / 功能建议
+description: Suggest something Lumno could do, or do better. / 建议 Lumno 新增或改进的功能。
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: You can write in English, Chinese or Japanese. / 可以用英文、中文或日文填写。
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you are trying to do / 你想做什么
+      description: The task or situation where Lumno falls short today. / 目前 Lumno 在哪个任务或场景下不够好用。
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you would like / 你希望怎样
+      description: How you picture it working. Mockups or examples from other tools help. / 你设想它怎样工作。附上草图或其他工具的例子会很有帮助。
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you do now instead / 现在的替代做法
+      description: Workarounds or other tools you use for this today, if any. / 你现在用来解决这个问题的变通方法或其他工具（如果有的话）。

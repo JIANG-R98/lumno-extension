@@ -255,6 +255,8 @@ npm run lint
 
 欢迎在 [Issues](https://github.com/kubai087/lumno-extension/issues) 反馈问题、提出建议或提交 Pull Request。如果 Lumno 帮你节省了时间，欢迎在 GitHub 点个 ⭐，或在 Chrome 应用商店、Firefox 附加组件留下评价，让更多人发现它。
 
+提交 Pull Request 前，请先阅读 [CONTRIBUTING.md](../.github/CONTRIBUTING.md)，了解开发环境和需要运行的检查。所有参与者都须遵守[行为准则](../.github/CODE_OF_CONDUCT.md)，安全问题请按 [SECURITY.md](../.github/SECURITY.md) 报告。
+
 ## 鸣谢
 
 - 日文本地化：感谢 [Humi](https://github.com/Hum1Tab) 参与日文翻译与校对。

@@ -255,6 +255,8 @@ npm run lint
 
 不具合の報告、機能の提案、プルリクエストは [Issues](https://github.com/kubai087/lumno-extension/issues) で受け付けています。Lumno が役に立ったら、GitHub の ⭐ や Chrome ウェブストアや Firefox アドオンでのレビューで応援していただけると、より多くの人に届きます。
 
+プルリクエストを送る前に [CONTRIBUTING.md](../.github/CONTRIBUTING.md) で開発環境と実行すべきチェックを確認してください。参加するすべての人は[行動規範](../.github/CODE_OF_CONDUCT.md)に従い、セキュリティの問題は [SECURITY.md](../.github/SECURITY.md) に沿って報告してください。
+
 ## クレジット
 
 - 日本語ローカライズ：[Humi](https://github.com/Hum1Tab) さんに日本語翻訳と校正へご協力いただきました。
