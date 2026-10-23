@@ -135,16 +135,14 @@ function createSuggestionSources(deps) {
           type: 'browserPage',
           title: getBrowserPageSuggestionTitle(browserProfile, targetUrl),
           url: targetUrl,
-          favicon: getPageFaviconCandidateUrl(targetUrl) ||
-            'https://img.icons8.com/?size=100&id=1LqgD1Q7n2fy&format=png&color=000000'
+          favicon: getPageFaviconCandidateUrl(targetUrl)
         });
       } else if (rule.type === 'url' && rule.url) {
         matches.push({
           type: 'browserPage',
           title: formatMessage('open_url', '打开 {url}', { url: rule.url }),
           url: rule.url,
-          favicon: getPageFaviconCandidateUrl(rule.url) ||
-            'https://img.icons8.com/?size=100&id=1LqgD1Q7n2fy&format=png&color=000000'
+          favicon: getPageFaviconCandidateUrl(rule.url)
         });
       }
     });
@@ -306,22 +304,6 @@ function createSuggestionSources(deps) {
         searchQuery: query,
         forceSearch: true
       };
-
-    // Add ChatGPT suggestion as second item
-    // const chatGptSuggestion = {
-    //   type: 'chatgpt',
-    //   title: `Ask ChatGPT: "${query}"`,
-    //   url: `https://chatgpt.com/?q=${encodeURIComponent(query)}`,
-    //   favicon: 'https://img.icons8.com/?size=100&id=fO5yVwARGUEB&format=png&color=ffffff'
-    // };
-
-    // Add Perplexity suggestion as third item
-    // const perplexitySuggestion = {
-    //   type: 'perplexity',
-    //   title: `Ask Perplexity: "${query}"`,
-    //   url: `https://perplexity.ai/search?q=${encodeURIComponent(query)}`,
-    //   favicon: 'https://img.icons8.com/?size=100&id=kzJWN5jCDzpq&format=png&color=000000'
-    // };
 
     getShortcutRules().then((rules) => {
       if (query !== overlayState.latestOverlayQuery) {

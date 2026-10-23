@@ -95,16 +95,14 @@ function createSearchNavigation(deps) {
           type: 'browserPage',
           title: getBrowserPageSuggestionTitle(browserProfile, targetUrl),
           url: targetUrl,
-          favicon: getPageFaviconCandidateUrl(targetUrl) ||
-            'https://img.icons8.com/?size=100&id=1LqgD1Q7n2fy&format=png&color=000000'
+          favicon: getPageFaviconCandidateUrl(targetUrl)
         });
       } else if (rule.type === 'url' && rule.url) {
         matches.push({
           type: 'browserPage',
           title: formatMessage('open_url', '打开 {url}', { url: rule.url }),
           url: rule.url,
-          favicon: getPageFaviconCandidateUrl(rule.url) ||
-            'https://img.icons8.com/?size=100&id=1LqgD1Q7n2fy&format=png&color=000000'
+          favicon: getPageFaviconCandidateUrl(rule.url)
         });
       }
     });
