@@ -557,16 +557,19 @@ function BookmarkCard({
       : options.t('bookmarks_heading', '书签'))
   );
   const safeTitleText = options.sanitizeDisplayText(titleText);
-  const themeSuggestion: ThemeSuggestion = {
+  // Built once per value, so the card effect below reruns when the bookmark
+  // changes rather than on every render.
+  const themeSuggestion = useMemo<ThemeSuggestion>(() => ({
     type: 'bookmark',
     url: themeUrl,
     title: titleText
-  };
+  }), [themeUrl, titleText]);
   const immediateTheme = isTopbarMode
     ? null
     : options.getImmediateThemeForSuggestion(themeSuggestion);
-  const previewItems = isFolder && !isTopbarMode
-    ? (Array.isArray(item.previewUrls) ? item.previewUrls : [])
+  const previewUrls = item.previewUrls;
+  const previewItems = useMemo(() => (isFolder && !isTopbarMode
+    ? (Array.isArray(previewUrls) ? previewUrls : [])
         .slice(0, 4)
         .map((url, previewIndex) => {
           let previewHost = '';
@@ -588,7 +591,7 @@ function BookmarkCard({
           };
         })
         .filter((entry) => entry.url)
-    : [];
+    : []), [isFolder, isTopbarMode, item.id, options, previewUrls]);
 
   function clearHoverIntentTimer(): void {
     if (!hoverIntentTimerRef.current) {

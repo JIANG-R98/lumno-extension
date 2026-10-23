@@ -58,6 +58,9 @@ function getFontPreviewFamily(family: string): string {
 // past the cap, however many fonts are installed.
 const SEARCHABLE_MENU_MIN_HEIGHT = 280;
 const SEARCHABLE_MENU_MAX_HEIGHT = 480;
+// One empty list for a menu without options, so effects that depend on the
+// options do not see a new list on each render.
+const NO_OPTIONS: SelectMenuOption[] = [];
 
 function findNextEnabledOptionIndex(
   options: SelectMenuOption[],
@@ -155,7 +158,7 @@ export function SelectMenu({
   registerControls?(controls: SelectMenuControls): void;
   windowObj: Window;
 }) {
-  const options = Array.isArray(config.options) ? config.options : [];
+  const options = Array.isArray(config.options) ? config.options : NO_OPTIONS;
   const searchable = config.searchable === true;
   const [open, setOpenState] = useState(false);
   const [selectedValue, setSelectedValue] = useState(String(config.value ?? ''));
@@ -170,6 +173,12 @@ export function SelectMenu({
   // changes only what it shows, never its box.
   const searchableNaturalHeightRef = useRef<number | null>(null);
   const visibleOptions = searchable ? filterOptions(options, filter) : options;
+  // The open effect reads the list through this ref: it runs when the menu
+  // opens or its options change, not on every keystroke in the filter.
+  const visibleOptionsRef = useRef(visibleOptions);
+  useLayoutEffect(() => {
+    visibleOptionsRef.current = visibleOptions;
+  });
 
   useEffect(() => {
     setSelectedValue(String(config.value ?? ''));
@@ -317,7 +326,7 @@ export function SelectMenu({
     }
     // Measured afresh for this open, or for a list that changed while open.
     searchableNaturalHeightRef.current = null;
-    const selectedIndex = visibleOptions.findIndex(
+    const selectedIndex = visibleOptionsRef.current.findIndex(
       (option) => !option.action && !option.checkbox &&
         option.value === selectedValue &&
         !option.disabled
@@ -393,7 +402,7 @@ export function SelectMenu({
       documentObj.removeEventListener('keydown', onKeyDown, true);
       documentObj.removeEventListener('focusin', onFocusIn, true);
     };
-  }, [documentObj, open, setOpen]);
+  }, [documentObj, host, open, setOpen]);
 
   useLayoutEffect(() => {
     registerControls?.({

@@ -161,6 +161,10 @@ function StaticTitle({ model }: { model: NormalizedCopyHeadingModel }) {
   );
 }
 
+// One empty list for every title without a cycle, so the cycle effect does
+// not see a new list on each render.
+const NO_TITLE_CYCLE_ITEMS: NormalizedTitleCycleItem[] = [];
+
 function RotatingTitle({
   model,
   options
@@ -168,7 +172,7 @@ function RotatingTitle({
   model: NormalizedCopyHeadingModel;
   options: CopyHeadingControllerOptions;
 }) {
-  const items = model.titleCycle?.items || [];
+  const items = model.titleCycle?.items || NO_TITLE_CYCLE_ITEMS;
   const [activeIndex, setActiveIndex] = useState(0);
   const [phase, setPhase] = useState<SwapPhase>('idle');
   const activeIndexRef = useRef(0);

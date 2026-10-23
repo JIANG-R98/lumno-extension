@@ -70,10 +70,15 @@ function OpenTabRowComponent({
           tab.url || ''
         )
       };
-  const themeSuggestion: Suggestion = {
-    url: tab.url || '',
-    favicon: tab.favIconUrl || ''
-  };
+  // One object per tab, so the row effect below reruns only when the tab
+  // or its theme changes, not on every render.
+  const themeSuggestion = useMemo<Suggestion>(
+    () => ({
+      url: tab.url || '',
+      favicon: tab.favIconUrl || ''
+    }),
+    [tab.favIconUrl, tab.url]
+  );
   const localFallback = isLocalUrlSuggestion(
     options,
     themeSuggestion
@@ -169,6 +174,7 @@ function OpenTabRowComponent({
   }, [
     fallback,
     immediateTheme,
+    index,
     localFallback,
     options,
     runtime,

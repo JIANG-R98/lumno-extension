@@ -1522,6 +1522,41 @@ describe('Suggestions React island', () => {
     expect(items[0].querySelector('.x-ov-action-tag__key')).toBeNull();
   });
 
+  it('leaves an open-tab row alone when the same tabs render again', () => {
+    const applyThemeVariables = vi.fn();
+    // The page hands out cached theme objects, the same one for the same site.
+    const theme = { highlightBg: '#eef' };
+    const { view } = createView({
+      surface: 'overlay',
+      applyThemeVariables,
+      getImmediateThemeForSuggestion: () => theme
+    });
+    const tabs = [{ id: 1, title: 'First tab', url: 'https://example.com/first' }];
+
+    act(() => view.renderTabs(tabs));
+    const applied = applyThemeVariables.mock.calls.length;
+    // The page passes a fresh list of tab objects on every update.
+    act(() => view.renderTabs(tabs.map((tab) => ({ ...tab }))));
+    expect(applyThemeVariables.mock.calls.length).toBe(applied);
+  });
+
+  it('moves the autocomplete mark with the first open tab when the tabs reorder', () => {
+    const { view, items } = createView({
+      surface: 'overlay',
+      autoHighlightFirstTab: true
+    });
+    const first = { id: 1, title: 'First tab', url: 'https://example.com/first' };
+    const second = { id: 2, title: 'Second tab', url: 'https://example.com/second' };
+
+    act(() => view.renderTabs([first, second]));
+    const [firstRow, secondRow] = items;
+    expect([firstRow._xIsAutocompleteTop, secondRow._xIsAutocompleteTop]).toEqual([true, false]);
+
+    act(() => view.renderTabs([second, first]));
+    expect(items[0]).toBe(secondRow);
+    expect([secondRow._xIsAutocompleteTop, firstRow._xIsAutocompleteTop]).toEqual([true, false]);
+  });
+
   it('applies contrast-aware brand text without a tag surface', () => {
     const brandTheme = {
       _xIsBrand: true,
