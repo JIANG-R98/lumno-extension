@@ -105,7 +105,7 @@
       }
    ],
   "manifest_version": 3,
-  "default_locale": "zh_CN",
+  "default_locale": "en",
    "name": "__MSG_ext_name__",
    "author": "Kubai087",
    "permissions": [ "scripting", "tabs", "tabGroups", "history", "topSites", "bookmarks", "storage", "search", "favicon", "alarms", "unlimitedStorage", "contextMenus", "fontSettings" ],
