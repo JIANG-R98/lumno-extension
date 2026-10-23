@@ -10,6 +10,7 @@ function createToggleControls(deps) {
     selectionQuickActionsToggle,
     selectionQuickActionsProviderSelect,
     renderOptionsSelectControl,
+    selectionQuickActionsSubrows,
     selectionQuickActionsProviderRow,
     selectionQuickActionsGroupToggle,
     selectionQuickActionsGroupRow,
@@ -82,8 +83,42 @@ function createToggleControls(deps) {
     record.controller.render(record.model);
   }
 
+  // The sub-rows open and fold with the switch. The first sync only places
+  // them (no motion while the page loads its settings); later ones animate.
+  if (selectionQuickActionsSubrows) {
+    selectionQuickActionsSubrows.addEventListener('transitionend', (event) => {
+      if (event.target === selectionQuickActionsSubrows
+        && event.propertyName === 'grid-template-rows'
+        && selectionQuickActionsSubrows.getAttribute('data-expanded') === 'true') {
+        selectionQuickActionsSubrows.setAttribute('data-settled', 'true');
+      }
+    });
+  }
+  let selectionQuickActionsSubrowsMotionQueued = false;
+  function setSelectionQuickActionsSubrowsExpanded(expanded) {
+    const wrap = selectionQuickActionsSubrows;
+    if (!wrap) {
+      return;
+    }
+    const next = expanded ? 'true' : 'false';
+    if (wrap.getAttribute('data-expanded') !== next) {
+      wrap.setAttribute('data-expanded', next);
+      wrap.inert = !expanded;
+      const instant = wrap.getAttribute('data-motion') === 'off'
+        || getComputedStyle(wrap).transitionDuration.split(',').every((value) => parseFloat(value) === 0);
+      wrap.setAttribute('data-settled', expanded && instant ? 'true' : 'false');
+    }
+    if (!selectionQuickActionsSubrowsMotionQueued && wrap.getAttribute('data-motion') === 'off') {
+      selectionQuickActionsSubrowsMotionQueued = true;
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        wrap.removeAttribute('data-motion');
+      }));
+    }
+  }
+
   function syncSelectionQuickActionsProviderAvailability() {
     const disabled = Boolean(selectionQuickActionsToggle && !selectionQuickActionsToggle.checked);
+    setSelectionQuickActionsSubrowsExpanded(!disabled);
     if (selectionQuickActionsProviderSelect) {
       selectionQuickActionsProviderSelect.disabled = disabled;
       renderOptionsSelectControl(selectionQuickActionsProviderSelect);

@@ -1484,6 +1484,42 @@ body[data-theme="dark"] ._x_extension_shortcut_ghost_2026_unique_ {
 ._x_extension_setting_subrow_2026_unique_[data-disabled="true"] {
   opacity: 0.5;
 }
+/* Sub-rows that only exist while their parent switch is on: they fold to
+   nothing (taking the column's row gap with them) and open on a grid-rows
+   transition. The inner box clips while moving, then lets dropdowns and
+   tooltips spill out once the rows have settled open. */
+._x_extension_setting_reveal_2026_unique_ {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition:
+    grid-template-rows var(--lumno-duration-3xl) var(--lumno-ease-spring),
+    margin-top var(--lumno-duration-3xl) var(--lumno-ease-spring),
+    opacity var(--lumno-duration-lg) ease;
+}
+._x_extension_setting_reveal_2026_unique_[data-expanded="false"] {
+  grid-template-rows: 0fr;
+  margin-top: calc(var(--settings-row-gap) * -1);
+  opacity: 0;
+}
+._x_extension_setting_reveal_2026_unique_[data-motion="off"] {
+  transition: none;
+}
+._x_extension_setting_reveal_inner_2026_unique_ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--settings-row-gap);
+  min-height: 0;
+  overflow: hidden;
+}
+._x_extension_setting_reveal_2026_unique_[data-settled="true"] > ._x_extension_setting_reveal_inner_2026_unique_ {
+  overflow: visible;
+}
+@media (prefers-reduced-motion: reduce) {
+  ._x_extension_setting_reveal_2026_unique_ {
+    transition: none;
+  }
+}
 ._x_extension_setting_row_2024_unique_[data-unsupported="true"] > * {
   opacity: 0.5;
 }
