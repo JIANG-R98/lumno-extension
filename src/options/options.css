@@ -86,27 +86,29 @@ html[data-theme-ready="true"] body {
   opacity: 1;
 }
 /* The page paints before the stored settings are read. Until options.js
-   marks them painted (data-lumno-options-ready), the settings panel stays
-   hidden and nothing else on the page animates, so switches, selects, rows
-   and the tab indicator appear in their stored state instead of sliding there
-   from the HTML defaults. The panel then fades in; should ready never come,
-   it shows anyway after a second. */
-html:not([data-lumno-options-ready="true"]) body :not(#_x_extension_settings_panel_2024_unique_),
+   marks them painted (data-lumno-options-ready), the banner and everything
+   under the settings root stay hidden and nothing on the page animates, so
+   switches, selects, rows and the tab indicator appear in their stored state
+   instead of sliding there from the HTML defaults. Banner, tabs and panel
+   then fade in together, each to its own opacity; should ready never come,
+   they show anyway after a second. */
+html:not([data-lumno-options-ready="true"]) body :not(#_x_extension_options_root_2024_unique_, .settings-bg-light),
 html:not([data-lumno-options-ready="true"]) body *::before,
 html:not([data-lumno-options-ready="true"]) body *::after {
   transition: none !important;
   animation: none !important;
 }
-#_x_extension_settings_panel_2024_unique_ {
+.settings-bg-light,
+#_x_extension_options_root_2024_unique_ {
   transition: opacity var(--lumno-duration-lg) ease;
 }
-html:not([data-lumno-options-ready="true"]) #_x_extension_settings_panel_2024_unique_ {
+html:not([data-lumno-options-ready="true"]) :is(.settings-bg-light, #_x_extension_options_root_2024_unique_) {
   opacity: 0;
   transition: none;
-  animation: _xOptionsPanelStartupFallback_2026_unique_ 0s linear 1s forwards;
+  animation: _xOptionsStartupRevealFallback_2026_unique_ 0s linear 1s forwards;
 }
-@keyframes _xOptionsPanelStartupFallback_2026_unique_ {
-  to { opacity: 1; }
+@keyframes _xOptionsStartupRevealFallback_2026_unique_ {
+  to { opacity: var(--settings-reveal-opacity, 1); }
 }
 /* Light mode subtle noise overlay (adjust opacity/URL for strength & tone) */
 body[data-theme="light"]::before {
@@ -130,10 +132,11 @@ body[data-theme="light"]::before {
   border-radius: 24px;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.65;
+  --settings-reveal-opacity: 0.65;
+  opacity: var(--settings-reveal-opacity);
 }
 body[data-theme="dark"] .settings-bg-light {
-  opacity: 1;
+  --settings-reveal-opacity: 1;
   background-image: url("../../assets/images/settings-bg-dark.webp");
 }
 body[data-theme="light"] {
