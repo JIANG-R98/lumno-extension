@@ -82,6 +82,9 @@ class FakeElement {
 
   click() {
     this.clickCount += 1;
+    if (typeof this.env.onClick === 'function') {
+      this.env.onClick(this);
+    }
   }
 }
 
@@ -99,6 +102,7 @@ function withFakePromptDom(callback, options) {
   };
 
   const env = {
+    onClick: settings.onClick,
     activeElement: null,
     enterPressed: false,
     sleepsAfterEnter: 0,
@@ -275,6 +279,25 @@ async function run() {
       'ChatGPT should still be filled by Lumno when the page ignores ?q=');
     assert.strictEqual(env.sendButton.clickCount, 1);
   }, { sendButtonAlwaysVisible: true });
+
+  await withFakePromptDom(async (env) => {
+    const result = await submitWithFakeChrome('qwenChatPrompt', 'Explain Lumno', {
+      expectedUrl: 'https://chat.qwen.ai/'
+    });
+    assert.deepStrictEqual(result, { ok: true, method: 'enter-button' });
+    assert.strictEqual(env.sendButton.clickCount, 3,
+      'Qwen Chat should click send again while the prompt is still in the composer');
+    assert.strictEqual(env.editor.innerText, '');
+  }, {
+    documentOrigin: 'https://chat.qwen.ai',
+    sendButtonAlwaysVisible: true,
+    onClick(button) {
+      // A freshly loaded Qwen Chat ignores the first sends, then clears the composer.
+      if (button.name === 'sendButton' && button.clickCount === 3) {
+        button.env.editor._text = '';
+      }
+    }
+  });
 
   const expectedStrategyOrigins = {
     geminiPrompt: 'https://gemini.google.com',

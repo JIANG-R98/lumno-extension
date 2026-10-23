@@ -64,6 +64,7 @@ function createPromptStrategy(options) {
     enterDelayMs: Math.max(0, Number(settings.enterDelayMs) || 0),
     postEnterDelayMs: Math.max(0, Number(settings.postEnterDelayMs) || 0),
     postEnterButtonAttempts: Math.max(0, Number(settings.postEnterButtonAttempts) || 0),
+    resendUntilClearedAttempts: Math.max(0, Number(settings.resendUntilClearedAttempts) || 0),
     submitMode: String(settings.submitMode || '').trim(),
     contentEditableFillMode: String(settings.contentEditableFillMode || '').trim(),
     inputEventDataMode: String(settings.inputEventDataMode || '').trim(),
@@ -82,6 +83,7 @@ function createEnterPromptStrategy(editorSelectors, options) {
     enterDelayMs: 180,
     postEnterDelayMs: 320,
     postEnterButtonAttempts: settings.postEnterButtonAttempts || 8,
+    resendUntilClearedAttempts: settings.resendUntilClearedAttempts,
     submitMode: 'enter',
     contentEditableFillMode: settings.contentEditableFillMode,
     inputEventDataMode: settings.inputEventDataMode,
@@ -252,6 +254,9 @@ const STRATEGIES = Object.freeze({
       'button.send-button',
       '.chat-prompt-send-button button'
     ],
+    // Qwen Chat ignores send clicks for about a second after its composer
+    // appears, which is exactly when a freshly opened tab gets here.
+    resendUntilClearedAttempts: 12,
     editorWaitAttempts: 36
   }),
   aiStudioPrompt: createPromptStrategy({
@@ -399,6 +404,7 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
         const enterDelayMs = Math.max(0, Number(config.enterDelayMs) || 0);
         const postEnterDelayMs = Math.max(0, Number(config.postEnterDelayMs) || 0);
         const postEnterButtonAttempts = Math.max(0, Number(config.postEnterButtonAttempts) || 0);
+        const resendUntilClearedAttempts = Math.max(0, Number(config.resendUntilClearedAttempts) || 0);
         const submitMode = String(config.submitMode || '').trim();
         const contentEditableFillMode = String(config.contentEditableFillMode || '').trim();
         const inputEventDataMode = String(config.inputEventDataMode || '').trim();
@@ -631,6 +637,21 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
             editor.dispatchEvent(event);
           });
         };
+        // Some composers ignore a send click until the page settles. While the
+        // prompt still sits in the editor, the send has not happened: click again.
+        const resendWhileUnsent = async (editor) => {
+          for (let attempt = 0; attempt < resendUntilClearedAttempts; attempt += 1) {
+            await sleep(500);
+            const currentEditor = findEditor() || editor;
+            if (getEditorText(currentEditor) !== promptText) {
+              return;
+            }
+            const sendButton = findSendButton(currentEditor, { useNearby: true });
+            if (sendButton && isActionableButton(sendButton)) {
+              sendButton.click();
+            }
+          }
+        };
         const prefilledEditor = urlPrefillWaitAttempts > 0 ? await waitForUrlPrefill() : null;
         if (prefilledEditor) {
           for (let sendAttempt = 0; sendAttempt < Math.max(1, buttonWaitAttempts); sendAttempt += 1) {
@@ -660,6 +681,7 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
               const sendButton = findSendButton(editor, { useNearby: useNearbySendButton });
               if (sendButton && isActionableButton(sendButton)) {
                 sendButton.click();
+                await resendWhileUnsent(editor);
                 return { ok: true, method: 'button' };
               }
               await sleep(sendAttempt < 4 ? 150 : 250);
@@ -682,6 +704,7 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
               });
               if (sendButton && isActionableButton(sendButton)) {
                 sendButton.click();
+                await resendWhileUnsent(editor);
                 return { ok: true, method: 'enter-button' };
               }
               if (postEnterAttempt + 1 < postEnterButtonAttempts) {
