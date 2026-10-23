@@ -34,6 +34,12 @@ async function testRowsAndTheirMarkup() {
 
 async function testInstalledFontsAreListedAndChosenOnThisDevice() {
   const page = await createOptionsPage({ fonts: FONTS });
+  // The font list and the menus' translated labels both arrive asynchronously.
+  const listed = (selectId) => {
+    const options = page.menuOptions(selectId);
+    return options.length > 1 && options.every((option) => option.label);
+  };
+  await page.waitFor(() => listed(FONT_SELECT) && listed(FALLBACK_SELECT), 'the installed fonts should be listed');
   assert.deepStrictEqual(page.menuOptions(FONT_SELECT), [
     { value: '', label: '默认' },
     { value: 'Inter', label: 'Inter' },
@@ -54,8 +60,7 @@ async function testInstalledFontsAreListedAndChosenOnThisDevice() {
   assert.strictEqual(fontWrites(page.storage.sync).length, syncWritesBefore, 'installed fonts should never reach browser sync');
 
   page.changeStorage('local', FAMILY_KEY, 'Inter');
-  await page.settle();
-  assert.strictEqual(page.document.getElementById(`${FONT_SELECT}_control_value`).textContent, 'Inter',
+  await page.waitFor(() => page.document.getElementById(`${FONT_SELECT}_control_value`).textContent === 'Inter',
     'a font chosen on another Settings page should show here');
   page.close();
 }

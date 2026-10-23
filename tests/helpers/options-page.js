@@ -271,6 +271,18 @@ async function createOptionsPage(options) {
   run(bundleScript('options'), 'build/options.js');
   await settle(80);
 
+  // Polls until condition() is truthy, for state the page fills in
+  // asynchronously and a busy machine may take longer than a fixed wait for.
+  const waitFor = async (condition, message, timeoutMs) => {
+    const deadline = Date.now() + (timeoutMs || 2000);
+    while (Date.now() < deadline) {
+      const value = condition();
+      if (value) return value;
+      await settle(10);
+    }
+    throw new Error(`${message || 'condition not met'}${errors.length ? `\npage errors: ${errors.join('\n')}` : ''}`);
+  };
+
   const page = {
     window,
     document: window.document,
@@ -283,6 +295,7 @@ async function createOptionsPage(options) {
     runtimeMessages,
     keys,
     settle,
+    waitFor,
     byId: (id) => window.document.getElementById(id),
     // Sets a control's value and fires the events a user change fires.
     async choose(element, value) {

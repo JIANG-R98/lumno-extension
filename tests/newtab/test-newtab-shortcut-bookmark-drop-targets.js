@@ -44,9 +44,32 @@ async function openNewtab(mode, sourceType, options) {
     // A folder shortcut's own folder lives elsewhere unless the case puts it on the bar.
     otherBookmarks: config.sourceAsCard ? [] : [{ id: '30', title: 'Source folder', children: [] }]
   });
-  await page.settle(250);
   const doc = page.document;
   const geometry = GEOMETRY[mode];
+  // Each drop is undone before the next one, and on a busy machine a drop, its
+  // undo and the renders after them can each take longer than a fixed wait.
+  // So the test waits for the page itself: for the drop to land before
+  // undoing it, and for the bookmarks and the shortcut to be back before the
+  // next drop.
+  const shortcutTiles = () => doc.querySelectorAll('.x-nt-shortcut-tile:not(.x-nt-shortcut-tile--add)').length;
+  const bookmarkCards = () => doc.querySelectorAll('#_x_extension_newtab_bookmarks_grid_2024_unique_ .x-nt-bookmark-card').length;
+  const restored = () => bookmarkCards() === barItems.length && shortcutTiles() === 1;
+  const waitUntilStill = async () => {
+    const snapshot = () => [shortcutTiles(), bookmarkCards(), page.bookmarks.calls.length].join();
+    let last = snapshot();
+    let stillSince = Date.now();
+    const deadline = Date.now() + 3000;
+    while (Date.now() < deadline && Date.now() - stillSince < 120) {
+      await page.settle(20);
+      const current = snapshot();
+      if (current !== last) {
+        last = current;
+        stillSince = Date.now();
+      }
+    }
+  };
+  await page.waitFor(restored, `${mode}/${sourceType}: New Tab should show the bookmarks and the shortcut`);
+  await waitUntilStill();
   const layoutPage = () => {
     const grid = doc.getElementById('_x_extension_newtab_bookmarks_grid_2024_unique_');
     const cards = Array.from(grid.querySelectorAll('.x-nt-bookmark-card'));
@@ -76,10 +99,12 @@ async function openNewtab(mode, sourceType, options) {
       assert.ok(tile, `${mode}/${sourceType} ${JSON.stringify(config)}: the shortcut should be back before dropping at ${x},${y}`);
       const before = page.bookmarks.calls.length;
       await page.drag(tile, [[320, 300], [x, y]]);
+      await waitUntilStill();
       const changes = page.bookmarks.calls.slice(before).filter((call) => ['create', 'move'].includes(call.name));
-      const shortcutsLeft = doc.querySelectorAll('.x-nt-shortcut-tile:not(.x-nt-shortcut-tile--add)').length;
+      const shortcutsLeft = shortcutTiles();
       page.trusted(doc.body, 'keydown', { key: 'z', code: 'KeyZ', metaKey: true, bubbles: true, cancelable: true });
-      await page.settle(150);
+      await page.waitFor(restored, `${mode}/${sourceType}: undoing the drop at ${x},${y} should restore the page`);
+      await waitUntilStill();
       page.bookmarks.calls.length = 0;
       return { changes: changes.map((call) => call.args[call.name === 'move' ? 1 : 0]), moved: changes.map((call) => call.name), shortcutsLeft };
     }

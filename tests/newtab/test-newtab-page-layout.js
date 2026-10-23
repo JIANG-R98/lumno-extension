@@ -89,7 +89,8 @@ async function testEntranceSequence() {
   const moving = await openPage({ sync: { [MOTION_KEY]: true } });
   const body = moving.document.body;
   const searchRoot = moving.document.getElementById(SEARCH_ROOT_ID);
-  assert.strictEqual(body.getAttribute('data-nt-ready'), '1', 'the page should be shown once its first layout is ready');
+  // A busy machine can take longer than the page helper's startup wait.
+  await moving.waitFor(() => body.getAttribute('data-nt-ready') === '1', 'the page should be shown once its first layout is ready');
   assert.deepStrictEqual([body.getAttribute('data-nt-enter'), searchRoot.getAttribute('data-lumno-search-entry')], ['run', 'run'],
     'the entrance should run on the page and its shared search entry');
   moving.press('Escape');
@@ -99,6 +100,7 @@ async function testEntranceSequence() {
   moving.close();
 
   const still = await openPage({ sync: { [MOTION_KEY]: false } });
+  await still.waitFor(() => still.document.body.getAttribute('data-nt-ready') === '1', 'the page should be shown');
   assert.strictEqual(still.document.body.getAttribute('data-nt-enter'), 'done', 'with motion off there is no entrance');
   still.close();
 }

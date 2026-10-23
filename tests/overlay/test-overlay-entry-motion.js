@@ -17,13 +17,19 @@ const OVERLAY_ID = '_x_extension_overlay_2024_unique_';
 const ELASTIC_REST = 'translateX(-50%) translateY(0) scale(var(--x-ov-visible-scale, 1)) scaleX(1)';
 const FADE_REST = 'translateX(-50%) translateY(0) scale(var(--x-ov-visible-scale, 1)) scale(1)';
 
-async function openWithMotion(settings, options) {
+// The overlay skips its entry when it starts more than 280ms after the open
+// was asked for, and a busy test machine can take that long on its own. Cases
+// that expect the motion date the open up to the second of clock skew the
+// overlay accepts; the slow-start case keeps the real time.
+const UNHURRIED_OPEN_MS = 1000;
+
+async function openWithMotion(settings, options, openedAt = Date.now()) {
   const page = await createOverlayPage(Object.assign({
     settings: Object.assign({ [MOTION_KEY]: true }, settings),
     stylesheetsLoad: true,
     recordAnimations: true
   }, options || {}));
-  const root = await page.open({ openedAt: Date.now() });
+  const root = await page.open({ openedAt });
   await page.settle(80);
   return { page, root, overlay: root.getElementById(OVERLAY_ID) };
 }
@@ -44,9 +50,12 @@ async function testEachEntrySettingPlaysItsMotion() {
   ];
   for (const [settings, startDelta, duration, easing, opacityDuration, rest] of cases) {
     const label = JSON.stringify(settings);
-    const { page, overlay } = await openWithMotion(settings);
+    const { page, overlay } = await openWithMotion(settings, null, Date.now() + UNHURRIED_OPEN_MS);
+    await page.waitFor(() => {
+      const started = entryAnimations(page, overlay);
+      return started.transform && started.opacity;
+    }, `${label} should animate the panel`);
     const { transform, opacity } = entryAnimations(page, overlay);
-    assert.ok(transform && opacity, `${label} should animate the panel`);
     assert.deepStrictEqual(transform.keyframes, [{ transform: startDelta }, { transform: 'none' }], `${label} entry delta`);
     assert.deepStrictEqual(
       [transform.options.composite, transform.options.fill, transform.options.duration, transform.options.easing],

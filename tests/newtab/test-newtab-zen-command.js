@@ -57,7 +57,7 @@ async function testRestoredBeforeTheFirstFrame() {
       }).observe(window.document.documentElement, { subtree: true, attributes: true, attributeFilter: ['data-nt-ready'] });
     }
   });
-  await surface.settle(200);
+  await surface.waitFor(() => zenWhenReady !== null, 'New Tab should show');
   assert.strictEqual(zenWhenReady, 'true', 'a remembered Zen mode should apply before New Tab first shows');
   surface.close();
 }

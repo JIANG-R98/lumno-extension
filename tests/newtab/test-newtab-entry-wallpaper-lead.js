@@ -8,7 +8,46 @@ const { moduleScript } = require('../helpers/module-script');
 const newtabCss = parsePageCss('newtab.html');
 const glassCss = parseCss(readStylesheet('src/newtab/glass-style.css'));
 
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+// A clock the test moves by hand. The lead is a 60ms window, and on a busy
+// machine building the module or a 20ms wait on real timers can take longer
+// than that, so real time would decide the outcome instead of the code.
+function createClock() {
+  let now = 1000;
+  let nextId = 1;
+  const timers = new Map();
+  const flush = () => new Promise((resolve) => setImmediate(resolve));
+  return {
+    performance: { now: () => now },
+    setTimeout(callback, ms) {
+      const id = nextId++;
+      timers.set(id, { at: now + Math.max(0, Number(ms) || 0), callback });
+      return id;
+    },
+    clearTimeout(id) {
+      timers.delete(id);
+    },
+    async advance(ms) {
+      const end = now + ms;
+      await flush();
+      for (;;) {
+        let next = null;
+        timers.forEach((timer, id) => {
+          if (timer.at <= end && (!next || timer.at < next.timer.at)) {
+            next = { id, timer };
+          }
+        });
+        if (!next) {
+          break;
+        }
+        timers.delete(next.id);
+        now = next.timer.at;
+        next.timer.callback();
+        await flush();
+      }
+      now = end;
+    }
+  };
+}
 
 function createElement() {
   const attributes = new Map();
@@ -30,18 +69,19 @@ function createEntryMotion({ wallpaperActive, wallpaperShownAgoMs, focusResume }
   if (wallpaperActive) {
     body.setAttribute('data-wallpaper-active', 'true');
   }
+  const clock = createClock();
   const pageState = {
     newtabReadyRequested: false,
     newtabReadyViewportRevision: 0,
     newtabResizeLayoutLocked: false,
     resolveNewtabEntryAnimationReady: null,
-    wallpaperShownAt: wallpaperShownAgoMs === null ? 0 : performance.now() - wallpaperShownAgoMs
+    wallpaperShownAt: wallpaperShownAgoMs === null ? 0 : clock.performance.now() - wallpaperShownAgoMs
   };
   const sandbox = {
     document: { body, documentElement },
-    window: { setTimeout, clearTimeout },
-    requestAnimationFrame: (callback) => setTimeout(callback, 0),
-    performance,
+    window: { setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout },
+    requestAnimationFrame: (callback) => clock.setTimeout(callback, 0),
+    performance: clock.performance,
     globalThis: null
   };
   sandbox.globalThis = sandbox;
@@ -57,41 +97,41 @@ function createEntryMotion({ wallpaperActive, wallpaperShownAgoMs, focusResume }
     getSearchEntryViewportSnapshot: () => viewport,
     hasSearchEntryViewportChanged: () => false
   });
-  return { body, motion, pageState };
+  return { body, clock, motion, pageState };
 }
 
 async function testContentWaitsForTheWallpaperLead() {
   const fresh = createEntryMotion({ wallpaperActive: true, wallpaperShownAgoMs: 0 });
   fresh.motion.markNewtabReady();
-  await delay(20);
+  await fresh.clock.advance(20);
   assert.strictEqual(fresh.body.getAttribute('data-nt-ready'), null,
     'content shown right after the wallpaper waits, so the two never land in one moment');
   assert.strictEqual(fresh.pageState.newtabReadyRequested, false);
   fresh.motion.markNewtabReady();
-  await delay(80);
+  await fresh.clock.advance(80);
   assert.strictEqual(fresh.body.getAttribute('data-nt-ready'), '1', 'the content enters once the wallpaper has led');
   assert.strictEqual(fresh.body.getAttribute('data-nt-enter'), 'run');
 
   const settled = createEntryMotion({ wallpaperActive: true, wallpaperShownAgoMs: 400 });
   settled.motion.markNewtabReady();
-  await delay(5);
+  await settled.clock.advance(5);
   assert.strictEqual(settled.body.getAttribute('data-nt-ready'), '1',
     'a wallpaper that showed long ago adds no wait');
 
   const plain = createEntryMotion({ wallpaperActive: false, wallpaperShownAgoMs: 0 });
   plain.motion.markNewtabReady();
-  await delay(5);
+  await plain.clock.advance(5);
   assert.strictEqual(plain.body.getAttribute('data-nt-ready'), '1', 'without a wallpaper nothing has to lead');
 
   const resumed = createEntryMotion({ wallpaperActive: true, wallpaperShownAgoMs: 0, focusResume: true });
   resumed.motion.markNewtabReady();
-  await delay(5);
+  await resumed.clock.advance(5);
   assert.strictEqual(resumed.body.getAttribute('data-nt-ready'), '1',
     'the search shortcut reload holds the old page until this one is ready, so it skips the lead');
 
   const unknown = createEntryMotion({ wallpaperActive: true, wallpaperShownAgoMs: null });
   unknown.motion.markNewtabReady();
-  await delay(5);
+  await unknown.clock.advance(5);
   assert.strictEqual(unknown.body.getAttribute('data-nt-ready'), '1');
 }
 
