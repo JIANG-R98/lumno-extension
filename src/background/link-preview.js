@@ -51,7 +51,9 @@ function createLinkPreviewService(options) {
   const now = typeof config.now === 'function' ? config.now : () => Date.now();
   const setTimer = config.setTimeout || setTimeout;
   const clearTimer = config.clearTimeout || clearTimeout;
-  // tabId -> { token, url, capture, ready, shown, expiryTimer }
+  // tabId -> { token, url, capture, ready, state, expiryTimer }, where state
+  // is "prepared" (pressed), "opening" (clicked, show not yet answered) or
+  // "open" (the surface shows it).
   const sessions = new Map();
   let tokenCounter = 0;
 
@@ -131,7 +133,7 @@ function createLinkPreviewService(options) {
   function scheduleExpiry(tabId, session) {
     clearTimer(session.expiryTimer);
     session.expiryTimer = setTimer(() => {
-      if (sessions.get(tabId) === session && !session.shown) {
+      if (sessions.get(tabId) === session && session.state === 'prepared') {
         discard(tabId, session.token);
       }
     }, PREPARED_TTL_MS);
@@ -143,7 +145,7 @@ function createLinkPreviewService(options) {
       return null;
     }
     const existing = sessions.get(tabId);
-    if (existing && existing.url === url && !existing.shown) {
+    if (existing && existing.url === url && existing.state === 'prepared') {
       scheduleExpiry(tabId, existing);
       return existing;
     }
@@ -162,7 +164,14 @@ function createLinkPreviewService(options) {
         }
         return sendToSurface(tabId, { action: 'lumnoLinkPreviewPrewarm', token, url }).then(Boolean);
       });
-    const session = { token, url, capture, ready, shown: false, expiryTimer: null };
+    // The surface gets the screenshot as soon as both are ready, to decode
+    // it while the button is still down; "show" then carries none.
+    const screenshotDelivered = Promise.all([ready, capture]).then(([surfaceReady, screenshot]) => (
+      surfaceReady && screenshot
+        ? sendToSurface(tabId, { action: 'lumnoLinkPreviewScreenshot', token, screenshot }).then(Boolean)
+        : false
+    ));
+    const session = { token, url, capture, ready, screenshotDelivered, state: 'prepared', expiryTimer: null };
     sessions.set(tabId, session);
     scheduleExpiry(tabId, session);
     return session;
@@ -173,13 +182,19 @@ function createLinkPreviewService(options) {
     if (!session) {
       return { ok: false, reason: 'not-previewable' };
     }
-    session.shown = true;
+    session.state = 'opening';
     clearTimer(session.expiryTimer);
-    const [ready, screenshot] = await Promise.all([session.ready, session.capture]);
+    const [ready, screenshot, screenshotDelivered] = await Promise.all([
+      session.ready,
+      session.capture,
+      session.screenshotDelivered
+    ]);
     if (sessions.get(tab.id) !== session) {
       return { ok: false, reason: 'superseded' };
     }
     if (!ready) {
+      // Nothing reached the page (the page refuses scripts, or it went
+      // away): the link can still open in a tab.
       discard(tab.id, session.token);
       return { ok: false, reason: 'surface-unavailable' };
     }
@@ -187,12 +202,17 @@ function createLinkPreviewService(options) {
       action: 'lumnoLinkPreviewShow',
       token: session.token,
       url,
-      screenshot,
+      screenshot: screenshotDelivered ? '' : screenshot,
       origin: origin || null
     });
     if (!shown) {
+      // The surface was asked to show and may be on screen; it moves the
+      // link to a tab itself when it cannot show it, so nothing opens here.
       discard(tab.id, session.token);
-      return { ok: false, reason: 'surface-unavailable' };
+      return { ok: false, reason: 'show-failed' };
+    }
+    if (sessions.get(tab.id) === session) {
+      session.state = 'open';
     }
     return { ok: true };
   }
@@ -232,12 +252,13 @@ function createLinkPreviewService(options) {
   }
 
   // The surface lives in the tab's top document, so a navigation of the tab
-  // may have taken it away without a close. Asking it settles that.
+  // may have taken it away without a close. Asking it settles that: no
+  // answer (no surface) or another preview's token drops the rule.
   function verifyOpenPreview(tabId) {
     return sendToSurface(tabId, { action: 'lumnoLinkPreviewPing' }).then((response) => {
-      const openToken = response && typeof response.token === 'string' ? response.token : '';
+      const surfaceToken = response && typeof response.token === 'string' ? response.token : '';
       const session = sessions.get(tabId);
-      if (!openToken || (session && session.shown && session.token !== openToken)) {
+      if (!surfaceToken || (session && session.token !== surfaceToken)) {
         return discard(tabId, '');
       }
       return false;
@@ -254,13 +275,15 @@ function createLinkPreviewService(options) {
   }
 
   // A navigation starts ("loading") while the old document still answers,
-  // so the check runs again when it finishes ("complete").
+  // so the check runs again when it finishes ("complete"). Only an open
+  // preview is checked: the preview's own frame loading can report the tab
+  // as loading while the press is still on its way to the surface.
   function handleTabUpdated(tabId, changeInfo) {
     if (!changeInfo || (changeInfo.status !== 'loading' && changeInfo.status !== 'complete')) {
       return Promise.resolve(false);
     }
     const session = sessions.get(tabId);
-    if (!session || !session.shown) {
+    if (!session || session.state !== 'open') {
       return Promise.resolve(false);
     }
     return verifyOpenPreview(tabId);
@@ -318,9 +341,9 @@ function createLinkPreviewService(options) {
     linkPreviewOpen(request, sender, sendResponse) {
       const tab = sender && sender.tab;
       open(tab, request.url, readOrigin(request, sender)).then((result) => {
-        if (!result.ok) {
-          // The page had no preview to show: open the link the way a
-          // modified click without the preview would have.
+        if (result.reason === 'surface-unavailable') {
+          // The page has no preview to show it in: open the link in a tab,
+          // as the click would have without the preview.
           openInTab(tab, request.url);
         }
         sendResponse(result);

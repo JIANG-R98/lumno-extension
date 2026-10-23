@@ -41,8 +41,10 @@
   };
 
   const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-  const OPEN_SPRING = createSpringEasing(300, 22);
-  const SOFT_SPRING = createSpringEasing(420, 30);
+  // Stiff springs: the window reaches 90% of its size in under 100ms and
+  // overshoots about 3% at 150ms, so it lands crisply and still bounces.
+  const OPEN_SPRING = createSpringEasing(600, 26);
+  const SOFT_SPRING = createSpringEasing(640, 38);
 
   const STYLES = `
     :host {
@@ -54,7 +56,6 @@
       --lp-panel: #ffffff;
       --lp-panel-edge: rgba(0, 0, 0, 0.12);
       --lp-muted: rgba(20, 20, 26, 0.48);
-      --lp-progress: rgba(60, 110, 255, 0.85);
       --lp-control: rgba(255, 255, 255, 0.2);
       --lp-control-hover: rgba(255, 255, 255, 0.32);
       --lp-control-edge: rgba(255, 255, 255, 0.34);
@@ -74,11 +75,13 @@
         --lp-panel: #1d1d21;
         --lp-panel-edge: rgba(255, 255, 255, 0.12);
         --lp-muted: rgba(235, 235, 245, 0.42);
-        --lp-progress: rgba(120, 160, 255, 0.9);
         --lp-notice-ink: #f2f2f5;
         --lp-button: rgba(255, 255, 255, 0.1);
         --lp-button-hover: rgba(255, 255, 255, 0.16);
       }
+    }
+    .root:focus {
+      outline: none;
     }
     .root[data-state="prewarm"] {
       opacity: 0;
@@ -89,17 +92,51 @@
       inset: 0;
       background: var(--lp-stage);
     }
-    .shot {
+    /* The receding page: its screenshot, and over it the same picture
+       blurred once in advance (the veil). Receding scales the pair and
+       crossfades from the screenshot to the veil, so the compositor animates
+       only transform and opacity;
+       animating a blur radius re-blurred two full-screen layers each frame. */
+    .page {
+      position: absolute;
+      inset: 0;
+      transform-origin: 50% 50%;
+      will-change: transform;
+    }
+    .shot,
+    .veil {
       position: absolute;
       inset: 0;
       width: 100%;
       height: 100%;
       display: block;
       object-fit: fill;
-      transform-origin: 50% 50%;
-      will-change: transform, filter;
     }
-    .shot[hidden] {
+    .shot {
+      will-change: opacity;
+    }
+    /* Feathered, so once the sharp screenshot has faded out from under it
+       the receded page melts into the surround without a seam. */
+    .veil {
+      opacity: 0;
+      will-change: opacity;
+      mask-image:
+        linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent),
+        linear-gradient(to bottom, transparent, #000 48px, #000 calc(100% - 48px), transparent);
+      mask-composite: intersect;
+    }
+    /* Fills the space the receding page leaves with the veil's picture, so
+       the shrinking page shows no edge against it. Oversized so the blurred
+       edge stays off screen. */
+    .surround {
+      position: absolute;
+      inset: -48px;
+      width: calc(100% + 96px);
+      height: calc(100% + 96px);
+      display: block;
+    }
+    .page[hidden],
+    .surround[hidden] {
       display: none;
     }
     .scrim {
@@ -123,12 +160,21 @@
       position: absolute;
       inset: 0;
       overflow: hidden;
-      border-radius: 16px;
+      border-radius: 26px;
       background: var(--lp-panel);
       box-shadow:
         0 0 0 0.5px var(--lp-panel-edge),
         0 24px 64px rgba(0, 0, 0, 0.28),
         0 4px 16px rgba(0, 0, 0, 0.12);
+    }
+    /* A continuous (squircle) corner like a macOS window's. Its curve starts
+       as far from the corner as a 26pt continuous corner does, about 1.5
+       times the radius, so it looks the size of the window corner. */
+    @supports (corner-shape: squircle) {
+      .panel {
+        border-radius: 40px;
+        corner-shape: squircle;
+      }
     }
     .placeholder {
       position: absolute;
@@ -147,33 +193,6 @@
       border: 0;
       display: block;
       background: transparent;
-    }
-    .progress {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 2px;
-      overflow: hidden;
-      pointer-events: none;
-      transition: opacity 240ms ease;
-    }
-    .progress::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      width: 36%;
-      border-radius: 2px;
-      background: var(--lp-progress);
-      animation: lp-progress 1100ms cubic-bezier(0.45, 0, 0.25, 1) infinite;
-    }
-    .root[data-loaded="true"] .progress {
-      opacity: 0;
-    }
-    @keyframes lp-progress {
-      from { transform: translateX(-100%); }
-      to { transform: translateX(280%); }
     }
     .notice {
       position: absolute;
@@ -230,6 +249,29 @@
     .control:hover {
       background: var(--lp-control-hover);
     }
+    /* While the page loads, an arc turns around the close button: out of
+       the page's way, and gone once it has loaded. */
+    .control-close {
+      position: relative;
+    }
+    .control-close::after {
+      content: "";
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      border: 1.5px solid transparent;
+      border-top-color: rgba(255, 255, 255, 0.9);
+      pointer-events: none;
+      animation: lp-spin 820ms linear infinite;
+      transition: opacity 240ms ease;
+    }
+    .root[data-loaded="true"] .control-close::after {
+      opacity: 0;
+      animation-play-state: paused;
+    }
+    @keyframes lp-spin {
+      to { transform: rotate(1turn); }
+    }
     .control:active {
       transform: scale(0.92);
     }
@@ -256,6 +298,15 @@
       }
     }
   `;
+
+  // The page receded behind the preview: scaled, and crossfaded to its veil, the
+  // screenshot blurred by BLUR_CSS_PX and toned by VEIL_TONE. The veil is
+  // painted at BLUR_RENDER_WIDTH pixels wide; blurred, it scales up unseen.
+  const PAGE_AT_REST = { transform: 'scale(1)' };
+  const PAGE_RECEDED = { transform: 'scale(0.95)' };
+  const BLUR_CSS_PX = 16;
+  const VEIL_TONE = 'brightness(0.9) saturate(1.1)';
+  const BLUR_RENDER_WIDTH = 480;
 
   let current = null;
 
@@ -378,16 +429,25 @@
     root.dataset.state = 'prewarm';
     root.setAttribute('role', 'dialog');
     root.setAttribute('aria-modal', 'true');
+    root.tabIndex = -1;
 
     const stage = document.createElement('div');
     stage.className = 'stage';
+    const surround = document.createElement('canvas');
+    surround.className = 'surround';
+    surround.hidden = true;
+    const page = document.createElement('div');
+    page.className = 'page';
+    page.hidden = true;
     const shot = document.createElement('img');
     shot.className = 'shot';
     shot.alt = '';
-    shot.hidden = true;
+    const veil = document.createElement('canvas');
+    veil.className = 'veil';
+    page.append(shot, veil);
     const scrim = document.createElement('div');
     scrim.className = 'scrim';
-    stage.append(shot, scrim);
+    stage.append(surround, page, scrim);
 
     const windowElement = document.createElement('div');
     windowElement.className = 'window';
@@ -401,8 +461,6 @@
     frame.setAttribute('sandbox', FRAME_SANDBOX);
     frame.setAttribute('allow', FRAME_ALLOW);
     frame.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
-    const progress = document.createElement('div');
-    progress.className = 'progress';
     const notice = document.createElement('div');
     notice.className = 'notice';
     const noticeText = document.createElement('div');
@@ -411,7 +469,7 @@
     noticeButton.type = 'button';
     noticeButton.textContent = getMessage('link_preview_open_in_tab', 'Open in new tab');
     notice.append(noticeText, noticeButton);
-    panel.append(placeholder, frame, progress, notice);
+    panel.append(placeholder, frame, notice);
 
     const controls = document.createElement('div');
     controls.className = 'controls';
@@ -421,7 +479,10 @@
       currentUrl: url,
       host,
       root,
+      page,
       shot,
+      veil,
+      surround,
       scrim,
       windowElement,
       controls,
@@ -433,9 +494,12 @@
       aliveSinceLoad: false,
       prewarmTimer: 0,
       restoreFocus: null,
+      shotDecode: null,
+      pageReported: false,
       cleanups: []
     };
     const closeButton = createControl('close', getMessage('link_preview_close', 'Close'), () => close(preview));
+    closeButton.classList.add('control-close');
     const openInTabButton = createControl(
       'openInTab',
       getMessage('link_preview_open_in_tab', 'Open in new tab'),
@@ -486,6 +550,20 @@
     preview.cleanups.push(() => target.removeEventListener(type, listener, options));
   }
 
+  // Keys go to the preview window until the previewed page has reported in,
+  // then to the page. A frame still on its initial empty document (a slow
+  // site) has nothing listening, and Escape would not close the preview.
+  function focusPreviewedPage(preview) {
+    if (!preview.shown || preview.closing || !preview.pageReported || !preview.root.matches(':focus')) {
+      return;
+    }
+    try {
+      preview.frame.focus();
+    } catch (error) {
+      // Focus stays on the window; Escape still closes from there.
+    }
+  }
+
   function handleFrameMessage(preview, event) {
     if (!event || event.source !== preview.frame.contentWindow) {
       return;
@@ -496,6 +574,8 @@
     }
     if (data.type === 'alive' && typeof data.url === 'string' && /^https?:\/\//i.test(data.url)) {
       preview.aliveSinceLoad = true;
+      preview.pageReported = true;
+      focusPreviewedPage(preview);
       preview.currentUrl = data.url;
       preview.root.dataset.blocked = 'false';
     } else if (data.type === 'escape' && preview.shown) {
@@ -531,6 +611,22 @@
     }, ALIVE_GRACE_MS);
   }
 
+  // The page under the preview keeps its scroll position while the preview
+  // is open, and gets it back when the preview goes: anything that scrolls
+  // it meanwhile (the previewed page chaining its scroll past its edge, a
+  // script) happens out of sight behind the screenshot.
+  function holdPageScroll(preview) {
+    const left = window.scrollX;
+    const top = window.scrollY;
+    const restore = () => {
+      if (window.scrollX !== left || window.scrollY !== top) {
+        window.scrollTo({ left, top, behavior: 'instant' });
+      }
+    };
+    listen(preview, window, 'scroll', restore, { passive: true });
+    preview.cleanups.push(restore);
+  }
+
   function teardown(preview) {
     clearTimeout(preview.prewarmTimer);
     preview.cleanups.splice(0).forEach((cleanup) => cleanup());
@@ -559,13 +655,53 @@
     return true;
   }
 
-  function decodeScreenshot(shot, dataUrl) {
-    if (!dataUrl) {
-      return Promise.resolve(false);
-    }
-    shot.src = dataUrl;
-    return (typeof shot.decode === 'function' ? shot.decode() : Promise.resolve())
+  function decodeImage(image, dataUrl) {
+    image.src = dataUrl;
+    return (typeof image.decode === 'function' ? image.decode() : Promise.resolve())
       .then(() => true, () => false);
+  }
+
+  // Paints the veil: the screenshot blurred and toned, small. The blurred
+  // edge would fade to transparent, so a slightly enlarged copy is painted
+  // first to fill it, then the copy that lines up with the screenshot. The
+  // surround gets the same picture.
+  function paintVeil(preview) {
+    const image = preview.shot;
+    const width = image.naturalWidth;
+    const height = image.naturalHeight;
+    const context = preview.veil.getContext('2d');
+    if (!width || !height || !context) {
+      return false;
+    }
+    const scale = Math.min(1, BLUR_RENDER_WIDTH / width);
+    const canvasWidth = Math.max(1, Math.round(width * scale));
+    const canvasHeight = Math.max(1, Math.round(height * scale));
+    // The screenshot is in device pixels; the blur is meant in CSS pixels.
+    const radius = BLUR_CSS_PX * (width / Math.max(1, window.innerWidth)) * scale;
+    const pad = Math.ceil(radius * 2);
+    preview.veil.width = canvasWidth;
+    preview.veil.height = canvasHeight;
+    context.filter = `blur(${radius}px) ${VEIL_TONE}`;
+    context.drawImage(image, -pad, -pad, canvasWidth + pad * 2, canvasHeight + pad * 2);
+    context.drawImage(image, 0, 0, canvasWidth, canvasHeight);
+    const surroundContext = preview.surround.getContext('2d');
+    if (surroundContext) {
+      preview.surround.width = canvasWidth;
+      preview.surround.height = canvasHeight;
+      surroundContext.drawImage(preview.veil, 0, 0);
+    }
+    return true;
+  }
+
+  // The screenshot usually arrives while the button is still down, so a
+  // large one is decoded and its veil painted before the click, and the
+  // opening starts at once.
+  function acceptScreenshot(preview, dataUrl) {
+    if (!dataUrl) {
+      return;
+    }
+    preview.shotDecode = decodeImage(preview.shot, dataUrl)
+      .then((decoded) => decoded && paintVeil(preview));
   }
 
   async function show(message) {
@@ -585,11 +721,14 @@
     clearTimeout(preview.prewarmTimer);
     preview.shown = true;
     preview.restoreFocus = document.activeElement;
-    const hasShot = await decodeScreenshot(preview.shot, message.screenshot);
+    holdPageScroll(preview);
+    acceptScreenshot(preview, message.screenshot);
+    const hasShot = await (preview.shotDecode || Promise.resolve(false));
     if (current !== preview || preview.closing) {
       return true;
     }
-    preview.shot.hidden = !hasShot;
+    preview.page.hidden = !hasShot;
+    preview.surround.hidden = !hasShot;
     preview.root.dataset.shot = hasShot ? 'image' : 'none';
     preview.root.dataset.state = 'open';
     preview.host.style.removeProperty('pointer-events');
@@ -598,11 +737,8 @@
       return true;
     }
     playOpening(preview, message.origin);
-    try {
-      preview.frame.focus();
-    } catch (error) {
-      // Focus stays on the page; Escape still closes from there.
-    }
+    preview.root.focus({ preventScroll: true });
+    focusPreviewedPage(preview);
     return true;
   }
 
@@ -612,32 +748,29 @@
     const originX = origin ? Math.min(Math.max(origin.x - rect.left, 0), rect.width) : rect.width / 2;
     const originY = origin ? Math.min(Math.max(origin.y - rect.top, 0), rect.height) : rect.height / 2;
     preview.windowElement.style.transformOrigin = `${originX}px ${originY}px`;
-    preview.shot.animate([
-      { transform: 'scale(1)', filter: 'blur(0px) brightness(1) saturate(1)', borderRadius: '0px' },
-      { transform: 'scale(0.94)', filter: 'blur(14px) brightness(0.86) saturate(1.15)', borderRadius: '22px' }
-    ], { duration: reduced ? 1 : 460, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'forwards' });
-    preview.scrim.animate([{ opacity: 0 }, { opacity: 1 }], {
-      duration: reduced ? 1 : 360,
-      easing: 'ease-out',
-      fill: 'forwards'
-    });
+    const recede = { duration: reduced ? 1 : 360, easing: 'cubic-bezier(0.2, 0.9, 0.1, 1)', fill: 'forwards' };
+    const blurIn = { duration: reduced ? 1 : 260, easing: 'cubic-bezier(0.3, 0.7, 0.2, 1)', fill: 'forwards' };
+    preview.page.animate([PAGE_AT_REST, PAGE_RECEDED], recede);
+    preview.shot.animate([{ opacity: 1 }, { opacity: 0 }], blurIn);
+    preview.veil.animate([{ opacity: 0 }, { opacity: 1 }], blurIn);
+    preview.scrim.animate([{ opacity: 0 }, { opacity: 1 }], blurIn);
     if (reduced) {
       preview.windowElement.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, fill: 'forwards' });
       return;
     }
     preview.windowElement.animate([
-      { transform: 'scale(0.56)' },
+      { transform: 'scale(0.78)' },
       { transform: 'scale(1)' }
     ], { duration: OPEN_SPRING.duration, easing: OPEN_SPRING.easing, fill: 'forwards' });
     preview.windowElement.animate([{ opacity: 0 }, { opacity: 1 }], {
-      duration: 150,
+      duration: 110,
       easing: 'ease-out',
       fill: 'forwards'
     });
     preview.controls.animate([
-      { opacity: 0, transform: 'scale(0.6)' },
+      { opacity: 0, transform: 'scale(0.7)' },
       { opacity: 1, transform: 'scale(1)' }
-    ], { duration: SOFT_SPRING.duration, delay: 120, easing: SOFT_SPRING.easing, fill: 'backwards' });
+    ], { duration: SOFT_SPRING.duration, delay: 60, easing: SOFT_SPRING.easing, fill: 'backwards' });
   }
 
   function close(preview, closeOptions) {
@@ -671,18 +804,14 @@
     });
     preview.windowElement.animate([
       { opacity: 1, transform: 'scale(1)' },
-      { opacity: 0, transform: reduced ? 'scale(1)' : 'scale(0.9)' }
-    ], { duration: reduced ? 120 : 190, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' });
-    preview.scrim.animate([{ opacity: 1 }, { opacity: 0 }], {
-      duration: reduced ? 1 : 260,
-      easing: 'ease-out',
-      fill: 'forwards'
-    });
-    const recede = preview.shot.animate([
-      { transform: 'scale(0.94)', filter: 'blur(14px) brightness(0.86) saturate(1.15)', borderRadius: '22px' },
-      { transform: 'scale(1)', filter: 'blur(0px) brightness(1) saturate(1)', borderRadius: '0px' }
-    ], { duration: reduced ? 1 : 300, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'forwards' });
-    recede.finished.then(finish, finish);
+      { opacity: 0, transform: reduced ? 'scale(1)' : 'scale(0.92)' }
+    ], { duration: reduced ? 120 : 160, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' });
+    const restore = { duration: reduced ? 1 : 280, easing: 'cubic-bezier(0.2, 0.9, 0.1, 1)', fill: 'forwards' };
+    const blurOut = { duration: reduced ? 1 : 220, easing: 'cubic-bezier(0.4, 0, 0.6, 1)', fill: 'forwards' };
+    preview.shot.animate([{ opacity: 0 }, { opacity: 1 }], blurOut);
+    preview.veil.animate([{ opacity: 1 }, { opacity: 0 }], blurOut);
+    preview.scrim.animate([{ opacity: 1 }, { opacity: 0 }], blurOut);
+    preview.page.animate([PAGE_RECEDED, PAGE_AT_REST], restore).finished.then(finish, finish);
   }
 
   function moveToTab(preview) {
@@ -699,6 +828,15 @@
       sendResponse(prewarm(String(message.token || ''), String(message.url || '')));
       return false;
     }
+    if (message.action === 'lumnoLinkPreviewScreenshot') {
+      const accepted = Boolean(current) && !current.shown && current.token === String(message.token || '') &&
+        typeof message.screenshot === 'string' && message.screenshot.length > 0;
+      if (accepted) {
+        acceptScreenshot(current, message.screenshot);
+      }
+      sendResponse(accepted);
+      return false;
+    }
     if (message.action === 'lumnoLinkPreviewShow') {
       show({
         token: String(message.token || ''),
@@ -709,7 +847,9 @@
       return true;
     }
     if (message.action === 'lumnoLinkPreviewPing') {
-      sendResponse({ token: current && current.shown && !current.closing ? current.token : '' });
+      // Answers for a preview still opening too: its own frame loading can
+      // make the background ask before the click reaches this surface.
+      sendResponse({ token: current && !current.closing ? current.token : '' });
       return false;
     }
     return false;
