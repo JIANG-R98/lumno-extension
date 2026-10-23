@@ -792,6 +792,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   const TOOLTIP_CSS_URL = overlayRuntime.getRuntimeUrl(chrome, 'src/shared/ui/tooltip.css');
   const CURSOR_TOOLTIP_CSS_URL = overlayRuntime.getRuntimeUrl(chrome, 'src/shared/ui/cursor-tooltip.css');
   const TOAST_CSS_URL = overlayRuntime.getRuntimeUrl(chrome, 'src/shared/ui/toast.css');
+  const EXTERNAL_LINK_ICON_CSS_URL = overlayRuntime.getRuntimeUrl(chrome, 'src/shared/ui/external-link-icon.css');
   const OVERLAY_SUGGESTIONS_CSS_URL = overlayRuntime.getRuntimeUrl(chrome, 'src/overlay/suggestions-view.css');
   overlayState.overlayMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
   overlayState.overlayThemeMode = 'system';
@@ -1183,6 +1184,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     tooltipCssUrl: TOOLTIP_CSS_URL,
     cursorTooltipCssUrl: CURSOR_TOOLTIP_CSS_URL,
     toastCssUrl: TOAST_CSS_URL,
+    externalLinkIconCssUrl: EXTERNAL_LINK_ICON_CSS_URL,
     overlaySuggestionsCssUrl: OVERLAY_SUGGESTIONS_CSS_URL
   });
   overlayState.overlay = overlayMount && overlayMount.panel ? overlayMount.panel : null;
@@ -1237,6 +1239,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     tooltipCssUrl: TOOLTIP_CSS_URL,
     cursorTooltipCssUrl: CURSOR_TOOLTIP_CSS_URL,
     toastCssUrl: TOAST_CSS_URL,
+    externalLinkIconCssUrl: EXTERNAL_LINK_ICON_CSS_URL,
     overlaySuggestionsCssUrl: OVERLAY_SUGGESTIONS_CSS_URL
   });
   const overlayToastElement = applyNoTranslate(document.createElement('div'));

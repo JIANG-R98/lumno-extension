@@ -720,9 +720,6 @@ html[data-options-theme-mode="dark"] #_x_extension_overlay_page_theme_adaptation
 ._x_extension_feedback_support_link_2026_unique_[data-open="true"] > i:last-child {
   opacity: 1;
 }
-._x_extension_feedback_support_link_2026_unique_:hover > .ri-external-link-line {
-  transform: translate(2px, -2px);
-}
 ._x_extension_feedback_support_link_2026_unique_:focus-visible {
   outline: 2px solid var(--input-focus-color);
   outline-offset: 2px;
@@ -731,11 +728,6 @@ body[data-theme="dark"] ._x_extension_feedback_support_link_2026_unique_ {
   --feedback-support-link-bg: color-mix(in srgb, var(--control-bg) 72%, transparent);
   --feedback-support-link-hover-bg: var(--control-hover-bg);
   --feedback-support-link-icon-color: var(--panel-subtext);
-}
-@media (prefers-reduced-motion: reduce) {
-  ._x_extension_feedback_support_link_2026_unique_:hover > .ri-external-link-line {
-    transform: none;
-  }
 }
 /* Same quiet text button as the onboarding guide link: no surface until hover. */
 ._x_extension_shortcut_submit_2024_unique_._x_extension_feedback_support_action_2026_unique_ {

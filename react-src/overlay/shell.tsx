@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 
 type OverlayShellOptions = Record<string, unknown> & {
   cursorTooltipCssUrl?: string;
+  externalLinkIconCssUrl?: string;
   featureHintsCssUrl?: string;
   hostId?: string;
   id?: string;
@@ -155,6 +156,12 @@ function appendOverlayStyleNodes(
     styleRoot,
     '_x_extension_toast_style_2026_unique_',
     options.toastCssUrl
+  );
+  appendStylesheet(
+    doc,
+    styleRoot,
+    '_x_extension_external_link_icon_style_2026_unique_',
+    options.externalLinkIconCssUrl
   );
   appendStylesheet(
     doc,

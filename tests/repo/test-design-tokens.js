@@ -42,7 +42,7 @@ stylesheets.forEach((file) => {
 [
   'src/shared/ui/tooltip.css', 'src/shared/ui/menu-surface.css', 'src/shared/ui/toast.css',
   'src/shared/search/search-input.css', 'src/shared/ui/feature-hints.css', 'src/shared/ui/cursor-tooltip.css',
-  'src/overlay/suggestions-view.css'
+  'src/shared/ui/external-link-icon.css', 'src/overlay/suggestions-view.css'
 ].forEach((file) => {
   const bare = read(file).match(/var\(--lumno-[\w-]+\)/g) || [];
   assert.deepStrictEqual(bare, [], `${file} is injected into web pages; give every token a fallback`);

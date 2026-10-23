@@ -1,0 +1,18 @@
+/* Every trailing ↗ (ri-external-link-line) moves the same way, wherever it
+   sits: hovering its link or button springs it up-right a little, and it
+   settles back on leave. Loaded by New Tab, Options, onboarding and the
+   overlay's shadow root, so pages only style the icon's size and color. */
+.ri-external-link-line {
+  transition: transform var(--lumno-duration-xl, 220ms) cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+:is(a[href], button:not(:disabled), [role="button"]:not([aria-disabled="true"])):hover .ri-external-link-line {
+  transform: translate(2px, -2px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ri-external-link-line {
+    transition: none;
+  }
+  :is(a[href], button:not(:disabled), [role="button"]:not([aria-disabled="true"])):hover .ri-external-link-line {
+    transform: none;
+  }
+}
