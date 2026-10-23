@@ -133,6 +133,7 @@ const EXPECTED_BACKGROUND_ACTIONS = [
   'getSiteSearchProviders', 'getHelpCenterSearchResults', 'runSiteSearchProviderQuery',
   'runAggregateSearchQuery',
   'runSelectionQuickAction',
+  'linkPreviewPrepare', 'linkPreviewOpen', 'linkPreviewClose', 'linkPreviewOpenInTab',
   'getLocaleMessages', 'getFileSchemeAccessStatus',
   'openOptionsPage', 'openOnboardingPage', 'openExtensionShortcutsPage', 'openSiteSearchOptionsPage',
   'openReleasePage', 'openBookmarkManager', 'openBookmarkFolderInNewTabGroup', 'createTab', 'openNewTab',

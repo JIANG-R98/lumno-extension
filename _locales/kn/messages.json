@@ -2210,6 +2210,15 @@
   "copy_page_url_failed_retry": {
     "message": "ನಕಲಿಸುವಿಕೆ ವಿಫಲವಾಗಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ."
   },
+  "link_preview_close": {
+    "message": "ಮುಚ್ಚಿ"
+  },
+  "link_preview_open_in_tab": {
+    "message": "ಹೊಸ ಟ್ಯಾಬ್‌ನಲ್ಲಿ ತೆರೆಯಿರಿ"
+  },
+  "link_preview_blocked": {
+    "message": "ಈ ಪುಟವನ್ನು ಪೂರ್ವವೀಕ್ಷಣೆಯಲ್ಲಿ ತೋರಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ"
+  },
   "copy_page_url_success": {
     "message": "ಪ್ರಸ್ತುತ ಪುಟದ URL ನಕಲಿಸಲಾಗಿದೆ"
   },

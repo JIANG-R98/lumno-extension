@@ -2210,6 +2210,15 @@
   "copy_page_url_failed_retry": {
     "message": "कॉपी करता आले नाही. कृपया पुन्हा प्रयत्न करा."
   },
+  "link_preview_close": {
+    "message": "बंद करा"
+  },
+  "link_preview_open_in_tab": {
+    "message": "नवीन टॅबमध्ये उघडा"
+  },
+  "link_preview_blocked": {
+    "message": "हे पेज प्रीव्ह्यूमध्ये दाखवता येत नाही"
+  },
   "copy_page_url_success": {
     "message": "सध्याच्या पेजची URL कॉपी केली"
   },

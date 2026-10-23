@@ -2210,6 +2210,15 @@
   "copy_page_url_failed_retry": {
     "message": "Η αντιγραφή απέτυχε. Δοκιμάστε ξανά."
   },
+  "link_preview_close": {
+    "message": "Κλείσιμο"
+  },
+  "link_preview_open_in_tab": {
+    "message": "Άνοιγμα σε νέα καρτέλα"
+  },
+  "link_preview_blocked": {
+    "message": "Αυτή η σελίδα δεν μπορεί να εμφανιστεί σε προεπισκόπηση"
+  },
   "copy_page_url_success": {
     "message": "Το URL της τρέχουσας σελίδας αντιγράφηκε"
   },

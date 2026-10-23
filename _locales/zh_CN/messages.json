@@ -2210,6 +2210,15 @@
   "copy_page_url_failed_retry": {
     "message": "复制失败，请重试。"
   },
+  "link_preview_close": {
+    "message": "关闭"
+  },
+  "link_preview_open_in_tab": {
+    "message": "在新标签页中打开"
+  },
+  "link_preview_blocked": {
+    "message": "此页面无法在预览中显示"
+  },
   "copy_page_url_success": {
     "message": "已复制当前页面链接"
   },

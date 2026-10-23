@@ -2210,6 +2210,15 @@
   "copy_page_url_failed_retry": {
     "message": "Gagal menyalin. Coba lagi."
   },
+  "link_preview_close": {
+    "message": "Tutup"
+  },
+  "link_preview_open_in_tab": {
+    "message": "Buka di tab baru"
+  },
+  "link_preview_blocked": {
+    "message": "Halaman ini tidak dapat ditampilkan dalam pratinjau"
+  },
   "copy_page_url_success": {
     "message": "URL halaman saat ini disalin"
   },

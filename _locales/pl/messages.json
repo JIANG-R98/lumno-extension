@@ -2210,6 +2210,15 @@
   "copy_page_url_failed_retry": {
     "message": "Nie udało się skopiować. Spróbuj ponownie."
   },
+  "link_preview_close": {
+    "message": "Zamknij"
+  },
+  "link_preview_open_in_tab": {
+    "message": "Otwórz w nowej karcie"
+  },
+  "link_preview_blocked": {
+    "message": "Tej strony nie można wyświetlić w podglądzie"
+  },
   "copy_page_url_success": {
     "message": "Skopiowano URL bieżącej strony"
   },

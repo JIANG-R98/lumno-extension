@@ -2210,6 +2210,15 @@
   "copy_page_url_failed_retry": {
     "message": "Kopírování se nezdařilo. Zkuste to prosím znovu."
   },
+  "link_preview_close": {
+    "message": "Zavřít"
+  },
+  "link_preview_open_in_tab": {
+    "message": "Otevřít na nové kartě"
+  },
+  "link_preview_blocked": {
+    "message": "Tuto stránku nelze zobrazit v náhledu"
+  },
   "copy_page_url_success": {
     "message": "URL aktuální stránky zkopírována"
   },

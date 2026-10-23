@@ -82,9 +82,15 @@ const BUNDLES = [
   { name: 'hotkey-listener', files: ['src/content/hotkey-listener.js'] },
   { name: 'page-shortcut-toast', files: ['src/content/page-shortcut-toast.js'] },
   { name: 'selection-quick-actions', files: ['src/content/selection-quick-actions.js'] },
+  { name: 'link-preview', files: ['src/content/link-preview.js'] },
 
   // Manifest content scripts
-  { name: 'shortcut-key-observer', files: ['src/content/shortcut-key-observer.js'] },
+  // The link preview's Shift+click trigger rides along: it needs the same
+  // every-frame, document-start entry, and one script per frame costs less.
+  {
+    name: 'shortcut-key-observer',
+    files: ['src/content/shortcut-key-observer.js', 'src/content/link-preview-trigger.js']
+  },
   { name: 'site-auto-pip', files: ['src/content/auto-pip-blacklist.js', 'src/content/site-auto-pip.js'] },
   { name: 'youtube-auto-pip', files: ['src/content/youtube-auto-pip.js'] }
 ];

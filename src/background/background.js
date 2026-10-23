@@ -52,6 +52,7 @@ import './bookmark-tab-groups.js';
 import './selection-target.js';
 import './selection-quick-action-provider.js';
 import * as LumnoSelectionScriptRegistration from './selection-script-registration.js';
+import * as LumnoLinkPreview from './link-preview.js';
 import * as BACKGROUND_MESSAGE_ROUTER from './message-router.js';
 import * as BACKGROUND_NEWTAB_FALLBACK from './newtab-fallback.js';
 import '../shared/browser-profile.js';
@@ -840,6 +841,10 @@ export const popupRecentPin = LumnoPopupRecentPin.createController({
   createProgressId: LumnoProgressHistory.createProgressId
 });
 
+// Link preview: Shift+click opens a link in a small window over the page.
+const linkPreviewService = LumnoLinkPreview.createLinkPreviewService({ chromeApi: chrome });
+linkPreviewService.attach();
+
 // One action -> handler registry for runtime messages. Each feature area
 // above owns its handlers; adding an action is one entry in its area's map,
 // and the router rejects an action registered twice. Exported for the
@@ -852,6 +857,7 @@ export const backgroundMessageRouter = BACKGROUND_MESSAGE_ROUTER.createRouter(
   SEARCH_MESSAGE_HANDLERS,
   SITE_SEARCH_MESSAGE_HANDLERS,
   SELECTION_QUICK_ACTION_MESSAGE_HANDLERS,
+  linkPreviewService.messageHandlers,
   LOCALE_AND_PERMISSION_MESSAGE_HANDLERS,
   EXTENSION_PAGE_MESSAGE_HANDLERS,
   POPUP_MESSAGE_HANDLERS,
@@ -873,6 +879,7 @@ const WEB_PAGE_MESSAGE_ACTIONS = Object.freeze([
   'recordSearchSuggestionSelection', 'deleteHistoryUrl',
   'getSiteSearchProviders', 'getHelpCenterSearchResults', 'runSiteSearchProviderQuery',
   'runAggregateSearchQuery', 'runSelectionQuickAction',
+  'linkPreviewPrepare', 'linkPreviewOpen', 'linkPreviewClose', 'linkPreviewOpenInTab',
   'getLocaleMessages', 'openOptionsPage', 'openReleasePage', 'createTab', 'openNewTab',
   'getFaviconData'
 ]);
@@ -887,6 +894,9 @@ const backgroundMessageSenderPolicy = BACKGROUND_MESSAGE_ROUTER.createSenderPoli
       request.url,
       chrome.runtime.getURL('')
     ),
+    linkPreviewPrepare: (request) => LumnoLinkPreview.isPreviewableUrl(request.url),
+    linkPreviewOpen: (request) => LumnoLinkPreview.isPreviewableUrl(request.url),
+    linkPreviewOpenInTab: (request) => LumnoLinkPreview.isPreviewableUrl(request.url),
     runSiteSearchProviderQuery: (request) => {
       const entryUrl = getSiteSearchProviderEntryUrl(request.provider, request.query);
       return /^https?:\/\//i.test(entryUrl);

@@ -2210,6 +2210,15 @@
   "copy_page_url_failed_retry": {
     "message": "Copierea nu a reușit. Încercați din nou."
   },
+  "link_preview_close": {
+    "message": "Închide"
+  },
+  "link_preview_open_in_tab": {
+    "message": "Deschide într-o filă nouă"
+  },
+  "link_preview_blocked": {
+    "message": "Această pagină nu poate fi afișată într-o previzualizare"
+  },
   "copy_page_url_success": {
     "message": "Adresa URL a paginii curente a fost copiată"
   },

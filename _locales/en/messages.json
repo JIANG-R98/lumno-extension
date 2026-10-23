@@ -2210,6 +2210,15 @@
   "copy_page_url_failed_retry": {
     "message": "Copy failed. Please try again."
   },
+  "link_preview_close": {
+    "message": "Close"
+  },
+  "link_preview_open_in_tab": {
+    "message": "Open in new tab"
+  },
+  "link_preview_blocked": {
+    "message": "This page can’t be shown in a preview"
+  },
   "copy_page_url_success": {
     "message": "Current page URL copied"
   },

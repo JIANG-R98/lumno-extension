@@ -2210,6 +2210,15 @@
   "copy_page_url_failed_retry": {
     "message": "Det gick inte att kopiera. Försök igen."
   },
+  "link_preview_close": {
+    "message": "Stäng"
+  },
+  "link_preview_open_in_tab": {
+    "message": "Öppna i ny flik"
+  },
+  "link_preview_blocked": {
+    "message": "Den här sidan kan inte visas i en förhandsvisning"
+  },
   "copy_page_url_success": {
     "message": "Den aktuella sidans URL har kopierats"
   },

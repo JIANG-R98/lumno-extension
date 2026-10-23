@@ -2210,6 +2210,15 @@
   "copy_page_url_failed_retry": {
     "message": "Hindi nakopya. Pakisubukan ulit."
   },
+  "link_preview_close": {
+    "message": "Isara"
+  },
+  "link_preview_open_in_tab": {
+    "message": "Buksan sa bagong tab"
+  },
+  "link_preview_blocked": {
+    "message": "Hindi maipapakita ang page na ito sa preview"
+  },
   "copy_page_url_success": {
     "message": "Nakopya ang URL ng kasalukuyang page"
   },
