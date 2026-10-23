@@ -731,6 +731,13 @@ function RecentSiteCard({
     clearNavigationSignals();
   }
 
+  // dispose is new each render; the card and the effect's cleanup call the
+  // latest one through this ref, so the effect below need not rerun for it.
+  const disposeRef = useRef(dispose);
+  useLayoutEffect(() => {
+    disposeRef.current = dispose;
+  });
+
   useLayoutEffect(() => {
     const card = cardRef.current;
     const favicon = faviconRef.current;
@@ -738,12 +745,13 @@ function RecentSiteCard({
     if (!card || !favicon || !pinButton) {
       return;
     }
+    const disposeCard = () => disposeRef.current();
     card._xHost = host;
     card._xTheme = immediateTheme;
     card._xActionText = actionTextRef.current;
     card._xTitleText = safeTitleText;
     card._xPinButton = pinButton;
-    card._xDisposeRecentCard = dispose;
+    card._xDisposeRecentCard = disposeCard;
 
     options.applyCardTheme(card, immediateTheme, host);
     options.attachFaviconWithFallbacks(favicon, faviconPageUrl, host, {
@@ -782,8 +790,9 @@ function RecentSiteCard({
       { priority: shouldEager ? 0 : 2 }
     );
 
-    return dispose;
+    return disposeCard;
   }, [
+    browserPageFaviconUrl,
     faviconPageUrl,
     host,
     immediateTheme,

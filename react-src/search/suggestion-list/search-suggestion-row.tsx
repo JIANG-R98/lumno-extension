@@ -70,6 +70,16 @@ function SearchSuggestionRowComponent({
     localFallback;
   const defaultSearchEngineThemeUrl =
     options.getDefaultSearchEngineThemeUrl();
+  // The two memos below read the suggestion through its ref, so each one is
+  // keyed on what it depends on instead: the suggestion's fingerprint, or what
+  // the theme comes from in place of the suggestion.
+  const immediateThemeKey = searchTheme
+    ? defaultSearchEngineThemeUrl
+    : usesUrlFallbackTheme
+      ? 1
+      : suggestionFingerprint;
+  const iconSpecKey =
+    suggestion.type === 'directUrl' ? '' : suggestionFingerprint;
   const immediateTheme = useMemo(() => {
     const latestSuggestion = suggestionRef.current;
     let nextTheme =
@@ -92,20 +102,12 @@ function SearchSuggestionRowComponent({
       }
     }
     return nextTheme;
-  }, [
-    options,
-    searchTheme
-      ? defaultSearchEngineThemeUrl
-      : usesUrlFallbackTheme
-        ? 1
-        : suggestionFingerprint
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on immediateThemeKey
+  }, [options, immediateThemeKey]);
   const iconSpec = useMemo(
     () => getSuggestionIconSpec(options, suggestionRef.current),
-    [
-      options,
-      suggestion.type === 'directUrl' ? '' : suggestionFingerprint
-    ]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on iconSpecKey
+    [options, iconSpecKey]
   );
   const command = Boolean(suggestion.commandText);
   const shouldSwitchMatchedTab =
@@ -310,7 +312,8 @@ function SearchSuggestionRowComponent({
     options,
     runtime,
     simpleMode,
-    shouldLoadTheme
+    shouldLoadTheme,
+    suggestionRef
   ]);
 
   useLayoutEffect(() => {

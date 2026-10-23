@@ -244,6 +244,7 @@ export function SuggestionIcon({
       );
     }
   }, [
+    iconSlotRef,
     isFavicon,
     options,
     spec.attach,
