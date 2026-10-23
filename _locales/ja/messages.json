@@ -281,23 +281,20 @@
   "settings_language_desc": {
     "message": "表示言語を選択"
   },
+  "settings_language_machine_note": {
+    "message": "この言語は AI による翻訳です。不自然な箇所があれば、フィードバックをお寄せください。"
+  },
+  "settings_language_search_placeholder": {
+    "message": "言語を検索"
+  },
+  "settings_language_no_results": {
+    "message": "一致する言語がありません"
+  },
   "settings_version_label": {
     "message": "バージョン"
   },
   "settings_version_tooltip": {
     "message": "更新履歴を見る"
-  },
-  "language_zh_cn": {
-    "message": "简体中文"
-  },
-  "language_zh_tw": {
-    "message": "繁體中文"
-  },
-  "language_en": {
-    "message": "English"
-  },
-  "language_ja": {
-    "message": "日本語"
   },
   "language_system": {
     "message": "ブラウザの言語に合わせる"
@@ -3536,8 +3533,8 @@
   "newtab_quote_import_hint": {
     "message": "名言は毎日自動で切り替わり、「別の一言」でいつでも変更できます。TXT / MD に対応し、空でない本文の各行が 1 つの名言になります。ファイルは最大 1 MB、最大 1,000 件、各 500 文字まで。このデバイスに保存され、ブラウザ同期には含まれません。WebDAV を有効にすると同期されます。"
   },
-  "newtab_quote_entries": {
-    "message": "件"
+  "newtab_quote_count": {
+    "message": "{count} 件"
   },
   "newtab_quote_import_error": {
     "message": "読み込めませんでした。ファイルの形式またはサイズが条件を満たしていません。以前のリストはそのままです。"

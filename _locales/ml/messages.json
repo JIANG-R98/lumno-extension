@@ -1,0 +1,3659 @@
+{
+  "ext_name": {
+    "message": "Lumno ｜ കമാൻഡ് ബാറും പുതിയ ടാബും"
+  },
+  "ext_description": {
+    "message": "ഭാരം കുറഞ്ഞ ബ്രൗസർ കമാൻഡ് ബാറും പുതിയ ടാബ് തിരയലും."
+  },
+  "settings_tab_general": {
+    "message": "പൊതുവായവ"
+  },
+  "settings_tab_appearance": {
+    "message": "രൂപഭാവം"
+  },
+  "settings_appearance_global_section_title": {
+    "message": "ആഗോളം"
+  },
+  "settings_webpage_focus_overlay_section_title": {
+    "message": "കമാൻഡ് ബാർ"
+  },
+  "newtab_theme_scope_label": {
+    "message": "തീം വ്യാപ്തി"
+  },
+  "newtab_theme_scope_global": {
+    "message": "ആഗോളം"
+  },
+  "newtab_theme_scope_home": {
+    "message": "പുതിയ ടാബ്"
+  },
+  "newtab_theme_scope_select_label": {
+    "message": "തീം മാറ്റങ്ങൾ {scope} എന്നതിൽ പ്രയോഗിക്കുക"
+  },
+  "newtab_theme_scope_help_label": {
+    "message": "തീം വ്യാപ്തി വിവരം"
+  },
+  "newtab_theme_scope_help": {
+    "message": "ആഗോളം: എല്ലാ പേജുകൾക്കുമുള്ള ഡിഫോൾട്ട് തീം.\nപുതിയ ടാബ്: പുതിയ ടാബ് പേജിന് മാത്രം ബാധകം. ഒരുപോലെ നിലനിർത്താൻ \"ആഗോളം\" പിന്തുടരുക തിരഞ്ഞെടുക്കുക."
+  },
+  "newtab_theme_follow_global": {
+    "message": "\"ആഗോളം\" പിന്തുടരുക"
+  },
+  "newtab_search_section_title": {
+    "message": "തിരയൽ ബോക്സ്"
+  },
+  "newtab_search_width_title": {
+    "message": "തിരയൽ ബോക്സിന്റെ വീതി"
+  },
+  "newtab_search_width_aria": {
+    "message": "പുതിയ ടാബിലെ തിരയൽ ബോക്സിന്റെ വീതി ക്രമീകരിക്കുക"
+  },
+  "newtab_search_width_standard": {
+    "message": "സാധാരണം"
+  },
+  "newtab_search_width_wide": {
+    "message": "വീതിയേറിയത്"
+  },
+  "newtab_search_width_max": {
+    "message": "പരമാവധി"
+  },
+  "newtab_appearance_settings_title": {
+    "message": "രൂപഭാവ ക്രമീകരണം"
+  },
+  "newtab_help_footer_prompt": {
+    "message": "ഒരു ഓപ്ഷൻ എന്ത് ചെയ്യുന്നുവെന്ന് ഉറപ്പില്ലേ?"
+  },
+  "newtab_help_footer_action": {
+    "message": "സഹായ കേന്ദ്രം സന്ദർശിക്കുക"
+  },
+  "newtab_more_settings": {
+    "message": "കൂടുതൽ ക്രമീകരണം"
+  },
+  "settings_tab_shortcuts": {
+    "message": "തിരയൽ ഉറവിടങ്ങൾ"
+  },
+  "settings_tab_blacklist": {
+    "message": "ബ്ലാക്ക്\u200cലിസ്റ്റ്"
+  },
+  "settings_tab_labs": {
+    "message": "ലാബ്\u200cസ്"
+  },
+  "settings_selection_quick_actions_title": {
+    "message": "തിരഞ്ഞെടുക്കൽ ദ്രുത പ്രവർത്തനങ്ങൾ"
+  },
+  "settings_selection_quick_actions_desc": {
+    "message": "ടെക്സ്റ്റ് തിരഞ്ഞെടുക്കുമ്പോൾ AI പ്രവർത്തനങ്ങൾ കാണിക്കുക"
+  },
+  "settings_selection_quick_actions_provider_title": {
+    "message": "മുൻഗണനയുള്ള ദാതാവ്"
+  },
+  "settings_selection_quick_actions_group_title": {
+    "message": "പശ്ചാത്തലത്തിൽ തിരയുക"
+  },
+  "settings_selection_quick_actions_group_desc": {
+    "message": "എല്ലാ AI പേജുകളും “AI തിരയൽ” ടാബ് ഗ്രൂപ്പിൽ ശേഖരിക്കുക"
+  },
+  "selection_quick_actions_group_name": {
+    "message": "AI തിരയൽ"
+  },
+  "selection_quick_action_ask": {
+    "message": "ഉത്തരം"
+  },
+  "selection_quick_action_translate": {
+    "message": "വിവർത്തനം"
+  },
+  "selection_quick_action_explain": {
+    "message": "വിശദീകരിക്കുക"
+  },
+  "selection_quick_action_summarize": {
+    "message": "സംഗ്രഹിക്കുക"
+  },
+  "selection_quick_action_search": {
+    "message": "ഗവേഷണം"
+  },
+  "selection_quick_action_calculate": {
+    "message": "കണക്കാക്കുക"
+  },
+  "selection_quick_action_open_menu": {
+    "message": "തിരഞ്ഞെടുത്ത ടെക്സ്റ്റിനൊപ്പം Lumno ഉപയോഗിക്കുക"
+  },
+  "selection_quick_action_more": {
+    "message": "കൂടുതൽ പ്രവർത്തനങ്ങൾ"
+  },
+  "selection_quick_action_sending": {
+    "message": "പശ്ചാത്തലത്തിൽ തുറക്കുന്നു…"
+  },
+  "selection_quick_action_failed": {
+    "message": "അയയ്ക്കാനായില്ല. വീണ്ടും ശ്രമിക്കുക."
+  },
+  "selection_debug_decision_title": {
+    "message": "തിരഞ്ഞെടുക്കൽ തീരുമാനം"
+  },
+  "selection_debug_status_show": {
+    "message": "കാണിക്കുക"
+  },
+  "selection_debug_status_hide": {
+    "message": "കാണിക്കരുത്"
+  },
+  "selection_debug_sort_title": {
+    "message": "മെനു ക്രമം"
+  },
+  "selection_debug_item_count": {
+    "message": "{count} ഇനങ്ങൾ"
+  },
+  "selection_debug_reason_calculate": {
+    "message": "ഒരു സമവാക്യം, കറൻസി അല്ലെങ്കിൽ യൂണിറ്റ് പരിവർത്തനം കണ്ടെത്തി"
+  },
+  "selection_debug_reason_question": {
+    "message": "വ്യക്തമായ ഒരു ചോദ്യം കണ്ടെത്തി"
+  },
+  "selection_debug_reason_prose": {
+    "message": "മതിയായ സമ്പന്നമായ തുടർ ഗദ്യം കണ്ടെത്തി"
+  },
+  "selection_debug_reason_search": {
+    "message": "വാർത്ത, വില, ഔദ്യോഗിക സൈറ്റ് അല്ലെങ്കിൽ പതിപ്പ് തിരയൽ ഉദ്ദേശ്യം കണ്ടെത്തി"
+  },
+  "selection_debug_reason_translate": {
+    "message": "തിരഞ്ഞെടുത്ത ടെക്സ്റ്റ് Lumno-യുടെ UI ഭാഷയിൽ നിന്ന് വ്യത്യസ്തമാണ്"
+  },
+  "selection_debug_reason_error": {
+    "message": "ഒരു പിശക് അല്ലെങ്കിൽ എക്സെപ്ഷൻ കണ്ടെത്തി"
+  },
+  "selection_debug_reason_code": {
+    "message": "കോഡ് വാക്യഘടന അല്ലെങ്കിൽ കോഡ് സന്ദർഭം കണ്ടെത്തി"
+  },
+  "selection_debug_reason_term": {
+    "message": "അർത്ഥവത്തായ ഒരു പദം അല്ലെങ്കിൽ ചെറു വാക്യം കണ്ടെത്തി"
+  },
+  "selection_debug_reason_explain_score": {
+    "message": "വിശദീകരിക്കുക എന്നതിന് ഏറ്റവും ഉയർന്ന സ്കോർ ലഭിച്ചു"
+  },
+  "selection_debug_reason_top_score": {
+    "message": "ഈ പ്രവർത്തനത്തിന് ഏറ്റവും ഉയർന്ന പൊരുത്ത സ്കോർ ലഭിച്ചു"
+  },
+  "selection_debug_rejection_disabled": {
+    "message": "തിരഞ്ഞെടുക്കൽ ദ്രുത പ്രവർത്തനങ്ങൾ പ്രവർത്തനരഹിതമാണ്"
+  },
+  "selection_debug_rejection_sensitive": {
+    "message": "സെൻസിറ്റീവ് പാസ്\u200cവേഡ് അല്ലെങ്കിൽ പേയ്\u200cമെന്റ് ഫീൽഡ്; ഉള്ളടക്കം വായിച്ചില്ല"
+  },
+  "selection_debug_rejection_no_selection": {
+    "message": "സാധുവായ ടെക്സ്റ്റ് തിരഞ്ഞെടുക്കൽ കണ്ടെത്തിയില്ല"
+  },
+  "selection_debug_rejection_too_short": {
+    "message": "2 പ്രതീകങ്ങളിൽ കുറവ്"
+  },
+  "selection_debug_rejection_too_long": {
+    "message": "2400 പ്രതീകങ്ങളിൽ കൂടുതൽ"
+  },
+  "selection_debug_rejection_url": {
+    "message": "പൂർണ്ണ URL"
+  },
+  "selection_debug_rejection_email": {
+    "message": "ഇമെയിൽ വിലാസം"
+  },
+  "selection_debug_rejection_generic_ui": {
+    "message": "“കൂടുതലറിയുക / സംരക്ഷിക്കുക / അടുത്തത്” പോലുള്ള പൊതു UI വാചകം"
+  },
+  "selection_debug_rejection_plain_number": {
+    "message": "കണക്കുകൂട്ടലോ പരിവർത്തനമോ ഇല്ലാത്ത വെറും സംഖ്യ"
+  },
+  "selection_debug_rejection_symbols": {
+    "message": "ചിഹ്നങ്ങളുടെ അനുപാതം വളരെ കൂടുതലാണ്"
+  },
+  "selection_debug_rejection_no_intent": {
+    "message": "വ്യക്തമായ ടാസ്ക്, അർത്ഥവത്തായ പദം, അല്ലെങ്കിൽ മതിയായ ഗദ്യം എന്നിവയുമായി പൊരുത്തപ്പെട്ടില്ല"
+  },
+  "selection_debug_primary_meta": {
+    "message": "പ്രാഥമികം: {action} · സ്കോർ {score} · {confidence} വിശ്വാസ്യത"
+  },
+  "selection_debug_confidence_high": {
+    "message": "ഉയർന്ന"
+  },
+  "selection_debug_confidence_medium": {
+    "message": "ഇടത്തരം"
+  },
+  "selection_debug_confidence_low": {
+    "message": "കുറഞ്ഞ"
+  },
+  "selection_debug_sort_primary_cause": {
+    "message": "{reason}, സ്കോർ {score}"
+  },
+  "selection_debug_sort_fallback_cause": {
+    "message": "പൊതുവായ ഫോൾബാക്ക്, നിശ്ചിത ക്രമത്തിൽ നിറച്ച് ആവർത്തനം ഒഴിവാക്കി"
+  },
+  "selection_debug_sort_footer": {
+    "message": "ആദ്യ ഇനം ഏറ്റവും ഉയർന്ന ഉദ്ദേശ്യ സ്കോർ ഉപയോഗിക്കുന്നു; ബാക്കിയുള്ളവ “വിശദീകരിക്കുക → ഗവേഷണം → വിവർത്തനം” ക്രമം പിന്തുടരുന്നു."
+  },
+  "settings_global_section_title": {
+    "message": "ആഗോള ക്രമീകരണം"
+  },
+  "settings_feedback_support_section_title": {
+    "message": "ഫീഡ്\u200cബാക്കും പിന്തുണയും"
+  },
+  "settings_feedback_support_wechat_action": {
+    "message": "WeChat ഗ്രൂപ്പിൽ ചേരുക"
+  },
+  "settings_help_center_title": {
+    "message": "സഹായ കേന്ദ്രം"
+  },
+  "settings_help_center_desc": {
+    "message": "ഒരു ഫീച്ചർ എങ്ങനെ പ്രവർത്തിക്കുന്നുവെന്ന് ഉറപ്പില്ലേ? എല്ലാ ഫീച്ചറുകളും ഇവിടെ വിശദീകരിച്ചിട്ടുണ്ട്."
+  },
+  "settings_help_center_action": {
+    "message": "തുറക്കുക"
+  },
+  "settings_help_center_ask_action": {
+    "message": "തിരയൽ ബോക്സിൽ നിന്ന് ചോദിക്കുക"
+  },
+  "settings_help_center_ask_caption": {
+    "message": "പുതിയ ടാബിലോ കമാൻഡ് ബാറിലോ lm എന്ന് ടൈപ്പ് ചെയ്ത് Tab അമർത്തി, നിങ്ങളുടെ ചോദ്യം എഴുതുക."
+  },
+  "settings_help_center_ask_demo_query": {
+    "message": "കീബോർഡ് കുറുക്കുവഴി എങ്ങനെ മാറ്റാം"
+  },
+  "settings_help_center_ask_demo_result_1_title": {
+    "message": "കീബോർഡ് കുറുക്കുവഴികൾ"
+  },
+  "settings_help_center_ask_demo_result_1_detail": {
+    "message": "കീബോർഡ് കുറുക്കുവഴി മാറ്റുക"
+  },
+  "settings_help_center_ask_demo_result_2_title": {
+    "message": "കുറുക്കുവഴികളും ബുക്ക്\u200cമാർക്കുകളും"
+  },
+  "settings_help_center_ask_demo_result_2_detail": {
+    "message": "കുറുക്കുവഴിയുടെ ഐക്കൺ മാറ്റുക"
+  },
+  "settings_feedback_support_review_action": {
+    "message": "Lumno റേറ്റ് ചെയ്യുക"
+  },
+  "settings_feedback_support_github_issue_action": {
+    "message": "Issue സൃഷ്\u200cടിക്കുക"
+  },
+  "settings_feedback_support_contact_author_action": {
+    "message": "രചയിതാവിനെ ബന്ധപ്പെടുക"
+  },
+  "settings_onboarding_tutorial_action": {
+    "message": "സ്വാഗത ടൂർ"
+  },
+  "settings_language_title": {
+    "message": "ഭാഷ"
+  },
+  "settings_language_desc": {
+    "message": "UI ഭാഷ തിരഞ്ഞെടുക്കുക"
+  },
+  "settings_language_machine_note": {
+    "message": "AI ഉപയോഗിച്ച് വിവർത്തനം ചെയ്\u200cതത്. എന്തെങ്കിലും തെറ്റായി തോന്നിയാൽ, ദയവായി ഫീഡ്\u200cബാക്ക് അയയ്ക്കുക."
+  },
+  "settings_language_search_placeholder": {
+    "message": "ഭാഷകൾ തിരയുക"
+  },
+  "settings_language_no_results": {
+    "message": "പൊരുത്തപ്പെടുന്ന ഭാഷകളൊന്നുമില്ല"
+  },
+  "settings_version_label": {
+    "message": "പതിപ്പ്"
+  },
+  "settings_version_tooltip": {
+    "message": "മാറ്റങ്ങളുടെ ലോഗ് കാണുക"
+  },
+  "language_system": {
+    "message": "ബ്രൗസർ ഭാഷ പിന്തുടരുക"
+  },
+  "settings_recent_title": {
+    "message": "പുതിയ ടാബിന്റെ താഴെയുള്ള ഉള്ളടക്കം"
+  },
+  "settings_newtab_section_title": {
+    "message": "പുതിയ ടാബ്"
+  },
+  "settings_search_results_section_title": {
+    "message": "തിരയൽ ഫല ക്രമീകരണം"
+  },
+  "settings_search_result_priority_title": {
+    "message": "ആദ്യ തിരയൽ ഫലത്തിന്റെ മുൻഗണന"
+  },
+  "settings_search_result_tab_position_title": {
+    "message": "തിരയൽ ഫല ടാബിന്റെ സ്ഥാനം"
+  },
+  "search_result_tab_position_end": {
+    "message": "ടാബ് സ്ട്രിപ്പിന്റെ അവസാനം (താഴെ)"
+  },
+  "search_result_tab_position_after_current": {
+    "message": "നിലവിലെ ടാബിന്റെ വലത് (താഴെ)"
+  },
+  "search_result_tab_position_before_current": {
+    "message": "നിലവിലെ ടാബിന്റെ ഇടത് (മുകളിൽ)"
+  },
+  "settings_search_fuzzy_pinyin_title": {
+    "message": "ഫസി പിൻയിൻ"
+  },
+  "settings_search_fuzzy_pinyin_desc": {
+    "message": "ഓണായിരിക്കുമ്പോൾ, പിൻയിൻ, ആദ്യാക്ഷര തിരയലുകൾ z, zh; c, ch; s, sh; n, l; an, ang; en, eng; in, ing എന്നിവയെ ഒന്നായി കണക്കാക്കും"
+  },
+  "settings_search_result_sources_title": {
+    "message": "കാണിക്കുന്ന ഫല തരങ്ങൾ"
+  },
+  "settings_search_result_display_limit_title": {
+    "message": "പരമാവധി കാണിക്കുന്ന ഫലങ്ങൾ"
+  },
+  "settings_overlay_open_tabs_default_visible_title": {
+    "message": "വെബ്\u200cപേജിൽ Lumno തുറക്കുമ്പോൾ ഡിഫോൾട്ടായി തുറന്നിരിക്കുന്ന എല്ലാ ടാബുകളും കാണിക്കുക"
+  },
+  "settings_favicon_enhanced_fetch_title": {
+    "message": "മെച്ചപ്പെടുത്തിയ ഐക്കൺ, തീം നിറം ലഭ്യമാക്കൽ"
+  },
+  "settings_favicon_enhanced_fetch_desc": {
+    "message": "ലോക്കൽ നെറ്റ്\u200cവർക്ക് ആക്\u200cസസ് അഭ്യർത്ഥന കാണുന്നുവെങ്കിൽ, ഇത് ഓഫാക്കുക. ബ്രൗസർ കാഷെ ചെയ്\u200cത ഐക്കണുകളും മൂന്നാം കക്ഷി ഐക്കൺ സേവനങ്ങളും ലഭ്യമായി നിലനിർത്തിക്കൊണ്ട് Lumno വെബ്\u200cസൈറ്റ് ചിത്രങ്ങൾ നേരിട്ട് ലോഡ് ചെയ്യുന്നത് നിർത്തും."
+  },
+  "favicon_blacklist_section_desc": {
+    "message": "വെബ്\u200cസൈറ്റ് അനുസരിച്ച് ഒഴിവാക്കുക"
+  },
+  "favicon_blacklist_add": {
+    "message": "ഒഴിവാക്കൽ നിയമം ചേർക്കുക"
+  },
+  "favicon_blacklist_removed_toast": {
+    "message": "ഐക്കൺ, തീം ഒഴിവാക്കലുകളിൽ നിന്ന് നീക്കം ചെയ്\u200cതു"
+  },
+  "favicon_blacklist_clear": {
+    "message": "ഒഴിവാക്കൽ നിയമങ്ങൾ മായ്ക്കുക"
+  },
+  "search_result_priority_autocomplete": {
+    "message": "സ്വയംപൂർത്തീകരണം ആദ്യം"
+  },
+  "search_result_priority_search": {
+    "message": "തിരയൽ ആദ്യം"
+  },
+  "settings_recent_desc": {
+    "message": "സമീപകാല / ഏറ്റവുമധികം സന്ദർശിച്ച സൈറ്റുകൾ കാണിക്കുക"
+  },
+  "settings_recent_sites_title": {
+    "message": "സൈറ്റ് കാർഡുകൾ"
+  },
+  "newtab_recent_rows_title": {
+    "message": "സൈറ്റ് കാർഡ് വരികൾ"
+  },
+  "settings_newtab_width_title": {
+    "message": "പുതിയ ടാബ് പേജ് ഉള്ളടക്കത്തിന്റെ വീതി"
+  },
+  "settings_bookmarks_title": {
+    "message": "ബുക്ക്\u200cമാർക്ക് വരികൾ"
+  },
+  "settings_bookmark_folder_icons_visible_title": {
+    "message": "ബുക്ക്\u200cമാർക്ക് ഫോൾഡറുകളിലെ ഐക്കണുകൾ കാണിക്കുക"
+  },
+  "settings_document_pip_title": {
+    "message": "വെബ് ക്ലിപ്പ്"
+  },
+  "settings_document_pip_desc": {
+    "message": "റഫറൻസിനും താരതമ്യത്തിനുമായി ഒരു പേജിന്റെ ഭാഗം ഫ്ലോട്ടിംഗ് കാഴ്\u200cചയിലേക്ക് ക്ലിപ്പ് ചെയ്യുക"
+  },
+  "settings_document_pip_unsupported_tooltip": {
+    "message": "വെബ് ക്ലിപ്പ് Document Picture-in-Picture-നെ ആശ്രയിക്കുന്നു, അത് Firefox ഇതുവരെ പിന്തുണയ്ക്കുന്നില്ല."
+  },
+  "document_pip_command_title": {
+    "message": "വെബ് ക്ലിപ്പ് ആരംഭിക്കുക"
+  },
+  "document_pip_command_action": {
+    "message": "ക്ലിപ്പ് ആരംഭിക്കുക"
+  },
+  "settings_update_notice_title": {
+    "message": "അപ്\u200cഡേറ്റ് അറിയിപ്പുകൾ"
+  },
+  "settings_update_notice_desc": {
+    "message": "Lumno പുതിയ പതിപ്പിലേക്ക് അപ്\u200cഡേറ്റ് ചെയ്\u200cത ശേഷം പുതിയതെന്തെന്ന് കാണിക്കുക"
+  },
+  "settings_motion_effects_title": {
+    "message": "ചലന ഇഫക്റ്റുകൾ"
+  },
+  "settings_motion_effects_desc": {
+    "message": "പ്രകടനം ഇടറുന്നുവെങ്കിലോ വേഗമേറിയ തുറക്കൽ അനുഭവം വേണമെങ്കിലോ ഇത് ഓഫാക്കുക"
+  },
+  "settings_simple_mode_title": {
+    "message": "മിനിമൽ മോഡ്"
+  },
+  "settings_simple_mode_desc": {
+    "message": "കൂടുതൽ വൃത്തിയുള്ള തിരയൽ ബോക്സിനായി കൂടുതൽ അലങ്കാര ഘടകങ്ങൾ നീക്കം ചെയ്യുക"
+  },
+  "settings_auto_pip_title": {
+    "message": "സ്വയമേവ ചിത്രത്തിനുള്ളിൽ ചിത്രം"
+  },
+  "settings_auto_pip_desc": {
+    "message": "വീഡിയോ പ്ലേ ചെയ്യുമ്പോൾ ടാബ് മാറിയാൽ, അത് ഒരു ഫ്ലോട്ടിംഗ് വിൻഡോയിൽ പ്ലേ ചെയ്യുന്നത് തുടരും"
+  },
+  "settings_auto_pip_unsupported_tooltip": {
+    "message": "വെബ് വീഡിയോകൾ സ്വയമേവ ചിത്രത്തിനുള്ളിൽ ചിത്രത്തിലേക്ക് മാറ്റാൻ Firefox വിപുലീകരണങ്ങളെ അനുവദിക്കുന്നില്ല, അതിനാൽ ഈ ഫീച്ചർ ലഭ്യമല്ല."
+  },
+  "settings_pinned_tab_recovery_title": {
+    "message": "റീസ്റ്റാർട്ടിന് ശേഷം പിൻ ചെയ്\u200cത ടാബുകൾ പുനഃസ്ഥാപിക്കുക"
+  },
+  "settings_pinned_tab_recovery_desc": {
+    "message": "പുനഃസ്ഥാപിക്കാവുന്ന പിൻ ചെയ്\u200cത വെബ് ടാബുകൾ സംരക്ഷിക്കുകയും ബ്രൗസർ റീസ്റ്റാർട്ട് ചെയ്\u200cത ശേഷം കാണാതായവ പുനഃസ്ഥാപിക്കുകയും ചെയ്യുക"
+  },
+  "settings_number_shortcut_instant_title": {
+    "message": "നമ്പർ ജമ്പ് കാണിക്കാൻ Command ഒരിക്കൽ അമർത്തുക"
+  },
+  "settings_number_shortcut_instant_desc": {
+    "message": "പ്രവർത്തനക്ഷമമാക്കിയാൽ, കമാൻഡ് ബാറിലോ തിരയൽ നിർദ്ദേശങ്ങളിലോ Command/Ctrl ഒരിക്കൽ അമർത്തുമ്പോൾ ഉടൻ നമ്പർ ജമ്പ് ബാഡ്\u200cജുകൾ കാണിക്കും; \"പശ്ചാത്തല ടാബിൽ തുറക്കുക\" ഇനി Command ഉപയോഗിക്കില്ല (മിഡിൽ-ക്ലിക്ക് ഇപ്പോഴും പശ്ചാത്തലത്തിൽ തുറക്കും)"
+  },
+  "settings_macos_ctrl_suggestion_navigation_title": {
+    "message": "Mac കീബോർഡ് നാവിഗേഷൻ"
+  },
+  "settings_macos_ctrl_suggestion_navigation_tooltip": {
+    "message": "macOS-ൽ പുതിയ ടാബിലും കമാൻഡ് ബാറിലും പ്രവർത്തിക്കുന്നു. സംഭാവനയ്ക്ക് @wanghanzhen-ന് നന്ദി."
+  },
+  "settings_macos_ctrl_suggestion_navigation_desc": {
+    "message": "അടുത്ത / മുമ്പത്തെ ഫലം തിരഞ്ഞെടുക്കാൻ Ctrl+N / Ctrl+P ഉപയോഗിക്കുക"
+  },
+  "document_pip_picker_hint": {
+    "message": "ഒരു ഘടകം തിരഞ്ഞെടുക്കാൻ പേജിന് മുകളിലൂടെ നീക്കുക. PiP തുറക്കാൻ ക്ലിക്ക് ചെയ്യുക, പാരന്റ് മാറ്റാൻ സ്ക്രോൾ ചെയ്യുക, റദ്ദാക്കാൻ Esc."
+  },
+  "document_pip_picker_started": {
+    "message": "ഫ്ലോട്ട് ചെയ്യേണ്ട ഉള്ളടക്കത്തിൽ ക്ലിക്ക് ചെയ്യുക, വ്യാപ്തി മാറ്റാൻ സ്ക്രോൾ ചെയ്യുക, അല്ലെങ്കിൽ റദ്ദാക്കാൻ Esc അമർത്തുക."
+  },
+  "document_pip_picker_cancelled": {
+    "message": "ഉള്ളടക്കം തിരഞ്ഞെടുക്കൽ അടച്ചു"
+  },
+  "document_pip_picker_closed": {
+    "message": "ഫ്ലോട്ടിംഗ് ഉള്ളടക്ക വിൻഡോ അടച്ചു"
+  },
+  "document_pip_picker_unsupported": {
+    "message": "ഈ പേജ് Document Picture-in-Picture പിന്തുണയ്ക്കുന്നില്ല."
+  },
+  "document_pip_picker_conflict_video_pip": {
+    "message": "ഒരു വീഡിയോ PiP ഇതിനകം സജീവമാണ്. ഉള്ളടക്കം ക്ലിപ്പ് ചെയ്യുന്നതിന് മുമ്പ് അത് അടയ്ക്കുക."
+  },
+  "document_pip_picker_invalid": {
+    "message": "ഈ ഭാഗം ഇപ്പോൾ ഫ്ലോട്ട് ചെയ്യാനാകില്ല. വലിയൊരു ഉള്ളടക്ക ഭാഗം പരീക്ഷിക്കുക."
+  },
+  "document_pip_picker_open_failed": {
+    "message": "ഫ്ലോട്ടിംഗ് ഉള്ളടക്ക വിൻഡോ തുറക്കാനായില്ല. മറ്റൊരു ഭാഗം പരീക്ഷിക്കുക."
+  },
+  "document_pip_picker_button_reselect": {
+    "message": "വീണ്ടും തിരഞ്ഞെടുക്കുക"
+  },
+  "document_pip_picker_button_return": {
+    "message": "മടങ്ങുക"
+  },
+  "document_pip_picker_button_close": {
+    "message": "അടയ്ക്കുക"
+  },
+  "settings_newtab_scope_desc": {
+    "message": "പുതിയ ടാബ്"
+  },
+  "settings_overlay_tab_priority_title": {
+    "message": "തുറന്ന ടാബുകളിലേക്ക് വേഗം മാറുക"
+  },
+  "settings_overlay_tab_priority_desc": {
+    "message": "ഇൻപുട്ട് ഒരു തുറന്ന ടാബുമായി പൊരുത്തപ്പെടുമ്പോൾ, Enter ആദ്യ നിർദ്ദേശത്തിന്റെ ടാബ് പ്രവർത്തനം പിന്തുടരുന്നു"
+  },
+  "overlay_tab_priority_switch_first": {
+    "message": "തുറന്ന ടാബിലേക്ക് മാറാൻ Enter അമർത്തുക"
+  },
+  "overlay_tab_priority_newtab_first": {
+    "message": "പുതിയ ടാബിൽ തുറക്കാൻ Enter അമർത്തുക"
+  },
+  "settings_shortcuts_title": {
+    "message": "കമാൻഡ് ബാർ തുറക്കുക"
+  },
+  "settings_shortcuts_browser_desc_prefix": {
+    "message": "കീബോർഡ് കുറുക്കുവഴികൾ മാറ്റാൻ "
+  },
+  "settings_shortcuts_browser_desc_path_extensions": {
+    "message": "വിപുലീകരണങ്ങൾ"
+  },
+  "settings_shortcuts_browser_desc_path_extensions__firefox": {
+    "message": "ആഡ്-ഓണുകളും തീമുകളും"
+  },
+  "settings_shortcuts_browser_desc_path_shortcuts": {
+    "message": "കീബോർഡ് കുറുക്കുവഴികൾ"
+  },
+  "settings_shortcuts_browser_desc_path_shortcuts__firefox": {
+    "message": "വിപുലീകരണ കുറുക്കുവഴികൾ നിയന്ത്രിക്കുക"
+  },
+  "settings_shortcuts_browser_desc_suffix": {
+    "message": " തുറക്കുക"
+  },
+  "settings_shortcuts_dia_tag": {
+    "message": "Dia-യിൽ ഉപയോഗിക്കുക"
+  },
+  "settings_shortcuts_dia_tooltip": {
+    "message": "Dia-യിൽ, ബ്രൗസർ പരിമിതികൾ കാരണം Lumno-യുടെ പുതിയ ടാബ് ഫീച്ചറുകൾ താൽക്കാലികമായി ലഭ്യമല്ല, എന്നാൽ കമാൻഡ് ബാർ സാധാരണ പോലെ പ്രവർത്തിക്കും.\n\nകീബോർഡ് കുറുക്കുവഴി Dia-യിൽ പ്രവർത്തിക്കുന്നില്ലെങ്കിൽ, ബ്രൗസറിന്റെ കുറുക്കുവഴി ക്രമീകരണ പേജ് തുറക്കാൻ താഴെ വലതുവശത്തെ ബട്ടൺ ക്ലിക്ക് ചെയ്യുക, തുടർന്ന് \"Open command bar\" എന്നത് In Dia-യിൽ നിന്ന് Global-ലേക്ക് മാറ്റുക."
+  },
+  "settings_shortcuts_section_title": {
+    "message": "കീബോർഡ് കുറുക്കുവഴി ക്രമീകരണം"
+  },
+  "settings_shortcuts_desc": {
+    "message": "Lumno കമാൻഡ് ബാർ തുറക്കാൻ ഉപയോഗിക്കുന്നു"
+  },
+  "overlay_close_other_tabs_tooltip": {
+    "message": "മറ്റ് ടാബുകൾ അടയ്ക്കുക"
+  },
+  "overlay_close_other_tabs_confirm": {
+    "message": "ഈ വിൻഡോയിലെ മറ്റ് ടാബുകൾ അടയ്ക്കണോ? പിൻ ചെയ്\u200cതതും ഗ്രൂപ്പിലുള്ളതുമായ ടാബുകൾ തുറന്നുതന്നെ ഇരിക്കും."
+  },
+  "overlay_close_other_tabs_confirm_button": {
+    "message": "അടയ്ക്കുക"
+  },
+  "settings_shortcuts_status": {
+    "message": "നിലവിൽ: {shortcut}"
+  },
+  "settings_shortcuts_unset": {
+    "message": "സജ്ജമാക്കിയിട്ടില്ല"
+  },
+  "settings_shortcuts_action": {
+    "message": "കുറുക്കുവഴി ക്രമീകരണം തുറക്കുക"
+  },
+  "settings_shortcuts_browser_tooltip": {
+    "message": "Chromium ബ്രൗസറുകളിൽ, കമാൻഡ് ബാറിന്റെ കീബോർഡ് കുറുക്കുവഴി സജ്ജമാക്കാനോ മാറ്റാനോ വിപുലീകരണ കുറുക്കുവഴി പേജ് തുറക്കണം."
+  },
+  "settings_shortcuts_browser_tooltip__firefox": {
+    "message": "Firefox-ൽ, ആഡ്-ഓൺ മാനേജറിലെ വിപുലീകരണ കുറുക്കുവഴികൾ നിയന്ത്രിക്കുക എന്നതിന് കീഴിൽ കമാൻഡ് ബാറിന്റെ കീബോർഡ് കുറുക്കുവഴി സജ്ജമാക്കുകയോ മാറ്റുകയോ ചെയ്യുക."
+  },
+  "settings_shortcuts_save": {
+    "message": "കുറുക്കുവഴി സംരക്ഷിക്കുക"
+  },
+  "settings_shortcuts_reset": {
+    "message": "ഡിഫോൾട്ട് പുനഃസജ്ജമാക്കുക"
+  },
+  "settings_shortcuts_record_placeholder": {
+    "message": "കുറുക്കുവഴി അമർത്തുക"
+  },
+  "settings_shortcuts_empty_state": {
+    "message": "ഒന്നുമില്ല"
+  },
+  "settings_shortcuts_invalid": {
+    "message": "അസാധുവായ കീബോർഡ് കുറുക്കുവഴി. Ctrl+K പോലുള്ള കീ കോമ്പിനേഷൻ ഉപയോഗിക്കുക."
+  },
+  "settings_restricted_title": {
+    "message": "നിയന്ത്രിത പേജുകളിലെ പെരുമാറ്റം"
+  },
+  "settings_restricted_tooltip": {
+    "message": "നിയന്ത്രിത പേജുകളിൽ (ഉദാഹരണത്തിന്, chrome://) കമാൻഡ് ബാർ തുറക്കാനാകില്ല. കീബോർഡ് കുറുക്കുവഴി അമർത്തുമ്പോൾ ഇവിടെ സജ്ജമാക്കിയ നിയമം പിന്തുടരും."
+  },
+  "settings_restricted_tooltip__firefox": {
+    "message": "നിയന്ത്രിത പേജുകളിൽ (ഉദാഹരണത്തിന്, about: പേജുകളും Firefox ആഡ്-ഓൺ സൈറ്റും) കമാൻഡ് ബാർ തുറക്കാനാകില്ല. കീബോർഡ് കുറുക്കുവഴി അമർത്തുമ്പോൾ ഇവിടെ സജ്ജമാക്കിയ നിയമം പിന്തുടരും."
+  },
+  "restricted_action_default": {
+    "message": "Lumno പുതിയ ടാബിലേക്ക് പോകുക"
+  },
+  "restricted_action_none": {
+    "message": "ബ്രൗസർ ക്രമീകരണം പിന്തുടരുക"
+  },
+  "newtab_file_access_notice_title": {
+    "message": "ലോക്കൽ PDF അല്ലെങ്കിൽ HTML പേജുകളിൽ Lumno ഉപയോഗിക്കാൻ, ഫയൽ URL ആക്\u200cസസ് പ്രവർത്തനക്ഷമമാക്കുക"
+  },
+  "newtab_file_access_notice_body": {
+    "message": "Lumno-യ്ക്ക് ഇതുവരെ ഫയൽ URL ആക്\u200cസസ് ഇല്ല. വിപുലീകരണ വിശദാംശ പേജ് തുറന്ന്, ഫയൽ URL-കളിലേക്ക് ആക്\u200cസസ് അനുവദിക്കുക പ്രവർത്തനക്ഷമമാക്കുക, തുടർന്ന് ആ പേജിലേക്ക് മടങ്ങി കീബോർഡ് കുറുക്കുവഴി വീണ്ടും അമർത്തുക."
+  },
+  "newtab_file_access_notice_open_cta": {
+    "message": "ആക്\u200cസസ് പ്രവർത്തനക്ഷമമാക്കുക"
+  },
+  "newtab_file_access_notice_dismiss": {
+    "message": "പിന്നീട്"
+  },
+  "newtab_file_access_notice_close": {
+    "message": "അറിയിപ്പ് അടയ്ക്കുക"
+  },
+  "recent_count_4": {
+    "message": "1 വരി കാണിക്കുക"
+  },
+  "recent_count_8": {
+    "message": "2 വരികൾ കാണിക്കുക"
+  },
+  "recent_count_off": {
+    "message": "മറയ്ക്കുക"
+  },
+  "bookmark_count_off": {
+    "message": "മറയ്ക്കുക"
+  },
+  "bookmark_count_4": {
+    "message": "1 വരി കാണിക്കുക"
+  },
+  "bookmark_count_8": {
+    "message": "8 എണ്ണം കാണിക്കുക"
+  },
+  "bookmark_count_16": {
+    "message": "16 എണ്ണം കാണിക്കുക"
+  },
+  "bookmark_count_32": {
+    "message": "32 എണ്ണം കാണിക്കുക"
+  },
+  "settings_bookmark_columns_title": {
+    "message": "ഓരോ വരിയിലെയും ബുക്ക്\u200cമാർക്കുകൾ"
+  },
+  "settings_bookmark_columns_desc": {
+    "message": "ഓരോ വരിയിലെയും പരമാവധി എണ്ണം സജ്ജമാക്കുന്നു; ഇടുങ്ങിയ സ്ക്രീനുകൾ സ്വയമേവ ക്രമീകരിക്കും"
+  },
+  "settings_bookmark_adaptive_count_tooltip": {
+    "message": "മതിയായ വീതി ലഭ്യമാകുമ്പോഴുള്ള പരമാവധി എണ്ണമാണിത്. കാണിക്കുന്ന യഥാർത്ഥ എണ്ണം ലഭ്യമായ സ്ഥലത്തിനനുസരിച്ച് മാറും."
+  },
+  "bookmark_columns_4": {
+    "message": "ഒരു വരിയിൽ 4"
+  },
+  "bookmark_columns_6": {
+    "message": "ഒരു വരിയിൽ 6"
+  },
+  "bookmark_columns_8": {
+    "message": "ഒരു വരിയിൽ 8"
+  },
+  "newtab_width_standard": {
+    "message": "സാധാരണം"
+  },
+  "newtab_width_wide": {
+    "message": "വീതിയേറിയത് (ശുപാർശിതം)"
+  },
+  "settings_overlay_size_title": {
+    "message": "വലുപ്പം"
+  },
+  "overlay_size_compact": {
+    "message": "ചെറുത്"
+  },
+  "overlay_size_standard": {
+    "message": "സാധാരണം"
+  },
+  "overlay_size_large": {
+    "message": "വലുത്"
+  },
+  "settings_overlay_enter_animation_title": {
+    "message": "തുറക്കൽ ആനിമേഷൻ"
+  },
+  "overlay_enter_animation_elastic": {
+    "message": "സ്പ്രിംഗ്"
+  },
+  "overlay_enter_animation_fade": {
+    "message": "ഫേഡ്"
+  },
+  "settings_overlay_font_title": {
+    "message": "ലോക്കൽ ഫോണ്ട്"
+  },
+  "settings_overlay_font_desc": {
+    "message": "ഈ കമ്പ്യൂട്ടറിൽ ഇൻസ്റ്റാൾ ചെയ്\u200cത ഫോണ്ടുകൾ വായിക്കുന്നു. ഈ ഉപകരണത്തിന് മാത്രം ബാധകം, സമന്വയിപ്പിക്കില്ല."
+  },
+  "settings_overlay_font_missing": {
+    "message": "“{font}” ഈ ഉപകരണത്തിൽ ഇൻസ്റ്റാൾ ചെയ്\u200cതിട്ടില്ല, അതിനാൽ ഓവർലേ ഡിഫോൾട്ട് ഫോണ്ട് ഉപയോഗിക്കുന്നു"
+  },
+  "settings_overlay_font_missing_reset": {
+    "message": "ഡിഫോൾട്ട് ഉപയോഗിക്കുക"
+  },
+  "settings_overlay_font_fallback_missing": {
+    "message": "“{font}” ഈ ഉപകരണത്തിൽ ഇൻസ്റ്റാൾ ചെയ്\u200cതിട്ടില്ല, അതിനാൽ ഫോൾബാക്ക് ഒഴിവാക്കി"
+  },
+  "settings_overlay_font_fallback_missing_reset": {
+    "message": "മായ്ക്കുക"
+  },
+  "settings_overlay_font_default": {
+    "message": "ഡിഫോൾട്ട്"
+  },
+  "settings_overlay_font_search_placeholder": {
+    "message": "ഫോണ്ടുകൾ തിരയുക"
+  },
+  "settings_overlay_font_no_results": {
+    "message": "പൊരുത്തപ്പെടുന്ന ഫോണ്ടുകളൊന്നുമില്ല"
+  },
+  "settings_overlay_font_fallback_title": {
+    "message": "ലോക്കൽ ഫോൾബാക്ക് ഫോണ്ട്"
+  },
+  "settings_overlay_font_fallback_desc": {
+    "message": "ആദ്യ ഫോണ്ടിൽ ഇല്ലാത്ത പ്രതീകങ്ങൾക്ക് ഉപയോഗിക്കുന്നു, ഉദാഹരണത്തിന് ഇംഗ്ലീഷ് ഫോണ്ടിലെ ചൈനീസ് അക്ഷരങ്ങൾ"
+  },
+  "settings_overlay_font_fallback_none": {
+    "message": "ഒന്നുമില്ല"
+  },
+  "settings_overlay_font_unsupported_tooltip": {
+    "message": "ഇൻസ്റ്റാൾ ചെയ്\u200cത ഫോണ്ടുകൾ ലിസ്റ്റ് ചെയ്യാൻ Firefox വിപുലീകരണങ്ങളെ അനുവദിക്കുന്നില്ല, അതിനാൽ ഇവിടെ ഓവർലേ ഡിഫോൾട്ട് ഫോണ്ട് ഉപയോഗിക്കുന്നു"
+  },
+  "settings_overlay_page_theme_adaptation_title": {
+    "message": "ഓരോ വെബ്\u200cപേജിനും അനുസരിച്ച് തീം നിറങ്ങൾ മാറ്റുക"
+  },
+  "settings_overlay_page_theme_adaptation_tooltip": {
+    "message": "തീം മോഡ് സിസ്റ്റം പിന്തുടരുക എന്ന് സജ്ജമാക്കുമ്പോൾ മാത്രം കാണിക്കുന്നു. ഓഫാക്കുമ്പോൾ, ലൈറ്റ്/ഡാർക്ക് മോഡ് വെബ്\u200cപേജിന്റെ തീം നിറത്തിനനുസരിച്ച് മാറില്ല."
+  },
+  "recent_mode_latest": {
+    "message": "സമീപകാലം കാണിക്കുക"
+  },
+  "recent_mode_most": {
+    "message": "ഏറ്റവുമധികം സന്ദർശിച്ചവ"
+  },
+  "settings_toggle_on": {
+    "message": "ഓൺ"
+  },
+  "settings_theme_title": {
+    "message": "തീം മോഡ്"
+  },
+  "settings_theme_desc": {
+    "message": "സിസ്റ്റം പിന്തുടരുക അല്ലെങ്കിൽ സ്വയം തിരഞ്ഞെടുക്കുക"
+  },
+  "settings_theme_system": {
+    "message": "സിസ്റ്റം പിന്തുടരുക"
+  },
+  "settings_theme_light": {
+    "message": "ലൈറ്റ്"
+  },
+  "settings_theme_dark": {
+    "message": "ഡാർക്ക്"
+  },
+  "settings_newtab_wordmark_title": {
+    "message": "തിരയൽ ബാറിന് മുകളിലുള്ള ഉള്ളടക്കം"
+  },
+  "newtab_top_content_brand": {
+    "message": "ബ്രാൻഡ്"
+  },
+  "newtab_top_content_time": {
+    "message": "സമയം"
+  },
+  "newtab_top_content_off": {
+    "message": "മറയ്ക്കുക"
+  },
+  "newtab_time_font_title": {
+    "message": "സമയ ഫോണ്ട്"
+  },
+  "newtab_time_font_weight_title": {
+    "message": "സമയ ഫോണ്ട് കനം"
+  },
+  "newtab_time_font_weight_reset": {
+    "message": "സമയ ഫോണ്ട് കനം പുനഃസജ്ജമാക്കുക"
+  },
+  "newtab_time_font_size_title": {
+    "message": "സമയ വലുപ്പം"
+  },
+  "newtab_time_font_size_reset": {
+    "message": "സമയ വലുപ്പം പുനഃസജ്ജമാക്കുക"
+  },
+  "newtab_time_opacity_title": {
+    "message": "സമയ അതാര്യത"
+  },
+  "newtab_time_opacity_reset": {
+    "message": "സമയ അതാര്യത പുനഃസജ്ജമാക്കുക"
+  },
+  "newtab_time_ink_title": {
+    "message": "സമയ നിറം"
+  },
+  "newtab_time_ink_auto": {
+    "message": "സ്വയമേവ"
+  },
+  "newtab_time_ink_light": {
+    "message": "ലൈറ്റ്"
+  },
+  "newtab_time_ink_dark": {
+    "message": "ഡാർക്ക്"
+  },
+  "newtab_time_show_seconds_title": {
+    "message": "സെക്കൻഡുകൾ കാണിക്കുക"
+  },
+  "newtab_time_12_hour_title": {
+    "message": "12 മണിക്കൂർ ക്ലോക്ക്"
+  },
+  "settings_newtab_page_buttons_title": {
+    "message": "പേജ് ബട്ടണുകൾ"
+  },
+  "settings_newtab_feedback_button_visible_title": {
+    "message": "ഫീഡ്\u200cബാക്ക് ബട്ടൺ കാണിക്കുക"
+  },
+  "settings_newtab_appearance_button_visible_title": {
+    "message": "രൂപഭാവം ബട്ടൺ കാണിക്കുക"
+  },
+  "settings_newtab_shortcuts_title": {
+    "message": "കുറുക്കുവഴികൾ"
+  },
+  "settings_newtab_shortcut_add_title": {
+    "message": "“+” കാണിക്കുക"
+  },
+  "settings_newtab_shortcut_dock_magnification_title": {
+    "message": "macOS Dock ശൈലിയിലുള്ള വലുതാക്കൽ"
+  },
+  "settings_newtab_shortcut_width_title": {
+    "message": "കുറുക്കുവഴിയുടെ വീതി"
+  },
+  "settings_newtab_shortcut_columns_title": {
+    "message": "ഓരോ വരിയിലെയും കുറുക്കുവഴികൾ"
+  },
+  "settings_newtab_shortcut_size_title": {
+    "message": "കുറുക്കുവഴിയുടെ വലുപ്പം"
+  },
+  "settings_newtab_shortcut_gap_title": {
+    "message": "കുറുക്കുവഴികൾക്കിടയിലെ അകലം"
+  },
+  "settings_newtab_shortcut_size_reset": {
+    "message": "കുറുക്കുവഴിയുടെ വലുപ്പം പുനഃസജ്ജമാക്കുക"
+  },
+  "settings_newtab_shortcut_gap_reset": {
+    "message": "കുറുക്കുവഴികളുടെ അകലം പുനഃസജ്ജമാക്കുക"
+  },
+  "settings_wallpaper_title": {
+    "message": "പുതിയ ടാബ് വാൾപേപ്പർ"
+  },
+  "settings_wallpaper_desc": {
+    "message": "പുതിയ ടാബിന്റെ പശ്ചാത്തലമായി ഒരു ലോക്കൽ ചിത്രം അപ്\u200cലോഡ് ചെയ്യുക"
+  },
+  "settings_wallpaper_upload": {
+    "message": "ചിത്രം അപ്\u200cലോഡ് ചെയ്യുക"
+  },
+  "settings_wallpaper_remove": {
+    "message": "നീക്കം ചെയ്യുക"
+  },
+  "settings_wallpaper_fit_cover": {
+    "message": "നിറയ്ക്കുക"
+  },
+  "settings_wallpaper_fit_contain": {
+    "message": "ഉൾക്കൊള്ളിക്കുക"
+  },
+  "settings_wallpaper_status_none": {
+    "message": "വാൾപേപ്പർ അപ്\u200cലോഡ് ചെയ്\u200cതിട്ടില്ല"
+  },
+  "settings_wallpaper_status_ready": {
+    "message": "വാൾപേപ്പർ അപ്\u200cലോഡ് ചെയ്\u200cതു"
+  },
+  "settings_wallpaper_status_local_only": {
+    "message": "വാൾപേപ്പർ അപ്\u200cലോഡ് ചെയ്\u200cതു (ഈ ഉപകരണത്തിൽ മാത്രം)"
+  },
+  "settings_wallpaper_status_missing": {
+    "message": "വാൾപേപ്പർ ഫയൽ കാണുന്നില്ല. ദയവായി വീണ്ടും അപ്\u200cലോഡ് ചെയ്യുക."
+  },
+  "settings_wallpaper_status_processing": {
+    "message": "പ്രോസസ്സ് ചെയ്യുന്നു…"
+  },
+  "settings_wallpaper_upload_done": {
+    "message": "വാൾപേപ്പർ അപ്\u200cഡേറ്റ് ചെയ്\u200cതു"
+  },
+  "settings_wallpaper_remove_done": {
+    "message": "വാൾപേപ്പർ നീക്കം ചെയ്\u200cതു"
+  },
+  "settings_wallpaper_error_type": {
+    "message": "ദയവായി ഒരു ചിത്ര ഫയൽ അപ്\u200cലോഡ് ചെയ്യുക (JPG / PNG / WEBP)."
+  },
+  "settings_wallpaper_error_oversize": {
+    "message": "ചിത്രം വളരെ വലുതാണ്. 8MB-ൽ താഴെയുള്ള ഫയൽ അപ്\u200cലോഡ് ചെയ്യുക."
+  },
+  "settings_wallpaper_error_oversize_after_compress": {
+    "message": "കംപ്രസ് ചെയ്\u200cത ശേഷവും ചിത്രം വളരെ വലുതാണ്. ചെറിയൊരു ചിത്രം പരീക്ഷിക്കുക."
+  },
+  "settings_wallpaper_error_save": {
+    "message": "വാൾപേപ്പർ സംരക്ഷിക്കാനായില്ല. ദയവായി വീണ്ടും ശ്രമിക്കുക."
+  },
+  "newtab_wallpaper_title": {
+    "message": "വാൾപേപ്പർ"
+  },
+  "newtab_logo_title": {
+    "message": "ബ്രാൻഡ് മുദ്ര"
+  },
+  "newtab_favicon_title": {
+    "message": "പുതിയ ടാബ് ഫാവിക്കോൺ"
+  },
+  "newtab_favicon_name_default": {
+    "message": "ഡിഫോൾട്ട്"
+  },
+  "newtab_favicon_name_alternate": {
+    "message": "ഇതര"
+  },
+  "newtab_favicon_select_label": {
+    "message": "{name} ഫാവിക്കോൺ തിരഞ്ഞെടുക്കുക"
+  },
+  "newtab_favicon_save_error": {
+    "message": "ഫാവിക്കോൺ സംരക്ഷിക്കാനായില്ല"
+  },
+  "newtab_wallpaper_source_title": {
+    "message": "ഉറവിടം"
+  },
+  "newtab_wallpaper_builtin_section": {
+    "message": "ബിൽറ്റ്-ഇൻ"
+  },
+  "newtab_wallpaper_local_section": {
+    "message": "ലോക്കൽ"
+  },
+  "newtab_wallpaper_toggle_label": {
+    "message": "വാൾപേപ്പർ ഓണാക്കുക അല്ലെങ്കിൽ ഓഫാക്കുക"
+  },
+  "newtab_wallpaper_select_label": {
+    "message": "{name} തിരഞ്ഞെടുക്കുക"
+  },
+  "newtab_wallpaper_add_local": {
+    "message": "ലോക്കൽ വാൾപേപ്പർ ചേർക്കുക"
+  },
+  "newtab_wallpaper_mode_sync_title": {
+    "message": "ലൈറ്റ്, ഡാർക്ക് മോഡുകൾ ഒരുപോലെ"
+  },
+  "newtab_wallpaper_mode_sync_toggle_label": {
+    "message": "ലൈറ്റ്, ഡാർക്ക് മോഡുകൾക്ക് ഒരേ വാൾപേപ്പർ ഉപയോഗിക്കുക"
+  },
+  "newtab_wallpaper_mode_row_title": {
+    "message": "മോഡ്"
+  },
+  "newtab_wallpaper_mode_tabs_label": {
+    "message": "വാൾപേപ്പർ കളർ മോഡ്"
+  },
+  "newtab_wallpaper_light_mode_tab": {
+    "message": "ലൈറ്റ്"
+  },
+  "newtab_wallpaper_dark_mode_tab": {
+    "message": "ഡാർക്ക്"
+  },
+  "newtab_wallpaper_mode_select_label": {
+    "message": "{mode} വാൾപേപ്പർ എഡിറ്റ് ചെയ്യുക"
+  },
+  "newtab_wallpaper_sources_feature_hint_badge": {
+    "message": "പുതിയത്"
+  },
+  "newtab_wallpaper_sources_feature_hint_text": {
+    "message": "പുതിയ വാൾപേപ്പറുകൾ: ദിവസവും അപ്\u200cഡേറ്റ് ചെയ്യാവുന്ന പ്രകൃതി, നഗരം, കല എന്നിവയുടെ തിരഞ്ഞെടുത്ത ശേഖരങ്ങൾ, അല്ലെങ്കിൽ ചിത്ര ലിങ്ക് വഴി ഒന്ന് ചേർക്കുക."
+  },
+  "newtab_wallpaper_sources_feature_hint_close": {
+    "message": "പുതിയ വാൾപേപ്പർ നുറുങ്ങ് ഡിസ്\u200cമിസ് ചെയ്യുക"
+  },
+  "newtab_webdav_feature_hint_badge": {
+    "message": "ബീറ്റ"
+  },
+  "newtab_webdav_feature_hint_text": {
+    "message": "WebDAV സമന്വയം പരീക്ഷിക്കൂ: WebDAV ഡ്രൈവ് അല്ലെങ്കിൽ NAS വഴി ക്രമീകരണം, ഐക്കണുകൾ, വാൾപേപ്പറുകൾ എന്നിവ ബ്രൗസറുകൾക്കിടയിൽ പോലും ഒരുപോലെ നിലനിർത്തുക."
+  },
+  "newtab_webdav_feature_hint_link": {
+    "message": "സജ്ജീകരിക്കുക"
+  },
+  "newtab_webdav_feature_hint_close": {
+    "message": "WebDAV നുറുങ്ങ് ഡിസ്\u200cമിസ് ചെയ്യുക"
+  },
+  "newtab_help_center_ask_feature_hint_badge": {
+    "message": "പുതിയത്"
+  },
+  "newtab_help_center_ask_feature_hint_text": {
+    "message": "lm എന്ന് ടൈപ്പ് ചെയ്ത് Tab അമർത്തി സഹായ കേന്ദ്രത്തോട് ചോദിക്കൂ."
+  },
+  "newtab_help_center_ask_feature_hint_link": {
+    "message": "പരീക്ഷിക്കുക"
+  },
+  "newtab_help_center_ask_feature_hint_close": {
+    "message": "സഹായ കേന്ദ്ര നുറുങ്ങ് ഡിസ്\u200cമിസ് ചെയ്യുക"
+  },
+  "newtab_ai_quick_jump_feature_hint_badge": {
+    "message": "പുതിയത്"
+  },
+  "newtab_ai_quick_jump_feature_hint_text": {
+    "message": "ജനപ്രിയ AI സൈറ്റുകളിലേക്ക് നിങ്ങളുടെ പ്രോംപ്റ്റുമായി ഒറ്റ ക്ലിക്കിൽ പോകാം. \"gemini\" എന്ന് ടൈപ്പ് ചെയ്ത് Tab അമർത്തി നോക്കൂ."
+  },
+  "newtab_ai_quick_jump_feature_hint_link": {
+    "message": "പിന്തുണയുള്ളവയുടെ ലിസ്റ്റ്"
+  },
+  "newtab_ai_quick_jump_feature_hint_close": {
+    "message": "AI ദ്രുത ജമ്പ് നുറുങ്ങ് ഡിസ്\u200cമിസ് ചെയ്യുക"
+  },
+  "newtab_tab_switcher_feature_hint_badge": {
+    "message": "പുതിയത്"
+  },
+  "newtab_tab_switcher_feature_hint_text": {
+    "message": "മൗസ് തൊടാതെ സമീപകാല ടാബുകളിലൂടെ നീങ്ങാൻ ടാബ് സ്വിച്ചർ തുറക്കാൻ {shortcut} അമർത്തുക."
+  },
+  "newtab_tab_switcher_feature_hint_close": {
+    "message": "ടാബ് സ്വിച്ചർ നുറുങ്ങ് ഡിസ്\u200cമിസ് ചെയ്യുക"
+  },
+  "newtab_input_auto_focus_title": {
+    "message": "ഇൻപുട്ടിൽ സ്വയമേവ ഫോക്കസ് ചെയ്യുക"
+  },
+  "newtab_input_auto_focus_help_label": {
+    "message": "ഇൻപുട്ട് സ്വയം ഫോക്കസ് വിവരം"
+  },
+  "newtab_input_auto_focus_help": {
+    "message": "ബ്രൗസറിന്റെ സ്വന്തം വിലാസ ബാർ ഉപയോഗിക്കാനാണ് താൽപ്പര്യമെങ്കിൽ, ഈ ഓപ്ഷൻ ഓഫാക്കുക. വിപുലീകരണ URL ഇനി വിലാസ ബാറിൽ ദൃശ്യമാകില്ല."
+  },
+  "update_notice_badge": {
+    "message": "{version}-ലേക്ക് അപ്\u200cഡേറ്റ് ചെയ്\u200cതു"
+  },
+  "update_notice_text_fallback": {
+    "message": "ഈ അപ്\u200cഡേറ്റിലെ മാറ്റങ്ങൾ കാണുക"
+  },
+  "update_notice_link": {
+    "message": "മാറ്റങ്ങളുടെ ലോഗ്"
+  },
+  "update_notice_close": {
+    "message": "അപ്\u200cഡേറ്റ് അറിയിപ്പ് ഡിസ്\u200cമിസ് ചെയ്യുക"
+  },
+  "engagement_notice_badge": {
+    "message": "Lumno"
+  },
+  "engagement_notice_text": {
+    "message": "Lumno ഇഷ്ടമായോ? എങ്കിൽ"
+  },
+  "engagement_notice_connector": {
+    "message": "അല്ലെങ്കിൽ"
+  },
+  "engagement_notice_trailing": {
+    "message": "ഹായ് പറയൂ."
+  },
+  "engagement_notice_review": {
+    "message": "5 സ്റ്റാർ നൽകൂ"
+  },
+  "engagement_notice_community": {
+    "message": "X-ൽ ഞങ്ങളെ കണ്ടെത്തി"
+  },
+  "engagement_notice_close": {
+    "message": "റേറ്റിംഗ്, കമ്മ്യൂണിറ്റി അറിയിപ്പ് ഡിസ്\u200cമിസ് ചെയ്യുക"
+  },
+  "newtab_bookmark_cascade_debug_enable": {
+    "message": "ബുക്ക്\u200cമാർക്ക് മെനു സുരക്ഷിത ത്രികോണം കാണിക്കുക"
+  },
+  "newtab_bookmark_cascade_debug_disable": {
+    "message": "ബുക്ക്\u200cമാർക്ക് മെനു സുരക്ഷിത ത്രികോണം മറയ്ക്കുക"
+  },
+  "newtab_bookmark_cascade_debug_open_label": {
+    "message": "തുറക്കുക"
+  },
+  "newtab_bookmark_cascade_debug_switch_label": {
+    "message": "മാറുക"
+  },
+  "newtab_bookmark_cascade_debug_safe_label": {
+    "message": "സുരക്ഷിതം"
+  },
+  "newtab_bookmark_cascade_debug_close_label": {
+    "message": "അടയ്ക്കുക"
+  },
+  "newtab_feedback_button_aria": {
+    "message": "ഫീഡ്\u200cബാക്ക് അയയ്ക്കുക"
+  },
+  "newtab_feedback_menu_aria": {
+    "message": "ഫീഡ്\u200cബാക്ക് ചാനലുകൾ"
+  },
+  "newtab_feedback_x_label": {
+    "message": "X"
+  },
+  "newtab_feedback_x_tooltip": {
+    "message": "X-ൽ ഞങ്ങളെ ബന്ധപ്പെടുക"
+  },
+  "newtab_feedback_github_issue_label": {
+    "message": "GitHub Issue"
+  },
+  "newtab_feedback_github_issue_tooltip": {
+    "message": "GitHub issue തുറക്കുക"
+  },
+  "newtab_feedback_chrome_review_label": {
+    "message": "സ്റ്റോർ റേറ്റിംഗ്"
+  },
+  "newtab_feedback_chrome_review_tooltip": {
+    "message": "വിപുലീകരണ സ്റ്റോറിൽ Lumno റേറ്റ് ചെയ്യുക"
+  },
+  "newtab_feedback_mail_label": {
+    "message": "ഇമെയിൽ"
+  },
+  "newtab_feedback_mail_tooltip": {
+    "message": "ഇമെയിൽ അയയ്ക്കുന്നു"
+  },
+  "newtab_feedback_wechat_label": {
+    "message": "WeChat"
+  },
+  "newtab_feedback_wechat_tooltip": {
+    "message": "WeChat ഗ്രൂപ്പിൽ ചേരുക"
+  },
+  "newtab_feedback_wechat_panel_title": {
+    "message": "ബഗ് റിപ്പോർട്ടുകളും ഫീച്ചർ അഭ്യർത്ഥനകളും"
+  },
+  "newtab_feedback_wechat_refresh_tooltip": {
+    "message": "QR കോഡ് പുതുക്കുക"
+  },
+  "newtab_feedback_wechat_refresh_success": {
+    "message": "ഏറ്റവും പുതിയ QR കോഡ് ലോഡ് ചെയ്\u200cതു"
+  },
+  "newtab_feedback_wechat_refresh_error": {
+    "message": "പുതുക്കാനായില്ല. വീണ്ടും ശ്രമിക്കുക."
+  },
+  "newtab_feedback_wechat_close_tooltip": {
+    "message": "അടയ്ക്കുക"
+  },
+  "newtab_feedback_wechat_qr_title": {
+    "message": "WeChat ഗ്രൂപ്പ് QR കോഡ്"
+  },
+  "newtab_feedback_wechat_qr_alt": {
+    "message": "Lumno WeChat ഗ്രൂപ്പ് QR കോഡ്"
+  },
+  "newtab_feedback_mail_subject": {
+    "message": "Lumno ഫീഡ്\u200cബാക്ക്"
+  },
+  "newtab_feedback_mail_source_label": {
+    "message": "ഉറവിടം"
+  },
+  "newtab_feedback_mail_version_label": {
+    "message": "Lumno പതിപ്പ്"
+  },
+  "newtab_feedback_mail_language_label": {
+    "message": "ഭാഷ"
+  },
+  "newtab_feedback_mail_os_label": {
+    "message": "OS"
+  },
+  "newtab_feedback_mail_browser_label": {
+    "message": "ബ്രൗസർ"
+  },
+  "newtab_wallpaper_delete_local": {
+    "message": "ഇമ്പോർട്ട് ചെയ്\u200cത വാൾപേപ്പർ ഇല്ലാതാക്കുക"
+  },
+  "newtab_wallpaper_custom_name": {
+    "message": "ലോക്കൽ വാൾപേപ്പർ"
+  },
+  "newtab_wallpaper_overlay_opacity": {
+    "message": "മാസ്ക് ഇഫക്റ്റ്"
+  },
+  "newtab_wallpaper_overlay_transparent_tick": {
+    "message": "സുതാര്യം"
+  },
+  "newtab_wallpaper_overlay_default_tick": {
+    "message": "ഡിഫോൾട്ട്"
+  },
+  "newtab_wallpaper_overlay_cover_tick": {
+    "message": "മൂടുക"
+  },
+  "newtab_wallpaper_effect_title": {
+    "message": "വാൾപേപ്പർ ഫിൽട്ടർ"
+  },
+  "newtab_wallpaper_effect_strength": {
+    "message": "സാമ്പിളിംഗ് ശക്തി"
+  },
+  "newtab_wallpaper_effect_blur_strength": {
+    "message": "ബ്ലർ ശക്തി"
+  },
+  "newtab_wallpaper_effect_size": {
+    "message": "വലുപ്പം"
+  },
+  "newtab_wallpaper_effect_spacing": {
+    "message": "അകലം"
+  },
+  "newtab_wallpaper_effect_texture": {
+    "message": "ടെക്സ്ചർ"
+  },
+  "newtab_wallpaper_effect_blocks_size": {
+    "message": "ബ്ലോക്ക് വലുപ്പം"
+  },
+  "newtab_wallpaper_effect_crt_strength": {
+    "message": "ഡിസ്പ്ലേ തീവ്രത"
+  },
+  "newtab_wallpaper_effect_crt_bloom": {
+    "message": "ബ്ലൂം"
+  },
+  "newtab_wallpaper_effect_crt_rgb_offset": {
+    "message": "RGB ഓഫ്\u200cസെറ്റ്"
+  },
+  "newtab_wallpaper_effect_crt_curvature": {
+    "message": "സ്ക്രീൻ വക്രത"
+  },
+  "newtab_wallpaper_effect_none": {
+    "message": "ഓഫ്"
+  },
+  "newtab_wallpaper_effect_blur": {
+    "message": "ഗ്ലാസ് ബ്ലർ"
+  },
+  "newtab_wallpaper_effect_grain": {
+    "message": "ഗ്രെയിൻ"
+  },
+  "newtab_wallpaper_effect_blocks": {
+    "message": "ബ്ലോക്കുകൾ"
+  },
+  "newtab_wallpaper_effect_halftone": {
+    "message": "ഹാഫ്\u200cടോൺ"
+  },
+  "newtab_wallpaper_effect_dither": {
+    "message": "ഡിതർ"
+  },
+  "newtab_wallpaper_effect_ascii": {
+    "message": "ASCII"
+  },
+  "newtab_wallpaper_effect_crt": {
+    "message": "CRT"
+  },
+  "newtab_wallpaper_effect_ink_title": {
+    "message": "സാമ്പിൾ ടോണുകൾ"
+  },
+  "newtab_wallpaper_effect_ink_dark": {
+    "message": "നിഴലുകൾ"
+  },
+  "newtab_wallpaper_effect_ink_light": {
+    "message": "ഹൈലൈറ്റുകൾ"
+  },
+  "newtab_wallpaper_effect_ink_select_label": {
+    "message": "ഡോട്ടുകൾക്കോ പ്രതീകങ്ങൾക്കോ {tone} സാമ്പിൾ ചെയ്യുക"
+  },
+  "newtab_wallpaper_save_error": {
+    "message": "വാൾപേപ്പർ സംരക്ഷിക്കാനായില്ല"
+  },
+  "newtab_wallpaper_importing": {
+    "message": "വാൾപേപ്പർ ഇമ്പോർട്ട് ചെയ്യുന്നു…"
+  },
+  "newtab_wallpaper_import_done": {
+    "message": "വാൾപേപ്പർ ഇമ്പോർട്ട് ചെയ്\u200cതു"
+  },
+  "newtab_wallpaper_import_error": {
+    "message": "വാൾപേപ്പർ ഇമ്പോർട്ട് ചെയ്യാനായില്ല"
+  },
+  "newtab_wallpaper_delete_done": {
+    "message": "ഇല്ലാതാക്കി"
+  },
+  "newtab_wallpaper_delete_error": {
+    "message": "വാൾപേപ്പർ ഇല്ലാതാക്കാനായില്ല"
+  },
+  "newtab_wallpaper_name_dark_linocut_topographic": {
+    "message": "രാത്രി ഭൂപ്രകൃതി"
+  },
+  "newtab_wallpaper_name_dark_monet_lily_nocturne": {
+    "message": "ആമ്പൽ രാത്രി"
+  },
+  "newtab_wallpaper_name_dark_shanshui_moonlit": {
+    "message": "നിലാവിലെ ഷാൻഷുയി"
+  },
+  "newtab_wallpaper_name_monet_coastal_white": {
+    "message": "മോനെ തീരം"
+  },
+  "newtab_wallpaper_name_monet_field_white": {
+    "message": "മോനെ വയൽ"
+  },
+  "newtab_wallpaper_name_monet_lily_pond_white": {
+    "message": "ആമ്പൽക്കുളം"
+  },
+  "newtab_wallpaper_name_impressionist_orchard_white": {
+    "message": "തോട്ടത്തിലെ പ്രഭാതം"
+  },
+  "newtab_wallpaper_name_seurat_coast_white": {
+    "message": "സ്യൂറാ തീരം"
+  },
+  "newtab_wallpaper_name_seurat_park_white": {
+    "message": "സ്യൂറാ പാർക്ക്"
+  },
+  "newtab_wallpaper_name_seurat_riverside_white": {
+    "message": "സ്യൂറാ നദീതീരം"
+  },
+  "newtab_wallpaper_name_pointillist_lakeside_white": {
+    "message": "തടാകതീര പോയിന്റിലിസം"
+  },
+  "newtab_wallpaper_name_white_3d_architecture": {
+    "message": "പകൽ വാസ്തുവിദ്യ"
+  },
+  "newtab_wallpaper_name_white_3d_observatory": {
+    "message": "മഞ്ഞുമൂടിയ നിരീക്ഷണാലയം"
+  },
+  "newtab_wallpaper_name_white_linocut_topographic": {
+    "message": "പകൽ ഭൂപ്രകൃതി"
+  },
+  "newtab_wallpaper_name_white_risograph_collage": {
+    "message": "പകൽ കൊളാഷ്"
+  },
+  "newtab_wallpaper_name_white_shanshui": {
+    "message": "തെളിഞ്ഞ ഷാൻഷുയി"
+  },
+  "newtab_wallpaper_name_white_shanshui_bamboo_bridge": {
+    "message": "മുളപ്പാലം"
+  },
+  "newtab_wallpaper_name_settings_bg_light_monet_newtab": {
+    "message": "മോനെ ലൈറ്റ്"
+  },
+  "shortcuts_duplicate_tag": {
+    "message": "ബിൽറ്റ്-ഇന്നിന്റെ തനിപ്പകർപ്പ്"
+  },
+  "shortcuts_duplicate_action": {
+    "message": "ബിൽറ്റ്-ഇൻ ഇനം കണ്ടെത്തുക"
+  },
+  "shortcuts_template_help": {
+    "message": "1. ചേർക്കേണ്ട സൈറ്റ് തുറക്കുക\n2. ഏതെങ്കിലും കീവേഡ് ഉപയോഗിച്ച് തിരയുക\n3. ഫല പേജിന്റെ URL പകർത്തി ഇവിടെ ഒട്ടിക്കുക\n4. കീവേഡിന് പകരം {query} നൽകുക"
+  },
+  "shortcuts_title": {
+    "message": "സൈറ്റ് തിരയൽ"
+  },
+  "shortcuts_desc": {
+    "message": "സൈറ്റ് തിരയൽ ഉപയോഗിക്കാൻ കീവേഡിന് ശേഷം Tab അമർത്തുക"
+  },
+  "shortcuts_group_custom": {
+    "message": "ഇഷ്\u200cടാനുസൃതം"
+  },
+  "blacklist_section_title": {
+    "message": "തിരയൽ, സമീപകാല ബ്ലാക്ക്\u200cലിസ്റ്റ്"
+  },
+  "blacklist_section_desc": {
+    "message": "തിരയൽ ഫലങ്ങളിൽ നിന്നും പുതിയ ടാബ് പേജിൽ നിന്നും മറയ്ക്കേണ്ട വെബ്\u200cസൈറ്റുകൾ ചേർക്കുക."
+  },
+  "blacklist_group_custom": {
+    "message": "എല്ലായിടത്തും തടയുക"
+  },
+  "blacklist_label_url": {
+    "message": "URL നിയമം"
+  },
+  "blacklist_label_domain": {
+    "message": "സൈറ്റ് ഡൊമെയ്ൻ"
+  },
+  "blacklist_label_prefix": {
+    "message": "സൈറ്റ് അല്ലെങ്കിൽ പാത്ത്"
+  },
+  "blacklist_label_exact": {
+    "message": "പൂർണ്ണ URL"
+  },
+  "blacklist_label_suffix": {
+    "message": "സൈറ്റ് ഡൊമെയ്ൻ"
+  },
+  "blacklist_match_label": {
+    "message": "പൊരുത്ത തരം"
+  },
+  "blacklist_match_exact": {
+    "message": "ഈ പേജ്"
+  },
+  "blacklist_match_prefix": {
+    "message": "ഈ സൈറ്റ് പാത്ത്"
+  },
+  "blacklist_match_suffix": {
+    "message": "മുഴുവൻ സൈറ്റ്"
+  },
+  "blacklist_match_exact_tooltip": {
+    "message": "ഈ പേജ് മാത്രം തടയുന്നു\n────────\nഉദാഹരണത്തിന്, x.com/home നൽകിയാൽ, ആ പേജ് മാത്രം മറയ്ക്കും, മറ്റ് പേജുകൾ ദൃശ്യമായി തുടരും."
+  },
+  "blacklist_match_prefix_tooltip": {
+    "message": "ഈ സൈറ്റിലെയും പാത്തിലെയും പേജുകൾ മാത്രം തടയുന്നു\n────────\nഉദാഹരണത്തിന്, baidu.com/search നൽകിയാൽ, baidu.com/search, baidu.com/search/1 എന്നിവ മറയ്ക്കും, എന്നാൽ baidu.com/news ദൃശ്യമായി തുടരും."
+  },
+  "blacklist_match_suffix_tooltip": {
+    "message": "ഉപഡൊമെയ്\u200cനുകൾ ഉൾപ്പെടെ ഈ സൈറ്റിലെ എല്ലാ പേജുകളും തടയുന്നു\n────────\nഉദാഹരണത്തിന്, baidu.com നൽകിയാൽ, baidu.com/search, tieba.baidu.com എന്നിവ രണ്ടും മറയ്ക്കും."
+  },
+  "blacklist_preview_title": {
+    "message": "യഥാർത്ഥ പൊരുത്ത പ്രിവ്യൂ"
+  },
+  "blacklist_preview_match": {
+    "message": "പൊരുത്തപ്പെടും"
+  },
+  "blacklist_preview_miss": {
+    "message": "പൊരുത്തപ്പെടില്ല"
+  },
+  "blacklist_preview_www_note": {
+    "message": "www. പതിപ്പും ഉൾപ്പെടുന്നു, അതിനാൽ baidu.com, www.baidu.com-മായും പൊരുത്തപ്പെടും."
+  },
+  "blacklist_placeholder_url": {
+    "message": "ഈ പേജിന് പൂർണ്ണ വിലാസവും മുഴുവൻ സൈറ്റിന് സൈറ്റ് ഡൊമെയ്\u200cനും ഉപയോഗിക്കുക"
+  },
+  "blacklist_placeholder_domain": {
+    "message": "baidu.com"
+  },
+  "blacklist_placeholder_prefix": {
+    "message": "baidu.com അല്ലെങ്കിൽ baidu.com/search"
+  },
+  "blacklist_placeholder_exact": {
+    "message": "x.com/home"
+  },
+  "blacklist_placeholder_suffix": {
+    "message": "ഉദാ. baidu.com"
+  },
+  "blacklist_add": {
+    "message": "ചേർക്കുക"
+  },
+  "blacklist_empty": {
+    "message": "ബ്ലാക്ക്\u200cലിസ്റ്റിൽ ഇതുവരെ URL-കളൊന്നുമില്ല"
+  },
+  "blacklist_error_url": {
+    "message": "സൈറ്റ് ഡൊമെയ്\u200cനോ പൂർണ്ണ URL-ഓ നൽകുക."
+  },
+  "blacklist_error_match_mode": {
+    "message": "കുറഞ്ഞത് ഒരു പൊരുത്ത തരമെങ്കിലും തിരഞ്ഞെടുക്കുക."
+  },
+  "blacklist_error_suffix": {
+    "message": "സൈറ്റ് ഡൊമെയ്ൻ നൽകുക."
+  },
+  "blacklist_error_domain": {
+    "message": "സൈറ്റ് ഡൊമെയ്ൻ നൽകുക."
+  },
+  "blacklist_match_mode_prefix": {
+    "message": "ഈ URL-ൽ ആരംഭിക്കുന്ന പേജുകളുമായി പൊരുത്തപ്പെടുന്നു"
+  },
+  "blacklist_match_unset": {
+    "message": "പൊരുത്ത തരമൊന്നും തിരഞ്ഞെടുത്തിട്ടില്ല"
+  },
+  "blacklist_removed_toast": {
+    "message": "ബ്ലാക്ക്\u200cലിസ്റ്റിൽ നിന്ന് നീക്കം ചെയ്\u200cതു"
+  },
+  "shortcuts_group_builtin": {
+    "message": "ബിൽറ്റ്-ഇൻ"
+  },
+  "shortcuts_group_ai": {
+    "message": "AI തിരയൽ"
+  },
+  "shortcuts_group_ai_desc": {
+    "message": "ഒരു കീവേഡ് നൽകി Tab അമർത്തി, തുടർന്ന് നിങ്ങളുടെ പ്രോംപ്റ്റ് ടൈപ്പ് ചെയ്യുമ്പോൾ ഈ AI സൈറ്റുകളിലൊന്ന് തുറന്ന് അത് സ്വയമേവ പൂരിപ്പിക്കും (ആദ്യം സൈറ്റിൽ സൈൻ ഇൻ ചെയ്യുക)"
+  },
+  "shortcuts_badge_custom": {
+    "message": "ഇഷ്\u200cടാനുസൃതം"
+  },
+  "shortcuts_badge_builtin": {
+    "message": "ബിൽറ്റ്-ഇൻ"
+  },
+  "shortcuts_badge_ai": {
+    "message": "AI തിരയൽ"
+  },
+  "shortcuts_label_key": {
+    "message": "കീവേഡ്"
+  },
+  "shortcuts_label_name": {
+    "message": "പേര്"
+  },
+  "shortcuts_label_template": {
+    "message": "തിരയൽ URL"
+  },
+  "shortcuts_label_alias": {
+    "message": "അപരനാമങ്ങൾ"
+  },
+  "shortcuts_label_display_group": {
+    "message": "കാണിക്കുന്നിടം"
+  },
+  "shortcuts_placeholder_required": {
+    "message": "ആവശ്യമാണ് — ഒന്നിലധികമെങ്കിൽ കോമ ഉപയോഗിക്കുക, ഉദാ. jd,bili"
+  },
+  "shortcuts_placeholder_optional_default": {
+    "message": "ഓപ്ഷണൽ — ഡിഫോൾട്ടായി കീവേഡ്"
+  },
+  "shortcuts_placeholder_template": {
+    "message": "https://example.com/search?q={query}"
+  },
+  "shortcuts_placeholder_alias": {
+    "message": "ഓപ്ഷണൽ — ഉദാ. Bilibili, YouTube"
+  },
+  "shortcuts_insert_query": {
+    "message": "ക്വറി വേരിയബിൾ ചേർക്കുക"
+  },
+  "shortcuts_add": {
+    "message": "ഇഷ്\u200cടാനുസൃത തിരയൽ ചേർക്കുക"
+  },
+  "shortcuts_save": {
+    "message": "മാറ്റങ്ങൾ സംരക്ഷിക്കുക"
+  },
+  "shortcuts_cancel": {
+    "message": "റദ്ദാക്കുക"
+  },
+  "shortcuts_edit": {
+    "message": "എഡിറ്റ് ചെയ്യുക"
+  },
+  "shortcuts_remove": {
+    "message": "നീക്കം ചെയ്യുക"
+  },
+  "shortcuts_empty_custom": {
+    "message": "ഇഷ്\u200cടാനുസൃത തിരയലുകളൊന്നും ഇതുവരെയില്ല"
+  },
+  "shortcuts_empty_builtin": {
+    "message": "ബിൽറ്റ്-ഇൻ സൈറ്റ് തിരയലുകളൊന്നുമില്ല"
+  },
+  "shortcuts_empty_engines": {
+    "message": "ബിൽറ്റ്-ഇൻ സെർച്ച് എഞ്ചിനുകളൊന്നുമില്ല"
+  },
+  "shortcuts_empty_ai": {
+    "message": "ബിൽറ്റ്-ഇൻ AI തിരയൽ ദാതാക്കളൊന്നുമില്ല"
+  },
+  "toast_saved": {
+    "message": "സംരക്ഷിച്ചു"
+  },
+  "toast_removed": {
+    "message": "നീക്കം ചെയ്\u200cതു"
+  },
+  "toast_error": {
+    "message": "പ്രവർത്തനം പരാജയപ്പെട്ടു. വീണ്ടും ശ്രമിക്കുക."
+  },
+  "toast_error_template": {
+    "message": "തിരയൽ ടെംപ്ലേറ്റിൽ {query} ഉൾപ്പെടുത്തണം."
+  },
+  "toast_reset": {
+    "message": "പുനഃസജ്ജമാക്കി"
+  },
+  "shortcuts_reset_builtin": {
+    "message": "ഡിഫോൾട്ട് ലിസ്റ്റിലേക്ക് പുനഃസജ്ജമാക്കുക"
+  },
+  "shortcuts_clear_custom": {
+    "message": "ഇഷ്\u200cടാനുസൃതം മായ്ക്കുക"
+  },
+  "blacklist_clear": {
+    "message": "മറയ്ക്കൽ നിയമങ്ങൾ മായ്ക്കുക"
+  },
+  "toast_cleared": {
+    "message": "മായ്ച്ചു"
+  },
+  "confirm_clear_custom": {
+    "message": "എല്ലാ ഇഷ്\u200cടാനുസൃത തിരയലുകളും മായ്ക്കണോ?"
+  },
+  "confirm_clear_blacklist": {
+    "message": "മറയ്ക്കൽ നിയമങ്ങൾ മായ്ക്കണോ?"
+  },
+  "confirm_clear_favicon_blacklist": {
+    "message": "ഒഴിവാക്കൽ നിയമങ്ങൾ മായ്ക്കണോ?"
+  },
+  "confirm_reset_builtin": {
+    "message": "ബിൽറ്റ്-ഇൻ ലിസ്റ്റ് പുനഃസജ്ജമാക്കണോ?"
+  },
+  "confirm_ok": {
+    "message": "സ്ഥിരീകരിക്കുക"
+  },
+  "confirm_cancel": {
+    "message": "റദ്ദാക്കുക"
+  },
+  "confirm_remove_item": {
+    "message": "ഈ ഇനം നീക്കം ചെയ്യണോ?"
+  },
+  "shortcuts_error_key": {
+    "message": "ദയവായി ഒരു ട്രിഗർ നൽകുക."
+  },
+  "shortcuts_error_key_space": {
+    "message": "ട്രിഗറിൽ സ്\u200cപെയ്\u200cസുകൾ പാടില്ല."
+  },
+  "shortcuts_error_key_duplicate": {
+    "message": "ഈ ട്രിഗർ ഇതിനകം ഉപയോഗത്തിലാണ്. മറ്റൊന്ന് തിരഞ്ഞെടുക്കുക."
+  },
+  "search_placeholder": {
+    "message": "തിരയുക അല്ലെങ്കിൽ URL ടൈപ്പ് ചെയ്യുക…"
+  },
+  "overlay_search_placeholder": {
+    "message": "തിരയുക അല്ലെങ്കിൽ URL ടൈപ്പ് ചെയ്യുക, തുറന്ന ടാബുകൾ തിരയാൻ Tab അമർത്തുക"
+  },
+  "options_page_title": {
+    "message": "Lumno ക്രമീകരണം"
+  },
+  "newtab_page_title": {
+    "message": "പുതിയ ടാബ്"
+  },
+  "recent_heading": {
+    "message": "സമീപകാലം"
+  },
+  "recent_heading_latest": {
+    "message": "സമീപകാലം"
+  },
+  "recent_heading_most": {
+    "message": "ഏറ്റവുമധികം സന്ദർശിച്ചവ"
+  },
+  "bookmarks_heading": {
+    "message": "ബുക്ക്\u200cമാർക്കുകൾ"
+  },
+  "display_mode_title": {
+    "message": "ഡിസ്പ്ലേ മോഡ്"
+  },
+  "bookmark_view_mode_folder": {
+    "message": "ബഹുതല ഫോൾഡർ കാഴ്\u200cച"
+  },
+  "bookmark_view_mode_list": {
+    "message": "ബഹുതല ലിസ്റ്റ് കാഴ്\u200cച"
+  },
+  "bookmark_view_mode_top": {
+    "message": "മുകളിലെ ബുക്ക്\u200cമാർക്ക് ബാർ"
+  },
+  "bookmark_topbar_layout_title": {
+    "message": "ബാർ ശൈലി"
+  },
+  "bookmark_topbar_layout_docked": {
+    "message": "മുകളിൽ ഉറപ്പിച്ചത്"
+  },
+  "bookmark_topbar_layout_floating": {
+    "message": "ഫ്ലോട്ടിംഗ്"
+  },
+  "bookmark_topbar_surface_title": {
+    "message": "ബാർ പശ്ചാത്തലം"
+  },
+  "bookmark_topbar_surface_follow": {
+    "message": "ശൈലി പിന്തുടരുക"
+  },
+  "bookmark_topbar_surface_adaptive": {
+    "message": "അഡാപ്റ്റീവ് മഞ്ഞ്"
+  },
+  "bookmark_topbar_surface_clear": {
+    "message": "ലിക്വിഡ് ഗ്ലാസ്"
+  },
+  "bookmark_topbar_surface_transparent": {
+    "message": "സുതാര്യം"
+  },
+  "bookmark_topbar_surface_custom": {
+    "message": "ഇഷ്\u200cടാനുസൃത നിറം"
+  },
+  "bookmark_topbar_color_pick": {
+    "message": "പശ്ചാത്തല നിറം എടുക്കുക"
+  },
+  "bookmark_topbar_color_reset": {
+    "message": "സ്വയമേവയുള്ള നിറങ്ങൾ പുനഃസ്ഥാപിക്കുക"
+  },
+  "bookmark_topbar_color_picked": {
+    "message": "നിറം എടുത്തു"
+  },
+  "bookmark_topbar_color_reset_done": {
+    "message": "സ്വയമേവയുള്ള നിറങ്ങൾ പുനഃസ്ഥാപിച്ചു"
+  },
+  "bookmark_topbar_color_unsupported": {
+    "message": "ഈ ബ്രൗസറിൽ സ്ക്രീനിൽ നിന്ന് നിറം എടുക്കുന്നത് പിന്തുണയ്ക്കുന്നില്ല."
+  },
+  "bookmark_topbar_color_failed": {
+    "message": "നിറം എടുക്കാനായില്ല. വീണ്ടും ശ്രമിക്കുക."
+  },
+  "bookmarks_empty_folder": {
+    "message": "ഉള്ളടക്കമൊന്നുമില്ല"
+  },
+  "bookmarks_page_prev": {
+    "message": "മുമ്പത്തെ പേജ്"
+  },
+  "bookmarks_page_next": {
+    "message": "അടുത്ത പേജ്"
+  },
+  "bookmarks_open_manager": {
+    "message": "ബുക്ക്\u200cമാർക്ക് മാനേജർ തുറക്കുക"
+  },
+  "bookmarks_open_in_new_tab_group": {
+    "message": "പുതിയ ടാബ് ഗ്രൂപ്പിൽ തുറക്കുക"
+  },
+  "newtab_open_in_new_tab": {
+    "message": "പുതിയ ടാബിൽ തുറക്കുക"
+  },
+  "bookmarks_open_group_confirm_title": {
+    "message": "{count} ടാബുകൾ തുറക്കണോ?"
+  },
+  "bookmarks_open_group_confirm_description": {
+    "message": "“{folder}”-ലെയും അതിന്റെ ഉപഫോൾഡറുകളിലെയും എല്ലാ ബുക്ക്\u200cമാർക്കുകളും ഒരു ടാബ് ഗ്രൂപ്പിൽ തുറക്കും."
+  },
+  "bookmarks_open_group_confirm_button": {
+    "message": "തുറക്കുക"
+  },
+  "bookmarks_untitled_folder": {
+    "message": "പേരില്ലാത്ത ഫോൾഡർ"
+  },
+  "bookmarks_open_group_partial_failed": {
+    "message": "{openedCount} ടാബുകൾ തുറന്നു; {failedCount} എണ്ണം തുറക്കാനായില്ല."
+  },
+  "bookmarks_open_group_failed": {
+    "message": "ഈ ബുക്ക്\u200cമാർക്ക് ഫോൾഡർ തുറക്കാനായില്ല"
+  },
+  "bookmarks_copy_url": {
+    "message": "ലിങ്ക് പകർത്തുക"
+  },
+  "bookmarks_copy_url_success": {
+    "message": "ബുക്ക്\u200cമാർക്ക് ലിങ്ക് പകർത്തി"
+  },
+  "bookmarks_copy_url_failed": {
+    "message": "ലിങ്ക് പകർത്താനായില്ല. വീണ്ടും ശ്രമിക്കുക."
+  },
+  "bookmarks_edit": {
+    "message": "എഡിറ്റ് ചെയ്യുക"
+  },
+  "bookmarks_edit_dialog_title": {
+    "message": "ബുക്ക്\u200cമാർക്ക് എഡിറ്റ് ചെയ്യുക"
+  },
+  "bookmarks_edit_folder_dialog_title": {
+    "message": "ഫോൾഡറിന്റെ പേര് മാറ്റുക"
+  },
+  "bookmarks_name_placeholder": {
+    "message": "പേര്"
+  },
+  "bookmarks_invalid_url": {
+    "message": "സാധുവായ URL നൽകുക."
+  },
+  "bookmarks_updated": {
+    "message": "ബുക്ക്\u200cമാർക്ക് അപ്\u200cഡേറ്റ് ചെയ്\u200cതു"
+  },
+  "bookmarks_folder_updated": {
+    "message": "ഫോൾഡർ അപ്\u200cഡേറ്റ് ചെയ്\u200cതു"
+  },
+  "bookmarks_update_failed": {
+    "message": "ബുക്ക്\u200cമാർക്ക് അപ്\u200cഡേറ്റ് ചെയ്യാനായില്ല"
+  },
+  "bookmarks_delete": {
+    "message": "ഇല്ലാതാക്കുക"
+  },
+  "bookmarks_context_menu_label": {
+    "message": "ബുക്ക്\u200cമാർക്ക് പ്രവർത്തനങ്ങൾ"
+  },
+  "bookmarks_delete_undone": {
+    "message": "ഇല്ലാതാക്കൽ പഴയപടിയാക്കി · വീണ്ടും ഇല്ലാതാക്കാൻ {shortcut}"
+  },
+  "bookmarks_delete_redone": {
+    "message": "ഇല്ലാതാക്കൽ വീണ്ടും ചെയ്\u200cതു · പഴയപടിയാക്കാൻ {shortcut}"
+  },
+  "bookmarks_delete_failed": {
+    "message": "ബുക്ക്\u200cമാർക്ക് ഇല്ലാതാക്കാനായില്ല"
+  },
+  "bookmarks_move_success": {
+    "message": "“{title}” നീക്കി · പഴയപടിയാക്കാൻ {shortcut}"
+  },
+  "bookmarks_move_undone": {
+    "message": "നീക്കൽ പഴയപടിയാക്കി · വീണ്ടും ചെയ്യാൻ {shortcut}"
+  },
+  "bookmarks_move_redone": {
+    "message": "നീക്കൽ വീണ്ടും ചെയ്\u200cതു · പഴയപടിയാക്കാൻ {shortcut}"
+  },
+  "bookmarks_move_failed": {
+    "message": "ബുക്ക്\u200cമാർക്ക് നീക്കാനായില്ല"
+  },
+  "bookmarks_moved_to_shortcuts": {
+    "message": "കുറുക്കുവഴികളിലേക്ക് നീക്കി"
+  },
+  "search_tag_history": {
+    "message": "ചരിത്രം"
+  },
+  "search_remove_history": {
+    "message": "ചരിത്രത്തിൽ നിന്ന് നീക്കം ചെയ്യുക"
+  },
+  "search_remove_history_tooltip": {
+    "message": "ഈ ചരിത്ര എൻട്രി നീക്കം ചെയ്യുക"
+  },
+  "search_remove_top_site_tooltip": {
+    "message": "ഈ പതിവ് ഫലം നീക്കം ചെയ്യുക"
+  },
+  "search_copy_url_tooltip": {
+    "message": "ലിങ്ക് പകർത്തുക"
+  },
+  "search_copy_url_success": {
+    "message": "ഫല ലിങ്ക് പകർത്തി"
+  },
+  "search_copy_url_failed": {
+    "message": "ഫല ലിങ്ക് പകർത്താനായില്ല. വീണ്ടും ശ്രമിക്കുക."
+  },
+  "search_tag_top_site": {
+    "message": "പതിവ്"
+  },
+  "search_tag_bookmark": {
+    "message": "ബുക്ക്\u200cമാർക്ക്"
+  },
+  "search_tag_open_tab": {
+    "message": "തുറന്നത്"
+  },
+  "visit_label": {
+    "message": "സന്ദർശിക്കുക"
+  },
+  "action_open_new_tab": {
+    "message": "പുതിയ ടാബ്"
+  },
+  "action_open_background_new_tab": {
+    "message": "പശ്ചാത്തലത്തിൽ തുറക്കുക"
+  },
+  "action_open_background_tab": {
+    "message": "പശ്ചാത്തലത്തിൽ തുറക്കുക"
+  },
+  "action_go_current_tab": {
+    "message": "പോകുക"
+  },
+  "open_prefix": {
+    "message": "{title} തുറക്കുക"
+  },
+  "open_url": {
+    "message": "{url} തുറക്കുക"
+  },
+  "open_browser_url": {
+    "message": "{browser} തുറക്കുക: {url}"
+  },
+  "mode_badge": {
+    "message": "മോഡ്: {mode}"
+  },
+  "mode_badge_follow_system": {
+    "message": "മോഡ്: {mode} (സിസ്റ്റം)"
+  },
+  "mode_badge_follow_site": {
+    "message": "മോഡ്: {mode} (സൈറ്റ്)"
+  },
+  "theme_label_dark": {
+    "message": "ഡാർക്ക്"
+  },
+  "theme_label_light": {
+    "message": "ലൈറ്റ്"
+  },
+  "theme_label_system": {
+    "message": "സിസ്റ്റം"
+  },
+  "command_newtab": {
+    "message": "പുതിയ ടാബ്"
+  },
+  "search_input_clear": {
+    "message": "മായ്ക്കുക"
+  },
+  "command_settings": {
+    "message": "ക്രമീകരണം തുറക്കുക"
+  },
+  "command_show_search": {
+    "message": "കമാൻഡ് ബാർ തുറക്കുക"
+  },
+  "command_show_search_prefill": {
+    "message": "നിലവിലെ പേജ് URL-നൊപ്പം കമാൻഡ് ബാർ തുറക്കുക"
+  },
+  "command_show_search_prefill_v": {
+    "message": "നിലവിലെ പേജ് URL പകർത്തുക"
+  },
+  "mode_switch_title": {
+    "message": "{name}: {mode} മോഡിലേക്ക് മാറുക"
+  },
+  "zen_badge_on": {
+    "message": "Zen: ഓൺ"
+  },
+  "zen_badge_off": {
+    "message": "Zen: ഓഫ്"
+  },
+  "zen_enable_title": {
+    "message": "{name}: Zen മോഡിൽ പ്രവേശിക്കുക"
+  },
+  "zen_disable_title": {
+    "message": "{name}: Zen മോഡിൽ നിന്ന് പുറത്തുകടക്കുക"
+  },
+  "switch_to_tab": {
+    "message": "മാറുക"
+  },
+  "untitled": {
+    "message": "പേരില്ലാത്തത്"
+  },
+  "site_search_default": {
+    "message": "സൈറ്റ്"
+  },
+  "site_search_name_baidu": {
+    "message": "Baidu"
+  },
+  "site_search_name_metaso": {
+    "message": "Metaso AI Search"
+  },
+  "site_search_name_sogou": {
+    "message": "Sogou"
+  },
+  "site_search_name_shenma": {
+    "message": "Shenma"
+  },
+  "site_search_name_weibo": {
+    "message": "Weibo"
+  },
+  "site_search_name_xiaohongshu": {
+    "message": "Xiaohongshu"
+  },
+  "site_search_name_douyin": {
+    "message": "Douyin"
+  },
+  "site_search_name_jd": {
+    "message": "JD.com"
+  },
+  "site_search_name_chatgpt": {
+    "message": "ChatGPT"
+  },
+  "site_search_name_gemini": {
+    "message": "Gemini"
+  },
+  "site_search_name_doubao": {
+    "message": "Doubao"
+  },
+  "site_search_name_qianwen": {
+    "message": "Qwen"
+  },
+  "site_search_name_yuanbao": {
+    "message": "Yuanbao"
+  },
+  "site_search_name_minimax": {
+    "message": "MiniMax"
+  },
+  "site_search_name_deepseek": {
+    "message": "DeepSeek"
+  },
+  "site_search_name_kimi": {
+    "message": "Kimi"
+  },
+  "site_search_name_zhihu": {
+    "message": "Zhihu"
+  },
+  "site_search_name_douban": {
+    "message": "Douban"
+  },
+  "site_search_name_juejin": {
+    "message": "Juejin"
+  },
+  "site_search_name_taobao": {
+    "message": "Taobao"
+  },
+  "site_search_name_tmall": {
+    "message": "Tmall"
+  },
+  "site_search_name_wechat": {
+    "message": "WeChat ഔദ്യോഗിക അക്കൗണ്ടുകൾ"
+  },
+  "site_search_name_wikipedia": {
+    "message": "വിക്കിപീഡിയ"
+  },
+  "site_search_name_lumno_help": {
+    "message": "Lumno സഹായ കേന്ദ്രം"
+  },
+  "help_center_recommended": {
+    "message": "നിർദ്ദേശിച്ച വായന"
+  },
+  "help_center_no_results": {
+    "message": "ഒന്നും കണ്ടെത്തിയില്ല. ഡെവലപ്പറെ ബന്ധപ്പെടാൻ മടിക്കേണ്ട."
+  },
+  "search_in_site": {
+    "message": "{site}-ൽ തിരയുക"
+  },
+  "search_in_site_query": {
+    "message": "{site}-ൽ \"{query}\" തിരയുക"
+  },
+  "ask_ai_provider": {
+    "message": "{site}-നോട് ചോദിക്കുക"
+  },
+  "ask_ai_provider_query": {
+    "message": "{site}-നോട് \"{query}\" ചോദിക്കുക"
+  },
+  "site_search_tab_hint": {
+    "message": "{site} തിരയുക"
+  },
+  "search_query": {
+    "message": "\"{query}\" തിരയുക"
+  },
+  "search_in_site_ellipsis": {
+    "message": "{site}-ൽ തിരയുക…"
+  },
+  "search_in_site_prefix": {
+    "message": "{site}-ൽ തിരയുക |"
+  },
+  "search_open_tabs_only_prefix": {
+    "message": "തുറന്ന ടാബുകൾ തിരയുക |"
+  },
+  "search_open_tabs_only_entry": {
+    "message": "തുറന്ന ടാബുകൾ തിരയുക"
+  },
+  "action_search": {
+    "message": "തിരയുക"
+  },
+  "action_search_engine": {
+    "message": "{engine}-ൽ തിരയുക"
+  },
+  "action_open_ai_web": {
+    "message": "{site} വെബ് ആപ്പ് തുറക്കുക"
+  },
+  "action_search_google": {
+    "message": "Google-ൽ തിരയുക"
+  },
+  "action_switch": {
+    "message": "മാറുക"
+  },
+  "action_open": {
+    "message": "തുറക്കുക"
+  },
+  "overlay_empty_result": {
+    "message": "പൊരുത്തപ്പെടുന്ന ഫലങ്ങളൊന്നുമില്ല"
+  },
+  "local_search_tab_hint": {
+    "message": "{source} മാത്രം തിരയുക"
+  },
+  "search_scope_switcher_label": {
+    "message": "തിരയൽ വ്യാപ്തി: {scope}. മാറ്റാൻ സജീവമാക്കുക."
+  },
+  "search_scope_current": {
+    "message": "നിലവിലുള്ളത്"
+  },
+  "search_scope_remove_confirmation": {
+    "message": "വ്യാപ്തി നീക്കം ചെയ്യാൻ Backspace വീണ്ടും അമർത്തുക."
+  },
+  "search_number_jump_release_hint": {
+    "message": "നമ്പറുകൾ കാണിക്കാൻ വിടുക"
+  },
+  "search_scope_menu_shortcut_hint": {
+    "message": "പാനൽ തുറക്കുക"
+  },
+  "search_scope_menu_navigation_hint": {
+    "message": "നീക്കുക"
+  },
+  "search_scope_menu_select_hint": {
+    "message": "മാറുക"
+  },
+  "search_scope_menu_focus_toggle_hint": {
+    "message": "ഫോക്കസ് മാറ്റുക"
+  },
+  "search_scope_menu_filter_hint": {
+    "message": "ഫിൽട്ടർ ചെയ്യാൻ ടൈപ്പ് ചെയ്യുക"
+  },
+  "search_scope_menu_filter_query": {
+    "message": "തിരയുക: {query}"
+  },
+  "search_scope_panel_placeholder": {
+    "message": "നിർദ്ദിഷ്ട സൈറ്റ് ഉള്ളടക്കം തിരയുക…"
+  },
+  "search_scope_active_placeholder": {
+    "message": "ഈ വ്യാപ്തിയിൽ തിരയുക; വ്യാപ്തി പാനൽ തുറക്കാൻ Tab വീണ്ടും അമർത്തുക…"
+  },
+  "search_scope_group_engines": {
+    "message": "സെർച്ച് എഞ്ചിനുകൾ"
+  },
+  "search_scope_group_local": {
+    "message": "ബ്രൗസർ ഉള്ളടക്കം"
+  },
+  "search_scope_group_ai": {
+    "message": "AI തിരയൽ"
+  },
+  "search_scope_group_sites": {
+    "message": "സൈറ്റ് തിരയൽ"
+  },
+  "search_scope_group_aggregates": {
+    "message": "സംയോജിത തിരയലുകൾ"
+  },
+  "aggregate_search_action": {
+    "message": "{name} ഉപയോഗിച്ച് തിരയുക"
+  },
+  "aggregate_search_action_query": {
+    "message": "{name} ഉപയോഗിച്ച് \"{query}\" തിരയുക"
+  },
+  "aggregate_search_group_title": {
+    "message": "സംയോജിത തിരയൽ"
+  },
+  "aggregate_search_add": {
+    "message": "സംയോജിത തിരയൽ ചേർക്കുക"
+  },
+  "aggregate_search_clear": {
+    "message": "സംയോജിത തിരയലുകൾ മായ്ക്കുക"
+  },
+  "confirm_clear_aggregate_search": {
+    "message": "എല്ലാ സംയോജിത തിരയലുകളും മായ്ക്കണോ?"
+  },
+  "aggregate_search_name_label": {
+    "message": "പേര്"
+  },
+  "aggregate_search_name_required_error": {
+    "message": "ഈ സംയോജിത തിരയലിന് ഒരു പേര് നൽകുക."
+  },
+  "aggregate_search_key_placeholder": {
+    "message": "ഉദാഹരണത്തിന്, tech"
+  },
+  "aggregate_search_default_name": {
+    "message": "സംയോജിത തിരയൽ"
+  },
+  "aggregate_search_sources_label": {
+    "message": "തിരയൽ ഉറവിടങ്ങൾ"
+  },
+  "aggregate_search_selected_count": {
+    "message": "തിരഞ്ഞെടുത്തത് {count}/{max}"
+  },
+  "aggregate_search_min_sources_error": {
+    "message": "കുറഞ്ഞത് 2 തിരയൽ ഉറവിടങ്ങൾ തിരഞ്ഞെടുക്കുക."
+  },
+  "aggregate_search_max_sources_error": {
+    "message": "പരമാവധി 10 തിരയൽ ഉറവിടങ്ങൾ തിരഞ്ഞെടുക്കാം."
+  },
+  "settings_aggregate_search_auto_group_title": {
+    "message": "സംയോജിത തിരയൽ ടാബുകൾ സ്വയമേവ ഗ്രൂപ്പ് ചെയ്യുക"
+  },
+  "settings_aggregate_search_auto_group_desc": {
+    "message": "പ്രവർത്തനക്ഷമമാക്കിയാൽ, ഒരു സംയോജിത തിരയൽ തുറക്കുന്ന എല്ലാ ടാബുകളും “സംയോജിത തിരയലിന്റെ പേര്: തിരയൽ ചോദ്യം” എന്ന് പേരുള്ള ഒരു ഗ്രൂപ്പിൽ ഉൾപ്പെടുത്തും"
+  },
+  "aggregate_search_badge": {
+    "message": "സംയോജിതം"
+  },
+  "aggregate_search_source_summary": {
+    "message": "{count} ഉറവിടങ്ങൾ"
+  },
+  "aggregate_search_source_summary_unavailable": {
+    "message": "{count} ഉറവിടങ്ങൾ · {unavailable} എണ്ണം ലഭ്യമല്ല · അപ്\u200cഡേറ്റ് ആവശ്യമാണ്"
+  },
+  "aggregate_search_sources_unavailable_error": {
+    "message": "ഈ സംയോജിത തിരയലിൽ നീക്കം ചെയ്\u200cതതോ പ്രവർത്തനരഹിതമാക്കിയതോ ആയ ഉറവിടങ്ങളുണ്ട്. ക്രമീകരണത്തിൽ അത് അപ്\u200cഡേറ്റ് ചെയ്യുക."
+  },
+  "aggregate_search_in_progress": {
+    "message": "ഈ സംയോജിത തിരയൽ ഇതിനകം പ്രവർത്തിക്കുന്നു."
+  },
+  "aggregate_search_partial_failure": {
+    "message": "ചില സംയോജിത തിരയൽ ഫലങ്ങൾ തുറക്കാനായില്ല."
+  },
+  "aggregate_search_degraded_success": {
+    "message": "തിരയൽ ഫലങ്ങൾ തുറന്നു, എന്നാൽ ടാബ് ഗ്രൂപ്പിംഗ്, പേരിടൽ അല്ലെങ്കിൽ ഫോക്കസ് പൂർത്തിയാക്കാനായില്ല."
+  },
+  "aggregate_search_storage_unavailable_error": {
+    "message": "സംയോജിത തിരയലുകൾ ലോഡ് ചെയ്യാനായില്ല. ക്രമീകരണം റീലോഡ് ചെയ്ത് വീണ്ടും ശ്രമിക്കുക."
+  },
+  "aggregate_search_source_selection_unavailable_error": {
+    "message": "ലഭ്യമല്ലാത്ത ഉറവിടങ്ങൾ നീക്കം ചെയ്ത് ലഭ്യമായ കുറഞ്ഞത് രണ്ട് ഉറവിടങ്ങൾ തിരഞ്ഞെടുക്കുക."
+  },
+  "aggregate_search_unavailable_group": {
+    "message": "ലഭ്യമല്ലാത്ത ഉറവിടങ്ങൾ"
+  },
+  "aggregate_search_unavailable_name": {
+    "message": "ലഭ്യമല്ലാത്ത ഉറവിടം ({source})"
+  },
+  "aggregate_search_name_duplicate_error": {
+    "message": "ഈ പേരിൽ ഒരു സംയോജിത തിരയൽ ഇതിനകം നിലവിലുണ്ട്."
+  },
+  "aggregate_search_max_items_error": {
+    "message": "പരമാവധി 8 സംയോജിത തിരയലുകൾ സൃഷ്\u200cടിക്കാം."
+  },
+  "overlay_empty_open_tabs": {
+    "message": "ടാബുകളൊന്നുമില്ല"
+  },
+  "site_icon_alt": {
+    "message": "സൈറ്റ്"
+  },
+  "site_brand_wechat_official": {
+    "message": "WeChat ഔദ്യോഗിക അക്കൗണ്ടുകൾ"
+  },
+  "settings_sync_title": {
+    "message": "{browser} ബിൽറ്റ്-ഇൻ സമന്വയം"
+  },
+  "settings_sync_section_title": {
+    "message": "ബ്രൗസർ ബിൽറ്റ്-ഇൻ സമന്വയം"
+  },
+  "settings_sync_desc": {
+    "message": "നിലവിലെ ബ്രൗസറിന്റെ ബിൽറ്റ്-ഇൻ സമന്വയ സേവനം വഴി ക്രമീകരണം സ്വയമേവ സമന്വയിപ്പിക്കുന്നു"
+  },
+  "sync_status_unavailable": {
+    "message": "സമന്വയം ലഭ്യമല്ല"
+  },
+  "sync_status_unavailable_hint": {
+    "message": "സമന്വയം ലഭ്യമല്ല: നിലവിലെ ബ്രൗസർ ബിൽറ്റ്-ഇൻ സമന്വയം പിന്തുണയ്ക്കുന്നുണ്ടോ എന്നും അത് ഓണാണോ എന്നും പരിശോധിക്കുക."
+  },
+  "sync_status_ready": {
+    "message": "സ്വയമേവ സമന്വയം ഓണാണ്"
+  },
+  "sync_status_done": {
+    "message": "സമന്വയം പൂർത്തിയായി"
+  },
+  "sync_status_failed": {
+    "message": "സമന്വയം പരാജയപ്പെട്ടു"
+  },
+  "sync_status_failed_reason": {
+    "message": "സമന്വയം പരാജയപ്പെട്ടു: {reason}"
+  },
+  "sync_action_now": {
+    "message": "ഇപ്പോൾ സമന്വയിപ്പിക്കുക"
+  },
+  "sync_action_export": {
+    "message": "ക്രമീകരണം എക്\u200cസ്\u200cപോർട്ട് ചെയ്യുക"
+  },
+  "sync_action_import": {
+    "message": "ക്രമീകരണം ഇമ്പോർട്ട് ചെയ്യുക"
+  },
+  "sync_tooltip_export": {
+    "message": "ക്രമീകരണം എക്\u200cസ്\u200cപോർട്ട് ചെയ്യുക"
+  },
+  "sync_tooltip_import": {
+    "message": "ക്രമീകരണം ഇമ്പോർട്ട് ചെയ്യുക"
+  },
+  "sync_tooltip_last_manual": {
+    "message": "അവസാന ഇമ്പോർട്ട്/മാനുവൽ സമന്വയം {time}"
+  },
+  "sync_tooltip_default": {
+    "message": "മാനുവൽ സമന്വയം"
+  },
+  "sync_status_hint": {
+    "message": "നിലവിലെ ബ്രൗസറിന്റെ ബിൽറ്റ്-ഇൻ സമന്വയ സേവനം വഴി Lumno ക്രമീകരണം സ്വയമേവ സമന്വയിപ്പിക്കുന്നു. ഒരേ ബ്രൗസർ അക്കൗണ്ടിൽ സൈൻ ഇൻ ചെയ്\u200cത ഉപകരണങ്ങൾക്കിടയിൽ സമന്വയം പ്രവർത്തിക്കും, എന്നാൽ വ്യത്യസ്ത ബ്രൗസറുകൾക്കിടയിൽ പ്രവർത്തിക്കില്ല."
+  },
+  "sync_export_done": {
+    "message": "ക്രമീകരണം എക്\u200cസ്\u200cപോർട്ട് ചെയ്\u200cതു"
+  },
+  "sync_importing": {
+    "message": "ക്രമീകരണം ഇമ്പോർട്ട് ചെയ്യുന്നു…"
+  },
+  "sync_import_done": {
+    "message": "ഇമ്പോർട്ട് പൂർത്തിയായി"
+  },
+  "sync_import_invalid": {
+    "message": "അസാധുവായ ക്രമീകരണ ഫയൽ"
+  },
+  "document_pip_picker_unsupported_policy": {
+    "message": "ഈ വെബ്\u200cസൈറ്റ് സൈറ്റ് നയം വഴി ചിത്രത്തിനുള്ളിൽ ചിത്രം പ്രവർത്തനരഹിതമാക്കിയിരിക്കുന്നു."
+  },
+  "document_pip_picker_unsupported_iframe": {
+    "message": "Document Picture-in-Picture മുകൾതല പേജിൽ മാത്രമേ പ്രവർത്തിക്കൂ."
+  },
+  "document_pip_picker_unsupported_insecure": {
+    "message": "Document Picture-in-Picture-ന് HTTPS ആവശ്യമാണ്."
+  },
+  "document_pip_picker_open_failed_not_allowed": {
+    "message": "Document Picture-in-Picture തുറക്കുന്നത് വെബ്\u200cസൈറ്റോ ബ്രൗസറോ തടഞ്ഞു."
+  },
+  "document_pip_picker_open_failed_not_supported": {
+    "message": "ഈ പേജിൽ ഈ തിരഞ്ഞെടുപ്പ് Document Picture-in-Picture-ൽ തുറക്കാനാകില്ല."
+  },
+  "document_pip_picker_open_failed_invalid_state": {
+    "message": "ഒരു ഫ്ലോട്ടിംഗ് വിൻഡോ ഇതിനകം തുറന്നിരിക്കുന്നു അല്ലെങ്കിൽ പേജിന്റെ അവസ്ഥ മാറി. വീണ്ടും ശ്രമിക്കുക."
+  },
+  "document_pip_picker_open_failed_security": {
+    "message": "സുരക്ഷാ കാരണങ്ങളാൽ ഈ പേജിൽ ബ്രൗസർ ഈ പ്രവർത്തനം തടഞ്ഞു."
+  },
+  "newtab_page_label": {
+    "message": "പുതിയ ടാബ്"
+  },
+  "settings_title": {
+    "message": "ക്രമീകരണം"
+  },
+  "extension_page_label": {
+    "message": "വിപുലീകരണ പേജ്"
+  },
+  "settings_button_aria": {
+    "message": "ക്രമീകരണം"
+  },
+  "copy_page_url_failed_retry": {
+    "message": "പകർത്താനായില്ല. ദയവായി വീണ്ടും ശ്രമിക്കുക."
+  },
+  "copy_page_url_success": {
+    "message": "നിലവിലെ പേജ് URL പകർത്തി"
+  },
+  "copy_page_url_failed_permission": {
+    "message": "പകർത്താനായില്ല. ക്ലിപ്പ്ബോർഡ് അനുമതി പരിശോധിക്കുക."
+  },
+  "recent_pin_add": {
+    "message": "പിൻ ചെയ്യുക"
+  },
+  "recent_pin_remove": {
+    "message": "അൺപിൻ ചെയ്യുക"
+  },
+  "recent_pin_limit": {
+    "message": "പരമാവധി 3 കാർഡുകൾ പിൻ ചെയ്യാം"
+  },
+  "recent_pin_limit_toast": {
+    "message": "പരമാവധി 3 കാർഡുകൾ പിൻ ചെയ്യാം."
+  },
+  "recent_dismiss_tooltip": {
+    "message": "നീക്കം ചെയ്യുക"
+  },
+  "recent_add_to_shortcuts": {
+    "message": "കുറുക്കുവഴികളിലേക്ക് ചേർക്കുക"
+  },
+  "recent_dismiss_pinned_tooltip": {
+    "message": "അൺപിൻ ചെയ്ത് നീക്കം ചെയ്യുക"
+  },
+  "recent_dismiss_toast": {
+    "message": "നീക്കം ചെയ്\u200cതു"
+  },
+  "recent_dismiss_pinned_toast": {
+    "message": "അൺപിൻ ചെയ്ത് നീക്കം ചെയ്\u200cതു"
+  },
+  "recent_context_menu_label": {
+    "message": "സമീപകാല സൈറ്റ് പ്രവർത്തനങ്ങൾ"
+  },
+  "tab_switcher_title": {
+    "message": "സമീപകാല ടാബുകൾ"
+  },
+  "tab_switcher_untitled": {
+    "message": "പേരില്ലാത്തത്"
+  },
+  "tab_switcher_favicon_alt": {
+    "message": "സൈറ്റ് ഐക്കൺ"
+  },
+  "tab_switcher_close_tab": {
+    "message": "ടാബ് അടയ്ക്കുക"
+  },
+  "tab_switcher_tab_closed": {
+    "message": "ടാബ് അടച്ചു"
+  },
+  "tab_switcher_close_failed": {
+    "message": "ഈ ടാബ് അടയ്ക്കാനായില്ല"
+  },
+  "command_show_tab_switcher": {
+    "message": "സമീപകാല ടാബ് സ്വിച്ചർ തുറക്കുക"
+  },
+  "shortcut_reference_title": {
+    "message": "കീബോർഡ് കുറുക്കുവഴികൾ"
+  },
+  "shortcut_reference_group_search": {
+    "message": "കമാൻഡ് ബാർ"
+  },
+  "shortcut_reference_group_page_link": {
+    "message": "പേജ് ലിങ്ക്"
+  },
+  "shortcut_reference_group_tab_switcher": {
+    "message": "ടാബ് സ്വിച്ചർ"
+  },
+  "shortcut_reference_group_web_clip": {
+    "message": "വെബ് ക്ലിപ്പ്"
+  },
+  "shortcut_reference_unset": {
+    "message": "സജ്ജമാക്കിയിട്ടില്ല"
+  },
+  "shortcut_reference_show_search_title": {
+    "message": "കമാൻഡ് ബാർ തുറക്കുക"
+  },
+  "shortcut_reference_show_search_desc": {
+    "message": "നിലവിലെ പേജിൽ Lumno തുറക്കുക"
+  },
+  "shortcut_reference_show_search_prefill_title": {
+    "message": "നിലവിലെ പേജ് URL-നൊപ്പം തുറക്കുക"
+  },
+  "shortcut_reference_show_search_prefill_desc": {
+    "message": "Lumno തുറന്ന് നിലവിലെ പേജ് URL മുൻകൂട്ടി പൂരിപ്പിക്കുക"
+  },
+  "shortcut_reference_copy_url_title": {
+    "message": "നിലവിലെ പേജ് URL പകർത്തുക"
+  },
+  "shortcut_reference_copy_url_desc": {
+    "message": "Lumno തുറക്കാതെ നിലവിലെ പേജ് URL പകർത്തുക"
+  },
+  "shortcut_reference_tab_switcher_title": {
+    "message": "സമീപകാല ടാബ് സ്വിച്ചർ തുറക്കുക"
+  },
+  "shortcut_reference_tab_switcher_desc": {
+    "message": "സമീപകാല ടാബ് സ്വിച്ചർ തുറക്കുക"
+  },
+  "shortcut_reference_search_input_history_title": {
+    "message": "മുമ്പത്തെ അല്ലെങ്കിൽ അടുത്ത ഇൻപുട്ട്"
+  },
+  "shortcut_reference_search_input_history_desc": {
+    "message": "സമർപ്പിച്ച ഇൻപുട്ട് ചരിത്രത്തിലൂടെ പിന്നോട്ടോ മുന്നോട്ടോ നീങ്ങുക"
+  },
+  "shortcut_reference_search_navigate_title": {
+    "message": "നിർദ്ദേശങ്ങളിലൂടെ നീങ്ങുക"
+  },
+  "shortcut_reference_search_navigate_desc": {
+    "message": "Lumno തിരയലിലും പുതിയ ടാബിലും സജീവ ഫലം നീക്കുക"
+  },
+  "shortcut_reference_search_number_jump_title": {
+    "message": "നമ്പറിട്ട ഫലത്തിലേക്ക് പോകുക"
+  },
+  "shortcut_reference_search_number_jump_desc": {
+    "message": "പ്രാഥമിക മോഡിഫയർ അമർത്തിപ്പിടിച്ച് വിട്ട ശേഷം, പൊരുത്തപ്പെടുന്ന ഫലം സജീവമാക്കാൻ 0–9 അമർത്തുക"
+  },
+  "shortcut_reference_search_number_jump_shortcut": {
+    "message": "{modifier} 0.4 സെക്കൻഡ് അമർത്തിപ്പിടിച്ച് വിട്ട ശേഷം 0–9 അമർത്തുക"
+  },
+  "shortcut_reference_search_confirm_title": {
+    "message": "തിരഞ്ഞെടുത്ത പ്രവർത്തനം നടത്തുക"
+  },
+  "shortcut_reference_search_confirm_desc": {
+    "message": "തുറക്കുക, തിരയുക, ടാബ് മാറുക, അല്ലെങ്കിൽ തിരഞ്ഞെടുത്ത കമാൻഡ് പ്രവർത്തിപ്പിക്കുക"
+  },
+  "shortcut_reference_search_tab_mode_title": {
+    "message": "പൂർത്തിയാക്കുക അല്ലെങ്കിൽ തിരയൽ മോഡിൽ പ്രവേശിക്കുക"
+  },
+  "shortcut_reference_search_tab_mode_desc": {
+    "message": "ഒരു നിർദ്ദേശം പൂർത്തിയാക്കുക അല്ലെങ്കിൽ സൈറ്റ്/തുറന്ന ടാബുകൾ തിരയൽ മോഡിൽ പ്രവേശിക്കുക"
+  },
+  "shortcut_reference_search_open_scope_menu_title": {
+    "message": "തിരയൽ വ്യാപ്തി പാനൽ തുറക്കുക"
+  },
+  "shortcut_reference_search_open_scope_menu_desc": {
+    "message": "ഇൻപുട്ട് ശൂന്യമാകുമ്പോൾ Tab രണ്ടുതവണ അമർത്തുക; ഒരു തിരയൽ വ്യാപ്തി തിരഞ്ഞെടുത്തിട്ടുണ്ടെങ്കിൽ Tab ഒരിക്കൽ അമർത്തുക"
+  },
+  "shortcut_reference_search_close_title": {
+    "message": "അടയ്ക്കുക അല്ലെങ്കിൽ മോഡിൽ നിന്ന് പുറത്തുകടക്കുക"
+  },
+  "shortcut_reference_search_close_desc": {
+    "message": "Lumno തിരയൽ അടയ്ക്കുക അല്ലെങ്കിൽ സൈറ്റ്/തുറന്ന ടാബുകൾ തിരയൽ മോഡിൽ നിന്ന് പുറത്തുകടക്കുക"
+  },
+  "shortcut_reference_search_current_tab_title": {
+    "message": "നിലവിലെ ടാബിൽ തുറക്കുക"
+  },
+  "shortcut_reference_search_current_tab_desc": {
+    "message": "സാധാരണയായി പുതിയ ടാബ് തുറക്കുന്ന പ്രവർത്തനങ്ങൾക്ക് നിലവിലെ ടാബ് ഉപയോഗിക്കുക"
+  },
+  "shortcut_reference_search_switch_new_tab_title": {
+    "message": "പൊരുത്തപ്പെട്ട ടാബ് ഫലം പുതിയ ടാബിൽ തുറക്കുക"
+  },
+  "shortcut_reference_search_switch_new_tab_desc": {
+    "message": "ഒരു ഫലം തുറന്ന ടാബുമായി പൊരുത്തപ്പെടുമ്പോൾ, അതിന്റെ URL പുതിയ ടാബിൽ തുറക്കുക"
+  },
+  "shortcut_reference_tab_switcher_cycle_title": {
+    "message": "ടാബ് സ്വിച്ചറിൽ തിരഞ്ഞെടുപ്പ് നീക്കുക"
+  },
+  "shortcut_reference_tab_switcher_cycle_desc": {
+    "message": "ടാബ് സ്വിച്ചറിൽ മുമ്പത്തെ അല്ലെങ്കിൽ അടുത്ത ടാബിലേക്ക് നീങ്ങുക"
+  },
+  "shortcut_reference_tab_switcher_confirm_title": {
+    "message": "തിരഞ്ഞെടുത്ത ടാബിലേക്ക് മാറുക"
+  },
+  "shortcut_reference_tab_switcher_confirm_desc": {
+    "message": "ടാബ് സ്വിച്ചറിൽ തിരഞ്ഞെടുത്ത ടാബ് സ്ഥിരീകരിക്കുക"
+  },
+  "shortcut_reference_document_pip_parent_title": {
+    "message": "പുറമേയുള്ള ഘടകം തിരഞ്ഞെടുക്കുക"
+  },
+  "shortcut_reference_document_pip_parent_desc": {
+    "message": "വെബ് ക്ലിപ്പ് തിരഞ്ഞെടുക്കുമ്പോൾ വലിയൊരു പാരന്റ് ഘടകത്തിലേക്ക് നീങ്ങുക"
+  },
+  "shortcut_reference_document_pip_child_title": {
+    "message": "ഉള്ളിലെ ഘടകം തിരഞ്ഞെടുക്കുക"
+  },
+  "shortcut_reference_document_pip_child_desc": {
+    "message": "വെബ് ക്ലിപ്പ് തിരഞ്ഞെടുക്കുമ്പോൾ ചെറിയൊരു ചൈൽഡ് ഘടകത്തിലേക്ക് നീങ്ങുക"
+  },
+  "newtab_shortcuts_section_label": {
+    "message": "കുറുക്കുവഴികൾ"
+  },
+  "newtab_shortcuts_add": {
+    "message": "കുറുക്കുവഴി ചേർക്കുക"
+  },
+  "newtab_shortcuts_hide_add": {
+    "message": "മറയ്ക്കുക"
+  },
+  "newtab_shortcuts_add_hidden": {
+    "message": "“+” മറച്ചു. ക്രമീകരണം → രൂപഭാവം → കുറുക്കുവഴികൾ → “+” കാണിക്കുക എന്നതിൽ ഇത് വീണ്ടും പ്രവർത്തനക്ഷമമാക്കാം."
+  },
+  "newtab_shortcuts_dialog_title": {
+    "message": "കുറുക്കുവഴി ചേർക്കുക"
+  },
+  "newtab_shortcuts_name_label": {
+    "message": "പേര്"
+  },
+  "newtab_shortcuts_name_placeholder": {
+    "message": "Lumno"
+  },
+  "newtab_shortcuts_url_label": {
+    "message": "URL"
+  },
+  "newtab_shortcuts_url_info_label": {
+    "message": "പിന്തുണയ്ക്കുന്ന URL-കളെക്കുറിച്ച്"
+  },
+  "newtab_shortcuts_url_info": {
+    "message": "ബ്രൗസറിന്റെ ആന്തരിക പേജുകളും പിന്തുണയ്ക്കുന്നു, ഉദാഹരണത്തിന്:\nchrome://inspect/#devices"
+  },
+  "newtab_shortcuts_url_info__firefox": {
+    "message": "about:config പോലുള്ള ബിൽറ്റ്-ഇൻ പേജുകൾ തുറക്കാൻ Firefox വിപുലീകരണങ്ങളെ അനുവദിക്കുന്നില്ല, അതിനാൽ ഒരു വെബ് വിലാസം ഉപയോഗിക്കുക."
+  },
+  "newtab_shortcuts_url_placeholder": {
+    "message": "https://example.com"
+  },
+  "newtab_shortcuts_icon_label": {
+    "message": "ഐക്കൺ (ഓപ്ഷണൽ)"
+  },
+  "newtab_shortcuts_icon_mode_label": {
+    "message": "ഐക്കൺ ഉറവിടം"
+  },
+  "newtab_shortcuts_icon_builtin": {
+    "message": "ബിൽറ്റ്-ഇൻ ഐക്കൺ"
+  },
+  "newtab_shortcuts_icon_builtin_hint": {
+    "message": "Lumno-യുടെ ബിൽറ്റ്-ഇൻ ഉയർന്ന നിലവാരമുള്ള ഐക്കണുകൾ ഉപയോഗിക്കുക."
+  },
+  "newtab_shortcuts_icon_builtin_network_hint": {
+    "message": "നെറ്റ്\u200cവർക്ക് അഭ്യർത്ഥന ആവശ്യമില്ല."
+  },
+  "newtab_shortcuts_icon_builtin_info_label": {
+    "message": "ബിൽറ്റ്-ഇൻ ഐക്കണുകളെക്കുറിച്ച്"
+  },
+  "newtab_shortcuts_icon_service": {
+    "message": "Gstatic (മൂന്നാം കക്ഷി ഐക്കണുകൾ)"
+  },
+  "newtab_shortcuts_icon_favicon_is": {
+    "message": "Favicon.is (മൂന്നാം കക്ഷി ഐക്കണുകൾ)"
+  },
+  "newtab_shortcuts_icon_favicon_is_hint": {
+    "message": "വലിയ ഐക്കണിനായി ഡൊമെയ്ൻ Favicon.is-ലേക്ക് അയയ്ക്കുക."
+  },
+  "newtab_shortcuts_icon_favicon_is_caution": {
+    "message": "ഡൊമെയ്ൻ ഐക്കണുകൾ നിലവിലെ പേജിന്റെ ഐക്കണിൽ നിന്ന് വ്യത്യസ്തമാകാം."
+  },
+  "newtab_shortcuts_icon_cache": {
+    "message": "ബ്രൗസർ കാഷെ"
+  },
+  "newtab_shortcuts_icon_service_hint": {
+    "message": "സൈറ്റ് ഡൊമെയ്ൻ Gstatic-ലേക്ക് അയയ്ക്കുക. സ്ഥിരതയുള്ളതും ഉയർന്ന നിലവാരമുള്ളതും."
+  },
+  "newtab_shortcuts_icon_cache_hint": {
+    "message": "ബ്രൗസർ കാഷെയിൽ നിന്നുള്ള വേഗമേറിയതും കൃത്യവുമായ വെബ്\u200cസൈറ്റ് ഐക്കണുകൾ."
+  },
+  "newtab_shortcuts_icon_custom_hint": {
+    "message": "ഡിഫോൾട്ടായി ഈ ഉപകരണത്തിൽ സംരക്ഷിക്കുന്നു, ബ്രൗസർ സമന്വയത്തിന് പുറത്ത്."
+  },
+  "newtab_shortcuts_icon_service_caution": {
+    "message": "ചില വെബ്\u200cസൈറ്റുകൾ തിരിച്ചറിഞ്ഞേക്കില്ല."
+  },
+  "newtab_shortcuts_icon_cache_caution": {
+    "message": "സൈറ്റ് ക്രമീകരണങ്ങൾ അറിയിപ്പ് ഡോട്ടുകൾ ചേർക്കുകയോ വ്യക്തത കുറയ്ക്കുകയോ ചെയ്\u200cതേക്കാം."
+  },
+  "newtab_shortcuts_icon_plate_label": {
+    "message": "ക്രമരഹിതമായ ഐക്കണുകൾക്ക് പശ്ചാത്തലം ചേർക്കുക"
+  },
+  "newtab_shortcuts_icon_plate_color_label": {
+    "message": "പശ്ചാത്തല നിറം"
+  },
+  "newtab_shortcuts_icon_plate_color_auto": {
+    "message": "ഐക്കണിൽ നിന്ന്"
+  },
+  "newtab_shortcuts_icon_plate_color_custom": {
+    "message": "ഇഷ്\u200cടാനുസൃത നിറം"
+  },
+  "newtab_shortcuts_icon_custom_sync_hint": {
+    "message": "WebDAV ഉപയോഗിച്ച് ഉപകരണങ്ങൾക്കിടയിൽ സമന്വയിപ്പിക്കുക."
+  },
+  "newtab_shortcuts_icon_refresh_success": {
+    "message": "ഐക്കൺ ലഭിച്ചു"
+  },
+  "newtab_shortcuts_icon_cache_failed": {
+    "message": "കാഷെ ചെയ്\u200cത ഐക്കൺ കണ്ടെത്തിയില്ല. ഈ വെബ്\u200cസൈറ്റ് സന്ദർശിച്ച ശേഷം വീണ്ടും പുതുക്കുക."
+  },
+  "newtab_shortcuts_icon_source_unavailable": {
+    "message": "ഈ ഉറവിടം ലഭ്യമല്ല. ബ്രൗസർ കാഷെ അല്ലെങ്കിൽ ഇഷ്\u200cടാനുസൃത ഐക്കൺ തിരഞ്ഞെടുക്കുക."
+  },
+  "newtab_shortcuts_icon_online": {
+    "message": "ഓൺലൈൻ ഐക്കൺ"
+  },
+  "newtab_shortcuts_icon_custom": {
+    "message": "ഇഷ്\u200cടാനുസൃത ഐക്കൺ"
+  },
+  "newtab_shortcuts_icon_current": {
+    "message": "നിലവിലെ ഐക്കൺ"
+  },
+  "newtab_shortcuts_icon_refresh": {
+    "message": "പുതുക്കുക"
+  },
+  "newtab_shortcuts_icon_refreshing": {
+    "message": "പുതുക്കുന്നു…"
+  },
+  "newtab_shortcuts_icon_refresh_failed": {
+    "message": "ഐക്കൺ പുതുക്കാനായില്ല. പിന്നീട് വീണ്ടും ശ്രമിക്കുക."
+  },
+  "newtab_shortcuts_icon_custom_required": {
+    "message": "ഇഷ്\u200cടാനുസൃത ഐക്കണിനായി ഒരു ചിത്രം തിരഞ്ഞെടുക്കുക."
+  },
+  "newtab_shortcuts_icon_online_info_label": {
+    "message": "ഓൺലൈൻ ഐക്കണുകളെക്കുറിച്ച്"
+  },
+  "newtab_shortcuts_icon_online_info": {
+    "message": "നിങ്ങൾ പുതുക്കി സംരക്ഷിക്കുന്നത് വരെ ഓൺലൈൻ ഐക്കണുകൾ മാറില്ല. പുതുക്കൽ ഐക്കൺ സേവനമോ ബ്രൗസർ കാഷെയോ ഉപയോഗിക്കുന്നു."
+  },
+  "newtab_shortcuts_icon_info_label": {
+    "message": "ലോക്കൽ കുറുക്കുവഴി ഐക്കണുകളെക്കുറിച്ച്"
+  },
+  "newtab_shortcuts_icon_info": {
+    "message": "PNG, JPG, WebP എന്നിവ പിന്തുണയ്ക്കുന്നു. 128×128 px അല്ലെങ്കിൽ അതിലും വലിയ സുതാര്യമായ ചതുര ഐക്കൺ ശുപാർശ ചെയ്യുന്നു. ഡിഫോൾട്ടായി ഈ ഉപകരണത്തിൽ സംരക്ഷിക്കുന്നു; WebDAV സമന്വയം ലഭ്യമാണ്."
+  },
+  "newtab_shortcuts_folder_item_icon_info": {
+    "message": "PNG, JPG, WebP എന്നിവ പിന്തുണയ്ക്കുന്നു. 128×128 px അല്ലെങ്കിൽ അതിലും വലിയ സുതാര്യമായ ചതുര ഐക്കൺ ശുപാർശ ചെയ്യുന്നു. ഈ ഉപകരണത്തിൽ മാത്രം സംരക്ഷിക്കുന്നു."
+  },
+  "newtab_shortcuts_icon_choose": {
+    "message": "ചിത്രം തിരഞ്ഞെടുക്കുക"
+  },
+  "newtab_shortcuts_icon_replace": {
+    "message": "ചിത്രം മാറ്റുക"
+  },
+  "newtab_shortcuts_icon_remove": {
+    "message": "നീക്കം ചെയ്യുക"
+  },
+  "newtab_shortcuts_icon_unsupported": {
+    "message": "PNG, JPG, അല്ലെങ്കിൽ WebP ചിത്രം തിരഞ്ഞെടുക്കുക."
+  },
+  "newtab_shortcuts_icon_dimensions_too_large": {
+    "message": "ചിത്രം 4096×4096 px-ൽ കൂടരുത്"
+  },
+  "newtab_shortcuts_icon_invalid": {
+    "message": "ഈ ചിത്രം ഉപയോഗിക്കാനായില്ല. മറ്റൊരു ചിത്രം തിരഞ്ഞെടുക്കുക."
+  },
+  "newtab_shortcuts_icon_storage_error": {
+    "message": "ലോക്കൽ ഐക്കൺ സംരക്ഷിക്കാനായില്ല. മറ്റൊരു ചിത്രം പരീക്ഷിക്കുക."
+  },
+  "folder_rename": {
+    "message": "പേര് മാറ്റുക"
+  },
+  "folder_color_change": {
+    "message": "നിറം മാറ്റുക"
+  },
+  "folder_color_format": {
+    "message": "നിറ ഫോർമാറ്റ്"
+  },
+  "folder_color_title": {
+    "message": "ഫോൾഡർ നിറം"
+  },
+  "folder_color_description": {
+    "message": "കുറുക്കുവഴികളിലും മെനുകളിലും ഈ ഫോൾഡറിന് ബാധകമാണ്. ഈ ഉപകരണത്തിൽ സംരക്ഷിക്കുന്നു."
+  },
+  "folder_color_presets": {
+    "message": "പ്രീസെറ്റ് നിറങ്ങൾ"
+  },
+  "folder_color_default": {
+    "message": "ഡിഫോൾട്ട് നിറം"
+  },
+  "folder_color_reset": {
+    "message": "പുനഃസജ്ജമാക്കുക"
+  },
+  "folder_color_saved": {
+    "message": "സംരക്ഷിച്ച നിറങ്ങൾ"
+  },
+  "folder_color_save_current": {
+    "message": "നിലവിലെ നിറം സംരക്ഷിക്കുക"
+  },
+  "folder_color_remove_saved": {
+    "message": "സംരക്ഷിച്ച നിറം ഇല്ലാതാക്കുക"
+  },
+  "folder_color_saved_delete_failed": {
+    "message": "ഈ നിറം ഇല്ലാതാക്കാനായില്ല. വീണ്ടും ശ്രമിക്കുക."
+  },
+  "folder_color_saved_load_failed": {
+    "message": "സംരക്ഷിച്ച നിറങ്ങൾ ലോഡ് ചെയ്യാനായില്ല. വീണ്ടും ശ്രമിക്കാൻ കളർ പിക്കർ വീണ്ടും തുറക്കുക."
+  },
+  "folder_color_saved_save_failed": {
+    "message": "ഈ നിറം സംരക്ഷിക്കാനായില്ല. വീണ്ടും ശ്രമിക്കുക."
+  },
+  "folder_color_invalid": {
+    "message": "സാധുവായ HEX നിറം അല്ലെങ്കിൽ 0 മുതൽ 255 വരെയുള്ള RGB മൂല്യങ്ങൾ നൽകുക."
+  },
+  "folder_color_save_failed": {
+    "message": "ഫോൾഡർ നിറം സംരക്ഷിക്കാനായില്ല. വീണ്ടും ശ്രമിക്കുക."
+  },
+  "newtab_shortcuts_cancel": {
+    "message": "റദ്ദാക്കുക"
+  },
+  "newtab_shortcuts_done": {
+    "message": "പൂർത്തിയായി"
+  },
+  "newtab_shortcuts_save": {
+    "message": "സംരക്ഷിക്കുക"
+  },
+  "newtab_shortcuts_invalid_url": {
+    "message": "സാധുവായ http, https അല്ലെങ്കിൽ ബ്രൗസർ ആന്തരിക URL നൽകുക."
+  },
+  "newtab_shortcuts_limit_reached": {
+    "message": "പരമാവധി {count} കുറുക്കുവഴികൾ ചേർക്കാം."
+  },
+  "newtab_shortcuts_added": {
+    "message": "കുറുക്കുവഴി ചേർത്തു"
+  },
+  "context_menu_add_page_shortcut": {
+    "message": "Lumno പുതിയ ടാബ് കുറുക്കുവഴികളിലേക്ക് ചേർക്കുക"
+  },
+  "page_shortcut_added": {
+    "message": "Lumno പുതിയ ടാബ് കുറുക്കുവഴികളിലേക്ക് ചേർത്തു"
+  },
+  "newtab_shortcuts_already_added": {
+    "message": "ഇതിനകം കുറുക്കുവഴികളിലുണ്ട്"
+  },
+  "newtab_shortcuts_sync_limit_reached": {
+    "message": "കുറുക്കുവഴികൾ ബ്രൗസറിന്റെ സമന്വയ സ്ഥലം കവിഞ്ഞതിനാൽ, പുതിയവ ഈ ഉപകരണത്തിൽ മാത്രം നിലനിൽക്കും. അവയും സമന്വയിപ്പിക്കാൻ ക്രമീകരണത്തിൽ WebDAV ഓണാക്കുക."
+  },
+  "newtab_shortcuts_edited": {
+    "message": "കുറുക്കുവഴി അപ്\u200cഡേറ്റ് ചെയ്\u200cതു"
+  },
+  "newtab_shortcuts_removed": {
+    "message": "കുറുക്കുവഴി നീക്കം ചെയ്\u200cതു"
+  },
+  "newtab_shortcuts_removed_undo": {
+    "message": "കുറുക്കുവഴി നീക്കം ചെയ്\u200cതു · പഴയപടിയാക്കാൻ {shortcut}"
+  },
+  "newtab_shortcuts_remove_undone": {
+    "message": "കുറുക്കുവഴി പുനഃസ്ഥാപിച്ചു · വീണ്ടും ചെയ്യാൻ {shortcut}"
+  },
+  "newtab_shortcuts_remove_redone": {
+    "message": "കുറുക്കുവഴി നീക്കം ചെയ്\u200cതു · പഴയപടിയാക്കാൻ {shortcut}"
+  },
+  "newtab_shortcuts_add_undone": {
+    "message": "കുറുക്കുവഴി ചേർക്കൽ പഴയപടിയാക്കി · വീണ്ടും ചെയ്യാൻ {shortcut}"
+  },
+  "newtab_shortcuts_add_redone": {
+    "message": "കുറുക്കുവഴി വീണ്ടും ചേർത്തു · പഴയപടിയാക്കാൻ {shortcut}"
+  },
+  "newtab_recent_added_to_folder": {
+    "message": "“{folder}”-ലേക്ക് ചേർത്തു"
+  },
+  "newtab_shortcuts_open_folder": {
+    "message": "ഫോൾഡർ തുറക്കുക"
+  },
+  "newtab_shortcuts_from_bookmarks": {
+    "message": "(ബുക്ക്\u200cമാർക്കുകളിൽ നിന്ന്)"
+  },
+  "newtab_shortcuts_folder_added": {
+    "message": "ഫോൾഡർ കുറുക്കുവഴികളിലേക്ക് ചേർത്തു"
+  },
+  "newtab_shortcuts_folder_missing": {
+    "message": "ഈ ബുക്ക്\u200cമാർക്ക് ഫോൾഡർ ഇനി ലഭ്യമല്ല."
+  },
+  "newtab_shortcuts_moved_to_bookmarks": {
+    "message": "ബുക്ക്\u200cമാർക്കുകളിലേക്ക് നീക്കി"
+  },
+  "newtab_shortcuts_new_folder_title": {
+    "message": "പുതിയ ഫോൾഡർ"
+  },
+  "newtab_shortcuts_stack_hint": {
+    "message": "ബുക്ക്\u200cമാർക്ക് ബാറിൽ ഫോൾഡർ സൃഷ്\u200cടിക്കാൻ വിടുക"
+  },
+  "newtab_shortcuts_stacked_undo": {
+    "message": "ഫോൾഡർ സൃഷ്\u200cടിച്ചു · പഴയപടിയാക്കാൻ {shortcut}"
+  },
+  "newtab_shortcuts_stack_undone": {
+    "message": "ഫോൾഡർ സൃഷ്\u200cടിക്കൽ പഴയപടിയാക്കി · വീണ്ടും ചെയ്യാൻ {shortcut}"
+  },
+  "newtab_shortcuts_stack_redone": {
+    "message": "ഫോൾഡർ വീണ്ടും സൃഷ്\u200cടിച്ചു · പഴയപടിയാക്കാൻ {shortcut}"
+  },
+  "newtab_shortcuts_stack_failed": {
+    "message": "ഫോൾഡർ സൃഷ്\u200cടിക്കാനായില്ല"
+  },
+  "newtab_shortcuts_move_to_bookmarks_failed": {
+    "message": "ബുക്ക്\u200cമാർക്കുകളിലേക്ക് നീക്കാനായില്ല"
+  },
+  "newtab_shortcuts_edit_dialog_title": {
+    "message": "കുറുക്കുവഴി എഡിറ്റ് ചെയ്യുക"
+  },
+  "newtab_shortcuts_context_menu_label": {
+    "message": "കുറുക്കുവഴി പ്രവർത്തനങ്ങൾ"
+  },
+  "settings_tab_switcher_title": {
+    "message": "ടാബ് സ്വിച്ചർ"
+  },
+  "settings_tab_switcher_desc": {
+    "message": "സമീപകാല ടാബുകൾക്കിടയിൽ വേഗം മാറുക; ഡിഫോൾട്ടായി {shortcut}, മാറ്റാവുന്നതാണ്"
+  },
+  "slash_command_empty": {
+    "message": "പൊരുത്തപ്പെടുന്ന കമാൻഡുകളൊന്നുമില്ല"
+  },
+  "command_tabs_title": {
+    "message": "തുറന്ന ടാബുകൾ മാത്രം തിരയുക"
+  },
+  "command_tabs_action": {
+    "message": "ടാബുകൾ തിരയുക"
+  },
+  "command_copy_title": {
+    "message": "നിലവിലെ പേജ് ലിങ്ക് പകർത്തുക"
+  },
+  "command_copy_action": {
+    "message": "ലിങ്ക് പകർത്തുക"
+  },
+  "settings_tab_account": {
+    "message": "അക്കൗണ്ടും സമന്വയവും"
+  },
+  "webdav_endpoint": {
+    "message": "സെർവർ വിലാസം (HTTPS)"
+  },
+  "webdav_directory": {
+    "message": "സമന്വയ ഫോൾഡർ"
+  },
+  "webdav_username": {
+    "message": "ഉപയോക്തൃനാമം"
+  },
+  "webdav_password": {
+    "message": "ആപ്പ് പാസ്\u200cവേഡ്"
+  },
+  "webdav_credentials_hint": {
+    "message": "ആപ്പ് പാസ്\u200cവേഡ് ഈ ഉപകരണത്തിൽ മാത്രം നിലനിൽക്കും. സെർവർ വിലാസം, ഫോൾഡർ, ഉപയോക്തൃനാമം എന്നിവ ബ്രൗസർ വഴി നിങ്ങളുടെ മറ്റ് ഉപകരണങ്ങളിലേക്ക് സമന്വയിപ്പിക്കും."
+  },
+  "webdav_password_hint": {
+    "message": "സെർവർ വിലാസം, ഫോൾഡർ, ഉപയോക്തൃനാമം എന്നിവ ബ്രൗസർ വഴി നിങ്ങളുടെ മറ്റ് ഉപകരണങ്ങളിലേക്ക് സമന്വയിപ്പിക്കും, എന്നാൽ ആപ്പ് പാസ്\u200cവേഡ് സമന്വയിപ്പിക്കില്ല. പുതിയ ഉപകരണങ്ങളിൽ നൽകാനായി അത് സുരക്ഷിതമായി സൂക്ഷിക്കുക."
+  },
+  "webdav_password_hint_synced": {
+    "message": "സെർവർ വിലാസം, ഫോൾഡർ, ഉപയോക്തൃനാമം എന്നിവ നിങ്ങളുടെ മറ്റൊരു ഉപകരണത്തിൽ നിന്ന് വന്നതാണ്. ആപ്പ് പാസ്\u200cവേഡ് സമന്വയിപ്പിക്കില്ല, അതിനാൽ അത് ഇവിടെ നൽകുക."
+  },
+  "webdav_suggestion_label": {
+    "message": "മറ്റൊരു ഉപകരണത്തിൽ നിന്ന്"
+  },
+  "webdav_suggestion_add": {
+    "message": "കണക്റ്റ് ചെയ്യാൻ പാസ്\u200cവേഡ് നൽകുക"
+  },
+  "webdav_suggestion_dismiss": {
+    "message": "ഡിസ്\u200cമിസ് ചെയ്യുക"
+  },
+  "webdav_password_saved": {
+    "message": "സംരക്ഷിച്ചു"
+  },
+  "webdav_password_change": {
+    "message": "മാറ്റുക"
+  },
+  "webdav_password_keep": {
+    "message": "സംരക്ഷിച്ച പാസ്\u200cവേഡ് നിലനിർത്തുക"
+  },
+  "webdav_password_show": {
+    "message": "പാസ്\u200cവേഡ് കാണിക്കുക"
+  },
+  "webdav_password_hide": {
+    "message": "പാസ്\u200cവേഡ് മറയ്ക്കുക"
+  },
+  "webdav_last_sync": {
+    "message": "അവസാനം സമന്വയിപ്പിച്ചത്"
+  },
+  "webdav_choice_hint": {
+    "message": "സെർവറിൽ ഇതിനകം Lumno ക്രമീകരണമുണ്ട്. ഒരു വശം നിലനിർത്തുക, അല്ലെങ്കിൽ രണ്ടിടത്തെയും വാൾപേപ്പറുകൾ ലയിപ്പിച്ച് സെർവറിന്റെ മറ്റ് ക്രമീകരണം നിലനിർത്തുക. ഈ ഉപകരണത്തിലെ ഡാറ്റ ആദ്യം ബാക്കപ്പ് ചെയ്യും."
+  },
+  "webdav_conflict_hint": {
+    "message": "ഈ ഉപകരണവും സെർവറും ഒരേ കാര്യം മാറ്റി. നിലനിർത്തേണ്ട പതിപ്പ് തിരഞ്ഞെടുക്കുക; മറ്റ് മാറ്റങ്ങൾ സ്വയമേവ ലയിക്കും."
+  },
+  "webdav_error_endpoint": {
+    "message": "സാധുവായ HTTPS WebDAV വിലാസം നൽകുക."
+  },
+  "webdav_error_directory": {
+    "message": "സാധുവായ സമന്വയ ഫോൾഡർ പേര് നൽകുക."
+  },
+  "webdav_error_credentials": {
+    "message": "ഉപയോക്തൃനാമവും ആപ്പ് പാസ്\u200cവേഡും നൽകുക."
+  },
+  "webdav_error_auth": {
+    "message": "പ്രാമാണീകരണം പരാജയപ്പെട്ടു. ഉപയോക്തൃനാമവും ആപ്പ് പാസ്\u200cവേഡും പരിശോധിക്കുക."
+  },
+  "webdav_error_permission": {
+    "message": "ആക്\u200cസസ് നിരസിച്ചു. ഫോൾഡറിന്റെ വായന, എഴുത്ത് അനുമതികൾ പരിശോധിക്കുക."
+  },
+  "webdav_error_rate": {
+    "message": "സെർവറിന്റെ അഭ്യർത്ഥന പരിധി എത്തി. പിന്നീട് വീണ്ടും ശ്രമിക്കുക."
+  },
+  "webdav_error_unavailable": {
+    "message": "സെർവർ താൽക്കാലികമായി ലഭ്യമല്ല (HTTP 503). കുറഞ്ഞ സമയത്തിനുള്ളിൽ വളരെയധികം അഭ്യർത്ഥനകൾ വന്നാൽ Nutstore-ഉം ഇങ്ങനെ പ്രതികരിക്കും, അതിനാൽ കുറച്ച് മിനിറ്റുകൾക്ക് ശേഷം വീണ്ടും ശ്രമിക്കുക. ഈ ഉപകരണത്തിലെ ഡാറ്റ നിലനിർത്തിയിട്ടുണ്ട്."
+  },
+  "webdav_warning_throttled": {
+    "message": "സെർവർ ഇപ്പോൾ അഭ്യർത്ഥനകൾ നിരസിക്കുന്നു (HTTP {status}), സാധാരണയായി കുറഞ്ഞ സമയത്തിനുള്ളിൽ വളരെയധികം അഭ്യർത്ഥനകൾ അയച്ചതുകൊണ്ടാണ്; Nutstore പോലുള്ള സേവനങ്ങൾ ഇങ്ങനെ പരിധി വയ്ക്കുന്നു. {time} കഴിഞ്ഞ് Lumno സ്വയമേവ വീണ്ടും ശ്രമിക്കും. ഈ ഉപകരണത്തിലെ ഡാറ്റ നിലനിർത്തിയിട്ടുണ്ട്."
+  },
+  "webdav_error_capacity": {
+    "message": "WebDAV സംഭരണം നിറഞ്ഞു. സ്ഥലം ഒഴിവാക്കി വീണ്ടും ശ്രമിക്കുക."
+  },
+  "webdav_error_conditional": {
+    "message": "ഈ സെർവറിന് ഒരേസമയമുള്ള ഓവർറൈറ്റുകൾ വിശ്വസനീയമായി തടയാനാകില്ല, അതിനാൽ സ്വയമേവയുള്ള സമന്വയത്തിന് പിന്തുണയില്ല."
+  },
+  "webdav_error_changed": {
+    "message": "സമന്വയത്തിനിടെ ക്രമീകരണം മാറി. ലോക്കൽ ഡാറ്റ നിലനിർത്തിയിട്ടുണ്ട്, സമന്വയം വീണ്ടും ശ്രമിക്കും."
+  },
+  "webdav_error_missing": {
+    "message": "റിമോട്ട് ക്രമീകരണം ഇല്ലാതാക്കി. അവ പുനഃസൃഷ്\u200cടിക്കാൻ ലോക്കൽ ക്രമീകരണം അപ്\u200cലോഡ് ചെയ്യുക, അല്ലെങ്കിൽ സെർവർ വിലാസം പരിശോധിക്കുക."
+  },
+  "webdav_error_chrome_capacity": {
+    "message": "ഈ ക്രമീകരണം Chrome സമന്വയ ശേഷി കവിയുന്നതിനാൽ പ്രയോഗിച്ചില്ല. നിലവിലുള്ള Chrome സമന്വയവും ലോക്കൽ ഡാറ്റയും സംരക്ഷിച്ചിട്ടുണ്ട്. ക്രമീകരണം കുറച്ച് വീണ്ടും ശ്രമിക്കുക."
+  },
+  "webdav_error_chrome_capacity__firefox": {
+    "message": "ഈ ക്രമീകരണം Firefox Sync ശേഷി കവിയുന്നതിനാൽ പ്രയോഗിച്ചില്ല. നിലവിലുള്ള Firefox Sync-ഉം ലോക്കൽ ഡാറ്റയും സംരക്ഷിച്ചിട്ടുണ്ട്. ക്രമീകരണം കുറച്ച് വീണ്ടും ശ്രമിക്കുക."
+  },
+  "webdav_warning_chrome_backup": {
+    "message": "ഈ ഉപകരണത്തിലെ ക്രമീകരണം Chrome സമന്വയ ശേഷി കവിയുന്നതിനാൽ, അവ ഇതുവരെ Chrome സമന്വയത്തിലേക്ക് ബാക്കപ്പ് ചെയ്\u200cതിട്ടില്ല. WebDAV സമന്വയം തുടരുന്നു, ലോക്കൽ ഡാറ്റ നിലനിർത്തിയിട്ടുണ്ട്. ബാക്കപ്പ് പൂർത്തിയാക്കാൻ ക്രമീകരണം കുറയ്ക്കുക."
+  },
+  "webdav_warning_chrome_backup__firefox": {
+    "message": "ഈ ഉപകരണത്തിലെ ക്രമീകരണം Firefox Sync ശേഷി കവിയുന്നതിനാൽ, അവ ഇതുവരെ Firefox Sync-ലേക്ക് ബാക്കപ്പ് ചെയ്\u200cതിട്ടില്ല. WebDAV സമന്വയം തുടരുന്നു, ലോക്കൽ ഡാറ്റ നിലനിർത്തിയിട്ടുണ്ട്. ബാക്കപ്പ് പൂർത്തിയാക്കാൻ ക്രമീകരണം കുറയ്ക്കുക."
+  },
+  "webdav_error_network": {
+    "message": "കണക്ഷൻ പരാജയപ്പെട്ടു അല്ലെങ്കിൽ സമയം കഴിഞ്ഞു. നെറ്റ്\u200cവർക്ക്, സെർവർ വിലാസം, സർട്ടിഫിക്കറ്റ് എന്നിവ പരിശോധിക്കുക. ലോക്കൽ ഡാറ്റ നിലനിർത്തിയിട്ടുണ്ട്."
+  },
+  "webdav_error_storage": {
+    "message": "സമന്വയ ഡാറ്റ സംരക്ഷിക്കാനായില്ല. ബ്രൗസറിന്റെ ലോക്കൽ സംഭരണം പരിശോധിക്കുക."
+  },
+  "webdav_error_shortcuts": {
+    "message": "പുനഃസ്ഥാപിച്ചാൽ കുറുക്കുവഴി പരിധി കവിയും. ആദ്യം ചില ലോക്കൽ ഫോൾഡർ കുറുക്കുവഴികൾ നീക്കം ചെയ്യുക."
+  },
+  "webdav_error_remote_unreadable": {
+    "message": "സെർവർ റിമോട്ട് ക്രമീകരണം സാധാരണ പോലെ നൽകിയില്ല. സെർവർ പരിശോധിക്കുക അല്ലെങ്കിൽ പിന്നീട് വീണ്ടും ശ്രമിക്കുക. ലോക്കൽ ഡാറ്റ മാറ്റിസ്ഥാപിച്ചിട്ടില്ല."
+  },
+  "webdav_error_remote_corrupt": {
+    "message": "റിമോട്ട് ക്രമീകരണ ഫയൽ കേടായി (സാധുവായ JSON അല്ല), ഒരുപക്ഷേ തടസ്സപ്പെട്ട അപ്\u200cലോഡ് അല്ലെങ്കിൽ മറ്റൊരു ആപ്പ് കാരണം. ലോക്കൽ ഡാറ്റ മാറ്റിസ്ഥാപിച്ചിട്ടില്ല."
+  },
+  "webdav_error_invalid_state": {
+    "message": "റിമോട്ട് ക്രമീകരണം ഈ Lumno തിരിച്ചറിയാത്ത ഘടനയോ പതിപ്പോ ഉപയോഗിക്കുന്നു, ഒരുപക്ഷേ പുതിയ റിലീസിൽ നിന്നാകാം. എല്ലാ ഉപകരണങ്ങളിലും Lumno അപ്\u200cഡേറ്റ് ചെയ്യുക. ലോക്കൽ ഡാറ്റ മാറ്റിസ്ഥാപിച്ചിട്ടില്ല."
+  },
+  "webdav_error_state_too_large": {
+    "message": "റിമോട്ട് ക്രമീകരണം സമന്വയ പരിധി കവിയുന്നു (200 കുറുക്കുവഴികൾ, 256 വാൾപേപ്പറുകൾ, 2 MB ക്രമീകരണം). ലോക്കൽ ഡാറ്റ മാറ്റിസ്ഥാപിച്ചിട്ടില്ല."
+  },
+  "webdav_error_response_too_large": {
+    "message": "സെർവർ നൽകിയ ഒരു ഫയൽ 2 MB പരിധി കവിയുന്നു. ലോക്കൽ ഡാറ്റ മാറ്റിസ്ഥാപിച്ചിട്ടില്ല."
+  },
+  "webdav_error_invalid_shortcuts": {
+    "message": "റിമോട്ട് കുറുക്കുവഴി ഡാറ്റ അസാധുവാണ് (തെറ്റായ ഫോർമാറ്റ് അല്ലെങ്കിൽ ആവർത്തിച്ച ID-കൾ). ലോക്കൽ ഡാറ്റ മാറ്റിസ്ഥാപിച്ചിട്ടില്ല."
+  },
+  "webdav_error_invalid_icon": {
+    "message": "റിമോട്ട് കുറുക്കുവഴി ഐക്കൺ റെക്കോർഡുകൾ അസാധുവാണ്. ലോക്കൽ ഡാറ്റ മാറ്റിസ്ഥാപിച്ചിട്ടില്ല."
+  },
+  "webdav_error_invalid_wallpaper": {
+    "message": "റിമോട്ട് വാൾപേപ്പർ റെക്കോർഡുകൾ അസാധുവാണ് (തെറ്റായ ID അല്ലെങ്കിൽ അളവുകൾ). ലോക്കൽ ഡാറ്റ മാറ്റിസ്ഥാപിച്ചിട്ടില്ല."
+  },
+  "webdav_error_invalid_asset": {
+    "message": "ഒരു റിമോട്ട് ചിത്രം അസാധുവാണ് (തെറ്റായ തരം, വലുപ്പം അല്ലെങ്കിൽ ഉള്ളടക്കം). ലോക്കൽ ഡാറ്റ മാറ്റിസ്ഥാപിച്ചിട്ടില്ല."
+  },
+  "webdav_error_asset_missing": {
+    "message": "സെർവറിൽ ഒരു ചിത്ര ഫയൽ കാണുന്നില്ല, ഒരുപക്ഷേ പൂർത്തിയാകാത്ത അപ്\u200cലോഡ് അല്ലെങ്കിൽ ഇല്ലാതാക്കിയ ഫയൽ കാരണം. ലോക്കൽ ഡാറ്റ നിലനിർത്തിയിട്ടുണ്ട്."
+  },
+  "webdav_error_asset_integrity": {
+    "message": "സെർവറിലെ ഒരു ചിത്ര ഫയൽ കേടായി (അതിന്റെ ഉള്ളടക്കം റെക്കോർഡുമായി പൊരുത്തപ്പെടുന്നില്ല). ലോക്കൽ ഡാറ്റ നിലനിർത്തിയിട്ടുണ്ട്."
+  },
+  "webdav_error_local_invalid_state": {
+    "message": "ഈ ഉപകരണത്തിലെ ക്രമീകരണത്തിന് അസാധുവായ ഘടനയുണ്ട്, സമന്വയിപ്പിക്കാനാകില്ല. ഇരുവശത്തും ഒന്നും മാറ്റിയിട്ടില്ല."
+  },
+  "webdav_error_local_state_too_large": {
+    "message": "ഈ ഉപകരണത്തിലെ ക്രമീകരണം സമന്വയ പരിധി കവിയുന്നു (256 വാൾപേപ്പറുകൾ, 2 MB ക്രമീകരണം). ചില വാൾപേപ്പറുകൾ നീക്കം ചെയ്ത് വീണ്ടും ശ്രമിക്കുക. ഇരുവശത്തും ഒന്നും മാറ്റിയിട്ടില്ല."
+  },
+  "webdav_error_local_invalid_shortcuts": {
+    "message": "ഈ ഉപകരണത്തിലെ കുറുക്കുവഴി ഡാറ്റ അസാധുവാണ് (തെറ്റായ ഫോർമാറ്റ് അല്ലെങ്കിൽ ആവർത്തിച്ച ID-കൾ), സമന്വയിപ്പിക്കാനാകില്ല. ഇരുവശത്തും ഒന്നും മാറ്റിയിട്ടില്ല."
+  },
+  "webdav_error_local_invalid_icon": {
+    "message": "ഈ ഉപകരണത്തിലെ കുറുക്കുവഴി ഐക്കൺ റെക്കോർഡുകൾ അസാധുവാണ്, സമന്വയിപ്പിക്കാനാകില്ല. ഇരുവശത്തും ഒന്നും മാറ്റിയിട്ടില്ല."
+  },
+  "webdav_error_local_invalid_wallpaper": {
+    "message": "ഈ ഉപകരണത്തിലെ വാൾപേപ്പർ റെക്കോർഡുകൾ അസാധുവാണ് (തെറ്റായ ID അല്ലെങ്കിൽ അളവുകൾ), സമന്വയിപ്പിക്കാനാകില്ല. ഇരുവശത്തും ഒന്നും മാറ്റിയിട്ടില്ല."
+  },
+  "webdav_error_local_invalid_asset": {
+    "message": "ഈ ഉപകരണത്തിലെ ഒരു ചിത്രം കേടായതോ പിന്തുണയില്ലാത്തതോ ആണ്, സമന്വയിപ്പിക്കാനാകില്ല. അത് നീക്കം ചെയ്ത് വീണ്ടും ചേർക്കുക. ഇരുവശത്തും ഒന്നും മാറ്റിയിട്ടില്ല."
+  },
+  "webdav_error_local_asset_too_large": {
+    "message": "ഈ ഉപകരണത്തിലെ ഒരു ചിത്രം സമന്വയ പരിധി കവിയുന്നു (ഓരോ ഐക്കണിനും 96 KB, ഓരോ വാൾപേപ്പറിനും 2 MB). ഇരുവശത്തും ഒന്നും മാറ്റിയിട്ടില്ല."
+  },
+  "webdav_error_shortcut_id_conflict": {
+    "message": "ഒരു റിമോട്ട് കുറുക്കുവഴിക്ക് ഈ ഉപകരണത്തിലെ ഒരു ബുക്ക്\u200cമാർക്ക് ഫോൾഡർ കുറുക്കുവഴിയുടെ അതേ ID ആണ്, അതിനാൽ അവ ലയിപ്പിക്കാനാകില്ല. ലോക്കൽ ഡാറ്റ നിലനിർത്തിയിട്ടുണ്ട്."
+  },
+  "webdav_error_write_failed": {
+    "message": "സമന്വയ ഫയലുകൾ എഴുതാൻ സെർവർ വിസമ്മതിച്ചു. ഫോൾഡറിന്റെ എഴുത്ത് അനുമതിയും ഒഴിഞ്ഞ സ്ഥലവും പരിശോധിക്കുക. ലോക്കൽ ഡാറ്റ നിലനിർത്തിയിട്ടുണ്ട്."
+  },
+  "webdav_error_directory_unavailable": {
+    "message": "സെർവറിൽ സമന്വയ ഫോൾഡർ സൃഷ്\u200cടിക്കാനായില്ല. സെർവർ വിലാസവും ഫോൾഡർ അനുമതികളും പരിശോധിക്കുക."
+  },
+  "webdav_error_folder_create_refused": {
+    "message": "പുതിയ ഫോൾഡർ സൃഷ്\u200cടിക്കാൻ സെർവർ വിസമ്മതിച്ചു (MKCOL 405), അതിനാൽ സമന്വയ ലോക്ക് സജ്ജമാക്കാനാകില്ല. അക്കൗണ്ടിന് ഫോൾഡറുകൾ സൃഷ്\u200cടിക്കാനാകുമോ, മൗണ്ട് റീഡ്-ഓൺലി അല്ലേ, ഒരു പ്രോക്സിയും MKCOL തടയുന്നില്ലേ എന്ന് പരിശോധിക്കുക."
+  },
+  "webdav_error_http": {
+    "message": "സെർവർ ഒരു പിശക് നൽകി (HTTP {status}). പിന്നീട് വീണ്ടും ശ്രമിക്കുക. ലോക്കൽ ഡാറ്റ നിലനിർത്തിയിട്ടുണ്ട്."
+  },
+  "webdav_error_generic": {
+    "message": "സമന്വയം പരാജയപ്പെട്ടു. പിന്നീട് വീണ്ടും ശ്രമിക്കുക. ലോക്കൽ ഡാറ്റ നിലനിർത്തിയിട്ടുണ്ട്."
+  },
+  "webdav_test": {
+    "message": "കണക്റ്റിവിറ്റി പരിശോധിക്കുക"
+  },
+  "webdav_enable": {
+    "message": "സംരക്ഷിച്ച് സമന്വയം ഓണാക്കുക"
+  },
+  "webdav_sync": {
+    "message": "ഇപ്പോൾ സമന്വയിപ്പിക്കുക"
+  },
+  "webdav_restore_backup": {
+    "message": "മാറ്റിസ്ഥാപിക്കുന്നതിന് മുമ്പുള്ള ക്രമീകരണം പുനഃസ്ഥാപിക്കുക"
+  },
+  "webdav_merge_wallpapers": {
+    "message": "വാൾപേപ്പറുകൾ ലയിപ്പിക്കുക"
+  },
+  "webdav_error_merge_too_large": {
+    "message": "ഒരുമിച്ച് വാൾപേപ്പറുകൾ സമന്വയ പരിധി കവിയുന്നു (256 വാൾപേപ്പറുകൾ, 2 MB ക്രമീകരണം, 8 KB ചിത്ര ലിങ്കുകൾ). ചിലത് നീക്കം ചെയ്യുക, അല്ലെങ്കിൽ ഒരു വശം നിലനിർത്തുക. ഒന്നും മാറ്റിയിട്ടില്ല."
+  },
+  "webdav_use_remote": {
+    "message": "സെർവർ പതിപ്പ് ഉപയോഗിക്കുക"
+  },
+  "webdav_use_local": {
+    "message": "ഈ ഉപകരണത്തിന്റെ പതിപ്പ് നിലനിർത്തുക"
+  },
+  "webdav_test_success": {
+    "message": "കണക്ഷൻ, വായന/എഴുത്ത്, ഒരേസമയമുള്ള അപ്\u200cഡേറ്റ് സംരക്ഷണം എന്നിവ സ്ഥിരീകരിച്ചു"
+  },
+  "webdav_state_browser": {
+    "message": "ഓഫ്"
+  },
+  "webdav_state_ready": {
+    "message": "സമന്വയിപ്പിച്ചു"
+  },
+  "webdav_state_syncing": {
+    "message": "സമന്വയിപ്പിക്കുന്നു…"
+  },
+  "webdav_state_paused": {
+    "message": "താൽക്കാലികമായി നിർത്തി"
+  },
+  "webdav_state_pending": {
+    "message": "സമന്വയം ബാക്കി"
+  },
+  "webdav_state_choice": {
+    "message": "ഒരു പകർപ്പ് തിരഞ്ഞെടുക്കുക"
+  },
+  "webdav_state_conflict": {
+    "message": "ക്രമീകരണ വൈരുദ്ധ്യം"
+  },
+  "webdav_state_error": {
+    "message": "സമന്വയം പരാജയപ്പെട്ടു"
+  },
+  "webdav_error_interrupted": {
+    "message": "മുമ്പത്തെ മാറ്റിസ്ഥാപിക്കൽ തടസ്സപ്പെട്ടു. അപ്\u200cലോഡുകൾ താൽക്കാലികമായി നിർത്തി. മുമ്പത്തെ ലോക്കൽ ക്രമീകരണം പുനഃസ്ഥാപിക്കുക, അല്ലെങ്കിൽ വീണ്ടും കണക്റ്റ് ചെയ്ത് റിമോട്ട് ക്രമീകരണം ഉപയോഗിക്കുക."
+  },
+  "webdav_missing_hint": {
+    "message": "സെർവറിലെ ക്രമീകരണം ഇല്ലാതായി. ഈ ഉപകരണത്തിന്റെ ക്രമീകരണം വീണ്ടും അപ്\u200cലോഡ് ചെയ്യുക, അല്ലെങ്കിൽ ആദ്യം സെർവർ വിലാസം പരിശോധിക്കുക."
+  },
+  "webdav_error_locked": {
+    "message": "മറ്റൊരു ഉപകരണം സെർവറിലേക്ക് എഴുതുന്നു. പിന്നീട് വീണ്ടും ശ്രമിക്കുക. തടസ്സം തുടരുകയാണെങ്കിൽ, ശേഷിക്കുന്ന ലോക്ക് വീണ്ടെടുക്കാൻ WebDAV ഗൈഡ് പിന്തുടരുക."
+  },
+  "webdav_error_lock_recovery": {
+    "message": "റിമോട്ട് എഴുത്ത് സുരക്ഷിതമായി പൂർത്തിയാക്കാനായില്ല, അതിനാൽ അതിന്റെ സംരക്ഷണം നിലനിർത്തി. റിമോട്ട് സമന്വയ ഡയറക്\u200cടറിയിൽ നിന്ന് v1/write-lock നീക്കം ചെയ്യുന്നതിന് മുമ്പ് എല്ലാ ഉപകരണങ്ങളിലും സമന്വയം താൽക്കാലികമായി നിർത്തി തടസ്സപ്പെട്ട അഭ്യർത്ഥന അവസാനിച്ചുവെന്ന് ഉറപ്പാക്കുക."
+  },
+  "webdav_error_outdated": {
+    "message": "ഒന്നിലധികം WebDAV കണക്ഷനുകൾ ഉപയോഗിക്കാൻ Lumno വിപുലീകരണം റീലോഡ് ചെയ്ത്, തുടർന്ന് ക്രമീകരണം പുതുക്കുക."
+  },
+  "webdav_title": {
+    "message": "WebDAV സമന്വയം"
+  },
+  "webdav_beta_hint": {
+    "message": "ബീറ്റയിൽ: WebDAV ഡ്രൈവ് അല്ലെങ്കിൽ NAS വഴി ക്രമീകരണം, ഇഷ്\u200cടാനുസൃത ഐക്കണുകൾ, വാൾപേപ്പറുകൾ എന്നിവ സമന്വയിപ്പിക്കുക. ബ്രൗസറിന്റെ ബിൽറ്റ്-ഇൻ സമന്വയത്തിൽ നിന്ന് വ്യത്യസ്തമായി, ഇത് ബ്രൗസറുകൾക്കിടയിൽ പ്രവർത്തിക്കുകയും ഐക്കണുകളും വാൾപേപ്പറുകളും ഉൾക്കൊള്ളുകയും ചെയ്യുന്നു."
+  },
+  "webdav_setup_hint": {
+    "message": "ബ്രൗസർ സമന്വയത്തോടൊപ്പം, Nutstore അല്ലെങ്കിൽ മറ്റൊരു WebDAV സേവനം വഴി ക്രമീകരണം, ഇഷ്\u200cടാനുസൃത ഐക്കണുകൾ, വാൾപേപ്പറുകൾ എന്നിവ സമന്വയിപ്പിക്കുക."
+  },
+  "webdav_edit_config": {
+    "message": "കണക്ഷൻ എഡിറ്റ് ചെയ്യുക"
+  },
+  "webdav_save": {
+    "message": "സംരക്ഷിക്കുക"
+  },
+  "webdav_never_synced": {
+    "message": "ഇതുവരെ സമന്വയിപ്പിച്ചിട്ടില്ല"
+  },
+  "webdav_choice_title": {
+    "message": "പ്രാരംഭ പതിപ്പ് തിരഞ്ഞെടുക്കുക"
+  },
+  "webdav_conflict_title": {
+    "message": "സമന്വയ വൈരുദ്ധ്യം"
+  },
+  "webdav_conflict_items": {
+    "message": "വൈരുദ്ധ്യമുള്ള ഉള്ളടക്കം"
+  },
+  "webdav_conflict_shortcuts": {
+    "message": "കുറുക്കുവഴികളും ഐക്കണുകളും"
+  },
+  "webdav_conflict_wallpapers": {
+    "message": "വാൾപേപ്പറുകളും തിരഞ്ഞെടുപ്പും"
+  },
+  "webdav_conflict_preferences": {
+    "message": "ക്രമീകരണം"
+  },
+  "webdav_resolve_later": {
+    "message": "താൽക്കാലികമായി നിർത്തി പിന്നീട് പരിഹരിക്കുക"
+  },
+  "webdav_add": {
+    "message": "WebDAV ചേർക്കുക"
+  },
+  "webdav_state_recovery": {
+    "message": "പുനഃസ്ഥാപിക്കൽ ആവശ്യമാണ്"
+  },
+  "webdav_retry": {
+    "message": "വീണ്ടും ശ്രമിക്കുക"
+  },
+  "webdav_copy_diagnostic": {
+    "message": "ഡയഗ്നോസ്റ്റിക്സ് പകർത്തുക"
+  },
+  "webdav_diagnostic_copied": {
+    "message": "പകർത്തി"
+  },
+  "webdav_provider_jianguoyun": {
+    "message": "Nutstore"
+  },
+  "webdav_upload_local": {
+    "message": "ഈ ഉപകരണത്തിന്റെ ക്രമീകരണം അപ്\u200cലോഡ് ചെയ്യുക"
+  },
+  "webdav_error_duplicate": {
+    "message": "ഒരേ സെർവർ, ഫോൾഡർ, ഉപയോക്തൃനാമം ഉള്ള ഒരു കണക്ഷൻ ഇതിനകം നിലവിലുണ്ട്."
+  },
+  "webdav_error_interrupted_other": {
+    "message": "മറ്റൊരു WebDAV കണക്ഷൻ ({name}) ആദ്യം ലോക്കൽ ക്രമീകരണം പുനഃസ്ഥാപിക്കേണ്ടതുണ്ട്. അതിന് ശേഷം ഇത് പുനരാരംഭിക്കും."
+  },
+  "webdav_just_now": {
+    "message": "ഇപ്പോൾ"
+  },
+  "webdav_view_diff": {
+    "message": "വ്യത്യാസങ്ങൾ കാണിക്കുക"
+  },
+  "webdav_hide_diff": {
+    "message": "വ്യത്യാസങ്ങൾ മറയ്ക്കുക"
+  },
+  "webdav_diff_local": {
+    "message": "ഈ ഉപകരണം"
+  },
+  "webdav_diff_remote": {
+    "message": "സെർവർ"
+  },
+  "webdav_diff_added": {
+    "message": "ചേർത്തത്: {items}"
+  },
+  "webdav_diff_removed": {
+    "message": "നീക്കം ചെയ്\u200cതത്: {items}"
+  },
+  "webdav_diff_changed": {
+    "message": "എഡിറ്റ് ചെയ്\u200cതത്: {items}"
+  },
+  "webdav_diff_more": {
+    "message": "ആകെ {count}"
+  },
+  "webdav_diff_reordered": {
+    "message": "ക്രമം മാറ്റി"
+  },
+  "webdav_diff_selection": {
+    "message": "നിലവിലെ വാൾപേപ്പർ മാറ്റി"
+  },
+  "webdav_diff_unchanged": {
+    "message": "മാറ്റങ്ങളൊന്നുമില്ല"
+  },
+  "webdav_diff_shortcut_total": {
+    "message": "{count} കുറുക്കുവഴികൾ"
+  },
+  "webdav_diff_wallpaper_total": {
+    "message": "{count} വാൾപേപ്പറുകൾ"
+  },
+  "webdav_diff_loading": {
+    "message": "ലോഡ് ചെയ്യുന്നു…"
+  },
+  "webdav_value_on": {
+    "message": "ഓൺ"
+  },
+  "webdav_value_off": {
+    "message": "ഓഫ്"
+  },
+  "webdav_value_default": {
+    "message": "ഡിഫോൾട്ട്"
+  },
+  "webdav_value_changed": {
+    "message": "മാറ്റി"
+  },
+  "webdav_value_list": {
+    "message": "{count} ഇനങ്ങൾ"
+  },
+  "webdav_preference_other": {
+    "message": "മറ്റ് ക്രമീകരണം"
+  },
+  "webdav_preference_zen_mode": {
+    "message": "Zen മോഡ്"
+  },
+  "webdav_remove": {
+    "message": "WebDAV കണക്ഷൻ ഇല്ലാതാക്കുക"
+  },
+  "webdav_remove_confirm": {
+    "message": "ഈ ലോക്കൽ കണക്ഷൻ ഇല്ലാതാക്കണോ? സെർവറിലെ ഫയലുകൾ നിലനിർത്തും."
+  },
+  "newtab_quote_title": {
+    "message": "ദിവസേനയുള്ള ഉദ്ധരണി"
+  },
+  "newtab_quote_position": {
+    "message": "ഉദ്ധരണിയുടെ സ്ഥാനം"
+  },
+  "newtab_quote_category": {
+    "message": "ഉദ്ധരണി വിഭാഗം"
+  },
+  "newtab_quote_off": {
+    "message": "ഓഫ്"
+  },
+  "newtab_quote_top": {
+    "message": "തിരയൽ ബോക്സിന് മുകളിൽ"
+  },
+  "newtab_quote_input": {
+    "message": "തിരയൽ ബോക്സിന് താഴെ"
+  },
+  "newtab_quote_search": {
+    "message": "കുറുക്കുവഴികൾക്ക് താഴെ"
+  },
+  "newtab_quote_bottom": {
+    "message": "പേജിന്റെ താഴെ"
+  },
+  "newtab_quote_literature": {
+    "message": "സാഹിത്യം"
+  },
+  "newtab_quote_poetry": {
+    "message": "കവിത"
+  },
+  "newtab_quote_shuffle": {
+    "message": "മറ്റൊരു ഉദ്ധരണി കാണിക്കുക"
+  },
+  "newtab_quote_shuffle_error": {
+    "message": "മറ്റൊരു ഉദ്ധരണി ലോഡ് ചെയ്യാനായില്ല"
+  },
+  "newtab_quote_save_error": {
+    "message": "ഉദ്ധരണി ക്രമീകരണം സംരക്ഷിക്കാനായില്ല"
+  },
+  "newtab_quote_fallback_text": {
+    "message": "ആയിരം മൈൽ യാത്രയും ഒരൊറ്റ ചുവടിൽ തുടങ്ങുന്നു."
+  },
+  "newtab_quote_fallback_author": {
+    "message": "ലാവോ ത്സു"
+  },
+  "newtab_quote_fallback_source": {
+    "message": "താവോ തെ ചിങ്"
+  },
+  "newtab_bing_daily": {
+    "message": "ദിവസവും സ്വയമേവ അപ്\u200cഡേറ്റ് ചെയ്യുക"
+  },
+  "newtab_bing_daily_hint": {
+    "message": "ദിവസവും പുതിയൊരു Bing ഫോട്ടോ. ഇത് ഓണായിരിക്കുമ്പോൾ നിങ്ങൾ തിരഞ്ഞെടുക്കുന്ന ഫോട്ടോ അന്നത്തെ ദിവസം മുഴുവൻ നിലനിൽക്കും."
+  },
+  "newtab_daily_restore": {
+    "message": "ഇന്നത്തെ വാൾപേപ്പറിലേക്ക് മടങ്ങുക"
+  },
+  "newtab_bing_recent": {
+    "message": "സമീപകാല വാൾപേപ്പറുകൾ"
+  },
+  "newtab_bing_refresh": {
+    "message": "പുതുക്കുക"
+  },
+  "newtab_bing_loading": {
+    "message": "വാൾപേപ്പറുകൾ ലോഡ് ചെയ്യുന്നു…"
+  },
+  "newtab_bing_saving": {
+    "message": "വാൾപേപ്പർ സംരക്ഷിക്കുന്നു…"
+  },
+  "newtab_bing_error": {
+    "message": "വാൾപേപ്പറുകൾ ലോഡ് ചെയ്യാനായില്ല. ദയവായി വീണ്ടും ശ്രമിക്കുക."
+  },
+  "newtab_bing_save_error": {
+    "message": "വാൾപേപ്പർ സംരക്ഷിക്കാനായില്ല. ദയവായി വീണ്ടും ശ്രമിക്കുക."
+  },
+  "newtab_bing_source": {
+    "message": "വാൾപേപ്പറിന്റെ ഉറവിടം കാണുക"
+  },
+  "newtab_wallpaper_curated_section": {
+    "message": "തിരഞ്ഞെടുത്തവ"
+  },
+  "newtab_curated_daily_hint": {
+    "message": "ഇത് ഓണാക്കുമ്പോൾ കാണിക്കുന്ന വിഭാഗത്തിൽ നിന്ന് ദിവസവും പുതിയൊരു ഫോട്ടോ, സമന്വയിപ്പിച്ച എല്ലാ ഉപകരണങ്ങളിലും ഒരുപോലെ. നിങ്ങൾ തിരഞ്ഞെടുക്കുന്ന ഫോട്ടോ അന്നത്തെ ദിവസം മുഴുവൻ നിലനിൽക്കും."
+  },
+  "newtab_curated_category": {
+    "message": "വിഭാഗം"
+  },
+  "newtab_curated_category_random": {
+    "message": "മിക്സ്"
+  },
+  "newtab_curated_category_nature": {
+    "message": "പ്രകൃതി"
+  },
+  "newtab_curated_category_water": {
+    "message": "ജലം"
+  },
+  "newtab_curated_category_city": {
+    "message": "നഗരം"
+  },
+  "newtab_curated_category_minimal": {
+    "message": "മിനിമൽ"
+  },
+  "newtab_curated_category_art": {
+    "message": "കല"
+  },
+  "newtab_curated_art_meta": {
+    "message": "The Cleveland Museum of Art"
+  },
+  "newtab_curated_list": {
+    "message": "ഫോട്ടോകൾ"
+  },
+  "newtab_curated_mix_all": {
+    "message": "എല്ലാ വിഭാഗങ്ങളും"
+  },
+  "newtab_curated_mix_count": {
+    "message": "{count} വിഭാഗങ്ങൾ"
+  },
+  "newtab_curated_mix_separator": {
+    "message": ", "
+  },
+  "newtab_curated_mix_aria": {
+    "message": "മിക്സിലെ വിഭാഗങ്ങൾ"
+  },
+  "newtab_curated_more": {
+    "message": "മറ്റുള്ളവ കാണിക്കുക"
+  },
+  "newtab_curated_photo_by": {
+    "message": "ഫോട്ടോ: {name}"
+  },
+  "newtab_curated_source_meta": {
+    "message": "Unsplash · Lorem Picsum വഴി"
+  },
+  "newtab_wallpaper_add_url": {
+    "message": "ചിത്ര ലിങ്ക് ചേർക്കുക"
+  },
+  "newtab_wallpaper_url_placeholder": {
+    "message": "ഒരു ചിത്ര ലിങ്ക് ഒട്ടിക്കുക (https://…)"
+  },
+  "newtab_wallpaper_url_submit": {
+    "message": "ചേർക്കുക"
+  },
+  "newtab_wallpaper_url_invalid": {
+    "message": "http:// അല്ലെങ്കിൽ https:// എന്നതിൽ ആരംഭിക്കുന്ന ലിങ്ക് നൽകുക"
+  },
+  "newtab_wallpaper_url_limit": {
+    "message": "ഈ ലിങ്ക് വളരെ ദൈർഘ്യമേറിയതാണ്, അല്ലെങ്കിൽ വളരെയധികം ലിങ്കുകൾ സംരക്ഷിച്ചിട്ടുണ്ട്. ചിലത് നീക്കം ചെയ്ത് വീണ്ടും ശ്രമിക്കുക."
+  },
+  "newtab_wallpaper_url_import_error": {
+    "message": "ഈ ലിങ്കിൽ നിന്ന് ചിത്രം ചേർക്കാനായില്ല"
+  },
+  "newtab_wallpaper_save_to_local": {
+    "message": "ലോക്കൽ വാൾപേപ്പറുകളിലേക്ക് സംരക്ഷിക്കുക"
+  },
+  "newtab_wallpaper_in_local": {
+    "message": "ഇതിനകം ലോക്കൽ വാൾപേപ്പറുകളിലുണ്ട്"
+  },
+  "newtab_wallpaper_saving_local": {
+    "message": "ലോക്കൽ വാൾപേപ്പറുകളിലേക്ക് സംരക്ഷിക്കുന്നു…"
+  },
+  "newtab_wallpaper_saved_local": {
+    "message": "ലോക്കൽ വാൾപേപ്പറുകളിലേക്ക് സംരക്ഷിച്ചു"
+  },
+  "newtab_wallpaper_local_limit": {
+    "message": "പരമാവധി {count} ലോക്കൽ വാൾപേപ്പറുകൾ സൂക്ഷിക്കാം. ചിലത് ഇല്ലാതാക്കി വീണ്ടും ശ്രമിക്കുക."
+  },
+  "newtab_wallpaper_context_menu_label": {
+    "message": "വാൾപേപ്പർ പ്രവർത്തനങ്ങൾ"
+  },
+  "newtab_quote_font": {
+    "message": "ഫോണ്ട്"
+  },
+  "newtab_quote_font_label": {
+    "message": "ഉദ്ധരണി ഫോണ്ട്"
+  },
+  "newtab_quote_font_wenkai": {
+    "message": "LXGW WenKai"
+  },
+  "newtab_quote_font_xiaowei": {
+    "message": "ZCOOL XiaoWei"
+  },
+  "newtab_quote_font_sans": {
+    "message": "സിസ്റ്റം സാൻസ്-സെരിഫ്"
+  },
+  "newtab_quote_font_size": {
+    "message": "ഫോണ്ട് വലുപ്പം"
+  },
+  "newtab_quote_font_size_label": {
+    "message": "ഉദ്ധരണി ഫോണ്ട് വലുപ്പം (px)"
+  },
+  "newtab_quote_provider": {
+    "message": "Hitokoto നൽകുന്നത്"
+  },
+  "recent_history_menu": {
+    "message": "സമീപകാല മാറ്റ ചരിത്രം കാണുക"
+  },
+  "recent_history_title": {
+    "message": "മാറ്റ ചരിത്രം"
+  },
+  "recent_history_description": {
+    "message": "ചരിത്രം നീക്കം ചെയ്യാതെ, നിലനിർത്തിയ ഏത് പതിപ്പും നിലവിലുള്ളതായി സജ്ജമാക്കുക."
+  },
+  "recent_history_current": {
+    "message": "നിലവിലെ പതിപ്പ്"
+  },
+  "recent_history_earlier": {
+    "message": "മുമ്പത്തെ പതിപ്പ്"
+  },
+  "recent_history_restore": {
+    "message": "നിലവിലുള്ളതായി സജ്ജമാക്കുക"
+  },
+  "recent_history_restoring": {
+    "message": "പുനഃസ്ഥാപിക്കുന്നു…"
+  },
+  "recent_history_restore_success": {
+    "message": "തിരഞ്ഞെടുത്ത പതിപ്പ് പുനഃസ്ഥാപിച്ചു"
+  },
+  "recent_history_restore_failed": {
+    "message": "ഈ പതിപ്പ് പുനഃസ്ഥാപിക്കാനായില്ല"
+  },
+  "recent_update_close": {
+    "message": "അടയ്ക്കുക"
+  },
+  "settings_progress_tracking_title": {
+    "message": "പിൻ ചെയ്\u200cത ഷോകളും നോവലുകളും അപ്\u200cഡേറ്റായി നിലനിർത്തുക"
+  },
+  "settings_progress_tracking_desc": {
+    "message": "ഒരു ഷോയോ നോവലോ പിൻ ചെയ്താൽ അതിന്റെ കാർഡ് അടുത്ത എപ്പിസോഡിലേക്കോ അധ്യായത്തിലേക്കോ നിങ്ങളെ പിന്തുടരും, അതിനാൽ നിർത്തിയിടത്ത് നിന്ന് തുറക്കും"
+  },
+  "settings_newtab_open_in_new_tab_title": {
+    "message": "പുതിയ ടാബിൽ തുറക്കുക"
+  },
+  "settings_newtab_open_in_new_tab_desc": {
+    "message": "ഓണാക്കിയ ഇനങ്ങൾ പുതിയ ടാബിൽ തുറന്ന് അതിലേക്ക് മാറും; ഓഫാക്കിയവ നിലവിലെ ടാബിൽ തുറക്കും. Command/Ctrl-ക്ലിക്ക് അല്ലെങ്കിൽ മിഡിൽ-ക്ലിക്ക് എല്ലായ്പ്പോഴും പശ്ചാത്തലത്തിൽ തുറക്കും."
+  },
+  "settings_newtab_open_in_new_tab_search": {
+    "message": "തിരയൽ ഫലങ്ങൾ"
+  },
+  "settings_newtab_open_in_new_tab_shortcuts": {
+    "message": "കുറുക്കുവഴികൾ"
+  },
+  "settings_newtab_open_in_new_tab_bookmarks": {
+    "message": "ബുക്ക്\u200cമാർക്കുകൾ"
+  },
+  "settings_newtab_open_in_new_tab_recent_sites": {
+    "message": "സൈറ്റ് കാർഡുകൾ"
+  },
+  "recent_progress_track": {
+    "message": "പുരോഗതി ട്രാക്ക് ചെയ്യുക"
+  },
+  "recent_progress_stop": {
+    "message": "പുരോഗതി ട്രാക്ക് ചെയ്യുന്നത് നിർത്തുക"
+  },
+  "recent_progress_track_toast": {
+    "message": "ട്രാക്കിംഗ് ഓണാണ്. നിങ്ങൾ അടുത്ത എപ്പിസോഡിലേക്കോ അധ്യായത്തിലേക്കോ പോകുമ്പോൾ കാർഡ് അപ്\u200cഡേറ്റ് ചെയ്യും."
+  },
+  "recent_progress_stop_toast": {
+    "message": "പുരോഗതി ട്രാക്ക് ചെയ്യുന്നത് നിർത്തി"
+  },
+  "recent_progress_tracking": {
+    "message": "പുരോഗതി ട്രാക്ക് ചെയ്യുന്നു"
+  },
+  "recent_progress_auto_toast": {
+    "message": "പിൻ ചെയ്\u200cതു, പുരോഗതി ട്രാക്ക് ചെയ്യുന്നു. നിർത്താൻ കാർഡിലെ റഡാർ ഐക്കൺ ക്ലിക്ക് ചെയ്യുക."
+  },
+  "settings_general_newtab_section_title": {
+    "message": "പുതിയ ടാബ് ക്രമീകരണം"
+  },
+  "recent_progress_track_tooltip": {
+    "message": "പുരോഗതി ട്രാക്ക് ചെയ്യുക\n────────\nഷോകൾക്കും തുടർ നോവലുകൾക്കും ഉപയോഗപ്രദം.\nഓണായിരിക്കുമ്പോൾ, ഈ കൃതിയുടെ അടുത്ത എപ്പിസോഡിലോ അധ്യായത്തിലോ എത്തുമ്പോൾ കാർഡ് അവിടേക്ക് നീങ്ങും."
+  },
+  "recent_progress_stop_tooltip": {
+    "message": "പുരോഗതി ട്രാക്ക് ചെയ്യുന്നു\n────────\nഈ കൃതിയുടെ അടുത്ത എപ്പിസോഡിലോ അധ്യായത്തിലോ എത്തുമ്പോൾ കാർഡ് അവിടേക്ക് നീങ്ങും.\nട്രാക്കിംഗ് നിർത്താൻ ക്ലിക്ക് ചെയ്യുക."
+  },
+  "newtab_shortcuts_group_new": {
+    "message": "പുതിയ ഗ്രൂപ്പ്"
+  },
+  "newtab_shortcuts_group_default_title": {
+    "message": "കുറുക്കുവഴികൾ"
+  },
+  "newtab_shortcuts_group_title_placeholder": {
+    "message": "ഒരു തലക്കെട്ട് ചേർക്കുക"
+  },
+  "newtab_shortcuts_group_actions": {
+    "message": "{group} പ്രവർത്തനങ്ങൾ"
+  },
+  "newtab_shortcuts_group_untitled_name": {
+    "message": "പേരില്ലാത്ത ഗ്രൂപ്പ്"
+  },
+  "newtab_shortcuts_group_rename": {
+    "message": "പേര് മാറ്റുക"
+  },
+  "newtab_shortcuts_group_add_site": {
+    "message": "സൈറ്റ് ചേർക്കുക"
+  },
+  "newtab_shortcuts_group_move_up": {
+    "message": "മുകളിലേക്ക് നീക്കുക"
+  },
+  "newtab_shortcuts_group_move_down": {
+    "message": "താഴേക്ക് നീക്കുക"
+  },
+  "newtab_shortcuts_group_delete": {
+    "message": "ഗ്രൂപ്പ് ഇല്ലാതാക്കുക"
+  },
+  "newtab_shortcuts_group_delete_with_sites": {
+    "message": "ഗ്രൂപ്പും സൈറ്റുകളും ഇല്ലാതാക്കുക"
+  },
+  "newtab_shortcuts_group_delete_confirm_title": {
+    "message": "“{group}”-ഉം അതിലെ സൈറ്റുകളും ഇല്ലാതാക്കണോ?"
+  },
+  "newtab_shortcuts_group_delete_confirm_description": {
+    "message": "ഗ്രൂപ്പും അതിലെ {count} സൈറ്റുകളും ഇല്ലാതാക്കും."
+  },
+  "newtab_shortcuts_group_delete_confirm_button": {
+    "message": "ഇല്ലാതാക്കുക"
+  },
+  "newtab_shortcuts_group_deleted_undo": {
+    "message": "ഗ്രൂപ്പ് ഇല്ലാതാക്കി · പഴയപടിയാക്കാൻ {shortcut}"
+  },
+  "newtab_shortcuts_group_delete_undone": {
+    "message": "ഗ്രൂപ്പ് പുനഃസ്ഥാപിച്ചു · വീണ്ടും ചെയ്യാൻ {shortcut}"
+  },
+  "newtab_shortcuts_group_delete_redone": {
+    "message": "ഗ്രൂപ്പ് ഇല്ലാതാക്കി · പഴയപടിയാക്കാൻ {shortcut}"
+  },
+  "newtab_shortcuts_group_limit_reached": {
+    "message": "പരമാവധി {count} ഗ്രൂപ്പുകൾ സൃഷ്\u200cടിക്കാം."
+  },
+  "options_shortcut_sync_all": {
+    "message": "കുറുക്കുവഴികൾ: {count} എണ്ണവും ബ്രൗസറുമായി സമന്വയിപ്പിക്കുന്നു."
+  },
+  "options_shortcut_sync_split_webdav": {
+    "message": "കുറുക്കുവഴികൾ: {synced} എണ്ണം ബ്രൗസറുമായി സമന്വയിപ്പിക്കുന്നു; ബാക്കി {local} എണ്ണം WebDAV വഴി സമന്വയിപ്പിക്കുന്നു."
+  },
+  "options_shortcut_sync_split_local": {
+    "message": "കുറുക്കുവഴികൾ: {synced} എണ്ണം ബ്രൗസറുമായി സമന്വയിപ്പിക്കുന്നു; {local} എണ്ണം അതിന്റെ സമന്വയ സ്ഥലം കവിയുന്നതിനാൽ ഈ ഉപകരണത്തിൽ നിലനിൽക്കും. അവയും സമന്വയിപ്പിക്കാൻ WebDAV ഓണാക്കുക."
+  },
+  "options_shortcut_sync_failed_local": {
+    "message": "കുറുക്കുവഴികൾ ബ്രൗസർ സമന്വയത്തിലേക്ക് സംരക്ഷിക്കാനായില്ല; {count} എണ്ണവും ഇപ്പോൾ ഈ ഉപകരണത്തിൽ നിലനിൽക്കും."
+  },
+  "options_shortcut_sync_failed_webdav": {
+    "message": "കുറുക്കുവഴികൾ ബ്രൗസർ സമന്വയത്തിലേക്ക് സംരക്ഷിക്കാനായില്ല; {count} എണ്ണവും ഇപ്പോൾ WebDAV വഴി സമന്വയിപ്പിക്കുന്നു."
+  },
+  "options_shortcut_sync_none_local": {
+    "message": "കുറുക്കുവഴികൾ: ബ്രൗസർ സമന്വയം നിറഞ്ഞതിനാൽ {count} എണ്ണവും ഈ ഉപകരണത്തിൽ നിലനിൽക്കും. അവ സമന്വയിപ്പിക്കാൻ WebDAV ഓണാക്കുക."
+  },
+  "options_shortcut_sync_none_webdav": {
+    "message": "കുറുക്കുവഴികൾ: ബ്രൗസർ സമന്വയം നിറഞ്ഞതിനാൽ {count} എണ്ണവും WebDAV വഴി സമന്വയിപ്പിക്കുന്നു."
+  },
+  "newtab_shortcuts_add_site": {
+    "message": "സൈറ്റ് ചേർക്കുക"
+  },
+  "newtab_shortcuts_group_dialog_rename_title": {
+    "message": "ഗ്രൂപ്പിന്റെ പേര് മാറ്റുക"
+  },
+  "newtab_shortcuts_group_name_placeholder": {
+    "message": "ഓപ്ഷണൽ; പേരില്ലാത്ത ഗ്രൂപ്പ് ഒരു പുതിയ വരി മാത്രം ആരംഭിക്കുന്നു"
+  },
+  "newtab_style_section_title": {
+    "message": "ശൈലി"
+  },
+  "settings_newtab_glass_style_title": {
+    "message": "മെറ്റീരിയൽ"
+  },
+  "settings_newtab_glass_style_desc": {
+    "message": "പുതിയ ടാബ് UI ഘടകങ്ങളുടെ മെറ്റീരിയൽ മാറ്റുക."
+  },
+  "settings_newtab_glass_style_none": {
+    "message": "ഡിഫോൾട്ട്"
+  },
+  "settings_newtab_glass_style_frosted": {
+    "message": "അക്രിലിക്"
+  },
+  "settings_newtab_glass_style_liquid": {
+    "message": "ലിക്വിഡ് ഗ്ലാസ്"
+  },
+  "settings_newtab_glass_theme_title": {
+    "message": "മെറ്റീരിയൽ തീം"
+  },
+  "settings_newtab_glass_theme_follow": {
+    "message": "സ്വയമേവ"
+  },
+  "settings_newtab_glass_theme_light": {
+    "message": "ലൈറ്റ്"
+  },
+  "settings_newtab_glass_theme_dark": {
+    "message": "ഡാർക്ക്"
+  },
+  "settings_search_source_group_order_title": {
+    "message": "തിരയൽ പാനൽ ക്രമം"
+  },
+  "settings_search_source_group_order_desc": {
+    "message": "തിരയൽ ബോക്സ് പാനലിലെ ഗ്രൂപ്പുകളുടെ ക്രമം സജ്ജമാക്കാൻ ടാഗുകൾ വലിച്ചിടുക. ഓരോ ഗ്രൂപ്പും ക്രമീകരിക്കാൻ താഴെയുള്ള ലിസ്റ്റുകളിലെ വരികൾ വലിച്ചിടുക. പഴയപടിയാക്കാൻ Ctrl/⌘ + Z, വീണ്ടും ചെയ്യാൻ Shift + Ctrl/⌘ + Z അമർത്തുക."
+  },
+  "settings_search_source_order_keyboard_hint": {
+    "message": "നീക്കാൻ Alt-നൊപ്പം ഇടത് അല്ലെങ്കിൽ വലത് അമ്പടയാള കീ അമർത്തുക"
+  },
+  "settings_search_source_order_failed": {
+    "message": "പുതിയ ക്രമം സംരക്ഷിക്കാനായില്ല. വീണ്ടും ശ്രമിക്കുക."
+  },
+  "settings_search_source_move_up": {
+    "message": "മുകളിലേക്ക് നീക്കുക"
+  },
+  "settings_search_source_move_down": {
+    "message": "താഴേക്ക് നീക്കുക"
+  },
+  "settings_search_result_sources_order_desc": {
+    "message": "തിരയൽ ബോക്സ് പാനലിലെ ബ്രൗസർ ഉള്ളടക്കം ഗ്രൂപ്പിൽ അവയുടെ ക്രമം സജ്ജമാക്കാൻ വലിച്ചിടുക. പഴയപടിയാക്കാൻ Ctrl/⌘ + Z, വീണ്ടും ചെയ്യാൻ Shift + Ctrl/⌘ + Z അമർത്തുക."
+  },
+  "settings_search_source_order_undone": {
+    "message": "ക്രമമാറ്റം പഴയപടിയാക്കി"
+  },
+  "settings_search_source_order_redone": {
+    "message": "ക്രമമാറ്റം വീണ്ടും ചെയ്\u200cതു"
+  },
+  "newtab_quote_source": {
+    "message": "ഉറവിടം"
+  },
+  "newtab_quote_custom": {
+    "message": "ഇഷ്\u200cടാനുസൃതം"
+  },
+  "newtab_quote_collection_save_error": {
+    "message": "ഈ ഉപകരണത്തിൽ സംരക്ഷിക്കാനായില്ല. നിങ്ങളുടെ മുമ്പത്തെ ശേഖരം നിലനിർത്തിയിട്ടുണ്ട്."
+  },
+  "newtab_quote_hitokoto": {
+    "message": "Hitokoto"
+  },
+  "newtab_quote_provider_custom": {
+    "message": "ഇഷ്\u200cടാനുസൃത ശേഖരം · ഈ ഉപകരണത്തിൽ, WebDAV-മായി സമന്വയിപ്പിക്കുന്നു"
+  },
+  "newtab_quote_importing": {
+    "message": "ഇമ്പോർട്ട് ചെയ്യുന്നു…"
+  },
+  "newtab_quote_import_hint": {
+    "message": "ദിവസവും പുതിയൊരു ഉദ്ധരണി കാണിക്കും; ഷഫിൾ ഏത് സമയത്തും അത് മാറ്റും. TXT / MD: ഓരോ ഉദ്ധരണിക്കും ശൂന്യമല്ലാത്ത ഒരു ഉള്ളടക്ക വരി. പരമാവധി 1 MB, 1,000 ഉദ്ധരണികൾ, ഓരോന്നിനും 500 പ്രതീകങ്ങൾ; ഈ ഉപകരണത്തിൽ സൂക്ഷിക്കുന്നു, ബ്രൗസർ സമന്വയത്തിലല്ല; ഓണാക്കിയാൽ WebDAV ഇത് സമന്വയിപ്പിക്കും."
+  },
+  "newtab_quote_count": {
+    "message": "ഉദ്ധരണികൾ: {count}"
+  },
+  "newtab_quote_import_error": {
+    "message": "ഇമ്പോർട്ട് പരാജയപ്പെട്ടു: ഫയൽ ഫോർമാറ്റ് അല്ലെങ്കിൽ വലുപ്പ പരിധികൾ പാലിക്കുന്നില്ല. നിങ്ങളുടെ മുമ്പത്തെ ശേഖരം നിലനിർത്തിയിട്ടുണ്ട്."
+  },
+  "newtab_quote_library": {
+    "message": "ഉദ്ധരണികൾ"
+  },
+  "newtab_quote_import": {
+    "message": "ഫയൽ ഇമ്പോർട്ട് ചെയ്യുക"
+  },
+  "newtab_quote_replace": {
+    "message": "ഫയൽ മാറ്റുക"
+  },
+  "newtab_quote_shuffle_button": {
+    "message": "ഷഫിൾ"
+  },
+  "newtab_quote_font_size_reset": {
+    "message": "ഉദ്ധരണി ഫോണ്ട് വലുപ്പം പുനഃസജ്ജമാക്കുക"
+  },
+  "popup_actions_label": {
+    "message": "പേജ് പ്രവർത്തനങ്ങൾ"
+  },
+  "popup_action_shortcut": {
+    "message": "കുറുക്കുവഴി ചേർക്കുക"
+  },
+  "popup_action_copy": {
+    "message": "ലിങ്ക് പകർത്തുക"
+  },
+  "popup_copy_failed": {
+    "message": "ലിങ്ക് പകർത്താനായില്ല. വീണ്ടും ശ്രമിക്കുക."
+  },
+  "popup_theme_label": {
+    "message": "തീം"
+  },
+  "popup_link_settings": {
+    "message": "ക്രമീകരണം"
+  },
+  "popup_link_shortcuts": {
+    "message": "കീബോർഡ് കുറുക്കുവഴികൾ"
+  },
+  "popup_link_feedback": {
+    "message": "ഫീഡ്\u200cബാക്ക്"
+  },
+  "popup_sync_error": {
+    "message": "WebDAV സമന്വയം പരാജയപ്പെട്ടു"
+  },
+  "popup_sync_attention": {
+    "message": "WebDAV സമന്വയത്തിന് ശ്രദ്ധ വേണം"
+  },
+  "popup_sync_busy": {
+    "message": "WebDAV സമന്വയിപ്പിക്കുന്നു"
+  },
+  "popup_sync_waiting": {
+    "message": "WebDAV വീണ്ടും ശ്രമിക്കാൻ കാത്തിരിക്കുന്നു"
+  },
+  "popup_release_notes": {
+    "message": "പുതിയതെന്ത്"
+  },
+  "popup_section_command_bar": {
+    "message": "കമാൻഡ് ബാർ"
+  },
+  "popup_overlay_page_theme": {
+    "message": "പേജ് നിറങ്ങളുമായി പൊരുത്തപ്പെടുത്തുക"
+  },
+  "popup_overlay_open_tabs": {
+    "message": "ഡിഫോൾട്ടായി തുറന്ന ടാബുകൾ കാണിക്കുക"
+  },
+  "popup_action_shortcut_tooltip": {
+    "message": "നിങ്ങളുടെ പുതിയ ടാബ് കുറുക്കുവഴികളിലേക്ക് ചേർക്കുക"
+  },
+  "popup_action_clip_tooltip": {
+    "message": "പേജിന്റെ ഭാഗം ഒരു ഫ്ലോട്ടിംഗ് വിൻഡോയിലേക്ക് ക്ലിപ്പ് ചെയ്യുക"
+  },
+  "popup_settings_label": {
+    "message": "ദ്രുത ക്രമീകരണം"
+  },
+  "popup_sync_ready": {
+    "message": "WebDAV സമന്വയിപ്പിച്ചു"
+  },
+  "popup_open_command_bar": {
+    "message": "കമാൻഡ് ബാർ തുറക്കുക"
+  },
+  "popup_action_pip": {
+    "message": "ചിത്രത്തിനുള്ളിൽ ചിത്രം"
+  },
+  "popup_action_pip_exit": {
+    "message": "ചിത്രത്തിനുള്ളിൽ ചിത്രത്തിൽ നിന്ന് പുറത്തുകടക്കുക"
+  },
+  "popup_action_pip_tooltip": {
+    "message": "ഈ പേജിലെ വീഡിയോ ഒരു ചെറിയ വിൻഡോയിൽ ഫ്ലോട്ട് ചെയ്യുക"
+  },
+  "popup_action_pip_menu": {
+    "message": "സ്വയമേവ ചിത്രത്തിനുള്ളിൽ ചിത്രം"
+  },
+  "popup_pip_failed": {
+    "message": "ഈ വീഡിയോ ചിത്രത്തിനുള്ളിൽ ചിത്രത്തിൽ പ്ലേ ചെയ്യാനാകില്ല."
+  },
+  "popup_auto_pip_hint": {
+    "message": "ടാബ് മാറുമ്പോൾ വീഡിയോകൾ ഫ്ലോട്ട് ചെയ്യും"
+  },
+  "popup_action_unavailable": {
+    "message": "ഈ പേജിൽ ലഭ്യമല്ല"
+  },
+  "popup_action_pin_recent": {
+    "message": "സമീപകാലത്തിൽ പിൻ ചെയ്യുക"
+  },
+  "popup_action_unpin_recent": {
+    "message": "സമീപകാലത്തിൽ നിന്ന് അൺപിൻ ചെയ്യുക"
+  },
+  "popup_action_pin_recent_tooltip": {
+    "message": "പുതിയ ടാബിലെ സമീപകാലത്തിൽ പിൻ ചെയ്യുക"
+  },
+  "popup_action_unpin_recent_tooltip": {
+    "message": "പുതിയ ടാബിലെ സമീപകാലത്തിൽ നിന്ന് അൺപിൻ ചെയ്യുക"
+  },
+  "popup_recent_pinned": {
+    "message": "നിങ്ങളുടെ പുതിയ ടാബിലെ സമീപകാലത്തിൽ പിൻ ചെയ്\u200cതു"
+  },
+  "popup_recent_unpinned": {
+    "message": "സമീപകാലത്തിൽ നിന്ന് അൺപിൻ ചെയ്\u200cതു"
+  }
+}

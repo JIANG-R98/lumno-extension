@@ -128,7 +128,7 @@ function createDailyQuoteSettings(config) {
   }
 
   function renderLibrary() {
-    const count = library ? `${library.quotes.length} ${getMessage('newtab_quote_entries', 'quotes')}` : '';
+    const count = library ? getMessage('newtab_quote_count', '{count} quotes').replace('{count}', String(library.quotes.length)) : '';
     els.count.hidden = !library;
     els.countText.textContent = count;
     els.count.setAttribute('data-tooltip', library ? library.filename : '');

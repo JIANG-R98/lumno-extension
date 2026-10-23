@@ -21,7 +21,8 @@ const ALLOWLIST = [
   'generated traditional-to-simplified character table in src/shared/search/search-han-variants.js',
   'question filler words dropped from help center queries in src/shared/search/help-center-search.js',
   'episode and chapter title patterns in src/shared/progress-match.js',
-  'photographer names credited in src/newtab/wallpaper/wallpaper-catalog.js'
+  'photographer names credited in src/newtab/wallpaper/wallpaper-catalog.js',
+  'language names written in their own language in UI_LOCALES (src/shared/settings.js)'
 ];
 const I18N_CALL_RE = /(?:^|[^\w])(?:t|baseT|getMessage|formatMessage|updateSyncStatusText|attachPopconfirm|createPopconfirmWrap|createModeOption)\s*\(/;
 
@@ -123,6 +124,9 @@ function isAllowlistedLine(file, line) {
     return true;
   }
   if (file === 'src/newtab/wallpaper/wallpaper-catalog.js') {
+    return true;
+  }
+  if (file === 'src/shared/settings.js' && /^\s*\['[A-Za-z_]+', '[^']+'(?:, true)?\],?$/.test(line)) {
     return true;
   }
   if (file === 'src/shared/update-notice.js' &&

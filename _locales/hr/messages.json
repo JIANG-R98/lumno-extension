@@ -1,0 +1,3659 @@
+{
+  "ext_name": {
+    "message": "Lumno ｜ Naredbena traka i nova kartica"
+  },
+  "ext_description": {
+    "message": "Lagana naredbena traka za preglednik i pretraživanje na novoj kartici."
+  },
+  "settings_tab_general": {
+    "message": "Općenito"
+  },
+  "settings_tab_appearance": {
+    "message": "Izgled"
+  },
+  "settings_appearance_global_section_title": {
+    "message": "Globalno"
+  },
+  "settings_webpage_focus_overlay_section_title": {
+    "message": "Naredbena traka"
+  },
+  "newtab_theme_scope_label": {
+    "message": "Opseg teme"
+  },
+  "newtab_theme_scope_global": {
+    "message": "Globalno"
+  },
+  "newtab_theme_scope_home": {
+    "message": "Nova kartica"
+  },
+  "newtab_theme_scope_select_label": {
+    "message": "Primijeni promjene teme na: {scope}"
+  },
+  "newtab_theme_scope_help_label": {
+    "message": "Informacije o opsegu teme"
+  },
+  "newtab_theme_scope_help": {
+    "message": "Globalno: zadana tema za sve stranice.\nNova kartica: primjenjuje se samo na stranicu nove kartice. Odaberite Prati „Globalno” da biste je uskladili."
+  },
+  "newtab_theme_follow_global": {
+    "message": "Prati „Globalno”"
+  },
+  "newtab_search_section_title": {
+    "message": "Okvir za pretraživanje"
+  },
+  "newtab_search_width_title": {
+    "message": "Širina okvira za pretraživanje"
+  },
+  "newtab_search_width_aria": {
+    "message": "Prilagodi širinu okvira za pretraživanje na novoj kartici"
+  },
+  "newtab_search_width_standard": {
+    "message": "Standardno"
+  },
+  "newtab_search_width_wide": {
+    "message": "Široko"
+  },
+  "newtab_search_width_max": {
+    "message": "Najšire"
+  },
+  "newtab_appearance_settings_title": {
+    "message": "Postavke izgleda"
+  },
+  "newtab_help_footer_prompt": {
+    "message": "Niste sigurni čemu služi neka opcija?"
+  },
+  "newtab_help_footer_action": {
+    "message": "Posjetite centar za pomoć"
+  },
+  "newtab_more_settings": {
+    "message": "Više postavki"
+  },
+  "settings_tab_shortcuts": {
+    "message": "Izvori pretraživanja"
+  },
+  "settings_tab_blacklist": {
+    "message": "Crna lista"
+  },
+  "settings_tab_labs": {
+    "message": "Eksperimenti"
+  },
+  "settings_selection_quick_actions_title": {
+    "message": "Brze radnje za odabir"
+  },
+  "settings_selection_quick_actions_desc": {
+    "message": "Prikaži AI radnje kada odaberete tekst"
+  },
+  "settings_selection_quick_actions_provider_title": {
+    "message": "Željeni pružatelj"
+  },
+  "settings_selection_quick_actions_group_title": {
+    "message": "Pretraži u pozadini"
+  },
+  "settings_selection_quick_actions_group_desc": {
+    "message": "Sve AI stranice skupi u grupu kartica „AI pretraživanje”"
+  },
+  "selection_quick_actions_group_name": {
+    "message": "AI pretraživanje"
+  },
+  "selection_quick_action_ask": {
+    "message": "Odgovori"
+  },
+  "selection_quick_action_translate": {
+    "message": "Prevedi"
+  },
+  "selection_quick_action_explain": {
+    "message": "Objasni"
+  },
+  "selection_quick_action_summarize": {
+    "message": "Sažmi"
+  },
+  "selection_quick_action_search": {
+    "message": "Istraži"
+  },
+  "selection_quick_action_calculate": {
+    "message": "Izračunaj"
+  },
+  "selection_quick_action_open_menu": {
+    "message": "Upotrijebi Lumno s odabranim tekstom"
+  },
+  "selection_quick_action_more": {
+    "message": "Više radnji"
+  },
+  "selection_quick_action_sending": {
+    "message": "Otvaranje u pozadini…"
+  },
+  "selection_quick_action_failed": {
+    "message": "Slanje nije uspjelo. Pokušajte ponovo."
+  },
+  "selection_debug_decision_title": {
+    "message": "Odluka o odabiru"
+  },
+  "selection_debug_status_show": {
+    "message": "Prikaži"
+  },
+  "selection_debug_status_hide": {
+    "message": "Ne prikazuj"
+  },
+  "selection_debug_sort_title": {
+    "message": "Redoslijed izbornika"
+  },
+  "selection_debug_item_count": {
+    "message": "Stavki: {count}"
+  },
+  "selection_debug_reason_calculate": {
+    "message": "Otkriven je izraz, valuta ili pretvorba jedinica"
+  },
+  "selection_debug_reason_question": {
+    "message": "Otkriveno je izravno pitanje"
+  },
+  "selection_debug_reason_prose": {
+    "message": "Otkriven je dovoljno bogat neprekinut tekst"
+  },
+  "selection_debug_reason_search": {
+    "message": "Otkrivena je namjera traženja vijesti, cijena, službene stranice ili verzije"
+  },
+  "selection_debug_reason_translate": {
+    "message": "Odabrani tekst razlikuje se od jezika sučelja Lumno"
+  },
+  "selection_debug_reason_error": {
+    "message": "Otkrivena je pogreška ili iznimka"
+  },
+  "selection_debug_reason_code": {
+    "message": "Otkrivena je sintaksa koda ili kontekst koda"
+  },
+  "selection_debug_reason_term": {
+    "message": "Otkriven je smislen pojam ili kratka fraza"
+  },
+  "selection_debug_reason_explain_score": {
+    "message": "Radnja Objasni dobila je najviši rezultat"
+  },
+  "selection_debug_reason_top_score": {
+    "message": "Ova je radnja dobila najviši rezultat podudaranja"
+  },
+  "selection_debug_rejection_disabled": {
+    "message": "Brze radnje za odabir su isključene"
+  },
+  "selection_debug_rejection_sensitive": {
+    "message": "Osjetljivo polje za zaporku ili plaćanje; sadržaj nije pročitan"
+  },
+  "selection_debug_rejection_no_selection": {
+    "message": "Nije otkriven valjan odabir teksta"
+  },
+  "selection_debug_rejection_too_short": {
+    "message": "Manje od 2 znaka"
+  },
+  "selection_debug_rejection_too_long": {
+    "message": "Više od 2400 znakova"
+  },
+  "selection_debug_rejection_url": {
+    "message": "Potpuni URL"
+  },
+  "selection_debug_rejection_email": {
+    "message": "Adresa e-pošte"
+  },
+  "selection_debug_rejection_generic_ui": {
+    "message": "Općeniti tekst sučelja poput „Saznajte više / Spremi / Dalje”"
+  },
+  "selection_debug_rejection_plain_number": {
+    "message": "Običan broj bez izračuna ili pretvorbe"
+  },
+  "selection_debug_rejection_symbols": {
+    "message": "Udio simbola je previsok"
+  },
+  "selection_debug_rejection_no_intent": {
+    "message": "Nije pronađen izravan zadatak, smislen pojam ni dovoljno opsežan tekst"
+  },
+  "selection_debug_primary_meta": {
+    "message": "Primarno: {action} · Rezultat {score} · Pouzdanost: {confidence}"
+  },
+  "selection_debug_confidence_high": {
+    "message": "Visoka"
+  },
+  "selection_debug_confidence_medium": {
+    "message": "Srednja"
+  },
+  "selection_debug_confidence_low": {
+    "message": "Niska"
+  },
+  "selection_debug_sort_primary_cause": {
+    "message": "{reason}, rezultat {score}"
+  },
+  "selection_debug_sort_fallback_cause": {
+    "message": "Opća zamjenska opcija, dodana fiksnim redoslijedom i bez duplikata"
+  },
+  "selection_debug_sort_footer": {
+    "message": "Prva stavka ima najviši rezultat namjere; ostale slijede redoslijed „Objasni → Istraži → Prevedi”."
+  },
+  "settings_global_section_title": {
+    "message": "Globalne postavke"
+  },
+  "settings_feedback_support_section_title": {
+    "message": "Povratne informacije i podrška"
+  },
+  "settings_feedback_support_wechat_action": {
+    "message": "Pridružite se WeChat grupi"
+  },
+  "settings_help_center_title": {
+    "message": "Centar za pomoć"
+  },
+  "settings_help_center_desc": {
+    "message": "Niste sigurni kako neka značajka radi? Ovdje je objašnjena svaka značajka."
+  },
+  "settings_help_center_action": {
+    "message": "Otvori"
+  },
+  "settings_help_center_ask_action": {
+    "message": "Pitajte iz okvira za pretraživanje"
+  },
+  "settings_help_center_ask_caption": {
+    "message": "Na novoj kartici ili u naredbenoj traci upišite lm, pritisnite Tab, a zatim napišite pitanje."
+  },
+  "settings_help_center_ask_demo_query": {
+    "message": "kako promijeniti prečac"
+  },
+  "settings_help_center_ask_demo_result_1_title": {
+    "message": "Tipkovni prečaci"
+  },
+  "settings_help_center_ask_demo_result_1_detail": {
+    "message": "Promjena prečaca"
+  },
+  "settings_help_center_ask_demo_result_2_title": {
+    "message": "Prečaci i oznake"
+  },
+  "settings_help_center_ask_demo_result_2_detail": {
+    "message": "Promjena ikone prečaca"
+  },
+  "settings_feedback_support_review_action": {
+    "message": "Ocijenite Lumno"
+  },
+  "settings_feedback_support_github_issue_action": {
+    "message": "Prijavi problem"
+  },
+  "settings_feedback_support_contact_author_action": {
+    "message": "Kontaktirajte autora"
+  },
+  "settings_onboarding_tutorial_action": {
+    "message": "Uvodni obilazak"
+  },
+  "settings_language_title": {
+    "message": "Jezik"
+  },
+  "settings_language_desc": {
+    "message": "Odaberite jezik sučelja"
+  },
+  "settings_language_machine_note": {
+    "message": "Preveo AI. Ako nešto ne zvuči ispravno, pošaljite nam povratne informacije."
+  },
+  "settings_language_search_placeholder": {
+    "message": "Pretraži jezike"
+  },
+  "settings_language_no_results": {
+    "message": "Nema odgovarajućih jezika"
+  },
+  "settings_version_label": {
+    "message": "Verzija"
+  },
+  "settings_version_tooltip": {
+    "message": "Prikaži popis promjena"
+  },
+  "language_system": {
+    "message": "Prati jezik preglednika"
+  },
+  "settings_recent_title": {
+    "message": "Sadržaj na dnu nove kartice"
+  },
+  "settings_newtab_section_title": {
+    "message": "Nova kartica"
+  },
+  "settings_search_results_section_title": {
+    "message": "Postavke rezultata pretraživanja"
+  },
+  "settings_search_result_priority_title": {
+    "message": "Prioritet prvog rezultata"
+  },
+  "settings_search_result_tab_position_title": {
+    "message": "Položaj kartice s rezultatom"
+  },
+  "search_result_tab_position_end": {
+    "message": "Kraj trake kartica (dno)"
+  },
+  "search_result_tab_position_after_current": {
+    "message": "Desno od trenutačne kartice (ispod)"
+  },
+  "search_result_tab_position_before_current": {
+    "message": "Lijevo od trenutačne kartice (iznad)"
+  },
+  "settings_search_fuzzy_pinyin_title": {
+    "message": "Neizraziti pinyin"
+  },
+  "settings_search_fuzzy_pinyin_desc": {
+    "message": "Kada je uključeno, pretraživanja pinyinom i inicijalima tretiraju z i zh, c i ch, s i sh, n i l, an i ang, en i eng te in i ing kao isto"
+  },
+  "settings_search_result_sources_title": {
+    "message": "Prikazane vrste rezultata"
+  },
+  "settings_search_result_display_limit_title": {
+    "message": "Najviše prikazanih rezultata"
+  },
+  "settings_overlay_open_tabs_default_visible_title": {
+    "message": "Prikaži sve otvorene kartice prema zadanim postavkama kad se Lumno otvori na web-stranici"
+  },
+  "settings_favicon_enhanced_fetch_title": {
+    "message": "Napredno dohvaćanje ikona i boja teme"
+  },
+  "settings_favicon_enhanced_fetch_desc": {
+    "message": "Ako vidite upit za pristup lokalnoj mreži, isključite ovo. Lumno više neće izravno učitavati slike s web-lokacija, ali ikone iz predmemorije preglednika i usluge ikona trećih strana ostaju dostupne."
+  },
+  "favicon_blacklist_section_desc": {
+    "message": "Izuzmi po web-lokaciji"
+  },
+  "favicon_blacklist_add": {
+    "message": "Dodaj pravilo izuzimanja"
+  },
+  "favicon_blacklist_removed_toast": {
+    "message": "Uklonjeno iz izuzeća ikona i teme"
+  },
+  "favicon_blacklist_clear": {
+    "message": "Izbriši pravila izuzimanja"
+  },
+  "search_result_priority_autocomplete": {
+    "message": "Prvo dovršavanje"
+  },
+  "search_result_priority_search": {
+    "message": "Prvo pretraživanje"
+  },
+  "settings_recent_desc": {
+    "message": "Prikaži nedavne / najposjećenije web-lokacije"
+  },
+  "settings_recent_sites_title": {
+    "message": "Pločice web-lokacija"
+  },
+  "newtab_recent_rows_title": {
+    "message": "Redovi pločica web-lokacija"
+  },
+  "settings_newtab_width_title": {
+    "message": "Širina sadržaja nove kartice"
+  },
+  "settings_bookmarks_title": {
+    "message": "Redovi oznaka"
+  },
+  "settings_bookmark_folder_icons_visible_title": {
+    "message": "Prikaži ikone u mapama oznaka"
+  },
+  "settings_document_pip_title": {
+    "message": "Isječak stranice"
+  },
+  "settings_document_pip_desc": {
+    "message": "Izrežite dio stranice u plutajući prikaz radi referenciranja i usporedbe jedno uz drugo"
+  },
+  "settings_document_pip_unsupported_tooltip": {
+    "message": "Isječak stranice oslanja se na Document Picture-in-Picture, koji Firefox još ne podržava."
+  },
+  "document_pip_command_title": {
+    "message": "Pokreni isječak stranice"
+  },
+  "document_pip_command_action": {
+    "message": "Započni isječak"
+  },
+  "settings_update_notice_title": {
+    "message": "Obavijesti o ažuriranju"
+  },
+  "settings_update_notice_desc": {
+    "message": "Prikaži novosti nakon ažuriranja Lumno na novu verziju"
+  },
+  "settings_motion_effects_title": {
+    "message": "Efekti pokreta"
+  },
+  "settings_motion_effects_desc": {
+    "message": "Isključite ovo ako izvedba zapinje ili želite brže otvaranje"
+  },
+  "settings_simple_mode_title": {
+    "message": "Minimalni način"
+  },
+  "settings_simple_mode_desc": {
+    "message": "Uklanja više ukrasnih elemenata za čišći okvir za pretraživanje"
+  },
+  "settings_auto_pip_title": {
+    "message": "Automatska slika u slici"
+  },
+  "settings_auto_pip_desc": {
+    "message": "Kada promijenite karticu dok se videozapis reproducira, on se nastavlja reproducirati u plutajućem prozoru"
+  },
+  "settings_auto_pip_unsupported_tooltip": {
+    "message": "Firefox ne dopušta proširenjima da automatski prebace videozapise u način slike u slici, pa ova značajka nije dostupna."
+  },
+  "settings_pinned_tab_recovery_title": {
+    "message": "Vrati prikvačene kartice nakon ponovnog pokretanja"
+  },
+  "settings_pinned_tab_recovery_desc": {
+    "message": "Sprema prikvačene web-kartice koje se mogu vratiti i vraća one koje nedostaju nakon ponovnog pokretanja preglednika"
+  },
+  "settings_number_shortcut_instant_title": {
+    "message": "Jedan pritisak tipke Command za brojčani skok"
+  },
+  "settings_number_shortcut_instant_desc": {
+    "message": "Kada je uključeno, jedan pritisak tipke Command/Ctrl u naredbenoj traci ili prijedlozima pretraživanja odmah prikazuje oznake za brojčani skok; „Otvori u pozadinskoj kartici” više ne koristi Command (srednji klik i dalje otvara u pozadini)"
+  },
+  "settings_macos_ctrl_suggestion_navigation_title": {
+    "message": "Navigacija tipkovnicom na Macu"
+  },
+  "settings_macos_ctrl_suggestion_navigation_tooltip": {
+    "message": "Radi na novoj kartici i u naredbenoj traci na macOS-u. Hvala @wanghanzhen na doprinosu."
+  },
+  "settings_macos_ctrl_suggestion_navigation_desc": {
+    "message": "Koristite Ctrl+N / Ctrl+P za odabir sljedećeg / prethodnog rezultata"
+  },
+  "document_pip_picker_hint": {
+    "message": "Pomičite pokazivač po stranici da biste odabrali element. Kliknite za otvaranje PiP-a, pomičite kotačić za promjenu nadređenog elementa, Esc za odustajanje."
+  },
+  "document_pip_picker_started": {
+    "message": "Kliknite sadržaj koji želite izdvojiti, pomičite kotačić za promjenu opsega ili pritisnite Esc za odustajanje."
+  },
+  "document_pip_picker_cancelled": {
+    "message": "Odabir sadržaja zatvoren"
+  },
+  "document_pip_picker_closed": {
+    "message": "Plutajući prozor sa sadržajem zatvoren"
+  },
+  "document_pip_picker_unsupported": {
+    "message": "Ova stranica ne podržava Document Picture-in-Picture."
+  },
+  "document_pip_picker_conflict_video_pip": {
+    "message": "Videozapis je već u načinu slike u slici. Zatvorite ga prije izrezivanja sadržaja."
+  },
+  "document_pip_picker_invalid": {
+    "message": "Ovo područje još se ne može izdvojiti. Pokušajte s većim područjem sadržaja."
+  },
+  "document_pip_picker_open_failed": {
+    "message": "Otvaranje plutajućeg prozora nije uspjelo. Pokušajte s drugim područjem."
+  },
+  "document_pip_picker_button_reselect": {
+    "message": "Odaberi ponovo"
+  },
+  "document_pip_picker_button_return": {
+    "message": "Natrag"
+  },
+  "document_pip_picker_button_close": {
+    "message": "Zatvori"
+  },
+  "settings_newtab_scope_desc": {
+    "message": "Nova kartica"
+  },
+  "settings_overlay_tab_priority_title": {
+    "message": "Brzi prelazak na otvorene kartice"
+  },
+  "settings_overlay_tab_priority_desc": {
+    "message": "Kada se unos podudara s otvorenom karticom, Enter izvršava radnju kartice prvog prijedloga"
+  },
+  "overlay_tab_priority_switch_first": {
+    "message": "Enter prelazi na otvorenu karticu"
+  },
+  "overlay_tab_priority_newtab_first": {
+    "message": "Enter otvara u novoj kartici"
+  },
+  "settings_shortcuts_title": {
+    "message": "Otvori naredbenu traku"
+  },
+  "settings_shortcuts_browser_desc_prefix": {
+    "message": "Otvorite "
+  },
+  "settings_shortcuts_browser_desc_path_extensions": {
+    "message": "Proširenja"
+  },
+  "settings_shortcuts_browser_desc_path_extensions__firefox": {
+    "message": "Dodaci i teme"
+  },
+  "settings_shortcuts_browser_desc_path_shortcuts": {
+    "message": "Tipkovni prečaci"
+  },
+  "settings_shortcuts_browser_desc_path_shortcuts__firefox": {
+    "message": "Upravljaj prečacima proširenja"
+  },
+  "settings_shortcuts_browser_desc_suffix": {
+    "message": " da biste promijenili prečace"
+  },
+  "settings_shortcuts_dia_tag": {
+    "message": "Upotreba u Dia"
+  },
+  "settings_shortcuts_dia_tooltip": {
+    "message": "U pregledniku Dia, zbog ograničenja preglednika, značajke nove kartice u Lumno trenutačno nisu dostupne, ali naredbena traka i dalje radi normalno.\n\nAko tipkovni prečac ne radi u pregledniku Dia, kliknite gumb dolje desno da biste otvorili stranicu postavki prečaca preglednika, a zatim za „Open command bar” promijenite In Dia u Global."
+  },
+  "settings_shortcuts_section_title": {
+    "message": "Postavke prečaca"
+  },
+  "settings_shortcuts_desc": {
+    "message": "Otvara naredbenu traku Lumno"
+  },
+  "overlay_close_other_tabs_tooltip": {
+    "message": "Zatvori ostale kartice"
+  },
+  "overlay_close_other_tabs_confirm": {
+    "message": "Zatvoriti ostale kartice u ovom prozoru? Prikvačene i grupirane kartice ostaju otvorene."
+  },
+  "overlay_close_other_tabs_confirm_button": {
+    "message": "Zatvori"
+  },
+  "settings_shortcuts_status": {
+    "message": "Trenutačno: {shortcut}"
+  },
+  "settings_shortcuts_unset": {
+    "message": "Nije postavljeno"
+  },
+  "settings_shortcuts_action": {
+    "message": "Otvori postavke prečaca"
+  },
+  "settings_shortcuts_browser_tooltip": {
+    "message": "U preglednicima temeljenima na Chromiumu prečac za naredbenu traku postavlja se ili mijenja na stranici prečaca proširenja."
+  },
+  "settings_shortcuts_browser_tooltip__firefox": {
+    "message": "U Firefoxu prečac za naredbenu traku postavite ili promijenite pod Upravljaj prečacima proširenja u Upravitelju dodataka."
+  },
+  "settings_shortcuts_save": {
+    "message": "Spremi prečac"
+  },
+  "settings_shortcuts_reset": {
+    "message": "Vrati zadano"
+  },
+  "settings_shortcuts_record_placeholder": {
+    "message": "Pritisnite prečac"
+  },
+  "settings_shortcuts_empty_state": {
+    "message": "Nema"
+  },
+  "settings_shortcuts_invalid": {
+    "message": "Nevažeći prečac. Upotrijebite kombinaciju tipki kao što je Ctrl+K."
+  },
+  "settings_restricted_title": {
+    "message": "Ponašanje na ograničenim stranicama"
+  },
+  "settings_restricted_tooltip": {
+    "message": "Na ograničenim stranicama (na primjer chrome://) ne može se otvoriti naredbena traka. Pritisak prečaca slijedi ovdje postavljeno pravilo."
+  },
+  "settings_restricted_tooltip__firefox": {
+    "message": "Na ograničenim stranicama (na primjer stranicama about: i web-lokaciji Firefox dodataka) ne može se otvoriti naredbena traka. Pritisak prečaca slijedi ovdje postavljeno pravilo."
+  },
+  "restricted_action_default": {
+    "message": "Idi na novu karticu Lumno"
+  },
+  "restricted_action_none": {
+    "message": "Prati postavku preglednika"
+  },
+  "newtab_file_access_notice_title": {
+    "message": "Da biste upotrebljavali Lumno na lokalnim PDF ili HTML stranicama, omogućite pristup URL-ovima datoteka"
+  },
+  "newtab_file_access_notice_body": {
+    "message": "Lumno još nema pristup URL-ovima datoteka. Otvorite stranicu s pojedinostima proširenja, uključite Dopusti pristup URL-ovima datoteka, a zatim se vratite na tu stranicu i ponovo pritisnite prečac."
+  },
+  "newtab_file_access_notice_open_cta": {
+    "message": "Omogući pristup"
+  },
+  "newtab_file_access_notice_dismiss": {
+    "message": "Možda kasnije"
+  },
+  "newtab_file_access_notice_close": {
+    "message": "Zatvori obavijest"
+  },
+  "recent_count_4": {
+    "message": "Prikaži 1 red"
+  },
+  "recent_count_8": {
+    "message": "Prikaži 2 reda"
+  },
+  "recent_count_off": {
+    "message": "Sakrij"
+  },
+  "bookmark_count_off": {
+    "message": "Sakrij"
+  },
+  "bookmark_count_4": {
+    "message": "Prikaži 1 red"
+  },
+  "bookmark_count_8": {
+    "message": "Prikaži 8"
+  },
+  "bookmark_count_16": {
+    "message": "Prikaži 16"
+  },
+  "bookmark_count_32": {
+    "message": "Prikaži 32"
+  },
+  "settings_bookmark_columns_title": {
+    "message": "Oznaka po retku"
+  },
+  "settings_bookmark_columns_desc": {
+    "message": "Postavlja najveći broj po retku; uži zasloni automatski se prilagođavaju"
+  },
+  "settings_bookmark_adaptive_count_tooltip": {
+    "message": "Ovo je najveći broj kada ima dovoljno širine. Stvarni prikazani broj prilagođava se dostupnom prostoru."
+  },
+  "bookmark_columns_4": {
+    "message": "4 po retku"
+  },
+  "bookmark_columns_6": {
+    "message": "6 po retku"
+  },
+  "bookmark_columns_8": {
+    "message": "8 po retku"
+  },
+  "newtab_width_standard": {
+    "message": "Standardno"
+  },
+  "newtab_width_wide": {
+    "message": "Široko (preporučeno)"
+  },
+  "settings_overlay_size_title": {
+    "message": "Veličina"
+  },
+  "overlay_size_compact": {
+    "message": "Kompaktno"
+  },
+  "overlay_size_standard": {
+    "message": "Standardno"
+  },
+  "overlay_size_large": {
+    "message": "Veliko"
+  },
+  "settings_overlay_enter_animation_title": {
+    "message": "Animacija otvaranja"
+  },
+  "overlay_enter_animation_elastic": {
+    "message": "Opruga"
+  },
+  "overlay_enter_animation_fade": {
+    "message": "Postupno"
+  },
+  "settings_overlay_font_title": {
+    "message": "Lokalni font"
+  },
+  "settings_overlay_font_desc": {
+    "message": "Čita fontove instalirane na ovom računalu. Primjenjuje se samo na ovom uređaju i ne sinkronizira se."
+  },
+  "settings_overlay_font_missing": {
+    "message": "Font „{font}” nije instaliran na ovom uređaju pa se koristi zadani font"
+  },
+  "settings_overlay_font_missing_reset": {
+    "message": "Koristi zadano"
+  },
+  "settings_overlay_font_fallback_missing": {
+    "message": "Font „{font}” nije instaliran na ovom uređaju pa se zamjenski font preskače"
+  },
+  "settings_overlay_font_fallback_missing_reset": {
+    "message": "Očisti"
+  },
+  "settings_overlay_font_default": {
+    "message": "Zadano"
+  },
+  "settings_overlay_font_search_placeholder": {
+    "message": "Pretraži fontove"
+  },
+  "settings_overlay_font_no_results": {
+    "message": "Nema odgovarajućih fontova"
+  },
+  "settings_overlay_font_fallback_title": {
+    "message": "Lokalni zamjenski font"
+  },
+  "settings_overlay_font_fallback_desc": {
+    "message": "Koristi se za znakove koji nedostaju prvom fontu, primjerice kineske znakove uz latinični font"
+  },
+  "settings_overlay_font_fallback_none": {
+    "message": "Nema"
+  },
+  "settings_overlay_font_unsupported_tooltip": {
+    "message": "Firefox ne dopušta proširenjima da navedu instalirane fontove pa se ovdje koristi zadani font"
+  },
+  "settings_overlay_page_theme_adaptation_title": {
+    "message": "Prilagodi boje teme svakoj web-stranici"
+  },
+  "settings_overlay_page_theme_adaptation_tooltip": {
+    "message": "Prikazuje se samo kad je način teme postavljen na Prati sustav. Kada je isključeno, svijetli/tamni način više se neće prilagođavati boji teme web-stranice."
+  },
+  "recent_mode_latest": {
+    "message": "Prikaži nedavne"
+  },
+  "recent_mode_most": {
+    "message": "Prikaži najposjećenije"
+  },
+  "settings_toggle_on": {
+    "message": "Uključeno"
+  },
+  "settings_theme_title": {
+    "message": "Način teme"
+  },
+  "settings_theme_desc": {
+    "message": "Prati sustav ili odaberite ručno"
+  },
+  "settings_theme_system": {
+    "message": "Prati sustav"
+  },
+  "settings_theme_light": {
+    "message": "Svijetla"
+  },
+  "settings_theme_dark": {
+    "message": "Tamna"
+  },
+  "settings_newtab_wordmark_title": {
+    "message": "Sadržaj iznad trake za pretraživanje"
+  },
+  "newtab_top_content_brand": {
+    "message": "Logotip"
+  },
+  "newtab_top_content_time": {
+    "message": "Vrijeme"
+  },
+  "newtab_top_content_off": {
+    "message": "Sakrij"
+  },
+  "newtab_time_font_title": {
+    "message": "Font vremena"
+  },
+  "newtab_time_font_weight_title": {
+    "message": "Debljina fonta vremena"
+  },
+  "newtab_time_font_weight_reset": {
+    "message": "Vrati debljinu fonta vremena"
+  },
+  "newtab_time_font_size_title": {
+    "message": "Veličina vremena"
+  },
+  "newtab_time_font_size_reset": {
+    "message": "Vrati veličinu vremena"
+  },
+  "newtab_time_opacity_title": {
+    "message": "Neprozirnost vremena"
+  },
+  "newtab_time_opacity_reset": {
+    "message": "Vrati neprozirnost vremena"
+  },
+  "newtab_time_ink_title": {
+    "message": "Boja vremena"
+  },
+  "newtab_time_ink_auto": {
+    "message": "Automatski"
+  },
+  "newtab_time_ink_light": {
+    "message": "Svijetla"
+  },
+  "newtab_time_ink_dark": {
+    "message": "Tamna"
+  },
+  "newtab_time_show_seconds_title": {
+    "message": "Prikaži sekunde"
+  },
+  "newtab_time_12_hour_title": {
+    "message": "12-satni format"
+  },
+  "settings_newtab_page_buttons_title": {
+    "message": "Gumbi stranice"
+  },
+  "settings_newtab_feedback_button_visible_title": {
+    "message": "Prikaži gumb za povratne informacije"
+  },
+  "settings_newtab_appearance_button_visible_title": {
+    "message": "Prikaži gumb Izgled"
+  },
+  "settings_newtab_shortcuts_title": {
+    "message": "Prečaci"
+  },
+  "settings_newtab_shortcut_add_title": {
+    "message": "Prikaži „+”"
+  },
+  "settings_newtab_shortcut_dock_magnification_title": {
+    "message": "Povećanje u stilu macOS Docka"
+  },
+  "settings_newtab_shortcut_width_title": {
+    "message": "Širina prečaca"
+  },
+  "settings_newtab_shortcut_columns_title": {
+    "message": "Prečaca po retku"
+  },
+  "settings_newtab_shortcut_size_title": {
+    "message": "Veličina prečaca"
+  },
+  "settings_newtab_shortcut_gap_title": {
+    "message": "Razmak prečaca"
+  },
+  "settings_newtab_shortcut_size_reset": {
+    "message": "Vrati veličinu prečaca"
+  },
+  "settings_newtab_shortcut_gap_reset": {
+    "message": "Vrati razmak prečaca"
+  },
+  "settings_wallpaper_title": {
+    "message": "Pozadina nove kartice"
+  },
+  "settings_wallpaper_desc": {
+    "message": "Prenesite lokalnu sliku kao pozadinu nove kartice"
+  },
+  "settings_wallpaper_upload": {
+    "message": "Prenesi sliku"
+  },
+  "settings_wallpaper_remove": {
+    "message": "Ukloni"
+  },
+  "settings_wallpaper_fit_cover": {
+    "message": "Ispuni"
+  },
+  "settings_wallpaper_fit_contain": {
+    "message": "Prilagodi"
+  },
+  "settings_wallpaper_status_none": {
+    "message": "Pozadina nije prenesena"
+  },
+  "settings_wallpaper_status_ready": {
+    "message": "Pozadina je prenesena"
+  },
+  "settings_wallpaper_status_local_only": {
+    "message": "Pozadina je prenesena (samo ovaj uređaj)"
+  },
+  "settings_wallpaper_status_missing": {
+    "message": "Datoteka pozadine nedostaje. Prenesite je ponovo."
+  },
+  "settings_wallpaper_status_processing": {
+    "message": "Obrada…"
+  },
+  "settings_wallpaper_upload_done": {
+    "message": "Pozadina je ažurirana"
+  },
+  "settings_wallpaper_remove_done": {
+    "message": "Pozadina je uklonjena"
+  },
+  "settings_wallpaper_error_type": {
+    "message": "Prenesite slikovnu datoteku (JPG / PNG / WEBP)."
+  },
+  "settings_wallpaper_error_oversize": {
+    "message": "Slika je prevelika. Prenesite datoteku manju od 8MB."
+  },
+  "settings_wallpaper_error_oversize_after_compress": {
+    "message": "Slika je i nakon sažimanja prevelika. Pokušajte s manjom slikom."
+  },
+  "settings_wallpaper_error_save": {
+    "message": "Spremanje pozadine nije uspjelo. Pokušajte ponovo."
+  },
+  "newtab_wallpaper_title": {
+    "message": "Pozadina"
+  },
+  "newtab_logo_title": {
+    "message": "Logotip"
+  },
+  "newtab_favicon_title": {
+    "message": "Favicon nove kartice"
+  },
+  "newtab_favicon_name_default": {
+    "message": "Zadano"
+  },
+  "newtab_favicon_name_alternate": {
+    "message": "Alternativno"
+  },
+  "newtab_favicon_select_label": {
+    "message": "Odaberi favicon {name}"
+  },
+  "newtab_favicon_save_error": {
+    "message": "Spremanje favicona nije uspjelo"
+  },
+  "newtab_wallpaper_source_title": {
+    "message": "Izvor"
+  },
+  "newtab_wallpaper_builtin_section": {
+    "message": "Ugrađeno"
+  },
+  "newtab_wallpaper_local_section": {
+    "message": "Lokalno"
+  },
+  "newtab_wallpaper_toggle_label": {
+    "message": "Uključi ili isključi pozadinu"
+  },
+  "newtab_wallpaper_select_label": {
+    "message": "Odaberi {name}"
+  },
+  "newtab_wallpaper_add_local": {
+    "message": "Dodaj lokalnu pozadinu"
+  },
+  "newtab_wallpaper_mode_sync_title": {
+    "message": "Ista za svijetli i tamni način"
+  },
+  "newtab_wallpaper_mode_sync_toggle_label": {
+    "message": "Koristi istu pozadinu za svijetli i tamni način"
+  },
+  "newtab_wallpaper_mode_row_title": {
+    "message": "Način"
+  },
+  "newtab_wallpaper_mode_tabs_label": {
+    "message": "Način boja pozadine"
+  },
+  "newtab_wallpaper_light_mode_tab": {
+    "message": "Svijetli"
+  },
+  "newtab_wallpaper_dark_mode_tab": {
+    "message": "Tamni"
+  },
+  "newtab_wallpaper_mode_select_label": {
+    "message": "Uredi pozadinu za način: {mode}"
+  },
+  "newtab_wallpaper_sources_feature_hint_badge": {
+    "message": "Novo"
+  },
+  "newtab_wallpaper_sources_feature_hint_text": {
+    "message": "Nove pozadine: odabrane zbirke prirode, gradova i umjetnosti koje se mogu ažurirati svaki dan ili dodajte pozadinu putem poveznice na sliku."
+  },
+  "newtab_wallpaper_sources_feature_hint_close": {
+    "message": "Odbaci savjet o novim pozadinama"
+  },
+  "newtab_webdav_feature_hint_badge": {
+    "message": "Beta"
+  },
+  "newtab_webdav_feature_hint_text": {
+    "message": "Isprobajte WebDAV sinkronizaciju: uskladite postavke, ikone i pozadine putem WebDAV diska ili NAS-a, čak i među preglednicima."
+  },
+  "newtab_webdav_feature_hint_link": {
+    "message": "Postavi"
+  },
+  "newtab_webdav_feature_hint_close": {
+    "message": "Odbaci savjet o WebDAV-u"
+  },
+  "newtab_help_center_ask_feature_hint_badge": {
+    "message": "Novo"
+  },
+  "newtab_help_center_ask_feature_hint_text": {
+    "message": "Upišite lm, pritisnite Tab i pitajte centar za pomoć."
+  },
+  "newtab_help_center_ask_feature_hint_link": {
+    "message": "Isprobajte"
+  },
+  "newtab_help_center_ask_feature_hint_close": {
+    "message": "Odbaci savjet o centru za pomoć"
+  },
+  "newtab_ai_quick_jump_feature_hint_badge": {
+    "message": "Novo"
+  },
+  "newtab_ai_quick_jump_feature_hint_text": {
+    "message": "Jednim klikom otvorite popularne AI web-lokacije s upitom. Pokušajte upisati „gemini” i pritisnuti Tab."
+  },
+  "newtab_ai_quick_jump_feature_hint_link": {
+    "message": "Podržane lokacije"
+  },
+  "newtab_ai_quick_jump_feature_hint_close": {
+    "message": "Odbaci savjet o brzom skoku na AI"
+  },
+  "newtab_tab_switcher_feature_hint_badge": {
+    "message": "Novo"
+  },
+  "newtab_tab_switcher_feature_hint_text": {
+    "message": "Pritisnite {shortcut} da biste otvorili izmjenjivač kartica i prelazili između nedavnih kartica bez miša."
+  },
+  "newtab_tab_switcher_feature_hint_close": {
+    "message": "Odbaci savjet o izmjenjivaču kartica"
+  },
+  "newtab_input_auto_focus_title": {
+    "message": "Automatski fokusiraj unos"
+  },
+  "newtab_input_auto_focus_help_label": {
+    "message": "Informacije o automatskom fokusu unosa"
+  },
+  "newtab_input_auto_focus_help": {
+    "message": "Ako radije koristite izvornu adresnu traku preglednika, isključite ovu opciju. URL proširenja više se neće prikazivati u adresnoj traci."
+  },
+  "update_notice_badge": {
+    "message": "Ažurirano na {version}"
+  },
+  "update_notice_text_fallback": {
+    "message": "Pogledajte što je novo u ovom ažuriranju"
+  },
+  "update_notice_link": {
+    "message": "Popis promjena"
+  },
+  "update_notice_close": {
+    "message": "Odbaci obavijest o ažuriranju"
+  },
+  "engagement_notice_badge": {
+    "message": "Lumno"
+  },
+  "engagement_notice_text": {
+    "message": "Sviđa vam se Lumno? Zašto ne biste"
+  },
+  "engagement_notice_connector": {
+    "message": "ili"
+  },
+  "engagement_notice_trailing": {
+    "message": "i javili se."
+  },
+  "engagement_notice_review": {
+    "message": "ostavili 5 zvjezdica"
+  },
+  "engagement_notice_community": {
+    "message": "nas pronašli na X-u"
+  },
+  "engagement_notice_close": {
+    "message": "Odbaci poziv na ocjenjivanje i zajednicu"
+  },
+  "newtab_bookmark_cascade_debug_enable": {
+    "message": "Prikaži sigurnosni trokut izbornika oznaka"
+  },
+  "newtab_bookmark_cascade_debug_disable": {
+    "message": "Sakrij sigurnosni trokut izbornika oznaka"
+  },
+  "newtab_bookmark_cascade_debug_open_label": {
+    "message": "Otvori"
+  },
+  "newtab_bookmark_cascade_debug_switch_label": {
+    "message": "Prebaci"
+  },
+  "newtab_bookmark_cascade_debug_safe_label": {
+    "message": "Sigurno"
+  },
+  "newtab_bookmark_cascade_debug_close_label": {
+    "message": "Zatvori"
+  },
+  "newtab_feedback_button_aria": {
+    "message": "Pošalji povratne informacije"
+  },
+  "newtab_feedback_menu_aria": {
+    "message": "Kanali za povratne informacije"
+  },
+  "newtab_feedback_x_label": {
+    "message": "X"
+  },
+  "newtab_feedback_x_tooltip": {
+    "message": "Kontaktirajte nas na X-u"
+  },
+  "newtab_feedback_github_issue_label": {
+    "message": "GitHub Issue"
+  },
+  "newtab_feedback_github_issue_tooltip": {
+    "message": "Otvorite GitHub issue"
+  },
+  "newtab_feedback_chrome_review_label": {
+    "message": "Ocjena u trgovini"
+  },
+  "newtab_feedback_chrome_review_tooltip": {
+    "message": "Ocijenite Lumno u trgovini proširenja"
+  },
+  "newtab_feedback_mail_label": {
+    "message": "E-pošta"
+  },
+  "newtab_feedback_mail_tooltip": {
+    "message": "Slanje e-pošte"
+  },
+  "newtab_feedback_wechat_label": {
+    "message": "WeChat"
+  },
+  "newtab_feedback_wechat_tooltip": {
+    "message": "Pridružite se WeChat grupi"
+  },
+  "newtab_feedback_wechat_panel_title": {
+    "message": "Prijave grešaka i zahtjevi za značajke"
+  },
+  "newtab_feedback_wechat_refresh_tooltip": {
+    "message": "Osvježi QR kôd"
+  },
+  "newtab_feedback_wechat_refresh_success": {
+    "message": "Učitan je najnoviji QR kôd"
+  },
+  "newtab_feedback_wechat_refresh_error": {
+    "message": "Osvježavanje nije uspjelo. Pokušajte ponovo."
+  },
+  "newtab_feedback_wechat_close_tooltip": {
+    "message": "Zatvori"
+  },
+  "newtab_feedback_wechat_qr_title": {
+    "message": "QR kôd WeChat grupe"
+  },
+  "newtab_feedback_wechat_qr_alt": {
+    "message": "QR kôd Lumno WeChat grupe"
+  },
+  "newtab_feedback_mail_subject": {
+    "message": "Povratne informacije za Lumno"
+  },
+  "newtab_feedback_mail_source_label": {
+    "message": "Izvor"
+  },
+  "newtab_feedback_mail_version_label": {
+    "message": "Verzija Lumno"
+  },
+  "newtab_feedback_mail_language_label": {
+    "message": "Jezik"
+  },
+  "newtab_feedback_mail_os_label": {
+    "message": "OS"
+  },
+  "newtab_feedback_mail_browser_label": {
+    "message": "Preglednik"
+  },
+  "newtab_wallpaper_delete_local": {
+    "message": "Izbriši uvezenu pozadinu"
+  },
+  "newtab_wallpaper_custom_name": {
+    "message": "Lokalna pozadina"
+  },
+  "newtab_wallpaper_overlay_opacity": {
+    "message": "Efekt maske"
+  },
+  "newtab_wallpaper_overlay_transparent_tick": {
+    "message": "Prozirno"
+  },
+  "newtab_wallpaper_overlay_default_tick": {
+    "message": "Zadano"
+  },
+  "newtab_wallpaper_overlay_cover_tick": {
+    "message": "Prekriveno"
+  },
+  "newtab_wallpaper_effect_title": {
+    "message": "Filtar pozadine"
+  },
+  "newtab_wallpaper_effect_strength": {
+    "message": "Jačina uzorkovanja"
+  },
+  "newtab_wallpaper_effect_blur_strength": {
+    "message": "Jačina zamućenja"
+  },
+  "newtab_wallpaper_effect_size": {
+    "message": "Veličina"
+  },
+  "newtab_wallpaper_effect_spacing": {
+    "message": "Razmak"
+  },
+  "newtab_wallpaper_effect_texture": {
+    "message": "Tekstura"
+  },
+  "newtab_wallpaper_effect_blocks_size": {
+    "message": "Veličina blokova"
+  },
+  "newtab_wallpaper_effect_crt_strength": {
+    "message": "Intenzitet prikaza"
+  },
+  "newtab_wallpaper_effect_crt_bloom": {
+    "message": "Sjaj"
+  },
+  "newtab_wallpaper_effect_crt_rgb_offset": {
+    "message": "RGB pomak"
+  },
+  "newtab_wallpaper_effect_crt_curvature": {
+    "message": "Zakrivljenost zaslona"
+  },
+  "newtab_wallpaper_effect_none": {
+    "message": "Isključeno"
+  },
+  "newtab_wallpaper_effect_blur": {
+    "message": "Mutno staklo"
+  },
+  "newtab_wallpaper_effect_grain": {
+    "message": "Zrnatost"
+  },
+  "newtab_wallpaper_effect_blocks": {
+    "message": "Blokovi"
+  },
+  "newtab_wallpaper_effect_halftone": {
+    "message": "Poluton"
+  },
+  "newtab_wallpaper_effect_dither": {
+    "message": "Dithering"
+  },
+  "newtab_wallpaper_effect_ascii": {
+    "message": "ASCII"
+  },
+  "newtab_wallpaper_effect_crt": {
+    "message": "CRT"
+  },
+  "newtab_wallpaper_effect_ink_title": {
+    "message": "Uzorkovanje tonova"
+  },
+  "newtab_wallpaper_effect_ink_dark": {
+    "message": "Sjene"
+  },
+  "newtab_wallpaper_effect_ink_light": {
+    "message": "Svijetli dijelovi"
+  },
+  "newtab_wallpaper_effect_ink_select_label": {
+    "message": "Uzorkuj {tone} za točke ili znakove"
+  },
+  "newtab_wallpaper_save_error": {
+    "message": "Spremanje pozadine nije uspjelo"
+  },
+  "newtab_wallpaper_importing": {
+    "message": "Uvoz pozadine…"
+  },
+  "newtab_wallpaper_import_done": {
+    "message": "Pozadina je uvezena"
+  },
+  "newtab_wallpaper_import_error": {
+    "message": "Uvoz pozadine nije uspio"
+  },
+  "newtab_wallpaper_delete_done": {
+    "message": "Izbrisano"
+  },
+  "newtab_wallpaper_delete_error": {
+    "message": "Brisanje pozadine nije uspjelo"
+  },
+  "newtab_wallpaper_name_dark_linocut_topographic": {
+    "message": "Noćna topografija"
+  },
+  "newtab_wallpaper_name_dark_monet_lily_nocturne": {
+    "message": "Noćni lopoči"
+  },
+  "newtab_wallpaper_name_dark_shanshui_moonlit": {
+    "message": "Shanshui pod mjesečinom"
+  },
+  "newtab_wallpaper_name_monet_coastal_white": {
+    "message": "Monetova obala"
+  },
+  "newtab_wallpaper_name_monet_field_white": {
+    "message": "Monetovo polje"
+  },
+  "newtab_wallpaper_name_monet_lily_pond_white": {
+    "message": "Jezerce s lopočima"
+  },
+  "newtab_wallpaper_name_impressionist_orchard_white": {
+    "message": "Jutro u voćnjaku"
+  },
+  "newtab_wallpaper_name_seurat_coast_white": {
+    "message": "Seuratova obala"
+  },
+  "newtab_wallpaper_name_seurat_park_white": {
+    "message": "Seuratov park"
+  },
+  "newtab_wallpaper_name_seurat_riverside_white": {
+    "message": "Seuratova riječna obala"
+  },
+  "newtab_wallpaper_name_pointillist_lakeside_white": {
+    "message": "Poentilizam uz jezero"
+  },
+  "newtab_wallpaper_name_white_3d_architecture": {
+    "message": "Arhitektura na danjem svjetlu"
+  },
+  "newtab_wallpaper_name_white_3d_observatory": {
+    "message": "Opservatorij u magli"
+  },
+  "newtab_wallpaper_name_white_linocut_topographic": {
+    "message": "Dnevna topografija"
+  },
+  "newtab_wallpaper_name_white_risograph_collage": {
+    "message": "Dnevni kolaž"
+  },
+  "newtab_wallpaper_name_white_shanshui": {
+    "message": "Vedri shanshui"
+  },
+  "newtab_wallpaper_name_white_shanshui_bamboo_bridge": {
+    "message": "Most od bambusa"
+  },
+  "newtab_wallpaper_name_settings_bg_light_monet_newtab": {
+    "message": "Svijetli Monet"
+  },
+  "shortcuts_duplicate_tag": {
+    "message": "Duplikat ugrađenog"
+  },
+  "shortcuts_duplicate_action": {
+    "message": "Pronađi ugrađenu stavku"
+  },
+  "shortcuts_template_help": {
+    "message": "1. Otvorite web-lokaciju koju želite dodati\n2. Pretražite bilo koju ključnu riječ\n3. Kopirajte URL stranice s rezultatima i zalijepite ga ovdje\n4. Zamijenite ključnu riječ s {query}"
+  },
+  "shortcuts_title": {
+    "message": "Pretraživanje web-lokacije"
+  },
+  "shortcuts_desc": {
+    "message": "Pritisnite Tab nakon ključne riječi za pretraživanje web-lokacije"
+  },
+  "shortcuts_group_custom": {
+    "message": "Prilagođeno"
+  },
+  "blacklist_section_title": {
+    "message": "Crna lista pretraživanja i nedavnih"
+  },
+  "blacklist_section_desc": {
+    "message": "Dodajte web-lokacije koje želite sakriti iz rezultata pretraživanja i s nove kartice."
+  },
+  "blacklist_group_custom": {
+    "message": "Blokiraj globalno"
+  },
+  "blacklist_label_url": {
+    "message": "URL pravilo"
+  },
+  "blacklist_label_domain": {
+    "message": "Domena web-lokacije"
+  },
+  "blacklist_label_prefix": {
+    "message": "Lokacija ili putanja"
+  },
+  "blacklist_label_exact": {
+    "message": "Puni URL"
+  },
+  "blacklist_label_suffix": {
+    "message": "Domena web-lokacije"
+  },
+  "blacklist_match_label": {
+    "message": "Vrsta podudaranja"
+  },
+  "blacklist_match_exact": {
+    "message": "Ova stranica"
+  },
+  "blacklist_match_prefix": {
+    "message": "Ova putanja"
+  },
+  "blacklist_match_suffix": {
+    "message": "Cijela web-lokacija"
+  },
+  "blacklist_match_exact_tooltip": {
+    "message": "Blokira samo ovu stranicu\n────────\nNa primjer, ako unesete x.com/home, sakrit će se samo ta stranica, a ostale stranice ostaju vidljive."
+  },
+  "blacklist_match_prefix_tooltip": {
+    "message": "Blokira samo stranice pod ovom web-lokacijom i putanjom\n────────\nNa primjer, ako unesete baidu.com/search, sakrit će se baidu.com/search i baidu.com/search/1, ali baidu.com/news ostaje vidljiv."
+  },
+  "blacklist_match_suffix_tooltip": {
+    "message": "Blokira svaku stranicu na ovoj web-lokaciji, uključujući njezine poddomene\n────────\nNa primjer, ako unesete baidu.com, sakrit će se i baidu.com/search i tieba.baidu.com."
+  },
+  "blacklist_preview_title": {
+    "message": "Pregled stvarnog podudaranja"
+  },
+  "blacklist_preview_match": {
+    "message": "Podudara se"
+  },
+  "blacklist_preview_miss": {
+    "message": "Ne podudara se"
+  },
+  "blacklist_preview_www_note": {
+    "message": "Obuhvaćena je i verzija s www., pa će se baidu.com podudarati i s www.baidu.com."
+  },
+  "blacklist_placeholder_url": {
+    "message": "Za Ovu stranicu unesite punu adresu, a za Cijelu web-lokaciju domenu"
+  },
+  "blacklist_placeholder_domain": {
+    "message": "baidu.com"
+  },
+  "blacklist_placeholder_prefix": {
+    "message": "baidu.com ili baidu.com/search"
+  },
+  "blacklist_placeholder_exact": {
+    "message": "x.com/home"
+  },
+  "blacklist_placeholder_suffix": {
+    "message": "npr. baidu.com"
+  },
+  "blacklist_add": {
+    "message": "Dodaj"
+  },
+  "blacklist_empty": {
+    "message": "Još nema URL-ova na crnoj listi"
+  },
+  "blacklist_error_url": {
+    "message": "Unesite domenu web-lokacije ili puni URL."
+  },
+  "blacklist_error_match_mode": {
+    "message": "Odaberite barem jednu vrstu podudaranja."
+  },
+  "blacklist_error_suffix": {
+    "message": "Unesite domenu web-lokacije."
+  },
+  "blacklist_error_domain": {
+    "message": "Unesite domenu web-lokacije."
+  },
+  "blacklist_match_mode_prefix": {
+    "message": "Podudara se sa stranicama koje počinju ovim URL-om"
+  },
+  "blacklist_match_unset": {
+    "message": "Nije odabrana vrsta podudaranja"
+  },
+  "blacklist_removed_toast": {
+    "message": "Uklonjeno s crne liste"
+  },
+  "shortcuts_group_builtin": {
+    "message": "Ugrađeno"
+  },
+  "shortcuts_group_ai": {
+    "message": "AI pretraživanje"
+  },
+  "shortcuts_group_ai_desc": {
+    "message": "Unesite ključnu riječ, pritisnite Tab, a zatim upišite upit da biste otvorili jednu od ovih AI web-lokacija i automatski ga ispunili (najprije se prijavite na web-lokaciju)"
+  },
+  "shortcuts_badge_custom": {
+    "message": "Prilagođeno"
+  },
+  "shortcuts_badge_builtin": {
+    "message": "Ugrađeno"
+  },
+  "shortcuts_badge_ai": {
+    "message": "AI pretraživanje"
+  },
+  "shortcuts_label_key": {
+    "message": "Ključna riječ"
+  },
+  "shortcuts_label_name": {
+    "message": "Naziv"
+  },
+  "shortcuts_label_template": {
+    "message": "URL pretraživanja"
+  },
+  "shortcuts_label_alias": {
+    "message": "Aliasi"
+  },
+  "shortcuts_label_display_group": {
+    "message": "Prikaži u"
+  },
+  "shortcuts_placeholder_required": {
+    "message": "Obavezno — više njih odvojite zarezom, npr. jd,bili"
+  },
+  "shortcuts_placeholder_optional_default": {
+    "message": "Neobavezno — zadano je ključna riječ"
+  },
+  "shortcuts_placeholder_template": {
+    "message": "https://example.com/search?q={query}"
+  },
+  "shortcuts_placeholder_alias": {
+    "message": "Neobavezno — npr. Bilibili, YouTube"
+  },
+  "shortcuts_insert_query": {
+    "message": "Umetni varijablu upita"
+  },
+  "shortcuts_add": {
+    "message": "Dodaj prilagođeno pretraživanje"
+  },
+  "shortcuts_save": {
+    "message": "Spremi promjene"
+  },
+  "shortcuts_cancel": {
+    "message": "Odustani"
+  },
+  "shortcuts_edit": {
+    "message": "Uredi"
+  },
+  "shortcuts_remove": {
+    "message": "Ukloni"
+  },
+  "shortcuts_empty_custom": {
+    "message": "Još nema prilagođenih pretraživanja"
+  },
+  "shortcuts_empty_builtin": {
+    "message": "Nema ugrađenih pretraživanja web-lokacija"
+  },
+  "shortcuts_empty_engines": {
+    "message": "Nema ugrađenih tražilica"
+  },
+  "shortcuts_empty_ai": {
+    "message": "Nema ugrađenih pružatelja AI pretraživanja"
+  },
+  "toast_saved": {
+    "message": "Spremljeno"
+  },
+  "toast_removed": {
+    "message": "Uklonjeno"
+  },
+  "toast_error": {
+    "message": "Radnja nije uspjela. Pokušajte ponovo."
+  },
+  "toast_error_template": {
+    "message": "Predložak pretraživanja mora sadržavati {query}."
+  },
+  "toast_reset": {
+    "message": "Vraćeno na zadano"
+  },
+  "shortcuts_reset_builtin": {
+    "message": "Vrati zadani popis"
+  },
+  "shortcuts_clear_custom": {
+    "message": "Očisti prilagođeno"
+  },
+  "blacklist_clear": {
+    "message": "Očisti pravila skrivanja"
+  },
+  "toast_cleared": {
+    "message": "Očišćeno"
+  },
+  "confirm_clear_custom": {
+    "message": "Očistiti sva prilagođena pretraživanja?"
+  },
+  "confirm_clear_blacklist": {
+    "message": "Očistiti pravila skrivanja?"
+  },
+  "confirm_clear_favicon_blacklist": {
+    "message": "Očistiti pravila izuzimanja?"
+  },
+  "confirm_reset_builtin": {
+    "message": "Vratiti ugrađeni popis na zadano?"
+  },
+  "confirm_ok": {
+    "message": "Potvrdi"
+  },
+  "confirm_cancel": {
+    "message": "Odustani"
+  },
+  "confirm_remove_item": {
+    "message": "Ukloniti ovu stavku?"
+  },
+  "shortcuts_error_key": {
+    "message": "Unesite ključnu riječ."
+  },
+  "shortcuts_error_key_space": {
+    "message": "Ključna riječ ne smije sadržavati razmake."
+  },
+  "shortcuts_error_key_duplicate": {
+    "message": "Ova se ključna riječ već koristi. Odaberite drugu."
+  },
+  "search_placeholder": {
+    "message": "Pretražite ili upišite URL…"
+  },
+  "overlay_search_placeholder": {
+    "message": "Pretražite ili upišite URL, pritisnite Tab za pretraživanje otvorenih kartica"
+  },
+  "options_page_title": {
+    "message": "Postavke za Lumno"
+  },
+  "newtab_page_title": {
+    "message": "Nova kartica"
+  },
+  "recent_heading": {
+    "message": "Nedavno"
+  },
+  "recent_heading_latest": {
+    "message": "Nedavno"
+  },
+  "recent_heading_most": {
+    "message": "Najposjećenije"
+  },
+  "bookmarks_heading": {
+    "message": "Oznake"
+  },
+  "display_mode_title": {
+    "message": "Način prikaza"
+  },
+  "bookmark_view_mode_folder": {
+    "message": "Prikaz mapa u više slojeva"
+  },
+  "bookmark_view_mode_list": {
+    "message": "Prikaz popisa u više razina"
+  },
+  "bookmark_view_mode_top": {
+    "message": "Gornja traka oznaka"
+  },
+  "bookmark_topbar_layout_title": {
+    "message": "Stil trake"
+  },
+  "bookmark_topbar_layout_docked": {
+    "message": "Pričvršćeno na vrh"
+  },
+  "bookmark_topbar_layout_floating": {
+    "message": "Plutajuće"
+  },
+  "bookmark_topbar_surface_title": {
+    "message": "Pozadina trake"
+  },
+  "bookmark_topbar_surface_follow": {
+    "message": "Prati stil"
+  },
+  "bookmark_topbar_surface_adaptive": {
+    "message": "Prilagodljiva magla"
+  },
+  "bookmark_topbar_surface_clear": {
+    "message": "Tekuće staklo"
+  },
+  "bookmark_topbar_surface_transparent": {
+    "message": "Prozirno"
+  },
+  "bookmark_topbar_surface_custom": {
+    "message": "Prilagođena boja"
+  },
+  "bookmark_topbar_color_pick": {
+    "message": "Odaberi boju pozadine"
+  },
+  "bookmark_topbar_color_reset": {
+    "message": "Vrati automatske boje"
+  },
+  "bookmark_topbar_color_picked": {
+    "message": "Boja je odabrana"
+  },
+  "bookmark_topbar_color_reset_done": {
+    "message": "Automatske boje su vraćene"
+  },
+  "bookmark_topbar_color_unsupported": {
+    "message": "Ovaj preglednik ne podržava odabir boje sa zaslona."
+  },
+  "bookmark_topbar_color_failed": {
+    "message": "Odabir boje nije uspio. Pokušajte ponovo."
+  },
+  "bookmarks_empty_folder": {
+    "message": "Nema sadržaja"
+  },
+  "bookmarks_page_prev": {
+    "message": "Prethodna stranica"
+  },
+  "bookmarks_page_next": {
+    "message": "Sljedeća stranica"
+  },
+  "bookmarks_open_manager": {
+    "message": "Otvori upravitelj oznaka"
+  },
+  "bookmarks_open_in_new_tab_group": {
+    "message": "Otvori u novoj grupi kartica"
+  },
+  "newtab_open_in_new_tab": {
+    "message": "Otvori u novoj kartici"
+  },
+  "bookmarks_open_group_confirm_title": {
+    "message": "Otvoriti kartice ({count})?"
+  },
+  "bookmarks_open_group_confirm_description": {
+    "message": "Sve oznake u mapi „{folder}” i njezinim podmapama otvorit će se u jednoj grupi kartica."
+  },
+  "bookmarks_open_group_confirm_button": {
+    "message": "Otvori"
+  },
+  "bookmarks_untitled_folder": {
+    "message": "Mapa bez naslova"
+  },
+  "bookmarks_open_group_partial_failed": {
+    "message": "Otvoreno kartica: {openedCount}; nije se moglo otvoriti: {failedCount}."
+  },
+  "bookmarks_open_group_failed": {
+    "message": "Ova mapa oznaka nije se mogla otvoriti"
+  },
+  "bookmarks_copy_url": {
+    "message": "Kopiraj vezu"
+  },
+  "bookmarks_copy_url_success": {
+    "message": "Veza oznake je kopirana"
+  },
+  "bookmarks_copy_url_failed": {
+    "message": "Kopiranje veze nije uspjelo. Pokušajte ponovo."
+  },
+  "bookmarks_edit": {
+    "message": "Uredi"
+  },
+  "bookmarks_edit_dialog_title": {
+    "message": "Uredi oznaku"
+  },
+  "bookmarks_edit_folder_dialog_title": {
+    "message": "Preimenuj mapu"
+  },
+  "bookmarks_name_placeholder": {
+    "message": "Naziv"
+  },
+  "bookmarks_invalid_url": {
+    "message": "Unesite važeći URL."
+  },
+  "bookmarks_updated": {
+    "message": "Oznaka je ažurirana"
+  },
+  "bookmarks_folder_updated": {
+    "message": "Mapa je ažurirana"
+  },
+  "bookmarks_update_failed": {
+    "message": "Oznaka se nije mogla ažurirati"
+  },
+  "bookmarks_delete": {
+    "message": "Izbriši"
+  },
+  "bookmarks_context_menu_label": {
+    "message": "Radnje oznake"
+  },
+  "bookmarks_delete_undone": {
+    "message": "Brisanje poništeno · {shortcut} za ponovno brisanje"
+  },
+  "bookmarks_delete_redone": {
+    "message": "Brisanje ponovljeno · {shortcut} za poništavanje"
+  },
+  "bookmarks_delete_failed": {
+    "message": "Oznaka se nije mogla izbrisati"
+  },
+  "bookmarks_move_success": {
+    "message": "Premješteno: „{title}” · {shortcut} za poništavanje"
+  },
+  "bookmarks_move_undone": {
+    "message": "Premještanje poništeno · {shortcut} za ponavljanje"
+  },
+  "bookmarks_move_redone": {
+    "message": "Premještanje ponovljeno · {shortcut} za poništavanje"
+  },
+  "bookmarks_move_failed": {
+    "message": "Oznaka se nije mogla premjestiti"
+  },
+  "bookmarks_moved_to_shortcuts": {
+    "message": "Premješteno u prečace"
+  },
+  "search_tag_history": {
+    "message": "Povijest"
+  },
+  "search_remove_history": {
+    "message": "Ukloni iz povijesti"
+  },
+  "search_remove_history_tooltip": {
+    "message": "Ukloni ovaj unos iz povijesti"
+  },
+  "search_remove_top_site_tooltip": {
+    "message": "Ukloni ovaj čest rezultat"
+  },
+  "search_copy_url_tooltip": {
+    "message": "Kopiraj vezu"
+  },
+  "search_copy_url_success": {
+    "message": "Veza rezultata je kopirana"
+  },
+  "search_copy_url_failed": {
+    "message": "Kopiranje veze rezultata nije uspjelo. Pokušajte ponovo."
+  },
+  "search_tag_top_site": {
+    "message": "Često"
+  },
+  "search_tag_bookmark": {
+    "message": "Oznaka"
+  },
+  "search_tag_open_tab": {
+    "message": "Otvoreno"
+  },
+  "visit_label": {
+    "message": "Posjeti"
+  },
+  "action_open_new_tab": {
+    "message": "Nova kartica"
+  },
+  "action_open_background_new_tab": {
+    "message": "Otvori u pozadini"
+  },
+  "action_open_background_tab": {
+    "message": "Otvori u pozadini"
+  },
+  "action_go_current_tab": {
+    "message": "Idi"
+  },
+  "open_prefix": {
+    "message": "Otvori {title}"
+  },
+  "open_url": {
+    "message": "Otvori {url}"
+  },
+  "open_browser_url": {
+    "message": "Otvori {browser}: {url}"
+  },
+  "mode_badge": {
+    "message": "Način: {mode}"
+  },
+  "mode_badge_follow_system": {
+    "message": "Način: {mode} (sustav)"
+  },
+  "mode_badge_follow_site": {
+    "message": "Način: {mode} (web-lokacija)"
+  },
+  "theme_label_dark": {
+    "message": "Tamni"
+  },
+  "theme_label_light": {
+    "message": "Svijetli"
+  },
+  "theme_label_system": {
+    "message": "Sustav"
+  },
+  "command_newtab": {
+    "message": "Nova kartica"
+  },
+  "search_input_clear": {
+    "message": "Očisti"
+  },
+  "command_settings": {
+    "message": "Otvori postavke"
+  },
+  "command_show_search": {
+    "message": "Otvori naredbenu traku"
+  },
+  "command_show_search_prefill": {
+    "message": "Otvori naredbenu traku s URL-om trenutačne stranice"
+  },
+  "command_show_search_prefill_v": {
+    "message": "Kopiraj URL trenutačne stranice"
+  },
+  "mode_switch_title": {
+    "message": "{name}: prijeđi na način {mode}"
+  },
+  "zen_badge_on": {
+    "message": "Zen: uključeno"
+  },
+  "zen_badge_off": {
+    "message": "Zen: isključeno"
+  },
+  "zen_enable_title": {
+    "message": "{name}: uđi u način Zen"
+  },
+  "zen_disable_title": {
+    "message": "{name}: izađi iz načina Zen"
+  },
+  "switch_to_tab": {
+    "message": "Prijeđi"
+  },
+  "untitled": {
+    "message": "Bez naslova"
+  },
+  "site_search_default": {
+    "message": "Lokacija"
+  },
+  "site_search_name_baidu": {
+    "message": "Baidu"
+  },
+  "site_search_name_metaso": {
+    "message": "Metaso AI Search"
+  },
+  "site_search_name_sogou": {
+    "message": "Sogou"
+  },
+  "site_search_name_shenma": {
+    "message": "Shenma"
+  },
+  "site_search_name_weibo": {
+    "message": "Weibo"
+  },
+  "site_search_name_xiaohongshu": {
+    "message": "Xiaohongshu"
+  },
+  "site_search_name_douyin": {
+    "message": "Douyin"
+  },
+  "site_search_name_jd": {
+    "message": "JD.com"
+  },
+  "site_search_name_chatgpt": {
+    "message": "ChatGPT"
+  },
+  "site_search_name_gemini": {
+    "message": "Gemini"
+  },
+  "site_search_name_doubao": {
+    "message": "Doubao"
+  },
+  "site_search_name_qianwen": {
+    "message": "Qwen"
+  },
+  "site_search_name_yuanbao": {
+    "message": "Yuanbao"
+  },
+  "site_search_name_minimax": {
+    "message": "MiniMax"
+  },
+  "site_search_name_deepseek": {
+    "message": "DeepSeek"
+  },
+  "site_search_name_kimi": {
+    "message": "Kimi"
+  },
+  "site_search_name_zhihu": {
+    "message": "Zhihu"
+  },
+  "site_search_name_douban": {
+    "message": "Douban"
+  },
+  "site_search_name_juejin": {
+    "message": "Juejin"
+  },
+  "site_search_name_taobao": {
+    "message": "Taobao"
+  },
+  "site_search_name_tmall": {
+    "message": "Tmall"
+  },
+  "site_search_name_wechat": {
+    "message": "WeChat službeni računi"
+  },
+  "site_search_name_wikipedia": {
+    "message": "Wikipedija"
+  },
+  "site_search_name_lumno_help": {
+    "message": "Lumno centar za pomoć"
+  },
+  "help_center_recommended": {
+    "message": "Preporučeno za čitanje"
+  },
+  "help_center_no_results": {
+    "message": "Ništa nije pronađeno. Slobodno se obratite razvojnom programeru."
+  },
+  "search_in_site": {
+    "message": "Pretraži {site}"
+  },
+  "search_in_site_query": {
+    "message": "Pretraži {site}: „{query}”"
+  },
+  "ask_ai_provider": {
+    "message": "Pitaj {site}"
+  },
+  "ask_ai_provider_query": {
+    "message": "Pitaj {site}: „{query}”"
+  },
+  "site_search_tab_hint": {
+    "message": "Pretraži {site}"
+  },
+  "search_query": {
+    "message": "Pretraži „{query}”"
+  },
+  "search_in_site_ellipsis": {
+    "message": "Pretraži {site}…"
+  },
+  "search_in_site_prefix": {
+    "message": "Pretraži {site} |"
+  },
+  "search_open_tabs_only_prefix": {
+    "message": "Pretraži otvorene kartice |"
+  },
+  "search_open_tabs_only_entry": {
+    "message": "Pretraži otvorene kartice"
+  },
+  "action_search": {
+    "message": "Pretraži"
+  },
+  "action_search_engine": {
+    "message": "Pretraži na {engine}"
+  },
+  "action_open_ai_web": {
+    "message": "Otvori web-aplikaciju {site}"
+  },
+  "action_search_google": {
+    "message": "Pretraži na Googleu"
+  },
+  "action_switch": {
+    "message": "Prijeđi"
+  },
+  "action_open": {
+    "message": "Otvori"
+  },
+  "overlay_empty_result": {
+    "message": "Nema odgovarajućih rezultata"
+  },
+  "local_search_tab_hint": {
+    "message": "Pretraži samo: {source}"
+  },
+  "search_scope_switcher_label": {
+    "message": "Opseg pretraživanja: {scope}. Aktivirajte za promjenu."
+  },
+  "search_scope_current": {
+    "message": "Trenutačno"
+  },
+  "search_scope_remove_confirmation": {
+    "message": "Ponovno pritisnite Backspace da biste uklonili opseg."
+  },
+  "search_number_jump_release_hint": {
+    "message": "Otpustite za prikaz brojeva"
+  },
+  "search_scope_menu_shortcut_hint": {
+    "message": "Otvori ploču"
+  },
+  "search_scope_menu_navigation_hint": {
+    "message": "Pomakni"
+  },
+  "search_scope_menu_select_hint": {
+    "message": "Promijeni"
+  },
+  "search_scope_menu_focus_toggle_hint": {
+    "message": "Promijeni fokus"
+  },
+  "search_scope_menu_filter_hint": {
+    "message": "Upišite za filtriranje"
+  },
+  "search_scope_menu_filter_query": {
+    "message": "Traži: {query}"
+  },
+  "search_scope_panel_placeholder": {
+    "message": "Pretražite sadržaj određene web-lokacije…"
+  },
+  "search_scope_active_placeholder": {
+    "message": "Pretražujte unutar ovog opsega; ponovno pritisnite Tab da biste otvorili ploču opsega…"
+  },
+  "search_scope_group_engines": {
+    "message": "Tražilice"
+  },
+  "search_scope_group_local": {
+    "message": "Sadržaj preglednika"
+  },
+  "search_scope_group_ai": {
+    "message": "AI pretraživanje"
+  },
+  "search_scope_group_sites": {
+    "message": "Pretraživanje web-lokacija"
+  },
+  "search_scope_group_aggregates": {
+    "message": "Skupna pretraživanja"
+  },
+  "aggregate_search_action": {
+    "message": "Pretraži pomoću: {name}"
+  },
+  "aggregate_search_action_query": {
+    "message": "Pretraži „{query}” pomoću: {name}"
+  },
+  "aggregate_search_group_title": {
+    "message": "Skupno pretraživanje"
+  },
+  "aggregate_search_add": {
+    "message": "Dodaj skupno pretraživanje"
+  },
+  "aggregate_search_clear": {
+    "message": "Očisti skupna pretraživanja"
+  },
+  "confirm_clear_aggregate_search": {
+    "message": "Očistiti sva skupna pretraživanja?"
+  },
+  "aggregate_search_name_label": {
+    "message": "Naziv"
+  },
+  "aggregate_search_name_required_error": {
+    "message": "Unesite naziv za ovo skupno pretraživanje."
+  },
+  "aggregate_search_key_placeholder": {
+    "message": "Na primjer, tech"
+  },
+  "aggregate_search_default_name": {
+    "message": "Skupno pretraživanje"
+  },
+  "aggregate_search_sources_label": {
+    "message": "Izvori pretraživanja"
+  },
+  "aggregate_search_selected_count": {
+    "message": "Odabrano {count}/{max}"
+  },
+  "aggregate_search_min_sources_error": {
+    "message": "Odaberite najmanje 2 izvora pretraživanja."
+  },
+  "aggregate_search_max_sources_error": {
+    "message": "Možete odabrati najviše 10 izvora pretraživanja."
+  },
+  "settings_aggregate_search_auto_group_title": {
+    "message": "Automatski grupiraj kartice skupnog pretraživanja"
+  },
+  "settings_aggregate_search_auto_group_desc": {
+    "message": "Kada je uključeno, sve kartice koje otvori skupno pretraživanje smještaju se u jednu grupu nazvanu „Naziv skupa: upit za pretraživanje”"
+  },
+  "aggregate_search_badge": {
+    "message": "Skupno"
+  },
+  "aggregate_search_source_summary": {
+    "message": "Izvora: {count}"
+  },
+  "aggregate_search_source_summary_unavailable": {
+    "message": "Izvora: {count} · nedostupno: {unavailable} · potrebno ažuriranje"
+  },
+  "aggregate_search_sources_unavailable_error": {
+    "message": "Ovo skupno pretraživanje sadrži uklonjene ili onemogućene izvore. Ažurirajte ga u postavkama."
+  },
+  "aggregate_search_in_progress": {
+    "message": "Ovo skupno pretraživanje već je u tijeku."
+  },
+  "aggregate_search_partial_failure": {
+    "message": "Neki rezultati skupnog pretraživanja nisu se mogli otvoriti."
+  },
+  "aggregate_search_degraded_success": {
+    "message": "Rezultati pretraživanja su otvoreni, ali grupiranje, imenovanje ili fokusiranje kartica nije dovršeno."
+  },
+  "aggregate_search_storage_unavailable_error": {
+    "message": "Skupna pretraživanja nisu se mogla učitati. Ponovno učitajte postavke i pokušajte ponovo."
+  },
+  "aggregate_search_source_selection_unavailable_error": {
+    "message": "Uklonite nedostupne izvore i odaberite najmanje dva dostupna izvora."
+  },
+  "aggregate_search_unavailable_group": {
+    "message": "Nedostupni izvori"
+  },
+  "aggregate_search_unavailable_name": {
+    "message": "Nedostupan izvor ({source})"
+  },
+  "aggregate_search_name_duplicate_error": {
+    "message": "Skupno pretraživanje s ovim nazivom već postoji."
+  },
+  "aggregate_search_max_items_error": {
+    "message": "Možete izraditi najviše 8 skupnih pretraživanja."
+  },
+  "overlay_empty_open_tabs": {
+    "message": "Nema kartica"
+  },
+  "site_icon_alt": {
+    "message": "Web-lokacija"
+  },
+  "site_brand_wechat_official": {
+    "message": "WeChat službeni računi"
+  },
+  "settings_sync_title": {
+    "message": "Ugrađena sinkronizacija preglednika {browser}"
+  },
+  "settings_sync_section_title": {
+    "message": "Ugrađena sinkronizacija preglednika"
+  },
+  "settings_sync_desc": {
+    "message": "Postavke se automatski sinkroniziraju putem ugrađene usluge sinkronizacije trenutačnog preglednika"
+  },
+  "sync_status_unavailable": {
+    "message": "Sinkronizacija nije dostupna"
+  },
+  "sync_status_unavailable_hint": {
+    "message": "Sinkronizacija nije dostupna: provjerite podržava li trenutačni preglednik ugrađenu sinkronizaciju i je li ona uključena."
+  },
+  "sync_status_ready": {
+    "message": "Automatska sinkronizacija uključena"
+  },
+  "sync_status_done": {
+    "message": "Sinkronizacija dovršena"
+  },
+  "sync_status_failed": {
+    "message": "Sinkronizacija nije uspjela"
+  },
+  "sync_status_failed_reason": {
+    "message": "Sinkronizacija nije uspjela: {reason}"
+  },
+  "sync_action_now": {
+    "message": "Sinkroniziraj sada"
+  },
+  "sync_action_export": {
+    "message": "Izvezi postavke"
+  },
+  "sync_action_import": {
+    "message": "Uvezi postavke"
+  },
+  "sync_tooltip_export": {
+    "message": "Izvezi postavke"
+  },
+  "sync_tooltip_import": {
+    "message": "Uvezi postavke"
+  },
+  "sync_tooltip_last_manual": {
+    "message": "Zadnji uvoz/ručna sinkronizacija {time}"
+  },
+  "sync_tooltip_default": {
+    "message": "Ručna sinkronizacija"
+  },
+  "sync_status_hint": {
+    "message": "Postavke za Lumno automatski se sinkroniziraju putem ugrađene usluge sinkronizacije trenutačnog preglednika. Sinkronizacija radi na uređajima prijavljenima na isti račun preglednika, ali ne između različitih preglednika."
+  },
+  "sync_export_done": {
+    "message": "Postavke su izvezene"
+  },
+  "sync_importing": {
+    "message": "Uvoz postavki…"
+  },
+  "sync_import_done": {
+    "message": "Uvoz je dovršen"
+  },
+  "sync_import_invalid": {
+    "message": "Nevažeća datoteka postavki"
+  },
+  "document_pip_picker_unsupported_policy": {
+    "message": "Ova web-lokacija onemogućuje sliku u slici pravilima web-lokacije."
+  },
+  "document_pip_picker_unsupported_iframe": {
+    "message": "Document Picture-in-Picture radi samo na stranici najviše razine."
+  },
+  "document_pip_picker_unsupported_insecure": {
+    "message": "Document Picture-in-Picture zahtijeva HTTPS."
+  },
+  "document_pip_picker_open_failed_not_allowed": {
+    "message": "Web-lokacija ili preglednik blokirali su otvaranje Document Picture-in-Picture."
+  },
+  "document_pip_picker_open_failed_not_supported": {
+    "message": "Ovaj odabir ne može se otvoriti u Document Picture-in-Picture na ovoj stranici."
+  },
+  "document_pip_picker_open_failed_invalid_state": {
+    "message": "Plutajući prozor već je otvoren ili se stanje stranice promijenilo. Pokušajte ponovo."
+  },
+  "document_pip_picker_open_failed_security": {
+    "message": "Preglednik je blokirao ovu radnju iz sigurnosnih razloga na ovoj stranici."
+  },
+  "newtab_page_label": {
+    "message": "Nova kartica"
+  },
+  "settings_title": {
+    "message": "Postavke"
+  },
+  "extension_page_label": {
+    "message": "Stranica proširenja"
+  },
+  "settings_button_aria": {
+    "message": "Postavke"
+  },
+  "copy_page_url_failed_retry": {
+    "message": "Kopiranje nije uspjelo. Pokušajte ponovo."
+  },
+  "copy_page_url_success": {
+    "message": "URL trenutačne stranice je kopiran"
+  },
+  "copy_page_url_failed_permission": {
+    "message": "Kopiranje nije uspjelo. Provjerite dopuštenje za međuspremnik."
+  },
+  "recent_pin_add": {
+    "message": "Prikvači"
+  },
+  "recent_pin_remove": {
+    "message": "Otkvači"
+  },
+  "recent_pin_limit": {
+    "message": "Možete prikvačiti najviše 3 pločice"
+  },
+  "recent_pin_limit_toast": {
+    "message": "Možete prikvačiti najviše 3 pločice."
+  },
+  "recent_dismiss_tooltip": {
+    "message": "Ukloni"
+  },
+  "recent_add_to_shortcuts": {
+    "message": "Dodaj u prečace"
+  },
+  "recent_dismiss_pinned_tooltip": {
+    "message": "Otkvači i ukloni"
+  },
+  "recent_dismiss_toast": {
+    "message": "Uklonjeno"
+  },
+  "recent_dismiss_pinned_toast": {
+    "message": "Otkvačeno i uklonjeno"
+  },
+  "recent_context_menu_label": {
+    "message": "Radnje za nedavnu web-lokaciju"
+  },
+  "tab_switcher_title": {
+    "message": "Nedavne kartice"
+  },
+  "tab_switcher_untitled": {
+    "message": "Bez naslova"
+  },
+  "tab_switcher_favicon_alt": {
+    "message": "Ikona web-lokacije"
+  },
+  "tab_switcher_close_tab": {
+    "message": "Zatvori karticu"
+  },
+  "tab_switcher_tab_closed": {
+    "message": "Kartica je zatvorena"
+  },
+  "tab_switcher_close_failed": {
+    "message": "Ova se kartica nije mogla zatvoriti"
+  },
+  "command_show_tab_switcher": {
+    "message": "Otvori izmjenjivač nedavnih kartica"
+  },
+  "shortcut_reference_title": {
+    "message": "Tipkovni prečaci"
+  },
+  "shortcut_reference_group_search": {
+    "message": "Naredbena traka"
+  },
+  "shortcut_reference_group_page_link": {
+    "message": "Veza stranice"
+  },
+  "shortcut_reference_group_tab_switcher": {
+    "message": "Izmjenjivač kartica"
+  },
+  "shortcut_reference_group_web_clip": {
+    "message": "Isječak stranice"
+  },
+  "shortcut_reference_unset": {
+    "message": "Nije postavljeno"
+  },
+  "shortcut_reference_show_search_title": {
+    "message": "Otvori naredbenu traku"
+  },
+  "shortcut_reference_show_search_desc": {
+    "message": "Otvori Lumno na trenutačnoj stranici"
+  },
+  "shortcut_reference_show_search_prefill_title": {
+    "message": "Otvori s URL-om trenutačne stranice"
+  },
+  "shortcut_reference_show_search_prefill_desc": {
+    "message": "Otvori Lumno i unaprijed upiši URL trenutačne stranice"
+  },
+  "shortcut_reference_copy_url_title": {
+    "message": "Kopiraj URL trenutačne stranice"
+  },
+  "shortcut_reference_copy_url_desc": {
+    "message": "Kopiraj URL trenutačne stranice bez otvaranja Lumno"
+  },
+  "shortcut_reference_tab_switcher_title": {
+    "message": "Otvori izmjenjivač nedavnih kartica"
+  },
+  "shortcut_reference_tab_switcher_desc": {
+    "message": "Otvara izmjenjivač nedavnih kartica"
+  },
+  "shortcut_reference_search_input_history_title": {
+    "message": "Prethodni ili sljedeći unos"
+  },
+  "shortcut_reference_search_input_history_desc": {
+    "message": "Kretanje unatrag ili unaprijed kroz povijest poslanih unosa"
+  },
+  "shortcut_reference_search_navigate_title": {
+    "message": "Kretanje kroz prijedloge"
+  },
+  "shortcut_reference_search_navigate_desc": {
+    "message": "Pomiče aktivni rezultat u pretraživanju Lumno i na novoj kartici"
+  },
+  "shortcut_reference_search_number_jump_title": {
+    "message": "Skok na numerirani rezultat"
+  },
+  "shortcut_reference_search_number_jump_desc": {
+    "message": "Držite glavnu modifikatorsku tipku, otpustite je, a zatim pritisnite 0–9 da biste aktivirali odgovarajući rezultat"
+  },
+  "shortcut_reference_search_number_jump_shortcut": {
+    "message": "Držite {modifier} 0,4 s, otpustite, zatim pritisnite 0–9"
+  },
+  "shortcut_reference_search_confirm_title": {
+    "message": "Izvrši odabranu radnju"
+  },
+  "shortcut_reference_search_confirm_desc": {
+    "message": "Otvaranje, pretraživanje, prelazak na karticu ili izvršavanje odabrane naredbe"
+  },
+  "shortcut_reference_search_tab_mode_title": {
+    "message": "Dovrši ili uđi u način pretraživanja"
+  },
+  "shortcut_reference_search_tab_mode_desc": {
+    "message": "Dovršava prijedlog ili ulazi u način pretraživanja web-lokacije / otvorenih kartica"
+  },
+  "shortcut_reference_search_open_scope_menu_title": {
+    "message": "Otvori ploču opsega pretraživanja"
+  },
+  "shortcut_reference_search_open_scope_menu_desc": {
+    "message": "Kad je unos prazan, dvaput pritisnite Tab; kad je odabran opseg pretraživanja, pritisnite Tab jednom"
+  },
+  "shortcut_reference_search_close_title": {
+    "message": "Zatvori ili izađi iz načina"
+  },
+  "shortcut_reference_search_close_desc": {
+    "message": "Zatvara pretraživanje Lumno ili izlazi iz načina pretraživanja web-lokacije / otvorenih kartica"
+  },
+  "shortcut_reference_search_current_tab_title": {
+    "message": "Otvori u trenutačnoj kartici"
+  },
+  "shortcut_reference_search_current_tab_desc": {
+    "message": "Koristi trenutačnu karticu za radnje koje inače otvaraju novu karticu"
+  },
+  "shortcut_reference_search_switch_new_tab_title": {
+    "message": "Otvori pronađenu karticu u novoj kartici"
+  },
+  "shortcut_reference_search_switch_new_tab_desc": {
+    "message": "Kada se rezultat podudara s otvorenom karticom, otvara njezin URL u novoj kartici"
+  },
+  "shortcut_reference_tab_switcher_cycle_title": {
+    "message": "Pomakni odabir u izmjenjivaču kartica"
+  },
+  "shortcut_reference_tab_switcher_cycle_desc": {
+    "message": "Prelazi na prethodnu ili sljedeću karticu u izmjenjivaču kartica"
+  },
+  "shortcut_reference_tab_switcher_confirm_title": {
+    "message": "Prijeđi na odabranu karticu"
+  },
+  "shortcut_reference_tab_switcher_confirm_desc": {
+    "message": "Potvrđuje odabranu karticu u izmjenjivaču kartica"
+  },
+  "shortcut_reference_document_pip_parent_title": {
+    "message": "Odaberi vanjski element"
+  },
+  "shortcut_reference_document_pip_parent_desc": {
+    "message": "Prelazi na veći nadređeni element pri odabiru isječka stranice"
+  },
+  "shortcut_reference_document_pip_child_title": {
+    "message": "Odaberi unutarnji element"
+  },
+  "shortcut_reference_document_pip_child_desc": {
+    "message": "Prelazi na manji podređeni element pri odabiru isječka stranice"
+  },
+  "newtab_shortcuts_section_label": {
+    "message": "Prečaci"
+  },
+  "newtab_shortcuts_add": {
+    "message": "Dodaj prečac"
+  },
+  "newtab_shortcuts_hide_add": {
+    "message": "Sakrij"
+  },
+  "newtab_shortcuts_add_hidden": {
+    "message": "„+” je sakriven. Ponovo ga uključite u Postavke → Izgled → Prečaci → Prikaži „+”."
+  },
+  "newtab_shortcuts_dialog_title": {
+    "message": "Dodaj prečac"
+  },
+  "newtab_shortcuts_name_label": {
+    "message": "Naziv"
+  },
+  "newtab_shortcuts_name_placeholder": {
+    "message": "Lumno"
+  },
+  "newtab_shortcuts_url_label": {
+    "message": "URL"
+  },
+  "newtab_shortcuts_url_info_label": {
+    "message": "O podržanim URL-ovima"
+  },
+  "newtab_shortcuts_url_info": {
+    "message": "Podržane su i interne stranice preglednika, na primjer:\nchrome://inspect/#devices"
+  },
+  "newtab_shortcuts_url_info__firefox": {
+    "message": "Firefox ne dopušta proširenjima otvaranje ugrađenih stranica kao što je about:config, pa upotrijebite web-adresu."
+  },
+  "newtab_shortcuts_url_placeholder": {
+    "message": "https://example.com"
+  },
+  "newtab_shortcuts_icon_label": {
+    "message": "Ikona (neobavezno)"
+  },
+  "newtab_shortcuts_icon_mode_label": {
+    "message": "Izvor ikone"
+  },
+  "newtab_shortcuts_icon_builtin": {
+    "message": "Ugrađena ikona"
+  },
+  "newtab_shortcuts_icon_builtin_hint": {
+    "message": "Koristi ugrađene ikone visoke kvalitete iz Lumno."
+  },
+  "newtab_shortcuts_icon_builtin_network_hint": {
+    "message": "Nije potreban mrežni zahtjev."
+  },
+  "newtab_shortcuts_icon_builtin_info_label": {
+    "message": "O ugrađenim ikonama"
+  },
+  "newtab_shortcuts_icon_service": {
+    "message": "Gstatic (ikone trećih strana)"
+  },
+  "newtab_shortcuts_icon_favicon_is": {
+    "message": "Favicon.is (ikone trećih strana)"
+  },
+  "newtab_shortcuts_icon_favicon_is_hint": {
+    "message": "Šalje domenu na Favicon.is radi veće ikone."
+  },
+  "newtab_shortcuts_icon_favicon_is_caution": {
+    "message": "Ikone domene mogu se razlikovati od ikone trenutačne stranice."
+  },
+  "newtab_shortcuts_icon_cache": {
+    "message": "Predmemorija preglednika"
+  },
+  "newtab_shortcuts_icon_service_hint": {
+    "message": "Šalje domenu web-lokacije na Gstatic. Stabilno, visoka kvaliteta."
+  },
+  "newtab_shortcuts_icon_cache_hint": {
+    "message": "Brze i točne ikone web-lokacija iz predmemorije preglednika."
+  },
+  "newtab_shortcuts_icon_custom_hint": {
+    "message": "Prema zadanim postavkama sprema se na ovom uređaju, izvan sinkronizacije preglednika."
+  },
+  "newtab_shortcuts_icon_service_caution": {
+    "message": "Neke web-lokacije možda neće biti prepoznate."
+  },
+  "newtab_shortcuts_icon_cache_caution": {
+    "message": "Postavke web-lokacije mogu dodati točke obavijesti ili smanjiti oštrinu."
+  },
+  "newtab_shortcuts_icon_plate_label": {
+    "message": "Dodaj pozadinu nepravilnim ikonama"
+  },
+  "newtab_shortcuts_icon_plate_color_label": {
+    "message": "Boja pozadine"
+  },
+  "newtab_shortcuts_icon_plate_color_auto": {
+    "message": "Iz ikone"
+  },
+  "newtab_shortcuts_icon_plate_color_custom": {
+    "message": "Prilagođena boja"
+  },
+  "newtab_shortcuts_icon_custom_sync_hint": {
+    "message": "Sinkronizirajte među uređajima putem WebDAV-a."
+  },
+  "newtab_shortcuts_icon_refresh_success": {
+    "message": "Ikona je dohvaćena"
+  },
+  "newtab_shortcuts_icon_cache_failed": {
+    "message": "Nije pronađena ikona u predmemoriji. Posjetite ovu web-lokaciju, a zatim ponovo osvježite."
+  },
+  "newtab_shortcuts_icon_source_unavailable": {
+    "message": "Ovaj izvor nije dostupan. Odaberite predmemoriju preglednika ili prilagođenu ikonu."
+  },
+  "newtab_shortcuts_icon_online": {
+    "message": "Online ikona"
+  },
+  "newtab_shortcuts_icon_custom": {
+    "message": "Prilagođena ikona"
+  },
+  "newtab_shortcuts_icon_current": {
+    "message": "Trenutačna ikona"
+  },
+  "newtab_shortcuts_icon_refresh": {
+    "message": "Osvježi"
+  },
+  "newtab_shortcuts_icon_refreshing": {
+    "message": "Osvježavanje…"
+  },
+  "newtab_shortcuts_icon_refresh_failed": {
+    "message": "Ikona se nije mogla osvježiti. Pokušajte ponovo kasnije."
+  },
+  "newtab_shortcuts_icon_custom_required": {
+    "message": "Odaberite sliku za prilagođenu ikonu."
+  },
+  "newtab_shortcuts_icon_online_info_label": {
+    "message": "O online ikonama"
+  },
+  "newtab_shortcuts_icon_online_info": {
+    "message": "Online ikone ostaju nepromijenjene dok ih ne osvježite i spremite. Osvježavanje koristi uslugu ikona ili predmemoriju preglednika."
+  },
+  "newtab_shortcuts_icon_info_label": {
+    "message": "O lokalnim ikonama prečaca"
+  },
+  "newtab_shortcuts_icon_info": {
+    "message": "Podržani su PNG, JPG i WebP. Preporučuje se prozirna kvadratna ikona od 128×128 px ili veća. Prema zadanim postavkama sprema se na ovom uređaju; dostupna je WebDAV sinkronizacija."
+  },
+  "newtab_shortcuts_folder_item_icon_info": {
+    "message": "Podržani su PNG, JPG i WebP. Preporučuje se prozirna kvadratna ikona od 128×128 px ili veća. Sprema se samo na ovom uređaju."
+  },
+  "newtab_shortcuts_icon_choose": {
+    "message": "Odaberi sliku"
+  },
+  "newtab_shortcuts_icon_replace": {
+    "message": "Zamijeni sliku"
+  },
+  "newtab_shortcuts_icon_remove": {
+    "message": "Ukloni"
+  },
+  "newtab_shortcuts_icon_unsupported": {
+    "message": "Odaberite sliku u formatu PNG, JPG ili WebP."
+  },
+  "newtab_shortcuts_icon_dimensions_too_large": {
+    "message": "Slika ne smije biti veća od 4096×4096 px"
+  },
+  "newtab_shortcuts_icon_invalid": {
+    "message": "Ova se slika ne može upotrijebiti. Odaberite drugu sliku."
+  },
+  "newtab_shortcuts_icon_storage_error": {
+    "message": "Lokalna ikona nije se mogla spremiti. Pokušajte s drugom slikom."
+  },
+  "folder_rename": {
+    "message": "Preimenuj"
+  },
+  "folder_color_change": {
+    "message": "Promijeni boju"
+  },
+  "folder_color_format": {
+    "message": "Format boje"
+  },
+  "folder_color_title": {
+    "message": "Boja mape"
+  },
+  "folder_color_description": {
+    "message": "Primjenjuje se i na ovu mapu u prečacima i izbornicima. Sprema se na ovom uređaju."
+  },
+  "folder_color_presets": {
+    "message": "Unaprijed postavljene boje"
+  },
+  "folder_color_default": {
+    "message": "Zadana boja"
+  },
+  "folder_color_reset": {
+    "message": "Vrati zadano"
+  },
+  "folder_color_saved": {
+    "message": "Spremljene boje"
+  },
+  "folder_color_save_current": {
+    "message": "Spremi trenutačnu boju"
+  },
+  "folder_color_remove_saved": {
+    "message": "Izbriši spremljenu boju"
+  },
+  "folder_color_saved_delete_failed": {
+    "message": "Ova se boja nije mogla izbrisati. Pokušajte ponovo."
+  },
+  "folder_color_saved_load_failed": {
+    "message": "Spremljene boje nisu se mogle učitati. Ponovo otvorite birač boja i pokušajte ponovo."
+  },
+  "folder_color_saved_save_failed": {
+    "message": "Ova se boja nije mogla spremiti. Pokušajte ponovo."
+  },
+  "folder_color_invalid": {
+    "message": "Unesite valjanu HEX boju ili RGB vrijednosti od 0 do 255."
+  },
+  "folder_color_save_failed": {
+    "message": "Boja mape nije se mogla spremiti. Pokušajte ponovo."
+  },
+  "newtab_shortcuts_cancel": {
+    "message": "Odustani"
+  },
+  "newtab_shortcuts_done": {
+    "message": "Gotovo"
+  },
+  "newtab_shortcuts_save": {
+    "message": "Spremi"
+  },
+  "newtab_shortcuts_invalid_url": {
+    "message": "Unesite valjani http, https ili interni URL preglednika."
+  },
+  "newtab_shortcuts_limit_reached": {
+    "message": "Možete dodati najviše ovoliko prečaca: {count}."
+  },
+  "newtab_shortcuts_added": {
+    "message": "Prečac je dodan"
+  },
+  "context_menu_add_page_shortcut": {
+    "message": "Dodaj u prečace nove kartice Lumno"
+  },
+  "page_shortcut_added": {
+    "message": "Dodano u prečace nove kartice Lumno"
+  },
+  "newtab_shortcuts_already_added": {
+    "message": "Već je u prečacima"
+  },
+  "newtab_shortcuts_sync_limit_reached": {
+    "message": "Prečaci premašuju prostor za sinkronizaciju preglednika pa novi ostaju na ovom uređaju. Uključite WebDAV u postavkama da biste i njih sinkronizirali."
+  },
+  "newtab_shortcuts_edited": {
+    "message": "Prečac je ažuriran"
+  },
+  "newtab_shortcuts_removed": {
+    "message": "Prečac je uklonjen"
+  },
+  "newtab_shortcuts_removed_undo": {
+    "message": "Prečac je uklonjen · {shortcut} za poništavanje"
+  },
+  "newtab_shortcuts_remove_undone": {
+    "message": "Prečac je vraćen · {shortcut} za ponavljanje"
+  },
+  "newtab_shortcuts_remove_redone": {
+    "message": "Prečac je uklonjen · {shortcut} za poništavanje"
+  },
+  "newtab_shortcuts_add_undone": {
+    "message": "Dodavanje prečaca poništeno · {shortcut} za ponavljanje"
+  },
+  "newtab_shortcuts_add_redone": {
+    "message": "Prečac je ponovo dodan · {shortcut} za poništavanje"
+  },
+  "newtab_recent_added_to_folder": {
+    "message": "Dodano u „{folder}”"
+  },
+  "newtab_shortcuts_open_folder": {
+    "message": "Otvori mapu"
+  },
+  "newtab_shortcuts_from_bookmarks": {
+    "message": "(iz oznaka)"
+  },
+  "newtab_shortcuts_folder_added": {
+    "message": "Mapa je dodana u prečace"
+  },
+  "newtab_shortcuts_folder_missing": {
+    "message": "Ova mapa oznaka više nije dostupna."
+  },
+  "newtab_shortcuts_moved_to_bookmarks": {
+    "message": "Premješteno u oznake"
+  },
+  "newtab_shortcuts_new_folder_title": {
+    "message": "Nova mapa"
+  },
+  "newtab_shortcuts_stack_hint": {
+    "message": "Otpustite za izradu mape na traci oznaka"
+  },
+  "newtab_shortcuts_stacked_undo": {
+    "message": "Mapa je izrađena · {shortcut} za poništavanje"
+  },
+  "newtab_shortcuts_stack_undone": {
+    "message": "Izrada mape poništena · {shortcut} za ponavljanje"
+  },
+  "newtab_shortcuts_stack_redone": {
+    "message": "Mapa je ponovo izrađena · {shortcut} za poništavanje"
+  },
+  "newtab_shortcuts_stack_failed": {
+    "message": "Mapa se nije mogla izraditi"
+  },
+  "newtab_shortcuts_move_to_bookmarks_failed": {
+    "message": "Premještanje u oznake nije uspjelo"
+  },
+  "newtab_shortcuts_edit_dialog_title": {
+    "message": "Uredi prečac"
+  },
+  "newtab_shortcuts_context_menu_label": {
+    "message": "Radnje prečaca"
+  },
+  "settings_tab_switcher_title": {
+    "message": "Izmjenjivač kartica"
+  },
+  "settings_tab_switcher_desc": {
+    "message": "Brzo prelazite između nedavnih kartica; zadano {shortcut}, može se prilagoditi"
+  },
+  "slash_command_empty": {
+    "message": "Nema odgovarajućih naredbi"
+  },
+  "command_tabs_title": {
+    "message": "Pretraži samo otvorene kartice"
+  },
+  "command_tabs_action": {
+    "message": "Pretraži kartice"
+  },
+  "command_copy_title": {
+    "message": "Kopiraj vezu trenutačne stranice"
+  },
+  "command_copy_action": {
+    "message": "Kopiraj vezu"
+  },
+  "settings_tab_account": {
+    "message": "Račun i sinkronizacija"
+  },
+  "webdav_endpoint": {
+    "message": "Adresa poslužitelja (HTTPS)"
+  },
+  "webdav_directory": {
+    "message": "Mapa za sinkronizaciju"
+  },
+  "webdav_username": {
+    "message": "Korisničko ime"
+  },
+  "webdav_password": {
+    "message": "Zaporka aplikacije"
+  },
+  "webdav_credentials_hint": {
+    "message": "Zaporka aplikacije ostaje na ovom uređaju. Adresa poslužitelja, mapa i korisničko ime sinkroniziraju se na vaše druge uređaje putem preglednika."
+  },
+  "webdav_password_hint": {
+    "message": "Adresa poslužitelja, mapa i korisničko ime sinkroniziraju se na vaše druge uređaje putem preglednika, ali zaporka aplikacije ne. Čuvajte je na sigurnom kako biste je unijeli na novim uređajima."
+  },
+  "webdav_password_hint_synced": {
+    "message": "Adresa poslužitelja, mapa i korisničko ime stigli su s vašeg drugog uređaja. Zaporka aplikacije ne sinkronizira se pa je unesite ovdje."
+  },
+  "webdav_suggestion_label": {
+    "message": "S drugog uređaja"
+  },
+  "webdav_suggestion_add": {
+    "message": "Unesite zaporku za povezivanje"
+  },
+  "webdav_suggestion_dismiss": {
+    "message": "Odbaci"
+  },
+  "webdav_password_saved": {
+    "message": "Spremljeno"
+  },
+  "webdav_password_change": {
+    "message": "Promijeni"
+  },
+  "webdav_password_keep": {
+    "message": "Zadrži spremljenu zaporku"
+  },
+  "webdav_password_show": {
+    "message": "Prikaži zaporku"
+  },
+  "webdav_password_hide": {
+    "message": "Sakrij zaporku"
+  },
+  "webdav_last_sync": {
+    "message": "Zadnja sinkronizacija"
+  },
+  "webdav_choice_hint": {
+    "message": "Na poslužitelju već postoje postavke za Lumno. Zadržite jednu stranu ili spojite pozadine s obje strane i zadržite ostale postavke s poslužitelja. Podaci s ovog uređaja najprije se sigurnosno kopiraju."
+  },
+  "webdav_conflict_hint": {
+    "message": "Ovaj uređaj i poslužitelj promijenili su isto. Odaberite verziju koju želite zadržati; ostale promjene spajaju se automatski."
+  },
+  "webdav_error_endpoint": {
+    "message": "Unesite valjanu HTTPS WebDAV adresu."
+  },
+  "webdav_error_directory": {
+    "message": "Unesite valjan naziv mape za sinkronizaciju."
+  },
+  "webdav_error_credentials": {
+    "message": "Unesite korisničko ime i zaporku aplikacije."
+  },
+  "webdav_error_auth": {
+    "message": "Autentifikacija nije uspjela. Provjerite korisničko ime i zaporku aplikacije."
+  },
+  "webdav_error_permission": {
+    "message": "Pristup je odbijen. Provjerite dopuštenja za čitanje i pisanje u mapi."
+  },
+  "webdav_error_rate": {
+    "message": "Dosegnuto je ograničenje zahtjeva poslužitelja. Pokušajte ponovo kasnije."
+  },
+  "webdav_error_unavailable": {
+    "message": "Poslužitelj je privremeno nedostupan (HTTP 503). Nutstore tako odgovara i nakon previše zahtjeva u kratkom vremenu, pa pokušajte ponovo za nekoliko minuta. Podaci na ovom uređaju su sačuvani."
+  },
+  "webdav_warning_throttled": {
+    "message": "Poslužitelj zasad odbija zahtjeve (HTTP {status}), obično zato što ih je poslano previše u kratkom vremenu; Nutstore i slične usluge ograničavaju ih na ovaj način. Lumno će automatski pokušati ponovo za {time}. Podaci na ovom uređaju su sačuvani."
+  },
+  "webdav_error_capacity": {
+    "message": "WebDAV prostor za pohranu je pun. Oslobodite prostor i pokušajte ponovo."
+  },
+  "webdav_error_conditional": {
+    "message": "Ovaj poslužitelj ne može pouzdano spriječiti istodobna prepisivanja i nije podržan za automatsku sinkronizaciju."
+  },
+  "webdav_error_changed": {
+    "message": "Postavke su se promijenile tijekom sinkronizacije. Lokalni podaci su sačuvani i sinkronizacija će se ponoviti."
+  },
+  "webdav_error_missing": {
+    "message": "Udaljene postavke su izbrisane. Odaberite prijenos lokalnih postavki da biste ih ponovo stvorili ili provjerite adresu poslužitelja."
+  },
+  "webdav_error_chrome_capacity": {
+    "message": "Ove postavke premašuju kapacitet sinkronizacije u Chromeu i nisu primijenjene. Postojeća sinkronizacija u Chromeu i lokalni podaci su sačuvani. Smanjite postavke i pokušajte ponovo."
+  },
+  "webdav_error_chrome_capacity__firefox": {
+    "message": "Ove postavke premašuju kapacitet usluge Firefox Sync i nisu primijenjene. Postojeći Firefox Sync i lokalni podaci su sačuvani. Smanjite postavke i pokušajte ponovo."
+  },
+  "webdav_warning_chrome_backup": {
+    "message": "Postavke na ovom uređaju premašuju kapacitet sinkronizacije u Chromeu pa još nisu sigurnosno kopirane u sinkronizaciju u Chromeu. WebDAV sinkronizacija se nastavlja i lokalni podaci su sačuvani. Smanjite postavke da biste dovršili sigurnosno kopiranje."
+  },
+  "webdav_warning_chrome_backup__firefox": {
+    "message": "Postavke na ovom uređaju premašuju kapacitet usluge Firefox Sync pa još nisu sigurnosno kopirane u Firefox Sync. WebDAV sinkronizacija se nastavlja i lokalni podaci su sačuvani. Smanjite postavke da biste dovršili sigurnosno kopiranje."
+  },
+  "webdav_error_network": {
+    "message": "Povezivanje nije uspjelo ili je isteklo. Provjerite mrežu, adresu poslužitelja i certifikat. Lokalni podaci su sačuvani."
+  },
+  "webdav_error_storage": {
+    "message": "Podaci sinkronizacije nisu se mogli spremiti. Provjerite lokalnu pohranu preglednika."
+  },
+  "webdav_error_shortcuts": {
+    "message": "Vraćanjem bi se premašilo ograničenje prečaca. Najprije uklonite neke lokalne prečace mapa."
+  },
+  "webdav_error_remote_unreadable": {
+    "message": "Poslužitelj nije normalno vratio udaljene postavke. Provjerite poslužitelj ili pokušajte ponovo kasnije. Lokalni podaci nisu zamijenjeni."
+  },
+  "webdav_error_remote_corrupt": {
+    "message": "Datoteka udaljenih postavki je oštećena (nije valjani JSON), možda zbog prekinutog prijenosa ili druge aplikacije. Lokalni podaci nisu zamijenjeni."
+  },
+  "webdav_error_invalid_state": {
+    "message": "Udaljene postavke koriste strukturu ili verziju koju ova verzija Lumno ne prepoznaje, možda iz novijeg izdanja. Ažurirajte Lumno na svim uređajima. Lokalni podaci nisu zamijenjeni."
+  },
+  "webdav_error_state_too_large": {
+    "message": "Udaljene postavke premašuju ograničenje sinkronizacije (200 prečaca, 256 pozadina, 2 MB postavki). Lokalni podaci nisu zamijenjeni."
+  },
+  "webdav_error_response_too_large": {
+    "message": "Datoteka koju je vratio poslužitelj premašuje ograničenje od 2 MB. Lokalni podaci nisu zamijenjeni."
+  },
+  "webdav_error_invalid_shortcuts": {
+    "message": "Udaljeni podaci prečaca nisu valjani (neispravni ili duplicirani ID-ovi). Lokalni podaci nisu zamijenjeni."
+  },
+  "webdav_error_invalid_icon": {
+    "message": "Udaljeni zapisi ikona prečaca nisu valjani. Lokalni podaci nisu zamijenjeni."
+  },
+  "webdav_error_invalid_wallpaper": {
+    "message": "Udaljeni zapisi pozadina nisu valjani (neispravan ID ili dimenzije). Lokalni podaci nisu zamijenjeni."
+  },
+  "webdav_error_invalid_asset": {
+    "message": "Udaljena slika nije valjana (pogrešna vrsta, veličina ili sadržaj). Lokalni podaci nisu zamijenjeni."
+  },
+  "webdav_error_asset_missing": {
+    "message": "Slikovna datoteka nedostaje na poslužitelju, možda zbog nedovršenog prijenosa ili izbrisane datoteke. Lokalni podaci su sačuvani."
+  },
+  "webdav_error_asset_integrity": {
+    "message": "Slikovna datoteka na poslužitelju je oštećena (njezin sadržaj ne odgovara zapisu). Lokalni podaci su sačuvani."
+  },
+  "webdav_error_local_invalid_state": {
+    "message": "Postavke ovog uređaja imaju nevaljanu strukturu i ne mogu se sinkronizirati. Ništa nije promijenjeno ni na jednoj strani."
+  },
+  "webdav_error_local_state_too_large": {
+    "message": "Postavke ovog uređaja premašuju ograničenje sinkronizacije (256 pozadina, 2 MB postavki). Uklonite neke pozadine i pokušajte ponovo. Ništa nije promijenjeno ni na jednoj strani."
+  },
+  "webdav_error_local_invalid_shortcuts": {
+    "message": "Podaci prečaca na ovom uređaju nisu valjani (neispravni ili duplicirani ID-ovi) i ne mogu se sinkronizirati. Ništa nije promijenjeno ni na jednoj strani."
+  },
+  "webdav_error_local_invalid_icon": {
+    "message": "Zapisi ikona prečaca na ovom uređaju nisu valjani i ne mogu se sinkronizirati. Ništa nije promijenjeno ni na jednoj strani."
+  },
+  "webdav_error_local_invalid_wallpaper": {
+    "message": "Zapisi pozadina na ovom uređaju nisu valjani (neispravan ID ili dimenzije) i ne mogu se sinkronizirati. Ništa nije promijenjeno ni na jednoj strani."
+  },
+  "webdav_error_local_invalid_asset": {
+    "message": "Slika na ovom uređaju je oštećena ili nije podržana i ne može se sinkronizirati. Uklonite je i ponovo dodajte. Ništa nije promijenjeno ni na jednoj strani."
+  },
+  "webdav_error_local_asset_too_large": {
+    "message": "Slika na ovom uređaju premašuje ograničenje sinkronizacije (96 KB po ikoni, 2 MB po pozadini). Ništa nije promijenjeno ni na jednoj strani."
+  },
+  "webdav_error_shortcut_id_conflict": {
+    "message": "Udaljeni prečac ima isti ID kao prečac mape oznaka na ovom uređaju pa se ne mogu spojiti. Lokalni podaci su sačuvani."
+  },
+  "webdav_error_write_failed": {
+    "message": "Poslužitelj je odbio zapisati datoteke sinkronizacije. Provjerite dopuštenje za pisanje u mapi i slobodan prostor. Lokalni podaci su sačuvani."
+  },
+  "webdav_error_directory_unavailable": {
+    "message": "Mapa za sinkronizaciju nije se mogla izraditi na poslužitelju. Provjerite adresu poslužitelja i dopuštenja mape."
+  },
+  "webdav_error_folder_create_refused": {
+    "message": "Poslužitelj je odbio izraditi novu mapu (MKCOL 405) pa se zaključavanje sinkronizacije ne može postaviti. Provjerite može li račun izrađivati mape, je li pogon montiran samo za čitanje i blokira li proxy MKCOL."
+  },
+  "webdav_error_http": {
+    "message": "Poslužitelj je vratio pogrešku (HTTP {status}). Pokušajte ponovo kasnije. Lokalni podaci su sačuvani."
+  },
+  "webdav_error_generic": {
+    "message": "Sinkronizacija nije uspjela. Pokušajte ponovo kasnije. Lokalni podaci su sačuvani."
+  },
+  "webdav_test": {
+    "message": "Testiraj vezu"
+  },
+  "webdav_enable": {
+    "message": "Spremi i uključi sinkronizaciju"
+  },
+  "webdav_sync": {
+    "message": "Sinkroniziraj sada"
+  },
+  "webdav_restore_backup": {
+    "message": "Vrati postavke od prije zamjene"
+  },
+  "webdav_merge_wallpapers": {
+    "message": "Spoji pozadine"
+  },
+  "webdav_error_merge_too_large": {
+    "message": "Zajedno pozadine premašuju ograničenje sinkronizacije (256 pozadina, 2 MB postavki, 8 KB poveznica na slike). Uklonite neke ili zadržite jednu stranu. Ništa nije promijenjeno."
+  },
+  "webdav_use_remote": {
+    "message": "Koristi verziju s poslužitelja"
+  },
+  "webdav_use_local": {
+    "message": "Zadrži verziju ovog uređaja"
+  },
+  "webdav_test_success": {
+    "message": "Provjereni su veza, čitanje/pisanje i zaštita od istodobnih ažuriranja"
+  },
+  "webdav_state_browser": {
+    "message": "Isključeno"
+  },
+  "webdav_state_ready": {
+    "message": "Sinkronizirano"
+  },
+  "webdav_state_syncing": {
+    "message": "Sinkronizacija…"
+  },
+  "webdav_state_paused": {
+    "message": "Pauzirano"
+  },
+  "webdav_state_pending": {
+    "message": "Čeka sinkronizaciju"
+  },
+  "webdav_state_choice": {
+    "message": "Odaberite kopiju"
+  },
+  "webdav_state_conflict": {
+    "message": "Sukob postavki"
+  },
+  "webdav_state_error": {
+    "message": "Sinkronizacija nije uspjela"
+  },
+  "webdav_error_interrupted": {
+    "message": "Prethodna zamjena je prekinuta. Prijenosi su pauzirani. Vratite prethodne lokalne postavke ili se ponovo povežite i upotrijebite udaljene postavke."
+  },
+  "webdav_missing_hint": {
+    "message": "Postavke na poslužitelju su nestale. Ponovo prenesite postavke ovog uređaja ili najprije provjerite adresu poslužitelja."
+  },
+  "webdav_error_locked": {
+    "message": "Drugi uređaj zapisuje na poslužitelj. Pokušajte ponovo kasnije. Ako ostane blokirano, slijedite WebDAV vodič za uklanjanje zaostalog zaključavanja."
+  },
+  "webdav_error_lock_recovery": {
+    "message": "Udaljeno zapisivanje nije se moglo sigurno dovršiti pa je njegova zaštita zadržana. Pauzirajte sinkronizaciju na svim uređajima i provjerite je li prekinuti zahtjev završio prije uklanjanja v1/write-lock iz udaljene mape za sinkronizaciju."
+  },
+  "webdav_error_outdated": {
+    "message": "Ponovo učitajte proširenje Lumno, a zatim osvježite postavke da biste koristili više WebDAV veza."
+  },
+  "webdav_title": {
+    "message": "WebDAV sinkronizacija"
+  },
+  "webdav_beta_hint": {
+    "message": "U beta fazi: sinkronizirajte postavke, prilagođene ikone i pozadine putem WebDAV diska ili NAS-a. Za razliku od ugrađene sinkronizacije preglednika, radi među preglednicima i obuhvaća ikone i pozadine."
+  },
+  "webdav_setup_hint": {
+    "message": "Sinkronizirajte postavke, prilagođene ikone i pozadine putem usluge Nutstore ili druge WebDAV usluge, uz sinkronizaciju preglednika."
+  },
+  "webdav_edit_config": {
+    "message": "Uredi vezu"
+  },
+  "webdav_save": {
+    "message": "Spremi"
+  },
+  "webdav_never_synced": {
+    "message": "Još nije sinkronizirano"
+  },
+  "webdav_choice_title": {
+    "message": "Odaberite početnu verziju"
+  },
+  "webdav_conflict_title": {
+    "message": "Sukob sinkronizacije"
+  },
+  "webdav_conflict_items": {
+    "message": "Sadržaj u sukobu"
+  },
+  "webdav_conflict_shortcuts": {
+    "message": "Prečaci i ikone"
+  },
+  "webdav_conflict_wallpapers": {
+    "message": "Pozadine i odabir"
+  },
+  "webdav_conflict_preferences": {
+    "message": "Postavke"
+  },
+  "webdav_resolve_later": {
+    "message": "Pauziraj i riješi kasnije"
+  },
+  "webdav_add": {
+    "message": "Dodaj WebDAV"
+  },
+  "webdav_state_recovery": {
+    "message": "Potrebno vraćanje"
+  },
+  "webdav_retry": {
+    "message": "Pokušaj ponovo"
+  },
+  "webdav_copy_diagnostic": {
+    "message": "Kopiraj dijagnostiku"
+  },
+  "webdav_diagnostic_copied": {
+    "message": "Kopirano"
+  },
+  "webdav_provider_jianguoyun": {
+    "message": "Nutstore"
+  },
+  "webdav_upload_local": {
+    "message": "Prenesi postavke ovog uređaja"
+  },
+  "webdav_error_duplicate": {
+    "message": "Veza s istim poslužiteljem, mapom i korisničkim imenom već postoji."
+  },
+  "webdav_error_interrupted_other": {
+    "message": "Druga WebDAV veza ({name}) najprije mora vratiti lokalne postavke. Ova se nastavlja nakon toga."
+  },
+  "webdav_just_now": {
+    "message": "upravo sada"
+  },
+  "webdav_view_diff": {
+    "message": "Prikaži razlike"
+  },
+  "webdav_hide_diff": {
+    "message": "Sakrij razlike"
+  },
+  "webdav_diff_local": {
+    "message": "Ovaj uređaj"
+  },
+  "webdav_diff_remote": {
+    "message": "Poslužitelj"
+  },
+  "webdav_diff_added": {
+    "message": "Dodano: {items}"
+  },
+  "webdav_diff_removed": {
+    "message": "Uklonjeno: {items}"
+  },
+  "webdav_diff_changed": {
+    "message": "Uređeno: {items}"
+  },
+  "webdav_diff_more": {
+    "message": "Ukupno: {count}"
+  },
+  "webdav_diff_reordered": {
+    "message": "Promijenjen redoslijed"
+  },
+  "webdav_diff_selection": {
+    "message": "Promijenjena trenutačna pozadina"
+  },
+  "webdav_diff_unchanged": {
+    "message": "Nema promjena"
+  },
+  "webdav_diff_shortcut_total": {
+    "message": "Prečaca: {count}"
+  },
+  "webdav_diff_wallpaper_total": {
+    "message": "Pozadina: {count}"
+  },
+  "webdav_diff_loading": {
+    "message": "Učitavanje…"
+  },
+  "webdav_value_on": {
+    "message": "Uključeno"
+  },
+  "webdav_value_off": {
+    "message": "Isključeno"
+  },
+  "webdav_value_default": {
+    "message": "Zadano"
+  },
+  "webdav_value_changed": {
+    "message": "Promijenjeno"
+  },
+  "webdav_value_list": {
+    "message": "Stavki: {count}"
+  },
+  "webdav_preference_other": {
+    "message": "Ostala postavka"
+  },
+  "webdav_preference_zen_mode": {
+    "message": "Način Zen"
+  },
+  "webdav_remove": {
+    "message": "Izbriši WebDAV vezu"
+  },
+  "webdav_remove_confirm": {
+    "message": "Izbrisati ovu lokalnu vezu? Datoteke na poslužitelju bit će zadržane."
+  },
+  "newtab_quote_title": {
+    "message": "Citat dana"
+  },
+  "newtab_quote_position": {
+    "message": "Položaj citata"
+  },
+  "newtab_quote_category": {
+    "message": "Kategorija citata"
+  },
+  "newtab_quote_off": {
+    "message": "Isključeno"
+  },
+  "newtab_quote_top": {
+    "message": "Iznad okvira za pretraživanje"
+  },
+  "newtab_quote_input": {
+    "message": "Ispod okvira za pretraživanje"
+  },
+  "newtab_quote_search": {
+    "message": "Ispod prečaca"
+  },
+  "newtab_quote_bottom": {
+    "message": "Dno stranice"
+  },
+  "newtab_quote_literature": {
+    "message": "Književnost"
+  },
+  "newtab_quote_poetry": {
+    "message": "Poezija"
+  },
+  "newtab_quote_shuffle": {
+    "message": "Prikaži drugi citat"
+  },
+  "newtab_quote_shuffle_error": {
+    "message": "Drugi citat nije se mogao učitati"
+  },
+  "newtab_quote_save_error": {
+    "message": "Spremanje postavki citata nije uspjelo"
+  },
+  "newtab_quote_fallback_text": {
+    "message": "Putovanje od tisuću milja počinje jednim korakom."
+  },
+  "newtab_quote_fallback_author": {
+    "message": "Lao Ce"
+  },
+  "newtab_quote_fallback_source": {
+    "message": "Tao Te Ching"
+  },
+  "newtab_bing_daily": {
+    "message": "Automatski ažuriraj svaki dan"
+  },
+  "newtab_bing_daily_hint": {
+    "message": "Nova fotografija s Binga svaki dan. Fotografija koju odaberete dok je ovo uključeno ostaje do kraja dana."
+  },
+  "newtab_daily_restore": {
+    "message": "Natrag na današnju pozadinu"
+  },
+  "newtab_bing_recent": {
+    "message": "Nedavne pozadine"
+  },
+  "newtab_bing_refresh": {
+    "message": "Osvježi"
+  },
+  "newtab_bing_loading": {
+    "message": "Učitavanje pozadina…"
+  },
+  "newtab_bing_saving": {
+    "message": "Spremanje pozadine…"
+  },
+  "newtab_bing_error": {
+    "message": "Pozadine se nisu mogle učitati. Pokušajte ponovo."
+  },
+  "newtab_bing_save_error": {
+    "message": "Pozadina se nije mogla spremiti. Pokušajte ponovo."
+  },
+  "newtab_bing_source": {
+    "message": "Prikaži izvor pozadine"
+  },
+  "newtab_wallpaper_curated_section": {
+    "message": "Odabrano"
+  },
+  "newtab_curated_daily_hint": {
+    "message": "Nova fotografija svaki dan iz kategorije prikazane kad ovo uključite, ista na svim sinkroniziranim uređajima. Fotografija koju odaberete ostaje do kraja dana."
+  },
+  "newtab_curated_category": {
+    "message": "Kategorija"
+  },
+  "newtab_curated_category_random": {
+    "message": "Mješavina"
+  },
+  "newtab_curated_category_nature": {
+    "message": "Priroda"
+  },
+  "newtab_curated_category_water": {
+    "message": "Voda"
+  },
+  "newtab_curated_category_city": {
+    "message": "Grad"
+  },
+  "newtab_curated_category_minimal": {
+    "message": "Minimalno"
+  },
+  "newtab_curated_category_art": {
+    "message": "Umjetnost"
+  },
+  "newtab_curated_art_meta": {
+    "message": "The Cleveland Museum of Art"
+  },
+  "newtab_curated_list": {
+    "message": "Fotografije"
+  },
+  "newtab_curated_mix_all": {
+    "message": "Sve kategorije"
+  },
+  "newtab_curated_mix_count": {
+    "message": "Kategorija: {count}"
+  },
+  "newtab_curated_mix_separator": {
+    "message": ", "
+  },
+  "newtab_curated_mix_aria": {
+    "message": "Kategorije u mješavini"
+  },
+  "newtab_curated_more": {
+    "message": "Prikaži druge"
+  },
+  "newtab_curated_photo_by": {
+    "message": "Fotografija: {name}"
+  },
+  "newtab_curated_source_meta": {
+    "message": "Unsplash · putem Lorem Picsum"
+  },
+  "newtab_wallpaper_add_url": {
+    "message": "Dodaj poveznicu na sliku"
+  },
+  "newtab_wallpaper_url_placeholder": {
+    "message": "Zalijepite poveznicu na sliku (https://…)"
+  },
+  "newtab_wallpaper_url_submit": {
+    "message": "Dodaj"
+  },
+  "newtab_wallpaper_url_invalid": {
+    "message": "Unesite poveznicu koja počinje s http:// ili https://"
+  },
+  "newtab_wallpaper_url_limit": {
+    "message": "Ova je poveznica preduga ili je spremljeno previše poveznica. Uklonite neke i pokušajte ponovo."
+  },
+  "newtab_wallpaper_url_import_error": {
+    "message": "Slika se nije mogla dodati s ove poveznice"
+  },
+  "newtab_wallpaper_save_to_local": {
+    "message": "Spremi u lokalne pozadine"
+  },
+  "newtab_wallpaper_in_local": {
+    "message": "Već je u lokalnim pozadinama"
+  },
+  "newtab_wallpaper_saving_local": {
+    "message": "Spremanje u lokalne pozadine…"
+  },
+  "newtab_wallpaper_saved_local": {
+    "message": "Spremljeno u lokalne pozadine"
+  },
+  "newtab_wallpaper_local_limit": {
+    "message": "Možete zadržati najviše ovoliko lokalnih pozadina: {count}. Izbrišite neke i pokušajte ponovo."
+  },
+  "newtab_wallpaper_context_menu_label": {
+    "message": "Radnje pozadine"
+  },
+  "newtab_quote_font": {
+    "message": "Font"
+  },
+  "newtab_quote_font_label": {
+    "message": "Font citata"
+  },
+  "newtab_quote_font_wenkai": {
+    "message": "LXGW WenKai"
+  },
+  "newtab_quote_font_xiaowei": {
+    "message": "ZCOOL XiaoWei"
+  },
+  "newtab_quote_font_sans": {
+    "message": "Sistemski sans-serif"
+  },
+  "newtab_quote_font_size": {
+    "message": "Veličina fonta"
+  },
+  "newtab_quote_font_size_label": {
+    "message": "Veličina fonta citata (px)"
+  },
+  "newtab_quote_provider": {
+    "message": "Pokreće Hitokoto"
+  },
+  "recent_history_menu": {
+    "message": "Prikaži povijest nedavnih promjena"
+  },
+  "recent_history_title": {
+    "message": "Povijest promjena"
+  },
+  "recent_history_description": {
+    "message": "Postavite bilo koju sačuvanu verziju kao trenutačnu bez uklanjanja povijesti."
+  },
+  "recent_history_current": {
+    "message": "Trenutačna verzija"
+  },
+  "recent_history_earlier": {
+    "message": "Ranija verzija"
+  },
+  "recent_history_restore": {
+    "message": "Postavi kao trenutačnu"
+  },
+  "recent_history_restoring": {
+    "message": "Vraćanje…"
+  },
+  "recent_history_restore_success": {
+    "message": "Odabrana verzija je vraćena"
+  },
+  "recent_history_restore_failed": {
+    "message": "Ova se verzija ne može vratiti"
+  },
+  "recent_update_close": {
+    "message": "Zatvori"
+  },
+  "settings_progress_tracking_title": {
+    "message": "Ažuriraj prikvačene serije i romane"
+  },
+  "settings_progress_tracking_desc": {
+    "message": "Prikvačite seriju ili roman i njegova pločica prati vas do sljedeće epizode ili poglavlja, pa se otvara ondje gdje ste stali"
+  },
+  "settings_newtab_open_in_new_tab_title": {
+    "message": "Otvori u novoj kartici"
+  },
+  "settings_newtab_open_in_new_tab_desc": {
+    "message": "Uključene stavke otvaraju se u novoj kartici i prelazi se na nju; isključene stavke otvaraju se u trenutačnoj kartici. Klik uz Command/Ctrl ili srednji klik uvijek otvara u pozadini."
+  },
+  "settings_newtab_open_in_new_tab_search": {
+    "message": "Rezultati pretraživanja"
+  },
+  "settings_newtab_open_in_new_tab_shortcuts": {
+    "message": "Prečaci"
+  },
+  "settings_newtab_open_in_new_tab_bookmarks": {
+    "message": "Oznake"
+  },
+  "settings_newtab_open_in_new_tab_recent_sites": {
+    "message": "Pločice web-lokacija"
+  },
+  "recent_progress_track": {
+    "message": "Prati napredak"
+  },
+  "recent_progress_stop": {
+    "message": "Zaustavi praćenje napretka"
+  },
+  "recent_progress_track_toast": {
+    "message": "Praćenje je uključeno. Pločica se ažurira kad prijeđete na sljedeću epizodu ili poglavlje."
+  },
+  "recent_progress_stop_toast": {
+    "message": "Praćenje napretka je zaustavljeno"
+  },
+  "recent_progress_tracking": {
+    "message": "Praćenje napretka"
+  },
+  "recent_progress_auto_toast": {
+    "message": "Prikvačeno i napredak se prati. Kliknite ikonu radara na pločici da biste zaustavili."
+  },
+  "settings_general_newtab_section_title": {
+    "message": "Postavke nove kartice"
+  },
+  "recent_progress_track_tooltip": {
+    "message": "Prati napredak\n────────\nKorisno za serije i romane u nastavcima.\nKada je uključeno, dolazak do sljedeće epizode ili poglavlja ovog djela premješta pločicu onamo."
+  },
+  "recent_progress_stop_tooltip": {
+    "message": "Praćenje napretka\n────────\nDolazak do sljedeće epizode ili poglavlja ovog djela premješta pločicu onamo.\nKliknite za zaustavljanje praćenja."
+  },
+  "newtab_shortcuts_group_new": {
+    "message": "Nova grupa"
+  },
+  "newtab_shortcuts_group_default_title": {
+    "message": "Prečaci"
+  },
+  "newtab_shortcuts_group_title_placeholder": {
+    "message": "Dodajte naslov"
+  },
+  "newtab_shortcuts_group_actions": {
+    "message": "Radnje za {group}"
+  },
+  "newtab_shortcuts_group_untitled_name": {
+    "message": "Grupa bez naslova"
+  },
+  "newtab_shortcuts_group_rename": {
+    "message": "Preimenuj"
+  },
+  "newtab_shortcuts_group_add_site": {
+    "message": "Dodaj web-lokaciju"
+  },
+  "newtab_shortcuts_group_move_up": {
+    "message": "Pomakni gore"
+  },
+  "newtab_shortcuts_group_move_down": {
+    "message": "Pomakni dolje"
+  },
+  "newtab_shortcuts_group_delete": {
+    "message": "Izbriši grupu"
+  },
+  "newtab_shortcuts_group_delete_with_sites": {
+    "message": "Izbriši grupu i web-lokacije"
+  },
+  "newtab_shortcuts_group_delete_confirm_title": {
+    "message": "Izbrisati „{group}” i njezine web-lokacije?"
+  },
+  "newtab_shortcuts_group_delete_confirm_description": {
+    "message": "Grupa i njezine web-lokacije (njih {count}) bit će izbrisane."
+  },
+  "newtab_shortcuts_group_delete_confirm_button": {
+    "message": "Izbriši"
+  },
+  "newtab_shortcuts_group_deleted_undo": {
+    "message": "Grupa je izbrisana · {shortcut} za poništavanje"
+  },
+  "newtab_shortcuts_group_delete_undone": {
+    "message": "Grupa je vraćena · {shortcut} za ponavljanje"
+  },
+  "newtab_shortcuts_group_delete_redone": {
+    "message": "Grupa je izbrisana · {shortcut} za poništavanje"
+  },
+  "newtab_shortcuts_group_limit_reached": {
+    "message": "Možete izraditi najviše ovoliko grupa: {count}."
+  },
+  "options_shortcut_sync_all": {
+    "message": "Prečaci: svi ({count}) sinkroniziraju se s preglednikom."
+  },
+  "options_shortcut_sync_split_webdav": {
+    "message": "Prečaci: {synced} se sinkronizira s preglednikom; ostali ({local}) sinkroniziraju se putem WebDAV-a."
+  },
+  "options_shortcut_sync_split_local": {
+    "message": "Prečaci: {synced} se sinkronizira s preglednikom; {local} premašuje njegov prostor za sinkronizaciju i ostaje na ovom uređaju. Uključite WebDAV da biste i njih sinkronizirali."
+  },
+  "options_shortcut_sync_failed_local": {
+    "message": "Prečaci se nisu mogli spremiti u sinkronizaciju preglednika; svi ({count}) zasad ostaju na ovom uređaju."
+  },
+  "options_shortcut_sync_failed_webdav": {
+    "message": "Prečaci se nisu mogli spremiti u sinkronizaciju preglednika; svi ({count}) zasad se sinkroniziraju putem WebDAV-a."
+  },
+  "options_shortcut_sync_none_local": {
+    "message": "Prečaci: sinkronizacija preglednika je puna pa svi ({count}) ostaju na ovom uređaju. Uključite WebDAV da biste ih sinkronizirali."
+  },
+  "options_shortcut_sync_none_webdav": {
+    "message": "Prečaci: sinkronizacija preglednika je puna pa se svi ({count}) sinkroniziraju putem WebDAV-a."
+  },
+  "newtab_shortcuts_add_site": {
+    "message": "Dodaj web-lokaciju"
+  },
+  "newtab_shortcuts_group_dialog_rename_title": {
+    "message": "Preimenuj grupu"
+  },
+  "newtab_shortcuts_group_name_placeholder": {
+    "message": "Neobavezno; grupa bez naslova samo započinje novi red"
+  },
+  "newtab_style_section_title": {
+    "message": "Stil"
+  },
+  "settings_newtab_glass_style_title": {
+    "message": "Materijal"
+  },
+  "settings_newtab_glass_style_desc": {
+    "message": "Promijenite materijal elemenata sučelja nove kartice."
+  },
+  "settings_newtab_glass_style_none": {
+    "message": "Zadano"
+  },
+  "settings_newtab_glass_style_frosted": {
+    "message": "Akril"
+  },
+  "settings_newtab_glass_style_liquid": {
+    "message": "Tekuće staklo"
+  },
+  "settings_newtab_glass_theme_title": {
+    "message": "Tema materijala"
+  },
+  "settings_newtab_glass_theme_follow": {
+    "message": "Automatski"
+  },
+  "settings_newtab_glass_theme_light": {
+    "message": "Svijetla"
+  },
+  "settings_newtab_glass_theme_dark": {
+    "message": "Tamna"
+  },
+  "settings_search_source_group_order_title": {
+    "message": "Redoslijed ploče pretraživanja"
+  },
+  "settings_search_source_group_order_desc": {
+    "message": "Povucite oznake da biste postavili redoslijed grupa na ploči okvira za pretraživanje. Povucite retke u popisima ispod da biste posložili svaku grupu. Pritisnite Ctrl/⌘ + Z za poništavanje i Shift + Ctrl/⌘ + Z za ponavljanje."
+  },
+  "settings_search_source_order_keyboard_hint": {
+    "message": "Pritisnite Alt s tipkom strelice lijevo ili desno za pomicanje"
+  },
+  "settings_search_source_order_failed": {
+    "message": "Novi redoslijed nije se mogao spremiti. Pokušajte ponovo."
+  },
+  "settings_search_source_move_up": {
+    "message": "Pomakni gore"
+  },
+  "settings_search_source_move_down": {
+    "message": "Pomakni dolje"
+  },
+  "settings_search_result_sources_order_desc": {
+    "message": "Povucite da biste postavili njihov redoslijed u grupi Sadržaj preglednika na ploči okvira za pretraživanje. Pritisnite Ctrl/⌘ + Z za poništavanje i Shift + Ctrl/⌘ + Z za ponavljanje."
+  },
+  "settings_search_source_order_undone": {
+    "message": "Promjena redoslijeda poništena"
+  },
+  "settings_search_source_order_redone": {
+    "message": "Promjena redoslijeda ponovljena"
+  },
+  "newtab_quote_source": {
+    "message": "Izvor"
+  },
+  "newtab_quote_custom": {
+    "message": "Prilagođeno"
+  },
+  "newtab_quote_collection_save_error": {
+    "message": "Spremanje na ovaj uređaj nije uspjelo. Vaša prethodna zbirka je sačuvana."
+  },
+  "newtab_quote_hitokoto": {
+    "message": "Hitokoto"
+  },
+  "newtab_quote_provider_custom": {
+    "message": "Prilagođena zbirka · na ovom uređaju, sinkronizira se putem WebDAV-a"
+  },
+  "newtab_quote_importing": {
+    "message": "Uvoz…"
+  },
+  "newtab_quote_import_hint": {
+    "message": "Svaki dan prikazuje se novi citat; Promiješaj ga mijenja u bilo kojem trenutku. TXT / MD: jedan neprazan redak sadržaja po citatu. Najviše 1 MB, 1000 citata, 500 znakova po citatu; čuva se na ovom uređaju, ne u sinkronizaciji preglednika; WebDAV ga sinkronizira kada je uključen."
+  },
+  "newtab_quote_count": {
+    "message": "Citati: {count}"
+  },
+  "newtab_quote_import_error": {
+    "message": "Uvoz nije uspio: datoteka ne zadovoljava ograničenja formata ili veličine. Vaša prethodna zbirka je sačuvana."
+  },
+  "newtab_quote_library": {
+    "message": "Citati"
+  },
+  "newtab_quote_import": {
+    "message": "Uvezi datoteku"
+  },
+  "newtab_quote_replace": {
+    "message": "Zamijeni datoteku"
+  },
+  "newtab_quote_shuffle_button": {
+    "message": "Promiješaj"
+  },
+  "newtab_quote_font_size_reset": {
+    "message": "Vrati veličinu fonta citata"
+  },
+  "popup_actions_label": {
+    "message": "Radnje stranice"
+  },
+  "popup_action_shortcut": {
+    "message": "Dodaj prečac"
+  },
+  "popup_action_copy": {
+    "message": "Kopiraj vezu"
+  },
+  "popup_copy_failed": {
+    "message": "Kopiranje veze nije uspjelo. Pokušajte ponovo."
+  },
+  "popup_theme_label": {
+    "message": "Tema"
+  },
+  "popup_link_settings": {
+    "message": "Postavke"
+  },
+  "popup_link_shortcuts": {
+    "message": "Tipkovni prečaci"
+  },
+  "popup_link_feedback": {
+    "message": "Povratne informacije"
+  },
+  "popup_sync_error": {
+    "message": "WebDAV sinkronizacija nije uspjela"
+  },
+  "popup_sync_attention": {
+    "message": "WebDAV sinkronizacija traži vašu pažnju"
+  },
+  "popup_sync_busy": {
+    "message": "WebDAV sinkronizacija u tijeku"
+  },
+  "popup_sync_waiting": {
+    "message": "WebDAV čeka ponovni pokušaj"
+  },
+  "popup_release_notes": {
+    "message": "Novosti"
+  },
+  "popup_section_command_bar": {
+    "message": "Naredbena traka"
+  },
+  "popup_overlay_page_theme": {
+    "message": "Uskladi s bojama stranice"
+  },
+  "popup_overlay_open_tabs": {
+    "message": "Prema zadanim postavkama prikaži otvorene kartice"
+  },
+  "popup_action_shortcut_tooltip": {
+    "message": "Dodaj u prečace nove kartice"
+  },
+  "popup_action_clip_tooltip": {
+    "message": "Izreži dio stranice u plutajući prozor"
+  },
+  "popup_settings_label": {
+    "message": "Brze postavke"
+  },
+  "popup_sync_ready": {
+    "message": "WebDAV sinkroniziran"
+  },
+  "popup_open_command_bar": {
+    "message": "Otvori naredbenu traku"
+  },
+  "popup_action_pip": {
+    "message": "Slika u slici"
+  },
+  "popup_action_pip_exit": {
+    "message": "Izađi iz slike u slici"
+  },
+  "popup_action_pip_tooltip": {
+    "message": "Prikaži videozapis ove stranice u malom plutajućem prozoru"
+  },
+  "popup_action_pip_menu": {
+    "message": "Automatska slika u slici"
+  },
+  "popup_pip_failed": {
+    "message": "Ovaj se videozapis ne može reproducirati kao slika u slici."
+  },
+  "popup_auto_pip_hint": {
+    "message": "Videozapisi lebde kad promijenite karticu"
+  },
+  "popup_action_unavailable": {
+    "message": "Nije dostupno na ovoj stranici"
+  },
+  "popup_action_pin_recent": {
+    "message": "Prikvači u Nedavno"
+  },
+  "popup_action_unpin_recent": {
+    "message": "Otkvači iz Nedavno"
+  },
+  "popup_action_pin_recent_tooltip": {
+    "message": "Prikvači u Nedavno na novoj kartici"
+  },
+  "popup_action_unpin_recent_tooltip": {
+    "message": "Otkvači iz Nedavno na novoj kartici"
+  },
+  "popup_recent_pinned": {
+    "message": "Prikvačeno u Nedavno na novoj kartici"
+  },
+  "popup_recent_unpinned": {
+    "message": "Otkvačeno iz Nedavno"
+  }
+}

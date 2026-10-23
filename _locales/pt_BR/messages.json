@@ -1,0 +1,3659 @@
+{
+  "ext_name": {
+    "message": "Lumno ｜ Barra de comandos e Nova guia"
+  },
+  "ext_description": {
+    "message": "Uma barra de comandos leve para o navegador e pesquisa na Nova guia."
+  },
+  "settings_tab_general": {
+    "message": "Geral"
+  },
+  "settings_tab_appearance": {
+    "message": "Aparência"
+  },
+  "settings_appearance_global_section_title": {
+    "message": "Global"
+  },
+  "settings_webpage_focus_overlay_section_title": {
+    "message": "Barra de comandos"
+  },
+  "newtab_theme_scope_label": {
+    "message": "Escopo do tema"
+  },
+  "newtab_theme_scope_global": {
+    "message": "Global"
+  },
+  "newtab_theme_scope_home": {
+    "message": "Nova guia"
+  },
+  "newtab_theme_scope_select_label": {
+    "message": "Aplicar mudanças de tema a {scope}"
+  },
+  "newtab_theme_scope_help_label": {
+    "message": "Informações sobre o escopo do tema"
+  },
+  "newtab_theme_scope_help": {
+    "message": "Global: o tema padrão de todas as páginas.\nNova guia: vale apenas para a página Nova guia. Escolha Seguir \"Global\" para mantê-los sincronizados."
+  },
+  "newtab_theme_follow_global": {
+    "message": "Seguir \"Global\""
+  },
+  "newtab_search_section_title": {
+    "message": "Caixa de pesquisa"
+  },
+  "newtab_search_width_title": {
+    "message": "Largura da caixa de pesquisa"
+  },
+  "newtab_search_width_aria": {
+    "message": "Ajustar a largura da caixa de pesquisa da Nova guia"
+  },
+  "newtab_search_width_standard": {
+    "message": "Padrão"
+  },
+  "newtab_search_width_wide": {
+    "message": "Larga"
+  },
+  "newtab_search_width_max": {
+    "message": "Máxima"
+  },
+  "newtab_appearance_settings_title": {
+    "message": "Configurações de aparência"
+  },
+  "newtab_help_footer_prompt": {
+    "message": "Não sabe o que uma opção faz?"
+  },
+  "newtab_help_footer_action": {
+    "message": "Acesse a Central de Ajuda"
+  },
+  "newtab_more_settings": {
+    "message": "Mais configurações"
+  },
+  "settings_tab_shortcuts": {
+    "message": "Fontes de pesquisa"
+  },
+  "settings_tab_blacklist": {
+    "message": "Lista de bloqueio"
+  },
+  "settings_tab_labs": {
+    "message": "Labs"
+  },
+  "settings_selection_quick_actions_title": {
+    "message": "Ações rápidas na seleção"
+  },
+  "settings_selection_quick_actions_desc": {
+    "message": "Mostrar ações de IA ao selecionar texto"
+  },
+  "settings_selection_quick_actions_provider_title": {
+    "message": "Provedor preferido"
+  },
+  "settings_selection_quick_actions_group_title": {
+    "message": "Pesquisar em segundo plano"
+  },
+  "settings_selection_quick_actions_group_desc": {
+    "message": "Reunir todas as páginas de IA no grupo de guias “Pesquisa com IA”"
+  },
+  "selection_quick_actions_group_name": {
+    "message": "Pesquisa com IA"
+  },
+  "selection_quick_action_ask": {
+    "message": "Responder"
+  },
+  "selection_quick_action_translate": {
+    "message": "Traduzir"
+  },
+  "selection_quick_action_explain": {
+    "message": "Explicar"
+  },
+  "selection_quick_action_summarize": {
+    "message": "Resumir"
+  },
+  "selection_quick_action_search": {
+    "message": "Pesquisar a fundo"
+  },
+  "selection_quick_action_calculate": {
+    "message": "Calcular"
+  },
+  "selection_quick_action_open_menu": {
+    "message": "Usar o Lumno com o texto selecionado"
+  },
+  "selection_quick_action_more": {
+    "message": "Mais ações"
+  },
+  "selection_quick_action_sending": {
+    "message": "Abrindo em segundo plano…"
+  },
+  "selection_quick_action_failed": {
+    "message": "Não foi possível enviar. Tente novamente."
+  },
+  "selection_debug_decision_title": {
+    "message": "Decisão da seleção"
+  },
+  "selection_debug_status_show": {
+    "message": "Mostrar"
+  },
+  "selection_debug_status_hide": {
+    "message": "Não mostrar"
+  },
+  "selection_debug_sort_title": {
+    "message": "Ordem do menu"
+  },
+  "selection_debug_item_count": {
+    "message": "{count} itens"
+  },
+  "selection_debug_reason_calculate": {
+    "message": "Expressão, moeda ou conversão de unidade detectada"
+  },
+  "selection_debug_reason_question": {
+    "message": "Pergunta explícita detectada"
+  },
+  "selection_debug_reason_prose": {
+    "message": "Texto corrido suficientemente rico detectado"
+  },
+  "selection_debug_reason_search": {
+    "message": "Intenção de buscar notícias, preços, site oficial ou versão detectada"
+  },
+  "selection_debug_reason_translate": {
+    "message": "O texto selecionado está em um idioma diferente da interface do Lumno"
+  },
+  "selection_debug_reason_error": {
+    "message": "Erro ou exceção detectado"
+  },
+  "selection_debug_reason_code": {
+    "message": "Sintaxe ou contexto de código detectado"
+  },
+  "selection_debug_reason_term": {
+    "message": "Termo ou expressão curta relevante detectado"
+  },
+  "selection_debug_reason_explain_score": {
+    "message": "Explicar recebeu a pontuação mais alta"
+  },
+  "selection_debug_reason_top_score": {
+    "message": "Esta ação recebeu a maior pontuação de correspondência"
+  },
+  "selection_debug_rejection_disabled": {
+    "message": "As ações rápidas na seleção estão desativadas"
+  },
+  "selection_debug_rejection_sensitive": {
+    "message": "Campo sensível de senha ou pagamento; o conteúdo não foi lido"
+  },
+  "selection_debug_rejection_no_selection": {
+    "message": "Nenhuma seleção de texto válida detectada"
+  },
+  "selection_debug_rejection_too_short": {
+    "message": "Menos de 2 caracteres"
+  },
+  "selection_debug_rejection_too_long": {
+    "message": "Mais de 2400 caracteres"
+  },
+  "selection_debug_rejection_url": {
+    "message": "URL completo"
+  },
+  "selection_debug_rejection_email": {
+    "message": "Endereço de e-mail"
+  },
+  "selection_debug_rejection_generic_ui": {
+    "message": "Texto genérico de interface, como “Saiba mais / Salvar / Próximo”"
+  },
+  "selection_debug_rejection_plain_number": {
+    "message": "Número simples, sem cálculo nem conversão"
+  },
+  "selection_debug_rejection_symbols": {
+    "message": "Proporção de símbolos alta demais"
+  },
+  "selection_debug_rejection_no_intent": {
+    "message": "Não corresponde a uma tarefa explícita, termo relevante nem texto substancial"
+  },
+  "selection_debug_primary_meta": {
+    "message": "Principal: {action} · Pontuação {score} · Confiança {confidence}"
+  },
+  "selection_debug_confidence_high": {
+    "message": "alta"
+  },
+  "selection_debug_confidence_medium": {
+    "message": "média"
+  },
+  "selection_debug_confidence_low": {
+    "message": "baixa"
+  },
+  "selection_debug_sort_primary_cause": {
+    "message": "{reason}, pontuação {score}"
+  },
+  "selection_debug_sort_fallback_cause": {
+    "message": "Alternativa geral, preenchida em ordem fixa e sem duplicatas"
+  },
+  "selection_debug_sort_footer": {
+    "message": "O primeiro item usa a maior pontuação de intenção; os demais seguem “Explicar → Pesquisar a fundo → Traduzir”."
+  },
+  "settings_global_section_title": {
+    "message": "Configurações globais"
+  },
+  "settings_feedback_support_section_title": {
+    "message": "Feedback e suporte"
+  },
+  "settings_feedback_support_wechat_action": {
+    "message": "Entrar no grupo do WeChat"
+  },
+  "settings_help_center_title": {
+    "message": "Central de Ajuda"
+  },
+  "settings_help_center_desc": {
+    "message": "Não sabe como um recurso funciona? Todos estão explicados aqui."
+  },
+  "settings_help_center_action": {
+    "message": "Abrir"
+  },
+  "settings_help_center_ask_action": {
+    "message": "Pergunte na caixa de pesquisa"
+  },
+  "settings_help_center_ask_caption": {
+    "message": "Na Nova guia ou na barra de comandos, digite lm, pressione Tab e escreva sua pergunta."
+  },
+  "settings_help_center_ask_demo_query": {
+    "message": "como mudar um atalho"
+  },
+  "settings_help_center_ask_demo_result_1_title": {
+    "message": "Atalhos de teclado"
+  },
+  "settings_help_center_ask_demo_result_1_detail": {
+    "message": "Mudar um atalho"
+  },
+  "settings_help_center_ask_demo_result_2_title": {
+    "message": "Atalhos e favoritos"
+  },
+  "settings_help_center_ask_demo_result_2_detail": {
+    "message": "Mudar o ícone de um atalho"
+  },
+  "settings_feedback_support_review_action": {
+    "message": "Avaliar o Lumno"
+  },
+  "settings_feedback_support_github_issue_action": {
+    "message": "Criar issue"
+  },
+  "settings_feedback_support_contact_author_action": {
+    "message": "Falar com o autor"
+  },
+  "settings_onboarding_tutorial_action": {
+    "message": "Tour de boas-vindas"
+  },
+  "settings_language_title": {
+    "message": "Idioma"
+  },
+  "settings_language_desc": {
+    "message": "Escolha o idioma da interface"
+  },
+  "settings_language_machine_note": {
+    "message": "Traduzido por IA. Se algo parecer errado, envie seu feedback."
+  },
+  "settings_language_search_placeholder": {
+    "message": "Pesquisar idiomas"
+  },
+  "settings_language_no_results": {
+    "message": "Nenhum idioma encontrado"
+  },
+  "settings_version_label": {
+    "message": "Versão"
+  },
+  "settings_version_tooltip": {
+    "message": "Ver registro de alterações"
+  },
+  "language_system": {
+    "message": "Seguir o idioma do navegador"
+  },
+  "settings_recent_title": {
+    "message": "Conteúdo inferior da Nova guia"
+  },
+  "settings_newtab_section_title": {
+    "message": "Nova guia"
+  },
+  "settings_search_results_section_title": {
+    "message": "Configurações dos resultados de pesquisa"
+  },
+  "settings_search_result_priority_title": {
+    "message": "Prioridade do primeiro resultado"
+  },
+  "settings_search_result_tab_position_title": {
+    "message": "Posição da guia de resultados"
+  },
+  "search_result_tab_position_end": {
+    "message": "Fim da barra de guias (embaixo)"
+  },
+  "search_result_tab_position_after_current": {
+    "message": "À direita da guia atual (abaixo)"
+  },
+  "search_result_tab_position_before_current": {
+    "message": "À esquerda da guia atual (acima)"
+  },
+  "settings_search_fuzzy_pinyin_title": {
+    "message": "Pinyin aproximado"
+  },
+  "settings_search_fuzzy_pinyin_desc": {
+    "message": "Quando ativado, as pesquisas por pinyin e iniciais tratam z e zh, c e ch, s e sh, n e l, an e ang, en e eng, e in e ing como iguais"
+  },
+  "settings_search_result_sources_title": {
+    "message": "Tipos de resultado exibidos"
+  },
+  "settings_search_result_display_limit_title": {
+    "message": "Máximo de resultados exibidos"
+  },
+  "settings_overlay_open_tabs_default_visible_title": {
+    "message": "Mostrar todas as guias abertas por padrão ao abrir o Lumno em uma página da Web"
+  },
+  "settings_favicon_enhanced_fetch_title": {
+    "message": "Busca avançada de ícones e cores de tema"
+  },
+  "settings_favicon_enhanced_fetch_desc": {
+    "message": "Se aparecer um aviso de acesso à rede local, desative esta opção. O Lumno deixará de carregar imagens diretamente dos sites, mas continuará usando ícones em cache do navegador e serviços de ícones de terceiros."
+  },
+  "favicon_blacklist_section_desc": {
+    "message": "Excluir por site"
+  },
+  "favicon_blacklist_add": {
+    "message": "Adicionar regra de exclusão"
+  },
+  "favicon_blacklist_removed_toast": {
+    "message": "Removido das exclusões de ícone e tema"
+  },
+  "favicon_blacklist_clear": {
+    "message": "Limpar regras de exclusão"
+  },
+  "search_result_priority_autocomplete": {
+    "message": "Preenchimento automático primeiro"
+  },
+  "search_result_priority_search": {
+    "message": "Pesquisa primeiro"
+  },
+  "settings_recent_desc": {
+    "message": "Mostrar sites recentes / mais visitados"
+  },
+  "settings_recent_sites_title": {
+    "message": "Cartões de sites"
+  },
+  "newtab_recent_rows_title": {
+    "message": "Linhas de cartões de sites"
+  },
+  "settings_newtab_width_title": {
+    "message": "Largura do conteúdo da Nova guia"
+  },
+  "settings_bookmarks_title": {
+    "message": "Linhas de favoritos"
+  },
+  "settings_bookmark_folder_icons_visible_title": {
+    "message": "Mostrar ícones dentro das pastas de favoritos"
+  },
+  "settings_document_pip_title": {
+    "message": "Recorte da Web"
+  },
+  "settings_document_pip_desc": {
+    "message": "Recorte parte de uma página em uma janela flutuante para consultar e comparar lado a lado"
+  },
+  "settings_document_pip_unsupported_tooltip": {
+    "message": "O Recorte da Web depende do Document Picture-in-Picture, que o Firefox ainda não suporta."
+  },
+  "document_pip_command_title": {
+    "message": "Iniciar Recorte da Web"
+  },
+  "document_pip_command_action": {
+    "message": "Iniciar recorte"
+  },
+  "settings_update_notice_title": {
+    "message": "Avisos de atualização"
+  },
+  "settings_update_notice_desc": {
+    "message": "Mostrar as novidades depois que o Lumno for atualizado para uma nova versão"
+  },
+  "settings_motion_effects_title": {
+    "message": "Efeitos de movimento"
+  },
+  "settings_motion_effects_desc": {
+    "message": "Desative se houver travamentos ou se preferir uma abertura mais ágil"
+  },
+  "settings_simple_mode_title": {
+    "message": "Modo minimalista"
+  },
+  "settings_simple_mode_desc": {
+    "message": "Remove mais elementos decorativos para uma caixa de pesquisa mais limpa"
+  },
+  "settings_auto_pip_title": {
+    "message": "Picture-in-picture automático"
+  },
+  "settings_auto_pip_desc": {
+    "message": "Ao mudar de guia durante a reprodução de um vídeo, ele continua tocando em uma janela flutuante"
+  },
+  "settings_auto_pip_unsupported_tooltip": {
+    "message": "O Firefox não permite que extensões coloquem vídeos da Web em picture-in-picture automaticamente, então este recurso não está disponível."
+  },
+  "settings_pinned_tab_recovery_title": {
+    "message": "Restaurar guias fixadas após reiniciar"
+  },
+  "settings_pinned_tab_recovery_desc": {
+    "message": "Salva as guias fixadas que podem ser restauradas e reabre as que faltarem depois que o navegador reiniciar"
+  },
+  "settings_number_shortcut_instant_title": {
+    "message": "Pressionar Command uma vez para mostrar os números de salto"
+  },
+  "settings_number_shortcut_instant_desc": {
+    "message": "Quando ativado, pressionar Command/Ctrl uma vez na barra de comandos ou nas sugestões de pesquisa mostra na hora os números de salto; \"Abrir em guia em segundo plano\" deixa de usar Command (o clique do meio ainda abre em segundo plano)"
+  },
+  "settings_macos_ctrl_suggestion_navigation_title": {
+    "message": "Navegação por teclado no Mac"
+  },
+  "settings_macos_ctrl_suggestion_navigation_tooltip": {
+    "message": "Funciona na Nova guia e na barra de comandos no macOS. Agradecemos a @wanghanzhen pela contribuição."
+  },
+  "settings_macos_ctrl_suggestion_navigation_desc": {
+    "message": "Use Ctrl+N / Ctrl+P para selecionar o resultado seguinte / anterior"
+  },
+  "document_pip_picker_hint": {
+    "message": "Mova o cursor pela página para escolher um elemento. Clique para abrir em PiP, role para alternar o elemento pai, Esc para cancelar."
+  },
+  "document_pip_picker_started": {
+    "message": "Clique no conteúdo que quer deixar flutuando, role para mudar o escopo ou pressione Esc para cancelar."
+  },
+  "document_pip_picker_cancelled": {
+    "message": "Seleção de conteúdo fechada"
+  },
+  "document_pip_picker_closed": {
+    "message": "Janela de conteúdo flutuante fechada"
+  },
+  "document_pip_picker_unsupported": {
+    "message": "Esta página não suporta Document Picture-in-Picture."
+  },
+  "document_pip_picker_conflict_video_pip": {
+    "message": "Já existe um vídeo em PiP. Feche-o antes de iniciar o recorte de conteúdo."
+  },
+  "document_pip_picker_invalid": {
+    "message": "Ainda não é possível deixar esta área flutuando. Tente uma região de conteúdo maior."
+  },
+  "document_pip_picker_open_failed": {
+    "message": "Não foi possível abrir a janela de conteúdo flutuante. Tente outra área."
+  },
+  "document_pip_picker_button_reselect": {
+    "message": "Selecionar de novo"
+  },
+  "document_pip_picker_button_return": {
+    "message": "Voltar"
+  },
+  "document_pip_picker_button_close": {
+    "message": "Fechar"
+  },
+  "settings_newtab_scope_desc": {
+    "message": "Nova guia"
+  },
+  "settings_overlay_tab_priority_title": {
+    "message": "Alternar rapidamente para guias abertas"
+  },
+  "settings_overlay_tab_priority_desc": {
+    "message": "Quando o texto digitado corresponde a uma guia aberta, Enter segue a ação de guia da primeira sugestão"
+  },
+  "overlay_tab_priority_switch_first": {
+    "message": "Pressionar Enter alterna para a guia aberta"
+  },
+  "overlay_tab_priority_newtab_first": {
+    "message": "Pressionar Enter abre em uma nova guia"
+  },
+  "settings_shortcuts_title": {
+    "message": "Abrir a barra de comandos"
+  },
+  "settings_shortcuts_browser_desc_prefix": {
+    "message": "Abra "
+  },
+  "settings_shortcuts_browser_desc_path_extensions": {
+    "message": "Extensões"
+  },
+  "settings_shortcuts_browser_desc_path_extensions__firefox": {
+    "message": "Extensões e temas"
+  },
+  "settings_shortcuts_browser_desc_path_shortcuts": {
+    "message": "Atalhos do teclado"
+  },
+  "settings_shortcuts_browser_desc_path_shortcuts__firefox": {
+    "message": "Gerenciar atalhos de extensões"
+  },
+  "settings_shortcuts_browser_desc_suffix": {
+    "message": " para mudar os atalhos"
+  },
+  "settings_shortcuts_dia_tag": {
+    "message": "Usar no Dia"
+  },
+  "settings_shortcuts_dia_tooltip": {
+    "message": "No Dia, por limitações do navegador, os recursos de Nova guia do Lumno estão temporariamente indisponíveis, mas a barra de comandos funciona normalmente.\n\nSe o atalho não funcionar no Dia, clique no botão no canto inferior direito para abrir a página de atalhos do navegador e mude \"Open command bar\" de In Dia para Global."
+  },
+  "settings_shortcuts_section_title": {
+    "message": "Configurações de atalho"
+  },
+  "settings_shortcuts_desc": {
+    "message": "Usado para abrir a barra de comandos do Lumno"
+  },
+  "overlay_close_other_tabs_tooltip": {
+    "message": "Fechar outras guias"
+  },
+  "overlay_close_other_tabs_confirm": {
+    "message": "Fechar as outras guias desta janela? Guias fixadas e agrupadas continuam abertas."
+  },
+  "overlay_close_other_tabs_confirm_button": {
+    "message": "Fechar"
+  },
+  "settings_shortcuts_status": {
+    "message": "Atual: {shortcut}"
+  },
+  "settings_shortcuts_unset": {
+    "message": "Não definido"
+  },
+  "settings_shortcuts_action": {
+    "message": "Abrir configurações de atalho"
+  },
+  "settings_shortcuts_browser_tooltip": {
+    "message": "Em navegadores Chromium, é preciso abrir a página de atalhos de extensões para definir ou mudar o atalho da barra de comandos."
+  },
+  "settings_shortcuts_browser_tooltip__firefox": {
+    "message": "No Firefox, defina ou mude o atalho da barra de comandos em Gerenciar atalhos de extensões, no Gerenciador de complementos."
+  },
+  "settings_shortcuts_save": {
+    "message": "Salvar atalho"
+  },
+  "settings_shortcuts_reset": {
+    "message": "Restaurar padrão"
+  },
+  "settings_shortcuts_record_placeholder": {
+    "message": "Pressione o atalho"
+  },
+  "settings_shortcuts_empty_state": {
+    "message": "Nenhum"
+  },
+  "settings_shortcuts_invalid": {
+    "message": "Atalho inválido. Use uma combinação de teclas, como Ctrl+K."
+  },
+  "settings_restricted_title": {
+    "message": "Comportamento em páginas restritas"
+  },
+  "settings_restricted_tooltip": {
+    "message": "Páginas restritas (por exemplo, chrome://) não podem abrir a barra de comandos. Ao pressionar o atalho, vale a regra definida aqui."
+  },
+  "settings_restricted_tooltip__firefox": {
+    "message": "Páginas restritas (por exemplo, páginas about: e o site de complementos do Firefox) não podem abrir a barra de comandos. Ao pressionar o atalho, vale a regra definida aqui."
+  },
+  "restricted_action_default": {
+    "message": "Ir para a Nova guia do Lumno"
+  },
+  "restricted_action_none": {
+    "message": "Seguir a configuração do navegador"
+  },
+  "newtab_file_access_notice_title": {
+    "message": "Para usar o Lumno em páginas PDF ou HTML locais, permita o acesso aos URLs de arquivo"
+  },
+  "newtab_file_access_notice_body": {
+    "message": "O Lumno ainda não tem acesso aos URLs de arquivo. Abra a página de detalhes da extensão, ative Permitir acesso aos URLs de arquivo, volte para aquela página e pressione o atalho de novo."
+  },
+  "newtab_file_access_notice_open_cta": {
+    "message": "Permitir acesso"
+  },
+  "newtab_file_access_notice_dismiss": {
+    "message": "Agora não"
+  },
+  "newtab_file_access_notice_close": {
+    "message": "Fechar aviso"
+  },
+  "recent_count_4": {
+    "message": "Mostrar 1 linha"
+  },
+  "recent_count_8": {
+    "message": "Mostrar 2 linhas"
+  },
+  "recent_count_off": {
+    "message": "Ocultar"
+  },
+  "bookmark_count_off": {
+    "message": "Ocultar"
+  },
+  "bookmark_count_4": {
+    "message": "Mostrar 1 linha"
+  },
+  "bookmark_count_8": {
+    "message": "Mostrar 8"
+  },
+  "bookmark_count_16": {
+    "message": "Mostrar 16"
+  },
+  "bookmark_count_32": {
+    "message": "Mostrar 32"
+  },
+  "settings_bookmark_columns_title": {
+    "message": "Favoritos por linha"
+  },
+  "settings_bookmark_columns_desc": {
+    "message": "Define o máximo por linha; telas mais estreitas se ajustam automaticamente"
+  },
+  "settings_bookmark_adaptive_count_tooltip": {
+    "message": "Este é o máximo quando há largura suficiente. O número exibido se ajusta ao espaço disponível."
+  },
+  "bookmark_columns_4": {
+    "message": "4 por linha"
+  },
+  "bookmark_columns_6": {
+    "message": "6 por linha"
+  },
+  "bookmark_columns_8": {
+    "message": "8 por linha"
+  },
+  "newtab_width_standard": {
+    "message": "Padrão"
+  },
+  "newtab_width_wide": {
+    "message": "Larga (recomendado)"
+  },
+  "settings_overlay_size_title": {
+    "message": "Tamanho"
+  },
+  "overlay_size_compact": {
+    "message": "Compacto"
+  },
+  "overlay_size_standard": {
+    "message": "Padrão"
+  },
+  "overlay_size_large": {
+    "message": "Grande"
+  },
+  "settings_overlay_enter_animation_title": {
+    "message": "Animação de abertura"
+  },
+  "overlay_enter_animation_elastic": {
+    "message": "Mola"
+  },
+  "overlay_enter_animation_fade": {
+    "message": "Esmaecer"
+  },
+  "settings_overlay_font_title": {
+    "message": "Fonte local"
+  },
+  "settings_overlay_font_desc": {
+    "message": "Lê as fontes instaladas neste computador. Vale apenas para este dispositivo e não é sincronizado."
+  },
+  "settings_overlay_font_missing": {
+    "message": "“{font}” não está instalada neste dispositivo, então a sobreposição usa a fonte padrão"
+  },
+  "settings_overlay_font_missing_reset": {
+    "message": "Usar padrão"
+  },
+  "settings_overlay_font_fallback_missing": {
+    "message": "“{font}” não está instalada neste dispositivo, então a alternativa é ignorada"
+  },
+  "settings_overlay_font_fallback_missing_reset": {
+    "message": "Limpar"
+  },
+  "settings_overlay_font_default": {
+    "message": "Padrão"
+  },
+  "settings_overlay_font_search_placeholder": {
+    "message": "Pesquisar fontes"
+  },
+  "settings_overlay_font_no_results": {
+    "message": "Nenhuma fonte encontrada"
+  },
+  "settings_overlay_font_fallback_title": {
+    "message": "Fonte local alternativa"
+  },
+  "settings_overlay_font_fallback_desc": {
+    "message": "Usada para caracteres que faltam na primeira fonte, como chinês em uma fonte ocidental"
+  },
+  "settings_overlay_font_fallback_none": {
+    "message": "Nenhuma"
+  },
+  "settings_overlay_font_unsupported_tooltip": {
+    "message": "O Firefox não permite que extensões listem as fontes instaladas, então a sobreposição usa a fonte padrão aqui"
+  },
+  "settings_overlay_page_theme_adaptation_title": {
+    "message": "Adaptar as cores do tema a cada página da Web"
+  },
+  "settings_overlay_page_theme_adaptation_tooltip": {
+    "message": "Exibido apenas quando o Modo de tema está em Seguir o sistema. Quando desativado, o modo claro/escuro deixa de se adaptar à cor do tema da página."
+  },
+  "recent_mode_latest": {
+    "message": "Mostrar recentes"
+  },
+  "recent_mode_most": {
+    "message": "Mostrar mais visitados"
+  },
+  "settings_toggle_on": {
+    "message": "Ativado"
+  },
+  "settings_theme_title": {
+    "message": "Modo de tema"
+  },
+  "settings_theme_desc": {
+    "message": "Seguir o sistema ou escolher manualmente"
+  },
+  "settings_theme_system": {
+    "message": "Seguir o sistema"
+  },
+  "settings_theme_light": {
+    "message": "Claro"
+  },
+  "settings_theme_dark": {
+    "message": "Escuro"
+  },
+  "settings_newtab_wordmark_title": {
+    "message": "Conteúdo acima da barra de pesquisa"
+  },
+  "newtab_top_content_brand": {
+    "message": "Marca"
+  },
+  "newtab_top_content_time": {
+    "message": "Hora"
+  },
+  "newtab_top_content_off": {
+    "message": "Ocultar"
+  },
+  "newtab_time_font_title": {
+    "message": "Fonte da hora"
+  },
+  "newtab_time_font_weight_title": {
+    "message": "Peso da fonte da hora"
+  },
+  "newtab_time_font_weight_reset": {
+    "message": "Redefinir peso da fonte da hora"
+  },
+  "newtab_time_font_size_title": {
+    "message": "Tamanho da hora"
+  },
+  "newtab_time_font_size_reset": {
+    "message": "Redefinir tamanho da hora"
+  },
+  "newtab_time_opacity_title": {
+    "message": "Opacidade da hora"
+  },
+  "newtab_time_opacity_reset": {
+    "message": "Redefinir opacidade da hora"
+  },
+  "newtab_time_ink_title": {
+    "message": "Cor da hora"
+  },
+  "newtab_time_ink_auto": {
+    "message": "Automática"
+  },
+  "newtab_time_ink_light": {
+    "message": "Clara"
+  },
+  "newtab_time_ink_dark": {
+    "message": "Escura"
+  },
+  "newtab_time_show_seconds_title": {
+    "message": "Mostrar segundos"
+  },
+  "newtab_time_12_hour_title": {
+    "message": "Relógio de 12 horas"
+  },
+  "settings_newtab_page_buttons_title": {
+    "message": "Botões da página"
+  },
+  "settings_newtab_feedback_button_visible_title": {
+    "message": "Mostrar botão de feedback"
+  },
+  "settings_newtab_appearance_button_visible_title": {
+    "message": "Mostrar botão Aparência"
+  },
+  "settings_newtab_shortcuts_title": {
+    "message": "Atalhos"
+  },
+  "settings_newtab_shortcut_add_title": {
+    "message": "Mostrar “+”"
+  },
+  "settings_newtab_shortcut_dock_magnification_title": {
+    "message": "Ampliação no estilo do Dock do macOS"
+  },
+  "settings_newtab_shortcut_width_title": {
+    "message": "Largura dos atalhos"
+  },
+  "settings_newtab_shortcut_columns_title": {
+    "message": "Atalhos por linha"
+  },
+  "settings_newtab_shortcut_size_title": {
+    "message": "Tamanho dos atalhos"
+  },
+  "settings_newtab_shortcut_gap_title": {
+    "message": "Espaçamento dos atalhos"
+  },
+  "settings_newtab_shortcut_size_reset": {
+    "message": "Redefinir tamanho dos atalhos"
+  },
+  "settings_newtab_shortcut_gap_reset": {
+    "message": "Redefinir espaçamento dos atalhos"
+  },
+  "settings_wallpaper_title": {
+    "message": "Plano de fundo da Nova guia"
+  },
+  "settings_wallpaper_desc": {
+    "message": "Envie uma imagem local para usar como plano de fundo da Nova guia"
+  },
+  "settings_wallpaper_upload": {
+    "message": "Enviar imagem"
+  },
+  "settings_wallpaper_remove": {
+    "message": "Remover"
+  },
+  "settings_wallpaper_fit_cover": {
+    "message": "Preencher"
+  },
+  "settings_wallpaper_fit_contain": {
+    "message": "Ajustar"
+  },
+  "settings_wallpaper_status_none": {
+    "message": "Nenhum plano de fundo enviado"
+  },
+  "settings_wallpaper_status_ready": {
+    "message": "Plano de fundo enviado"
+  },
+  "settings_wallpaper_status_local_only": {
+    "message": "Plano de fundo enviado (só neste dispositivo)"
+  },
+  "settings_wallpaper_status_missing": {
+    "message": "O arquivo do plano de fundo não foi encontrado. Envie-o novamente."
+  },
+  "settings_wallpaper_status_processing": {
+    "message": "Processando…"
+  },
+  "settings_wallpaper_upload_done": {
+    "message": "Plano de fundo atualizado"
+  },
+  "settings_wallpaper_remove_done": {
+    "message": "Plano de fundo removido"
+  },
+  "settings_wallpaper_error_type": {
+    "message": "Envie um arquivo de imagem (JPG / PNG / WEBP)."
+  },
+  "settings_wallpaper_error_oversize": {
+    "message": "A imagem é grande demais. Envie um arquivo com menos de 8MB."
+  },
+  "settings_wallpaper_error_oversize_after_compress": {
+    "message": "A imagem continua grande demais após a compactação. Tente uma imagem menor."
+  },
+  "settings_wallpaper_error_save": {
+    "message": "Não foi possível salvar o plano de fundo. Tente novamente."
+  },
+  "newtab_wallpaper_title": {
+    "message": "Plano de fundo"
+  },
+  "newtab_logo_title": {
+    "message": "Logotipo"
+  },
+  "newtab_favicon_title": {
+    "message": "Favicon da Nova guia"
+  },
+  "newtab_favicon_name_default": {
+    "message": "Padrão"
+  },
+  "newtab_favicon_name_alternate": {
+    "message": "Alternativo"
+  },
+  "newtab_favicon_select_label": {
+    "message": "Selecionar favicon {name}"
+  },
+  "newtab_favicon_save_error": {
+    "message": "Não foi possível salvar o favicon"
+  },
+  "newtab_wallpaper_source_title": {
+    "message": "Origem"
+  },
+  "newtab_wallpaper_builtin_section": {
+    "message": "Integrados"
+  },
+  "newtab_wallpaper_local_section": {
+    "message": "Local"
+  },
+  "newtab_wallpaper_toggle_label": {
+    "message": "Ativar ou desativar o plano de fundo"
+  },
+  "newtab_wallpaper_select_label": {
+    "message": "Selecionar {name}"
+  },
+  "newtab_wallpaper_add_local": {
+    "message": "Adicionar plano de fundo local"
+  },
+  "newtab_wallpaper_mode_sync_title": {
+    "message": "Igual nos modos claro e escuro"
+  },
+  "newtab_wallpaper_mode_sync_toggle_label": {
+    "message": "Usar o mesmo plano de fundo nos modos claro e escuro"
+  },
+  "newtab_wallpaper_mode_row_title": {
+    "message": "Modo"
+  },
+  "newtab_wallpaper_mode_tabs_label": {
+    "message": "Modo de cor do plano de fundo"
+  },
+  "newtab_wallpaper_light_mode_tab": {
+    "message": "Claro"
+  },
+  "newtab_wallpaper_dark_mode_tab": {
+    "message": "Escuro"
+  },
+  "newtab_wallpaper_mode_select_label": {
+    "message": "Editar plano de fundo do modo {mode}"
+  },
+  "newtab_wallpaper_sources_feature_hint_badge": {
+    "message": "Novo"
+  },
+  "newtab_wallpaper_sources_feature_hint_text": {
+    "message": "Novos planos de fundo: coleções selecionadas de natureza, cidades e arte que podem mudar todo dia, ou adicione um pelo link da imagem."
+  },
+  "newtab_wallpaper_sources_feature_hint_close": {
+    "message": "Dispensar dica de novos planos de fundo"
+  },
+  "newtab_webdav_feature_hint_badge": {
+    "message": "Beta"
+  },
+  "newtab_webdav_feature_hint_text": {
+    "message": "Experimente a sincronização WebDAV: mantenha configurações, ícones e planos de fundo em dia por meio de um drive WebDAV ou NAS, até entre navegadores."
+  },
+  "newtab_webdav_feature_hint_link": {
+    "message": "Configurar"
+  },
+  "newtab_webdav_feature_hint_close": {
+    "message": "Dispensar dica do WebDAV"
+  },
+  "newtab_help_center_ask_feature_hint_badge": {
+    "message": "Novo"
+  },
+  "newtab_help_center_ask_feature_hint_text": {
+    "message": "Digite lm, pressione Tab e pergunte à Central de Ajuda."
+  },
+  "newtab_help_center_ask_feature_hint_link": {
+    "message": "Experimentar"
+  },
+  "newtab_help_center_ask_feature_hint_close": {
+    "message": "Dispensar dica da Central de Ajuda"
+  },
+  "newtab_ai_quick_jump_feature_hint_badge": {
+    "message": "Novo"
+  },
+  "newtab_ai_quick_jump_feature_hint_text": {
+    "message": "Vá para sites de IA populares com seu comando em um clique. Experimente digitar \"gemini\" e pressionar Tab."
+  },
+  "newtab_ai_quick_jump_feature_hint_link": {
+    "message": "Sites compatíveis"
+  },
+  "newtab_ai_quick_jump_feature_hint_close": {
+    "message": "Dispensar dica de acesso rápido à IA"
+  },
+  "newtab_tab_switcher_feature_hint_badge": {
+    "message": "Novo"
+  },
+  "newtab_tab_switcher_feature_hint_text": {
+    "message": "Pressione {shortcut} para abrir o alternador de guias e pular entre as guias recentes sem usar o mouse."
+  },
+  "newtab_tab_switcher_feature_hint_close": {
+    "message": "Dispensar dica do alternador de guias"
+  },
+  "newtab_input_auto_focus_title": {
+    "message": "Focar o campo de entrada automaticamente"
+  },
+  "newtab_input_auto_focus_help_label": {
+    "message": "Informações sobre o foco automático"
+  },
+  "newtab_input_auto_focus_help": {
+    "message": "Se preferir usar a barra de endereço nativa do navegador, desative esta opção. O URL da extensão deixará de aparecer na barra de endereço."
+  },
+  "update_notice_badge": {
+    "message": "Atualizado para {version}"
+  },
+  "update_notice_text_fallback": {
+    "message": "Veja o que mudou nesta atualização"
+  },
+  "update_notice_link": {
+    "message": "Novidades"
+  },
+  "update_notice_close": {
+    "message": "Dispensar aviso de atualização"
+  },
+  "engagement_notice_badge": {
+    "message": "Lumno"
+  },
+  "engagement_notice_text": {
+    "message": "Curtiu o Lumno? Que tal"
+  },
+  "engagement_notice_connector": {
+    "message": "ou"
+  },
+  "engagement_notice_trailing": {
+    "message": "e dar um oi?"
+  },
+  "engagement_notice_review": {
+    "message": "deixar 5 estrelas"
+  },
+  "engagement_notice_community": {
+    "message": "nos encontrar no X"
+  },
+  "engagement_notice_close": {
+    "message": "Dispensar convite para avaliar e participar da comunidade"
+  },
+  "newtab_bookmark_cascade_debug_enable": {
+    "message": "Mostrar triângulo de segurança do menu de favoritos"
+  },
+  "newtab_bookmark_cascade_debug_disable": {
+    "message": "Ocultar triângulo de segurança do menu de favoritos"
+  },
+  "newtab_bookmark_cascade_debug_open_label": {
+    "message": "Abrir"
+  },
+  "newtab_bookmark_cascade_debug_switch_label": {
+    "message": "Alternar"
+  },
+  "newtab_bookmark_cascade_debug_safe_label": {
+    "message": "Seguro"
+  },
+  "newtab_bookmark_cascade_debug_close_label": {
+    "message": "Fechar"
+  },
+  "newtab_feedback_button_aria": {
+    "message": "Enviar feedback"
+  },
+  "newtab_feedback_menu_aria": {
+    "message": "Canais de feedback"
+  },
+  "newtab_feedback_x_label": {
+    "message": "X"
+  },
+  "newtab_feedback_x_tooltip": {
+    "message": "Fale conosco no X"
+  },
+  "newtab_feedback_github_issue_label": {
+    "message": "Issue no GitHub"
+  },
+  "newtab_feedback_github_issue_tooltip": {
+    "message": "Abrir uma issue no GitHub"
+  },
+  "newtab_feedback_chrome_review_label": {
+    "message": "Avaliar na loja"
+  },
+  "newtab_feedback_chrome_review_tooltip": {
+    "message": "Avalie o Lumno na loja de extensões"
+  },
+  "newtab_feedback_mail_label": {
+    "message": "E-mail"
+  },
+  "newtab_feedback_mail_tooltip": {
+    "message": "Enviar e-mail"
+  },
+  "newtab_feedback_wechat_label": {
+    "message": "WeChat"
+  },
+  "newtab_feedback_wechat_tooltip": {
+    "message": "Entrar no grupo do WeChat"
+  },
+  "newtab_feedback_wechat_panel_title": {
+    "message": "Relatos de bugs e pedidos de recursos"
+  },
+  "newtab_feedback_wechat_refresh_tooltip": {
+    "message": "Atualizar QR code"
+  },
+  "newtab_feedback_wechat_refresh_success": {
+    "message": "QR code mais recente carregado"
+  },
+  "newtab_feedback_wechat_refresh_error": {
+    "message": "Não foi possível atualizar. Tente novamente."
+  },
+  "newtab_feedback_wechat_close_tooltip": {
+    "message": "Fechar"
+  },
+  "newtab_feedback_wechat_qr_title": {
+    "message": "QR code do grupo do WeChat"
+  },
+  "newtab_feedback_wechat_qr_alt": {
+    "message": "QR code do grupo do Lumno no WeChat"
+  },
+  "newtab_feedback_mail_subject": {
+    "message": "Feedback sobre o Lumno"
+  },
+  "newtab_feedback_mail_source_label": {
+    "message": "Origem"
+  },
+  "newtab_feedback_mail_version_label": {
+    "message": "Versão do Lumno"
+  },
+  "newtab_feedback_mail_language_label": {
+    "message": "Idioma"
+  },
+  "newtab_feedback_mail_os_label": {
+    "message": "Sistema operacional"
+  },
+  "newtab_feedback_mail_browser_label": {
+    "message": "Navegador"
+  },
+  "newtab_wallpaper_delete_local": {
+    "message": "Excluir plano de fundo importado"
+  },
+  "newtab_wallpaper_custom_name": {
+    "message": "Plano de fundo local"
+  },
+  "newtab_wallpaper_overlay_opacity": {
+    "message": "Efeito de máscara"
+  },
+  "newtab_wallpaper_overlay_transparent_tick": {
+    "message": "Transparente"
+  },
+  "newtab_wallpaper_overlay_default_tick": {
+    "message": "Padrão"
+  },
+  "newtab_wallpaper_overlay_cover_tick": {
+    "message": "Cobrir"
+  },
+  "newtab_wallpaper_effect_title": {
+    "message": "Filtro do plano de fundo"
+  },
+  "newtab_wallpaper_effect_strength": {
+    "message": "Intensidade da amostragem"
+  },
+  "newtab_wallpaper_effect_blur_strength": {
+    "message": "Intensidade do desfoque"
+  },
+  "newtab_wallpaper_effect_size": {
+    "message": "Tamanho"
+  },
+  "newtab_wallpaper_effect_spacing": {
+    "message": "Espaçamento"
+  },
+  "newtab_wallpaper_effect_texture": {
+    "message": "Textura"
+  },
+  "newtab_wallpaper_effect_blocks_size": {
+    "message": "Tamanho dos blocos"
+  },
+  "newtab_wallpaper_effect_crt_strength": {
+    "message": "Intensidade da tela"
+  },
+  "newtab_wallpaper_effect_crt_bloom": {
+    "message": "Brilho"
+  },
+  "newtab_wallpaper_effect_crt_rgb_offset": {
+    "message": "Deslocamento RGB"
+  },
+  "newtab_wallpaper_effect_crt_curvature": {
+    "message": "Curvatura da tela"
+  },
+  "newtab_wallpaper_effect_none": {
+    "message": "Desativado"
+  },
+  "newtab_wallpaper_effect_blur": {
+    "message": "Vidro fosco"
+  },
+  "newtab_wallpaper_effect_grain": {
+    "message": "Granulado"
+  },
+  "newtab_wallpaper_effect_blocks": {
+    "message": "Blocos"
+  },
+  "newtab_wallpaper_effect_halftone": {
+    "message": "Meio-tom"
+  },
+  "newtab_wallpaper_effect_dither": {
+    "message": "Pontilhado"
+  },
+  "newtab_wallpaper_effect_ascii": {
+    "message": "ASCII"
+  },
+  "newtab_wallpaper_effect_crt": {
+    "message": "CRT"
+  },
+  "newtab_wallpaper_effect_ink_title": {
+    "message": "Tons de amostra"
+  },
+  "newtab_wallpaper_effect_ink_dark": {
+    "message": "Sombras"
+  },
+  "newtab_wallpaper_effect_ink_light": {
+    "message": "Realces"
+  },
+  "newtab_wallpaper_effect_ink_select_label": {
+    "message": "Usar {tone} como amostra para pontos ou caracteres"
+  },
+  "newtab_wallpaper_save_error": {
+    "message": "Não foi possível salvar o plano de fundo"
+  },
+  "newtab_wallpaper_importing": {
+    "message": "Importando plano de fundo…"
+  },
+  "newtab_wallpaper_import_done": {
+    "message": "Plano de fundo importado"
+  },
+  "newtab_wallpaper_import_error": {
+    "message": "Não foi possível importar o plano de fundo"
+  },
+  "newtab_wallpaper_delete_done": {
+    "message": "Excluído"
+  },
+  "newtab_wallpaper_delete_error": {
+    "message": "Não foi possível excluir o plano de fundo"
+  },
+  "newtab_wallpaper_name_dark_linocut_topographic": {
+    "message": "Topografia noturna"
+  },
+  "newtab_wallpaper_name_dark_monet_lily_nocturne": {
+    "message": "Noturno de ninfeias"
+  },
+  "newtab_wallpaper_name_dark_shanshui_moonlit": {
+    "message": "Shanshui ao luar"
+  },
+  "newtab_wallpaper_name_monet_coastal_white": {
+    "message": "Costa de Monet"
+  },
+  "newtab_wallpaper_name_monet_field_white": {
+    "message": "Campo de Monet"
+  },
+  "newtab_wallpaper_name_monet_lily_pond_white": {
+    "message": "Lago de ninfeias"
+  },
+  "newtab_wallpaper_name_impressionist_orchard_white": {
+    "message": "Pomar ao amanhecer"
+  },
+  "newtab_wallpaper_name_seurat_coast_white": {
+    "message": "Costa de Seurat"
+  },
+  "newtab_wallpaper_name_seurat_park_white": {
+    "message": "Parque de Seurat"
+  },
+  "newtab_wallpaper_name_seurat_riverside_white": {
+    "message": "Margem de Seurat"
+  },
+  "newtab_wallpaper_name_pointillist_lakeside_white": {
+    "message": "Lago pontilhista"
+  },
+  "newtab_wallpaper_name_white_3d_architecture": {
+    "message": "Arquitetura diurna"
+  },
+  "newtab_wallpaper_name_white_3d_observatory": {
+    "message": "Observatório na névoa"
+  },
+  "newtab_wallpaper_name_white_linocut_topographic": {
+    "message": "Topografia diurna"
+  },
+  "newtab_wallpaper_name_white_risograph_collage": {
+    "message": "Colagem diurna"
+  },
+  "newtab_wallpaper_name_white_shanshui": {
+    "message": "Shanshui claro"
+  },
+  "newtab_wallpaper_name_white_shanshui_bamboo_bridge": {
+    "message": "Ponte de bambu"
+  },
+  "newtab_wallpaper_name_settings_bg_light_monet_newtab": {
+    "message": "Monet claro"
+  },
+  "shortcuts_duplicate_tag": {
+    "message": "Duplicado de um integrado"
+  },
+  "shortcuts_duplicate_action": {
+    "message": "Localizar item integrado"
+  },
+  "shortcuts_template_help": {
+    "message": "1. Abra o site que você quer adicionar\n2. Faça uma pesquisa com qualquer palavra-chave\n3. Copie o URL da página de resultados e cole aqui\n4. Substitua a palavra-chave por {query}"
+  },
+  "shortcuts_title": {
+    "message": "Pesquisa no site"
+  },
+  "shortcuts_desc": {
+    "message": "Pressione Tab depois de uma palavra-chave para pesquisar no site"
+  },
+  "shortcuts_group_custom": {
+    "message": "Personalizados"
+  },
+  "blacklist_section_title": {
+    "message": "Lista de bloqueio de pesquisa e recentes"
+  },
+  "blacklist_section_desc": {
+    "message": "Adicione sites para ocultá-los dos resultados de pesquisa e da página Nova guia."
+  },
+  "blacklist_group_custom": {
+    "message": "Bloquear em todo lugar"
+  },
+  "blacklist_label_url": {
+    "message": "Regra de URL"
+  },
+  "blacklist_label_domain": {
+    "message": "Domínio do site"
+  },
+  "blacklist_label_prefix": {
+    "message": "Site ou caminho"
+  },
+  "blacklist_label_exact": {
+    "message": "URL completo"
+  },
+  "blacklist_label_suffix": {
+    "message": "Domínio do site"
+  },
+  "blacklist_match_label": {
+    "message": "Tipo de correspondência"
+  },
+  "blacklist_match_exact": {
+    "message": "Esta página"
+  },
+  "blacklist_match_prefix": {
+    "message": "Este caminho do site"
+  },
+  "blacklist_match_suffix": {
+    "message": "Site inteiro"
+  },
+  "blacklist_match_exact_tooltip": {
+    "message": "Bloqueia apenas esta página\n────────\nPor exemplo, se você digitar x.com/home, só essa página será ocultada e as outras continuarão visíveis."
+  },
+  "blacklist_match_prefix_tooltip": {
+    "message": "Bloqueia apenas as páginas deste site e caminho\n────────\nPor exemplo, se você digitar baidu.com/search, baidu.com/search e baidu.com/search/1 serão ocultadas, mas baidu.com/news continuará visível."
+  },
+  "blacklist_match_suffix_tooltip": {
+    "message": "Bloqueia todas as páginas deste site, incluindo os subdomínios\n────────\nPor exemplo, se você digitar baidu.com, tanto baidu.com/search quanto tieba.baidu.com serão ocultadas."
+  },
+  "blacklist_preview_title": {
+    "message": "Prévia da correspondência"
+  },
+  "blacklist_preview_match": {
+    "message": "Corresponde"
+  },
+  "blacklist_preview_miss": {
+    "message": "Não corresponde"
+  },
+  "blacklist_preview_www_note": {
+    "message": "A versão com www. também está incluída, então baidu.com também corresponde a www.baidu.com."
+  },
+  "blacklist_placeholder_url": {
+    "message": "Use o endereço completo para Esta página ou o domínio para Site inteiro"
+  },
+  "blacklist_placeholder_domain": {
+    "message": "baidu.com"
+  },
+  "blacklist_placeholder_prefix": {
+    "message": "baidu.com ou baidu.com/search"
+  },
+  "blacklist_placeholder_exact": {
+    "message": "x.com/home"
+  },
+  "blacklist_placeholder_suffix": {
+    "message": "ex.: baidu.com"
+  },
+  "blacklist_add": {
+    "message": "Adicionar"
+  },
+  "blacklist_empty": {
+    "message": "Nenhum URL na lista de bloqueio"
+  },
+  "blacklist_error_url": {
+    "message": "Digite um domínio ou URL completo."
+  },
+  "blacklist_error_match_mode": {
+    "message": "Selecione pelo menos um tipo de correspondência."
+  },
+  "blacklist_error_suffix": {
+    "message": "Digite um domínio."
+  },
+  "blacklist_error_domain": {
+    "message": "Digite um domínio."
+  },
+  "blacklist_match_mode_prefix": {
+    "message": "Corresponde às páginas que começam com este URL"
+  },
+  "blacklist_match_unset": {
+    "message": "Nenhum tipo de correspondência selecionado"
+  },
+  "blacklist_removed_toast": {
+    "message": "Removido da lista de bloqueio"
+  },
+  "shortcuts_group_builtin": {
+    "message": "Integrados"
+  },
+  "shortcuts_group_ai": {
+    "message": "Pesquisa com IA"
+  },
+  "shortcuts_group_ai_desc": {
+    "message": "Digite uma palavra-chave, pressione Tab e escreva seu comando para abrir um destes sites de IA com ele já preenchido (faça login no site antes)"
+  },
+  "shortcuts_badge_custom": {
+    "message": "Personalizado"
+  },
+  "shortcuts_badge_builtin": {
+    "message": "Integrado"
+  },
+  "shortcuts_badge_ai": {
+    "message": "Pesquisa com IA"
+  },
+  "shortcuts_label_key": {
+    "message": "Palavra-chave"
+  },
+  "shortcuts_label_name": {
+    "message": "Nome"
+  },
+  "shortcuts_label_template": {
+    "message": "URL de pesquisa"
+  },
+  "shortcuts_label_alias": {
+    "message": "Apelidos"
+  },
+  "shortcuts_label_display_group": {
+    "message": "Mostrar em"
+  },
+  "shortcuts_placeholder_required": {
+    "message": "Obrigatório — separe vários com vírgulas, ex.: jd,bili"
+  },
+  "shortcuts_placeholder_optional_default": {
+    "message": "Opcional — usa a palavra-chave por padrão"
+  },
+  "shortcuts_placeholder_template": {
+    "message": "https://example.com/search?q={query}"
+  },
+  "shortcuts_placeholder_alias": {
+    "message": "Opcional — ex.: Bilibili, YouTube"
+  },
+  "shortcuts_insert_query": {
+    "message": "Inserir variável de consulta"
+  },
+  "shortcuts_add": {
+    "message": "Adicionar pesquisa personalizada"
+  },
+  "shortcuts_save": {
+    "message": "Salvar alterações"
+  },
+  "shortcuts_cancel": {
+    "message": "Cancelar"
+  },
+  "shortcuts_edit": {
+    "message": "Editar"
+  },
+  "shortcuts_remove": {
+    "message": "Remover"
+  },
+  "shortcuts_empty_custom": {
+    "message": "Nenhuma pesquisa personalizada"
+  },
+  "shortcuts_empty_builtin": {
+    "message": "Nenhuma pesquisa no site integrada"
+  },
+  "shortcuts_empty_engines": {
+    "message": "Nenhum mecanismo de pesquisa integrado"
+  },
+  "shortcuts_empty_ai": {
+    "message": "Nenhum provedor de pesquisa com IA integrado"
+  },
+  "toast_saved": {
+    "message": "Salvo"
+  },
+  "toast_removed": {
+    "message": "Removido"
+  },
+  "toast_error": {
+    "message": "A ação falhou. Tente novamente."
+  },
+  "toast_error_template": {
+    "message": "O modelo de pesquisa precisa incluir {query}."
+  },
+  "toast_reset": {
+    "message": "Redefinido"
+  },
+  "shortcuts_reset_builtin": {
+    "message": "Restaurar lista padrão"
+  },
+  "shortcuts_clear_custom": {
+    "message": "Limpar personalizadas"
+  },
+  "blacklist_clear": {
+    "message": "Limpar regras de ocultação"
+  },
+  "toast_cleared": {
+    "message": "Limpo"
+  },
+  "confirm_clear_custom": {
+    "message": "Limpar todas as pesquisas personalizadas?"
+  },
+  "confirm_clear_blacklist": {
+    "message": "Limpar as regras de ocultação?"
+  },
+  "confirm_clear_favicon_blacklist": {
+    "message": "Limpar as regras de exclusão?"
+  },
+  "confirm_reset_builtin": {
+    "message": "Restaurar a lista integrada?"
+  },
+  "confirm_ok": {
+    "message": "Confirmar"
+  },
+  "confirm_cancel": {
+    "message": "Cancelar"
+  },
+  "confirm_remove_item": {
+    "message": "Remover este item?"
+  },
+  "shortcuts_error_key": {
+    "message": "Digite uma palavra-chave."
+  },
+  "shortcuts_error_key_space": {
+    "message": "A palavra-chave não pode ter espaços."
+  },
+  "shortcuts_error_key_duplicate": {
+    "message": "Esta palavra-chave já está em uso. Escolha outra."
+  },
+  "search_placeholder": {
+    "message": "Pesquise ou digite um URL…"
+  },
+  "overlay_search_placeholder": {
+    "message": "Pesquise ou digite um URL; pressione Tab para pesquisar nas guias abertas"
+  },
+  "options_page_title": {
+    "message": "Configurações do Lumno"
+  },
+  "newtab_page_title": {
+    "message": "Nova guia"
+  },
+  "recent_heading": {
+    "message": "Recentes"
+  },
+  "recent_heading_latest": {
+    "message": "Recentes"
+  },
+  "recent_heading_most": {
+    "message": "Mais visitados"
+  },
+  "bookmarks_heading": {
+    "message": "Favoritos"
+  },
+  "display_mode_title": {
+    "message": "Modo de exibição"
+  },
+  "bookmark_view_mode_folder": {
+    "message": "Pastas em várias camadas"
+  },
+  "bookmark_view_mode_list": {
+    "message": "Lista em vários níveis"
+  },
+  "bookmark_view_mode_top": {
+    "message": "Barra de favoritos no topo"
+  },
+  "bookmark_topbar_layout_title": {
+    "message": "Estilo da barra"
+  },
+  "bookmark_topbar_layout_docked": {
+    "message": "Fixa no topo"
+  },
+  "bookmark_topbar_layout_floating": {
+    "message": "Flutuante"
+  },
+  "bookmark_topbar_surface_title": {
+    "message": "Fundo da barra"
+  },
+  "bookmark_topbar_surface_follow": {
+    "message": "Seguir o estilo"
+  },
+  "bookmark_topbar_surface_adaptive": {
+    "message": "Névoa adaptável"
+  },
+  "bookmark_topbar_surface_clear": {
+    "message": "Vidro líquido"
+  },
+  "bookmark_topbar_surface_transparent": {
+    "message": "Transparente"
+  },
+  "bookmark_topbar_surface_custom": {
+    "message": "Cor personalizada"
+  },
+  "bookmark_topbar_color_pick": {
+    "message": "Escolher cor do fundo"
+  },
+  "bookmark_topbar_color_reset": {
+    "message": "Restaurar cores automáticas"
+  },
+  "bookmark_topbar_color_picked": {
+    "message": "Cor escolhida"
+  },
+  "bookmark_topbar_color_reset_done": {
+    "message": "Cores automáticas restauradas"
+  },
+  "bookmark_topbar_color_unsupported": {
+    "message": "Este navegador não permite capturar cores da tela."
+  },
+  "bookmark_topbar_color_failed": {
+    "message": "Não foi possível capturar a cor. Tente novamente."
+  },
+  "bookmarks_empty_folder": {
+    "message": "Nenhum conteúdo"
+  },
+  "bookmarks_page_prev": {
+    "message": "Página anterior"
+  },
+  "bookmarks_page_next": {
+    "message": "Próxima página"
+  },
+  "bookmarks_open_manager": {
+    "message": "Abrir o Gerenciador de favoritos"
+  },
+  "bookmarks_open_in_new_tab_group": {
+    "message": "Abrir em novo grupo de guias"
+  },
+  "newtab_open_in_new_tab": {
+    "message": "Abrir em nova guia"
+  },
+  "bookmarks_open_group_confirm_title": {
+    "message": "Abrir {count} guias?"
+  },
+  "bookmarks_open_group_confirm_description": {
+    "message": "Todos os favoritos de “{folder}” e das subpastas serão abertos em um único grupo de guias."
+  },
+  "bookmarks_open_group_confirm_button": {
+    "message": "Abrir"
+  },
+  "bookmarks_untitled_folder": {
+    "message": "Pasta sem título"
+  },
+  "bookmarks_open_group_partial_failed": {
+    "message": "{openedCount} guias abertas; não foi possível abrir {failedCount}."
+  },
+  "bookmarks_open_group_failed": {
+    "message": "Não foi possível abrir esta pasta de favoritos"
+  },
+  "bookmarks_copy_url": {
+    "message": "Copiar link"
+  },
+  "bookmarks_copy_url_success": {
+    "message": "Link do favorito copiado"
+  },
+  "bookmarks_copy_url_failed": {
+    "message": "Não foi possível copiar o link. Tente novamente."
+  },
+  "bookmarks_edit": {
+    "message": "Editar"
+  },
+  "bookmarks_edit_dialog_title": {
+    "message": "Editar favorito"
+  },
+  "bookmarks_edit_folder_dialog_title": {
+    "message": "Renomear pasta"
+  },
+  "bookmarks_name_placeholder": {
+    "message": "Nome"
+  },
+  "bookmarks_invalid_url": {
+    "message": "Digite um URL válido."
+  },
+  "bookmarks_updated": {
+    "message": "Favorito atualizado"
+  },
+  "bookmarks_folder_updated": {
+    "message": "Pasta atualizada"
+  },
+  "bookmarks_update_failed": {
+    "message": "Não foi possível atualizar o favorito"
+  },
+  "bookmarks_delete": {
+    "message": "Excluir"
+  },
+  "bookmarks_context_menu_label": {
+    "message": "Ações do favorito"
+  },
+  "bookmarks_delete_undone": {
+    "message": "Exclusão desfeita · {shortcut} para excluir de novo"
+  },
+  "bookmarks_delete_redone": {
+    "message": "Exclusão refeita · {shortcut} para desfazer"
+  },
+  "bookmarks_delete_failed": {
+    "message": "Não foi possível excluir o favorito"
+  },
+  "bookmarks_move_success": {
+    "message": "“{title}” movido · {shortcut} para desfazer"
+  },
+  "bookmarks_move_undone": {
+    "message": "Movimentação desfeita · {shortcut} para refazer"
+  },
+  "bookmarks_move_redone": {
+    "message": "Movimentação refeita · {shortcut} para desfazer"
+  },
+  "bookmarks_move_failed": {
+    "message": "Não foi possível mover o favorito"
+  },
+  "bookmarks_moved_to_shortcuts": {
+    "message": "Movido para os atalhos"
+  },
+  "search_tag_history": {
+    "message": "Histórico"
+  },
+  "search_remove_history": {
+    "message": "Remover do histórico"
+  },
+  "search_remove_history_tooltip": {
+    "message": "Remover esta entrada do histórico"
+  },
+  "search_remove_top_site_tooltip": {
+    "message": "Remover este resultado frequente"
+  },
+  "search_copy_url_tooltip": {
+    "message": "Copiar link"
+  },
+  "search_copy_url_success": {
+    "message": "Link do resultado copiado"
+  },
+  "search_copy_url_failed": {
+    "message": "Não foi possível copiar o link do resultado. Tente novamente."
+  },
+  "search_tag_top_site": {
+    "message": "Frequente"
+  },
+  "search_tag_bookmark": {
+    "message": "Favorito"
+  },
+  "search_tag_open_tab": {
+    "message": "Aberta"
+  },
+  "visit_label": {
+    "message": "Acessar"
+  },
+  "action_open_new_tab": {
+    "message": "Nova guia"
+  },
+  "action_open_background_new_tab": {
+    "message": "Abrir em segundo plano"
+  },
+  "action_open_background_tab": {
+    "message": "Abrir em segundo plano"
+  },
+  "action_go_current_tab": {
+    "message": "Ir"
+  },
+  "open_prefix": {
+    "message": "Abrir {title}"
+  },
+  "open_url": {
+    "message": "Abrir {url}"
+  },
+  "open_browser_url": {
+    "message": "Abrir {browser}: {url}"
+  },
+  "mode_badge": {
+    "message": "Modo: {mode}"
+  },
+  "mode_badge_follow_system": {
+    "message": "Modo: {mode} (sistema)"
+  },
+  "mode_badge_follow_site": {
+    "message": "Modo: {mode} (site)"
+  },
+  "theme_label_dark": {
+    "message": "Escuro"
+  },
+  "theme_label_light": {
+    "message": "Claro"
+  },
+  "theme_label_system": {
+    "message": "Sistema"
+  },
+  "command_newtab": {
+    "message": "Nova guia"
+  },
+  "search_input_clear": {
+    "message": "Limpar"
+  },
+  "command_settings": {
+    "message": "Abrir configurações"
+  },
+  "command_show_search": {
+    "message": "Abrir a barra de comandos"
+  },
+  "command_show_search_prefill": {
+    "message": "Abrir a barra de comandos com o URL da página atual"
+  },
+  "command_show_search_prefill_v": {
+    "message": "Copiar URL da página atual"
+  },
+  "mode_switch_title": {
+    "message": "{name}: mudar para o modo {mode}"
+  },
+  "zen_badge_on": {
+    "message": "Zen: ativado"
+  },
+  "zen_badge_off": {
+    "message": "Zen: desativado"
+  },
+  "zen_enable_title": {
+    "message": "{name}: entrar no modo Zen"
+  },
+  "zen_disable_title": {
+    "message": "{name}: sair do modo Zen"
+  },
+  "switch_to_tab": {
+    "message": "Alternar"
+  },
+  "untitled": {
+    "message": "Sem título"
+  },
+  "site_search_default": {
+    "message": "Site"
+  },
+  "site_search_name_baidu": {
+    "message": "Baidu"
+  },
+  "site_search_name_metaso": {
+    "message": "Metaso AI Search"
+  },
+  "site_search_name_sogou": {
+    "message": "Sogou"
+  },
+  "site_search_name_shenma": {
+    "message": "Shenma"
+  },
+  "site_search_name_weibo": {
+    "message": "Weibo"
+  },
+  "site_search_name_xiaohongshu": {
+    "message": "Xiaohongshu"
+  },
+  "site_search_name_douyin": {
+    "message": "Douyin"
+  },
+  "site_search_name_jd": {
+    "message": "JD.com"
+  },
+  "site_search_name_chatgpt": {
+    "message": "ChatGPT"
+  },
+  "site_search_name_gemini": {
+    "message": "Gemini"
+  },
+  "site_search_name_doubao": {
+    "message": "Doubao"
+  },
+  "site_search_name_qianwen": {
+    "message": "Qwen"
+  },
+  "site_search_name_yuanbao": {
+    "message": "Yuanbao"
+  },
+  "site_search_name_minimax": {
+    "message": "MiniMax"
+  },
+  "site_search_name_deepseek": {
+    "message": "DeepSeek"
+  },
+  "site_search_name_kimi": {
+    "message": "Kimi"
+  },
+  "site_search_name_zhihu": {
+    "message": "Zhihu"
+  },
+  "site_search_name_douban": {
+    "message": "Douban"
+  },
+  "site_search_name_juejin": {
+    "message": "Juejin"
+  },
+  "site_search_name_taobao": {
+    "message": "Taobao"
+  },
+  "site_search_name_tmall": {
+    "message": "Tmall"
+  },
+  "site_search_name_wechat": {
+    "message": "Contas Oficiais do WeChat"
+  },
+  "site_search_name_wikipedia": {
+    "message": "Wikipédia"
+  },
+  "site_search_name_lumno_help": {
+    "message": "Central de Ajuda do Lumno"
+  },
+  "help_center_recommended": {
+    "message": "Leitura sugerida"
+  },
+  "help_center_no_results": {
+    "message": "Nada encontrado. Fique à vontade para falar com o desenvolvedor."
+  },
+  "search_in_site": {
+    "message": "Pesquisar em {site}"
+  },
+  "search_in_site_query": {
+    "message": "Pesquisar \"{query}\" em {site}"
+  },
+  "ask_ai_provider": {
+    "message": "Perguntar ao {site}"
+  },
+  "ask_ai_provider_query": {
+    "message": "Perguntar ao {site} \"{query}\""
+  },
+  "site_search_tab_hint": {
+    "message": "Pesquisar em {site}"
+  },
+  "search_query": {
+    "message": "Pesquisar \"{query}\""
+  },
+  "search_in_site_ellipsis": {
+    "message": "Pesquisar em {site}…"
+  },
+  "search_in_site_prefix": {
+    "message": "Pesquisar em {site} |"
+  },
+  "search_open_tabs_only_prefix": {
+    "message": "Pesquisar nas guias abertas |"
+  },
+  "search_open_tabs_only_entry": {
+    "message": "Pesquisar nas guias abertas"
+  },
+  "action_search": {
+    "message": "Pesquisar"
+  },
+  "action_search_engine": {
+    "message": "Pesquisar no {engine}"
+  },
+  "action_open_ai_web": {
+    "message": "Abrir o app da Web do {site}"
+  },
+  "action_search_google": {
+    "message": "Pesquisar no Google"
+  },
+  "action_switch": {
+    "message": "Alternar"
+  },
+  "action_open": {
+    "message": "Abrir"
+  },
+  "overlay_empty_result": {
+    "message": "Nenhum resultado encontrado"
+  },
+  "local_search_tab_hint": {
+    "message": "Pesquisar só em {source}"
+  },
+  "search_scope_switcher_label": {
+    "message": "Escopo da pesquisa: {scope}. Ative para alternar."
+  },
+  "search_scope_current": {
+    "message": "Atual"
+  },
+  "search_scope_remove_confirmation": {
+    "message": "Pressione Backspace de novo para remover o escopo."
+  },
+  "search_number_jump_release_hint": {
+    "message": "Solte para mostrar os números"
+  },
+  "search_scope_menu_shortcut_hint": {
+    "message": "Abrir painel"
+  },
+  "search_scope_menu_navigation_hint": {
+    "message": "Mover"
+  },
+  "search_scope_menu_select_hint": {
+    "message": "Alternar"
+  },
+  "search_scope_menu_focus_toggle_hint": {
+    "message": "Alternar foco"
+  },
+  "search_scope_menu_filter_hint": {
+    "message": "Digite para filtrar"
+  },
+  "search_scope_menu_filter_query": {
+    "message": "Pesquisa: {query}"
+  },
+  "search_scope_panel_placeholder": {
+    "message": "Pesquisar conteúdo de um site específico…"
+  },
+  "search_scope_active_placeholder": {
+    "message": "Pesquise neste escopo; pressione Tab de novo para abrir o painel de escopos…"
+  },
+  "search_scope_group_engines": {
+    "message": "Mecanismos de pesquisa"
+  },
+  "search_scope_group_local": {
+    "message": "Conteúdo do navegador"
+  },
+  "search_scope_group_ai": {
+    "message": "Pesquisa com IA"
+  },
+  "search_scope_group_sites": {
+    "message": "Pesquisa no site"
+  },
+  "search_scope_group_aggregates": {
+    "message": "Pesquisas combinadas"
+  },
+  "aggregate_search_action": {
+    "message": "Pesquisar com {name}"
+  },
+  "aggregate_search_action_query": {
+    "message": "Pesquisar \"{query}\" com {name}"
+  },
+  "aggregate_search_group_title": {
+    "message": "Pesquisa combinada"
+  },
+  "aggregate_search_add": {
+    "message": "Adicionar pesquisa combinada"
+  },
+  "aggregate_search_clear": {
+    "message": "Limpar pesquisas combinadas"
+  },
+  "confirm_clear_aggregate_search": {
+    "message": "Limpar todas as pesquisas combinadas?"
+  },
+  "aggregate_search_name_label": {
+    "message": "Nome"
+  },
+  "aggregate_search_name_required_error": {
+    "message": "Digite um nome para esta pesquisa combinada."
+  },
+  "aggregate_search_key_placeholder": {
+    "message": "Por exemplo, tech"
+  },
+  "aggregate_search_default_name": {
+    "message": "Pesquisa combinada"
+  },
+  "aggregate_search_sources_label": {
+    "message": "Fontes de pesquisa"
+  },
+  "aggregate_search_selected_count": {
+    "message": "{count}/{max} selecionadas"
+  },
+  "aggregate_search_min_sources_error": {
+    "message": "Selecione pelo menos 2 fontes de pesquisa."
+  },
+  "aggregate_search_max_sources_error": {
+    "message": "Você pode selecionar até 10 fontes de pesquisa."
+  },
+  "settings_aggregate_search_auto_group_title": {
+    "message": "Agrupar automaticamente as guias da pesquisa combinada"
+  },
+  "settings_aggregate_search_auto_group_desc": {
+    "message": "Quando ativado, todas as guias abertas por uma pesquisa combinada ficam em um único grupo chamado “Nome da pesquisa: termo pesquisado”"
+  },
+  "aggregate_search_badge": {
+    "message": "Combinada"
+  },
+  "aggregate_search_source_summary": {
+    "message": "{count} fontes"
+  },
+  "aggregate_search_source_summary_unavailable": {
+    "message": "{count} fontes · {unavailable} indisponíveis · Atualização necessária"
+  },
+  "aggregate_search_sources_unavailable_error": {
+    "message": "Esta pesquisa combinada contém fontes removidas ou desativadas. Atualize-a nas Configurações."
+  },
+  "aggregate_search_in_progress": {
+    "message": "Esta pesquisa combinada já está em andamento."
+  },
+  "aggregate_search_partial_failure": {
+    "message": "Não foi possível abrir alguns resultados da pesquisa combinada."
+  },
+  "aggregate_search_degraded_success": {
+    "message": "Os resultados foram abertos, mas não foi possível concluir o agrupamento, a nomeação ou o foco das guias."
+  },
+  "aggregate_search_storage_unavailable_error": {
+    "message": "Não foi possível carregar as pesquisas combinadas. Recarregue as Configurações e tente novamente."
+  },
+  "aggregate_search_source_selection_unavailable_error": {
+    "message": "Remova as fontes indisponíveis e selecione pelo menos duas fontes disponíveis."
+  },
+  "aggregate_search_unavailable_group": {
+    "message": "Fontes indisponíveis"
+  },
+  "aggregate_search_unavailable_name": {
+    "message": "Fonte indisponível ({source})"
+  },
+  "aggregate_search_name_duplicate_error": {
+    "message": "Já existe uma pesquisa combinada com este nome."
+  },
+  "aggregate_search_max_items_error": {
+    "message": "Você pode criar até 8 pesquisas combinadas."
+  },
+  "overlay_empty_open_tabs": {
+    "message": "Nenhuma guia"
+  },
+  "site_icon_alt": {
+    "message": "Site"
+  },
+  "site_brand_wechat_official": {
+    "message": "Contas Oficiais do WeChat"
+  },
+  "settings_sync_title": {
+    "message": "Sincronização integrada do {browser}"
+  },
+  "settings_sync_section_title": {
+    "message": "Sincronização integrada do navegador"
+  },
+  "settings_sync_desc": {
+    "message": "As configurações são sincronizadas automaticamente pelo serviço de sincronização integrado do navegador atual"
+  },
+  "sync_status_unavailable": {
+    "message": "Sincronização indisponível"
+  },
+  "sync_status_unavailable_hint": {
+    "message": "Sincronização indisponível: verifique se o navegador atual oferece sincronização integrada e se ela está ativada."
+  },
+  "sync_status_ready": {
+    "message": "Sincronização automática ativada"
+  },
+  "sync_status_done": {
+    "message": "Sincronização concluída"
+  },
+  "sync_status_failed": {
+    "message": "Falha na sincronização"
+  },
+  "sync_status_failed_reason": {
+    "message": "Falha na sincronização: {reason}"
+  },
+  "sync_action_now": {
+    "message": "Sincronizar agora"
+  },
+  "sync_action_export": {
+    "message": "Exportar configurações"
+  },
+  "sync_action_import": {
+    "message": "Importar configurações"
+  },
+  "sync_tooltip_export": {
+    "message": "Exportar configurações"
+  },
+  "sync_tooltip_import": {
+    "message": "Importar configurações"
+  },
+  "sync_tooltip_last_manual": {
+    "message": "Última importação/sincronização manual: {time}"
+  },
+  "sync_tooltip_default": {
+    "message": "Sincronização manual"
+  },
+  "sync_status_hint": {
+    "message": "As configurações do Lumno são sincronizadas automaticamente pelo serviço de sincronização integrado do navegador atual. Isso funciona entre dispositivos conectados à mesma conta do navegador, mas não entre navegadores diferentes."
+  },
+  "sync_export_done": {
+    "message": "Configurações exportadas"
+  },
+  "sync_importing": {
+    "message": "Importando configurações…"
+  },
+  "sync_import_done": {
+    "message": "Importação concluída"
+  },
+  "sync_import_invalid": {
+    "message": "Arquivo de configurações inválido"
+  },
+  "document_pip_picker_unsupported_policy": {
+    "message": "Este site desativou o picture-in-picture por meio da política do site."
+  },
+  "document_pip_picker_unsupported_iframe": {
+    "message": "O Document Picture-in-Picture só funciona na página de nível superior."
+  },
+  "document_pip_picker_unsupported_insecure": {
+    "message": "O Document Picture-in-Picture exige HTTPS."
+  },
+  "document_pip_picker_open_failed_not_allowed": {
+    "message": "O site ou o navegador bloqueou a abertura do Document Picture-in-Picture."
+  },
+  "document_pip_picker_open_failed_not_supported": {
+    "message": "Esta seleção não pode ser aberta em Document Picture-in-Picture nesta página."
+  },
+  "document_pip_picker_open_failed_invalid_state": {
+    "message": "Já existe uma janela flutuante aberta ou o estado da página mudou. Tente novamente."
+  },
+  "document_pip_picker_open_failed_security": {
+    "message": "O navegador bloqueou esta ação nesta página por motivos de segurança."
+  },
+  "newtab_page_label": {
+    "message": "Nova guia"
+  },
+  "settings_title": {
+    "message": "Configurações"
+  },
+  "extension_page_label": {
+    "message": "Página da extensão"
+  },
+  "settings_button_aria": {
+    "message": "Configurações"
+  },
+  "copy_page_url_failed_retry": {
+    "message": "Não foi possível copiar. Tente novamente."
+  },
+  "copy_page_url_success": {
+    "message": "URL da página atual copiado"
+  },
+  "copy_page_url_failed_permission": {
+    "message": "Não foi possível copiar. Verifique a permissão da área de transferência."
+  },
+  "recent_pin_add": {
+    "message": "Fixar"
+  },
+  "recent_pin_remove": {
+    "message": "Liberar"
+  },
+  "recent_pin_limit": {
+    "message": "Você pode fixar até 3 cartões"
+  },
+  "recent_pin_limit_toast": {
+    "message": "Você pode fixar até 3 cartões."
+  },
+  "recent_dismiss_tooltip": {
+    "message": "Remover"
+  },
+  "recent_add_to_shortcuts": {
+    "message": "Adicionar aos atalhos"
+  },
+  "recent_dismiss_pinned_tooltip": {
+    "message": "Liberar e remover"
+  },
+  "recent_dismiss_toast": {
+    "message": "Removido"
+  },
+  "recent_dismiss_pinned_toast": {
+    "message": "Liberado e removido"
+  },
+  "recent_context_menu_label": {
+    "message": "Ações do site recente"
+  },
+  "tab_switcher_title": {
+    "message": "Guias recentes"
+  },
+  "tab_switcher_untitled": {
+    "message": "Sem título"
+  },
+  "tab_switcher_favicon_alt": {
+    "message": "Ícone do site"
+  },
+  "tab_switcher_close_tab": {
+    "message": "Fechar guia"
+  },
+  "tab_switcher_tab_closed": {
+    "message": "Guia fechada"
+  },
+  "tab_switcher_close_failed": {
+    "message": "Não foi possível fechar esta guia"
+  },
+  "command_show_tab_switcher": {
+    "message": "Abrir o alternador de guias recentes"
+  },
+  "shortcut_reference_title": {
+    "message": "Atalhos do teclado"
+  },
+  "shortcut_reference_group_search": {
+    "message": "Barra de comandos"
+  },
+  "shortcut_reference_group_page_link": {
+    "message": "Link da página"
+  },
+  "shortcut_reference_group_tab_switcher": {
+    "message": "Alternador de guias"
+  },
+  "shortcut_reference_group_web_clip": {
+    "message": "Recorte da Web"
+  },
+  "shortcut_reference_unset": {
+    "message": "Não definido"
+  },
+  "shortcut_reference_show_search_title": {
+    "message": "Abrir a barra de comandos"
+  },
+  "shortcut_reference_show_search_desc": {
+    "message": "Abre o Lumno na página atual"
+  },
+  "shortcut_reference_show_search_prefill_title": {
+    "message": "Abrir com o URL da página atual"
+  },
+  "shortcut_reference_show_search_prefill_desc": {
+    "message": "Abre o Lumno com o URL da página atual já preenchido"
+  },
+  "shortcut_reference_copy_url_title": {
+    "message": "Copiar URL da página atual"
+  },
+  "shortcut_reference_copy_url_desc": {
+    "message": "Copia o URL da página atual sem abrir o Lumno"
+  },
+  "shortcut_reference_tab_switcher_title": {
+    "message": "Abrir o alternador de guias recentes"
+  },
+  "shortcut_reference_tab_switcher_desc": {
+    "message": "Abre o alternador de guias recentes"
+  },
+  "shortcut_reference_search_input_history_title": {
+    "message": "Entrada anterior ou seguinte"
+  },
+  "shortcut_reference_search_input_history_desc": {
+    "message": "Volta ou avança no histórico de entradas enviadas"
+  },
+  "shortcut_reference_search_navigate_title": {
+    "message": "Navegar pelas sugestões"
+  },
+  "shortcut_reference_search_navigate_desc": {
+    "message": "Move o resultado ativo na pesquisa do Lumno e na Nova guia"
+  },
+  "shortcut_reference_search_number_jump_title": {
+    "message": "Ir para um resultado numerado"
+  },
+  "shortcut_reference_search_number_jump_desc": {
+    "message": "Mantenha a tecla modificadora principal pressionada, solte e pressione 0–9 para ativar o resultado correspondente"
+  },
+  "shortcut_reference_search_number_jump_shortcut": {
+    "message": "Segure {modifier} por 0,4 s, solte e pressione 0–9"
+  },
+  "shortcut_reference_search_confirm_title": {
+    "message": "Executar ação selecionada"
+  },
+  "shortcut_reference_search_confirm_desc": {
+    "message": "Abre, pesquisa, alterna a guia ou executa o comando selecionado"
+  },
+  "shortcut_reference_search_tab_mode_title": {
+    "message": "Completar ou entrar no modo de pesquisa"
+  },
+  "shortcut_reference_search_tab_mode_desc": {
+    "message": "Completa uma sugestão ou entra no modo de pesquisa no site/nas guias abertas"
+  },
+  "shortcut_reference_search_open_scope_menu_title": {
+    "message": "Abrir painel de escopos"
+  },
+  "shortcut_reference_search_open_scope_menu_desc": {
+    "message": "Com o campo vazio, pressione Tab duas vezes; com um escopo de pesquisa selecionado, pressione Tab uma vez"
+  },
+  "shortcut_reference_search_close_title": {
+    "message": "Fechar ou sair do modo"
+  },
+  "shortcut_reference_search_close_desc": {
+    "message": "Fecha a pesquisa do Lumno ou sai do modo de pesquisa no site/nas guias abertas"
+  },
+  "shortcut_reference_search_current_tab_title": {
+    "message": "Abrir na guia atual"
+  },
+  "shortcut_reference_search_current_tab_desc": {
+    "message": "Usa a guia atual para ações que normalmente abrem uma nova guia"
+  },
+  "shortcut_reference_search_switch_new_tab_title": {
+    "message": "Abrir guia correspondente em nova guia"
+  },
+  "shortcut_reference_search_switch_new_tab_desc": {
+    "message": "Quando um resultado corresponde a uma guia aberta, abre o URL dela em uma nova guia"
+  },
+  "shortcut_reference_tab_switcher_cycle_title": {
+    "message": "Mover a seleção no alternador"
+  },
+  "shortcut_reference_tab_switcher_cycle_desc": {
+    "message": "Vai para a guia anterior ou seguinte no alternador de guias"
+  },
+  "shortcut_reference_tab_switcher_confirm_title": {
+    "message": "Alternar para a guia selecionada"
+  },
+  "shortcut_reference_tab_switcher_confirm_desc": {
+    "message": "Confirma a guia selecionada no alternador de guias"
+  },
+  "shortcut_reference_document_pip_parent_title": {
+    "message": "Selecionar elemento externo"
+  },
+  "shortcut_reference_document_pip_parent_desc": {
+    "message": "Passa para um elemento pai maior ao escolher um recorte da Web"
+  },
+  "shortcut_reference_document_pip_child_title": {
+    "message": "Selecionar elemento interno"
+  },
+  "shortcut_reference_document_pip_child_desc": {
+    "message": "Passa para um elemento filho menor ao escolher um recorte da Web"
+  },
+  "newtab_shortcuts_section_label": {
+    "message": "Atalhos"
+  },
+  "newtab_shortcuts_add": {
+    "message": "Adicionar atalho"
+  },
+  "newtab_shortcuts_hide_add": {
+    "message": "Ocultar"
+  },
+  "newtab_shortcuts_add_hidden": {
+    "message": "“+” ocultado. Reative em Configurações → Aparência → Atalhos → Mostrar “+”."
+  },
+  "newtab_shortcuts_dialog_title": {
+    "message": "Adicionar atalho"
+  },
+  "newtab_shortcuts_name_label": {
+    "message": "Nome"
+  },
+  "newtab_shortcuts_name_placeholder": {
+    "message": "Lumno"
+  },
+  "newtab_shortcuts_url_label": {
+    "message": "URL"
+  },
+  "newtab_shortcuts_url_info_label": {
+    "message": "Sobre os URLs compatíveis"
+  },
+  "newtab_shortcuts_url_info": {
+    "message": "Páginas internas do navegador também são compatíveis, por exemplo:\nchrome://inspect/#devices"
+  },
+  "newtab_shortcuts_url_info__firefox": {
+    "message": "O Firefox não permite que extensões abram páginas internas como about:config, então use um endereço da Web."
+  },
+  "newtab_shortcuts_url_placeholder": {
+    "message": "https://example.com"
+  },
+  "newtab_shortcuts_icon_label": {
+    "message": "Ícone (opcional)"
+  },
+  "newtab_shortcuts_icon_mode_label": {
+    "message": "Origem do ícone"
+  },
+  "newtab_shortcuts_icon_builtin": {
+    "message": "Ícone integrado"
+  },
+  "newtab_shortcuts_icon_builtin_hint": {
+    "message": "Usa os ícones integrados de alta qualidade do Lumno."
+  },
+  "newtab_shortcuts_icon_builtin_network_hint": {
+    "message": "Não precisa de conexão de rede."
+  },
+  "newtab_shortcuts_icon_builtin_info_label": {
+    "message": "Sobre os ícones integrados"
+  },
+  "newtab_shortcuts_icon_service": {
+    "message": "Gstatic (ícones de terceiros)"
+  },
+  "newtab_shortcuts_icon_favicon_is": {
+    "message": "Favicon.is (ícones de terceiros)"
+  },
+  "newtab_shortcuts_icon_favicon_is_hint": {
+    "message": "Envia o domínio ao Favicon.is para obter um ícone maior."
+  },
+  "newtab_shortcuts_icon_favicon_is_caution": {
+    "message": "Ícones do domínio podem ser diferentes do ícone da página atual."
+  },
+  "newtab_shortcuts_icon_cache": {
+    "message": "Cache do navegador"
+  },
+  "newtab_shortcuts_icon_service_hint": {
+    "message": "Envia o domínio do site ao Gstatic. Estável e de alta qualidade."
+  },
+  "newtab_shortcuts_icon_cache_hint": {
+    "message": "Ícones de sites rápidos e precisos, do cache do navegador."
+  },
+  "newtab_shortcuts_icon_custom_hint": {
+    "message": "Salvo neste dispositivo por padrão, fora da sincronização do navegador."
+  },
+  "newtab_shortcuts_icon_service_caution": {
+    "message": "Alguns sites podem não ser reconhecidos."
+  },
+  "newtab_shortcuts_icon_cache_caution": {
+    "message": "As configurações do site podem incluir pontos de notificação ou reduzir a nitidez."
+  },
+  "newtab_shortcuts_icon_plate_label": {
+    "message": "Adicionar fundo a ícones irregulares"
+  },
+  "newtab_shortcuts_icon_plate_color_label": {
+    "message": "Cor do fundo"
+  },
+  "newtab_shortcuts_icon_plate_color_auto": {
+    "message": "Do ícone"
+  },
+  "newtab_shortcuts_icon_plate_color_custom": {
+    "message": "Cor personalizada"
+  },
+  "newtab_shortcuts_icon_custom_sync_hint": {
+    "message": "Sincronize entre dispositivos com WebDAV."
+  },
+  "newtab_shortcuts_icon_refresh_success": {
+    "message": "Ícone obtido"
+  },
+  "newtab_shortcuts_icon_cache_failed": {
+    "message": "Nenhum ícone em cache encontrado. Acesse o site e atualize novamente."
+  },
+  "newtab_shortcuts_icon_source_unavailable": {
+    "message": "Esta origem está indisponível. Escolha o cache do navegador ou um ícone personalizado."
+  },
+  "newtab_shortcuts_icon_online": {
+    "message": "Ícone on-line"
+  },
+  "newtab_shortcuts_icon_custom": {
+    "message": "Ícone personalizado"
+  },
+  "newtab_shortcuts_icon_current": {
+    "message": "Ícone atual"
+  },
+  "newtab_shortcuts_icon_refresh": {
+    "message": "Atualizar"
+  },
+  "newtab_shortcuts_icon_refreshing": {
+    "message": "Atualizando…"
+  },
+  "newtab_shortcuts_icon_refresh_failed": {
+    "message": "Não foi possível atualizar o ícone. Tente novamente mais tarde."
+  },
+  "newtab_shortcuts_icon_custom_required": {
+    "message": "Escolha uma imagem para o ícone personalizado."
+  },
+  "newtab_shortcuts_icon_online_info_label": {
+    "message": "Sobre os ícones on-line"
+  },
+  "newtab_shortcuts_icon_online_info": {
+    "message": "Os ícones on-line ficam fixos até você atualizar e salvar. A atualização usa o serviço de ícones ou o cache do navegador."
+  },
+  "newtab_shortcuts_icon_info_label": {
+    "message": "Sobre os ícones locais dos atalhos"
+  },
+  "newtab_shortcuts_icon_info": {
+    "message": "Compatível com PNG, JPG e WebP. Recomendamos um ícone quadrado com fundo transparente de 128×128 px ou mais. Salvo neste dispositivo por padrão; a sincronização por WebDAV está disponível."
+  },
+  "newtab_shortcuts_folder_item_icon_info": {
+    "message": "Compatível com PNG, JPG e WebP. Recomendamos um ícone quadrado com fundo transparente de 128×128 px ou mais. Salvo apenas neste dispositivo."
+  },
+  "newtab_shortcuts_icon_choose": {
+    "message": "Escolher imagem"
+  },
+  "newtab_shortcuts_icon_replace": {
+    "message": "Trocar imagem"
+  },
+  "newtab_shortcuts_icon_remove": {
+    "message": "Remover"
+  },
+  "newtab_shortcuts_icon_unsupported": {
+    "message": "Escolha uma imagem PNG, JPG ou WebP."
+  },
+  "newtab_shortcuts_icon_dimensions_too_large": {
+    "message": "A imagem não pode ser maior que 4096×4096 px"
+  },
+  "newtab_shortcuts_icon_invalid": {
+    "message": "Não foi possível usar esta imagem. Escolha outra."
+  },
+  "newtab_shortcuts_icon_storage_error": {
+    "message": "Não foi possível salvar o ícone local. Tente outra imagem."
+  },
+  "folder_rename": {
+    "message": "Renomear"
+  },
+  "folder_color_change": {
+    "message": "Mudar cor"
+  },
+  "folder_color_format": {
+    "message": "Formato da cor"
+  },
+  "folder_color_title": {
+    "message": "Cor da pasta"
+  },
+  "folder_color_description": {
+    "message": "Também vale para esta pasta nos atalhos e menus. Salva neste dispositivo."
+  },
+  "folder_color_presets": {
+    "message": "Cores predefinidas"
+  },
+  "folder_color_default": {
+    "message": "Cor padrão"
+  },
+  "folder_color_reset": {
+    "message": "Redefinir"
+  },
+  "folder_color_saved": {
+    "message": "Cores salvas"
+  },
+  "folder_color_save_current": {
+    "message": "Salvar cor atual"
+  },
+  "folder_color_remove_saved": {
+    "message": "Excluir cor salva"
+  },
+  "folder_color_saved_delete_failed": {
+    "message": "Não foi possível excluir esta cor. Tente novamente."
+  },
+  "folder_color_saved_load_failed": {
+    "message": "Não foi possível carregar as cores salvas. Reabra o seletor de cores para tentar novamente."
+  },
+  "folder_color_saved_save_failed": {
+    "message": "Não foi possível salvar esta cor. Tente novamente."
+  },
+  "folder_color_invalid": {
+    "message": "Digite uma cor HEX válida ou valores RGB de 0 a 255."
+  },
+  "folder_color_save_failed": {
+    "message": "Não foi possível salvar a cor da pasta. Tente novamente."
+  },
+  "newtab_shortcuts_cancel": {
+    "message": "Cancelar"
+  },
+  "newtab_shortcuts_done": {
+    "message": "Concluído"
+  },
+  "newtab_shortcuts_save": {
+    "message": "Salvar"
+  },
+  "newtab_shortcuts_invalid_url": {
+    "message": "Digite um URL http, https ou interno do navegador válido."
+  },
+  "newtab_shortcuts_limit_reached": {
+    "message": "Você pode adicionar até {count} atalhos."
+  },
+  "newtab_shortcuts_added": {
+    "message": "Atalho adicionado"
+  },
+  "context_menu_add_page_shortcut": {
+    "message": "Adicionar aos atalhos da Nova guia do Lumno"
+  },
+  "page_shortcut_added": {
+    "message": "Adicionado aos atalhos da Nova guia do Lumno"
+  },
+  "newtab_shortcuts_already_added": {
+    "message": "Já está nos atalhos"
+  },
+  "newtab_shortcuts_sync_limit_reached": {
+    "message": "Os atalhos excedem o espaço de sincronização do navegador, então os novos ficam só neste dispositivo. Ative o WebDAV nas Configurações para sincronizá-los também."
+  },
+  "newtab_shortcuts_edited": {
+    "message": "Atalho atualizado"
+  },
+  "newtab_shortcuts_removed": {
+    "message": "Atalho removido"
+  },
+  "newtab_shortcuts_removed_undo": {
+    "message": "Atalho removido · {shortcut} para desfazer"
+  },
+  "newtab_shortcuts_remove_undone": {
+    "message": "Atalho restaurado · {shortcut} para refazer"
+  },
+  "newtab_shortcuts_remove_redone": {
+    "message": "Atalho removido · {shortcut} para desfazer"
+  },
+  "newtab_shortcuts_add_undone": {
+    "message": "Adição do atalho desfeita · {shortcut} para refazer"
+  },
+  "newtab_shortcuts_add_redone": {
+    "message": "Atalho adicionado de novo · {shortcut} para desfazer"
+  },
+  "newtab_recent_added_to_folder": {
+    "message": "Adicionado a “{folder}”"
+  },
+  "newtab_shortcuts_open_folder": {
+    "message": "Abrir pasta"
+  },
+  "newtab_shortcuts_from_bookmarks": {
+    "message": "(dos favoritos)"
+  },
+  "newtab_shortcuts_folder_added": {
+    "message": "Pasta adicionada aos atalhos"
+  },
+  "newtab_shortcuts_folder_missing": {
+    "message": "Esta pasta de favoritos não está mais disponível."
+  },
+  "newtab_shortcuts_moved_to_bookmarks": {
+    "message": "Movido para os favoritos"
+  },
+  "newtab_shortcuts_new_folder_title": {
+    "message": "Nova pasta"
+  },
+  "newtab_shortcuts_stack_hint": {
+    "message": "Solte para criar uma pasta na barra de favoritos"
+  },
+  "newtab_shortcuts_stacked_undo": {
+    "message": "Pasta criada · {shortcut} para desfazer"
+  },
+  "newtab_shortcuts_stack_undone": {
+    "message": "Criação da pasta desfeita · {shortcut} para refazer"
+  },
+  "newtab_shortcuts_stack_redone": {
+    "message": "Pasta criada de novo · {shortcut} para desfazer"
+  },
+  "newtab_shortcuts_stack_failed": {
+    "message": "Não foi possível criar a pasta"
+  },
+  "newtab_shortcuts_move_to_bookmarks_failed": {
+    "message": "Não foi possível mover para os favoritos"
+  },
+  "newtab_shortcuts_edit_dialog_title": {
+    "message": "Editar atalho"
+  },
+  "newtab_shortcuts_context_menu_label": {
+    "message": "Ações do atalho"
+  },
+  "settings_tab_switcher_title": {
+    "message": "Alternador de guias"
+  },
+  "settings_tab_switcher_desc": {
+    "message": "Alterne rapidamente entre as guias recentes; {shortcut} por padrão, personalizável"
+  },
+  "slash_command_empty": {
+    "message": "Nenhum comando encontrado"
+  },
+  "command_tabs_title": {
+    "message": "Pesquisar só nas guias abertas"
+  },
+  "command_tabs_action": {
+    "message": "Pesquisar guias"
+  },
+  "command_copy_title": {
+    "message": "Copiar link da página atual"
+  },
+  "command_copy_action": {
+    "message": "Copiar link"
+  },
+  "settings_tab_account": {
+    "message": "Conta e sincronização"
+  },
+  "webdav_endpoint": {
+    "message": "Endereço do servidor (HTTPS)"
+  },
+  "webdav_directory": {
+    "message": "Pasta de sincronização"
+  },
+  "webdav_username": {
+    "message": "Nome de usuário"
+  },
+  "webdav_password": {
+    "message": "Senha de app"
+  },
+  "webdav_credentials_hint": {
+    "message": "A senha de app fica neste dispositivo. O endereço do servidor, a pasta e o nome de usuário são sincronizados com seus outros dispositivos pelo navegador."
+  },
+  "webdav_password_hint": {
+    "message": "O endereço do servidor, a pasta e o nome de usuário são sincronizados com seus outros dispositivos pelo navegador, mas a senha de app não. Guarde-a em um lugar seguro para digitá-la em novos dispositivos."
+  },
+  "webdav_password_hint_synced": {
+    "message": "O endereço do servidor, a pasta e o nome de usuário vieram do seu outro dispositivo. A senha de app não é sincronizada, então digite-a aqui."
+  },
+  "webdav_suggestion_label": {
+    "message": "De outro dispositivo"
+  },
+  "webdav_suggestion_add": {
+    "message": "Digite a senha para conectar"
+  },
+  "webdav_suggestion_dismiss": {
+    "message": "Dispensar"
+  },
+  "webdav_password_saved": {
+    "message": "Salva"
+  },
+  "webdav_password_change": {
+    "message": "Alterar"
+  },
+  "webdav_password_keep": {
+    "message": "Manter senha salva"
+  },
+  "webdav_password_show": {
+    "message": "Mostrar senha"
+  },
+  "webdav_password_hide": {
+    "message": "Ocultar senha"
+  },
+  "webdav_last_sync": {
+    "message": "Última sincronização"
+  },
+  "webdav_choice_hint": {
+    "message": "O servidor já tem configurações do Lumno. Mantenha um dos lados ou junte os planos de fundo dos dois e mantenha as demais configurações do servidor. Antes, é feito um backup dos dados deste dispositivo."
+  },
+  "webdav_conflict_hint": {
+    "message": "Este dispositivo e o servidor alteraram a mesma coisa. Escolha qual versão manter; as outras alterações são mescladas automaticamente."
+  },
+  "webdav_error_endpoint": {
+    "message": "Digite um endereço WebDAV HTTPS válido."
+  },
+  "webdav_error_directory": {
+    "message": "Digite um nome de pasta de sincronização válido."
+  },
+  "webdav_error_credentials": {
+    "message": "Digite o nome de usuário e a senha de app."
+  },
+  "webdav_error_auth": {
+    "message": "Falha na autenticação. Verifique o nome de usuário e a senha de app."
+  },
+  "webdav_error_permission": {
+    "message": "Acesso negado. Verifique as permissões de leitura e gravação da pasta."
+  },
+  "webdav_error_rate": {
+    "message": "O limite de solicitações do servidor foi atingido. Tente novamente mais tarde."
+  },
+  "webdav_error_unavailable": {
+    "message": "O servidor está temporariamente indisponível (HTTP 503). O Nutstore também responde assim depois de muitas solicitações em pouco tempo, então tente de novo em alguns minutos. Os dados deste dispositivo foram mantidos."
+  },
+  "webdav_warning_throttled": {
+    "message": "O servidor está recusando solicitações por enquanto (HTTP {status}), geralmente porque muitas foram enviadas em pouco tempo; o Nutstore e serviços parecidos limitam assim. O Lumno tentará de novo automaticamente após {time}. Os dados deste dispositivo foram mantidos."
+  },
+  "webdav_error_capacity": {
+    "message": "O armazenamento WebDAV está cheio. Libere espaço e tente novamente."
+  },
+  "webdav_error_conditional": {
+    "message": "Este servidor não consegue evitar com segurança substituições simultâneas e não é compatível com a sincronização automática."
+  },
+  "webdav_error_changed": {
+    "message": "As configurações mudaram durante a sincronização. Os dados locais foram mantidos e a sincronização será repetida."
+  },
+  "webdav_error_missing": {
+    "message": "As configurações remotas foram excluídas. Envie as configurações locais para recriá-las ou verifique o endereço do servidor."
+  },
+  "webdav_error_chrome_capacity": {
+    "message": "Estas configurações excedem a capacidade de sincronização do Chrome e não foram aplicadas. A sincronização atual do Chrome e os dados locais foram preservados. Reduza as configurações e tente novamente."
+  },
+  "webdav_error_chrome_capacity__firefox": {
+    "message": "Estas configurações excedem a capacidade do Firefox Sync e não foram aplicadas. O Firefox Sync atual e os dados locais foram preservados. Reduza as configurações e tente novamente."
+  },
+  "webdav_warning_chrome_backup": {
+    "message": "As configurações deste dispositivo excedem a capacidade de sincronização do Chrome, então ainda não têm backup na sincronização do Chrome. A sincronização WebDAV continua e os dados locais foram mantidos. Reduza as configurações para concluir o backup."
+  },
+  "webdav_warning_chrome_backup__firefox": {
+    "message": "As configurações deste dispositivo excedem a capacidade do Firefox Sync, então ainda não têm backup no Firefox Sync. A sincronização WebDAV continua e os dados locais foram mantidos. Reduza as configurações para concluir o backup."
+  },
+  "webdav_error_network": {
+    "message": "A conexão falhou ou expirou. Verifique a rede, o endereço do servidor e o certificado. Os dados locais foram mantidos."
+  },
+  "webdav_error_storage": {
+    "message": "Não foi possível salvar os dados de sincronização. Verifique o armazenamento local do navegador."
+  },
+  "webdav_error_shortcuts": {
+    "message": "A restauração excederia o limite de atalhos. Remova antes alguns atalhos de pastas locais."
+  },
+  "webdav_error_remote_unreadable": {
+    "message": "O servidor não retornou as configurações remotas normalmente. Verifique o servidor ou tente mais tarde. Os dados locais não foram substituídos."
+  },
+  "webdav_error_remote_corrupt": {
+    "message": "O arquivo de configurações remoto está danificado (JSON inválido), talvez por um envio interrompido ou outro app. Os dados locais não foram substituídos."
+  },
+  "webdav_error_invalid_state": {
+    "message": "As configurações remotas usam uma estrutura ou versão que este Lumno não reconhece, talvez de uma versão mais nova. Atualize o Lumno em todos os dispositivos. Os dados locais não foram substituídos."
+  },
+  "webdav_error_state_too_large": {
+    "message": "As configurações remotas excedem o limite de sincronização (200 atalhos, 256 planos de fundo, 2 MB de configurações). Os dados locais não foram substituídos."
+  },
+  "webdav_error_response_too_large": {
+    "message": "Um arquivo retornado pelo servidor excede o limite de 2 MB. Os dados locais não foram substituídos."
+  },
+  "webdav_error_invalid_shortcuts": {
+    "message": "Os dados remotos dos atalhos são inválidos (formato incorreto ou IDs duplicados). Os dados locais não foram substituídos."
+  },
+  "webdav_error_invalid_icon": {
+    "message": "Os registros remotos de ícones dos atalhos são inválidos. Os dados locais não foram substituídos."
+  },
+  "webdav_error_invalid_wallpaper": {
+    "message": "Os registros remotos de planos de fundo são inválidos (ID ou dimensões incorretos). Os dados locais não foram substituídos."
+  },
+  "webdav_error_invalid_asset": {
+    "message": "Uma imagem remota é inválida (tipo, tamanho ou conteúdo incorreto). Os dados locais não foram substituídos."
+  },
+  "webdav_error_asset_missing": {
+    "message": "Falta um arquivo de imagem no servidor, talvez por um envio incompleto ou um arquivo excluído. Os dados locais foram mantidos."
+  },
+  "webdav_error_asset_integrity": {
+    "message": "Um arquivo de imagem no servidor está danificado (o conteúdo não corresponde ao registro). Os dados locais foram mantidos."
+  },
+  "webdav_error_local_invalid_state": {
+    "message": "As configurações deste dispositivo têm uma estrutura inválida e não podem ser sincronizadas. Nada foi alterado em nenhum dos lados."
+  },
+  "webdav_error_local_state_too_large": {
+    "message": "As configurações deste dispositivo excedem o limite de sincronização (256 planos de fundo, 2 MB de configurações). Remova alguns planos de fundo e tente novamente. Nada foi alterado em nenhum dos lados."
+  },
+  "webdav_error_local_invalid_shortcuts": {
+    "message": "Os dados dos atalhos deste dispositivo são inválidos (formato incorreto ou IDs duplicados) e não podem ser sincronizados. Nada foi alterado em nenhum dos lados."
+  },
+  "webdav_error_local_invalid_icon": {
+    "message": "Os registros de ícones dos atalhos deste dispositivo são inválidos e não podem ser sincronizados. Nada foi alterado em nenhum dos lados."
+  },
+  "webdav_error_local_invalid_wallpaper": {
+    "message": "Os registros de planos de fundo deste dispositivo são inválidos (ID ou dimensões incorretos) e não podem ser sincronizados. Nada foi alterado em nenhum dos lados."
+  },
+  "webdav_error_local_invalid_asset": {
+    "message": "Uma imagem deste dispositivo está danificada ou não é compatível e não pode ser sincronizada. Remova-a e adicione de novo. Nada foi alterado em nenhum dos lados."
+  },
+  "webdav_error_local_asset_too_large": {
+    "message": "Uma imagem deste dispositivo excede o limite de sincronização (96 KB por ícone, 2 MB por plano de fundo). Nada foi alterado em nenhum dos lados."
+  },
+  "webdav_error_shortcut_id_conflict": {
+    "message": "Um atalho remoto tem o mesmo ID de um atalho de pasta de favoritos deste dispositivo, então não é possível mesclá-los. Os dados locais foram mantidos."
+  },
+  "webdav_error_write_failed": {
+    "message": "O servidor recusou gravar os arquivos de sincronização. Verifique a permissão de gravação da pasta e o espaço livre. Os dados locais foram mantidos."
+  },
+  "webdav_error_directory_unavailable": {
+    "message": "Não foi possível criar a pasta de sincronização no servidor. Verifique o endereço do servidor e as permissões da pasta."
+  },
+  "webdav_error_folder_create_refused": {
+    "message": "O servidor recusou criar uma nova pasta (MKCOL 405), então o bloqueio de sincronização não pode ser configurado. Verifique se a conta pode criar pastas, se a montagem não é somente leitura e se nenhum proxy bloqueia MKCOL."
+  },
+  "webdav_error_http": {
+    "message": "O servidor retornou um erro (HTTP {status}). Tente novamente mais tarde. Os dados locais foram mantidos."
+  },
+  "webdav_error_generic": {
+    "message": "Falha na sincronização. Tente novamente mais tarde. Os dados locais foram mantidos."
+  },
+  "webdav_test": {
+    "message": "Testar conexão"
+  },
+  "webdav_enable": {
+    "message": "Salvar e ativar sincronização"
+  },
+  "webdav_sync": {
+    "message": "Sincronizar agora"
+  },
+  "webdav_restore_backup": {
+    "message": "Restaurar configurações anteriores à substituição"
+  },
+  "webdav_merge_wallpapers": {
+    "message": "Juntar planos de fundo"
+  },
+  "webdav_error_merge_too_large": {
+    "message": "Juntos, os planos de fundo excedem o limite de sincronização (256 planos de fundo, 2 MB de configurações, 8 KB de links de imagem). Remova alguns ou mantenha um dos lados. Nada foi alterado."
+  },
+  "webdav_use_remote": {
+    "message": "Usar versão do servidor"
+  },
+  "webdav_use_local": {
+    "message": "Manter versão deste dispositivo"
+  },
+  "webdav_test_success": {
+    "message": "Conexão, leitura/gravação e proteção contra atualizações simultâneas verificadas"
+  },
+  "webdav_state_browser": {
+    "message": "Desativado"
+  },
+  "webdav_state_ready": {
+    "message": "Sincronizado"
+  },
+  "webdav_state_syncing": {
+    "message": "Sincronizando…"
+  },
+  "webdav_state_paused": {
+    "message": "Pausado"
+  },
+  "webdav_state_pending": {
+    "message": "Aguardando sincronização"
+  },
+  "webdav_state_choice": {
+    "message": "Escolha uma cópia"
+  },
+  "webdav_state_conflict": {
+    "message": "Conflito de configurações"
+  },
+  "webdav_state_error": {
+    "message": "Falha na sincronização"
+  },
+  "webdav_error_interrupted": {
+    "message": "A substituição anterior foi interrompida. Os envios estão pausados. Restaure as configurações locais anteriores ou reconecte e use as configurações remotas."
+  },
+  "webdav_missing_hint": {
+    "message": "As configurações do servidor sumiram. Envie de novo as configurações deste dispositivo ou verifique antes o endereço do servidor."
+  },
+  "webdav_error_locked": {
+    "message": "Outro dispositivo está gravando no servidor. Tente novamente mais tarde. Se continuar bloqueado, siga o guia do WebDAV para remover um bloqueio residual."
+  },
+  "webdav_error_lock_recovery": {
+    "message": "A gravação remota não terminou com segurança, então a proteção foi mantida. Pause a sincronização em todos os dispositivos e confirme que a solicitação interrompida terminou antes de remover v1/write-lock da pasta de sincronização remota."
+  },
+  "webdav_error_outdated": {
+    "message": "Recarregue a extensão Lumno e atualize as configurações para usar várias conexões WebDAV."
+  },
+  "webdav_title": {
+    "message": "Sincronização WebDAV"
+  },
+  "webdav_beta_hint": {
+    "message": "Em beta: sincronize configurações, ícones personalizados e planos de fundo por um drive WebDAV ou NAS. Ao contrário da sincronização integrada do navegador, funciona entre navegadores e inclui ícones e planos de fundo."
+  },
+  "webdav_setup_hint": {
+    "message": "Sincronize configurações, ícones personalizados e planos de fundo pelo Nutstore ou outro serviço WebDAV, junto com a sincronização do navegador."
+  },
+  "webdav_edit_config": {
+    "message": "Editar conexão"
+  },
+  "webdav_save": {
+    "message": "Salvar"
+  },
+  "webdav_never_synced": {
+    "message": "Ainda não sincronizado"
+  },
+  "webdav_choice_title": {
+    "message": "Escolha a versão inicial"
+  },
+  "webdav_conflict_title": {
+    "message": "Conflito de sincronização"
+  },
+  "webdav_conflict_items": {
+    "message": "Conteúdo em conflito"
+  },
+  "webdav_conflict_shortcuts": {
+    "message": "Atalhos e ícones"
+  },
+  "webdav_conflict_wallpapers": {
+    "message": "Planos de fundo e seleção"
+  },
+  "webdav_conflict_preferences": {
+    "message": "Configurações"
+  },
+  "webdav_resolve_later": {
+    "message": "Pausar e resolver depois"
+  },
+  "webdav_add": {
+    "message": "Adicionar WebDAV"
+  },
+  "webdav_state_recovery": {
+    "message": "Restauração necessária"
+  },
+  "webdav_retry": {
+    "message": "Tentar de novo"
+  },
+  "webdav_copy_diagnostic": {
+    "message": "Copiar diagnóstico"
+  },
+  "webdav_diagnostic_copied": {
+    "message": "Copiado"
+  },
+  "webdav_provider_jianguoyun": {
+    "message": "Nutstore"
+  },
+  "webdav_upload_local": {
+    "message": "Enviar configurações deste dispositivo"
+  },
+  "webdav_error_duplicate": {
+    "message": "Já existe uma conexão com o mesmo servidor, pasta e nome de usuário."
+  },
+  "webdav_error_interrupted_other": {
+    "message": "Outra conexão WebDAV ({name}) precisa restaurar as configurações locais primeiro. Esta será retomada depois."
+  },
+  "webdav_just_now": {
+    "message": "agora mesmo"
+  },
+  "webdav_view_diff": {
+    "message": "Mostrar diferenças"
+  },
+  "webdav_hide_diff": {
+    "message": "Ocultar diferenças"
+  },
+  "webdav_diff_local": {
+    "message": "Este dispositivo"
+  },
+  "webdav_diff_remote": {
+    "message": "Servidor"
+  },
+  "webdav_diff_added": {
+    "message": "Adicionados: {items}"
+  },
+  "webdav_diff_removed": {
+    "message": "Removidos: {items}"
+  },
+  "webdav_diff_changed": {
+    "message": "Editados: {items}"
+  },
+  "webdav_diff_more": {
+    "message": "{count} no total"
+  },
+  "webdav_diff_reordered": {
+    "message": "Reordenado"
+  },
+  "webdav_diff_selection": {
+    "message": "Plano de fundo atual alterado"
+  },
+  "webdav_diff_unchanged": {
+    "message": "Sem alterações"
+  },
+  "webdav_diff_shortcut_total": {
+    "message": "{count} atalhos"
+  },
+  "webdav_diff_wallpaper_total": {
+    "message": "{count} planos de fundo"
+  },
+  "webdav_diff_loading": {
+    "message": "Carregando…"
+  },
+  "webdav_value_on": {
+    "message": "Ativado"
+  },
+  "webdav_value_off": {
+    "message": "Desativado"
+  },
+  "webdav_value_default": {
+    "message": "Padrão"
+  },
+  "webdav_value_changed": {
+    "message": "Alterado"
+  },
+  "webdav_value_list": {
+    "message": "{count} itens"
+  },
+  "webdav_preference_other": {
+    "message": "Outra configuração"
+  },
+  "webdav_preference_zen_mode": {
+    "message": "Modo Zen"
+  },
+  "webdav_remove": {
+    "message": "Excluir conexão WebDAV"
+  },
+  "webdav_remove_confirm": {
+    "message": "Excluir esta conexão local? Os arquivos no servidor serão mantidos."
+  },
+  "newtab_quote_title": {
+    "message": "Frase do dia"
+  },
+  "newtab_quote_position": {
+    "message": "Posição da frase"
+  },
+  "newtab_quote_category": {
+    "message": "Categoria da frase"
+  },
+  "newtab_quote_off": {
+    "message": "Desativada"
+  },
+  "newtab_quote_top": {
+    "message": "Acima da pesquisa"
+  },
+  "newtab_quote_input": {
+    "message": "Abaixo da pesquisa"
+  },
+  "newtab_quote_search": {
+    "message": "Abaixo dos atalhos"
+  },
+  "newtab_quote_bottom": {
+    "message": "Rodapé da página"
+  },
+  "newtab_quote_literature": {
+    "message": "Literatura"
+  },
+  "newtab_quote_poetry": {
+    "message": "Poesia"
+  },
+  "newtab_quote_shuffle": {
+    "message": "Mostrar outra frase"
+  },
+  "newtab_quote_shuffle_error": {
+    "message": "Não foi possível carregar outra frase"
+  },
+  "newtab_quote_save_error": {
+    "message": "Não foi possível salvar as configurações da frase"
+  },
+  "newtab_quote_fallback_text": {
+    "message": "Uma jornada de mil milhas começa com um único passo."
+  },
+  "newtab_quote_fallback_author": {
+    "message": "Lao-Tsé"
+  },
+  "newtab_quote_fallback_source": {
+    "message": "Tao Te Ching"
+  },
+  "newtab_bing_daily": {
+    "message": "Atualizar todo dia"
+  },
+  "newtab_bing_daily_hint": {
+    "message": "Uma nova foto do Bing todo dia. Se você escolher uma foto com isto ativado, ela fica até o fim do dia."
+  },
+  "newtab_daily_restore": {
+    "message": "Voltar ao plano de fundo de hoje"
+  },
+  "newtab_bing_recent": {
+    "message": "Planos de fundo recentes"
+  },
+  "newtab_bing_refresh": {
+    "message": "Atualizar"
+  },
+  "newtab_bing_loading": {
+    "message": "Carregando planos de fundo…"
+  },
+  "newtab_bing_saving": {
+    "message": "Salvando plano de fundo…"
+  },
+  "newtab_bing_error": {
+    "message": "Não foi possível carregar os planos de fundo. Tente novamente."
+  },
+  "newtab_bing_save_error": {
+    "message": "Não foi possível salvar o plano de fundo. Tente novamente."
+  },
+  "newtab_bing_source": {
+    "message": "Ver origem do plano de fundo"
+  },
+  "newtab_wallpaper_curated_section": {
+    "message": "Selecionados"
+  },
+  "newtab_curated_daily_hint": {
+    "message": "Uma nova foto todo dia, da categoria exibida quando você ativou isto, igual em todos os dispositivos sincronizados. Uma foto que você escolher fica até o fim do dia."
+  },
+  "newtab_curated_category": {
+    "message": "Categoria"
+  },
+  "newtab_curated_category_random": {
+    "message": "Mista"
+  },
+  "newtab_curated_category_nature": {
+    "message": "Natureza"
+  },
+  "newtab_curated_category_water": {
+    "message": "Água"
+  },
+  "newtab_curated_category_city": {
+    "message": "Cidade"
+  },
+  "newtab_curated_category_minimal": {
+    "message": "Minimalista"
+  },
+  "newtab_curated_category_art": {
+    "message": "Arte"
+  },
+  "newtab_curated_art_meta": {
+    "message": "Museu de Arte de Cleveland"
+  },
+  "newtab_curated_list": {
+    "message": "Fotos"
+  },
+  "newtab_curated_mix_all": {
+    "message": "Todas as categorias"
+  },
+  "newtab_curated_mix_count": {
+    "message": "{count} categorias"
+  },
+  "newtab_curated_mix_separator": {
+    "message": ", "
+  },
+  "newtab_curated_mix_aria": {
+    "message": "Categorias na mistura"
+  },
+  "newtab_curated_more": {
+    "message": "Mostrar outras"
+  },
+  "newtab_curated_photo_by": {
+    "message": "Foto de {name}"
+  },
+  "newtab_curated_source_meta": {
+    "message": "Unsplash · via Lorem Picsum"
+  },
+  "newtab_wallpaper_add_url": {
+    "message": "Adicionar link de imagem"
+  },
+  "newtab_wallpaper_url_placeholder": {
+    "message": "Cole o link de uma imagem (https://…)"
+  },
+  "newtab_wallpaper_url_submit": {
+    "message": "Adicionar"
+  },
+  "newtab_wallpaper_url_invalid": {
+    "message": "Digite um link que comece com http:// ou https://"
+  },
+  "newtab_wallpaper_url_limit": {
+    "message": "Este link é longo demais ou há links salvos demais. Remova alguns e tente novamente."
+  },
+  "newtab_wallpaper_url_import_error": {
+    "message": "Não foi possível adicionar uma imagem deste link"
+  },
+  "newtab_wallpaper_save_to_local": {
+    "message": "Salvar nos planos de fundo locais"
+  },
+  "newtab_wallpaper_in_local": {
+    "message": "Já está nos planos de fundo locais"
+  },
+  "newtab_wallpaper_saving_local": {
+    "message": "Salvando nos planos de fundo locais…"
+  },
+  "newtab_wallpaper_saved_local": {
+    "message": "Salvo nos planos de fundo locais"
+  },
+  "newtab_wallpaper_local_limit": {
+    "message": "Você pode manter até {count} planos de fundo locais. Exclua alguns e tente novamente."
+  },
+  "newtab_wallpaper_context_menu_label": {
+    "message": "Ações do plano de fundo"
+  },
+  "newtab_quote_font": {
+    "message": "Fonte"
+  },
+  "newtab_quote_font_label": {
+    "message": "Fonte da frase"
+  },
+  "newtab_quote_font_wenkai": {
+    "message": "LXGW WenKai"
+  },
+  "newtab_quote_font_xiaowei": {
+    "message": "ZCOOL XiaoWei"
+  },
+  "newtab_quote_font_sans": {
+    "message": "Sem serifa do sistema"
+  },
+  "newtab_quote_font_size": {
+    "message": "Tamanho da fonte"
+  },
+  "newtab_quote_font_size_label": {
+    "message": "Tamanho da fonte da frase (px)"
+  },
+  "newtab_quote_provider": {
+    "message": "Fornecido por Hitokoto"
+  },
+  "recent_history_menu": {
+    "message": "Ver histórico de alterações recentes"
+  },
+  "recent_history_title": {
+    "message": "Histórico de alterações"
+  },
+  "recent_history_description": {
+    "message": "Defina qualquer versão mantida como atual sem apagar o histórico."
+  },
+  "recent_history_current": {
+    "message": "Versão atual"
+  },
+  "recent_history_earlier": {
+    "message": "Versão anterior"
+  },
+  "recent_history_restore": {
+    "message": "Definir como atual"
+  },
+  "recent_history_restoring": {
+    "message": "Restaurando…"
+  },
+  "recent_history_restore_success": {
+    "message": "Versão selecionada restaurada"
+  },
+  "recent_history_restore_failed": {
+    "message": "Não foi possível restaurar esta versão"
+  },
+  "recent_update_close": {
+    "message": "Fechar"
+  },
+  "settings_progress_tracking_title": {
+    "message": "Manter séries e romances fixados em dia"
+  },
+  "settings_progress_tracking_desc": {
+    "message": "Fixe uma série ou um romance e o cartão acompanha você até o próximo episódio ou capítulo, abrindo onde você parou"
+  },
+  "settings_newtab_open_in_new_tab_title": {
+    "message": "Abrir em uma nova guia"
+  },
+  "settings_newtab_open_in_new_tab_desc": {
+    "message": "Os itens ativados abrem em uma nova guia e mudam para ela; os desativados abrem na guia atual. Command/Ctrl + clique ou clique do meio sempre abre em segundo plano."
+  },
+  "settings_newtab_open_in_new_tab_search": {
+    "message": "Resultados de pesquisa"
+  },
+  "settings_newtab_open_in_new_tab_shortcuts": {
+    "message": "Atalhos"
+  },
+  "settings_newtab_open_in_new_tab_bookmarks": {
+    "message": "Favoritos"
+  },
+  "settings_newtab_open_in_new_tab_recent_sites": {
+    "message": "Cartões de sites"
+  },
+  "recent_progress_track": {
+    "message": "Acompanhar progresso"
+  },
+  "recent_progress_stop": {
+    "message": "Parar de acompanhar o progresso"
+  },
+  "recent_progress_track_toast": {
+    "message": "Acompanhamento ativado. O cartão é atualizado quando você passa para o próximo episódio ou capítulo."
+  },
+  "recent_progress_stop_toast": {
+    "message": "O progresso não está mais sendo acompanhado"
+  },
+  "recent_progress_tracking": {
+    "message": "Acompanhando o progresso"
+  },
+  "recent_progress_auto_toast": {
+    "message": "Fixado e acompanhando o progresso. Clique no ícone de radar do cartão para parar."
+  },
+  "settings_general_newtab_section_title": {
+    "message": "Configurações da Nova guia"
+  },
+  "recent_progress_track_tooltip": {
+    "message": "Acompanhar progresso\n────────\nÚtil para séries e romances em capítulos.\nQuando ativado, ao chegar ao próximo episódio ou capítulo desta obra, o cartão é atualizado."
+  },
+  "recent_progress_stop_tooltip": {
+    "message": "Acompanhando o progresso\n────────\nAo chegar ao próximo episódio ou capítulo desta obra, o cartão é atualizado.\nClique para parar de acompanhar."
+  },
+  "newtab_shortcuts_group_new": {
+    "message": "Novo grupo"
+  },
+  "newtab_shortcuts_group_default_title": {
+    "message": "Atalhos"
+  },
+  "newtab_shortcuts_group_title_placeholder": {
+    "message": "Adicione um título"
+  },
+  "newtab_shortcuts_group_actions": {
+    "message": "Ações de {group}"
+  },
+  "newtab_shortcuts_group_untitled_name": {
+    "message": "Grupo sem título"
+  },
+  "newtab_shortcuts_group_rename": {
+    "message": "Renomear"
+  },
+  "newtab_shortcuts_group_add_site": {
+    "message": "Adicionar site"
+  },
+  "newtab_shortcuts_group_move_up": {
+    "message": "Mover para cima"
+  },
+  "newtab_shortcuts_group_move_down": {
+    "message": "Mover para baixo"
+  },
+  "newtab_shortcuts_group_delete": {
+    "message": "Excluir grupo"
+  },
+  "newtab_shortcuts_group_delete_with_sites": {
+    "message": "Excluir grupo e sites"
+  },
+  "newtab_shortcuts_group_delete_confirm_title": {
+    "message": "Excluir “{group}” e os sites dele?"
+  },
+  "newtab_shortcuts_group_delete_confirm_description": {
+    "message": "O grupo e os {count} sites dele serão excluídos."
+  },
+  "newtab_shortcuts_group_delete_confirm_button": {
+    "message": "Excluir"
+  },
+  "newtab_shortcuts_group_deleted_undo": {
+    "message": "Grupo excluído · {shortcut} para desfazer"
+  },
+  "newtab_shortcuts_group_delete_undone": {
+    "message": "Grupo restaurado · {shortcut} para refazer"
+  },
+  "newtab_shortcuts_group_delete_redone": {
+    "message": "Grupo excluído · {shortcut} para desfazer"
+  },
+  "newtab_shortcuts_group_limit_reached": {
+    "message": "Você pode criar até {count} grupos."
+  },
+  "options_shortcut_sync_all": {
+    "message": "Atalhos: todos os {count} são sincronizados com o navegador."
+  },
+  "options_shortcut_sync_split_webdav": {
+    "message": "Atalhos: {synced} são sincronizados com o navegador; os outros {local}, pelo WebDAV."
+  },
+  "options_shortcut_sync_split_local": {
+    "message": "Atalhos: {synced} são sincronizados com o navegador; {local} excedem o espaço de sincronização e ficam neste dispositivo. Ative o WebDAV para sincronizá-los também."
+  },
+  "options_shortcut_sync_failed_local": {
+    "message": "Não foi possível salvar os atalhos na sincronização do navegador; os {count} ficam neste dispositivo por enquanto."
+  },
+  "options_shortcut_sync_failed_webdav": {
+    "message": "Não foi possível salvar os atalhos na sincronização do navegador; os {count} são sincronizados pelo WebDAV por enquanto."
+  },
+  "options_shortcut_sync_none_local": {
+    "message": "Atalhos: a sincronização do navegador está cheia, então os {count} ficam neste dispositivo. Ative o WebDAV para sincronizá-los."
+  },
+  "options_shortcut_sync_none_webdav": {
+    "message": "Atalhos: a sincronização do navegador está cheia, então os {count} são sincronizados pelo WebDAV."
+  },
+  "newtab_shortcuts_add_site": {
+    "message": "Adicionar site"
+  },
+  "newtab_shortcuts_group_dialog_rename_title": {
+    "message": "Renomear grupo"
+  },
+  "newtab_shortcuts_group_name_placeholder": {
+    "message": "Opcional; um grupo sem título só inicia uma nova linha"
+  },
+  "newtab_style_section_title": {
+    "message": "Estilo"
+  },
+  "settings_newtab_glass_style_title": {
+    "message": "Material"
+  },
+  "settings_newtab_glass_style_desc": {
+    "message": "Mude o material dos elementos da interface da Nova guia."
+  },
+  "settings_newtab_glass_style_none": {
+    "message": "Padrão"
+  },
+  "settings_newtab_glass_style_frosted": {
+    "message": "Acrílico"
+  },
+  "settings_newtab_glass_style_liquid": {
+    "message": "Vidro líquido"
+  },
+  "settings_newtab_glass_theme_title": {
+    "message": "Tema do material"
+  },
+  "settings_newtab_glass_theme_follow": {
+    "message": "Automático"
+  },
+  "settings_newtab_glass_theme_light": {
+    "message": "Claro"
+  },
+  "settings_newtab_glass_theme_dark": {
+    "message": "Escuro"
+  },
+  "settings_search_source_group_order_title": {
+    "message": "Ordem do painel de pesquisa"
+  },
+  "settings_search_source_group_order_desc": {
+    "message": "Arraste as etiquetas para definir a ordem dos grupos no painel da caixa de pesquisa. Arraste as linhas das listas abaixo para ordenar cada grupo. Pressione Ctrl/⌘ + Z para desfazer e Shift + Ctrl/⌘ + Z para refazer."
+  },
+  "settings_search_source_order_keyboard_hint": {
+    "message": "Pressione Alt com a seta para a esquerda ou para a direita para mover"
+  },
+  "settings_search_source_order_failed": {
+    "message": "Não foi possível salvar a nova ordem. Tente novamente."
+  },
+  "settings_search_source_move_up": {
+    "message": "Mover para cima"
+  },
+  "settings_search_source_move_down": {
+    "message": "Mover para baixo"
+  },
+  "settings_search_result_sources_order_desc": {
+    "message": "Arraste para definir a ordem no grupo Conteúdo do navegador do painel da caixa de pesquisa. Pressione Ctrl/⌘ + Z para desfazer e Shift + Ctrl/⌘ + Z para refazer."
+  },
+  "settings_search_source_order_undone": {
+    "message": "Mudança de ordem desfeita"
+  },
+  "settings_search_source_order_redone": {
+    "message": "Mudança de ordem refeita"
+  },
+  "newtab_quote_source": {
+    "message": "Origem"
+  },
+  "newtab_quote_custom": {
+    "message": "Personalizada"
+  },
+  "newtab_quote_collection_save_error": {
+    "message": "Não foi possível salvar neste dispositivo. Sua coleção anterior foi mantida."
+  },
+  "newtab_quote_hitokoto": {
+    "message": "Hitokoto"
+  },
+  "newtab_quote_provider_custom": {
+    "message": "Coleção personalizada · neste dispositivo, sincroniza com WebDAV"
+  },
+  "newtab_quote_importing": {
+    "message": "Importando…"
+  },
+  "newtab_quote_import_hint": {
+    "message": "Uma nova frase aparece todo dia; Sortear troca a qualquer momento. TXT / MD: uma linha de conteúdo não vazia por frase. Até 1 MB, 1.000 frases, 500 caracteres cada; fica neste dispositivo, fora da sincronização do navegador; o WebDAV sincroniza quando ativado."
+  },
+  "newtab_quote_count": {
+    "message": "Frases: {count}"
+  },
+  "newtab_quote_import_error": {
+    "message": "Falha na importação: o arquivo não atende aos limites de formato ou tamanho. Sua coleção anterior foi mantida."
+  },
+  "newtab_quote_library": {
+    "message": "Frases"
+  },
+  "newtab_quote_import": {
+    "message": "Importar arquivo"
+  },
+  "newtab_quote_replace": {
+    "message": "Trocar arquivo"
+  },
+  "newtab_quote_shuffle_button": {
+    "message": "Sortear"
+  },
+  "newtab_quote_font_size_reset": {
+    "message": "Redefinir tamanho da fonte da frase"
+  },
+  "popup_actions_label": {
+    "message": "Ações da página"
+  },
+  "popup_action_shortcut": {
+    "message": "Adicionar atalho"
+  },
+  "popup_action_copy": {
+    "message": "Copiar link"
+  },
+  "popup_copy_failed": {
+    "message": "Não foi possível copiar o link. Tente novamente."
+  },
+  "popup_theme_label": {
+    "message": "Tema"
+  },
+  "popup_link_settings": {
+    "message": "Configurações"
+  },
+  "popup_link_shortcuts": {
+    "message": "Definir atalhos"
+  },
+  "popup_link_feedback": {
+    "message": "Feedback"
+  },
+  "popup_sync_error": {
+    "message": "Falha na sincronização WebDAV"
+  },
+  "popup_sync_attention": {
+    "message": "A sincronização WebDAV precisa de você"
+  },
+  "popup_sync_busy": {
+    "message": "Sincronizando via WebDAV"
+  },
+  "popup_sync_waiting": {
+    "message": "WebDAV aguardando nova tentativa"
+  },
+  "popup_release_notes": {
+    "message": "Novidades"
+  },
+  "popup_section_command_bar": {
+    "message": "Barra de comandos"
+  },
+  "popup_overlay_page_theme": {
+    "message": "Seguir as cores da página"
+  },
+  "popup_overlay_open_tabs": {
+    "message": "Mostrar guias abertas por padrão"
+  },
+  "popup_action_shortcut_tooltip": {
+    "message": "Adicionar aos atalhos da Nova guia"
+  },
+  "popup_action_clip_tooltip": {
+    "message": "Recortar parte da página em uma janela flutuante"
+  },
+  "popup_settings_label": {
+    "message": "Configurações rápidas"
+  },
+  "popup_sync_ready": {
+    "message": "WebDAV sincronizado"
+  },
+  "popup_open_command_bar": {
+    "message": "Abrir a barra de comandos"
+  },
+  "popup_action_pip": {
+    "message": "Picture-in-picture"
+  },
+  "popup_action_pip_exit": {
+    "message": "Sair do picture-in-picture"
+  },
+  "popup_action_pip_tooltip": {
+    "message": "Deixar o vídeo desta página flutuando em uma janela pequena"
+  },
+  "popup_action_pip_menu": {
+    "message": "Picture-in-picture automático"
+  },
+  "popup_pip_failed": {
+    "message": "Este vídeo não pode ser reproduzido em picture-in-picture."
+  },
+  "popup_auto_pip_hint": {
+    "message": "Os vídeos flutuam quando você muda de guia"
+  },
+  "popup_action_unavailable": {
+    "message": "Indisponível nesta página"
+  },
+  "popup_action_pin_recent": {
+    "message": "Fixar em Recentes"
+  },
+  "popup_action_unpin_recent": {
+    "message": "Liberar de Recentes"
+  },
+  "popup_action_pin_recent_tooltip": {
+    "message": "Fixar em Recentes na Nova guia"
+  },
+  "popup_action_unpin_recent_tooltip": {
+    "message": "Liberar de Recentes na Nova guia"
+  },
+  "popup_recent_pinned": {
+    "message": "Fixado em Recentes na sua Nova guia"
+  },
+  "popup_recent_unpinned": {
+    "message": "Liberado de Recentes"
+  }
+}

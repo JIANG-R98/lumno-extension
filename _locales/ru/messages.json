@@ -1,0 +1,3659 @@
+{
+  "ext_name": {
+    "message": "Lumno ｜ Панель команд и новая вкладка"
+  },
+  "ext_description": {
+    "message": "Легкая панель команд для браузера и поиск на новой вкладке."
+  },
+  "settings_tab_general": {
+    "message": "Общие"
+  },
+  "settings_tab_appearance": {
+    "message": "Внешний вид"
+  },
+  "settings_appearance_global_section_title": {
+    "message": "Общие"
+  },
+  "settings_webpage_focus_overlay_section_title": {
+    "message": "Панель команд"
+  },
+  "newtab_theme_scope_label": {
+    "message": "Область темы"
+  },
+  "newtab_theme_scope_global": {
+    "message": "Везде"
+  },
+  "newtab_theme_scope_home": {
+    "message": "Новая вкладка"
+  },
+  "newtab_theme_scope_select_label": {
+    "message": "Применять изменения темы: {scope}"
+  },
+  "newtab_theme_scope_help_label": {
+    "message": "Об области темы"
+  },
+  "newtab_theme_scope_help": {
+    "message": "Везде: тема по умолчанию для всех страниц.\nНовая вкладка: действует только на странице новой вкладки. Выберите «Как везде», чтобы тема совпадала с общей."
+  },
+  "newtab_theme_follow_global": {
+    "message": "Как везде"
+  },
+  "newtab_search_section_title": {
+    "message": "Поле поиска"
+  },
+  "newtab_search_width_title": {
+    "message": "Ширина поля поиска"
+  },
+  "newtab_search_width_aria": {
+    "message": "Изменить ширину поля поиска на новой вкладке"
+  },
+  "newtab_search_width_standard": {
+    "message": "Обычная"
+  },
+  "newtab_search_width_wide": {
+    "message": "Широкая"
+  },
+  "newtab_search_width_max": {
+    "message": "Макс."
+  },
+  "newtab_appearance_settings_title": {
+    "message": "Настройки внешнего вида"
+  },
+  "newtab_help_footer_prompt": {
+    "message": "Не знаете, что делает параметр?"
+  },
+  "newtab_help_footer_action": {
+    "message": "Открыть Справочный центр"
+  },
+  "newtab_more_settings": {
+    "message": "Другие настройки"
+  },
+  "settings_tab_shortcuts": {
+    "message": "Источники поиска"
+  },
+  "settings_tab_blacklist": {
+    "message": "Черный список"
+  },
+  "settings_tab_labs": {
+    "message": "Эксперименты"
+  },
+  "settings_selection_quick_actions_title": {
+    "message": "Быстрые действия с выделенным"
+  },
+  "settings_selection_quick_actions_desc": {
+    "message": "Показывать действия ИИ при выделении текста"
+  },
+  "settings_selection_quick_actions_provider_title": {
+    "message": "Предпочтительный сервис"
+  },
+  "settings_selection_quick_actions_group_title": {
+    "message": "Искать в фоне"
+  },
+  "settings_selection_quick_actions_group_desc": {
+    "message": "Собирать все страницы ИИ в группе вкладок «Поиск ИИ»"
+  },
+  "selection_quick_actions_group_name": {
+    "message": "Поиск ИИ"
+  },
+  "selection_quick_action_ask": {
+    "message": "Ответить"
+  },
+  "selection_quick_action_translate": {
+    "message": "Перевести"
+  },
+  "selection_quick_action_explain": {
+    "message": "Объяснить"
+  },
+  "selection_quick_action_summarize": {
+    "message": "Кратко"
+  },
+  "selection_quick_action_search": {
+    "message": "Исследовать"
+  },
+  "selection_quick_action_calculate": {
+    "message": "Вычислить"
+  },
+  "selection_quick_action_open_menu": {
+    "message": "Использовать Lumno для выделенного текста"
+  },
+  "selection_quick_action_more": {
+    "message": "Другие действия"
+  },
+  "selection_quick_action_sending": {
+    "message": "Открывается в фоне…"
+  },
+  "selection_quick_action_failed": {
+    "message": "Не удалось отправить. Повторите попытку."
+  },
+  "selection_debug_decision_title": {
+    "message": "Решение по выделению"
+  },
+  "selection_debug_status_show": {
+    "message": "Показать"
+  },
+  "selection_debug_status_hide": {
+    "message": "Не показывать"
+  },
+  "selection_debug_sort_title": {
+    "message": "Порядок в меню"
+  },
+  "selection_debug_item_count": {
+    "message": "Элементов: {count}"
+  },
+  "selection_debug_reason_calculate": {
+    "message": "Обнаружено выражение, валюта или перевод единиц"
+  },
+  "selection_debug_reason_question": {
+    "message": "Обнаружен явный вопрос"
+  },
+  "selection_debug_reason_prose": {
+    "message": "Обнаружен достаточно содержательный связный текст"
+  },
+  "selection_debug_reason_search": {
+    "message": "Обнаружен запрос новостей, цен, официального сайта или версии"
+  },
+  "selection_debug_reason_translate": {
+    "message": "Язык выделенного текста отличается от языка интерфейса Lumno"
+  },
+  "selection_debug_reason_error": {
+    "message": "Обнаружена ошибка или исключение"
+  },
+  "selection_debug_reason_code": {
+    "message": "Обнаружен синтаксис кода или контекст кода"
+  },
+  "selection_debug_reason_term": {
+    "message": "Обнаружен значимый термин или короткая фраза"
+  },
+  "selection_debug_reason_explain_score": {
+    "message": "У действия «Объяснить» наивысший балл"
+  },
+  "selection_debug_reason_top_score": {
+    "message": "У этого действия наивысший балл совпадения"
+  },
+  "selection_debug_rejection_disabled": {
+    "message": "Быстрые действия с выделенным отключены"
+  },
+  "selection_debug_rejection_sensitive": {
+    "message": "Поле пароля или платежных данных; содержимое не считывалось"
+  },
+  "selection_debug_rejection_no_selection": {
+    "message": "Выделенный текст не обнаружен"
+  },
+  "selection_debug_rejection_too_short": {
+    "message": "Меньше 2 символов"
+  },
+  "selection_debug_rejection_too_long": {
+    "message": "Больше 2400 символов"
+  },
+  "selection_debug_rejection_url": {
+    "message": "Полный URL"
+  },
+  "selection_debug_rejection_email": {
+    "message": "Адрес электронной почты"
+  },
+  "selection_debug_rejection_generic_ui": {
+    "message": "Типовой текст интерфейса, например «Подробнее / Сохранить / Далее»"
+  },
+  "selection_debug_rejection_plain_number": {
+    "message": "Просто число без вычисления или перевода единиц"
+  },
+  "selection_debug_rejection_symbols": {
+    "message": "Слишком много символов"
+  },
+  "selection_debug_rejection_no_intent": {
+    "message": "Не найдено явной задачи, значимого термина или содержательного текста"
+  },
+  "selection_debug_primary_meta": {
+    "message": "Основное: {action} · Балл {score} · Уверенность: {confidence}"
+  },
+  "selection_debug_confidence_high": {
+    "message": "высокая"
+  },
+  "selection_debug_confidence_medium": {
+    "message": "средняя"
+  },
+  "selection_debug_confidence_low": {
+    "message": "низкая"
+  },
+  "selection_debug_sort_primary_cause": {
+    "message": "{reason}, балл {score}"
+  },
+  "selection_debug_sort_fallback_cause": {
+    "message": "Общий резервный вариант: добавлен в фиксированном порядке без повторов"
+  },
+  "selection_debug_sort_footer": {
+    "message": "Первый пункт — с наивысшим баллом намерения; остальные идут в порядке «Объяснить → Исследовать → Перевести»."
+  },
+  "settings_global_section_title": {
+    "message": "Общие настройки"
+  },
+  "settings_feedback_support_section_title": {
+    "message": "Отзывы и поддержка"
+  },
+  "settings_feedback_support_wechat_action": {
+    "message": "Группа в WeChat"
+  },
+  "settings_help_center_title": {
+    "message": "Справочный центр"
+  },
+  "settings_help_center_desc": {
+    "message": "Не знаете, как работает функция? Здесь описаны все функции."
+  },
+  "settings_help_center_action": {
+    "message": "Открыть"
+  },
+  "settings_help_center_ask_action": {
+    "message": "Спросить в поле поиска"
+  },
+  "settings_help_center_ask_caption": {
+    "message": "На новой вкладке или в панели команд введите lm, нажмите Tab и напишите свой вопрос."
+  },
+  "settings_help_center_ask_demo_query": {
+    "message": "как изменить быстрые клавиши"
+  },
+  "settings_help_center_ask_demo_result_1_title": {
+    "message": "Быстрые клавиши"
+  },
+  "settings_help_center_ask_demo_result_1_detail": {
+    "message": "Изменить сочетание клавиш"
+  },
+  "settings_help_center_ask_demo_result_2_title": {
+    "message": "Ярлыки и закладки"
+  },
+  "settings_help_center_ask_demo_result_2_detail": {
+    "message": "Изменить значок ярлыка"
+  },
+  "settings_feedback_support_review_action": {
+    "message": "Оценить Lumno"
+  },
+  "settings_feedback_support_github_issue_action": {
+    "message": "Создать Issue"
+  },
+  "settings_feedback_support_contact_author_action": {
+    "message": "Написать автору"
+  },
+  "settings_onboarding_tutorial_action": {
+    "message": "Знакомство"
+  },
+  "settings_language_title": {
+    "message": "Язык"
+  },
+  "settings_language_desc": {
+    "message": "Язык интерфейса"
+  },
+  "settings_language_machine_note": {
+    "message": "Переведено с помощью ИИ. Если заметили ошибку, пожалуйста, сообщите нам."
+  },
+  "settings_language_search_placeholder": {
+    "message": "Поиск языка"
+  },
+  "settings_language_no_results": {
+    "message": "Языки не найдены"
+  },
+  "settings_version_label": {
+    "message": "Версия"
+  },
+  "settings_version_tooltip": {
+    "message": "Список изменений"
+  },
+  "language_system": {
+    "message": "Как в браузере"
+  },
+  "settings_recent_title": {
+    "message": "Нижняя часть новой вкладки"
+  },
+  "settings_newtab_section_title": {
+    "message": "Новая вкладка"
+  },
+  "settings_search_results_section_title": {
+    "message": "Результаты поиска"
+  },
+  "settings_search_result_priority_title": {
+    "message": "Что показывать первым"
+  },
+  "settings_search_result_tab_position_title": {
+    "message": "Где открывать вкладку результата"
+  },
+  "search_result_tab_position_end": {
+    "message": "В конце панели вкладок (внизу)"
+  },
+  "search_result_tab_position_after_current": {
+    "message": "Справа от текущей (ниже)"
+  },
+  "search_result_tab_position_before_current": {
+    "message": "Слева от текущей (выше)"
+  },
+  "settings_search_fuzzy_pinyin_title": {
+    "message": "Нечеткий пиньинь"
+  },
+  "settings_search_fuzzy_pinyin_desc": {
+    "message": "Если включено, при поиске по пиньиню и начальным буквам z и zh, c и ch, s и sh, n и l, an и ang, en и eng, in и ing считаются одинаковыми"
+  },
+  "settings_search_result_sources_title": {
+    "message": "Показываемые типы результатов"
+  },
+  "settings_search_result_display_limit_title": {
+    "message": "Максимум результатов"
+  },
+  "settings_overlay_open_tabs_default_visible_title": {
+    "message": "Показывать все открытые вкладки при вызове Lumno на веб-странице"
+  },
+  "settings_favicon_enhanced_fetch_title": {
+    "message": "Расширенная загрузка значков и цветов темы"
+  },
+  "settings_favicon_enhanced_fetch_desc": {
+    "message": "Если появляется запрос на доступ к локальной сети, отключите этот параметр. Lumno перестанет загружать изображения напрямую с сайтов, но значки из кеша браузера и сторонние сервисы значков останутся доступны."
+  },
+  "favicon_blacklist_section_desc": {
+    "message": "Исключения по сайтам"
+  },
+  "favicon_blacklist_add": {
+    "message": "Добавить исключение"
+  },
+  "favicon_blacklist_removed_toast": {
+    "message": "Удалено из исключений для значков и темы"
+  },
+  "favicon_blacklist_clear": {
+    "message": "Очистить исключения"
+  },
+  "search_result_priority_autocomplete": {
+    "message": "Сначала автозаполнение"
+  },
+  "search_result_priority_search": {
+    "message": "Сначала поиск"
+  },
+  "settings_recent_desc": {
+    "message": "Показывать недавние / часто посещаемые сайты"
+  },
+  "settings_recent_sites_title": {
+    "message": "Карточки сайтов"
+  },
+  "newtab_recent_rows_title": {
+    "message": "Ряды карточек сайтов"
+  },
+  "settings_newtab_width_title": {
+    "message": "Ширина содержимого новой вкладки"
+  },
+  "settings_bookmarks_title": {
+    "message": "Ряды закладок"
+  },
+  "settings_bookmark_folder_icons_visible_title": {
+    "message": "Показывать значки внутри папок закладок"
+  },
+  "settings_document_pip_title": {
+    "message": "Вырезка страницы"
+  },
+  "settings_document_pip_desc": {
+    "message": "Вырежьте часть страницы в плавающее окно, чтобы сверяться с ней и сравнивать"
+  },
+  "settings_document_pip_unsupported_tooltip": {
+    "message": "Вырезка страницы использует Document Picture-in-Picture, который Firefox пока не поддерживает."
+  },
+  "document_pip_command_title": {
+    "message": "Вырезать часть страницы"
+  },
+  "document_pip_command_action": {
+    "message": "Вырезать"
+  },
+  "settings_update_notice_title": {
+    "message": "Сообщения об обновлениях"
+  },
+  "settings_update_notice_desc": {
+    "message": "Показывать новые возможности после обновления Lumno"
+  },
+  "settings_motion_effects_title": {
+    "message": "Анимация"
+  },
+  "settings_motion_effects_desc": {
+    "message": "Отключите, если интерфейс подтормаживает или вы предпочитаете более быстрое открытие"
+  },
+  "settings_simple_mode_title": {
+    "message": "Минимальный режим"
+  },
+  "settings_simple_mode_desc": {
+    "message": "Убрать лишние декоративные элементы, чтобы поле поиска было чище"
+  },
+  "settings_auto_pip_title": {
+    "message": "Автоматическая картинка в картинке"
+  },
+  "settings_auto_pip_desc": {
+    "message": "Если переключиться на другую вкладку во время воспроизведения видео, оно продолжит играть в плавающем окне"
+  },
+  "settings_auto_pip_unsupported_tooltip": {
+    "message": "Firefox не позволяет расширениям автоматически включать режим «Картинка в картинке» для видео, поэтому эта функция недоступна."
+  },
+  "settings_pinned_tab_recovery_title": {
+    "message": "Восстанавливать закрепленные вкладки после перезапуска"
+  },
+  "settings_pinned_tab_recovery_desc": {
+    "message": "Запоминать закрепленные вкладки с веб-страницами и восстанавливать недостающие после перезапуска браузера"
+  },
+  "settings_number_shortcut_instant_title": {
+    "message": "Одно нажатие Command показывает номера"
+  },
+  "settings_number_shortcut_instant_desc": {
+    "message": "Если включено, одно нажатие Command/Ctrl в панели команд или подсказках поиска сразу показывает номера для перехода; «Открыть в фоновой вкладке» больше не использует Command (средняя кнопка мыши по-прежнему открывает в фоне)"
+  },
+  "settings_macos_ctrl_suggestion_navigation_title": {
+    "message": "Навигация с клавиатуры на Mac"
+  },
+  "settings_macos_ctrl_suggestion_navigation_tooltip": {
+    "message": "Работает на новой вкладке и в панели команд в macOS. Спасибо @wanghanzhen за вклад."
+  },
+  "settings_macos_ctrl_suggestion_navigation_desc": {
+    "message": "Ctrl+N / Ctrl+P — выбрать следующий / предыдущий результат"
+  },
+  "document_pip_picker_hint": {
+    "message": "Наведите указатель на элемент страницы. Нажмите, чтобы открыть PiP, прокрутите колесико, чтобы выбрать родительский элемент, Esc — отмена."
+  },
+  "document_pip_picker_started": {
+    "message": "Нажмите на содержимое, которое нужно открепить, прокрутите колесико, чтобы изменить область, или нажмите Esc для отмены."
+  },
+  "document_pip_picker_cancelled": {
+    "message": "Выбор содержимого закрыт"
+  },
+  "document_pip_picker_closed": {
+    "message": "Плавающее окно закрыто"
+  },
+  "document_pip_picker_unsupported": {
+    "message": "Эта страница не поддерживает Document Picture-in-Picture."
+  },
+  "document_pip_picker_conflict_video_pip": {
+    "message": "Видео уже открыто в режиме PiP. Закройте его, прежде чем вырезать часть страницы."
+  },
+  "document_pip_picker_invalid": {
+    "message": "Эту область пока нельзя открепить. Выберите область побольше."
+  },
+  "document_pip_picker_open_failed": {
+    "message": "Не удалось открыть плавающее окно. Выберите другую область."
+  },
+  "document_pip_picker_button_reselect": {
+    "message": "Выбрать заново"
+  },
+  "document_pip_picker_button_return": {
+    "message": "Вернуть"
+  },
+  "document_pip_picker_button_close": {
+    "message": "Закрыть"
+  },
+  "settings_newtab_scope_desc": {
+    "message": "Новая вкладка"
+  },
+  "settings_overlay_tab_priority_title": {
+    "message": "Быстрый переход к открытым вкладкам"
+  },
+  "settings_overlay_tab_priority_desc": {
+    "message": "Что делает Enter, если введенный текст совпадает с открытой вкладкой в первой подсказке"
+  },
+  "overlay_tab_priority_switch_first": {
+    "message": "Enter — перейти на открытую вкладку"
+  },
+  "overlay_tab_priority_newtab_first": {
+    "message": "Enter — открыть в новой вкладке"
+  },
+  "settings_shortcuts_title": {
+    "message": "Открыть панель команд"
+  },
+  "settings_shortcuts_browser_desc_prefix": {
+    "message": "Откройте "
+  },
+  "settings_shortcuts_browser_desc_path_extensions": {
+    "message": "Расширения"
+  },
+  "settings_shortcuts_browser_desc_path_extensions__firefox": {
+    "message": "Дополнения и темы"
+  },
+  "settings_shortcuts_browser_desc_path_shortcuts": {
+    "message": "Быстрые клавиши"
+  },
+  "settings_shortcuts_browser_desc_path_shortcuts__firefox": {
+    "message": "Управление горячими клавишами расширений"
+  },
+  "settings_shortcuts_browser_desc_suffix": {
+    "message": " и измените сочетание клавиш"
+  },
+  "settings_shortcuts_dia_tag": {
+    "message": "Использовать в Dia"
+  },
+  "settings_shortcuts_dia_tooltip": {
+    "message": "Из-за ограничений браузера Dia функции новой вкладки Lumno там временно недоступны, но панель команд работает как обычно.\n\nЕсли сочетание клавиш не срабатывает в Dia, нажмите кнопку справа внизу, чтобы открыть настройки быстрых клавиш браузера, и для «Open command bar» замените In Dia на Global."
+  },
+  "settings_shortcuts_section_title": {
+    "message": "Быстрые клавиши"
+  },
+  "settings_shortcuts_desc": {
+    "message": "Открывает панель команд Lumno"
+  },
+  "overlay_close_other_tabs_tooltip": {
+    "message": "Закрыть другие вкладки"
+  },
+  "overlay_close_other_tabs_confirm": {
+    "message": "Закрыть другие вкладки в этом окне? Закрепленные вкладки и вкладки в группах останутся открытыми."
+  },
+  "overlay_close_other_tabs_confirm_button": {
+    "message": "Закрыть"
+  },
+  "settings_shortcuts_status": {
+    "message": "Сейчас: {shortcut}"
+  },
+  "settings_shortcuts_unset": {
+    "message": "Не задано"
+  },
+  "settings_shortcuts_action": {
+    "message": "Настроить быстрые клавиши"
+  },
+  "settings_shortcuts_browser_tooltip": {
+    "message": "В браузерах на основе Chromium сочетание клавиш для панели команд задается или меняется на странице быстрых клавиш расширений."
+  },
+  "settings_shortcuts_browser_tooltip__firefox": {
+    "message": "В Firefox сочетание клавиш для панели команд задается или меняется в разделе «Управление горячими клавишами расширений» в менеджере дополнений."
+  },
+  "settings_shortcuts_save": {
+    "message": "Сохранить"
+  },
+  "settings_shortcuts_reset": {
+    "message": "По умолчанию"
+  },
+  "settings_shortcuts_record_placeholder": {
+    "message": "Нажмите сочетание клавиш"
+  },
+  "settings_shortcuts_empty_state": {
+    "message": "Нет"
+  },
+  "settings_shortcuts_invalid": {
+    "message": "Недопустимое сочетание. Используйте комбинацию клавиш, например Ctrl+K."
+  },
+  "settings_restricted_title": {
+    "message": "Поведение на защищенных страницах"
+  },
+  "settings_restricted_tooltip": {
+    "message": "На защищенных страницах (например, chrome://) панель команд открыть нельзя. При нажатии сочетания клавиш действует правило, заданное здесь."
+  },
+  "settings_restricted_tooltip__firefox": {
+    "message": "На защищенных страницах (например, страницах about: и сайте дополнений Firefox) панель команд открыть нельзя. При нажатии сочетания клавиш действует правило, заданное здесь."
+  },
+  "restricted_action_default": {
+    "message": "Открыть новую вкладку Lumno"
+  },
+  "restricted_action_none": {
+    "message": "Как в настройках браузера"
+  },
+  "newtab_file_access_notice_title": {
+    "message": "Чтобы использовать Lumno на локальных страницах PDF или HTML, разрешите доступ к файлам"
+  },
+  "newtab_file_access_notice_body": {
+    "message": "У Lumno пока нет доступа к локальным файлам. Откройте страницу сведений о расширении, включите параметр «Разрешить открывать локальные файлы по ссылкам», затем вернитесь на ту страницу и снова нажмите сочетание клавиш."
+  },
+  "newtab_file_access_notice_open_cta": {
+    "message": "Разрешить доступ"
+  },
+  "newtab_file_access_notice_dismiss": {
+    "message": "Не сейчас"
+  },
+  "newtab_file_access_notice_close": {
+    "message": "Закрыть уведомление"
+  },
+  "recent_count_4": {
+    "message": "1 ряд"
+  },
+  "recent_count_8": {
+    "message": "2 ряда"
+  },
+  "recent_count_off": {
+    "message": "Скрыть"
+  },
+  "bookmark_count_off": {
+    "message": "Скрыть"
+  },
+  "bookmark_count_4": {
+    "message": "1 ряд"
+  },
+  "bookmark_count_8": {
+    "message": "Показать 8"
+  },
+  "bookmark_count_16": {
+    "message": "Показать 16"
+  },
+  "bookmark_count_32": {
+    "message": "Показать 32"
+  },
+  "settings_bookmark_columns_title": {
+    "message": "Закладок в ряду"
+  },
+  "settings_bookmark_columns_desc": {
+    "message": "Максимальное число в ряду; на узких экранах подстраивается автоматически"
+  },
+  "settings_bookmark_adaptive_count_tooltip": {
+    "message": "Это максимум при достаточной ширине. Фактическое число зависит от доступного места."
+  },
+  "bookmark_columns_4": {
+    "message": "4 в ряду"
+  },
+  "bookmark_columns_6": {
+    "message": "6 в ряду"
+  },
+  "bookmark_columns_8": {
+    "message": "8 в ряду"
+  },
+  "newtab_width_standard": {
+    "message": "Обычная"
+  },
+  "newtab_width_wide": {
+    "message": "Широкая (рекомендуется)"
+  },
+  "settings_overlay_size_title": {
+    "message": "Размер"
+  },
+  "overlay_size_compact": {
+    "message": "Компактный"
+  },
+  "overlay_size_standard": {
+    "message": "Обычный"
+  },
+  "overlay_size_large": {
+    "message": "Большой"
+  },
+  "settings_overlay_enter_animation_title": {
+    "message": "Анимация открытия"
+  },
+  "overlay_enter_animation_elastic": {
+    "message": "Пружина"
+  },
+  "overlay_enter_animation_fade": {
+    "message": "Плавно"
+  },
+  "settings_overlay_font_title": {
+    "message": "Локальный шрифт"
+  },
+  "settings_overlay_font_desc": {
+    "message": "Использует шрифты, установленные на этом компьютере. Действует только на этом устройстве и не синхронизируется."
+  },
+  "settings_overlay_font_missing": {
+    "message": "Шрифт «{font}» не установлен на этом устройстве, поэтому используется шрифт по умолчанию"
+  },
+  "settings_overlay_font_missing_reset": {
+    "message": "По умолчанию"
+  },
+  "settings_overlay_font_fallback_missing": {
+    "message": "Шрифт «{font}» не установлен на этом устройстве, поэтому резервный шрифт не используется"
+  },
+  "settings_overlay_font_fallback_missing_reset": {
+    "message": "Очистить"
+  },
+  "settings_overlay_font_default": {
+    "message": "По умолчанию"
+  },
+  "settings_overlay_font_search_placeholder": {
+    "message": "Поиск шрифтов"
+  },
+  "settings_overlay_font_no_results": {
+    "message": "Шрифты не найдены"
+  },
+  "settings_overlay_font_fallback_title": {
+    "message": "Локальный резервный шрифт"
+  },
+  "settings_overlay_font_fallback_desc": {
+    "message": "Используется для символов, которых нет в основном шрифте, например кириллицы или китайского в латинском шрифте"
+  },
+  "settings_overlay_font_fallback_none": {
+    "message": "Нет"
+  },
+  "settings_overlay_font_unsupported_tooltip": {
+    "message": "Firefox не позволяет расширениям получать список установленных шрифтов, поэтому здесь используется шрифт по умолчанию"
+  },
+  "settings_overlay_page_theme_adaptation_title": {
+    "message": "Подстраивать цвета темы под веб-страницу"
+  },
+  "settings_overlay_page_theme_adaptation_tooltip": {
+    "message": "Доступно, только если для режима темы выбрано «Как в системе». Если отключить, светлый/темный режим не будет подстраиваться под цвет темы веб-страницы."
+  },
+  "recent_mode_latest": {
+    "message": "Недавние"
+  },
+  "recent_mode_most": {
+    "message": "Часто посещаемые"
+  },
+  "settings_toggle_on": {
+    "message": "Вкл."
+  },
+  "settings_theme_title": {
+    "message": "Режим темы"
+  },
+  "settings_theme_desc": {
+    "message": "Как в системе или вручную"
+  },
+  "settings_theme_system": {
+    "message": "Как в системе"
+  },
+  "settings_theme_light": {
+    "message": "Светлая"
+  },
+  "settings_theme_dark": {
+    "message": "Темная"
+  },
+  "settings_newtab_wordmark_title": {
+    "message": "Над полем поиска"
+  },
+  "newtab_top_content_brand": {
+    "message": "Логотип"
+  },
+  "newtab_top_content_time": {
+    "message": "Время"
+  },
+  "newtab_top_content_off": {
+    "message": "Скрыть"
+  },
+  "newtab_time_font_title": {
+    "message": "Шрифт времени"
+  },
+  "newtab_time_font_weight_title": {
+    "message": "Насыщенность шрифта времени"
+  },
+  "newtab_time_font_weight_reset": {
+    "message": "Сбросить насыщенность шрифта времени"
+  },
+  "newtab_time_font_size_title": {
+    "message": "Размер времени"
+  },
+  "newtab_time_font_size_reset": {
+    "message": "Сбросить размер времени"
+  },
+  "newtab_time_opacity_title": {
+    "message": "Непрозрачность времени"
+  },
+  "newtab_time_opacity_reset": {
+    "message": "Сбросить непрозрачность времени"
+  },
+  "newtab_time_ink_title": {
+    "message": "Цвет времени"
+  },
+  "newtab_time_ink_auto": {
+    "message": "Авто"
+  },
+  "newtab_time_ink_light": {
+    "message": "Светлый"
+  },
+  "newtab_time_ink_dark": {
+    "message": "Темный"
+  },
+  "newtab_time_show_seconds_title": {
+    "message": "Показывать секунды"
+  },
+  "newtab_time_12_hour_title": {
+    "message": "12-часовой формат"
+  },
+  "settings_newtab_page_buttons_title": {
+    "message": "Кнопки на странице"
+  },
+  "settings_newtab_feedback_button_visible_title": {
+    "message": "Кнопка отзыва"
+  },
+  "settings_newtab_appearance_button_visible_title": {
+    "message": "Кнопка «Внешний вид»"
+  },
+  "settings_newtab_shortcuts_title": {
+    "message": "Ярлыки"
+  },
+  "settings_newtab_shortcut_add_title": {
+    "message": "Показывать «+»"
+  },
+  "settings_newtab_shortcut_dock_magnification_title": {
+    "message": "Увеличение как в Dock macOS"
+  },
+  "settings_newtab_shortcut_width_title": {
+    "message": "Ширина ярлыков"
+  },
+  "settings_newtab_shortcut_columns_title": {
+    "message": "Ярлыков в ряду"
+  },
+  "settings_newtab_shortcut_size_title": {
+    "message": "Размер ярлыков"
+  },
+  "settings_newtab_shortcut_gap_title": {
+    "message": "Расстояние между ярлыками"
+  },
+  "settings_newtab_shortcut_size_reset": {
+    "message": "Сбросить размер ярлыков"
+  },
+  "settings_newtab_shortcut_gap_reset": {
+    "message": "Сбросить расстояние между ярлыками"
+  },
+  "settings_wallpaper_title": {
+    "message": "Обои новой вкладки"
+  },
+  "settings_wallpaper_desc": {
+    "message": "Загрузите изображение с компьютера в качестве фона новой вкладки"
+  },
+  "settings_wallpaper_upload": {
+    "message": "Загрузить"
+  },
+  "settings_wallpaper_remove": {
+    "message": "Удалить"
+  },
+  "settings_wallpaper_fit_cover": {
+    "message": "Заполнить"
+  },
+  "settings_wallpaper_fit_contain": {
+    "message": "Вписать"
+  },
+  "settings_wallpaper_status_none": {
+    "message": "Обои не загружены"
+  },
+  "settings_wallpaper_status_ready": {
+    "message": "Обои загружены"
+  },
+  "settings_wallpaper_status_local_only": {
+    "message": "Обои загружены (только на этом устройстве)"
+  },
+  "settings_wallpaper_status_missing": {
+    "message": "Файл обоев не найден. Загрузите его снова."
+  },
+  "settings_wallpaper_status_processing": {
+    "message": "Обработка…"
+  },
+  "settings_wallpaper_upload_done": {
+    "message": "Обои обновлены"
+  },
+  "settings_wallpaper_remove_done": {
+    "message": "Обои удалены"
+  },
+  "settings_wallpaper_error_type": {
+    "message": "Загрузите файл изображения (JPG / PNG / WEBP)."
+  },
+  "settings_wallpaper_error_oversize": {
+    "message": "Изображение слишком большое. Загрузите файл размером до 8 MB."
+  },
+  "settings_wallpaper_error_oversize_after_compress": {
+    "message": "Изображение слишком большое даже после сжатия. Выберите изображение поменьше."
+  },
+  "settings_wallpaper_error_save": {
+    "message": "Не удалось сохранить обои. Повторите попытку."
+  },
+  "newtab_wallpaper_title": {
+    "message": "Обои"
+  },
+  "newtab_logo_title": {
+    "message": "Логотип"
+  },
+  "newtab_favicon_title": {
+    "message": "Значок новой вкладки"
+  },
+  "newtab_favicon_name_default": {
+    "message": "Стандартный"
+  },
+  "newtab_favicon_name_alternate": {
+    "message": "Альтернативный"
+  },
+  "newtab_favicon_select_label": {
+    "message": "Выбрать значок: {name}"
+  },
+  "newtab_favicon_save_error": {
+    "message": "Не удалось сохранить значок"
+  },
+  "newtab_wallpaper_source_title": {
+    "message": "Источник"
+  },
+  "newtab_wallpaper_builtin_section": {
+    "message": "Встроенные"
+  },
+  "newtab_wallpaper_local_section": {
+    "message": "Локальные"
+  },
+  "newtab_wallpaper_toggle_label": {
+    "message": "Включить или отключить обои"
+  },
+  "newtab_wallpaper_select_label": {
+    "message": "Выбрать: {name}"
+  },
+  "newtab_wallpaper_add_local": {
+    "message": "Добавить свои обои"
+  },
+  "newtab_wallpaper_mode_sync_title": {
+    "message": "Одни для светлого и темного"
+  },
+  "newtab_wallpaper_mode_sync_toggle_label": {
+    "message": "Использовать одни обои для светлого и темного режима"
+  },
+  "newtab_wallpaper_mode_row_title": {
+    "message": "Режим"
+  },
+  "newtab_wallpaper_mode_tabs_label": {
+    "message": "Цветовой режим обоев"
+  },
+  "newtab_wallpaper_light_mode_tab": {
+    "message": "Светлый"
+  },
+  "newtab_wallpaper_dark_mode_tab": {
+    "message": "Темный"
+  },
+  "newtab_wallpaper_mode_select_label": {
+    "message": "Изменить обои: {mode}"
+  },
+  "newtab_wallpaper_sources_feature_hint_badge": {
+    "message": "Новое"
+  },
+  "newtab_wallpaper_sources_feature_hint_text": {
+    "message": "Новые обои: подборки с природой, городами и искусством, которые могут обновляться каждый день, или добавьте свои по ссылке на изображение."
+  },
+  "newtab_wallpaper_sources_feature_hint_close": {
+    "message": "Закрыть подсказку о новых обоях"
+  },
+  "newtab_webdav_feature_hint_badge": {
+    "message": "Бета"
+  },
+  "newtab_webdav_feature_hint_text": {
+    "message": "Попробуйте синхронизацию через WebDAV: настройки, значки и обои синхронизируются через облачный диск WebDAV или NAS, даже между разными браузерами."
+  },
+  "newtab_webdav_feature_hint_link": {
+    "message": "Настроить"
+  },
+  "newtab_webdav_feature_hint_close": {
+    "message": "Закрыть подсказку о WebDAV"
+  },
+  "newtab_help_center_ask_feature_hint_badge": {
+    "message": "Новое"
+  },
+  "newtab_help_center_ask_feature_hint_text": {
+    "message": "Введите lm, нажмите Tab и задайте вопрос Справочному центру."
+  },
+  "newtab_help_center_ask_feature_hint_link": {
+    "message": "Попробовать"
+  },
+  "newtab_help_center_ask_feature_hint_close": {
+    "message": "Закрыть подсказку о Справочном центре"
+  },
+  "newtab_ai_quick_jump_feature_hint_badge": {
+    "message": "Новое"
+  },
+  "newtab_ai_quick_jump_feature_hint_text": {
+    "message": "Переходите на популярные сайты ИИ сразу с вашим запросом. Попробуйте ввести «gemini» и нажать Tab."
+  },
+  "newtab_ai_quick_jump_feature_hint_link": {
+    "message": "Список сайтов"
+  },
+  "newtab_ai_quick_jump_feature_hint_close": {
+    "message": "Закрыть подсказку о быстром переходе к ИИ"
+  },
+  "newtab_tab_switcher_feature_hint_badge": {
+    "message": "Новое"
+  },
+  "newtab_tab_switcher_feature_hint_text": {
+    "message": "Нажмите {shortcut}, чтобы открыть переключатель вкладок и переходить между недавними вкладками без мыши."
+  },
+  "newtab_tab_switcher_feature_hint_close": {
+    "message": "Закрыть подсказку о переключателе вкладок"
+  },
+  "newtab_input_auto_focus_title": {
+    "message": "Автофокус на поле ввода"
+  },
+  "newtab_input_auto_focus_help_label": {
+    "message": "Об автофокусе на поле ввода"
+  },
+  "newtab_input_auto_focus_help": {
+    "message": "Если вы предпочитаете адресную строку браузера, отключите этот параметр. URL расширения больше не будет показываться в адресной строке."
+  },
+  "update_notice_badge": {
+    "message": "Обновлено до {version}"
+  },
+  "update_notice_text_fallback": {
+    "message": "Что изменилось в этом обновлении"
+  },
+  "update_notice_link": {
+    "message": "Список изменений"
+  },
+  "update_notice_close": {
+    "message": "Закрыть уведомление об обновлении"
+  },
+  "engagement_notice_badge": {
+    "message": "Lumno"
+  },
+  "engagement_notice_text": {
+    "message": "Нравится Lumno? Можно"
+  },
+  "engagement_notice_connector": {
+    "message": "или"
+  },
+  "engagement_notice_trailing": {
+    "message": "и передать привет."
+  },
+  "engagement_notice_review": {
+    "message": "поставить 5 звезд"
+  },
+  "engagement_notice_community": {
+    "message": "найти нас в X"
+  },
+  "engagement_notice_close": {
+    "message": "Закрыть предложение оценить и присоединиться к сообществу"
+  },
+  "newtab_bookmark_cascade_debug_enable": {
+    "message": "Показать безопасный треугольник меню закладок"
+  },
+  "newtab_bookmark_cascade_debug_disable": {
+    "message": "Скрыть безопасный треугольник меню закладок"
+  },
+  "newtab_bookmark_cascade_debug_open_label": {
+    "message": "Открытие"
+  },
+  "newtab_bookmark_cascade_debug_switch_label": {
+    "message": "Переключение"
+  },
+  "newtab_bookmark_cascade_debug_safe_label": {
+    "message": "Защита"
+  },
+  "newtab_bookmark_cascade_debug_close_label": {
+    "message": "Закрытие"
+  },
+  "newtab_feedback_button_aria": {
+    "message": "Отправить отзыв"
+  },
+  "newtab_feedback_menu_aria": {
+    "message": "Способы связи"
+  },
+  "newtab_feedback_x_label": {
+    "message": "X"
+  },
+  "newtab_feedback_x_tooltip": {
+    "message": "Написать нам в X"
+  },
+  "newtab_feedback_github_issue_label": {
+    "message": "GitHub Issue"
+  },
+  "newtab_feedback_github_issue_tooltip": {
+    "message": "Создать issue на GitHub"
+  },
+  "newtab_feedback_chrome_review_label": {
+    "message": "Оценка в магазине"
+  },
+  "newtab_feedback_chrome_review_tooltip": {
+    "message": "Оценить Lumno в магазине расширений"
+  },
+  "newtab_feedback_mail_label": {
+    "message": "Почта"
+  },
+  "newtab_feedback_mail_tooltip": {
+    "message": "Написать письмо"
+  },
+  "newtab_feedback_wechat_label": {
+    "message": "WeChat"
+  },
+  "newtab_feedback_wechat_tooltip": {
+    "message": "Присоединиться к группе в WeChat"
+  },
+  "newtab_feedback_wechat_panel_title": {
+    "message": "Сообщения об ошибках и пожелания"
+  },
+  "newtab_feedback_wechat_refresh_tooltip": {
+    "message": "Обновить QR-код"
+  },
+  "newtab_feedback_wechat_refresh_success": {
+    "message": "Загружен актуальный QR-код"
+  },
+  "newtab_feedback_wechat_refresh_error": {
+    "message": "Не удалось обновить. Повторите попытку."
+  },
+  "newtab_feedback_wechat_close_tooltip": {
+    "message": "Закрыть"
+  },
+  "newtab_feedback_wechat_qr_title": {
+    "message": "QR-код группы в WeChat"
+  },
+  "newtab_feedback_wechat_qr_alt": {
+    "message": "QR-код группы Lumno в WeChat"
+  },
+  "newtab_feedback_mail_subject": {
+    "message": "Отзыв о Lumno"
+  },
+  "newtab_feedback_mail_source_label": {
+    "message": "Источник"
+  },
+  "newtab_feedback_mail_version_label": {
+    "message": "Версия Lumno"
+  },
+  "newtab_feedback_mail_language_label": {
+    "message": "Язык"
+  },
+  "newtab_feedback_mail_os_label": {
+    "message": "ОС"
+  },
+  "newtab_feedback_mail_browser_label": {
+    "message": "Браузер"
+  },
+  "newtab_wallpaper_delete_local": {
+    "message": "Удалить импортированные обои"
+  },
+  "newtab_wallpaper_custom_name": {
+    "message": "Свои обои"
+  },
+  "newtab_wallpaper_overlay_opacity": {
+    "message": "Затемнение"
+  },
+  "newtab_wallpaper_overlay_transparent_tick": {
+    "message": "Прозрачно"
+  },
+  "newtab_wallpaper_overlay_default_tick": {
+    "message": "Обычно"
+  },
+  "newtab_wallpaper_overlay_cover_tick": {
+    "message": "Сплошное"
+  },
+  "newtab_wallpaper_effect_title": {
+    "message": "Фильтр обоев"
+  },
+  "newtab_wallpaper_effect_strength": {
+    "message": "Сила выборки"
+  },
+  "newtab_wallpaper_effect_blur_strength": {
+    "message": "Сила размытия"
+  },
+  "newtab_wallpaper_effect_size": {
+    "message": "Размер"
+  },
+  "newtab_wallpaper_effect_spacing": {
+    "message": "Интервал"
+  },
+  "newtab_wallpaper_effect_texture": {
+    "message": "Текстура"
+  },
+  "newtab_wallpaper_effect_blocks_size": {
+    "message": "Размер блоков"
+  },
+  "newtab_wallpaper_effect_crt_strength": {
+    "message": "Интенсивность"
+  },
+  "newtab_wallpaper_effect_crt_bloom": {
+    "message": "Свечение"
+  },
+  "newtab_wallpaper_effect_crt_rgb_offset": {
+    "message": "Смещение RGB"
+  },
+  "newtab_wallpaper_effect_crt_curvature": {
+    "message": "Кривизна экрана"
+  },
+  "newtab_wallpaper_effect_none": {
+    "message": "Нет"
+  },
+  "newtab_wallpaper_effect_blur": {
+    "message": "Матовое стекло"
+  },
+  "newtab_wallpaper_effect_grain": {
+    "message": "Зерно"
+  },
+  "newtab_wallpaper_effect_blocks": {
+    "message": "Блоки"
+  },
+  "newtab_wallpaper_effect_halftone": {
+    "message": "Растр"
+  },
+  "newtab_wallpaper_effect_dither": {
+    "message": "Дизеринг"
+  },
+  "newtab_wallpaper_effect_ascii": {
+    "message": "ASCII"
+  },
+  "newtab_wallpaper_effect_crt": {
+    "message": "ЭЛТ"
+  },
+  "newtab_wallpaper_effect_ink_title": {
+    "message": "Тона выборки"
+  },
+  "newtab_wallpaper_effect_ink_dark": {
+    "message": "Тени"
+  },
+  "newtab_wallpaper_effect_ink_light": {
+    "message": "Света"
+  },
+  "newtab_wallpaper_effect_ink_select_label": {
+    "message": "Брать точки или символы из области: {tone}"
+  },
+  "newtab_wallpaper_save_error": {
+    "message": "Не удалось сохранить обои"
+  },
+  "newtab_wallpaper_importing": {
+    "message": "Импорт обоев…"
+  },
+  "newtab_wallpaper_import_done": {
+    "message": "Обои импортированы"
+  },
+  "newtab_wallpaper_import_error": {
+    "message": "Не удалось импортировать обои"
+  },
+  "newtab_wallpaper_delete_done": {
+    "message": "Удалено"
+  },
+  "newtab_wallpaper_delete_error": {
+    "message": "Не удалось удалить обои"
+  },
+  "newtab_wallpaper_name_dark_linocut_topographic": {
+    "message": "Ночная топография"
+  },
+  "newtab_wallpaper_name_dark_monet_lily_nocturne": {
+    "message": "Ночные кувшинки"
+  },
+  "newtab_wallpaper_name_dark_shanshui_moonlit": {
+    "message": "Шань-шуй при луне"
+  },
+  "newtab_wallpaper_name_monet_coastal_white": {
+    "message": "Побережье Моне"
+  },
+  "newtab_wallpaper_name_monet_field_white": {
+    "message": "Поле Моне"
+  },
+  "newtab_wallpaper_name_monet_lily_pond_white": {
+    "message": "Пруд с кувшинками"
+  },
+  "newtab_wallpaper_name_impressionist_orchard_white": {
+    "message": "Утро в саду"
+  },
+  "newtab_wallpaper_name_seurat_coast_white": {
+    "message": "Побережье Сёра"
+  },
+  "newtab_wallpaper_name_seurat_park_white": {
+    "message": "Парк Сёра"
+  },
+  "newtab_wallpaper_name_seurat_riverside_white": {
+    "message": "Берег реки Сёра"
+  },
+  "newtab_wallpaper_name_pointillist_lakeside_white": {
+    "message": "Пуантилизм у озера"
+  },
+  "newtab_wallpaper_name_white_3d_architecture": {
+    "message": "Дневная архитектура"
+  },
+  "newtab_wallpaper_name_white_3d_observatory": {
+    "message": "Обсерватория в тумане"
+  },
+  "newtab_wallpaper_name_white_linocut_topographic": {
+    "message": "Дневная топография"
+  },
+  "newtab_wallpaper_name_white_risograph_collage": {
+    "message": "Дневной коллаж"
+  },
+  "newtab_wallpaper_name_white_shanshui": {
+    "message": "Ясный шань-шуй"
+  },
+  "newtab_wallpaper_name_white_shanshui_bamboo_bridge": {
+    "message": "Бамбуковый мост"
+  },
+  "newtab_wallpaper_name_settings_bg_light_monet_newtab": {
+    "message": "Светлый Моне"
+  },
+  "shortcuts_duplicate_tag": {
+    "message": "Повторяет встроенный"
+  },
+  "shortcuts_duplicate_action": {
+    "message": "Показать встроенный"
+  },
+  "shortcuts_template_help": {
+    "message": "1. Откройте сайт, который хотите добавить\n2. Выполните поиск по любому слову\n3. Скопируйте URL страницы результатов и вставьте сюда\n4. Замените слово на {query}"
+  },
+  "shortcuts_title": {
+    "message": "Поиск по сайту"
+  },
+  "shortcuts_desc": {
+    "message": "Нажмите Tab после ключевого слова, чтобы искать по сайту"
+  },
+  "shortcuts_group_custom": {
+    "message": "Свои"
+  },
+  "blacklist_section_title": {
+    "message": "Черный список поиска и недавних"
+  },
+  "blacklist_section_desc": {
+    "message": "Добавьте сайты, которые нужно скрыть из результатов поиска и со страницы новой вкладки."
+  },
+  "blacklist_group_custom": {
+    "message": "Блокировать везде"
+  },
+  "blacklist_label_url": {
+    "message": "Правило URL"
+  },
+  "blacklist_label_domain": {
+    "message": "Домен сайта"
+  },
+  "blacklist_label_prefix": {
+    "message": "Сайт или путь"
+  },
+  "blacklist_label_exact": {
+    "message": "Полный URL"
+  },
+  "blacklist_label_suffix": {
+    "message": "Домен сайта"
+  },
+  "blacklist_match_label": {
+    "message": "Тип совпадения"
+  },
+  "blacklist_match_exact": {
+    "message": "Эта страница"
+  },
+  "blacklist_match_prefix": {
+    "message": "Этот путь"
+  },
+  "blacklist_match_suffix": {
+    "message": "Весь сайт"
+  },
+  "blacklist_match_exact_tooltip": {
+    "message": "Блокирует только эту страницу\n────────\nНапример, если ввести x.com/home, будет скрыта только эта страница, а остальные останутся видны."
+  },
+  "blacklist_match_prefix_tooltip": {
+    "message": "Блокирует только страницы этого сайта по этому пути\n────────\nНапример, если ввести baidu.com/search, будут скрыты baidu.com/search и baidu.com/search/1, а baidu.com/news останется виден."
+  },
+  "blacklist_match_suffix_tooltip": {
+    "message": "Блокирует все страницы этого сайта, включая поддомены\n────────\nНапример, если ввести baidu.com, будут скрыты и baidu.com/search, и tieba.baidu.com."
+  },
+  "blacklist_preview_title": {
+    "message": "Предпросмотр совпадений"
+  },
+  "blacklist_preview_match": {
+    "message": "Совпадает"
+  },
+  "blacklist_preview_miss": {
+    "message": "Не совпадает"
+  },
+  "blacklist_preview_www_note": {
+    "message": "Версия с www. тоже учитывается: baidu.com совпадет и с www.baidu.com."
+  },
+  "blacklist_placeholder_url": {
+    "message": "Полный адрес для «Эта страница» или домен для «Весь сайт»"
+  },
+  "blacklist_placeholder_domain": {
+    "message": "baidu.com"
+  },
+  "blacklist_placeholder_prefix": {
+    "message": "baidu.com или baidu.com/search"
+  },
+  "blacklist_placeholder_exact": {
+    "message": "x.com/home"
+  },
+  "blacklist_placeholder_suffix": {
+    "message": "например, baidu.com"
+  },
+  "blacklist_add": {
+    "message": "Добавить"
+  },
+  "blacklist_empty": {
+    "message": "В черном списке пока нет URL"
+  },
+  "blacklist_error_url": {
+    "message": "Введите домен сайта или полный URL."
+  },
+  "blacklist_error_match_mode": {
+    "message": "Выберите хотя бы один тип совпадения."
+  },
+  "blacklist_error_suffix": {
+    "message": "Введите домен сайта."
+  },
+  "blacklist_error_domain": {
+    "message": "Введите домен сайта."
+  },
+  "blacklist_match_mode_prefix": {
+    "message": "Совпадают страницы, URL которых начинается так"
+  },
+  "blacklist_match_unset": {
+    "message": "Тип совпадения не выбран"
+  },
+  "blacklist_removed_toast": {
+    "message": "Удалено из черного списка"
+  },
+  "shortcuts_group_builtin": {
+    "message": "Встроенные"
+  },
+  "shortcuts_group_ai": {
+    "message": "Поиск с ИИ"
+  },
+  "shortcuts_group_ai_desc": {
+    "message": "Введите ключевое слово, нажмите Tab и напишите запрос, чтобы открыть один из этих сайтов ИИ с автоматически заполненным запросом (сначала войдите на сайт)"
+  },
+  "shortcuts_badge_custom": {
+    "message": "Свой"
+  },
+  "shortcuts_badge_builtin": {
+    "message": "Встроенный"
+  },
+  "shortcuts_badge_ai": {
+    "message": "Поиск с ИИ"
+  },
+  "shortcuts_label_key": {
+    "message": "Ключевое слово"
+  },
+  "shortcuts_label_name": {
+    "message": "Название"
+  },
+  "shortcuts_label_template": {
+    "message": "URL поиска"
+  },
+  "shortcuts_label_alias": {
+    "message": "Псевдонимы"
+  },
+  "shortcuts_label_display_group": {
+    "message": "Где показывать"
+  },
+  "shortcuts_placeholder_required": {
+    "message": "Обязательно; несколько через запятую, например jd,bili"
+  },
+  "shortcuts_placeholder_optional_default": {
+    "message": "Необязательно; по умолчанию ключевое слово"
+  },
+  "shortcuts_placeholder_template": {
+    "message": "https://example.com/search?q={query}"
+  },
+  "shortcuts_placeholder_alias": {
+    "message": "Необязательно, например Bilibili, YouTube"
+  },
+  "shortcuts_insert_query": {
+    "message": "Вставить переменную запроса"
+  },
+  "shortcuts_add": {
+    "message": "Добавить свой поиск"
+  },
+  "shortcuts_save": {
+    "message": "Сохранить"
+  },
+  "shortcuts_cancel": {
+    "message": "Отмена"
+  },
+  "shortcuts_edit": {
+    "message": "Изменить"
+  },
+  "shortcuts_remove": {
+    "message": "Удалить"
+  },
+  "shortcuts_empty_custom": {
+    "message": "Своих поисковых систем пока нет"
+  },
+  "shortcuts_empty_builtin": {
+    "message": "Нет встроенных поисков по сайтам"
+  },
+  "shortcuts_empty_engines": {
+    "message": "Нет встроенных поисковых систем"
+  },
+  "shortcuts_empty_ai": {
+    "message": "Нет встроенных сервисов поиска с ИИ"
+  },
+  "toast_saved": {
+    "message": "Сохранено"
+  },
+  "toast_removed": {
+    "message": "Удалено"
+  },
+  "toast_error": {
+    "message": "Не удалось выполнить действие. Повторите попытку."
+  },
+  "toast_error_template": {
+    "message": "Шаблон поиска должен содержать {query}."
+  },
+  "toast_reset": {
+    "message": "Сброшено"
+  },
+  "shortcuts_reset_builtin": {
+    "message": "Восстановить исходный список"
+  },
+  "shortcuts_clear_custom": {
+    "message": "Удалить свои"
+  },
+  "blacklist_clear": {
+    "message": "Очистить правила скрытия"
+  },
+  "toast_cleared": {
+    "message": "Очищено"
+  },
+  "confirm_clear_custom": {
+    "message": "Удалить все свои поисковые системы?"
+  },
+  "confirm_clear_blacklist": {
+    "message": "Очистить правила скрытия?"
+  },
+  "confirm_clear_favicon_blacklist": {
+    "message": "Очистить исключения?"
+  },
+  "confirm_reset_builtin": {
+    "message": "Сбросить встроенный список?"
+  },
+  "confirm_ok": {
+    "message": "Подтвердить"
+  },
+  "confirm_cancel": {
+    "message": "Отмена"
+  },
+  "confirm_remove_item": {
+    "message": "Удалить этот элемент?"
+  },
+  "shortcuts_error_key": {
+    "message": "Введите ключевое слово."
+  },
+  "shortcuts_error_key_space": {
+    "message": "Ключевое слово не может содержать пробелы."
+  },
+  "shortcuts_error_key_duplicate": {
+    "message": "Это ключевое слово уже используется. Выберите другое."
+  },
+  "search_placeholder": {
+    "message": "Введите запрос или URL…"
+  },
+  "overlay_search_placeholder": {
+    "message": "Введите запрос или URL; Tab — поиск по открытым вкладкам"
+  },
+  "options_page_title": {
+    "message": "Настройки Lumno"
+  },
+  "newtab_page_title": {
+    "message": "Новая вкладка"
+  },
+  "recent_heading": {
+    "message": "Недавние"
+  },
+  "recent_heading_latest": {
+    "message": "Недавние"
+  },
+  "recent_heading_most": {
+    "message": "Часто посещаемые"
+  },
+  "bookmarks_heading": {
+    "message": "Закладки"
+  },
+  "display_mode_title": {
+    "message": "Режим отображения"
+  },
+  "bookmark_view_mode_folder": {
+    "message": "Многоуровневые папки"
+  },
+  "bookmark_view_mode_list": {
+    "message": "Многоуровневый список"
+  },
+  "bookmark_view_mode_top": {
+    "message": "Панель закладок сверху"
+  },
+  "bookmark_topbar_layout_title": {
+    "message": "Стиль панели"
+  },
+  "bookmark_topbar_layout_docked": {
+    "message": "У верхнего края"
+  },
+  "bookmark_topbar_layout_floating": {
+    "message": "Плавающая"
+  },
+  "bookmark_topbar_surface_title": {
+    "message": "Фон панели"
+  },
+  "bookmark_topbar_surface_follow": {
+    "message": "Как в стиле"
+  },
+  "bookmark_topbar_surface_adaptive": {
+    "message": "Адаптивная дымка"
+  },
+  "bookmark_topbar_surface_clear": {
+    "message": "Жидкое стекло"
+  },
+  "bookmark_topbar_surface_transparent": {
+    "message": "Прозрачный"
+  },
+  "bookmark_topbar_surface_custom": {
+    "message": "Свой цвет"
+  },
+  "bookmark_topbar_color_pick": {
+    "message": "Выбрать цвет фона"
+  },
+  "bookmark_topbar_color_reset": {
+    "message": "Вернуть автоматические цвета"
+  },
+  "bookmark_topbar_color_picked": {
+    "message": "Цвет выбран"
+  },
+  "bookmark_topbar_color_reset_done": {
+    "message": "Автоматические цвета восстановлены"
+  },
+  "bookmark_topbar_color_unsupported": {
+    "message": "Этот браузер не поддерживает выбор цвета с экрана."
+  },
+  "bookmark_topbar_color_failed": {
+    "message": "Не удалось выбрать цвет. Повторите попытку."
+  },
+  "bookmarks_empty_folder": {
+    "message": "Пусто"
+  },
+  "bookmarks_page_prev": {
+    "message": "Предыдущая страница"
+  },
+  "bookmarks_page_next": {
+    "message": "Следующая страница"
+  },
+  "bookmarks_open_manager": {
+    "message": "Открыть диспетчер закладок"
+  },
+  "bookmarks_open_in_new_tab_group": {
+    "message": "Открыть в новой группе вкладок"
+  },
+  "newtab_open_in_new_tab": {
+    "message": "Открыть в новой вкладке"
+  },
+  "bookmarks_open_group_confirm_title": {
+    "message": "Открыть вкладки ({count})?"
+  },
+  "bookmarks_open_group_confirm_description": {
+    "message": "Все закладки из папки «{folder}» и ее подпапок откроются в одной группе вкладок."
+  },
+  "bookmarks_open_group_confirm_button": {
+    "message": "Открыть"
+  },
+  "bookmarks_untitled_folder": {
+    "message": "Папка без названия"
+  },
+  "bookmarks_open_group_partial_failed": {
+    "message": "Открыто вкладок: {openedCount}; не удалось открыть: {failedCount}."
+  },
+  "bookmarks_open_group_failed": {
+    "message": "Не удалось открыть эту папку закладок"
+  },
+  "bookmarks_copy_url": {
+    "message": "Копировать ссылку"
+  },
+  "bookmarks_copy_url_success": {
+    "message": "Ссылка на закладку скопирована"
+  },
+  "bookmarks_copy_url_failed": {
+    "message": "Не удалось скопировать ссылку. Повторите попытку."
+  },
+  "bookmarks_edit": {
+    "message": "Изменить"
+  },
+  "bookmarks_edit_dialog_title": {
+    "message": "Изменить закладку"
+  },
+  "bookmarks_edit_folder_dialog_title": {
+    "message": "Переименовать папку"
+  },
+  "bookmarks_name_placeholder": {
+    "message": "Название"
+  },
+  "bookmarks_invalid_url": {
+    "message": "Введите действительный URL."
+  },
+  "bookmarks_updated": {
+    "message": "Закладка изменена"
+  },
+  "bookmarks_folder_updated": {
+    "message": "Папка изменена"
+  },
+  "bookmarks_update_failed": {
+    "message": "Не удалось изменить закладку"
+  },
+  "bookmarks_delete": {
+    "message": "Удалить"
+  },
+  "bookmarks_context_menu_label": {
+    "message": "Действия с закладкой"
+  },
+  "bookmarks_delete_undone": {
+    "message": "Удаление отменено · {shortcut} — удалить снова"
+  },
+  "bookmarks_delete_redone": {
+    "message": "Удаление повторено · {shortcut} — отменить"
+  },
+  "bookmarks_delete_failed": {
+    "message": "Не удалось удалить закладку"
+  },
+  "bookmarks_move_success": {
+    "message": "«{title}» перемещено · {shortcut} — отменить"
+  },
+  "bookmarks_move_undone": {
+    "message": "Перемещение отменено · {shortcut} — повторить"
+  },
+  "bookmarks_move_redone": {
+    "message": "Перемещение повторено · {shortcut} — отменить"
+  },
+  "bookmarks_move_failed": {
+    "message": "Не удалось переместить закладку"
+  },
+  "bookmarks_moved_to_shortcuts": {
+    "message": "Перемещено в ярлыки"
+  },
+  "search_tag_history": {
+    "message": "История"
+  },
+  "search_remove_history": {
+    "message": "Удалить из истории"
+  },
+  "search_remove_history_tooltip": {
+    "message": "Удалить эту запись истории"
+  },
+  "search_remove_top_site_tooltip": {
+    "message": "Удалить этот частый результат"
+  },
+  "search_copy_url_tooltip": {
+    "message": "Копировать ссылку"
+  },
+  "search_copy_url_success": {
+    "message": "Ссылка скопирована"
+  },
+  "search_copy_url_failed": {
+    "message": "Не удалось скопировать ссылку. Повторите попытку."
+  },
+  "search_tag_top_site": {
+    "message": "Частое"
+  },
+  "search_tag_bookmark": {
+    "message": "Закладка"
+  },
+  "search_tag_open_tab": {
+    "message": "Открыта"
+  },
+  "visit_label": {
+    "message": "Перейти"
+  },
+  "action_open_new_tab": {
+    "message": "Новая вкладка"
+  },
+  "action_open_background_new_tab": {
+    "message": "Открыть в фоне"
+  },
+  "action_open_background_tab": {
+    "message": "Открыть в фоне"
+  },
+  "action_go_current_tab": {
+    "message": "Перейти"
+  },
+  "open_prefix": {
+    "message": "Открыть {title}"
+  },
+  "open_url": {
+    "message": "Открыть {url}"
+  },
+  "open_browser_url": {
+    "message": "Открыть {browser}: {url}"
+  },
+  "mode_badge": {
+    "message": "Режим: {mode}"
+  },
+  "mode_badge_follow_system": {
+    "message": "Режим: {mode} (система)"
+  },
+  "mode_badge_follow_site": {
+    "message": "Режим: {mode} (сайт)"
+  },
+  "theme_label_dark": {
+    "message": "Темный"
+  },
+  "theme_label_light": {
+    "message": "Светлый"
+  },
+  "theme_label_system": {
+    "message": "Системный"
+  },
+  "command_newtab": {
+    "message": "Новая вкладка"
+  },
+  "search_input_clear": {
+    "message": "Очистить"
+  },
+  "command_settings": {
+    "message": "Открыть настройки"
+  },
+  "command_show_search": {
+    "message": "Открыть панель команд"
+  },
+  "command_show_search_prefill": {
+    "message": "Открыть панель команд с URL текущей страницы"
+  },
+  "command_show_search_prefill_v": {
+    "message": "Копировать URL текущей страницы"
+  },
+  "mode_switch_title": {
+    "message": "{name}: переключиться на режим «{mode}»"
+  },
+  "zen_badge_on": {
+    "message": "Zen: вкл."
+  },
+  "zen_badge_off": {
+    "message": "Zen: выкл."
+  },
+  "zen_enable_title": {
+    "message": "{name}: включить режим Zen"
+  },
+  "zen_disable_title": {
+    "message": "{name}: выйти из режима Zen"
+  },
+  "switch_to_tab": {
+    "message": "Перейти"
+  },
+  "untitled": {
+    "message": "Без названия"
+  },
+  "site_search_default": {
+    "message": "Сайт"
+  },
+  "site_search_name_baidu": {
+    "message": "Baidu"
+  },
+  "site_search_name_metaso": {
+    "message": "Metaso AI Search"
+  },
+  "site_search_name_sogou": {
+    "message": "Sogou"
+  },
+  "site_search_name_shenma": {
+    "message": "Shenma"
+  },
+  "site_search_name_weibo": {
+    "message": "Weibo"
+  },
+  "site_search_name_xiaohongshu": {
+    "message": "Xiaohongshu"
+  },
+  "site_search_name_douyin": {
+    "message": "Douyin"
+  },
+  "site_search_name_jd": {
+    "message": "JD.com"
+  },
+  "site_search_name_chatgpt": {
+    "message": "ChatGPT"
+  },
+  "site_search_name_gemini": {
+    "message": "Gemini"
+  },
+  "site_search_name_doubao": {
+    "message": "Doubao"
+  },
+  "site_search_name_qianwen": {
+    "message": "Qwen"
+  },
+  "site_search_name_yuanbao": {
+    "message": "Yuanbao"
+  },
+  "site_search_name_minimax": {
+    "message": "MiniMax"
+  },
+  "site_search_name_deepseek": {
+    "message": "DeepSeek"
+  },
+  "site_search_name_kimi": {
+    "message": "Kimi"
+  },
+  "site_search_name_zhihu": {
+    "message": "Zhihu"
+  },
+  "site_search_name_douban": {
+    "message": "Douban"
+  },
+  "site_search_name_juejin": {
+    "message": "Juejin"
+  },
+  "site_search_name_taobao": {
+    "message": "Taobao"
+  },
+  "site_search_name_tmall": {
+    "message": "Tmall"
+  },
+  "site_search_name_wechat": {
+    "message": "Официальные аккаунты WeChat"
+  },
+  "site_search_name_wikipedia": {
+    "message": "Википедия"
+  },
+  "site_search_name_lumno_help": {
+    "message": "Справочный центр Lumno"
+  },
+  "help_center_recommended": {
+    "message": "Рекомендуем прочитать"
+  },
+  "help_center_no_results": {
+    "message": "Ничего не найдено. Напишите разработчику — мы поможем."
+  },
+  "search_in_site": {
+    "message": "Искать на сайте {site}"
+  },
+  "search_in_site_query": {
+    "message": "Искать на сайте {site}: «{query}»"
+  },
+  "ask_ai_provider": {
+    "message": "Спросить {site}"
+  },
+  "ask_ai_provider_query": {
+    "message": "Спросить {site}: «{query}»"
+  },
+  "site_search_tab_hint": {
+    "message": "Поиск: {site}"
+  },
+  "search_query": {
+    "message": "Искать «{query}»"
+  },
+  "search_in_site_ellipsis": {
+    "message": "Искать на сайте {site}…"
+  },
+  "search_in_site_prefix": {
+    "message": "Искать на сайте {site} |"
+  },
+  "search_open_tabs_only_prefix": {
+    "message": "Поиск по открытым вкладкам |"
+  },
+  "search_open_tabs_only_entry": {
+    "message": "Поиск по открытым вкладкам"
+  },
+  "action_search": {
+    "message": "Найти"
+  },
+  "action_search_engine": {
+    "message": "Искать в {engine}"
+  },
+  "action_open_ai_web": {
+    "message": "Открыть веб-версию {site}"
+  },
+  "action_search_google": {
+    "message": "Искать в Google"
+  },
+  "action_switch": {
+    "message": "Перейти"
+  },
+  "action_open": {
+    "message": "Открыть"
+  },
+  "overlay_empty_result": {
+    "message": "Ничего не найдено"
+  },
+  "local_search_tab_hint": {
+    "message": "Искать только: {source}"
+  },
+  "search_scope_switcher_label": {
+    "message": "Область поиска: {scope}. Выберите, чтобы изменить."
+  },
+  "search_scope_current": {
+    "message": "Текущая"
+  },
+  "search_scope_remove_confirmation": {
+    "message": "Нажмите Backspace еще раз, чтобы убрать область поиска."
+  },
+  "search_number_jump_release_hint": {
+    "message": "Отпустите, чтобы увидеть номера"
+  },
+  "search_scope_menu_shortcut_hint": {
+    "message": "Открыть панель"
+  },
+  "search_scope_menu_navigation_hint": {
+    "message": "Перемещение"
+  },
+  "search_scope_menu_select_hint": {
+    "message": "Выбрать"
+  },
+  "search_scope_menu_focus_toggle_hint": {
+    "message": "Сменить фокус"
+  },
+  "search_scope_menu_filter_hint": {
+    "message": "Введите текст для фильтра"
+  },
+  "search_scope_menu_filter_query": {
+    "message": "Поиск: {query}"
+  },
+  "search_scope_panel_placeholder": {
+    "message": "Искать на определенном сайте…"
+  },
+  "search_scope_active_placeholder": {
+    "message": "Поиск в этой области; нажмите Tab еще раз, чтобы открыть панель областей…"
+  },
+  "search_scope_group_engines": {
+    "message": "Поисковые системы"
+  },
+  "search_scope_group_local": {
+    "message": "Данные браузера"
+  },
+  "search_scope_group_ai": {
+    "message": "Поиск с ИИ"
+  },
+  "search_scope_group_sites": {
+    "message": "Поиск по сайту"
+  },
+  "search_scope_group_aggregates": {
+    "message": "Сводные поиски"
+  },
+  "aggregate_search_action": {
+    "message": "Искать через {name}"
+  },
+  "aggregate_search_action_query": {
+    "message": "Искать «{query}» через {name}"
+  },
+  "aggregate_search_group_title": {
+    "message": "Сводный поиск"
+  },
+  "aggregate_search_add": {
+    "message": "Добавить сводный поиск"
+  },
+  "aggregate_search_clear": {
+    "message": "Удалить сводные поиски"
+  },
+  "confirm_clear_aggregate_search": {
+    "message": "Удалить все сводные поиски?"
+  },
+  "aggregate_search_name_label": {
+    "message": "Название"
+  },
+  "aggregate_search_name_required_error": {
+    "message": "Введите название сводного поиска."
+  },
+  "aggregate_search_key_placeholder": {
+    "message": "Например, tech"
+  },
+  "aggregate_search_default_name": {
+    "message": "Сводный поиск"
+  },
+  "aggregate_search_sources_label": {
+    "message": "Источники поиска"
+  },
+  "aggregate_search_selected_count": {
+    "message": "Выбрано {count}/{max}"
+  },
+  "aggregate_search_min_sources_error": {
+    "message": "Выберите не менее 2 источников поиска."
+  },
+  "aggregate_search_max_sources_error": {
+    "message": "Можно выбрать не более 10 источников поиска."
+  },
+  "settings_aggregate_search_auto_group_title": {
+    "message": "Группировать вкладки сводного поиска"
+  },
+  "settings_aggregate_search_auto_group_desc": {
+    "message": "Если включено, все вкладки, открытые сводным поиском, помещаются в одну группу с названием «Название поиска: запрос»"
+  },
+  "aggregate_search_badge": {
+    "message": "Сводный"
+  },
+  "aggregate_search_source_summary": {
+    "message": "Источников: {count}"
+  },
+  "aggregate_search_source_summary_unavailable": {
+    "message": "Источников: {count} · недоступно: {unavailable} · требуется обновить"
+  },
+  "aggregate_search_sources_unavailable_error": {
+    "message": "В этом сводном поиске есть удаленные или отключенные источники. Обновите его в настройках."
+  },
+  "aggregate_search_in_progress": {
+    "message": "Этот сводный поиск уже выполняется."
+  },
+  "aggregate_search_partial_failure": {
+    "message": "Некоторые результаты сводного поиска не удалось открыть."
+  },
+  "aggregate_search_degraded_success": {
+    "message": "Результаты поиска открыты, но не удалось сгруппировать вкладки, назвать группу или переключиться на нее."
+  },
+  "aggregate_search_storage_unavailable_error": {
+    "message": "Не удалось загрузить сводные поиски. Перезагрузите страницу настроек и повторите попытку."
+  },
+  "aggregate_search_source_selection_unavailable_error": {
+    "message": "Удалите недоступные источники и выберите не менее двух доступных."
+  },
+  "aggregate_search_unavailable_group": {
+    "message": "Недоступные источники"
+  },
+  "aggregate_search_unavailable_name": {
+    "message": "Недоступный источник ({source})"
+  },
+  "aggregate_search_name_duplicate_error": {
+    "message": "Сводный поиск с таким названием уже существует."
+  },
+  "aggregate_search_max_items_error": {
+    "message": "Можно создать не более 8 сводных поисков."
+  },
+  "overlay_empty_open_tabs": {
+    "message": "Нет вкладок"
+  },
+  "site_icon_alt": {
+    "message": "Сайт"
+  },
+  "site_brand_wechat_official": {
+    "message": "Официальные аккаунты WeChat"
+  },
+  "settings_sync_title": {
+    "message": "Встроенная синхронизация {browser}"
+  },
+  "settings_sync_section_title": {
+    "message": "Встроенная синхронизация браузера"
+  },
+  "settings_sync_desc": {
+    "message": "Настройки синхронизируются автоматически через встроенную синхронизацию текущего браузера"
+  },
+  "sync_status_unavailable": {
+    "message": "Синхронизация недоступна"
+  },
+  "sync_status_unavailable_hint": {
+    "message": "Синхронизация недоступна: проверьте, поддерживает ли текущий браузер встроенную синхронизацию и включена ли она."
+  },
+  "sync_status_ready": {
+    "message": "Автосинхронизация включена"
+  },
+  "sync_status_done": {
+    "message": "Синхронизация завершена"
+  },
+  "sync_status_failed": {
+    "message": "Ошибка синхронизации"
+  },
+  "sync_status_failed_reason": {
+    "message": "Ошибка синхронизации: {reason}"
+  },
+  "sync_action_now": {
+    "message": "Синхронизировать"
+  },
+  "sync_action_export": {
+    "message": "Экспорт настроек"
+  },
+  "sync_action_import": {
+    "message": "Импорт настроек"
+  },
+  "sync_tooltip_export": {
+    "message": "Экспортировать настройки"
+  },
+  "sync_tooltip_import": {
+    "message": "Импортировать настройки"
+  },
+  "sync_tooltip_last_manual": {
+    "message": "Последний импорт / ручная синхронизация: {time}"
+  },
+  "sync_tooltip_default": {
+    "message": "Синхронизировать вручную"
+  },
+  "sync_status_hint": {
+    "message": "Настройки Lumno синхронизируются автоматически через встроенную синхронизацию текущего браузера. Синхронизация работает между устройствами с одним аккаунтом браузера, но не между разными браузерами."
+  },
+  "sync_export_done": {
+    "message": "Настройки экспортированы"
+  },
+  "sync_importing": {
+    "message": "Импорт настроек…"
+  },
+  "sync_import_done": {
+    "message": "Импорт завершен"
+  },
+  "sync_import_invalid": {
+    "message": "Недопустимый файл настроек"
+  },
+  "document_pip_picker_unsupported_policy": {
+    "message": "Этот сайт запрещает режим «Картинка в картинке» правилами сайта."
+  },
+  "document_pip_picker_unsupported_iframe": {
+    "message": "Document Picture-in-Picture работает только на странице верхнего уровня."
+  },
+  "document_pip_picker_unsupported_insecure": {
+    "message": "Для Document Picture-in-Picture требуется HTTPS."
+  },
+  "document_pip_picker_open_failed_not_allowed": {
+    "message": "Сайт или браузер заблокировал открытие Document Picture-in-Picture."
+  },
+  "document_pip_picker_open_failed_not_supported": {
+    "message": "Выбранное содержимое нельзя открыть в Document Picture-in-Picture на этой странице."
+  },
+  "document_pip_picker_open_failed_invalid_state": {
+    "message": "Плавающее окно уже открыто или состояние страницы изменилось. Повторите попытку."
+  },
+  "document_pip_picker_open_failed_security": {
+    "message": "Браузер заблокировал это действие на этой странице по соображениям безопасности."
+  },
+  "newtab_page_label": {
+    "message": "Новая вкладка"
+  },
+  "settings_title": {
+    "message": "Настройки"
+  },
+  "extension_page_label": {
+    "message": "Страница расширения"
+  },
+  "settings_button_aria": {
+    "message": "Настройки"
+  },
+  "copy_page_url_failed_retry": {
+    "message": "Не удалось скопировать. Повторите попытку."
+  },
+  "copy_page_url_success": {
+    "message": "URL текущей страницы скопирован"
+  },
+  "copy_page_url_failed_permission": {
+    "message": "Не удалось скопировать. Проверьте разрешение на доступ к буферу обмена."
+  },
+  "recent_pin_add": {
+    "message": "Закрепить"
+  },
+  "recent_pin_remove": {
+    "message": "Открепить"
+  },
+  "recent_pin_limit": {
+    "message": "Можно закрепить не более 3 карточек"
+  },
+  "recent_pin_limit_toast": {
+    "message": "Можно закрепить не более 3 карточек."
+  },
+  "recent_dismiss_tooltip": {
+    "message": "Удалить"
+  },
+  "recent_add_to_shortcuts": {
+    "message": "Добавить в ярлыки"
+  },
+  "recent_dismiss_pinned_tooltip": {
+    "message": "Открепить и удалить"
+  },
+  "recent_dismiss_toast": {
+    "message": "Удалено"
+  },
+  "recent_dismiss_pinned_toast": {
+    "message": "Откреплено и удалено"
+  },
+  "recent_context_menu_label": {
+    "message": "Действия с недавним сайтом"
+  },
+  "tab_switcher_title": {
+    "message": "Недавние вкладки"
+  },
+  "tab_switcher_untitled": {
+    "message": "Без названия"
+  },
+  "tab_switcher_favicon_alt": {
+    "message": "Значок сайта"
+  },
+  "tab_switcher_close_tab": {
+    "message": "Закрыть вкладку"
+  },
+  "tab_switcher_tab_closed": {
+    "message": "Вкладка закрыта"
+  },
+  "tab_switcher_close_failed": {
+    "message": "Не удалось закрыть вкладку"
+  },
+  "command_show_tab_switcher": {
+    "message": "Открыть переключатель недавних вкладок"
+  },
+  "shortcut_reference_title": {
+    "message": "Быстрые клавиши"
+  },
+  "shortcut_reference_group_search": {
+    "message": "Панель команд"
+  },
+  "shortcut_reference_group_page_link": {
+    "message": "Ссылка на страницу"
+  },
+  "shortcut_reference_group_tab_switcher": {
+    "message": "Переключатель вкладок"
+  },
+  "shortcut_reference_group_web_clip": {
+    "message": "Вырезка страницы"
+  },
+  "shortcut_reference_unset": {
+    "message": "Не задано"
+  },
+  "shortcut_reference_show_search_title": {
+    "message": "Открыть панель команд"
+  },
+  "shortcut_reference_show_search_desc": {
+    "message": "Открыть Lumno на текущей странице"
+  },
+  "shortcut_reference_show_search_prefill_title": {
+    "message": "Открыть с URL текущей страницы"
+  },
+  "shortcut_reference_show_search_prefill_desc": {
+    "message": "Открыть Lumno и подставить URL текущей страницы"
+  },
+  "shortcut_reference_copy_url_title": {
+    "message": "Копировать URL текущей страницы"
+  },
+  "shortcut_reference_copy_url_desc": {
+    "message": "Скопировать URL текущей страницы, не открывая Lumno"
+  },
+  "shortcut_reference_tab_switcher_title": {
+    "message": "Открыть переключатель недавних вкладок"
+  },
+  "shortcut_reference_tab_switcher_desc": {
+    "message": "Открыть переключатель недавних вкладок"
+  },
+  "shortcut_reference_search_input_history_title": {
+    "message": "Предыдущий или следующий ввод"
+  },
+  "shortcut_reference_search_input_history_desc": {
+    "message": "Перемещаться назад или вперед по истории отправленных запросов"
+  },
+  "shortcut_reference_search_navigate_title": {
+    "message": "Перемещение по подсказкам"
+  },
+  "shortcut_reference_search_navigate_desc": {
+    "message": "Выбрать другой результат в поиске Lumno и на новой вкладке"
+  },
+  "shortcut_reference_search_number_jump_title": {
+    "message": "Перейти к результату по номеру"
+  },
+  "shortcut_reference_search_number_jump_desc": {
+    "message": "Удерживайте основную клавишу-модификатор, отпустите ее и нажмите 0–9, чтобы выбрать нужный результат"
+  },
+  "shortcut_reference_search_number_jump_shortcut": {
+    "message": "Удерживайте {modifier} 0,4 с, отпустите и нажмите 0–9"
+  },
+  "shortcut_reference_search_confirm_title": {
+    "message": "Выполнить выбранное действие"
+  },
+  "shortcut_reference_search_confirm_desc": {
+    "message": "Открыть, искать, перейти на вкладку или выполнить выбранную команду"
+  },
+  "shortcut_reference_search_tab_mode_title": {
+    "message": "Дополнить или войти в режим поиска"
+  },
+  "shortcut_reference_search_tab_mode_desc": {
+    "message": "Дополнить подсказку или включить поиск по сайту / открытым вкладкам"
+  },
+  "shortcut_reference_search_open_scope_menu_title": {
+    "message": "Открыть панель областей поиска"
+  },
+  "shortcut_reference_search_open_scope_menu_desc": {
+    "message": "Если поле ввода пустое, нажмите Tab дважды; если область поиска уже выбрана — один раз"
+  },
+  "shortcut_reference_search_close_title": {
+    "message": "Закрыть или выйти из режима"
+  },
+  "shortcut_reference_search_close_desc": {
+    "message": "Закрыть поиск Lumno или выйти из поиска по сайту / открытым вкладкам"
+  },
+  "shortcut_reference_search_current_tab_title": {
+    "message": "Открыть в текущей вкладке"
+  },
+  "shortcut_reference_search_current_tab_desc": {
+    "message": "Открывать в текущей вкладке то, что обычно открывается в новой"
+  },
+  "shortcut_reference_search_switch_new_tab_title": {
+    "message": "Открыть найденную вкладку в новой вкладке"
+  },
+  "shortcut_reference_search_switch_new_tab_desc": {
+    "message": "Если результат совпадает с открытой вкладкой, открыть его URL в новой вкладке"
+  },
+  "shortcut_reference_tab_switcher_cycle_title": {
+    "message": "Перемещение в переключателе вкладок"
+  },
+  "shortcut_reference_tab_switcher_cycle_desc": {
+    "message": "Перейти к предыдущей или следующей вкладке в переключателе"
+  },
+  "shortcut_reference_tab_switcher_confirm_title": {
+    "message": "Перейти на выбранную вкладку"
+  },
+  "shortcut_reference_tab_switcher_confirm_desc": {
+    "message": "Подтвердить выбор вкладки в переключателе"
+  },
+  "shortcut_reference_document_pip_parent_title": {
+    "message": "Выбрать внешний элемент"
+  },
+  "shortcut_reference_document_pip_parent_desc": {
+    "message": "Перейти к более крупному родительскому элементу при выборе вырезки"
+  },
+  "shortcut_reference_document_pip_child_title": {
+    "message": "Выбрать внутренний элемент"
+  },
+  "shortcut_reference_document_pip_child_desc": {
+    "message": "Перейти к более мелкому дочернему элементу при выборе вырезки"
+  },
+  "newtab_shortcuts_section_label": {
+    "message": "Ярлыки"
+  },
+  "newtab_shortcuts_add": {
+    "message": "Добавить ярлык"
+  },
+  "newtab_shortcuts_hide_add": {
+    "message": "Скрыть"
+  },
+  "newtab_shortcuts_add_hidden": {
+    "message": "Кнопка «+» скрыта. Вернуть ее можно в разделе Настройки → Внешний вид → Ярлыки → Показывать «+»."
+  },
+  "newtab_shortcuts_dialog_title": {
+    "message": "Добавить ярлык"
+  },
+  "newtab_shortcuts_name_label": {
+    "message": "Название"
+  },
+  "newtab_shortcuts_name_placeholder": {
+    "message": "Lumno"
+  },
+  "newtab_shortcuts_url_label": {
+    "message": "URL"
+  },
+  "newtab_shortcuts_url_info_label": {
+    "message": "О поддерживаемых URL"
+  },
+  "newtab_shortcuts_url_info": {
+    "message": "Также поддерживаются внутренние страницы браузера, например:\nchrome://inspect/#devices"
+  },
+  "newtab_shortcuts_url_info__firefox": {
+    "message": "Firefox не позволяет расширениям открывать встроенные страницы, например about:config, поэтому укажите адрес веб-страницы."
+  },
+  "newtab_shortcuts_url_placeholder": {
+    "message": "https://example.com"
+  },
+  "newtab_shortcuts_icon_label": {
+    "message": "Значок (необязательно)"
+  },
+  "newtab_shortcuts_icon_mode_label": {
+    "message": "Источник значка"
+  },
+  "newtab_shortcuts_icon_builtin": {
+    "message": "Встроенный значок"
+  },
+  "newtab_shortcuts_icon_builtin_hint": {
+    "message": "Использовать встроенные значки Lumno в высоком качестве."
+  },
+  "newtab_shortcuts_icon_builtin_network_hint": {
+    "message": "Не требует подключения к сети."
+  },
+  "newtab_shortcuts_icon_builtin_info_label": {
+    "message": "О встроенных значках"
+  },
+  "newtab_shortcuts_icon_service": {
+    "message": "Gstatic (сторонние значки)"
+  },
+  "newtab_shortcuts_icon_favicon_is": {
+    "message": "Favicon.is (сторонние значки)"
+  },
+  "newtab_shortcuts_icon_favicon_is_hint": {
+    "message": "Отправляет домен в Favicon.is, чтобы получить значок крупнее."
+  },
+  "newtab_shortcuts_icon_favicon_is_caution": {
+    "message": "Значок домена может отличаться от значка текущей страницы."
+  },
+  "newtab_shortcuts_icon_cache": {
+    "message": "Кеш браузера"
+  },
+  "newtab_shortcuts_icon_service_hint": {
+    "message": "Отправляет домен сайта в Gstatic. Стабильно и в высоком качестве."
+  },
+  "newtab_shortcuts_icon_cache_hint": {
+    "message": "Быстро и точно: значки сайтов из кеша браузера."
+  },
+  "newtab_shortcuts_icon_custom_hint": {
+    "message": "По умолчанию хранится на этом устройстве и не синхронизируется браузером."
+  },
+  "newtab_shortcuts_icon_service_caution": {
+    "message": "Некоторые сайты могут не распознаваться."
+  },
+  "newtab_shortcuts_icon_cache_caution": {
+    "message": "Из-за настроек сайта значок может быть с точкой уведомления или нечетким."
+  },
+  "newtab_shortcuts_icon_plate_label": {
+    "message": "Добавлять фон к значкам неправильной формы"
+  },
+  "newtab_shortcuts_icon_plate_color_label": {
+    "message": "Цвет фона"
+  },
+  "newtab_shortcuts_icon_plate_color_auto": {
+    "message": "Из значка"
+  },
+  "newtab_shortcuts_icon_plate_color_custom": {
+    "message": "Свой цвет"
+  },
+  "newtab_shortcuts_icon_custom_sync_hint": {
+    "message": "Синхронизация между устройствами через WebDAV."
+  },
+  "newtab_shortcuts_icon_refresh_success": {
+    "message": "Значок получен"
+  },
+  "newtab_shortcuts_icon_cache_failed": {
+    "message": "Значок в кеше не найден. Откройте этот сайт и обновите еще раз."
+  },
+  "newtab_shortcuts_icon_source_unavailable": {
+    "message": "Этот источник недоступен. Выберите кеш браузера или свой значок."
+  },
+  "newtab_shortcuts_icon_online": {
+    "message": "Значок из сети"
+  },
+  "newtab_shortcuts_icon_custom": {
+    "message": "Свой значок"
+  },
+  "newtab_shortcuts_icon_current": {
+    "message": "Текущий значок"
+  },
+  "newtab_shortcuts_icon_refresh": {
+    "message": "Обновить"
+  },
+  "newtab_shortcuts_icon_refreshing": {
+    "message": "Обновление…"
+  },
+  "newtab_shortcuts_icon_refresh_failed": {
+    "message": "Не удалось обновить значок. Повторите попытку позже."
+  },
+  "newtab_shortcuts_icon_custom_required": {
+    "message": "Выберите изображение для своего значка."
+  },
+  "newtab_shortcuts_icon_online_info_label": {
+    "message": "О значках из сети"
+  },
+  "newtab_shortcuts_icon_online_info": {
+    "message": "Значок из сети не меняется, пока вы не обновите и не сохраните его. Для обновления используется сервис значков или кеш браузера."
+  },
+  "newtab_shortcuts_icon_info_label": {
+    "message": "О локальных значках ярлыков"
+  },
+  "newtab_shortcuts_icon_info": {
+    "message": "Поддерживаются PNG, JPG и WebP. Рекомендуется квадратный значок с прозрачным фоном от 128×128 px. По умолчанию хранится на этом устройстве; доступна синхронизация через WebDAV."
+  },
+  "newtab_shortcuts_folder_item_icon_info": {
+    "message": "Поддерживаются PNG, JPG и WebP. Рекомендуется квадратный значок с прозрачным фоном от 128×128 px. Хранится только на этом устройстве."
+  },
+  "newtab_shortcuts_icon_choose": {
+    "message": "Выбрать изображение"
+  },
+  "newtab_shortcuts_icon_replace": {
+    "message": "Заменить изображение"
+  },
+  "newtab_shortcuts_icon_remove": {
+    "message": "Удалить"
+  },
+  "newtab_shortcuts_icon_unsupported": {
+    "message": "Выберите изображение PNG, JPG или WebP."
+  },
+  "newtab_shortcuts_icon_dimensions_too_large": {
+    "message": "Размер изображения не должен превышать 4096×4096 px"
+  },
+  "newtab_shortcuts_icon_invalid": {
+    "message": "Не удалось использовать это изображение. Выберите другое."
+  },
+  "newtab_shortcuts_icon_storage_error": {
+    "message": "Не удалось сохранить локальный значок. Попробуйте другое изображение."
+  },
+  "folder_rename": {
+    "message": "Переименовать"
+  },
+  "folder_color_change": {
+    "message": "Изменить цвет"
+  },
+  "folder_color_format": {
+    "message": "Формат цвета"
+  },
+  "folder_color_title": {
+    "message": "Цвет папки"
+  },
+  "folder_color_description": {
+    "message": "Применяется и к этой папке в ярлыках и меню. Сохраняется на этом устройстве."
+  },
+  "folder_color_presets": {
+    "message": "Готовые цвета"
+  },
+  "folder_color_default": {
+    "message": "Цвет по умолчанию"
+  },
+  "folder_color_reset": {
+    "message": "Сбросить"
+  },
+  "folder_color_saved": {
+    "message": "Сохраненные цвета"
+  },
+  "folder_color_save_current": {
+    "message": "Сохранить текущий цвет"
+  },
+  "folder_color_remove_saved": {
+    "message": "Удалить сохраненный цвет"
+  },
+  "folder_color_saved_delete_failed": {
+    "message": "Не удалось удалить цвет. Повторите попытку."
+  },
+  "folder_color_saved_load_failed": {
+    "message": "Не удалось загрузить сохраненные цвета. Откройте палитру заново."
+  },
+  "folder_color_saved_save_failed": {
+    "message": "Не удалось сохранить цвет. Повторите попытку."
+  },
+  "folder_color_invalid": {
+    "message": "Введите корректный цвет HEX или значения RGB от 0 до 255."
+  },
+  "folder_color_save_failed": {
+    "message": "Не удалось сохранить цвет папки. Повторите попытку."
+  },
+  "newtab_shortcuts_cancel": {
+    "message": "Отмена"
+  },
+  "newtab_shortcuts_done": {
+    "message": "Готово"
+  },
+  "newtab_shortcuts_save": {
+    "message": "Сохранить"
+  },
+  "newtab_shortcuts_invalid_url": {
+    "message": "Введите действительный URL http, https или внутренней страницы браузера."
+  },
+  "newtab_shortcuts_limit_reached": {
+    "message": "Можно добавить не более {count} ярлыков."
+  },
+  "newtab_shortcuts_added": {
+    "message": "Ярлык добавлен"
+  },
+  "context_menu_add_page_shortcut": {
+    "message": "Добавить в ярлыки новой вкладки Lumno"
+  },
+  "page_shortcut_added": {
+    "message": "Добавлено в ярлыки новой вкладки Lumno"
+  },
+  "newtab_shortcuts_already_added": {
+    "message": "Уже есть в ярлыках"
+  },
+  "newtab_shortcuts_sync_limit_reached": {
+    "message": "Ярлыки не помещаются в хранилище синхронизации браузера, поэтому новые сохраняются только на этом устройстве. Включите WebDAV в настройках, чтобы синхронизировать и их."
+  },
+  "newtab_shortcuts_edited": {
+    "message": "Ярлык изменен"
+  },
+  "newtab_shortcuts_removed": {
+    "message": "Ярлык удален"
+  },
+  "newtab_shortcuts_removed_undo": {
+    "message": "Ярлык удален · {shortcut} — отменить"
+  },
+  "newtab_shortcuts_remove_undone": {
+    "message": "Ярлык восстановлен · {shortcut} — повторить"
+  },
+  "newtab_shortcuts_remove_redone": {
+    "message": "Ярлык удален · {shortcut} — отменить"
+  },
+  "newtab_shortcuts_add_undone": {
+    "message": "Добавление ярлыка отменено · {shortcut} — повторить"
+  },
+  "newtab_shortcuts_add_redone": {
+    "message": "Ярлык добавлен снова · {shortcut} — отменить"
+  },
+  "newtab_recent_added_to_folder": {
+    "message": "Добавлено в «{folder}»"
+  },
+  "newtab_shortcuts_open_folder": {
+    "message": "Открыть папку"
+  },
+  "newtab_shortcuts_from_bookmarks": {
+    "message": "(из закладок)"
+  },
+  "newtab_shortcuts_folder_added": {
+    "message": "Папка добавлена в ярлыки"
+  },
+  "newtab_shortcuts_folder_missing": {
+    "message": "Эта папка закладок больше не существует."
+  },
+  "newtab_shortcuts_moved_to_bookmarks": {
+    "message": "Перемещено в закладки"
+  },
+  "newtab_shortcuts_new_folder_title": {
+    "message": "Новая папка"
+  },
+  "newtab_shortcuts_stack_hint": {
+    "message": "Отпустите, чтобы создать папку на панели закладок"
+  },
+  "newtab_shortcuts_stacked_undo": {
+    "message": "Папка создана · {shortcut} — отменить"
+  },
+  "newtab_shortcuts_stack_undone": {
+    "message": "Создание папки отменено · {shortcut} — повторить"
+  },
+  "newtab_shortcuts_stack_redone": {
+    "message": "Папка создана снова · {shortcut} — отменить"
+  },
+  "newtab_shortcuts_stack_failed": {
+    "message": "Не удалось создать папку"
+  },
+  "newtab_shortcuts_move_to_bookmarks_failed": {
+    "message": "Не удалось переместить в закладки"
+  },
+  "newtab_shortcuts_edit_dialog_title": {
+    "message": "Изменить ярлык"
+  },
+  "newtab_shortcuts_context_menu_label": {
+    "message": "Действия с ярлыком"
+  },
+  "settings_tab_switcher_title": {
+    "message": "Переключатель вкладок"
+  },
+  "settings_tab_switcher_desc": {
+    "message": "Быстрый переход между недавними вкладками; по умолчанию {shortcut}, можно изменить"
+  },
+  "slash_command_empty": {
+    "message": "Команды не найдены"
+  },
+  "command_tabs_title": {
+    "message": "Искать только по открытым вкладкам"
+  },
+  "command_tabs_action": {
+    "message": "Искать вкладки"
+  },
+  "command_copy_title": {
+    "message": "Копировать ссылку на текущую страницу"
+  },
+  "command_copy_action": {
+    "message": "Копировать ссылку"
+  },
+  "settings_tab_account": {
+    "message": "Синхронизация"
+  },
+  "webdav_endpoint": {
+    "message": "Адрес сервера (HTTPS)"
+  },
+  "webdav_directory": {
+    "message": "Папка синхронизации"
+  },
+  "webdav_username": {
+    "message": "Имя пользователя"
+  },
+  "webdav_password": {
+    "message": "Пароль приложения"
+  },
+  "webdav_credentials_hint": {
+    "message": "Пароль приложения хранится только на этом устройстве. Адрес сервера, папка и имя пользователя синхронизируются с другими вашими устройствами через браузер."
+  },
+  "webdav_password_hint": {
+    "message": "Адрес сервера, папка и имя пользователя синхронизируются с другими вашими устройствами через браузер, а пароль приложения — нет. Сохраните его в надежном месте, чтобы ввести на новых устройствах."
+  },
+  "webdav_password_hint_synced": {
+    "message": "Адрес сервера, папка и имя пользователя получены с другого вашего устройства. Пароль приложения не синхронизируется, поэтому введите его здесь."
+  },
+  "webdav_suggestion_label": {
+    "message": "С другого устройства"
+  },
+  "webdav_suggestion_add": {
+    "message": "Введите пароль для подключения"
+  },
+  "webdav_suggestion_dismiss": {
+    "message": "Скрыть"
+  },
+  "webdav_password_saved": {
+    "message": "Сохранен"
+  },
+  "webdav_password_change": {
+    "message": "Изменить"
+  },
+  "webdav_password_keep": {
+    "message": "Оставить сохраненный пароль"
+  },
+  "webdav_password_show": {
+    "message": "Показать пароль"
+  },
+  "webdav_password_hide": {
+    "message": "Скрыть пароль"
+  },
+  "webdav_last_sync": {
+    "message": "Последняя синхронизация"
+  },
+  "webdav_choice_hint": {
+    "message": "На сервере уже есть настройки Lumno. Оставьте одну из версий или объедините обои с обеих сторон, сохранив остальные настройки с сервера. Данные этого устройства сначала будут сохранены в резервной копии."
+  },
+  "webdav_conflict_hint": {
+    "message": "Одно и то же изменено и на этом устройстве, и на сервере. Выберите, какую версию оставить; остальные изменения объединятся автоматически."
+  },
+  "webdav_error_endpoint": {
+    "message": "Введите действительный адрес WebDAV с HTTPS."
+  },
+  "webdav_error_directory": {
+    "message": "Введите допустимое имя папки синхронизации."
+  },
+  "webdav_error_credentials": {
+    "message": "Введите имя пользователя и пароль приложения."
+  },
+  "webdav_error_auth": {
+    "message": "Ошибка аутентификации. Проверьте имя пользователя и пароль приложения."
+  },
+  "webdav_error_permission": {
+    "message": "Доступ запрещен. Проверьте права на чтение и запись для папки."
+  },
+  "webdav_error_rate": {
+    "message": "Превышен лимит запросов к серверу. Повторите попытку позже."
+  },
+  "webdav_error_unavailable": {
+    "message": "Сервер временно недоступен (HTTP 503). Nutstore отвечает так же после слишком большого числа запросов за короткое время, поэтому повторите попытку через несколько минут. Данные на этом устройстве сохранены."
+  },
+  "webdav_warning_throttled": {
+    "message": "Сервер временно отклоняет запросы (HTTP {status}), обычно из-за слишком большого числа запросов за короткое время — так их ограничивают Nutstore и похожие сервисы. Lumno повторит попытку автоматически через {time}. Данные на этом устройстве сохранены."
+  },
+  "webdav_error_capacity": {
+    "message": "Хранилище WebDAV заполнено. Освободите место и повторите попытку."
+  },
+  "webdav_error_conditional": {
+    "message": "Этот сервер не может надежно предотвратить одновременную перезапись, поэтому автоматическая синхронизация с ним не поддерживается."
+  },
+  "webdav_error_changed": {
+    "message": "Настройки изменились во время синхронизации. Локальные данные сохранены, синхронизация будет повторена."
+  },
+  "webdav_error_missing": {
+    "message": "Настройки на сервере удалены. Загрузите локальные настройки, чтобы создать их заново, или проверьте адрес сервера."
+  },
+  "webdav_error_chrome_capacity": {
+    "message": "Эти настройки превышают объем синхронизации Chrome и не были применены. Текущие данные синхронизации Chrome и локальные данные сохранены. Сократите настройки и повторите попытку."
+  },
+  "webdav_error_chrome_capacity__firefox": {
+    "message": "Эти настройки превышают объем Синхронизации Firefox и не были применены. Текущие данные Синхронизации Firefox и локальные данные сохранены. Сократите настройки и повторите попытку."
+  },
+  "webdav_warning_chrome_backup": {
+    "message": "Настройки на этом устройстве превышают объем синхронизации Chrome, поэтому пока не сохранены в синхронизации Chrome. Синхронизация WebDAV продолжается, локальные данные сохранены. Сократите настройки, чтобы завершить резервное копирование."
+  },
+  "webdav_warning_chrome_backup__firefox": {
+    "message": "Настройки на этом устройстве превышают объем Синхронизации Firefox, поэтому пока не сохранены в Синхронизации Firefox. Синхронизация WebDAV продолжается, локальные данные сохранены. Сократите настройки, чтобы завершить резервное копирование."
+  },
+  "webdav_error_network": {
+    "message": "Не удалось подключиться или истекло время ожидания. Проверьте сеть, адрес сервера и сертификат. Локальные данные сохранены."
+  },
+  "webdav_error_storage": {
+    "message": "Не удалось сохранить данные синхронизации. Проверьте локальное хранилище браузера."
+  },
+  "webdav_error_shortcuts": {
+    "message": "После восстановления будет превышен лимит ярлыков. Сначала удалите часть локальных ярлыков-папок."
+  },
+  "webdav_error_remote_unreadable": {
+    "message": "Сервер не вернул настройки в нормальном виде. Проверьте сервер или повторите попытку позже. Локальные данные не заменены."
+  },
+  "webdav_error_remote_corrupt": {
+    "message": "Файл настроек на сервере поврежден (недопустимый JSON) — возможно, из-за прерванной загрузки или другого приложения. Локальные данные не заменены."
+  },
+  "webdav_error_invalid_state": {
+    "message": "Настройки на сервере имеют структуру или версию, которую эта версия Lumno не распознает, — возможно, из более нового выпуска. Обновите Lumno на всех устройствах. Локальные данные не заменены."
+  },
+  "webdav_error_state_too_large": {
+    "message": "Настройки на сервере превышают лимит синхронизации (200 ярлыков, 256 обоев, 2 MB настроек). Локальные данные не заменены."
+  },
+  "webdav_error_response_too_large": {
+    "message": "Файл, полученный с сервера, превышает лимит 2 MB. Локальные данные не заменены."
+  },
+  "webdav_error_invalid_shortcuts": {
+    "message": "Данные ярлыков на сервере недопустимы (неверный формат или повторяющиеся ID). Локальные данные не заменены."
+  },
+  "webdav_error_invalid_icon": {
+    "message": "Записи значков ярлыков на сервере недопустимы. Локальные данные не заменены."
+  },
+  "webdav_error_invalid_wallpaper": {
+    "message": "Записи обоев на сервере недопустимы (неверный ID или размеры). Локальные данные не заменены."
+  },
+  "webdav_error_invalid_asset": {
+    "message": "Изображение на сервере недопустимо (неверный тип, размер или содержимое). Локальные данные не заменены."
+  },
+  "webdav_error_asset_missing": {
+    "message": "На сервере нет файла изображения — возможно, загрузка не завершилась или файл удален. Локальные данные сохранены."
+  },
+  "webdav_error_asset_integrity": {
+    "message": "Файл изображения на сервере поврежден (содержимое не совпадает с записью). Локальные данные сохранены."
+  },
+  "webdav_error_local_invalid_state": {
+    "message": "Настройки на этом устройстве имеют недопустимую структуру и не могут быть синхронизированы. Ничего не изменено ни на одной стороне."
+  },
+  "webdav_error_local_state_too_large": {
+    "message": "Настройки на этом устройстве превышают лимит синхронизации (256 обоев, 2 MB настроек). Удалите часть обоев и повторите попытку. Ничего не изменено ни на одной стороне."
+  },
+  "webdav_error_local_invalid_shortcuts": {
+    "message": "Данные ярлыков на этом устройстве недопустимы (неверный формат или повторяющиеся ID) и не могут быть синхронизированы. Ничего не изменено ни на одной стороне."
+  },
+  "webdav_error_local_invalid_icon": {
+    "message": "Записи значков ярлыков на этом устройстве недопустимы и не могут быть синхронизированы. Ничего не изменено ни на одной стороне."
+  },
+  "webdav_error_local_invalid_wallpaper": {
+    "message": "Записи обоев на этом устройстве недопустимы (неверный ID или размеры) и не могут быть синхронизированы. Ничего не изменено ни на одной стороне."
+  },
+  "webdav_error_local_invalid_asset": {
+    "message": "Изображение на этом устройстве повреждено или не поддерживается и не может быть синхронизировано. Удалите его и добавьте заново. Ничего не изменено ни на одной стороне."
+  },
+  "webdav_error_local_asset_too_large": {
+    "message": "Изображение на этом устройстве превышает лимит синхронизации (96 KB на значок, 2 MB на обои). Ничего не изменено ни на одной стороне."
+  },
+  "webdav_error_shortcut_id_conflict": {
+    "message": "Ярлык на сервере имеет тот же ID, что и ярлык папки закладок на этом устройстве, поэтому их нельзя объединить. Локальные данные сохранены."
+  },
+  "webdav_error_write_failed": {
+    "message": "Сервер отказался записывать файлы синхронизации. Проверьте права на запись для папки и свободное место. Локальные данные сохранены."
+  },
+  "webdav_error_directory_unavailable": {
+    "message": "Не удалось создать папку синхронизации на сервере. Проверьте адрес сервера и права доступа к папке."
+  },
+  "webdav_error_folder_create_refused": {
+    "message": "Сервер отказался создать новую папку (MKCOL 405), поэтому блокировку синхронизации установить нельзя. Убедитесь, что аккаунт может создавать папки, хранилище не подключено только для чтения и прокси не блокирует MKCOL."
+  },
+  "webdav_error_http": {
+    "message": "Сервер вернул ошибку (HTTP {status}). Повторите попытку позже. Локальные данные сохранены."
+  },
+  "webdav_error_generic": {
+    "message": "Ошибка синхронизации. Повторите попытку позже. Локальные данные сохранены."
+  },
+  "webdav_test": {
+    "message": "Проверить подключение"
+  },
+  "webdav_enable": {
+    "message": "Сохранить и включить синхронизацию"
+  },
+  "webdav_sync": {
+    "message": "Синхронизировать"
+  },
+  "webdav_restore_backup": {
+    "message": "Восстановить настройки до замены"
+  },
+  "webdav_merge_wallpapers": {
+    "message": "Объединить обои"
+  },
+  "webdav_error_merge_too_large": {
+    "message": "Вместе обои превышают лимит синхронизации (256 обоев, 2 MB настроек, 8 KB ссылок на изображения). Удалите часть или оставьте одну сторону. Ничего не изменено."
+  },
+  "webdav_use_remote": {
+    "message": "Использовать версию с сервера"
+  },
+  "webdav_use_local": {
+    "message": "Оставить версию этого устройства"
+  },
+  "webdav_test_success": {
+    "message": "Подключение, чтение/запись и защита от одновременных изменений проверены"
+  },
+  "webdav_state_browser": {
+    "message": "Выкл."
+  },
+  "webdav_state_ready": {
+    "message": "Синхронизировано"
+  },
+  "webdav_state_syncing": {
+    "message": "Синхронизация…"
+  },
+  "webdav_state_paused": {
+    "message": "Приостановлено"
+  },
+  "webdav_state_pending": {
+    "message": "Ожидает синхронизации"
+  },
+  "webdav_state_choice": {
+    "message": "Выберите копию"
+  },
+  "webdav_state_conflict": {
+    "message": "Конфликт настроек"
+  },
+  "webdav_state_error": {
+    "message": "Ошибка синхронизации"
+  },
+  "webdav_error_interrupted": {
+    "message": "Предыдущая замена была прервана. Отправка на сервер приостановлена. Восстановите прежние локальные настройки или подключитесь заново и используйте настройки с сервера."
+  },
+  "webdav_missing_hint": {
+    "message": "Настройки на сервере пропали. Загрузите настройки этого устройства снова или сначала проверьте адрес сервера."
+  },
+  "webdav_error_locked": {
+    "message": "Другое устройство записывает данные на сервер. Повторите попытку позже. Если блокировка не снимается, удалите оставшуюся блокировку по инструкции WebDAV."
+  },
+  "webdav_error_lock_recovery": {
+    "message": "Запись на сервер не удалось безопасно завершить, поэтому защита сохранена. Приостановите синхронизацию на всех устройствах и убедитесь, что прерванный запрос завершился, прежде чем удалять v1/write-lock из папки синхронизации на сервере."
+  },
+  "webdav_error_outdated": {
+    "message": "Перезагрузите расширение Lumno, затем обновите страницу настроек, чтобы использовать несколько подключений WebDAV."
+  },
+  "webdav_title": {
+    "message": "Синхронизация WebDAV"
+  },
+  "webdav_beta_hint": {
+    "message": "Бета-версия: синхронизация настроек, своих значков и обоев через диск WebDAV или NAS. В отличие от встроенной синхронизации браузера, работает между разными браузерами и охватывает значки и обои."
+  },
+  "webdav_setup_hint": {
+    "message": "Синхронизируйте настройки, свои значки и обои через Nutstore или другой сервис WebDAV вместе с синхронизацией браузера."
+  },
+  "webdav_edit_config": {
+    "message": "Изменить подключение"
+  },
+  "webdav_save": {
+    "message": "Сохранить"
+  },
+  "webdav_never_synced": {
+    "message": "Еще не синхронизировано"
+  },
+  "webdav_choice_title": {
+    "message": "Выберите исходную версию"
+  },
+  "webdav_conflict_title": {
+    "message": "Конфликт синхронизации"
+  },
+  "webdav_conflict_items": {
+    "message": "Конфликтующие данные"
+  },
+  "webdav_conflict_shortcuts": {
+    "message": "Ярлыки и значки"
+  },
+  "webdav_conflict_wallpapers": {
+    "message": "Обои и выбор обоев"
+  },
+  "webdav_conflict_preferences": {
+    "message": "Настройки"
+  },
+  "webdav_resolve_later": {
+    "message": "Приостановить и решить позже"
+  },
+  "webdav_add": {
+    "message": "Добавить WebDAV"
+  },
+  "webdav_state_recovery": {
+    "message": "Нужно восстановление"
+  },
+  "webdav_retry": {
+    "message": "Повторить"
+  },
+  "webdav_copy_diagnostic": {
+    "message": "Копировать диагностику"
+  },
+  "webdav_diagnostic_copied": {
+    "message": "Скопировано"
+  },
+  "webdav_provider_jianguoyun": {
+    "message": "Nutstore"
+  },
+  "webdav_upload_local": {
+    "message": "Загрузить настройки этого устройства"
+  },
+  "webdav_error_duplicate": {
+    "message": "Подключение с тем же сервером, папкой и именем пользователя уже существует."
+  },
+  "webdav_error_interrupted_other": {
+    "message": "Другому подключению WebDAV ({name}) сначала нужно восстановить локальные настройки. Это подключение продолжит работу после этого."
+  },
+  "webdav_just_now": {
+    "message": "только что"
+  },
+  "webdav_view_diff": {
+    "message": "Показать различия"
+  },
+  "webdav_hide_diff": {
+    "message": "Скрыть различия"
+  },
+  "webdav_diff_local": {
+    "message": "Это устройство"
+  },
+  "webdav_diff_remote": {
+    "message": "Сервер"
+  },
+  "webdav_diff_added": {
+    "message": "Добавлено: {items}"
+  },
+  "webdav_diff_removed": {
+    "message": "Удалено: {items}"
+  },
+  "webdav_diff_changed": {
+    "message": "Изменено: {items}"
+  },
+  "webdav_diff_more": {
+    "message": "всего {count}"
+  },
+  "webdav_diff_reordered": {
+    "message": "Изменен порядок"
+  },
+  "webdav_diff_selection": {
+    "message": "Изменены текущие обои"
+  },
+  "webdav_diff_unchanged": {
+    "message": "Без изменений"
+  },
+  "webdav_diff_shortcut_total": {
+    "message": "Ярлыков: {count}"
+  },
+  "webdav_diff_wallpaper_total": {
+    "message": "Обоев: {count}"
+  },
+  "webdav_diff_loading": {
+    "message": "Загрузка…"
+  },
+  "webdav_value_on": {
+    "message": "Вкл."
+  },
+  "webdav_value_off": {
+    "message": "Выкл."
+  },
+  "webdav_value_default": {
+    "message": "По умолчанию"
+  },
+  "webdav_value_changed": {
+    "message": "Изменено"
+  },
+  "webdav_value_list": {
+    "message": "Элементов: {count}"
+  },
+  "webdav_preference_other": {
+    "message": "Другой параметр"
+  },
+  "webdav_preference_zen_mode": {
+    "message": "Режим Zen"
+  },
+  "webdav_remove": {
+    "message": "Удалить подключение WebDAV"
+  },
+  "webdav_remove_confirm": {
+    "message": "Удалить это локальное подключение? Файлы на сервере останутся."
+  },
+  "newtab_quote_title": {
+    "message": "Цитата дня"
+  },
+  "newtab_quote_position": {
+    "message": "Положение цитаты"
+  },
+  "newtab_quote_category": {
+    "message": "Тип цитат"
+  },
+  "newtab_quote_off": {
+    "message": "Выкл."
+  },
+  "newtab_quote_top": {
+    "message": "Над полем поиска"
+  },
+  "newtab_quote_input": {
+    "message": "Под полем поиска"
+  },
+  "newtab_quote_search": {
+    "message": "Под ярлыками"
+  },
+  "newtab_quote_bottom": {
+    "message": "Внизу страницы"
+  },
+  "newtab_quote_literature": {
+    "message": "Литература"
+  },
+  "newtab_quote_poetry": {
+    "message": "Поэзия"
+  },
+  "newtab_quote_shuffle": {
+    "message": "Другая цитата"
+  },
+  "newtab_quote_shuffle_error": {
+    "message": "Не удалось загрузить другую цитату"
+  },
+  "newtab_quote_save_error": {
+    "message": "Не удалось сохранить настройки цитат"
+  },
+  "newtab_quote_fallback_text": {
+    "message": "Путь в тысячу ли начинается с первого шага."
+  },
+  "newtab_quote_fallback_author": {
+    "message": "Лао-цзы"
+  },
+  "newtab_quote_fallback_source": {
+    "message": "Дао дэ цзин"
+  },
+  "newtab_bing_daily": {
+    "message": "Обновлять каждый день"
+  },
+  "newtab_bing_daily_hint": {
+    "message": "Каждый день новое фото из Bing. Фото, выбранное вручную при включенном параметре, останется до конца дня."
+  },
+  "newtab_daily_restore": {
+    "message": "Вернуть обои дня"
+  },
+  "newtab_bing_recent": {
+    "message": "Недавние обои"
+  },
+  "newtab_bing_refresh": {
+    "message": "Обновить"
+  },
+  "newtab_bing_loading": {
+    "message": "Загрузка обоев…"
+  },
+  "newtab_bing_saving": {
+    "message": "Сохранение обоев…"
+  },
+  "newtab_bing_error": {
+    "message": "Не удалось загрузить обои. Повторите попытку."
+  },
+  "newtab_bing_save_error": {
+    "message": "Не удалось сохранить обои. Повторите попытку."
+  },
+  "newtab_bing_source": {
+    "message": "Источник обоев"
+  },
+  "newtab_wallpaper_curated_section": {
+    "message": "Подборка"
+  },
+  "newtab_curated_daily_hint": {
+    "message": "Каждый день новое фото из категории, выбранной при включении, — одинаковое на всех синхронизированных устройствах. Фото, выбранное вручную, останется до конца дня."
+  },
+  "newtab_curated_category": {
+    "message": "Категория"
+  },
+  "newtab_curated_category_random": {
+    "message": "Микс"
+  },
+  "newtab_curated_category_nature": {
+    "message": "Природа"
+  },
+  "newtab_curated_category_water": {
+    "message": "Вода"
+  },
+  "newtab_curated_category_city": {
+    "message": "Город"
+  },
+  "newtab_curated_category_minimal": {
+    "message": "Минимализм"
+  },
+  "newtab_curated_category_art": {
+    "message": "Искусство"
+  },
+  "newtab_curated_art_meta": {
+    "message": "Кливлендский музей искусств"
+  },
+  "newtab_curated_list": {
+    "message": "Фото"
+  },
+  "newtab_curated_mix_all": {
+    "message": "Все категории"
+  },
+  "newtab_curated_mix_count": {
+    "message": "Категорий: {count}"
+  },
+  "newtab_curated_mix_separator": {
+    "message": ", "
+  },
+  "newtab_curated_mix_aria": {
+    "message": "Категории в миксе"
+  },
+  "newtab_curated_more": {
+    "message": "Показать другие"
+  },
+  "newtab_curated_photo_by": {
+    "message": "Фото: {name}"
+  },
+  "newtab_curated_source_meta": {
+    "message": "Unsplash · через Lorem Picsum"
+  },
+  "newtab_wallpaper_add_url": {
+    "message": "Добавить ссылку на изображение"
+  },
+  "newtab_wallpaper_url_placeholder": {
+    "message": "Вставьте ссылку на изображение (https://…)"
+  },
+  "newtab_wallpaper_url_submit": {
+    "message": "Добавить"
+  },
+  "newtab_wallpaper_url_invalid": {
+    "message": "Введите ссылку, которая начинается с http:// или https://"
+  },
+  "newtab_wallpaper_url_limit": {
+    "message": "Ссылка слишком длинная или сохранено слишком много ссылок. Удалите часть и повторите попытку."
+  },
+  "newtab_wallpaper_url_import_error": {
+    "message": "Не удалось добавить изображение по этой ссылке"
+  },
+  "newtab_wallpaper_save_to_local": {
+    "message": "Сохранить в свои обои"
+  },
+  "newtab_wallpaper_in_local": {
+    "message": "Уже есть в своих обоях"
+  },
+  "newtab_wallpaper_saving_local": {
+    "message": "Сохранение в свои обои…"
+  },
+  "newtab_wallpaper_saved_local": {
+    "message": "Сохранено в свои обои"
+  },
+  "newtab_wallpaper_local_limit": {
+    "message": "Можно хранить не более {count} своих обоев. Удалите часть и повторите попытку."
+  },
+  "newtab_wallpaper_context_menu_label": {
+    "message": "Действия с обоями"
+  },
+  "newtab_quote_font": {
+    "message": "Шрифт"
+  },
+  "newtab_quote_font_label": {
+    "message": "Шрифт цитаты"
+  },
+  "newtab_quote_font_wenkai": {
+    "message": "LXGW WenKai"
+  },
+  "newtab_quote_font_xiaowei": {
+    "message": "ZCOOL XiaoWei"
+  },
+  "newtab_quote_font_sans": {
+    "message": "Системный без засечек"
+  },
+  "newtab_quote_font_size": {
+    "message": "Размер шрифта"
+  },
+  "newtab_quote_font_size_label": {
+    "message": "Размер шрифта цитаты (px)"
+  },
+  "newtab_quote_provider": {
+    "message": "Цитаты от Hitokoto"
+  },
+  "recent_history_menu": {
+    "message": "История изменений"
+  },
+  "recent_history_title": {
+    "message": "История изменений"
+  },
+  "recent_history_description": {
+    "message": "Сделайте любую сохраненную версию текущей — история при этом не удаляется."
+  },
+  "recent_history_current": {
+    "message": "Текущая версия"
+  },
+  "recent_history_earlier": {
+    "message": "Более ранняя версия"
+  },
+  "recent_history_restore": {
+    "message": "Сделать текущей"
+  },
+  "recent_history_restoring": {
+    "message": "Восстановление…"
+  },
+  "recent_history_restore_success": {
+    "message": "Выбранная версия восстановлена"
+  },
+  "recent_history_restore_failed": {
+    "message": "Не удалось восстановить эту версию"
+  },
+  "recent_update_close": {
+    "message": "Закрыть"
+  },
+  "settings_progress_tracking_title": {
+    "message": "Обновлять прогресс закрепленных сериалов и книг"
+  },
+  "settings_progress_tracking_desc": {
+    "message": "Закрепите сериал или книгу, и карточка будет переходить на следующую серию или главу, чтобы открываться там, где вы остановились"
+  },
+  "settings_newtab_open_in_new_tab_title": {
+    "message": "Открывать в новой вкладке"
+  },
+  "settings_newtab_open_in_new_tab_desc": {
+    "message": "Включенные элементы открываются в новой вкладке с переходом на нее, отключенные — в текущей вкладке. Нажатие с Command/Ctrl или средней кнопкой мыши всегда открывает в фоне."
+  },
+  "settings_newtab_open_in_new_tab_search": {
+    "message": "Результаты поиска"
+  },
+  "settings_newtab_open_in_new_tab_shortcuts": {
+    "message": "Ярлыки"
+  },
+  "settings_newtab_open_in_new_tab_bookmarks": {
+    "message": "Закладки"
+  },
+  "settings_newtab_open_in_new_tab_recent_sites": {
+    "message": "Карточки сайтов"
+  },
+  "recent_progress_track": {
+    "message": "Отслеживать прогресс"
+  },
+  "recent_progress_stop": {
+    "message": "Не отслеживать прогресс"
+  },
+  "recent_progress_track_toast": {
+    "message": "Отслеживание включено. Карточка обновится, когда вы перейдете к следующей серии или главе."
+  },
+  "recent_progress_stop_toast": {
+    "message": "Отслеживание прогресса остановлено"
+  },
+  "recent_progress_tracking": {
+    "message": "Прогресс отслеживается"
+  },
+  "recent_progress_auto_toast": {
+    "message": "Закреплено, прогресс отслеживается. Чтобы остановить, нажмите значок радара на карточке."
+  },
+  "settings_general_newtab_section_title": {
+    "message": "Настройки новой вкладки"
+  },
+  "recent_progress_track_tooltip": {
+    "message": "Отслеживать прогресс\n────────\nУдобно для сериалов и книг, выходящих частями.\nЕсли включено, при переходе к следующей серии или главе карточка обновится."
+  },
+  "recent_progress_stop_tooltip": {
+    "message": "Прогресс отслеживается\n────────\nПри переходе к следующей серии или главе карточка обновится.\nНажмите, чтобы остановить отслеживание."
+  },
+  "newtab_shortcuts_group_new": {
+    "message": "Новая группа"
+  },
+  "newtab_shortcuts_group_default_title": {
+    "message": "Ярлыки"
+  },
+  "newtab_shortcuts_group_title_placeholder": {
+    "message": "Добавьте название"
+  },
+  "newtab_shortcuts_group_actions": {
+    "message": "Действия с группой «{group}»"
+  },
+  "newtab_shortcuts_group_untitled_name": {
+    "message": "Группа без названия"
+  },
+  "newtab_shortcuts_group_rename": {
+    "message": "Переименовать"
+  },
+  "newtab_shortcuts_group_add_site": {
+    "message": "Добавить сайт"
+  },
+  "newtab_shortcuts_group_move_up": {
+    "message": "Переместить вверх"
+  },
+  "newtab_shortcuts_group_move_down": {
+    "message": "Переместить вниз"
+  },
+  "newtab_shortcuts_group_delete": {
+    "message": "Удалить группу"
+  },
+  "newtab_shortcuts_group_delete_with_sites": {
+    "message": "Удалить группу и сайты"
+  },
+  "newtab_shortcuts_group_delete_confirm_title": {
+    "message": "Удалить группу «{group}» и ее сайты?"
+  },
+  "newtab_shortcuts_group_delete_confirm_description": {
+    "message": "Будут удалены группа и сайты в ней ({count})."
+  },
+  "newtab_shortcuts_group_delete_confirm_button": {
+    "message": "Удалить"
+  },
+  "newtab_shortcuts_group_deleted_undo": {
+    "message": "Группа удалена · {shortcut} — отменить"
+  },
+  "newtab_shortcuts_group_delete_undone": {
+    "message": "Группа восстановлена · {shortcut} — повторить"
+  },
+  "newtab_shortcuts_group_delete_redone": {
+    "message": "Группа удалена · {shortcut} — отменить"
+  },
+  "newtab_shortcuts_group_limit_reached": {
+    "message": "Можно создать не более {count} групп."
+  },
+  "options_shortcut_sync_all": {
+    "message": "Ярлыки: все ({count}) синхронизируются через браузер."
+  },
+  "options_shortcut_sync_split_webdav": {
+    "message": "Ярлыки: {synced} синхронизируются через браузер, остальные ({local}) — через WebDAV."
+  },
+  "options_shortcut_sync_split_local": {
+    "message": "Ярлыки: {synced} синхронизируются через браузер; {local} не помещаются в хранилище синхронизации и остаются на этом устройстве. Включите WebDAV, чтобы синхронизировать и их."
+  },
+  "options_shortcut_sync_failed_local": {
+    "message": "Не удалось сохранить ярлыки в синхронизации браузера; пока все ({count}) остаются на этом устройстве."
+  },
+  "options_shortcut_sync_failed_webdav": {
+    "message": "Не удалось сохранить ярлыки в синхронизации браузера; пока все ({count}) синхронизируются через WebDAV."
+  },
+  "options_shortcut_sync_none_local": {
+    "message": "Ярлыки: хранилище синхронизации браузера заполнено, поэтому все ({count}) остаются на этом устройстве. Включите WebDAV, чтобы синхронизировать их."
+  },
+  "options_shortcut_sync_none_webdav": {
+    "message": "Ярлыки: хранилище синхронизации браузера заполнено, поэтому все ({count}) синхронизируются через WebDAV."
+  },
+  "newtab_shortcuts_add_site": {
+    "message": "Добавить сайт"
+  },
+  "newtab_shortcuts_group_dialog_rename_title": {
+    "message": "Переименовать группу"
+  },
+  "newtab_shortcuts_group_name_placeholder": {
+    "message": "Необязательно; группа без названия просто начинает новый ряд"
+  },
+  "newtab_style_section_title": {
+    "message": "Стиль"
+  },
+  "settings_newtab_glass_style_title": {
+    "message": "Материал"
+  },
+  "settings_newtab_glass_style_desc": {
+    "message": "Изменить материал элементов интерфейса новой вкладки."
+  },
+  "settings_newtab_glass_style_none": {
+    "message": "Обычный"
+  },
+  "settings_newtab_glass_style_frosted": {
+    "message": "Акрил"
+  },
+  "settings_newtab_glass_style_liquid": {
+    "message": "Жидкое стекло"
+  },
+  "settings_newtab_glass_theme_title": {
+    "message": "Тема материала"
+  },
+  "settings_newtab_glass_theme_follow": {
+    "message": "Авто"
+  },
+  "settings_newtab_glass_theme_light": {
+    "message": "Светлая"
+  },
+  "settings_newtab_glass_theme_dark": {
+    "message": "Темная"
+  },
+  "settings_search_source_group_order_title": {
+    "message": "Порядок в панели поиска"
+  },
+  "settings_search_source_group_order_desc": {
+    "message": "Перетаскивайте теги, чтобы задать порядок групп в панели поиска. Порядок внутри групп меняйте, перетаскивая строки в списках ниже. Ctrl/⌘ + Z — отменить, Shift + Ctrl/⌘ + Z — повторить."
+  },
+  "settings_search_source_order_keyboard_hint": {
+    "message": "Для перемещения нажмите Alt и стрелку влево или вправо"
+  },
+  "settings_search_source_order_failed": {
+    "message": "Не удалось сохранить новый порядок. Повторите попытку."
+  },
+  "settings_search_source_move_up": {
+    "message": "Переместить вверх"
+  },
+  "settings_search_source_move_down": {
+    "message": "Переместить вниз"
+  },
+  "settings_search_result_sources_order_desc": {
+    "message": "Перетаскивайте, чтобы задать их порядок в группе «Данные браузера» панели поиска. Ctrl/⌘ + Z — отменить, Shift + Ctrl/⌘ + Z — повторить."
+  },
+  "settings_search_source_order_undone": {
+    "message": "Изменение порядка отменено"
+  },
+  "settings_search_source_order_redone": {
+    "message": "Изменение порядка повторено"
+  },
+  "newtab_quote_source": {
+    "message": "Источник"
+  },
+  "newtab_quote_custom": {
+    "message": "Свои"
+  },
+  "newtab_quote_collection_save_error": {
+    "message": "Не удалось сохранить на этом устройстве. Прежняя коллекция сохранена."
+  },
+  "newtab_quote_hitokoto": {
+    "message": "Hitokoto"
+  },
+  "newtab_quote_provider_custom": {
+    "message": "Своя коллекция · на этом устройстве, синхронизируется через WebDAV"
+  },
+  "newtab_quote_importing": {
+    "message": "Импорт…"
+  },
+  "newtab_quote_import_hint": {
+    "message": "Каждый день показывается новая цитата; кнопка «Другая» меняет ее в любой момент. TXT / MD: одна непустая строка текста — одна цитата. До 1 MB, 1000 цитат, 500 символов в каждой; хранится на этом устройстве, не в синхронизации браузера; если включен WebDAV, синхронизируется через него."
+  },
+  "newtab_quote_count": {
+    "message": "Цитаты: {count}"
+  },
+  "newtab_quote_import_error": {
+    "message": "Не удалось импортировать: файл не соответствует требованиям к формату или размеру. Прежняя коллекция сохранена."
+  },
+  "newtab_quote_library": {
+    "message": "Цитаты"
+  },
+  "newtab_quote_import": {
+    "message": "Импорт файла"
+  },
+  "newtab_quote_replace": {
+    "message": "Заменить файл"
+  },
+  "newtab_quote_shuffle_button": {
+    "message": "Другая"
+  },
+  "newtab_quote_font_size_reset": {
+    "message": "Сбросить размер шрифта цитаты"
+  },
+  "popup_actions_label": {
+    "message": "Действия со страницей"
+  },
+  "popup_action_shortcut": {
+    "message": "Добавить ярлык"
+  },
+  "popup_action_copy": {
+    "message": "Копировать ссылку"
+  },
+  "popup_copy_failed": {
+    "message": "Не удалось скопировать ссылку. Повторите попытку."
+  },
+  "popup_theme_label": {
+    "message": "Тема"
+  },
+  "popup_link_settings": {
+    "message": "Настройки"
+  },
+  "popup_link_shortcuts": {
+    "message": "Быстрые клавиши"
+  },
+  "popup_link_feedback": {
+    "message": "Отзыв"
+  },
+  "popup_sync_error": {
+    "message": "Ошибка синхронизации WebDAV"
+  },
+  "popup_sync_attention": {
+    "message": "Синхронизация WebDAV требует внимания"
+  },
+  "popup_sync_busy": {
+    "message": "Идет синхронизация WebDAV"
+  },
+  "popup_sync_waiting": {
+    "message": "WebDAV ожидает повтора"
+  },
+  "popup_release_notes": {
+    "message": "Что нового"
+  },
+  "popup_section_command_bar": {
+    "message": "Панель команд"
+  },
+  "popup_overlay_page_theme": {
+    "message": "Цвета как на странице"
+  },
+  "popup_overlay_open_tabs": {
+    "message": "Показывать открытые вкладки"
+  },
+  "popup_action_shortcut_tooltip": {
+    "message": "Добавить в ярлыки новой вкладки"
+  },
+  "popup_action_clip_tooltip": {
+    "message": "Вырезать часть страницы в плавающее окно"
+  },
+  "popup_settings_label": {
+    "message": "Быстрые настройки"
+  },
+  "popup_sync_ready": {
+    "message": "WebDAV синхронизирован"
+  },
+  "popup_open_command_bar": {
+    "message": "Открыть панель команд"
+  },
+  "popup_action_pip": {
+    "message": "Картинка в картинке"
+  },
+  "popup_action_pip_exit": {
+    "message": "Выйти из режима «Картинка в картинке»"
+  },
+  "popup_action_pip_tooltip": {
+    "message": "Показать видео с этой страницы в маленьком окне"
+  },
+  "popup_action_pip_menu": {
+    "message": "Автоматическая картинка в картинке"
+  },
+  "popup_pip_failed": {
+    "message": "Это видео нельзя воспроизвести в режиме «Картинка в картинке»."
+  },
+  "popup_auto_pip_hint": {
+    "message": "Видео открепляется при переключении вкладок"
+  },
+  "popup_action_unavailable": {
+    "message": "Недоступно на этой странице"
+  },
+  "popup_action_pin_recent": {
+    "message": "Закрепить в недавних"
+  },
+  "popup_action_unpin_recent": {
+    "message": "Открепить из недавних"
+  },
+  "popup_action_pin_recent_tooltip": {
+    "message": "Закрепить в недавних на новой вкладке"
+  },
+  "popup_action_unpin_recent_tooltip": {
+    "message": "Открепить из недавних на новой вкладке"
+  },
+  "popup_recent_pinned": {
+    "message": "Закреплено в недавних на новой вкладке"
+  },
+  "popup_recent_unpinned": {
+    "message": "Откреплено из недавних"
+  }
+}

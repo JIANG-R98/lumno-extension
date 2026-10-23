@@ -1,0 +1,3659 @@
+{
+  "ext_name": {
+    "message": "Lumno ｜ Bar Perintah & Tab Baharu"
+  },
+  "ext_description": {
+    "message": "Bar perintah pelayar yang ringan dan carian tab baharu."
+  },
+  "settings_tab_general": {
+    "message": "Umum"
+  },
+  "settings_tab_appearance": {
+    "message": "Penampilan"
+  },
+  "settings_appearance_global_section_title": {
+    "message": "Global"
+  },
+  "settings_webpage_focus_overlay_section_title": {
+    "message": "Bar Perintah"
+  },
+  "newtab_theme_scope_label": {
+    "message": "Skop tema"
+  },
+  "newtab_theme_scope_global": {
+    "message": "Global"
+  },
+  "newtab_theme_scope_home": {
+    "message": "Tab Baharu"
+  },
+  "newtab_theme_scope_select_label": {
+    "message": "Gunakan perubahan tema pada {scope}"
+  },
+  "newtab_theme_scope_help_label": {
+    "message": "Maklumat skop tema"
+  },
+  "newtab_theme_scope_help": {
+    "message": "Global: tema lalai untuk semua halaman.\nTab Baharu: hanya untuk halaman tab baharu. Pilih Ikut \"Global\" untuk memastikannya selari."
+  },
+  "newtab_theme_follow_global": {
+    "message": "Ikut \"Global\""
+  },
+  "newtab_search_section_title": {
+    "message": "Kotak carian"
+  },
+  "newtab_search_width_title": {
+    "message": "Lebar kotak carian"
+  },
+  "newtab_search_width_aria": {
+    "message": "Laraskan lebar kotak carian Tab Baharu"
+  },
+  "newtab_search_width_standard": {
+    "message": "Standard"
+  },
+  "newtab_search_width_wide": {
+    "message": "Lebar"
+  },
+  "newtab_search_width_max": {
+    "message": "Maks"
+  },
+  "newtab_appearance_settings_title": {
+    "message": "Tetapan penampilan"
+  },
+  "newtab_help_footer_prompt": {
+    "message": "Tidak pasti fungsi sesuatu pilihan?"
+  },
+  "newtab_help_footer_action": {
+    "message": "Lawati Pusat Bantuan"
+  },
+  "newtab_more_settings": {
+    "message": "Lagi tetapan"
+  },
+  "settings_tab_shortcuts": {
+    "message": "Sumber carian"
+  },
+  "settings_tab_blacklist": {
+    "message": "Senarai hitam"
+  },
+  "settings_tab_labs": {
+    "message": "Makmal"
+  },
+  "settings_selection_quick_actions_title": {
+    "message": "Tindakan pantas pilihan"
+  },
+  "settings_selection_quick_actions_desc": {
+    "message": "Tunjukkan tindakan AI apabila anda memilih teks"
+  },
+  "settings_selection_quick_actions_provider_title": {
+    "message": "Penyedia pilihan"
+  },
+  "settings_selection_quick_actions_group_title": {
+    "message": "Cari di latar belakang"
+  },
+  "settings_selection_quick_actions_group_desc": {
+    "message": "Kumpulkan semua halaman AI dalam kumpulan tab “Carian AI”"
+  },
+  "selection_quick_actions_group_name": {
+    "message": "Carian AI"
+  },
+  "selection_quick_action_ask": {
+    "message": "Jawab"
+  },
+  "selection_quick_action_translate": {
+    "message": "Terjemah"
+  },
+  "selection_quick_action_explain": {
+    "message": "Terangkan"
+  },
+  "selection_quick_action_summarize": {
+    "message": "Ringkaskan"
+  },
+  "selection_quick_action_search": {
+    "message": "Kaji"
+  },
+  "selection_quick_action_calculate": {
+    "message": "Kira"
+  },
+  "selection_quick_action_open_menu": {
+    "message": "Gunakan Lumno dengan teks yang dipilih"
+  },
+  "selection_quick_action_more": {
+    "message": "Lagi tindakan"
+  },
+  "selection_quick_action_sending": {
+    "message": "Membuka di latar belakang…"
+  },
+  "selection_quick_action_failed": {
+    "message": "Tidak dapat dihantar. Cuba lagi."
+  },
+  "selection_debug_decision_title": {
+    "message": "Keputusan pilihan"
+  },
+  "selection_debug_status_show": {
+    "message": "Tunjukkan"
+  },
+  "selection_debug_status_hide": {
+    "message": "Jangan tunjukkan"
+  },
+  "selection_debug_sort_title": {
+    "message": "Susunan menu"
+  },
+  "selection_debug_item_count": {
+    "message": "{count} item"
+  },
+  "selection_debug_reason_calculate": {
+    "message": "Ungkapan, mata wang atau penukaran unit dikesan"
+  },
+  "selection_debug_reason_question": {
+    "message": "Soalan yang jelas dikesan"
+  },
+  "selection_debug_reason_prose": {
+    "message": "Prosa berterusan yang cukup kaya dikesan"
+  },
+  "selection_debug_reason_search": {
+    "message": "Niat mencari berita, harga, laman rasmi atau versi dikesan"
+  },
+  "selection_debug_reason_translate": {
+    "message": "Teks yang dipilih berbeza daripada bahasa antara muka Lumno"
+  },
+  "selection_debug_reason_error": {
+    "message": "Ralat atau pengecualian dikesan"
+  },
+  "selection_debug_reason_code": {
+    "message": "Sintaks kod atau konteks kod dikesan"
+  },
+  "selection_debug_reason_term": {
+    "message": "Istilah atau frasa pendek yang bermakna dikesan"
+  },
+  "selection_debug_reason_explain_score": {
+    "message": "Terangkan mendapat skor tertinggi"
+  },
+  "selection_debug_reason_top_score": {
+    "message": "Tindakan ini mendapat skor padanan tertinggi"
+  },
+  "selection_debug_rejection_disabled": {
+    "message": "Tindakan pantas pilihan dilumpuhkan"
+  },
+  "selection_debug_rejection_sensitive": {
+    "message": "Medan kata laluan atau pembayaran yang sensitif; kandungan tidak dibaca"
+  },
+  "selection_debug_rejection_no_selection": {
+    "message": "Tiada pilihan teks yang sah dikesan"
+  },
+  "selection_debug_rejection_too_short": {
+    "message": "Kurang daripada 2 aksara"
+  },
+  "selection_debug_rejection_too_long": {
+    "message": "Lebih daripada 2400 aksara"
+  },
+  "selection_debug_rejection_url": {
+    "message": "URL lengkap"
+  },
+  "selection_debug_rejection_email": {
+    "message": "Alamat e-mel"
+  },
+  "selection_debug_rejection_generic_ui": {
+    "message": "Teks antara muka umum seperti “Ketahui lebih lanjut / Simpan / Seterusnya”"
+  },
+  "selection_debug_rejection_plain_number": {
+    "message": "Nombor biasa tanpa pengiraan atau penukaran"
+  },
+  "selection_debug_rejection_symbols": {
+    "message": "Nisbah simbol terlalu tinggi"
+  },
+  "selection_debug_rejection_no_intent": {
+    "message": "Tidak sepadan dengan tugas yang jelas, istilah bermakna atau prosa yang cukup panjang"
+  },
+  "selection_debug_primary_meta": {
+    "message": "Utama: {action} · Skor {score} · Keyakinan {confidence}"
+  },
+  "selection_debug_confidence_high": {
+    "message": "Tinggi"
+  },
+  "selection_debug_confidence_medium": {
+    "message": "Sederhana"
+  },
+  "selection_debug_confidence_low": {
+    "message": "Rendah"
+  },
+  "selection_debug_sort_primary_cause": {
+    "message": "{reason}, skor {score}"
+  },
+  "selection_debug_sort_fallback_cause": {
+    "message": "Sandaran umum, diisi mengikut susunan tetap dan tanpa pendua"
+  },
+  "selection_debug_sort_footer": {
+    "message": "Item pertama menggunakan skor niat tertinggi; item selebihnya mengikut “Terangkan → Kaji → Terjemah.”"
+  },
+  "settings_global_section_title": {
+    "message": "Tetapan Global"
+  },
+  "settings_feedback_support_section_title": {
+    "message": "Maklum Balas & Sokongan"
+  },
+  "settings_feedback_support_wechat_action": {
+    "message": "Sertai kumpulan WeChat"
+  },
+  "settings_help_center_title": {
+    "message": "Pusat Bantuan"
+  },
+  "settings_help_center_desc": {
+    "message": "Tidak pasti cara sesuatu ciri berfungsi? Setiap ciri diterangkan di sini."
+  },
+  "settings_help_center_action": {
+    "message": "Buka"
+  },
+  "settings_help_center_ask_action": {
+    "message": "Tanya dari kotak carian"
+  },
+  "settings_help_center_ask_caption": {
+    "message": "Dalam Tab Baharu atau bar perintah, taip lm, tekan Tab, kemudian tulis soalan anda."
+  },
+  "settings_help_center_ask_demo_query": {
+    "message": "cara menukar pintasan"
+  },
+  "settings_help_center_ask_demo_result_1_title": {
+    "message": "Pintasan papan kekunci"
+  },
+  "settings_help_center_ask_demo_result_1_detail": {
+    "message": "Tukar pintasan"
+  },
+  "settings_help_center_ask_demo_result_2_title": {
+    "message": "Pintasan dan penanda halaman"
+  },
+  "settings_help_center_ask_demo_result_2_detail": {
+    "message": "Tukar ikon pintasan"
+  },
+  "settings_feedback_support_review_action": {
+    "message": "Nilai Lumno"
+  },
+  "settings_feedback_support_github_issue_action": {
+    "message": "Cipta Isu"
+  },
+  "settings_feedback_support_contact_author_action": {
+    "message": "Hubungi pembangun"
+  },
+  "settings_onboarding_tutorial_action": {
+    "message": "Lawatan pengenalan"
+  },
+  "settings_language_title": {
+    "message": "Bahasa"
+  },
+  "settings_language_desc": {
+    "message": "Pilih bahasa antara muka"
+  },
+  "settings_language_machine_note": {
+    "message": "Diterjemahkan oleh AI. Jika ada yang kurang tepat, sila hantar maklum balas."
+  },
+  "settings_language_search_placeholder": {
+    "message": "Cari bahasa"
+  },
+  "settings_language_no_results": {
+    "message": "Tiada bahasa yang sepadan"
+  },
+  "settings_version_label": {
+    "message": "Versi"
+  },
+  "settings_version_tooltip": {
+    "message": "Lihat log perubahan"
+  },
+  "language_system": {
+    "message": "Ikut bahasa pelayar"
+  },
+  "settings_recent_title": {
+    "message": "Kandungan Bawah Tab Baharu"
+  },
+  "settings_newtab_section_title": {
+    "message": "Tab Baharu"
+  },
+  "settings_search_results_section_title": {
+    "message": "Tetapan Hasil Carian"
+  },
+  "settings_search_result_priority_title": {
+    "message": "Keutamaan Hasil Carian Pertama"
+  },
+  "settings_search_result_tab_position_title": {
+    "message": "Kedudukan tab hasil carian"
+  },
+  "search_result_tab_position_end": {
+    "message": "Hujung jalur tab (bawah)"
+  },
+  "search_result_tab_position_after_current": {
+    "message": "Kanan tab semasa (bawah)"
+  },
+  "search_result_tab_position_before_current": {
+    "message": "Kiri tab semasa (atas)"
+  },
+  "settings_search_fuzzy_pinyin_title": {
+    "message": "Pinyin kabur"
+  },
+  "settings_search_fuzzy_pinyin_desc": {
+    "message": "Apabila dihidupkan, carian pinyin dan huruf awal menganggap z dan zh, c dan ch, s dan sh, n dan l, an dan ang, en dan eng, serta in dan ing sebagai sama"
+  },
+  "settings_search_result_sources_title": {
+    "message": "Jenis Hasil yang Dipaparkan"
+  },
+  "settings_search_result_display_limit_title": {
+    "message": "Hasil Maksimum Dipaparkan"
+  },
+  "settings_overlay_open_tabs_default_visible_title": {
+    "message": "Tunjukkan semua tab yang terbuka secara lalai apabila Lumno dibuka pada halaman web"
+  },
+  "settings_favicon_enhanced_fetch_title": {
+    "message": "Pengambilan Ikon dan Warna Tema Dipertingkat"
+  },
+  "settings_favicon_enhanced_fetch_desc": {
+    "message": "Jika anda melihat gesaan akses rangkaian setempat, matikan tetapan ini. Lumno akan berhenti memuatkan imej laman web secara langsung tetapi masih menggunakan ikon cache pelayar dan perkhidmatan ikon pihak ketiga."
+  },
+  "favicon_blacklist_section_desc": {
+    "message": "Kecualikan mengikut laman web"
+  },
+  "favicon_blacklist_add": {
+    "message": "Tambah peraturan pengecualian"
+  },
+  "favicon_blacklist_removed_toast": {
+    "message": "Dialih keluar daripada pengecualian ikon dan tema"
+  },
+  "favicon_blacklist_clear": {
+    "message": "Kosongkan peraturan pengecualian"
+  },
+  "search_result_priority_autocomplete": {
+    "message": "Autolengkap Dahulu"
+  },
+  "search_result_priority_search": {
+    "message": "Carian Dahulu"
+  },
+  "settings_recent_desc": {
+    "message": "Tunjukkan Tapak Terbaharu / Paling Kerap Dilawati"
+  },
+  "settings_recent_sites_title": {
+    "message": "Kad Tapak"
+  },
+  "newtab_recent_rows_title": {
+    "message": "Baris kad tapak"
+  },
+  "settings_newtab_width_title": {
+    "message": "Lebar Kandungan Halaman Tab Baharu"
+  },
+  "settings_bookmarks_title": {
+    "message": "Baris penanda halaman"
+  },
+  "settings_bookmark_folder_icons_visible_title": {
+    "message": "Tunjukkan Ikon dalam Folder Penanda Halaman"
+  },
+  "settings_document_pip_title": {
+    "message": "Klip Web"
+  },
+  "settings_document_pip_desc": {
+    "message": "Klip sebahagian halaman ke dalam paparan terapung untuk rujukan dan perbandingan sebelah-menyebelah"
+  },
+  "settings_document_pip_unsupported_tooltip": {
+    "message": "Klip Web bergantung pada Document Picture-in-Picture, yang belum disokong oleh Firefox."
+  },
+  "document_pip_command_title": {
+    "message": "Mulakan Klip Web"
+  },
+  "document_pip_command_action": {
+    "message": "Mulakan klip"
+  },
+  "settings_update_notice_title": {
+    "message": "Gesaan Kemas Kini"
+  },
+  "settings_update_notice_desc": {
+    "message": "Tunjukkan apa yang baharu selepas Lumno dikemas kini ke versi baharu"
+  },
+  "settings_motion_effects_title": {
+    "message": "Kesan gerakan"
+  },
+  "settings_motion_effects_desc": {
+    "message": "Matikan tetapan ini jika prestasi tersekat-sekat atau anda mahukan pembukaan yang lebih pantas"
+  },
+  "settings_simple_mode_title": {
+    "message": "Mod minimum"
+  },
+  "settings_simple_mode_desc": {
+    "message": "Buang lebih banyak elemen hiasan untuk kotak carian yang lebih kemas"
+  },
+  "settings_auto_pip_title": {
+    "message": "Gambar dalam Gambar Automatik"
+  },
+  "settings_auto_pip_desc": {
+    "message": "Apabila anda bertukar tab semasa video dimainkan, video itu terus dimainkan dalam tetingkap terapung"
+  },
+  "settings_auto_pip_unsupported_tooltip": {
+    "message": "Firefox tidak membenarkan sambungan memasukkan video web ke dalam Gambar dalam Gambar secara automatik, jadi ciri ini tidak tersedia."
+  },
+  "settings_pinned_tab_recovery_title": {
+    "message": "Pulihkan Tab yang Disemat Selepas Mula Semula"
+  },
+  "settings_pinned_tab_recovery_desc": {
+    "message": "Simpan tab web disemat yang boleh dipulihkan dan pulihkan yang hilang selepas pelayar dimulakan semula"
+  },
+  "settings_number_shortcut_instant_title": {
+    "message": "Tekan Command sekali untuk menunjukkan lompatan nombor"
+  },
+  "settings_number_shortcut_instant_desc": {
+    "message": "Apabila didayakan, menekan Command/Ctrl sekali dalam bar perintah atau cadangan carian akan terus menunjukkan lencana lompatan nombor; \"Buka dalam tab latar belakang\" tidak lagi menggunakan Command (klik tengah masih membuka di latar belakang)"
+  },
+  "settings_macos_ctrl_suggestion_navigation_title": {
+    "message": "Navigasi papan kekunci Mac"
+  },
+  "settings_macos_ctrl_suggestion_navigation_tooltip": {
+    "message": "Berfungsi dalam Tab Baharu dan bar perintah pada macOS. Terima kasih kepada @wanghanzhen atas sumbangannya."
+  },
+  "settings_macos_ctrl_suggestion_navigation_desc": {
+    "message": "Gunakan Ctrl+N / Ctrl+P untuk memilih hasil seterusnya / sebelumnya"
+  },
+  "document_pip_picker_hint": {
+    "message": "Gerakkan tetikus di atas halaman untuk memilih elemen. Klik untuk membuka PiP, tatal untuk menukar induk, Esc untuk membatalkan."
+  },
+  "document_pip_picker_started": {
+    "message": "Klik kandungan untuk diapungkan, tatal untuk menukar skop atau tekan Esc untuk membatalkan."
+  },
+  "document_pip_picker_cancelled": {
+    "message": "Pemilihan kandungan ditutup"
+  },
+  "document_pip_picker_closed": {
+    "message": "Tetingkap kandungan terapung ditutup"
+  },
+  "document_pip_picker_unsupported": {
+    "message": "Halaman ini tidak menyokong Document Picture-in-Picture."
+  },
+  "document_pip_picker_conflict_video_pip": {
+    "message": "Gambar dalam Gambar video sudah aktif. Tutup video itu dahulu sebelum memulakan klip kandungan."
+  },
+  "document_pip_picker_invalid": {
+    "message": "Kawasan ini belum boleh diapungkan. Cuba kawasan kandungan yang lebih besar."
+  },
+  "document_pip_picker_open_failed": {
+    "message": "Tidak dapat membuka tetingkap kandungan terapung. Cuba kawasan lain."
+  },
+  "document_pip_picker_button_reselect": {
+    "message": "Pilih semula"
+  },
+  "document_pip_picker_button_return": {
+    "message": "Kembali"
+  },
+  "document_pip_picker_button_close": {
+    "message": "Tutup"
+  },
+  "settings_newtab_scope_desc": {
+    "message": "Tab Baharu"
+  },
+  "settings_overlay_tab_priority_title": {
+    "message": "Tukar Pantas ke Tab Terbuka"
+  },
+  "settings_overlay_tab_priority_desc": {
+    "message": "Apabila input sepadan dengan tab yang terbuka, Enter mengikut tindakan tab bagi cadangan pertama"
+  },
+  "overlay_tab_priority_switch_first": {
+    "message": "Tekan Enter untuk beralih ke tab terbuka"
+  },
+  "overlay_tab_priority_newtab_first": {
+    "message": "Tekan Enter untuk membuka dalam tab baharu"
+  },
+  "settings_shortcuts_title": {
+    "message": "Buka bar perintah"
+  },
+  "settings_shortcuts_browser_desc_prefix": {
+    "message": "Buka "
+  },
+  "settings_shortcuts_browser_desc_path_extensions": {
+    "message": "Sambungan"
+  },
+  "settings_shortcuts_browser_desc_path_extensions__firefox": {
+    "message": "Alat tambah dan tema"
+  },
+  "settings_shortcuts_browser_desc_path_shortcuts": {
+    "message": "Pintasan papan kekunci"
+  },
+  "settings_shortcuts_browser_desc_path_shortcuts__firefox": {
+    "message": "Urus Pintasan Sambungan"
+  },
+  "settings_shortcuts_browser_desc_suffix": {
+    "message": " untuk menukar pintasan"
+  },
+  "settings_shortcuts_dia_tag": {
+    "message": "Guna dalam Dia"
+  },
+  "settings_shortcuts_dia_tooltip": {
+    "message": "Dalam Dia, disebabkan had pelayar, ciri Tab Baharu Lumno tidak tersedia buat sementara waktu, tetapi bar perintah masih berfungsi seperti biasa.\n\nJika pintasan tidak berfungsi dalam Dia, klik butang di sebelah kanan bawah untuk membuka halaman tetapan pintasan pelayar, kemudian tukar \"Buka bar perintah\" daripada In Dia kepada Global."
+  },
+  "settings_shortcuts_section_title": {
+    "message": "Tetapan Pintasan"
+  },
+  "settings_shortcuts_desc": {
+    "message": "Digunakan untuk membuka bar perintah Lumno"
+  },
+  "overlay_close_other_tabs_tooltip": {
+    "message": "Tutup tab lain"
+  },
+  "overlay_close_other_tabs_confirm": {
+    "message": "Tutup tab lain dalam tetingkap ini? Tab yang disemat dan dikumpulkan akan kekal terbuka."
+  },
+  "overlay_close_other_tabs_confirm_button": {
+    "message": "Tutup"
+  },
+  "settings_shortcuts_status": {
+    "message": "Semasa: {shortcut}"
+  },
+  "settings_shortcuts_unset": {
+    "message": "Belum ditetapkan"
+  },
+  "settings_shortcuts_action": {
+    "message": "Buka tetapan pintasan"
+  },
+  "settings_shortcuts_browser_tooltip": {
+    "message": "Dalam pelayar Chromium, anda perlu membuka halaman pintasan sambungan untuk menetapkan atau menukar pintasan bar perintah."
+  },
+  "settings_shortcuts_browser_tooltip__firefox": {
+    "message": "Dalam Firefox, tetapkan atau tukar pintasan bar perintah di bawah Urus Pintasan Sambungan dalam Pengurus Alat Tambah."
+  },
+  "settings_shortcuts_save": {
+    "message": "Simpan pintasan"
+  },
+  "settings_shortcuts_reset": {
+    "message": "Tetapkan semula lalai"
+  },
+  "settings_shortcuts_record_placeholder": {
+    "message": "Tekan pintasan"
+  },
+  "settings_shortcuts_empty_state": {
+    "message": "Tiada"
+  },
+  "settings_shortcuts_invalid": {
+    "message": "Pintasan tidak sah. Gunakan gabungan kekunci seperti Ctrl+K."
+  },
+  "settings_restricted_title": {
+    "message": "Gelagat halaman terhad"
+  },
+  "settings_restricted_tooltip": {
+    "message": "Halaman terhad (contohnya chrome://) tidak dapat membuka bar perintah. Menekan pintasan akan mengikut peraturan yang ditetapkan di sini."
+  },
+  "settings_restricted_tooltip__firefox": {
+    "message": "Halaman terhad (contohnya halaman about: dan laman Alat Tambah Firefox) tidak dapat membuka bar perintah. Menekan pintasan akan mengikut peraturan yang ditetapkan di sini."
+  },
+  "restricted_action_default": {
+    "message": "Pergi ke tab baharu Lumno"
+  },
+  "restricted_action_none": {
+    "message": "Ikut tetapan pelayar"
+  },
+  "newtab_file_access_notice_title": {
+    "message": "Untuk menggunakan Lumno pada halaman PDF atau HTML setempat, dayakan akses URL fail"
+  },
+  "newtab_file_access_notice_body": {
+    "message": "Lumno belum mempunyai akses URL fail. Buka halaman butiran sambungan, dayakan Benarkan akses kepada URL fail, kemudian kembali ke halaman itu dan tekan pintasan sekali lagi."
+  },
+  "newtab_file_access_notice_open_cta": {
+    "message": "Dayakan akses"
+  },
+  "newtab_file_access_notice_dismiss": {
+    "message": "Mungkin nanti"
+  },
+  "newtab_file_access_notice_close": {
+    "message": "Tutup notis"
+  },
+  "recent_count_4": {
+    "message": "Tunjukkan 1 baris"
+  },
+  "recent_count_8": {
+    "message": "Tunjukkan 2 baris"
+  },
+  "recent_count_off": {
+    "message": "Sembunyikan"
+  },
+  "bookmark_count_off": {
+    "message": "Sembunyikan"
+  },
+  "bookmark_count_4": {
+    "message": "Tunjukkan 1 baris"
+  },
+  "bookmark_count_8": {
+    "message": "Tunjukkan 8"
+  },
+  "bookmark_count_16": {
+    "message": "Tunjukkan 16"
+  },
+  "bookmark_count_32": {
+    "message": "Tunjukkan 32"
+  },
+  "settings_bookmark_columns_title": {
+    "message": "Penanda halaman setiap baris"
+  },
+  "settings_bookmark_columns_desc": {
+    "message": "Menetapkan jumlah maksimum setiap baris; skrin yang lebih sempit menyesuaikan secara automatik"
+  },
+  "settings_bookmark_adaptive_count_tooltip": {
+    "message": "Ini ialah jumlah maksimum apabila lebar mencukupi. Jumlah sebenar yang dipaparkan menyesuaikan dengan ruang yang ada."
+  },
+  "bookmark_columns_4": {
+    "message": "4 sebaris"
+  },
+  "bookmark_columns_6": {
+    "message": "6 sebaris"
+  },
+  "bookmark_columns_8": {
+    "message": "8 sebaris"
+  },
+  "newtab_width_standard": {
+    "message": "Standard"
+  },
+  "newtab_width_wide": {
+    "message": "Lebar (Disyorkan)"
+  },
+  "settings_overlay_size_title": {
+    "message": "Saiz"
+  },
+  "overlay_size_compact": {
+    "message": "Padat"
+  },
+  "overlay_size_standard": {
+    "message": "Standard"
+  },
+  "overlay_size_large": {
+    "message": "Besar"
+  },
+  "settings_overlay_enter_animation_title": {
+    "message": "Animasi pembukaan"
+  },
+  "overlay_enter_animation_elastic": {
+    "message": "Pegas"
+  },
+  "overlay_enter_animation_fade": {
+    "message": "Pudar"
+  },
+  "settings_overlay_font_title": {
+    "message": "Fon setempat"
+  },
+  "settings_overlay_font_desc": {
+    "message": "Membaca fon yang dipasang pada komputer ini. Hanya untuk peranti ini dan tidak disegerakkan."
+  },
+  "settings_overlay_font_missing": {
+    "message": "“{font}” tidak dipasang pada peranti ini, jadi lapisan menggunakan fon lalai"
+  },
+  "settings_overlay_font_missing_reset": {
+    "message": "Guna lalai"
+  },
+  "settings_overlay_font_fallback_missing": {
+    "message": "“{font}” tidak dipasang pada peranti ini, jadi fon sandaran dilangkau"
+  },
+  "settings_overlay_font_fallback_missing_reset": {
+    "message": "Kosongkan"
+  },
+  "settings_overlay_font_default": {
+    "message": "Lalai"
+  },
+  "settings_overlay_font_search_placeholder": {
+    "message": "Cari fon"
+  },
+  "settings_overlay_font_no_results": {
+    "message": "Tiada fon yang sepadan"
+  },
+  "settings_overlay_font_fallback_title": {
+    "message": "Fon sandaran setempat"
+  },
+  "settings_overlay_font_fallback_desc": {
+    "message": "Digunakan untuk aksara yang tiada dalam fon pertama, seperti aksara Cina dalam fon Inggeris"
+  },
+  "settings_overlay_font_fallback_none": {
+    "message": "Tiada"
+  },
+  "settings_overlay_font_unsupported_tooltip": {
+    "message": "Firefox tidak membenarkan sambungan menyenaraikan fon yang dipasang, jadi lapisan menggunakan fon lalainya di sini"
+  },
+  "settings_overlay_page_theme_adaptation_title": {
+    "message": "Sesuaikan warna tema dengan setiap halaman web"
+  },
+  "settings_overlay_page_theme_adaptation_tooltip": {
+    "message": "Hanya ditunjukkan apabila Mod tema ditetapkan kepada Ikut sistem. Apabila dimatikan, mod cerah/gelap tidak lagi menyesuaikan dengan warna tema halaman web."
+  },
+  "recent_mode_latest": {
+    "message": "Tunjukkan Terbaharu"
+  },
+  "recent_mode_most": {
+    "message": "Tunjukkan Paling Kerap Dilawati"
+  },
+  "settings_toggle_on": {
+    "message": "Hidup"
+  },
+  "settings_theme_title": {
+    "message": "Mod tema"
+  },
+  "settings_theme_desc": {
+    "message": "Ikut sistem atau pilih secara manual"
+  },
+  "settings_theme_system": {
+    "message": "Ikut sistem"
+  },
+  "settings_theme_light": {
+    "message": "Cerah"
+  },
+  "settings_theme_dark": {
+    "message": "Gelap"
+  },
+  "settings_newtab_wordmark_title": {
+    "message": "Kandungan di atas bar carian"
+  },
+  "newtab_top_content_brand": {
+    "message": "Jenama"
+  },
+  "newtab_top_content_time": {
+    "message": "Masa"
+  },
+  "newtab_top_content_off": {
+    "message": "Sembunyikan"
+  },
+  "newtab_time_font_title": {
+    "message": "Fon masa"
+  },
+  "newtab_time_font_weight_title": {
+    "message": "Ketebalan fon masa"
+  },
+  "newtab_time_font_weight_reset": {
+    "message": "Tetapkan semula ketebalan fon masa"
+  },
+  "newtab_time_font_size_title": {
+    "message": "Saiz masa"
+  },
+  "newtab_time_font_size_reset": {
+    "message": "Tetapkan semula saiz masa"
+  },
+  "newtab_time_opacity_title": {
+    "message": "Kelegapan masa"
+  },
+  "newtab_time_opacity_reset": {
+    "message": "Tetapkan semula kelegapan masa"
+  },
+  "newtab_time_ink_title": {
+    "message": "Warna masa"
+  },
+  "newtab_time_ink_auto": {
+    "message": "Auto"
+  },
+  "newtab_time_ink_light": {
+    "message": "Cerah"
+  },
+  "newtab_time_ink_dark": {
+    "message": "Gelap"
+  },
+  "newtab_time_show_seconds_title": {
+    "message": "Tunjukkan saat"
+  },
+  "newtab_time_12_hour_title": {
+    "message": "Jam 12 jam"
+  },
+  "settings_newtab_page_buttons_title": {
+    "message": "Butang halaman"
+  },
+  "settings_newtab_feedback_button_visible_title": {
+    "message": "Tunjukkan butang maklum balas"
+  },
+  "settings_newtab_appearance_button_visible_title": {
+    "message": "Tunjukkan butang Penampilan"
+  },
+  "settings_newtab_shortcuts_title": {
+    "message": "Pintasan"
+  },
+  "settings_newtab_shortcut_add_title": {
+    "message": "Tunjukkan “+”"
+  },
+  "settings_newtab_shortcut_dock_magnification_title": {
+    "message": "Pembesaran gaya Dock macOS"
+  },
+  "settings_newtab_shortcut_width_title": {
+    "message": "Lebar pintasan"
+  },
+  "settings_newtab_shortcut_columns_title": {
+    "message": "Pintasan setiap baris"
+  },
+  "settings_newtab_shortcut_size_title": {
+    "message": "Saiz pintasan"
+  },
+  "settings_newtab_shortcut_gap_title": {
+    "message": "Jarak pintasan"
+  },
+  "settings_newtab_shortcut_size_reset": {
+    "message": "Tetapkan semula saiz pintasan"
+  },
+  "settings_newtab_shortcut_gap_reset": {
+    "message": "Tetapkan semula jarak pintasan"
+  },
+  "settings_wallpaper_title": {
+    "message": "Kertas dinding Tab Baharu"
+  },
+  "settings_wallpaper_desc": {
+    "message": "Muat naik imej setempat sebagai latar belakang tab baharu"
+  },
+  "settings_wallpaper_upload": {
+    "message": "Muat naik imej"
+  },
+  "settings_wallpaper_remove": {
+    "message": "Alih keluar"
+  },
+  "settings_wallpaper_fit_cover": {
+    "message": "Isi"
+  },
+  "settings_wallpaper_fit_contain": {
+    "message": "Muat"
+  },
+  "settings_wallpaper_status_none": {
+    "message": "Tiada kertas dinding dimuat naik"
+  },
+  "settings_wallpaper_status_ready": {
+    "message": "Kertas dinding dimuat naik"
+  },
+  "settings_wallpaper_status_local_only": {
+    "message": "Kertas dinding dimuat naik (peranti ini sahaja)"
+  },
+  "settings_wallpaper_status_missing": {
+    "message": "Fail kertas dinding hilang. Sila muat naik semula."
+  },
+  "settings_wallpaper_status_processing": {
+    "message": "Memproses…"
+  },
+  "settings_wallpaper_upload_done": {
+    "message": "Kertas dinding dikemas kini"
+  },
+  "settings_wallpaper_remove_done": {
+    "message": "Kertas dinding dialih keluar"
+  },
+  "settings_wallpaper_error_type": {
+    "message": "Sila muat naik fail imej (JPG / PNG / WEBP)."
+  },
+  "settings_wallpaper_error_oversize": {
+    "message": "Imej terlalu besar. Sila muat naik fail di bawah 8MB."
+  },
+  "settings_wallpaper_error_oversize_after_compress": {
+    "message": "Imej masih terlalu besar selepas dimampatkan. Cuba imej yang lebih kecil."
+  },
+  "settings_wallpaper_error_save": {
+    "message": "Tidak dapat menyimpan kertas dinding. Sila cuba lagi."
+  },
+  "newtab_wallpaper_title": {
+    "message": "Kertas dinding"
+  },
+  "newtab_logo_title": {
+    "message": "Tanda jenama"
+  },
+  "newtab_favicon_title": {
+    "message": "Favicon Tab Baharu"
+  },
+  "newtab_favicon_name_default": {
+    "message": "Lalai"
+  },
+  "newtab_favicon_name_alternate": {
+    "message": "Alternatif"
+  },
+  "newtab_favicon_select_label": {
+    "message": "Pilih favicon {name}"
+  },
+  "newtab_favicon_save_error": {
+    "message": "Gagal menyimpan favicon"
+  },
+  "newtab_wallpaper_source_title": {
+    "message": "Sumber"
+  },
+  "newtab_wallpaper_builtin_section": {
+    "message": "Terbina dalam"
+  },
+  "newtab_wallpaper_local_section": {
+    "message": "Setempat"
+  },
+  "newtab_wallpaper_toggle_label": {
+    "message": "Hidupkan atau matikan kertas dinding"
+  },
+  "newtab_wallpaper_select_label": {
+    "message": "Pilih {name}"
+  },
+  "newtab_wallpaper_add_local": {
+    "message": "Tambah kertas dinding setempat"
+  },
+  "newtab_wallpaper_mode_sync_title": {
+    "message": "Padankan mod cerah dan gelap"
+  },
+  "newtab_wallpaper_mode_sync_toggle_label": {
+    "message": "Gunakan kertas dinding yang sama untuk mod cerah dan gelap"
+  },
+  "newtab_wallpaper_mode_row_title": {
+    "message": "Mod"
+  },
+  "newtab_wallpaper_mode_tabs_label": {
+    "message": "Mod warna kertas dinding"
+  },
+  "newtab_wallpaper_light_mode_tab": {
+    "message": "Cerah"
+  },
+  "newtab_wallpaper_dark_mode_tab": {
+    "message": "Gelap"
+  },
+  "newtab_wallpaper_mode_select_label": {
+    "message": "Edit kertas dinding mod {mode}"
+  },
+  "newtab_wallpaper_sources_feature_hint_badge": {
+    "message": "Baharu"
+  },
+  "newtab_wallpaper_sources_feature_hint_text": {
+    "message": "Kertas dinding baharu: koleksi alam semula jadi, bandar dan seni pilihan yang boleh dikemas kini setiap hari, atau tambah satu melalui pautan imej."
+  },
+  "newtab_wallpaper_sources_feature_hint_close": {
+    "message": "Ketepikan petua kertas dinding baharu"
+  },
+  "newtab_webdav_feature_hint_badge": {
+    "message": "Beta"
+  },
+  "newtab_webdav_feature_hint_text": {
+    "message": "Cuba penyegerakan WebDAV: selaraskan tetapan, ikon dan kertas dinding melalui pemacu WebDAV atau NAS, malah merentas pelayar."
+  },
+  "newtab_webdav_feature_hint_link": {
+    "message": "Sediakan"
+  },
+  "newtab_webdav_feature_hint_close": {
+    "message": "Ketepikan petua WebDAV"
+  },
+  "newtab_help_center_ask_feature_hint_badge": {
+    "message": "Baharu"
+  },
+  "newtab_help_center_ask_feature_hint_text": {
+    "message": "Tidak pasti cara sesuatu berfungsi? Taip lm, tekan Tab dan tanya Pusat Bantuan."
+  },
+  "newtab_help_center_ask_feature_hint_link": {
+    "message": "Cuba"
+  },
+  "newtab_help_center_ask_feature_hint_close": {
+    "message": "Ketepikan petua Pusat Bantuan"
+  },
+  "newtab_ai_quick_jump_feature_hint_badge": {
+    "message": "Baharu"
+  },
+  "newtab_ai_quick_jump_feature_hint_text": {
+    "message": "Lompat ke laman AI popular bersama gesaan anda dengan satu klik. Cuba taip \"gemini\" dan tekan Tab."
+  },
+  "newtab_ai_quick_jump_feature_hint_link": {
+    "message": "Senarai sokongan"
+  },
+  "newtab_ai_quick_jump_feature_hint_close": {
+    "message": "Ketepikan petua lompatan pantas AI"
+  },
+  "newtab_tab_switcher_feature_hint_badge": {
+    "message": "Baharu"
+  },
+  "newtab_tab_switcher_feature_hint_text": {
+    "message": "Tekan {shortcut} untuk membuka penukar tab dan melompat antara tab terbaharu tanpa menggunakan tetikus."
+  },
+  "newtab_tab_switcher_feature_hint_close": {
+    "message": "Ketepikan petua penukar tab"
+  },
+  "newtab_input_auto_focus_title": {
+    "message": "Fokus input secara automatik"
+  },
+  "newtab_input_auto_focus_help_label": {
+    "message": "Maklumat fokus automatik input"
+  },
+  "newtab_input_auto_focus_help": {
+    "message": "Jika anda lebih suka menggunakan bar alamat asal pelayar, matikan pilihan ini. URL sambungan tidak lagi muncul dalam bar alamat."
+  },
+  "update_notice_badge": {
+    "message": "Dikemas kini ke {version}"
+  },
+  "update_notice_text_fallback": {
+    "message": "Lihat perubahan dalam kemas kini ini"
+  },
+  "update_notice_link": {
+    "message": "Log perubahan"
+  },
+  "update_notice_close": {
+    "message": "Ketepikan notis kemas kini"
+  },
+  "engagement_notice_badge": {
+    "message": "Lumno"
+  },
+  "engagement_notice_text": {
+    "message": "Suka Lumno? Apa kata anda"
+  },
+  "engagement_notice_connector": {
+    "message": "atau"
+  },
+  "engagement_notice_trailing": {
+    "message": "dan tegur kami."
+  },
+  "engagement_notice_review": {
+    "message": "beri 5 bintang"
+  },
+  "engagement_notice_community": {
+    "message": "cari kami di X"
+  },
+  "engagement_notice_close": {
+    "message": "Ketepikan gesaan penilaian dan komuniti"
+  },
+  "newtab_bookmark_cascade_debug_enable": {
+    "message": "Tunjukkan segi tiga selamat menu penanda halaman"
+  },
+  "newtab_bookmark_cascade_debug_disable": {
+    "message": "Sembunyikan segi tiga selamat menu penanda halaman"
+  },
+  "newtab_bookmark_cascade_debug_open_label": {
+    "message": "Buka"
+  },
+  "newtab_bookmark_cascade_debug_switch_label": {
+    "message": "Tukar"
+  },
+  "newtab_bookmark_cascade_debug_safe_label": {
+    "message": "Selamat"
+  },
+  "newtab_bookmark_cascade_debug_close_label": {
+    "message": "Tutup"
+  },
+  "newtab_feedback_button_aria": {
+    "message": "Hantar maklum balas"
+  },
+  "newtab_feedback_menu_aria": {
+    "message": "Saluran maklum balas"
+  },
+  "newtab_feedback_x_label": {
+    "message": "X"
+  },
+  "newtab_feedback_x_tooltip": {
+    "message": "Hubungi kami di X"
+  },
+  "newtab_feedback_github_issue_label": {
+    "message": "Isu GitHub"
+  },
+  "newtab_feedback_github_issue_tooltip": {
+    "message": "Buka isu GitHub"
+  },
+  "newtab_feedback_chrome_review_label": {
+    "message": "Penilaian gedung"
+  },
+  "newtab_feedback_chrome_review_tooltip": {
+    "message": "Nilai Lumno di gedung sambungan"
+  },
+  "newtab_feedback_mail_label": {
+    "message": "E-mel"
+  },
+  "newtab_feedback_mail_tooltip": {
+    "message": "Hantar e-mel"
+  },
+  "newtab_feedback_wechat_label": {
+    "message": "WeChat"
+  },
+  "newtab_feedback_wechat_tooltip": {
+    "message": "Sertai kumpulan WeChat"
+  },
+  "newtab_feedback_wechat_panel_title": {
+    "message": "Laporan pepijat & permintaan ciri"
+  },
+  "newtab_feedback_wechat_refresh_tooltip": {
+    "message": "Muat semula kod QR"
+  },
+  "newtab_feedback_wechat_refresh_success": {
+    "message": "Kod QR terkini dimuatkan"
+  },
+  "newtab_feedback_wechat_refresh_error": {
+    "message": "Tidak dapat dimuat semula. Cuba lagi."
+  },
+  "newtab_feedback_wechat_close_tooltip": {
+    "message": "Tutup"
+  },
+  "newtab_feedback_wechat_qr_title": {
+    "message": "Kod QR kumpulan WeChat"
+  },
+  "newtab_feedback_wechat_qr_alt": {
+    "message": "Kod QR kumpulan WeChat Lumno"
+  },
+  "newtab_feedback_mail_subject": {
+    "message": "Maklum balas Lumno"
+  },
+  "newtab_feedback_mail_source_label": {
+    "message": "Sumber"
+  },
+  "newtab_feedback_mail_version_label": {
+    "message": "Versi Lumno"
+  },
+  "newtab_feedback_mail_language_label": {
+    "message": "Bahasa"
+  },
+  "newtab_feedback_mail_os_label": {
+    "message": "OS"
+  },
+  "newtab_feedback_mail_browser_label": {
+    "message": "Pelayar"
+  },
+  "newtab_wallpaper_delete_local": {
+    "message": "Padam kertas dinding yang diimport"
+  },
+  "newtab_wallpaper_custom_name": {
+    "message": "Kertas dinding setempat"
+  },
+  "newtab_wallpaper_overlay_opacity": {
+    "message": "Kesan topeng"
+  },
+  "newtab_wallpaper_overlay_transparent_tick": {
+    "message": "Lut sinar"
+  },
+  "newtab_wallpaper_overlay_default_tick": {
+    "message": "Lalai"
+  },
+  "newtab_wallpaper_overlay_cover_tick": {
+    "message": "Tutup"
+  },
+  "newtab_wallpaper_effect_title": {
+    "message": "Penapis kertas dinding"
+  },
+  "newtab_wallpaper_effect_strength": {
+    "message": "Kekuatan sampel"
+  },
+  "newtab_wallpaper_effect_blur_strength": {
+    "message": "Kekuatan kabur"
+  },
+  "newtab_wallpaper_effect_size": {
+    "message": "Saiz"
+  },
+  "newtab_wallpaper_effect_spacing": {
+    "message": "Jarak"
+  },
+  "newtab_wallpaper_effect_texture": {
+    "message": "Tekstur"
+  },
+  "newtab_wallpaper_effect_blocks_size": {
+    "message": "Saiz blok"
+  },
+  "newtab_wallpaper_effect_crt_strength": {
+    "message": "Keamatan paparan"
+  },
+  "newtab_wallpaper_effect_crt_bloom": {
+    "message": "Bloom"
+  },
+  "newtab_wallpaper_effect_crt_rgb_offset": {
+    "message": "Ofset RGB"
+  },
+  "newtab_wallpaper_effect_crt_curvature": {
+    "message": "Kelengkungan skrin"
+  },
+  "newtab_wallpaper_effect_none": {
+    "message": "Mati"
+  },
+  "newtab_wallpaper_effect_blur": {
+    "message": "Kaca kabur"
+  },
+  "newtab_wallpaper_effect_grain": {
+    "message": "Butiran"
+  },
+  "newtab_wallpaper_effect_blocks": {
+    "message": "Blok"
+  },
+  "newtab_wallpaper_effect_halftone": {
+    "message": "Halftone"
+  },
+  "newtab_wallpaper_effect_dither": {
+    "message": "Dither"
+  },
+  "newtab_wallpaper_effect_ascii": {
+    "message": "ASCII"
+  },
+  "newtab_wallpaper_effect_crt": {
+    "message": "CRT"
+  },
+  "newtab_wallpaper_effect_ink_title": {
+    "message": "Ton sampel"
+  },
+  "newtab_wallpaper_effect_ink_dark": {
+    "message": "Bayang"
+  },
+  "newtab_wallpaper_effect_ink_light": {
+    "message": "Sorotan"
+  },
+  "newtab_wallpaper_effect_ink_select_label": {
+    "message": "Ambil sampel {tone} untuk titik atau aksara"
+  },
+  "newtab_wallpaper_save_error": {
+    "message": "Gagal menyimpan kertas dinding"
+  },
+  "newtab_wallpaper_importing": {
+    "message": "Mengimport kertas dinding…"
+  },
+  "newtab_wallpaper_import_done": {
+    "message": "Kertas dinding diimport"
+  },
+  "newtab_wallpaper_import_error": {
+    "message": "Gagal mengimport kertas dinding"
+  },
+  "newtab_wallpaper_delete_done": {
+    "message": "Dipadam"
+  },
+  "newtab_wallpaper_delete_error": {
+    "message": "Gagal memadam kertas dinding"
+  },
+  "newtab_wallpaper_name_dark_linocut_topographic": {
+    "message": "Topografi malam"
+  },
+  "newtab_wallpaper_name_dark_monet_lily_nocturne": {
+    "message": "Teratai malam"
+  },
+  "newtab_wallpaper_name_dark_shanshui_moonlit": {
+    "message": "Shanshui diterangi bulan"
+  },
+  "newtab_wallpaper_name_monet_coastal_white": {
+    "message": "Pantai Monet"
+  },
+  "newtab_wallpaper_name_monet_field_white": {
+    "message": "Padang Monet"
+  },
+  "newtab_wallpaper_name_monet_lily_pond_white": {
+    "message": "Kolam teratai"
+  },
+  "newtab_wallpaper_name_impressionist_orchard_white": {
+    "message": "Pagi di dusun"
+  },
+  "newtab_wallpaper_name_seurat_coast_white": {
+    "message": "Pantai Seurat"
+  },
+  "newtab_wallpaper_name_seurat_park_white": {
+    "message": "Taman Seurat"
+  },
+  "newtab_wallpaper_name_seurat_riverside_white": {
+    "message": "Tebing sungai Seurat"
+  },
+  "newtab_wallpaper_name_pointillist_lakeside_white": {
+    "message": "Tepi tasik pointilisme"
+  },
+  "newtab_wallpaper_name_white_3d_architecture": {
+    "message": "Seni bina siang"
+  },
+  "newtab_wallpaper_name_white_3d_observatory": {
+    "message": "Balai cerap berkabus"
+  },
+  "newtab_wallpaper_name_white_linocut_topographic": {
+    "message": "Topografi siang"
+  },
+  "newtab_wallpaper_name_white_risograph_collage": {
+    "message": "Kolaj siang"
+  },
+  "newtab_wallpaper_name_white_shanshui": {
+    "message": "Shanshui cerah"
+  },
+  "newtab_wallpaper_name_white_shanshui_bamboo_bridge": {
+    "message": "Jambatan buluh"
+  },
+  "newtab_wallpaper_name_settings_bg_light_monet_newtab": {
+    "message": "Monet cerah"
+  },
+  "shortcuts_duplicate_tag": {
+    "message": "Bertindih dengan terbina dalam"
+  },
+  "shortcuts_duplicate_action": {
+    "message": "Cari item terbina dalam"
+  },
+  "shortcuts_template_help": {
+    "message": "1. Buka laman yang ingin anda tambah\n2. Buat carian dengan sebarang kata kunci\n3. Salin URL halaman hasil dan tampalkan di sini\n4. Gantikan kata kunci dengan {query}"
+  },
+  "shortcuts_title": {
+    "message": "Carian laman"
+  },
+  "shortcuts_desc": {
+    "message": "Tekan Tab selepas kata kunci untuk menggunakan carian laman"
+  },
+  "shortcuts_group_custom": {
+    "message": "Tersuai"
+  },
+  "blacklist_section_title": {
+    "message": "Senarai Hitam Carian dan Terbaharu"
+  },
+  "blacklist_section_desc": {
+    "message": "Tambah laman web untuk disembunyikan daripada hasil carian dan halaman tab baharu."
+  },
+  "blacklist_group_custom": {
+    "message": "Sekat Secara Global"
+  },
+  "blacklist_label_url": {
+    "message": "Peraturan URL"
+  },
+  "blacklist_label_domain": {
+    "message": "Domain laman"
+  },
+  "blacklist_label_prefix": {
+    "message": "Laman atau laluan"
+  },
+  "blacklist_label_exact": {
+    "message": "URL penuh"
+  },
+  "blacklist_label_suffix": {
+    "message": "Domain laman"
+  },
+  "blacklist_match_label": {
+    "message": "Jenis padanan"
+  },
+  "blacklist_match_exact": {
+    "message": "Halaman ini"
+  },
+  "blacklist_match_prefix": {
+    "message": "Laluan laman ini"
+  },
+  "blacklist_match_suffix": {
+    "message": "Seluruh laman"
+  },
+  "blacklist_match_exact_tooltip": {
+    "message": "Hanya menyekat halaman ini\n────────\nContohnya, jika anda memasukkan x.com/home, hanya halaman itu disembunyikan manakala halaman lain kekal kelihatan."
+  },
+  "blacklist_match_prefix_tooltip": {
+    "message": "Hanya menyekat halaman di bawah laman dan laluan ini\n────────\nContohnya, jika anda memasukkan baidu.com/search, baidu.com/search dan baidu.com/search/1 akan disembunyikan, tetapi baidu.com/news kekal kelihatan."
+  },
+  "blacklist_match_suffix_tooltip": {
+    "message": "Menyekat setiap halaman di laman ini, termasuk subdomainnya\n────────\nContohnya, jika anda memasukkan baidu.com, kedua-dua baidu.com/search dan tieba.baidu.com akan disembunyikan."
+  },
+  "blacklist_preview_title": {
+    "message": "Pratonton padanan sebenar"
+  },
+  "blacklist_preview_match": {
+    "message": "Sepadan"
+  },
+  "blacklist_preview_miss": {
+    "message": "Tidak sepadan"
+  },
+  "blacklist_preview_www_note": {
+    "message": "Versi www. turut diliputi, jadi baidu.com juga sepadan dengan www.baidu.com."
+  },
+  "blacklist_placeholder_url": {
+    "message": "Gunakan alamat penuh untuk Halaman ini, atau domain laman untuk Seluruh laman"
+  },
+  "blacklist_placeholder_domain": {
+    "message": "baidu.com"
+  },
+  "blacklist_placeholder_prefix": {
+    "message": "baidu.com atau baidu.com/search"
+  },
+  "blacklist_placeholder_exact": {
+    "message": "x.com/home"
+  },
+  "blacklist_placeholder_suffix": {
+    "message": "cth. baidu.com"
+  },
+  "blacklist_add": {
+    "message": "Tambah"
+  },
+  "blacklist_empty": {
+    "message": "Belum ada URL dalam senarai hitam"
+  },
+  "blacklist_error_url": {
+    "message": "Masukkan domain laman atau URL penuh."
+  },
+  "blacklist_error_match_mode": {
+    "message": "Pilih sekurang-kurangnya satu jenis padanan."
+  },
+  "blacklist_error_suffix": {
+    "message": "Masukkan domain laman."
+  },
+  "blacklist_error_domain": {
+    "message": "Masukkan domain laman."
+  },
+  "blacklist_match_mode_prefix": {
+    "message": "Sepadan dengan halaman yang bermula dengan URL ini"
+  },
+  "blacklist_match_unset": {
+    "message": "Tiada jenis padanan dipilih"
+  },
+  "blacklist_removed_toast": {
+    "message": "Dialih keluar daripada senarai hitam"
+  },
+  "shortcuts_group_builtin": {
+    "message": "Terbina dalam"
+  },
+  "shortcuts_group_ai": {
+    "message": "Carian AI"
+  },
+  "shortcuts_group_ai_desc": {
+    "message": "Masukkan kata kunci, tekan Tab, kemudian taip gesaan anda untuk membuka salah satu laman AI ini dan mengisinya secara automatik (log masuk ke laman itu dahulu)"
+  },
+  "shortcuts_badge_custom": {
+    "message": "Tersuai"
+  },
+  "shortcuts_badge_builtin": {
+    "message": "Terbina dalam"
+  },
+  "shortcuts_badge_ai": {
+    "message": "Carian AI"
+  },
+  "shortcuts_label_key": {
+    "message": "Kata kunci"
+  },
+  "shortcuts_label_name": {
+    "message": "Nama"
+  },
+  "shortcuts_label_template": {
+    "message": "URL carian"
+  },
+  "shortcuts_label_alias": {
+    "message": "Alias"
+  },
+  "shortcuts_label_display_group": {
+    "message": "Tunjuk dalam"
+  },
+  "shortcuts_placeholder_required": {
+    "message": "Wajib — gunakan koma untuk beberapa, cth. jd,bili"
+  },
+  "shortcuts_placeholder_optional_default": {
+    "message": "Pilihan — lalai kepada kata kunci"
+  },
+  "shortcuts_placeholder_template": {
+    "message": "https://example.com/search?q={query}"
+  },
+  "shortcuts_placeholder_alias": {
+    "message": "Pilihan — cth. Bilibili, YouTube"
+  },
+  "shortcuts_insert_query": {
+    "message": "Sisipkan pemboleh ubah pertanyaan"
+  },
+  "shortcuts_add": {
+    "message": "Tambah carian tersuai"
+  },
+  "shortcuts_save": {
+    "message": "Simpan perubahan"
+  },
+  "shortcuts_cancel": {
+    "message": "Batal"
+  },
+  "shortcuts_edit": {
+    "message": "Edit"
+  },
+  "shortcuts_remove": {
+    "message": "Alih keluar"
+  },
+  "shortcuts_empty_custom": {
+    "message": "Belum ada carian tersuai"
+  },
+  "shortcuts_empty_builtin": {
+    "message": "Tiada carian laman terbina dalam"
+  },
+  "shortcuts_empty_engines": {
+    "message": "Tiada enjin carian terbina dalam"
+  },
+  "shortcuts_empty_ai": {
+    "message": "Tiada penyedia carian AI terbina dalam"
+  },
+  "toast_saved": {
+    "message": "Disimpan"
+  },
+  "toast_removed": {
+    "message": "Dialih keluar"
+  },
+  "toast_error": {
+    "message": "Tindakan gagal. Cuba lagi."
+  },
+  "toast_error_template": {
+    "message": "Templat carian mesti mengandungi {query}."
+  },
+  "toast_reset": {
+    "message": "Ditetapkan semula"
+  },
+  "shortcuts_reset_builtin": {
+    "message": "Tetapkan semula ke senarai lalai"
+  },
+  "shortcuts_clear_custom": {
+    "message": "Kosongkan tersuai"
+  },
+  "blacklist_clear": {
+    "message": "Kosongkan peraturan sembunyi"
+  },
+  "toast_cleared": {
+    "message": "Dikosongkan"
+  },
+  "confirm_clear_custom": {
+    "message": "Kosongkan semua carian tersuai?"
+  },
+  "confirm_clear_blacklist": {
+    "message": "Kosongkan peraturan sembunyi?"
+  },
+  "confirm_clear_favicon_blacklist": {
+    "message": "Kosongkan peraturan pengecualian?"
+  },
+  "confirm_reset_builtin": {
+    "message": "Tetapkan semula senarai terbina dalam?"
+  },
+  "confirm_ok": {
+    "message": "Sahkan"
+  },
+  "confirm_cancel": {
+    "message": "Batal"
+  },
+  "confirm_remove_item": {
+    "message": "Alih keluar item ini?"
+  },
+  "shortcuts_error_key": {
+    "message": "Sila masukkan pencetus."
+  },
+  "shortcuts_error_key_space": {
+    "message": "Pencetus tidak boleh mengandungi ruang."
+  },
+  "shortcuts_error_key_duplicate": {
+    "message": "Pencetus ini sudah digunakan. Pilih yang lain."
+  },
+  "search_placeholder": {
+    "message": "Cari atau taip URL…"
+  },
+  "overlay_search_placeholder": {
+    "message": "Cari atau taip URL, tekan Tab untuk mencari tab terbuka"
+  },
+  "options_page_title": {
+    "message": "Tetapan Lumno"
+  },
+  "newtab_page_title": {
+    "message": "Tab Baharu"
+  },
+  "recent_heading": {
+    "message": "Terbaharu"
+  },
+  "recent_heading_latest": {
+    "message": "Terbaharu"
+  },
+  "recent_heading_most": {
+    "message": "Paling Kerap Dilawati"
+  },
+  "bookmarks_heading": {
+    "message": "Penanda halaman"
+  },
+  "display_mode_title": {
+    "message": "Mod paparan"
+  },
+  "bookmark_view_mode_folder": {
+    "message": "Paparan folder berbilang lapisan"
+  },
+  "bookmark_view_mode_list": {
+    "message": "Paparan senarai berbilang aras"
+  },
+  "bookmark_view_mode_top": {
+    "message": "Bar penanda halaman atas"
+  },
+  "bookmark_topbar_layout_title": {
+    "message": "Gaya bar"
+  },
+  "bookmark_topbar_layout_docked": {
+    "message": "Terlekat di atas"
+  },
+  "bookmark_topbar_layout_floating": {
+    "message": "Terapung"
+  },
+  "bookmark_topbar_surface_title": {
+    "message": "Latar belakang bar"
+  },
+  "bookmark_topbar_surface_follow": {
+    "message": "Padankan gaya"
+  },
+  "bookmark_topbar_surface_adaptive": {
+    "message": "Kabus adaptif"
+  },
+  "bookmark_topbar_surface_clear": {
+    "message": "Kaca cecair"
+  },
+  "bookmark_topbar_surface_transparent": {
+    "message": "Lut sinar"
+  },
+  "bookmark_topbar_surface_custom": {
+    "message": "Warna tersuai"
+  },
+  "bookmark_topbar_color_pick": {
+    "message": "Pilih warna latar belakang"
+  },
+  "bookmark_topbar_color_reset": {
+    "message": "Pulihkan warna automatik"
+  },
+  "bookmark_topbar_color_picked": {
+    "message": "Warna dipilih"
+  },
+  "bookmark_topbar_color_reset_done": {
+    "message": "Warna automatik dipulihkan"
+  },
+  "bookmark_topbar_color_unsupported": {
+    "message": "Pemilihan warna skrin tidak disokong dalam pelayar ini."
+  },
+  "bookmark_topbar_color_failed": {
+    "message": "Tidak dapat memilih warna. Cuba lagi."
+  },
+  "bookmarks_empty_folder": {
+    "message": "Tiada kandungan"
+  },
+  "bookmarks_page_prev": {
+    "message": "Halaman sebelumnya"
+  },
+  "bookmarks_page_next": {
+    "message": "Halaman seterusnya"
+  },
+  "bookmarks_open_manager": {
+    "message": "Buka pengurus penanda halaman"
+  },
+  "bookmarks_open_in_new_tab_group": {
+    "message": "Buka dalam kumpulan tab baharu"
+  },
+  "newtab_open_in_new_tab": {
+    "message": "Buka dalam tab baharu"
+  },
+  "bookmarks_open_group_confirm_title": {
+    "message": "Buka {count} tab?"
+  },
+  "bookmarks_open_group_confirm_description": {
+    "message": "Semua penanda halaman dalam “{folder}” dan subfoldernya akan dibuka dalam satu kumpulan tab."
+  },
+  "bookmarks_open_group_confirm_button": {
+    "message": "Buka"
+  },
+  "bookmarks_untitled_folder": {
+    "message": "Folder tanpa tajuk"
+  },
+  "bookmarks_open_group_partial_failed": {
+    "message": "{openedCount} tab dibuka; {failedCount} tidak dapat dibuka."
+  },
+  "bookmarks_open_group_failed": {
+    "message": "Tidak dapat membuka folder penanda halaman ini"
+  },
+  "bookmarks_copy_url": {
+    "message": "Salin pautan"
+  },
+  "bookmarks_copy_url_success": {
+    "message": "Pautan penanda halaman disalin"
+  },
+  "bookmarks_copy_url_failed": {
+    "message": "Tidak dapat menyalin pautan. Cuba lagi."
+  },
+  "bookmarks_edit": {
+    "message": "Edit"
+  },
+  "bookmarks_edit_dialog_title": {
+    "message": "Edit penanda halaman"
+  },
+  "bookmarks_edit_folder_dialog_title": {
+    "message": "Namakan semula folder"
+  },
+  "bookmarks_name_placeholder": {
+    "message": "Nama"
+  },
+  "bookmarks_invalid_url": {
+    "message": "Masukkan URL yang sah."
+  },
+  "bookmarks_updated": {
+    "message": "Penanda halaman dikemas kini"
+  },
+  "bookmarks_folder_updated": {
+    "message": "Folder dikemas kini"
+  },
+  "bookmarks_update_failed": {
+    "message": "Tidak dapat mengemas kini penanda halaman"
+  },
+  "bookmarks_delete": {
+    "message": "Padam"
+  },
+  "bookmarks_context_menu_label": {
+    "message": "Tindakan penanda halaman"
+  },
+  "bookmarks_delete_undone": {
+    "message": "Pemadaman dibuat asal · {shortcut} untuk padam semula"
+  },
+  "bookmarks_delete_redone": {
+    "message": "Pemadaman dibuat semula · {shortcut} untuk buat asal"
+  },
+  "bookmarks_delete_failed": {
+    "message": "Tidak dapat memadam penanda halaman"
+  },
+  "bookmarks_move_success": {
+    "message": "“{title}” dialihkan · {shortcut} untuk buat asal"
+  },
+  "bookmarks_move_undone": {
+    "message": "Pengalihan dibuat asal · {shortcut} untuk buat semula"
+  },
+  "bookmarks_move_redone": {
+    "message": "Pengalihan dibuat semula · {shortcut} untuk buat asal"
+  },
+  "bookmarks_move_failed": {
+    "message": "Tidak dapat mengalihkan penanda halaman"
+  },
+  "bookmarks_moved_to_shortcuts": {
+    "message": "Dialihkan ke pintasan"
+  },
+  "search_tag_history": {
+    "message": "Sejarah"
+  },
+  "search_remove_history": {
+    "message": "Alih keluar daripada sejarah"
+  },
+  "search_remove_history_tooltip": {
+    "message": "Alih keluar entri sejarah ini"
+  },
+  "search_remove_top_site_tooltip": {
+    "message": "Alih keluar hasil kerap ini"
+  },
+  "search_copy_url_tooltip": {
+    "message": "Salin pautan"
+  },
+  "search_copy_url_success": {
+    "message": "Pautan hasil disalin"
+  },
+  "search_copy_url_failed": {
+    "message": "Tidak dapat menyalin pautan hasil. Cuba lagi."
+  },
+  "search_tag_top_site": {
+    "message": "Kerap"
+  },
+  "search_tag_bookmark": {
+    "message": "Penanda halaman"
+  },
+  "search_tag_open_tab": {
+    "message": "Dibuka"
+  },
+  "visit_label": {
+    "message": "Lawati"
+  },
+  "action_open_new_tab": {
+    "message": "Tab Baharu"
+  },
+  "action_open_background_new_tab": {
+    "message": "Buka di Latar"
+  },
+  "action_open_background_tab": {
+    "message": "Buka di Latar"
+  },
+  "action_go_current_tab": {
+    "message": "Pergi"
+  },
+  "open_prefix": {
+    "message": "Buka {title}"
+  },
+  "open_url": {
+    "message": "Buka {url}"
+  },
+  "open_browser_url": {
+    "message": "Buka {browser}: {url}"
+  },
+  "mode_badge": {
+    "message": "Mod: {mode}"
+  },
+  "mode_badge_follow_system": {
+    "message": "Mod: {mode} (Sistem)"
+  },
+  "mode_badge_follow_site": {
+    "message": "Mod: {mode} (Laman)"
+  },
+  "theme_label_dark": {
+    "message": "Gelap"
+  },
+  "theme_label_light": {
+    "message": "Cerah"
+  },
+  "theme_label_system": {
+    "message": "Sistem"
+  },
+  "command_newtab": {
+    "message": "Tab Baharu"
+  },
+  "search_input_clear": {
+    "message": "Kosongkan"
+  },
+  "command_settings": {
+    "message": "Buka tetapan"
+  },
+  "command_show_search": {
+    "message": "Buka bar perintah"
+  },
+  "command_show_search_prefill": {
+    "message": "Buka bar perintah dengan URL halaman semasa"
+  },
+  "command_show_search_prefill_v": {
+    "message": "Salin URL Halaman Semasa"
+  },
+  "mode_switch_title": {
+    "message": "{name}: tukar ke mod {mode}"
+  },
+  "zen_badge_on": {
+    "message": "Zen: Hidup"
+  },
+  "zen_badge_off": {
+    "message": "Zen: Mati"
+  },
+  "zen_enable_title": {
+    "message": "{name}: masuk mod Zen"
+  },
+  "zen_disable_title": {
+    "message": "{name}: keluar mod Zen"
+  },
+  "switch_to_tab": {
+    "message": "Tukar"
+  },
+  "untitled": {
+    "message": "Tanpa tajuk"
+  },
+  "site_search_default": {
+    "message": "Laman"
+  },
+  "site_search_name_baidu": {
+    "message": "Baidu"
+  },
+  "site_search_name_metaso": {
+    "message": "Metaso AI Search"
+  },
+  "site_search_name_sogou": {
+    "message": "Sogou"
+  },
+  "site_search_name_shenma": {
+    "message": "Shenma"
+  },
+  "site_search_name_weibo": {
+    "message": "Weibo"
+  },
+  "site_search_name_xiaohongshu": {
+    "message": "Xiaohongshu"
+  },
+  "site_search_name_douyin": {
+    "message": "Douyin"
+  },
+  "site_search_name_jd": {
+    "message": "JD.com"
+  },
+  "site_search_name_chatgpt": {
+    "message": "ChatGPT"
+  },
+  "site_search_name_gemini": {
+    "message": "Gemini"
+  },
+  "site_search_name_doubao": {
+    "message": "Doubao"
+  },
+  "site_search_name_qianwen": {
+    "message": "Qwen"
+  },
+  "site_search_name_yuanbao": {
+    "message": "Yuanbao"
+  },
+  "site_search_name_minimax": {
+    "message": "MiniMax"
+  },
+  "site_search_name_deepseek": {
+    "message": "DeepSeek"
+  },
+  "site_search_name_kimi": {
+    "message": "Kimi"
+  },
+  "site_search_name_zhihu": {
+    "message": "Zhihu"
+  },
+  "site_search_name_douban": {
+    "message": "Douban"
+  },
+  "site_search_name_juejin": {
+    "message": "Juejin"
+  },
+  "site_search_name_taobao": {
+    "message": "Taobao"
+  },
+  "site_search_name_tmall": {
+    "message": "Tmall"
+  },
+  "site_search_name_wechat": {
+    "message": "Akaun Rasmi WeChat"
+  },
+  "site_search_name_wikipedia": {
+    "message": "Wikipedia"
+  },
+  "site_search_name_lumno_help": {
+    "message": "Pusat Bantuan Lumno"
+  },
+  "help_center_recommended": {
+    "message": "Bacaan dicadangkan"
+  },
+  "help_center_no_results": {
+    "message": "Tiada apa-apa ditemui. Jangan segan untuk menghubungi pembangun."
+  },
+  "search_in_site": {
+    "message": "Cari dalam {site}"
+  },
+  "search_in_site_query": {
+    "message": "Cari dalam {site} \"{query}\""
+  },
+  "ask_ai_provider": {
+    "message": "Tanya {site}"
+  },
+  "ask_ai_provider_query": {
+    "message": "Tanya {site} \"{query}\""
+  },
+  "site_search_tab_hint": {
+    "message": "Cari {site}"
+  },
+  "search_query": {
+    "message": "Cari \"{query}\""
+  },
+  "search_in_site_ellipsis": {
+    "message": "Cari dalam {site}…"
+  },
+  "search_in_site_prefix": {
+    "message": "Cari dalam {site} |"
+  },
+  "search_open_tabs_only_prefix": {
+    "message": "Cari tab terbuka |"
+  },
+  "search_open_tabs_only_entry": {
+    "message": "Cari tab terbuka"
+  },
+  "action_search": {
+    "message": "Cari"
+  },
+  "action_search_engine": {
+    "message": "Cari dalam {engine}"
+  },
+  "action_open_ai_web": {
+    "message": "Buka apl web {site}"
+  },
+  "action_search_google": {
+    "message": "Cari dalam Google"
+  },
+  "action_switch": {
+    "message": "Tukar"
+  },
+  "action_open": {
+    "message": "Buka"
+  },
+  "overlay_empty_result": {
+    "message": "Tiada hasil yang sepadan"
+  },
+  "local_search_tab_hint": {
+    "message": "Cari {source} sahaja"
+  },
+  "search_scope_switcher_label": {
+    "message": "Skop carian: {scope}. Aktifkan untuk menukar."
+  },
+  "search_scope_current": {
+    "message": "Semasa"
+  },
+  "search_scope_remove_confirmation": {
+    "message": "Tekan Backspace sekali lagi untuk mengalih keluar skop."
+  },
+  "search_number_jump_release_hint": {
+    "message": "Lepaskan untuk menunjukkan nombor"
+  },
+  "search_scope_menu_shortcut_hint": {
+    "message": "Buka panel"
+  },
+  "search_scope_menu_navigation_hint": {
+    "message": "Alih"
+  },
+  "search_scope_menu_select_hint": {
+    "message": "Tukar"
+  },
+  "search_scope_menu_focus_toggle_hint": {
+    "message": "Tukar fokus"
+  },
+  "search_scope_menu_filter_hint": {
+    "message": "Taip untuk menapis"
+  },
+  "search_scope_menu_filter_query": {
+    "message": "Cari: {query}"
+  },
+  "search_scope_panel_placeholder": {
+    "message": "Cari kandungan laman tertentu…"
+  },
+  "search_scope_active_placeholder": {
+    "message": "Cari dalam skop ini; tekan Tab lagi untuk membuka panel skop…"
+  },
+  "search_scope_group_engines": {
+    "message": "Enjin carian"
+  },
+  "search_scope_group_local": {
+    "message": "Kandungan pelayar"
+  },
+  "search_scope_group_ai": {
+    "message": "Carian AI"
+  },
+  "search_scope_group_sites": {
+    "message": "Carian laman"
+  },
+  "search_scope_group_aggregates": {
+    "message": "Carian agregat"
+  },
+  "aggregate_search_action": {
+    "message": "Cari dengan {name}"
+  },
+  "aggregate_search_action_query": {
+    "message": "Cari \"{query}\" dengan {name}"
+  },
+  "aggregate_search_group_title": {
+    "message": "Carian agregat"
+  },
+  "aggregate_search_add": {
+    "message": "Tambah carian agregat"
+  },
+  "aggregate_search_clear": {
+    "message": "Kosongkan carian agregat"
+  },
+  "confirm_clear_aggregate_search": {
+    "message": "Kosongkan semua carian agregat?"
+  },
+  "aggregate_search_name_label": {
+    "message": "Nama"
+  },
+  "aggregate_search_name_required_error": {
+    "message": "Masukkan nama untuk carian agregat ini."
+  },
+  "aggregate_search_key_placeholder": {
+    "message": "Contohnya, tech"
+  },
+  "aggregate_search_default_name": {
+    "message": "Carian agregat"
+  },
+  "aggregate_search_sources_label": {
+    "message": "Sumber carian"
+  },
+  "aggregate_search_selected_count": {
+    "message": "Dipilih {count}/{max}"
+  },
+  "aggregate_search_min_sources_error": {
+    "message": "Pilih sekurang-kurangnya 2 sumber carian."
+  },
+  "aggregate_search_max_sources_error": {
+    "message": "Anda boleh memilih sehingga 10 sumber carian."
+  },
+  "settings_aggregate_search_auto_group_title": {
+    "message": "Kumpulkan tab carian agregat secara automatik"
+  },
+  "settings_aggregate_search_auto_group_desc": {
+    "message": "Apabila didayakan, semua tab yang dibuka oleh carian agregat diletakkan dalam satu kumpulan bernama “Nama agregat: Pertanyaan carian”"
+  },
+  "aggregate_search_badge": {
+    "message": "Agregat"
+  },
+  "aggregate_search_source_summary": {
+    "message": "{count} sumber"
+  },
+  "aggregate_search_source_summary_unavailable": {
+    "message": "{count} sumber · {unavailable} tidak tersedia · Perlu dikemas kini"
+  },
+  "aggregate_search_sources_unavailable_error": {
+    "message": "Carian agregat ini mengandungi sumber yang telah dialih keluar atau dilumpuhkan. Kemas kininya dalam Tetapan."
+  },
+  "aggregate_search_in_progress": {
+    "message": "Carian agregat ini sedang berjalan."
+  },
+  "aggregate_search_partial_failure": {
+    "message": "Sesetengah hasil carian agregat tidak dapat dibuka."
+  },
+  "aggregate_search_degraded_success": {
+    "message": "Hasil carian dibuka, tetapi pengumpulan, penamaan atau fokus tab tidak dapat diselesaikan."
+  },
+  "aggregate_search_storage_unavailable_error": {
+    "message": "Carian agregat tidak dapat dimuatkan. Muat semula Tetapan dan cuba lagi."
+  },
+  "aggregate_search_source_selection_unavailable_error": {
+    "message": "Alih keluar sumber yang tidak tersedia dan pilih sekurang-kurangnya dua sumber yang tersedia."
+  },
+  "aggregate_search_unavailable_group": {
+    "message": "Sumber tidak tersedia"
+  },
+  "aggregate_search_unavailable_name": {
+    "message": "Sumber tidak tersedia ({source})"
+  },
+  "aggregate_search_name_duplicate_error": {
+    "message": "Carian agregat dengan nama ini sudah wujud."
+  },
+  "aggregate_search_max_items_error": {
+    "message": "Anda boleh mencipta sehingga 8 carian agregat."
+  },
+  "overlay_empty_open_tabs": {
+    "message": "Tiada tab"
+  },
+  "site_icon_alt": {
+    "message": "Laman"
+  },
+  "site_brand_wechat_official": {
+    "message": "Akaun Rasmi WeChat"
+  },
+  "settings_sync_title": {
+    "message": "Penyegerakan terbina dalam {browser}"
+  },
+  "settings_sync_section_title": {
+    "message": "Penyegerakan terbina dalam pelayar"
+  },
+  "settings_sync_desc": {
+    "message": "Tetapan disegerakkan secara automatik melalui perkhidmatan penyegerakan terbina dalam pelayar semasa anda"
+  },
+  "sync_status_unavailable": {
+    "message": "Penyegerakan tidak tersedia"
+  },
+  "sync_status_unavailable_hint": {
+    "message": "Penyegerakan tidak tersedia: semak sama ada pelayar semasa anda menyokong penyegerakan terbina dalam dan telah menghidupkannya."
+  },
+  "sync_status_ready": {
+    "message": "Autosegerak didayakan"
+  },
+  "sync_status_done": {
+    "message": "Penyegerakan selesai"
+  },
+  "sync_status_failed": {
+    "message": "Penyegerakan gagal"
+  },
+  "sync_status_failed_reason": {
+    "message": "Penyegerakan gagal: {reason}"
+  },
+  "sync_action_now": {
+    "message": "Segerakkan sekarang"
+  },
+  "sync_action_export": {
+    "message": "Eksport tetapan"
+  },
+  "sync_action_import": {
+    "message": "Import tetapan"
+  },
+  "sync_tooltip_export": {
+    "message": "Eksport tetapan"
+  },
+  "sync_tooltip_import": {
+    "message": "Import tetapan"
+  },
+  "sync_tooltip_last_manual": {
+    "message": "Import/penyegerakan manual terakhir {time}"
+  },
+  "sync_tooltip_default": {
+    "message": "Penyegerakan manual"
+  },
+  "sync_status_hint": {
+    "message": "Tetapan Lumno disegerakkan secara automatik melalui perkhidmatan penyegerakan terbina dalam pelayar semasa anda. Penyegerakan berfungsi merentas peranti yang log masuk ke akaun pelayar yang sama, tetapi tidak merentas pelayar yang berbeza."
+  },
+  "sync_export_done": {
+    "message": "Tetapan dieksport"
+  },
+  "sync_importing": {
+    "message": "Mengimport tetapan…"
+  },
+  "sync_import_done": {
+    "message": "Import selesai"
+  },
+  "sync_import_invalid": {
+    "message": "Fail tetapan tidak sah"
+  },
+  "document_pip_picker_unsupported_policy": {
+    "message": "Laman web ini melumpuhkan Gambar dalam Gambar melalui dasar laman."
+  },
+  "document_pip_picker_unsupported_iframe": {
+    "message": "Document Picture-in-Picture hanya berfungsi pada halaman peringkat atas."
+  },
+  "document_pip_picker_unsupported_insecure": {
+    "message": "Document Picture-in-Picture memerlukan HTTPS."
+  },
+  "document_pip_picker_open_failed_not_allowed": {
+    "message": "Laman web atau pelayar telah menyekat pembukaan Document Picture-in-Picture."
+  },
+  "document_pip_picker_open_failed_not_supported": {
+    "message": "Pilihan ini tidak dapat dibuka dalam Document Picture-in-Picture pada halaman ini."
+  },
+  "document_pip_picker_open_failed_invalid_state": {
+    "message": "Tetingkap terapung sudah dibuka atau keadaan halaman telah berubah. Cuba lagi."
+  },
+  "document_pip_picker_open_failed_security": {
+    "message": "Pelayar menyekat tindakan ini atas sebab keselamatan pada halaman ini."
+  },
+  "newtab_page_label": {
+    "message": "Tab Baharu"
+  },
+  "settings_title": {
+    "message": "Tetapan"
+  },
+  "extension_page_label": {
+    "message": "Halaman Sambungan"
+  },
+  "settings_button_aria": {
+    "message": "Tetapan"
+  },
+  "copy_page_url_failed_retry": {
+    "message": "Gagal menyalin. Sila cuba lagi."
+  },
+  "copy_page_url_success": {
+    "message": "URL halaman semasa disalin"
+  },
+  "copy_page_url_failed_permission": {
+    "message": "Gagal menyalin. Semak kebenaran papan keratan."
+  },
+  "recent_pin_add": {
+    "message": "Semat"
+  },
+  "recent_pin_remove": {
+    "message": "Nyahsemat"
+  },
+  "recent_pin_limit": {
+    "message": "Anda boleh menyemat sehingga 3 kad"
+  },
+  "recent_pin_limit_toast": {
+    "message": "Anda boleh menyemat sehingga 3 kad."
+  },
+  "recent_dismiss_tooltip": {
+    "message": "Alih keluar"
+  },
+  "recent_add_to_shortcuts": {
+    "message": "Tambah pada pintasan"
+  },
+  "recent_dismiss_pinned_tooltip": {
+    "message": "Nyahsemat dan alih keluar"
+  },
+  "recent_dismiss_toast": {
+    "message": "Dialih keluar"
+  },
+  "recent_dismiss_pinned_toast": {
+    "message": "Dinyahsemat dan dialih keluar"
+  },
+  "recent_context_menu_label": {
+    "message": "Tindakan laman terbaharu"
+  },
+  "tab_switcher_title": {
+    "message": "Tab terbaharu"
+  },
+  "tab_switcher_untitled": {
+    "message": "Tanpa tajuk"
+  },
+  "tab_switcher_favicon_alt": {
+    "message": "Ikon laman"
+  },
+  "tab_switcher_close_tab": {
+    "message": "Tutup tab"
+  },
+  "tab_switcher_tab_closed": {
+    "message": "Tab ditutup"
+  },
+  "tab_switcher_close_failed": {
+    "message": "Tidak dapat menutup tab ini"
+  },
+  "command_show_tab_switcher": {
+    "message": "Buka penukar tab terbaharu"
+  },
+  "shortcut_reference_title": {
+    "message": "Senarai pintasan papan kekunci"
+  },
+  "shortcut_reference_group_search": {
+    "message": "Bar perintah"
+  },
+  "shortcut_reference_group_page_link": {
+    "message": "Pautan halaman"
+  },
+  "shortcut_reference_group_tab_switcher": {
+    "message": "Penukar tab"
+  },
+  "shortcut_reference_group_web_clip": {
+    "message": "Klip web"
+  },
+  "shortcut_reference_unset": {
+    "message": "Belum ditetapkan"
+  },
+  "shortcut_reference_show_search_title": {
+    "message": "Buka bar perintah"
+  },
+  "shortcut_reference_show_search_desc": {
+    "message": "Buka Lumno pada halaman semasa"
+  },
+  "shortcut_reference_show_search_prefill_title": {
+    "message": "Buka dengan URL halaman semasa"
+  },
+  "shortcut_reference_show_search_prefill_desc": {
+    "message": "Buka Lumno dan prapasang URL halaman semasa"
+  },
+  "shortcut_reference_copy_url_title": {
+    "message": "Salin URL halaman semasa"
+  },
+  "shortcut_reference_copy_url_desc": {
+    "message": "Salin URL halaman semasa tanpa membuka Lumno"
+  },
+  "shortcut_reference_tab_switcher_title": {
+    "message": "Buka penukar tab terbaharu"
+  },
+  "shortcut_reference_tab_switcher_desc": {
+    "message": "Buka penukar tab terbaharu"
+  },
+  "shortcut_reference_search_input_history_title": {
+    "message": "Input sebelumnya atau seterusnya"
+  },
+  "shortcut_reference_search_input_history_desc": {
+    "message": "Bergerak ke belakang atau ke hadapan melalui sejarah input yang dihantar"
+  },
+  "shortcut_reference_search_navigate_title": {
+    "message": "Bergerak antara cadangan"
+  },
+  "shortcut_reference_search_navigate_desc": {
+    "message": "Alihkan hasil aktif dalam carian Lumno dan Tab Baharu"
+  },
+  "shortcut_reference_search_number_jump_title": {
+    "message": "Lompat ke hasil bernombor"
+  },
+  "shortcut_reference_search_number_jump_desc": {
+    "message": "Tahan kekunci pengubah utama, lepaskan, kemudian tekan 0–9 untuk mengaktifkan hasil yang sepadan"
+  },
+  "shortcut_reference_search_number_jump_shortcut": {
+    "message": "Tahan {modifier} selama 0.4s, lepaskan, kemudian tekan 0–9"
+  },
+  "shortcut_reference_search_confirm_title": {
+    "message": "Jalankan tindakan yang dipilih"
+  },
+  "shortcut_reference_search_confirm_desc": {
+    "message": "Buka, cari, tukar tab atau jalankan perintah yang dipilih"
+  },
+  "shortcut_reference_search_tab_mode_title": {
+    "message": "Lengkapkan atau masuk mod carian"
+  },
+  "shortcut_reference_search_tab_mode_desc": {
+    "message": "Lengkapkan cadangan atau masuk mod carian laman/tab terbuka"
+  },
+  "shortcut_reference_search_open_scope_menu_title": {
+    "message": "Buka panel skop carian"
+  },
+  "shortcut_reference_search_open_scope_menu_desc": {
+    "message": "Apabila input kosong, tekan Tab dua kali; jika skop carian dipilih, tekan Tab sekali"
+  },
+  "shortcut_reference_search_close_title": {
+    "message": "Tutup atau keluar mod"
+  },
+  "shortcut_reference_search_close_desc": {
+    "message": "Tutup carian Lumno atau keluar daripada mod carian laman/tab terbuka"
+  },
+  "shortcut_reference_search_current_tab_title": {
+    "message": "Buka dalam tab semasa"
+  },
+  "shortcut_reference_search_current_tab_desc": {
+    "message": "Gunakan tab semasa untuk tindakan yang biasanya membuka tab baharu"
+  },
+  "shortcut_reference_search_switch_new_tab_title": {
+    "message": "Buka hasil tab sepadan dalam tab baharu"
+  },
+  "shortcut_reference_search_switch_new_tab_desc": {
+    "message": "Apabila hasil sepadan dengan tab yang terbuka, buka URLnya dalam tab baharu"
+  },
+  "shortcut_reference_tab_switcher_cycle_title": {
+    "message": "Alihkan pilihan dalam penukar tab"
+  },
+  "shortcut_reference_tab_switcher_cycle_desc": {
+    "message": "Beralih ke tab sebelumnya atau seterusnya dalam penukar tab"
+  },
+  "shortcut_reference_tab_switcher_confirm_title": {
+    "message": "Beralih ke tab yang dipilih"
+  },
+  "shortcut_reference_tab_switcher_confirm_desc": {
+    "message": "Sahkan tab yang dipilih dalam penukar tab"
+  },
+  "shortcut_reference_document_pip_parent_title": {
+    "message": "Pilih elemen luar"
+  },
+  "shortcut_reference_document_pip_parent_desc": {
+    "message": "Beralih ke elemen induk yang lebih besar semasa memilih klip web"
+  },
+  "shortcut_reference_document_pip_child_title": {
+    "message": "Pilih elemen dalam"
+  },
+  "shortcut_reference_document_pip_child_desc": {
+    "message": "Beralih ke elemen anak yang lebih kecil semasa memilih klip web"
+  },
+  "newtab_shortcuts_section_label": {
+    "message": "Pintasan"
+  },
+  "newtab_shortcuts_add": {
+    "message": "Tambah pintasan"
+  },
+  "newtab_shortcuts_hide_add": {
+    "message": "Sembunyikan"
+  },
+  "newtab_shortcuts_add_hidden": {
+    "message": "“+” disembunyikan. Dayakannya semula dalam Tetapan → Penampilan → Pintasan → Tunjukkan “+”."
+  },
+  "newtab_shortcuts_dialog_title": {
+    "message": "Tambah pintasan"
+  },
+  "newtab_shortcuts_name_label": {
+    "message": "Nama"
+  },
+  "newtab_shortcuts_name_placeholder": {
+    "message": "Lumno"
+  },
+  "newtab_shortcuts_url_label": {
+    "message": "URL"
+  },
+  "newtab_shortcuts_url_info_label": {
+    "message": "Perihal URL yang disokong"
+  },
+  "newtab_shortcuts_url_info": {
+    "message": "Halaman dalaman pelayar juga disokong, contohnya:\nchrome://inspect/#devices"
+  },
+  "newtab_shortcuts_url_info__firefox": {
+    "message": "Firefox tidak membenarkan sambungan membuka halaman terbina dalam seperti about:config, jadi gunakan alamat web."
+  },
+  "newtab_shortcuts_url_placeholder": {
+    "message": "https://example.com"
+  },
+  "newtab_shortcuts_icon_label": {
+    "message": "Ikon (pilihan)"
+  },
+  "newtab_shortcuts_icon_mode_label": {
+    "message": "Sumber ikon"
+  },
+  "newtab_shortcuts_icon_builtin": {
+    "message": "Ikon terbina dalam"
+  },
+  "newtab_shortcuts_icon_builtin_hint": {
+    "message": "Gunakan ikon berkualiti tinggi terbina dalam Lumno."
+  },
+  "newtab_shortcuts_icon_builtin_network_hint": {
+    "message": "Tiada permintaan rangkaian diperlukan."
+  },
+  "newtab_shortcuts_icon_builtin_info_label": {
+    "message": "Perihal ikon terbina dalam"
+  },
+  "newtab_shortcuts_icon_service": {
+    "message": "Gstatic (ikon pihak ketiga)"
+  },
+  "newtab_shortcuts_icon_favicon_is": {
+    "message": "Favicon.is (ikon pihak ketiga)"
+  },
+  "newtab_shortcuts_icon_favicon_is_hint": {
+    "message": "Hantar domain kepada Favicon.is untuk ikon yang lebih besar."
+  },
+  "newtab_shortcuts_icon_favicon_is_caution": {
+    "message": "Ikon domain mungkin berbeza daripada ikon halaman semasa."
+  },
+  "newtab_shortcuts_icon_cache": {
+    "message": "Cache pelayar"
+  },
+  "newtab_shortcuts_icon_service_hint": {
+    "message": "Hantar domain laman kepada Gstatic. Stabil dan berkualiti tinggi."
+  },
+  "newtab_shortcuts_icon_cache_hint": {
+    "message": "Ikon laman web yang pantas dan tepat daripada cache pelayar."
+  },
+  "newtab_shortcuts_icon_custom_hint": {
+    "message": "Disimpan pada peranti ini secara lalai, di luar penyegerakan pelayar."
+  },
+  "newtab_shortcuts_icon_service_caution": {
+    "message": "Sesetengah laman web mungkin tidak dikenali."
+  },
+  "newtab_shortcuts_icon_cache_caution": {
+    "message": "Tetapan laman mungkin menambah titik pemberitahuan atau mengurangkan kejelasan."
+  },
+  "newtab_shortcuts_icon_plate_label": {
+    "message": "Tambah latar belakang pada ikon tidak sekata"
+  },
+  "newtab_shortcuts_icon_plate_color_label": {
+    "message": "Warna latar belakang"
+  },
+  "newtab_shortcuts_icon_plate_color_auto": {
+    "message": "Daripada ikon"
+  },
+  "newtab_shortcuts_icon_plate_color_custom": {
+    "message": "Warna tersuai"
+  },
+  "newtab_shortcuts_icon_custom_sync_hint": {
+    "message": "Segerakkan merentas peranti dengan WebDAV."
+  },
+  "newtab_shortcuts_icon_refresh_success": {
+    "message": "Ikon diperoleh"
+  },
+  "newtab_shortcuts_icon_cache_failed": {
+    "message": "Tiada ikon cache ditemui. Lawati laman web ini, kemudian muat semula sekali lagi."
+  },
+  "newtab_shortcuts_icon_source_unavailable": {
+    "message": "Sumber ini tidak tersedia. Pilih cache pelayar atau ikon tersuai."
+  },
+  "newtab_shortcuts_icon_online": {
+    "message": "Ikon dalam talian"
+  },
+  "newtab_shortcuts_icon_custom": {
+    "message": "Ikon tersuai"
+  },
+  "newtab_shortcuts_icon_current": {
+    "message": "Ikon semasa"
+  },
+  "newtab_shortcuts_icon_refresh": {
+    "message": "Muat semula"
+  },
+  "newtab_shortcuts_icon_refreshing": {
+    "message": "Memuat semula…"
+  },
+  "newtab_shortcuts_icon_refresh_failed": {
+    "message": "Tidak dapat memuat semula ikon. Cuba lagi nanti."
+  },
+  "newtab_shortcuts_icon_custom_required": {
+    "message": "Pilih imej untuk ikon tersuai."
+  },
+  "newtab_shortcuts_icon_online_info_label": {
+    "message": "Perihal ikon dalam talian"
+  },
+  "newtab_shortcuts_icon_online_info": {
+    "message": "Ikon dalam talian kekal tetap sehingga anda memuat semula dan menyimpan. Muat semula menggunakan perkhidmatan ikon atau cache pelayar."
+  },
+  "newtab_shortcuts_icon_info_label": {
+    "message": "Perihal ikon pintasan setempat"
+  },
+  "newtab_shortcuts_icon_info": {
+    "message": "PNG, JPG dan WebP disokong. Ikon segi empat sama lut sinar bersaiz 128×128 px atau lebih besar disyorkan. Disimpan pada peranti ini secara lalai; penyegerakan WebDAV tersedia."
+  },
+  "newtab_shortcuts_folder_item_icon_info": {
+    "message": "PNG, JPG dan WebP disokong. Ikon segi empat sama lut sinar bersaiz 128×128 px atau lebih besar disyorkan. Disimpan pada peranti ini sahaja."
+  },
+  "newtab_shortcuts_icon_choose": {
+    "message": "Pilih imej"
+  },
+  "newtab_shortcuts_icon_replace": {
+    "message": "Ganti imej"
+  },
+  "newtab_shortcuts_icon_remove": {
+    "message": "Alih keluar"
+  },
+  "newtab_shortcuts_icon_unsupported": {
+    "message": "Pilih imej PNG, JPG atau WebP."
+  },
+  "newtab_shortcuts_icon_dimensions_too_large": {
+    "message": "Imej tidak boleh melebihi 4096×4096 px"
+  },
+  "newtab_shortcuts_icon_invalid": {
+    "message": "Imej ini tidak dapat digunakan. Pilih imej lain."
+  },
+  "newtab_shortcuts_icon_storage_error": {
+    "message": "Ikon setempat tidak dapat disimpan. Cuba imej lain."
+  },
+  "folder_rename": {
+    "message": "Namakan semula"
+  },
+  "folder_color_change": {
+    "message": "Tukar warna"
+  },
+  "folder_color_format": {
+    "message": "Format warna"
+  },
+  "folder_color_title": {
+    "message": "Warna folder"
+  },
+  "folder_color_description": {
+    "message": "Turut digunakan pada folder ini dalam pintasan dan menu. Disimpan pada peranti ini."
+  },
+  "folder_color_presets": {
+    "message": "Warna pratetap"
+  },
+  "folder_color_default": {
+    "message": "Warna lalai"
+  },
+  "folder_color_reset": {
+    "message": "Tetapkan semula"
+  },
+  "folder_color_saved": {
+    "message": "Warna yang disimpan"
+  },
+  "folder_color_save_current": {
+    "message": "Simpan warna semasa"
+  },
+  "folder_color_remove_saved": {
+    "message": "Padam warna yang disimpan"
+  },
+  "folder_color_saved_delete_failed": {
+    "message": "Tidak dapat memadam warna ini. Cuba lagi."
+  },
+  "folder_color_saved_load_failed": {
+    "message": "Tidak dapat memuatkan warna yang disimpan. Buka semula pemilih warna untuk mencuba lagi."
+  },
+  "folder_color_saved_save_failed": {
+    "message": "Tidak dapat menyimpan warna ini. Cuba lagi."
+  },
+  "folder_color_invalid": {
+    "message": "Masukkan warna HEX yang sah atau nilai RGB dari 0 hingga 255."
+  },
+  "folder_color_save_failed": {
+    "message": "Tidak dapat menyimpan warna folder. Cuba lagi."
+  },
+  "newtab_shortcuts_cancel": {
+    "message": "Batal"
+  },
+  "newtab_shortcuts_done": {
+    "message": "Selesai"
+  },
+  "newtab_shortcuts_save": {
+    "message": "Simpan"
+  },
+  "newtab_shortcuts_invalid_url": {
+    "message": "Masukkan URL http, https atau dalaman pelayar yang sah."
+  },
+  "newtab_shortcuts_limit_reached": {
+    "message": "Anda boleh menambah sehingga {count} pintasan."
+  },
+  "newtab_shortcuts_added": {
+    "message": "Pintasan ditambah"
+  },
+  "context_menu_add_page_shortcut": {
+    "message": "Tambah pada pintasan Tab Baharu Lumno"
+  },
+  "page_shortcut_added": {
+    "message": "Ditambah pada pintasan Tab Baharu Lumno"
+  },
+  "newtab_shortcuts_already_added": {
+    "message": "Sudah ada dalam pintasan"
+  },
+  "newtab_shortcuts_sync_limit_reached": {
+    "message": "Pintasan melebihi ruang penyegerakan pelayar, jadi pintasan baharu kekal pada peranti ini. Hidupkan WebDAV dalam Tetapan untuk menyegerakkannya juga."
+  },
+  "newtab_shortcuts_edited": {
+    "message": "Pintasan dikemas kini"
+  },
+  "newtab_shortcuts_removed": {
+    "message": "Pintasan dialih keluar"
+  },
+  "newtab_shortcuts_removed_undo": {
+    "message": "Pintasan dialih keluar · {shortcut} untuk buat asal"
+  },
+  "newtab_shortcuts_remove_undone": {
+    "message": "Pintasan dipulihkan · {shortcut} untuk buat semula"
+  },
+  "newtab_shortcuts_remove_redone": {
+    "message": "Pintasan dialih keluar · {shortcut} untuk buat asal"
+  },
+  "newtab_shortcuts_add_undone": {
+    "message": "Penambahan pintasan dibuat asal · {shortcut} untuk buat semula"
+  },
+  "newtab_shortcuts_add_redone": {
+    "message": "Pintasan ditambah semula · {shortcut} untuk buat asal"
+  },
+  "newtab_recent_added_to_folder": {
+    "message": "Ditambah pada “{folder}”"
+  },
+  "newtab_shortcuts_open_folder": {
+    "message": "Buka folder"
+  },
+  "newtab_shortcuts_from_bookmarks": {
+    "message": "(daripada penanda halaman)"
+  },
+  "newtab_shortcuts_folder_added": {
+    "message": "Folder ditambah pada pintasan"
+  },
+  "newtab_shortcuts_folder_missing": {
+    "message": "Folder penanda halaman ini tidak lagi tersedia."
+  },
+  "newtab_shortcuts_moved_to_bookmarks": {
+    "message": "Dialihkan ke penanda halaman"
+  },
+  "newtab_shortcuts_new_folder_title": {
+    "message": "Folder baharu"
+  },
+  "newtab_shortcuts_stack_hint": {
+    "message": "Lepaskan untuk mencipta folder dalam bar penanda halaman"
+  },
+  "newtab_shortcuts_stacked_undo": {
+    "message": "Folder dicipta · {shortcut} untuk buat asal"
+  },
+  "newtab_shortcuts_stack_undone": {
+    "message": "Penciptaan folder dibuat asal · {shortcut} untuk buat semula"
+  },
+  "newtab_shortcuts_stack_redone": {
+    "message": "Folder dicipta semula · {shortcut} untuk buat asal"
+  },
+  "newtab_shortcuts_stack_failed": {
+    "message": "Tidak dapat mencipta folder"
+  },
+  "newtab_shortcuts_move_to_bookmarks_failed": {
+    "message": "Tidak dapat dialihkan ke penanda halaman"
+  },
+  "newtab_shortcuts_edit_dialog_title": {
+    "message": "Edit pintasan"
+  },
+  "newtab_shortcuts_context_menu_label": {
+    "message": "Tindakan pintasan"
+  },
+  "settings_tab_switcher_title": {
+    "message": "Penukar tab"
+  },
+  "settings_tab_switcher_desc": {
+    "message": "Beralih dengan pantas antara tab terbaharu; {shortcut} secara lalai, boleh disesuaikan"
+  },
+  "slash_command_empty": {
+    "message": "Tiada perintah yang sepadan"
+  },
+  "command_tabs_title": {
+    "message": "Cari tab terbuka sahaja"
+  },
+  "command_tabs_action": {
+    "message": "Cari tab"
+  },
+  "command_copy_title": {
+    "message": "Salin pautan halaman semasa"
+  },
+  "command_copy_action": {
+    "message": "Salin pautan"
+  },
+  "settings_tab_account": {
+    "message": "Akaun & penyegerakan"
+  },
+  "webdav_endpoint": {
+    "message": "Alamat pelayan (HTTPS)"
+  },
+  "webdav_directory": {
+    "message": "Folder penyegerakan"
+  },
+  "webdav_username": {
+    "message": "Nama pengguna"
+  },
+  "webdav_password": {
+    "message": "Kata laluan apl"
+  },
+  "webdav_credentials_hint": {
+    "message": "Kata laluan apl kekal pada peranti ini. Alamat pelayan, folder dan nama pengguna disegerakkan ke peranti anda yang lain melalui pelayar anda."
+  },
+  "webdav_password_hint": {
+    "message": "Alamat pelayan, folder dan nama pengguna disegerakkan ke peranti anda yang lain melalui pelayar anda, tetapi kata laluan apl tidak. Simpan kata laluan itu di tempat selamat untuk dimasukkan pada peranti baharu."
+  },
+  "webdav_password_hint_synced": {
+    "message": "Alamat pelayan, folder dan nama pengguna datang daripada peranti anda yang lain. Kata laluan apl tidak disegerakkan, jadi masukkannya di sini."
+  },
+  "webdav_suggestion_label": {
+    "message": "Daripada peranti lain"
+  },
+  "webdav_suggestion_add": {
+    "message": "Masukkan kata laluan untuk menyambung"
+  },
+  "webdav_suggestion_dismiss": {
+    "message": "Ketepikan"
+  },
+  "webdav_password_saved": {
+    "message": "Disimpan"
+  },
+  "webdav_password_change": {
+    "message": "Tukar"
+  },
+  "webdav_password_keep": {
+    "message": "Kekalkan kata laluan yang disimpan"
+  },
+  "webdav_password_show": {
+    "message": "Tunjukkan kata laluan"
+  },
+  "webdav_password_hide": {
+    "message": "Sembunyikan kata laluan"
+  },
+  "webdav_last_sync": {
+    "message": "Kali terakhir disegerakkan"
+  },
+  "webdav_choice_hint": {
+    "message": "Pelayan sudah mempunyai tetapan Lumno. Kekalkan satu pihak, atau gabungkan kertas dinding daripada kedua-duanya dan kekalkan tetapan lain pelayan. Data peranti ini disandarkan dahulu."
+  },
+  "webdav_conflict_hint": {
+    "message": "Peranti ini dan pelayan menukar perkara yang sama. Pilih versi untuk dikekalkan; perubahan lain digabungkan secara automatik."
+  },
+  "webdav_error_endpoint": {
+    "message": "Masukkan alamat WebDAV HTTPS yang sah."
+  },
+  "webdav_error_directory": {
+    "message": "Masukkan nama folder penyegerakan yang sah."
+  },
+  "webdav_error_credentials": {
+    "message": "Masukkan nama pengguna dan kata laluan apl."
+  },
+  "webdav_error_auth": {
+    "message": "Pengesahan gagal. Semak nama pengguna dan kata laluan apl."
+  },
+  "webdav_error_permission": {
+    "message": "Akses ditolak. Semak kebenaran baca dan tulis folder."
+  },
+  "webdav_error_rate": {
+    "message": "Had kadar pelayan telah dicapai. Cuba lagi nanti."
+  },
+  "webdav_error_unavailable": {
+    "message": "Pelayan tidak tersedia buat sementara waktu (HTTP 503). Nutstore juga memberikan respons ini selepas terlalu banyak permintaan dalam masa singkat, jadi cuba lagi dalam beberapa minit. Data pada peranti ini dikekalkan."
+  },
+  "webdav_warning_throttled": {
+    "message": "Pelayan menolak permintaan buat masa ini (HTTP {status}), biasanya kerana terlalu banyak permintaan dihantar dalam masa singkat; Nutstore dan perkhidmatan serupa mengehadkannya dengan cara ini. Lumno akan mencuba lagi secara automatik selepas {time}. Data pada peranti ini dikekalkan."
+  },
+  "webdav_error_capacity": {
+    "message": "Storan WebDAV penuh. Kosongkan ruang dan cuba lagi."
+  },
+  "webdav_error_conditional": {
+    "message": "Pelayan ini tidak dapat menghalang tulis ganti serentak dengan pasti dan tidak disokong untuk penyegerakan automatik."
+  },
+  "webdav_error_changed": {
+    "message": "Tetapan berubah semasa penyegerakan. Data setempat dikekalkan dan penyegerakan akan dicuba semula."
+  },
+  "webdav_error_missing": {
+    "message": "Tetapan jauh telah dipadam. Pilih untuk memuat naik tetapan setempat bagi menciptanya semula, atau semak alamat pelayan."
+  },
+  "webdav_error_chrome_capacity": {
+    "message": "Tetapan ini melebihi kapasiti penyegerakan Chrome dan tidak digunakan. Penyegerakan Chrome sedia ada dan data setempat dikekalkan. Kurangkan tetapan dan cuba lagi."
+  },
+  "webdav_error_chrome_capacity__firefox": {
+    "message": "Tetapan ini melebihi kapasiti Firefox Sync dan tidak digunakan. Firefox Sync sedia ada dan data setempat dikekalkan. Kurangkan tetapan dan cuba lagi."
+  },
+  "webdav_warning_chrome_backup": {
+    "message": "Tetapan pada peranti ini melebihi kapasiti penyegerakan Chrome, jadi tetapan itu belum disandarkan ke penyegerakan Chrome. Penyegerakan WebDAV diteruskan dan data setempat dikekalkan. Kurangkan tetapan untuk melengkapkan sandaran."
+  },
+  "webdav_warning_chrome_backup__firefox": {
+    "message": "Tetapan pada peranti ini melebihi kapasiti Firefox Sync, jadi tetapan itu belum disandarkan ke Firefox Sync. Penyegerakan WebDAV diteruskan dan data setempat dikekalkan. Kurangkan tetapan untuk melengkapkan sandaran."
+  },
+  "webdav_error_network": {
+    "message": "Sambungan gagal atau tamat masa. Semak rangkaian, alamat pelayan dan sijil. Data setempat dikekalkan."
+  },
+  "webdav_error_storage": {
+    "message": "Data penyegerakan tidak dapat disimpan. Semak storan setempat pelayar."
+  },
+  "webdav_error_shortcuts": {
+    "message": "Pemulihan akan melebihi had pintasan. Alih keluar beberapa pintasan folder setempat dahulu."
+  },
+  "webdav_error_remote_unreadable": {
+    "message": "Pelayan tidak mengembalikan tetapan jauh seperti biasa. Semak pelayan atau cuba lagi nanti. Data setempat tidak diganti."
+  },
+  "webdav_error_remote_corrupt": {
+    "message": "Fail tetapan jauh rosak (bukan JSON yang sah), mungkin akibat muat naik yang terganggu atau apl lain. Data setempat tidak diganti."
+  },
+  "webdav_error_invalid_state": {
+    "message": "Tetapan jauh menggunakan struktur atau versi yang tidak dikenali oleh Lumno ini, mungkin daripada keluaran yang lebih baharu. Kemas kini Lumno pada setiap peranti. Data setempat tidak diganti."
+  },
+  "webdav_error_state_too_large": {
+    "message": "Tetapan jauh melebihi had penyegerakan (200 pintasan, 256 kertas dinding, 2 MB tetapan). Data setempat tidak diganti."
+  },
+  "webdav_error_response_too_large": {
+    "message": "Fail yang dikembalikan oleh pelayan melebihi had 2 MB. Data setempat tidak diganti."
+  },
+  "webdav_error_invalid_shortcuts": {
+    "message": "Data pintasan jauh tidak sah (cacat atau ID pendua). Data setempat tidak diganti."
+  },
+  "webdav_error_invalid_icon": {
+    "message": "Rekod ikon pintasan jauh tidak sah. Data setempat tidak diganti."
+  },
+  "webdav_error_invalid_wallpaper": {
+    "message": "Rekod kertas dinding jauh tidak sah (ID atau dimensi salah). Data setempat tidak diganti."
+  },
+  "webdav_error_invalid_asset": {
+    "message": "Imej jauh tidak sah (jenis, saiz atau kandungan salah). Data setempat tidak diganti."
+  },
+  "webdav_error_asset_missing": {
+    "message": "Fail imej hilang pada pelayan, mungkin akibat muat naik yang tidak selesai atau fail yang dipadam. Data setempat dikekalkan."
+  },
+  "webdav_error_asset_integrity": {
+    "message": "Fail imej pada pelayan rosak (kandungannya tidak sepadan dengan rekod). Data setempat dikekalkan."
+  },
+  "webdav_error_local_invalid_state": {
+    "message": "Tetapan peranti ini mempunyai struktur yang tidak sah dan tidak dapat disegerakkan. Tiada apa-apa diubah pada mana-mana pihak."
+  },
+  "webdav_error_local_state_too_large": {
+    "message": "Tetapan peranti ini melebihi had penyegerakan (256 kertas dinding, 2 MB tetapan). Alih keluar beberapa kertas dinding dan cuba lagi. Tiada apa-apa diubah pada mana-mana pihak."
+  },
+  "webdav_error_local_invalid_shortcuts": {
+    "message": "Data pintasan peranti ini tidak sah (cacat atau ID pendua) dan tidak dapat disegerakkan. Tiada apa-apa diubah pada mana-mana pihak."
+  },
+  "webdav_error_local_invalid_icon": {
+    "message": "Rekod ikon pintasan peranti ini tidak sah dan tidak dapat disegerakkan. Tiada apa-apa diubah pada mana-mana pihak."
+  },
+  "webdav_error_local_invalid_wallpaper": {
+    "message": "Rekod kertas dinding peranti ini tidak sah (ID atau dimensi salah) dan tidak dapat disegerakkan. Tiada apa-apa diubah pada mana-mana pihak."
+  },
+  "webdav_error_local_invalid_asset": {
+    "message": "Imej pada peranti ini rosak atau tidak disokong dan tidak dapat disegerakkan. Alih keluar dan tambah semula. Tiada apa-apa diubah pada mana-mana pihak."
+  },
+  "webdav_error_local_asset_too_large": {
+    "message": "Imej pada peranti ini melebihi had penyegerakan (96 KB setiap ikon, 2 MB setiap kertas dinding). Tiada apa-apa diubah pada mana-mana pihak."
+  },
+  "webdav_error_shortcut_id_conflict": {
+    "message": "Pintasan jauh berkongsi ID dengan pintasan folder penanda halaman pada peranti ini, jadi kedua-duanya tidak dapat digabungkan. Data setempat dikekalkan."
+  },
+  "webdav_error_write_failed": {
+    "message": "Pelayan enggan menulis fail penyegerakan. Semak kebenaran tulis folder dan ruang kosong. Data setempat dikekalkan."
+  },
+  "webdav_error_directory_unavailable": {
+    "message": "Tidak dapat mencipta folder penyegerakan pada pelayan. Semak alamat pelayan dan kebenaran folder."
+  },
+  "webdav_error_folder_create_refused": {
+    "message": "Pelayan enggan mencipta folder baharu (MKCOL 405), jadi kunci penyegerakan tidak dapat disediakan. Pastikan akaun boleh mencipta folder, lekapan bukan baca sahaja dan tiada proksi yang menyekat MKCOL."
+  },
+  "webdav_error_http": {
+    "message": "Pelayan mengembalikan ralat (HTTP {status}). Cuba lagi nanti. Data setempat dikekalkan."
+  },
+  "webdav_error_generic": {
+    "message": "Penyegerakan gagal. Cuba lagi nanti. Data setempat dikekalkan."
+  },
+  "webdav_test": {
+    "message": "Uji sambungan"
+  },
+  "webdav_enable": {
+    "message": "Simpan dan hidupkan penyegerakan"
+  },
+  "webdav_sync": {
+    "message": "Segerakkan sekarang"
+  },
+  "webdav_restore_backup": {
+    "message": "Pulihkan tetapan sebelum penggantian"
+  },
+  "webdav_merge_wallpapers": {
+    "message": "Gabungkan kertas dinding"
+  },
+  "webdav_error_merge_too_large": {
+    "message": "Gabungan kertas dinding melebihi had penyegerakan (256 kertas dinding, 2 MB tetapan, 8 KB pautan imej). Alih keluar beberapa, atau kekalkan satu pihak. Tiada apa-apa diubah."
+  },
+  "webdav_use_remote": {
+    "message": "Guna versi pelayan"
+  },
+  "webdav_use_local": {
+    "message": "Kekalkan versi peranti ini"
+  },
+  "webdav_test_success": {
+    "message": "Sambungan, baca/tulis dan perlindungan kemas kini serentak disahkan"
+  },
+  "webdav_state_browser": {
+    "message": "Mati"
+  },
+  "webdav_state_ready": {
+    "message": "Disegerakkan"
+  },
+  "webdav_state_syncing": {
+    "message": "Menyegerakkan…"
+  },
+  "webdav_state_paused": {
+    "message": "Dijeda"
+  },
+  "webdav_state_pending": {
+    "message": "Menunggu penyegerakan"
+  },
+  "webdav_state_choice": {
+    "message": "Pilih salinan"
+  },
+  "webdav_state_conflict": {
+    "message": "Konflik tetapan"
+  },
+  "webdav_state_error": {
+    "message": "Penyegerakan gagal"
+  },
+  "webdav_error_interrupted": {
+    "message": "Penggantian sebelumnya terganggu. Muat naik dijeda. Pulihkan tetapan setempat sebelumnya, atau sambung semula dan gunakan tetapan jauh."
+  },
+  "webdav_missing_hint": {
+    "message": "Tetapan pada pelayan telah hilang. Muat naik semula tetapan peranti ini, atau semak alamat pelayan dahulu."
+  },
+  "webdav_error_locked": {
+    "message": "Peranti lain sedang menulis ke pelayan. Cuba lagi nanti. Jika masih tersekat, ikut panduan WebDAV untuk memulihkan kunci yang tertinggal."
+  },
+  "webdav_error_lock_recovery": {
+    "message": "Penulisan jauh tidak dapat diselesaikan dengan selamat, jadi perlindungannya dikekalkan. Jeda penyegerakan pada setiap peranti dan pastikan permintaan yang terganggu telah tamat sebelum mengalih keluar v1/write-lock daripada direktori penyegerakan jauh."
+  },
+  "webdav_error_outdated": {
+    "message": "Muat semula sambungan Lumno, kemudian muat semula tetapan untuk menggunakan berbilang sambungan WebDAV."
+  },
+  "webdav_title": {
+    "message": "Penyegerakan WebDAV"
+  },
+  "webdav_beta_hint": {
+    "message": "Dalam beta: segerakkan tetapan, ikon tersuai dan kertas dinding melalui pemacu WebDAV atau NAS. Tidak seperti penyegerakan terbina dalam pelayar, ia berfungsi merentas pelayar dan merangkumi ikon serta kertas dinding."
+  },
+  "webdav_setup_hint": {
+    "message": "Segerakkan tetapan, ikon tersuai dan kertas dinding melalui Nutstore atau perkhidmatan WebDAV lain, bersama penyegerakan pelayar."
+  },
+  "webdav_edit_config": {
+    "message": "Edit sambungan"
+  },
+  "webdav_save": {
+    "message": "Simpan"
+  },
+  "webdav_never_synced": {
+    "message": "Belum disegerakkan"
+  },
+  "webdav_choice_title": {
+    "message": "Pilih versi awal"
+  },
+  "webdav_conflict_title": {
+    "message": "Konflik penyegerakan"
+  },
+  "webdav_conflict_items": {
+    "message": "Kandungan yang berkonflik"
+  },
+  "webdav_conflict_shortcuts": {
+    "message": "Pintasan dan ikon"
+  },
+  "webdav_conflict_wallpapers": {
+    "message": "Kertas dinding dan pilihan"
+  },
+  "webdav_conflict_preferences": {
+    "message": "Tetapan"
+  },
+  "webdav_resolve_later": {
+    "message": "Jeda dan selesaikan kemudian"
+  },
+  "webdav_add": {
+    "message": "Tambah WebDAV"
+  },
+  "webdav_state_recovery": {
+    "message": "Perlu dipulihkan"
+  },
+  "webdav_retry": {
+    "message": "Cuba semula"
+  },
+  "webdav_copy_diagnostic": {
+    "message": "Salin diagnostik"
+  },
+  "webdav_diagnostic_copied": {
+    "message": "Disalin"
+  },
+  "webdav_provider_jianguoyun": {
+    "message": "Nutstore"
+  },
+  "webdav_upload_local": {
+    "message": "Muat naik tetapan peranti ini"
+  },
+  "webdav_error_duplicate": {
+    "message": "Sambungan dengan pelayan, folder dan nama pengguna yang sama sudah wujud."
+  },
+  "webdav_error_interrupted_other": {
+    "message": "Sambungan WebDAV lain ({name}) perlu memulihkan tetapan setempat dahulu. Sambungan ini akan diteruskan selepas itu."
+  },
+  "webdav_just_now": {
+    "message": "sebentar tadi"
+  },
+  "webdav_view_diff": {
+    "message": "Tunjukkan perbezaan"
+  },
+  "webdav_hide_diff": {
+    "message": "Sembunyikan perbezaan"
+  },
+  "webdav_diff_local": {
+    "message": "Peranti ini"
+  },
+  "webdav_diff_remote": {
+    "message": "Pelayan"
+  },
+  "webdav_diff_added": {
+    "message": "Ditambah: {items}"
+  },
+  "webdav_diff_removed": {
+    "message": "Dialih keluar: {items}"
+  },
+  "webdav_diff_changed": {
+    "message": "Diedit: {items}"
+  },
+  "webdav_diff_more": {
+    "message": "{count} kesemuanya"
+  },
+  "webdav_diff_reordered": {
+    "message": "Disusun semula"
+  },
+  "webdav_diff_selection": {
+    "message": "Menukar kertas dinding semasa"
+  },
+  "webdav_diff_unchanged": {
+    "message": "Tiada perubahan"
+  },
+  "webdav_diff_shortcut_total": {
+    "message": "{count} pintasan"
+  },
+  "webdav_diff_wallpaper_total": {
+    "message": "{count} kertas dinding"
+  },
+  "webdav_diff_loading": {
+    "message": "Memuatkan…"
+  },
+  "webdav_value_on": {
+    "message": "Hidup"
+  },
+  "webdav_value_off": {
+    "message": "Mati"
+  },
+  "webdav_value_default": {
+    "message": "Lalai"
+  },
+  "webdav_value_changed": {
+    "message": "Diubah"
+  },
+  "webdav_value_list": {
+    "message": "{count} item"
+  },
+  "webdav_preference_other": {
+    "message": "Tetapan lain"
+  },
+  "webdav_preference_zen_mode": {
+    "message": "Mod Zen"
+  },
+  "webdav_remove": {
+    "message": "Padam sambungan WebDAV"
+  },
+  "webdav_remove_confirm": {
+    "message": "Padam sambungan setempat ini? Fail pada pelayan akan dikekalkan."
+  },
+  "newtab_quote_title": {
+    "message": "Petikan harian"
+  },
+  "newtab_quote_position": {
+    "message": "Kedudukan petikan"
+  },
+  "newtab_quote_category": {
+    "message": "Kategori petikan"
+  },
+  "newtab_quote_off": {
+    "message": "Mati"
+  },
+  "newtab_quote_top": {
+    "message": "Di atas kotak carian"
+  },
+  "newtab_quote_input": {
+    "message": "Di bawah kotak carian"
+  },
+  "newtab_quote_search": {
+    "message": "Di bawah pintasan"
+  },
+  "newtab_quote_bottom": {
+    "message": "Bawah halaman"
+  },
+  "newtab_quote_literature": {
+    "message": "Sastera"
+  },
+  "newtab_quote_poetry": {
+    "message": "Puisi"
+  },
+  "newtab_quote_shuffle": {
+    "message": "Tunjukkan petikan lain"
+  },
+  "newtab_quote_shuffle_error": {
+    "message": "Tidak dapat memuatkan petikan lain"
+  },
+  "newtab_quote_save_error": {
+    "message": "Gagal menyimpan tetapan petikan"
+  },
+  "newtab_quote_fallback_text": {
+    "message": "Perjalanan seribu batu bermula dengan satu langkah."
+  },
+  "newtab_quote_fallback_author": {
+    "message": "Laozi"
+  },
+  "newtab_quote_fallback_source": {
+    "message": "Tao Te Ching"
+  },
+  "newtab_bing_daily": {
+    "message": "Kemas kini automatik setiap hari"
+  },
+  "newtab_bing_daily_hint": {
+    "message": "Foto Bing baharu setiap hari. Foto yang anda pilih semasa ini dihidupkan kekal untuk baki hari itu."
+  },
+  "newtab_daily_restore": {
+    "message": "Kembali ke kertas dinding hari ini"
+  },
+  "newtab_bing_recent": {
+    "message": "Kertas dinding terbaharu"
+  },
+  "newtab_bing_refresh": {
+    "message": "Muat semula"
+  },
+  "newtab_bing_loading": {
+    "message": "Memuatkan kertas dinding…"
+  },
+  "newtab_bing_saving": {
+    "message": "Menyimpan kertas dinding…"
+  },
+  "newtab_bing_error": {
+    "message": "Tidak dapat memuatkan kertas dinding. Sila cuba lagi."
+  },
+  "newtab_bing_save_error": {
+    "message": "Tidak dapat menyimpan kertas dinding. Sila cuba lagi."
+  },
+  "newtab_bing_source": {
+    "message": "Lihat sumber kertas dinding"
+  },
+  "newtab_wallpaper_curated_section": {
+    "message": "Pilihan"
+  },
+  "newtab_curated_daily_hint": {
+    "message": "Foto baharu setiap hari daripada kategori yang ditunjukkan semasa anda menghidupkan ini, sama pada setiap peranti yang disegerakkan. Foto yang anda pilih kekal untuk baki hari itu."
+  },
+  "newtab_curated_category": {
+    "message": "Kategori"
+  },
+  "newtab_curated_category_random": {
+    "message": "Campuran"
+  },
+  "newtab_curated_category_nature": {
+    "message": "Alam"
+  },
+  "newtab_curated_category_water": {
+    "message": "Air"
+  },
+  "newtab_curated_category_city": {
+    "message": "Bandar"
+  },
+  "newtab_curated_category_minimal": {
+    "message": "Minimal"
+  },
+  "newtab_curated_category_art": {
+    "message": "Seni"
+  },
+  "newtab_curated_art_meta": {
+    "message": "The Cleveland Museum of Art"
+  },
+  "newtab_curated_list": {
+    "message": "Foto"
+  },
+  "newtab_curated_mix_all": {
+    "message": "Semua kategori"
+  },
+  "newtab_curated_mix_count": {
+    "message": "{count} kategori"
+  },
+  "newtab_curated_mix_separator": {
+    "message": ", "
+  },
+  "newtab_curated_mix_aria": {
+    "message": "Kategori dalam campuran"
+  },
+  "newtab_curated_more": {
+    "message": "Tunjukkan lain"
+  },
+  "newtab_curated_photo_by": {
+    "message": "Foto oleh {name}"
+  },
+  "newtab_curated_source_meta": {
+    "message": "Unsplash · melalui Lorem Picsum"
+  },
+  "newtab_wallpaper_add_url": {
+    "message": "Tambah pautan imej"
+  },
+  "newtab_wallpaper_url_placeholder": {
+    "message": "Tampal pautan imej (https://…)"
+  },
+  "newtab_wallpaper_url_submit": {
+    "message": "Tambah"
+  },
+  "newtab_wallpaper_url_invalid": {
+    "message": "Masukkan pautan yang bermula dengan http:// atau https://"
+  },
+  "newtab_wallpaper_url_limit": {
+    "message": "Pautan ini terlalu panjang, atau terlalu banyak pautan disimpan. Alih keluar beberapa dan cuba lagi."
+  },
+  "newtab_wallpaper_url_import_error": {
+    "message": "Tidak dapat menambah imej daripada pautan ini"
+  },
+  "newtab_wallpaper_save_to_local": {
+    "message": "Simpan ke kertas dinding setempat"
+  },
+  "newtab_wallpaper_in_local": {
+    "message": "Sudah ada dalam kertas dinding setempat"
+  },
+  "newtab_wallpaper_saving_local": {
+    "message": "Menyimpan ke kertas dinding setempat…"
+  },
+  "newtab_wallpaper_saved_local": {
+    "message": "Disimpan ke kertas dinding setempat"
+  },
+  "newtab_wallpaper_local_limit": {
+    "message": "Anda boleh menyimpan sehingga {count} kertas dinding setempat. Padam beberapa dan cuba lagi."
+  },
+  "newtab_wallpaper_context_menu_label": {
+    "message": "Tindakan kertas dinding"
+  },
+  "newtab_quote_font": {
+    "message": "Fon"
+  },
+  "newtab_quote_font_label": {
+    "message": "Fon petikan"
+  },
+  "newtab_quote_font_wenkai": {
+    "message": "LXGW WenKai"
+  },
+  "newtab_quote_font_xiaowei": {
+    "message": "ZCOOL XiaoWei"
+  },
+  "newtab_quote_font_sans": {
+    "message": "Sans-serif sistem"
+  },
+  "newtab_quote_font_size": {
+    "message": "Saiz fon"
+  },
+  "newtab_quote_font_size_label": {
+    "message": "Saiz fon petikan (px)"
+  },
+  "newtab_quote_provider": {
+    "message": "Dikuasakan oleh Hitokoto"
+  },
+  "recent_history_menu": {
+    "message": "Lihat Sejarah Perubahan Terbaharu"
+  },
+  "recent_history_title": {
+    "message": "Sejarah Perubahan"
+  },
+  "recent_history_description": {
+    "message": "Tetapkan mana-mana versi yang disimpan sebagai semasa tanpa mengalih keluar sejarah."
+  },
+  "recent_history_current": {
+    "message": "Versi semasa"
+  },
+  "recent_history_earlier": {
+    "message": "Versi terdahulu"
+  },
+  "recent_history_restore": {
+    "message": "Tetapkan sebagai semasa"
+  },
+  "recent_history_restoring": {
+    "message": "Memulihkan…"
+  },
+  "recent_history_restore_success": {
+    "message": "Versi yang dipilih dipulihkan"
+  },
+  "recent_history_restore_failed": {
+    "message": "Tidak dapat memulihkan versi ini"
+  },
+  "recent_update_close": {
+    "message": "Tutup"
+  },
+  "settings_progress_tracking_title": {
+    "message": "Kemas kinikan rancangan dan novel yang disemat"
+  },
+  "settings_progress_tracking_desc": {
+    "message": "Semat rancangan atau novel dan kadnya mengikut anda ke episod atau bab seterusnya, jadi ia dibuka di tempat anda berhenti"
+  },
+  "settings_newtab_open_in_new_tab_title": {
+    "message": "Buka dalam tab baharu"
+  },
+  "settings_newtab_open_in_new_tab_desc": {
+    "message": "Item yang dihidupkan dibuka dalam tab baharu dan beralih kepadanya; item yang dimatikan dibuka dalam tab semasa. Klik dengan Command/Ctrl atau klik tengah sentiasa membuka di latar belakang."
+  },
+  "settings_newtab_open_in_new_tab_search": {
+    "message": "Hasil carian"
+  },
+  "settings_newtab_open_in_new_tab_shortcuts": {
+    "message": "Pintasan"
+  },
+  "settings_newtab_open_in_new_tab_bookmarks": {
+    "message": "Penanda halaman"
+  },
+  "settings_newtab_open_in_new_tab_recent_sites": {
+    "message": "Kad tapak"
+  },
+  "recent_progress_track": {
+    "message": "Jejak kemajuan"
+  },
+  "recent_progress_stop": {
+    "message": "Berhenti menjejak kemajuan"
+  },
+  "recent_progress_track_toast": {
+    "message": "Penjejakan dihidupkan. Kad dikemas kini apabila anda beralih ke episod atau bab seterusnya."
+  },
+  "recent_progress_stop_toast": {
+    "message": "Berhenti menjejak kemajuan"
+  },
+  "recent_progress_tracking": {
+    "message": "Menjejak kemajuan"
+  },
+  "recent_progress_auto_toast": {
+    "message": "Disemat dan menjejak kemajuan. Klik ikon radar pada kad untuk berhenti."
+  },
+  "settings_general_newtab_section_title": {
+    "message": "Tetapan Tab Baharu"
+  },
+  "recent_progress_track_tooltip": {
+    "message": "Jejak kemajuan\n────────\nBerguna untuk rancangan dan novel bersiri.\nApabila dihidupkan, mencapai episod atau bab seterusnya bagi karya ini akan mengalihkan kad ke sana."
+  },
+  "recent_progress_stop_tooltip": {
+    "message": "Menjejak kemajuan\n────────\nMencapai episod atau bab seterusnya bagi karya ini akan mengalihkan kad ke sana.\nKlik untuk berhenti menjejak."
+  },
+  "newtab_shortcuts_group_new": {
+    "message": "Kumpulan baharu"
+  },
+  "newtab_shortcuts_group_default_title": {
+    "message": "Pintasan"
+  },
+  "newtab_shortcuts_group_title_placeholder": {
+    "message": "Tambah tajuk"
+  },
+  "newtab_shortcuts_group_actions": {
+    "message": "Tindakan {group}"
+  },
+  "newtab_shortcuts_group_untitled_name": {
+    "message": "Kumpulan tanpa tajuk"
+  },
+  "newtab_shortcuts_group_rename": {
+    "message": "Namakan semula"
+  },
+  "newtab_shortcuts_group_add_site": {
+    "message": "Tambah laman"
+  },
+  "newtab_shortcuts_group_move_up": {
+    "message": "Alih ke atas"
+  },
+  "newtab_shortcuts_group_move_down": {
+    "message": "Alih ke bawah"
+  },
+  "newtab_shortcuts_group_delete": {
+    "message": "Padam kumpulan"
+  },
+  "newtab_shortcuts_group_delete_with_sites": {
+    "message": "Padam kumpulan dan laman"
+  },
+  "newtab_shortcuts_group_delete_confirm_title": {
+    "message": "Padam “{group}” dan lamannya?"
+  },
+  "newtab_shortcuts_group_delete_confirm_description": {
+    "message": "Kumpulan ini dan {count} lamannya akan dipadam."
+  },
+  "newtab_shortcuts_group_delete_confirm_button": {
+    "message": "Padam"
+  },
+  "newtab_shortcuts_group_deleted_undo": {
+    "message": "Kumpulan dipadam · {shortcut} untuk buat asal"
+  },
+  "newtab_shortcuts_group_delete_undone": {
+    "message": "Kumpulan dipulihkan · {shortcut} untuk buat semula"
+  },
+  "newtab_shortcuts_group_delete_redone": {
+    "message": "Kumpulan dipadam · {shortcut} untuk buat asal"
+  },
+  "newtab_shortcuts_group_limit_reached": {
+    "message": "Anda boleh mencipta sehingga {count} kumpulan."
+  },
+  "options_shortcut_sync_all": {
+    "message": "Pintasan: kesemua {count} disegerakkan dengan pelayar."
+  },
+  "options_shortcut_sync_split_webdav": {
+    "message": "Pintasan: {synced} disegerakkan dengan pelayar; {local} lagi disegerakkan melalui WebDAV."
+  },
+  "options_shortcut_sync_split_local": {
+    "message": "Pintasan: {synced} disegerakkan dengan pelayar; {local} melebihi ruang penyegerakannya dan kekal pada peranti ini. Hidupkan WebDAV untuk menyegerakkannya juga."
+  },
+  "options_shortcut_sync_failed_local": {
+    "message": "Pintasan tidak dapat disimpan ke penyegerakan pelayar; kesemua {count} kekal pada peranti ini buat masa ini."
+  },
+  "options_shortcut_sync_failed_webdav": {
+    "message": "Pintasan tidak dapat disimpan ke penyegerakan pelayar; kesemua {count} disegerakkan melalui WebDAV buat masa ini."
+  },
+  "options_shortcut_sync_none_local": {
+    "message": "Pintasan: penyegerakan pelayar penuh, jadi kesemua {count} kekal pada peranti ini. Hidupkan WebDAV untuk menyegerakkannya."
+  },
+  "options_shortcut_sync_none_webdav": {
+    "message": "Pintasan: penyegerakan pelayar penuh, jadi kesemua {count} disegerakkan melalui WebDAV."
+  },
+  "newtab_shortcuts_add_site": {
+    "message": "Tambah laman"
+  },
+  "newtab_shortcuts_group_dialog_rename_title": {
+    "message": "Namakan semula kumpulan"
+  },
+  "newtab_shortcuts_group_name_placeholder": {
+    "message": "Pilihan; kumpulan tanpa tajuk hanya memulakan baris baharu"
+  },
+  "newtab_style_section_title": {
+    "message": "Gaya"
+  },
+  "settings_newtab_glass_style_title": {
+    "message": "Bahan"
+  },
+  "settings_newtab_glass_style_desc": {
+    "message": "Tukar bahan elemen UI Tab Baharu."
+  },
+  "settings_newtab_glass_style_none": {
+    "message": "Lalai"
+  },
+  "settings_newtab_glass_style_frosted": {
+    "message": "Akrilik"
+  },
+  "settings_newtab_glass_style_liquid": {
+    "message": "Kaca cecair"
+  },
+  "settings_newtab_glass_theme_title": {
+    "message": "Tema bahan"
+  },
+  "settings_newtab_glass_theme_follow": {
+    "message": "Auto"
+  },
+  "settings_newtab_glass_theme_light": {
+    "message": "Cerah"
+  },
+  "settings_newtab_glass_theme_dark": {
+    "message": "Gelap"
+  },
+  "settings_search_source_group_order_title": {
+    "message": "Susunan Panel Carian"
+  },
+  "settings_search_source_group_order_desc": {
+    "message": "Seret teg untuk menetapkan susunan kumpulan dalam panel kotak carian. Seret baris dalam senarai di bawah untuk menyusun setiap kumpulan. Tekan Ctrl/⌘ + Z untuk buat asal dan Shift + Ctrl/⌘ + Z untuk buat semula."
+  },
+  "settings_search_source_order_keyboard_hint": {
+    "message": "Tekan Alt bersama kekunci anak panah Kiri atau Kanan untuk mengalihkan"
+  },
+  "settings_search_source_order_failed": {
+    "message": "Susunan baharu tidak dapat disimpan. Cuba lagi."
+  },
+  "settings_search_source_move_up": {
+    "message": "Alih ke atas"
+  },
+  "settings_search_source_move_down": {
+    "message": "Alih ke bawah"
+  },
+  "settings_search_result_sources_order_desc": {
+    "message": "Seret untuk menetapkan susunannya dalam kumpulan Kandungan pelayar pada panel kotak carian. Tekan Ctrl/⌘ + Z untuk buat asal dan Shift + Ctrl/⌘ + Z untuk buat semula."
+  },
+  "settings_search_source_order_undone": {
+    "message": "Perubahan susunan dibuat asal"
+  },
+  "settings_search_source_order_redone": {
+    "message": "Perubahan susunan dibuat semula"
+  },
+  "newtab_quote_source": {
+    "message": "Sumber"
+  },
+  "newtab_quote_custom": {
+    "message": "Tersuai"
+  },
+  "newtab_quote_collection_save_error": {
+    "message": "Tidak dapat menyimpan pada peranti ini. Koleksi anda sebelum ini dikekalkan."
+  },
+  "newtab_quote_hitokoto": {
+    "message": "Hitokoto"
+  },
+  "newtab_quote_provider_custom": {
+    "message": "Koleksi tersuai · pada peranti ini, disegerakkan dengan WebDAV"
+  },
+  "newtab_quote_importing": {
+    "message": "Mengimport…"
+  },
+  "newtab_quote_import_hint": {
+    "message": "Petikan baharu dipaparkan setiap hari; Kocok menukarnya pada bila-bila masa. TXT / MD: satu baris kandungan tidak kosong bagi setiap petikan. Sehingga 1 MB, 1,000 petikan, 500 aksara setiap satu; disimpan pada peranti ini, bukan dalam penyegerakan pelayar; WebDAV menyegerakkannya apabila dihidupkan."
+  },
+  "newtab_quote_count": {
+    "message": "{count} petikan"
+  },
+  "newtab_quote_import_error": {
+    "message": "Import gagal: fail tidak memenuhi had format atau saiz. Koleksi anda sebelum ini dikekalkan."
+  },
+  "newtab_quote_library": {
+    "message": "Petikan"
+  },
+  "newtab_quote_import": {
+    "message": "Import fail"
+  },
+  "newtab_quote_replace": {
+    "message": "Ganti fail"
+  },
+  "newtab_quote_shuffle_button": {
+    "message": "Kocok"
+  },
+  "newtab_quote_font_size_reset": {
+    "message": "Tetapkan semula saiz fon petikan"
+  },
+  "popup_actions_label": {
+    "message": "Tindakan halaman"
+  },
+  "popup_action_shortcut": {
+    "message": "Tambah pintasan"
+  },
+  "popup_action_copy": {
+    "message": "Salin pautan"
+  },
+  "popup_copy_failed": {
+    "message": "Tidak dapat menyalin pautan. Cuba lagi."
+  },
+  "popup_theme_label": {
+    "message": "Tema"
+  },
+  "popup_link_settings": {
+    "message": "Tetapan"
+  },
+  "popup_link_shortcuts": {
+    "message": "Tetapkan pintasan"
+  },
+  "popup_link_feedback": {
+    "message": "Maklum balas"
+  },
+  "popup_sync_error": {
+    "message": "Penyegerakan WebDAV gagal"
+  },
+  "popup_sync_attention": {
+    "message": "Penyegerakan WebDAV perlukan anda"
+  },
+  "popup_sync_busy": {
+    "message": "WebDAV sedang menyegerakkan"
+  },
+  "popup_sync_waiting": {
+    "message": "WebDAV menunggu untuk mencuba semula"
+  },
+  "popup_release_notes": {
+    "message": "Apa yang baharu"
+  },
+  "popup_section_command_bar": {
+    "message": "Bar perintah"
+  },
+  "popup_overlay_page_theme": {
+    "message": "Padankan warna halaman"
+  },
+  "popup_overlay_open_tabs": {
+    "message": "Tunjukkan tab terbuka secara lalai"
+  },
+  "popup_action_shortcut_tooltip": {
+    "message": "Tambah pada pintasan Tab Baharu anda"
+  },
+  "popup_action_clip_tooltip": {
+    "message": "Klip sebahagian halaman ke dalam tetingkap terapung"
+  },
+  "popup_settings_label": {
+    "message": "Tetapan pantas"
+  },
+  "popup_sync_ready": {
+    "message": "WebDAV disegerakkan"
+  },
+  "popup_open_command_bar": {
+    "message": "Buka bar perintah"
+  },
+  "popup_action_pip": {
+    "message": "Gambar dalam gambar"
+  },
+  "popup_action_pip_exit": {
+    "message": "Keluar gambar dalam gambar"
+  },
+  "popup_action_pip_tooltip": {
+    "message": "Apungkan video halaman ini dalam tetingkap kecil"
+  },
+  "popup_action_pip_menu": {
+    "message": "Gambar dalam gambar automatik"
+  },
+  "popup_pip_failed": {
+    "message": "Video ini tidak dapat dimainkan dalam gambar dalam gambar."
+  },
+  "popup_auto_pip_hint": {
+    "message": "Video terapung apabila anda bertukar tab"
+  },
+  "popup_action_unavailable": {
+    "message": "Tidak tersedia pada halaman ini"
+  },
+  "popup_action_pin_recent": {
+    "message": "Semat ke Terbaharu"
+  },
+  "popup_action_unpin_recent": {
+    "message": "Nyahsemat daripada Terbaharu"
+  },
+  "popup_action_pin_recent_tooltip": {
+    "message": "Semat ke Terbaharu pada Tab Baharu"
+  },
+  "popup_action_unpin_recent_tooltip": {
+    "message": "Nyahsemat daripada Terbaharu pada Tab Baharu"
+  },
+  "popup_recent_pinned": {
+    "message": "Disemat ke Terbaharu pada Tab Baharu anda"
+  },
+  "popup_recent_unpinned": {
+    "message": "Dinyahsemat daripada Terbaharu"
+  }
+}

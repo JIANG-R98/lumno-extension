@@ -281,23 +281,20 @@
   "settings_language_desc": {
     "message": "选择界面显示语言"
   },
+  "settings_language_machine_note": {
+    "message": "此语言由 AI 翻译，如有不准确之处，欢迎反馈。"
+  },
+  "settings_language_search_placeholder": {
+    "message": "搜索语言"
+  },
+  "settings_language_no_results": {
+    "message": "没有匹配的语言"
+  },
   "settings_version_label": {
     "message": "版本"
   },
   "settings_version_tooltip": {
     "message": "查看更新日志"
-  },
-  "language_zh_cn": {
-    "message": "简体中文"
-  },
-  "language_zh_tw": {
-    "message": "繁體中文"
-  },
-  "language_en": {
-    "message": "English"
-  },
-  "language_ja": {
-    "message": "日本語"
   },
   "language_system": {
     "message": "跟随浏览器语言"
@@ -3536,8 +3533,8 @@
   "newtab_quote_import_hint": {
     "message": "每天自动换一句，也可以点「换一句」手动更换。支持 TXT / MD，每个非空正文行作为一句；文件最大 1 MB，最多 1,000 句，每句不超过 500 字。保存在本机，不走浏览器同步；开启 WebDAV 后会随之同步。"
   },
-  "newtab_quote_entries": {
-    "message": "句"
+  "newtab_quote_count": {
+    "message": "{count} 句"
   },
   "newtab_quote_import_error": {
     "message": "导入失败：格式或大小不符，原句库已保留。"

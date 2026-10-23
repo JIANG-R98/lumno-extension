@@ -586,6 +586,18 @@ import * as MODEL from './onboarding-content.js';
     return true;
   }
 
+  // A translated language's copy ships as JSON beside this page; without
+  // it the page falls back to English.
+  function loadOnboardingLocaleText(locale) {
+    if (!MODEL.needsOnboardingLocaleText(locale) || typeof fetch !== 'function') {
+      return Promise.resolve();
+    }
+    return fetch(`locales/${locale}.json`)
+      .then((response) => response.json())
+      .then((translations) => MODEL.registerOnboardingLocaleText(locale, translations))
+      .catch(() => {});
+  }
+
   function getRuntimeLocale(callback) {
     const chromeApi = getChromeApi();
     const fromParam = params.get('locale') || params.get('lang') || '';
@@ -1054,7 +1066,9 @@ import * as MODEL from './onboarding-content.js';
     if (!widestLine) {
       return;
     }
-    const scale = Math.max(0.78, Math.min(1, availableWidth / widestLine));
+    // Translated titles can run much longer than the English or Chinese
+    // ones, so the floor is low enough for them to still fit on one line.
+    const scale = Math.max(0.6, Math.min(1, availableWidth / widestLine));
     title.style.setProperty('--title-fit-scale', scale.toFixed(3));
   }
 
@@ -1503,14 +1517,14 @@ import * as MODEL from './onboarding-content.js';
     visualResizeObserver.observe(visualSlot);
   }
 
-  getRuntimeLocale((locale) => {
+  getRuntimeLocale((locale) => loadOnboardingLocaleText(locale).then(() => {
     blueprint = MODEL.getOnboardingBlueprint(locale);
     runtimeCopy = blueprint.runtimeCopy || runtimeCopy;
     const requestedIndex = Number(params.get('slide') || 0);
     state = MODEL.createOnboardingState(blueprint.slides.length, requestedIndex);
     render();
     refreshCurrentShortcut(true);
-  });
+  }));
 
   window.addEventListener('focus', () => refreshCurrentShortcut(true), true);
   document.addEventListener('visibilitychange', () => {

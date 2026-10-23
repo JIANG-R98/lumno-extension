@@ -496,36 +496,100 @@ function writeSettingRepairs(chromeApi, area, repairs, stored) {
   }
 }
 
-function normalizeLocale(locale) {
-  const raw = String(locale || '').trim();
-  if (!raw) {
-    return 'en';
+// The UI languages, in the language picker's order. `id` is the _locales
+// folder (a Chrome locale code), `name` is the language in its own words.
+// Right-to-left languages are left out until the styles handle them.
+// `machineTranslated` marks copy that no native speaker has reviewed yet.
+const UI_LOCALES = Object.freeze([
+  ['zh_CN', '简体中文'],
+  ['zh_TW', '繁體中文'],
+  ['ja', '日本語'],
+  ['en', 'English'],
+  ['ko', '한국어', true],
+  ['id', 'Bahasa Indonesia', true],
+  ['ms', 'Bahasa Melayu', true],
+  ['ca', 'Català', true],
+  ['cs', 'Čeština', true],
+  ['da', 'Dansk', true],
+  ['de', 'Deutsch', true],
+  ['et', 'Eesti', true],
+  ['es', 'Español', true],
+  ['fil', 'Filipino', true],
+  ['fr', 'Français', true],
+  ['hr', 'Hrvatski', true],
+  ['it', 'Italiano', true],
+  ['sw', 'Kiswahili', true],
+  ['lv', 'Latviešu', true],
+  ['lt', 'Lietuvių', true],
+  ['hu', 'Magyar', true],
+  ['nl', 'Nederlands', true],
+  ['no', 'Norsk', true],
+  ['pl', 'Polski', true],
+  ['pt_BR', 'Português (Brasil)', true],
+  ['pt_PT', 'Português (Portugal)', true],
+  ['ro', 'Română', true],
+  ['sk', 'Slovenčina', true],
+  ['sl', 'Slovenščina', true],
+  ['fi', 'Suomi', true],
+  ['sv', 'Svenska', true],
+  ['vi', 'Tiếng Việt', true],
+  ['tr', 'Türkçe', true],
+  ['el', 'Ελληνικά', true],
+  ['bg', 'Български', true],
+  ['ru', 'Русский', true],
+  ['sr', 'Српски', true],
+  ['uk', 'Українська', true],
+  ['am', 'አማርኛ', true],
+  ['hi', 'हिन्दी', true],
+  ['mr', 'मराठी', true],
+  ['bn', 'বাংলা', true],
+  ['gu', 'ગુજરાતી', true],
+  ['ta', 'தமிழ்', true],
+  ['te', 'తెలుగు', true],
+  ['kn', 'ಕನ್ನಡ', true],
+  ['ml', 'മലയാളം', true],
+  ['th', 'ไทย', true]
+].map(([id, name, machineTranslated]) => Object.freeze({
+  id,
+  htmlLang: id.replace('_', '-'),
+  name,
+  machineTranslated: Boolean(machineTranslated)
+})));
+const UI_LOCALES_BY_ID = new Map(UI_LOCALES.map((entry) => [entry.id, entry]));
+// Language subtags browsers report under another name than the _locales folder.
+const LOCALE_SUBTAG_ALIASES = Object.freeze({ nb: 'no', nn: 'no', tl: 'fil', in: 'id' });
+
+// The _locales folder for a browser or stored language tag, or '' when
+// Lumno has no copy in that language.
+function resolveSupportedLocale(locale) {
+  const lower = String(locale || '').trim().toLowerCase().replace(/_/g, '-');
+  if (!lower) {
+    return '';
   }
-  const lower = raw.toLowerCase();
   if (lower.startsWith('zh')) {
     if (lower.includes('tw') || lower.includes('hk') || lower.includes('mo') || lower.includes('hant')) {
       return 'zh_TW';
     }
     return 'zh_CN';
   }
-  if (lower === 'ja' || lower.startsWith('ja-') || lower.startsWith('ja_')) {
-    return 'ja';
+  const [language, ...rest] = lower.split('-');
+  if (language === 'pt') {
+    return rest.includes('pt') ? 'pt_PT' : 'pt_BR';
   }
-  return 'en';
+  const id = LOCALE_SUBTAG_ALIASES[language] || language;
+  return UI_LOCALES_BY_ID.has(id) ? id : '';
+}
+
+function normalizeLocale(locale) {
+  return resolveSupportedLocale(locale) || 'en';
 }
 
 function localeToHtmlLang(locale) {
-  const normalized = normalizeLocale(locale);
-  if (normalized === 'zh_CN') {
-    return 'zh-CN';
-  }
-  if (normalized === 'zh_TW') {
-    return 'zh-TW';
-  }
-  if (normalized === 'ja') {
-    return 'ja';
-  }
-  return 'en';
+  return UI_LOCALES_BY_ID.get(normalizeLocale(locale)).htmlLang;
+}
+
+function isMachineTranslatedLocale(locale) {
+  return UI_LOCALES_BY_ID.get(normalizeLocale(locale)).machineTranslated;
 }
 
 function normalizeNewtabWidthMode(value) {
@@ -1741,8 +1805,11 @@ export {
   NEWTAB_TIME_FONTS,
   NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY,
   NEWTAB_TIME_12_HOUR_STORAGE_KEY,
+  UI_LOCALES,
+  resolveSupportedLocale,
   normalizeLocale,
   localeToHtmlLang,
+  isMachineTranslatedLocale,
   normalizeNewtabWidthMode,
   normalizeNewtabSearchWidth,
   normalizeNewtabTopContentMode,

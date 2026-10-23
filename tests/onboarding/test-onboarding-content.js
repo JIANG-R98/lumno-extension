@@ -26,7 +26,8 @@ assert.strictEqual(typeof onboarding.shortcutHotkeyMatchesEvent, 'function');
 assert.strictEqual(typeof onboarding.getOnboardingRuntimeCopy, 'function');
 
 const locales = onboarding.getSupportedLocales();
-assert.deepStrictEqual(locales, ['zh_CN', 'zh_TW', 'ja', 'en']);
+assert.deepStrictEqual(locales.slice(0, 4), ['zh_CN', 'zh_TW', 'ja', 'en']);
+assert.ok(locales.includes('de') && locales.includes('pt_BR'), 'translated UI languages should be supported');
 const localeDirs = fs.readdirSync(path.join(__dirname, '..', '..', '_locales'))
   .filter((name) => fs.existsSync(path.join(__dirname, '..', '..', '_locales', name, 'messages.json')))
   .sort();
@@ -437,6 +438,27 @@ assert.strictEqual(
   'Search bookmarks instantly',
   'unknown locales should fall back to English onboarding copy'
 );
+
+// A translated locale lays its file over the English copy; paths it misses stay English.
+const translationSource = onboarding.getOnboardingTranslationSource();
+assert.strictEqual(translationSource['intro.title'], 'Search bookmarks instantly');
+assert.ok(!Object.keys(translationSource).some((key) => /(^|\.)(favicon|url|id)$/.test(key)),
+  'ids, URLs and icons should not be offered for translation');
+assert.strictEqual(onboarding.needsOnboardingLocaleText('de'), true);
+assert.strictEqual(onboarding.needsOnboardingLocaleText('ja'), false);
+onboarding.registerOnboardingLocaleText('de', {
+  'intro.title': 'Lesezeichen sofort finden',
+  'runtimeCopy.siteSearchDemo.cases.1.promptQuery': 'Worauf sollte ich in diesem PR achten?'
+});
+assert.strictEqual(onboarding.needsOnboardingLocaleText('de'), false);
+const de = onboarding.getOnboardingBlueprint('de-DE');
+assert.strictEqual(de.locale, 'de');
+assert.strictEqual(de.htmlLang, 'de');
+assert.strictEqual(de.slides[0].copy.title, 'Lesezeichen sofort finden');
+const deDemo = de.runtimeCopy.siteSearchDemo.cases[1];
+assert.strictEqual(deDemo.promptQuery, 'Worauf sollte ich in diesem PR achten?');
+assert.strictEqual(deDemo.promptWidth, undefined, 'a translated demo query should size itself');
+assert.strictEqual(de.runtimeCopy.misc.openLabel, 'Open', 'untranslated paths should keep the English copy');
 
 const zh = onboarding.getOnboardingBlueprint('zh-CN');
 assert.strictEqual(zh.locale, 'zh_CN', 'BCP-47 Chinese locale should normalize to extension locale key');

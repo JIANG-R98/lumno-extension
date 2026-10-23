@@ -80,6 +80,7 @@ import * as LumnoWebDavOptions from './webdav-options.js';
   const tabsContainer = document.getElementById('_x_extension_settings_tabs_2024_unique_');
   const settingsVersion = document.getElementById('_x_extension_settings_version_2024_unique_');
   const languageSelect = document.getElementById('_x_extension_language_select_2024_unique_');
+  const languageMachineNote = document.getElementById('_x_extension_language_machine_note_2026_unique_');
   const recentModeSelect = document.getElementById('_x_extension_recent_mode_select_2024_unique_');
   const recentModeTabButtons = Array.from(document.querySelectorAll('button[data-recent-mode]'));
   const recentModeTabsWrap = document.getElementById('_x_extension_recent_mode_tabs_wrap_2024_unique_');
@@ -443,6 +444,7 @@ import * as LumnoWebDavOptions from './webdav-options.js';
     LANGUAGE_STORAGE_KEY,
     localStorageArea,
     languageSelect,
+    languageMachineNote,
     setOptionsSelectState: (...args) => optionsState.setOptionsSelectState(...args),
     renderOptionsInfoButtons,
     renderFeedbackSupport,
@@ -1176,6 +1178,16 @@ import * as LumnoWebDavOptions from './webdav-options.js';
       newtabTimeFontSelect.appendChild(option);
     });
     newtabTimeFontSelect.value = optionsState.currentNewtabTimeFont;
+  }
+  // Each language is listed in its own words, so the names are not translated.
+  if (languageSelect) {
+    SETTINGS.UI_LOCALES.forEach((locale) => {
+      const option = document.createElement('option');
+      option.value = locale.htmlLang;
+      option.lang = locale.htmlLang;
+      option.textContent = locale.name;
+      languageSelect.appendChild(option);
+    });
   }
   [
     [languageSelect, 'language'],

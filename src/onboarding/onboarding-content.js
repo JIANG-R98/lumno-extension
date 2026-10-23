@@ -1,6 +1,17 @@
 import * as SHORTCUT_KEY_MATCHER from '../shared/shortcut-key-matcher.js';
 import * as SETTINGS from '../shared/settings.js';
-const SUPPORTED_LOCALES = Object.freeze(['zh_CN', 'zh_TW', 'ja', 'en']);
+// zh_CN, zh_TW, ja and en are written below; every other UI language
+// translates the English copy into src/onboarding/locales/<locale>.json.
+const SUPPORTED_LOCALES = Object.freeze(SETTINGS.UI_LOCALES.map((entry) => entry.id));
+// Ids, URLs, icons, sizes and the demo's brand names stay as written in
+// every language; every other string in the copy is translated.
+const UNTRANSLATED_COPY_KEYS = new Set([
+  'id', 'tone', 'type', 'kind', 'art', 'favicon', 'iconClass', 'url', 'urlText', 'detail',
+  'previewUrls', 'query', 'triggerQuery', 'modeLabel', 'prefixLabel', 'siteName',
+  'sourceTagKind', 'promptWidth'
+]);
+// Translated copy by locale, filled in by registerOnboardingLocaleText().
+const TRANSLATED_LOCALE_TEXT = new Map();
 const LUMNO_GITHUB_HOMEPAGE_URL = 'https://github.com/kubai087/lumno-extension';
 const EMPTY_COPY = Object.freeze({ eyebrow: '', title: '', body: '' });
 const SHORTCUTS_PAGE_URL = 'chrome://extensions/shortcuts';
@@ -19,13 +30,6 @@ const BROWSER_AVATARS = Object.freeze([
   Object.freeze({ id: 'dia', name: 'Dia', src: '../../assets/images/browser-logos/dia.jpg' }),
   Object.freeze({ id: 'comet', name: 'Comet', src: '../../assets/images/browser-logos/comet.jpg' })
 ]);
-
-const LOCALE_META = Object.freeze({
-  zh_CN: Object.freeze({ locale: 'zh_CN', htmlLang: 'zh-CN' }),
-  zh_TW: Object.freeze({ locale: 'zh_TW', htmlLang: 'zh-TW' }),
-  ja: Object.freeze({ locale: 'ja', htmlLang: 'ja' }),
-  en: Object.freeze({ locale: 'en', htmlLang: 'en' })
-});
 
 const LOCALE_TEXT = Object.freeze({
   zh_CN: Object.freeze({
@@ -953,7 +957,58 @@ function cloneAccordionLinks(links) {
 
 function getLocaleText(locale) {
   const normalized = normalizeLocale(locale);
-  return LOCALE_TEXT[normalized] || LOCALE_TEXT.en;
+  return LOCALE_TEXT[normalized] || TRANSLATED_LOCALE_TEXT.get(normalized) || LOCALE_TEXT.en;
+}
+
+// The English copy's translatable strings, keyed by their path
+// ("intro.titleLines.0"): the source a translated locale file follows.
+// Another written locale gives its own strings, for translators to compare.
+function getOnboardingTranslationSource(locale = 'en') {
+  const source = {};
+  const walk = (value, path) => {
+    if (typeof value === 'string') {
+      source[path.join('.')] = value;
+      return;
+    }
+    if (value && typeof value === 'object') {
+      Object.keys(value).forEach((key) => {
+        if (!UNTRANSLATED_COPY_KEYS.has(key)) {
+          walk(value[key], path.concat(key));
+        }
+      });
+    }
+  };
+  walk(LOCALE_TEXT[locale] || LOCALE_TEXT.en, []);
+  return source;
+}
+
+function needsOnboardingLocaleText(locale) {
+  const normalized = normalizeLocale(locale);
+  return !LOCALE_TEXT[normalized] && !TRANSLATED_LOCALE_TEXT.has(normalized);
+}
+
+// Lays a locale file's strings over the English copy. Paths the file
+// misses keep the English text.
+function registerOnboardingLocaleText(locale, translations) {
+  const normalized = normalizeLocale(locale);
+  if (LOCALE_TEXT[normalized] || !translations || typeof translations !== 'object') {
+    return;
+  }
+  const text = JSON.parse(JSON.stringify(LOCALE_TEXT.en));
+  Object.keys(getOnboardingTranslationSource()).forEach((path) => {
+    const value = translations[path];
+    if (typeof value !== 'string' || !value) {
+      return;
+    }
+    const keys = path.split('.');
+    const parent = keys.slice(0, -1).reduce((node, key) => node[key], text);
+    parent[keys[keys.length - 1]] = value;
+    // The demo's typed query sizes itself from its characters once translated.
+    if (keys[keys.length - 1] === 'promptQuery') {
+      delete parent.promptWidth;
+    }
+  });
+  TRANSLATED_LOCALE_TEXT.set(normalized, cloneDeepFrozen(text));
 }
 
 function cloneDeepFrozen(value) {
@@ -1305,12 +1360,11 @@ function getOnboardingRuntimeCopy(locale) {
 
 function getOnboardingBlueprint(locale) {
   const normalized = normalizeLocale(locale);
-  const meta = LOCALE_META[normalized] || LOCALE_META.en;
-  const text = getLocaleText(meta.locale);
+  const text = getLocaleText(normalized);
   return Object.freeze({
     brand: 'Lumno',
-    locale: meta.locale,
-    htmlLang: meta.htmlLang,
+    locale: normalized,
+    htmlLang: SETTINGS.localeToHtmlLang(normalized),
     mode: 'paginated',
     shell: Object.freeze({
       rootId: 'onboarding-root',
@@ -1319,7 +1373,7 @@ function getOnboardingBlueprint(locale) {
       visualStageId: VISUAL_MOUNT_ID,
       cursorLayerId: CURSOR_MOUNT_ID
     }),
-    runtimeCopy: getOnboardingRuntimeCopy(meta.locale),
+    runtimeCopy: getOnboardingRuntimeCopy(normalized),
     slides: Object.freeze(createSlideSlots(text).map(createSlide))
   });
 }
@@ -1393,6 +1447,9 @@ export {
   parseShortcutHotkey,
   shortcutHotkeyMatchesEvent,
   getSupportedLocales,
+  getOnboardingTranslationSource,
+  needsOnboardingLocaleText,
+  registerOnboardingLocaleText,
   getOnboardingRuntimeCopy,
   getOnboardingBlueprint,
   getOnboardingBlueprint as getOnboardingContent,

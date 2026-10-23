@@ -1,0 +1,3659 @@
+{
+  "ext_name": {
+    "message": "Lumno ｜ কমান্ড বার ও নতুন ট্যাব"
+  },
+  "ext_description": {
+    "message": "হালকা ব্রাউজার কমান্ড বার এবং নতুন ট্যাবে সার্চ।"
+  },
+  "settings_tab_general": {
+    "message": "সাধারণ"
+  },
+  "settings_tab_appearance": {
+    "message": "চেহারা"
+  },
+  "settings_appearance_global_section_title": {
+    "message": "গ্লোবাল"
+  },
+  "settings_webpage_focus_overlay_section_title": {
+    "message": "কমান্ড বার"
+  },
+  "newtab_theme_scope_label": {
+    "message": "থিমের পরিধি"
+  },
+  "newtab_theme_scope_global": {
+    "message": "গ্লোবাল"
+  },
+  "newtab_theme_scope_home": {
+    "message": "নতুন ট্যাব"
+  },
+  "newtab_theme_scope_select_label": {
+    "message": "থিমের পরিবর্তন {scope}-এ প্রয়োগ করুন"
+  },
+  "newtab_theme_scope_help_label": {
+    "message": "থিমের পরিধি সম্পর্কে তথ্য"
+  },
+  "newtab_theme_scope_help": {
+    "message": "গ্লোবাল: সব পৃষ্ঠার ডিফল্ট থিম।\nনতুন ট্যাব: শুধু নতুন ট্যাব পৃষ্ঠায় প্রযোজ্য। মিল রাখতে \"গ্লোবাল অনুসরণ করুন\" বেছে নিন।"
+  },
+  "newtab_theme_follow_global": {
+    "message": "\"গ্লোবাল\" অনুসরণ করুন"
+  },
+  "newtab_search_section_title": {
+    "message": "সার্চ বক্স"
+  },
+  "newtab_search_width_title": {
+    "message": "সার্চ বক্সের প্রস্থ"
+  },
+  "newtab_search_width_aria": {
+    "message": "নতুন ট্যাবের সার্চ বক্সের প্রস্থ পরিবর্তন করুন"
+  },
+  "newtab_search_width_standard": {
+    "message": "সাধারণ"
+  },
+  "newtab_search_width_wide": {
+    "message": "চওড়া"
+  },
+  "newtab_search_width_max": {
+    "message": "সর্বোচ্চ"
+  },
+  "newtab_appearance_settings_title": {
+    "message": "চেহারার সেটিংস"
+  },
+  "newtab_help_footer_prompt": {
+    "message": "কোনো বিকল্প কী করে তা নিশ্চিত নন?"
+  },
+  "newtab_help_footer_action": {
+    "message": "সহায়তা কেন্দ্রে যান"
+  },
+  "newtab_more_settings": {
+    "message": "আরও সেটিংস"
+  },
+  "settings_tab_shortcuts": {
+    "message": "সার্চের উৎস"
+  },
+  "settings_tab_blacklist": {
+    "message": "ব্লকলিস্ট"
+  },
+  "settings_tab_labs": {
+    "message": "ল্যাবস"
+  },
+  "settings_selection_quick_actions_title": {
+    "message": "নির্বাচিত টেক্সটের দ্রুত অ্যাকশন"
+  },
+  "settings_selection_quick_actions_desc": {
+    "message": "টেক্সট বেছে নিলে AI অ্যাকশন দেখান"
+  },
+  "settings_selection_quick_actions_provider_title": {
+    "message": "পছন্দের প্রোভাইডার"
+  },
+  "settings_selection_quick_actions_group_title": {
+    "message": "ব্যাকগ্রাউন্ডে সার্চ করুন"
+  },
+  "settings_selection_quick_actions_group_desc": {
+    "message": "সব AI পৃষ্ঠা “AI সার্চ” ট্যাব গ্রুপে রাখুন"
+  },
+  "selection_quick_actions_group_name": {
+    "message": "AI সার্চ"
+  },
+  "selection_quick_action_ask": {
+    "message": "উত্তর দিন"
+  },
+  "selection_quick_action_translate": {
+    "message": "অনুবাদ করুন"
+  },
+  "selection_quick_action_explain": {
+    "message": "ব্যাখ্যা করুন"
+  },
+  "selection_quick_action_summarize": {
+    "message": "সারাংশ"
+  },
+  "selection_quick_action_search": {
+    "message": "গবেষণা"
+  },
+  "selection_quick_action_calculate": {
+    "message": "হিসাব করুন"
+  },
+  "selection_quick_action_open_menu": {
+    "message": "নির্বাচিত টেক্সটে Lumno ব্যবহার করুন"
+  },
+  "selection_quick_action_more": {
+    "message": "আরও অ্যাকশন"
+  },
+  "selection_quick_action_sending": {
+    "message": "ব্যাকগ্রাউন্ডে খোলা হচ্ছে…"
+  },
+  "selection_quick_action_failed": {
+    "message": "পাঠানো যায়নি। আবার চেষ্টা করুন।"
+  },
+  "selection_debug_decision_title": {
+    "message": "নির্বাচনের সিদ্ধান্ত"
+  },
+  "selection_debug_status_show": {
+    "message": "দেখান"
+  },
+  "selection_debug_status_hide": {
+    "message": "দেখাবেন না"
+  },
+  "selection_debug_sort_title": {
+    "message": "মেনুর ক্রম"
+  },
+  "selection_debug_item_count": {
+    "message": "{count}টি আইটেম"
+  },
+  "selection_debug_reason_calculate": {
+    "message": "একটি গাণিতিক রাশি, মুদ্রা বা একক রূপান্তর শনাক্ত হয়েছে"
+  },
+  "selection_debug_reason_question": {
+    "message": "একটি স্পষ্ট প্রশ্ন শনাক্ত হয়েছে"
+  },
+  "selection_debug_reason_prose": {
+    "message": "যথেষ্ট সমৃদ্ধ ধারাবাহিক লেখা শনাক্ত হয়েছে"
+  },
+  "selection_debug_reason_search": {
+    "message": "সংবাদ, দাম, অফিসিয়াল সাইট বা ভার্সন খোঁজার উদ্দেশ্য শনাক্ত হয়েছে"
+  },
+  "selection_debug_reason_translate": {
+    "message": "নির্বাচিত টেক্সট Lumno-র UI ভাষা থেকে আলাদা"
+  },
+  "selection_debug_reason_error": {
+    "message": "একটি ত্রুটি বা এক্সেপশন শনাক্ত হয়েছে"
+  },
+  "selection_debug_reason_code": {
+    "message": "কোড সিনট্যাক্স বা কোডের প্রসঙ্গ শনাক্ত হয়েছে"
+  },
+  "selection_debug_reason_term": {
+    "message": "একটি অর্থবহ শব্দ বা ছোট বাক্যাংশ শনাক্ত হয়েছে"
+  },
+  "selection_debug_reason_explain_score": {
+    "message": "ব্যাখ্যা সর্বোচ্চ স্কোর পেয়েছে"
+  },
+  "selection_debug_reason_top_score": {
+    "message": "এই অ্যাকশনটি সর্বোচ্চ মিলের স্কোর পেয়েছে"
+  },
+  "selection_debug_rejection_disabled": {
+    "message": "নির্বাচিত টেক্সটের দ্রুত অ্যাকশন বন্ধ আছে"
+  },
+  "selection_debug_rejection_sensitive": {
+    "message": "সংবেদনশীল পাসওয়ার্ড বা পেমেন্ট ফিল্ড; কন্টেন্ট পড়া হয়নি"
+  },
+  "selection_debug_rejection_no_selection": {
+    "message": "কোনো বৈধ টেক্সট নির্বাচন শনাক্ত হয়নি"
+  },
+  "selection_debug_rejection_too_short": {
+    "message": "২টির কম অক্ষর"
+  },
+  "selection_debug_rejection_too_long": {
+    "message": "২৪০০টির বেশি অক্ষর"
+  },
+  "selection_debug_rejection_url": {
+    "message": "সম্পূর্ণ URL"
+  },
+  "selection_debug_rejection_email": {
+    "message": "ইমেল ঠিকানা"
+  },
+  "selection_debug_rejection_generic_ui": {
+    "message": "“আরও জানুন / সেভ করুন / পরবর্তী”-এর মতো সাধারণ UI লেখা"
+  },
+  "selection_debug_rejection_plain_number": {
+    "message": "হিসাব বা রূপান্তর ছাড়া সাধারণ সংখ্যা"
+  },
+  "selection_debug_rejection_symbols": {
+    "message": "চিহ্নের অনুপাত খুব বেশি"
+  },
+  "selection_debug_rejection_no_intent": {
+    "message": "কোনো স্পষ্ট কাজ, অর্থবহ শব্দ বা যথেষ্ট লেখার সাথে মেলেনি"
+  },
+  "selection_debug_primary_meta": {
+    "message": "প্রধান: {action} · স্কোর {score} · {confidence} আস্থা"
+  },
+  "selection_debug_confidence_high": {
+    "message": "উচ্চ"
+  },
+  "selection_debug_confidence_medium": {
+    "message": "মাঝারি"
+  },
+  "selection_debug_confidence_low": {
+    "message": "নিম্ন"
+  },
+  "selection_debug_sort_primary_cause": {
+    "message": "{reason}, স্কোর {score}"
+  },
+  "selection_debug_sort_fallback_cause": {
+    "message": "সাধারণ বিকল্প, নির্দিষ্ট ক্রমে পূরণ করা ও ডুপ্লিকেট বাদ দেওয়া"
+  },
+  "selection_debug_sort_footer": {
+    "message": "প্রথম আইটেম সর্বোচ্চ উদ্দেশ্য-স্কোর অনুযায়ী; বাকিগুলো “ব্যাখ্যা → গবেষণা → অনুবাদ” ক্রমে।"
+  },
+  "settings_global_section_title": {
+    "message": "গ্লোবাল সেটিংস"
+  },
+  "settings_feedback_support_section_title": {
+    "message": "মতামত ও সহায়তা"
+  },
+  "settings_feedback_support_wechat_action": {
+    "message": "WeChat গ্রুপে যোগ দিন"
+  },
+  "settings_help_center_title": {
+    "message": "সহায়তা কেন্দ্র"
+  },
+  "settings_help_center_desc": {
+    "message": "কোনো ফিচার কীভাবে কাজ করে তা নিশ্চিত নন? প্রতিটি ফিচারের ব্যাখ্যা এখানে আছে।"
+  },
+  "settings_help_center_action": {
+    "message": "খুলুন"
+  },
+  "settings_help_center_ask_action": {
+    "message": "সার্চ বক্স থেকে জিজ্ঞাসা করুন"
+  },
+  "settings_help_center_ask_caption": {
+    "message": "নতুন ট্যাব বা কমান্ড বারে lm লিখুন, Tab টিপুন, তারপর আপনার প্রশ্ন লিখুন।"
+  },
+  "settings_help_center_ask_demo_query": {
+    "message": "কীভাবে শর্টকাট পরিবর্তন করব"
+  },
+  "settings_help_center_ask_demo_result_1_title": {
+    "message": "কীবোর্ড শর্টকাট"
+  },
+  "settings_help_center_ask_demo_result_1_detail": {
+    "message": "শর্টকাট পরিবর্তন করুন"
+  },
+  "settings_help_center_ask_demo_result_2_title": {
+    "message": "শর্টকাট ও বুকমার্ক"
+  },
+  "settings_help_center_ask_demo_result_2_detail": {
+    "message": "শর্টকাটের আইকন পরিবর্তন করুন"
+  },
+  "settings_feedback_support_review_action": {
+    "message": "Lumno-কে রেটিং দিন"
+  },
+  "settings_feedback_support_github_issue_action": {
+    "message": "Issue তৈরি করুন"
+  },
+  "settings_feedback_support_contact_author_action": {
+    "message": "নির্মাতার সাথে যোগাযোগ করুন"
+  },
+  "settings_onboarding_tutorial_action": {
+    "message": "পরিচিতি ট্যুর"
+  },
+  "settings_language_title": {
+    "message": "ভাষা"
+  },
+  "settings_language_desc": {
+    "message": "UI-এর ভাষা বেছে নিন"
+  },
+  "settings_language_machine_note": {
+    "message": "AI দিয়ে অনুবাদ করা। কিছু ভুল মনে হলে অনুগ্রহ করে মতামত পাঠান।"
+  },
+  "settings_language_search_placeholder": {
+    "message": "ভাষা সার্চ করুন"
+  },
+  "settings_language_no_results": {
+    "message": "কোনো মিলে যাওয়া ভাষা নেই"
+  },
+  "settings_version_label": {
+    "message": "ভার্সন"
+  },
+  "settings_version_tooltip": {
+    "message": "পরিবর্তনের তালিকা দেখুন"
+  },
+  "language_system": {
+    "message": "ব্রাউজারের ভাষা অনুসরণ করুন"
+  },
+  "settings_recent_title": {
+    "message": "নতুন ট্যাবের নিচের কন্টেন্ট"
+  },
+  "settings_newtab_section_title": {
+    "message": "নতুন ট্যাব"
+  },
+  "settings_search_results_section_title": {
+    "message": "সার্চ ফলাফলের সেটিংস"
+  },
+  "settings_search_result_priority_title": {
+    "message": "প্রথম সার্চ ফলাফলের অগ্রাধিকার"
+  },
+  "settings_search_result_tab_position_title": {
+    "message": "সার্চ ফলাফলের ট্যাবের অবস্থান"
+  },
+  "search_result_tab_position_end": {
+    "message": "ট্যাব স্ট্রিপের শেষে (নিচে)"
+  },
+  "search_result_tab_position_after_current": {
+    "message": "বর্তমান ট্যাবের ডানে (নিচে)"
+  },
+  "search_result_tab_position_before_current": {
+    "message": "বর্তমান ট্যাবের বাঁয়ে (উপরে)"
+  },
+  "settings_search_fuzzy_pinyin_title": {
+    "message": "ফাজি পিনইন"
+  },
+  "settings_search_fuzzy_pinyin_desc": {
+    "message": "চালু থাকলে, পিনইন ও আদ্যক্ষর দিয়ে সার্চে z ও zh, c ও ch, s ও sh, n ও l, an ও ang, en ও eng এবং in ও ing একই হিসেবে ধরা হয়"
+  },
+  "settings_search_result_sources_title": {
+    "message": "দৃশ্যমান ফলাফলের ধরন"
+  },
+  "settings_search_result_display_limit_title": {
+    "message": "সর্বাধিক দৃশ্যমান ফলাফল"
+  },
+  "settings_overlay_open_tabs_default_visible_title": {
+    "message": "ওয়েবপেজে Lumno খুললে ডিফল্টভাবে সব খোলা ট্যাব দেখান"
+  },
+  "settings_favicon_enhanced_fetch_title": {
+    "message": "উন্নত আইকন ও থিমের রং সংগ্রহ"
+  },
+  "settings_favicon_enhanced_fetch_desc": {
+    "message": "লোকাল নেটওয়ার্ক অ্যাক্সেসের অনুরোধ দেখলে এটি বন্ধ করুন। Lumno সরাসরি ওয়েবসাইটের ছবি লোড করা বন্ধ করবে, তবে ব্রাউজারে ক্যাশ করা আইকন ও থার্ড-পার্টি আইকন পরিষেবা উপলভ্য থাকবে।"
+  },
+  "favicon_blacklist_section_desc": {
+    "message": "ওয়েবসাইট অনুযায়ী বাদ দিন"
+  },
+  "favicon_blacklist_add": {
+    "message": "বাদ দেওয়ার নিয়ম যোগ করুন"
+  },
+  "favicon_blacklist_removed_toast": {
+    "message": "আইকন ও থিমের বাদ তালিকা থেকে সরানো হয়েছে"
+  },
+  "favicon_blacklist_clear": {
+    "message": "বাদ দেওয়ার নিয়ম মুছুন"
+  },
+  "search_result_priority_autocomplete": {
+    "message": "অটোকমপ্লিট আগে"
+  },
+  "search_result_priority_search": {
+    "message": "সার্চ আগে"
+  },
+  "settings_recent_desc": {
+    "message": "সাম্প্রতিক / সবচেয়ে বেশি দেখা সাইট দেখান"
+  },
+  "settings_recent_sites_title": {
+    "message": "সাইট কার্ড"
+  },
+  "newtab_recent_rows_title": {
+    "message": "সাইট কার্ডের সারি"
+  },
+  "settings_newtab_width_title": {
+    "message": "নতুন ট্যাব পৃষ্ঠার কন্টেন্টের প্রস্থ"
+  },
+  "settings_bookmarks_title": {
+    "message": "বুকমার্কের সারি"
+  },
+  "settings_bookmark_folder_icons_visible_title": {
+    "message": "বুকমার্ক ফোল্ডারের ভেতরে আইকন দেখান"
+  },
+  "settings_document_pip_title": {
+    "message": "ওয়েব ক্লিপ"
+  },
+  "settings_document_pip_desc": {
+    "message": "রেফারেন্স ও পাশাপাশি তুলনার জন্য পৃষ্ঠার একটি অংশ ভাসমান ভিউতে ক্লিপ করুন"
+  },
+  "settings_document_pip_unsupported_tooltip": {
+    "message": "ওয়েব ক্লিপ Document Picture-in-Picture-এর উপর নির্ভর করে, যা Firefox এখনও সমর্থন করে না।"
+  },
+  "document_pip_command_title": {
+    "message": "ওয়েব ক্লিপ শুরু করুন"
+  },
+  "document_pip_command_action": {
+    "message": "ক্লিপ শুরু করুন"
+  },
+  "settings_update_notice_title": {
+    "message": "আপডেটের বার্তা"
+  },
+  "settings_update_notice_desc": {
+    "message": "Lumno নতুন ভার্সনে আপডেট হলে নতুন কী আছে তা দেখান"
+  },
+  "settings_motion_effects_title": {
+    "message": "মোশন ইফেক্ট"
+  },
+  "settings_motion_effects_desc": {
+    "message": "পারফরম্যান্স আটকে গেলে বা আরও দ্রুত খোলার অভিজ্ঞতা চাইলে এটি বন্ধ করুন"
+  },
+  "settings_simple_mode_title": {
+    "message": "মিনিমাল মোড"
+  },
+  "settings_simple_mode_desc": {
+    "message": "আরও পরিচ্ছন্ন সার্চ বক্সের জন্য বাড়তি সাজসজ্জা সরিয়ে দিন"
+  },
+  "settings_auto_pip_title": {
+    "message": "অটো ছবির-মধ্যে-ছবি"
+  },
+  "settings_auto_pip_desc": {
+    "message": "ভিডিও চলার সময় ট্যাব পাল্টালে সেটি একটি ভাসমান উইন্ডোতে চলতে থাকে"
+  },
+  "settings_auto_pip_unsupported_tooltip": {
+    "message": "Firefox এক্সটেনশনকে ওয়েব ভিডিও স্বয়ংক্রিয়ভাবে ছবির-মধ্যে-ছবিতে পাঠাতে দেয় না, তাই এই ফিচারটি উপলভ্য নয়।"
+  },
+  "settings_pinned_tab_recovery_title": {
+    "message": "রিস্টার্টের পরে পিন করা ট্যাব ফিরিয়ে আনুন"
+  },
+  "settings_pinned_tab_recovery_desc": {
+    "message": "ফিরিয়ে আনা যায় এমন পিন করা ওয়েব ট্যাব সেভ করুন এবং ব্রাউজার রিস্টার্টের পরে হারানোগুলো ফিরিয়ে আনুন"
+  },
+  "settings_number_shortcut_instant_title": {
+    "message": "একবার Command টিপে নম্বর জাম্প দেখান"
+  },
+  "settings_number_shortcut_instant_desc": {
+    "message": "চালু থাকলে, কমান্ড বার বা সার্চের সাজেশনে একবার Command/Ctrl টিপলেই নম্বর জাম্প ব্যাজ দেখা যায়; \"ব্যাকগ্রাউন্ড ট্যাবে খুলুন\" আর Command ব্যবহার করে না (মাঝের ক্লিকে এখনও ব্যাকগ্রাউন্ডে খোলে)"
+  },
+  "settings_macos_ctrl_suggestion_navigation_title": {
+    "message": "Mac কীবোর্ড নেভিগেশন"
+  },
+  "settings_macos_ctrl_suggestion_navigation_tooltip": {
+    "message": "macOS-এ নতুন ট্যাব ও কমান্ড বারে কাজ করে। অবদানের জন্য @wanghanzhen-কে ধন্যবাদ।"
+  },
+  "settings_macos_ctrl_suggestion_navigation_desc": {
+    "message": "পরের / আগের ফলাফল বেছে নিতে Ctrl+N / Ctrl+P ব্যবহার করুন"
+  },
+  "document_pip_picker_hint": {
+    "message": "এলিমেন্ট বেছে নিতে পৃষ্ঠার উপর পয়েন্টার সরান। PiP খুলতে ক্লিক করুন, প্যারেন্ট পাল্টাতে স্ক্রল করুন, বাতিল করতে Esc।"
+  },
+  "document_pip_picker_started": {
+    "message": "ভাসাতে কন্টেন্টে ক্লিক করুন, পরিধি পাল্টাতে স্ক্রল করুন, বা বাতিল করতে Esc টিপুন।"
+  },
+  "document_pip_picker_cancelled": {
+    "message": "কন্টেন্ট বাছাই বন্ধ হয়েছে"
+  },
+  "document_pip_picker_closed": {
+    "message": "ভাসমান কন্টেন্ট উইন্ডো বন্ধ হয়েছে"
+  },
+  "document_pip_picker_unsupported": {
+    "message": "এই পৃষ্ঠা Document Picture-in-Picture সমর্থন করে না।"
+  },
+  "document_pip_picker_conflict_video_pip": {
+    "message": "একটি ভিডিও PiP ইতিমধ্যে চালু আছে। কন্টেন্ট ক্লিপ শুরু করার আগে সেটি বন্ধ করুন।"
+  },
+  "document_pip_picker_invalid": {
+    "message": "এই অংশটি এখনও ভাসানো যাবে না। আরও বড় কোনো অংশ চেষ্টা করুন।"
+  },
+  "document_pip_picker_open_failed": {
+    "message": "ভাসমান কন্টেন্ট উইন্ডো খোলা যায়নি। অন্য কোনো অংশ চেষ্টা করুন।"
+  },
+  "document_pip_picker_button_reselect": {
+    "message": "আবার বাছুন"
+  },
+  "document_pip_picker_button_return": {
+    "message": "ফিরে যান"
+  },
+  "document_pip_picker_button_close": {
+    "message": "বন্ধ করুন"
+  },
+  "settings_newtab_scope_desc": {
+    "message": "নতুন ট্যাব"
+  },
+  "settings_overlay_tab_priority_title": {
+    "message": "খোলা ট্যাবে দ্রুত যান"
+  },
+  "settings_overlay_tab_priority_desc": {
+    "message": "লেখা কোনো খোলা ট্যাবের সাথে মিললে, Enter প্রথম সাজেশনের ট্যাব অ্যাকশন অনুসরণ করে"
+  },
+  "overlay_tab_priority_switch_first": {
+    "message": "খোলা ট্যাবে যেতে Enter টিপুন"
+  },
+  "overlay_tab_priority_newtab_first": {
+    "message": "নতুন ট্যাবে খুলতে Enter টিপুন"
+  },
+  "settings_shortcuts_title": {
+    "message": "কমান্ড বার খুলুন"
+  },
+  "settings_shortcuts_browser_desc_prefix": {
+    "message": "শর্টকাট পরিবর্তন করতে "
+  },
+  "settings_shortcuts_browser_desc_path_extensions": {
+    "message": "এক্সটেনশন"
+  },
+  "settings_shortcuts_browser_desc_path_extensions__firefox": {
+    "message": "অ্যাড-অন ও থিম"
+  },
+  "settings_shortcuts_browser_desc_path_shortcuts": {
+    "message": "কীবোর্ড শর্টকাট"
+  },
+  "settings_shortcuts_browser_desc_path_shortcuts__firefox": {
+    "message": "এক্সটেনশন শর্টকাট পরিচালনা করুন"
+  },
+  "settings_shortcuts_browser_desc_suffix": {
+    "message": " খুলুন"
+  },
+  "settings_shortcuts_dia_tag": {
+    "message": "Dia-তে ব্যবহার করুন"
+  },
+  "settings_shortcuts_dia_tooltip": {
+    "message": "Dia-তে ব্রাউজারের সীমাবদ্ধতার কারণে Lumno-র নতুন ট্যাব ফিচার আপাতত উপলভ্য নয়, তবে কমান্ড বার স্বাভাবিকভাবে কাজ করে।\n\nDia-তে শর্টকাট কাজ না করলে, ব্রাউজারের শর্টকাট সেটিংস পৃষ্ঠা খুলতে নিচে ডানদিকের বোতামে ক্লিক করুন, তারপর \"কমান্ড বার খুলুন\"-কে In Dia থেকে Global-এ পরিবর্তন করুন।"
+  },
+  "settings_shortcuts_section_title": {
+    "message": "শর্টকাট সেটিংস"
+  },
+  "settings_shortcuts_desc": {
+    "message": "Lumno কমান্ড বার খুলতে ব্যবহার করুন"
+  },
+  "overlay_close_other_tabs_tooltip": {
+    "message": "অন্যান্য ট্যাব বন্ধ করুন"
+  },
+  "overlay_close_other_tabs_confirm": {
+    "message": "এই উইন্ডোর অন্যান্য ট্যাব বন্ধ করবেন? পিন করা ও গ্রুপের ট্যাবগুলো খোলা থাকবে।"
+  },
+  "overlay_close_other_tabs_confirm_button": {
+    "message": "বন্ধ করুন"
+  },
+  "settings_shortcuts_status": {
+    "message": "বর্তমান: {shortcut}"
+  },
+  "settings_shortcuts_unset": {
+    "message": "সেট করা নেই"
+  },
+  "settings_shortcuts_action": {
+    "message": "শর্টকাট সেটিংস খুলুন"
+  },
+  "settings_shortcuts_browser_tooltip": {
+    "message": "Chromium ব্রাউজারে কমান্ড বারের শর্টকাট সেট বা পরিবর্তন করতে এক্সটেনশনের শর্টকাট পৃষ্ঠা খুলতে হবে।"
+  },
+  "settings_shortcuts_browser_tooltip__firefox": {
+    "message": "Firefox-এ অ্যাড-অন ম্যানেজারের \"এক্সটেনশন শর্টকাট পরিচালনা করুন\" থেকে কমান্ড বারের শর্টকাট সেট বা পরিবর্তন করুন।"
+  },
+  "settings_shortcuts_save": {
+    "message": "শর্টকাট সেভ করুন"
+  },
+  "settings_shortcuts_reset": {
+    "message": "ডিফল্টে ফেরান"
+  },
+  "settings_shortcuts_record_placeholder": {
+    "message": "শর্টকাট টিপুন"
+  },
+  "settings_shortcuts_empty_state": {
+    "message": "নেই"
+  },
+  "settings_shortcuts_invalid": {
+    "message": "শর্টকাট সঠিক নয়। Ctrl+K-এর মতো কী কম্বিনেশন ব্যবহার করুন।"
+  },
+  "settings_restricted_title": {
+    "message": "সীমাবদ্ধ পৃষ্ঠায় আচরণ"
+  },
+  "settings_restricted_tooltip": {
+    "message": "সীমাবদ্ধ পৃষ্ঠায় (যেমন chrome://) কমান্ড বার খোলা যায় না। শর্টকাট টিপলে এখানে সেট করা নিয়ম অনুসরণ করা হয়।"
+  },
+  "settings_restricted_tooltip__firefox": {
+    "message": "সীমাবদ্ধ পৃষ্ঠায় (যেমন about: পৃষ্ঠা ও Firefox অ্যাড-অন সাইট) কমান্ড বার খোলা যায় না। শর্টকাট টিপলে এখানে সেট করা নিয়ম অনুসরণ করা হয়।"
+  },
+  "restricted_action_default": {
+    "message": "Lumno নতুন ট্যাবে যান"
+  },
+  "restricted_action_none": {
+    "message": "ব্রাউজারের সেটিং অনুসরণ করুন"
+  },
+  "newtab_file_access_notice_title": {
+    "message": "লোকাল PDF বা HTML পৃষ্ঠায় Lumno ব্যবহার করতে ফাইল URL অ্যাক্সেস চালু করুন"
+  },
+  "newtab_file_access_notice_body": {
+    "message": "Lumno-র এখনও ফাইল URL অ্যাক্সেস নেই। এক্সটেনশনের বিবরণ পৃষ্ঠা খুলুন, \"ফাইল URL-এ অ্যাক্সেসের অনুমতি দিন\" চালু করুন, তারপর সেই পৃষ্ঠায় ফিরে আবার শর্টকাট টিপুন।"
+  },
+  "newtab_file_access_notice_open_cta": {
+    "message": "অ্যাক্সেস চালু করুন"
+  },
+  "newtab_file_access_notice_dismiss": {
+    "message": "পরে"
+  },
+  "newtab_file_access_notice_close": {
+    "message": "বার্তা বন্ধ করুন"
+  },
+  "recent_count_4": {
+    "message": "১টি সারি দেখান"
+  },
+  "recent_count_8": {
+    "message": "২টি সারি দেখান"
+  },
+  "recent_count_off": {
+    "message": "লুকান"
+  },
+  "bookmark_count_off": {
+    "message": "লুকান"
+  },
+  "bookmark_count_4": {
+    "message": "১টি সারি দেখান"
+  },
+  "bookmark_count_8": {
+    "message": "৮টি দেখান"
+  },
+  "bookmark_count_16": {
+    "message": "১৬টি দেখান"
+  },
+  "bookmark_count_32": {
+    "message": "৩২টি দেখান"
+  },
+  "settings_bookmark_columns_title": {
+    "message": "প্রতি সারিতে বুকমার্ক"
+  },
+  "settings_bookmark_columns_desc": {
+    "message": "প্রতি সারিতে সর্বোচ্চ সংখ্যা সেট করে; সরু স্ক্রিনে নিজে থেকেই মানিয়ে নেয়"
+  },
+  "settings_bookmark_adaptive_count_tooltip": {
+    "message": "যথেষ্ট জায়গা থাকলে এটি সর্বোচ্চ সংখ্যা। আসলে কতগুলো দেখানো হবে তা উপলভ্য জায়গা অনুযায়ী বদলায়।"
+  },
+  "bookmark_columns_4": {
+    "message": "সারিতে ৪টি"
+  },
+  "bookmark_columns_6": {
+    "message": "সারিতে ৬টি"
+  },
+  "bookmark_columns_8": {
+    "message": "সারিতে ৮টি"
+  },
+  "newtab_width_standard": {
+    "message": "সাধারণ"
+  },
+  "newtab_width_wide": {
+    "message": "চওড়া (প্রস্তাবিত)"
+  },
+  "settings_overlay_size_title": {
+    "message": "আকার"
+  },
+  "overlay_size_compact": {
+    "message": "ছোট"
+  },
+  "overlay_size_standard": {
+    "message": "সাধারণ"
+  },
+  "overlay_size_large": {
+    "message": "বড়"
+  },
+  "settings_overlay_enter_animation_title": {
+    "message": "খোলার অ্যানিমেশন"
+  },
+  "overlay_enter_animation_elastic": {
+    "message": "স্প্রিং"
+  },
+  "overlay_enter_animation_fade": {
+    "message": "ফেড"
+  },
+  "settings_overlay_font_title": {
+    "message": "লোকাল ফন্ট"
+  },
+  "settings_overlay_font_desc": {
+    "message": "এই কম্পিউটারে ইনস্টল করা ফন্ট পড়ে। শুধু এই ডিভাইসে প্রযোজ্য, সিঙ্ক হয় না।"
+  },
+  "settings_overlay_font_missing": {
+    "message": "এই ডিভাইসে “{font}” ইনস্টল করা নেই, তাই ওভারলে ডিফল্ট ফন্ট ব্যবহার করছে"
+  },
+  "settings_overlay_font_missing_reset": {
+    "message": "ডিফল্ট ব্যবহার করুন"
+  },
+  "settings_overlay_font_fallback_missing": {
+    "message": "এই ডিভাইসে “{font}” ইনস্টল করা নেই, তাই ফলব্যাক বাদ দেওয়া হয়েছে"
+  },
+  "settings_overlay_font_fallback_missing_reset": {
+    "message": "মুছুন"
+  },
+  "settings_overlay_font_default": {
+    "message": "ডিফল্ট"
+  },
+  "settings_overlay_font_search_placeholder": {
+    "message": "ফন্ট সার্চ করুন"
+  },
+  "settings_overlay_font_no_results": {
+    "message": "কোনো মিলে যাওয়া ফন্ট নেই"
+  },
+  "settings_overlay_font_fallback_title": {
+    "message": "লোকাল ফলব্যাক ফন্ট"
+  },
+  "settings_overlay_font_fallback_desc": {
+    "message": "প্রথম ফন্টে না থাকা অক্ষরের জন্য ব্যবহার হয়, যেমন ইংরেজি ফন্টে চীনা অক্ষর"
+  },
+  "settings_overlay_font_fallback_none": {
+    "message": "নেই"
+  },
+  "settings_overlay_font_unsupported_tooltip": {
+    "message": "Firefox এক্সটেনশনকে ইনস্টল করা ফন্টের তালিকা দেখতে দেয় না, তাই এখানে ওভারলে ডিফল্ট ফন্ট ব্যবহার করে"
+  },
+  "settings_overlay_page_theme_adaptation_title": {
+    "message": "প্রতিটি ওয়েবপেজ অনুযায়ী থিমের রং মানিয়ে নিন"
+  },
+  "settings_overlay_page_theme_adaptation_tooltip": {
+    "message": "থিম মোড \"সিস্টেম অনুসরণ করুন\" থাকলেই শুধু দেখা যায়। বন্ধ করলে লাইট/ডার্ক মোড আর ওয়েবপেজের থিমের রং অনুযায়ী বদলাবে না।"
+  },
+  "recent_mode_latest": {
+    "message": "সাম্প্রতিক দেখান"
+  },
+  "recent_mode_most": {
+    "message": "সবচেয়ে বেশি দেখা"
+  },
+  "settings_toggle_on": {
+    "message": "চালু"
+  },
+  "settings_theme_title": {
+    "message": "থিম মোড"
+  },
+  "settings_theme_desc": {
+    "message": "সিস্টেম অনুসরণ করুন বা নিজে বেছে নিন"
+  },
+  "settings_theme_system": {
+    "message": "সিস্টেম অনুসরণ করুন"
+  },
+  "settings_theme_light": {
+    "message": "লাইট"
+  },
+  "settings_theme_dark": {
+    "message": "ডার্ক"
+  },
+  "settings_newtab_wordmark_title": {
+    "message": "সার্চ বারের উপরের কন্টেন্ট"
+  },
+  "newtab_top_content_brand": {
+    "message": "ব্র্যান্ড"
+  },
+  "newtab_top_content_time": {
+    "message": "সময়"
+  },
+  "newtab_top_content_off": {
+    "message": "লুকান"
+  },
+  "newtab_time_font_title": {
+    "message": "সময়ের ফন্ট"
+  },
+  "newtab_time_font_weight_title": {
+    "message": "সময়ের ফন্টের ওজন"
+  },
+  "newtab_time_font_weight_reset": {
+    "message": "সময়ের ফন্টের ওজন রিসেট করুন"
+  },
+  "newtab_time_font_size_title": {
+    "message": "সময়ের আকার"
+  },
+  "newtab_time_font_size_reset": {
+    "message": "সময়ের আকার রিসেট করুন"
+  },
+  "newtab_time_opacity_title": {
+    "message": "সময়ের অস্বচ্ছতা"
+  },
+  "newtab_time_opacity_reset": {
+    "message": "সময়ের অস্বচ্ছতা রিসেট করুন"
+  },
+  "newtab_time_ink_title": {
+    "message": "সময়ের রং"
+  },
+  "newtab_time_ink_auto": {
+    "message": "অটো"
+  },
+  "newtab_time_ink_light": {
+    "message": "হালকা"
+  },
+  "newtab_time_ink_dark": {
+    "message": "গাঢ়"
+  },
+  "newtab_time_show_seconds_title": {
+    "message": "সেকেন্ড দেখান"
+  },
+  "newtab_time_12_hour_title": {
+    "message": "১২ ঘণ্টার ঘড়ি"
+  },
+  "settings_newtab_page_buttons_title": {
+    "message": "পৃষ্ঠার বোতাম"
+  },
+  "settings_newtab_feedback_button_visible_title": {
+    "message": "মতামতের বোতাম দেখান"
+  },
+  "settings_newtab_appearance_button_visible_title": {
+    "message": "চেহারার বোতাম দেখান"
+  },
+  "settings_newtab_shortcuts_title": {
+    "message": "শর্টকাট"
+  },
+  "settings_newtab_shortcut_add_title": {
+    "message": "“+” দেখান"
+  },
+  "settings_newtab_shortcut_dock_magnification_title": {
+    "message": "macOS Dock-এর মতো বড় করে দেখানো"
+  },
+  "settings_newtab_shortcut_width_title": {
+    "message": "শর্টকাটের প্রস্থ"
+  },
+  "settings_newtab_shortcut_columns_title": {
+    "message": "প্রতি সারিতে শর্টকাট"
+  },
+  "settings_newtab_shortcut_size_title": {
+    "message": "শর্টকাটের আকার"
+  },
+  "settings_newtab_shortcut_gap_title": {
+    "message": "শর্টকাটের ব্যবধান"
+  },
+  "settings_newtab_shortcut_size_reset": {
+    "message": "শর্টকাটের আকার রিসেট করুন"
+  },
+  "settings_newtab_shortcut_gap_reset": {
+    "message": "শর্টকাটের ব্যবধান রিসেট করুন"
+  },
+  "settings_wallpaper_title": {
+    "message": "নতুন ট্যাবের ওয়ালপেপার"
+  },
+  "settings_wallpaper_desc": {
+    "message": "নতুন ট্যাবের ব্যাকগ্রাউন্ড হিসেবে একটি লোকাল ছবি আপলোড করুন"
+  },
+  "settings_wallpaper_upload": {
+    "message": "ছবি আপলোড করুন"
+  },
+  "settings_wallpaper_remove": {
+    "message": "সরান"
+  },
+  "settings_wallpaper_fit_cover": {
+    "message": "পূরণ"
+  },
+  "settings_wallpaper_fit_contain": {
+    "message": "পুরোটা"
+  },
+  "settings_wallpaper_status_none": {
+    "message": "কোনো ওয়ালপেপার আপলোড করা হয়নি"
+  },
+  "settings_wallpaper_status_ready": {
+    "message": "ওয়ালপেপার আপলোড হয়েছে"
+  },
+  "settings_wallpaper_status_local_only": {
+    "message": "ওয়ালপেপার আপলোড হয়েছে (শুধু এই ডিভাইসে)"
+  },
+  "settings_wallpaper_status_missing": {
+    "message": "ওয়ালপেপার ফাইল পাওয়া যাচ্ছে না। অনুগ্রহ করে আবার আপলোড করুন।"
+  },
+  "settings_wallpaper_status_processing": {
+    "message": "প্রসেস করা হচ্ছে…"
+  },
+  "settings_wallpaper_upload_done": {
+    "message": "ওয়ালপেপার আপডেট হয়েছে"
+  },
+  "settings_wallpaper_remove_done": {
+    "message": "ওয়ালপেপার সরানো হয়েছে"
+  },
+  "settings_wallpaper_error_type": {
+    "message": "অনুগ্রহ করে একটি ছবির ফাইল আপলোড করুন (JPG / PNG / WEBP)।"
+  },
+  "settings_wallpaper_error_oversize": {
+    "message": "ছবিটি খুব বড়। অনুগ্রহ করে 8MB-এর কম ফাইল আপলোড করুন।"
+  },
+  "settings_wallpaper_error_oversize_after_compress": {
+    "message": "কম্প্রেস করার পরেও ছবিটি খুব বড়। আরও ছোট ছবি চেষ্টা করুন।"
+  },
+  "settings_wallpaper_error_save": {
+    "message": "ওয়ালপেপার সেভ করা যায়নি। আবার চেষ্টা করুন।"
+  },
+  "newtab_wallpaper_title": {
+    "message": "ওয়ালপেপার"
+  },
+  "newtab_logo_title": {
+    "message": "ব্র্যান্ড চিহ্ন"
+  },
+  "newtab_favicon_title": {
+    "message": "নতুন ট্যাবের ফেভিকন"
+  },
+  "newtab_favicon_name_default": {
+    "message": "ডিফল্ট"
+  },
+  "newtab_favicon_name_alternate": {
+    "message": "বিকল্প"
+  },
+  "newtab_favicon_select_label": {
+    "message": "{name} ফেভিকন বেছে নিন"
+  },
+  "newtab_favicon_save_error": {
+    "message": "ফেভিকন সেভ করা যায়নি"
+  },
+  "newtab_wallpaper_source_title": {
+    "message": "উৎস"
+  },
+  "newtab_wallpaper_builtin_section": {
+    "message": "বিল্ট-ইন"
+  },
+  "newtab_wallpaper_local_section": {
+    "message": "লোকাল"
+  },
+  "newtab_wallpaper_toggle_label": {
+    "message": "ওয়ালপেপার চালু বা বন্ধ করুন"
+  },
+  "newtab_wallpaper_select_label": {
+    "message": "{name} বেছে নিন"
+  },
+  "newtab_wallpaper_add_local": {
+    "message": "লোকাল ওয়ালপেপার যোগ করুন"
+  },
+  "newtab_wallpaper_mode_sync_title": {
+    "message": "লাইট ও ডার্ক মোডে একই"
+  },
+  "newtab_wallpaper_mode_sync_toggle_label": {
+    "message": "লাইট ও ডার্ক মোডে একই ওয়ালপেপার ব্যবহার করুন"
+  },
+  "newtab_wallpaper_mode_row_title": {
+    "message": "মোড"
+  },
+  "newtab_wallpaper_mode_tabs_label": {
+    "message": "ওয়ালপেপারের রঙের মোড"
+  },
+  "newtab_wallpaper_light_mode_tab": {
+    "message": "লাইট"
+  },
+  "newtab_wallpaper_dark_mode_tab": {
+    "message": "ডার্ক"
+  },
+  "newtab_wallpaper_mode_select_label": {
+    "message": "{mode} ওয়ালপেপার সম্পাদনা করুন"
+  },
+  "newtab_wallpaper_sources_feature_hint_badge": {
+    "message": "নতুন"
+  },
+  "newtab_wallpaper_sources_feature_hint_text": {
+    "message": "নতুন ওয়ালপেপার: প্রকৃতি, শহর ও শিল্পের বাছাই করা সংগ্রহ, যা প্রতিদিন আপডেট হতে পারে, অথবা ছবির লিঙ্ক দিয়ে নিজেরটা যোগ করুন।"
+  },
+  "newtab_wallpaper_sources_feature_hint_close": {
+    "message": "নতুন ওয়ালপেপারের টিপ বন্ধ করুন"
+  },
+  "newtab_webdav_feature_hint_badge": {
+    "message": "বেটা"
+  },
+  "newtab_webdav_feature_hint_text": {
+    "message": "WebDAV সিঙ্ক ব্যবহার করে দেখুন: WebDAV ড্রাইভ বা NAS-এর মাধ্যমে সেটিংস, আইকন ও ওয়ালপেপার মিলিয়ে রাখুন, এমনকি বিভিন্ন ব্রাউজারেও।"
+  },
+  "newtab_webdav_feature_hint_link": {
+    "message": "সেট আপ করুন"
+  },
+  "newtab_webdav_feature_hint_close": {
+    "message": "WebDAV টিপ বন্ধ করুন"
+  },
+  "newtab_help_center_ask_feature_hint_badge": {
+    "message": "নতুন"
+  },
+  "newtab_help_center_ask_feature_hint_text": {
+    "message": "lm লিখুন, Tab টিপুন এবং সহায়তা কেন্দ্রকে জিজ্ঞাসা করুন।"
+  },
+  "newtab_help_center_ask_feature_hint_link": {
+    "message": "চেষ্টা করুন"
+  },
+  "newtab_help_center_ask_feature_hint_close": {
+    "message": "সহায়তা কেন্দ্রের টিপ বন্ধ করুন"
+  },
+  "newtab_ai_quick_jump_feature_hint_badge": {
+    "message": "নতুন"
+  },
+  "newtab_ai_quick_jump_feature_hint_text": {
+    "message": "এক ক্লিকে আপনার প্রম্পট নিয়ে জনপ্রিয় AI সাইটে চলে যান। \"gemini\" লিখে Tab টিপে দেখুন।"
+  },
+  "newtab_ai_quick_jump_feature_hint_link": {
+    "message": "সমর্থিত তালিকা"
+  },
+  "newtab_ai_quick_jump_feature_hint_close": {
+    "message": "AI কুইক জাম্প টিপ বন্ধ করুন"
+  },
+  "newtab_tab_switcher_feature_hint_badge": {
+    "message": "নতুন"
+  },
+  "newtab_tab_switcher_feature_hint_text": {
+    "message": "ট্যাব সুইচার খুলতে {shortcut} টিপুন এবং মাউস ছাড়াই সাম্প্রতিক ট্যাবগুলোর মধ্যে যান।"
+  },
+  "newtab_tab_switcher_feature_hint_close": {
+    "message": "ট্যাব সুইচারের টিপ বন্ধ করুন"
+  },
+  "newtab_input_auto_focus_title": {
+    "message": "ইনপুটে নিজে থেকে ফোকাস"
+  },
+  "newtab_input_auto_focus_help_label": {
+    "message": "ইনপুট অটো-ফোকাস সম্পর্কে তথ্য"
+  },
+  "newtab_input_auto_focus_help": {
+    "message": "ব্রাউজারের নিজস্ব অ্যাড্রেস বার ব্যবহার করতে চাইলে এই বিকল্পটি বন্ধ করুন। তখন অ্যাড্রেস বারে এক্সটেনশনের URL আর দেখা যাবে না।"
+  },
+  "update_notice_badge": {
+    "message": "{version}-এ আপডেট হয়েছে"
+  },
+  "update_notice_text_fallback": {
+    "message": "এই আপডেটে কী বদলেছে দেখুন"
+  },
+  "update_notice_link": {
+    "message": "পরিবর্তনের তালিকা"
+  },
+  "update_notice_close": {
+    "message": "আপডেটের বার্তা বন্ধ করুন"
+  },
+  "engagement_notice_badge": {
+    "message": "Lumno"
+  },
+  "engagement_notice_text": {
+    "message": "Lumno ভালো লাগছে? তাহলে"
+  },
+  "engagement_notice_connector": {
+    "message": "বা"
+  },
+  "engagement_notice_trailing": {
+    "message": "আর হাই বলুন।"
+  },
+  "engagement_notice_review": {
+    "message": "৫ স্টার দিন"
+  },
+  "engagement_notice_community": {
+    "message": "X-এ আমাদের খুঁজে নিন"
+  },
+  "engagement_notice_close": {
+    "message": "রেটিং ও কমিউনিটির বার্তা বন্ধ করুন"
+  },
+  "newtab_bookmark_cascade_debug_enable": {
+    "message": "বুকমার্ক মেনুর নিরাপদ ত্রিভুজ দেখান"
+  },
+  "newtab_bookmark_cascade_debug_disable": {
+    "message": "বুকমার্ক মেনুর নিরাপদ ত্রিভুজ লুকান"
+  },
+  "newtab_bookmark_cascade_debug_open_label": {
+    "message": "খোলা"
+  },
+  "newtab_bookmark_cascade_debug_switch_label": {
+    "message": "পরিবর্তন"
+  },
+  "newtab_bookmark_cascade_debug_safe_label": {
+    "message": "নিরাপদ"
+  },
+  "newtab_bookmark_cascade_debug_close_label": {
+    "message": "বন্ধ"
+  },
+  "newtab_feedback_button_aria": {
+    "message": "মতামত পাঠান"
+  },
+  "newtab_feedback_menu_aria": {
+    "message": "মতামতের মাধ্যম"
+  },
+  "newtab_feedback_x_label": {
+    "message": "X"
+  },
+  "newtab_feedback_x_tooltip": {
+    "message": "X-এ আমাদের সাথে যোগাযোগ করুন"
+  },
+  "newtab_feedback_github_issue_label": {
+    "message": "GitHub Issue"
+  },
+  "newtab_feedback_github_issue_tooltip": {
+    "message": "GitHub-এ একটি issue খুলুন"
+  },
+  "newtab_feedback_chrome_review_label": {
+    "message": "স্টোর রেটিং"
+  },
+  "newtab_feedback_chrome_review_tooltip": {
+    "message": "এক্সটেনশন স্টোরে Lumno-কে রেটিং দিন"
+  },
+  "newtab_feedback_mail_label": {
+    "message": "ইমেল"
+  },
+  "newtab_feedback_mail_tooltip": {
+    "message": "ইমেল পাঠানো হচ্ছে"
+  },
+  "newtab_feedback_wechat_label": {
+    "message": "WeChat"
+  },
+  "newtab_feedback_wechat_tooltip": {
+    "message": "WeChat গ্রুপে যোগ দিন"
+  },
+  "newtab_feedback_wechat_panel_title": {
+    "message": "বাগ রিপোর্ট ও ফিচারের অনুরোধ"
+  },
+  "newtab_feedback_wechat_refresh_tooltip": {
+    "message": "QR কোড রিফ্রেশ করুন"
+  },
+  "newtab_feedback_wechat_refresh_success": {
+    "message": "সর্বশেষ QR কোড লোড হয়েছে"
+  },
+  "newtab_feedback_wechat_refresh_error": {
+    "message": "রিফ্রেশ করা যায়নি। আবার চেষ্টা করুন।"
+  },
+  "newtab_feedback_wechat_close_tooltip": {
+    "message": "বন্ধ করুন"
+  },
+  "newtab_feedback_wechat_qr_title": {
+    "message": "WeChat গ্রুপের QR কোড"
+  },
+  "newtab_feedback_wechat_qr_alt": {
+    "message": "Lumno WeChat গ্রুপের QR কোড"
+  },
+  "newtab_feedback_mail_subject": {
+    "message": "Lumno সম্পর্কে মতামত"
+  },
+  "newtab_feedback_mail_source_label": {
+    "message": "উৎস"
+  },
+  "newtab_feedback_mail_version_label": {
+    "message": "Lumno ভার্সন"
+  },
+  "newtab_feedback_mail_language_label": {
+    "message": "ভাষা"
+  },
+  "newtab_feedback_mail_os_label": {
+    "message": "অপারেটিং সিস্টেম"
+  },
+  "newtab_feedback_mail_browser_label": {
+    "message": "ব্রাউজার"
+  },
+  "newtab_wallpaper_delete_local": {
+    "message": "ইমপোর্ট করা ওয়ালপেপার মুছুন"
+  },
+  "newtab_wallpaper_custom_name": {
+    "message": "লোকাল ওয়ালপেপার"
+  },
+  "newtab_wallpaper_overlay_opacity": {
+    "message": "মাস্ক ইফেক্ট"
+  },
+  "newtab_wallpaper_overlay_transparent_tick": {
+    "message": "স্বচ্ছ"
+  },
+  "newtab_wallpaper_overlay_default_tick": {
+    "message": "ডিফল্ট"
+  },
+  "newtab_wallpaper_overlay_cover_tick": {
+    "message": "ঢাকা"
+  },
+  "newtab_wallpaper_effect_title": {
+    "message": "ওয়ালপেপার ফিল্টার"
+  },
+  "newtab_wallpaper_effect_strength": {
+    "message": "স্যাম্পলিংয়ের মাত্রা"
+  },
+  "newtab_wallpaper_effect_blur_strength": {
+    "message": "ব্লারের মাত্রা"
+  },
+  "newtab_wallpaper_effect_size": {
+    "message": "আকার"
+  },
+  "newtab_wallpaper_effect_spacing": {
+    "message": "ব্যবধান"
+  },
+  "newtab_wallpaper_effect_texture": {
+    "message": "টেক্সচার"
+  },
+  "newtab_wallpaper_effect_blocks_size": {
+    "message": "ব্লকের আকার"
+  },
+  "newtab_wallpaper_effect_crt_strength": {
+    "message": "ডিসপ্লের তীব্রতা"
+  },
+  "newtab_wallpaper_effect_crt_bloom": {
+    "message": "ব্লুম"
+  },
+  "newtab_wallpaper_effect_crt_rgb_offset": {
+    "message": "RGB অফসেট"
+  },
+  "newtab_wallpaper_effect_crt_curvature": {
+    "message": "স্ক্রিনের বক্রতা"
+  },
+  "newtab_wallpaper_effect_none": {
+    "message": "বন্ধ"
+  },
+  "newtab_wallpaper_effect_blur": {
+    "message": "গ্লাস ব্লার"
+  },
+  "newtab_wallpaper_effect_grain": {
+    "message": "গ্রেইন"
+  },
+  "newtab_wallpaper_effect_blocks": {
+    "message": "ব্লক"
+  },
+  "newtab_wallpaper_effect_halftone": {
+    "message": "হাফটোন"
+  },
+  "newtab_wallpaper_effect_dither": {
+    "message": "ডিদার"
+  },
+  "newtab_wallpaper_effect_ascii": {
+    "message": "ASCII"
+  },
+  "newtab_wallpaper_effect_crt": {
+    "message": "CRT"
+  },
+  "newtab_wallpaper_effect_ink_title": {
+    "message": "স্যাম্পল টোন"
+  },
+  "newtab_wallpaper_effect_ink_dark": {
+    "message": "ছায়া"
+  },
+  "newtab_wallpaper_effect_ink_light": {
+    "message": "উজ্জ্বল অংশ"
+  },
+  "newtab_wallpaper_effect_ink_select_label": {
+    "message": "বিন্দু বা অক্ষরের জন্য {tone} থেকে স্যাম্পল নিন"
+  },
+  "newtab_wallpaper_save_error": {
+    "message": "ওয়ালপেপার সেভ করা যায়নি"
+  },
+  "newtab_wallpaper_importing": {
+    "message": "ওয়ালপেপার ইমপোর্ট করা হচ্ছে…"
+  },
+  "newtab_wallpaper_import_done": {
+    "message": "ওয়ালপেপার ইমপোর্ট হয়েছে"
+  },
+  "newtab_wallpaper_import_error": {
+    "message": "ওয়ালপেপার ইমপোর্ট করা যায়নি"
+  },
+  "newtab_wallpaper_delete_done": {
+    "message": "মুছে ফেলা হয়েছে"
+  },
+  "newtab_wallpaper_delete_error": {
+    "message": "ওয়ালপেপার মোছা যায়নি"
+  },
+  "newtab_wallpaper_name_dark_linocut_topographic": {
+    "message": "রাতের ভূচিত্র"
+  },
+  "newtab_wallpaper_name_dark_monet_lily_nocturne": {
+    "message": "রাতের শাপলা"
+  },
+  "newtab_wallpaper_name_dark_shanshui_moonlit": {
+    "message": "জ্যোৎস্নায় শানশুই"
+  },
+  "newtab_wallpaper_name_monet_coastal_white": {
+    "message": "মোনের উপকূল"
+  },
+  "newtab_wallpaper_name_monet_field_white": {
+    "message": "মোনের মাঠ"
+  },
+  "newtab_wallpaper_name_monet_lily_pond_white": {
+    "message": "শাপলা পুকুর"
+  },
+  "newtab_wallpaper_name_impressionist_orchard_white": {
+    "message": "সকালের বাগান"
+  },
+  "newtab_wallpaper_name_seurat_coast_white": {
+    "message": "সোরার উপকূল"
+  },
+  "newtab_wallpaper_name_seurat_park_white": {
+    "message": "সোরার পার্ক"
+  },
+  "newtab_wallpaper_name_seurat_riverside_white": {
+    "message": "সোরার নদীতীর"
+  },
+  "newtab_wallpaper_name_pointillist_lakeside_white": {
+    "message": "বিন্দুচিত্রে হ্রদের ধার"
+  },
+  "newtab_wallpaper_name_white_3d_architecture": {
+    "message": "দিনের আলোয় স্থাপত্য"
+  },
+  "newtab_wallpaper_name_white_3d_observatory": {
+    "message": "কুয়াশায় মানমন্দির"
+  },
+  "newtab_wallpaper_name_white_linocut_topographic": {
+    "message": "দিনের ভূচিত্র"
+  },
+  "newtab_wallpaper_name_white_risograph_collage": {
+    "message": "দিনের কোলাজ"
+  },
+  "newtab_wallpaper_name_white_shanshui": {
+    "message": "স্বচ্ছ শানশুই"
+  },
+  "newtab_wallpaper_name_white_shanshui_bamboo_bridge": {
+    "message": "বাঁশের সেতু"
+  },
+  "newtab_wallpaper_name_settings_bg_light_monet_newtab": {
+    "message": "মোনে লাইট"
+  },
+  "shortcuts_duplicate_tag": {
+    "message": "বিল্ট-ইনের সাথে ডুপ্লিকেট"
+  },
+  "shortcuts_duplicate_action": {
+    "message": "বিল্ট-ইন আইটেম খুঁজুন"
+  },
+  "shortcuts_template_help": {
+    "message": "১. যে সাইট যোগ করতে চান সেটি খুলুন\n২. যেকোনো কিওয়ার্ড দিয়ে সার্চ করুন\n৩. ফলাফল পৃষ্ঠার URL কপি করে এখানে পেস্ট করুন\n৪. কিওয়ার্ডটির জায়গায় {query} লিখুন"
+  },
+  "shortcuts_title": {
+    "message": "সাইট সার্চ"
+  },
+  "shortcuts_desc": {
+    "message": "সাইট সার্চ ব্যবহার করতে কিওয়ার্ডের পরে Tab টিপুন"
+  },
+  "shortcuts_group_custom": {
+    "message": "কাস্টম"
+  },
+  "blacklist_section_title": {
+    "message": "সার্চ ও সাম্প্রতিকের ব্লকলিস্ট"
+  },
+  "blacklist_section_desc": {
+    "message": "সার্চ ফলাফল ও নতুন ট্যাব পৃষ্ঠা থেকে লুকাতে ওয়েবসাইট যোগ করুন।"
+  },
+  "blacklist_group_custom": {
+    "message": "সব জায়গায় ব্লক করুন"
+  },
+  "blacklist_label_url": {
+    "message": "URL নিয়ম"
+  },
+  "blacklist_label_domain": {
+    "message": "সাইটের ডোমেন"
+  },
+  "blacklist_label_prefix": {
+    "message": "সাইট বা পাথ"
+  },
+  "blacklist_label_exact": {
+    "message": "সম্পূর্ণ URL"
+  },
+  "blacklist_label_suffix": {
+    "message": "সাইটের ডোমেন"
+  },
+  "blacklist_match_label": {
+    "message": "মেলানোর ধরন"
+  },
+  "blacklist_match_exact": {
+    "message": "এই পৃষ্ঠা"
+  },
+  "blacklist_match_prefix": {
+    "message": "এই সাইটের পাথ"
+  },
+  "blacklist_match_suffix": {
+    "message": "পুরো সাইট"
+  },
+  "blacklist_match_exact_tooltip": {
+    "message": "শুধু এই পৃষ্ঠাটি ব্লক করে\n────────\nযেমন, x.com/home লিখলে শুধু সেই পৃষ্ঠাটি লুকানো হবে, অন্য পৃষ্ঠাগুলো দেখা যাবে।"
+  },
+  "blacklist_match_prefix_tooltip": {
+    "message": "শুধু এই সাইট ও পাথের অধীনের পৃষ্ঠাগুলো ব্লক করে\n────────\nযেমন, baidu.com/search লিখলে baidu.com/search ও baidu.com/search/1 লুকানো হবে, কিন্তু baidu.com/news দেখা যাবে।"
+  },
+  "blacklist_match_suffix_tooltip": {
+    "message": "সাবডোমেন সহ এই সাইটের সব পৃষ্ঠা ব্লক করে\n────────\nযেমন, baidu.com লিখলে baidu.com/search ও tieba.baidu.com দুটোই লুকানো হবে।"
+  },
+  "blacklist_preview_title": {
+    "message": "আসল মিলের প্রিভিউ"
+  },
+  "blacklist_preview_match": {
+    "message": "মিলবে"
+  },
+  "blacklist_preview_miss": {
+    "message": "মিলবে না"
+  },
+  "blacklist_preview_www_note": {
+    "message": "www. সংস্করণও অন্তর্ভুক্ত, তাই baidu.com www.baidu.com-এর সাথেও মিলবে।"
+  },
+  "blacklist_placeholder_url": {
+    "message": "\"এই পৃষ্ঠা\"-র জন্য সম্পূর্ণ ঠিকানা, বা \"পুরো সাইট\"-এর জন্য সাইটের ডোমেন লিখুন"
+  },
+  "blacklist_placeholder_domain": {
+    "message": "baidu.com"
+  },
+  "blacklist_placeholder_prefix": {
+    "message": "baidu.com বা baidu.com/search"
+  },
+  "blacklist_placeholder_exact": {
+    "message": "x.com/home"
+  },
+  "blacklist_placeholder_suffix": {
+    "message": "যেমন baidu.com"
+  },
+  "blacklist_add": {
+    "message": "যোগ করুন"
+  },
+  "blacklist_empty": {
+    "message": "এখনও কোনো URL ব্লকলিস্টে নেই"
+  },
+  "blacklist_error_url": {
+    "message": "সাইটের ডোমেন বা সম্পূর্ণ URL লিখুন।"
+  },
+  "blacklist_error_match_mode": {
+    "message": "অন্তত একটি মেলানোর ধরন বেছে নিন।"
+  },
+  "blacklist_error_suffix": {
+    "message": "সাইটের ডোমেন লিখুন।"
+  },
+  "blacklist_error_domain": {
+    "message": "সাইটের ডোমেন লিখুন।"
+  },
+  "blacklist_match_mode_prefix": {
+    "message": "এই URL দিয়ে শুরু হওয়া পৃষ্ঠার সাথে মেলে"
+  },
+  "blacklist_match_unset": {
+    "message": "কোনো মেলানোর ধরন বেছে নেওয়া হয়নি"
+  },
+  "blacklist_removed_toast": {
+    "message": "ব্লকলিস্ট থেকে সরানো হয়েছে"
+  },
+  "shortcuts_group_builtin": {
+    "message": "বিল্ট-ইন"
+  },
+  "shortcuts_group_ai": {
+    "message": "AI সার্চ"
+  },
+  "shortcuts_group_ai_desc": {
+    "message": "একটি কিওয়ার্ড লিখুন, Tab টিপুন, তারপর আপনার প্রম্পট লিখুন—এর মধ্যে একটি AI সাইট খুলে সেটি নিজে থেকেই পূরণ হবে (আগে সাইটটিতে সাইন ইন করুন)"
+  },
+  "shortcuts_badge_custom": {
+    "message": "কাস্টম"
+  },
+  "shortcuts_badge_builtin": {
+    "message": "বিল্ট-ইন"
+  },
+  "shortcuts_badge_ai": {
+    "message": "AI সার্চ"
+  },
+  "shortcuts_label_key": {
+    "message": "কিওয়ার্ড"
+  },
+  "shortcuts_label_name": {
+    "message": "নাম"
+  },
+  "shortcuts_label_template": {
+    "message": "সার্চ URL"
+  },
+  "shortcuts_label_alias": {
+    "message": "অন্য নাম"
+  },
+  "shortcuts_label_display_group": {
+    "message": "যেখানে দেখাবে"
+  },
+  "shortcuts_placeholder_required": {
+    "message": "আবশ্যক — একাধিক হলে কমা দিন, যেমন jd,bili"
+  },
+  "shortcuts_placeholder_optional_default": {
+    "message": "ঐচ্ছিক — ডিফল্টভাবে কিওয়ার্ড"
+  },
+  "shortcuts_placeholder_template": {
+    "message": "https://example.com/search?q={query}"
+  },
+  "shortcuts_placeholder_alias": {
+    "message": "ঐচ্ছিক — যেমন Bilibili, YouTube"
+  },
+  "shortcuts_insert_query": {
+    "message": "কোয়েরি ভেরিয়েবল যোগ করুন"
+  },
+  "shortcuts_add": {
+    "message": "কাস্টম সার্চ যোগ করুন"
+  },
+  "shortcuts_save": {
+    "message": "পরিবর্তন সেভ করুন"
+  },
+  "shortcuts_cancel": {
+    "message": "বাতিল করুন"
+  },
+  "shortcuts_edit": {
+    "message": "সম্পাদনা করুন"
+  },
+  "shortcuts_remove": {
+    "message": "সরান"
+  },
+  "shortcuts_empty_custom": {
+    "message": "এখনও কোনো কাস্টম সার্চ নেই"
+  },
+  "shortcuts_empty_builtin": {
+    "message": "কোনো বিল্ট-ইন সাইট সার্চ নেই"
+  },
+  "shortcuts_empty_engines": {
+    "message": "কোনো বিল্ট-ইন সার্চ ইঞ্জিন নেই"
+  },
+  "shortcuts_empty_ai": {
+    "message": "কোনো বিল্ট-ইন AI সার্চ প্রোভাইডার নেই"
+  },
+  "toast_saved": {
+    "message": "সেভ হয়েছে"
+  },
+  "toast_removed": {
+    "message": "সরানো হয়েছে"
+  },
+  "toast_error": {
+    "message": "কাজটি করা যায়নি। আবার চেষ্টা করুন।"
+  },
+  "toast_error_template": {
+    "message": "সার্চ টেমপ্লেটে অবশ্যই {query} থাকতে হবে।"
+  },
+  "toast_reset": {
+    "message": "রিসেট হয়েছে"
+  },
+  "shortcuts_reset_builtin": {
+    "message": "ডিফল্ট তালিকায় রিসেট করুন"
+  },
+  "shortcuts_clear_custom": {
+    "message": "কাস্টম মুছুন"
+  },
+  "blacklist_clear": {
+    "message": "লুকানোর নিয়ম মুছুন"
+  },
+  "toast_cleared": {
+    "message": "মুছে ফেলা হয়েছে"
+  },
+  "confirm_clear_custom": {
+    "message": "সব কাস্টম সার্চ মুছবেন?"
+  },
+  "confirm_clear_blacklist": {
+    "message": "লুকানোর নিয়মগুলো মুছবেন?"
+  },
+  "confirm_clear_favicon_blacklist": {
+    "message": "বাদ দেওয়ার নিয়মগুলো মুছবেন?"
+  },
+  "confirm_reset_builtin": {
+    "message": "বিল্ট-ইন তালিকা রিসেট করবেন?"
+  },
+  "confirm_ok": {
+    "message": "নিশ্চিত করুন"
+  },
+  "confirm_cancel": {
+    "message": "বাতিল করুন"
+  },
+  "confirm_remove_item": {
+    "message": "এই আইটেমটি সরাবেন?"
+  },
+  "shortcuts_error_key": {
+    "message": "অনুগ্রহ করে একটি কিওয়ার্ড লিখুন।"
+  },
+  "shortcuts_error_key_space": {
+    "message": "কিওয়ার্ডে স্পেস থাকতে পারবে না।"
+  },
+  "shortcuts_error_key_duplicate": {
+    "message": "এই কিওয়ার্ডটি ইতিমধ্যে ব্যবহার হচ্ছে। অন্য একটি বেছে নিন।"
+  },
+  "search_placeholder": {
+    "message": "সার্চ করুন বা URL লিখুন…"
+  },
+  "overlay_search_placeholder": {
+    "message": "সার্চ করুন বা URL লিখুন, খোলা ট্যাবে সার্চ করতে Tab টিপুন"
+  },
+  "options_page_title": {
+    "message": "Lumno সেটিংস"
+  },
+  "newtab_page_title": {
+    "message": "নতুন ট্যাব"
+  },
+  "recent_heading": {
+    "message": "সাম্প্রতিক"
+  },
+  "recent_heading_latest": {
+    "message": "সাম্প্রতিক"
+  },
+  "recent_heading_most": {
+    "message": "সবচেয়ে বেশি দেখা"
+  },
+  "bookmarks_heading": {
+    "message": "বুকমার্ক"
+  },
+  "display_mode_title": {
+    "message": "প্রদর্শন মোড"
+  },
+  "bookmark_view_mode_folder": {
+    "message": "বহুস্তরের ফোল্ডার ভিউ"
+  },
+  "bookmark_view_mode_list": {
+    "message": "বহুস্তরের তালিকা ভিউ"
+  },
+  "bookmark_view_mode_top": {
+    "message": "উপরে বুকমার্ক বার"
+  },
+  "bookmark_topbar_layout_title": {
+    "message": "বারের স্টাইল"
+  },
+  "bookmark_topbar_layout_docked": {
+    "message": "উপরে লাগানো"
+  },
+  "bookmark_topbar_layout_floating": {
+    "message": "ভাসমান"
+  },
+  "bookmark_topbar_surface_title": {
+    "message": "বারের ব্যাকগ্রাউন্ড"
+  },
+  "bookmark_topbar_surface_follow": {
+    "message": "স্টাইলের সাথে মেলান"
+  },
+  "bookmark_topbar_surface_adaptive": {
+    "message": "অ্যাডাপ্টিভ কুয়াশা"
+  },
+  "bookmark_topbar_surface_clear": {
+    "message": "লিকুইড গ্লাস"
+  },
+  "bookmark_topbar_surface_transparent": {
+    "message": "স্বচ্ছ"
+  },
+  "bookmark_topbar_surface_custom": {
+    "message": "কাস্টম রং"
+  },
+  "bookmark_topbar_color_pick": {
+    "message": "ব্যাকগ্রাউন্ডের রং বাছুন"
+  },
+  "bookmark_topbar_color_reset": {
+    "message": "অটোমেটিক রং ফিরিয়ে আনুন"
+  },
+  "bookmark_topbar_color_picked": {
+    "message": "রং বাছাই হয়েছে"
+  },
+  "bookmark_topbar_color_reset_done": {
+    "message": "অটোমেটিক রং ফিরিয়ে আনা হয়েছে"
+  },
+  "bookmark_topbar_color_unsupported": {
+    "message": "এই ব্রাউজারে স্ক্রিন থেকে রং বাছাই সমর্থিত নয়।"
+  },
+  "bookmark_topbar_color_failed": {
+    "message": "রং বাছাই করা যায়নি। আবার চেষ্টা করুন।"
+  },
+  "bookmarks_empty_folder": {
+    "message": "কোনো কন্টেন্ট নেই"
+  },
+  "bookmarks_page_prev": {
+    "message": "আগের পৃষ্ঠা"
+  },
+  "bookmarks_page_next": {
+    "message": "পরের পৃষ্ঠা"
+  },
+  "bookmarks_open_manager": {
+    "message": "বুকমার্ক ম্যানেজার খুলুন"
+  },
+  "bookmarks_open_in_new_tab_group": {
+    "message": "নতুন ট্যাব গ্রুপে খুলুন"
+  },
+  "newtab_open_in_new_tab": {
+    "message": "নতুন ট্যাবে খুলুন"
+  },
+  "bookmarks_open_group_confirm_title": {
+    "message": "{count}টি ট্যাব খুলবেন?"
+  },
+  "bookmarks_open_group_confirm_description": {
+    "message": "“{folder}” ও এর সাবফোল্ডারের সব বুকমার্ক একটি ট্যাব গ্রুপে খুলবে।"
+  },
+  "bookmarks_open_group_confirm_button": {
+    "message": "খুলুন"
+  },
+  "bookmarks_untitled_folder": {
+    "message": "নামহীন ফোল্ডার"
+  },
+  "bookmarks_open_group_partial_failed": {
+    "message": "{openedCount}টি ট্যাব খোলা হয়েছে; {failedCount}টি খোলা যায়নি।"
+  },
+  "bookmarks_open_group_failed": {
+    "message": "এই বুকমার্ক ফোল্ডারটি খোলা যায়নি"
+  },
+  "bookmarks_copy_url": {
+    "message": "লিঙ্ক কপি করুন"
+  },
+  "bookmarks_copy_url_success": {
+    "message": "বুকমার্কের লিঙ্ক কপি হয়েছে"
+  },
+  "bookmarks_copy_url_failed": {
+    "message": "লিঙ্ক কপি করা যায়নি। আবার চেষ্টা করুন।"
+  },
+  "bookmarks_edit": {
+    "message": "সম্পাদনা করুন"
+  },
+  "bookmarks_edit_dialog_title": {
+    "message": "বুকমার্ক সম্পাদনা করুন"
+  },
+  "bookmarks_edit_folder_dialog_title": {
+    "message": "ফোল্ডারের নাম পরিবর্তন করুন"
+  },
+  "bookmarks_name_placeholder": {
+    "message": "নাম"
+  },
+  "bookmarks_invalid_url": {
+    "message": "একটি সঠিক URL লিখুন।"
+  },
+  "bookmarks_updated": {
+    "message": "বুকমার্ক আপডেট হয়েছে"
+  },
+  "bookmarks_folder_updated": {
+    "message": "ফোল্ডার আপডেট হয়েছে"
+  },
+  "bookmarks_update_failed": {
+    "message": "বুকমার্ক আপডেট করা যায়নি"
+  },
+  "bookmarks_delete": {
+    "message": "মুছুন"
+  },
+  "bookmarks_context_menu_label": {
+    "message": "বুকমার্কের অ্যাকশন"
+  },
+  "bookmarks_delete_undone": {
+    "message": "মোছা পূর্বাবস্থায় ফেরানো হয়েছে · আবার মুছতে {shortcut}"
+  },
+  "bookmarks_delete_redone": {
+    "message": "আবার মোছা হয়েছে · পূর্বাবস্থায় ফেরাতে {shortcut}"
+  },
+  "bookmarks_delete_failed": {
+    "message": "বুকমার্ক মোছা যায়নি"
+  },
+  "bookmarks_move_success": {
+    "message": "“{title}” সরানো হয়েছে · পূর্বাবস্থায় ফেরাতে {shortcut}"
+  },
+  "bookmarks_move_undone": {
+    "message": "সরানো পূর্বাবস্থায় ফেরানো হয়েছে · আবার করতে {shortcut}"
+  },
+  "bookmarks_move_redone": {
+    "message": "আবার সরানো হয়েছে · পূর্বাবস্থায় ফেরাতে {shortcut}"
+  },
+  "bookmarks_move_failed": {
+    "message": "বুকমার্ক সরানো যায়নি"
+  },
+  "bookmarks_moved_to_shortcuts": {
+    "message": "শর্টকাটে সরানো হয়েছে"
+  },
+  "search_tag_history": {
+    "message": "ইতিহাস"
+  },
+  "search_remove_history": {
+    "message": "ইতিহাস থেকে সরান"
+  },
+  "search_remove_history_tooltip": {
+    "message": "ইতিহাসের এই এন্ট্রিটি সরান"
+  },
+  "search_remove_top_site_tooltip": {
+    "message": "এই ঘন ঘন দেখা ফলাফলটি সরান"
+  },
+  "search_copy_url_tooltip": {
+    "message": "লিঙ্ক কপি করুন"
+  },
+  "search_copy_url_success": {
+    "message": "ফলাফলের লিঙ্ক কপি হয়েছে"
+  },
+  "search_copy_url_failed": {
+    "message": "ফলাফলের লিঙ্ক কপি করা যায়নি। আবার চেষ্টা করুন।"
+  },
+  "search_tag_top_site": {
+    "message": "ঘন ঘন দেখা"
+  },
+  "search_tag_bookmark": {
+    "message": "বুকমার্ক"
+  },
+  "search_tag_open_tab": {
+    "message": "খোলা"
+  },
+  "visit_label": {
+    "message": "যান"
+  },
+  "action_open_new_tab": {
+    "message": "নতুন ট্যাব"
+  },
+  "action_open_background_new_tab": {
+    "message": "ব্যাকগ্রাউন্ডে খুলুন"
+  },
+  "action_open_background_tab": {
+    "message": "ব্যাকগ্রাউন্ডে খুলুন"
+  },
+  "action_go_current_tab": {
+    "message": "যান"
+  },
+  "open_prefix": {
+    "message": "{title} খুলুন"
+  },
+  "open_url": {
+    "message": "{url} খুলুন"
+  },
+  "open_browser_url": {
+    "message": "{browser} খুলুন: {url}"
+  },
+  "mode_badge": {
+    "message": "মোড: {mode}"
+  },
+  "mode_badge_follow_system": {
+    "message": "মোড: {mode} (সিস্টেম)"
+  },
+  "mode_badge_follow_site": {
+    "message": "মোড: {mode} (সাইট)"
+  },
+  "theme_label_dark": {
+    "message": "ডার্ক"
+  },
+  "theme_label_light": {
+    "message": "লাইট"
+  },
+  "theme_label_system": {
+    "message": "সিস্টেম"
+  },
+  "command_newtab": {
+    "message": "নতুন ট্যাব"
+  },
+  "search_input_clear": {
+    "message": "মুছুন"
+  },
+  "command_settings": {
+    "message": "সেটিংস খুলুন"
+  },
+  "command_show_search": {
+    "message": "কমান্ড বার খুলুন"
+  },
+  "command_show_search_prefill": {
+    "message": "বর্তমান পৃষ্ঠার URL সহ কমান্ড বার খুলুন"
+  },
+  "command_show_search_prefill_v": {
+    "message": "বর্তমান পৃষ্ঠার URL কপি করুন"
+  },
+  "mode_switch_title": {
+    "message": "{name}: {mode} মোডে যান"
+  },
+  "zen_badge_on": {
+    "message": "Zen: চালু"
+  },
+  "zen_badge_off": {
+    "message": "Zen: বন্ধ"
+  },
+  "zen_enable_title": {
+    "message": "{name}: Zen মোডে যান"
+  },
+  "zen_disable_title": {
+    "message": "{name}: Zen মোড থেকে বের হন"
+  },
+  "switch_to_tab": {
+    "message": "যান"
+  },
+  "untitled": {
+    "message": "শিরোনামহীন"
+  },
+  "site_search_default": {
+    "message": "সাইট"
+  },
+  "site_search_name_baidu": {
+    "message": "Baidu"
+  },
+  "site_search_name_metaso": {
+    "message": "Metaso AI সার্চ"
+  },
+  "site_search_name_sogou": {
+    "message": "Sogou"
+  },
+  "site_search_name_shenma": {
+    "message": "Shenma"
+  },
+  "site_search_name_weibo": {
+    "message": "Weibo"
+  },
+  "site_search_name_xiaohongshu": {
+    "message": "Xiaohongshu"
+  },
+  "site_search_name_douyin": {
+    "message": "Douyin"
+  },
+  "site_search_name_jd": {
+    "message": "JD.com"
+  },
+  "site_search_name_chatgpt": {
+    "message": "ChatGPT"
+  },
+  "site_search_name_gemini": {
+    "message": "Gemini"
+  },
+  "site_search_name_doubao": {
+    "message": "Doubao"
+  },
+  "site_search_name_qianwen": {
+    "message": "Qwen"
+  },
+  "site_search_name_yuanbao": {
+    "message": "Yuanbao"
+  },
+  "site_search_name_minimax": {
+    "message": "MiniMax"
+  },
+  "site_search_name_deepseek": {
+    "message": "DeepSeek"
+  },
+  "site_search_name_kimi": {
+    "message": "Kimi"
+  },
+  "site_search_name_zhihu": {
+    "message": "Zhihu"
+  },
+  "site_search_name_douban": {
+    "message": "Douban"
+  },
+  "site_search_name_juejin": {
+    "message": "Juejin"
+  },
+  "site_search_name_taobao": {
+    "message": "Taobao"
+  },
+  "site_search_name_tmall": {
+    "message": "Tmall"
+  },
+  "site_search_name_wechat": {
+    "message": "WeChat অফিসিয়াল অ্যাকাউন্ট"
+  },
+  "site_search_name_wikipedia": {
+    "message": "উইকিপিডিয়া"
+  },
+  "site_search_name_lumno_help": {
+    "message": "Lumno সহায়তা কেন্দ্র"
+  },
+  "help_center_recommended": {
+    "message": "পড়ার পরামর্শ"
+  },
+  "help_center_no_results": {
+    "message": "কিছু পাওয়া যায়নি। প্রয়োজনে ডেভেলপারের সাথে যোগাযোগ করুন।"
+  },
+  "search_in_site": {
+    "message": "{site}-এ সার্চ করুন"
+  },
+  "search_in_site_query": {
+    "message": "{site}-এ \"{query}\" সার্চ করুন"
+  },
+  "ask_ai_provider": {
+    "message": "{site}-কে জিজ্ঞাসা করুন"
+  },
+  "ask_ai_provider_query": {
+    "message": "{site}-কে জিজ্ঞাসা করুন \"{query}\""
+  },
+  "site_search_tab_hint": {
+    "message": "{site}-এ সার্চ করুন"
+  },
+  "search_query": {
+    "message": "\"{query}\" সার্চ করুন"
+  },
+  "search_in_site_ellipsis": {
+    "message": "{site}-এ সার্চ করুন…"
+  },
+  "search_in_site_prefix": {
+    "message": "{site}-এ সার্চ |"
+  },
+  "search_open_tabs_only_prefix": {
+    "message": "খোলা ট্যাবে সার্চ |"
+  },
+  "search_open_tabs_only_entry": {
+    "message": "খোলা ট্যাবে সার্চ করুন"
+  },
+  "action_search": {
+    "message": "সার্চ"
+  },
+  "action_search_engine": {
+    "message": "{engine}-এ সার্চ করুন"
+  },
+  "action_open_ai_web": {
+    "message": "{site} ওয়েব অ্যাপ খুলুন"
+  },
+  "action_search_google": {
+    "message": "Google-এ সার্চ করুন"
+  },
+  "action_switch": {
+    "message": "যান"
+  },
+  "action_open": {
+    "message": "খুলুন"
+  },
+  "overlay_empty_result": {
+    "message": "মিলে যাওয়া কোনো ফলাফল নেই"
+  },
+  "local_search_tab_hint": {
+    "message": "শুধু {source} সার্চ করুন"
+  },
+  "search_scope_switcher_label": {
+    "message": "সার্চের পরিধি: {scope}। পরিবর্তন করতে চালু করুন।"
+  },
+  "search_scope_current": {
+    "message": "বর্তমান"
+  },
+  "search_scope_remove_confirmation": {
+    "message": "পরিধি সরাতে আবার Backspace টিপুন।"
+  },
+  "search_number_jump_release_hint": {
+    "message": "নম্বর দেখতে ছেড়ে দিন"
+  },
+  "search_scope_menu_shortcut_hint": {
+    "message": "প্যানেল খুলুন"
+  },
+  "search_scope_menu_navigation_hint": {
+    "message": "সরান"
+  },
+  "search_scope_menu_select_hint": {
+    "message": "পরিবর্তন"
+  },
+  "search_scope_menu_focus_toggle_hint": {
+    "message": "ফোকাস পাল্টান"
+  },
+  "search_scope_menu_filter_hint": {
+    "message": "ফিল্টার করতে লিখুন"
+  },
+  "search_scope_menu_filter_query": {
+    "message": "সার্চ: {query}"
+  },
+  "search_scope_panel_placeholder": {
+    "message": "নির্দিষ্ট সাইটের কন্টেন্ট সার্চ করুন…"
+  },
+  "search_scope_active_placeholder": {
+    "message": "এই পরিধির মধ্যে সার্চ করুন; পরিধির প্যানেল খুলতে আবার Tab টিপুন…"
+  },
+  "search_scope_group_engines": {
+    "message": "সার্চ ইঞ্জিন"
+  },
+  "search_scope_group_local": {
+    "message": "ব্রাউজারের কন্টেন্ট"
+  },
+  "search_scope_group_ai": {
+    "message": "AI সার্চ"
+  },
+  "search_scope_group_sites": {
+    "message": "সাইট সার্চ"
+  },
+  "search_scope_group_aggregates": {
+    "message": "সম্মিলিত সার্চ"
+  },
+  "aggregate_search_action": {
+    "message": "{name} দিয়ে সার্চ করুন"
+  },
+  "aggregate_search_action_query": {
+    "message": "{name} দিয়ে \"{query}\" সার্চ করুন"
+  },
+  "aggregate_search_group_title": {
+    "message": "সম্মিলিত সার্চ"
+  },
+  "aggregate_search_add": {
+    "message": "সম্মিলিত সার্চ যোগ করুন"
+  },
+  "aggregate_search_clear": {
+    "message": "সম্মিলিত সার্চ মুছুন"
+  },
+  "confirm_clear_aggregate_search": {
+    "message": "সব সম্মিলিত সার্চ মুছবেন?"
+  },
+  "aggregate_search_name_label": {
+    "message": "নাম"
+  },
+  "aggregate_search_name_required_error": {
+    "message": "এই সম্মিলিত সার্চের একটি নাম লিখুন।"
+  },
+  "aggregate_search_key_placeholder": {
+    "message": "যেমন, tech"
+  },
+  "aggregate_search_default_name": {
+    "message": "সম্মিলিত সার্চ"
+  },
+  "aggregate_search_sources_label": {
+    "message": "সার্চের উৎস"
+  },
+  "aggregate_search_selected_count": {
+    "message": "বাছাই করা {count}/{max}"
+  },
+  "aggregate_search_min_sources_error": {
+    "message": "অন্তত ২টি সার্চের উৎস বেছে নিন।"
+  },
+  "aggregate_search_max_sources_error": {
+    "message": "আপনি সর্বোচ্চ ১০টি সার্চের উৎস বেছে নিতে পারেন।"
+  },
+  "settings_aggregate_search_auto_group_title": {
+    "message": "সম্মিলিত সার্চের ট্যাব নিজে থেকে গ্রুপ করুন"
+  },
+  "settings_aggregate_search_auto_group_desc": {
+    "message": "চালু থাকলে, সম্মিলিত সার্চে খোলা সব ট্যাব “সম্মিলিত সার্চের নাম: সার্চ কোয়েরি” নামের একটি গ্রুপে রাখা হয়"
+  },
+  "aggregate_search_badge": {
+    "message": "সম্মিলিত"
+  },
+  "aggregate_search_source_summary": {
+    "message": "{count}টি উৎস"
+  },
+  "aggregate_search_source_summary_unavailable": {
+    "message": "{count}টি উৎস · {unavailable}টি অনুপলভ্য · আপডেট প্রয়োজন"
+  },
+  "aggregate_search_sources_unavailable_error": {
+    "message": "এই সম্মিলিত সার্চে সরানো বা বন্ধ করা উৎস আছে। সেটিংসে গিয়ে এটি আপডেট করুন।"
+  },
+  "aggregate_search_in_progress": {
+    "message": "এই সম্মিলিত সার্চটি ইতিমধ্যে চলছে।"
+  },
+  "aggregate_search_partial_failure": {
+    "message": "সম্মিলিত সার্চের কিছু ফলাফল খোলা যায়নি।"
+  },
+  "aggregate_search_degraded_success": {
+    "message": "সার্চের ফলাফল খোলা হয়েছে, কিন্তু ট্যাব গ্রুপ করা, নাম দেওয়া বা ফোকাস করা সম্পূর্ণ হয়নি।"
+  },
+  "aggregate_search_storage_unavailable_error": {
+    "message": "সম্মিলিত সার্চ লোড করা যায়নি। সেটিংস আবার লোড করে চেষ্টা করুন।"
+  },
+  "aggregate_search_source_selection_unavailable_error": {
+    "message": "অনুপলভ্য উৎসগুলো সরান এবং অন্তত দুটি উপলভ্য উৎস বেছে নিন।"
+  },
+  "aggregate_search_unavailable_group": {
+    "message": "অনুপলভ্য উৎস"
+  },
+  "aggregate_search_unavailable_name": {
+    "message": "অনুপলভ্য উৎস ({source})"
+  },
+  "aggregate_search_name_duplicate_error": {
+    "message": "এই নামে একটি সম্মিলিত সার্চ আগে থেকেই আছে।"
+  },
+  "aggregate_search_max_items_error": {
+    "message": "আপনি সর্বোচ্চ ৮টি সম্মিলিত সার্চ তৈরি করতে পারেন।"
+  },
+  "overlay_empty_open_tabs": {
+    "message": "কোনো ট্যাব নেই"
+  },
+  "site_icon_alt": {
+    "message": "সাইট"
+  },
+  "site_brand_wechat_official": {
+    "message": "WeChat অফিসিয়াল অ্যাকাউন্ট"
+  },
+  "settings_sync_title": {
+    "message": "{browser}-এর বিল্ট-ইন সিঙ্ক"
+  },
+  "settings_sync_section_title": {
+    "message": "ব্রাউজারের বিল্ট-ইন সিঙ্ক"
+  },
+  "settings_sync_desc": {
+    "message": "আপনার বর্তমান ব্রাউজারের বিল্ট-ইন সিঙ্ক পরিষেবার মাধ্যমে সেটিংস নিজে থেকে সিঙ্ক হয়"
+  },
+  "sync_status_unavailable": {
+    "message": "সিঙ্ক উপলভ্য নয়"
+  },
+  "sync_status_unavailable_hint": {
+    "message": "সিঙ্ক উপলভ্য নয়: আপনার বর্তমান ব্রাউজার বিল্ট-ইন সিঙ্ক সমর্থন করে কিনা এবং তা চালু আছে কিনা দেখুন।"
+  },
+  "sync_status_ready": {
+    "message": "অটো সিঙ্ক চালু আছে"
+  },
+  "sync_status_done": {
+    "message": "সিঙ্ক সম্পূর্ণ"
+  },
+  "sync_status_failed": {
+    "message": "সিঙ্ক ব্যর্থ হয়েছে"
+  },
+  "sync_status_failed_reason": {
+    "message": "সিঙ্ক ব্যর্থ হয়েছে: {reason}"
+  },
+  "sync_action_now": {
+    "message": "এখনই সিঙ্ক করুন"
+  },
+  "sync_action_export": {
+    "message": "সেটিংস এক্সপোর্ট করুন"
+  },
+  "sync_action_import": {
+    "message": "সেটিংস ইমপোর্ট করুন"
+  },
+  "sync_tooltip_export": {
+    "message": "সেটিংস এক্সপোর্ট করুন"
+  },
+  "sync_tooltip_import": {
+    "message": "সেটিংস ইমপোর্ট করুন"
+  },
+  "sync_tooltip_last_manual": {
+    "message": "শেষ ইমপোর্ট/ম্যানুয়াল সিঙ্ক {time}"
+  },
+  "sync_tooltip_default": {
+    "message": "ম্যানুয়াল সিঙ্ক"
+  },
+  "sync_status_hint": {
+    "message": "Lumno-র সেটিংস আপনার বর্তমান ব্রাউজারের বিল্ট-ইন সিঙ্ক পরিষেবার মাধ্যমে নিজে থেকে সিঙ্ক হয়। একই ব্রাউজার অ্যাকাউন্টে সাইন ইন করা ডিভাইসগুলোর মধ্যে সিঙ্ক হয়, কিন্তু আলাদা ব্রাউজারের মধ্যে নয়।"
+  },
+  "sync_export_done": {
+    "message": "সেটিংস এক্সপোর্ট হয়েছে"
+  },
+  "sync_importing": {
+    "message": "সেটিংস ইমপোর্ট করা হচ্ছে…"
+  },
+  "sync_import_done": {
+    "message": "ইমপোর্ট সম্পূর্ণ"
+  },
+  "sync_import_invalid": {
+    "message": "সেটিংস ফাইলটি সঠিক নয়"
+  },
+  "document_pip_picker_unsupported_policy": {
+    "message": "এই ওয়েবসাইট সাইট নীতির মাধ্যমে ছবির-মধ্যে-ছবি বন্ধ রেখেছে।"
+  },
+  "document_pip_picker_unsupported_iframe": {
+    "message": "Document Picture-in-Picture শুধু টপ-লেভেল পৃষ্ঠায় কাজ করে।"
+  },
+  "document_pip_picker_unsupported_insecure": {
+    "message": "Document Picture-in-Picture-এর জন্য HTTPS প্রয়োজন।"
+  },
+  "document_pip_picker_open_failed_not_allowed": {
+    "message": "ওয়েবসাইট বা ব্রাউজার Document Picture-in-Picture খুলতে দেয়নি।"
+  },
+  "document_pip_picker_open_failed_not_supported": {
+    "message": "এই পৃষ্ঠায় বাছাই করা অংশটি Document Picture-in-Picture-এ খোলা যাবে না।"
+  },
+  "document_pip_picker_open_failed_invalid_state": {
+    "message": "একটি ভাসমান উইন্ডো আগে থেকেই খোলা আছে বা পৃষ্ঠার অবস্থা বদলেছে। আবার চেষ্টা করুন।"
+  },
+  "document_pip_picker_open_failed_security": {
+    "message": "নিরাপত্তার কারণে ব্রাউজার এই পৃষ্ঠায় কাজটি আটকে দিয়েছে।"
+  },
+  "newtab_page_label": {
+    "message": "নতুন ট্যাব"
+  },
+  "settings_title": {
+    "message": "সেটিংস"
+  },
+  "extension_page_label": {
+    "message": "এক্সটেনশন পৃষ্ঠা"
+  },
+  "settings_button_aria": {
+    "message": "সেটিংস"
+  },
+  "copy_page_url_failed_retry": {
+    "message": "কপি করা যায়নি। আবার চেষ্টা করুন।"
+  },
+  "copy_page_url_success": {
+    "message": "বর্তমান পৃষ্ঠার URL কপি হয়েছে"
+  },
+  "copy_page_url_failed_permission": {
+    "message": "কপি করা যায়নি। ক্লিপবোর্ডের অনুমতি দেখুন।"
+  },
+  "recent_pin_add": {
+    "message": "পিন করুন"
+  },
+  "recent_pin_remove": {
+    "message": "আনপিন করুন"
+  },
+  "recent_pin_limit": {
+    "message": "আপনি সর্বোচ্চ ৩টি কার্ড পিন করতে পারেন"
+  },
+  "recent_pin_limit_toast": {
+    "message": "আপনি সর্বোচ্চ ৩টি কার্ড পিন করতে পারেন।"
+  },
+  "recent_dismiss_tooltip": {
+    "message": "সরান"
+  },
+  "recent_add_to_shortcuts": {
+    "message": "শর্টকাটে যোগ করুন"
+  },
+  "recent_dismiss_pinned_tooltip": {
+    "message": "আনপিন করে সরান"
+  },
+  "recent_dismiss_toast": {
+    "message": "সরানো হয়েছে"
+  },
+  "recent_dismiss_pinned_toast": {
+    "message": "আনপিন করে সরানো হয়েছে"
+  },
+  "recent_context_menu_label": {
+    "message": "সাম্প্রতিক সাইটের অ্যাকশন"
+  },
+  "tab_switcher_title": {
+    "message": "সাম্প্রতিক ট্যাব"
+  },
+  "tab_switcher_untitled": {
+    "message": "শিরোনামহীন"
+  },
+  "tab_switcher_favicon_alt": {
+    "message": "সাইটের আইকন"
+  },
+  "tab_switcher_close_tab": {
+    "message": "ট্যাব বন্ধ করুন"
+  },
+  "tab_switcher_tab_closed": {
+    "message": "ট্যাব বন্ধ হয়েছে"
+  },
+  "tab_switcher_close_failed": {
+    "message": "এই ট্যাবটি বন্ধ করা যায়নি"
+  },
+  "command_show_tab_switcher": {
+    "message": "সাম্প্রতিক ট্যাব সুইচার খুলুন"
+  },
+  "shortcut_reference_title": {
+    "message": "কীবোর্ড শর্টকাটের তালিকা"
+  },
+  "shortcut_reference_group_search": {
+    "message": "কমান্ড বার"
+  },
+  "shortcut_reference_group_page_link": {
+    "message": "পৃষ্ঠার লিঙ্ক"
+  },
+  "shortcut_reference_group_tab_switcher": {
+    "message": "ট্যাব সুইচার"
+  },
+  "shortcut_reference_group_web_clip": {
+    "message": "ওয়েব ক্লিপ"
+  },
+  "shortcut_reference_unset": {
+    "message": "সেট করা নেই"
+  },
+  "shortcut_reference_show_search_title": {
+    "message": "কমান্ড বার খুলুন"
+  },
+  "shortcut_reference_show_search_desc": {
+    "message": "বর্তমান পৃষ্ঠায় Lumno খুলুন"
+  },
+  "shortcut_reference_show_search_prefill_title": {
+    "message": "বর্তমান পৃষ্ঠার URL সহ খুলুন"
+  },
+  "shortcut_reference_show_search_prefill_desc": {
+    "message": "Lumno খুলুন এবং বর্তমান পৃষ্ঠার URL আগে থেকে বসিয়ে দিন"
+  },
+  "shortcut_reference_copy_url_title": {
+    "message": "বর্তমান পৃষ্ঠার URL কপি করুন"
+  },
+  "shortcut_reference_copy_url_desc": {
+    "message": "Lumno না খুলেই বর্তমান পৃষ্ঠার URL কপি করুন"
+  },
+  "shortcut_reference_tab_switcher_title": {
+    "message": "সাম্প্রতিক ট্যাব সুইচার খুলুন"
+  },
+  "shortcut_reference_tab_switcher_desc": {
+    "message": "সাম্প্রতিক ট্যাব সুইচার খুলুন"
+  },
+  "shortcut_reference_search_input_history_title": {
+    "message": "আগের বা পরের ইনপুট"
+  },
+  "shortcut_reference_search_input_history_desc": {
+    "message": "জমা দেওয়া ইনপুটের ইতিহাসে পিছনে বা সামনে যান"
+  },
+  "shortcut_reference_search_navigate_title": {
+    "message": "সাজেশনের মধ্যে সরুন"
+  },
+  "shortcut_reference_search_navigate_desc": {
+    "message": "Lumno সার্চ ও নতুন ট্যাবে সক্রিয় ফলাফল সরান"
+  },
+  "shortcut_reference_search_number_jump_title": {
+    "message": "নম্বর দেওয়া ফলাফলে যান"
+  },
+  "shortcut_reference_search_number_jump_desc": {
+    "message": "প্রধান মডিফায়ার কী চেপে ধরে ছেড়ে দিন, তারপর মিলে যাওয়া ফলাফল চালু করতে 0–9 টিপুন"
+  },
+  "shortcut_reference_search_number_jump_shortcut": {
+    "message": "{modifier} 0.4 সেকেন্ড চেপে ধরে ছেড়ে দিন, তারপর 0–9 টিপুন"
+  },
+  "shortcut_reference_search_confirm_title": {
+    "message": "বাছাই করা অ্যাকশন চালান"
+  },
+  "shortcut_reference_search_confirm_desc": {
+    "message": "খুলুন, সার্চ করুন, ট্যাব পাল্টান বা বাছাই করা কমান্ড চালান"
+  },
+  "shortcut_reference_search_tab_mode_title": {
+    "message": "সম্পূর্ণ করুন বা সার্চ মোডে যান"
+  },
+  "shortcut_reference_search_tab_mode_desc": {
+    "message": "একটি সাজেশন সম্পূর্ণ করুন বা সাইট/খোলা ট্যাব সার্চ মোডে যান"
+  },
+  "shortcut_reference_search_open_scope_menu_title": {
+    "message": "সার্চের পরিধির প্যানেল খুলুন"
+  },
+  "shortcut_reference_search_open_scope_menu_desc": {
+    "message": "ইনপুট খালি থাকলে দুবার Tab টিপুন; সার্চের পরিধি বাছাই করা থাকলে একবার Tab টিপুন"
+  },
+  "shortcut_reference_search_close_title": {
+    "message": "বন্ধ করুন বা মোড থেকে বের হন"
+  },
+  "shortcut_reference_search_close_desc": {
+    "message": "Lumno সার্চ বন্ধ করুন বা সাইট/খোলা ট্যাব সার্চ মোড থেকে বের হন"
+  },
+  "shortcut_reference_search_current_tab_title": {
+    "message": "বর্তমান ট্যাবে খুলুন"
+  },
+  "shortcut_reference_search_current_tab_desc": {
+    "message": "সাধারণত নতুন ট্যাবে খোলে এমন অ্যাকশনের জন্য বর্তমান ট্যাব ব্যবহার করুন"
+  },
+  "shortcut_reference_search_switch_new_tab_title": {
+    "message": "খোলা ট্যাবের ফলাফল নতুন ট্যাবে খুলুন"
+  },
+  "shortcut_reference_search_switch_new_tab_desc": {
+    "message": "কোনো ফলাফল খোলা ট্যাবের সাথে মিললে, তার URL নতুন ট্যাবে খুলুন"
+  },
+  "shortcut_reference_tab_switcher_cycle_title": {
+    "message": "ট্যাব সুইচারে বাছাই সরান"
+  },
+  "shortcut_reference_tab_switcher_cycle_desc": {
+    "message": "ট্যাব সুইচারে আগের বা পরের ট্যাবে যান"
+  },
+  "shortcut_reference_tab_switcher_confirm_title": {
+    "message": "বাছাই করা ট্যাবে যান"
+  },
+  "shortcut_reference_tab_switcher_confirm_desc": {
+    "message": "ট্যাব সুইচারে বাছাই করা ট্যাবটি নিশ্চিত করুন"
+  },
+  "shortcut_reference_document_pip_parent_title": {
+    "message": "বাইরের এলিমেন্ট বাছুন"
+  },
+  "shortcut_reference_document_pip_parent_desc": {
+    "message": "ওয়েব ক্লিপ বাছাইয়ের সময় বড় প্যারেন্ট এলিমেন্টে যান"
+  },
+  "shortcut_reference_document_pip_child_title": {
+    "message": "ভেতরের এলিমেন্ট বাছুন"
+  },
+  "shortcut_reference_document_pip_child_desc": {
+    "message": "ওয়েব ক্লিপ বাছাইয়ের সময় ছোট চাইল্ড এলিমেন্টে যান"
+  },
+  "newtab_shortcuts_section_label": {
+    "message": "শর্টকাট"
+  },
+  "newtab_shortcuts_add": {
+    "message": "শর্টকাট যোগ করুন"
+  },
+  "newtab_shortcuts_hide_add": {
+    "message": "লুকান"
+  },
+  "newtab_shortcuts_add_hidden": {
+    "message": "“+” লুকানো হয়েছে। সেটিংস → চেহারা → শর্টকাট → “+” দেখান থেকে আবার চালু করুন।"
+  },
+  "newtab_shortcuts_dialog_title": {
+    "message": "শর্টকাট যোগ করুন"
+  },
+  "newtab_shortcuts_name_label": {
+    "message": "নাম"
+  },
+  "newtab_shortcuts_name_placeholder": {
+    "message": "Lumno"
+  },
+  "newtab_shortcuts_url_label": {
+    "message": "URL"
+  },
+  "newtab_shortcuts_url_info_label": {
+    "message": "সমর্থিত URL সম্পর্কে"
+  },
+  "newtab_shortcuts_url_info": {
+    "message": "ব্রাউজারের অভ্যন্তরীণ পৃষ্ঠাও সমর্থিত, যেমন:\nchrome://inspect/#devices"
+  },
+  "newtab_shortcuts_url_info__firefox": {
+    "message": "Firefox এক্সটেনশনকে about:config-এর মতো বিল্ট-ইন পৃষ্ঠা খুলতে দেয় না, তাই একটি ওয়েব ঠিকানা ব্যবহার করুন।"
+  },
+  "newtab_shortcuts_url_placeholder": {
+    "message": "https://example.com"
+  },
+  "newtab_shortcuts_icon_label": {
+    "message": "আইকন (ঐচ্ছিক)"
+  },
+  "newtab_shortcuts_icon_mode_label": {
+    "message": "আইকনের উৎস"
+  },
+  "newtab_shortcuts_icon_builtin": {
+    "message": "বিল্ট-ইন আইকন"
+  },
+  "newtab_shortcuts_icon_builtin_hint": {
+    "message": "Lumno-র বিল্ট-ইন উচ্চমানের আইকন ব্যবহার করুন।"
+  },
+  "newtab_shortcuts_icon_builtin_network_hint": {
+    "message": "কোনো নেটওয়ার্ক অনুরোধের প্রয়োজন নেই।"
+  },
+  "newtab_shortcuts_icon_builtin_info_label": {
+    "message": "বিল্ট-ইন আইকন সম্পর্কে"
+  },
+  "newtab_shortcuts_icon_service": {
+    "message": "Gstatic (থার্ড-পার্টি আইকন)"
+  },
+  "newtab_shortcuts_icon_favicon_is": {
+    "message": "Favicon.is (থার্ড-পার্টি আইকন)"
+  },
+  "newtab_shortcuts_icon_favicon_is_hint": {
+    "message": "বড় আইকনের জন্য ডোমেনটি Favicon.is-এ পাঠান।"
+  },
+  "newtab_shortcuts_icon_favicon_is_caution": {
+    "message": "ডোমেনের আইকন বর্তমান পৃষ্ঠার আইকন থেকে আলাদা হতে পারে।"
+  },
+  "newtab_shortcuts_icon_cache": {
+    "message": "ব্রাউজারের ক্যাশ"
+  },
+  "newtab_shortcuts_icon_service_hint": {
+    "message": "সাইটের ডোমেন Gstatic-এ পাঠান। স্থিতিশীল, উচ্চমানের।"
+  },
+  "newtab_shortcuts_icon_cache_hint": {
+    "message": "ব্রাউজারের ক্যাশ থেকে দ্রুত ও নির্ভুল ওয়েবসাইট আইকন।"
+  },
+  "newtab_shortcuts_icon_custom_hint": {
+    "message": "ডিফল্টভাবে এই ডিভাইসে সেভ হয়, ব্রাউজার সিঙ্কের বাইরে।"
+  },
+  "newtab_shortcuts_icon_service_caution": {
+    "message": "কিছু ওয়েবসাইট শনাক্ত নাও হতে পারে।"
+  },
+  "newtab_shortcuts_icon_cache_caution": {
+    "message": "সাইটের সেটিংসের কারণে বিজ্ঞপ্তির বিন্দু যোগ হতে পারে বা স্পষ্টতা কমতে পারে।"
+  },
+  "newtab_shortcuts_icon_plate_label": {
+    "message": "অনিয়মিত আকারের আইকনে ব্যাকগ্রাউন্ড যোগ করুন"
+  },
+  "newtab_shortcuts_icon_plate_color_label": {
+    "message": "ব্যাকগ্রাউন্ডের রং"
+  },
+  "newtab_shortcuts_icon_plate_color_auto": {
+    "message": "আইকন থেকে"
+  },
+  "newtab_shortcuts_icon_plate_color_custom": {
+    "message": "কাস্টম রং"
+  },
+  "newtab_shortcuts_icon_custom_sync_hint": {
+    "message": "WebDAV দিয়ে বিভিন্ন ডিভাইসে সিঙ্ক করুন।"
+  },
+  "newtab_shortcuts_icon_refresh_success": {
+    "message": "আইকন পাওয়া গেছে"
+  },
+  "newtab_shortcuts_icon_cache_failed": {
+    "message": "ক্যাশে কোনো আইকন পাওয়া যায়নি। এই ওয়েবসাইটে গিয়ে আবার রিফ্রেশ করুন।"
+  },
+  "newtab_shortcuts_icon_source_unavailable": {
+    "message": "এই উৎসটি উপলভ্য নয়। ব্রাউজারের ক্যাশ বা কাস্টম আইকন বেছে নিন।"
+  },
+  "newtab_shortcuts_icon_online": {
+    "message": "অনলাইন আইকন"
+  },
+  "newtab_shortcuts_icon_custom": {
+    "message": "কাস্টম আইকন"
+  },
+  "newtab_shortcuts_icon_current": {
+    "message": "বর্তমান আইকন"
+  },
+  "newtab_shortcuts_icon_refresh": {
+    "message": "রিফ্রেশ করুন"
+  },
+  "newtab_shortcuts_icon_refreshing": {
+    "message": "রিফ্রেশ করা হচ্ছে…"
+  },
+  "newtab_shortcuts_icon_refresh_failed": {
+    "message": "আইকন রিফ্রেশ করা যায়নি। পরে আবার চেষ্টা করুন।"
+  },
+  "newtab_shortcuts_icon_custom_required": {
+    "message": "কাস্টম আইকনের জন্য একটি ছবি বেছে নিন।"
+  },
+  "newtab_shortcuts_icon_online_info_label": {
+    "message": "অনলাইন আইকন সম্পর্কে"
+  },
+  "newtab_shortcuts_icon_online_info": {
+    "message": "রিফ্রেশ করে সেভ না করা পর্যন্ত অনলাইন আইকন একই থাকে। রিফ্রেশ করলে আইকন পরিষেবা বা ব্রাউজারের ক্যাশ ব্যবহার হয়।"
+  },
+  "newtab_shortcuts_icon_info_label": {
+    "message": "লোকাল শর্টকাট আইকন সম্পর্কে"
+  },
+  "newtab_shortcuts_icon_info": {
+    "message": "PNG, JPG ও WebP সমর্থিত। 128×128 px বা তার বড় স্বচ্ছ বর্গাকার আইকন ভালো। ডিফল্টভাবে এই ডিভাইসে সেভ হয়; WebDAV সিঙ্ক উপলভ্য।"
+  },
+  "newtab_shortcuts_folder_item_icon_info": {
+    "message": "PNG, JPG ও WebP সমর্থিত। 128×128 px বা তার বড় স্বচ্ছ বর্গাকার আইকন ভালো। শুধু এই ডিভাইসে সেভ হয়।"
+  },
+  "newtab_shortcuts_icon_choose": {
+    "message": "ছবি বেছে নিন"
+  },
+  "newtab_shortcuts_icon_replace": {
+    "message": "ছবি বদলান"
+  },
+  "newtab_shortcuts_icon_remove": {
+    "message": "সরান"
+  },
+  "newtab_shortcuts_icon_unsupported": {
+    "message": "একটি PNG, JPG বা WebP ছবি বেছে নিন।"
+  },
+  "newtab_shortcuts_icon_dimensions_too_large": {
+    "message": "ছবিটি 4096×4096 px-এর বেশি বড় হতে পারবে না"
+  },
+  "newtab_shortcuts_icon_invalid": {
+    "message": "এই ছবিটি ব্যবহার করা যায়নি। অন্য একটি ছবি বেছে নিন।"
+  },
+  "newtab_shortcuts_icon_storage_error": {
+    "message": "লোকাল আইকন সেভ করা যায়নি। অন্য একটি ছবি চেষ্টা করুন।"
+  },
+  "folder_rename": {
+    "message": "নাম পরিবর্তন করুন"
+  },
+  "folder_color_change": {
+    "message": "রং পরিবর্তন করুন"
+  },
+  "folder_color_format": {
+    "message": "রঙের ফরম্যাট"
+  },
+  "folder_color_title": {
+    "message": "ফোল্ডারের রং"
+  },
+  "folder_color_description": {
+    "message": "শর্টকাট ও মেনুতে এই ফোল্ডারেও প্রযোজ্য। এই ডিভাইসে সেভ হয়।"
+  },
+  "folder_color_presets": {
+    "message": "প্রিসেট রং"
+  },
+  "folder_color_default": {
+    "message": "ডিফল্ট রং"
+  },
+  "folder_color_reset": {
+    "message": "রিসেট করুন"
+  },
+  "folder_color_saved": {
+    "message": "সেভ করা রং"
+  },
+  "folder_color_save_current": {
+    "message": "বর্তমান রং সেভ করুন"
+  },
+  "folder_color_remove_saved": {
+    "message": "সেভ করা রং মুছুন"
+  },
+  "folder_color_saved_delete_failed": {
+    "message": "এই রংটি মোছা যায়নি। আবার চেষ্টা করুন।"
+  },
+  "folder_color_saved_load_failed": {
+    "message": "সেভ করা রং লোড করা যায়নি। আবার চেষ্টা করতে কালার পিকার আবার খুলুন।"
+  },
+  "folder_color_saved_save_failed": {
+    "message": "এই রংটি সেভ করা যায়নি। আবার চেষ্টা করুন।"
+  },
+  "folder_color_invalid": {
+    "message": "একটি সঠিক HEX রং বা 0 থেকে 255-এর মধ্যে RGB মান লিখুন।"
+  },
+  "folder_color_save_failed": {
+    "message": "ফোল্ডারের রং সেভ করা যায়নি। আবার চেষ্টা করুন।"
+  },
+  "newtab_shortcuts_cancel": {
+    "message": "বাতিল করুন"
+  },
+  "newtab_shortcuts_done": {
+    "message": "সম্পন্ন"
+  },
+  "newtab_shortcuts_save": {
+    "message": "সেভ করুন"
+  },
+  "newtab_shortcuts_invalid_url": {
+    "message": "একটি সঠিক http, https বা ব্রাউজারের অভ্যন্তরীণ URL লিখুন।"
+  },
+  "newtab_shortcuts_limit_reached": {
+    "message": "আপনি সর্বোচ্চ {count}টি শর্টকাট যোগ করতে পারেন।"
+  },
+  "newtab_shortcuts_added": {
+    "message": "শর্টকাট যোগ করা হয়েছে"
+  },
+  "context_menu_add_page_shortcut": {
+    "message": "Lumno নতুন ট্যাবের শর্টকাটে যোগ করুন"
+  },
+  "page_shortcut_added": {
+    "message": "Lumno নতুন ট্যাবের শর্টকাটে যোগ করা হয়েছে"
+  },
+  "newtab_shortcuts_already_added": {
+    "message": "ইতিমধ্যে শর্টকাটে আছে"
+  },
+  "newtab_shortcuts_sync_limit_reached": {
+    "message": "শর্টকাট ব্রাউজারের সিঙ্কের জায়গা ছাড়িয়ে গেছে, তাই নতুনগুলো এই ডিভাইসেই থাকবে। সেগুলোও সিঙ্ক করতে সেটিংসে WebDAV চালু করুন।"
+  },
+  "newtab_shortcuts_edited": {
+    "message": "শর্টকাট আপডেট হয়েছে"
+  },
+  "newtab_shortcuts_removed": {
+    "message": "শর্টকাট সরানো হয়েছে"
+  },
+  "newtab_shortcuts_removed_undo": {
+    "message": "শর্টকাট সরানো হয়েছে · পূর্বাবস্থায় ফেরাতে {shortcut}"
+  },
+  "newtab_shortcuts_remove_undone": {
+    "message": "শর্টকাট ফিরিয়ে আনা হয়েছে · আবার করতে {shortcut}"
+  },
+  "newtab_shortcuts_remove_redone": {
+    "message": "শর্টকাট সরানো হয়েছে · পূর্বাবস্থায় ফেরাতে {shortcut}"
+  },
+  "newtab_shortcuts_add_undone": {
+    "message": "শর্টকাট যোগ করা পূর্বাবস্থায় ফেরানো হয়েছে · আবার করতে {shortcut}"
+  },
+  "newtab_shortcuts_add_redone": {
+    "message": "শর্টকাট আবার যোগ করা হয়েছে · পূর্বাবস্থায় ফেরাতে {shortcut}"
+  },
+  "newtab_recent_added_to_folder": {
+    "message": "“{folder}”-এ যোগ করা হয়েছে"
+  },
+  "newtab_shortcuts_open_folder": {
+    "message": "ফোল্ডার খুলুন"
+  },
+  "newtab_shortcuts_from_bookmarks": {
+    "message": "(বুকমার্ক থেকে)"
+  },
+  "newtab_shortcuts_folder_added": {
+    "message": "ফোল্ডার শর্টকাটে যোগ করা হয়েছে"
+  },
+  "newtab_shortcuts_folder_missing": {
+    "message": "এই বুকমার্ক ফোল্ডারটি আর উপলভ্য নেই।"
+  },
+  "newtab_shortcuts_moved_to_bookmarks": {
+    "message": "বুকমার্কে সরানো হয়েছে"
+  },
+  "newtab_shortcuts_new_folder_title": {
+    "message": "নতুন ফোল্ডার"
+  },
+  "newtab_shortcuts_stack_hint": {
+    "message": "বুকমার্ক বারে একটি ফোল্ডার তৈরি করতে ছেড়ে দিন"
+  },
+  "newtab_shortcuts_stacked_undo": {
+    "message": "ফোল্ডার তৈরি হয়েছে · পূর্বাবস্থায় ফেরাতে {shortcut}"
+  },
+  "newtab_shortcuts_stack_undone": {
+    "message": "ফোল্ডার তৈরি পূর্বাবস্থায় ফেরানো হয়েছে · আবার করতে {shortcut}"
+  },
+  "newtab_shortcuts_stack_redone": {
+    "message": "ফোল্ডার আবার তৈরি হয়েছে · পূর্বাবস্থায় ফেরাতে {shortcut}"
+  },
+  "newtab_shortcuts_stack_failed": {
+    "message": "ফোল্ডার তৈরি করা যায়নি"
+  },
+  "newtab_shortcuts_move_to_bookmarks_failed": {
+    "message": "বুকমার্কে সরানো যায়নি"
+  },
+  "newtab_shortcuts_edit_dialog_title": {
+    "message": "শর্টকাট সম্পাদনা করুন"
+  },
+  "newtab_shortcuts_context_menu_label": {
+    "message": "শর্টকাটের অ্যাকশন"
+  },
+  "settings_tab_switcher_title": {
+    "message": "ট্যাব সুইচার"
+  },
+  "settings_tab_switcher_desc": {
+    "message": "সাম্প্রতিক ট্যাবগুলোর মধ্যে দ্রুত যান; ডিফল্টভাবে {shortcut}, পরিবর্তনযোগ্য"
+  },
+  "slash_command_empty": {
+    "message": "মিলে যাওয়া কোনো কমান্ড নেই"
+  },
+  "command_tabs_title": {
+    "message": "শুধু খোলা ট্যাবে সার্চ করুন"
+  },
+  "command_tabs_action": {
+    "message": "ট্যাব সার্চ করুন"
+  },
+  "command_copy_title": {
+    "message": "বর্তমান পৃষ্ঠার লিঙ্ক কপি করুন"
+  },
+  "command_copy_action": {
+    "message": "লিঙ্ক কপি করুন"
+  },
+  "settings_tab_account": {
+    "message": "অ্যাকাউন্ট ও সিঙ্ক"
+  },
+  "webdav_endpoint": {
+    "message": "সার্ভারের ঠিকানা (HTTPS)"
+  },
+  "webdav_directory": {
+    "message": "সিঙ্ক ফোল্ডার"
+  },
+  "webdav_username": {
+    "message": "ইউজারনেম"
+  },
+  "webdav_password": {
+    "message": "অ্যাপ পাসওয়ার্ড"
+  },
+  "webdav_credentials_hint": {
+    "message": "অ্যাপ পাসওয়ার্ড এই ডিভাইসেই থাকে। সার্ভারের ঠিকানা, ফোল্ডার ও ইউজারনেম আপনার ব্রাউজারের মাধ্যমে অন্যান্য ডিভাইসে সিঙ্ক হয়।"
+  },
+  "webdav_password_hint": {
+    "message": "সার্ভারের ঠিকানা, ফোল্ডার ও ইউজারনেম আপনার ব্রাউজারের মাধ্যমে অন্যান্য ডিভাইসে সিঙ্ক হয়, কিন্তু অ্যাপ পাসওয়ার্ড হয় না। নতুন ডিভাইসে লেখার জন্য এটি নিরাপদ কোথাও রেখে দিন।"
+  },
+  "webdav_password_hint_synced": {
+    "message": "সার্ভারের ঠিকানা, ফোল্ডার ও ইউজারনেম আপনার অন্য ডিভাইস থেকে এসেছে। অ্যাপ পাসওয়ার্ড সিঙ্ক হয় না, তাই এখানে লিখুন।"
+  },
+  "webdav_suggestion_label": {
+    "message": "অন্য ডিভাইস থেকে"
+  },
+  "webdav_suggestion_add": {
+    "message": "কানেক্ট করতে পাসওয়ার্ড লিখুন"
+  },
+  "webdav_suggestion_dismiss": {
+    "message": "খারিজ করুন"
+  },
+  "webdav_password_saved": {
+    "message": "সেভ করা আছে"
+  },
+  "webdav_password_change": {
+    "message": "পরিবর্তন করুন"
+  },
+  "webdav_password_keep": {
+    "message": "সেভ করা পাসওয়ার্ড রাখুন"
+  },
+  "webdav_password_show": {
+    "message": "পাসওয়ার্ড দেখান"
+  },
+  "webdav_password_hide": {
+    "message": "পাসওয়ার্ড লুকান"
+  },
+  "webdav_last_sync": {
+    "message": "শেষ সিঙ্ক"
+  },
+  "webdav_choice_hint": {
+    "message": "সার্ভারে আগে থেকেই Lumno-র সেটিংস আছে। একদিকের সংস্করণ রাখুন, অথবা দুদিকের ওয়ালপেপার একত্র করে সার্ভারের অন্যান্য সেটিংস রাখুন। এই ডিভাইসের ডেটা আগে ব্যাকআপ নেওয়া হয়।"
+  },
+  "webdav_conflict_hint": {
+    "message": "এই ডিভাইস ও সার্ভার একই জিনিস পরিবর্তন করেছে। কোন সংস্করণ রাখবেন বেছে নিন; অন্যান্য পরিবর্তন নিজে থেকেই একত্র হবে।"
+  },
+  "webdav_error_endpoint": {
+    "message": "একটি সঠিক HTTPS WebDAV ঠিকানা লিখুন।"
+  },
+  "webdav_error_directory": {
+    "message": "একটি সঠিক সিঙ্ক ফোল্ডারের নাম লিখুন।"
+  },
+  "webdav_error_credentials": {
+    "message": "ইউজারনেম ও অ্যাপ পাসওয়ার্ড লিখুন।"
+  },
+  "webdav_error_auth": {
+    "message": "যাচাই ব্যর্থ হয়েছে। ইউজারনেম ও অ্যাপ পাসওয়ার্ড দেখুন।"
+  },
+  "webdav_error_permission": {
+    "message": "অ্যাক্সেস প্রত্যাখ্যাত। ফোল্ডারের পড়া ও লেখার অনুমতি দেখুন।"
+  },
+  "webdav_error_rate": {
+    "message": "সার্ভারের অনুরোধের সীমা পূর্ণ হয়েছে। পরে আবার চেষ্টা করুন।"
+  },
+  "webdav_error_unavailable": {
+    "message": "সার্ভার সাময়িকভাবে উপলভ্য নয় (HTTP 503)। অল্প সময়ে অনেক বেশি অনুরোধ পেলে Nutstore-ও এভাবে সাড়া দেয়, তাই কয়েক মিনিট পরে আবার চেষ্টা করুন। এই ডিভাইসের ডেটা রাখা আছে।"
+  },
+  "webdav_warning_throttled": {
+    "message": "সার্ভার আপাতত অনুরোধ ফিরিয়ে দিচ্ছে (HTTP {status}), সাধারণত অল্প সময়ে অনেক বেশি অনুরোধ পাঠানোর কারণে; Nutstore ও এ ধরনের পরিষেবা এভাবেই সীমা টানে। Lumno {time} পরে নিজে থেকেই আবার চেষ্টা করবে। এই ডিভাইসের ডেটা রাখা আছে।"
+  },
+  "webdav_error_capacity": {
+    "message": "WebDAV স্টোরেজ পূর্ণ। জায়গা খালি করে আবার চেষ্টা করুন।"
+  },
+  "webdav_error_conditional": {
+    "message": "এই সার্ভার একসাথে ওভাররাইট হওয়া নির্ভরযোগ্যভাবে আটকাতে পারে না, তাই অটো সিঙ্কের জন্য সমর্থিত নয়।"
+  },
+  "webdav_error_changed": {
+    "message": "সিঙ্কের সময় সেটিংস বদলেছে। লোকাল ডেটা রাখা আছে এবং আবার সিঙ্ক করার চেষ্টা হবে।"
+  },
+  "webdav_error_missing": {
+    "message": "রিমোট সেটিংস মুছে ফেলা হয়েছে। আবার তৈরি করতে লোকাল সেটিংস আপলোড করুন, বা সার্ভারের ঠিকানা দেখুন।"
+  },
+  "webdav_error_chrome_capacity": {
+    "message": "এই সেটিংস Chrome সিঙ্কের ধারণক্ষমতা ছাড়িয়ে গেছে এবং প্রয়োগ করা হয়নি। বিদ্যমান Chrome সিঙ্ক ও লোকাল ডেটা রাখা আছে। সেটিংস কমিয়ে আবার চেষ্টা করুন।"
+  },
+  "webdav_error_chrome_capacity__firefox": {
+    "message": "এই সেটিংস Firefox Sync-এর ধারণক্ষমতা ছাড়িয়ে গেছে এবং প্রয়োগ করা হয়নি। বিদ্যমান Firefox Sync ও লোকাল ডেটা রাখা আছে। সেটিংস কমিয়ে আবার চেষ্টা করুন।"
+  },
+  "webdav_warning_chrome_backup": {
+    "message": "এই ডিভাইসের সেটিংস Chrome সিঙ্কের ধারণক্ষমতা ছাড়িয়ে গেছে, তাই এখনও Chrome সিঙ্কে ব্যাকআপ হয়নি। WebDAV সিঙ্ক চলছে এবং লোকাল ডেটা রাখা আছে। ব্যাকআপ শেষ করতে সেটিংস কমান।"
+  },
+  "webdav_warning_chrome_backup__firefox": {
+    "message": "এই ডিভাইসের সেটিংস Firefox Sync-এর ধারণক্ষমতা ছাড়িয়ে গেছে, তাই এখনও Firefox Sync-এ ব্যাকআপ হয়নি। WebDAV সিঙ্ক চলছে এবং লোকাল ডেটা রাখা আছে। ব্যাকআপ শেষ করতে সেটিংস কমান।"
+  },
+  "webdav_error_network": {
+    "message": "কানেকশন ব্যর্থ হয়েছে বা সময় শেষ হয়েছে। নেটওয়ার্ক, সার্ভারের ঠিকানা ও সার্টিফিকেট দেখুন। লোকাল ডেটা রাখা আছে।"
+  },
+  "webdav_error_storage": {
+    "message": "সিঙ্কের ডেটা সেভ করা যায়নি। ব্রাউজারের লোকাল স্টোরেজ দেখুন।"
+  },
+  "webdav_error_shortcuts": {
+    "message": "ফিরিয়ে আনলে শর্টকাটের সীমা ছাড়িয়ে যাবে। আগে কিছু লোকাল ফোল্ডার শর্টকাট সরান।"
+  },
+  "webdav_error_remote_unreadable": {
+    "message": "সার্ভার রিমোট সেটিংস স্বাভাবিকভাবে ফেরত দেয়নি। সার্ভার দেখুন বা পরে আবার চেষ্টা করুন। লোকাল ডেটা প্রতিস্থাপন করা হয়নি।"
+  },
+  "webdav_error_remote_corrupt": {
+    "message": "রিমোট সেটিংস ফাইল ক্ষতিগ্রস্ত (সঠিক JSON নয়), সম্ভবত আপলোড বাধাপ্রাপ্ত হওয়ায় বা অন্য কোনো অ্যাপের কারণে। লোকাল ডেটা প্রতিস্থাপন করা হয়নি।"
+  },
+  "webdav_error_invalid_state": {
+    "message": "রিমোট সেটিংস এমন গঠন বা ভার্সন ব্যবহার করে যা এই Lumno চেনে না, সম্ভবত নতুন রিলিজ থেকে। প্রতিটি ডিভাইসে Lumno আপডেট করুন। লোকাল ডেটা প্রতিস্থাপন করা হয়নি।"
+  },
+  "webdav_error_state_too_large": {
+    "message": "রিমোট সেটিংস সিঙ্কের সীমা ছাড়িয়ে গেছে (200টি শর্টকাট, 256টি ওয়ালপেপার, 2 MB সেটিংস)। লোকাল ডেটা প্রতিস্থাপন করা হয়নি।"
+  },
+  "webdav_error_response_too_large": {
+    "message": "সার্ভারের ফেরত দেওয়া একটি ফাইল 2 MB সীমা ছাড়িয়ে গেছে। লোকাল ডেটা প্রতিস্থাপন করা হয়নি।"
+  },
+  "webdav_error_invalid_shortcuts": {
+    "message": "রিমোট শর্টকাটের ডেটা সঠিক নয় (ভুল ফরম্যাট বা ডুপ্লিকেট ID)। লোকাল ডেটা প্রতিস্থাপন করা হয়নি।"
+  },
+  "webdav_error_invalid_icon": {
+    "message": "রিমোট শর্টকাট আইকনের রেকর্ড সঠিক নয়। লোকাল ডেটা প্রতিস্থাপন করা হয়নি।"
+  },
+  "webdav_error_invalid_wallpaper": {
+    "message": "রিমোট ওয়ালপেপারের রেকর্ড সঠিক নয় (ভুল ID বা মাপ)। লোকাল ডেটা প্রতিস্থাপন করা হয়নি।"
+  },
+  "webdav_error_invalid_asset": {
+    "message": "একটি রিমোট ছবি সঠিক নয় (ভুল ধরন, আকার বা কন্টেন্ট)। লোকাল ডেটা প্রতিস্থাপন করা হয়নি।"
+  },
+  "webdav_error_asset_missing": {
+    "message": "সার্ভারে একটি ছবির ফাইল নেই, সম্ভবত আপলোড শেষ না হওয়ায় বা ফাইল মুছে ফেলায়। লোকাল ডেটা রাখা আছে।"
+  },
+  "webdav_error_asset_integrity": {
+    "message": "সার্ভারে একটি ছবির ফাইল ক্ষতিগ্রস্ত (এর কন্টেন্ট রেকর্ডের সাথে মেলে না)। লোকাল ডেটা রাখা আছে।"
+  },
+  "webdav_error_local_invalid_state": {
+    "message": "এই ডিভাইসের সেটিংসের গঠন সঠিক নয় এবং সিঙ্ক করা যাবে না। কোনো দিকেই কিছু পরিবর্তন করা হয়নি।"
+  },
+  "webdav_error_local_state_too_large": {
+    "message": "এই ডিভাইসের সেটিংস সিঙ্কের সীমা ছাড়িয়ে গেছে (256টি ওয়ালপেপার, 2 MB সেটিংস)। কিছু ওয়ালপেপার সরিয়ে আবার চেষ্টা করুন। কোনো দিকেই কিছু পরিবর্তন করা হয়নি।"
+  },
+  "webdav_error_local_invalid_shortcuts": {
+    "message": "এই ডিভাইসের শর্টকাটের ডেটা সঠিক নয় (ভুল ফরম্যাট বা ডুপ্লিকেট ID) এবং সিঙ্ক করা যাবে না। কোনো দিকেই কিছু পরিবর্তন করা হয়নি।"
+  },
+  "webdav_error_local_invalid_icon": {
+    "message": "এই ডিভাইসের শর্টকাট আইকনের রেকর্ড সঠিক নয় এবং সিঙ্ক করা যাবে না। কোনো দিকেই কিছু পরিবর্তন করা হয়নি।"
+  },
+  "webdav_error_local_invalid_wallpaper": {
+    "message": "এই ডিভাইসের ওয়ালপেপারের রেকর্ড সঠিক নয় (ভুল ID বা মাপ) এবং সিঙ্ক করা যাবে না। কোনো দিকেই কিছু পরিবর্তন করা হয়নি।"
+  },
+  "webdav_error_local_invalid_asset": {
+    "message": "এই ডিভাইসের একটি ছবি ক্ষতিগ্রস্ত বা অসমর্থিত এবং সিঙ্ক করা যাবে না। সেটি সরিয়ে আবার যোগ করুন। কোনো দিকেই কিছু পরিবর্তন করা হয়নি।"
+  },
+  "webdav_error_local_asset_too_large": {
+    "message": "এই ডিভাইসের একটি ছবি সিঙ্কের সীমা ছাড়িয়ে গেছে (প্রতি আইকন 96 KB, প্রতি ওয়ালপেপার 2 MB)। কোনো দিকেই কিছু পরিবর্তন করা হয়নি।"
+  },
+  "webdav_error_shortcut_id_conflict": {
+    "message": "একটি রিমোট শর্টকাটের ID এই ডিভাইসের একটি বুকমার্ক ফোল্ডার শর্টকাটের ID-র সাথে মিলে গেছে, তাই এগুলো একত্র করা যাবে না। লোকাল ডেটা রাখা আছে।"
+  },
+  "webdav_error_write_failed": {
+    "message": "সার্ভার সিঙ্ক ফাইল লিখতে দেয়নি। ফোল্ডারের লেখার অনুমতি ও খালি জায়গা দেখুন। লোকাল ডেটা রাখা আছে।"
+  },
+  "webdav_error_directory_unavailable": {
+    "message": "সার্ভারে সিঙ্ক ফোল্ডার তৈরি করা যায়নি। সার্ভারের ঠিকানা ও ফোল্ডারের অনুমতি দেখুন।"
+  },
+  "webdav_error_folder_create_refused": {
+    "message": "সার্ভার নতুন ফোল্ডার তৈরি করতে দেয়নি (MKCOL 405), তাই সিঙ্ক লক সেট আপ করা যাবে না। অ্যাকাউন্টটি ফোল্ডার তৈরি করতে পারে কিনা, মাউন্টটি শুধু-পড়ার কিনা, এবং কোনো প্রক্সি MKCOL আটকাচ্ছে কিনা দেখুন।"
+  },
+  "webdav_error_http": {
+    "message": "সার্ভার একটি ত্রুটি ফেরত দিয়েছে (HTTP {status})। পরে আবার চেষ্টা করুন। লোকাল ডেটা রাখা আছে।"
+  },
+  "webdav_error_generic": {
+    "message": "সিঙ্ক ব্যর্থ হয়েছে। পরে আবার চেষ্টা করুন। লোকাল ডেটা রাখা আছে।"
+  },
+  "webdav_test": {
+    "message": "কানেকশন পরীক্ষা করুন"
+  },
+  "webdav_enable": {
+    "message": "সেভ করে সিঙ্ক চালু করুন"
+  },
+  "webdav_sync": {
+    "message": "এখনই সিঙ্ক করুন"
+  },
+  "webdav_restore_backup": {
+    "message": "প্রতিস্থাপনের আগের সেটিংস ফিরিয়ে আনুন"
+  },
+  "webdav_merge_wallpapers": {
+    "message": "ওয়ালপেপার একত্র করুন"
+  },
+  "webdav_error_merge_too_large": {
+    "message": "একসাথে ওয়ালপেপারগুলো সিঙ্কের সীমা ছাড়িয়ে যায় (256টি ওয়ালপেপার, 2 MB সেটিংস, 8 KB ছবির লিঙ্ক)। কিছু সরান, বা একদিকের সংস্করণ রাখুন। কিছুই পরিবর্তন করা হয়নি।"
+  },
+  "webdav_use_remote": {
+    "message": "সার্ভারের সংস্করণ ব্যবহার করুন"
+  },
+  "webdav_use_local": {
+    "message": "এই ডিভাইসের সংস্করণ রাখুন"
+  },
+  "webdav_test_success": {
+    "message": "কানেকশন, পড়া/লেখা ও একসাথে আপডেটের সুরক্ষা যাচাই হয়েছে"
+  },
+  "webdav_state_browser": {
+    "message": "বন্ধ"
+  },
+  "webdav_state_ready": {
+    "message": "সিঙ্ক হয়েছে"
+  },
+  "webdav_state_syncing": {
+    "message": "সিঙ্ক হচ্ছে…"
+  },
+  "webdav_state_paused": {
+    "message": "থামানো আছে"
+  },
+  "webdav_state_pending": {
+    "message": "সিঙ্কের অপেক্ষায়"
+  },
+  "webdav_state_choice": {
+    "message": "একটি কপি বেছে নিন"
+  },
+  "webdav_state_conflict": {
+    "message": "সেটিংসে দ্বন্দ্ব"
+  },
+  "webdav_state_error": {
+    "message": "সিঙ্ক ব্যর্থ হয়েছে"
+  },
+  "webdav_error_interrupted": {
+    "message": "আগের প্রতিস্থাপন বাধাপ্রাপ্ত হয়েছে। আপলোড থামানো আছে। আগের লোকাল সেটিংস ফিরিয়ে আনুন, অথবা আবার কানেক্ট করে রিমোট সেটিংস ব্যবহার করুন।"
+  },
+  "webdav_missing_hint": {
+    "message": "সার্ভারের সেটিংস আর নেই। এই ডিভাইসের সেটিংস আবার আপলোড করুন, অথবা আগে সার্ভারের ঠিকানা দেখুন।"
+  },
+  "webdav_error_locked": {
+    "message": "অন্য একটি ডিভাইস সার্ভারে লিখছে। পরে আবার চেষ্টা করুন। আটকে থাকলে, থেকে যাওয়া লক সরাতে WebDAV গাইড অনুসরণ করুন।"
+  },
+  "webdav_error_lock_recovery": {
+    "message": "রিমোট লেখা নিরাপদে শেষ হয়নি, তাই এর সুরক্ষা রেখে দেওয়া হয়েছে। রিমোট সিঙ্ক ডিরেক্টরি থেকে v1/write-lock সরানোর আগে প্রতিটি ডিভাইসে সিঙ্ক থামান এবং বাধাপ্রাপ্ত অনুরোধটি শেষ হয়েছে কিনা নিশ্চিত করুন।"
+  },
+  "webdav_error_outdated": {
+    "message": "একাধিক WebDAV কানেকশন ব্যবহার করতে Lumno এক্সটেনশন আবার লোড করুন, তারপর সেটিংস রিফ্রেশ করুন।"
+  },
+  "webdav_title": {
+    "message": "WebDAV সিঙ্ক"
+  },
+  "webdav_beta_hint": {
+    "message": "বেটা: WebDAV ড্রাইভ বা NAS-এর মাধ্যমে সেটিংস, কাস্টম আইকন ও ওয়ালপেপার সিঙ্ক করুন। ব্রাউজারের বিল্ট-ইন সিঙ্কের তুলনায় এটি বিভিন্ন ব্রাউজারে কাজ করে এবং আইকন ও ওয়ালপেপারও সিঙ্ক করে।"
+  },
+  "webdav_setup_hint": {
+    "message": "ব্রাউজার সিঙ্কের পাশাপাশি Nutstore বা অন্য কোনো WebDAV পরিষেবার মাধ্যমে সেটিংস, কাস্টম আইকন ও ওয়ালপেপার সিঙ্ক করুন।"
+  },
+  "webdav_edit_config": {
+    "message": "কানেকশন সম্পাদনা করুন"
+  },
+  "webdav_save": {
+    "message": "সেভ করুন"
+  },
+  "webdav_never_synced": {
+    "message": "এখনও সিঙ্ক হয়নি"
+  },
+  "webdav_choice_title": {
+    "message": "প্রাথমিক সংস্করণ বেছে নিন"
+  },
+  "webdav_conflict_title": {
+    "message": "সিঙ্কে দ্বন্দ্ব"
+  },
+  "webdav_conflict_items": {
+    "message": "দ্বন্দ্বপূর্ণ কন্টেন্ট"
+  },
+  "webdav_conflict_shortcuts": {
+    "message": "শর্টকাট ও আইকন"
+  },
+  "webdav_conflict_wallpapers": {
+    "message": "ওয়ালপেপার ও বাছাই"
+  },
+  "webdav_conflict_preferences": {
+    "message": "সেটিংস"
+  },
+  "webdav_resolve_later": {
+    "message": "থামিয়ে পরে সমাধান করুন"
+  },
+  "webdav_add": {
+    "message": "WebDAV যোগ করুন"
+  },
+  "webdav_state_recovery": {
+    "message": "ফিরিয়ে আনা প্রয়োজন"
+  },
+  "webdav_retry": {
+    "message": "আবার চেষ্টা করুন"
+  },
+  "webdav_copy_diagnostic": {
+    "message": "ডায়াগনস্টিক কপি করুন"
+  },
+  "webdav_diagnostic_copied": {
+    "message": "কপি হয়েছে"
+  },
+  "webdav_provider_jianguoyun": {
+    "message": "Nutstore"
+  },
+  "webdav_upload_local": {
+    "message": "এই ডিভাইসের সেটিংস আপলোড করুন"
+  },
+  "webdav_error_duplicate": {
+    "message": "একই সার্ভার, ফোল্ডার ও ইউজারনেমের একটি কানেকশন আগে থেকেই আছে।"
+  },
+  "webdav_error_interrupted_other": {
+    "message": "অন্য একটি WebDAV কানেকশনকে ({name}) আগে লোকাল সেটিংস ফিরিয়ে আনতে হবে। এর পরে এটি আবার চালু হবে।"
+  },
+  "webdav_just_now": {
+    "message": "এইমাত্র"
+  },
+  "webdav_view_diff": {
+    "message": "পার্থক্য দেখান"
+  },
+  "webdav_hide_diff": {
+    "message": "পার্থক্য লুকান"
+  },
+  "webdav_diff_local": {
+    "message": "এই ডিভাইস"
+  },
+  "webdav_diff_remote": {
+    "message": "সার্ভার"
+  },
+  "webdav_diff_added": {
+    "message": "যোগ করা হয়েছে: {items}"
+  },
+  "webdav_diff_removed": {
+    "message": "সরানো হয়েছে: {items}"
+  },
+  "webdav_diff_changed": {
+    "message": "সম্পাদিত: {items}"
+  },
+  "webdav_diff_more": {
+    "message": "মোট {count}টি"
+  },
+  "webdav_diff_reordered": {
+    "message": "ক্রম বদলানো হয়েছে"
+  },
+  "webdav_diff_selection": {
+    "message": "বর্তমান ওয়ালপেপার পরিবর্তন হয়েছে"
+  },
+  "webdav_diff_unchanged": {
+    "message": "কোনো পরিবর্তন নেই"
+  },
+  "webdav_diff_shortcut_total": {
+    "message": "{count}টি শর্টকাট"
+  },
+  "webdav_diff_wallpaper_total": {
+    "message": "{count}টি ওয়ালপেপার"
+  },
+  "webdav_diff_loading": {
+    "message": "লোড হচ্ছে…"
+  },
+  "webdav_value_on": {
+    "message": "চালু"
+  },
+  "webdav_value_off": {
+    "message": "বন্ধ"
+  },
+  "webdav_value_default": {
+    "message": "ডিফল্ট"
+  },
+  "webdav_value_changed": {
+    "message": "পরিবর্তিত"
+  },
+  "webdav_value_list": {
+    "message": "{count}টি আইটেম"
+  },
+  "webdav_preference_other": {
+    "message": "অন্যান্য সেটিং"
+  },
+  "webdav_preference_zen_mode": {
+    "message": "Zen মোড"
+  },
+  "webdav_remove": {
+    "message": "WebDAV কানেকশন মুছুন"
+  },
+  "webdav_remove_confirm": {
+    "message": "এই লোকাল কানেকশন মুছবেন? সার্ভারের ফাইলগুলো রাখা থাকবে।"
+  },
+  "newtab_quote_title": {
+    "message": "দৈনিক উক্তি"
+  },
+  "newtab_quote_position": {
+    "message": "উক্তির অবস্থান"
+  },
+  "newtab_quote_category": {
+    "message": "উক্তির ধরন"
+  },
+  "newtab_quote_off": {
+    "message": "বন্ধ"
+  },
+  "newtab_quote_top": {
+    "message": "সার্চ বক্সের উপরে"
+  },
+  "newtab_quote_input": {
+    "message": "সার্চ বক্সের নিচে"
+  },
+  "newtab_quote_search": {
+    "message": "শর্টকাটের নিচে"
+  },
+  "newtab_quote_bottom": {
+    "message": "পৃষ্ঠার নিচে"
+  },
+  "newtab_quote_literature": {
+    "message": "সাহিত্য"
+  },
+  "newtab_quote_poetry": {
+    "message": "কবিতা"
+  },
+  "newtab_quote_shuffle": {
+    "message": "অন্য উক্তি দেখান"
+  },
+  "newtab_quote_shuffle_error": {
+    "message": "অন্য উক্তি লোড করা যায়নি"
+  },
+  "newtab_quote_save_error": {
+    "message": "উক্তির সেটিংস সেভ করা যায়নি"
+  },
+  "newtab_quote_fallback_text": {
+    "message": "হাজার মাইলের যাত্রা শুরু হয় একটি পদক্ষেপ দিয়ে।"
+  },
+  "newtab_quote_fallback_author": {
+    "message": "লাও জু"
+  },
+  "newtab_quote_fallback_source": {
+    "message": "তাও তে চিং"
+  },
+  "newtab_bing_daily": {
+    "message": "প্রতিদিন অটো আপডেট"
+  },
+  "newtab_bing_daily_hint": {
+    "message": "প্রতিদিন একটি নতুন Bing ছবি। এটি চালু থাকা অবস্থায় আপনার বেছে নেওয়া ছবি দিনের বাকি সময় থাকে।"
+  },
+  "newtab_daily_restore": {
+    "message": "আজকের ওয়ালপেপারে ফিরুন"
+  },
+  "newtab_bing_recent": {
+    "message": "সাম্প্রতিক ওয়ালপেপার"
+  },
+  "newtab_bing_refresh": {
+    "message": "রিফ্রেশ করুন"
+  },
+  "newtab_bing_loading": {
+    "message": "ওয়ালপেপার লোড হচ্ছে…"
+  },
+  "newtab_bing_saving": {
+    "message": "ওয়ালপেপার সেভ হচ্ছে…"
+  },
+  "newtab_bing_error": {
+    "message": "ওয়ালপেপার লোড করা যায়নি। আবার চেষ্টা করুন।"
+  },
+  "newtab_bing_save_error": {
+    "message": "ওয়ালপেপার সেভ করা যায়নি। আবার চেষ্টা করুন।"
+  },
+  "newtab_bing_source": {
+    "message": "ওয়ালপেপারের উৎস দেখুন"
+  },
+  "newtab_wallpaper_curated_section": {
+    "message": "বাছাই করা"
+  },
+  "newtab_curated_daily_hint": {
+    "message": "চালু করার সময় দেখানো বিভাগ থেকে প্রতিদিন একটি নতুন ছবি, সিঙ্ক করা প্রতিটি ডিভাইসে একই। আপনার বেছে নেওয়া ছবি দিনের বাকি সময় থাকে।"
+  },
+  "newtab_curated_category": {
+    "message": "বিভাগ"
+  },
+  "newtab_curated_category_random": {
+    "message": "মিশ্র"
+  },
+  "newtab_curated_category_nature": {
+    "message": "প্রকৃতি"
+  },
+  "newtab_curated_category_water": {
+    "message": "জল"
+  },
+  "newtab_curated_category_city": {
+    "message": "শহর"
+  },
+  "newtab_curated_category_minimal": {
+    "message": "মিনিমাল"
+  },
+  "newtab_curated_category_art": {
+    "message": "শিল্পকলা"
+  },
+  "newtab_curated_art_meta": {
+    "message": "ক্লিভল্যান্ড মিউজিয়াম অব আর্ট"
+  },
+  "newtab_curated_list": {
+    "message": "ছবি"
+  },
+  "newtab_curated_mix_all": {
+    "message": "সব বিভাগ"
+  },
+  "newtab_curated_mix_count": {
+    "message": "{count}টি বিভাগ"
+  },
+  "newtab_curated_mix_separator": {
+    "message": ", "
+  },
+  "newtab_curated_mix_aria": {
+    "message": "মিশ্রণে থাকা বিভাগ"
+  },
+  "newtab_curated_more": {
+    "message": "অন্যগুলো দেখান"
+  },
+  "newtab_curated_photo_by": {
+    "message": "ছবি: {name}"
+  },
+  "newtab_curated_source_meta": {
+    "message": "Unsplash · Lorem Picsum-এর মাধ্যমে"
+  },
+  "newtab_wallpaper_add_url": {
+    "message": "ছবির লিঙ্ক যোগ করুন"
+  },
+  "newtab_wallpaper_url_placeholder": {
+    "message": "ছবির লিঙ্ক পেস্ট করুন (https://…)"
+  },
+  "newtab_wallpaper_url_submit": {
+    "message": "যোগ করুন"
+  },
+  "newtab_wallpaper_url_invalid": {
+    "message": "http:// বা https:// দিয়ে শুরু হওয়া একটি লিঙ্ক লিখুন"
+  },
+  "newtab_wallpaper_url_limit": {
+    "message": "লিঙ্কটি খুব লম্বা, বা অনেক বেশি লিঙ্ক সেভ করা আছে। কিছু সরিয়ে আবার চেষ্টা করুন।"
+  },
+  "newtab_wallpaper_url_import_error": {
+    "message": "এই লিঙ্ক থেকে ছবি যোগ করা যায়নি"
+  },
+  "newtab_wallpaper_save_to_local": {
+    "message": "লোকাল ওয়ালপেপারে সেভ করুন"
+  },
+  "newtab_wallpaper_in_local": {
+    "message": "ইতিমধ্যে লোকাল ওয়ালপেপারে আছে"
+  },
+  "newtab_wallpaper_saving_local": {
+    "message": "লোকাল ওয়ালপেপারে সেভ হচ্ছে…"
+  },
+  "newtab_wallpaper_saved_local": {
+    "message": "লোকাল ওয়ালপেপারে সেভ হয়েছে"
+  },
+  "newtab_wallpaper_local_limit": {
+    "message": "আপনি সর্বোচ্চ {count}টি লোকাল ওয়ালপেপার রাখতে পারেন। কিছু মুছে আবার চেষ্টা করুন।"
+  },
+  "newtab_wallpaper_context_menu_label": {
+    "message": "ওয়ালপেপারের অ্যাকশন"
+  },
+  "newtab_quote_font": {
+    "message": "ফন্ট"
+  },
+  "newtab_quote_font_label": {
+    "message": "উক্তির ফন্ট"
+  },
+  "newtab_quote_font_wenkai": {
+    "message": "LXGW WenKai"
+  },
+  "newtab_quote_font_xiaowei": {
+    "message": "ZCOOL XiaoWei"
+  },
+  "newtab_quote_font_sans": {
+    "message": "সিস্টেম স্যান্স-সেরিফ"
+  },
+  "newtab_quote_font_size": {
+    "message": "ফন্টের আকার"
+  },
+  "newtab_quote_font_size_label": {
+    "message": "উক্তির ফন্টের আকার (px)"
+  },
+  "newtab_quote_provider": {
+    "message": "Hitokoto দ্বারা পরিচালিত"
+  },
+  "recent_history_menu": {
+    "message": "সাম্প্রতিক পরিবর্তনের ইতিহাস দেখুন"
+  },
+  "recent_history_title": {
+    "message": "পরিবর্তনের ইতিহাস"
+  },
+  "recent_history_description": {
+    "message": "ইতিহাস না মুছেই রাখা যেকোনো সংস্করণকে বর্তমান হিসেবে সেট করুন।"
+  },
+  "recent_history_current": {
+    "message": "বর্তমান সংস্করণ"
+  },
+  "recent_history_earlier": {
+    "message": "আগের সংস্করণ"
+  },
+  "recent_history_restore": {
+    "message": "বর্তমান হিসেবে সেট করুন"
+  },
+  "recent_history_restoring": {
+    "message": "ফিরিয়ে আনা হচ্ছে…"
+  },
+  "recent_history_restore_success": {
+    "message": "বাছাই করা সংস্করণ ফিরিয়ে আনা হয়েছে"
+  },
+  "recent_history_restore_failed": {
+    "message": "এই সংস্করণ ফিরিয়ে আনা যায়নি"
+  },
+  "recent_update_close": {
+    "message": "বন্ধ করুন"
+  },
+  "settings_progress_tracking_title": {
+    "message": "পিন করা শো ও উপন্যাস আপ টু ডেট রাখুন"
+  },
+  "settings_progress_tracking_desc": {
+    "message": "একটি শো বা উপন্যাস পিন করলে এর কার্ড পরের পর্ব বা অধ্যায়ে আপনার সাথে এগোয়, তাই যেখানে ছেড়েছিলেন সেখান থেকেই খোলে"
+  },
+  "settings_newtab_open_in_new_tab_title": {
+    "message": "নতুন ট্যাবে খুলুন"
+  },
+  "settings_newtab_open_in_new_tab_desc": {
+    "message": "চালু করা আইটেমগুলো নতুন ট্যাবে খোলে এবং সেখানে চলে যায়; বন্ধ করা আইটেমগুলো বর্তমান ট্যাবে খোলে। Command/Ctrl-ক্লিক বা মাঝের ক্লিক সবসময় ব্যাকগ্রাউন্ডে খোলে।"
+  },
+  "settings_newtab_open_in_new_tab_search": {
+    "message": "সার্চের ফলাফল"
+  },
+  "settings_newtab_open_in_new_tab_shortcuts": {
+    "message": "শর্টকাট"
+  },
+  "settings_newtab_open_in_new_tab_bookmarks": {
+    "message": "বুকমার্ক"
+  },
+  "settings_newtab_open_in_new_tab_recent_sites": {
+    "message": "সাইট কার্ড"
+  },
+  "recent_progress_track": {
+    "message": "অগ্রগতি ট্র্যাক করুন"
+  },
+  "recent_progress_stop": {
+    "message": "অগ্রগতি ট্র্যাক করা বন্ধ করুন"
+  },
+  "recent_progress_track_toast": {
+    "message": "ট্র্যাকিং চালু। আপনি পরের পর্ব বা অধ্যায়ে গেলে কার্ড আপডেট হবে।"
+  },
+  "recent_progress_stop_toast": {
+    "message": "অগ্রগতি ট্র্যাক করা বন্ধ হয়েছে"
+  },
+  "recent_progress_tracking": {
+    "message": "অগ্রগতি ট্র্যাক করা হচ্ছে"
+  },
+  "recent_progress_auto_toast": {
+    "message": "পিন করা হয়েছে এবং অগ্রগতি ট্র্যাক করা হচ্ছে। বন্ধ করতে কার্ডের রাডার আইকনে ক্লিক করুন।"
+  },
+  "settings_general_newtab_section_title": {
+    "message": "নতুন ট্যাবের সেটিংস"
+  },
+  "recent_progress_track_tooltip": {
+    "message": "অগ্রগতি ট্র্যাক করুন\n────────\nশো ও ধারাবাহিক উপন্যাসের জন্য কাজের।\nচালু থাকলে, এই কাজের পরের পর্ব বা অধ্যায়ে পৌঁছালে কার্ডটি সেখানে সরে যায়।"
+  },
+  "recent_progress_stop_tooltip": {
+    "message": "অগ্রগতি ট্র্যাক করা হচ্ছে\n────────\nএই কাজের পরের পর্ব বা অধ্যায়ে পৌঁছালে কার্ডটি সেখানে সরে যায়।\nট্র্যাকিং বন্ধ করতে ক্লিক করুন।"
+  },
+  "newtab_shortcuts_group_new": {
+    "message": "নতুন গ্রুপ"
+  },
+  "newtab_shortcuts_group_default_title": {
+    "message": "শর্টকাট"
+  },
+  "newtab_shortcuts_group_title_placeholder": {
+    "message": "শিরোনাম যোগ করুন"
+  },
+  "newtab_shortcuts_group_actions": {
+    "message": "{group}-এর অ্যাকশন"
+  },
+  "newtab_shortcuts_group_untitled_name": {
+    "message": "নামহীন গ্রুপ"
+  },
+  "newtab_shortcuts_group_rename": {
+    "message": "নাম পরিবর্তন করুন"
+  },
+  "newtab_shortcuts_group_add_site": {
+    "message": "সাইট যোগ করুন"
+  },
+  "newtab_shortcuts_group_move_up": {
+    "message": "উপরে সরান"
+  },
+  "newtab_shortcuts_group_move_down": {
+    "message": "নিচে সরান"
+  },
+  "newtab_shortcuts_group_delete": {
+    "message": "গ্রুপ মুছুন"
+  },
+  "newtab_shortcuts_group_delete_with_sites": {
+    "message": "গ্রুপ ও সাইটগুলো মুছুন"
+  },
+  "newtab_shortcuts_group_delete_confirm_title": {
+    "message": "“{group}” ও এর সাইটগুলো মুছবেন?"
+  },
+  "newtab_shortcuts_group_delete_confirm_description": {
+    "message": "গ্রুপটি ও এর {count}টি সাইট মুছে ফেলা হবে।"
+  },
+  "newtab_shortcuts_group_delete_confirm_button": {
+    "message": "মুছুন"
+  },
+  "newtab_shortcuts_group_deleted_undo": {
+    "message": "গ্রুপ মুছে ফেলা হয়েছে · পূর্বাবস্থায় ফেরাতে {shortcut}"
+  },
+  "newtab_shortcuts_group_delete_undone": {
+    "message": "গ্রুপ ফিরিয়ে আনা হয়েছে · আবার করতে {shortcut}"
+  },
+  "newtab_shortcuts_group_delete_redone": {
+    "message": "গ্রুপ মুছে ফেলা হয়েছে · পূর্বাবস্থায় ফেরাতে {shortcut}"
+  },
+  "newtab_shortcuts_group_limit_reached": {
+    "message": "আপনি সর্বোচ্চ {count}টি গ্রুপ তৈরি করতে পারেন।"
+  },
+  "options_shortcut_sync_all": {
+    "message": "শর্টকাট: {count}টিই ব্রাউজারের সাথে সিঙ্ক হয়।"
+  },
+  "options_shortcut_sync_split_webdav": {
+    "message": "শর্টকাট: {synced}টি ব্রাউজারের সাথে সিঙ্ক হয়; বাকি {local}টি WebDAV-এর মাধ্যমে সিঙ্ক হয়।"
+  },
+  "options_shortcut_sync_split_local": {
+    "message": "শর্টকাট: {synced}টি ব্রাউজারের সাথে সিঙ্ক হয়; {local}টি এর সিঙ্কের জায়গা ছাড়িয়ে যাওয়ায় এই ডিভাইসেই থাকে। সেগুলোও সিঙ্ক করতে WebDAV চালু করুন।"
+  },
+  "options_shortcut_sync_failed_local": {
+    "message": "শর্টকাট ব্রাউজার সিঙ্কে সেভ করা যায়নি; আপাতত {count}টিই এই ডিভাইসে থাকবে।"
+  },
+  "options_shortcut_sync_failed_webdav": {
+    "message": "শর্টকাট ব্রাউজার সিঙ্কে সেভ করা যায়নি; আপাতত {count}টিই WebDAV-এর মাধ্যমে সিঙ্ক হবে।"
+  },
+  "options_shortcut_sync_none_local": {
+    "message": "শর্টকাট: ব্রাউজার সিঙ্ক পূর্ণ, তাই {count}টিই এই ডিভাইসে থাকে। সেগুলো সিঙ্ক করতে WebDAV চালু করুন।"
+  },
+  "options_shortcut_sync_none_webdav": {
+    "message": "শর্টকাট: ব্রাউজার সিঙ্ক পূর্ণ, তাই {count}টিই WebDAV-এর মাধ্যমে সিঙ্ক হয়।"
+  },
+  "newtab_shortcuts_add_site": {
+    "message": "সাইট যোগ করুন"
+  },
+  "newtab_shortcuts_group_dialog_rename_title": {
+    "message": "গ্রুপের নাম পরিবর্তন করুন"
+  },
+  "newtab_shortcuts_group_name_placeholder": {
+    "message": "ঐচ্ছিক; নামহীন গ্রুপ শুধু নতুন সারি শুরু করে"
+  },
+  "newtab_style_section_title": {
+    "message": "স্টাইল"
+  },
+  "settings_newtab_glass_style_title": {
+    "message": "ম্যাটেরিয়াল"
+  },
+  "settings_newtab_glass_style_desc": {
+    "message": "নতুন ট্যাবের UI এলিমেন্টের ম্যাটেরিয়াল পরিবর্তন করুন।"
+  },
+  "settings_newtab_glass_style_none": {
+    "message": "ডিফল্ট"
+  },
+  "settings_newtab_glass_style_frosted": {
+    "message": "অ্যাক্রিলিক"
+  },
+  "settings_newtab_glass_style_liquid": {
+    "message": "লিকুইড গ্লাস"
+  },
+  "settings_newtab_glass_theme_title": {
+    "message": "ম্যাটেরিয়ালের থিম"
+  },
+  "settings_newtab_glass_theme_follow": {
+    "message": "অটো"
+  },
+  "settings_newtab_glass_theme_light": {
+    "message": "লাইট"
+  },
+  "settings_newtab_glass_theme_dark": {
+    "message": "ডার্ক"
+  },
+  "settings_search_source_group_order_title": {
+    "message": "সার্চ প্যানেলের ক্রম"
+  },
+  "settings_search_source_group_order_desc": {
+    "message": "সার্চ বক্সের প্যানেলে গ্রুপগুলোর ক্রম সেট করতে ট্যাগগুলো টেনে আনুন। প্রতিটি গ্রুপের ক্রম ঠিক করতে নিচের তালিকার সারিগুলো টেনে আনুন। পূর্বাবস্থায় ফেরাতে Ctrl/⌘ + Z এবং আবার করতে Shift + Ctrl/⌘ + Z টিপুন।"
+  },
+  "settings_search_source_order_keyboard_hint": {
+    "message": "সরাতে Alt-এর সাথে বাঁ বা ডান তীর কী টিপুন"
+  },
+  "settings_search_source_order_failed": {
+    "message": "নতুন ক্রম সেভ করা যায়নি। আবার চেষ্টা করুন।"
+  },
+  "settings_search_source_move_up": {
+    "message": "উপরে সরান"
+  },
+  "settings_search_source_move_down": {
+    "message": "নিচে সরান"
+  },
+  "settings_search_result_sources_order_desc": {
+    "message": "সার্চ বক্সের প্যানেলের ব্রাউজারের কন্টেন্ট গ্রুপে এগুলোর ক্রম সেট করতে টেনে আনুন। পূর্বাবস্থায় ফেরাতে Ctrl/⌘ + Z এবং আবার করতে Shift + Ctrl/⌘ + Z টিপুন।"
+  },
+  "settings_search_source_order_undone": {
+    "message": "ক্রমের পরিবর্তন পূর্বাবস্থায় ফেরানো হয়েছে"
+  },
+  "settings_search_source_order_redone": {
+    "message": "ক্রমের পরিবর্তন আবার করা হয়েছে"
+  },
+  "newtab_quote_source": {
+    "message": "উৎস"
+  },
+  "newtab_quote_custom": {
+    "message": "কাস্টম"
+  },
+  "newtab_quote_collection_save_error": {
+    "message": "এই ডিভাইসে সেভ করা যায়নি। আপনার আগের সংগ্রহ রাখা আছে।"
+  },
+  "newtab_quote_hitokoto": {
+    "message": "Hitokoto"
+  },
+  "newtab_quote_provider_custom": {
+    "message": "কাস্টম সংগ্রহ · এই ডিভাইসে, WebDAV-এর সাথে সিঙ্ক হয়"
+  },
+  "newtab_quote_importing": {
+    "message": "ইমপোর্ট করা হচ্ছে…"
+  },
+  "newtab_quote_import_hint": {
+    "message": "প্রতিদিন একটি নতুন উক্তি দেখা যায়; \"এলোমেলো\" দিয়ে যেকোনো সময় বদলানো যায়। TXT / MD: প্রতি উক্তির জন্য একটি খালি নয় এমন লাইন। সর্বোচ্চ 1 MB, 1,000টি উক্তি, প্রতিটি 500 অক্ষর; এই ডিভাইসে থাকে, ব্রাউজার সিঙ্কে নয়; WebDAV চালু থাকলে সিঙ্ক হয়।"
+  },
+  "newtab_quote_count": {
+    "message": "{count}টি উক্তি"
+  },
+  "newtab_quote_import_error": {
+    "message": "ইমপোর্ট ব্যর্থ হয়েছে: ফাইলটি ফরম্যাট বা আকারের সীমা মানে না। আপনার আগের সংগ্রহ রাখা আছে।"
+  },
+  "newtab_quote_library": {
+    "message": "উক্তি"
+  },
+  "newtab_quote_import": {
+    "message": "ফাইল ইমপোর্ট করুন"
+  },
+  "newtab_quote_replace": {
+    "message": "ফাইল বদলান"
+  },
+  "newtab_quote_shuffle_button": {
+    "message": "এলোমেলো"
+  },
+  "newtab_quote_font_size_reset": {
+    "message": "উক্তির ফন্টের আকার রিসেট করুন"
+  },
+  "popup_actions_label": {
+    "message": "পৃষ্ঠার অ্যাকশন"
+  },
+  "popup_action_shortcut": {
+    "message": "শর্টকাট যোগ করুন"
+  },
+  "popup_action_copy": {
+    "message": "লিঙ্ক কপি করুন"
+  },
+  "popup_copy_failed": {
+    "message": "লিঙ্ক কপি করা যায়নি। আবার চেষ্টা করুন।"
+  },
+  "popup_theme_label": {
+    "message": "থিম"
+  },
+  "popup_link_settings": {
+    "message": "সেটিংস"
+  },
+  "popup_link_shortcuts": {
+    "message": "কীবোর্ড শর্টকাট সেট করুন"
+  },
+  "popup_link_feedback": {
+    "message": "মতামত"
+  },
+  "popup_sync_error": {
+    "message": "WebDAV সিঙ্ক ব্যর্থ হয়েছে"
+  },
+  "popup_sync_attention": {
+    "message": "WebDAV সিঙ্কে আপনার পদক্ষেপ প্রয়োজন"
+  },
+  "popup_sync_busy": {
+    "message": "WebDAV সিঙ্ক হচ্ছে"
+  },
+  "popup_sync_waiting": {
+    "message": "WebDAV আবার চেষ্টার অপেক্ষায়"
+  },
+  "popup_release_notes": {
+    "message": "নতুন কী আছে"
+  },
+  "popup_section_command_bar": {
+    "message": "কমান্ড বার"
+  },
+  "popup_overlay_page_theme": {
+    "message": "পৃষ্ঠার রঙের সাথে মেলান"
+  },
+  "popup_overlay_open_tabs": {
+    "message": "ডিফল্টভাবে খোলা ট্যাব দেখান"
+  },
+  "popup_action_shortcut_tooltip": {
+    "message": "আপনার নতুন ট্যাবের শর্টকাটে যোগ করুন"
+  },
+  "popup_action_clip_tooltip": {
+    "message": "পৃষ্ঠার একটি অংশ ভাসমান উইন্ডোতে ক্লিপ করুন"
+  },
+  "popup_settings_label": {
+    "message": "দ্রুত সেটিংস"
+  },
+  "popup_sync_ready": {
+    "message": "WebDAV সিঙ্ক হয়েছে"
+  },
+  "popup_open_command_bar": {
+    "message": "কমান্ড বার খুলুন"
+  },
+  "popup_action_pip": {
+    "message": "ছবির-মধ্যে-ছবি"
+  },
+  "popup_action_pip_exit": {
+    "message": "ছবির-মধ্যে-ছবি থেকে বের হন"
+  },
+  "popup_action_pip_tooltip": {
+    "message": "এই পৃষ্ঠার ভিডিও একটি ছোট উইন্ডোতে ভাসান"
+  },
+  "popup_action_pip_menu": {
+    "message": "অটো ছবির-মধ্যে-ছবি"
+  },
+  "popup_pip_failed": {
+    "message": "এই ভিডিওটি ছবির-মধ্যে-ছবিতে চালানো যাবে না।"
+  },
+  "popup_auto_pip_hint": {
+    "message": "ট্যাব পাল্টালে ভিডিও ভেসে ওঠে"
+  },
+  "popup_action_unavailable": {
+    "message": "এই পৃষ্ঠায় উপলভ্য নয়"
+  },
+  "popup_action_pin_recent": {
+    "message": "সাম্প্রতিকে পিন করুন"
+  },
+  "popup_action_unpin_recent": {
+    "message": "সাম্প্রতিক থেকে আনপিন করুন"
+  },
+  "popup_action_pin_recent_tooltip": {
+    "message": "নতুন ট্যাবের সাম্প্রতিকে পিন করুন"
+  },
+  "popup_action_unpin_recent_tooltip": {
+    "message": "নতুন ট্যাবের সাম্প্রতিক থেকে আনপিন করুন"
+  },
+  "popup_recent_pinned": {
+    "message": "আপনার নতুন ট্যাবের সাম্প্রতিকে পিন করা হয়েছে"
+  },
+  "popup_recent_unpinned": {
+    "message": "সাম্প্রতিক থেকে আনপিন করা হয়েছে"
+  }
+}
