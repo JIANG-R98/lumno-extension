@@ -78,7 +78,7 @@ packageRoots.forEach((packageRoot) => {
     filter: shouldCopyPackagePath
   });
 });
-fs.writeFileSync(stagedPath('manifest.json'), `${JSON.stringify(storeManifest, null, 3)}\n`);
+fs.writeFileSync(stagedPath('manifest.json'), `${JSON.stringify(storeManifest, null, 2)}\n`);
 
 // The store builds its own bundles, minified.
 const bundleBuild = spawnSync(process.execPath, [

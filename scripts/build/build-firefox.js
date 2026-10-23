@@ -41,7 +41,7 @@ fs.writeFileSync(
 );
 const ffManifest = toFirefoxManifest(storeManifest, { lazyBackgroundDeps, importShim: IMPORT_SHIM });
 
-fs.writeFileSync(outPath('manifest.json'), `${JSON.stringify(ffManifest, null, 3)}\n`);
+fs.writeFileSync(outPath('manifest.json'), `${JSON.stringify(ffManifest, null, 2)}\n`);
 
 // Browser-specific copy lives in the locale files as "<key>__firefox"
 // variants. They replace their base message here, so every reader
