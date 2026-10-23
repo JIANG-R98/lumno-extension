@@ -62,6 +62,12 @@ function createStorageArea(initialData, options) {
 function createChromeStub(options) {
   const config = options || {};
   const messageListeners = [];
+  // The full-history and bookmark-tree reads that warm the background
+  // indexes: held back until config.coldIndexGate resolves when it is given,
+  // else delayed by the configured time.
+  const deferColdIndex = (run, ms) => (config.coldIndexGate
+    ? config.coldIndexGate.then(run)
+    : setTimeout(run, ms));
   const storageArea = createStorageArea(config.initialSyncData || {}, {
     defaultSearchEngineLoadDelayMs: config.defaultSearchEngineLoadDelayMs
   });
@@ -244,10 +250,11 @@ function createChromeStub(options) {
           : historyItems)
           .filter((item) => (Number(item.lastVisitTime) || 0) >= startTime)
           .slice(0, maxResults);
-        const delay = text
-          ? Number(config.historySearchDelayMs) || 0
-          : Number(config.historyFallbackSearchDelayMs) || 0;
-        setTimeout(() => callback(items), delay);
+        if (text) {
+          setTimeout(() => callback(items), Number(config.historySearchDelayMs) || 0);
+        } else {
+          deferColdIndex(() => callback(items), Number(config.historyFallbackSearchDelayMs) || 0);
+        }
       },
       deleteUrl(options, callback) {
         const targetUrl = String(options && options.url || '');
@@ -285,7 +292,7 @@ function createChromeStub(options) {
         ]), 0);
       },
       getTree(callback) {
-        setTimeout(() => callback([
+        deferColdIndex(() => callback([
           {
             id: '0',
             title: '',
@@ -1258,25 +1265,34 @@ async function run() {
     'background search suggestions should match initials from currently open tab titles'
   );
 
-  const { context: coldIndexContext } = loadBackgroundForTest({
-    historyFallbackSearchDelayMs: 260,
-    bookmarkTreeDelayMs: 260
+  // The cold indexes answer only once the test lets them, so results that
+  // arrive before that did not wait for them, however busy the machine is.
+  let warmColdIndexes;
+  const coldIndexGate = new Promise((resolve) => {
+    warmColdIndexes = resolve;
   });
-  const coldIndexStartedAt = Date.now();
-  const coldIndexSuggestions = await coldIndexContext.__testGetSearchSuggestions('github');
-  const coldIndexElapsedMs = Date.now() - coldIndexStartedAt;
+  const { context: coldIndexContext } = loadBackgroundForTest({ coldIndexGate });
+  const coldIndexSuggestions = await Promise.race([
+    coldIndexContext.__testGetSearchSuggestions('github'),
+    new Promise((resolve) => setTimeout(() => resolve(null), 5000))
+  ]);
   assert.ok(
-    coldIndexElapsedMs < 160,
-    `direct local results should not wait for cold full-history and bookmark indexes (took ${coldIndexElapsedMs}ms)`
+    coldIndexSuggestions,
+    'direct local results should not wait for cold full-history and bookmark indexes'
   );
   assert.ok(
     coldIndexSuggestions.some((item) => item && item.url === 'https://github.com/'),
     'the fast local response should retain direct history matches while background indexes warm'
   );
-  await new Promise((resolve) => setTimeout(resolve, 320));
-  const warmedFuzzySuggestions = await coldIndexContext.__testGetSearchSuggestions('fcc');
+  warmColdIndexes();
+  const warmedFuzzyMatch = (items) => items.some((item) => item && item.url === 'https://apps.apple.com/final-cut-camera');
+  let warmedFuzzySuggestions = [];
+  for (const deadline = Date.now() + 5000; Date.now() < deadline && !warmedFuzzyMatch(warmedFuzzySuggestions);) {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    warmedFuzzySuggestions = await coldIndexContext.__testGetSearchSuggestions('fcc');
+  }
   assert.ok(
-    warmedFuzzySuggestions.some((item) => item && item.url === 'https://apps.apple.com/final-cut-camera'),
+    warmedFuzzyMatch(warmedFuzzySuggestions),
     'the warmed history index should continue to support fuzzy initial matching after the fast first response'
   );
 

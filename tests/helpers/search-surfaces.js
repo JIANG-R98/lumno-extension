@@ -70,8 +70,15 @@ async function openSearchSurface(name, options) {
       const element = prefix();
       return Boolean(element && element.getAttribute('data-menu-open') === 'true');
     },
+    // A click that lands before the page has wired its scope button does
+    // nothing, so the page settles first and a click that opened nothing is
+    // repeated.
     async openScopeMenu() {
-      click(root.querySelector('[data-search-scope-action="true"]'));
+      await page.settle(0);
+      for (let attempt = 0; attempt < 3 && !surface.scopeMenuOpen(); attempt += 1) {
+        click(root.querySelector('[data-search-scope-action="true"]'));
+        await page.settle(30);
+      }
       await page.waitFor(() => surface.scopeMenuOpen(), `the ${name} scope menu should open`);
     },
     async chooseScope(modeId) {

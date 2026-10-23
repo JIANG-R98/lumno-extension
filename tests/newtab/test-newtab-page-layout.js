@@ -40,6 +40,9 @@ async function openPage(options) {
         historySearches.push(query);
         return search(query, callback);
       };
+      if (typeof config.setup === 'function') {
+        config.setup(window);
+      }
     }
   });
   await page.settle(400);
@@ -86,17 +89,32 @@ async function testWideModeWidensRecentSites() {
 }
 
 async function testEntranceSequence() {
-  const moving = await openPage({ sync: { [MOTION_KEY]: true } });
-  const body = moving.document.body;
-  const searchRoot = moving.document.getElementById(SEARCH_ROOT_ID);
-  // A busy machine can take longer than the page helper's startup wait.
-  await moving.waitFor(() => body.getAttribute('data-nt-ready') === '1', 'the page should be shown once its first layout is ready');
-  assert.deepStrictEqual([body.getAttribute('data-nt-enter'), searchRoot.getAttribute('data-lumno-search-entry')], ['run', 'run'],
-    'the entrance should run on the page and its shared search entry');
-  moving.press('Escape');
-  await moving.settle(10);
-  assert.deepStrictEqual([body.getAttribute('data-nt-enter'), searchRoot.getAttribute('data-lumno-search-entry')], ['done', 'done'],
-    'a key press should end the entrance at once');
+  // The entrance lasts 260ms, so whether it is still running when a test gets
+  // the page depends on how fast the machine is. Instead the page is watched
+  // from the start: the moment the entrance starts, the test records the
+  // state and presses a key.
+  let started = null;
+  let afterKey = null;
+  const moving = await openPage({
+    sync: { [MOTION_KEY]: true },
+    setup(window) {
+      new window.MutationObserver(() => {
+        const body = window.document.body;
+        if (started || body.getAttribute('data-nt-enter') !== 'run') {
+          return;
+        }
+        const searchRoot = window.document.getElementById(SEARCH_ROOT_ID);
+        const entrance = () => [body.getAttribute('data-nt-enter'), searchRoot.getAttribute('data-lumno-search-entry')];
+        started = { ready: body.getAttribute('data-nt-ready'), entrance: entrance() };
+        window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        afterKey = entrance();
+      }).observe(window.document.documentElement, { subtree: true, attributes: true, attributeFilter: ['data-nt-enter'] });
+    }
+  });
+  await moving.waitFor(() => started, 'the entrance should start');
+  assert.strictEqual(started.ready, '1', 'the page should be shown once its first layout is ready');
+  assert.deepStrictEqual(started.entrance, ['run', 'run'], 'the entrance should run on the page and its shared search entry');
+  assert.deepStrictEqual(afterKey, ['done', 'done'], 'a key press should end the entrance at once');
   moving.close();
 
   const still = await openPage({ sync: { [MOTION_KEY]: false } });

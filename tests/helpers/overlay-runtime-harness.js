@@ -5,6 +5,7 @@ const { JSDOM, VirtualConsole } = require('jsdom');
 const { bundleScript } = require('./module-script');
 const { getInjectedFiles } = require('./runtime-scripts');
 const { recordAllListeners, trackListeners } = require('./trusted-events');
+const { trackPageTimers } = require('./page-timers');
 
 // Loads the unmodified production overlay injection bundle (the same file
 // list background.js injects) into a JSDOM page with a fake chrome API, so
@@ -16,7 +17,7 @@ const HOST_ID = '_x_extension_overlay_host_2026_unique_';
 const CONTEXT_TOKEN_KEY = '__lumnoOverlayContextToken2026';
 
 async function waitFor(condition, message, errors) {
-  const deadline = Date.now() + 2000;
+  const deadline = Date.now() + 5000;
   while (Date.now() < deadline) {
     assert.deepStrictEqual(errors, [], 'the full overlay runtime must not throw');
     if (condition()) {
@@ -27,8 +28,13 @@ async function waitFor(condition, message, errors) {
   assert.fail(message);
 }
 
+// The page created last; the exported settle() waits on its timers.
+let activeTimers = null;
+
 function settle(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms || 30));
+  return activeTimers
+    ? activeTimers.settle(ms || 30)
+    : new Promise((resolve) => setTimeout(resolve, ms || 30));
 }
 
 function createListenerLedger(window) {
@@ -123,6 +129,8 @@ async function createOverlayPage(options) {
     virtualConsole
   });
   const { window } = dom;
+  const timers = trackPageTimers(window);
+  activeTimers = timers;
   if (config.userAgent) {
     Object.defineProperty(window.navigator, 'userAgent', { configurable: true, value: config.userAgent });
   }
@@ -361,7 +369,7 @@ async function createOverlayPage(options) {
     trusted(target, type, init) {
       return dispatchTrusted(target, type, init);
     },
-    settle,
+    settle: (ms) => timers.settle(ms || 30),
     close() {
       window.close();
     }

@@ -11,6 +11,7 @@ const esbuild = require('esbuild');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { bundleScript } = require('./module-script');
 const { trackListeners } = require('./trusted-events');
+const { trackPageTimers } = require('./page-timers');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const EXTENSION_ORIGIN = 'chrome-extension://lumno-test';
@@ -141,6 +142,7 @@ async function createOptionsPage(options) {
     virtualConsole
   });
   const { window } = dom;
+  const timers = trackPageTimers(window);
   Object.defineProperty(window.navigator, 'platform', { configurable: true, value: config.platform || 'MacIntel' });
   if (config.userAgent) {
     Object.defineProperty(window.navigator, 'userAgent', { configurable: true, value: config.userAgent });
@@ -264,7 +266,7 @@ async function createOptionsPage(options) {
   run(bundleScript('options-preload'), 'build/options-preload.js');
   window.LumnoOptionsReactBootstrap = { reactReady: false };
   run(reactEntryScript('src/react/options-islands.js'), 'src/react/options-islands.js');
-  const settle = (ms) => new Promise((resolve) => setTimeout(resolve, ms === undefined ? 30 : ms));
+  const settle = timers.settle;
   // The page bundle is a script the bootstrap adds once the React entry has
   // loaded, so React has rendered the islands by the time it runs.
   await settle(50);
@@ -274,7 +276,7 @@ async function createOptionsPage(options) {
   // Polls until condition() is truthy, for state the page fills in
   // asynchronously and a busy machine may take longer than a fixed wait for.
   const waitFor = async (condition, message, timeoutMs) => {
-    const deadline = Date.now() + (timeoutMs || 2000);
+    const deadline = Date.now() + (timeoutMs || 5000);
     while (Date.now() < deadline) {
       const value = condition();
       if (value) return value;

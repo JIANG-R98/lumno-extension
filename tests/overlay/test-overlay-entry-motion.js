@@ -19,17 +19,19 @@ const FADE_REST = 'translateX(-50%) translateY(0) scale(var(--x-ov-visible-scale
 
 // The overlay skips its entry when it starts more than 280ms after the open
 // was asked for, and a busy test machine can take that long on its own. Cases
-// that expect the motion date the open up to the second of clock skew the
-// overlay accepts; the slow-start case keeps the real time.
-const UNHURRIED_OPEN_MS = 1000;
-
-async function openWithMotion(settings, options, openedAt = Date.now()) {
+// that check which motion plays stop the page's clock, so the start always
+// looks instant; the slow-start case keeps the real time.
+async function openWithMotion(settings, options, stopClock = false) {
   const page = await createOverlayPage(Object.assign({
     settings: Object.assign({ [MOTION_KEY]: true }, settings),
     stylesheetsLoad: true,
     recordAnimations: true
   }, options || {}));
-  const root = await page.open({ openedAt });
+  if (stopClock) {
+    const stoppedAt = page.window.Date.now();
+    page.window.Date.now = () => stoppedAt;
+  }
+  const root = await page.open({ openedAt: page.window.Date.now() });
   await page.settle(80);
   return { page, root, overlay: root.getElementById(OVERLAY_ID) };
 }
@@ -50,7 +52,7 @@ async function testEachEntrySettingPlaysItsMotion() {
   ];
   for (const [settings, startDelta, duration, easing, opacityDuration, rest] of cases) {
     const label = JSON.stringify(settings);
-    const { page, overlay } = await openWithMotion(settings, null, Date.now() + UNHURRIED_OPEN_MS);
+    const { page, overlay } = await openWithMotion(settings, null, true);
     await page.waitFor(() => {
       const started = entryAnimations(page, overlay);
       return started.transform && started.opacity;

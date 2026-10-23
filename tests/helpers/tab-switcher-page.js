@@ -10,6 +10,7 @@ const path = require('path');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { bundleScript, moduleScript } = require('./module-script');
 const { trackListeners } = require('./trusted-events');
+const { trackPageTimers } = require('./page-timers');
 const { parseCss } = require('./css-rules');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
@@ -60,6 +61,7 @@ function createTabSwitcherPage(options) {
     virtualConsole
   });
   const { window } = dom;
+  const timers = trackPageTimers(window);
   const shadowRoots = new Map();
   const nativeAttachShadow = window.Element.prototype.attachShadow;
   window.Element.prototype.attachShadow = function(init) {
@@ -214,7 +216,7 @@ function createTabSwitcherPage(options) {
       return keys.dispatch('keyup', Object.assign({ key }, init || {}));
     },
     settle(ms) {
-      return new Promise((resolve) => setTimeout(resolve, ms || 10));
+      return timers.settle(ms || 10);
     },
     close() {
       window.close();

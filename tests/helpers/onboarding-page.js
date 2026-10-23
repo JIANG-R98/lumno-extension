@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { bundleScript } = require('./module-script');
+const { trackPageTimers } = require('./page-timers');
 const { EXTENSION_ORIGIN, createArea, createEvent, reactEntryScript } = require('./options-page');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
@@ -29,6 +30,7 @@ async function createOnboardingPage(options) {
     virtualConsole
   });
   const { window } = dom;
+  const timers = trackPageTimers(window);
   Object.defineProperty(window.navigator, 'platform', { configurable: true, value: 'MacIntel' });
   const storageChanged = createEvent();
   const sync = createArea(window, 'sync', config.sync, storageChanged);
@@ -76,7 +78,7 @@ async function createOnboardingPage(options) {
     return { finished: Promise.resolve(), cancel() {}, finish() {}, onfinish: null, addEventListener() {} };
   };
   const run = (source, file) => window.eval(`${source}\n//# sourceURL=${file}`);
-  const settle = (ms) => new Promise((resolve) => setTimeout(resolve, ms === undefined ? 30 : ms));
+  const settle = timers.settle;
   run(bundleScript('onboarding-preload'), 'build/onboarding-preload.js');
   run(reactEntryScript('src/react/overlay-islands.js'), 'src/react/overlay-islands.js');
   window.LumnoOnboardingReactBootstrap = { reactReady: false };

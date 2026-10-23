@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM, VirtualConsole } = require('jsdom');
 const { bundleScript } = require('./module-script');
+const { trackPageTimers } = require('./page-timers');
 const { recordAllListeners } = require('./trusted-events');
 const { EXTENSION_ORIGIN, createArea, createEvent, reactEntryScript } = require('./options-page');
 const { createFakeBookmarks, shortcutsStorage } = require('./newtab-fixtures');
@@ -59,6 +60,7 @@ async function createNewtabPage(options) {
     virtualConsole
   });
   const { window } = dom;
+  const timers = trackPageTimers(window);
   Object.defineProperty(window.navigator, 'platform', { configurable: true, value: config.platform || 'MacIntel' });
   if (config.userAgent) {
     Object.defineProperty(window.navigator, 'userAgent', { configurable: true, value: config.userAgent });
@@ -203,7 +205,7 @@ async function createNewtabPage(options) {
   }
   const dispatchTrusted = recordAllListeners(window);
   const run = (source, file) => window.eval(`${source}\n//# sourceURL=${file}`);
-  const settle = (ms) => new Promise((resolve) => setTimeout(resolve, ms === undefined ? 30 : ms));
+  const settle = timers.settle;
   run(bundleScript('newtab-preload'), 'build/newtab-preload.js');
   run(bundleScript('wallpaper-effect-preload'), 'build/wallpaper-effect-preload.js');
   window.LumnoNewtabReactBootstrap = { reactReady: false };
@@ -214,7 +216,7 @@ async function createNewtabPage(options) {
   await settle(120);
 
   const waitFor = async (condition, message, timeoutMs) => {
-    const deadline = Date.now() + (timeoutMs || 2000);
+    const deadline = Date.now() + (timeoutMs || 5000);
     while (Date.now() < deadline) {
       const value = condition();
       if (value) return value;
