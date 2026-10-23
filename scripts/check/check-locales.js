@@ -1,6 +1,9 @@
 // Every UI language has the whole English copy: the same message keys, the
 // same {tokens} and line breaks, and (for AI-translated languages) the
 // onboarding copy. The store name and summary stay within the store limits.
+// Contributors write en, zh_CN, zh_TW and ja; a string the AI-translated
+// languages do not have yet is only a warning, since maintainers fill them in
+// with scripts/i18n before a release. --strict makes it a problem again.
 // Pass locales (`node scripts/check/check-locales.js de fr`) to check only those.
 const fs = require('fs');
 const path = require('path');
@@ -11,10 +14,23 @@ const MESSAGE_LENGTH_LIMITS = Object.freeze({ ext_name: 75, ext_description: 132
 
 const REPLACEMENT_CHARACTER = String.fromCharCode(0xfffd);
 const problems = [];
-const onlyLocales = process.argv.slice(2);
+const pending = [];
+const args = process.argv.slice(2);
+const strict = args.includes('--strict');
+const onlyLocales = args.filter((arg) => arg !== '--strict');
 
 function report(locale, message) {
   problems.push(`${locale}: ${message}`);
+}
+
+// A string an AI-translated language still waits for: the page falls back to
+// another language until a maintainer translates it.
+function reportMissing(locale, message) {
+  if (!strict && files.MACHINE_TRANSLATED_LOCALE_IDS.includes(locale)) {
+    pending.push(`${locale}: ${message}`);
+    return;
+  }
+  report(locale, message);
 }
 
 function sameList(left, right) {
@@ -25,7 +41,7 @@ function sameList(left, right) {
 function compareCopy(locale, label, source, translated) {
   Object.keys(source).forEach((key) => {
     if (!Object.prototype.hasOwnProperty.call(translated, key)) {
-      report(locale, `${label} is missing ${key}`);
+      reportMissing(locale, `${label} is missing ${key}`);
       return;
     }
     const sourceText = source[key];
@@ -106,6 +122,15 @@ async function main() {
     }
   });
 
+  if (pending.length > 0) {
+    const waiting = new Set(pending.map((entry) => entry.slice(0, entry.indexOf(':'))));
+    console.warn(`${pending.length} string(s) wait for translation in ${waiting.size} AI-translated language(s); ` +
+      'maintainers fill them in with npm run i18n:export and i18n:import:');
+    pending.slice(0, 20).forEach((entry) => console.warn(`  ${entry}`));
+    if (pending.length > 20) {
+      console.warn(`  … and ${pending.length - 20} more`);
+    }
+  }
   if (problems.length > 0) {
     console.error(`Locale check found ${problems.length} problem(s):`);
     problems.slice(0, 200).forEach((problem) => console.error(`  ${problem}`));

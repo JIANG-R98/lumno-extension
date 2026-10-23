@@ -9,6 +9,6 @@
 ## Checklist / 检查清单
 
 - [ ] `npm run verify` passes. / `npm run verify` 通过。
-- [ ] New or changed UI text is in all four `_locales/` files. / 新增或修改的界面文案已写入全部四个 `_locales/` 文件。
+- [ ] New or changed UI text is in `en`, `zh_CN`, `zh_TW` and `ja` under `_locales/`; maintainers fill in the AI-translated languages. / 新增或修改的界面文案已写入 `_locales/` 下的 `en`、`zh_CN`、`zh_TW` 和 `ja`，其余 AI 翻译的语言由维护者补齐。
 - [ ] UI changes come with before and after screenshots. / 界面改动附上了修改前后的截图。
 - [ ] New third-party code, icons or fonts are listed in `THIRD_PARTY_NOTICES.md` with their license texts. / 新引入的第三方代码、图标或字体已列入 `THIRD_PARTY_NOTICES.md`，并附上许可文本。

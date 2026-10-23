@@ -23,6 +23,7 @@
     "check:js": "node scripts/check/check-js-syntax.js",
     "check:names": "node scripts/check/check-undefined-names.js",
     "check:locales": "node scripts/check/check-locales.js",
+    "check:locales:strict": "node scripts/check/check-locales.js --strict",
     "i18n:export": "node scripts/i18n/export-chunks.js",
     "i18n:import": "node scripts/i18n/import-chunks.js",
     "check:manifest": "node scripts/check/check-manifest-resources.js",
@@ -33,7 +34,7 @@
     "e2e:shortcut-groups": "node scripts/dev/e2e-newtab-shortcut-groups.js",
     "smoke": "npm run build:bundles && node scripts/dev/smoke-extension.js",
     "cleanup:browsers": "node scripts/dev/cleanup-test-browsers.js",
-    "package:store": "npm run build:react && node scripts/build/package-store.js",
+    "package:store": "npm run check:locales:strict && npm run build:react && node scripts/build/package-store.js",
     "package:firefox": "npm run package:store && node scripts/build/build-firefox.js",
     "lint:firefox": "npx --yes web-ext@latest lint -s dist/firefox"
   },
