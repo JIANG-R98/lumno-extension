@@ -93,7 +93,7 @@ function createVisualViewport(window, values) {
 }
 
 // New Tab follows the visual viewport's top inset when it resizes or
-// scrolls, and keeps the appearance heading above one shared scroller.
+// scrolls (but not a pinch zoom's), and keeps the appearance heading above one shared scroller.
 async function testNewTab() {
   let viewport = null;
   const page = await createNewtabPage({ setup(window) { viewport = createVisualViewport(window, { offsetTop: 0 }); } });
@@ -107,6 +107,12 @@ async function testNewTab() {
   viewport.dispatchEvent(new page.window.Event('scroll'));
   await page.settle(50);
   assert.strictEqual(inset(), '12px', 'and when it scrolls');
+  viewport.scale = 2;
+  viewport.offsetTop = 200;
+  viewport.dispatchEvent(new page.window.Event('resize'));
+  await page.settle(50);
+  assert.strictEqual(inset(), '0px', 'a pinch zoom should zoom the page as is, not re-fit layers to the zoomed-in view');
+  viewport.scale = 1;
 
   page.click(page.document.querySelector('.x-nt-wallpaper-button'));
   await page.settle(400);

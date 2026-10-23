@@ -1,4 +1,5 @@
 import * as SUGGESTIONS_HEIGHT_LAYOUT from '../shared/search/suggestions-height-layout.js';
+import { isPinchZoomed } from './viewport-insets.js';
 
 // New Tab widths, defined once. The standard search box and the content
 // column; the search width slider runs from 640 (since 508a5c0 widened
@@ -949,7 +950,8 @@ function createLayoutController(options) {
     const anchor = searchLayer || inputParts.container;
     const anchorRect = anchor.getBoundingClientRect();
     const visualViewport = windowObj.visualViewport;
-    const viewportBottom = visualViewport && Number.isFinite(visualViewport.height)
+    const viewportBottom = visualViewport && Number.isFinite(visualViewport.height) &&
+      !isPinchZoomed(visualViewport)
       ? visualViewport.offsetTop + visualViewport.height
       : Math.max(0, windowObj.innerHeight || 0);
     const dropdownTopViewport = anchorRect.bottom - 1;
