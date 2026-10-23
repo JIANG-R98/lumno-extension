@@ -216,8 +216,12 @@ const STRATEGIES = Object.freeze({
     editorWaitAttempts: 48,
     inputEventDataMode: 'none'
   }),
+  // copilot.com/chat is Microsoft's merged work-and-life Copilot; its composer
+  // is a Lexical editor.
   copilotPrompt: createPromptStrategy({
     editorSelectors: [
+      '#m365-chat-editor-target-element[contenteditable="true"]',
+      '[data-lexical-editor="true"][aria-label*="Copilot"]',
       'textarea#userInput',
       'textarea[placeholder*="Copilot"]',
       'textarea[aria-label*="Copilot"]',
@@ -225,6 +229,8 @@ const STRATEGIES = Object.freeze({
       '[contenteditable="true"][data-placeholder*="Copilot"]'
     ],
     sendButtonSelectors: [
+      'button.fai-SendButton',
+      'button[type="submit"][aria-label="Send"]',
       'button[data-testid="submit-button"]',
       'button[aria-label="Submit message"]',
       'button[aria-label="提交消息"]',
@@ -294,7 +300,7 @@ const STRATEGY_ALLOWED_ORIGINS = Object.freeze({
   minimaxPrompt: Object.freeze(['https://chat.minimax.io']),
   deepseekPrompt: Object.freeze(['https://chat.deepseek.com']),
   kimiPrompt: Object.freeze(['https://www.kimi.com']),
-  copilotPrompt: Object.freeze(['https://copilot.microsoft.com']),
+  copilotPrompt: Object.freeze(['https://copilot.com']),
   grokPrompt: Object.freeze(['https://grok.com']),
   qwenChatPrompt: Object.freeze(['https://chat.qwen.ai']),
   aiStudioPrompt: Object.freeze(['https://aistudio.google.com'])
@@ -538,7 +544,11 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
         const setContentEditablePrompt = (editor) => {
           editor.innerHTML = `<p>${escapeHtml(promptText)}</p>`;
         };
-        const setPrompt = (editor) => {
+        // Rich editors such as Lexical pad their text with zero-width marks.
+        const readContentText = (editor) => String(editor.innerText || editor.textContent || '')
+          .replace(/[\u200B-\u200D\uFEFF]/g, '')
+          .trim();
+        const setPrompt = async (editor) => {
           editor.focus();
           if (editor instanceof HTMLTextAreaElement || editor instanceof HTMLInputElement) {
             setNativeValue(editor, promptText);
@@ -548,7 +558,7 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
           if (contentEditableFillMode === 'replace') {
             setContentEditablePrompt(editor);
             dispatchInput(editor);
-            return String(editor.innerText || editor.textContent || '').trim() === promptText;
+            return readContentText(editor) === promptText;
           }
           const selection = window.getSelection();
           if (selection) {
@@ -560,12 +570,17 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
           if (typeof document.execCommand === 'function') {
             document.execCommand('insertText', false, promptText);
           }
-          const currentText = String(editor.innerText || editor.textContent || '').trim();
+          // Lexical (Copilot) applies the insert on its next update rather than
+          // synchronously; overwriting it through innerHTML would desync it.
+          for (let settle = 0; settle < 6 && readContentText(editor) !== promptText; settle += 1) {
+            await sleep(50);
+          }
+          const currentText = readContentText(editor);
           if (currentText !== promptText) {
             setContentEditablePrompt(editor);
           }
           dispatchInput(editor);
-          return String(editor.innerText || editor.textContent || '').trim() === promptText;
+          return readContentText(editor) === promptText;
         };
         const getEditorText = (editor) => {
           if (!editor) {
@@ -574,7 +589,7 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
           if (editor instanceof HTMLTextAreaElement || editor instanceof HTMLInputElement) {
             return String(editor.value || '').trim();
           }
-          return String(editor.innerText || editor.textContent || '').trim();
+          return readContentText(editor);
         };
         const normalizeWhitespace = (value) => String(value || '').replace(/\s+/g, ' ').trim();
         const hasUrlPrefill = (editor) => {
@@ -671,7 +686,7 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
             await sleep(400);
             continue;
           }
-          const populated = setPrompt(editor);
+          const populated = await setPrompt(editor);
           if (!populated) {
             await sleep(250);
             continue;

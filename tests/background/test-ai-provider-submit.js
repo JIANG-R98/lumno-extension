@@ -141,6 +141,10 @@ function withFakePromptDom(callback, options) {
   global.HTMLInputElement = class HTMLInputElement {};
   global.setTimeout = (done) => {
     env.totalSleeps += 1;
+    if (env.pendingInsert) {
+      env.pendingInsert.element.innerText = env.pendingInsert.text;
+      env.pendingInsert = null;
+    }
     if (typeof settings.onSleep === 'function') {
       settings.onSleep(env);
     }
@@ -186,8 +190,12 @@ function withFakePromptDom(callback, options) {
       };
     },
     execCommand(command, _showUi, value) {
+      if (command === 'insertText' && env.activeElement && settings.deferInsertedText) {
+        env.pendingInsert = { element: env.activeElement, text: value + (settings.insertedTextSuffix || '') };
+        return true;
+      }
       if (command === 'insertText' && env.activeElement) {
-        env.activeElement.innerText = value;
+        env.activeElement.innerText = value + (settings.insertedTextSuffix || '');
         return true;
       }
       return false;
@@ -299,6 +307,20 @@ async function run() {
     }
   });
 
+  await withFakePromptDom(async (env) => {
+    const result = await submitWithFakeChrome('copilotPrompt', 'Explain Lumno', {
+      expectedUrl: 'https://copilot.com/chat'
+    });
+    assert.strictEqual(result.ok, true);
+    assert.strictEqual(env.editorWrites, 1,
+      'Copilot applies typed text a moment later and pads it with zero-width marks; ' +
+      'that still counts as filled, so the Lexical editor must not be overwritten through innerHTML');
+  }, {
+    documentOrigin: 'https://copilot.com',
+    deferInsertedText: true,
+    insertedTextSuffix: '\u200B\u200C'
+  });
+
   const expectedStrategyOrigins = {
     geminiPrompt: 'https://gemini.google.com',
     chatgptPrompt: 'https://chatgpt.com',
@@ -308,7 +330,7 @@ async function run() {
     minimaxPrompt: 'https://chat.minimax.io',
     deepseekPrompt: 'https://chat.deepseek.com',
     kimiPrompt: 'https://www.kimi.com',
-    copilotPrompt: 'https://copilot.microsoft.com',
+    copilotPrompt: 'https://copilot.com',
     grokPrompt: 'https://grok.com',
     qwenChatPrompt: 'https://chat.qwen.ai',
     aiStudioPrompt: 'https://aistudio.google.com'

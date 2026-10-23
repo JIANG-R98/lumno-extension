@@ -129,7 +129,7 @@
       "key": "cp",
       "aliases": ["copilot", "microsoft copilot"],
       "name": "Copilot",
-      "template": "https://copilot.microsoft.com/",
+      "template": "https://copilot.com/chat",
       "action": "openAndSubmit",
       "submitStrategy": "copilotPrompt"
     },

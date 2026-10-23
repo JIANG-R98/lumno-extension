@@ -67,7 +67,7 @@ const DEFAULT_SITE_SEARCH_PROVIDERS = Object.freeze([
   { key: 'mx', aliases: ['minimax', 'mini max'], name: 'MiniMax', template: 'https://chat.minimax.io/', action: 'openAndSubmit', submitStrategy: 'minimaxPrompt' },
   { key: 'ds', aliases: ['deepseek', 'deep seek', '深度求索'], name: 'DeepSeek', template: 'https://chat.deepseek.com/', action: 'openAndSubmit', submitStrategy: 'deepseekPrompt' },
   { key: 'kimi', aliases: ['moonshot', '月之暗面'], name: 'Kimi', template: 'https://www.kimi.com/', action: 'openAndSubmit', submitStrategy: 'kimiPrompt' },
-  { key: 'cp', aliases: ['copilot', 'microsoft copilot'], name: 'Copilot', template: 'https://copilot.microsoft.com/', action: 'openAndSubmit', submitStrategy: 'copilotPrompt' },
+  { key: 'cp', aliases: ['copilot', 'microsoft copilot'], name: 'Copilot', template: 'https://copilot.com/chat', action: 'openAndSubmit', submitStrategy: 'copilotPrompt' },
   { key: 'grok', aliases: ['xai'], name: 'Grok', template: 'https://grok.com/', action: 'openAndSubmit', submitStrategy: 'grokPrompt' },
   { key: 'qwen', aliases: ['qwen chat', 'qwenchat'], name: 'Qwen Chat', template: 'https://chat.qwen.ai/', action: 'openAndSubmit', submitStrategy: 'qwenChatPrompt' },
   { key: 'ais', aliases: ['aistudio', 'ai studio', 'google ai studio'], name: 'Google AI Studio', template: 'https://aistudio.google.com/prompts/new_chat', action: 'openAndSubmit', submitStrategy: 'aiStudioPrompt' },

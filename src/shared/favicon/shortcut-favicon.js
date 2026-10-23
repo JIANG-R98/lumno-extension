@@ -124,6 +124,7 @@ const SHORTCUT_ICON_SITE_HOSTS = Object.freeze({
   gpt: Object.freeze(['chat.openai.com']),
   ds: Object.freeze(['deepseek.com']),
   kimi: Object.freeze(['kimi.moonshot.cn']),
+  cp: Object.freeze(['copilot.microsoft.com']),
   bd: Object.freeze(['m.baidu.com']),
   bi: Object.freeze(['cn.bing.com']),
   gg: Object.freeze(['google.com.hk']),

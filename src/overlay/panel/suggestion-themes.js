@@ -54,6 +54,7 @@ function createSuggestionThemes(deps) {
     'chat.minimax.io': [24, 119, 242],
     'chat.deepseek.com': [74, 107, 255],
     'kimi.com': [77, 92, 255],
+    'copilot.com': [34, 83, 206],
     'copilot.microsoft.com': [34, 83, 206],
     'grok.com': [17, 24, 39],
     'chat.qwen.ai': [99, 54, 231],
