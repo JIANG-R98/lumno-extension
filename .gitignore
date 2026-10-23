@@ -8,6 +8,16 @@ coverage/
 # Local scratch data (scripts/dev/probe-webdav.js writes here)
 .tmp/
 
+# Local work output: promo renders, test captures, worktrees
+output/
+.codex-artifacts/
+.worktrees/
+
+# Internal research notes kept outside the repo
+docs/bookmark-shortcut-drag-semantics.md
+docs/favicon-page-matching.md
+docs/webdav-sync-feasibility.md
+
 # Logs and OS files
 *.log
 .DS_Store
