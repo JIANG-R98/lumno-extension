@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "AI ద్వారా అనువదించబడింది. ఏదైనా తప్పుగా అనిపిస్తే, దయచేసి ఫీడ్\u200cబ్యాక్ పంపండి."
   },
+  "settings_translation_help_action": {
+    "message": "అనువాదాన్ని మెరుగుపరచండి"
+  },
+  "settings_translation_help_title": {
+    "message": "{language} అనువాదాన్ని మెరుగుపరచడంలో సహాయపడండి"
+  },
+  "settings_translation_help_desc": {
+    "message": "తప్పుగా లేదా అసహజంగా ఉన్న అనువాదం కనిపించిందా? అది ఏ లైనో మాకు చెప్పండి, లేదా మొత్తం వచనాన్ని డౌన్\u200cలోడ్ చేసి నేరుగా స్ప్రెడ్\u200cషీట్\u200cలో సరిచేయండి."
+  },
+  "settings_translation_help_report_action": {
+    "message": "సమస్యను నివేదించండి"
+  },
+  "settings_translation_help_download_action": {
+    "message": "అనువాద షీట్\u200cను డౌన్\u200cలోడ్ చేయండి"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "దాన్ని Excel లేదా Google Sheetsలో తెరిచి, “సూచించిన అనువాదం” నిలువు వరుసలో మీ మార్పులు రాసి, ఆ తర్వాత ఫైల్\u200cను “సమస్యను నివేదించండి” పేజీలోకి లాగండి."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "సూచించిన అనువాదం"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "గమనిక"
+  },
   "settings_language_search_placeholder": {
     "message": "భాషలను సెర్చ్ చేయండి"
   },

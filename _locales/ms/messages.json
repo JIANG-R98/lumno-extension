@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "Diterjemahkan oleh AI. Jika ada yang kurang tepat, sila hantar maklum balas."
   },
+  "settings_translation_help_action": {
+    "message": "Perbaiki terjemahan"
+  },
+  "settings_translation_help_title": {
+    "message": "Bantu perbaiki terjemahan {language}"
+  },
+  "settings_translation_help_desc": {
+    "message": "Terjumpa terjemahan yang salah atau janggal? Beritahu kami baris yang mana, atau muat turun semua teks dan betulkan terus dalam hamparan."
+  },
+  "settings_translation_help_report_action": {
+    "message": "Laporkan masalah"
+  },
+  "settings_translation_help_download_action": {
+    "message": "Muat turun helaian terjemahan"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Buka dalam Excel atau Google Sheets, tulis perubahan anda dalam lajur “Cadangan”, kemudian seret fail ke halaman “Laporkan masalah”."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "Cadangan"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "Nota"
+  },
   "settings_language_search_placeholder": {
     "message": "Cari bahasa"
   },

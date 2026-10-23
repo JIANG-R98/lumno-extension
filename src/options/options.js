@@ -37,6 +37,7 @@ import * as LumnoOptionsSyncTransfer from './options-sync-transfer.js';
 import * as THEME from './options-theme.js';
 import * as OPTIONS_TOGGLE_CONTROLS from './options-toggle-controls.js';
 import * as OPTIONS_TOOLTIPS from './options-tooltips.js';
+import * as LumnoOptionsTranslationHelpSection from './options-translation-help.js';
 import * as LumnoWebDavOptions from './webdav-options.js';
 
 (function() {
@@ -177,6 +178,7 @@ import * as LumnoWebDavOptions from './webdav-options.js';
   const shortcutReferenceList = document.getElementById('_x_extension_shortcut_reference_list_2026_unique_');
   const openOnboardingPageButton = document.getElementById('_x_extension_open_onboarding_page_2026_unique_');
   const feedbackSupportHost = document.getElementById('_x_extension_feedback_support_2026_unique_');
+  const translationHelpHost = document.getElementById('_x_extension_translation_help_2026_unique_');
   const openShortcutsPageButton = document.getElementById('_x_extension_open_shortcuts_page_2026_unique_');
   const siteSearchEngineBuiltinList = document.getElementById('_x_extension_search_engine_builtin_list_2026_unique_');
   const aggregateSearchList = document.getElementById('_x_extension_aggregate_search_list_2026_unique_');
@@ -207,6 +209,7 @@ import * as LumnoWebDavOptions from './webdav-options.js';
   const optionsBlacklistListApi = globalThis.LumnoOptionsBlacklistList;
   const optionsAggregateSearchListApi = globalThis.LumnoOptionsAggregateSearchList;
   const optionsFeedbackSupportApi = globalThis.LumnoOptionsFeedbackSupport;
+  const optionsTranslationHelpApi = globalThis.LumnoOptionsTranslationHelp;
   const optionsInfoButtonApi = globalThis.LumnoOptionsInfoButton;
   const optionsToastApi = globalThis.LumnoOptionsToast;
   const optionsSegmentedControlApi = globalThis.LumnoOptionsSegmentedControl;
@@ -432,7 +435,8 @@ import * as LumnoWebDavOptions from './webdav-options.js';
     normalizeLocale,
     getSystemLocale,
     normalizeLanguageMode,
-    applyLanguageMode
+    applyLanguageMode,
+    loadLocaleMessages
   } = OPTIONS_LANGUAGE.createLanguage({
     renderOverlayFontMissingNotices: (...args) => optionsState.renderOverlayFontMissingNotices(...args),
     popconfirmLanguageRefreshers,
@@ -448,6 +452,7 @@ import * as LumnoWebDavOptions from './webdav-options.js';
     setOptionsSelectState: (...args) => optionsState.setOptionsSelectState(...args),
     renderOptionsInfoButtons,
     renderFeedbackSupport,
+    renderTranslationHelp,
     refreshCustomSelects,
     setEditingState,
     updateBuiltinResetTooltip,
@@ -546,6 +551,17 @@ import * as LumnoWebDavOptions from './webdav-options.js';
       ? chrome.runtime.getURL('assets/images/site-search/glyph-lm.png')
       : '../../assets/images/site-search/glyph-lm.png',
     isHelpCenterSearchEnabled: () => optionsState.helpCenterSearchEnabled
+  });
+  const translationHelpSection = LumnoOptionsTranslationHelpSection.createTranslationHelpSection({
+    controller: optionsTranslationHelpApi.createTranslationHelpController(translationHelpHost),
+    documentObj: document,
+    formatTemplate: (...args) => formatTemplate(...args),
+    getIssueUrl: () => COMMUNITY_LINKS.getLinks().githubIssue,
+    getLocale: () => (optionsState.currentLanguageMode === 'system' ? getSystemLocale() : normalizeLocale(optionsState.currentLanguageMode)),
+    getMessage,
+    loadLocaleMessages,
+    uiLocales: SETTINGS.UI_LOCALES,
+    version: chrome?.runtime?.getManifest?.()?.version || ''
   });
   function createOptionsInfoButtonController(host) {
     return optionsInfoButtonApi.createInfoButtonController(host);
@@ -1326,6 +1342,12 @@ import * as LumnoWebDavOptions from './webdav-options.js';
 
   renderFeedbackSupport();
   feedbackSupportSection.loadLinks();
+
+  function renderTranslationHelp() {
+    translationHelpSection.render();
+  }
+
+  renderTranslationHelp();
 
   setNewtabWidthTabState(optionsState.currentNewtabWidthMode);
   setOverlaySizeTabState(optionsState.currentOverlaySizeMode);

@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "Tradus de AI. Dacă ceva sună greșit, trimiteți-ne feedback."
   },
+  "settings_translation_help_action": {
+    "message": "Îmbunătățește traducerea"
+  },
+  "settings_translation_help_title": {
+    "message": "Ajută la îmbunătățirea traducerii: {language}"
+  },
+  "settings_translation_help_desc": {
+    "message": "Ai observat o traducere greșită sau nefirească? Spune-ne ce rând este sau descarcă tot textul și corectează-l direct într-o foaie de calcul."
+  },
+  "settings_translation_help_report_action": {
+    "message": "Raportează o problemă"
+  },
+  "settings_translation_help_download_action": {
+    "message": "Descarcă foaia de traducere"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Deschide-o în Excel sau în Foi de calcul Google, scrie modificările în coloana „Sugestie”, apoi trage fișierul pe pagina „Raportează o problemă”."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "Sugestie"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "Notă"
+  },
   "settings_language_search_placeholder": {
     "message": "Căutați limbi"
   },

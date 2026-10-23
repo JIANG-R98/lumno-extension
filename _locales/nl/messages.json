@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "Vertaald door AI. Klopt er iets niet? Stuur ons dan feedback."
   },
+  "settings_translation_help_action": {
+    "message": "Vertaling verbeteren"
+  },
+  "settings_translation_help_title": {
+    "message": "Help de vertaling te verbeteren: {language}"
+  },
+  "settings_translation_help_desc": {
+    "message": "Een onjuiste of onnatuurlijke vertaling gezien? Laat ons weten om welke regel het gaat, of download alle teksten en verbeter ze direct in een spreadsheet."
+  },
+  "settings_translation_help_report_action": {
+    "message": "Probleem melden"
+  },
+  "settings_translation_help_download_action": {
+    "message": "Vertaalbestand downloaden"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Open het in Excel of Google Spreadsheets, schrijf je wijzigingen in de kolom ‘Suggestie’ en sleep het bestand daarna naar de pagina ‘Probleem melden’."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "Suggestie"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "Opmerking"
+  },
   "settings_language_search_placeholder": {
     "message": "Talen zoeken"
   },

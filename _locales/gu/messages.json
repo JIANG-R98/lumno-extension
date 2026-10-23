@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "AI દ્વારા અનુવાદિત. જો કંઈક ખોટું લાગે, તો કૃપા કરીને પ્રતિસાદ મોકલો."
   },
+  "settings_translation_help_action": {
+    "message": "અનુવાદ સુધારો"
+  },
+  "settings_translation_help_title": {
+    "message": "{language} અનુવાદ સુધારવામાં મદદ કરો"
+  },
+  "settings_translation_help_desc": {
+    "message": "ખોટો કે અકુદરતી અનુવાદ દેખાયો? કઈ લાઇન છે તે અમને જણાવો, અથવા બધું લખાણ ડાઉનલોડ કરીને સીધું સ્પ્રેડશીટમાં સુધારો."
+  },
+  "settings_translation_help_report_action": {
+    "message": "સમસ્યાની જાણ કરો"
+  },
+  "settings_translation_help_download_action": {
+    "message": "અનુવાદ શીટ ડાઉનલોડ કરો"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "તેને Excel અથવા Google Sheetsમાં ખોલો, “સૂચિત અનુવાદ” કૉલમમાં તમારા ફેરફારો લખો, પછી ફાઇલને “સમસ્યાની જાણ કરો” પેજ પર ખેંચી લાવો."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "સૂચિત અનુવાદ"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "નોંધ"
+  },
   "settings_language_search_placeholder": {
     "message": "ભાષાઓ શોધો"
   },

@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "AI দিয়ে অনুবাদ করা। কিছু ভুল মনে হলে অনুগ্রহ করে মতামত পাঠান।"
   },
+  "settings_translation_help_action": {
+    "message": "অনুবাদ উন্নত করুন"
+  },
+  "settings_translation_help_title": {
+    "message": "{language} অনুবাদ উন্নত করুন"
+  },
+  "settings_translation_help_desc": {
+    "message": "কোনো ভুল বা অস্বাভাবিক অনুবাদ চোখে পড়েছে? কোন লাইনে তা আমাদের জানান, অথবা সব লেখা ডাউনলোড করে সরাসরি স্প্রেডশিটে ঠিক করুন।"
+  },
+  "settings_translation_help_report_action": {
+    "message": "সমস্যা জানান"
+  },
+  "settings_translation_help_download_action": {
+    "message": "অনুবাদের শিট ডাউনলোড করুন"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Excel বা Google Sheets-এ খুলুন, “প্রস্তাবিত অনুবাদ” কলামে আপনার পরিবর্তন লিখুন, তারপর ফাইলটি “সমস্যা জানান” পাতায় টেনে আনুন।"
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "প্রস্তাবিত অনুবাদ"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "মন্তব্য"
+  },
   "settings_language_search_placeholder": {
     "message": "ভাষা সার্চ করুন"
   },

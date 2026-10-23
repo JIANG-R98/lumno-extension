@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "AI tarafından çevrildi. Bir şey yanlış görünüyorsa lütfen geri bildirim gönderin."
   },
+  "settings_translation_help_action": {
+    "message": "Çeviriyi iyileştir"
+  },
+  "settings_translation_help_title": {
+    "message": "Çeviriyi iyileştirmeye yardım edin: {language}"
+  },
+  "settings_translation_help_desc": {
+    "message": "Yanlış veya doğal olmayan bir çeviri mi gördünüz? Hangi satır olduğunu bize söyleyin ya da tüm metni indirip doğrudan bir e-tabloda düzeltin."
+  },
+  "settings_translation_help_report_action": {
+    "message": "Sorun bildir"
+  },
+  "settings_translation_help_download_action": {
+    "message": "Çeviri tablosunu indir"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Excel veya Google E-Tablolar'da açın, değişikliklerinizi “Öneri” sütununa yazın, ardından dosyayı “Sorun bildir” sayfasına sürükleyin."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "Öneri"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "Not"
+  },
   "settings_language_search_placeholder": {
     "message": "Dil ara"
   },

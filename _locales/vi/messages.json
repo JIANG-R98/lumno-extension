@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "Bản dịch do AI thực hiện. Nếu thấy chỗ nào chưa đúng, hãy gửi phản hồi cho chúng tôi."
   },
+  "settings_translation_help_action": {
+    "message": "Cải thiện bản dịch"
+  },
+  "settings_translation_help_title": {
+    "message": "Giúp cải thiện bản dịch {language}"
+  },
+  "settings_translation_help_desc": {
+    "message": "Bạn thấy bản dịch sai hoặc không tự nhiên? Hãy cho chúng tôi biết đó là dòng nào, hoặc tải toàn bộ văn bản về và sửa trực tiếp trong bảng tính."
+  },
+  "settings_translation_help_report_action": {
+    "message": "Báo cáo sự cố"
+  },
+  "settings_translation_help_download_action": {
+    "message": "Tải bảng dịch"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Mở bằng Excel hoặc Google Trang tính, ghi nội dung sửa vào cột “Đề xuất”, rồi kéo tệp vào trang “Báo cáo sự cố”."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "Đề xuất"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "Ghi chú"
+  },
   "settings_language_search_placeholder": {
     "message": "Tìm ngôn ngữ"
   },

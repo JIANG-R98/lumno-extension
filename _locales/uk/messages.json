@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "Перекладено за допомогою ШІ. Якщо щось звучить неправильно, надішліть відгук."
   },
+  "settings_translation_help_action": {
+    "message": "Покращити переклад"
+  },
+  "settings_translation_help_title": {
+    "message": "Допоможіть покращити переклад: {language}"
+  },
+  "settings_translation_help_desc": {
+    "message": "Помітили неточний чи неприродний переклад? Скажіть, який це рядок, або завантажте всі тексти й виправте їх просто в таблиці."
+  },
+  "settings_translation_help_report_action": {
+    "message": "Повідомити про проблему"
+  },
+  "settings_translation_help_download_action": {
+    "message": "Завантажити таблицю перекладу"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Відкрийте її в Excel або Google Таблицях, впишіть виправлення в стовпець «Пропозиція», а потім перетягніть файл на сторінку «Повідомити про проблему»."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "Пропозиція"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "Примітка"
+  },
   "settings_language_search_placeholder": {
     "message": "Пошук мов"
   },

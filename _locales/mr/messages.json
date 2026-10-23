@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "AI ने भाषांतरित केले. काही चुकीचे वाटल्यास कृपया अभिप्राय पाठवा."
   },
+  "settings_translation_help_action": {
+    "message": "भाषांतर सुधारा"
+  },
+  "settings_translation_help_title": {
+    "message": "{language} भाषांतर सुधारण्यात मदत करा"
+  },
+  "settings_translation_help_desc": {
+    "message": "चुकीचे किंवा अनैसर्गिक भाषांतर दिसले? कोणती ओळ आहे ते आम्हाला सांगा, किंवा सर्व मजकूर डाउनलोड करून थेट स्प्रेडशीटमध्ये दुरुस्त करा."
+  },
+  "settings_translation_help_report_action": {
+    "message": "समस्या नोंदवा"
+  },
+  "settings_translation_help_download_action": {
+    "message": "भाषांतर शीट डाउनलोड करा"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "ते Excel किंवा Google Sheets मध्ये उघडा, “सुचवलेले भाषांतर” स्तंभात तुमचे बदल लिहा, मग फाइल “समस्या नोंदवा” पेजवर ओढून आणा."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "सुचवलेले भाषांतर"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "टीप"
+  },
   "settings_language_search_placeholder": {
     "message": "भाषा शोधा"
   },

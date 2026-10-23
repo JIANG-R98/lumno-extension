@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "この言語は AI による翻訳です。不自然な箇所があれば、フィードバックをお寄せください。"
   },
+  "settings_translation_help_action": {
+    "message": "翻訳を改善"
+  },
+  "settings_translation_help_title": {
+    "message": "{language}の翻訳の改善にご協力ください"
+  },
+  "settings_translation_help_desc": {
+    "message": "不正確な訳や不自然な訳を見つけましたか？どの文言かを教えていただくか、すべての文言をダウンロードして表の中で直接修正できます。"
+  },
+  "settings_translation_help_report_action": {
+    "message": "問題を報告"
+  },
+  "settings_translation_help_download_action": {
+    "message": "翻訳シートをダウンロード"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Excel または Google スプレッドシートで開き、「修正案」の列に修正を書き込んでから、ファイルを「問題を報告」のページにドラッグしてください。"
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "修正案"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "メモ"
+  },
   "settings_language_search_placeholder": {
     "message": "言語を検索"
   },

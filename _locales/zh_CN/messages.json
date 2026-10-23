@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "此语言由 AI 翻译，如有不准确之处，欢迎反馈。"
   },
+  "settings_translation_help_action": {
+    "message": "改进翻译"
+  },
+  "settings_translation_help_title": {
+    "message": "帮助改进{language}翻译"
+  },
+  "settings_translation_help_desc": {
+    "message": "看到不准确或不自然的译文？告诉我们是哪一句，或者下载全部文案，直接在表格里改。"
+  },
+  "settings_translation_help_report_action": {
+    "message": "报告问题"
+  },
+  "settings_translation_help_download_action": {
+    "message": "下载翻译表格"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "用 Excel 或 Google 表格打开，在「建议译文」一列写下修改，再把文件拖进「报告问题」页面提交。"
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "建议译文"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "备注"
+  },
   "settings_language_search_placeholder": {
     "message": "搜索语言"
   },

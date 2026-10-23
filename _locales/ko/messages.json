@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "AI가 번역했습니다. 어색한 부분이 있으면 의견을 보내 주세요."
   },
+  "settings_translation_help_action": {
+    "message": "번역 개선"
+  },
+  "settings_translation_help_title": {
+    "message": "{language} 번역 개선에 참여하기"
+  },
+  "settings_translation_help_desc": {
+    "message": "부정확하거나 어색한 번역을 발견하셨나요? 어느 문구인지 알려 주시거나, 모든 문구를 내려받아 표에서 바로 고쳐 주세요."
+  },
+  "settings_translation_help_report_action": {
+    "message": "문제 신고"
+  },
+  "settings_translation_help_download_action": {
+    "message": "번역 시트 다운로드"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Excel 또는 Google 스프레드시트에서 열고 '수정 제안' 열에 수정 내용을 적은 다음, 파일을 '문제 신고' 페이지로 끌어다 놓으세요."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "수정 제안"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "메모"
+  },
   "settings_language_search_placeholder": {
     "message": "언어 검색"
   },

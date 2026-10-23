@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "Oversatt med AI. Gi oss gjerne tilbakemelding hvis noe er feil."
   },
+  "settings_translation_help_action": {
+    "message": "Forbedre oversettelsen"
+  },
+  "settings_translation_help_title": {
+    "message": "Hjelp oss å forbedre oversettelsen: {language}"
+  },
+  "settings_translation_help_desc": {
+    "message": "Har du sett en feil eller unaturlig oversettelse? Fortell oss hvilken linje det gjelder, eller last ned all teksten og rett den direkte i et regneark."
+  },
+  "settings_translation_help_report_action": {
+    "message": "Rapporter et problem"
+  },
+  "settings_translation_help_download_action": {
+    "message": "Last ned oversettelsesark"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Åpne det i Excel eller Google Regneark, skriv endringene dine i kolonnen «Forslag», og dra deretter filen til siden «Rapporter et problem»."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "Forslag"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "Merknad"
+  },
   "settings_language_search_placeholder": {
     "message": "Søk etter språk"
   },

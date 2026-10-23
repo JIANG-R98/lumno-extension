@@ -18,6 +18,7 @@ function createLanguage(deps) {
     setOptionsSelectState,
     renderOptionsInfoButtons,
     renderFeedbackSupport,
+    renderTranslationHelp,
     refreshCustomSelects,
     setEditingState,
     updateBuiltinResetTooltip,
@@ -235,6 +236,7 @@ function createLanguage(deps) {
       renderMachineTranslationNote(targetLocale);
       renderOptionsInfoButtons();
       renderFeedbackSupport();
+      renderTranslationHelp();
       refreshCustomSelects();
       setEditingState(optionsState.editingSiteSearchKey);
       updateBuiltinResetTooltip();
@@ -280,7 +282,8 @@ function createLanguage(deps) {
     normalizeLocale,
     getSystemLocale,
     normalizeLanguageMode,
-    applyLanguageMode
+    applyLanguageMode,
+    loadLocaleMessages
   };
 }
 

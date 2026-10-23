@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "Išversta naudojant DI. Jei kas nors skamba netiksliai, atsiųskite atsiliepimą."
   },
+  "settings_translation_help_action": {
+    "message": "Patobulinti vertimą"
+  },
+  "settings_translation_help_title": {
+    "message": "Padėkite patobulinti vertimą: {language}"
+  },
+  "settings_translation_help_desc": {
+    "message": "Pastebėjote netikslų ar nenatūralų vertimą? Parašykite, kuri tai eilutė, arba atsisiųskite visą tekstą ir pataisykite jį tiesiai skaičiuoklėje."
+  },
+  "settings_translation_help_report_action": {
+    "message": "Pranešti apie problemą"
+  },
+  "settings_translation_help_download_action": {
+    "message": "Atsisiųsti vertimo lentelę"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Atidarykite ją „Excel“ arba „Google“ skaičiuoklėse, įrašykite pakeitimus stulpelyje „Pasiūlymas“, tada nuvilkite failą į puslapį „Pranešti apie problemą“."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "Pasiūlymas"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "Pastaba"
+  },
   "settings_language_search_placeholder": {
     "message": "Ieškoti kalbų"
   },

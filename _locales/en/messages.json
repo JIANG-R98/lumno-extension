@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "Translated by AI. If something reads wrong, please send feedback."
   },
+  "settings_translation_help_action": {
+    "message": "Improve translation"
+  },
+  "settings_translation_help_title": {
+    "message": "Improve the {language} translation"
+  },
+  "settings_translation_help_desc": {
+    "message": "Spotted a wrong or awkward translation? Tell us which line it is, or download all the text and fix it right in a spreadsheet."
+  },
+  "settings_translation_help_report_action": {
+    "message": "Report a problem"
+  },
+  "settings_translation_help_download_action": {
+    "message": "Download translation sheet"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Open it in Excel or Google Sheets, write your changes in the “Suggestion” column, then drag the file onto the “Report a problem” page."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "Suggestion"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "Note"
+  },
   "settings_language_search_placeholder": {
     "message": "Search languages"
   },

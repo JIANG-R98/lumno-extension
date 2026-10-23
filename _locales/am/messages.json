@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "በAI የተተረጎመ። የተሳሳተ ነገር ካለ፣ እባክዎ ግብረመልስ ይላኩ።"
   },
+  "settings_translation_help_action": {
+    "message": "ትርጉምን አሻሽል"
+  },
+  "settings_translation_help_title": {
+    "message": "የ{language} ትርጉምን ያሻሽሉ"
+  },
+  "settings_translation_help_desc": {
+    "message": "ትክክል ያልሆነ ወይም የማይመች ትርጉም አገኙ? የትኛው መስመር እንደሆነ ይንገሩን፣ ወይም ሁሉንም ጽሑፍ አውርደው በቀጥታ በሠንጠረዥ ውስጥ ያስተካክሉ።"
+  },
+  "settings_translation_help_report_action": {
+    "message": "ችግር ሪፖርት አድርግ"
+  },
+  "settings_translation_help_download_action": {
+    "message": "የትርጉም ሠንጠረዥ አውርድ"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "በExcel ወይም Google Sheets ይክፈቱት፣ ለውጦችዎን በ«የተጠቆመ ትርጉም» አምድ ውስጥ ይጻፉ፣ ከዚያ ፋይሉን ወደ «ችግር ሪፖርት አድርግ» ገጽ ይጎትቱት።"
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "የተጠቆመ ትርጉም"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "ማስታወሻ"
+  },
   "settings_language_search_placeholder": {
     "message": "ቋንቋዎችን ፈልግ"
   },

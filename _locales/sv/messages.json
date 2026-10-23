@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "Översatt med AI. Skicka gärna feedback om något låter fel."
   },
+  "settings_translation_help_action": {
+    "message": "Förbättra översättningen"
+  },
+  "settings_translation_help_title": {
+    "message": "Hjälp till att förbättra översättningen: {language}"
+  },
+  "settings_translation_help_desc": {
+    "message": "Har du sett en felaktig eller onaturlig översättning? Berätta vilken rad det gäller, eller ladda ned all text och rätta den direkt i ett kalkylark."
+  },
+  "settings_translation_help_report_action": {
+    "message": "Rapportera ett problem"
+  },
+  "settings_translation_help_download_action": {
+    "message": "Ladda ned översättningsark"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Öppna det i Excel eller Google Kalkylark, skriv dina ändringar i kolumnen ”Förslag” och dra sedan filen till sidan ”Rapportera ett problem”."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "Förslag"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "Anteckning"
+  },
   "settings_language_search_placeholder": {
     "message": "Sök efter språk"
   },

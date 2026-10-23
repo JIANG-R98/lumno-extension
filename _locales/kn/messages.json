@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "AI ಮೂಲಕ ಅನುವಾದಿಸಲಾಗಿದೆ. ಏನಾದರೂ ತಪ್ಪಾಗಿ ಕಂಡುಬಂದರೆ, ದಯವಿಟ್ಟು ಪ್ರತಿಕ್ರಿಯೆ ಕಳುಹಿಸಿ."
   },
+  "settings_translation_help_action": {
+    "message": "ಅನುವಾದ ಸುಧಾರಿಸಿ"
+  },
+  "settings_translation_help_title": {
+    "message": "{language} ಅನುವಾದ ಸುಧಾರಿಸಲು ಸಹಾಯ ಮಾಡಿ"
+  },
+  "settings_translation_help_desc": {
+    "message": "ತಪ್ಪಾದ ಅಥವಾ ಅಸಹಜ ಅನುವಾದ ಕಂಡಿತೇ? ಯಾವ ಸಾಲು ಎಂದು ನಮಗೆ ತಿಳಿಸಿ, ಅಥವಾ ಎಲ್ಲಾ ಪಠ್ಯವನ್ನು ಡೌನ್\u200cಲೋಡ್ ಮಾಡಿ ನೇರವಾಗಿ ಸ್ಪ್ರೆಡ್\u200cಶೀಟ್\u200cನಲ್ಲಿ ಸರಿಪಡಿಸಿ."
+  },
+  "settings_translation_help_report_action": {
+    "message": "ಸಮಸ್ಯೆ ವರದಿ ಮಾಡಿ"
+  },
+  "settings_translation_help_download_action": {
+    "message": "ಅನುವಾದ ಶೀಟ್ ಡೌನ್\u200cಲೋಡ್ ಮಾಡಿ"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "ಅದನ್ನು Excel ಅಥವಾ Google Sheets\u200cನಲ್ಲಿ ತೆರೆಯಿರಿ, “ಸೂಚಿಸಿದ ಅನುವಾದ” ಕಾಲಮ್\u200cನಲ್ಲಿ ನಿಮ್ಮ ಬದಲಾವಣೆಗಳನ್ನು ಬರೆಯಿರಿ, ನಂತರ ಫೈಲ್ ಅನ್ನು “ಸಮಸ್ಯೆ ವರದಿ ಮಾಡಿ” ಪುಟಕ್ಕೆ ಎಳೆಯಿರಿ."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "ಸೂಚಿಸಿದ ಅನುವಾದ"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "ಟಿಪ್ಪಣಿ"
+  },
   "settings_language_search_placeholder": {
     "message": "ಭಾಷೆಗಳನ್ನು ಹುಡುಕಿ"
   },

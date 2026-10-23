@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "Preložené pomocou AI. Ak niečo neznie správne, pošlite nám spätnú väzbu."
   },
+  "settings_translation_help_action": {
+    "message": "Vylepšiť preklad"
+  },
+  "settings_translation_help_title": {
+    "message": "Pomôžte vylepšiť preklad: {language}"
+  },
+  "settings_translation_help_desc": {
+    "message": "Narazili ste na nepresný alebo neprirodzený preklad? Napíšte nám, o ktorý riadok ide, alebo si stiahnite všetky texty a opravte ich priamo v tabuľke."
+  },
+  "settings_translation_help_report_action": {
+    "message": "Nahlásiť problém"
+  },
+  "settings_translation_help_download_action": {
+    "message": "Stiahnuť tabuľku prekladu"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Otvorte ju v Exceli alebo Tabuľkách Google, napíšte úpravy do stĺpca „Návrh“ a potom súbor presuňte na stránku „Nahlásiť problém“."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "Návrh"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "Poznámka"
+  },
   "settings_language_search_placeholder": {
     "message": "Hľadať jazyky"
   },

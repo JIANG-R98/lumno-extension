@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "Переведено с помощью ИИ. Если заметили ошибку, пожалуйста, сообщите нам."
   },
+  "settings_translation_help_action": {
+    "message": "Улучшить перевод"
+  },
+  "settings_translation_help_title": {
+    "message": "Помогите улучшить перевод: {language}"
+  },
+  "settings_translation_help_desc": {
+    "message": "Заметили неточный или неестественный перевод? Сообщите, какая это строка, или скачайте все тексты и исправьте их прямо в таблице."
+  },
+  "settings_translation_help_report_action": {
+    "message": "Сообщить о проблеме"
+  },
+  "settings_translation_help_download_action": {
+    "message": "Скачать таблицу перевода"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Откройте её в Excel или Google Таблицах, впишите исправления в столбец «Предложение», затем перетащите файл на страницу «Сообщить о проблеме»."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "Предложение"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "Примечание"
+  },
   "settings_language_search_placeholder": {
     "message": "Поиск языка"
   },

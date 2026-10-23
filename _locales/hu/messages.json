@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "MI által fordítva. Ha valami nem hangzik jól, kérjük, küldjön visszajelzést."
   },
+  "settings_translation_help_action": {
+    "message": "Fordítás javítása"
+  },
+  "settings_translation_help_title": {
+    "message": "Segítsen javítani a fordítást: {language}"
+  },
+  "settings_translation_help_desc": {
+    "message": "Pontatlan vagy természetellenes fordítást talált? Írja meg, melyik sorról van szó, vagy töltse le az összes szöveget, és javítsa közvetlenül egy táblázatban."
+  },
+  "settings_translation_help_report_action": {
+    "message": "Probléma jelentése"
+  },
+  "settings_translation_help_download_action": {
+    "message": "Fordítási táblázat letöltése"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Nyissa meg Excelben vagy a Google Táblázatokban, írja a javításait a „Javaslat” oszlopba, majd húzza a fájlt a „Probléma jelentése” oldalra."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "Javaslat"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "Megjegyzés"
+  },
   "settings_language_search_placeholder": {
     "message": "Nyelvek keresése"
   },

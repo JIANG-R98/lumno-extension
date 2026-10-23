@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "Käännetty tekoälyllä. Jos jokin kuulostaa väärältä, lähetä palautetta."
   },
+  "settings_translation_help_action": {
+    "message": "Paranna käännöstä"
+  },
+  "settings_translation_help_title": {
+    "message": "Auta parantamaan käännöstä: {language}"
+  },
+  "settings_translation_help_desc": {
+    "message": "Huomasitko virheellisen tai kömpelön käännöksen? Kerro meille, mikä rivi on kyseessä, tai lataa kaikki tekstit ja korjaa ne suoraan taulukossa."
+  },
+  "settings_translation_help_report_action": {
+    "message": "Ilmoita ongelmasta"
+  },
+  "settings_translation_help_download_action": {
+    "message": "Lataa käännöstaulukko"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Avaa se Excelissä tai Google Sheetsissä, kirjoita muutokset sarakkeeseen ”Ehdotus” ja vedä tiedosto sitten sivulle ”Ilmoita ongelmasta”."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "Ehdotus"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "Huomautus"
+  },
   "settings_language_search_placeholder": {
     "message": "Hae kieliä"
   },

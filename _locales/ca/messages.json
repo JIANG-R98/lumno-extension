@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "Traduït amb IA. Si alguna cosa no sona bé, envia'ns comentaris."
   },
+  "settings_translation_help_action": {
+    "message": "Millora la traducció"
+  },
+  "settings_translation_help_title": {
+    "message": "Millora la traducció: {language}"
+  },
+  "settings_translation_help_desc": {
+    "message": "Has vist una traducció incorrecta o poc natural? Digues-nos quina línia és, o baixa tot el text i corregeix-lo directament en un full de càlcul."
+  },
+  "settings_translation_help_report_action": {
+    "message": "Informa d'un problema"
+  },
+  "settings_translation_help_download_action": {
+    "message": "Baixa el full de traducció"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Obre'l amb Excel o Fulls de càlcul de Google, escriu els canvis a la columna «Suggeriment» i arrossega el fitxer a la pàgina «Informa d'un problema»."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "Suggeriment"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "Nota"
+  },
   "settings_language_search_placeholder": {
     "message": "Cerca idiomes"
   },

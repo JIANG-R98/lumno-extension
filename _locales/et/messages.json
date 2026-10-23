@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "Tõlkinud AI. Kui midagi kõlab valesti, saatke meile tagasisidet."
   },
+  "settings_translation_help_action": {
+    "message": "Paranda tõlget"
+  },
+  "settings_translation_help_title": {
+    "message": "Aidake tõlget parandada: {language}"
+  },
+  "settings_translation_help_desc": {
+    "message": "Märkasite ebatäpset või kohmakat tõlget? Öelge meile, milline rida see on, või laadige kogu tekst alla ja parandage see otse tabelis."
+  },
+  "settings_translation_help_report_action": {
+    "message": "Teata probleemist"
+  },
+  "settings_translation_help_download_action": {
+    "message": "Laadi tõlketabel alla"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Avage see Excelis või Google'i arvutustabelites, kirjutage muudatused veergu „Ettepanek“ ja lohistage fail lehele „Teata probleemist“."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "Ettepanek"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "Märkus"
+  },
   "settings_language_search_placeholder": {
     "message": "Otsi keeli"
   },

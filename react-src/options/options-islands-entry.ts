@@ -15,6 +15,7 @@ import { createShortcutHotkeyApi } from './shortcut-hotkey';
 import { createSiteSearchListApi } from './site-search-list';
 import { createWebDavListApi } from './webdav-list';
 import { createThemePickerApi } from './theme-picker';
+import { createTranslationHelpApi } from './translation-help';
 import { createTooltipViewApi } from '../shared/tooltip-view';
 import { createTabSwitcherViewApi } from '../overlay/tab-switcher';
 
@@ -38,6 +39,7 @@ const runtime = globalThis as typeof globalThis & {
     siteSearchList: ReturnType<typeof createSiteSearchListApi>;
     webDavList: ReturnType<typeof createWebDavListApi>;
     themePicker: ReturnType<typeof createThemePickerApi>;
+    translationHelp: ReturnType<typeof createTranslationHelpApi>;
     toast: ReturnType<typeof createToastApi>;
     tabSwitcher: ReturnType<typeof createTabSwitcherViewApi>;
   };
@@ -70,6 +72,7 @@ const runtime = globalThis as typeof globalThis & {
   LumnoOptionsWebDavList?: ReturnType<typeof createWebDavListApi>;
   LumnoOptionsThemePicker?: ReturnType<typeof createThemePickerApi>;
   LumnoOptionsThemePickerReact?: ReturnType<typeof createThemePickerApi>;
+  LumnoOptionsTranslationHelp?: ReturnType<typeof createTranslationHelpApi>;
   LumnoOptionsToast?: ReturnType<typeof createToastApi>;
   LumnoOptionsToastReact?: ReturnType<typeof createToastApi>;
   LumnoTooltipView?: ReturnType<typeof createTooltipViewApi>;
@@ -97,6 +100,7 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   const siteSearchListApi = createSiteSearchListApi();
   const webDavListApi = createWebDavListApi();
   const themePickerApi = createThemePickerApi();
+  const translationHelpApi = createTranslationHelpApi();
   const toastApi = createToastApi();
   const tooltipViewApi = createTooltipViewApi();
   const tabSwitcherApi =
@@ -131,6 +135,7 @@ if (!bootstrapState || !bootstrapState.reactReady) {
   runtime.LumnoOptionsWebDavList = webDavListApi;
   runtime.LumnoOptionsThemePickerReact = themePickerApi;
   runtime.LumnoOptionsThemePicker = themePickerApi;
+  runtime.LumnoOptionsTranslationHelp = translationHelpApi;
   runtime.LumnoOptionsToastReact = toastApi;
   runtime.LumnoOptionsToast = toastApi;
   runtime.LumnoTooltipViewReact = tooltipViewApi;
@@ -154,6 +159,7 @@ if (!bootstrapState || !bootstrapState.reactReady) {
     siteSearchList: siteSearchListApi,
     webDavList: webDavListApi,
     themePicker: themePickerApi,
+    translationHelp: translationHelpApi,
     toast: toastApi,
     tabSwitcher: tabSwitcherApi
   });

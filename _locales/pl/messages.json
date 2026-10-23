@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "Przetłumaczone przez AI. Jeśli coś brzmi niepoprawnie, prześlij nam opinię."
   },
+  "settings_translation_help_action": {
+    "message": "Popraw tłumaczenie"
+  },
+  "settings_translation_help_title": {
+    "message": "Pomóż ulepszyć tłumaczenie: {language}"
+  },
+  "settings_translation_help_desc": {
+    "message": "Widzisz błędne lub nienaturalne tłumaczenie? Napisz nam, o który wiersz chodzi, albo pobierz wszystkie teksty i popraw je bezpośrednio w arkuszu."
+  },
+  "settings_translation_help_report_action": {
+    "message": "Zgłoś problem"
+  },
+  "settings_translation_help_download_action": {
+    "message": "Pobierz arkusz tłumaczenia"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Otwórz go w Excelu lub Arkuszach Google, wpisz poprawki w kolumnie „Propozycja”, a potem przeciągnij plik na stronę „Zgłoś problem”."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "Propozycja"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "Uwagi"
+  },
   "settings_language_search_placeholder": {
     "message": "Szukaj języków"
   },

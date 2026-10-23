@@ -658,6 +658,15 @@ html[data-options-theme-mode="dark"] #_x_extension_overlay_page_theme_adaptation
   min-width: 0;
   padding: 4px var(--settings-content-edge-space) var(--settings-row-block-space);
 }
+._x_extension_feedback_support_links_2026_unique_:has(+ ._x_extension_feedback_support_footer_2026_unique_) {
+  padding-bottom: 0;
+}
+/* Quiet links under the tiles, right-aligned with the tiles' outer edge. */
+._x_extension_feedback_support_footer_2026_unique_ {
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px var(--settings-content-edge-space) var(--settings-row-block-space);
+}
 ._x_extension_feedback_support_link_2026_unique_ {
   --feedback-support-link-bg: var(--control-bg);
   --feedback-support-link-hover-bg: rgba(15, 23, 42, 0.07);
@@ -828,6 +837,60 @@ body[data-theme="dark"] ._x_extension_feedback_support_link_2026_unique_ {
 }
 body[data-theme="dark"] ._x_extension_feedback_support_qr_image_2026_unique_ {
   background: #18181b;
+}
+/* "Improve translation" beside the language picker: report a string or download the sheet. */
+#_x_extension_translation_help_2026_unique_ {
+  margin-left: auto;
+  display: flex;
+  flex-shrink: 0;
+}
+#_x_extension_translation_help_2026_unique_:empty {
+  display: none;
+}
+._x_extension_translation_help_anchor_2026_unique_ {
+  position: relative;
+  display: flex;
+}
+._x_extension_translation_help_popover_2026_unique_ {
+  --x-extension-menu-surface-transform-origin: top right;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  width: 300px;
+  max-width: calc(100vw - 32px);
+  padding: 8px;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--lumno-radius-2xl);
+  background: var(--menu-bg);
+  box-shadow: var(--sync-menu-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  visibility: hidden;
+}
+._x_extension_translation_help_popover_2026_unique_[data-open="true"] {
+  visibility: visible;
+}
+._x_extension_translation_help_desc_2026_unique_,
+._x_extension_translation_help_hint_2026_unique_ {
+  margin: 0;
+  padding: 0 6px;
+  color: var(--panel-subtext);
+  font-size: var(--lumno-font-size-sm);
+  line-height: 1.5;
+}
+._x_extension_translation_help_hint_2026_unique_ {
+  padding-bottom: 2px;
+  font-size: var(--lumno-font-size-xs);
+}
+._x_extension_translation_help_actions_2026_unique_ {
+  display: grid;
+  gap: 6px;
+}
+._x_extension_translation_help_actions_2026_unique_ > ._x_extension_feedback_support_link_2026_unique_:disabled {
+  cursor: progress;
+  opacity: 0.6;
 }
 /* "Ask in the search box": hover or focus plays a small demo of lm → Tab → question → pages. */
 ._x_extension_help_ask_anchor_2026_unique_ {

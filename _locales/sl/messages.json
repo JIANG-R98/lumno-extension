@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "Prevedla umetna inteligenca. Če se kaj ne bere pravilno, nam pošljite povratne informacije."
   },
+  "settings_translation_help_action": {
+    "message": "Izboljšaj prevod"
+  },
+  "settings_translation_help_title": {
+    "message": "Pomagajte izboljšati prevod: {language}"
+  },
+  "settings_translation_help_desc": {
+    "message": "Ste opazili netočen ali nenaraven prevod? Povejte nam, za katero vrstico gre, ali prenesite vsa besedila in jih popravite neposredno v preglednici."
+  },
+  "settings_translation_help_report_action": {
+    "message": "Prijavi težavo"
+  },
+  "settings_translation_help_download_action": {
+    "message": "Prenesi preglednico prevoda"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Odprite jo v Excelu ali Google Preglednicah, vpišite popravke v stolpec »Predlog«, nato povlecite datoteko na stran »Prijavi težavo«."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "Predlog"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "Opomba"
+  },
   "settings_language_search_placeholder": {
     "message": "Iskanje jezikov"
   },

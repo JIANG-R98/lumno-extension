@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "Tulkojis AI. Ja kaut kas izklausās nepareizi, lūdzu, sniedziet atsauksmi."
   },
+  "settings_translation_help_action": {
+    "message": "Uzlabot tulkojumu"
+  },
+  "settings_translation_help_title": {
+    "message": "Palīdziet uzlabot tulkojumu: {language}"
+  },
+  "settings_translation_help_desc": {
+    "message": "Pamanījāt neprecīzu vai nedabisku tulkojumu? Pastāstiet mums, kura tā ir rinda, vai lejupielādējiet visu tekstu un izlabojiet to tieši izklājlapā."
+  },
+  "settings_translation_help_report_action": {
+    "message": "Ziņot par problēmu"
+  },
+  "settings_translation_help_download_action": {
+    "message": "Lejupielādēt tulkojuma tabulu"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Atveriet to programmā Excel vai Google izklājlapās, ierakstiet labojumus kolonnā “Ieteikums” un pēc tam ievelciet failu lapā “Ziņot par problēmu”."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "Ieteikums"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "Piezīme"
+  },
   "settings_language_search_placeholder": {
     "message": "Meklēt valodas"
   },

@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "Tradotto con l'IA. Se qualcosa non ti sembra corretto, inviaci un feedback."
   },
+  "settings_translation_help_action": {
+    "message": "Migliora la traduzione"
+  },
+  "settings_translation_help_title": {
+    "message": "Aiutaci a migliorare la traduzione: {language}"
+  },
+  "settings_translation_help_desc": {
+    "message": "Hai notato una traduzione sbagliata o poco naturale? Dicci di quale riga si tratta, oppure scarica tutti i testi e correggili direttamente in un foglio di calcolo."
+  },
+  "settings_translation_help_report_action": {
+    "message": "Segnala un problema"
+  },
+  "settings_translation_help_download_action": {
+    "message": "Scarica il foglio di traduzione"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Aprilo in Excel o in Fogli Google, scrivi le modifiche nella colonna «Suggerimento», poi trascina il file nella pagina «Segnala un problema»."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "Suggerimento"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "Nota"
+  },
   "settings_language_search_placeholder": {
     "message": "Cerca lingue"
   },

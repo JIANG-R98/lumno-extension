@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "Μετάφραση από AI. Αν κάτι δεν διαβάζεται σωστά, στείλτε μας σχόλια."
   },
+  "settings_translation_help_action": {
+    "message": "Βελτίωση μετάφρασης"
+  },
+  "settings_translation_help_title": {
+    "message": "Βελτιώστε τη μετάφραση: {language}"
+  },
+  "settings_translation_help_desc": {
+    "message": "Εντοπίσατε λανθασμένη ή αφύσικη μετάφραση; Πείτε μας ποια γραμμή είναι ή κατεβάστε όλο το κείμενο και διορθώστε το απευθείας σε υπολογιστικό φύλλο."
+  },
+  "settings_translation_help_report_action": {
+    "message": "Αναφορά προβλήματος"
+  },
+  "settings_translation_help_download_action": {
+    "message": "Λήψη φύλλου μετάφρασης"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Ανοίξτε το στο Excel ή στα Υπολογιστικά φύλλα Google, γράψτε τις αλλαγές σας στη στήλη «Πρόταση» και μετά σύρετε το αρχείο στη σελίδα «Αναφορά προβλήματος»."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "Πρόταση"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "Σημείωση"
+  },
   "settings_language_search_placeholder": {
     "message": "Αναζήτηση γλωσσών"
   },

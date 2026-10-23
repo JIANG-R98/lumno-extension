@@ -23,6 +23,9 @@ type OptionsRuntime = typeof globalThis & {
   LumnoOptionsFeedbackSupportReact?: {
     implementation?: string;
   };
+  LumnoOptionsTranslationHelp?: {
+    implementation?: string;
+  };
   LumnoOptionsInfoButton?: {
     implementation?: string;
   };
@@ -117,6 +120,7 @@ function clearRuntime(): void {
   delete runtime.LumnoOptionsBlacklistListReact;
   delete runtime.LumnoOptionsFeedbackSupport;
   delete runtime.LumnoOptionsFeedbackSupportReact;
+  delete runtime.LumnoOptionsTranslationHelp;
   delete runtime.LumnoOptionsInfoButton;
   delete runtime.LumnoOptionsInfoButtonReact;
   delete runtime.LumnoOptionsPopconfirm;
@@ -216,6 +220,7 @@ describe('Options React islands entry', () => {
     expect(runtime.LumnoOptionsThemePickerReact).toBe(
       runtime.LumnoOptionsThemePicker
     );
+    expect(runtime.LumnoOptionsTranslationHelp?.implementation).toBe('react');
     expect(runtime.LumnoOptionsToast?.implementation).toBe('react');
     expect(runtime.LumnoOptionsToastReact).toBe(runtime.LumnoOptionsToast);
     expect(runtime.LumnoOverlayTabSwitcherView?.implementation).toBe('react');
@@ -238,6 +243,7 @@ describe('Options React islands entry', () => {
       siteSearchList: runtime.LumnoOptionsSiteSearchList,
       webDavList: runtime.LumnoOptionsWebDavList,
       themePicker: runtime.LumnoOptionsThemePicker,
+      translationHelp: runtime.LumnoOptionsTranslationHelp,
       toast: runtime.LumnoOptionsToast,
       tabSwitcher: runtime.LumnoOverlayTabSwitcherView
     });

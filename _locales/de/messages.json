@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "Von KI übersetzt. Wenn etwas falsch klingt, senden Sie uns bitte Feedback."
   },
+  "settings_translation_help_action": {
+    "message": "Übersetzung verbessern"
+  },
+  "settings_translation_help_title": {
+    "message": "Übersetzung verbessern: {language}"
+  },
+  "settings_translation_help_desc": {
+    "message": "Ungenaue oder holprige Übersetzung entdeckt? Sagen Sie uns, welche Zeile es ist, oder laden Sie alle Texte herunter und korrigieren Sie sie direkt in einer Tabelle."
+  },
+  "settings_translation_help_report_action": {
+    "message": "Problem melden"
+  },
+  "settings_translation_help_download_action": {
+    "message": "Übersetzungstabelle herunterladen"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Öffnen Sie sie in Excel oder Google Tabellen, tragen Sie Ihre Änderungen in die Spalte „Vorschlag“ ein und ziehen Sie die Datei dann auf die Seite „Problem melden“."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "Vorschlag"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "Anmerkung"
+  },
   "settings_language_search_placeholder": {
     "message": "Sprachen suchen"
   },

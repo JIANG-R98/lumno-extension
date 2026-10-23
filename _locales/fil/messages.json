@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "Isinalin ng AI. Kung may mali o kakaiba, magpadala ng feedback."
   },
+  "settings_translation_help_action": {
+    "message": "Pagandahin ang salin"
+  },
+  "settings_translation_help_title": {
+    "message": "Tumulong pagandahin ang salin: {language}"
+  },
+  "settings_translation_help_desc": {
+    "message": "May nakitang mali o hindi natural na salin? Sabihin sa amin kung aling linya, o i-download ang lahat ng teksto at ayusin ito mismo sa spreadsheet."
+  },
+  "settings_translation_help_report_action": {
+    "message": "Mag-ulat ng problema"
+  },
+  "settings_translation_help_download_action": {
+    "message": "I-download ang translation sheet"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Buksan ito sa Excel o Google Sheets, isulat ang iyong mga pagbabago sa column na “Mungkahi”, pagkatapos ay i-drag ang file sa pahinang “Mag-ulat ng problema”."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "Mungkahi"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "Tala"
+  },
   "settings_language_search_placeholder": {
     "message": "Maghanap ng wika"
   },

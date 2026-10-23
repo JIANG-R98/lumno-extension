@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "Превео AI. Ако нешто не звучи добро, пошаљите нам повратне информације."
   },
+  "settings_translation_help_action": {
+    "message": "Побољшај превод"
+  },
+  "settings_translation_help_title": {
+    "message": "Помозите да се побољша превод: {language}"
+  },
+  "settings_translation_help_desc": {
+    "message": "Приметили сте нетачан или неприродан превод? Реците нам о ком реду је реч или преузмите сав текст и исправите га директно у табели."
+  },
+  "settings_translation_help_report_action": {
+    "message": "Пријави проблем"
+  },
+  "settings_translation_help_download_action": {
+    "message": "Преузми табелу превода"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Отворите је у Excel-у или Google табелама, упишите измене у колону „Предлог”, а затим превуците датотеку на страницу „Пријави проблем”."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "Предлог"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "Напомена"
+  },
   "settings_language_search_placeholder": {
     "message": "Претражите језике"
   },

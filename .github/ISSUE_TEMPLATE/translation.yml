@@ -1,0 +1,38 @@
+name: Translation / 翻译改进
+description: Point out a wrong or unnatural translation, or send a filled translation spreadsheet. / 指出不准确或不自然的译文，或提交填好的翻译表格。
+title: "[Translation] "
+labels: [translation]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping Lumno read naturally in your language. Write in any language you like. / 感谢你帮 Lumno 改进翻译，可以用任何语言填写。
+
+        To fix many strings at once, open Lumno Settings → General → Language → Improve translation → Download translation spreadsheet, fill in the Suggestion column, and drag the file into the box below. / 想一次改很多处？在 Lumno 设置 → 全局设置 → 语言 → 改进翻译 中下载翻译表格，填写「建议译文」一列，再把文件拖进下面的输入框。
+
+  - type: input
+    id: language
+    attributes:
+      label: Language / 语言
+      placeholder: 日本語 (ja)
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What should change / 需要修改的地方
+      description: Where the text appears, what it says now, and what it should say. Drag the filled spreadsheet here if you have one. / 文字出现在哪里、现在写的是什么、应该改成什么。如果填好了翻译表格，直接把文件拖到这里。
+      placeholder: |
+        Where / 位置: Settings → General → Update notice
+        Now / 现在: …
+        Better / 建议: …
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Lumno version / Lumno 版本
+      description: Shown at the top of the Settings page. / 显示在设置页顶部。
+      placeholder: 1.1.4

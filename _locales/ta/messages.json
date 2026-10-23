@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "AI மூலம் மொழிபெயர்க்கப்பட்டது. ஏதேனும் தவறாகத் தெரிந்தால், கருத்தை அனுப்பவும்."
   },
+  "settings_translation_help_action": {
+    "message": "மொழிபெயர்ப்பை மேம்படுத்து"
+  },
+  "settings_translation_help_title": {
+    "message": "{language} மொழிபெயர்ப்பை மேம்படுத்த உதவுங்கள்"
+  },
+  "settings_translation_help_desc": {
+    "message": "தவறான அல்லது இயல்பற்ற மொழிபெயர்ப்பைக் கண்டீர்களா? எந்த வரி என்று எங்களிடம் சொல்லுங்கள், அல்லது எல்லா உரையையும் பதிவிறக்கி நேரடியாக விரிதாளில் திருத்துங்கள்."
+  },
+  "settings_translation_help_report_action": {
+    "message": "சிக்கலைப் புகாரளி"
+  },
+  "settings_translation_help_download_action": {
+    "message": "மொழிபெயர்ப்புத் தாளைப் பதிவிறக்கு"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "அதை Excel அல்லது Google Sheets-இல் திறந்து, “பரிந்துரைக்கும் மொழிபெயர்ப்பு” நெடுவரிசையில் உங்கள் மாற்றங்களை எழுதி, பின்னர் கோப்பை “சிக்கலைப் புகாரளி” பக்கத்திற்கு இழுத்து விடுங்கள்."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "பரிந்துரைக்கும் மொழிபெயர்ப்பு"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "குறிப்பு"
+  },
   "settings_language_search_placeholder": {
     "message": "மொழிகளைத் தேடு"
   },

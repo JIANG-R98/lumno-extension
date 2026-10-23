@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "AI ഉപയോഗിച്ച് വിവർത്തനം ചെയ്\u200cതത്. എന്തെങ്കിലും തെറ്റായി തോന്നിയാൽ, ദയവായി ഫീഡ്\u200cബാക്ക് അയയ്ക്കുക."
   },
+  "settings_translation_help_action": {
+    "message": "വിവർത്തനം മെച്ചപ്പെടുത്തുക"
+  },
+  "settings_translation_help_title": {
+    "message": "{language} വിവർത്തനം മെച്ചപ്പെടുത്താൻ സഹായിക്കുക"
+  },
+  "settings_translation_help_desc": {
+    "message": "തെറ്റായതോ അസ്വാഭാവികമോ ആയ വിവർത്തനം കണ്ടോ? ഏത് വരിയാണെന്ന് ഞങ്ങളോട് പറയുക, അല്ലെങ്കിൽ എല്ലാ ടെക്സ്റ്റും ഡൗൺലോഡ് ചെയ്ത് സ്പ്രെഡ്ഷീറ്റിൽ നേരിട്ട് തിരുത്തുക."
+  },
+  "settings_translation_help_report_action": {
+    "message": "പ്രശ്നം റിപ്പോർട്ട് ചെയ്യുക"
+  },
+  "settings_translation_help_download_action": {
+    "message": "വിവർത്തന ഷീറ്റ് ഡൗൺലോഡ് ചെയ്യുക"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Excel-ലോ Google Sheets-ലോ തുറന്ന്, “നിർദ്ദേശിക്കുന്ന വിവർത്തനം” കോളത്തിൽ നിങ്ങളുടെ മാറ്റങ്ങൾ എഴുതുക, തുടർന്ന് ഫയൽ “പ്രശ്നം റിപ്പോർട്ട് ചെയ്യുക” പേജിലേക്ക് വലിച്ചിടുക."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "നിർദ്ദേശിക്കുന്ന വിവർത്തനം"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "കുറിപ്പ്"
+  },
   "settings_language_search_placeholder": {
     "message": "ഭാഷകൾ തിരയുക"
   },

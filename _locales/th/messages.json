@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "แปลโดย AI หากพบข้อความที่ไม่ถูกต้อง โปรดส่งความคิดเห็นถึงเรา"
   },
+  "settings_translation_help_action": {
+    "message": "ปรับปรุงคำแปล"
+  },
+  "settings_translation_help_title": {
+    "message": "ช่วยปรับปรุงคำแปล: {language}"
+  },
+  "settings_translation_help_desc": {
+    "message": "พบคำแปลที่ไม่ถูกต้องหรือไม่เป็นธรรมชาติใช่ไหม บอกเราว่าเป็นบรรทัดไหน หรือดาวน์โหลดข้อความทั้งหมดแล้วแก้ไขในสเปรดชีตได้เลย"
+  },
+  "settings_translation_help_report_action": {
+    "message": "รายงานปัญหา"
+  },
+  "settings_translation_help_download_action": {
+    "message": "ดาวน์โหลดชีตคำแปล"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "เปิดใน Excel หรือ Google ชีต เขียนการแก้ไขในคอลัมน์ “คำแปลที่แนะนำ” แล้วลากไฟล์ไปยังหน้า “รายงานปัญหา”"
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "คำแปลที่แนะนำ"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "หมายเหตุ"
+  },
   "settings_language_search_placeholder": {
     "message": "ค้นหาภาษา"
   },

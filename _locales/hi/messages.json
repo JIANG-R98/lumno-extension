@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "इसका अनुवाद AI ने किया है। अगर कुछ गलत लगे, तो कृपया सुझाव भेजें।"
   },
+  "settings_translation_help_action": {
+    "message": "अनुवाद सुधारें"
+  },
+  "settings_translation_help_title": {
+    "message": "{language} अनुवाद सुधारने में मदद करें"
+  },
+  "settings_translation_help_desc": {
+    "message": "कोई गलत या अटपटा अनुवाद दिखा? हमें बताएं कि कौन-सी पंक्ति है, या सारा टेक्स्ट डाउनलोड करके सीधे स्प्रेडशीट में सुधारें।"
+  },
+  "settings_translation_help_report_action": {
+    "message": "समस्या की रिपोर्ट करें"
+  },
+  "settings_translation_help_download_action": {
+    "message": "अनुवाद शीट डाउनलोड करें"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "इसे Excel या Google Sheets में खोलें, “सुझाया गया अनुवाद” कॉलम में अपने बदलाव लिखें, फिर फ़ाइल को “समस्या की रिपोर्ट करें” पेज पर खींचकर छोड़ें।"
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "सुझाया गया अनुवाद"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "टिप्पणी"
+  },
   "settings_language_search_placeholder": {
     "message": "भाषाएं खोजें"
   },

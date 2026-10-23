@@ -284,6 +284,30 @@
   "settings_language_machine_note": {
     "message": "Imetafsiriwa na AI. Ikiwa kuna kitu kisicho sahihi, tafadhali tuma maoni."
   },
+  "settings_translation_help_action": {
+    "message": "Boresha tafsiri"
+  },
+  "settings_translation_help_title": {
+    "message": "Saidia kuboresha tafsiri ya {language}"
+  },
+  "settings_translation_help_desc": {
+    "message": "Umeona tafsiri isiyo sahihi au isiyo ya kawaida? Tuambie ni mstari upi, au pakua maandishi yote na uyarekebishe moja kwa moja kwenye lahajedwali."
+  },
+  "settings_translation_help_report_action": {
+    "message": "Ripoti tatizo"
+  },
+  "settings_translation_help_download_action": {
+    "message": "Pakua jedwali la tafsiri"
+  },
+  "settings_translation_help_download_hint": {
+    "message": "Lifungue kwenye Excel au Google Sheets, andika mabadiliko yako kwenye safu ya “Pendekezo”, kisha buruta faili hadi kwenye ukurasa wa “Ripoti tatizo”."
+  },
+  "settings_translation_help_sheet_suggestion": {
+    "message": "Pendekezo"
+  },
+  "settings_translation_help_sheet_note": {
+    "message": "Dokezo"
+  },
   "settings_language_search_placeholder": {
     "message": "Tafuta lugha"
   },
