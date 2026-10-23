@@ -1,7 +1,9 @@
 const assert = require('assert');
-const { JSDOM } = require('jsdom');
+const { JSDOM, VirtualConsole } = require('jsdom');
 const { moduleScript } = require('../helpers/module-script');
 const linkPreview = require('../../src/background/link-preview.js');
+const settings = require('../../src/shared/settings.js');
+const { toPreviewFrameUrl } = require('../../src/shared/link-preview-frame-url.js');
 
 // The link preview: the background service that prepares and opens a
 // preview for a tab, and the content script that turns Shift+click on a link
@@ -60,6 +62,10 @@ async function testRuleScope() {
     'header removal must stay limited to subframes of the previewing tab');
   assert.deepStrictEqual(rule.action.responseHeaders.map((entry) => entry.header),
     ['x-frame-options', 'content-security-policy']);
+  const workerRule = linkPreview.buildWorkerHeaderRule();
+  assert.deepStrictEqual(workerRule.condition.tabIds, [-1], 'the second rule reaches service workers\' requests only');
+  assert.deepStrictEqual(workerRule.action.responseHeaders, [{ header: 'x-frame-options', operation: 'remove' }],
+    'a worker may cache what it fetched for the site\'s own tabs, so its CSP stays');
   assert.ok(linkPreview.isPreviewableUrl('https://example.com/a'));
   assert.ok(!linkPreview.isPreviewableUrl('javascript:alert(1)'));
   assert.ok(!linkPreview.isPreviewableUrl('chrome://settings'));
@@ -76,6 +82,7 @@ async function testPrepareThenOpen() {
   assert.strictEqual(calls.injected.length, 1);
   assert.deepStrictEqual(calls.injected[0].target, { tabId: 3, frameIds: [0] });
   assert.ok(sessionRules.has(3), 'the tab may frame refusing pages while its preview is open');
+  assert.ok(sessionRules.has(linkPreview.WORKER_RULE_ID), 'and so may pages its site\'s service worker serves');
   const actions = calls.sent.map((entry) => entry.message.action);
   assert.deepStrictEqual(actions, ['lumnoLinkPreviewPrewarm', 'lumnoLinkPreviewScreenshot', 'lumnoLinkPreviewShow']);
   assert.strictEqual(calls.sent[1].message.screenshot, 'data:image/jpeg;base64,AAAA',
@@ -89,6 +96,18 @@ async function testPrepareThenOpen() {
   assert.ok(sessionRules.has(3), 'a close from a replaced preview must not drop the open one');
   await service.discard(3, show.token);
   assert.ok(!sessionRules.has(3), 'closing the preview removes the header rule');
+  assert.ok(!sessionRules.has(linkPreview.WORKER_RULE_ID), 'with no preview left, workers\' requests keep their headers');
+}
+
+async function testWorkerRuleOutlivesOnePreview() {
+  const { chromeApi, sessionRules } = createChromeMock();
+  const service = linkPreview.createLinkPreviewService({ chromeApi });
+  await service.open({ id: 5, windowId: 1 }, 'https://example.com/a');
+  await service.open({ id: 6, windowId: 2 }, 'https://example.com/b');
+  await service.handleTabRemoved(5);
+  assert.ok(sessionRules.has(linkPreview.WORKER_RULE_ID), 'another tab\'s preview still needs the workers\' rule');
+  await service.handleTabRemoved(6);
+  assert.ok(!sessionRules.has(linkPreview.WORKER_RULE_ID));
 }
 
 async function testUnclaimedPrepareExpires() {
@@ -218,9 +237,11 @@ async function testReconcileDropsRulesWithoutPreview() {
     respond: (message) => (message.action === 'lumnoLinkPreviewPing' ? { token: '' } : true)
   });
   sessionRules.set(8, linkPreview.buildFrameHeaderRule(8));
+  sessionRules.set(linkPreview.WORKER_RULE_ID, linkPreview.buildWorkerHeaderRule());
   const service = linkPreview.createLinkPreviewService({ chromeApi });
   await service.reconcileRules();
   assert.ok(!sessionRules.has(8), 'a rule whose preview is gone is removed when the worker wakes');
+  assert.ok(!sessionRules.has(linkPreview.WORKER_RULE_ID), 'and the workers\' rule with it');
 }
 
 function loadTrigger(options) {
@@ -230,7 +251,8 @@ function loadTrigger(options) {
     <a id="hash" href="#section">hash</a>
     <a id="file" href="https://other.example/file.zip" download>file</a>
     <a id="mail" href="mailto:a@example.com">mail</a>
-  </body>`, { runScripts: 'outside-only', url: 'https://docs.example.test/page' });
+    ${config.body || ''}
+  </body>`, { runScripts: 'outside-only', url: config.url || 'https://docs.example.test/page' });
   const { window } = dom;
   const sent = [];
   const listeners = [];
@@ -253,6 +275,12 @@ function loadTrigger(options) {
       }
     }
   };
+  if (config.storage) {
+    window.chrome.storage = config.storage;
+  }
+  if (config.navigation) {
+    window.navigation = config.navigation;
+  }
   window.eval(moduleScript('src/content/link-preview-trigger.js'));
   // The events of one press, in Chrome's order. Returns the types whose
   // default was prevented; `claimed` collects the types kept from the page.
@@ -273,7 +301,13 @@ function loadTrigger(options) {
         clientX: 30,
         clientY: 40,
         target,
-        composedPath: () => [target, window.document.body, window.document.documentElement, window.document, window],
+        composedPath: () => {
+          const path = [];
+          for (let node = target; node; node = node.parentNode) {
+            path.push(node);
+          }
+          return path.concat(window);
+        },
         preventDefault() {
           prevented.push(type);
         },
@@ -313,8 +347,130 @@ function testOtherPressesKeepDefault() {
   assert.deepStrictEqual(page.claimed, [], 'presses the preview does not take stay with the page');
 }
 
+function testShownAddressOpensPreview() {
+  const page = loadTrigger({
+    body: `
+      <span id="shown" role="link">https://lumno.kubai.design</span>
+      <a id="scripted" href="javascript:void(0)"><span id="scripted-text">www.example.org/a</span></a>
+      <span id="plain">https://plain.example/text</span>
+      <span id="name" role="link">README.md</span>
+      <span id="sentence" role="link">see https://other.example/x</span>`
+  });
+  page.press('shown');
+  assert.strictEqual(page.sent[0].url, 'https://lumno.kubai.design/',
+    'a clickable address shown as text is previewed, not left to the page to open in a new window');
+  page.sent.length = 0;
+  page.press('scripted-text');
+  assert.strictEqual(page.sent[0].url, 'https://www.example.org/a',
+    'a link that runs script but shows an address opens that address');
+  page.sent.length = 0;
+  ['plain', 'name', 'sentence'].forEach((id) => {
+    assert.deepStrictEqual(page.press(id), [], `${id}: text that is not a clickable address keeps Shift+click`);
+  });
+  assert.deepStrictEqual(page.sent, []);
+}
+
+function testPostOpensPreview() {
+  const post = `
+    <article data-testid="tweet">
+      <div id="post-body">Tide is now available<div role="button"><span id="like">1</span></div></div>
+      <a href="/albertuvw/status/123"><time>38m</time></a>
+      <div role="link"><span id="quote">Unfold. Naturally.</span><a href="/tide_fm_app/status/99"><time>51m</time></a></div>
+    </article>`;
+  const timeline = loadTrigger({ url: 'https://x.com/home', body: post });
+  timeline.press('post-body');
+  assert.strictEqual(timeline.sent[0].url, 'https://x.com/albertuvw/status/123',
+    'a press anywhere on an X post previews the post');
+  timeline.sent.length = 0;
+  assert.deepStrictEqual(timeline.press('like'), [], 'the post\'s buttons keep their press');
+  const ownPage = loadTrigger({ url: 'https://x.com/albertuvw/status/123', body: post });
+  assert.deepStrictEqual(ownPage.press('post-body'), [], 'the post a page shows has nothing to preview');
+  const elsewhere = loadTrigger({ body: post });
+  assert.deepStrictEqual(elsewhere.press('post-body'), [], 'only X posts open from anywhere in them');
+}
+
+function testPageNavigationAfterPressCancelled() {
+  const listeners = [];
+  const navigation = {
+    canGoBack: false,
+    addEventListener(type, listener) {
+      listeners.push({ type, listener });
+    },
+    removeEventListener() {}
+  };
+  const navigate = (navigationType) => {
+    let cancelled = false;
+    const event = { navigationType, cancelable: true, preventDefault() { cancelled = true; } };
+    listeners.filter((entry) => entry.type === 'navigate').forEach((entry) => entry.listener(event));
+    return cancelled;
+  };
+  const page = loadTrigger({ navigation });
+  assert.strictEqual(navigate('push'), false, 'the page navigates freely before any press');
+  page.press('out');
+  assert.strictEqual(navigate('push'), true,
+    'a page that saw the press first (the trigger injected late) cannot navigate under the preview');
+  assert.strictEqual(navigate('replace'), true);
+  assert.strictEqual(navigate('traverse'), false, 'Back and Forward still work');
+  assert.strictEqual(navigate('reload'), false, 'reloading still works');
+}
+
+function testXPostLoadsPastServiceWorker() {
+  assert.strictEqual(toPreviewFrameUrl('https://x.com/__oQuery/status/2113594440686453210'),
+    'https://x.com/i/web/status/2113594440686453210',
+    'an X post loads through the address X\'s service worker leaves to the network');
+  assert.strictEqual(toPreviewFrameUrl('https://twitter.com/a_b/status/42/photo/1'), 'https://x.com/i/web/status/42');
+  assert.strictEqual(toPreviewFrameUrl('https://x.com/a_b'), 'https://x.com/a_b', 'other X pages load as they are');
+  assert.strictEqual(toPreviewFrameUrl('https://x.com/i/web/status/42'), 'https://x.com/i/web/status/42');
+  assert.strictEqual(toPreviewFrameUrl('https://example.com/a/status/42'), 'https://example.com/a/status/42');
+}
+
 // Storage areas holding the given values, with the change event a test can
 // fire as Chrome would.
+function createTriggerStorage(values) {
+  const changeListeners = [];
+  const area = (name) => ({
+    get(keys, callback) {
+      const result = {};
+      keys.forEach((key) => {
+        if (Object.hasOwn(values[name] || {}, key)) {
+          result[key] = values[name][key];
+        }
+      });
+      callback(result);
+    }
+  });
+  return {
+    sync: area('sync'),
+    local: area('local'),
+    onChanged: {
+      addListener: (listener) => changeListeners.push(listener),
+      removeListener() {}
+    },
+    change(areaName, key, newValue) {
+      changeListeners.forEach((listener) => listener({ [key]: { newValue } }, areaName));
+    }
+  };
+}
+
+function testSwitchTurnsTriggerOff() {
+  const ENABLED_KEY = settings.LINK_PREVIEW_ENABLED_STORAGE_KEY;
+  const storage = createTriggerStorage({ sync: { [ENABLED_KEY]: false } });
+  const page = loadTrigger({ storage });
+  assert.deepStrictEqual(page.press('out'), [], 'with the switch off a Shift+click keeps Chrome\'s own behavior');
+  assert.deepStrictEqual(page.sent, []);
+  assert.deepStrictEqual(page.claimed, [], 'and the page still sees the press');
+  storage.change('sync', ENABLED_KEY, true);
+  assert.deepStrictEqual(page.press('out'), ['mousedown', 'click'], 'turning the switch on takes effect without a reload');
+
+  const localPrimary = createTriggerStorage({
+    sync: { [ENABLED_KEY]: true },
+    local: { [ENABLED_KEY]: false, [settings.LOCAL_PRIMARY_STORAGE_KEY]: true }
+  });
+  assert.deepStrictEqual(loadTrigger({ storage: localPrimary }).press('out'), [],
+    'when settings stay local, the local value decides');
+  assert.strictEqual(settings.normalizeLinkPreviewEnabled(undefined), true, 'link preview is on until turned off');
+}
+
 function testPreviewFrameReportsIn() {
   const dom = new JSDOM('<!doctype html><body><iframe name="lumno-link-preview"></iframe></body>', {
     runScripts: 'outside-only',
@@ -337,9 +493,84 @@ function testPreviewFrameReportsIn() {
     .some((style) => /:root\s*\{\s*overscroll-behavior:\s*contain/.test(style.textContent));
   assert.ok(contained,
     'scrolling past the previewed page\'s edge must not chain to the page under the preview');
-  const thinScrollbar = Array.from(frameWindow.document.querySelectorAll('style'))
-    .some((style) => /scrollbar-width:\s*thin/.test(style.textContent));
-  assert.ok(thinScrollbar, 'the previewed page shows a thin scrollbar, not a classic bar beside the window');
+  const styles = Array.from(frameWindow.document.querySelectorAll('style')).map((style) => style.textContent).join('\n');
+  assert.ok(/::-webkit-scrollbar-track\s*\{[^}]*margin:\s*\d+px/.test(styles),
+    'the previewed page\'s scrollbar stops short of the window\'s rounded corners');
+  assert.ok(/scrollbar-width:\s*auto/.test(styles) && /scrollbar-width:\s*thin/.test(styles),
+    'Chromium draws the scrollbar parts, other browsers a thin standard bar');
+}
+
+function testShiftClickInsidePreviewStaysInPreview() {
+  const virtualConsole = new VirtualConsole();
+  const notImplemented = [];
+  virtualConsole.on('jsdomError', (error) => notImplemented.push(String(error.message)));
+  const dom = new JSDOM('<!doctype html><body><iframe name="lumno-link-preview"></iframe></body>', {
+    runScripts: 'outside-only',
+    url: 'https://docs.example.test/page',
+    virtualConsole
+  });
+  dom.window.postMessage = () => {};
+  const frameWindow = dom.window.document.querySelector('iframe').contentWindow;
+  frameWindow.name = 'lumno-link-preview';
+  frameWindow.document.body.innerHTML = '<a id="next" href="https://docs.example.test/next">next</a>';
+  const sent = [];
+  frameWindow.chrome = { runtime: { lastError: null, sendMessage: (message) => sent.push(message) } };
+  const listeners = [];
+  const originalAdd = frameWindow.addEventListener.bind(frameWindow);
+  frameWindow.addEventListener = (type, listener, options) => {
+    listeners.push({ type, listener });
+    originalAdd(type, listener, options);
+  };
+  frameWindow.eval(moduleScript('src/content/link-preview-trigger.js'));
+  const target = frameWindow.document.getElementById('next');
+  const prevented = [];
+  ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'].forEach((type) => {
+    const event = {
+      type,
+      isTrusted: true,
+      button: 0,
+      shiftKey: true,
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+      target,
+      composedPath: () => [target, frameWindow.document.body, frameWindow.document.documentElement, frameWindow.document, frameWindow],
+      preventDefault() {
+        prevented.push(type);
+      },
+      stopImmediatePropagation() {}
+    };
+    listeners.filter((entry) => entry.type === type).forEach((entry) => entry.listener(event));
+  });
+  assert.deepStrictEqual(prevented, ['mousedown', 'click'], 'Chrome does not open a new window for it');
+  assert.deepStrictEqual(sent, [], 'no second preview starts from inside the preview');
+  assert.ok(notImplemented.some((message) => /navigation/i.test(message)),
+    'Shift+click on a link inside the preview opens it in the preview, where Back returns');
+}
+
+async function testPreviewFrameReportsBackground() {
+  const dom = new JSDOM('<!doctype html><body><iframe name="lumno-link-preview"></iframe></body>', {
+    runScripts: 'outside-only',
+    url: 'https://docs.example.test/page'
+  });
+  const parentMessages = [];
+  dom.window.postMessage = (message) => parentMessages.push(message);
+  const frameWindow = dom.window.document.querySelector('iframe').contentWindow;
+  frameWindow.name = 'lumno-link-preview';
+  frameWindow.chrome = { runtime: { lastError: null, sendMessage() {} } };
+  frameWindow.document.body.style.backgroundColor = 'rgb(13, 17, 23)';
+  frameWindow.eval(moduleScript('src/content/link-preview-trigger.js'));
+  const backgrounds = () => parentMessages.filter((message) => message.type === 'background').map((message) => message.color);
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  await wait(320);
+  assert.deepStrictEqual(backgrounds(), ['rgb(13, 17, 23)'],
+    'the preview window takes the page\'s background, so its corners and scrollbar track show no seam');
+  frameWindow.document.body.style.backgroundColor = 'rgb(0, 0, 0)';
+  await wait(60);
+  frameWindow.document.body.style.backgroundColor = 'rgb(255, 255, 255)';
+  await wait(320);
+  assert.deepStrictEqual(backgrounds(), ['rgb(13, 17, 23)', 'rgb(255, 255, 255)'],
+    'a page that switches theme reports where it settles, not a color it passes through (X starts black)');
 }
 
 async function testPreviewFrameEscape() {
@@ -389,9 +620,17 @@ async function testPreviewFrameEscape() {
   await testFailedShowOpensNoTab();
   await testOpenPreviewDroppedWhenSurfaceGone();
   await testReconcileDropsRulesWithoutPreview();
+  await testWorkerRuleOutlivesOnePreview();
   testShiftClickOpensPreview();
   testOtherPressesKeepDefault();
+  testShownAddressOpensPreview();
+  testPostOpensPreview();
+  testPageNavigationAfterPressCancelled();
+  testXPostLoadsPastServiceWorker();
+  testSwitchTurnsTriggerOff();
   testPreviewFrameReportsIn();
+  testShiftClickInsidePreviewStaysInPreview();
+  await testPreviewFrameReportsBackground();
   await testPreviewFrameEscape();
   console.log('link preview tests passed');
 })().catch((error) => {

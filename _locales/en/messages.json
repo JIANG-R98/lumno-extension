@@ -2258,6 +2258,18 @@
   "link_preview_open_in_tab": {
     "message": "Open in new tab"
   },
+  "link_preview_copy_link": {
+    "message": "Copy link"
+  },
+  "link_preview_link_copied": {
+    "message": "Link copied"
+  },
+  "link_preview_reload": {
+    "message": "Reload"
+  },
+  "link_preview_back": {
+    "message": "Back"
+  },
   "link_preview_blocked": {
     "message": "This page can’t be shown in a preview"
   },

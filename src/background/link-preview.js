@@ -14,6 +14,15 @@ const UI_FILES = Object.freeze(['build/link-preview.js']);
 // goes with frame-ancestors; the rule applies to subframes of the one tab and
 // only while its preview is open.
 const FRAME_BLOCKING_HEADERS = Object.freeze(['x-frame-options', 'content-security-policy']);
+// A site with a service worker answers the frame from the worker, and the
+// worker's own request belongs to no tab (tab id -1), so the tab's rule never
+// sees it. While any preview is open, such requests lose X-Frame-Options
+// alone: a worker may cache what it fetched and later serve it to the site's
+// own tabs, where a removed CSP would stay removed. A page a worker builds
+// from its cache keeps its headers and is still refused (X's posts load
+// through another address for that; see link-preview-frame-url.js).
+const WORKER_RULE_ID = 2147483647;
+const NO_TAB_ID = -1;
 // A press the page kept for itself (it handled the click) never opens; its
 // rule and screenshot are dropped after this long.
 const PREPARED_TTL_MS = 4000;
@@ -41,6 +50,21 @@ function buildFrameHeaderRule(tabId) {
     condition: {
       tabIds: [tabId],
       resourceTypes: ['sub_frame']
+    }
+  };
+}
+
+function buildWorkerHeaderRule() {
+  return {
+    id: WORKER_RULE_ID,
+    priority: 1,
+    action: {
+      type: 'modifyHeaders',
+      responseHeaders: [{ header: 'x-frame-options', operation: 'remove' }]
+    },
+    condition: {
+      tabIds: [NO_TAB_ID],
+      resourceTypes: ['sub_frame', 'xmlhttprequest', 'other']
     }
   };
 }
@@ -85,7 +109,11 @@ function createLinkPreviewService(options) {
     }
     const update = { removeRuleIds: [getRuleIdForTab(tabId)] };
     if (enabled) {
-      update.addRules = [buildFrameHeaderRule(tabId)];
+      update.removeRuleIds.push(WORKER_RULE_ID);
+      update.addRules = [buildFrameHeaderRule(tabId), buildWorkerHeaderRule()];
+    } else if (sessions.size === 0) {
+      // The last preview is gone; the workers' requests keep their headers.
+      update.removeRuleIds.push(WORKER_RULE_ID);
     }
     return callback((done) => dnr.updateSessionRules(update, done)).then(Boolean);
   }
@@ -301,8 +329,13 @@ function createLinkPreviewService(options) {
       return;
     }
     await Promise.all(rules
-      .filter((rule) => rule && rule.condition && Array.isArray(rule.condition.tabIds))
+      .filter((rule) => rule && rule.id !== WORKER_RULE_ID && rule.condition && Array.isArray(rule.condition.tabIds))
       .map((rule) => verifyOpenPreview(rule.condition.tabIds[0])));
+    // The workers' rule outlives no preview.
+    const left = await callback((done) => dnr.getSessionRules(done));
+    if (Array.isArray(left) && left.length === 1 && left[0].id === WORKER_RULE_ID) {
+      await callback((done) => dnr.updateSessionRules({ removeRuleIds: [WORKER_RULE_ID] }, done));
+    }
   }
 
   function attach() {
@@ -382,8 +415,10 @@ function createLinkPreviewService(options) {
 export {
   UI_FILES,
   FRAME_BLOCKING_HEADERS,
+  WORKER_RULE_ID,
   PREPARED_TTL_MS,
   isPreviewableUrl,
   buildFrameHeaderRule,
+  buildWorkerHeaderRule,
   createLinkPreviewService
 };

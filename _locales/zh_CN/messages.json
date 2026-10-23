@@ -2258,6 +2258,18 @@
   "link_preview_open_in_tab": {
     "message": "在新标签页中打开"
   },
+  "link_preview_copy_link": {
+    "message": "复制链接"
+  },
+  "link_preview_link_copied": {
+    "message": "已复制链接"
+  },
+  "link_preview_reload": {
+    "message": "重新加载"
+  },
+  "link_preview_back": {
+    "message": "后退"
+  },
   "link_preview_blocked": {
     "message": "此页面无法在预览中显示"
   },

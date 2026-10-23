@@ -2258,6 +2258,18 @@
   "link_preview_open_in_tab": {
     "message": "新しいタブで開く"
   },
+  "link_preview_copy_link": {
+    "message": "リンクをコピー"
+  },
+  "link_preview_link_copied": {
+    "message": "リンクをコピーしました"
+  },
+  "link_preview_reload": {
+    "message": "再読み込み"
+  },
+  "link_preview_back": {
+    "message": "戻る"
+  },
   "link_preview_blocked": {
     "message": "このページはプレビューで表示できません"
   },

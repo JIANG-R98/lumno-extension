@@ -73,6 +73,7 @@ const expectedSyncKeys = [
   '_x_extension_tab_switcher_enabled_2026_unique_',
   '_x_extension_document_pip_enabled_2026_unique_',
   '_x_extension_pinned_tab_recovery_enabled_2026_unique_',
+  '_x_extension_link_preview_enabled_2026_unique_',
   '_x_extension_selection_quick_actions_enabled_2026_unique_',
   '_x_extension_selection_quick_actions_provider_2026_unique_',
   '_x_extension_selection_quick_actions_group_enabled_2026_unique_',

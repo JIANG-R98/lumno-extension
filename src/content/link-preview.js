@@ -1,3 +1,6 @@
+import { toPreviewFrameUrl } from '../shared/link-preview-frame-url.js';
+import * as TOAST from '../shared/ui/toast.js';
+
 (function() {
   // The link preview surface, injected into a tab's top frame by
   // src/background/link-preview.js. It shows a link in a small window over
@@ -17,6 +20,7 @@
   const HOST_ID = '_x_extension_link_preview_host_2026_unique_';
   const PREVIEW_FRAME_NAME = 'lumno-link-preview';
   const PREVIEW_MESSAGE_SOURCE = 'lumno-link-preview-frame';
+  const PREVIEW_SURFACE_SOURCE = 'lumno-link-preview-surface';
   // A prewarmed window the click never claimed (the page kept the click).
   const PREWARM_TTL_MS = 4500;
   // How long after the frame's load event a page may still report in; the
@@ -37,7 +41,10 @@
   const FRAME_ALLOW = 'autoplay; clipboard-read; clipboard-write; encrypted-media; fullscreen; picture-in-picture; web-share';
   const ICON_PATHS = {
     close: 'M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z',
-    openInTab: 'M10 6v2H5v11h11v-5h2v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6zm11-3v8h-2V6.413l-7.793 7.794-1.414-1.414L17.585 5H13V3h8z'
+    openInTab: 'M10 6v2H5v11h11v-5h2v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6zm11-3v8h-2V6.413l-7.793 7.794-1.414-1.414L17.585 5H13V3h8z',
+    copyLink: 'M7 6V3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-3v3c0 .552-.45 1-1.007 1H4.007A1.001 1.001 0 0 1 3 21l.003-14c0-.552.45-1 1.007-1H7zM5.003 8L5 20h10V8H5.003zM9 6h8v10h2V4H9v2z',
+    reload: 'M5.463 4.433A9.961 9.961 0 0 1 12 2c5.523 0 10 4.477 10 10 0 2.136-.67 4.116-1.81 5.74L17 12h3A8 8 0 0 0 6.46 6.228l-.997-1.795zm13.074 15.134A9.961 9.961 0 0 1 12 22C6.477 22 2 17.523 2 12c0-2.136.67-4.116 1.81-5.74L7 12H4a8 8 0 0 0 13.54 5.772l.997 1.795z',
+    back: 'M7.828 11H20v2H7.828l5.364 5.364-1.414 1.414L4 12l7.778-7.778 1.414 1.414z'
   };
 
   const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -65,7 +72,11 @@
       --lp-button-hover: rgba(20, 20, 26, 0.14);
       position: fixed;
       inset: 0;
-      overflow: hidden;
+      /* Clipped, not hidden: a hidden overflow can still be scrolled by
+         script, and a previewed page that scrolls an element into view
+         past its own end (X does on load) carried the scroll out to here,
+         lifting the whole window off the page. */
+      overflow: clip;
       color-scheme: light dark;
       font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans", sans-serif;
       -webkit-font-smoothing: antialiased;
@@ -97,9 +108,19 @@
        crossfades from the screenshot to the veil, so the compositor animates
        only transform and opacity;
        animating a blur radius re-blurred two full-screen layers each frame. */
+    /* captureVisibleTab takes the whole window, scrollbars included, while
+       this layer stops at the page's scrollbar. Laid out at the window's
+       size (set from innerWidth and innerHeight; vw leaves the scrollbar
+       out on pages whose root always scrolls), the picture keeps the page's
+       scale and its own scrollbar falls under the real one; fitted to the
+       layer, it was narrower than the page and showed a second scrollbar
+       while the preview closed. */
     .page {
       position: absolute;
-      inset: 0;
+      top: 0;
+      left: 0;
+      width: var(--lp-window-width, 100vw);
+      height: var(--lp-window-height, 100vh);
       transform-origin: 50% 50%;
       will-change: transform;
     }
@@ -159,7 +180,7 @@
     .panel {
       position: absolute;
       inset: 0;
-      overflow: hidden;
+      overflow: clip;
       border-radius: 26px;
       background: var(--lp-panel);
       box-shadow:
@@ -248,6 +269,9 @@
     }
     .control:hover {
       background: var(--lp-control-hover);
+    }
+    .control[hidden] {
+      display: none;
     }
     /* While the page loads, an arc turns around the close button: out of
        the page's way, and gone once it has loaded. */
@@ -383,6 +407,82 @@
     return button;
   }
 
+  // Copies the address the preview is on now, which follows links taken
+  // inside it. The page's clipboard API needs a secure page; elsewhere a
+  // selected field inside the window copies instead, so focus stays here.
+  function copyLink(preview) {
+    const url = preview.currentUrl || preview.url;
+    const clipboard = navigator.clipboard;
+    const copied = clipboard && typeof clipboard.writeText === 'function'
+      ? Promise.resolve(clipboard.writeText(url)).then(() => true, () => copyWithSelection(preview, url))
+      : Promise.resolve(copyWithSelection(preview, url));
+    copied.then((ok) => {
+      if (preview.closing) {
+        return;
+      }
+      if (ok) {
+        showToast(preview, getMessage('link_preview_link_copied', 'Link copied'));
+      } else {
+        showToast(preview, getMessage('copy_page_url_failed_retry', 'Copy failed. Please try again.'), { error: true });
+      }
+    });
+  }
+
+  function copyWithSelection(preview, text) {
+    const field = document.createElement('textarea');
+    field.value = text;
+    field.setAttribute('readonly', '');
+    field.setAttribute('aria-hidden', 'true');
+    field.style.cssText = 'position: fixed; left: -9999px; top: 0; opacity: 0;';
+    preview.root.append(field);
+    field.select();
+    let copied = false;
+    try {
+      copied = document.execCommand('copy');
+    } catch (error) {
+      copied = false;
+    }
+    field.remove();
+    return copied;
+  }
+
+  function showToast(preview, message, options) {
+    const dark = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (dark) {
+      preview.toastElement.setAttribute('data-theme', 'dark');
+    } else {
+      preview.toastElement.removeAttribute('data-theme');
+    }
+    preview.toast.show(message, options);
+  }
+
+  function postToFrame(preview, type) {
+    try {
+      preview.frame.contentWindow.postMessage({ source: PREVIEW_SURFACE_SOURCE, type }, '*');
+    } catch (error) {
+      // The frame may be between documents.
+    }
+  }
+
+  // Back steps through the frame's own history only; the button shows while
+  // the previewed page reports it has somewhere to go back to.
+  function goBack(preview) {
+    preview.root.dataset.loaded = 'false';
+    postToFrame(preview, 'back');
+  }
+
+  // A page that reported in reloads itself, keeping its place in the
+  // frame's history; Chrome's error page has no script, so it is loaded
+  // again from its address.
+  function reload(preview) {
+    preview.root.dataset.loaded = 'false';
+    if (preview.pageReported && preview.root.dataset.blocked !== 'true') {
+      postToFrame(preview, 'reload');
+    } else {
+      preview.frame.src = toPreviewFrameUrl(preview.currentUrl || preview.url);
+    }
+  }
+
   function readHostLabel(url) {
     try {
       return new URL(url).hostname.replace(/^www\./, '');
@@ -477,6 +577,7 @@
       token,
       url,
       currentUrl: url,
+      frameUrl: toPreviewFrameUrl(url),
       host,
       root,
       page,
@@ -485,6 +586,7 @@
       surround,
       scrim,
       windowElement,
+      panel,
       controls,
       frame,
       supportsPopover,
@@ -493,6 +595,10 @@
       loadCount: 0,
       aliveSinceLoad: false,
       prewarmTimer: 0,
+      backButton: null,
+      toastElement: null,
+      toastGate: null,
+      toast: null,
       restoreFocus: null,
       shotDecode: null,
       pageReported: false,
@@ -505,11 +611,35 @@
       getMessage('link_preview_open_in_tab', 'Open in new tab'),
       () => moveToTab(preview)
     );
+    const copyLinkButton = createControl(
+      'copyLink',
+      getMessage('link_preview_copy_link', 'Copy link'),
+      () => copyLink(preview)
+    );
+    const reloadButton = createControl('reload', getMessage('link_preview_reload', 'Reload'), () => reload(preview));
+    // Last, so it comes and goes without moving the others.
+    const backButton = createControl('back', getMessage('link_preview_back', 'Back'), () => goBack(preview));
+    backButton.hidden = true;
+    preview.backButton = backButton;
     noticeButton.addEventListener('click', () => moveToTab(preview));
-    controls.append(closeButton, openInTabButton);
+    controls.append(closeButton, openInTabButton, copyLinkButton, reloadButton, backButton);
     windowElement.append(panel, controls);
-    root.append(stage, windowElement);
-    shadow.append(style, root);
+    // The window sits in the top layer, so a toast of the page's own would
+    // stay under it; this one lives in the window.
+    const toastStylesheet = document.createElement('link');
+    toastStylesheet.rel = 'stylesheet';
+    toastStylesheet.href = chrome.runtime.getURL('src/shared/ui/toast.css');
+    const toastElement = document.createElement('div');
+    toastElement.className = 'x-lumno-toast';
+    toastElement.setAttribute('data-show', 'false');
+    toastElement.setAttribute('role', 'status');
+    toastElement.setAttribute('aria-live', 'polite');
+    toastElement.style.setProperty('--x-lumno-toast-top', 'max(24px, calc(env(safe-area-inset-top) + 12px))');
+    preview.toastElement = toastElement;
+    preview.toastGate = TOAST.createToastStyleGate(toastElement, { stylesheetElement: toastStylesheet, windowObj: window });
+    preview.toast = TOAST.createToastController(toastElement, { windowObj: window });
+    root.append(stage, windowElement, toastElement);
+    shadow.append(style, toastStylesheet, root);
 
     // A press outside the window closes it.
     stage.addEventListener('click', () => close(preview));
@@ -537,7 +667,7 @@
     // The address is set before the frame is connected: a frame connected
     // without one loads about:blank first, and that load would count as the
     // page's (see handleFrameLoad).
-    frame.src = url;
+    frame.src = preview.frameUrl;
     document.documentElement.append(host);
     if (supportsPopover) {
       host.showPopover();
@@ -576,8 +706,18 @@
       preview.aliveSinceLoad = true;
       preview.pageReported = true;
       focusPreviewedPage(preview);
-      preview.currentUrl = data.url;
+      // Until the page moves on, the link keeps its own address where the
+      // frame loads it through another (see toPreviewFrameUrl).
+      preview.currentUrl = data.url === preview.frameUrl ? preview.url : data.url;
       preview.root.dataset.blocked = 'false';
+      preview.backButton.hidden = data.canGoBack !== true;
+    } else if (data.type === 'background' && typeof data.color === 'string' &&
+        /^rgba?\([\d.,\s%/]+\)$/.test(data.color)) {
+      preview.panel.style.backgroundColor = data.color;
+    } else if (data.type === 'loading') {
+      preview.root.dataset.loaded = 'false';
+    } else if (data.type === 'loaded') {
+      preview.root.dataset.loaded = 'true';
     } else if (data.type === 'escape' && preview.shown) {
       close(preview);
     }
@@ -585,8 +725,8 @@
 
   // Every document that really loads in the frame reports in before its load
   // event. A load nothing reported is Chrome's error page: the site refused
-  // to be framed (or failed). The first one moves the link to a tab; a later
-  // one (a link followed inside the preview) shows a notice instead.
+  // to be framed (or failed). The window says so and offers a tab; moving the
+  // link to a tab on its own read as the preview being cut off by a jump.
   function handleFrameLoad(preview) {
     preview.loadCount += 1;
     const loadNumber = preview.loadCount;
@@ -600,15 +740,34 @@
       if (alive) {
         return;
       }
-      if (loadNumber === 1) {
-        preview.refused = true;
-        if (preview.shown) {
-          moveToTab(preview);
-        }
-        return;
-      }
       preview.root.dataset.blocked = 'true';
     }, ALIVE_GRACE_MS);
+  }
+
+  // The page under the preview cannot be used while it is up, so a new
+  // navigation it starts by itself (a site acting late on the press the
+  // preview took, or a same-site page in the preview reaching out to it)
+  // is held back, a scripted reload included. Back, Forward, the user's own
+  // reload and the page replacing its own address in place still go through.
+  function holdPageNavigation(preview) {
+    const navigation = window.navigation;
+    if (!navigation || typeof navigation.addEventListener !== 'function') {
+      return;
+    }
+    listen(preview, navigation, 'navigate', (event) => {
+      const sameDocument = Boolean(event.destination && event.destination.sameDocument);
+      const held = event.navigationType === 'push' ||
+        (event.navigationType === 'replace' && !sameDocument) ||
+        (event.navigationType === 'reload' && !event.userInitiated);
+      if (held && event.cancelable && !event.downloadRequest && !preview.closing) {
+        event.preventDefault();
+      }
+    });
+  }
+
+  function fitPageToWindow(preview) {
+    preview.root.style.setProperty('--lp-window-width', `${window.innerWidth}px`);
+    preview.root.style.setProperty('--lp-window-height', `${window.innerHeight}px`);
   }
 
   // The page under the preview keeps its scroll position while the preview
@@ -629,6 +788,8 @@
 
   function teardown(preview) {
     clearTimeout(preview.prewarmTimer);
+    preview.toast.destroy();
+    preview.toastGate.destroy();
     preview.cleanups.splice(0).forEach((cleanup) => cleanup());
     preview.frame.removeAttribute('src');
     preview.host.remove();
@@ -722,6 +883,9 @@
     preview.shown = true;
     preview.restoreFocus = document.activeElement;
     holdPageScroll(preview);
+    holdPageNavigation(preview);
+    fitPageToWindow(preview);
+    listen(preview, window, 'resize', () => fitPageToWindow(preview));
     acceptScreenshot(preview, message.screenshot);
     const hasShot = await (preview.shotDecode || Promise.resolve(false));
     if (current !== preview || preview.closing) {
@@ -732,10 +896,6 @@
     preview.root.dataset.shot = hasShot ? 'image' : 'none';
     preview.root.dataset.state = 'open';
     preview.host.style.removeProperty('pointer-events');
-    if (preview.refused) {
-      moveToTab(preview);
-      return true;
-    }
     playOpening(preview, message.origin);
     preview.root.focus({ preventScroll: true });
     focusPreviewedPage(preview);

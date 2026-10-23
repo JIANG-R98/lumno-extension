@@ -182,6 +182,7 @@ const AUTO_PIP_ENABLED_STORAGE_KEY = '_x_extension_auto_pip_enabled_2026_unique_
 const TAB_SWITCHER_ENABLED_STORAGE_KEY = '_x_extension_tab_switcher_enabled_2026_unique_';
 const DOCUMENT_PIP_ENABLED_STORAGE_KEY = '_x_extension_document_pip_enabled_2026_unique_';
 const PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY = '_x_extension_pinned_tab_recovery_enabled_2026_unique_';
+const LINK_PREVIEW_ENABLED_STORAGE_KEY = '_x_extension_link_preview_enabled_2026_unique_';
 const OVERLAY_TAB_PRIORITY_STORAGE_KEY = '_x_extension_overlay_tab_priority_2024_unique_';
 const RESTRICTED_ACTION_STORAGE_KEY = '_x_extension_restricted_action_2024_unique_';
 const SEARCH_RESULT_PRIORITY_STORAGE_KEY = '_x_extension_search_result_priority_2026_unique_';
@@ -382,6 +383,7 @@ const CHROME_SYNC_STORAGE_KEYS = Object.freeze([
   TAB_SWITCHER_ENABLED_STORAGE_KEY,
   DOCUMENT_PIP_ENABLED_STORAGE_KEY,
   PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY,
+  LINK_PREVIEW_ENABLED_STORAGE_KEY,
   SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY,
   SELECTION_QUICK_ACTIONS_PROVIDER_STORAGE_KEY,
   SELECTION_QUICK_ACTIONS_GROUP_ENABLED_STORAGE_KEY,
@@ -1094,6 +1096,10 @@ function normalizeTabSwitcherEnabled(value) {
   return value !== false;
 }
 
+function normalizeLinkPreviewEnabled(value) {
+  return value !== false;
+}
+
 function normalizeSelectionQuickActionsEnabled(value) {
   return value === true;
 }
@@ -1698,6 +1704,7 @@ export {
   TAB_SWITCHER_ENABLED_STORAGE_KEY,
   DOCUMENT_PIP_ENABLED_STORAGE_KEY,
   PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY,
+  LINK_PREVIEW_ENABLED_STORAGE_KEY,
   OVERLAY_TAB_PRIORITY_STORAGE_KEY,
   RESTRICTED_ACTION_STORAGE_KEY,
   SEARCH_RESULT_PRIORITY_STORAGE_KEY,
@@ -1871,6 +1878,7 @@ export {
   normalizeSearchResultSourceTypes,
   normalizeTabRankScoreDebugMode,
   normalizeTabSwitcherEnabled,
+  normalizeLinkPreviewEnabled,
   normalizeSelectionQuickActionsEnabled,
   normalizeSelectionQuickActionsProvider,
   normalizeSelectionQuickActionsGroupEnabled,
