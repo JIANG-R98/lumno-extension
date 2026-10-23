@@ -11,7 +11,8 @@ function createPanelSession(deps) {
     stopOverlayAntiTranslateObserver,
     overlayShell,
     stopOverlayPageThemeObserver,
-    overlayLifecycle
+    overlayLifecycle,
+    SETTINGS
   } = deps;
 
   // The panel state object shared with search-panel.js and the other modules.
@@ -270,11 +271,11 @@ function createPanelSession(deps) {
   let overlayExitTimer = null;
   let closingOverlayElement = null;
 
+  // The exit follows the same switches as the entry: the Motion effects
+  // setting and the system's reduced-motion preference.
   function closeOverlayWithMotion(overlayElement) {
-    const reduceMotion = typeof window.matchMedia === 'function' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (!overlayElement || !overlayElement.isConnected ||
-        reduceMotion ||
+        SETTINGS.shouldSkipEntryMotion(window, overlayState.motionEffectsEnabled) ||
         overlayElement.getAttribute('data-lumno-overlay-entry') !== 'done') {
       removeOverlay(overlayElement);
       return;

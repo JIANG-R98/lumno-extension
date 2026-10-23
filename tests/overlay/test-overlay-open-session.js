@@ -51,7 +51,8 @@ async function testFirstOpenReadsPreferencesOnceAndAsksForTabsOnce() {
   assert.strictEqual(page.window[OPEN_FLAG], true);
 
   page.press('Escape');
-  await page.waitFor(() => page.host() === null, 'Escape should close the overlay after its exit animation');
+  await page.settle(30);
+  assert.strictEqual(page.host(), null);
   assert.strictEqual(page.window[OPEN_FLAG], false, 'closing should clear the open flag the worker reads back');
   assert.ok(page.messages.some((message) => message.action === 'notifyOverlayClosed'),
     'a deliberate close should tell the worker, so a page load does not bring the overlay back');

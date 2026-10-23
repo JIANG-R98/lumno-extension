@@ -26,20 +26,45 @@ async function waitForClosed(page, message) {
   await waitFor(() => page.hostCount() === 0, message, page.errors);
 }
 
+const MOTION_KEY = '_x_extension_motion_effects_enabled_2026_unique_';
+
+function findPanel(page) {
+  return page.window.LumnoOverlayShell.findOverlayPanel(page.window.document);
+}
+
 async function testToggleCloseFromNewInvocation() {
-  const page = await createOverlayPage();
+  const page = await createOverlayPage({ settings: { [MOTION_KEY]: true } });
   try {
     const baseline = page.ledger.snapshot();
     await openAndSettle(page);
+    await waitFor(() => findPanel(page).getAttribute('data-lumno-overlay-entry') === 'done',
+      'the entry should finish before closing', page.errors);
     // A second hotkey press runs the toggle helper again; that invocation
     // has its own closure and must still release the first one's listeners.
     page.toggle();
-    const closingPanel = page.window.LumnoOverlayShell.findOverlayPanel(page.window.document);
-    assert.strictEqual(closingPanel.getAttribute('data-lumno-overlay-exit'), 'running',
+    assert.strictEqual(findPanel(page).getAttribute('data-lumno-overlay-exit'), 'running',
       'the second press should start the exit animation');
     await waitForClosed(page, 'the second press should close the overlay after its exit animation');
     assert.strictEqual(page.hostCount(), 0, 'the second press should close the overlay');
     assertReleased(page, baseline, 'closing from a new invocation');
+  } finally {
+    page.window.close();
+  }
+}
+
+// With Motion effects off (the harness default) the exit is skipped too.
+async function testCloseWithoutMotionIsImmediate() {
+  const page = await createOverlayPage();
+  try {
+    const baseline = page.ledger.snapshot();
+    await openAndSettle(page);
+    page.toggle();
+    assert.strictEqual(page.hostCount(), 0, 'the hotkey should close at once without Motion effects');
+    assertReleased(page, baseline, 'closing without motion');
+    await openAndSettle(page);
+    page.press('Escape');
+    assert.strictEqual(page.hostCount(), 0, 'Escape should close at once without Motion effects');
+    assertReleased(page, baseline, 'Escape without motion');
   } finally {
     page.window.close();
   }
@@ -122,6 +147,7 @@ async function testMountGuardRestoresHostUntilClose() {
 
 (async () => {
   await testToggleCloseFromNewInvocation();
+  await testCloseWithoutMotionIsImmediate();
   await testMountGuardRestoresHostUntilClose();
   await testToggleCloseAfterReinjection();
   await testStaleReplacementThenClose();

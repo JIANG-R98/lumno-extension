@@ -109,6 +109,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     overlayShell,
     stopOverlayPageThemeObserver,
     overlayLifecycle,
+    SETTINGS,
     overlayState
   });
 
