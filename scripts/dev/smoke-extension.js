@@ -20,6 +20,7 @@ const http = require('http');
 const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
+require('../node/register-typescript');
 const SETTINGS = require('../../src/shared/settings.js');
 
 const repoRoot = path.resolve(__dirname, '..', '..');

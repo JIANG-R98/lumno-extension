@@ -17,6 +17,7 @@ function collectFiles(directory, pattern) {
     });
   }
   visit(path.join(repoRoot, directory));
+  assert.ok(files.length > 0, `no files in ${directory} match ${pattern}`);
   return files;
 }
 
@@ -27,7 +28,7 @@ function filesContaining(files, pattern) {
     .sort();
 }
 
-const runtimeFiles = collectFiles('src', /\.js$/);
+const runtimeFiles = collectFiles('src', /\.(?:js|ts|tsx)$/);
 assert.deepStrictEqual(
   filesContaining(runtimeFiles, /function getBrowserInternalScheme\(/),
   ['src/shared/browser-profile.js'],

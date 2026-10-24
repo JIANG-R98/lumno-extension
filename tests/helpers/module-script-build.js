@@ -6,10 +6,11 @@
 
 const path = require('path');
 const esbuild = require('esbuild');
+const { resolveSourceFile } = require('../../scripts/node/register-typescript');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const { entry, globalName, stubs } = JSON.parse(process.argv[2]);
-const stubbed = new Map(Object.entries(stubs).map(([file, name]) => [path.join(repoRoot, file), name]));
+const stubbed = new Map(Object.entries(stubs).map(([file, name]) => [resolveSourceFile(file) || path.join(repoRoot, file), name]));
 
 esbuild.build({
   absWorkingDir: repoRoot,
@@ -27,8 +28,8 @@ esbuild.build({
       // A namespace of their own keeps src/package.json's "type": "module"
       // from making the stubs ES modules, so they can use module.exports.
       build.onResolve({ filter: /^\.{1,2}\// }, (args) => {
-        const file = path.resolve(args.resolveDir, args.path);
-        return stubbed.has(file) ? { path: file, namespace: 'lumno-test-stub' } : undefined;
+        const file = resolveSourceFile(path.resolve(args.resolveDir, args.path));
+        return file && stubbed.has(file) ? { path: file, namespace: 'lumno-test-stub' } : undefined;
       });
       build.onLoad({ filter: /.*/, namespace: 'lumno-test-stub' }, (args) => ({
         contents: `module.exports = globalThis[${JSON.stringify(stubbed.get(args.path))}];`,

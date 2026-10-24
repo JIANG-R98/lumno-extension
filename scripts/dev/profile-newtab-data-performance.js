@@ -1,6 +1,7 @@
 const assert = require('assert');
 const os = require('os');
 const { performance } = require('perf_hooks');
+require('../node/register-typescript');
 const bookmarkStore = require('../../src/newtab/bookmarks/bookmarks-store.js');
 const recentStore = require('../../src/newtab/recent/recent-sites-store.js');
 const settings = require('../../src/shared/settings.js');

@@ -6,6 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 const { withoutExports } = require('./closure-source');
+const { resolveSourceFile } = require('../../scripts/node/register-typescript');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const BACKGROUND_ENTRY = 'src/background/background.js';
@@ -13,8 +14,8 @@ const BACKGROUND_ENTRY = 'src/background/background.js';
 // The services background.js imports, in its import order.
 function getBackgroundServiceFiles() {
   const source = fs.readFileSync(path.join(repoRoot, BACKGROUND_ENTRY), 'utf8');
-  const files = [...source.matchAll(/from '\.\/((?:[\w-]+-service|pinned-tab-recovery)\.js)';/g)]
-    .map((match) => `src/background/${match[1]}`);
+  const files = [...source.matchAll(/from '\.\/((?:[\w-]+-service|pinned-tab-recovery))(?:\.[jt]s)?';/g)]
+    .map((match) => path.relative(repoRoot, resolveSourceFile(`src/background/${match[1]}.js`)).split(path.sep).join('/'));
   return [...new Set(files)];
 }
 

@@ -31,6 +31,9 @@ const testFiles = collectTestFiles(__dirname)
 
 const MAX_JOBS = 8;
 
+// Lets each test file load TypeScript sources (see the file for details).
+const TYPESCRIPT_HOOKS = path.join(repoRoot, 'scripts', 'node', 'register-typescript.js');
+
 function getJobCount() {
   if (process.env.LUMNO_TEST_SERIAL === '1') {
     return 1;
@@ -48,7 +51,7 @@ function getJobCount() {
 function runTestFile(relativePath) {
   return new Promise((resolve) => {
     const chunks = [];
-    const child = spawn(process.execPath, [relativePath], {
+    const child = spawn(process.execPath, ['--require', TYPESCRIPT_HOOKS, relativePath], {
       cwd: repoRoot,
       stdio: ['ignore', 'pipe', 'pipe']
     });

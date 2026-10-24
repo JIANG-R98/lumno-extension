@@ -12,9 +12,16 @@ const vm = require('vm');
 const { execFileSync } = require('child_process');
 const esbuild = require('esbuild');
 const { BUNDLES } = require('../../scripts/build/bundles');
+const { resolveSourceFile } = require('../../scripts/node/register-typescript');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const cache = new Map();
+
+// A source path as tests name it, resolved to the file on disk (a .js path
+// may name a module that is now TypeScript).
+function sourcePath(file) {
+  return resolveSourceFile(file) || path.join(repoRoot, file);
+}
 
 function build(entry, globalName) {
   const key = `${entry}\0${globalName || ''}`;
@@ -66,15 +73,15 @@ function buildWithStubs(entry, globalName, stubs) {
 function moduleScript(file, globalName, also, stubs) {
   if (stubs) {
     if (also) throw new Error('moduleScript takes also or stubs, not both');
-    return buildWithStubs(path.join(repoRoot, file), globalName, stubs);
+    return buildWithStubs(sourcePath(file), globalName, stubs);
   }
   if (!also) {
-    return build(path.join(repoRoot, file), globalName);
+    return build(sourcePath(file), globalName);
   }
   const key = `${file}\0${globalName}\0${JSON.stringify(also)}`;
   if (!cache.has(key)) {
-    const lines = [`export * from ${JSON.stringify(path.join(repoRoot, file))};`].concat(
-      Object.entries(also).map(([from, names]) => `export { ${names.join(', ')} } from ${JSON.stringify(path.join(repoRoot, from))};`)
+    const lines = [`export * from ${JSON.stringify(sourcePath(file))};`].concat(
+      Object.entries(also).map(([from, names]) => `export { ${names.join(', ')} } from ${JSON.stringify(sourcePath(from))};`)
     );
     cache.set(key, withEntry('entry.js', lines.join('\n'), (entry) => build(entry, globalName)));
   }
@@ -100,9 +107,9 @@ function bundleScript(name, expose) {
   }
   const key = `bundle:${name}\0${JSON.stringify(expose || {})}`;
   if (!cache.has(key)) {
-    const imports = bundle.files.map((file) => `import ${JSON.stringify(path.join(repoRoot, file))};`);
+    const imports = bundle.files.map((file) => `import ${JSON.stringify(sourcePath(file))};`);
     Object.entries(expose || {}).forEach(([file, globalName], index) => {
-      imports.push(`import * as exposed${index} from ${JSON.stringify(path.join(repoRoot, file))};`);
+      imports.push(`import * as exposed${index} from ${JSON.stringify(sourcePath(file))};`);
       imports.push(`globalThis.${globalName} = exposed${index};`);
     });
     cache.set(key, withEntry(`${name}.js`, imports.join('\n'), (entry) => build(entry)));

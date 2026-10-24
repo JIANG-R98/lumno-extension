@@ -12,7 +12,7 @@ const { getBackgroundServiceFiles } = require('../helpers/background-source');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 const serviceModules = fs.readdirSync(path.join(repoRoot, 'src/background'))
-  .filter((file) => /-service\.js$|^pinned-tab-recovery\.js$/.test(file))
+  .filter((file) => /-service\.[jt]s$|^pinned-tab-recovery\.[jt]s$/.test(file))
   .map((file) => `src/background/${file}`);
 const importedServices = getBackgroundServiceFiles();
 

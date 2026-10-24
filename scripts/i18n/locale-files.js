@@ -2,6 +2,7 @@
 // and the translated onboarding copy in src/onboarding/locales/<locale>.json.
 const fs = require('fs');
 const path = require('path');
+require('../node/register-typescript');
 const settings = require('../../src/shared/settings.js');
 
 const REPO_ROOT = path.join(__dirname, '..', '..');
