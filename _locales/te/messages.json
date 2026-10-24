@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "సైజ్"
   },
+  "settings_overlay_width_title": {
+    "message": "వెడల్పు"
+  },
+  "settings_overlay_width_reset": {
+    "message": "పరిమాణ సెట్టింగ్‌ను అనుసరించు"
+  },
   "overlay_size_compact": {
     "message": "చిన్నది"
   },

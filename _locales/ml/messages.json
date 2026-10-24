@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "വലുപ്പം"
   },
+  "settings_overlay_width_title": {
+    "message": "വീതി"
+  },
+  "settings_overlay_width_reset": {
+    "message": "വലുപ്പ ക്രമീകരണം പിന്തുടരുക"
+  },
   "overlay_size_compact": {
     "message": "ചെറുത്"
   },

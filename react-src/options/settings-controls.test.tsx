@@ -272,6 +272,57 @@ describe('Options settings controls React islands', () => {
     expect(valueInput?.style.width).toBe('var(--x-range-slider-value-width, 52px)');
   });
 
+  it('settles a drag on a nearby snap point but keeps a typed value', () => {
+    const host = document.createElement('div');
+    const onInput = vi.fn();
+    document.body.appendChild(host);
+    const controller = createRangeSliderControlController(host, {
+      kind: 'overlay-width',
+      onInput
+    });
+    controllers.push(controller);
+
+    act(() => controller.render({
+      ariaLabel: 'Width',
+      id: 'overlay-width',
+      max: 1040,
+      min: 560,
+      snapPoints: [680, 760, 840],
+      snapThreshold: 14,
+      step: 1,
+      ticks: [{ label: '680' }, { label: '760' }, { label: '840' }],
+      value: 900
+    }));
+
+    const slider = host.querySelector<HTMLInputElement>('input[type="range"]');
+    const valueInput = host.querySelector<HTMLInputElement>('input[type="number"]');
+    act(() => {
+      if (!slider) return;
+      slider.value = '771';
+      slider.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(onInput).toHaveBeenLastCalledWith(760);
+    expect(slider?.value).toBe('760');
+
+    act(() => {
+      if (!slider) return;
+      slider.value = '800';
+      slider.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(onInput).toHaveBeenLastCalledWith(800);
+
+    act(() => {
+      valueInput?.focus();
+      if (!valueInput) return;
+      Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set?.call(valueInput, '770');
+      valueInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    act(() => {
+      valueInput?.blur();
+    });
+    expect(onInput).toHaveBeenLastCalledWith(770);
+  });
+
   it('aligns a two-tick range to both slider endpoints', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);

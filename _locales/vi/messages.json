@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "Kích thước"
   },
+  "settings_overlay_width_title": {
+    "message": "Chiều rộng"
+  },
+  "settings_overlay_width_reset": {
+    "message": "Theo cài đặt kích thước"
+  },
   "overlay_size_compact": {
     "message": "Nhỏ gọn"
   },

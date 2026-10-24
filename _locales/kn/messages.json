@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "ಗಾತ್ರ"
   },
+  "settings_overlay_width_title": {
+    "message": "ಅಗಲ"
+  },
+  "settings_overlay_width_reset": {
+    "message": "ಗಾತ್ರ ಸೆಟ್ಟಿಂಗ್ ಅನುಸರಿಸಿ"
+  },
   "overlay_size_compact": {
     "message": "ಕಾಂಪ್ಯಾಕ್ಟ್"
   },

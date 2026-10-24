@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "Μέγεθος"
   },
+  "settings_overlay_width_title": {
+    "message": "Πλάτος"
+  },
+  "settings_overlay_width_reset": {
+    "message": "Σύμφωνα με τη ρύθμιση μεγέθους"
+  },
   "overlay_size_compact": {
     "message": "Μικρό"
   },

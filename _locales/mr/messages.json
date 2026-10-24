@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "आकार"
   },
+  "settings_overlay_width_title": {
+    "message": "रुंदी"
+  },
+  "settings_overlay_width_reset": {
+    "message": "आकार सेटिंगनुसार"
+  },
   "overlay_size_compact": {
     "message": "संक्षिप्त"
   },

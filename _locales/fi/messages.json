@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "Koko"
   },
+  "settings_overlay_width_title": {
+    "message": "Leveys"
+  },
+  "settings_overlay_width_reset": {
+    "message": "Seuraa koon asetusta"
+  },
   "overlay_size_compact": {
     "message": "Pieni"
   },

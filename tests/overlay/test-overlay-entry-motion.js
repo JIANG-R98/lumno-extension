@@ -13,6 +13,8 @@ const MOTION_KEY = '_x_extension_motion_effects_enabled_2026_unique_';
 const ANIMATION_KEY = '_x_extension_overlay_enter_animation_2026_unique_';
 const OPEN_TABS_VISIBLE_KEY = '_x_extension_overlay_open_tabs_default_visible_2026_unique_';
 const THEME_KEY = '_x_extension_theme_mode_2024_unique_';
+const SIZE_KEY = '_x_extension_overlay_size_mode_2026_unique_';
+const WIDTH_KEY = '_x_extension_overlay_width_2026_unique_';
 const OVERLAY_ID = '_x_extension_overlay_2024_unique_';
 const ELASTIC_REST = 'translateX(-50%) translateY(0) scale(var(--x-ov-visible-scale, 1)) scale(1)';
 const SPRING_EASING = /^linear\(0, .*, 1\)$/;
@@ -119,6 +121,23 @@ async function testThemeElevation() {
   page.close();
 }
 
+// A custom width replaces the size's own width, within its range; clearing
+// it follows the size again.
+async function testCustomWidthReplacesTheSizeWidth() {
+  const { page, overlay } = await openWithMotion({ [SIZE_KEY]: 'large', [WIDTH_KEY]: 920 });
+  assert.strictEqual(overlay.style.getPropertyValue('width'), '920px');
+  page.changeSetting(WIDTH_KEY, 5000);
+  await page.settle();
+  assert.strictEqual(overlay.style.getPropertyValue('width'), '1040px', 'the width should stay within its range');
+  page.changeSetting(WIDTH_KEY, undefined);
+  await page.settle();
+  assert.strictEqual(overlay.style.getPropertyValue('width'), '840px', 'without a custom width the size decides');
+  page.changeSetting(SIZE_KEY, 'compact');
+  await page.settle();
+  assert.strictEqual(overlay.style.getPropertyValue('width'), '680px');
+  page.close();
+}
+
 async function testCornersFollowTheResults() {
   const page = await createOverlayPage({
     respond(message) {
@@ -172,6 +191,7 @@ function testSharedSearchInputMotionTokens() {
   await testEachEntrySettingPlaysItsMotion();
   await testEntryMotionIsSkippedWhenItWouldStutter();
   await testThemeElevation();
+  await testCustomWidthReplacesTheSizeWidth();
   await testCornersFollowTheResults();
   testSharedSearchInputMotionTokens();
   console.log('overlay entry motion tests passed');

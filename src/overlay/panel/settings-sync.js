@@ -43,6 +43,7 @@ function createSettingsSync(deps) {
     documentPipSupported,
     OVERLAY_TAB_PRIORITY_STORAGE_KEY,
     OVERLAY_SIZE_MODE_STORAGE_KEY,
+    OVERLAY_WIDTH_STORAGE_KEY,
     overlayRuntime,
     localStorageArea,
     OVERLAY_FONT_FAMILY_STORAGE_KEY,
@@ -320,6 +321,7 @@ function createSettingsSync(deps) {
   });
   const initialOverlaySizeReady = initialOverlaySettingsReady.then((result) => {
     overlayState.overlaySizeMode = SETTINGS.normalizeOverlaySizeMode(result[OVERLAY_SIZE_MODE_STORAGE_KEY]);
+    overlayState.overlayCustomWidth = SETTINGS.normalizeOverlayWidth(result[OVERLAY_WIDTH_STORAGE_KEY]);
     applyOverlaySizeForPageZoom(overlayState.overlay);
     return overlayState.overlaySizeMode;
   });
@@ -356,10 +358,16 @@ function createSettingsSync(deps) {
     }
   });
   overlayState.storageChangeListeners.add((changes, areaName) => {
-    if (!isPrimaryStorageAreaName(areaName) || !changes[OVERLAY_SIZE_MODE_STORAGE_KEY]) {
+    if (!isPrimaryStorageAreaName(areaName) ||
+        (!changes[OVERLAY_SIZE_MODE_STORAGE_KEY] && !changes[OVERLAY_WIDTH_STORAGE_KEY])) {
       return;
     }
-    overlayState.overlaySizeMode = SETTINGS.normalizeOverlaySizeMode(changes[OVERLAY_SIZE_MODE_STORAGE_KEY].newValue);
+    if (changes[OVERLAY_SIZE_MODE_STORAGE_KEY]) {
+      overlayState.overlaySizeMode = SETTINGS.normalizeOverlaySizeMode(changes[OVERLAY_SIZE_MODE_STORAGE_KEY].newValue);
+    }
+    if (changes[OVERLAY_WIDTH_STORAGE_KEY]) {
+      overlayState.overlayCustomWidth = SETTINGS.normalizeOverlayWidth(changes[OVERLAY_WIDTH_STORAGE_KEY].newValue);
+    }
     applyOverlaySizeForPageZoom(overlayState.overlay);
   });
   if (overlayState.storageArea) {

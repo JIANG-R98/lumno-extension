@@ -107,6 +107,7 @@ import * as LumnoWebDavOptions from './webdav-options.js';
   const bookmarkColumnsSettingRow = document.getElementById('_x_extension_bookmark_columns_setting_row_2026_unique_');
   const bookmarkColumnsControlHost = document.getElementById('_x_extension_bookmark_columns_control_2026_unique_');
   const searchResultDisplayLimitControlHost = document.getElementById('_x_extension_search_result_display_limit_control_2026_unique_');
+  const overlayWidthControlHost = document.getElementById('_x_extension_overlay_width_control_2026_unique_');
   const bookmarkFolderIconsVisibleRow = document.getElementById('_x_extension_bookmark_folder_icons_visible_row_2026_unique_');
   const aggregateSearchAutoGroupToggle = document.getElementById(
     '_x_extension_aggregate_search_auto_group_toggle_2026_unique_'
@@ -485,6 +486,7 @@ import * as LumnoWebDavOptions from './webdav-options.js';
     renderBookmarkRowsControl: (...args) => renderBookmarkRowsControl(...args),
     renderBookmarkColumnsControl: (...args) => renderBookmarkColumnsControl(...args),
     renderSearchResultDisplayLimitControl: (...args) => renderSearchResultDisplayLimitControl(...args),
+    renderOverlayWidthControl: (...args) => renderOverlayWidthControl(...args),
     renderSettingsNavigation,
     renderSiteSearchList,
     renderAggregateSearchList: (...args) => renderAggregateSearchList(...args),
@@ -1165,6 +1167,7 @@ import * as LumnoWebDavOptions from './webdav-options.js';
   optionsState.currentRecentMode = 'most';
   optionsState.currentNewtabWidthMode = 'wide';
   optionsState.currentOverlaySizeMode = 'standard';
+  optionsState.currentOverlayWidth = null;
   optionsState.currentOverlayEnterAnimation = 'elastic';
   // Empty means the bundled Lumno Open Sans stack.
   optionsState.currentOverlayFontFamily = '';
@@ -1278,7 +1281,8 @@ import * as LumnoWebDavOptions from './webdav-options.js';
     renderBookmarkRowsControl,
     renderRecentCountControl,
     renderBookmarkColumnsControl,
-    renderSearchResultDisplayLimitControl
+    renderSearchResultDisplayLimitControl,
+    renderOverlayWidthControl
   } = OPTIONS_SLIDER_CONTROLS.createSliderControls({
     optionsSettingsControlsApi,
     newtabTimeFontWeightControlHost,
@@ -1330,6 +1334,7 @@ import * as LumnoWebDavOptions from './webdav-options.js';
     searchResultDisplayLimitControlHost,
     normalizeSearchResultDisplayLimit,
     SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
+    overlayWidthControlHost,
     optionsState
   });
 
@@ -1344,6 +1349,7 @@ import * as LumnoWebDavOptions from './webdav-options.js';
   renderBookmarkRowsControl(8);
   renderBookmarkColumnsControl(6);
   renderSearchResultDisplayLimitControl(10);
+  renderOverlayWidthControl(null);
   syncSelectionQuickActionsProviderAvailability();
 
   function renderFeedbackSupport() {
@@ -1733,6 +1739,7 @@ import * as LumnoWebDavOptions from './webdav-options.js';
     SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
     normalizeSearchResultDisplayLimit,
     renderSearchResultDisplayLimitControl,
+    renderOverlayWidthControl,
     RECENT_MODE_STORAGE_KEY,
     recentModeSelect,
     setRecentModeTabState,

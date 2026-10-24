@@ -45,6 +45,9 @@ export interface RangeSliderControlRenderModel {
   valueSuffix?: string;
   resetAriaLabel?: string;
   resetButtonId?: string;
+  // Values a drag settles on when it comes within snapThreshold of them.
+  snapPoints?: number[];
+  snapThreshold?: number;
 }
 
 export interface RangeSliderControlControllerOptions {
@@ -232,6 +235,11 @@ function RangeSliderControl({
     const stepped = min + Math.round((next - min) / step) * step;
     return Math.min(max, Math.max(min, stepped));
   };
+  const snapValue = (next: number) => {
+    const threshold = Number(model.snapThreshold) > 0 ? Number(model.snapThreshold) : 0;
+    const point = (model.snapPoints || []).find((candidate) => Math.abs(candidate - next) <= threshold);
+    return Number.isFinite(point) ? Number(point) : next;
+  };
   const handleValueChange = (next: number) => {
     const normalized = normalizeValue(next);
     setDraftValue(String(normalized));
@@ -275,10 +283,10 @@ function RangeSliderControl({
             }
           : undefined}
         onChange={(event) => {
-          handleValueChange(Number(event.currentTarget.value));
+          handleValueChange(snapValue(Number(event.currentTarget.value)));
         }}
         onInput={(event) => {
-          handleValueChange(Number(event.currentTarget.value));
+          handleValueChange(snapValue(Number(event.currentTarget.value)));
         }}
         step={model.step}
         style={{

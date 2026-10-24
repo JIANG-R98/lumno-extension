@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "Saiz"
   },
+  "settings_overlay_width_title": {
+    "message": "Lebar"
+  },
+  "settings_overlay_width_reset": {
+    "message": "Ikut tetapan saiz"
+  },
   "overlay_size_compact": {
     "message": "Padat"
   },

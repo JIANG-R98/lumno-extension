@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "કદ"
   },
+  "settings_overlay_width_title": {
+    "message": "પહોળાઈ"
+  },
+  "settings_overlay_width_reset": {
+    "message": "કદ સેટિંગ અનુસાર"
+  },
   "overlay_size_compact": {
     "message": "કૉમ્પેક્ટ"
   },

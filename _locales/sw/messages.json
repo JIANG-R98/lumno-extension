@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "Ukubwa"
   },
+  "settings_overlay_width_title": {
+    "message": "Upana"
+  },
+  "settings_overlay_width_reset": {
+    "message": "Fuata mpangilio wa ukubwa"
+  },
   "overlay_size_compact": {
     "message": "Mdogo"
   },

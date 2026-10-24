@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "크기"
   },
+  "settings_overlay_width_title": {
+    "message": "너비"
+  },
+  "settings_overlay_width_reset": {
+    "message": "크기 설정에 맞추기"
+  },
   "overlay_size_compact": {
     "message": "작게"
   },

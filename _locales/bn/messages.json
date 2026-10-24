@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "আকার"
   },
+  "settings_overlay_width_title": {
+    "message": "প্রস্থ"
+  },
+  "settings_overlay_width_reset": {
+    "message": "আকারের সেটিং অনুসরণ করুন"
+  },
   "overlay_size_compact": {
     "message": "ছোট"
   },

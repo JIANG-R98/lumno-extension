@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "Boyut"
   },
+  "settings_overlay_width_title": {
+    "message": "Genişlik"
+  },
+  "settings_overlay_width_reset": {
+    "message": "Boyut ayarını izle"
+  },
   "overlay_size_compact": {
     "message": "Küçük"
   },

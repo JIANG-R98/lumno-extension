@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "サイズ"
   },
+  "settings_overlay_width_title": {
+    "message": "幅"
+  },
+  "settings_overlay_width_reset": {
+    "message": "サイズ設定に合わせる"
+  },
   "overlay_size_compact": {
     "message": "小"
   },

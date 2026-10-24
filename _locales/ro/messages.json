@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "Dimensiune"
   },
+  "settings_overlay_width_title": {
+    "message": "Lățime"
+  },
+  "settings_overlay_width_reset": {
+    "message": "Urmează setarea de dimensiune"
+  },
   "overlay_size_compact": {
     "message": "Compactă"
   },

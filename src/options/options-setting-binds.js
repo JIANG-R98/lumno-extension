@@ -83,6 +83,7 @@ function createSettingBinds(deps) {
     SEARCH_RESULT_DISPLAY_LIMIT_STORAGE_KEY,
     normalizeSearchResultDisplayLimit,
     renderSearchResultDisplayLimitControl,
+    renderOverlayWidthControl,
     RECENT_MODE_STORAGE_KEY,
     recentModeSelect,
     setRecentModeTabState,
@@ -274,9 +275,21 @@ function createSettingBinds(deps) {
   settingBinder.bindSetting({
     key: OVERLAY_SIZE_MODE_STORAGE_KEY,
     normalize: normalizeOverlaySizeMode,
-    apply: setOverlaySizeTabState,
+    apply(mode) {
+      setOverlaySizeTabState(mode);
+      // An unset width shows the new size's own width.
+      renderOverlayWidthControl(optionsState.currentOverlayWidth);
+    },
     repairOnChange: false,
     refreshSelects: true
+  });
+  settingBinder.bindSetting({
+    key: SETTINGS.OVERLAY_WIDTH_STORAGE_KEY,
+    normalize: SETTINGS.normalizeOverlayWidth,
+    apply: renderOverlayWidthControl,
+    // Unset is a valid state (follow the size), so nothing is written back.
+    repairOnLoad: false,
+    repairOnChange: false
   });
   settingBinder.bindSetting({
     key: OVERLAY_ENTER_ANIMATION_STORAGE_KEY,

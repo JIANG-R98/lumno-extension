@@ -150,6 +150,8 @@ const NEWTAB_WALLPAPER_OVERLAY_STORAGE_KEY = '_x_extension_newtab_wallpaper_over
 const NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY = '_x_extension_newtab_wallpaper_effect_2026_unique_';
 const NEWTAB_FAVICON_STORAGE_KEY = '_x_extension_newtab_favicon_2026_unique_';
 const OVERLAY_SIZE_MODE_STORAGE_KEY = '_x_extension_overlay_size_mode_2026_unique_';
+// A custom panel width in CSS px; unset follows the size mode's own width.
+const OVERLAY_WIDTH_STORAGE_KEY = '_x_extension_overlay_width_2026_unique_';
 // An installed family name, or the empty string for the bundled Lumno stack.
 // A missing face falls back to the bundled stack.
 const OVERLAY_FONT_FAMILY_STORAGE_KEY = '_x_extension_overlay_font_family_2026_unique_';
@@ -350,6 +352,7 @@ const CHROME_SYNC_STORAGE_KEYS = Object.freeze([
   NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY,
   NEWTAB_FAVICON_STORAGE_KEY,
   OVERLAY_SIZE_MODE_STORAGE_KEY,
+  OVERLAY_WIDTH_STORAGE_KEY,
   OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
   OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY,
   BOOKMARK_COUNT_STORAGE_KEY,
@@ -973,6 +976,32 @@ function normalizeOverlaySizeMode(value) {
     return value;
   }
   return 'standard';
+}
+
+// What each size draws: the panel width before zoom compensation, its height
+// cap and the scale applied to its contents.
+const OVERLAY_SIZE_PRESETS = Object.freeze({
+  compact: Object.freeze({ width: 680, maxHeightVh: 72, uiScale: 0.94 }),
+  standard: Object.freeze({ width: 760, maxHeightVh: 75, uiScale: 1 }),
+  large: Object.freeze({ width: 840, maxHeightVh: 80, uiScale: 1.06 })
+});
+const OVERLAY_WIDTH_MIN = 560;
+const OVERLAY_WIDTH_MAX = 1040;
+
+function getOverlaySizePreset(mode) {
+  return OVERLAY_SIZE_PRESETS[normalizeOverlaySizeMode(mode)];
+}
+
+// A custom width, or null when the panel follows its size mode.
+function normalizeOverlayWidth(value) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return null;
+  }
+  return Math.min(OVERLAY_WIDTH_MAX, Math.max(OVERLAY_WIDTH_MIN, Math.round(number)));
 }
 
 function normalizeOverlayEnterAnimation(value) {
@@ -1694,6 +1723,7 @@ export {
   NEWTAB_WALLPAPER_EFFECT_STORAGE_KEY,
   NEWTAB_FAVICON_STORAGE_KEY,
   OVERLAY_SIZE_MODE_STORAGE_KEY,
+  OVERLAY_WIDTH_STORAGE_KEY,
   OVERLAY_FONT_FAMILY_STORAGE_KEY,
   OVERLAY_FONT_FALLBACK_STORAGE_KEY,
   OVERLAY_FONT_LABELS_STORAGE_KEY,
@@ -1874,6 +1904,11 @@ export {
   normalizeOverlayOpenTabsDefaultVisible,
   normalizeOverlayPageThemeAdaptationEnabled,
   normalizeOverlaySizeMode,
+  OVERLAY_SIZE_PRESETS,
+  OVERLAY_WIDTH_MIN,
+  OVERLAY_WIDTH_MAX,
+  getOverlaySizePreset,
+  normalizeOverlayWidth,
   normalizeOverlayEnterAnimation,
   normalizeOverlayFontFamily,
   normalizeOverlayFontLabels,

@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "அளவு"
   },
+  "settings_overlay_width_title": {
+    "message": "அகலம்"
+  },
+  "settings_overlay_width_reset": {
+    "message": "அளவு அமைப்பைப் பின்பற்று"
+  },
   "overlay_size_compact": {
     "message": "சிறியது"
   },

@@ -755,6 +755,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   const FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY = overlayStorageKeys.faviconEnhancedFetchEnabled;
   const OVERLAY_OPEN_TABS_DEFAULT_VISIBLE_STORAGE_KEY = overlayStorageKeys.overlayOpenTabsDefaultVisible;
   const OVERLAY_SIZE_MODE_STORAGE_KEY = overlayStorageKeys.overlaySizeMode;
+  const OVERLAY_WIDTH_STORAGE_KEY = overlayStorageKeys.overlayWidth;
   const OVERLAY_ENTER_ANIMATION_STORAGE_KEY = overlayStorageKeys.overlayEnterAnimation ||
     '_x_extension_overlay_enter_animation_2026_unique_';
   const OVERLAY_FONT_FAMILY_STORAGE_KEY = overlayStorageKeys.overlayFontFamily ||
@@ -800,6 +801,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
   overlayState.overlaySearchResultPriorityMode = 'autocomplete';
   overlayState.overlaySearchResultDisplayLimit = 10;
   overlayState.overlaySizeMode = 'standard';
+  overlayState.overlayCustomWidth = null;
   overlayState.overlayEnterAnimation = 'elastic';
   // Empty keeps the bundled Lumno Open Sans stack the CSS declares. The
   // fallback covers glyphs (Chinese) the chosen family does not carry.
@@ -828,6 +830,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
       THEME_STORAGE_KEY,
       OVERLAY_PAGE_THEME_ADAPTATION_ENABLED_STORAGE_KEY,
       OVERLAY_SIZE_MODE_STORAGE_KEY,
+      OVERLAY_WIDTH_STORAGE_KEY,
       OVERLAY_ENTER_ANIMATION_STORAGE_KEY,
       MOTION_EFFECTS_ENABLED_STORAGE_KEY,
       SIMPLE_MODE_ENABLED_STORAGE_KEY,
@@ -1116,15 +1119,12 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
 
   ensureOverlayFontFaces();
 
+  // A custom width replaces the size's own; the size keeps its height cap
+  // and content scale.
   function getOverlaySizePreset(mode) {
-    const normalizedMode = SETTINGS.normalizeOverlaySizeMode(mode);
-    if (normalizedMode === 'compact') {
-      return { width: 680, maxHeightVh: 72, uiScale: 0.94 };
-    }
-    if (normalizedMode === 'large') {
-      return { width: 840, maxHeightVh: 80, uiScale: 1.06 };
-    }
-    return { width: 760, maxHeightVh: 75, uiScale: 1 };
+    const preset = SETTINGS.getOverlaySizePreset(mode);
+    const customWidth = SETTINGS.normalizeOverlayWidth(overlayState.overlayCustomWidth);
+    return customWidth ? Object.assign({}, preset, { width: customWidth }) : preset;
   }
 
   function getRiSvg(id, sizeClass, extraClass) {
@@ -1806,6 +1806,7 @@ window._x_extension_toggleSearchOverlay_2026_unique_ = function(requestedTabs, o
     documentPipSupported,
     OVERLAY_TAB_PRIORITY_STORAGE_KEY,
     OVERLAY_SIZE_MODE_STORAGE_KEY,
+    OVERLAY_WIDTH_STORAGE_KEY,
     overlayRuntime,
     localStorageArea,
     OVERLAY_FONT_FAMILY_STORAGE_KEY,

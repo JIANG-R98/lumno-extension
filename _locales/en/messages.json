@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "Size"
   },
+  "settings_overlay_width_title": {
+    "message": "Width"
+  },
+  "settings_overlay_width_reset": {
+    "message": "Match the size setting"
+  },
   "overlay_size_compact": {
     "message": "Compact"
   },

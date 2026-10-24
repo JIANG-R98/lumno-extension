@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "Величина"
   },
+  "settings_overlay_width_title": {
+    "message": "Ширина"
+  },
+  "settings_overlay_width_reset": {
+    "message": "Прати подешавање величине"
+  },
   "overlay_size_compact": {
     "message": "Компактно"
   },

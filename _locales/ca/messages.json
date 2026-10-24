@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "Mida"
   },
+  "settings_overlay_width_title": {
+    "message": "Amplada"
+  },
+  "settings_overlay_width_reset": {
+    "message": "Segueix la mida"
+  },
   "overlay_size_compact": {
     "message": "Compacta"
   },

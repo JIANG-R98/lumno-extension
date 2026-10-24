@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "Izmērs"
   },
+  "settings_overlay_width_title": {
+    "message": "Platums"
+  },
+  "settings_overlay_width_reset": {
+    "message": "Atbilstoši izmēra iestatījumam"
+  },
   "overlay_size_compact": {
     "message": "Kompakts"
   },

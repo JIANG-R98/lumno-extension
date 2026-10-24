@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "Suurus"
   },
+  "settings_overlay_width_title": {
+    "message": "Laius"
+  },
+  "settings_overlay_width_reset": {
+    "message": "Järgi suuruse seadet"
+  },
   "overlay_size_compact": {
     "message": "Kompaktne"
   },

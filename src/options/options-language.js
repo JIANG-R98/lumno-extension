@@ -47,6 +47,7 @@ function createLanguage(deps) {
     renderBookmarkRowsControl,
     renderBookmarkColumnsControl,
     renderSearchResultDisplayLimitControl,
+    renderOverlayWidthControl,
     renderSettingsNavigation,
     renderSiteSearchList,
     renderAggregateSearchList,
@@ -270,6 +271,7 @@ function createLanguage(deps) {
       renderBookmarkRowsControl(optionsState.currentBookmarkCount);
       renderBookmarkColumnsControl(optionsState.currentBookmarkColumns);
       renderSearchResultDisplayLimitControl(optionsState.currentSearchResultDisplayLimit);
+      renderOverlayWidthControl(optionsState.currentOverlayWidth);
       renderSettingsNavigation(optionsState.currentActiveSettingsTab);
       renderSiteSearchList();
       renderAggregateSearchList();

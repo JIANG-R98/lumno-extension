@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "Méret"
   },
+  "settings_overlay_width_title": {
+    "message": "Szélesség"
+  },
+  "settings_overlay_width_reset": {
+    "message": "A méretbeállítás szerint"
+  },
   "overlay_size_compact": {
     "message": "Kompakt"
   },

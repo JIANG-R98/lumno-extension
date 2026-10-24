@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "Dydis"
   },
+  "settings_overlay_width_title": {
+    "message": "Plotis"
+  },
+  "settings_overlay_width_reset": {
+    "message": "Pagal dydžio nustatymą"
+  },
   "overlay_size_compact": {
     "message": "Kompaktiškas"
   },

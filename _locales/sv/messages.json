@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "Storlek"
   },
+  "settings_overlay_width_title": {
+    "message": "Bredd"
+  },
+  "settings_overlay_width_reset": {
+    "message": "Följ storleksinställningen"
+  },
   "overlay_size_compact": {
     "message": "Kompakt"
   },

@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "Laki"
   },
+  "settings_overlay_width_title": {
+    "message": "Lapad"
+  },
+  "settings_overlay_width_reset": {
+    "message": "Sundan ang setting ng laki"
+  },
   "overlay_size_compact": {
     "message": "Compact"
   },

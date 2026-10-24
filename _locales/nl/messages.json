@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "Grootte"
   },
+  "settings_overlay_width_title": {
+    "message": "Breedte"
+  },
+  "settings_overlay_width_reset": {
+    "message": "Volg de grootte-instelling"
+  },
   "overlay_size_compact": {
     "message": "Compact"
   },

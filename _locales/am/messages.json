@@ -677,6 +677,12 @@
   "settings_overlay_size_title": {
     "message": "መጠን"
   },
+  "settings_overlay_width_title": {
+    "message": "ስፋት"
+  },
+  "settings_overlay_width_reset": {
+    "message": "ከመጠን ቅንብሩ ጋር አዛምድ"
+  },
   "overlay_size_compact": {
     "message": "አነስተኛ"
   },
