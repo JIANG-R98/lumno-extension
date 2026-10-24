@@ -885,7 +885,8 @@ const WEB_PAGE_MESSAGE_ACTIONS = Object.freeze([
   'recordSearchSuggestionSelection', 'deleteHistoryUrl',
   'getSiteSearchProviders', 'getHelpCenterSearchResults', 'runSiteSearchProviderQuery',
   'runAggregateSearchQuery', 'runSelectionQuickAction',
-  'linkPreviewPrepare', 'linkPreviewOpen', 'linkPreviewClose', 'linkPreviewOpenInTab',
+  'linkPreviewPrepare', 'linkPreviewOpen', 'linkPreviewCancel', 'linkPreviewClose', 'linkPreviewOpenInTab',
+  'linkPreviewFrameBind', 'linkPreviewFrameNavigating', 'linkPreviewFrameCommitted', 'linkPreviewFrameRefused',
   'getLocaleMessages', 'openOptionsPage', 'openReleasePage', 'createTab', 'openNewTab',
   'getFaviconData'
 ]);
@@ -903,6 +904,7 @@ const backgroundMessageSenderPolicy = BACKGROUND_MESSAGE_ROUTER.createSenderPoli
     linkPreviewPrepare: (request) => LumnoLinkPreview.isPreviewableUrl(request.url),
     linkPreviewOpen: (request) => LumnoLinkPreview.isPreviewableUrl(request.url),
     linkPreviewOpenInTab: (request) => LumnoLinkPreview.isPreviewableUrl(request.url),
+    linkPreviewFrameNavigating: (request) => LumnoLinkPreview.isPreviewableUrl(request.url),
     setWebAppearance: (request) => Boolean(LumnoWebAppearance.normalizeMode(request.mode)),
     runSiteSearchProviderQuery: (request) => {
       const entryUrl = getSiteSearchProviderEntryUrl(request.provider, request.query);

@@ -403,13 +403,29 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
     }
   }
 
-  function send(message) {
+  function send(message, callback) {
     try {
-      chrome.runtime.sendMessage(message, () => {
+      chrome.runtime.sendMessage(message, (response) => {
         void (chrome.runtime && chrome.runtime.lastError);
+        if (typeof callback === 'function') {
+          callback(response);
+        }
       });
     } catch (error) {
       // Ignore an extension context invalidated during reload or navigation.
+      if (typeof callback === 'function') {
+        callback(undefined);
+      }
+    }
+  }
+
+  // Sends the frame to another address in place of its current entry, so
+  // Back does not return to the error page it replaces.
+  function replaceFrameLocation(preview, url) {
+    try {
+      preview.frame.contentWindow.location.replace(url);
+    } catch (error) {
+      preview.frame.src = url;
     }
   }
 
@@ -483,9 +499,9 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
     preview.toast.show(message, options);
   }
 
-  function postToFrame(preview, type) {
+  function postToFrame(preview, type, extra) {
     try {
-      preview.frame.contentWindow.postMessage({ source: PREVIEW_SURFACE_SOURCE, type }, '*');
+      preview.frame.contentWindow.postMessage(Object.assign({ source: PREVIEW_SURFACE_SOURCE, type }, extra), '*');
     } catch (error) {
       // The frame may be between documents.
     }
@@ -738,6 +754,12 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
       preview.currentUrl = data.url === preview.frameUrl ? preview.url : data.url;
       preview.root.dataset.blocked = 'false';
       preview.backButton.hidden = data.canGoBack !== true;
+      // Only this window holds the frame, so only the frame's page hears
+      // the secret; its content script hands it to the background, which
+      // then takes that frame's reports as the preview's.
+      if (preview.frameSecret) {
+        postToFrame(preview, 'bind', { secret: preview.frameSecret });
+      }
     } else if (data.type === 'background' && typeof data.color === 'string' &&
         /^rgba?\([\d.,\s%/]+\)$/.test(data.color)) {
       preview.panel.style.backgroundColor = data.color;
@@ -763,12 +785,31 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
       }
       const alive = preview.aliveSinceLoad;
       preview.aliveSinceLoad = false;
-      preview.root.dataset.loaded = 'true';
       if (alive) {
+        preview.root.dataset.loaded = 'true';
         return;
       }
-      preview.root.dataset.blocked = 'true';
+      retryRefusedPage(preview, loadNumber);
     }, ALIVE_GRACE_MS);
+  }
+
+  // The preview frames the previewed site's domains only. A refused page may
+  // be one it went to from there (a link that redirects, or a link followed
+  // in the preview): the background allows that domain if it may and the
+  // frame tries once more; otherwise the window says the page is refused.
+  function retryRefusedPage(preview, loadNumber) {
+    send({ action: 'linkPreviewFrameRefused', token: preview.token }, (response) => {
+      if (current !== preview || preview.closing || loadNumber !== preview.loadCount) {
+        return;
+      }
+      if (response && response.retry === true && typeof response.url === 'string' &&
+          /^https?:\/\//i.test(response.url)) {
+        replaceFrameLocation(preview, response.url);
+        return;
+      }
+      preview.root.dataset.loaded = 'true';
+      preview.root.dataset.blocked = 'true';
+    });
   }
 
   // The page under the preview cannot be used while it is up, so a new
@@ -825,7 +866,7 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
     }
   }
 
-  function prewarm(token, url) {
+  function prewarm(token, url, frameSecret) {
     if (current && !current.shown) {
       teardown(current);
     }
@@ -834,6 +875,7 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
       return false;
     }
     const preview = build(token, url);
+    preview.frameSecret = frameSecret;
     current = preview;
     preview.prewarmTimer = setTimeout(() => {
       if (current === preview && !preview.shown) {
@@ -943,7 +985,7 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
       return false;
     }
     if (!current || current.token !== message.token || current.url !== message.url) {
-      prewarm(message.token, message.url);
+      prewarm(message.token, message.url, message.frameSecret);
     }
     const preview = current;
     if (!preview) {
@@ -1067,7 +1109,7 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
       return false;
     }
     if (message.action === 'lumnoLinkPreviewPrewarm') {
-      sendResponse(prewarm(String(message.token || ''), String(message.url || '')));
+      sendResponse(prewarm(String(message.token || ''), String(message.url || ''), String(message.frameSecret || '')));
       return false;
     }
     if (message.action === 'lumnoLinkPreviewScreenshot') {
@@ -1083,10 +1125,20 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
       show({
         token: String(message.token || ''),
         url: String(message.url || ''),
+        frameSecret: String(message.frameSecret || ''),
         screenshot: typeof message.screenshot === 'string' ? message.screenshot : '',
         origin: message.origin || null
       }).then(sendResponse, () => sendResponse(false));
       return true;
+    }
+    if (message.action === 'lumnoLinkPreviewDiscard') {
+      // The press ended away from the link: the click will not come.
+      const discarded = Boolean(current) && !current.shown && current.token === String(message.token || '');
+      if (discarded) {
+        teardown(current);
+      }
+      sendResponse(discarded);
+      return false;
     }
     if (message.action === 'lumnoLinkPreviewPing') {
       // Answers for a preview still opening too: its own frame loading can

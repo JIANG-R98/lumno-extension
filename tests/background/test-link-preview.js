@@ -79,27 +79,186 @@ async function testRuleIdsStayInRange() {
 }
 
 async function testRuleScope() {
-  const [frameOptionsRule, cspRule] = linkPreview.buildFrameHeaderRules(7, [2, 3]);
+  const [frameOptionsRule, cspRule] = linkPreview.buildFrameHeaderRules(7, [2, 3], ['example.com']);
   assert.strictEqual(frameOptionsRule.id, 2);
-  assert.deepStrictEqual(frameOptionsRule.condition, { tabIds: [7], resourceTypes: ['sub_frame'] },
-    'header removal must stay limited to subframes of the previewing tab');
+  assert.deepStrictEqual(frameOptionsRule.condition, {
+    tabIds: [7], requestDomains: ['example.com'], resourceTypes: ['sub_frame']
+  }, 'header removal must stay limited to the previewed site\'s subframes in the previewing tab');
   assert.deepStrictEqual(frameOptionsRule.action.responseHeaders.map((entry) => entry.header), ['x-frame-options']);
   assert.strictEqual(cspRule.id, 3);
   assert.deepStrictEqual(cspRule.action.responseHeaders.map((entry) => entry.header), ['content-security-policy']);
   assert.deepStrictEqual(cspRule.condition.responseHeaders,
     [{ header: 'content-security-policy', values: ['*frame-ancestors*'] }],
     'a CSP goes only when it refuses framing; its limits on script stay with the previewed page');
-  const legacy = linkPreview.buildFrameHeaderRules(7, [2, 3], false);
+  const legacy = linkPreview.buildFrameHeaderRules(7, [2, 3], ['example.com'], false);
   assert.strictEqual(legacy.length, 1);
   assert.deepStrictEqual(legacy[0].action.responseHeaders.map((entry) => entry.header),
     ['x-frame-options', 'content-security-policy'], 'without header matching the CSP goes as a whole');
-  const workerRule = linkPreview.buildWorkerHeaderRule();
+  const workerRule = linkPreview.buildWorkerHeaderRule(['example.com']);
   assert.deepStrictEqual(workerRule.condition.tabIds, [-1], 'the second rule reaches service workers\' requests only');
+  assert.deepStrictEqual(workerRule.condition.requestDomains, ['example.com'],
+    'and only those to the previewed sites');
   assert.deepStrictEqual(workerRule.action.responseHeaders, [{ header: 'x-frame-options', operation: 'remove' }],
     'a worker may cache what it fetched for the site\'s own tabs, so its CSP stays');
   assert.ok(linkPreview.isPreviewableUrl('https://example.com/a'));
   assert.ok(!linkPreview.isPreviewableUrl('javascript:alert(1)'));
   assert.ok(!linkPreview.isPreviewableUrl('chrome://settings'));
+  assert.strictEqual(linkPreview.readUrlDomain('https://www.Example.com./a'), 'example.com');
+  assert.strictEqual(linkPreview.readUrlDomain('https://docs.example.com/a'), 'docs.example.com');
+  assert.strictEqual(linkPreview.readUrlDomain('chrome://settings'), '');
+}
+
+const PREVIEW_FRAME_ID = 42;
+
+function surfaceResponder(overrides) {
+  return (message) => (overrides && Object.hasOwn(overrides, message.action) ? overrides[message.action] : true);
+}
+
+// The secret the surface was handed for the tab's preview, and the preview
+// frame binding with it as the surface's frame would.
+function prewarmSecret(calls, tabId) {
+  const prewarms = calls.sent.filter((entry) => entry.tabId === tabId && entry.message.action === 'lumnoLinkPreviewPrewarm');
+  return prewarms[prewarms.length - 1].message.frameSecret;
+}
+
+async function bindPreviewFrame(service, calls, tabId, url) {
+  return service.bindFrame(frameSender(tabId, url), prewarmSecret(calls, tabId));
+}
+
+function frameSender(tabId, url, frameId = PREVIEW_FRAME_ID) {
+  return { tab: { id: tabId, windowId: 1 }, frameId, url };
+}
+
+function allowedDomains(sessionRules, tabId) {
+  const rules = tabRules(sessionRules, tabId);
+  return rules.length ? rules[0].condition.requestDomains.slice().sort() : [];
+}
+
+async function testRulesNameThePreviewedSite() {
+  const { chromeApi, sessionRules } = createChromeMock({ respond: surfaceResponder() });
+  const service = linkPreview.createLinkPreviewService({ chromeApi });
+  await service.open({ id: 3, windowId: 1 }, 'https://www.example.com/a');
+  assert.deepStrictEqual(allowedDomains(sessionRules, 3), ['example.com'],
+    'the page under the preview cannot use it to frame other sites that refuse framing');
+  assert.ok(tabRules(sessionRules, 3).every((rule) => rule.condition.requestDomains.length === 1));
+  await service.open({ id: 4, windowId: 1 }, 'https://twitter.com/a_b/status/42');
+  assert.deepStrictEqual(allowedDomains(sessionRules, 4), ['twitter.com', 'x.com'],
+    'an X post loads through x.com, which its rule covers too');
+  assert.deepStrictEqual(sessionRules.get(linkPreview.WORKER_RULE_ID).condition.requestDomains,
+    ['example.com', 'twitter.com', 'x.com'], 'workers\' requests lose headers for the open previews\' sites only');
+  await service.handleTabRemoved(4);
+  assert.deepStrictEqual(sessionRules.get(linkPreview.WORKER_RULE_ID).condition.requestDomains, ['example.com']);
+}
+
+async function testOnlyThePreviewFrameMovesTheRule() {
+  const { chromeApi, calls, sessionRules } = createChromeMock({ respond: surfaceResponder() });
+  const service = linkPreview.createLinkPreviewService({ chromeApi });
+  await service.open({ id: 3, windowId: 1 }, 'https://example.com/a');
+  const secret = prewarmSecret(calls, 3);
+  assert.ok(/^[0-9a-f]{32}$/.test(secret), 'each preview hands its surface a secret of its own');
+  assert.strictEqual(calls.sent.find((entry) => entry.message.action === 'lumnoLinkPreviewShow').message.frameSecret, secret);
+  assert.strictEqual(await service.bindFrame(frameSender(3, 'https://example.com/a', 7), 'guess'), false,
+    'a frame without the secret is not the preview frame');
+  assert.strictEqual(await service.bindFrame(frameSender(3, 'https://example.com/a', 0), secret), false,
+    'nor is the top frame');
+  assert.strictEqual(await bindPreviewFrame(service, calls, 3, 'https://example.com/a'), true);
+  assert.strictEqual(await service.bindFrame(frameSender(3, 'https://example.com/a', 7), secret), false,
+    'a frame the page passed the secret to comes second and is not bound');
+  await service.noteFrameCommitted(frameSender(3, 'https://other.test/x', 7));
+  assert.deepStrictEqual(allowedDomains(sessionRules, 3), ['example.com'],
+    'a frame of the page\'s own cannot widen the rule');
+  await service.noteFrameCommitted(frameSender(3, 'https://other.test/x'));
+  assert.deepStrictEqual(allowedDomains(sessionRules, 3), ['example.com', 'other.test'],
+    'the site the preview went on to keeps working in it');
+  await service.noteFrameCommitted(frameSender(3, 'https://third.test/y'));
+  assert.deepStrictEqual(allowedDomains(sessionRules, 3), ['example.com', 'third.test'],
+    'a site the preview left is framed as anywhere else again');
+}
+
+async function testRefusedPageTriesAgainForItsRedirect() {
+  const fetched = [];
+  const { chromeApi, calls, sessionRules } = createChromeMock({ respond: surfaceResponder() });
+  const service = linkPreview.createLinkPreviewService({
+    chromeApi,
+    fetch: async (url, init) => {
+      fetched.push({ url, init });
+      return { url: url.replace('short.test/a', 'final.test/page') };
+    }
+  });
+  await service.open({ id: 5, windowId: 1 }, 'https://example.com/a');
+  const token = calls.sent[0].message.token;
+  await bindPreviewFrame(service, calls, 5, 'https://example.com/a');
+  await service.noteFrameNavigation(frameSender(5, 'https://example.com/a', 7), 'https://evil.test/');
+  await service.noteFrameNavigation(frameSender(5, 'https://example.com/a'), 'https://short.test/a');
+  assert.deepStrictEqual(await service.retryRefusedFrame(5, 'stale'), { retry: false },
+    'a replaced preview gets no retry');
+  const answer = await service.retryRefusedFrame(5, token);
+  assert.deepStrictEqual(answer, { retry: true, url: 'https://short.test/a' },
+    'the frame tries the address it went to again, never one a frame of the page named');
+  assert.strictEqual(fetched[0].url, 'https://short.test/a');
+  assert.strictEqual(fetched[0].init.redirect, 'follow');
+  assert.deepStrictEqual(allowedDomains(sessionRules, 5), ['example.com', 'final.test', 'short.test'],
+    'the address and where it redirects are allowed for the next try');
+  assert.deepStrictEqual(await service.retryRefusedFrame(5, token), { retry: false },
+    'a page still refused with its domains allowed is not tried again');
+  await service.noteFrameCommitted(frameSender(5, 'https://final.test/page'));
+  assert.deepStrictEqual(allowedDomains(sessionRules, 5), ['example.com', 'final.test'],
+    'once the page loads, the domains of the try go');
+
+  let refusedAnswer = null;
+  service.messageHandlers.linkPreviewFrameRefused({ token }, frameSender(5, 'https://example.com/', 7),
+    (value) => { refusedAnswer = value; });
+  assert.deepStrictEqual(refusedAnswer, { retry: false }, 'only the top frame\'s surface asks for a retry');
+}
+
+async function testReleasedPressCancels() {
+  const { chromeApi, calls, sessionRules } = createChromeMock({ respond: surfaceResponder() });
+  const service = linkPreview.createLinkPreviewService({ chromeApi });
+  service.prepare({ id: 6, windowId: 1 }, 'https://example.com/a');
+  await flush();
+  assert.ok(hasTabRules(sessionRules, 6));
+  await service.cancel(6);
+  assert.ok(!hasTabRules(sessionRules, 6), 'a press released away from the link drops the rule at once');
+  assert.ok(!sessionRules.has(linkPreview.WORKER_RULE_ID));
+  assert.ok(calls.sent.some((entry) => entry.message.action === 'lumnoLinkPreviewDiscard'),
+    'and the hidden window with it');
+  await service.open({ id: 6, windowId: 1 }, 'https://example.com/a');
+  await service.cancel(6);
+  assert.ok(hasTabRules(sessionRules, 6), 'an open preview is not cancelled by a stray release');
+}
+
+async function testOpenPreviewOutlivesWorker() {
+  const stored = {};
+  const { chromeApi, calls, sessionRules } = createChromeMock({
+    respond: surfaceResponder({ lumnoLinkPreviewPing: null })
+  });
+  chromeApi.storage = {
+    session: {
+      get(keys, callback) {
+        callback(Object.fromEntries(keys.filter((key) => Object.hasOwn(stored, key)).map((key) => [key, stored[key]])));
+      },
+      set(values, callback) {
+        Object.assign(stored, JSON.parse(JSON.stringify(values)));
+        callback();
+      }
+    }
+  };
+  const first = linkPreview.createLinkPreviewService({ chromeApi });
+  await first.open({ id: 8, windowId: 1 }, 'https://example.com/a');
+  const token = calls.sent[0].message.token;
+  await bindPreviewFrame(first, calls, 8, 'https://example.com/a');
+  // The worker sleeps; a new one wakes with the preview still on screen.
+  chromeApi.tabs.sendMessage = (tabId, message, sendOptions, callback) => {
+    callback(message.action === 'lumnoLinkPreviewPing' ? { token } : true);
+  };
+  const woken = linkPreview.createLinkPreviewService({ chromeApi });
+  woken.attach();
+  await woken.noteFrameCommitted(frameSender(8, 'https://other.test/x'));
+  assert.deepStrictEqual(allowedDomains(sessionRules, 8), ['example.com', 'other.test'],
+    'a woken worker still knows the preview frame');
+  await woken.discard(8, token);
+  assert.ok(!hasTabRules(sessionRules, 8));
+  assert.deepStrictEqual(stored[Object.keys(stored)[0]], {}, 'a closed preview is not kept');
 }
 
 async function testPrepareThenOpen() {
@@ -286,8 +445,8 @@ async function testReconcileDropsRulesWithoutPreview() {
   const { chromeApi, sessionRules } = createChromeMock({
     respond: (message) => (message.action === 'lumnoLinkPreviewPing' ? { token: '' } : true)
   });
-  linkPreview.buildFrameHeaderRules(8, [2, 3]).forEach((rule) => sessionRules.set(rule.id, rule));
-  sessionRules.set(linkPreview.WORKER_RULE_ID, linkPreview.buildWorkerHeaderRule());
+  linkPreview.buildFrameHeaderRules(8, [2, 3], ['example.com']).forEach((rule) => sessionRules.set(rule.id, rule));
+  sessionRules.set(linkPreview.WORKER_RULE_ID, linkPreview.buildWorkerHeaderRule(['example.com']));
   const service = linkPreview.createLinkPreviewService({ chromeApi });
   await service.reconcileRules();
   assert.ok(!hasTabRules(sessionRules, 8), 'a rule whose preview is gone is removed when the worker wakes');
@@ -339,7 +498,9 @@ function loadTrigger(options) {
     const target = window.document.getElementById(id);
     const prevented = [];
     claimed.length = 0;
-    ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'].forEach((type) => {
+    const config = eventOptions || {};
+    const skip = config.skip || [];
+    ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'].filter((type) => !skip.includes(type)).forEach((type) => {
       const event = Object.assign({
         type,
         isTrusted: true,
@@ -365,6 +526,11 @@ function loadTrigger(options) {
           claimed.push(type);
         }
       }, eventOptions || {});
+      delete event.skip;
+      delete event.shiftOnClick;
+      if (type === 'click' && config.shiftOnClick === false) {
+        event.shiftKey = false;
+      }
       listeners.filter((entry) => entry.type === type).forEach((entry) => entry.listener(event));
     });
     return prevented;
@@ -383,6 +549,23 @@ function testShiftClickOpensPreview() {
     { action: 'linkPreviewPrepare', url: 'https://other.example/page' },
     { action: 'linkPreviewOpen', url: 'https://other.example/page', origin: { x: 30, y: 40 } }
   ]);
+}
+
+async function testPressReleasedElsewhereCancels() {
+  const page = loadTrigger();
+  page.press('out');
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.ok(!page.sent.some((message) => message.action === 'linkPreviewCancel'), 'a press that clicks is not cancelled');
+  page.sent.length = 0;
+  page.press('out', { skip: ['click'] });
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.deepStrictEqual(page.sent.map((message) => message.action), ['linkPreviewPrepare', 'linkPreviewCancel'],
+    'a press released away from the link cancels its preview, and its header rule with it');
+  page.sent.length = 0;
+  page.press('out', { shiftOnClick: false });
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.deepStrictEqual(page.sent.map((message) => message.action), ['linkPreviewPrepare', 'linkPreviewCancel'],
+    'so does one where Shift was let go before the click');
 }
 
 function testOtherPressesKeepDefault() {
@@ -538,7 +721,13 @@ function testPreviewFrameReportsIn() {
   assert.strictEqual(parentMessages[0].source, 'lumno-link-preview-frame');
   assert.strictEqual(parentMessages[0].type, 'alive',
     'a page that loads in the preview reports in, so a refused one can be told apart');
-  assert.deepStrictEqual(sent, [], 'a preview frame does not start previews of its own');
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(sent)), [{ action: 'linkPreviewFrameCommitted' }],
+    'a preview frame reports its page to the background and starts no previews of its own');
+  const fromSurface = (source, data) => frameWindow.dispatchEvent(new frameWindow.MessageEvent('message', { source, data }));
+  fromSurface(dom.window, { source: 'lumno-link-preview-surface', type: 'bind', secret: 'abc' });
+  fromSurface(frameWindow, { source: 'lumno-link-preview-surface', type: 'bind', secret: 'page' });
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(sent.slice(1))), [{ action: 'linkPreviewFrameBind', secret: 'abc' }],
+    'the frame passes on the secret only from the surface above it');
   const contained = Array.from(frameWindow.document.querySelectorAll('style'))
     .some((style) => /:root\s*\{\s*overscroll-behavior:\s*contain/.test(style.textContent));
   assert.ok(contained,
@@ -593,7 +782,8 @@ function testShiftClickInsidePreviewStaysInPreview() {
     listeners.filter((entry) => entry.type === type).forEach((entry) => entry.listener(event));
   });
   assert.deepStrictEqual(prevented, ['mousedown', 'click'], 'Chrome does not open a new window for it');
-  assert.deepStrictEqual(sent, [], 'no second preview starts from inside the preview');
+  assert.deepStrictEqual(sent.filter((message) => message.action !== 'linkPreviewFrameCommitted'), [],
+    'no second preview starts from inside the preview');
   assert.ok(notImplemented.some((message) => /navigation/i.test(message)),
     'Shift+click on a link inside the preview opens it in the preview, where Back returns');
 }
@@ -673,7 +863,13 @@ async function testPreviewFrameEscape() {
   await testWorkerRuleOutlivesOnePreview();
   await testOlderChromeDropsWholeCsp();
   await testRuleIdsStayInRange();
+  await testRulesNameThePreviewedSite();
+  await testOnlyThePreviewFrameMovesTheRule();
+  await testRefusedPageTriesAgainForItsRedirect();
+  await testReleasedPressCancels();
+  await testOpenPreviewOutlivesWorker();
   testShiftClickOpensPreview();
+  await testPressReleasedElsewhereCancels();
   testOtherPressesKeepDefault();
   testShownAddressOpensPreview();
   testPostOpensPreview();

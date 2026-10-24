@@ -269,6 +269,9 @@ import { toPreviewFrameUrl } from '../shared/link-preview-frame-url.js';
     prepare(href) {
       send({ action: 'linkPreviewPrepare', url: href });
     },
+    cancel() {
+      send({ action: 'linkPreviewCancel' });
+    },
     open(href, event) {
       send({
         action: 'linkPreviewOpen',
@@ -280,6 +283,7 @@ import { toPreviewFrameUrl } from '../shared/link-preview-frame-url.js';
   const IN_PREVIEW_HANDLERS = Object.freeze({
     navigatesHere: true,
     prepare() {},
+    cancel() {},
     open(href) {
       location.assign(toPreviewFrameUrl(href));
     }
@@ -288,6 +292,10 @@ import { toPreviewFrameUrl } from '../shared/link-preview-frame-url.js';
   function setupTrigger(handlers) {
     let pressedHref = '';
     let guardUntil = 0;
+    // A prepared press waits for its click; released anywhere else (or with
+    // Shift let go) it is cancelled, so the preview's header rule does not
+    // outlive the press.
+    let preparePending = false;
     const navigation = window.navigation && typeof window.navigation.addEventListener === 'function'
       ? window.navigation
       : null;
@@ -323,6 +331,7 @@ import { toPreviewFrameUrl } from '../shared/link-preview-frame-url.js';
       claim(event);
       // Shift+mousedown would extend the text selection to the link.
       event.preventDefault();
+      preparePending = true;
       handlers.prepare(href);
     }, true);
     ['pointerup', 'mouseup'].forEach((type) => {
@@ -332,6 +341,19 @@ import { toPreviewFrameUrl } from '../shared/link-preview-frame-url.js';
         }
       }, true);
     });
+    // The click, if any, is dispatched with the mouseup, ahead of this.
+    listen(window, 'mouseup', () => {
+      if (!preparePending) {
+        return;
+      }
+      setTimeout(() => {
+        if (preparePending) {
+          preparePending = false;
+          pressedHref = '';
+          handlers.cancel();
+        }
+      }, 0);
+    }, true);
     // Preventing the click also stops Chrome's Shift+click new window.
     listen(window, 'click', (event) => {
       const wasPressed = isClaimedPress(event);
@@ -340,6 +362,7 @@ import { toPreviewFrameUrl } from '../shared/link-preview-frame-url.js';
       if (!wasPressed) {
         return;
       }
+      preparePending = false;
       claim(event);
       event.preventDefault();
       if (handlers.navigatesHere) {
@@ -512,7 +535,20 @@ import { toPreviewFrameUrl } from '../shared/link-preview-frame-url.js';
       });
     };
     reportLocation();
+    // The background reads this page's address from the browser and lets
+    // the preview frame its site from now on (see linkPreviewFrameCommitted;
+    // until the frame is bound it is ignored, and the bind below counts).
+    send({ action: 'linkPreviewFrameCommitted' });
     if (navigation) {
+      // Where the frame goes next, for the background to try again if the
+      // site there refuses framing. It allows nothing by itself.
+      listen(navigation, 'navigate', (event) => {
+        const url = event.destination && typeof event.destination.url === 'string' ? event.destination.url : '';
+        if (!event.downloadRequest && !(event.destination && event.destination.sameDocument) &&
+            /^https?:\/\//i.test(url)) {
+          send({ action: 'linkPreviewFrameNavigating', url });
+        }
+      });
       listen(navigation, 'navigatesuccess', reportLocation);
       listen(navigation, 'currententrychange', reportLocation);
       // The window shows the page loading again when it leaves for another
@@ -540,6 +576,8 @@ import { toPreviewFrameUrl } from '../shared/link-preview-frame-url.js';
         });
       } else if (data.type === 'reload') {
         location.reload();
+      } else if (data.type === 'bind' && typeof data.secret === 'string') {
+        send({ action: 'linkPreviewFrameBind', secret: data.secret });
       }
     });
     // Escape closes the preview even where the previewed page claims the key
