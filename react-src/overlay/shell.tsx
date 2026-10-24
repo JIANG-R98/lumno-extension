@@ -289,6 +289,16 @@ function appendOverlayStyleNodes(
     :where(#_x_extension_overlay_2024_unique_) :where(.x-ov-close-other-tabs) {
       right: calc(var(--x-ext-input-right-icon-inset, 13px) + 36px);
     }
+    /* The close-other-tabs popconfirm stays mounted while closed. Hidden
+       from the first frame, the stylesheet's closed state changes nothing
+       when it arrives, so its closing transition never plays unopened. */
+    :where(#_x_extension_overlay_2024_unique_) :where(.x-lumno-search-input__popconfirm) {
+      position: absolute;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translateY(-6px) scale(0.98);
+    }
     :where(#_x_extension_overlay_2024_unique_[data-lumno-site-fix-style-fallback]) :where(.x-ov-suggestions-container) {
       visibility: hidden;
     }
