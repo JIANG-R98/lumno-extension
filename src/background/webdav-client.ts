@@ -209,7 +209,7 @@ function normalizeConfig(input: WebDavConfigInput): WebDavConnection {
   if (endpoint.protocol !== 'https:' || endpoint.username || endpoint.password || endpoint.search || endpoint.hash) throw error('invalid-endpoint');
   endpoint.pathname = endpoint.pathname.replace(/\/+$/, '') + '/';
   const directory = String(input.directory || 'lumno').trim().replace(/^\/+|\/+$/g, '');
-  if (!directory || directory.length > 240 || directory.split('/').some((part) => !/^[-\w\u0080-￿ ]+$/.test(part) || part === '.' || part === '..')) throw error('invalid-directory');
+  if (!directory || directory.length > 240 || directory.split('/').some((part) => !/^[-\w\u0080-\uffff ]+$/.test(part) || part === '.' || part === '..')) throw error('invalid-directory');
   const username = String(input.username || '').trim();
   const password = String(input.password || '');
   if (!username || username.includes(':') || username.length > 256 || !password || password.length > 4096) throw error('missing-credentials');
