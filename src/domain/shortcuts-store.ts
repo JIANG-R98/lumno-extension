@@ -903,7 +903,9 @@ export {
   getShortcutSyncBudget,
   measureShortcutSyncUsage,
   createShortcutStoragePlan,
-  createAuthoritativeOverflowRecord
+  createAuthoritativeOverflowRecord,
+  isShortcutFolder,
+  isPortableFolder
 };
 export type {
   GroupedShortcutItem,
