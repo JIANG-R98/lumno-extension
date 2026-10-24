@@ -18,9 +18,6 @@ const UI_FILES = Object.freeze(['build/link-preview.js']);
 // 128 cannot match on a response header; there the CSP always goes.
 const FRAME_BLOCKING_HEADERS = Object.freeze(['x-frame-options', 'content-security-policy']);
 const FRAME_ANCESTORS_CSP = Object.freeze({ header: 'content-security-policy', values: ['*frame-ancestors*'] });
-// A tab's CSP rule sits this far above its X-Frame-Options rule, whose id is
-// the tab id.
-const CSP_RULE_ID_OFFSET = 1000000000;
 // A site with a service worker answers the frame from the worker, and the
 // worker's own request belongs to no tab (tab id -1), so the tab's rule never
 // sees it. While any preview is open, such requests lose X-Frame-Options
@@ -28,7 +25,7 @@ const CSP_RULE_ID_OFFSET = 1000000000;
 // own tabs, where a removed CSP would stay removed. A page a worker builds
 // from its cache keeps its headers and is still refused (X's posts load
 // through another address for that; see link-preview-frame-url.js).
-const WORKER_RULE_ID = 2147483647;
+const WORKER_RULE_ID = 1;
 const NO_TAB_ID = -1;
 // A press the page kept for itself (it handled the click) never opens; its
 // rule and screenshot are dropped after this long.
@@ -40,10 +37,26 @@ function isPreviewableUrl(url) {
   return typeof url === 'string' && url.length <= 8192 && PREVIEWABLE_URL_PATTERN.test(url);
 }
 
-// Session rules accept a tab condition and outlive a suspended worker; the
-// rules are keyed by the tab id, so a woken worker still finds them.
-function getRuleIdsForTab(tabId) {
-  return [tabId, tabId + CSP_RULE_ID_OFFSET];
+// Session rules accept a tab condition and outlive a suspended worker, which
+// finds a tab's rules again by the tab in their condition. Their ids are
+// handed out from the ones free: tab ids run past a billion, so an id made
+// from one could leave the 32-bit range rules allow.
+function findTabRuleIds(rules, tabId) {
+  return rules
+    .filter((rule) => rule.id !== WORKER_RULE_ID && rule.condition && Array.isArray(rule.condition.tabIds) &&
+      rule.condition.tabIds.includes(tabId))
+    .map((rule) => rule.id);
+}
+
+function allocateRuleIds(rules, count) {
+  const used = new Set(rules.map((rule) => rule.id).concat(WORKER_RULE_ID));
+  const ids = [];
+  for (let id = 1; ids.length < count; id += 1) {
+    if (!used.has(id)) {
+      ids.push(id);
+    }
+  }
+  return ids;
 }
 
 function buildRemoveHeadersRule(id, tabId, headers, responseHeaders) {
@@ -63,13 +76,13 @@ function buildRemoveHeadersRule(id, tabId, headers, responseHeaders) {
 }
 
 // With matchHeaders false (Chrome before 128), one rule drops both headers.
-function buildFrameHeaderRules(tabId, matchHeaders = true) {
+function buildFrameHeaderRules(tabId, ids, matchHeaders = true) {
   if (!matchHeaders) {
-    return [buildRemoveHeadersRule(tabId, tabId, FRAME_BLOCKING_HEADERS)];
+    return [buildRemoveHeadersRule(ids[0], tabId, FRAME_BLOCKING_HEADERS)];
   }
   return [
-    buildRemoveHeadersRule(tabId, tabId, ['x-frame-options']),
-    buildRemoveHeadersRule(tabId + CSP_RULE_ID_OFFSET, tabId, ['content-security-policy'], [FRAME_ANCESTORS_CSP])
+    buildRemoveHeadersRule(ids[0], tabId, ['x-frame-options']),
+    buildRemoveHeadersRule(ids[1], tabId, ['content-security-policy'], [FRAME_ANCESTORS_CSP])
   ];
 }
 
@@ -101,6 +114,8 @@ function createLinkPreviewService(options) {
   let tokenCounter = 0;
   // Cleared once Chrome refuses a rule that matches on a response header.
   let headerMatching = true;
+  // Rule updates read the rules in place first, so they run one at a time.
+  let ruleQueue = Promise.resolve();
 
   function readLastError() {
     return chromeApi && chromeApi.runtime ? chromeApi.runtime.lastError : null;
@@ -123,16 +138,27 @@ function createLinkPreviewService(options) {
     return dnr && typeof dnr.updateSessionRules === 'function' ? dnr : null;
   }
 
-  async function setFrameHeaderRule(tabId, enabled) {
+  function setFrameHeaderRule(tabId, enabled) {
     const dnr = getDnr();
     if (!dnr) {
-      return false;
+      return Promise.resolve(false);
     }
+    const run = ruleQueue.then(() => updateFrameHeaderRules(dnr, tabId, enabled));
+    ruleQueue = run.catch(() => false);
+    return run;
+  }
+
+  async function updateFrameHeaderRules(dnr, tabId, enabled) {
+    const current = typeof dnr.getSessionRules === 'function'
+      ? await callback((done) => dnr.getSessionRules(done))
+      : null;
+    const rules = Array.isArray(current) ? current : [];
     const apply = () => {
-      const update = { removeRuleIds: getRuleIdsForTab(tabId) };
+      const update = { removeRuleIds: findTabRuleIds(rules, tabId) };
       if (enabled) {
         update.removeRuleIds.push(WORKER_RULE_ID);
-        update.addRules = buildFrameHeaderRules(tabId, headerMatching).concat(buildWorkerHeaderRule());
+        const ids = allocateRuleIds(rules, 2);
+        update.addRules = buildFrameHeaderRules(tabId, ids, headerMatching).concat(buildWorkerHeaderRule());
       } else if (sessions.size === 0) {
         // The last preview is gone; the workers' requests keep their headers.
         update.removeRuleIds.push(WORKER_RULE_ID);
@@ -446,7 +472,6 @@ export {
   UI_FILES,
   FRAME_BLOCKING_HEADERS,
   WORKER_RULE_ID,
-  CSP_RULE_ID_OFFSET,
   PREPARED_TTL_MS,
   isPreviewableUrl,
   buildFrameHeaderRules,

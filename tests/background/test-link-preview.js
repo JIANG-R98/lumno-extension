@@ -55,18 +55,41 @@ function createChromeMock(options) {
   return { chromeApi, calls, sessionRules };
 }
 
+function tabRules(sessionRules, tabId) {
+  return Array.from(sessionRules.values()).filter((rule) => rule.condition.tabIds.includes(tabId));
+}
+
+function hasTabRules(sessionRules, tabId) {
+  return tabRules(sessionRules, tabId).length > 0;
+}
+
+async function testRuleIdsStayInRange() {
+  const { chromeApi, sessionRules } = createChromeMock();
+  const service = linkPreview.createLinkPreviewService({ chromeApi });
+  // Chrome's tab ids run past a billion.
+  await service.open({ id: 2000000000, windowId: 1 }, 'https://example.com/a');
+  await service.open({ id: 2000000001, windowId: 1 }, 'https://example.com/b');
+  const ids = Array.from(sessionRules.keys());
+  assert.strictEqual(tabRules(sessionRules, 2000000000).length, 2);
+  assert.ok(ids.every((id) => Number.isInteger(id) && id >= 1 && id < 2 ** 31), 'rule ids stay within what Chrome accepts');
+  assert.strictEqual(new Set(ids).size, ids.length);
+  await service.handleTabRemoved(2000000000);
+  assert.ok(!hasTabRules(sessionRules, 2000000000));
+  assert.strictEqual(tabRules(sessionRules, 2000000001).length, 2, 'the other tab keeps its rules');
+}
+
 async function testRuleScope() {
-  const [frameOptionsRule, cspRule] = linkPreview.buildFrameHeaderRules(7);
-  assert.strictEqual(frameOptionsRule.id, 7);
+  const [frameOptionsRule, cspRule] = linkPreview.buildFrameHeaderRules(7, [2, 3]);
+  assert.strictEqual(frameOptionsRule.id, 2);
   assert.deepStrictEqual(frameOptionsRule.condition, { tabIds: [7], resourceTypes: ['sub_frame'] },
     'header removal must stay limited to subframes of the previewing tab');
   assert.deepStrictEqual(frameOptionsRule.action.responseHeaders.map((entry) => entry.header), ['x-frame-options']);
-  assert.strictEqual(cspRule.id, 7 + linkPreview.CSP_RULE_ID_OFFSET);
+  assert.strictEqual(cspRule.id, 3);
   assert.deepStrictEqual(cspRule.action.responseHeaders.map((entry) => entry.header), ['content-security-policy']);
   assert.deepStrictEqual(cspRule.condition.responseHeaders,
     [{ header: 'content-security-policy', values: ['*frame-ancestors*'] }],
     'a CSP goes only when it refuses framing; its limits on script stay with the previewed page');
-  const legacy = linkPreview.buildFrameHeaderRules(7, false);
+  const legacy = linkPreview.buildFrameHeaderRules(7, [2, 3], false);
   assert.strictEqual(legacy.length, 1);
   assert.deepStrictEqual(legacy[0].action.responseHeaders.map((entry) => entry.header),
     ['x-frame-options', 'content-security-policy'], 'without header matching the CSP goes as a whole');
@@ -89,7 +112,7 @@ async function testPrepareThenOpen() {
   assert.strictEqual(calls.captures, 1, 'mousedown and click share one screenshot');
   assert.strictEqual(calls.injected.length, 1);
   assert.deepStrictEqual(calls.injected[0].target, { tabId: 3, frameIds: [0] });
-  assert.ok(sessionRules.has(3), 'the tab may frame refusing pages while its preview is open');
+  assert.ok(hasTabRules(sessionRules, 3), 'the tab may frame refusing pages while its preview is open');
   assert.ok(sessionRules.has(linkPreview.WORKER_RULE_ID), 'and so may pages its site\'s service worker serves');
   const actions = calls.sent.map((entry) => entry.message.action);
   assert.deepStrictEqual(actions, ['lumnoLinkPreviewPrewarm', 'lumnoLinkPreviewScreenshot', 'lumnoLinkPreviewShow']);
@@ -101,10 +124,9 @@ async function testPrepareThenOpen() {
   assert.strictEqual(show.token, calls.sent[0].message.token);
 
   await service.discard(3, 'stale-token');
-  assert.ok(sessionRules.has(3), 'a close from a replaced preview must not drop the open one');
+  assert.ok(hasTabRules(sessionRules, 3), 'a close from a replaced preview must not drop the open one');
   await service.discard(3, show.token);
-  assert.ok(!sessionRules.has(3), 'closing the preview removes the header rule');
-  assert.ok(!sessionRules.has(3 + linkPreview.CSP_RULE_ID_OFFSET), 'and the CSP rule');
+  assert.ok(!hasTabRules(sessionRules, 3), 'closing the preview removes the header rule');
   assert.ok(!sessionRules.has(linkPreview.WORKER_RULE_ID), 'with no preview left, workers\' requests keep their headers');
 }
 
@@ -123,7 +145,7 @@ async function testOlderChromeDropsWholeCsp() {
   const service = linkPreview.createLinkPreviewService({ chromeApi });
   const result = await service.open({ id: 9, windowId: 1 }, 'https://example.com/a');
   assert.deepStrictEqual(result, { ok: true }, 'a Chrome that cannot match on headers still previews');
-  assert.deepStrictEqual(sessionRules.get(9).action.responseHeaders.map((entry) => entry.header),
+  assert.deepStrictEqual(tabRules(sessionRules, 9)[0].action.responseHeaders.map((entry) => entry.header),
     ['x-frame-options', 'content-security-policy']);
 }
 
@@ -144,10 +166,10 @@ async function testUnclaimedPrepareExpires() {
   const service = linkPreviewService(chromeApi, timers);
   service.prepare({ id: 4, windowId: 1 }, 'https://example.com/b');
   await flush();
-  assert.ok(sessionRules.has(4));
+  assert.ok(hasTabRules(sessionRules, 4));
   timers.forEach((timer) => timer.fn());
   await flush();
-  assert.ok(!sessionRules.has(4), 'a press the page kept must not leave the header rule behind');
+  assert.ok(!hasTabRules(sessionRules, 4), 'a press the page kept must not leave the header rule behind');
 }
 
 function linkPreviewService(chromeApi, timers) {
@@ -182,7 +204,7 @@ async function testMissingSurfaceOpensTab() {
   assert.deepStrictEqual(calls.created, [{
     url: 'https://example.com/c', active: true, index: 1, openerTabId: 5, windowId: 1
   }]);
-  assert.ok(!sessionRules.has(5));
+  assert.ok(!hasTabRules(sessionRules, 5));
 }
 
 async function testFrameLoadWhileOpeningKeepsPreview() {
@@ -205,7 +227,7 @@ async function testFrameLoadWhileOpeningKeepsPreview() {
   await flush();
   await flush();
   assert.deepStrictEqual(response, { ok: true });
-  assert.ok(sessionRules.has(6), 'the opening preview keeps its header rule');
+  assert.ok(hasTabRules(sessionRules, 6), 'the opening preview keeps its header rule');
   assert.deepStrictEqual(calls.created, [], 'no tab opens beside the preview');
 }
 
@@ -254,22 +276,21 @@ async function testOpenPreviewDroppedWhenSurfaceGone() {
   const tab = { id: 9, windowId: 1, index: 0 };
   assert.deepStrictEqual(await service.open(tab, 'https://example.com/f'), { ok: true });
   await service.handleTabUpdated(9, { status: 'complete' });
-  assert.ok(sessionRules.has(9), 'a surface still showing the preview keeps the rule');
+  assert.ok(hasTabRules(sessionRules, 9), 'a surface still showing the preview keeps the rule');
   surfaceToken = null;
   await service.handleTabUpdated(9, { status: 'complete' });
-  assert.ok(!sessionRules.has(9), 'a navigation that took the surface away drops the rule');
+  assert.ok(!hasTabRules(sessionRules, 9), 'a navigation that took the surface away drops the rule');
 }
 
 async function testReconcileDropsRulesWithoutPreview() {
   const { chromeApi, sessionRules } = createChromeMock({
     respond: (message) => (message.action === 'lumnoLinkPreviewPing' ? { token: '' } : true)
   });
-  linkPreview.buildFrameHeaderRules(8).forEach((rule) => sessionRules.set(rule.id, rule));
+  linkPreview.buildFrameHeaderRules(8, [2, 3]).forEach((rule) => sessionRules.set(rule.id, rule));
   sessionRules.set(linkPreview.WORKER_RULE_ID, linkPreview.buildWorkerHeaderRule());
   const service = linkPreview.createLinkPreviewService({ chromeApi });
   await service.reconcileRules();
-  assert.ok(!sessionRules.has(8), 'a rule whose preview is gone is removed when the worker wakes');
-  assert.ok(!sessionRules.has(8 + linkPreview.CSP_RULE_ID_OFFSET));
+  assert.ok(!hasTabRules(sessionRules, 8), 'a rule whose preview is gone is removed when the worker wakes');
   assert.ok(!sessionRules.has(linkPreview.WORKER_RULE_ID), 'and the workers\' rule with it');
 }
 
@@ -651,6 +672,7 @@ async function testPreviewFrameEscape() {
   await testReconcileDropsRulesWithoutPreview();
   await testWorkerRuleOutlivesOnePreview();
   await testOlderChromeDropsWholeCsp();
+  await testRuleIdsStayInRange();
   testShiftClickOpensPreview();
   testOtherPressesKeepDefault();
   testShownAddressOpensPreview();

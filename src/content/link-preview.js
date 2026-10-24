@@ -215,6 +215,11 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
       font-size: 13px;
       letter-spacing: 0.01em;
     }
+    /* Gone once the page has loaded: a page with no background of its own
+       leaves the frame clear, and the site's name showed through it. */
+    .root[data-loaded="true"] .placeholder {
+      visibility: hidden;
+    }
     iframe {
       position: absolute;
       inset: 0;
