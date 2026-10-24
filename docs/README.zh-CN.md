@@ -198,6 +198,22 @@ Lumno 本地优先。书签、历史和标签页仅在本机读取用于搜索�
 **如何修改快捷键？**
 打开 `chrome://extensions/shortcuts`（或 `edge://extensions/shortcuts`），为 Lumno 设置新的按键。
 
+**能像 Arc 一样用 Ctrl+Tab 打开标签切换器吗？**
+可以，但快捷键页面本身不接受 Ctrl+Tab。打开 `chrome://extensions/shortcuts`，按 `Cmd+Option+J`（Windows 和 Linux 上为 `Ctrl+Shift+J`）打开开发者工具的控制台，运行：
+
+```js
+const extensions = await chrome.developerPrivate.getExtensionsInfo();
+const lumno = extensions.find((item) =>
+  item.commands.some((command) => command.name === "show-tab-switcher"));
+await chrome.developerPrivate.updateExtensionCommand({
+  extensionId: lumno.id,
+  commandName: "show-tab-switcher",
+  keybinding: "Ctrl+Tab",
+});
+```
+
+这段代码只修改 Lumno 标签切换器的快捷键，设置后浏览器自带的 Ctrl+Tab 不再生效。图文步骤见[帮助中心](https://lumno.kubai.design/help/tab-switcher/#ctrl-tab)。
+
 **和 Chrome 自带的标签页搜索有什么不同？**
 Lumno 同时搜索标签页、书签、历史和常用网站，额外提供站内搜索和 AI 搜索前缀、聚合搜索和最近标签页切换器，并且直接在当前网页上以浮层打开，而不只是在工具栏中。
 

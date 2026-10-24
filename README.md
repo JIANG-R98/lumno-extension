@@ -198,6 +198,22 @@ Browsers block extensions on internal pages such as `chrome://` and on the Chrom
 **How do I change the keyboard shortcut?**
 Open `chrome://extensions/shortcuts` (or `edge://extensions/shortcuts`) and set new keys for Lumno.
 
+**Can I open the tab switcher with Ctrl+Tab, like in Arc?**
+Yes, though the shortcuts page itself won't accept Ctrl+Tab. Open `chrome://extensions/shortcuts`, open the DevTools console (`Cmd+Option+J` on macOS, `Ctrl+Shift+J` on Windows and Linux) and run:
+
+```js
+const extensions = await chrome.developerPrivate.getExtensionsInfo();
+const lumno = extensions.find((item) =>
+  item.commands.some((command) => command.name === "show-tab-switcher"));
+await chrome.developerPrivate.updateExtensionCommand({
+  extensionId: lumno.id,
+  commandName: "show-tab-switcher",
+  keybinding: "Ctrl+Tab",
+});
+```
+
+This changes only Lumno's tab switcher shortcut, and the browser's own Ctrl+Tab stops working. The [Help Center](https://lumno.kubai.design/en/help/tab-switcher/#ctrl-tab) walks through it with screenshots.
+
 **How is Lumno different from the default Chrome tab search?**
 Lumno searches tabs, bookmarks, history and top sites together, adds site and AI search prefixes, aggregate search and a recent tab switcher, and works as an overlay on the current page instead of only in the toolbar.
 

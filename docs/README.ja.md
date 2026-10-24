@@ -198,6 +198,22 @@ Manifest V3 拡張機能に対応した Chromium ブラウザ（Google Chrome、
 **ショートカットを変更するには？**
 `chrome://extensions/shortcuts`（または `edge://extensions/shortcuts`）を開き、Lumno に新しいキーを設定してください。
 
+**Arc のように Ctrl+Tab でタブ切り替えを開けますか？**
+はい。ただし、ショートカット設定ページでは Ctrl+Tab を登録できません。`chrome://extensions/shortcuts` を開き、`Cmd+Option+J`（Windows と Linux では `Ctrl+Shift+J`）でデベロッパーツールのコンソールを開いて、次のコードを実行してください。
+
+```js
+const extensions = await chrome.developerPrivate.getExtensionsInfo();
+const lumno = extensions.find((item) =>
+  item.commands.some((command) => command.name === "show-tab-switcher"));
+await chrome.developerPrivate.updateExtensionCommand({
+  extensionId: lumno.id,
+  commandName: "show-tab-switcher",
+  keybinding: "Ctrl+Tab",
+});
+```
+
+このコードが変更するのは Lumno のタブ切り替えのショートカットだけで、設定後はブラウザ標準の Ctrl+Tab は使えなくなります。画像付きの手順は[ヘルプセンター](https://lumno.kubai.design/ja/help/tab-switcher/#ctrl-tab)を参照してください。
+
 **Chrome 標準のタブ検索との違いは？**
 Lumno はタブ、ブックマーク、履歴、よく使うサイトをまとめて検索し、サイト内検索や AI 検索のプレフィックス、集約検索、最近のタブスイッチャーを備えています。ツールバーだけでなく、現在のページ上にオーバーレイとして開けます。
 
