@@ -1,12 +1,10 @@
-// @ts-nocheck
 // Search suggestions for the overlay and New Tab: local sources (open tabs,
 // history, top sites, bookmarks) with their short-lived caches, title pinyin
 // matching, remote search-engine suggestions, the default search engine, site
 // search providers, the search blacklist and selection stats.
 //
 // A module of the service worker; background.ts imports it before its own code
-// runs. It uses other services' bindings only when its functions run, never
-// while this file loads, because the services import one another.
+// runs.
 //
 // Every cache and promise below is a rebuildable in-memory cache; nothing here
 // must survive a service-worker suspension.
@@ -24,7 +22,7 @@ import {
   SITE_SEARCH_STORAGE_KEY
 } from '../domain/settings';
 import * as LumnoSettingsStorage from '../platform/settings-storage';
-import { PINYIN_PRO_SCRIPT_PATH, localStorageArea, normalizeHost, storageArea } from './worker-context';
+import { PINYIN_PRO_SCRIPT_PATH, getImportScripts, localStorageArea, normalizeHost, storageArea } from './worker-context';
 import {
   getFaviconFallbackHost,
   getHostFaviconUrl,
@@ -41,11 +39,157 @@ import {
   getSourceTabGroupContext,
   isOwnExtensionUrl
 } from './browser-urls-service';
+import type { BlacklistRule } from '../domain/blacklist-utils';
+import type {
+  BrowserItem,
+  NormalizedSiteSearchProvider,
+  SearchPolicy,
+  SearchQueryContext,
+  SearchRankingOptions,
+  SearchSelectionStats,
+  SearchSourceType,
+  SearchTextMatcher,
+  SiteSearchProvider,
+  SuggestionLike
+} from '../domain/search/types';
+import type { TabGroupContext } from './tab-groups';
+import type { MessageSender } from './message-router';
+
+// A suggestion row as the surfaces get it: the ranking's fields plus
+// whatever the row carries for display.
+type SuggestionRow = SuggestionLike & Record<string, unknown>;
+
+// The default search engine this device last searched with.
+interface DefaultSearchEngineState {
+  id: string;
+  name: string;
+  host: string;
+  searchTemplate: string;
+  updatedAt: number;
+}
+
+interface SearchEngineDef {
+  id: string;
+  name: string;
+  hostMatches: string[];
+  searchTemplate: string;
+  searchUrl(query: string): string;
+}
+
+// A short-lived copy of a browser source.
+interface TimedCache<T> {
+  expiresAt: number;
+  items: T[];
+}
+
+interface BookmarkNodeInfo {
+  title: string;
+  parentId: string | null;
+  hasUrl: boolean;
+}
+
+interface BookmarkItem extends BrowserItem {
+  id: string;
+  parentId: string | null;
+  title: string;
+}
+
+interface OpenTabItem extends BrowserItem {
+  title: string;
+  _xMatchedTabId: number;
+}
+
+// One search engine suggestion fetch, shared by the prefetch and the request
+// that consumes it.
+interface EngineSuggestionRequest {
+  requestKey: string;
+  query: string;
+  controller: AbortController;
+  startTimer: ReturnType<typeof setTimeout> | null;
+  releaseTimer: ReturnType<typeof setTimeout> | null;
+  // The engine's raw answer, read by normalizeSearchEngineSuggestions.
+  promise: Promise<unknown[]> | null;
+  consumed: boolean;
+}
+
+interface SearchSuggestionOptions {
+  sourceTypes?: unknown;
+  includeOpenTabs?: unknown;
+  // Retry with the query read in other keyboard layouts when nothing matched.
+  keyboardLayoutRetry?: boolean;
+}
+
+interface EngineSuggestionOptions {
+  signal?: AbortSignal | null;
+  rawEngineSuggestionsPromise?: Promise<unknown> | null;
+  searchFirst?: boolean;
+}
+
+// pinyin-pro's API as the worker uses it.
+interface PinyinProApi {
+  pinyin(text: string, options: { toneType: 'none'; type: 'array'; multiple?: boolean; v: boolean }): string[];
+}
+
+type HistoryRemoval = { allHistory: boolean; urls?: string[] };
+
+// A page from one of the local sources, as ranking reads it.
+interface SourceItem {
+  id?: string | number;
+  url?: string;
+  title?: string;
+  parentId?: string | null;
+  lastVisitTime?: number;
+  visitCount?: number;
+  typedCount?: number;
+  type?: string;
+  isTopSite?: boolean;
+  _xMatchedTabId?: number;
+}
+
+// Extra fields createSearchSuggestion copies onto a row.
+interface RowExtras {
+  favicon?: string;
+  reasons?: string[];
+  [field: string]: unknown;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+// The ranking's fields of a row a page sent back, each kept only when it has
+// the expected type; the row's other fields pass through.
+const SUGGESTION_FIELD_CHECKS: Readonly<Record<string, (value: unknown) => boolean>> = Object.freeze({
+  type: (value: unknown) => typeof value === 'string',
+  url: (value: unknown) => typeof value === 'string',
+  title: (value: unknown) => typeof value === 'string',
+  score: (value: unknown) => typeof value === 'number',
+  isTopSite: (value: unknown) => typeof value === 'boolean',
+  selectionBoost: (value: unknown) => typeof value === 'number',
+  lastVisitTime: (value: unknown) => typeof value === 'number',
+  visitCount: (value: unknown) => typeof value === 'number',
+  typedCount: (value: unknown) => typeof value === 'number',
+  _xMatchedTabId: (value: unknown) => typeof value === 'number'
+});
+
+function readSuggestionRow(value: unknown): SuggestionRow | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const row: SuggestionRow = {};
+  Object.keys(value).forEach((key) => {
+    const check = Object.prototype.hasOwnProperty.call(SUGGESTION_FIELD_CHECKS, key) ? SUGGESTION_FIELD_CHECKS[key] : null;
+    if (!check || check(value[key])) {
+      row[key] = value[key];
+    }
+  });
+  return row;
+}
 
 // Which suggestion the user picked for a query; device-only, in local storage.
 export const SEARCH_SELECTION_STATS_STORAGE_KEY = '_x_extension_search_selection_stats_2026_unique_';
 
-export function getSearchEngineSuggestionRequestKey(request, sender) {
+export function getSearchEngineSuggestionRequestKey(request: { context?: unknown } | null | undefined, sender: MessageSender | null | undefined): string {
   const senderTabId = sender && sender.tab && typeof sender.tab.id === 'number'
     ? sender.tab.id
     : 'extension';
@@ -54,7 +198,10 @@ export function getSearchEngineSuggestionRequestKey(request, sender) {
   return `${senderTabId}:${senderFrameId}:${context}`;
 }
 
-export function deleteHistoryUrlFromSearch(targetUrl, sendResponse) {
+export function deleteHistoryUrlFromSearch(
+  targetUrl: string,
+  sendResponse: (reply: { ok: boolean; reason?: string; url?: string }) => void
+): true | void {
   if (!targetUrl) {
     sendResponse({ ok: false, reason: 'invalid-url' });
     return;
@@ -74,36 +221,36 @@ export function deleteHistoryUrlFromSearch(targetUrl, sendResponse) {
   return true;
 }
 
-export let siteSearchCache = null;
+export let siteSearchCache: SiteSearchProvider[] | null = null;
 
-let siteSearchPromise = null;
+let siteSearchPromise: Promise<SiteSearchProvider[]> | null = null;
 
 let siteSearchLoadGeneration = 0;
 
-let searchBlacklistCache = null;
+let searchBlacklistCache: BlacklistRule[] | null = null;
 
-let searchBlacklistPromise = null;
+let searchBlacklistPromise: Promise<BlacklistRule[]> | null = null;
 
-let searchResultSourceTypesCache = null;
+let searchResultSourceTypesCache: SearchSourceType[] | null = null;
 
-let searchResultSourceTypesPromise = null;
+let searchResultSourceTypesPromise: Promise<SearchSourceType[]> | null = null;
 
-let searchSelectionStatsCache = null;
+let searchSelectionStatsCache: SearchSelectionStats | null = null;
 
-let searchSelectionStatsPromise = null;
+let searchSelectionStatsPromise: Promise<SearchSelectionStats> | null = null;
 
 // Storage listeners call these when the stored values change elsewhere.
-export function invalidateSearchBlacklistCache() {
+export function invalidateSearchBlacklistCache(): void {
   searchBlacklistCache = null;
   searchBlacklistPromise = null;
 }
 
-export function invalidateSearchResultSourceTypesCache() {
+export function invalidateSearchResultSourceTypesCache(): void {
   searchResultSourceTypesCache = null;
   searchResultSourceTypesPromise = null;
 }
 
-export function replaceSearchSelectionStatsCache(stats) {
+export function replaceSearchSelectionStatsCache(stats: SearchSelectionStats): void {
   searchSelectionStatsCache = stats;
   searchSelectionStatsPromise = null;
 }
@@ -124,7 +271,7 @@ const TOP_SITES_CACHE_TTL_MS = 30 * 1000;
 
 const BOOKMARK_TREE_CACHE_TTL_MS = 2 * 60 * 1000;
 
-let historyFallbackCache = {
+let historyFallbackCache: TimedCache<chrome.history.HistoryItem> = {
   expiresAt: 0,
   items: []
 };
@@ -136,49 +283,49 @@ let historyFallbackCache = {
 // long interval; removed history leaves it at once.
 const HAN_TITLE_HISTORY_CACHE_TTL_MS = 10 * 60 * 1000;
 
-let hanTitleHistoryCache = {
+let hanTitleHistoryCache: TimedCache<chrome.history.HistoryItem> = {
   expiresAt: 0,
   items: []
 };
 
-let hanTitleHistoryRequest = null;
+let hanTitleHistoryRequest: Promise<chrome.history.HistoryItem[]> | null = null;
 
-let topSitesCache = {
+let topSitesCache: TimedCache<chrome.topSites.MostVisitedURL> = {
   expiresAt: 0,
   items: []
 };
 
 let localSearchSourceCacheListenersBound = false;
 
-let bookmarkTreeIndexCache = {
+let bookmarkTreeIndexCache: { expiresAt: number; map: Map<string, BookmarkNodeInfo> | null } = {
   expiresAt: 0,
   map: null
 };
 
-let bookmarkItemsCache = {
+let bookmarkItemsCache: TimedCache<BookmarkItem> = {
   expiresAt: 0,
   items: []
 };
 
-let bookmarkItemsPromise = null;
+let bookmarkItemsPromise: Promise<BookmarkItem[]> | null = null;
 
 let bookmarkTreeCacheListenersBound = false;
 
-export const searchEngineSuggestionRequests = new Map();
+export const searchEngineSuggestionRequests = new Map<string, EngineSuggestionRequest>();
 
 // Titles whose units (and pinyin readings) were built for matching, about
 // 1 KB each. It holds the Han-title history and the bookmarks, so typing one
 // more letter never rebuilds them.
 const BACKGROUND_TITLE_PINYIN_CACHE_MAX_ENTRIES = 6144;
 
-let titleTextMatcher = null;
+let titleTextMatcher: SearchTextMatcher | null = null;
 
 // Fuzzy pinyin (模糊音) is off unless the reader turns it on in Options.
 let searchFuzzyPinyinEnabled = false;
 let searchFuzzyPinyinEnabledLoaded = false;
-let searchFuzzyPinyinEnabledPromise = null;
+let searchFuzzyPinyinEnabledPromise: Promise<boolean> | null = null;
 
-const SEARCH_ENGINE_DEFS = [
+const SEARCH_ENGINE_DEFS: readonly SearchEngineDef[] = [
   {
     id: 'google',
     name: 'Google',
@@ -244,7 +391,7 @@ const SEARCH_ENGINE_DEFS = [
   }
 ];
 
-let defaultSearchEngineState = {
+let defaultSearchEngineState: DefaultSearchEngineState = {
   id: 'google',
   name: 'Google',
   host: 'www.google.com',
@@ -252,15 +399,17 @@ let defaultSearchEngineState = {
   updatedAt: 0
 };
 
-let defaultSearchEngineStateReady = Promise.resolve(defaultSearchEngineState);
+let defaultSearchEngineStateReady: Promise<DefaultSearchEngineState> = Promise.resolve(defaultSearchEngineState);
 
+// A search the overlay or New Tab handed to the browser's default engine:
+// its results tab is found as it opens, and joins the source tab's group.
 export let pendingSearchAt = 0;
 
-export let pendingSearchTabId = null;
+export let pendingSearchTabId: number | null = null;
 
-export let pendingSearchGroupContext = null;
+export let pendingSearchGroupContext: TabGroupContext | null = null;
 
-function getSearchEngineByHostname(hostname) {
+function getSearchEngineByHostname(hostname: unknown): SearchEngineDef | null {
   const normalized = normalizeHost(hostname);
   if (!normalized) {
     return null;
@@ -270,24 +419,24 @@ function getSearchEngineByHostname(hostname) {
   ) || null;
 }
 
-function getSearchEngineById(id) {
+function getSearchEngineById(id: unknown): SearchEngineDef | null {
   if (!id) {
     return null;
   }
   return SEARCH_ENGINE_DEFS.find((engine) => engine.id === id) || null;
 }
 
-export function setDefaultSearchEngineState(nextState, shouldPersist) {
-  if (!nextState || !nextState.id) {
+export function setDefaultSearchEngineState(nextState: unknown, shouldPersist: boolean): void {
+  if (!isRecord(nextState) || !nextState.id) {
     return;
   }
   const engine = getSearchEngineById(nextState.id);
-  const updated = {
-    id: nextState.id,
-    name: nextState.name || '',
-    host: nextState.host || '',
-    searchTemplate: nextState.searchTemplate || (engine ? engine.searchTemplate : ''),
-    updatedAt: nextState.updatedAt || Date.now()
+  const updated: DefaultSearchEngineState = {
+    id: String(nextState.id),
+    name: String(nextState.name || ''),
+    host: String(nextState.host || ''),
+    searchTemplate: String(nextState.searchTemplate || (engine ? engine.searchTemplate : '')),
+    updatedAt: Number(nextState.updatedAt) || Date.now()
   };
   defaultSearchEngineState = updated;
   if (shouldPersist && storageArea) {
@@ -296,19 +445,23 @@ export function setDefaultSearchEngineState(nextState, shouldPersist) {
 }
 
 // Re-reads the stored default engine; callers wait on defaultSearchEngineStateReady.
-export function refreshDefaultSearchEngineState() {
+export function refreshDefaultSearchEngineState(): void {
   defaultSearchEngineStateReady = loadDefaultSearchEngineState();
 }
 
-function loadDefaultSearchEngineState() {
+function loadDefaultSearchEngineState(): Promise<DefaultSearchEngineState> {
   if (!storageArea) {
     return Promise.resolve(defaultSearchEngineState);
   }
   return new Promise((resolve) => {
     storageArea.get([DEFAULT_SEARCH_ENGINE_STORAGE_KEY], (result) => {
       const stored = result ? result[DEFAULT_SEARCH_ENGINE_STORAGE_KEY] : null;
-      if (stored && stored.id) {
-        if (SEARCH_UTILS.isRetiredSearchEngineState(stored)) {
+      if (isRecord(stored) && stored.id) {
+        if (SEARCH_UTILS.isRetiredSearchEngineState({
+          id: typeof stored.id === 'string' ? stored.id : undefined,
+          host: typeof stored.host === 'string' ? stored.host : undefined,
+          searchTemplate: typeof stored.searchTemplate === 'string' ? stored.searchTemplate : undefined
+        })) {
           setDefaultSearchEngineState({
             id: 'google',
             name: 'Google',
@@ -325,9 +478,9 @@ function loadDefaultSearchEngineState() {
   });
 }
 
-export function isSearchEngineResultUrl(url) {
+export function isSearchEngineResultUrl(url: unknown): boolean {
   try {
-    const parsedUrl = new URL(url);
+    const parsedUrl = new URL(String(url));
     if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
       return false;
     }
@@ -345,7 +498,7 @@ export function isSearchEngineResultUrl(url) {
     }
     const queryMarker = '__lumno_search_query__';
     const searchUrl = new URL(engine.searchTemplate.replace('{query}', queryMarker));
-    const normalizePath = (value) => value.toLowerCase().replace(/\/+$/, '') || '/';
+    const normalizePath = (value: string): string => value.toLowerCase().replace(/\/+$/, '') || '/';
     // A prefix such as /web also matches ordinary pages like /webstore.
     if (normalizePath(parsedUrl.pathname) !== normalizePath(searchUrl.pathname)) {
       return false;
@@ -353,17 +506,17 @@ export function isSearchEngineResultUrl(url) {
     const queryParam = Array.from(searchUrl.searchParams.entries())
       .find(([, value]) => value === queryMarker);
     return Boolean(queryParam && String(parsedUrl.searchParams.get(queryParam[0]) || '').trim());
-  } catch (e) {
+  } catch (_error) {
     return false;
   }
 }
 
-export function updateDefaultSearchEngineFromUrl(url) {
+export function updateDefaultSearchEngineFromUrl(url: unknown): boolean {
   if (!url || !isSearchEngineResultUrl(url)) {
     return false;
   }
   try {
-    const parsedUrl = new URL(url);
+    const parsedUrl = new URL(String(url));
     const engine = getSearchEngineByHostname(parsedUrl.hostname);
     if (!engine) {
       return false;
@@ -376,12 +529,12 @@ export function updateDefaultSearchEngineFromUrl(url) {
       updatedAt: Date.now()
     }, true);
     return true;
-  } catch (e) {
+  } catch (_error) {
     return false;
   }
 }
 
-export function buildDefaultSearchUrl(query) {
+export function buildDefaultSearchUrl(query: string): string {
   const engine = getSearchEngineById(defaultSearchEngineState.id);
   if (engine && typeof engine.searchUrl === 'function') {
     return engine.searchUrl(query);
@@ -389,11 +542,11 @@ export function buildDefaultSearchUrl(query) {
   return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
 }
 
-export function getDirectNavigationUrl(input) {
+export function getDirectNavigationUrl(input: unknown): string {
   return SEARCH_UTILS.getDirectNavigationUrl(input);
 }
 
-function getDefaultSearchEngineFaviconUrl() {
+function getDefaultSearchEngineFaviconUrl(): string {
   if (defaultSearchEngineState.id === 'google') {
     return 'https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png';
   }
@@ -405,14 +558,14 @@ function getDefaultSearchEngineFaviconUrl() {
     try {
       const host = new URL(engine.searchUrl('test')).hostname;
       return `https://${host}/favicon.ico`;
-    } catch (e) {
+    } catch (_error) {
       return '';
     }
   }
   return 'https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png';
 }
 
-function parseJsonpPayload(text) {
+function parseJsonpPayload(text: string): unknown {
   if (!text) {
     return null;
   }
@@ -424,12 +577,12 @@ function parseJsonpPayload(text) {
   const payload = text.slice(start + 1, end);
   try {
     return JSON.parse(payload);
-  } catch (e) {
+  } catch (_error) {
     return null;
   }
 }
 
-function extractJsonArray(text) {
+function extractJsonArray(text: string): unknown {
   if (!text) {
     return null;
   }
@@ -441,12 +594,13 @@ function extractJsonArray(text) {
   const payload = text.slice(start, end + 1);
   try {
     return JSON.parse(payload);
-  } catch (e) {
+  } catch (_error) {
     return null;
   }
 }
 
-async function fetchJson(url, options) {
+// What a suggestion service answered; the parsers below check its shape.
+async function fetchJson(url: string, options?: { signal?: AbortSignal } | null): Promise<unknown> {
   if (!url) {
     return null;
   }
@@ -459,10 +613,11 @@ async function fetchJson(url, options) {
   if (!response || !response.ok) {
     return null;
   }
-  return response.json();
+  const data: unknown = await response.json();
+  return data;
 }
 
-async function fetchText(url, options) {
+async function fetchText(url: string, options?: { signal?: AbortSignal } | null): Promise<string> {
   if (!url) {
     return '';
   }
@@ -478,7 +633,16 @@ async function fetchText(url, options) {
   return response.text();
 }
 
-async function fetchSearchSuggestionsForEngine(query, options) {
+// The values of a list field of a suggestion service's answer.
+function readField(list: unknown, field: string): unknown[] {
+  return Array.isArray(list) ? list.map((item: unknown) => (isRecord(item) ? item[field] : null)).filter(Boolean) : [];
+}
+
+function readSecondList(data: unknown): unknown[] | null {
+  return Array.isArray(data) && Array.isArray(data[1]) ? data[1] : null;
+}
+
+async function fetchSearchSuggestionsForEngine(query: string, options?: { signal?: AbortSignal } | null): Promise<unknown[]> {
   const engineId = defaultSearchEngineState.id;
   const settings = options && typeof options === 'object' ? options : {};
   // A URL, host or path (the prefilled current page among them) stays local.
@@ -488,121 +652,95 @@ async function fetchSearchSuggestionsForEngine(query, options) {
   try {
     if (engineId === 'google') {
       const url = `https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(query)}`;
-      const data = await fetchJson(url, settings);
-      if (Array.isArray(data) && Array.isArray(data[1])) {
-        return data[1];
-      }
-      return [];
+      return readSecondList(await fetchJson(url, settings)) || [];
     }
     if (engineId === 'bing') {
       const url = `https://api.bing.com/osjson.aspx?query=${encodeURIComponent(query)}`;
-      const data = await fetchJson(url, settings);
-      if (Array.isArray(data) && Array.isArray(data[1])) {
-        return data[1];
-      }
-      return [];
+      return readSecondList(await fetchJson(url, settings)) || [];
     }
     if (engineId === 'baidu') {
       const url = `https://www.baidu.com/sugrec?ie=utf-8&json=1&prod=pc&wd=${encodeURIComponent(query)}`;
       const data = await fetchJson(url, settings);
-      if (data && Array.isArray(data.g)) {
-        return data.g.map((item) => item && item.q).filter(Boolean);
-      }
-      return [];
+      return isRecord(data) ? readField(data.g, 'q') : [];
     }
     if (engineId === 'sogou') {
       const url = `https://sor.html5.qq.com/api/getsug?m=searxng&key=${encodeURIComponent(query)}`;
       const text = await fetchText(url, settings);
-      const data = extractJsonArray(text);
-      if (Array.isArray(data) && Array.isArray(data[1])) {
-        return data[1];
-      }
-      return [];
+      return readSecondList(extractJsonArray(text)) || [];
     }
     if (engineId === 'duckduckgo') {
       const url = `https://duckduckgo.com/ac/?type=list&q=${encodeURIComponent(query)}`;
       const data = await fetchJson(url, settings);
       if (Array.isArray(data)) {
-        if (Array.isArray(data[1])) {
-          return data[1];
-        }
-        return data.map((item) => item && item.phrase).filter(Boolean);
+        return readSecondList(data) || readField(data, 'phrase');
       }
       return [];
     }
     if (engineId === 'yandex') {
       const url = `https://suggest.yandex.com/suggest-ff.cgi?part=${encodeURIComponent(query)}`;
-      const data = await fetchJson(url, settings);
-      if (Array.isArray(data) && Array.isArray(data[1])) {
-        return data[1];
-      }
-      return [];
+      return readSecondList(await fetchJson(url, settings)) || [];
     }
     if (engineId === 'quark') {
       const url = `https://sugs.m.sm.cn/web?q=${encodeURIComponent(query)}`;
       const data = await fetchJson(url, settings);
-      if (data && Array.isArray(data.r)) {
-        return data.r.map((item) => item && item.w).filter(Boolean);
-      }
-      return [];
+      return isRecord(data) ? readField(data.r, 'w') : [];
     }
     if (engineId === 'shenma') {
       const url = `https://sugs.m.sm.cn/web?q=${encodeURIComponent(query)}`;
       const data = await fetchJson(url, settings);
-      if (data && Array.isArray(data.r)) {
-        return data.r.map((item) => item && item.w).filter(Boolean);
-      }
-      return [];
+      return isRecord(data) ? readField(data.r, 'w') : [];
     }
     if (engineId === 'yahoo') {
       const url = `https://search.yahoo.com/sugg/gossip/gossip-us-ura/?output=sd1&command=${encodeURIComponent(query)}`;
       const text = await fetchText(url, settings);
       const data = parseJsonpPayload(text) || extractJsonArray(text);
       if (Array.isArray(data)) {
-        if (Array.isArray(data[1])) {
-          return data[1];
+        const second = readSecondList(data);
+        if (second) {
+          return second;
         }
         if (data[0] && Array.isArray(data[0])) {
           return data[0];
         }
       }
-      if (data && Array.isArray(data.gossip && data.gossip.results)) {
-        return data.gossip.results.map((item) => item && item.key).filter(Boolean);
+      const gossip = isRecord(data) ? data.gossip : null;
+      if (isRecord(gossip) && Array.isArray(gossip.results)) {
+        return readField(gossip.results, 'key');
       }
       return [];
     }
     return [];
-  } catch (e) {
+  } catch (_error) {
     return [];
   }
 }
 
-export function markPendingSearchTab(tabId, sourceTab) {
+export function markPendingSearchTab(tabId: unknown, sourceTab: chrome.tabs.Tab | null | undefined): void {
   pendingSearchAt = Date.now();
   pendingSearchTabId = typeof tabId === 'number' ? tabId : null;
   pendingSearchGroupContext = getSourceTabGroupContext(sourceTab);
 }
 
 // The pending search's results tab once it is known.
-export function setPendingSearchTabId(tabId) {
+export function setPendingSearchTabId(tabId: number): void {
   pendingSearchTabId = tabId;
 }
 
-export function clearPendingSearch() {
+export function clearPendingSearch(): void {
   pendingSearchAt = 0;
   pendingSearchTabId = null;
   pendingSearchGroupContext = null;
 }
 
-export function isInteractiveSiteSearchProvider(provider) {
+export function isInteractiveSiteSearchProvider(provider: SiteSearchProvider | null | undefined): boolean {
   return SEARCH_UTILS.isInteractiveSiteSearchProvider(provider);
 }
 
-export function sanitizeSiteSearchProviders(items) {
+export function sanitizeSiteSearchProviders(items: unknown): NormalizedSiteSearchProvider[] {
   return SEARCH_UTILS.sanitizeSiteSearchProviders(items);
 }
 
-function loadCustomSiteSearchProviders() {
+function loadCustomSiteSearchProviders(): Promise<NormalizedSiteSearchProvider[]> {
   return LumnoSettingsStorage.readStorageValue(
     storageArea,
     chrome,
@@ -610,27 +748,27 @@ function loadCustomSiteSearchProviders() {
   ).then(sanitizeSiteSearchProviders);
 }
 
-function loadDisabledSiteSearchKeys() {
+function loadDisabledSiteSearchKeys(): Promise<string[]> {
   return LumnoSettingsStorage.readStorageValue(
     storageArea,
     chrome,
     SITE_SEARCH_DISABLED_STORAGE_KEY
   ).then((value) => {
-    const items = Array.isArray(value) ? value : [];
+    const items: unknown[] = Array.isArray(value) ? value : [];
     return items.map((item) => String(item).toLowerCase()).filter(Boolean);
   });
 }
 
-function normalizeSearchBlacklistItems(items) {
+function normalizeSearchBlacklistItems(items: unknown): BlacklistRule[] {
   if (BLACKLIST_UTILS.normalizeItems) {
     return BLACKLIST_UTILS.normalizeItems(items, 'prefix');
   }
   return [];
 }
 
-function areStringArraysEqual(a, b) {
-  const left = Array.isArray(a) ? a : [];
-  const right = Array.isArray(b) ? b : [];
+function areStringArraysEqual(a: unknown, b: unknown): boolean {
+  const left: unknown[] = Array.isArray(a) ? a : [];
+  const right: unknown[] = Array.isArray(b) ? b : [];
   if (left.length !== right.length) {
     return false;
   }
@@ -642,14 +780,14 @@ function areStringArraysEqual(a, b) {
   return true;
 }
 
-function loadSearchResultSourceTypes() {
+function loadSearchResultSourceTypes(): Promise<SearchSourceType[]> {
   if (searchResultSourceTypesCache) {
     return Promise.resolve(searchResultSourceTypesCache);
   }
   if (searchResultSourceTypesPromise) {
     return searchResultSourceTypesPromise;
   }
-  searchResultSourceTypesPromise = new Promise((resolve) => {
+  searchResultSourceTypesPromise = new Promise<SearchSourceType[]>((resolve) => {
     if (!storageArea) {
       const defaults = SETTINGS.normalizeSearchResultSourceTypes(null);
       searchResultSourceTypesCache = defaults;
@@ -671,7 +809,7 @@ function loadSearchResultSourceTypes() {
   return searchResultSourceTypesPromise;
 }
 
-function loadSearchFuzzyPinyinEnabled() {
+function loadSearchFuzzyPinyinEnabled(): Promise<boolean> {
   if (searchFuzzyPinyinEnabledLoaded) {
     return Promise.resolve(searchFuzzyPinyinEnabled);
   }
@@ -696,7 +834,7 @@ function loadSearchFuzzyPinyinEnabled() {
 
 // Titles were indexed with the readings of the old choice, so they are
 // indexed again.
-export function setSearchFuzzyPinyinEnabled(enabled) {
+export function setSearchFuzzyPinyinEnabled(enabled: unknown): void {
   const next = enabled === true;
   if (searchFuzzyPinyinEnabledLoaded && next !== searchFuzzyPinyinEnabled && titleTextMatcher) {
     titleTextMatcher.clear();
@@ -705,14 +843,14 @@ export function setSearchFuzzyPinyinEnabled(enabled) {
   searchFuzzyPinyinEnabledLoaded = true;
 }
 
-function loadSearchBlacklistItems() {
+function loadSearchBlacklistItems(): Promise<BlacklistRule[]> {
   if (searchBlacklistCache) {
     return Promise.resolve(searchBlacklistCache);
   }
   if (searchBlacklistPromise) {
     return searchBlacklistPromise;
   }
-  searchBlacklistPromise = new Promise((resolve) => {
+  searchBlacklistPromise = new Promise<BlacklistRule[]>((resolve) => {
     if (!storageArea) {
       resolve([]);
       return;
@@ -728,18 +866,18 @@ function loadSearchBlacklistItems() {
   return searchBlacklistPromise;
 }
 
-export function normalizeSearchSelectionStats(rawStats) {
+export function normalizeSearchSelectionStats(rawStats: unknown): SearchSelectionStats {
   return SEARCH_UTILS.normalizeSearchSelectionStats(rawStats);
 }
 
-function loadSearchSelectionStats() {
+function loadSearchSelectionStats(): Promise<SearchSelectionStats> {
   if (searchSelectionStatsCache) {
     return Promise.resolve(searchSelectionStatsCache);
   }
   if (searchSelectionStatsPromise) {
     return searchSelectionStatsPromise;
   }
-  searchSelectionStatsPromise = new Promise((resolve) => {
+  searchSelectionStatsPromise = new Promise<SearchSelectionStats>((resolve) => {
     if (!localStorageArea) {
       const emptyStats = normalizeSearchSelectionStats(null);
       searchSelectionStatsCache = emptyStats;
@@ -757,7 +895,7 @@ function loadSearchSelectionStats() {
   return searchSelectionStatsPromise;
 }
 
-function saveSearchSelectionStats(stats) {
+function saveSearchSelectionStats(stats: SearchSelectionStats): Promise<boolean> {
   const normalizedStats = normalizeSearchSelectionStats(stats);
   searchSelectionStatsCache = normalizedStats;
   return new Promise((resolve) => {
@@ -771,8 +909,8 @@ function saveSearchSelectionStats(stats) {
   });
 }
 
-function shouldRecordSearchSuggestionSelectionPayload(selection) {
-  if (!selection || typeof selection !== 'object') {
+function shouldRecordSearchSuggestionSelectionPayload(selection: unknown): selection is Record<string, unknown> {
+  if (!isRecord(selection)) {
     return false;
   }
   const query = String(selection.query || '').trim();
@@ -794,30 +932,41 @@ function shouldRecordSearchSuggestionSelectionPayload(selection) {
   return true;
 }
 
-export function recordSearchSuggestionSelection(selection) {
+export function recordSearchSuggestionSelection(selection: unknown): Promise<{ ok: boolean; reason?: string }> {
   if (!shouldRecordSearchSuggestionSelectionPayload(selection)) {
     return Promise.resolve({ ok: false, reason: 'invalid-selection' });
   }
+  const recorded = {
+    query: String(selection.query || ''),
+    url: String(selection.url || ''),
+    title: typeof selection.title === 'string' ? selection.title : undefined,
+    type: typeof selection.type === 'string' ? selection.type : undefined
+  };
   return loadSearchSelectionStats()
     .then((stats) => {
-      const updatedStats = SEARCH_UTILS.recordSearchSelectionInStats(stats, selection);
+      const updatedStats = SEARCH_UTILS.recordSearchSelectionInStats(stats, recorded);
       return saveSearchSelectionStats(updatedStats);
     })
     .then((ok) => ({ ok: ok === true }));
 }
 
-function getSearchSelectionBoost(item, context, stats, options) {
+function getSearchSelectionBoost(
+  item: BrowserItem,
+  context: SearchQueryContext,
+  stats: SearchSelectionStats,
+  options: SearchRankingOptions
+): number {
   return SEARCH_UTILS.getSearchSelectionBoost(item, context, stats, options);
 }
 
-function isUrlBlockedBySearchBlacklist(url, items) {
+function isUrlBlockedBySearchBlacklist(url: unknown, items: unknown): boolean {
   if (BLACKLIST_UTILS.isUrlBlocked) {
     return BLACKLIST_UTILS.isUrlBlocked(url, items);
   }
   return false;
 }
 
-function isSuggestionBlockedBySearchBlacklist(suggestion, items, queryForProvider) {
+function isSuggestionBlockedBySearchBlacklist(suggestion: SuggestionLike | null | undefined, items: readonly BlacklistRule[]): boolean {
   if (!suggestion) {
     return false;
   }
@@ -835,31 +984,34 @@ function isSuggestionBlockedBySearchBlacklist(suggestion, items, queryForProvide
   return false;
 }
 
-function filterBlacklistedSuggestions(list, items, queryForProvider) {
+function filterBlacklistedSuggestions<T extends SuggestionLike>(list: readonly T[], items: readonly BlacklistRule[]): T[] {
   if (!Array.isArray(list) || list.length === 0) {
     return [];
   }
-  return list.filter((suggestion) => !isSuggestionBlockedBySearchBlacklist(suggestion, items, queryForProvider));
+  return list.filter((suggestion) => !isSuggestionBlockedBySearchBlacklist(suggestion, items));
 }
 
-function mergeCustomProviders(baseItems, customItems) {
+function mergeCustomProviders(
+  baseItems: readonly SiteSearchProvider[],
+  customItems: readonly SiteSearchProvider[]
+): SiteSearchProvider[] {
   return SEARCH_UTILS.mergeCustomProviders(baseItems, customItems);
 }
 
-export function getSiteSearchProviderEntryUrl(provider, query) {
+export function getSiteSearchProviderEntryUrl(provider: SiteSearchProvider | null | undefined, query: unknown): string {
   if (!provider || !provider.template) {
     return '';
   }
   return SEARCH_UTILS.buildSearchUrlFromTemplate(provider.template, query || '');
 }
 
-export function invalidateSiteSearchProviderCache() {
+export function invalidateSiteSearchProviderCache(): void {
   siteSearchLoadGeneration += 1;
   siteSearchCache = null;
   siteSearchPromise = null;
 }
 
-export function loadSiteSearchProviders() {
+export function loadSiteSearchProviders(): Promise<SiteSearchProvider[]> {
   if (siteSearchCache) {
     return Promise.resolve(siteSearchCache);
   }
@@ -869,10 +1021,10 @@ export function loadSiteSearchProviders() {
   const localUrl = chrome.runtime.getURL('assets/data/site-search.json');
   const fallbackDefaults = SEARCH_UTILS.getDefaultSiteSearchProviders();
   const loadGeneration = siteSearchLoadGeneration;
-  const loadTask = fetch(localUrl)
+  const loadTask: Promise<SiteSearchProvider[]> = fetch(localUrl)
     .then((response) => response.json())
-    .then((data) => {
-      const items = data && Array.isArray(data.items) ? data.items : [];
+    .then((data: unknown) => {
+      const items: unknown[] = isRecord(data) && Array.isArray(data.items) ? data.items : [];
       const source = items.length > 0 ? items : fallbackDefaults;
       return sanitizeSiteSearchProviders(source);
     })
@@ -906,7 +1058,7 @@ export function loadSiteSearchProviders() {
         return merged;
       }
       return siteSearchCache || [];
-    })).catch((error) => {
+    })).catch((error: unknown) => {
       if (loadGeneration === siteSearchLoadGeneration &&
           siteSearchPromise === loadTask) {
         siteSearchPromise = null;
@@ -917,14 +1069,14 @@ export function loadSiteSearchProviders() {
   return loadTask;
 }
 
-export function warmSiteSearchProviderIcons() {
+export function warmSiteSearchProviderIcons(): Promise<SiteSearchProvider[]> {
   return loadSiteSearchProviders().then((providers) => {
     scheduleSiteSearchProviderIconWarmup(providers, '');
     return providers;
   }).catch(() => []);
 }
 
-function withTimeout(promise, timeoutMs, fallbackValue) {
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, fallbackValue: T): Promise<T> {
   const safePromise = promise
     .then((value) => value)
     .catch(() => fallbackValue);
@@ -933,13 +1085,13 @@ function withTimeout(promise, timeoutMs, fallbackValue) {
   }
   return Promise.race([
     safePromise,
-    new Promise((resolve) => {
+    new Promise<T>((resolve) => {
       setTimeout(() => resolve(fallbackValue), timeoutMs);
     })
   ]);
 }
 
-async function fetchSearchEngineSuggestionsWithTimeout(query, externalSignal) {
+async function fetchSearchEngineSuggestionsWithTimeout(query: string, externalSignal: AbortSignal | null | undefined): Promise<unknown[]> {
   if (externalSignal && externalSignal.aborted) {
     return [];
   }
@@ -948,9 +1100,9 @@ async function fetchSearchEngineSuggestionsWithTimeout(query, externalSignal) {
   if (externalSignal) {
     externalSignal.addEventListener('abort', forwardExternalAbort, { once: true });
   }
-  let timeoutId = null;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
   try {
-    const timeoutPromise = new Promise((resolve) => {
+    const timeoutPromise = new Promise<unknown[]>((resolve) => {
       timeoutId = setTimeout(() => {
         requestController.abort();
         resolve([]);
@@ -970,11 +1122,14 @@ async function fetchSearchEngineSuggestionsWithTimeout(query, externalSignal) {
   }
 }
 
-export function shouldPrefetchSearchEngineSuggestions(request, query) {
+export function shouldPrefetchSearchEngineSuggestions(
+  request: { context?: unknown; sourceTypes?: unknown } | null | undefined,
+  query: unknown
+): boolean {
   const context = request && request.context ? String(request.context) : '';
   const normalizedQuery = String(query || '').trim();
-  const isScopedLocalSearch = Array.isArray(request && request.sourceTypes) &&
-    request.sourceTypes.length > 0;
+  const sourceTypes = request ? request.sourceTypes : undefined;
+  const isScopedLocalSearch = Array.isArray(sourceTypes) && sourceTypes.length > 0;
   return (context === 'newtab' || context === 'overlay') &&
     Boolean(normalizedQuery) &&
     !normalizedQuery.startsWith('/') &&
@@ -982,7 +1137,7 @@ export function shouldPrefetchSearchEngineSuggestions(request, query) {
     !isScopedLocalSearch;
 }
 
-function clearSearchEngineSuggestionRequestTimers(record) {
+function clearSearchEngineSuggestionRequestTimers(record: EngineSuggestionRequest | null | undefined): void {
   if (!record) {
     return;
   }
@@ -996,7 +1151,7 @@ function clearSearchEngineSuggestionRequestTimers(record) {
   }
 }
 
-export function releaseSearchEngineSuggestionRequest(requestKey, record) {
+export function releaseSearchEngineSuggestionRequest(requestKey: string, record: EngineSuggestionRequest | null | undefined): void {
   if (!record || searchEngineSuggestionRequests.get(requestKey) !== record) {
     return;
   }
@@ -1004,7 +1159,7 @@ export function releaseSearchEngineSuggestionRequest(requestKey, record) {
   searchEngineSuggestionRequests.delete(requestKey);
 }
 
-export function abortSearchEngineSuggestionRequest(requestKey) {
+export function abortSearchEngineSuggestionRequest(requestKey: string): void {
   const record = searchEngineSuggestionRequests.get(requestKey);
   if (!record) {
     return;
@@ -1018,7 +1173,7 @@ export function abortSearchEngineSuggestionRequest(requestKey) {
   }
 }
 
-export function startSearchEngineSuggestionRequest(record) {
+export function startSearchEngineSuggestionRequest(record: EngineSuggestionRequest | null | undefined): Promise<unknown[]> {
   if (!record) {
     return Promise.resolve([]);
   }
@@ -1029,15 +1184,16 @@ export function startSearchEngineSuggestionRequest(record) {
     clearTimeout(record.startTimer);
     record.startTimer = null;
   }
-  record.promise = Promise.resolve(defaultSearchEngineStateReady)
-    .then(() => {
+  const promise = Promise.resolve(defaultSearchEngineStateReady)
+    .then((): unknown[] | Promise<unknown[]> => {
       if (record.controller.signal.aborted) {
         return [];
       }
       return fetchSearchEngineSuggestionsWithTimeout(record.query, record.controller.signal);
     })
-    .catch(() => []);
-  record.promise.then(() => {
+    .catch((): unknown[] => []);
+  record.promise = promise;
+  void promise.then(() => {
     if (record.consumed ||
         searchEngineSuggestionRequests.get(record.requestKey) !== record ||
         record.releaseTimer !== null) {
@@ -1047,10 +1203,14 @@ export function startSearchEngineSuggestionRequest(record) {
       releaseSearchEngineSuggestionRequest(record.requestKey, record);
     }, SEARCH_ENGINE_SUGGEST_PREFETCH_RETENTION_MS);
   });
-  return record.promise;
+  return promise;
 }
 
-function getOrCreateSearchEngineSuggestionRequest(requestKey, query, options) {
+function getOrCreateSearchEngineSuggestionRequest(
+  requestKey: string,
+  query: unknown,
+  options?: { consume?: boolean; startImmediately?: boolean; delayMs?: number } | null
+): EngineSuggestionRequest | null {
   const normalizedQuery = String(query || '').trim();
   if (!normalizedQuery) {
     abortSearchEngineSuggestionRequest(requestKey);
@@ -1067,14 +1227,14 @@ function getOrCreateSearchEngineSuggestionRequest(requestKey, query, options) {
       }
     }
     if (settings.startImmediately === true) {
-      startSearchEngineSuggestionRequest(existing);
+      void startSearchEngineSuggestionRequest(existing);
     }
     return existing;
   }
   if (existing) {
     abortSearchEngineSuggestionRequest(requestKey);
   }
-  const record = {
+  const record: EngineSuggestionRequest = {
     requestKey,
     query: normalizedQuery,
     controller: new AbortController(),
@@ -1088,31 +1248,31 @@ function getOrCreateSearchEngineSuggestionRequest(requestKey, query, options) {
   if (delayMs > 0 && settings.startImmediately !== true) {
     record.startTimer = setTimeout(() => {
       record.startTimer = null;
-      startSearchEngineSuggestionRequest(record);
+      void startSearchEngineSuggestionRequest(record);
     }, delayMs);
   } else {
-    startSearchEngineSuggestionRequest(record);
+    void startSearchEngineSuggestionRequest(record);
   }
   return record;
 }
 
-export function scheduleSearchEngineSuggestionPrefetch(requestKey, query) {
+export function scheduleSearchEngineSuggestionPrefetch(requestKey: string, query: unknown): EngineSuggestionRequest | null {
   return getOrCreateSearchEngineSuggestionRequest(requestKey, query, {
     delayMs: SEARCH_ENGINE_SUGGEST_PREFETCH_DELAY_MS
   });
 }
 
-export function consumeSearchEngineSuggestionRequest(requestKey, query) {
+export function consumeSearchEngineSuggestionRequest(requestKey: string, query: unknown): EngineSuggestionRequest | null {
   return getOrCreateSearchEngineSuggestionRequest(requestKey, query, {
     consume: true,
     startImmediately: true
   });
 }
 
-function callChromeApiWithTimeout(invoke, fallbackValue, timeoutMs) {
-  return withTimeout(new Promise((resolve) => {
+function callChromeApiWithTimeout<T>(invoke: (done: (value: T) => void) => void, fallbackValue: T, timeoutMs: number): Promise<T> {
+  return withTimeout(new Promise<T>((resolve) => {
     let settled = false;
-    const finish = (value) => {
+    const finish = (value: T): void => {
       if (settled) {
         return;
       }
@@ -1121,13 +1281,13 @@ function callChromeApiWithTimeout(invoke, fallbackValue, timeoutMs) {
     };
     try {
       invoke(finish);
-    } catch (e) {
+    } catch (_error) {
       finish(fallbackValue);
     }
   }), timeoutMs, fallbackValue);
 }
 
-function invalidateBookmarkTreeCache() {
+function invalidateBookmarkTreeCache(): void {
   bookmarkTreeIndexCache = {
     expiresAt: 0,
     map: null
@@ -1139,7 +1299,7 @@ function invalidateBookmarkTreeCache() {
   bookmarkItemsPromise = null;
 }
 
-function invalidateLocalSearchSourceCaches() {
+function invalidateLocalSearchSourceCaches(): void {
   historyFallbackCache = {
     expiresAt: 0,
     items: []
@@ -1150,7 +1310,7 @@ function invalidateLocalSearchSourceCaches() {
   };
 }
 
-function removeHanTitleHistoryItems(removed) {
+function removeHanTitleHistoryItems(removed: HistoryRemoval | null | undefined): void {
   if (!removed || removed.allHistory) {
     hanTitleHistoryCache = {
       expiresAt: 0,
@@ -1163,34 +1323,32 @@ function removeHanTitleHistoryItems(removed) {
   if (removedUrls.size > 0) {
     hanTitleHistoryCache = {
       ...hanTitleHistoryCache,
-      items: hanTitleHistoryCache.items.filter((item) => !removedUrls.has(item && item.url))
+      items: hanTitleHistoryCache.items.filter((item) => !(item && item.url && removedUrls.has(item.url)))
     };
   }
 }
 
-function ensureLocalSearchSourceCacheListeners() {
+function ensureLocalSearchSourceCacheListeners(): void {
   if (localSearchSourceCacheListenersBound || !chrome || !chrome.history) {
     return;
   }
-  [
-    chrome.history.onVisited,
-    chrome.history.onVisitRemoved
-  ].forEach((eventTarget) => {
-    if (eventTarget && typeof eventTarget.addListener === 'function') {
-      eventTarget.addListener(invalidateLocalSearchSourceCaches);
-    }
-  });
+  if (chrome.history.onVisited && typeof chrome.history.onVisited.addListener === 'function') {
+    chrome.history.onVisited.addListener(invalidateLocalSearchSourceCaches);
+  }
+  if (chrome.history.onVisitRemoved && typeof chrome.history.onVisitRemoved.addListener === 'function') {
+    chrome.history.onVisitRemoved.addListener(invalidateLocalSearchSourceCaches);
+  }
   if (chrome.history.onVisitRemoved && typeof chrome.history.onVisitRemoved.addListener === 'function') {
     chrome.history.onVisitRemoved.addListener(removeHanTitleHistoryItems);
   }
   localSearchSourceCacheListenersBound = true;
 }
 
-function ensureBookmarkTreeCacheListeners() {
+function ensureBookmarkTreeCacheListeners(): void {
   if (bookmarkTreeCacheListenersBound || !chrome || !chrome.bookmarks) {
     return;
   }
-  const events = [
+  const events: Array<{ addListener(listener: () => void): void } | undefined> = [
     chrome.bookmarks.onCreated,
     chrome.bookmarks.onRemoved,
     chrome.bookmarks.onChanged,
@@ -1206,9 +1364,9 @@ function ensureBookmarkTreeCacheListeners() {
   bookmarkTreeCacheListenersBound = true;
 }
 
-function buildBookmarkNodeMap(tree) {
-  const bookmarkNodeMap = new Map();
-  function indexBookmarkNodes(node, parentId) {
+function buildBookmarkNodeMap(tree: chrome.bookmarks.BookmarkTreeNode[] | null | undefined): Map<string, BookmarkNodeInfo> {
+  const bookmarkNodeMap = new Map<string, BookmarkNodeInfo>();
+  function indexBookmarkNodes(node: chrome.bookmarks.BookmarkTreeNode | null | undefined, parentId: string | null): void {
     if (!node || !node.id) {
       return;
     }
@@ -1227,9 +1385,9 @@ function buildBookmarkNodeMap(tree) {
   return bookmarkNodeMap;
 }
 
-function buildBookmarkItems(tree) {
-  const items = [];
-  function collectBookmarkNodes(node) {
+function buildBookmarkItems(tree: chrome.bookmarks.BookmarkTreeNode[] | null | undefined): BookmarkItem[] {
+  const items: BookmarkItem[] = [];
+  function collectBookmarkNodes(node: chrome.bookmarks.BookmarkTreeNode | null | undefined): void {
     if (!node || !node.id) {
       return;
     }
@@ -1251,7 +1409,7 @@ function buildBookmarkItems(tree) {
   return items;
 }
 
-function getAllBookmarksCached() {
+function getAllBookmarksCached(): Promise<BookmarkItem[]> {
   const now = Date.now();
   if (Array.isArray(bookmarkItemsCache.items) && bookmarkItemsCache.expiresAt > now) {
     return Promise.resolve(bookmarkItemsCache.items);
@@ -1263,7 +1421,7 @@ function getAllBookmarksCached() {
     return Promise.resolve([]);
   }
   ensureBookmarkTreeCacheListeners();
-  bookmarkItemsPromise = callChromeApiWithTimeout((done) => {
+  bookmarkItemsPromise = callChromeApiWithTimeout<BookmarkItem[]>((done) => {
     chrome.bookmarks.getTree((tree) => {
       const items = buildBookmarkItems(tree);
       const nodeMap = buildBookmarkNodeMap(tree);
@@ -1279,14 +1437,14 @@ function getAllBookmarksCached() {
       bookmarkItemsPromise = null;
       done(items);
     });
-  }, [], LOCAL_SUGGEST_SOURCE_TIMEOUT_MS).catch(() => {
+  }, [], LOCAL_SUGGEST_SOURCE_TIMEOUT_MS).catch((): BookmarkItem[] => {
     bookmarkItemsPromise = null;
     return [];
   });
   return bookmarkItemsPromise;
 }
 
-function getTopSitesCached() {
+function getTopSitesCached(): Promise<chrome.topSites.MostVisitedURL[]> {
   const now = Date.now();
   if (topSitesCache.expiresAt > now && Array.isArray(topSitesCache.items)) {
     return Promise.resolve(topSitesCache.items);
@@ -1296,7 +1454,7 @@ function getTopSitesCached() {
       BROWSER_PROFILE.getBrowserInternalScheme(navigator.userAgent) === 'edge://') {
     return Promise.resolve([]);
   }
-  return callChromeApiWithTimeout((done) => {
+  return callChromeApiWithTimeout<chrome.topSites.MostVisitedURL[]>((done) => {
     chrome.topSites.get((items) => {
       const list = Array.isArray(items) ? items : [];
       topSitesCache = {
@@ -1305,10 +1463,10 @@ function getTopSitesCached() {
       };
       done(list);
     });
-  }, [], LOCAL_SUGGEST_SOURCE_TIMEOUT_MS).catch(() => []);
+  }, [], LOCAL_SUGGEST_SOURCE_TIMEOUT_MS).catch((): chrome.topSites.MostVisitedURL[] => []);
 }
 
-function getFallbackHistoryItemsCached(policy) {
+function getFallbackHistoryItemsCached(policy: Partial<SearchPolicy> | null | undefined): Promise<chrome.history.HistoryItem[]> {
   const now = Date.now();
   if (historyFallbackCache.expiresAt > now && Array.isArray(historyFallbackCache.items)) {
     return Promise.resolve(historyFallbackCache.items);
@@ -1323,7 +1481,7 @@ function getFallbackHistoryItemsCached(policy) {
   const fallbackWindowDays = Number(settings.fallbackHistoryWindowDays) > 0
     ? Number(settings.fallbackHistoryWindowDays)
     : 365;
-  return callChromeApiWithTimeout((done) => {
+  return callChromeApiWithTimeout<chrome.history.HistoryItem[]>((done) => {
     chrome.history.search({
       text: '',
       maxResults: fallbackMaxResults,
@@ -1336,10 +1494,10 @@ function getFallbackHistoryItemsCached(policy) {
       };
       done(list);
     });
-  }, [], LOCAL_SUGGEST_SOURCE_TIMEOUT_MS).catch(() => []);
+  }, [], LOCAL_SUGGEST_SOURCE_TIMEOUT_MS).catch((): chrome.history.HistoryItem[] => []);
 }
 
-function getHanTitleHistoryItemsCached(policy) {
+function getHanTitleHistoryItemsCached(policy: Partial<SearchPolicy> | null | undefined): Promise<chrome.history.HistoryItem[]> {
   if (hanTitleHistoryCache.expiresAt > Date.now()) {
     return Promise.resolve(hanTitleHistoryCache.items);
   }
@@ -1356,7 +1514,7 @@ function getHanTitleHistoryItemsCached(policy) {
   const windowDays = Number(settings.fallbackHistoryWindowDays) > 0
     ? Number(settings.fallbackHistoryWindowDays)
     : 365;
-  const request = callChromeApiWithTimeout((done) => {
+  const request: Promise<chrome.history.HistoryItem[]> = callChromeApiWithTimeout<chrome.history.HistoryItem[]>((done) => {
     chrome.history.search({
       text: '',
       maxResults: scanLimit,
@@ -1373,7 +1531,7 @@ function getHanTitleHistoryItemsCached(policy) {
       done(list);
     });
   }, [], LOCAL_SUGGEST_SOURCE_TIMEOUT_MS)
-    .catch(() => [])
+    .catch((): chrome.history.HistoryItem[] => [])
     .finally(() => {
       if (hanTitleHistoryRequest === request) {
         hanTitleHistoryRequest = null;
@@ -1385,7 +1543,7 @@ function getHanTitleHistoryItemsCached(policy) {
 
 // The first typed letter starts the scan without waiting for it; the next
 // keystrokes use it.
-function getCachedHanTitleHistoryItemsOrWarm(policy) {
+function getCachedHanTitleHistoryItemsOrWarm(policy: Partial<SearchPolicy>): Promise<chrome.history.HistoryItem[]> {
   if (hanTitleHistoryCache.expiresAt > Date.now()) {
     return Promise.resolve(hanTitleHistoryCache.items);
   }
@@ -1396,7 +1554,7 @@ function getCachedHanTitleHistoryItemsOrWarm(policy) {
   );
 }
 
-function getCachedFallbackHistoryItemsOrWarm(policy) {
+function getCachedFallbackHistoryItemsOrWarm(policy: Partial<SearchPolicy>): Promise<chrome.history.HistoryItem[]> {
   const now = Date.now();
   if (historyFallbackCache.expiresAt > now && Array.isArray(historyFallbackCache.items)) {
     return Promise.resolve(historyFallbackCache.items);
@@ -1408,7 +1566,7 @@ function getCachedFallbackHistoryItemsOrWarm(policy) {
   );
 }
 
-function getCachedBookmarkItemsOrWarm() {
+function getCachedBookmarkItemsOrWarm(): Promise<BookmarkItem[]> {
   const now = Date.now();
   if (Array.isArray(bookmarkItemsCache.items) && bookmarkItemsCache.expiresAt > now) {
     return Promise.resolve(bookmarkItemsCache.items);
@@ -1420,7 +1578,7 @@ function getCachedBookmarkItemsOrWarm() {
   );
 }
 
-function getCachedBookmarkNodeMap() {
+function getCachedBookmarkNodeMap(): Map<string, BookmarkNodeInfo> {
   const now = Date.now();
   if (bookmarkTreeIndexCache.map && bookmarkTreeIndexCache.expiresAt > now) {
     return bookmarkTreeIndexCache.map;
@@ -1428,54 +1586,77 @@ function getCachedBookmarkNodeMap() {
   return new Map();
 }
 
-function getOpenTabSearchItems() {
+function getOpenTabSearchItems(): Promise<OpenTabItem[]> {
   if (!chrome || !chrome.tabs || typeof chrome.tabs.query !== 'function') {
     return Promise.resolve([]);
   }
-  return callChromeApiWithTimeout((done) => {
+  return callChromeApiWithTimeout<OpenTabItem[]>((done) => {
     chrome.tabs.query({}, (tabs) => {
-      const items = (Array.isArray(tabs) ? tabs : [])
-        .map((tab) => {
-          const url = getResolvedTabUrl(tab);
-          if (!url || typeof tab.id !== 'number') {
-            return null;
-          }
-          return {
-            title: String(tab.title || '').replace(/\s+/g, ' ').trim() || url,
-            url,
-            _xMatchedTabId: tab.id
-          };
-        })
-        .filter(Boolean);
+      const items: OpenTabItem[] = [];
+      (Array.isArray(tabs) ? tabs : []).forEach((tab) => {
+        const url = getResolvedTabUrl(tab);
+        if (!url || typeof tab.id !== 'number') {
+          return;
+        }
+        items.push({
+          title: String(tab.title || '').replace(/\s+/g, ' ').trim() || url,
+          url,
+          _xMatchedTabId: tab.id
+        });
+      });
       done(items);
     });
-  }, [], LOCAL_SUGGEST_SOURCE_TIMEOUT_MS).catch(() => []);
+  }, [], LOCAL_SUGGEST_SOURCE_TIMEOUT_MS).catch((): OpenTabItem[] => []);
 }
 
 let pinyinProImportAttempted = false;
 
-function getPinyinPro() {
-  if (!globalThis.pinyinPro && !pinyinProImportAttempted && typeof importScripts === 'function') {
+// pinyin-pro sets globalThis.pinyinPro when its script runs.
+function readPinyinPro(): PinyinProApi | null {
+  const api: unknown = 'pinyinPro' in globalThis ? Reflect.get(globalThis, 'pinyinPro') : undefined;
+  if (!isRecord(api)) {
+    return null;
+  }
+  const pinyin = api.pinyin;
+  if (typeof pinyin !== 'function') {
+    return null;
+  }
+  return {
+    pinyin: (text, options) => {
+      const converted: unknown = Reflect.apply(pinyin, api, [text, options]);
+      return Array.isArray(converted) ? converted.map((item: unknown) => String(item)) : [];
+    }
+  };
+}
+
+let pinyinProApi: PinyinProApi | null = null;
+
+function getPinyinPro(): PinyinProApi | null {
+  if (pinyinProApi) {
+    return pinyinProApi;
+  }
+  const importScripts = getImportScripts();
+  if (!('pinyinPro' in globalThis) && !pinyinProImportAttempted && importScripts) {
     pinyinProImportAttempted = true;
     try {
       importScripts(chrome.runtime.getURL(PINYIN_PRO_SCRIPT_PATH));
-    } catch (error) {
+    } catch (_error) {
       // Without pinyin-pro, titles still match by their own text.
     }
   }
-  const api = globalThis.pinyinPro;
-  return api && typeof api.pinyin === 'function' ? api : null;
+  pinyinProApi = readPinyinPro();
+  return pinyinProApi;
 }
 
 // Every reading of each Han character, so a polyphone matches either way:
 // 重庆 matches "chongqing" and "zhongqing", 银行 "yinhang" and "yinxing".
 // Readings depend on the character alone, so a few thousand entries cover
 // every title.
-const hanCharacterReadingsCache = new Map();
-const hanCharacterFuzzyReadingsCache = new Map();
+const hanCharacterReadingsCache = new Map<string, string[]>();
+const hanCharacterFuzzyReadingsCache = new Map<string, string[]>();
 const BACKGROUND_HAN_READINGS_CACHE_MAX_ENTRIES = 8192;
 
-function getTitleHanReadings(text, characters) {
+function getTitleHanReadings(_text: string, characters: string[]): string[][] | null {
   const pinyinApi = getPinyinPro();
   if (!pinyinApi) {
     return null;
@@ -1484,8 +1665,9 @@ function getTitleHanReadings(text, characters) {
     return characters.map((character) => getHanCharacterReadings(pinyinApi, character));
   }
   return characters.map((character) => {
-    if (hanCharacterFuzzyReadingsCache.has(character)) {
-      return hanCharacterFuzzyReadingsCache.get(character);
+    const cached = hanCharacterFuzzyReadingsCache.get(character);
+    if (cached) {
+      return cached;
     }
     const readings = SEARCH_UTILS.expandSearchFuzzyPinyinReadings(getHanCharacterReadings(pinyinApi, character));
     FAVICON_UTILS.setBoundedCacheEntry(
@@ -1498,9 +1680,10 @@ function getTitleHanReadings(text, characters) {
   });
 }
 
-function getHanCharacterReadings(pinyinApi, character) {
-  if (hanCharacterReadingsCache.has(character)) {
-    return hanCharacterReadingsCache.get(character);
+function getHanCharacterReadings(pinyinApi: PinyinProApi, character: string): string[] {
+  const cached = hanCharacterReadingsCache.get(character);
+  if (cached) {
+    return cached;
   }
   const converted = pinyinApi.pinyin(character, {
     toneType: 'none',
@@ -1518,7 +1701,7 @@ function getHanCharacterReadings(pinyinApi, character) {
   return readings;
 }
 
-function getTitleTextMatcher() {
+function getTitleTextMatcher(): SearchTextMatcher | null {
   if (!titleTextMatcher && SEARCH_UTILS && typeof SEARCH_UTILS.createSearchTextMatcher === 'function') {
     titleTextMatcher = SEARCH_UTILS.createSearchTextMatcher({
       getHanReadings: getTitleHanReadings,
@@ -1528,21 +1711,13 @@ function getTitleTextMatcher() {
   return titleTextMatcher;
 }
 
-function getBackgroundSearchPolicy(searchUtils) {
-  return (searchUtils && searchUtils.SEARCH_POLICY) || {
-    lookupWindowDays: 180,
-    lookupMaxResults: 120,
-    maxEngineSuggestions: 5,
-    maxEngineSuggestionsWithLocalResults: 3,
-    candidatePoolLimit: 20,
-    finalSuggestionLimit: 12,
-    fallbackTopSiteLimit: 5
-  };
+function getBackgroundSearchPolicy(searchUtils: typeof SEARCH_UTILS): Readonly<SearchPolicy> {
+  return searchUtils.SEARCH_POLICY;
 }
 
 // A query of Han characters alone, as a site's address would spell it: its
 // pinyin and its initials: 知乎 is zhihu, 京东 is jd.
-function getQueryHostSpellings(context, searchUtils) {
+function getQueryHostSpellings(context: SearchQueryContext, searchUtils: typeof SEARCH_UTILS): string[] {
   const compact = typeof searchUtils.compactSearchQuery === 'function'
     ? searchUtils.compactSearchQuery(context.queryLower)
     : '';
@@ -1564,37 +1739,27 @@ function getQueryHostSpellings(context, searchUtils) {
     const full = syllables.join('');
     const initials = syllables.map((syllable) => syllable.charAt(0)).join('');
     return full === initials ? [full] : [full, initials];
-  } catch (error) {
+  } catch (_error) {
     return [];
   }
 }
 
-function buildBackgroundSearchQueryContext(query, searchUtils) {
-  if (searchUtils && typeof searchUtils.buildSearchQueryContext === 'function') {
-    const context = searchUtils.buildSearchQueryContext(query);
-    context.queryHostSpellings = getQueryHostSpellings(context, searchUtils);
-    return context;
-  }
-  const queryLower = String(query || '').trim().toLowerCase();
-  const queryTerms = queryLower.split(/\s+/).filter(Boolean);
-  return {
-    lookupQuery: String(query || ''),
-    queryLower,
-    unitQuery: '',
-    queryTerms,
-    coreQueryTerms: queryTerms.slice(),
-    intentType: 'object',
-    hasSettingsIntent: false,
-    hasInformationalIntent: false
-  };
+function buildBackgroundSearchQueryContext(query: unknown, searchUtils: typeof SEARCH_UTILS): SearchQueryContext {
+  const context = searchUtils.buildSearchQueryContext(query);
+  context.queryHostSpellings = getQueryHostSpellings(context, searchUtils);
+  return context;
 }
 
 // Marks where a local result's title shows the query, by the same rules that
 // matched it, so a pinyin or initials match marks the characters it spelled.
 // The view uses the ranges only while its title text and query are these.
-function attachSuggestionTitleHighlight(suggestion, context, scoreOptions, searchUtils) {
-  if (!suggestion || !suggestion.title || !searchUtils ||
-      typeof searchUtils.getSearchTitleHighlightRanges !== 'function') {
+function attachSuggestionTitleHighlight<T extends SuggestionRow>(
+  suggestion: T,
+  context: SearchQueryContext,
+  scoreOptions: SearchRankingOptions,
+  searchUtils: typeof SEARCH_UTILS
+): T {
+  if (!suggestion || !suggestion.title) {
     return suggestion;
   }
   const text = searchUtils.sanitizeDisplayText(suggestion.title);
@@ -1616,14 +1781,17 @@ const KEYBOARD_LAYOUT_SCORE_PENALTY = 12;
 // no Hebrew pages never pays for a Hebrew search. What a reading finds ranks
 // below a match of the query itself and keeps the reading's highlight, shown
 // for the query the user typed.
-async function getKeyboardLayoutSuggestions(context, requestOptions, searchUtils, searchPolicy) {
-  const candidates = typeof searchUtils.getSearchKeyboardLayoutQueries === 'function'
-    ? searchUtils.getSearchKeyboardLayoutQueries(context.lookupQuery)
-    : [];
+async function getKeyboardLayoutSuggestions(
+  context: SearchQueryContext,
+  requestOptions: SearchSuggestionOptions,
+  searchUtils: typeof SEARCH_UTILS,
+  searchPolicy: Readonly<SearchPolicy>
+): Promise<SuggestionRow[]> {
+  const candidates = searchUtils.getSearchKeyboardLayoutQueries(context.lookupQuery);
   if (candidates.length === 0) {
     return [];
   }
-  const corpora = await Promise.all([
+  const corpora: ReadonlyArray<ReadonlyArray<{ title?: string }>> = await Promise.all([
     getCachedFallbackHistoryItemsOrWarm(searchPolicy),
     getCachedBookmarkItemsOrWarm(),
     getTopSitesCached(),
@@ -1641,8 +1809,8 @@ async function getKeyboardLayoutSuggestions(context, requestOptions, searchUtils
     getSearchSuggestions(reading.query, { ...requestOptions, keyboardLayoutRetry: false })
   )));
   const typedQuery = String(context.lookupQuery || '').trim().toLowerCase();
-  const merged = [];
-  const seenKeys = new Set();
+  const merged: SuggestionRow[] = [];
+  const seenKeys = new Set<string>();
   groups.forEach((group, index) => {
     const reading = readings[index];
     group.forEach((suggestion) => {
@@ -1656,8 +1824,8 @@ async function getKeyboardLayoutSuggestions(context, requestOptions, searchUtils
         score: Math.max(1, (Number(suggestion.score) || 0) - KEYBOARD_LAYOUT_SCORE_PENALTY),
         keyboardLayout: reading.layout,
         keyboardLayoutQuery: reading.query,
-        reasons: [`键盘布局纠正：${reading.query}`].concat(suggestion.reasons || []).slice(0, 3),
-        ...(suggestion.titleHighlight
+        reasons: [`键盘布局纠正：${reading.query}`].concat(readReasons(suggestion.reasons)).slice(0, 3),
+        ...(isRecord(suggestion.titleHighlight)
           ? { titleHighlight: { ...suggestion.titleHighlight, query: typedQuery } }
           : {})
       });
@@ -1667,10 +1835,14 @@ async function getKeyboardLayoutSuggestions(context, requestOptions, searchUtils
   return merged.slice(0, searchPolicy.candidatePoolLimit || 20);
 }
 
+function readReasons(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((reason: unknown): reason is string => typeof reason === 'string') : [];
+}
+
 // Function to get search suggestions from history and top sites
-export async function getSearchSuggestions(query, options) {
-  const suggestions = [];
-  const requestOptions = options && typeof options === 'object' ? options : {};
+export async function getSearchSuggestions(query: unknown, options?: SearchSuggestionOptions | null): Promise<SuggestionRow[]> {
+  const suggestions: SuggestionRow[] = [];
+  const requestOptions: SearchSuggestionOptions = options && typeof options === 'object' ? options : {};
   ensureLocalSearchSourceCacheListeners();
   const searchUtils = SEARCH_UTILS;
   const searchPolicy = getBackgroundSearchPolicy(searchUtils);
@@ -1681,8 +1853,8 @@ export async function getSearchSuggestions(query, options) {
   const lookupStartTime = Date.now() - (searchPolicy.lookupWindowDays * 24 * 60 * 60 * 1000);
   const lookupEndTime = Date.now();
   const lookupMaxResults = searchPolicy.lookupMaxResults || 120;
-  const titleMatcher = getTitleTextMatcher();
-  const searchScoreOptions = {
+  const titleMatcher = getTitleTextMatcher() || undefined;
+  const searchScoreOptions: SearchRankingOptions = {
     titleMatcher,
     isLocalNetworkHost: FAVICON_UTILS.isLocalNetworkHost,
     isOwnExtensionUrl
@@ -1691,14 +1863,13 @@ export async function getSearchSuggestions(query, options) {
     loadSearchResultSourceTypes(),
     loadSearchFuzzyPinyinEnabled()
   ]);
-  const requestedSourceTypes = Array.isArray(requestOptions.sourceTypes)
-    ? requestOptions.sourceTypes
-      .map((item) => String(item || '').trim())
-      .filter((item, index, items) => (
-        (item === 'topSite' || item === 'bookmark' || item === 'history') &&
-        items.indexOf(item) === index
-      ))
-    : [];
+  const requestedTypes: unknown[] = Array.isArray(requestOptions.sourceTypes) ? requestOptions.sourceTypes : [];
+  const requestedSourceTypes = requestedTypes
+    .map((item) => String(item || '').trim())
+    .filter((item, index, items): item is SearchSourceType => (
+      (item === 'topSite' || item === 'bookmark' || item === 'history') &&
+      items.indexOf(item) === index
+    ));
   const sourceTypes = requestedSourceTypes.length > 0
     ? configuredSourceTypes.filter((sourceType) => requestedSourceTypes.includes(sourceType))
     : configuredSourceTypes;
@@ -1709,7 +1880,7 @@ export async function getSearchSuggestions(query, options) {
   const allowOpenTabs = requestOptions.includeOpenTabs !== false;
 
   try {
-    const openTabsPromise = allowOpenTabs ? getOpenTabSearchItems() : Promise.resolve([]);
+    const openTabsPromise: Promise<OpenTabItem[]> = allowOpenTabs ? getOpenTabSearchItems() : Promise.resolve([]);
     const [
       historyItemsRaw,
       topSites,
@@ -1723,7 +1894,7 @@ export async function getSearchSuggestions(query, options) {
       searchSelectionStats
     ] = await Promise.all([
       allowHistory
-        ? callChromeApiWithTimeout((done) => {
+        ? callChromeApiWithTimeout<chrome.history.HistoryItem[]>((done) => {
           chrome.history.search({
             text: context.lookupQuery,
             maxResults: lookupMaxResults,
@@ -1731,24 +1902,24 @@ export async function getSearchSuggestions(query, options) {
             endTime: lookupEndTime
           }, done);
         }, [], LOCAL_SUGGEST_SOURCE_TIMEOUT_MS)
-        : Promise.resolve([]),
-      allowTopSites ? getTopSitesCached() : Promise.resolve([]),
+        : Promise.resolve<chrome.history.HistoryItem[]>([]),
+      allowTopSites ? getTopSitesCached() : Promise.resolve<chrome.topSites.MostVisitedURL[]>([]),
       allowBookmarks
-        ? callChromeApiWithTimeout((done) => {
+        ? callChromeApiWithTimeout<chrome.bookmarks.BookmarkTreeNode[]>((done) => {
           chrome.bookmarks.search({ query: context.lookupQuery }, done);
         }, [], LOCAL_SUGGEST_SOURCE_TIMEOUT_MS)
-        : Promise.resolve([]),
-      allowHistory ? getCachedFallbackHistoryItemsOrWarm(searchPolicy) : Promise.resolve([]),
-      allowBookmarks ? getCachedBookmarkItemsOrWarm() : Promise.resolve([]),
+        : Promise.resolve<chrome.bookmarks.BookmarkTreeNode[]>([]),
+      allowHistory ? getCachedFallbackHistoryItemsOrWarm(searchPolicy) : Promise.resolve<chrome.history.HistoryItem[]>([]),
+      allowBookmarks ? getCachedBookmarkItemsOrWarm() : Promise.resolve<BookmarkItem[]>([]),
       allowHistory && /[a-z]/.test(context.unitQuery || '')
         ? getCachedHanTitleHistoryItemsOrWarm(searchPolicy)
-        : Promise.resolve([]),
+        : Promise.resolve<chrome.history.HistoryItem[]>([]),
       loadSearchBlacklistItems(),
       loadFaviconRequestBlacklistItems(),
       loadFaviconEnhancedFetchEnabled(),
       loadSearchSelectionStats()
     ]);
-    const collectSearchMatches = (items) => {
+    const collectSearchMatches = <T extends SourceItem>(items: readonly T[]): T[] => {
       return searchUtils.collectSearchMatches(items, context, searchBlacklistItems, {
         titleMatcher,
         isUrlBlockedBySearchBlacklist
@@ -1764,7 +1935,7 @@ export async function getSearchSuggestions(query, options) {
       fallbackHistoryMatches
     ]));
     const bookmarkTextMatches = collectSearchMatches(allBookmarks);
-    const bookmarks = collectSearchMatches(mergeSearchItems([
+    const bookmarks = collectSearchMatches(mergeSearchItems<SourceItem>([
       Array.isArray(bookmarksRaw) ? bookmarksRaw : [],
       bookmarkTextMatches
     ]));
@@ -1782,8 +1953,8 @@ export async function getSearchSuggestions(query, options) {
       '移动设备书签'
     ]);
 
-    function buildSuggestionReasons(item, sourceType) {
-      const reasons = [];
+    function buildSuggestionReasons(item: SourceItem | null | undefined, sourceType: string): string[] {
+      const reasons: string[] = [];
       if (sourceType === 'bookmark') {
         reasons.push('来源：书签');
       } else if (sourceType === 'topSite') {
@@ -1816,7 +1987,7 @@ export async function getSearchSuggestions(query, options) {
       return reasons.slice(0, 3);
     }
 
-    function buildSearchSuggestionFavicon(url) {
+    function buildSearchSuggestionFavicon(url: string): string {
       if (isOwnExtensionUrl(url)) {
         return getOwnExtensionFaviconUrl();
       }
@@ -1829,23 +2000,25 @@ export async function getSearchSuggestions(query, options) {
         return shouldBlockFaviconForHost(host)
           ? ''
           : getPageFaviconCandidateUrl(urlObj.href);
-      } catch (e) {
+      } catch (_error) {
         const fallbackHost = getFaviconFallbackHost(url);
         return shouldBlockFaviconForHost(fallbackHost) ? '' : getHostFaviconUrl(fallbackHost);
       }
     }
 
-    function createSearchSuggestion(item, sourceType, score, extras) {
+    function createSearchSuggestion(item: SourceItem & { url: string }, sourceType: string, score: number, extras: RowExtras): SuggestionRow {
       return searchUtils.createSearchSuggestion(item, sourceType, score, extras);
     }
 
-    function calculateSearchRelevanceScore(item, sourceType) {
+    function calculateSearchRelevanceScore(item: SourceItem & { url: string }, sourceType: string): number {
       return searchUtils.calculateSearchRelevanceScore(item, sourceType, context, searchScoreOptions);
     }
 
-    function buildBookmarkPath(bookmark) {
-      const pathParts = [];
-      let parentId = bookmark && bookmark.parentId ? bookmark.parentId : bookmark && bookmark.id;
+    function buildBookmarkPath(bookmark: SourceItem): string {
+      const pathParts: string[] = [];
+      let parentId: string | null = bookmark && bookmark.parentId
+        ? bookmark.parentId
+        : (bookmark && bookmark.id !== undefined ? String(bookmark.id) : null);
       while (parentId) {
         const node = bookmarkNodeMap.get(parentId);
         if (!node) {
@@ -1860,13 +2033,13 @@ export async function getSearchSuggestions(query, options) {
       return pathParts.join('/');
     }
 
-    const suggestionIndexByKey = new Map();
+    const suggestionIndexByKey = new Map<string, number>();
 
-    function getSuggestionKey(item) {
+    function getSuggestionKey(item: SourceItem | SuggestionLike | null | undefined): string {
       return searchUtils.buildSearchDedupEntryKey(item);
     }
 
-    function upsertSuggestion(rawItem, sourceType, extras) {
+    function upsertSuggestion(rawItem: SourceItem | null | undefined, sourceType: string, extras?: RowExtras): SuggestionRow | null {
       if (!rawItem || !rawItem.url) {
         return null;
       }
@@ -1876,20 +2049,21 @@ export async function getSearchSuggestions(query, options) {
       // Bookmarks and top sites carry no visit data. When the same page was
       // already seen in history, keep its behavior signals so adding a
       // bookmark never makes a frequently used page rank lower.
-      const item = existing
+      const item: SourceItem & { url: string } = existing
         ? {
           ...rawItem,
+          url: rawItem.url,
           lastVisitTime: Math.max(Number(rawItem.lastVisitTime) || 0, Number(existing.lastVisitTime) || 0),
           visitCount: Math.max(Number(rawItem.visitCount) || 0, Number(existing.visitCount) || 0),
           typedCount: Math.max(Number(rawItem.typedCount) || 0, Number(existing.typedCount) || 0),
           isTopSite: Boolean(rawItem.isTopSite || existing.isTopSite)
         }
-        : rawItem;
+        : { ...rawItem, url: rawItem.url };
       const baseScore = calculateSearchRelevanceScore(item, sourceType);
       if (baseScore <= 0 && sourceType !== 'openTab') {
         return null;
       }
-      const normalizedExtras = extras && typeof extras === 'object' ? { ...extras } : {};
+      const normalizedExtras: RowExtras = extras && typeof extras === 'object' ? { ...extras } : {};
       const scoreAdjustment = Number(normalizedExtras.scoreAdjustment) || 0;
       delete normalizedExtras.scoreAdjustment;
       const selectionBoost = getSearchSelectionBoost(item, context, searchSelectionStats, searchScoreOptions);
@@ -1918,7 +2092,7 @@ export async function getSearchSuggestions(query, options) {
       return suggestion;
     }
 
-    function upsertOpenTabSuggestion(item) {
+    function upsertOpenTabSuggestion(item: OpenTabItem | null | undefined): SuggestionRow | null {
       if (!item || !item.url || typeof item._xMatchedTabId !== 'number') {
         return null;
       }
@@ -1968,7 +2142,7 @@ export async function getSearchSuggestions(query, options) {
         if (hostname.startsWith(context.queryLower)) {
           scoreAdjustment += 8;
         }
-      } catch (e) {
+      } catch (_error) {
         // Ignore invalid URLs.
       }
       if (titleLower.startsWith(context.queryLower)) {
@@ -1998,13 +2172,14 @@ export async function getSearchSuggestions(query, options) {
       buildReasons: buildSuggestionReasons
     });
     if (brandDirectSuggestion) {
-      const directKey = getSuggestionKey(brandDirectSuggestion);
+      const directRow: SuggestionRow = { ...brandDirectSuggestion };
+      const directKey = getSuggestionKey(directRow);
       const existingIndex = suggestionIndexByKey.get(directKey);
       if (typeof existingIndex === 'number') {
-        suggestions[existingIndex] = brandDirectSuggestion;
+        suggestions[existingIndex] = directRow;
       } else {
         suggestionIndexByKey.set(directKey, suggestions.length);
-        suggestions.push(brandDirectSuggestion);
+        suggestions.push(directRow);
       }
     }
 
@@ -2012,8 +2187,8 @@ export async function getSearchSuggestions(query, options) {
       return searchUtils.compareSearchSuggestions(a, b);
     });
 
-    const uniqueSuggestions = [];
-    const seenSuggestionKeys = new Set();
+    const uniqueSuggestions: SuggestionRow[] = [];
+    const seenSuggestionKeys = new Set<string>();
     for (let i = 0; i < suggestions.length && uniqueSuggestions.length < (searchPolicy.candidatePoolLimit || 20); i += 1) {
       const suggestion = suggestions[i];
       const suggestionKey = getSuggestionKey(suggestion);
@@ -2024,7 +2199,7 @@ export async function getSearchSuggestions(query, options) {
       uniqueSuggestions.push(suggestion);
     }
 
-    let finalSuggestions = filterBlacklistedSuggestions(uniqueSuggestions, searchBlacklistItems, context.lookupQuery);
+    let finalSuggestions = filterBlacklistedSuggestions(uniqueSuggestions, searchBlacklistItems);
     finalSuggestions = searchUtils.filterSearchSuggestionsBySourceTypes(finalSuggestions, sourceTypes);
     finalSuggestions = searchUtils.applySearchSuggestionHostDiversity(finalSuggestions, { context });
     if (finalSuggestions.length === 0 && requestOptions.keyboardLayoutRetry !== false) {
@@ -2041,24 +2216,30 @@ export async function getSearchSuggestions(query, options) {
   }
 }
 
-export async function getSearchEngineSuggestions(query, localSuggestions, options) {
+export async function getSearchEngineSuggestions(
+  query: unknown,
+  localSuggestions: unknown,
+  options?: EngineSuggestionOptions | null
+): Promise<SuggestionRow[]> {
   await defaultSearchEngineStateReady;
   const searchUtils = SEARCH_UTILS;
   const searchPolicy = getBackgroundSearchPolicy(searchUtils);
   const context = buildBackgroundSearchQueryContext(query, searchUtils);
-  const settings = options && typeof options === 'object' ? options : {};
+  const settings: EngineSuggestionOptions = options && typeof options === 'object' ? options : {};
   const signal = settings.signal || null;
-  const normalizedLocalSuggestions = (Array.isArray(localSuggestions) ? localSuggestions : [])
-    .filter((suggestion) => suggestion && typeof suggestion === 'object')
+  const pageRows: unknown[] = Array.isArray(localSuggestions) ? localSuggestions : [];
+  const normalizedLocalSuggestions = pageRows
+    .map(readSuggestionRow)
+    .filter((suggestion): suggestion is SuggestionRow => suggestion !== null)
     .slice(0, searchPolicy.candidatePoolLimit || 20);
   if (!context.queryLower || (signal && signal.aborted)) {
     return normalizedLocalSuggestions;
   }
 
-  const rawEngineSuggestionsPromise = settings.rawEngineSuggestionsPromise &&
+  const rawEngineSuggestionsPromise: Promise<unknown> = settings.rawEngineSuggestionsPromise &&
     typeof settings.rawEngineSuggestionsPromise.then === 'function'
     ? settings.rawEngineSuggestionsPromise
-    : fetchSearchEngineSuggestionsWithTimeout(query, signal);
+    : fetchSearchEngineSuggestionsWithTimeout(String(query || ''), signal);
   const [rawEngineSuggestions, searchBlacklistItems, sourceTypes] = await Promise.all([
     rawEngineSuggestionsPromise,
     loadSearchBlacklistItems(),
@@ -2077,9 +2258,9 @@ export async function getSearchEngineSuggestions(query, localSuggestions, option
     ...searchPolicy,
     searchFirst: settings.searchFirst === true
   });
-  const mergedSuggestions = normalizedLocalSuggestions.slice();
+  const mergedSuggestions: SuggestionRow[] = normalizedLocalSuggestions.slice();
   engineSuggestions.slice(0, engineSuggestionPolicy.limit).forEach((suggestion) => {
-    const suggestionItem = {
+    const suggestionItem: SuggestionRow = {
       type: 'googleSuggest',
       title: suggestion,
       url: buildDefaultSearchUrl(suggestion),
@@ -2089,7 +2270,7 @@ export async function getSearchEngineSuggestions(query, localSuggestions, option
       forceSearch: true,
       reasons: ['来源：搜索建议']
     };
-    if (!isSuggestionBlockedBySearchBlacklist(suggestionItem, searchBlacklistItems, suggestion)) {
+    if (!isSuggestionBlockedBySearchBlacklist(suggestionItem, searchBlacklistItems)) {
       mergedSuggestions.push(suggestionItem);
     }
   });
@@ -2097,8 +2278,8 @@ export async function getSearchEngineSuggestions(query, localSuggestions, option
   mergedSuggestions.sort((a, b) => {
     return searchUtils.compareSearchSuggestions(a, b);
   });
-  const uniqueSuggestions = [];
-  const seenSuggestionKeys = new Set();
+  const uniqueSuggestions: SuggestionRow[] = [];
+  const seenSuggestionKeys = new Set<string>();
   for (let i = 0; i < mergedSuggestions.length && uniqueSuggestions.length < (searchPolicy.candidatePoolLimit || 20); i += 1) {
     const suggestion = mergedSuggestions[i];
     const suggestionKey = searchUtils.buildSearchDedupEntryKey(suggestion);
@@ -2109,7 +2290,7 @@ export async function getSearchEngineSuggestions(query, localSuggestions, option
     uniqueSuggestions.push(suggestion);
   }
 
-  let finalSuggestions = filterBlacklistedSuggestions(uniqueSuggestions, searchBlacklistItems, context.lookupQuery);
+  let finalSuggestions = filterBlacklistedSuggestions(uniqueSuggestions, searchBlacklistItems);
   finalSuggestions = searchUtils.filterSearchSuggestionsBySourceTypes(finalSuggestions, sourceTypes);
   if (settings.searchFirst === true) {
     const engineCandidates = finalSuggestions.filter((suggestion) => (

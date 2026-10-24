@@ -40,6 +40,7 @@
     "src/background/pinned-tab-recovery.ts",
     "src/shared/wallpaper-local-store.ts",
     "src/background/webdav-sync.ts",
-    "src/background/favicon-service.ts"
+    "src/background/favicon-service.ts",
+    "src/background/search-suggestions-service.ts"
   ]
 }

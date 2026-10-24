@@ -151,6 +151,18 @@ function warnBackgroundFailure(context: string): (error: unknown) => void {
   };
 }
 
+// The worker's importScripts (Firefox's build replaces it with a no-op);
+// null where the global scope has none.
+function getImportScripts(): ((...urls: string[]) => void) | null {
+  const importScriptsFn: unknown = Reflect.get(globalThis, 'importScripts');
+  if (typeof importScriptsFn !== 'function') {
+    return null;
+  }
+  return (...urls) => {
+    Reflect.apply(importScriptsFn, globalThis, urls);
+  };
+}
+
 // A host as the favicon and site-search lookups key it.
 function normalizeHost(hostname: unknown): string {
   if (!hostname) {
@@ -223,6 +235,7 @@ export {
   SHOW_TAB_SWITCHER_COMMAND_NAME,
   areBackgroundSettingsLoaded,
   documentPipEnabledReady,
+  getImportScripts,
   getRestrictedAction,
   getShortcutUrl,
   ignoreExpectedChromeError,

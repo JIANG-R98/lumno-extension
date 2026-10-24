@@ -374,7 +374,7 @@ function createSiteSearchProviders(deps: SiteSearchProvidersDeps) {
     return provider;
   }
 
-  function sanitizeSiteSearchProviders(items: unknown, baseItems: unknown): NormalizedSiteSearchProvider[] {
+  function sanitizeSiteSearchProviders(items: unknown, baseItems?: unknown): NormalizedSiteSearchProvider[] {
     const baseMap = new Map<string, ProviderInput>((Array.isArray(baseItems) ? baseItems : []).map((item: ProviderInput): [string, ProviderInput] => [
       String(item && item.key ? item.key : '').toLowerCase(),
       item
