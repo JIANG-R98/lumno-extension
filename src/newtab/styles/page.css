@@ -794,6 +794,11 @@ body[data-nt-suggestions-open="true"] #_x_extension_newtab_root_2024_unique_ {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
+/* The site search menu hangs below the search box, so the box has to sit above the update notice
+   and the other sections it covers, as it does while suggestions are open. */
+#_x_extension_newtab_root_2024_unique_:has(.x-lumno-search-input-mode__menu[data-surface="newtab"]:not([hidden])) {
+  z-index: 22;
+}
 body[data-nt-suggestions-open="true"] #_x_extension_newtab_search_layer_2024_unique_ {
   z-index: 20;
   border-radius:
