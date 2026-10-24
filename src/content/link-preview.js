@@ -187,7 +187,7 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
       position: absolute;
       inset: 0;
       overflow: clip;
-      border-radius: 26px;
+      border-radius: 23px;
       background: var(--lp-panel);
       box-shadow:
         0 0 0 0.5px var(--lp-panel-edge),
@@ -198,8 +198,10 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
        as far from the corner as a 26pt continuous corner does, about 1.5
        times the radius, so it looks the size of the window corner. Only
        while the window is still: clipping the frame to it takes a mask pass
-       on every frame, and the plain corner it stands in for while the window
-       springs open or shrinks away looks the same at that size. */
+       on every frame. The plain corner it stands in for while the window
+       springs open or shrinks away is the circle closest to it, within about
+       half a pixel, so the swap does not show; a 26px circle was nearly two
+       pixels off and the corner visibly jumped when the spring settled. */
     @supports (corner-shape: squircle) {
       .root[data-motion="still"] .panel {
         border-radius: 40px;
