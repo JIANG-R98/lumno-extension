@@ -1,4 +1,117 @@
-// @ts-nocheck
+// The extension's settings: their storage keys, which ones browser sync
+// carries, their defaults, and the normalizers that read a stored value back
+// into a valid one.
+import type { SearchSourceType } from './search/types';
+
+type NewtabWidthMode = 'standard' | 'wide';
+
+// 'none' keeps the original New Tab surfaces; the others swap in a glass material.
+type NewtabGlassStyle = 'none' | 'frosted' | 'liquid';
+
+// Light or dark under a glass material: 'follow' takes the New Tab's own theme (where the light
+// theme still turns plates dark over a dark wallpaper); 'light' and 'dark' hold the page there.
+type NewtabGlassTheme = 'follow' | 'light' | 'dark';
+
+// What the top of the New Tab shows.
+type NewtabTopContentMode = 'brand' | 'time' | 'off';
+
+// The clock's ink: 'auto' follows the wallpaper or theme behind it; 'light'
+// and 'dark' hold it there.
+type NewtabTimeInk = 'auto' | 'light' | 'dark';
+
+type NewtabOpenInNewTabSurface = 'search' | 'shortcuts' | 'bookmarks' | 'recentSites';
+
+// Which New Tab surfaces open a plain click in a new foreground tab.
+type NewtabOpenInNewTab = Record<NewtabOpenInNewTabSurface, boolean>;
+
+// Where the quote sits: above the search box, inside it, at the bottom, or
+// below the shortcuts ('search', the oldest placement).
+type NewtabQuotePosition = 'top' | 'input' | 'bottom' | 'search';
+
+interface NewtabQuotePrefs {
+  enabled: boolean;
+  position: NewtabQuotePosition;
+  category: 'poetry' | 'literature';
+  provider: 'custom' | 'hitokoto';
+  // An id of NEWTAB_QUOTE_FONTS.
+  font: string;
+  fontSize: number;
+}
+
+interface NewtabQuoteFont {
+  id: string;
+  // The message with the face's name, and the name when that is missing.
+  labelKey: string;
+  label: string;
+  // CSS font-family stack.
+  family: string;
+}
+
+interface NewtabTimeFont {
+  id: string;
+  label: string;
+  family: string;
+  // CSS font-stretch, or '' for the face's own.
+  stretch: string;
+  minWeight: number;
+  maxWeight: number;
+  defaultWeight: number;
+  // Letter spacing in em at minWeight and maxWeight; null for Open Sans's
+  // stepped weight-based tracking.
+  tracking: readonly [number, number] | null;
+  // Space around the colon and its vertical shift, in em.
+  colonGap: number;
+  colonShift: number;
+}
+
+interface UiLocale {
+  // The _locales folder.
+  id: string;
+  htmlLang: string;
+  // The language in its own words.
+  name: string;
+  machineTranslated: boolean;
+}
+
+type OverlaySizeMode = 'compact' | 'standard' | 'large';
+
+type OverlayEnterAnimation = 'fade' | 'elastic';
+
+// Whether search engine suggestions or matching pages come first.
+type SearchResultPriority = 'search' | 'autocomplete';
+
+// Where a result opened in a new tab goes.
+type SearchResultTabPosition = 'afterCurrent' | 'beforeCurrent' | 'end';
+
+type SelectionQuickActionsProvider =
+  | 'gpt' | 'gm' | 'dbai' | 'qw' | 'yb' | 'mx' | 'ds' | 'kimi' | 'cp' | 'grok' | 'qwen' | 'ais';
+
+// A stored theme mode; 'system' follows the browser.
+type ThemeMode = 'dark' | 'light' | 'system';
+
+// A theme a page holds itself in, or '' to follow the global mode.
+type ThemePreference = 'dark' | 'light' | '';
+
+// Bounds for a stored number: values are held within min and max, and a
+// missing or invalid value becomes the fallback.
+interface RangeOptions {
+  min?: number;
+  max?: number;
+  fallback?: number;
+}
+
+interface SearchWidthOptions extends RangeOptions {
+  // Read a missing width as null (no custom width) instead of the fallback.
+  allowNull?: boolean;
+}
+
+interface ShortcutColumnsFromWidthOptions {
+  widthMin?: number;
+  widthMax?: number;
+  columnsMin?: number;
+  columnsMax?: number;
+}
+
 const THEME_STORAGE_KEY = '_x_extension_theme_mode_2024_unique_';
 // Retained for safely migrating older WebDAV installations. New connections
 // keep Chrome Sync as the preferences source and add WebDAV alongside it.
@@ -18,7 +131,7 @@ const NEWTAB_SHORTCUTS_VISIBLE_STORAGE_KEY = '_x_extension_newtab_shortcuts_visi
 const NEWTAB_SHORTCUTS_CHUNK_2_STORAGE_KEY = '_x_extension_newtab_shortcuts_chunk_2_2026_unique_';
 const NEWTAB_SHORTCUTS_CHUNK_3_STORAGE_KEY = '_x_extension_newtab_shortcuts_chunk_3_2026_unique_';
 // Grouped shortcut state; the three keys above hold the older flat list.
-const NEWTAB_SHORTCUTS_V2_STORAGE_KEYS = Object.freeze([
+const NEWTAB_SHORTCUTS_V2_STORAGE_KEYS: readonly string[] = Object.freeze([
   '_x_extension_newtab_shortcuts_v2_2026_unique_',
   '_x_extension_newtab_shortcuts_v2_chunk_2_2026_unique_',
   '_x_extension_newtab_shortcuts_v2_chunk_3_2026_unique_'
@@ -28,12 +141,9 @@ const NEWTAB_SHORTCUT_DOCK_MAGNIFICATION_ENABLED_STORAGE_KEY = '_x_extension_new
 const NEWTAB_FEEDBACK_BUTTON_VISIBLE_STORAGE_KEY = '_x_extension_newtab_feedback_button_visible_2026_unique_';
 const NEWTAB_APPEARANCE_BUTTON_VISIBLE_STORAGE_KEY = '_x_extension_newtab_appearance_button_visible_2026_unique_';
 const NEWTAB_GLASS_STYLE_STORAGE_KEY = '_x_extension_newtab_glass_style_2026_unique_';
-// 'none' keeps the original New Tab surfaces; the others swap in a glass material.
-const NEWTAB_GLASS_STYLES = Object.freeze(['none', 'frosted', 'liquid']);
-// Light or dark under a glass material: 'follow' takes the New Tab's own theme (where the light
-// theme still turns plates dark over a dark wallpaper); 'light' and 'dark' hold the page there.
+const NEWTAB_GLASS_STYLES: readonly NewtabGlassStyle[] = Object.freeze(['none', 'frosted', 'liquid']);
 const NEWTAB_GLASS_THEME_STORAGE_KEY = '_x_extension_newtab_glass_theme_2026_unique_';
-const NEWTAB_GLASS_THEMES = Object.freeze(['follow', 'light', 'dark']);
+const NEWTAB_GLASS_THEMES: readonly NewtabGlassTheme[] = Object.freeze(['follow', 'light', 'dark']);
 const NEWTAB_SHORTCUT_WIDTH_STORAGE_KEY = '_x_extension_newtab_shortcut_width_2026_unique_';
 const NEWTAB_SHORTCUT_WIDTH_MIN = 360;
 const NEWTAB_SHORTCUT_WIDTH_MAX = 1440;
@@ -77,7 +187,8 @@ const NEWTAB_QUOTE_FONT_DEFAULT = 'wenkai';
 // Glyphs a face lacks fall back along its own stack.
 const NEWTAB_QUOTE_SERIF_FALLBACK = '"Songti SC", "Songti TC", "STSong", "SimSun", "NSimSun", ' +
   '"Noto Serif CJK SC", "Source Han Serif SC", Georgia, "Times New Roman", serif';
-const NEWTAB_QUOTE_FONTS = Object.freeze([
+const NEWTAB_QUOTE_POSITIONS: readonly NewtabQuotePosition[] = Object.freeze(['top', 'input', 'bottom']);
+const NEWTAB_QUOTE_FONTS: readonly NewtabQuoteFont[] = Object.freeze([
   Object.freeze({
     id: 'wenkai',
     labelKey: 'newtab_quote_font_wenkai',
@@ -128,10 +239,11 @@ const SEARCH_SOURCE_ORDER_STORAGE_KEY = '_x_extension_search_source_order_2026_u
 const PROGRESS_TRACKING_ENABLED_STORAGE_KEY = '_x_extension_progress_tracking_enabled_2026_unique_';
 // Which New Tab surfaces open a plain click in a new foreground tab instead of the New Tab itself.
 const NEWTAB_OPEN_IN_NEW_TAB_STORAGE_KEY = '_x_extension_newtab_open_in_new_tab_2026_unique_';
-const NEWTAB_OPEN_IN_NEW_TAB_SURFACES = Object.freeze(['search', 'shortcuts', 'bookmarks', 'recentSites']);
+const NEWTAB_OPEN_IN_NEW_TAB_SURFACES: readonly NewtabOpenInNewTabSurface[] =
+  Object.freeze(['search', 'shortcuts', 'bookmarks', 'recentSites']);
 // Bookmark bar material is chosen against the wallpaper. Browser sync
 // carries no custom wallpapers, so these values never enter Chrome Sync.
-const BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS = Object.freeze([
+const BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS: readonly string[] = Object.freeze([
   '_x_extension_bookmark_topbar_surface_mode_2026_unique_',
   '_x_extension_bookmark_topbar_surface_color_light_2026_unique_',
   '_x_extension_bookmark_topbar_surface_color_dark_2026_unique_',
@@ -139,7 +251,7 @@ const BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS = Object.freeze([
 ]);
 // WebDAV carries them together with the wallpapers. The legacy single color
 // is migrated into the light and dark colors on each device.
-const BOOKMARK_TOPBAR_WEBDAV_STORAGE_KEYS = Object.freeze(BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS.slice(0, 3));
+const BOOKMARK_TOPBAR_WEBDAV_STORAGE_KEYS: readonly string[] = Object.freeze(BOOKMARK_TOPBAR_LOCAL_STORAGE_KEYS.slice(0, 3));
 const LANGUAGE_STORAGE_KEY = '_x_extension_language_2024_unique_';
 const RECENT_MODE_STORAGE_KEY = '_x_extension_recent_mode_2024_unique_';
 const RECENT_COUNT_STORAGE_KEY = '_x_extension_recent_count_2024_unique_';
@@ -164,7 +276,7 @@ const OVERLAY_FONT_LABELS_STORAGE_KEY = '_x_extension_overlay_font_labels_2026_u
 // The fonts are this computer's installed faces, so the choice stays on the
 // device: always chrome.storage.local, never Chrome Sync, WebDAV or an
 // export. Another device has its own fonts and its own choice.
-const OVERLAY_FONT_LOCAL_STORAGE_KEYS = Object.freeze([
+const OVERLAY_FONT_LOCAL_STORAGE_KEYS: readonly string[] = Object.freeze([
   OVERLAY_FONT_FAMILY_STORAGE_KEY,
   OVERLAY_FONT_FALLBACK_STORAGE_KEY,
   OVERLAY_FONT_LABELS_STORAGE_KEY
@@ -199,7 +311,7 @@ const SYNC_META_STORAGE_KEY = '_x_extension_sync_meta_2024_unique_';
 const RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY = '_x_extension_restricted_action_auto_browser_setting_done_2026_unique_';
 // localStorage: the Options page theme from its last load, applied before its scripts load.
 const OPTIONS_THEME_PRELOAD_STORAGE_KEY = '_x_extension_options_theme_preload_2026_unique_';
-const SELECTION_QUICK_ACTIONS_PROVIDER_KEYS = Object.freeze([
+const SELECTION_QUICK_ACTIONS_PROVIDER_KEYS: readonly SelectionQuickActionsProvider[] = Object.freeze([
   'gpt',
   'gm',
   'dbai',
@@ -215,9 +327,9 @@ const SELECTION_QUICK_ACTIONS_PROVIDER_KEYS = Object.freeze([
 ]);
 // Keep the original key value so existing installations migrate from boolean to mode in place.
 const NEWTAB_TOP_CONTENT_MODE_STORAGE_KEY = '_x_extension_newtab_wordmark_visible_2026_unique_';
-const NEWTAB_TOP_CONTENT_BRAND = 'brand';
-const NEWTAB_TOP_CONTENT_TIME = 'time';
-const NEWTAB_TOP_CONTENT_OFF = 'off';
+const NEWTAB_TOP_CONTENT_BRAND: NewtabTopContentMode = 'brand';
+const NEWTAB_TOP_CONTENT_TIME: NewtabTopContentMode = 'time';
+const NEWTAB_TOP_CONTENT_OFF: NewtabTopContentMode = 'off';
 const NEWTAB_TIME_FONT_WEIGHT_STORAGE_KEY =
   '_x_extension_newtab_time_font_weight_2026_unique_';
 const NEWTAB_TIME_FONT_WEIGHT_MIN = 300;
@@ -234,11 +346,9 @@ const NEWTAB_TIME_OPACITY_STORAGE_KEY = '_x_extension_newtab_time_opacity_2026_u
 const NEWTAB_TIME_OPACITY_MIN = 20;
 const NEWTAB_TIME_OPACITY_MAX = 100;
 const NEWTAB_TIME_OPACITY_DEFAULT = 100;
-// The clock's ink: 'auto' follows the wallpaper or theme behind it; 'light'
-// and 'dark' hold it there.
 const NEWTAB_TIME_INK_STORAGE_KEY = '_x_extension_newtab_time_ink_2026_unique_';
-const NEWTAB_TIME_INKS = Object.freeze(['auto', 'light', 'dark']);
-const NEWTAB_TIME_INK_DEFAULT = 'auto';
+const NEWTAB_TIME_INKS: readonly NewtabTimeInk[] = Object.freeze(['auto', 'light', 'dark']);
+const NEWTAB_TIME_INK_DEFAULT: NewtabTimeInk = 'auto';
 const NEWTAB_TIME_FONT_STORAGE_KEY = '_x_extension_newtab_time_font_2026_unique_';
 const NEWTAB_TIME_FONT_DEFAULT = 'open-sans';
 // The stored weight stays within 300-800; each face clamps it to the range
@@ -248,20 +358,21 @@ const NEWTAB_TIME_FONT_DEFAULT = 'open-sans';
 // letter spacing in em at the face's lightest and heaviest weight: light
 // strokes leave room to set digits tighter, heavy ones need air. null keeps
 // Open Sans's stepped weight-based tracking.
-const NEWTAB_TIME_FONTS = Object.freeze([
-  Object.freeze({
-    id: 'open-sans',
-    label: 'Open Sans',
-    family: '"Open Sans", sans-serif',
-    stretch: '86%',
-    minWeight: 300,
-    maxWeight: 800,
-    defaultWeight: 320,
-    tracking: null,
-    colonGap: 0.055,
-    colonShift: -0.035
-  }),
-  Object.freeze({
+const OPEN_SANS_TIME_FONT: NewtabTimeFont = Object.freeze({
+  id: NEWTAB_TIME_FONT_DEFAULT,
+  label: 'Open Sans',
+  family: '"Open Sans", sans-serif',
+  stretch: '86%',
+  minWeight: 300,
+  maxWeight: 800,
+  defaultWeight: 320,
+  tracking: null,
+  colonGap: 0.055,
+  colonShift: -0.035
+});
+const NEWTAB_TIME_FONTS: readonly NewtabTimeFont[] = Object.freeze([
+  OPEN_SANS_TIME_FONT,
+  Object.freeze<NewtabTimeFont>({
     id: 'geist',
     label: 'Geist',
     family: '"Lumno Clock Geist", "Open Sans", sans-serif',
@@ -273,7 +384,7 @@ const NEWTAB_TIME_FONTS = Object.freeze([
     colonGap: 0.04,
     colonShift: -0.06
   }),
-  Object.freeze({
+  Object.freeze<NewtabTimeFont>({
     id: 'jetbrains-mono',
     label: 'JetBrains Mono',
     family: '"Lumno Clock JetBrains Mono", "Open Sans", monospace',
@@ -285,7 +396,7 @@ const NEWTAB_TIME_FONTS = Object.freeze([
     colonGap: -0.06,
     colonShift: -0.02
   }),
-  Object.freeze({
+  Object.freeze<NewtabTimeFont>({
     id: 'bricolage-grotesque',
     label: 'Bricolage Grotesque',
     family: '"Lumno Clock Bricolage Grotesque", "Open Sans", sans-serif',
@@ -297,7 +408,7 @@ const NEWTAB_TIME_FONTS = Object.freeze([
     colonGap: 0.1,
     colonShift: -0.06
   }),
-  Object.freeze({
+  Object.freeze<NewtabTimeFont>({
     id: 'unbounded',
     label: 'Unbounded',
     family: '"Lumno Clock Unbounded", "Open Sans", sans-serif',
@@ -310,7 +421,7 @@ const NEWTAB_TIME_FONTS = Object.freeze([
     colonShift: -0.04
   }),
   // Solid round dots; past 550 the dots run into each other.
-  Object.freeze({
+  Object.freeze<NewtabTimeFont>({
     id: 'bitcount',
     label: 'Bitcount',
     family: '"Lumno Clock Bitcount", "Open Sans", monospace',
@@ -329,7 +440,7 @@ const NEWTAB_TIME_SECONDS_VISIBLE_STORAGE_KEY =
 const NEWTAB_TIME_12_HOUR_STORAGE_KEY = '_x_extension_newtab_time_12_hour_2026_unique_';
 // User-controlled preferences that are safe to store in chrome.storage.sync.
 // Keep generated caches, device state, and custom wallpaper media out of this list.
-const CHROME_SYNC_STORAGE_KEYS = Object.freeze([
+const CHROME_SYNC_STORAGE_KEYS: readonly string[] = Object.freeze([
   THEME_STORAGE_KEY,
   LANGUAGE_STORAGE_KEY,
   RECENT_MODE_STORAGE_KEY,
@@ -423,7 +534,7 @@ const CHROME_SYNC_STORAGE_KEYS = Object.freeze([
 // folder (a Chrome locale code), `name` is the language in its own words.
 // Right-to-left languages are left out until the styles handle them.
 // `machineTranslated` marks copy that no native speaker has reviewed yet.
-const UI_LOCALES = Object.freeze([
+const UI_LOCALE_ENTRIES: ReadonlyArray<readonly [string, string, boolean?]> = [
   ['zh_CN', '简体中文'],
   ['zh_TW', '繁體中文'],
   ['ja', '日本語'],
@@ -472,19 +583,37 @@ const UI_LOCALES = Object.freeze([
   ['kn', 'ಕನ್ನಡ', true],
   ['ml', 'മലയാളം', true],
   ['th', 'ไทย', true]
-].map(([id, name, machineTranslated]) => Object.freeze({
+];
+const UI_LOCALES: readonly UiLocale[] = Object.freeze(UI_LOCALE_ENTRIES.map(([id, name, machineTranslated]) => Object.freeze({
   id,
   htmlLang: id.replace('_', '-'),
   name,
   machineTranslated: Boolean(machineTranslated)
 })));
-const UI_LOCALES_BY_ID = new Map(UI_LOCALES.map((entry) => [entry.id, entry]));
+const UI_LOCALES_BY_ID: ReadonlyMap<string, UiLocale> = new Map(UI_LOCALES.map((entry) => [entry.id, entry]));
 // Language subtags browsers report under another name than the _locales folder.
-const LOCALE_SUBTAG_ALIASES = Object.freeze({ nb: 'no', nn: 'no', tl: 'fil', in: 'id' });
+const LOCALE_SUBTAG_ALIASES: ReadonlyMap<string, string> = new Map([['nb', 'no'], ['nn', 'no'], ['tl', 'fil'], ['in', 'id']]);
+
+function isOneOf<T extends string>(list: readonly T[], value: unknown): value is T {
+  return list.some((item) => item === value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function isUnknownArray(value: unknown): value is unknown[] {
+  return Array.isArray(value);
+}
+
+// A finite option, or the fallback.
+function getNumberOption(value: unknown, fallback: number): number {
+  return Number.isFinite(Number(value)) ? Number(value) : fallback;
+}
 
 // The _locales folder for a browser or stored language tag, or '' when
 // Lumno has no copy in that language.
-function resolveSupportedLocale(locale) {
+function resolveSupportedLocale(locale: unknown): string {
   const lower = String(locale || '').trim().toLowerCase().replace(/_/g, '-');
   if (!lower) {
     return '';
@@ -499,32 +628,44 @@ function resolveSupportedLocale(locale) {
   if (language === 'pt') {
     return rest.includes('pt') ? 'pt_PT' : 'pt_BR';
   }
-  const id = LOCALE_SUBTAG_ALIASES[language] || language;
+  const id = LOCALE_SUBTAG_ALIASES.get(language) || language;
   return UI_LOCALES_BY_ID.has(id) ? id : '';
 }
 
-function normalizeLocale(locale) {
+function normalizeLocale(locale: unknown): string {
   return resolveSupportedLocale(locale) || 'en';
 }
 
-function localeToHtmlLang(locale) {
-  return UI_LOCALES_BY_ID.get(normalizeLocale(locale)).htmlLang;
+function getUiLocale(locale: unknown): UiLocale {
+  const id = normalizeLocale(locale);
+  const entry = UI_LOCALES_BY_ID.get(id);
+  // normalizeLocale only returns ids of UI_LOCALES.
+  if (!entry) {
+    throw new Error(`Unknown UI locale: ${id}`);
+  }
+  return entry;
 }
 
-function isMachineTranslatedLocale(locale) {
-  return UI_LOCALES_BY_ID.get(normalizeLocale(locale)).machineTranslated;
+function localeToHtmlLang(locale: unknown): string {
+  return getUiLocale(locale).htmlLang;
 }
 
-function normalizeNewtabWidthMode(value) {
+function isMachineTranslatedLocale(locale: unknown): boolean {
+  return getUiLocale(locale).machineTranslated;
+}
+
+function normalizeNewtabWidthMode(value: unknown): NewtabWidthMode {
   return value === 'standard' ? 'standard' : 'wide';
 }
 
-function normalizeNewtabSearchWidth(value, options) {
+function normalizeNewtabSearchWidth(value: unknown, options?: SearchWidthOptions & { allowNull?: false }): number;
+function normalizeNewtabSearchWidth(value: unknown, options: SearchWidthOptions): number | null;
+function normalizeNewtabSearchWidth(value: unknown, options?: SearchWidthOptions): number | null {
   const config = options || {};
   const allowNull = Boolean(config.allowNull);
-  const min = Number.isFinite(Number(config.min)) ? Number(config.min) : 640;
-  const max = Number.isFinite(Number(config.max)) ? Number(config.max) : 1040;
-  const fallback = Number.isFinite(Number(config.fallback)) ? Number(config.fallback) : 920;
+  const min = getNumberOption(config.min, 640);
+  const max = getNumberOption(config.max, 1040);
+  const fallback = getNumberOption(config.fallback, 920);
   const number = Number(value);
   if (!Number.isFinite(number)) {
     return allowNull ? null : fallback;
@@ -532,7 +673,7 @@ function normalizeNewtabSearchWidth(value, options) {
   return Math.min(max, Math.max(min, Math.round(number)));
 }
 
-function normalizeNewtabTopContentMode(value) {
+function normalizeNewtabTopContentMode(value: unknown): NewtabTopContentMode {
   if (value === NEWTAB_TOP_CONTENT_TIME) {
     return NEWTAB_TOP_CONTENT_TIME;
   }
@@ -542,39 +683,40 @@ function normalizeNewtabTopContentMode(value) {
   return NEWTAB_TOP_CONTENT_BRAND;
 }
 
-function normalizeNewtabQuotePrefs(value) {
-  const source = value && typeof value === 'object' ? value : {};
+function normalizeNewtabQuotePrefs(value: unknown): NewtabQuotePrefs {
+  const source = isRecord(value) ? value : {};
   const size = typeof source.fontSize === 'number' ||
     (typeof source.fontSize === 'string' && source.fontSize.trim())
     ? Number(source.fontSize) : NaN;
+  const font = NEWTAB_QUOTE_FONTS.find((entry) => entry.id === source.font);
   return {
     // Off until the user turns it on; a saved position alone never enables it.
     enabled: source.enabled === true,
     // 'search' predates the input-box placement and still means "below shortcuts".
-    position: ['top', 'input', 'bottom'].includes(source.position) ? source.position : 'search',
+    position: isOneOf(NEWTAB_QUOTE_POSITIONS, source.position) ? source.position : 'search',
     category: source.category === 'poetry' ? 'poetry' : 'literature',
     // 'custom' reads the reader's imported collection on this device.
     provider: source.provider === 'custom' ? 'custom' : 'hitokoto',
-    font: NEWTAB_QUOTE_FONTS.some((font) => font.id === source.font) ? source.font : NEWTAB_QUOTE_FONT_DEFAULT,
+    font: font ? font.id : NEWTAB_QUOTE_FONT_DEFAULT,
     fontSize: Number.isFinite(size)
       ? Math.min(NEWTAB_QUOTE_FONT_SIZE_MAX, Math.max(NEWTAB_QUOTE_FONT_SIZE_MIN, Math.round(size)))
       : NEWTAB_QUOTE_FONT_SIZE_DEFAULT
   };
 }
 
-function normalizeNewtabWordmarkVisible(value) {
+function normalizeNewtabWordmarkVisible(value: unknown): boolean {
   return normalizeNewtabTopContentMode(value) !== NEWTAB_TOP_CONTENT_OFF;
 }
 
-function normalizeNewtabTimeSecondsVisible(value) {
+function normalizeNewtabTimeSecondsVisible(value: unknown): boolean {
   return value === true;
 }
 
-function normalizeNewtabTime12Hour(value) {
+function normalizeNewtabTime12Hour(value: unknown): boolean {
   return value === true;
 }
 
-function normalizeNewtabTimeFontWeight(value) {
+function normalizeNewtabTimeFontWeight(value: unknown): number {
   const number = Number(value);
   if (!Number.isFinite(number)) {
     return NEWTAB_TIME_FONT_WEIGHT_DEFAULT;
@@ -585,7 +727,7 @@ function normalizeNewtabTimeFontWeight(value) {
   );
 }
 
-function normalizeNewtabTimeFontSize(value) {
+function normalizeNewtabTimeFontSize(value: unknown): number {
   const number = Number(value);
   if (value === null || value === '' || !Number.isFinite(number)) {
     return NEWTAB_TIME_FONT_SIZE_DEFAULT;
@@ -596,7 +738,7 @@ function normalizeNewtabTimeFontSize(value) {
   );
 }
 
-function normalizeNewtabTimeOpacity(value) {
+function normalizeNewtabTimeOpacity(value: unknown): number {
   const number = Number(value);
   if (value === null || value === '' || !Number.isFinite(number)) {
     return NEWTAB_TIME_OPACITY_DEFAULT;
@@ -607,24 +749,23 @@ function normalizeNewtabTimeOpacity(value) {
   );
 }
 
-function normalizeNewtabTimeInk(value) {
-  return NEWTAB_TIME_INKS.includes(value) ? value : NEWTAB_TIME_INK_DEFAULT;
+function normalizeNewtabTimeInk(value: unknown): NewtabTimeInk {
+  return isOneOf(NEWTAB_TIME_INKS, value) ? value : NEWTAB_TIME_INK_DEFAULT;
 }
 
-function getNewtabTimeFont(value) {
-  return NEWTAB_TIME_FONTS.find((font) => font.id === value) ||
-    NEWTAB_TIME_FONTS.find((font) => font.id === NEWTAB_TIME_FONT_DEFAULT);
+function getNewtabTimeFont(value: unknown): NewtabTimeFont {
+  return NEWTAB_TIME_FONTS.find((font) => font.id === value) || OPEN_SANS_TIME_FONT;
 }
 
-function normalizeNewtabTimeFont(value) {
+function normalizeNewtabTimeFont(value: unknown): string {
   return getNewtabTimeFont(value).id;
 }
 
 // Letter spacing in em for a face at a weight, or null for Open Sans's own
 // stepped tracking.
-function getNewtabTimeFontTracking(fontId, weight) {
+function getNewtabTimeFontTracking(fontId: unknown, weight: unknown): number | null {
   const font = getNewtabTimeFont(fontId);
-  if (!Array.isArray(font.tracking)) {
+  if (!font.tracking) {
     return null;
   }
   const resolvedWeight = resolveNewtabTimeFontWeight(font.id, weight);
@@ -636,7 +777,7 @@ function getNewtabTimeFontTracking(fontId, weight) {
 
 // The weight a face actually draws with: the stored weight, held to the
 // range that face supports.
-function resolveNewtabTimeFontWeight(fontId, weight) {
+function resolveNewtabTimeFontWeight(fontId: unknown, weight: unknown): number {
   const font = getNewtabTimeFont(fontId);
   return Math.min(
     font.maxWeight,
@@ -644,47 +785,46 @@ function resolveNewtabTimeFontWeight(fontId, weight) {
   );
 }
 
-function normalizeNewtabShortcutsVisible(value) {
+function normalizeNewtabShortcutsVisible(value: unknown): boolean {
   return value !== false;
 }
 
-function normalizeNewtabShortcutAddVisible(value) {
+function normalizeNewtabShortcutAddVisible(value: unknown): boolean {
   return value !== false;
 }
 
-function normalizeNewtabShortcutDockMagnificationEnabled(value) {
+function normalizeNewtabShortcutDockMagnificationEnabled(value: unknown): boolean {
   return value !== false;
 }
 
-function normalizeNewtabFeedbackButtonVisible(value) {
+function normalizeNewtabFeedbackButtonVisible(value: unknown): boolean {
   return value !== false;
 }
 
-function normalizeNewtabAppearanceButtonVisible(value) {
+function normalizeNewtabAppearanceButtonVisible(value: unknown): boolean {
   return value !== false;
 }
 
-function normalizeNewtabGlassStyle(value) {
-  return NEWTAB_GLASS_STYLES.includes(value) ? value : 'none';
+function normalizeNewtabGlassStyle(value: unknown): NewtabGlassStyle {
+  return isOneOf(NEWTAB_GLASS_STYLES, value) ? value : 'none';
 }
 
-function normalizeNewtabGlassTheme(value) {
-  return NEWTAB_GLASS_THEMES.includes(value) ? value : 'follow';
+function normalizeNewtabGlassTheme(value: unknown): NewtabGlassTheme {
+  return isOneOf(NEWTAB_GLASS_THEMES, value) ? value : 'follow';
 }
 
 // The theme a glass material holds the New Tab in, or '' when the page keeps its own theme.
-function getNewtabGlassThemeOverride(style, theme) {
+function getNewtabGlassThemeOverride(style: unknown, theme: unknown): Exclude<NewtabGlassTheme, 'follow'> | '' {
   const glassTheme = normalizeNewtabGlassTheme(theme);
   return normalizeNewtabGlassStyle(style) !== 'none' && glassTheme !== 'follow' ? glassTheme : '';
 }
 
-function normalizeNewtabShortcutWidth(value, options) {
+// A whole number within the range, or the fallback held to it.
+function clampToRange(value: unknown, options: RangeOptions | null | undefined, defaults: Required<RangeOptions>): number {
   const config = options || {};
-  const min = Number.isFinite(Number(config.min)) ? Number(config.min) : NEWTAB_SHORTCUT_WIDTH_MIN;
-  const max = Number.isFinite(Number(config.max)) ? Number(config.max) : NEWTAB_SHORTCUT_WIDTH_MAX;
-  const fallback = Number.isFinite(Number(config.fallback))
-    ? Number(config.fallback)
-    : NEWTAB_SHORTCUT_WIDTH_DEFAULT;
+  const min = getNumberOption(config.min, defaults.min);
+  const max = getNumberOption(config.max, defaults.max);
+  const fallback = getNumberOption(config.fallback, defaults.fallback);
   const number = Number(value);
   if (!Number.isFinite(number)) {
     return Math.min(max, Math.max(min, Math.round(fallback)));
@@ -692,74 +832,44 @@ function normalizeNewtabShortcutWidth(value, options) {
   return Math.min(max, Math.max(min, Math.round(number)));
 }
 
-function normalizeNewtabShortcutColumns(value, options) {
-  const config = options || {};
-  const min = Number.isFinite(Number(config.min))
-    ? Number(config.min)
-    : NEWTAB_SHORTCUT_COLUMNS_MIN;
-  const max = Number.isFinite(Number(config.max))
-    ? Number(config.max)
-    : NEWTAB_SHORTCUT_COLUMNS_MAX;
-  const fallback = Number.isFinite(Number(config.fallback))
-    ? Number(config.fallback)
-    : NEWTAB_SHORTCUT_COLUMNS_DEFAULT;
-  const number = Number(value);
-  if (!Number.isFinite(number)) {
-    return Math.min(max, Math.max(min, Math.round(fallback)));
-  }
-  return Math.min(max, Math.max(min, Math.round(number)));
+function normalizeNewtabShortcutWidth(value: unknown, options?: RangeOptions | null): number {
+  return clampToRange(value, options, {
+    min: NEWTAB_SHORTCUT_WIDTH_MIN,
+    max: NEWTAB_SHORTCUT_WIDTH_MAX,
+    fallback: NEWTAB_SHORTCUT_WIDTH_DEFAULT
+  });
 }
 
-function normalizeNewtabShortcutSize(value, options) {
-  const config = options || {};
-  const min = Number.isFinite(Number(config.min))
-    ? Number(config.min)
-    : NEWTAB_SHORTCUT_SIZE_MIN;
-  const max = Number.isFinite(Number(config.max))
-    ? Number(config.max)
-    : NEWTAB_SHORTCUT_SIZE_MAX;
-  const fallback = Number.isFinite(Number(config.fallback))
-    ? Number(config.fallback)
-    : NEWTAB_SHORTCUT_SIZE_DEFAULT;
-  const number = Number(value);
-  if (!Number.isFinite(number)) {
-    return Math.min(max, Math.max(min, Math.round(fallback)));
-  }
-  return Math.min(max, Math.max(min, Math.round(number)));
+function normalizeNewtabShortcutColumns(value: unknown, options?: RangeOptions | null): number {
+  return clampToRange(value, options, {
+    min: NEWTAB_SHORTCUT_COLUMNS_MIN,
+    max: NEWTAB_SHORTCUT_COLUMNS_MAX,
+    fallback: NEWTAB_SHORTCUT_COLUMNS_DEFAULT
+  });
 }
 
-function normalizeNewtabShortcutGap(value, options) {
-  const config = options || {};
-  const min = Number.isFinite(Number(config.min))
-    ? Number(config.min)
-    : NEWTAB_SHORTCUT_GAP_MIN;
-  const max = Number.isFinite(Number(config.max))
-    ? Number(config.max)
-    : NEWTAB_SHORTCUT_GAP_MAX;
-  const fallback = Number.isFinite(Number(config.fallback))
-    ? Number(config.fallback)
-    : NEWTAB_SHORTCUT_GAP_DEFAULT;
-  const number = Number(value);
-  if (!Number.isFinite(number)) {
-    return Math.min(max, Math.max(min, Math.round(fallback)));
-  }
-  return Math.min(max, Math.max(min, Math.round(number)));
+function normalizeNewtabShortcutSize(value: unknown, options?: RangeOptions | null): number {
+  return clampToRange(value, options, {
+    min: NEWTAB_SHORTCUT_SIZE_MIN,
+    max: NEWTAB_SHORTCUT_SIZE_MAX,
+    fallback: NEWTAB_SHORTCUT_SIZE_DEFAULT
+  });
 }
 
-function inferNewtabShortcutColumnsFromWidth(value, options) {
+function normalizeNewtabShortcutGap(value: unknown, options?: RangeOptions | null): number {
+  return clampToRange(value, options, {
+    min: NEWTAB_SHORTCUT_GAP_MIN,
+    max: NEWTAB_SHORTCUT_GAP_MAX,
+    fallback: NEWTAB_SHORTCUT_GAP_DEFAULT
+  });
+}
+
+function inferNewtabShortcutColumnsFromWidth(value: unknown, options?: ShortcutColumnsFromWidthOptions | null): number {
   const config = options || {};
-  const widthMin = Number.isFinite(Number(config.widthMin))
-    ? Number(config.widthMin)
-    : NEWTAB_SHORTCUT_WIDTH_MIN;
-  const widthMax = Number.isFinite(Number(config.widthMax))
-    ? Number(config.widthMax)
-    : NEWTAB_SHORTCUT_WIDTH_MAX;
-  const columnsMin = Number.isFinite(Number(config.columnsMin))
-    ? Number(config.columnsMin)
-    : NEWTAB_SHORTCUT_COLUMNS_MIN;
-  const columnsMax = Number.isFinite(Number(config.columnsMax))
-    ? Number(config.columnsMax)
-    : NEWTAB_SHORTCUT_COLUMNS_MAX;
+  const widthMin = getNumberOption(config.widthMin, NEWTAB_SHORTCUT_WIDTH_MIN);
+  const widthMax = getNumberOption(config.widthMax, NEWTAB_SHORTCUT_WIDTH_MAX);
+  const columnsMin = getNumberOption(config.columnsMin, NEWTAB_SHORTCUT_COLUMNS_MIN);
+  const columnsMax = getNumberOption(config.columnsMax, NEWTAB_SHORTCUT_COLUMNS_MAX);
   const width = normalizeNewtabShortcutWidth(value, {
     min: widthMin,
     max: widthMax,
@@ -777,25 +887,25 @@ function inferNewtabShortcutColumnsFromWidth(value, options) {
   );
 }
 
-function normalizeNewtabInputAutoFocusEnabled(value) {
+function normalizeNewtabInputAutoFocusEnabled(value: unknown): boolean {
   return value === true;
 }
 
-
-function normalizeNewtabOpenInNewTab(value) {
-  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-  const normalized = {};
-  NEWTAB_OPEN_IN_NEW_TAB_SURFACES.forEach((surface) => {
-    normalized[surface] = source[surface] === true;
-  });
-  return normalized;
+function normalizeNewtabOpenInNewTab(value: unknown): NewtabOpenInNewTab {
+  const source = isRecord(value) && !Array.isArray(value) ? value : {};
+  return {
+    search: source.search === true,
+    shortcuts: source.shortcuts === true,
+    bookmarks: source.bookmarks === true,
+    recentSites: source.recentSites === true
+  };
 }
 
-function normalizeBookmarkFolderIconsVisible(value) {
+function normalizeBookmarkFolderIconsVisible(value: unknown): boolean {
   return value !== false;
 }
 
-function normalizeBookmarkCount(value) {
+function normalizeBookmarkCount(value: unknown): number {
   const parsed = Number(value);
   if (Number.isInteger(parsed) && parsed >= 0 && parsed <= 32 && parsed % 4 === 0) {
     return parsed;
@@ -803,7 +913,7 @@ function normalizeBookmarkCount(value) {
   return 8;
 }
 
-function normalizeBookmarkColumns(value) {
+function normalizeBookmarkColumns(value: unknown): number {
   const parsed = Number(value);
   if (Number.isInteger(parsed) && parsed >= 4 && parsed <= 8) {
     return parsed;
@@ -811,51 +921,50 @@ function normalizeBookmarkColumns(value) {
   return 6;
 }
 
-function normalizeUpdateNoticeEnabled(value) {
+function normalizeUpdateNoticeEnabled(value: unknown): boolean {
   return value !== false;
 }
 
-function normalizeMotionEffectsEnabled(value) {
+function normalizeMotionEffectsEnabled(value: unknown): boolean {
   return value !== false;
 }
 
-function normalizeSimpleModeEnabled(value) {
+function normalizeSimpleModeEnabled(value: unknown): boolean {
   return value === true;
 }
 
-function normalizeNumberShortcutInstantEnabled(value) {
+function normalizeNumberShortcutInstantEnabled(value: unknown): boolean {
   return value === true;
 }
 
-function normalizeSearchFuzzyPinyinEnabled(value) {
+function normalizeSearchFuzzyPinyinEnabled(value: unknown): boolean {
   return value === true;
 }
 
-function normalizeMacosCtrlSuggestionNavigationEnabled(value) {
+function normalizeMacosCtrlSuggestionNavigationEnabled(value: unknown): boolean {
   return value === true;
 }
 
-
-function normalizeFaviconEnhancedFetchEnabled(value) {
+function normalizeFaviconEnhancedFetchEnabled(value: unknown): boolean {
   return value !== false;
 }
 
-function normalizeOverlayOpenTabsDefaultVisible(value) {
+function normalizeOverlayOpenTabsDefaultVisible(value: unknown): boolean {
   return value !== false;
 }
 
-function normalizeOverlayPageThemeAdaptationEnabled(value) {
+function normalizeOverlayPageThemeAdaptationEnabled(value: unknown): boolean {
   return value !== false;
 }
 
-function normalizeOverlaySizeMode(value) {
+function normalizeOverlaySizeMode(value: unknown): OverlaySizeMode {
   if (value === 'compact' || value === 'large') {
     return value;
   }
   return 'standard';
 }
 
-function normalizeOverlayEnterAnimation(value) {
+function normalizeOverlayEnterAnimation(value: unknown): OverlayEnterAnimation {
   return value === 'fade' ? 'fade' : 'elastic';
 }
 
@@ -869,7 +978,7 @@ const OVERLAY_FONT_DEFAULT_STACK = "'Lumno Open Sans', 'Open Sans', -apple-syste
 // is not a plausible CSS family name is dropped.
 // Quotes and backslashes would end the quoted family early; control
 // characters and braces would break out of the declaration.
-function normalizeOverlayFontFamily(value) {
+function normalizeOverlayFontFamily(value: unknown): string {
   if (typeof value !== 'string') {
     return '';
   }
@@ -882,21 +991,19 @@ function normalizeOverlayFontFamily(value) {
 
 // Only plausible names survive. Given the chosen families, the map keeps
 // just theirs; read without them, it keeps at most the two a writer stored.
-function normalizeOverlayFontLabels(value, families) {
-  const labels = {};
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+function normalizeOverlayFontLabels(value: unknown, families?: readonly unknown[] | null): Record<string, string> {
+  const labels: Record<string, string> = {};
+  if (!isRecord(value) || Array.isArray(value)) {
     return labels;
   }
-  (Array.isArray(families) ? families : Object.keys(value).slice(0, 2)).forEach((family) => {
+  for (const family of Array.isArray(families) ? families : Object.keys(value).slice(0, 2)) {
     const key = normalizeOverlayFontFamily(family);
-    const label = key && Object.prototype.hasOwnProperty.call(value, key) &&
-      typeof value[key] === 'string'
-      ? value[key].trim()
-      : '';
+    const stored = key && Object.prototype.hasOwnProperty.call(value, key) ? value[key] : undefined;
+    const label = typeof stored === 'string' ? stored.trim() : '';
     if (label && label.length <= 120 && !/[\u0000-\u001f\u007f]/.test(label)) {
       labels[key] = label;
     }
-  });
+  }
   return labels;
 }
 
@@ -904,7 +1011,7 @@ function normalizeOverlayFontLabels(value, families) {
 // families in order, then the bundled stack so missing faces and glyphs
 // still resolve. An empty value clears the property, which restores the CSS
 // fallbacks exactly.
-function getOverlayFontFamilyCssValue(value, fallbackValue) {
+function getOverlayFontFamilyCssValue(value: unknown, fallbackValue: unknown): string {
   const families = [normalizeOverlayFontFamily(value), normalizeOverlayFontFamily(fallbackValue)]
     .filter(Boolean);
   if (families.length === 0) {
@@ -913,7 +1020,9 @@ function getOverlayFontFamilyCssValue(value, fallbackValue) {
   return `${families.map((family) => `"${family}"`).join(', ')}, ${OVERLAY_FONT_DEFAULT_STACK}`;
 }
 
-function normalizeOverlayTabPriorityMode(value) {
+// Whether opening a result switches to its open tab first. Older versions
+// stored the mode names.
+function normalizeOverlayTabPriorityMode(value: unknown): boolean {
   if (value === 'switchTabFirst') {
     return true;
   }
@@ -926,22 +1035,23 @@ function normalizeOverlayTabPriorityMode(value) {
   return true;
 }
 
-function normalizeSearchResultPriority(value) {
+function normalizeSearchResultPriority(value: unknown): SearchResultPriority {
   return value === 'search' ? 'search' : 'autocomplete';
 }
 
-function normalizeSearchResultTabPosition(value) {
+function normalizeSearchResultTabPosition(value: unknown): SearchResultTabPosition {
   return value === 'afterCurrent' || value === 'beforeCurrent' ? value : 'end';
 }
 
-function normalizeSearchResultDisplayLimit(value) {
+function normalizeSearchResultDisplayLimit(value: unknown): number {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed >= 5 && parsed <= 10 ? parsed : 10;
 }
 
-const SEARCH_RESULT_SOURCE_TYPES = Object.freeze(['topSite', 'bookmark', 'history']);
+const SEARCH_RESULT_SOURCE_TYPES: readonly SearchSourceType[] = Object.freeze(['topSite', 'bookmark', 'history']);
 
-function normalizeSearchResultSourceType(value) {
+// A source type, also under the names older versions stored; '' when unknown.
+function normalizeSearchResultSourceType(value: unknown): SearchSourceType | '' {
   const raw = String(value || '').trim();
   if (raw === 'topSite' || raw === 'topSites' || raw === 'frequent' || raw === 'common') {
     return 'topSite';
@@ -955,56 +1065,56 @@ function normalizeSearchResultSourceType(value) {
   return '';
 }
 
-function normalizeSearchResultSourceTypes(value) {
-  const rawItems = Array.isArray(value)
+function normalizeSearchResultSourceTypes(value: unknown): SearchSourceType[] {
+  const rawItems: unknown[] = isUnknownArray(value)
     ? value
     : (typeof value === 'string' ? value.split(/[\s,]+/) : []);
-  const selected = [];
-  rawItems.forEach((item) => {
+  const selected: SearchSourceType[] = [];
+  for (const item of rawItems) {
     const type = normalizeSearchResultSourceType(item);
     if (!type || selected.includes(type)) {
-      return;
+      continue;
     }
     selected.push(type);
-  });
+  }
   return selected.length > 0 ? selected : SEARCH_RESULT_SOURCE_TYPES.slice();
 }
 
-function normalizeTabRankScoreDebugMode(value) {
+function normalizeTabRankScoreDebugMode(value: unknown): boolean {
   return value === true;
 }
 
-function normalizeTabSwitcherEnabled(value) {
+function normalizeTabSwitcherEnabled(value: unknown): boolean {
   return value !== false;
 }
 
-function normalizeLinkPreviewEnabled(value) {
+function normalizeLinkPreviewEnabled(value: unknown): boolean {
   return value !== false;
 }
 
-function normalizeSelectionQuickActionsEnabled(value) {
+function normalizeSelectionQuickActionsEnabled(value: unknown): boolean {
   return value === true;
 }
 
-function normalizeSelectionQuickActionsProvider(value) {
+function normalizeSelectionQuickActionsProvider(value: unknown): SelectionQuickActionsProvider {
   const key = String(value || '').trim().toLowerCase();
-  return SELECTION_QUICK_ACTIONS_PROVIDER_KEYS.includes(key) ? key : 'gpt';
+  return isOneOf(SELECTION_QUICK_ACTIONS_PROVIDER_KEYS, key) ? key : 'gpt';
 }
 
-function normalizeSelectionQuickActionsGroupEnabled(value) {
+function normalizeSelectionQuickActionsGroupEnabled(value: unknown): boolean {
   return value === true;
 }
 
-function normalizeAggregateSearchAutoGroupEnabled(value) {
+function normalizeAggregateSearchAutoGroupEnabled(value: unknown): boolean {
   return value !== false;
 }
 
 // Pinning an episode or chapter tracks it unless the person turns this off.
-function normalizeProgressTrackingEnabled(value) {
+function normalizeProgressTrackingEnabled(value: unknown): boolean {
   return value !== false;
 }
 
-function normalizeThemePreference(value) {
+function normalizeThemePreference(value: unknown): ThemePreference {
   if (value === 'dark') {
     return 'dark';
   }
@@ -1014,14 +1124,14 @@ function normalizeThemePreference(value) {
   return '';
 }
 
-function normalizeThemeMode(value) {
+function normalizeThemeMode(value: unknown): ThemeMode {
   if (value === 'dark' || value === 'light') {
     return value;
   }
   return 'system';
 }
 
-function createGlobalThemeModeStorageUpdate(mode) {
+function createGlobalThemeModeStorageUpdate(mode: unknown): Record<string, ThemeMode> {
   return {
     [THEME_STORAGE_KEY]: normalizeThemeMode(mode)
   };
@@ -1240,4 +1350,28 @@ export {
   normalizeThemePreference,
   normalizeThemeMode,
   createGlobalThemeModeStorageUpdate
+};
+export type {
+  NewtabGlassStyle,
+  NewtabGlassTheme,
+  NewtabOpenInNewTab,
+  NewtabOpenInNewTabSurface,
+  NewtabQuoteFont,
+  NewtabQuotePosition,
+  NewtabQuotePrefs,
+  NewtabTimeFont,
+  NewtabTimeInk,
+  NewtabTopContentMode,
+  NewtabWidthMode,
+  OverlayEnterAnimation,
+  OverlaySizeMode,
+  RangeOptions,
+  SearchResultPriority,
+  SearchResultTabPosition,
+  SearchWidthOptions,
+  SelectionQuickActionsProvider,
+  ShortcutColumnsFromWidthOptions,
+  ThemeMode,
+  ThemePreference,
+  UiLocale
 };
