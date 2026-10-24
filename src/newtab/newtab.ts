@@ -8,6 +8,7 @@ import * as EXTENSION_ROUTES from '../domain/extension-routes';
 import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
 import * as SHORTCUT_FAVICON from '../domain/favicon/shortcut-favicon';
 import * as LumnoShortcutFaviconStore from '../platform/shortcut-favicon-store';
+import * as LumnoBrowserIcons from '../platform/browser-icons';
 import * as NAVIGATION_DISPOSITION from '../domain/navigation-disposition';
 import * as PROGRESS_HISTORY from '../domain/progress-history';
 import * as PROGRESS_MATCH from '../domain/progress-match';
@@ -899,7 +900,7 @@ import * as LumnoSettingsStorage from '../platform/settings-storage';
     ? FAVICON_UTILS.createBrowserIconIndex()
     : null;
   pageState.firefoxBrowserIconsReady = pageState.firefoxBrowserIcons
-    ? pageState.firefoxBrowserIcons.load(chrome).catch(() => {})
+    ? LumnoBrowserIcons.loadBrowserIcons(pageState.firefoxBrowserIcons, chrome).catch(() => {})
     : Promise.resolve();
   const {
     isEnglishQuery,

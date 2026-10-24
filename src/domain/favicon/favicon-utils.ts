@@ -1,7 +1,236 @@
-// @ts-nocheck
+// Where favicons come from and which sources a page may use: the browser's
+// icon cache, approved icon services, bundled artwork and a page's own
+// declared icons, filtered by the enhanced-fetch setting and the host rules
+// that keep local and intranet sites from being contacted. Also the theme
+// colors a page declares.
+
+type FaviconTheme = 'dark' | 'light';
+
+// An icon URL with how strongly it is preferred.
+interface ScoredFaviconUrl {
+  url: string;
+  score: number;
+}
+
+// The extension URL of a path (chrome.runtime.getURL).
+type RuntimeUrlGetter = (path: string) => string;
+
+interface FaviconUrlOptions {
+  getRuntimeUrl?: RuntimeUrlGetter | null;
+  // Pixel size requested from the source.
+  size?: number;
+  // Keep the _favicon URL where it does not load (Firefox), as the marker
+  // the background resolves from the browser's own icons.
+  browserCacheRequest?: boolean;
+  // The Gstatic host to ask.
+  host?: string;
+}
+
+// The parts of the extension API the favicon helpers read.
+interface FaviconChromeApi {
+  runtime?: {
+    id?: string;
+    getURL?: RuntimeUrlGetter;
+  };
+}
+
+interface EnhancedFetchPolicyOptions {
+  chromeApi?: FaviconChromeApi | null;
+  ownExtensionId?: string;
+  // False when the site is excluded from icon services.
+  allowThirdPartyFetch?: boolean;
+  // A remote image the user configured explicitly.
+  allowRemoteImage?: boolean;
+}
+
+interface FaviconDecisionDetails {
+  pageUrl?: string;
+  candidateKind?: string;
+}
+
+// Records why a candidate was blocked; true when it logged something new.
+type FaviconDecisionLogger = (candidateUrl: unknown, reason: unknown, details?: FaviconDecisionDetails) => boolean | void;
+
+interface FaviconDecisionLoggerOptions {
+  surface?: string;
+  consoleObj?: { debug?: (...values: unknown[]) => void } | null;
+}
+
+// The extension's own URL host and protocol.
+interface ExtensionRuntimeInfo {
+  id: string;
+  protocol: string;
+}
+
+interface FaviconHostPolicy {
+  // Never request an icon for the host.
+  hardBlocked: boolean;
+  // Do not contact the host directly; a service may still answer for it.
+  avoidDirect: boolean;
+}
+
+interface FaviconHostPolicyOptions {
+  shouldBlockFaviconForHost?: (hostname: string) => boolean;
+  shouldAvoidDirectFaviconForHost?: (hostname: string) => boolean;
+  // A service URL for an avoided host stays allowed.
+  allowProxyAvoidDirect?: boolean;
+}
+
+type ThemeRgb = [number, number, number];
+
+type ThemeColorConfidence = 'neutral' | 'color';
+
+interface ThemeColorCandidate {
+  accentRgb: ThemeRgb;
+  source: string;
+  neutral: boolean;
+  confidence: ThemeColorConfidence;
+  score: number;
+}
+
+// A manifest whose theme_color is still to be read.
+interface ManifestThemeColorCandidate {
+  manifestUrl: string;
+  source: 'manifest';
+  score: number;
+}
+
+type ThemeCandidate = ThemeColorCandidate | ManifestThemeColorCandidate;
+
+interface ThemeFaviconUrlOptions {
+  includeProxy?: boolean;
+  includeChrome?: boolean;
+}
+
+interface FaviconResolverOptions {
+  getRuntimeUrl?: RuntimeUrlGetter;
+  chromeApi?: FaviconChromeApi | null;
+  size?: number;
+  isEnhancedFaviconFetchEnabled?: (pageUrl: string) => boolean;
+  shouldBlockFaviconForHost?: (hostname: string) => boolean;
+  shouldAvoidDirectFaviconForHost?: (hostname: string) => boolean;
+  isBlockedLocalFaviconUrl?: (url: string, pageUrl?: string) => boolean;
+  getExtensionFaviconUrl?: (pageUrl: string) => string;
+  getBrowserPageFaviconUrl?: (pageUrl: string) => string;
+  getGstaticFaviconUrl?: (pageUrl: string) => string;
+  getChromeFaviconUrl?: (pageUrl: string) => string;
+  // Why icon services are off for a page: 'global-off', 'exclusion', or ''.
+  getStrictFaviconReason?: (pageUrl: string) => string;
+  logFaviconDecision?: FaviconDecisionLogger;
+}
+
+interface FaviconResolverDependencies {
+  config: FaviconResolverOptions;
+  size: number;
+  getRuntimeUrl: RuntimeUrlGetter | null;
+  ownExtensionRuntime: ExtensionRuntimeInfo;
+  hostPolicyOptions: Readonly<Required<Pick<FaviconHostPolicyOptions, 'shouldBlockFaviconForHost' | 'shouldAvoidDirectFaviconForHost'>>>;
+  isBlockedLocalFaviconUrl: (url: string, pageUrl?: string) => boolean;
+  customExtensionFaviconUrl: ((pageUrl: string) => string) | null;
+  customBrowserPageFaviconUrl: ((pageUrl: string) => string) | null;
+  customGstaticFaviconUrl: ((pageUrl: string) => string) | null;
+  customChromeFaviconUrl: ((pageUrl: string) => string) | null;
+  isEnhancedFaviconFetchEnabled: (pageUrl: string) => boolean;
+  getStrictFaviconReason: (pageUrl: string) => string;
+  logFaviconDecision: FaviconDecisionLogger;
+}
+
+interface FaviconSourceOptions {
+  allowRemoteImage?: boolean;
+  // Accept favicon.is for another page of the same host.
+  allowDomainProxy?: boolean;
+}
+
+interface FaviconSourcePolicy {
+  isBlockedFaviconPageUrl(pageUrl: unknown): boolean;
+  isBlockedFaviconUrl(url: unknown, pageUrl?: unknown, candidateKind?: string, sourceOptions?: FaviconSourceOptions | null): boolean;
+  // The URL as the page may load it, or '' when it is not allowed.
+  getSafeFaviconCandidateUrl(value: unknown, pageUrl?: unknown, candidateKind?: string, sourceOptions?: FaviconSourceOptions | null): string;
+}
+
+interface FaviconSourceUrls {
+  getExtensionFaviconUrl(pageUrl: unknown, options?: { browserCacheRequest?: boolean } | null): string;
+  getBrowserPageFaviconUrl(pageUrl: unknown): string;
+  getGstaticFaviconUrl(pageUrl: unknown): string;
+  getChromeFaviconUrl(pageUrl: unknown): string;
+  getOwnExtensionFaviconUrl(pageUrl: unknown): string;
+}
+
+interface PageFaviconCandidateOptions extends FaviconSourceOptions {
+  includeChromeForHttp?: boolean;
+  includeChromeForNonHttp?: boolean;
+  includeChromeFallback?: boolean;
+}
+
+interface PageFaviconRenderCandidates {
+  primaryUrl: string;
+  // The browser's icon to fall back to, or ''.
+  browserUrl: string;
+}
+
+interface PageFaviconCandidates {
+  getPageFaviconCandidateUrl(pageUrl: unknown, candidateOptions?: PageFaviconCandidateOptions | null): string;
+  getPageFaviconRenderCandidates(pageUrl: unknown, explicitUrl?: unknown, candidateOptions?: PageFaviconCandidateOptions | null): PageFaviconRenderCandidates;
+  resolveFaviconSource(value: unknown, pageUrl: unknown, sourceOptions?: PageFaviconCandidateOptions | null): string;
+  getProviderFaviconUrl(pageUrl: unknown, iconUrl: unknown): string;
+}
+
+type ShortcutFetchCandidateKind = 'favicon-is' | 'browser-cache' | 'proxy';
+
+// A source a shortcut's icon is downloaded from, with the address of the
+// placeholder that source answers for a site it has no icon for.
+interface ShortcutFetchCandidate {
+  kind: ShortcutFetchCandidateKind;
+  url: string;
+  placeholderUrl: string;
+}
+
+interface ShortcutFaviconCandidates {
+  getShortcutFaviconCandidateUrl(pageUrl: unknown, localIconUrl?: unknown): string;
+  getShortcutFaviconFetchUrl(pageUrl: unknown): string;
+  getShortcutFaviconFetchCandidates(pageUrl: unknown, iconSource?: unknown): ShortcutFetchCandidate[];
+}
+
+type FaviconPlanCandidateKind = 'page-specific' | 'persisted-data' | 'persisted-url' | 'primary' | 'extension' | 'browser' | 'gstatic';
+
+interface FaviconPlanCandidate {
+  kind: FaviconPlanCandidateKind;
+  url: string;
+}
+
+// What a surface knows about an icon to resolve.
+interface FaviconPlanState {
+  pageUrl?: string;
+  url?: string;
+  allowRemoteImage?: boolean;
+  browserUrl?: string;
+  skipPersisted?: boolean;
+  persistedDataUrl?: string;
+  persistedUrl?: string;
+  pageSpecificUrl?: string;
+  primaryUrl?: string;
+  fallbackUrl?: string;
+  extensionFavicon?: string;
+  extensionUrl?: string;
+  gstaticFavicon?: string;
+  gstaticUrl?: string;
+  // 'shortcut': live web sources are left to the shortcut icon snapshot.
+  sourceProfile?: string;
+}
+
+type FaviconProxyCheckKind = 'extension' | 'gstatic' | '';
+
+interface BrowserIconIndex {
+  // Records a data: icon the browser reported for a page.
+  add(pageUrl: unknown, iconUrl: unknown): void;
+  // The page's icon, else the latest one for its host, else ''.
+  get(pageUrl: unknown): string;
+}
+
 const LUMNO_EXTENSION_ICON_PATH = 'assets/images/lumno.png';
 
-function setBoundedCacheEntry(cache, key, value, maxEntries) {
+// Sets a Map entry as the newest and drops the oldest past maxEntries.
+function setBoundedCacheEntry<K, V>(cache: Map<K, V> | null | undefined, key: K | null | undefined, value: V, maxEntries: unknown): V {
   if (!cache || typeof cache.set !== 'function' || key === null || typeof key === 'undefined') {
     return value;
   }
@@ -25,7 +254,7 @@ function setBoundedCacheEntry(cache, key, value, maxEntries) {
   return value;
 }
 
-function normalizeFaviconHost(hostname) {
+function normalizeFaviconHost(hostname: unknown): string {
   if (!hostname) {
     return '';
   }
@@ -36,7 +265,7 @@ function normalizeFaviconHost(hostname) {
   return host;
 }
 
-function getFaviconIsPageUrl(parsed) {
+function getFaviconIsPageUrl(parsed: URL): string {
   if (parsed.protocol !== 'https:' || parsed.hostname !== 'favicon.is' ||
       parsed.port || parsed.username || parsed.password) return '';
   const domain = decodeURIComponent(parsed.pathname.slice(1)).toLowerCase();
@@ -45,12 +274,12 @@ function getFaviconIsPageUrl(parsed) {
   return page.hostname === domain ? page.href : '';
 }
 
-function isFaviconIsUrl(url) {
+function isFaviconIsUrl(url: unknown): boolean {
   try { return Boolean(getFaviconIsPageUrl(new URL(String(url || '').trim()))); }
   catch (error) { return false; }
 }
 
-function isFaviconProxyUrl(url) {
+function isFaviconProxyUrl(url: unknown): boolean {
   try {
     const parsed = new URL(String(url || '').trim());
     const host = parsed.hostname.toLowerCase();
@@ -69,19 +298,19 @@ function isFaviconProxyUrl(url) {
   }
 }
 
-function isChromeMonogramFaviconUrl(url) {
+function isChromeMonogramFaviconUrl(url: unknown): boolean {
   return /^chrome:\/\/favicon2\//i.test(String(url || '').trim());
 }
 
 // Chromium's _favicon endpoint answers from the browser's own icon cache.
 // It is not web accessible (a page could probe it to learn which sites were
 // visited), so web-page surfaces load these through the background instead.
-function isExtensionFaviconEndpointUrl(url) {
+function isExtensionFaviconEndpointUrl(url: unknown): boolean {
   return /^chrome-extension:\/\/[^/]+\/_favicon\//i.test(String(url || '').trim());
 }
 
 // Services that receive only the site origin answer for the whole site.
-function isOriginScopedFaviconProxyUrl(url) {
+function isOriginScopedFaviconProxyUrl(url: unknown): boolean {
   try {
     const parsed = new URL(String(url || '').trim());
     return parsed.protocol === 'https:' && isFaviconProxyUrl(url) && !getFaviconIsPageUrl(parsed);
@@ -90,7 +319,7 @@ function isOriginScopedFaviconProxyUrl(url) {
   }
 }
 
-function isSafeVirtualFaviconRequestUrl(url) {
+function isSafeVirtualFaviconRequestUrl(url: unknown): boolean {
   const raw = String(url || '').trim();
   if (!raw) {
     return false;
@@ -107,7 +336,11 @@ function isSafeVirtualFaviconRequestUrl(url) {
   }
 }
 
-function isFaviconSourceAllowedByEnhancedFetchPolicy(url, enhancedFetchEnabled, options) {
+function isFaviconSourceAllowedByEnhancedFetchPolicy(
+  url: unknown,
+  enhancedFetchEnabled: unknown,
+  options?: EnhancedFetchPolicyOptions | null
+): boolean {
   const raw = String(url || '').trim();
   if (!raw) {
     return false;
@@ -148,7 +381,7 @@ function isFaviconSourceAllowedByEnhancedFetchPolicy(url, enhancedFetchEnabled, 
   }
 }
 
-function getFaviconDecisionHostname(pageUrl, candidateUrl) {
+function getFaviconDecisionHostname(pageUrl: unknown, candidateUrl: unknown): string {
   const values = [pageUrl, getCanonicalPageUrlForFavicon(candidateUrl), candidateUrl];
   for (let index = 0; index < values.length; index += 1) {
     try {
@@ -163,7 +396,7 @@ function getFaviconDecisionHostname(pageUrl, candidateUrl) {
   return '';
 }
 
-function getFaviconCandidateKind(url, providedKind) {
+function getFaviconCandidateKind(url: unknown, providedKind: unknown): string {
   const explicitKind = String(providedKind || '').trim().toLowerCase();
   if (explicitKind) {
     return explicitKind;
@@ -184,12 +417,12 @@ function getFaviconCandidateKind(url, providedKind) {
   return 'other';
 }
 
-function createFaviconDecisionLogger(options) {
+function createFaviconDecisionLogger(options?: FaviconDecisionLoggerOptions | null): FaviconDecisionLogger {
   const config = options || {};
   const surface = String(config.surface || 'unknown').trim() || 'unknown';
   const consoleObj = config.consoleObj || (typeof console !== 'undefined' ? console : null);
   const seen = new Set();
-  return function logFaviconDecision(candidateUrl, reason, details) {
+  return function logFaviconDecision(candidateUrl: unknown, reason: unknown, details?: FaviconDecisionDetails): boolean {
     const decisionReason = String(reason || '').trim();
     if (!decisionReason || !consoleObj || typeof consoleObj.debug !== 'function') {
       return false;
@@ -213,7 +446,7 @@ function createFaviconDecisionLogger(options) {
   };
 }
 
-function getHttpPageUrl(value) {
+function getHttpPageUrl(value: unknown): string {
   const raw = String(value || '').trim();
   if (!raw) {
     return '';
@@ -226,7 +459,7 @@ function getHttpPageUrl(value) {
   }
 }
 
-function getFaviconPageSearchParam(parsedUrl) {
+function getFaviconPageSearchParam(parsedUrl: URL | null | undefined): string {
   if (!parsedUrl || !parsedUrl.searchParams) {
     return '';
   }
@@ -236,7 +469,7 @@ function getFaviconPageSearchParam(parsedUrl) {
     '';
 }
 
-function getPageUrlFromFaviconProxyUrl(url) {
+function getPageUrlFromFaviconProxyUrl(url: unknown): string {
   const raw = String(url || '').trim();
   if (!raw) {
     return '';
@@ -266,7 +499,7 @@ function getPageUrlFromFaviconProxyUrl(url) {
   return '';
 }
 
-function getCanonicalPageUrlForFavicon(url) {
+function getCanonicalPageUrlForFavicon(url: unknown): string {
   let current = String(url || '').trim();
   if (!current) {
     return '';
@@ -281,7 +514,7 @@ function getCanonicalPageUrlForFavicon(url) {
   return current;
 }
 
-function getFaviconPersistCacheKey(pageUrl, fallbackKey) {
+function getFaviconPersistCacheKey(pageUrl: unknown, fallbackKey?: unknown): string {
   const canonicalPageUrl = getCanonicalPageUrlForFavicon(pageUrl);
   try {
     const parsed = new URL(canonicalPageUrl);
@@ -295,7 +528,7 @@ function getFaviconPersistCacheKey(pageUrl, fallbackKey) {
   return String(fallbackKey || canonicalPageUrl || '').trim();
 }
 
-function getCanonicalFaviconHost(url) {
+function getCanonicalFaviconHost(url: unknown): string {
   const pageUrl = getCanonicalPageUrlForFavicon(url);
   if (!pageUrl) {
     return '';
@@ -307,7 +540,7 @@ function getCanonicalFaviconHost(url) {
   }
 }
 
-function getExtensionFaviconUrl(pageUrl, options) {
+function getExtensionFaviconUrl(pageUrl: string, options?: FaviconUrlOptions | null): string {
   if (!pageUrl || !/^https?:\/\//i.test(pageUrl)) {
     return '';
   }
@@ -317,9 +550,7 @@ function getExtensionFaviconUrl(pageUrl, options) {
   if (!getRuntimeUrl) {
     return '';
   }
-  const size = Number.isFinite(Number(options && options.size))
-    ? Math.max(1, Math.round(Number(options.size)))
-    : 128;
+  const size = getFaviconResolverSize(options);
   try {
     const faviconUrl = new URL(getRuntimeUrl('/_favicon/'));
     // Only Chromium serves _favicon. Elsewhere (Firefox) the URL would never
@@ -340,7 +571,7 @@ function getExtensionFaviconUrl(pageUrl, options) {
 
 // Third-party icon services only learn which site is shown, never the page:
 // paths and queries can carry document ids, intranet paths or tokens.
-function getFaviconServiceSiteUrl(pageUrl) {
+function getFaviconServiceSiteUrl(pageUrl: unknown): string {
   try {
     const parsed = new URL(String(pageUrl || '').trim());
     return (parsed.protocol === 'http:' || parsed.protocol === 'https:') ? `${parsed.origin}/` : '';
@@ -349,14 +580,12 @@ function getFaviconServiceSiteUrl(pageUrl) {
   }
 }
 
-function getGstaticFaviconUrl(pageUrl, options) {
+function getGstaticFaviconUrl(pageUrl: unknown, options?: FaviconUrlOptions | null): string {
   const siteUrl = getFaviconServiceSiteUrl(pageUrl);
   if (!siteUrl) {
     return '';
   }
-  const size = Number.isFinite(Number(options && options.size))
-    ? Math.max(1, Math.round(Number(options.size)))
-    : 128;
+  const size = getFaviconResolverSize(options);
   const host = options && options.host ? String(options.host) : 't2.gstatic.cn';
   try {
     const faviconUrl = new URL(`https://${host}/faviconV2`);
@@ -371,7 +600,7 @@ function getGstaticFaviconUrl(pageUrl, options) {
   }
 }
 
-function getFaviconIsUrl(pageUrl) {
+function getFaviconIsUrl(pageUrl: unknown): string {
   try {
     const parsed = new URL(String(pageUrl || '').trim());
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return '';
@@ -379,14 +608,12 @@ function getFaviconIsUrl(pageUrl) {
   } catch (error) { return ''; }
 }
 
-function getChromeFaviconUrl(pageUrl, options) {
+function getChromeFaviconUrl(pageUrl: unknown, options?: FaviconUrlOptions | null): string {
   const page = String(pageUrl || '').trim();
   if (!page) {
     return '';
   }
-  const size = Number.isFinite(Number(options && options.size))
-    ? Math.max(1, Math.round(Number(options.size)))
-    : 128;
+  const size = getFaviconResolverSize(options);
   // chrome://favicon2 forces host fallback in its local-storage branch.
   // Web pages must use the extension endpoint, which honors exact matching.
   if (/^https?:\/\//i.test(page)) {
@@ -402,7 +629,7 @@ function getChromeFaviconUrl(pageUrl, options) {
   }
 }
 
-function isBrowserInternalPageUrl(url) {
+function isBrowserInternalPageUrl(url: unknown): boolean {
   const lower = String(url || '').trim().toLowerCase();
   return lower.startsWith('chrome://') ||
     lower.startsWith('edge://') ||
@@ -412,21 +639,19 @@ function isBrowserInternalPageUrl(url) {
     lower.startsWith('about:');
 }
 
-function isBrowserExtensionProtocol(protocol) {
+function isBrowserExtensionProtocol(protocol: unknown): boolean {
   const normalized = String(protocol || '').toLowerCase();
   return normalized === 'chrome-extension:' ||
     normalized === 'moz-extension:' ||
     normalized === 'ms-browser-extension:';
 }
 
-function getBrowserPageFaviconUrl(pageUrl, options) {
+function getBrowserPageFaviconUrl(pageUrl: unknown, options?: FaviconUrlOptions | null): string {
   const page = String(pageUrl || '').trim();
   if (!isBrowserInternalPageUrl(page)) {
     return '';
   }
-  const size = Number.isFinite(Number(options && options.size))
-    ? Math.max(1, Math.round(Number(options.size)))
-    : 128;
+  const size = getFaviconResolverSize(options);
   const getRuntimeUrl = options && typeof options.getRuntimeUrl === 'function'
     ? options.getRuntimeUrl
     : null;
@@ -443,12 +668,12 @@ function getBrowserPageFaviconUrl(pageUrl, options) {
   return getChromeFaviconUrl(page, { size });
 }
 
-function normalizeFaviconThemePreference(theme) {
+function normalizeFaviconThemePreference(theme: unknown): FaviconTheme | '' {
   const value = String(theme || '').trim().toLowerCase();
   return value === 'dark' || value === 'light' ? value : '';
 }
 
-function hasThemeTokenInUrl(url, token) {
+function hasThemeTokenInUrl(url: unknown, token: unknown): boolean {
   const mode = normalizeFaviconThemePreference(token);
   if (!mode) {
     return false;
@@ -457,7 +682,7 @@ function hasThemeTokenInUrl(url, token) {
   return new RegExp(`(^|[._/-])${mode}([._/-]|$)`).test(lower);
 }
 
-function shouldSkipThemeUpgradeCandidate(candidateUrl, preferredTheme, currentUrl) {
+function shouldSkipThemeUpgradeCandidate(candidateUrl: unknown, preferredTheme: unknown, currentUrl: unknown): boolean {
   const mode = normalizeFaviconThemePreference(preferredTheme);
   if (!mode) {
     return false;
@@ -474,7 +699,7 @@ function shouldSkipThemeUpgradeCandidate(candidateUrl, preferredTheme, currentUr
   return false;
 }
 
-function getRuntimeFaviconUrl(path, options) {
+function getRuntimeFaviconUrl(path: string, options?: FaviconUrlOptions | null): string {
   const getRuntimeUrl = options && typeof options.getRuntimeUrl === 'function'
     ? options.getRuntimeUrl
     : null;
@@ -488,7 +713,10 @@ function getRuntimeFaviconUrl(path, options) {
   }
 }
 
-function getOwnExtensionRuntimeInfo(options, getRuntimeUrl) {
+function getOwnExtensionRuntimeInfo(
+  options: { chromeApi?: FaviconChromeApi | null } | null | undefined,
+  getRuntimeUrl: RuntimeUrlGetter | null
+): ExtensionRuntimeInfo {
   const runtime = options && options.chromeApi && options.chromeApi.runtime
     ? options.chromeApi.runtime
     : null;
@@ -531,7 +759,7 @@ function getOwnExtensionRuntimeInfo(options, getRuntimeUrl) {
   return info;
 }
 
-function getOwnExtensionAssetUrl(path, runtimeInfo, options) {
+function getOwnExtensionAssetUrl(path: string, runtimeInfo: ExtensionRuntimeInfo | null | undefined, options?: FaviconUrlOptions | null): string {
   const assetPath = String(path || '').replace(/^\/+/, '');
   if (!assetPath) {
     return '';
@@ -554,7 +782,7 @@ function getOwnExtensionAssetUrl(path, runtimeInfo, options) {
   return runtimeUrl;
 }
 
-function getKnownThemedFaviconCandidateScores(hostname, preferredTheme, options) {
+function getKnownThemedFaviconCandidateScores(hostname: unknown, preferredTheme: unknown, options?: FaviconUrlOptions | null): ScoredFaviconUrl[] {
   const host = normalizeFaviconHost(hostname);
   const mode = normalizeFaviconThemePreference(preferredTheme);
   if (!host) {
@@ -592,7 +820,7 @@ function getKnownThemedFaviconCandidateScores(hostname, preferredTheme, options)
   return [];
 }
 
-function getKnownThemedFaviconCandidateUrls(hostname, preferredTheme, options) {
+function getKnownThemedFaviconCandidateUrls(hostname: unknown, preferredTheme: unknown, options?: FaviconUrlOptions | null): string[] {
   const mode = normalizeFaviconThemePreference(preferredTheme);
   const scoreMode = mode === 'dark' ? 'dark' : 'light';
   return getKnownThemedFaviconCandidateScores(hostname, scoreMode, options)
@@ -600,7 +828,7 @@ function getKnownThemedFaviconCandidateUrls(hostname, preferredTheme, options) {
     .filter(Boolean);
 }
 
-function getRootFaviconCandidateScores(hostname, preferredTheme) {
+function getRootFaviconCandidateScores(hostname: unknown, preferredTheme: unknown): ScoredFaviconUrl[] {
   const host = normalizeFaviconHost(hostname);
   const mode = normalizeFaviconThemePreference(preferredTheme);
   if (!host) {
@@ -630,7 +858,7 @@ function getRootFaviconCandidateScores(hostname, preferredTheme) {
   ];
 }
 
-function getRootFaviconCandidateUrls(hostname, preferredTheme) {
+function getRootFaviconCandidateUrls(hostname: unknown, preferredTheme: unknown): string[] {
   const host = normalizeFaviconHost(hostname);
   const mode = normalizeFaviconThemePreference(preferredTheme);
   if (!host) {
@@ -681,7 +909,7 @@ function getRootFaviconCandidateUrls(hostname, preferredTheme) {
   });
 }
 
-function getThemeHintScore(url, mediaValue, preferredTheme) {
+function getThemeHintScore(url: unknown, mediaValue: unknown, preferredTheme: unknown): number {
   const normalizedTheme = normalizeFaviconThemePreference(preferredTheme);
   if (!normalizedTheme) {
     return 0;
@@ -718,7 +946,7 @@ function getThemeHintScore(url, mediaValue, preferredTheme) {
   return score;
 }
 
-function getHtmlAttributeValue(tag, name) {
+function getHtmlAttributeValue(tag: unknown, name: string): string {
   if (!tag || !name) {
     return '';
   }
@@ -727,12 +955,13 @@ function getHtmlAttributeValue(tag, name) {
   return match ? String(match[2] || match[3] || match[4] || '').trim() : '';
 }
 
-function parseHtmlIconCandidateScores(html, pageUrl, preferredTheme) {
+function parseHtmlIconCandidateScores(html: unknown, pageUrl: unknown, preferredTheme: unknown): ScoredFaviconUrl[] {
   if (!html || !pageUrl) {
     return [];
   }
   const normalizedTheme = normalizeFaviconThemePreference(preferredTheme);
-  const list = [];
+  const base = String(pageUrl);
+  const list: ScoredFaviconUrl[] = [];
   const linkMatches = String(html).match(/<link\b[^>]*>/gi) || [];
   linkMatches.forEach((tag) => {
     const rel = getHtmlAttributeValue(tag, 'rel').toLowerCase();
@@ -742,7 +971,7 @@ function parseHtmlIconCandidateScores(html, pageUrl, preferredTheme) {
     }
     let href = '';
     try {
-      href = new URL(hrefRaw, pageUrl).href;
+      href = new URL(hrefRaw, base).href;
     } catch (e) {
       return;
     }
@@ -788,7 +1017,7 @@ function parseHtmlIconCandidateScores(html, pageUrl, preferredTheme) {
     if (baseHrefRaw) {
       let baseHref = '';
       try {
-        baseHref = new URL(baseHrefRaw, pageUrl).href;
+        baseHref = new URL(baseHrefRaw, base).href;
       } catch (e) {
         baseHref = '';
       }
@@ -809,13 +1038,15 @@ function parseHtmlIconCandidateScores(html, pageUrl, preferredTheme) {
   return list;
 }
 
-function getThemeFaviconCandidateUrls(urls, options) {
+// Concrete icon URLs first, then service URLs; blocked and repeated ones dropped.
+function getThemeFaviconCandidateUrls(urls: unknown, options?: ThemeFaviconUrlOptions | null): string[] {
   const includeProxy = !options || options.includeProxy !== false;
   const includeChrome = Boolean(options && options.includeChrome);
-  const concrete = [];
-  const proxy = [];
-  const seen = new Set();
-  (Array.isArray(urls) ? urls : []).forEach((item) => {
+  const concrete: string[] = [];
+  const proxy: string[] = [];
+  const seen = new Set<string>();
+  const items: unknown[] = Array.isArray(urls) ? urls : [];
+  items.forEach((item) => {
     const value = String(item || '').trim();
     if (!value || seen.has(value) || isBlockedLocalFaviconUrl(value)) {
       return;
@@ -839,7 +1070,7 @@ function getThemeFaviconCandidateUrls(urls, options) {
   return concrete.concat(proxy);
 }
 
-function parseCssThemeColor(color) {
+function parseCssThemeColor(color: unknown): ThemeRgb | null {
   const value = String(color || '').trim().toLowerCase();
   if (!value || value === 'transparent') {
     return null;
@@ -864,13 +1095,13 @@ function parseCssThemeColor(color) {
   if (!rgbMatch) {
     return null;
   }
-  const rgb = [Number(rgbMatch[1]), Number(rgbMatch[2]), Number(rgbMatch[3])];
+  const rgb: ThemeRgb = [Number(rgbMatch[1]), Number(rgbMatch[2]), Number(rgbMatch[3])];
   return rgb.every((channel) => Number.isFinite(channel) && channel >= 0 && channel <= 255)
-    ? rgb.map((channel) => Math.round(channel))
+    ? [Math.round(rgb[0]), Math.round(rgb[1]), Math.round(rgb[2])]
     : null;
 }
 
-function isNeutralThemeColor(rgb) {
+function isNeutralThemeColor(rgb: unknown): boolean {
   if (!Array.isArray(rgb) || rgb.length !== 3) {
     return false;
   }
@@ -896,7 +1127,7 @@ const PLACEHOLDER_FAVICON_COLORS = [
 ];
 const PLACEHOLDER_FAVICON_COLOR_TOLERANCE = 10;
 
-function isPlaceholderFaviconColor(rgb) {
+function isPlaceholderFaviconColor(rgb: unknown): boolean {
   if (!Array.isArray(rgb) || rgb.length !== 3) {
     return false;
   }
@@ -909,11 +1140,11 @@ function isPlaceholderFaviconColor(rgb) {
   ));
 }
 
-function getThemeColorConfidence(rgb) {
+function getThemeColorConfidence(rgb: unknown): ThemeColorConfidence {
   return isNeutralThemeColor(rgb) ? 'neutral' : 'color';
 }
 
-function buildThemeColorCandidate(accentRgb, source, baseScore, extraScore) {
+function buildThemeColorCandidate(accentRgb: unknown, source: string, baseScore: number, extraScore: number): ThemeColorCandidate | null {
   const rgb = parseCssThemeColor(Array.isArray(accentRgb) ? `rgb(${accentRgb.join(',')})` : accentRgb);
   if (!rgb) {
     return null;
@@ -929,7 +1160,7 @@ function buildThemeColorCandidate(accentRgb, source, baseScore, extraScore) {
   };
 }
 
-function getThemeMediaScore(media, preferredTheme) {
+function getThemeMediaScore(media: unknown, preferredTheme: unknown): number {
   const theme = normalizeFaviconThemePreference(preferredTheme);
   const value = String(media || '').toLowerCase();
   if (!value) {
@@ -946,8 +1177,8 @@ function getThemeMediaScore(media, preferredTheme) {
   return wantsDark || wantsLight ? 12 : 4;
 }
 
-function parseHtmlThemeColorCandidates(html, pageUrl, preferredTheme) {
-  const list = [];
+function parseHtmlThemeColorCandidates(html: unknown, pageUrl: unknown, preferredTheme: unknown): ThemeCandidate[] {
+  const list: ThemeCandidate[] = [];
   const metaMatches = String(html || '').match(/<meta\b[^>]*>/gi) || [];
   metaMatches.forEach((tag) => {
     const name = getHtmlAttributeValue(tag, 'name').toLowerCase();
@@ -984,7 +1215,7 @@ function parseHtmlThemeColorCandidates(html, pageUrl, preferredTheme) {
     }
     try {
       list.push({
-        manifestUrl: new URL(hrefRaw, pageUrl).href,
+        manifestUrl: new URL(hrefRaw, String(pageUrl)).href,
         source: 'manifest',
         score: 42
       });
@@ -995,14 +1226,14 @@ function parseHtmlThemeColorCandidates(html, pageUrl, preferredTheme) {
   return list;
 }
 
-function pickBestThemeColorCandidate(candidates) {
+function pickBestThemeColorCandidate(candidates: ReadonlyArray<ThemeCandidate | null | undefined> | null | undefined): ThemeCandidate | null {
   const sorted = (Array.isArray(candidates) ? candidates : [])
     .filter((item) => item && (item.accentRgb || item.manifestUrl))
     .sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
   return sorted[0] || null;
 }
 
-function hostHasExplicitDarkFavicon(hostname) {
+function hostHasExplicitDarkFavicon(hostname: unknown): boolean {
   const host = normalizeFaviconHost(hostname);
   if (!host) {
     return false;
@@ -1010,7 +1241,7 @@ function hostHasExplicitDarkFavicon(hostname) {
   return host === 'github.com' || host.endsWith('.github.com');
 }
 
-function isLocalNetworkHost(hostname) {
+function isLocalNetworkHost(hostname: unknown): boolean {
   const host = String(hostname || '').trim().toLowerCase().replace(/^\[|\]$/g, '');
   if (!host) {
     return false;
@@ -1070,7 +1301,7 @@ function isLocalNetworkHost(hostname) {
   return false;
 }
 
-function isSuspiciousLocalFaviconHost(hostname) {
+function isSuspiciousLocalFaviconHost(hostname: unknown): boolean {
   const host = String(hostname || '').trim().toLowerCase().replace(/^\[|\]$/g, '');
   if (!host) {
     return false;
@@ -1102,15 +1333,16 @@ function isSuspiciousLocalFaviconHost(hostname) {
   ].includes(suffix);
 }
 
-function shouldBlockFaviconForHost(hostname) {
+// No host is blocked outright by default; callers pass their own rule.
+function shouldBlockFaviconForHost(_hostname: unknown): boolean {
   return false;
 }
 
-function shouldAvoidDirectFaviconForHost(hostname) {
+function shouldAvoidDirectFaviconForHost(hostname: unknown): boolean {
   return isLocalNetworkHost(hostname) || isSuspiciousLocalFaviconHost(hostname);
 }
 
-function getFaviconHostPolicy(hostname, options) {
+function getFaviconHostPolicy(hostname: unknown, options?: FaviconHostPolicyOptions | null): FaviconHostPolicy {
   const config = options || {};
   const shouldBlockHost = typeof config.shouldBlockFaviconForHost === 'function'
     ? config.shouldBlockFaviconForHost
@@ -1128,17 +1360,18 @@ function getFaviconHostPolicy(hostname, options) {
   };
 }
 
-function shouldBlockDirectFaviconHost(hostname, options) {
+function shouldBlockDirectFaviconHost(hostname: unknown, options?: FaviconHostPolicyOptions | null): boolean {
   const policy = getFaviconHostPolicy(hostname, options);
   return policy.hardBlocked || policy.avoidDirect;
 }
 
-function isAllowedFaviconProxyRequestUrl(url) {
+function isAllowedFaviconProxyRequestUrl(url: unknown): boolean {
   const raw = String(url || '').trim();
   return Boolean(raw && (isSafeVirtualFaviconRequestUrl(raw) || isFaviconProxyUrl(raw)));
 }
 
-function getFaviconUrlHostCandidate(url) {
+// The host a URL names, also when it does not parse as a URL.
+function getFaviconUrlHostCandidate(url: unknown): string {
   const raw = String(url || '').trim();
   if (!raw) {
     return '';
@@ -1166,7 +1399,7 @@ function getFaviconUrlHostCandidate(url) {
   return value.replace(/^\[|\]$/g, '').split(':')[0];
 }
 
-function getFaviconUrlPolicy(url, options) {
+function getFaviconUrlPolicy(url: unknown, options?: FaviconHostPolicyOptions | null): FaviconHostPolicy {
   const raw = String(url || '').trim();
   const config = options || {};
   const allowProxyAvoidDirect = config.allowProxyAvoidDirect !== false;
@@ -1208,12 +1441,12 @@ function getFaviconUrlPolicy(url, options) {
   return hostPolicy;
 }
 
-function isFaviconUrlPolicyBlocked(url, options) {
+function isFaviconUrlPolicyBlocked(url: unknown, options?: FaviconHostPolicyOptions | null): boolean {
   const policy = getFaviconUrlPolicy(url, options);
   return policy.hardBlocked || policy.avoidDirect;
 }
 
-function isBlockedLocalFaviconUrl(url) {
+function isBlockedLocalFaviconUrl(url: unknown): boolean {
   const raw = String(url || '').trim();
   if (!raw) {
     return false;
@@ -1221,52 +1454,41 @@ function isBlockedLocalFaviconUrl(url) {
   return isFaviconUrlPolicyBlocked(raw);
 }
 
-function getFaviconResolverSize(options) {
-  return Number.isFinite(Number(options && options.size))
-    ? Math.max(1, Math.round(Number(options.size)))
-    : 128;
-}
-
-function getOptionalFunction(value, fallback) {
-  return typeof value === 'function' ? value : fallback;
+function getFaviconResolverSize(options: { size?: unknown } | null | undefined): number {
+  const size = Number(options && options.size);
+  return Number.isFinite(size) ? Math.max(1, Math.round(size)) : 128;
 }
 
 // Reads the caller's hooks once; every resolver piece below shares this view.
-function getFaviconResolverDependencies(options) {
+function getFaviconResolverDependencies(options?: FaviconResolverOptions | null): Readonly<FaviconResolverDependencies> {
   const config = options || {};
-  const getRuntimeUrl = typeof config.getRuntimeUrl === 'function'
-    ? config.getRuntimeUrl
-    : (config.chromeApi && config.chromeApi.runtime && typeof config.chromeApi.runtime.getURL === 'function'
-      ? config.chromeApi.runtime.getURL.bind(config.chromeApi.runtime)
-      : null);
-  const isEnhancedFaviconFetchEnabled = getOptionalFunction(config.isEnhancedFaviconFetchEnabled, () => true);
+  const runtime = config.chromeApi && config.chromeApi.runtime;
+  const runtimeGetUrl = runtime && runtime.getURL;
+  const getRuntimeUrl: RuntimeUrlGetter | null = config.getRuntimeUrl ||
+    (runtime && runtimeGetUrl ? runtimeGetUrl.bind(runtime) : null);
+  const isEnhancedFaviconFetchEnabled = config.isEnhancedFaviconFetchEnabled || (() => true);
   return Object.freeze({
     config,
     size: getFaviconResolverSize(config),
     getRuntimeUrl,
     ownExtensionRuntime: getOwnExtensionRuntimeInfo(config, getRuntimeUrl),
     hostPolicyOptions: Object.freeze({
-      shouldBlockFaviconForHost: getOptionalFunction(config.shouldBlockFaviconForHost, shouldBlockFaviconForHost),
-      shouldAvoidDirectFaviconForHost: getOptionalFunction(
-        config.shouldAvoidDirectFaviconForHost,
-        shouldAvoidDirectFaviconForHost
-      )
+      shouldBlockFaviconForHost: config.shouldBlockFaviconForHost || shouldBlockFaviconForHost,
+      shouldAvoidDirectFaviconForHost: config.shouldAvoidDirectFaviconForHost || shouldAvoidDirectFaviconForHost
     }),
-    isBlockedLocalFaviconUrl: getOptionalFunction(config.isBlockedLocalFaviconUrl, isBlockedLocalFaviconUrl),
-    customExtensionFaviconUrl: getOptionalFunction(config.getExtensionFaviconUrl, null),
-    customBrowserPageFaviconUrl: getOptionalFunction(config.getBrowserPageFaviconUrl, null),
-    customGstaticFaviconUrl: getOptionalFunction(config.getGstaticFaviconUrl, null),
-    customChromeFaviconUrl: getOptionalFunction(config.getChromeFaviconUrl, null),
+    isBlockedLocalFaviconUrl: config.isBlockedLocalFaviconUrl || isBlockedLocalFaviconUrl,
+    customExtensionFaviconUrl: config.getExtensionFaviconUrl || null,
+    customBrowserPageFaviconUrl: config.getBrowserPageFaviconUrl || null,
+    customGstaticFaviconUrl: config.getGstaticFaviconUrl || null,
+    customChromeFaviconUrl: config.getChromeFaviconUrl || null,
     isEnhancedFaviconFetchEnabled,
-    getStrictFaviconReason: getOptionalFunction(
-      config.getStrictFaviconReason,
-      (pageUrl) => isEnhancedFaviconFetchEnabled(pageUrl) === true ? '' : 'global-off'
-    ),
-    logFaviconDecision: getOptionalFunction(config.logFaviconDecision, () => {})
+    getStrictFaviconReason: config.getStrictFaviconReason ||
+      ((pageUrl: string) => isEnhancedFaviconFetchEnabled(pageUrl) === true ? '' : 'global-off'),
+    logFaviconDecision: config.logFaviconDecision || (() => {})
   });
 }
 
-function getCanonicalFaviconPage(pageUrl) {
+function getCanonicalFaviconPage(pageUrl: unknown): string {
   const raw = String(pageUrl || '').trim();
   if (!raw) {
     return '';
@@ -1274,7 +1496,7 @@ function getCanonicalFaviconPage(pageUrl) {
   return getCanonicalPageUrlForFavicon(raw) || raw;
 }
 
-function isOwnExtensionPageUrl(pageUrl, ownExtensionId) {
+function isOwnExtensionPageUrl(pageUrl: unknown, ownExtensionId: string): boolean {
   if (!ownExtensionId) {
     return false;
   }
@@ -1288,7 +1510,7 @@ function isOwnExtensionPageUrl(pageUrl, ownExtensionId) {
   }
 }
 
-function isOtherExtensionPageUrl(pageUrl, ownExtensionId) {
+function isOtherExtensionPageUrl(pageUrl: unknown, ownExtensionId: string): boolean {
   try {
     const parsed = new URL(String(pageUrl || '').trim());
     return isBrowserExtensionProtocol(parsed.protocol) &&
@@ -1301,7 +1523,12 @@ function isOtherExtensionPageUrl(pageUrl, ownExtensionId) {
 // A proxy or virtual favicon request only belongs to the page it names.
 // Favicon.is is an explicitly selected domain source, never an automatic
 // replacement for the exact-page browser or Gstatic candidates.
-function isFaviconRequestForOtherPage(url, targetPage, requestPage, sourceOptions) {
+function isFaviconRequestForOtherPage(
+  url: string,
+  targetPage: string,
+  requestPage: string,
+  sourceOptions: FaviconSourceOptions | null | undefined
+): boolean {
   if (!/^https?:\/\//i.test(targetPage) ||
       !(isFaviconProxyUrl(url) || isSafeVirtualFaviconRequestUrl(url))) {
     return false;
@@ -1317,7 +1544,7 @@ function isFaviconRequestForOtherPage(url, targetPage, requestPage, sourceOption
 }
 
 // Normalize older Chrome sources as well as newly generated URLs.
-function normalizeVirtualFaviconRequestUrl(parsed, requestPage) {
+function normalizeVirtualFaviconRequestUrl(parsed: URL, requestPage: string): string {
   parsed.searchParams.set('pageUrl', requestPage);
   parsed.searchParams.delete('url');
   parsed.searchParams.delete('domain_url');
@@ -1326,13 +1553,13 @@ function normalizeVirtualFaviconRequestUrl(parsed, requestPage) {
 }
 
 // Enhanced-fetch, host and local-URL rules that every resolver candidate passes.
-function createFaviconSourcePolicy(deps) {
+function createFaviconSourcePolicy(deps: Readonly<FaviconResolverDependencies>): Readonly<FaviconSourcePolicy> {
   const pageHostPolicyOptions = Object.freeze({
     shouldBlockFaviconForHost: deps.hostPolicyOptions.shouldBlockFaviconForHost,
     shouldAvoidDirectFaviconForHost: () => false
   });
 
-  function isSourceAllowedByEnhancedFetchPolicy(url, pageUrl, sourceOptions) {
+  function isSourceAllowedByEnhancedFetchPolicy(url: string, pageUrl: string, sourceOptions: FaviconSourceOptions | null | undefined): boolean {
     const policyPageUrl = getCanonicalFaviconPage(pageUrl || url);
     return isFaviconSourceAllowedByEnhancedFetchPolicy(url, deps.isEnhancedFaviconFetchEnabled(policyPageUrl), {
       chromeApi: deps.config.chromeApi,
@@ -1342,18 +1569,18 @@ function createFaviconSourcePolicy(deps) {
     });
   }
 
-  function logBlockedFaviconUrl(url, reason, policyPageUrl, candidateKind) {
+  function logBlockedFaviconUrl(url: string, reason: string, policyPageUrl: string, candidateKind: string | undefined): void {
     deps.logFaviconDecision(url, reason, {
       pageUrl: policyPageUrl,
       candidateKind
     });
   }
 
-  function isBlockedFaviconPageUrl(pageUrl) {
+  function isBlockedFaviconPageUrl(pageUrl: unknown): boolean {
     return getFaviconUrlPolicy(pageUrl, pageHostPolicyOptions).hardBlocked;
   }
 
-  function isBlockedFaviconUrl(url, pageUrl, candidateKind, sourceOptions) {
+  function isBlockedFaviconUrl(url: unknown, pageUrl?: unknown, candidateKind?: string, sourceOptions?: FaviconSourceOptions | null): boolean {
     const raw = String(url || '').trim();
     if (!raw) {
       return false;
@@ -1376,7 +1603,7 @@ function createFaviconSourcePolicy(deps) {
     return blocked;
   }
 
-  function getSafeFaviconCandidateUrl(value, pageUrl, candidateKind, sourceOptions) {
+  function getSafeFaviconCandidateUrl(value: unknown, pageUrl?: unknown, candidateKind?: string, sourceOptions?: FaviconSourceOptions | null): string {
     const raw = String(value || '').trim();
     if (isOtherExtensionPageUrl(pageUrl, deps.ownExtensionRuntime.id)) {
       return '';
@@ -1424,10 +1651,13 @@ function createFaviconSourcePolicy(deps) {
 
 // Per-source favicon URLs for a page, preferring caller overrides when they
 // pass the source policy.
-function createFaviconSourceUrls(deps, getSafeFaviconCandidateUrl) {
+function createFaviconSourceUrls(
+  deps: Readonly<FaviconResolverDependencies>,
+  getSafeFaviconCandidateUrl: FaviconSourcePolicy['getSafeFaviconCandidateUrl']
+): Readonly<FaviconSourceUrls> {
   const { getRuntimeUrl, size } = deps;
 
-  function getResolverExtensionFaviconUrl(pageUrl, options) {
+  function getResolverExtensionFaviconUrl(pageUrl: unknown, options?: { browserCacheRequest?: boolean } | null): string {
     const page = getCanonicalFaviconPage(pageUrl);
     if (!page || !/^https?:\/\//i.test(page)) {
       return '';
@@ -1445,7 +1675,7 @@ function createFaviconSourceUrls(deps, getSafeFaviconCandidateUrl) {
     });
   }
 
-  function getResolverBrowserPageFaviconUrl(pageUrl) {
+  function getResolverBrowserPageFaviconUrl(pageUrl: unknown): string {
     const page = getCanonicalFaviconPage(pageUrl);
     if (!isBrowserInternalPageUrl(page)) {
       return '';
@@ -1459,7 +1689,7 @@ function createFaviconSourceUrls(deps, getSafeFaviconCandidateUrl) {
     return getBrowserPageFaviconUrl(page, { getRuntimeUrl, size });
   }
 
-  function getResolverGstaticFaviconUrl(pageUrl) {
+  function getResolverGstaticFaviconUrl(pageUrl: unknown): string {
     const page = getCanonicalFaviconPage(pageUrl);
     if (!page || !/^https?:\/\//i.test(page)) {
       return '';
@@ -1473,7 +1703,7 @@ function createFaviconSourceUrls(deps, getSafeFaviconCandidateUrl) {
     return getGstaticFaviconUrl(page, { size });
   }
 
-  function getResolverChromeFaviconUrl(pageUrl) {
+  function getResolverChromeFaviconUrl(pageUrl: unknown): string {
     const page = getCanonicalFaviconPage(pageUrl);
     if (!page) {
       return '';
@@ -1490,7 +1720,7 @@ function createFaviconSourceUrls(deps, getSafeFaviconCandidateUrl) {
     return getChromeFaviconUrl(page, { size });
   }
 
-  function getResolverOwnExtensionFaviconUrl(pageUrl) {
+  function getResolverOwnExtensionFaviconUrl(pageUrl: unknown): string {
     if (!isOwnExtensionPageUrl(pageUrl, deps.ownExtensionRuntime.id)) {
       return '';
     }
@@ -1508,11 +1738,15 @@ function createFaviconSourceUrls(deps, getSafeFaviconCandidateUrl) {
 
 // Picks what a page's favicon renders as: an explicit icon, the browser's
 // cached icon, or a proxy fallback.
-function createPageFaviconCandidates(deps, policy, sources) {
+function createPageFaviconCandidates(
+  deps: Readonly<FaviconResolverDependencies>,
+  policy: Readonly<FaviconSourcePolicy>,
+  sources: Readonly<FaviconSourceUrls>
+): Readonly<PageFaviconCandidates> {
   const { getSafeFaviconCandidateUrl } = policy;
-  const isOtherExtensionPage = (pageUrl) => isOtherExtensionPageUrl(pageUrl, deps.ownExtensionRuntime.id);
+  const isOtherExtensionPage = (pageUrl: string): boolean => isOtherExtensionPageUrl(pageUrl, deps.ownExtensionRuntime.id);
 
-  function getPageFaviconCandidateUrl(pageUrl, candidateOptions) {
+  function getPageFaviconCandidateUrl(pageUrl: unknown, candidateOptions?: PageFaviconCandidateOptions | null): string {
     const candidateConfig = candidateOptions || {};
     const page = getCanonicalFaviconPage(pageUrl);
     if (!page) {
@@ -1541,12 +1775,16 @@ function createPageFaviconCandidates(deps, policy, sources) {
       : getSafeFaviconCandidateUrl(sources.getChromeFaviconUrl(page), page, 'browser-favicon');
   }
 
-  function getDistinctFallbackUrl(url, primaryUrl) {
+  function getDistinctFallbackUrl(url: string, primaryUrl: string): string {
     const safeUrl = getSafeFaviconCandidateUrl(url);
     return safeUrl && safeUrl !== primaryUrl ? safeUrl : '';
   }
 
-  function getPageFaviconRenderCandidates(pageUrl, explicitUrl, candidateOptions) {
+  function getPageFaviconRenderCandidates(
+    pageUrl: unknown,
+    explicitUrl?: unknown,
+    candidateOptions?: PageFaviconCandidateOptions | null
+  ): PageFaviconRenderCandidates {
     const candidateConfig = candidateOptions || {};
     const page = getCanonicalFaviconPage(pageUrl);
     const explicitFavicon = getSafeFaviconCandidateUrl(explicitUrl, page, 'explicit', candidateConfig);
@@ -1589,11 +1827,11 @@ function createPageFaviconCandidates(deps, policy, sources) {
   // Automatic sources (including tab.favIconUrl and persisted URLs) never
   // load a website image directly. Only an explicitly configured image may
   // opt in, and it still follows the enhanced-fetch and host policies.
-  function resolveFaviconSource(value, pageUrl, sourceOptions) {
+  function resolveFaviconSource(value: unknown, pageUrl: unknown, sourceOptions?: PageFaviconCandidateOptions | null): string {
     return getPageFaviconRenderCandidates(pageUrl, value, sourceOptions).primaryUrl;
   }
 
-  function getProviderFaviconUrl(pageUrl, iconUrl) {
+  function getProviderFaviconUrl(pageUrl: unknown, iconUrl: unknown): string {
     return resolveFaviconSource(iconUrl, pageUrl, { allowRemoteImage: !isFaviconProxyUrl(iconUrl) });
   }
 
@@ -1605,7 +1843,7 @@ function createPageFaviconCandidates(deps, policy, sources) {
   });
 }
 
-function isShortcutFetchCandidateForIconSource(candidate, iconSource) {
+function isShortcutFetchCandidateForIconSource(candidate: ShortcutFetchCandidate, iconSource: unknown): boolean {
   if (iconSource === 'service') {
     return candidate.kind === 'proxy';
   }
@@ -1617,10 +1855,14 @@ function isShortcutFetchCandidateForIconSource(candidate, iconSource) {
 
 // Shortcut tiles keep only local icons and fetch site icons through the
 // browser cache or a proxy instead of loading them directly.
-function createShortcutFaviconCandidates(policy, sources, getPageFaviconCandidateUrl) {
+function createShortcutFaviconCandidates(
+  policy: Readonly<FaviconSourcePolicy>,
+  sources: Readonly<FaviconSourceUrls>,
+  getPageFaviconCandidateUrl: PageFaviconCandidates['getPageFaviconCandidateUrl']
+): Readonly<ShortcutFaviconCandidates> {
   const { getSafeFaviconCandidateUrl } = policy;
 
-  function getShortcutFaviconCandidateUrl(pageUrl, localIconUrl) {
+  function getShortcutFaviconCandidateUrl(pageUrl: unknown, localIconUrl?: unknown): string {
     const page = getCanonicalFaviconPage(pageUrl);
     if (!/^https?:\/\//i.test(page)) {
       return getPageFaviconCandidateUrl(page);
@@ -1630,7 +1872,7 @@ function createShortcutFaviconCandidates(policy, sources, getPageFaviconCandidat
       ? localIcon : '';
   }
 
-  function getShortcutFaviconFetchUrl(pageUrl) {
+  function getShortcutFaviconFetchUrl(pageUrl: unknown): string {
     const page = getCanonicalFaviconPage(pageUrl);
     try {
       const parsed = new URL(page);
@@ -1644,7 +1886,7 @@ function createShortcutFaviconCandidates(policy, sources, getPageFaviconCandidat
     }
   }
 
-  function getShortcutFaviconFetchCandidates(pageUrl, iconSource) {
+  function getShortcutFaviconFetchCandidates(pageUrl: unknown, iconSource?: unknown): ShortcutFetchCandidate[] {
     const page = getCanonicalFaviconPage(pageUrl);
     if (!/^https?:\/\//i.test(page) || policy.isBlockedFaviconPageUrl(page)) {
       return [];
@@ -1654,7 +1896,7 @@ function createShortcutFaviconCandidates(policy, sources, getPageFaviconCandidat
       return url ? [{ kind: 'favicon-is', url, placeholderUrl: getFaviconIsUrl('https://lumno.invalid/') }] : [];
     }
     const placeholderPage = 'https://lumno.invalid/__favicon_placeholder_probe__';
-    return [
+    const candidates: ShortcutFetchCandidate[] = [
       {
         kind: 'browser-cache',
         url: getSafeFaviconCandidateUrl(
@@ -1669,7 +1911,8 @@ function createShortcutFaviconCandidates(policy, sources, getPageFaviconCandidat
         url: getShortcutFaviconFetchUrl(page),
         placeholderUrl: sources.getGstaticFaviconUrl('https://lumno.invalid/')
       }
-    ].filter((candidate) => candidate.url && isShortcutFetchCandidateForIconSource(candidate, iconSource));
+    ];
+    return candidates.filter((candidate) => candidate.url && isShortcutFetchCandidateForIconSource(candidate, iconSource));
   }
 
   return Object.freeze({
@@ -1681,7 +1924,7 @@ function createShortcutFaviconCandidates(policy, sources, getPageFaviconCandidat
 
 // Lower runs first: local and data: icons, then an opted-in remote primary,
 // then virtual browser-cache requests, then remote proxies.
-function getFaviconCandidateSourcePriority(candidate, allowRemotePrimary) {
+function getFaviconCandidateSourcePriority(candidate: FaviconPlanCandidate, allowRemotePrimary: boolean): number {
   if (!/^https?:\/\//i.test(candidate.url) && !isSafeVirtualFaviconRequestUrl(candidate.url)) {
     return candidate.url.startsWith('data:') ? 1 : 0;
   }
@@ -1691,14 +1934,17 @@ function getFaviconCandidateSourcePriority(candidate, allowRemotePrimary) {
   return isSafeVirtualFaviconRequestUrl(candidate.url) ? 2 : 3;
 }
 
-function createFaviconCandidatePlanBuilder(policy, sources) {
-  return function buildFaviconCandidatePlan(state) {
+function createFaviconCandidatePlanBuilder(
+  policy: Readonly<FaviconSourcePolicy>,
+  sources: Readonly<FaviconSourceUrls>
+): (state?: FaviconPlanState | null) => FaviconPlanCandidate[] {
+  return function buildFaviconCandidatePlan(state?: FaviconPlanState | null): FaviconPlanCandidate[] {
     const input = state || {};
     const pageUrl = getCanonicalFaviconPage(input.pageUrl || input.url || '');
     const allowRemotePrimary = input.allowRemoteImage === true;
     const browserUrl = String(input.browserUrl || '').trim() ||
       (pageUrl && isBrowserInternalPageUrl(pageUrl) ? sources.getChromeFaviconUrl(pageUrl) : '');
-    const persistedCandidates = input.skipPersisted === true
+    const persistedCandidates: FaviconPlanCandidate[] = input.skipPersisted === true
       ? []
       : [
         { kind: 'persisted-data', url: input.persistedDataUrl || '' },
@@ -1706,7 +1952,7 @@ function createFaviconCandidatePlanBuilder(policy, sources) {
       ];
     // A full-page resolution is more specific than host-scoped browser and
     // persisted caches, which may legitimately collapse sibling URLs.
-    const rawCandidates = [
+    const rawCandidates: FaviconPlanCandidate[] = [
       { kind: 'page-specific', url: input.pageSpecificUrl || '' },
       ...persistedCandidates,
       { kind: 'primary', url: input.primaryUrl || input.fallbackUrl || '' },
@@ -1714,7 +1960,7 @@ function createFaviconCandidatePlanBuilder(policy, sources) {
       { kind: 'browser', url: browserUrl },
       { kind: 'gstatic', url: input.gstaticFavicon || input.gstaticUrl || sources.getGstaticFaviconUrl(pageUrl) }
     ];
-    const seen = new Set();
+    const seen = new Set<string>();
     const candidates = rawCandidates.filter((candidate) => {
       const safeUrl = policy.getSafeFaviconCandidateUrl(candidate.url, pageUrl, candidate.kind,
         { allowRemoteImage: allowRemotePrimary && candidate.kind === 'primary' });
@@ -1733,7 +1979,7 @@ function createFaviconCandidatePlanBuilder(policy, sources) {
   };
 }
 
-function getFaviconProxyCheckKind(candidate) {
+function getFaviconProxyCheckKind(candidate: Partial<FaviconPlanCandidate> | null | undefined): FaviconProxyCheckKind {
   if (!candidate || !candidate.url) {
     return '';
   }
@@ -1756,7 +2002,7 @@ function getFaviconProxyCheckKind(candidate) {
   return '';
 }
 
-function createFaviconUrlResolver(options) {
+function createFaviconUrlResolver(options?: FaviconResolverOptions | null) {
   const deps = getFaviconResolverDependencies(options);
   const policy = createFaviconSourcePolicy(deps);
   const sources = createFaviconSourceUrls(deps, policy.getSafeFaviconCandidateUrl);
@@ -1789,14 +2035,17 @@ function createFaviconUrlResolver(options) {
   });
 }
 
+type FaviconUrlResolver = ReturnType<typeof createFaviconUrlResolver>;
+
 // Firefox has no _favicon endpoint, and blocks page-icon:/cached-favicon:
 // for extensions. Its cached icons reach extension pages only through open
-// tabs (favIconUrl) and topSites({ includeFavicon }); this indexes them.
-// An exact page wins; otherwise the latest icon seen for the same host.
-function createBrowserIconIndex() {
-  const byPage = new Map();
-  const byHost = new Map();
-  const getPageKey = (url) => {
+// tabs (favIconUrl) and topSites({ includeFavicon }); this indexes them
+// (platform/browser-icons.ts fills it). An exact page wins; otherwise the
+// latest icon seen for the same host.
+function createBrowserIconIndex(): Readonly<BrowserIconIndex> {
+  const byPage = new Map<string, string>();
+  const byHost = new Map<string, string>();
+  const getPageKey = (url: unknown): string => {
     try {
       const parsed = new URL(String(url || ''));
       if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
@@ -1804,22 +2053,22 @@ function createBrowserIconIndex() {
       }
       parsed.hash = '';
       return parsed.href;
-    } catch (e) {
+    } catch (_error) {
       return '';
     }
   };
-  const getHostKey = (pageKey) => {
+  const getHostKey = (pageKey: string): string => {
     try {
       return new URL(pageKey).hostname.toLowerCase().replace(/^www\./, '');
-    } catch (e) {
+    } catch (_error) {
       return '';
     }
   };
   // Firefox hands these out as data: URLs read from its own icon cache.
   // Anything else would be a request to the site, which automatic sources
   // never make (see resolveFaviconSource).
-  const isUsableIconUrl = (iconUrl) => /^data:image\//i.test(String(iconUrl || ''));
-  function add(pageUrl, iconUrl) {
+  const isUsableIconUrl = (iconUrl: unknown): boolean => /^data:image\//i.test(String(iconUrl || ''));
+  function add(pageUrl: unknown, iconUrl: unknown): void {
     const pageKey = getPageKey(pageUrl);
     if (!pageKey || !isUsableIconUrl(iconUrl)) {
       return;
@@ -1830,24 +2079,14 @@ function createBrowserIconIndex() {
       byHost.set(hostKey, String(iconUrl));
     }
   }
-  function get(pageUrl) {
+  function get(pageUrl: unknown): string {
     const pageKey = getPageKey(pageUrl);
     if (!pageKey) {
       return '';
     }
     return byPage.get(pageKey) || byHost.get(getHostKey(pageKey)) || '';
   }
-  // Firefox exposes its cached icons only through top sites and open tabs.
-  // Tabs go last so their current icons win.
-  async function load(chromeApi) {
-    const [sites, tabs] = await Promise.all([
-      Promise.resolve().then(() => chromeApi.topSites.get({ includeFavicon: true, limit: 100 })).catch(() => []),
-      Promise.resolve().then(() => chromeApi.tabs.query({})).catch(() => [])
-    ]);
-    (Array.isArray(sites) ? sites : []).forEach((site) => site && add(site.url, site.favicon));
-    (Array.isArray(tabs) ? tabs : []).forEach((tab) => tab && add(tab.url, tab.favIconUrl));
-  }
-  return Object.freeze({ add, get, load });
+  return Object.freeze({ add, get });
 }
 
 export {
@@ -1901,4 +2140,36 @@ export {
   shouldBlockFaviconForHost,
   shouldBlockDirectFaviconHost,
   shouldAvoidDirectFaviconForHost
+};
+export type {
+  BrowserIconIndex,
+  EnhancedFetchPolicyOptions,
+  ExtensionRuntimeInfo,
+  FaviconChromeApi,
+  FaviconDecisionDetails,
+  FaviconDecisionLogger,
+  FaviconDecisionLoggerOptions,
+  FaviconHostPolicy,
+  FaviconHostPolicyOptions,
+  FaviconPlanCandidate,
+  FaviconPlanCandidateKind,
+  FaviconPlanState,
+  FaviconProxyCheckKind,
+  FaviconResolverOptions,
+  FaviconSourceOptions,
+  FaviconTheme,
+  FaviconUrlOptions,
+  FaviconUrlResolver,
+  ManifestThemeColorCandidate,
+  PageFaviconCandidateOptions,
+  PageFaviconRenderCandidates,
+  RuntimeUrlGetter,
+  ScoredFaviconUrl,
+  ShortcutFetchCandidate,
+  ShortcutFetchCandidateKind,
+  ThemeCandidate,
+  ThemeColorCandidate,
+  ThemeColorConfidence,
+  ThemeFaviconUrlOptions,
+  ThemeRgb
 };

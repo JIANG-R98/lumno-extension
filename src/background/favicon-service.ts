@@ -16,6 +16,7 @@
 import * as BLACKLIST_UTILS from '../domain/blacklist-utils';
 import * as BROWSER_PROFILE from '../platform/browser-profile';
 import * as FAVICON_CACHE from '../platform/favicon-cache';
+import * as LumnoBrowserIcons from '../platform/browser-icons';
 import * as LumnoShortcutFaviconStore from '../platform/shortcut-favicon-store';
 import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
 import * as SETTINGS from '../domain/settings';
@@ -593,7 +594,7 @@ function fetchShortcutFaviconResource(candidate, pageUrl, signal) {
 // open tabs and top sites; like Chrome's cache it never contacts the site.
 async function getFirefoxBrowserFaviconUrl(pageUrl) {
   const browserIcons = FAVICON_UTILS.createBrowserIconIndex();
-  await browserIcons.load(chrome);
+  await LumnoBrowserIcons.loadBrowserIcons(browserIcons, chrome);
   return browserIcons.get(pageUrl);
 }
 

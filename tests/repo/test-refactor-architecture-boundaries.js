@@ -45,7 +45,7 @@ assert.deepStrictEqual(
   'configured shortcut parsing belongs to the shared matcher'
 );
 assert.deepStrictEqual(
-  filesContaining(runtimeFiles, /function setBoundedCacheEntry\(/),
+  filesContaining(runtimeFiles, /function setBoundedCacheEntry\s*[<(]/),
   ['src/domain/favicon/favicon-utils.ts'],
   'bounded favicon cache writes belong to favicon-utils'
 );
