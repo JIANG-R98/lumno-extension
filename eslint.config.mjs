@@ -27,7 +27,12 @@ export default tseslint.config(
       'node_modules/',
       'src/react/',
       'assets/vendor/',
-      '.claude/'
+      '.claude/',
+      // Local work output and scratch data, ignored by git as well.
+      'output/',
+      '.tmp/',
+      '.codex-artifacts/',
+      '.worktrees/'
     ]
   },
   js.configs.recommended,
