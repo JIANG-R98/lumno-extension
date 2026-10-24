@@ -1,8 +1,83 @@
+// While a tab loads a new page under the open overlay, the background keeps
+// a record of the overlay's input and decides from what the new page reports
+// whether to restore the overlay there, keep waiting, or let the record go.
+import type { OverlayLoadingSession } from '../domain/messages';
+
+// A webNavigation event's fields.
+interface NavigationDetails {
+  tabId?: number;
+  frameId?: number;
+  url?: string;
+}
+
+// A top frame navigation the tab has not reported yet (tab.pendingUrl lags).
+interface TopFrameNavigationState {
+  tabId: number;
+  url: string;
+  startedAt: number;
+  updatedAt: number;
+}
+
+// The fields of a tab the decisions read.
+interface LoadingTabLike {
+  id?: number;
+  status?: string;
+  url?: string;
+  pendingUrl?: string;
+}
+
+interface OverlaySessionState extends OverlayLoadingSession {
+  // Counts updates, so an older one never wins.
+  revision: number;
+  updatedAt: number;
+}
+
+interface OverlayLoadingRecord {
+  tabId: number;
+  // What opened the overlay (a command, the page hotkey, ...).
+  source: string;
+  // The document the overlay runs in, once known.
+  documentId: string;
+  session: OverlaySessionState | null;
+  createdAt: number;
+  updatedAt: number;
+}
+
+type LifecycleAction = 'none' | 'keep' | 'clear' | 'restore';
+
+interface LifecycleDecision {
+  action: LifecycleAction;
+  record: OverlayLoadingRecord | null;
+  reason: string;
+}
+
+// One frame's result of chrome.scripting.executeScript.
+interface InjectionResult {
+  frameId?: number;
+  documentId?: string;
+  result?: unknown;
+}
+
+interface ExpiryOptions {
+  now?: number;
+  ttlMs?: number;
+}
+
+interface RecoveryOptions extends ExpiryOptions {
+  // The tab finished loading, and has stayed so long enough to trust it.
+  complete?: boolean;
+  stable?: boolean;
+}
+
 const DEFAULT_RECORD_TTL_MS = 5 * 60 * 1000;
 const DEFAULT_NAVIGATION_STATE_TTL_MS = 5 * 60 * 1000;
 const MAX_INPUT_VALUE_LENGTH = 64 * 1024;
 
-function createTopFrameNavigationState(details, now) {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function createTopFrameNavigationState(details: NavigationDetails | null | undefined, now?: number): TopFrameNavigationState | null {
   const input = details && typeof details === 'object' ? details : {};
   if (typeof input.tabId !== 'number' || input.tabId < 0 || input.frameId !== 0) {
     return null;
@@ -16,7 +91,11 @@ function createTopFrameNavigationState(details, now) {
   };
 }
 
-function updateTopFrameNavigationState(record, details, now) {
+function updateTopFrameNavigationState(
+  record: TopFrameNavigationState | null | undefined,
+  details: NavigationDetails | null | undefined,
+  now?: number
+): TopFrameNavigationState | null {
   const input = details && typeof details === 'object' ? details : {};
   if (!record || typeof record.tabId !== 'number' || input.frameId !== 0 ||
       (typeof input.tabId === 'number' && input.tabId !== record.tabId)) {
@@ -33,7 +112,7 @@ function updateTopFrameNavigationState(record, details, now) {
   };
 }
 
-function isNavigationStateExpired(state, now, ttlMs) {
+function isNavigationStateExpired(state: TopFrameNavigationState | null | undefined, now?: number, ttlMs?: number): boolean {
   if (!state || typeof state.tabId !== 'number') {
     return true;
   }
@@ -44,7 +123,13 @@ function isNavigationStateExpired(state, now, ttlMs) {
   return currentTime - Number(state.updatedAt || state.startedAt || 0) > maxAge;
 }
 
-function applyTopFrameNavigationState(tab, state, options) {
+// The tab as loading its pending page when the navigation is known but
+// the tab does not show it yet.
+function applyTopFrameNavigationState<T extends LoadingTabLike>(
+  tab: T,
+  state: TopFrameNavigationState | null | undefined,
+  options?: ExpiryOptions | null
+): T {
   if (!tab || typeof tab.id !== 'number' || !state || state.tabId !== tab.id) {
     return tab;
   }
@@ -62,7 +147,7 @@ function applyTopFrameNavigationState(tab, state, options) {
   };
 }
 
-function isLoadingTab(tab) {
+function isLoadingTab(tab: LoadingTabLike | null | undefined): tab is LoadingTabLike & { id: number } {
   if (!tab || typeof tab.id !== 'number') {
     return false;
   }
@@ -71,7 +156,7 @@ function isLoadingTab(tab) {
   );
 }
 
-function getPendingInjectableUrl(tab, canInjectUrl) {
+function getPendingInjectableUrl(tab: LoadingTabLike | null | undefined, canInjectUrl: ((url: string) => boolean) | null | undefined): string {
   if (!isLoadingTab(tab) || typeof canInjectUrl !== 'function') {
     return '';
   }
@@ -83,7 +168,7 @@ function getPendingInjectableUrl(tab, canInjectUrl) {
   return pendingUrl;
 }
 
-function shouldDeferRestrictedLoadingTab(tab, canInjectUrl) {
+function shouldDeferRestrictedLoadingTab(tab: LoadingTabLike | null | undefined, canInjectUrl: ((url: string) => boolean) | null | undefined): boolean {
   if (!isLoadingTab(tab) || typeof canInjectUrl !== 'function') {
     return false;
   }
@@ -95,7 +180,7 @@ function shouldDeferRestrictedLoadingTab(tab, canInjectUrl) {
   return !pendingUrl || canInjectUrl(pendingUrl);
 }
 
-function createRecord(tab, source, now) {
+function createRecord(tab: LoadingTabLike | null | undefined, source: unknown, now?: number): OverlayLoadingRecord | null {
   if (!isLoadingTab(tab)) {
     return null;
   }
@@ -110,14 +195,16 @@ function createRecord(tab, source, now) {
   };
 }
 
-function clampSelectionOffset(value, inputLength, fallback) {
+function clampSelectionOffset(value: unknown, inputLength: number, fallback: number): number {
   const numeric = Number(value);
   const resolved = Number.isFinite(numeric) ? Math.trunc(numeric) : fallback;
   return Math.max(0, Math.min(inputLength, resolved));
 }
 
-function normalizeSessionState(value, previousSession, now) {
-  const input = value && typeof value === 'object' ? value : {};
+// The overlay's input as the page last reported it; missing fields keep
+// their previous values.
+function normalizeSessionState(value: unknown, previousSession: OverlaySessionState | null | undefined, now?: number): OverlaySessionState {
+  const input = isRecord(value) ? value : {};
   const previous = previousSession && typeof previousSession === 'object'
     ? previousSession
     : null;
@@ -158,7 +245,11 @@ function normalizeSessionState(value, previousSession, now) {
   };
 }
 
-function applySessionUpdate(record, value, options) {
+function applySessionUpdate(
+  record: OverlayLoadingRecord | null | undefined,
+  value: unknown,
+  options?: { documentId?: string; now?: number } | null
+): LifecycleDecision {
   if (!record) {
     return { action: 'none', record: null, reason: 'not-tracked' };
   }
@@ -185,12 +276,12 @@ function applySessionUpdate(record, value, options) {
   };
 }
 
-function getMainFrameResult(results) {
-  const list = Array.isArray(results) ? results.filter(Boolean) : [];
+function getMainFrameResult(results: readonly (InjectionResult | null | undefined)[] | null | undefined): InjectionResult | null {
+  const list = (Array.isArray(results) ? results : []).filter((item): item is InjectionResult => Boolean(item));
   return list.find((item) => item.frameId === 0) || list[0] || null;
 }
 
-function withResultDocument(record, result, now) {
+function withResultDocument(record: OverlayLoadingRecord | null, result: InjectionResult | null, now?: number): OverlayLoadingRecord | null {
   if (!record) {
     return null;
   }
@@ -205,14 +296,17 @@ function withResultDocument(record, result, now) {
   };
 }
 
-function applyInvocationResult(record, results, now) {
+// What opening the overlay in the loading tab reported.
+function applyInvocationResult(
+  record: OverlayLoadingRecord | null | undefined,
+  results: readonly (InjectionResult | null | undefined)[] | null | undefined,
+  now?: number
+): LifecycleDecision {
   if (!record) {
     return { action: 'none', record: null, reason: 'not-tracked' };
   }
   const mainResult = getMainFrameResult(results);
-  const payload = mainResult && mainResult.result && typeof mainResult.result === 'object'
-    ? mainResult.result
-    : null;
+  const payload = mainResult && isRecord(mainResult.result) ? mainResult.result : null;
   if (!payload || payload.ok !== true) {
     return { action: 'keep', record, reason: 'invocation-unconfirmed' };
   }
@@ -226,7 +320,7 @@ function applyInvocationResult(record, results, now) {
   };
 }
 
-function isExpired(record, now, ttlMs) {
+function isExpired(record: OverlayLoadingRecord | null | undefined, now?: number, ttlMs?: number): boolean {
   if (!record) {
     return true;
   }
@@ -237,7 +331,13 @@ function isExpired(record, now, ttlMs) {
   return currentTime - Number(record.createdAt || 0) > maxAge;
 }
 
-function decideRecovery(record, results, options) {
+// What to do with a record once the tab's page reports in: restore the
+// overlay, keep waiting, or let the record go.
+function decideRecovery(
+  record: OverlayLoadingRecord | null | undefined,
+  results: readonly (InjectionResult | null | undefined)[] | null | undefined,
+  options?: RecoveryOptions | null
+): LifecycleDecision {
   const settings = options && typeof options === 'object' ? options : {};
   const now = Number.isFinite(Number(settings.now)) ? Number(settings.now) : Date.now();
   if (!record) {
@@ -247,10 +347,8 @@ function decideRecovery(record, results, options) {
     return { action: 'clear', record: null, reason: 'expired' };
   }
   const mainResult = getMainFrameResult(results);
-  const payload = mainResult && mainResult.result && typeof mainResult.result === 'object'
-    ? mainResult.result
-    : null;
-  if (!payload) {
+  const payload = mainResult && isRecord(mainResult.result) ? mainResult.result : null;
+  if (!mainResult || !payload) {
     return { action: 'restore', record, reason: 'probe-unavailable' };
   }
   const nextRecord = withResultDocument(record, mainResult, now);
@@ -297,4 +395,15 @@ export {
   normalizeSessionState,
   shouldDeferRestrictedLoadingTab,
   updateTopFrameNavigationState
+};
+export type {
+  InjectionResult,
+  LifecycleAction,
+  LifecycleDecision,
+  LoadingTabLike,
+  NavigationDetails,
+  OverlayLoadingRecord,
+  OverlaySessionState,
+  RecoveryOptions,
+  TopFrameNavigationState
 };

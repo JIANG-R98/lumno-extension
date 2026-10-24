@@ -1,8 +1,49 @@
-// @ts-nocheck
-function resolvePlacement(chromeApi, sourceTab, position) {
+// Placing search result tabs and running the browser's search in them.
+
+interface RuntimeErrorApi {
+  runtime?: { lastError?: { message?: string } | null };
+}
+
+interface PlacementChromeApi extends RuntimeErrorApi {
+  tabs?: {
+    get?(tabId: number, callback: (tab: chrome.tabs.Tab) => void): void;
+    query?(queryInfo: { active: boolean; currentWindow: boolean }, callback: (tabs: chrome.tabs.Tab[]) => void): void;
+  };
+}
+
+interface SearchChromeApi extends RuntimeErrorApi {
+  tabs: {
+    update(tabId: number, updateProperties: { url: string }, callback: () => void): void;
+  };
+  search: {
+    query(queryInfo: { text: string; tabId: number }, callback: () => void): void;
+  };
+}
+
+interface TabPlacement {
+  sourceTab: chrome.tabs.Tab | null;
+  windowId?: number;
+  // The tab index to open at; the end of the window when absent.
+  index?: number;
+}
+
+interface SearchInTabOptions {
+  query: string;
+  tabId: number;
+  fallbackUrl: string;
+  // Runs before the fallback URL loads.
+  onFallback?: () => void;
+}
+
+// Where a result tab opens: next to the source tab, before it, or at the end.
+function resolvePlacement(
+  chromeApi: PlacementChromeApi | null | undefined,
+  sourceTab: chrome.tabs.Tab | null | undefined,
+  position: unknown
+): Promise<TabPlacement> {
   return new Promise((resolve) => {
-    const finish = (tab) => {
-      const context = { sourceTab: tab || null };
+    const finish = (tab: chrome.tabs.Tab | null | undefined): void => {
+      const context: TabPlacement = { sourceTab: tab || null };
       if (tab && Number.isInteger(tab.windowId)) {
         context.windowId = tab.windowId;
       }
@@ -16,27 +57,34 @@ function resolvePlacement(chromeApi, sourceTab, position) {
       finish(sourceTab);
       return;
     }
+    const tabs = chromeApi.tabs;
     try {
-      if (sourceTab && typeof sourceTab.id === 'number' && typeof chromeApi.tabs.get === 'function') {
+      if (sourceTab && typeof sourceTab.id === 'number' && typeof tabs.get === 'function') {
         // Refresh the index: tabs can move while search suggestions are loading.
-        chromeApi.tabs.get(sourceTab.id, (tab) => {
+        tabs.get(sourceTab.id, (tab) => {
           finish(chromeApi.runtime && chromeApi.runtime.lastError ? null : tab);
         });
-      } else if (!sourceTab && typeof chromeApi.tabs.query === 'function') {
-        chromeApi.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-          finish(chromeApi.runtime && chromeApi.runtime.lastError ? null : tabs && tabs[0]);
+      } else if (!sourceTab && typeof tabs.query === 'function') {
+        tabs.query({ active: true, currentWindow: true }, (activeTabs) => {
+          finish(chromeApi.runtime && chromeApi.runtime.lastError ? null : activeTabs && activeTabs[0]);
         });
       } else {
         finish(sourceTab);
       }
-    } catch (error) {
+    } catch (_error) {
       finish(null);
     }
   });
 }
 
-function searchInTab(chromeApi, options, callback) {
-  const fallback = () => {
+// Runs the browser's default search in an already placed tab, or loads the
+// fallback search URL there when the search API refuses.
+function searchInTab(
+  chromeApi: SearchChromeApi,
+  options: SearchInTabOptions,
+  callback: (result: { ok: boolean; reason?: string }) => void
+): void {
+  const fallback = (): void => {
     if (typeof options.onFallback === 'function') {
       options.onFallback();
     }
@@ -47,7 +95,7 @@ function searchInTab(chromeApi, options, callback) {
         callback({ ok: !error, reason: error ? error.message : '' });
       });
     } catch (error) {
-      callback({ ok: false, reason: error.message || 'tab-update-failed' });
+      callback({ ok: false, reason: (error instanceof Error && error.message) || 'tab-update-failed' });
     }
   };
   try {
@@ -58,9 +106,10 @@ function searchInTab(chromeApi, options, callback) {
       }
       callback({ ok: true });
     });
-  } catch (error) {
+  } catch (_error) {
     fallback();
   }
 }
 
 export { resolvePlacement, searchInTab };
+export type { PlacementChromeApi, SearchChromeApi, SearchInTabOptions, TabPlacement };

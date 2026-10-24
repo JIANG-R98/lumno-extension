@@ -1,10 +1,22 @@
+// Where the search command goes when the active tab is Lumno's onboarding
+// page: its own search overlay instead of the restricted-page fallback.
+
+interface CommandTargetOptions {
+  isOwnExtensionUrl?: (url: string) => boolean;
+  isOnboardingUrl?: (url: string) => boolean;
+}
+
 const ONBOARDING_SEARCH_OVERLAY_COMMAND_ACTION = 'triggerOnboardingSearchOverlayFromCommand';
 
-function isSearchCommandSource(source) {
+function isSearchCommandSource(source: unknown): boolean {
   return source === 'commands' || source === 'commands-prefill';
 }
 
-function shouldTriggerOnboardingOverlayFromCommand(source, url, options) {
+function shouldTriggerOnboardingOverlayFromCommand(
+  source: unknown,
+  url: string | null | undefined,
+  options?: CommandTargetOptions | null
+): boolean {
   if (!isSearchCommandSource(source) || !url) {
     return false;
   }
@@ -21,7 +33,11 @@ function shouldTriggerOnboardingOverlayFromCommand(source, url, options) {
   return Boolean(isOnboardingUrl);
 }
 
-function shouldSuppressRestrictedCommandFallback(source, url, options) {
+function shouldSuppressRestrictedCommandFallback(
+  source: unknown,
+  url: string | null | undefined,
+  options?: CommandTargetOptions | null
+): boolean {
   return shouldTriggerOnboardingOverlayFromCommand(source, url, options);
 }
 
@@ -30,3 +46,4 @@ export {
   shouldTriggerOnboardingOverlayFromCommand,
   shouldSuppressRestrictedCommandFallback
 };
+export type { CommandTargetOptions };

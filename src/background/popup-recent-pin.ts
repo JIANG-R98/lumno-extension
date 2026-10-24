@@ -1,11 +1,48 @@
-// @ts-nocheck
 // Pins the toolbar popup's page among the New Tab's recent sites, in the
 // list the New Tab keeps (one card per site, a tracked card per work). An
 // episode or chapter starts tracked, as when it is pinned on the New Tab.
 import * as LumnoRecentSitesStorage from '../platform/recent-sites-storage';
+import type { RecentSite, RecentSiteOptions } from '../domain/recent-sites-store';
+import type { RecentPinStatus, RecentPinToggleStatus } from '../domain/messages';
+import type { StorageAreaLike } from '../domain/storage-port';
 
-function createController(options) {
-  const opts = options || {};
+// The recent sites store functions the controller uses.
+interface RecentSitesStoreApi {
+  normalizeRecentSiteItem(item: unknown, options?: RecentSiteOptions | null): RecentSite | null;
+  isSamePinnedRecentSite(a: unknown, b: unknown, options?: RecentSiteOptions | null): boolean;
+}
+
+// The popup's page.
+interface PopupPage {
+  url: string;
+  title: string;
+}
+
+interface RecentPinOptions {
+  store: RecentSitesStoreApi;
+  // The pinned sites' storage key.
+  key?: string;
+  storeOptions?: RecentSiteOptions;
+  getArea?: () => StorageAreaLike | null;
+  // Settles once the storage area is known.
+  ready?: () => Promise<unknown>;
+  // Whether a page reads as an episode or chapter, which starts tracked.
+  probeSeries?: (url: string) => Promise<boolean>;
+  createProgressId?: (now: number) => string;
+}
+
+interface RecentPinToggleResult {
+  status: RecentPinToggleStatus;
+  tracking?: boolean;
+}
+
+interface RecentPinController {
+  getStatus(page: PopupPage | null): Promise<RecentPinStatus>;
+  toggle(page: PopupPage | null): Promise<RecentPinToggleResult>;
+}
+
+function createController(options: RecentPinOptions): RecentPinController {
+  const opts = options;
   const store = opts.store;
   const key = String(opts.key || '');
   const storeOptions = opts.storeOptions || {};
@@ -15,30 +52,30 @@ function createController(options) {
   const probeSeries = typeof opts.probeSeries === 'function' ? opts.probeSeries : () => Promise.resolve(false);
   const createProgressId = typeof opts.createProgressId === 'function'
     ? opts.createProgressId
-    : (now) => `p${Number(now).toString(36)}`;
-  let chain = Promise.resolve();
+    : (now: number) => `p${Number(now).toString(36)}`;
+  let chain: Promise<unknown> = Promise.resolve();
 
-  function toItem(page) {
+  function toItem(page: PopupPage | null): RecentSite | null {
     const url = String((page && page.url) || '');
     if (!/^https?:\/\//i.test(url)) return null;
-    return store.normalizeRecentSiteItem({ url, title: String(page.title || '') }, {
+    return store.normalizeRecentSiteItem({ url, title: String((page && page.title) || '') }, {
       ...storeOptions,
       ignoreBlacklist: true
     });
   }
 
-  async function readPinned() {
+  async function readPinned(): Promise<RecentSite[]> {
     await ready();
     return LumnoRecentSitesStorage.loadPinnedRecentSites(getArea(), { ...storeOptions, key });
   }
 
-  function findPinned(pinned, item) {
+  function findPinned(pinned: readonly RecentSite[], item: RecentSite): number {
     return pinned.findIndex((pinnedItem) => store.isSamePinnedRecentSite(pinnedItem, item, storeOptions));
   }
 
   // available: the page can be pinned at all; pinned: it (or its site) is;
   // full: nothing more fits.
-  async function getStatus(page) {
+  async function getStatus(page: PopupPage | null): Promise<RecentPinStatus> {
     const item = toItem(page);
     if (!item) return { available: false, pinned: false, full: false };
     const pinned = await readPinned();
@@ -51,13 +88,14 @@ function createController(options) {
 
   // Unpins what the popup showed as pinned, otherwise pins the page in
   // front. One toggle at a time, so two quick clicks read each other's list.
-  function toggle(page) {
-    const job = chain.catch(() => {}).then(async () => {
+  function toggle(page: PopupPage | null): Promise<RecentPinToggleResult> {
+    const job = chain.catch(() => {}).then(async (): Promise<RecentPinToggleResult> => {
       const item = toItem(page);
       if (!item) return { status: 'invalid' };
       const pinned = await readPinned();
       const index = findPinned(pinned, item);
-      const save = (items) => LumnoRecentSitesStorage.savePinnedRecentSites(getArea(), items, { ...storeOptions, key });
+      const save = (items: unknown[]): Promise<RecentSite[]> =>
+        LumnoRecentSitesStorage.savePinnedRecentSites(getArea(), items, { ...storeOptions, key });
       if (index >= 0) {
         await save(pinned.filter((_, position) => position !== index));
         return { status: 'unpinned' };
@@ -73,7 +111,7 @@ function createController(options) {
       return { status: 'pinned', tracking };
     });
     chain = job;
-    return job.catch((error) => {
+    return job.catch((error: unknown): RecentPinToggleResult => {
       console.warn('[Lumno] Could not pin the page to recent sites.', error);
       return { status: 'failed' };
     });
@@ -83,3 +121,4 @@ function createController(options) {
 }
 
 export { createController };
+export type { PopupPage, RecentPinController, RecentPinOptions, RecentPinToggleResult, RecentSitesStoreApi };
