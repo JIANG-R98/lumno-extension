@@ -10,6 +10,7 @@ const { toPreviewFrameUrl } = require('../../src/shared/link-preview-frame-url.j
 // into one.
 
 const flush = () => new Promise((resolve) => setImmediate(resolve));
+const TEST_EXTENSION_ID = 'lumno-test-extension';
 
 function createChromeMock(options) {
   const config = options || {};
@@ -466,15 +467,24 @@ function loadTrigger(options) {
   const sent = [];
   const listeners = [];
   const originalAdd = window.addEventListener.bind(window);
+  const originalRemove = window.removeEventListener.bind(window);
   window.addEventListener = (type, listener, listenerOptions) => {
     listeners.push({ type, listener });
     originalAdd(type, listener, listenerOptions);
+  };
+  window.removeEventListener = (type, listener, listenerOptions) => {
+    const index = listeners.findIndex((entry) => entry.type === type && entry.listener === listener);
+    if (index >= 0) {
+      listeners.splice(index, 1);
+    }
+    originalRemove(type, listener, listenerOptions);
   };
   if (config.name) {
     window.name = config.name;
   }
   window.chrome = {
     runtime: {
+      id: TEST_EXTENSION_ID,
       lastError: null,
       sendMessage(message, callback) {
         sent.push(message);
@@ -535,7 +545,7 @@ function loadTrigger(options) {
     });
     return prevented;
   }
-  return { window, sent, press, claimed };
+  return { window, sent, press, claimed, listeners };
 }
 
 function testShiftClickOpensPreview() {
@@ -549,6 +559,17 @@ function testShiftClickOpensPreview() {
     { action: 'linkPreviewPrepare', url: 'https://other.example/page' },
     { action: 'linkPreviewOpen', url: 'https://other.example/page', origin: { x: 30, y: 40 } }
   ]);
+}
+
+function testOrphanedTriggerStepsAside() {
+  const page = loadTrigger();
+  // What Chrome leaves to a content script whose extension was reloaded.
+  delete page.window.chrome.runtime.id;
+  assert.deepStrictEqual(page.press('out'), [], 'a trigger whose extension went away takes no press');
+  assert.deepStrictEqual(page.claimed, [],
+    'so the trigger injected after the reload, which listens after it, gets the press');
+  assert.deepStrictEqual(page.sent, []);
+  assert.deepStrictEqual(page.listeners, [], 'and it removes its listeners for good');
 }
 
 async function testPressReleasedElsewhereCancels() {
@@ -715,7 +736,7 @@ function testPreviewFrameReportsIn() {
   // JSDOM does not carry the frame's name attribute into its window.
   frameWindow.name = 'lumno-link-preview';
   const sent = [];
-  frameWindow.chrome = { runtime: { lastError: null, sendMessage: (message) => sent.push(message) } };
+  frameWindow.chrome = { runtime: { id: TEST_EXTENSION_ID, lastError: null, sendMessage: (message) => sent.push(message) } };
   frameWindow.eval(moduleScript('src/content/link-preview-trigger.js'));
   frameWindow.dispatchEvent(new frameWindow.KeyboardEvent('keydown', { key: 'Escape' }));
   assert.strictEqual(parentMessages[0].source, 'lumno-link-preview-frame');
@@ -753,7 +774,7 @@ function testShiftClickInsidePreviewStaysInPreview() {
   frameWindow.name = 'lumno-link-preview';
   frameWindow.document.body.innerHTML = '<a id="next" href="https://docs.example.test/next">next</a>';
   const sent = [];
-  frameWindow.chrome = { runtime: { lastError: null, sendMessage: (message) => sent.push(message) } };
+  frameWindow.chrome = { runtime: { id: TEST_EXTENSION_ID, lastError: null, sendMessage: (message) => sent.push(message) } };
   const listeners = [];
   const originalAdd = frameWindow.addEventListener.bind(frameWindow);
   frameWindow.addEventListener = (type, listener, options) => {
@@ -797,7 +818,7 @@ async function testPreviewFrameReportsBackground() {
   dom.window.postMessage = (message) => parentMessages.push(message);
   const frameWindow = dom.window.document.querySelector('iframe').contentWindow;
   frameWindow.name = 'lumno-link-preview';
-  frameWindow.chrome = { runtime: { lastError: null, sendMessage() {} } };
+  frameWindow.chrome = { runtime: { id: TEST_EXTENSION_ID, lastError: null, sendMessage() {} } };
   frameWindow.document.body.style.backgroundColor = 'rgb(13, 17, 23)';
   frameWindow.eval(moduleScript('src/content/link-preview-trigger.js'));
   const backgrounds = () => parentMessages.filter((message) => message.type === 'background').map((message) => message.color);
@@ -822,7 +843,7 @@ async function testPreviewFrameEscape() {
   dom.window.postMessage = (message) => parentMessages.push(message);
   const frameWindow = dom.window.document.querySelector('iframe').contentWindow;
   frameWindow.name = 'lumno-link-preview';
-  frameWindow.chrome = { runtime: { lastError: null, sendMessage() {} } };
+  frameWindow.chrome = { runtime: { id: TEST_EXTENSION_ID, lastError: null, sendMessage() {} } };
   const keydownListeners = [];
   const originalAdd = frameWindow.addEventListener.bind(frameWindow);
   frameWindow.addEventListener = (type, listener, options) => {
@@ -869,6 +890,7 @@ async function testPreviewFrameEscape() {
   await testReleasedPressCancels();
   await testOpenPreviewOutlivesWorker();
   testShiftClickOpensPreview();
+  testOrphanedTriggerStepsAside();
   await testPressReleasedElsewhereCancels();
   testOtherPressesKeepDefault();
   testShownAddressOpensPreview();

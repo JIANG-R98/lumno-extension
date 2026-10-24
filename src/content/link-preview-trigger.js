@@ -20,9 +20,34 @@ import { toPreviewFrameUrl } from '../shared/link-preview-frame-url.js';
   }
 
   const cleanups = [];
+  function cleanup() {
+    cleanups.splice(0).forEach((run) => run());
+  }
+
+  // A tab left open across an extension reload or update keeps this script
+  // from the old extension running next to the one injected after it, in a
+  // separate isolated world the new one cannot reach through window. Its
+  // listeners come first and would keep claiming presses whose messages no
+  // longer reach the background, so the first event it sees after its
+  // extension went away removes them all and is left alone.
+  function isExtensionAlive() {
+    try {
+      return Boolean(chrome.runtime && chrome.runtime.id);
+    } catch (error) {
+      return false;
+    }
+  }
+
   function listen(target, type, listener, options) {
-    target.addEventListener(type, listener, options);
-    cleanups.push(() => target.removeEventListener(type, listener, options));
+    const guarded = (event) => {
+      if (!isExtensionAlive()) {
+        cleanup();
+        return;
+      }
+      listener(event);
+    };
+    target.addEventListener(type, guarded, options);
+    cleanups.push(() => target.removeEventListener(type, guarded, options));
   }
 
   function isPreviewFrame() {
@@ -610,9 +635,5 @@ import { toPreviewFrameUrl } from '../shared/link-preview-frame-url.js';
     setupTrigger(PREVIEW_HANDLERS);
   }
 
-  window[RUNTIME_KEY] = {
-    cleanup() {
-      cleanups.splice(0).forEach((cleanup) => cleanup());
-    }
-  };
+  window[RUNTIME_KEY] = { cleanup };
 })();
