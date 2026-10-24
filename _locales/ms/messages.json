@@ -2765,6 +2765,12 @@
   "settings_tab_switcher_desc": {
     "message": "Beralih dengan pantas antara tab terbaharu; {shortcut} secara lalai, boleh disesuaikan"
   },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "Guna {shortcut}"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "Mengenai {shortcut}"
+  },
   "slash_command_empty": {
     "message": "Tiada perintah yang sepadan"
   },

@@ -2765,6 +2765,12 @@
   "settings_tab_switcher_desc": {
     "message": "Бързо превключване между скорошните раздели; по подразбиране {shortcut}, може да се персонализира"
   },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "Използване на {shortcut}"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "Относно {shortcut}"
+  },
   "slash_command_empty": {
     "message": "Няма съвпадащи команди"
   },

@@ -2765,6 +2765,12 @@
   "settings_tab_switcher_desc": {
     "message": "Växla snabbt mellan senaste flikar; {shortcut} som standard, kan anpassas"
   },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "Använd {shortcut}"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "Om {shortcut}"
+  },
   "slash_command_empty": {
     "message": "Inga matchande kommandon"
   },

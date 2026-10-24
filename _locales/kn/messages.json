@@ -2765,6 +2765,12 @@
   "settings_tab_switcher_desc": {
     "message": "ಇತ್ತೀಚಿನ ಟ್ಯಾಬ್\u200cಗಳ ನಡುವೆ ತ್ವರಿತವಾಗಿ ಬದಲಿಸಿ; ಡೀಫಾಲ್ಟ್ ಆಗಿ {shortcut}, ಕಸ್ಟಮೈಸ್ ಮಾಡಬಹುದು"
   },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "{shortcut} ಬಳಸಿ"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "{shortcut} ಕುರಿತು"
+  },
   "slash_command_empty": {
     "message": "ಹೊಂದಾಣಿಕೆಯ ಕಮಾಂಡ್\u200cಗಳಿಲ್ಲ"
   },

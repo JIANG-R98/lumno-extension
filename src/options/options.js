@@ -1434,6 +1434,12 @@ import * as LumnoWebDavOptions from './webdav-options.js';
     shortcutReferenceController,
     getMessage,
     formatTemplate,
+    getHelpUrl: (slug, anchor) => COMMUNITY_LINKS.getHelpUrl(
+      optionsState.currentLanguageMode === 'system' ? getSystemLocale() : normalizeLocale(optionsState.currentLanguageMode),
+      slug,
+      anchor
+    ),
+    tabSwitcherCtrlTabLink: document.getElementById('_x_extension_tab_switcher_ctrl_tab_link_2026_unique_'),
     optionsState
   });
 

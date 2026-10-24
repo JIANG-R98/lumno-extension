@@ -2765,6 +2765,12 @@
   "settings_tab_switcher_desc": {
     "message": "Canvia ràpidament entre les pestanyes recents; {shortcut} per defecte, personalitzable"
   },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "Fes servir {shortcut}"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "Quant a {shortcut}"
+  },
   "slash_command_empty": {
     "message": "No hi ha cap ordre coincident"
   },

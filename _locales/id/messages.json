@@ -2765,6 +2765,12 @@
   "settings_tab_switcher_desc": {
     "message": "Beralih cepat antar-tab terbaru; {shortcut} secara default, dapat disesuaikan"
   },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "Pakai {shortcut}"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "Tentang {shortcut}"
+  },
   "slash_command_empty": {
     "message": "Tidak ada perintah yang cocok"
   },

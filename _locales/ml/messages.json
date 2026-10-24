@@ -2765,6 +2765,12 @@
   "settings_tab_switcher_desc": {
     "message": "സമീപകാല ടാബുകൾക്കിടയിൽ വേഗം മാറുക; ഡിഫോൾട്ടായി {shortcut}, മാറ്റാവുന്നതാണ്"
   },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "{shortcut} ഉപയോഗിക്കുക"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "{shortcut} സംബന്ധിച്ച്"
+  },
   "slash_command_empty": {
     "message": "പൊരുത്തപ്പെടുന്ന കമാൻഡുകളൊന്നുമില്ല"
   },

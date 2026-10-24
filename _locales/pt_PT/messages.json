@@ -2765,6 +2765,12 @@
   "settings_tab_switcher_desc": {
     "message": "Mude rapidamente entre separadores recentes; {shortcut} por predefinição, personalizável"
   },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "Usar {shortcut}"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "Sobre {shortcut}"
+  },
   "slash_command_empty": {
     "message": "Nenhum comando correspondente"
   },

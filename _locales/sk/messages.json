@@ -2765,6 +2765,12 @@
   "settings_tab_switcher_desc": {
     "message": "Rýchle prepínanie medzi nedávnymi kartami; predvolene {shortcut}, dá sa prispôsobiť"
   },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "Použiť {shortcut}"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "O skratke {shortcut}"
+  },
   "slash_command_empty": {
     "message": "Žiadne zodpovedajúce príkazy"
   },

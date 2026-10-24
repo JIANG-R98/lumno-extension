@@ -2765,6 +2765,12 @@
   "settings_tab_switcher_desc": {
     "message": "Hitro preklapljanje med nedavnimi zavihki; privzeto {shortcut}, prilagodljivo"
   },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "Uporabi {shortcut}"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "O bližnjici {shortcut}"
+  },
   "slash_command_empty": {
     "message": "Ni ustreznih ukazov"
   },

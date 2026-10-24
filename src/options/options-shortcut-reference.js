@@ -7,7 +7,9 @@ function createShortcutReference(deps) {
     shortcutReferenceList,
     shortcutReferenceController,
     getMessage,
-    formatTemplate
+    formatTemplate,
+    getHelpUrl,
+    tabSwitcherCtrlTabLink
   } = deps;
 
   // The page state object shared with options.js and the other modules.
@@ -29,13 +31,43 @@ function createShortcutReference(deps) {
     });
   }
 
+  function isCtrlTabShortcut(shortcut) {
+    const value = String(shortcut || '').replace(/\s+/g, '').toLowerCase();
+    return value === '⌃⇥' || value === 'ctrl+tab' || value === 'macctrl+tab';
+  }
+
+  // The browser's shortcuts page cannot take Ctrl+Tab, so the tab switcher row
+  // links to the help center's console snippet; once bound, it links there as
+  // the place to read how to change it back.
+  function renderTabSwitcherCtrlTabLink(groups) {
+    if (!tabSwitcherCtrlTabLink || typeof getHelpUrl !== 'function') {
+      return;
+    }
+    const item = groups
+      .flatMap((group) => group.items || [])
+      .find((entry) => entry && entry.commandName === 'show-tab-switcher');
+    const bound = isCtrlTabShortcut(item && item.shortcut);
+    const label = formatTemplate(bound
+      ? getMessage('settings_tab_switcher_ctrl_tab_guide', '{shortcut} 说明')
+      : getMessage('settings_tab_switcher_ctrl_tab_link', '改用 {shortcut}'), {
+      shortcut: optionsState.isMacPlatform ? '⌃Tab' : 'Ctrl+Tab'
+    });
+    tabSwitcherCtrlTabLink.href = getHelpUrl('tab-switcher', 'ctrl-tab');
+    tabSwitcherCtrlTabLink.setAttribute('data-bound', bound ? 'true' : 'false');
+    const labelNode = tabSwitcherCtrlTabLink.querySelector('.x-lumno-link-button__label');
+    if (labelNode) {
+      labelNode.textContent = label;
+    }
+    tabSwitcherCtrlTabLink.hidden = false;
+  }
+
   function getShortcutReferenceParts(shortcut) {
     const value = String(shortcut || '').trim();
     if (!value) {
       return [];
     }
     return value
-      .split(/\s*\/\s*/)
+      .split(/\s+\/\s+/)
       .map(getShortcutReferencePartLabel)
       .filter(Boolean);
   }
@@ -93,6 +125,7 @@ function createShortcutReference(deps) {
         platform
       });
       renderShortcutReferenceGroups(groups);
+      renderTabSwitcherCtrlTabLink(groups);
     };
     if (!chrome || !chrome.commands || typeof chrome.commands.getAll !== 'function') {
       renderWithCommands(null);

@@ -2780,6 +2780,12 @@
   "settings_tab_switcher_desc": {
     "message": "快速切换最近标签页，默认 {shortcut}，可自定义"
   },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "改用 {shortcut}"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "{shortcut} 说明"
+  },
   "settings_tab_switcher_current_window_only_title": {
     "message": "只显示当前窗口的标签页"
   },

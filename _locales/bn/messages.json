@@ -2765,6 +2765,12 @@
   "settings_tab_switcher_desc": {
     "message": "সাম্প্রতিক ট্যাবগুলোর মধ্যে দ্রুত যান; ডিফল্টভাবে {shortcut}, পরিবর্তনযোগ্য"
   },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "{shortcut} ব্যবহার করুন"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "{shortcut} সম্পর্কে"
+  },
   "slash_command_empty": {
     "message": "মিলে যাওয়া কোনো কমান্ড নেই"
   },

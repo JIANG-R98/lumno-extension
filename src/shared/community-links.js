@@ -169,9 +169,10 @@ function getCommunityUrl(links, locale) {
     : (source.x || FALLBACK_LINKS.x);
 }
 
-function getHelpUrl(locale, slug) {
+function getHelpUrl(locale, slug, anchor) {
   const page = String(slug || '').trim().replace(/^\/+|\/+$/g, '') || HELP_DEFAULT_SLUG;
-  return `${WEB_ORIGIN}${HELP_LOCALE_PREFIXES[normalizeWebLocale(locale)]}/help/${page}/`;
+  const section = String(anchor || '').trim().replace(/^#/, '');
+  return `${WEB_ORIGIN}${HELP_LOCALE_PREFIXES[normalizeWebLocale(locale)]}/help/${page}/${section ? `#${section}` : ''}`;
 }
 
 // The index behind the help center's search box, in the reader's language.

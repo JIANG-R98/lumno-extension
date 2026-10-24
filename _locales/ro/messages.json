@@ -2765,6 +2765,12 @@
   "settings_tab_switcher_desc": {
     "message": "Comutați rapid între filele recente; implicit {shortcut}, personalizabil"
   },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "Folosește {shortcut}"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "Despre {shortcut}"
+  },
   "slash_command_empty": {
     "message": "Nicio comandă potrivită"
   },

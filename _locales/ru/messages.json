@@ -2765,6 +2765,12 @@
   "settings_tab_switcher_desc": {
     "message": "Быстрый переход между недавними вкладками; по умолчанию {shortcut}, можно изменить"
   },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "Использовать {shortcut}"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "О сочетании {shortcut}"
+  },
   "slash_command_empty": {
     "message": "Команды не найдены"
   },

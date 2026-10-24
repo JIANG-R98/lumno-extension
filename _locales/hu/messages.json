@@ -2765,6 +2765,12 @@
   "settings_tab_switcher_desc": {
     "message": "Gyors váltás a legutóbbi lapok között; alapértelmezés: {shortcut}, testreszabható"
   },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "{shortcut} használata"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "A(z) {shortcut} leírása"
+  },
   "slash_command_empty": {
     "message": "Nincs egyező parancs"
   },

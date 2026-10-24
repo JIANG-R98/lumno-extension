@@ -2765,6 +2765,12 @@
   "settings_tab_switcher_desc": {
     "message": "Chuyển nhanh giữa các thẻ gần đây; mặc định là {shortcut}, có thể tùy chỉnh"
   },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "Dùng {shortcut}"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "Về {shortcut}"
+  },
   "slash_command_empty": {
     "message": "Không có lệnh phù hợp"
   },

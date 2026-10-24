@@ -2765,6 +2765,12 @@
   "settings_tab_switcher_desc": {
     "message": "สลับระหว่างแท็บล่าสุดได้อย่างรวดเร็ว ค่าเริ่มต้นคือ {shortcut} และปรับแต่งได้"
   },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "ใช้ {shortcut}"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "เกี่ยวกับ {shortcut}"
+  },
   "slash_command_empty": {
     "message": "ไม่พบคำสั่งที่ตรงกัน"
   },

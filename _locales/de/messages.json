@@ -2765,6 +2765,12 @@
   "settings_tab_switcher_desc": {
     "message": "Schnell zwischen den letzten Tabs wechseln; standardmäßig {shortcut}, anpassbar"
   },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "{shortcut} verwenden"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "Über {shortcut}"
+  },
   "slash_command_empty": {
     "message": "Keine passenden Befehle"
   },

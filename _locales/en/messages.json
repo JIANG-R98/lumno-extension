@@ -2780,6 +2780,12 @@
   "settings_tab_switcher_desc": {
     "message": "Quickly switch between recent tabs; {shortcut} by default, customizable"
   },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "Use {shortcut} instead"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "About {shortcut}"
+  },
   "settings_tab_switcher_current_window_only_title": {
     "message": "Show only tabs in the current window"
   },

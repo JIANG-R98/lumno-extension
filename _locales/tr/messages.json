@@ -2765,6 +2765,12 @@
   "settings_tab_switcher_desc": {
     "message": "Son sekmeler arasında hızla geçiş yapın; varsayılan {shortcut}, özelleştirilebilir"
   },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "{shortcut} kullan"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "{shortcut} hakkında"
+  },
   "slash_command_empty": {
     "message": "Eşleşen komut yok"
   },

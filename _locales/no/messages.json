@@ -2765,6 +2765,12 @@
   "settings_tab_switcher_desc": {
     "message": "Bytt raskt mellom nylige faner – {shortcut} som standard, kan tilpasses"
   },
+  "settings_tab_switcher_ctrl_tab_link": {
+    "message": "Bruk {shortcut}"
+  },
+  "settings_tab_switcher_ctrl_tab_guide": {
+    "message": "Om {shortcut}"
+  },
   "slash_command_empty": {
     "message": "Ingen samsvarende kommandoer"
   },
