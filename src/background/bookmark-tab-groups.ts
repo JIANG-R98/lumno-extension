@@ -13,7 +13,7 @@ interface BookmarkTabGroupChromeApi {
   bookmarks?: { getSubTree?(id: string, callback: (nodes: BookmarkNodeLike[]) => void): void };
   tabs?: {
     create?(createProperties: chrome.tabs.CreateProperties, callback: (tab: chrome.tabs.Tab) => void): void;
-    group?(options: { tabIds: number[] }, callback: (groupId: number) => void): void;
+    group?(options: { tabIds: [number, ...number[]] }, callback: (groupId: number) => void): void;
   };
   tabGroups?: { update?(groupId: number, updateProperties: { title: string }, callback: () => void): void };
   runtime?: { lastError?: { message?: string } | null };
@@ -24,7 +24,7 @@ interface ReadyChromeApi extends BookmarkTabGroupChromeApi {
   bookmarks: { getSubTree(id: string, callback: (nodes: BookmarkNodeLike[]) => void): void };
   tabs: {
     create(createProperties: chrome.tabs.CreateProperties, callback: (tab: chrome.tabs.Tab) => void): void;
-    group(options: { tabIds: number[] }, callback: (groupId: number) => void): void;
+    group(options: { tabIds: [number, ...number[]] }, callback: (groupId: number) => void): void;
   };
   tabGroups: { update(groupId: number, updateProperties: { title: string }, callback: () => void): void };
 }
@@ -110,7 +110,7 @@ function createBackgroundTab(chromeApi: ReadyChromeApi, createProperties: chrome
   });
 }
 
-function createTabGroup(chromeApi: ReadyChromeApi, tabIds: number[]): Promise<number> {
+function createTabGroup(chromeApi: ReadyChromeApi, tabIds: [number, ...number[]]): Promise<number> {
   return new Promise((resolve, reject) => {
     try {
       chromeApi.tabs.group({ tabIds }, (groupId) => {
@@ -220,7 +220,8 @@ async function openBookmarkFolderInNewTabGroup(
 
   const openedCount = openedTabs.length;
   const failedCount = requestedCount - openedCount;
-  if (!openedCount) {
+  const [firstOpenedTab, ...otherOpenedTabs] = openedTabs;
+  if (!firstOpenedTab) {
     return createResult({
       requestedCount,
       failedCount,
@@ -232,7 +233,7 @@ async function openBookmarkFolderInNewTabGroup(
   try {
     groupId = await createTabGroup(
       chromeApi,
-      openedTabs.map((tab) => tab.id)
+      [firstOpenedTab.id, ...otherOpenedTabs.map((tab) => tab.id)]
     );
     const folderTitle = String(options.title || folderNode.title || '').trim();
     await updateTabGroupTitle(chromeApi, groupId, folderTitle);

@@ -4,7 +4,7 @@
 // file.
 import '../domain/blacklist-utils';
 import * as LumnoUrlGuards from '../platform/url-guards';
-import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
+import '../domain/favicon/favicon-utils';
 import '../domain/favicon/shortcut-favicon';
 import '../domain/shortcut-key-matcher';
 import '../shared/favicon/favicon-theme';
@@ -17,7 +17,7 @@ import * as LumnoSettingsMigration from '../platform/settings-migration';
 import * as LumnoBookmarkFolderBindings from '../platform/bookmark-folder-bindings';
 import '../domain/shortcuts-store';
 import '../domain/site-display-name';
-import * as LumnoPageShortcutMenu from './page-shortcut-menu';
+import './page-shortcut-menu';
 import '../shared/wallpaper-local-store';
 import '../domain/webdav-contract';
 import * as LumnoWebDavClient from './webdav-client';
@@ -63,11 +63,12 @@ import * as LumnoWebAppearance from './web-appearance';
 import './pip-ownership';
 import '../shared/pip-main-world';
 import './recent-tab-switcher';
-import * as LumnoProgressMatch from '../domain/progress-match';
-import * as LumnoProgressHistory from '../domain/progress-history';
-import * as LumnoProgressTracker from './progress-tracker';
-import * as LumnoNewtabRecentSitesStore from '../domain/recent-sites-store';
-import * as LumnoPopupRecentPin from './popup-recent-pin';
+import '../domain/progress-match';
+import '../domain/progress-history';
+import './progress-tracker';
+import '../domain/recent-sites-store';
+import './popup-recent-pin';
+import { pageShortcutMenuController, startProgressTracking } from './worker-controllers';
 import './overlay-loading-lifecycle';
 import * as DEV_EXTENSION_STARTUP from './dev-extension-startup';
 import {
@@ -153,16 +154,13 @@ import {
   LOCALE_AND_PERMISSION_MESSAGE_HANDLERS,
   POPUP_MESSAGE_HANDLERS,
   SHORTCUT_MESSAGE_HANDLERS,
-  TAB_MESSAGE_HANDLERS,
-  loadLocaleMessages
+  TAB_MESSAGE_HANDLERS
 } from './message-handlers-service';
 import {
   DOCUMENT_PIP_ENABLED_STORAGE_KEY,
   FAVICON_ENHANCED_FETCH_ENABLED_STORAGE_KEY,
   FAVICON_REQUEST_BLACKLIST_STORAGE_KEY,
-  PINNED_RECENT_SITES_STORAGE_KEY,
   PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY,
-  PROGRESS_TRACKING_ENABLED_STORAGE_KEY,
   RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY,
   RESTRICTED_ACTION_STORAGE_KEY,
   SEARCH_BLACKLIST_STORAGE_KEY,
@@ -170,8 +168,7 @@ import {
   SELECTION_QUICK_ACTIONS_ENABLED_STORAGE_KEY,
   SITE_SEARCH_DISABLED_STORAGE_KEY,
   SITE_SEARCH_STORAGE_KEY,
-  TAB_SWITCHER_ENABLED_STORAGE_KEY,
-  THEME_STORAGE_KEY
+  TAB_SWITCHER_ENABLED_STORAGE_KEY
 } from '../domain/settings';
 import {
   PINYIN_PRO_SCRIPT_PATH,
@@ -180,10 +177,8 @@ import {
   SHOW_SEARCH_PREFILL_V_COMMAND_NAME,
   SHOW_TAB_SWITCHER_COMMAND_NAME,
   isPrimaryStorageAreaName,
-  localStorageArea,
   logHotkeyDebug,
   markBackgroundSettingsLoaded,
-  normalizeHost,
   providerStorageRuntime,
   setDocumentPipEnabled,
   setRestrictedAction,
@@ -202,29 +197,7 @@ if (typeof globalThis.addEventListener === 'function') {
 const openOnboardingPage = BACKGROUND_PAGES.openOnboardingPage;
 const shouldOpenOnboardingForUpdate = BACKGROUND_PAGES.shouldOpenOnboardingForUpdate;
 
-// Labs: tracked pinned cards follow the episode or chapter the person is on.
-export let progressTrackingEnabled = false;
-export const progressTracker = LumnoProgressTracker.createProgressTracker({
-  chromeApi: chrome,
-  progressMatch: LumnoProgressMatch,
-  progressHistory: LumnoProgressHistory,
-  getPinnedArea: () => storageArea,
-  historyArea: localStorageArea,
-  pinnedKey: PINNED_RECENT_SITES_STORAGE_KEY,
-  isEnabled: () => progressTrackingEnabled
-});
-progressTracker.attach();
-storageArea.get([PROGRESS_TRACKING_ENABLED_STORAGE_KEY], (result) => {
-  progressTrackingEnabled = LumnoSettings.normalizeProgressTrackingEnabled(
-    result && result[PROGRESS_TRACKING_ENABLED_STORAGE_KEY]
-  );
-});
-chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (!isPrimaryStorageAreaName(areaName) || !changes[PROGRESS_TRACKING_ENABLED_STORAGE_KEY]) return;
-  progressTrackingEnabled = LumnoSettings.normalizeProgressTrackingEnabled(
-    changes[PROGRESS_TRACKING_ENABLED_STORAGE_KEY].newValue
-  );
-});
+startProgressTracking();
 // The settings mirrors in worker-context.ts are re-read from storage on every
 // wake here, and kept current by the storage.onChanged listener further down.
 // The tab switcher and pinned-tab recovery services keep their own.
@@ -618,26 +591,7 @@ function handleWebDavMessage(request, sender, sendResponse) {
 }
 
 // The page context menu item that adds the page to the New Tab shortcuts.
-export const pageShortcutMenuController = providerStorageRuntime && chrome.contextMenus
-  ? LumnoPageShortcutMenu.createController({ chrome, provider: providerStorageRuntime,
-    loadLocaleMessages, themeStorageKey: THEME_STORAGE_KEY }) : null;
 if (pageShortcutMenuController) pageShortcutMenuController.start();
-
-// The popup's pin among the New Tab's recent sites; episodes and chapters
-// start tracked while progress tracking (Labs) is on.
-export const popupRecentPin = LumnoPopupRecentPin.createController({
-  store: LumnoNewtabRecentSitesStore,
-  key: PINNED_RECENT_SITES_STORAGE_KEY,
-  storeOptions: {
-    normalizeHost,
-    getCanonicalPageUrlForFavicon: FAVICON_UTILS.getCanonicalPageUrlForFavicon,
-    maxPinned: 3
-  },
-  getArea: () => storageArea,
-  ready: () => (providerStorageRuntime ? providerStorageRuntime.ready : Promise.resolve()),
-  probeSeries: (url) => (progressTrackingEnabled ? progressTracker.probeSeries(url) : Promise.resolve(false)),
-  createProgressId: LumnoProgressHistory.createProgressId
-});
 
 // Link preview: Shift+click opens a link in a small window over the page.
 const linkPreviewService = LumnoLinkPreview.createLinkPreviewService({ chromeApi: chrome });

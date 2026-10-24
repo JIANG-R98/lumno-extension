@@ -1,18 +1,12 @@
-// @ts-nocheck
 // Message handlers for the extension's own pages and the overlay: tab actions,
 // shortcuts, locale messages and permissions, extension page navigation,
-// favicons, and the toolbar popup. background.js combines them with the feature
+// favicons, and the toolbar popup. background.ts combines them with the feature
 // handlers into one router.
 //
 // A module of the service worker; background.ts imports it before its own code
-// runs. Its functions use other services' bindings and background.ts's
-// controllers (the progress tracker, the page shortcut menu, the popup's
-// recent pin) only when they run, never while this file loads, because the
-// services import one another and background.ts has not initialized its own
-// top-level bindings yet at that point.
+// runs.
 
 import * as BOOKMARK_TAB_GROUPS from './bookmark-tab-groups';
-import * as SETTINGS from '../domain/settings';
 import * as SHORTCUT_KEY_MATCHER from '../domain/shortcut-key-matcher';
 import {
   getExtensionDetailsUrl,
@@ -24,13 +18,13 @@ import {
   openSiteSearchOptionsPage
 } from './extension-pages';
 import { checkFileSchemeAccess, swapNewtabForFocus } from './newtab-fallback';
-import { SHOW_SEARCH_COMMAND_NAME, loadShortcutRules, logHotkeyDebug } from './worker-context';
+import { SHOW_SEARCH_COMMAND_NAME, loadLocaleMessages, loadShortcutRules, logHotkeyDebug } from './worker-context';
 import {
+  isProgressTrackingEnabled,
   pageShortcutMenuController,
   popupRecentPin,
-  progressTracker,
-  progressTrackingEnabled
-} from './background';
+  progressTracker
+} from './worker-controllers';
 import {
   focusWindowAndActivateTab,
   handleTabSwitcherShortcutModifierReleased
@@ -75,9 +69,55 @@ import {
   triggerShowSearchForTab
 } from './command-service';
 import { openDocumentPipPickerOnTab } from './pip-service';
+import type { HandlersFor } from './message-router';
+import type { LocaleMessage, OpenDisposition } from '../domain/messages';
+
+type TabAction =
+  | 'swapNewtabForFocus' | 'switchToTab' | 'closeTabFromTabSwitcher' | 'notifyOverlayClosed'
+  | 'notifyTopFrameDocumentStarted' | 'updateOverlayLoadingSession' | 'getTabsForOverlay' | 'trackSearchTab'
+  | 'closeOtherTabsForOverlay';
+type ShortcutAction =
+  | 'getShowSearchShortcut' | 'getCopyCurrentUrlCommandShortcut' | 'copyCurrentPageUrl'
+  | 'triggerShowSearchFromPageHotkey' | 'notifyTabSwitcherShortcutModifierReleased' | 'getShortcutRules';
+type LocaleAction = 'getLocaleMessages' | 'getFileSchemeAccessStatus';
+type ExtensionPageAction =
+  | 'probeProgressSeries' | 'openOptionsPage' | 'openOnboardingPage' | 'openReleasePage'
+  | 'openExtensionShortcutsPage' | 'openSiteSearchOptionsPage' | 'openBookmarkManager'
+  | 'openBookmarkFolderInNewTabGroup' | 'createTab' | 'openNewTab' | 'openExtensionDetailsPage';
+type FaviconAction = 'resolveFaviconCandidates' | 'getFaviconData' | 'getShortcutFaviconData' | 'resolveSiteThemeColor';
+type PopupAction =
+  | 'popupOpenDocumentPipPicker' | 'popupShowSearch' | 'popupShowPageToast' | 'popupAddPageShortcut'
+  | 'popupGetRecentPin' | 'popupToggleRecentPin';
+
+function readDisposition(value: unknown): OpenDisposition | undefined {
+  return value === 'currentTab' || value === 'newTab' || value === 'backgroundTab' ? value : undefined;
+}
+
+function readString(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+// The keys a page saw pressed, with only the fields of the expected types.
+function readKeyDescriptor(value: unknown): Partial<SHORTCUT_KEY_MATCHER.KeyDescriptor> | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+  const fields: object = value;
+  const descriptor: Partial<SHORTCUT_KEY_MATCHER.KeyDescriptor> = {};
+  if ('ctrlKey' in fields && typeof fields.ctrlKey === 'boolean') descriptor.ctrlKey = fields.ctrlKey;
+  if ('altKey' in fields && typeof fields.altKey === 'boolean') descriptor.altKey = fields.altKey;
+  if ('shiftKey' in fields && typeof fields.shiftKey === 'boolean') descriptor.shiftKey = fields.shiftKey;
+  if ('metaKey' in fields && typeof fields.metaKey === 'boolean') descriptor.metaKey = fields.metaKey;
+  if ('key' in fields && typeof fields.key === 'string') descriptor.key = fields.key;
+  return descriptor;
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
 
 // Tabs, overlay lifecycle and tab visibility.
-export const TAB_MESSAGE_HANDLERS = Object.freeze({
+export const TAB_MESSAGE_HANDLERS: HandlersFor<TabAction> = Object.freeze({
   swapNewtabForFocus(request, sender, sendResponse) {
     swapNewtabForFocus(sender && sender.tab ? sender.tab : null, sender && sender.url, (result) => {
       sendResponse(result);
@@ -85,11 +125,14 @@ export const TAB_MESSAGE_HANDLERS = Object.freeze({
     return true;
   },
   switchToTab(request, sender, sendResponse) {
-    if (typeof request.tabId === 'number') {
-      recordTabSwitchEvent(request.tabId);
+    const tabId = request.tabId;
+    if (typeof tabId !== 'number') {
+      sendResponse({ ok: false, reason: 'invalid-tab' });
+      return;
     }
+    recordTabSwitchEvent(tabId);
     focusWindowAndActivateTab(
-      request.tabId,
+      tabId,
       typeof request.windowId === 'number' ? request.windowId : null,
       (result) => {
         sendResponse(result || { ok: false });
@@ -114,8 +157,9 @@ export const TAB_MESSAGE_HANDLERS = Object.freeze({
         return;
       }
       chrome.tabs.remove(tabId, () => {
-        if (chrome.runtime.lastError) {
-          sendResponse({ ok: false, reason: chrome.runtime.lastError.message || 'remove-failed' });
+        const lastError = chrome.runtime.lastError;
+        if (lastError) {
+          sendResponse({ ok: false, reason: lastError.message || 'remove-failed' });
           return;
         }
         sendResponse({ ok: true });
@@ -152,7 +196,7 @@ export const TAB_MESSAGE_HANDLERS = Object.freeze({
           : requestedCurrentTabId;
         chrome.tabs.query({}, (tabs) => {
           const normalizedTabs = (Array.isArray(tabs) ? tabs : [])
-            .filter((tab) => tab && tab.incognito !== true)
+            .filter((tab): tab is chrome.tabs.Tab & { id: number } => Boolean(tab) && tab.incognito !== true && typeof tab.id === 'number')
             .map((tab) => {
               const resolvedUrl = getResolvedTabUrl(tab);
               return {
@@ -187,20 +231,22 @@ export const TAB_MESSAGE_HANDLERS = Object.freeze({
       sendResponse({ ok: false, reason: 'invalid-sender' });
       return;
     }
+    const senderTabId = senderTab.id;
     chrome.tabs.query({ windowId: senderTab.windowId }, (tabs) => {
-      if (chrome.runtime && chrome.runtime.lastError) {
-        sendResponse({ ok: false, reason: chrome.runtime.lastError.message || 'query-failed' });
+      const queryError = chrome.runtime && chrome.runtime.lastError;
+      if (queryError) {
+        sendResponse({ ok: false, reason: queryError.message || 'query-failed' });
         return;
       }
       const ungroupedId = chrome && chrome.tabGroups && typeof chrome.tabGroups.TAB_GROUP_ID_NONE === 'number'
         ? chrome.tabGroups.TAB_GROUP_ID_NONE
         : -1;
       const toCloseIds = (Array.isArray(tabs) ? tabs : [])
-        .filter((tab) => {
+        .filter((tab): tab is chrome.tabs.Tab & { id: number } => {
           if (!tab || typeof tab.id !== 'number') {
             return false;
           }
-          if (tab.id === senderTab.id) {
+          if (tab.id === senderTabId) {
             return false;
           }
           if (tab.pinned) {
@@ -217,8 +263,9 @@ export const TAB_MESSAGE_HANDLERS = Object.freeze({
         return;
       }
       chrome.tabs.remove(toCloseIds, () => {
-        if (chrome.runtime && chrome.runtime.lastError) {
-          sendResponse({ ok: false, reason: chrome.runtime.lastError.message || 'remove-failed' });
+        const removeError = chrome.runtime && chrome.runtime.lastError;
+        if (removeError) {
+          sendResponse({ ok: false, reason: removeError.message || 'remove-failed' });
           return;
         }
         sendResponse({ ok: true, closedCount: toCloseIds.length });
@@ -229,7 +276,7 @@ export const TAB_MESSAGE_HANDLERS = Object.freeze({
 });
 
 // Configured shortcuts and page hotkeys.
-export const SHORTCUT_MESSAGE_HANDLERS = Object.freeze({
+export const SHORTCUT_MESSAGE_HANDLERS: HandlersFor<ShortcutAction> = Object.freeze({
   getShowSearchShortcut(request, sender, sendResponse) {
     getConfiguredFallbackShortcut((shortcut) => {
       sendResponse({ shortcut: shortcut || '' });
@@ -254,7 +301,7 @@ export const SHORTCUT_MESSAGE_HANDLERS = Object.freeze({
   // from the browser command, so it gets the command's no-tab fallback here.
   triggerShowSearchFromPageHotkey(request, sender, sendResponse) {
     const senderTab = sender && sender.tab && typeof sender.tab.id === 'number' ? sender.tab : null;
-    const triggerVerifiedPageHotkey = (shortcut) => {
+    const triggerVerifiedPageHotkey = (shortcut: string): void => {
       const shouldPrefillCurrentUrl = Boolean(request && request.prefillCurrentUrl);
       const triggerSource = shouldPrefillCurrentUrl ? 'page-hotkey-prefill' : 'page-hotkey';
       logHotkeyDebug('received', {
@@ -275,7 +322,7 @@ export const SHORTCUT_MESSAGE_HANDLERS = Object.freeze({
     if (request && request.requiresShortcutVerification === true) {
       getConfiguredFallbackShortcut((shortcut) => {
         const spec = SHORTCUT_KEY_MATCHER.parseShortcut(shortcut);
-        const matched = SHORTCUT_KEY_MATCHER.descriptorMatchesShortcut(request.observedShortcut, spec);
+        const matched = SHORTCUT_KEY_MATCHER.descriptorMatchesShortcut(readKeyDescriptor(request.observedShortcut), spec);
         if (!matched) {
           sendResponse({ ok: false, reason: 'shortcut-mismatch', shortcut: shortcut || '' });
           return;
@@ -289,7 +336,7 @@ export const SHORTCUT_MESSAGE_HANDLERS = Object.freeze({
   },
   notifyTabSwitcherShortcutModifierReleased(request, sender, sendResponse) {
     const senderTab = sender && sender.tab ? sender.tab : null;
-    handleTabSwitcherShortcutModifierReleased(senderTab, request && request.key, (didCommit) => {
+    handleTabSwitcherShortcutModifierReleased(senderTab, request.key, (didCommit) => {
       sendResponse({ ok: true, committed: didCommit === true });
     });
     return true;
@@ -302,33 +349,14 @@ export const SHORTCUT_MESSAGE_HANDLERS = Object.freeze({
   }
 });
 
-// Parsed _locales files by locale. They only change with the extension, which
-// restarts this worker, so each is read once per worker lifetime.
-const localeMessagesByLocale = new Map();
-
-export function loadLocaleMessages(rawLocale) {
-  const locale = SETTINGS.normalizeLocale(rawLocale);
-  if (localeMessagesByLocale.has(locale)) {
-    return localeMessagesByLocale.get(locale);
-  }
-  const loading = fetch(chrome.runtime.getURL(`_locales/${locale}/messages.json`))
-    .then((response) => response.json())
-    .then((messages) => (messages && typeof messages === 'object' ? messages : {}))
-    .catch(() => {
-      localeMessagesByLocale.delete(locale);
-      return {};
-    });
-  localeMessagesByLocale.set(locale, loading);
-  return loading;
-}
-
 // A page script that names the few strings it shows gets only those.
-function pickLocaleMessages(messages, keys) {
+function pickLocaleMessages(messages: Record<string, LocaleMessage>, keys: unknown): Record<string, LocaleMessage> {
   if (!Array.isArray(keys)) {
     return messages;
   }
-  const picked = {};
-  keys.forEach((key) => {
+  const picked: Record<string, LocaleMessage> = {};
+  const keyList: unknown[] = keys;
+  keyList.forEach((key) => {
     if (typeof key === 'string' && Object.prototype.hasOwnProperty.call(messages, key)) {
       picked[key] = messages[key];
     }
@@ -337,10 +365,10 @@ function pickLocaleMessages(messages, keys) {
 }
 
 // Locale messages and permission probes.
-export const LOCALE_AND_PERMISSION_MESSAGE_HANDLERS = Object.freeze({
+export const LOCALE_AND_PERMISSION_MESSAGE_HANDLERS: HandlersFor<LocaleAction> = Object.freeze({
   getLocaleMessages(request, sender, sendResponse) {
-    loadLocaleMessages(request && request.locale).then((messages) => {
-      sendResponse({ messages: pickLocaleMessages(messages, request && request.keys) });
+    void loadLocaleMessages(request.locale).then((messages) => {
+      sendResponse({ messages: pickLocaleMessages(messages, request.keys) });
     });
     return true;
   },
@@ -358,10 +386,10 @@ export const LOCALE_AND_PERMISSION_MESSAGE_HANDLERS = Object.freeze({
 });
 
 // Extension pages, tab creation and progress probes.
-export const EXTENSION_PAGE_MESSAGE_HANDLERS = Object.freeze({
+export const EXTENSION_PAGE_MESSAGE_HANDLERS: HandlersFor<ExtensionPageAction> = Object.freeze({
   probeProgressSeries(request, sender, sendResponse) {
     // Pinning from New Tab: does the open page read as an episode or chapter?
-    if (!progressTrackingEnabled) {
+    if (!isProgressTrackingEnabled()) {
       sendResponse({ ok: true, series: false });
       return false;
     }
@@ -371,32 +399,32 @@ export const EXTENSION_PAGE_MESSAGE_HANDLERS = Object.freeze({
     return true;
   },
   openOptionsPage(request, sender, sendResponse) {
-    openExtensionOptionsPage({ disposition: request.disposition, hash: request.hash }, (ok) => {
+    openExtensionOptionsPage({ disposition: readDisposition(request.disposition), hash: readString(request.hash) }, (ok) => {
       sendResponse({ ok: ok !== false });
     });
     return true;
   },
   openOnboardingPage(request, sender, sendResponse) {
-    openOnboardingPage({ reason: 'manual', disposition: request.disposition }, (ok) => {
+    openOnboardingPage({ reason: 'manual', disposition: readDisposition(request.disposition) }, (ok) => {
       sendResponse({ ok: ok !== false });
     });
     return true;
   },
   openReleasePage(request, sender, sendResponse) {
     const reason = typeof request.reason === 'string' ? request.reason : 'manual';
-    openReleasePage({ reason, disposition: request.disposition }, (ok) => {
+    openReleasePage({ reason, disposition: readDisposition(request.disposition) }, (ok) => {
       sendResponse({ ok: ok !== false });
     });
     return true;
   },
   openExtensionShortcutsPage(request, sender, sendResponse) {
-    openExtensionShortcutsPage({ disposition: request.disposition }, (ok) => {
+    openExtensionShortcutsPage({ disposition: readDisposition(request.disposition) }, (ok) => {
       sendResponse({ ok: ok !== false });
     });
     return true;
   },
   openSiteSearchOptionsPage(request, sender, sendResponse) {
-    openSiteSearchOptionsPage({ disposition: request.disposition }, (ok) => {
+    openSiteSearchOptionsPage({ disposition: readDisposition(request.disposition) }, (ok) => {
       sendResponse({ ok: ok !== false });
     });
     return true;
@@ -420,12 +448,10 @@ export const EXTENSION_PAGE_MESSAGE_HANDLERS = Object.freeze({
       insertIndex: sourceTab && typeof sourceTab.index === 'number'
         ? sourceTab.index + 1
         : undefined
-    }).then(sendResponse).catch((error) => {
+    }).then(sendResponse).catch((error: unknown) => {
       sendResponse({
         ok: false,
-        reason: error && error.message
-          ? error.message
-          : 'bookmark-tab-group-failed'
+        reason: getErrorMessage(error, 'bookmark-tab-group-failed')
       });
     });
     return true;
@@ -441,7 +467,7 @@ export const EXTENSION_PAGE_MESSAGE_HANDLERS = Object.freeze({
       const senderTabId = sender && sender.tab && typeof sender.tab.id === 'number'
         ? sender.tab.id
         : null;
-      const updateTab = (tabId) => {
+      const updateTab = (tabId: number): void => {
         chrome.tabs.update(tabId, { url: targetUrl, active: true }, () => {
           sendResponse({ ok: !(chrome.runtime && chrome.runtime.lastError) });
         });
@@ -486,17 +512,12 @@ export const EXTENSION_PAGE_MESSAGE_HANDLERS = Object.freeze({
 });
 
 // Favicons and site theme colors.
-export const FAVICON_MESSAGE_HANDLERS = Object.freeze({
+export const FAVICON_MESSAGE_HANDLERS: HandlersFor<FaviconAction> = Object.freeze({
   resolveFaviconCandidates(request, sender, sendResponse) {
     const targetUrl = request.url || '';
     const hostOverride = request.host || '';
     const fallbackUrl = request.fallbackUrl || '';
-    const preferredTheme = request.preferredTheme || '';
-    const options = {
-      includeChromeFallback: request.excludeChromeFallback ? false : true,
-      forceFresh: request.forceFresh === true
-    };
-    resolveFaviconCandidates(targetUrl, hostOverride, fallbackUrl, preferredTheme, options).then((urls) => {
+    resolveFaviconCandidates(targetUrl, hostOverride, fallbackUrl).then((urls) => {
       sendResponse({ urls: Array.isArray(urls) ? urls : [] });
     }).catch(() => {
       sendResponse({ urls: [] });
@@ -522,7 +543,7 @@ export const FAVICON_MESSAGE_HANDLERS = Object.freeze({
           sendResponse({ data: '' });
           return;
         }
-      } catch (e) {
+      } catch (_error) {
         // Ignore parse failures and continue with non-local handling.
       }
       fetchFaviconData(targetUrl, pageUrl).then((dataUrl) => {
@@ -572,7 +593,7 @@ export const FAVICON_MESSAGE_HANDLERS = Object.freeze({
 
 // The tab a toolbar popup action works on. The popup names the tab it showed;
 // a tab that has gone since resolves to null.
-function getPopupTargetTab(tabId, callback) {
+function getPopupTargetTab(tabId: unknown, callback: (tab: chrome.tabs.Tab | null) => void): void {
   if (typeof tabId !== 'number' || !chrome.tabs || typeof chrome.tabs.get !== 'function') {
     callback(null);
     return;
@@ -582,19 +603,19 @@ function getPopupTargetTab(tabId, callback) {
   });
 }
 
-function getPopupPage(tab) {
+function getPopupPage(tab: chrome.tabs.Tab | null): { url: string; title: string } | null {
   return tab ? { url: String(tab.url || tab.pendingUrl || ''), title: String(tab.title || '') } : null;
 }
 
 // The toolbar popup's page actions. The popup closes once the clip or the
 // search starts, so those answer first and then act on the tab. A finished
 // copy or add is announced by Lumno's top toast in the page.
-export const POPUP_MESSAGE_HANDLERS = Object.freeze({
+export const POPUP_MESSAGE_HANDLERS: HandlersFor<PopupAction> = Object.freeze({
   popupOpenDocumentPipPicker(request, sender, sendResponse) {
     getPopupTargetTab(request.tabId, (tab) => {
       sendResponse({ ok: Boolean(tab) });
       if (tab) {
-        openDocumentPipPickerOnTab(tab, 'popup');
+        void openDocumentPipPickerOnTab(tab, 'popup');
       }
     });
     return true;
@@ -616,12 +637,13 @@ export const POPUP_MESSAGE_HANDLERS = Object.freeze({
     return true;
   },
   popupShowPageToast(request, sender, sendResponse) {
-    if (!pageShortcutMenuController) {
+    const tabId = request.tabId;
+    if (!pageShortcutMenuController || typeof tabId !== 'number') {
       sendResponse({ ok: false });
       return false;
     }
     const message = typeof request.message === 'string' ? request.message.slice(0, 200) : '';
-    pageShortcutMenuController.showToast(request.tabId, { message }).then((shown) => {
+    void pageShortcutMenuController.showToast(tabId, { message }).then((shown) => {
       sendResponse({ ok: shown === true });
     });
     return true;
@@ -631,8 +653,9 @@ export const POPUP_MESSAGE_HANDLERS = Object.freeze({
       sendResponse({ status: 'failed', message: '', error: true });
       return false;
     }
+    const menu = pageShortcutMenuController;
     getPopupTargetTab(request.tabId, (tab) => {
-      pageShortcutMenuController.addTabPage(tab).then(sendResponse, () => {
+      menu.addTabPage(tab).then(sendResponse, () => {
         sendResponse({ status: 'failed', message: '', error: true });
       });
     });
@@ -648,7 +671,7 @@ export const POPUP_MESSAGE_HANDLERS = Object.freeze({
   },
   popupToggleRecentPin(request, sender, sendResponse) {
     getPopupTargetTab(request.tabId, (tab) => {
-      popupRecentPin.toggle(getPopupPage(tab)).then(sendResponse);
+      void popupRecentPin.toggle(getPopupPage(tab)).then(sendResponse);
     });
     return true;
   }

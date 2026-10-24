@@ -8,6 +8,8 @@ import * as LumnoSettingsStorage from '../platform/settings-storage';
 import type { StorageAreaFacade } from '../platform/settings-storage';
 import type { StorageAreaLike } from '../domain/storage-port';
 import type { RestrictedAction } from '../domain/settings';
+import { normalizeLocale } from '../domain/settings';
+import type { LocaleMessage } from '../domain/messages';
 import * as BACKGROUND_SHORTCUT_RULES from './shortcut-rules';
 
 // pinyin-pro (~320 KB) only matters when a Han-character title is matched
@@ -163,6 +165,71 @@ function getImportScripts(): ((...urls: string[]) => void) | null {
   };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function readPlaceholders(value: unknown): Record<string, { content: string; example?: string }> | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const placeholders: Record<string, { content: string; example?: string }> = {};
+  Object.keys(value).forEach((name) => {
+    const placeholder = value[name];
+    if (isRecord(placeholder) && typeof placeholder.content === 'string') {
+      placeholders[name] = typeof placeholder.example === 'string'
+        ? { content: placeholder.content, example: placeholder.example }
+        : { content: placeholder.content };
+    }
+  });
+  return placeholders;
+}
+
+// A _locales messages.json, with only well-formed entries.
+function readLocaleMessages(value: unknown): Record<string, LocaleMessage> {
+  const messages: Record<string, LocaleMessage> = {};
+  if (!isRecord(value)) {
+    return messages;
+  }
+  Object.keys(value).forEach((key) => {
+    const entry = value[key];
+    if (!isRecord(entry) || typeof entry.message !== 'string') {
+      return;
+    }
+    const message: LocaleMessage = { message: entry.message };
+    if (typeof entry.description === 'string') {
+      message.description = entry.description;
+    }
+    const placeholders = readPlaceholders(entry.placeholders);
+    if (placeholders) {
+      message.placeholders = placeholders;
+    }
+    messages[key] = message;
+  });
+  return messages;
+}
+
+// Parsed _locales files by locale. They only change with the extension, which
+// restarts this worker, so each is read once per worker lifetime.
+const localeMessagesByLocale = new Map<string, Promise<Record<string, LocaleMessage>>>();
+
+function loadLocaleMessages(rawLocale: unknown): Promise<Record<string, LocaleMessage>> {
+  const locale = normalizeLocale(rawLocale);
+  const known = localeMessagesByLocale.get(locale);
+  if (known) {
+    return known;
+  }
+  const loading = fetch(chrome.runtime.getURL(`_locales/${locale}/messages.json`))
+    .then((response) => response.json())
+    .then((messages: unknown) => readLocaleMessages(messages))
+    .catch((): Record<string, LocaleMessage> => {
+      localeMessagesByLocale.delete(locale);
+      return {};
+    });
+  localeMessagesByLocale.set(locale, loading);
+  return loading;
+}
+
 // A host as the favicon and site-search lookups key it.
 function normalizeHost(hostname: unknown): string {
   if (!hostname) {
@@ -242,6 +309,7 @@ export {
   isDocumentPipEnabled,
   isPrimaryStorageAreaName,
   isRestrictedActionAutoBrowserSettingDone,
+  loadLocaleMessages,
   loadShortcutRules,
   localStorageArea,
   logHotkeyDebug,
