@@ -2772,10 +2772,10 @@
     "message": "हाल के टैब के बीच तुरंत स्विच करें; डिफ़ॉल्ट रूप से {shortcut}, जिसे बदला जा सकता है"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "{shortcut} इस्तेमाल करें"
+    "message": "Arc की तरह {shortcut} से बदलें"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "{shortcut} के बारे में"
+    "message": "Arc जैसा {shortcut}: गाइड"
   },
   "slash_command_empty": {
     "message": "कोई मिलता-जुलता कमांड नहीं"

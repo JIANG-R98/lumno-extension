@@ -2772,10 +2772,10 @@
     "message": "சமீபத்திய தாவல்களுக்கு இடையே விரைவாக மாறலாம்; இயல்பாக {shortcut}, மாற்றலாம்"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "{shortcut} பயன்படுத்து"
+    "message": "Arc போல {shortcut} மூலம் மாற்று"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "{shortcut} பற்றி"
+    "message": "Arc போல {shortcut}: வழிகாட்டி"
   },
   "slash_command_empty": {
     "message": "பொருந்தும் கட்டளைகள் இல்லை"

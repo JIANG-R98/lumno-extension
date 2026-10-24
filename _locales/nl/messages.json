@@ -2772,10 +2772,10 @@
     "message": "Snel wisselen tussen recente tabbladen; standaard {shortcut}, aan te passen"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "{shortcut} gebruiken"
+    "message": "Wisselen met {shortcut}, zoals in Arc"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "Over {shortcut}"
+    "message": "Uitleg: {shortcut} zoals in Arc"
   },
   "slash_command_empty": {
     "message": "Geen overeenkomende opdrachten"

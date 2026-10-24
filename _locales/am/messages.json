@@ -2772,10 +2772,10 @@
     "message": "በቅርብ ጊዜ ትሮች መካከል በፍጥነት ይቀያይሩ፤ በነባሪ {shortcut}፣ ሊበጅ ይችላል"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "በምትኩ {shortcut} ተጠቀም"
+    "message": "እንደ Arc በ{shortcut} ቀይር"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "ስለ {shortcut}"
+    "message": "እንደ Arc {shortcut}፦ መመሪያ"
   },
   "slash_command_empty": {
     "message": "ምንም ተዛማጅ ትዕዛዞች የሉም"

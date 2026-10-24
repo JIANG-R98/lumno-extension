@@ -2787,10 +2787,10 @@
     "message": "快速切換最近分頁，預設 {shortcut}，可自訂"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "改用 {shortcut}"
+    "message": "像 Arc 一樣用 {shortcut} 切換"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "{shortcut} 說明"
+    "message": "Arc 式 {shortcut} 切換說明"
   },
   "settings_tab_switcher_current_window_only_title": {
     "message": "只顯示目前視窗的分頁"

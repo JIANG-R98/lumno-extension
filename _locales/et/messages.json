@@ -2772,10 +2772,10 @@
     "message": "Vahetage kiiresti hiljutiste vahelehtede vahel; vaikimisi {shortcut}, kohandatav"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "Kasuta {shortcut}"
+    "message": "Vaheta klahvidega {shortcut} nagu Arcis"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "{shortcut} teave"
+    "message": "Juhend: {shortcut} nagu Arcis"
   },
   "slash_command_empty": {
     "message": "Sobivaid käske pole"

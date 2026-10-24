@@ -2772,10 +2772,10 @@
     "message": "Vaihda nopeasti viimeisimpien välilehtien välillä; oletuksena {shortcut}, muokattavissa"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "Käytä {shortcut}"
+    "message": "Vaihda näppäimillä {shortcut} kuten Arcissa"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "Tietoja: {shortcut}"
+    "message": "Ohje: {shortcut} kuten Arcissa"
   },
   "slash_command_empty": {
     "message": "Ei vastaavia komentoja"

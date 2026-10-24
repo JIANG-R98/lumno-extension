@@ -2772,10 +2772,10 @@
     "message": "Comutați rapid între filele recente; implicit {shortcut}, personalizabil"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "Folosește {shortcut}"
+    "message": "Comută cu {shortcut}, ca în Arc"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "Despre {shortcut}"
+    "message": "Ghid: {shortcut} ca în Arc"
   },
   "slash_command_empty": {
     "message": "Nicio comandă potrivită"

@@ -2787,10 +2787,10 @@
     "message": "既定の {shortcut} で最近のタブをすばやく切り替えます（変更可能）"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "{shortcut} に変更"
+    "message": "Arc のように {shortcut} で切り替え"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "{shortcut} について"
+    "message": "Arc 風 {shortcut} 切り替えの説明"
   },
   "settings_tab_switcher_current_window_only_title": {
     "message": "現在のウィンドウのタブのみ表示"

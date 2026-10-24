@@ -48,13 +48,13 @@ function createShortcutReference(deps) {
       .find((entry) => entry && entry.commandName === 'show-tab-switcher');
     const bound = isCtrlTabShortcut(item && item.shortcut);
     const label = formatTemplate(bound
-      ? getMessage('settings_tab_switcher_ctrl_tab_guide', '{shortcut} 说明')
-      : getMessage('settings_tab_switcher_ctrl_tab_link', '改用 {shortcut}'), {
+      ? getMessage('settings_tab_switcher_ctrl_tab_guide', 'Arc 式 {shortcut} 切换说明')
+      : getMessage('settings_tab_switcher_ctrl_tab_link', '像 Arc 一样用 {shortcut} 切换'), {
       shortcut: optionsState.isMacPlatform ? '⌃Tab' : 'Ctrl+Tab'
     });
     tabSwitcherCtrlTabLink.href = getHelpUrl('tab-switcher', 'ctrl-tab');
     tabSwitcherCtrlTabLink.setAttribute('data-bound', bound ? 'true' : 'false');
-    const labelNode = tabSwitcherCtrlTabLink.querySelector('.x-lumno-link-button__label');
+    const labelNode = tabSwitcherCtrlTabLink.querySelector('[data-ctrl-tab-label]');
     if (labelNode) {
       labelNode.textContent = label;
     }

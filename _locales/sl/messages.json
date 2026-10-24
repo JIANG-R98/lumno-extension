@@ -2772,10 +2772,10 @@
     "message": "Hitro preklapljanje med nedavnimi zavihki; privzeto {shortcut}, prilagodljivo"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "Uporabi {shortcut}"
+    "message": "Preklapljaj z {shortcut} kot v Arc"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "O bližnjici {shortcut}"
+    "message": "Pomoč: {shortcut} kot v Arc"
   },
   "slash_command_empty": {
     "message": "Ni ustreznih ukazov"

@@ -2772,10 +2772,10 @@
     "message": "ఇటీవలి ట్యాబ్\u200cల మధ్య త్వరగా మారండి; డిఫాల్ట్\u200cగా {shortcut}, మార్చుకోవచ్చు"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "{shortcut} ఉపయోగించండి"
+    "message": "Arc లాగా {shortcut}తో మార్చండి"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "{shortcut} గురించి"
+    "message": "Arc లాగా {shortcut}: గైడ్"
   },
   "slash_command_empty": {
     "message": "మ్యాచ్ అయ్యే కమాండ్\u200cలు లేవు"

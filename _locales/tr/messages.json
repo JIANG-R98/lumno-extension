@@ -2772,10 +2772,10 @@
     "message": "Son sekmeler arasında hızla geçiş yapın; varsayılan {shortcut}, özelleştirilebilir"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "{shortcut} kullan"
+    "message": "Arc'taki gibi {shortcut} ile geçiş yap"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "{shortcut} hakkında"
+    "message": "Kılavuz: Arc'taki gibi {shortcut}"
   },
   "slash_command_empty": {
     "message": "Eşleşen komut yok"

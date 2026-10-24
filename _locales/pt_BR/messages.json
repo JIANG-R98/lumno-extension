@@ -2772,10 +2772,10 @@
     "message": "Alterne rapidamente entre as guias recentes; {shortcut} por padrão, personalizável"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "Usar {shortcut}"
+    "message": "Alternar com {shortcut}, como no Arc"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "Sobre {shortcut}"
+    "message": "Guia: {shortcut} como no Arc"
   },
   "slash_command_empty": {
     "message": "Nenhum comando encontrado"

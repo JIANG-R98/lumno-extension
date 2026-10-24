@@ -2772,10 +2772,10 @@
     "message": "최근 탭 간에 빠르게 전환합니다. 기본값은 {shortcut}이며 변경할 수 있습니다"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "{shortcut}로 바꾸기"
+    "message": "Arc처럼 {shortcut}로 전환"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "{shortcut} 안내"
+    "message": "Arc 방식 {shortcut} 전환 안내"
   },
   "slash_command_empty": {
     "message": "일치하는 명령 없음"

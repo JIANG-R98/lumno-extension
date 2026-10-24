@@ -2787,10 +2787,10 @@
     "message": "Quickly switch between recent tabs; {shortcut} by default, customizable"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "Use {shortcut} instead"
+    "message": "Switch with {shortcut}, like Arc"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "About {shortcut}"
+    "message": "Guide: {shortcut} like Arc"
   },
   "settings_tab_switcher_current_window_only_title": {
     "message": "Show only tabs in the current window"

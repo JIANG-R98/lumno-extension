@@ -2772,10 +2772,10 @@
     "message": "Rychlé přepínání mezi nedávnými kartami; ve výchozím nastavení {shortcut}, lze upravit"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "Použít {shortcut}"
+    "message": "Přepínat pomocí {shortcut} jako v Arc"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "O zkratce {shortcut}"
+    "message": "Nápověda: {shortcut} jako v Arc"
   },
   "slash_command_empty": {
     "message": "Žádné odpovídající příkazy"

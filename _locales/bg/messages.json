@@ -2772,10 +2772,10 @@
     "message": "Бързо превключване между скорошните раздели; по подразбиране {shortcut}, може да се персонализира"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "Използване на {shortcut}"
+    "message": "Превключване с {shortcut} като в Arc"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "Относно {shortcut}"
+    "message": "Помощ: {shortcut} като в Arc"
   },
   "slash_command_empty": {
     "message": "Няма съвпадащи команди"

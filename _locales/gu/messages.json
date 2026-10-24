@@ -2772,10 +2772,10 @@
     "message": "તાજેતરના ટૅબ વચ્ચે ઝડપથી સ્વિચ કરો; ડિફૉલ્ટ રૂપે {shortcut}, કસ્ટમાઇઝ કરી શકાય છે"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "{shortcut} વાપરો"
+    "message": "Arc ની જેમ {shortcut} થી બદલો"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "{shortcut} વિશે"
+    "message": "Arc જેવું {shortcut}: માર્ગદર્શિકા"
   },
   "slash_command_empty": {
     "message": "કોઈ મેળ ખાતા કમાન્ડ નથી"

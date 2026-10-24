@@ -2772,10 +2772,10 @@
     "message": "Γρήγορη εναλλαγή μεταξύ πρόσφατων καρτελών· {shortcut} από προεπιλογή, με δυνατότητα προσαρμογής"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "Χρήση {shortcut}"
+    "message": "Εναλλαγή με {shortcut}, όπως στο Arc"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "Σχετικά με το {shortcut}"
+    "message": "Οδηγός: {shortcut} όπως στο Arc"
   },
   "slash_command_empty": {
     "message": "Δεν βρέθηκαν εντολές"

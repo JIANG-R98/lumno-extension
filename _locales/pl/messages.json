@@ -2772,10 +2772,10 @@
     "message": "Szybko przełączaj się między ostatnimi kartami; domyślnie {shortcut}, można to zmienić"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "Użyj {shortcut}"
+    "message": "Przełączaj przez {shortcut}, jak w Arc"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "Informacje o {shortcut}"
+    "message": "Pomoc: {shortcut} jak w Arc"
   },
   "slash_command_empty": {
     "message": "Brak pasujących poleceń"

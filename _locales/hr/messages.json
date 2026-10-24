@@ -2772,10 +2772,10 @@
     "message": "Brzo prelazite između nedavnih kartica; zadano {shortcut}, može se prilagoditi"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "Koristi {shortcut}"
+    "message": "Prebacuj s {shortcut} kao u Arcu"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "O prečacu {shortcut}"
+    "message": "Pomoć: {shortcut} kao u Arcu"
   },
   "slash_command_empty": {
     "message": "Nema odgovarajućih naredbi"

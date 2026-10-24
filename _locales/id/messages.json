@@ -2772,10 +2772,10 @@
     "message": "Beralih cepat antar-tab terbaru; {shortcut} secara default, dapat disesuaikan"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "Pakai {shortcut}"
+    "message": "Beralih dengan {shortcut} seperti di Arc"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "Tentang {shortcut}"
+    "message": "Panduan: {shortcut} seperti di Arc"
   },
   "slash_command_empty": {
     "message": "Tidak ada perintah yang cocok"

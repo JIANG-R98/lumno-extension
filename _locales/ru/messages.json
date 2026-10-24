@@ -2772,10 +2772,10 @@
     "message": "Быстрый переход между недавними вкладками; по умолчанию {shortcut}, можно изменить"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "Использовать {shortcut}"
+    "message": "Переключать по {shortcut}, как в Arc"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "О сочетании {shortcut}"
+    "message": "Справка: {shortcut} как в Arc"
   },
   "slash_command_empty": {
     "message": "Команды не найдены"

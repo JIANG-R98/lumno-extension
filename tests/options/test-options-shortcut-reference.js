@@ -3,8 +3,8 @@ const shortcutDisplay = require('../../src/shared/shortcut-display');
 const { createShortcutReference } = require('../../src/options/options-shortcut-reference');
 
 const MESSAGES = {
-  settings_tab_switcher_ctrl_tab_link: 'Use {shortcut} instead',
-  settings_tab_switcher_ctrl_tab_guide: 'About {shortcut}'
+  settings_tab_switcher_ctrl_tab_link: 'Switch with {shortcut}, like Arc',
+  settings_tab_switcher_ctrl_tab_guide: 'Guide: {shortcut} like Arc'
 };
 
 function createLink() {
@@ -15,7 +15,7 @@ function createLink() {
     attributes: {},
     label,
     setAttribute(name, value) { this.attributes[name] = value; },
-    querySelector(selector) { return selector === '.x-lumno-link-button__label' ? label : null; }
+    querySelector(selector) { return selector === '[data-ctrl-tab-label]' ? label : null; }
   };
 }
 
@@ -55,16 +55,16 @@ function render(shortcut, isMacPlatform) {
 const unbound = render('⌥Q', true);
 assert.strictEqual(unbound.link.hidden, false, 'the tab switcher row should show its link once commands load');
 assert.strictEqual(unbound.link.href, 'https://lumno.kubai.design/en/help/tab-switcher/#ctrl-tab');
-assert.strictEqual(unbound.link.label.textContent, 'Use ⌃Tab instead');
+assert.strictEqual(unbound.link.label.textContent, 'Switch with ⌃Tab, like Arc');
 assert.strictEqual(unbound.link.attributes['data-bound'], 'false');
 assert.strictEqual(unbound.label('tab-switcher-cycle'), 'Q / ⇥ / ↑↓←→');
 assert.strictEqual(unbound.label('tab-switcher-confirm'), '↩ / ⌥↑');
 
-assert.strictEqual(render('Alt+Q', false).link.label.textContent, 'Use Ctrl+Tab instead',
+assert.strictEqual(render('Alt+Q', false).link.label.textContent, 'Switch with Ctrl+Tab, like Arc',
   'Windows and Linux should name the keys as they are printed');
 
 const boundMac = render('⌃⇥', true);
-assert.strictEqual(boundMac.link.label.textContent, 'About ⌃Tab',
+assert.strictEqual(boundMac.link.label.textContent, 'Guide: ⌃Tab like Arc',
   'once Ctrl+Tab is bound the link becomes the guide, which also says how to change it back');
 assert.strictEqual(boundMac.link.attributes['data-bound'], 'true');
 assert.strictEqual(boundMac.link.href, 'https://lumno.kubai.design/en/help/tab-switcher/#ctrl-tab');
@@ -74,7 +74,7 @@ assert.strictEqual(boundMac.label('tab-switcher-confirm'), '↩ / ⌃↑',
   'with Ctrl+Tab the switcher commits when Control is released');
 
 const boundWindows = render('Ctrl+Tab', false);
-assert.strictEqual(boundWindows.link.label.textContent, 'About Ctrl+Tab');
+assert.strictEqual(boundWindows.link.label.textContent, 'Guide: Ctrl+Tab like Arc');
 assert.strictEqual(boundWindows.label('tab-switcher-confirm'), 'Enter / Ctrl↑');
 
 const slash = render('Ctrl+Shift+/', false);

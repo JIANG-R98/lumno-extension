@@ -2772,10 +2772,10 @@
     "message": "Gyors váltás a legutóbbi lapok között; alapértelmezés: {shortcut}, testreszabható"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "{shortcut} használata"
+    "message": "Váltás: {shortcut}, mint az Arcban"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "A(z) {shortcut} leírása"
+    "message": "Súgó: {shortcut}, mint az Arcban"
   },
   "slash_command_empty": {
     "message": "Nincs egyező parancs"

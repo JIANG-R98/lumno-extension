@@ -2772,10 +2772,10 @@
     "message": "Chuyển nhanh giữa các thẻ gần đây; mặc định là {shortcut}, có thể tùy chỉnh"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "Dùng {shortcut}"
+    "message": "Chuyển bằng {shortcut} như Arc"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "Về {shortcut}"
+    "message": "Hướng dẫn: {shortcut} như Arc"
   },
   "slash_command_empty": {
     "message": "Không có lệnh phù hợp"

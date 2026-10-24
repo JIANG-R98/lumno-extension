@@ -2772,10 +2772,10 @@
     "message": "Badili haraka kati ya vichupo vya hivi karibuni; {shortcut} kwa chaguomsingi, inaweza kubadilishwa"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "Tumia {shortcut}"
+    "message": "Badilisha kwa {shortcut} kama Arc"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "Kuhusu {shortcut}"
+    "message": "Mwongozo: {shortcut} kama Arc"
   },
   "slash_command_empty": {
     "message": "Hakuna amri zinazolingana"

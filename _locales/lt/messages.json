@@ -2772,10 +2772,10 @@
     "message": "Greitai perjunkite naujausius skirtukus; numatytasis {shortcut}, galima tinkinti"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "Naudoti {shortcut}"
+    "message": "Perjungti su {shortcut} kaip Arc"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "Apie {shortcut}"
+    "message": "Pagalba: {shortcut} kaip Arc"
   },
   "slash_command_empty": {
     "message": "Atitinkančių komandų nėra"

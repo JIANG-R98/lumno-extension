@@ -2772,10 +2772,10 @@
     "message": "Växla snabbt mellan senaste flikar; {shortcut} som standard, kan anpassas"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "Använd {shortcut}"
+    "message": "Växla med {shortcut} som i Arc"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "Om {shortcut}"
+    "message": "Guide: {shortcut} som i Arc"
   },
   "slash_command_empty": {
     "message": "Inga matchande kommandon"

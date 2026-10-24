@@ -2772,10 +2772,10 @@
     "message": "Bytt raskt mellom nylige faner – {shortcut} som standard, kan tilpasses"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "Bruk {shortcut}"
+    "message": "Bytt med {shortcut} som i Arc"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "Om {shortcut}"
+    "message": "Veiledning: {shortcut} som i Arc"
   },
   "slash_command_empty": {
     "message": "Ingen samsvarende kommandoer"

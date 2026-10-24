@@ -2772,10 +2772,10 @@
     "message": "Schnell zwischen den letzten Tabs wechseln; standardmäßig {shortcut}, anpassbar"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "{shortcut} verwenden"
+    "message": "Wie in Arc mit {shortcut} wechseln"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "Über {shortcut}"
+    "message": "Anleitung: {shortcut} wie in Arc"
   },
   "slash_command_empty": {
     "message": "Keine passenden Befehle"

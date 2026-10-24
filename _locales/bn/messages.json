@@ -2772,10 +2772,10 @@
     "message": "সাম্প্রতিক ট্যাবগুলোর মধ্যে দ্রুত যান; ডিফল্টভাবে {shortcut}, পরিবর্তনযোগ্য"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "{shortcut} ব্যবহার করুন"
+    "message": "Arc-এর মতো {shortcut} দিয়ে বদলান"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "{shortcut} সম্পর্কে"
+    "message": "Arc-এর মতো {shortcut}: নির্দেশিকা"
   },
   "slash_command_empty": {
     "message": "মিলে যাওয়া কোনো কমান্ড নেই"

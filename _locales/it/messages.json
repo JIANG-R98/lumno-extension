@@ -2772,10 +2772,10 @@
     "message": "Passa rapidamente tra le schede recenti; {shortcut} per impostazione predefinita, personalizzabile"
   },
   "settings_tab_switcher_ctrl_tab_link": {
-    "message": "Usa {shortcut}"
+    "message": "Passa con {shortcut}, come in Arc"
   },
   "settings_tab_switcher_ctrl_tab_guide": {
-    "message": "Info su {shortcut}"
+    "message": "Guida: {shortcut} come in Arc"
   },
   "slash_command_empty": {
     "message": "Nessun comando corrispondente"
