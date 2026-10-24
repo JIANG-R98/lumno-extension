@@ -369,7 +369,27 @@ function createShortcutsController(deps) {
       pageState.newtabShortcutFavicons, pageUrl, normalizedDataUrl, sourceUrl
     );
     scheduleShortcutFaviconCacheWrite(pageUrl);
+    refreshShortcutTileThemesForPage(pageUrl);
     return normalizedDataUrl;
+  }
+
+  // A tile that mounted before its snapshot arrived took its tint with no
+  // artwork to read; tint it again from the icon it now shows.
+  function refreshShortcutTileThemesForPage(pageUrl) {
+    shortcutTiles.forEach((tile) => {
+      const url = tile && tile.isConnected ? tile.getAttribute('data-shortcut-url') || '' : '';
+      if (!url || tile.getAttribute('data-shortcut-custom-icon') === 'true' ||
+          SHORTCUT_FAVICON.normalizePageUrl(url) !== pageUrl) {
+        return;
+      }
+      queueThemeForTarget(tile, { type: 'shortcut', url }, (theme) => {
+        if (!tile.isConnected) {
+          return;
+        }
+        tile._xTheme = theme || tile._xTheme;
+        applyShortcutTileTheme(tile, theme, tile._xHost || '');
+      }, { priority: 0 });
+    });
   }
 
   function areShortcutFaviconEntriesEqual(left, right) {
