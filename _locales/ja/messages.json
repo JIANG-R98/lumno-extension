@@ -2780,6 +2780,12 @@
   "settings_tab_switcher_desc": {
     "message": "既定の {shortcut} で最近のタブをすばやく切り替えます（変更可能）"
   },
+  "settings_tab_switcher_current_window_only_title": {
+    "message": "現在のウィンドウのタブのみ表示"
+  },
+  "settings_tab_switcher_current_window_only_desc": {
+    "message": "スペースごとに別ウィンドウを使うブラウザで、ほかのスペースのタブを一覧に表示しません"
+  },
   "settings_features_section_title": {
     "message": "機能"
   },

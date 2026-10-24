@@ -2780,6 +2780,12 @@
   "settings_tab_switcher_desc": {
     "message": "快速切換最近分頁，預設 {shortcut}，可自訂"
   },
+  "settings_tab_switcher_current_window_only_title": {
+    "message": "只顯示目前視窗的分頁"
+  },
+  "settings_tab_switcher_current_window_only_desc": {
+    "message": "適用於把每個空間放在獨立視窗的瀏覽器，避免列出其他空間的分頁"
+  },
   "settings_features_section_title": {
     "message": "功能"
   },

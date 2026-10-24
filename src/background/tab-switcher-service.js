@@ -1963,6 +1963,14 @@ function clearSwitcherThumbnailsForDisabledSwitcher() {
 // Mirrors the stored setting, re-read on every wake; background.js applies it.
 let tabSwitcherEnabledCache = true;
 
+// Browsers that present each space as its own window need this to keep other
+// spaces out of the list; by default every normal window shares one list.
+let tabSwitcherCurrentWindowOnlyCache = false;
+
+export function applyTabSwitcherCurrentWindowOnlySetting(enabled) {
+  tabSwitcherCurrentWindowOnlyCache = enabled === true;
+}
+
 export function applyTabSwitcherEnabledSetting(enabled) {
   tabSwitcherEnabledCache = enabled === true;
   if (!tabSwitcherEnabledCache) {
@@ -1995,8 +2003,9 @@ function normalizeSwitcherTabForPayload(tab, currentTabId) {
   };
 }
 
-function getRecentTabsForSwitcher(tabList, currentTabId) {
+function getRecentTabsForSwitcher(tabList, currentTabId, windowId) {
   const normalizedTabs = (Array.isArray(tabList) ? tabList : [])
+    .filter((tab) => !tabSwitcherCurrentWindowOnlyCache || (tab && tab.windowId === windowId))
     .map((tab) => ({
       ...tab,
       url: getResolvedTabUrl(tab)
@@ -2528,7 +2537,7 @@ export function triggerTabSwitcherForTab(tab, source, commandObservedAt, directi
         return;
       }
       const { tabList, activeTab, shortcut, finishOpeningAndArmShortcutRelease } = openContext;
-      const items = getRecentTabsForSwitcher(tabList, activeTab.id);
+      const items = getRecentTabsForSwitcher(tabList, activeTab.id, activeTab.windowId);
       markSwitcherThumbnailPriorityForItems(items, tabList, 'command-payload');
       if (!items.length) {
         finishOpening();

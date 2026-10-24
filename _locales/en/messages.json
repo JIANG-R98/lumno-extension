@@ -2780,6 +2780,12 @@
   "settings_tab_switcher_desc": {
     "message": "Quickly switch between recent tabs; {shortcut} by default, customizable"
   },
+  "settings_tab_switcher_current_window_only_title": {
+    "message": "Show only tabs in the current window"
+  },
+  "settings_tab_switcher_current_window_only_desc": {
+    "message": "For browsers that put each space in its own window, so tabs from other spaces stay out of the list"
+  },
   "settings_features_section_title": {
     "message": "Features"
   },

@@ -133,6 +133,16 @@ async function testCommandOpensTheRecentTabsOnTheActivePage() {
   });
 }
 
+async function testCurrentWindowOnlyKeepsOtherWindowsOut() {
+  const session = bootSwitcher({ sync: { '_x_extension_tab_switcher_current_window_only_2026_unique_': true } });
+  await wait(30);
+  await session.visit([12, 13, 11]);
+  session.press();
+  await wait(400);
+  assert.deepStrictEqual(session.sent('openTabSwitcherFromCommand')[0].message.context.tabs.map((tab) => tab.id), [11, 13, 12],
+    'with the setting on, tabs from other windows should stay out of the list');
+}
+
 async function testRepeatedCommandAdvancesTheOpenSwitcher() {
   const session = bootSwitcher({
     respond(message) {
@@ -500,6 +510,7 @@ async function testShowSearchOnTheNewtabFocusesItsInput() {
 
 (async () => {
   await testCommandOpensTheRecentTabsOnTheActivePage();
+  await testCurrentWindowOnlyKeepsOtherWindowsOut();
   await testRepeatedCommandAdvancesTheOpenSwitcher();
   await testReverseCommandOpensOnTheOldestTabAndCommitsOnItsModifier();
   await testSuppressedAdvanceStillOpens();

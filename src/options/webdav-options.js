@@ -108,6 +108,7 @@ const PREFERENCE_LABELS = [
   ['update_notice', 'settings_update_notice_title'], ['motion_effects', 'settings_motion_effects_title'],
   ['simple_mode', 'settings_simple_mode_title'], ['number_shortcut_instant', 'settings_number_shortcut_instant_title'],
   ['macos_ctrl', 'settings_macos_ctrl_suggestion_navigation_title'], ['auto_pip', 'settings_auto_pip_title'],
+  ['tab_switcher_current_window_only', 'settings_tab_switcher_current_window_only_title'],
   ['tab_switcher', 'settings_tab_switcher_title'], ['document_pip', 'settings_document_pip_title'],
   ['pinned_tab_recovery', 'settings_pinned_tab_recovery_title'],
   ['selection_quick_actions_provider', 'settings_selection_quick_actions_provider_title'],

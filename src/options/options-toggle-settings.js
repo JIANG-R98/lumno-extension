@@ -15,7 +15,7 @@
 //   repairOnLoad/repairOnChange, normalizeInput: see createSettingBinder
 //
 // hooks: { faviconBlacklistEditor, newtabShortcutSubcontrols,
-//          selectionQuickActionsAvailability } — page functions some
+//          selectionQuickActionsAvailability, tabSwitcherSubrows } — page functions some
 //          switches run after a value is applied; tests may leave them out.
 function getToggleSettings(settings, hooks) {
   const S = settings;
@@ -167,6 +167,14 @@ function getToggleSettings(settings, hooks) {
       kind: 'tab-switcher',
       key: S.TAB_SWITCHER_ENABLED_STORAGE_KEY,
       normalize: S.normalizeTabSwitcherEnabled,
+      refreshSelects: true,
+      afterApply: page.tabSwitcherSubrows
+    },
+    {
+      inputId: '_x_extension_tab_switcher_current_window_only_toggle_2026_unique_',
+      kind: 'tab-switcher-current-window-only',
+      key: S.TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY,
+      normalize: S.normalizeTabSwitcherCurrentWindowOnly,
       refreshSelects: true
     },
     {

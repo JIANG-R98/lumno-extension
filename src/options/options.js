@@ -111,6 +111,8 @@ import * as LumnoWebDavOptions from './webdav-options.js';
   const aggregateSearchAutoGroupToggle = document.getElementById(
     '_x_extension_aggregate_search_auto_group_toggle_2026_unique_'
   );
+  const tabSwitcherToggle = document.getElementById('_x_extension_tab_switcher_toggle_2026_unique_');
+  const tabSwitcherSubrows = document.getElementById('_x_extension_tab_switcher_subrows_2026_unique_');
   const selectionQuickActionsToggle = document.getElementById('_x_extension_selection_quick_actions_toggle_2026_unique_');
   const selectionQuickActionsSubrows = document.getElementById('_x_extension_selection_quick_actions_subrows_2026_unique_');
   const selectionQuickActionsProviderRow = document.getElementById('_x_extension_selection_quick_actions_provider_row_2026_unique_');
@@ -762,6 +764,8 @@ import * as LumnoWebDavOptions from './webdav-options.js';
     renderSearchResultSourceTypeControl
   } = OPTIONS_TOGGLE_CONTROLS.createToggleControls({
     optionsSettingsControlsApi,
+    tabSwitcherToggle,
+    tabSwitcherSubrows,
     selectionQuickActionsToggle,
     selectionQuickActionsProviderSelect,
     renderOptionsSelectControl: optionsState.renderOptionsSelectControl,

@@ -180,6 +180,7 @@ const HIDDEN_RECENT_SITES_STORAGE_KEY = '_x_extension_newtab_hidden_recent_sites
 const NEWTAB_SHORTCUTS_STORAGE_KEY = '_x_extension_newtab_shortcuts_2026_unique_';
 const AUTO_PIP_ENABLED_STORAGE_KEY = '_x_extension_auto_pip_enabled_2026_unique_';
 const TAB_SWITCHER_ENABLED_STORAGE_KEY = '_x_extension_tab_switcher_enabled_2026_unique_';
+const TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY = '_x_extension_tab_switcher_current_window_only_2026_unique_';
 const DOCUMENT_PIP_ENABLED_STORAGE_KEY = '_x_extension_document_pip_enabled_2026_unique_';
 const PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY = '_x_extension_pinned_tab_recovery_enabled_2026_unique_';
 const LINK_PREVIEW_ENABLED_STORAGE_KEY = '_x_extension_link_preview_enabled_2026_unique_';
@@ -381,6 +382,7 @@ const CHROME_SYNC_STORAGE_KEYS = Object.freeze([
   MACOS_CTRL_SUGGESTION_NAVIGATION_ENABLED_STORAGE_KEY,
   AUTO_PIP_ENABLED_STORAGE_KEY,
   TAB_SWITCHER_ENABLED_STORAGE_KEY,
+  TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY,
   DOCUMENT_PIP_ENABLED_STORAGE_KEY,
   PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY,
   LINK_PREVIEW_ENABLED_STORAGE_KEY,
@@ -1096,6 +1098,10 @@ function normalizeTabSwitcherEnabled(value) {
   return value !== false;
 }
 
+function normalizeTabSwitcherCurrentWindowOnly(value) {
+  return value === true;
+}
+
 function normalizeLinkPreviewEnabled(value) {
   return value !== false;
 }
@@ -1702,6 +1708,7 @@ export {
   NEWTAB_SHORTCUTS_STORAGE_KEY,
   AUTO_PIP_ENABLED_STORAGE_KEY,
   TAB_SWITCHER_ENABLED_STORAGE_KEY,
+  TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY,
   DOCUMENT_PIP_ENABLED_STORAGE_KEY,
   PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY,
   LINK_PREVIEW_ENABLED_STORAGE_KEY,
@@ -1878,6 +1885,7 @@ export {
   normalizeSearchResultSourceTypes,
   normalizeTabRankScoreDebugMode,
   normalizeTabSwitcherEnabled,
+  normalizeTabSwitcherCurrentWindowOnly,
   normalizeLinkPreviewEnabled,
   normalizeSelectionQuickActionsEnabled,
   normalizeSelectionQuickActionsProvider,

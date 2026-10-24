@@ -70,6 +70,7 @@ import './overlay-loading-lifecycle.js';
 import * as DEV_EXTENSION_STARTUP from './dev-extension-startup.js';
 import {
   applyTabSwitcherEnabledSetting,
+  applyTabSwitcherCurrentWindowOnlySetting,
   clearSwitcherThumbnailPriority,
   ensureTabSwitcherStateLoaded,
   flushPendingTabSwitcherState,
@@ -366,6 +367,7 @@ if (storageArea) {
     RESTRICTED_ACTION_AUTO_BROWSER_SETTING_DONE_STORAGE_KEY,
     DOCUMENT_PIP_ENABLED_STORAGE_KEY,
     TAB_SWITCHER_ENABLED_STORAGE_KEY,
+    SETTINGS.TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY,
     PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY
   ], (storedResult) => {
     const result = storedResult || {};
@@ -389,6 +391,9 @@ if (storageArea) {
       storageArea.set({ [TAB_SWITCHER_ENABLED_STORAGE_KEY]: normalizedTabSwitcher });
     }
     applyTabSwitcherEnabledSetting(normalizedTabSwitcher);
+    applyTabSwitcherCurrentWindowOnlySetting(SETTINGS.normalizeTabSwitcherCurrentWindowOnly(
+      result[SETTINGS.TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY]
+    ));
     const pinnedTabRecoveryStored = result[PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY];
     applyPinnedTabRecoverySetting(pinnedTabRecoveryStored);
     markBackgroundSettingsLoaded();
@@ -1053,6 +1058,11 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     if (typeof next !== 'undefined' && next !== normalized && storageArea) {
       storageArea.set({ [TAB_SWITCHER_ENABLED_STORAGE_KEY]: normalized });
     }
+  }
+  if (changes[SETTINGS.TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY]) {
+    applyTabSwitcherCurrentWindowOnlySetting(SETTINGS.normalizeTabSwitcherCurrentWindowOnly(
+      changes[SETTINGS.TAB_SWITCHER_CURRENT_WINDOW_ONLY_STORAGE_KEY].newValue
+    ));
   }
   if (changes[PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY]) {
     const next = changes[PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY].newValue;

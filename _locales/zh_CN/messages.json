@@ -2780,6 +2780,12 @@
   "settings_tab_switcher_desc": {
     "message": "快速切换最近标签页，默认 {shortcut}，可自定义"
   },
+  "settings_tab_switcher_current_window_only_title": {
+    "message": "只显示当前窗口的标签页"
+  },
+  "settings_tab_switcher_current_window_only_desc": {
+    "message": "适用于把每个空间放在独立窗口的浏览器，避免列出其他空间的标签页"
+  },
   "settings_features_section_title": {
     "message": "功能"
   },
