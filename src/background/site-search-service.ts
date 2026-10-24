@@ -1,11 +1,9 @@
-// @ts-nocheck
 // Search requests from New Tab and the overlay: interactive site-search
 // providers, aggregate search across several engines, the help center index,
 // and the search and site-search message handlers.
 //
 // A module of the service worker; background.ts imports it before its own code
-// runs. It uses other services' bindings only when its functions run, never
-// while this file loads, because the services import one another.
+// runs.
 
 import * as AGGREGATE_SEARCH from './aggregate-search';
 import * as AGGREGATE_SEARCH_STORE from '../domain/search/aggregate-search-store';
@@ -44,8 +42,70 @@ import {
   startSearchEngineSuggestionRequest
 } from './search-suggestions-service';
 import { createSearchResultTab, resolveSearchResultTabPlacement } from './browser-urls-service';
+import type { AggregateSearchQueryRunner } from './aggregate-search';
+import type { CreatedTabCallback } from './tab-groups';
+import type { HelpIndexDoc, HelpSearchResult } from '../domain/search/help-center-search';
+import type { SiteSearchProvider } from '../domain/search/types';
+import type { OkReply, OpenDisposition } from '../domain/messages';
+import type { HandlersFor, MessageSender } from './message-router';
 
-function runInteractiveSiteSearchProvider(provider, query, sender, disposition) {
+type SearchAction =
+  | 'searchOrNavigate'
+  | 'getSearchSuggestions'
+  | 'getSearchEngineSuggestions'
+  | 'recordSearchSuggestionSelection'
+  | 'deleteHistoryUrl';
+
+type SiteSearchAction =
+  | 'getSiteSearchProviders'
+  | 'getHelpCenterSearchResults'
+  | 'runSiteSearchProviderQuery'
+  | 'runAggregateSearchQuery';
+
+// What running an interactive provider did: the tab it used and how the
+// prompt went in.
+interface ProviderRunResult extends OkReply {
+  tabId?: number;
+  url?: string;
+  strategy?: string;
+  method?: string;
+}
+
+const PROVIDER_STRING_FIELDS = ['id', 'name', 'template', 'action', 'submitStrategy', 'category', 'builtinKey', 'icon', 'iconUrl'] as const;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
+function readDisposition(value: unknown): OpenDisposition | undefined {
+  return value === 'currentTab' || value === 'newTab' || value === 'backgroundTab' ? value : undefined;
+}
+
+// A provider a page asks to run, with only the string fields running it reads.
+function readSiteSearchProvider(value: unknown): SiteSearchProvider | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const provider: SiteSearchProvider = { key: typeof value.key === 'string' ? value.key : '' };
+  PROVIDER_STRING_FIELDS.forEach((field) => {
+    const fieldValue = value[field];
+    if (typeof fieldValue === 'string') {
+      provider[field] = fieldValue;
+    }
+  });
+  return provider;
+}
+
+function runInteractiveSiteSearchProvider(
+  provider: SiteSearchProvider | null,
+  query: unknown,
+  sender: MessageSender | null | undefined,
+  disposition: OpenDisposition | undefined
+): Promise<ProviderRunResult> {
   const prompt = String(query || '').trim();
   const entryUrl = getSiteSearchProviderEntryUrl(provider, prompt);
   const submitStrategy = String((provider && provider.submitStrategy) || '').trim();
@@ -57,19 +117,20 @@ function runInteractiveSiteSearchProvider(provider, query, sender, disposition) 
       resolve({ ok: false, reason: 'invalid-provider-request' });
       return;
     }
-    const finish = (result) => {
+    const finish = (result: ProviderRunResult): void => {
       resolve(result && typeof result === 'object' ? result : { ok: false, reason: 'unknown' });
     };
-    const handleReadyTab = (tab) => {
+    const handleReadyTab = (tab: chrome.tabs.Tab | null | undefined): void => {
       if (!tab || typeof tab.id !== 'number') {
         finish({ ok: false, reason: 'tab-unavailable' });
         return;
       }
-      waitForTabComplete(tab.id, 15000)
+      const tabId = tab.id;
+      waitForTabComplete(tabId, 15000)
         .catch(() => tab)
         .then(() => AI_PROVIDER_SUBMIT.submitPromptInTab(
           chrome,
-          tab.id,
+          tabId,
           prompt,
           submitStrategy,
           entryUrl
@@ -77,26 +138,27 @@ function runInteractiveSiteSearchProvider(provider, query, sender, disposition) 
         .then((result) => {
           finish({
             ok: Boolean(result && result.ok),
-            tabId: tab.id,
+            tabId,
             url: entryUrl,
             strategy: submitStrategy,
             method: result && result.method ? result.method : '',
             reason: result && result.reason ? result.reason : ''
           });
         })
-        .catch((error) => {
+        .catch((error: unknown) => {
           finish({
             ok: false,
-            tabId: tab.id,
+            tabId,
             url: entryUrl,
-            reason: error && error.message ? error.message : 'interactive-site-search-failed'
+            reason: getErrorMessage(error, 'interactive-site-search-failed')
           });
         });
     };
-    const updateTab = (tabId) => {
+    const updateTab = (tabId: number): void => {
       chrome.tabs.update(tabId, { url: entryUrl, active: true }, (tab) => {
-        if (chrome.runtime && chrome.runtime.lastError) {
-          finish({ ok: false, reason: chrome.runtime.lastError.message || 'tab-update-failed' });
+        const lastError = chrome.runtime && chrome.runtime.lastError;
+        if (lastError) {
+          finish({ ok: false, reason: lastError.message || 'tab-update-failed' });
           return;
         }
         handleReadyTab(tab);
@@ -108,8 +170,9 @@ function runInteractiveSiteSearchProvider(provider, query, sender, disposition) 
         return;
       }
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (chrome.runtime && chrome.runtime.lastError) {
-          finish({ ok: false, reason: chrome.runtime.lastError.message || 'active-tab-unavailable' });
+        const lastError = chrome.runtime && chrome.runtime.lastError;
+        if (lastError) {
+          finish({ ok: false, reason: lastError.message || 'active-tab-unavailable' });
           return;
         }
         const activeTab = Array.isArray(tabs) && tabs.length > 0 ? tabs[0] : null;
@@ -132,8 +195,13 @@ function runInteractiveSiteSearchProvider(provider, query, sender, disposition) 
   });
 }
 
-let aggregateSearchQueryRunner = null;
-function runAggregateSearchQuery(aggregateId, query, sender, disposition) {
+let aggregateSearchQueryRunner: AggregateSearchQueryRunner | null = null;
+function runAggregateSearchQuery(
+  aggregateId: unknown,
+  query: unknown,
+  sender: MessageSender,
+  disposition: OpenDisposition | undefined
+): ReturnType<AggregateSearchQueryRunner> {
   if (!aggregateSearchQueryRunner) {
     aggregateSearchQueryRunner = AGGREGATE_SEARCH.createAggregateSearchQueryRunner({
       aggregateSearchStore: AGGREGATE_SEARCH_STORE,
@@ -163,14 +231,14 @@ function runAggregateSearchQuery(aggregateId, query, sender, disposition) {
 }
 
 // Search, suggestions and history.
-export const SEARCH_MESSAGE_HANDLERS = Object.freeze({
+export const SEARCH_MESSAGE_HANDLERS: HandlersFor<SearchAction> = Object.freeze({
   searchOrNavigate(request, sender, sendResponse) {
     const query = request.query ? String(request.query) : '';
     const forceSearch = Boolean(request.forceSearch);
     const openInBackgroundTab = request.disposition === 'backgroundTab';
     const sourceTab = sender && sender.tab ? sender.tab : null;
     Promise.all([loadShortcutRules(), resolveSearchResultTabPlacement(sourceTab)]).then(([rules, placement]) => {
-      const createResolvedTab = (url, callback) => {
+      const createResolvedTab = (url: string, callback: CreatedTabCallback): void => {
         createSearchResultTab({
           url,
           active: !openInBackgroundTab
@@ -213,7 +281,7 @@ export const SEARCH_MESSAGE_HANDLERS = Object.freeze({
                 sendResponse({ ok: true, url: fallbackUrl });
               });
               return;
-            } catch (error) {
+            } catch (_error) {
               clearPendingSearch();
             }
           }
@@ -262,7 +330,7 @@ export const SEARCH_MESSAGE_HANDLERS = Object.freeze({
     getSearchSuggestions(query, {
       sourceTypes: request.sourceTypes,
       includeOpenTabs: request.includeOpenTabs
-    }).then(suggestions => {
+    }).then((suggestions) => {
       sendResponse({ suggestions: suggestions });
     }).catch(() => {
       sendResponse({ suggestions: [] });
@@ -306,10 +374,10 @@ export const SEARCH_MESSAGE_HANDLERS = Object.freeze({
       .then((result) => {
         sendResponse(result);
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         sendResponse({
           ok: false,
-          reason: error && error.message ? error.message : 'record-selection-failed'
+          reason: getErrorMessage(error, 'record-selection-failed')
         });
       });
     return true;
@@ -320,29 +388,36 @@ export const SEARCH_MESSAGE_HANDLERS = Object.freeze({
   }
 });
 
-let helpCenterIndexLoader = null;
-let helpCenterSynonymsLoader = null;
+type HelpSynonyms = ReturnType<typeof HELP_CENTER_SEARCH.normalizeSynonyms>;
+
+let helpCenterLoaders: {
+  index: { load(url: unknown): Promise<HelpIndexDoc[] | never[]> };
+  synonyms: { load(url: unknown): Promise<HelpSynonyms | never[]> };
+} | null = null;
 
 // Help center pages matching the query, read from the index and synonym list of the given
 // interface language. Without synonyms the search still runs, only more literally.
-function getHelpCenterSearchResults(query, locale) {
+function getHelpCenterSearchResults(query: unknown, locale: unknown): Promise<HelpSearchResult[]> {
   if (!String(query || '').trim()) {
     return Promise.resolve([]);
   }
-  if (!helpCenterIndexLoader) {
-    const fetchImpl = (url, init) => fetch(url, init);
-    helpCenterIndexLoader = LumnoHelpCenterIndex.createIndexLoader({ fetchImpl });
-    // A language with no synonym list (404) is cached as empty rather than asked for on every key.
-    helpCenterSynonymsLoader = LumnoHelpCenterIndex.createIndexLoader({
-      fetchImpl: (url, init) => fetch(url, init).then((response) => (
-        response.status === 404 ? { ok: true, json: () => [] } : response
-      )),
-      parse: HELP_CENTER_SEARCH.normalizeSynonyms
-    });
+  if (!helpCenterLoaders) {
+    const fetchImpl = (url: string, init?: { signal: AbortSignal }): Promise<Response> => fetch(url, init);
+    helpCenterLoaders = {
+      index: LumnoHelpCenterIndex.createIndexLoader({ fetchImpl }),
+      // A language with no synonym list (404) is cached as empty rather than asked for on every key.
+      synonyms: LumnoHelpCenterIndex.createIndexLoader({
+        fetchImpl: (url, init) => fetch(url, init).then((response) => (
+          response.status === 404 ? { ok: true, json: () => [] } : response
+        )),
+        parse: HELP_CENTER_SEARCH.normalizeSynonyms
+      })
+    };
   }
+  const loaders = helpCenterLoaders;
   return Promise.all([
-    helpCenterIndexLoader.load(COMMUNITY_LINKS.getHelpSearchIndexUrl(locale)),
-    helpCenterSynonymsLoader.load(COMMUNITY_LINKS.getHelpSearchSynonymsUrl(locale)).catch(() => [])
+    loaders.index.load(COMMUNITY_LINKS.getHelpSearchIndexUrl(locale)),
+    loaders.synonyms.load(COMMUNITY_LINKS.getHelpSearchSynonymsUrl(locale)).catch((): never[] => [])
   ]).then(([index, synonyms]) => HELP_CENTER_SEARCH.searchIndex(index, query, {
     origin: COMMUNITY_LINKS.WEB_ORIGIN,
     synonyms
@@ -350,7 +425,7 @@ function getHelpCenterSearchResults(query, locale) {
 }
 
 // Site search, help center and aggregate search.
-export const SITE_SEARCH_MESSAGE_HANDLERS = Object.freeze({
+export const SITE_SEARCH_MESSAGE_HANDLERS: HandlersFor<SiteSearchAction> = Object.freeze({
   getSiteSearchProviders(request, sender, sendResponse) {
     loadSiteSearchProviders().then((items) => {
       sendResponse({ items: items });
@@ -372,16 +447,16 @@ export const SITE_SEARCH_MESSAGE_HANDLERS = Object.freeze({
   },
   runSiteSearchProviderQuery(request, sender, sendResponse) {
     runInteractiveSiteSearchProvider(
-      request.provider,
+      readSiteSearchProvider(request.provider),
       request.query,
       sender,
-      request.disposition
+      readDisposition(request.disposition)
     ).then((result) => {
       sendResponse(result);
-    }).catch((error) => {
+    }).catch((error: unknown) => {
       sendResponse({
         ok: false,
-        reason: error && error.message ? error.message : 'interactive-site-search-failed'
+        reason: getErrorMessage(error, 'interactive-site-search-failed')
       });
     });
     return true;
@@ -391,11 +466,11 @@ export const SITE_SEARCH_MESSAGE_HANDLERS = Object.freeze({
       request.aggregateId,
       request.query,
       sender,
-      request.disposition
-    ).then(sendResponse).catch((error) => {
+      readDisposition(request.disposition)
+    ).then(sendResponse).catch((error: unknown) => {
       sendResponse({
         ok: false,
-        reason: error && error.message ? error.message : 'aggregate-search-failed'
+        reason: getErrorMessage(error, 'aggregate-search-failed')
       });
     });
     return true;

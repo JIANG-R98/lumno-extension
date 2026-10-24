@@ -1,11 +1,9 @@
-// @ts-nocheck
 // The selection toolbar's actions: its enabled/provider/group settings, opening
 // a search or an AI prompt for the selected text in a new tab (in the toolbar's
 // tab group), and the messages the toolbar sends.
 //
 // A module of the service worker; background.ts imports it before its own code
-// runs. It uses other services' bindings only when its functions run, never
-// while this file loads, because the services import one another.
+// runs.
 
 import * as AI_PROVIDER_SUBMIT from './ai-provider-submit';
 import * as SEARCH_UTILS from '../domain/search/search-utils';
@@ -25,8 +23,34 @@ import {
   loadSiteSearchProviders,
   sanitizeSiteSearchProviders
 } from './search-suggestions-service';
+import type { SelectionAction } from '../domain/selection-intent';
+import type { SelectionQuickActionsProvider } from '../domain/settings';
+import type { SiteSearchProvider } from '../domain/search/types';
+import type { SelectionTargetOptions, SelectionTargetResult } from './selection-target';
+import type { HandlersFor, IncomingRequest, MessageSender } from './message-router';
+import type { OkReply } from '../domain/messages';
 
-export function loadSelectionQuickActionsEnabled() {
+// What a selection quick action did: the tab it opened and how the prompt
+// went in, or why it stopped.
+interface SelectionActionResult extends OkReply {
+  tabId?: number;
+  url?: string;
+  strategy?: string;
+  method?: string;
+  openMode?: string;
+  groupId?: number | null;
+  providerKey?: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function isSelectionAction(value: unknown): value is SelectionAction {
+  return SELECTION_INTENT.ACTIONS.some((action) => action === value);
+}
+
+export function loadSelectionQuickActionsEnabled(): Promise<boolean> {
   return new Promise((resolve) => {
     if (!storageArea || typeof storageArea.get !== 'function') {
       resolve(false);
@@ -42,7 +66,7 @@ export function loadSelectionQuickActionsEnabled() {
   });
 }
 
-function loadSelectionQuickActionsProvider() {
+function loadSelectionQuickActionsProvider(): Promise<SelectionQuickActionsProvider> {
   return new Promise((resolve) => {
     if (!storageArea || typeof storageArea.get !== 'function') {
       resolve('gpt');
@@ -60,7 +84,7 @@ function loadSelectionQuickActionsProvider() {
   });
 }
 
-function loadSelectionQuickActionsGroupEnabled() {
+function loadSelectionQuickActionsGroupEnabled(): Promise<boolean> {
   return new Promise((resolve) => {
     if (!storageArea || typeof storageArea.get !== 'function') {
       resolve(false);
@@ -76,23 +100,23 @@ function loadSelectionQuickActionsGroupEnabled() {
   });
 }
 
-let selectionTargetOpenQueue = Promise.resolve();
-let selectionQuickActionFallbackProvidersPromise = null;
-const selectionQuickActionGroupTitlePromises = new Map();
+let selectionTargetOpenQueue: Promise<unknown> = Promise.resolve();
+let selectionQuickActionFallbackProvidersPromise: Promise<SiteSearchProvider[]> | null = null;
+const selectionQuickActionGroupTitlePromises = new Map<string, Promise<string>>();
 
-function loadSelectionQuickActionGroupTitle(locale) {
+function loadSelectionQuickActionGroupTitle(locale: unknown): Promise<string> {
   const normalizedLocale = SETTINGS.normalizeLocale(locale);
-  if (selectionQuickActionGroupTitlePromises.has(normalizedLocale)) {
-    return selectionQuickActionGroupTitlePromises.get(normalizedLocale);
+  const known = selectionQuickActionGroupTitlePromises.get(normalizedLocale);
+  if (known) {
+    return known;
   }
   const fallbackTitle = String(SELECTION_TARGET.DEFAULT_GROUP_TITLE || 'AI Search');
   const localePath = chrome.runtime.getURL(`_locales/${normalizedLocale}/messages.json`);
   const titlePromise = fetch(localePath, { cache: 'no-store' })
     .then((response) => response.json())
-    .then((messages) => {
-      const title = messages && messages.selection_quick_actions_group_name
-        ? String(messages.selection_quick_actions_group_name.message || '').trim()
-        : '';
+    .then((messages: unknown) => {
+      const entry = isRecord(messages) ? messages.selection_quick_actions_group_name : null;
+      const title = isRecord(entry) ? String(entry.message || '').trim() : '';
       return title || fallbackTitle;
     })
     .catch(() => fallbackTitle);
@@ -100,18 +124,18 @@ function loadSelectionQuickActionGroupTitle(locale) {
   return titlePromise;
 }
 
-function queueSelectionTargetOpen(options) {
+function queueSelectionTargetOpen(options: SelectionTargetOptions): Promise<SelectionTargetResult> {
   // The previous open reported its own failure to its caller; only order matters here.
   const task = selectionTargetOpenQueue
     .catch(() => {})
-    .then(() => new Promise((resolve) => {
+    .then(() => new Promise<SelectionTargetResult>((resolve) => {
       SELECTION_TARGET.openSelectionTarget(chrome, options, resolve);
     }));
   selectionTargetOpenQueue = task.then(() => undefined, () => undefined);
   return task;
 }
 
-function loadSelectionQuickActionFallbackProviders() {
+function loadSelectionQuickActionFallbackProviders(): Promise<SiteSearchProvider[]> {
   if (selectionQuickActionFallbackProvidersPromise) {
     return selectionQuickActionFallbackProvidersPromise;
   }
@@ -119,31 +143,38 @@ function loadSelectionQuickActionFallbackProviders() {
   const fallbackDefaults = SEARCH_UTILS.getDefaultSiteSearchProviders();
   selectionQuickActionFallbackProvidersPromise = fetch(localUrl)
     .then((response) => response.json())
-    .then((data) => {
-      const items = data && Array.isArray(data.items) ? data.items : [];
+    .then((data: unknown) => {
+      const items: unknown[] = isRecord(data) && Array.isArray(data.items) ? data.items : [];
       return sanitizeSiteSearchProviders(items.length > 0 ? items : fallbackDefaults);
     })
     .catch(() => sanitizeSiteSearchProviders(fallbackDefaults));
   return selectionQuickActionFallbackProvidersPromise;
 }
 
-function submitSelectionPromptInTab(provider, prompt, entryUrl, tab, targetInfo) {
+function submitSelectionPromptInTab(
+  provider: SiteSearchProvider,
+  prompt: string,
+  entryUrl: string,
+  tab: chrome.tabs.Tab | null,
+  targetInfo: SelectionTargetResult
+): Promise<SelectionActionResult> {
   const submitStrategy = String(provider && provider.submitStrategy || '').trim();
   if (!tab || typeof tab.id !== 'number') {
     return Promise.resolve({ ok: false, reason: 'tab-unavailable' });
   }
-  return waitForTabComplete(tab.id, 15000)
+  const tabId = tab.id;
+  return waitForTabComplete(tabId, 15000)
     .catch(() => tab)
     .then(() => AI_PROVIDER_SUBMIT.submitPromptInTab(
       chrome,
-      tab.id,
+      tabId,
       prompt,
       submitStrategy,
       entryUrl
     ))
     .then((result) => ({
       ok: Boolean(result && result.ok),
-      tabId: tab.id,
+      tabId,
       url: entryUrl,
       strategy: submitStrategy,
       method: result && result.method ? result.method : '',
@@ -155,14 +186,14 @@ function submitSelectionPromptInTab(provider, prompt, entryUrl, tab, targetInfo)
 }
 
 async function openAndSubmitSelectionPrompt(
-  provider,
-  prompt,
-  entryUrl,
-  sourceTab,
-  groupEnabled,
-  groupTitle
-) {
-  const targetOptions = {
+  provider: SiteSearchProvider,
+  prompt: string,
+  entryUrl: string,
+  sourceTab: chrome.tabs.Tab | null,
+  groupEnabled: boolean,
+  groupTitle: string
+): Promise<SelectionActionResult> {
+  const targetOptions: SelectionTargetOptions = {
     url: entryUrl,
     sourceTab,
     groupEnabled,
@@ -195,7 +226,10 @@ async function openAndSubmitSelectionPrompt(
   return firstResult;
 }
 
-async function runSelectionQuickAction(request, sender) {
+async function runSelectionQuickAction(
+  request: IncomingRequest<'runSelectionQuickAction'>,
+  sender: MessageSender
+): Promise<SelectionActionResult> {
   const [enabled, preferredProviderKey, groupEnabled, bundledProviders, groupTitle] = await Promise.all([
     loadSelectionQuickActionsEnabled(),
     loadSelectionQuickActionsProvider(),
@@ -209,8 +243,7 @@ async function runSelectionQuickAction(request, sender) {
   const rawText = typeof request.text === 'string' ? request.text : '';
   const normalizedText = SELECTION_INTENT.normalizeText(rawText);
   const maxLength = Number(SELECTION_INTENT.MAX_SELECTION_LENGTH) || 2400;
-  const actions = Array.isArray(SELECTION_INTENT.ACTIONS) ? SELECTION_INTENT.ACTIONS : [];
-  const intent = actions.includes(request.intent) ? request.intent : 'ask';
+  const intent: SelectionAction = isSelectionAction(request.intent) ? request.intent : 'ask';
   if (!normalizedText || normalizedText.length > maxLength) {
     return { ok: false, reason: 'invalid-selection-text' };
   }
@@ -241,16 +274,16 @@ async function runSelectionQuickAction(request, sender) {
 }
 
 // Selection quick actions.
-export const SELECTION_QUICK_ACTION_MESSAGE_HANDLERS = Object.freeze({
+export const SELECTION_QUICK_ACTION_MESSAGE_HANDLERS: HandlersFor<'runSelectionQuickAction'> = Object.freeze({
   runSelectionQuickAction(request, sender, sendResponse) {
     runSelectionQuickAction(request, sender)
       .then((result) => {
         sendResponse(result);
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         sendResponse({
           ok: false,
-          reason: error && error.message ? error.message : 'selection-quick-action-failed'
+          reason: error instanceof Error && error.message ? error.message : 'selection-quick-action-failed'
         });
       });
     return true;

@@ -41,6 +41,8 @@
     "src/shared/wallpaper-local-store.ts",
     "src/background/webdav-sync.ts",
     "src/background/favicon-service.ts",
-    "src/background/search-suggestions-service.ts"
+    "src/background/search-suggestions-service.ts",
+    "src/background/selection-quick-actions-service.ts",
+    "src/background/site-search-service.ts"
   ]
 }
