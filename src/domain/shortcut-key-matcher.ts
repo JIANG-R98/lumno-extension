@@ -1,5 +1,34 @@
-// @ts-nocheck
-const KEY_ALIASES = Object.freeze({
+// Matching key presses against configured shortcuts.
+
+interface ShortcutSpec {
+  ctrl: boolean;
+  alt: boolean;
+  shift: boolean;
+  meta: boolean;
+  // A lowercase character, a function key ("F5") or a key name ("Enter").
+  key: string;
+}
+
+// A key press reduced to its modifiers and key.
+interface KeyDescriptor {
+  ctrlKey: boolean;
+  altKey: boolean;
+  shiftKey: boolean;
+  metaKey: boolean;
+  key: string;
+}
+
+// The fields of a keyboard event the matcher reads.
+interface KeyboardEventLike {
+  code?: string;
+  key?: string;
+  ctrlKey?: boolean;
+  altKey?: boolean;
+  shiftKey?: boolean;
+  metaKey?: boolean;
+}
+
+const KEY_ALIASES: Readonly<Record<string, string>> = Object.freeze({
   tab: 'Tab',
   enter: 'Enter',
   return: 'Enter',
@@ -29,7 +58,7 @@ const KEY_ALIASES = Object.freeze({
   bracketright: ']'
 });
 
-const CODE_ALIASES = Object.freeze({
+const CODE_ALIASES: Readonly<Record<string, string>> = Object.freeze({
   Backquote: '`',
   Minus: '-',
   Equal: '+',
@@ -51,7 +80,14 @@ const CODE_ALIASES = Object.freeze({
   ArrowRight: 'ArrowRight'
 });
 
-function parseShortcut(shortcut) {
+// An own entry of an alias table, so "constructor" and its kin never match.
+function lookup(table: Readonly<Record<string, string>>, key: string): string {
+  return Object.prototype.hasOwnProperty.call(table, key) ? table[key] : '';
+}
+
+// A shortcut as Chrome writes it ("Ctrl+Shift+K", "⌘⇧K"), or null when it
+// is not one.
+function parseShortcut(shortcut: unknown): ShortcutSpec | null {
   let value = String(shortcut || '').trim().replace(/\s*\+\s*/g, '+');
   if (!value || value.includes('%')) {
     return null;
@@ -67,8 +103,8 @@ function parseShortcut(shortcut) {
   if (parts.length === 0) {
     return null;
   }
-  const keyToken = parts.pop();
-  const spec = {
+  const keyToken = parts.pop() || '';
+  const spec: ShortcutSpec = {
     ctrl: false,
     alt: false,
     shift: false,
@@ -91,8 +127,9 @@ function parseShortcut(shortcut) {
     }
   }
   const normalizedKey = keyToken.toLowerCase();
-  if (KEY_ALIASES[normalizedKey]) {
-    spec.key = KEY_ALIASES[normalizedKey];
+  const alias = lookup(KEY_ALIASES, normalizedKey);
+  if (alias) {
+    spec.key = alias;
   } else if (/^f\d{1,2}$/.test(normalizedKey)) {
     spec.key = normalizedKey.toUpperCase();
   } else {
@@ -101,7 +138,8 @@ function parseShortcut(shortcut) {
   return spec.key ? spec : null;
 }
 
-function getKeyFromCode(rawCode) {
+// The key a KeyboardEvent.code stands for, independent of the layout.
+function getKeyFromCode(rawCode: unknown): string {
   const code = String(rawCode || '').trim();
   if (/^Key[A-Z]$/.test(code)) {
     return code.slice(3).toLowerCase();
@@ -109,13 +147,14 @@ function getKeyFromCode(rawCode) {
   if (/^Digit\d$/.test(code)) {
     return code.slice(5);
   }
-  if (CODE_ALIASES[code]) {
-    return CODE_ALIASES[code];
+  const alias = lookup(CODE_ALIASES, code);
+  if (alias) {
+    return alias;
   }
   return /^F\d{1,2}$/.test(code) ? code.toUpperCase() : '';
 }
 
-function describeKeyboardEvent(event) {
+function describeKeyboardEvent(event: KeyboardEventLike | null | undefined): KeyDescriptor | null {
   if (!event) {
     return null;
   }
@@ -132,7 +171,10 @@ function describeKeyboardEvent(event) {
   };
 }
 
-function descriptorMatchesShortcut(descriptor, shortcutOrSpec) {
+function descriptorMatchesShortcut(
+  descriptor: Partial<KeyDescriptor> | null | undefined,
+  shortcutOrSpec: string | ShortcutSpec | null | undefined
+): boolean {
   const spec = typeof shortcutOrSpec === 'string'
     ? parseShortcut(shortcutOrSpec)
     : shortcutOrSpec;
@@ -153,11 +195,15 @@ function descriptorMatchesShortcut(descriptor, shortcutOrSpec) {
   return eventKey === spec.key;
 }
 
-function eventMatchesShortcut(event, shortcutOrSpec) {
+function eventMatchesShortcut(
+  event: KeyboardEventLike | null | undefined,
+  shortcutOrSpec: string | ShortcutSpec | null | undefined
+): boolean {
   return descriptorMatchesShortcut(describeKeyboardEvent(event), shortcutOrSpec);
 }
 
-function canBeChromeCommandShortcut(descriptor) {
+// Chrome commands need a modifier other than Shift, or a function key.
+function canBeChromeCommandShortcut(descriptor: Partial<KeyDescriptor> | null | undefined): boolean {
   if (!descriptor || !String(descriptor.key || '')) {
     return false;
   }
@@ -173,3 +219,4 @@ export {
   eventMatchesShortcut,
   canBeChromeCommandShortcut
 };
+export type { KeyDescriptor, KeyboardEventLike, ShortcutSpec };

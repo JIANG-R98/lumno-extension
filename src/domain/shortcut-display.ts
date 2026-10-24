@@ -1,5 +1,21 @@
-// @ts-nocheck
-const MODIFIER_ALIASES = Object.freeze({
+// Shortcut labels as each platform writes them.
+
+type ShortcutPlatform = 'mac' | 'windows' | 'other';
+
+// The navigator fields the platform is read from.
+interface NavigatorLike {
+  userAgentData?: { platform?: unknown } | null;
+  platform?: unknown;
+  userAgent?: unknown;
+}
+
+interface ShortcutDisplayOptions {
+  // A platform name; read from navigatorLike when absent.
+  platform?: string;
+  navigatorLike?: NavigatorLike | null;
+}
+
+const MODIFIER_ALIASES: Readonly<Record<string, string>> = Object.freeze({
   alt: 'Alt',
   cmd: 'Command',
   command: 'Command',
@@ -12,7 +28,7 @@ const MODIFIER_ALIASES = Object.freeze({
   super: 'Command'
 });
 
-const KEY_ALIASES = Object.freeze({
+const KEY_ALIASES: Readonly<Record<string, string>> = Object.freeze({
   arrowdown: 'ArrowDown',
   arrowleft: 'ArrowLeft',
   arrowright: 'ArrowRight',
@@ -26,28 +42,33 @@ const KEY_ALIASES = Object.freeze({
   up: 'ArrowUp'
 });
 
-const ARROW_LABELS = Object.freeze({
+const ARROW_LABELS: Readonly<Record<string, string>> = Object.freeze({
   ArrowDown: '↓',
   ArrowLeft: '←',
   ArrowRight: '→',
   ArrowUp: '↑'
 });
 
-const MAC_KEY_LABELS = Object.freeze({
+const MAC_KEY_LABELS: Readonly<Record<string, string>> = Object.freeze({
   ...ARROW_LABELS,
   Enter: '↩',
   Escape: '⎋',
   Tab: '⇥'
 });
 
-const MAC_MODIFIER_LABELS = Object.freeze({
+const MAC_MODIFIER_LABELS: Readonly<Record<string, string>> = Object.freeze({
   Alt: '⌥',
   Command: '⌘',
   Ctrl: '⌃',
   Shift: '⇧'
 });
 
-function getNavigatorPlatform(navigatorLike) {
+// An own entry of a label table, so "constructor" and its kin never match.
+function lookup(table: Readonly<Record<string, string>>, key: string): string {
+  return Object.prototype.hasOwnProperty.call(table, key) ? table[key] : '';
+}
+
+function getNavigatorPlatform(navigatorLike: NavigatorLike | null | undefined): ShortcutPlatform {
   const source = navigatorLike || {};
   const userAgentDataPlatform = source.userAgentData &&
     typeof source.userAgentData.platform === 'string'
@@ -76,7 +97,7 @@ function getNavigatorPlatform(navigatorLike) {
   return 'other';
 }
 
-function resolvePlatform(options) {
+function resolvePlatform(options: ShortcutDisplayOptions | null | undefined): ShortcutPlatform {
   const config = options || {};
   const explicitPlatform = String(config.platform || '').trim().toLowerCase();
   if (explicitPlatform.includes('mac')) {
@@ -91,16 +112,17 @@ function resolvePlatform(options) {
   return getNavigatorPlatform(config.navigatorLike);
 }
 
-function normalizeKeyToken(value) {
+function normalizeKeyToken(value: unknown): string {
   const text = String(value || '').trim();
   if (!text) {
     return '';
   }
-  const alias = KEY_ALIASES[text.toLowerCase()];
+  const alias = lookup(KEY_ALIASES, text.toLowerCase());
   return alias || text;
 }
 
-function formatShortcutChord(shortcut, options) {
+// "Ctrl+Shift+K" as the platform writes it: ⌃⇧K on a Mac.
+function formatShortcutChord(shortcut: unknown, options?: ShortcutDisplayOptions | null): string {
   const text = String(shortcut || '').trim();
   if (!text) {
     return '';
@@ -114,19 +136,21 @@ function formatShortcutChord(shortcut, options) {
   }
   const keyToken = normalizeKeyToken(parts.pop());
   const modifiers = parts.map((part) => {
-    return MODIFIER_ALIASES[String(part || '').trim().toLowerCase()] || part;
+    return lookup(MODIFIER_ALIASES, String(part || '').trim().toLowerCase()) || part;
   });
   const platform = resolvePlatform(options);
   const keyLabel = platform === 'mac'
-    ? (MAC_KEY_LABELS[keyToken] || keyToken)
-    : (ARROW_LABELS[keyToken] || keyToken);
+    ? (lookup(MAC_KEY_LABELS, keyToken) || keyToken)
+    : (lookup(ARROW_LABELS, keyToken) || keyToken);
   if (platform === 'mac') {
-    return `${modifiers.map((modifier) => MAC_MODIFIER_LABELS[modifier] || modifier).join('')}${keyLabel}`;
+    return `${modifiers.map((modifier) => lookup(MAC_MODIFIER_LABELS, modifier) || modifier).join('')}${keyLabel}`;
   }
   return modifiers.length > 0 ? `${modifiers.join('+')}+${keyLabel}` : keyLabel;
 }
 
-function formatShortcutReferencePart(part, options) {
+// One alternative of a reference: a chord, a sequence of chords, or one of
+// the named gestures ("arrow keys", "release Alt").
+function formatShortcutReferencePart(part: unknown, options?: ShortcutDisplayOptions | null): string {
   const text = String(part || '').trim();
   if (!text) {
     return '';
@@ -146,7 +170,8 @@ function formatShortcutReferencePart(part, options) {
   return formatShortcutChord(text, options);
 }
 
-function formatShortcutReference(shortcut, options) {
+// Alternatives separated by "/".
+function formatShortcutReference(shortcut: unknown, options?: ShortcutDisplayOptions | null): string {
   return String(shortcut || '')
     .split(/\s*\/\s*/)
     .map((part) => formatShortcutReferencePart(part, options))
@@ -154,7 +179,8 @@ function formatShortcutReference(shortcut, options) {
     .join(' / ');
 }
 
-function formatShortcutTemplate(text, shortcut, options) {
+// Puts the shortcut's label where the text says {shortcut}.
+function formatShortcutTemplate(text: unknown, shortcut: unknown, options?: ShortcutDisplayOptions | null): string {
   const shortcutLabel = formatShortcutChord(shortcut, options);
   return String(text || '').replace(/\{shortcut\}/g, shortcutLabel);
 }
@@ -166,3 +192,4 @@ export {
   formatShortcutTemplate,
   getNavigatorPlatform
 };
+export type { NavigatorLike, ShortcutDisplayOptions, ShortcutPlatform };
