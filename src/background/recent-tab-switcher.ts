@@ -1,16 +1,117 @@
-// @ts-nocheck
+// The recent-tab switcher's memory: the tabs in the order they were last
+// used, with a thumbnail of each, kept across worker restarts as plain data.
+import type { TabSwitcherThumbnailStatus } from '../domain/messages';
+
+// The tab fields the tracker reads; chrome.tabs.Tab has them all.
+interface TrackableTab {
+  id?: number;
+  windowId?: number;
+  url?: string;
+  pendingUrl?: string;
+  title?: string;
+  favIconUrl?: string;
+  lastAccessed?: number;
+  incognito?: boolean;
+}
+
+// A tab as it was last seen.
+interface TabSnapshot {
+  id: number;
+  windowId: number;
+  url: string;
+  title: string;
+  favIconUrl: string;
+  lastAccessed: number;
+  // When the person last switched to it.
+  visitedAt: number;
+}
+
+// The thumbnail states a capture leaves behind; 'missing' and 'stale' are
+// only ever reported, never kept.
+type KeptThumbnailStatus = 'ok' | 'pending' | 'failed' | 'restricted';
+
+interface ThumbnailEntry {
+  tabId: number;
+  // The page the thumbnail shows.
+  url: string;
+  dataUrl: string;
+  capturedAt: number;
+  updatedAt: number;
+  status: KeptThumbnailStatus;
+  reason: string;
+}
+
+interface ThumbnailState {
+  status: TabSwitcherThumbnailStatus;
+  reason: string;
+  dataUrl: string;
+  capturedAt: number;
+  updatedAt: number;
+}
+
+// The fields getRecentTabs adds to each tab.
+interface SwitcherFields {
+  url: string;
+  title: string;
+  favIconUrl: string;
+  _xSwitcherVisitedAt: number;
+  _xSwitcherThumbnail: string;
+  _xSwitcherThumbnailStatus: TabSwitcherThumbnailStatus;
+  _xSwitcherThumbnailReason: string;
+}
+
+interface TrackerState {
+  version: number;
+  savedAt: number;
+  stack: TabSnapshot[];
+  thumbnails: ThumbnailEntry[];
+}
+
+interface RecentTabTrackerOptions {
+  limit?: number;
+  thumbnailLimit?: number;
+  thumbnailTtlMs?: number;
+  shouldIncludeTab?: (tab: TrackableTab) => boolean;
+}
+
+interface RecentTabTracker {
+  recordTab(tab: TrackableTab | null | undefined, visitedAt?: number): TabSnapshot | null;
+  updateTab(tab: TrackableTab | null | undefined, visitedAt?: number): TabSnapshot | null;
+  removeTab(tabId: unknown): boolean;
+  getRecentTabs<T extends TrackableTab>(tabs: readonly T[] | null | undefined, requestOptions?: { limit?: number } | null): Array<T & SwitcherFields>;
+  setThumbnail(tabId: unknown, dataUrl: unknown, capturedAt?: number, metadata?: { url?: unknown } | null): boolean;
+  setThumbnailStatus(tabId: unknown, status: unknown, updatedAt?: number, metadata?: { url?: unknown; reason?: unknown } | null): boolean;
+  clearThumbnails(): boolean;
+  getThumbnailState(tabId: number, expectedUrl?: unknown): ThumbnailState;
+  getThumbnail(tabId: number, expectedUrl?: unknown): string;
+  getStackSnapshot(): TabSnapshot[];
+  exportState(options?: { now?: number } | null): TrackerState;
+  hydrateState(state: unknown, options?: { now?: number; merge?: boolean } | null): boolean;
+}
+
+interface FocusResult {
+  ok: boolean;
+  tabId?: number;
+  windowId?: number | null;
+  reason?: string;
+}
+
 const DEFAULT_LIMIT = 5;
 const STACK_BUFFER_MULTIPLIER = 4;
 const DEFAULT_THUMBNAIL_LIMIT = 10;
 const DEFAULT_THUMBNAIL_TTL_MS = 1000 * 60 * 60 * 2;
 const STATE_VERSION = 1;
 
-function toPositiveInteger(value, fallback) {
-  const parsed = Number.parseInt(value, 10);
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function toPositiveInteger(value: unknown, fallback: number): number {
+  const parsed = Number.parseInt(String(value), 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-function getResolvedTabUrl(tab) {
+function getResolvedTabUrl(tab: TrackableTab | null | undefined): string {
   if (!tab || typeof tab !== 'object') {
     return '';
   }
@@ -21,7 +122,7 @@ function getResolvedTabUrl(tab) {
   return typeof tab.pendingUrl === 'string' ? tab.pendingUrl.trim() : '';
 }
 
-function defaultShouldIncludeTab(tab) {
+function defaultShouldIncludeTab(tab: TrackableTab | null | undefined): boolean {
   if (!tab || typeof tab.id !== 'number' || typeof tab.windowId !== 'number' || tab.incognito === true) {
     return false;
   }
@@ -32,12 +133,30 @@ function defaultShouldIncludeTab(tab) {
   try {
     const parsed = new URL(url);
     return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 }
 
-function getShortcutCommitModifierEventKey(shortcut) {
+// A tab restored from storage, with only the fields of the expected types.
+function readStoredTab(value: unknown): (TrackableTab & { visitedAt?: unknown }) | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  return {
+    id: typeof value.id === 'number' ? value.id : undefined,
+    windowId: typeof value.windowId === 'number' ? value.windowId : undefined,
+    url: typeof value.url === 'string' ? value.url : undefined,
+    pendingUrl: typeof value.pendingUrl === 'string' ? value.pendingUrl : undefined,
+    title: typeof value.title === 'string' ? value.title : undefined,
+    favIconUrl: typeof value.favIconUrl === 'string' ? value.favIconUrl : undefined,
+    lastAccessed: typeof value.lastAccessed === 'number' ? value.lastAccessed : undefined,
+    incognito: value.incognito === true,
+    visitedAt: value.visitedAt
+  };
+}
+
+function getShortcutCommitModifierEventKey(shortcut: unknown): string {
   const shortcutText = String(shortcut || '').trim();
   const symbolModifiers = Array.from(shortcutText).map((token) => {
     if (token === '⌥') {
@@ -79,7 +198,7 @@ function getShortcutCommitModifierEventKey(shortcut) {
   return modifiers.find((key) => key !== 'Shift') || modifiers[0] || '';
 }
 
-function getShortcutTriggerEventKey(shortcut) {
+function getShortcutTriggerEventKey(shortcut: unknown): string {
   const shortcutText = String(shortcut || '').trim();
   const parts = shortcutText
     .split('+')
@@ -90,7 +209,7 @@ function getShortcutTriggerEventKey(shortcut) {
     : '';
   const rawToken = symbolTrigger || String(parts[parts.length - 1] || '');
   const token = rawToken.toLowerCase();
-  const aliases = {
+  const aliases: Readonly<Record<string, string>> = {
     comma: ',',
     period: '.',
     slash: '/',
@@ -100,7 +219,7 @@ function getShortcutTriggerEventKey(shortcut) {
     space: ' ',
     spacebar: ' '
   };
-  if (aliases[token]) {
+  if (Object.prototype.hasOwnProperty.call(aliases, token)) {
     return aliases[token];
   }
   if (/^f\d{1,2}$/.test(token)) {
@@ -109,7 +228,7 @@ function getShortcutTriggerEventKey(shortcut) {
   return token.length === 1 ? token : rawToken;
 }
 
-function getShortcutReleaseEventKeys(shortcut) {
+function getShortcutReleaseEventKeys(shortcut: unknown): string[] {
   const modifierKey = getShortcutCommitModifierEventKey(shortcut);
   if (!modifierKey) {
     return [];
@@ -117,15 +236,15 @@ function getShortcutReleaseEventKeys(shortcut) {
   return [modifierKey];
 }
 
-function sanitizeText(value) {
+function sanitizeText(value: unknown): string {
   return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
-function normalizeUrl(value) {
+function normalizeUrl(value: unknown): string {
   return String(value || '').trim();
 }
 
-function normalizeThumbnailStatus(value, fallback) {
+function normalizeThumbnailStatus(value: unknown, fallback: 'ok' | 'missing' = 'missing'): KeptThumbnailStatus | 'missing' {
   const status = String(value || '').trim().toLowerCase();
   if (status === 'ok' ||
       status === 'pending' ||
@@ -133,14 +252,18 @@ function normalizeThumbnailStatus(value, fallback) {
       status === 'restricted') {
     return status;
   }
-  return fallback || 'missing';
+  return fallback;
 }
 
-function normalizeThumbnailEntry(tabId, raw, options) {
+function normalizeThumbnailEntry(
+  tabId: unknown,
+  raw: unknown,
+  options?: { now?: number; ttlMs?: number } | null
+): ThumbnailEntry | null {
   const opts = options && typeof options === 'object' ? options : {};
   const now = Number.isFinite(Number(opts.now)) ? Number(opts.now) : Date.now();
   const ttlMs = Number.isFinite(Number(opts.ttlMs)) ? Math.max(0, Number(opts.ttlMs)) : DEFAULT_THUMBNAIL_TTL_MS;
-  if (typeof tabId !== 'number' || !raw || typeof raw !== 'object') {
+  if (typeof tabId !== 'number' || !isRecord(raw)) {
     return null;
   }
   const dataUrl = typeof raw.dataUrl === 'string' ? raw.dataUrl : '';
@@ -165,8 +288,12 @@ function normalizeThumbnailEntry(tabId, raw, options) {
   };
 }
 
-function normalizeTabSnapshot(tab, visitedAt, shouldIncludeTab) {
-  if (!shouldIncludeTab(tab)) {
+function normalizeTabSnapshot(
+  tab: TrackableTab | null | undefined,
+  visitedAt: unknown,
+  shouldIncludeTab: (tab: TrackableTab) => boolean
+): TabSnapshot | null {
+  if (!tab || !shouldIncludeTab(tab) || typeof tab.id !== 'number' || typeof tab.windowId !== 'number') {
     return null;
   }
   const now = Number.isFinite(Number(visitedAt)) ? Number(visitedAt) : Date.now();
@@ -181,7 +308,7 @@ function normalizeTabSnapshot(tab, visitedAt, shouldIncludeTab) {
   };
 }
 
-function createRecentTabTracker(options) {
+function createRecentTabTracker(options?: RecentTabTrackerOptions | null): Readonly<RecentTabTracker> {
   const settings = options && typeof options === 'object' ? options : {};
   const limit = toPositiveInteger(settings.limit, DEFAULT_LIMIT);
   const stackLimit = Math.max(limit, limit * STACK_BUFFER_MULTIPLIER);
@@ -190,16 +317,16 @@ function createRecentTabTracker(options) {
   const shouldIncludeTab = typeof settings.shouldIncludeTab === 'function'
     ? settings.shouldIncludeTab
     : defaultShouldIncludeTab;
-  const recentStack = [];
-  const thumbnailByTabId = new Map();
+  const recentStack: TabSnapshot[] = [];
+  const thumbnailByTabId = new Map<number, ThumbnailEntry>();
 
-  function trimStack() {
+  function trimStack(): void {
     if (recentStack.length > stackLimit) {
       recentStack.splice(stackLimit);
     }
   }
 
-  function pruneThumbnails(now) {
+  function pruneThumbnails(now: number): void {
     const referenceNow = Number.isFinite(Number(now)) ? Number(now) : Date.now();
     Array.from(thumbnailByTabId.entries()).forEach(([tabId, entry]) => {
       const normalized = normalizeThumbnailEntry(tabId, entry, {
@@ -221,7 +348,7 @@ function createRecentTabTracker(options) {
     });
   }
 
-  function removeStackEntry(tabId) {
+  function removeStackEntry(tabId: unknown): boolean {
     if (typeof tabId !== 'number') {
       return false;
     }
@@ -234,7 +361,7 @@ function createRecentTabTracker(options) {
     return recentStack.length !== before;
   }
 
-  function removeTab(tabId) {
+  function removeTab(tabId: unknown): boolean {
     if (typeof tabId !== 'number') {
       return false;
     }
@@ -243,7 +370,7 @@ function createRecentTabTracker(options) {
     return didRemoveStackEntry || didRemoveThumbnail;
   }
 
-  function recordTab(tab, visitedAt) {
+  function recordTab(tab: TrackableTab | null | undefined, visitedAt?: number): TabSnapshot | null {
     const snapshot = normalizeTabSnapshot(tab, visitedAt, shouldIncludeTab);
     if (!snapshot) {
       if (tab && typeof tab.id === 'number') {
@@ -257,7 +384,7 @@ function createRecentTabTracker(options) {
     return snapshot;
   }
 
-  function updateTab(tab, visitedAt) {
+  function updateTab(tab: TrackableTab | null | undefined, visitedAt?: number): TabSnapshot | null {
     if (!tab || typeof tab.id !== 'number') {
       return null;
     }
@@ -282,11 +409,14 @@ function createRecentTabTracker(options) {
     return recentStack[existingIndex];
   }
 
-  function getRecentTabs(tabs, requestOptions) {
+  function getRecentTabs<T extends TrackableTab>(
+    tabs: readonly T[] | null | undefined,
+    requestOptions?: { limit?: number } | null
+  ): Array<T & SwitcherFields> {
     const request = requestOptions && typeof requestOptions === 'object' ? requestOptions : {};
     const requestedLimit = toPositiveInteger(request.limit, limit);
-    const tabList = Array.isArray(tabs) ? tabs : [];
-    const tabById = new Map();
+    const tabList: readonly T[] = Array.isArray(tabs) ? tabs : [];
+    const tabById = new Map<number, T & { url: string }>();
     tabList.forEach((tab) => {
       if (tab && typeof tab.id === 'number' && shouldIncludeTab(tab)) {
         tabById.set(tab.id, {
@@ -296,8 +426,8 @@ function createRecentTabTracker(options) {
       }
     });
 
-    const results = [];
-    const seenIds = new Set();
+    const results: Array<T & SwitcherFields> = [];
+    const seenIds = new Set<number>();
     recentStack.forEach((snapshot) => {
       if (!snapshot || seenIds.has(snapshot.id)) {
         return;
@@ -323,7 +453,9 @@ function createRecentTabTracker(options) {
 
     if (results.length < requestedLimit) {
       tabList
-        .filter((tab) => tab && typeof tab.id === 'number' && !seenIds.has(tab.id) && shouldIncludeTab(tab))
+        .filter((tab): tab is T & { id: number } => (
+          Boolean(tab) && typeof tab.id === 'number' && !seenIds.has(tab.id) && shouldIncludeTab(tab)
+        ))
         .slice()
         .sort((a, b) => {
           const accessA = Number(a.lastAccessed) || 0;
@@ -352,7 +484,7 @@ function createRecentTabTracker(options) {
     return results.slice(0, requestedLimit);
   }
 
-  function setThumbnail(tabId, dataUrl, capturedAt, metadata) {
+  function setThumbnail(tabId: unknown, dataUrl: unknown, capturedAt?: number, metadata?: { url?: unknown } | null): boolean {
     if (typeof tabId !== 'number') {
       return false;
     }
@@ -381,12 +513,17 @@ function createRecentTabTracker(options) {
     return true;
   }
 
-  function setThumbnailStatus(tabId, status, updatedAt, metadata) {
+  function setThumbnailStatus(
+    tabId: unknown,
+    status: unknown,
+    updatedAt?: number,
+    metadata?: { url?: unknown; reason?: unknown } | null
+  ): boolean {
     if (typeof tabId !== 'number') {
       return false;
     }
-    const normalizedStatus = normalizeThumbnailStatus(status, '');
-    if (!normalizedStatus || normalizedStatus === 'missing' || normalizedStatus === 'ok') {
+    const normalizedStatus = normalizeThumbnailStatus(status);
+    if (normalizedStatus === 'missing' || normalizedStatus === 'ok') {
       return false;
     }
     const meta = metadata && typeof metadata === 'object' ? metadata : {};
@@ -394,13 +531,13 @@ function createRecentTabTracker(options) {
     const existing = normalizeThumbnailEntry(tabId, thumbnailByTabId.get(tabId), {
       ttlMs: thumbnailTtlMs
     });
-    const canKeepImage = existing &&
-      existing.dataUrl &&
-      (!url || !existing.url || existing.url === url);
+    const keptImage = existing && existing.dataUrl && (!url || !existing.url || existing.url === url)
+      ? existing
+      : null;
     const entry = normalizeThumbnailEntry(tabId, {
-      dataUrl: canKeepImage ? existing.dataUrl : '',
+      dataUrl: keptImage ? keptImage.dataUrl : '',
       url: url || (existing ? existing.url : ''),
-      capturedAt: canKeepImage ? existing.capturedAt : 0,
+      capturedAt: keptImage ? keptImage.capturedAt : 0,
       updatedAt: Number(updatedAt) || Date.now(),
       status: normalizedStatus,
       reason: sanitizeText(meta.reason)
@@ -416,7 +553,7 @@ function createRecentTabTracker(options) {
     return true;
   }
 
-  function getThumbnailState(tabId, expectedUrl) {
+  function getThumbnailState(tabId: number, expectedUrl?: unknown): ThumbnailState {
     const entry = thumbnailByTabId.get(tabId);
     const normalized = normalizeThumbnailEntry(tabId, entry, {
       ttlMs: thumbnailTtlMs
@@ -450,21 +587,21 @@ function createRecentTabTracker(options) {
     };
   }
 
-  function clearThumbnails() {
+  function clearThumbnails(): boolean {
     const hadThumbnails = thumbnailByTabId.size > 0;
     thumbnailByTabId.clear();
     return hadThumbnails;
   }
 
-  function getThumbnail(tabId, expectedUrl) {
+  function getThumbnail(tabId: number, expectedUrl?: unknown): string {
     return getThumbnailState(tabId, expectedUrl).dataUrl || '';
   }
 
-  function getStackSnapshot() {
+  function getStackSnapshot(): TabSnapshot[] {
     return recentStack.map((item) => ({ ...item }));
   }
 
-  function mergeThumbnailEntries(tabId, baseEntry, overlayEntry, now) {
+  function mergeThumbnailEntries(tabId: number, baseEntry: unknown, overlayEntry: unknown, now: number): ThumbnailEntry | null {
     const base = normalizeThumbnailEntry(tabId, baseEntry, {
       now,
       ttlMs: thumbnailTtlMs
@@ -498,7 +635,7 @@ function createRecentTabTracker(options) {
     });
   }
 
-  function exportState(optionsArg) {
+  function exportState(optionsArg?: { now?: number } | null): TrackerState {
     const opts = optionsArg && typeof optionsArg === 'object' ? optionsArg : {};
     const now = Number.isFinite(Number(opts.now)) ? Number(opts.now) : Date.now();
     pruneThumbnails(now);
@@ -510,23 +647,24 @@ function createRecentTabTracker(options) {
     };
   }
 
-  function hydrateState(state, optionsArg) {
+  function hydrateState(state: unknown, optionsArg?: { now?: number; merge?: boolean } | null): boolean {
     const opts = optionsArg && typeof optionsArg === 'object' ? optionsArg : {};
     const now = Number.isFinite(Number(opts.now)) ? Number(opts.now) : Date.now();
     const shouldMerge = opts.merge === true;
-    if (!state || typeof state !== 'object') {
+    if (!isRecord(state)) {
       return false;
     }
-    const pendingStack = shouldMerge ? getStackSnapshot() : [];
-    const pendingThumbnails = shouldMerge
-      ? Array.from(thumbnailByTabId.entries()).map(([tabId, entry]) => [tabId, { ...entry }])
+    const pendingStack: TabSnapshot[] = shouldMerge ? getStackSnapshot() : [];
+    const pendingThumbnails: Array<[number, ThumbnailEntry]> = shouldMerge
+      ? Array.from(thumbnailByTabId.entries()).map(([tabId, entry]): [number, ThumbnailEntry] => [tabId, { ...entry }])
       : [];
     recentStack.splice(0, recentStack.length);
     thumbnailByTabId.clear();
-    const stack = Array.isArray(state.stack) ? state.stack : [];
-    const stackItems = shouldMerge ? pendingStack.concat(stack) : stack;
+    const stack: unknown[] = Array.isArray(state.stack) ? state.stack : [];
+    const stackItems: unknown[] = shouldMerge ? [...pendingStack, ...stack] : stack;
     stackItems.forEach((item) => {
-      const snapshot = normalizeTabSnapshot(item, item && item.visitedAt, shouldIncludeTab);
+      const storedTab = readStoredTab(item);
+      const snapshot = normalizeTabSnapshot(storedTab, storedTab && storedTab.visitedAt, shouldIncludeTab);
       if (!snapshot) {
         return;
       }
@@ -536,9 +674,9 @@ function createRecentTabTracker(options) {
       recentStack.push(snapshot);
     });
     trimStack();
-    const thumbnails = Array.isArray(state.thumbnails) ? state.thumbnails : [];
+    const thumbnails: unknown[] = Array.isArray(state.thumbnails) ? state.thumbnails : [];
     thumbnails.forEach((item) => {
-      const tabId = Number(item && item.tabId);
+      const tabId = Number(isRecord(item) ? item.tabId : undefined);
       if (!Number.isInteger(tabId)) {
         return;
       }
@@ -576,37 +714,40 @@ function createRecentTabTracker(options) {
   });
 }
 
-function callChromeCallback(fn) {
+function callChromeCallback<T>(fn: (done: (value?: T) => void) => void): Promise<T | null> {
   return new Promise((resolve) => {
     try {
       fn((value) => resolve(value || null));
-    } catch (error) {
+    } catch (_error) {
       resolve(null);
     }
   });
 }
 
-function getRuntimeError(chromeApi) {
+function getRuntimeError(chromeApi: typeof chrome): chrome.runtime.LastError | null {
   return chromeApi && chromeApi.runtime && chromeApi.runtime.lastError
     ? chromeApi.runtime.lastError
     : null;
 }
 
-async function focusWindowAndActivateTab(chromeApi, request) {
-  const api = chromeApi || {};
+async function focusWindowAndActivateTab(
+  chromeApi: typeof chrome | null | undefined,
+  request: { tabId?: unknown; windowId?: unknown } | null | undefined
+): Promise<FocusResult> {
+  const api = chromeApi;
   const tabId = request && typeof request.tabId === 'number' ? request.tabId : null;
   const windowId = request && typeof request.windowId === 'number' ? request.windowId : null;
-  if (typeof tabId !== 'number' || !api.tabs || typeof api.tabs.update !== 'function') {
+  if (!api || typeof tabId !== 'number' || !api.tabs || typeof api.tabs.update !== 'function') {
     return { ok: false, reason: 'invalid-tab' };
   }
 
   if (typeof windowId === 'number' && api.windows && typeof api.windows.update === 'function') {
-    await callChromeCallback((done) => {
+    await callChromeCallback<chrome.windows.Window>((done) => {
       api.windows.update(windowId, { focused: true }, done);
     });
   }
 
-  const tab = await callChromeCallback((done) => {
+  const tab = await callChromeCallback<chrome.tabs.Tab>((done) => {
     api.tabs.update(tabId, { active: true }, done);
   });
   const error = getRuntimeError(api);
@@ -628,6 +769,7 @@ async function focusWindowAndActivateTab(chromeApi, request) {
   };
 }
 
+export type { FocusResult, RecentTabTracker, RecentTabTrackerOptions, SwitcherFields, TabSnapshot, ThumbnailState, TrackableTab, TrackerState };
 export {
   DEFAULT_LIMIT,
   createRecentTabTracker,

@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Shift+click on a link opens it in a small window over the page instead of
 // a new browser window. The page's content script reports the press here;
 // this service captures the visible tab for the receding background, lets
@@ -10,6 +9,59 @@
 // the button is still down, and asks the surface to start loading the page
 // in a hidden frame, so the window opens on click with the page underway.
 import * as LumnoMessaging from '../platform/messaging';
+import type { HandlersFor, MessageSender } from './message-router';
+import type { LinkPreviewOrigin, OkReply, PageAction, PageReply, PageRequest } from '../domain/messages';
+
+type Rule = chrome.declarativeNetRequest.Rule;
+type HeaderInfo = chrome.declarativeNetRequest.HeaderInfo;
+type RuleCondition = chrome.declarativeNetRequest.RuleCondition;
+type UpdateRuleOptions = chrome.declarativeNetRequest.UpdateRuleOptions;
+
+type LinkPreviewAction = 'linkPreviewPrepare' | 'linkPreviewOpen' | 'linkPreviewClose' | 'linkPreviewOpenInTab';
+type SurfaceAction = Extract<PageAction, `lumnoLinkPreview${string}`>;
+
+// "prepared" (pressed), "opening" (clicked, show not yet answered) or "open"
+// (the surface shows it).
+type SessionState = 'prepared' | 'opening' | 'open';
+
+// A timer from the injected timer functions; only they read it.
+type TimerHandle = unknown;
+
+interface PreviewSession {
+  token: string;
+  url: string;
+  // The screenshot of the page behind the preview, or '' without one.
+  capture: Promise<string>;
+  // Whether the surface is injected and loading the page.
+  ready: Promise<boolean>;
+  screenshotDelivered: Promise<boolean>;
+  state: SessionState;
+  expiryTimer: TimerHandle | null;
+}
+
+interface LinkPreviewServiceOptions {
+  chromeApi?: typeof chrome | null;
+  now?: () => number;
+  setTimeout?: (callback: () => void, delayMs: number) => TimerHandle;
+  clearTimeout?: (timer: TimerHandle) => void;
+}
+
+interface LinkPreviewService {
+  prepare(tab: chrome.tabs.Tab | null | undefined, url: unknown): PreviewSession | null;
+  open(tab: chrome.tabs.Tab | null | undefined, url: unknown, origin: LinkPreviewOrigin | null): Promise<OkReply>;
+  discard(tabId: number, token: string): Promise<boolean>;
+  openInTab(tab: chrome.tabs.Tab | null | undefined, url: unknown): Promise<boolean>;
+  handleTabRemoved(tabId: number): Promise<boolean>;
+  handleTabUpdated(tabId: number, changeInfo: chrome.tabs.OnUpdatedInfo | null | undefined): Promise<boolean>;
+  reconcileRules(): Promise<void>;
+  attach(): void;
+  messageHandlers: HandlersFor<LinkPreviewAction>;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
 const UI_FILES = Object.freeze(['build/link-preview.js']);
 // X-Frame-Options and CSP frame-ancestors are the two ways a page refuses to
 // be framed (a page that sends both is judged by frame-ancestors). While a
@@ -18,8 +70,8 @@ const UI_FILES = Object.freeze(['build/link-preview.js']);
 // header, never part of one, and the rest of a CSP (the limits on script and
 // style that guard against injected script) is worth keeping. Chrome before
 // 128 cannot match on a response header; there the CSP always goes.
-const FRAME_BLOCKING_HEADERS = Object.freeze(['x-frame-options', 'content-security-policy']);
-const FRAME_ANCESTORS_CSP = Object.freeze({ header: 'content-security-policy', values: ['*frame-ancestors*'] });
+const FRAME_BLOCKING_HEADERS: readonly string[] = Object.freeze(['x-frame-options', 'content-security-policy']);
+const FRAME_ANCESTORS_CSP: Readonly<HeaderInfo> = Object.freeze({ header: 'content-security-policy', values: ['*frame-ancestors*'] });
 // A site with a service worker answers the frame from the worker, and the
 // worker's own request belongs to no tab (tab id -1), so the tab's rule never
 // sees it. While any preview is open, such requests lose X-Frame-Options
@@ -35,7 +87,7 @@ const PREPARED_TTL_MS = 4000;
 const CAPTURE_JPEG_QUALITY = 82;
 const PREVIEWABLE_URL_PATTERN = /^https?:\/\//i;
 
-function isPreviewableUrl(url) {
+function isPreviewableUrl(url: unknown): url is string {
   return typeof url === 'string' && url.length <= 8192 && PREVIEWABLE_URL_PATTERN.test(url);
 }
 
@@ -43,16 +95,16 @@ function isPreviewableUrl(url) {
 // finds a tab's rules again by the tab in their condition. Their ids are
 // handed out from the ones free: tab ids run past a billion, so an id made
 // from one could leave the 32-bit range rules allow.
-function findTabRuleIds(rules, tabId) {
+function findTabRuleIds(rules: readonly Rule[], tabId: number): number[] {
   return rules
     .filter((rule) => rule.id !== WORKER_RULE_ID && rule.condition && Array.isArray(rule.condition.tabIds) &&
       rule.condition.tabIds.includes(tabId))
     .map((rule) => rule.id);
 }
 
-function allocateRuleIds(rules, count) {
+function allocateRuleIds(rules: readonly Rule[], count: number): number[] {
   const used = new Set(rules.map((rule) => rule.id).concat(WORKER_RULE_ID));
-  const ids = [];
+  const ids: number[] = [];
   for (let id = 1; ids.length < count; id += 1) {
     if (!used.has(id)) {
       ids.push(id);
@@ -61,8 +113,13 @@ function allocateRuleIds(rules, count) {
   return ids;
 }
 
-function buildRemoveHeadersRule(id, tabId, headers, responseHeaders) {
-  const condition = { tabIds: [tabId], resourceTypes: ['sub_frame'] };
+function buildRemoveHeadersRule(
+  id: number,
+  tabId: number,
+  headers: readonly string[],
+  responseHeaders?: HeaderInfo[]
+): Rule {
+  const condition: RuleCondition = { tabIds: [tabId], resourceTypes: ['sub_frame'] };
   if (responseHeaders) {
     condition.responseHeaders = responseHeaders;
   }
@@ -78,7 +135,7 @@ function buildRemoveHeadersRule(id, tabId, headers, responseHeaders) {
 }
 
 // With matchHeaders false (Chrome before 128), one rule drops both headers.
-function buildFrameHeaderRules(tabId, ids, matchHeaders = true) {
+function buildFrameHeaderRules(tabId: number, ids: readonly number[], matchHeaders = true): Rule[] {
   if (!matchHeaders) {
     return [buildRemoveHeadersRule(ids[0], tabId, FRAME_BLOCKING_HEADERS)];
   }
@@ -88,7 +145,7 @@ function buildFrameHeaderRules(tabId, ids, matchHeaders = true) {
   ];
 }
 
-function buildWorkerHeaderRule() {
+function buildWorkerHeaderRule(): Rule {
   return {
     id: WORKER_RULE_ID,
     priority: 1,
@@ -103,44 +160,52 @@ function buildWorkerHeaderRule() {
   };
 }
 
-function createLinkPreviewService(options) {
+function createLinkPreviewService(options?: LinkPreviewServiceOptions | null): Readonly<LinkPreviewService> {
   const config = options || {};
-  const chromeApi = config.chromeApi;
+  const chromeApi = config.chromeApi || null;
   const now = typeof config.now === 'function' ? config.now : () => Date.now();
-  const setTimer = config.setTimeout || setTimeout;
-  const clearTimer = config.clearTimeout || clearTimeout;
-  // tabId -> { token, url, capture, ready, state, expiryTimer }, where state
-  // is "prepared" (pressed), "opening" (clicked, show not yet answered) or
-  // "open" (the surface shows it).
-  const sessions = new Map();
+  const setTimer = config.setTimeout || ((callback: () => void, delayMs: number): TimerHandle => setTimeout(callback, delayMs));
+  const clearTimer = config.clearTimeout || ((timer: TimerHandle): void => {
+    if (typeof timer === 'number') {
+      clearTimeout(timer);
+    }
+  });
+  const sessions = new Map<number, PreviewSession>();
   let tokenCounter = 0;
   // Cleared once Chrome refuses a rule that matches on a response header.
   let headerMatching = true;
   // Rule updates read the rules in place first, so they run one at a time.
-  let ruleQueue = Promise.resolve();
+  let ruleQueue: Promise<boolean> = Promise.resolve(false);
 
-  function readLastError() {
+  function readLastError(): chrome.runtime.LastError | null | undefined {
     return chromeApi && chromeApi.runtime ? chromeApi.runtime.lastError : null;
   }
 
-  function callback(fn) {
+  // Runs a callback-style extension call. Resolves with what it passed back,
+  // true for a call that passes nothing, or null when it failed.
+  function callback<T>(fn: (done: (result?: T) => void) => void): Promise<T | true | null> {
     return new Promise((resolve) => {
       try {
         fn((result) => {
           resolve(readLastError() ? null : (result === undefined ? true : result));
         });
-      } catch (error) {
+      } catch (_error) {
         resolve(null);
       }
     });
   }
 
-  function getDnr() {
+  function readRules(dnr: typeof chrome.declarativeNetRequest): Promise<Rule[] | null> {
+    return callback<Rule[]>((done) => dnr.getSessionRules(done))
+      .then((rules) => (Array.isArray(rules) ? rules : null));
+  }
+
+  function getDnr(): typeof chrome.declarativeNetRequest | null {
     const dnr = chromeApi && chromeApi.declarativeNetRequest;
     return dnr && typeof dnr.updateSessionRules === 'function' ? dnr : null;
   }
 
-  function setFrameHeaderRule(tabId, enabled) {
+  function setFrameHeaderRule(tabId: number, enabled: boolean): Promise<boolean> {
     const dnr = getDnr();
     if (!dnr) {
       return Promise.resolve(false);
@@ -150,22 +215,25 @@ function createLinkPreviewService(options) {
     return run;
   }
 
-  async function updateFrameHeaderRules(dnr, tabId, enabled) {
-    const current = typeof dnr.getSessionRules === 'function'
-      ? await callback((done) => dnr.getSessionRules(done))
-      : null;
-    const rules = Array.isArray(current) ? current : [];
-    const apply = () => {
-      const update = { removeRuleIds: findTabRuleIds(rules, tabId) };
+  async function updateFrameHeaderRules(
+    dnr: typeof chrome.declarativeNetRequest,
+    tabId: number,
+    enabled: boolean
+  ): Promise<boolean> {
+    const current = typeof dnr.getSessionRules === 'function' ? await readRules(dnr) : null;
+    const rules = current || [];
+    const apply = (): Promise<boolean> => {
+      const removeRuleIds = findTabRuleIds(rules, tabId);
+      const update: UpdateRuleOptions = { removeRuleIds };
       if (enabled) {
-        update.removeRuleIds.push(WORKER_RULE_ID);
+        removeRuleIds.push(WORKER_RULE_ID);
         const ids = allocateRuleIds(rules, 2);
         update.addRules = buildFrameHeaderRules(tabId, ids, headerMatching).concat(buildWorkerHeaderRule());
       } else if (sessions.size === 0) {
         // The last preview is gone; the workers' requests keep their headers.
-        update.removeRuleIds.push(WORKER_RULE_ID);
+        removeRuleIds.push(WORKER_RULE_ID);
       }
-      return callback((done) => dnr.updateSessionRules(update, done)).then(Boolean);
+      return callback<void>((done) => dnr.updateSessionRules(update, done)).then(Boolean);
     };
     const applied = await apply();
     if (!applied && enabled && headerMatching) {
@@ -175,29 +243,30 @@ function createLinkPreviewService(options) {
     return applied;
   }
 
-  function captureTab(tab) {
+  function captureTab(tab: chrome.tabs.Tab): Promise<string> {
     const tabs = chromeApi && chromeApi.tabs;
-    if (!tabs || typeof tabs.captureVisibleTab !== 'function' || typeof tab.windowId !== 'number') {
+    const windowId = tab.windowId;
+    if (!tabs || typeof tabs.captureVisibleTab !== 'function' || typeof windowId !== 'number') {
       return Promise.resolve('');
     }
-    return callback((done) => tabs.captureVisibleTab(tab.windowId, {
+    return callback<string>((done) => tabs.captureVisibleTab(windowId, {
       format: 'jpeg',
       quality: CAPTURE_JPEG_QUALITY
     }, done)).then((dataUrl) => (typeof dataUrl === 'string' ? dataUrl : ''));
   }
 
-  function injectSurface(tabId) {
+  function injectSurface(tabId: number): Promise<boolean> {
     const scripting = chromeApi && chromeApi.scripting;
     if (!scripting || typeof scripting.executeScript !== 'function') {
       return Promise.resolve(false);
     }
-    return callback((done) => scripting.executeScript({
+    return callback<unknown>((done) => scripting.executeScript({
       target: { tabId, frameIds: [0] },
       files: UI_FILES.slice()
     }, done)).then(Boolean);
   }
 
-  function sendToSurface(tabId, message) {
+  function sendToSurface<A extends SurfaceAction>(tabId: number, message: PageRequest<A>): Promise<PageReply<A> | null> {
     const tabs = chromeApi && chromeApi.tabs;
     if (!tabs || typeof tabs.sendMessage !== 'function') {
       return Promise.resolve(null);
@@ -206,17 +275,24 @@ function createLinkPreviewService(options) {
     // (undefined), which must not read as success.
     return new Promise((resolve) => {
       try {
-        LumnoMessaging.sendTabMessage(tabs, tabId, message, (response) => {
+        LumnoMessaging.sendTabMessage<A>(tabs, tabId, message, (response) => {
           resolve(readLastError() || response === undefined ? null : response);
         }, { frameId: 0 });
-      } catch (error) {
+      } catch (_error) {
         resolve(null);
       }
     });
   }
 
-  function scheduleExpiry(tabId, session) {
-    clearTimer(session.expiryTimer);
+  function stopExpiry(session: PreviewSession): void {
+    if (session.expiryTimer !== null) {
+      clearTimer(session.expiryTimer);
+      session.expiryTimer = null;
+    }
+  }
+
+  function scheduleExpiry(tabId: number, session: PreviewSession): void {
+    stopExpiry(session);
     session.expiryTimer = setTimer(() => {
       if (sessions.get(tabId) === session && session.state === 'prepared') {
         discard(tabId, session.token);
@@ -224,9 +300,9 @@ function createLinkPreviewService(options) {
     }, PREPARED_TTL_MS);
   }
 
-  function prepare(tab, url) {
+  function prepare(tab: chrome.tabs.Tab | null | undefined, url: unknown): PreviewSession | null {
     const tabId = tab && tab.id;
-    if (typeof tabId !== 'number' || !isPreviewableUrl(url)) {
+    if (!tab || typeof tabId !== 'number' || !isPreviewableUrl(url)) {
       return null;
     }
     const existing = sessions.get(tabId);
@@ -235,7 +311,7 @@ function createLinkPreviewService(options) {
       return existing;
     }
     if (existing) {
-      clearTimer(existing.expiryTimer);
+      stopExpiry(existing);
     }
     tokenCounter += 1;
     const token = `${now().toString(36)}-${tokenCounter}`;
@@ -247,56 +323,63 @@ function createLinkPreviewService(options) {
         if (!injected) {
           return false;
         }
-        return sendToSurface(tabId, { action: 'lumnoLinkPreviewPrewarm', token, url }).then(Boolean);
+        return sendToSurface<'lumnoLinkPreviewPrewarm'>(tabId, { action: 'lumnoLinkPreviewPrewarm', token, url })
+          .then(Boolean);
       });
     // The surface gets the screenshot as soon as both are ready, to decode
     // it while the button is still down; "show" then carries none.
     const screenshotDelivered = Promise.all([ready, capture]).then(([surfaceReady, screenshot]) => (
       surfaceReady && screenshot
-        ? sendToSurface(tabId, { action: 'lumnoLinkPreviewScreenshot', token, screenshot }).then(Boolean)
+        ? sendToSurface<'lumnoLinkPreviewScreenshot'>(tabId, { action: 'lumnoLinkPreviewScreenshot', token, screenshot })
+          .then(Boolean)
         : false
     ));
-    const session = { token, url, capture, ready, screenshotDelivered, state: 'prepared', expiryTimer: null };
+    const session: PreviewSession = { token, url, capture, ready, screenshotDelivered, state: 'prepared', expiryTimer: null };
     sessions.set(tabId, session);
     scheduleExpiry(tabId, session);
     return session;
   }
 
-  async function open(tab, url, origin) {
+  async function open(
+    tab: chrome.tabs.Tab | null | undefined,
+    url: unknown,
+    origin: LinkPreviewOrigin | null
+  ): Promise<OkReply> {
     const session = prepare(tab, url);
-    if (!session) {
+    const tabId = tab && tab.id;
+    if (!session || typeof tabId !== 'number') {
       return { ok: false, reason: 'not-previewable' };
     }
     session.state = 'opening';
-    clearTimer(session.expiryTimer);
+    stopExpiry(session);
     const [ready, screenshot, screenshotDelivered] = await Promise.all([
       session.ready,
       session.capture,
       session.screenshotDelivered
     ]);
-    if (sessions.get(tab.id) !== session) {
+    if (sessions.get(tabId) !== session) {
       return { ok: false, reason: 'superseded' };
     }
     if (!ready) {
       // Nothing reached the page (the page refuses scripts, or it went
       // away): the link can still open in a tab.
-      discard(tab.id, session.token);
+      void discard(tabId, session.token);
       return { ok: false, reason: 'surface-unavailable' };
     }
-    const shown = await sendToSurface(tab.id, {
+    const shown = await sendToSurface<'lumnoLinkPreviewShow'>(tabId, {
       action: 'lumnoLinkPreviewShow',
       token: session.token,
-      url,
+      url: session.url,
       screenshot: screenshotDelivered ? '' : screenshot,
       origin: origin || null
     });
     if (!shown) {
       // The surface was asked to show and may be on screen; it moves the
       // link to a tab itself when it cannot show it, so nothing opens here.
-      discard(tab.id, session.token);
+      void discard(tabId, session.token);
       return { ok: false, reason: 'show-failed' };
     }
-    if (sessions.get(tab.id) === session) {
+    if (sessions.get(tabId) === session) {
       session.state = 'open';
     }
     return { ok: true };
@@ -306,24 +389,24 @@ function createLinkPreviewService(options) {
   // preview is a late close from one already replaced; it is ignored. With
   // no session known (the worker slept while the preview was open), the
   // rule is removed anyway.
-  function discard(tabId, token) {
+  function discard(tabId: number, token: string): Promise<boolean> {
     const session = sessions.get(tabId);
     if (session && token && session.token !== token) {
       return Promise.resolve(false);
     }
     if (session) {
-      clearTimer(session.expiryTimer);
+      stopExpiry(session);
       sessions.delete(tabId);
     }
     return setFrameHeaderRule(tabId, false);
   }
 
-  function openInTab(tab, url) {
+  function openInTab(tab: chrome.tabs.Tab | null | undefined, url: unknown): Promise<boolean> {
     const tabs = chromeApi && chromeApi.tabs;
     if (!tabs || typeof tabs.create !== 'function' || !isPreviewableUrl(url)) {
       return Promise.resolve(false);
     }
-    const properties = { url, active: true };
+    const properties: chrome.tabs.CreateProperties = { url, active: true };
     if (tab && typeof tab.index === 'number') {
       properties.index = tab.index + 1;
     }
@@ -333,14 +416,14 @@ function createLinkPreviewService(options) {
     if (tab && typeof tab.windowId === 'number') {
       properties.windowId = tab.windowId;
     }
-    return callback((done) => tabs.create(properties, done)).then(Boolean);
+    return callback<chrome.tabs.Tab>((done) => tabs.create(properties, done)).then(Boolean);
   }
 
   // The surface lives in the tab's top document, so a navigation of the tab
   // may have taken it away without a close. Asking it settles that: no
   // answer (no surface) or another preview's token drops the rule.
-  function verifyOpenPreview(tabId) {
-    return sendToSurface(tabId, { action: 'lumnoLinkPreviewPing' }).then((response) => {
+  function verifyOpenPreview(tabId: number): Promise<boolean> {
+    return sendToSurface<'lumnoLinkPreviewPing'>(tabId, { action: 'lumnoLinkPreviewPing' }).then((response) => {
       const surfaceToken = response && typeof response.token === 'string' ? response.token : '';
       const session = sessions.get(tabId);
       if (!surfaceToken || (session && session.token !== surfaceToken)) {
@@ -350,10 +433,10 @@ function createLinkPreviewService(options) {
     });
   }
 
-  function handleTabRemoved(tabId) {
+  function handleTabRemoved(tabId: number): Promise<boolean> {
     const session = sessions.get(tabId);
     if (session) {
-      clearTimer(session.expiryTimer);
+      stopExpiry(session);
       sessions.delete(tabId);
     }
     return setFrameHeaderRule(tabId, false);
@@ -363,7 +446,7 @@ function createLinkPreviewService(options) {
   // so the check runs again when it finishes ("complete"). Only an open
   // preview is checked: the preview's own frame loading can report the tab
   // as loading while the press is still on its way to the surface.
-  function handleTabUpdated(tabId, changeInfo) {
+  function handleTabUpdated(tabId: number, changeInfo: chrome.tabs.OnUpdatedInfo | null | undefined): Promise<boolean> {
     if (!changeInfo || (changeInfo.status !== 'loading' && changeInfo.status !== 'complete')) {
       return Promise.resolve(false);
     }
@@ -376,54 +459,58 @@ function createLinkPreviewService(options) {
 
   // Rules left by a worker that stopped while previews were open: keep the
   // ones whose preview is still on screen.
-  async function reconcileRules() {
+  async function reconcileRules(): Promise<void> {
     const dnr = getDnr();
     if (!dnr || typeof dnr.getSessionRules !== 'function') {
       return;
     }
-    const rules = await callback((done) => dnr.getSessionRules(done));
-    if (!Array.isArray(rules)) {
+    const rules = await readRules(dnr);
+    if (!rules) {
       return;
     }
-    const tabIds = new Set(rules
-      .filter((rule) => rule && rule.id !== WORKER_RULE_ID && rule.condition && Array.isArray(rule.condition.tabIds))
-      .map((rule) => rule.condition.tabIds[0]));
+    const tabIds = new Set<number>();
+    rules.forEach((rule) => {
+      const ruleTabIds = rule && rule.id !== WORKER_RULE_ID && rule.condition ? rule.condition.tabIds : undefined;
+      if (Array.isArray(ruleTabIds) && typeof ruleTabIds[0] === 'number') {
+        tabIds.add(ruleTabIds[0]);
+      }
+    });
     await Promise.all(Array.from(tabIds, (tabId) => verifyOpenPreview(tabId)));
     // The workers' rule outlives no preview.
-    const left = await callback((done) => dnr.getSessionRules(done));
-    if (Array.isArray(left) && left.length === 1 && left[0].id === WORKER_RULE_ID) {
-      await callback((done) => dnr.updateSessionRules({ removeRuleIds: [WORKER_RULE_ID] }, done));
+    const left = await readRules(dnr);
+    if (left && left.length === 1 && left[0].id === WORKER_RULE_ID) {
+      await callback<void>((done) => dnr.updateSessionRules({ removeRuleIds: [WORKER_RULE_ID] }, done));
     }
   }
 
-  function attach() {
+  function attach(): void {
     const tabs = chromeApi && chromeApi.tabs;
     if (tabs && tabs.onRemoved && typeof tabs.onRemoved.addListener === 'function') {
       tabs.onRemoved.addListener((tabId) => {
         if (sessions.has(tabId)) {
-          handleTabRemoved(tabId);
+          void handleTabRemoved(tabId);
         }
       });
     }
     if (tabs && tabs.onUpdated && typeof tabs.onUpdated.addListener === 'function') {
       tabs.onUpdated.addListener((tabId, changeInfo) => {
-        handleTabUpdated(tabId, changeInfo);
+        void handleTabUpdated(tabId, changeInfo);
       });
     }
-    reconcileRules();
+    void reconcileRules();
   }
 
-  function readOrigin(request, sender) {
+  function readOrigin(origin: unknown, sender: MessageSender): LinkPreviewOrigin | null {
     // Click coordinates only mean something in the top frame's viewport.
-    if (!sender || sender.frameId !== 0 || !request || !request.origin) {
+    if (!sender || sender.frameId !== 0 || !isRecord(origin)) {
       return null;
     }
-    const x = Number(request.origin.x);
-    const y = Number(request.origin.y);
+    const x = Number(origin.x);
+    const y = Number(origin.y);
     return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null;
   }
 
-  const messageHandlers = Object.freeze({
+  const messageHandlers: HandlersFor<LinkPreviewAction> = Object.freeze({
     linkPreviewPrepare(request, sender, sendResponse) {
       prepare(sender && sender.tab, request.url);
       sendResponse({ ok: true });
@@ -431,11 +518,11 @@ function createLinkPreviewService(options) {
     },
     linkPreviewOpen(request, sender, sendResponse) {
       const tab = sender && sender.tab;
-      open(tab, request.url, readOrigin(request, sender)).then((result) => {
+      void open(tab, request.url, readOrigin(request.origin, sender)).then((result) => {
         if (result.reason === 'surface-unavailable') {
           // The page has no preview to show it in: open the link in a tab,
           // as the click would have without the preview.
-          openInTab(tab, request.url);
+          void openInTab(tab, request.url);
         }
         sendResponse(result);
       });
@@ -444,13 +531,13 @@ function createLinkPreviewService(options) {
     linkPreviewClose(request, sender, sendResponse) {
       const tab = sender && sender.tab;
       if (tab && typeof tab.id === 'number') {
-        discard(tab.id, String(request.token || ''));
+        void discard(tab.id, String(request.token || ''));
       }
       sendResponse({ ok: true });
       return false;
     },
     linkPreviewOpenInTab(request, sender, sendResponse) {
-      openInTab(sender && sender.tab, request.url).then((opened) => {
+      void openInTab(sender && sender.tab, request.url).then((opened) => {
         sendResponse({ ok: opened });
       });
       return true;

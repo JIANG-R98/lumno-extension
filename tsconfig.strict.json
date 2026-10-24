@@ -30,6 +30,13 @@
     "src/background/page-shortcut-menu.ts",
     "src/background/pip-service.ts",
     "src/background/extension-pages.ts",
-    "src/background/worker-context.ts"
+    "src/background/worker-context.ts",
+    "src/background/link-preview.ts",
+    "src/background/ai-provider-submit.ts",
+    "src/background/aggregate-search.ts",
+    "src/background/webdav-client.ts",
+    "src/background/progress-tracker.ts",
+    "src/background/recent-tab-switcher.ts",
+    "src/background/pinned-tab-recovery.ts"
   ]
 }

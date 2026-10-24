@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Moves tracked pinned cards forward as the person watches or reads on.
 // A page counts once it has stayed in a tab the person is looking at (or
 // listening to) for the dwell time; passing through never moves a card.
@@ -6,32 +5,127 @@
 // (clicked on from the card's page, or typed and bookmarked) and, on sites
 // with a tracked card only, what the page says about itself: next and
 // previous links, episode metadata and the media session.
+import { isRecord, isThenable } from '../platform/storage-call';
+import type * as LumnoProgressMatch from '../domain/progress-match';
+import type * as LumnoProgressHistory from '../domain/progress-history';
+import type { ProgressComparison, ProgressConfidence } from '../domain/progress-match';
+import type { StorageAreaLike, StorageItems } from '../domain/storage-port';
+
+type ProgressMatchApi = Pick<typeof LumnoProgressMatch,
+  'getComparableUrl' | 'getProgressSiteKey' | 'compareProgressPages' | 'shouldAdvance' | 'looksLikeSeriesPage'>;
+type ProgressHistoryApi = Pick<typeof LumnoProgressHistory, 'STORAGE_KEY' | 'recordVersion' | 'getHistoryId'>;
+
+// A timer from the injected timer functions; only they read it.
+type TimerHandle = unknown;
+
+// What a page's media session says is playing.
+interface MediaReading {
+  title: string;
+  series: string;
+}
+
+// What a page says about itself (see readProgressPageHints).
+interface PageHints {
+  nextUrls: string[];
+  prevUrls: string[];
+  episodeNavigation: boolean;
+  seriesName: string;
+  episode: number;
+  media: MediaReading | null;
+}
+
+// Hints read from a tracked card's page, and the page they were read from.
+interface CardHints extends PageHints {
+  url: string;
+}
+
+// A tab whose page is waiting out the dwell time.
+interface DwellCandidate {
+  url: string;
+  timer: TimerHandle | null;
+  // The dwell ran out while the tab was in the background.
+  waiting: boolean;
+  // The page was weighed.
+  settled: boolean;
+}
+
+// Where a tab is, and the page it was on before.
+interface Trail {
+  url: string;
+  title: string;
+  previousUrl: string;
+  previousTitle: string;
+}
+
+// A pinned card that follows a work, as stored. Fields the tracker does not
+// read are kept as they are.
+interface TrackedCard extends Record<string, unknown> {
+  url: string;
+  progressTracking: true;
+}
+
+interface AdvanceResult {
+  changed: boolean;
+  reason: string;
+  confidence?: ProgressConfidence;
+}
+
+interface ObserveOptions {
+  // The page's title or sound changed without a new URL.
+  contentChanged?: boolean;
+}
+
+interface ProgressTrackerOptions {
+  chromeApi?: typeof chrome | null;
+  progressMatch: ProgressMatchApi;
+  progressHistory: ProgressHistoryApi;
+  getPinnedArea: () => StorageAreaLike | null;
+  historyArea: StorageAreaLike | null;
+  pinnedKey: string;
+  isEnabled?: () => boolean;
+  dwellMs?: number;
+  probeTimeoutMs?: number;
+  now?: () => number;
+  setTimer?: (callback: () => void, delayMs: number) => TimerHandle;
+  clearTimer?: (timer: TimerHandle) => void;
+}
+
+interface ProgressTracker {
+  attach(): boolean;
+  observe(tab: chrome.tabs.Tab | null | undefined, options?: ObserveOptions): void;
+  advance(tab: chrome.tabs.Tab & { id: number; url: string }): Promise<AdvanceResult>;
+  probeSeries(url: unknown): Promise<boolean>;
+  getPendingCount(): number;
+}
+
 const DEFAULT_DWELL_MS = 15000;
 const DEFAULT_PROBE_TIMEOUT_MS = 800;
 const MAX_PAGE_LINKS = 6;
 
 // Runs in the page (isolated world) and returns plain data only. Must not
 // reference anything outside itself: it is serialized by scripting.
-function readProgressPageHints() {
+function readProgressPageHints(): PageHints {
   const NEXT_TEXT = /^(?:下一[集话話章节節页頁篇回]|下[集章]|next(?:\s+(?:episode|chapter|page|part))?|次の(?:話|章|エピソード|ページ)|次へ|다음(?:\s*(?:화|장|편))?)\s*[>›»→]*$/i;
   const PREV_TEXT = /^[<‹«←]*\s*(?:上一[集话話章节節页頁篇回]|上[集章]|prev(?:ious)?(?:\s+(?:episode|chapter|page|part))?|前の(?:話|章|エピソード|ページ)|前へ|이전(?:\s*(?:화|장|편))?)$/i;
   const EPISODE_NAV_TEXT = /下一[集话話章节節回]|上一[集话話章节節回]|(?:next|previous|prev)\s+(?:episode|chapter)|(?:次|前)の(?:話|章|エピソード)|(?:다음|이전)\s*(?:화|장)/i;
   const EPISODE_TYPES = /^(?:TVEpisode|Episode|PodcastEpisode|RadioEpisode|Chapter)$/;
   const limit = 6;
-  const absolute = (href) => {
+  const isObject = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object';
+  const absolute = (href: string | null): string => {
+    if (href === null) return '';
     try {
       const url = new URL(href, location.href);
       return /^https?:$/.test(url.protocol) ? url.href : '';
-    } catch (error) {
+    } catch (_error) {
       return '';
     }
   };
-  const pushUnique = (list, href) => {
+  const pushUnique = (list: string[], href: string | null): void => {
     const url = absolute(href);
     if (url && url !== location.href && !list.includes(url) && list.length < limit) list.push(url);
   };
-  const nextUrls = [];
-  const prevUrls = [];
+  const nextUrls: string[] = [];
+  const prevUrls: string[] = [];
   let episodeNavigation = false;
   document.querySelectorAll('link[rel~="next"][href], a[rel~="next"][href]').forEach((node) => {
     pushUnique(nextUrls, node.getAttribute('href'));
@@ -52,16 +146,18 @@ function readProgressPageHints() {
   }
   let seriesName = '';
   let episode = 0;
-  const visit = (value, depth) => {
-    if (!value || typeof value !== 'object' || depth > 4 || seriesName) return;
+  const visit = (value: unknown, depth: number): void => {
+    if (!isObject(value) || depth > 4 || seriesName) return;
     if (Array.isArray(value)) {
-      value.forEach((entry) => visit(entry, depth + 1));
+      value.forEach((entry: unknown) => visit(entry, depth + 1));
       return;
     }
-    const types = [].concat(value['@type'] || []);
+    const typeValue = value['@type'] || [];
+    const types: unknown[] = Array.isArray(typeValue) ? typeValue : [typeValue];
     if (types.some((type) => EPISODE_TYPES.test(String(type)))) {
-      const series = value.partOfSeries || (value.partOfSeason && value.partOfSeason.partOfSeries) || value.isPartOf;
-      const name = series && typeof series === 'object' ? series.name : '';
+      const season = value.partOfSeason;
+      const series = value.partOfSeries || (isObject(season) && season.partOfSeries) || value.isPartOf;
+      const name = isObject(series) ? series.name : '';
       if (name) seriesName = String(name);
       episode = Number(value.episodeNumber || value.position) || 0;
     }
@@ -70,7 +166,7 @@ function readProgressPageHints() {
   document.querySelectorAll('script[type="application/ld+json"]').forEach((node) => {
     try {
       visit(JSON.parse(node.textContent || ''), 0);
-    } catch (error) {
+    } catch (_error) {
       // Malformed metadata is ignored.
     }
   });
@@ -78,13 +174,13 @@ function readProgressPageHints() {
   if (ogType && /^video\.episode$/i.test(String(ogType.getAttribute('content') || ''))) {
     episodeNavigation = true;
   }
-  let media = null;
+  let media: MediaReading | null = null;
   try {
     const metadata = navigator.mediaSession && navigator.mediaSession.metadata;
     if (metadata && metadata.title) {
       media = { title: String(metadata.title), series: String(metadata.album || metadata.artist || '') };
     }
-  } catch (error) {
+  } catch (_error) {
     media = null;
   }
   return { nextUrls, prevUrls, episodeNavigation, seriesName, episode, media };
@@ -92,20 +188,34 @@ function readProgressPageHints() {
 
 // The media session set by the page's own player, which the isolated world
 // may not see. Runs in the page's main world and only reads.
-function readMediaSession() {
+function readMediaSession(): MediaReading | null {
   try {
     const metadata = navigator.mediaSession && navigator.mediaSession.metadata;
     return metadata && metadata.title
       ? { title: String(metadata.title), series: String(metadata.album || metadata.artist || '') }
       : null;
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }
 
-function createProgressTracker(options) {
-  const config = options && typeof options === 'object' ? options : {};
-  const chromeApi = config.chromeApi;
+function isTrackedCard(item: unknown): item is TrackedCard {
+  return isRecord(item) && item.progressTracking === true && typeof item.url === 'string';
+}
+
+function readCardTitle(card: TrackedCard): string | undefined {
+  return typeof card.title === 'string' ? card.title : undefined;
+}
+
+// The first frame's result of scripting.executeScript, which the page
+// produced: callers read it as unknown.
+function readFirstResult(results: unknown): unknown {
+  return Array.isArray(results) && isRecord(results[0]) ? results[0].result : null;
+}
+
+function createProgressTracker(options: ProgressTrackerOptions): Readonly<ProgressTracker> {
+  const config = options;
+  const chromeApi = config.chromeApi || null;
   const progressMatch = config.progressMatch;
   const progressHistory = config.progressHistory;
   const getPinnedArea = config.getPinnedArea;
@@ -119,23 +229,24 @@ function createProgressTracker(options) {
   const now = typeof config.now === 'function' ? config.now : Date.now;
   const setTimer = typeof config.setTimer === 'function'
     ? config.setTimer
-    : (callback, delay) => setTimeout(callback, delay);
+    : (callback: () => void, delay: number): TimerHandle => setTimeout(callback, delay);
   const clearTimer = typeof config.clearTimer === 'function'
     ? config.clearTimer
-    : (timerId) => clearTimeout(timerId);
-  // tabId → { url, timer, waiting, settled }
-  const candidates = new Map();
-  // tabId → { url, title, previousUrl, previousTitle }: where each tab came from.
-  const trails = new Map();
+    : (timerId: TimerHandle): void => {
+      if (typeof timerId === 'number') clearTimeout(timerId);
+    };
+  const candidates = new Map<number, DwellCandidate>();
+  // Where each tab came from.
+  const trails = new Map<number, Trail>();
   // card history id → hints read from the card's own page while it was open.
-  const cardHints = new Map();
-  let queue = Promise.resolve();
+  const cardHints = new Map<string, CardHints>();
+  let queue: Promise<unknown> = Promise.resolve();
 
-  function readLastError() {
+  function readLastError(): chrome.runtime.LastError | null | undefined {
     return chromeApi && chromeApi.runtime ? chromeApi.runtime.lastError : null;
   }
 
-  function storageGet(area, key) {
+  function storageGet(area: StorageAreaLike | null, key: string): Promise<StorageItems> {
     return new Promise((resolve) => {
       if (!area || typeof area.get !== 'function') {
         resolve({});
@@ -147,7 +258,7 @@ function createProgressTracker(options) {
     });
   }
 
-  function storageSet(area, value) {
+  function storageSet(area: StorageAreaLike | null, value: StorageItems): Promise<void> {
     return new Promise((resolve, reject) => {
       if (!area || typeof area.set !== 'function') {
         reject(new Error('storage-unavailable'));
@@ -161,7 +272,7 @@ function createProgressTracker(options) {
     });
   }
 
-  function getTab(tabId) {
+  function getTab(tabId: number): Promise<chrome.tabs.Tab | null> {
     return new Promise((resolve) => {
       if (!chromeApi || !chromeApi.tabs || typeof chromeApi.tabs.get !== 'function') {
         resolve(null);
@@ -173,7 +284,7 @@ function createProgressTracker(options) {
     });
   }
 
-  function withTimeout(promise, fallback) {
+  function withTimeout<T>(promise: Promise<T>, fallback: T): Promise<T> {
     return new Promise((resolve) => {
       let done = false;
       const timer = setTimer(() => {
@@ -196,31 +307,38 @@ function createProgressTracker(options) {
     });
   }
 
-  function executeInTab(tabId, func, world) {
+  // Runs a reader in the tab's top frame. Its result comes from the page,
+  // so it is unknown until normalized.
+  function executeInTab(tabId: number, func: () => unknown, world?: chrome.scripting.ExecutionWorld | `${chrome.scripting.ExecutionWorld}`): Promise<unknown> {
     const scripting = chromeApi && chromeApi.scripting;
     if (!scripting || typeof scripting.executeScript !== 'function') return Promise.resolve(null);
-    return withTimeout(new Promise((resolve) => {
+    return withTimeout(new Promise<unknown>((resolve) => {
       try {
-        const pending = scripting.executeScript({ target: { tabId }, func, world: world || 'ISOLATED' }, (results) => {
-          resolve(readLastError() || !Array.isArray(results) || !results[0] ? null : results[0].result);
+        // Firefox answers with a promise as well as the callback.
+        const pending: unknown = scripting.executeScript({ target: { tabId }, func, world: world || 'ISOLATED' }, (results) => {
+          resolve(readLastError() ? null : readFirstResult(results));
         });
-        if (pending && typeof pending.then === 'function') {
+        if (isThenable(pending)) {
           pending.then((results) => {
-            resolve(Array.isArray(results) && results[0] ? results[0].result : null);
+            resolve(readFirstResult(results));
           }, () => resolve(null));
         }
-      } catch (error) {
+      } catch (_error) {
         resolve(null);
       }
     }), null);
   }
 
-  function normalizeHints(value) {
-    const hints = value && typeof value === 'object' ? value : {};
-    const urls = (list) => (Array.isArray(list) ? list.map(String).slice(0, MAX_PAGE_LINKS) : []);
-    const media = hints.media && typeof hints.media === 'object' && hints.media.title
-      ? { title: String(hints.media.title).trim(), series: String(hints.media.series || '').trim() }
+  function normalizeMedia(value: unknown): MediaReading | null {
+    return isRecord(value) && value.title
+      ? { title: String(value.title).trim(), series: String(value.series || '').trim() }
       : null;
+  }
+
+  function normalizeHints(value: unknown): PageHints {
+    const hints = isRecord(value) ? value : {};
+    const urls = (list: unknown): string[] => (Array.isArray(list) ? list.map(String).slice(0, MAX_PAGE_LINKS) : []);
+    const media = normalizeMedia(hints.media);
     return {
       nextUrls: urls(hints.nextUrls),
       prevUrls: urls(hints.prevUrls),
@@ -231,12 +349,12 @@ function createProgressTracker(options) {
     };
   }
 
-  function readPageHints(tabId, options) {
+  function readPageHints(tabId: number, options?: { media?: boolean }): Promise<PageHints> {
     return executeInTab(tabId, readProgressPageHints).then(async (raw) => {
       const hints = normalizeHints(raw);
       if (!hints.media && options && options.media) {
-        const media = await executeInTab(tabId, readMediaSession, 'MAIN');
-        if (media && media.title) hints.media = normalizeHints({ media }).media;
+        const media = normalizeMedia(await executeInTab(tabId, readMediaSession, 'MAIN'));
+        if (media) hints.media = media;
       }
       return hints;
     });
@@ -244,10 +362,10 @@ function createProgressTracker(options) {
 
   // How the person reached this URL, from the browser history: a link, or
   // a typed URL, bookmark or search.
-  function getTransition(url) {
+  function getTransition(url: string): Promise<string> {
     const history = chromeApi && chromeApi.history;
     if (!history || typeof history.getVisits !== 'function') return Promise.resolve('');
-    return withTimeout(new Promise((resolve) => {
+    return withTimeout(new Promise<string>((resolve) => {
       try {
         history.getVisits({ url }, (visits) => {
           if (readLastError() || !Array.isArray(visits) || !visits.length) {
@@ -259,25 +377,25 @@ function createProgressTracker(options) {
           ));
           resolve(String(latest.transition || ''));
         });
-      } catch (error) {
+      } catch (_error) {
         resolve('');
       }
     }), '');
   }
 
-  function isHttpUrl(url) {
-    return /^https?:\/\//i.test(String(url || ''));
+  function isHttpUrl(url: unknown): url is string {
+    return typeof url === 'string' && /^https?:\/\//i.test(url);
   }
 
-  function isTrackableTab(tab) {
+  function isTrackableTab(tab: chrome.tabs.Tab | null | undefined): tab is chrome.tabs.Tab & { id: number; url: string } {
     return Boolean(tab && Number.isInteger(tab.id) && !tab.incognito && isHttpUrl(tab.url));
   }
 
-  function isEngaged(tab) {
+  function isEngaged(tab: chrome.tabs.Tab | null | undefined): boolean {
     return Boolean(tab && (tab.active || tab.audible));
   }
 
-  function rememberTrail(tabId, url, title) {
+  function rememberTrail(tabId: number, url: string | undefined, title: string | undefined): void {
     const entry = trails.get(tabId) || { url: '', title: '', previousUrl: '', previousTitle: '' };
     if (url && url !== entry.url) {
       // A blank or internal page in between (a new tab's first load) keeps
@@ -291,25 +409,25 @@ function createProgressTracker(options) {
     if (title) trails.set(tabId, { ...entry, title: String(title) });
   }
 
-  function forget(tabId) {
+  function forget(tabId: number): void {
     const candidate = candidates.get(tabId);
-    if (candidate && candidate.timer) clearTimer(candidate.timer);
+    if (candidate && candidate.timer !== null) clearTimer(candidate.timer);
     candidates.delete(tabId);
   }
 
-  function startDwell(tabId, url) {
+  function startDwell(tabId: number, url: string): void {
     forget(tabId);
-    const candidate = { url, timer: 0, waiting: false, settled: false };
+    const candidate: DwellCandidate = { url, timer: null, waiting: false, settled: false };
     candidate.timer = setTimer(() => {
-      candidate.timer = 0;
+      candidate.timer = null;
       void settle(tabId, candidate);
     }, dwellMs);
     candidates.set(tabId, candidate);
   }
 
-  function observe(tab, options) {
+  function observe(tab: chrome.tabs.Tab | null | undefined, options?: ObserveOptions): void {
     if (!isEnabled() || !isTrackableTab(tab)) {
-      if (tab && Number.isInteger(tab.id)) forget(tab.id);
+      if (tab && typeof tab.id === 'number' && Number.isInteger(tab.id)) forget(tab.id);
       return;
     }
     const candidate = candidates.get(tab.id);
@@ -325,10 +443,10 @@ function createProgressTracker(options) {
     startDwell(tab.id, tab.url);
   }
 
-  function settle(tabId, candidate) {
+  function settle(tabId: number, candidate: DwellCandidate): Promise<AdvanceResult | null> {
     return getTab(tabId).then((tab) => {
       if (candidates.get(tabId) !== candidate) return null;
-      if (!tab || tab.url !== candidate.url) {
+      if (!tab || tab.url !== candidate.url || !isTrackableTab(tab)) {
         forget(tabId);
         return null;
       }
@@ -341,24 +459,30 @@ function createProgressTracker(options) {
     });
   }
 
-  function enqueue(task) {
+  function enqueue<T>(task: () => Promise<T>): Promise<T> {
     const run = queue.then(task, task);
     queue = run.catch(() => {});
     return run;
   }
 
-  function getPageTitle(tab) {
+  function getPageTitle(tab: chrome.tabs.Tab): string {
     const title = String(tab && tab.title || '').replace(/\s+/g, ' ').trim();
     return title && title !== tab.url ? title : '';
   }
 
-  function sameUrl(a, b) {
+  function sameUrl(a: unknown, b: unknown): boolean {
     const left = progressMatch.getComparableUrl(a);
     return Boolean(left) && left === progressMatch.getComparableUrl(b);
   }
 
-  async function saveCard(items, index, nextCard, timestamp, options) {
-    const previous = items[index];
+  async function saveCard(
+    items: readonly unknown[],
+    index: number,
+    previous: TrackedCard,
+    nextCard: TrackedCard,
+    timestamp: number,
+    options?: { record?: boolean }
+  ): Promise<void> {
     if (options && options.record) {
       const historyKey = progressHistory.STORAGE_KEY;
       const storedHistory = await storageGet(historyArea, historyKey);
@@ -376,7 +500,7 @@ function createProgressTracker(options) {
     await storageSet(getPinnedArea(), { [pinnedKey]: nextItems });
   }
 
-  function getMediaTitle(media) {
+  function getMediaTitle(media: MediaReading): string {
     return media.series && !media.title.includes(media.series)
       ? `${media.series} ${media.title}`
       : media.title;
@@ -385,15 +509,19 @@ function createProgressTracker(options) {
   // On a tracked card's own page: remember what the page says about its
   // neighbours, and follow a player that moves on without changing the URL
   // (sites that keep one address for every episode).
-  async function refreshOwnPage(tab, items, index) {
-    const card = items[index];
+  async function refreshOwnPage(
+    tab: chrome.tabs.Tab & { id: number },
+    items: readonly unknown[],
+    index: number,
+    card: TrackedCard
+  ): Promise<AdvanceResult> {
     const historyId = progressHistory.getHistoryId(card, progressMatch);
     const known = cardHints.get(historyId);
     const hints = await readPageHints(tab.id, { media: true });
     cardHints.set(historyId, { url: card.url, ...hints });
     if (!hints.media) return { changed: false, reason: 'own-page' };
     const mediaTitle = getMediaTitle(hints.media);
-    if (mediaTitle === card.title) return { changed: false, reason: 'own-page' };
+    if (mediaTitle === readCardTitle(card)) return { changed: false, reason: 'own-page' };
     const knownMedia = known && sameUrl(known.url, card.url) ? known.media : null;
     if (knownMedia && knownMedia.title === hints.media.title) return { changed: false, reason: 'own-page' };
     // The first reading names what is playing; a different reading later
@@ -401,10 +529,10 @@ function createProgressTracker(options) {
     const movedOn = Boolean(knownMedia);
     const timestamp = Math.max(0, Number(now()) || 0);
     try {
-      await saveCard(items, index, { ...card, title: mediaTitle, lastVisitTime: timestamp }, timestamp, {
+      await saveCard(items, index, card, { ...card, title: mediaTitle, lastVisitTime: timestamp }, timestamp, {
         record: movedOn
       });
-    } catch (error) {
+    } catch (_error) {
       return { changed: false, reason: 'storage-error' };
     }
     return { changed: true, reason: movedOn ? 'media-session' : 'media-title', confidence: 'high' };
@@ -412,59 +540,63 @@ function createProgressTracker(options) {
 
   // Finds the tracked card this page continues and moves it forward. The
   // version it leaves goes into the history first, so it can be restored.
-  async function advance(tab) {
+  async function advance(tab: chrome.tabs.Tab & { id: number; url: string }): Promise<AdvanceResult> {
     if (!isEnabled()) return { changed: false, reason: 'disabled' };
     const stored = await storageGet(getPinnedArea(), pinnedKey);
-    const items = Array.isArray(stored[pinnedKey]) ? stored[pinnedKey] : [];
+    const storedItems = stored[pinnedKey];
+    const items: readonly unknown[] = Array.isArray(storedItems) ? storedItems : [];
     const siteKey = progressMatch.getProgressSiteKey(tab.url);
-    const tracked = items
-      .map((item, index) => ({ item, index }))
-      .filter(({ item }) => item && item.progressTracking === true &&
-        progressMatch.getProgressSiteKey(item.url) === siteKey);
+    const tracked: Array<{ item: TrackedCard; index: number }> = [];
+    items.forEach((item, index) => {
+      if (isTrackedCard(item) && progressMatch.getProgressSiteKey(item.url) === siteKey) {
+        tracked.push({ item, index });
+      }
+    });
     if (!tracked.length) return { changed: false, reason: 'no-match' };
 
     const own = tracked.find(({ item }) => sameUrl(item.url, tab.url));
-    if (own) return refreshOwnPage(tab, items, own.index);
+    if (own) return refreshOwnPage(tab, items, own.index, own.item);
 
     const page = { url: tab.url, title: getPageTitle(tab) };
-    const trail = trails.get(tab.id) || {};
+    const trail = trails.get(tab.id);
     const [candidateHints, transition] = await Promise.all([
       readPageHints(tab.id),
       getTransition(tab.url)
     ]);
     // A site can have several tracked works; the strongest evidence wins.
-    let best = null;
-    tracked.forEach(({ item, index }) => {
+    let best: { item: TrackedCard; index: number; result: ProgressComparison } | null = null;
+    for (const { item, index } of tracked) {
       const historyId = progressHistory.getHistoryId(item, progressMatch);
       const hints = cardHints.get(historyId);
       const currentHints = hints && sameUrl(hints.url, item.url) ? hints : null;
       const result = progressMatch.compareProgressPages(
-        { url: item.url, title: item.title },
+        { url: item.url, title: readCardTitle(item) },
         page,
         {
-          fromCurrent: sameUrl(trail.previousUrl, item.url),
+          fromCurrent: sameUrl(trail ? trail.previousUrl : undefined, item.url),
           transition,
           currentHints: currentHints || undefined,
           candidateHints,
           currentEpisode: currentHints ? currentHints.episode : undefined
         }
       );
-      if (!progressMatch.shouldAdvance(result)) return;
+      if (!progressMatch.shouldAdvance(result)) continue;
       if (!best || result.score > best.result.score) best = { item, index, result };
-    });
+    }
     if (!best) return { changed: false, reason: 'no-match' };
-    if (items.some((item, index) => index !== best.index && item && sameUrl(item.url, page.url))) {
+    const bestIndex = best.index;
+    if (items.some((item, index) => index !== bestIndex && isRecord(item) && sameUrl(item.url, page.url))) {
       return { changed: false, reason: 'url-conflict' };
     }
     const timestamp = Math.max(0, Number(now()) || 0);
     try {
-      await saveCard(items, best.index, {
+      await saveCard(items, best.index, best.item, {
         ...best.item,
         url: page.url,
         title: page.title || best.item.title,
         lastVisitTime: timestamp
       }, timestamp, { record: true });
-    } catch (error) {
+    } catch (_error) {
       return { changed: false, reason: 'storage-error' };
     }
     // The page the card now points to tells us about its own neighbours.
@@ -474,33 +606,33 @@ function createProgressTracker(options) {
 
   // Whether an open tab showing this URL reads as an episode or chapter,
   // for pinning: its title, URL, episode navigation or metadata.
-  function probeSeries(url) {
+  function probeSeries(url: unknown): Promise<boolean> {
     const tabs = chromeApi && chromeApi.tabs;
     if (!isHttpUrl(url) || !tabs || typeof tabs.query !== 'function') return Promise.resolve(false);
-    return withTimeout(new Promise((resolve) => {
+    return withTimeout(new Promise<boolean>((resolve) => {
       tabs.query({}, (openTabs) => {
         const tab = !readLastError() && Array.isArray(openTabs)
           ? openTabs.find((entry) => entry && !entry.incognito && sameUrl(entry.url, url))
           : null;
-        if (!tab) {
+        if (!tab || typeof tab.id !== 'number') {
           resolve(false);
           return;
         }
         readPageHints(tab.id).then((hints) => {
-          resolve(progressMatch.looksLikeSeriesPage({ url: tab.url, title: getPageTitle(tab) }, hints));
+          resolve(progressMatch.looksLikeSeriesPage({ url: tab.url || '', title: getPageTitle(tab) }, hints));
         }, () => resolve(false));
       });
     }), false);
   }
 
-  function attach() {
+  function attach(): boolean {
     const tabs = chromeApi && chromeApi.tabs;
     if (!tabs) return false;
     if (tabs.onCreated && typeof tabs.onCreated.addListener === 'function') {
       tabs.onCreated.addListener((tab) => {
         const openerTabId = Number(tab && tab.openerTabId);
         const opener = Number.isInteger(openerTabId) ? trails.get(openerTabId) : null;
-        if (!tab || !Number.isInteger(tab.id) || !opener || !isHttpUrl(opener.url)) return;
+        if (!tab || typeof tab.id !== 'number' || !Number.isInteger(tab.id) || !opener || !isHttpUrl(opener.url)) return;
         // A tab opened from a page came from that page.
         trails.set(tab.id, { url: '', title: '', previousUrl: opener.url, previousTitle: opener.title });
       });
@@ -544,10 +676,11 @@ function createProgressTracker(options) {
   return Object.freeze({
     attach,
     observe,
-    advance: (tab) => enqueue(() => advance(tab)),
+    advance: (tab: chrome.tabs.Tab & { id: number; url: string }) => enqueue(() => advance(tab)),
     probeSeries,
     getPendingCount: () => candidates.size
   });
 }
 
+export type { AdvanceResult, PageHints, ProgressTracker, ProgressTrackerOptions };
 export { DEFAULT_DWELL_MS, createProgressTracker, readProgressPageHints };

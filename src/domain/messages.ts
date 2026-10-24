@@ -23,6 +23,13 @@ interface OkReply {
   reason?: string;
 }
 
+// Where a link preview was clicked, in the top frame's viewport; the window
+// grows from there.
+interface LinkPreviewOrigin {
+  x: number;
+  y: number;
+}
+
 // The search surface asking, which keeps its suggestion requests apart.
 type SearchContext = 'newtab' | 'overlay' | 'popup' | string;
 
@@ -335,7 +342,7 @@ interface BackgroundMessages {
     reply: AggregateSearchReply;
   };
   linkPreviewPrepare: { request: { url: string }; reply: OkReply };
-  linkPreviewOpen: { request: { url: string; origin?: { x: number; y: number } }; reply: OkReply };
+  linkPreviewOpen: { request: { url: string; origin?: LinkPreviewOrigin }; reply: OkReply };
   linkPreviewClose: { request: { token?: string }; reply: OkReply };
   linkPreviewOpenInTab: { request: { url: string }; reply: OkReply };
   getWebAppearance: { request: NoFields; reply: WebAppearanceState };
@@ -405,13 +412,15 @@ interface PageMessages {
   setTabSwitcherCaptureVisibility: { request: { hidden: boolean }; reply: OkReply };
   getOpenTabSwitcherState: { request: NoFields; reply: { ok: boolean; open: boolean } };
   updateTabSwitcherThumbnail: { request: TabSwitcherThumbnailUpdate; reply: OkReply };
-  lumnoLinkPreviewPrewarm: { request: { token: string; url: string }; reply: OkReply };
-  lumnoLinkPreviewScreenshot: { request: { token: string; screenshot: string }; reply: OkReply };
+  // The link preview surface answers whether it took the request.
+  lumnoLinkPreviewPrewarm: { request: { token: string; url: string }; reply: boolean };
+  lumnoLinkPreviewScreenshot: { request: { token: string; screenshot: string }; reply: boolean };
   lumnoLinkPreviewShow: {
-    request: { token: string; url: string; screenshot: string; origin: { x: number; y: number } | null };
-    reply: OkReply;
+    request: { token: string; url: string; screenshot: string; origin: LinkPreviewOrigin | null };
+    reply: boolean;
   };
-  lumnoLinkPreviewPing: { request: NoFields; reply: OkReply };
+  // The token of the preview on screen, or '' with none.
+  lumnoLinkPreviewPing: { request: NoFields; reply: { token: string } };
   'lumno:newtab-focus-input': { request: { source: string; tabId: number | null }; reply: OkReply };
   'lumno:newtab-refresh-sections': { request: { section: 'recent' | 'bookmarks' | 'all' | string }; reply: void };
   triggerOnboardingSearchOverlayFromCommand: { request: { tabId: number; source: string }; reply: OkReply };
@@ -432,6 +441,7 @@ export type {
   BackgroundReply,
   BackgroundRequest,
   BookmarkTabGroupReply,
+  LinkPreviewOrigin,
   LocaleMessage,
   NoFields,
   OkReply,

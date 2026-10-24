@@ -12,8 +12,12 @@ interface ProgressVersion {
 
 type ProgressHistoryMap = Record<string, ProgressVersion[]>;
 
-function normalizeVersion(value: any): ProgressVersion | null {
-  if (!value || typeof value !== 'object') return null;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function normalizeVersion(value: unknown): ProgressVersion | null {
+  if (!isRecord(value)) return null;
   const url = String(value.url || '').trim();
   if (!/^https?:\/\//i.test(url)) return null;
   return {
@@ -35,9 +39,9 @@ function normalizeVersions(value: unknown): ProgressVersion[] {
   return versions.slice(0, MAX_VERSIONS);
 }
 
-function normalizeHistoryMap(value: any): ProgressHistoryMap {
+function normalizeHistoryMap(value: unknown): ProgressHistoryMap {
   const map: ProgressHistoryMap = {};
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return map;
+  if (!isRecord(value) || Array.isArray(value)) return map;
   Object.keys(value).forEach((siteKey) => {
     const versions = normalizeVersions(value[siteKey]);
     if (siteKey && versions.length) map[siteKey] = versions;
@@ -72,8 +76,8 @@ function restoreVersion(map: unknown, siteKey: string, index: number, currentVer
 // Tracked cards store their history under their own id; cards tracked
 // before ids existed fall back to their site.
 function getHistoryId(
-  card: { progressId?: string; url?: string } | null | undefined,
-  progressMatch?: { getProgressSiteKey(url: string | undefined): string } | null
+  card: { progressId?: unknown; url?: unknown } | null | undefined,
+  progressMatch?: { getProgressSiteKey(url: unknown): string } | null
 ): string {
   const progressId = String(card && card.progressId || '').trim();
   if (progressId) return progressId;

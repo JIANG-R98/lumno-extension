@@ -1,4 +1,135 @@
-// @ts-nocheck
+// The WebDAV requests behind sync: reading and writing the shared state file
+// under a lock every device honours, the asset and snapshot files next to it,
+// and the probe that finds which lock a server supports.
+
+type DiagnosticPhase =
+  | 'state-etag' | 'state-lock-create' | 'directory-race' | 'directory-delete' | 'directory-recreate'
+  | 'move-race' | 'move-owner' | 'move-delete' | 'move-recreate' | 'move-claim' | 'state-read';
+
+type DavMethod = 'GET' | 'HEAD' | 'PUT' | 'DELETE' | 'MKCOL' | 'MOVE' | 'PROPFIND';
+type DavHeaders = Record<string, string>;
+
+// 'conditional': the server honours If-Match, so a write cannot silently
+// replace a newer state; 'collection-lock': writes rely on the lock alone.
+type Concurrency = 'conditional' | 'collection-lock';
+// How the lock is taken: by moving a private folder onto the lock folder, or
+// by creating the lock folder outright.
+type LockStrategy = 'collection-move' | 'collection-create';
+
+// Which step of the lock probe or a write a server failed, with up to two
+// HTTP statuses; carries nothing about the account or the data.
+interface WebDavDiagnostic {
+  revision: string;
+  phase: DiagnosticPhase;
+  statuses: number[];
+}
+
+// A lock this client could not release; the next run releases it first.
+interface StaleLockMarker {
+  owner: string;
+  at: number;
+  // The write under it may still land on the server.
+  uncertain: boolean;
+}
+
+interface WebDavError extends Error {
+  code: string;
+  status?: number;
+  retryAfterMs?: number | null;
+  diagnostic?: WebDavDiagnostic | null;
+  staleLock?: StaleLockMarker;
+}
+
+// A connection as entered or stored; every field is checked.
+interface WebDavConfigInput {
+  endpoint?: unknown;
+  directory?: unknown;
+  username?: unknown;
+  password?: unknown;
+  enabled?: unknown;
+  concurrency?: unknown;
+  lockStrategy?: unknown;
+}
+
+interface WebDavConnection {
+  endpoint: string;
+  directory: string;
+  username: string;
+  password: string;
+  enabled: boolean;
+  concurrency: Concurrency;
+  lockStrategy: LockStrategy;
+}
+
+// What the client reads of a fetch response.
+interface DavFetchResponse {
+  status: number;
+  headers: { get(name: string): string | null };
+  body?: ReadableStream<Uint8Array> | null;
+  arrayBuffer(): Promise<ArrayBuffer>;
+}
+
+type DavFetch = (url: string, init: RequestInit) => Promise<DavFetchResponse>;
+
+interface WebDavClientOptions {
+  fetch?: DavFetch;
+  timeoutMs?: number;
+}
+
+interface DavResponse {
+  status: number;
+  etag: string | null;
+  bytes: Uint8Array<ArrayBuffer>;
+  // The Content-Length the server sent, when it sent one.
+  size: number | null;
+  lastModified: string | null;
+  date: string | null;
+}
+
+// The state file's content and its revision (a digest of its bytes).
+interface StateSnapshot {
+  state: unknown;
+  etag: string;
+  httpEtag: string | null;
+}
+
+type StateRead = StateSnapshot | { unchanged: true };
+
+interface StateWrite {
+  state: unknown;
+  etag: string;
+  staleLock?: StaleLockMarker;
+}
+
+interface CollectionLock {
+  // The id in the lock's owner file; null for a lock that has none.
+  owner: string | null;
+  release(): Promise<void>;
+}
+
+interface ModifiedTimes {
+  times: Map<string, number>;
+  // The server's own time, NaN when it sent none.
+  now: number;
+}
+
+interface ConnectionCapabilities {
+  ok: true;
+  concurrency: Concurrency;
+  lockStrategy: LockStrategy;
+}
+
+interface WebDavClient {
+  request(path: string, method: DavMethod, body?: BodyInit, headers?: DavHeaders, limit?: number): Promise<DavResponse>;
+  ensureDirectories(): Promise<void>;
+  // Null when there is no state file yet.
+  readState(etag?: string | null): Promise<StateRead | null>;
+  writeState(state: unknown, etag: string | null | undefined): Promise<StateWrite>;
+  releaseStaleLock(marker: unknown, now?: number): Promise<boolean>;
+  sweepAbandoned(): Promise<number>;
+  testConnection(): Promise<ConnectionCapabilities>;
+}
+
 const REVISION = 'dav-lock-5';
 // Providers refuse an occupied MOVE destination differently: RFC 4918 412,
 // Nutstore 409, Go x/net/webdav 423, nginx 405, and Apache, WsgiDAV and
@@ -10,43 +141,77 @@ const MOVE_REFUSALS = [405, 409, 412, 423, 500];
 // belongs to a client that was terminated or lost its network; it may be
 // broken. Both times come from the server, never from device clocks.
 const STALE_LOCK_MS = 10 * 60 * 1000;
-const DIAGNOSTIC_PHASES = ['state-etag', 'state-lock-create', 'directory-race', 'directory-delete', 'directory-recreate',
-  'move-race', 'move-owner', 'move-delete', 'move-recreate', 'move-claim', 'state-read'];
+const DIAGNOSTIC_PHASES: readonly DiagnosticPhase[] = ['state-etag', 'state-lock-create', 'directory-race',
+  'directory-delete', 'directory-recreate', 'move-race', 'move-owner', 'move-delete', 'move-recreate', 'move-claim',
+  'state-read'];
 // Rate limits and temporary blocks: the server refused the request without
 // acting on it. Nutstore answers 503 "BlockedTemporarily" once an account
 // sent too many requests, and keeps refusing while it is still being polled.
 const REFUSED_STATUSES = [429, 503];
 const RETRY_AFTER_MAX_MS = 6 * 60 * 60 * 1000;
-function error(code, status) { return Object.assign(new Error(code), { code, status }); }
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function error(code: string, status?: number): WebDavError {
+  return Object.assign(new Error(code), { code, status });
+}
+
+// A failure this module raised; anything else (a fetch abort or a network
+// failure) is reported by code instead.
+function isWebDavError(value: unknown): value is WebDavError {
+  return value instanceof Error && 'code' in value && typeof value.code === 'string';
+}
+
+function errorStatus(cause: unknown): number {
+  return isWebDavError(cause) && typeof cause.status === 'number' ? cause.status : 0;
+}
+
+function withStaleLock(cause: unknown, staleLock: StaleLockMarker): unknown {
+  return cause instanceof Error ? Object.assign(cause, { staleLock }) : cause;
+}
+
 // Retry-After holds seconds or an HTTP date, read against the server's clock.
-function retryAfterMs(value, date) {
+function retryAfterMs(value: string | null, date: string | null): number | null {
   const text = String(value || '').trim();
   if (!text) return null;
   const ms = /^\d+$/.test(text) ? Number(text) * 1000 : Date.parse(text) - (Date.parse(date || '') || Date.now());
   return Number.isFinite(ms) ? Math.min(Math.max(ms, 0), RETRY_AFTER_MAX_MS) : null;
 }
-function diagnostic(input) {
-  if (!input || input.revision !== REVISION || !DIAGNOSTIC_PHASES.includes(input.phase)) return null;
-  return { revision: REVISION, phase: input.phase,
-    statuses: (Array.isArray(input.statuses) ? input.statuses : []).filter((status) => Number.isInteger(status) && status >= 0 && status <= 599).slice(0, 2) };
+
+function isDiagnosticPhase(value: unknown): value is DiagnosticPhase {
+  return DIAGNOSTIC_PHASES.some((phase) => phase === value);
 }
-function unsupported(phase, statuses) {
+
+// A diagnostic of this revision, rebuilt from its known fields only.
+function diagnostic(input: unknown): WebDavDiagnostic | null {
+  if (!isRecord(input) || input.revision !== REVISION || !isDiagnosticPhase(input.phase)) return null;
+  const statuses: unknown[] = Array.isArray(input.statuses) ? input.statuses : [];
+  return { revision: REVISION, phase: input.phase,
+    statuses: statuses.filter((status): status is number => typeof status === 'number' && Number.isInteger(status) &&
+      status >= 0 && status <= 599).slice(0, 2) };
+}
+
+function unsupported(phase: DiagnosticPhase, statuses: number[]): WebDavError {
   return Object.assign(error('conditional-write-unsupported'), { diagnostic: diagnostic({ revision: REVISION, phase, statuses }) });
 }
+
 // A uniquely named path cannot already exist, so 405 there means the server
 // refuses to create folders at all (read-only mounts, Go x/net/webdav backend
 // errors, proxies blocking MKCOL), not a concurrency weakness.
-function creationFailed(status) {
+function creationFailed(status: number): WebDavError {
   if (status !== 405) return unsupported('state-lock-create', [status]);
   return Object.assign(error('folder-create-refused'), { diagnostic: diagnostic({ revision: REVISION, phase: 'state-lock-create', statuses: [status] }) });
 }
-function normalizeConfig(input) {
-  let endpoint;
+
+function normalizeConfig(input: WebDavConfigInput): WebDavConnection {
+  let endpoint: URL;
   try { endpoint = new URL(String(input.endpoint || '').trim()); } catch (_error) { throw error('invalid-endpoint'); }
   if (endpoint.protocol !== 'https:' || endpoint.username || endpoint.password || endpoint.search || endpoint.hash) throw error('invalid-endpoint');
   endpoint.pathname = endpoint.pathname.replace(/\/+$/, '') + '/';
   const directory = String(input.directory || 'lumno').trim().replace(/^\/+|\/+$/g, '');
-  if (!directory || directory.length > 240 || directory.split('/').some((part) => !/^[-\w\u0080-\uffff ]+$/.test(part) || part === '.' || part === '..')) throw error('invalid-directory');
+  if (!directory || directory.length > 240 || directory.split('/').some((part) => !/^[-\w\u0080-￿ ]+$/.test(part) || part === '.' || part === '..')) throw error('invalid-directory');
   const username = String(input.username || '').trim();
   const password = String(input.password || '');
   if (!username || username.includes(':') || username.length > 256 || !password || password.length > 4096) throw error('missing-credentials');
@@ -54,30 +219,37 @@ function normalizeConfig(input) {
     concurrency: input.concurrency === 'collection-lock' ? 'collection-lock' : 'conditional',
     lockStrategy: input.lockStrategy === 'collection-create' ? 'collection-create' : 'collection-move' };
 }
-function createClient(config, options) {
+
+function createClient(config: WebDavConfigInput, options?: WebDavClientOptions | null): Readonly<WebDavClient> {
   const opts = options || {};
   const connection = normalizeConfig(config);
-  const fetchFn = opts.fetch || globalThis.fetch.bind(globalThis);
+  const fetchFn: DavFetch = opts.fetch || globalThis.fetch.bind(globalThis);
   const parts = [...connection.directory.split('/'), 'v1'].map(encodeURIComponent);
   const prefix = `${connection.endpoint}${parts.join('/')}/`;
   let lockStrategy = connection.lockStrategy;
   const token = new TextEncoder().encode(`${connection.username}:${connection.password}`);
   const authorization = 'Basic ' + globalThis.btoa(Array.from(token, (byte) => String.fromCharCode(byte)).join(''));
-  async function request(path, method, body, headers, limit) {
+  async function request(path: string, method: DavMethod, body?: BodyInit, headers?: DavHeaders, limit?: number): Promise<DavResponse> {
     if (!/^(?:state\.json|assets\/[a-f0-9]{64}\.(?:png|webp)|snapshots\/[-\w]+\.json|probe-[-\w]+(?:\.txt|\/(?:owner\.txt)?)|)$/.test(path)) throw error('invalid-path');
     return requestUrl(prefix + path, method, body, headers, limit);
   }
-  async function requestUrl(url, method, body, headers, limit = 2 * 1024 * 1024) {
+  async function requestUrl(
+    url: string,
+    method: DavMethod,
+    body?: BodyInit,
+    headers?: DavHeaders,
+    limit = 2 * 1024 * 1024
+  ): Promise<DavResponse> {
     const abort = new AbortController();
     const timer = setTimeout(() => abort.abort(), opts.timeoutMs || 20000);
     try {
       const response = await fetchFn(url, { method, body, redirect: 'error', credentials: 'omit', cache: 'no-store',
         signal: abort.signal, headers: { Authorization: authorization, ...headers } });
       if (method !== 'HEAD' && Number(response.headers.get('Content-Length')) > limit) throw error('response-too-large');
-      let bytes;
+      let bytes: Uint8Array<ArrayBuffer>;
       if (response.body && typeof response.body.getReader === 'function') {
         const reader = response.body.getReader();
-        const chunks = [];
+        const chunks: Uint8Array[] = [];
         let length = 0;
         while (true) {
           const chunk = await reader.read();
@@ -86,9 +258,10 @@ function createClient(config, options) {
           if (length > limit) { await reader.cancel(); throw error('response-too-large'); }
           chunks.push(chunk.value);
         }
-        bytes = new Uint8Array(length);
+        const joined = new Uint8Array(length);
         let offset = 0;
-        chunks.forEach((chunk) => { bytes.set(chunk, offset); offset += chunk.byteLength; });
+        chunks.forEach((chunk) => { joined.set(chunk, offset); offset += chunk.byteLength; });
+        bytes = joined;
       } else bytes = new Uint8Array(await response.arrayBuffer());
       if (bytes.byteLength > limit) throw error('response-too-large');
       if (![200, 201, 204, 304, 404, 405, 412].includes(response.status) && !(method === 'MOVE' && MOVE_REFUSALS.includes(response.status)) &&
@@ -104,20 +277,18 @@ function createClient(config, options) {
         size: length !== null && /^\d+$/.test(length) ? Number(length) : null,
         lastModified: response.headers.get('Last-Modified'), date: response.headers.get('Date') };
     } catch (cause) {
-      // Only the client's own failures carry a string code; an aborted
-      // fetch rejects with a DOMException, whose code is a number.
-      if (cause && typeof cause.code === 'string') throw cause;
+      if (isWebDavError(cause)) throw cause;
       throw error(abort.signal.aborted ? 'timeout' : 'network-error');
     } finally { clearTimeout(timer); }
   }
-  async function ownerMatches(url, owner) {
+  async function ownerMatches(url: string, owner: string): Promise<boolean> {
     const result = await requestUrl(url + 'owner.txt', 'GET', undefined, {}, 65536);
     return result.status === 200 && new TextDecoder().decode(result.bytes) === owner;
   }
-  async function absent(url) {
+  async function absent(url: string): Promise<boolean> {
     return (await requestUrl(url + 'owner.txt', 'GET', undefined, {}, 65536)).status === 404;
   }
-  async function ensureDirectories() {
+  async function ensureDirectories(): Promise<void> {
     for (let index = 1; index <= parts.length; index += 1) {
       const result = await requestUrl(`${connection.endpoint}${parts.slice(0, index).join('/')}/`, 'MKCOL', undefined, {}, 65536);
       if (![201, 405].includes(result.status)) throw error('directory-unavailable');
@@ -127,7 +298,8 @@ function createClient(config, options) {
       if (![201, 405].includes(result.status)) throw error('directory-unavailable');
     }
   }
-  async function readState(etag) {
+  // The state file's bytes and their revision; null when there is none.
+  async function readStateBytes(): Promise<{ bytes: Uint8Array<ArrayBuffer>; revision: string; httpEtag: string | null } | null> {
     const result = await request('state.json', 'GET');
     if (result.status === 404) return null;
     if (result.status !== 200) {
@@ -140,21 +312,32 @@ function createClient(config, options) {
     // such as Cloudflare weaken it whenever they compress the response.
     const digest = new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256', result.bytes));
     const revision = Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('');
-    if (etag === revision) return { unchanged: true };
-    let state;
-    try { state = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(result.bytes)); }
-    catch (_cause) { throw error('remote-corrupt'); }
-    return { state, etag: revision, httpEtag: result.etag };
+    return { bytes: result.bytes, revision, httpEtag: result.etag };
   }
-  async function writeState(state, etag) {
+  function parseState(bytes: Uint8Array): unknown {
+    try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); }
+    catch (_cause) { throw error('remote-corrupt'); }
+  }
+  async function readStateSnapshot(): Promise<StateSnapshot | null> {
+    const read = await readStateBytes();
+    return read ? { state: parseState(read.bytes), etag: read.revision, httpEtag: read.httpEtag } : null;
+  }
+  // { unchanged: true } when the state still has the revision etag names.
+  async function readState(etag?: string | null): Promise<StateRead | null> {
+    const read = await readStateBytes();
+    if (!read) return null;
+    if (etag === read.revision) return { unchanged: true };
+    return { state: parseState(read.bytes), etag: read.revision, httpEtag: read.httpEtag };
+  }
+  async function writeState(state: unknown, etag: string | null | undefined): Promise<StateWrite> {
     // Both acquisition strategies use the same mutex. A capability change
     // must never bypass a lock left by an uncertain write.
     return writeWithCollectionLock(state, etag);
   }
   const lockUrl = `${prefix}write-lock/`;
-  const text = (result) => new TextDecoder().decode(result.bytes);
+  const text = (result: DavResponse): string => new TextDecoder().decode(result.bytes);
   // Releases the shared lock only while it still names this owner.
-  async function releaseOwned(owner) {
+  async function releaseOwned(owner: string): Promise<void> {
     const current = await requestUrl(lockUrl + 'owner.txt', 'GET', undefined, {}, 65536);
     if (current.status === 404) return;
     if (current.status !== 200 || text(current) !== owner) throw error('lock-release-failed');
@@ -162,12 +345,12 @@ function createClient(config, options) {
     if (released.status !== 204) throw error('lock-release-failed');
   }
   // A lock this client could not release, so the next run releases it first.
-  const staleMarker = (owner, uncertain) => ({ owner, at: Date.now(), uncertain: Boolean(uncertain) });
+  const staleMarker = (owner: string, uncertain: boolean): StaleLockMarker => ({ owner, at: Date.now(), uncertain: Boolean(uncertain) });
   // Breaks a MOVE lock whose owner file is older than STALE_LOCK_MS by the
   // server's own clock. It is moved aside rather than deleted, so of several
   // devices breaking it at once only one succeeds, and a fresh lock taken in
   // between is recognised by its owner and put back.
-  async function breakStaleLock() {
+  async function breakStaleLock(): Promise<boolean> {
     const current = await requestUrl(lockUrl + 'owner.txt', 'GET', undefined, {}, 65536);
     // A collection-create lock has no owner file; its age is never guessed.
     if (current.status !== 200) return false;
@@ -176,7 +359,7 @@ function createClient(config, options) {
     // Nutstore sends no Last-Modified with GET; the WebDAV property has it.
     let modified = Date.parse(current.lastModified || '');
     if (!Number.isFinite(modified)) {
-      const own = await modifiedTimes(lockUrl + 'owner.txt', '0');
+      const own = (await modifiedTimes(lockUrl + 'owner.txt', '0')).times;
       modified = own.get(lockUrl + 'owner.txt') ?? (own.size === 1 ? [...own.values()][0] : NaN);
     }
     if (!Number.isFinite(modified) || now - modified < STALE_LOCK_MS) return false;
@@ -197,13 +380,13 @@ function createClient(config, options) {
   // own time. A server without PROPFIND, or without the property, yields no
   // time and so no stale lock. Folder URLs keep the trailing slash some
   // servers (Nutstore) leave out.
-  async function modifiedTimes(url, depth) {
-    const times = new Map();
+  async function modifiedTimes(url: string, depth: '0' | '1'): Promise<ModifiedTimes> {
+    const times = new Map<string, number>();
     const result = await requestUrl(url, 'PROPFIND',
       '<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:"><d:prop><d:getlastmodified/></d:prop></d:propfind>',
       { Depth: depth, 'Content-Type': 'application/xml; charset=utf-8' }, 1024 * 1024);
-    times.now = Date.parse(result.date || '');
-    if (result.status !== 207) return times;
+    const now = Date.parse(result.date || '');
+    if (result.status !== 207) return { times, now };
     for (const [, body] of text(result).matchAll(/<(?:[\w-]+:)?response\b[^>]*>([\s\S]*?)<\/(?:[\w-]+:)?response>/gi)) {
       const href = /<(?:[\w-]+:)?href\b[^>]*>([^<]+)</i.exec(body);
       const modified = /<(?:[\w-]+:)?getlastmodified\b[^>]*>([^<]+)</i.exec(body);
@@ -211,20 +394,20 @@ function createClient(config, options) {
       try { times.set(new URL(href[1].trim().replace(/&amp;/g, '&'), url).href, Date.parse(modified[1].trim())); }
       catch (_cause) { /* An unreadable entry has no age. */ }
     }
-    return times;
+    return { times, now };
   }
   // Candidates whose MOVE was never confirmed and broken locks that could
   // not be deleted stay behind as folders. Once they are as old as a stale
   // lock no write can still be using them.
-  async function sweepAbandoned() {
-    const times = await modifiedTimes(prefix, '1');
-    if (!Number.isFinite(times.now)) return 0;
+  async function sweepAbandoned(): Promise<number> {
+    const { times, now } = await modifiedTimes(prefix, '1');
+    if (!Number.isFinite(now)) return 0;
     const abandoned = [...times].filter(([url, modified]) => url.startsWith(prefix) &&
-      /^lock-(?:candidate|stale)-[-\w]+\/?$/.test(url.slice(prefix.length)) && times.now - modified >= STALE_LOCK_MS);
+      /^lock-(?:candidate|stale)-[-\w]+\/?$/.test(url.slice(prefix.length)) && now - modified >= STALE_LOCK_MS);
     for (const [url] of abandoned.slice(0, 50)) await requestUrl(url.replace(/\/?$/, '/'), 'DELETE', undefined, {}, 65536);
     return abandoned.length;
   }
-  async function acquireCollectionLock(allowTakeover = true) {
+  async function acquireCollectionLock(allowTakeover = true): Promise<CollectionLock> {
     if (lockStrategy === 'collection-create') {
       const claimed = await requestUrl(lockUrl, 'MKCOL', undefined, {}, 65536);
       if (claimed.status === 405) throw error('remote-locked');
@@ -239,19 +422,19 @@ function createClient(config, options) {
     const owner = globalThis.crypto.randomUUID();
     const candidate = `${prefix}lock-candidate-${owner}/`;
     let cleanup = false;
-    let retry = false;
     try {
       const created = await requestUrl(candidate, 'MKCOL', undefined, {}, 65536);
       if (created.status !== 201) throw creationFailed(created.status);
       cleanup = true;
       const written = await requestUrl(candidate + 'owner.txt', 'PUT', owner, { 'Content-Type': 'text/plain' }, 65536);
       if (![200, 201, 204].includes(written.status)) throw error('write-failed');
-      let claimed;
+      let claimed: DavResponse;
       try { claimed = await requestUrl(candidate, 'MOVE', undefined, { Destination: lockUrl, Overwrite: 'F' }, 65536); }
       catch (cause) {
         // A late MOVE can still acquire the lock. Preserve both paths when
         // its result is unknown; never remove the shared destination here.
-        if (!cause.status || (cause.status >= 500 && !REFUSED_STATUSES.includes(cause.status))) {
+        const status = errorStatus(cause);
+        if (!status || (status >= 500 && !REFUSED_STATUSES.includes(status))) {
           cleanup = false;
           throw Object.assign(error('lock-write-uncertain'), { staleLock: staleMarker(owner, true) });
         }
@@ -263,17 +446,16 @@ function createClient(config, options) {
         if (!await ownerMatches(candidate, owner)) throw unsupported('move-claim', [claimed.status]);
         cleanup = true;
         if (!allowTakeover || !await breakStaleLock()) throw error('remote-locked');
-        retry = true;
       } else {
         if (claimed.status !== 201) throw unsupported('move-claim', [claimed.status]);
-        let target;
-        let source;
+        let target: DavResponse;
+        let source: DavResponse;
         try {
           target = await requestUrl(lockUrl + 'owner.txt', 'GET', undefined, {}, 65536);
           source = await requestUrl(candidate + 'owner.txt', 'GET', undefined, {}, 65536);
         } catch (cause) {
           // The MOVE reported success, so the lock may well be ours.
-          throw Object.assign(cause, { staleLock: staleMarker(owner, false) });
+          throw withStaleLock(cause, staleMarker(owner, false));
         }
         if (target.status !== 200 || text(target) !== owner || source.status !== 404) {
           // Never keep a lock this client cannot vouch for, and never touch
@@ -290,49 +472,52 @@ function createClient(config, options) {
     } finally {
       if (cleanup) await requestUrl(candidate, 'DELETE', undefined, {}, 65536).catch(() => {});
     }
-    return retry ? acquireCollectionLock(false) : null;
+    // The stale lock was broken: claim it once more, without a takeover.
+    return acquireCollectionLock(false);
   }
   // Releases a lock an earlier run left behind. Resolves true once nothing
   // is left to do (released, or the lock is no longer this client's), false
   // while an uncertain write may still be in flight on the server.
-  async function releaseStaleLock(marker, now = Date.now()) {
-    if (!marker || typeof marker.owner !== 'string' || !/^[-\w]{1,80}$/.test(marker.owner)) return true;
+  async function releaseStaleLock(marker: unknown, now = Date.now()): Promise<boolean> {
+    if (!isRecord(marker) || typeof marker.owner !== 'string' || !/^[-\w]{1,80}$/.test(marker.owner)) return true;
+    const owner = marker.owner;
     if (marker.uncertain && now - Number(marker.at || 0) < STALE_LOCK_MS) return false;
     const current = await requestUrl(lockUrl + 'owner.txt', 'GET', undefined, {}, 65536);
-    if (current.status === 200 && text(current) === marker.owner) {
+    if (current.status === 200 && text(current) === owner) {
       const released = await requestUrl(lockUrl, 'DELETE', undefined, {}, 65536);
       if (released.status !== 204) throw error('lock-release-failed');
     } else if (![200, 404].includes(current.status)) throw error('lock-release-failed');
-    const candidate = `${prefix}lock-candidate-${marker.owner}/`;
-    if (await ownerMatches(candidate, marker.owner)) await requestUrl(candidate, 'DELETE', undefined, {}, 65536);
+    const candidate = `${prefix}lock-candidate-${owner}/`;
+    if (await ownerMatches(candidate, owner)) await requestUrl(candidate, 'DELETE', undefined, {}, 65536);
     return true;
   }
-  async function writeWithCollectionLock(state, revision) {
+  async function writeWithCollectionLock(state: unknown, revision: string | null | undefined): Promise<StateWrite> {
     const lock = await acquireCollectionLock();
-    let uncertain = false;
-    let primary = null;
-    let verified = null;
+    let uncertain: WebDavError | null = null;
+    let primary: unknown = null;
+    let verified: StateSnapshot | null = null;
     try {
-      const latest = await readState();
+      const latest = await readStateSnapshot();
       if ((latest && latest.etag || null) !== (revision || null)) throw error('remote-changed');
-      let written;
+      let written: DavResponse;
       try {
         const validator = latest && latest.httpEtag;
         written = await request('state.json', 'PUT', JSON.stringify(state), { 'Content-Type': 'application/json',
-          ...(!latest ? { 'If-None-Match': '*' } : /^"[^"\r\n]+"$/.test(validator || '') ? { 'If-Match': validator } : {}) });
+          ...(!latest ? { 'If-None-Match': '*' } : validator && /^"[^"\r\n]+"$/.test(validator) ? { 'If-Match': validator } : {}) });
       } catch (cause) {
         // Explicit client-error responses reject the write. Retrying a rate
         // limit or fixing credentials must not leave a lock unnecessarily.
-        if ((cause.status >= 400 && cause.status < 500) || [507, ...REFUSED_STATUSES].includes(cause.status)) throw cause;
+        const status = errorStatus(cause);
+        if ((status >= 400 && status < 500) || [507, ...REFUSED_STATUSES].includes(status)) throw cause;
         // A timed-out request may still commit on the server. Releasing or
         // expiring the lock could let that late PUT overwrite a later writer.
-        uncertain = true;
-        throw error('lock-write-uncertain');
+        uncertain = error('lock-write-uncertain');
+        throw uncertain;
       }
       if (written.status === 412) throw error('remote-changed');
       if ([404, 405].includes(written.status)) throw error('write-failed');
-      if (![200, 201, 204].includes(written.status)) { uncertain = true; throw error('lock-write-uncertain'); }
-      verified = await readState();
+      if (![200, 201, 204].includes(written.status)) { uncertain = error('lock-write-uncertain'); throw uncertain; }
+      verified = await readStateSnapshot();
       if (!verified || JSON.stringify(verified.state) !== JSON.stringify(state)) throw error('remote-changed');
     } catch (cause) {
       primary = cause;
@@ -341,21 +526,21 @@ function createClient(config, options) {
     // stays for this client to release once the write must have settled,
     // or for another device to break once it is stale.
     if (uncertain) {
-      if (lock.owner) primary.staleLock = staleMarker(lock.owner, true);
-      throw primary;
+      if (lock.owner) uncertain.staleLock = staleMarker(lock.owner, true);
+      throw uncertain;
     }
     try { await lock.release(); }
     catch (releaseError) {
       // A failed release never hides why the write itself failed.
       if (!lock.owner) throw primary || releaseError;
       const staleLock = staleMarker(lock.owner, false);
-      if (primary) throw Object.assign(primary, { staleLock });
+      if (primary || !verified) throw withStaleLock(primary || error('remote-changed'), staleLock);
       return { state: verified.state, etag: verified.etag, staleLock };
     }
-    if (primary) throw primary;
+    if (primary || !verified) throw primary || error('remote-changed');
     return { state: verified.state, etag: verified.etag };
   }
-  async function testCollectionLock() {
+  async function testCollectionLock(): Promise<void> {
     const url = `${prefix}probe-lock-${globalThis.crypto.randomUUID()}/`;
     let owned = false;
     try {
@@ -377,12 +562,14 @@ function createClient(config, options) {
       if (owned) await requestUrl(url, 'DELETE', undefined, {}, 65536).catch(() => {});
     }
   }
-  async function testMoveLock() {
+  async function testMoveLock(): Promise<boolean> {
     const id = globalThis.crypto.randomUUID();
     const sources = [`${prefix}probe-${id}-a/`, `${prefix}probe-${id}-b/`];
     const target = `${prefix}probe-${id}-target/`;
     const owners = [globalThis.crypto.randomUUID(), globalThis.crypto.randomUUID()];
-    const move = (source) => requestUrl(source, 'MOVE', undefined, { Destination: target, Overwrite: 'F' }, 65536);
+    const move = (source: string): Promise<DavResponse> => (
+      requestUrl(source, 'MOVE', undefined, { Destination: target, Overwrite: 'F' }, 65536)
+    );
     try {
       for (let index = 0; index < sources.length; index += 1) {
         const created = await requestUrl(sources[index], 'MKCOL', undefined, {}, 65536);
@@ -391,7 +578,7 @@ function createClient(config, options) {
         if (![200, 201, 204].includes(written.status)) throw error('write-failed');
       }
       const attempts = await Promise.allSettled(sources.map(move));
-      const statuses = attempts.map((attempt) => attempt.status === 'fulfilled' ? attempt.value.status : attempt.reason.status || 0);
+      const statuses = attempts.map((attempt) => attempt.status === 'fulfilled' ? attempt.value.status : errorStatus(attempt.reason));
       // Only an explicitly unsupported method can select the MKCOL fallback.
       if (statuses.every((status) => [405, 501].includes(status))) return false;
       let winner = statuses.indexOf(201);
@@ -424,7 +611,7 @@ function createClient(config, options) {
       for (const url of [...sources, target]) await requestUrl(url, 'DELETE', undefined, {}, 65536).catch(() => {});
     }
   }
-  async function testConnection() {
+  async function testConnection(): Promise<ConnectionCapabilities> {
     await ensureDirectories();
     const path = `probe-${globalThis.crypto.randomUUID()}.txt`;
     const content = 'lumno-webdav-probe';
@@ -434,7 +621,7 @@ function createClient(config, options) {
       if (![200, 201, 204].includes(put.status)) throw error('write-failed');
       const read = await request(path, 'GET', undefined, {}, 65536);
       if (read.status !== 200 || new TextDecoder().decode(read.bytes) !== content) throw error('write-failed');
-      if (/^"[^"\r\n]+"$/.test(read.etag || '')) {
+      if (read.etag && /^"[^"\r\n]+"$/.test(read.etag)) {
         try {
           const rejected = await request(path, 'PUT', 'must-not-overwrite', { 'If-Match': '"lumno-invalid-etag"' }, 65536);
           const unchanged = await request(path, 'GET', undefined, {}, 65536);
@@ -447,7 +634,7 @@ function createClient(config, options) {
             }
           }
         } catch (cause) {
-          if (!['http-400', 'http-501'].includes(cause.code)) throw cause;
+          if (!isWebDavError(cause) || !['http-400', 'http-501'].includes(cause.code)) throw cause;
         }
       }
       // Prefer non-overwriting MOVE: several providers race when creating
@@ -462,11 +649,26 @@ function createClient(config, options) {
   return Object.freeze({ request, ensureDirectories, readState, writeState, releaseStaleLock, sweepAbandoned, testConnection });
 }
 
+export type {
+  ConnectionCapabilities,
+  DavResponse,
+  StaleLockMarker,
+  StateRead,
+  StateSnapshot,
+  StateWrite,
+  WebDavClient,
+  WebDavClientOptions,
+  WebDavConfigInput,
+  WebDavConnection,
+  WebDavDiagnostic,
+  WebDavError
+};
 export {
   normalizeConfig,
   createClient,
   error,
   diagnostic,
+  isWebDavError,
   REVISION,
   MOVE_REFUSALS,
   REFUSED_STATUSES,

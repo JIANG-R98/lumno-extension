@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Pinned-tab recovery (an opt-in Labs setting): keeps a snapshot of the
 // user's pinned tabs and their tab groups in chrome.storage.local and reopens
 // the missing ones after a browser or extension update, startup, or a new
@@ -16,6 +15,31 @@
 import { PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY } from '../domain/settings';
 import { storageArea } from './worker-context';
 import { getResolvedTabUrl } from './browser-urls-service';
+import { isTabGroupColor } from './tab-groups';
+import type { TabGroupColor } from './tab-groups';
+
+// The tab group a pinned tab was in: its key (window and group id when
+// saved) tells tabs of one group apart, title and color recreate it.
+interface PinnedGroupSnapshot {
+  key?: string;
+  title?: string;
+  color?: string;
+}
+
+interface PinnedTabEntry {
+  url: string;
+  group?: PinnedGroupSnapshot;
+}
+
+interface SnapshotPersistOptions {
+  // Keep the last snapshot when no normal window is open (the browser is
+  // closing its last window), instead of saving an empty one.
+  skipEmptyWhenNoNormalWindows?: boolean;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
 
 // The last snapshot of the pinned tabs; device-only, in local storage.
 const PINNED_TAB_SNAPSHOT_STORAGE_KEY = '_x_extension_pinned_tab_snapshot_2026_unique_';
@@ -24,7 +48,7 @@ const PINNED_TAB_SNAPSHOT_DEBOUNCE_MS = 600;
 
 // Restoring only opens a tab, so any web page qualifies, store pages included
 // even though they take no scripts.
-function isRestorablePinnedUrl(url) {
+function isRestorablePinnedUrl(url: unknown): boolean {
   return /^https?:\/\//i.test(String(url || ''));
 }
 
@@ -33,21 +57,21 @@ const PINNED_TAB_RESTORE_MAX_TABS = 24;
 let pinnedTabRecoveryEnabledCache = false;
 
 // Pinned-tab snapshot: debounced write, flushed on runtime.onSuspend.
-let pinnedTabSnapshotTimer = null;
+let pinnedTabSnapshotTimer: ReturnType<typeof setTimeout> | null = null;
 
-let pinnedTabSnapshotPersistOptions = null;
+let pinnedTabSnapshotPersistOptions: SnapshotPersistOptions | null = null;
 
 let pinnedTabRecoverySettingLoaded = false;
 
-let pinnedTabRecoverySettingLoadPromise = null;
+let pinnedTabRecoverySettingLoadPromise: Promise<boolean> | null = null;
 
-let pinnedTabRestorePromise = null;
+let pinnedTabRestorePromise: Promise<void> | null = null;
 
-function normalizePinnedTabRecoveryEnabled(value) {
+function normalizePinnedTabRecoveryEnabled(value: unknown): boolean {
   return value === true;
 }
 
-export function applyPinnedTabRecoverySetting(rawValue) {
+export function applyPinnedTabRecoverySetting(rawValue: unknown): boolean {
   const normalized = normalizePinnedTabRecoveryEnabled(rawValue);
   pinnedTabRecoveryEnabledCache = normalized;
   pinnedTabRecoverySettingLoaded = true;
@@ -57,7 +81,7 @@ export function applyPinnedTabRecoverySetting(rawValue) {
   return normalized;
 }
 
-function ensurePinnedTabRecoverySettingLoaded() {
+function ensurePinnedTabRecoverySettingLoaded(): Promise<boolean> {
   if (pinnedTabRecoverySettingLoaded) {
     return Promise.resolve(pinnedTabRecoveryEnabledCache);
   }
@@ -69,7 +93,7 @@ function ensurePinnedTabRecoverySettingLoaded() {
     pinnedTabRecoveryEnabledCache = false;
     return Promise.resolve(false);
   }
-  pinnedTabRecoverySettingLoadPromise = new Promise((resolve) => {
+  pinnedTabRecoverySettingLoadPromise = new Promise<boolean>((resolve) => {
     storageArea.get([PINNED_TAB_RECOVERY_ENABLED_STORAGE_KEY], (result) => {
       if (chrome.runtime && chrome.runtime.lastError) {
         pinnedTabRecoverySettingLoaded = true;
@@ -86,7 +110,7 @@ function ensurePinnedTabRecoverySettingLoaded() {
   return pinnedTabRecoverySettingLoadPromise;
 }
 
-function queryTabsForPinnedSnapshot(queryInfo) {
+function queryTabsForPinnedSnapshot(queryInfo: chrome.tabs.QueryInfo): Promise<chrome.tabs.Tab[]> {
   return new Promise((resolve) => {
     if (!chrome || !chrome.tabs || typeof chrome.tabs.query !== 'function') {
       resolve([]);
@@ -102,7 +126,7 @@ function queryTabsForPinnedSnapshot(queryInfo) {
   });
 }
 
-function getPinnedSnapshotFromStorage() {
+function getPinnedSnapshotFromStorage(): Promise<unknown> {
   return new Promise((resolve) => {
     if (!chrome || !chrome.storage || !chrome.storage.local) {
       resolve(null);
@@ -118,7 +142,7 @@ function getPinnedSnapshotFromStorage() {
   });
 }
 
-function setPinnedSnapshotToStorage(snapshot) {
+function setPinnedSnapshotToStorage(snapshot: unknown): Promise<boolean> {
   return new Promise((resolve) => {
     if (!chrome || !chrome.storage || !chrome.storage.local) {
       resolve(false);
@@ -134,13 +158,13 @@ function setPinnedSnapshotToStorage(snapshot) {
   });
 }
 
-function createPinnedTabForRestore(url, windowId) {
+function createPinnedTabForRestore(url: string, windowId: number | null): Promise<{ ok: boolean; tab: chrome.tabs.Tab | null }> {
   return new Promise((resolve) => {
     if (!chrome || !chrome.tabs || typeof chrome.tabs.create !== 'function') {
       resolve({ ok: false, tab: null });
       return;
     }
-    const createWithWindow = (typeof windowId === 'number')
+    const createWithWindow: chrome.tabs.CreateProperties = (typeof windowId === 'number')
       ? { windowId, url, pinned: true, active: false }
       : { url, pinned: true, active: false };
     chrome.tabs.create(createWithWindow, (tab) => {
@@ -162,7 +186,7 @@ function createPinnedTabForRestore(url, windowId) {
   });
 }
 
-function getLastFocusedWindowIdForRestore() {
+function getLastFocusedWindowIdForRestore(): Promise<number | null> {
   return new Promise((resolve) => {
     if (!chrome || !chrome.windows || typeof chrome.windows.getLastFocused !== 'function') {
       resolve(null);
@@ -174,15 +198,14 @@ function getLastFocusedWindowIdForRestore() {
         return;
       }
       const canUse = windowInfo &&
-        typeof windowInfo.id === 'number' &&
         windowInfo.incognito !== true &&
         (!windowInfo.type || windowInfo.type === 'normal');
-      resolve(canUse ? windowInfo.id : null);
+      resolve(canUse && typeof windowInfo.id === 'number' ? windowInfo.id : null);
     });
   });
 }
 
-function getNormalWindowCountForPinnedSnapshot() {
+function getNormalWindowCountForPinnedSnapshot(): Promise<number> {
   return new Promise((resolve) => {
     if (!chrome || !chrome.windows || typeof chrome.windows.getAll !== 'function') {
       resolve(0);
@@ -205,7 +228,7 @@ function getNormalWindowCountForPinnedSnapshot() {
   });
 }
 
-function getPinnedTabUngroupedId() {
+function getPinnedTabUngroupedId(): number {
   return chrome &&
     chrome.tabGroups &&
     typeof chrome.tabGroups.TAB_GROUP_ID_NONE === 'number'
@@ -213,7 +236,7 @@ function getPinnedTabUngroupedId() {
     : -1;
 }
 
-function isTabInGroup(tab) {
+function isTabInGroup(tab: chrome.tabs.Tab | null | undefined): boolean {
   return Boolean(
     tab &&
     typeof tab.groupId === 'number' &&
@@ -221,8 +244,8 @@ function isTabInGroup(tab) {
   );
 }
 
-function normalizePinnedTabGroupSnapshot(rawValue) {
-  if (!rawValue || typeof rawValue !== 'object') {
+function normalizePinnedTabGroupSnapshot(rawValue: unknown): PinnedGroupSnapshot | null {
+  if (!isRecord(rawValue)) {
     return null;
   }
   const key = String(rawValue.key || '').trim();
@@ -231,7 +254,7 @@ function normalizePinnedTabGroupSnapshot(rawValue) {
   if (!key && !title && !color) {
     return null;
   }
-  const snapshot = {};
+  const snapshot: PinnedGroupSnapshot = {};
   if (key) {
     snapshot.key = key;
   }
@@ -244,10 +267,10 @@ function normalizePinnedTabGroupSnapshot(rawValue) {
   return snapshot;
 }
 
-function normalizePinnedTabSnapshotEntry(rawValue) {
-  const raw = typeof rawValue === 'string'
+function normalizePinnedTabSnapshotEntry(rawValue: unknown): PinnedTabEntry | null {
+  const raw: Record<string, unknown> | null = typeof rawValue === 'string'
     ? { url: rawValue }
-    : (rawValue && typeof rawValue === 'object' ? rawValue : null);
+    : (isRecord(rawValue) ? rawValue : null);
   if (!raw) {
     return null;
   }
@@ -255,7 +278,7 @@ function normalizePinnedTabSnapshotEntry(rawValue) {
   if (!isRestorablePinnedUrl(url)) {
     return null;
   }
-  const entry = { url };
+  const entry: PinnedTabEntry = { url };
   const group = normalizePinnedTabGroupSnapshot(raw.group);
   if (group) {
     entry.group = group;
@@ -263,9 +286,10 @@ function normalizePinnedTabSnapshotEntry(rawValue) {
   return entry;
 }
 
-function normalizePinnedTabSnapshot(rawValue) {
-  const entries = [];
-  const appendEntry = (item) => {
+// Version 2 snapshots list entries; version 1 kept bare URLs.
+function normalizePinnedTabSnapshot(rawValue: unknown): PinnedTabEntry[] {
+  const entries: PinnedTabEntry[] = [];
+  const appendEntry = (item: unknown): void => {
     const entry = normalizePinnedTabSnapshotEntry(item);
     if (entry) {
       entries.push(entry);
@@ -275,7 +299,7 @@ function normalizePinnedTabSnapshot(rawValue) {
     rawValue.forEach(appendEntry);
     return entries.slice(0, PINNED_TAB_RESTORE_MAX_TABS);
   }
-  if (!rawValue || typeof rawValue !== 'object') {
+  if (!isRecord(rawValue)) {
     return [];
   }
   if (Array.isArray(rawValue.entries)) {
@@ -288,8 +312,8 @@ function normalizePinnedTabSnapshot(rawValue) {
   return entries.slice(0, PINNED_TAB_RESTORE_MAX_TABS);
 }
 
-function countUrls(urls) {
-  const map = new Map();
+function countUrls(urls: readonly string[]): Map<string, number> {
+  const map = new Map<string, number>();
   urls.forEach((url) => {
     const current = map.get(url) || 0;
     map.set(url, current + 1);
@@ -297,10 +321,10 @@ function countUrls(urls) {
   return map;
 }
 
-function getMissingPinnedTabEntries(savedEntries, existingPinnedUrls) {
+function getMissingPinnedTabEntries(savedEntries: readonly PinnedTabEntry[], existingPinnedUrls: readonly string[]): PinnedTabEntry[] {
   const existing = countUrls(existingPinnedUrls);
-  const missingEntries = [];
-  (Array.isArray(savedEntries) ? savedEntries : []).forEach((entry) => {
+  const missingEntries: PinnedTabEntry[] = [];
+  savedEntries.forEach((entry) => {
     const url = entry && entry.url ? String(entry.url) : '';
     if (!url) {
       return;
@@ -315,7 +339,7 @@ function getMissingPinnedTabEntries(savedEntries, existingPinnedUrls) {
   return missingEntries;
 }
 
-function getTabGroupById(groupId) {
+function getTabGroupById(groupId: number): Promise<chrome.tabGroups.TabGroup | null> {
   return new Promise((resolve) => {
     if (!chrome ||
         !chrome.tabGroups ||
@@ -332,13 +356,13 @@ function getTabGroupById(groupId) {
         }
         resolve(group || null);
       });
-    } catch (error) {
+    } catch (_error) {
       resolve(null);
     }
   });
 }
 
-async function getPinnedTabGroupSnapshot(tab) {
+async function getPinnedTabGroupSnapshot(tab: chrome.tabs.Tab): Promise<PinnedGroupSnapshot | null> {
   if (!isTabInGroup(tab)) {
     return null;
   }
@@ -351,7 +375,7 @@ async function getPinnedTabGroupSnapshot(tab) {
   return snapshot;
 }
 
-function getPinnedRestoreGroupKey(group) {
+function getPinnedRestoreGroupKey(group: PinnedGroupSnapshot): string {
   const snapshot = normalizePinnedTabGroupSnapshot(group);
   if (!snapshot) {
     return '';
@@ -359,7 +383,7 @@ function getPinnedRestoreGroupKey(group) {
   return snapshot.key || `${snapshot.title || ''}::${snapshot.color || ''}`;
 }
 
-function updateRestoredTabGroup(groupId, group) {
+function updateRestoredTabGroup(groupId: number, group: PinnedGroupSnapshot): Promise<boolean> {
   return new Promise((resolve) => {
     const snapshot = normalizePinnedTabGroupSnapshot(group);
     if (!snapshot ||
@@ -370,11 +394,11 @@ function updateRestoredTabGroup(groupId, group) {
       resolve(false);
       return;
     }
-    const updates = {};
+    const updates: { title?: string; color?: TabGroupColor } = {};
     if (snapshot.title) {
       updates.title = snapshot.title;
     }
-    if (snapshot.color) {
+    if (isTabGroupColor(snapshot.color)) {
       updates.color = snapshot.color;
     }
     if (Object.keys(updates).length === 0) {
@@ -385,13 +409,17 @@ function updateRestoredTabGroup(groupId, group) {
       chrome.tabGroups.update(groupId, updates, () => {
         resolve(!(chrome.runtime && chrome.runtime.lastError));
       });
-    } catch (error) {
+    } catch (_error) {
       resolve(false);
     }
   });
 }
 
-function groupRestoredPinnedTab(tab, group, existingGroupId) {
+function groupRestoredPinnedTab(
+  tab: chrome.tabs.Tab | null,
+  group: PinnedGroupSnapshot,
+  existingGroupId: number | null | undefined
+): Promise<number | null> {
   return new Promise((resolve) => {
     const snapshot = normalizePinnedTabGroupSnapshot(group);
     if (!snapshot ||
@@ -403,7 +431,7 @@ function groupRestoredPinnedTab(tab, group, existingGroupId) {
       resolve(null);
       return;
     }
-    const groupOptions = { tabIds: tab.id };
+    const groupOptions: chrome.tabs.GroupOptions = { tabIds: tab.id };
     if (typeof existingGroupId === 'number') {
       groupOptions.groupId = existingGroupId;
     }
@@ -422,13 +450,13 @@ function groupRestoredPinnedTab(tab, group, existingGroupId) {
           .catch(() => false)
           .finally(() => resolve(resolvedGroupId));
       });
-    } catch (error) {
+    } catch (_error) {
       resolve(null);
     }
   });
 }
 
-async function persistPinnedTabSnapshotNow(options) {
+async function persistPinnedTabSnapshotNow(options: SnapshotPersistOptions | null): Promise<void> {
   if (!pinnedTabRecoveryEnabledCache) {
     return;
   }
@@ -446,7 +474,7 @@ async function persistPinnedTabSnapshotNow(options) {
       const indexB = typeof b.index === 'number' ? b.index : 0;
       return indexA - indexB;
     });
-  const entries = [];
+  const entries: PinnedTabEntry[] = [];
   for (let i = 0; i < snapshotTabs.length; i += 1) {
     if (entries.length >= PINNED_TAB_RESTORE_MAX_TABS) {
       break;
@@ -456,7 +484,7 @@ async function persistPinnedTabSnapshotNow(options) {
     if (!isRestorablePinnedUrl(url)) {
       continue;
     }
-    const entry = { url };
+    const entry: PinnedTabEntry = { url };
     const group = await getPinnedTabGroupSnapshot(tab);
     if (group) {
       entry.group = group;
@@ -477,7 +505,7 @@ async function persistPinnedTabSnapshotNow(options) {
   });
 }
 
-function mergePinnedTabSnapshotPersistOptions(options) {
+function mergePinnedTabSnapshotPersistOptions(options: SnapshotPersistOptions | null | undefined): void {
   if (!options || typeof options !== 'object') {
     return;
   }
@@ -489,7 +517,7 @@ function mergePinnedTabSnapshotPersistOptions(options) {
   };
 }
 
-export function schedulePersistPinnedTabSnapshot(options) {
+export function schedulePersistPinnedTabSnapshot(options?: SnapshotPersistOptions | null): void {
   if (!pinnedTabRecoverySettingLoaded) {
     // A worker woken by a pin, move or close sees that event before the
     // recovery setting is read; dropping it would leave the snapshot stale.
@@ -515,7 +543,7 @@ export function schedulePersistPinnedTabSnapshot(options) {
   pinnedTabSnapshotTimer = setTimeout(flushPendingPinnedTabSnapshot, PINNED_TAB_SNAPSHOT_DEBOUNCE_MS);
 }
 
-export function flushPendingPinnedTabSnapshot() {
+export function flushPendingPinnedTabSnapshot(): Promise<void> {
   if (pinnedTabSnapshotTimer === null) {
     return Promise.resolve();
   }
@@ -528,7 +556,7 @@ export function flushPendingPinnedTabSnapshot() {
   });
 }
 
-async function restorePinnedTabsFromSnapshotNow() {
+async function restorePinnedTabsFromSnapshotNow(): Promise<void> {
   const enabled = await ensurePinnedTabRecoverySettingLoaded();
   if (!enabled) {
     return;
@@ -548,7 +576,7 @@ async function restorePinnedTabsFromSnapshotNow() {
     return;
   }
   const targetWindowId = await getLastFocusedWindowIdForRestore();
-  const restoredGroupIds = new Map();
+  const restoredGroupIds = new Map<string, number>();
   for (let i = 0; i < missingEntries.length && i < PINNED_TAB_RESTORE_MAX_TABS; i += 1) {
     const entry = missingEntries[i];
     const result = await createPinnedTabForRestore(entry.url, targetWindowId);
@@ -567,7 +595,7 @@ async function restorePinnedTabsFromSnapshotNow() {
   }, 800);
 }
 
-export function restorePinnedTabsFromSnapshotOnStartup() {
+export function restorePinnedTabsFromSnapshotOnStartup(): Promise<void> {
   if (pinnedTabRestorePromise) {
     return pinnedTabRestorePromise;
   }

@@ -28,6 +28,17 @@ interface CreatedTabInfo {
 
 type CreatedTabCallback = (tab: chrome.tabs.Tab | null, info: CreatedTabInfo) => void;
 
+type TabGroupColor = `${chrome.tabGroups.Color}`;
+
+const TAB_GROUP_COLORS: readonly TabGroupColor[] = Object.freeze([
+  'grey', 'blue', 'red', 'yellow', 'green', 'pink', 'purple', 'cyan', 'orange'
+]);
+
+// A color tabGroups.update takes; stored colors may be anything.
+function isTabGroupColor(value: unknown): value is TabGroupColor {
+  return TAB_GROUP_COLORS.some((color) => color === value);
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object';
 }
@@ -217,8 +228,9 @@ export {
   createTabInSourceGroup,
   getSourceTabGroupContext,
   getUngroupedTabId,
+  isTabGroupColor,
   moveTabToSourceGroup,
   moveTabToSourceGroupContext,
   shouldGroupCreatedTab
 };
-export type { CreatedTabCallback, CreatedTabInfo, TabGroupChromeApi, TabGroupContext, TabLike };
+export type { CreatedTabCallback, CreatedTabInfo, TabGroupChromeApi, TabGroupColor, TabGroupContext, TabLike };

@@ -1,5 +1,91 @@
-// @ts-nocheck
-const GENERIC_PROMPT_EDITOR_SELECTORS = Object.freeze([
+// Sends a prompt to an AI provider's chat page: fills its composer in the
+// tab and presses its send button or Enter, each provider by its own
+// strategy (which elements to look for, how long to wait, how to send).
+
+// 'enter' sends with Enter first; '' clicks the send button first.
+type SubmitMode = 'enter' | '';
+// 'replace' writes a contenteditable composer's markup directly; '' types
+// into it, which rich editors track.
+type ContentEditableFillMode = 'replace' | '';
+// 'none' leaves the typed text out of the input event, for editors that
+// would insert it a second time.
+type InputEventDataMode = 'none' | '';
+
+interface PromptStrategyOptions {
+  editorSelectors?: readonly string[];
+  sendButtonSelectors?: readonly string[];
+  buttonWaitAttempts?: number;
+  editorWaitAttempts?: number;
+  urlPrefillWaitAttempts?: number;
+  enterDelayMs?: number;
+  postEnterDelayMs?: number;
+  postEnterButtonAttempts?: number;
+  resendUntilClearedAttempts?: number;
+  submitMode?: SubmitMode;
+  contentEditableFillMode?: ContentEditableFillMode;
+  inputEventDataMode?: InputEventDataMode;
+  useNearbySendButton?: boolean;
+  postEnterUseNearbySendButton?: boolean;
+}
+
+type EnterPromptStrategyOptions = Pick<PromptStrategyOptions,
+  | 'sendButtonSelectors'
+  | 'editorWaitAttempts'
+  | 'postEnterButtonAttempts'
+  | 'resendUntilClearedAttempts'
+  | 'contentEditableFillMode'
+  | 'inputEventDataMode'>;
+
+// How the page script fills a provider's composer and sends the prompt.
+interface PromptStrategy {
+  editorSelectors: string[];
+  sendButtonSelectors: string[];
+  buttonWaitAttempts: number;
+  editorWaitAttempts: number;
+  // How long to wait for the page to fill the composer from its own URL.
+  urlPrefillWaitAttempts: number;
+  enterDelayMs: number;
+  postEnterDelayMs: number;
+  postEnterButtonAttempts: number;
+  resendUntilClearedAttempts: number;
+  submitMode: SubmitMode;
+  contentEditableFillMode: ContentEditableFillMode;
+  inputEventDataMode: InputEventDataMode;
+  // Fall back to a button next to the composer when no selector matches.
+  useNearbySendButton: boolean;
+  postEnterUseNearbySendButton: boolean;
+}
+
+// A provider that takes the prompt from its URL alone.
+interface UrlOnlyStrategy {
+  urlOnly: true;
+}
+
+type SubmitStrategy = PromptStrategy | UrlOnlyStrategy;
+
+// How the prompt went in: 'url', 'button', 'enter', 'enter-button',
+// 'prefill-button' or 'prefill-enter'.
+interface SubmitResult {
+  ok: boolean;
+  method?: string;
+  reason?: string;
+}
+
+type TabLookup = { ok: true; tab: chrome.tabs.Tab } | { ok: false; reason: string };
+
+// What the page script uses of an editor or a button.
+interface ComposerElement extends Element {
+  focus(): void;
+  click(): void;
+  innerText?: string;
+}
+
+interface ComposerButtonCandidate {
+  button: ComposerElement;
+  score: number;
+}
+
+const GENERIC_PROMPT_EDITOR_SELECTORS: readonly string[] = Object.freeze([
   'textarea[placeholder*="发消息"]',
   'textarea[aria-label*="发消息"]',
   'textarea[placeholder*="输入"]',
@@ -24,7 +110,7 @@ const GENERIC_PROMPT_EDITOR_SELECTORS = Object.freeze([
   'textarea'
 ]);
 
-const GENERIC_SEND_BUTTON_SELECTORS = Object.freeze([
+const GENERIC_SEND_BUTTON_SELECTORS: readonly string[] = Object.freeze([
   'button[aria-label*="发送消息"]',
   'button[aria-label*="发送"]',
   'button[aria-label*="提交"]',
@@ -33,9 +119,9 @@ const GENERIC_SEND_BUTTON_SELECTORS = Object.freeze([
   'button[aria-label*="submit" i]'
 ]);
 
-function uniqueSelectors(groups) {
-  const seen = new Set();
-  const items = [];
+function uniqueSelectors(groups: ReadonlyArray<readonly string[] | undefined>): string[] {
+  const seen = new Set<string>();
+  const items: string[] = [];
   groups.forEach((group) => {
     (Array.isArray(group) ? group : []).forEach((selector) => {
       if (!selector || seen.has(selector)) {
@@ -48,7 +134,7 @@ function uniqueSelectors(groups) {
   return items;
 }
 
-function createPromptStrategy(options) {
+function createPromptStrategy(options?: PromptStrategyOptions | null): PromptStrategy {
   const settings = options && typeof options === 'object' ? options : {};
   return {
     editorSelectors: uniqueSelectors([
@@ -66,15 +152,18 @@ function createPromptStrategy(options) {
     postEnterDelayMs: Math.max(0, Number(settings.postEnterDelayMs) || 0),
     postEnterButtonAttempts: Math.max(0, Number(settings.postEnterButtonAttempts) || 0),
     resendUntilClearedAttempts: Math.max(0, Number(settings.resendUntilClearedAttempts) || 0),
-    submitMode: String(settings.submitMode || '').trim(),
-    contentEditableFillMode: String(settings.contentEditableFillMode || '').trim(),
-    inputEventDataMode: String(settings.inputEventDataMode || '').trim(),
+    submitMode: settings.submitMode === 'enter' ? 'enter' : '',
+    contentEditableFillMode: settings.contentEditableFillMode === 'replace' ? 'replace' : '',
+    inputEventDataMode: settings.inputEventDataMode === 'none' ? 'none' : '',
     useNearbySendButton: Boolean(settings.useNearbySendButton),
     postEnterUseNearbySendButton: Boolean(settings.postEnterUseNearbySendButton)
   };
 }
 
-function createEnterPromptStrategy(editorSelectors, options) {
+function createEnterPromptStrategy(
+  editorSelectors: readonly string[],
+  options?: EnterPromptStrategyOptions | null
+): PromptStrategy {
   const settings = options && typeof options === 'object' ? options : {};
   return createPromptStrategy({
     editorSelectors,
@@ -92,7 +181,7 @@ function createEnterPromptStrategy(editorSelectors, options) {
   });
 }
 
-const STRATEGIES = Object.freeze({
+const STRATEGIES: Readonly<Record<string, SubmitStrategy>> = Object.freeze({
   geminiPrompt: createPromptStrategy({
     editorSelectors: [
       '.ql-editor[contenteditable="true"][role="textbox"]',
@@ -292,7 +381,7 @@ const STRATEGIES = Object.freeze({
   }
 });
 
-const STRATEGY_ALLOWED_ORIGINS = Object.freeze({
+const STRATEGY_ALLOWED_ORIGINS: Readonly<Record<string, readonly string[]>> = Object.freeze({
   geminiPrompt: Object.freeze(['https://gemini.google.com']),
   chatgptPrompt: Object.freeze(['https://chatgpt.com']),
   doubaoPrompt: Object.freeze(['https://www.doubao.com']),
@@ -307,20 +396,32 @@ const STRATEGY_ALLOWED_ORIGINS = Object.freeze({
   aiStudioPrompt: Object.freeze(['https://aistudio.google.com'])
 });
 
-function getStrategyConfig(strategyName) {
-  const key = String(strategyName || '').trim();
-  const config = STRATEGIES[key];
+// Own entries only: a name such as "constructor" names no strategy.
+function lookup<T>(table: Readonly<Record<string, T>>, key: string): T | null {
+  return Object.prototype.hasOwnProperty.call(table, key) ? table[key] : null;
+}
+
+function isUrlOnlyStrategy(strategy: SubmitStrategy): strategy is UrlOnlyStrategy {
+  return 'urlOnly' in strategy && strategy.urlOnly === true;
+}
+
+// A copy of the named strategy, or null for an unknown name.
+function getStrategyConfig(strategyName: unknown): SubmitStrategy | null {
+  const config = lookup(STRATEGIES, String(strategyName || '').trim());
   if (!config) {
     return null;
   }
+  if (isUrlOnlyStrategy(config)) {
+    return { urlOnly: true };
+  }
   return {
     ...config,
-    editorSelectors: Array.isArray(config.editorSelectors) ? config.editorSelectors.slice() : [],
-    sendButtonSelectors: Array.isArray(config.sendButtonSelectors) ? config.sendButtonSelectors.slice() : []
+    editorSelectors: config.editorSelectors.slice(),
+    sendButtonSelectors: config.sendButtonSelectors.slice()
   };
 }
 
-function getHttpOrigin(urlValue) {
+function getHttpOrigin(urlValue: unknown): string {
   try {
     const url = new URL(String(urlValue || ''));
     if (url.protocol !== 'https:' && url.protocol !== 'http:') {
@@ -332,13 +433,12 @@ function getHttpOrigin(urlValue) {
   }
 }
 
-function getAllowedStrategyOrigins(strategyName) {
-  const key = String(strategyName || '').trim();
-  const origins = STRATEGY_ALLOWED_ORIGINS[key];
-  return Array.isArray(origins) ? origins.slice() : [];
+function getAllowedStrategyOrigins(strategyName: unknown): string[] {
+  const origins = lookup(STRATEGY_ALLOWED_ORIGINS, String(strategyName || '').trim());
+  return origins ? origins.slice() : [];
 }
 
-function isAllowedStrategyOrigin(strategyName, origin) {
+function isAllowedStrategyOrigin(strategyName: unknown, origin: unknown): boolean {
   const normalizedOrigin = String(origin || '').trim();
   return Boolean(
     normalizedOrigin &&
@@ -346,7 +446,7 @@ function isAllowedStrategyOrigin(strategyName, origin) {
   );
 }
 
-function getCurrentTab(chromeApi, tabId) {
+function getCurrentTab(chromeApi: typeof chrome, tabId: number): Promise<TabLookup> {
   return new Promise((resolve) => {
     if (!chromeApi || !chromeApi.tabs || typeof chromeApi.tabs.get !== 'function') {
       resolve({ ok: false, reason: 'tab-query-unavailable' });
@@ -365,14 +465,20 @@ function getCurrentTab(chromeApi, tabId) {
   });
 }
 
-async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expectedUrl) {
+async function submitPromptInTab(
+  chromeApi: typeof chrome,
+  tabId: number,
+  prompt: unknown,
+  strategyName: unknown,
+  expectedUrl: unknown
+): Promise<SubmitResult> {
   const promptText = String(prompt || '').trim();
   const config = getStrategyConfig(strategyName);
   if (!promptText) {
-    return Promise.resolve({ ok: false, reason: 'empty-prompt' });
+    return { ok: false, reason: 'empty-prompt' };
   }
   if (!config) {
-    return Promise.resolve({ ok: false, reason: 'unknown-submit-strategy' });
+    return { ok: false, reason: 'unknown-submit-strategy' };
   }
   const expectedOrigin = getHttpOrigin(expectedUrl);
   if (!expectedOrigin) {
@@ -381,20 +487,22 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
   if (!isAllowedStrategyOrigin(strategyName, expectedOrigin)) {
     return { ok: false, reason: 'unapproved-submit-origin' };
   }
-  if (config.urlOnly) {
-    return Promise.resolve({ ok: true, method: 'url' });
+  if (isUrlOnlyStrategy(config)) {
+    return { ok: true, method: 'url' };
   }
   const currentTab = await getCurrentTab(chromeApi, tabId);
-  if (!currentTab.ok) {
-    return currentTab;
+  if (currentTab.ok === false) {
+    return { ok: false, reason: currentTab.reason };
   }
   if (getHttpOrigin(currentTab.tab.url) !== expectedOrigin) {
     return { ok: false, reason: 'unexpected-tab-origin' };
   }
   return new Promise((resolve) => {
+    // The function runs in the page on its own: everything it uses is
+    // defined inside it.
     chromeApi.scripting.executeScript({
       target: { tabId: tabId },
-      func: async (allowedOrigin, rawPrompt, strategyConfig) => {
+      func: async (allowedOrigin: string, rawPrompt: string, strategyConfig: PromptStrategy): Promise<SubmitResult> => {
         if (!window.location || window.location.origin !== allowedOrigin) {
           return { ok: false, reason: 'unexpected-document-origin' };
         }
@@ -402,7 +510,7 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
         if (!promptText) {
           return { ok: false, reason: 'empty-prompt' };
         }
-        const config = strategyConfig && typeof strategyConfig === 'object' ? strategyConfig : {};
+        const config: Partial<PromptStrategy> = strategyConfig && typeof strategyConfig === 'object' ? strategyConfig : {};
         const editorSelectors = Array.isArray(config.editorSelectors) ? config.editorSelectors : [];
         const sendButtonSelectors = Array.isArray(config.sendButtonSelectors) ? config.sendButtonSelectors : [];
         const buttonWaitAttempts = Math.max(0, Number(config.buttonWaitAttempts) || 0);
@@ -417,8 +525,12 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
         const inputEventDataMode = String(config.inputEventDataMode || '').trim();
         const useNearbySendButton = Boolean(config.useNearbySendButton);
         const postEnterUseNearbySendButton = Boolean(config.postEnterUseNearbySendButton);
-        const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
-        const isVisible = (element) => {
+        const sleep = (ms: number): Promise<void> => new Promise((done) => setTimeout(done, ms));
+        const isComposerElement = (element: Element): element is ComposerElement => (
+          'focus' in element && typeof element.focus === 'function' &&
+          'click' in element && typeof element.click === 'function'
+        );
+        const isVisible = (element: Element | null): boolean => {
           if (!element) {
             return false;
           }
@@ -429,8 +541,8 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
           const rect = element.getBoundingClientRect();
           return rect.width > 0 && rect.height > 0;
         };
-        const isActionableButton = (element) => {
-          if (!isVisible(element) || element.disabled) {
+        const isActionableButton = (element: ComposerElement): boolean => {
+          if (!isVisible(element) || ('disabled' in element && element.disabled)) {
             return false;
           }
           const style = window.getComputedStyle(element);
@@ -445,11 +557,11 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
             Number(style.opacity || '1') > 0.2
           );
         };
-        const escapeHtml = (value) => value
+        const escapeHtml = (value: string): string => value
           .replace(/&/g, '&amp;')
           .replace(/</g, '&lt;')
           .replace(/>/g, '&gt;');
-        const dispatchInput = (element) => {
+        const dispatchInput = (element: Element): void => {
           if (typeof InputEvent === 'function') {
             const eventData = inputEventDataMode === 'none' ? null : promptText;
             element.dispatchEvent(new InputEvent('input', {
@@ -463,21 +575,22 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
           }
           element.dispatchEvent(new Event('change', { bubbles: true }));
         };
-        const queryAll = (selector) => {
+        // A page may answer a selector it cannot parse with an error.
+        const queryAll = (selector: string): ComposerElement[] => {
           try {
-            return Array.from(document.querySelectorAll(selector));
-          } catch (error) {
+            return Array.from(document.querySelectorAll(selector)).filter(isComposerElement);
+          } catch (_error) {
             return [];
           }
         };
-        const queryWithin = (container, selector) => {
+        const queryWithin = (container: Element, selector: string): ComposerElement[] => {
           try {
-            return Array.from(container.querySelectorAll(selector));
-          } catch (error) {
+            return Array.from(container.querySelectorAll(selector)).filter(isComposerElement);
+          } catch (_error) {
             return [];
           }
         };
-        const findEditor = () => {
+        const findEditor = (): ComposerElement | null => {
           for (const selector of editorSelectors) {
             const editor = queryAll(selector).find(isVisible);
             if (editor) {
@@ -486,12 +599,12 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
           }
           return null;
         };
-        const findNearbySendButton = (editor, shouldUseNearby) => {
+        const findNearbySendButton = (editor: ComposerElement | null, shouldUseNearby: boolean): ComposerElement | null => {
           if (!shouldUseNearby || !editor) {
             return null;
           }
           const editorRect = editor.getBoundingClientRect();
-          const candidates = [];
+          const candidates: ComposerButtonCandidate[] = [];
           let root = editor.parentElement;
           for (let depth = 0; root && depth < 8; depth += 1, root = root.parentElement) {
             queryWithin(root, 'button,[role="button"]').forEach((button) => {
@@ -521,7 +634,7 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
           candidates.sort((a, b) => a.score - b.score);
           return candidates.length > 0 ? candidates[0].button : null;
         };
-        const findSendButton = (editor, options) => {
+        const findSendButton = (editor: ComposerElement | null, options: { useNearby: boolean }): ComposerElement | null => {
           const shouldUseNearby = Boolean(options && options.useNearby);
           for (const selector of sendButtonSelectors) {
             const button = queryAll(selector).find(isVisible);
@@ -531,7 +644,7 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
           }
           return findNearbySendButton(editor, shouldUseNearby);
         };
-        const setNativeValue = (editor, value) => {
+        const setNativeValue = (editor: HTMLTextAreaElement | HTMLInputElement, value: string): void => {
           const prototype = editor instanceof HTMLTextAreaElement
             ? HTMLTextAreaElement.prototype
             : HTMLInputElement.prototype;
@@ -542,14 +655,14 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
           }
           editor.value = value;
         };
-        const setContentEditablePrompt = (editor) => {
+        const setContentEditablePrompt = (editor: Element): void => {
           editor.innerHTML = `<p>${escapeHtml(promptText)}</p>`;
         };
         // Rich editors such as Lexical pad their text with zero-width marks.
-        const readContentText = (editor) => String(editor.innerText || editor.textContent || '')
+        const readContentText = (editor: ComposerElement): string => String(editor.innerText || editor.textContent || '')
           .replace(/[\u200B-\u200D\uFEFF]/g, '')
           .trim();
-        const setPrompt = async (editor) => {
+        const setPrompt = async (editor: ComposerElement): Promise<boolean> => {
           editor.focus();
           if (editor instanceof HTMLTextAreaElement || editor instanceof HTMLInputElement) {
             setNativeValue(editor, promptText);
@@ -583,7 +696,7 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
           dispatchInput(editor);
           return readContentText(editor) === promptText;
         };
-        const getEditorText = (editor) => {
+        const getEditorText = (editor: ComposerElement | null): string => {
           if (!editor) {
             return '';
           }
@@ -592,12 +705,12 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
           }
           return readContentText(editor);
         };
-        const normalizeWhitespace = (value) => String(value || '').replace(/\s+/g, ' ').trim();
-        const hasUrlPrefill = (editor) => {
+        const normalizeWhitespace = (value: string): string => String(value || '').replace(/\s+/g, ' ').trim();
+        const hasUrlPrefill = (editor: ComposerElement): boolean => {
           const normalizedPrompt = normalizeWhitespace(promptText);
           return Boolean(normalizedPrompt) && normalizeWhitespace(getEditorText(editor)).includes(normalizedPrompt);
         };
-        const waitForUrlPrefill = async () => {
+        const waitForUrlPrefill = async (): Promise<ComposerElement | null> => {
           for (let attempt = 0; attempt < urlPrefillWaitAttempts; attempt += 1) {
             const editor = findEditor();
             if (editor && hasUrlPrefill(editor)) {
@@ -612,7 +725,7 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
           }
           return null;
         };
-        const collapseDuplicatePrompt = (editor) => {
+        const collapseDuplicatePrompt = (editor: ComposerElement): boolean => {
           const currentText = getEditorText(editor);
           if (!currentText || currentText === promptText) {
             return false;
@@ -630,7 +743,7 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
           editor.dispatchEvent(new Event('change', { bubbles: true }));
           return true;
         };
-        const pressEnter = (editor) => {
+        const pressEnter = (editor: Element): void => {
           ['keydown', 'keypress', 'keyup'].forEach((type) => {
             const event = new KeyboardEvent(type, {
               key: 'Enter',
@@ -639,14 +752,15 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
               cancelable: true,
               composed: true
             });
-            [
+            const legacyFields: Array<[string, number]> = [
               ['keyCode', 13],
               ['which', 13],
               ['charCode', type === 'keypress' ? 13 : 0]
-            ].forEach(([name, value]) => {
+            ];
+            legacyFields.forEach(([name, value]) => {
               try {
                 Object.defineProperty(event, name, { get: () => value });
-              } catch (error) {
+              } catch (_error) {
                 // Some engines expose these fields as non-configurable.
               }
             });
@@ -655,7 +769,7 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
         };
         // Some composers ignore a send click until the page settles. While the
         // prompt still sits in the editor, the send has not happened: click again.
-        const resendWhileUnsent = async (editor) => {
+        const resendWhileUnsent = async (editor: ComposerElement): Promise<void> => {
           for (let attempt = 0; attempt < resendUntilClearedAttempts; attempt += 1) {
             await sleep(500);
             const currentEditor = findEditor() || editor;
@@ -734,8 +848,9 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
       },
       args: [expectedOrigin, promptText, config]
     }, (results) => {
-      if (chromeApi.runtime && chromeApi.runtime.lastError) {
-        resolve({ ok: false, reason: chromeApi.runtime.lastError.message || 'execute-script-failed' });
+      const lastError = chromeApi.runtime && chromeApi.runtime.lastError;
+      if (lastError) {
+        resolve({ ok: false, reason: lastError.message || 'execute-script-failed' });
         return;
       }
       const result = Array.isArray(results) && results[0] ? results[0].result : null;
@@ -744,6 +859,7 @@ async function submitPromptInTab(chromeApi, tabId, prompt, strategyName, expecte
   });
 }
 
+export type { PromptStrategy, SubmitResult, SubmitStrategy };
 export {
   getAllowedStrategyOrigins,
   getHttpOrigin,

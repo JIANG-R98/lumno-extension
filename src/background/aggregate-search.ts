@@ -1,15 +1,148 @@
-// @ts-nocheck
+// Running an aggregate search: one tab per source (in a tab group when the
+// setting asks), prompts typed into the AI sources' pages, and the first
+// finished search brought to the front.
+import type { AggregateSearch, AggregateSearchAvailability } from '../domain/search/aggregate-search-store';
+import type { SiteSearchProvider } from '../domain/search/types';
+import type { AggregateSearchReply, OpenDisposition } from '../domain/messages';
+import type { MessageSender } from './message-router';
+import type { SubmitResult } from './ai-provider-submit';
+import type { TabPlacement } from './search-result-tabs';
+
+type GetEntryUrl = (provider: SiteSearchProvider, query: string) => string;
+type IsInteractiveProvider = (provider: SiteSearchProvider) => boolean;
+type WaitForTabComplete = (tabId: number, timeoutMs?: number) => Promise<unknown>;
+type SubmitPromptInTab = (
+  chromeApi: typeof chrome,
+  tabId: number,
+  prompt: string,
+  strategyName: string,
+  expectedUrl: string
+) => Promise<SubmitResult>;
+type ScheduleActivation = (task: () => void, delayMs: number) => unknown;
+
+interface AggregateSearchOpenOptions {
+  definition?: AggregateSearch | null;
+  query?: string;
+  providers?: readonly SiteSearchProvider[];
+  // Sources the definition names that are missing or disabled.
+  unavailableSourceCount?: number;
+  autoCreateTabGroup?: boolean;
+  windowId?: number;
+  // Where the first tab opens; at the end of the window without one.
+  insertIndex?: number;
+  disposition?: OpenDisposition;
+  getEntryUrl?: GetEntryUrl;
+  isInteractiveProvider?: IsInteractiveProvider;
+  waitForTabComplete?: WaitForTabComplete;
+  submitPromptInTab?: SubmitPromptInTab;
+  scheduleActivation?: ScheduleActivation;
+}
+
+// openAggregateSearch's outcome, with every count set.
+interface AggregateSearchResult extends AggregateSearchReply {
+  requestedCount: number;
+  openedCount: number;
+  failedCount: number;
+  unavailableSourceCount: number;
+  grouped: boolean;
+  groupId: number | null;
+  groupTitleApplied: boolean;
+  activatedTabId: number | null;
+  activationDeferred: boolean;
+  activationDelayMs: number;
+  interactiveRequestedCount: number;
+  interactiveSucceededCount: number;
+  interactiveFailedCount: number;
+  reason: string;
+  warnings: string[];
+}
+
+type OpenAggregateSearch = (
+  chromeApi: typeof chrome | null | undefined,
+  options: AggregateSearchOpenOptions
+) => Promise<AggregateSearchReply>;
+
+interface AggregateSearchStoreLike {
+  getAggregateSearchAvailability(
+    definition: unknown,
+    providers: readonly SiteSearchProvider[] | null | undefined
+  ): AggregateSearchAvailability;
+}
+
+interface AggregateSearchQueryRunnerConfig {
+  aggregateSearchStore?: AggregateSearchStoreLike | null;
+  chromeApi?: typeof chrome | null;
+  loadAggregateSearches?: () => Promise<AggregateSearch[]>;
+  loadSiteSearchProviders?: () => Promise<SiteSearchProvider[]> | SiteSearchProvider[];
+  // The grouping setting; anything but a boolean leaves it to the definitions.
+  loadAggregateSearchAutoGroupEnabled?: () => Promise<unknown> | unknown;
+  resolveTabPlacement?: (sourceTab: chrome.tabs.Tab | null) => Promise<Partial<TabPlacement>>;
+  openAggregateSearch?: OpenAggregateSearch;
+  getEntryUrl?: GetEntryUrl;
+  isInteractiveProvider?: IsInteractiveProvider;
+  waitForTabComplete?: WaitForTabComplete;
+  submitPromptInTab?: SubmitPromptInTab;
+  now?: () => number;
+  dedupeWindowMs?: number;
+}
+
+type AggregateSearchQueryRunner = (
+  aggregateId: unknown,
+  query: unknown,
+  sender: MessageSender | null | undefined,
+  disposition?: OpenDisposition
+) => Promise<AggregateSearchReply>;
+
+interface ProviderPlan {
+  provider: SiteSearchProvider;
+  // '' when the provider has no safe address for the query.
+  url: string;
+  interactive: boolean;
+}
+
+interface CreatedTab {
+  tab: chrome.tabs.Tab | null;
+  error: string;
+}
+
+interface PlanTab extends CreatedTab {
+  plan: ProviderPlan;
+}
+
+interface OpenedPlanTab extends PlanTab {
+  tab: chrome.tabs.Tab & { id: number };
+}
+
+// A recent or running search, shared by identical requests.
+interface RequestEntry {
+  pending: boolean;
+  expiresAt: number;
+  promise: Promise<AggregateSearchReply>;
+}
+
 const DEFAULT_DEDUPE_WINDOW_MS = 1000;
 const ACTIVATION_FEEDBACK_DELAY_MS = 2300;
 
-function getLastErrorMessage(chromeApi, fallback) {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function hasOwn(value: object, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(value, key);
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
+function getLastErrorMessage(chromeApi: typeof chrome, fallback: string): string {
   const runtime = chromeApi && chromeApi.runtime;
   return runtime && runtime.lastError
     ? String(runtime.lastError.message || fallback)
     : '';
 }
 
-function createBackgroundTab(chromeApi, createProperties) {
+function createBackgroundTab(chromeApi: typeof chrome, createProperties: chrome.tabs.CreateProperties): Promise<CreatedTab> {
   return new Promise((resolve) => {
     try {
       chromeApi.tabs.create(createProperties, (tab) => {
@@ -23,13 +156,16 @@ function createBackgroundTab(chromeApi, createProperties) {
     } catch (error) {
       resolve({
         tab: null,
-        error: error && error.message ? error.message : 'tab-create-failed'
+        error: getErrorMessage(error, 'tab-create-failed')
       });
     }
   });
 }
 
-function groupTabs(chromeApi, tabIds) {
+function groupTabs(
+  chromeApi: typeof chrome,
+  tabIds: [number, ...number[]]
+): Promise<{ groupId: number | null; error: string }> {
   return new Promise((resolve) => {
     if (!chromeApi || !chromeApi.tabs || typeof chromeApi.tabs.group !== 'function') {
       resolve({ groupId: null, error: 'tab-group-api-unavailable' });
@@ -47,13 +183,13 @@ function groupTabs(chromeApi, tabIds) {
     } catch (error) {
       resolve({
         groupId: null,
-        error: error && error.message ? error.message : 'tab-group-failed'
+        error: getErrorMessage(error, 'tab-group-failed')
       });
     }
   });
 }
 
-function titleTabGroup(chromeApi, groupId, title) {
+function titleTabGroup(chromeApi: typeof chrome, groupId: number, title: string): Promise<{ ok: boolean; error: string }> {
   return new Promise((resolve) => {
     if (!chromeApi || !chromeApi.tabGroups ||
         typeof chromeApi.tabGroups.update !== 'function') {
@@ -68,16 +204,19 @@ function titleTabGroup(chromeApi, groupId, title) {
     } catch (error) {
       resolve({
         ok: false,
-        error: error && error.message ? error.message : 'tab-group-title-failed'
+        error: getErrorMessage(error, 'tab-group-title-failed')
       });
     }
   });
 }
 
-function activateTab(chromeApi, tabId) {
+function activateTab(
+  chromeApi: typeof chrome,
+  tabId: number
+): Promise<{ ok: boolean; tab: chrome.tabs.Tab | null; error: string }> {
   return new Promise((resolve) => {
     if (!chromeApi || !chromeApi.tabs || typeof chromeApi.tabs.update !== 'function') {
-      resolve({ ok: false, error: 'tab-activate-api-unavailable' });
+      resolve({ ok: false, tab: null, error: 'tab-activate-api-unavailable' });
       return;
     }
     try {
@@ -89,14 +228,14 @@ function activateTab(chromeApi, tabId) {
       resolve({
         ok: false,
         tab: null,
-        error: error && error.message ? error.message : 'tab-activate-failed'
+        error: getErrorMessage(error, 'tab-activate-failed')
       });
     }
   });
 }
 
-function createResult(overrides) {
-  return Object.assign({
+function createResult(overrides: Partial<AggregateSearchResult>): AggregateSearchResult {
+  return {
     ok: false,
     requestedCount: 0,
     openedCount: 0,
@@ -112,11 +251,12 @@ function createResult(overrides) {
     interactiveSucceededCount: 0,
     interactiveFailedCount: 0,
     reason: '',
-    warnings: []
-  }, overrides || {});
+    warnings: [],
+    ...overrides
+  };
 }
 
-function isSafeSearchUrl(value) {
+function isSafeSearchUrl(value: unknown): boolean {
   const raw = String(value || '').trim();
   if (!raw) {
     return false;
@@ -129,7 +269,7 @@ function isSafeSearchUrl(value) {
   }
 }
 
-function buildProviderPlans(options, query) {
+function buildProviderPlans(options: AggregateSearchOpenOptions, query: string): ProviderPlan[] {
   const providers = Array.isArray(options.providers) ? options.providers : [];
   const getEntryUrl = typeof options.getEntryUrl === 'function'
     ? options.getEntryUrl
@@ -155,7 +295,12 @@ function buildProviderPlans(options, query) {
   });
 }
 
-function submitInteractivePrompt(chromeApi, options, openedItem, query) {
+function submitInteractivePrompt(
+  chromeApi: typeof chrome,
+  options: AggregateSearchOpenOptions,
+  openedItem: OpenedPlanTab,
+  query: string
+): Promise<{ ok: boolean; reason: string }> {
   const waitForTabComplete = typeof options.waitForTabComplete === 'function'
     ? options.waitForTabComplete
     : null;
@@ -170,15 +315,16 @@ function submitInteractivePrompt(chromeApi, options, openedItem, query) {
   if (!tab || typeof tab.id !== 'number' || !plan) {
     return Promise.resolve({ ok: false, reason: 'tab-unavailable' });
   }
+  const tabId = tab.id;
   const ready = waitForTabComplete
     ? Promise.resolve()
-      .then(() => waitForTabComplete(tab.id, 15000))
+      .then(() => waitForTabComplete(tabId, 15000))
       .catch(() => tab)
     : Promise.resolve(tab);
   return ready
     .then(() => submitPromptInTab(
       chromeApi,
-      tab.id,
+      tabId,
       query,
       String(plan.provider && plan.provider.submitStrategy || '').trim(),
       plan.url
@@ -187,14 +333,17 @@ function submitInteractivePrompt(chromeApi, options, openedItem, query) {
       ok: Boolean(result && result.ok),
       reason: result && result.reason ? String(result.reason) : ''
     }))
-    .catch((error) => ({
+    .catch((error: unknown) => ({
       ok: false,
-      reason: error && error.message ? error.message : 'interactive-site-search-failed'
+      reason: getErrorMessage(error, 'interactive-site-search-failed')
     }));
 }
 
-async function openAggregateSearch(chromeApi, rawOptions) {
-  const options = rawOptions && typeof rawOptions === 'object' ? rawOptions : {};
+async function openAggregateSearch(
+  chromeApi: typeof chrome | null | undefined,
+  rawOptions: AggregateSearchOpenOptions | null | undefined
+): Promise<AggregateSearchResult> {
+  const options: AggregateSearchOpenOptions = rawOptions && typeof rawOptions === 'object' ? rawOptions : {};
   const query = String(options.query || '').trim();
   const unavailableSourceCount = Math.max(0, Number(options.unavailableSourceCount) || 0);
   if (!query) {
@@ -224,11 +373,12 @@ async function openAggregateSearch(chromeApi, rawOptions) {
   }
 
   const windowId = Number(options.windowId);
-  const insertIndex = Number.isInteger(options.insertIndex) && options.insertIndex >= 0
+  const insertIndex = typeof options.insertIndex === 'number' && Number.isInteger(options.insertIndex) &&
+    options.insertIndex >= 0
     ? options.insertIndex
     : null;
-  const createPlanTab = (plan, offset) => {
-    const createProperties = {
+  const createPlanTab = (plan: ProviderPlan, offset: number): Promise<PlanTab> => {
+    const createProperties: chrome.tabs.CreateProperties = {
       url: plan.url,
       active: false
     };
@@ -241,7 +391,7 @@ async function openAggregateSearch(chromeApi, rawOptions) {
     return createBackgroundTab(chromeApi, createProperties)
       .then((result) => ({ ...result, plan }));
   };
-  let creationResults;
+  let creationResults: PlanTab[];
   if (insertIndex !== null) {
     // Insert in source order; parallel insertion can reverse or interleave tabs.
     creationResults = [];
@@ -256,12 +406,13 @@ async function openAggregateSearch(chromeApi, rawOptions) {
   } else {
     creationResults = await Promise.all(plans.map((plan) => createPlanTab(plan, 0)));
   }
-  const openedItems = creationResults.filter((result) => (
-    result && result.tab && typeof result.tab.id === 'number'
+  const openedItems = creationResults.filter((result): result is OpenedPlanTab => (
+    Boolean(result && result.tab && typeof result.tab.id === 'number')
   ));
   const openedCount = openedItems.length;
   const failedCount = requestedCount - openedCount;
-  if (!openedCount) {
+  const [firstOpenedItem, ...otherOpenedItems] = openedItems;
+  if (!firstOpenedItem) {
     return createResult({
       requestedCount,
       openedCount,
@@ -271,34 +422,27 @@ async function openAggregateSearch(chromeApi, rawOptions) {
     });
   }
 
-  const warnings = [];
+  const warnings: string[] = [];
   if (failedCount > 0) {
     warnings.push('partial-tab-create-failure');
   }
 
-  const hasExplicitGroupSetting = Object.prototype.hasOwnProperty.call(
-    options,
-    'autoCreateTabGroup'
-  );
+  const hasExplicitGroupSetting = hasOwn(options, 'autoCreateTabGroup');
   const definition = options.definition && typeof options.definition === 'object'
     ? options.definition
     : null;
-  const hasLegacyGroupSetting = Boolean(definition) && Object.prototype.hasOwnProperty.call(
-    definition,
-    'autoCreateTabGroup'
-  );
   const shouldCreateGroup = hasExplicitGroupSetting
     ? options.autoCreateTabGroup === true
-    : (hasLegacyGroupSetting ? definition.autoCreateTabGroup === true : true);
-  let groupId = null;
+    : (definition && hasOwn(definition, 'autoCreateTabGroup') ? definition.autoCreateTabGroup === true : true);
+  let groupId: number | null = null;
   let grouped = false;
   let groupTitleApplied = false;
   if (shouldCreateGroup) {
     const groupResult = await groupTabs(
       chromeApi,
-      openedItems.map((item) => item.tab.id)
+      [firstOpenedItem.tab.id, ...otherOpenedItems.map((item) => item.tab.id)]
     );
-    if (groupResult.error) {
+    if (groupResult.error || groupResult.groupId === null) {
       warnings.push(groupResult.error);
     } else {
       groupId = groupResult.groupId;
@@ -334,12 +478,12 @@ async function openAggregateSearch(chromeApi, rawOptions) {
   const firstSuccessfulItem = openedItems.find((item) => (
     !item.plan.interactive || successfulInteractiveTabIds.has(item.tab.id)
   ));
-  let activatedTabId = null;
+  let activatedTabId: number | null = null;
   let activationDeferred = false;
   if (searchSucceeded && firstSuccessfulItem && options.disposition !== 'backgroundTab') {
     const firstTabId = firstSuccessfulItem.tab.id;
     if (warnings.length > 0) {
-      const scheduleActivation = typeof options.scheduleActivation === 'function'
+      const scheduleActivation: ScheduleActivation = typeof options.scheduleActivation === 'function'
         ? options.scheduleActivation
         : (task, delayMs) => setTimeout(task, delayMs);
       try {
@@ -348,7 +492,7 @@ async function openAggregateSearch(chromeApi, rawOptions) {
         }, ACTIVATION_FEEDBACK_DELAY_MS);
         activationDeferred = true;
       } catch (error) {
-        warnings.push(error && error.message ? error.message : 'tab-activate-failed');
+        warnings.push(getErrorMessage(error, 'tab-activate-failed'));
         const activateResult = await activateTab(chromeApi, firstTabId);
         if (activateResult.ok) {
           activatedTabId = firstTabId;
@@ -388,7 +532,7 @@ async function openAggregateSearch(chromeApi, rawOptions) {
   });
 }
 
-function getAggregateRequestSenderKey(sender) {
+function getAggregateRequestSenderKey(sender: MessageSender | null | undefined): string {
   const tab = sender && sender.tab ? sender.tab : null;
   if (tab && typeof tab.id === 'number') {
     return `tab:${tab.id}`;
@@ -399,34 +543,39 @@ function getAggregateRequestSenderKey(sender) {
   return 'extension';
 }
 
-function resolveAggregateSearchAutoGroupEnabled(value, definitions, fallbackDefinition) {
+// The grouping setting, or before it was one setting, the grouping choice
+// the stored definitions made: grouping when any of them did.
+function resolveAggregateSearchAutoGroupEnabled(
+  value: unknown,
+  definitions: readonly unknown[] | null | undefined,
+  fallbackDefinition?: unknown
+): boolean {
   if (typeof value === 'boolean') {
     return value;
   }
-  const items = Array.isArray(definitions) ? definitions : [];
-  const legacyItems = items.filter((item) => (
-    item && Object.prototype.hasOwnProperty.call(item, 'autoCreateTabGroup')
+  const items: readonly unknown[] = Array.isArray(definitions) ? definitions : [];
+  const legacyItems = items.filter((item): item is Record<string, unknown> => (
+    isRecord(item) && hasOwn(item, 'autoCreateTabGroup')
   ));
   if (legacyItems.length > 0) {
     return legacyItems.some((item) => item.autoCreateTabGroup === true);
   }
-  if (fallbackDefinition && Object.prototype.hasOwnProperty.call(
-    fallbackDefinition,
-    'autoCreateTabGroup'
-  )) {
+  if (isRecord(fallbackDefinition) && hasOwn(fallbackDefinition, 'autoCreateTabGroup')) {
     return fallbackDefinition.autoCreateTabGroup === true;
   }
   return true;
 }
 
-function createAggregateSearchQueryRunner(rawConfig) {
-  const config = rawConfig && typeof rawConfig === 'object' ? rawConfig : {};
-  const store = config.aggregateSearchStore || {};
+function createAggregateSearchQueryRunner(
+  rawConfig: AggregateSearchQueryRunnerConfig | null | undefined
+): AggregateSearchQueryRunner {
+  const config: AggregateSearchQueryRunnerConfig = rawConfig && typeof rawConfig === 'object' ? rawConfig : {};
+  const store = config.aggregateSearchStore || null;
   const loadAggregateSearches = config.loadAggregateSearches;
   const loadSiteSearchProviders = config.loadSiteSearchProviders;
   const loadAggregateSearchAutoGroupEnabled =
     config.loadAggregateSearchAutoGroupEnabled;
-  const openSearch = typeof config.openAggregateSearch === 'function'
+  const openSearch: OpenAggregateSearch = typeof config.openAggregateSearch === 'function'
     ? config.openAggregateSearch
     : openAggregateSearch;
   const now = typeof config.now === 'function' ? config.now : Date.now;
@@ -434,9 +583,9 @@ function createAggregateSearchQueryRunner(rawConfig) {
     0,
     Number(config.dedupeWindowMs) || DEFAULT_DEDUPE_WINDOW_MS
   );
-  const requests = new Map();
+  const requests = new Map<string, RequestEntry>();
 
-  function pruneRequests(timestamp) {
+  function pruneRequests(timestamp: number): void {
     requests.forEach((entry, key) => {
       if (!entry.pending && entry.expiresAt <= timestamp) {
         requests.delete(key);
@@ -444,14 +593,19 @@ function createAggregateSearchQueryRunner(rawConfig) {
     });
   }
 
-  function execute(aggregateId, query, sender, disposition) {
+  function execute(
+    aggregateId: unknown,
+    query: unknown,
+    sender: MessageSender | null | undefined,
+    disposition?: OpenDisposition
+  ): Promise<AggregateSearchReply> {
     const normalizedId = String(aggregateId || '').trim().toLowerCase();
     const normalizedQuery = String(query || '').trim();
     if (!normalizedId || !normalizedQuery) {
       return Promise.resolve({ ok: false, reason: 'invalid-aggregate-search-request' });
     }
     if (typeof loadAggregateSearches !== 'function' ||
-        typeof store.getAggregateSearchAvailability !== 'function' ||
+        !store || typeof store.getAggregateSearchAvailability !== 'function' ||
         typeof loadSiteSearchProviders !== 'function' ||
         typeof openSearch !== 'function') {
       return Promise.resolve({ ok: false, reason: 'aggregate-search-runtime-unavailable' });
@@ -470,7 +624,7 @@ function createAggregateSearchQueryRunner(rawConfig) {
       return existing.promise;
     }
 
-    const autoGroupSettingTask = typeof loadAggregateSearchAutoGroupEnabled === 'function'
+    const autoGroupSettingTask: Promise<boolean | undefined> = typeof loadAggregateSearchAutoGroupEnabled === 'function'
       ? Promise.resolve()
         .then(() => loadAggregateSearchAutoGroupEnabled())
         .then(
@@ -482,7 +636,7 @@ function createAggregateSearchQueryRunner(rawConfig) {
       loadAggregateSearches(),
       Promise.resolve().then(() => loadSiteSearchProviders()),
       autoGroupSettingTask
-    ]).then(async ([definitions, providers, autoGroupSetting]) => {
+    ]).then(async ([definitions, providers, autoGroupSetting]): Promise<AggregateSearchReply> => {
       const definition = (Array.isArray(definitions) ? definitions : []).find((item) => (
         String(item && item.id || '').trim().toLowerCase() === normalizedId
       ));
@@ -512,7 +666,7 @@ function createAggregateSearchQueryRunner(rawConfig) {
         };
       }
       const sourceTab = sender && sender.tab ? sender.tab : null;
-      const placement = typeof config.resolveTabPlacement === 'function'
+      const placement: Partial<TabPlacement> = typeof config.resolveTabPlacement === 'function'
         ? await config.resolveTabPlacement(sourceTab)
         : {};
       return openSearch(config.chromeApi, {
@@ -537,21 +691,20 @@ function createAggregateSearchQueryRunner(rawConfig) {
       });
     });
 
-    const entry = {
+    const entry: RequestEntry = {
       pending: true,
       expiresAt: Number.POSITIVE_INFINITY,
-      promise: null
+      promise: task.then((result) => {
+        entry.pending = false;
+        entry.expiresAt = now() + dedupeWindowMs;
+        return result;
+      }, (error: unknown) => {
+        if (requests.get(requestKey) === entry) {
+          requests.delete(requestKey);
+        }
+        throw error;
+      })
     };
-    entry.promise = task.then((result) => {
-      entry.pending = false;
-      entry.expiresAt = now() + dedupeWindowMs;
-      return result;
-    }, (error) => {
-      if (requests.get(requestKey) === entry) {
-        requests.delete(requestKey);
-      }
-      throw error;
-    });
     requests.set(requestKey, entry);
     return entry.promise;
   }
@@ -559,6 +712,7 @@ function createAggregateSearchQueryRunner(rawConfig) {
   return execute;
 }
 
+export type { AggregateSearchOpenOptions, AggregateSearchQueryRunner, AggregateSearchQueryRunnerConfig, AggregateSearchResult };
 export {
   ACTIVATION_FEEDBACK_DELAY_MS,
   DEFAULT_DEDUPE_WINDOW_MS,
