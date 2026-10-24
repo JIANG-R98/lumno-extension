@@ -4,7 +4,7 @@ const { createNewtabPage } = require('../helpers/newtab-page');
 const { createOnboardingPage } = require('../helpers/onboarding-page');
 const { createOptionsPage } = require('../helpers/options-page');
 
-const communityLinks = require('../../src/domain/community-links.ts');
+const communityLinks = require('../../src/platform/community-links.ts');
 const { getInjectedScripts, getPageScripts, runsBefore } = require('../helpers/runtime-scripts');
 
 (async () => {

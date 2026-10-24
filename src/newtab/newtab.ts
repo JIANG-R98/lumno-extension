@@ -3,7 +3,7 @@ import * as BLACKLIST_UTILS from '../domain/blacklist-utils';
 import * as FOLDER_REFERENCES from '../domain/bookmark-folder-reference';
 import * as FOLDER_BINDINGS from '../platform/bookmark-folder-bindings';
 import * as LumnoBrowserProfile from '../platform/browser-profile';
-import * as LumnoCommunityLinks from '../domain/community-links';
+import * as LumnoCommunityLinks from '../platform/community-links';
 import * as EXTENSION_ROUTES from '../domain/extension-routes';
 import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
 import * as SHORTCUT_FAVICON from '../domain/favicon/shortcut-favicon';

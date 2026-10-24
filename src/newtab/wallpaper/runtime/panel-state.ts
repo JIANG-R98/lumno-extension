@@ -2,7 +2,7 @@
 // The appearance panel's view model: the panel header, the theme, search
 // and shortcut sections, each wallpaper source's tiles, effects, favicons,
 // and drawing the model into the React view.
-import * as LumnoCommunityLinks from '../../../domain/community-links';
+import * as LumnoCommunityLinks from '../../../platform/community-links';
 
 function createPanelState(deps) {
   const {

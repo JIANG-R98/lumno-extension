@@ -1,6 +1,6 @@
 // @ts-nocheck
 import * as FAVICON_THEME from '../shared/favicon/favicon-theme';
-import * as COMMUNITY_LINKS from '../domain/community-links';
+import * as COMMUNITY_LINKS from '../platform/community-links';
 import * as FAVICON_UTILS from '../domain/favicon/favicon-utils';
 import * as SHORTCUT_FAVICON from '../domain/favicon/shortcut-favicon';
 import * as LumnoShortcutFaviconStore from '../platform/shortcut-favicon-store';

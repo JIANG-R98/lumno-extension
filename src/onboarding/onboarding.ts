@@ -1,5 +1,5 @@
 // @ts-nocheck
-import * as COMMUNITY_LINKS from '../domain/community-links';
+import * as COMMUNITY_LINKS from '../platform/community-links';
 import * as LumnoExtensionRoutes from '../domain/extension-routes';
 import * as NAVIGATION_DISPOSITION from '../domain/navigation-disposition';
 import * as LumnoSettings from '../domain/settings';

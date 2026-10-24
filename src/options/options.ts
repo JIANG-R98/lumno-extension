@@ -1,7 +1,7 @@
 // @ts-nocheck
 import * as LumnoNewtabShortcutsStore from '../domain/shortcuts-store';
 import * as LumnoBlacklistUtils from '../domain/blacklist-utils';
-import * as COMMUNITY_LINKS from '../domain/community-links';
+import * as COMMUNITY_LINKS from '../platform/community-links';
 import * as NAVIGATION_DISPOSITION from '../domain/navigation-disposition';
 import * as AGGREGATE_SEARCH_STORE from '../domain/search/aggregate-search-store';
 import * as SEARCH_UTILS from '../domain/search/search-utils';

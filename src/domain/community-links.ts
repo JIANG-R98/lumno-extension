@@ -1,9 +1,40 @@
-// @ts-nocheck
+// Links to Lumno's website, help center, store listings and community,
+// with the fallbacks used until the website's current list arrives
+// (platform/community-links.ts loads it).
+
+// The help center's languages.
+type WebLocale = 'zh-CN' | 'zh-TW' | 'ja' | 'en';
+
+// Where community support lives: the WeChat group or the author on X.
+type CommunityChannel = 'wechat' | 'x';
+
+type CommunityByLocale = Record<WebLocale, CommunityChannel>;
+
+interface CommunityLinks {
+  x: string;
+  githubIssue: string;
+  licenses: string;
+  chromeReview: string;
+  edgeReview: string;
+  firefoxReview: string;
+  wechatQr: string;
+  communityByLocale: CommunityByLocale;
+}
+
+type StoreId = 'chrome' | 'edge' | 'firefox';
+
+interface StoreListing {
+  id: StoreId;
+  name: string;
+  host: string;
+  url: string;
+}
+
 const WEB_ORIGIN = 'https://lumno.kubai.design';
 const COMMUNITY_LINKS_URL = `${WEB_ORIGIN}/community-links.json`;
 const FETCH_TIMEOUT_MS = 2500;
 // Help center paths per UI locale: Simplified Chinese is the site's root language.
-const HELP_LOCALE_PREFIXES = Object.freeze({
+const HELP_LOCALE_PREFIXES: Readonly<Record<WebLocale, string>> = Object.freeze({
   'zh-CN': '',
   'zh-TW': '/zh-tw',
   ja: '/ja',
@@ -16,7 +47,7 @@ const HELP_DEFAULT_SLUG = 'what-is-lumno';
 const EDGE_ADDONS_EXTENSION_ID = 'pfbklkaefmfamjpibfiapaiihlddhchc';
 // Firefox and its forks (Zen, LibreWolf, Floorp) install from Firefox Add-ons.
 const FIREFOX_ADDONS_URL = 'https://addons.mozilla.org/firefox/addon/lumno-command-bar-new-tab/';
-const STORE_LISTINGS = Object.freeze({
+const STORE_LISTINGS: Readonly<Record<StoreId, Readonly<StoreListing>>> = Object.freeze({
   chrome: Object.freeze({
     id: 'chrome',
     name: 'Chrome Web Store',
@@ -36,7 +67,7 @@ const STORE_LISTINGS = Object.freeze({
     url: FIREFOX_ADDONS_URL
   })
 });
-const FALLBACK_LINKS = Object.freeze({
+const FALLBACK_LINKS: Readonly<CommunityLinks> = Object.freeze({
   x: 'https://x.com/kubai087',
   githubIssue: 'https://github.com/kubai087/lumno-extension/issues/new',
   licenses: 'https://github.com/kubai087/lumno-extension/blob/main/THIRD_PARTY_NOTICES.md',
@@ -52,7 +83,11 @@ const FALLBACK_LINKS = Object.freeze({
   })
 });
 
-function normalizeHttpsUrl(value) {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object';
+}
+
+function normalizeHttpsUrl(value: unknown): string {
   const raw = String(value || '').trim();
   if (!raw) {
     return '';
@@ -60,23 +95,23 @@ function normalizeHttpsUrl(value) {
   try {
     const url = new URL(raw);
     return url.protocol === 'https:' ? url.toString() : '';
-  } catch (error) {
+  } catch (_error) {
     return '';
   }
 }
 
 // Discord is retired: the website's older payload still says "discord" for
 // non-Chinese locales, which now means the author on X.
-function normalizeCommunityChannel(value, fallback) {
+function normalizeCommunityChannel(value: unknown, fallback: CommunityChannel): CommunityChannel {
   if (value === 'wechat') {
     return 'wechat';
   }
   return value === 'x' || value === 'discord' ? 'x' : fallback;
 }
 
-function normalizeCommunityMap(value) {
+function normalizeCommunityMap(value: unknown): CommunityByLocale {
   const fallbackMap = FALLBACK_LINKS.communityByLocale;
-  const source = value && typeof value === 'object' ? value : {};
+  const source = isRecord(value) ? value : {};
   return {
     'zh-CN': normalizeCommunityChannel(
       source['zh-CN'] || source.zh_CN,
@@ -91,9 +126,11 @@ function normalizeCommunityMap(value) {
   };
 }
 
-function normalizeLinksPayload(payload) {
-  const source = payload && typeof payload === 'object' ? payload : {};
-  const links = source.links && typeof source.links === 'object' ? source.links : source;
+// The website's community-links.json, with every link it lacks or gets
+// wrong taken from the fallbacks.
+function normalizeLinksPayload(payload: unknown): CommunityLinks {
+  const source = isRecord(payload) ? payload : {};
+  const links = isRecord(source.links) ? source.links : source;
   return {
     x: normalizeHttpsUrl(links.x) || FALLBACK_LINKS.x,
     githubIssue: normalizeHttpsUrl(
@@ -128,7 +165,7 @@ function normalizeLinksPayload(payload) {
   };
 }
 
-function normalizeWebLocale(locale) {
+function normalizeWebLocale(locale: unknown): WebLocale {
   const normalized = String(locale || '')
     .trim()
     .replace(/_/g, '-')
@@ -145,7 +182,7 @@ function normalizeWebLocale(locale) {
   return 'en';
 }
 
-function getCommunityChannel(links, locale) {
+function getCommunityChannel(links: Partial<CommunityLinks> | null | undefined, locale: unknown): CommunityChannel {
   const webLocale = normalizeWebLocale(locale);
   // Chinese community support lives in WeChat. Keep this product policy
   // local so a stale remote map cannot send zh-CN or zh-TW users elsewhere.
@@ -153,7 +190,7 @@ function getCommunityChannel(links, locale) {
     return 'wechat';
   }
   const source = links && typeof links === 'object' ? links : FALLBACK_LINKS;
-  const communityMap = source.communityByLocale &&
+  const communityMap: Partial<CommunityByLocale> = source.communityByLocale &&
       typeof source.communityByLocale === 'object'
     ? source.communityByLocale
     : FALLBACK_LINKS.communityByLocale;
@@ -163,45 +200,39 @@ function getCommunityChannel(links, locale) {
   );
 }
 
-function getCommunityUrl(links, locale) {
+function getCommunityUrl(links: Partial<CommunityLinks> | null | undefined, locale: unknown): string {
   const source = links && typeof links === 'object' ? links : FALLBACK_LINKS;
   return getCommunityChannel(source, locale) === 'wechat'
     ? (source.wechatQr || FALLBACK_LINKS.wechatQr)
     : (source.x || FALLBACK_LINKS.x);
 }
 
-function getHelpUrl(locale, slug) {
+function getHelpUrl(locale: unknown, slug?: unknown): string {
   const page = String(slug || '').trim().replace(/^\/+|\/+$/g, '') || HELP_DEFAULT_SLUG;
   return `${WEB_ORIGIN}${HELP_LOCALE_PREFIXES[normalizeWebLocale(locale)]}/help/${page}/`;
 }
 
 // The index behind the help center's search box, in the reader's language.
-function getHelpSearchIndexUrl(locale) {
+function getHelpSearchIndexUrl(locale: unknown): string {
   return `${WEB_ORIGIN}${HELP_LOCALE_PREFIXES[normalizeWebLocale(locale)]}/help/search-index.json`;
 }
 
 // Words the help center treats as the same thing, in the reader's language.
-function getHelpSearchSynonymsUrl(locale) {
+function getHelpSearchSynonymsUrl(locale: unknown): string {
   return `${WEB_ORIGIN}${HELP_LOCALE_PREFIXES[normalizeWebLocale(locale)]}/help/search-synonyms.json`;
 }
 
-function getRuntimeExtensionId() {
-  const runtime = globalThis && globalThis.chrome && globalThis.chrome.runtime ? globalThis.chrome.runtime : null;
-  return runtime && runtime.id ? String(runtime.id) : '';
-}
-
-function isEdgeAddonsInstall(extensionId) {
-  const id = extensionId === undefined ? getRuntimeExtensionId() : String(extensionId || '');
-  return id === EDGE_ADDONS_EXTENSION_ID;
+function isEdgeAddonsInstall(extensionId: string): boolean {
+  return extensionId === EDGE_ADDONS_EXTENSION_ID;
 }
 
 // Gecko add-on IDs are email-like or a braced GUID; Chromium IDs are 32 letters.
-function isFirefoxInstall(extensionId) {
-  const id = extensionId === undefined ? getRuntimeExtensionId() : String(extensionId || '');
-  return id.includes('@') || /^\{[0-9a-f-]+\}$/i.test(id);
+function isFirefoxInstall(extensionId: string): boolean {
+  return extensionId.includes('@') || /^\{[0-9a-f-]+\}$/i.test(extensionId);
 }
 
-function getReviewUrl(links, extensionId) {
+// The review page of the store this install came from.
+function getReviewUrl(links: Partial<CommunityLinks> | null | undefined, extensionId: string): string {
   const source = links && typeof links === 'object' ? links : FALLBACK_LINKS;
   if (isFirefoxInstall(extensionId)) {
     return source.firefoxReview || FALLBACK_LINKS.firefoxReview;
@@ -211,14 +242,15 @@ function getReviewUrl(links, extensionId) {
     : (source.chromeReview || FALLBACK_LINKS.chromeReview);
 }
 
-function getStoreListing(extensionId) {
+function getStoreListing(extensionId: string): Readonly<StoreListing> {
   if (isFirefoxInstall(extensionId)) {
     return STORE_LISTINGS.firefox;
   }
   return isEdgeAddonsInstall(extensionId) ? STORE_LISTINGS.edge : STORE_LISTINGS.chrome;
 }
 
-function buildFreshQrUrl(value, timestamp) {
+// The QR image URL with a parameter that keeps caches from serving an old code.
+function buildFreshQrUrl(value: unknown, timestamp?: unknown): string {
   const safeUrl = normalizeHttpsUrl(value);
   if (!safeUrl) {
     return '';
@@ -231,82 +263,6 @@ function buildFreshQrUrl(value, timestamp) {
   return url.toString();
 }
 
-function createLoader(options) {
-  const config = options && typeof options === 'object' ? options : {};
-  let currentLinks = FALLBACK_LINKS;
-  let loaded = false;
-  let loadingPromise = null;
-
-  function getLinks() {
-    return currentLinks;
-  }
-
-  function load(loadOptions) {
-    const settings = loadOptions && typeof loadOptions === 'object' ? loadOptions : {};
-    const force = settings.force === true;
-    if (!force && loaded) {
-      return Promise.resolve(currentLinks);
-    }
-    if (loadingPromise) {
-      return loadingPromise;
-    }
-    const fetchImpl = settings.fetchImpl || config.fetchImpl ||
-      (globalThis && typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null);
-    if (!fetchImpl) {
-      return Promise.resolve(currentLinks);
-    }
-    const timeoutRuntime = settings.windowObj || config.windowObj || globalThis;
-    const AbortControllerImpl = settings.AbortControllerImpl ||
-      config.AbortControllerImpl ||
-      (globalThis && typeof globalThis.AbortController === 'function' ? globalThis.AbortController : null);
-    const controller = AbortControllerImpl ? new AbortControllerImpl() : null;
-    const timeoutMs = Number.isFinite(Number(settings.timeoutMs))
-      ? Math.max(0, Number(settings.timeoutMs))
-      : FETCH_TIMEOUT_MS;
-    const timeoutId = controller && timeoutRuntime &&
-        typeof timeoutRuntime.setTimeout === 'function'
-      ? timeoutRuntime.setTimeout(() => controller.abort(), timeoutMs)
-      : 0;
-    loadingPromise = Promise.resolve(fetchImpl(settings.url || COMMUNITY_LINKS_URL, {
-      cache: 'no-store',
-      signal: controller ? controller.signal : undefined
-    }))
-      .then((response) => {
-        if (!response || !response.ok || typeof response.json !== 'function') {
-          throw new Error('community links unavailable');
-        }
-        return response.json();
-      })
-      .then((payload) => {
-        currentLinks = normalizeLinksPayload(payload);
-        loaded = true;
-        return currentLinks;
-      })
-      .catch(() => {
-        // Cache the fallback for this page session. A forced load remains
-        // available for user-triggered refreshes without retrying on every
-        // consumer after an offline or timed-out request.
-        loaded = true;
-        return currentLinks;
-      })
-      .finally(() => {
-        if (timeoutId && timeoutRuntime &&
-            typeof timeoutRuntime.clearTimeout === 'function') {
-          timeoutRuntime.clearTimeout(timeoutId);
-        }
-        loadingPromise = null;
-      });
-    return loadingPromise;
-  }
-
-  return Object.freeze({
-    getLinks,
-    load
-  });
-}
-
-const defaultLoader = createLoader();
-
 export {
   COMMUNITY_LINKS_URL,
   EDGE_ADDONS_EXTENSION_ID,
@@ -316,7 +272,6 @@ export {
   STORE_LISTINGS,
   WEB_ORIGIN,
   buildFreshQrUrl,
-  createLoader,
   getCommunityChannel,
   getCommunityUrl,
   getHelpSearchIndexUrl,
@@ -330,5 +285,4 @@ export {
   normalizeLinksPayload,
   normalizeWebLocale
 };
-export const getLinks = defaultLoader.getLinks;
-export const load = defaultLoader.load;
+export type { CommunityByLocale, CommunityChannel, CommunityLinks, StoreId, StoreListing, WebLocale };

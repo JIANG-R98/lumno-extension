@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const communityLinks = require('../../src/domain/community-links.ts');
+const communityLinks = require('../../src/platform/community-links.ts');
 const { parsePageCss } = require('../helpers/css-rules');
 const { createNewtabPage } = require('../helpers/newtab-page');
 const { getPageScripts } = require('../helpers/runtime-scripts');
