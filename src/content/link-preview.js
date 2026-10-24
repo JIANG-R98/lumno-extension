@@ -1,6 +1,6 @@
 import { toPreviewFrameUrl } from '../shared/link-preview-frame-url.js';
 import * as TOAST from '../shared/ui/toast.js';
-import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-state-art.js';
+import { createEmptyStateArt } from '../shared/ui/empty-state-art.js';
 
 (function() {
   // The link preview surface, injected into a tab's top frame by
@@ -71,7 +71,6 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
       --lp-notice-ink: #18181d;
       --lp-button: rgba(20, 20, 26, 0.08);
       --lp-button-hover: rgba(20, 20, 26, 0.14);
-      --lumno-art-accent: #4d7dcb;
       position: fixed;
       inset: 0;
       /* Clipped, not hidden: a hidden overflow can still be scrolled by
@@ -91,11 +90,6 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
         --lp-notice-ink: #f2f2f5;
         --lp-button: rgba(255, 255, 255, 0.1);
         --lp-button-hover: rgba(255, 255, 255, 0.16);
-        --lumno-art-accent: #6f9be6;
-        --lumno-art-surface-fill: 0.06;
-        --lumno-art-raised-fill: 0.09;
-        --lumno-art-edge: 0.2;
-        --lumno-art-line: 0.6;
       }
     }
     .root:focus {
@@ -237,6 +231,7 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
       display: grid;
     }
     .notice .lumno-empty-art {
+      display: block;
       margin-bottom: 4px;
     }
     .notice button {
@@ -253,7 +248,6 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
     .notice button:hover {
       background: var(--lp-button-hover);
     }
-    ${EMPTY_STATE_ART_CSS}
     .controls {
       position: absolute;
       top: 0;
@@ -579,7 +573,7 @@ import { createEmptyStateArt, EMPTY_STATE_ART_CSS } from '../shared/ui/empty-sta
     const noticeButton = document.createElement('button');
     noticeButton.type = 'button';
     noticeButton.textContent = getMessage('link_preview_open_in_tab', 'Open in new tab');
-    notice.append(createEmptyStateArt(document, 'blockedPage', { size: 128 }), noticeText, noticeButton);
+    notice.append(createEmptyStateArt(document, 'blockedPage', { size: 176 }), noticeText, noticeButton);
     panel.append(placeholder, frame, notice);
 
     const controls = document.createElement('div');
